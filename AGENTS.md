@@ -11,7 +11,7 @@ This file only holds things that would break the project if an agent guessed wro
 - Every visual = `Field → Grid Sampler → Renderer`. Never hand-draw a widget outside this pipeline.
 - One accent color per board (`{colors.dotActive}`). If you're about to add a second, stop and ask.
 - Quantize UI dot sizes (`{grid.quantizeSteps}`); only photos skip quantization.
-- Core engine (`packages/core`) stays zero-dependency. New deps go in `apps/playground` only, and only if justified in a commit message.
+- `src/engine/` stays framework-free — no React, no UI library, no new npm dependency, ever. It's plain TypeScript + browser Canvas/SVG APIs only. New deps (if truly needed) only go in the app-level `package.json` for playground UI code (`src/components/playground/`), never for anything under `src/engine/`.
 - Corner roundness = squircle exponent, not a radius enum. Don't reintroduce `border-radius: Npx` presets.
 - Renderer choice (`svg` vs `canvas`) is decided by dot-count/animation, not by convenience — check the rule in `DESIGN.md` before hardcoding one.
 
