@@ -34,11 +34,12 @@ export function poissonDiscPoints(width: number, height: number, minDistance: nu
 export function scatterField(points: [number, number][], dotRadius: number, width?: number, height?: number): Field {
   let maxX = width ?? 1e-6, maxY = height ?? 1e-6
   if (width === undefined || height === undefined) for (const [px, py] of points) { if (px > maxX) maxX = px; if (py > maxY) maxY = py }
+  const smoothstep = (a: number, b: number, x: number) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
   return (u, v) => {
     const x = u * maxX, y = v * maxY
     let best = Infinity
     for (const [px, py] of points) { const dx = px - x, dy = py - y, d = dx * dx + dy * dy; if (d < best) best = d }
     const dist = Math.sqrt(best)
-    return dist <= dotRadius ? 1 : dist >= dotRadius * 2 ? 0 : 1 - (dist - dotRadius) / dotRadius
+    return dist <= dotRadius ? 1 : dist >= dotRadius * 2 ? 0 : 1 - smoothstep(dotRadius, dotRadius * 2, dist)
   }
 }

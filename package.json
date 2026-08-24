@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "verify": "npx tsx src/engine/verify-acceptance.ts",
     "lint": "oxlint",
     "preview": "vite preview"
   },

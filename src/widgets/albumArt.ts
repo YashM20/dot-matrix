@@ -13,6 +13,6 @@ const groove = spiralField(0.5, 0.5, 3.5, 22)
 
 export const albumArt: WidgetPreset = {
   id: 'album-art', name: 'Album Art', group: 'photo',
-  grid: { cols: 48, rows: 48 }, style: baseStyle,
+  grid: { cols: 48, rows: 48 }, style: { ...baseStyle, sizeMax: 2.2 },
   field: () => combine(disc, (u, v) => groove(u, v) * 0.32),
 }

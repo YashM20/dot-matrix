@@ -15,6 +15,7 @@ export interface PlaygroundState {
   animated: boolean
   photoField?: Field
   photoName?: string
+  widgetData: Record<string, Record<string, number>>
   setPreset: (id: string) => void
   setPitch: (pitch: number) => void
   setShape: (shape: DotStyle['shape']) => void
@@ -26,6 +27,7 @@ export interface PlaygroundState {
   setTheme: (theme: 'dot480' | 'deerflowMosaic') => void
   setAnimated: (animated: boolean) => void
   setPhoto: (field: Field | undefined, name?: string) => void
+  setWidgetData: (presetId: string, key: string, value: number) => void
 }
 
 export const usePlayground = create<PlaygroundState>(set => ({
@@ -39,6 +41,10 @@ export const usePlayground = create<PlaygroundState>(set => ({
   quantizeSteps: 5,
   theme: 'dot480',
   animated: false,
+  widgetData: {
+    'fitness-rings': { move: 1.21, exercise: 1.62, stand: 2 },
+    'retail-analytics': { sales: 0.58 },
+  },
   setPreset: presetId => set({ presetId }),
   setPitch: pitch => set({ pitch }),
   setShape: shape => set({ shape }),
@@ -50,4 +56,5 @@ export const usePlayground = create<PlaygroundState>(set => ({
   setTheme: theme => set({ theme }),
   setAnimated: animated => set({ animated }),
   setPhoto: (photoField, photoName) => set({ photoField, photoName }),
+  setWidgetData: (presetId, key, value) => set(s => ({ widgetData: { ...s.widgetData, [presetId]: { ...(s.widgetData[presetId] ?? {}), [key]: value } } })),
 }))

@@ -45,9 +45,10 @@ import { homeQuiet } from './homeQuiet'
 import { wikiGraph } from './wikiGraph'
 import { notificationsGrid } from './notificationsGrid'
 import { rideDual } from './rideDual'
+import { recorder } from './recorder'
 
 export const widgetPresets: WidgetPreset[] = [
-  clock, timer, boardingPass, headlineText,
+  recorder, clock, timer, boardingPass, headlineText,
   gaugeSpeed, gaugeBattery, fitnessRings, oxygenRing, moistureLeafRings, dialRadio, breathingCircles, deviceOverviewDonut, agentAvatarRing, sunburstWidget, rideDual,
   weatherCard, settingsList, evCharge, visionCube, appIconGrid, wikiGraph, notificationsGrid,
   thermalMonitor, portraitArt, albumArt, silhouetteArt,

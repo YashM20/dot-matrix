@@ -28,7 +28,8 @@ export function DotCanvas({ field, grid, style, theme = dot480, paint, animated,
   const pitch = grid.pitch ?? theme.gridPx
   const width = grid.cols * pitch
   const height = grid.rows * pitch
-  const mode = renderer ?? (animated || dots.length > 2000 ? 'canvas' : 'svg')
+  const visibleCount = dots.filter(d => d.opacity > 0 && d.r > 0).length
+  const mode = renderer ?? (animated || visibleCount > 2000 ? 'canvas' : 'svg')
   const canvasRef = useRef<HTMLCanvasElement>(null)
 
   useEffect(() => {
@@ -40,8 +41,8 @@ export function DotCanvas({ field, grid, style, theme = dot480, paint, animated,
   }, [mode, dots, width, height])
 
   if (mode === 'canvas') {
-    return <canvas ref={canvasRef} width={width} height={height} className={className} aria-hidden="true" />
+    return <canvas ref={canvasRef} width={width} height={height} className={className} style={{ width: '100%', height: 'auto', display: 'block', aspectRatio: `${width} / ${height}` }} aria-hidden="true" />
   }
   const svg = renderSVG(dots, width, height)
-  return <div className={`dot-svg ${className ?? ''}`} style={{ aspectRatio: `${width} / ${height}` }} dangerouslySetInnerHTML={{ __html: svg }} aria-hidden="true" />
+  return <div className={`dot-svg ${className ?? ''}`} style={{ aspectRatio: `${width} / ${height}`, width: '100%', height: 'auto' }} dangerouslySetInnerHTML={{ __html: svg }} aria-hidden="true" />
 }

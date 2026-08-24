@@ -23,11 +23,12 @@ export function modulatedRingField(cx: number, cy: number, rInner: number, rOute
 }
 
 export function spiralField(cx: number, cy: number, turns = 2.2, tightness = 18): Field {
+  const smoothstep = (a: number, b: number, x: number) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
   return (u, v) => {
     const dx = u - cx, dy = v - cy, r = Math.hypot(dx, dy), ang = Math.atan2(dy, dx)
     const spiral = (ang + TAU) % TAU / TAU * turns * TAU
     const dist = Math.abs(r * tightness - spiral)
-    return Math.max(0, 1 - dist * 3)
+    return dist <= 0.06 ? 1 : dist >= 0.22 ? 0 : 1 - smoothstep(0.06, 0.22, dist)
   }
 }
 

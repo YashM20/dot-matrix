@@ -28,7 +28,7 @@ Every visual = `Field(u,v)->number[0,1] → sampleField(grid,style,theme) → Do
 - Spline: Catmull-Rom with tension 0.5
 - Heatmap: gridField nearest lookup
 - Scatter: Bridson Poisson-disc + mulberry32
-- 3D: perspectiveProjection + corridorField
+- 3D: perspectiveProjection `screenX = focal*worldX/(focal+max(0,worldZ))` (safe, never div0) + corridorField (receding rects, dot size 1/z); PRD originally wrote `f*worldX/worldZ` which div0 at wz=0 — implementation is intentional fix
 - Warped (next-level): domain warps via sin/cos/tan, modulated polar (see `src/engine/fields/warpedField.ts`)
 
 ## Renderer Rule (PRD §5.3)
