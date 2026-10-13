@@ -2,17 +2,17 @@
 
 ## What this is
 Dot/480 — a field-based dot-matrix UI engine. Full spec lives in two docs, always read them first, don't duplicate their content here:
-- `DOT-MATRIX-ENGINE-PLAN.md` — architecture, modules, algorithms
+- `docs/DOT-MATRIX-ENGINE-PLAN.md` — architecture, modules, algorithms
 - `DESIGN.md` — tokens, colors, typography, components
 
 This file only holds things that would break the project if an agent guessed wrong, and that don't change as models get smarter.
 
 ## Non-negotiables
-- Every visual = `Field → Grid Sampler → Renderer`. Never hand-draw a widget outside this pipeline.
+- Every visual = `Field → Grid Sampler → Renderer`. Never hand-draw a widget outside this pipeline. Widgets are `Layer[]` (field + tone) placed in cell space via `src/engine/layout.ts`; text goes through `textAt`/`T.big` so glyph pixels stay dot-aligned. Bigger elements use a coarser `lattice` or dot `sites`, never clusters of small dots. Check new cards against their reference with `pnpm snap`.
 - One accent color per board (`{colors.dotActive}`). If you're about to add a second, stop and ask.
 - Quantize UI dot sizes (`{grid.quantizeSteps}`); only photos skip quantization.
 - `src/engine/` stays framework-free — no React, no UI library, no new npm dependency, ever. It's plain TypeScript + browser Canvas/SVG APIs only. New deps (if truly needed) only go in the app-level `package.json` for playground UI code (`src/components/playground/`), never for anything under `src/engine/`.
-- Corner roundness = squircle exponent, not a radius enum. Don't reintroduce `border-radius: Npx` presets.
+- Dot roundness = squircle exponent (`cornerRoundness` → `n = 2 + 30r²`), not a radius enum. Don't reintroduce shape presets.
 - Renderer choice (`svg` vs `canvas`) is decided by dot-count/animation, not by convenience — check the rule in `DESIGN.md` before hardcoding one.
 
 ## Before changing a generator or token

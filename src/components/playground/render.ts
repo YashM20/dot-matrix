@@ -1,41 +1,32 @@
-import type { DotStyle, Field, GridConfig } from '../../engine'
+import type { DotStyle, GridConfig, Layer } from '../../engine'
 import { dot480, presets } from '../../engine'
-import { sampleField } from '../../engine/sampler/gridSampler'
+import { sampleLayers } from '../../engine/sampler/gridSampler'
 import { renderSVG } from '../../engine/renderer/svgRenderer'
-import { ringField } from '../../engine/fields/polarField'
-import { combine, dim } from '../../widgets/types'
-import { widgetById } from '../../widgets'
+import { widgetById, widgetPresets, withChrome, type WidgetContext } from '../../widgets'
 import type { PlaygroundState } from './store'
 
 export interface ResolvedWidget {
   id: string
   name: string
-  field: () => Field
+  layers: (ctx: WidgetContext) => Layer[]
+  data: Record<string, number>
+  defaults: Record<string, number>
   grid: GridConfig
   style: DotStyle
-  paint?: (dots: ReturnType<typeof sampleField>, theme: typeof dot480) => void
-}
-
-function fieldFor(state: PlaygroundState, preset: NonNullable<ReturnType<typeof widgetById>>): () => Field {
-  if (preset.id === 'fitness-rings') {
-    const d = state.widgetData?.['fitness-rings']
-    if (d && Number.isFinite(d.move) && Number.isFinite(d.exercise) && Number.isFinite(d.stand)) {
-      const ring = (a: number, b: number, sweep: number) => ringField(.5, .5, a, b, -Math.PI / 2, Math.PI * sweep)
-      const track = (a: number, b: number) => dim(ring(a, b, 2), .3)
-      return () => combine(track(.4, .48), dim(ring(.4, .48, d.move), .58), track(.29, .37), dim(ring(.29, .37, d.exercise), .78), track(.18, .26), ring(.18, .26, d.stand))
-    }
-  }
-  return preset.field
+  animated: boolean
 }
 
 export function resolveCurrent(state: PlaygroundState): ResolvedWidget {
-  const preset = widgetById(state.presetId) ?? widgetById('clock')!
+  const preset = widgetById(state.presetId) ?? widgetPresets[0]
   const photo = state.photoField
+  const defaults = preset.defaults ?? {}
   return {
     id: preset.id,
     name: photo ? 'PHOTO HALFTONE' : preset.name,
-    field: photo ? () => photo : fieldFor(state, preset),
-    grid: { ...preset.grid, pitch: state.pitch },
+    layers: photo ? () => [{ field: photo, tone: 'auto' }] : withChrome(preset),
+    data: { ...defaults, ...(state.widgetData[preset.id] ?? {}) },
+    defaults,
+    grid: { ...(photo ? state.photoGrid ?? preset.grid : preset.grid), pitch: state.pitch },
     style: {
       shape: state.shape,
       sizeMin: state.sizeMin,
@@ -43,24 +34,28 @@ export function resolveCurrent(state: PlaygroundState): ResolvedWidget {
       cornerRoundness: state.cornerRoundness,
       opacityMode: 'fromValue',
       jitter: state.jitter,
+      // Photos keep continuous radii; UI widgets stay quantized (DESIGN.md › Do's and Don'ts).
       quantizeSteps: photo ? undefined : state.quantizeSteps || undefined,
     },
-    paint: photo ? undefined : preset.paint,
+    animated: !photo && state.animated,
   }
 }
 
 export function getTheme(state: PlaygroundState) { return presets[state.theme] ?? dot480 }
 export function renderCurrentSVG(state: PlaygroundState): string {
   const widget = resolveCurrent(state)
-  const theme = getTheme(state)
-  const dots = sampleField(widget.field(), widget.grid, widget.style, theme)
-  if (widget.paint) widget.paint(dots, theme)
+  const dots = sampleLayers(widget.layers({ t: 0, data: widget.data }), widget.grid, widget.style, getTheme(state))
   return renderSVG(dots, widget.grid.cols * widget.grid.pitch!, widget.grid.rows * widget.grid.pitch!)
 }
 
+/** A copy-pasteable `<DotWidget>` that reproduces the preview. */
 export function snippetFor(state: PlaygroundState): string {
   const widget = resolveCurrent(state)
-  const themeStr = state.theme !== 'dot480' ? `\n  theme="${state.theme}"` : ''
-  const animStr = state.animated ? `\n  animated` : ''
-  return `<DotWidget\n  type="${widget.id}"\n  density={${state.pitch}}\n  dotShape="${state.shape}"\n  roundness={${state.cornerRoundness}}${themeStr}${animStr}\n  size={{ w: ${widget.grid.cols * state.pitch}, h: ${widget.grid.rows * state.pitch} }}\n/>`
+  const props = [`type="${widget.id}"`, `density={${state.pitch}}`, `dotShape="${state.shape}"`, `roundness={${state.cornerRoundness}}`]
+  if (state.theme !== 'dot480') props.push(`theme={${state.theme}}`)
+  if (widget.animated) props.push('animated')
+  const changed = Object.entries(widget.data).filter(([k, v]) => widget.defaults[k] !== v)
+  if (changed.length) props.push(`data={{ ${changed.map(([k, v]) => `${k}: ${v}`).join(', ')} }}`)
+  const imports = [`import { DotWidget } from './components/DotWidget'`, ...(state.theme !== 'dot480' ? [`import { ${state.theme} } from './engine'`] : [])]
+  return `${imports.join('\n')}\n\n<DotWidget\n  ${props.join('\n  ')}\n/>`
 }

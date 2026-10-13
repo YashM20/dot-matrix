@@ -1,7 +1,6 @@
 import { saveAs } from 'file-saver'
-import { dot480 } from '../../engine'
 import { usePlayground } from './store'
-import { renderCurrentSVG, snippetFor } from './render'
+import { getTheme, renderCurrentSVG, snippetFor } from './render'
 
 function downloadPNG(svg: string) {
   const match = svg.match(/width="(\d+)" height="(\d+)"/)
@@ -16,7 +15,7 @@ function downloadPNG(svg: string) {
     canvas.getContext('2d')?.drawImage(image, 0, 0, canvas.width, canvas.height)
     canvas.toBlob(blob => blob && saveAs(blob, 'dot480.png'), 'image/png')
   }
-  image.src = `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svg)))}`
+  image.src = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
 }
 
 export function ExportPanel() {
@@ -25,7 +24,7 @@ export function ExportPanel() {
   const exportSVG = () => saveAs(new Blob([renderCurrentSVG(state)], { type: 'image/svg+xml' }), 'dot480.svg')
   const copySnippet = async () => { await navigator.clipboard.writeText(snippetFor(state)) }
   const exportHTML = () => {
-    const html = `<!doctype html><html><body style="background:${dot480.bg};display:grid;place-items:center;height:100vh;margin:0">${renderCurrentSVG(state)}</body></html>`
+    const html = `<!doctype html><html><body style="background:${getTheme(state).bg};display:grid;place-items:center;height:100vh;margin:0">${renderCurrentSVG(state)}</body></html>`
     saveAs(new Blob([html], { type: 'text/html' }), 'dot480.html')
   }
   return (
