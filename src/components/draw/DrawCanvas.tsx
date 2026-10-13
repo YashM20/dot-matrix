@@ -78,20 +78,23 @@ export function DrawCanvas({ matrix, cols, rows, pitch, brush, eraseMode, refUrl
     }
   }, [matrix, cols, rows, pitch, brush])
 
-  const flushPending = useCallback(() => {
+  // Drain the queue one cell per frame; `flush` is re-read through the ref so the callback can re-arm itself.
+  const flushRef = useRef<() => void>(() => {})
+  const flush = () => {
     if (pending.current.length === 0) { raf.current = null; return }
     const curr = pending.current.shift()!
     const prev = lastCell.current, val = activeErase.current ? 0 : 1
     const pts = prev ? bresenhamLine(prev[0], prev[1], curr[0], curr[1]) : [curr]
     for (const [c, r] of pts) paintCell(c, r, val)
     lastCell.current = curr
-    raf.current = requestAnimationFrame(flushPending)
-  }, [paintCell])
+    raf.current = requestAnimationFrame(() => flushRef.current())
+  }
+  useEffect(() => { flushRef.current = flush })
 
   const queueCell = useCallback((col: number, row: number) => {
     pending.current.push([col, row])
-    if (raf.current == null) raf.current = requestAnimationFrame(flushPending)
-  }, [flushPending])
+    if (raf.current == null) raf.current = requestAnimationFrame(() => flushRef.current())
+  }, [])
 
   const onPointerDown = (e: React.PointerEvent) => {
     const rect = canvasRef.current!.getBoundingClientRect()

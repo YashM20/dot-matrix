@@ -1,7 +1,9 @@
 import { create } from 'zustand'
-import type { DotStyle, Field } from '../../engine'
+import type { DotStyle, Field, GridConfig } from '../../engine'
 import { dot480 } from '../../engine'
+import { widgetById, widgetPresets } from '../../widgets'
 
+export type ThemeName = 'dot480' | 'deerflowMosaic'
 export interface PlaygroundState {
   presetId: string
   pitch: number
@@ -11,11 +13,14 @@ export interface PlaygroundState {
   cornerRoundness: number
   jitter: number
   quantizeSteps: number
-  theme: 'dot480' | 'deerflowMosaic'
+  theme: ThemeName
   animated: boolean
   photoField?: Field
   photoName?: string
+  photoGrid?: GridConfig
+  /** Per-preset editable numbers, seeded from each preset's `defaults`. */
   widgetData: Record<string, Record<string, number>>
+  /** Select a preset and adopt its own style so the preview matches the board. */
   setPreset: (id: string) => void
   setPitch: (pitch: number) => void
   setShape: (shape: DotStyle['shape']) => void
@@ -24,29 +29,27 @@ export interface PlaygroundState {
   setCornerRoundness: (value: number) => void
   setJitter: (value: number) => void
   setQuantizeSteps: (value: number) => void
-  setTheme: (theme: 'dot480' | 'deerflowMosaic') => void
+  setTheme: (theme: ThemeName) => void
   setAnimated: (animated: boolean) => void
-  setPhoto: (field: Field | undefined, name?: string) => void
+  setPhoto: (field: Field | undefined, name?: string, grid?: GridConfig) => void
   setWidgetData: (presetId: string, key: string, value: number) => void
+  resetStyle: () => void
 }
 
-export const usePlayground = create<PlaygroundState>(set => ({
-  presetId: 'clock',
-  pitch: dot480.gridPx,
-  shape: 'squircle',
-  sizeMin: .3,
-  sizeMax: 1.6,
-  cornerRoundness: .72,
-  jitter: 0,
-  quantizeSteps: 5,
+const styleOf = (id: string) => {
+  const p = widgetById(id) ?? widgetPresets[0]
+  return { pitch: p.grid.pitch ?? dot480.gridPx, shape: p.style.shape, sizeMin: p.style.sizeMin, sizeMax: p.style.sizeMax, cornerRoundness: p.style.cornerRoundness ?? 0, jitter: p.style.jitter ?? 0, quantizeSteps: p.style.quantizeSteps ?? 0, animated: !!p.animated }
+}
+const first = widgetPresets[0].id
+
+export const usePlayground = create<PlaygroundState>((set, get) => ({
+  presetId: first,
+  ...styleOf(first),
   theme: 'dot480',
-  animated: false,
-  widgetData: {
-    'fitness-rings': { move: 1.21, exercise: 1.62, stand: 2 },
-    'retail-analytics': { sales: 0.58 },
-  },
-  setPreset: presetId => set({ presetId }),
-  setPitch: pitch => set({ pitch }),
+  widgetData: {},
+  setPreset: presetId => set({ presetId, ...styleOf(presetId) }),
+  // dot radii are in px, so keep them proportional to the pitch they were tuned for
+  setPitch: pitch => set(s => ({ pitch, sizeMin: s.sizeMin * pitch / s.pitch, sizeMax: s.sizeMax * pitch / s.pitch })),
   setShape: shape => set({ shape }),
   setSizeMin: sizeMin => set({ sizeMin }),
   setSizeMax: sizeMax => set({ sizeMax }),
@@ -55,6 +58,7 @@ export const usePlayground = create<PlaygroundState>(set => ({
   setQuantizeSteps: quantizeSteps => set({ quantizeSteps }),
   setTheme: theme => set({ theme }),
   setAnimated: animated => set({ animated }),
-  setPhoto: (photoField, photoName) => set({ photoField, photoName }),
+  setPhoto: (photoField, photoName, photoGrid) => set({ photoField, photoName, photoGrid }),
   setWidgetData: (presetId, key, value) => set(s => ({ widgetData: { ...s.widgetData, [presetId]: { ...(s.widgetData[presetId] ?? {}), [key]: value } } })),
+  resetStyle: () => set(styleOf(get().presetId)),
 }))

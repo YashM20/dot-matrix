@@ -93,3 +93,12 @@
 ## Summary — What's solid (unchanged)
 ECG Gaussian-composite, Poisson-disc Bridson, perspective safety fix, combine/place/dim primitives, gap-tracking — all still solid.
 
+
+## Addendum — 2026-10-12 re-verification
+
+Re-reading the source after this review found several items above described as FIXED that were not in the code. Corrected in the rebuild:
+- **1.4 Squircle** — `DESIGN.md` had not been updated and the bezier `c = r(.2+.35r)` could never exceed a circle. Replaced with a true superellipse mapping (`squircleExponent`, `bezierHandle`); roundness 0 = circle, 1 ≈ square. Covered by `pnpm verify`.
+- **1.7 Accent coupling** — `accentHigh` thresholds removed entirely; colour is now a per-layer `Tone` (`sampleLayers`), so accent never depends on a value threshold.
+- **1.10 Memo stability** — `DotWidget` and `PreviewCanvas` called `preset.field()` every render, defeating the memo. Sources are now stable `layers` functions; `useDotField` keys on primitives + `t`.
+- **XSS item** — the list/chat cards contained no text at all; they now render real bitmap text (still geometry, never innerHTML).
+- New findings fixed in the same pass: waveform bars hung from the top (`amplitudeField` anchor), photo luminance was inverted, Bayer matrix ignored the grid, `spiralField` drew one seamed arm, `ringField` broke for `thetaStart > π`, icon paths were filled instead of stroked, CJK fallback rasterised with `sans-serif` and injected a Google Fonts `<link>`, Canvas ignored `devicePixelRatio`, exported snippet was invalid JSX, "animated" had no clock.

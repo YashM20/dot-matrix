@@ -17,7 +17,7 @@ Two surface tones do all the work: `{colors.bg}` (near-black canvas) behind ever
 
 ## Colors
 
-> **Source tokens:** derived from the `dot480` and `deerflowMosaic` theme presets defined in `theme/presets.ts`. Both presets share the same role structure; only the surface warmth and accent hue shift between them.
+> **Source tokens:** derived from the `dot480` and `deerflowMosaic` theme presets defined in `src/engine/theme/tokens.ts`. Both presets share the same role structure; only the surface warmth and accent hue shift between them.
 
 ### Brand & Accent
 - **Signal Red** (`{colors.dotActive}` — `#FF3B30`): the entire brand. Every progress fill, every "live/recording/listening" indicator, every active-state dot, every destructive action.
@@ -54,17 +54,21 @@ Dot/480 has **no conventional font family** — every text role is a precomputed
 
 There is no italic, no variable weight, and no letter-spacing tuning — hierarchy is built entirely from **grid size** (how many dots tall a glyph is) and **color** (`{colors.value}` vs `{colors.label}` vs `{colors.mute}`), never from a second typeface.
 
-### Hierarchy
+### Hierarchy — TILE cards (the reference-fidelity standard)
 
-| Token | Glyph Grid | Approx. px (density 4) | Use |
-|---|---|---|---|
-| `{typography.heroDot}` | 13×17 | 96px | Full-bleed hero numerals (rare — used only on splash/marketing boards) |
-| `{typography.displayDot}` | 9×13 | 64px | Primary card value: clock time, "14A", "247W", timer countdown |
-| `{typography.headingDot}` | 7×9 | 40px | Section headline blocks ("THE MOON BLINKED", "SHIP THE IDEA") |
-| `{typography.valueDot}` | 5×7 | 28px | Standard in-card numeral/short-string ("A-07", "P2", "98%") |
-| `{typography.bodyDot}` | 5×7 | 16px | Sub-labels, list item copy, chat bubble text |
-| `{typography.caption}` | 4×6 (condensed) | 11px | Card eyebrow label, uppercase, always `{colors.label}` |
-| `{typography.micro}` | 3×5 | 9px | Units suffix ("W", "%", "km/h"), fine-print, timestamp |
+Cards are `TILE` rasters: **144×144 dots at 2.25px** (`src/widgets/types.ts`), label row included (`chrome: 'dots'`), style `tileStyle`. The references mix dot pitches inside one card — tiny dots for labels and grids, big dots for hero numerals — so every tier above body text sits on its own coarser **lattice** (`Layer.lattice`): a 5×7 pixel is one *bigger* dot, never a cluster of small ones.
+
+| Token | Helper | Lattice | Glyph | Use |
+|---|---|---|---|---|
+| `{typography.label}` | chrome / `T.text` | 1 | 5×7 (advance 6 cells ≈ 4% of card) | Card label, captions, units, grid ticks |
+| `{typography.body}` | `T.big(s, col, row, { lattice: 1.25–1.3 })` | 1.25–1.3 | 5×7 | Sub-lines ("SFO — LHR", "03 AHEAD", "LISTENING") |
+| `{typography.value}` | `T.big(..., { lattice: 1.6–2 })` | 1.6–2 | 5×7 | Stat values, units beside heroes ("H", "M", "W") |
+| `{typography.hero}` | `T.big(..., { lattice: 2.5–3, smooth: true })` | 2.5–3 | 10×14 Scale2x | Clock/stat heroes ("7H 42M", "247", "A-07") |
+| `{typography.display}` | `T.big(..., { lattice: 3.5–4, smooth: true })` | 3.5–4 | 10×14 Scale2x | One-word posters ("14A") |
+
+`smooth` upsamples a glyph 2× with Scale2x: strokes two dots thick, diagonals stepping one dot — the reference numeral weight. Rings, arcs, rays and dot sliders use **dot sites** (`T.dotRing` / `T.dotLine` / `T.dotDisc` / `T.dotBars` / `T.dots`): evenly spaced dots along the curve, never square-grid rasters. A red marker or status dot is a single site dot (`T.dots([[x, y]], 7–9)`).
+
+Legacy `CARD` (80×74 @ 4px) cards still render, with whole-dot `scale` text (`L.text(..., { scale: [2, 3] })`) and the CSS card header; new cards should be TILE.
 
 ### Principles
 Every size in the hierarchy is a strict multiple of the base grid unit — there is no arbitrary in-between size. Weight is simulated by dot density, not a bold-font variant: a "heavier" numeral is achieved by widening `{grid.pitch}` or increasing `{dotStyle.sizeMax}` for that glyph's field, never by swapping a font file. This keeps every text role rendering through the exact same `Field → Sampler → Renderer` pipeline as every icon, chart, and photo in the system.
@@ -108,19 +112,21 @@ Dot/480 has effectively no drop-shadow elevation. Depth, where it exists at all,
 
 ### Dot Roundness Scale
 
-| Token | Squircle Exponent (`n`) | Use |
-|---|---|---|
-| `{rounded.sharp}` | n → ∞ (square) | Dense data grids (heatmap/sleep-stage blocks, notification-dot grid) where alignment matters more than softness |
-| `{rounded.default}` | n = 4 | Standard dot shape across nearly every widget — the system default |
-| `{rounded.soft}` | n = 2.4 | Slightly softened dots for photo halftones, giving a gentler photographic feel |
-| `{rounded.circle}` | n = 2 (true circle) | Status dots, avatar circles, radial-ring markers, password/PIN dots |
+`DotStyle.cornerRoundness` (0..1) maps to the superellipse exponent with `n = 2 + 30·r²` (`squircleExponent()` in `shapePath.ts`).
+
+| Token | `cornerRoundness` | Exponent (`n`) | Use |
+|---|---|---|---|
+| `{rounded.sharp}` | 1 | 32 (visually square) | Dense data grids (sleep-stage blocks) — or `shape: 'square'` |
+| `{rounded.default}` | 0.25 | ≈3.9 | Standard dot shape across nearly every widget — `baseStyle` |
+| `{rounded.soft}` | 0.12 | 2.4 | Slightly softened dots for photo halftones |
+| `{rounded.circle}` | 0 | 2 (true circle) | Status dots, avatar circles, radial-ring markers, PIN dots |
 
 Individual dot shape is controlled by one continuous parameter (the superellipse exponent) rather than a discrete shape enum — sliding from `{rounded.sharp}` to `{rounded.circle}` smoothly passes through every intermediate "squircle" state. Card container corners use the same exponent at a larger scale (`{rounded.cardCorner}`, default n=4, ≈16px effective radius) so card chrome and dot chrome always read as the same geometric family.
 
 ### Photography / Field Geometry
 - **Halftone photo grid:** default 48×48 to 96×96 cells depending on card size; below ~32 cells, detail recognizability drops sharply (see Caveats in the engineering plan).
 - **Icon SDF canvas:** icons rasterize at 4× target grid resolution before distance-transform, then downsample — keeps edges clean at any density.
-- **Status dot:** fixed 4–6px regardless of card size — the one element that does **not** scale with `{grid.pitch}`, so it stays legible as a state marker even on the densest widgets.
+- **Status dot:** one site dot about 7 card dots across, top-right of the label row — drawn by `cardChrome()` for `live` TILE cards.
 
 ## Components
 
@@ -252,7 +258,7 @@ Unlike a typical responsive system that reflows layout, Dot/480's primary respon
 
 1. Focus on ONE generator or widget preset at a time. Pull its config object from `widgets/index.ts` and verify every field/style/theme reference resolves against the token tables above.
 2. Reference tokens directly (`{colors.dotActive}`, `{component.progress-ring}`, `{rounded.default}`) — do not paraphrase or invent parallel names.
-3. Run the playground's built-in validation pass after edits — it flags `unresolved-token`, `dot-count-exceeded`, and `orphaned-field` warnings automatically before export.
+3. Run `pnpm verify` after edits — it checks sampler/squircle/text geometry and smoke-renders every preset (dot count, finite radii, unique ids).
 4. Add new interactive states as separate component entries (`-selected`, `-disabled`, `-active`) — do not bury them inside a single widget's prose description.
 5. Default text to `{typography.bodyDot}`; reach for `{typography.displayDot}` only for a card's single primary value; reserve `{typography.heroDot}` strictly for splash/marketing boards.
 6. Keep `{colors.dotActive}` scarce per board — if more than one card shows a solid red fill/ring in the same 3×3 grid, ask whether one of them is actually "informational" rather than "live," and recolor it to `{colors.dotIdle}`.
@@ -265,4 +271,4 @@ Unlike a typical responsive system that reflows layout, Dot/480's primary respon
 - **Superformula (N-fold decorative dot shapes)** deferred per the engineering plan — only the squircle exponent range is currently implemented.
 - **Low-density halftone legibility** below ~32×32 grid cells is a known hard limit, not yet mitigated beyond the gamma-boost + pre-blur tweaks documented in the engineering plan.
 - **Modal / dialog styling** not present in any captured reference board — no `dot-modal` component exists yet.
-- **Full multi-language dot-font coverage** beyond the curated Latin set + Noto Sans SC fallback is unverified for right-to-left scripts.
+- **Full multi-language dot-font coverage** beyond the curated Latin set + system CJK font fallback (`cjkFallback.ts`, no web font is fetched) is unverified for right-to-left scripts.

@@ -1,46 +1,33 @@
-# React + TypeScript + Vite
-
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
-
-Currently, two official plugins are available:
-
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
-
-Note: This will impact Vite dev & build performances.
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
-```
-
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
-
 # Dot/480 — Field-based Dot-Matrix UI Engine
 
-Field → Grid Sampler → Renderer. Every widget is a config of `Field(u,v)->[0,1]` sampled onto a dot grid and rendered as SVG/Canvas.
+Every visual is `Layer[]` (a `Field(u,v) → [0,1]` plus a colour tone) → grid sampler → SVG or Canvas. Nothing is hand-drawn.
 
-- **Engine:** `src/engine/` — zero deps, pure TS + Canvas/SVG. Fields: bitmapFont, polar, iconSDF (filled), halftone (Bayer/Floyd + blur+gamma), waveform (bars + trace), spline (Catmull-Rom tension 0.5), heatmap, scatter (Bridson), 3D corridor, warped (sin/cos modulated).
-- **Widgets:** `src/widgets/` — 46 presets, one file per widget, `src/components/Board.tsx` composes 7 reference boards (3×3, 3×4).
-- **Playground:** `src/components/playground/` — WidgetGallery (thumbnails), ControlsPanel (density/shape/size/roundness/jitter/quantize/theme/animated), PreviewCanvas (DotCanvas DRY), ExportPanel (PNG/SVG/React/HTML), PhotoUpload (100% client-side, Bayer/Floyd).
-- **Docs:** `docs/` — DESIGN, AGENTS, BLOCK-INVENTORY, DOT-MATRIX-ENGINE-PLAN, ADVERSARIAL-REVIEW. Original specs in `public/docs/` (PRD, STEP-1/2 handoffs) untouched.
-- **Run:** `npm run dev` → Boards + Workspace tabs. `npm run build` → production.
+- **Engine:** `src/engine/` — plain TypeScript + Canvas/SVG APIs, no dependencies. Fields (bitmap font, polar, stroked-icon SDF, halftone, waveform, spline, heatmap, Poisson scatter, 3D corridor, warps), cell-space layout (`layout.ts`), squircle renderers, theme tokens.
+- **Widgets:** `src/widgets/boards/*.ts` — 66 cards recreated from the seven reference boards in `public/images/`, one file per board, plus `components.ts` (toggle, pill, slider, icon button, status dot primitives from the DOT/480 sheet). `src/widgets/sprites.ts` holds the pixel art.
+- **App:** `src/components/` — `DotCanvas` (renderer choice, DPR, 12 fps animation), `DotWidget` (card chrome), `Board`, the Workspace playground (gallery, controls, data sliders, export, photo halftone) and the Draw tab.
+- **Docs:** `DESIGN.md` (tokens, typography scales, shapes, components), `docs/DOT-MATRIX-ENGINE-PLAN.md` (module map, algorithms), `AGENTS.md` (invariants). Original specs in `public/docs/`.
 
-Tokens: `src/engine/theme/tokens.ts` (`dot480` mono, `deerflowMosaic` warm). Quantize default 5 (chunky LED), photos skip quantize. One accent `#FF3B30` per board.
+## Scripts
+```bash
+pnpm dev        # Vite dev server — Boards / Gallery / Workspace / Draw tabs
+pnpm build      # tsc -b && vite build
+pnpm verify     # headless acceptance tests (sampler, lattices, squircle, text, halftone, every preset)
+pnpm snap --board henry3   # headless PNG of a board (or card ids, or --all) into .snapshots/
+pnpm check      # typecheck + lint + verify
+```
+Deep links: `/?board=mosaic` opens a board, `/?card=timer` renders a single card.
+
+## Writing a card
+```ts
+import { CARD, L, baseStyle, layer, type WidgetPreset } from '../types'
+export const timer: WidgetPreset = {
+  id: 'timer', name: '03 Timer', group: 'polar', live: true, grid: CARD, style: baseStyle,
+  defaults: { progress: 0.62 },                       // → sliders in the Workspace DATA panel
+  layers: ({ data }) => [
+    layer(L.ring(40, 34, 32, { every: 2 }), 'faint'),  // track
+    layer(L.ring(40, 34, 32, { sweep: Math.PI * 2 * data.progress, every: 2 }), 'active'),
+    layer(L.text('12:48', 40, 24, { scale: [2, 2], align: 'center' })),
+  ],
+}
+```
+Text is placed by integer cell with `L.text(str, col, row, { scale })`, so every glyph pixel lands on whole dots. `tone: 'active'` is the single accent — one element per card.
