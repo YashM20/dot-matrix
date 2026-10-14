@@ -3,7 +3,54 @@
 All notable changes to Dot/480 are recorded here, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The project has no tagged releases yet, so entries are grouped by date and commit.
 
-## [Unreleased] — 2026-10-14 · research and planning
+## [Unreleased] — 2026-10-14 · Phase 0 foundations + Phase 1 motion core
+### Added
+- **Engine**
+  - `src/engine/math.ts`: deterministic `hash32`/`hash01` (murmur3 finaliser), plus `clamp`/`mix`/`smoothstep`.
+  - `src/engine/context.ts`: `FrameContext`, `Pointer`, `LayerSource`; `WidgetContext` is now an alias.
+  - `src/engine/clock.ts`: master clock. One shared rAF, per-subscriber fps (`t = frame/fps`), pause on hidden page, never resets, `invalidate()` for next-frame redraw.
+  - `src/engine/motion/`:
+    - masks: bayer, ign, noise, diagonal, wipe, radial, curtain, scan, `ditherEdge`;
+    - easing: `cubicBezier`, M3 tokens, durations;
+    - closed-form springs and `DataSprings`;
+    - buffer-level `revealDots` / `transitionDots`;
+    - `decodeText` / `splitFlapText`.
+  - `Layer.size` for site layers (split from `lattice`).
+- **App**
+  - Board entrance: cards reveal on a diagonal stagger with a Bayer mask, and each card samples only when its turn comes.
+  - Change dissolve: any card whose dots change (data, minute tick) dissolves old → new in mask order.
+  - Both respect reduced motion.
+- **Tooling**
+  - `pnpm snap --film` (contact sheet + APNG) and `--bar` (candidate vs liked cards at 1×, 3×, blur, silhouette).
+  - `pnpm golden [--check]` with `goldens/hashes.json`.
+  - `pnpm fidelity` (gates G1–G3, G5 + metrics) and `pnpm bench` (per-board budgets).
+- **CI:** `.github/workflows/ci.yml` (check, build, golden check, perf report).
+- **Docs:** `docs/STYLE-BIBLE.md` (10 rules extracted from the liked cards).
+
+### Changed
+- Animated cards draw imperatively from the master clock; React no longer re-renders every frame.
+- The SVG renderer emits `<defs>` + `<use>` grouped by fill, at 2 dp. Board markup is about 4× smaller (deerflow12: 1.39 MB → 359 KB).
+- The canvas renderer is batched: one `Path2D` + `fill()` per colour and opacity, instead of one per dot.
+- `bounded()` no longer mutates its argument.
+- Cover and visibility are decided on the quantized value, so a dot that quantizes to 0 no longer punches a hole.
+- The minute tick re-samples only `clock: true` presets.
+- `withChrome()` is cached per preset, so the playground preview stops re-sampling on unrelated changes.
+- All board hashes moved from `fract(sin)` to `hash01`, and goldens were re-baselined. Liked cards are unchanged; the mini-game star seeds were retuned.
+- Acceptance tests moved from `src/engine/verify-acceptance.ts` to `scripts/verify.ts`, so the engine no longer imports widgets.
+
+### Fixed
+- **H1:** mosaic `cells()` returned non-zero outside its box. Every preset now renders identically with or without bounds.
+- **H4 Draw:**
+  - W/H apply on blur/Enter, and resize is undoable;
+  - the canvas is DPR-aware;
+  - object URLs are revoked;
+  - the advertised shortcuts work.
+- **M7:** bad lattice values, NaN sites and empty splines no longer throw or corrupt output.
+- `superformulaPath` falls back to a circle instead of throwing.
+- **Perf:** thermal-monitor heat is computed once per cell, and apps icons are bounded.
+- A broken preset renders blank instead of crashing the board.
+
+## 2026-10-14 · `f748396`, `c8af647` — research, planning, changelog
 ### Added
 - `docs/ADVANCED-PLAN.md`: full audit and roadmap. It covers:
   - a baseline benchmark (per-frame vs mount cost, SVG size);

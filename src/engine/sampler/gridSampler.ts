@@ -31,10 +31,16 @@ const safe = (x: number) => (Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 
 /** u/v for a cell centre — the same mapping every generator and layout helper relies on. */
 export const cellU = (col: number, cols: number) => (cols === 1 ? 0.5 : col / (cols - 1))
 
+/** The value a dot is drawn with — quantized for UI styles. Visibility and cover decisions use this, not the raw value. */
+const shown = (value: number, style: DotStyle) => (style.quantizeSteps ? quantize(value, style.quantizeSteps) : value)
+/** A positive, finite lattice/size factor (bad input falls back to 1 instead of throwing or flipping radii). */
+const factor = (k: number | undefined) => (k !== undefined && Number.isFinite(k) && k > 0 ? k : 1)
+
 function emit(dots: DotInstance[], value: number, color: string, x: number, y: number, seed: number, style: DotStyle, scale = 1): void {
-  if (style.quantizeSteps) value = quantize(value, style.quantizeSteps)
+  value = shown(value, style)
   const eased = style.sizeCurve ? style.sizeCurve(value) : value
-  const [jx, jy] = applyJitter([x, y], (style.jitter ?? 0) * scale, seed)
+  let jx = x, jy = y
+  if (style.jitter) [jx, jy] = applyJitter([x, y], style.jitter * scale, seed)
   dots.push({ x: jx, y: jy, r: (style.sizeMin + (style.sizeMax - style.sizeMin) * eased) * scale, opacity: style.opacityMode === 'constant' ? 1 : value, color, shape: style.shape, roundness: style.cornerRoundness })
 }
 
@@ -82,18 +88,19 @@ export function sampleLayers(layers: Layer[], grid: GridConfig, style: DotStyle,
   const base: Layer[] = [], lattices = new Map<string, Layer[]>(), sited: Layer[] = []
   for (const layer of layers) {
     if (layer.sites) { sited.push(layer); continue }
-    if ((layer.lattice ?? 1) === 1 && !layer.origin) { base.push(layer); continue }
-    const key = `${layer.lattice ?? 1}|${layer.origin ?? '0,0'}`
+    if (factor(layer.lattice) === 1 && !layer.origin) { base.push(layer); continue }
+    const key = `${factor(layer.lattice)}|${layer.origin ?? '0,0'}`
     lattices.set(key, [...(lattices.get(key) ?? []), layer])
   }
   const covered = lattices.size || sited.length ? new Uint8Array(grid.cols * grid.rows) : null
-  const groups = [...lattices.values()].sort((a, b) => (b[0].lattice ?? 1) - (a[0].lattice ?? 1))
+  const groups = [...lattices.values()].sort((a, b) => factor(b[0].lattice) - factor(a[0].lattice))
   for (const group of groups) {
-    const k = group[0].lattice ?? 1, [ox, oy] = group[0].origin ?? [0, 0], sub = latticeGrid(grid, k, [ox, oy])
+    const k = factor(group[0].lattice), [ox, oy] = group[0].origin ?? [0, 0], sub = latticeGrid(grid, k, [ox, oy])
     const { best, tone } = composite(group, sub)
     for (let row = 0; row < sub.rows; row++) for (let col = 0; col < sub.cols; col++) {
       const value = best[row * sub.cols + col]
-      if (value <= 0) continue
+      // a dot that quantizes to nothing is not drawn, so it must not punch a hole in the card either
+      if (shown(value, style) <= 0) continue
       emit(dots, value, toneColor(tone[row * sub.cols + col], value, theme), (ox + (col + .5) * k) * pitch, (oy + (row + .5) * k) * pitch, 1e6 + row * sub.cols + col, style, k)
       // card cells whose centre falls inside this lattice cell
       const c0 = Math.ceil(ox + col * k - .5), c1 = Math.ceil(ox + (col + 1) * k - .5), r0 = Math.ceil(oy + row * k - .5), r1 = Math.ceil(oy + (row + 1) * k - .5)
@@ -103,10 +110,11 @@ export function sampleLayers(layers: Layer[], grid: GridConfig, style: DotStyle,
   // explicit sites: merge coincident sites, then emit and clear the card cells under each dot
   const sites = new Map<string, { x: number; y: number; k: number; value: number; tone?: Tone }>()
   for (const layer of sited) for (const [x, y] of layer.sites!) {
+    if (!Number.isFinite(x) || !Number.isFinite(y)) continue
     const value = safe(layer.field(x / Math.max(1, grid.cols - 1), y / Math.max(1, grid.rows - 1)))
-    if (value <= 0) continue
+    if (shown(value, style) <= 0) continue
     const key = `${x.toFixed(2)},${y.toFixed(2)}`, prev = sites.get(key)
-    if (!prev || value >= prev.value) sites.set(key, { x, y, k: layer.lattice ?? 1, value, tone: layer.tone })
+    if (!prev || value >= prev.value) sites.set(key, { x, y, k: factor(layer.size ?? layer.lattice), value, tone: layer.tone })
   }
   let seed = 2e6
   for (const { x, y, k, value, tone } of sites.values()) {
@@ -120,7 +128,7 @@ export function sampleLayers(layers: Layer[], grid: GridConfig, style: DotStyle,
   for (let row = 0; row < grid.rows; row++) for (let col = 0; col < grid.cols; col++) {
     const i = row * grid.cols + col
     // empty cells are invisible unless the style draws every dot (constant opacity)
-    if (covered?.[i] || (best[i] <= 0 && !background)) continue
+    if (covered?.[i] || (shown(best[i], style) <= 0 && !background)) continue
     emit(dots, best[i], toneColor(tone[i], best[i], theme), (col + .5) * pitch, (row + .5) * pitch, i, style)
   }
   return dots

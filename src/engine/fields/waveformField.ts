@@ -1,4 +1,5 @@
 import type { Field } from '../types'
+import { hash01 } from '../math'
 
 const gauss = (x: number, mu: number, sigma: number) => Math.exp(-((x - mu) ** 2) / (2 * sigma * sigma))
 
@@ -54,7 +55,7 @@ export function speechAmplitudes(n: number, t = 0, seed = 1): number[] {
   for (let i = 0; i < n; i++) {
     const x = i / Math.max(1, n - 1)
     const burst = Math.max(0, Math.sin(x * 9.3 + seed * 1.7 + t) * Math.sin(x * 2.9 - seed * 0.6 + t * 0.4))
-    const hash = Math.abs(Math.sin((i + 1) * 12.9898 * seed + 78.233 * seed)) % 1
+    const hash = hash01(i + 1, seed)
     out.push(Math.max(0.08, Math.min(1, 0.12 + burst * 0.9 * (0.55 + hash * 0.45))))
   }
   return out

@@ -15,6 +15,19 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 
 export const releases: Release[] = [
   {
+    version: '0.5', date: '2026-10-14', title: 'Boards that come alive',
+    summary: 'The first motion work: boards build themselves in, dot by dot, and every change dissolves instead of cutting. Under the hood, everything got lighter and steadier.',
+    changes: [
+      { kind: 'new', text: 'Boards enter with a staggered dithered reveal. Each card lights up dot by dot, corner to corner.' },
+      { kind: 'new', text: 'Changes dissolve: move a slider in the playground, or let the clock tick over, and the old frame gives way to the new one in dithered order.' },
+      { kind: 'improved', text: 'All animated cards now share one clock and stay in sync, picking up where they left off when you scroll back.' },
+      { kind: 'improved', text: 'Pages are much lighter. Boards render about four times smaller as SVG, and canvas cards draw in a handful of passes instead of thousands.' },
+      { kind: 'improved', text: 'Textures and noise now use integer maths, so every card comes out exactly the same on every run.' },
+      { kind: 'improved', text: 'Draw: width and height apply when you finish typing, resizing can be undone, the canvas is sharp on high-DPI screens, and the keyboard shortcuts work.' },
+      { kind: 'fixed', text: 'A card that fails to draw no longer takes the whole board down.' },
+    ],
+  },
+  {
     version: '0.4', date: '2026-10-14', title: 'Motion lab and the roadmap',
     summary: 'A first live look at where Dot/480 is heading: dots that move with intent, react to your touch, and catch the light.',
     changes: [
@@ -57,8 +70,8 @@ export const releases: Release[] = [
 ]
 
 export const upcoming: Upcoming[] = [
-  { phase: '0', title: 'Foundations', status: 'in progress', text: 'Consistent output on every browser, a shared type scale, a scoring system for card quality, and faster first paint.' },
-  { phase: '1', title: 'Motion', status: 'next', text: 'Boards that enter with dithered reveals, digits that flip and decode, values that spring into place, and a split-flap departures board.' },
+  { phase: '0', title: 'Foundations', status: 'in progress', text: 'Mostly done: deterministic output, lighter rendering and quality tooling. Still to come: a shared type scale, card-quality scoring and faster first paint on the heaviest board.' },
+  { phase: '1', title: 'Motion', status: 'in progress', text: 'Boards that enter with dithered reveals, digits that flip and decode, values that spring into place, and a split-flap departures board.' },
   { phase: '2', title: 'Touch', status: 'planned', text: 'Components you can use: knobs, sliders, toggles and lists with press, hover and focus feedback in dots.' },
   { phase: '3', title: 'Depth and light', status: 'planned', text: 'Lit buttons, shadows, parallax and film-poster portraits.' },
 ]

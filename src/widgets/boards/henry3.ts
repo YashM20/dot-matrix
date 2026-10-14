@@ -3,16 +3,16 @@
  * TILE cards (144×144): 5×7 labels on the card pitch, body text on a 1.25–1.3 lattice,
  * hero numerals in the smooth display weight on a 2.5–3.7 lattice, rings and rays as dot sites.
  */
+import { hash01, mix } from '../../engine/math'
 import type { Field } from '../../engine/types'
 import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
 const BODY = { lattice: 1.3 }
 /** Voice-like bar heights: syllable envelopes times a per-bar jitter, so neighbours differ the way real speech does. */
-const hash = (i: number, seed: number) => { const x = Math.sin(i * 127.1 + seed * 311.7) * 43758.5453; return x - Math.floor(x) }
 const chatter = (n: number, t: number, seed: number, floor = .2) => Array.from({ length: n }, (_, i) => {
   const syllable = Math.abs(Math.sin(i * .42 + seed + t * .8)) * (.6 + .4 * Math.sin(i * .13 - t * .5 + seed))
-  return floor + (1 - floor) * Math.max(0, syllable) * (.3 + .7 * hash(i + Math.floor(t * 4), seed))
+  return floor + (1 - floor) * Math.max(0, syllable) * (.3 + .7 * hash01(i + Math.floor(t * 4), seed))
 })
 
 export const boardingPass: WidgetPreset = {
@@ -74,7 +74,6 @@ export const midnightCircuit: WidgetPreset = {
 // Brutalist overhang against a bright overcast sky, a hooded figure in silhouette — luminance in,
 // halftone out. Regions are blended with a soft edge so the dot sizes ramp instead of stepping.
 const soft = (d: number) => Math.max(0, Math.min(1, .5 + d / .014))
-const mix = (a: number, b: number, k: number) => a + (b - a) * k
 const skyline: Field = (u, v) => {
   // sky: bright overcast, cloud banks darkening toward the lower right
   const cloud = .5 + .5 * Math.sin(u * 6.5 + v * 4 + 1.3) * Math.cos(v * 7 - u * 3.1)

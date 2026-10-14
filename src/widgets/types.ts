@@ -1,4 +1,5 @@
 import type { DotStyle, Field, GridConfig, Layer, Tone } from '../engine/types'
+import type { FrameContext } from '../engine/context'
 import { barsAt, centeredBarsAt, discCells, dotAt, hRule, placeCells, polylineCells, rectCells, ringCells, spriteAt, textAt, textSize, vRule } from '../engine/layout'
 import { latticeGrid } from '../engine/sampler/gridSampler'
 import { cachedIconField, iconPaths } from '../engine/fields/iconSDF'
@@ -7,12 +8,8 @@ import type { TextOptions } from '../engine/fields/bitmapFont'
 import { combine } from '../engine/layout'
 export { bounded, combine, dim, place } from '../engine/layout'
 
-export interface WidgetContext {
-  /** Seconds since the widget mounted (0 for static renders). */
-  t: number
-  /** Editable numbers, seeded from `defaults` — the playground renders a slider per key. */
-  data: Record<string, number>
-}
+/** Frame context a preset's `layers()` receives — see `FrameContext` in the engine. */
+export type WidgetContext = FrameContext
 export interface WidgetPreset {
   id: string
   name: string
@@ -21,6 +18,8 @@ export interface WidgetPreset {
   live?: boolean
   /** Re-sampled on a timer with a running `t`. */
   animated?: boolean
+  /** Reads the wall clock (time/date text) — re-sampled on each minute tick; other static cards never re-sample. */
+  clock?: boolean
   grid: GridConfig
   style: DotStyle
   defaults?: Record<string, number>
@@ -60,7 +59,7 @@ export const staticLayers = (layers: Layer[]) => () => layers
 /** Flatten a preset to a single field (thumbnails, exports, tests). */
 export const presetField = (p: WidgetPreset, ctx: WidgetContext = { t: 0, data: p.defaults ?? {} }): Field => {
   const ls = withChrome(p)(ctx).map(l => {
-    if (l.sites) { const reach = (l.lattice ?? 1) / 2 + .25, cells = l.sites; return (u: number, v: number) => { const x = u * (p.grid.cols - 1), y = v * (p.grid.rows - 1); return cells.some(([sx, sy]) => Math.hypot(x - sx, y - sy) <= reach) ? l.field(u, v) : 0 } }
+    if (l.sites) { const reach = (l.size ?? l.lattice ?? 1) / 2 + .25, cells = l.sites; return (u: number, v: number) => { const x = u * (p.grid.cols - 1), y = v * (p.grid.rows - 1); return cells.some(([sx, sy]) => Math.hypot(x - sx, y - sy) <= reach) ? l.field(u, v) : 0 } }
     if (!l.lattice && !l.origin) return l.field
     // map card u/v onto the layer's lattice so the flattened field lines up
     const k = l.lattice ?? 1, [ox, oy] = l.origin ?? [0, 0], sub = latticeGrid(p.grid, k, [ox, oy])
@@ -79,7 +78,14 @@ export function cardChrome(p: WidgetPreset): Layer[] {
   return [...(label ? [layer(M.text(label, 0, 0), 'idle')] : []), ...(p.live ? [layer(M.dots([[p.grid.cols - 4, 3]], 7), 'active')] : [])]
 }
 /** The preset's layers with its chrome in front — what every renderer should draw. */
-export const withChrome = (p: WidgetPreset) => p.chrome === 'dots' ? (ctx: WidgetContext) => [...cardChrome(p), ...p.layers(ctx)] : p.layers
+const chromed = new WeakMap<WidgetPreset, WidgetPreset['layers']>()
+/** The preset's layers plus its dot-drawn label. Cached per preset so callers get a stable function (no needless re-samples). */
+export const withChrome = (p: WidgetPreset): WidgetPreset['layers'] => {
+  if (p.chrome !== 'dots') return p.layers
+  let f = chromed.get(p)
+  if (!f) chromed.set(p, (f = (ctx: WidgetContext) => [...cardChrome(p), ...p.layers(ctx)]))
+  return f
+}
 
 /** Cell-space drawing helpers bound to one grid — what every reference card is built from. */
 export const TAU = Math.PI * 2
@@ -127,19 +133,19 @@ export function layoutFor(grid: GridConfig) {
         const a = (i / n) * TAU, rel = (((a - start) % TAU) + TAU) % TAU
         if (rel <= sweep + 1e-9) sites.push([cx + r * Math.sin(a), cy - r * Math.cos(a)])
       }
-      return { field: one, sites, lattice: size }
+      return { field: one, sites, size }
     },
     /** Evenly spaced dots from (x0,y0) to (x1,y1), first dot `from` cells along. */
     dotLine: (x0: number, y0: number, x1: number, y1: number, opts: SiteOptions & { from?: number } = {}): LatticeField => {
       const { spacing = 4.5, size = 1.8, from = 0 } = opts, len = Math.hypot(x1 - x0, y1 - y0), sites: Pt[] = []
       for (let d = from; d <= len + 1e-9; d += spacing) sites.push([x0 + ((x1 - x0) * d) / (len || 1), y0 + ((y1 - y0) * d) / (len || 1)])
-      return { field: one, sites, lattice: size }
+      return { field: one, sites, size }
     },
     /** Square-packed dots filling a disc. */
     dotDisc: (cx: number, cy: number, r: number, opts: SiteOptions = {}): LatticeField => {
       const { spacing = 4.5, size = 1.8 } = opts, n = Math.floor(r / spacing), sites: Pt[] = []
       for (let j = -n; j <= n; j++) for (let i = -n; i <= n; i++) if (Math.hypot(i, j) * spacing <= r + 1e-9) sites.push([cx + i * spacing, cy + j * spacing])
-      return { field: one, sites, lattice: size }
+      return { field: one, sites, size }
     },
     /**
      * Audio-style bars made of dot sites: one column per value, `gap` cells apart, dots `pitch`
@@ -151,7 +157,7 @@ export function layoutFor(grid: GridConfig) {
         const n = Math.round((Math.max(0, Math.min(1, value)) * height) / pitch), x = x0 + i * gap
         for (let j = mirror ? -n : 0; j <= n; j++) sites.push([x, base - j * pitch])
       })
-      return { field: one, sites, lattice: size }
+      return { field: one, sites, size }
     },
     /** Arbitrary dot sites. */
     dots: (points: Pt[], size = 1.8): LatticeField => ({ field: one, sites: points, lattice: size }),

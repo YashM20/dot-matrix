@@ -1,0 +1,58 @@
+# Dot/480 CI: typecheck + lint + acceptance harness (`pnpm check`) and a production build.
+# MASTER-PLAN §4 P0.6 / §6: golden hashes and perf budgets join here once their scripts land.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: check + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # package.json has no "packageManager" field, so pin pnpm 10 here
+      # (pnpm-lock.yaml is lockfileVersion 9.0, which pnpm 9 and 10 both read).
+      # If "packageManager" is added later, delete `version:` - action-setup fails when both are set and disagree.
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # tsc -b, oxlint, and the headless acceptance harness (src/engine/verify-acceptance.ts)
+      - name: Check
+        run: pnpm check
+
+      - name: Build
+        run: pnpm build
+
+      # Fails on any drift of a preset's quantized dot list. Intentional visual changes:
+      # run `pnpm golden` locally and commit goldens/hashes.json with the change.
+      - name: Golden hashes
+        run: pnpm golden --check
+
+      # Report-only: shared CI runners are too noisy to gate on timings yet (MASTER-PLAN §6).
+      # Switch to `pnpm bench --strict` once budgets are met on a stable runner.
+      - name: Perf report
+        run: pnpm bench
+        continue-on-error: true

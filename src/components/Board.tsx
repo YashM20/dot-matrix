@@ -3,6 +3,7 @@ import { DotWidget } from './DotWidget'
 import { usePlayground } from './playground/store'
 import { presets } from '../engine/theme/tokens'
 import { boardById, boards } from '../widgets'
+import { duration } from '../engine/motion'
 
 /** Minute counter aligned to the wall clock, so clock cards flip exactly on :00. */
 function useMinuteTick(): number {
@@ -27,7 +28,9 @@ export function Board({ id }: { id: string }) {
       <h2 className="board-title" id={titleId}>{board.title}</h2>
       {/* column count is a CSS var so the responsive breakpoints in App.css can step it down (3 → 2 → 1) */}
       <div className="board-grid" style={{ '--board-cols': board.columns } as CSSProperties}>
-        {board.items.map(preset => <DotWidget key={preset.id} type={preset.id} preset={preset} theme={theme} tick={tick} />)}
+        {/* cards enter on a diagonal stagger (row + column), each revealing its dots in Bayer order */}
+        {board.items.map((preset, i) => <DotWidget key={preset.id} type={preset.id} preset={preset} theme={theme} tick={preset.clock ? tick : undefined}
+          enter={{ delay: (Math.floor(i / board.columns) + (i % board.columns)) * duration.stagger, mask: 'bayer' }} />)}
       </div>
     </section>
   )

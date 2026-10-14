@@ -5,17 +5,23 @@
  * runs taller than 5×7, so body text uses `scale: [1, 9/7]` (rows 1 and 5 doubled — stems, not bars).
  */
 import { latticeGrid } from '../../engine/sampler/gridSampler'
-import { TAU, TILE, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
+import { TAU, TILE, bounded, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
 const TALL: [number, number] = [1, 9 / 7]
 type Pt = [number, number]
 
-/** A field in card-cell coordinates sampled on a `k`-cell lattice anchored at (col,row): f sees each lattice dot's centre. */
-function cellField(k: number, col: number, row: number, f: (x: number, y: number) => number): LatticeField {
+/**
+ * A field in card-cell coordinates sampled on a `k`-cell lattice anchored at (col,row): f sees each lattice dot's centre.
+ * `size` ([w, h] in lattice dots) limits the field to that box — it reads 0 outside and carries matching `bounds`.
+ */
+function cellField(k: number, col: number, row: number, f: (x: number, y: number) => number, size?: [number, number]): LatticeField {
   const sub = latticeGrid(TILE, k, [col, row])
   const at = (t: number, n: number) => Math.round(t * (n - 1))
-  return { field: (u, v) => f(col + (at(u, sub.cols) + .5) * k - .5, row + (at(v, sub.rows) + .5) * k - .5), lattice: k, origin: [col, row] }
+  if (!size) return { field: (u, v) => f(col + (at(u, sub.cols) + .5) * k - .5, row + (at(v, sub.rows) + .5) * k - .5), lattice: k, origin: [col, row] }
+  const [w, h] = size
+  const field = bounded((u, v) => { const i = at(u, sub.cols), j = at(v, sub.rows); return i < w && j < h ? f(col + (i + .5) * k - .5, row + (j + .5) * k - .5) : 0 }, 0, 0, w - 1, h - 1)
+  return { field, lattice: k, origin: [col, row] }
 }
 /** A `#`/`.` sprite on a `k`-cell lattice (icons drawn at their own dot pitch). */
 const spriteOn = (rows: string[], k: number, col: number, row: number): LatticeField => {
@@ -260,14 +266,15 @@ const segDist = (x: number, y: number, [ax, ay]: Pt, [bx, by]: Pt) => {
 const strokeOn = (paths: Pt[][], k: number, col: number, row: number, w = .75) => cellField(k, col, row, (x, y) => {
   const i = (x - col + .5) / k - .5, j = (y - row + .5) / k - .5
   return paths.some(p => p.slice(1).some((q, s) => segDist(i, j, p[s], q) <= w)) ? 1 : 0
-})
+}, [Math.floor(Math.max(...paths.flat().map(p => p[0])) + w) + 1, Math.floor(Math.max(...paths.flat().map(p => p[1])) + w) + 1])
 const PULSE: Pt[][] = [[[0, 5], [3.5, 5], [5.5, .5], [7.5, 9.5], [9.5, .5], [11.5, 5], [15, 5]]]
 const MOUNTAIN: Pt[][] = [[[.5, 9.5], [3.5, 3.5], [5.8, 6.3], [9.5, .5], [15, 9.5]], [[.5, 9.5], [15, 9.5]]]
 export const apps: WidgetPreset = {
   id: 'apps', name: 'Apps', group: 'icon', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => {
-    const shape = (f: (i: number, j: number) => boolean, col: number, row: number) => cellField(1.85, col, row, (x, y) => (f(Math.round((x - col + .5) / 1.85 - .5), Math.round((y - row + .5) / 1.85 - .5)) ? 1 : 0))
-    const grey = (rows: string[], col: number, row: number) => shape((i, j) => rows[j]?.[i] === '#', col, row)
+    // each icon only spans its own box of lattice dots (12×12 for the round ones), so the sampler skips the rest
+    const shape = (f: (i: number, j: number) => boolean, col: number, row: number, size: [number, number] = [12, 12]) => cellField(1.85, col, row, (x, y) => (f(Math.round((x - col + .5) / 1.85 - .5), Math.round((y - row + .5) / 1.85 - .5)) ? 1 : 0), size)
+    const grey = (rows: string[], col: number, row: number) => shape((i, j) => rows[j]?.[i] === '#', col, row, [Math.max(...rows.map(r => r.length)), rows.length])
     return [
       layer(grey(MONITOR, 16, 13), 'idle'), layer(grey(BARS, 60, 13), 'idle'), layer(shape(gear, 103, 13), 'idle'),
       layer(shape(compass, 16, 48), 'idle'), layer(spriteOn(FACE, 1.8, 56, 45)), layer(strokeOn(PULSE, 1.95, 100, 51), 'idle'),

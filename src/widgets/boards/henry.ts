@@ -5,6 +5,7 @@
  * line icons (transport, settings glyphs, camera buttons) as 1-dot strokes on the card pitch.
  */
 import { glyph } from '../../engine/fields/bitmapFont'
+import { hash01 } from '../../engine/math'
 import type { Field } from '../../engine/types'
 import { TAU, TILE, bounded, combine, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
@@ -47,7 +48,6 @@ function dotText(str: string, x: number, y: number, o: { px: number; py?: number
   }
   return T.dots(sites, size)
 }
-const hash = (x: number, y: number) => { const s = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return s - Math.floor(s) }
 const side = (ax: number, ay: number, bx: number, by: number, x: number, y: number) => (bx - ax) * (y - ay) - (by - ay) * (x - ax)
 const segDist = (ax: number, ay: number, bx: number, by: number, x: number, y: number) => {
   const t = Math.max(0, Math.min(1, ((x - ax) * (bx - ax) + (y - ay) * (by - ay)) / ((bx - ax) ** 2 + (by - ay) ** 2)))
@@ -105,7 +105,7 @@ const dateNow = () => { const d = new Date(); return `${MONTHS[d.getMonth()]} ${
 
 // ── 01 HOME ─────────────────────────────────────────────────────────────────
 export const homeClock: WidgetPreset = {
-  id: 'home-clock', name: '01 Home', label: '01  HOME', group: 'text', live: true, ...tile,
+  id: 'home-clock', name: '01 Home', label: '01  HOME', group: 'text', live: true, clock: true, ...tile,
   defaults: { battery: 0.78 },
   layers: ({ data }) => {
     // battery gauge: 27 dots on a half ring, 9 o'clock → 3 o'clock; charged run white, the rest dim
@@ -132,7 +132,7 @@ const cover = bounded((u: number, v: number) => {
   // L1: the long bright diagonal; L2: the ridge from the hole; L3: the shadow edge under the stripes
   if (segDist(64, 90, 105, 52, x, y) < .6 || segDist(80, 58, 104, 69, x, y) < .6) return 0
   const belowL1 = side(64, 90, 105, 52, x, y) > 0
-  if (belowL1) return hash(x, y) < .45 ? .5 : 0
+  if (belowL1) return hash01(x, y) < .45 ? .5 : 0
   const shadow = x >= 80 ? y > 58 + (x - 80) * (11 / 24) : side(80, 58, 55, 86, x, y) < 0 && y > 58
   if (shadow) return x === 80 && y < 75 ? .3 : 0
   if (y % 2) return 0

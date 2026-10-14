@@ -1,23 +1,30 @@
 /**
  * Programmatic acceptance harness — framework-free, runs headless.
- * Run: pnpm verify   (or: npx tsx src/engine/verify-acceptance.ts)
+ * Run: pnpm verify   (or: npx tsx scripts/verify.ts)
  * Covers the sampler, squircle geometry, text layout, waveform anchoring, halftone polarity,
  * spiral continuity, Poisson-disc, and a smoke render of every widget preset.
  */
-import { quantize } from './sampler/quantize'
-import { cellU, colorFor, sampleField, sampleLayers } from './sampler/gridSampler'
-import { squircleExponent, squircleRadius45 } from './renderer/shapePath'
-import { poissonDiscPoints, scatterField } from './fields/scatterField'
-import { amplitudeField, ecgAmplitudes, sumOfSinesAmplitudes, traceField } from './fields/waveformField'
-import { bayerDither, imageToLuminanceField } from './fields/haltoneField'
-import { spiralField } from './fields/warpedField'
-import { ringField } from './fields/polarField'
-import { bitmapFont, glyph, scale2x, textWidth } from './fields/bitmapFont'
-import { rasterizePath } from './fields/svgPath'
-import { iconPaths } from './fields/iconSDF'
-import { combine, hRule, ringCells, textAt, toCell } from './layout'
-import { dot480 } from './theme/tokens'
-import { widgetPresets, withChrome } from '../widgets'
+import { quantize } from '../src/engine/sampler/quantize'
+import { cellU, colorFor, sampleField, sampleLayers } from '../src/engine/sampler/gridSampler'
+import { squircleExponent, squircleRadius45 } from '../src/engine/renderer/shapePath'
+import { poissonDiscPoints, scatterField } from '../src/engine/fields/scatterField'
+import { amplitudeField, ecgAmplitudes, sumOfSinesAmplitudes, traceField } from '../src/engine/fields/waveformField'
+import { bayerDither, imageToLuminanceField } from '../src/engine/fields/haltoneField'
+import { spiralField } from '../src/engine/fields/warpedField'
+import { ringField } from '../src/engine/fields/polarField'
+import { bitmapFont, glyph, scale2x, textWidth } from '../src/engine/fields/bitmapFont'
+import { rasterizePath } from '../src/engine/fields/svgPath'
+import { iconPaths } from '../src/engine/fields/iconSDF'
+import { combine, hRule, ringCells, textAt, toCell } from '../src/engine/layout'
+import { dot480 } from '../src/engine/theme/tokens'
+import { widgetPresets, withChrome } from '../src/widgets'
+import { hash01, hash32 } from '../src/engine/math'
+import { createMasterClock, quantizeTime } from '../src/engine/clock'
+import { renderSVG } from '../src/engine/renderer/svgRenderer'
+import { bounded } from '../src/engine/layout'
+import { catmullRomField } from '../src/engine/fields/splineField'
+import { readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 
 let failures = 0
 function assert(name: string, cond: boolean, detail = '') {
@@ -149,6 +156,60 @@ assert('traceField renders thin line at amp', traceField([0.5], 0.02)(0.5, 0.5) 
   const sited = sampleLayers([{ field: () => 1, tone: 'faint' }, { field: () => 1, tone: 'idle', sites: [[5, 5], [10, 5]], lattice: 2 }, { field: () => 1, tone: 'active', sites: [[10, 5]], lattice: 2 }], { cols: 20, rows: 10, pitch: 2 }, style, dot480)
   assert('sites merge (later layer wins) and clear the cells under them', sited.filter(d => d.color === dot480.dotActive).length === 1 && sited.filter(d => d.color === dot480.dotIdle).length === 1 && sited.filter(d => d.color === dot480.dotFaint).length === 200 - 10)
   assert('every icon rasterizes non-empty', Object.entries(iconPaths).every(([, d]) => count(rasterizePath(d, 32)) > 10))
+}
+
+// 11) P0 hardening: deterministic hash, master clock, quantized cover, input guards, compact SVG
+{
+  assert('hash32 is a fixed function (cross-engine golden)', hash32(1, 2, 3) === hash32(1, 2, 3) && hash32(0) !== hash32(1) && hash32(1, 2) !== hash32(2, 1))
+  let sum = 0, lo = 1, hi = 0
+  for (let i = 0; i < 4096; i++) { const h = hash01(i, 7); sum += h; lo = Math.min(lo, h); hi = Math.max(hi, h) }
+  assert('hash01 is uniform-ish in [0,1)', Math.abs(sum / 4096 - .5) < .02 && lo >= 0 && hi < 1, `mean ${(sum / 4096).toFixed(3)}`)
+  assert('hash01 separates fractional inputs', hash01(3.5) !== hash01(3))
+
+  assert('quantizeTime snaps to the card frame rate', quantizeTime(1.26, 12).frame === 15 && Math.abs(quantizeTime(1.26, 12).t - 1.25) < 1e-9)
+  let clockNow = 0
+  const queue: ((time: number) => void)[] = []
+  const clock = createMasterClock({ now: () => clockNow, raf: cb => { queue.push(cb); return queue.length }, caf: () => {} })
+  const step = (ms: number) => { clockNow += ms; const cb = queue.shift(); cb?.(clockNow) }
+  const seen: number[] = []
+  const unsub = clock.subscribe({ fps: 12, onFrame: t => seen.push(t) })
+  step(16); step(16); step(60)
+  assert('clock draws once per card frame, at quantized t', seen.length === 2 && seen[0] === 0 && Math.abs(seen[1] - 1 / 12) < 1e-9, seen.join(','))
+  clock.pause(); clockNow += 5000; clock.resume(); step(1)
+  assert('clock does not advance while paused and never resets', clock.time() > .09 && clock.time() < .1, clock.time().toFixed(3))
+  unsub()
+
+  const qStyle = { shape: 'circle' as const, sizeMin: 0, sizeMax: 1, quantizeSteps: 5 }
+  const holes = sampleLayers([{ field: () => 1, tone: 'faint' }, { field: () => .1, tone: 'idle', lattice: 2 }], { cols: 8, rows: 8, pitch: 2 }, qStyle, dot480)
+  assert('a lattice dot that quantizes to 0 does not punch a hole', holes.filter(d => d.color === dot480.dotFaint).length === 64 && !holes.some(d => d.color === dot480.dotIdle))
+  const g3 = { cols: 6, rows: 6, pitch: 2 }, style = { shape: 'circle' as const, sizeMin: 0, sizeMax: 1 }
+  let guarded = true
+  try {
+    sampleLayers([{ field: () => 1, lattice: 0 }, { field: () => 1, lattice: NaN }, { field: () => 1, lattice: -2 }], g3, style, dot480)
+    guarded = sampleLayers([{ field: () => 1, sites: [[NaN, 2], [2, Infinity], [3, 3]] }], g3, style, dot480).every(d => Number.isFinite(d.x) && Number.isFinite(d.y))
+    guarded &&= catmullRomField([])(.5, .5) === 0
+  } catch { guarded = false }
+  assert('sampler guards bad lattice, NaN sites and empty splines', guarded)
+  const shared = () => 1
+  const b = bounded(shared, 1, 1, 2, 2)
+  assert('bounded() does not mutate its argument', !('bounds' in shared) && JSON.stringify(b.bounds) === '[1,1,2,2]' && b(.5, .5) === 1)
+
+  const svgDots = sampleLayers([{ field: () => .75 }], { cols: 20, rows: 20, pitch: 2.25 }, { shape: 'squircle', sizeMin: .2, sizeMax: .95, cornerRoundness: .1, quantizeSteps: 5 }, dot480)
+  const svg = renderSVG(svgDots, 45, 45)
+  assert('SVG defines each dot shape once and places dots with <use>', (svg.match(/<use /g) ?? []).length === 400 && (svg.match(/<path /g) ?? []).length === 1)
+  assert('SVG coordinates are rounded to 2 dp', !/\d\.\d{3,}/.test(svg) && svg.length / 400 < 60, `${(svg.length / 400).toFixed(1)} B/dot`)
+}
+
+// 12) determinism lint: the engine never reads ambient randomness or time, and never sin-hashes
+{
+  const files: string[] = []
+  const walk = (dir: string) => { for (const f of readdirSync(dir)) { const p = join(dir, f); if (statSync(p).isDirectory()) walk(p); else if (p.endsWith('.ts')) files.push(p) } }
+  walk(join(import.meta.dirname, '../src/engine'))
+  const offenders = files.filter(f => {
+    const code = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
+    return /Math\.random\(|Date\.now\(|new Date\(|43758\.5453/.test(code)
+  })
+  assert('src/engine has no Math.random / Date.now / new Date / sin-hash', offenders.length === 0, offenders.join(', '))
 }
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }

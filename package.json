@@ -6,8 +6,11 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "verify": "tsx src/engine/verify-acceptance.ts",
+    "verify": "tsx scripts/verify.ts",
     "snap": "tsx scripts/snap.ts",
+    "golden": "tsx scripts/golden.ts",
+    "fidelity": "tsx scripts/fidelity.ts",
+    "bench": "tsx scripts/bench.ts",
     "lint": "oxlint",
     "preview": "vite preview",
     "check": "tsc -b && oxlint && pnpm verify"
