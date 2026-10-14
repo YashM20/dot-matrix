@@ -15,12 +15,22 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The pro
   - a fidelity rubric and refinement protocol;
   - an Engine 2.0 architecture (`FrameContext`, Layer 2.0, field algebra, motion, SimField, card spec);
   - phases P0–P7, cross-cutting budgets, risks and decisions.
-- `docs/prototypes/motion-lab.html`: standalone live prototype with four tiles:
+- `public/lab/motion-lab.html` (served at `/lab/motion-lab.html`): standalone live prototype with four tiles:
   - mask transitions;
   - decode scramble plus a closed-form spring;
   - pointer interaction (fisheye, hover glow, press spring, ripple, keyboard focus);
   - Lambert-lit depth with a pointer torch, shadows, moat and bloom.
 - `CHANGELOG.md` (this file).
+- **Public changelog in the app:** a LOG tab (deep link `?tab=log`) listing releases v0.1–v0.4 and the upcoming phases, written for visitors (`src/changelog.ts`, `src/components/Changelog.tsx`).
+- `docs/PROGRESS.md`: handoff checklist of what's done, pending and skipped, per phase.
+### Changed
+- `docs/MASTER-PLAN.md` → **v2**, after adversarial review by three critics (engine architecture, design/fidelity, vision/research). Main changes:
+  - **Fidelity:** split into gates + visual score + life score, with rank-validity calibration; a style bible; a type-scale ladder; a v0–v5 refinement protocol with variants, bar sheets and a human like on heroes.
+  - **Architecture:** a `Raster` kind for neighbourhood ops; a `layers()`/`live()` static split; buffer-level keyed transitions with data springs; a 60 Hz master clock; hit-testing as data; a fixed-rate SimField; an integer hash.
+  - **Field IR:** promoted to a core deliverable.
+  - **Perception Lab:** a new track (DeviceProfile, HVS-SSIM, halftone ladder, display simulators).
+  - **Showcases:** sharper flagships (Departures, Instrument, Cinema, Levels, Glyph, Agent Heartbeat, Five Surfaces).
+  - **Backlog and scope:** a lift backlog for the weakest cards; an explicit cut list.
 
 ## 2026-10-13 · `d2bbb22` — rebuild all boards on the 144×144 TILE standard
 ### Added
