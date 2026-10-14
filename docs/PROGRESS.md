@@ -108,9 +108,9 @@ Plan reference: MASTER-PLAN §4 P0.
 ### Calibration and CI
 - [ ] Score all 71 cards (visual + life), check rank validity, κ ≥ 0.6, and produce the "weakest 15" list. **Needs a human taste pass**; `fidelity` covers only the automatable gates.
 - [x] GitHub Action: install, `pnpm check`, `pnpm build`, `pnpm golden --check`, `pnpm bench` (report only, `continue-on-error`).
-  - [ ] Still to do: confirm it goes green on GitHub (it has not run yet; it runs on the next push).
+  - [x] Green on GitHub (run 38613505006, commit `e52b383`). Goldens computed on Linux match the Windows baselines.
 ### P0 exit gates
-- [ ] CI green on GitHub (pending the first run).
+- [x] CI green on GitHub.
 - [ ] Mosaic mount < 30 ms (not met; see Performance).
 - [x] Board SVG < 0.5 MB (bench: every board under 512 KB).
 - [ ] Rank validity / κ ≥ 0.6 (needs human scoring).
@@ -127,7 +127,7 @@ Plan reference: MASTER-PLAN §4 P1. **Flagship: Departures.**
 - [x] `spring.ts`: closed-form `criticalSpring` (Holden), `underdampedSpring`, `DataSprings` (re-targets with velocity, pure `at(t)`, `settled()`).
 - [x] `reveal.ts`: buffer-level `revealDots` (enter/exit, flashing scan edge, keeps colour so the accent survives) and `transitionDots` (prev → next, cell by cell in mask order).
 - [x] `text.ts`: `decodeText` (scramble within the character class, left→right lock-in, pure in `tau`) and `splitFlapText` (drum stepping with column stagger).
-- [ ] Tests for `motion/*` in `scripts/verify.ts`. Only exercised in the browser so far. **Next agent: add them.**
+- [x] Tests for `motion/*` (verify §13, 20 checks): masks in [0,1), bayer has 64 ranks, reveal/exit/transition boundaries and complements, scan-edge flash, spring half-life/no-overshoot/settling, DataSprings re-target without a jump, bezier monotonicity, decode/split-flap end states and digit-only scrambles.
 - [ ] SoA `DotBuffer` + pools. Not started; per-frame allocation is still `DotInstance` objects.
 - [ ] `layers()` / `live()` split + liveness lint.
 - [ ] Keyed layer transitions, `coarsen`.
@@ -153,12 +153,11 @@ Plan reference: MASTER-PLAN §4 P1. **Flagship: Departures.**
 - [ ] P1 exit gates.
 
 ## Next up (in order)
-1. Add verify tests for `motion/*` (masks in [0,1), reveal at p=0/1, transition boundaries, decode/split-flap end states, spring settling).
-2. Wire data springs (`springKeys`) and a home-clock split-flap using `splitFlapText` + `tick`.
-3. Font registry (M1), then `layoutText`, then decode on local faces.
-4. Departures flagship: v0 references + thesis, then 3 variants for the user to pick.
-5. Mosaic mount cost (thermal-puppy, silhouette, vision-camera) and the static sample cache.
-6. User decisions §11.1 (accent) and §11.5 (ladder), then the `accentRole` annotation and the ladder migration with bar-sheet review.
+1. Wire data springs (`springKeys`) and a home-clock split-flap using `splitFlapText` + `tick`.
+2. Font registry (M1), then `layoutText`, then decode on local faces.
+3. Departures flagship: v0 references + thesis, then 3 variants for the user to pick.
+4. Mosaic mount cost (thermal-puppy, silhouette, vision-camera) and the static sample cache.
+5. User decisions §11.1 (accent) and §11.5 (ladder), then the `accentRole` annotation and the ladder migration with bar-sheet review.
 
 ## Known issues / notes for the next agent
 - Root `index.css` sets centred text. New views must set `text-align: left` (the LOG view does).
