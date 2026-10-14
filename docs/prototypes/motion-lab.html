@@ -1,0 +1,213 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Dot/480 · motion · interaction · depth lab</title>
+<style>
+  .lab { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; font-family: var(--font-mono, ui-monospace, monospace); }
+  .tile { background: #0b0b0c; border: 1px solid #222; border-radius: 14px; padding: 16px; color: #8a8a8a; }
+  .tile h3 { margin: 0 0 10px; font: 600 11px/1 var(--font-mono, monospace); letter-spacing: .14em; color: #d9d9d9; display: flex; justify-content: space-between; }
+  .tile h3 span { color: #ff3b30; font-weight: 500; }
+  canvas { display: block; width: 100%; aspect-ratio: 1; border-radius: 8px; touch-action: none; outline: none; }
+  canvas:focus-visible { box-shadow: 0 0 0 1px #444; }
+  .tile p { margin: 10px 0 0; font-size: 11px; line-height: 1.5; }
+  .tile b { color: #cfcfcf; font-weight: 500; }
+</style>
+</head>
+<body>
+<div class="lab">
+  <div class="tile"><h3>01 ENTER · CHANGE <span id="l1">bayer</span></h3><canvas id="c1"></canvas>
+    <p><b>Mask transition.</b> Every dot flips exactly once, in the order its static mask gives it. The bright line is the scan edge. The masks cycle through bayer, radial and wipe dither, curtain, and IGN noise. The same function covers load-in, state change and the reduced-motion dissolve.</p></div>
+  <div class="tile"><h3>02 DATA CHANGE <span id="l2">decode</span></h3><canvas id="c2"></canvas>
+    <p><b>Decode scramble and spring.</b> Changed digits scramble, then resolve staggered from left to right. Unchanged digits hold. The bar runs on a closed-form critically damped spring (Holden), so it's a pure function of time and can be scrubbed. It's drawn on a coarse lattice because bigger elements use bigger dots.</p></div>
+  <div class="tile"><h3>03 INTERACTION <span>hover · press · tab</span></h3><canvas id="c3" tabindex="0"></canvas>
+    <p><b>The pointer warps what the dots sample; the dots never move.</b> Hovering gives a Sarkar–Brown fisheye and a glow on idle dots. Click a row to press it: it drops one size step and springs back. Clicking also starts a ripple simulation that refracts what the dots sample. Row 1 is a toggle. You can also use Tab plus the ↑ ↓ keys and Enter; the focused row gets marching dots.</p></div>
+  <div class="tile"><h3>04 DEPTH <span>torch light</span></h3><canvas id="c4"></canvas>
+    <p><b>Lambert-lit SDF heightfields.</b> The light follows your pointer, and orbits on its own when the pointer is away. You get an embossed button, a dome, halftone shadows on a lit backplate, a 1-dot occlusion moat, and a stepped bloom around the accent LED. Everything stays one accent and quantized dots.</p></div>
+</div>
+<script>
+const TAU = Math.PI * 2, STEPS = 6;
+const clamp = (x, a = 0, b = 1) => Math.min(b, Math.max(a, x));
+const ss = (a, b, x) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t); };
+const hash = (a, b = 0) => { let h = (a * 374761393 + b * 668265263) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// ---- masks -------------------------------------------------------------
+const B8 = (() => { let m = [[0]]; for (let k = 0; k < 3; k++) { const n = m.length, r = [];
+  for (let y = 0; y < 2 * n; y++) { r.push([]); for (let x = 0; x < 2 * n; x++) r[y][x] = 4 * m[y % n][x % n] + [0, 2, 3, 1][(y < n ? 0 : 2) + (x < n ? 0 : 1)]; } m = r; }
+  return m.map(r => r.map(v => (v + .5) / 64)); })();
+const bayer = (i, j) => B8[j & 7][i & 7];
+const ign = (i, j) => { const f = 52.9829189 * ((0.06711056 * i + 0.00583715 * j) % 1); return f - Math.floor(f); };
+const MASKS = [
+  ['bayer', (i, j) => bayer(i, j)],
+  ['radial · dither', (i, j, u, v) => .78 * clamp(Math.hypot(u - .5, v - .5) / .71) + .22 * bayer(i, j)],
+  ['wipe · dither', (i, j, u) => .8 * u + .2 * bayer(i, j)],
+  ['curtain · ign', (i, j, u) => .75 * Math.abs(u - .5) * 2 + .25 * ign(i, j)],
+  ['ign noise', (i, j) => ign(i, j)],
+];
+
+// ---- renderer: field -> quantized dots, batched by (tone, step) ---------
+const TONE = ['#f2f2f2', '#ff3b30', '#ff3b30'];
+function tile(id, cols) {
+  const cv = document.getElementById(id), px = 360, dpr = Math.min(2, devicePixelRatio || 1);
+  cv.width = cv.height = px * dpr; const ctx = cv.getContext('2d'); ctx.scale(dpr, dpr);
+  const pitch = px / cols, out = [0, 0], ptr = { u: .5, v: .5, inside: false, down: false };
+  const toUV = e => { const r = cv.getBoundingClientRect(); ptr.u = (e.clientX - r.left) / r.width; ptr.v = (e.clientY - r.top) / r.height; };
+  cv.addEventListener('pointermove', e => { toUV(e); ptr.inside = true; });
+  cv.addEventListener('pointerleave', () => { ptr.inside = false; ptr.down = false; });
+  return { cv, ctx, cols, pitch, ptr, toUV, draw(field) {
+    ctx.clearRect(0, 0, px, px); const buckets = new Map();
+    for (let j = 0; j < cols; j++) for (let i = 0; i < cols; i++) {
+      out[0] = 0; out[1] = 0; field(i, j, (i + .5) / cols, (j + .5) / cols, out);
+      const q = Math.round(clamp(out[0]) * STEPS); if (!q) continue;
+      const key = out[1] * 10 + q; let p = buckets.get(key); if (!p) buckets.set(key, p = new Path2D());
+      const r = q / STEPS * pitch * .46, cx = (i + .5) * pitch, cy = (j + .5) * pitch; p.moveTo(cx + r, cy); p.arc(cx, cy, r, 0, TAU);
+    }
+    for (const [key, p] of buckets) { const tone = Math.floor(key / 10), q = key % 10;
+      ctx.globalAlpha = tone === 2 ? .22 + .3 * q / STEPS : .3 + .7 * q / STEPS; ctx.fillStyle = TONE[tone]; ctx.fill(p); }
+    ctx.globalAlpha = 1; } };
+}
+const sdBox = (x, y, hx, hy, r) => { const qx = Math.abs(x) - hx + r, qy = Math.abs(y) - hy + r;
+  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r; };
+
+// ---- 01 mask transition ------------------------------------------------
+const T1 = tile('c1', 72);
+const SHAPES = [
+  (u, v, o) => o[0] = 0, // empty -> first cycle is a load-in
+  (u, v, o) => { const x = u - .5, y = v - .5, d = Math.hypot(x, y), a = (Math.atan2(x, -y) + TAU) % TAU;
+    const ring = 1 - ss(.012, .03, Math.abs(d - .34)); if (ring > .1) { o[0] = a < TAU * .62 ? 1 : .45; o[1] = a < TAU * .62 ? 1 : 0; return; }
+    o[0] = d < .07 ? 1 : 0; },
+  (u, v, o) => { const x = u - .5, y = v - .5, sd = sdBox(x, y, .3, .3, .09);
+    if (Math.abs(sd) < .016) { o[0] = .8; return; }
+    if ((Math.abs(x) < .028 && Math.abs(y) < .15) || (Math.abs(y) < .028 && Math.abs(x) < .15)) { o[0] = 1; return; }
+    if (Math.hypot(u - .79, v - .21) < .045) { o[0] = 1; o[1] = 1; } },
+  (u, v, o) => { const x = (u - .5) / .33, y = (v - .52) / .33, r2 = x * x + y * y;
+    if (r2 < 1) { const z = Math.sqrt(1 - r2), l = (-.5 * x - .6 * y + .62 * z); o[0] = .08 + .92 * Math.max(0, l) ** 1.2; return; }
+    o[0] = v > .52 + .33 * .9 && v < .9 && Math.abs(u - .5) < .4 ? .25 * (1 - ss(.85, .9, v)) * (1 - Math.abs(u - .5) * 2) : 0; },
+];
+const tmpA = [0, 0], tmpB = [0, 0];
+function frame1(t) {
+  const period = 2.8, dur = reduced ? .001 : 1.0, e = .045;
+  const k = Math.floor(t / period), local = t - k * period;
+  const from = k === 0 ? 0 : 1 + ((k - 1) % 3), to = 1 + (k % 3), [name, mask] = MASKS[k % MASKS.length];
+  document.getElementById('l1').textContent = name;
+  const pe = clamp(local / dur), ease = 1 - Math.pow(1 - pe, 3), p = -e + ease * (1 + 2 * e);
+  T1.draw((i, j, u, v, o) => { const m = mask(i, j, u, v); tmpA[0] = tmpA[1] = tmpB[0] = tmpB[1] = 0;
+    if (m > p) { SHAPES[from](u, v, tmpA); o[0] = tmpA[0]; o[1] = tmpA[1]; }
+    else if (m > p - e && pe < 1) { SHAPES[to](u, v, tmpB); o[0] = Math.max(.85, tmpB[0]); o[1] = 0; }
+    else { SHAPES[to](u, v, tmpB); o[0] = tmpB[0]; o[1] = tmpB[1]; } });
+}
+
+// ---- 02 decode + closed-form spring -------------------------------------
+const T2 = tile('c2', 36);
+const FONT = ['01110100011001110101110011000101110','00100011000010000100001000010001110','01110100010000100010001000100011111','11111000100010000010000011000101110','00010001100101010010111110001000010',
+  '11111100001111000001000011000101110','00110010001000011110100011000101110','11111000010001000100010000100001000','01110100011000101110100011000101110','01110100011000101111000010001001100'];
+let cur = 2148, prev = 2148, tChange = -10, sx0 = .2148, sv0 = 0, goal = .2148;
+const HL = .45, Y = 4 * Math.LN2 / HL / 2;
+const springAt = tau => { const j0 = sx0 - goal, j1 = sv0 + j0 * Y, ey = Math.exp(-Y * tau); return [ey * (j0 + j1 * tau) + goal, ey * (sv0 - j1 * Y * tau)]; };
+function frame2(t) {
+  const step = Math.floor(t / 3.2);
+  if (step !== frame2.step) { frame2.step = step; if (step > 0) {
+    const [x, v] = springAt(t - tChange); sx0 = x; sv0 = v; prev = cur;
+    cur = Math.floor(hash(step, 7) * 9999); goal = cur / 9999; tChange = t; } }
+  const tau = t - tChange, [bar] = springAt(tau), ds = String(cur).padStart(4, '0'), dp = String(prev).padStart(4, '0');
+  document.getElementById('l2').textContent = tau < 1.1 && ds !== dp ? 'decode' : 'hold';
+  T2.draw((i, j, u, v, o) => {
+    if (j >= 9 && j < 16) { const c = i - 5, k = Math.floor(c / 7), cx = c - k * 7;
+      if (c < 0 || k > 3 || cx > 4) return; const row = j - 9;
+      let d = +ds[k], val = 1; const resolve = .18 + .11 * k + .22 * hash(k, step);
+      if (!reduced && ds[k] !== dp[k] && tau < resolve) { d = Math.floor(hash(k * 31 + Math.floor(t * 18), step) * 10); val = .55; }
+      if (FONT[d][row * 5 + cx] === '1') { o[0] = val; } return; }
+    if (j === 22 || j === 23) { const x0 = 5, x1 = 30, n = (i - x0) / (x1 - x0); if (i < x0 || i > x1) return;
+      const head = Math.round(clamp(bar) * (x1 - x0)) + x0; if (i === head) { o[0] = 1; o[1] = 1; return; }
+      o[0] = i < head ? .85 : .2; return; }
+    if (j === 27 && i >= 5 && i <= 30 && (i - 5) % 5 === 0) o[0] = .35;
+  });
+}
+
+// ---- 03 pointer: fisheye, glow, press spring, ripple, focus -------------
+const T3 = tile('c3', 72), N3 = 72;
+let h0 = new Float32Array(N3 * N3), h1 = new Float32Array(N3 * N3);
+const ROWS = [.23, .41, .59, .77], press = ROWS.map(() => ({ x: 0, v: 0, target: 0 })), knob = { x: 0, v: 0, target: 0 };
+let focus = -1;
+const rowAt = v => ROWS.findIndex(r => Math.abs(v - r) < .075);
+T3.cv.addEventListener('pointerdown', e => { T3.toUV(e); const r = rowAt(T3.ptr.v); T3.cv.setPointerCapture(e.pointerId);
+  const ci = Math.floor(T3.ptr.u * N3), cj = Math.floor(T3.ptr.v * N3);
+  for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) { const ii = ci + dx, jj = cj + dy; if (ii > 0 && jj > 0 && ii < N3 - 1 && jj < N3 - 1) h1[jj * N3 + ii] += 2.2; }
+  if (r >= 0) { press[r].target = 1; if (r === 0) knob.target = 1 - knob.target; } });
+addEventListener('pointerup', () => press.forEach(p => p.target = 0));
+T3.cv.addEventListener('keydown', e => { if (e.key === 'ArrowDown') focus = (focus + 1) % 4; else if (e.key === 'ArrowUp') focus = (focus + 3) % 4;
+  else if (e.key === 'Enter' || e.key === ' ') { if (focus < 0) focus = 0; press[focus].target = 1; setTimeout(() => press[focus].target = 0, 120); if (focus === 0) knob.target = 1 - knob.target; } else return; e.preventDefault(); });
+T3.cv.addEventListener('focus', () => { if (focus < 0) focus = 0; }); T3.cv.addEventListener('blur', () => focus = -1);
+const stepSpring = (s, dt, w, z) => { const a = -w * w * (s.x - s.target) - 2 * z * w * s.v; s.v += a * dt; s.x += s.v * dt; };
+function rowField(u, v, k, o) { const y = v - ROWS[k], x = u - .5, sd = sdBox(x, y, .4, .062, .062);
+  if (Math.abs(sd) < .009) { o[0] = .55; return true; }
+  if (k === 0) { const kx = .75 + .1 * knob.x, track = sdBox(u - .8, y, .085, .032, .032);
+    if (Math.hypot(u - kx, y) < .036) { o[0] = 1; o[1] = knob.x > .5 ? 1 : 0; return true; }
+    if (track < 0) { o[0] = knob.x > .5 ? .5 : .2; o[1] = knob.x > .5 ? 2 : 0; return true; } }
+  if (Math.hypot(u - .17, y) < .03) { o[0] = .9; return true; }
+  if (Math.abs(y) < .012 && u > .25 && u < .25 + [.3, .38, .22, .33][k]) { o[0] = .85; return true; }
+  return false; }
+let last3 = 0;
+function frame3(t) {
+  const dt = Math.min(.05, t - last3); last3 = t; const P = T3.ptr;
+  press.forEach(p => stepSpring(p, dt, 38, .35)); stepSpring(knob, dt, 22, .55);
+  if (!reduced) { const d = .975; for (let j = 1; j < N3 - 1; j++) for (let i = 1; i < N3 - 1; i++) { const q = j * N3 + i;
+    h0[q] = ((h1[q - 1] + h1[q + 1] + h1[q - N3] + h1[q + N3]) / 2 - h0[q]) * d; } [h0, h1] = [h1, h0]; }
+  const R = .2, dist = 2.6;
+  T3.draw((i, j, u, v, o) => {
+    let su = u, sv = v; const dx = u - P.u, dy = v - P.v, r = Math.hypot(dx, dy);
+    if (P.inside && r < R && r > 1e-4) { const x = r / R, xi = x / (1 + dist - dist * x); su = P.u + dx / r * xi * R; sv = P.v + dy / r * xi * R; }
+    const q = j * N3 + i, hh = h1[q] || 0;
+    if (i > 0 && i < N3 - 1) { su += (h1[q + 1] - h1[q - 1]) * .02; sv += ((h1[q + N3] || 0) - (h1[q - N3] || 0)) * .02; }
+    const k = rowAt(sv);
+    if (k >= 0 && rowField(su, sv, k, o)) {
+      o[0] = Math.max(0, o[0] - press[k].x / STEPS * 1.2);
+      return; }
+    if (k >= 0 && focus === k) { const sd = sdBox(su - .5, sv - ROWS[k], .43, .075, .075);
+      if (Math.abs(sd) < .008 && (i + j + Math.floor(t * 10)) % 3 === 0) { o[0] = .9; return; } }
+    let base = (i % 2 === 0 && j % 2 === 0) ? .16 : 0;
+    if (P.inside) base = Math.max(base, (i % 2 === 0 && j % 2 === 0 ? .55 : 0) * ss(.16, 0, r));
+    o[0] = base + Math.min(.6, Math.abs(hh) * .5);
+  });
+}
+
+// ---- 04 depth: lambert SDF + torch + shadow + moat + bloom -------------
+const T4 = tile('c4', 72), E4 = 1 / 72;
+const btn = (u, v) => sdBox(u - .33, v - .64, .2, .13, .055), dome = (u, v) => Math.hypot(u - .68, v - .36) - .19;
+const scene = (u, v) => Math.min(btn(u, v), dome(u, v));
+const height = (u, v) => { const b = btn(u, v); if (b < 0) return clamp(-b / .045) * .6;
+  const d = dome(u, v); if (d < 0) { const r = (d + .19) / .19; return Math.sqrt(Math.max(0, 1 - r * r)) * 1.2; } return 0; };
+function frame4(t) {
+  const P = T4.ptr, lx = P.inside ? P.u : .5 + .42 * Math.cos(.7 * t), ly = P.inside ? P.v : .48 + .38 * Math.sin(.7 * t);
+  T4.draw((i, j, u, v, o) => {
+    const s = scene(u, v);
+    const ledD = Math.hypot(u - .23, v - .64);
+    if (ledD < .03) { o[0] = 1; o[1] = 1; return; }
+    if (s < 0) {
+      const hx = (height(u + E4, v) - height(u - E4, v)) / (2 * E4), hy = (height(u, v + E4) - height(u, v - E4)) / (2 * E4);
+      let nx = -hx * .06, ny = -hy * .06, nz = 1; const nl = Math.hypot(nx, ny, nz); nx /= nl; ny /= nl; nz /= nl;
+      let Lx = lx - u, Ly = ly - v, Lz = .35; const ll = Math.hypot(Lx, Ly, Lz); Lx /= ll; Ly /= ll; Lz /= ll;
+      const ndl = Math.max(0, nx * Lx + ny * Ly + nz * Lz), Hz = Lz + 1, hl = Math.hypot(Lx, Ly, Hz), spec = Math.max(0, (nx * Lx + ny * Ly + nz * Hz) / hl) ** 28;
+      o[0] = .1 + .8 * ndl + .45 * spec; return; }
+    if (ledD < .075 && btn(u, v) < 0) return;
+    if (ledD < .062) { o[0] = .7; o[1] = 2; return; }
+    if (ledD < .085) { o[0] = .38; o[1] = 2; return; }
+    if (s < 1.3 * E4) return;                                     // 1-dot occlusion moat
+    if ((i + j) % 2) return;                                       // backplate on a checker lattice
+    const dl = Math.hypot(lx - u, ly - v) || 1, off = .07;
+    const sh = ss(-.01, .03, scene(u + (lx - u) / dl * off, v + (ly - v) / dl * off));
+    const lit = .16 + .3 * ss(.6, 0, dl);
+    o[0] = lit * (.25 + .75 * sh);
+  });
+}
+
+// ---- one board clock, paused when off-screen ---------------------------
+let visible = true; new IntersectionObserver(es => visible = es.some(e => e.isIntersecting)).observe(document.querySelector('.lab'));
+const t0 = performance.now(); let lastDraw = 0;
+function loop(now) { requestAnimationFrame(loop); if (!visible || document.hidden || now - lastDraw < 1000 / 30) return; lastDraw = now;
+  const t = (now - t0) / 1000; frame1(t); frame2(t); frame3(t); frame4(t); }
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
