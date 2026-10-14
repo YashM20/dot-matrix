@@ -24,7 +24,8 @@ export function squirclePath(x: number, y: number, r: number, roundness = 0): st
   const k = r * bezierHandle(n)
   return `M ${x} ${y - r} C ${x + k} ${y - r} ${x + r} ${y - k} ${x + r} ${y} C ${x + r} ${y + k} ${x + k} ${y + r} ${x} ${y + r} C ${x - k} ${y + r} ${x - r} ${y + k} ${x - r} ${y} C ${x - r} ${y - k} ${x - k} ${y - r} ${x} ${y - r}Z`
 }
-export function superformulaPath(): never { throw new Error('not implemented — deferred, see DESIGN.md Known Gaps') }
+/** Superformula outlines are deferred (DESIGN.md › Known Gaps); until then they render as circles instead of throwing. */
+export function superformulaPath(x: number, y: number, r: number): string { return circlePath(x, y, r) }
 
 /** Radius of the rendered squircle at 45°, in units of r — used by the acceptance tests. */
 export function squircleRadius45(roundness: number): number {

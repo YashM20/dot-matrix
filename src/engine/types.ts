@@ -40,4 +40,9 @@ export interface Layer {
    * (highest value wins, later layer wins ties), so an accent arc can reuse its track's sites.
    */
   sites?: [number, number][]
+  /**
+   * Dot size of a `sites` layer relative to a card dot (2 ≈ hero dot). Older presets pass this as
+   * `lattice`, which is still honoured when `size` is absent; `lattice` otherwise means pitch.
+   */
+  size?: number
 }

@@ -5,6 +5,7 @@
  * places it on a coarser lattice like `T.big`; rings, sliders and waveforms are dot sites.
  */
 import { scale2x } from '../../engine/fields/bitmapFont'
+import { hash01, smoothstep } from '../../engine/math'
 import type { Field } from '../../engine/types'
 import { TAU, TILE, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
@@ -114,7 +115,6 @@ const ICONS: Record<string, string[]> = {
 
 // ── waveforms and texture noise ─────────────────────────────────────────────
 const frac = (x: number) => x - Math.floor(x)
-const hash = (i: number, seed: number) => { const x = Math.sin(i * 127.1 + seed * 311.7) * 43758.5453; return x - Math.floor(x) }
 /** Waveform bars as dot sites: half-heights in dots, mirrored around `cy`, `gap` cells apart. */
 const dotWave = (halves: number[], x0: number, cy: number, gap: number, pitch: number, size: number): LatticeField =>
   T.dots(halves.flatMap((n, i) => Array.from({ length: 2 * n + 1 }, (_, j) => [x0 + i * gap, cy + (j - n) * pitch] as Pt)), size)
@@ -226,9 +226,8 @@ export const interpreter: WidgetPreset = {
 
 // Thermal puppy: luminance = heat (white-hot face, chest and paws, cooler ear tips, a warm floor glow).
 const ell = (u: number, v: number, cx: number, cy: number, rx: number, ry: number) => 1 - Math.hypot((u - cx) / rx, (v - cy) / ry)
-const smoothstep = (a: number, b: number, x: number) => { const k = Math.max(0, Math.min(1, (x - a) / (b - a))); return k * k * (3 - 2 * k) }
 const puppy: Field = (u, v) => {
-  const n1 = hash(Math.floor(u * 150) + Math.floor(v * 150) * 157, 3), n2 = hash(Math.floor(u * 40) + Math.floor(v * 28) * 41, 9) - .5
+  const n1 = hash01(Math.floor(u * 150) + Math.floor(v * 150) * 157, 3), n2 = hash01(Math.floor(u * 40) + Math.floor(v * 28) * 41, 9) - .5
   const fuzz = .1 * n2 + .07 * (n1 - .5)
   const head = ell(u, v, .51, .21, .17, .15), muzzle = ell(u, v, .51, .3, .08, .07)
   const ears = Math.max(ell(u, v, .33, .285, .055, .11), ell(u, v, .685, .28, .055, .11))
@@ -270,12 +269,12 @@ const corridor: Field = (u, v) => {
     const brick = Math.floor(depth + (course % 2) * .5), fz = frac(depth + (course % 2) * .5)
     if (y < .025) return .95 * fog
     if (fy < .14 || fz < .14 || y > .97) return .04
-    return (.62 + .33 * hash(course * 31 + brick, 7)) * fog * (1 - .35 * fy) * (fz < .3 ? 1.15 : 1)
+    return (.62 + .33 * hash01(course * 31 + brick, 7)) * fog * (1 - .35 * fy) * (fz < .3 ? 1.15 : 1)
   }
   const x = (dx * z) / F
   if (z === zFloor) {
     const lane = Math.abs(x * 6 - Math.round(x * 6)) < .09 * Math.sqrt(z), row = frac(depth * 1.1) < .16
-    return lane || row ? .04 : (.36 + .08 * hash(Math.floor(x * 6) * 13 + Math.floor(depth * 1.1), 5)) * fog
+    return lane || row ? .04 : (.36 + .08 * hash01(Math.floor(x * 6) * 13 + Math.floor(depth * 1.1), 5)) * fog
   }
   const rib = frac(depth * 2.4) < .3, ray = Math.abs(x * 3 - Math.round(x * 3)) < .05 * Math.sqrt(z)
   return rib || ray ? .42 * fog : .03

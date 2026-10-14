@@ -5,6 +5,7 @@ const smoothstep = (a: number, b: number, x: number) => { const t = Math.max(0, 
 export function catmullRomField(points: [number, number][], tension = .5): Field {
   const samples: [number, number][] = []
   const n = points.length
+  if (!n) return () => 0
   const tau = tension
   for (let i = 0; i < n - 1; i++) {
     const p0 = points[Math.max(0, i - 1)], p1 = points[i], p2 = points[i + 1], p3 = points[Math.min(n - 1, i + 2)]

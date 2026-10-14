@@ -4,10 +4,10 @@
 ```bash
 npx tsc -b              # 0 errors required
 npm run build           # vite build must succeed, ~103 modules, ~230KB
-npx tsx src/engine/verify-acceptance.ts
-# or Node 22+: node --experimental-strip-types src/engine/verify-acceptance.ts
+npx tsx scripts/verify.ts
+# or Node 22+: node --experimental-strip-types scripts/verify.ts
 ```
-`verify-acceptance.ts` checks:
+`scripts/verify.ts` checks:
 - `quantize` ladder (5 steps → 0 / 0.25 / 0.5 / 0.75 / 1, clip, steps<2 bypass)
 - Poisson-disc `poissonDiscPoints(100,100,12,seed)` minDistance ≥12 and deterministic + `scatterField` near/far
 - `sumOfSinesAmplitudes` vs `ecgAmplitudes` bounds, motion with `t`, variance separation, `traceField`/`amplitudeField` thin vs bar

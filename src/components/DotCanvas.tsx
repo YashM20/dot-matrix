@@ -1,10 +1,13 @@
-import { useEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject } from 'react'
 import { renderCanvas } from '../engine/renderer/canvasRenderer'
+import { sampleLayers } from '../engine/sampler/gridSampler'
+import { sharedClock } from '../engine/clock'
+import { duration as motionDuration, ease, maskByName, revealDots, transitionDots, type MaskName } from '../engine/motion'
 import { renderSVG } from '../engine/renderer/svgRenderer'
-import type { DotStyle, Field, GridConfig, Layer, ThemeTokens } from '../engine'
+import type { DotInstance, DotStyle, Field, GridConfig, Layer, ThemeTokens } from '../engine'
 import { dot480 } from '../engine'
 import type { WidgetContext } from '../widgets/types'
-import { useClock, useDotField } from '../hooks/useDotField'
+import { useDotField } from '../hooks/useDotField'
 
 export type RenderMode = 'svg' | 'canvas'
 export interface DotCanvasProps {
@@ -14,17 +17,26 @@ export interface DotCanvasProps {
   grid: GridConfig
   style: DotStyle
   theme?: ThemeTokens
-  /** Re-sample on a running clock (12 fps by default) — forces the Canvas renderer. */
+  /** Re-sample on the shared master clock (12 fps by default) — forces the Canvas renderer. */
   animated?: boolean
   fps?: number
   /** Bump to re-sample a static source (e.g. a clock on the minute). */
   tick?: number
   renderer?: RenderMode
+  /**
+   * Entrance: wait `delay` ms (the card is not even sampled until then — boards spread their
+   * sampling cost over the stagger), then reveal the dots in `mask` order over `duration` ms.
+   * Skipped under reduced motion. Read once at mount.
+   */
+  enter?: { delay: number; mask?: MaskName; duration?: number }
+  /** Mask for change transitions (new data or minute tick dissolves the old frame into the new). `false` = hard cut. */
+  change?: MaskName | false
   onMode?: (mode: RenderMode) => void
   className?: string
 }
 const CANVAS_THRESHOLD = 2000
 const MAX_BACKING_SCALE = 3
+const CHANGE_MS = 360
 
 const reducedMotionQuery = '(prefers-reduced-motion: reduce)'
 function subscribeReducedMotion(cb: () => void) {
@@ -32,12 +44,7 @@ function subscribeReducedMotion(cb: () => void) {
   mql.addEventListener('change', cb)
   return () => mql.removeEventListener('change', cb)
 }
-function subscribeVisibility(cb: () => void) {
-  document.addEventListener('visibilitychange', cb)
-  return () => document.removeEventListener('visibilitychange', cb)
-}
 const usePrefersReducedMotion = () => useSyncExternalStore(subscribeReducedMotion, () => window.matchMedia(reducedMotionQuery).matches, () => false)
-const usePageVisible = () => useSyncExternalStore(subscribeVisibility, () => document.visibilityState !== 'hidden', () => true)
 
 /** True while the element is (near) the viewport. Only observes when `enabled`, so static cards pay nothing. */
 function useOnScreen(ref: RefObject<Element | null>, enabled: boolean): boolean {
@@ -77,36 +84,138 @@ function useBackingScale(ref: RefObject<HTMLCanvasElement | null>, enabled: bool
   return scale
 }
 
+/** Same dots, same look? (A re-sample that changed nothing must not trigger a change transition.) */
+function sameFrame(a: DotInstance[], b: DotInstance[]): boolean {
+  if (a === b) return true
+  if (a.length !== b.length) return false
+  for (let i = 0; i < a.length; i++) {
+    const p = a[i], q = b[i]
+    if (p.x !== q.x || p.y !== q.y || p.r !== q.r || p.opacity !== q.opacity || p.color !== q.color) return false
+  }
+  return true
+}
+
+/** Short-lived animation drawn over the sampled frame: the entrance, or a change dissolve from the previous frame. */
+type Transient = { kind: 'enter'; t0: number | null } | { kind: 'change'; t0: number | null; prev: DotInstance[] }
+
 /** Field → Grid Sampler → Renderer. Picks SVG for sparse static output, Canvas above ~2000 dots or when animated. */
-export function DotCanvas({ field, layers, data, grid, style, theme = dot480, animated, fps, tick = 0, renderer, onMode, className }: DotCanvasProps) {
+export function DotCanvas({ field, layers, data, grid, style, theme = dot480, animated, fps, tick = 0, renderer, enter, change = 'ign', onMode, className }: DotCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const svgRef = useRef<HTMLDivElement>(null)
   const reducedMotion = usePrefersReducedMotion()
-  const pageVisible = usePageVisible()
   const motion = !!animated && !reducedMotion
   // the observed element is whichever renderer is mounted; `mode` is stable for animated cards (always canvas unless forced)
   const onScreen = useOnScreen(renderer === 'svg' ? svgRef : canvasRef, motion)
-  // paused (off-screen / hidden tab / reduced motion) → clock stops and the card holds a single static frame at t=0
-  const t = useClock(motion && pageVisible && onScreen, fps)
-  const dots = useDotField(layers ? { layers } : { field: field ?? (() => 0) }, grid, style, theme, animated ? t : tick, data)
+  // live = drawn imperatively from the master clock (no React render per frame; the clock itself pauses
+  // while the page is hidden). Otherwise the card is one sampled frame: t=0 for animated cards under
+  // reduced motion or off-screen, `tick` for wall-clock cards.
+  const live = motion && onScreen && !!layers
+
+  // entrance: sampling waits for the stagger delay, so a board spreads its sampling cost over the stagger
+  const [enterSpec] = useState(() => (enter && !window.matchMedia(reducedMotionQuery).matches ? enter : undefined))
+  const [ready, setReady] = useState(!enterSpec)
+  useEffect(() => {
+    if (!enterSpec) return
+    const id = window.setTimeout(() => setReady(true), enterSpec.delay)
+    return () => window.clearTimeout(id)
+  }, [enterSpec])
+
+  const dots = useDotField(layers ? { layers } : { field: field ?? (() => 0) }, grid, style, theme, animated ? 0 : tick, data, ready)
   const pitch = grid.pitch ?? theme.gridPx
   const width = grid.cols * pitch, height = grid.rows * pitch
+
+  // the ref drives frames; the `transient` state only keeps the canvas renderer mounted while one runs
+  const transientRef = useRef<Transient | null>(enterSpec ? { kind: 'enter', t0: null } : null)
+  const [transient, setTransient] = useState<Transient['kind'] | null>(enterSpec ? 'enter' : null)
+  const shownRef = useRef<DotInstance[]>(dots), firstRef = useRef(true)
+  // a new static frame (data edit, minute tick) dissolves from what is on screen now
+  useLayoutEffect(() => {
+    if (!ready || live) { shownRef.current = dots; return }
+    if (firstRef.current) { firstRef.current = false; shownRef.current = dots; return }
+    if (sameFrame(shownRef.current, dots)) return
+    if (change !== false && !reducedMotion && transientRef.current?.kind !== 'enter' && shownRef.current.length) {
+      transientRef.current = { kind: 'change', t0: null, prev: shownRef.current }
+      setTransient('change')
+    }
+    shownRef.current = dots
+  }, [dots, ready, live]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const visible = useMemo(() => { let n = 0; for (const d of dots) if (d.opacity > 0 && d.r > 0) n++; return n }, [dots])
-  const mode: RenderMode = renderer ?? (animated || visible > CANVAS_THRESHOLD ? 'canvas' : 'svg')
+  // transients animate on canvas; a sparse card hands back to SVG when they finish
+  const mode: RenderMode = renderer ?? (animated || transient || visible > CANVAS_THRESHOLD ? 'canvas' : 'svg')
   const svg = useMemo(() => mode === 'svg' ? renderSVG(dots, width, height) : '', [mode, dots, width, height])
   const scale = useBackingScale(canvasRef, mode === 'canvas', width)
-
   useEffect(() => { onMode?.(mode) }, [mode, onMode])
-  useEffect(() => {
-    if (mode !== 'canvas') return
-    const canvas = canvasRef.current, context = canvas?.getContext('2d')
-    if (!canvas || !context) return
+
+  const prepare = (canvas: HTMLCanvasElement) => {
+    const context = canvas.getContext('2d')
+    if (!context) return null
     const w = Math.round(width * scale), h = Math.round(height * scale)
     if (canvas.width !== w || canvas.height !== h) { canvas.width = w; canvas.height = h }
     context.setTransform(scale, 0, 0, scale, 0, 0)
+    return context
+  }
+  const draw = (canvas: HTMLCanvasElement, frame: DotInstance[]) => {
+    const context = prepare(canvas)
+    if (!context) return
     context.clearRect(0, 0, width, height)
-    renderCanvas(context, dots)
-  }, [mode, dots, width, height, scale])
+    renderCanvas(context, frame)
+  }
+  /** Apply the running transient (if any) to a frame at clock time `t`; ends it when complete. */
+  const applyTransient = (frame: DotInstance[], t: number): DotInstance[] => {
+    const tr = transientRef.current
+    if (!tr) return frame
+    if (tr.t0 === null) tr.t0 = t
+    const elapsed = t - tr.t0, geometry = { cols: grid.cols, rows: grid.rows, pitch }
+    if (tr.kind === 'enter') {
+      const p = ease.decelerate(elapsed / ((enterSpec?.duration ?? motionDuration.enter) / 1000))
+      if (p >= 1) { transientRef.current = null; setTransient(null); return frame }
+      return revealDots(frame, { ...geometry, p, mask: maskByName(enterSpec?.mask), edge: .06 })
+    }
+    const p = ease.standard(elapsed / (CHANGE_MS / 1000))
+    if (p >= 1) { transientRef.current = null; setTransient(null); return frame }
+    return transitionDots(tr.prev, frame, { ...geometry, p, mask: maskByName(change || undefined), edge: .05 })
+  }
+
+  // transient on a static card: a short-lived 30 fps clock subscription (first frame drawn before paint)
+  useLayoutEffect(() => {
+    if (!ready || !transient || live || mode !== 'canvas') return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const clock = sharedClock()
+    draw(canvas, applyTransient(shownRef.current, clock.time()))
+    return clock.subscribe({ fps: 30, onFrame: t => draw(canvas, applyTransient(shownRef.current, t)) })
+  }, [ready, transient, live, mode, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // static frame (also the paused / reduced-motion frame of an animated card)
+  useEffect(() => {
+    if (mode !== 'canvas' || live || transient) return
+    const canvas = canvasRef.current
+    if (canvas) draw(canvas, dots)
+  }, [mode, live, transient, dots, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // live frames straight from the master clock; a throwing frame keeps the last good one on screen
+  const { cols, rows, pitch: gridPitch } = grid
+  const { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps } = style
+  const dataKey = JSON.stringify(data ?? {})
+  useEffect(() => {
+    if (!live || !ready || mode !== 'canvas' || !layers) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const g = { cols, rows, pitch: gridPitch }, s = { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps }
+    const frameData = JSON.parse(dataKey) as Record<string, number>
+    let failed = false
+    return sharedClock().subscribe({
+      fps: fps ?? 12,
+      onFrame(t: number, frame: number) {
+        try { draw(canvas, applyTransient(sampleLayers(layers({ t, frame, data: frameData, grid: g }), g, s, theme), t)) }
+        catch (error) {
+          if (!failed) console.error('DotCanvas: frame failed, keeping the last good frame', error)
+          failed = true
+        }
+      },
+    })
+  }, [live, ready, mode, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, theme, dataKey, fps, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (mode === 'canvas') {
     return <canvas ref={canvasRef} className={className} style={{ width: '100%', height: 'auto', display: 'block', aspectRatio: `${width} / ${height}` }} aria-hidden="true" />

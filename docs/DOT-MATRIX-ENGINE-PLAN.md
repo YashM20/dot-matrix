@@ -20,7 +20,7 @@ src/engine/                       framework-free TypeScript + Canvas/SVG APIs on
   fields/haltoneField.ts          imageToLuminanceField, bayerDither (per-dot), floydSteinbergDither, boxBlurField
   fields/waveformField.ts         amplitudeField (bottom/center baseline, gap), traceField, speech/ecg/sine amplitudes
   fields/splineField.ts, heatmapField.ts, scatterField.ts, projection3D.ts, warpedField.ts
-  verify-acceptance.ts            headless acceptance tests — `pnpm verify`
+  (tests live in scripts/verify.ts — `pnpm verify`)
 src/widgets/
   types.ts                        WidgetPreset { grid, style, chrome?, label?, bleed?, defaults?, layers(ctx) }, TILE/CARD grids, tileStyle, layoutFor() (big, dotRing, dotLine, dotDisc, dotBars, dots, lattice …), cardChrome/withChrome
   sprites.ts                      1-bit pixel art (invaders, bear, deer, pill …)

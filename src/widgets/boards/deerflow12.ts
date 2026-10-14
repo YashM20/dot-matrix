@@ -3,6 +3,7 @@
  * TILE cards (144×144): 5×7 labels on the card pitch, stat values on a 1.5–1.6 lattice, heroes on
  * 1.8–3, and every outline (car, cube, leaf, rings, chart) as evenly spaced dot sites.
  */
+import { hash01 } from '../../engine/math'
 import type { Field } from '../../engine/types'
 import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
@@ -10,7 +11,6 @@ const T = layoutFor(TILE)
 type Pt = [number, number]
 const VALUE = { lattice: 1.6 }
 const deg = (d: number) => (d / 360) * TAU
-const hash = (i: number) => { const x = Math.sin(i * 127.1 + 311.7) * 43758.5453; return x - Math.floor(x) }
 
 /** Evenly spaced points along a polyline (spacing carried across vertices, so corners don't bunch up). */
 function trace(pts: Pt[], spacing: number, closed = false): Pt[] {
@@ -51,7 +51,7 @@ const stat = (label: string, value: string, col: number, row: number, lattice = 
 const agentWave = (t: number) => Array.from({ length: 48 }, (_, i) => {
   const x = 1 + 3 * i, wob = .45 + .55 * Math.abs(Math.sin(i * 1.9 + t * 3.2))
   if (x >= 20 && x <= 47) return Math.sin((Math.PI * (x - 19)) / 29) ** 1.5 * wob
-  if (x >= 64) return i % 2 ? 0 : (.3 + .7 * hash(i + 9)) * wob
+  if (x >= 64) return i % 2 ? 0 : (.3 + .7 * hash01(i + 9, 1)) * wob
   return 0
 })
 export const agentStatus: WidgetPreset = {

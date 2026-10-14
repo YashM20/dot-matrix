@@ -3,7 +3,7 @@ import { dot480 } from '../engine'
 import { useMemo } from 'react'
 import type { WidgetPreset } from '../widgets'
 import { widgetById, withChrome } from '../widgets'
-import { DotCanvas } from './DotCanvas'
+import { DotCanvas, type DotCanvasProps } from './DotCanvas'
 
 export interface DotWidgetProps {
   /** Preset id from `widgetPresets` (ignored when `preset` is given). */
@@ -20,9 +20,11 @@ export interface DotWidgetProps {
   data?: Record<string, number>
   tick?: number
   preset?: WidgetPreset
+  /** Staggered entrance (see `DotCanvas.enter`). */
+  enter?: DotCanvasProps['enter']
 }
 
-export function DotWidget({ type, density, dotShape, roundness, size, theme = dot480, animated, data, tick, preset: presetProp }: DotWidgetProps) {
+export function DotWidget({ type, density, dotShape, roundness, size, theme = dot480, animated, data, tick, preset: presetProp, enter }: DotWidgetProps) {
   const preset = presetProp ?? widgetById(type)
   const layers = useMemo(() => preset && withChrome(preset), [preset])
   if (!preset || !layers) return null
@@ -38,7 +40,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
         {preset.live && <i className="status-dot" />}
       </header>}
       <div className="dot-card-body">
-        <DotCanvas layers={layers} data={{ ...preset.defaults, ...data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} tick={tick} />
+        <DotCanvas layers={layers} data={{ ...preset.defaults, ...data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} tick={tick} enter={enter} />
       </div>
     </article>
   )

@@ -4,6 +4,7 @@
  * 5×7 captions on the card pitch, values on a 1–1.3 lattice, heroes as big single dots on a 2–3 lattice.
  * Photo-like content (thermal mug, car, desk scene) is a procedural luminance field in cell space.
  */
+import { clamp, hash01, smoothstep } from '../../engine/math'
 import type { Field } from '../../engine/types'
 import { TAU, TILE, bounded, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 import { HEART, INVADER } from '../sprites'
@@ -13,10 +14,18 @@ type Pt = [number, number]
 const N = TILE.cols - 1
 /** Photo-like cards: continuous dot sizes, no quantization (luminance in, halftone out). */
 const photoStyle = { ...tileStyle, sizeMin: 0, sizeMax: 1.05, quantizeSteps: 0 }
-const clamp = (x: number, a = 0, b = 1) => Math.max(a, Math.min(b, x))
-const sstep = (a: number, b: number, x: number) => { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t) }
-/** A field written in card cells (x,y ∈ 0..143), limited to a cell box so the sampler skips the rest. */
-const cells = (f: (x: number, y: number) => number, box: [number, number, number, number] = [0, 0, N, N]): Field => bounded((u, v) => f(u * N, v * N), ...box)
+/**
+ * A field written in card cells (x,y ∈ 0..143), limited to a cell box: it reads 0 outside the box (so it
+ * renders the same with or without `bounds`) and carries the box as `bounds` so the sampler skips the rest.
+ */
+const cells = (f: (x: number, y: number) => number, box: [number, number, number, number] = [0, 0, N, N]): Field => {
+  // the sampler visits whole cells floor(c0)…ceil(c1); clip to exactly those
+  const c0 = Math.floor(box[0]), r0 = Math.floor(box[1]), c1 = Math.ceil(box[2]), r1 = Math.ceil(box[3])
+  return bounded((u, v) => {
+    const x = u * N, y = v * N, c = Math.round(x), r = Math.round(y)
+    return c < c0 || c > c1 || r < r0 || r > r1 ? 0 : f(x, y)
+  }, ...box)
+}
 const inPoly = (pts: Pt[], x: number, y: number) => {
   let inside = false
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
@@ -29,7 +38,6 @@ const segDist = (x: number, y: number, [ax, ay]: Pt, [bx, by]: Pt) => {
   const dx = bx - ax, dy = by - ay, t = clamp(((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))
   return Math.hypot(x - ax - t * dx, y - ay - t * dy)
 }
-const hash = (i: number, seed = 0) => { const x = Math.sin(i * 127.1 + seed * 311.7) * 43758.5453; return x - Math.floor(x) }
 
 /** Evenly spaced dot sites along a polyline (spacing carried across corners). */
 const dotPath = (pts: Pt[], spacing: number, size: number): LatticeField => {
@@ -81,12 +89,12 @@ const mugHeat = (x: number, y: number) => {
   const body = (y >= 43 && y <= 100 && Math.abs(x - MUG_X) <= half) || e <= 1 || be <= 1
   const ho = Math.hypot((x - 43) / 18, (y - 68) / 15.5), hi = Math.hypot((x - 41) / 10, (y - 68) / 9.5)
   const handle = x < 44 && ho <= 1 && hi >= 1
-  const grain = .09 * Math.sin(x * 1.3 + y * .7) * Math.cos(y * 1.1 - x * .4) + .12 * (hash(Math.round(x) * 151 + Math.round(y), 3) - .5)
+  const grain = .09 * Math.sin(x * 1.3 + y * .7) * Math.cos(y * 1.1 - x * .4) + .12 * (hash01(Math.round(x) * 151 + Math.round(y), 3) - .5)
   let h = 0
   if (body) {
     const core = Math.exp(-((x - 62) ** 2 + (y - 68) ** 2) / (2 * 12 ** 2))
     const edge = Math.min(half - Math.abs(x - MUG_X), 104.5 - y)
-    h = (.52 + .5 * core + grain) * (.8 + .2 * sstep(0, 4, edge))
+    h = (.52 + .5 * core + grain) * (.8 + .2 * smoothstep(0, 4, edge))
     if (e < .86) h = .5 + grain
   }
   if (Math.abs(e - 1) < .13) h = Math.max(h, .7 + grain)
@@ -96,18 +104,26 @@ const mugHeat = (x: number, y: number) => {
   const d = Math.min(Math.max(Math.abs(x - MUG_X) - half, 36.5 - y, y - 104.5, 0) + (y < 36.5 || y > 104.5 ? Math.max(0, Math.abs(x - MUG_X) - half) : 0), x < 46 ? Math.max(0, ho - 1) * 15 : 99)
   return .34 * Math.exp(-d / 2.2)
 }
+/** The mug is static: bake its heat once per card cell, shared by the three tone layers below. */
+const HEAT = new Float64Array(TILE.cols * TILE.rows).fill(NaN)
+const heatAt = (x: number, y: number) => {
+  const c = Math.round(x), r = Math.round(y)
+  if (Math.abs(x - c) > 1e-6 || Math.abs(y - r) > 1e-6 || c < 0 || r < 0 || c > N || r > N) return mugHeat(x, y)
+  const i = r * TILE.cols + c, h = HEAT[i]
+  return h === h ? h : (HEAT[i] = mugHeat(x, y))
+}
 const PANEL: [number, number, number, number] = [0, 16, 117, 110]
 /** Red → white is dithered: the hotter a cell, the likelier it is a white dot. */
-const hot = (x: number, y: number, h: number) => hash(Math.round(x) * 151 + Math.round(y), 7) < clamp((h - .76) / .2)
+const hot = (x: number, y: number, h: number) => hash01(Math.round(x) * 151 + Math.round(y), 7) < clamp((h - .76) / .2)
 export const thermalMonitor: WidgetPreset = {
   id: 'thermal-monitor', name: '01 Thermal Monitor', label: '01  THERMAL MONITOR', group: 'photo', chrome: 'dots', grid: TILE, style: photoStyle,
   layers: () => [
     num('01'), ...menuGlyph,
     // sensor frame, then the heat: cool halo grey, warm body red, hot core white (dot size = heat)
     layer(frame(0, 16, 118, 95, 6), 'faint'),
-    layer(cells((x, y) => { const h = mugHeat(x, y); return h >= .05 && h < .42 ? .25 + h * 1.2 : 0 }, PANEL), 'mid'),
-    layer(cells((x, y) => { const h = mugHeat(x, y); return h >= .42 && !hot(x, y, h) ? .45 + .55 * clamp((h - .42) / .3) : 0 }, PANEL), 'active'),
-    layer(cells((x, y) => { const h = mugHeat(x, y); return hot(x, y, h) ? .7 + .3 * clamp((h - .9) / .1) : 0 }, PANEL), 'value'),
+    layer(cells((x, y) => { const h = heatAt(x, y); return h >= .05 && h < .42 ? .25 + h * 1.2 : 0 }, PANEL), 'mid'),
+    layer(cells((x, y) => { const h = heatAt(x, y); return h >= .42 && !hot(x, y, h) ? .45 + .55 * clamp((h - .42) / .3) : 0 }, PANEL), 'active'),
+    layer(cells((x, y) => { const h = heatAt(x, y); return hot(x, y, h) ? .7 + .3 * clamp((h - .9) / .1) : 0 }, PANEL), 'value'),
     // colour scale: hot (red) at the top fading to cool grey
     layer(cap('55°C', 143, 20, 'right'), 'value'),
     ...[138, 141].flatMap(x => [
@@ -148,7 +164,7 @@ const car = (x: number, y: number) => {
   if (y > 93) return 0
   if (y < top + 1.3) return .85
   const crease = 76 - (x * 6) / 143
-  if (x > 49 && x < 140 && y < 64.5) return Math.abs(x - 85) < 1.3 || y < top + 2.4 ? .45 : .14 + .12 * sstep(58, 50, y)
+  if (x > 49 && x < 140 && y < 64.5) return Math.abs(x - 85) < 1.3 || y < top + 2.4 ? .45 : .14 + .12 * smoothstep(58, 50, y)
   if (Math.abs(y - 65.5) < .7 && x > 46) return .62
   if (Math.abs(y - crease) < .7) return .58
   if (x < 12 && y > 77 && y < 80) return .9
@@ -274,7 +290,8 @@ const SHIP_R = [
   '', '', '', '', '', '', '....#........#....', '....#........#....', '', '', '.#..............#.', '.#..............#.', '.#......##......#.', '........##........',
   '', '', '........##........', '........##........', '', '', '', '.....#......#.....',
 ]
-const STARS: Pt[] = Array.from({ length: 34 }, (_, i) => [Math.round(hash(i, 1) * 143), 14 + Math.round(hash(i, 2) * 129)] as Pt)
+// seeds 24/25 picked after the hash01 switch: evenly spread, no star pairs clumping beside the invaders
+const STARS: Pt[] = Array.from({ length: 34 }, (_, i) => [Math.round(hash01(i, 24) * 143), 14 + Math.round(hash01(i, 25) * 129)] as Pt)
   .filter(([x, y]) => !(x > 52 && x < 84 && y > 108) && !(x > 90 && y < 40) && !(x < 30 && y < 28))
 const SPARKS: Pt[] = [[82, 41], [76, 47], [91, 47], [75, 57], [92, 57], [79, 62], [88, 62], [83.5, 65]]
 export const miniGame: WidgetPreset = {
@@ -337,7 +354,7 @@ const TAG_BOX = TAGS.map(([x, y, s]) => [x, y, x + tagW(s) - 1, y + TAG_H - 1])
 const desk = (x: number, y: number) => {
   if (TAG_BOX.some(([a, b, c, d]) => x >= a && x <= c && y >= b && y <= d)) return 0
   // desk: a soft pool of light behind the laptop, falling off toward the edges
-  let lum = .24 + .16 * clamp(1 - Math.hypot(x - 60, y - 40) / 110) + .03 * (hash(Math.round(x) * 157 + Math.round(y), 9) - .5)
+  let lum = .24 + .16 * clamp(1 - Math.hypot(x - 60, y - 40) / 110) + .03 * (hash01(Math.round(x) * 157 + Math.round(y), 9) - .5)
   // plant: dark pot with a lit rim, leaf strokes fanning out of it
   if (x > 113 && x < 134 && y > 33 && y < 52) lum = y < 36 ? .5 : .1 + .1 * clamp((x - 114) / 20)
   else if (y < 36 && LEAVES.some(p => segDist(x, y, [123, 34], p) < 1.3)) lum = .7
