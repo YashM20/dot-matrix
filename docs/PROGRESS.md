@@ -153,6 +153,15 @@ Plan reference: MASTER-PLAN §4 P1. **Flagship: Departures.**
 - [ ] P1 exit gates.
 
 ## Next up (in order)
+> **User feedback (2026-10-14, end of session): priorities were wrong.** Too much tooling and docs, not enough visible work.
+> Focus next on what the user sees, in this order:
+> 1. Board-to-board transition: old board exits (`revealDots` exit, staggered), then the new one enters.
+> 2. Split-flap digits on the home-clock (`splitFlapText`, triggered on the minute tick).
+> 3. The **Departures** flagship board (live split-flap transit board).
+> 4. Interactive components (extend `components.ts`; the user loved this board).
+>
+> Keep doc and tooling updates minimal: just tick this checklist.
+
 1. Wire data springs (`springKeys`) and a home-clock split-flap using `splitFlapText` + `tick`.
 2. Font registry (M1), then `layoutText`, then decode on local faces.
 3. Departures flagship: v0 references + thesis, then 3 variants for the user to pick.
