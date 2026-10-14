@@ -25,6 +25,7 @@ import { bounded } from '../src/engine/layout'
 import { catmullRomField } from '../src/engine/fields/splineField'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
 function assert(name: string, cond: boolean, detail = '') {
@@ -210,6 +211,54 @@ assert('traceField renders thin line at amp', traceField([0.5], 0.02)(0.5, 0.5) 
     return /Math\.random\(|Date\.now\(|new Date\(|43758\.5453/.test(code)
   })
   assert('src/engine has no Math.random / Date.now / new Date / sin-hash', offenders.length === 0, offenders.join(', '))
+}
+
+// 13) motion primitives: masks, reveal/transition, springs, easing, text
+{
+  const names = Object.keys(masks) as (keyof typeof masks)[]
+  let inRange = true
+  for (const n of names) for (let r = 0; r < 24; r++) for (let c = 0; c < 24; c++) { const m = masks[n](c, r, 24, 24); if (!(m >= 0 && m < 1)) inRange = false }
+  const edged = ditherEdge(masks.radial)
+  for (let r = 0; r < 24; r++) for (let c = 0; c < 24; c++) { const m = edged(c, r, 24, 24); if (!(m >= 0 && m < 1)) inRange = false }
+  assert('every mask ranks cells in [0, 1)', inRange, names.join(' '))
+  const bayerRanks = new Set<number>(); for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) bayerRanks.add(masks.bayer(c, r, 8, 8))
+  assert('bayer 8×8 gives 64 distinct ranks', bayerRanks.size === 64)
+
+  const geo = { cols: 12, rows: 12, pitch: 2, mask: masks.bayer }
+  const full = sampleLayers([{ field: () => 1 }], { cols: 12, rows: 12, pitch: 2 }, { shape: 'circle', sizeMin: 0, sizeMax: 1 }, dot480)
+  const other = full.map(d => ({ ...d, color: '#123456' }))
+  assert('reveal at p=0 shows nothing, at p=1 everything', revealDots(full, { ...geo, p: 0 }).length === 0 && revealDots(full, { ...geo, p: 1 }) === full)
+  const half = revealDots(full, { ...geo, p: .5 }).length
+  assert('reveal at p=.5 shows about half (bayer is exact)', half === 72, String(half))
+  assert('exit is the complement of enter', revealDots(full, { ...geo, p: .5, exit: true }).length === 144 - half)
+  const mid = transitionDots(full, other, { ...geo, p: .5 })
+  assert('transition shows each cell from exactly one frame', mid.length === 144 && mid.filter(d => d.color === '#123456').length === half)
+  assert('transition endpoints are the frames themselves', transitionDots(full, other, { ...geo, p: 0 }) === full && transitionDots(full, other, { ...geo, p: 1 }) === other)
+  const flashed = revealDots(full.map(d => ({ ...d, opacity: .3 })), { ...geo, p: .5, edge: .1 })
+  assert('reveal scan edge flashes dots near the front, keeps the rest', flashed.some(d => d.opacity > .9) && flashed.some(d => d.opacity === .3))
+
+  const c0 = criticalSpring(0, 0, 1, .2, 0), c1 = criticalSpring(0, 0, 1, .2, .2), c9 = criticalSpring(0, 0, 1, .2, 3)
+  assert('critical spring starts at x0, is ~half way at one half-life, settles without overshoot', c0.x === 0 && Math.abs(c1.x - .5) < .1 && Math.abs(c9.x - 1) < 1e-3, `${c1.x.toFixed(3)}`)
+  let over = false; for (let t = 0; t < 2; t += .01) if (criticalSpring(0, 0, 1, .2, t).x > 1 + 1e-9) over = true
+  assert('critical spring never overshoots', !over)
+  let peak = 0; for (let t = 0; t < 2; t += .005) peak = Math.max(peak, underdampedSpring(0, 0, 1, 2, .3, t).x)
+  assert('under-damped spring overshoots then settles', peak > 1.05 && Math.abs(underdampedSpring(0, 0, 1, 2, .3, 6).x - 1) < 1e-3, peak.toFixed(3))
+  const ds = new DataSprings(.15)
+  ds.set({ a: 0 }, 0); ds.set({ a: 10 }, 1)
+  const midA = ds.at(1.15).a
+  ds.set({ a: 0 }, 1.15)
+  assert('data springs re-target from the current value without a jump', Math.abs(ds.at(1.15).a - midA) < 1e-9 && midA > 2 && midA < 8, midA.toFixed(2))
+  assert('data springs settle', ds.settled(4) && !ds.settled(1.2))
+
+  const em = cubicBezier(.2, 0, 0, 1)
+  assert('cubic-bezier hits its endpoints and is monotone', em(0) === 0 && Math.abs(em(1) - 1) < 1e-6 && em(.25) < em(.5) && em(.5) < em(.75))
+  assert('decelerate front-loads progress, accelerate back-loads it', ease.decelerate(.3) > .5 && ease.accelerate(.3) < .2)
+
+  assert('decode resolves to the target and keeps unchanged characters', decodeText('21:30', '21:31', 5) === '21:31' && decodeText('21:30', '21:31', 0).startsWith('21:3'))
+  let digitsOnly = true; for (let t = 0; t < .6; t += .05) if (!/^\d\d:\d\d$/.test(decodeText('09:59', '10:00', t))) digitsOnly = false
+  assert('decode scrambles digits within digits (no width change)', digitsOnly)
+  const flap = splitFlapText('09', '12', 0), done = splitFlapText('09', '12', 5)
+  assert('split-flap steps forward and lands on the target', flap.moving && flap.text.length === 2 && !done.moving && done.text === '12')
 }
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
