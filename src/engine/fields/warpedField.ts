@@ -1,6 +1,7 @@
 import type { Field } from '../types'
 
 const TAU = Math.PI * 2
+const smoothstep = (a: number, b: number, x: number) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
 
 export const warpDomain = (field: Field, warp: (u: number, v: number) => [number, number]): Field => (u, v) => { const [uu, vv] = warp(u, v); return field(Math.max(0, Math.min(1, uu)), Math.max(0, Math.min(1, vv))) }
 
@@ -11,24 +12,29 @@ export const radialWarp = (field: Field, strength = 0.15): Field => warpDomain(f
 export function modulatedRingField(cx: number, cy: number, rInner: number, rOuter: number, thetaStart: number, sweep: number, modFreq = 6, modAmp = 0.28): Field {
   return (u, v) => {
     const r = Math.hypot(u - cx, v - cy), theta = Math.atan2(v - cy, u - cx)
-    const ang = ((theta - thetaStart + TAU) % TAU)
+    const ang = (((theta - thetaStart) % TAU) + TAU) % TAU
     if (ang > sweep) return 0
     const mod = 1 + Math.sin(theta * modFreq) * modAmp
     const inner = rInner * mod, outer = rOuter * mod
     const edge = 0.012
     const radial = Math.max(0, Math.min(1, (r - inner) / edge)) * Math.max(0, 1 - Math.max(0, Math.min(1, (r - (outer - edge)) / edge)))
-    const clamped = Math.max(0, Math.min(1, radial))
-    return clamped
+    return Math.max(0, Math.min(1, radial))
   }
 }
 
-export function spiralField(cx: number, cy: number, turns = 2.2, tightness = 18): Field {
-  const smoothstep = (a: number, b: number, x: number) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t) }
+/**
+ * Archimedean spiral r = (θ + 2πk) / tightness. `turns` arms wrap around the centre;
+ * the value falls off with distance (in r units) to the nearest arm, with no seam at θ=0.
+ */
+export function spiralField(cx: number, cy: number, turns = 2.2, tightness = 18, lineWidth = 0.35): Field {
+  const pitch = TAU / tightness, maxR = (turns * TAU) / tightness
   return (u, v) => {
-    const dx = u - cx, dy = v - cy, r = Math.hypot(dx, dy), ang = Math.atan2(dy, dx)
-    const spiral = (ang + TAU) % TAU / TAU * turns * TAU
-    const dist = Math.abs(r * tightness - spiral)
-    return dist <= 0.06 ? 1 : dist >= 0.22 ? 0 : 1 - smoothstep(0.06, 0.22, dist)
+    const dx = u - cx, dy = v - cy, r = Math.hypot(dx, dy)
+    if (r > maxR + pitch) return 0
+    const ang = (Math.atan2(dy, dx) + TAU) % TAU
+    const phase = (((r * tightness - ang) % TAU) + TAU) % TAU
+    const dist = Math.min(phase, TAU - phase) / tightness / pitch // 0 on the arm, 0.5 midway between arms
+    return dist <= lineWidth * 0.5 ? 1 : 1 - smoothstep(lineWidth * 0.5, lineWidth, dist)
   }
 }
 

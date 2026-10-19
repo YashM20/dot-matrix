@@ -1,18 +1,49 @@
 import type { DotInstance } from '../types'
+import { BEZIER_MAX_N, bezierHandle, cornerFraction, squircleExponent } from './shapePath'
+
+type PathSink = Pick<CanvasPath, 'moveTo' | 'lineTo' | 'arcTo' | 'bezierCurveTo' | 'arc' | 'rect' | 'closePath'>
+
+/** Append one dot outline as a closed sub-path (squircles: same curve as the SVG renderer). */
+function addDot(p: PathSink, dot: DotInstance): void {
+  const { x, y, r } = dot
+  if (dot.shape === 'square') { p.rect(x - r, y - r, r * 2, r * 2); return }
+  if (dot.shape !== 'squircle') { p.moveTo(x + r, y); p.arc(x, y, r, 0, Math.PI * 2); p.closePath(); return }
+  const n = squircleExponent(dot.roundness ?? 0)
+  if (n > BEZIER_MAX_N) {
+    const c = r * cornerFraction(n), s = r - c
+    p.moveTo(x - s, y - r); p.lineTo(x + s, y - r); p.arcTo(x + r, y - r, x + r, y - s, c)
+    p.lineTo(x + r, y + s); p.arcTo(x + r, y + r, x + s, y + r, c)
+    p.lineTo(x - s, y + r); p.arcTo(x - r, y + r, x - r, y + s, c)
+    p.lineTo(x - r, y - s); p.arcTo(x - r, y - r, x - s, y - r, c)
+  } else {
+    const k = r * bezierHandle(n)
+    p.moveTo(x, y - r); p.bezierCurveTo(x + k, y - r, x + r, y - k, x + r, y)
+    p.bezierCurveTo(x + r, y + k, x + k, y + r, x, y + r)
+    p.bezierCurveTo(x - k, y + r, x - r, y + k, x - r, y)
+    p.bezierCurveTo(x - r, y - k, x - k, y - r, x, y - r)
+  }
+  p.closePath()
+}
+
+/**
+ * Draw dots, batched: dots sharing a colour and opacity become one `Path2D` and one `fill()`.
+ * A UI card is a handful of fills instead of thousands; photo cards (continuous opacity) still
+ * collapse to at most ~1000 groups because opacity is bucketed to 1/1000.
+ */
 export function renderCanvas(ctx: CanvasRenderingContext2D, dots: DotInstance[]): void {
+  const groups = new Map<string, Path2D>()
   for (const dot of dots) {
-    if (dot.r <= 0 || dot.opacity <= 0) continue
-    ctx.globalAlpha = dot.opacity; ctx.fillStyle = dot.color
-    if (dot.shape === 'square') ctx.fillRect(dot.x - dot.r, dot.y - dot.r, dot.r * 2, dot.r * 2)
-    else if (dot.shape === 'squircle') {
-      const r = dot.r, x = dot.x, y = dot.y, roundness = dot.roundness ?? .72, c = r * (.2 + Math.max(0, Math.min(1, roundness)) * .35)
-      ctx.beginPath()
-      ctx.moveTo(x, y - r); ctx.bezierCurveTo(x + c, y - r, x + r, y - c, x + r, y)
-      ctx.bezierCurveTo(x + r, y + c, x + c, y + r, x, y + r)
-      ctx.bezierCurveTo(x - c, y + r, x - r, y + c, x - r, y)
-      ctx.bezierCurveTo(x - r, y - c, x - c, y - r, x, y - r)
-      ctx.closePath(); ctx.fill()
-    } else { ctx.beginPath(); ctx.arc(dot.x, dot.y, dot.r, 0, Math.PI * 2); ctx.fill() }
+    if (!(dot.r > 0) || !(dot.opacity > 0)) continue
+    const key = `${dot.color}|${Math.round(Math.min(1, dot.opacity) * 1000)}`
+    let path = groups.get(key)
+    if (!path) groups.set(key, (path = new Path2D()))
+    addDot(path, dot)
+  }
+  for (const [key, path] of groups) {
+    const cut = key.lastIndexOf('|')
+    ctx.globalAlpha = +key.slice(cut + 1) / 1000
+    ctx.fillStyle = key.slice(0, cut)
+    ctx.fill(path)
   }
   ctx.globalAlpha = 1
 }

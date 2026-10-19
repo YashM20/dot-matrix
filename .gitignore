@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# headless card snapshots (pnpm snap)
+.snapshots

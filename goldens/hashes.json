@@ -1,0 +1,475 @@
+{
+ "about": "FNV-1a 32 of the sorted quantized dot list per preset (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
+ "presets": {
+  "home-clock": {
+   "t=0": {
+    "hash": "00577b8a",
+    "dots": 482
+   }
+  },
+  "music": {
+   "t=0": {
+    "hash": "290c39ca",
+    "dots": 2317
+   }
+  },
+  "timer": {
+   "t=0": {
+    "hash": "b2443d92",
+    "dots": 454
+   }
+  },
+  "weather": {
+   "t=0": {
+    "hash": "fe03c7b4",
+    "dots": 496
+   }
+  },
+  "fitness": {
+   "t=0": {
+    "hash": "247afc4b",
+    "dots": 514
+   }
+  },
+  "messages": {
+   "t=0": {
+    "hash": "fb02c34f",
+    "dots": 1943
+   }
+  },
+  "camera": {
+   "t=0": {
+    "hash": "26a3c2fd",
+    "dots": 672
+   }
+  },
+  "settings": {
+   "t=0": {
+    "hash": "d0c21f7a",
+    "dots": 2936
+   }
+  },
+  "system": {
+   "t=0": {
+    "hash": "90b63d72",
+    "dots": 634
+   }
+  },
+  "agent-status": {
+   "t=0": {
+    "hash": "ad7c23f1",
+    "dots": 867
+   },
+   "t=1.3": {
+    "hash": "b74b30ab",
+    "dots": 867
+   }
+  },
+  "codex-tokens": {
+   "t=0": {
+    "hash": "4b1e2c1e",
+    "dots": 734
+   }
+  },
+  "device-overview": {
+   "t=0": {
+    "hash": "58a122fe",
+    "dots": 1011
+   }
+  },
+  "tesla-status": {
+   "t=0": {
+    "hash": "8afa5e32",
+    "dots": 892
+   }
+  },
+  "pharma-track": {
+   "t=0": {
+    "hash": "412c019f",
+    "dots": 1540
+   }
+  },
+  "medical-monitor": {
+   "t=0": {
+    "hash": "b85109bb",
+    "dots": 1004
+   }
+  },
+  "bio-sensor": {
+   "t=0": {
+    "hash": "99daf59a",
+    "dots": 645
+   }
+  },
+  "word-play": {
+   "t=0": {
+    "hash": "6ab89599",
+    "dots": 1266
+   }
+  },
+  "retail-analytics": {
+   "t=0": {
+    "hash": "f7909b13",
+    "dots": 706
+   }
+  },
+  "entertainment": {
+   "t=0": {
+    "hash": "feebfd6d",
+    "dots": 803
+   },
+   "t=1.3": {
+    "hash": "5994dbe2",
+    "dots": 803
+   }
+  },
+  "game-zone": {
+   "t=0": {
+    "hash": "3d7b375b",
+    "dots": 678
+   },
+   "t=1.3": {
+    "hash": "a6fc4957",
+    "dots": 678
+   }
+  },
+  "vision-ai": {
+   "t=0": {
+    "hash": "d00feae5",
+    "dots": 773
+   },
+   "t=1.3": {
+    "hash": "d00feae5",
+    "dots": 773
+   }
+  },
+  "thermal-monitor": {
+   "t=0": {
+    "hash": "e02b3790",
+    "dots": 6256
+   }
+  },
+  "ev-charge": {
+   "t=0": {
+    "hash": "3cbf9e60",
+    "dots": 6059
+   }
+  },
+  "codex-usage": {
+   "t=0": {
+    "hash": "c338393f",
+    "dots": 2030
+   }
+  },
+  "fitness-rings": {
+   "t=0": {
+    "hash": "7f733e33",
+    "dots": 2326
+   }
+  },
+  "henry-sleep": {
+   "t=0": {
+    "hash": "01707341",
+    "dots": 3396
+   }
+  },
+  "mini-game": {
+   "t=0": {
+    "hash": "729f864f",
+    "dots": 803
+   },
+   "t=1.3": {
+    "hash": "9bb828af",
+    "dots": 803
+   }
+  },
+  "ai-assistant": {
+   "t=0": {
+    "hash": "32de78d2",
+    "dots": 3663
+   }
+  },
+  "vision-camera": {
+   "t=0": {
+    "hash": "2bc234f4",
+    "dots": 15919
+   }
+  },
+  "deerflow-agent": {
+   "t=0": {
+    "hash": "cb7ccf31",
+    "dots": 1641
+   },
+   "t=1.3": {
+    "hash": "deddfc50",
+    "dots": 1643
+   }
+  },
+  "boarding-pass": {
+   "t=0": {
+    "hash": "bcf824ba",
+    "dots": 521
+   }
+  },
+  "sunburst": {
+   "t=0": {
+    "hash": "115fd4d0",
+    "dots": 291
+   }
+  },
+  "power-ring": {
+   "t=0": {
+    "hash": "b71c2b5f",
+    "dots": 289
+   }
+  },
+  "midnight-circuit": {
+   "t=0": {
+    "hash": "2a95ddc7",
+    "dots": 907
+   },
+   "t=1.3": {
+    "hash": "2242ed79",
+    "dots": 885
+   }
+  },
+  "silhouette": {
+   "t=0": {
+    "hash": "af26a6ba",
+    "dots": 20706
+   }
+  },
+  "inhale": {
+   "t=0": {
+    "hash": "7f726483",
+    "dots": 480
+   },
+   "t=1.3": {
+    "hash": "08bb23ba",
+    "dots": 491
+   }
+  },
+  "good-morning": {
+   "t=0": {
+    "hash": "803dbb9f",
+    "dots": 1861
+   }
+  },
+  "cardiology": {
+   "t=0": {
+    "hash": "56faeb55",
+    "dots": 639
+   }
+  },
+  "listening": {
+   "t=0": {
+    "hash": "a0d48f1c",
+    "dots": 649
+   },
+   "t=1.3": {
+    "hash": "c7c6577e",
+    "dots": 705
+   }
+  },
+  "metro": {
+   "t=0": {
+    "hash": "739f3928",
+    "dots": 474
+   }
+  },
+  "oxygen": {
+   "t=0": {
+    "hash": "fe84b2c2",
+    "dots": 321
+   }
+  },
+  "home-quiet": {
+   "t=0": {
+    "hash": "a71bf625",
+    "dots": 512
+   }
+  },
+  "final-lap": {
+   "t=0": {
+    "hash": "529bb3df",
+    "dots": 366
+   }
+  },
+  "newswire": {
+   "t=0": {
+    "hash": "fffea371",
+    "dots": 940
+   }
+  },
+  "deerflow-stars": {
+   "t=0": {
+    "hash": "78a191f9",
+    "dots": 496
+   }
+  },
+  "cody": {
+   "t=0": {
+    "hash": "4556bd1a",
+    "dots": 589
+   }
+  },
+  "tatooine": {
+   "t=0": {
+    "hash": "e1571cd6",
+    "dots": 1155
+   }
+  },
+  "afterlight": {
+   "t=0": {
+    "hash": "aeb6f2a7",
+    "dots": 1068
+   }
+  },
+  "ride": {
+   "t=0": {
+    "hash": "1753e9b7",
+    "dots": 608
+   }
+  },
+  "henry-bear": {
+   "t=0": {
+    "hash": "87717428",
+    "dots": 1349
+   }
+  },
+  "design-review": {
+   "t=0": {
+    "hash": "677401fd",
+    "dots": 715
+   }
+  },
+  "memo": {
+   "t=0": {
+    "hash": "64213394",
+    "dots": 1181
+   }
+  },
+  "wiki": {
+   "t=0": {
+    "hash": "84a75d3e",
+    "dots": 1007
+   }
+  },
+  "system-menu": {
+   "t=0": {
+    "hash": "196251fd",
+    "dots": 550
+   }
+  },
+  "last-password": {
+   "t=0": {
+    "hash": "4818698d",
+    "dots": 441
+   }
+  },
+  "notifications": {
+   "t=0": {
+    "hash": "fa652763",
+    "dots": 553
+   }
+  },
+  "apps": {
+   "t=0": {
+    "hash": "032edaa4",
+    "dots": 843
+   }
+  },
+  "audio-levels": {
+   "t=0": {
+    "hash": "cc8093c4",
+    "dots": 526
+   }
+  },
+  "vibe-pad": {
+   "t=0": {
+    "hash": "edff296c",
+    "dots": 1836
+   }
+  },
+  "midi": {
+   "t=0": {
+    "hash": "472cbd4b",
+    "dots": 336
+   }
+  },
+  "recorder": {
+   "t=0": {
+    "hash": "f8e1837a",
+    "dots": 1624
+   },
+   "t=1.3": {
+    "hash": "0b632cf0",
+    "dots": 1624
+   }
+  },
+  "radio": {
+   "t=0": {
+    "hash": "002cc42b",
+    "dots": 899
+   }
+  },
+  "interpreter": {
+   "t=0": {
+    "hash": "b4d00c7c",
+    "dots": 760
+   },
+   "t=1.3": {
+    "hash": "b3c91488",
+    "dots": 760
+   }
+  },
+  "thermal-puppy": {
+   "t=0": {
+    "hash": "29830d9b",
+    "dots": 20737
+   }
+  },
+  "level-03": {
+   "t=0": {
+    "hash": "061a6520",
+    "dots": 20013
+   }
+  },
+  "shopping": {
+   "t=0": {
+    "hash": "5d39ca39",
+    "dots": 1379
+   }
+  },
+  "ui-toggle": {
+   "t=0": {
+    "hash": "6579335f",
+    "dots": 248
+   }
+  },
+  "ui-pill": {
+   "t=0": {
+    "hash": "ccad0b02",
+    "dots": 479
+   }
+  },
+  "ui-slider": {
+   "t=0": {
+    "hash": "28eafc4f",
+    "dots": 145
+   }
+  },
+  "ui-icon-button": {
+   "t=0": {
+    "hash": "368aff15",
+    "dots": 384
+   }
+  },
+  "ui-status-dot": {
+   "t=0": {
+    "hash": "6d3c61cb",
+    "dots": 169
+   }
+  }
+ }
+}

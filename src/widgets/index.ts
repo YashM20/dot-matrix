@@ -1,62 +1,29 @@
 import type { WidgetPreset } from './types'
-import { clock } from './clock'
-import { timer } from './timer'
-import { boardingPass } from './boardingPass'
-import { headlineText } from './headlineText'
-import { gaugeSpeed } from './gaugeSpeed'
-import { gaugeBattery } from './gaugeBattery'
-import { fitnessRings } from './fitnessRings'
-import { oxygenRing } from './oxygenRing'
-import { moistureLeafRings } from './moistureLeafRings'
-import { dialRadio } from './dialRadio'
-import { breathingCircles } from './breathingCircles'
-import { deviceOverviewDonut } from './deviceOverviewDonut'
-import { agentAvatarRing } from './agentAvatarRing'
-import { weatherCard } from './weatherCard'
-import { settingsList } from './settingsList'
-import { evCharge } from './evCharge'
-import { visionCube } from './visionCube'
-import { appIconGrid } from './appIconGrid'
-import { thermalMonitor } from './thermalMonitor'
-import { portraitArt } from './portraitArt'
-import { albumArt } from './albumArt'
-import { silhouetteArt } from './silhouetteArt'
-import { musicPlayer, ecgMonitor } from './ecgMonitor'
-import { audioRecorder } from './audioRecorder'
-import { voiceListening } from './voiceListening'
-import { interpreterDual } from './interpreterDual'
-import { lapTimeChart } from './lapTimeChart'
-import { retailAnalytics } from './retailAnalytics'
-import { sleepChart } from './sleepChart'
-import { systemStatsBars } from './systemStatsBars'
-import { metroLine } from './metroLine'
-import { starFieldWidget } from './starField'
-import { passwordDotsRing } from './passwordDotsRing'
-import { mazeGame } from './mazeGame'
-import { messagesList } from './messagesList'
-import { aiAssistantChat } from './aiAssistantChat'
-import { cameraViewfinder } from './cameraViewfinder'
-import { shoppingChecklist } from './shoppingChecklist'
-import { agentStatus } from './agentStatus'
-import { sunburstWidget } from './sunburstWidget'
-import { pharmaTrack } from './pharmaTrack'
-import { codexUsage } from './codexUsage'
-import { homeQuiet } from './homeQuiet'
-import { wikiGraph } from './wikiGraph'
-import { notificationsGrid } from './notificationsGrid'
-import { rideDual } from './rideDual'
-import { recorder } from './recorder'
+import { henryBoard } from './boards/henry'
+import { deerflow12Board } from './boards/deerflow12'
+import { mosaicBoard } from './boards/mosaic'
+import { henry3Board } from './boards/henry3'
+import { metroBoard } from './boards/metro'
+import { rideBoard } from './boards/ride'
+import { audioBoard } from './boards/audio'
+import { componentsBoard } from './boards/components'
 
-export const widgetPresets: WidgetPreset[] = [
-  recorder, clock, timer, boardingPass, headlineText,
-  gaugeSpeed, gaugeBattery, fitnessRings, oxygenRing, moistureLeafRings, dialRadio, breathingCircles, deviceOverviewDonut, agentAvatarRing, sunburstWidget, rideDual,
-  weatherCard, settingsList, evCharge, visionCube, appIconGrid, wikiGraph, notificationsGrid,
-  thermalMonitor, portraitArt, albumArt, silhouetteArt,
-  musicPlayer, audioRecorder, voiceListening, interpreterDual, ecgMonitor, lapTimeChart, retailAnalytics, sleepChart, systemStatsBars, metroLine, codexUsage,
-  starFieldWidget, passwordDotsRing, mazeGame,
-  messagesList, aiAssistantChat, cameraViewfinder, shoppingChecklist, agentStatus, pharmaTrack, homeQuiet,
+export interface BoardDef { id: string; title: string; columns: number; items: WidgetPreset[] }
+/** Every reference board in public/images, in the order they appear there. */
+export const boards: BoardDef[] = [
+  { id: 'henry', title: 'DOT / 480 — OLED MICRO INTERFACE SYSTEM', columns: 3, items: henryBoard },
+  { id: 'deerflow12', title: 'DEERFLOW AIoT DASHBOARD — 12', columns: 3, items: deerflow12Board },
+  { id: 'mosaic', title: 'DEERFLOW MOSAIC — AIoT COMMAND CENTER', columns: 3, items: mosaicBoard },
+  { id: 'henry3', title: 'HENRY LI — 14A / 247W', columns: 3, items: henry3Board },
+  { id: 'metro', title: 'METRO / OXYGEN / QUIET', columns: 3, items: metroBoard },
+  { id: 'ride', title: 'RIDE / HENRY / SYSTEM', columns: 3, items: rideBoard },
+  { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, items: audioBoard },
+  { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, items: componentsBoard },
 ]
+export const boardIds = boards.map(b => b.id)
+export const boardById = (id: string): BoardDef | undefined => boards.find(b => b.id === id)
 
+export const widgetPresets: WidgetPreset[] = boards.flatMap(b => b.items)
 export const widgetById = (id: string): WidgetPreset | undefined => widgetPresets.find(p => p.id === id)
 
 export * from './types'
