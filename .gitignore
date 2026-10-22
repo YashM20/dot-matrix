@@ -25,3 +25,4 @@ dist-ssr
 
 # headless card snapshots (pnpm snap)
 .snapshots
+.claude/worktrees/
