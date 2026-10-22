@@ -146,7 +146,7 @@ Plan reference: MASTER-PLAN §4 P1. **Flagship: Departures.**
 - [x] Reduced motion: no entrance, no dissolve (instant).
 - [ ] Data springs wired into cards: an opt-in `springKeys` on presets for timer, music and fitness. Not wired yet; the dissolve is the generic fallback.
 - [ ] Tab switch exit → enter. Only the enter runs now; the old board unmounts instantly.
-- [ ] Transition Lab in the playground.
+- [x] P1-F Transition Lab in the playground (WORKSPACE side panel): mask, duration 150–1200 ms, easing, enter/exit/change (preset → next preset), Replay; engine `revealDots`/`transitionDots` on a canvas.
 - [ ] Card upgrades: home-clock split-flap via `splitFlapText`, message typewriter, meter peak-hold, weather morph.
 - [ ] Lift pass: home-clock, weather, messages, settings, agent-status, word-play, codex-tokens.
 - [ ] **Departures** board, through the v0–v5 protocol (needs the user's pick at v1 and a like at v5).
