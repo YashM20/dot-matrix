@@ -221,8 +221,8 @@
   },
   "sunburst": {
    "t=0": {
-    "hash": "115fd4d0",
-    "dots": 291
+    "hash": "1b41b14d",
+    "dots": 191
    }
   },
   "power-ring": {
@@ -341,8 +341,8 @@
   },
   "henry-bear": {
    "t=0": {
-    "hash": "87717428",
-    "dots": 1349
+    "hash": "da52242f",
+    "dots": 974
    }
   },
   "design-review": {
@@ -513,6 +513,96 @@
     "dots": 618
    }
   },
+  "inst-cutoff": {
+   "t=0": {
+    "hash": "6bd9c745",
+    "dots": 213
+   },
+   "t=1.3": {
+    "hash": "6bd9c745",
+    "dots": 213
+   }
+  },
+  "inst-resonance": {
+   "t=0": {
+    "hash": "67091625",
+    "dots": 255
+   },
+   "t=1.3": {
+    "hash": "67091625",
+    "dots": 255
+   }
+  },
+  "inst-level": {
+   "t=0": {
+    "hash": "89f7c8b0",
+    "dots": 279
+   },
+   "t=1.3": {
+    "hash": "0b8133a0",
+    "dots": 279
+   }
+  },
+  "inst-attack": {
+   "t=0": {
+    "hash": "5fe8c854",
+    "dots": 193
+   },
+   "t=1.3": {
+    "hash": "5fe8c854",
+    "dots": 193
+   }
+  },
+  "inst-release": {
+   "t=0": {
+    "hash": "c5f68747",
+    "dots": 256
+   },
+   "t=1.3": {
+    "hash": "c5f68747",
+    "dots": 256
+   }
+  },
+  "inst-xy": {
+   "t=0": {
+    "hash": "718d608a",
+    "dots": 319
+   },
+   "t=1.3": {
+    "hash": "28cca7fe",
+    "dots": 318
+   }
+  },
+  "inst-transport": {
+   "t=0": {
+    "hash": "1b6cf18a",
+    "dots": 382
+   },
+   "t=1.3": {
+    "hash": "a03cbb2e",
+    "dots": 382
+   }
+  },
+  "inst-sequencer": {
+   "t=0": {
+    "hash": "80778385",
+    "dots": 319
+   },
+   "t=1.3": {
+    "hash": "1bfd0af8",
+    "dots": 310
+   }
+  },
+  "inst-crank": {
+   "t=0": {
+    "hash": "352fb284",
+    "dots": 329
+   },
+   "t=1.3": {
+    "hash": "352fb284",
+    "dots": 329
+   }
+  },
   "ui-toggle": {
    "t=0": {
     "hash": "6579335f",
@@ -541,6 +631,78 @@
    "t=0": {
     "hash": "6d3c61cb",
     "dots": 169
+   }
+  },
+  "ui-segmented": {
+   "t=0": {
+    "hash": "157408f3",
+    "dots": 403
+   }
+  },
+  "ui-stepped-slider": {
+   "t=0": {
+    "hash": "fe615a0c",
+    "dots": 352
+   }
+  },
+  "ui-knob": {
+   "t=0": {
+    "hash": "b38b1e5c",
+    "dots": 165
+   }
+  },
+  "ui-stepper": {
+   "t=0": {
+    "hash": "126c7693",
+    "dots": 352
+   }
+  },
+  "ui-check": {
+   "t=0": {
+    "hash": "ccffa04f",
+    "dots": 486
+   }
+  },
+  "ui-tabs": {
+   "t=0": {
+    "hash": "13bfa28a",
+    "dots": 493
+   }
+  },
+  "ui-progress": {
+   "t=0": {
+    "hash": "08ade18b",
+    "dots": 471
+   }
+  },
+  "ui-loaders": {
+   "t=0": {
+    "hash": "279b46cb",
+    "dots": 422
+   },
+   "t=1.3": {
+    "hash": "4a9e612c",
+    "dots": 425
+   }
+  },
+  "ui-keypad": {
+   "t=0": {
+    "hash": "54eae425",
+    "dots": 282
+   },
+   "t=1.3": {
+    "hash": "54eae425",
+    "dots": 282
+   }
+  },
+  "ui-text-field": {
+   "t=0": {
+    "hash": "e69de066",
+    "dots": 501
+   },
+   "t=1.3": {
+    "hash": "e69de066",
+    "dots": 501
    }
   }
  }

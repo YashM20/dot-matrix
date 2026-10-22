@@ -29,15 +29,15 @@
 - [x] P1-F: Transition Lab in WORKSPACE (`src/components/playground/TransitionLab.tsx`): mask, duration, easing, enter/exit/change, Replay.
 
 **Agent can do now (P0 leftovers, invisible):**
-- [ ] P0-A: mosaic mount < 30 ms (`thermal-puppy`, `silhouette`, `vision-camera`) + static sample cache across board visits.
-- [ ] P0-B: permanent bounds-vs-no-bounds check in `scripts/verify.ts`.
-- [ ] P0-C: migrate `sites` + `lattice` literals to `Layer.size`.
+- [~] P0-A: mosaic mount < 30 ms (`thermal-puppy`, `silhouette`, `vision-camera`) + static sample cache across board visits. The cache is done. Mosaic went from 117–200 ms to about 30–33 ms (bench median), so the gate is borderline. Remaining cost is `DotInstance` allocation (SoA `DotBuffer`).
+- [x] P0-B: permanent bounds-vs-no-bounds check in `scripts/verify.ts` (§14, all 77 presets, nothing skipped).
+- [x] P0-C: migrate `sites` + `lattice` literals to `Layer.size` (`T.dots`, metro `afterlight`; verify §14 lints for it).
 
 **P2 (interaction + Components v2): started 2026-10-22, run as parallel agents on the `Control` contract** (`src/engine/context.ts`: cards declare `controls`; the input layer edits `data[key]` and fills `hover`/`pressed`/`focus`):
-- [ ] P2-A: input layer: pointer/touch/keyboard → data, hit testing, a11y overlay, hover/press/focus in ctx (`DotCanvas`, `src/engine/interaction/`).
-- [ ] P2-B: Components v2 on the components board (segmented, knob, stepper, checkbox/radio, tabs, chips, loaders, keypad, …).
-- [ ] P2-C: **Instrument** flagship board (knobs, crank, XY pad, 16-step sequencer, transport, meter).
-- [ ] P2-D: DESIGN.md "Interaction" tokens + lift pass (`henry-bear`, `sunburst`).
+- [x] P2-A: input layer: pointer/touch/keyboard → data, hit testing, a11y overlay, hover/press/focus in ctx (`DotCanvas`, `src/engine/interaction/`). Done 2026-10-22: engine `toLocal` / `pick` / `beginDrag` + `dragValue` / `releaseValue` / `keyValue` / `settle` (verify §15); `useControlInput` (pointer capture, `pointers[]` in cells, rAF-batched commits, input frames cut instead of dissolving, springKeys still glide); a hovered / pressed / focused card runs on the clock at 30 fps so focus rings march (still frame under reduced motion); `ControlOverlay` + `.dot-a11y-*` styles (button, `role=switch`, ranges, xy range pair, radiogroup; one roving stop for buttons/switches; 24/44 px hit pads); `DotWidget` owns the data and is `role=group` when interactive. Checked in the browser on `ui-toggle` / `ui-slider` (mouse, drag, keyboard). Not done: axe run, latency gate measurement, multitouch on a real device.
+- [x] P2-B: Components v2 on the components board. Done 2026-10-22: 10 new cards with `controls` and hover/press/focus states (`ui-segmented`, `ui-stepped-slider`, `ui-knob`, `ui-stepper`, `ui-check`, `ui-tabs`, `ui-progress`, `ui-loaders`, `ui-keypad`, `ui-text-field`); `pnpm snap --ctx '<json>'` merges extra frame-context fields for state snapshots. Chips and toast not built yet.
+- [x] P2-C: **Instrument** flagship board (knobs, crank, XY pad, 16-step sequencer, transport, meter). Done: `src/widgets/boards/instrument.ts`, nine `inst-*` cards with `controls`, rendered purely from `data`/`hover`/`pressed`/`focus`/`t` (hover glow in mid, press one quantize step down, marching-dots focus); red only on the playhead, record light and XY live dot. Goldens added; needs a browser check once P2-A lands.
+- [x] P2-D: DESIGN.md "Interaction" tokens + lift pass (`henry-bear`, `sunburst`).
 
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.
@@ -105,7 +105,7 @@ Four parallel agents, each owning separate files, plus the main thread on the en
 Plan reference: MASTER-PLAN §4 P0.
 ### Hardening
 - [x] H1: `cells()` in `mosaic.ts` returns 0 outside its box. All 71 presets render identically with or without bounds (checked by a throwaway script).
-  - [ ] Still to do: add that bounds-vs-no-bounds check to `scripts/verify.ts` permanently.
+  - [x] P0-B: permanent check in `scripts/verify.ts` §14. Every preset (77, animated ones at t=0 and 1.3) samples identically with each layer's `bounds` stripped. No card is skipped; the check takes about 1–4 s on this machine.
 - [~] H3, partly done:
   - [x] Tests moved from `src/engine/verify-acceptance.ts` to `scripts/verify.ts`, so the engine no longer imports widgets.
   - [x] `superformulaPath` falls back to a circle instead of throwing.
@@ -122,7 +122,7 @@ Plan reference: MASTER-PLAN §4 P0.
 - [x] Non-mutating `bounded()`: it returns a wrapper, and layout helpers use a private `own()` on the hot path.
 - [x] Cover and visibility decided on the **quantized** value (`shown()` in `gridSampler.ts`). Tested.
 - [x] `Layer.size` for site layers. `lattice` is still honoured on sites when `size` is absent.
-  - [ ] Still to do: migrate board literals that pass `sites` + `lattice` over to `size`.
+  - [x] P0-C: board literals migrated. `T.dots` now returns `size`, and so does the metro `afterlight` face layer. verify §14 fails on any preset site layer that still carries `lattice`. Hash-neutral: all goldens unchanged.
 - [x] Per-card error isolation: a sampling error renders a blank card; the live path keeps the last good frame.
 ### Determinism
 - [x] `hash01`/`hash32` (`src/engine/math.ts`, murmur3 finaliser) replace every `fract(sin)` hash in the board files and in `waveformField`. Goldens re-baselined.
@@ -142,8 +142,23 @@ Plan reference: MASTER-PLAN §4 P0.
 - [x] thermal-monitor heat computed once per cell (about 97 → 38 ms); `apps` icons bounded (about 53 → 21 ms). Timings were taken on a busy machine.
 - [x] Scoped minute tick: only `clock: true` presets (`home-clock`) re-sample each minute.
 - [x] Playground: `withChrome()` cached per preset, so the preview no longer re-samples on unrelated store changes (part of M9).
-- [ ] Static sample cache across board visits (perf item 5).
-- [ ] **Mosaic mount is still about 100–200 ms** (bench is noisy). The progressive entrance hides most of it: cards sample at their stagger delay. The gate (< 30 ms per board) is not met yet. Next targets: `thermal-puppy` 99 ms, `silhouette` 70 ms, `vision-camera` 68 ms.
+- [x] Static sample cache across board visits (perf item 5, part of P0-A), in `src/hooks/useDotField.ts`.
+  - Module-level LRU of 200 entries, keyed by layers-function identity + theme + JSON of grid/style/t/data.
+  - Only presets that are neither `animated` nor `clock` are cached. Cached dot arrays are shared, so treat them as read-only.
+- [~] **P0-A mosaic mount: about 30–33 ms, down from 117–200 ms.** Measured as the median of 3 interleaved `pnpm bench` runs per side on a busy machine. The gate sits at the edge: runs gave 30.4, 32.7 and 47.6 ms. All changes are hash-neutral.
+  - Sampler (engine):
+    - lattice groups are composited and scanned only inside the union of their fields' bounds, where they used to cover the whole sub-grid (a 0.72 caption spans about 200×200 cells);
+    - cell-centre tables are cached per width;
+    - typed scratch buffers are reused, and owner indices replace the holey tone array;
+    - site merge keys are numeric, with exactly the `toFixed(2)` equality (tested in verify §14).
+  - Fields:
+    - `len()` (`Math.sqrt`) replaces `Math.hypot` in hot photo fields. Hypot is about 12× slower in V8 and not engine-identical;
+    - bbox early-outs in the vision-camera desk;
+    - `baked(grid, field)` (`src/widgets/types.ts`) memoises static photo fields per cell: puppy, skyline, corridor, desk, car, thermal tones and the fitness wash.
+  - Card mount ms, before → after (bench median): `thermal-puppy` 56–64 → 4.4, `silhouette` 34–39 → 4.9, `vision-camera` 39–82 → 4.5, `thermal-monitor` 12–15 → 8.8.
+  - Boards, before → after (ms): henry 43 → 34, deerflow12 31 → 16, henry3 50 → 12, metro 25 → 12, ride 23 → 13, audio 92 → 21, components 8 → 4. Departures is about 6.
+  - **Caveat:** bench is a warm median. The first-ever sample of a card is still JIT-bound and fills the baked tables, so it improved much less (mosaic first pass ≈ 280 ms in both). The stagger entrance spreads that cost, and the static cache removes it on revisits.
+  - What is left is mostly allocating `DotInstance` objects and GC: about 42 k dots per mosaic mount. The SoA `DotBuffer` (P1) is the next lever.
 ### Fidelity tooling
 - [x] `snap --film`, `snap --bar`, `golden` (+ `--check`), `fidelity`, `bench` (`scripts/`, `scripts/lib/{raster,cards,freeze}.ts`).
 - [ ] Not built: `snap --replay` (needs pointer input, P2), `--ref` with HVS-SSIM (Track L), `--diff` pixelmatch, the G6 flash-safety check.
@@ -158,7 +173,7 @@ Plan reference: MASTER-PLAN §4 P0.
   - [x] Green on GitHub (run 38613505006, commit `e52b383`). Goldens computed on Linux match the Windows baselines.
 ### P0 exit gates
 - [x] CI green on GitHub.
-- [ ] Mosaic mount < 30 ms (not met; see Performance).
+- [~] Mosaic mount < 30 ms: about 30–33 ms on the bench median, borderline (see P0-A under Performance).
 - [x] Board SVG < 0.5 MB (bench: every board under 512 KB).
 - [ ] Rank validity / κ ≥ 0.6 (needs human scoring).
 - [ ] Cross-engine goldens.

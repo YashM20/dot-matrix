@@ -1,7 +1,7 @@
 import type { DotStyle, Field, GridConfig, Layer, Tone } from '../engine/types'
 import type { Control, FrameContext } from '../engine/context'
 import { barsAt, centeredBarsAt, discCells, dotAt, hRule, placeCells, polylineCells, rectCells, ringCells, spriteAt, textAt, textSize, vRule } from '../engine/layout'
-import { latticeGrid } from '../engine/sampler/gridSampler'
+import { cellU, latticeGrid } from '../engine/sampler/gridSampler'
 import { cachedIconField, iconPaths } from '../engine/fields/iconSDF'
 import { cjkTextField } from '../engine/fields/cjkFallback'
 import type { TextOptions } from '../engine/fields/bitmapFont'
@@ -64,6 +64,24 @@ export interface SiteOptions {
   size?: number
 }
 export const layer = (src: Field | LatticeField, tone: Tone = 'value'): Layer => (typeof src === 'function' ? { field: src, tone } : { ...src, tone })
+/**
+ * A static field memoised per cell centre of `grid`: each centre is computed once, later samples read
+ * the table. Any other u/v (thumbnails, another grid) goes straight to `field`, so output is identical.
+ * Only for fields that never change (no `t`, no data) — photo-like cards whose per-cell maths is heavy.
+ */
+export function baked(grid: GridConfig, field: Field): Field {
+  const { cols, rows } = grid
+  let table: Float64Array | undefined
+  const f: Field = (u, v) => {
+    const c = Math.round(u * (cols - 1)), r = Math.round(v * (rows - 1))
+    if (c < 0 || r < 0 || c >= cols || r >= rows || u !== cellU(c, cols) || v !== cellU(r, rows)) return field(u, v)
+    table ??= new Float64Array(cols * rows).fill(NaN)
+    const i = r * cols + c, x = table[i]
+    return x === x ? x : (table[i] = field(u, v))
+  }
+  if (field.bounds) { const [c0, r0, c1, r1] = field.bounds; f.bounds = [c0, r0, c1, r1] }
+  return f
+}
 export const staticLayers = (layers: Layer[]) => () => layers
 /** Flatten a preset to a single field (thumbnails, exports, tests). */
 export const presetField = (p: WidgetPreset, ctx: WidgetContext = { t: 0, data: p.defaults ?? {} }): Field => {
@@ -169,7 +187,7 @@ export function layoutFor(grid: GridConfig) {
       return { field: one, sites, size }
     },
     /** Arbitrary dot sites. */
-    dots: (points: Pt[], size = 1.8): LatticeField => ({ field: one, sites: points, lattice: size }),
+    dots: (points: Pt[], size = 1.8): LatticeField => ({ field: one, sites: points, size }),
     /** Layout helpers for a coarser lattice anchored at card cell (col,row); wrap results with `.at()`. */
     lattice: (k: number, col = 0, row = 0) => {
       const sub = latticeGrid(grid, k, [col, row])

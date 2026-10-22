@@ -5,9 +5,9 @@
  * places it on a coarser lattice like `T.big`; rings, sliders and waveforms are dot sites.
  */
 import { scale2x } from '../../engine/fields/bitmapFont'
-import { hash01, smoothstep } from '../../engine/math'
+import { hash01, len, smoothstep } from '../../engine/math'
 import type { Field } from '../../engine/types'
-import { TAU, TILE, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
+import { TAU, TILE, baked, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -244,7 +244,7 @@ export const interpreter: WidgetPreset = {
 }
 
 // Thermal puppy: luminance = heat (white-hot face, chest and paws, cooler ear tips, a warm floor glow).
-const ell = (u: number, v: number, cx: number, cy: number, rx: number, ry: number) => 1 - Math.hypot((u - cx) / rx, (v - cy) / ry)
+const ell = (u: number, v: number, cx: number, cy: number, rx: number, ry: number) => 1 - len((u - cx) / rx, (v - cy) / ry)
 const puppy: Field = (u, v) => {
   const n1 = hash01(Math.floor(u * 150) + Math.floor(v * 150) * 157, 3), n2 = hash01(Math.floor(u * 40) + Math.floor(v * 28) * 41, 9) - .5
   const fuzz = .1 * n2 + .07 * (n1 - .5)
@@ -257,15 +257,17 @@ const puppy: Field = (u, v) => {
   const inside = smoothstep(-.04, .1, Math.max(head, ears, torso, legs, paws, muzzle) + fuzz - gap)
   const glow = Math.max(0, chest * 1.2, muzzle * 1.4, head * .7, paws * .9)
   let heat = .8 + .2 * Math.min(1, glow * 2.2) + fuzz * 2 - (ears > 0 && head < .05 ? .14 : 0)
-  if (Math.min(Math.hypot((u - .43) / .024, (v - .245) / .024), Math.hypot((u - .58) / .024, (v - .245) / .024)) < 1) heat = .1
+  if (Math.min(len((u - .43) / .024, (v - .245) / .024), len((u - .58) / .024, (v - .245) / .024)) < 1) heat = .1
   const back = .04 + .05 * v + .26 * Math.max(0, ell(u, v, .5, .9, .55, .14))
   return Math.max(0, Math.min(1, back + (heat - back) * inside))
 }
+/** The puppy never changes: baked once per card cell (about 20 ellipse tests a cell). */
+const PUPPY = baked(TILE, puppy)
 const NOSE: Pt = [73.5, 43]
 export const thermalPuppy: WidgetPreset = {
   id: 'thermal-puppy', name: 'Thermal', label: '', group: 'photo', chrome: 'dots', bleed: true, grid: TILE, style: { ...tileStyle, sizeMin: 0, sizeMax: 1.05, quantizeSteps: 0 },
   layers: () => [
-    layer(puppy, 'value'),
+    layer(PUPPY, 'value'),
     layer(T.dotRing(NOSE[0], NOSE[1], 3.2, { spacing: 1.3, size: 1.2 })),
     layer(T.dots([NOSE], 4.5), 'active'),
     // bleed cards have no padding, so the label is placed by hand at the padded inset
@@ -298,6 +300,8 @@ const corridor: Field = (u, v) => {
   const rib = frac(depth * 2.4) < .3, ray = Math.abs(x * 3 - Math.round(x * 3)) < .05 * Math.sqrt(z)
   return rib || ray ? .42 * fog : .03
 }
+/** The corridor never changes: baked once per card cell. */
+const CORRIDOR = baked(TILE, corridor)
 const INVADER = [
   '#.......#',
   '#.......#',
@@ -315,7 +319,7 @@ export const level03: WidgetPreset = {
   layers: () => {
     const sprite = T.lattice(1.45, 69, 53.5)
     return [
-      layer(corridor, 'value'),
+      layer(CORRIDOR, 'value'),
       layer(sprite.at(sprite.sprite(INVADER, 0, 0)), 'active'),
       layer(face('84', 76, 110.5, { lattice: 1.85, align: 'center', rows: 13 })),
       layer(T.big('LEVEL 03', 5, 5, { lattice: .92 }), 'idle'),

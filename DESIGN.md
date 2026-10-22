@@ -130,7 +130,7 @@ Individual dot shape is controlled by one continuous parameter (the superellipse
 
 ## Components
 
-> **No hover states documented.** Dot/480 widgets are designed primarily for display surfaces (LED panels, kiosk screens) where hover is not a meaningful input; interactive variants below cover Default, Active/Selected, and Disabled only.
+> **Interactive states.** Hover, press, focus, drag and long-press follow the grammar and tokens in [Interaction](#interaction); the variants below cover Default, Active/Selected and Disabled.
 
 ### Buttons & Controls
 
@@ -210,6 +210,33 @@ Individual dot shape is controlled by one continuous parameter (the superellipse
 - Four corner-bracket glyphs (`⌐ ¬ L J` style, dot-rasterized) framing a live/static photo field, optional bounding-box labels (`{typography.micro}` in a bordered pill) for vision-AI object detection.
 - `REC`/status text pairs with `{component.statusDot}` when actively capturing.
 
+## Interaction
+
+Interaction is a state the card's *data* is in, not a CSS layer on top. The input layer (pointer, touch, keyboard) edits `data[key]` for each declared `Control` and fills `hover` / `pressed` / `focus` in the frame context; the card redraws through the same `Field → Sampler → Renderer` pipeline. Feedback is therefore always made of dots: a glow is a field, a press is a size step, a focus ring is a row of sites. No state introduces a new colour.
+
+### Interaction tokens
+
+| Token | Value | Applies to |
+|---|---|---|
+| `{interaction.hoverGlowRadius}` | 6 cells (falloff to 0 at the radius, soft ramp about 1 cell wide per the organic-edge rule) | Soft light pool under the pointer, drawn behind the hovered control |
+| `{interaction.hoverGlowTone}` | `value` at the centre, `mid` at the rim. **Never `{colors.dotActive}`** | Hover glow layer tone |
+| `{interaction.pressStep}` | 1 `{grid.quantizeSteps}` step down (`1 / quantizeSteps`: 0.2 at the default 5); **0.25** on unquantized styles | Dot size (radius value) of a pressed control, relative to its resting value |
+| `{interaction.springHalfLife.data}` | 0.12 s, critically damped | Data keys that glide to a new value (`springKeys`): sliders, knobs, scrub position |
+| `{interaction.springHalfLife.release}` | 0.08 s, under-damped (damping ratio 0.5, one visible overshoot) | Press release: the dot size springs back past rest once, then settles |
+| `{interaction.focusDash}` | 3 dots lit, 2 dots dark (one 5-site period) along the control's dotted outline | Keyboard focus ring (marching dots) |
+| `{interaction.focusSpeed}` | 8 cells per second (at most 1 cell per frame at 12 fps), linear | Marching speed of the focus dash; held still under reduced motion |
+| `{interaction.hitPad}` | Pad each target by whole cells until it is at least 24 px square (`ceil(24 / pxPerCell)` cells per axis); **44 px** when the pointer is touch | Hit-test rectangle around every control; never changes what is drawn |
+
+### Grammar rules
+
+- **Hover glow** is `value`/`mid`, never the accent. Red keeps its meaning (live, hot, primary); hover and focus never use it.
+- **Press** is one quantize step *down* in dot size, so the control visibly sinks. On release it springs back with `{interaction.springHalfLife.release}`. It is never a colour change.
+- **Data motion** uses `{interaction.springHalfLife.data}`: the value glides on a critically damped spring and snaps to the next integer cell or lattice step each frame.
+- **Focus** is marching dots: the control's own outline sites light in the `{interaction.focusDash}` pattern and travel at `{interaction.focusSpeed}`. It replaces the `{colors.hairlineActive}` card border for in-card controls; the hairline treatment stays for whole-card selection.
+- **Drag scrubs whole dot columns.** A horizontal drag moves a value one whole column (or lattice step) at a time, never a fractional position. Bars, sliders and playheads quantize to site columns, so the control always sits exactly on dots.
+- **Long-press is a radial-reveal progress.** Holding a control reveals a ring of sites clockwise from 12 o'clock around the press point; the action fires when the ring closes. Releasing early un-reveals it on the release spring.
+- **Hit pad** is invisible. Targets below 24 px (44 px on touch) grow their hit rectangle, not their dots.
+
 ## Do's and Don'ts
 
 ### Do
@@ -267,7 +294,7 @@ Unlike a typical responsive system that reflows layout, Dot/480's primary respon
 ## Known Gaps
 
 - **Physical LED-panel calibration not yet measured** — the `led-panel` breakpoint's pitch-locking behavior is specified but not validated against real hardware bit-depth/gamma response.
-- **Hover states not documented** by system policy — Dot/480 targets primarily non-hover display surfaces.
+- **Interaction tokens are specified, not yet measured** — `{interaction.*}` values (glow radius, spring half-lives, focus dash, hit pad) are design targets until tuned against real pointer/touch latency.
 - **Superformula (N-fold decorative dot shapes)** deferred per the engineering plan — only the squircle exponent range is currently implemented.
 - **Low-density halftone legibility** below ~32×32 grid cells is a known hard limit, not yet mitigated beyond the gamma-boost + pre-blur tweaks documented in the engineering plan.
 - **Modal / dialog styling** not present in any captured reference board — no `dot-modal` component exists yet.

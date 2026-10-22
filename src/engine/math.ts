@@ -5,6 +5,11 @@
  */
 export const clamp = (x: number, lo = 0, hi = 1) => (x < lo ? lo : x > hi ? hi : x)
 export const mix = (a: number, b: number, t: number) => a + (b - a) * t
+/**
+ * Length of (x, y) for per-cell field code. `Math.hypot` is variadic and ~10× slower in V8, and its
+ * rounding is engine-specific; `Math.sqrt` is correctly rounded everywhere.
+ */
+export const len = (x: number, y: number) => Math.sqrt(x * x + y * y)
 /** Hermite smoothstep; `a > b` gives the falling edge. */
 export function smoothstep(a: number, b: number, x: number): number { const t = clamp((x - a) / (b - a)); return t * t * (3 - 2 * t) }
 

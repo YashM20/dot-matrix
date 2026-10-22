@@ -295,7 +295,7 @@ export const afterlight: WidgetPreset = {
   id: 'afterlight', name: 'Afterlight', label: '', group: 'photo', chrome: 'dots', grid: TILE, style: { ...tileStyle, sizeMin: 0, sizeMax: 1.05, quantizeSteps: 0 },
   layers: () => [
     layer(textDots('AFTERLIGHT', 0, 0, { font: 'narrowShort', px: 1.8, py: 2.16, size: 2 })),
-    layer({ field: faceField, sites: faceSites, lattice: 2.6 }, 'value'),
+    layer({ field: faceField, sites: faceSites, size: 2.6 }, 'value'),
     layer(T.dotLine(70.2, 0, 70.2, 134, { spacing: 2.9, size: 1.8 }), 'active'),
     layer(T.big('A FILM BY HENRY LI', 0, 136, { lattice: 1.05 }), 'idle'),
   ],

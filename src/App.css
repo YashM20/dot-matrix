@@ -1410,7 +1410,8 @@ label b {
   cursor: pointer
 }
 
-/* real controls: transparent and pointer-blind (the card handles the pointer), with a keyboard focus ring */
+/* real controls: transparent and pointer-blind (the card handles the pointer); the card draws focus itself
+   (marching dots from `ctx.focus`), so there is no CSS outline */
 .dot-a11y-ctl,
 .dot-a11y-group {
   margin: 0;
@@ -1455,11 +1456,4 @@ label b {
 
 .dot-a11y-ctl::-moz-range-track {
   background: transparent
-}
-
-/* fallback focus ring in the label tone (never the accent) until cards draw their own marching-dots focus */
-.dot-a11y-ctl:focus-visible {
-  outline: 1px dashed var(--label);
-  outline-offset: 2px;
-  border-radius: 4px
 }

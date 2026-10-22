@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject } from 'react'
 import { renderCanvas } from '../engine/renderer/canvasRenderer'
 import { sampleLayers } from '../engine/sampler/gridSampler'
-import { sharedClock } from '../engine/clock'
+import { quantizeTime, sharedClock } from '../engine/clock'
 import { DataSprings, duration as motionDuration, ease, maskByName, revealDots, transitionDots, type MaskName } from '../engine/motion'
 import { renderSVG } from '../engine/renderer/svgRenderer'
 import type { Control, ControlPatch, DotInstance, DotStyle, Field, GridConfig, Layer, ThemeTokens } from '../engine'
@@ -140,7 +140,12 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   // live = drawn imperatively from the master clock (no React render per frame; the clock itself pauses
   // while the page is hidden). Otherwise the card is one sampled frame: t=0 for animated cards under
   // reduced motion or off-screen, `tick` for wall-clock cards.
-  const live = motion && onScreen && !!layers
+  const input = useControlInput(controls, grid, data ?? {}, onInput)
+  const interactive = !!controls?.length && !!layers
+  // engaged: a control is hovered, pressed or focused, so even a static card runs on the clock (glow, press
+  // ripple and the marching focus ring read `t`); under reduced motion it stays a re-sampled still frame
+  const engaged = interactive && !reducedMotion && !!(input.ix?.hover || input.ix?.pressed || input.ix?.focus)
+  const live = ((motion && onScreen) || engaged) && !!layers
 
   // entrance: sampling waits for the stagger delay, so a board spreads its sampling cost over the stagger
   const [enterSpec] = useState(() => (enter && !window.matchMedia(reducedMotionQuery).matches ? enter : undefined))
@@ -151,8 +156,6 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     return () => window.clearTimeout(id)
   }, [enterSpec])
 
-  const input = useControlInput(controls, grid, data ?? {}, onInput)
-  const interactive = !!controls?.length && !!layers
   // a live card reads the latest interaction per frame; the static frame re-samples only on a committed change
   const dots = useDotField(layers ? { layers } : { field: field ?? (() => 0) }, grid, style, theme, animated ? 0 : tick, data, ready, live ? undefined : input.ix)
   const pitch = grid.pitch ?? theme.gridPx
@@ -227,7 +230,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
 
   const visible = useMemo(() => { let n = 0; for (const d of dots) if (d.opacity > 0 && d.r > 0) n++; return n }, [dots])
   // transients animate on canvas; a sparse card hands back to SVG when they finish
-  const mode: RenderMode = renderer ?? (animated || transient || visible > CANVAS_THRESHOLD ? 'canvas' : 'svg')
+  const mode: RenderMode = renderer ?? (animated || live || transient || visible > CANVAS_THRESHOLD ? 'canvas' : 'svg')
   const svg = useMemo(() => mode === 'svg' ? renderSVG(dots, width, height) : '', [mode, dots, width, height])
   const scale = useBackingScale(canvasRef, mode === 'canvas', width)
   useEffect(() => { onMode?.(mode) }, [mode, onMode])
@@ -297,7 +300,9 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   // live frames straight from the master clock; a throwing frame keeps the last good one on screen
   const { cols, rows, pitch: gridPitch } = grid
   const { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps } = style
-  useEffect(() => {
+  const liveCanvasRef = useRef<HTMLCanvasElement | null>(null)
+  // a layout effect, so a static card that just became engaged (SVG → canvas) never shows a blank canvas
+  useLayoutEffect(() => {
     if (!live || !ready || mode !== 'canvas' || !layers) return
     const canvas = canvasRef.current
     if (!canvas) return
@@ -306,7 +311,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     let failed = false
     const bindLive = input.bindLive
     const sub = {
-      fps: fps ?? 12,
+      fps: fps ?? (motion ? 12 : 30),
       onFrame(t: number, frame: number) {
         const d = springKey && springsRef.current ? { ...frameData, ...springsRef.current.at(t) } : frameData
         try { draw(canvas, applyTransient(sampleLayers(layers({ t, frame, data: d, grid: g, ...input.ixRef.current }), g, s, theme), t)) }
@@ -317,9 +322,15 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
       },
     }
     // input invalidates this subscriber, so feedback lands on the next animation frame rather than the next fps tick
+    if (liveCanvasRef.current !== canvas) {
+      // first frame on a freshly mounted canvas: draw it before paint
+      liveCanvasRef.current = canvas
+      const { t, frame } = quantizeTime(sharedClock().time(), sub.fps)
+      sub.onFrame(t, frame)
+    }
     const off = sharedClock().subscribe(sub), unbind = bindLive(sub)
     return () => { off(); unbind() }
-  }, [live, ready, mode, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, theme, dataKey, springKey, fps, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [live, ready, mode, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, theme, dataKey, springKey, fps, motion, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const surface = mode === 'canvas'
     ? <canvas ref={canvasRef} className={className} style={{ width: '100%', height: 'auto', display: 'block', aspectRatio: `${width} / ${height}` }} aria-hidden="true" />

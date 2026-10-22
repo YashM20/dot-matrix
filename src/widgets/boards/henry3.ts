@@ -3,9 +3,9 @@
  * TILE cards (144×144): 5×7 labels on the card pitch, body text on a 1.25–1.3 lattice,
  * hero numerals in the smooth display weight on a 2.5–3.7 lattice, rings and rays as dot sites.
  */
-import { hash01, mix } from '../../engine/math'
-import type { Field } from '../../engine/types'
-import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
+import { hash01, len, mix } from '../../engine/math'
+import type { Field, Tone } from '../../engine/types'
+import { TAU, TILE, baked, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
 const BODY = { lattice: 1.3 }
@@ -24,19 +24,25 @@ export const boardingPass: WidgetPreset = {
   ],
 }
 
-// 16 rays: the on-axis/diagonal ones run long, the in-between ones short.
-const SUN: [number, number] = [69, 57]
-const rays = Array.from({ length: 16 }, (_, i) => {
-  const a = (i / 16) * TAU, end = i % 2 === 0 ? 55 : 42
-  return T.dotLine(SUN[0] + Math.sin(a) * 27, SUN[1] - Math.cos(a) * 27, SUN[0] + Math.sin(a) * end, SUN[1] - Math.cos(a) * end, { spacing: 4.8, size: 2.4 })
-})
+// A sun on one radial lattice (dots every 7.2 cells outward from the centre): a red core, three
+// concentric site rings (8, 16, 16 dots) in value then idle, and 16 spokes that continue the rings'
+// dots and taper in size and tone as they leave: the on-axis/diagonal spokes run long, the others short.
+const SUN: [number, number] = [71.5, 61], STEP = 7.2
+// [ring k, size, tone, dots on that ring (every `skip`-th of 16 spokes), spokes that reach it]
+const SUN_BANDS: [number, number, Tone, number, (i: number) => boolean][] = [
+  [1, 4.4, 'value', 2, () => true], [2, 4.6, 'value', 1, () => true], [3, 5.6, 'idle', 1, () => true],
+  [4, 5.2, 'idle', 1, () => true], [5, 4.4, 'idle', 1, () => true],
+  [6, 3.6, 'mid', 1, i => i % 2 === 0], [7, 2.8, 'mid', 1, i => i % 2 === 0],
+]
+const sunSites = (k: number, skip: number, reach: (i: number) => boolean): [number, number][] =>
+  Array.from({ length: 16 }, (_, i) => i).filter(i => i % skip === 0 && reach(i))
+    .map(i => [SUN[0] + Math.sin((i / 16) * TAU) * STEP * k, SUN[1] - Math.cos((i / 16) * TAU) * STEP * k])
 export const sunburst: WidgetPreset = {
   id: 'sunburst', name: 'Day 3 of 7', label: '', group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
-    layer(T.dotDisc(SUN[0], SUN[1], 21, { spacing: 3.6, size: 2.9 }), 'idle'),
-    ...rays.map(r => layer(r, 'idle')),
-    layer(T.dots([SUN], 2.9), 'active'),
-    layer(T.big('DAY 3 OF 7', 70, 128, { ...BODY, align: 'center' }), 'idle'),
+    ...SUN_BANDS.map(([k, size, tone, skip, reach]) => layer(T.dots(sunSites(k, skip, reach), size), tone)),
+    layer(T.dots([SUN], 6.5), 'active'),
+    layer(T.big('DAY 3 OF 7', 71.5, 125, { lattice: 1.6, align: 'center' }), 'idle'),
   ],
 }
 
@@ -89,18 +95,20 @@ const skyline: Field = (u, v) => {
   const roofs = Math.max(soft(v - .93), soft(.36 - u) * soft(v - .88), soft(u - .7) * soft(.9 - u) * soft(v - (u < .78 ? .86 : .9)))
   lum = mix(lum, .06, roofs)
   // the figure: head, hood falling to the left, shoulders widening to the bottom
-  const head = soft(.036 - Math.hypot((u - .515) / .85, v - .62))
-  const hood = soft(.03 - Math.hypot(u - .472, (v - .695) / 1.6)), neck = soft(.025 - Math.abs(u - .5)) * soft(v - .62) * soft(.72 - v)
+  const head = soft(.036 - len((u - .515) / .85, v - .62))
+  const hood = soft(.03 - len(u - .472, (v - .695) / 1.6)), neck = soft(.025 - Math.abs(u - .5)) * soft(v - .62) * soft(.72 - v)
   const w = .062 + Math.min(.022, Math.max(0, v - .72) * .2), body = soft(w - Math.abs(u - .493)) * soft(v - .705 - Math.abs(u - .493) * .5)
   lum = mix(lum, .02, Math.max(head, hood, neck, body))
   return Math.max(0, Math.min(1, lum))
 }
+/** The scene never changes: baked once per card cell. */
+const SKYLINE = baked(TILE, skyline)
 export const afterSilhouette: WidgetPreset = {
   id: 'silhouette', name: 'Henry', label: '', group: 'photo', chrome: 'dots', bleed: true, grid: TILE,
   // halftone: every dot fully lit, luminance carried by dot size alone
   style: { ...tileStyle, sizeMin: 0, sizeMax: 1.2, quantizeSteps: 0, opacityMode: 'constant' },
   layers: () => [
-    layer(skyline, 'value'),
+    layer(SKYLINE, 'value'),
     layer(T.dotRing(132, 11, 5, { spacing: 1.2, size: 1.3 }), 'active'),
   ],
 }
