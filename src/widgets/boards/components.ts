@@ -48,7 +48,10 @@ export const toggleCard: WidgetPreset = {
   defaults: { on: 1 },
   controls: [{ key: 'on', kind: 'toggle', box: [TRACK.x, 28, TRACK.w, TRACK.h], label: 'Toggle' }],
   // the top switch follows `on`; the bottom one always shows the opposite state
-  layers: ({ data }) => [...toggle(28, data.on >= .5), ...toggle(86, data.on < .5)],
+  layers: ctx => [
+    ...toggle(28, ctx.data.on >= .5), ...toggle(86, ctx.data.on < .5),
+    ...states(ui(ctx, 'on'), ctx.t, rr(TRACK.x, 28, TRACK.w, TRACK.h, TRACK.h / 2)),
+  ],
 }
 
 // ── PILL ────────────────────────────────────────────────────────────────────
@@ -80,7 +83,13 @@ export const sliderCard: WidgetPreset = {
     { key: 'value', kind: 'slider', box: [RAIL.x0, 51 - RAIL.knob / 2, RAIL.x1 - RAIL.x0, RAIL.knob], step: 1 / 30, label: 'Value' },
     { key: 'level', kind: 'slider', box: [RAIL.x0, 105 - RAIL.knob / 2, RAIL.x1 - RAIL.x0, RAIL.knob], step: 1 / 30, label: 'Level' },
   ],
-  layers: ({ data }) => [...slider(51, data.value, 'idle', 'value'), ...slider(105, data.level, 'active', 'active')],
+  layers: ctx => {
+    const ring = (y: number) => rr(RAIL.x0 + 2, y - 6, RAIL.x1 - RAIL.x0 - 4, 12, 6)
+    return [
+      ...slider(51, ctx.data.value, 'idle', 'value'), ...slider(105, ctx.data.level, 'active', 'active'),
+      ...states(ui(ctx, 'value'), ctx.t, ring(51), ring(51), 4), ...states(ui(ctx, 'level'), ctx.t, ring(105), ring(105), 4),
+    ]
+  },
 }
 
 // ── ICON BUTTON ─────────────────────────────────────────────────────────────
@@ -194,7 +203,7 @@ const segX = (i: number) => SEG.x + SEG.h / 2 + (i * (SEG.w - SEG.h)) / 2
 export const segmentedCard: WidgetPreset = {
   id: 'ui-segmented', name: 'Segmented', group: 'composite', chrome: 'dots', grid: TILE, style,
   defaults: { seg: 1 },
-  controls: [{ key: 'seg', kind: 'segmented', options: 3, box: [SEG.x, SEG.y, SEG.w, SEG.h + 28], label: 'Fan speed' }],
+  controls: [{ key: 'seg', kind: 'segmented', options: 3, optionLabels: SEG.labels, box: [SEG.x, SEG.y, SEG.w, SEG.h + 28], label: 'Fan speed' }],
   layers: ctx => {
     const s = ui(ctx, 'seg'), sel = int(ctx.data.seg, 0, 2), cy = SEG.y + SEG.h / 2, track = rr(SEG.x, SEG.y, SEG.w, SEG.h, SEG.h / 2)
     return [
@@ -298,7 +307,7 @@ export const checkCard: WidgetPreset = {
   defaults: { notify: 1, period: 0 },
   controls: [
     { key: 'notify', kind: 'toggle', box: [10, CHK.rows[0] - 14, 124, 28], label: 'Notify' },
-    { key: 'period', kind: 'segmented', options: 2, orientation: 'vertical', box: [10, CHK.rows[1] - 14, 124, CHK.rows[2] - CHK.rows[1] + 28], label: 'Period' },
+    { key: 'period', kind: 'segmented', options: 2, optionLabels: CHK.labels.slice(1), orientation: 'vertical', box: [10, CHK.rows[1] - 14, 124, CHK.rows[2] - CHK.rows[1] + 28], label: 'Period' },
   ],
   layers: ctx => {
     const c = ui(ctx, 'notify'), g = ui(ctx, 'period'), on = ctx.data.notify >= .5, sel = int(ctx.data.period, 0, 1)
@@ -337,7 +346,7 @@ const TAB_DATA = [
 export const tabsCard: WidgetPreset = {
   id: 'ui-tabs', name: 'Tabs', group: 'composite', chrome: 'dots', grid: TILE, style,
   defaults: { tab: 1 },
-  controls: [{ key: 'tab', kind: 'segmented', options: 3, box: [4, TABS.y - 6, 136, TABS.rule - TABS.y + 10], label: 'Range' }],
+  controls: [{ key: 'tab', kind: 'segmented', options: 3, optionLabels: TABS.names, box: [4, TABS.y - 6, 136, TABS.rule - TABS.y + 10], label: 'Range' }],
   layers: ctx => {
     const s = ui(ctx, 'tab'), sel = int(ctx.data.tab, 0, 2), p = ptr(ctx), hot = p ? int(p.x / 48 - .5, 0, 2) : sel
     const thin: Pt[] = [], thick: Pt[] = []

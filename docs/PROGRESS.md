@@ -5,14 +5,14 @@
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
 ## Status board (updated 2026-10-22)
-**Where we are:** P0 is mostly done. P1 is in progress on branch `feat/p1-complete`. P2–P6 have not started.
+**Where we are:** On branch `feat/p1-complete`: P0 agent items are done (P0-A borderline). P1-A to P1-F are done. P2-A to P2-D are done: input layer, Components v2, Instrument board, interaction tokens. P3–P6 have not started. 96 presets.
 `main` = `666c0eb` (PR #2 merged: TILE boards + P0 + P1 motion core).
 
 | Phase | Plan | Done | State |
 |---|---|---|---|
-| P0 Foundations, determinism, fidelity harness | 2 wk | 20 / 28 items · 2 / 5 gates | 🟡 Agent work left, plus 3 items waiting on the user |
-| P1 Motion, states, choreography | 2.5 wk | 8 / 19 items | 🔵 **Active**: visible items first |
-| P2 Interaction + Components v2 | 3 wk | 0 | ⚪ Next |
+| P0 Foundations, determinism, fidelity harness | 2 wk | 22 / 28 items · 2 / 5 gates | 🟡 3 items waiting on the user; mosaic perf borderline |
+| P1 Motion, states, choreography | 2.5 wk | visible items done (P1-A..F) | 🟢 Needs browser checks + Departures taste pass |
+| P2 Interaction + Components v2 | 3 wk | P2-A..D done | 🔵 **Active**: polish + gates left (below) |
 | P3 Depth, light, material, Field IR | 3 wk | 0 | ⚪ |
 | P4 Hero transitions, simulation, agents, live data | 3 wk | 0 | ⚪ |
 | P5 GPU, devices, display physics | 3 wk | 0 | ⚪ |
@@ -37,7 +37,16 @@
 - [x] P2-A: input layer: pointer/touch/keyboard → data, hit testing, a11y overlay, hover/press/focus in ctx (`DotCanvas`, `src/engine/interaction/`). Done 2026-10-22: engine `toLocal` / `pick` / `beginDrag` + `dragValue` / `releaseValue` / `keyValue` / `settle` (verify §15); `useControlInput` (pointer capture, `pointers[]` in cells, rAF-batched commits, input frames cut instead of dissolving, springKeys still glide); a hovered / pressed / focused card runs on the clock at 30 fps so focus rings march (still frame under reduced motion); `ControlOverlay` + `.dot-a11y-*` styles (button, `role=switch`, ranges, xy range pair, radiogroup; one roving stop for buttons/switches; 24/44 px hit pads); `DotWidget` owns the data and is `role=group` when interactive. Checked in the browser on `ui-toggle` / `ui-slider` (mouse, drag, keyboard). Not done: axe run, latency gate measurement, multitouch on a real device.
 - [x] P2-B: Components v2 on the components board. Done 2026-10-22: 10 new cards with `controls` and hover/press/focus states (`ui-segmented`, `ui-stepped-slider`, `ui-knob`, `ui-stepper`, `ui-check`, `ui-tabs`, `ui-progress`, `ui-loaders`, `ui-keypad`, `ui-text-field`); `pnpm snap --ctx '<json>'` merges extra frame-context fields for state snapshots. Chips and toast not built yet.
 - [x] P2-C: **Instrument** flagship board (knobs, crank, XY pad, 16-step sequencer, transport, meter). Done: `src/widgets/boards/instrument.ts`, nine `inst-*` cards with `controls`, rendered purely from `data`/`hover`/`pressed`/`focus`/`t` (hover glow in mid, press one quantize step down, marching-dots focus); red only on the playhead, record light and XY live dot. Goldens added; needs a browser check once P2-A lands.
-- [x] P2-D: DESIGN.md "Interaction" tokens + lift pass (`henry-bear`, `sunburst`).
+- [x] P2-D: DESIGN.md "Interaction" tokens + lift pass (`henry-bear`, `sunburst`). The bunny is still a little blobby.
+- [x] P2 follow-up: `ui-toggle` / `ui-slider` now draw hover glow + marching focus ring; segmented / tabs / radio / transport pass `optionLabels` (screen readers read "Record", "Play", "Stop", not "1/2/3").
+
+**P2 left (agent can do):**
+- [ ] P2-E: chips + toast cards (Components v2 leftovers).
+- [ ] P2-F: browser pass on the Instrument board (knobs, crank, XY, sequencer, transport) and the new `ui-*` cards; axe run on the overlay.
+- [ ] P2-G: measure the one-frame input latency gate; multitouch on a real device.
+- [ ] P2-H: touch ripple after release (pointer is dropped on `pointerup`, so `tDown`-based ripples stop early on touch).
+- [ ] P2-I: controls when `DotWidget` gets a `size` override (currently switched off; boxes are in preset-grid cells).
+- [ ] P2-J: `inst-level` follows the sequencer's default pattern, not live edits (cards don't share data yet; needs board-level data).
 
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.

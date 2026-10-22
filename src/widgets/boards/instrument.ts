@@ -198,7 +198,7 @@ export const transport: WidgetPreset = {
   defaults: { bpm: BPM, mode: 0 },
   controls: [
     { key: 'bpm', kind: 'stepper', orientation: 'vertical', box: BPM_BOX, min: 40, max: 240, step: 1, label: 'Tempo' },
-    { key: 'mode', kind: 'segmented', box: [SEG.x, SEG.y, SEG.w, SEG.h], options: 3, label: 'Transport: record, play, stop' },
+    { key: 'mode', kind: 'segmented', box: [SEG.x, SEG.y, SEG.w, SEG.h], options: 3, optionLabels: ['Record', 'Play', 'Stop'], label: 'Transport' },
   ],
   layers: ctx => {
     const bpm = Math.round(ctx.data.bpm ?? BPM), mode = Math.round(ctx.data.mode ?? 0), running = mode !== 2
