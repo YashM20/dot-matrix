@@ -5,6 +5,8 @@ import type { InteractionContext } from './useDotField'
 
 /** How long a keyboard-pressed button stays down (ms). */
 const KEY_PRESS_MS = 140
+/** How long a released touch pointer lingers in `pointers[]` (ms), so tDown-based ripples (0.5 s) finish. */
+const LINGER_MS = 520
 
 interface Drag { control: Control; start: DragStart; before: ControlPatch }
 interface Live { hover?: string; pressed?: string; focus?: string }
@@ -66,8 +68,14 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
   const live = useRef<Live>({}), committed = useRef<Live>({})
   const pending = useRef<ControlPatch | null>(null), moved = useRef(false), keyPress = useRef<string | undefined>(undefined)
   const raf = useRef(0), keyTimer = useRef(0)
+  const lingers = useRef(new Map<number, number>()), lingerDirty = useRef(false)
+  const unlinger = (id: number) => { const h = lingers.current.get(id); if (h !== undefined) { window.clearTimeout(h); lingers.current.delete(id) } }
   // reset the handles too: StrictMode re-runs effects, and a stale handle would block every later schedule()
-  useEffect(() => () => { cancelAnimationFrame(raf.current); raf.current = 0; window.clearTimeout(keyTimer.current) }, [])
+  useEffect(() => () => {
+    cancelAnimationFrame(raf.current); raf.current = 0; window.clearTimeout(keyTimer.current)
+    for (const h of lingers.current.values()) window.clearTimeout(h)
+    lingers.current.clear()
+  }, [])
 
   const value = useCallback((key: string) => {
     const p = pending.current?.[key]
@@ -80,8 +88,8 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
     pending.current = null
     const l = live.current, c = committed.current
     ixRef.current = snapshot(l, pointers.current)
-    const changed = !!patch || l.hover !== c.hover || l.pressed !== c.pressed || l.focus !== c.focus || (!!l.pressed && moved.current)
-    moved.current = false
+    const changed = !!patch || l.hover !== c.hover || l.pressed !== c.pressed || l.focus !== c.focus || (!!l.pressed && moved.current) || lingerDirty.current
+    moved.current = false; lingerDirty.current = false
     if (changed) {
       inputAt.current = performance.now()
       committed.current = { ...l }
@@ -135,8 +143,17 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
     const p = pointers.current.get(e.pointerId)
     if (p) {
       // touch pointers end with the contact; a mouse stays (hovering) until it leaves
-      if (e.pointerType === 'touch' || cancel) { pointers.current.delete(e.pointerId); stamps.current.delete(e.pointerId) }
-      else pointers.current.set(e.pointerId, { ...p, down: false, tUp: sharedClock().time() })
+      if (cancel) { unlinger(e.pointerId); pointers.current.delete(e.pointerId); stamps.current.delete(e.pointerId) }
+      else if (e.pointerType === 'touch') {
+        // a released touch lingers (up, not inside / down) so the press ripple plays out; it never counts as hover / pressed
+        pointers.current.set(e.pointerId, { ...p, down: false, inside: false, up: true, tUp: sharedClock().time() })
+        unlinger(e.pointerId); lingerDirty.current = true
+        lingers.current.set(e.pointerId, window.setTimeout(() => {
+          lingers.current.delete(e.pointerId)
+          if (pointers.current.get(e.pointerId)?.up) { pointers.current.delete(e.pointerId); stamps.current.delete(e.pointerId) }
+          lingerDirty.current = true; schedule()
+        }, LINGER_MS))
+      } else pointers.current.set(e.pointerId, { ...p, down: false, tUp: sharedClock().time() })
     }
     if (e.pointerType === 'touch' && e.isPrimary) live.current.hover = undefined
     syncPressed(); schedule()
@@ -145,7 +162,8 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
   const handlers: ControlInput['handlers'] = {
     onPointerDown(e) {
       if (e.pointerType === 'mouse' && e.button !== 0) return
-      const p = track(e, { down: true, tDown: sharedClock().time() })
+      unlinger(e.pointerId)
+      const p = track(e, { down: true, up: false, tDown: sharedClock().time() })
       const key = keyAt(e, p), c = control(key)
       if (!c) { schedule(); return }
       // no text selection, native drag or emulated mouse events; focus the control ourselves
@@ -173,7 +191,7 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
     onPointerCancel(e) { finish(e, true) },
     onLostPointerCapture(e) { if (drags.current.has(e.pointerId)) finish(e, false) },
     onPointerLeave(e) {
-      if (drags.current.has(e.pointerId)) return
+      if (drags.current.has(e.pointerId) || pointers.current.get(e.pointerId)?.up) return
       pointers.current.delete(e.pointerId); stamps.current.delete(e.pointerId)
       if (e.isPrimary) live.current.hover = undefined
       schedule()

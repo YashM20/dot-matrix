@@ -44,8 +44,8 @@
 - [ ] P2-E: chips + toast cards (Components v2 leftovers).
 - [ ] P2-F: browser pass on the Instrument board (knobs, crank, XY, sequencer, transport) and the new `ui-*` cards; axe run on the overlay.
 - [ ] P2-G: measure the one-frame input latency gate; multitouch on a real device.
-- [ ] P2-H: touch ripple after release (pointer is dropped on `pointerup`, so `tDown`-based ripples stop early on touch).
-- [ ] P2-I: controls when `DotWidget` gets a `size` override (currently switched off; boxes are in preset-grid cells).
+- [x] P2-H: a released touch lingers in `pointers[]` for 520 ms (`up: true`, not down/inside, never hover/pressed) and keeps the clock live, so `ui-keypad`'s ripple finishes; `ptr()` ignores lingering pointers.
+- [x] P2-I: `size` only re-grids the canvas (layers and boxes share cell space), so controls stay on unscaled; boxes fully outside the smaller grid are dropped.
 - [ ] P2-J: `inst-level` follows the sequencer's default pattern, not live edits (cards don't share data yet; needs board-level data).
 
 **Needs the user (blocked):**

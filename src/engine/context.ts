@@ -9,6 +9,8 @@ export interface Pointer {
   tDown: number; tUp: number
   vx: number; vy: number
   pressure: number
+  /** A released touch kept briefly so press ripples can finish: not `down`, not `inside`, never a hover target. */
+  up?: boolean
 }
 
 /**

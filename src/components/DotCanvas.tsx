@@ -144,7 +144,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   const interactive = !!controls?.length && !!layers
   // engaged: a control is hovered, pressed or focused, so even a static card runs on the clock (glow, press
   // ripple and the marching focus ring read `t`); under reduced motion it stays a re-sampled still frame
-  const engaged = interactive && !reducedMotion && !!(input.ix?.hover || input.ix?.pressed || input.ix?.focus)
+  const engaged = interactive && !reducedMotion && !!(input.ix?.hover || input.ix?.pressed || input.ix?.focus || input.ix?.pointers?.some(p => p.up))
   const live = ((motion && onScreen) || engaged) && !!layers
 
   // entrance: sampling waits for the stagger delay, so a board spreads its sampling cost over the stagger

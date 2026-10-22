@@ -194,7 +194,7 @@ const marching = (shape: Shape, t: number, d = FOCUS.d): Layer => {
 const states = (s: UiState, t: number, hover: Shape, focus: Shape = hover, focusD = FOCUS.d): Layer[] =>
   [...(s.hover ? glow(hover) : []), ...(s.focus ? [marching(focus, t, focusD)] : [])]
 /** Primary pointer (card cells), when the input layer provides one. */
-const ptr = (ctx: Ctx) => ctx.pointers?.[0]
+const ptr = (ctx: Ctx) => ctx.pointers?.find(q => !q.up)
 
 // ── SEGMENTED ───────────────────────────────────────────────────────────────
 /** A three-stop switch: the toggle's track and knob, mid detents at the free stops, labels below. */
@@ -447,7 +447,9 @@ export const keypadCard: WidgetPreset = {
       if (s.pressed) out.push(layer(at(T.dotRing(x, y, 11, { spacing: 2.6, size: 1.3 }), PRESS), 'idle'))
       out.push(...states(s, ctx.t, circle(x, y, 9), circle(x, y, 11), 0))
       // ripple: from the pointer's press time; a pressed key without pointer data shows an early frame
-      const age = p && (s.pressed || s.hover) ? ctx.t - p.tDown : s.pressed ? .12 : -1
+      // (a released touch lingers in `pointers` as `up`, so the ripple finishes on the key it was released over)
+      const rel = ctx.pointers?.find(q => q.up && Math.abs(q.x - x) <= 18 && Math.abs(q.y - y) <= 13)
+      const age = p && (s.pressed || s.hover) ? ctx.t - p.tDown : s.pressed ? .12 : rel ? ctx.t - rel.tDown : -1
       if (age >= 0 && age < PAD.ripple) {
         const f = age / PAD.ripple
         out.push(layer(T.dotRing(x, y, Math.round(12 + f * 14), { spacing: 3.3, size: 1.5 }), f < .34 ? 'value' : f < .67 ? 'idle' : 'mid'))
