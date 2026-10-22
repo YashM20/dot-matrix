@@ -26,7 +26,7 @@
 - [x] P1-C: **Departures** flagship board (`src/widgets/boards/departures.ts`, `?board=departures`). Six live cards: split-flap departures list (rows cascade every 7 s; the letter drum has a blank flap), Swiss station clock (58.5 s sweep, rests at 12, minute hand jumps on an underdamped spring), platform-change flip, next-train countdown (minute flip + draining 30-dot bar), line map (dwell + emphasized glide, decoded stop name), service status (decode on change). v0 only: needs the user's taste pass (the v1 pick in the protocol).
 - [x] P1-D: data springs on timer, music, fitness and audio-levels (`springKeys`). Details in the Phase 1 section. Not yet watched in the browser.
 - [x] P1-E: card upgrades: messages typewriter, audio-levels peak-hold, weather city morph (decode). Details in the Phase 1 section.
-- [ ] P1-F: Transition Lab in the playground (pick mask, duration and easing; replay).
+- [x] P1-F: Transition Lab in WORKSPACE (`src/components/playground/TransitionLab.tsx`): mask, duration, easing, enter/exit/change, Replay.
 
 **Agent can do now (P0 leftovers, invisible):**
 - [ ] P0-A: mosaic mount < 30 ms (`thermal-puppy`, `silhouette`, `vision-camera`) + static sample cache across board visits.
@@ -187,7 +187,7 @@ Plan reference: MASTER-PLAN §4 P1. **Flagship: Departures.**
 - [x] Reduced motion: no entrance, no dissolve (instant).
 - [x] P1-D data springs: opt-in `WidgetPreset.springKeys` → `DotCanvas` `spring` transient re-samples each frame with `DataSprings` (half-life .12 s) until settled, no IGN dissolve; live cards read the springs per frame. Wired on timer, music, fitness, audio-levels. Reduced motion = instant. Not yet checked by dragging in the browser.
 - [ ] Tab switch exit → enter. Only the enter runs now; the old board unmounts instantly.
-- [ ] Transition Lab in the playground.
+- [x] P1-F Transition Lab in the playground (WORKSPACE, bottom row): mask, duration 150–1200 ms, easing, enter/exit/change (preset → next preset), Replay; engine `revealDots`/`transitionDots` on a canvas.
 - [x] P1-E card upgrades (home-clock split-flap landed separately as P1-B; pure in `t`, t=0 frame unchanged): messages typewriter + blinking cursor (9 s cycle), audio-levels mic meter with decaying peak-hold dot, weather cycles TOKYO/OSAKA/KYOTO via `decodeText` (6 s). Goldens: new t=1.3 entries for those three. Home-clock split-flap not done.
 - [ ] Lift pass: home-clock, weather, messages, settings, agent-status, word-play, codex-tokens.
 - [ ] **Departures** board, through the v0–v5 protocol (needs the user's pick at v1 and a like at v5).

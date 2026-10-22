@@ -8,6 +8,7 @@ import { DataEditor } from './components/playground/DataEditor'
 import { ExportPanel } from './components/playground/ExportPanel'
 import { PhotoUpload } from './components/playground/PhotoUpload'
 import { PreviewCanvas } from './components/playground/PreviewCanvas'
+import { TransitionLab } from './components/playground/TransitionLab'
 import { WidgetGallery } from './components/playground/WidgetGallery'
 import { useExitSwap } from './hooks/useExitSwap'
 import { boardIds } from './widgets'
@@ -60,6 +61,7 @@ export default function App() {
           <div className="pg-bottom-row">
             <DataEditor />
             <PhotoUpload />
+            <TransitionLab />
           </div>
         </div>
         <aside className="pg-side">
