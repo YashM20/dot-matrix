@@ -915,6 +915,43 @@ label b {
   cursor: pointer
 }
 
+.pg-tlab-stage {
+  margin-top: 10px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px
+}
+
+.pg-tlab-stage canvas {
+  display: block;
+  width: 100%;
+  height: auto
+}
+
+.pg-tlab-modes {
+  display: flex;
+  gap: 6px;
+  margin-top: 10px
+}
+
+.pg-tlab-modes button {
+  flex: 1;
+  font: 500 9px var(--mono);
+  letter-spacing: .08em;
+  padding: 6px 10px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: none;
+  color: var(--mute);
+  cursor: pointer
+}
+
+.pg-tlab-modes button.on {
+  border-color: var(--red);
+  color: var(--red)
+}
+
+.pg-tlab-modes button:hover,
 .pg-controls-actions button:hover {
   border-color: var(--red);
   color: var(--red)

@@ -5,6 +5,7 @@
  *   pnpm snap --board henry3              # whole board as one sheet
  *   pnpm snap --all                       # every board
  *   pnpm snap --film timer --t 0:2:0.25   # contact sheet across time → <out>/film/timer.png (+ timer.apng)
+ *   pnpm snap --film home-clock --since --t 0:1.2:0.1   # tick burst: ctx.since = t (split-flap)
  *   pnpm snap --bar silhouette            # bar sheet vs the reference cards → <out>/bar/silhouette.png
  *   options: --out <dir> (default .snapshots)  --px <pixels per CSS px> (default 2; film/bar default 1)
  *            --t <seconds> (default 1.3; with --film a:b:step, default 0:2:0.25)  --cols <n> (film frames per row)
@@ -22,6 +23,7 @@ const opt = (name: string, fallback: string) => { const i = args.indexOf(`--${na
 const film = opt('film', ''), bar = opt('bar', '')
 const out = opt('out', '.snapshots'), px = +opt('px', film || bar ? '1' : '2'), tArg = opt('t', ''), board = opt('board', ''), filmCols = +opt('cols', '0')
 const t = tArg && !tArg.includes(':') ? +tArg : 1.3
+const since = args.includes('--since')
 const all = args.includes('--all'), ids = args.filter(a => !a.startsWith('--'))
 
 const save = (name: string, r: Raster | Buffer, ext = 'png') => {
@@ -33,7 +35,7 @@ const need = (id: string): WidgetPreset => { const p = widgetById(id); if (!p) {
 // ── film: one card across deterministic t values ────────────────────────────
 function filmSheet(p: WidgetPreset, ts: number[]) {
   const LABEL = 22, gap = 12
-  const frames = ts.map(tt => renderCard(p, { px, t: tt }))
+  const frames = ts.map(tt => renderCard(p, { px, t: tt, since: since ? tt : undefined }))
   const fw = Math.max(...frames.map(f => f.w)), fh = Math.max(...frames.map(f => f.h))
   const cols = filmCols > 0 ? filmCols : frames.length, rows = Math.ceil(frames.length / cols)
   const s = new Raster(cols * fw + (cols + 1) * gap, rows * (fh + LABEL) + (rows + 1) * gap, theme.bg)

@@ -15,6 +15,16 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 
 export const releases: Release[] = [
   {
+    version: '0.6', date: '2026-10-22', title: 'Departures, and boards that leave',
+    summary: 'A new flagship board where every change is mechanical, and smooth handovers between boards.',
+    changes: [
+      { kind: 'new', text: 'Departures board: a live transit board. Split-flap rows cascade when a train leaves, a Swiss station clock sweeps and pauses at 12, and a train glides along its line.' },
+      { kind: 'new', text: 'The home clock flips its digits on the minute, like a split-flap clock, folding about the middle.' },
+      { kind: 'new', text: 'Switching boards or views now dissolves the old cards out, corner to corner, before the new ones build in.' },
+    ],
+    link: { href: '?board=departures', label: 'OPEN DEPARTURES' },
+  },
+  {
     version: '0.5', date: '2026-10-14', title: 'Boards that come alive',
     summary: 'The first motion work: boards build themselves in, dot by dot, and every change dissolves instead of cutting. Under the hood, everything got lighter and steadier.',
     changes: [

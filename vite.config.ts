@@ -11,6 +11,8 @@ export default defineConfig({
     react(),
     babel({ presets: [reactCompilerPreset()] })
   ],
+  // agent worktrees live under .claude/ — don't let their edits reload this checkout's dev server
+  server: { watch: { ignored: ['**/.claude/**'] } },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),

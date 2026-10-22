@@ -1,5 +1,5 @@
 import type { DotStyle, Field, GridConfig, Layer, Tone } from '../engine/types'
-import type { FrameContext } from '../engine/context'
+import type { Control, FrameContext } from '../engine/context'
 import { barsAt, centeredBarsAt, discCells, dotAt, hRule, placeCells, polylineCells, rectCells, ringCells, spriteAt, textAt, textSize, vRule } from '../engine/layout'
 import { cellU, latticeGrid } from '../engine/sampler/gridSampler'
 import { cachedIconField, iconPaths } from '../engine/fields/iconSDF'
@@ -20,9 +20,18 @@ export interface WidgetPreset {
   animated?: boolean
   /** Reads the wall clock (time/date text) — re-sampled on each minute tick; other static cards never re-sample. */
   clock?: boolean
+  /**
+   * Seconds of live animation after each minute tick (needs `clock`): the card is re-sampled every
+   * frame with `ctx.since` = seconds since the tick, e.g. for a split-flap. Replaces the change dissolve.
+   */
+  burst?: number
+  /** Interactive regions (P2): pointer / keyboard input edits `data[control.key]`; see `Control`. */
+  controls?: Control[]
   grid: GridConfig
   style: DotStyle
   defaults?: Record<string, number>
+  /** Data keys that glide to new values on a critically damped spring instead of dissolving (DotCanvas `springKeys`). */
+  springKeys?: string[]
   /** `dots`: the card label and live dot are drawn by the engine inside the grid (TILE cards). */
   chrome?: 'dots'
   /** Label text drawn by `chrome: 'dots'` (defaults to `name`; '' = no label). */

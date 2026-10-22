@@ -4,6 +4,53 @@
 > Update this file in the same commit as the work. Plan: `docs/MASTER-PLAN.md` (v2). Research: `docs/MOTION-INTERACTION-DEPTH.md`, `docs/ADVANCED-PLAN.md`. Taste: `docs/STYLE-BIBLE.md`.
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
+## Status board (updated 2026-10-22)
+**Where we are:** P0 is mostly done. P1 is in progress on branch `feat/p1-complete`. P2–P6 have not started.
+`main` = `666c0eb` (PR #2 merged: TILE boards + P0 + P1 motion core).
+
+| Phase | Plan | Done | State |
+|---|---|---|---|
+| P0 Foundations, determinism, fidelity harness | 2 wk | 20 / 28 items · 2 / 5 gates | 🟡 Agent work left, plus 3 items waiting on the user |
+| P1 Motion, states, choreography | 2.5 wk | 8 / 19 items | 🔵 **Active**: visible items first |
+| P2 Interaction + Components v2 | 3 wk | 0 | ⚪ Next |
+| P3 Depth, light, material, Field IR | 3 wk | 0 | ⚪ |
+| P4 Hero transitions, simulation, agents, live data | 3 wk | 0 | ⚪ |
+| P5 GPU, devices, display physics | 3 wk | 0 | ⚪ |
+| P6 Authoring + ecosystem | 4 wk | 0 | ⚪ |
+| Track L (Perception Lab) / Track R (research spikes) | parallel | 0 | ⚪ |
+
+### Remaining for P0 / P1, by who can unblock it
+**Agent can do now (P1, visible; the user's priority order):**
+- [x] P1-A: board-to-board exit → enter transition. `DotCanvas.exit` (Bayer, accelerate, 220 ms per card, held blank); `cardMotion()` in `Board.tsx` staggers the exit on the same diagonal inside `VIEW_EXIT_MS` = 420 ms; `useExitSwap` in `App` keeps the old view mounted for that window (instant when leaving LOG/DRAW/WORKSPACE or under reduced motion). The gallery enters and exits too. Verified in the browser.
+- [x] P1-B: home-clock split-flap on the minute tick. New `burst` preset flag + `ctx.since`: the card samples live for 1.2 s after the tick. Engine `splitFlapCells` (only changed columns stagger). `flapText` in `henry.ts` folds the flap about the hinge (rows squeeze by \|cos πφ\|, dim while steep). Film: `pnpm snap --film home-clock --since --t 0:0.6:0.05`.
+- [x] P1-C: **Departures** flagship board (`src/widgets/boards/departures.ts`, `?board=departures`). Six live cards: split-flap departures list (rows cascade every 7 s; the letter drum has a blank flap), Swiss station clock (58.5 s sweep, rests at 12, minute hand jumps on an underdamped spring), platform-change flip, next-train countdown (minute flip + draining 30-dot bar), line map (dwell + emphasized glide, decoded stop name), service status (decode on change). v0 only: needs the user's taste pass (the v1 pick in the protocol).
+- [x] P1-D: data springs on timer, music, fitness and audio-levels (`springKeys`). Details in the Phase 1 section. Not yet watched in the browser.
+- [x] P1-E: card upgrades: messages typewriter, audio-levels peak-hold, weather city morph (decode). Details in the Phase 1 section.
+- [x] P1-F: Transition Lab in WORKSPACE (`src/components/playground/TransitionLab.tsx`): mask, duration, easing, enter/exit/change, Replay.
+
+**Agent can do now (P0 leftovers, invisible):**
+- [ ] P0-A: mosaic mount < 30 ms (`thermal-puppy`, `silhouette`, `vision-camera`) + static sample cache across board visits.
+- [ ] P0-B: permanent bounds-vs-no-bounds check in `scripts/verify.ts`.
+- [ ] P0-C: migrate `sites` + `lattice` literals to `Layer.size`.
+
+**P2 (interaction + Components v2): started 2026-10-22, run as parallel agents on the `Control` contract** (`src/engine/context.ts`: cards declare `controls`; the input layer edits `data[key]` and fills `hover`/`pressed`/`focus`):
+- [ ] P2-A: input layer: pointer/touch/keyboard → data, hit testing, a11y overlay, hover/press/focus in ctx (`DotCanvas`, `src/engine/interaction/`).
+- [ ] P2-B: Components v2 on the components board (segmented, knob, stepper, checkbox/radio, tabs, chips, loaders, keypad, …).
+- [ ] P2-C: **Instrument** flagship board (knobs, crank, XY pad, 16-step sequencer, transport, meter).
+- [ ] P2-D: DESIGN.md "Interaction" tokens + lift pass (`henry-bear`, `sunburst`).
+
+**Needs the user (blocked):**
+- [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.
+- [ ] P0-E: `accentRole` on multi-accent cards → decision §11.1.
+- [ ] P0-F: score the 71 cards for the rank-validity gate (needs a human taste pass).
+
+**Deferred to a later phase (not blocking P1 exit):**
+- [-] SoA `DotBuffer` + pools, `layers()`/`live()` split, keyed layer transitions, States API → do these with P2 interaction, where they are needed.
+- [-] Font registry → `layoutText` → typewriter on local faces: P1-E uses the existing `textDots` instead.
+- [-] Afterglow decay raster → P3 (Raster kind).
+- [-] Cross-engine goldens, `snap --replay/--ref/--diff`, the G6 flash check → Track L.
+- [-] Engine barrel curation + library `.d.ts` build → P6 packaging.
+
 ## How to resume (read first)
 1. `pnpm i`, then `pnpm dev`.
    - Tabs: BOARDS, GALLERY, WORKSPACE, LOG and DRAW.
@@ -144,10 +191,10 @@ Plan reference: MASTER-PLAN §4 P1. **Flagship: Departures.**
   - SVG cards switch to canvas for the dissolve and back to SVG afterwards.
   - Verified in the playground.
 - [x] Reduced motion: no entrance, no dissolve (instant).
-- [ ] Data springs wired into cards: an opt-in `springKeys` on presets for timer, music and fitness. Not wired yet; the dissolve is the generic fallback.
+- [x] P1-D data springs: opt-in `WidgetPreset.springKeys` → `DotCanvas` `spring` transient re-samples each frame with `DataSprings` (half-life .12 s) until settled, no IGN dissolve; live cards read the springs per frame. Wired on timer, music, fitness, audio-levels. Reduced motion = instant. Not yet checked by dragging in the browser.
 - [ ] Tab switch exit → enter. Only the enter runs now; the old board unmounts instantly.
-- [ ] Transition Lab in the playground.
-- [ ] Card upgrades: home-clock split-flap via `splitFlapText`, message typewriter, meter peak-hold, weather morph.
+- [x] P1-F Transition Lab in the playground (WORKSPACE, bottom row): mask, duration 150–1200 ms, easing, enter/exit/change (preset → next preset), Replay; engine `revealDots`/`transitionDots` on a canvas.
+- [x] P1-E card upgrades (home-clock split-flap landed separately as P1-B; pure in `t`, t=0 frame unchanged): messages typewriter + blinking cursor (9 s cycle), audio-levels mic meter with decaying peak-hold dot, weather cycles TOKYO/OSAKA/KYOTO via `decodeText` (6 s). Goldens: new t=1.3 entries for those three. Home-clock split-flap not done.
 - [ ] Lift pass: home-clock, weather, messages, settings, agent-status, word-play, codex-tokens.
 - [ ] **Departures** board, through the v0–v5 protocol (needs the user's pick at v1 and a like at v5).
 - [ ] P1 exit gates.
@@ -162,13 +209,11 @@ Plan reference: MASTER-PLAN §4 P1. **Flagship: Departures.**
 >
 > Keep doc and tooling updates minimal: just tick this checklist.
 
-1. Wire data springs (`springKeys`) and a home-clock split-flap using `splitFlapText` + `tick`.
-2. Font registry (M1), then `layoutText`, then decode on local faces.
-3. Departures flagship: v0 references + thesis, then 3 variants for the user to pick.
-4. Mosaic mount cost (thermal-puppy, silhouette, vision-camera) and the static sample cache.
-5. User decisions §11.1 (accent) and §11.5 (ladder), then the `accentRole` annotation and the ladder migration with bar-sheet review.
+Work the **Status board** list top to bottom: P1-A → P1-F, then P0-A → P0-C. When all of those are ticked, P1 is closed and P2 (interaction + Components v2) starts.
 
 ## Known issues / notes for the next agent
+- **Pending browser checks (2026-10-22):** the data springs (drag the WORKSPACE sliders on timer, music or fitness) and the Transition Lab panel were only verified by tsc, verify, goldens and headless snaps. The preview browser hung before a manual look. One agent saw a React warning, "Cannot update a component (`Board`) while rendering `DotCanvas`"; reproduce it on the current tree before fixing.
+- Agent worktrees live under `.claude/worktrees/` (gitignored, and ignored by the Vite watcher).
 - Root `index.css` sets centred text. New views must set `text-align: left` (the LOG view does).
 - `pnpm snap` renders CJK as empty; icons render fine headlessly.
   - Agents keep claiming icons are empty. They are not: verify asserts every icon rasterizes.

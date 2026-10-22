@@ -2,7 +2,7 @@ import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalS
 import { renderCanvas } from '../engine/renderer/canvasRenderer'
 import { sampleLayers } from '../engine/sampler/gridSampler'
 import { sharedClock } from '../engine/clock'
-import { duration as motionDuration, ease, maskByName, revealDots, transitionDots, type MaskName } from '../engine/motion'
+import { DataSprings, duration as motionDuration, ease, maskByName, revealDots, transitionDots, type MaskName } from '../engine/motion'
 import { renderSVG } from '../engine/renderer/svgRenderer'
 import type { DotInstance, DotStyle, Field, GridConfig, Layer, ThemeTokens } from '../engine'
 import { dot480 } from '../engine'
@@ -22,6 +22,8 @@ export interface DotCanvasProps {
   fps?: number
   /** Bump to re-sample a static source (e.g. a clock on the minute). */
   tick?: number
+  /** Seconds of live re-sampling after each `tick` bump, with `ctx.since` set (instead of the change dissolve). */
+  burst?: number
   renderer?: RenderMode
   /**
    * Entrance: wait `delay` ms (the card is not even sampled until then — boards spread their
@@ -29,14 +31,27 @@ export interface DotCanvasProps {
    * Skipped under reduced motion. Read once at mount.
    */
   enter?: { delay: number; mask?: MaskName; duration?: number }
+  /**
+   * Exit: when set, wait `delay` ms, then hide the dots in `mask` order over `duration` ms and stay
+   * blank (the parent unmounts the card after its exit window). Cleared again → the card re-enters.
+   */
+  exit?: { delay: number; mask?: MaskName; duration?: number } | null
   /** Mask for change transitions (new data or minute tick dissolves the old frame into the new). `false` = hard cut. */
   change?: MaskName | false
+  /**
+   * Data keys smoothed by a critically damped spring: a change to one of them re-samples every
+   * frame with the spring-interpolated value (no dissolve) until it settles. Opt-in per preset.
+   */
+  springKeys?: string[]
   onMode?: (mode: RenderMode) => void
   className?: string
 }
 const CANVAS_THRESHOLD = 2000
 const MAX_BACKING_SCALE = 3
 const CHANGE_MS = 360
+const EXIT_MS = 220
+/** Data-spring half-life (s): a value closes half the distance to its new target in this time. */
+const SPRING_HALFLIFE = .12
 
 const reducedMotionQuery = '(prefers-reduced-motion: reduce)'
 function subscribeReducedMotion(cb: () => void) {
@@ -95,11 +110,16 @@ function sameFrame(a: DotInstance[], b: DotInstance[]): boolean {
   return true
 }
 
-/** Short-lived animation drawn over the sampled frame: the entrance, or a change dissolve from the previous frame. */
-type Transient = { kind: 'enter'; t0: number | null } | { kind: 'change'; t0: number | null; prev: DotInstance[] }
+/** Short-lived animation drawn over the sampled frame: the entrance, a change dissolve from the previous frame, or the exit (held blank at the end). */
+type Transient =
+  | { kind: 'enter'; t0: number | null }
+  | { kind: 'change'; t0: number | null; prev: DotInstance[] }
+  | { kind: 'exit'; t0: number | null; delay: number; mask?: MaskName; duration: number }
+  | { kind: 'burst'; t0: number | null; seconds: number }
+  | { kind: 'spring'; t0: number | null; sample: (data: Record<string, number>) => DotInstance[]; data: Record<string, number> }
 
 /** Field → Grid Sampler → Renderer. Picks SVG for sparse static output, Canvas above ~2000 dots or when animated. */
-export function DotCanvas({ field, layers, data, grid, style, theme = dot480, animated, fps, tick = 0, renderer, enter, change = 'ign', onMode, className }: DotCanvasProps) {
+export function DotCanvas({ field, layers, data, grid, style, theme = dot480, animated, fps, tick = 0, burst, renderer, enter, exit, change = 'ign', springKeys, onMode, className }: DotCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const svgRef = useRef<HTMLDivElement>(null)
   const reducedMotion = usePrefersReducedMotion()
@@ -128,17 +148,66 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   const transientRef = useRef<Transient | null>(enterSpec ? { kind: 'enter', t0: null } : null)
   const [transient, setTransient] = useState<Transient['kind'] | null>(enterSpec ? 'enter' : null)
   const shownRef = useRef<DotInstance[]>(dots), firstRef = useRef(true)
+  // tick burst: a static card runs live for a moment after the tick (declared before the dissolve so it wins)
+  const tickRef = useRef(tick)
+  useLayoutEffect(() => {
+    if (tickRef.current === tick) return
+    tickRef.current = tick
+    if (!burst || !layers || animated || reducedMotion || !ready || transientRef.current?.kind === 'exit') return
+    transientRef.current = { kind: 'burst', t0: null, seconds: burst }
+    setTransient('burst')
+  }, [tick]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // data springs: re-target on every data change; a static card runs a `spring` transient that
+  // re-samples with the interpolated values (and skips the dissolve), a live card reads them per frame
+  const springsRef = useRef<DataSprings | null>(null), springGoalRef = useRef(''), springKickRef = useRef(false)
+  const dataKey = JSON.stringify(data ?? {})
+  const springKey = springKeys?.join(',') ?? ''
+  useLayoutEffect(() => {
+    springKickRef.current = false
+    if (!springKey) return
+    const all = JSON.parse(dataKey) as Record<string, number>, target: Record<string, number> = {}
+    for (const k of springKey.split(',')) if (typeof all[k] === 'number') target[k] = all[k]
+    const goal = JSON.stringify(target), springs = springsRef.current ??= new DataSprings(SPRING_HALFLIFE)
+    const moved = springGoalRef.current !== '' && springGoalRef.current !== goal
+    springGoalRef.current = goal
+    const now = sharedClock().time()
+    // reduced motion / not yet entered / mid-entrance: jump straight to the new values
+    if (reducedMotion || !ready || change === false || transientRef.current?.kind === 'enter') { springsRef.current = new DataSprings(SPRING_HALFLIFE); springsRef.current.set(target, now); return }
+    springs.set(target, now)
+    if (!moved || live || !layers) return
+    const g = { cols: grid.cols, rows: grid.rows, pitch: grid.pitch }, t = animated ? 0 : tick
+    const sample = (d: Record<string, number>) => sampleLayers(layers({ t, frame: 0, data: d, grid: g }), g, style, theme)
+    transientRef.current = { kind: 'spring', t0: null, sample, data: all }
+    springKickRef.current = true
+    setTransient('spring')
+  }, [dataKey, springKey]) // eslint-disable-line react-hooks/exhaustive-deps
   // a new static frame (data edit, minute tick) dissolves from what is on screen now
   useLayoutEffect(() => {
     if (!ready || live) { shownRef.current = dots; return }
     if (firstRef.current) { firstRef.current = false; shownRef.current = dots; return }
     if (sameFrame(shownRef.current, dots)) return
-    if (change !== false && !reducedMotion && transientRef.current?.kind !== 'enter' && shownRef.current.length) {
+    if (springKickRef.current) { springKickRef.current = false; shownRef.current = dots; return }
+    const running = transientRef.current?.kind
+    if (change !== false && !reducedMotion && (!running || running === 'change') && shownRef.current.length) {
       transientRef.current = { kind: 'change', t0: null, prev: shownRef.current }
       setTransient('change')
     }
     shownRef.current = dots
   }, [dots, ready, live]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // exit: dissolve out and hold blank; if the exit is called off (user came back), enter again
+  const exitKey = exit && !reducedMotion ? `${exit.delay}|${exit.mask ?? ''}|${exit.duration ?? ''}` : ''
+  useLayoutEffect(() => {
+    const running = transientRef.current?.kind
+    if (exitKey && exit) {
+      transientRef.current = { kind: 'exit', t0: null, delay: exit.delay, mask: exit.mask, duration: exit.duration ?? EXIT_MS }
+      setTransient('exit')
+    } else if (running === 'exit') {
+      transientRef.current = { kind: 'enter', t0: null }
+      setTransient('enter')
+    }
+  }, [exitKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const visible = useMemo(() => { let n = 0; for (const d of dots) if (d.opacity > 0 && d.r > 0) n++; return n }, [dots])
   // transients animate on canvas; a sparse card hands back to SVG when they finish
@@ -167,10 +236,25 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     if (!tr) return frame
     if (tr.t0 === null) tr.t0 = t
     const elapsed = t - tr.t0, geometry = { cols: grid.cols, rows: grid.rows, pitch }
+    if (tr.kind === 'burst') {
+      if (elapsed >= tr.seconds || !layers) { transientRef.current = null; setTransient(null); return frame }
+      return sampleLayers(layers({ t: elapsed, since: elapsed, data: data ?? {}, grid }), grid, style, theme)
+    }
+    if (tr.kind === 'exit') {
+      // never ends on its own: the blank frame holds until the card unmounts or the exit is cleared
+      const p = ease.accelerate(Math.min(1, Math.max(0, (elapsed - tr.delay / 1000) / (tr.duration / 1000))))
+      return revealDots(frame, { ...geometry, p, mask: maskByName(tr.mask), edge: .06, exit: true })
+    }
     if (tr.kind === 'enter') {
       const p = ease.decelerate(elapsed / ((enterSpec?.duration ?? motionDuration.enter) / 1000))
       if (p >= 1) { transientRef.current = null; setTransient(null); return frame }
       return revealDots(frame, { ...geometry, p, mask: maskByName(enterSpec?.mask), edge: .06 })
+    }
+    if (tr.kind === 'spring') {
+      const springs = springsRef.current
+      if (!springs || springs.settled(t)) { transientRef.current = null; setTransient(null); return frame }
+      try { return tr.sample({ ...tr.data, ...springs.at(t) }) }
+      catch { transientRef.current = null; setTransient(null); return frame }
     }
     const p = ease.standard(elapsed / (CHANGE_MS / 1000))
     if (p >= 1) { transientRef.current = null; setTransient(null); return frame }
@@ -197,7 +281,6 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   // live frames straight from the master clock; a throwing frame keeps the last good one on screen
   const { cols, rows, pitch: gridPitch } = grid
   const { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps } = style
-  const dataKey = JSON.stringify(data ?? {})
   useEffect(() => {
     if (!live || !ready || mode !== 'canvas' || !layers) return
     const canvas = canvasRef.current
@@ -208,14 +291,15 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     return sharedClock().subscribe({
       fps: fps ?? 12,
       onFrame(t: number, frame: number) {
-        try { draw(canvas, applyTransient(sampleLayers(layers({ t, frame, data: frameData, grid: g }), g, s, theme), t)) }
+        const d = springKey && springsRef.current ? { ...frameData, ...springsRef.current.at(t) } : frameData
+        try { draw(canvas, applyTransient(sampleLayers(layers({ t, frame, data: d, grid: g }), g, s, theme), t)) }
         catch (error) {
           if (!failed) console.error('DotCanvas: frame failed, keeping the last good frame', error)
           failed = true
         }
       },
     })
-  }, [live, ready, mode, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, theme, dataKey, fps, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [live, ready, mode, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, theme, dataKey, springKey, fps, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
 
   if (mode === 'canvas') {
     return <canvas ref={canvasRef} className={className} style={{ width: '100%', height: 'auto', display: 'block', aspectRatio: `${width} / ${height}` }} aria-hidden="true" />

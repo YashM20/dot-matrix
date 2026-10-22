@@ -22,9 +22,11 @@ export interface DotWidgetProps {
   preset?: WidgetPreset
   /** Staggered entrance (see `DotCanvas.enter`). */
   enter?: DotCanvasProps['enter']
+  /** Exit (see `DotCanvas.exit`). */
+  exit?: DotCanvasProps['exit']
 }
 
-export function DotWidget({ type, density, dotShape, roundness, size, theme = dot480, animated, data, tick, preset: presetProp, enter }: DotWidgetProps) {
+export function DotWidget({ type, density, dotShape, roundness, size, theme = dot480, animated, data, tick, preset: presetProp, enter, exit }: DotWidgetProps) {
   const preset = presetProp ?? widgetById(type)
   const layers = useMemo(() => preset && withChrome(preset), [preset])
   if (!preset || !layers) return null
@@ -40,7 +42,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
         {preset.live && <i className="status-dot" />}
       </header>}
       <div className="dot-card-body">
-        <DotCanvas layers={layers} data={{ ...preset.defaults, ...data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} tick={tick} enter={enter} />
+        <DotCanvas layers={layers} data={{ ...preset.defaults, ...data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys} />
       </div>
     </article>
   )
