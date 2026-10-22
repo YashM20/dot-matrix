@@ -36,13 +36,13 @@ export interface Layer {
   /**
    * Sample this layer at explicit dot sites (card-cell coordinates, fractional allowed) instead
    * of a rectangular lattice — evenly spaced dots along rings, arcs and rays. The field is read
-   * at each site's card u/v; dots are `lattice`× the card dot. Sites at the same position merge
+   * at each site's card u/v; dots are `size`× the card dot. Sites at the same position merge
    * (highest value wins, later layer wins ties), so an accent arc can reuse its track's sites.
    */
   sites?: [number, number][]
   /**
-   * Dot size of a `sites` layer relative to a card dot (2 ≈ hero dot). Older presets pass this as
-   * `lattice`, which is still honoured when `size` is absent; `lattice` otherwise means pitch.
+   * Dot size of a `sites` layer relative to a card dot (2 ≈ hero dot). Every board passes this as `size`;
+   * a legacy `lattice` on a site layer is still honoured when `size` is absent (`lattice` otherwise means pitch).
    */
   size?: number
 }

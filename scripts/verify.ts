@@ -25,6 +25,7 @@ import { bounded } from '../src/engine/layout'
 import { catmullRomField } from '../src/engine/fields/splineField'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
+import type { Field } from '../src/engine/types'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -259,6 +260,37 @@ assert('traceField renders thin line at amp', traceField([0.5], 0.02)(0.5, 0.5) 
   assert('decode scrambles digits within digits (no width change)', digitsOnly)
   const flap = splitFlapText('09', '12', 0), done = splitFlapText('09', '12', 5)
   assert('split-flap steps forward and lands on the target', flap.moving && flap.text.length === 2 && !done.moving && done.text === '12')
+}
+
+// 14) bounds are only an optimisation: every preset samples identically with its layers' `bounds` stripped
+//     (a field that lights cells outside its bounds would be clipped by the sampler). Site layers carry
+//     their dot size as `size`, never as `lattice` (which means pitch).
+{
+  const t0 = performance.now(), mismatched: string[] = [], legacySize: string[] = [], seen = new Set<string>()
+  const strip = (f: Field): Field => (u, v) => f(u, v)
+  for (const p of widgetPresets) {
+    if (seen.has(p.id)) continue
+    seen.add(p.id)
+    for (const t of p.animated ? [0, 1.3] : [0]) {
+      const layers = withChrome(p)({ t, data: { ...p.defaults } })
+      if (layers.some(l => l.sites && l.lattice !== undefined)) legacySize.push(p.id)
+      if (!layers.some(l => l.field.bounds)) continue
+      const a = sampleLayers(layers, p.grid, p.style, dot480), b = sampleLayers(layers.map(l => ({ ...l, field: strip(l.field) })), p.grid, p.style, dot480)
+      if (JSON.stringify(a) !== JSON.stringify(b)) mismatched.push(`${p.id}@t=${t}`)
+    }
+  }
+  assert('every preset renders identically with and without bounds', mismatched.length === 0, mismatched.length ? mismatched.join(', ') : `${seen.size} presets, ${(performance.now() - t0).toFixed(0)} ms`)
+  assert('site layers set their dot size with `size`, not `lattice`', legacySize.length === 0, legacySize.join(', '))
+  // sites merge exactly when `${x.toFixed(2)},${y.toFixed(2)}` matches (the sampler keys them numerically)
+  const sg = { cols: 20, rows: 10, pitch: 2 }, ss = { shape: 'circle' as const, sizeMin: 0, sizeMax: 1 }
+  const pairs: [number, number][] = [[1, 1.004999], [1, 1.005], [3.125, 3.13], [2.115, 2.11], [-0.001, 0.001], [-0.001, -0.004], [0, -0], [7.994999, 7.995], [12.345, 12.35]]
+  const wrong = pairs.filter(([x1, x2]) => {
+    const n = sampleLayers([{ field: () => 1, tone: 'idle', sites: [[x1, 5]], size: 1 }, { field: () => 1, tone: 'active', sites: [[x2, 5]], size: 1 }], sg, ss, dot480).length
+    return (n === 1) !== (x1.toFixed(2) === x2.toFixed(2))
+  })
+  assert('sites merge exactly when their toFixed(2) positions match', wrong.length === 0, wrong.map(p => p.join('/')).join(', '))
+  const sized = sampleLayers([{ field: () => 1, sites: [[5, 5]], size: 3 }], sg, ss, dot480)
+  assert('a site layer\'s `size` sets its dot size', sized.length === 1 && sized[0].r === 3)
 }
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }

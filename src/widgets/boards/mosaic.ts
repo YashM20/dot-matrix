@@ -4,9 +4,9 @@
  * 5×7 captions on the card pitch, values on a 1–1.3 lattice, heroes as big single dots on a 2–3 lattice.
  * Photo-like content (thermal mug, car, desk scene) is a procedural luminance field in cell space.
  */
-import { clamp, hash01, smoothstep } from '../../engine/math'
+import { clamp, hash01, len, smoothstep } from '../../engine/math'
 import type { Field } from '../../engine/types'
-import { TAU, TILE, bounded, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
+import { TAU, TILE, baked, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 import { HEART, INVADER } from '../sprites'
 
 const T = layoutFor(TILE)
@@ -21,12 +21,19 @@ const photoStyle = { ...tileStyle, sizeMin: 0, sizeMax: 1.05, quantizeSteps: 0 }
 const cells = (f: (x: number, y: number) => number, box: [number, number, number, number] = [0, 0, N, N]): Field => {
   // the sampler visits whole cells floor(c0)…ceil(c1); clip to exactly those
   const c0 = Math.floor(box[0]), r0 = Math.floor(box[1]), c1 = Math.ceil(box[2]), r1 = Math.ceil(box[3])
-  return bounded((u, v) => {
+  // a fresh closure, so the bounds go straight on it (no `bounded()` wrapper call per cell)
+  const field: Field = (u, v) => {
     const x = u * N, y = v * N, c = Math.round(x), r = Math.round(y)
     return c < c0 || c > c1 || r < r0 || r > r1 ? 0 : f(x, y)
-  }, ...box)
+  }
+  field.bounds = [box[0], box[1], box[2], box[3]]
+  return field
 }
-const inPoly = (pts: Pt[], x: number, y: number) => {
+type Box = [number, number, number, number]
+const bbox = (pts: Pt[]): Box => [Math.min(...pts.map(p => p[0])), Math.min(...pts.map(p => p[1])), Math.max(...pts.map(p => p[0])), Math.max(...pts.map(p => p[1]))]
+/** Point in polygon (even-odd). `box` is the polygon's bbox: a point outside it is never inside, so most cells skip the edge walk. */
+const inPoly = (pts: Pt[], x: number, y: number, box?: Box) => {
+  if (box && (x < box[0] || x > box[2] || y < box[1] || y > box[3])) return false
   let inside = false
   for (let i = 0, j = pts.length - 1; i < pts.length; j = i++) {
     const [xi, yi] = pts[i], [xj, yj] = pts[j]
@@ -36,7 +43,7 @@ const inPoly = (pts: Pt[], x: number, y: number) => {
 }
 const segDist = (x: number, y: number, [ax, ay]: Pt, [bx, by]: Pt) => {
   const dx = bx - ax, dy = by - ay, t = clamp(((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))
-  return Math.hypot(x - ax - t * dx, y - ay - t * dy)
+  return len(x - ax - t * dx, y - ay - t * dy)
 }
 
 /** Evenly spaced dot sites along a polyline (spacing carried across corners). */
@@ -56,7 +63,7 @@ const frame = (x: number, y: number, w: number, h: number, r: number): Field => 
   return cells((c, rr) => {
     c = Math.round(c); rr = Math.round(rr)
     const qx = Math.abs(c - mx) - hw, qy = Math.abs(rr - my) - hh
-    const sd = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r
+    const sd = len(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r
     return sd <= 0 && sd > -1 ? 1 : 0
   }, [x, y, x + w - 1, y + h - 1])
 }
@@ -85,9 +92,9 @@ const waveGlyph = [layer(T.dots([[131, 3]], 1.3), 'idle'), layer(T.dotLine(134, 
 const MUG_X = 68.5
 const mugHeat = (x: number, y: number) => {
   const ty = clamp((y - 43) / 57), half = 27.5 - 4.5 * ty
-  const e = Math.hypot((x - MUG_X) / 27.5, (y - 43) / 6.5), be = Math.hypot((x - MUG_X) / 23, (y - 100) / 4.5)
+  const e = len((x - MUG_X) / 27.5, (y - 43) / 6.5), be = len((x - MUG_X) / 23, (y - 100) / 4.5)
   const body = (y >= 43 && y <= 100 && Math.abs(x - MUG_X) <= half) || e <= 1 || be <= 1
-  const ho = Math.hypot((x - 43) / 18, (y - 68) / 15.5), hi = Math.hypot((x - 41) / 10, (y - 68) / 9.5)
+  const ho = len((x - 43) / 18, (y - 68) / 15.5), hi = len((x - 41) / 10, (y - 68) / 9.5)
   const handle = x < 44 && ho <= 1 && hi >= 1
   const grain = .09 * Math.sin(x * 1.3 + y * .7) * Math.cos(y * 1.1 - x * .4) + .12 * (hash01(Math.round(x) * 151 + Math.round(y), 3) - .5)
   let h = 0
@@ -115,15 +122,17 @@ const heatAt = (x: number, y: number) => {
 const PANEL: [number, number, number, number] = [0, 16, 117, 110]
 /** Red → white is dithered: the hotter a cell, the likelier it is a white dot. */
 const hot = (x: number, y: number, h: number) => hash01(Math.round(x) * 151 + Math.round(y), 7) < clamp((h - .76) / .2)
+// the heat split into its three tones: cool halo grey, warm body red, hot core white (dot size = heat), each baked per cell
+const HEAT_MID = baked(TILE, cells((x, y) => { const h = heatAt(x, y); return h >= .05 && h < .42 ? .25 + h * 1.2 : 0 }, PANEL))
+const HEAT_WARM = baked(TILE, cells((x, y) => { const h = heatAt(x, y); return h >= .42 && !hot(x, y, h) ? .45 + .55 * clamp((h - .42) / .3) : 0 }, PANEL))
+const HEAT_HOT = baked(TILE, cells((x, y) => { const h = heatAt(x, y); return hot(x, y, h) ? .7 + .3 * clamp((h - .9) / .1) : 0 }, PANEL))
 export const thermalMonitor: WidgetPreset = {
   id: 'thermal-monitor', name: '01 Thermal Monitor', label: '01  THERMAL MONITOR', group: 'photo', chrome: 'dots', grid: TILE, style: photoStyle,
   layers: () => [
     num('01'), ...menuGlyph,
-    // sensor frame, then the heat: cool halo grey, warm body red, hot core white (dot size = heat)
+    // sensor frame, then the heat
     layer(frame(0, 16, 118, 95, 6), 'faint'),
-    layer(cells((x, y) => { const h = heatAt(x, y); return h >= .05 && h < .42 ? .25 + h * 1.2 : 0 }, PANEL), 'mid'),
-    layer(cells((x, y) => { const h = heatAt(x, y); return h >= .42 && !hot(x, y, h) ? .45 + .55 * clamp((h - .42) / .3) : 0 }, PANEL), 'active'),
-    layer(cells((x, y) => { const h = heatAt(x, y); return hot(x, y, h) ? .7 + .3 * clamp((h - .9) / .1) : 0 }, PANEL), 'value'),
+    layer(HEAT_MID, 'mid'), layer(HEAT_WARM, 'active'), layer(HEAT_HOT, 'value'),
     // colour scale: hot (red) at the top fading to cool grey
     layer(cap('55°C', 143, 20, 'right'), 'value'),
     ...[138, 141].flatMap(x => [
@@ -150,7 +159,7 @@ const WHEELS: Pt[] = [[31, 88], [126, 87]]
 /** Dark sedan in profile: dim body, darker glass, highlights on the roofline, crease and rims. */
 const car = (x: number, y: number) => {
   for (const [wx, wy] of WHEELS) {
-    const d = Math.hypot(x - wx, y - wy)
+    const d = len(x - wx, y - wy)
     if (d <= 11.5) {
       if (d > 8.8) return .18
       if (d < 2.2) return .7
@@ -168,9 +177,10 @@ const car = (x: number, y: number) => {
   if (Math.abs(y - 65.5) < .7 && x > 46) return .62
   if (Math.abs(y - crease) < .7) return .58
   if (x < 12 && y > 77 && y < 80) return .9
-  if (Math.hypot(x - 57, y - 64) < 2.6) return .55
+  if (len(x - 57, y - 64) < 2.6) return .55
   return (y < crease ? .5 : .4) - .22 * clamp((y - 70) / 23)
 }
+const CAR = baked(TILE, cells(car, [0, 48, N, 97]))
 export const evCharge: WidgetPreset = {
   id: 'ev-charge', name: '02 EV Charge', label: '02  EV CHARGE', group: 'icon', chrome: 'dots', grid: TILE, style: photoStyle,
   defaults: { charge: 0.78 },
@@ -180,7 +190,7 @@ export const evCharge: WidgetPreset = {
       num('02'), ...boltGlyph,
       layer(T.big(pct, 0, 22, { lattice: 3 })), layer(T.big('%', w + 3, 32.4, { lattice: 1.6 })),
       layer(cap('CHARGING', Math.max(57, Math.round(w + 19)), 36), 'idle'),
-      layer(cells(car, [0, 48, N, 97]), 'idle'),
+      layer(CAR, 'idle'),
       // charge port: plug, red port light, cable running back along the ground
       layer(T.hrule(97, 76, 7), 'value'), layer(T.dots([[106.5, 76]], 3.4), 'active'),
       layer(dotPath([[107.5, 79], [108.5, 90], [110, 96], [114, 99], [143, 99]], 1.05, 1.05), 'active'),
@@ -229,6 +239,8 @@ const SHOE = ['..##.......', '..#.#......', '..#..##....', '.#.....###.', '.#...
 const DUMBBELL = ['..##...##..', '.#.#...#.#.', '#..#...#..#', '#..#####..#', '#..#...#..#', '.#.#...#.#.', '..##...##..']
 const TREND: Pt[] = [[0, 120], [8, 117.5], [15, 115], [23, 110], [30, 113], [36, 113.5], [43, 117], [49, 118], [57, 113], [63, 112], [68, 109], [74, 114], [80, 116], [86, 116], [92, 110], [98, 105.5], [104, 103], [112, 105], [118, 105], [126, 107], [131, 108], [137, 107]]
 const RING_C: Pt = [33.5, 61]
+/** The dim red wash fading out below the trend line. */
+const TREND_WASH = baked(TILE, cells((x, y) => { const d = y - along(TREND, x); return d > 1.5 ? .32 * (1 - d / 16) : 0 }, [0, 100, N, 127]))
 export const fitnessRings: WidgetPreset = {
   id: 'fitness-rings', name: '04 Fitness Rings', label: '04  FITNESS RINGS', group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
   defaults: { move: 0.5, exercise: 0.58, stand: 0.5 },
@@ -244,7 +256,7 @@ export const fitnessRings: WidgetPreset = {
       layer(T.sprite(SHOE, 72, 51), 'idle'), layer(T.big('8,935', 86, 50, { lattice: 1.15 })), layer(cap('MOVE', 125, 54), 'idle'),
       layer(T.sprite(DUMBBELL, 72, 74), 'idle'), layer(T.big('62', 86, 73, { lattice: 1.15 })), layer(cap('TRAIN', 104, 77), 'idle'),
       // the trend line with a dim red wash fading out below it
-      layer(cells((x, y) => { const d = y - along(TREND, x); return d > 1.5 ? .32 * (1 - d / 16) : 0 }, [0, 100, N, 127]), 'active'),
+      layer(TREND_WASH, 'active'),
       layer(dotPath(TREND, 1.1, 1.35), 'active'),
       layer(T.hrule(0, 129, 144, 2), 'faint'),
       ...['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => layer(T.text(d, 2 + i * 22.2, 136, { align: 'center' }), i === 6 ? 'active' : 'idle')),
@@ -350,38 +362,43 @@ const NOTEBOOK: Pt[] = [[13, 100], [62, 91], [94, 121], [42, 129]]
 const LEAVES: Pt[] = [[110, 19], [116, 14], [124, 12], [131, 15], [139, 21], [140, 30], [112, 28], [119, 18]]
 const TAGS: [number, number, string][] = [[84, 24, 'PLANT'], [18, 44, 'MUG'], [106, 77, 'LAPTOP'], [82, 108, 'NOTEBOOK']]
 const TAG_BOX = TAGS.map(([x, y, s]) => [x, y, x + tagW(s) - 1, y + TAG_H - 1])
+const LAPTOP_BOX = bbox(LAPTOP), NOTEBOOK_BOX = bbox(NOTEBOOK)
+/** `segDist(x, y, a, b) < d`, skipping the distance when (x, y) is outside the segment's box grown by `d` (it cannot be that close). */
+const near = (x: number, y: number, a: Pt, b: Pt, d: number) =>
+  x > Math.min(a[0], b[0]) - d && x < Math.max(a[0], b[0]) + d && y > Math.min(a[1], b[1]) - d && y < Math.max(a[1], b[1]) + d && segDist(x, y, a, b) < d
+const PEN: [Pt, Pt] = [[50, 98], [76, 114]]
 /** Dim desk scene: black mug, closed silver laptop, notebook and pen, a potted plant. */
 const desk = (x: number, y: number) => {
-  if (TAG_BOX.some(([a, b, c, d]) => x >= a && x <= c && y >= b && y <= d)) return 0
+  for (const [a, b, c, d] of TAG_BOX) if (x >= a && x <= c && y >= b && y <= d) return 0
   // desk: a soft pool of light behind the laptop, falling off toward the edges
-  let lum = .24 + .16 * clamp(1 - Math.hypot(x - 60, y - 40) / 110) + .03 * (hash01(Math.round(x) * 157 + Math.round(y), 9) - .5)
+  let lum = .24 + .16 * clamp(1 - len(x - 60, y - 40) / 110) + .03 * (hash01(Math.round(x) * 157 + Math.round(y), 9) - .5)
   // plant: dark pot with a lit rim, leaf strokes fanning out of it
   if (x > 113 && x < 134 && y > 33 && y < 52) lum = y < 36 ? .5 : .1 + .1 * clamp((x - 114) / 20)
-  else if (y < 36 && LEAVES.some(p => segDist(x, y, [123, 34], p) < 1.3)) lum = .7
+  else if (y < 36 && LEAVES.some(p => near(x, y, [123, 34], p, 1.3))) lum = .7
   // laptop lid: brushed silver, bright bevel along the near edges, darker logo
-  if (inPoly(LAPTOP, x, y)) {
+  if (inPoly(LAPTOP, x, y, LAPTOP_BOX)) {
     lum = .8 - .32 * clamp((x - 54) / 90) - .12 * clamp((y - 55) / 50) + .04 * Math.sin((x + y) * .9)
-    if (segDist(x, y, LAPTOP[0], LAPTOP[4]) < 1.3 || segDist(x, y, LAPTOP[0], LAPTOP[1]) < .9) lum = .95
-    if (Math.hypot((x - 97) / 1.3, y - 67) < 2.6) lum = .22
-  } else if (segDist(x, y, [55, 62], [104, 107]) < 1.4 || segDist(x, y, [104, 107], [143, 96]) < 1.2) lum = .55
+    if (near(x, y, LAPTOP[0], LAPTOP[4], 1.3) || near(x, y, LAPTOP[0], LAPTOP[1], .9)) lum = .95
+    if (len((x - 97) / 1.3, y - 67) < 2.6) lum = .22
+  } else if (near(x, y, [55, 62], [104, 107], 1.4) || near(x, y, [104, 107], [143, 96], 1.2)) lum = .55
   // notebook with a lit spine, pen across it
-  if (inPoly(NOTEBOOK, x, y)) lum = segDist(x, y, NOTEBOOK[0], NOTEBOOK[3]) < 1.4 ? .75 : .16 - .06 * clamp((y - 92) / 37)
-  const pen = segDist(x, y, [50, 98], [76, 114])
-  if (pen < 1.5) lum = pen < .6 ? .75 : .05
+  if (inPoly(NOTEBOOK, x, y, NOTEBOOK_BOX)) lum = near(x, y, NOTEBOOK[0], NOTEBOOK[3], 1.4) ? .75 : .16 - .06 * clamp((y - 92) / 37)
+  if (near(x, y, PEN[0], PEN[1], 1.5)) lum = near(x, y, PEN[0], PEN[1], .6) ? .75 : .05
   // mug: black body, lit rim, handle with a highlight on its outer curve
-  const rim = Math.hypot((x - 24.5) / 13.5, (y - 63) / 4)
-  const ho = Math.hypot((x - 38) / 9, (y - 77) / 10), hi = Math.hypot((x - 38) / 5.5, (y - 77) / 6.5)
+  const rim = len((x - 24.5) / 13.5, (y - 63) / 4)
+  const ho = len((x - 38) / 9, (y - 77) / 10), hi = len((x - 38) / 5.5, (y - 77) / 6.5)
   if (x > 37 && ho <= 1 && hi >= 1) lum = ho > .82 ? .5 : .06
   if ((x >= 11 && x <= 38 && y >= 63 && y <= 95) || rim <= 1) lum = rim < 1 ? .03 : x < 15 ? .3 : x > 33 ? .18 : .06
   if (Math.abs(rim - 1) < .16) lum = .7
   return lum
 }
+const DESK = baked(TILE, cells(desk, [0, 16, N, 128]))
 const corner = (x: number, y: number, dx: number, dy: number) => [T.hrule(dx > 0 ? x : x - 8, y, 9), T.vrule(x, dy > 0 ? y : y - 8, 9)]
 export const visionCamera: WidgetPreset = {
   id: 'vision-camera', name: '08 Vision Camera', label: '08  VISION CAMERA', group: 'composite', chrome: 'dots', grid: TILE, style: photoStyle,
   layers: () => [
     num('08'), ...menuGlyph,
-    layer(cells(desk, [0, 16, N, 128]), 'idle'),
+    layer(DESK, 'idle'),
     ...[...corner(4, 21, 1, 1), ...corner(139, 21, -1, 1), ...corner(4, 123, 1, -1), ...corner(139, 123, -1, -1)].map(f => layer(f, 'value')),
     ...TAGS.flatMap(([x, y, s]) => tag(x, y, s)),
     layer(cap('SCENE CONFIDENCE', 1, 138), 'idle'),

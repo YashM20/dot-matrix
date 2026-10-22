@@ -3,9 +3,9 @@
  * TILE cards (144×144): 5×7 labels on the card pitch, body text on a 1.25–1.3 lattice,
  * hero numerals in the smooth display weight on a 2.5–3.7 lattice, rings and rays as dot sites.
  */
-import { hash01, mix } from '../../engine/math'
+import { hash01, len, mix } from '../../engine/math'
 import type { Field } from '../../engine/types'
-import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
+import { TAU, TILE, baked, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
 const BODY = { lattice: 1.3 }
@@ -89,18 +89,20 @@ const skyline: Field = (u, v) => {
   const roofs = Math.max(soft(v - .93), soft(.36 - u) * soft(v - .88), soft(u - .7) * soft(.9 - u) * soft(v - (u < .78 ? .86 : .9)))
   lum = mix(lum, .06, roofs)
   // the figure: head, hood falling to the left, shoulders widening to the bottom
-  const head = soft(.036 - Math.hypot((u - .515) / .85, v - .62))
-  const hood = soft(.03 - Math.hypot(u - .472, (v - .695) / 1.6)), neck = soft(.025 - Math.abs(u - .5)) * soft(v - .62) * soft(.72 - v)
+  const head = soft(.036 - len((u - .515) / .85, v - .62))
+  const hood = soft(.03 - len(u - .472, (v - .695) / 1.6)), neck = soft(.025 - Math.abs(u - .5)) * soft(v - .62) * soft(.72 - v)
   const w = .062 + Math.min(.022, Math.max(0, v - .72) * .2), body = soft(w - Math.abs(u - .493)) * soft(v - .705 - Math.abs(u - .493) * .5)
   lum = mix(lum, .02, Math.max(head, hood, neck, body))
   return Math.max(0, Math.min(1, lum))
 }
+/** The scene never changes: baked once per card cell. */
+const SKYLINE = baked(TILE, skyline)
 export const afterSilhouette: WidgetPreset = {
   id: 'silhouette', name: 'Henry', label: '', group: 'photo', chrome: 'dots', bleed: true, grid: TILE,
   // halftone: every dot fully lit, luminance carried by dot size alone
   style: { ...tileStyle, sizeMin: 0, sizeMax: 1.2, quantizeSteps: 0, opacityMode: 'constant' },
   layers: () => [
-    layer(skyline, 'value'),
+    layer(SKYLINE, 'value'),
     layer(T.dotRing(132, 11, 5, { spacing: 1.2, size: 1.3 }), 'active'),
   ],
 }
