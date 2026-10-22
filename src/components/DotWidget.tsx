@@ -40,7 +40,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
         {preset.live && <i className="status-dot" />}
       </header>}
       <div className="dot-card-body">
-        <DotCanvas layers={layers} data={{ ...preset.defaults, ...data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} tick={tick} enter={enter} />
+        <DotCanvas layers={layers} data={{ ...preset.defaults, ...data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} tick={tick} enter={enter} springKeys={preset.springKeys} />
       </div>
     </article>
   )

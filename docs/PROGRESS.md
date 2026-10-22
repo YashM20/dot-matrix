@@ -144,10 +144,10 @@ Plan reference: MASTER-PLAN §4 P1. **Flagship: Departures.**
   - SVG cards switch to canvas for the dissolve and back to SVG afterwards.
   - Verified in the playground.
 - [x] Reduced motion: no entrance, no dissolve (instant).
-- [ ] Data springs wired into cards: an opt-in `springKeys` on presets for timer, music and fitness. Not wired yet; the dissolve is the generic fallback.
+- [x] P1-D data springs: opt-in `WidgetPreset.springKeys` → `DotCanvas` `spring` transient re-samples each frame with `DataSprings` (half-life .12 s) until settled, no IGN dissolve; live cards read the springs per frame. Wired on timer, music, fitness, audio-levels. Reduced motion = instant. Not yet checked by dragging in the browser.
 - [ ] Tab switch exit → enter. Only the enter runs now; the old board unmounts instantly.
 - [ ] Transition Lab in the playground.
-- [ ] Card upgrades: home-clock split-flap via `splitFlapText`, message typewriter, meter peak-hold, weather morph.
+- [~] P1-E card upgrades (pure in `t`, t=0 frame unchanged): messages typewriter + blinking cursor (9 s cycle), audio-levels mic meter with decaying peak-hold dot, weather cycles TOKYO/OSAKA/KYOTO via `decodeText` (6 s). Goldens: new t=1.3 entries for those three. Home-clock split-flap not done.
 - [ ] Lift pass: home-clock, weather, messages, settings, agent-status, word-play, codex-tokens.
 - [ ] **Departures** board, through the v0–v5 protocol (needs the user's pick at v1 and a like at v5).
 - [ ] P1 exit gates.

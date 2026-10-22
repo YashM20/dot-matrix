@@ -133,11 +133,30 @@ function gauge(cx: number, cy: number, level: number, marker: boolean) {
     ...(marker ? [layer(T.dots([[cx + r * Math.sin(head), cy - r * Math.cos(head)]], 5.5), 'active')] : []),
   ]
 }
+/** Live mic level: the set level, dipping with the voice (0 at t = 0, so the static frame is the set level). */
+const micLevel = (mic: number, t: number) => {
+  const s = Math.max(0, t), w = .6 * (.5 - .5 * Math.cos(3.1 * s)) + .4 * (.5 - .5 * Math.cos(7.7 * s + 2 * Math.sin(1.3 * s)))
+  return mic * (1 - .6 * w)
+}
+/** Peak-hold: the highest level of the last moments, held for `PEAK_HOLD` s then falling at `PEAK_FALL`/s. Pure in t. */
+const PEAK_HOLD = .5, PEAK_FALL = .35, PEAK_LOOK = 1.8
+const micPeak = (mic: number, t: number) => {
+  let peak = 0
+  for (let k = 0; k <= 36; k++) { const back = (k / 36) * PEAK_LOOK; peak = Math.max(peak, micLevel(mic, t - back) - PEAK_FALL * Math.max(0, back - PEAK_HOLD)) }
+  return peak
+}
+/** The peak dot on the mic gauge: lit only when it sits ahead of the live head. */
+function peakDot(cx: number, cy: number, level: number, peak: number) {
+  const { r, spacing, size } = GAUGE, step = TAU / Math.round((TAU * r) / spacing)
+  const at = (l: number) => Math.floor((Math.min(1, l / .5) * G_END) / step + 1e-9) * step
+  const p = at(peak)
+  return p > at(level) + 1e-6 ? [layer(T.dots([[cx + r * Math.sin(p), cy - r * Math.cos(p)]], size * 1.35), 'value')] : []
+}
 export const audioLevels: WidgetPreset = {
-  id: 'audio-levels', name: 'Audio', group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
-  defaults: { speaker: 0.72, mic: 0.48 },
-  layers: ({ data }) => [
-    ...gauge(35, 70, data.speaker, false), ...gauge(110, 70, data.mic, true),
+  id: 'audio-levels', name: 'Audio', group: 'polar', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
+  defaults: { speaker: 0.72, mic: 0.48 }, springKeys: ['speaker', 'mic'],
+  layers: ({ data, t }) => [
+    ...gauge(35, 70, data.speaker, false), ...gauge(110, 70, micLevel(data.mic, t), true), ...peakDot(110, 70, micLevel(data.mic, t), micPeak(data.mic, t)),
     layer(T.text('SPEAKER', 35, 59, { align: 'center' }), 'idle'), layer(T.text('MIC', 110, 59, { align: 'center' }), 'idle'),
     layer(face(`${Math.round(data.speaker * 100)}`, 35.5, 71, { lattice: 2.1, align: 'center' })),
     layer(face(`${Math.round(data.mic * 100)}`, 109, 71, { lattice: 2.1, align: 'center' })),
