@@ -441,6 +441,66 @@
     "dots": 1379
    }
   },
+  "departures": {
+   "t=0": {
+    "hash": "91a6bd3b",
+    "dots": 1280
+   },
+   "t=1.3": {
+    "hash": "91a6bd3b",
+    "dots": 1280
+   }
+  },
+  "station-clock": {
+   "t=0": {
+    "hash": "b158670e",
+    "dots": 247
+   },
+   "t=1.3": {
+    "hash": "b158670e",
+    "dots": 247
+   }
+  },
+  "platform": {
+   "t=0": {
+    "hash": "45cacf1c",
+    "dots": 417
+   },
+   "t=1.3": {
+    "hash": "45cacf1c",
+    "dots": 417
+   }
+  },
+  "next-train": {
+   "t=0": {
+    "hash": "840fea44",
+    "dots": 376
+   },
+   "t=1.3": {
+    "hash": "840fea44",
+    "dots": 376
+   }
+  },
+  "line-map": {
+   "t=0": {
+    "hash": "176d9958",
+    "dots": 777
+   },
+   "t=1.3": {
+    "hash": "6fbca4de",
+    "dots": 767
+   }
+  },
+  "service": {
+   "t=0": {
+    "hash": "f511ac60",
+    "dots": 618
+   },
+   "t=1.3": {
+    "hash": "f511ac60",
+    "dots": 618
+   }
+  },
   "ui-toggle": {
    "t=0": {
     "hash": "6579335f",

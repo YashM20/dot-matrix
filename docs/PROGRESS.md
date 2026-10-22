@@ -23,7 +23,7 @@
 **Agent can do now (P1, visible; the user's priority order):**
 - [x] P1-A: board-to-board exit → enter transition. `DotCanvas.exit` (Bayer, accelerate, 220 ms per card, held blank); `cardMotion()` in `Board.tsx` staggers the exit on the same diagonal inside `VIEW_EXIT_MS` = 420 ms; `useExitSwap` in `App` keeps the old view mounted for that window (instant when leaving LOG/DRAW/WORKSPACE or under reduced motion). The gallery enters and exits too. Verified in the browser.
 - [x] P1-B: home-clock split-flap on the minute tick. New `burst` preset flag + `ctx.since`: the card samples live for 1.2 s after the tick. Engine `splitFlapCells` (only changed columns stagger). `flapText` in `henry.ts` folds the flap about the hinge (rows squeeze by \|cos πφ\|, dim while steep). Film: `pnpm snap --film home-clock --since --t 0:0.6:0.05`.
-- [ ] P1-C: **Departures** flagship board (live split-flap transit board).
+- [x] P1-C: **Departures** flagship board (`src/widgets/boards/departures.ts`, `?board=departures`). Six live cards: split-flap departures list (rows cascade every 7 s; the letter drum has a blank flap), Swiss station clock (58.5 s sweep, rests at 12, minute hand jumps on an underdamped spring), platform-change flip, next-train countdown (minute flip + draining 30-dot bar), line map (dwell + emphasized glide, decoded stop name), service status (decode on change). v0 only: needs the user's taste pass (the v1 pick in the protocol).
 - [ ] P1-D: data springs on the timer, music and fitness cards (`springKeys`).
 - [ ] P1-E: card upgrades: message typewriter, meter peak-hold, weather morph.
 - [ ] P1-F: Transition Lab in the playground (pick mask, duration and easing; replay).

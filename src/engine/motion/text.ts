@@ -2,6 +2,12 @@ import { hash32 } from '../math'
 
 const DIGITS = '0123456789', LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'
 const charsetFor = (ch: string) => (DIGITS.includes(ch) ? DIGITS : LETTERS.includes(ch.toUpperCase()) ? LETTERS : '')
+/** Split-flap drums: the letter drum starts with a blank flap (Solari), so letters ⇄ spaces flip too. */
+const LETTER_DRUM = ' ' + LETTERS
+const drumFor = (to: string, from: string) => {
+  const set = charsetFor(to) || (to === ' ' ? charsetFor(from) : '')
+  return set === LETTERS ? LETTER_DRUM : set
+}
 
 export interface DecodeOptions {
   /** Seconds between successive characters resolving (left → right). */
@@ -47,7 +53,7 @@ export function splitFlapCells(prev: string, next: string, tau: number, o: Split
   const from = prev.padStart(next.length).slice(-next.length)
   let k = 0
   return [...next].map((ch, i) => {
-    const set = charsetFor(ch), a = set.indexOf(from[i])
+    const set = drumFor(ch, from[i]), a = set.indexOf(from[i])
     if (from[i] === ch || !set) return { from: ch, to: ch, phase: 1 }
     const start = a < 0 ? 0 : a, steps = (set.indexOf(ch) - start + set.length) % set.length
     const local = tau - k++ * stagger
@@ -75,7 +81,7 @@ export function splitFlapText(prev: string, next: string, tau: number, o: SplitF
   const from = prev.padStart(next.length).slice(-next.length)
   let text = '', moving = false
   for (let i = 0; i < next.length; i++) {
-    const ch = next[i], set = charsetFor(ch), a = set.indexOf(from[i])
+    const ch = next[i], set = drumFor(ch, from[i]), a = set.indexOf(from[i])
     if (from[i] === ch || !set) { text += ch; continue }
     const start = a < 0 ? 0 : a, target = set.indexOf(ch)
     const steps = (target - start + set.length) % set.length

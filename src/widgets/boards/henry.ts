@@ -38,7 +38,7 @@ const bitsOf = (ch: string) => NUM[ch] ?? glyph(ch).map(row => row.map(b => (b ?
  * Text as explicit dot sites: `px`/`py` cells between dots, `size` = dot size. Unlike a lattice
  * layer this keeps the reference's dot-to-gap ratio (big dots with clear air between them).
  */
-function dotText(str: string, x: number, y: number, o: { px: number; py?: number; size: number; gap?: number; align?: 'left' | 'center' | 'right' }): LatticeField {
+export function dotText(str: string, x: number, y: number, o: { px: number; py?: number; size: number; gap?: number; align?: 'left' | 'center' | 'right' }): LatticeField {
   const { px, py = px, size, gap = 1 } = o, chars = [...str].map(bitsOf)
   const cols = chars.reduce((n, g) => n + g[0].length, 0) + gap * (chars.length - 1), w = (cols - 1) * px
   let cx = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x
@@ -55,7 +55,7 @@ function dotText(str: string, x: number, y: number, o: { px: number; py?: number
  * the hinge by |cos(πφ)| (old top half falling, then new bottom half landing) and hide whatever it
  * covers. Returns `[faces, flap]`; the flap dims while it is steep, so the fold reads as depth.
  */
-function flapText(cells: FlapCell[], x: number, y: number, o: { px: number; py?: number; size: number; gap?: number }): [LatticeField, LatticeField] {
+export function flapText(cells: FlapCell[], x: number, y: number, o: { px: number; py?: number; size: number; gap?: number }): [LatticeField, LatticeField] {
   const { px, py = px, size, gap = 1 } = o
   const faces: Pt[] = [], flap: Pt[] = []
   let cx = x
