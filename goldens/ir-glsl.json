@@ -1,0 +1,25 @@
+{
+ "about": "FNV-1a 32 of emitGLSL() per IR test field (scripts/ir.ts). Re-baseline with `npx tsx scripts/ir.ts --update` when a codegen change is intended.",
+ "fields": {
+  "ripple": "69dda0c7",
+  "plasma": "fb8c89cc",
+  "modNegative": "706284ce",
+  "fractNegative": "5abde6f7",
+  "smoothstepEdges": "0b726737",
+  "stepCompare": "d7aef4c0",
+  "ternary": "42ace7d4",
+  "letShadow": "42c15fbd",
+  "forSum": "c151d3d1",
+  "forNested": "6c0bbc46",
+  "forInExpr": "f69f9119",
+  "hashGrid": "1ce3c1d0",
+  "sdf": "f5486d1b",
+  "powers": "04bf2c0b",
+  "precedence": "c47306f7",
+  "inputs": "c609c944",
+  "dial": "4771a8f1",
+  "builtins": "acf234bd",
+  "clampOrder": "ecf2bfc4",
+  "loopWork": "e96c55c5"
+ }
+}

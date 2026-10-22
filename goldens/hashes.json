@@ -603,6 +603,32 @@
     "dots": 329
    }
   },
+  "ir-ripple": {
+   "t=0": {
+    "hash": "7d25eeb9",
+    "dots": 1091
+   },
+   "t=1.3": {
+    "hash": "7cd10071",
+    "dots": 1063
+   }
+  },
+  "ir-plasma": {
+   "t=0": {
+    "hash": "cbcf12bb",
+    "dots": 3227
+   },
+   "t=1.3": {
+    "hash": "d8bbcd8f",
+    "dots": 3653
+   }
+  },
+  "ir-dial": {
+   "t=0": {
+    "hash": "99cdb88e",
+    "dots": 608
+   }
+  },
   "ui-toggle": {
    "t=0": {
     "hash": "6579335f",

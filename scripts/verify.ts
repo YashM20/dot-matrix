@@ -26,6 +26,7 @@ import { catmullRomField } from '../src/engine/fields/splineField'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Field } from '../src/engine/types'
+import { irChecks } from './ir'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -371,6 +372,9 @@ import { beginDrag, dragValue, keyValue, pick, releaseValue, settle, toLocal, ty
   }
   assert('preset controls: in-grid boxes, labels, unique keys', bad.length === 0, bad.join(', '))
 }
+
+// IR) Field IR v0: parser limits, JSON round trip, JS ≡ GLSL-semantics reference, GLSL snapshot (scripts/ir.ts)
+irChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')

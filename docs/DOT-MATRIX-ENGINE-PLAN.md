@@ -66,5 +66,24 @@ Squircle = superellipse `|x/r|^n + |y/r|^n = 1`. `cornerRoundness` r∈[0,1] →
 ## Renderer Rule
 `renderer = animated || visibleDots > 2000 ? 'canvas' : 'svg'`. Canvas scales by `devicePixelRatio`. Animated presets re-sample at 12 fps with a running `t` passed to `layers({ t, data })`.
 
+## Field IR (`dot` v0)
+A tiny pure language for fields (`src/engine/ir/`, exported as `ir`; MASTER-PLAN §3.12). `parse(src)` → JSON AST → `compileJS(ast)(env)` → `Field` (closure tree by default, CSP-safe; `mode: 'function'` uses `new Function` and falls back by itself), `emitGLSL(ast)` → `float field(vec2 uv, float t, vec3 pointer, float data_<key>…)` (GLSL ES 3.0, data params in sorted key order, raw unclamped value), `serialize` / `deserialize` (validated, never evaluated). `irProgram(src)` memoises parse + compile; `contextEnv(ctx, grid, rect)` maps a frame context in. Example board: `src/widgets/boards/ir.ts`.
+```
+program := ('let' NAME '=' expr ';')* expr               // also inside ( … ) and { … }
+expr    := cmp ('?' expr ':' expr)?                       // true = non-zero
+cmp     := add (< <= > >= == != add)?                     // 1 or 0, no chaining
+add     := mul ((+ | -) mul)*      mul := unary ((* | / | %) unary)*
+unary   := - unary | + unary | atom ('^' unary)?          // -x^2 = -(x^2); 2^3^2 = 2^9
+atom    := NUMBER | u | v | t | PI | TAU | pointer.x | pointer.y | pointer.down | data.NAME | NAME
+         | FN '(' expr, … ')' | '(' program ')'
+         | 'for' NAME 'in' INT '..' INT 'with' NAME '=' expr '{' program '}'   // acc = init; acc = body per i
+FN      := sin cos abs floor fract sqrt exp sign (1) · min max step atan(y,x) length(x,y) hash(a,b) (2)
+         · clamp mix smoothstep sdCircle(x,y,r) (3) · sdBox(x,y,hw,hh) sdRing(x,y,r,w) (4)
+```
+- Everything is a float. `%` is GLSL `mod` (floored); `a ^ b` is `pow(|a|, b)`, except integer literal exponents 0–8, which expand to multiplications (sign kept). `clamp`/`min`/`max`/`step`/`smoothstep` follow the GLSL formulas. `hash` = murmur3 of the 1/256 fixed-point inputs, top 24 bits (exact in float32).
+- Inputs: u/v as the sampler sees them (v down); `pointer` in u/v, (-1, -1, 0) when absent; missing `data` keys read 0.
+- Limits: 4096 source chars, 2000 nodes, nesting 96, loop range = integer literals with ≤ 64 iterations, nested loops ≤ 1024 body runs per dot. Unknown identifiers or functions, wrong arity and reserved names fail with `IRError` at line:col (or a JSON path on deserialize).
+- Tests: `scripts/ir.ts` (also run by `pnpm verify`) checks both JS backends against a GLSL-spec reference interpreter (`reference.ts`) on 20 fields over 48×48 and snapshots the GLSL hashes in `goldens/ir-glsl.json` (`npx tsx scripts/ir.ts --update` after an intended codegen change). Real GPU readback parity is pending P5.
+
 ## Tokens
 See `DESIGN.md`; runtime values in `src/engine/theme/tokens.ts`.
