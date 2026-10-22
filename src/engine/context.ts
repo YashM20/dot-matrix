@@ -30,6 +30,12 @@ export interface Control {
   keyY?: string
   /** `segmented`: option count (value = index). */
   options?: number
+  /** `segmented`: accessible names of the options (default "1", "2", …). */
+  optionLabels?: string[]
+  /** `crank`: value change per clockwise revolution (default 1, i.e. the value counts turns). */
+  perTurn?: number
+  /** `crank`: wrap around inside [min, max) instead of stopping at the ends. */
+  wrap?: boolean
   /** Accessible name, e.g. "Volume". */
   label: string
 }

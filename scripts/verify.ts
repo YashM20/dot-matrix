@@ -268,5 +268,77 @@ assert('traceField renders thin line at amp', traceField([0.5], 0.02)(0.5, 0.5) 
     fEnd.every((c, i) => c.phase === 1 && c.to === '11:18'[i]) && late[3].from === '5' && late[3].phase === 1 && late[1].phase < 1)
 }
 
+// 14) input layer (P2-A): toLocal, pick, dragValue, keyValue, clamp + quantize
+import { beginDrag, dragValue, keyValue, pick, releaseValue, settle, toLocal, type Control } from '../src/engine/interaction'
+{
+  const near = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) < eps
+  const tl = toLocal(110, 220, { left: 100, top: 200, width: 100, height: 50 }, { cols: 10, rows: 5 })
+  assert('toLocal maps client px to cell centres', near(tl.x, .5) && near(tl.y, 1.5), `${tl.x},${tl.y}`)
+  const corner = toLocal(100, 200, { left: 100, top: 200, width: 100, height: 50 }, { cols: 10, rows: 5 })
+  assert('toLocal: the element corner is half a cell before cell 0', near(corner.x, -.5) && near(corner.y, -.5))
+
+  const slider: Control = { key: 's', kind: 'slider', box: [10, 10, 100, 10], label: 'S' }
+  const knob: Control = { key: 'k', kind: 'knob', box: [0, 40, 20, 20], label: 'K' }
+  const ctrls = [slider, knob]
+  assert('pick: box hit, miss, and hit pad', pick(ctrls, 50, 15) === 's' && pick(ctrls, 50, 30) === null && pick(ctrls, 50, 21) === 's' && pick(ctrls, 50, 21, 0) === null)
+  assert('pick: knobs use the inscribed circle (box corner misses)', pick(ctrls, 10, 50) === 'k' && pick(ctrls, 1, 41, 0) === null && pick(ctrls, 1, 41) === null)
+  const over: Control = { key: 'o', kind: 'button', box: [40, 10, 10, 10], label: 'O' }
+  assert('pick: later controls sit on top; exact hits beat padded ones', pick([slider, over], 45, 15) === 'o' && pick([over, slider], 45, 15) === 's' && pick([slider, over], 52, 15) === 's')
+
+  const drag = (c: Control, x: number, y: number, data: Record<string, number>, to: { x: number; y: number }) => dragValue(c, beginDrag(c, x, y, data), to)
+  assert('slider: value from position, clamped', near(drag(slider, 60, 15, { s: 0 }, { x: 60, y: 15 }).s, .5) && drag(slider, 60, 15, {}, { x: 500, y: 15 }).s === 1 && drag(slider, 60, 15, {}, { x: -50, y: 15 }).s === 0)
+  const stepped: Control = { ...slider, min: 0, max: 10, step: 2 }
+  assert('slider: quantized to step', drag(stepped, 10, 15, {}, { x: 44, y: 15 }).s === 4, String(drag(stepped, 10, 15, {}, { x: 44, y: 15 }).s))
+  const vslider: Control = { key: 'v', kind: 'slider', orientation: 'vertical', box: [0, 0, 10, 100], label: 'V' }
+  assert('vertical slider grows upwards', near(drag(vslider, 5, 25, {}, { x: 5, y: 25 }).v, .75))
+  assert('knob: drag up / right increases, relative to the value at press', near(drag(knob, 10, 50, { k: .5 }, { x: 10, y: 30 }).k, 1) && near(drag(knob, 10, 50, { k: .5 }, { x: 0, y: 50 }).k, .25) && drag(knob, 10, 50, { k: .5 }, { x: 10, y: 90 }).k === 0)
+
+  const crank: Control = { key: 'c', kind: 'crank', box: [0, 0, 20, 20], label: 'C' }
+  const cs = beginDrag(crank, 20, 10, { c: 0 })
+  let cv = 0
+  for (let i = 1; i <= 36 * 2.5; i++) { const a = i / 36 * Math.PI * 2; cv = dragValue(crank, cs, { x: 10 + 10 * Math.cos(a), y: 10 + 10 * Math.sin(a) }).c }
+  assert('crank: atan2 accumulation, unbounded (2.5 clockwise turns = 2.5)', near(cv, 2.5, 1e-6), cv.toFixed(4))
+  const cs2 = beginDrag(crank, 20, 10, { c: 0 })
+  for (let i = 1; i <= 36; i++) { const a = -i / 36 * Math.PI * 2; cv = dragValue(crank, cs2, { x: 10 + 10 * Math.cos(a), y: 10 + 10 * Math.sin(a) }).c }
+  assert('crank: counter-clockwise goes negative', near(cv, -1, 1e-6), cv.toFixed(4))
+  const wrapCrank: Control = { ...crank, min: 0, max: 1, wrap: true, step: .25 }
+  const cs3 = beginDrag(wrapCrank, 20, 10, { c: 0 })
+  for (let i = 1; i <= 45; i++) { const a = i / 36 * Math.PI * 2; cv = dragValue(wrapCrank, cs3, { x: 10 + 10 * Math.cos(a), y: 10 + 10 * Math.sin(a) }).c }
+  assert('crank: wrap + step (1.25 turns on 0..1 → .25)', near(cv, .25), String(cv))
+
+  const xy: Control = { key: 'px', keyY: 'py', kind: 'xy', box: [0, 0, 100, 100], label: 'XY' }
+  const pxy = drag(xy, 25, 25, {}, { x: 25, y: 25 })
+  assert('xy: returns two values (y grows upwards)', near(pxy.px, .25) && near(pxy.py, .75) && Object.keys(pxy).length === 2)
+
+  const stepper: Control = { key: 'n', kind: 'stepper', box: [0, 0, 40, 10], min: 0, max: 10, step: 1, label: 'N' }
+  assert('stepper: tap zones step down / up, clamped', drag(stepper, 5, 5, { n: 3 }, { x: 5, y: 5 }).n === 2 && drag(stepper, 35, 5, { n: 3 }, { x: 35, y: 5 }).n === 4 && drag(stepper, 35, 5, { n: 10 }, { x: 35, y: 5 }).n === 10)
+  const seg: Control = { key: 'g', kind: 'segmented', box: [0, 0, 30, 10], options: 3, label: 'G' }
+  assert('segmented: the option under the pointer', drag(seg, 5, 5, {}, { x: 5, y: 5 }).g === 0 && drag(seg, 5, 5, {}, { x: 15, y: 5 }).g === 1 && drag(seg, 5, 5, {}, { x: 99, y: 5 }).g === 2)
+  const tog: Control = { key: 't', kind: 'toggle', box: [0, 0, 10, 10], label: 'T' }
+  const btn: Control = { key: 'b', kind: 'button', box: [0, 0, 10, 10], label: 'B' }
+  assert('toggle flips the value at press; button is max while held, min on release',
+    drag(tog, 5, 5, { t: 0 }, { x: 5, y: 5 }).t === 1 && drag(tog, 5, 5, { t: 1 }, { x: 5, y: 5 }).t === 0 && drag(btn, 5, 5, {}, { x: 5, y: 5 }).b === 1 && releaseValue(btn)?.b === 0 && releaseValue(slider) === null)
+
+  assert('keys: arrows step, PageUp/Down 10 %, Home/End ends', near(keyValue(slider, .5, 'ArrowRight')!, .51) && near(keyValue(slider, .5, 'ArrowDown')!, .49)
+    && near(keyValue(slider, .5, 'PageUp')!, .6) && keyValue(slider, .5, 'Home') === 0 && keyValue(slider, .5, 'End') === 1 && keyValue(slider, .5, 'a') === null)
+  assert('keys: clamp and quantize', keyValue(slider, 1, 'ArrowUp') === 1 && keyValue(stepped, 4, 'ArrowRight') === 6 && keyValue(stepper, 0, 'ArrowLeft') === 0)
+  assert('keys: unbounded crank has no Home/End, arrows step 1/24 turn', keyValue(crank, 0, 'Home') === null && near(keyValue(crank, 0, 'ArrowRight')!, 1 / 24))
+  assert('keys: segmented wraps, toggle / button on Space / Enter', keyValue(seg, 2, 'ArrowRight') === 0 && keyValue(seg, 0, 'ArrowLeft') === 2 && keyValue(seg, 1, 'End') === 2
+    && keyValue(tog, 0, ' ') === 1 && keyValue(tog, 1, 'Enter') === 0 && keyValue(tog, 0, 'ArrowRight') === null && keyValue(btn, 0, 'Enter') === 1)
+  assert('settle: quantize from min, then clamp; no float noise', settle({ ...slider, min: .1, max: .9, step: .2 }, .62) === .7 && settle(slider, 3) === 1 && settle({ ...slider, step: .1 }, .3) === .3)
+
+  // every declared control (all boards) has a usable box and a label, and its key is unique per card
+  const bad: string[] = []
+  for (const p of widgetPresets) {
+    const keys = new Set<string>()
+    for (const c of p.controls ?? []) {
+      const [col, row, w, h] = c.box
+      if (!(w > 0 && h > 0 && col >= -1 && row >= -1 && col + w <= p.grid.cols + 1 && row + h <= p.grid.rows + 1) || !c.label || keys.has(c.key)) bad.push(`${p.id}:${c.key}`)
+      keys.add(c.key)
+    }
+  }
+  assert('preset controls: in-grid boxes, labels, unique keys', bad.length === 0, bad.join(', '))
+}
+
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')

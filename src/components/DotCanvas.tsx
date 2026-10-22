@@ -4,10 +4,12 @@ import { sampleLayers } from '../engine/sampler/gridSampler'
 import { sharedClock } from '../engine/clock'
 import { DataSprings, duration as motionDuration, ease, maskByName, revealDots, transitionDots, type MaskName } from '../engine/motion'
 import { renderSVG } from '../engine/renderer/svgRenderer'
-import type { DotInstance, DotStyle, Field, GridConfig, Layer, ThemeTokens } from '../engine'
+import type { Control, ControlPatch, DotInstance, DotStyle, Field, GridConfig, Layer, ThemeTokens } from '../engine'
 import { dot480 } from '../engine'
 import type { WidgetContext } from '../widgets/types'
 import { useDotField } from '../hooks/useDotField'
+import { useControlInput } from '../hooks/useControlInput'
+import { ControlOverlay } from './ControlOverlay'
 
 export type RenderMode = 'svg' | 'canvas'
 export interface DotCanvasProps {
@@ -45,6 +47,13 @@ export interface DotCanvasProps {
   springKeys?: string[]
   onMode?: (mode: RenderMode) => void
   className?: string
+  /**
+   * Interactive regions (P2): pointer, touch and keyboard input on them produces data patches
+   * through `onInput` (the owner merges them into `data`) and fills hover / pressed / focus /
+   * pointers in the layers' context. Adds the accessibility overlay. Boxes are in `grid` cells.
+   */
+  controls?: Control[]
+  onInput?: (patch: ControlPatch) => void
 }
 const CANVAS_THRESHOLD = 2000
 const MAX_BACKING_SCALE = 3
@@ -52,6 +61,8 @@ const CHANGE_MS = 360
 const EXIT_MS = 220
 /** Data-spring half-life (s): a value closes half the distance to its new target in this time. */
 const SPRING_HALFLIFE = .12
+/** A frame that lands this soon (ms) after input is a direct response: it cuts, never dissolves. */
+const INPUT_CUT_MS = 250
 
 const reducedMotionQuery = '(prefers-reduced-motion: reduce)'
 function subscribeReducedMotion(cb: () => void) {
@@ -119,7 +130,7 @@ type Transient =
   | { kind: 'spring'; t0: number | null; sample: (data: Record<string, number>) => DotInstance[]; data: Record<string, number> }
 
 /** Field → Grid Sampler → Renderer. Picks SVG for sparse static output, Canvas above ~2000 dots or when animated. */
-export function DotCanvas({ field, layers, data, grid, style, theme = dot480, animated, fps, tick = 0, burst, renderer, enter, exit, change = 'ign', springKeys, onMode, className }: DotCanvasProps) {
+export function DotCanvas({ field, layers, data, grid, style, theme = dot480, animated, fps, tick = 0, burst, renderer, enter, exit, change = 'ign', springKeys, onMode, className, controls, onInput }: DotCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const svgRef = useRef<HTMLDivElement>(null)
   const reducedMotion = usePrefersReducedMotion()
@@ -140,7 +151,10 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     return () => window.clearTimeout(id)
   }, [enterSpec])
 
-  const dots = useDotField(layers ? { layers } : { field: field ?? (() => 0) }, grid, style, theme, animated ? 0 : tick, data, ready)
+  const input = useControlInput(controls, grid, data ?? {}, onInput)
+  const interactive = !!controls?.length && !!layers
+  // a live card reads the latest interaction per frame; the static frame re-samples only on a committed change
+  const dots = useDotField(layers ? { layers } : { field: field ?? (() => 0) }, grid, style, theme, animated ? 0 : tick, data, ready, live ? undefined : input.ix)
   const pitch = grid.pitch ?? theme.gridPx
   const width = grid.cols * pitch, height = grid.rows * pitch
 
@@ -177,7 +191,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     springs.set(target, now)
     if (!moved || live || !layers) return
     const g = { cols: grid.cols, rows: grid.rows, pitch: grid.pitch }, t = animated ? 0 : tick
-    const sample = (d: Record<string, number>) => sampleLayers(layers({ t, frame: 0, data: d, grid: g }), g, style, theme)
+    const sample = (d: Record<string, number>) => sampleLayers(layers({ t, frame: 0, data: d, grid: g, ...input.ixRef.current }), g, style, theme)
     transientRef.current = { kind: 'spring', t0: null, sample, data: all }
     springKickRef.current = true
     setTransient('spring')
@@ -188,6 +202,8 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     if (firstRef.current) { firstRef.current = false; shownRef.current = dots; return }
     if (sameFrame(shownRef.current, dots)) return
     if (springKickRef.current) { springKickRef.current = false; shownRef.current = dots; return }
+    // direct manipulation (drag, key, hover, press) answers at once instead of dissolving
+    if (performance.now() - input.inputAt.current < INPUT_CUT_MS) { shownRef.current = dots; return }
     const running = transientRef.current?.kind
     if (change !== false && !reducedMotion && (!running || running === 'change') && shownRef.current.length) {
       transientRef.current = { kind: 'change', t0: null, prev: shownRef.current }
@@ -238,7 +254,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     const elapsed = t - tr.t0, geometry = { cols: grid.cols, rows: grid.rows, pitch }
     if (tr.kind === 'burst') {
       if (elapsed >= tr.seconds || !layers) { transientRef.current = null; setTransient(null); return frame }
-      return sampleLayers(layers({ t: elapsed, since: elapsed, data: data ?? {}, grid }), grid, style, theme)
+      return sampleLayers(layers({ t: elapsed, since: elapsed, data: data ?? {}, grid, ...input.ixRef.current }), grid, style, theme)
     }
     if (tr.kind === 'exit') {
       // never ends on its own: the blank frame holds until the card unmounts or the exit is cleared
@@ -288,21 +304,32 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     const g = { cols, rows, pitch: gridPitch }, s = { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps }
     const frameData = JSON.parse(dataKey) as Record<string, number>
     let failed = false
-    return sharedClock().subscribe({
+    const bindLive = input.bindLive
+    const sub = {
       fps: fps ?? 12,
       onFrame(t: number, frame: number) {
         const d = springKey && springsRef.current ? { ...frameData, ...springsRef.current.at(t) } : frameData
-        try { draw(canvas, applyTransient(sampleLayers(layers({ t, frame, data: d, grid: g }), g, s, theme), t)) }
+        try { draw(canvas, applyTransient(sampleLayers(layers({ t, frame, data: d, grid: g, ...input.ixRef.current }), g, s, theme), t)) }
         catch (error) {
           if (!failed) console.error('DotCanvas: frame failed, keeping the last good frame', error)
           failed = true
         }
       },
-    })
+    }
+    // input invalidates this subscriber, so feedback lands on the next animation frame rather than the next fps tick
+    const off = sharedClock().subscribe(sub), unbind = bindLive(sub)
+    return () => { off(); unbind() }
   }, [live, ready, mode, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, theme, dataKey, springKey, fps, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  if (mode === 'canvas') {
-    return <canvas ref={canvasRef} className={className} style={{ width: '100%', height: 'auto', display: 'block', aspectRatio: `${width} / ${height}` }} aria-hidden="true" />
-  }
-  return <div ref={svgRef} className={`dot-svg ${className ?? ''}`} style={{ aspectRatio: `${width} / ${height}`, width: '100%', height: 'auto' }} dangerouslySetInnerHTML={{ __html: svg }} aria-hidden="true" />
+  const surface = mode === 'canvas'
+    ? <canvas ref={canvasRef} className={className} style={{ width: '100%', height: 'auto', display: 'block', aspectRatio: `${width} / ${height}` }} aria-hidden="true" />
+    : <div ref={svgRef} className={`dot-svg ${className ?? ''}`} style={{ aspectRatio: `${width} / ${height}`, width: '100%', height: 'auto' }} dangerouslySetInnerHTML={{ __html: svg }} aria-hidden="true" />
+  if (!interactive) return surface
+  // the root shows exactly the grid, so pointer coordinates map straight to cells (and it holds pointer capture)
+  return (
+    <div className="dot-a11y-root" {...input.handlers}>
+      {surface}
+      <ControlOverlay controls={controls!} grid={grid} data={data ?? {}} input={input} />
+    </div>
+  )
 }

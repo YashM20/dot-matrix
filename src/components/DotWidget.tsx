@@ -1,6 +1,6 @@
-import type { DotStyle, ThemeTokens } from '../engine'
+import type { ControlPatch, DotStyle, ThemeTokens } from '../engine'
 import { dot480 } from '../engine'
-import { useMemo } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import type { WidgetPreset } from '../widgets'
 import { widgetById, withChrome } from '../widgets'
 import { DotCanvas, type DotCanvasProps } from './DotCanvas'
@@ -29,20 +29,27 @@ export interface DotWidgetProps {
 export function DotWidget({ type, density, dotShape, roundness, size, theme = dot480, animated, data, tick, preset: presetProp, enter, exit }: DotWidgetProps) {
   const preset = presetProp ?? widgetById(type)
   const layers = useMemo(() => preset && withChrome(preset), [preset])
+  // interactive data (P2): input patches merged over the defaults and the `data` prop
+  const [local, setLocal] = useState<ControlPatch>({})
+  const onInput = useCallback((patch: ControlPatch) => setLocal(prev => ({ ...prev, ...patch })), [])
   if (!preset || !layers) return null
+  // control boxes are authored in the preset's own cells; a `size` override re-grids the card, so it is not interactive
+  const controls = !size && preset.controls?.length ? preset.controls : undefined
   const native = preset.grid.pitch ?? theme.gridPx, pitch = density ?? native, k = pitch / native
   // radii are px tuned for the preset's own pitch — scale them with density so dots keep their proportion
   const style: DotStyle = { ...preset.style, sizeMin: preset.style.sizeMin * k, sizeMax: preset.style.sizeMax * k, shape: dotShape ?? preset.style.shape, cornerRoundness: roundness ?? preset.style.cornerRoundness }
   const grid = size ? { pitch, cols: Math.max(4, Math.round(size.w / pitch)), rows: Math.max(4, Math.round(size.h / pitch)) } : { ...preset.grid, pitch }
   return (
-    // role="img": the card is one dot-matrix picture; its children (label text, canvas) are presentational
-    <article className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}`} role="img" aria-label={preset.live ? `${preset.name} (live)` : preset.name}>
+    // role="img": the card is one dot-matrix picture; its children (label text, canvas) are presentational.
+    // An interactive card is a group instead, so its accessibility overlay (real controls) stays reachable.
+    <article className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}`} role={controls ? 'group' : 'img'} aria-label={preset.live ? `${preset.name} (live)` : preset.name}>
       {preset.chrome !== 'dots' && <header className="dot-card-head" aria-hidden="true">
         <span className="dot-card-label">{preset.name.toUpperCase()}</span>
         {preset.live && <i className="status-dot" />}
       </header>}
       <div className="dot-card-body">
-        <DotCanvas layers={layers} data={{ ...preset.defaults, ...data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys} />
+        <DotCanvas layers={layers} data={{ ...preset.defaults, ...data, ...local }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
+          controls={controls} onInput={controls ? onInput : undefined} />
       </div>
     </article>
   )

@@ -44,6 +44,7 @@ const toggle = (top: number, on: boolean) => {
 export const toggleCard: WidgetPreset = {
   id: 'ui-toggle', name: 'Toggle', group: 'composite', chrome: 'dots', grid: TILE, style,
   defaults: { on: 1 },
+  controls: [{ key: 'on', kind: 'toggle', box: [TRACK.x, 28, TRACK.w, TRACK.h], label: 'Toggle' }],
   // the top switch follows `on`; the bottom one always shows the opposite state
   layers: ({ data }) => [...toggle(28, data.on >= .5), ...toggle(86, data.on < .5)],
 }
@@ -72,6 +73,11 @@ const slider = (y: number, value: number, fill: Tone, knobTone: Tone) => {
 export const sliderCard: WidgetPreset = {
   id: 'ui-slider', name: 'Slider', group: 'composite', chrome: 'dots', grid: TILE, style,
   defaults: { value: .55, level: .4 },
+  // P2-A test hook: both rails are draggable (detents match the 30 rail dots)
+  controls: [
+    { key: 'value', kind: 'slider', box: [RAIL.x0, 51 - RAIL.knob / 2, RAIL.x1 - RAIL.x0, RAIL.knob], step: 1 / 30, label: 'Value' },
+    { key: 'level', kind: 'slider', box: [RAIL.x0, 105 - RAIL.knob / 2, RAIL.x1 - RAIL.x0, RAIL.knob], step: 1 / 30, label: 'Level' },
+  ],
   layers: ({ data }) => [...slider(51, data.value, 'idle', 'value'), ...slider(105, data.level, 'active', 'active')],
 }
 
