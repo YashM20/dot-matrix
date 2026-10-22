@@ -37,7 +37,7 @@
 - [ ] P2-A: input layer: pointer/touch/keyboard → data, hit testing, a11y overlay, hover/press/focus in ctx (`DotCanvas`, `src/engine/interaction/`).
 - [ ] P2-B: Components v2 on the components board (segmented, knob, stepper, checkbox/radio, tabs, chips, loaders, keypad, …).
 - [ ] P2-C: **Instrument** flagship board (knobs, crank, XY pad, 16-step sequencer, transport, meter).
-- [ ] P2-D: DESIGN.md "Interaction" tokens + lift pass (`henry-bear`, `sunburst`).
+- [x] P2-D: DESIGN.md "Interaction" tokens + lift pass (`henry-bear`, `sunburst`).
 
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.

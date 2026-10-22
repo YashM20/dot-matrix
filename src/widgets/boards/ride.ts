@@ -56,26 +56,71 @@ export const ride: WidgetPreset = {
 }
 
 // ── Henry: a bear holding a bunny inside two dotted rings ───────────────────
-const ell = (x: number, y: number, cx: number, cy: number, a: number, b: number, p = 2) => Math.abs((x - cx) / a) ** p + Math.abs((y - cy) / b) ** p <= 1
-const EYES: Pt[] = [[59, 65], [85.8, 65]]
-const eyeRing = (x: number, y: number) => EYES.some(([ex, ey]) => { const m = Math.max(Math.abs(x - ex), Math.abs(y - ey)); return m > 3 && m <= 5.6 && !(Math.abs(x - ex) > 4 && Math.abs(y - ey) > 4) })
-const eyeHole = (x: number, y: number) => EYES.some(([ex, ey]) => Math.max(Math.abs(x - ex), Math.abs(y - ey)) <= 3)
-const nose = (x: number, y: number) => ell(x, y, 72, 68.4, 2.8, 2) || Math.hypot(x - 68.6, y - 73.4) < 1.2 || Math.hypot(x - 75.4, y - 73.4) < 1.2
-const muzzle = (x: number, y: number) => ell(x, y, 72, 74, 7.2, 6.2) && !nose(x, y)
-const bunnyHead = (x: number, y: number) => ell(x, y, 83, 107.5, 11.4, 10.2)
-const bunnyHole = (x: number, y: number) => Math.hypot(x - 77.6, y - 104.6) < 3 || Math.hypot(x - 87.8, y - 104.6) < 3 || Math.hypot(x - 82.6, y - 110.8) < 1.3
-const bunny = (x: number, y: number) => ((bunnyHead(x, y) && !bunnyHole(x, y)) || ell(x, y, 78.4, 90, 2.5, 8) || ell(x, y, 88.4, 90, 2.5, 8)) && y < 117.5
-const bearShape = (x: number, y: number) => ell(x, y, 72, 63.5, 35.5, 24, 2.6) || Math.hypot(x - 50.5, y - 39.6) <= 9.4 || Math.hypot(x - 93.5, y - 39.6) <= 9.4 || ell(x, y, 72, 97, 28.5, 20.8, 4)
-const bearWhite = (x: number, y: number) => eyeRing(x, y) || muzzle(x, y) || bunny(x, y)
-const bearDark = (x: number, y: number) => eyeHole(x, y) || nose(x, y) || bunnyHead(x, y) || bunnyHole(x, y)
+// Hand-authored sprites on two lattices: the bear on 3-cell dots, the bunny on 2-cell
+// dots sitting in a U-shaped hold cut out of the body (cols 8–15, rows 16–23). F = fur, f = chin
+// and base shade, E = inner ear, W = white (eye rings, muzzle), o = void (pupils, nose).
+const BEAR = [
+  '..FFFF............FFFF..',
+  '.FFEEFF..........FFEEFF.',
+  '.FFEEFFFFFFFFFFFFFFEEFF.',
+  '.FFFFFFFFFFFFFFFFFFFFFF.',
+  '..FFFFFFFFFFFFFFFFFFFF..',
+  '.FFFFFFFFFFFFFFFFFFFFFF.',
+  'FFFFFFFFFFFFFFFFFFFFFFFF',
+  'FFFFFFFFFFFFFFFFFFFFFFFF',
+  'FFFFFWWWFFFFFFFFWWWFFFFF',
+  'FFFFFWoWFFFFFFFFWoWFFFFF',
+  'FFFFFWWWFWWWWWWFWWWFFFFF',
+  'FFFFFFFFFWWooWWFFFFFFFFF',
+  'FFFFFFFFFWWWWWWFFFFFFFFF',
+  'FFFFFFFFFFWWWWFFFFFFFFFF',
+  '.FFFFFFFFFFFFFFFFFFFFFF.',
+  '..ffffffffffffffffffff..',
+  '..FFFFFF........FFFFFF..',
+  '..FFFFFF........FFFFFF..',
+  '..FFFFFF........FFFFFF..',
+  '..FFFFFF........FFFFFF..',
+  '..FFFFFF........FFFFFF..',
+  '..FFFFFF........FFFFFF..',
+  '..FFFFFF........FFFFFF..',
+  '..FFFFFF........FFFFFF..',
+  '..fFFFFFFFFFFFFFFFFFFf..',
+  '...ffffffffffffffffff...',
+]
+const BUNNY = [
+  '.##...##.',
+  '.##...##.',
+  '.##...##.',
+  '#########',
+  '#########',
+  '##.###.##',
+  '#########',
+  '####.####',
+  '.#######.',
+  '.#######.',
+  '.##...##.',
+]
+const BEAR_K = 3, BUNNY_K = 2, BEAR_AT: Pt = [36, 30], BUNNY_AT: Pt = [63, 79]
+/** Fur luma by lighting: lit top-left rim, plain fur, shaded right rim and chin. */
+const furLuma = (i: number, j: number): string => {
+  const at = (x: number, y: number) => (BEAR[y]?.[x] ?? '.') === 'F' || BEAR[y]?.[x] === 'E'
+  const ch = BEAR[j][i]
+  if (ch === 'E') return '4'
+  if (ch === 'f') return '5'
+  if (ch !== 'F') return '.'
+  if (!at(i + 1, j) || !at(i, j + 1)) return '6'
+  return !at(i - 1, j) || !at(i, j - 1) ? '9' : '8'
+}
+const bearFur = BEAR.map((row, j) => [...row].map((_, i) => furLuma(i, j)).join(''))
+const bearWhite = BEAR.map(row => row.replace(/[^W]/g, '.').replace(/W/g, '#'))
 export const henryBear: WidgetPreset = {
   id: 'henry-bear', name: 'Henry', group: 'icon', live: true, chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
-    layer(T.dots(ringSites(72, 69.5, 65, 93, () => true).filter(([, y]) => y < 128), 2.25), 'idle'),
-    layer(T.dots(ringSites(72, 69.5, 52.3, 78, () => true), 2.2), 'idle'),
-    // fur: smaller, dimmer dots (the reference bear is brown — one accent per board, so it reads as grey)
-    layer(cellField(2.3, 36.5, 29.5, (x, y) => (bearShape(x, y) && !bearWhite(x, y) && !bearDark(x, y) ? .8 : 0)), 'idle'),
-    layer(cellField(2.3, 36.5, 29.5, (x, y) => (bearWhite(x, y) && !(eyeHole(x, y) || bunnyHole(x, y)) ? 1 : 0))),
+    layer(T.dots(ringSites(72, 69.5, 65, 93, () => true).filter(([, y]) => y < 128), 2.4), 'idle'),
+    layer(T.dots(ringSites(72, 69.5, 54, 78, () => true), 2.2), 'mid'),
+    layer(spriteOn(bearFur, BEAR_K, ...BEAR_AT), 'idle'),
+    layer(spriteOn(bearWhite, BEAR_K, ...BEAR_AT)),
+    layer(spriteOn(BUNNY, BUNNY_K, ...BUNNY_AT)),
     layer(T.big("I'M LISTENING", 72, 131, { lattice: 1.4, scale: TALL, align: 'center' })),
   ],
 }
