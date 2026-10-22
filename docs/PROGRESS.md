@@ -43,10 +43,10 @@
 **P2 left (agent can do):**
 - [x] P2-E: chips + toast cards. Done 2026-10-22: `ui-chips` (4 stadium toggles, own data keys) and `ui-toast` (animated top slide-in reveal, dismiss button), both in components board; goldens +2.
 - [ ] P2-F: browser pass on the Instrument board (knobs, crank, XY, sequencer, transport) and the new `ui-*` cards; axe run on the overlay.
-- [ ] P2-G: measure the one-frame input latency gate; multitouch on a real device.
+- [x] P2-G: latency gate instrumented. Done 2026-10-22: dev-only probe (`src/hooks/latencyProbe.ts`) times pointer/keyboard `event.timeStamp` → end of the first canvas draw showing it; in the dev console `__dotLatency()` gives `{ n, p50, p95, max }` ms over the last 512 events (`__dotLatency(true)` clears; paint/compositing not included). Input now commits inside its rAF (`flushSync`) and the live card draws before that frame paints; live cards skip the redundant static sample. Measured (dev build, headless Chrome 60 Hz, Instrument board, 110 clicks/drag/keys): p50 16.8 ms, p95 40.4 ms (was p50 ~35 / p95 ~65). Not done: multitouch on a real device, production-build numbers.
 - [x] P2-H: a released touch lingers in `pointers[]` for 520 ms (`up: true`, not down/inside, never hover/pressed) and keeps the clock live, so `ui-keypad`'s ripple finishes; `ptr()` ignores lingering pointers.
 - [x] P2-I: `size` only re-grids the canvas (layers and boxes share cell space), so controls stay on unscaled; boxes fully outside the smaller grid are dropped.
-- [ ] P2-J: `inst-level` follows the sequencer's default pattern, not live edits (cards don't share data yet; needs board-level data).
+- [x] P2-J: board-level shared data. Done 2026-10-22: `BoardDef.shared` keys live in one `Board` store (seeded from card defaults), merged into every card's data; `DotWidget` writes control edits to shared keys back to it. Instrument shares `bpm`, `mode`, `s0..s15`: step edits, tempo and stop (silent meter, parked playhead) drive `inst-level` and the sequencer live; goldens unchanged.
 
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.

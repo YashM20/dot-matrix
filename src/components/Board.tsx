@@ -1,8 +1,9 @@
-import { useEffect, useId, useState, type CSSProperties } from 'react'
+import { useCallback, useEffect, useId, useState, type CSSProperties } from 'react'
 import { DotWidget } from './DotWidget'
 import { usePlayground } from './playground/store'
 import { presets } from '../engine/theme/tokens'
-import { boardById, boards } from '../widgets'
+import { boardById, boards, type BoardDef } from '../widgets'
+import type { ControlPatch } from '../engine'
 import { duration } from '../engine/motion'
 import type { DotCanvasProps } from './DotCanvas'
 
@@ -36,12 +37,27 @@ function useMinuteTick(): number {
   return tick
 }
 
+/** Initial board store: each shared key takes the first card default that defines it. */
+function seedShared(board: BoardDef): ControlPatch {
+  const out: ControlPatch = {}
+  for (const key of board.shared ?? []) {
+    const owner = board.items.find(p => typeof p.defaults?.[key] === 'number')
+    if (owner) out[key] = owner.defaults![key]
+  }
+  return out
+}
+
 export function Board({ id, leaving = false }: { id: string; leaving?: boolean }) {
   const board = boardById(id) ?? boards[0]
   const themeName = usePlayground(s => s.theme)
   const theme = presets[themeName]
   const tick = useMinuteTick()
   const titleId = useId()
+  // board-level shared data (`BoardDef.shared`): one store, merged into every card, written by any card's controls
+  // (the Board is keyed by id, so the store starts fresh on every board switch)
+  const [shared, setShared] = useState(() => seedShared(board))
+  const onShared = useCallback((patch: ControlPatch) => setShared(prev => ({ ...prev, ...patch })), [])
+  const sharing = !!board.shared?.length
   return (
     <section className="board-view" aria-labelledby={titleId}>
       <h2 className="board-title" id={titleId}>{board.title}</h2>
@@ -49,7 +65,7 @@ export function Board({ id, leaving = false }: { id: string; leaving?: boolean }
       <div className="board-grid" style={{ '--board-cols': board.columns } as CSSProperties}>
         {/* cards enter (and exit) on a diagonal stagger, each revealing its dots in Bayer order */}
         {board.items.map((preset, i) => <DotWidget key={preset.id} type={preset.id} preset={preset} theme={theme} tick={preset.clock ? tick : undefined}
-          {...cardMotion(i, board.columns, board.items.length, leaving)} />)}
+          {...(sharing ? { shared, sharedKeys: board.shared, onShared } : {})} {...cardMotion(i, board.columns, board.items.length, leaving)} />)}
       </div>
     </section>
   )
