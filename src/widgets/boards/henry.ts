@@ -6,6 +6,7 @@
  */
 import { glyph } from '../../engine/fields/bitmapFont'
 import { hash01 } from '../../engine/math'
+import { splitFlapCells, type FlapCell } from '../../engine/motion/text'
 import type { Field } from '../../engine/types'
 import { TAU, TILE, bounded, combine, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
@@ -47,6 +48,34 @@ function dotText(str: string, x: number, y: number, o: { px: number; py?: number
     cx += (g[0].length + gap) * px
   }
   return T.dots(sites, size)
+}
+/**
+ * Split-flap text as dot sites: like `dotText`, but a column mid-flip shows the new top half and
+ * the old bottom half, with the flap folding about the glyph's middle — its rows squeeze toward
+ * the hinge by |cos(πφ)| (old top half falling, then new bottom half landing) and hide whatever it
+ * covers. Returns `[faces, flap]`; the flap dims while it is steep, so the fold reads as depth.
+ */
+function flapText(cells: FlapCell[], x: number, y: number, o: { px: number; py?: number; size: number; gap?: number }): [LatticeField, LatticeField] {
+  const { px, py = px, size, gap = 1 } = o
+  const faces: Pt[] = [], flap: Pt[] = []
+  let cx = x
+  for (const { from, to, phase } of cells) {
+    const a = bitsOf(from), b = bitsOf(to), rows = b.length, hinge = y + ((rows - 1) / 2) * py
+    const fold = Math.abs(Math.cos(Math.PI * phase)), reach = (rows / 2) * py * fold
+    b.forEach((row, r) => [...row].forEach((bit, c) => {
+      const top = r < rows / 2, sy = y + r * py, sx = cx + c * px
+      if (phase >= 1) { if (bit === '#') faces.push([sx, sy]); return }
+      // behind the flap: new top half (uncovered as the flap falls), old bottom half (until it lands)
+      const face = top ? bit : a[r]?.[c]
+      const covered = top ? phase < .5 && sy > hinge - reach : phase >= .5 && sy < hinge + reach
+      if (face === '#' && !covered) faces.push([sx, sy])
+      // the flap: old top half folding down (φ < ½), then the new bottom half unfolding (φ ≥ ½)
+      const flapBit = phase < .5 ? (top ? a[r]?.[c] : '.') : (top ? '.' : bit)
+      if (flapBit === '#') (fold > .8 ? faces : flap).push([sx, hinge + (sy - hinge) * fold])
+    }))
+    cx += (b[0].length + gap) * px
+  }
+  return [T.dots(faces, size), T.dots(flap, size)]
 }
 const side = (ax: number, ay: number, bx: number, by: number, x: number, y: number) => (bx - ax) * (y - ay) - (by - ay) * (x - ax)
 const segDist = (ax: number, ay: number, bx: number, by: number, x: number, y: number) => {
@@ -100,21 +129,26 @@ const inPill = (x0: number, y0: number, w: number, h: number, hole?: [number, nu
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 const DAYS3 = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
-const timeNow = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }
+const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 const dateNow = () => { const d = new Date(); return `${MONTHS[d.getMonth()]} ${d.getDate()} ${DAYS3[d.getDay()]}` }
 
 // ── 01 HOME ─────────────────────────────────────────────────────────────────
 export const homeClock: WidgetPreset = {
-  id: 'home-clock', name: '01 Home', label: '01  HOME', group: 'text', live: true, clock: true, ...tile,
+  id: 'home-clock', name: '01 Home', label: '01  HOME', group: 'text', live: true, clock: true, burst: 1.2, ...tile,
   defaults: { battery: 0.78 },
-  layers: ({ data }) => {
+  layers: ({ data, since }) => {
     // battery gauge: 27 dots on a half ring, 9 o'clock → 3 o'clock; charged run white, the rest dim
     const n = 27, lit = Math.round(data.battery * n), gauge = Array.from({ length: n }, (_, i): Pt => {
       const a = -Math.PI / 2 + (Math.PI * i) / (n - 1)
       return [100 + 32 * Math.sin(a), 129.5 - 32 * Math.cos(a)]
     })
+    // on the minute the changed digits flip, split-flap style, one column after another
+    const now = new Date(), digits = { px: 4.3, py: 4.8, size: 4.7 }
+    const [faces, flap] = since === undefined ? [dotText(hhmm(now), 3, 35.5, digits)]
+      : flapText(splitFlapCells(hhmm(new Date(+now - 60_000)), hhmm(now), since, { flip: .32, stagger: .12 }), 3, 35.5, digits)
     return [
-      layer(dotText(timeNow(), 3, 35.5, { px: 4.3, py: 4.8, size: 4.7 })),
+      layer(faces),
+      ...(flap ? [layer(flap, 'mid')] : []),
       layer(T.big(dateNow(), 4, 86, SMALL), 'idle'),
       layer(T.text(`${Math.round(data.battery * 100)}%`, 4, 124, { smooth: true })),
       layer(T.dots(gauge.slice(lit), 3.3), 'mid'),

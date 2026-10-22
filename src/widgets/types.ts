@@ -20,6 +20,11 @@ export interface WidgetPreset {
   animated?: boolean
   /** Reads the wall clock (time/date text) — re-sampled on each minute tick; other static cards never re-sample. */
   clock?: boolean
+  /**
+   * Seconds of live animation after each minute tick (needs `clock`): the card is re-sampled every
+   * frame with `ctx.since` = seconds since the tick, e.g. for a split-flap. Replaces the change dissolve.
+   */
+  burst?: number
   grid: GridConfig
   style: DotStyle
   defaults?: Record<string, number>

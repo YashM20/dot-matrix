@@ -33,6 +33,31 @@ export function decodeText(prev: string, next: string, tau: number, o: DecodeOpt
   return out
 }
 
+/** One split-flap column: flipping from `from` to `to`; `phase` in [0,1) mid-flip, 1 = settled on `to`. */
+export interface FlapCell { from: string; to: string; phase: number }
+
+/**
+ * Split-flap columns, for renderers that draw the flap itself (fold the halves). Each changed column
+ * steps through its drum one flap per `flip` seconds; the k-th *changed* column starts `k·stagger`
+ * late (unchanged columns don't delay the wave) and holds its old character until then. Each step
+ * reports the pair it is flipping between and how far through the flip it is.
+ */
+export function splitFlapCells(prev: string, next: string, tau: number, o: SplitFlapOptions = {}): FlapCell[] {
+  const { flip = .06, stagger = .04 } = o
+  const from = prev.padStart(next.length).slice(-next.length)
+  let k = 0
+  return [...next].map((ch, i) => {
+    const set = charsetFor(ch), a = set.indexOf(from[i])
+    if (from[i] === ch || !set) return { from: ch, to: ch, phase: 1 }
+    const start = a < 0 ? 0 : a, steps = (set.indexOf(ch) - start + set.length) % set.length
+    const local = tau - k++ * stagger
+    if (local <= 0) return { from: set[start], to: set[start], phase: 1 }
+    const elapsed = local / flip, done = Math.floor(elapsed)
+    if (done >= steps) return { from: ch, to: ch, phase: 1 }
+    return { from: set[(start + done) % set.length], to: set[(start + done + 1) % set.length], phase: elapsed - done }
+  })
+}
+
 export interface SplitFlapOptions {
   /** Seconds per flap. */
   flip?: number

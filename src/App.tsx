@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Board } from './components/Board'
+import { Board, VIEW_EXIT_MS, cardMotion } from './components/Board'
 import { Changelog } from './components/Changelog'
 import { DrawBoard } from './components/draw/DrawBoard'
 import { DotWidget } from './components/DotWidget'
@@ -9,6 +9,7 @@ import { ExportPanel } from './components/playground/ExportPanel'
 import { PhotoUpload } from './components/playground/PhotoUpload'
 import { PreviewCanvas } from './components/playground/PreviewCanvas'
 import { WidgetGallery } from './components/playground/WidgetGallery'
+import { useExitSwap } from './hooks/useExitSwap'
 import { boardIds } from './widgets'
 import './App.css'
 
@@ -24,27 +25,31 @@ const singleCard = params.get('card')
 export default function App() {
   const [tab, setTab] = useState<Tab>(tabs.find(t => t === params.get('tab')?.toUpperCase()) ?? 'BOARDS')
   const [board, setBoard] = useState(boardIds.includes(params.get('board') ?? '') ? params.get('board')! : boardIds[0])
+  // the old view dissolves out before the new one mounts and enters (instant under reduced motion)
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const [view, leaving] = useExitSwap(`${tab}|${board}`, shown => reduced || !/^(BOARDS|GALLERY)\|/.test(shown) ? 0 : VIEW_EXIT_MS)
+  const [shownTab, shownBoard] = view.split('|') as [Tab, string]
   if (singleCard) return <main className="shell"><section className="gallery-view"><div className="gallery-grid"><DotWidget type={singleCard} /></div></section></main>
   return <main className="shell">
     <h1 className="sr-only">DOT/480 dot-matrix UI engine</h1>
     <header className="topbar"><div className="brand"><i aria-hidden="true"/> DOT/480 <small>{tab === 'WORKSPACE' ? 'PLAYGROUND' : tab}</small></div>
       <nav aria-label="Views">{tabs.map(t => <button key={t} className={tab === t ? 'selected' : ''} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}</nav>
       <div className="live"><i aria-hidden="true"/> LIVE</div></header>
-    {tab === 'BOARDS' ? (
+    {shownTab === 'BOARDS' ? (
       <section className="boards-view">
         <div className="board-tabs" role="group" aria-label="Boards">{boardIds.map(id => <button key={id} className={board === id ? 'selected' : ''} aria-pressed={board === id} onClick={() => setBoard(id)}>{id.toUpperCase()}</button>)}</div>
-        <Board id={board} />
+        <Board key={shownBoard} id={shownBoard} leaving={leaving} />
       </section>
-    ) : tab === 'GALLERY' ? (
+    ) : shownTab === 'GALLERY' ? (
       <section className="gallery-view">
         <h2 className="gallery-title">DOT/480 — 480×480 OLED MICRO INTERFACE SYSTEM</h2>
         <div className="gallery-grid">
-          {galleryItems.map(type => <DotWidget key={type} type={type} />)}
+          {galleryItems.map((type, i) => <DotWidget key={type} type={type} {...cardMotion(i, 3, galleryItems.length, leaving)} />)}
         </div>
       </section>
-    ) : tab === 'LOG' ? (
+    ) : shownTab === 'LOG' ? (
       <Changelog />
-    ) : tab === 'DRAW' ? (
+    ) : shownTab === 'DRAW' ? (
       <DrawBoard />
     ) : (
       <section className="pg-layout">

@@ -22,6 +22,8 @@ export interface DotCanvasProps {
   fps?: number
   /** Bump to re-sample a static source (e.g. a clock on the minute). */
   tick?: number
+  /** Seconds of live re-sampling after each `tick` bump, with `ctx.since` set (instead of the change dissolve). */
+  burst?: number
   renderer?: RenderMode
   /**
    * Entrance: wait `delay` ms (the card is not even sampled until then — boards spread their
@@ -29,6 +31,11 @@ export interface DotCanvasProps {
    * Skipped under reduced motion. Read once at mount.
    */
   enter?: { delay: number; mask?: MaskName; duration?: number }
+  /**
+   * Exit: when set, wait `delay` ms, then hide the dots in `mask` order over `duration` ms and stay
+   * blank (the parent unmounts the card after its exit window). Cleared again → the card re-enters.
+   */
+  exit?: { delay: number; mask?: MaskName; duration?: number } | null
   /** Mask for change transitions (new data or minute tick dissolves the old frame into the new). `false` = hard cut. */
   change?: MaskName | false
   onMode?: (mode: RenderMode) => void
@@ -37,6 +44,7 @@ export interface DotCanvasProps {
 const CANVAS_THRESHOLD = 2000
 const MAX_BACKING_SCALE = 3
 const CHANGE_MS = 360
+const EXIT_MS = 220
 
 const reducedMotionQuery = '(prefers-reduced-motion: reduce)'
 function subscribeReducedMotion(cb: () => void) {
@@ -95,11 +103,15 @@ function sameFrame(a: DotInstance[], b: DotInstance[]): boolean {
   return true
 }
 
-/** Short-lived animation drawn over the sampled frame: the entrance, or a change dissolve from the previous frame. */
-type Transient = { kind: 'enter'; t0: number | null } | { kind: 'change'; t0: number | null; prev: DotInstance[] }
+/** Short-lived animation drawn over the sampled frame: the entrance, a change dissolve from the previous frame, or the exit (held blank at the end). */
+type Transient =
+  | { kind: 'enter'; t0: number | null }
+  | { kind: 'change'; t0: number | null; prev: DotInstance[] }
+  | { kind: 'exit'; t0: number | null; delay: number; mask?: MaskName; duration: number }
+  | { kind: 'burst'; t0: number | null; seconds: number }
 
 /** Field → Grid Sampler → Renderer. Picks SVG for sparse static output, Canvas above ~2000 dots or when animated. */
-export function DotCanvas({ field, layers, data, grid, style, theme = dot480, animated, fps, tick = 0, renderer, enter, change = 'ign', onMode, className }: DotCanvasProps) {
+export function DotCanvas({ field, layers, data, grid, style, theme = dot480, animated, fps, tick = 0, burst, renderer, enter, exit, change = 'ign', onMode, className }: DotCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const svgRef = useRef<HTMLDivElement>(null)
   const reducedMotion = usePrefersReducedMotion()
@@ -128,17 +140,41 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   const transientRef = useRef<Transient | null>(enterSpec ? { kind: 'enter', t0: null } : null)
   const [transient, setTransient] = useState<Transient['kind'] | null>(enterSpec ? 'enter' : null)
   const shownRef = useRef<DotInstance[]>(dots), firstRef = useRef(true)
+  // tick burst: a static card runs live for a moment after the tick (declared before the dissolve so it wins)
+  const tickRef = useRef(tick)
+  useLayoutEffect(() => {
+    if (tickRef.current === tick) return
+    tickRef.current = tick
+    if (!burst || !layers || animated || reducedMotion || !ready || transientRef.current?.kind === 'exit') return
+    transientRef.current = { kind: 'burst', t0: null, seconds: burst }
+    setTransient('burst')
+  }, [tick]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // a new static frame (data edit, minute tick) dissolves from what is on screen now
   useLayoutEffect(() => {
     if (!ready || live) { shownRef.current = dots; return }
     if (firstRef.current) { firstRef.current = false; shownRef.current = dots; return }
     if (sameFrame(shownRef.current, dots)) return
-    if (change !== false && !reducedMotion && transientRef.current?.kind !== 'enter' && shownRef.current.length) {
+    const running = transientRef.current?.kind
+    if (change !== false && !reducedMotion && (!running || running === 'change') && shownRef.current.length) {
       transientRef.current = { kind: 'change', t0: null, prev: shownRef.current }
       setTransient('change')
     }
     shownRef.current = dots
   }, [dots, ready, live]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // exit: dissolve out and hold blank; if the exit is called off (user came back), enter again
+  const exitKey = exit && !reducedMotion ? `${exit.delay}|${exit.mask ?? ''}|${exit.duration ?? ''}` : ''
+  useLayoutEffect(() => {
+    const running = transientRef.current?.kind
+    if (exitKey && exit) {
+      transientRef.current = { kind: 'exit', t0: null, delay: exit.delay, mask: exit.mask, duration: exit.duration ?? EXIT_MS }
+      setTransient('exit')
+    } else if (running === 'exit') {
+      transientRef.current = { kind: 'enter', t0: null }
+      setTransient('enter')
+    }
+  }, [exitKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const visible = useMemo(() => { let n = 0; for (const d of dots) if (d.opacity > 0 && d.r > 0) n++; return n }, [dots])
   // transients animate on canvas; a sparse card hands back to SVG when they finish
@@ -167,6 +203,15 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     if (!tr) return frame
     if (tr.t0 === null) tr.t0 = t
     const elapsed = t - tr.t0, geometry = { cols: grid.cols, rows: grid.rows, pitch }
+    if (tr.kind === 'burst') {
+      if (elapsed >= tr.seconds || !layers) { transientRef.current = null; setTransient(null); return frame }
+      return sampleLayers(layers({ t: elapsed, since: elapsed, data: data ?? {}, grid }), grid, style, theme)
+    }
+    if (tr.kind === 'exit') {
+      // never ends on its own: the blank frame holds until the card unmounts or the exit is cleared
+      const p = ease.accelerate(Math.min(1, Math.max(0, (elapsed - tr.delay / 1000) / (tr.duration / 1000))))
+      return revealDots(frame, { ...geometry, p, mask: maskByName(tr.mask), edge: .06, exit: true })
+    }
     if (tr.kind === 'enter') {
       const p = ease.decelerate(elapsed / ((enterSpec?.duration ?? motionDuration.enter) / 1000))
       if (p >= 1) { transientRef.current = null; setTransient(null); return frame }

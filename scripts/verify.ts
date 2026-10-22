@@ -25,7 +25,7 @@ import { bounded } from '../src/engine/layout'
 import { catmullRomField } from '../src/engine/fields/splineField'
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
-import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, cubicBezier, ease } from '../src/engine/motion'
+import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
 function assert(name: string, cond: boolean, detail = '') {
@@ -259,6 +259,13 @@ assert('traceField renders thin line at amp', traceField([0.5], 0.02)(0.5, 0.5) 
   assert('decode scrambles digits within digits (no width change)', digitsOnly)
   const flap = splitFlapText('09', '12', 0), done = splitFlapText('09', '12', 5)
   assert('split-flap steps forward and lands on the target', flap.moving && flap.text.length === 2 && !done.moving && done.text === '12')
+  // cells: only changed columns stagger; a column holds its old character until its turn, then flips
+  const f0 = splitFlapCells('11:17', '11:18', 0, { flip: .3, stagger: .1 }), fMid = splitFlapCells('11:17', '11:18', .15, { flip: .3, stagger: .1 })
+  const fEnd = splitFlapCells('11:17', '11:18', 1, { flip: .3, stagger: .1 }), late = splitFlapCells('17:59', '18:00', .05, { flip: .3, stagger: .1 })
+  assert('split-flap cells: unchanged columns are settled, the changed one flips at once',
+    f0.slice(0, 4).every(c => c.phase === 1 && c.from === c.to) && f0[4].from === '7' && fMid[4].from === '7' && fMid[4].to === '8' && Math.abs(fMid[4].phase - .5) < 1e-9)
+  assert('split-flap cells: settle on the target; later changed columns hold their old character first',
+    fEnd.every((c, i) => c.phase === 1 && c.to === '11:18'[i]) && late[3].from === '5' && late[3].phase === 1 && late[1].phase < 1)
 }
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }

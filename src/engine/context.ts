@@ -30,6 +30,8 @@ export interface FrameContext<D = Record<string, number>> {
   state?: string
   reducedMotion?: boolean
   seed?: number
+  /** Seconds since the last tick, set only while a tick burst runs (e.g. a split-flap after the minute changes). */
+  since?: number
 }
 
 /** A card: frame context in, layers out. */
