@@ -206,6 +206,8 @@ Plan reference: MASTER-PLAN §4 P1. **Flagship: Departures.**
 Work the **Status board** list top to bottom: P1-A → P1-F, then P0-A → P0-C. When all of those are ticked, P1 is closed and P2 (interaction + Components v2) starts.
 
 ## Known issues / notes for the next agent
+- **Pending browser checks (2026-10-22):** the data springs (drag the WORKSPACE sliders on timer, music or fitness) and the Transition Lab panel were only verified by tsc, verify, goldens and headless snaps. The preview browser hung before a manual look. One agent saw a React warning, "Cannot update a component (`Board`) while rendering `DotCanvas`"; reproduce it on the current tree before fixing.
+- Agent worktrees live under `.claude/worktrees/` (gitignored, and ignored by the Vite watcher).
 - Root `index.css` sets centred text. New views must set `text-align: left` (the LOG view does).
 - `pnpm snap` renders CJK as empty; icons render fine headlessly.
   - Agents keep claiming icons are empty. They are not: verify asserts every icon rasterizes.
