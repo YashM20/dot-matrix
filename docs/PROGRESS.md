@@ -36,7 +36,7 @@
 **P2 (interaction + Components v2): started 2026-10-22, run as parallel agents on the `Control` contract** (`src/engine/context.ts`: cards declare `controls`; the input layer edits `data[key]` and fills `hover`/`pressed`/`focus`):
 - [ ] P2-A: input layer: pointer/touch/keyboard → data, hit testing, a11y overlay, hover/press/focus in ctx (`DotCanvas`, `src/engine/interaction/`).
 - [ ] P2-B: Components v2 on the components board (segmented, knob, stepper, checkbox/radio, tabs, chips, loaders, keypad, …).
-- [ ] P2-C: **Instrument** flagship board (knobs, crank, XY pad, 16-step sequencer, transport, meter).
+- [x] P2-C: **Instrument** flagship board (knobs, crank, XY pad, 16-step sequencer, transport, meter). Done: `src/widgets/boards/instrument.ts`, nine `inst-*` cards with `controls`, rendered purely from `data`/`hover`/`pressed`/`focus`/`t` (hover glow in mid, press one quantize step down, marching-dots focus); red only on the playhead, record light and XY live dot. Goldens added; needs a browser check once P2-A lands.
 - [ ] P2-D: DESIGN.md "Interaction" tokens + lift pass (`henry-bear`, `sunburst`).
 
 **Needs the user (blocked):**
