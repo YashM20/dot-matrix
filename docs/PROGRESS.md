@@ -41,7 +41,7 @@
 - [x] P2 follow-up: `ui-toggle` / `ui-slider` now draw hover glow + marching focus ring; segmented / tabs / radio / transport pass `optionLabels` (screen readers read "Record", "Play", "Stop", not "1/2/3").
 
 **P2 left (agent can do):**
-- [ ] P2-E: chips + toast cards (Components v2 leftovers).
+- [x] P2-E: chips + toast cards. Done 2026-10-22: `ui-chips` (4 stadium toggles, own data keys) and `ui-toast` (animated top slide-in reveal, dismiss button), both in components board; goldens +2.
 - [ ] P2-F: browser pass on the Instrument board (knobs, crank, XY, sequencer, transport) and the new `ui-*` cards; axe run on the overlay.
 - [ ] P2-G: measure the one-frame input latency gate; multitouch on a real device.
 - [ ] P2-H: touch ripple after release (pointer is dropped on `pointerup`, so `tDown`-based ripples stop early on touch).
