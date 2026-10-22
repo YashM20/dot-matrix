@@ -6,7 +6,7 @@ import { dot480 } from '../../src/engine/theme/tokens'
 import { sampleLayers } from '../../src/engine/sampler/gridSampler'
 import { squircleExponent } from '../../src/engine/renderer/shapePath'
 import type { DotInstance, DotStyle, ThemeTokens } from '../../src/engine/types'
-import { boards, withChrome, type WidgetPreset } from '../../src/widgets'
+import { boards, withChrome, type WidgetContext, type WidgetPreset } from '../../src/widgets'
 import { Raster } from './raster'
 
 export const theme: ThemeTokens = dot480
@@ -27,8 +27,10 @@ export function timeRange(spec: string): number[] {
 }
 
 export const pitchOf = (p: WidgetPreset) => p.grid.pitch ?? theme.gridPx
-export const sampleCard = (p: WidgetPreset, t: number, style: DotStyle = p.style, since?: number): DotInstance[] =>
-  sampleLayers(withChrome(p)({ t, since, data: { ...p.defaults } }), p.grid, style, theme)
+/** Extra frame-context fields merged over the default `{ t, since, data }` (e.g. `hover` / `pressed` / `focus`); `data` merges over the defaults. */
+export type CtxExtra = Partial<WidgetContext>
+export const sampleCard = (p: WidgetPreset, t: number, style: DotStyle = p.style, since?: number, extra: CtxExtra = {}): DotInstance[] =>
+  sampleLayers(withChrome(p)({ t, since, ...extra, data: { ...p.defaults, ...extra.data } }), p.grid, style, theme)
 export const visible = (d: DotInstance) => d.opacity > 0 && d.r > 0
 
 /** Opacity·area-weighted centroid of lit dots, in card px (grid units). */
@@ -47,16 +49,18 @@ export interface RenderOptions {
   silhouette?: boolean
   /** Seconds since the last tick (tick-burst cards, e.g. the home-clock split-flap). */
   since?: number
+  /** Extra frame-context fields (snap `--ctx '<json>'`). */
+  ctx?: CtxExtra
 }
 export interface RenderedCard { raster: Raster; dots: DotInstance[]; /** card px → raster px */ map: (x: number, y: number) => [number, number] }
 
-export function renderCardFull(p: WidgetPreset, { px, t, silhouette = false, since }: RenderOptions): RenderedCard {
+export function renderCardFull(p: WidgetPreset, { px, t, silhouette = false, since, ctx }: RenderOptions): RenderedCard {
   // bleed cards have no padding, so scale their dots up to fill the same footprint
   const base = pitchOf(p) * px, pitch = p.bleed ? base + (PAD * 2) / p.grid.cols : base, k = (pitch / base) * px
   const w = Math.round(p.grid.cols * pitch), h = Math.round(p.grid.rows * pitch)
   // silhouette: same lit set (same quantization), but every dot at full radius
   const style: DotStyle = silhouette ? { ...p.style, sizeMin: p.style.sizeMax, sizeCurve: undefined, opacityMode: 'fromValue' } : p.style
-  const dots = sampleCard(p, t, style, since)
+  const dots = sampleCard(p, t, style, since, ctx)
   const pad = p.bleed ? 0 : PAD
   const card = new Raster(w + pad * 2, h + pad * 2, theme.bg)
   card.rect(0, 0, card.w, card.h, silhouette ? '#000000' : theme.surface, 14, '#26292d')
