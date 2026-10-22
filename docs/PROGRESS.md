@@ -35,7 +35,7 @@
 
 **P2 (interaction + Components v2): started 2026-10-22, run as parallel agents on the `Control` contract** (`src/engine/context.ts`: cards declare `controls`; the input layer edits `data[key]` and fills `hover`/`pressed`/`focus`):
 - [ ] P2-A: input layer: pointer/touch/keyboard → data, hit testing, a11y overlay, hover/press/focus in ctx (`DotCanvas`, `src/engine/interaction/`).
-- [ ] P2-B: Components v2 on the components board (segmented, knob, stepper, checkbox/radio, tabs, chips, loaders, keypad, …).
+- [x] P2-B: Components v2 on the components board. Done 2026-10-22: 10 new cards with `controls` and hover/press/focus states (`ui-segmented`, `ui-stepped-slider`, `ui-knob`, `ui-stepper`, `ui-check`, `ui-tabs`, `ui-progress`, `ui-loaders`, `ui-keypad`, `ui-text-field`); `pnpm snap --ctx '<json>'` merges extra frame-context fields for state snapshots. Chips and toast not built yet.
 - [ ] P2-C: **Instrument** flagship board (knobs, crank, XY pad, 16-step sequencer, transport, meter).
 - [x] P2-D: DESIGN.md "Interaction" tokens + lift pass (`henry-bear`, `sunburst`).
 

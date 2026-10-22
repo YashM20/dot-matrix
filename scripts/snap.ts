@@ -7,6 +7,7 @@
  *   pnpm snap --film timer --t 0:2:0.25   # contact sheet across time → <out>/film/timer.png (+ timer.apng)
  *   pnpm snap --film home-clock --since --t 0:1.2:0.1   # tick burst: ctx.since = t (split-flap)
  *   pnpm snap --bar silhouette            # bar sheet vs the reference cards → <out>/bar/silhouette.png
+ *   pnpm snap ui-knob --ctx '{"hover":"knob","data":{"knob":0.8}}'   # extra frame-context fields (interaction states)
  *   options: --out <dir> (default .snapshots)  --px <pixels per CSS px> (default 2; film/bar default 1)
  *            --t <seconds> (default 1.3; with --film a:b:step, default 0:2:0.25)  --cols <n> (film frames per row)
  *
@@ -16,7 +17,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { boardById, boards, widgetById, widgetPresets, type WidgetPreset } from '../src/widgets'
 import { apng, Raster } from './lib/raster'
-import { litCentroid, renderCard, renderCardFull, sheet, theme, timeRange } from './lib/cards'
+import { litCentroid, renderCard, renderCardFull, sheet, theme, timeRange, type CtxExtra } from './lib/cards'
 
 const args = process.argv.slice(2)
 const opt = (name: string, fallback: string) => { const i = args.indexOf(`--${name}`); return i >= 0 ? args.splice(i, 2)[1] : fallback }
@@ -24,6 +25,9 @@ const film = opt('film', ''), bar = opt('bar', '')
 const out = opt('out', '.snapshots'), px = +opt('px', film || bar ? '1' : '2'), tArg = opt('t', ''), board = opt('board', ''), filmCols = +opt('cols', '0')
 const t = tArg && !tArg.includes(':') ? +tArg : 1.3
 const since = args.includes('--since')
+const ctxArg = opt('ctx', '')
+let ctx: CtxExtra | undefined
+try { ctx = ctxArg ? JSON.parse(ctxArg) as CtxExtra : undefined } catch { console.error(`bad --ctx JSON: ${ctxArg}`); process.exit(1) }
 const all = args.includes('--all'), ids = args.filter(a => !a.startsWith('--'))
 
 const save = (name: string, r: Raster | Buffer, ext = 'png') => {
@@ -35,7 +39,7 @@ const need = (id: string): WidgetPreset => { const p = widgetById(id); if (!p) {
 // ── film: one card across deterministic t values ────────────────────────────
 function filmSheet(p: WidgetPreset, ts: number[]) {
   const LABEL = 22, gap = 12
-  const frames = ts.map(tt => renderCard(p, { px, t: tt, since: since ? tt : undefined }))
+  const frames = ts.map(tt => renderCard(p, { px, t: tt, since: since ? tt : undefined, ctx }))
   const fw = Math.max(...frames.map(f => f.w)), fh = Math.max(...frames.map(f => f.h))
   const cols = filmCols > 0 ? filmCols : frames.length, rows = Math.ceil(frames.length / cols)
   const s = new Raster(cols * fw + (cols + 1) * gap, rows * (fh + LABEL) + (rows + 1) * gap, theme.bg)
@@ -61,13 +65,13 @@ function resolveRef(id: string): WidgetPreset | undefined {
 function barSheet(p: WidgetPreset) {
   const cards = [p, ...BAR_REFS.map(resolveRef).filter((r): r is WidgetPreset => !!r && r.id !== p.id)]
   const views = cards.map(c => {
-    const one = renderCardFull(c, { px, t })
+    const one = renderCardFull(c, { px, t, ctx: c === p ? ctx : undefined })
     // 3×: render at 3× scale and crop a 1×-sized window around the lit-mass centroid
-    const three = renderCardFull(c, { px: px * 3, t }), [cx, cy] = litCentroid(three.dots)
+    const three = renderCardFull(c, { px: px * 3, t, ctx: c === p ? ctx : undefined }), [cx, cy] = litCentroid(three.dots)
     const [mx, my] = Number.isFinite(cx) ? three.map(cx, cy) : [three.raster.w / 2, three.raster.h / 2]
     const ox = Math.round(Math.max(0, Math.min(three.raster.w - one.raster.w, mx - one.raster.w / 2)))
     const oy = Math.round(Math.max(0, Math.min(three.raster.h - one.raster.h, my - one.raster.h / 2)))
-    return [one.raster, three.raster.crop(ox, oy, one.raster.w, one.raster.h), one.raster.blur(6 * px), renderCard(c, { px, t, silhouette: true })]
+    return [one.raster, three.raster.crop(ox, oy, one.raster.w, one.raster.h), one.raster.blur(6 * px), renderCard(c, { px, t, silhouette: true, ctx: c === p ? ctx : undefined })]
   })
   const ROWS = ['1X', '3X', 'BLUR', 'SIL'], LEFT = 64, TOP = 26, gap = 12
   const cw = Math.max(...views.map(v => v[0].w)), ch = Math.max(...views.map(v => v[0].h))
@@ -84,5 +88,5 @@ function barSheet(p: WidgetPreset) {
 mkdirSync(out, { recursive: true })
 if (film) filmSheet(need(film), tArg.includes(':') ? timeRange(tArg) : tArg ? [t] : timeRange('0:2:0.25'))
 if (bar) barSheet(need(bar))
-for (const b of all ? boards : board ? [boardById(board)!] : []) save(`board-${b.id}`, sheet(b.items.map(p => renderCard(p, { px, t })), b.columns))
-for (const id of ids) { const p = widgetById(id); if (!p) { console.error(`unknown card ${id}`); continue } save(id, renderCard(p, { px, t })) }
+for (const b of all ? boards : board ? [boardById(board)!] : []) save(`board-${b.id}`, sheet(b.items.map(p => renderCard(p, { px, t, ctx })), b.columns))
+for (const id of ids) { const p = widgetById(id); if (!p) { console.error(`unknown card ${id}`); continue } save(id, renderCard(p, { px, t, ctx })) }
