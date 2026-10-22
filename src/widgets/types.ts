@@ -28,6 +28,8 @@ export interface WidgetPreset {
   grid: GridConfig
   style: DotStyle
   defaults?: Record<string, number>
+  /** Data keys that glide to new values on a critically damped spring instead of dissolving (DotCanvas `springKeys`). */
+  springKeys?: string[]
   /** `dots`: the card label and live dot are drawn by the engine inside the grid (TILE cards). */
   chrome?: 'dots'
   /** Label text drawn by `chrome: 'dots'` (defaults to `name`; '' = no label). */

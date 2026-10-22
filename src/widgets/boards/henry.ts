@@ -6,7 +6,7 @@
  */
 import { glyph } from '../../engine/fields/bitmapFont'
 import { hash01 } from '../../engine/math'
-import { splitFlapCells, type FlapCell } from '../../engine/motion/text'
+import { decodeText, splitFlapCells, type FlapCell } from '../../engine/motion/text'
 import type { Field } from '../../engine/types'
 import { TAU, TILE, bounded, combine, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
@@ -182,7 +182,7 @@ const transport = (x: number, dir: 1 | -1) => {
 }
 export const music: WidgetPreset = {
   id: 'music', name: '02 Music', group: 'photo', ...tile,
-  defaults: { position: 0.44 },
+  defaults: { position: 0.44 }, springKeys: ['position'],
   layers: ({ data }) => {
     const knob = 2 + data.position * 138
     return [
@@ -199,7 +199,7 @@ export const music: WidgetPreset = {
 // ── 03 TIMER ────────────────────────────────────────────────────────────────
 export const timer: WidgetPreset = {
   id: 'timer', name: '03 Timer', group: 'polar', ...tile,
-  defaults: { progress: 0.38 },
+  defaults: { progress: 0.38 }, springKeys: ['progress'],
   layers: ({ data }) => {
     const ring = { spacing: (TAU * 60) / 104, size: 3.1 }
     return [
@@ -224,15 +224,28 @@ const cloudSites: Pt[] = [
   }),
   ...Array.from({ length: 10 }, (_, k): Pt => [91 + 4 + k * SP, BASE]),
 ].map(([x, y]): Pt => [x, BASE - (BASE - y) * LIFT]) // the sheet's cloud is taller than round lobes
+/** Cities the card cycles through (same-length strings so the decode never reflows). */
+const CITIES = [['TOKYO', '24', 'M 26° / L 18°'], ['OSAKA', '22', 'M 25° / L 17°'], ['KYOTO', '21', 'M 24° / L 16°']]
+const CITY_S = 6
+/** City `k` of the cycle at time `t`, decoding in from the previous one (t < CITY_S = the static Tokyo frame). */
+const weatherAt = (t: number) => {
+  const k = Math.floor(Math.max(0, t) / CITY_S), tau = t - k * CITY_S, next = CITIES[k % 3]
+  if (k === 0) return next
+  const prev = CITIES[(k - 1) % 3]
+  return next.map((s, i) => decodeText(prev[i], s, tau, { seed: i + 1 }))
+}
 export const weather: WidgetPreset = {
-  id: 'weather', name: '04 Weather', label: '04  WEATHER', group: 'icon', ...tile,
-  layers: () => [
-    layer(T.big('TOKYO', 1.5, 29, { lattice: 1.35 }), 'idle'),
-    layer(dotText('24', 2.5, 49, { px: 3, py: 4.3, size: 3.1 })), layer(T.dotRing(50, 53, 3.6, { spacing: (TAU * 3.6) / 8, size: 2.4 })),
-    layer(T.dots(cloudSites, 2.7)),
-    layer(T.big('M 26° / L 18°', 1, 107, SMALL), 'idle'),
-    layer(T.big('CLOUDY', 1, 129, { lattice: 1.15 }), 'idle'),
-  ],
+  id: 'weather', name: '04 Weather', label: '04  WEATHER', group: 'icon', animated: true, ...tile,
+  layers: ({ t }) => {
+    const [city, temp, range] = weatherAt(t)
+    return [
+      layer(T.big(city, 1.5, 29, { lattice: 1.35 }), 'idle'),
+      layer(dotText(temp, 2.5, 49, { px: 3, py: 4.3, size: 3.1 })), layer(T.dotRing(50, 53, 3.6, { spacing: (TAU * 3.6) / 8, size: 2.4 })),
+      layer(T.dots(cloudSites, 2.7)),
+      layer(T.big(range, 1, 107, SMALL), 'idle'),
+      layer(T.big('CLOUDY', 1, 129, { lattice: 1.15 }), 'idle'),
+    ]
+  },
 }
 
 // ── 05 FITNESS ──────────────────────────────────────────────────────────────
@@ -240,7 +253,7 @@ const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 const WEEK = [7, 9, 7, 6, 8, 9, 8], TODAY_EXTRA = 7
 export const fitness: WidgetPreset = {
   id: 'fitness', name: '05 Fitness', group: 'polar', ...tile,
-  defaults: { move: 0.62, exercise: 0.58, stand: 0.6 },
+  defaults: { move: 0.62, exercise: 0.58, stand: 0.6 }, springKeys: ['move', 'exercise', 'stand'],
   layers: ({ data }) => {
     const rings = ([[26.5, data.move, 'value'], [21, data.exercise, 'active'], [15.5, data.stand, 'active']] as const).flatMap(([r, p, tone]) => {
       const o = { spacing: (TAU * r) / Math.round((TAU * r) / 3.8), size: 3.3 }
@@ -261,17 +274,32 @@ export const fitness: WidgetPreset = {
 }
 
 // ── 06 MESSAGES ─────────────────────────────────────────────────────────────
-const bubble = (top: number, initial: string, name: string, time: string, l1: string, l2: string) => [
+const bubble = (top: number, initial: string, name: string, time: string, l1: string, l2: string, cursor?: 0 | 1) => [
   layer(roundRect(1, top, 142, 55, 6), 'mid'),
   layer(T.dotRing(16, top + 27, 11.5, { spacing: 1.6, size: .7 }), 'idle'),
   layer(T.big(initial, 16, top + 22, { lattice: 1.4, align: 'center' })),
   layer(T.text(name, 35, top + 11)), layer(T.text(time, 137, top + 11, { align: 'right' }), 'idle'),
   layer(T.text(l1, 35, top + 24), 'idle'), layer(T.text(l2, 35, top + 37), 'idle'),
+  // text cursor: a one-dot bar after the last typed character
+  ...(cursor === undefined ? [] : [layer(T.vrule(35 + T.size(cursor ? l2 : l1)[0] + 1, top + (cursor ? 37 : 24), 7))]),
 ]
+/**
+ * Typewriter on the newest message: the full text holds (the static frame), then it is retyped
+ * at `CPS` characters a second behind a solid cursor, which blinks once the line is complete.
+ */
+const NEWEST = ['SEE YOU SOON.', "LET'S MEET UP."] as const, TYPE_PERIOD = 9, TYPE_HOLD = 3, CPS = 12
+const typewriter = (t: number): [string, string, (0 | 1)?] => {
+  const tau = (((t % TYPE_PERIOD) + TYPE_PERIOD) % TYPE_PERIOD) - TYPE_HOLD, [a, b] = NEWEST
+  if (tau < 0) return [a, b]
+  const n = Math.floor(tau * CPS)
+  if (n < a.length) return [a.slice(0, n), '', 0]
+  if (n < a.length + b.length) return [a, b.slice(0, n - a.length), 1]
+  return Math.floor(tau * 2.5) % 2 ? [a, b] : [a, b, 1]
+}
 export const messages: WidgetPreset = {
-  id: 'messages', name: '06 Messages', group: 'composite', live: true, ...tile,
-  layers: () => [
-    ...bubble(17, 'A', 'ALEX', '10:30', 'SEE YOU SOON.', "LET'S MEET UP."),
+  id: 'messages', name: '06 Messages', group: 'composite', live: true, animated: true, ...tile,
+  layers: ({ t }) => [
+    ...bubble(17, 'A', 'ALEX', '10:30', ...typewriter(t)),
     ...bubble(77, 'M', 'MAYA', '09:12', "DON'T FORGET", 'THE REPORT.'),
     layer(T.dots([[65, 140]], 3.4)), ...[72, 79].map(x => layer(T.dotRing(x, 140, 1.7, { spacing: 1.05, size: .55 }), 'idle')),
   ],
