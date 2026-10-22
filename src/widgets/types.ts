@@ -1,5 +1,5 @@
 import type { DotStyle, Field, GridConfig, Layer, Tone } from '../engine/types'
-import type { FrameContext } from '../engine/context'
+import type { Control, FrameContext } from '../engine/context'
 import { barsAt, centeredBarsAt, discCells, dotAt, hRule, placeCells, polylineCells, rectCells, ringCells, spriteAt, textAt, textSize, vRule } from '../engine/layout'
 import { latticeGrid } from '../engine/sampler/gridSampler'
 import { cachedIconField, iconPaths } from '../engine/fields/iconSDF'
@@ -25,6 +25,8 @@ export interface WidgetPreset {
    * frame with `ctx.since` = seconds since the tick, e.g. for a split-flap. Replaces the change dissolve.
    */
   burst?: number
+  /** Interactive regions (P2): pointer / keyboard input edits `data[control.key]`; see `Control`. */
+  controls?: Control[]
   grid: GridConfig
   style: DotStyle
   defaults?: Record<string, number>

@@ -33,6 +33,12 @@
 - [ ] P0-B: permanent bounds-vs-no-bounds check in `scripts/verify.ts`.
 - [ ] P0-C: migrate `sites` + `lattice` literals to `Layer.size`.
 
+**P2 (interaction + Components v2): started 2026-10-22, run as parallel agents on the `Control` contract** (`src/engine/context.ts`: cards declare `controls`; the input layer edits `data[key]` and fills `hover`/`pressed`/`focus`):
+- [ ] P2-A: input layer: pointer/touch/keyboard → data, hit testing, a11y overlay, hover/press/focus in ctx (`DotCanvas`, `src/engine/interaction/`).
+- [ ] P2-B: Components v2 on the components board (segmented, knob, stepper, checkbox/radio, tabs, chips, loaders, keypad, …).
+- [ ] P2-C: **Instrument** flagship board (knobs, crank, XY pad, 16-step sequencer, transport, meter).
+- [ ] P2-D: DESIGN.md "Interaction" tokens + lift pass (`henry-bear`, `sunburst`).
+
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.
 - [ ] P0-E: `accentRole` on multi-accent cards → decision §11.1.
