@@ -481,9 +481,60 @@ export const textFieldCard: WidgetPreset = {
   },
 }
 
+// ── CHIPS ───────────────────────────────────────────────────────────────────
+/** Four stadium filter chips, each its own toggle: on = value outline + label, off = mid. */
+const CHIPS = { w: 62, h: 24, xs: [6, 76], ys: [46, 84], items: [{ key: 'all', label: 'ALL' }, { key: 'live', label: 'LIVE' }, { key: 'saved', label: 'SAVED' }, { key: 'muted', label: 'MUTED' }] }
+const chipBox = (i: number) => [CHIPS.xs[i % 2], CHIPS.ys[Math.floor(i / 2)]] as const
+export const chipsCard: WidgetPreset = {
+  id: 'ui-chips', name: 'Chips', group: 'composite', chrome: 'dots', grid: TILE, style,
+  defaults: { all: 0, live: 1, saved: 1, muted: 0 },
+  controls: CHIPS.items.map(({ key, label }, i): Control => {
+    const [x, y] = chipBox(i)
+    return { key, kind: 'toggle', box: [x, y, CHIPS.w, CHIPS.h], label }
+  }),
+  layers: ctx => {
+    const out: Layer[] = [layer(T.text('FILTERS', 6, 24), 'idle')]
+    const n = CHIPS.items.reduce((a, { key }) => a + (ctx.data[key] >= .5 ? 1 : 0), 0)
+    CHIPS.items.forEach(({ key, label }, i) => {
+      const s = ui(ctx, key), on = ctx.data[key] >= .5, [x, y] = chipBox(i), v = s.pressed ? PRESS : 1, shape = rr(x, y, CHIPS.w, CHIPS.h, CHIPS.h / 2)
+      out.push(
+        layer(at(T.dots(shape(0, OUTLINE.spacing), OUTLINE.size), v), on ? 'value' : 'mid'),
+        layer(dimmed(T.big(label, x + CHIPS.w / 2, y + CHIPS.h / 2 - 4.5, { ...BODY, align: 'center' }), v), on ? 'value' : 'mid'),
+        ...states(s, ctx.t, shape, shape, 5),
+      )
+    })
+    out.push(layer(T.text(`${n} ACTIVE`, 138, 132, { align: 'right' }), 'mid'))
+    return out
+  },
+}
+
+// ── TOAST ───────────────────────────────────────────────────────────────────
+/** Notification pill that slides in from the top over `reveal` seconds, holds, then repeats; the × button dims on press. */
+const TOAST = { x: 6, y: 52, w: 132, h: 38, text: 'SYNC DONE', bx: 118, reveal: .6, period: 4.2, dist: 70 }
+export const toastCard: WidgetPreset = {
+  id: 'ui-toast', name: 'Toast', group: 'composite', chrome: 'dots', grid: TILE, style, animated: true,
+  defaults: { dismiss: 0 },
+  controls: [{ key: 'dismiss', kind: 'button', box: [TOAST.bx - 12, TOAST.y + TOAST.h / 2 - 12, 24, 24], label: 'Dismiss' }],
+  layers: ctx => {
+    const s = ui(ctx, 'dismiss'), age = ctx.t % TOAST.period, k = clamp(age / TOAST.reveal), e = 1 - (1 - k) ** 3
+    const dy = -(1 - e) * TOAST.dist, cy = TOAST.y + TOAST.h / 2 + dy, v = s.pressed ? PRESS : 1
+    const pill = rr(TOAST.x, TOAST.y + dy, TOAST.w, TOAST.h, TOAST.h / 2), cross = TOAST.bx
+    const x = (d: number): Pt[] => [-2, -1, 0, 1, 2].map((i): Pt => [cross + i * d, cy + i * d]), x2 = (d: number): Pt[] => [-2, -1, 0, 1, 2].map((i): Pt => [cross + i * d, cy - i * d])
+    return [
+      layer(T.text('NOTICE', TOAST.x + 2, 30), 'idle'),
+      layer(dimmed(T.dots(pill(0, OUTLINE.spacing), OUTLINE.size), e), 'value'),
+      layer(dimmed(T.big(TOAST.text, TOAST.x + 16, cy - 4.5, BODY), e), 'value'),
+      layer(at(T.dotRing(cross, cy, 10, { spacing: 2.6, size: 1.3 }), v * e), 'mid'),
+      layer(at(T.dots([...x(2.2), ...x2(2.2)], 2), v * e), 'mid'),
+      ...(e > .99 ? states(s, ctx.t, circle(cross, cy, 10), circle(cross, cy, 10), 7) : []),
+    ]
+  },
+}
+
 export const componentsBoard = [
   toggleCard, pillCard, sliderCard, iconButtonCard, statusDotCard,
   segmentedCard, steppedSliderCard, knobCard, stepperCard, checkCard,
   tabsCard, progressCard, loadersCard, keypadCard, textFieldCard,
+  chipsCard, toastCard,
 ]
 
