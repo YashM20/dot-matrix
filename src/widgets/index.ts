@@ -8,10 +8,18 @@ import { rideBoard } from './boards/ride'
 import { audioBoard } from './boards/audio'
 import { componentsBoard } from './boards/components'
 import { departuresBoard } from './boards/departures'
-import { instrumentBoard } from './boards/instrument'
+import { instrumentBoard, instrumentShared } from './boards/instrument'
 import { irBoard } from './boards/ir'
 
-export interface BoardDef { id: string; title: string; columns: number; items: WidgetPreset[] }
+export interface BoardDef {
+  id: string; title: string; columns: number; items: WidgetPreset[]
+  /**
+   * Opt-in board-level data: these keys live in one store on the board (seeded from the first card
+   * default that defines each), are merged into every card's `data`, and control edits to them are
+   * written back to the store, so one card's controls can drive another card. Cards stay pure in ctx.
+   */
+  shared?: string[]
+}
 /** Every reference board in public/images, in the order they appear there. */
 export const boards: BoardDef[] = [
   { id: 'henry', title: 'DOT / 480 — OLED MICRO INTERFACE SYSTEM', columns: 3, items: henryBoard },
@@ -22,7 +30,7 @@ export const boards: BoardDef[] = [
   { id: 'ride', title: 'RIDE / HENRY / SYSTEM', columns: 3, items: rideBoard },
   { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, items: audioBoard },
   { id: 'departures', title: 'DEPARTURES — LIVE TRANSIT BOARD', columns: 3, items: departuresBoard },
-  { id: 'instrument', title: 'INSTRUMENT — DOT/480 DEVICE', columns: 3, items: instrumentBoard },
+  { id: 'instrument', title: 'INSTRUMENT — DOT/480 DEVICE', columns: 3, items: instrumentBoard, shared: instrumentShared },
   { id: 'ir', title: 'FIELD IR — DOT PROGRAMS', columns: 3, items: irBoard },
   { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, items: componentsBoard },
 ]

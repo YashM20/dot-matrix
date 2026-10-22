@@ -105,26 +105,38 @@ const PATTERN = [1, 0, 0, 0, 1, 0, 1, 0, 1, 0, 0, 1, 0, 0, 1, 0]
 const BPM = 120
 /** Sixteenth-note index at `t` — pure in t, tempo from data. */
 const stepAt = (t: number, bpm: number) => Math.floor((Math.max(0, t) * bpm) / 15)
+const stepKey = (i: number) => `s${i}`
+/** Transport `mode` 2 = stop: the meter goes silent and the playhead parks. */
+const runningOf = (data: Record<string, number>) => Math.round(data.mode ?? 0) !== 2
+/**
+ * Board-shared data keys (`BoardDef.shared`): tempo, transport mode and the 16 steps live in one
+ * board store, so sequencer edits, stop and tempo reach the meter and the playhead. A card alone
+ * (gallery, goldens) falls back to the defaults below, so its resting frame is unchanged.
+ */
+export const instrumentShared = ['bpm', 'mode', ...PATTERN.map((_, i) => stepKey(i))]
 
 // ── 03 LEVEL ────────────────────────────────────────────────────────────────
-// A stereo LED ladder fed by the default pattern at the default tempo: each hit kicks both
-// channels (panned per step), decays, and leaves a held peak that falls after a beat.
+// A stereo LED ladder fed by the sequencer's pattern at the transport tempo (board-shared data,
+// defaults when alone): each hit kicks both channels (panned per step), decays, and leaves a held
+// peak that falls after a beat. Stopped transport = silence.
 const METER = { xs: [52, 92], base: 114, n: 13, pitch: 7.3, size: 6 }
 const DECAY = .28, HOLD = .5, FALL = .9, LOOK = 1.4
-const hit = (t: number, side: number) => {
-  const dur = 15 / BPM, now = stepAt(t, BPM)
+interface Song { bpm: number; pattern: boolean[] }
+const songOf = (data: Record<string, number>): Song => ({ bpm: Math.max(1, data.bpm ?? BPM), pattern: PATTERN.map((on, i) => (data[stepKey(i)] ?? on) >= .5) })
+const hit = (t: number, side: number, { bpm, pattern }: Song) => {
+  const dur = 15 / bpm, now = stepAt(t, bpm)
   let e = .1 + .04 * Math.sin(5.3 * t + side * 1.7)
   for (let j = now; j > now - 8 && j >= 0; j--) {
     const i = j % 16
-    if (!PATTERN[i]) continue
+    if (!pattern[i]) continue
     const vel = (i % 4 ? .72 : .96) * (1 + .1 * Math.sin(i * 2.3 + side * Math.PI))
     e = Math.max(e, vel * Math.exp(-(t - j * dur) / DECAY))
   }
   return e
 }
-const peakOf = (t: number, side: number) => {
+const peakOf = (t: number, side: number, song: Song) => {
   let p = 0
-  for (let k = 0; k <= 28; k++) { const back = (k / 28) * LOOK; if (t - back < 0) break; p = Math.max(p, hit(t - back, side) - FALL * Math.max(0, back - HOLD)) }
+  for (let k = 0; k <= 28; k++) { const back = (k / 28) * LOOK; if (t - back < 0) break; p = Math.max(p, hit(t - back, side, song) - FALL * Math.max(0, back - HOLD)) }
   return p
 }
 export const meter: WidgetPreset = {
@@ -133,9 +145,10 @@ export const meter: WidgetPreset = {
   controls: [{ key: 'gain', kind: 'slider', orientation: 'vertical', box: [36, 20, 72, 100], min: 0, max: 1, step: 1 / 20, label: 'Output gain' }],
   layers: ctx => {
     const { xs, base, n, pitch, size } = METER, f = feel(ctx, 'gain'), gain = clamp01(ctx.data.gain ?? .8) * 1.15
-    const y = (i: number) => base - i * pitch
+    const y = (i: number) => base - i * pitch, song = songOf(ctx.data), running = runningOf(ctx.data)
     const out = METER.xs.flatMap((x, side) => {
-      const lit = Math.round(clamp01(hit(ctx.t, side) * gain) * n), peak = Math.round(clamp01(peakOf(ctx.t, side) * gain) * n) - 1
+      const lit = running ? Math.round(clamp01(hit(ctx.t, side, song) * gain) * n) : 0
+      const peak = running ? Math.round(clamp01(peakOf(ctx.t, side, song) * gain) * n) - 1 : -1
       const seg = Array.from({ length: n }, (_, i): Pt => [x, y(i)])
       return [
         layer(spots(seg.slice(lit).filter((_, i) => i + lit !== peak), size), f.hover ? 'mid' : 'faint'),
@@ -227,10 +240,10 @@ export const transport: WidgetPreset = {
 
 // ── 08 SEQUENCER ────────────────────────────────────────────────────────────
 // Sixteen step LEDs on a 4×4 grid (rows are bars' beats); the playhead walks them at `bpm`
-// sixteenths. A lit step under the playhead fires red at full size; an empty one shows a small red.
+// sixteenths (tempo and transport shared with the board). A lit step under the playhead fires red at
+// full size; an empty one shows a small red. Stopped transport parks the playhead (no red, 00/16).
 const SEQ = { x0: 33, y0: 28, pitch: 26, on: 13, off: 4.4 }
 const stepPos = (i: number): Pt => [SEQ.x0 + (i % 4) * SEQ.pitch, SEQ.y0 + Math.floor(i / 4) * SEQ.pitch]
-const stepKey = (i: number) => `s${i}`
 export const sequencer: WidgetPreset = {
   id: 'inst-sequencer', name: 'Sequencer', label: '08  SEQUENCER', ...device,
   defaults: { bpm: BPM, ...Object.fromEntries(PATTERN.map((on, i) => [stepKey(i), on])) },
@@ -239,7 +252,7 @@ export const sequencer: WidgetPreset = {
     return { key: stepKey(i), kind: 'toggle', box: [x - 12, y - 12, 24, 24], label: `Step ${i + 1}` }
   }),
   layers: ctx => {
-    const bpm = ctx.data.bpm ?? BPM, head = stepAt(ctx.t, bpm) % 16
+    const bpm = ctx.data.bpm ?? BPM, head = runningOf(ctx.data) ? stepAt(ctx.t, bpm) % 16 : -1
     return [
       ...PATTERN.flatMap((_, i) => {
         const p = stepPos(i), on = (ctx.data[stepKey(i)] ?? 0) >= .5, f = feel(ctx, stepKey(i)), here = i === head

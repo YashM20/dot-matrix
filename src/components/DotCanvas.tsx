@@ -156,8 +156,10 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     return () => window.clearTimeout(id)
   }, [enterSpec])
 
-  // a live card reads the latest interaction per frame; the static frame re-samples only on a committed change
-  const dots = useDotField(layers ? { layers } : { field: field ?? (() => 0) }, grid, style, theme, animated ? 0 : tick, data, ready, live ? undefined : input.ix)
+  // a live card reads the latest interaction per frame; the static frame re-samples only on a committed change.
+  // A live card draws every frame itself, so it skips the static sample (a data edit, or a board-shared key that
+  // reaches every card on the board, would otherwise re-sample in render for nothing); it samples again on going static
+  const dots = useDotField(layers ? { layers } : { field: field ?? (() => 0) }, grid, style, theme, animated ? 0 : tick, data, ready && !live, live ? undefined : input.ix)
   const pitch = grid.pitch ?? theme.gridPx
   const width = grid.cols * pitch, height = grid.rows * pitch
 
@@ -243,11 +245,13 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     context.setTransform(scale, 0, 0, scale, 0, 0)
     return context
   }
-  const draw = (canvas: HTMLCanvasElement, frame: DotInstance[]) => {
+  /** `drawn` = the data this frame shows (dev latency probe: answers the input events it reflects). */
+  const draw = (canvas: HTMLCanvasElement, frame: DotInstance[], drawn: Record<string, number> = data ?? {}) => {
     const context = prepare(canvas)
     if (!context) return
     context.clearRect(0, 0, width, height)
     renderCanvas(context, frame)
+    input.drawn(drawn)
   }
   /** Apply the running transient (if any) to a frame at clock time `t`; ends it when complete. */
   const applyTransient = (frame: DotInstance[], t: number): DotInstance[] => {
@@ -314,16 +318,19 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
       fps: fps ?? (motion ? 12 : 30),
       onFrame(t: number, frame: number) {
         const d = springKey && springsRef.current ? { ...frameData, ...springsRef.current.at(t) } : frameData
-        try { draw(canvas, applyTransient(sampleLayers(layers({ t, frame, data: d, grid: g, ...input.ixRef.current }), g, s, theme), t)) }
+        try { draw(canvas, applyTransient(sampleLayers(layers({ t, frame, data: d, grid: g, ...input.ixRef.current }), g, s, theme), t), frameData) }
         catch (error) {
           if (!failed) console.error('DotCanvas: frame failed, keeping the last good frame', error)
           failed = true
         }
       },
     }
-    // input invalidates this subscriber, so feedback lands on the next animation frame rather than the next fps tick
-    if (liveCanvasRef.current !== canvas) {
-      // first frame on a freshly mounted canvas: draw it before paint
+    // input invalidates this subscriber, so feedback lands on the next animation frame rather than the next fps tick.
+    // Drawn before paint: the first frame on a freshly mounted canvas, and the frame right after this card's own
+    // input committed new data (an edit must not wait for the next fps tick, 12 fps on animated cards). Other
+    // re-subscriptions (e.g. a board-shared key edited on another card) wait for their tick, so one edit never
+    // samples the whole board at once.
+    if (liveCanvasRef.current !== canvas || performance.now() - input.inputAt.current < INPUT_CUT_MS) {
       liveCanvasRef.current = canvas
       const { t, frame } = quantizeTime(sharedClock().time(), sub.fps)
       sub.onFrame(t, frame)

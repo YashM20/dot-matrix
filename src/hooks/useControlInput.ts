@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { beginDrag, dragValue, pick, releaseValue, sharedClock, toLocal } from '../engine'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { flushSync } from 'react-dom'
+import { beginDrag, dragValue, pick, quantizeTime, releaseValue, sharedClock, toLocal } from '../engine'
 import type { ClockSubscriber, Control, ControlPatch, DragStart, GridConfig, Pointer } from '../engine'
 import type { InteractionContext } from './useDotField'
+import { LATENCY_PROBE, resolveMarks, type LatencyMark } from './latencyProbe'
 
 /** How long a keyboard-pressed button stays down (ms). */
 const KEY_PRESS_MS = 140
@@ -38,7 +40,11 @@ export interface ControlInput {
     onPointerCancel(e: ReactPointerEvent<HTMLElement>): void
     onPointerLeave(e: ReactPointerEvent<HTMLElement>): void
     onLostPointerCapture(e: ReactPointerEvent<HTMLElement>): void
+    /** Dev latency probe only: stamps keyboard input on the overlay's controls. */
+    onKeyDownCapture?(e: ReactKeyboardEvent<HTMLElement>): void
   }
+  /** Call after every canvas draw with the data it drew (input → frame bookkeeping; feeds the dev latency probe). */
+  drawn(data: Record<string, number>): void
   /** Current value of a data key (pending input included). */
   value(key: string): number
   /** Apply a patch (keyboard / assistive tech); committed on the next animation frame. */
@@ -69,6 +75,11 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
   const pending = useRef<ControlPatch | null>(null), moved = useRef(false), keyPress = useRef<string | undefined>(undefined)
   const raf = useRef(0), keyTimer = useRef(0)
   const lingers = useRef(new Map<number, number>()), lingerDirty = useRef(false)
+  // dev latency probe (P2-G): event stamps since the last flush, and marks waiting for the draw that shows them
+  const stamped = useRef<number[]>([]), marks = useRef<LatencyMark[]>([])
+  /** Canvas draws reported by the owner (`drawn`): tells `flush` whether its commit already redrew the card. */
+  const draws = useRef(0)
+  const note = (e: { timeStamp: number }) => { if (LATENCY_PROBE) stamped.current.push(e.timeStamp) }
   const unlinger = (id: number) => { const h = lingers.current.get(id); if (h !== undefined) { window.clearTimeout(h); lingers.current.delete(id) } }
   // reset the handles too: StrictMode re-runs effects, and a stale handle would block every later schedule()
   useEffect(() => () => {
@@ -90,13 +101,24 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
     ixRef.current = snapshot(l, pointers.current)
     const changed = !!patch || l.hover !== c.hover || l.pressed !== c.pressed || l.focus !== c.focus || (!!l.pressed && moved.current) || lingerDirty.current
     moved.current = false; lingerDirty.current = false
-    if (changed) {
-      inputAt.current = performance.now()
-      committed.current = { ...l }
-      setIx(ixRef.current)
+    if (LATENCY_PROBE && stamped.current.length) {
+      // only events that changed something wait for a frame; the rest had nothing to show
+      if (changed) for (const stamp of stamped.current) marks.current.push({ stamp, patch: patch ?? undefined })
+      stamped.current = []
     }
-    if (patch) onInputRef.current?.(patch)
-    if (liveSub.current) sharedClock().invalidate(liveSub.current)
+    if (changed) { inputAt.current = performance.now(); committed.current = { ...l } }
+    // commit inside this animation frame (not on React's next scheduler task, which lands after the paint), so the
+    // card's layout effect draws the edit before this frame paints: one frame from input to pixels, not two
+    const before = draws.current
+    if (changed || patch) flushSync(() => {
+      if (changed) setIx(ixRef.current)
+      if (patch) onInputRef.current?.(patch)
+    })
+    // a live card that the commit did not redraw (hover / press / focus only: ix is read per frame) draws now,
+    // inside this frame, instead of on the clock's next one
+    const sub = liveSub.current
+    if (sub && changed && draws.current === before) { const { t, frame } = quantizeTime(sharedClock().time(), sub.fps); sub.onFrame(t, frame) }
+    else if (sub) sharedClock().invalidate(sub)
   }, [])
   const schedule = useCallback(() => { if (!raf.current) raf.current = requestAnimationFrame(flush) }, [flush])
 
@@ -162,6 +184,7 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
   const handlers: ControlInput['handlers'] = {
     onPointerDown(e) {
       if (e.pointerType === 'mouse' && e.button !== 0) return
+      note(e)
       unlinger(e.pointerId)
       const p = track(e, { down: true, up: false, tDown: sharedClock().time() })
       const key = keyAt(e, p), c = control(key)
@@ -182,13 +205,14 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
       syncPressed(); schedule()
     },
     onPointerMove(e) {
+      note(e)
       const p = track(e), d = drags.current.get(e.pointerId)
       if (d) { set(dragValue(d.control, d.start, p)); moved.current = true }
       else if (hovers(e)) live.current.hover = keyAt(e, p) ?? undefined
       schedule()
     },
-    onPointerUp(e) { finish(e, false) },
-    onPointerCancel(e) { finish(e, true) },
+    onPointerUp(e) { note(e); finish(e, false) },
+    onPointerCancel(e) { note(e); finish(e, true) },
     onLostPointerCapture(e) { if (drags.current.has(e.pointerId)) finish(e, false) },
     onPointerLeave(e) {
       if (drags.current.has(e.pointerId) || pointers.current.get(e.pointerId)?.up) return
@@ -196,6 +220,8 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
       if (e.isPrimary) live.current.hover = undefined
       schedule()
     },
+    // keydown reaches the root before the overlay control handles it; the flush drops it if nothing changed
+    ...(LATENCY_PROBE ? { onKeyDownCapture(e: ReactKeyboardEvent<HTMLElement>) { note(e); schedule() } } : {}),
   }
 
   const press = useCallback((c: Control) => {
@@ -227,5 +253,7 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
     return () => { if (liveSub.current === sub) liveSub.current = null }
   }, [])
 
-  return { ix, ixRef, inputAt, bindLive, handlers, value, set, press, focus }
+  const drawn = useCallback((d: Record<string, number>) => { draws.current++; if (LATENCY_PROBE) resolveMarks(marks.current, d) }, [])
+
+  return { ix, ixRef, inputAt, bindLive, handlers, value, set, press, focus, drawn }
 }

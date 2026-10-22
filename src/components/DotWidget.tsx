@@ -24,14 +24,32 @@ export interface DotWidgetProps {
   enter?: DotCanvasProps['enter']
   /** Exit (see `DotCanvas.exit`). */
   exit?: DotCanvasProps['exit']
+  /**
+   * Board-level shared data (`BoardDef.shared`): merged over the defaults and `data`; control edits to
+   * `sharedKeys` go to `onShared` (the board store) instead of this card's own state.
+   */
+  shared?: ControlPatch
+  sharedKeys?: string[]
+  onShared?: (patch: ControlPatch) => void
 }
 
-export function DotWidget({ type, density, dotShape, roundness, size, theme = dot480, animated, data, tick, preset: presetProp, enter, exit }: DotWidgetProps) {
+export function DotWidget({ type, density, dotShape, roundness, size, theme = dot480, animated, data, tick, preset: presetProp, enter, exit, shared, sharedKeys, onShared }: DotWidgetProps) {
   const preset = presetProp ?? widgetById(type)
   const layers = useMemo(() => preset && withChrome(preset), [preset])
   // interactive data (P2): input patches merged over the defaults and the `data` prop
   const [local, setLocal] = useState<ControlPatch>({})
-  const onInput = useCallback((patch: ControlPatch) => setLocal(prev => ({ ...prev, ...patch })), [])
+  const sharedKey = sharedKeys?.join(',') ?? ''
+  const onInput = useCallback((patch: ControlPatch) => {
+    // split the patch: shared keys go to the board store, the rest stay on this card
+    const keys = sharedKey ? new Set(sharedKey.split(',')) : null, mine: ControlPatch = {}, board: ControlPatch = {}
+    let ownEdit = false, boardEdit = false
+    for (const k in patch) {
+      if (keys?.has(k) && onShared) { board[k] = patch[k]; boardEdit = true }
+      else { mine[k] = patch[k]; ownEdit = true }
+    }
+    if (ownEdit) setLocal(prev => ({ ...prev, ...mine }))
+    if (boardEdit) onShared!(board)
+  }, [sharedKey, onShared])
   if (!preset || !layers) return null
   const native = preset.grid.pitch ?? theme.gridPx, pitch = density ?? native, k = pitch / native
   // radii are px tuned for the preset's own pitch — scale them with density so dots keep their proportion
@@ -50,7 +68,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
         {preset.live && <i className="status-dot" />}
       </header>}
       <div className="dot-card-body">
-        <DotCanvas layers={layers} data={{ ...preset.defaults, ...data, ...local }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
+        <DotCanvas layers={layers} data={{ ...preset.defaults, ...data, ...shared, ...local }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
           controls={interactive ? controls : undefined} onInput={interactive ? onInput : undefined} />
       </div>
     </article>
