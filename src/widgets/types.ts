@@ -39,6 +39,8 @@ export interface WidgetPreset {
   label?: string
   /** Edge-to-edge artwork: the card has no inner padding (photo cards). */
   bleed?: boolean
+  /** Live media the host feeds into `ctx.media` (app-level capture in `src/media/`, started only by a control). */
+  media?: 'camera'
   layers(ctx: WidgetContext): Layer[]
 }
 
