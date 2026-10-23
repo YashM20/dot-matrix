@@ -14,6 +14,7 @@ import type { WidgetContext } from '../widgets/types'
 import { useDotField } from '../hooks/useDotField'
 import { useControlInput } from '../hooks/useControlInput'
 import { ControlOverlay } from './ControlOverlay'
+import { DisplaySurface } from './skins/DisplaySurface'
 
 export type RenderMode = 'svg' | 'canvas'
 export interface DotCanvasProps {
@@ -400,9 +401,10 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     return () => { off(); unbind(); remote?.dispose(); releaseDotBuffer(local) }
   }, [live, ready, mode, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, theme, dataKey, springKey, fps, motion, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const surface = mode === 'canvas'
+  // C7 display skins: post-raster stage around the surface (src/components/skins/); OLED = no-op wrapper
+  const surface = <DisplaySurface mode={mode} dots={dots} running={live || !!transient} fps={transient ? 30 : fps ?? (motion ? 12 : 30)} cols={grid.cols} rows={grid.rows} width={width} height={height}>{mode === 'canvas'
     ? <canvas ref={canvasRef} className={className} style={{ width: '100%', height: 'auto', display: 'block', aspectRatio: `${width} / ${height}` }} aria-hidden="true" />
-    : <div ref={svgRef} className={`dot-svg ${className ?? ''}`} style={{ aspectRatio: `${width} / ${height}`, width: '100%', height: 'auto' }} dangerouslySetInnerHTML={{ __html: svg }} aria-hidden="true" />
+    : <div ref={svgRef} className={`dot-svg ${className ?? ''}`} style={{ aspectRatio: `${width} / ${height}`, width: '100%', height: 'auto' }} dangerouslySetInnerHTML={{ __html: svg }} aria-hidden="true" />}</DisplaySurface>
   if (!interactive) return surface
   // the root shows exactly the grid, so pointer coordinates map straight to cells (and it holds pointer capture)
   return (

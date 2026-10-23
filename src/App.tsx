@@ -4,6 +4,7 @@ import { Changelog } from './components/Changelog'
 import { DrawBoard } from './components/draw/DrawBoard'
 import { DotWidget } from './components/DotWidget'
 import { DotsRepl } from './components/dwitter/DotsRepl'
+import { SkinSwitcher } from './components/skins/SkinSwitcher'
 import { ControlsPanel } from './components/playground/ControlsPanel'
 import { DataEditor } from './components/playground/DataEditor'
 import { ExportPanel } from './components/playground/ExportPanel'
@@ -37,6 +38,7 @@ export default function App() {
     <h1 className="sr-only">DOT/480 dot-matrix UI engine</h1>
     <header className="topbar"><div className="brand"><i aria-hidden="true"/> DOT/480 <small>{tab === 'WORKSPACE' ? 'PLAYGROUND' : tab}</small></div>
       <nav aria-label="Views">{tabs.map(t => <button key={t} className={tab === t ? 'selected' : ''} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}</nav>
+      <SkinSwitcher />
       <div className="live"><i aria-hidden="true"/> LIVE</div></header>
     {shownTab === 'BOARDS' ? (
       <section className="boards-view">
