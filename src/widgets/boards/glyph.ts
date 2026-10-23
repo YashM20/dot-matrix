@@ -9,8 +9,9 @@
 import { hash01 } from '../../engine/math'
 import { ease } from '../../engine/motion'
 import { grayScott, simAt } from '../../engine/sim'
+import { migrate, migrationLayers } from '../../engine/migrate'
 import type { Control } from '../../engine/context'
-import type { Layer } from '../../engine/types'
+import type { DotInstance, Layer, Tone } from '../../engine/types'
 import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 import { dotText } from './henry'
 
@@ -89,10 +90,15 @@ export const glyphHourglass: WidgetPreset = {
 // ── 02 LONG PRESS ───────────────────────────────────────────────────────────
 // A padlock on a dotted ring. Hold it: the ring fills clockwise from 12 o'clock (age = t - tDown of
 // the pressing pointer; keyboard holds loop the same reveal), the lock drops one quantize step, and
-// at HOLD s the ring closes, the shackle lifts and swings its left leg free: UNLOCKED. Hover lights the
-// lock and haloes the ring, focus marches outside it (the components-board grammar, one ring each).
+// at HOLD s the ring closes, the shackle lifts and swings its left leg free: UNLOCKED. Keep holding and
+// the lock's dots migrate (engine `migrate`: Hilbert-rank pairs, staggered along the curve, bowed
+// paths) into the app it opens, a now-playing glyph: vinyl rings, progress line, transport. Release
+// and the same pairs fly back (age from tUp), the shackle drops shut. Hover lights the lock and haloes
+// the ring, focus marches outside it (the components-board grammar, one ring each).
 const HOLD = 1.6, CX = 72, CY = 72, RING = 50
 const LP = .75, GLOW = { d: 3.5, v: .45 }, FOCUS = { d: 7, size: 1.3, on: 3, period: 5, rate: 10 }
+/** Migration timeline (s): starts MIG0 after the press, takes MIG; the way back takes BACK, then the shackle closes in SHUT. */
+const MIG0 = HOLD + .5, MIG = 1.1, BACK = .38, SHUT = .12, DWELL = 2.2, REST = .7
 const BODY = { x0: CX - 15, y0: CY - 4, cols: 11, rows: 9, pitch: 3, size: 2.5 }
 const KEYHOLE: Pt[] = [[0, 2], [-1, 3], [0, 3], [1, 3], [0, 4], [0, 5]]
 const lockBody: Pt[] = []
@@ -113,26 +119,89 @@ function shackle(lift: number, free: number): Pt[] {
   return pts
 }
 /** Rings share the track's site count, so halo and focus dots sit on the track's spokes (no moiré). */
-const ring = (r: number, o: { size?: number; sweep?: number } = {}) => T.dotRing(CX, CY, r, { spacing: (4.4 * r) / RING, size: 1.6, ...o })
+const ring = (r: number, o: { size?: number; sweep?: number; cx?: number; cy?: number } = {}) => T.dotRing(o.cx ?? CX, o.cy ?? CY, r, { spacing: (4.4 * r) / RING, size: 1.6, ...o })
+// the app: a now-playing glyph. Disc of three dotted grooves round a hub, a progress line, transport
+const DISC = { cx: 72, cy: 55, r: [30, 22.5, 15] }, BAR = { x0: 24, x1: 120, y: 97, sp: 4 }, PLAYED = .36, TRACK = 214
+const icon = (rows: string[], x: number, y: number, p: number): Pt[] => rows.flatMap((row, j) => [...row].flatMap((ch, i) => (ch === '#' ? [[x + (i - (row.length - 1) / 2) * p, y + (j - (rows.length - 1) / 2) * p] as Pt] : [])))
+const PREV = ['..#', '.##', '###', '.##', '..#'], NEXT = PREV.map(r => [...r].reverse().join('')), PAUSE = ['#.#', '#.#', '#.#']
+/** Disc grooves keep one site pitch at every radius (the lock ring's shared spokes would crowd the small ones into a line). */
+const groove = (r: number) => T.dotRing(DISC.cx, DISC.cy, r, { spacing: 4.2, size: 1 }).sites!
+const barSites: Pt[] = []
+for (let x = BAR.x0; x <= BAR.x1 + 1e-9; x += BAR.sp) barSites.push([x, BAR.y])
+interface Part { pts: Pt[]; size: number; tone: Tone }
+const appParts: Part[] = [
+  { pts: groove(DISC.r[0]), size: 2.2, tone: 'value' },
+  { pts: groove(DISC.r[1]), size: 1.7, tone: 'mid' },
+  { pts: groove(DISC.r[2]), size: 1.7, tone: 'mid' },
+  { pts: [[DISC.cx, DISC.cy]], size: 4.4, tone: 'value' },
+  { pts: icon(PREV, 44, 113, 3.4), size: 2.5, tone: 'idle' },
+  { pts: icon(PAUSE, 72, 113, 4.2), size: 3.2, tone: 'value' },
+  { pts: icon(NEXT, 100, 113, 3.4), size: 2.5, tone: 'idle' },
+]
+/** Progress line at `played` (0..1): played dots lit, a bigger playhead, the rest faint. */
+const progressParts = (played: number): Part[] => {
+  const head = Math.round(played * (barSites.length - 1))
+  return [
+    { pts: barSites.slice(0, head), size: 1.8, tone: 'value' },
+    { pts: [barSites[head]], size: 3.2, tone: 'value' },
+    { pts: barSites.slice(head + 1), size: 1.4, tone: 'faint' },
+  ]
+}
+const lockParts: Part[] = [
+  { pts: ring(RING, { size: 2.4 }).sites!, size: 2.4, tone: 'value' },
+  { pts: lockBody, size: BODY.size, tone: 'value' },
+  { pts: shackle(9, 3), size: 2.6, tone: 'value' },
+]
+const asDots = (parts: Part[]): DotInstance[] => parts.flatMap(p => p.pts.map(([x, y]) => ({ x, y, r: p.size, opacity: 1, color: p.tone })))
+/** Built once: the open lock's dots → the app's dots (the progress line at its start position). */
+const unlockMigration = migrate(asDots(lockParts), asDots([...appParts, ...progressParts(PLAYED)]), { stagger: .3, arc: .1, ease: ease.emphasized })
+const partLayers = (parts: Part[]) => parts.filter(p => p.pts.length).map(p => layer(T.dots(p.pts, p.size), p.tone))
+const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+const migProgress = (age: number) => clamp01((age - MIG0) / MIG)
 export const glyphLongpress: WidgetPreset = {
   id: 'glyph-longpress', name: 'Long Press', label: '02  LONG PRESS', group: 'composite', ...tile,
   style: { ...tileStyle, cornerRoundness: 0 },
   defaults: { hold: 0 },
   controls: [{ key: 'hold', kind: 'button', box: [CX - RING - 4, CY - RING - 4, 2 * RING + 8, 2 * RING + 8], label: 'Hold to unlock' } satisfies Control],
   layers: ctx => {
-    const down = ctx.pressed === 'hold' || ctx.data.hold >= .5, p = ctx.pointers?.find(q => q.down && !q.up)
-    const age = down ? (p ? ctx.t - p.tDown : ctx.t % (HOLD + 1.2)) : 0
-    const f = clamp01(age / HOLD), open = down && f >= 1, u = open ? ease.emphasized(clamp01((age - HOLD) / .3)) : 0
-    const v = down && !open ? LP : 1, a = f * TAU, lit = down || ctx.hover === 'hold'
-    const out: Layer[] = [
-      layer(ring(RING), down ? 'mid' : 'faint'),
-      ...(down && f > 0 ? [layer(ring(RING, { size: 2.4, sweep: open ? TAU : a }), 'value')] : []),
-      ...(down && !open && f > 0 ? [layer(T.dots([[CX + RING * Math.sin(a), CY - RING * Math.cos(a)]], 4.4), 'value')] : []),
-      layer(at(T.dots(lockBody, BODY.size), v), lit ? 'value' : 'idle'),
-      layer(at(T.dots(shackle(Math.round(u * 3) * 3, Math.round(u * 3)), 2.6), v), lit ? 'value' : 'idle'),
-      layer(T.big(open ? 'UNLOCKED' : down ? `${Math.round(f * 100)}%` : 'HOLD TO UNLOCK', 72, 132, { lattice: 1.1, align: 'center' }), open ? 'value' : down ? 'value' : 'idle'),
-    ]
-    if (ctx.hover === 'hold' && !down) out.push(layer(at(ring(RING + GLOW.d), GLOW.v), 'value'))
+    const p = ctx.pointers?.find(q => q.down && !q.up), keyHeld = ctx.pressed === 'hold' || ctx.data.hold >= .5
+    let down = !!p || keyHeld, age = 0, m = 0, shut = 1, since = 0
+    if (p) { age = ctx.t - p.tDown; since = Math.max(0, age - MIG0 - MIG) }
+    else if (keyHeld) {
+      // keyboard / demo hold: loop unlock → app → back → locked
+      const loop = MIG0 + MIG + DWELL + BACK + SHUT + REST, tau = ctx.t % loop, back = tau - (MIG0 + MIG + DWELL)
+      age = Math.min(tau, MIG0 + MIG); since = Math.max(0, tau - MIG0 - MIG)
+      if (back > 0) { down = false; m = clamp01(1 - back / BACK); shut = clamp01((back - BACK) / SHUT) }
+    } else {
+      // released after the unlock: fly back from wherever the migration was
+      const q = ctx.pointers?.find(r => !r.down && r.tUp >= r.tDown && r.tUp - r.tDown >= HOLD), back = q ? ctx.t - q.tUp : Infinity
+      const m0 = q ? migProgress(q.tUp - q.tDown) : 0
+      if (back >= 0 && back < Infinity) { m = clamp01(m0 - back / BACK); shut = clamp01((back - m0 * BACK) / SHUT) }
+    }
+    if (down) m = migProgress(age)
+    const f = down ? clamp01(age / HOLD) : 0, open = down && f >= 1
+    const u = open ? ease.emphasized(clamp01((age - HOLD) / .3)) : m > 0 || shut < 1 ? 1 - shut : 0
+    const out: Layer[] = []
+    if (m > 0 && m < 1) out.push(...migrationLayers(unlockMigration, m))
+    else if (m >= 1) {
+      // landed: the record turns (a lit groove site walks the inner ring) and the track plays on
+      const inner = appParts[2].pts, k = Math.floor(since * 6) % inner.length
+      out.push(...partLayers([...appParts, ...progressParts(Math.min(1, PLAYED + since / TRACK))]), layer(T.dots([inner[k]], 2.2), 'value'))
+    } else {
+      const v = down && !open ? LP : 1, a = f * TAU, lit = down || u > 0 || ctx.hover === 'hold'
+      out.push(
+        layer(ring(RING), down ? 'mid' : 'faint'),
+        ...(down && f > 0 ? [layer(ring(RING, { size: 2.4, sweep: open ? TAU : a }), 'value')] : []),
+        ...(!down && u > 0 ? [layer(ring(RING, { size: 2.4 }), 'value')] : []),
+        ...(down && !open && f > 0 ? [layer(T.dots([[CX + RING * Math.sin(a), CY - RING * Math.cos(a)]], 4.4), 'value')] : []),
+        layer(at(T.dots(lockBody, BODY.size), v), lit ? 'value' : 'idle'),
+        layer(at(T.dots(shackle(Math.round(u * 3) * 3, Math.round(u * 3)), 2.6), v), lit ? 'value' : 'idle'),
+      )
+    }
+    const playing = m >= .5
+    const label = playing ? (m >= 1 ? `LOW TIDE  ${mmss(PLAYED * TRACK + since)}` : 'LOW TIDE') : open || u > 0 ? 'UNLOCKED' : down ? `${Math.round(f * 100)}%` : 'HOLD TO UNLOCK'
+    out.push(layer(T.big(label, 72, 132, { lattice: 1.1, align: 'center' }), down || u > 0 || m > 0 ? 'value' : 'idle'))
+    if (ctx.hover === 'hold' && !down && m === 0 && u === 0) out.push(layer(at(ring(RING + GLOW.d), GLOW.v), 'value'))
     if (ctx.focus === 'hold') {
       const ph = Math.floor(ctx.t * FOCUS.rate), P = FOCUS.period, rr = ring(RING + FOCUS.d, { size: FOCUS.size })
       out.push(layer({ ...rr, sites: rr.sites!.filter((_, i) => (((i - ph) % P) + P) % P < FOCUS.on) }, 'idle'))

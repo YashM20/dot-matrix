@@ -4,6 +4,7 @@ import { sampleLayers } from '../engine/sampler/gridSampler'
 import { quantizeTime, sharedClock } from '../engine/clock'
 import { DataSprings, duration as motionDuration, ease, maskByName, revealDots, transitionDots, type MaskName } from '../engine/motion'
 import { renderSVG } from '../engine/renderer/svgRenderer'
+import { migrate as migrateDots, type MigrateOptions, type Migration } from '../engine/migrate'
 import type { Control, ControlPatch, DotInstance, DotStyle, Field, GridConfig, Layer, ThemeTokens } from '../engine'
 import { dot480 } from '../engine'
 import type { WidgetContext } from '../widgets/types'
@@ -38,6 +39,13 @@ export interface DotCanvasProps {
    * blank (the parent unmounts the card after its exit window). Cleared again → the card re-enters.
    */
   exit?: { delay: number; mask?: MaskName; duration?: number } | null
+  /**
+   * Shared-element migration (P4): when set, the dots on screen fly to `to` (dots in this canvas's
+   * pixel space, e.g. a target card's sampled dots offset into it), paired by Hilbert rank, over
+   * `duration` ms after `delay`, then hold there. Cleared → they fly back to the card's frame.
+   * A new `key` re-targets. Reduced motion: instant (no flight either way).
+   */
+  migrate?: { key: string; to: DotInstance[]; delay?: number; duration?: number; options?: MigrateOptions } | null
   /** Mask for change transitions (new data or minute tick dissolves the old frame into the new). `false` = hard cut. */
   change?: MaskName | false
   /**
@@ -59,6 +67,7 @@ const CANVAS_THRESHOLD = 2000
 const MAX_BACKING_SCALE = 3
 const CHANGE_MS = 360
 const EXIT_MS = 220
+const MIGRATE_MS = 640
 /** Data-spring half-life (s): a value closes half the distance to its new target in this time. */
 const SPRING_HALFLIFE = .12
 /** A frame that lands this soon (ms) after input is a direct response: it cuts, never dissolves. */
@@ -128,9 +137,10 @@ type Transient =
   | { kind: 'exit'; t0: number | null; delay: number; mask?: MaskName; duration: number }
   | { kind: 'burst'; t0: number | null; seconds: number }
   | { kind: 'spring'; t0: number | null; sample: (data: Record<string, number>) => DotInstance[]; data: Record<string, number> }
+  | { kind: 'migrate'; t0: number | null; m: Migration; delay: number; duration: number; back: boolean; out: DotInstance[] }
 
 /** Field → Grid Sampler → Renderer. Picks SVG for sparse static output, Canvas above ~2000 dots or when animated. */
-export function DotCanvas({ field, layers, data, grid, style, theme = dot480, animated, fps, tick = 0, burst, renderer, enter, exit, change = 'ign', springKeys, onMode, className, controls, onInput }: DotCanvasProps) {
+export function DotCanvas({ field, layers, data, grid, style, theme = dot480, animated, fps, tick = 0, burst, renderer, enter, exit, migrate, change = 'ign', springKeys, onMode, className, controls, onInput }: DotCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const svgRef = useRef<HTMLDivElement>(null)
   const reducedMotion = usePrefersReducedMotion()
@@ -230,6 +240,24 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     }
   }, [exitKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
+  // migrate: fly the frame on screen into the target's dots and hold; cleared → fly back to the frame
+  const migrateKey = migrate?.key ?? '', migrateTo = useRef<DotInstance[] | null>(null)
+  useLayoutEffect(() => {
+    if (transientRef.current?.kind === 'exit') return
+    const running = transientRef.current?.kind
+    if (migrate) {
+      migrateTo.current = migrate.to
+      const m = migrateDots(shownRef.current, migrate.to, { stagger: .3, arc: .12, ease: ease.emphasized, ...migrate.options })
+      transientRef.current = { kind: 'migrate', t0: null, m, delay: reducedMotion ? 0 : migrate.delay ?? 0, duration: reducedMotion ? 0 : migrate.duration ?? MIGRATE_MS, back: false, out: [] }
+      setTransient('migrate')
+    } else if (running === 'migrate' && migrateTo.current) {
+      if (reducedMotion) { transientRef.current = null; setTransient(null); return }
+      const m = migrateDots(migrateTo.current, shownRef.current, { stagger: .3, arc: .12, ease: ease.emphasized })
+      transientRef.current = { kind: 'migrate', t0: null, m, delay: 0, duration: MIGRATE_MS, back: true, out: [] }
+      setTransient('migrate')
+    }
+  }, [migrateKey]) // eslint-disable-line react-hooks/exhaustive-deps
+
   const visible = useMemo(() => { let n = 0; for (const d of dots) if (d.opacity > 0 && d.r > 0) n++; return n }, [dots])
   // transients animate on canvas; a sparse card hands back to SVG when they finish
   const mode: RenderMode = renderer ?? (animated || live || transient || visible > CANVAS_THRESHOLD ? 'canvas' : 'svg')
@@ -272,6 +300,12 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
       const p = ease.decelerate(elapsed / ((enterSpec?.duration ?? motionDuration.enter) / 1000))
       if (p >= 1) { transientRef.current = null; setTransient(null); return frame }
       return revealDots(frame, { ...geometry, p, mask: maskByName(enterSpec?.mask), edge: .06 })
+    }
+    if (tr.kind === 'migrate') {
+      // forward holds on the target (until cleared); the way back ends on the live frame
+      const p = tr.duration > 0 ? Math.min(1, Math.max(0, (elapsed - tr.delay / 1000) / (tr.duration / 1000))) : 1
+      if (tr.back && p >= 1) { transientRef.current = null; setTransient(null); return frame }
+      return tr.m.dots(p, tr.out)
     }
     if (tr.kind === 'spring') {
       const springs = springsRef.current

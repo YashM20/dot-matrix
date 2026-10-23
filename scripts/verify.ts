@@ -663,5 +663,82 @@ import { simBoard, simBoardSims } from '../src/widgets/boards/sim'
   assert('sim board: cold mount at t = 1, 60, 3600 s stays within each sim\'s maxSteps (looped), never lags', boundOk, rows.join('; '))
 }
 
+// P4-D) migration (Hilbert-rank shared-element pairing) + SDF morph
+{
+  const { migrate, migrationLayers, hilbertIndex, morph, signedDistance } = await import('../src/engine/migrate')
+  const { createRaster: mkRaster } = await import('../src/engine/raster')
+  const { glyphLongpress } = await import('../src/widgets/boards/glyph')
+  type D = { x: number; y: number; r: number; opacity: number; color: string }
+  const cloud = (n: number, seed: number, w = 576): D[] => Array.from({ length: n }, (_, i) => ({ x: hash01(i, seed) * w, y: hash01(i, seed + 1) * w, r: 1 + hash01(i, seed + 2), opacity: 1, color: i % 3 ? '#ffffff' : '#7a7a7a' }))
+  const key = (d: { x: number; y: number }) => `${d.x.toFixed(3)},${d.y.toFixed(3)}`
+  const set = (ds: { x: number; y: number; r: number }[]) => new Set(ds.filter(d => d.r > 1e-6).map(key))
+  const eqSet = (a: Set<string>, b: Set<string>) => a.size === b.size && [...a].every(k => b.has(k))
+
+  // the curve: order-1 visits (0,0) (0,1) (1,1) (1,0); every order-4 cell once, consecutive indices are neighbours
+  const h4 = new Map<number, [number, number]>()
+  for (let x = 0; x < 16; x++) for (let y = 0; y < 16; y++) h4.set(hilbertIndex(x, y, 4), [x, y])
+  let adjacent = h4.size === 256
+  for (let d = 1; d < 256; d++) { const a = h4.get(d - 1)!, b = h4.get(d)!; adjacent &&= Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) === 1 }
+  assert('migrate hilbert: order 1 = U shape, order 4 is a bijection whose steps are unit moves', [hilbertIndex(0, 0, 1), hilbertIndex(0, 1, 1), hilbertIndex(1, 1, 1), hilbertIndex(1, 0, 1)].join() === '0,1,2,3' && adjacent)
+
+  // pairing: deterministic, independent of input order, identity on A → A, far shorter paths than a random pairing
+  const A = cloud(3000, 11), B = cloud(2600, 23), shuffled = [...A].reverse()
+  const m1 = migrate(A, B), m2 = migrate(A, B), m3 = migrate(shuffled, B)
+  const pairKey = (m: typeof m1, from: D[]) => Array.from(m.fromIndex, (a, k) => `${key(from[a])}>${key(B[m.toIndex[k]])}`).join('|')
+  const self = migrate(A, A), selfOk = Array.from(self.fromIndex).every((a, k) => a === self.toIndex[k])
+  const mean = (m: typeof m1, from: D[], to: D[]) => { let s = 0; for (let k = 0; k < m.count; k++) { const a = from[m.fromIndex[k]], b = to[m.toIndex[k]]; s += Math.hypot(a.x - b.x, a.y - b.y) } return s / m.count }
+  let rnd = 0; for (let i = 0; i < 2600; i++) rnd += Math.hypot(A[i].x - B[i].x, A[i].y - B[i].y); rnd /= 2600
+  const hil = mean(m1, A, B)
+  assert('migrate pairing: deterministic, input-order independent, identity on A → A, shorter than random pairing',
+    pairKey(m1, A) === pairKey(m2, A) && pairKey(m1, A) === pairKey(m3, shuffled) && selfOk && hil < rnd * .4, `mean path ${hil.toFixed(1)} px vs random ${rnd.toFixed(1)} px`)
+
+  // counts: split draws max(n) dots, every one travels, p = 0 / 1 reproduce A / B exactly; fade keeps min(n) pairs, spares shrink in place
+  const split0 = set(m1.dots(0)), split1 = set(m1.dots(1))
+  const fade = migrate(A, B, { spares: 'fade' }), spare = Array.from(fade.toIndex).filter(i => i < 0).length
+  const f1 = fade.dots(1), fadeOk = fade.count === 3000 && spare === 400 && f1.filter(d => d.r === 0 && d.opacity === 0).length === 400 && eqSet(set(f1), set(B)) && eqSet(set(fade.dots(0)), set(A))
+  const grow = migrate([], B.slice(0, 10)), growOk = grow.count === 10 && grow.dots(0).every(d => d.r === 0) && eqSet(set(grow.dots(1)), set(B.slice(0, 10)))
+  const covered = new Set(m1.fromIndex), coveredB = new Set(m1.toIndex)
+  assert('migrate counts: split covers every dot of both sets, ends on A / B; fade pairs min(n), 400 spares shrink to 0; [] → B grows in',
+    m1.count === 3000 && covered.size === 3000 && coveredB.size === 2600 && eqSet(split0, set(A)) && eqSet(split1, set(B)) && fadeOk && growOk)
+
+  // in flight: colour mixes between the two ends, stagger delays the late ranks, arc bows the path off the chord
+  const st = migrate(A, B, { stagger: .5, arc: .25 }), f = st.frame(.3), last = (st.count - 1) * 5, firstMoved = f[4] > 0, lastWaits = f[last + 4] === 0
+  const mid = migrate([{ x: 0, y: 0, r: 1, opacity: 1, color: '#000000' }], [{ x: 10, y: 0, r: 3, opacity: 1, color: '#ffffff' }], { arc: .25 }).dots(.5)[0]
+  assert('migrate frame: stagger by rank, arc bows the path, size and colour interpolate', firstMoved && lastWaits && close(mid.x, 5) && close(mid.y, 1.25) && close(mid.r, 2) && mid.color === '#808080')
+
+  // board layers: a migration frame becomes site layers (never card-pitch splats), tones switch at half way
+  const lay = migrationLayers(migrate([{ x: 10, y: 10, r: 2, opacity: 1, color: 'value' }], [{ x: 50, y: 10, r: 3, opacity: 1, color: 'mid' }]), .6)
+  assert('migrate layers: site layers, snapped size, the `to` tone past half way', lay.length === 1 && !!lay[0].sites && lay[0].tone === 'mid' && lay[0].size! > 2 && lay[0].size! < 3)
+
+  // perf gates (P4): setup ≤ 8 ms and a frame ≤ 4 ms for 3k dots (median of warm runs; cold first run printed)
+  let c0 = performance.now(); migrate(cloud(3000, 5), cloud(3000, 6)); const cold = performance.now() - c0
+  const setups: number[] = [], frames: number[] = [], out: ReturnType<typeof m1.dots> = []
+  for (let i = 0; i < 15; i++) { c0 = performance.now(); migrate(A, B, { stagger: .3, arc: .1 }); setups.push(performance.now() - c0) }
+  const mp = migrate(A, B, { stagger: .3, arc: .1 })
+  for (let i = 0; i < 60; i++) { c0 = performance.now(); mp.dots(i / 59, out); frames.push(performance.now() - c0) }
+  const med = (xs: number[]) => [...xs].sort((a, b) => a - b)[xs.length >> 1]
+  assert('migrate perf: 3000 → 2600 dots, setup ≤ 8 ms, frame ≤ 4 ms (medians)', med(setups) <= 8 && med(frames) <= 4,
+    `setup ${med(setups).toFixed(2)} ms (cold ${cold.toFixed(1)}), frame ${med(frames).toFixed(3)} ms`)
+
+  // SDF morph: k = 0 / 1 reproduce the masks, the halfway shape lies between them, the EDT is cached per shape
+  const g = { cols: 40, rows: 40 }
+  const disc: Field = (u, v) => (Math.hypot(u * 39 - 20, v * 39 - 20) <= 12 ? 1 : 0)
+  const box = mkRaster(g); for (let y = 8; y < 32; y++) for (let x = 14; x < 26; x++) box.data[y * 40 + x] = 1
+  const m0 = morph(disc, box, 0, { grid: g }), mk1 = morph(disc, box, 1, { grid: g }), mh = morph(disc, box, .5, { grid: g })
+  let ends = true; for (let i = 0; i < 1600; i++) { const c = i % 40, r = (i / 40) | 0; ends &&= (m0.data[i] >= .5) === (disc(cellU(c, 40), cellU(r, 40)) >= .5) && (mk1.data[i] >= .5) === (box.data[i] >= .5) }
+  const area = (r: { data: Float32Array }) => r.data.reduce((s, v) => s + (v >= .5 ? 1 : 0), 0)
+  const between = area(mh) > Math.min(area(m0), area(mk1)) * .8 && area(mh) < Math.max(area(m0), area(mk1)) * 1.2 && mh.data[20 * 40 + 20] === 1
+  const cached = signedDistance(box) === signedDistance(box) && signedDistance(disc, { grid: g }) === signedDistance(disc, { grid: g })
+  c0 = performance.now(); for (let i = 0; i < 30; i++) morph(disc, box, i / 29, { grid: g }); const perMorph = (performance.now() - c0) / 30
+  assert('sdf morph: ends reproduce both masks, halfway is in between, EDT cached per shape', ends && between && cached, `${perMorph.toFixed(3)} ms per 40×40 morph`)
+
+  // glyph-longpress: the demo hold loop locks → migrates → app → back; the app view and the lock are both site layers
+  const lp = withChrome(glyphLongpress), hold = { hold: 1 }
+  const at = (t: number) => sampleLayers(lp({ t, data: hold }), glyphLongpress.grid, glyphLongpress.style, dot480).length
+  const lpFrames = [0, 2.4, 3.6, 6.5].map(at)
+  c0 = performance.now(); for (let i = 0; i < 30; i++) at(2.1 + i * .04); const lpMs = (performance.now() - c0) / 30
+  assert('glyph-longpress: hold → unlock → migrate → app → back renders every phase', lpFrames.every(n => n > 100), `dots ${lpFrames.join('/')}, migrating frame ${lpMs.toFixed(2)} ms`)
+}
+
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')
