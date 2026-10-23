@@ -32,6 +32,7 @@ import { halftoneChecks } from './halftone'
 import { deviceChecks } from './device'
 import { exportChecks } from './export'
 import { dotsChecks } from './dots'
+import { studioChecks } from './studio'
 import { specChecks } from './spec'
 import { bytecodeChecks } from './bytecode'
 import { esp32Checks } from '../targets/test/esp32'
@@ -793,6 +794,9 @@ esp32Checks(assert, { pathOnly: true })
 await targetsChecks(assert)
 // P5-B) struct-of-arrays DotBuffer, buffer canvas renderer, worker protocol (scripts/buffer.ts)
 bufferChecks(assert)
+
+// P6-D) Dot Studio: document model, undo/redo, reference stacks, spec v1 / DOTS import, timeline (scripts/studio.ts)
+studioChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')

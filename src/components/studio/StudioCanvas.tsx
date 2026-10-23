@@ -76,8 +76,8 @@ export function StudioCanvas() {
   }
   return (
     <div className="st-stage">
-      <canvas ref={ref} className="st-canvas" style={{ width: W * SCALE, height: H * SCALE }} role="img" aria-label={`Preview of ${card.name}`}
-        onPointerMove={onPointer} onPointerDown={onPointer} onPointerUp={onPointer} onPointerLeave={() => { pointer.current = undefined; dirty.current = true }} />
+      <canvas ref={ref} className="st-canvas" style={{ width: W * SCALE, height: H * SCALE }} role="img" aria-label={`Preview of ${card.name}. Press it to fire press / release edges`}
+        onPointerMove={onPointer} onPointerDown={e => { onPointer(e); useStudio.getState().fireEvent('press') }} onPointerUp={e => { onPointer(e); useStudio.getState().fireEvent('release') }} onPointerLeave={() => { pointer.current = undefined; dirty.current = true }} />
     </div>
   )
 }

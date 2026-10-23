@@ -63,9 +63,10 @@ export function drawBarSheet(canvas: HTMLCanvasElement, candidate: WidgetPreset,
     ctx.fillStyle = theme.surface; ctx.fillRect(ox, rowY(1), w, h)
     drawDots(ctx, c.dots, ox - sx + PAD * 3, rowY(1) - sy + PAD * 3, 3, [ox, rowY(1), w, h])
     // blur: the 1× view through a 6 px blur
-    ctx.save(); ctx.filter = 'blur(6px)'
-    ctx.drawImage(canvas, ox, rowY(0), w, h, ox, rowY(2), w, h)
-    ctx.restore()
+    const tmp = document.createElement('canvas'); tmp.width = w; tmp.height = h
+    tmp.getContext('2d')!.drawImage(canvas, ox, rowY(0), w, h, 0, 0, w, h)
+    ctx.save(); ctx.fillStyle = theme.bg; ctx.fillRect(ox, rowY(2), w, h); ctx.beginPath(); ctx.rect(ox, rowY(2), w, h); ctx.clip()
+    ctx.filter = 'blur(6px)'; ctx.drawImage(tmp, ox, rowY(2)); ctx.restore()
     // silhouette: every lit dot solid white at full size, on black
     cardBg(ctx, ox, rowY(3), w, h, '#000000'); drawDots(ctx, c.sil, ox + PAD, rowY(3) + PAD, 1)
   })

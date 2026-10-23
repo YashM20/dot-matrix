@@ -42,6 +42,8 @@ export interface StudioStore {
   setPlaying(p: boolean): void
   setMode(m: PreviewMode): void
   fire(edgeIndex: number): void
+  /** Fire the first edge leaving the current state on `event` (`press` / `release` from the preview). */
+  fireEvent(event: string): boolean
   settle(): void
   setNote(n: string): void
 }
@@ -65,6 +67,12 @@ export const useStudio = create<StudioStore>((set, get) => ({
     if (!e) return
     const from = e.from === '*' ? get().state : e.from
     set({ mode: 'live', state: e.to, firing: { edge: { ...e, from }, start: performance.now() } })
+  },
+  fireEvent: event => {
+    const { h, state } = get(), i = h.present.machine.findIndex(e => (e.from === state || e.from === '*') && e.on === event)
+    if (i < 0) return false
+    get().fire(i)
+    return true
   },
   settle: () => set({ firing: undefined }),
   setNote: note => set({ note }),

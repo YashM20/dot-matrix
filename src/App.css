@@ -1865,9 +1865,12 @@ label b {
 .st-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px }
 .st-grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px }
 .st-wide { grid-column: 1 / -1 }
-.st-num { display: grid; gap: 3px; color: var(--mute); font: 500 8px var(--mono); letter-spacing: .12em }
-.st-num input, .st-num select { width: 100% }
-.st-check { display: flex; gap: 6px; align-items: center; color: var(--label); font: 500 9px var(--mono); grid-column: 1 / -1 }
+.st-layout label { margin: 0 }
+.st-layout .st-num { display: grid; grid-template-columns: 1fr; gap: 3px; align-items: end; color: var(--mute); font: 500 8px var(--mono); letter-spacing: .12em }
+.st-num input, .st-num select { width: 100%; box-sizing: border-box }
+.st-layout .st-check { display: flex; gap: 6px; align-items: center; color: var(--label); font: 500 9px var(--mono); grid-column: 1 / -1 }
+.st-check input { width: auto }
+.st-layout .dw-slider { margin-top: 2px }
 .st-check input { accent-color: var(--red) }
 
 .st-toolbar { display: grid; gap: 6px }
@@ -1948,3 +1951,4 @@ label b {
 @media (max-width: 1100px) {
   .st-layout { grid-template-columns: 1fr }
 }
+.st-hint code { font: inherit; color: var(--label); background: none; padding: 0 }
