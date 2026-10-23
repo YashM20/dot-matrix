@@ -5,8 +5,8 @@
  * relief reads as big dots, and its tone is split into bands (faint → mid → idle, `value` for the
  * gloss), never one grey ramp. Red only on the ON AIR sign (emissive = live).
  */
-import { blur, outline, rasterize, sample, type Raster } from '../../engine/raster'
-import { bloom, emissive, fabric, glass, gloss as glossMaterial, heightRaster, hourOf, illuminate, lambert, matte, metal, normalRaster, phong, sdfBox, sdfCircle, sdfRing, sdfSubtract, sdfUnion, stackHeights, sunAt, torch, type Light } from '../../engine/light'
+import { blur, createRaster, outline, rasterize, sample, type Raster } from '../../engine/raster'
+import { bloom, emissive, fabric, glass, heightRaster, hourOf, illuminate, lambert, matte, metal, normalRaster, phong, sdfBox, sdfCircle, sdfRing, sdfSubtract, sdfUnion, stackHeights, sunAt, torch, type Light, type Vec3 } from '../../engine/light'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { smoothstep } from '../../engine/math'
 import type { Field, Layer, Tone } from '../../engine/types'
@@ -174,11 +174,59 @@ const RULES: Field = (u, v) => { const c = Math.round(u * (LG.cols - 1)), r = Ma
 RULES.bounds = [4, 12, 67, 61]
 /** The lit bulb: full dots, one size step down on the outer ring (the limb of a glowing ball). */
 const BALL_LIGHT = rasterize((u, v) => { const d = BALL_SDF(u, v); return d > 0 ? 0 : d > -5 ? .75 : 1 }, LG)
+/** The board light as a unit direction seen from the ball (a torch: from the ball's centre). */
+function dirOf(light: Light): Vec3 {
+  const v: Vec3 = Array.isArray(light) ? light as Vec3 : [(light as { at: Vec3 }).at[0] - BALL.cx, (light as { at: Vec3 }).at[1] - BALL.cy, (light as { at: Vec3 }).at[2]]
+  const k = 1 / (Math.hypot(v[0], v[1], v[2]) || 1)
+  return [v[0] * k, v[1] * k, v[2] * k]
+}
+/** Per-cell field over the ball's normals (mask ≥ .5), as a lattice-cell raster. */
+function ballCells(fn: (nx: number, ny: number, nz: number) => number): Field {
+  const n = BALL_N, out = createRaster(n.grid, n.space, n.bounds), cols = n.grid.cols, b = n.bounds ?? [0, 0, cols - 1, n.grid.rows - 1]
+  for (let r = b[1]; r <= b[3]; r++) for (let c = b[0]; c <= b[2]; c++) { const i = r * cols + c; if (n.mask[i] >= .5) out.data[i] = fn(n.x[i], n.y[i], n.z[i]) }
+  return sample(out)
+}
+const GLOSS_BODY: [number, number, Tone][] = [[.06, .26, 'faint'], [.26, .5, 'mid'], [.5, 2, 'idle']]
+/**
+ * Black lacquer: a dark Lambert body (void on the shadow side, never past idle), the window's
+ * highlight as a hard two-step `value` spot held out toward the lit limb (the highlight's light is the
+ * board light dropped to a low 20°, so it never sits at the centre), and the floor's reflection as a thin
+ * `mid` crescent on the shadow-side rim: the three reads that make a ball look lacquered.
+ */
+function lacquer(light: Light): Layer[] {
+  const L = dirOf(light), h = Math.hypot(L[0], L[1]), hx = h > .15 ? L[0] / h : -.6, hy = h > .15 ? L[1] / h : -.8
+  const e = 20 * Math.PI / 180, H = [hx * Math.cos(e), hy * Math.cos(e), Math.sin(e)]
+  // half vector of the low light and the viewer: where the highlight lands
+  const hn = Math.hypot(H[0], H[1], H[2] + 1), Hx = H[0] / hn, Hy = H[1] / hn, Hz = (H[2] + 1) / hn
+  const spec = ballCells((nx, ny, nz) => { const s = Math.max(0, nx * Hx + ny * Hy + nz * Hz) ** 60; return s > .45 ? 1 : s > .1 ? .75 : 0 })
+  const body = ballCells((nx, ny, nz) => {
+    const d = Math.max(0, nx * L[0] + ny * L[1] + nz * L[2])
+    if (Math.max(0, nx * Hx + ny * Hy + nz * Hz) ** 60 > .1) return 0 // the highlight replaces the body under it
+    const rim = nz < .3 && nx * hx + ny * hy < -.25 ? .4 : 0 // floor bounce on the far rim
+    return Math.max(rim, .95 * d ** 1.25)
+  })
+  const rimOnly: Field = (u, v) => { const x = body(u, v); return x === .4 ? .5 : 0 }
+  rimOnly.bounds = body.bounds
+  const lit: Field = (u, v) => { const x = body(u, v); return x === .4 ? 0 : x }
+  lit.bounds = body.bounds
+  return [...banded(lit, GLOSS_BODY), layer(LAT.at(rimOnly), 'mid'), layer(LAT.at(spec), 'value')]
+}
+/** Fabric's shadow side keeps its weave: a higher floor of light, the Bayer dither to one size step. */
+const FABRIC_AMBIENT = .34
+/** Velvet sheen: cloth brightens where it turns away from the eye: a rim of `mid` round the shadow side, so the dark half keeps its edge. */
+function velvet(light: Light): Layer[] {
+  const L = dirOf(light)
+  const sheen = ballCells((nx, ny, nz) => (nz < .34 && nx * L[0] + ny * L[1] < .1 ? .5 : 0))
+  const cloth = fabric(BALL_N, light, { ...AT, ambient: FABRIC_AMBIENT }).cloth
+  const under: Field = (u, v) => (sheen(u, v) ? 0 : cloth(u, v))
+  under.bounds = cloth.bounds
+  return [...banded(under, [[.1, .3, 'faint'], [.3, .6, 'mid'], [.6, 2, 'idle']]), layer(LAT.at(sheen), 'mid')]
+}
 export const lightMatte = materialCard('light-matte', 'Matte', 'LAMBERT', ctx => matte(BALL_N, boardLight(ctx), AT))
-export const lightGloss = materialCard('light-gloss', 'Gloss', '+2 STEPS', ctx => glossMaterial(BALL_N, boardLight(ctx), AT).layers)
+export const lightGloss = materialCard('light-gloss', 'Gloss', '+2 STEPS', ctx => lacquer(boardLight(ctx)))
 export const lightGlass = materialCard('light-glass', 'Glass', 'REFRACT', ctx => glass(BALL_N, boardLight(ctx), RULES, AT).layers)
 export const lightEmissive = materialCard('light-emissive', 'Emissive', 'BLOOM', () => emissive(BALL_LIGHT, { ...AT, radius: 4.5, lift: .7, coreTone: 'value', haloBands: [[.1, .45, 'faint'], [.45, 2, 'mid']] }).layers)
 export const lightMetal = materialCard('light-metal', 'Metal', 'ENVIRONMENT', ctx => metal(BALL_N, boardLight(ctx), AT).layers)
-export const lightFabric = materialCard('light-fabric', 'Fabric', 'BAYER 4', ctx => fabric(BALL_N, boardLight(ctx), AT).layers)
+export const lightFabric = materialCard('light-fabric', 'Fabric', 'BAYER 4', ctx => velvet(boardLight(ctx)))
 
 export const lightBoard = [lightTorch, lightOrb, lightOnAir, lightMatte, lightGloss, lightGlass, lightEmissive, lightMetal, lightFabric]

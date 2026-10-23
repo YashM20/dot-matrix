@@ -323,23 +323,39 @@ const upstairsPoster = poster({
 })
 
 // ── 05 CLOSER · romance ─────────────────────────────────────────────────────────────────────────
-// Two profiles almost touching, cut out of the glow of the one flame between their lips.
-/** Face profile: how far the front edge reaches toward the other face, by row. */
+// Two profiles almost touching, lit only by the one flame between their lips: each face is bright
+// where it turns to the flame and falls into the dark behind the cheek, so the faces (not the gap)
+// are the figure.
+/** Face profile: how far the front edge reaches toward the other face, by row (forehead → neck). */
 const PROFILE: Pt[] = [[16, -16], [20, -9], [26, -4.5], [34, -1.5], [44, 0], [49, 1], [52, -.2], [55, .6], [58, 3], [62.5, 7.2], [64.5, 6], [66, 2], [68, 2.6], [70, 3.6], [71.5, 2], [73, 3], [75, 1], [78, .2], [81, 1.6], [84, -1], [87, -7], [93, -10.5], [131, -11.5]]
-const FLAME: Pt = [71.5, 72.75]
-const leftEdge = (y: number) => 63 + pl(PROFILE, y)
-const rightEdge = (y: number) => 81 - pl(PROFILE, y - 1.5)
-const shoulder = (y: number, dir: number) => (y > 104 ? (y - 104) * .9 * dir : 0)
-const inLeft = (x: number, y: number) => x < leftEdge(y) + shoulder(y, 1) && y > 15 && (ell(x, y, 46, 50, 21, 36) < 1 || (y > 82 && x > 40 - (y - 82) * 1.6))
-const inRight = (x: number, y: number) => x > rightEdge(y) - shoulder(y, 1) && y > 16.5 && (ell(x, y, 98, 51.5, 21, 36) < 1 || (y > 83 && x < 104 + (y - 83) * 1.6))
-const hair = (x: number, y: number) => x > 92 && y > 30 && y < 100 && ell(x, y, 104, 62, 17, 40) < 1
+const FLAME: Pt = [72, 71.25], PK = 1.7
+const leftEdge = (y: number) => 58 + PK * pl(PROFILE, y)
+const rightEdge = (y: number) => 86 - PK * pl(PROFILE, y - 1.5)
+const inLeft = (x: number, y: number) => x < leftEdge(y) && y > 15 && (ell(x, y, 40, 50, 23, 36) < 1 || (y > 78 && x > leftEdge(y) - 20 - Math.max(0, y - 98) * 1.6))
+const inRight = (x: number, y: number) => x > rightEdge(y) && y > 16.5 && (ell(x, y, 104, 51.5, 23, 36) < 1 || (y > 79.5 && x < rightEdge(y) + 20 + Math.max(0, y - 99.5) * 1.6))
+/** Closed eyes: a short dark lash line a cheek's width behind the brow. */
+const lash = (x: number, y: number, ex: number, ey: number) => Math.abs(y - ey - .1 * (x - ex) ** 2) < .9 && Math.abs(x - ex) < 3.2
+const face = (d: number, y: number, dx: number) => {
+  // lit by the flame: bright on the profile, ~8 cells of falloff into the cheek, dimmer with height off the flame
+  const fromFlame = len(dx * .6, y - FLAME[1]), key = .35 + .65 * Math.exp(-((fromFlame / 34) ** 2))
+  return key * (.2 + .8 * Math.exp(-d / 14)) * (d < 1.2 ? .8 : 1)
+}
 const closer: Luma = (x, y) => {
-  // the flame's glow fills the gap; the two faces are cut out of it in black, a thin rim on each contour
-  const df = len((x - FLAME[0]) * 1.15, y - FLAME[1]), glow = (.97 * Math.exp(-((df / 30) ** 2)) + .45 * Math.exp(-((df / 70) ** 2))) * clamp(1.15 - Math.max(Math.abs(x - 72) - 50, 0) / 22)
-  if (inLeft(x, y)) { const d = leftEdge(y) + shoulder(y, 1) - x; return d < 1.6 ? .55 * glow : 0 }
-  if (inRight(x, y)) { const d = x - rightEdge(y) + shoulder(y, 1); return d < 1.6 ? .55 * glow : 0 }
-  if (hair(x, y)) return 0
-  return glow
+  const df = len((x - FLAME[0]) * 1.3, y - FLAME[1])
+  if (inLeft(x, y)) {
+    const d = leftEdge(y) - x
+    if (lash(x, y, leftEdge(50) - 8, 50.5) || (Math.abs(y - 71.5) < .7 && d < 3.5)) return .04
+    return face(d, y, leftEdge(y) - FLAME[0])
+  }
+  if (inRight(x, y)) {
+    const d = x - rightEdge(y)
+    if (lash(x, y, rightEdge(52) + 8, 52) || (Math.abs(y - 73) < .7 && d < 3.5)) return .04
+    // her hair falls over the back of her head: only the strands nearest the flame catch it
+    const hair = x > rightEdge(y) + 16 && y > 26 ? .35 + .3 * Math.sin(x * .9 + y * .25) : 1
+    return face(d, y, rightEdge(y) - FLAME[0]) * hair
+  }
+  // between them: only the flame's own small halo, the rest is night
+  return .95 * Math.exp(-((df / 7) ** 2))
 }
 const closerPoster = poster({
   id: 'cinema-closer', n: 5, genre: 'ROMANCE', title: 'CLOSER', tag: 'NO LIGHTS. JUST US.', at: [centre('CLOSER'), BOTTOM],
@@ -440,7 +456,7 @@ const exit14Poster = poster({
 // A lighthouse on its rock at night, the beam across the sky; the lamp itself is red.
 const LX = 97.75, LAMP: Pt = [LX, 36.5], SEA_Y = 92
 const hw = (y: number) => 5.6 + (y - 44) * .12
-const ROCKS = poly([[62, 104], [66, 97], [72, 91], [80, 88.5], [86, 91], [110, 91], [118, 88.5], [126, 92.5], [134, 98], [140, 104]])
+const ROCKS = poly([[56, 106], [61, 101], [67, 97.5], [73, 93.5], [79, 90], [85, 86.5], [91, 84.5], [104, 84.5], [110, 86.5], [116, 85.5], [122, 89], [128, 93], [134, 97], [140, 101.5], [144, 103], [144, 106]])
 const beam = (x: number, y: number, dx: number, dy: number, reach: number) => {
   const n = Math.hypot(dx, dy), ux = dx / n, uy = dy / n, px = x - LAMP[0], py = y - LAMP[1]
   const along = px * ux + py * uy, perp = Math.abs(px * -uy + py * ux), w = 1.6 + along * .095
@@ -454,19 +470,29 @@ const keeper: Luma = (x, y) => {
   if (poly([[LX - 7, 30.5], [LX, 23], [LX + 7, 30.5]])(x, y)) return .55 - .3 * clamp((x - LX + 7) / 14)
   if (Math.abs(x - LX) < .5 && y > 19 && y < 23.5) return .5
   // tower: lit from the beam side (left), two dark bands, a door
-  if (y >= 44 && y <= 95 && Math.abs(x - LX) < hw(y)) {
-    if (rect(x, y, LX - 2, 86, LX + 2, 95)) return .03
+  if (y >= 44 && y <= 86 && Math.abs(x - LX) < hw(y)) {
+    if (rect(x, y, LX - 2, 78, LX + 2, 86)) return .03
     const side = (x - (LX - hw(y))) / (2 * hw(y)), banded = (y > 56 && y < 65) || (y > 76 && y < 85)
     return (.95 - .6 * side) * (banded ? .3 : 1)
   }
-  if (ROCKS(x, y) && y > 88) return !ROCKS(x, y - 2.2) ? .5 : 0
+  // the rock: a black mass, its crown lit by the lamp above, surf breaking white along its waterline
+  if (ROCKS(x, y)) {
+    if (!ROCKS(x, y - 2.4)) return .62 - .3 * clamp(Math.abs(x - LX) / 40)
+    const facet = vnoise(x / 5, y / 3, 55)
+    return y < 97 && facet > .62 ? .2 : 0
+  }
   const sky = Math.max(beam(x, y, -1, -.3, 175), beam(x, y, 1, .14, 80))
   if (y < SEA_Y) return Math.max(sky, star(x, y, 52, .03))
-  // sea: perspective swell lines, a glitter path under the lamp
-  if (y < SEA_Y + 1.4) return .4 // horizon
-  const z = 36 / (y - SEA_Y + 3), swell = frac(z * .8 + .4 * vnoise(x / 14, z, 53))
-  const path = Math.abs(x - LX + 4) < 3 + (y - SEA_Y) * .3 && hash01(Math.round(x / 2.5), Math.round(y / 2.5), 54) > .45
-  return path ? .55 : swell < .16 ? .26 * clamp(1.1 - (y - SEA_Y) / 60) : 0
+  if (y < SEA_Y + 1.4) return .5 // horizon
+  if (y > 113) return 0
+  // surf: a broken white line hugging the rock's waterline
+  if (ROCKS(x, y - 2.6) || ROCKS(x - 2.6, y - 1.2) || ROCKS(x + 2.6, y - 1.2)) return hash01(Math.round(x / 2.5), Math.round(y / 2.5), 56) > .3 ? .92 : .5
+  // sea: swell lines that open up toward the viewer, brighter under the lamp (its reflection)
+  // one broken swell line per lattice row; dashes lengthen toward the viewer and close up under the lamp
+  const k = (y - SEA_Y) / (113 - SEA_Y), row = Math.round((y - yOf(0)) / K)
+  const under = Math.exp(-(((x - LX + 2) / (6 + 16 * k)) ** 2))
+  const dash = vnoise(x / (5 + 14 * k), row * 1.7, 53) > .52 - .3 * under
+  return dash ? (.24 + .14 * (row % 2) + .55 * under) * (1 - .25 * k) : 0
 }
 const keeperPoster = poster({
   id: 'cinema-keeper', n: 8, genre: 'DRAMA', title: 'KEEPER', tag: 'HE KEPT IT BURNING', at: [centre('KEEPER'), BOTTOM],
@@ -474,34 +500,42 @@ const keeperPoster = poster({
 })
 
 // ── 09 ENCORE · musical ─────────────────────────────────────────────────────────────────────────
-// A singer alone in a follow-spot at the stage lip; a red rose lies at her feet.
-const coneHalf = (y: number) => 5 + (y - 11) * .34
-const POOL: Pt = [72, 102]
-
-const DRESS = poly([[66.5, 59], [77.5, 59], [76, 66], [74.5, 73], [76.5, 92], [79, 101], [65, 101], [67.5, 92], [69.5, 73], [68, 66]])
-const singer = (x: number, y: number) => DRESS(x, y) || ell(x, y, 72, 50.5, 3.4, 4.2) < 1 || rect(x, y, 70.8, 54, 73.2, 59.5) ||
-  seg(x, y, [67, 60], [63, 67.5]) < 1.3 || seg(x, y, [63, 67.5], [66.8, 55.5]) < 1.2 || seg(x, y, [77, 60], [80.5, 72]) < 1.3
-const ROSE: Box = [86, 97.9, 89.9, 100.1]
-/** The singer is drawn 1.4× about her feet. */
-const SING = 1.4
+// A singer alone in the follow-spot, black against the lit curtain at a vintage mic stand: head
+// thrown back to the mic, one arm flung up to the rafters, the gown flaring to the boards.
+// A red rose lies at her feet.
+/** The spot on the back curtain: a big disc with a 1-cell edge ramp. */
+const SPOT: Pt = [72, 62], SPOT_R = 54, SPOT_Y = 1.04, STAGE_Y = 104
+/** The singer as one closed silhouette (card cells), hand-placed: gown, left arm at her side, neck, raised right arm. */
+const SINGER = poly([
+  [44, 104.5], [52, 98], [57.5, 88], [61, 77], [62.5, 68], [63, 58], [62.5, 49], [65, 45.5], // gown → arm at her side → shoulder
+  [70, 43], [70, 37], [75, 37], [75, 42.5], [82, 44], // neck, shoulder
+  [94.2, 28], [102.5, 15.5], [104.5, 11.5], [107.5, 11], [110, 13.5], [110.5, 17.5], [108.8, 20.5], [99.8, 32.5], [88.5, 48.5], // raised arm, open hand
+  [83, 52], [80, 58], [79, 64], [80.5, 70], [83.5, 79], [87.5, 89], [92.5, 97.5], [100, 104.5], // torso, gown
+])
+/** Head thrown back toward the mic: chin up-left, hair gathered behind. */
+const head = (x: number, y: number) => ell(x, y, 71.5, 29.5, 6.4, 7.4) < 1 || ell(x, y, 66.6, 35, 3, 2.3) < 1 || ell(x, y, 77.5, 25.5, 3.6, 4) < 1
+/** The stand: a thin pole to a round mic at her mouth. */
+const stand = (x: number, y: number) => seg(x, y, [52.5, 104], [59.5, 39]) < .9 || seg(x, y, [59.5, 39], [61.8, 36]) < .9 || ell(x, y, 61.8, 33.6, 2.1, 2.6) < 1
+const singer = (x: number, y: number) => SINGER(x, y) || head(x, y) || stand(x, y)
+const ROSE: Box = [101.5, 102.4, 105.5, 104.9]
 const encore: Luma = (x, y) => {
-  const sx = 72 + (x - 72) / SING, sy = 101 + (y - 101) / SING
-  if (singer(sx, sy)) {
-    // the follow-spot is overhead: a hot rim on hair and shoulders, the rest falls into shadow
-    // backlit by the haze: every edge of her carries a rim, brightest on top
-    if (!singer(sx, sy - 1.8)) return .95
-    if (!singer(sx - 1.8, sy) || !singer(sx + 1.8, sy)) return .55
-    return 0
+  if (singer(x, y)) return 0
+  if (seg(x, y, [105.5, 104], [113.5, 105.4]) < .6) return .2 // rose stem
+  const ds = len(x - SPOT[0], (y - SPOT[1]) * SPOT_Y)
+  if (y < STAGE_Y) {
+    // the curtain: vertical pleats, lit inside the spot (bright core, a fall-off to its edge), dim outside
+    const pleat = .5 + .5 * Math.sin((x + 1.5 * Math.sin(y * .05)) * .62)
+    if (ds < SPOT_R) {
+      const core = 1 - .4 * (ds / SPOT_R) ** 2, edge = clamp(SPOT_R - ds)
+      return (.72 + .28 * pleat) * core * (.55 + .45 * edge)
+    }
+    return .3 * Math.exp(-(ds - SPOT_R) / 3) + .2 * pleat * clamp(1 - (ds - SPOT_R) / 30) * (y > 60 ? 1 : 0)
   }
-  if (seg(sx, sy, [61, 101], [66.5, 56]) < .5 || ell(sx, sy, 67.5, 54, 1.2, 1) < 1) return .6 // mic stand
-  if (seg(x, y, [90, 99.6], [97.5, 101.2]) < .6) return .18 // rose stem
-  if (y > 104 && y < 112) return .55 * (1 - Math.abs(x - 72) / 100)
-  const e = ell(x, y, POOL[0], POOL[1], 34, 6.5)
-  if (y > 95 && e < 1) return ell(x, y, 72, 101.5, 9, 2) < 1 ? .12 : .9 * (1 - .45 * e * e)
-  if (y > 95) return .1 * clamp(1.4 - e / 2)
-  const h = coneHalf(y), q = Math.abs(x - 72) / h
-  if (q < 1) return (.18 + .28 * Math.sqrt(1 - q)) * (.85 + .3 * vnoise(x / 4, y / 4, 64))
-  return 0
+  // the boards: the spot's pool spreads out from her feet
+  if (y > 113) return 0
+  const e = ell(x, y, 72, 107, 46, 6.5), plank = frac((y - STAGE_Y) / 2.5) < .5 ? 1 : .8
+  if (e < 1) return (.95 - .5 * e * e) * plank
+  return y < STAGE_Y + 1.5 ? .5 : .16 * clamp(1.6 - e / 2) * plank
 }
 const encorePoster = poster({
   id: 'cinema-encore', n: 9, genre: 'MUSICAL', title: 'ENCORE', tag: 'ONE MORE SONG', at: [centre('ENCORE'), BOTTOM],
