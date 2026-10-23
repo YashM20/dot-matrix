@@ -159,7 +159,7 @@
   },
   "ev-charge": {
    "t=0": {
-    "hash": "3cbf9e60",
+    "hash": "918e955d",
     "dots": 6059
    }
   },
@@ -199,8 +199,8 @@
   },
   "vision-camera": {
    "t=0": {
-    "hash": "2bc234f4",
-    "dots": 15919
+    "hash": "09c728fa",
+    "dots": 13059
    }
   },
   "deerflow-agent": {
@@ -243,7 +243,7 @@
   },
   "silhouette": {
    "t=0": {
-    "hash": "af26a6ba",
+    "hash": "812b6027",
     "dots": 20706
    }
   },
@@ -437,8 +437,8 @@
   },
   "thermal-puppy": {
    "t=0": {
-    "hash": "29830d9b",
-    "dots": 20737
+    "hash": "5edd9a62",
+    "dots": 20731
    }
   },
   "level-03": {
