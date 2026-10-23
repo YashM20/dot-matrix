@@ -32,6 +32,7 @@ import { halftoneChecks } from './halftone'
 import { deviceChecks } from './device'
 import { exportChecks } from './export'
 import { dotsChecks } from './dots'
+import { studioChecks } from './studio'
 import { specChecks } from './spec'
 import { bytecodeChecks } from './bytecode'
 import { esp32Checks } from '../targets/test/esp32'
@@ -821,6 +822,8 @@ import { gpuBoard } from '../src/widgets/boards/gpu'
   const fs = evalFS('float field(vec2 uv, float t, vec3 pointer, float data_a, float data_b) { return 0.0; }', 2)
   assert('webgl: IR eval shader passes data uniforms in key order and reads u/v from the CPU table', fs.includes('field(uv, uT, uPointer, uData[0], uData[1])') && fs.includes('uniform float uData[2]') && fs.includes('texelFetch(uUV'))
 }
+// P6-D) Dot Studio: document model, undo/redo, reference stacks, spec v1 / DOTS import, timeline (scripts/studio.ts)
+studioChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')
