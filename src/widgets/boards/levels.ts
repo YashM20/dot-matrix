@@ -6,11 +6,12 @@
  * Lambert on flat planes, parallax layers step in whole cells at their own pitch. Every card has at
  * most one red element, the thing the moment is about (eyes, gem, runner, player, hive, eye,
  * countdown, cursor, your entry). Everything is a pure function of `t`.
- * Helpers are local: a small ray-plane `cast` (the `scene3d` idea from MASTER-PLAN §3.8, cut down to
- * one hall) and an isometric box tracer.
+ * The ray-plane hall caster lives in the engine (`src/engine/scene`, shared with the playable game in
+ * `src/game/`); the isometric box tracer is local.
  */
 import { clamp, hash01, smoothstep } from '../../engine/math'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
+import { HALL_CEIL, HALL_FLOOR, castHall, fog, lamp, project, seam, type Hall } from '../../engine/scene'
 import type { Field } from '../../engine/types'
 import { TILE, baked, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 import { SHIP } from '../sprites'
@@ -59,35 +60,9 @@ const title = (s: string) => layer(T.big(s, 5, 5, { lattice: LABEL }), 'idle')
 const score = (s: string) => layer(T.big(s, 139, 5, { lattice: LABEL, align: 'right' }), 'idle')
 const CAP = .72
 
-// ── ray-plane hall (scene3d, cut down) ──────────────────────────────────────────────────────────
-/**
- * Camera at the origin looking down +z; world y grows downward like the card. The floor is the plane
- * y = +floor, the ceiling y = -ceil, the walls x = ±wall. (vx,vy) is the vanishing point in cells and
- * `f` the focal length in cells per world unit. Rays that travel past `far` hit nothing (black).
- */
-interface Hall { vx: number; vy: number; f: number; floor: number; ceil?: number; wall?: number; far: number }
-const FLOOR = 0, CEIL = 1, WALL_L = 2, WALL_R = 3
-interface Hit { s: number; x: number; y: number; z: number; /** world size of one card cell at the hit, across / along depth */ fp: number; fz: number }
-const NORMAL: V3[] = [[0, -1, 0], [0, 1, 0], [1, 0, 0], [-1, 0, 0]]
-function cast(h: Hall, px: number, py: number): Hit | null {
-  const dx = (px - h.vx) / h.f, dy = (py - h.vy) / h.f
-  let z = h.far, s = -1, d = 1
-  if (dy > 1e-9 && h.floor / dy < z) { z = h.floor / dy; s = FLOOR; d = h.floor }
-  if (h.ceil !== undefined && dy < -1e-9 && h.ceil / -dy < z) { z = h.ceil / -dy; s = CEIL; d = h.ceil }
-  if (h.wall !== undefined && Math.abs(dx) > 1e-9 && h.wall / Math.abs(dx) < z) { z = h.wall / Math.abs(dx); s = dx < 0 ? WALL_L : WALL_R; d = h.wall }
-  return s < 0 ? null : { s, x: dx * z, y: dy * z, z, fp: z / h.f, fz: (z * z) / (h.f * d) }
-}
-/** Lambert × soft inverse-square falloff from a point light (radius `r`, intensity `i`). */
-function lamp(h: Hit, [lx, ly, lz]: V3, r: number, i: number) {
-  const ax = lx - h.x, ay = ly - h.y, az = lz - h.z, d = Math.hypot(ax, ay, az) || 1e-6, [nx, ny, nz] = NORMAL[h.s]
-  return (i * Math.max(0, (ax * nx + ay * ny + az * nz) / d)) / (1 + (d / r) ** 2)
-}
-/** Depth fog: 1 at the camera, 0 at `far`. */
-const fog = (z: number, far: number, k = 1.3) => clamp(1 - z / far) ** k
-/** A seam `w` world units wide on a `period` grid, never thinner than ~1 card cell (`fp`). */
-const seam = (x: number, period: number, w: number, fp: number) => { const f = frac(x / period) * period; return f < Math.max(w, fp * .8) }
-/** Screen position of a world point. */
-const project = (h: Hall, [x, y, z]: V3): Pt => [h.vx + (h.f * x) / z, h.vy + (h.f * y) / z]
+// ── ray-plane hall: the engine's scene3d (`src/engine/scene`) ─────────────────────────────────
+const FLOOR = HALL_FLOOR, CEIL = HALL_CEIL
+const cast = castHall
 
 // ── 01 corridor: torchlit stone hall, walking forward; two red eyes wait past the light ─────────
 const HALL1: Hall = { vx: 72, vy: 66, f: 62, floor: 1, ceil: 1.15, wall: 1.1, far: 13 }
