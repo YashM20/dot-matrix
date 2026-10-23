@@ -509,24 +509,43 @@ export const chipsCard: WidgetPreset = {
 }
 
 // ── TOAST ───────────────────────────────────────────────────────────────────
-/** Notification pill that slides in from the top over `reveal` seconds, holds, then repeats; the × button dims on press. */
-const TOAST = { x: 6, y: 52, w: 132, h: 38, text: 'SYNC DONE', bx: 118, reveal: .6, period: 4.2, dist: 70 }
+/**
+ * Notification stack: the newest toast slides in from the top, an older one sits dimmer below it, and an
+ * auto-dismiss rail drains under the newest. The × toggles `dismissed` (a data spring): the newest slides out
+ * to the right and the older one rises into its slot; pressing × again brings it back.
+ */
+const TOAST = { x: 6, w: 132, h: 34, top: 34, gap: 12, bx: 118, reveal: .6, period: 6, dist: 60, rail: 3.6 }
+const TOASTS = ['SYNC DONE', '3 FILES IN']
 export const toastCard: WidgetPreset = {
   id: 'ui-toast', name: 'Toast', group: 'composite', chrome: 'dots', grid: TILE, style, animated: true,
-  defaults: { dismiss: 0 },
-  controls: [{ key: 'dismiss', kind: 'button', box: [TOAST.bx - 12, TOAST.y + TOAST.h / 2 - 12, 24, 24], label: 'Dismiss' }],
+  defaults: { dismissed: 0 }, springKeys: ['dismissed'],
+  controls: [{ key: 'dismissed', kind: 'toggle', box: [TOAST.bx - 12, TOAST.top + TOAST.h / 2 - 12, 24, 24], label: 'Dismiss notification' }],
   layers: ctx => {
-    const s = ui(ctx, 'dismiss'), age = ctx.t % TOAST.period, k = clamp(age / TOAST.reveal), e = 1 - (1 - k) ** 3
-    const dy = -(1 - e) * TOAST.dist, cy = TOAST.y + TOAST.h / 2 + dy, v = s.pressed ? PRESS : 1
-    const pill = rr(TOAST.x, TOAST.y + dy, TOAST.w, TOAST.h, TOAST.h / 2), cross = TOAST.bx
-    const x = (d: number): Pt[] => [-2, -1, 0, 1, 2].map((i): Pt => [cross + i * d, cy + i * d]), x2 = (d: number): Pt[] => [-2, -1, 0, 1, 2].map((i): Pt => [cross + i * d, cy - i * d])
+    const s = ui(ctx, 'dismissed'), gone = clamp(ctx.data.dismissed), v = s.pressed ? PRESS : 1
+    const age = ctx.t % TOAST.period, e = 1 - (1 - clamp(age / TOAST.reveal)) ** 3
+    const slot2 = TOAST.top + TOAST.h + TOAST.gap
+    const toast = (text: string, x: number, y: number, a: number, close: boolean): Layer[] => {
+      if (a <= .02) return []
+      const cy = y + TOAST.h / 2, cx = x + TOAST.bx - TOAST.x
+      const arm = (sx: number): Pt[] => [-3, -2, -1, 0, 1, 2, 3].map((i): Pt => [cx + i * 1.7, cy + sx * i * 1.7])
+      return [
+        layer(dimmed(T.dots(rrect(x, y, TOAST.w, TOAST.h, TOAST.h / 2, OUTLINE.spacing), OUTLINE.size), a), 'value'),
+        layer(dimmed(T.big(text, x + 14, cy - 4.5, BODY), a), 'value'),
+        ...(close ? [layer(at(T.dots([...arm(1), ...arm(-1)], 1.6), v * a), 'value')] : []),
+      ]
+    }
+    // newest: slides down on arrival, out to the right when dismissed; older: rises into the top slot as the newest leaves
+    const newest = toast(TOASTS[0], TOAST.x + gone * 150, TOAST.top - (1 - e) * TOAST.dist, e * (1 - gone), true)
+    const older = toast(TOASTS[1], TOAST.x, slot2 - gone * (slot2 - TOAST.top), .45 + .55 * gone, gone > .5)
+    // auto-dismiss rail under the stack: drains over `rail` seconds after the newest lands
+    const n = 26, left = Math.round(n * (1 - clamp((age - TOAST.reveal) / TOAST.rail))) * (1 - gone)
+    const rail: Pt[] = Array.from({ length: n }, (_, i): Pt => [12 + i * 120 / (n - 1), 126])
     return [
-      layer(T.text('NOTICE', TOAST.x + 2, 30), 'idle'),
-      layer(dimmed(T.dots(pill(0, OUTLINE.spacing), OUTLINE.size), e), 'value'),
-      layer(dimmed(T.big(TOAST.text, TOAST.x + 16, cy - 4.5, BODY), e), 'value'),
-      layer(at(T.dotRing(cross, cy, 10, { spacing: 2.6, size: 1.3 }), v * e), 'mid'),
-      layer(at(T.dots([...x(2.2), ...x2(2.2)], 2), v * e), 'mid'),
-      ...(e > .99 ? states(s, ctx.t, circle(cross, cy, 10), circle(cross, cy, 10), 7) : []),
+      layer(T.text(gone > .5 ? '1 NOTICE' : '2 NOTICES', TOAST.x + 2, 22), 'idle'),
+      ...older, ...newest,
+      layer(T.dots(rail.slice(0, Math.round(left)), 1.5), 'mid'),
+      layer(T.dots(rail.slice(Math.round(left)), 1), 'faint'),
+      ...(e > .99 ? states(s, ctx.t, circle(TOAST.bx, TOAST.top + TOAST.h / 2, 9), circle(TOAST.bx, TOAST.top + TOAST.h / 2, 9), 3) : []),
     ]
   },
 }
