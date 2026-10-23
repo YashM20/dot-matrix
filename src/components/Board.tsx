@@ -7,6 +7,7 @@ import type { ControlPatch } from '../engine'
 import { duration } from '../engine/motion'
 import type { DotCanvasProps } from './DotCanvas'
 import { pick, useLiveData } from '../data/useLiveData'
+import { useAudio } from '../audio/useAudio'
 
 /** Total exit window for a view of cards: the last card on the diagonal finishes by then. */
 export const VIEW_EXIT_MS = 420
@@ -61,13 +62,15 @@ export function Board({ id, leaving = false }: { id: string; leaving?: boolean }
   const sharing = !!board.shared?.length
   // live sources (`BoardDef.sources`): fixture → cached → live data, merged over each card's defaults
   const live = useLiveData(board.sources)
+  // sound (C5): the shared store drives src/audio on the instrument/scope boards; cards get live analysis
+  const withAudio = useAudio(board.id, shared, onShared, titleId)
   return (
     <section className="board-view" aria-labelledby={titleId}>
       <h2 className="board-title" id={titleId}>{board.title}</h2>
       {/* column count is a CSS var so the responsive breakpoints in App.css can step it down (3 → 2 → 1) */}
       <div className="board-grid" style={{ '--board-cols': board.columns } as CSSProperties}>
         {/* cards enter (and exit) on a diagonal stagger, each revealing its dots in Bayer order */}
-        {board.items.map((preset, i) => <DotWidget key={preset.id} type={preset.id} preset={preset} theme={theme} tick={preset.clock ? tick : undefined}
+        {board.items.map((preset, i) => <DotWidget key={preset.id} type={preset.id} preset={withAudio(preset)} theme={theme} tick={preset.clock ? tick : undefined}
           data={board.sources ? pick(live, preset.defaults) : undefined}
           {...(sharing ? { shared, sharedKeys: board.shared, onShared } : {})} {...cardMotion(i, board.columns, board.items.length, leaving)} />)}
       </div>

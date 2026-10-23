@@ -20,6 +20,7 @@ import { liveBoard, liveSources } from './boards/live'
 import type { Source } from '../data/source'
 import { mirrorBoard } from './boards/mirror'
 import { surfacesBoard, surfacesSources } from './boards/surfaces'
+import { scopeBoard, scopeShared } from './boards/scope'
 
 export interface BoardDef {
   id: string; title: string; columns: number; items: WidgetPreset[]
@@ -43,6 +44,7 @@ export const boards: BoardDef[] = [
   { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, items: audioBoard },
   { id: 'departures', title: 'DEPARTURES — LIVE TRANSIT BOARD', columns: 3, items: departuresBoard },
   { id: 'instrument', title: 'INSTRUMENT — DOT/480 DEVICE', columns: 3, items: instrumentBoard, shared: instrumentShared },
+  { id: 'scope', title: 'SCOPE — THE INSTRUMENT, SEEN', columns: 3, items: scopeBoard, shared: scopeShared },
   { id: 'ir', title: 'FIELD IR — DOT PROGRAMS', columns: 3, items: irBoard },
   { id: 'cinema', title: 'CINEMA — THE AFTERLIGHT CYCLE', columns: 3, items: cinemaBoard },
   { id: 'light', title: 'LIGHT — RASTER LIGHT STACK', columns: 3, items: lightBoard },
