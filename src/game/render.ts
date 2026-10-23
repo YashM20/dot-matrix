@@ -5,12 +5,12 @@
  * bullets and lights are dot sites, text goes through `T.big`. One red element per frame: the eyes,
  * the player, the queen's eye, the countdown or your entry.
  */
-import { castGrid, castHall, fog, lampAt, seam, HALL_FLOOR, type GridHit, type Hall } from '../engine/scene'
+import { castGrid, fog, lampAt, seam, type GridHit, type Hall } from '../engine/scene'
 import { clamp, hash01 } from '../engine/math'
 import { masks } from '../engine/motion'
 import type { DotStyle, Field, Layer } from '../engine/types'
 import { layer, layoutFor, tileStyle, type LatticeField } from '../widgets/types'
-import { CURSOR, EYE, QK, QUEEN, RUN_A, RUN_B, SKY_STARS, lift, surfaceSky } from '../widgets/boards/levels'
+import { CURSOR, EYE, MOON, QK, QUEEN, RUN_A, RUN_B, SKY_STARS, lift, ridge, surfaceSky } from '../widgets/boards/levels'
 import { SHIP } from '../widgets/sprites'
 import {
   FOCAL, FOV_PLANE, HORIZON, LETTERS, MAZE_K, MAZE_O, PH, QUEEN_HP, SHIP_ORIGIN, mazeScreen, queenEyeAt, toCamera,
@@ -77,12 +77,13 @@ export function shakeOffset(g: Game, reduced = false): Pt {
 
 // ── title ──────────────────────────────────────────────────────────────────────────────────────
 const TITLE_FLOOR: Hall = { vx: W / 2, vy: 98, f: 40, floor: 1, far: 16 }
+/** A ray-plane floor grid (as the title / game-over cards): depth is constant along a row, so cast once per row. */
 function floorGrid(h: Hall, scroll: number, peak: number) {
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
-    const hit = castHall(h, x, y)
-    let v = 0
-    if (hit && hit.s === HALL_FLOOR && (seam(hit.x + 50, .7, .03, hit.fp) || seam(hit.z + scroll, .8, .03, hit.fz))) v = peak * fog(hit.z, h.far, 1.1)
-    fb[y * W + x] = v
+  for (let y = 0; y < H; y++) {
+    const dy = (y - h.vy) / h.f, z = dy > 1e-9 ? h.floor / dy : Infinity, row = y * W
+    if (!(z < h.far)) { fb.fill(0, row, row + W); continue }
+    const fp = z / h.f, fz = (z * z) / (h.f * h.floor), across = seam(z + scroll, .8, .03, fz), v = peak * fog(z, h.far, 1.1)
+    for (let x = 0; x < W; x++) fb[row + x] = across || seam(((x - h.vx) / h.f) * z + 50, .7, .03, fp) ? v : 0
   }
 }
 function hiveMoon(cx: number, cy: number, R: number) {
@@ -154,10 +155,10 @@ function corridorLayers(g: Game): Layer[] {
         }
       } else if (yc >= hz) {
         const rd = rowRd[y], wx = c.x + rdx[x] * rd, wy = c.y + rdy[x] * rd, cf = rd / FOCAL
-        v = seam(wx, .5, .02, cf) || seam(wy, .5, .02, cf * 2) ? .02 : Math.min(.9, (.42 + .2 * hash01(Math.floor(wx * 2), Math.floor(wy * 2), 5)) * light(wx, .5, wy, N_FLOOR) * rowFog[y])
+        v = seam(wx, .5, .02, cf) || seam(wy, .5, .02, cf * 2) ? 0 : Math.min(.9, (.42 + .2 * hash01(Math.floor(wx * 2), Math.floor(wy * 2), 5)) * light(wx, .5, wy, N_FLOOR) * rowFog[y])
       } else {
         const rd = rowRd[y], wx = c.x + rdx[x] * rd, wy = c.y + rdy[x] * rd, cf = rd / FOCAL
-        v = seam(wx, 1, .1, cf) || seam(wy, 1, .1, cf * 2) ? Math.min(.8, .6 * light(wx, -.5, wy, N_CEIL) * rowFog[y]) : .02
+        v = seam(wx, 1, .1, cf) || seam(wy, 1, .1, cf * 2) ? Math.min(.8, .6 * light(wx, -.5, wy, N_CEIL) * rowFog[y]) : 0
       }
       fb[y * W + x] = y < 13 ? v * .35 : v
     }
@@ -240,9 +241,31 @@ function mazeLayers(g: Game, o: RenderOptions): Layer[] {
 // ── surface: parallax backdrop at card pitch, ground and actors on lattice 2 ───────────────────
 const BEE_A = ['#.#.#', '.###.', '..#..'], BEE_B = ['.....', '#####', '.#.#.']
 const STARS_WIDE: V3[] = [...SKY_STARS, ...SKY_STARS.map(([x, y, v]): V3 => [x + 96 > W - 2 ? x - 40 : x + 96, y + 3, v]).filter(([x]) => x > 144)]
+/**
+ * `surfaceSky` (levels.ts) into the scene buffer, with everything that depends only on the column
+ * (pine, ground band, ridge) worked out once per column. Same values cell for cell (checked in scripts/game.ts).
+ */
+export function skyInto(far: number, mid: number, out: Float32Array = fb): Float32Array {
+  for (let x = 0; x < W; x++) {
+    const xm = x + mid, n = Math.floor(xm / 19), c = n * 19 + 5 + Math.floor(hash01(n, 7) * 9), th = 12 + Math.floor(hash01(n, 8) * 14), top = 116 - th - 4
+    const band = 108 + Math.round(2 * Math.sin(xm * .05)), xf = x + far, h = ridge(xf), ry = 104 - Math.round(h), lit = ridge(xf + 1) < ridge(xf - 1) ? 0 : 1
+    const ax = Math.abs(xm - c), moonCol = Math.abs(x - MOON.x) <= MOON.r * 1.05 + 1
+    for (let y = 0; y < H; y++) {
+      let v = 0
+      if (y >= 116) v = 0
+      else if (y > top && y < 112 && ax <= (y - top) * .42) v = xm >= c ? .5 : .28
+      else if (y >= 112 && ax <= 1) v = .2
+      else if (y >= band) v = y === band ? .2 : .12
+      else if (y >= ry) v = y - ry < 3 && h > 36 ? .5 : (.11 + .07 * lit) * (1 - .45 * (y - ry) / (104 - ry + 6))
+      else if (moonCol) v = surfaceSky(x, y, far, mid)
+      out[y * W + x] = lift(v)
+    }
+  }
+  return out
+}
 function surfaceLayers(g: Game, o: RenderOptions): Layer[] {
   const s = g.s, cam = s.cam, far = Math.floor(cam * 2 * .12), mid = Math.floor(cam * 2 * .45)
-  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) fb[y * W + x] = lift(surfaceSky(x, y, far, mid))
+  skyInto(far, mid)
   const lw = W / SURF_K, lh = H / SURF_K, gate = SURFACE.gate
   const ground: Field = (u, v) => {
     const c = Math.round(u * (lw - 1)), r = Math.round(v * (lh - 1)), w = c + cam
