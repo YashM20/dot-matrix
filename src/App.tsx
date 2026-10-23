@@ -4,6 +4,7 @@ import { Changelog } from './components/Changelog'
 import { DrawBoard } from './components/draw/DrawBoard'
 import { DotWidget } from './components/DotWidget'
 import { DotsRepl } from './components/dwitter/DotsRepl'
+import { CommandLayer } from './components/palette/CommandLayer'
 import { ControlsPanel } from './components/playground/ControlsPanel'
 import { DataEditor } from './components/playground/DataEditor'
 import { ExportPanel } from './components/playground/ExportPanel'
@@ -32,7 +33,7 @@ export default function App() {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const [view, leaving] = useExitSwap(`${tab}|${board}`, shown => reduced || !/^(BOARDS|GALLERY)\|/.test(shown) ? 0 : VIEW_EXIT_MS)
   const [shownTab, shownBoard] = view.split('|') as [Tab, string]
-  if (singleCard) return <main className="shell"><section className="gallery-view"><div className="gallery-grid"><DotWidget type={singleCard} /></div></section></main>
+  if (singleCard) return <main className="shell"><section className="gallery-view"><div className="gallery-grid"><DotWidget type={singleCard} /></div></section><CommandLayer tab="BOARDS" board={board} /></main>
   return <main className="shell">
     <h1 className="sr-only">DOT/480 dot-matrix UI engine</h1>
     <header className="topbar"><div className="brand"><i aria-hidden="true"/> DOT/480 <small>{tab === 'WORKSPACE' ? 'PLAYGROUND' : tab}</small></div>
@@ -73,5 +74,7 @@ export default function App() {
         </div>
       </section>
     )}
+    {/* C10: ⌘K palette, dot shell, X-ray inspector, time machine */}
+    <CommandLayer tab={tab} board={board} setTab={t => setTab(t as Tab)} setBoard={setBoard} />
     <footer className="bottom">DOT/480 / <b>CONFIGURATION 01</b><span>FIELD → GRID SAMPLER → RENDERER</span><span>STATUS: <b>NOMINAL</b></span></footer></main>
 }

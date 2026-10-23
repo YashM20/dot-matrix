@@ -5,6 +5,8 @@ import type { WidgetPreset } from '../widgets'
 import { widgetById, withChrome } from '../widgets'
 import { DotCanvas, type DotCanvasProps } from './DotCanvas'
 import { useCamera, withMedia } from '../media/useCamera'
+import { useXRay } from './xray/useXRay'
+import { XRayOverlay } from './xray/XRayOverlay'
 
 export interface DotWidgetProps {
   /** Preset id from `widgetPresets` (ignored when `preset` is given). */
@@ -42,6 +44,8 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
   const merged = { ...preset?.defaults, ...data, ...shared, ...local }
   const camera = useCamera(preset?.media === 'camera', !!merged.cam, preset?.grid)
   const layers = useMemo(() => preset && (preset.media ? withMedia(withChrome(preset), camera.read) : withChrome(preset)), [preset, camera.read])
+  // C10 X-ray slot: identity (same layers, no override) unless this card is X-rayed with a layer soloed / muted
+  const xr = useXRay(layers)
   const sharedKey = sharedKeys?.join(',') ?? ''
   const onInput = useCallback((patch: ControlPatch) => {
     // split the patch: shared keys go to the board store, the rest stay on this card
@@ -66,14 +70,16 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
   return (
     // role="img": the card is one dot-matrix picture; its children (label text, canvas) are presentational.
     // An interactive card is a group instead, so its accessibility overlay (real controls) stays reachable.
-    <div className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}`} role={interactive ? 'group' : 'img'} aria-label={preset.live ? `${preset.name} (live)` : preset.name}>
+    <div className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}`} role={interactive ? 'group' : 'img'} data-xr-key={xr.key} data-card-id={preset.id} aria-label={preset.live ? `${preset.name} (live)` : preset.name}>
       {preset.chrome !== 'dots' && <header className="dot-card-head" aria-hidden="true">
         <span className="dot-card-label">{preset.name.toUpperCase()}</span>
         {preset.live && <i className="status-dot" />}
       </header>}
       <div className="dot-card-body">
-        <DotCanvas layers={layers} data={preset.media ? { ...merged, ...camera.data } : merged} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={camera.status === 'live' ? 30 : undefined} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
+        <DotCanvas layers={xr.layers} renderer={xr.renderer} onMode={xr.onMode} data={preset.media ? { ...merged, ...camera.data } : merged} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={camera.status === 'live' ? 30 : undefined} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
           controls={interactive ? controls : undefined} onInput={interactive ? onInput : undefined} />
+        {xr.on && <XRayOverlay xr={xr} preset={preset} layers={layers} data={preset.media ? { ...merged, ...camera.data } : merged} grid={grid} style={style} theme={theme}
+          animated={!!(animated ?? preset.animated)} fps={camera.status === 'live' ? 30 : undefined} tick={tick} />}
       </div>
     </div>
   )
