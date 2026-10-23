@@ -5,7 +5,7 @@
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
 ## Status board (updated 2026-10-22)
-**Where we are:** On branch `feat/p1-complete`: P0 agent items done (P0-A mosaic mount ~31–34 ms, gate 30 ms, still open). P1-A..F done. P2-A..J done (browser + axe pass done; only `--mute` contrast 4.14:1 left, a design call). P3-A..G done: light/raster engine, Cinema, Levels, lift pass, Field IR v0, multi-tone layer, materials + time-of-day light. P4–P6 not started. 128 presets.
+**Where we are:** On branch `feat/p1-complete`: P0 agent items done (P0-A mosaic mount ~31–34 ms, gate 30 ms, still open). P1-A..F done. P2-A..J done (browser + axe pass done; only `--mute` contrast 4.14:1 left, a design call). P3-A..G done: light/raster engine, Cinema, Levels, lift pass, Field IR v0, multi-tone layer, materials + time-of-day light. P4-A..G done (agent side): sim engine, Heartbeat, Glyph, migration + SDF morph, live data, webcam halftone mirror, MCP App + describe(). P5 started 2026-10-23 (parallel agents). P6 not started. 146 presets.
 `main` = `666c0eb` (PR #2 merged: TILE boards + P0 + P1 motion core).
 
 | Phase | Plan | Done | State |
@@ -14,8 +14,8 @@
 | P1 Motion, states, choreography | 2.5 wk | visible items done (P1-A..F) | 🟢 Needs browser checks + Departures taste pass |
 | P2 Interaction + Components v2 | 3 wk | P2-A..J done | 🟢 Instrument taste pass + `--mute` contrast decision left |
 | P3 Depth, light, material, Field IR | 3 wk | P3-A..G done | 🟢 Taste passes (Cinema, Levels, light) + exit gates left |
-| P4 Hero transitions, simulation, agents, live data | 3 wk | P4-A..C v0 | 🔵 **Active**: migration, SDF morph, live data, MCP App left |
-| P5 GPU, devices, display physics | 3 wk | 0 | ⚪ |
+| P4 Hero transitions, simulation, agents, live data | 3 wk | P4-A..G done | 🟢 Taste passes, real-host MCP test, 60 s Glyph recording gate left |
+| P5 GPU, devices, display physics | 3 wk | started | 🔵 **Active**: P5-A..E running as parallel agents |
 | P6 Authoring + ecosystem | 4 wk | 0 | ⚪ |
 | Track L (Perception Lab) / Track R (research spikes) | parallel | 0 | ⚪ |
 
