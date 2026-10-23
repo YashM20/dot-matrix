@@ -7,6 +7,7 @@ import { remoteSampler } from '../workers/client'
 import { quantizeTime, sharedClock } from '../engine/clock'
 import { DataSprings, duration as motionDuration, ease, maskByName, revealDots, transitionDots, type MaskName } from '../engine/motion'
 import { renderSVG } from '../engine/renderer/svgRenderer'
+import { hasGPULayers, renderWebGL, splitGPULayers, webglReady, type GPUPass } from '../engine/renderer/webgl'
 import { migrate as migrateDots, type MigrateOptions, type Migration } from '../engine/migrate'
 import type { Control, ControlPatch, DotInstance, DotStyle, Field, GridConfig, Layer, ThemeTokens } from '../engine'
 import { dot480 } from '../engine'
@@ -15,7 +16,8 @@ import { useDotField } from '../hooks/useDotField'
 import { useControlInput } from '../hooks/useControlInput'
 import { ControlOverlay } from './ControlOverlay'
 
-export type RenderMode = 'svg' | 'canvas'
+/** `webgl` (P5): the canvas surface drawn through the shared WebGL2 context; picked for cards with GPU layers when WebGL2 works. */
+export type RenderMode = 'svg' | 'canvas' | 'webgl'
 export interface DotCanvasProps {
   field?: Field
   layers?: (ctx: WidgetContext) => Layer[]
@@ -263,10 +265,13 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
 
   const visible = useMemo(() => { let n = 0; for (const d of dots) if (d.opacity > 0 && d.r > 0) n++; return n }, [dots])
   // transients animate on canvas; a sparse card hands back to SVG when they finish
-  const mode: RenderMode = renderer ?? (animated || live || transient || visible > CANVAS_THRESHOLD ? 'canvas' : 'svg')
+  // WebGL2 (P5): forced, or picked for a card whose layers carry GPU passes (`gpuIR` / `gpuValues`); it draws on the canvas surface
+  const gpuCard = useMemo(() => { try { return !renderer && !!layers && hasGPULayers(layers({ t: 0, frame: 0, data: data ?? {}, grid })) && webglReady() } catch { return false } }, [layers, renderer]) // eslint-disable-line react-hooks/exhaustive-deps
+  const webgl = renderer === 'webgl' || gpuCard, gpuFade = useRef(1)
+  const mode: RenderMode = renderer && renderer !== 'webgl' ? renderer : (webgl || animated || live || transient || visible > CANVAS_THRESHOLD ? 'canvas' : 'svg')
   const svg = useMemo(() => mode === 'svg' ? renderSVG(dots, width, height) : '', [mode, dots, width, height])
   const scale = useBackingScale(canvasRef, mode === 'canvas', width)
-  useEffect(() => { onMode?.(mode) }, [mode, onMode])
+  useEffect(() => { onMode?.(webgl && mode === 'canvas' ? 'webgl' : mode) }, [mode, webgl, onMode])
 
   const prepare = (canvas: HTMLCanvasElement) => {
     const context = canvas.getContext('2d')
@@ -277,11 +282,11 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     return context
   }
   /** `drawn` = the data this frame shows (dev latency probe: answers the input events it reflects). */
-  const draw = (canvas: HTMLCanvasElement, frame: DotInstance[], drawn: Record<string, number> = data ?? {}) => {
+  const draw = (canvas: HTMLCanvasElement, frame: DotInstance[], drawn: Record<string, number> = data ?? {}, passes: GPUPass[] = []) => {
     const context = prepare(canvas)
     if (!context) return
     context.clearRect(0, 0, width, height)
-    renderCanvas(context, frame)
+    if (!webgl || !renderWebGL(context, frame, passes, theme, gpuFade.current)) renderCanvas(context, frame)
     input.drawn(drawn)
   }
   /**
@@ -310,10 +315,12 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     if (tr.kind === 'exit') {
       // never ends on its own: the blank frame holds until the card unmounts or the exit is cleared
       const p = ease.accelerate(Math.min(1, Math.max(0, (elapsed - tr.delay / 1000) / (tr.duration / 1000))))
+      gpuFade.current = 1 - p
       return revealDots(frame, { ...geometry, p, mask: maskByName(tr.mask), edge: .06, exit: true })
     }
     if (tr.kind === 'enter') {
       const p = ease.decelerate(elapsed / ((enterSpec?.duration ?? motionDuration.enter) / 1000))
+      gpuFade.current = Math.min(1, Math.max(0, p))
       if (p >= 1) { transientRef.current = null; setTransient(null); return frame }
       return revealDots(frame, { ...geometry, p, mask: maskByName(enterSpec?.mask), edge: .06 })
     }
@@ -367,12 +374,16 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     // P5-B: a registered preset card is sampled in the worker (main thread only draws). On this thread instead
     // while a transient runs, while a control is engaged (input answers without a worker round trip), for the
     // first frame and when no worker is available — into a reused DotBuffer unless a transient needs DotInstance[]
-    const remote = remoteSampler(layers, (buf, _t, bitmap) => { if (!transientRef.current && !engagedNow()) drawBuffer(canvas, buf, frameData, bitmap); else bitmap?.close() })
+    const remote = webgl ? null : remoteSampler(layers, (buf, _t, bitmap) => { if (!transientRef.current && !engagedNow()) drawBuffer(canvas, buf, frameData, bitmap); else bitmap?.close() })
     const engagedNow = () => { const ix = input.ixRef.current; return !!(ix && (ix.hover || ix.pressed || ix.focus || ix.pointers?.length)) }
     const local = acquireDotBuffer(cols * rows)
     const frameAt = (t: number, frame: number, sync: boolean) => {
       const d = springKey && springsRef.current ? { ...frameData, ...springsRef.current.at(t) } : frameData
-      if (transientRef.current) draw(canvas, applyTransient(sampleLayers(layers({ t, frame, data: d, grid: g, ...input.ixRef.current }), g, s, theme), t), frameData)
+      // P5-A: GPU passes leave the CPU sample and are drawn by WebGL2 under the rest, on this thread (all CPU when WebGL2 is unavailable or lost)
+      if (webgl && webglReady()) {
+        const { cpu, passes } = splitGPULayers(layers({ t, frame, data: d, grid: g, ...input.ixRef.current }), g, s, gridPitch ?? theme.gridPx)
+        draw(canvas, applyTransient(sampleLayers(cpu, g, s, theme), t), frameData, passes)
+      } else if (transientRef.current) draw(canvas, applyTransient(sampleLayers(layers({ t, frame, data: d, grid: g, ...input.ixRef.current }), g, s, theme), t), frameData)
       else if (remote && !remote.failed && !sync && !engagedNow()) remote.request(t, frame, d, g, s, theme, { w: Math.round(width * scale), h: Math.round(height * scale), scale })
       else drawBuffer(canvas, sampleLayersInto(layers({ t, frame, data: d, grid: g, ...input.ixRef.current }), g, s, theme, local), frameData)
     }
@@ -398,7 +409,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     }
     const off = sharedClock().subscribe(sub), unbind = bindLive(sub)
     return () => { off(); unbind(); remote?.dispose(); releaseDotBuffer(local) }
-  }, [live, ready, mode, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, theme, dataKey, springKey, fps, motion, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [live, ready, mode, webgl, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, theme, dataKey, springKey, fps, motion, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const surface = mode === 'canvas'
     ? <canvas ref={canvasRef} className={className} style={{ width: '100%', height: 'auto', display: 'block', aspectRatio: `${width} / ${height}` }} aria-hidden="true" />
