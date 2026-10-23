@@ -41,7 +41,7 @@ function Toolbar() {
       replace(importDots(await decodeShare(p)), 'imported DOTS program')
     } catch (e) { setNote(`DOTS import failed: ${(e as Error).message}`) }
   }
-  const save = () => { setLib(librarySave(card)); setNote(`saved "${card.name}" to this browser`) }
+  const save = () => { try { setLib(librarySave(card)); setNote(`saved "${card.name}" to this browser`) } catch (e) { setNote((e as Error).message) } }
   return (
     <div className="pg-panel st-toolbar" role="toolbar" aria-label="Document">
       <div className="st-row st-wrap">
@@ -75,7 +75,7 @@ export function Studio() {
     const onKey = (e: KeyboardEvent) => {
       if (!(e.ctrlKey || e.metaKey)) return
       const k = e.key.toLowerCase()
-      if (k === 's') { e.preventDefault(); librarySave(useStudio.getState().h.present); useStudio.getState().setNote('saved to this browser') }
+      if (k === 's') { e.preventDefault(); try { librarySave(useStudio.getState().h.present); useStudio.getState().setNote('saved to this browser') } catch (err) { useStudio.getState().setNote((err as Error).message) } }
       else if (k === 'z' && !e.shiftKey) { e.preventDefault(); undo() }
       else if ((k === 'z' && e.shiftKey) || k === 'y') { e.preventDefault(); redo() }
     }

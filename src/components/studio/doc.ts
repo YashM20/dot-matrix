@@ -344,7 +344,8 @@ export const STORAGE_KEY = 'dot480.studio.v1'
 export const LIBRARY_KEY = 'dot480.studio.library'
 type KV = Pick<Storage, 'getItem' | 'setItem'>
 const store = (): KV | undefined => { try { return globalThis.localStorage } catch { return undefined } }
-export function saveLocal(c: StudioCard, kv = store()) { kv?.setItem(STORAGE_KEY, JSON.stringify(c)) }
+/** Autosave; false when storage is missing or full (a card with big baked rasters can exceed the quota). */
+export function saveLocal(c: StudioCard, kv = store()): boolean { try { kv?.setItem(STORAGE_KEY, JSON.stringify(c)); return !!kv } catch { return false } }
 export function loadLocal(kv = store()): StudioCard | undefined {
   const s = kv?.getItem(STORAGE_KEY)
   if (!s) return undefined
@@ -354,7 +355,7 @@ export function loadLocal(kv = store()): StudioCard | undefined {
 export function librarySave(c: StudioCard, kv = store()): StudioCard[] {
   const list = libraryList(kv).filter(x => x.id !== c.id)
   const next = [c, ...list].slice(0, 24)
-  kv?.setItem(LIBRARY_KEY, JSON.stringify(next))
+  try { kv?.setItem(LIBRARY_KEY, JSON.stringify(next)) } catch { throw new Error('browser storage is full: download the card as JSON instead') }
   return next
 }
 export function libraryList(kv = store()): StudioCard[] {
