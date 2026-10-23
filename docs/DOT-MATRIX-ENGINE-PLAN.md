@@ -5,7 +5,7 @@
 ## Module Map
 ```
 src/engine/                       framework-free TypeScript + Canvas/SVG APIs only
-  types.ts                        Field (+ optional cell bounds), GridConfig, DotStyle, ThemeTokens, DotInstance, Layer (tone, lattice, origin, sites), Tone
+  types.ts                        Field (+ optional cell bounds), GridConfig, DotStyle, ThemeTokens, DotInstance, Layer (tone or per-cell `toneOf` multi-tone, lattice, origin, sites), Tone
   theme/tokens.ts                 dot480, deerflowMosaic presets
   sampler/gridSampler.ts          sampleField, sampleLayers (card grid + coarser lattices + dot sites), latticeGrid, colorFor, toneColor, cellU
   sampler/quantize.ts, jitter.ts
@@ -32,7 +32,7 @@ scripts/snap.ts                   headless card/board PNG snapshots — `pnpm sn
 ```
 
 ## Pipeline
-Every visual = `Layer[]` (each a `Field(u,v) → [0,1]` plus a colour `Tone`) → `sampleLayers(grid, style, theme)` → `DotInstance[]` → SVG | Canvas.
+Every visual = `Layer[]` (each a `Field(u,v) → [0,1]` plus a colour `Tone`, or a per-cell `toneOf(value, u, v)` read in the same sampler pass for one field drawn in several tones) → `sampleLayers(grid, style, theme)` → `DotInstance[]` → SVG | Canvas.
 Per cell the layer with the highest value wins and decides the colour; later layers win ties. `tone: 'active'` is the single accent — one element per card.
 
 ### Cell-space layout

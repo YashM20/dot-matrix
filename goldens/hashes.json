@@ -731,12 +731,12 @@
   },
   "light-orb": {
    "t=0": {
-    "hash": "e6b6b6be",
-    "dots": 1886
+    "hash": "fcfc61c7",
+    "dots": 1881
    },
    "t=1.3": {
-    "hash": "da9b6a2a",
-    "dots": 1883
+    "hash": "fcfc61c7",
+    "dots": 1881
    }
   },
   "light-on-air": {
@@ -747,6 +747,66 @@
    "t=1.3": {
     "hash": "d62459c9",
     "dots": 1372
+   }
+  },
+  "light-matte": {
+   "t=0": {
+    "hash": "e56d7870",
+    "dots": 1451
+   },
+   "t=1.3": {
+    "hash": "e56d7870",
+    "dots": 1451
+   }
+  },
+  "light-gloss": {
+   "t=0": {
+    "hash": "b3f94c78",
+    "dots": 1308
+   },
+   "t=1.3": {
+    "hash": "b3f94c78",
+    "dots": 1308
+   }
+  },
+  "light-glass": {
+   "t=0": {
+    "hash": "bf2c51aa",
+    "dots": 1315
+   },
+   "t=1.3": {
+    "hash": "bf2c51aa",
+    "dots": 1315
+   }
+  },
+  "light-emissive": {
+   "t=0": {
+    "hash": "56bb494e",
+    "dots": 2254
+   },
+   "t=1.3": {
+    "hash": "56bb494e",
+    "dots": 2254
+   }
+  },
+  "light-metal": {
+   "t=0": {
+    "hash": "d545a3aa",
+    "dots": 1542
+   },
+   "t=1.3": {
+    "hash": "d545a3aa",
+    "dots": 1542
+   }
+  },
+  "light-fabric": {
+   "t=0": {
+    "hash": "6848750e",
+    "dots": 1501
+   },
+   "t=1.3": {
+    "hash": "6848750e",
+    "dots": 1501
    }
   },
   "lv-title": {

@@ -96,10 +96,11 @@ export interface ToneStop {
   blend?: number
 }
 /**
- * Split one static field into tone layers (cool grey → warm → hot, shadow → mid → highlight). `field` is
- * evaluated once per cell of `grid` and the band and value memoised, so N tones cost one evaluation, not N.
- * Values below the first stop draw nothing. Off-grid samples (thumbnails) are computed directly.
- * Like `baked`, only for fields that never change (no `t`, no data); `seed` picks the dither hash.
+ * One static field drawn in several tones (cool grey → warm → hot, shadow → mid → highlight), as a single
+ * multi-tone layer (`Layer.toneOf`): `field` is evaluated once per cell of `grid` and the band and value
+ * memoised, and the sampler reads value and tone in one scan. Values below the first stop draw nothing.
+ * Off-grid samples (thumbnails) are computed directly. Returned as a one-element array so it spreads into
+ * a layer stack. Like `baked`, only for fields that never change (no `t`, no data); `seed` picks the dither hash.
  */
 export function toneRamp(field: Field, stops: ToneStop[], { grid = TILE, seed = 7 }: { grid?: GridConfig; seed?: number } = {}): Layer[] {
   const { cols, rows } = grid
@@ -113,42 +114,46 @@ export function toneRamp(field: Field, stops: ToneStop[], { grid = TILE, seed = 
     }
     hit = -1; hitValue = 0
   }
-  // On first use: one pass over the field's window fills a value table per tone (Float32, the sampler's own
-  // precision) and a cell box per tone per band of STRIP rows. Each tone is emitted as one layer per strip,
-  // bounded to that box, so the sampler visits a tone only where it lands (N tones ≈ one pass, not N).
-  const STRIP = 12, strips = Math.ceil(rows / STRIP)
-  let tables: Float32Array[] | undefined, boxes: [number, number, number, number][] = []
+  // On first use: one pass over the field's window fills the value (Float32, the sampler's own precision)
+  // and band of every cell, and the box of lit cells (the layer's bounds).
+  let values: Float32Array | undefined, bands: Int8Array | undefined
+  const box: [number, number, number, number] = [cols, rows, -1, -1]
   const fill = () => {
-    if (tables) return tables
-    tables = stops.map(() => new Float32Array(cols * rows))
-    boxes = Array.from({ length: stops.length * strips }, (): [number, number, number, number] => [cols, rows, -1, -1])
+    if (values) return
+    values = new Float32Array(cols * rows); bands = new Int8Array(cols * rows).fill(-1)
     const b = field.bounds
     const c0 = b ? Math.max(0, Math.floor(b[0])) : 0, r0 = b ? Math.max(0, Math.floor(b[1])) : 0
     const c1 = b ? Math.min(cols - 1, Math.ceil(b[2])) : cols - 1, r1 = b ? Math.min(rows - 1, Math.ceil(b[3])) : rows - 1
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       pick(cellU(c, cols), cellU(r, rows), c, r)
       if (hit < 0) continue
-      tables[hit][r * cols + c] = hitValue
-      const box = boxes[hit * strips + Math.floor(r / STRIP)]
+      values[r * cols + c] = hitValue; bands[r * cols + c] = hit
       if (c < box[0]) box[0] = c
       if (r < box[1]) box[1] = r
       if (c > box[2]) box[2] = c
       if (r > box[3]) box[3] = r
     }
-    return tables
   }
-  return stops.flatMap((s, k) => Array.from({ length: strips }, (_, strip) => {
-    const f: Field = (u, v) => {
-      const x = u * (cols - 1), y = v * (rows - 1), c = Math.round(x), r = Math.round(y)
-      // a cell centre reads the table (its own strip only); anything else (thumbnails, another grid) is computed directly
-      if (c >= 0 && r >= 0 && c < cols && r < rows && Math.abs(x - c) < 1e-6 && Math.abs(y - r) < 1e-6) return Math.floor(r / STRIP) === strip ? fill()[k][r * cols + c] : 0
-      if (Math.floor(Math.max(0, Math.min(rows - 1, r)) / STRIP) !== strip) return 0
-      pick(u, v, c, r)
-      return hit === k ? hitValue : 0
-    }
-    Object.defineProperty(f, 'bounds', { get: () => (fill(), boxes[k * strips + strip]), enumerable: true })
-    return { field: f, tone: s.tone }
-  }))
+  /** Table index of a cell centre of `grid`, else -1 (thumbnails, another grid: computed directly). */
+  const cellAt = (u: number, v: number) => {
+    const x = u * (cols - 1), y = v * (rows - 1), c = Math.round(x), r = Math.round(y)
+    return c >= 0 && r >= 0 && c < cols && r < rows && Math.abs(x - c) < 1e-6 && Math.abs(y - r) < 1e-6 ? r * cols + c : -1
+  }
+  const offGrid = (u: number, v: number) => pick(u, v, Math.round(u * (cols - 1)), Math.round(v * (rows - 1)))
+  const f: Field = (u, v) => {
+    const i = cellAt(u, v)
+    if (i >= 0) { fill(); return values![i] }
+    offGrid(u, v)
+    return hit >= 0 ? hitValue : 0
+  }
+  Object.defineProperty(f, 'bounds', { get: () => (fill(), box), enumerable: true })
+  const toneOf = (_: number, u: number, v: number): Tone | undefined => {
+    const i = cellAt(u, v)
+    if (i >= 0) { fill(); return stops[bands![i]]?.tone }
+    offGrid(u, v)
+    return stops[hit]?.tone
+  }
+  return [{ field: f, toneOf }]
 }
 export const staticLayers = (layers: Layer[]) => () => layers
 /** Flatten a preset to a single field (thumbnails, exports, tests). */

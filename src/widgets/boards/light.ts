@@ -6,7 +6,7 @@
  * gloss), never one grey ramp. Red only on the ON AIR sign (emissive = live).
  */
 import { blur, outline, rasterize, sample, type Raster } from '../../engine/raster'
-import { bloom, heightRaster, illuminate, lambert, lightDir, normalRaster, phong, sdfBox, sdfCircle, sdfRing, sdfSubtract, sdfUnion, stackHeights, torch, type Light } from '../../engine/light'
+import { bloom, emissive, fabric, glass, gloss as glossMaterial, heightRaster, hourOf, illuminate, lambert, matte, metal, normalRaster, phong, sdfBox, sdfCircle, sdfRing, sdfSubtract, sdfUnion, stackHeights, sunAt, torch, type Light } from '../../engine/light'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { smoothstep } from '../../engine/math'
 import type { Field, Layer, Tone } from '../../engine/types'
@@ -75,13 +75,17 @@ export const lightTorch: WidgetPreset = {
 }
 
 // ── ORB ─────────────────────────────────────────────────────────────────────
-// A gloss sphere under a slow sun (the board-wide light direction idea): Lambert body in three bands,
+// A gloss sphere under the board's sun (the time-of-day light): Lambert body in three bands,
 // the Phong highlight two size steps up, and a soft contact shadow cut out of a faint floor.
 const ORB = { cx: 35.75, cy: 33, r: 21 }
 const SPHERE = normalRaster(heightRaster(sdfCircle(LG, ORB.cx, ORB.cy, ORB.r), { width: ORB.r }, LG))
 /** The orb's own coverage: the floor never shows through its dark underside. */
 const BODY_MASK = sample({ ...SPHERE, data: SPHERE.mask })
-const sun = (t: number) => lightDir(-.95 + .55 * Math.sin(t * .35), .78)
+/**
+ * The board-wide light: the sun of the wall-clock hour (`sunAt`), shared by the orb and the materials,
+ * so the whole board is lit from one side and the light walks across it over the day.
+ */
+function boardSun() { return sunAt(hourOf(new Date())) }
 /** Floor: a pool of dots under the orb, fading out to the sides (a table top seen at a low angle). */
 const floorDots: Field = (u, v) => {
   const x = u * (LG.cols - 1) - ORB.cx, y = v * (LG.rows - 1) - 59.5, e = Math.sqrt((x / 33) ** 2 + (y / 6.5) ** 2)
@@ -102,8 +106,8 @@ const shadows = new Map<number, Field>()
 const blurred = (r: Raster) => { const b = blur(r, 2.5); for (let i = 0; i < b.data.length; i++) b.data[i] = Math.min(1, b.data[i] * 1.5); return b }
 export const lightOrb: WidgetPreset = {
   id: 'light-orb', name: 'Orb', group: 'composite', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
-  layers: ({ t }) => {
-    const L = sun(t), diffuse = lambert(SPHERE, L, { ambient: .16 }), specular = phong(SPHERE, L, [0, 0, 1], 60)
+  layers: () => {
+    const L = boardSun(), diffuse = lambert(SPHERE, L, { ambient: .16 }), specular = phong(SPHERE, L, [0, 0, 1], 60)
     const shadow = contactShadow(L), floor: Field = (u, v) => floorDots(u, v) * (1 - shadow(u, v)) * (1 - BODY_MASK(u, v))
     floor.bounds = floorDots.bounds
     return [layer(LAT.at(floor), 'mid'), ...banded(diffuse), gloss(diffuse, specular, .3)]
@@ -149,4 +153,32 @@ export const lightOnAir: WidgetPreset = {
   ],
 }
 
-export const lightBoard = [lightTorch, lightOrb, lightOnAir]
+// ── MATERIALS ───────────────────────────────────────────────────────────────
+// One ball, six dot vocabularies (src/engine/light/material.ts), all under the board's light: the sun
+// of the wall-clock hour (`sunAt`), or the pointer as a torch while it is over the card.
+const BALL = { cx: 35.75, cy: 36.5, r: 22 }
+const BALL_SDF = sdfCircle(LG, BALL.cx, BALL.cy, BALL.r)
+const BALL_N = normalRaster(heightRaster(BALL_SDF, { width: BALL.r }, LG))
+const AT = { lattice: K, origin: [0, 0] as [number, number] }
+/** The board light: the pointer as a torch over this card, else the sun of the current hour. */
+function boardLight(ctx: WidgetContext): Light {
+  const p = ctx.pointers?.find(q => q.inside && !q.up)
+  return p ? torch(toLat(p.x), toLat(p.y), 34, 150) : boardSun()
+}
+const caption = (s: string) => layer(T.big(s, 72, 126, { lattice: 1, align: 'center' }), 'mid')
+function materialCard(id: string, name: string, note: string, body: (ctx: WidgetContext) => Layer[]): WidgetPreset {
+  return { id, name, group: 'composite', chrome: 'dots', animated: true, grid: TILE, style: tileStyle, layers: ctx => [...body(ctx), caption(note)] }
+}
+/** What the glass ball stands in front of: vertical rules on the lattice, a band across the card. */
+const RULES: Field = (u, v) => { const c = Math.round(u * (LG.cols - 1)), r = Math.round(v * (LG.rows - 1)); return r >= 12 && r <= 61 && c >= 4 && c <= 67 && c % 4 === 0 ? .5 : 0 }
+RULES.bounds = [4, 12, 67, 61]
+/** The lit bulb: full dots, one size step down on the outer ring (the limb of a glowing ball). */
+const BALL_LIGHT = rasterize((u, v) => { const d = BALL_SDF(u, v); return d > 0 ? 0 : d > -5 ? .75 : 1 }, LG)
+export const lightMatte = materialCard('light-matte', 'Matte', 'LAMBERT', ctx => matte(BALL_N, boardLight(ctx), AT))
+export const lightGloss = materialCard('light-gloss', 'Gloss', '+2 STEPS', ctx => glossMaterial(BALL_N, boardLight(ctx), AT).layers)
+export const lightGlass = materialCard('light-glass', 'Glass', 'REFRACT', ctx => glass(BALL_N, boardLight(ctx), RULES, AT).layers)
+export const lightEmissive = materialCard('light-emissive', 'Emissive', 'BLOOM', () => emissive(BALL_LIGHT, { ...AT, radius: 4.5, lift: .7, coreTone: 'value', haloBands: [[.1, .45, 'faint'], [.45, 2, 'mid']] }).layers)
+export const lightMetal = materialCard('light-metal', 'Metal', 'ENVIRONMENT', ctx => metal(BALL_N, boardLight(ctx), AT).layers)
+export const lightFabric = materialCard('light-fabric', 'Fabric', 'BAYER 4', ctx => fabric(BALL_N, boardLight(ctx), AT).layers)
+
+export const lightBoard = [lightTorch, lightOrb, lightOnAir, lightMatte, lightGloss, lightGlass, lightEmissive, lightMetal, lightFabric]
