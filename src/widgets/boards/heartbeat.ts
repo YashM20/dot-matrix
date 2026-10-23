@@ -194,3 +194,37 @@ const hbAgent: WidgetPreset = {
 }
 
 export const heartbeatBoard = [hbThinking, hbToolRunning, hbAwaiting, hbError, hbDone, hbAgent]
+
+// ── LIVE ── the card an agent drives from outside (MCP App `ui://dot-card/heartbeat`): `data.state`
+// 0..4 (sprung by the host page) picks the parameters; `label` replaces the status line's left text.
+// A single card, so the awaiting-approval pulse may spend the accent. Not on a board (goldens unchanged).
+const liveCards = new Map<string, WidgetPreset>()
+/** `label` uppercased and truncated so it fits on the status line left of `right`. */
+const fitLabel = (label: string, right: string) => {
+  let s = label.toUpperCase().replace(/\s+/g, ' ').trim()
+  const room = TILE.cols - T.size(right)[0] - 6
+  while (s && T.size(s)[0] > room) s = s.slice(0, -1).trimEnd()
+  return s
+}
+/** The live heartbeat card for an optional status label (memoised per label so renderers see a stable preset). */
+export function heartbeatCard(label?: string): WidgetPreset {
+  const key = label ?? ''
+  let p = liveCards.get(key)
+  if (!p) liveCards.set(key, (p = {
+    id: 'hb-live', name: 'AGENT HEARTBEAT', label: '', ...tile, animated: true,
+    defaults: { state: 0 },
+    springKeys: ['state'],
+    layers: ctx => {
+      const s = clamp(Number.isFinite(ctx.data.state) ? ctx.data.state : 0, 0, 4), i0 = Math.min(3, Math.floor(s)), sel = HEARTBEAT_STATES[Math.round(s)]
+      const p = blendStates(HEARTBEAT[HEARTBEAT_STATES[i0]], HEARTBEAT[HEARTBEAT_STATES[i0 + 1]], s - i0)
+      const right = STATUS[sel][1](ctx.t), left = label ? fitLabel(label, right) : STATUS[sel][0]
+      return [
+        layer(T.text(sel.replace('-', ' ').toUpperCase(), 0, 0), 'idle'),
+        ...scene(p, ctx.t, STAGE, true),
+        layer(T.text(left, 0, FOOT), 'mid'),
+        layer(T.text(right, TILE.cols - 1, FOOT, { align: 'right' }), 'value'),
+      ]
+    },
+  }))
+  return p
+}

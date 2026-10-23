@@ -4,7 +4,12 @@ export type CellBounds = [number, number, number, number]
  * A field maps u/v in [0,1]² to a value in [0,1]. Cell-space layout helpers also attach `bounds`
  * (the only cells that can be non-zero) so the sampler can skip the rest of the grid.
  */
-export interface Field { (u: number, v: number): number; bounds?: CellBounds }
+export interface Field {
+  (u: number, v: number): number
+  bounds?: CellBounds
+  /** The string a text helper (`textAt`) drew — metadata for `describe()`, never read by the sampler. */
+  text?: string
+}
 
 export interface GridConfig { cols: number; rows: number; pitch?: number; aspect?: number }
 export interface DotStyle {

@@ -663,5 +663,31 @@ import { simBoard, simBoardSims } from '../src/widgets/boards/sim'
   assert('sim board: cold mount at t = 1, 60, 3600 s stays within each sim\'s maxSteps (looped), never lags', boundOk, rows.join('; '))
 }
 
+// ── P4-G: describe() — agents read any board as text ──
+import { describe as describeCard, describeBoard } from '../src/engine/describe'
+import { boards as allBoards } from '../src/widgets'
+import { heartbeatCard, HEARTBEAT_STATES } from '../src/widgets/boards/heartbeat'
+{
+  console.log('\ndescribe')
+  let threw = '', shapeOk = true, detOk = true
+  for (const p of widgetPresets) {
+    try {
+      const a = describeCard(p, { t: 1.5 }), b = describeCard(p, { t: 1.5 })
+      detOk &&= JSON.stringify(a) === JSON.stringify(b)
+      shapeOk &&= a.id === p.id && !!a.summary && typeof a.state === 'string' && a.controls.length === (p.controls?.length ?? 0)
+    } catch (e) { threw ||= `${p.id}: ${(e as Error).message}` }
+  }
+  assert(`describe: all ${widgetPresets.length} presets described without throwing, id/state/controls/summary filled`, !threw && shapeOk, threw)
+  assert('describe: deterministic (same ctx → identical JSON for every preset)', detOk)
+  const agent = widgetPresets.find(p => p.id === 'hb-agent')!
+  const ask = describeCard(agent, { data: { state: 2 } })
+  assert('describe: hb-agent state comes from its segmented control; text read from the drawn fields',
+    ask.state === 'Awaiting approval' && ask.text.includes('EDIT 3 FILES?') && ask.summary.includes('Agent state = Awaiting approval'), ask.summary)
+  const live = HEARTBEAT_STATES.map((st, i) => describeCard(heartbeatCard('pnpm test --run'), { state: st, data: { state: i } }))
+  assert('describe: live heartbeat card names its state and shows the agent label', live.every((d, i) => d.state === HEARTBEAT_STATES[i] && d.text.includes('PNPM TEST --RUN')), live[1].summary)
+  const bd = allBoards.map(b => describeBoard(b))
+  assert('describeBoard: every board, one card per unique id', bd.every((d, i) => d.cards.length === new Set(allBoards[i].items.map(p => p.id)).size && d.summary.startsWith(allBoards[i].title)))
+}
+
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')
