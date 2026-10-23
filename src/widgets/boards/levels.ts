@@ -25,7 +25,7 @@ const frac = (x: number) => x - Math.floor(x)
  * Scene value → dot value. A scene dot's size *and* opacity follow its value, so mid greys read far
  * darker than their number; lift the mids and keep the voids (seams, mortar) void.
  */
-const lift = (v: number) => (v < .1 ? v * .4 : v ** .6)
+export const lift = (v: number) => (v < .1 ? v * .4 : v ** .6)
 /** Procedural scenes: continuous dot size is the luminance (the level-03 precedent, MASTER-PLAN §11.2). */
 const sceneStyle = { ...tileStyle, sizeMin: 0, sizeMax: 1, quantizeSteps: 0 }
 const scene = { group: 'scatter', chrome: 'dots', bleed: true, label: '', grid: TILE, style: sceneStyle } as const
@@ -217,41 +217,42 @@ export const lvVault: WidgetPreset = {
 }
 
 // ── 04 surface: side-scroller; moon, far range, pines, ground each step at their own pitch ─────
-const SKY_STARS: V3[] = Array.from({ length: 30 }, (_, n): V3 => [Math.round(hash01(n, 41) * 140) + 2, 16 + Math.round(hash01(n, 42) * 50), .25 + .4 * hash01(n, 43)])
+export const SKY_STARS: V3[] = Array.from({ length: 30 }, (_, n): V3 => [Math.round(hash01(n, 41) * 140) + 2, 16 + Math.round(hash01(n, 42) * 50), .25 + .4 * hash01(n, 43)])
   .filter(([x, y]) => Math.hypot(x - 110, y - 34) > 16)
-const ridge = (x: number) => 27 + 10 * Math.sin(x * .043) + 6 * Math.sin(x * .11 + 1) + 2.5 * Math.sin(x * .29 + 2)
-const MOON = { x: 110, y: 34, r: 12 }
+export const ridge = (x: number) => 27 + 10 * Math.sin(x * .043) + 6 * Math.sin(x * .11 + 1) + 2.5 * Math.sin(x * .29 + 2)
+export const MOON = { x: 110, y: 34, r: 12 }
+/** The surface sky at card cell (x, y) with the far range shifted `far` cells and the pines `mid` cells (shared with the game). */
+export const surfaceSky = (x: number, y: number, far: number, mid: number) => {
+  x = Math.round(x); y = Math.round(y)
+  if (y >= 116) return 0
+  // pines (mid layer, 6 cells/s): lit on the moon side
+  const xm = x + mid, n = Math.floor(xm / 19), c = n * 19 + 5 + Math.floor(hash01(n, 7) * 9), th = 12 + Math.floor(hash01(n, 8) * 14)
+  const top = 116 - th - 4
+  if (y > top && y < 112 && Math.abs(xm - c) <= (y - top) * .42) return xm >= c ? .5 : .28
+  if (y >= 112 && Math.abs(xm - c) <= 1) return .2
+  if (y >= 108 + Math.round(2 * Math.sin(xm * .05))) return y === 108 + Math.round(2 * Math.sin(xm * .05)) ? .2 : .12
+  // far range (2 cells/s): snow on the high peaks, lit flank facing the moon
+  const xf = x + far, h = ridge(xf), ry = 104 - Math.round(h)
+  if (y >= ry) {
+    const lit = ridge(xf + 1) < ridge(xf - 1) ? 0 : 1
+    if (y - ry < 3 && h > 36) return .5
+    return (.11 + .07 * lit) * (1 - .45 * (y - ry) / (104 - ry + 6))
+  }
+  // the moon: a lit sphere with soft limb and two craters
+  const mx = (x - MOON.x) / MOON.r, my = (y - MOON.y) / MOON.r, rr = mx * mx + my * my
+  if (rr < 1.1) {
+    const nz = Math.sqrt(Math.max(0, 1 - rr)), lam = Math.max(0, -.55 * mx - .45 * my + .7 * nz)
+    const crater = Math.hypot(mx + .3, my - .25) < .22 || Math.hypot(mx - .35, my + .35) < .15 ? .7 : 1
+    return clamp((.04 + .9 * lam) * crater) * smoothstep(0, 1, (1 - Math.sqrt(rr)) * MOON.r + .5)
+  }
+  return 0
+}
 const backdrop = (t: number): Field => {
   const far = Math.floor(t * 2), mid = Math.floor(t * 6)
-  const at = (x: number, y: number) => {
-    x = Math.round(x); y = Math.round(y)
-    if (y >= 116) return 0
-    // pines (mid layer, 6 cells/s): lit on the moon side
-    const xm = x + mid, n = Math.floor(xm / 19), c = n * 19 + 5 + Math.floor(hash01(n, 7) * 9), th = 12 + Math.floor(hash01(n, 8) * 14)
-    const top = 116 - th - 4
-    if (y > top && y < 112 && Math.abs(xm - c) <= (y - top) * .42) return xm >= c ? .5 : .28
-    if (y >= 112 && Math.abs(xm - c) <= 1) return .2
-    if (y >= 108 + Math.round(2 * Math.sin(xm * .05))) return y === 108 + Math.round(2 * Math.sin(xm * .05)) ? .2 : .12
-    // far range (2 cells/s): snow on the high peaks, lit flank facing the moon
-    const xf = x + far, h = ridge(xf), ry = 104 - Math.round(h)
-    if (y >= ry) {
-      const lit = ridge(xf + 1) < ridge(xf - 1) ? 0 : 1
-      if (y - ry < 3 && h > 36) return .5
-      return (.11 + .07 * lit) * (1 - .45 * (y - ry) / (104 - ry + 6))
-    }
-    // the moon: a lit sphere with soft limb and two craters
-    const mx = (x - MOON.x) / MOON.r, my = (y - MOON.y) / MOON.r, rr = mx * mx + my * my
-    if (rr < 1.1) {
-      const nz = Math.sqrt(Math.max(0, 1 - rr)), lam = Math.max(0, -.55 * mx - .45 * my + .7 * nz)
-      const crater = Math.hypot(mx + .3, my - .25) < .22 || Math.hypot(mx - .35, my + .35) < .15 ? .7 : 1
-      return clamp((.04 + .9 * lam) * crater) * smoothstep(0, 1, (1 - Math.sqrt(rr)) * MOON.r + .5)
-    }
-    return 0
-  }
-  return cells((x, y) => lift(at(x, y)))
+  return cells((x, y) => lift(surfaceSky(x, y, far, mid)))
 }
-const RUN_A = ['..##..', '..##..', '.####.', '#.##.#', '..##..', '.#..#.', '#....#']
-const RUN_B = ['..##..', '..##..', '.####.', '.###.#', '..##..', '..##..', '..#.#.']
+export const RUN_A = ['..##..', '..##..', '.####.', '#.##.#', '..##..', '.#..#.', '#....#']
+export const RUN_B = ['..##..', '..##..', '.####.', '.###.#', '..##..', '..##..', '..#.#.']
 const SPEED = 6 // ground lattice cells per second (12 card cells/s)
 const PLAYER_C = 16, GROUND_R = 58, CRATE_GAP = 24
 /** Runner height above the ground (lattice cells): a jump over each crate, from the continuous scroll. */
@@ -393,8 +394,8 @@ const QUEEN_HALF = [
   '..9........', '...9.......', '....9......', '....9999999', '...66666666', '..666666666', '.6666666EEE', '66666666EEE',
   '666666666EE', '66.66666666', '.3333333333', '33..333.333', '3...3.3..33', '3..3...3...', '..3.....3..',
 ]
-const QUEEN = QUEEN_HALF.map(s => s + [...s.slice(0, 10)].reverse().join(''))
-const QK = 4, QW = QUEEN[0].length, EYE: Pt = [10, 7]
+export const QUEEN = QUEEN_HALF.map(s => s + [...s.slice(0, 10)].reverse().join(''))
+export const QK = 4, QW = QUEEN[0].length, EYE: Pt = [10, 7]
 /** Shell tones 9/6/3 → lit top, body, underside; the open eye is emissive, so shell dots near it brighten. */
 const queenBody = (open: boolean, ox: number, oy: number) => onLattice(QK, ox, oy, (c, r) => {
   const ch = QUEEN[r]?.[c]
@@ -444,7 +445,7 @@ const hiveMoon = cells((x, y) => {
   const band = (y - top) / 24, gap = frac(band * 6) < band * .55
   return gap ? 0 : .5 - .25 * band
 })
-const CURSOR = ['#...', '##..', '###.', '####', '###.', '##..', '#...']
+export const CURSOR = ['#...', '##..', '###.', '####', '###.', '##..', '#...']
 export const lvTitle: WidgetPreset = {
   id: 'lv-title', name: 'Hive', ...scene, animated: true,
   layers: ({ t }) => {
@@ -479,7 +480,7 @@ export const lvOver: WidgetPreset = {
 }
 
 // ── high scores: the table recedes into fog; your entry is red, initials typing in ──────────────
-const TABLE: [string, string, string][] = [['2ND', 'ZAP', '10450'], ['3RD', 'KAI', '08420'], ['4TH', 'HEX', '06100'], ['5TH', 'BIT', '04730'], ['6TH', 'ION', '02200']]
+export const TABLE: [string, string, string][] = [['2ND', 'ZAP', '10450'], ['3RD', 'KAI', '08420'], ['4TH', 'HEX', '06100'], ['5TH', 'BIT', '04730'], ['6TH', 'ION', '02200']]
 const ROW_TONE = ['value', 'active', 'idle', 'mid', 'faint'] as const
 export const lvScores: WidgetPreset = {
   id: 'lv-scores', name: 'High Scores', group: 'text', chrome: 'dots', label: '', bleed: true, animated: true, grid: TILE, style: tileStyle,
