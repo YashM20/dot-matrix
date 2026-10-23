@@ -13,6 +13,7 @@ import { irBoard } from './boards/ir'
 import { cinemaBoard } from './boards/cinema'
 import { lightBoard } from './boards/light'
 import { levelsBoard } from './boards/levels'
+import { heartbeatBoard } from './boards/heartbeat'
 
 export interface BoardDef {
   id: string; title: string; columns: number; items: WidgetPreset[]
@@ -38,6 +39,7 @@ export const boards: BoardDef[] = [
   { id: 'cinema', title: 'CINEMA — THE AFTERLIGHT CYCLE', columns: 3, items: cinemaBoard },
   { id: 'light', title: 'LIGHT — RASTER LIGHT STACK', columns: 3, items: lightBoard },
   { id: 'levels', title: 'LEVELS — HIVE, NINE WORLDS', columns: 3, items: levelsBoard },
+  { id: 'heartbeat', title: 'HEARTBEAT — AGENT PRESENCE', columns: 3, items: heartbeatBoard },
   { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, items: componentsBoard },
 ]
 export const boardIds = boards.map(b => b.id)
