@@ -301,6 +301,49 @@ assert('traceField renders thin line at amp', traceField([0.5], 0.02)(0.5, 0.5) 
   assert('a site layer\'s `size` sets its dot size', sized.length === 1 && sized[0].r === 3)
 }
 
+// 14b) multi-tone layers (P3-F): one `toneOf` layer samples exactly like splitting it into one layer per tone
+//      (each lit only where `toneOf` picks its tone) at the same place in the stack, on the card grid, on a
+//      coarser lattice, at sites (same set; sites keep first-seen order), and on another grid (thumbnails take the off-grid path of `toneRamp`).
+import { toneRamp, TILE } from '../src/widgets'
+import type { Layer, Tone } from '../src/engine/types'
+{
+  const TONES: (Tone | undefined)[] = [undefined, 'auto', 'active', 'activeDim', 'value', 'idle', 'mid', 'faint']
+  const clamp01 = (x: number) => (Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 0)
+  const split = (layers: Layer[]): Layer[] => layers.flatMap(l => {
+    if (!l.toneOf) return [l]
+    const { toneOf, ...rest } = l, b = l.field.bounds
+    return TONES.map(tone => {
+      const f: Field = (u, v) => { const x = l.field(u, v); return toneOf(clamp01(x), u, v) === tone ? x : 0 }
+      if (b) f.bounds = [b[0], b[1], b[2], b[3]]
+      return { ...rest, field: f, tone }
+    })
+  })
+  // sites emit in first-registration order, which splitting changes: compare those as sets (no jitter here)
+  const key = (dots: ReturnType<typeof sampleLayers>, sorted: boolean) => { const ks = dots.map(d => JSON.stringify(d)); return (sorted ? ks.sort() : ks).join('|') }
+  const same = (layers: Layer[], grid: { cols: number; rows: number }, style: Parameters<typeof sampleLayers>[2], sorted = false) =>
+    key(sampleLayers(layers, grid, style, dot480), sorted) === key(sampleLayers(split(layers), grid, style, dot480), sorted)
+  const multi: string[] = [], bad: string[] = []
+  for (const p of widgetPresets) {
+    const layers = withChrome(p)({ t: 0, data: { ...p.defaults } })
+    if (!layers.some(l => l.toneOf) || multi.includes(p.id)) continue
+    multi.push(p.id)
+    if (!same(layers, p.grid, p.style)) bad.push(p.id)
+    if (!same(layers, { cols: 72, rows: 72 }, p.style)) bad.push(`${p.id}@72²`)
+  }
+  assert('every multi-tone preset samples like its split-layer form (card grid + 72² thumbnail)', multi.length > 0 && bad.length === 0, bad.length ? bad.join(', ') : `${multi.join(', ')}`)
+  const ramp = toneRamp((u, v) => (u + v) / 2, [{ at: .1, tone: 'faint' }, { at: .4, blend: .1, tone: 'mid', value: h => h * .8 }, { at: .7, tone: 'active' }], { grid: TILE, seed: 3 })
+  const ts = { shape: 'circle' as const, sizeMin: 0, sizeMax: 1, quantizeSteps: 5 }, track: Layer = { field: () => .5, tone: 'idle' }
+  const sites: [number, number][] = Array.from({ length: 40 }, (_, i) => [i * 3.5, 70 + 30 * Math.sin(i)])
+  const cases: [string, Layer[]][] = [
+    ['card grid, under and over a track', [track, ...ramp, { ...track, tone: 'value' }]],
+    ['lattice 3 at an origin', [track, ...ramp.map(l => ({ ...l, lattice: 3, origin: [1, 2] as [number, number] }))]],
+    ['sites', [...ramp.map(l => ({ ...l, sites, size: 2 })), { field: () => .5, tone: 'idle' as const, sites, size: 2 }]],
+  ]
+  const off = cases.filter(([n, ls]) => !same(ls, TILE, ts, n === 'sites')).map(([n]) => n)
+  assert('a multi-tone layer equals its split layers on a grid, a lattice and sites', off.length === 0, off.join(', '))
+  assert('toneRamp is one multi-tone layer', ramp.length === 1 && !!ramp[0].toneOf)
+}
+
 // 15) input layer (P2-A): toLocal, pick, dragValue, keyValue, clamp + quantize
 import { beginDrag, dragValue, keyValue, pick, releaseValue, settle, toLocal, type Control } from '../src/engine/interaction'
 {

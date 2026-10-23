@@ -26,6 +26,14 @@ export interface Layer {
   field: Field
   tone?: Tone
   /**
+   * Multi-tone layer: the tone of each dot this layer wins, read in the same sampler pass from the
+   * cell's (unquantized) value and u/v on the grid being sampled. Overrides `tone`; `undefined` falls
+   * back to the value-based grey scale. One such layer equals splitting it into one layer per tone
+   * (each lit only where `toneOf` returns its tone) at the same place in the stack, at the cost of one scan
+   * (`sites` dots come out in site order rather than tone order; the set is the same).
+   */
+  toneOf?: (value: number, u: number, v: number) => Tone | undefined
+  /**
    * Sample this layer on its own coarser lattice: dots `lattice`× the card pitch apart and
    * `lattice`× bigger (hero numerals in the references sit on ~2–4× the label pitch).
    * The field sees u/v over that lattice, which starts at `origin` (card cells).

@@ -116,7 +116,12 @@ function composite(layers: Layer[], grid: GridConfig, win: Window = [0, 0, grid.
   }
   return { best, owner }
 }
-const toneOf = (layers: Layer[], owner: number): Tone | undefined => (owner ? layers[owner - 1].tone : undefined)
+/** Tone of the layer that won a cell (`owner` = index + 1); a multi-tone layer is asked per cell. */
+const toneOf = (layers: Layer[], owner: number, value: number, u: number, v: number): Tone | undefined => {
+  if (!owner) return undefined
+  const l = layers[owner - 1]
+  return l.toneOf ? l.toneOf(value, u, v) : l.tone
+}
 
 /**
  * Sample several layers onto one grid. Per cell the layer with the highest value wins
@@ -163,12 +168,12 @@ function sampleLayersOnce(layers: Layer[], grid: GridConfig, style: DotStyle, th
     const k = factor(group[0].lattice), [ox, oy] = group[0].origin ?? [0, 0], sub = latticeGrid(grid, k, [ox, oy])
     // only the cells the group's fields can light are composited and scanned (a caption's lattice spans the card)
     const win = unionWindow(group, sub.cols, sub.rows), [wc0, wr0, wc1, wr1] = win, width = wc1 - wc0 + 1
-    const { best, owner } = composite(group, sub, win)
+    const { best, owner } = composite(group, sub, win), us = centres(sub.cols), vs = centres(sub.rows)
     for (let row = wr0; row <= wr1; row++) for (let col = wc0; col <= wc1; col++) {
       const j = (row - wr0) * width + (col - wc0), value = best[j]
       // a dot that quantizes to nothing is not drawn, so it must not punch a hole in the card either
       if (value <= 0 || shown(value, style) <= 0) continue
-      emit(dots, value, toneColor(toneOf(group, owner[j]), value, theme), (ox + (col + .5) * k) * pitch, (oy + (row + .5) * k) * pitch, 1e6 + row * sub.cols + col, style, k)
+      emit(dots, value, toneColor(toneOf(group, owner[j], value, us[col], vs[row]), value, theme), (ox + (col + .5) * k) * pitch, (oy + (row + .5) * k) * pitch, 1e6 + row * sub.cols + col, style, k)
       // card cells whose centre falls inside this lattice cell
       const c0 = Math.ceil(ox + col * k - .5), c1 = Math.ceil(ox + (col + 1) * k - .5), r0 = Math.ceil(oy + row * k - .5), r1 = Math.ceil(oy + (row + 1) * k - .5)
       for (let r = Math.max(0, r0); r < Math.min(grid.rows, r1); r++) for (let c = Math.max(0, c0); c < Math.min(grid.cols, c1); c++) covered![r * grid.cols + c] = 1
@@ -178,10 +183,10 @@ function sampleLayersOnce(layers: Layer[], grid: GridConfig, style: DotStyle, th
   const sites = new Map<number | string, { x: number; y: number; k: number; value: number; tone?: Tone }>()
   for (const layer of sited) for (const [x, y] of layer.sites!) {
     if (!Number.isFinite(x) || !Number.isFinite(y)) continue
-    const value = safe(layer.field(x / Math.max(1, grid.cols - 1), y / Math.max(1, grid.rows - 1)))
+    const u = x / Math.max(1, grid.cols - 1), v = y / Math.max(1, grid.rows - 1), value = safe(layer.field(u, v))
     if (shown(value, style) <= 0) continue
     const key = siteKey(x, y), prev = sites.get(key)
-    if (!prev || value >= prev.value) sites.set(key, { x, y, k: factor(layer.size ?? layer.lattice), value, tone: layer.tone })
+    if (!prev || value >= prev.value) sites.set(key, { x, y, k: factor(layer.size ?? layer.lattice), value, tone: layer.toneOf ? layer.toneOf(value, u, v) : layer.tone })
   }
   let seed = 2e6
   for (const { x, y, k, value, tone } of sites.values()) {
@@ -191,12 +196,12 @@ function sampleLayersOnce(layers: Layer[], grid: GridConfig, style: DotStyle, th
       for (let c = Math.max(0, Math.ceil(x - reach)); c <= Math.min(grid.cols - 1, Math.floor(x + reach)); c++)
         if (Math.hypot(c - x, r - y) <= reach) covered![r * grid.cols + c] = 1
   }
-  const { best, owner } = composite(base, grid), background = style.opacityMode === 'constant'
+  const { best, owner } = composite(base, grid), background = style.opacityMode === 'constant', us = centres(grid.cols), vs = centres(grid.rows)
   for (let row = 0; row < grid.rows; row++) for (let col = 0; col < grid.cols; col++) {
     const i = row * grid.cols + col, value = best[i]
     // empty cells are invisible unless the style draws every dot (constant opacity); 0 always shows as 0
     if (covered?.[i] || ((value <= 0 || shown(value, style) <= 0) && !background)) continue
-    emit(dots, value, toneColor(toneOf(base, owner[i]), value, theme), (col + .5) * pitch, (row + .5) * pitch, i, style)
+    emit(dots, value, toneColor(toneOf(base, owner[i], value, us[col], vs[row]), value, theme), (col + .5) * pitch, (row + .5) * pitch, i, style)
   }
   return dots
 }
