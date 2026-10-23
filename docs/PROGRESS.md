@@ -48,6 +48,9 @@
 - [x] P2-I: `size` only re-grids the canvas (layers and boxes share cell space), so controls stay on unscaled; boxes fully outside the smaller grid are dropped.
 - [ ] P2-J: `inst-level` follows the sequencer's default pattern, not live edits (cards don't share data yet; needs board-level data).
 
+**P3 (depth, light, material, IR): started 2026-10-22**
+- [x] P3-C: **Levels** flagship board (`src/widgets/boards/levels.ts`, `?board=levels`): nine animated HIVE game-world cards (title, torchlit corridor, isometric vault, parallax side-scroller, lantern maze, warp, boss, game over, high scores); local ray-plane `cast` + iso box tracer, Lambert point/window light, depth fog, cell-snapped parallax, one red element per card. v0: needs the user's taste pass.
+
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.
 - [ ] P0-E: `accentRole` on multi-accent cards → decision §11.1.

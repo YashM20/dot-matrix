@@ -9,6 +9,7 @@ import { audioBoard } from './boards/audio'
 import { componentsBoard } from './boards/components'
 import { departuresBoard } from './boards/departures'
 import { instrumentBoard } from './boards/instrument'
+import { levelsBoard } from './boards/levels'
 
 export interface BoardDef { id: string; title: string; columns: number; items: WidgetPreset[] }
 /** Every reference board in public/images, in the order they appear there. */
@@ -22,6 +23,7 @@ export const boards: BoardDef[] = [
   { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, items: audioBoard },
   { id: 'departures', title: 'DEPARTURES — LIVE TRANSIT BOARD', columns: 3, items: departuresBoard },
   { id: 'instrument', title: 'INSTRUMENT — DOT/480 DEVICE', columns: 3, items: instrumentBoard },
+  { id: 'levels', title: 'LEVELS — HIVE, NINE WORLDS', columns: 3, items: levelsBoard },
   { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, items: componentsBoard },
 ]
 export const boardIds = boards.map(b => b.id)
