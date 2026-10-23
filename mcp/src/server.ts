@@ -1,7 +1,8 @@
 /**
- * Dot/480 MCP server (MCP Apps, spec 2026-01-26). Two tools:
+ * Dot/480 MCP server (MCP Apps, spec 2026-01-26). Presence + reading tools:
  *   set_agent_state({ state, label? }) — the agent's presence; hosts render `ui://dot-card/heartbeat` inline
  *   describe_board({ id })             — any board or card as text (engine `describe` / `describeBoard`)
+ * Authoring tools (render_card, score_card, refine_card, record_verdict, push_to_device): `./author.ts`.
  * The agent never draws: it sends a state from the closed `HEARTBEAT` vocabulary, the card does the rest.
  */
 import { readFileSync } from 'node:fs'
@@ -13,6 +14,7 @@ import { z } from 'zod'
 import { describe, describeBoard } from '../../src/engine/describe'
 import { boards, widgetById } from '../../src/widgets'
 import { heartbeatCard, HEARTBEAT_STATES, type HeartbeatState } from '../../src/widgets/boards/heartbeat'
+import { registerAuthorTools } from './author'
 
 export const HEARTBEAT_URI = 'ui://dot-card/heartbeat'
 const VIEW_HTML = join(dirname(fileURLToPath(import.meta.url)), '..', 'dist', 'heartbeat.html')
@@ -71,5 +73,6 @@ export function createServer(): McpServer {
     return { isError: true, content: [{ type: 'text', text: `Unknown board or card "${id}". Boards: ${boards.map(b => b.id).join(', ')}` }] }
   })
 
+  registerAuthorTools(server)
   return server
 }

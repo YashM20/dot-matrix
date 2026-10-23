@@ -36,9 +36,45 @@ pnpm typecheck
 
 Client config, for example Claude Desktop or VS Code `mcp.json`: `{ "command": "<repo>/mcp/node_modules/.bin/tsx", "args": ["<repo>/mcp/src/main.ts"] }`. On Windows use `tsx.cmd`. Run `pnpm build` once first. Do not launch it through `pnpm run`, because pnpm's script banner on stdout would corrupt the stdio JSON-RPC stream.
 
+## Authoring tools (P6-E)
+
+The P6 "AI authoring" loop (MASTER-PLAN §2.7, P6). The MCP surface is `mcp/src/author.ts`. The logic is in `scripts/author/` and uses Node built-ins only: `card.ts` (card input → preset), `score.ts` (gates), `refine.ts` (loop), `bt.ts` (Bradley–Terry), `verdicts.ts` (history) and `seeds.ts` (3 weak test programs; `npx tsx scripts/author/seeds.ts` prints their refinement). Fidelity scoring was moved out of the CLI into `scripts/lib/fidelity.ts` (`scoreFidelity`). `pnpm fidelity` prints the same table as before.
+
+A card is `{ id }` (any preset) or an IR card: `{ ir, grid?, lattice?, tone?, accent?, accentCut?, gain?, level?, speed?, data?, name? }`. `ir` is Field IR source, drawn as one layer on `lattice` over the grid (default TILE 144×144 at 2.25 px). `accent` is an optional second program, lit in `active` red where its value is ≥ `accentCut`. `gain` and `level` reshape the tone, and `speed` scales `t`. TODO: switch this to card spec v1 (`src/spec`) once it lands.
+
+| Tool | Input | Returns |
+|---|---|---|
+| `render_card` | card + `t?`, `px?` (1–4, default 2) | PNG as `image` content (base64), the `describe()` summary as text. Read-only. |
+| `score_card` | card | Gates G1 dot integrity, G2 accent (≤ 1 active layer, red ≤ 12% of lit dots), G3 lattice ladder, G4 dot size (p90 lit-dot diameter ≥ 3 px at 1×), G5 perf, V2 tonal depth (opacity spread ≥ 0.3), V7 density (coverage 3–45%), L1 motion legibility (≤ 2 cells/frame, ≤ 50% dots changed/frame; animated cards only). Also returns metrics and the raw fidelity G1–G5 results. When a like/kill history exists it adds `preference`: the card's Bradley–Terry rank, plus liked/killed exemplars. Read-only. |
+| `refine_card` | IR card + `feedback?`, `rounds?` (0–12, default 4) | The round history. Each round: render, score, then apply rule-based revisions for the failing gates: snap the lattice to the ladder, raise the lattice to the step that clears G4 (or for G5), turn the main layer grey and keep red only on its core, raise `accentCut`, stretch tone around the median, raise or lower `level`, slow `t`. The single revisions and their chained combination are all scored, and a round is kept only if the best one scores better. More gates passing wins, and ties go to the lower total deficit. The loop stops at the gate, after N rounds, or when nothing improves. |
+| `record_verdict` | card + `verdict: like \| kill`, `note?` | Appends `{ ts, key, verdict, note, card? }` to `.dot480/verdicts.jsonl` (gitignored; override the path with `DOT480_VERDICTS`). Returns the card's new rank. |
+| `push_to_device` | card + `target: http \| file`, `t?` | Returns `not configured` by default. `http` needs `DOT480_DEVICE_URL` set to a **loopback** http(s) URL; any other host is refused. It POSTs the frame `{ key, cols, rows, pitch, t, dots: [x, y, r, opacity, color][] }` with a 3 s timeout. `file` needs `DOT480_DEVICE_DIR` and writes `<key>.json` there. Nothing else is contacted. |
+| `describe_board`, `set_agent_state` | (above) | (above) |
+
+**No LLM inside.** `refine_card` is deterministic and local. The critic half of §2.7 is the MCP host model: "screenshot-worthy?", ranked defects, the kill veto, and comparison with Bradley–Terry exemplars. It looks at `render_card`, reads `score_card` (including `preference.exemplars`, which it can render for comparison), and steers the next `refine_card` call with `feedback`. Feedback keywords map onto the same rules: "contrast"/"flat", "red"/"accent", "bigger"/"legible", "finer", "busy"/"dense", "sparse"/"dim", "flicker"/"too fast". A revision asked for in feedback is also kept when the score stays equal. Heroes still need a human like (§2.4). The host should call `record_verdict` only when the user gives a verdict.
+
+**Bradley–Terry** (`scripts/author/bt.ts`): every liked card beats every killed card. Each verdict also counts as a game against a fixed neutral anchor (strength 1): a like is a win, a kill is a loss. Every card also gets one virtual win and one virtual loss against the anchor as a prior. Strengths are fitted with Hunter's MM iteration. Keys are sorted, so the same records in any order give the same fit. Preset cards are keyed by id and IR cards by `ir:<fnv1a of the normalised card>`.
+
+### Adding it to a client (documentation only; nothing is registered by this repo)
+
+Claude Code (project `.mcp.json`, or `claude mcp add`):
+
+```json
+{ "mcpServers": { "dot-matrix": { "command": "<repo>/mcp/node_modules/.bin/tsx", "args": ["<repo>/mcp/src/main.ts"] } } }
+```
+
+```sh
+claude mcp add dot-matrix -- <repo>/mcp/node_modules/.bin/tsx <repo>/mcp/src/main.ts
+```
+
+Claude Desktop (`claude_desktop_config.json`: `%APPDATA%\Claude\` on Windows, `~/Library/Application Support/Claude/` on macOS) uses the same `mcpServers` block. On Windows use `tsx.cmd` and backslash-escaped paths. Add `"env": { "DOT480_DEVICE_URL": "http://127.0.0.1:8480/frame" }` only if a local device is listening there.
+
+`pnpm test` in `mcp/` also runs `test/author.ts`. That test goes over stdio JSON-RPC and writes its verdicts to a temp file. It checks: render returns a valid PNG for a preset and for an IR card; bad IR gives a positioned error; score returns every gate; refine finishes within N rounds and never gets worse on the 3 seeds; BT gives ranks and exemplars; the BT fit is deterministic; push_to_device stays unconfigured or refuses a non-loopback URL.
+
 ## Not verified
 
 - Rendering inside a real host: Claude, ChatGPT, VS Code Copilot or M365 Copilot. Nothing was registered or published.
 - Host-specific requirements: Claude's domain signing, ChatGPT's Apps SDK review and `_meta` extras.
 - Whether a host that injects its own inline script into the view would conflict with the hash-only meta CSP. The spec does not require hosts to inject anything.
+- Authoring tools: not tried in a real host, so whether hosts show the `image` content inline is not checked. `push_to_device` http has not been tested against a real device. The author gates are proxies, not calibrated against the user's taste (§2.5, P0-F). G5 is a wall-clock timing, so under machine load it can fail on its own; a refine run can then stop early or report a different round count.
 - Streamable HTTP transport, which remote-only hosts such as ChatGPT need. Only stdio is implemented. Adding HTTP means adding `@modelcontextprotocol/node` + `express`, as in the ext-apps examples.
