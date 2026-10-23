@@ -1,0 +1,14 @@
+<!--
+  Dot/480 Private Plugin markup (layout: full). Strategy: Polling, URL = <your server>/plugin.json.
+  The polled JSON is exposed as Liquid variables: {{ image_url }}, {{ title }}, {{ updated_at }}.
+  The image is already 1-bit and blue-noise dithered, so it is shown as-is (no CSS dithering).
+-->
+<div class="view view--full">
+  <div class="layout layout--center">
+    <img src="{{ image_url }}" alt="{{ title }}" style="width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated;" />
+  </div>
+  <div class="title_bar">
+    <span class="title">Dot/480</span>
+    <span class="instance">{{ title }}</span>
+  </div>
+</div>
