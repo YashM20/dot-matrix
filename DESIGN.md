@@ -108,6 +108,13 @@ Dot/480 has effectively no drop-shadow elevation. Depth, where it exists at all,
 - **Status dot:** the `{component.statusDot}` (4–6px solid red circle, top-right of a card) is the system's one consistent ornamental/state marker — equivalent role to a corner-square motif in other systems.
 - **Radial rings:** concentric polar-field rings (activity rings, breathing circles, gauges) are the closest thing Dot/480 has to a "hero" decorative device — used prominently but always in the same grey/red palette, never a separate accent.
 
+### Light (Raster light stack, P3)
+Relief and light are fields too: a signed distance becomes a cached height and normal raster (`heightRaster`, `normalRaster`), and per frame only the light moves (`lambert`, `phong`, `illuminate`). Rules:
+- Lit surfaces sit on a coarser lattice (2× on the `light` board) and are split into tone bands (`faint` → `mid` → `idle`), never one grey ramp.
+- **Gloss** = the specular highlight drawn two quantize steps (+0.5) above the diffuse dot under it, in `value`.
+- **Torch** = the primary pointer as a point light (`torch(x, y)`); without a pointer the light drifts slowly.
+- **Emissive** = the accent shape plus a `bloom` halo in `{colors.dotActiveDim}`, with a one-dot moat between the two. The halo is never `dotActive`.
+
 ## Shapes
 
 ### Dot Roundness Scale

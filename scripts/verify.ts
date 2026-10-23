@@ -372,5 +372,88 @@ import { beginDrag, dragValue, keyValue, pick, releaseValue, settle, toLocal, ty
   assert('preset controls: in-grid boxes, labels, unique keys', bad.length === 0, bad.join(', '))
 }
 
+// 16) P3-A raster + light stack: rasterize/sample, blur, morphology, distance, height → normals → lambert/phong, bloom, torch perf
+import { blur as rBlur, createRaster, cut as rCut, dilate as rDilate, distanceRaster, erode as rErode, moat as rMoat, outline as rOutline, rasterSum, rasterize, sample as rSample } from '../src/engine/raster'
+import { bloom, heightRaster, illuminate, lambert, lightDir, normalRaster, phong, sdfBox, sdfCircle, stackHeights, torch, type HeightRaster } from '../src/engine/light'
+{
+  const G = { cols: 37, rows: 23 }, U = cellU
+  const wave: Field = (u, v) => .5 + .5 * Math.sin(u * 9.1) * Math.cos(v * 5.3)
+  const ras = rasterize(wave, G), near = rSample(ras), bil = rSample(ras, 'bilinear')
+  let exact = true
+  for (let r = 0; r < G.rows; r++) for (let c = 0; c < G.cols; c++) {
+    const want = Math.fround(wave(U(c, G.cols), U(r, G.rows)))
+    if (near(U(c, G.cols), U(r, G.rows)) !== want || bil(U(c, G.cols), U(r, G.rows)) !== want) exact = false
+  }
+  assert('raster: sample round-trip is exact on cell centres (nearest + bilinear)', exact)
+  const mid = bil(3.5 / (G.cols - 1), U(4, G.rows)), avg = (ras.data[4 * G.cols + 3] + ras.data[4 * G.cols + 4]) / 2
+  assert('raster: bilinear halfway between centres is their mean; off-grid is 0', close(mid, avg, 1e-6) && near(-.2, .5) === 0 && bil(.5, 1.2) === 0)
+  const br = rasterize(bounded(wave, 5, 3, 9, 8), G), bs = rSample(br)
+  assert('raster: a bounded field rasterizes only its bounds; sample keeps them', br.data[0] === 0 && br.data[3 * G.cols + 5] > 0 && String(bs.bounds) === '5,3,9,8')
+
+  // blur preserves mass, also for a blob in the corner (weight off the edge is reflected back in)
+  const C = { cols: 40, rows: 30 }, blob = rasterize(bounded((u, v) => (Math.hypot(u * 39 - 2, v * 29 - 1) <= 3 ? 1 : 0), 0, 0, 6, 5), C)
+  const m0 = rasterSum(blob), g = rBlur(blob, 4), bx = rBlur(blob, 3, 'box'), wr = rasterize(wave, C), whole = rBlur(wr, 6)
+  assert('blur: gaussian + box preserve mass (corner blob, unbounded field)', close(rasterSum(g), m0, 1e-3) && close(rasterSum(bx), m0, 1e-3) && close(rasterSum(whole), rasterSum(wr), 1e-2),
+    `${m0} → ${rasterSum(g).toFixed(4)} / ${rasterSum(bx).toFixed(4)}`)
+  assert('blur: spreads (lower peak, bounds grown by the reach)', Math.max(...g.data) < 1 && String(g.bounds) === '0,0,10,9')
+
+  // morphology on a disc of radius 6
+  const D = { cols: 41, rows: 41 }, discAt = (rad: number) => rasterize((u, v) => (Math.hypot(u * 40 - 20, v * 40 - 20) <= rad ? 1 : 0), D)
+  const discR = discAt(6), count = (r: { data: Float32Array }) => r.data.reduce((a, b) => a + b, 0)
+  const dil = rDilate(discR, 2), ero = rErode(discR, 2)
+  assert('dilate / erode grow and shrink a disc by the radius', Math.abs(count(dil) - count(discAt(8))) <= 12 && Math.abs(count(ero) - count(discAt(4))) <= 12 && ero.data[20 * 41 + 20] === 1 && ero.data[20 * 41 + 25] === 0,
+    `${count(discR)} → +${count(dil)} / −${count(ero)}`)
+  const inner = rOutline(discR, 1), mo = rMoat(discR, 2)
+  let edgeOk = true
+  for (let i = 0; i < inner.data.length; i++) { if (inner.data[i] && !discR.data[i]) edgeOk = false; if (mo.data[i] && discR.data[i]) edgeOk = false }
+  assert('outline sits on the edge inside, moat just outside', edgeOk && count(inner) > 20 && count(inner) < 60 && mo.data[20 * 41 + 27] === 1 && mo.data[20 * 41 + 29] === 0 && count(rCut(dil, mo)) === count(discR))
+  const sd = distanceRaster(discR)
+  assert('distanceRaster: signed, ≈ −r at the centre, ±.5 across the edge', close(sd.data[20 * 41 + 20], -6, .6) && sd.data[20 * 41 + 26] < 0 && sd.data[20 * 41 + 27] > 0 && close(sd.data[20 * 41 + 30], 3.5, .01))
+
+  // height → normals: a flat plateau and a tilted plane have constant normals
+  const P = { cols: 60, rows: 60 }, boxSdf = sdfBox(P, 30, 30, 20, 20, 4), plate = heightRaster(boxSdf, { width: 4 }, P), pn = normalRaster(plate)
+  let flat = true
+  for (let r = 15; r <= 45; r++) for (let c = 15; c <= 45; c++) { const i = r * 60 + c; if (pn.x[i] !== 0 || pn.y[i] !== 0 || pn.z[i] !== 1) flat = false }
+  const tilt: HeightRaster = { ...createRaster(P), mask: new Float32Array(3600).fill(1) }
+  for (let r = 0; r < 60; r++) for (let c = 0; c < 60; c++) tilt.data[r * 60 + c] = .5 * c
+  const tn = normalRaster(tilt), want = [-.5 / Math.sqrt(1.25), 0, 1 / Math.sqrt(1.25)]
+  let tiltOk = true
+  for (let i = 0; i < 3600; i++) if (!close(tn.x[i], want[0], 1e-6) || tn.y[i] !== 0 || !close(tn.z[i], want[2], 1e-6)) tiltOk = false
+  assert('normals of a plane are flat (a plateau faces the viewer, a 0.5 slope tilts every normal alike)', flat && tiltOk)
+  assert('heightRaster / normalRaster are cached per geometry, grid and profile', heightRaster(boxSdf, { shape: 'round', width: 4 }, P) === plate && normalRaster(plate) === pn
+    && heightRaster(boxSdf, { width: 5 }, P) !== plate && heightRaster(boxSdf, { width: 4 }, { cols: 30, rows: 30 }) !== plate)
+
+  // lambert of a hemisphere peaks where the normal equals L; phong where it bisects L and the view
+  const S = { cols: 144, rows: 144 }, R = 40, sphere = normalRaster(heightRaster(sdfCircle(S, 72, 72, R), { width: R }, S))
+  const argmax = (f: Field): [number, number, number] => { let best = -1, bc = 0, brr = 0; for (let r = 0; r < 144; r++) for (let c = 0; c < 144; c++) { const x = f(U(c, 144), U(r, 144)); if (x > best) { best = x; bc = c; brr = r } } return [bc, brr, best] }
+  const L = lightDir(-Math.PI / 4, Math.PI / 4), [lc, lr, lmax] = argmax(lambert(sphere, L))
+  assert('lambert of a hemisphere peaks toward L', Math.hypot(lc - (72 + R * L[0]), lr - (72 + R * L[1])) <= 1.5 && lmax > .99, `peak (${lc},${lr}) value ${lmax.toFixed(3)}`)
+  const hv = [L[0], L[1], L[2] + 1], hk = 1 / Math.hypot(...hv), [pc, pr, pmax] = argmax(phong(sphere, L, [0, 0, 1], 40))
+  assert('phong highlight sits on the half vector', Math.hypot(pc - (72 + R * hv[0] * hk), pr - (72 + R * hv[1] * hk)) <= 1.5 && pmax > .98 && pmax <= 1, `peak (${pc},${pr})`)
+  const lit = lambert(sphere, L, { ambient: .2 })
+  assert('lambert: ambient floor on the shadow side, 0 off the shape', close(lit(U(98, 144), U(98, 144)), .2, .02) && lit(U(2, 144), U(2, 144)) === 0)
+  const tl = lambert(sphere, torch(52, 52, 60)), tr = lambert(sphere, torch(92, 92, 60))
+  assert('torch: a point light brightens the side it is over', tl(U(60, 144), U(60, 144)) > tl(U(84, 144), U(84, 144)) && tr(U(84, 144), U(84, 144)) > tr(U(60, 144), U(60, 144)))
+
+  // bloom: normalised to strength, the moat keeps it off the source
+  const dotR = rasterize(bounded((u, v) => (Math.hypot(u * 40 - 20, v * 40 - 20) <= 2 ? 1 : 0), 18, 18, 22, 22), D), bl = bloom(dotR, 5, { strength: .8, gap: 1 })
+  assert('bloom: peak = strength, source + 1-cell moat cut out, halo beyond', close(Math.max(...bl.data), .8, 1e-6) && bl.data[20 * 41 + 20] === 0 && bl.data[20 * 41 + 23] === 0 && bl.data[20 * 41 + 24] > 0 && bl.data[20 * 41 + 26] > 0)
+
+  // perf: torch relight of a 144² card (an embossed plate + a dome): one illuminate pass + reading every cell back
+  const card = stackHeights(heightRaster(sdfBox(S, 72, 72, 56, 56, 14), { width: 6 }, S), heightRaster(sdfCircle(S, 72, 72, 30), { width: 30, height: 12 }, S))
+  const cn = normalRaster(card), into = createRaster(S), intoS = createRaster(S), tightCount = (n: { mask: Float32Array }) => n.mask.reduce((a, m) => a + (m > 0 ? 1 : 0), 0)
+  const relight = (k: number) => illuminate(cn, torch(30 + (k % 80), 40 + (k % 50), 40, 90), { ambient: .1, shininess: 24, into, intoSpecular: intoS })
+  const readBack = (f: { diffuse: Field; specular: Field }) => { let s = 0; for (let r = 0; r < 144; r++) { const v = U(r, 144); for (let c = 0; c < 144; c++) { const u = U(c, 144); s += f.diffuse(u, v) + f.specular(u, v) } } return s }
+  const median = (fn: (k: number) => unknown) => {
+    for (let k = 0; k < 40; k++) fn(k)
+    const ts: number[] = []
+    for (let k = 0; k < 101; k++) { const t0 = performance.now(); fn(k); ts.push(performance.now() - t0) }
+    return ts.sort((a, b) => a - b)[50]
+  }
+  const pass = median(relight), full = median(k => readBack(relight(k)))
+  console.log(`  torch relight 144² (one lambert + phong pass, ${tightCount(cn)} lit cells): median ${pass.toFixed(3)} ms; with every cell of both fields read back: ${full.toFixed(3)} ms`)
+  assert('perf: torch relight of a 144² card ≤ 1 ms median after warm-up', pass <= 1, `${pass.toFixed(3)} ms`)
+}
+
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')

@@ -603,6 +603,36 @@
     "dots": 329
    }
   },
+  "light-torch": {
+   "t=0": {
+    "hash": "f8f438cf",
+    "dots": 1997
+   },
+   "t=1.3": {
+    "hash": "7a7d6f98",
+    "dots": 1979
+   }
+  },
+  "light-orb": {
+   "t=0": {
+    "hash": "e6b6b6be",
+    "dots": 1886
+   },
+   "t=1.3": {
+    "hash": "da9b6a2a",
+    "dots": 1883
+   }
+  },
+  "light-on-air": {
+   "t=0": {
+    "hash": "7b6390d2",
+    "dots": 1340
+   },
+   "t=1.3": {
+    "hash": "d62459c9",
+    "dots": 1372
+   }
+  },
   "ui-toggle": {
    "t=0": {
     "hash": "6579335f",
