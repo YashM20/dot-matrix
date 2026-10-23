@@ -36,6 +36,7 @@ import { specChecks } from './spec'
 import { bytecodeChecks } from './bytecode'
 import { esp32Checks } from '../targets/test/esp32'
 import { targetsChecks } from '../targets/test/targets'
+import { bufferChecks } from './buffer'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -790,6 +791,8 @@ specChecks(assert)
 bytecodeChecks(assert)
 esp32Checks(assert, { pathOnly: true })
 await targetsChecks(assert)
+// P5-B) struct-of-arrays DotBuffer, buffer canvas renderer, worker protocol (scripts/buffer.ts)
+bufferChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')

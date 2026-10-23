@@ -7,10 +7,11 @@
 src/engine/                       framework-free TypeScript + Canvas/SVG APIs only
   types.ts                        Field (+ optional cell bounds), GridConfig, DotStyle, ThemeTokens, DotInstance, Layer (tone or per-cell `toneOf` multi-tone, lattice, origin, sites), Tone
   theme/tokens.ts                 dot480, deerflowMosaic presets
-  sampler/gridSampler.ts          sampleField, sampleLayers (card grid + coarser lattices + dot sites), latticeGrid, colorFor, toneColor, cellU
+  sampler/gridSampler.ts          sampleField, sampleLayers (card grid + coarser lattices + dot sites), sampleLayersInto (→ DotBuffer), latticeGrid, colorFor, toneColor, cellU
+  buffer/dotBuffer.ts             DotBuffer (struct of arrays, one ArrayBuffer), TONE/paletteOf/toneIndex, pushDot, reserve, toDots adapter, pool
   sampler/quantize.ts, jitter.ts
   renderer/shapePath.ts           circle / square / squircle paths, squircleExponent, bezierHandle
-  renderer/svgRenderer.ts, canvasRenderer.ts
+  renderer/svgRenderer.ts, canvasRenderer.ts, canvasBuffer.ts (renderCanvasBuffer: draws a DotBuffer)
   layout.ts                       cell-space placement with bounds: textAt, placeCells, ringCells, barsAt, spriteAt, polylineCells, combine …
   fields/bitmapFont.ts            5×7 glyph set, Scale2x display weight (`smooth`), textField, textWidth, glyphMetrics
   fields/cjkFallback.ts           system-font SDF fallback for glyphs outside the set (no network)
@@ -29,6 +30,7 @@ src/widgets/
   index.ts                        boards[], widgetPresets, widgetById
 src/spec/                         card spec v1 (framework-free, above widgets): validateSpec, specToPreset, presetToSpec, migrateSpec, loadSpec
 src/components/                   DotCanvas, DotWidget, Board, playground/*, draw/*
+src/workers/                      protocol.ts (handleSample), sampleWorker.ts (module worker), client.ts (remoteSampler, workerPresetId)
 src/lib/photoDotify.ts            client-only upload → dither
 scripts/snap.ts                   headless card/board PNG snapshots — `pnpm snap <id…> | --board <id> | --all`
 ```
@@ -151,6 +153,13 @@ A card as JSON (`src/spec/`, schema `schema/card.v1.schema.json`, JSON Schema 20
   Every converted layer is rebuilt and compared cell by cell (sites: per site) with the original; a mismatch falls back to the bake. A preset built from a spec exports back verbatim. `sizeCurve` styles (`mirror-*`) are refused.
 - **`migrateSpec(json)`**: v1 passes through. v0 (the P3 draft: `spec: 0`, flat `cols`/`rows`, `title`, `{ type: 'ir'|'text'|'dots' }` layers) is mapped to v1. Unknown versions throw. `loadSpec` = parse + migrate + validate.
 - **Tests:** `scripts/spec.ts` (in `pnpm verify`; `--examples` rewrites `examples/specs/*.json`). It checks that the schema enums equal the TS constants, and that the schema (via a test-only 2020-12 evaluator, `scripts/lib/jsonschema.ts`) and the validator agree on 48 fixtures. Every preset goes through preset → spec → JSON → preset: 144/146 keep their golden hash (the IR-board cards at both golden times). The 87 with no baked layer travel as IR/text/sites/generators; TS code that moves sites per frame exports as its t = 0 frame. Re-export is byte-stable. Examples: `ir-ripple.json`, `text-sites-gauge.json` (hand-written: IR-bound arc + numeral, states, transitions, springKeys), `baked-photo.json` (`silhouette`, Float32 raster + tone palette).
+## DotBuffer and worker sampling (P5-B)
+- **DotBuffer** (`src/engine/buffer/`): `x, y, r, opacity: Float32Array; tone: Uint8Array; n` as views into one `ArrayBuffer` (17 bytes per dot), so a frame moves in one transfer. `tone` is a `TONE` index (faint, mid, idle, value, activeDim, active) into `palette` (from the theme, same fallbacks as `toneColor`); shape and roundness are per frame. `reserve` grows by doubling, `acquireDotBuffer`/`releaseDotBuffer` pool retired stores.
+- **Sampler:** `sampleLayers` and `sampleLayersInto(layers, grid, style, theme, buf?)` share one pass; `emit` writes either an object or five array slots (one sink shape, a branch rather than a virtual call). Same dots, same order. `toDots(buf)` is the `DotInstance[]` adapter for SVG, export and motion. Goldens hash the float64 `sampleLayers` path, so they are unchanged; float32 storage moves values by ≤ 1.5e-5 px, which flips a `toFixed` tie in some frames, so do not hash `toDots` output against `goldens/hashes.json`.
+- **Canvas from a buffer:** `renderCanvasBuffer(ctx, buf)` batches by (tone, opacity step of 1/1000) with an integer key per dot. It makes the same fills and sub-paths as `renderCanvas` (verified on every preset); the worst quantized UI card has 12 fills. Sub-paths stay open (`fill` closes them): in Chrome, `closePath` was the largest self-time item of path building.
+- **Worker** (`src/workers/`): one module worker per page (`new Worker(new URL('./sampleWorker.ts', import.meta.url), { type: 'module' })`) imports the preset registry. `DotCanvas` live frames ask `remoteSampler(layers, …)`: the request names the preset id (`workerPresetId`: registered `withChrome(p)` functions only, no `media` cards), `t`, frame, data (springs already applied), grid, style primitives and theme. The worker samples into the store it was handed and also rasterizes on an `OffscreenCanvas` with `renderCanvasBuffer`. It transfers back the buffer and an `ImageBitmap`. Double buffering: the main thread keeps the frame on screen and hands the previous one back with the next request. At most one request per card is in flight, and the newest pending one wins. The main thread blits the bitmap, or draws the buffer if the backing size changed meanwhile.
+- **Main-thread fallback** (it still samples into a reused `DotBuffer`): the first frame of a subscription (drawn before paint), while a transient runs (enter, change, exit, migrate, spring, burst need `DotInstance[]`), while a control is engaged (hover, press, focus, pointers: input answers without a round trip), for media and unregistered layers, without `Worker`, after a worker error, and with `?worker=0`. Transferables only: no SharedArrayBuffer, so embeds and MCP Apps need no COOP/COEP.
+- **Measure:** `npx tsx scripts/browser-perf.ts --boards mosaic,cinema [--runs 3] [--top 8]` (headless Chrome over CDP, dev server on :5196). It compares main-thread sampling and drawing at mount and per 12 fps tick, worker on vs `?worker=0`. Checks: `scripts/buffer.ts` (in verify). Measured 2026-10-23 on a loaded machine, headless software raster, median of 3, main-thread busy ms per 12 fps tick. Before P5-B: cinema 43–46, light 85, mosaic 12–31. After, with the worker: cinema 1.7, light 2.3, mosaic 2.5; JS is ≤ 0.4 of that, the rest is native compositing. After, main-thread fallback: cinema 23, light 23, mosaic 4.
 
 ## Tokens
 See `DESIGN.md`; runtime values in `src/engine/theme/tokens.ts`.

@@ -1,6 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, useSyncExternalStore, type RefObject } from 'react'
 import { renderCanvas } from '../engine/renderer/canvasRenderer'
-import { sampleLayers } from '../engine/sampler/gridSampler'
+import { sampleLayers, sampleLayersInto } from '../engine/sampler/gridSampler'
+import { renderCanvasBuffer } from '../engine/renderer/canvasBuffer'
+import { acquireDotBuffer, releaseDotBuffer, type DotBuffer } from '../engine/buffer/dotBuffer'
+import { remoteSampler } from '../workers/client'
 import { quantizeTime, sharedClock } from '../engine/clock'
 import { DataSprings, duration as motionDuration, ease, maskByName, revealDots, transitionDots, type MaskName } from '../engine/motion'
 import { renderSVG } from '../engine/renderer/svgRenderer'
@@ -281,6 +284,19 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     renderCanvas(context, frame)
     input.drawn(drawn)
   }
+  /**
+   * Draw a struct-of-arrays frame (live frames without a transient: sampled into a buffer here or in the worker).
+   * A worker frame may come rasterized already: then it is one blit, if it still matches the backing size.
+   */
+  const drawBuffer = (canvas: HTMLCanvasElement, buf: DotBuffer, drawn: Record<string, number>, bitmap?: ImageBitmap) => {
+    const context = prepare(canvas)
+    if (!context) { bitmap?.close(); return }
+    context.clearRect(0, 0, width, height)
+    if (bitmap && bitmap.width === canvas.width && bitmap.height === canvas.height) { context.setTransform(1, 0, 0, 1, 0, 0); context.drawImage(bitmap, 0, 0) }
+    else renderCanvasBuffer(context, buf)
+    bitmap?.close()
+    input.drawn(drawn)
+  }
   /** Apply the running transient (if any) to a frame at clock time `t`; ends it when complete. */
   const applyTransient = (frame: DotInstance[], t: number): DotInstance[] => {
     const tr = transientRef.current
@@ -348,11 +364,22 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     const frameData = JSON.parse(dataKey) as Record<string, number>
     let failed = false
     const bindLive = input.bindLive
+    // P5-B: a registered preset card is sampled in the worker (main thread only draws). On this thread instead
+    // while a transient runs, while a control is engaged (input answers without a worker round trip), for the
+    // first frame and when no worker is available — into a reused DotBuffer unless a transient needs DotInstance[]
+    const remote = remoteSampler(layers, (buf, _t, bitmap) => { if (!transientRef.current && !engagedNow()) drawBuffer(canvas, buf, frameData, bitmap); else bitmap?.close() })
+    const engagedNow = () => { const ix = input.ixRef.current; return !!(ix && (ix.hover || ix.pressed || ix.focus || ix.pointers?.length)) }
+    const local = acquireDotBuffer(cols * rows)
+    const frameAt = (t: number, frame: number, sync: boolean) => {
+      const d = springKey && springsRef.current ? { ...frameData, ...springsRef.current.at(t) } : frameData
+      if (transientRef.current) draw(canvas, applyTransient(sampleLayers(layers({ t, frame, data: d, grid: g, ...input.ixRef.current }), g, s, theme), t), frameData)
+      else if (remote && !remote.failed && !sync && !engagedNow()) remote.request(t, frame, d, g, s, theme, { w: Math.round(width * scale), h: Math.round(height * scale), scale })
+      else drawBuffer(canvas, sampleLayersInto(layers({ t, frame, data: d, grid: g, ...input.ixRef.current }), g, s, theme, local), frameData)
+    }
     const sub = {
       fps: fps ?? (motion ? 12 : 30),
-      onFrame(t: number, frame: number) {
-        const d = springKey && springsRef.current ? { ...frameData, ...springsRef.current.at(t) } : frameData
-        try { draw(canvas, applyTransient(sampleLayers(layers({ t, frame, data: d, grid: g, ...input.ixRef.current }), g, s, theme), t), frameData) }
+      onFrame(t: number, frame: number, sync = false) {
+        try { frameAt(t, frame, sync) }
         catch (error) {
           if (!failed) console.error('DotCanvas: frame failed, keeping the last good frame', error)
           failed = true
@@ -367,10 +394,10 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     if (liveCanvasRef.current !== canvas || performance.now() - input.inputAt.current < INPUT_CUT_MS) {
       liveCanvasRef.current = canvas
       const { t, frame } = quantizeTime(sharedClock().time(), sub.fps)
-      sub.onFrame(t, frame)
+      sub.onFrame(t, frame, true)
     }
     const off = sharedClock().subscribe(sub), unbind = bindLive(sub)
-    return () => { off(); unbind() }
+    return () => { off(); unbind(); remote?.dispose(); releaseDotBuffer(local) }
   }, [live, ready, mode, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, theme, dataKey, springKey, fps, motion, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const surface = mode === 'canvas'
