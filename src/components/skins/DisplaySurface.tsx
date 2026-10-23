@@ -63,10 +63,13 @@ class Runner {
   scratch: HTMLCanvasElement | null = null
   built: SkinName | null = null
   gain = 1
+  renders = 0
+  feeds = 0
   step = () => {
     this.raf = 0
     const { stage, ctx } = this
     if (!stage || !ctx) return
+    this.renders++
     const t0 = performance.now(), more = stage.render(ctx, now())
     record(stage.skin, 'render', performance.now() - t0)
     if (more) this.raf = requestAnimationFrame(this.step)
@@ -76,6 +79,7 @@ class Runner {
   feed(src: CanvasImageSource) {
     const stage = this.stage
     if (!stage) return
+    this.feeds++
     const t0 = performance.now()
     stage.frame(src, now())
     record(stage.skin, 'frame', performance.now() - t0)
@@ -133,6 +137,7 @@ export function DisplaySurface({ children, mode, dots, running, fps, cols, rows,
     const delay = switched && !same ? Math.min(1, Math.max(0, wrap.getBoundingClientRect().top / window.innerHeight)) * .3 : 0
     runner.stage = createDisplayStage(drawn, { cols, rows, w: W, h: H, gain: runner.gain, delay, instant: same || calm, noFlash: calm, onFlip: playClack })
     runner.ctx = ctx; runner.built = drawn
+    ;(wrap as unknown as { __runner: Runner }).__runner = runner
     setStageId(id => id + 1)
     return () => runner.stop()
   }, [drawn, W, H, cols, rows])
