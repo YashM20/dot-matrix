@@ -18,7 +18,7 @@
 import { sampleLayers } from '../../src/engine/sampler/gridSampler'
 import type { DotInstance, Layer } from '../../src/engine/types'
 import { boards, withChrome, type WidgetPreset } from '../../src/widgets'
-import { litCentroid, median, pitchOf, quantile, theme, visible } from './cards'
+import { litCentroid, median, pitchOf, quantile, theme, visible } from './stats'
 
 export const LADDER = [0.72, 1, 1.3, 1.6, 2, 2.5, 3, 4], onLadder = (k: number) => LADDER.some(s => Math.abs(s - k) <= 0.01)
 export const BUDGET = { staticMs: 30, frameMs: 4 }, FPS = 12
