@@ -1029,6 +1029,24 @@
     "dots": 1066
    }
   },
+  "live-weather": {
+   "t=0": {
+    "hash": "66cb190a",
+    "dots": 1140
+   }
+  },
+  "live-now-playing": {
+   "t=0": {
+    "hash": "61733d77",
+    "dots": 1352
+   }
+  },
+  "live-contribs": {
+   "t=0": {
+    "hash": "d541fea8",
+    "dots": 1651
+   }
+  },
   "ui-toggle": {
    "t=0": {
     "hash": "6579335f",
