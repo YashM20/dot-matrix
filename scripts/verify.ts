@@ -30,6 +30,7 @@ import { irChecks } from './ir'
 import { liveChecks } from './live'
 import { halftoneChecks } from './halftone'
 import { deviceChecks } from './device'
+import { exportChecks } from './export'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -774,6 +775,8 @@ await liveChecks(assert)
 halftoneChecks(assert)
 // P5-C) device profiles, toDevice, display simulators, cross-tab clock sync (scripts/device.ts)
 deviceChecks(assert)
+// P5-D) export: APNG / GIF encoders, WebM / MP4 muxers, plotter SVG (scripts/export.ts)
+await exportChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')
