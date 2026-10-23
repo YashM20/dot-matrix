@@ -13,6 +13,8 @@ export default defineConfig({
   ],
   // agent worktrees live under .claude/ — don't let their edits reload this checkout's dev server
   server: { watch: { ignored: ['**/.claude/**'] } },
+  // two pages: the app, and the launch essay as its own entry (deployable alone, its own JS budget)
+  build: { rollupOptions: { input: { main: fileURLToPath(new URL('./index.html', import.meta.url)), essay: fileURLToPath(new URL('./essay.html', import.meta.url)) } } },
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
