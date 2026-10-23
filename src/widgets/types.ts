@@ -191,29 +191,34 @@ export const withChrome = (p: WidgetPreset): WidgetPreset['layers'] => {
 
 /** Cell-space drawing helpers bound to one grid — what every reference card is built from. */
 export const TAU = Math.PI * 2
+/** Layout helpers whose fields `presetToSpec` (src/spec) can carry as `generator` layers: same name, same JSON args. */
+export const LAYOUT_GENERATORS = ['dot', 'rect', 'hrule', 'vrule', 'disc', 'ring', 'box', 'sprite', 'bars', 'cbars', 'line', 'icon', 'cjk'] as const
+export type LayoutGenerator = typeof LAYOUT_GENERATORS[number]
 export function layoutFor(grid: GridConfig) {
   const W = grid.cols, H = grid.rows
+  /** Tag a helper's fields with their name, grid and args (Field.from) — spec export metadata only. */
+  const tag = <F extends (...args: never[]) => Field>(gen: LayoutGenerator, make: F): F => ((...args: Parameters<F>) => { const f = make(...args); f.from = { gen, grid, args }; return f }) as F
   return {
     W, H,
     text: (str: string, col: number, row: number, opts: TextOptions & { align?: 'left' | 'center' | 'right' } = {}) => textAt(grid, str, col, row, opts),
     size: textSize,
-    dot: (col: number, row: number, value = 1) => dotAt(grid, col, row, value),
-    rect: (col: number, row: number, w: number, h: number, value = 1) => rectCells(grid, col, row, w, h, value),
-    hrule: (col: number, row: number, w: number, step = 1, value = 1) => hRule(grid, col, row, w, step, value),
-    vrule: (col: number, row: number, h: number, step = 1, value = 1) => vRule(grid, col, row, h, step, value),
-    disc: (cx: number, cy: number, r: number, value = 1) => discCells(grid, cx, cy, r, value),
-    ring: (cx: number, cy: number, r: number, opts: Parameters<typeof ringCells>[4] = {}) => ringCells(grid, cx, cy, r, opts),
+    dot: tag('dot', (col: number, row: number, value = 1) => dotAt(grid, col, row, value)),
+    rect: tag('rect', (col: number, row: number, w: number, h: number, value = 1) => rectCells(grid, col, row, w, h, value)),
+    hrule: tag('hrule', (col: number, row: number, w: number, step = 1, value = 1) => hRule(grid, col, row, w, step, value)),
+    vrule: tag('vrule', (col: number, row: number, h: number, step = 1, value = 1) => vRule(grid, col, row, h, step, value)),
+    disc: tag('disc', (cx: number, cy: number, r: number, value = 1) => discCells(grid, cx, cy, r, value)),
+    ring: tag('ring', (cx: number, cy: number, r: number, opts: Parameters<typeof ringCells>[4] = {}) => ringCells(grid, cx, cy, r, opts)),
     /** Outlined rectangle, `step` controls dotting of the outline. */
-    box: (col: number, row: number, w: number, h: number, step = 1, value = 1): Field => {
+    box: tag('box', (col: number, row: number, w: number, h: number, step = 1, value = 1): Field => {
       return combine(hRule(grid, col, row, w, step, value), hRule(grid, col, row + h - 1, w, step, value), vRule(grid, col, row, h, step, value), vRule(grid, col + w - 1, row, h, step, value))
-    },
-    sprite: (rows: string[], col: number, row: number, scale = 1) => spriteAt(grid, rows, col, row, scale),
-    bars: (values: number[], col: number, base: number, height: number, barW = 1, gap = 1, every = 1) => barsAt(grid, values, col, base, height, barW, gap, every),
-    cbars: (values: number[], col: number, centre: number, half: number, barW = 1, gap = 1) => centeredBarsAt(grid, values, col, centre, half, barW, gap),
-    line: (points: [number, number][], every = 1, value = 1) => polylineCells(grid, points, every, value),
-    place: (field: Field, col: number, row: number, w: number, h: number) => placeCells(grid, field, col, row, w, h),
-    icon: (name: keyof typeof iconPaths, col: number, row: number, size: number, opts: { fill?: boolean; stroke?: number } = {}) => placeCells(grid, cachedIconField(name, iconPaths[name], 64, opts), col, row, size, size),
-    cjk: (text: string, col: number, row: number, cell: number) => placeCells(grid, cjkTextField(text), col, row, cell * [...text].length, cell),
+    }),
+    sprite: tag('sprite', (rows: string[], col: number, row: number, scale = 1) => spriteAt(grid, rows, col, row, scale)),
+    bars: tag('bars', (values: number[], col: number, base: number, height: number, barW = 1, gap = 1, every = 1) => barsAt(grid, values, col, base, height, barW, gap, every)),
+    cbars: tag('cbars', (values: number[], col: number, centre: number, half: number, barW = 1, gap = 1) => centeredBarsAt(grid, values, col, centre, half, barW, gap)),
+    line: tag('line', (points: [number, number][], every = 1, value = 1) => polylineCells(grid, points, every, value)),
+    place: (field: Field, col: number, row: number, w: number, h: number) => { const f = placeCells(grid, field, col, row, w, h); f.from = { gen: 'place', grid, args: [col, row, w, h], inner: field }; return f },
+    icon: tag('icon', (name: keyof typeof iconPaths, col: number, row: number, size: number, opts: { fill?: boolean; stroke?: number } = {}) => placeCells(grid, cachedIconField(name, iconPaths[name], 64, opts), col, row, size, size)),
+    cjk: tag('cjk', (text: string, col: number, row: number, cell: number) => placeCells(grid, cjkTextField(text), col, row, cell * [...text].length, cell)),
     /**
      * Hero text on its own lattice: `lattice` card cells per dot, anchored at card cell (col,row).
      * `smooth` gives the 2-dot-stroke display weight. Width in card cells = size(...)[0] * lattice.

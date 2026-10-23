@@ -41,6 +41,7 @@ export function textAt(grid: GridConfig, str: string, col: number, row: number, 
   const left = opts.align === 'center' ? Math.round(col - w / 2) : opts.align === 'right' ? col - w + 1 : col
   const f = placeCells(grid, textField(str, opts), left, row, w, h)
   f.text = str
+  f.from = { gen: 'text', grid, args: [str, col, row, opts] }
   return f
 }
 export function textSize(str: string, opts: TextOptions = {}): [number, number] {

@@ -3,6 +3,7 @@
  *   parse(src) → AST → compileJS(ast)(env) → Field     (CPU; closure tree, CSP-safe)
  *                    → emitGLSL(ast)                    (GPU; GLSL ES 3.0 function)
  *                    → serialize(ast) / deserialize()   (JSON, validated, no eval)
+ *                    → compileBytecode(ast)             (f32 stack VM bytecode for devices; runBytecode / targets/esp32/dotvm.c)
  * Grammar and semantics: docs/DOT-MATRIX-ENGINE-PLAN.md › Field IR.
  */
 import type { FrameContext } from '../context'
@@ -15,13 +16,18 @@ export { parse } from './parse'
 export { compileJS, type CompileOptions, type IREnv, type IRProgram } from './compile'
 export { emitGLSL, emitJS } from './emit'
 export { reference, referenceField } from './reference'
+export { BC_MAX_STEPS, BC_STACK, BC_VERSION, OP as BC_OP, bytecodeInfo, compileBytecode, loadBytecode, runBytecode, verifyBytecode, type BytecodeInfo, type BytecodeProgram } from './bytecode'
 
 const cache = new Map<string, IRProgram>()
 /** Parse + compile IR source once (memoised by source and mode). Throws `IRError` on bad source. */
 export function irProgram(src: string, opts: CompileOptions = {}): IRProgram {
   const key = `${opts.mode ?? 'closure'}${opts.raw ? '+raw' : ''}\n${src}`
   let p = cache.get(key)
-  if (!p) cache.set(key, (p = compileJS(parse(src), opts)))
+  if (!p) {
+    // tag each frame's field with its source so a card spec can carry it as an `ir` layer (src/spec)
+    const run = compileJS(parse(src), opts), from = opts.raw ? { ir: src, raw: true } : { ir: src }
+    cache.set(key, (p = Object.assign((env?: IREnv) => { const f = run(env); f.from = from; return f }, { info: run.info, mode: run.mode })))
+  }
   return p
 }
 
