@@ -458,5 +458,56 @@ import { bloom, heightRaster, illuminate, lambert, lightDir, normalRaster, phong
   assert('perf: torch relight of a 144² card ≤ 1 ms median after warm-up', pass <= 1, `${pass.toFixed(3)} ms`)
 }
 
+// P3-G) materials as dot vocabularies (src/engine/light/material.ts) and the board-wide time-of-day light
+import { bayer4, emissive as mEmissive, fabric as mFabric, glass as mGlass, gloss as mGloss, hourOf, matte as mMatte, metal as mMetal, sunAt } from '../src/engine/light'
+{
+  const N = 72, G = { cols: N, rows: N }, R = 24, U = cellU, at = (f: Field, c: number, r: number) => f(U(c, N), U(r, N))
+  const ball = normalRaster(heightRaster(sdfCircle(G, 36, 36, R), { width: R }, G)), L = lightDir(-Math.PI / 4, Math.PI / 4)
+  const cells = (fn: (c: number, r: number) => boolean) => { for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) if (!fn(c, r)) return false; return true }
+
+  // matte: the bands partition Lambert (each lit cell in exactly one band, at its Lambert value); the lit side is idle
+  const mm = mMatte(ball, L, { ambient: .06, lattice: 2 }), lam = lambert(ball, L, { ambient: .06 })
+  const bandsOk = cells((c, r) => { const x = at(lam, c, r), hits = mm.filter(l => at(l.field, c, r) > 0); return x < .06 ? hits.length === 0 : hits.length === 1 && close(at(hits[0].field, c, r), x, 1e-6) })
+  assert('matte: faint/mid/idle bands partition Lambert, on the given lattice', bandsOk && mm.map(l => l.tone).join() === 'faint,mid,idle' && mm.every(l => l.lattice === 2)
+    && at(mm[2].field, Math.round(36 + R * .5 * L[0] / Math.hypot(L[0], L[1])), Math.round(36 + R * .5 * L[1] / Math.hypot(L[0], L[1]))) > 0)
+
+  // gloss: at the half vector the highlight is exactly two quantize steps above the body under it; nowhere above 1
+  const hv = [L[0], L[1], L[2] + 1], hk = 1 / Math.hypot(...hv), hc = Math.round(36 + R * hv[0] * hk), hr = Math.round(36 + R * hv[1] * hk)
+  const gl = mGloss(ball, L), hi = at(gl.highlight, hc, hr), body = at(gl.body, hc, hr)
+  assert('gloss: highlight two quantize steps above its body at the half vector', close(quantize(hi, 5) - quantize(body, 5), .5, 1e-9) && cells((c, r) => at(gl.highlight, c, r) <= 1), `body ${body.toFixed(3)} → ${hi.toFixed(3)}`)
+  assert('gloss: the body never takes the highlight\'s two steps (≤ 1 − 2 steps), the highlight layer is value', cells((c, r) => at(gl.body, c, r) <= .5 + 1e-9) && gl.layers[gl.layers.length - 1].tone === 'value')
+
+  // glass: outside the ball the scene is untouched, at the centre (flat normal) it is unshifted, toward the rim it is read from nearer the centre
+  const scene: Field = (u, v) => Math.round(u * (N - 1)) / (N - 1) + Math.round(v * (N - 1)) * 7
+  const gs = mGlass(ball, L, scene, { strength: 6 }), [outside] = gs.layers
+  const k = Math.round(6 * ball.x[36 * N + 54]), want = at(scene, 54 - k, 36)
+  assert('glass: scene untouched outside, unshifted at the centre, read toward the centre near the rim (whole cells)',
+    at(outside.field, 3, 3) === at(scene, 3, 3) && at(outside.field, 36, 36) === 0 && close(at(gs.through, 36, 36), at(scene, 36, 36), 1e-6) && k > 0 && close(at(gs.through, 54, 36), want, 1e-6))
+
+  // emissive: the halo never touches the shape (a one-dot moat), tones default to active / activeDim, cached per source
+  const src = rasterize((u, v) => (Math.hypot(u * (N - 1) - 36, v * (N - 1) - 36) <= 8 ? 1 : 0), G), em = mEmissive(src, { radius: 4, gap: 1 })
+  assert('emissive: core in active, activeDim halo beyond a one-dot moat, halo cached per source', em.layers.map(l => l.tone).join() === 'activeDim,active'
+    && at(em.halo, 36, 36) === 0 && at(em.halo, 45, 36) === 0 && at(em.halo, 46, 36) > 0 && mEmissive(src, { radius: 4, gap: 1 }).halo === em.halo)
+
+  // metal: only studio values (hard stripes, no ramp), the light's own reflection at the half vector, a black horizon line
+  const me = mMetal(ball, L), steps = new Set<number>()
+  cells((c, r) => { const x = at(me.env, c, r); if (ball.mask[r * N + c] >= .5) steps.add(Math.round(x * 1e6) / 1e6); return true })
+  assert('metal: hard environment stripes (≤ 5 values), the light reflected at the half vector, a black horizon inside the ball',
+    steps.size <= 5 && [...steps].every(x => close(x * 4, Math.round(x * 4), 1e-6)) && at(me.env, hc, hr) === 1 && steps.has(0), `values ${[...steps].sort().join(' ')}`)
+
+  // fabric: every dot on a quantize step, ≤ 3 steps, deterministic, the lit half denser than the shadow half; Bayer is a permutation
+  const fa = mFabric(ball, L), fb = mFabric(ball, L)
+  let lit = 0, dark = 0
+  const fabOk = cells((c, r) => { const x = at(fa.cloth, c, r); if (c + r < 72) lit += x; else dark += x; return x === at(fb.cloth, c, r) && close(x * 4, Math.round(x * 4), 1e-9) && x <= .75 + 1e-9 })
+  const bayer = new Set<number>(); for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) bayer.add(bayer4(c, r))
+  assert('fabric: ordered dither on quantize steps (≤ .75), deterministic, denser on the lit side', fabOk && lit > dark * 1.5 && bayer.size === 16 && bayer4(5, 6) === bayer4(1, 2), `lit ${lit.toFixed(1)} vs shadow ${dark.toFixed(1)}`)
+
+  // the time-of-day light: rises on the left, sets on the right, highest at noon, always above the surface; pure in the hour
+  const elev = (h: number) => sunAt(h)[2]
+  assert('sunAt: left in the morning, right in the afternoon, highest at noon, above the surface at night, deterministic',
+    sunAt(8)[0] < 0 && sunAt(16)[0] > 0 && elev(12) > elev(9) && elev(12) > elev(15) && elev(3) > 0 && sunAt(9.7).every((x, i) => x === sunAt(9.7)[i])
+    && close(hourOf(new globalThis.Date(2026, 0, 1, 9, 41, 30)), 9 + 41 / 60 + 30 / 3600, 1e-9))
+}
+
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')
