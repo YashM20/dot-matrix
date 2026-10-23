@@ -3,6 +3,7 @@
  *   parse(src) → AST → compileJS(ast)(env) → Field     (CPU; closure tree, CSP-safe)
  *                    → emitGLSL(ast)                    (GPU; GLSL ES 3.0 function)
  *                    → serialize(ast) / deserialize()   (JSON, validated, no eval)
+ *                    → compileBytecode(ast)             (f32 stack VM bytecode for devices; runBytecode / targets/esp32/dotvm.c)
  * Grammar and semantics: docs/DOT-MATRIX-ENGINE-PLAN.md › Field IR.
  */
 import type { FrameContext } from '../context'
@@ -15,6 +16,7 @@ export { parse } from './parse'
 export { compileJS, type CompileOptions, type IREnv, type IRProgram } from './compile'
 export { emitGLSL, emitJS } from './emit'
 export { reference, referenceField } from './reference'
+export { BC_MAX_STEPS, BC_STACK, BC_VERSION, OP as BC_OP, bytecodeInfo, compileBytecode, loadBytecode, runBytecode, verifyBytecode, type BytecodeInfo, type BytecodeProgram } from './bytecode'
 
 const cache = new Map<string, IRProgram>()
 /** Parse + compile IR source once (memoised by source and mode). Throws `IRError` on bad source. */

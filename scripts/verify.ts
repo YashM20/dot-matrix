@@ -29,6 +29,9 @@ import type { Field } from '../src/engine/types'
 import { irChecks } from './ir'
 import { liveChecks } from './live'
 import { halftoneChecks } from './halftone'
+import { bytecodeChecks } from './bytecode'
+import { esp32Checks } from '../targets/test/esp32'
+import { targetsChecks } from '../targets/test/targets'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -771,6 +774,10 @@ import { heartbeatCard, HEARTBEAT_STATES } from '../src/widgets/boards/heartbeat
 await liveChecks(assert)
 // P4-F) halftone ladder + STBN temporal stability + live camera card timing (scripts/halftone.ts)
 halftoneChecks(assert)
+// P5-E) IR bytecode VM + device targets: f32 VM parity, C VM vs TS VM when a C compiler is found, senders vs local fakes only
+bytecodeChecks(assert)
+esp32Checks(assert, { pathOnly: true })
+await targetsChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')
