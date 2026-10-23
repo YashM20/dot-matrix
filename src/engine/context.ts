@@ -1,4 +1,5 @@
 import type { GridConfig, Layer } from './types'
+import type { Raster } from './raster/raster'
 
 /** A pointer in card-cell space (multitouch: one entry per active pointer). */
 export interface Pointer {
@@ -68,6 +69,12 @@ export interface FrameContext<D = Record<string, number>> {
   pressed?: string
   /** Seconds since the last tick, set only while a tick burst runs (e.g. a split-flap after the minute changes). */
   since?: number
+  /**
+   * Live media rasters supplied by the host for this frame (e.g. `camera`: mirrored, exposure-normalised
+   * luma on the card grid). Absent in snapshots, goldens and before the user grants access: cards must
+   * draw a deterministic stand-in then.
+   */
+  media?: Record<string, Raster | undefined>
 }
 
 /** A card: frame context in, layers out. */

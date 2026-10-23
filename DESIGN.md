@@ -245,6 +245,12 @@ Individual dot shape is controlled by one continuous parameter (the superellipse
 - Four corner-bracket glyphs (`⌐ ¬ L J` style, dot-rasterized) framing a live/static photo field, optional bounding-box labels (`{typography.micro}` in a bordered pill) for vision-AI object detection.
 - `REC`/status text pairs with `{component.statusDot}` when actively capturing.
 
+**Halftone ladder (live media)**
+- Camera and video go through `halftone` / `halftoneStream` (`src/engine/halftone/`), never a raw threshold: step 1 = ordered multi-level threshold, step 2 = structure-aware (edge-preserving, local contrast, crisp edges) for faces.
+- Live input uses the stream (STBN slices + hysteresis): a still scene must not shimmer (verify: ≤ 10% of plain thresholding's dot changes per frame).
+- 6 levels; level → size (.3–1 of `sizeMax`) and tone (`faint` → `mid` → `idle` → `value`). Photo exemption: `quantizeSteps: 0`.
+- Before the user starts the camera (and in snapshots), show a deterministic stand-in (test portrait) and a prompt; the camera is requested only from a control. Red only for `REC` while live.
+
 ## Interaction
 
 Interaction is a state the card's *data* is in, not a CSS layer on top. The input layer (pointer, touch, keyboard) edits `data[key]` for each declared `Control` and fills `hover` / `pressed` / `focus` in the frame context; the card redraws through the same `Field → Sampler → Renderer` pipeline. Feedback is therefore always made of dots: a glow is a field, a press is a size step, a focus ring is a row of sites. No state introduces a new colour.

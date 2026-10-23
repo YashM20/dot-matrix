@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from 'react'
 import type { WidgetPreset } from '../widgets'
 import { widgetById, withChrome } from '../widgets'
 import { DotCanvas, type DotCanvasProps } from './DotCanvas'
+import { useCamera, withMedia } from '../media/useCamera'
 
 export interface DotWidgetProps {
   /** Preset id from `widgetPresets` (ignored when `preset` is given). */
@@ -35,9 +36,12 @@ export interface DotWidgetProps {
 
 export function DotWidget({ type, density, dotShape, roundness, size, theme = dot480, animated, data, tick, preset: presetProp, enter, exit, shared, sharedKeys, onShared }: DotWidgetProps) {
   const preset = presetProp ?? widgetById(type)
-  const layers = useMemo(() => preset && withChrome(preset), [preset])
   // interactive data (P2): input patches merged over the defaults and the `data` prop
   const [local, setLocal] = useState<ControlPatch>({})
+  // live media (P4): a camera card's feed starts only once its own control turned `cam` on
+  const merged = { ...preset?.defaults, ...data, ...shared, ...local }
+  const camera = useCamera(preset?.media === 'camera', !!merged.cam, preset?.grid)
+  const layers = useMemo(() => preset && (preset.media ? withMedia(withChrome(preset), camera.read) : withChrome(preset)), [preset, camera.read])
   const sharedKey = sharedKeys?.join(',') ?? ''
   const onInput = useCallback((patch: ControlPatch) => {
     // split the patch: shared keys go to the board store, the rest stay on this card
@@ -68,7 +72,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
         {preset.live && <i className="status-dot" />}
       </header>}
       <div className="dot-card-body">
-        <DotCanvas layers={layers} data={{ ...preset.defaults, ...data, ...shared, ...local }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
+        <DotCanvas layers={layers} data={preset.media ? { ...merged, ...camera.data } : merged} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={camera.status === 'live' ? 30 : undefined} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
           controls={interactive ? controls : undefined} onInput={interactive ? onInput : undefined} />
       </div>
     </div>

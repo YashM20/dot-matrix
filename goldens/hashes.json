@@ -1047,6 +1047,22 @@
     "dots": 1651
    }
   },
+  "mirror-camera": {
+   "t=0": {
+    "hash": "3c90d1f6",
+    "dots": 11904
+   },
+   "t=1.3": {
+    "hash": "3c90d1f6",
+    "dots": 11904
+   }
+  },
+  "mirror-ladder": {
+   "t=0": {
+    "hash": "24e8e619",
+    "dots": 11049
+   }
+  },
   "ui-toggle": {
    "t=0": {
     "hash": "6579335f",
