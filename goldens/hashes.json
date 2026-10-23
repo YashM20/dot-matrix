@@ -603,6 +603,96 @@
     "dots": 329
    }
   },
+  "cinema-last-call": {
+   "t=0": {
+    "hash": "76a1f86f",
+    "dots": 1433
+   },
+   "t=1.3": {
+    "hash": "706822fd",
+    "dots": 1433
+   }
+  },
+  "cinema-signal": {
+   "t=0": {
+    "hash": "9091ce06",
+    "dots": 1388
+   },
+   "t=1.3": {
+    "hash": "5e06b698",
+    "dots": 1388
+   }
+  },
+  "cinema-sundown": {
+   "t=0": {
+    "hash": "afaef50e",
+    "dots": 1265
+   },
+   "t=1.3": {
+    "hash": "715d108d",
+    "dots": 1265
+   }
+  },
+  "cinema-upstairs": {
+   "t=0": {
+    "hash": "3b62611a",
+    "dots": 1815
+   },
+   "t=1.3": {
+    "hash": "6b6854da",
+    "dots": 1815
+   }
+  },
+  "cinema-closer": {
+   "t=0": {
+    "hash": "db4396b5",
+    "dots": 1401
+   },
+   "t=1.3": {
+    "hash": "1dd8d7c4",
+    "dots": 1401
+   }
+  },
+  "cinema-witness": {
+   "t=0": {
+    "hash": "adaded3b",
+    "dots": 2668
+   },
+   "t=1.3": {
+    "hash": "b809cb75",
+    "dots": 2668
+   }
+  },
+  "cinema-exit-14": {
+   "t=0": {
+    "hash": "232d9200",
+    "dots": 871
+   },
+   "t=1.3": {
+    "hash": "18d462c5",
+    "dots": 896
+   }
+  },
+  "cinema-keeper": {
+   "t=0": {
+    "hash": "d7cac742",
+    "dots": 1150
+   },
+   "t=1.3": {
+    "hash": "491fd103",
+    "dots": 1150
+   }
+  },
+  "cinema-encore": {
+   "t=0": {
+    "hash": "38ed49f2",
+    "dots": 1301
+   },
+   "t=1.3": {
+    "hash": "a6ec5423",
+    "dots": 1291
+   }
+  },
   "ui-toggle": {
    "t=0": {
     "hash": "6579335f",
