@@ -332,6 +332,22 @@ Unlike a typical responsive system that reflows layout, Dot/480's primary respon
 6. Keep `{colors.dotActive}` scarce per board — if more than one card shows a solid red fill/ring in the same 3×3 grid, ask whether one of them is actually "informational" rather than "live," and recolor it to `{colors.dotIdle}`.
 7. Before adding a new generator type, check whether the need can be expressed as a new `Field` function feeding the existing sampler/renderer/theme pipeline — new generators should be rare; new widget *presets* (a new config on top of existing generators) should be common.
 
+## Devices
+
+One card, many physical surfaces (P5, `src/engine/device/`). `toDevice(spec, profile, { ctx })` samples the card (or its curated `variants['CxR']` when the device grid has one), splats each dot's light (area × opacity × colour luminance; `{colors.dotActive}` = full light, monochrome panels have no red) onto the device grid area-weighted, then applies the profile's tone map. Simulators are pure in t: `createEinkSim`, `createFlipSim`, `ledGlow`, `plotPaths` / `plotAt` / `plotterSVG`. Board `surfaces` shows the same timer on all five.
+
+| Profile | Grid | Mask | Bits / tone map | Pitch | Dot | Refresh (demo) | Physics |
+|---|---|---|---|---|---|---|---|
+| `browser` | 144×144 | — | 8 / linear | .6 mm | circle | 60 Hz | — (the card itself) |
+| `glyph-matrix-25` | 25×25 | round, 489 LEDs | 8 / linear (PWM), γ 2.2 | 1.5 mm | circle | 60 Hz | LED bloom .14 to 8 neighbours, off-lens glow .05 |
+| `trmnl-800x480` | 800×480 | — | 1 / blue-noise dither (STBN slice 0, static) | .2 mm | square | 1 Hz | e-ink: full refresh every 10 (.9 s flash), partial .32 s, ghost .3 × .8 per partial |
+| `flipdisc-28x14` | 28×14 | — | 1 / threshold .5 | 10 mm | disc | 1 Hz | column scan 20 ms, rotation ω 60 rad/s, ζ .32 (overshoot 1.35, settle .24 s) |
+| `plotter` | 48×48 | — | 2 / blue-noise | 2 mm | pen | — | level k = k loops (r .42 cells), draw 90 / travel 260 cells/s, NN travel order |
+
+- **Variants vs resampling:** grids under ~32 cells (`25x25`, `28x14`) get a curated layout (MASTER-PLAN §3.9); bigger ones resample the authored TILE card. Previews of big panels use `previewProfile(p, k)` (the TRMNL card shows 1/6: 133×80, one pixel per card cell).
+- **Card look:** e-ink paper = `{colors.dotIdle}` dots, ink = no dot, ghost = one tone step down; LEDs and discs are dot sites in size/tone bands; flip-disc black faces stay visible in `faint`.
+- **Time:** device cards read board time `t + data.clockOffset`; `createClockSync` (`src/engine/clockSync.ts`) keeps tabs on one epoch over BroadcastChannel. Flip-disc clack is app-side (`src/media/clack.ts`), off unless `?clack=1`.
+
 ## Known Gaps
 
 - **Physical LED-panel calibration not yet measured** — the `led-panel` breakpoint's pitch-locking behavior is specified but not validated against real hardware bit-depth/gamma response.
