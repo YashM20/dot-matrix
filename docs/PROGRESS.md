@@ -51,6 +51,9 @@
 **P3 (depth, light, material, IR): started 2026-10-22**
 - [x] P3-E: Field IR v0 (`src/engine/ir/`): parser with limits and line:col errors, closure-tree JS backend (+ optional `new Function`), GLSL ES 3.0 emitter, JSON serialize/validate, GLSL-semantics reference interpreter. `scripts/ir.ts` (in `pnpm verify`): JS ≡ reference on 20 fields over 48×48, GLSL hash snapshot in `goldens/ir-glsl.json`. Demo board `ir` (`ir-ripple`, `ir-plasma`, `ir-dial`). Not done: real GPU parity (P5), bytecode/device backend.
 
+**P3 (depth, light, material, IR): started 2026-10-22**
+- [x] P3-B: **Cinema** flagship board (`src/widgets/boards/cinema.ts`, `?board=cinema`): nine `cinema-*` film posters of the Afterlight cycle (noir, sci-fi, western, horror, romance, documentary, thriller, drama, musical), procedural scenes baked onto one 2.5-cell luma lattice, title on the same lattice knocked out of the scene, one red "last light" per poster; quantized 12 fps projector flicker + `decodeText` title per 16 s reel; EXIT 14 centre dashes move. Goldens +9.
+
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.
 - [ ] P0-E: `accentRole` on multi-accent cards → decision §11.1.
