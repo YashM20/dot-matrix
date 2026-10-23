@@ -127,28 +127,62 @@ export const liveWeather: WidgetPreset = {
 }
 
 // ── 02 NOW PLAYING ──────────────────────────────────────────────────────────
-/** A cover generated from the title: a mirrored 9×9 dot identicon in three sizes (each track its own art). */
-const COVER = { x: 4, y: 15, n: 9, sp: 6 }
+/**
+ * A cover generated from the title: a sun going down into the sea, on a 2.4-cell site lattice (20 × 20
+ * sites). The upper half of the disc is solid, the lower half is cut by gaps that open up toward the
+ * horizon; under it the water carries the sun's reflection as dashes that narrow and dim toward the
+ * viewer, with a few faint stars above. The title seeds the sun's place, size and band rhythm (each
+ * track its own art, the same art every frame).
+ */
+const COVER = { x: 4, y: 15, n: 20, sp: 2.4 }
+const covers = new Map<number, Layer[]>()
 function cover(seed: number): Layer[] {
-  const tiers: Pt[][] = [[], [], []], half = Math.ceil(COVER.n / 2)
-  for (let r = 0; r < COVER.n; r++) for (let c = 0; c < half; c++) {
-    // brighter toward a hashed focal point, so each cover has one shape instead of noise
-    const fx = 1 + 2.5 * hash01(seed % 1e6, 1), fy = 1.5 + 6 * hash01(seed % 1e6, 2)
-    const d = Math.hypot(c - fx, r - fy) / 5, h = hash01(seed % 1e6, r * 16 + c, 3) * .55 + (1 - d) * .65
-    const tier = h > .78 ? 2 : h > .5 ? 1 : 0
-    for (const cc of new Set([c, COVER.n - 1 - c])) tiers[tier].push([COVER.x + cc * COVER.sp, COVER.y + r * COVER.sp])
+  const key = seed % 1e6
+  let out = covers.get(key)
+  if (out) return out
+  const { n, sp } = COVER, tiers: Pt[][] = [[], [], [], []] // faint, mid, idle, value
+  const cx = 8.5 + 3 * hash01(key, 1), r = 6.6 + 1.2 * hash01(key, 2), horizon = 14 + Math.round(hash01(key, 3)), cy = horizon - .5 - r * .6
+  // rows under the sun's centre: D drawn, G a gap; the gaps open up toward the horizon
+  const BANDS = hash01(key, 4) < .5 ? 'DDGDDGDGGDG' : 'DGDDGDGGDGG'
+  for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
+    const at: Pt = [COVER.x + i * sp, COVER.y + j * sp], d = Math.hypot(i - cx, j - cy)
+    if (j < horizon) {
+      if (d <= r) {
+        // the sun: solid above its centre, then bands that thicken toward the horizon
+        const q = j - Math.ceil(cy)
+        if (q < 0 || BANDS[q] !== 'G') tiers[q < 2 ? 3 : 2].push(at)
+      } else if (hash01(key, j * 32 + i, 5) > .955) tiers[0].push(at) // stars
+      continue
+    }
+    if (j === horizon) { tiers[Math.abs(i - cx) <= r ? 2 : 1].push(at); continue }
+    // the water: the reflection narrows and breaks up toward the viewer; faint swell lines either side
+    const z = j - horizon, half = r * (1 - z / (n - horizon + 2)), wave = hash01(key, j * 32 + i, 7)
+    if (Math.abs(i - cx) <= half && wave > .18) tiers[z < 3 ? 2 : 1].push(at)
+    else if (z % 2 === 0 && wave > .55) tiers[0].push(at)
   }
-  return [layer(T.dots(tiers[0], 1.1), 'faint'), layer(T.dots(tiers[1], 2.2), 'mid'), layer(T.dots(tiers[2], 3.4))]
+  out = [layer(T.dots(tiers[0], 1), 'faint'), layer(T.dots(tiers[1], 1.6), 'mid'), layer(T.dots(tiers[2], 2), 'idle'), layer(T.dots(tiers[3], 2.3))]
+  covers.set(key, out)
+  return out
+}
+/** Spectrum bands: a held spectral tilt (bass-heavy) times two beating sines per band, stepped at 12 fps. */
+const EQ_BANDS = 10
+const eqLevels = (t: number, seed: number) => {
+  const tf = Math.floor(t * 12) / 12, beat = .5 + .5 * Math.max(0, Math.sin(tf * TAU * 1.9)) ** 3
+  return Array.from({ length: EQ_BANDS }, (_, i) => {
+    const f1 = 1.3 + 2.1 * hash01(seed % 1e6, i, 21), f2 = 2.9 + 3.3 * hash01(seed % 1e6, i, 22), ph = TAU * hash01(seed % 1e6, i, 23)
+    const tilt = 1 - .55 * (i / (EQ_BANDS - 1)), wobble = .5 + .25 * Math.sin(tf * f1 * TAU / 2 + ph) + .25 * Math.sin(tf * f2 * TAU / 2 + 2 * ph)
+    return Math.max(.08, Math.min(1, tilt * wobble * (i < 3 ? .65 + .45 * beat : .85 + .15 * beat)))
+  })
 }
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 export const liveNowPlaying: WidgetPreset = {
-  id: 'live-now-playing', name: 'Now Playing', label: 'NOW PLAYING', group: 'photo', ...tile,
+  id: 'live-now-playing', name: 'Now Playing', label: 'NOW PLAYING', group: 'photo', ...tile, animated: true,
   defaults: sources.nowPlaying.fixture, springKeys: ['npPos'],
-  layers: ({ data }) => {
+  layers: ({ data, t }) => {
     const playing = data.npPlay !== 0, title = textOf(data.npTitle, 'NOTHING PLAYING'), dur = data.npDur, pos = Math.max(0, Math.min(1, data.npPos))
     const knob = 3 + pos * 137, seed = data.npTitle || 1
-    // spectrum to the right of the cover: a still of the track's "shape", flat when paused
-    const eq = Array.from({ length: 10 }, (_, i) => (playing ? .2 + .8 * hash01(seed % 1e6, i, 9) * (1 - Math.abs(i - 3.5) / 9) : .04))
+    // spectrum to the right of the cover: it moves with the board clock while playing, flat when paused
+    const eq = playing ? eqLevels(t, seed) : Array.from({ length: EQ_BANDS }, () => .04)
     return [
       ...cover(seed),
       layer(T.text(playing ? '▶ PLAYING' : '■ PAUSED', 62, 15), playing ? 'value' : 'idle'),
