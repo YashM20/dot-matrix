@@ -1,0 +1,33 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "ui-progress",
+  "type": "registry:component",
+  "title": "Progress (Dot/480)",
+  "description": "Components v2 dot-matrix card `ui-progress`: Field → Sampler → Renderer, static (SVG under 2000 dots). Controls: Sync progress (slider). Props: data, theme, renderer, pitch, onInput.",
+  "dependencies": [
+    "@dot480/react@^0.1.0",
+    "@dot480/core@^0.1.0"
+  ],
+  "files": [
+    {
+      "path": "registry/dot480/ui-progress/ui-progress.tsx",
+      "type": "registry:component",
+      "content": "'use client'\n/** Progress — Dot/480 card `ui-progress` (interactive: pointer + keyboard edit its data). */\nimport { DotCard, type DotCardProps } from '@dot480/react'\n\nexport type DotProgressProps = Omit<DotCardProps, 'preset' | 'spec'>\n\nexport function DotProgress(props: DotProgressProps) {\n  return <DotCard preset=\"ui-progress\" {...props} />\n}\n"
+    }
+  ],
+  "categories": [
+    "dot-matrix",
+    "components-v2"
+  ],
+  "meta": {
+    "preset": "ui-progress",
+    "controls": [
+      "progress"
+    ],
+    "grid": {
+      "cols": 144,
+      "rows": 144,
+      "pitch": 2.25
+    }
+  }
+}

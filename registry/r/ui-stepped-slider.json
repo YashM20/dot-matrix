@@ -1,0 +1,33 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "ui-stepped-slider",
+  "type": "registry:component",
+  "title": "Stepped Slider (Dot/480)",
+  "description": "Components v2 dot-matrix card `ui-stepped-slider`: Field → Sampler → Renderer, static (SVG under 2000 dots). Controls: Level (slider). Props: data, theme, renderer, pitch, onInput.",
+  "dependencies": [
+    "@dot480/react@^0.1.0",
+    "@dot480/core@^0.1.0"
+  ],
+  "files": [
+    {
+      "path": "registry/dot480/ui-stepped-slider/ui-stepped-slider.tsx",
+      "type": "registry:component",
+      "content": "'use client'\n/** Stepped Slider — Dot/480 card `ui-stepped-slider` (interactive: pointer + keyboard edit its data). */\nimport { DotCard, type DotCardProps } from '@dot480/react'\n\nexport type DotSteppedSliderProps = Omit<DotCardProps, 'preset' | 'spec'>\n\nexport function DotSteppedSlider(props: DotSteppedSliderProps) {\n  return <DotCard preset=\"ui-stepped-slider\" {...props} />\n}\n"
+    }
+  ],
+  "categories": [
+    "dot-matrix",
+    "components-v2"
+  ],
+  "meta": {
+    "preset": "ui-stepped-slider",
+    "controls": [
+      "step"
+    ],
+    "grid": {
+      "cols": 144,
+      "rows": 144,
+      "pitch": 2.25
+    }
+  }
+}

@@ -1,0 +1,21 @@
+{
+  "name": "@dot480/element",
+  "version": "0.1.0",
+  "description": "<dot-card> custom element for Dot/480 dot-matrix cards. No framework, shadow DOM, reduced-motion aware.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": ["./dist/index.js", "./dist/standalone/dot-card.js"],
+  "files": ["dist", "demo.html"],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/types/index.d.ts", "default": "./dist/index.js" },
+    "./standalone": { "types": "./dist/types/index.d.ts", "default": "./dist/standalone/dot-card.js" },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@dot480/core": "^0.1.0"
+  },
+  "keywords": ["dot-matrix", "custom-element", "web-component", "led", "ui"]
+}

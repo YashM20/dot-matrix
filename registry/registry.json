@@ -1,0 +1,505 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "dot480",
+  "homepage": "https://github.com/YashM20/dot-matrix",
+  "items": [
+    {
+      "name": "ui-segmented",
+      "type": "registry:component",
+      "title": "Segmented (Dot/480)",
+      "description": "Components v2 dot-matrix card `ui-segmented`: Field → Sampler → Renderer, static (SVG under 2000 dots). Controls: Fan speed (segmented). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/ui-segmented/ui-segmented.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components-v2"
+      ],
+      "meta": {
+        "preset": "ui-segmented",
+        "controls": [
+          "seg"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "ui-stepped-slider",
+      "type": "registry:component",
+      "title": "Stepped Slider (Dot/480)",
+      "description": "Components v2 dot-matrix card `ui-stepped-slider`: Field → Sampler → Renderer, static (SVG under 2000 dots). Controls: Level (slider). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/ui-stepped-slider/ui-stepped-slider.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components-v2"
+      ],
+      "meta": {
+        "preset": "ui-stepped-slider",
+        "controls": [
+          "step"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "ui-knob",
+      "type": "registry:component",
+      "title": "Knob (Dot/480)",
+      "description": "Components v2 dot-matrix card `ui-knob`: Field → Sampler → Renderer, static (SVG under 2000 dots). Controls: Gain (knob). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/ui-knob/ui-knob.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components-v2"
+      ],
+      "meta": {
+        "preset": "ui-knob",
+        "controls": [
+          "gain"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "ui-stepper",
+      "type": "registry:component",
+      "title": "Stepper (Dot/480)",
+      "description": "Components v2 dot-matrix card `ui-stepper`: Field → Sampler → Renderer, static (SVG under 2000 dots). Controls: Guests (stepper). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/ui-stepper/ui-stepper.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components-v2"
+      ],
+      "meta": {
+        "preset": "ui-stepper",
+        "controls": [
+          "guests"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "ui-check",
+      "type": "registry:component",
+      "title": "Checkbox (Dot/480)",
+      "description": "Components v2 dot-matrix card `ui-check`: Field → Sampler → Renderer, static (SVG under 2000 dots). Controls: Notify (toggle), Period (segmented). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/ui-check/ui-check.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components-v2"
+      ],
+      "meta": {
+        "preset": "ui-check",
+        "controls": [
+          "notify",
+          "period"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "ui-tabs",
+      "type": "registry:component",
+      "title": "Tabs (Dot/480)",
+      "description": "Components v2 dot-matrix card `ui-tabs`: Field → Sampler → Renderer, static (SVG under 2000 dots). Controls: Range (segmented). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/ui-tabs/ui-tabs.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components-v2"
+      ],
+      "meta": {
+        "preset": "ui-tabs",
+        "controls": [
+          "tab"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "ui-progress",
+      "type": "registry:component",
+      "title": "Progress (Dot/480)",
+      "description": "Components v2 dot-matrix card `ui-progress`: Field → Sampler → Renderer, static (SVG under 2000 dots). Controls: Sync progress (slider). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/ui-progress/ui-progress.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components-v2"
+      ],
+      "meta": {
+        "preset": "ui-progress",
+        "controls": [
+          "progress"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "ui-loaders",
+      "type": "registry:component",
+      "title": "Loaders (Dot/480)",
+      "description": "Components v2 dot-matrix card `ui-loaders`: Field → Sampler → Renderer, animated (Canvas). Controls: Loading (toggle). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/ui-loaders/ui-loaders.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components-v2"
+      ],
+      "meta": {
+        "preset": "ui-loaders",
+        "controls": [
+          "run"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "ui-keypad",
+      "type": "registry:component",
+      "title": "Keypad (Dot/480)",
+      "description": "Components v2 dot-matrix card `ui-keypad`: Field → Sampler → Renderer, animated (Canvas). Controls: 1 (button), 2 (button), 3 (button), 4 (button), 5 (button), 6 (button), 7 (button), 8 (button), 9 (button), Star (button), 0 (button), Hash (button). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/ui-keypad/ui-keypad.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components-v2"
+      ],
+      "meta": {
+        "preset": "ui-keypad",
+        "controls": [
+          "k1",
+          "k2",
+          "k3",
+          "k4",
+          "k5",
+          "k6",
+          "k7",
+          "k8",
+          "k9",
+          "kstar",
+          "k0",
+          "khash"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "ui-text-field",
+      "type": "registry:component",
+      "title": "Text Field (Dot/480)",
+      "description": "Components v2 dot-matrix card `ui-text-field`: Field → Sampler → Renderer, animated (Canvas). Controls: Callsign (stepper). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/ui-text-field/ui-text-field.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components-v2"
+      ],
+      "meta": {
+        "preset": "ui-text-field",
+        "controls": [
+          "len"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "timer",
+      "type": "registry:component",
+      "title": "Timer (Dot/480)",
+      "description": "Widget dot-matrix card `timer`: Field → Sampler → Renderer, static (SVG under 2000 dots). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/timer/timer.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "widgets"
+      ],
+      "meta": {
+        "preset": "timer",
+        "controls": [],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "home-clock",
+      "type": "registry:component",
+      "title": "Home (Dot/480)",
+      "description": "Widget dot-matrix card `home-clock`: Field → Sampler → Renderer, static (SVG under 2000 dots). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/home-clock/home-clock.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "widgets"
+      ],
+      "meta": {
+        "preset": "home-clock",
+        "controls": [],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "weather",
+      "type": "registry:component",
+      "title": "Weather (Dot/480)",
+      "description": "Widget dot-matrix card `weather`: Field → Sampler → Renderer, animated (Canvas). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/weather/weather.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "widgets"
+      ],
+      "meta": {
+        "preset": "weather",
+        "controls": [],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "music",
+      "type": "registry:component",
+      "title": "Music (Dot/480)",
+      "description": "Widget dot-matrix card `music`: Field → Sampler → Renderer, static (SVG under 2000 dots). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/music/music.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "widgets"
+      ],
+      "meta": {
+        "preset": "music",
+        "controls": [],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "audio-levels",
+      "type": "registry:component",
+      "title": "Audio (Dot/480)",
+      "description": "Widget dot-matrix card `audio-levels`: Field → Sampler → Renderer, animated (Canvas). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/audio-levels/audio-levels.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "widgets"
+      ],
+      "meta": {
+        "preset": "audio-levels",
+        "controls": [],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "hb-agent",
+      "type": "registry:component",
+      "title": "AGENT (Dot/480)",
+      "description": "Widget dot-matrix card `hb-agent`: Field → Sampler → Renderer, animated (Canvas). Controls: Agent state (segmented). Props: data, theme, renderer, pitch, onInput.",
+      "dependencies": [
+        "@dot480/react@^0.1.0",
+        "@dot480/core@^0.1.0"
+      ],
+      "files": [
+        {
+          "path": "registry/dot480/hb-agent/hb-agent.tsx",
+          "type": "registry:component"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "widgets"
+      ],
+      "meta": {
+        "preset": "hb-agent",
+        "controls": [
+          "state"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    }
+  ]
+}
