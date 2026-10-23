@@ -15,6 +15,7 @@ import { lightBoard } from './boards/light'
 import { levelsBoard } from './boards/levels'
 import { heartbeatBoard } from './boards/heartbeat'
 import { simBoard } from './boards/sim'
+import { physicsBoard } from './boards/physics'
 import { glyphBoard } from './boards/glyph'
 import { liveBoard, liveSources } from './boards/live'
 import type { Source } from '../data/source'
@@ -49,6 +50,7 @@ export const boards: BoardDef[] = [
   { id: 'levels', title: 'LEVELS — HIVE, NINE WORLDS', columns: 3, items: levelsBoard },
   { id: 'heartbeat', title: 'HEARTBEAT — AGENT PRESENCE', columns: 3, items: heartbeatBoard },
   { id: 'sim', title: 'SIM — LIVING FIELDS', columns: 3, items: simBoard },
+  { id: 'physics', title: 'PHYSICS — DOTS YOU CAN TOUCH', columns: 3, items: physicsBoard },
   { id: 'glyph', title: 'GLYPH — LOCK EXPERIENCES', columns: 2, items: glyphBoard },
   { id: 'live', title: 'LIVE — WEATHER, NOW PLAYING, CONTRIBUTIONS', columns: 3, items: liveBoard, sources: liveSources },
   { id: 'mirror', title: 'MIRROR — LIVE HALFTONE', columns: 3, items: mirrorBoard },
