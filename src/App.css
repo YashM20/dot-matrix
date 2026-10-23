@@ -1457,3 +1457,305 @@ label b {
 .dot-a11y-ctl::-moz-range-track {
   background: transparent
 }
+
+/* ── DOTS tab (Dwitter for dots): Field IR REPL, share link, remix graph ── */
+.dw-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 440px);
+  gap: var(--spacing-cardGap);
+  padding: var(--spacing-cardGap) 0;
+  align-items: start;
+  text-align: left
+}
+
+.dw-main,
+.dw-side {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0
+}
+
+.dw-side {
+  position: sticky;
+  top: 22px
+}
+
+.dw-panel h2 small,
+.dw-gallery h2 small {
+  color: var(--mute);
+  margin-left: 8px;
+  letter-spacing: .1em
+}
+
+.dw-editor {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  background: #000;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  overflow: hidden;
+  font: 12px/18px var(--mono)
+}
+
+.dw-editor--error {
+  border-color: rgba(255, 59, 48, .45)
+}
+
+.dw-gutter {
+  padding: 10px 0;
+  overflow: hidden;
+  color: var(--mute);
+  text-align: right;
+  user-select: none;
+  max-height: 360px;
+  border-right: 1px solid var(--line)
+}
+
+.dw-gutter span {
+  display: block;
+  padding-right: 8px
+}
+
+.dw-gutter .dw-gutter-err {
+  color: var(--red)
+}
+
+.dw-code {
+  position: relative;
+  min-width: 0
+}
+
+.dw-mirror,
+.dw-code textarea {
+  margin: 0;
+  padding: 10px 12px;
+  font: inherit;
+  letter-spacing: 0;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+  height: 360px;
+  width: 100%
+}
+
+.dw-mirror {
+  position: absolute;
+  inset: 0;
+  color: transparent;
+  pointer-events: none;
+  overflow: hidden
+}
+
+.dw-mirror mark {
+  color: transparent;
+  background: rgba(255, 59, 48, .28);
+  border-bottom: 2px solid var(--red)
+}
+
+.dw-code textarea {
+  position: relative;
+  display: block;
+  resize: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--value);
+  caret-color: var(--red)
+}
+
+.dw-error {
+  grid-column: 1 / -1;
+  text-align: left;
+  border: 0;
+  border-top: 1px solid var(--line);
+  background: rgba(255, 59, 48, .08);
+  color: var(--label);
+  font: 11px var(--mono);
+  padding: 8px 12px;
+  cursor: pointer
+}
+
+.dw-error b,
+.dw-bad,
+.dw-warn b {
+  color: var(--red)
+}
+
+.dw-status {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 10px;
+  color: var(--mute);
+  font: 500 9px var(--mono);
+  letter-spacing: .12em
+}
+
+.dw-status b,
+.dw-url b {
+  color: var(--value)
+}
+
+.dw-share {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 12px;
+  flex-wrap: wrap
+}
+
+.dw-share button,
+.dw-play,
+.dw-link-btn {
+  font: 500 9px var(--mono);
+  letter-spacing: .1em;
+  padding: 7px 14px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: none;
+  color: var(--value);
+  cursor: pointer
+}
+
+.dw-share button:hover:not(:disabled),
+.dw-play:hover,
+.dw-link-btn:hover {
+  border-color: var(--red);
+  color: var(--red)
+}
+
+.dw-share button:disabled {
+  opacity: .4;
+  cursor: default
+}
+
+.dw-url {
+  margin-left: auto;
+  color: var(--mute);
+  font: 500 9px var(--mono);
+  letter-spacing: .1em
+}
+
+.dw-banner {
+  margin: 0 0 10px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 59, 48, .45);
+  border-radius: 8px;
+  color: var(--label);
+  font: 11px var(--mono)
+}
+
+.dw-stage {
+  min-height: 0;
+  padding: 18px;
+  touch-action: none;
+  cursor: crosshair
+}
+
+.dw-time {
+  display: grid;
+  grid-template-columns: auto 1fr 64px;
+  gap: 10px;
+  align-items: center
+}
+
+.dw-time output,
+.dw-slider output {
+  color: var(--label);
+  font: 10px var(--mono);
+  text-align: right
+}
+
+.dw-time input,
+.dw-slider input {
+  width: 100%;
+  accent-color: var(--red)
+}
+
+.dw-field {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  color: var(--mute);
+  font: 500 9px var(--mono);
+  letter-spacing: .12em
+}
+
+.dw-pickers .dw-field:first-child {
+  margin-top: 0
+}
+
+.dw-field select {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  color: var(--value);
+  font: 10px var(--mono);
+  padding: 4px 6px;
+  border-radius: 6px
+}
+
+.dw-slider {
+  display: grid;
+  grid-template-columns: 96px 1fr 40px;
+  gap: 8px;
+  align-items: center;
+  margin-top: 8px;
+  color: var(--label);
+  font: 10px var(--mono)
+}
+
+.dw-hint {
+  margin: 0;
+  color: var(--mute);
+  font: 10px/1.6 var(--mono)
+}
+
+.dw-hint code {
+  color: var(--label);
+  font-size: inherit;
+  padding: 0;
+  background: none
+}
+
+.dw-graph {
+  background: #000;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 10px;
+  cursor: pointer
+}
+
+.dw-graph canvas,
+.dw-graph .dot-svg {
+  width: 100% !important;
+  height: auto !important
+}
+
+.dw-list {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 12px 0 0;
+  padding: 0
+}
+
+.dw-link-btn {
+  margin-top: 12px;
+  color: var(--mute)
+}
+
+@media(max-width:960px) {
+  .dw-layout {
+    grid-template-columns: 1fr
+  }
+
+  .dw-side {
+    position: static;
+    order: -1
+  }
+}
