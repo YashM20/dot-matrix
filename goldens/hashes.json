@@ -991,42 +991,42 @@
   },
   "glyph-hourglass": {
    "t=0": {
-    "hash": "147127e4",
-    "dots": 312
+    "hash": "cdfbd82a",
+    "dots": 310
    },
    "t=1.3": {
-    "hash": "147127e4",
-    "dots": 312
+    "hash": "cdfbd82a",
+    "dots": 310
    }
   },
   "glyph-longpress": {
    "t=0": {
-    "hash": "a86b6de0",
-    "dots": 631
+    "hash": "b10209c1",
+    "dots": 529
    },
    "t=1.3": {
-    "hash": "a86b6de0",
-    "dots": 631
+    "hash": "b10209c1",
+    "dots": 529
    }
   },
   "glyph-notify": {
    "t=0": {
-    "hash": "c0523e6a",
-    "dots": 421
+    "hash": "18945236",
+    "dots": 545
    },
    "t=1.3": {
-    "hash": "6aee9fce",
-    "dots": 440
+    "hash": "659d7540",
+    "dots": 547
    }
   },
   "glyph-idle": {
    "t=0": {
-    "hash": "9a4a07fd",
-    "dots": 760
+    "hash": "38d9f467",
+    "dots": 1066
    },
    "t=1.3": {
-    "hash": "bfb73fb5",
-    "dots": 788
+    "hash": "38d9f467",
+    "dots": 1066
    }
   },
   "ui-toggle": {
