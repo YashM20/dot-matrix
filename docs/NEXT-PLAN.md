@@ -1,5 +1,7 @@
 # NEXT PLAN — After P6: v1.0 and beyond
 
+> **Direction update (2026-10-23):** this is a personal project deployed as a website only — no release, publishing or monetization. The product phases in §3 (launch, hosted service, plugins, partnerships) are superseded by `docs/WEB-PLAN.md`. §1 (gap audit), §2 (consolidation), §4 (Track R) and §6 (agent lessons) still apply.
+
 > **v1** · 2026-10-23 · written against `feat/p1-complete` @ `d6ea7e1` (P0–P4 merged, P5 running as parallel agents, P6 not started).
 > **Assumption:** P5 (GPU, devices, exports, targets) and P6 (card spec, packages, Dwitter page, MCP authoring tools) land roughly as `MASTER-PLAN.md` §4 describes. Wherever that assumption carries risk, the risk is flagged **⚠ P5/P6 risk**.
 > **Inputs:**

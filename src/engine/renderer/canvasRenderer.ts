@@ -1,14 +1,20 @@
 import type { DotInstance } from '../types'
 import { BEZIER_MAX_N, bezierHandle, cornerFraction, squircleExponent } from './shapePath'
 
-type PathSink = Pick<CanvasPath, 'moveTo' | 'lineTo' | 'arcTo' | 'bezierCurveTo' | 'arc' | 'rect' | 'closePath'>
+export type PathSink = Pick<CanvasPath, 'moveTo' | 'lineTo' | 'arcTo' | 'bezierCurveTo' | 'arc' | 'rect' | 'closePath'>
 
-/** Append one dot outline as a closed sub-path (squircles: same curve as the SVG renderer). */
+/** Append one dot outline as a sub-path, left open for `fill` (squircles: same curve as the SVG renderer). */
 function addDot(p: PathSink, dot: DotInstance): void {
-  const { x, y, r } = dot
-  if (dot.shape === 'square') { p.rect(x - r, y - r, r * 2, r * 2); return }
-  if (dot.shape !== 'squircle') { p.moveTo(x + r, y); p.arc(x, y, r, 0, Math.PI * 2); p.closePath(); return }
-  const n = squircleExponent(dot.roundness ?? 0)
+  addDotShape(p, dot.x, dot.y, dot.r, dot.shape, dot.shape === 'squircle' ? squircleExponent(dot.roundness ?? 0) : 2, false)
+}
+/**
+ * One dot outline from plain numbers; `n` = the squircle exponent (read only for `shape: 'squircle'`).
+ * `close: false` leaves the sub-paths open: `fill()` closes them implicitly (same pixels), and Chrome's
+ * `closePath` is a large share of path building for thousands of dots.
+ */
+export function addDotShape(p: PathSink, x: number, y: number, r: number, shape: DotInstance['shape'], n: number, close = true): void {
+  if (shape === 'square') { p.rect(x - r, y - r, r * 2, r * 2); return }
+  if (shape !== 'squircle') { p.moveTo(x + r, y); p.arc(x, y, r, 0, Math.PI * 2); if (close) p.closePath(); return }
   if (n > BEZIER_MAX_N) {
     const c = r * cornerFraction(n), s = r - c
     p.moveTo(x - s, y - r); p.lineTo(x + s, y - r); p.arcTo(x + r, y - r, x + r, y - s, c)
@@ -22,7 +28,7 @@ function addDot(p: PathSink, dot: DotInstance): void {
     p.bezierCurveTo(x - k, y + r, x - r, y + k, x - r, y)
     p.bezierCurveTo(x - r, y - k, x - k, y - r, x, y - r)
   }
-  p.closePath()
+  if (close) p.closePath()
 }
 
 /**

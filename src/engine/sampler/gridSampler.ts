@@ -1,6 +1,7 @@
 import type { DotInstance, DotStyle, Field, GridConfig, Layer, ThemeTokens, Tone } from '../types'
-import { applyJitter } from './jitter'
+import { mulberry32 } from './jitter'
 import { quantize } from './quantize'
+import { acquireDotBuffer, paletteOf, pushDot, toneIndex, type DotBuffer } from '../buffer/dotBuffer'
 /**
  * Canonical tone mapping — single source of truth for dot color by value.
  * Thresholds mirror DESIGN.md Dot Grey Scale:
@@ -36,12 +37,24 @@ const shown = (value: number, style: DotStyle) => (style.quantizeSteps ? quantiz
 /** A positive, finite lattice/size factor (bad input falls back to 1 instead of throwing or flipping radii). */
 const factor = (k: number | undefined) => (k !== undefined && Number.isFinite(k) && k > 0 ? k : 1)
 
-function emit(dots: DotInstance[], value: number, color: string, x: number, y: number, seed: number, style: DotStyle, scale = 1): void {
+/**
+ * Where emitted dots go: a `DotInstance[]` (the classic API) or a struct-of-arrays `DotBuffer`.
+ * One object shape for both (a branch, not a virtual call, keeps `emit` monomorphic). `tone` is a
+ * `TONE` index; the array path resolves it through `palette`, or uses `fixed` when set.
+ */
+interface Sink { dots: DotInstance[] | null; buf: DotBuffer | null; palette: readonly string[]; fixed: string | undefined; shape: DotStyle['shape']; roundness: number | undefined }
+const sinkOf = (dots: DotInstance[] | null, buf: DotBuffer | null, palette: readonly string[], style: DotStyle): Sink =>
+  ({ dots, buf, palette, fixed: undefined, shape: style.shape, roundness: style.cornerRoundness })
+
+function emit(out: Sink, value: number, tone: number, x: number, y: number, seed: number, style: DotStyle, scale = 1): void {
   value = shown(value, style)
   const eased = style.sizeCurve ? style.sizeCurve(value) : value
   let jx = x, jy = y
-  if (style.jitter) [jx, jy] = applyJitter([x, y], style.jitter * scale, seed)
-  dots.push({ x: jx, y: jy, r: (style.sizeMin + (style.sizeMax - style.sizeMin) * eased) * scale, opacity: style.opacityMode === 'constant' ? 1 : value, color, shape: style.shape, roundness: style.cornerRoundness })
+  // same arithmetic as `applyJitter`, without the tuple
+  if (style.jitter) { const amount = style.jitter * scale, random = mulberry32(seed); jx = x + (random() - .5) * amount; jy = y + (random() - .5) * amount }
+  const r = (style.sizeMin + (style.sizeMax - style.sizeMin) * eased) * scale, opacity = style.opacityMode === 'constant' ? 1 : value
+  if (out.buf) pushDot(out.buf, jx, jy, r, opacity, tone)
+  else out.dots!.push({ x: jx, y: jy, r, opacity, color: out.fixed ?? out.palette[tone], shape: out.shape, roundness: out.roundness })
 }
 
 /** The cell grid a lattice layer is sampled on (see `Layer.lattice`). */
@@ -50,12 +63,13 @@ export function latticeGrid(grid: GridConfig, lattice: number, origin: [number, 
 }
 
 export function sampleField(field: Field, grid: GridConfig, style: DotStyle, theme: ThemeTokens, colorForFn: ColorFor = colorFor): DotInstance[] {
-  const pitch = grid.pitch ?? theme.gridPx; const dots: DotInstance[] = []
+  const pitch = grid.pitch ?? theme.gridPx, out = sinkOf([], null, [], style)
   for (let row = 0; row < grid.rows; row++) for (let col = 0; col < grid.cols; col++) {
     const value = safe(field(cellU(col, grid.cols), cellU(row, grid.rows)))
-    emit(dots, value, colorForFn(value, theme), (col + .5) * pitch, (row + .5) * pitch, row * grid.cols + col, style)
+    out.fixed = colorForFn(value, theme)
+    emit(out, value, 0, (col + .5) * pitch, (row + .5) * pitch, row * grid.cols + col, style)
   }
-  return dots
+  return out.dots!
 }
 
 /** Inclusive cell window [c0, r0, c1, r1] a field is visited in: its `bounds` clipped to the grid, else the whole grid. */
@@ -130,8 +144,22 @@ const toneOf = (layers: Layer[], owner: number, value: number, u: number, v: num
  * cells under a lit lattice dot are left empty so the two pitches never overlap.
  */
 export function sampleLayers(layers: Layer[], grid: GridConfig, style: DotStyle, theme: ThemeTokens): DotInstance[] {
+  const out = sinkOf([], null, paletteOf(theme), style)
   scratch.enter()
-  try { return sampleLayersOnce(layers, grid, style, theme) } finally { scratch.leave() }
+  try { sampleLayersOnce(out, layers, grid, style, theme) } finally { scratch.leave() }
+  return out.dots!
+}
+
+/**
+ * `sampleLayers` into a struct-of-arrays `DotBuffer` (reset, grown as needed; a pooled one when omitted):
+ * the same dots in the same order, with no object per dot. `toDots(buf)` gives the `DotInstance[]` back
+ * (float32-rounded). Shape, roundness and palette are stamped from `style` / `theme`.
+ */
+export function sampleLayersInto(layers: Layer[], grid: GridConfig, style: DotStyle, theme: ThemeTokens, buf: DotBuffer = acquireDotBuffer(grid.cols * grid.rows)): DotBuffer {
+  buf.n = 0; buf.palette = paletteOf(theme); buf.shape = style.shape; buf.roundness = style.cornerRoundness
+  scratch.enter()
+  try { sampleLayersOnce(sinkOf(null, buf, buf.palette, style), layers, grid, style, theme) } finally { scratch.leave() }
+  return buf
 }
 
 /** One coordinate of a site's merge key: the integer behind `x.toFixed(2)`, negatives (incl. "-0.00") mapped below 0. */
@@ -152,8 +180,8 @@ function siteKey(x: number, y: number): number | string {
   return Math.abs(kx) < KEY_SPAN && Math.abs(ky) < KEY_SPAN ? kx * (2 * KEY_SPAN) + ky : `${x.toFixed(2)},${y.toFixed(2)}`
 }
 
-function sampleLayersOnce(layers: Layer[], grid: GridConfig, style: DotStyle, theme: ThemeTokens): DotInstance[] {
-  const pitch = grid.pitch ?? theme.gridPx; const dots: DotInstance[] = []
+function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: DotStyle, theme: ThemeTokens): void {
+  const pitch = grid.pitch ?? theme.gridPx
   const base: Layer[] = [], lattices = new Map<string, Layer[]>(), sited: Layer[] = []
   for (const layer of layers) {
     if (layer.sites) { sited.push(layer); continue }
@@ -173,7 +201,7 @@ function sampleLayersOnce(layers: Layer[], grid: GridConfig, style: DotStyle, th
       const j = (row - wr0) * width + (col - wc0), value = best[j]
       // a dot that quantizes to nothing is not drawn, so it must not punch a hole in the card either
       if (value <= 0 || shown(value, style) <= 0) continue
-      emit(dots, value, toneColor(toneOf(group, owner[j], value, us[col], vs[row]), value, theme), (ox + (col + .5) * k) * pitch, (oy + (row + .5) * k) * pitch, 1e6 + row * sub.cols + col, style, k)
+      emit(dots, value, toneIndex(toneOf(group, owner[j], value, us[col], vs[row]), value), (ox + (col + .5) * k) * pitch, (oy + (row + .5) * k) * pitch, 1e6 + row * sub.cols + col, style, k)
       // card cells whose centre falls inside this lattice cell
       const c0 = Math.ceil(ox + col * k - .5), c1 = Math.ceil(ox + (col + 1) * k - .5), r0 = Math.ceil(oy + row * k - .5), r1 = Math.ceil(oy + (row + 1) * k - .5)
       for (let r = Math.max(0, r0); r < Math.min(grid.rows, r1); r++) for (let c = Math.max(0, c0); c < Math.min(grid.cols, c1); c++) covered![r * grid.cols + c] = 1
@@ -190,7 +218,7 @@ function sampleLayersOnce(layers: Layer[], grid: GridConfig, style: DotStyle, th
   }
   let seed = 2e6
   for (const { x, y, k, value, tone } of sites.values()) {
-    emit(dots, value, toneColor(tone, value, theme), (x + .5) * pitch, (y + .5) * pitch, seed++, style, k)
+    emit(dots, value, toneIndex(tone, value), (x + .5) * pitch, (y + .5) * pitch, seed++, style, k)
     const reach = k / 2 + .25
     for (let r = Math.max(0, Math.ceil(y - reach)); r <= Math.min(grid.rows - 1, Math.floor(y + reach)); r++)
       for (let c = Math.max(0, Math.ceil(x - reach)); c <= Math.min(grid.cols - 1, Math.floor(x + reach)); c++)
@@ -201,7 +229,6 @@ function sampleLayersOnce(layers: Layer[], grid: GridConfig, style: DotStyle, th
     const i = row * grid.cols + col, value = best[i]
     // empty cells are invisible unless the style draws every dot (constant opacity); 0 always shows as 0
     if (covered?.[i] || ((value <= 0 || shown(value, style) <= 0) && !background)) continue
-    emit(dots, value, toneColor(toneOf(base, owner[i], value, us[col], vs[row]), value, theme), (col + .5) * pitch, (row + .5) * pitch, i, style)
+    emit(dots, value, toneIndex(toneOf(base, owner[i], value, us[col], vs[row]), value), (col + .5) * pitch, (row + .5) * pitch, i, style)
   }
-  return dots
 }

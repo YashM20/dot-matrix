@@ -1,0 +1,59 @@
+{
+ "version": 1,
+ "id": "ir-ripple",
+ "name": "IR Ripple",
+ "group": "composite",
+ "grid": {
+  "cols": 144,
+  "rows": 144,
+  "pitch": 2.25
+ },
+ "style": {
+  "shape": "squircle",
+  "sizeMin": 0.2,
+  "sizeMax": 0.95,
+  "cornerRoundness": 0.1,
+  "opacityMode": "fromValue",
+  "quantizeSteps": 5
+ },
+ "layers": [
+  {
+   "kind": "ir",
+   "src": "// rings leave the centre and fade at the rim\nlet x = (u - .5) * 1.08; let y = v - .5;\nlet d = length(x, y);\nlet w = .5 + .5 * sin(d * 30 - t * 5);\nw * smoothstep(.6, .04, d)",
+   "tone": "auto",
+   "lattice": 3,
+   "origin": [
+    0,
+    12
+   ],
+   "bounds": [
+    0,
+    0,
+    48,
+    40
+   ]
+  },
+  {
+   "kind": "sites",
+   "points": [
+    [
+     71.5,
+     71.5
+    ]
+   ],
+   "size": 3,
+   "tone": "active"
+  },
+  {
+   "kind": "text",
+   "tone": "idle",
+   "text": "174 B  33 NODES",
+   "at": [
+    0,
+    134
+   ]
+  }
+ ],
+ "chrome": "dots",
+ "label": "IR  RIPPLE"
+}
