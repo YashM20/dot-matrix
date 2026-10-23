@@ -20,6 +20,7 @@ src/engine/                       framework-free TypeScript + Canvas/SVG APIs on
   fields/haltoneField.ts          imageToLuminanceField, bayerDither (per-dot), floydSteinbergDither, boxBlurField
   fields/waveformField.ts         amplitudeField (bottom/center baseline, gap), traceField, speech/ecg/sine amplitudes
   fields/splineField.ts, heatmapField.ts, scatterField.ts, projection3D.ts, warpedField.ts
+  migrate/                        hilbertIndex/hilbertOrder, migrate (Hilbert-rank dot pairing), migrationLayers, morph/morphSDF/signedDistance (SDF morph, EDT cache)
   (tests live in scripts/verify.ts — `pnpm verify`)
 src/widgets/
   types.ts                        WidgetPreset { grid, style, chrome?, label?, bleed?, defaults?, layers(ctx) }, TILE/CARD grids, tileStyle, layoutFor() (big, dotRing, dotLine, dotDisc, dotBars, dots, lattice …), cardChrome/withChrome
@@ -93,6 +94,14 @@ Stateful simulations as Fields (`src/engine/sim/`; MASTER-PLAN §3.7). `createSi
 - **Memory:** the stepper ping-pongs head/scratch (Gray–Scott sub-steps reuse src), neighbour index tables are built once, `simView`/`simField`/`simMapField` read a ring of 3 reused snapshots, so steady state allocates only new checkpoints.
 - **Models:** `grayScott` (explicit Euler, unit sub-step, 5-point Laplacian, `edge: 'wrap'` torus or `'clamp'` zero-flux, per-cell `killAt`, V flushed to 0 below 1e-9 (guards against float32 denormals)), `fallingSand` (0 empty, 2 wall, any other value a grain that keeps its kind; one move per grain per step, only into empty cells, so mass is conserved; sources are `emitters`, custom scenes via `init`), `life` (B3/S23, `edge: 'wrap'` torus default or `'dead'` bounded, `soup` rect, `stamps` via `lifeStamp`, optional `afterglow` trail channel).
 - **Tests:** `scripts/verify.ts` (end): determinism across fresh instances, replay and LRU restore; loop folding at 3600 s and wall clock; the step budget; sand mass conservation; Life oscillator/glider/edge cases; Gray–Scott fixed point and mirror symmetry; buffer reuse; cold board mount at t = 1, 60, 3600 s. `pnpm bench` prints the same cold-start table.
+
+## Migration and SDF morph
+Shared-element transitions (`src/engine/migrate/`; MASTER-PLAN §3.5, P4).
+- **`migrate(from, to, opts)`** pairs two `DotInstance[]` sets by rank along one Hilbert curve (`hilbertIndex`, order 12 over the square bounds of both sets; ties break by position, so the pairing ignores input order). Unequal counts: `spares: 'split'` (default) splits / merges the smaller set's dots so every drawn dot travels; `'fade'` rank-matches min(n) pairs and shrinks the rest in place (r, opacity → 0). `stagger` spreads the starts along the curve (a sweep), `arc` bows each path into a quadratic, `ease` shapes each dot's own progress. Returns `count`, `fromIndex` / `toIndex` and `frame(p)` (packed `[x, y, r, opacity, mix]`), `dots(p)` (colour mixed per dot), `colorAt`. p = 0 / 1 reproduce the two sets exactly. Units are the caller's: pixels from the sampler, or card cells (r = site size, opacity = value, color = tone name).
+- **`migrationLayers(m, p)`** turns a frame in card cells into site layers grouped by tone, snapped size and value (tone switches at half way): migration is always drawn as site layers, never splatted to card pitch.
+- **`morph(a, b, k)`** blends the signed distance rasters of two masks (`Raster` or `Field` + grid) and returns a coverage raster with tight bounds; `signedDistance` caches the EDT (`distanceRaster`) per shape identity, so a frame is one lerp. `morphSDF` returns the blended distance itself.
+- **App:** `DotCanvas` `migrate={ key, to, delay?, duration?, options? }` flies the frame on screen into `to` (target card dots in this canvas's pixel space) and holds; clearing it flies back. Reduced motion: instant. `glyph-longpress` uses the engine pairing: the open lock migrates into a now-playing glyph, release flies it back.
+- **Gates (verify):** 3000 → 2600 dots, setup ≤ 8 ms, frame ≤ 4 ms (median, printed); deterministic, input-order independent, identity on A → A, counts conserved / faded, morph ends exact.
 
 ## Tokens
 See `DESIGN.md`; runtime values in `src/engine/theme/tokens.ts`.
