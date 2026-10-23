@@ -14,7 +14,7 @@
 | P1 Motion, states, choreography | 2.5 wk | visible items done (P1-A..F) | 🟢 Needs browser checks + Departures taste pass |
 | P2 Interaction + Components v2 | 3 wk | P2-A..J done | 🟢 Instrument taste pass + `--mute` contrast decision left |
 | P3 Depth, light, material, Field IR | 3 wk | P3-A..G done | 🟢 Taste passes (Cinema, Levels, light) + exit gates left |
-| P4 Hero transitions, simulation, agents, live data | 3 wk | 0 | ⚪ |
+| P4 Hero transitions, simulation, agents, live data | 3 wk | P4-A..C v0 | 🔵 **Active**: migration, SDF morph, live data, MCP App left |
 | P5 GPU, devices, display physics | 3 wk | 0 | ⚪ |
 | P6 Authoring + ecosystem | 4 wk | 0 | ⚪ |
 | Track L (Perception Lab) / Track R (research spikes) | parallel | 0 | ⚪ |
@@ -60,6 +60,7 @@
 **P4 (living: transitions, simulation, agents, live data): started 2026-10-23**
 - [x] P4-B: Agent Heartbeat v0 (`src/widgets/boards/heartbeat.ts`, `?board=heartbeat`): six animated tiles, one metaball organism per agent state (`hb-thinking` breathing, `hb-tool-running` orbit + scan, `hb-awaiting-approval` red pulse, `hb-error` glitch/stutter in value/mid, `hb-done` settles into a check) plus `hb-agent` with a 5-stop segmented control on `data.state`. Red only on awaiting approval (the agent card shows it only when switched to that state). Goldens +6. Not done: real agent event feed, transitions between states.
 - [x] P4-A: SimFields (`src/engine/sim/`): `createSim` fixed-dt stepper with checkpoints, `simAt(sim, t)` replays deterministically (same t, same grid; back-jumps resume from the nearest checkpoint); Gray-Scott, falling sand and Conway Life, each as a bounded Field. Board `sim` (`sim-rd`, `sim-sand`, `sim-life`), goldens +3, verify section added.
+- [x] P4-C: **Glyph** lock experience v0 (`src/widgets/boards/glyph.ts`, `?board=glyph`): four animated tile cards: `glyph-hourglass` (wall-clock HH:MM poured grain by grain over each minute, old digits shed), `glyph-longpress` (button control; ring and glyph wedge reveal clockwise from `t - pointers[0].tDown`, UNLOCKED at 1.4 s), `glyph-notify` (metaball drop splits off and rejoins every 7 s, its badge dot is the board's only red; no card is `live`), `glyph-idle` (layered-sine reaction-diffusion look-alike wallpaper, not a simulation). Goldens +4. v0: needs the user's taste pass; long press not yet tried in the browser.
 
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.

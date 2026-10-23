@@ -989,6 +989,46 @@
     "dots": 1052
    }
   },
+  "glyph-hourglass": {
+   "t=0": {
+    "hash": "147127e4",
+    "dots": 312
+   },
+   "t=1.3": {
+    "hash": "147127e4",
+    "dots": 312
+   }
+  },
+  "glyph-longpress": {
+   "t=0": {
+    "hash": "a86b6de0",
+    "dots": 631
+   },
+   "t=1.3": {
+    "hash": "a86b6de0",
+    "dots": 631
+   }
+  },
+  "glyph-notify": {
+   "t=0": {
+    "hash": "c0523e6a",
+    "dots": 421
+   },
+   "t=1.3": {
+    "hash": "6aee9fce",
+    "dots": 440
+   }
+  },
+  "glyph-idle": {
+   "t=0": {
+    "hash": "9a4a07fd",
+    "dots": 760
+   },
+   "t=1.3": {
+    "hash": "bfb73fb5",
+    "dots": 788
+   }
+  },
   "ui-toggle": {
    "t=0": {
     "hash": "6579335f",

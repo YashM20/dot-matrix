@@ -15,6 +15,7 @@ import { lightBoard } from './boards/light'
 import { levelsBoard } from './boards/levels'
 import { heartbeatBoard } from './boards/heartbeat'
 import { simBoard } from './boards/sim'
+import { glyphBoard } from './boards/glyph'
 
 export interface BoardDef {
   id: string; title: string; columns: number; items: WidgetPreset[]
@@ -42,6 +43,7 @@ export const boards: BoardDef[] = [
   { id: 'levels', title: 'LEVELS — HIVE, NINE WORLDS', columns: 3, items: levelsBoard },
   { id: 'heartbeat', title: 'HEARTBEAT — AGENT PRESENCE', columns: 3, items: heartbeatBoard },
   { id: 'sim', title: 'SIM — LIVING FIELDS', columns: 3, items: simBoard },
+  { id: 'glyph', title: 'GLYPH — LOCK EXPERIENCES', columns: 2, items: glyphBoard },
   { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, items: componentsBoard },
 ]
 export const boardIds = boards.map(b => b.id)
