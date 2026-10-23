@@ -719,6 +719,126 @@
     "dots": 1291
    }
   },
+  "light-torch": {
+   "t=0": {
+    "hash": "f8f438cf",
+    "dots": 1997
+   },
+   "t=1.3": {
+    "hash": "7a7d6f98",
+    "dots": 1979
+   }
+  },
+  "light-orb": {
+   "t=0": {
+    "hash": "e6b6b6be",
+    "dots": 1886
+   },
+   "t=1.3": {
+    "hash": "da9b6a2a",
+    "dots": 1883
+   }
+  },
+  "light-on-air": {
+   "t=0": {
+    "hash": "7b6390d2",
+    "dots": 1340
+   },
+   "t=1.3": {
+    "hash": "d62459c9",
+    "dots": 1372
+   }
+  },
+  "lv-title": {
+   "t=0": {
+    "hash": "9e88255a",
+    "dots": 2828
+   },
+   "t=1.3": {
+    "hash": "e33e69c8",
+    "dots": 2706
+   }
+  },
+  "lv-corridor": {
+   "t=0": {
+    "hash": "92f1faec",
+    "dots": 20674
+   },
+   "t=1.3": {
+    "hash": "4c7e5537",
+    "dots": 20675
+   }
+  },
+  "lv-vault": {
+   "t=0": {
+    "hash": "162fd19c",
+    "dots": 9648
+   },
+   "t=1.3": {
+    "hash": "28fae89c",
+    "dots": 9648
+   }
+  },
+  "lv-surface": {
+   "t=0": {
+    "hash": "fdcc72d3",
+    "dots": 6909
+   },
+   "t=1.3": {
+    "hash": "174135f1",
+    "dots": 6881
+   }
+  },
+  "lv-warren": {
+   "t=0": {
+    "hash": "6c8cbb68",
+    "dots": 831
+   },
+   "t=1.3": {
+    "hash": "54d76ffc",
+    "dots": 844
+   }
+  },
+  "lv-void": {
+   "t=0": {
+    "hash": "bff3df6e",
+    "dots": 850
+   },
+   "t=1.3": {
+    "hash": "4a742ede",
+    "dots": 821
+   }
+  },
+  "lv-queen": {
+   "t=0": {
+    "hash": "bf838999",
+    "dots": 515
+   },
+   "t=1.3": {
+    "hash": "8f2ffe66",
+    "dots": 515
+   }
+  },
+  "lv-over": {
+   "t=0": {
+    "hash": "3984adf5",
+    "dots": 2032
+   },
+   "t=1.3": {
+    "hash": "4de03439",
+    "dots": 2041
+   }
+  },
+  "lv-scores": {
+   "t=0": {
+    "hash": "1e1dfe51",
+    "dots": 1521
+   },
+   "t=1.3": {
+    "hash": "1e1dfe51",
+    "dots": 1521
+   }
+  },
   "ui-toggle": {
    "t=0": {
     "hash": "6579335f",

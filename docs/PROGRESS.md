@@ -5,15 +5,15 @@
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
 ## Status board (updated 2026-10-22)
-**Where we are:** On branch `feat/p1-complete`: P0 agent items are done (P0-A borderline). P1-A to P1-F are done. P2-A to P2-D are done: input layer, Components v2, Instrument board, interaction tokens. P3–P6 have not started. 96 presets.
+**Where we are:** On branch `feat/p1-complete`: P0 agent items are done (P0-A borderline). P1-A to P1-F are done. P2-A to P2-J are done (P2-F browser/axe pass left). P3 is active: light engine (P3-A), Cinema (P3-B), Levels (P3-C), Field IR v0 (P3-E) are merged; lift pass (P3-D) in progress. P4–P6 have not started. 122 presets.
 `main` = `666c0eb` (PR #2 merged: TILE boards + P0 + P1 motion core).
 
 | Phase | Plan | Done | State |
 |---|---|---|---|
 | P0 Foundations, determinism, fidelity harness | 2 wk | 22 / 28 items · 2 / 5 gates | 🟡 3 items waiting on the user; mosaic perf borderline |
 | P1 Motion, states, choreography | 2.5 wk | visible items done (P1-A..F) | 🟢 Needs browser checks + Departures taste pass |
-| P2 Interaction + Components v2 | 3 wk | P2-A..D done | 🔵 **Active**: polish + gates left (below) |
-| P3 Depth, light, material, Field IR | 3 wk | 0 | ⚪ |
+| P2 Interaction + Components v2 | 3 wk | P2-A..J done except F | 🟢 Browser/axe pass + Instrument taste pass left |
+| P3 Depth, light, material, Field IR | 3 wk | 4 / 5 agent items | 🔵 **Active**: lift pass, materials, browser + taste pass left |
 | P4 Hero transitions, simulation, agents, live data | 3 wk | 0 | ⚪ |
 | P5 GPU, devices, display physics | 3 wk | 0 | ⚪ |
 | P6 Authoring + ecosystem | 4 wk | 0 | ⚪ |
@@ -50,14 +50,8 @@
 
 **P3 (depth, light, material, IR): started 2026-10-22**
 - [x] P3-E: Field IR v0 (`src/engine/ir/`): parser with limits and line:col errors, closure-tree JS backend (+ optional `new Function`), GLSL ES 3.0 emitter, JSON serialize/validate, GLSL-semantics reference interpreter. `scripts/ir.ts` (in `pnpm verify`): JS ≡ reference on 20 fields over 48×48, GLSL hash snapshot in `goldens/ir-glsl.json`. Demo board `ir` (`ir-ripple`, `ir-plasma`, `ir-dial`). Not done: real GPU parity (P5), bytecode/device backend.
-
-**P3 (depth, light, material, IR): started 2026-10-22**
 - [x] P3-B: **Cinema** flagship board (`src/widgets/boards/cinema.ts`, `?board=cinema`): nine `cinema-*` film posters of the Afterlight cycle (noir, sci-fi, western, horror, romance, documentary, thriller, drama, musical), procedural scenes baked onto one 2.5-cell luma lattice, title on the same lattice knocked out of the scene, one red "last light" per poster; quantized 12 fps projector flicker + `decodeText` title per 16 s reel; EXIT 14 centre dashes move. Goldens +9.
-
-**P3 (depth, light, material, Field IR):**
 - [x] P3-A: engine Raster + light stack. `src/engine/raster/` (`Raster`, `rasterize`, `sample` nearest/bilinear, mass-preserving `blur`, `dilate`/`erode`/`outline`/`moat`/`cut`, exact signed `distanceRaster`) and `src/engine/light/` (`sdfCircle`/`sdfBox`/`sdfRing` + union/subtract, `heightRaster` + `normalRaster` cached per geometry, `stackHeights`, `lambert`, `phong`, one-pass `illuminate`, `torch`/`lightDir`, `bloom`). Verify §16 (round-trip, mass, flat normals, lambert/phong peaks, bloom moat, torch relight ≤ 1 ms: about 0.5 ms median on a loaded laptop, about 1.5 ms incl. reading every cell back). Demo board `light` (`?board=light`): `light-torch` (pointer = torch, orbit fallback, XY control parks it), `light-orb` (gloss sphere, slow sun, blurred contact shadow), `light-on-air` (red sign + activeDim bloom). Goldens +3. Not yet checked in the browser.
-
-**P3 (depth, light, material, IR): started 2026-10-22**
 - [x] P3-C: **Levels** flagship board (`src/widgets/boards/levels.ts`, `?board=levels`): nine animated HIVE game-world cards (title, torchlit corridor, isometric vault, parallax side-scroller, lantern maze, warp, boss, game over, high scores); local ray-plane `cast` + iso box tracer, Lambert point/window light, depth fog, cell-snapped parallax, one red element per card. v0: needs the user's taste pass.
 
 **Needs the user (blocked):**
