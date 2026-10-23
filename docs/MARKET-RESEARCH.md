@@ -1,5 +1,7 @@
 # MARKET RESEARCH: Dot/480
 
+> **Reference only (2026-10-23):** the user does not plan a release, monetization or marketing; the project is a personal website. Keep this for context (competitors, prior art, trademark cautions — e.g. avoid "Glyph" as a name). The active plan is `docs/WEB-PLAN.md`.
+
 > Researched 2026-10-23. Every factual claim carries a source tag `[S#]`; the full list (URL + access date) is at the end.
 > Numbers marked **Estimate** are my reasoning from comparables, not data. Where evidence is thin I say so.
 > Product described from `docs/MASTER-PLAN.md` (v2), `docs/MCP-APP.md`, `docs/PROGRESS.md` (P0–P4 done, P5 active, P6 not started, 146 presets) and `README.md`.

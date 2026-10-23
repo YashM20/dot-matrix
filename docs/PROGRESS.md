@@ -83,7 +83,7 @@
 - Unmerged agent work is saved in worktrees under `.claude/worktrees/` — P5-A WebGL2 renderer (`worktree-agent-a520014850d0cde8f`), P6-D Dot Studio (`worktree-agent-ab037e72f7115a61c`), launch essay (`worktree-agent-aa2661170ff4f86e0`). Resume each agent, or commit its WIP and merge into `feat/p1-complete`, then `pnpm golden --check` + `pnpm check`.
 - `pnpm check` currently fails only `mirror-camera live frame ≤ 4 ms` (5.4–6.9 ms) — measured with 3–9 agents loading the machine; re-measure on an idle machine before treating it as a regression.
 - `feat/p1-complete` is ~40 commits ahead of origin: push failed (Git Credential Manager crash; `gh` account `yashmhj` has no write access). Fix credentials, then `git push`.
-- Next plan: `docs/NEXT-PLAN.md` (v1.0 hardening first). Market + launch: `docs/MARKET-RESEARCH.md` (rename the "Glyph" board before launch — Nothing trademark).
+- Direction: personal project, website only (no release/monetization). Active plan: `docs/WEB-PLAN.md` (ship the site first, then the cool tracks C1–C10). `docs/NEXT-PLAN.md` §1/§2 still apply; `docs/MARKET-RESEARCH.md` is reference only. Rename the "Glyph" board to LOCK (trademark caution).
 
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.
