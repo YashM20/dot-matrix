@@ -5,9 +5,9 @@
  * places it on a coarser lattice like `T.big`; rings, sliders and waveforms are dot sites.
  */
 import { scale2x } from '../../engine/fields/bitmapFont'
-import { hash01, len, smoothstep } from '../../engine/math'
+import { clamp, hash01, len, smoothstep } from '../../engine/math'
 import type { Field } from '../../engine/types'
-import { TAU, TILE, baked, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
+import { TAU, TILE, baked, dim, layer, layoutFor, tileStyle, toneRamp, type LatticeField, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -243,33 +243,75 @@ export const interpreter: WidgetPreset = {
   },
 }
 
-// Thermal puppy: luminance = heat (white-hot face, chest and paws, cooler ear tips, a warm floor glow).
-const ell = (u: number, v: number, cx: number, cy: number, rx: number, ry: number) => 1 - len((u - cx) / rx, (v - cy) / ry)
-const puppy: Field = (u, v) => {
-  const n1 = hash01(Math.floor(u * 150) + Math.floor(v * 150) * 157, 3), n2 = hash01(Math.floor(u * 40) + Math.floor(v * 28) * 41, 9) - .5
-  const fuzz = .1 * n2 + .07 * (n1 - .5)
-  const head = ell(u, v, .51, .21, .17, .15), muzzle = ell(u, v, .51, .3, .08, .07)
-  const ears = Math.max(ell(u, v, .33, .285, .055, .11), ell(u, v, .685, .28, .055, .11))
-  const torso = Math.max(ell(u, v, .5, .5, .16, .2), ell(u, v, .5, .64, .21, .16)), chest = ell(u, v, .5, .47, .09, .14)
-  const legs = Math.max(ell(u, v, .38, .74, .075, .13), ell(u, v, .62, .74, .075, .13), ell(u, v, .3, .7, .08, .11), ell(u, v, .72, .7, .08, .11))
-  const paws = Math.max(ell(u, v, .37, .84, .085, .045), ell(u, v, .63, .84, .085, .045), ell(u, v, .27, .8, .06, .04), ell(u, v, .75, .79, .06, .04))
-  const gap = v > .7 ? Math.max(0, .05 - Math.abs(u - .5)) * 4 * Math.min(1, (v - .7) * 8) : 0
-  const inside = smoothstep(-.04, .1, Math.max(head, ears, torso, legs, paws, muzzle) + fuzz - gap)
-  const glow = Math.max(0, chest * 1.2, muzzle * 1.4, head * .7, paws * .9)
-  let heat = .8 + .2 * Math.min(1, glow * 2.2) + fuzz * 2 - (ears > 0 && head < .05 ? .14 : 0)
-  if (Math.min(len((u - .43) / .024, (v - .245) / .024), len((u - .58) / .024, (v - .245) / .024)) < 1) heat = .1
-  const back = .04 + .05 * v + .26 * Math.max(0, ell(u, v, .5, .9, .55, .14))
-  return Math.max(0, Math.min(1, back + (heat - back) * inside))
+// Thermal puppy: a sitting pup through a thermal camera. Heat is dot size and tone at once: cold floor
+// void, cool ears and paws mid grey, warm fur grey → white, the hot chest core red (accent = hot) and a
+// cold nose. Hand-tuned parts in card cells, painted back to front; each overlap leaves a cooler fur fold.
+// [cx, cy, rx, ry, tilt (rad), heat at the part's root, heat at its far end (down the part)]
+type Part = [number, number, number, number, number, number, number]
+const PUP: Part[] = [
+  [40, 118, 11, 6.5, 0, .44, .36], [104, 118, 11, 6.5, 0, .44, .36], // hind paws
+  [72, 101, 32, 21, 0, .6, .5], // haunches
+  [72, 83, 23, 26, 0, .68, .64], // chest
+  [61, 102, 7.5, 18, .05, .74, .58], [83, 102, 7.5, 18, -.05, .74, .58], // front legs
+  [60, 121, 9.5, 5.5, 0, .48, .4], [84, 121, 9.5, 5.5, 0, .48, .4], // front paws
+  [42, 54, 8.5, 20, .34, .44, .24], [104, 54, 8.5, 20, -.34, .44, .24], // floppy ears, hanging clear of the chest
+  [73, 40, 24, 20, 0, .52, .5], // head
+  [73, 54, 12, 9, 0, .64, .6], // muzzle
+]
+const HOT: Pt = [72, 73]
+const partSd = (x: number, y: number, [cx, cy, rx, ry, a]: Part) => {
+  const dx = x - cx, dy = y - cy, c = Math.cos(a), s = Math.sin(a)
+  return (len((c * dx + s * dy) / rx, (c * dy - s * dx) / ry) - 1) * Math.min(rx, ry)
 }
-/** The puppy never changes: baked once per card cell (about 20 ellipse tests a cell). */
-const PUPPY = baked(TILE, puppy)
-const NOSE: Pt = [73.5, 43]
+const pupHeat = (x: number, y: number) => {
+  // a 1-cell moat around the spot-meter crosshair arms
+  const ax = Math.abs(x - HOT[0]), ay = Math.abs(y - HOT[1])
+  if ((ax < 1.6 && ay > 2.4 && ay < 9.6) || (ay < 1.6 && ax > 2.4 && ax < 9.6)) return 0
+  let h = 0, inside = false, sd = 99
+  for (const p of PUP) {
+    const d = partSd(x, y, p)
+    sd = Math.min(sd, d)
+    if (d >= .5) continue
+    const along = clamp((y - (p[1] - p[3])) / (2 * p[3])), heat = p[5] + (p[6] - p[5]) * along
+    // a part in front of another: a ~1.5-cell cooler fold where its edge crosses the fur behind it
+    const fold = inside && d > -1.3 ? .72 : 1
+    h = inside ? heat * fold : heat
+    inside = true
+  }
+  if (inside) {
+    // chest core: thin fur, the hottest skin
+    h += .36 * Math.exp(-((x - HOT[0]) ** 2 + ((y - HOT[1]) / 1.2) ** 2) / (2 * 9 ** 2))
+    // forehead and eyes run warm; the wet nose is the coldest thing on the dog
+    h += .06 * Math.exp(-((x - 73) ** 2 + (y - 38) ** 2) / (2 * 9 ** 2))
+    const eye = Math.min(len(x - 63, y - 41), len(x - 83, y - 41))
+    if (eye < 2.6) h = .8
+    else if (eye < 3.6) h = .3
+    if (len((x - 73) / 5, (y - 50.5) / 3.6) < 1) h = 0
+    // fur insulates: the outline runs cooler over ~3 cells, then a 1-cell edge into the floor
+    h *= .8 + .2 * smoothstep(0, 3, -sd)
+  }
+  const edge = clamp(.5 - sd)
+  // warm air hugging the body and a faint warm patch on the floor under it
+  const halo = .2 * Math.exp(-Math.max(0, sd) / 2.2) + .1 * clamp(1 - len((x - 72) / 50, (y - 126) / 6))
+  return clamp(halo + (h - halo) * edge)
+}
+/** Heat → tone and size in one pass: the puppy never changes, so `toneRamp` evaluates each cell once. */
+const pupSize = (h: number) => .2 + .8 * h
+const PUPPY = toneRamp((u, v) => pupHeat(u * 143, v * 143), [
+  { at: .05, tone: 'faint', value: h => .3 + h },
+  { at: .2, blend: .04, tone: 'mid', value: pupSize },
+  { at: .4, blend: .05, tone: 'idle', value: pupSize },
+  { at: .6, blend: .06, tone: 'value', value: pupSize },
+  { at: .84, blend: .1, tone: 'active', value: pupSize },
+])
 export const thermalPuppy: WidgetPreset = {
-  id: 'thermal-puppy', name: 'Thermal', label: '', group: 'photo', chrome: 'dots', bleed: true, grid: TILE, style: { ...tileStyle, sizeMin: 0, sizeMax: 1.05, quantizeSteps: 0 },
+  id: 'thermal-puppy', name: 'Thermal', label: '', group: 'photo', chrome: 'dots', bleed: true, grid: TILE,
+  style: { ...tileStyle, sizeMin: 0, sizeMax: 1.05, quantizeSteps: 0, opacityMode: 'constant' },
   layers: () => [
-    layer(PUPPY, 'value'),
-    layer(T.dotRing(NOSE[0], NOSE[1], 3.2, { spacing: 1.3, size: 1.2 })),
-    layer(T.dots([NOSE], 4.5), 'active'),
+    ...PUPPY,
+    // spot meter on the hottest point: a crosshair and its readout
+    ...[[-1, 0], [1, 0], [0, -1], [0, 1]].map(([dx, dy]) => layer(T.dotLine(HOT[0] + dx * 4, HOT[1] + dy * 4, HOT[0] + dx * 8, HOT[1] + dy * 8, { spacing: 1, size: 1.1 }), 'value')),
+    layer(T.big('38.6°', 139, 5, { lattice: 1.3, align: 'right' })),
     // bleed cards have no padding, so the label is placed by hand at the padded inset
     layer(T.big('THERMAL', 5, 5, { lattice: .92 })),
   ],

@@ -48,6 +48,9 @@
 - [x] P2-I: `size` only re-grids the canvas (layers and boxes share cell space), so controls stay on unscaled; boxes fully outside the smaller grid are dropped.
 - [ ] P2-J: `inst-level` follows the sequencer's default pattern, not live edits (cards don't share data yet; needs board-level data).
 
+**P3 (depth, light, material, IR): started 2026-10-22**
+- [x] P3-D: lift pass on `silhouette` (structure-aware halftone, blue-noise-ish sky, hand-masked figure), `thermal-puppy` (heat `toneRamp`, red hot core, `38.6°` spot readout), `vision-camera` (silhouette pass per object, lamp-pool tone ramp, snapped detection boxes), `ev-charge` (Lambert-lit car from the cable side); `toneRamp(field, stops)` in `src/widgets/types.ts`, also used by `thermal-monitor` (output unchanged). Mount cost: henry3 +8 ms, audio +2 ms, mosaic +3 ms, because each tone is a separate layer pass in the sampler; an engine multi-tone layer would remove it.
+
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.
 - [ ] P0-E: `accentRole` on multi-accent cards → decision §11.1.

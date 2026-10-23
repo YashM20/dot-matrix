@@ -6,7 +6,7 @@
  */
 import { clamp, hash01, len, smoothstep } from '../../engine/math'
 import type { Field } from '../../engine/types'
-import { TAU, TILE, baked, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
+import { TAU, TILE, baked, layer, layoutFor, tileStyle, toneRamp, type LatticeField, type WidgetPreset } from '../types'
 import { HEART, INVADER } from '../sprites'
 
 const T = layoutFor(TILE)
@@ -111,28 +111,21 @@ const mugHeat = (x: number, y: number) => {
   const d = Math.min(Math.max(Math.abs(x - MUG_X) - half, 36.5 - y, y - 104.5, 0) + (y < 36.5 || y > 104.5 ? Math.max(0, Math.abs(x - MUG_X) - half) : 0), x < 46 ? Math.max(0, ho - 1) * 15 : 99)
   return .34 * Math.exp(-d / 2.2)
 }
-/** The mug is static: bake its heat once per card cell, shared by the three tone layers below. */
-const HEAT = new Float64Array(TILE.cols * TILE.rows).fill(NaN)
-const heatAt = (x: number, y: number) => {
-  const c = Math.round(x), r = Math.round(y)
-  if (Math.abs(x - c) > 1e-6 || Math.abs(y - r) > 1e-6 || c < 0 || r < 0 || c > N || r > N) return mugHeat(x, y)
-  const i = r * TILE.cols + c, h = HEAT[i]
-  return h === h ? h : (HEAT[i] = mugHeat(x, y))
-}
 const PANEL: [number, number, number, number] = [0, 16, 117, 110]
-/** Red → white is dithered: the hotter a cell, the likelier it is a white dot. */
-const hot = (x: number, y: number, h: number) => hash01(Math.round(x) * 151 + Math.round(y), 7) < clamp((h - .76) / .2)
-// the heat split into its three tones: cool halo grey, warm body red, hot core white (dot size = heat), each baked per cell
-const HEAT_MID = baked(TILE, cells((x, y) => { const h = heatAt(x, y); return h >= .05 && h < .42 ? .25 + h * 1.2 : 0 }, PANEL))
-const HEAT_WARM = baked(TILE, cells((x, y) => { const h = heatAt(x, y); return h >= .42 && !hot(x, y, h) ? .45 + .55 * clamp((h - .42) / .3) : 0 }, PANEL))
-const HEAT_HOT = baked(TILE, cells((x, y) => { const h = heatAt(x, y); return hot(x, y, h) ? .7 + .3 * clamp((h - .9) / .1) : 0 }, PANEL))
+// the heat split into its three tones, mugHeat evaluated once per cell: cool halo grey, warm body red,
+// hot core white (dot size = heat). Red → white is dithered: the hotter a cell, the likelier it is white.
+const HEAT = toneRamp(cells(mugHeat, PANEL), [
+  { at: .05, tone: 'mid', value: h => .25 + h * 1.2 },
+  { at: .42, tone: 'active', value: h => .45 + .55 * clamp((h - .42) / .3) },
+  { at: .76, blend: .2, tone: 'value', value: h => .7 + .3 * clamp((h - .9) / .1) },
+])
 export const thermalMonitor: WidgetPreset = {
   id: 'thermal-monitor', name: '01 Thermal Monitor', label: '01  THERMAL MONITOR', group: 'photo', chrome: 'dots', grid: TILE, style: photoStyle,
   layers: () => [
     num('01'), ...menuGlyph,
     // sensor frame, then the heat
     layer(frame(0, 16, 118, 95, 6), 'faint'),
-    layer(HEAT_MID, 'mid'), layer(HEAT_WARM, 'active'), layer(HEAT_HOT, 'value'),
+    ...HEAT,
     // colour scale: hot (red) at the top fading to cool grey
     layer(cap('55°C', 143, 20, 'right'), 'value'),
     ...[138, 141].flatMap(x => [
@@ -156,31 +149,80 @@ const along = (pts: Pt[], x: number) => {
   return pts[pts.length - 1][1]
 }
 const WHEELS: Pt[] = [[31, 88], [126, 87]]
-/** Dark sedan in profile: dim body, darker glass, highlights on the roofline, crease and rims. */
+/**
+ * The charger's work light: off-card right, by the port, toward the viewer (card cells; z out of the card).
+ * The black sedan is lit only by it, so the rear quarter and every edge facing the cable glow, and the
+ * nose falls away into the dark.
+ */
+const LAMP = [178, -6, 36]
+const SILL = 93, ARCH = 13.2, BEVEL = 5
+/** Distance inside the body silhouette and the inward unit normal of the nearest edge (roof, sill or wheel arch). */
+const bodyEdge = (x: number, y: number): [number, number, number] => {
+  let d = SILL - y, gx = 0, gy = -1
+  for (let i = 0; i < ROOF.length - 1; i++) {
+    const [ax, ay] = ROOF[i], [bx, by] = ROOF[i + 1], dx = bx - ax, dy = by - ay
+    const t = clamp(((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy)), qx = x - ax - t * dx, qy = y - ay - t * dy, q = len(qx, qy)
+    if (q < d && q > 1e-6) { d = q; gx = qx / q; gy = qy / q }
+  }
+  for (const [wx, wy] of WHEELS) {
+    const r = len(x - wx, y - wy), q = r - ARCH
+    if (y > wy - 13 && q < d) { d = q; gx = (x - wx) / r; gy = (y - wy) / r }
+  }
+  return [d, gx, gy]
+}
+/** Lambert + a tight Blinn highlight from the lamp for a surface normal (nx, ny, nz) at (x, y, z). */
+const lampLight = (x: number, y: number, z: number, nx: number, ny: number, nz: number, gloss: number): [number, number] => {
+  const lx = LAMP[0] - x, ly = LAMP[1] - y, lz = LAMP[2] - z, ld = len(len(lx, ly), lz), nl = len(len(nx, ny), nz)
+  const diffuse = Math.max(0, (nx * lx + ny * ly + nz * lz) / (ld * nl))
+  const hx = lx / ld, hy = ly / ld, hz = lz / ld + 1, hl = len(len(hx, hy), hz)
+  const spec = Math.max(0, (nx * hx + ny * hy + nz * hz) / (hl * nl)) ** gloss
+  const fall = 1 / (1 + (ld / 120) ** 2)
+  return [diffuse * fall, spec * fall]
+}
+/** Black sedan in profile: a 5-cell rounded bevel on every edge, glass glossier than paint, rims lit by the same lamp. */
 const car = (x: number, y: number) => {
   for (const [wx, wy] of WHEELS) {
     const d = len(x - wx, y - wy)
     if (d <= 11.5) {
-      if (d > 8.8) return .18
-      if (d < 2.2) return .7
+      // tyre and rim: a flat disc facing us, its spokes and lip catching the lamp
+      const [, spec] = lampLight(x, y, 0, 0, 0, 1, 1), lit = .3 + 1.4 * spec
+      if (d > 8.8) return .12 * lit
+      if (d < 2.2) return .6 * lit
       const a = Math.atan2(y - wy, x - wx)
-      return d > 7.6 ? .6 : .22 + .4 * Math.max(0, Math.cos(5 * a)) ** 2
+      return (d > 7.6 ? .7 : .2 + .5 * Math.max(0, Math.cos(5 * a)) ** 2) * lit
     }
-    if (d <= 13.2 && y > wy - 13) return 0
+    if (d <= ARCH && y > wy - 13) return 0
   }
-  const top = along(ROOF, x)
-  if (y < top) return 0
-  if (y > 93) return 0
-  if (y < top + 1.3) return .85
-  const crease = 76 - (x * 6) / 143
-  if (x > 49 && x < 140 && y < 64.5) return Math.abs(x - 85) < 1.3 || y < top + 2.4 ? .45 : .14 + .12 * smoothstep(58, 50, y)
-  if (Math.abs(y - 65.5) < .7 && x > 46) return .62
-  if (Math.abs(y - crease) < .7) return .58
-  if (x < 12 && y > 77 && y < 80) return .9
-  if (len(x - 57, y - 64) < 2.6) return .55
-  return (y < crease ? .5 : .4) - .22 * clamp((y - 70) / 23)
+  if (y < along(ROOF, x) || y > SILL) return 0
+  const [d, gx, gy] = bodyEdge(x, y)
+  // rounded profile h(d): the surface turns away from us over BEVEL cells, so the normal tilts out at the edge
+  const t = clamp(d / BEVEL), s = Math.min(4, (1 - t) / Math.sqrt(Math.max(.06, 1 - (1 - t) ** 2))), z = BEVEL * Math.sqrt(1 - (1 - t) ** 2)
+  // the side panel bulges: tilted up above the shoulder crease, tucking under toward the sill
+  const crease = 76 - (x * 6) / 143, bulge = y < crease ? -.75 * clamp((crease - y) / 5) : .9 * clamp((y - crease) / (SILL - crease)) ** 1.5
+  const glass = x > 49 && x < 140 && y < 64.5
+  const nx = -s * gx, ny = -s * gy + bulge, [diffuse, spec] = lampLight(x, y, z, nx, ny, 1, glass ? 60 : 18)
+  // a dim sky fill from straight above keeps the whole roofline readable into the dark
+  const sky = .16 * Math.max(0, -ny / len(len(nx, ny), 1))
+  let lum = glass ? .02 + .5 * sky + .12 * diffuse + 1.6 * spec : .09 + sky + 1.25 * diffuse + 1.2 * spec
+  // the lamp mirrored in the rear side glass: one slanted streak
+  if (glass && Math.abs(x - 112 + (y - 57) * .8) < 2.2) lum += .9 * diffuse
+  // trim: B-pillar and window surround, the belt-line chrome, the shoulder crease, headlight and mirror
+  if (glass && (Math.abs(x - 85) < 1.3 || d < 2.4)) lum = .1 + .6 * diffuse + spec
+  if (Math.abs(y - 65.5) < .7 && x > 46) lum = Math.max(lum, .2 + 1.2 * diffuse)
+  if (Math.abs(y - crease) < .7) lum += .2 * diffuse
+  // the rim: the outermost cell of the silhouette, Lambert-lit by its outward normal (bright toward the cable)
+  if (d < 1.2 && y < SILL - 1.5) lum = Math.max(lum, .05 + 1.5 * lampLight(x, y, 0, -gx, -gy, .25, 1)[0])
+  if (x < 12 && y > 77 && y < 80) lum = .55
+  if (len(x - 57, y - 64) < 2.6) lum = .08 + .8 * diffuse
+  return clamp(lum)
 }
-const CAR = baked(TILE, cells(car, [0, 48, N, 97]))
+/** The car never changes: `toneRamp` lights each cell once and splits it into shadow → highlight tones. */
+// the tone already darkens the shadow bands, so dot size only spans .3–1 (a faint dot stays a visible dot)
+const carDot = (h: number) => .3 + .7 * h
+const CAR = toneRamp(cells(car, [0, 48, N, 97]), [
+  { at: .05, tone: 'faint', value: carDot }, { at: .16, tone: 'mid', value: carDot },
+  { at: .34, tone: 'idle', value: carDot }, { at: .62, tone: 'value', value: carDot },
+])
 export const evCharge: WidgetPreset = {
   id: 'ev-charge', name: '02 EV Charge', label: '02  EV CHARGE', group: 'icon', chrome: 'dots', grid: TILE, style: photoStyle,
   defaults: { charge: 0.78 },
@@ -190,7 +232,7 @@ export const evCharge: WidgetPreset = {
       num('02'), ...boltGlyph,
       layer(T.big(pct, 0, 22, { lattice: 3 })), layer(T.big('%', w + 3, 32.4, { lattice: 1.6 })),
       layer(cap('CHARGING', Math.max(57, Math.round(w + 19)), 36), 'idle'),
-      layer(CAR, 'idle'),
+      ...CAR,
       // charge port: plug, red port light, cable running back along the ground
       layer(T.hrule(97, 76, 7), 'value'), layer(T.dots([[106.5, 76]], 3.4), 'active'),
       layer(dotPath([[107.5, 79], [108.5, 90], [110, 96], [114, 99], [143, 99]], 1.05, 1.05), 'active'),
@@ -357,50 +399,94 @@ export const aiAssistant: WidgetPreset = {
 }
 
 // ── 08 vision camera ────────────────────────────────────────────────────────────────────────────
-const LAPTOP: Pt[] = [[54, 60], [108, 48], [143, 53], [143, 93], [103, 105]]
-const NOTEBOOK: Pt[] = [[13, 100], [62, 91], [94, 121], [42, 129]]
-const LEAVES: Pt[] = [[110, 19], [116, 14], [124, 12], [131, 15], [139, 21], [140, 30], [112, 28], [119, 18]]
-const TAGS: [number, number, string][] = [[84, 24, 'PLANT'], [18, 44, 'MUG'], [106, 77, 'LAPTOP'], [82, 108, 'NOTEBOOK']]
-const TAG_BOX = TAGS.map(([x, y, s]) => [x, y, x + tagW(s) - 1, y + TAG_H - 1])
+// A desk under one lamp (upper left). Each object gets a silhouette pass so it reads at 1×: bright ones
+// (laptop, leaves, pen) sit in a 1-cell void moat, dark ones (mug, notebook, pot) get a lit rim on the
+// lamp side, and all cast a short shadow to the lower right. The desk is a lamp pool, tone-ramped.
+const LAPTOP: Pt[] = [[54, 84], [90, 63], [134, 77], [98, 98]]
+const NOTEBOOK: Pt[] = [[10, 96], [46, 87], [68, 107], [32, 117]]
+const PEN: [Pt, Pt] = [[20, 100], [50, 111]]
+const STEM: Pt = [122, 55]
+const LEAVES: Pt[] = [[107, 39], [112, 31], [120, 28], [128, 30], [134, 37], [135, 46], [109, 48], [116, 33]]
+const MUG_TOP = 40, MUG_BASE = 67, HANDLE: Pt = [40, 53]
 const LAPTOP_BOX = bbox(LAPTOP), NOTEBOOK_BOX = bbox(NOTEBOOK)
 /** `segDist(x, y, a, b) < d`, skipping the distance when (x, y) is outside the segment's box grown by `d` (it cannot be that close). */
 const near = (x: number, y: number, a: Pt, b: Pt, d: number) =>
   x > Math.min(a[0], b[0]) - d && x < Math.max(a[0], b[0]) + d && y > Math.min(a[1], b[1]) - d && y < Math.max(a[1], b[1]) + d && segDist(x, y, a, b) < d
-const PEN: [Pt, Pt] = [[50, 98], [76, 114]]
-/** Dim desk scene: black mug, closed silver laptop, notebook and pen, a potted plant. */
+// object masks, in card cells
+const mugE = (x: number) => (x - 26) / 12.5
+const inMug = (x: number, y: number) => {
+  const e = mugE(x), cap = Math.abs(e) <= 1 ? 3.6 * Math.sqrt(1 - e * e) : -1
+  return cap >= 0 && y >= MUG_TOP - cap && y <= MUG_BASE + cap
+}
+const handleR = (x: number, y: number) => len((x - HANDLE[0]) / 7.5, (y - HANDLE[1]) / 8.5)
+const inHandle = (x: number, y: number) => x > 37 && handleR(x, y) <= 1 && len((x - HANDLE[0]) / 4.2, (y - HANDLE[1]) / 5.2) >= 1
+const inPot = (x: number, y: number) => y >= 55 && y <= 70 && Math.abs(x - STEM[0]) <= 9 - (2 * (y - 55)) / 15
+const inLeaf = (x: number, y: number) => y > 26 && y < 56 && x > 105 && LEAVES.some(p => near(x, y, STEM, p, 1.3))
+const inLaptop = (x: number, y: number) => inPoly(LAPTOP, x, y, LAPTOP_BOX)
+const inNotebook = (x: number, y: number) => inPoly(NOTEBOOK, x, y, NOTEBOOK_BOX)
+const inPen = (x: number, y: number) => near(x, y, PEN[0], PEN[1], .8)
+const bright = (x: number, y: number) => inPen(x, y) || inLaptop(x, y) || inLeaf(x, y)
+const caster = (x: number, y: number) => inMug(x, y) || inHandle(x, y) || inLaptop(x, y) || inNotebook(x, y) || inPot(x, y)
+/** Detections: a box snapped to each object's extent, the tag sitting on its top-left corner (the plant's to its left). */
+const DETECT: [string, Box, Pt][] = [['MUG', [12, 36, 48, 71], [12, 25]], ['PLANT', [106, 27, 136, 70], [77, 27]], ['LAPTOP', [53, 62, 135, 101], [53, 51]], ['NOTEBOOK', [9, 86, 69, 118], [9, 75]]]
+const TAG_BOX = DETECT.map(([s, , [x, y]]) => [x, y, x + tagW(s) - 1, y + TAG_H - 1])
 const desk = (x: number, y: number) => {
   for (const [a, b, c, d] of TAG_BOX) if (x >= a && x <= c && y >= b && y <= d) return 0
-  // desk: a soft pool of light behind the laptop, falling off toward the edges
-  let lum = .24 + .16 * clamp(1 - len(x - 60, y - 40) / 110) + .03 * (hash01(Math.round(x) * 157 + Math.round(y), 9) - .5)
-  // plant: dark pot with a lit rim, leaf strokes fanning out of it
-  if (x > 113 && x < 134 && y > 33 && y < 52) lum = y < 36 ? .5 : .1 + .1 * clamp((x - 114) / 20)
-  else if (y < 36 && LEAVES.some(p => near(x, y, [123, 34], p, 1.3))) lum = .7
-  // laptop lid: brushed silver, bright bevel along the near edges, darker logo
-  if (inPoly(LAPTOP, x, y, LAPTOP_BOX)) {
-    lum = .8 - .32 * clamp((x - 54) / 90) - .12 * clamp((y - 55) / 50) + .04 * Math.sin((x + y) * .9)
-    if (near(x, y, LAPTOP[0], LAPTOP[4], 1.3) || near(x, y, LAPTOP[0], LAPTOP[1], .9)) lum = .95
-    if (len((x - 97) / 1.3, y - 67) < 2.6) lum = .22
-  } else if (near(x, y, [55, 62], [104, 107], 1.4) || near(x, y, [104, 107], [143, 96], 1.2)) lum = .55
-  // notebook with a lit spine, pen across it
-  if (inPoly(NOTEBOOK, x, y, NOTEBOOK_BOX)) lum = near(x, y, NOTEBOOK[0], NOTEBOOK[3], 1.4) ? .75 : .16 - .06 * clamp((y - 92) / 37)
-  if (near(x, y, PEN[0], PEN[1], 1.5)) lum = near(x, y, PEN[0], PEN[1], .6) ? .75 : .05
-  // mug: black body, lit rim, handle with a highlight on its outer curve
-  const rim = len((x - 24.5) / 13.5, (y - 63) / 4)
-  const ho = len((x - 38) / 9, (y - 77) / 10), hi = len((x - 38) / 5.5, (y - 77) / 6.5)
-  if (x > 37 && ho <= 1 && hi >= 1) lum = ho > .82 ? .5 : .06
-  if ((x >= 11 && x <= 38 && y >= 63 && y <= 95) || rim <= 1) lum = rim < 1 ? .03 : x < 15 ? .3 : x > 33 ? .18 : .06
-  if (Math.abs(rim - 1) < .16) lum = .7
-  return lum
+  // front to back: pen, mug, notebook, laptop, plant
+  if (inPen(x, y)) return near(x, y, PEN[0], PEN[1], .45) ? .9 : .6
+  if (inMug(x, y)) {
+    // black ceramic: a lit rim ellipse, coffee inside it, one specular stripe down the lamp side of the cylinder
+    const rim = len(mugE(x), (y - MUG_TOP) / 3.6)
+    if (Math.abs(rim - 1) < .2) return .85
+    if (rim < 1) return .02
+    // a cylinder lit from the left: Lambert across its width, a specular stripe near the lit side
+    const e = mugE(x), lambert = Math.max(0, -.7 * e + .7 * Math.sqrt(1 - e * e))
+    return Math.abs(e + .55) < .09 ? .62 : .02 + .3 * lambert ** 2
+  }
+  if (inHandle(x, y)) return handleR(x, y) > .78 && y < HANDLE[1] + 2 ? .5 : .05
+  if (inNotebook(x, y)) {
+    // dark cover outlined all round: page block on the two near edges, the lamp on the far ones, an elastic band
+    if (near(x, y, NOTEBOOK[1], NOTEBOOK[2], 1.3) || near(x, y, NOTEBOOK[2], NOTEBOOK[3], 1.3)) return .72
+    if (near(x, y, NOTEBOOK[0], NOTEBOOK[1], 1.1) || near(x, y, NOTEBOOK[0], NOTEBOOK[3], 1.1)) return .45
+    if (near(x, y, [57, 97], [35, 103], .6)) return .3
+    return .1
+  }
+  if (inLaptop(x, y)) {
+    // brushed aluminium lid, brightest toward the lamp, a crisp bevel on the lamp-facing edge, a dark logo
+    if (near(x, y, LAPTOP[0], LAPTOP[1], 1.2)) return 1
+    if (len((x - 94) / 1.3, y - 80.5) < 2.8) return .22
+    return .78 - .25 * clamp((x - 54) / 80) - .1 * clamp((y - 63) / 35) + .03 * Math.sin((x + y) * .9)
+  }
+  // the lid's two-cell side face under its near edges
+  if (inLaptop(x, y - 2) && y > along([LAPTOP[0], LAPTOP[3], LAPTOP[2]], x)) return .3
+  if (inPot(x, y)) return y < 57.5 ? .75 : inPot(x - 1.5, y) ? .1 : .45
+  if (inLeaf(x, y)) return near(x, y, STEM, LEAVES[2], .5) ? .9 : .72
+  // silhouette pass: a 1-cell void moat around every bright object
+  if (bright(x - 1, y) || bright(x + 1, y) || bright(x, y - 1) || bright(x, y + 1) || inLeaf(x + 1, y + 1) || inLeaf(x - 1, y - 1)) return 0
+  // lamp pool on the desk (the wall behind it stays dark), objects' shadows falling to the lower right
+  const pool = Math.exp(-(((x - 66) / 44) ** 2 + ((y - 80) / 34) ** 2) / 2)
+  const lum = y < 40 ? .04 + .06 * pool : .07 + .42 * pool
+  return caster(x - 3, y - 2) ? lum * .3 : lum
 }
-const DESK = baked(TILE, cells(desk, [0, 16, N, 128]))
+const deskDot = (h: number) => .25 + .75 * h
+/** The desk never changes: `toneRamp` evaluates each cell once and splits the pool into dithered tone steps. */
+const DESK = toneRamp(cells(desk, [0, 16, N, 128]), [
+  { at: .06, tone: 'faint', value: deskDot }, { at: .2, blend: .05, tone: 'mid', value: deskDot },
+  { at: .38, blend: .06, tone: 'idle', value: deskDot }, { at: .7, tone: 'value', value: deskDot },
+])
 const corner = (x: number, y: number, dx: number, dy: number) => [T.hrule(dx > 0 ? x : x - 8, y, 9), T.vrule(x, dy > 0 ? y : y - 8, 9)]
+/** Detection box: four 4-cell corner brackets on the box's exact cells. */
+const brackets = ([x0, y0, x1, y1]: Box, arm = 4) => [
+  T.hrule(x0, y0, arm), T.vrule(x0, y0, arm), T.hrule(x1 - arm + 1, y0, arm), T.vrule(x1, y0, arm),
+  T.hrule(x0, y1, arm), T.vrule(x0, y1 - arm + 1, arm), T.hrule(x1 - arm + 1, y1, arm), T.vrule(x1, y1 - arm + 1, arm),
+]
 export const visionCamera: WidgetPreset = {
   id: 'vision-camera', name: '08 Vision Camera', label: '08  VISION CAMERA', group: 'composite', chrome: 'dots', grid: TILE, style: photoStyle,
   layers: () => [
     num('08'), ...menuGlyph,
-    layer(DESK, 'idle'),
+    ...DESK,
     ...[...corner(4, 21, 1, 1), ...corner(139, 21, -1, 1), ...corner(4, 123, 1, -1), ...corner(139, 123, -1, -1)].map(f => layer(f, 'value')),
-    ...TAGS.flatMap(([x, y, s]) => tag(x, y, s)),
+    ...DETECT.flatMap(([s, box, [x, y]]) => [...brackets(box).map(f => layer(f, 'idle')), ...tag(x, y, s)]),
     layer(cap('SCENE CONFIDENCE', 1, 138), 'idle'),
     layer(T.dots([[125, 140.5]], 2.6), 'active'), layer(cap('92%', 143, 138, 'right'), 'value'),
   ],
