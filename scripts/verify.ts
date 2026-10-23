@@ -31,6 +31,7 @@ import { liveChecks } from './live'
 import { halftoneChecks } from './halftone'
 import { deviceChecks } from './device'
 import { exportChecks } from './export'
+import { dotsChecks } from './dots'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -777,6 +778,8 @@ halftoneChecks(assert)
 deviceChecks(assert)
 // P5-D) export: APNG / GIF encoders, WebM / MP4 muxers, plotter SVG (scripts/export.ts)
 await exportChecks(assert)
+// P6-C) DOTS tab: share links, limits, the 8 seed programs, remix gallery + graph (scripts/dots.ts)
+await dotsChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')
