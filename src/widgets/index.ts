@@ -20,6 +20,7 @@ import { liveBoard, liveSources } from './boards/live'
 import type { Source } from '../data/source'
 import { mirrorBoard } from './boards/mirror'
 import { surfacesBoard, surfacesSources } from './boards/surfaces'
+import { typeBoard } from './boards/type'
 
 export interface BoardDef {
   id: string; title: string; columns: number; items: WidgetPreset[]
@@ -54,6 +55,7 @@ export const boards: BoardDef[] = [
   { id: 'mirror', title: 'MIRROR — LIVE HALFTONE', columns: 3, items: mirrorBoard },
   { id: 'surfaces', title: 'SURFACES — ONE FIELD, FIVE SURFACES', columns: 5, items: surfacesBoard, sources: surfacesSources },
   { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, items: componentsBoard },
+  { id: 'type', title: 'TYPE — VARIABLE DOT TYPE', columns: 3, items: typeBoard },
 ]
 export const boardIds = boards.map(b => b.id)
 export const boardById = (id: string): BoardDef | undefined => boards.find(b => b.id === id)
