@@ -34,7 +34,7 @@ type Ctx = CanvasRenderingContext2D
 function cardBg(ctx: Ctx, x: number, y: number, w: number, h: number, fill: string) {
   ctx.save(); ctx.fillStyle = fill; ctx.strokeStyle = '#26292d'; ctx.beginPath(); ctx.roundRect(x + .5, y + .5, w - 1, h - 1, 14); ctx.fill(); ctx.stroke(); ctx.restore()
 }
-function drawDots(ctx: Ctx, f: CardFrame, dots: DotInstance[], x: number, y: number, k: number, clip?: [number, number, number, number]) {
+function drawDots(ctx: Ctx, dots: DotInstance[], x: number, y: number, k: number, clip?: [number, number, number, number]) {
   ctx.save()
   if (clip) { ctx.beginPath(); ctx.rect(...clip); ctx.clip() }
   ctx.translate(x, y); ctx.scale(k, k); renderCanvas(ctx, dots); ctx.restore()
@@ -56,18 +56,18 @@ export function drawBarSheet(canvas: HTMLCanvasElement, candidate: WidgetPreset,
     ctx.fillStyle = i === 0 ? theme.dotActive : theme.dotIdle; ctx.fillText(c.p.id.toUpperCase().slice(0, 28), x0, 6)
     const rowY = (r: number) => TOP + gap + r * (ch + gap) + (ch - h) / 2
     // 1×
-    cardBg(ctx, ox, rowY(0), w, h, theme.surface); drawDots(ctx, c, c.dots, ox + PAD, rowY(0) + PAD, 1)
+    cardBg(ctx, ox, rowY(0), w, h, theme.surface); drawDots(ctx, c.dots, ox + PAD, rowY(0) + PAD, 1)
     // 3×: the same dots at 3× scale, a card-sized window around the lit centroid
     const [cx, cy] = litCentroid(c.dots), mx = Number.isFinite(cx) ? cx * 3 + PAD * 3 : (w * 3) / 2, my = Number.isFinite(cy) ? cy * 3 + PAD * 3 : (h * 3) / 2
     const sx = Math.max(0, Math.min(w * 3 - w, mx - w / 2)), sy = Math.max(0, Math.min(h * 3 - h, my - h / 2))
     ctx.fillStyle = theme.surface; ctx.fillRect(ox, rowY(1), w, h)
-    drawDots(ctx, c, c.dots, ox - sx + PAD * 3, rowY(1) - sy + PAD * 3, 3, [ox, rowY(1), w, h])
+    drawDots(ctx, c.dots, ox - sx + PAD * 3, rowY(1) - sy + PAD * 3, 3, [ox, rowY(1), w, h])
     // blur: the 1× view through a 6 px blur
     ctx.save(); ctx.filter = 'blur(6px)'
     ctx.drawImage(canvas, ox, rowY(0), w, h, ox, rowY(2), w, h)
     ctx.restore()
     // silhouette: every lit dot solid white at full size, on black
-    cardBg(ctx, ox, rowY(3), w, h, '#000000'); drawDots(ctx, c, c.sil, ox + PAD, rowY(3) + PAD, 1)
+    cardBg(ctx, ox, rowY(3), w, h, '#000000'); drawDots(ctx, c.sil, ox + PAD, rowY(3) + PAD, 1)
   })
   return performance.now() - t0
 }
