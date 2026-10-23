@@ -56,6 +56,8 @@ async function stopRecording() {
   download(clip)
 }
 
+/** Cards that read neither the analysis nor the transport clock keep the original preset (worker sampling, a free main thread for the scheduler). */
+const STATIC = new Set(['inst-cutoff', 'inst-resonance', 'inst-attack', 'inst-release', 'inst-crank'])
 const wrapped = new WeakMap<WidgetPreset, WidgetPreset>()
 function live(p: WidgetPreset): WidgetPreset {
   let w = wrapped.get(p)
@@ -124,5 +126,5 @@ export function useAudio(boardId: string, shared: ControlPatch, onShared: (patch
   }, [role, shared]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const active = useSyncExternalStore(eng.subscribe, () => eng.active, () => false)
-  return useCallback((p: WidgetPreset) => (role && active ? live(p) : p), [role, active])
+  return useCallback((p: WidgetPreset) => (role && active && !STATIC.has(p.id) ? live(p) : p), [role, active])
 }

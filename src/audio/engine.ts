@@ -196,7 +196,8 @@ export class AudioEngine {
     const ac = this.ac!, g = this.g!
     g.bend.offset.cancelScheduledValues(ac.currentTime); g.bend.offset.setTargetAtTime(0, ac.currentTime, .01)
     this.stepLog.length = 0
-    this.sched = new Scheduler({ now: () => ac.currentTime, bpm: () => this.params.bpm, onStep: e => this.onStep(e) })
+    // 200 ms ahead (not the classic 100): the timer's tick runs on the main thread, which also samples cards
+    this.sched = new Scheduler({ now: () => ac.currentTime, bpm: () => this.params.bpm, onStep: e => this.onStep(e), ahead: .2 })
     this.sched.start(ac.currentTime + .06)
     this.emit()
   }
