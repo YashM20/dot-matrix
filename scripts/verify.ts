@@ -29,6 +29,7 @@ import type { Field } from '../src/engine/types'
 import { irChecks } from './ir'
 import { liveChecks } from './live'
 import { halftoneChecks } from './halftone'
+import { bufferChecks } from './buffer'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -771,6 +772,8 @@ import { heartbeatCard, HEARTBEAT_STATES } from '../src/widgets/boards/heartbeat
 await liveChecks(assert)
 // P4-F) halftone ladder + STBN temporal stability + live camera card timing (scripts/halftone.ts)
 halftoneChecks(assert)
+// P5-B) struct-of-arrays DotBuffer, buffer canvas renderer, worker protocol (scripts/buffer.ts)
+bufferChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')
