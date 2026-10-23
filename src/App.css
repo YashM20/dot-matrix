@@ -1986,3 +1986,29 @@ label b {
   .st-layout { grid-template-columns: 1fr }
 }
 .st-hint code { font: inherit; color: var(--label); background: none; padding: 0 }
+
+/* W0: playground controls on touch screens (number fields, dither toggles, group headers) */
+@media (pointer: coarse) {
+  .pg-layout input,
+  .pg-layout button {
+    min-height: 24px
+  }
+}
+
+/* W0: STUDIO at phone widths: the timeline rows wrap instead of pushing the page 4 px wide */
+@media (max-width: 480px) {
+  .st-layout > *,
+  .st-track,
+  .st-transport > * {
+    min-width: 0
+  }
+
+  .st-transport,
+  .st-track-opts {
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+  }
+
+  .st-track-head {
+    flex-wrap: wrap
+  }
+}

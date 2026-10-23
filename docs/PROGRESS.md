@@ -111,18 +111,18 @@
   - `src/widgets/manifest.ts` holds one `import()` per board; tab hover/focus prefetches the board.
   - The `Board` suspends on `use(loadBoard(id))`. The other views are `React.lazy`.
   - `src/widgets/registry.ts` replaces the eager registry reads in `useDotField`, the worker client and the playground store.
-  - First-load JS: 222.7 kB gz (one 613 kB chunk) → 115.8 kB gz (Vite gzip; `scripts/site/size.ts --check`, budget 150). A deep link adds its board chunk: mosaic +7.4, surfaces +7.6.
+  - First-load JS: 222.7 kB gz (one 613 kB chunk) → 119.8 kB gz after the STUDIO/gpu merge (`scripts/site/size.ts --check`, gzip -9, budget 150). Deep links: `/mosaic/` 127.2, `/gpu/` 121.0.
 
   Deep links:
   - `/<board>/` paths, with `?board=` still accepted; the address bar follows the board.
   - Runtime `<title>`/description/OG tags come from `src/site/meta.ts`.
-  - `scripts/site/postbuild.ts` (run from the vite plugin) writes `dist/<board>/index.html` crawler copies and `dist/og/<board>.png` (21 images via `scripts/og.ts`, ~22 s).
+  - `scripts/site/postbuild.ts` (run from the vite plugin) writes `dist/<board>/index.html` crawler copies and `dist/og/<board>.png` (22 images via `scripts/og.ts`, ~20–35 s).
 
-  `.gitattributes` (LF + binaries) with a renormalize commit; goldens unchanged (151).
+  `.gitattributes` (LF + binaries) with a renormalize commit; the index was already LF, so renormalizing changed nothing; goldens unchanged (154).
 
   Mobile (`scripts/site/mobile.ts`, CDP, 375 px + touch, screenshots in `.snapshots/w0/`):
-  - All 20 boards and 5 views: no horizontal overflow.
-  - View tabs were 10 px tap targets. Fixed in `App.css` (append-only): 24 px tabs, and 24 px selects/ranges on coarse pointers.
+  - All 21 boards and 6 views: no horizontal overflow. STUDIO overflowed by 4 px (timeline rows); fixed with 2-column rows at ≤ 480 px.
+  - View tabs were 10 px tap targets. Fixed in `App.css` (append-only): 24 px tabs, and 24 px selects/ranges/playground controls on coarse pointers.
   - DRAW stays hidden in the narrow nav (deliberate; still reachable at `?tab=draw`).
 
   **Needs the user:** Cloudflare project + secrets + `SITE_URL` variable (`docs/DEPLOY.md` › What you need to do), and git push credentials. Not verified: the headers on a real Pages deploy (`wrangler pages dev dist` locally); Safari/Firefox.

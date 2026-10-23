@@ -118,7 +118,7 @@ try {
     check('crawler HTML for /cinema/ carries its meta', crawl.includes('<title>CINEMA') && crawl.includes('/og/cinema.png'))
   }
 
-  const items = only ?? [...boardIds, ...['gallery', 'workspace', 'log', 'dots', 'draw'].map(t => `tab:${t}`)]
+  const items = only ?? [...boardIds, ...['gallery', 'workspace', 'studio', 'log', 'dots', 'draw'].map(t => `tab:${t}`)]
   for (const id of items.filter(i => !i.startsWith('tab:'))) {
     logs = []
     await cdp('Page.navigate', { url: `${base}${id}/` })
