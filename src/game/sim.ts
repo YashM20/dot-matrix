@@ -81,7 +81,8 @@ const mazeStart = (): MazeState => ({ x: MAZE.start[0], y: MAZE.start[1], cool: 
 const surfaceStart = (): SurfaceState => ({ x: 4, y: SURF_GROUND, vx: 0, vy: 0, ground: true, coyote: 0, buf: 0, cp: 4, bees: SURFACE.bees.map(([x, y], i) => ({ x, y, alive: true, phase: i * 37 })), motes: SURFACE.motes.map(() => false), run: 0, cam: 0 })
 const queenStart = (): QueenState => ({ ox: 54, oy: 16, hp: QUEEN_HP, phase: 0, eye: true, shipX: 96, shipY: 126, shots: [], bullets: [], cool: 0, dying: 0, spin: 0, hit: 0 })
 
-function enter(g: Game, stage: Stage): void {
+/** Jump straight to a stage (stage reset included): the sim's own transitions, exposed for tools and screenshots. */
+export function enter(g: Game, stage: Stage): void {
   g.stage = stage; g.sf = 0; g.pending = null; g.flashes = []; g.invuln = 0
   if (stage === 'corridor') g.c = corridorStart()
   if (stage === 'maze') g.m = mazeStart()
