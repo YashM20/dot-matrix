@@ -32,6 +32,7 @@ import { halftoneChecks } from './halftone'
 import { deviceChecks } from './device'
 import { exportChecks } from './export'
 import { dotsChecks } from './dots'
+import { specChecks } from './spec'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -780,6 +781,8 @@ deviceChecks(assert)
 await exportChecks(assert)
 // P6-C) DOTS tab: share links, limits, the 8 seed programs, remix gallery + graph (scripts/dots.ts)
 await dotsChecks(assert)
+// P6-A) card spec v1: schema ≡ validator, preset ↔ spec round-trip, migration, examples (scripts/spec.ts)
+specChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')

@@ -21,7 +21,11 @@ const cache = new Map<string, IRProgram>()
 export function irProgram(src: string, opts: CompileOptions = {}): IRProgram {
   const key = `${opts.mode ?? 'closure'}${opts.raw ? '+raw' : ''}\n${src}`
   let p = cache.get(key)
-  if (!p) cache.set(key, (p = compileJS(parse(src), opts)))
+  if (!p) {
+    // tag each frame's field with its source so a card spec can carry it as an `ir` layer (src/spec)
+    const run = compileJS(parse(src), opts), from = opts.raw ? { ir: src, raw: true } : { ir: src }
+    cache.set(key, (p = Object.assign((env?: IREnv) => { const f = run(env); f.from = from; return f }, { info: run.info, mode: run.mode })))
+  }
   return p
 }
 

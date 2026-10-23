@@ -9,7 +9,13 @@ export interface Field {
   bounds?: CellBounds
   /** The string a text helper (`textAt`) drew — metadata for `describe()`, never read by the sampler. */
   text?: string
+  /** How a helper built this field (IR source, a named layout generator) — metadata for spec export (`src/spec`), never read by the sampler. */
+  from?: FieldOrigin
 }
+/** Provenance of a field: compiled from Field IR `src`, or made by layout generator `gen` on `grid` with JSON-able `args` (`place` also keeps its `inner` field). */
+export type FieldOrigin =
+  | { ir: string; raw?: boolean }
+  | { gen: string; grid: GridConfig; args: unknown[]; inner?: Field }
 
 export interface GridConfig { cols: number; rows: number; pitch?: number; aspect?: number }
 export interface DotStyle {
