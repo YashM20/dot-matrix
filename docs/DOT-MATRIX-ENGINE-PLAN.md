@@ -27,6 +27,7 @@ src/widgets/
   sprites.ts                      1-bit pixel art (invaders, bear, deer, pill …)
   boards/<board>.ts               one file per reference board, one export per card
   index.ts                        boards[], widgetPresets, widgetById
+src/spec/                         card spec v1 (framework-free, above widgets): validateSpec, specToPreset, presetToSpec, migrateSpec, loadSpec
 src/components/                   DotCanvas, DotWidget, Board, playground/*, draw/*
 src/lib/photoDotify.ts            client-only upload → dither
 scripts/snap.ts                   headless card/board PNG snapshots — `pnpm snap <id…> | --board <id> | --all`
@@ -113,6 +114,33 @@ Real sources bound to cards (`src/data/`, app-level, not engine; MASTER-PLAN P4)
 - **Tests:** `scripts/live.ts` (also run by `pnpm verify`) uses a fake env (manual clock, fake fetch / storage / socket): fixture determinism, backoff, retry timing, caching and restart, hidden-tab pause, rate-limit waits, push and websocket.
 ## Halftone ladder
 Luma `Raster` → quantized dot levels (`src/engine/halftone/`; MASTER-PLAN §8 Track L, P4 live media). `halftone(r, { step, levels, mode, frame })` is pure: step 1 thresholds `v·(L-1)` against the STBN mask; step 2 first runs a self-guided filter (radius 2, from two summed-area tables), stretches flat neighbourhoods about their ±6 mean (local contrast) and scales the dither amplitude down on gradients so edges snap to the nearest level. `stbn(x, y, k)` = fract(blue[x, y] + k·φ) over a 64² void-and-cluster rank table generated on first use (no asset). `halftoneStream` keeps per-cell level, anchor and slice: a cell takes the current frame's slice only when its prepared input moved > `reroll` (.08), and changes level only past `hysteresis` (.35 level) beyond the boundary, so a static noisy scene is stable and moving regions get fresh thresholds. Host capture is app-level (`src/media/`), passed as `ctx.media.camera`. Tests: `scripts/halftone.ts` (run by verify: mask, determinism, tone, noise robustness, flicker table, motion tracking, live frame timing).
+
+## Card spec v1
+A card as JSON (`src/spec/`, schema `schema/card.v1.schema.json`, JSON Schema 2020-12; MASTER-PLAN §3.12, P6). It lives above `src/widgets` because it builds `WidgetPreset`s with `layoutFor`, so it is not under `src/engine` (which must not import the widget layer); it is framework-free all the same, with no dependencies.
+```
+{ version: 1, id, name, group?, grid: { cols, rows, pitch?, aspect? }, style (DotStyle minus sizeCurve),
+  theme?: { dotActive: '#rrggbb', … DESIGN.md colour tokens }, data?: defaults, controls?: Control[],
+  layers: [ { kind: 'ir', src, tone?, lattice?, origin?, bounds?: [col,row,w,h], toneStops?: [{ at, tone, blend? }] }
+          | { kind: 'text', text | bind, format?: { decimals, pad, prefix, suffix }, at, align?, scale?, smooth?, lattice?, origin?, tone? }
+          | { kind: 'sites', points: [x,y] | [x,y,value], bind?, size?, tone?, tones?: (Tone|null)[] }
+          | { kind: 'raster', grid, window?, format: 'f64'|'f32'|'u8', asset: base64, tones?: { palette, asset }, lattice?, origin?, tone? }
+          | { kind: 'generator', name: 'ring'|'bars'|'icon'|…, params: JSON[] , lattice?, origin?, tone? } ],
+  states?: { name: { data } }, initial?, transitions?: { enter?, change?: … | false, exit? } ({ mask, ease?, duration?, delay? }),
+  springKeys?, live?, clock?, burst?, chrome?, label?, bleed?, media? }
+```
+- **Dynamic values are Field IR**: `ir.src`, `text.bind` (evaluated raw at u = v = 0, then formatted) and `sites.bind` (per site, at its card u/v). They are parsed and validated with the IR limits and compiled to the closure tree (`irMode: 'function'` opts into `new Function`, which falls back by itself). Nothing is `eval`ed, so specs are safe from MCP tools or URLs under a strict CSP.
+- **`validateSpec(json)` → `{ ok, errors: [{ path, message }] }`** is hand-written, with no ajv. Its structural rules mirror the schema. On top it checks what a schema cannot: IR sources parse, the whole spec is ≤ 4 MB of JSON, asset byte counts match their window, palette indices are in range, `initial` / `springKeys` resolve, icon names exist, `sizeMin ≤ sizeMax`. Limits (`SPEC_LIMITS`): grid ≤ 512², 256 layers, IR 4096 chars, text 256, 20k sites per layer, assets 2M base64 chars. Unknown keys and kinds are rejected with a path like `$.layers[2].kind`.
+- **`specToPreset(spec)`** validates (throws `SpecError`), then builds plain `Layer`s. These are the normal Field → Grid Sampler → Renderer pipeline. Static layers are built once. IR layers get `contextEnv` per frame, with the pointer mapped into the layer's rect. `ctx.state` naming a spec state overlays its data. The card animates only if some IR reads `t`. `preset.spec` carries what a `WidgetPreset` has no slot for (theme, states, transitions).
+- **`presetToSpec(preset, { t, data, precision })`** exports the generator subset: fields carry provenance in `Field.from`, which `irProgram`, `textAt` and the `layoutFor` generators/`place` set and the sampler never reads. Each layer maps to one kind:
+  - IR → `ir` (a `place`d IR → `bounds`);
+  - `textAt` / `T.text` / `T.big` → `text`;
+  - site layers → `sites` (an IR field → `bind`, else per-site values/tones);
+  - named generators → `generator`;
+  - everything else bakes to a `raster` on the layer's own grid (card or lattice) at the export frame. That covers bespoke TS fields, `combine`/`dim`, multi-tone `toneRamp`s and photos. `lossless` precision picks Float32 when every sample fits, else Float64; tones go in a palette channel.
+
+  Every converted layer is rebuilt and compared cell by cell (sites: per site) with the original; a mismatch falls back to the bake. A preset built from a spec exports back verbatim. `sizeCurve` styles (`mirror-*`) are refused.
+- **`migrateSpec(json)`**: v1 passes through. v0 (the P3 draft: `spec: 0`, flat `cols`/`rows`, `title`, `{ type: 'ir'|'text'|'dots' }` layers) is mapped to v1. Unknown versions throw. `loadSpec` = parse + migrate + validate.
+- **Tests:** `scripts/spec.ts` (in `pnpm verify`; `--examples` rewrites `examples/specs/*.json`). It checks that the schema enums equal the TS constants, and that the schema (via a test-only 2020-12 evaluator, `scripts/lib/jsonschema.ts`) and the validator agree on 48 fixtures. Every preset goes through preset → spec → JSON → preset: 144/146 keep their golden hash (the IR-board cards at both golden times). The 87 with no baked layer travel as IR/text/sites/generators; TS code that moves sites per frame exports as its t = 0 frame. Re-export is byte-stable. Examples: `ir-ripple.json`, `text-sites-gauge.json` (hand-written: IR-bound arc + numeral, states, transitions, springKeys), `baked-photo.json` (`silhouette`, Float32 raster + tone palette).
 
 ## Tokens
 See `DESIGN.md`; runtime values in `src/engine/theme/tokens.ts`.
