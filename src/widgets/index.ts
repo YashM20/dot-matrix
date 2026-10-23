@@ -11,6 +11,7 @@ import { departuresBoard } from './boards/departures'
 import { instrumentBoard, instrumentShared } from './boards/instrument'
 import { irBoard } from './boards/ir'
 import { cinemaBoard } from './boards/cinema'
+import { lightBoard } from './boards/light'
 
 export interface BoardDef {
   id: string; title: string; columns: number; items: WidgetPreset[]
@@ -34,6 +35,7 @@ export const boards: BoardDef[] = [
   { id: 'instrument', title: 'INSTRUMENT — DOT/480 DEVICE', columns: 3, items: instrumentBoard, shared: instrumentShared },
   { id: 'ir', title: 'FIELD IR — DOT PROGRAMS', columns: 3, items: irBoard },
   { id: 'cinema', title: 'CINEMA — THE AFTERLIGHT CYCLE', columns: 3, items: cinemaBoard },
+  { id: 'light', title: 'LIGHT — RASTER LIGHT STACK', columns: 3, items: lightBoard },
   { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, items: componentsBoard },
 ]
 export const boardIds = boards.map(b => b.id)
