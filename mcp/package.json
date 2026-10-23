@@ -10,7 +10,8 @@
     "start": "tsx scripts/build-view.ts && tsx src/main.ts",
     "serve": "tsx src/main.ts",
     "typecheck": "tsc --noEmit",
-    "test": "tsx scripts/build-view.ts && tsx test/server.ts && tsx test/headless.ts"
+    "test": "tsx scripts/build-view.ts && tsx test/server.ts && tsx test/author.ts && tsx test/headless.ts",
+    "author:seeds": "tsx ../scripts/author/seeds.ts"
   },
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^2.0.3",
