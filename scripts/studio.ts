@@ -85,6 +85,9 @@ export function studioChecks(assert: Assert) {
   assert('studio: timeline enter / change / exit use the engine masks', enter < full && exit < full && changing.track === 'change' && changing.p > 0 && changing.p < 1, `enter ${enter}, full ${full}, exit ${exit}`)
   const f = { edge: c.machine[0], start: 0 }, mid = firingFrame(inp, 0, f, 60), done = firingFrame(inp, 0, f, 400)
   assert('studio: firing an edge dissolves state A into state B', !mid.done && done.done && sig(done.dots) === sig(sampleCard(inp, 0, stateData(c, 'high'))) && sig(mid.dots) !== sig(done.dots))
-  const t0 = performance.now(); for (let i = 0; i < 20; i++) timelineFrame(inp, i * .15); const ms = (performance.now() - t0) / 20
-  assert('studio: a 144² timeline frame (2 IR + text) samples in ≤ 16 ms', ms <= 16, `${ms.toFixed(2)} ms`)
+  // median after a warm-up (the mean is at the mercy of GC / machine load); the browser check measures real frames
+  for (let i = 0; i < 5; i++) timelineFrame(inp, i * .6)
+  const times = Array.from({ length: 21 }, (_, i) => { const t0 = performance.now(); timelineFrame(inp, i * .14); return performance.now() - t0 }).sort((a, b) => a - b)
+  const ms = times[10]
+  assert('studio: a 144² timeline frame (2 IR + text) samples in ≤ 16 ms (median)', ms <= 16, `median ${ms.toFixed(2)} ms, worst ${times[20].toFixed(2)} ms`)
 }
