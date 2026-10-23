@@ -141,9 +141,9 @@ function cover(seed: number): Layer[] {
   let out = covers.get(key)
   if (out) return out
   const { n, sp } = COVER, tiers: Pt[][] = [[], [], [], []] // faint, mid, idle, value
-  const cx = 8.5 + 3 * hash01(key, 1), r = 6.6 + 1.2 * hash01(key, 2), horizon = 14 + Math.round(hash01(key, 3)), cy = horizon - .5 - r * .6
+  const cx = 8.5 + 3 * hash01(key, 1), r = 7.2 + hash01(key, 2), horizon = 14 + Math.round(hash01(key, 3)), cy = horizon - .5 - r * .72
   // rows under the sun's centre: D drawn, G a gap; the gaps open up toward the horizon
-  const BANDS = hash01(key, 4) < .5 ? 'DDGDDGDGGDG' : 'DGDDGDGGDGG'
+  const BANDS = hash01(key, 4) < .5 ? 'DDGDGDGG' : 'DGDGDGGG'
   for (let j = 0; j < n; j++) for (let i = 0; i < n; i++) {
     const at: Pt = [COVER.x + i * sp, COVER.y + j * sp], d = Math.hypot(i - cx, j - cy)
     if (j < horizon) {
@@ -201,7 +201,8 @@ export const liveNowPlaying: WidgetPreset = {
 
 // ── 03 CONTRIBUTIONS ────────────────────────────────────────────────────────
 const G = { x: 2.3, y: 70, sp: 2.68 }
-const LEVEL: [number, Tone][] = [[.7, 'faint'], [1.4, 'mid'], [1.8, 'idle'], [2.1, 'value'], [2.45, 'value']]
+/** Size + tone per contribution level: level 0 still reads as the calendar's grid at board size, 1 a clear step up. */
+const LEVEL: [number, Tone][] = [[1.15, 'faint'], [1.75, 'mid'], [2, 'idle'], [2.25, 'value'], [2.5, 'value']]
 const MONTHS = 'JFMAMJJASOND'
 export const liveContribs: WidgetPreset = {
   id: 'live-contribs', name: 'Contributions', label: 'CONTRIBUTIONS', group: 'scatter', ...tile,
