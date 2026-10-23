@@ -1,0 +1,14 @@
+# LF everywhere in the repo (Windows checkouts too); binaries are never touched.
+* text=auto eol=lf
+
+*.png binary
+*.apng binary
+*.webp binary
+*.gif binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.woff binary
+*.woff2 binary
+*.bin binary
+*.tgz binary
