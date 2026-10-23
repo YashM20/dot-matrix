@@ -1,4 +1,5 @@
 import type { WidgetPreset } from './types'
+import { registerPresets } from './registered'
 import { henryBoard } from './boards/henry'
 import { deerflow12Board } from './boards/deerflow12'
 import { mosaicBoard } from './boards/mosaic'
@@ -59,6 +60,7 @@ export const boardIds = boards.map(b => b.id)
 export const boardById = (id: string): BoardDef | undefined => boards.find(b => b.id === id)
 
 export const widgetPresets: WidgetPreset[] = boards.flatMap(b => b.items)
+registerPresets(widgetPresets)
 export const widgetById = (id: string): WidgetPreset | undefined => widgetPresets.find(p => p.id === id)
 
 export * from './types'

@@ -3,6 +3,10 @@ import { glyphHourglass } from '../../widgets/boards/glyph'
 import { simRd, simSand } from '../../widgets/boards/sim'
 import { Card } from '../ui/Card'
 import { Cards, Controls, Range } from '../ui/kit'
+import { registerPresets } from '../../widgets/registered'
+
+// registry cards: the sample worker can rebuild them by id, static ones share the sample cache
+registerPresets([glyphHourglass, simSand, simRd])
 
 /** Simulation as a field: the Hourglass clock from the Lock board, falling sand, Gray-Scott reaction-diffusion. */
 export default function FigSim() {

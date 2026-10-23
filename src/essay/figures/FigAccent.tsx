@@ -4,6 +4,10 @@ import { dot480 } from '../../engine/theme/tokens'
 import { progressCard, sliderCard, statusDotCard } from '../../widgets/boards/components'
 import { Card } from '../ui/Card'
 import { Cards, Controls, Toggle } from '../ui/kit'
+import { registerPresets } from '../../widgets/registered'
+
+// registry cards: the sample worker can rebuild them by id, static ones share the sample cache
+registerPresets([progressCard, statusDotCard, sliderCard])
 
 /**
  * Deliberately off-system: a second accent hue, so the reader can watch the board lose its plot.
