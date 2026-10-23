@@ -3,7 +3,8 @@ import type { Raster } from './raster/raster'
 
 /** A pointer in card-cell space (multitouch: one entry per active pointer). */
 export interface Pointer {
-  id: number
+  /** The host's pointer id; `'hand'` = the webcam hand tracker's virtual pointer (HAND mode). */
+  id: number | 'hand'
   x: number; y: number
   inside: boolean; down: boolean
   /** Board-clock seconds of the last press / release. */
