@@ -27,6 +27,7 @@ import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import type { Field } from '../src/engine/types'
 import { irChecks } from './ir'
+import { liveChecks } from './live'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -687,7 +688,10 @@ import { heartbeatCard, HEARTBEAT_STATES } from '../src/widgets/boards/heartbeat
   assert('describe: live heartbeat card names its state and shows the agent label', live.every((d, i) => d.state === HEARTBEAT_STATES[i] && d.text.includes('PNPM TEST --RUN')), live[1].summary)
   const bd = allBoards.map(b => describeBoard(b))
   assert('describeBoard: every board, one card per unique id', bd.every((d, i) => d.cards.length === new Set(allBoards[i].items.map(p => p.id)).size && d.summary.startsWith(allBoards[i].title)))
+}
+
 // P4-D) migration (Hilbert-rank shared-element pairing) + SDF morph
+{
   const { migrate, migrationLayers, hilbertIndex, morph, signedDistance } = await import('../src/engine/migrate')
   const { createRaster: mkRaster } = await import('../src/engine/raster')
   const { glyphLongpress } = await import('../src/widgets/boards/glyph')
@@ -762,6 +766,8 @@ import { heartbeatCard, HEARTBEAT_STATES } from '../src/widgets/boards/heartbeat
   c0 = performance.now(); for (let i = 0; i < 30; i++) at(2.1 + i * .04); const lpMs = (performance.now() - c0) / 30
   assert('glyph-longpress: hold → unlock → migrate → app → back renders every phase', lpFrames.every(n => n > 100), `dots ${lpFrames.join('/')}, migrating frame ${lpMs.toFixed(2)} ms`)
 }
+// 13) live data (P4-E): fixtures, backoff, caching, pause, transports — fake env, no network
+await liveChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')

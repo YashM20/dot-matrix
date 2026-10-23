@@ -16,6 +16,8 @@ import { levelsBoard } from './boards/levels'
 import { heartbeatBoard } from './boards/heartbeat'
 import { simBoard } from './boards/sim'
 import { glyphBoard } from './boards/glyph'
+import { liveBoard, liveSources } from './boards/live'
+import type { Source } from '../data/source'
 
 export interface BoardDef {
   id: string; title: string; columns: number; items: WidgetPreset[]
@@ -25,6 +27,8 @@ export interface BoardDef {
    * written back to the store, so one card's controls can drive another card. Cards stay pure in ctx.
    */
   shared?: string[]
+  /** Live data (`src/data`): subscribed while the board is mounted; each card gets the keys its defaults declare. */
+  sources?: readonly Source[]
 }
 /** Every reference board in public/images, in the order they appear there. */
 export const boards: BoardDef[] = [
@@ -44,6 +48,7 @@ export const boards: BoardDef[] = [
   { id: 'heartbeat', title: 'HEARTBEAT — AGENT PRESENCE', columns: 3, items: heartbeatBoard },
   { id: 'sim', title: 'SIM — LIVING FIELDS', columns: 3, items: simBoard },
   { id: 'glyph', title: 'GLYPH — LOCK EXPERIENCES', columns: 2, items: glyphBoard },
+  { id: 'live', title: 'LIVE — WEATHER, NOW PLAYING, CONTRIBUTIONS', columns: 3, items: liveBoard, sources: liveSources },
   { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, items: componentsBoard },
 ]
 export const boardIds = boards.map(b => b.id)
