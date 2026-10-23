@@ -187,6 +187,20 @@ Individual dot shape is controlled by one continuous parameter (the superellipse
 - Vertical dot-bars sampled from an amplitude field, scrub-position marked by a single `{colors.dotActive}` dot along a baseline.
 - Powers: audio player, voice recorder, "listening" agent state, interpreter dual-waveform, EKG monitor (Gaussian-composite variant).
 
+**Agent presence** (`src/widgets/boards/heartbeat.ts`, board `heartbeat`)
+- One organism (a lobed metaball cluster on a 3-cell lattice: mid body, highlight up-left) whose behaviour is a closed token set. Agents write `data.state` and never draw; `heartbeatState(name)` returns the parameters, and `blendStates` mixes two of them while a sprung `data.state` (`springKeys`) moves between stops (~0.4 s).
+- Cards carry an eyebrow label naming the state plus a 1× status line (`mid` text, `value` metric); the organism is the hero, so the state is never spelled out twice.
+
+| State | Motion | Accent |
+|---|---|---|
+| `thinking` | big, lobed, slow breath (0.2 Hz), lobes drift and the body wanders | none |
+| `tool-running` | condensed; ring of sites with a comet sweeping (8 s/rev), the highlight turns to face it | none |
+| `awaiting-approval` | lub-dub pulse at 0.85 Hz with a neutral ripple ring | the organism in `{colors.dotActive}`; text stays neutral |
+| `error` | still body; 0.5 s bursts of whole-lattice-cell row offsets and band dropouts at 12 steps/s | none |
+| `done` | condenses into a dot check mark | none |
+
+- Red is spent once per board: a card that can switch into `awaiting-approval` (the `hb-agent` demo) pulses in `value` instead.
+
 ### Cards
 
 **`dot-card`** (base container for every widget)

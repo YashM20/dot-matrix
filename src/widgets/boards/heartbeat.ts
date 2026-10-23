@@ -1,140 +1,194 @@
 /**
- * Board · Heartbeat — an agent presence vocabulary: one animated tile per state (thinking, tool
- * running, awaiting approval, error, done) and one `hb-agent` card whose `data.state` picks the
- * state through a segmented control. Every state is the same "organism" (a smooth metaball blob on
- * a 3-cell lattice) behaving differently. Red (`active`) is spent only on awaiting approval.
+ * Board · Heartbeat — an agent presence vocabulary. One organism (a lobed metaball cluster on a
+ * 3-cell lattice) behaves differently per agent state; the states are a closed, tokenized set
+ * (`HEARTBEAT` / `heartbeatState`) so an agent only writes `data.state`, never draws. One tile per
+ * state plus `hb-agent`, whose segmented control switches state and springs between parameter sets.
+ * Red (`active`) is spent once on the board: the awaiting-approval organism's pulse.
  */
-import type { Field, Tone } from '../../engine/types'
+import type { Field, Layer, Tone } from '../../engine/types'
 import { clamp, hash01, smoothstep } from '../../engine/math'
-import { TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { OUTLINE, stadium } from './components'
 
 const T = layoutFor(TILE)
-const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle } as const
+const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: { ...tileStyle, cornerRoundness: 0 } } as const
 type Pt = [number, number]
-const TAU = Math.PI * 2
 
-// ── ORGANISM ── lattice-3 stage: 48×28 lattice cells = 144×84 card cells, rows 12..96.
-const STAGE = { k: 3, row: 12, w: 48, h: 28, cx: 72, cy: 54 }
-const ASP = (STAGE.w * STAGE.k) / (STAGE.h * STAGE.k)
-const stage = T.lattice(STAGE.k, 0, STAGE.row)
-const onStage = (f: Field) => stage.at(stage.place(f, 0, 0, STAGE.w, STAGE.h))
+// ── TOKENS ── the closed presence vocabulary: state → motion parameters (cells, seconds, 0..1).
+export interface HeartbeatParams {
+  /** Core ball radius, cells. */ core: number
+  /** Satellite lobe radius, cells. */ lobe: number
+  /** Lobe distance from the core, cells. */ spread: number
+  /** Lobe rotation, rad/s. */ drift: number
+  /** Breathing rate (Hz) and depth (radius scale). */ breathHz: number; breath: number
+  /** Slow whole-body wander, cells. */ wander: number
+  /** Lub-dub heartbeat rate (Hz) and depth (radius scale). */ beatHz: number; beat: number
+  /** Orbit ring + scanning comet visibility, and seconds per revolution. */ orbit: number; orbitPeriod: number
+  /** Row-offset stutter strength. */ glitch: number
+  /** Condensed into a check mark. */ check: number
+  /** 1 = the pulse is the board's accent (`active`); only one state may set it. */ accent: number
+}
+export type HeartbeatState = 'thinking' | 'tool-running' | 'awaiting-approval' | 'error' | 'done'
+const base: HeartbeatParams = { core: 14, lobe: 9, spread: 12, drift: .2, breathHz: .2, breath: .08, wander: 0, beatHz: 0, beat: 0, orbit: 0, orbitPeriod: 8, glitch: 0, check: 0, accent: 0 }
+export const HEARTBEAT: Readonly<Record<HeartbeatState, Readonly<HeartbeatParams>>> = {
+  thinking: { ...base, core: 14, lobe: 11, spread: 18, drift: .18, breathHz: .2, breath: .1, wander: 3 },
+  'tool-running': { ...base, core: 13, lobe: 7, spread: 8, drift: .9, breathHz: .7, breath: .04, orbit: 1 },
+  'awaiting-approval': { ...base, core: 15, lobe: 8, spread: 9, drift: .3, breathHz: 0, breath: 0, beatHz: .85, beat: .18, accent: 1 },
+  error: { ...base, core: 14, lobe: 9, spread: 11, drift: .06, breathHz: .3, breath: .03, glitch: 1 },
+  done: { ...base, core: 13, lobe: 7, spread: 8, drift: .12, breathHz: .25, breath: .04, check: 1 },
+}
+export const HEARTBEAT_STATES = Object.keys(HEARTBEAT) as HeartbeatState[]
+/** Motion parameters for a presence state (unknown names fall back to `thinking`). */
+export const heartbeatState = (name: string): Readonly<HeartbeatParams> => HEARTBEAT[name as HeartbeatState] ?? HEARTBEAT.thinking
+/** Parameters part-way between two states (`f` 0..1) — what a sprung `data.state` draws mid-transition. */
+export const blendStates = (a: HeartbeatParams, b: HeartbeatParams, f: number): HeartbeatParams => {
+  const out = { ...a }
+  for (const k of Object.keys(a) as (keyof HeartbeatParams)[]) out[k] = a[k] + (b[k] - a[k]) * f
+  return out
+}
 
+// ── ORGANISM ── metaballs evaluated per lattice-3 dot, in card cells.
+interface Stage { row: number; h: number; cx: number; cy: number; scale: number }
+const K = 3, COLS = Math.floor(TILE.cols / K)
+const stageAt = (row: number, h: number, scale: number): Stage => ({ row, h, cx: (TILE.cols - 1) / 2, cy: row + (K * (h - 1)) / 2 + 1, scale })
+const CHECK: Pt[] = [[-25, 2], [-9, 18], [26, -17]]
+const segDist = (x: number, y: number, [ax, ay]: Pt, [bx, by]: Pt) => {
+  const dx = bx - ax, dy = by - ay, t = clamp(((x - ax) * dx + (y - ay) * dy) / (dx * dx + dy * dy))
+  return Math.hypot(x - ax - t * dx, y - ay - t * dy)
+}
+/** Lub-dub envelope for beat phase `ph` in [0,1). */
+const lubDub = (ph: number) => Math.max(Math.exp(-(((ph - .04) / .07) ** 2)), .55 * Math.exp(-(((ph - .27) / .07) ** 2)))
 interface Ball { x: number; y: number; r: number }
-/** Sum of r²/d² metaballs → soft body with a brighter core. `dx` shifts the sample (glitch). */
-const blob = (balls: Ball[], edge = [.9, 1.5], core = .4) => (x: number, y: number): number => {
+const balls = (p: HeartbeatParams, t: number, s: Stage): Ball[] => {
+  const beat = p.beatHz ? lubDub((t * p.beatHz) % 1) : 0
+  const k = s.scale * (1 + p.breath * Math.sin(t * TAU * p.breathHz) + p.beat * beat) * (1 - .7 * p.check)
+  const cx = s.cx + p.wander * Math.sin(t * .23), cy = s.cy + p.wander * .7 * Math.sin(t * .17 + 1)
+  const out: Ball[] = [{ x: cx, y: cy, r: p.core * k }]
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * TAU + t * p.drift + .45 * Math.sin(t * .37 + i * 1.9)
+    const d = p.spread * k * (1 + .3 * Math.sin(t * .5 + i * 2.1)), r = p.lobe * k * (.85 + .25 * Math.sin(t * .43 + i * 1.3))
+    out.push({ x: cx + Math.cos(a) * d, y: cy + Math.sin(a) * d, r })
+  }
+  // tool running: a lobe leans toward the scanning comet (attention)
+  if (p.orbit > 0) { const a = (t / p.orbitPeriod) * TAU - Math.PI / 2; out.push({ x: cx + Math.cos(a) * p.core * k, y: cy + Math.sin(a) * p.core * k, r: p.lobe * 1.1 * k * p.orbit }) }
+  return out
+}
+/** Organism density at card cell (x,y): metaball sum, cross-faded into a check-mark stroke by `p.check`. */
+const density = (bs: Ball[], p: HeartbeatParams, s: Stage, x: number, y: number) => {
   let f = 0
-  for (const b of balls) f += (b.r * b.r) / ((x - b.x) ** 2 + (y - b.y) ** 2 + 1e-4)
-  return smoothstep(edge[0], edge[1], f) * (1 - core + core * smoothstep(1.4, 5, f))
+  if (p.check < 1) for (const b of bs) f += (b.r * b.r) / ((x - b.x) ** 2 + (y - b.y) ** 2 + 1e-3)
+  if (p.check <= 0) return f
+  const lx = (x - s.cx) / s.scale, ly = (y - s.cy) / s.scale, d = Math.min(segDist(lx, ly, CHECK[0], CHECK[1]), segDist(lx, ly, CHECK[1], CHECK[2]))
+  return f * (1 - p.check) + p.check * (4.6 / (d + .4)) ** 2
 }
-const field = (fn: (x: number, y: number) => number): Field => (u, v) => clamp(fn((u - .5) * ASP, v - .5))
-const orbit = (t: number, n: number, rad: number, speed: number, r: number, wob = .02): Ball[] =>
-  Array.from({ length: n }, (_, i) => {
-    const a = (i / n) * TAU + t * speed
-    return { x: Math.cos(a) * rad * ASP * .5 + Math.sin(t * 1.3 + i * 2) * wob, y: Math.sin(a) * rad + Math.cos(t * 1.1 + i * 3) * wob, r }
-  })
-/** Slow breathing: radius scale 0.88..1.12 over about 5 s. */
-const breath = (t: number, depth = .12) => 1 + depth * Math.sin(t * 1.25)
-
-const names = ['THINKING', 'RUNNING TOOL', 'NEEDS APPROVAL', 'ERROR', 'DONE']
-const name = (s: number, tone: Tone = 'value') => layer(T.big(names[s], STAGE.cx, 99, { lattice: 1.3, align: 'center' }), tone)
-
-// ── scenes ── each returns the layers of the stage for time `t`.
-const thinking = (t: number) => {
-  const b = breath(t)
-  return [layer(onStage(field(blob([{ x: 0, y: 0, r: .23 * b }, ...orbit(t, 3, .15, .45, .13 * b, .03)]))), 'value')]
-}
-
-const RUN = { n: 8, rad: 34, speed: 2.2 }
-const toolRunning = (t: number) => {
-  const head = t * RUN.speed, sites = (k: number): Pt[] => {
-    const a = head - (k * TAU) / RUN.n * 1
-    return [[STAGE.cx + Math.cos(a) * RUN.rad, STAGE.cy + Math.sin(a) * RUN.rad]]
+/** The organism as a lattice-3 layer: soft edge, mid body, highlight up-left (void → mid → highlight). */
+const organism = (p: HeartbeatParams, t: number, s: Stage, tone: Tone): Layer => {
+  // glitch: bursts of whole-lattice-cell row offsets at 12 steps/s, the body freezing mid-burst
+  const burst = p.glitch > 0 && (t % 1.5) < .5 ? p.glitch : 0, step = Math.floor(t * 12)
+  const bs = balls(p, burst ? Math.floor(t * 4) / 4 : t, s), e = .14 * (1 - p.check) + .06 * p.check
+  const blackout = burst > .5 && hash01(step, 41) > .86, reach = (p.core + p.spread) * s.scale
+  // highlight sits up-left; while a tool runs it turns to face the comet (the organism watches it)
+  const gaze = (t / p.orbitPeriod) * TAU - Math.PI / 2, o = clamp(p.orbit)
+  const lightX = -.3 * (1 - o) + .4 * o * Math.cos(gaze), lightY = -.3 * (1 - o) + .4 * o * Math.sin(gaze)
+  const pulse = p.beatHz ? lubDub((t * p.beatHz) % 1) * Math.min(1, p.beat / .1) : 0
+  const f: Field = (u, v) => {
+    const c = u * COLS - .5, r = v * s.h - .5
+    let x = K * c + 1
+    const y = s.row + K * r + 1
+    if (burst) {
+      if (blackout) return 0
+      const band = Math.floor((r + 1000) / 3)
+      if (hash01(band, step, 7) > 1 - .16 * burst) return 0
+      if (hash01(band, step, 3) < .45 * burst) x -= K * Math.round((hash01(band, step, 5) - .5) * 8)
+    }
+    const S = density(bs, p, s, x, y), body = smoothstep(1 - e, 1 + e, S)
+    if (!body) return 0
+    // key light from the upper left: the lit side of the dense interior is highlight, the rest mid
+    const lx = bs[0].x + lightX * reach - x, ly = bs[0].y + lightY * reach - y
+    const lit = smoothstep(1.1, 2.2, S) * (p.check + (1 - p.check) * Math.exp(-(lx * lx + ly * ly) / (2 * (.5 * reach) ** 2)))
+    return body * (.48 + .25 * pulse + (.52 - .25 * pulse) * lit)
   }
-  const sweep = field((x, y) => {
-    const d = Math.hypot(x / ASP * 1.7, y) // aspect-corrected radius
-    const behind = (((head - Math.atan2(y, x)) % TAU) + TAU) % TAU / TAU
-    return Math.pow(1 - behind, 3) * smoothstep(.34, .3, d) * smoothstep(.06, .1, d) * .8
-  })
-  return [
-    layer(onStage(sweep), 'mid'),
-    layer(onStage(field(blob([{ x: 0, y: 0, r: .075 * breath(t * 2, .08) }]))), 'value'),
-    layer(T.dotRing(STAGE.cx, STAGE.cy, RUN.rad, { spacing: 4.2, size: 1.2 }), 'faint'),
-    layer(T.dots(sites(0), 3.6), 'value'),
-    layer(T.dots(sites(1), 3), 'value'),
-    layer(T.dots(sites(2), 2.6), 'mid'),
-    layer(T.dots(sites(3), 2.2), 'mid'),
-    layer(T.dots([4, 5, 6, 7].flatMap(sites), 1.8), 'idle'),
-  ]
+  return layer(T.lattice(K, 0, s.row).at(T.lattice(K, 0, s.row).place(f, 0, 0, COLS, s.h)), tone)
 }
-
-const awaiting = (t: number) => {
-  const p = .5 + .5 * Math.sin(t * 3.4), q = Math.round(p * 4) / 4, b = 1 + .22 * q
-  return [
-    layer(onStage(field(blob([{ x: 0, y: 0, r: .21 * b }, ...orbit(t, 3, .1, .6, .12 * b, .02)]))), 'active'),
-    layer(T.dotRing(STAGE.cx, STAGE.cy, 34 + 3 * q, { spacing: 4.4, size: 1.2 }), q > .5 ? 'activeDim' : 'faint'),
-  ]
-}
-
-const error = (t: number) => {
-  const tt = Math.floor(t * 9), burst = hash01(Math.floor(t * 2.2), 5) > .4 ? 1 : .12
-  const base = blob([{ x: 0, y: 0, r: .22 }, { x: .12, y: .04, r: .12 }, { x: -.16, y: -.03, r: .1 }])
-  const slip = (seed: number, amp: number): Field => (u, v) => {
-    const band = Math.floor(v * 16), dx = (hash01(band, tt, seed) - .5) * amp * burst
-    const drop = hash01(band, tt, seed + 9) > 1 - .12 * burst ? .3 : 1
-    return clamp(base((u - .5) * ASP + dx, v - .5) * drop)
+/** Ring of sites around the organism with a comet sweeping it (orbit), or a ripple after each beat. */
+const halo = (p: HeartbeatParams, t: number, s: Stage): Layer[] => {
+  const out: Layer[] = []
+  if (p.orbit > .05) {
+    const R = 44 * s.scale, n = Math.round((TAU * R) / 4.4), head = Math.floor((t / p.orbitPeriod) * n)
+    const site = (i: number): Pt => { const a = (((i % n) + n) % n) / n * TAU - Math.PI / 2; return [s.cx + R * Math.cos(a), s.cy + R * Math.sin(a)] }
+    const tail = [3.8, 3.2, 2.8, 2.5, 2.2, 2, 1.8, 1.6, 1.5, 1.4].map((size, i) => ({ size, tone: (i < 2 ? 'value' : i < 5 ? 'mid' : 'idle') as Tone }))
+    const v = () => p.orbit
+    out.push(layer({ ...T.dots(Array.from({ length: n - tail.length }, (_, i) => site(head + 1 + i)), 1.4), field: v }, 'faint'))
+    tail.forEach((d, i) => out.push(layer({ ...T.dots([site(head - i)], d.size), field: v }, d.tone)))
   }
-  return [
-    layer(onStage(slip(1, .44)), 'mid'),
-    layer(onStage(field((x, y) => base(x, y) * (hash01(Math.floor((y + .5) * 16), tt, 3) > .93 * (burst > .5 ? .6 : 1) ? .35 : 1))), 'value'),
-  ]
-}
-
-const DONE = { period: 7, checkAt: 1.6, checkLen: 1.1 }
-const CHECK: Pt[] = [[-19, 1], [-6, 14], [21, -15]]
-const checkDots = (n: number): Pt[] => {
-  const pts: Pt[] = []
-  for (let k = 0; k < CHECK.length - 1; k++) {
-    const [x0, y0] = CHECK[k], [x1, y1] = CHECK[k + 1], m = Math.round(Math.hypot(x1 - x0, y1 - y0) / 3.4)
-    for (let i = k ? 1 : 0; i <= m; i++) pts.push([STAGE.cx + x0 + ((x1 - x0) * i) / m, STAGE.cy + y0 + ((y1 - y0) * i) / m])
+  if (p.beat > .02 && p.beatHz) {
+    const ph = (t * p.beatHz) % 1, R = Math.round((34 + 22 * smoothstep(0, .8, ph)) * s.scale / 2) * 2, n = Math.round((TAU * R) / 4.6)
+    const fade = (1 - smoothstep(.1, .85, ph)) * Math.min(1, p.beat / .1)
+    if (fade > .1) out.push(layer({ ...T.dotRing(s.cx, s.cy, R, { spacing: (TAU * R) / n, size: 1.3 }), field: () => fade }, 'idle'))
   }
-  return pts.slice(0, Math.ceil(pts.length * n))
-}
-const done = (t: number) => {
-  const ph = t % DONE.period, settle = smoothstep(0, 1.6, ph), p = clamp((ph - DONE.checkAt) / DONE.checkLen)
-  const wob = 1 - settle, b = [{ x: 0, y: 0, r: .22 }, ...orbit(t, 3, .14 * wob, .9, .1 * wob, .04 * wob)]
-  return [
-    layer(onStage(field(blob(b, [.9, 1.4], .15 * (1 - p)))), p > 0 ? 'mid' : 'value'),
-    layer(T.dots(checkDots(p), 3.8), 'value'),
-  ]
+  return out
 }
 
-const scenes = [thinking, toolRunning, awaiting, error, done]
-const make = (id: string, label: string, s: number): WidgetPreset => ({
-  id, name: label, label: `HB  ${label}`, ...tile, animated: true,
-  layers: (ctx: WidgetContext) => [...scenes[s](ctx.t), name(s, s === 2 ? 'active' : 'value')],
+// ── CARDS ── eyebrow names the state; a small status line says what the agent is doing.
+const STAGE = stageAt(12, 36, 1)
+const FOOT = 136
+const clock = (t: number) => { const s = Math.floor(t) % 600; return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` }
+const STATUS: Record<HeartbeatState, [string, (t: number) => string]> = {
+  thinking: ['PLANNING NEXT STEP', clock],
+  'tool-running': ['PNPM TEST', clock],
+  'awaiting-approval': ['EDIT 3 FILES?', () => 'Y/N'],
+  error: ['EXIT CODE 1', () => 'RETRY'],
+  done: ['12 FILES CHANGED', () => '0:42'],
+}
+const statusLine = (st: HeartbeatState, t: number, row: number): Layer[] => [
+  layer(T.text(STATUS[st][0], 0, row), 'mid'),
+  layer(T.text(STATUS[st][1](t), TILE.cols - 1, row, { align: 'right' }), 'value'),
+]
+const scene = (p: HeartbeatParams, t: number, s: Stage, accent: boolean) => [...halo(p, t, s), organism(p, t, s, accent && p.accent > .5 ? 'active' : 'value')]
+/** Done tile: blob → condense (1.4 s, decelerating) → hold the check → relax back, on a 7 s loop (t = 0 opens on the held check). */
+/** Done tile: blob → condense (1.4 s, decelerating) → hold the check → relax back, on a 7 s loop. */
+const doneCheck = (t: number) => {
+  const ph = (t + 4) % 7
+  return ph < 1 ? 0 : ph < 2.4 ? 1 - (1 - (ph - 1) / 1.4) ** 3 : ph < 5.6 ? 1 : 1 - smoothstep(5.6, 7, ph)
+}
+const make = (id: string, index: number, label: string, st: HeartbeatState): WidgetPreset => ({
+  id, name: label, label: `0${index}  ${label}`, ...tile, animated: true,
+  layers: (ctx: WidgetContext) => {
+    const p = st === 'done' ? { ...HEARTBEAT.done, check: doneCheck(ctx.t) } : HEARTBEAT[st]
+    return [...scene(p, ctx.t, STAGE, true), ...statusLine(st, ctx.t, FOOT)]
+  },
 })
-export const hbThinking = make('hb-thinking', 'THINKING', 0)
-export const hbToolRunning = make('hb-tool-running', 'TOOL RUNNING', 1)
-export const hbAwaiting = make('hb-awaiting-approval', 'AWAITING', 2)
-export const hbError = make('hb-error', 'ERROR', 3)
-export const hbDone = make('hb-done', 'DONE', 4)
+export const hbThinking = make('hb-thinking', 1, 'THINKING', 'thinking')
+export const hbToolRunning = make('hb-tool-running', 2, 'TOOL RUNNING', 'tool-running')
+export const hbAwaiting = make('hb-awaiting-approval', 3, 'AWAITING APPROVAL', 'awaiting-approval')
+export const hbError = make('hb-error', 4, 'ERROR', 'error')
+export const hbDone = make('hb-done', 5, 'DONE', 'done')
 
-// ── AGENT ── `data.state` 0..4 picks the scene; a five-stop segmented control switches it.
-const SEG = { x: 8, w: 128, y: 121, labels: ['THK', 'RUN', 'ASK', 'ERR', 'OK'] }
-const segX = (i: number) => SEG.x + 12 + (i * (SEG.w - 24)) / 4
+// ── AGENT ── `data.state` 0..4 (sprung) picks the parameters; the knob glides between stops.
+const AGENT = stageAt(12, 28, .78)
+const SEG = { x: 6, y: 106, w: 132, h: 18, knob: 13, labels: ['THK', 'RUN', 'ASK', 'ERR', 'OK'] }
+const segX = (i: number) => SEG.x + SEG.h / 2 + (i * (SEG.w - SEG.h)) / 4
+const track = (d: number, spacing: number) => stadium(SEG.x - d, SEG.y - d, SEG.w + 2 * d, SEG.h + 2 * d, spacing)
 const hbAgent: WidgetPreset = {
-  id: 'hb-agent', name: 'AGENT', label: 'HB  AGENT', ...tile, animated: true,
+  id: 'hb-agent', name: 'AGENT', label: '06  AGENT', ...tile, animated: true,
   defaults: { state: 0 },
-  controls: [{ key: 'state', kind: 'segmented', options: 5, optionLabels: ['Thinking', 'Running tool', 'Awaiting approval', 'Error', 'Done'], box: [SEG.x, SEG.y - 12, SEG.w, 28], label: 'Agent state' }],
+  springKeys: ['state'],
+  controls: [{ key: 'state', kind: 'segmented', options: 5, optionLabels: ['Thinking', 'Running tool', 'Awaiting approval', 'Error', 'Done'], box: [SEG.x, SEG.y - 4, SEG.w, SEG.h + 18], label: 'Agent state' }],
   layers: ctx => {
-    const s = Math.round(clamp(Number.isFinite(ctx.data.state) ? ctx.data.state : 0, 0, 4))
-    const idx = [0, 1, 2, 3, 4]
+    const s = clamp(Number.isFinite(ctx.data.state) ? ctx.data.state : 0, 0, 4), i0 = Math.min(3, Math.floor(s)), sel = Math.round(s)
+    const p = blendStates(HEARTBEAT[HEARTBEAT_STATES[i0]], HEARTBEAT[HEARTBEAT_STATES[i0 + 1]], s - i0)
+    const hover = ctx.hover === 'state', pressed = ctx.pressed === 'state', focus = ctx.focus === 'state'
+    const cy = SEG.y + SEG.h / 2, mark = Math.floor(ctx.t * 10)
     return [
-      ...scenes[s](ctx.t), name(s, 'value'),
-      layer(T.dotLine(segX(0), SEG.y, segX(4), SEG.y, { spacing: 3.2, size: 1.1 }), 'faint'),
-      layer(T.dots(idx.filter(i => i !== s).map((i): Pt => [segX(i), SEG.y]), 3), 'mid'),
-      layer(T.dots([[segX(s), SEG.y]], 11), 'value'),
-      ...idx.map(i => layer(T.big(SEG.labels[i], segX(i), SEG.y + 9, { lattice: 1.3, align: 'center' }), i === s ? 'value' : 'mid')),
+      // red-free: the agent card's pulse stays in `value`, so the board spends red once
+      ...scene(p, ctx.t, AGENT, false), ...statusLine(HEARTBEAT_STATES[sel], ctx.t, 94),
+      layer(T.dots(track(0, OUTLINE.spacing), OUTLINE.size), 'mid'),
+      layer(T.dots([0, 1, 2, 3, 4].filter(i => Math.abs(i - s) > .5).map((i): Pt => [segX(i), cy]), 3), 'mid'),
+      layer({ ...T.dots([[SEG.x + SEG.h / 2 + (s * (SEG.w - SEG.h)) / 4, cy]], SEG.knob), field: () => (pressed ? .75 : 1) }, 'value'),
+      ...SEG.labels.map((l, i) => layer(T.text(l, segX(i), SEG.y + SEG.h + 6, { align: 'center' }), i === sel ? 'value' : 'idle')),
+      ...(hover ? [layer({ ...T.dots(track(2.6, OUTLINE.spacing), OUTLINE.size), field: () => .5 }, 'value')] : []),
+      // focus: the track's own sites march (no extra outline: the status line and labels sit close)
+      ...(focus ? [layer(T.dots(track(0, OUTLINE.spacing).filter((_, i) => (((i - mark) % 5) + 5) % 5 < 2), OUTLINE.size), 'value')] : []),
     ]
   },
 }
