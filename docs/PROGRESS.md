@@ -59,6 +59,7 @@
 
 **P4 (living: transitions, simulation, agents, live data): started 2026-10-23**
 - [x] P4-B: Agent Heartbeat v0 (`src/widgets/boards/heartbeat.ts`, `?board=heartbeat`): six animated tiles, one metaball organism per agent state (`hb-thinking` breathing, `hb-tool-running` orbit + scan, `hb-awaiting-approval` red pulse, `hb-error` glitch/stutter in value/mid, `hb-done` settles into a check) plus `hb-agent` with a 5-stop segmented control on `data.state`. Red only on awaiting approval (the agent card shows it only when switched to that state). Goldens +6. Not done: real agent event feed, transitions between states.
+- [x] P4-A: SimFields (`src/engine/sim/`): `createSim` fixed-dt stepper with checkpoints, `simAt(sim, t)` replays deterministically (same t, same grid; back-jumps resume from the nearest checkpoint); Gray-Scott, falling sand and Conway Life, each as a bounded Field. Board `sim` (`sim-rd`, `sim-sand`, `sim-life`), goldens +3, verify section added.
 
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.
