@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import type { Field, Layer } from '../../engine/types'
 import { DotCanvas } from '../../components/DotCanvas'
-import { Controls, Panel, Range, figStyle } from '../ui/kit'
+import { Controls, Panel, Range } from '../ui/kit'
+import { figStyle } from '../ui/style'
 
 /** A lit sphere over a floor: a field in u/v, so it has no resolution of its own. */
 const sphere: Field = (u, v) => {

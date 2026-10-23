@@ -39,7 +39,7 @@ const js = async (expression: string) => {
   return r.result?.result?.value
 }
 let failures = 0
-const check = (name: string, ok: boolean, detail = '') => { console.log(`${ok ? '✓' : '✗'} ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failures++ }
+const check = (name: string, ok: boolean, detail = '') => { console.log(`${ok ? 'âœ“' : 'âœ—'} ${name}${detail ? ` â€” ${detail}` : ''}`); if (!ok) failures++ }
 const shot = async (name: string) => { const r = await cdp('Page.captureScreenshot', { format: 'png' }); writeFileSync(join(out, `${name}.png`), Buffer.from(r.result.data, 'base64')) }
 const waitFor = async (expr: string, ms = 8000) => { for (let i = 0; i < ms / 100; i++) { if (await js(expr).catch(() => false)) return true; await sleep(100) } return false }
 
@@ -71,7 +71,7 @@ const setRange = (sel: string, v: number) => js(`(() => { const el = document.qu
 const clickText = (scope: string, label: string) => js(`[...document.querySelectorAll(${JSON.stringify(`${scope} button`)})].find(b => b.textContent.trim().startsWith(${JSON.stringify(label)})).click()`)
 const changed = async (id: string, act: () => Promise<unknown>, wait = 700) => {
   const a = await sig(id); await act(); await sleep(wait); const b = await sig(id)
-  return { ok: b.n > 0 && b.sig !== a.sig, detail: `${a.n}→${b.n} lit` }
+  return { ok: b.n > 0 && b.sig !== a.sig, detail: `${a.n}â†’${b.n} lit` }
 }
 
 async function open(width: number, height: number, mobile: boolean, reduced = false) {
@@ -88,12 +88,14 @@ async function open(width: number, height: number, mobile: boolean, reduced = fa
 try {
   await cdp('Page.enable'); await cdp('Runtime.enable'); await cdp('Log.enable')
 
-  // ── desktop, 1280 ─────────────────────────────────────────────────────────
+  const only = process.env.ESSAY_ONLY ?? ''
+  if (!only || only === 'desktop') {
+  // â”€â”€ desktop, 1280 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   const opened = await open(1280, 900, false)
   check('1280: essay.html loads and the dot title draws', opened && await js(`!!document.querySelector('.hero canvas, .hero .dot-svg')`))
   await shot('1280-00-hero')
-  const ids = await figIds(), first = await mounted()
-  check('1280: figures lazy-mount (only those near the first view are mounted at load)', first.length < ids.length / 3, `${first.length}/${ids.length} mounted at load: ${first.join(', ')}`)
+  const all = await figIds(), first = await mounted()
+  check('1280: figures lazy-mount (only those near the first view are mounted at load)', first.length < all.length / 3, `${first.length}/${all.length} mounted at load: ${first.join(', ')}`)
   const transfer = await js(`performance.getEntriesByType('resource').filter(e => e.initiatorType === 'script' || e.name.endsWith('.js') || e.name.includes('.ts') || e.name.includes('.tsx')).length`)
   console.log(`  (dev server: ${transfer} module requests before scrolling)`)
 
@@ -123,22 +125,25 @@ try {
       await sleep(300)
       const err = await js(`document.querySelector('#fig-ir .ir-status').textContent`) as string, still = await sig('ir')
       const href = await js(`document.querySelector('#fig-ir a.ctl-link').getAttribute('href')`) as string
-      return { ok: typed.ok && /^ERROR/.test(err) && still.n > 0 && /tab=dots&p=/.test(href), detail: `${typed.detail}; "${err.slice(0, 40)}"; link ${href.slice(0, 40)}…` }
+      return { ok: typed.ok && /^ERROR/.test(err) && still.n > 0 && /tab=dots&p=/.test(href), detail: `${typed.detail}; "${err.slice(0, 40)}"; link ${href.slice(0, 40)}â€¦` }
     },
     surfaces: async () => { const a = await sig('surfaces'); await sleep(1500); const b = await sig('surfaces'); return { ok: a.n > 500 && a.sig !== b.sig, detail: `${a.n} lit, animating` } },
     agents: () => changed('agents', () => clickText('#fig-agents', 'Awaiting'), 900),
   }
-  for (const id of ids) {
+  for (const id of all) {
     const ok = await reach(id)
     const first = await sig(id)
     check(`1280: ${id} mounts on scroll and draws`, ok && first.n > 0, `${first.n} lit`)
     if (act[id]) { const r = await act[id](); check(`1280: ${id} responds to input`, r.ok, r.detail) }
     await sleep(300)
-    await shot(`1280-${String(ids.indexOf(id) + 1).padStart(2, '0')}-${id}`)
+    await shot(`1280-${String(all.indexOf(id) + 1).padStart(2, '0')}-${id}`)
   }
   check('1280: no console errors or exceptions', logs.length === 0, logs.slice(0, 5).join(' | '))
+  }
+  const ids = ['resolution', 'pipeline', 'quantize', 'lattice', 'accent', 'masks', 'departures', 'instrument', 'light', 'sim', 'flicker', 'mirror', 'ir', 'surfaces', 'agents']
+  if (!only || only === 'phone') {
 
-  // ── phone, 375 ────────────────────────────────────────────────────────────
+  // â”€â”€ phone, 375 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   await open(375, 812, true)
   await shot('375-00-hero')
   for (const id of ids) {
@@ -150,18 +155,29 @@ try {
   const overflow = await js(`document.documentElement.scrollWidth - window.innerWidth`)
   check('375: no horizontal overflow', overflow <= 0, `${overflow}px`)
   check('375: no console errors or exceptions', logs.length === 0, logs.slice(0, 5).join(' | '))
+  }
+  if (!only || only === 'reduced') {
 
-  // ── reduced motion: figures show stills ───────────────────────────────────
+  // â”€â”€ reduced motion: figures show stills â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   await open(1280, 900, false, true)
   const stills: string[] = []
-  for (const id of ['departures', 'sim', 'surfaces']) {
+  check('reduced motion: the page sees prefers-reduced-motion', await js(`matchMedia('(prefers-reduced-motion: reduce)').matches`))
+  // (surfaces is left out on purpose: its clock source re-samples it once a second, a ticking still)
+  for (const id of ['departures', 'sim', 'flicker', 'light']) {
     await reach(id)
-    const a = await sig(id); await sleep(1200); const b = await sig(id)
+    // let every card settle its first frame (backing-store re-measure, staggered first samples), then watch for 2 s
+    await sleep(2000)
+    const per = `[...document.querySelectorAll('#fig-${id} canvas')].map(c => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let s = 0; for (let i = 0; i < d.length; i += 4) s = (s * 31 + d[i] + d[i + 1] * 3) % 1000003; return c.closest('[data-card]')?.dataset.card + ':' + c.width + ':' + s })`
+    const pa = await js(per) as string[]
+    const a = await sig(id); await sleep(2000); const b = await sig(id)
+    const pb = await js(per) as string[]
+    if (a.sig !== b.sig) console.log(`  ${id}: ${pa.filter((x, i) => x !== pb[i]).join(' ')} â†’ ${pb.filter((x, i) => x !== pa[i]).join(' ')}`)
     if (!(a.n > 0 && a.sig === b.sig)) stills.push(`${id} ${a.n} lit ${a.sig === b.sig ? 'still' : 'moving'}`)
   }
   check('reduced motion: animated figures draw a still frame', stills.length === 0, stills.join('; '))
   await shot('1280-reduced-sim')
   check('reduced motion: no console errors', logs.length === 0, logs.slice(0, 5).join(' | '))
+  }
 } catch (e) {
   check('run', false, String(e))
 } finally {

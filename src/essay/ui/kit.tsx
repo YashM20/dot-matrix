@@ -1,8 +1,4 @@
 import type { ReactNode } from 'react'
-import type { DotStyle } from '../../engine/types'
-
-/** UI dots (quantized, the default squircle) for figure canvases. */
-export const figStyle: DotStyle = { shape: 'squircle', sizeMin: .3, sizeMax: 1.55, cornerRoundness: .25, opacityMode: 'fromValue', quantizeSteps: 5 }
 
 export function Range({ label, value, min, max, step = 1, onChange, format, name }: {
   label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void; format?: (v: number) => string; name?: string

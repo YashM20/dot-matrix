@@ -41,11 +41,15 @@ export function Essay() {
   return (
     <main className="essay">
       <header className="hero">
-        <p className="kicker"><i aria-hidden="true" /> DOT/480 · AN EXPLORABLE ESSAY</p>
+        <nav className="site-nav" aria-label="Site">
+          <span className="kicker"><i aria-hidden="true" /> DOT/480</span>
+          <span><a href="./">BOARDS</a><a href="./?tab=dots">DOTS</a><a href="./?tab=log">LOG</a></span>
+        </nav>
         <DotTitle text="Ditherpunk for UI" level={1} max={10} smooth />
         <p className="lede">
-          How a dot-matrix UI engine turns maths into interfaces: one field, sampled onto a grid, quantized into a handful of dot sizes,
-          drawn in grey with exactly one red. Every figure on this page is the real engine running in your browser. Drag things.
+          Notes from building a dot-matrix renderer for interfaces, a hobby that got out of hand. A field goes in, gets sampled onto a grid,
+          is rounded to a handful of dot sizes, and comes out grey with exactly one red. Every figure on this page is the actual engine running in your browser,
+          so poke at them. Nothing here is for sale.
         </p>
         <nav className="toc" aria-label="Sections">
           <ol>{TOC.map(([id, name], i) => <li key={id}><a href={`#${id}`}><span>{String(i + 1).padStart(2, '0')}</span>{name}</a></li>)}</ol>
@@ -63,7 +67,8 @@ export function Essay() {
           the <A href="https://teenage.engineering/">Teenage Engineering</A> OP-1 screen and LED back panels on phones are all memorable because they got so little and used it well.
         </p>
         <p>
-          Dot/480 is an engine for that look, built for real product UI rather than nostalgia. The core idea fits in one sentence: <em>nothing is drawn, everything is sampled.</em>
+          Dot/480 is my attempt to get that look for ordinary interface widgets (clocks, sliders, timers, status cards) without hand-pixelling a single one.
+          The trick fits in one sentence: <em>nothing is drawn, everything is sampled.</em>
           Below is a lit sphere. It isn't a bitmap. It's a function of two numbers, and the slider only changes how many times we ask it for a value.
         </p>
         <Figure id="resolution" load={fig.resolution} minHeight={420} caption={<>A field has no resolution. At 8×8 it is a blob of light; at 24×24 it is a sphere; past 48 it starts to look like a photo, and the charm drains out. Most Dot/480 cards live between 25 and 144 dots a side.</>} />
@@ -135,9 +140,9 @@ export function Essay() {
           If you can't name the role of a red dot, it shouldn't be red.
         </p>
         <p>
-          It's easier to show than to argue. The three cards below are a progress bar, a live status dot and a toggle. Flip the switch to give the toggle its own accent.
+          It's easier to show than to argue. The three cards below are a progress bar, a live status dot and a pair of sliders whose lower one is a live level. Flip the switch to give the sliders their own accent.
         </p>
-        <Figure id="accent" load={fig.accent} minHeight={300} caption={<>With one red your eye lands on the live state first. With two hues the board has two plots and no protagonist, and the blue toggle reads like an ad. (The blue theme exists only in this figure.)</>} />
+        <Figure id="accent" load={fig.accent} minHeight={300} caption={<>With one red your eye lands on the live state first. With two hues the board has two plots and no protagonist, and the blue slider reads like an ad. (The blue theme exists only in this figure.)</>} />
         <p>
           Scarcity is what gives red its meaning. Once every card is allowed one accent, every board is a rainbow. So the budget is per board, not per card:
           the heartbeat board below pulses in white on the card that could switch to red, because a sibling already owns it.
@@ -249,19 +254,19 @@ export function Essay() {
         </p>
         <Figure id="surfaces" load={fig.surfaces} wide minHeight={240} caption={<>One 60-second timer on a browser card, a 25×25 round LED matrix, an 800×480 1-bit e-ink panel, a 28×14 flip-disc sign and a pen plotter, on one board clock (synced across tabs).</>} />
         <Moment n={3}><b>One Field, Five Surfaces.</b> Nobody redrew anything for these screens. The red arc on the browser card turns into full-brightness light on the monochrome devices, because a
-          device has no red; it has photons. The previews are honest about what each panel would do, and that's the point of having them before you buy the panel.</Moment>
+          device has no red; it has photons. The simulators are honest about what each panel does: the e-ink ghosts until its tenth refresh flashes it clean, and the discs overshoot before they settle.</Moment>
       </Sec>
 
       <Sec id="agents" num="13" title="Agents">
         <p>
-          The last surface isn't a screen. It's a conversation. An agent working on your behalf has a state, like thinking, running a tool, waiting for your approval, failed or done, and today
-          that state is a spinner and a sentence. Dot/480 gives it a body instead: a lobed organism whose behaviour is a closed set of tokens. Agents write one number, <C>data.state</C>, and never draw.
+          One last experiment. A coding agent running in a terminal has a handful of states (thinking, running a tool, waiting for you, failed, done) and shows them as a spinner and a sentence.
+          What if it had a body instead? The heartbeat is a lobed metaball organism whose behaviour is a closed set of tokens. Whoever drives it writes one number, <C>data.state</C>, and never draws.
           The card springs between states in about 0.4 s: a slow breath while thinking, a comet circling while a tool runs, a lub-dub pulse in red only when it needs <em>you</em>.
         </p>
         <Figure id="agents" load={fig.agents} minHeight={300} caption={<>Switch the state an agent would write. Right: the same card resampled onto a phone's 25×25 back-panel LED matrix, so the heartbeat is readable face-down on a desk.</>} />
-        <Moment n={4}><b>Agent Heartbeat.</b> The same card ships as an <A href="https://github.com/modelcontextprotocol/ext-apps">MCP App</A>: a host like Claude or VS Code renders it inline in the chat,
-          and the agent drives it through the protocol, along with <C>describe()</C>, which turns a card back into text so a model can check what it drew. That's what "the dot-matrix engine for the agent era"
-          means in practice: write a field once and ship it as a React component, a live status card inside a chat, an e-ink dashboard and an LED matrix.</Moment>
+        <Moment n={4}><b>Agent Heartbeat.</b> Because a card is a pure function of <C>t</C> and <C>data</C>, it doesn't care who writes the data. In the repo the same card also runs as an
+          {' '}<A href="https://github.com/modelcontextprotocol/ext-apps">MCP App</A> inside a chat window, with the agent setting its state, and <C>describe()</C> turns any card back into text so a model
+          can check what it drew. The nice part is that none of this needed new rendering code: the phone back on the right is the same card resampled, the chat version is the same card in an iframe.</Moment>
       </Sec>
 
       <section className="sec" id="credits" aria-labelledby="credits-h">
@@ -278,7 +283,9 @@ export function Essay() {
           <li>Gabriel Lamé's superellipse (1818), and every designer who argued about squircles since.</li>
         </ul>
         <p className="outro">
-          Want to keep playing? Open the <a href="./">boards</a>, write a program in <a href="./?tab=dots">DOTS</a>, or watch the <a href="./?board=surfaces">five surfaces</a> full size.
+          That's the tour. The rest of the site is the workshop: twenty-odd <a href="./">boards</a> of cards (try <a href="./?board=departures">Departures</a>,
+          {' '}<a href="./?board=levels">Levels</a> and <a href="./?board=glyph">Lock</a>), a <a href="./?tab=dots">DOTS</a> tab for writing your own fields and sharing them as links,
+          and a <a href="./?tab=log">log</a> of what changed.
         </p>
       </section>
       <footer className="essay-foot">DOT/480 · FIELD → GRID SAMPLER → RENDERER · <span>NO GRADIENTS WERE HARMED</span></footer>

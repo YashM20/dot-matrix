@@ -15,6 +15,17 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 
 export const releases: Release[] = [
   {
+    version: '0.8', date: '2026-10-23', title: 'Ditherpunk for UI: the tour',
+    summary: 'A long, hands-on walk through how the dots are made, with the real engine running in every figure.',
+    changes: [
+      { kind: 'new', text: 'Fourteen short chapters, from "why dots" to light, sand, halftone, five display types and an agent heartbeat. Each one has something to drag, toggle or edit.' },
+      { kind: 'new', text: 'Scratch a halftone portrait and watch it heal, carry a torch down a dark corridor, and watch an hourglass clock pour the time into place.' },
+      { kind: 'new', text: 'Edit a tiny dot program right in the page, then open it in DOTS to keep going.' },
+      { kind: 'improved', text: 'Figures load only when you scroll to them, and show still frames if you prefer reduced motion.' },
+    ],
+    link: { href: 'essay.html', label: 'READ THE ESSAY' },
+  },
+  {
     version: '0.7', date: '2026-10-23', title: 'DOTS: write a field, share it as a link',
     summary: 'A new DOTS tab where you write a few lines of maths and watch them run as a dot display, then share them as a short link.',
     changes: [

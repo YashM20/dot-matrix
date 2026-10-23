@@ -145,3 +145,9 @@ em { color: var(--value) }
   .dot-card { padding: 8px; border-radius: 12px }
   .ctl { flex-basis: 100% }
 }
+
+/* site nav: the essay is the front door; the boards, DOTS and the log are one click away */
+.site-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; margin: 0 0 32px }
+.site-nav .kicker { margin: 0 }
+.site-nav a { font: 500 11px var(--mono); letter-spacing: .16em; color: var(--label); text-decoration: none; margin-left: 18px }
+.site-nav a:hover { color: var(--value) }

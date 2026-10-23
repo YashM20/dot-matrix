@@ -1,7 +1,8 @@
 import { useMemo, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import type { DotStyle, Field, Layer } from '../../engine/types'
 import { DotCanvas } from '../../components/DotCanvas'
-import { Controls, Panel, Range, figStyle } from '../ui/kit'
+import { Controls, Panel, Range } from '../ui/kit'
+import { figStyle } from '../ui/style'
 
 /** Three metaballs; the reader holds the third. Pure in (u, v, x, y). */
 const blobs = (x: number, y: number): Field => (u, v) => {

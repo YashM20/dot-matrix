@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ThemeTokens } from '../../engine/types'
 import { dot480 } from '../../engine/theme/tokens'
-import { progressCard, statusDotCard, toggleCard } from '../../widgets/boards/components'
+import { progressCard, sliderCard, statusDotCard } from '../../widgets/boards/components'
 import { Card } from '../ui/Card'
 import { Cards, Controls, Toggle } from '../ui/kit'
 
@@ -18,7 +18,7 @@ export default function FigAccent() {
       <Cards n={3}>
         <Card preset={progressCard} />
         <Card preset={statusDotCard} />
-        <Card preset={toggleCard} theme={second ? SECOND : dot480} />
+        <Card preset={sliderCard} theme={second ? SECOND : dot480} />
       </Cards>
       <Controls>
         <Toggle label="Add a second accent" on={second} onChange={setSecond} />

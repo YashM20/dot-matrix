@@ -9,7 +9,7 @@ import { Cards, Choice, Controls } from '../ui/kit'
 const T = layoutFor(TILE)
 const HB = heartbeatCard()
 const SPEC: DeviceSpec = { grid: TILE, style: tileStyle, layers: HB.layers }
-const GLYPH = DEVICES['glyph-matrix-25'], GP = 5.2, GX = 72 - 12 * GP, GY = 74 - 12 * GP
+const LED25 = DEVICES['glyph-matrix-25'], GP = 5.2, GX = 72 - 12 * GP, GY = 74 - 12 * GP
 
 /**
  * Signature moment 4: the agent heartbeat, mirrored to a phone's back-panel LED matrix. The same card
@@ -19,7 +19,7 @@ const phoneBack: WidgetPreset = {
   id: 'essay-hb-phone', name: 'Phone back', label: 'PHONE BACK  25×25 LED', group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true,
   defaults: { state: 0 }, springKeys: ['state'],
   layers: ctx => {
-    const { lit, halo } = ledGlow(toDevice(SPEC, GLYPH, { ctx: { t: ctx.t, data: ctx.data } }), GLYPH.physics)
+    const { lit, halo } = ledGlow(toDevice(SPEC, LED25, { ctx: { t: ctx.t, data: ctx.data } }), LED25.physics)
     const groups = new Map<string, { tone: Tone; size: number; sites: [number, number][] }>()
     const put = (tone: Tone, size: number, at: [number, number]) => { const k = `${tone}${size}`; let g = groups.get(k); if (!g) groups.set(k, (g = { tone, size, sites: [] })); g.sites.push(at) }
     for (let r = 0; r < 25; r++) for (let c = 0; c < 25; c++) {
