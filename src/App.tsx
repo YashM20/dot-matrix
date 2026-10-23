@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { lazy, Suspense, useState } from 'react'
 import { Board, VIEW_EXIT_MS, cardMotion } from './components/Board'
 import { Changelog } from './components/Changelog'
 import { DrawBoard } from './components/draw/DrawBoard'
@@ -17,7 +17,10 @@ import './App.css'
 
 const galleryItems = ['home-clock', 'music', 'timer', 'weather', 'fitness', 'messages', 'camera', 'settings', 'system']
 // DRAW stays last: the narrow layout hides the last tab
-const tabs = ['BOARDS', 'GALLERY', 'WORKSPACE', 'LOG', 'DOTS', 'DRAW'] as const
+// STUDIO (P6-D) is its own tab, not a WORKSPACE upgrade: WORKSPACE stays the one-preset tuner (style,
+// photo, exports); STUDIO edits a layered card document. Lazy, so the other tabs don't load the editor.
+const Studio = lazy(() => import('./components/studio/Studio').then(m => ({ default: m.Studio })))
+const tabs = ['BOARDS', 'GALLERY', 'WORKSPACE', 'STUDIO', 'LOG', 'DOTS', 'DRAW'] as const
 type Tab = typeof tabs[number]
 
 // Deep links: ?board=<id> opens a board, ?card=<id> renders one card alone (handy for screenshots/bisecting),
@@ -54,6 +57,8 @@ export default function App() {
       </section>
     ) : shownTab === 'LOG' ? (
       <Changelog />
+    ) : shownTab === 'STUDIO' ? (
+      <Suspense fallback={<p className="st-hint">Loading the Studio…</p>}><Studio /></Suspense>
     ) : shownTab === 'DOTS' ? (
       <DotsRepl />
     ) : shownTab === 'DRAW' ? (

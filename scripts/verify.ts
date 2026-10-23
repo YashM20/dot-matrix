@@ -32,6 +32,7 @@ import { halftoneChecks } from './halftone'
 import { deviceChecks } from './device'
 import { exportChecks } from './export'
 import { dotsChecks } from './dots'
+import { studioChecks } from './studio'
 import { specChecks } from './spec'
 import { bytecodeChecks } from './bytecode'
 import { esp32Checks } from '../targets/test/esp32'
@@ -793,6 +794,36 @@ esp32Checks(assert, { pathOnly: true })
 await targetsChecks(assert)
 // P5-B) struct-of-arrays DotBuffer, buffer canvas renderer, worker protocol (scripts/buffer.ts)
 bufferChecks(assert)
+
+// P5-A) WebGL2 renderer, CPU half: pass mapping ≡ sampler, routing, colours (GPU half: `npx tsx scripts/webgl.ts` in headless Chrome)
+import { baseStyle } from '../src/widgets/types'
+import { gpuTag, gpuValues, hasGPULayers, parseColor, passDots, passToDots, splitGPULayers, type GPUField } from '../src/engine/renderer/webgl'
+import { evalFS } from '../src/engine/renderer/webgl/shaders'
+import { gpuBoard } from '../src/widgets/boards/gpu'
+{
+  const key = (d: { x: number; y: number; r: number; opacity: number; color: string }) => `${d.x.toFixed(2)},${d.y.toFixed(2)},${d.r.toFixed(3)},${d.opacity.toFixed(3)},${d.color}`
+  const atDensity = (l: Layer, density: number): Layer => { const g = gpuTag(l.field)!, f: GPUField = Object.assign((u: number, v: number) => l.field(u, v), { bounds: l.field.bounds, gpu: { ...g, density } }); return { ...l, field: f } }
+  let same = true, detail = ''
+  for (const p of gpuBoard) {
+    const tagged = withChrome(p)({ t: 1.3, data: {} }).filter(l => hasGPULayers([l]))
+    const cpu = sampleLayers(tagged, p.grid, p.style, dot480).map(key).sort()
+    const gpu = splitGPULayers(tagged.map(l => atDensity(l, 1)), p.grid, p.style, p.grid.pitch!).passes.flatMap(q => passToDots(q, dot480)).map(key).sort()
+    const ok = cpu.length === gpu.length && cpu.every((k, i) => k === gpu[i])
+    same &&= ok; detail += `${p.id} ${cpu.length}${ok ? '' : `≠${gpu.length}`} `
+  }
+  assert('webgl: a GPU pass at density 1 draws exactly the CPU sampler\'s dots (gpu board, t = 1.3)', same, detail)
+  const counts = gpuBoard.map(p => passDots(splitGPULayers(withChrome(p)({ t: 0, data: {} }), p.grid, p.style, p.grid.pitch!).passes))
+  assert('webgl: gpu-plasma draws ≥ 500k GPU dots; every gpu card ≥ 250k', counts[0] >= 5e5 && counts.every(n => n >= 2.5e5), counts.join(' / '))
+  const plain: Layer = { field: () => 1 }, sited: Layer = { field: gpuValues(() => 1), sites: [[1, 1]] }, grid = { cols: 8, rows: 8 }
+  const r1 = splitGPULayers([plain, sited, { field: gpuValues(() => .5) }], grid, baseStyle, 4), r2 = splitGPULayers([{ field: gpuValues(() => 1) }], grid, { ...baseStyle, jitter: .5 }, 4)
+  assert('webgl: routing — untagged, site and jittered layers stay on the CPU, tagged lattice layers become passes', r1.cpu.length === 2 && r1.passes.length === 1 && r2.passes.length === 0 && !hasGPULayers([plain]))
+  const c = (s: string) => parseColor(s).map(x => Math.round(x * 255)).join(',')
+  assert('webgl: colours parse (#rgb, #rrggbb, #rrggbbaa, rgb(), rgba())', c('#FF3B30') === '255,59,48,255' && c('#fff') === '255,255,255,255' && c('#00000080') === '0,0,0,128' && c('rgba(255,255,255,0.08)') === '255,255,255,20' && c('rgb(10 20 30)') === '10,20,30,255')
+  const fs = evalFS('float field(vec2 uv, float t, vec3 pointer, float data_a, float data_b) { return 0.0; }', 2)
+  assert('webgl: IR eval shader passes data uniforms in key order and reads u/v from the CPU table', fs.includes('field(uv, uT, uPointer, uData[0], uData[1])') && fs.includes('uniform float uData[2]') && fs.includes('texelFetch(uUV'))
+}
+// P6-D) Dot Studio: document model, undo/redo, reference stacks, spec v1 / DOTS import, timeline (scripts/studio.ts)
+studioChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')
