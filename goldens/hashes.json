@@ -1063,6 +1063,36 @@
     "dots": 11049
    }
   },
+  "gpu-plasma": {
+   "t=0": {
+    "hash": "eea3ca4a",
+    "dots": 13360
+   },
+   "t=1.3": {
+    "hash": "f0439330",
+    "dots": 14188
+   }
+  },
+  "gpu-starfield": {
+   "t=0": {
+    "hash": "769f1933",
+    "dots": 1992
+   },
+   "t=1.3": {
+    "hash": "65ce6ee0",
+    "dots": 2418
+   }
+  },
+  "gpu-moire": {
+   "t=0": {
+    "hash": "f12c41b4",
+    "dots": 9139
+   },
+   "t=1.3": {
+    "hash": "28c2d13d",
+    "dots": 9053
+   }
+  },
   "ui-toggle": {
    "t=0": {
     "hash": "6579335f",

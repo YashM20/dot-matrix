@@ -19,6 +19,7 @@ import { glyphBoard } from './boards/glyph'
 import { liveBoard, liveSources } from './boards/live'
 import type { Source } from '../data/source'
 import { mirrorBoard } from './boards/mirror'
+import { gpuBoard } from './boards/gpu'
 
 export interface BoardDef {
   id: string; title: string; columns: number; items: WidgetPreset[]
@@ -51,6 +52,7 @@ export const boards: BoardDef[] = [
   { id: 'glyph', title: 'GLYPH — LOCK EXPERIENCES', columns: 2, items: glyphBoard },
   { id: 'live', title: 'LIVE — WEATHER, NOW PLAYING, CONTRIBUTIONS', columns: 3, items: liveBoard, sources: liveSources },
   { id: 'mirror', title: 'MIRROR — LIVE HALFTONE', columns: 3, items: mirrorBoard },
+  { id: 'gpu', title: 'GPU — HALF A MILLION DOTS', columns: 2, items: gpuBoard },
   { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, items: componentsBoard },
 ]
 export const boardIds = boards.map(b => b.id)
