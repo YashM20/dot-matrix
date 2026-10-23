@@ -45,6 +45,7 @@ export const boardManifest = [
   { id: 'glyph', title: 'GLYPH — LOCK EXPERIENCES', columns: 2, load: () => import('./boards/glyph').then(m => ({ items: m.glyphBoard })) },
   { id: 'live', title: 'LIVE — WEATHER, NOW PLAYING, CONTRIBUTIONS', columns: 3, load: () => import('./boards/live').then(m => ({ items: m.liveBoard, sources: m.liveSources })) },
   { id: 'mirror', title: 'MIRROR — LIVE HALFTONE', columns: 3, load: () => import('./boards/mirror').then(m => ({ items: m.mirrorBoard })) },
+  { id: 'gpu', title: 'GPU — HALF A MILLION DOTS', columns: 2, load: () => import('./boards/gpu').then(m => ({ items: m.gpuBoard })) },
   { id: 'surfaces', title: 'SURFACES — ONE FIELD, FIVE SURFACES', columns: 5, load: () => import('./boards/surfaces').then(m => ({ items: m.surfacesBoard, sources: m.surfacesSources })) },
   { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, load: () => import('./boards/components').then(m => ({ items: m.componentsBoard })) },
 ] as const satisfies readonly (BoardMeta & { load: () => Promise<BoardContents> })[]

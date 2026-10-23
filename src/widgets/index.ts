@@ -18,6 +18,7 @@ import { simBoard } from './boards/sim'
 import { glyphBoard } from './boards/glyph'
 import { liveBoard, liveSources } from './boards/live'
 import { mirrorBoard } from './boards/mirror'
+import { gpuBoard } from './boards/gpu'
 import { surfacesBoard, surfacesSources } from './boards/surfaces'
 import { boardIds, boardManifest, type BoardContents, type BoardDef, type BoardId } from './manifest'
 import { registerPresets } from './registry'
@@ -45,6 +46,7 @@ const contents = {
   glyph: { items: glyphBoard },
   live: { items: liveBoard, sources: liveSources },
   mirror: { items: mirrorBoard },
+  gpu: { items: gpuBoard },
   surfaces: { items: surfacesBoard, sources: surfacesSources },
   components: { items: componentsBoard },
 } satisfies Record<BoardId, BoardContents>
