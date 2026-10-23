@@ -29,6 +29,14 @@ import type { Field } from '../src/engine/types'
 import { irChecks } from './ir'
 import { liveChecks } from './live'
 import { halftoneChecks } from './halftone'
+import { deviceChecks } from './device'
+import { exportChecks } from './export'
+import { dotsChecks } from './dots'
+import { specChecks } from './spec'
+import { bytecodeChecks } from './bytecode'
+import { esp32Checks } from '../targets/test/esp32'
+import { targetsChecks } from '../targets/test/targets'
+import { bufferChecks } from './buffer'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -771,6 +779,20 @@ import { heartbeatCard, HEARTBEAT_STATES } from '../src/widgets/boards/heartbeat
 await liveChecks(assert)
 // P4-F) halftone ladder + STBN temporal stability + live camera card timing (scripts/halftone.ts)
 halftoneChecks(assert)
+// P5-C) device profiles, toDevice, display simulators, cross-tab clock sync (scripts/device.ts)
+deviceChecks(assert)
+// P5-D) export: APNG / GIF encoders, WebM / MP4 muxers, plotter SVG (scripts/export.ts)
+await exportChecks(assert)
+// P6-C) DOTS tab: share links, limits, the 8 seed programs, remix gallery + graph (scripts/dots.ts)
+await dotsChecks(assert)
+// P6-A) card spec v1: schema ≡ validator, preset ↔ spec round-trip, migration, examples (scripts/spec.ts)
+specChecks(assert)
+// P5-E) IR bytecode VM + device targets: f32 VM parity, C VM vs TS VM when a C compiler is found, senders vs local fakes only
+bytecodeChecks(assert)
+esp32Checks(assert, { pathOnly: true })
+await targetsChecks(assert)
+// P5-B) struct-of-arrays DotBuffer, buffer canvas renderer, worker protocol (scripts/buffer.ts)
+bufferChecks(assert)
 
 // P5-A) WebGL2 renderer, CPU half: pass mapping ≡ sampler, routing, colours (GPU half: `npx tsx scripts/webgl.ts` in headless Chrome)
 import { baseStyle } from '../src/widgets/types'

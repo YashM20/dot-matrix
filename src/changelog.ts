@@ -15,6 +15,17 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 
 export const releases: Release[] = [
   {
+    version: '0.7', date: '2026-10-23', title: 'DOTS: write a field, share it as a link',
+    summary: 'A new DOTS tab where you write a few lines of maths and watch them run as a dot display, then share them as a short link.',
+    changes: [
+      { kind: 'new', text: 'A live editor for tiny dot programs. Type, and the card redraws as you go. Mistakes are marked at their exact line and column.' },
+      { kind: 'new', text: 'Scrub through time, pause on any frame, set the loop length, and pick the grid, dot size and tone. Every data value you use gets its own slider, and the pointer is an input too.' },
+      { kind: 'new', text: 'Share: a program fits in a short, compressed link. Opening a broken or tampered link shows what is wrong and never runs it.' },
+      { kind: 'new', text: 'Remix: every edit remembers what it came from. Your programs build a small remix graph, drawn in dots, starting from eight examples: ripple, plasma, rings, spiral, rain, lissajous, checker warp and heartbeat.' },
+    ],
+    link: { href: '?tab=dots', label: 'OPEN DOTS' },
+  },
+  {
     version: '0.6', date: '2026-10-22', title: 'Departures, and boards that leave',
     summary: 'A new flagship board where every change is mechanical, and smooth handovers between boards.',
     changes: [

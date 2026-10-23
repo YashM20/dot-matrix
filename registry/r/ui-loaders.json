@@ -1,0 +1,33 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "ui-loaders",
+  "type": "registry:component",
+  "title": "Loaders (Dot/480)",
+  "description": "Components v2 dot-matrix card `ui-loaders`: Field → Sampler → Renderer, animated (Canvas). Controls: Loading (toggle). Props: data, theme, renderer, pitch, onInput.",
+  "dependencies": [
+    "@dot480/react@^0.1.0",
+    "@dot480/core@^0.1.0"
+  ],
+  "files": [
+    {
+      "path": "registry/dot480/ui-loaders/ui-loaders.tsx",
+      "type": "registry:component",
+      "content": "'use client'\n/** Loaders — Dot/480 card `ui-loaders` (interactive: pointer + keyboard edit its data). */\nimport { DotCard, type DotCardProps } from '@dot480/react'\n\nexport type DotLoadersProps = Omit<DotCardProps, 'preset' | 'spec'>\n\nexport function DotLoaders(props: DotLoadersProps) {\n  return <DotCard preset=\"ui-loaders\" {...props} />\n}\n"
+    }
+  ],
+  "categories": [
+    "dot-matrix",
+    "components-v2"
+  ],
+  "meta": {
+    "preset": "ui-loaders",
+    "controls": [
+      "run"
+    ],
+    "grid": {
+      "cols": 144,
+      "rows": 144,
+      "pitch": 2.25
+    }
+  }
+}

@@ -3,6 +3,7 @@ import { Board, VIEW_EXIT_MS, cardMotion } from './components/Board'
 import { Changelog } from './components/Changelog'
 import { DrawBoard } from './components/draw/DrawBoard'
 import { DotWidget } from './components/DotWidget'
+import { DotsRepl } from './components/dwitter/DotsRepl'
 import { ControlsPanel } from './components/playground/ControlsPanel'
 import { DataEditor } from './components/playground/DataEditor'
 import { ExportPanel } from './components/playground/ExportPanel'
@@ -16,10 +17,11 @@ import './App.css'
 
 const galleryItems = ['home-clock', 'music', 'timer', 'weather', 'fitness', 'messages', 'camera', 'settings', 'system']
 // DRAW stays last: the narrow layout hides the last tab
-const tabs = ['BOARDS', 'GALLERY', 'WORKSPACE', 'LOG', 'DRAW'] as const
+const tabs = ['BOARDS', 'GALLERY', 'WORKSPACE', 'LOG', 'DOTS', 'DRAW'] as const
 type Tab = typeof tabs[number]
 
-// Deep links: ?board=<id> opens a board, ?card=<id> renders one card alone (handy for screenshots/bisecting).
+// Deep links: ?board=<id> opens a board, ?card=<id> renders one card alone (handy for screenshots/bisecting),
+// ?tab=dots&p=<encoded> opens a shared Field IR program in the DOTS REPL.
 const params = new URLSearchParams(window.location.search)
 const singleCard = params.get('card')
 
@@ -50,6 +52,8 @@ export default function App() {
       </section>
     ) : shownTab === 'LOG' ? (
       <Changelog />
+    ) : shownTab === 'DOTS' ? (
+      <DotsRepl />
     ) : shownTab === 'DRAW' ? (
       <DrawBoard />
     ) : (

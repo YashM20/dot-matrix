@@ -1093,6 +1093,56 @@
     "dots": 9053
    }
   },
+  "surface-browser": {
+   "t=0": {
+    "hash": "bf1487c1",
+    "dots": 473
+   },
+   "t=1.3": {
+    "hash": "1a0f0285",
+    "dots": 483
+   }
+  },
+  "surface-glyph": {
+   "t=0": {
+    "hash": "e15ee132",
+    "dots": 757
+   },
+   "t=1.3": {
+    "hash": "783e903b",
+    "dots": 757
+   }
+  },
+  "surface-eink": {
+   "t=0": {
+    "hash": "4fa3b7bf",
+    "dots": 1438
+   },
+   "t=1.3": {
+    "hash": "6b199b7f",
+    "dots": 11099
+   }
+  },
+  "surface-flipdisc": {
+   "t=0": {
+    "hash": "4c1e9650",
+    "dots": 1217
+   },
+   "t=1.3": {
+    "hash": "6867d2c0",
+    "dots": 1215
+   }
+  },
+  "surface-plotter": {
+   "t=0": {
+    "hash": "a0226e23",
+    "dots": 719
+   },
+   "t=1.3": {
+    "hash": "92a92569",
+    "dots": 711
+   }
+  },
   "ui-toggle": {
    "t=0": {
     "hash": "6579335f",

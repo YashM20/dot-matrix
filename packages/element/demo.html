@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>&lt;dot-card&gt; demo — Dot/480</title>
+<style>
+  body { margin: 0; padding: 32px; background: #070809; color: #8a8f96; font: 12px ui-monospace, Menlo, Consolas, monospace }
+  h1 { font-size: 12px; letter-spacing: .16em; font-weight: 500; margin: 0 0 24px }
+  .row { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start }
+  dot-card { --dot-card-width: 280px }
+  code { color: #c9ccd1 }
+</style>
+<!-- after `npx tsx packages/scripts/build.ts` (or from a CDN: .../@dot480/element/dist/standalone/dot-card.js) -->
+<script type="module" src="./dist/standalone/dot-card.js"></script>
+</head>
+<body>
+<h1>&lt;DOT-CARD&gt; — NO FRAMEWORK</h1>
+<div class="row">
+  <dot-card id="timer" card="timer"></dot-card>
+  <dot-card id="weather" card="weather"></dot-card>
+  <dot-card id="knob" card="ui-knob" data-value="0.7"></dot-card>
+  <dot-card id="toggle" card="ui-toggle" renderer="canvas"></dot-card>
+  <dot-card id="spec">
+    <script type="application/json">
+      { "name": "Ripple", "grid": { "cols": 48, "rows": 48, "pitch": 5 },
+        "layers": [{ "ir": "let d = length(u - .5, v - .5); (.5 + .5 * sin(d * 30 - t * 4)) * smoothstep(.5, .05, d)" }] }
+    </script>
+  </dot-card>
+  <dot-card id="bad" card="no-such-card"></dot-card>
+</div>
+<p>Edit live: <code>document.getElementById('knob').dataset.value = 0.2</code></p>
+</body>
+</html>

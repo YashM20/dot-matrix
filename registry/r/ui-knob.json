@@ -1,0 +1,33 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "ui-knob",
+  "type": "registry:component",
+  "title": "Knob (Dot/480)",
+  "description": "Components v2 dot-matrix card `ui-knob`: Field → Sampler → Renderer, static (SVG under 2000 dots). Controls: Gain (knob). Props: data, theme, renderer, pitch, onInput.",
+  "dependencies": [
+    "@dot480/react@^0.1.0",
+    "@dot480/core@^0.1.0"
+  ],
+  "files": [
+    {
+      "path": "registry/dot480/ui-knob/ui-knob.tsx",
+      "type": "registry:component",
+      "content": "'use client'\n/** Knob — Dot/480 card `ui-knob` (interactive: pointer + keyboard edit its data). */\nimport { DotCard, type DotCardProps } from '@dot480/react'\n\nexport type DotKnobProps = Omit<DotCardProps, 'preset' | 'spec'>\n\nexport function DotKnob(props: DotKnobProps) {\n  return <DotCard preset=\"ui-knob\" {...props} />\n}\n"
+    }
+  ],
+  "categories": [
+    "dot-matrix",
+    "components-v2"
+  ],
+  "meta": {
+    "preset": "ui-knob",
+    "controls": [
+      "gain"
+    ],
+    "grid": {
+      "cols": 144,
+      "rows": 144,
+      "pitch": 2.25
+    }
+  }
+}
