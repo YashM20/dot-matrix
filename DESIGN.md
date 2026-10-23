@@ -115,6 +115,20 @@ Relief and light are fields too: a signed distance becomes a cached height and n
 - **Torch** = the primary pointer as a point light (`torch(x, y)`); without a pointer the light drifts slowly.
 - **Emissive** = the accent shape plus a `bloom` halo in `{colors.dotActiveDim}`, with a one-dot moat between the two. The halo is never `dotActive`.
 
+#### Materials
+A material is a dot vocabulary, not a shader: given one normal raster and one light it decides which dots exist, how many quantize steps they take and which tone carries them (`src/engine/light/material.ts`, each returns `Layer[]`). No new color tokens; materials only use the existing tones.
+
+| Material | Function | Dot rule |
+|---|---|---|
+| Matte | `matte` | Lambert split into `faint` → `mid` → `idle` bands |
+| Gloss | `gloss` | Body capped at 1 − 2 steps (`faint`/`mid`/`idle`); highlight exactly +1 step on its rim, +2 at its core, in `value` |
+| Glass | `glass` | The layer behind, offset toward the centre by the normal in whole cells; a one-band fresnel rim in `mid`; highlight in `value` |
+| Emissive | `emissive` | The shape plus its `bloom` halo behind a one-dot moat; `active` + `activeDim` by default, white (`value` + `mid`/`faint`) when the board's red is taken |
+| Metal | `metal` | No diffuse: hard studio stripes read off the normal (sky, glow strip, black horizon, ground, lit floor) plus the light's own reflection |
+| Fabric | `fabric` | Lambert ordered-dithered between adjacent size steps (Bayer 4×4), capped at 3 steps, one tone per step |
+
+**Board-wide light:** a board shares one light direction, the sun of the wall-clock hour (`sunAt(hourOf(date))`: rises on the left at 6, highest at noon, sets on the right at 18, a lower moon at night). Over a card the pointer replaces it as a torch.
+
 ## Shapes
 
 ### Dot Roundness Scale
