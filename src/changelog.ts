@@ -15,6 +15,19 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 
 export const releases: Release[] = [
   {
+    version: '0.8', date: '2026-10-23', title: 'Dot Studio: build your own card',
+    summary: 'A new STUDIO tab: stack layers of dot fields and text, give them states and transitions, and watch them play.',
+    changes: [
+      { kind: 'new', text: 'Layers you can stack, hide, reorder by dragging, tint and blend. Write a field as a few lines of maths, add hero text or rings of dots.' },
+      { kind: 'new', text: 'A timeline: scrub through how the card builds in, changes and leaves, and pick the dissolve pattern and easing for each, drawn in dots.' },
+      { kind: 'new', text: 'States: name a few sets of values, connect them, then click an arrow (or press the card) to watch it dissolve from one to the other.' },
+      { kind: 'new', text: 'Open any card from the boards and take it apart layer by layer, or pull in a program from the DOTS tab.' },
+      { kind: 'new', text: 'A side-by-side sheet against the favourite cards, a quality scorecard, previews on a tiny LED matrix, e-ink, flip-disc and pen plotter, and exports to PNG, SVG, animated PNG, GIF and video.' },
+      { kind: 'improved', text: 'Everything saves in your browser, with undo and redo, and can be downloaded as a file.' },
+    ],
+    link: { href: '?tab=studio', label: 'OPEN STUDIO' },
+  },
+  {
     version: '0.7', date: '2026-10-23', title: 'DOTS: write a field, share it as a link',
     summary: 'A new DOTS tab where you write a few lines of maths and watch them run as a dot display, then share them as a short link.',
     changes: [

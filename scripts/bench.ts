@@ -17,7 +17,7 @@
  * at t, then the median frame over the next RUNS frames (t + i/30). The warm-up above hides replay cost, this does not.
  * Writes .snapshots/bench.json.
  */
-import { mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { sampleLayers } from '../src/engine/sampler/gridSampler'
 import { renderSVG } from '../src/engine/renderer/svgRenderer'
 import { boards, withChrome, type WidgetPreset } from '../src/widgets'
@@ -92,6 +92,16 @@ const simRows = simTs.map(T => {
 console.log(`
 Sim board cold start (checkpoints dropped; frame = median of ${RUNS} at 30 fps after mount)`)
 for (const r of simRows) console.log(`  t=${lpad(r.t, 5)} s   mount ${lpad(f(r.mountMs), 7)} ms (${r.steps.join('/')} steps)   frame ${lpad(f(r.frameMs), 6)} ms`)
+
+// P5-A WebGL2: frame rates need a browser, so they come from the last `npx tsx scripts/webgl.ts [--swiftshader]` run
+type GLPerf = { kind: string; dots: number; fps: number; cpuMsPerFrame: number; gpuMsPerFrame: number; syncMsPerFrame: number | null }
+for (const backend of ['gpu', 'swiftshader']) {
+  const file = `.snapshots/p5a/report-${backend}.json`
+  if (!existsSync(file)) { console.log(`\nWebGL2 (${backend}): no ${file} yet — run npx tsx scripts/webgl.ts${backend === 'gpu' ? '' : ' --swiftshader'}`); continue }
+  const r = JSON.parse(readFileSync(file, 'utf8')) as { info?: { renderer?: string }; perf?: GLPerf[] }
+  console.log(`\nWebGL2 (${backend}: ${r.info?.renderer ?? '?'}) — gates: 500k IR dots and 100k CPU dots at 60 fps (16.7 ms)`)
+  for (const p of r.perf ?? []) console.log(`  ${pad(p.kind, 7)} ${lpad(p.dots, 7)} dots   ${lpad(p.fps, 6)} fps rAF   main ${lpad(p.cpuMsPerFrame, 7)} ms   GPU ${lpad(p.gpuMsPerFrame ?? '-', 7)} ms   sync ${lpad(p.syncMsPerFrame ?? '-', 7)} ms`)
+}
 
 mkdirSync('.snapshots', { recursive: true })
 writeFileSync('.snapshots/bench.json', JSON.stringify({ runs: RUNS, budget: BUDGET, boards: boardRows, cards: sorted, simColdStart: simRows }, null, 1))
