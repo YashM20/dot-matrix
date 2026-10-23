@@ -110,7 +110,7 @@ export const typeKineticCard: WidgetPreset = {
   layers: ({ t }) => [
     KIN1.layer(typeField('WAVE', centred(KIN1, 2, { size: 15, roundness: .8, glyph: glyphs(waveGlyphs(t, { amp: 2, period: 1.8, phase: .14 }), weightWave(t, { min: .25, max: .9, period: 1.8, spread: .14 })) }))),
     KIN2.layer(typeField('BOUNCE', centred(KIN2, 3, { size: 11, weight: .55, glyph: bounceGlyphs(t, { height: 3, period: 1.2, stagger: .1, weight: .55 }) })), 'idle'),
-    layer(typeField('BREATHE', { grid: TILE, col: 71.5, row: 106, size: 13, align: 'center', hint: false, weight: breathe(t, { min: .1, max: .9, period: 3.2 }) }), 'mid'),
+    layer(typeField('BREATHE', { grid: TILE, col: 71.5, row: 106, size: 13, align: 'center', hint: false, weight: breathe(t, { min: .3, max: .9, period: 3.2 }) }), 'mid'),
   ],
 }
 

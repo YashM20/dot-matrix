@@ -101,6 +101,9 @@
 - [-] Cross-engine goldens, `snap --replay/--ref/--diff`, the G6 flash check → Track L.
 - [-] Engine barrel curation + library `.d.ts` build → P6 packaging.
 
+**Web plan (2026-10-23)**
+- [x] C8: **kinetic dot type** (`src/engine/type/`, `?board=type`): stroke font (67 glyphs, SDF centrelines) with weight / width / roundness / slant axes, lattice hinting, profile kerning; `typeMorph` (SDF, letter sweep), `typeMigration`, quantized `marqueeField`, wave / bounce / weight-wave / breathe; CJK/emoji via offscreen canvas in the browser only (skipped headlessly). Board: VARIABLE (3 knobs), MORPH, MARQUEE (ON AIR = the one red), KINETIC, FLIGHT, TYPE ANYTHING (`data.text` textId, migrates on change). Verify `scripts/type.ts` (9 checks), goldens +6. Not done: ⌘K wiring, CJK not seen in a real browser, lowercase.
+
 ## How to resume (read first)
 1. `pnpm i`, then `pnpm dev`.
    - Tabs: BOARDS, GALLERY, WORKSPACE, LOG and DRAW.
