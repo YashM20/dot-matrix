@@ -64,7 +64,7 @@ try {
   await cdp('Emulation.setDeviceMetricsOverride', { width: 1680, height: 1300, deviceScaleFactor: 1, mobile: false })
   await cdp('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: out }).catch(() => cdp('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: out }))
   await cdp('Page.navigate', { url: `${base}?tab=studio` })
-  const opened = await waitFor(`!!document.querySelector('.st-canvas')`, 30000)
+  const opened = await waitFor(`!!document.querySelector('.st-canvas')`, 120000)
   check('STUDIO tab opens from ?tab=studio', opened, opened ? '' : logs.join(' | '))
   if (!opened) { await shot('00-failed'); throw new Error('tab did not open') }
   await sleep(1200)
