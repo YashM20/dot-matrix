@@ -17,7 +17,7 @@ const BODY = { lattice: 1.3 }
 type Pt = [number, number]
 
 /** Evenly spaced dot sites around a stadium (pill) outline, top-left corner at (x,y). */
-function stadium(x: number, y: number, w: number, h: number, spacing: number): Pt[] {
+export function stadium(x: number, y: number, w: number, h: number, spacing: number): Pt[] {
   const r = h / 2, straight = Math.max(0, w - h), perimeter = 2 * straight + TAU * r
   const n = Math.max(8, Math.round(perimeter / spacing)), step = perimeter / n, pts: Pt[] = []
   const lx = x + r, rx = x + r + straight, cy = y + r
@@ -33,7 +33,7 @@ function stadium(x: number, y: number, w: number, h: number, spacing: number): P
   }
   return pts
 }
-const OUTLINE = { spacing: 3.3, size: 1.5 }
+export const OUTLINE = { spacing: 3.3, size: 1.5 }
 const outline = (x: number, y: number, w: number, h: number) => T.dots(stadium(x, y, w, h, OUTLINE.spacing), OUTLINE.size)
 
 // ── TOGGLE ──────────────────────────────────────────────────────────────────
