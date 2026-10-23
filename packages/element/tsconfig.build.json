@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "target": "es2023",
+    "lib": ["ES2023", "DOM"],
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "verbatimModuleSyntax": true,
+    "skipLibCheck": true,
+    "types": [],
+    "declaration": true,
+    "emitDeclarationOnly": true,
+    "rootDir": "src",
+    "outDir": "dist/types",
+    "paths": {
+      "@dot480/core": ["../core/dist/types/packages/core/src/index.d.ts"],
+      "@dot480/core/*": ["../core/dist/types/packages/core/src/*.d.ts"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

@@ -1,0 +1,23 @@
+{
+  "name": "@dot480/react",
+  "version": "0.1.0",
+  "description": "React bindings for Dot/480: <DotCard preset|spec data /> and useDotField.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist"],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/types/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/types/index.d.ts", "default": "./dist/index.js" },
+    "./package.json": "./package.json"
+  },
+  "dependencies": {
+    "@dot480/core": "^0.1.0"
+  },
+  "peerDependencies": {
+    "react": ">=18"
+  },
+  "keywords": ["dot-matrix", "react", "led", "ui"]
+}

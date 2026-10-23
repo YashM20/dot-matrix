@@ -1,0 +1,44 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "ui-keypad",
+  "type": "registry:component",
+  "title": "Keypad (Dot/480)",
+  "description": "Components v2 dot-matrix card `ui-keypad`: Field → Sampler → Renderer, animated (Canvas). Controls: 1 (button), 2 (button), 3 (button), 4 (button), 5 (button), 6 (button), 7 (button), 8 (button), 9 (button), Star (button), 0 (button), Hash (button). Props: data, theme, renderer, pitch, onInput.",
+  "dependencies": [
+    "@dot480/react@^0.1.0",
+    "@dot480/core@^0.1.0"
+  ],
+  "files": [
+    {
+      "path": "registry/dot480/ui-keypad/ui-keypad.tsx",
+      "type": "registry:component",
+      "content": "'use client'\n/** Keypad — Dot/480 card `ui-keypad` (interactive: pointer + keyboard edit its data). */\nimport { DotCard, type DotCardProps } from '@dot480/react'\n\nexport type DotKeypadProps = Omit<DotCardProps, 'preset' | 'spec'>\n\nexport function DotKeypad(props: DotKeypadProps) {\n  return <DotCard preset=\"ui-keypad\" {...props} />\n}\n"
+    }
+  ],
+  "categories": [
+    "dot-matrix",
+    "components-v2"
+  ],
+  "meta": {
+    "preset": "ui-keypad",
+    "controls": [
+      "k1",
+      "k2",
+      "k3",
+      "k4",
+      "k5",
+      "k6",
+      "k7",
+      "k8",
+      "k9",
+      "kstar",
+      "k0",
+      "khash"
+    ],
+    "grid": {
+      "cols": 144,
+      "rows": 144,
+      "pitch": 2.25
+    }
+  }
+}

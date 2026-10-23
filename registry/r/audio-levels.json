@@ -1,0 +1,31 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "audio-levels",
+  "type": "registry:component",
+  "title": "Audio (Dot/480)",
+  "description": "Widget dot-matrix card `audio-levels`: Field → Sampler → Renderer, animated (Canvas). Props: data, theme, renderer, pitch, onInput.",
+  "dependencies": [
+    "@dot480/react@^0.1.0",
+    "@dot480/core@^0.1.0"
+  ],
+  "files": [
+    {
+      "path": "registry/dot480/audio-levels/audio-levels.tsx",
+      "type": "registry:component",
+      "content": "'use client'\n/** Audio — Dot/480 card `audio-levels`. */\nimport { DotCard, type DotCardProps } from '@dot480/react'\n\nexport type DotAudioLevelsProps = Omit<DotCardProps, 'preset' | 'spec'>\n\nexport function DotAudioLevels(props: DotAudioLevelsProps) {\n  return <DotCard preset=\"audio-levels\" {...props} />\n}\n"
+    }
+  ],
+  "categories": [
+    "dot-matrix",
+    "widgets"
+  ],
+  "meta": {
+    "preset": "audio-levels",
+    "controls": [],
+    "grid": {
+      "cols": 144,
+      "rows": 144,
+      "pitch": 2.25
+    }
+  }
+}
