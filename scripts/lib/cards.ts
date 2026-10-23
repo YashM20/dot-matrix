@@ -2,14 +2,13 @@
  * Shared preset → dots → raster path for the headless instruments. Matches the app: a card is
  * `withChrome(preset)(ctx)` sampled with `sampleLayers` on the preset's own grid and style, dot480 theme.
  */
-import { dot480 } from '../../src/engine/theme/tokens'
 import { sampleLayers } from '../../src/engine/sampler/gridSampler'
 import { squircleExponent } from '../../src/engine/renderer/shapePath'
-import type { DotInstance, DotStyle, ThemeTokens } from '../../src/engine/types'
+import type { DotInstance, DotStyle } from '../../src/engine/types'
 import { boards, withChrome, type WidgetContext, type WidgetPreset } from '../../src/widgets'
 import { Raster } from './raster'
-
-export const theme: ThemeTokens = dot480
+import { litCentroid, median, pitchOf, theme, visible } from './stats'
+export { litCentroid, median, pitchOf, quantile, theme, visible } from './stats'
 
 /** Every preset once, in board order (an id that appears on several boards is listed once). */
 export function uniquePresets(): WidgetPreset[] {
@@ -26,19 +25,10 @@ export function timeRange(spec: string): number[] {
   return Array.from({ length: n + 1 }, (_, i) => +(a + i * step).toFixed(6))
 }
 
-export const pitchOf = (p: WidgetPreset) => p.grid.pitch ?? theme.gridPx
 /** Extra frame-context fields merged over the default `{ t, since, data }` (e.g. `hover` / `pressed` / `focus`); `data` merges over the defaults. */
 export type CtxExtra = Partial<WidgetContext>
 export const sampleCard = (p: WidgetPreset, t: number, style: DotStyle = p.style, since?: number, extra: CtxExtra = {}): DotInstance[] =>
   sampleLayers(withChrome(p)({ t, since, ...extra, data: { ...p.defaults, ...extra.data } }), p.grid, style, theme)
-export const visible = (d: DotInstance) => d.opacity > 0 && d.r > 0
-
-/** Opacity·area-weighted centroid of lit dots, in card px (grid units). */
-export function litCentroid(dots: DotInstance[]): [number, number] {
-  let sx = 0, sy = 0, sw = 0
-  for (const d of dots) if (visible(d)) { const w = d.opacity * d.r * d.r; sx += d.x * w; sy += d.y * w; sw += w }
-  return sw ? [sx / sw, sy / sw] : [NaN, NaN]
-}
 
 export const PAD = 14 // card padding in output px, like the CSS card
 export interface RenderOptions {
@@ -81,8 +71,6 @@ export function sheet(cards: Raster[], columns: number, gap = 12): Raster {
   return s
 }
 
-export const median = (a: number[]) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.floor(s.length / 2)] : NaN }
-export const quantile = (a: number[], q: number) => { const s = [...a].sort((x, y) => x - y); return s.length ? s[Math.min(s.length - 1, Math.max(0, Math.floor(q * (s.length - 1))))] : NaN }
 /** Median wall time of `runs` calls (after one warm-up call). */
 export function timeMedian(fn: () => unknown, runs = 5): number {
   fn()
