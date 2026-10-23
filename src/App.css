@@ -1828,3 +1828,38 @@ label b {
     order: -1
   }
 }
+
+/* ── W0 mobile pass (375 px, scripts/site/mobile.ts): tap targets at least 24 px (WCAG 2.5.8), touch padding ── */
+.view-loading {
+  min-height: 60vh
+}
+
+@media(max-width:760px) {
+  /* the view tabs were 10 px tall: pad them to a 24 px target without moving the text */
+  .topbar nav button {
+    min-height: 24px;
+    min-width: 24px;
+    padding-block: 7px
+  }
+
+  .topbar {
+    gap: 6px 24px
+  }
+
+  .log-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px
+  }
+}
+
+@media (pointer: coarse) {
+  .board-tabs button {
+    min-height: 28px
+  }
+
+  :is(.shell) select,
+  :is(.shell) input[type=range] {
+    min-height: 24px
+  }
+}

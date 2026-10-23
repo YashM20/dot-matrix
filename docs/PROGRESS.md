@@ -97,6 +97,32 @@
 - [-] Cross-engine goldens, `snap --replay/--ref/--diff`, the G6 flash check → Track L.
 - [-] Engine barrel curation + library `.d.ts` build → P6 packaging.
 
+**Web plan (2026-10-23)** (`docs/WEB-PLAN.md`)
+- [x] W0: **ship the site** (agent side; `docs/DEPLOY.md`). Static deploy for Cloudflare Pages:
+  - `public/_headers`: immutable `/assets/*`; a CSP with `'self'` scripts, workers, camera, the live APIs and no eval; no COOP/COEP.
+  - `public/_redirects`: SPA fallback.
+  - CI: `deploy` job (`cloudflare/wrangler-action`). Push to `main` → production, a PR → a preview. It is skipped until the `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` secrets exist. CI also runs the bundle budget and uploads a `site` artifact.
+
+  Lazy boards:
+  - `src/widgets/manifest.ts` holds one `import()` per board; tab hover/focus prefetches the board.
+  - The `Board` suspends on `use(loadBoard(id))`. The other views are `React.lazy`.
+  - `src/widgets/registry.ts` replaces the eager registry reads in `useDotField`, the worker client and the playground store.
+  - First-load JS: 222.7 kB gz (one 613 kB chunk) → 115.8 kB gz (Vite gzip; `scripts/site/size.ts --check`, budget 150). A deep link adds its board chunk: mosaic +7.4, surfaces +7.6.
+
+  Deep links:
+  - `/<board>/` paths, with `?board=` still accepted; the address bar follows the board.
+  - Runtime `<title>`/description/OG tags come from `src/site/meta.ts`.
+  - `scripts/site/postbuild.ts` (run from the vite plugin) writes `dist/<board>/index.html` crawler copies and `dist/og/<board>.png` (21 images via `scripts/og.ts`, ~22 s).
+
+  `.gitattributes` (LF + binaries) with a renormalize commit; goldens unchanged (151).
+
+  Mobile (`scripts/site/mobile.ts`, CDP, 375 px + touch, screenshots in `.snapshots/w0/`):
+  - All 20 boards and 5 views: no horizontal overflow.
+  - View tabs were 10 px tap targets. Fixed in `App.css` (append-only): 24 px tabs, and 24 px selects/ranges on coarse pointers.
+  - DRAW stays hidden in the narrow nav (deliberate; still reachable at `?tab=draw`).
+
+  **Needs the user:** Cloudflare project + secrets + `SITE_URL` variable (`docs/DEPLOY.md` › What you need to do), and git push credentials. Not verified: the headers on a real Pages deploy (`wrangler pages dev dist` locally); Safari/Firefox.
+
 ## How to resume (read first)
 1. `pnpm i`, then `pnpm dev`.
    - Tabs: BOARDS, GALLERY, WORKSPACE, LOG and DRAW.

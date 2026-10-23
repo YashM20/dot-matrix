@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
 import { sampleField, sampleLayers } from '../engine'
 import type { DotInstance, DotStyle, Field, FrameContext, GridConfig, Layer, ThemeTokens } from '../engine'
-import type { WidgetContext, WidgetPreset } from '../widgets/types'
-import { widgetPresets, withChrome } from '../widgets'
+import type { WidgetContext } from '../widgets/types'
+import { staticLayers } from '../widgets/registry'
 
 export type DotSource = { field: Field } | { layers: (ctx: WidgetContext) => Layer[] }
 /** Interaction fields of the frame context (P2), filled by the input layer in `DotCanvas`. */
@@ -17,12 +17,8 @@ export type InteractionContext = Pick<FrameContext, 'hover' | 'pressed' | 'focus
  */
 const CACHE_LIMIT = 200
 const cache = new Map<string, DotInstance[]>()
-let staticLayers: WeakSet<object> | undefined
-/** Layers functions of the static presets (built on first use, so the widget registry is read once it is complete). */
-const isStatic = (layers: object) => {
-  staticLayers ??= new WeakSet(widgetPresets.filter((p: WidgetPreset) => !p.animated && !p.clock).map(p => withChrome(p)))
-  return staticLayers.has(layers)
-}
+/** Layers functions of the static presets (registered as their boards load: `widgets/registry`). */
+const isStatic = (layers: object) => staticLayers.has(layers)
 const ids = new WeakMap<object, number>()
 let nextId = 1
 const idOf = (o: object) => { let id = ids.get(o); if (id === undefined) ids.set(o, (id = nextId++)); return id }
