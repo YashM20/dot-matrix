@@ -57,6 +57,9 @@
 - [x] P3-D: lift pass on `silhouette` (structure-aware halftone, blue-noise-ish sky, hand-masked figure), `thermal-puppy` (heat `toneRamp`, red hot core, `38.6°` spot readout), `vision-camera` (silhouette pass per object, lamp-pool tone ramp, snapped detection boxes), `ev-charge` (Lambert-lit car from the cable side); `toneRamp(field, stops)` in `src/widgets/types.ts`, also used by `thermal-monitor` (output unchanged). Mount cost: henry3 +8 ms, audio +2 ms, mosaic +3 ms, because each tone is a separate layer pass in the sampler; an engine multi-tone layer would remove it.
 - [x] P3-F: multi-tone layer: optional `Layer.toneOf(value, u, v)` read by the sampler in the same pass (card grid, lattices, sites; single-tone path unchanged). `toneRamp` now returns one such layer instead of tones × 12-row strips. Goldens unchanged (122). Verify §14b: every multi-tone preset ≡ its split-layer form (card grid + 72² thumbnail), plus lattice/sites cases. Bench median of 5 interleaved runs, before → after: henry3 16.3 → 14.2 ms, mosaic 32.6 → 34.2 (noise; min 31.6 → 31.4), audio 22.8 → 23.6; silhouette 9.1 → 7.1, thermal-puppy 6.4 → 5.8, vision-camera 6.1 → 6.1, ev-charge 5.4 → 4.7 ms. Mount time left is mostly dot emission and the other layers, so P0-A is still borderline.
 
+**P4 (living: transitions, simulation, agents, live data): started 2026-10-23**
+- [x] P4-A: SimFields (`src/engine/sim/`): `createSim` fixed-dt stepper with checkpoints, `simAt(sim, t)` replays deterministically (same t, same grid; back-jumps resume from the nearest checkpoint); Gray-Scott, falling sand and Conway Life, each as a bounded Field. Board `sim` (`sim-rd`, `sim-sand`, `sim-life`), goldens +3, verify section added.
+
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.
 - [ ] P0-E: `accentRole` on multi-accent cards → decision §11.1.

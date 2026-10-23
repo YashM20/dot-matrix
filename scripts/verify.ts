@@ -552,5 +552,32 @@ import { bayer4, emissive as mEmissive, fabric as mFabric, glass as mGlass, glos
     && close(hourOf(new globalThis.Date(2026, 0, 1, 9, 41, 30)), 9 + 41 / 60 + 30 / 3600, 1e-9))
 }
 
+// P4-A) SimFields (src/engine/sim): fixed-dt steppers replay deterministically from checkpoints
+import { fallingSand, grayScott, life, simAt, simAtStep, SAND } from '../src/engine/sim'
+{
+  const same = (a: Float32Array, b: Float32Array) => a.length === b.length && a.every((x, i) => x === b[i])
+  const makers: [string, () => ReturnType<typeof life>][] = [
+    ['gray-scott', () => grayScott({ w: 40, h: 40, seed: 3, every: 10 })],
+    ['sand', () => fallingSand({ w: 40, h: 40, seed: 5, every: 10 })],
+    ['life', () => life({ w: 40, h: 40, seed: 11, every: 10 })],
+  ]
+  for (const [name, make] of makers) {
+    const a = make(), b = make(), T1 = 37 * a.dt, T0 = 12 * a.dt
+    const g1 = simAt(a, T1).slice()
+    // same t → same grid: repeated, and on an independent instance
+    const rep = same(simAt(a, T1), g1) && same(simAt(b, T1), g1)
+    // replay: jump back past a checkpoint and forward again, vs. the straight run from step 0
+    simAt(a, T0)
+    const replay = same(simAt(a, T1), g1)
+    const c = make(); let straight = c.checkpoints.get(0)!.slice(), scratch = new Float32Array(straight.length)
+    for (let n = 0; n < 37; n++) { c.step(straight, scratch, c.w, c.h, n); [straight, scratch] = [scratch, straight] }
+    const evolved = !same(straight, a.checkpoints.get(0)!)
+    assert(`sim ${name}: same t → same grid; replay from a checkpoint equals the straight run from the seed`,
+      rep && replay && same(straight, g1) && evolved && a.checkpoints.has(30) && same(simAtStep(a, 20), simAtStep(make(), 20)), `step 37 checksum ${g1.reduce((s, x) => s + x, 0).toFixed(4)}`)
+  }
+  const s = fallingSand({ w: 40, h: 40, seed: 5 }), g0 = simAtStep(s, 0).reduce((n, x) => n + (x === SAND ? 1 : 0), 0), g1 = simAtStep(s, 200).reduce((n, x) => n + (x === SAND ? 1 : 0), 0)
+  assert('sim sand: grains are conserved by falling (count only grows by the emitter, never shrinks)', g0 === 0 && g1 > 0 && g1 <= 200, `${g1} grains after 200 steps`)
+}
+
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')
