@@ -5,15 +5,15 @@
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
 ## Status board (updated 2026-10-22)
-**Where we are:** On branch `feat/p1-complete`: P0 agent items are done (P0-A borderline). P1-A to P1-F are done. P2-A to P2-J are done (P2-F browser/axe pass left). P3 is active: light engine (P3-A), Cinema (P3-B), Levels (P3-C), Field IR v0 (P3-E) are merged; lift pass (P3-D) done (mount slower: henry3 12.6 → 20.4 ms, needs a multi-tone layer). P4–P6 have not started. 122 presets.
+**Where we are:** On branch `feat/p1-complete`: P0 agent items done (P0-A mosaic mount ~31–34 ms, gate 30 ms, still open). P1-A..F done. P2-A..J done (browser + axe pass done; only `--mute` contrast 4.14:1 left, a design call). P3-A..G done: light/raster engine, Cinema, Levels, lift pass, Field IR v0, multi-tone layer, materials + time-of-day light. P4–P6 not started. 128 presets.
 `main` = `666c0eb` (PR #2 merged: TILE boards + P0 + P1 motion core).
 
 | Phase | Plan | Done | State |
 |---|---|---|---|
 | P0 Foundations, determinism, fidelity harness | 2 wk | 22 / 28 items · 2 / 5 gates | 🟡 3 items waiting on the user; mosaic perf borderline |
 | P1 Motion, states, choreography | 2.5 wk | visible items done (P1-A..F) | 🟢 Needs browser checks + Departures taste pass |
-| P2 Interaction + Components v2 | 3 wk | P2-A..J done except F | 🟢 Browser/axe pass + Instrument taste pass left |
-| P3 Depth, light, material, Field IR | 3 wk | 5 / 5 agent items | 🔵 **Active**: materials, multi-tone layer, browser + taste pass left |
+| P2 Interaction + Components v2 | 3 wk | P2-A..J done | 🟢 Instrument taste pass + `--mute` contrast decision left |
+| P3 Depth, light, material, Field IR | 3 wk | P3-A..G done | 🟢 Taste passes (Cinema, Levels, light) + exit gates left |
 | P4 Hero transitions, simulation, agents, live data | 3 wk | 0 | ⚪ |
 | P5 GPU, devices, display physics | 3 wk | 0 | ⚪ |
 | P6 Authoring + ecosystem | 4 wk | 0 | ⚪ |
