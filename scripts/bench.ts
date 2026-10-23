@@ -13,6 +13,8 @@
  *   frame       Σ animated-card per-frame time (board frame, 30 fps tier)       ≤ 8 ms
  *   worst live  slowest animated card per frame                                ≤ 4 ms (hero)
  *   SVG         Σ renderSVG bytes of the cards the app draws as SVG              < 0.5 MB
+ * Sim board cold start (`--sim-t 1,60,3600`, default those): every sim's checkpoints dropped, the board mounted
+ * at t, then the median frame over the next RUNS frames (t + i/30). The warm-up above hides replay cost, this does not.
  * Writes .snapshots/bench.json.
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
@@ -21,6 +23,8 @@ import { renderSVG } from '../src/engine/renderer/svgRenderer'
 import { boards, withChrome, type WidgetPreset } from '../src/widgets'
 import { median, pitchOf, theme, uniquePresets, visible } from './lib/cards'
 import { freezeWallClock } from './lib/freeze'
+import { simReset } from '../src/engine/sim'
+import { simBoard, simBoardSims } from '../src/widgets/boards/sim'
 
 freezeWallClock()
 const args = process.argv.slice(2), strict = args.includes('--strict')
@@ -77,8 +81,20 @@ console.log(`Boards — budgets: mount ≤ ${BUDGET.mountMs} ms, frame ≤ ${BUD
 console.log(`${pad('board', 11)} ${lpad('cards', 5)} ${lpad('anim', 4)} ${lpad('mount ms', 9)} ${lpad('frame ms', 9)} ${pad('worst live (ms)', 26)} ${lpad('svg cards', 9)} ${lpad('SVG KB', 7)} ${lpad('all-SVG KB', 10)}  over`)
 for (const r of boardRows) console.log(`${pad(r.id, 11)} ${lpad(r.cards, 5)} ${lpad(r.animated, 4)} ${lpad(f(r.mountMs), 9)} ${lpad(f(r.frameMs), 9)} ${pad(r.animated ? `${r.worstLive} (${f(r.worstLiveMs)})` : '-', 26)} ${lpad(r.svgCards, 9)} ${lpad(kb(r.svgBytes), 7)} ${lpad(kb(r.svgAllBytes), 10)}  ${r.over.join(',') || 'ok'}`)
 
+const si = args.indexOf('--sim-t'), simTs = (si >= 0 ? args[si + 1] : '1,60,3600').split(',').map(Number)
+const simRows = simTs.map(T => {
+  const frameAt = (t: number) => { const a = performance.now(); for (const p of simBoard) sampleLayers(withChrome(p)({ t, data: { ...p.defaults } }), p.grid, p.style, theme); return performance.now() - a }
+  for (const s of simBoardSims) { simReset(s); s.stepsTaken = 0 }
+  const mountMs = frameAt(T), steps = simBoardSims.map(s => s.stepsTaken)
+  const frameMs = median(Array.from({ length: RUNS }, (_, i) => frameAt(T + (i + 1) / 30)))
+  return { t: T, mountMs, frameMs, steps }
+})
+console.log(`
+Sim board cold start (checkpoints dropped; frame = median of ${RUNS} at 30 fps after mount)`)
+for (const r of simRows) console.log(`  t=${lpad(r.t, 5)} s   mount ${lpad(f(r.mountMs), 7)} ms (${r.steps.join('/')} steps)   frame ${lpad(f(r.frameMs), 6)} ms`)
+
 mkdirSync('.snapshots', { recursive: true })
-writeFileSync('.snapshots/bench.json', JSON.stringify({ runs: RUNS, budget: BUDGET, boards: boardRows, cards: sorted }, null, 1))
+writeFileSync('.snapshots/bench.json', JSON.stringify({ runs: RUNS, budget: BUDGET, boards: boardRows, cards: sorted, simColdStart: simRows }, null, 1))
 const failing = boardRows.filter(r => r.over.length)
 console.log(`\n${failing.length}/${boardRows.length} boards over budget${strict ? '' : ' (report only; --strict to fail)'} — .snapshots/bench.json`)
 if (strict && failing.length) process.exit(1)

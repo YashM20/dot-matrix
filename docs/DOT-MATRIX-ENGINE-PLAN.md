@@ -85,5 +85,14 @@ FN      := sin cos abs floor fract sqrt exp sign (1) · min max step atan(y,x) l
 - Limits: 4096 source chars, 2000 nodes, nesting 96, loop range = integer literals with ≤ 64 iterations, nested loops ≤ 1024 body runs per dot. Unknown identifiers or functions, wrong arity and reserved names fail with `IRError` at line:col (or a JSON path on deserialize).
 - Tests: `scripts/ir.ts` (also run by `pnpm verify`) checks both JS backends against a GLSL-spec reference interpreter (`reference.ts`) on 20 fields over 48×48 and snapshots the GLSL hashes in `goldens/ir-glsl.json` (`npx tsx scripts/ir.ts --update` after an intended codegen change). Real GPU readback parity is pending P5.
 
+## SimField
+Stateful simulations as Fields (`src/engine/sim/`; MASTER-PLAN §3.7). `createSim(spec)` steps a Float32Array grid (`channels` interleaved) at a fixed `dt`; `simAt(sim, t)` = the grid at step `simStep(sim, t)`, a pure function of (seed, step), in any call order.
+- **Loop:** `lead` + `period` (seconds) fold any t (negative, 3600 s, wall clock) into steps [lead/dt, (lead+period)/dt): the sim resets each period and a cold call never replays more than lead + period. Cards always set a loop; `simPhase(sim, t)` is the 0..1 position for rails and fades.
+- **Checkpoints:** every `every` steps, an LRU of `maxCheckpoints` (default 64; step 0 and the loop start pinned). A back-jump restores the nearest checkpoint ≤ n; forward playback continues from the head (0–1 steps per frame).
+- **Budget:** one call takes at most `maxSteps` (default 4096); an unlooped far jump then catches up over later calls (`sim.lag` > 0 until exact). `simReset` drops the cache for cold benches.
+- **Memory:** the stepper ping-pongs head/scratch (Gray–Scott sub-steps reuse src), neighbour index tables are built once, `simView`/`simField`/`simMapField` read a ring of 3 reused snapshots, so steady state allocates only new checkpoints.
+- **Models:** `grayScott` (explicit Euler, unit sub-step, 5-point Laplacian, `edge: 'wrap'` torus or `'clamp'` zero-flux, per-cell `killAt`, V flushed to 0 below 1e-9 (guards against float32 denormals)), `fallingSand` (0 empty, 2 wall, any other value a grain that keeps its kind; one move per grain per step, only into empty cells, so mass is conserved; sources are `emitters`, custom scenes via `init`), `life` (B3/S23, `edge: 'wrap'` torus default or `'dead'` bounded, `soup` rect, `stamps` via `lifeStamp`, optional `afterglow` trail channel).
+- **Tests:** `scripts/verify.ts` (end): determinism across fresh instances, replay and LRU restore; loop folding at 3600 s and wall clock; the step budget; sand mass conservation; Life oscillator/glider/edge cases; Gray–Scott fixed point and mirror symmetry; buffer reuse; cold board mount at t = 1, 60, 3600 s. `pnpm bench` prints the same cold-start table.
+
 ## Tokens
 See `DESIGN.md`; runtime values in `src/engine/theme/tokens.ts`.

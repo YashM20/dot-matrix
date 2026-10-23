@@ -552,14 +552,18 @@ import { bayer4, emissive as mEmissive, fabric as mFabric, glass as mGlass, glos
     && close(hourOf(new globalThis.Date(2026, 0, 1, 9, 41, 30)), 9 + 41 / 60 + 30 / 3600, 1e-9))
 }
 
-// P4-A) SimFields (src/engine/sim): fixed-dt steppers replay deterministically from checkpoints
-import { fallingSand, grayScott, life, simAt, simAtStep, SAND } from '../src/engine/sim'
+// P4-A) SimFields (src/engine/sim): fixed-dt steppers replay deterministically from checkpoints, loop so any t is
+// bounded, conserve sand, run B3/S23, and allocate nothing per step
+import { fallingSand, grayScott, life, lifeStamp, sandCount, simAt, simAtStep, simField, simReset, simStep, simView, SAND, SAND_B, WALL, type Sim } from '../src/engine/sim'
+import { simBoard, simBoardSims } from '../src/widgets/boards/sim'
 {
   const same = (a: Float32Array, b: Float32Array) => a.length === b.length && a.every((x, i) => x === b[i])
-  const makers: [string, () => ReturnType<typeof life>][] = [
+  const makers: [string, () => Sim][] = [
     ['gray-scott', () => grayScott({ w: 40, h: 40, seed: 3, every: 10 })],
+    ['gray-scott clamp', () => grayScott({ w: 40, h: 40, seed: 3, every: 10, edge: 'clamp', killAt: x => x < 3 ? .01 : 0 })],
     ['sand', () => fallingSand({ w: 40, h: 40, seed: 5, every: 10 })],
     ['life', () => life({ w: 40, h: 40, seed: 11, every: 10 })],
+    ['life dead+glow', () => life({ w: 40, h: 40, seed: 11, every: 10, edge: 'dead', afterglow: .8 })],
   ]
   for (const [name, make] of makers) {
     const a = make(), b = make(), T1 = 37 * a.dt, T0 = 12 * a.dt
@@ -572,11 +576,91 @@ import { fallingSand, grayScott, life, simAt, simAtStep, SAND } from '../src/eng
     const c = make(); let straight = c.checkpoints.get(0)!.slice(), scratch = new Float32Array(straight.length)
     for (let n = 0; n < 37; n++) { c.step(straight, scratch, c.w, c.h, n); [straight, scratch] = [scratch, straight] }
     const evolved = !same(straight, a.checkpoints.get(0)!)
-    assert(`sim ${name}: same t → same grid; replay from a checkpoint equals the straight run from the seed`,
-      rep && replay && same(straight, g1) && evolved && a.checkpoints.has(30) && same(simAtStep(a, 20), simAtStep(make(), 20)), `step 37 checksum ${g1.reduce((s, x) => s + x, 0).toFixed(4)}`)
+    // restore after LRU eviction: a 3-checkpoint sim run far ahead, then asked for an evicted step
+    const lru = make(); lru.maxCheckpoints = 3; simAtStep(lru, 80); const evicted = !lru.checkpoints.has(30)
+    const restored = same(simAtStep(lru, 37), g1) && lru.checkpoints.size <= 3 && lru.checkpoints.has(0)
+    assert(`sim ${name}: same t → same grid (fresh instances, replay, restore after LRU eviction) = straight run from the seed`,
+      rep && replay && same(straight, g1) && evolved && a.checkpoints.has(30) && same(simAtStep(a, 20), simAtStep(make(), 20)) && evicted && restored,
+      `step 37 checksum ${g1.reduce((s, x) => s + x, 0).toFixed(4)}`)
   }
-  const s = fallingSand({ w: 40, h: 40, seed: 5 }), g0 = simAtStep(s, 0).reduce((n, x) => n + (x === SAND ? 1 : 0), 0), g1 = simAtStep(s, 200).reduce((n, x) => n + (x === SAND ? 1 : 0), 0)
-  assert('sim sand: grains are conserved by falling (count only grows by the emitter, never shrinks)', g0 === 0 && g1 > 0 && g1 <= 200, `${g1} grains after 200 steps`)
+
+  // loop: t folds into [lead, lead + period); a wall-clock t costs at most lead + period steps cold, and the grid
+  // equals the one at the folded time on a fresh instance
+  const looped = () => life({ w: 32, h: 32, seed: 4, lead: 1, period: 4, dt: 1 / 8 })
+  const L1 = looped(), L2 = looped(), wall = 1_761_000_000.3 // a Date.now()/1000-like t
+  const folded = (wall % 4 + 4) % 4
+  const g3600 = simAt(L1, 3600.5).slice(), loopOk = simStep(L1, 3600.5) === simStep(L1, .5) && simStep(L1, -.5) === simStep(L1, 3.5) && simStep(L1, 0) === 8
+  assert('sim loop: t = 3600 s and wall-clock t fold into [lead, lead+period); cold cost ≤ lead+period steps',
+    loopOk && same(g3600, simAt(L2, .5)) && L1.stepsTaken <= 8 + 32 && same(simAt(looped(), wall), simAt(looped(), folded)), `${L1.stepsTaken} steps for t=3600.5`)
+
+  // budget: an unlooped far jump never takes more than maxSteps in one call; it catches up and then matches exactly
+  const cap = life({ w: 32, h: 32, seed: 4, maxSteps: 50 }), ref = life({ w: 32, h: 32, seed: 4 })
+  simAtStep(cap, 180); const lag1 = cap.lag, took1 = cap.stepsTaken
+  let calls = 1; while (cap.lag > 0 && calls < 10) { simAtStep(cap, 180); calls++ }
+  assert('sim budget: one call takes ≤ maxSteps, `lag` reports the rest, catch-up lands on the exact grid',
+    took1 === 50 && lag1 === 130 && cap.lag === 0 && calls === 4 && same(simAtStep(cap, 180), simAtStep(ref, 180)), `${calls} calls`)
+
+  // sand: falling conserves mass exactly. Closed hourglass-like box: constant count, walls never move; with emitters
+  // the count grows by at most one grain per emitter per step and never shrinks
+  const box = fallingSand({
+    w: 30, h: 30, seed: 9, emitters: [],
+    init: (g, w, h) => { for (let y = 0; y < h; y++) { g[y * w] = WALL; g[y * w + w - 1] = WALL } for (let x = 5; x < 25; x++) g[15 * w + x] = x === 14 || x === 15 ? 0 : WALL; for (let y = 2; y < 12; y++) for (let x = 3; x < 27; x++) g[y * w + x] = y & 1 ? SAND : SAND_B },
+  })
+  const n0 = sandCount(simAtStep(box, 0)), walls0 = simAtStep(box, 0).map(x => x === WALL ? 1 : 0)
+  let massOk = true, wallsOk = true
+  for (let n = 1; n <= 300; n += 7) { const g = simAtStep(box, n); massOk &&= sandCount(g) === n0; wallsOk &&= g.every((x, i) => (x === WALL ? 1 : 0) === walls0[i]) }
+  const kinds = (g: Float32Array, k: number) => g.reduce((s, x) => s + (x === k ? 1 : 0), 0)
+  const kindOk = kinds(simAtStep(box, 300), SAND) === kinds(simAtStep(box, 0), SAND)
+  const emit = fallingSand({ w: 40, h: 40, seed: 5, emitters: [{ x: .3, rate: .8 }, { x: .7, rate: .5 }] })
+  let prev = 0, emitOk = true
+  for (let n = 1; n <= 200; n++) { const c = sandCount(simAtStep(emit, n)); emitOk &&= c >= prev && c - prev <= 2; prev = c }
+  const s = fallingSand({ w: 40, h: 40, seed: 5 }), g200 = sandCount(simAtStep(s, 200))
+  assert('sim sand: mass is conserved (closed box constant per kind, walls fixed; emitters add ≤ 1 grain each per step)',
+    n0 === 240 && massOk && wallsOk && kindOk && emitOk && prev > 0 && g200 > 0 && g200 <= 200, `${n0} grains held over 300 steps; ${prev} emitted`)
+
+  // life: B3/S23. Blinker period 2, block still, glider moves (+1,+1) in 4 generations; on a torus it re-enters on
+  // the far side, on dead edges it dies into debris and never wraps
+  const lifeWith = (rows: string[], x: number, y: number, edge: 'wrap' | 'dead' = 'wrap') => life({ w: 12, h: 12, density: 0, edge, stamps: (g, w) => lifeStamp(g, w, rows, x, y) })
+  const blinker = lifeWith(['###'], 4, 5), block = lifeWith(['##', '##'], 4, 4), glider = lifeWith(['.#.', '..#', '###'], 2, 2)
+  const cells = (g: Float32Array) => [...g].flatMap((x, i) => x ? [i] : [])
+  const shifted = (a: number[], d: number) => a.map(i => i + d).join()
+  const gl0 = cells(simAtStep(glider, 0)), wrapG = lifeWith(['.#.', '..#', '###'], 9, 9), deadG = lifeWith(['.#.', '..#', '###'], 9, 9, 'dead')
+  const lifeOk = same(simAtStep(blinker, 2), blinker.checkpoints.get(0)!) && !same(simAtStep(blinker, 1), blinker.checkpoints.get(0)!)
+    && same(simAtStep(block, 5), block.checkpoints.get(0)!) && cells(simAtStep(glider, 4)).join() === shifted(gl0, 13)
+    && cells(simAtStep(wrapG, 48)).length === 5 && cells(simAtStep(deadG, 48)).every(i => i >= 12 * 6)
+  assert('sim life: B3/S23 (blinker, block, glider); wrap = torus, dead = bounded board', lifeOk)
+
+  // gray-scott: the U=1, V=0 rest state is a fixed point; a mirror-symmetric seed stays symmetric on clamp edges
+  const rest = grayScott({ w: 16, h: 16, blobs: 0 }), sym = grayScott({ w: 24, h: 24, blobs: 0, edge: 'clamp', sub: 4 })
+  const gs = sym.checkpoints.get(0)!; for (const x of [4, 5, 6, 7, 16, 17, 18, 19]) for (let y = 6; y < 16; y++) { gs[(y * 24 + x) * 2] = .5; gs[(y * 24 + x) * 2 + 1] = .25 }
+  sym.head.grid.set(gs)
+  const gy = simAtStep(sym, 30); let mirror = true
+  for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) mirror &&= Math.abs(gy[(y * 24 + x) * 2 + 1] - gy[(y * 24 + 23 - x) * 2 + 1]) < 1e-6
+  assert('sim gray-scott: rest state is a fixed point; clamp edges keep a mirror-symmetric seed symmetric', same(simAtStep(rest, 20), rest.checkpoints.get(0)!) && mirror && gy.some((v, i) => i & 1 && v > .05))
+
+  // memory: forward playback allocates nothing per step (ping-pong + bounded checkpoints); fields reuse 3 views
+  const mem = grayScott({ w: 40, h: 40, maxCheckpoints: 4 }); simAtStep(mem, 1)
+  const bufs = new Set<Float32Array>(); for (let n = 1; n < 200; n++) { simAtStep(mem, n); bufs.add(mem.head.grid); bufs.add(mem.scratch) }
+  const views = new Set<Float32Array>(); for (let f = 0; f < 120; f++) { simField(mem, f / 30)(.5, .5); views.add(simView(mem, f / 30)) }
+  assert('sim memory: head/scratch ping-pong (2 buffers over 200 steps), ≤ maxCheckpoints kept, fields read 3 reused views',
+    bufs.size === 2 && mem.checkpoints.size <= 4 && views.size === 3 && simView(mem, 1) === simView(mem, 1))
+
+  // timing: the sim board, cold (all checkpoints dropped), mounted at t = 1, 60 and 3600 s, then 15 frames on.
+  // Asserted on steps (deterministic); the ms are printed for the record (bench: `pnpm bench`)
+  const theme = dot480, rows: string[] = []
+  let boundOk = true
+  for (const T of [1, 60, 3600]) {
+    for (const sim of simBoardSims) { simReset(sim); sim.stepsTaken = 0 }
+    const a = performance.now()
+    for (const p of simBoard) sampleLayers(withChrome(p)({ t: T, data: {} }), p.grid, p.style, theme)
+    const mount = performance.now() - a, mountSteps = simBoardSims.map(s => s.stepsTaken)
+    const b = performance.now()
+    for (let f = 1; f <= 15; f++) for (const p of simBoard) sampleLayers(withChrome(p)({ t: T + f / 30, data: {} }), p.grid, p.style, theme)
+    const frame = (performance.now() - b) / 15
+    boundOk &&= simBoardSims.every((s, i) => mountSteps[i] <= s.maxSteps && s.lag === 0)
+    rows.push(`t=${T}: mount ${mount.toFixed(1)} ms (${mountSteps.join('/')} steps), frame ${frame.toFixed(2)} ms`)
+  }
+  assert('sim board: cold mount at t = 1, 60, 3600 s stays within each sim\'s maxSteps (looped), never lags', boundOk, rows.join('; '))
 }
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
