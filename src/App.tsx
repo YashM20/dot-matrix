@@ -64,9 +64,9 @@ export default function App() {
             <TransitionLab />
           </div>
         </div>
-        <aside className="pg-side">
+        <div className="pg-side" role="region" aria-label="Controls">
           <ControlsPanel />
-        </aside>
+        </div>
       </section>
     )}
     <footer className="bottom">DOT/480 / <b>CONFIGURATION 01</b><span>FIELD → GRID SAMPLER → RENDERER</span><span>STATUS: <b>NOMINAL</b></span></footer></main>

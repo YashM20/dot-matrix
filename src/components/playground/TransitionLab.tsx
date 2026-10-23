@@ -68,7 +68,7 @@ export function TransitionLab() {
         <canvas ref={canvasRef} style={{ aspectRatio: `${frames.width} / ${frames.height}` }} aria-hidden="true" />
       </div>
       <div className="pg-tlab-modes">
-        {modes.map(x => <button key={x} className={x === mode ? 'on' : ''} onClick={() => { setMode(x); setRun(r => r + 1) }}>{x.toUpperCase()}</button>)}
+        {modes.map(x => <button key={x} className={x === mode ? 'on' : ''} aria-pressed={x === mode} onClick={() => { setMode(x); setRun(r => r + 1) }}>{x.toUpperCase()}</button>)}
       </div>
       <p className="pg-hint">{mode === 'change' ? `${a.name.toUpperCase()} → ${next.name.toUpperCase()}` : a.name.toUpperCase()}</p>
       <label>

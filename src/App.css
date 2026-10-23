@@ -56,7 +56,7 @@ body {
 
 .brand i,
 .live i,
-article header i {
+:where(.dot-card) header i {
   display: inline-block;
   width: 6px;
   height: 6px;
@@ -108,7 +108,7 @@ article header i {
 }
 
 .intro p,
-article header {
+:where(.dot-card) header {
   margin: 0 0 13px;
   color: var(--label);
   font: 500 10px var(--mono);

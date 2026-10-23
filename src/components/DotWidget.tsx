@@ -62,7 +62,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
   return (
     // role="img": the card is one dot-matrix picture; its children (label text, canvas) are presentational.
     // An interactive card is a group instead, so its accessibility overlay (real controls) stays reachable.
-    <article className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}`} role={interactive ? 'group' : 'img'} aria-label={preset.live ? `${preset.name} (live)` : preset.name}>
+    <div className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}`} role={interactive ? 'group' : 'img'} aria-label={preset.live ? `${preset.name} (live)` : preset.name}>
       {preset.chrome !== 'dots' && <header className="dot-card-head" aria-hidden="true">
         <span className="dot-card-label">{preset.name.toUpperCase()}</span>
         {preset.live && <i className="status-dot" />}
@@ -71,6 +71,6 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
         <DotCanvas layers={layers} data={{ ...preset.defaults, ...data, ...shared, ...local }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
           controls={interactive ? controls : undefined} onInput={interactive ? onInput : undefined} />
       </div>
-    </article>
+    </div>
   )
 }

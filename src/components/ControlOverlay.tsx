@@ -1,4 +1,4 @@
-import { useState, type CSSProperties, type FocusEvent, type KeyboardEvent } from 'react'
+import { useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent } from 'react'
 import { HIT_PAD, controlRange, keyValue, keyYOf, settle } from '../engine'
 import type { Control, GridConfig } from '../engine'
 import type { ControlInput } from '../hooks/useControlInput'
@@ -16,6 +16,16 @@ export function ControlOverlay({ controls, grid, data, input }: { controls: Cont
   const taps = controls.filter(c => c.kind === 'button' || c.kind === 'toggle')
   const [rove, setRove] = useState<string | undefined>(undefined)
   const stop = taps.some(c => c.key === rove) ? rove : taps[0]?.key
+  // a pointer pick in a radiogroup moves the checked option (and the roving tab stop) away from the focused one:
+  // focus follows the selection, without turning on the focus ring
+  const root = useRef<HTMLDivElement>(null)
+  useLayoutEffect(() => {
+    const a = document.activeElement as HTMLElement | null
+    if (!a || a.getAttribute('role') !== 'radio' || a.tabIndex === 0 || !root.current?.contains(a)) return
+    let visible = false
+    try { visible = a.matches(':focus-visible') } catch { /* old browsers */ }
+    a.closest('[role=radiogroup]')?.querySelector<HTMLElement>('[role=radio][tabindex="0"]')?.focus({ preventScroll: true, focusVisible: visible } as FocusOptions)
+  })
   const val = (key: string, c: Control) => { const v = data[key]; if (typeof v === 'number') return v; const { min } = controlRange(c); return Number.isFinite(min) ? min : 0 }
 
   const onFocus = (key: string) => (e: FocusEvent<HTMLElement>) => {
@@ -93,7 +103,7 @@ export function ControlOverlay({ controls, grid, data, input }: { controls: Cont
   }
 
   return (
-    <div className="dot-a11y">
+    <div className="dot-a11y" ref={root}>
       {controls.map(c => {
         const [col, row, w, h] = c.box
         return <div key={`hit:${c.key}`} className={`dot-a11y-hit dot-a11y-hit--${c.kind === 'button' || c.kind === 'toggle' || c.kind === 'segmented' || c.kind === 'stepper' ? 'tap' : 'drag'}`}

@@ -26,7 +26,7 @@ export function PreviewCanvas() {
       </div>
       <div id="pg-svg-host" className="pg-stage" style={{ background: bg }}>
         <div className="pg-oled-frame">
-          <DotCanvas layers={widget.layers} data={widget.data} grid={widget.grid} style={widget.style} theme={theme} animated={widget.animated} onMode={setMode} />
+          <DotCanvas layers={widget.layers} data={widget.data} grid={widget.grid} style={widget.style} theme={theme} animated={widget.animated} springKeys={widget.springKeys} onMode={setMode} />
         </div>
       </div>
       <div className="pg-preview-meta">

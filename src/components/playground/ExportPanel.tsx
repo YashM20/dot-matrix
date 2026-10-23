@@ -36,7 +36,7 @@ export function ExportPanel() {
         <button onClick={exportHTML}>HTML</button>
         <button onClick={copySnippet}>REACT SNIPPET</button>
       </div>
-      <pre className="pg-snippet">{snippetFor(state)}</pre>
+      <pre className="pg-snippet" tabIndex={0} aria-label="Component snippet">{snippetFor(state)}</pre>
     </section>
   )
 }
