@@ -78,7 +78,7 @@ async function open(width: number, height: number, mobile: boolean, reduced = fa
   await cdp('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: mobile ? 2 : 1, mobile })
   await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: reduced ? 'reduce' : 'no-preference' }] })
   logs.length = 0
-  await cdp('Page.navigate', { url: `${base}essay.html` })
+  await cdp('Page.navigate', { url: `${base}essay.html${process.env.ESSAY_QUERY ?? ''}` })
   const ok = await waitFor(`!!document.querySelector('.hero .dot-title') && document.readyState === 'complete'`, 30000)
   await js(SIG)
   await sleep(1500)
@@ -165,10 +165,14 @@ try {
   // surfaces is left out on purpose: its clock source re-samples it once a second (a ticking still)
   for (const id of ['departures', 'sim', 'flicker', 'light']) {
     await reach(id)
-    // let every card settle its first frame (backing-store re-measure, staggered first samples), then watch for 2 s
+    // let every card settle its first frame, then count draws for 3 s: a live 12 fps card would draw ~36 times,
+    // a still at most a re-draw or two (backing-store re-measure). Pixel signatures are not used here: headless
+    // canvas readback of an unchanged card is not always bit-stable.
     await sleep(2000)
-    const a = await sig(id); await sleep(2000); const b = await sig(id)
-    if (!(a.n > 0 && a.sig === b.sig)) stills.push(`${id} ${a.n} lit ${a.sig === b.sig ? 'still' : 'moving'}`)
+    await js(`(() => { window.__draws = 0; const p = CanvasRenderingContext2D.prototype; if (!p.__counted) { const o = p.clearRect; p.clearRect = function (...a) { window.__draws++; return o.apply(this, a) }; p.__counted = 1 } })()`)
+    const a = await sig(id); await sleep(3000)
+    const draws = await js('window.__draws') as number, cards = await js(`document.querySelectorAll('#fig-${id} canvas').length`) as number
+    if (!(a.n > 0 && draws <= cards * 3)) stills.push(`${id}: ${a.n} lit, ${draws} draws over ${cards} canvases in 3 s`)
   }
   check('reduced motion: animated figures draw a still frame', stills.length === 0, stills.join('; '))
   await shot('1280-reduced-sim')

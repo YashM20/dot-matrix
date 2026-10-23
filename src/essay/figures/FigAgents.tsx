@@ -2,11 +2,10 @@ import { useState } from 'react'
 import type { Layer, Tone } from '../../engine/types'
 import { DEVICES, ledGlow, toDevice, type DeviceSpec } from '../../engine/device'
 import { heartbeatCard } from '../../widgets/boards/heartbeat'
-import { TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../../widgets/types'
+import { TILE, tileStyle, type WidgetPreset } from '../../widgets/types'
 import { Card } from '../ui/Card'
 import { Cards, Choice, Controls } from '../ui/kit'
 
-const T = layoutFor(TILE)
 const HB = heartbeatCard()
 const SPEC: DeviceSpec = { grid: TILE, style: tileStyle, layers: HB.layers }
 const LED25 = DEVICES['glyph-matrix-25'], GP = 5.2, GX = 72 - 12 * GP, GY = 74 - 12 * GP
@@ -16,7 +15,7 @@ const LED25 = DEVICES['glyph-matrix-25'], GP = 5.2, GX = 72 - 12 * GP, GY = 74 -
  * goes through `toDevice` (area-weighted onto the 25×25 round mask), then LED bloom, then dot sites.
  */
 const phoneBack: WidgetPreset = {
-  id: 'essay-hb-phone', name: 'Phone back', label: 'PHONE BACK  25×25 LED', group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true,
+  id: 'essay-hb-phone', name: 'Phone back', label: 'PHONE BACK  25X25 LED', group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true,
   defaults: { state: 0 }, springKeys: ['state'],
   layers: ctx => {
     const { lit, halo } = ledGlow(toDevice(SPEC, LED25, { ctx: { t: ctx.t, data: ctx.data } }), LED25.physics)
@@ -30,9 +29,7 @@ const phoneBack: WidgetPreset = {
       else if (L > 0) put('mid', 3.6, at)
       else put(halo[i] >= .3 ? 'mid' : 'faint', halo[i] >= .15 ? 1.9 : 1.3, at)
     }
-    const out: Layer[] = [...groups.values()].map(g => ({ field: () => 1, sites: g.sites, size: g.size, tone: g.tone }))
-    out.push(layer(T.text('SAME CARD, RESAMPLED', 0, 136), 'faint'))
-    return out
+    return [...groups.values()].map((g): Layer => ({ field: () => 1, sites: g.sites, size: g.size, tone: g.tone }))
   },
 }
 const STATES = [0, 1, 2, 3, 4] as const
