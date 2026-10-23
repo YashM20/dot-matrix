@@ -13,7 +13,7 @@ import { tileStyle } from '../../widgets'
 import type { Motion } from './doc'
 import { Num } from './Inspector'
 import { useCard, useStudio } from './store'
-import { changePair, trackSpans, type Track } from './timeline'
+import { changePair, trackSpans, type Track } from './playback'
 
 const MASKS = Object.keys(masks) as MaskName[], EASES = Object.keys(ease) as EaseName[]
 const LENGTHS = [1.5, 2, 3, 4, 6, 8, 12]

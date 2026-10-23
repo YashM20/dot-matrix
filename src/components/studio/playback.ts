@@ -7,6 +7,7 @@
 import { ease, maskByName, revealDots, transitionDots } from '../../engine/motion'
 import { sampleLayers } from '../../engine/sampler/gridSampler'
 import type { Pointer } from '../../engine/context'
+import { themeTones, type ClipSource } from '../../export'
 import type { DotInstance, ThemeTokens } from '../../engine/types'
 import { CONTRIB_FIXTURE_NOW, contribFixture, mapContribs, mapWeather, WEATHER_FIXTURE } from '../../data'
 import type { Binding, CompiledCard, MachineEdge, Motion, SourceId, StudioCard } from './doc'
@@ -115,4 +116,10 @@ export function boundValues(bindings: Binding[], t: number, now: number, pointer
   let out: Record<string, number> | undefined
   for (const b of bindings) if (b.kind === 'source' && b.source) (out ??= {})[b.key] = b.min + (b.max - b.min) * sourceValue(b.source, t, now, pointer)
   return out
+}
+
+/** The timeline as a clip source: frame(t) is exactly what the preview shows at t (enter / change / exit included). */
+export function timelineSource(card: StudioCard, compiled: CompiledCard, theme: ThemeTokens): ClipSource {
+  const pitch = card.grid.pitch ?? 4
+  return { width: card.grid.cols * pitch, height: card.grid.rows * pitch, background: theme.surface, tones: themeTones(theme), frame: t => timelineFrame({ card, compiled, theme, bound: boundValues(card.bindings, t, Date.now()) }, t) }
 }

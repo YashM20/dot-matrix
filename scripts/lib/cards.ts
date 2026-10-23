@@ -7,7 +7,7 @@ import { squircleExponent } from '../../src/engine/renderer/shapePath'
 import type { DotInstance, DotStyle } from '../../src/engine/types'
 import { boards, withChrome, type WidgetContext, type WidgetPreset } from '../../src/widgets'
 import { Raster } from './raster'
-import { litCentroid, median, pitchOf, theme, visible } from './stats'
+import { median, pitchOf, theme, visible } from './stats'
 export { litCentroid, median, pitchOf, quantile, theme, visible } from './stats'
 
 /** Every preset once, in board order (an id that appears on several boards is listed once). */

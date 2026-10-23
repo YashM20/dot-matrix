@@ -3,7 +3,7 @@ import { useState, type DragEvent, type KeyboardEvent } from 'react'
 import { BLENDS, irLayer, normalizeZ, sitesLayer, stackOrder, textLayer, TONES, type Blend, type LayerTone, type StudioLayer } from './doc'
 import { compiledOf, useCard, useStudio } from './store'
 
-const KIND: Record<StudioLayer['kind'], string> = { ir: 'IR', text: 'TXT', sites: 'SIT', 'preset-layer': 'REF' }
+const KIND: Record<StudioLayer['kind'], string> = { ir: 'IR', text: 'TXT', sites: 'SIT', 'preset-layer': 'REF', spec: 'SPC' }
 
 export function LayerList() {
   const card = useCard(), { selected, select, edit, editLayer } = useStudio()

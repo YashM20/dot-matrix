@@ -1,9 +1,10 @@
+import { useState } from 'react'
 /** Inspector for the selected layer (IR editor with line:col errors, lattice / size / tone pickers) and the card settings. */
 import { IR_LIMITS } from '../../engine/ir'
 import { SHARE_GRIDS } from '../../lib/share'
 import { CARD } from '../../widgets'
 import { CodeEditor } from '../dwitter/CodeEditor'
-import { BLENDS, LATTICES, newId, normalizeZ, SITE_SIZES, stackOrder, TONES, type Blend, type IRLayer, type LayerTone, type SitesLayer, type StudioLayer, type TextLayer } from './doc'
+import { BLENDS, LATTICES, newId, normalizeZ, SITE_SIZES, stackOrder, TONES, type Blend, type IRLayer, type LayerTone, type SitesLayer, type SpecLayer, type StudioLayer, type TextLayer } from './doc'
 import { compiledOf, useCard, useStudio } from './store'
 
 export function Num({ label, value, onChange, min, max, step = 1, disabled }: { label: string; value: number; onChange: (v: number) => void; min?: number; max?: number; step?: number; disabled?: boolean }) {
@@ -57,6 +58,25 @@ function SiteFields({ l }: { l: SitesLayer }) {
   )
 }
 
+function SpecFields({ l }: { l: SpecLayer }) {
+  const editLayer = useStudio(s => s.editLayer)
+  const [text, setText] = useState(() => JSON.stringify(l.spec, null, 1))
+  const [err, setErr] = useState('')
+  const big = text.length > 20000
+  const apply = (v: string) => {
+    setText(v)
+    try { const spec = JSON.parse(v); if (!spec || typeof spec.kind !== 'string') throw new Error('needs a "kind"'); editLayer(l.id, x => ({ ...x, spec }) as StudioLayer, `spec:${l.id}`); setErr('') }
+    catch (e) { setErr((e as Error).message) }
+  }
+  return (
+    <>
+      <p className="st-hint">Card spec v1 <b>{l.spec.kind}</b> layer, built by <code>src/spec</code>. Edit its JSON{big ? ' (large: a baked raster)' : ''}:</p>
+      <textarea className="st-json" aria-label="Spec layer JSON" spellCheck={false} value={big ? text.slice(0, 20000) : text} readOnly={big} onChange={e => apply(e.target.value)} rows={8} />
+      {err && <p className="dw-bad" role="alert">JSON: {err}</p>}
+    </>
+  )
+}
+
 export function Inspector() {
   const card = useCard(), { selected, editLayer, edit, select } = useStudio()
   const l = card.layers.find(x => x.id === selected)
@@ -76,6 +96,7 @@ export function Inspector() {
       {l.kind === 'ir' && <IRFields l={l} />}
       {l.kind === 'sites' && <><SiteFields l={l} /><p className="st-hint">Field at each site (u, v, t, data.*):</p><IRFields l={l} /></>}
       {l.kind === 'text' && <TextFields l={l} />}
+      {l.kind === 'spec' && <SpecFields key={l.id} l={l} />}
       {ro && <p className="st-hint">Reference layer <b>#{l.params.index}</b> of preset <b>{l.params.preset}</b> (read-only: its field, lattice and sites come from the preset's <code>layers(ctx)</code>; tone, blend, order and visibility are yours).</p>}
       <div className="st-row">
         <button type="button" onClick={duplicate}>DUPLICATE</button>

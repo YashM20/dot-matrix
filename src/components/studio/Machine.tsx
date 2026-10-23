@@ -4,7 +4,7 @@ import { ease, masks, type EaseName, type MaskName } from '../../engine/motion'
 import type { Binding, MachineEdge, SourceId, StudioState } from './doc'
 import { Num } from './Inspector'
 import { compiledOf, useCard, useStudio } from './store'
-import { SOURCES } from './timeline'
+import { SOURCES } from './playback'
 
 const MASKS = Object.keys(masks) as MaskName[], EASES = Object.keys(ease) as EaseName[]
 

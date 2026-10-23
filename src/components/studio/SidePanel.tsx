@@ -8,21 +8,16 @@ import { saveAs } from 'file-saver'
 import { DEVICES, plotPaths, plotterSVG as devicePlotSVG, previewProfile, toDevice, type DeviceFrame, type DeviceId } from '../../engine/device'
 import { renderSVG } from '../../engine/renderer/svgRenderer'
 import { dot480 } from '../../engine/theme/tokens'
-import { plotterSVG, recordClip, themeTones, type ClipFormat, type ClipSource } from '../../export'
+import { plotterSVG, recordClip, type ClipFormat } from '../../export'
 import { cardPreset, cardToJSON, type StudioCard } from './doc'
 import { specV0 } from './adapter'
 import { drawBarSheet, scoreCard, type Score } from './sheet'
 import { compiledOf, useCard, useStudio } from './store'
-import { boundValues, timelineFrame, type FrameInput } from './timeline'
+import { boundValues, timelineFrame, timelineSource, type FrameInput } from './playback'
 
 const theme = dot480
 const slug = (c: StudioCard) => (c.name || 'card').toLowerCase().replace(/[^\w-]+/g, '-').slice(0, 40)
 const inputOf = (card: StudioCard): FrameInput => ({ card, compiled: compiledOf(card), theme, bound: boundValues(card.bindings, 0, Date.now()) })
-/** The timeline as a clip source: frame(t) is exactly what the preview shows at t (enter / change / exit included). */
-export function timelineSource(card: StudioCard): ClipSource {
-  const pitch = card.grid.pitch ?? 4, inp = inputOf(card)
-  return { width: card.grid.cols * pitch, height: card.grid.rows * pitch, background: theme.surface, tones: themeTones(theme), frame: t => timelineFrame({ ...inp, bound: boundValues(card.bindings, t, Date.now()) }, t) }
-}
 /** Run when the main thread is idle (setTimeout where requestIdleCallback is missing, e.g. Safari). */
 const idle = (fn: () => void, timeout: number): (() => void) => {
   if (typeof requestIdleCallback === 'function') { const h = requestIdleCallback(fn, { timeout }); return () => cancelIdleCallback(h) }
@@ -105,7 +100,7 @@ function ExportMenu() {
   const record = async () => {
     abort.current = new AbortController(); setProgress(0); setStatus('')
     try {
-      const clip = await recordClip(timelineSource(card), { format, seconds: card.timeline.length, fps, scale, signal: abort.current.signal, onProgress: (d, n) => setProgress(d / n) })
+      const clip = await recordClip(timelineSource(card, compiledOf(card), theme), { format, seconds: card.timeline.length, fps, scale, signal: abort.current.signal, onProgress: (d, n) => setProgress(d / n) })
       saveAs(clip.blob, `${name}.${clip.ext}`)
       ;(window as { __studioClip?: unknown }).__studioClip = { format, size: clip.blob.size, frames: clip.frames, durationMs: clip.durationMs, width: clip.width, height: clip.height, via: clip.via }
       setStatus(`${clip.ext.toUpperCase()} ${clip.width}×${clip.height} · ${clip.frames} frames · ${(clip.durationMs / 1000).toFixed(2)} s · ${(clip.blob.size / 1024).toFixed(1)} KB · ${clip.via}`)

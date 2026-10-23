@@ -9,7 +9,7 @@ import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { dot480 } from '../../engine/theme/tokens'
 import type { DotInstance } from '../../engine/types'
 import { compiledOf, useCard, useStudio } from './store'
-import { boundValues, firingFrame, sampleCard, stateData, timelineFrame, type FrameInput } from './timeline'
+import { boundValues, firingFrame, sampleCard, stateData, timelineFrame, type FrameInput } from './playback'
 
 declare global { interface Window { __studio?: { frameMs: number; maxMs: number; frames: number; dots: number; lit: number } } }
 const SCALE = 1.5

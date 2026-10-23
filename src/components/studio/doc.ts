@@ -12,10 +12,11 @@ import type { Control } from '../../engine/context'
 import type { DotStyle, Field, GridConfig, Layer, Tone } from '../../engine/types'
 import { ease, masks, type EaseName, type MaskName } from '../../engine/motion'
 import { SHARE_GRIDS, type SharedProgram } from '../../lib/share'
+import { buildLayer, LAYER_KINDS, type LayerSpec } from '../../spec'
 import { layoutFor, tileStyle, TILE, widgetById, withChrome, type WidgetContext, type WidgetPreset } from '../../widgets'
 
 export const STUDIO_VERSION = 1
-export type LayerKind = 'ir' | 'text' | 'sites' | 'preset-layer'
+export type LayerKind = 'ir' | 'text' | 'sites' | 'preset-layer' | 'spec'
 /**
  * How a layer meets the layer below it (in z order). `normal`: its own layer, the sampler's max-value
  * composite (later wins ties). The others fold this layer's field into the one below and draw in the
@@ -48,7 +49,9 @@ export interface SitesLayer extends LayerBase {
 }
 /** A read-only layer of an existing preset: `withChrome(preset)(ctx)[index]`, live with the card's t and data. */
 export interface PresetLayer extends LayerBase { kind: 'preset-layer'; params: { preset: string; index: number } }
-export type StudioLayer = IRLayer | TextLayer | SitesLayer | PresetLayer
+/** Any card spec v1 layer (raster, generator, bound text, site lists…), built by `src/spec` `buildLayer`; edited as JSON. */
+export interface SpecLayer extends LayerBase { kind: 'spec'; spec: LayerSpec }
+export type StudioLayer = IRLayer | TextLayer | SitesLayer | PresetLayer | SpecLayer
 
 export interface Motion { mask: MaskName; ease: EaseName; ms: number }
 export interface StudioState { name: string; data: Record<string, number> }
@@ -211,6 +214,11 @@ export function compileCard(card: StudioCard, good: ProgramCache = new Map()): C
         ? { ...L.big(s, col, row, { lattice: l.lattice, smooth, align, scale }), tone: tone('value') }
         : { field: textAt(card.grid, s, col, row, { align, scale, smooth }), tone: tone('value') }
       builders.push({ layer: l, build: () => built })
+    } else if (l.kind === 'spec') {
+      let build: ((ctx: WidgetContext) => Layer) | undefined
+      try { build = buildLayer(l.spec, card.grid, { irMode: 'function' }) } catch (e) { errors.set(l.id, new IRError(`spec layer: ${(e as Error).message}`)) }
+      if ('src' in l.spec && typeof l.spec.src === 'string') { try { const p = irProgram(l.spec.src); p.info.data.forEach(k => keys.add(k)); usesT ||= p.info.t } catch { /* reported by buildLayer */ } }
+      if (build) builders.push({ layer: l, build: ctx => { const x = build(ctx); return { ...x, tone: tone(x.tone) } } })
     } else {
       const p = widgetById(l.params.preset)
       if (!p) { errors.set(l.id, new IRError(`no preset "${l.params.preset}"`)); continue }
@@ -285,7 +293,7 @@ export function validateCard(x: unknown): StudioCard {
     const w = `layers[${i}]`
     str(l.id, 64, `${w}.id`); if (ids.has(l.id)) throw new Error(`studio card: duplicate layer id ${l.id}`); ids.add(l.id)
     str(l.name, 64, `${w}.name`)
-    oneOf(l.kind, ['ir', 'text', 'sites', 'preset-layer'] as const, `${w}.kind`)
+    oneOf(l.kind, ['ir', 'text', 'sites', 'preset-layer', 'spec'] as const, `${w}.kind`)
     oneOf(l.tone, [...TONES, 'preset'] as LayerTone[], `${w}.tone`)
     oneOf(l.blend, BLENDS, `${w}.blend`)
     num(l.z, -1e6, 1e6, `${w}.z`)
@@ -293,6 +301,7 @@ export function validateCard(x: unknown): StudioCard {
     if (l.kind === 'ir') { str(l.src, IR_LIMITS.source, `${w}.src`); num(l.lattice, 1, 16, `${w}.lattice`) }
     if (l.kind === 'sites') { str(l.src, IR_LIMITS.source, `${w}.src`); num(l.size, .25, 16, `${w}.size`); oneOf(l.params?.shape, ['ring', 'line', 'disc'] as const, `${w}.params.shape`) }
     if (l.kind === 'text') { str(l.params?.text, 64, `${w}.params.text`); num(l.params.col, -512, 512, `${w}.params.col`); num(l.params.row, -512, 512, `${w}.params.row`); num(l.lattice, 1, 16, `${w}.lattice`) }
+    if (l.kind === 'spec' && !(l.spec && typeof l.spec === 'object' && (LAYER_KINDS as readonly string[]).includes(l.spec.kind))) throw new Error(`studio card: ${w}.spec must be a card spec v1 layer`)
     if (l.kind === 'preset-layer') { str(l.params?.preset, 64, `${w}.params.preset`); num(l.params.index, 0, 256, `${w}.params.index`) }
   })
   dataOf(c.data, 'data')
@@ -310,7 +319,7 @@ export function validateCard(x: unknown): StudioCard {
 }
 export const cardToJSON = (c: StudioCard) => JSON.stringify(c, null, 2)
 export const cardFromJSON = (json: string): StudioCard => {
-  if (json.length > 512 * 1024) throw new Error('studio card: file too large')
+  if (json.length > 4_000_000) throw new Error('studio card: file too large')
   let x: unknown
   try { x = JSON.parse(json) } catch (e) { throw new Error(`studio card: not JSON (${(e as Error).message})`) }
   return validateCard(x)

@@ -5,7 +5,7 @@
  */
 import { create } from 'zustand'
 import { commit, compileCard, historyOf, irLayer, loadLocal, newCard, normalizeZ, redo, saveLocal, textLayer, undo, type CompiledCard, type History, type ProgramCache, type StudioCard, type StudioLayer } from './doc'
-import type { Firing } from './timeline'
+import type { Firing } from './playback'
 
 export function starterCard(): StudioCard {
   const c = newCard('starter')
