@@ -57,6 +57,9 @@
 **P3 (depth, light, material, Field IR):**
 - [x] P3-A: engine Raster + light stack. `src/engine/raster/` (`Raster`, `rasterize`, `sample` nearest/bilinear, mass-preserving `blur`, `dilate`/`erode`/`outline`/`moat`/`cut`, exact signed `distanceRaster`) and `src/engine/light/` (`sdfCircle`/`sdfBox`/`sdfRing` + union/subtract, `heightRaster` + `normalRaster` cached per geometry, `stackHeights`, `lambert`, `phong`, one-pass `illuminate`, `torch`/`lightDir`, `bloom`). Verify §16 (round-trip, mass, flat normals, lambert/phong peaks, bloom moat, torch relight ≤ 1 ms: about 0.5 ms median on a loaded laptop, about 1.5 ms incl. reading every cell back). Demo board `light` (`?board=light`): `light-torch` (pointer = torch, orbit fallback, XY control parks it), `light-orb` (gloss sphere, slow sun, blurred contact shadow), `light-on-air` (red sign + activeDim bloom). Goldens +3. Not yet checked in the browser.
 
+**P3 (depth, light, material, IR): started 2026-10-22**
+- [x] P3-C: **Levels** flagship board (`src/widgets/boards/levels.ts`, `?board=levels`): nine animated HIVE game-world cards (title, torchlit corridor, isometric vault, parallax side-scroller, lantern maze, warp, boss, game over, high scores); local ray-plane `cast` + iso box tracer, Lambert point/window light, depth fog, cell-snapped parallax, one red element per card. v0: needs the user's taste pass.
+
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.
 - [ ] P0-E: `accentRole` on multi-accent cards → decision §11.1.
