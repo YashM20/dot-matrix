@@ -1,7 +1,10 @@
 import { create } from 'zustand'
 import type { DotStyle, Field, GridConfig } from '../../engine'
 import { dot480 } from '../../engine'
-import { widgetById, widgetPresets } from '../../widgets'
+// not the eager `widgets` registry: the boards view reads `theme` from this store, and must not pull every
+// board into the first load. Presets resolve once their board loaded (the playground loads them all).
+import { registeredPreset } from '../../widgets/registry'
+import { henryBoard } from '../../widgets/boards/henry'
 
 export type ThemeName = 'dot480' | 'deerflowMosaic'
 export interface PlaygroundState {
@@ -37,10 +40,10 @@ export interface PlaygroundState {
 }
 
 const styleOf = (id: string) => {
-  const p = widgetById(id) ?? widgetPresets[0]
+  const p = registeredPreset(id) ?? henryBoard[0]
   return { pitch: p.grid.pitch ?? dot480.gridPx, shape: p.style.shape, sizeMin: p.style.sizeMin, sizeMax: p.style.sizeMax, cornerRoundness: p.style.cornerRoundness ?? 0, jitter: p.style.jitter ?? 0, quantizeSteps: p.style.quantizeSteps ?? 0, animated: !!p.animated }
 }
-const first = widgetPresets[0].id
+const first = henryBoard[0].id
 
 export const usePlayground = create<PlaygroundState>((set, get) => ({
   presetId: first,

@@ -1,0 +1,6 @@
+# SPA fallback: any unknown path serves the app, which reads the board from `/<board>/` or `?board=`.
+# Board paths (`/light/`) are real files (dist/<board>/index.html, scripts/site/pages.ts), so they win
+# over this rule and crawlers get each board's meta. Cloudflare Pages already falls back to index.html
+# when dist/ has no top-level 404.html; if it flags this rule as a loop, it skips it and that built-in
+# fallback still applies. Netlify and similar hosts need the rule.
+/*    /index.html   200
