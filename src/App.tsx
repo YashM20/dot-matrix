@@ -1,19 +1,23 @@
-import { lazy, Suspense, useState } from 'react'
+import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
 import { Board, VIEW_EXIT_MS, cardMotion } from './components/Board'
-import { Changelog } from './components/Changelog'
-import { DrawBoard } from './components/draw/DrawBoard'
 import { DotWidget } from './components/DotWidget'
-import { DotsRepl } from './components/dwitter/DotsRepl'
-import { ControlsPanel } from './components/playground/ControlsPanel'
-import { DataEditor } from './components/playground/DataEditor'
-import { ExportPanel } from './components/playground/ExportPanel'
-import { PhotoUpload } from './components/playground/PhotoUpload'
-import { PreviewCanvas } from './components/playground/PreviewCanvas'
-import { TransitionLab } from './components/playground/TransitionLab'
-import { WidgetGallery } from './components/playground/WidgetGallery'
 import { useExitSwap } from './hooks/useExitSwap'
-import { boardIds } from './widgets'
+import { boardIds, prefetchBoard } from './widgets/manifest'
+import { boardFromPath, setPageMeta } from './site/meta'
 import './App.css'
+
+// every view but BOARDS is its own chunk, fetched when its tab opens (first-load budget, docs/WEB-PLAN.md §1)
+const later = <K extends string>(load: () => Promise<{ [k in K]: ComponentType }>, name: K) => lazy(() => load().then(m => ({ default: m[name] })))
+const Changelog = later(() => import('./components/Changelog'), 'Changelog')
+const DrawBoard = later(() => import('./components/draw/DrawBoard'), 'DrawBoard')
+const DotsRepl = later(() => import('./components/dwitter/DotsRepl'), 'DotsRepl')
+const ControlsPanel = later(() => import('./components/playground/ControlsPanel'), 'ControlsPanel')
+const DataEditor = later(() => import('./components/playground/DataEditor'), 'DataEditor')
+const ExportPanel = later(() => import('./components/playground/ExportPanel'), 'ExportPanel')
+const PhotoUpload = later(() => import('./components/playground/PhotoUpload'), 'PhotoUpload')
+const PreviewCanvas = later(() => import('./components/playground/PreviewCanvas'), 'PreviewCanvas')
+const TransitionLab = later(() => import('./components/playground/TransitionLab'), 'TransitionLab')
+const WidgetGallery = later(() => import('./components/playground/WidgetGallery'), 'WidgetGallery')
 
 const galleryItems = ['home-clock', 'music', 'timer', 'weather', 'fitness', 'messages', 'camera', 'settings', 'system']
 // DRAW stays last: the narrow layout hides the last tab
@@ -30,7 +34,9 @@ const singleCard = params.get('card')
 
 export default function App() {
   const [tab, setTab] = useState<Tab>(tabs.find(t => t === params.get('tab')?.toUpperCase()) ?? 'BOARDS')
-  const [board, setBoard] = useState(boardIds.includes(params.get('board') ?? '') ? params.get('board')! : boardIds[0])
+  const [board, setBoard] = useState(boardIds.includes(params.get('board') ?? '') ? params.get('board')! : boardFromPath(window.location.pathname) ?? boardIds[0])
+  // per-view <title>, description and OG tags (crawlers get the same from the prebuilt dist/<board>/index.html)
+  useEffect(() => setPageMeta(tab === 'BOARDS' ? board : undefined), [tab, board])
   // the old view dissolves out before the new one mounts and enters (instant under reduced motion)
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const [view, leaving] = useExitSwap(`${tab}|${board}`, shown => reduced || !/^(BOARDS|GALLERY)\|/.test(shown) ? 0 : VIEW_EXIT_MS)
@@ -41,9 +47,10 @@ export default function App() {
     <header className="topbar"><div className="brand"><i aria-hidden="true"/> DOT/480 <small>{tab === 'WORKSPACE' ? 'PLAYGROUND' : tab}</small></div>
       <nav aria-label="Views">{tabs.map(t => <button key={t} className={tab === t ? 'selected' : ''} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}</nav>
       <div className="live"><i aria-hidden="true"/> LIVE</div></header>
+    <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
     {shownTab === 'BOARDS' ? (
       <section className="boards-view">
-        <div className="board-tabs" role="group" aria-label="Boards">{boardIds.map(id => <button key={id} className={board === id ? 'selected' : ''} aria-pressed={board === id} onClick={() => setBoard(id)}>{id.toUpperCase()}</button>)}</div>
+        <div className="board-tabs" role="group" aria-label="Boards">{boardIds.map(id => <button key={id} className={board === id ? 'selected' : ''} aria-pressed={board === id} onClick={() => setBoard(id)} onPointerEnter={() => prefetchBoard(id)} onFocus={() => prefetchBoard(id)}>{id.toUpperCase()}</button>)}</div>
         <Board key={shownBoard} id={shownBoard} leaving={leaving} />
       </section>
     ) : shownTab === 'GALLERY' ? (
@@ -78,5 +85,6 @@ export default function App() {
         </div>
       </section>
     )}
+    </Suspense>
     <footer className="bottom">DOT/480 / <b>CONFIGURATION 01</b><span>FIELD → GRID SAMPLER → RENDERER</span><span>STATUS: <b>NOMINAL</b></span></footer></main>
 }

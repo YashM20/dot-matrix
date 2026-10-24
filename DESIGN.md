@@ -52,7 +52,7 @@ Two surface tones do all the work: `{colors.bg}` (near-black canvas) behind ever
 ### Font System
 Dot/480 has **no conventional font family** — every text role is a precomputed bitmap dot-grid glyph set (see `bitmapFont.ts`), not a rasterized TTF. Latin letters, digits, and punctuation use a hand-authored 5×7 base grid; larger display sizes reuse the same glyph proportions scaled to 7×9 or 9×13 grids rather than switching typeface. CJK and any glyph outside the curated set fall back to a live-rasterized SDF pass over **Noto Sans SC**, sampled onto the same dot grid so it never visually breaks continuity with the bitmap font.
 
-There is no italic, no variable weight, and no letter-spacing tuning — hierarchy is built entirely from **grid size** (how many dots tall a glyph is) and **color** (`{colors.value}` vs `{colors.label}` vs `{colors.mute}`), never from a second typeface.
+The bitmap tiers have no italic, no variable weight, and no letter-spacing tuning (the opt-in dot type below has all three) — hierarchy is built entirely from **grid size** (how many dots tall a glyph is) and **color** (`{colors.value}` vs `{colors.label}` vs `{colors.mute}`), never from a second typeface.
 
 ### Hierarchy — TILE cards (the reference-fidelity standard)
 
@@ -69,6 +69,9 @@ Cards are `TILE` rasters: **144×144 dots at 2.25px** (`src/widgets/types.ts`), 
 `smooth` upsamples a glyph 2× with Scale2x: strokes two dots thick, diagonals stepping one dot — the reference numeral weight. Rings, arcs, rays and dot sliders use **dot sites** (`T.dotRing` / `T.dotLine` / `T.dotDisc` / `T.dotBars` / `T.dots`): evenly spaced dots along the curve, never square-grid rasters. A red marker or status dot is a single site dot (`T.dots([[x, y]], 7–9)`).
 
 Legacy `CARD` (80×74 @ 4px) cards still render, with whole-dot `scale` text (`L.text(..., { scale: [2, 3] })`) and the CSS card header; new cards should be TILE.
+
+### Dot type (variable stroke font, C8)
+A second, opt-in face for display and kinetic type: `src/engine/type` (`typeField` / `typeLayers` / `typeFrame`). Glyphs (A–Z, 0–9, punctuation) are hand-authored **centrelines** in a 10-unit cap box; the outline is the signed distance to them, so one field gives every size and four axes: `weight` (stroke 0.7–3.1 units), `width` (×0.6–1.4), `roundness` (curves and stroke ends are superellipses, n = 2 + 10(1 − r)²: 1 round, 0 squarish) and `slant` (shear). Upright static text is **hinted**: cap line, baseline, stems and arc boxes snap to the lattice and strokes round to whole dots. Moving or slanted text is unhinted, and its edge dots take part values that the sampler quantizes. Spacing is proportional, with kerning from side profiles (AV, LT, TA tuck in). Big type sits on a coarser `lattice` through `typeFrame`, like `T.big`. Kinetic helpers: `typeMorph` (SDF blend, letter-by-letter `sweep`), `typeMigration` (dot flight word to word), `marqueeField` (offset in 1/`sub` cell steps), `waveGlyphs` / `bounceGlyphs` / `weightWave` / `breathe`. CJK and emoji go through an offscreen-canvas luma raster **in the browser only**. Node and goldens skip them. The 5×7 bitmap font stays the label/body face, and `textAt` output is unchanged. Board: `?board=type`.
 
 ### Principles
 Every size in the hierarchy is a strict multiple of the base grid unit — there is no arbitrary in-between size. Weight is simulated by dot density, not a bold-font variant: a "heavier" numeral is achieved by widening `{grid.pitch}` or increasing `{dotStyle.sizeMax}` for that glyph's field, never by swapping a font file. This keeps every text role rendering through the exact same `Field → Sampler → Renderer` pipeline as every icon, chart, and photo in the system.
