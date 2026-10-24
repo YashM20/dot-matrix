@@ -12,7 +12,7 @@ import { PreviewCanvas } from './components/playground/PreviewCanvas'
 import { TransitionLab } from './components/playground/TransitionLab'
 import { WidgetGallery } from './components/playground/WidgetGallery'
 import { useExitSwap } from './hooks/useExitSwap'
-import { boardIds } from './widgets'
+import { boardById, boardIds } from './widgets'
 import './App.css'
 
 const galleryItems = ['home-clock', 'music', 'timer', 'weather', 'fitness', 'messages', 'camera', 'settings', 'system']
@@ -30,7 +30,7 @@ const singleCard = params.get('card')
 
 export default function App() {
   const [tab, setTab] = useState<Tab>(tabs.find(t => t === params.get('tab')?.toUpperCase()) ?? 'BOARDS')
-  const [board, setBoard] = useState(boardIds.includes(params.get('board') ?? '') ? params.get('board')! : boardIds[0])
+  const [board, setBoard] = useState(boardById(params.get('board') ?? '')?.id ?? boardIds[0])
   // the old view dissolves out before the new one mounts and enters (instant under reduced motion)
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const [view, leaving] = useExitSwap(`${tab}|${board}`, shown => reduced || !/^(BOARDS|GALLERY)\|/.test(shown) ? 0 : VIEW_EXIT_MS)

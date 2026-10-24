@@ -89,7 +89,7 @@ Status key:
 | `snap --replay`, `--ref` (HVS-SSIM), `--diff`, G6 flash check (§2.6) | Not built | The G6 safety gate is never enforced. Flash-heavy cards (`hb-error` dropout bursts, cinema flicker) are unchecked |
 | G2 `accentRole`, G3 lattice ladder | Blocked on decisions §11.1 and §11.5 | Two of the six gates are inert |
 | ≤ 8 MB memory per board, ≤ 150 kB gzip shell (§6) | Never measured; boards are not lazy-loaded | Unknown |
-| Hourglass tilt (signature moment 1) | `glyph-hourglass` reads `data.tilt`, but nothing in `src/hooks` or `src/components` wires DeviceOrientation (or the iOS permission prompt) to it | The moment can't be demoed on a phone |
+| Hourglass tilt (signature moment 1) | `lock-hourglass` reads `data.tilt`, but nothing in `src/hooks` or `src/components` wires DeviceOrientation (or the iOS permission prompt) to it | The moment can't be demoed on a phone |
 | Mirror "heals" (signature moment 2) | `mirror-camera` exists; the scratch-and-regrow interaction does not | Moment 2 is incomplete |
 | Torch in the Dark (signature moment 5) | `light-torch` and the torchlit `lv-corridor` exist, but level-03 itself is not torch-lit | Moment 5 is a stand-in |
 
@@ -130,7 +130,7 @@ D-1 to D-8 are MASTER-PLAN §11. D-9 onward are new, raised by this audit and by
 | H3 | **Perf gates in CI** | `bench --strict` on a relative baseline (fail on > 15% regression against `main`'s artifact, not on absolute ms); a board p95 that includes entrance; heap per board; shell size with `boards/*` code-split by `import()` | Board p95 ≤ 8 ms at 30 fps; ≤ 8 MB per board; shell ≤ 150 kB gzip; no strict-mode false positives in 10 CI runs |
 | H4 | **Safety and a11y** | G6 flash analysis over `snap --film` frames (WCAG 2.3.1: ≤ 3 flashes/s, red flash); axe in CI on 4 boards via Playwright; the `--mute` fix (D-9); real-device touch and multitouch on iOS Safari and Android Chrome | G6 passes on all 146 cards, or the card gets a reduced-flash variant; axe 0 violations in CI; Instrument XY + 4 knobs work with two fingers on a phone |
 | H5 | **Fidelity calibration** | The taste session (D-11), then P0-F: score 20 cards for κ and rank all 146 by visual score. Build `snap --ref` with HVS-SSIM (CSF at 2 viewing distances) and `snap --diff` | κ ≥ 0.6; liked cards in the top quartile; rejected cards in the bottom half; every flagship has a like or a waiver |
-| H6 | **Real hosts and devices** | MCP Heartbeat in Claude Desktop, VS Code Copilot and ChatGPT (adds Streamable HTTP, `@modelcontextprotocol/node` in `mcp/` only); 2 device targets photographed for HVS-SSIM; the 60 s Glyph recording; DeviceOrientation wired for `glyph-hourglass` | Screenshots from 3 hosts in `docs/MCP-APP.md`; simulator vs photo HVS-SSIM ≥ 0.85 on TRMNL and WLED; a 60 s recording at 30 fps with 0 drops |
+| H6 | **Real hosts and devices** | MCP Heartbeat in Claude Desktop, VS Code Copilot and ChatGPT (adds Streamable HTTP, `@modelcontextprotocol/node` in `mcp/` only); 2 device targets photographed for HVS-SSIM; the 60 s Glyph recording; DeviceOrientation wired for `lock-hourglass` | Screenshots from 3 hosts in `docs/MCP-APP.md`; simulator vs photo HVS-SSIM ≥ 0.85 on TRMNL and WLED; a 60 s recording at 30 fps with 0 drops |
 | H7 | **Determinism** | Goldens in Chromium and WebKit through Playwright (the dot-list hash, rendered in-page) | Hashes match across engines, or every mismatch has a named cause and a fix |
 | H8 | **Packaging** | Curated barrel (`src/engine/index.ts` → explicit named exports, internals under `@dot480/core/internal`); `.d.ts` via `tsc --emitDeclarationOnly`; `publint` + `arethetypeswrong` in CI; Tailwind removed | `npm i @dot480/core` in a clean Vite, Next and Node 22 app renders `ui-toggle`; the public API surface is listed in `docs/API.md` (generated) |
 
@@ -205,7 +205,7 @@ Ordered by leverage. Sizes assume one developer plus agents. Every phase keeps t
 
 ### P7 · Launch: docs site, interactive essay, hosted card service (3 wk)
 - **Goal:** turn the build into something people can find, read, embed and link. Most of the value of P0–P6 is invisible until this ships.
-- **Flagship:** the *"Ditherpunk for UI"* interactive essay (if P6 slipped it), embedding the 5 signature moments live: `glyph-hourglass`, `mirror-camera` (with heals, R1), Five Surfaces, `hb-live`, and level-03 torch-lit (C2.2).
+- **Flagship:** the *"Ditherpunk for UI"* interactive essay (if P6 slipped it), embedding the 5 signature moments live: `lock-hourglass`, `mirror-camera` (with heals, R1), Five Surfaces, `hb-live`, and level-03 torch-lit (C2.2).
 - **Engine work:**
   - `<dot-card>` hydration from a spec hash;
   - SSR-safe static render (SVG string from Node, no DOM);
@@ -370,7 +370,7 @@ Ranked by expected value per week.
 | 5 | **Track L step 3: perceptual error optimization** (Chizhov 2022), offline | AI authoring (P9) needs faces better than structure-aware step 2 | Beats step 2 on HVS-SSIM for 10 portraits; afterlight-class result on 1 new face in a blind A/B | P9, cinema |
 | 6 | **R7 MSDF glyphs and icons** | Unblocks CJK morphs (P11) and weather icon morphs without corner collapse | Mid-frame morphs free of collapse on 30 glyph pairs; CJK at 16² legible to 3 readers | P11 |
 | 7 | **R4 Multi-screen choreography** (BroadcastChannel → WebRTC, NTP-style sync) | The Five Surfaces flagship already uses BroadcastChannel locally | ≤ 1 frame drift over 60 s across 2 devices on Wi-Fi | P13, essay |
-| 8 | **R2 Sliced-OT migration** (worker) | Hilbert rank is good enough (0.4 ms). Run this only if the `glyph-longpress` taste pass flags crossings | Blind A/B preference over Hilbert rank ≥ 60% | P8 |
+| 8 | **R2 Sliced-OT migration** (worker) | Hilbert rank is good enough (0.4 ms). Run this only if the `lock-longpress` taste pass flags crossings | Blind A/B preference over Hilbert rank ≥ 60% | P8 |
 | 9 | **R12 Audio-reactive fields** (new): mic → FFT → `ctx.data` via `src/media/` (camera pattern) | `audio-levels` and the mirror pipeline already exist | ≤ 1 frame of latency from FFT to draw; no G6 flash failures at music peaks | essay |
 | 10 | **R8 Generative editions** | A gallery/artist track. Low priority until the essay ships | One curated edition of 64, deterministic across engines (H7) | P10 |
 

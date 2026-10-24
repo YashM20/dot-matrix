@@ -15,7 +15,7 @@ import { lightBoard } from './boards/light'
 import { levelsBoard } from './boards/levels'
 import { heartbeatBoard } from './boards/heartbeat'
 import { simBoard } from './boards/sim'
-import { glyphBoard } from './boards/glyph'
+import { lockBoard } from './boards/glyph'
 import { liveBoard, liveSources } from './boards/live'
 import type { Source } from '../data/source'
 import { mirrorBoard } from './boards/mirror'
@@ -50,7 +50,7 @@ export const boards: BoardDef[] = [
   { id: 'levels', title: 'LEVELS — HIVE, NINE WORLDS', columns: 3, items: levelsBoard },
   { id: 'heartbeat', title: 'HEARTBEAT — AGENT PRESENCE', columns: 3, items: heartbeatBoard },
   { id: 'sim', title: 'SIM — LIVING FIELDS', columns: 3, items: simBoard },
-  { id: 'glyph', title: 'GLYPH — LOCK EXPERIENCES', columns: 2, items: glyphBoard },
+  { id: 'lock', title: 'LOCK — LOCK SCREEN EXPERIENCES', columns: 2, items: lockBoard },
   { id: 'live', title: 'LIVE — WEATHER, NOW PLAYING, CONTRIBUTIONS', columns: 3, items: liveBoard, sources: liveSources },
   { id: 'mirror', title: 'MIRROR — LIVE HALFTONE', columns: 3, items: mirrorBoard },
   { id: 'gpu', title: 'GPU — HALF A MILLION DOTS', columns: 2, items: gpuBoard },
@@ -58,9 +58,11 @@ export const boards: BoardDef[] = [
   { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, items: componentsBoard },
 ]
 export const boardIds = boards.map(b => b.id)
-export const boardById = (id: string): BoardDef | undefined => boards.find(b => b.id === id)
+/** Old board ids that still resolve (deep links, bookmarks): `?board=glyph` opens the lock board. */
+export const boardAliases: Readonly<Record<string, string>> = { glyph: 'lock' }
+export const boardById = (id: string): BoardDef | undefined => boards.find(b => b.id === (boardAliases[id] ?? id))
 
 export const widgetPresets: WidgetPreset[] = boards.flatMap(b => b.items)
-export const widgetById = (id: string): WidgetPreset | undefined => widgetPresets.find(p => p.id === id)
+export const widgetById = (id: string): WidgetPreset | undefined => widgetPresets.find(p => p.id === id) ?? (id.startsWith('glyph-') ? widgetById(`lock-${id.slice(6)}`) : undefined)
 
 export * from './types'

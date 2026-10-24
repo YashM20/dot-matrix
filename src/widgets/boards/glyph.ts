@@ -1,5 +1,5 @@
 /**
- * Board — Glyph: lock-screen experiences in the Nothing-phone spirit. An hourglass clock whose
+ * Board — Lock (was "Glyph"; `?board=glyph` still resolves): lock-screen experiences in the Nothing-phone spirit. An hourglass clock whose
  * grains pour into the digits on each minute and trickle through the colon into a heap as the
  * seconds run, a padlock that unlocks behind a long-press radial reveal, a metaball inbox that buds
  * off a red count badge, and a Gray–Scott coral wallpaper on a round glyph matrix. Every card is a
@@ -43,7 +43,7 @@ const NECK = DY + 6 * DIG.py, TRICKLE = { from: 2.4, every: .95 }
 /** Distance fallen after τ s under gravity g, in whole `step`s; null before release. */
 const fallen = (tau: number, g: number, step: number) => (tau < 0 ? null : Math.floor((.5 * g * tau * tau) / step) * step)
 export const glyphHourglass: WidgetPreset = {
-  id: 'glyph-hourglass', name: 'Hourglass', label: '01  HOURGLASS', group: 'text', ...tile, clock: true,
+  id: 'lock-hourglass', name: 'Hourglass', label: '01  HOURGLASS', group: 'text', ...tile, clock: true,
   defaults: { tilt: 0 },
   layers: ({ since, data }) => {
     const now = new Date(), sec = since ?? now.getSeconds() + now.getMilliseconds() / 1000
@@ -159,7 +159,7 @@ const partLayers = (parts: Part[]) => parts.filter(p => p.pts.length).map(p => l
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 const migProgress = (age: number) => clamp01((age - MIG0) / MIG)
 export const glyphLongpress: WidgetPreset = {
-  id: 'glyph-longpress', name: 'Long Press', label: '02  LONG PRESS', group: 'composite', ...tile,
+  id: 'lock-longpress', name: 'Long Press', label: '02  LONG PRESS', group: 'composite', ...tile,
   style: { ...tileStyle, cornerRoundness: 0 },
   defaults: { hold: 0 },
   controls: [{ key: 'hold', kind: 'button', box: [CX - RING - 4, CY - RING - 4, 2 * RING + 8, 2 * RING + 8], label: 'Hold to unlock' } satisfies Control],
@@ -213,28 +213,30 @@ export const glyphLongpress: WidgetPreset = {
 // ── 03 NOTIFY ───────────────────────────────────────────────────────────────
 // A metaball inbox: Σ r²/d² over two bodies, thresholded on a 3.6-cell lattice into core, skin and
 // halo. Every PERIOD s a bud pinches off the top-right of the body, and once it is free it turns
-// into the badge — red sites (the board's one red: a *live* count) with the count in white 3×5
+// into the badge — red sites (the board's one red: a *live* count) with the count in white 5×7
 // numerals on the same lattice. Then it is drawn back in, read, and merges grey.
-const PERIOD = 7, PITCH = 3.6, BIG: Pt = [58.8, 77.4], OFF: Pt = [41.4, -36]
+const PERIOD = 7, PITCH = 3.6, BIG: Pt = [58.8, 77.4], OFF: Pt = [46, -40]
 const lattice: Pt[] = []
 for (let y = 16.2; y < 122; y += PITCH) for (let x = 5.4; x < 140; x += PITCH) lattice.push([x, y])
+/** The count in 5×7 numerals on the badge's own lattice (hand-set: 3×5 read as a smudge at 1×). */
 const MINI: Record<string, string[]> = {
-  '1': ['.#.', '##.', '.#.', '.#.', '###'], '2': ['##.', '..#', '.#.', '#..', '###'], '3': ['##.', '..#', '.#.', '..#', '##.'],
-  '4': ['#.#', '#.#', '###', '..#', '..#'], '5': ['###', '#..', '##.', '..#', '##.'], '6': ['.##', '#..', '###', '#.#', '###'],
-  '7': ['###', '..#', '.#.', '.#.', '.#.'], '8': ['###', '#.#', '.#.', '#.#', '###'], '9': ['###', '#.#', '###', '..#', '##.'],
+  '2': ['.###.', '#...#', '....#', '...#.', '..#..', '.#...', '#####'], '3': ['####.', '....#', '....#', '.###.', '....#', '....#', '####.'],
+  '4': ['...#.', '..##.', '.#.#.', '#..#.', '#####', '...#.', '...#.'], '5': ['#####', '#....', '####.', '....#', '....#', '#...#', '.###.'],
+  '6': ['..##.', '.#...', '#....', '####.', '#...#', '#...#', '.###.'], '7': ['#####', '....#', '...#.', '..#..', '.#...', '.#...', '.#...'],
+  '8': ['.###.', '#...#', '#...#', '.###.', '#...#', '#...#', '.###.'], '9': ['.###.', '#...#', '#...#', '.####', '....#', '...#.', '.##..'],
 }
 const away = (t: number) => { const tau = t % PERIOD; return tau < 1 ? 0 : tau < 2.6 ? ease.emphasized((tau - 1) / 1.6) : tau < 4.6 ? 1 : tau < 6.2 ? 1 - ease.emphasized((tau - 4.6) / 1.6) : 0 }
 const snap = (x: number) => Math.round(x / PITCH) * PITCH
 export const glyphNotify: WidgetPreset = {
-  id: 'glyph-notify', name: 'Notify', label: '03  NOTIFY', group: 'composite', ...tile,
+  id: 'lock-notify', name: 'Notify', label: '03  NOTIFY', group: 'composite', ...tile,
   layers: ({ t }) => {
     const tt = t + 2.4, s = away(tt), wob = Math.sin(t * 2.1) * .6 * (1 - s), n = 2 + (Math.floor(tt / PERIOD) % 8) // stills land on the badge
-    const drop: Pt = [BIG[0] + 8 + s * (OFF[0] - 8), BIG[1] - 8 + s * (OFF[1] + 8)], rBig = 24 - 2 * s + wob, rDrop = 8 + 8 * s
+    const drop: Pt = [BIG[0] + 8 + s * (OFF[0] - 8), BIG[1] - 8 + s * (OFF[1] + 8)], rBig = 24 - 4 * s + wob, rDrop = 8 + 14 * s
     const badge = s > .8, core: Pt[] = [], skin: Pt[] = [], halo: Pt[] = [], red: Pt[] = [], ink: Pt[] = []
-    // the count's 3×5 cells, on lattice sites around the bud's nearest site
-    const gx = snap(drop[0] + 2 - 5.4) + 5.4, gy = snap(drop[1] - 1 - 16.2) + 16.2, glyph = MINI[String(n)] // the free bud bulges away from the body
+    // the count's 5×7 cells, on lattice sites around the bud's nearest site
+    const gx = snap(drop[0] - 1.8 - 5.4) + 5.4, gy = snap(drop[1] - 1.8 - 16.2) + 16.2, glyph = MINI[String(n)] // the free bud bulges away from the body
     const isInk = (x: number, y: number) => {
-      const c = Math.round((x - gx) / PITCH) + 1, r = Math.round((y - gy) / PITCH) + 2
+      const c = Math.round((x - gx) / PITCH) + 2, r = Math.round((y - gy) / PITCH) + 3
       return glyph[r]?.[c] === '#'
     }
     for (const [x, y] of lattice) {
@@ -246,27 +248,27 @@ export const glyphNotify: WidgetPreset = {
       layer(T.dots(halo, 1.2), 'faint'),
       layer(T.dots(skin, 2.2), 'mid'),
       layer(T.dots(core, 2.9)),
-      layer(T.dots(red, 2.6), 'active'),
-      layer(T.dots(ink, 3.3)),
+      layer(T.dots(red, 2.2), 'active'),
+      layer(T.dots(ink, 3.5)),
       layer(T.big(badge ? `${n} NEW` : 'ALL CLEAR', 6, 132, { lattice: 1.1 }), badge ? 'value' : 'idle'),
     ]
   },
 }
 
 // ── 04 IDLE ─────────────────────────────────────────────────────────────────
-// Gray–Scott labyrinth (src/engine/sim) on a round 46-site glyph matrix: four seeds grow into a thin labyrinth
-// that fills the disc, then it dims out and regrows. The sim is sampled at a bounded, looped time
+// Gray–Scott labyrinth (src/engine/sim) on a round 60-site glyph matrix: seeds grow into a fine labyrinth
+// that fills the disc, which keeps rearranging, then it dims out and regrows. The sim is sampled at a bounded, looped time
 // (lead + t·RATE mod LOOP), so a still is already a pattern and large t never replays far.
 // V maps to four tone/size steps; the disc edge ramps one site.
-const N = 46, K = 2.76, R = 63, OX = 72, OY = 78
-const rd = grayScott({ w: N, h: N, feed: .037, kill: .06, du: .12, dv: .06, seed: 7, blobs: 6, sub: 8, every: 12 })
+const N = 60, K = 2.1, R = 63, OX = 72, OY = 78
+const rd = grayScott({ w: N, h: N, feed: .037, kill: .06, du: .05, dv: .025, seed: 7, blobs: 14, sub: 12, every: 12, radius: [1, 2] })
 /** Sim seconds: LEAD of head start, then LOOP on repeat at RATE sim-s per board second (150 s per regrowth). */
-const LEAD = 1, LOOP = 9, RATE = .06
-const BANDS = [{ at: .3, size: 2.3, tone: 'value' }, { at: .22, size: 1.95, tone: 'idle' }, { at: .13, size: 1.5, tone: 'mid' }, { at: .06, size: 1, tone: 'faint' }] as const
+const LEAD = 1, LOOP = 11, RATE = .06
+const BANDS = [{ at: .3, size: 1.9, tone: 'value' }, { at: .24, size: 1.6, tone: 'idle' }, { at: .17, size: 1.2, tone: 'mid' }, { at: .1, size: .8, tone: 'faint' }] as const
 export const glyphIdle: WidgetPreset = {
-  id: 'glyph-idle', name: 'Idle', label: '04  IDLE', group: 'scatter', ...tile,
+  id: 'lock-idle', name: 'Idle', label: '04  IDLE', group: 'scatter', ...tile,
   layers: ({ t }) => {
-    const ph = (((t * RATE + 3) % LOOP) + LOOP) % LOOP, g = simAt(rd, LEAD + ph)
+    const ph = (((t * RATE + 5.5) % LOOP) + LOOP) % LOOP, g = simAt(rd, LEAD + ph)
     const fade = clamp01(2 * Math.min(ph, LOOP - ph)) // dims in over the first half sim-second, out over the last
     const bands: Pt[][] = BANDS.map(() => [])
     for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
@@ -279,4 +281,4 @@ export const glyphIdle: WidgetPreset = {
   },
 }
 
-export const glyphBoard: WidgetPreset[] = [glyphHourglass, glyphLongpress, glyphNotify, glyphIdle]
+export const lockBoard: WidgetPreset[] = [glyphHourglass, glyphLongpress, glyphNotify, glyphIdle]
