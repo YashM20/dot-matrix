@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useId, useState, type CSSProperties } from 'react'
+import { Suspense, use, useCallback, useEffect, useId, useState, type CSSProperties } from 'react'
 import { DotWidget } from './DotWidget'
 import { usePlayground } from './playground/store'
 import { presets } from '../engine/theme/tokens'
-import { boardById, boards, type BoardDef } from '../widgets'
+import { boardMeta, loadBoard, type BoardDef } from '../widgets/manifest'
 import type { ControlPatch } from '../engine'
 import { duration } from '../engine/motion'
 import type { DotCanvasProps } from './DotCanvas'
@@ -48,8 +48,15 @@ function seedShared(board: BoardDef): ControlPatch {
   return out
 }
 
+/** A board by id: its chunk loads on first open (`widgets/manifest`); the title holds the place meanwhile. */
 export function Board({ id, leaving = false }: { id: string; leaving?: boolean }) {
-  const board = boardById(id) ?? boards[0]
+  return <Suspense fallback={<section className="board-view" aria-busy="true"><h2 className="board-title">{boardMeta(id)?.title}</h2></section>}>
+    <LoadedBoard id={id} leaving={leaving} />
+  </Suspense>
+}
+
+function LoadedBoard({ id, leaving }: { id: string; leaving: boolean }) {
+  const board = use(loadBoard(id))
   const themeName = usePlayground(s => s.theme)
   const theme = presets[themeName]
   const tick = useMinuteTick()
