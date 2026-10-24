@@ -111,7 +111,13 @@ try {
       return { ok: r.ok && blue > 0, detail: `${r.detail}; ${blue} blue px/dots` }
     },
     masks: () => changed('masks', () => clickText('#fig-masks', 'radial'), 350),
-    departures: async () => { const a = await sig('departures'); await sleep(3200); const b = await sig('departures'); return { ok: a.n > 500 && a.sig !== b.sig, detail: `${a.n} lit, animating` } },
+    // animating = the figure keeps drawing (canvas draw calls, worker bitmaps included); pixel signatures can sit
+    // still for a second here (the station clock rests at 12)
+    departures: async () => {
+      await js(`(() => { window.__paint = 0; const p = CanvasRenderingContext2D.prototype; if (!p.__painted) { for (const m of ['clearRect', 'drawImage']) { const o = p[m]; p[m] = function (...a) { if (this.canvas.closest('#fig-departures')) window.__paint++; return o.apply(this, a) } } p.__painted = 1 } })()`)
+      const a = await sig('departures'); await sleep(2000); const paints = await js('window.__paint') as number
+      return { ok: a.n > 500 && paints >= 6, detail: `${a.n} lit, ${paints} draws in 2 s` }
+    },
     instrument: () => changed('instrument', () => drag('#fig-instrument .dot-card:first-child .dot-a11y-root', [[.5, .2], [.8, .3], [.85, .55], [.7, .8]])),
     light: () => changed('light', async () => { const [cx, cy, w] = await centre('#fig-light .dot-card:last-child .dot-a11y-root'); await mouse('mouseMoved', cx - w * .3, cy - w * .2); await sleep(200); await mouse('mouseMoved', cx + w * .25, cy + w * .1) }),
     sim: async () => { const a = await sig('sim'); await sleep(1200); const b = await sig('sim'); return { ok: a.n > 500 && a.sig !== b.sig, detail: `${a.n} lit, animating` } },
