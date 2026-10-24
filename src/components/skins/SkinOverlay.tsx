@@ -84,6 +84,13 @@ class Runner {
 }
 
 const runnerOf = (ref: { current: Runner | null }): Runner => (ref.current ??= new Runner())
+/**
+ * The card's wrapper, read through the overlay's own canvas first: when the wrapper and the overlay mount in the
+ * same commit (a board whose chunk lands after the overlay's), React attaches the wrapper's ref only after the
+ * overlay's layout effects ran, so `wrapRef.current` is still null there (the card stayed OLED under CRT).
+ */
+const wrapOf = (overlay: RefObject<HTMLCanvasElement | null>, wrap: RefObject<HTMLDivElement | null>): HTMLDivElement | null =>
+  (overlay.current?.parentElement as HTMLDivElement | null | undefined) ?? wrap.current
 
 /**
  * Lazy part of the display stage (loaded on the first non-OLED skin): the overlay canvas and its stage,
@@ -112,7 +119,7 @@ export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, wid
 
   // backing scale: CSS size × DPR (same rule as DotCanvas), measured only while a skin is on
   useLayoutEffect(() => {
-    const el = wrapRef.current
+    const el = wrapOf(overlayRef, wrapRef)
     if (drawn === 'oled' || !el) return
     const measure = () => {
       const css = el.clientWidth / width || 1
@@ -126,7 +133,7 @@ export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, wid
   const W = Math.round(width * scale), H = Math.round(height * scale)
   // the stage: one per (skin, backing size); a resize keeps the skin without replaying its power-on
   useLayoutEffect(() => {
-    const runner = runnerOf(runnerRef), canvas = overlayRef.current, wrap = wrapRef.current
+    const runner = runnerOf(runnerRef), canvas = overlayRef.current, wrap = wrapOf(overlayRef, wrapRef)
     if (drawn === 'oled' || !canvas || !wrap) { runner.built = null; return }
     if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H }
     const ctx = canvas.getContext('2d', { alpha: false })
@@ -148,7 +155,7 @@ export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, wid
     if (!runner.stage || copying) return
     if (mode === 'canvas') {
       let live = true
-      queueMicrotask(() => { const src = wrapRef.current?.firstElementChild; if (live && src instanceof HTMLCanvasElement && src.width) runner.feed(src) })
+      queueMicrotask(() => { const src = wrapOf(overlayRef, wrapRef)?.firstElementChild; if (live && src instanceof HTMLCanvasElement && src.width) runner.feed(src) })
       return () => { live = false }
     }
     const c = runner.scratch ??= document.createElement('canvas')
@@ -166,7 +173,7 @@ export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, wid
     let queued = false
     const copy = () => {
       queued = false
-      const src = wrapRef.current?.firstElementChild
+      const src = wrapOf(overlayRef, wrapRef)?.firstElementChild
       if (src instanceof HTMLCanvasElement && src.width) runner.feed(src)
     }
     const later = () => { if (!queued) { queued = true; queueMicrotask(copy) } }
@@ -176,7 +183,7 @@ export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, wid
 
   // the wrapper is DisplaySurface's; mark it with the skin being drawn (CSS hides the card under an overlay)
   useLayoutEffect(() => {
-    const el = wrapRef.current
+    const el = wrapOf(overlayRef, wrapRef)
     if (!el) return
     el.dataset.skin = drawn
     if (leaving) el.dataset.leaving = ''; else delete el.dataset.leaving
