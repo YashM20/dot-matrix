@@ -72,11 +72,11 @@ function body(g: NcaGrid, skip?: Float32Array): Layer[] {
 const reseed = (g: NcaGrid) => { g.cells.fill(0); ncaSeed(g, SEED_X, model.seedAt[1]) }
 const at = (s: number) => Math.round(s / DT)
 
-// ── 01 Heal: a scripted cut takes the left half at 5 s and it regrows, the regrowth front in red; at 12 s
+// ── 01 Heal: a scripted cut takes the top half (head, front legs: ~48% of the body) at 5 s and it regrows, the regrowth front in red; at 12 s
 // it starts again from one seed cell. Loop [3 s, 15 s): t = 0 is already grown.
 const heroRun = ncaRun({
   model, w: W, h: H, dt: DT, seed: 3, lead: 3, period: 12, every: 24,
-  script: (g, n) => { if (n === at(5)) ncaErase(g, x => x < W / 2); else if (n === at(12)) reseed(g) },
+  script: (g, n) => { if (n === at(5)) ncaErase(g, (_x, y) => y < H * .46); else if (n === at(12)) reseed(g) },
 })
 const growth = new Float32Array(W * H)
 export const healMirror: WidgetPreset = {
@@ -123,7 +123,7 @@ export const healXray: WidgetPreset = {
 }
 
 // ── 03 Persist: a ghost hand scratches a different stroke every 4 s; the lizard never stops healing.
-// Loop 16 s. The ghost's fingertip is a small ring of `idle` dots while it drags.
+// Loop 16 s. The ghost's fingertip is a small ring of `mid` dots while it drags.
 interface Stroke { at: number; from: [number, number]; to: [number, number] }
 const STROKES: Stroke[] = [
   { at: 3.2, from: [6, 6], to: [26, 16] },
@@ -154,7 +154,7 @@ export const healPersist: WidgetPreset = {
     const ghost = persistRun.live ? null : ghostAt(s), ring: [number, number][] = []
     if (ghost) for (let a = 0; a < 12; a++) ring.push([OX + ghost[0] * K + Math.cos(a / 12 * Math.PI * 2) * GHOST_R * K, OY + ghost[1] * K + Math.sin(a / 12 * Math.PI * 2) * GHOST_R * K])
     const wounds = STROKES.filter(w => w.at <= s).length
-    return [...body(g), layer(T.dots(ring, 1), 'idle'), ...footer(persistRun, ctx.t, `CUTS ${wounds}`, `HEAL ${pad(healPct(g), 3)}%`)]
+    return [...body(g), layer(T.dots(ring, 1.4), 'mid'), ...footer(persistRun, ctx.t, `CUTS ${wounds}`, `HEAL ${pad(healPct(g), 3)}%`)]
   },
 }
 

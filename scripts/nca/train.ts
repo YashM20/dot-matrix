@@ -1,10 +1,14 @@
 /**
  * Train the Growing-NCA lizard (Mordvintsev et al. 2020, "regenerating" experiment): sample pool, the
  * highest-loss sample of each batch reset to the seed, the lowest-loss ones damaged (discs and half-plane
- * cuts), 32–48 unrolled steps per iteration, BPTT by hand (core.ts), per-tensor gradient normalisation,
+ * cuts), 24–52 unrolled steps per iteration, BPTT by hand (core.ts), per-tensor gradient normalisation,
  * Adam. Pure CPU, plain TypeScript, no dependencies; the batch is split over worker threads.
  *
- *   npx tsx scripts/nca/train.ts [--minutes 12] [--workers 3] [--batch 8] [--hid 96] [--ch 12] [--resume]
+ *   npx tsx scripts/nca/train.ts --minutes 15 --smin 24 --smax 36                              # fresh
+ *   npx tsx scripts/nca/train.ts --resume --minutes 12 --smin 36 --smax 52 --damage 0 --lr 6e-4  # refine
+ *
+ * The shipped lizard is one fresh 15-min session plus two resumed 12-min sessions (lr 1e-3 with 28–40 steps,
+ * then 6e-4 with 36–52): 2,625 + 1,059 + 690 iterations. A fourth session made it worse and was dropped.
  *
  * Writes src/assets/nca/lizard.ts (Int8 asset) and scripts/nca/lizard.f32.txt (float weights, for --resume).
  */
@@ -17,9 +21,9 @@ import { toAsset, writeAsset } from './asset'
 import { evaluate, pickXray, STEP_DT } from './eval'
 
 const arg = (k: string, d: number) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? Number(process.argv[i + 1]) : d }
-const MINUTES = arg('minutes', 12), WORKERS = arg('workers', 3), BATCH = arg('batch', 8), POOL = arg('pool', 256)
+const MINUTES = arg('minutes', 12), WORKERS = arg('workers', 4), BATCH = arg('batch', 4), POOL = arg('pool', 128)
 const S0 = arg('smin', 28), S1 = arg('smax', 40), LR0 = arg('lr', 2e-3), SEED = arg('seed', 1), DAMAGE_FROM = arg('damage', .25)
-const dims: Dims = { W: GRID_W, H: GRID_H, C: arg('ch', 12), HID: arg('hid', 96), VIS: 2 }
+const dims: Dims = { W: GRID_W, H: GRID_H, C: arg('ch', 12), HID: arg('hid', 48), VIS: 2 }
 const FLOAT_FILE = 'scripts/nca/lizard.f32.txt', ASSET_FILE = 'src/assets/nca/lizard.ts'
 
 const target = lizardTarget(), R = rng(SEED * 7919)

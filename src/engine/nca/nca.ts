@@ -37,10 +37,10 @@ export interface NcaAsset {
 export interface NcaModel {
   channels: number; hidden: number; fire: number
   /** [hidden][3C] */
-  w1: Float32Array
-  b1: Float32Array
+  w1: Float64Array
+  b1: Float64Array
   /** [hidden][C] */
-  w2: Float32Array
+  w2: Float64Array
   w: number; h: number; seedAt: [number, number]; grown: number
 }
 
@@ -55,9 +55,9 @@ export function ncaBase64(s: string): Uint8Array {
   }
   return out.subarray(0, o)
 }
-function dequant(b64: string, scales: number[], cols: number): Float32Array {
-  const q = new Int8Array(ncaBase64(b64).buffer), out = new Float32Array(scales.length * cols)
-  for (let r = 0; r < scales.length; r++) for (let c = 0; c < cols; c++) out[r * cols + c] = q[r * cols + c] * scales[r]
+function dequant(b64: string, scales: number[], cols: number): Float64Array {
+  const q = new Int8Array(ncaBase64(b64).buffer), out = new Float64Array(scales.length * cols)
+  for (let r = 0; r < scales.length; r++) for (let c = 0; c < cols; c++) out[r * cols + c] = Math.fround(q[r * cols + c] * scales[r])
   return out
 }
 /** Decode a shipped asset into float weights. */
@@ -65,7 +65,7 @@ export function ncaModel(a: NcaAsset): NcaModel {
   const C = a.channels, P = 3 * C
   return {
     channels: C, hidden: a.hidden, fire: a.fire, w: a.w, h: a.h, seedAt: a.seedAt, grown: a.grown,
-    w1: dequant(a.w1, a.s1, P), b1: Float32Array.from(a.b1), w2: dequant(a.w2, a.s2, C),
+    w1: dequant(a.w1, a.s1, P), b1: Float64Array.from(a.b1, Math.fround), w2: dequant(a.w2, a.s2, C),
   }
 }
 

@@ -101,6 +101,9 @@
 - [-] Cross-engine goldens, `snap --replay/--ref/--diff`, the G6 flash check → Track L.
 - [-] Engine barrel curation + library `.d.ts` build → P6 packaging.
 
+**Web plan (2026-10-23)**
+- [x] C3 Growing NCA, board `heal` (heal-mirror / heal-xray / heal-persist). Engine `src/engine/nca/`: 12 ch, 48 hidden, Int8 asset `src/assets/nca/lizard.ts` (2,352 params, ~3 KB). Training: `scripts/nca/train.ts`, plain-TS BPTT on worker threads, 4,374 iterations in 3 sessions (39 min total; smaller than planned because this laptop was at 100% load). Regrowth after a top-half cut (47%): 50 steps = 1.7 s at 30 steps/s. Left/right/bottom cuts regrow the body, but the limbs on that side only come back as stubs. Step cost under load: 6 ms (board grid) and 26 ms (64², four lizards). The 2 ms gate is unverified on an idle machine.
+
 ## How to resume (read first)
 1. `pnpm i`, then `pnpm dev`.
    - Tabs: BOARDS, GALLERY, WORKSPACE, LOG and DRAW.
