@@ -39,7 +39,10 @@ export function placeCells(grid: GridConfig, field: Field, col: number, row: num
 export function textAt(grid: GridConfig, str: string, col: number, row: number, opts: TextOptions & { align?: 'left' | 'center' | 'right' } = {}): Field {
   const [w, h] = textSize(str, opts)
   const left = opts.align === 'center' ? Math.round(col - w / 2) : opts.align === 'right' ? col - w + 1 : col
-  return placeCells(grid, textField(str, opts), left, row, w, h)
+  const f = placeCells(grid, textField(str, opts), left, row, w, h)
+  f.text = str
+  f.from = { gen: 'text', grid, args: [str, col, row, opts] }
+  return f
 }
 export function textSize(str: string, opts: TextOptions = {}): [number, number] {
   const [sx, sy] = scaleOf(opts)

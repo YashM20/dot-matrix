@@ -1,11 +1,12 @@
 import type { DotStyle, Field, GridConfig, Layer, Tone } from '../engine/types'
-import type { FrameContext } from '../engine/context'
+import type { Control, FrameContext } from '../engine/context'
 import { barsAt, centeredBarsAt, discCells, dotAt, hRule, placeCells, polylineCells, rectCells, ringCells, spriteAt, textAt, textSize, vRule } from '../engine/layout'
-import { latticeGrid } from '../engine/sampler/gridSampler'
+import { cellU, latticeGrid } from '../engine/sampler/gridSampler'
 import { cachedIconField, iconPaths } from '../engine/fields/iconSDF'
 import { cjkTextField } from '../engine/fields/cjkFallback'
 import type { TextOptions } from '../engine/fields/bitmapFont'
 import { combine } from '../engine/layout'
+import { hash01 } from '../engine/math'
 export { bounded, combine, dim, place } from '../engine/layout'
 
 /** Frame context a preset's `layers()` receives — see `FrameContext` in the engine. */
@@ -20,15 +21,26 @@ export interface WidgetPreset {
   animated?: boolean
   /** Reads the wall clock (time/date text) — re-sampled on each minute tick; other static cards never re-sample. */
   clock?: boolean
+  /**
+   * Seconds of live animation after each minute tick (needs `clock`): the card is re-sampled every
+   * frame with `ctx.since` = seconds since the tick, e.g. for a split-flap. Replaces the change dissolve.
+   */
+  burst?: number
+  /** Interactive regions (P2): pointer / keyboard input edits `data[control.key]`; see `Control`. */
+  controls?: Control[]
   grid: GridConfig
   style: DotStyle
   defaults?: Record<string, number>
+  /** Data keys that glide to new values on a critically damped spring instead of dissolving (DotCanvas `springKeys`). */
+  springKeys?: string[]
   /** `dots`: the card label and live dot are drawn by the engine inside the grid (TILE cards). */
   chrome?: 'dots'
   /** Label text drawn by `chrome: 'dots'` (defaults to `name`; '' = no label). */
   label?: string
   /** Edge-to-edge artwork: the card has no inner padding (photo cards). */
   bleed?: boolean
+  /** Live media the host feeds into `ctx.media` (app-level capture in `src/media/`, started only by a control). */
+  media?: 'camera'
   layers(ctx: WidgetContext): Layer[]
 }
 
@@ -55,6 +67,96 @@ export interface SiteOptions {
   size?: number
 }
 export const layer = (src: Field | LatticeField, tone: Tone = 'value'): Layer => (typeof src === 'function' ? { field: src, tone } : { ...src, tone })
+/**
+ * A static field memoised per cell centre of `grid`: each centre is computed once, later samples read
+ * the table. Any other u/v (thumbnails, another grid) goes straight to `field`, so output is identical.
+ * Only for fields that never change (no `t`, no data) — photo-like cards whose per-cell maths is heavy.
+ */
+export function baked(grid: GridConfig, field: Field): Field {
+  const { cols, rows } = grid
+  let table: Float64Array | undefined
+  const f: Field = (u, v) => {
+    const c = Math.round(u * (cols - 1)), r = Math.round(v * (rows - 1))
+    if (c < 0 || r < 0 || c >= cols || r >= rows || u !== cellU(c, cols) || v !== cellU(r, rows)) return field(u, v)
+    table ??= new Float64Array(cols * rows).fill(NaN)
+    const i = r * cols + c, x = table[i]
+    return x === x ? x : (table[i] = field(u, v))
+  }
+  if (field.bounds) { const [c0, r0, c1, r1] = field.bounds; f.bounds = [c0, r0, c1, r1] }
+  return f
+}
+/** One band of a `toneRamp`: field values from `at` up to the next stop's `at` draw in `tone`. */
+export interface ToneStop {
+  at: number
+  tone: Tone
+  /** Dot value for field value `h` in this band (default `h`; 0 = no dot). */
+  value?: (h: number) => number
+  /**
+   * Dissolve this band's lower edge over [at, at + blend]: a cell joins the band when its per-cell hash
+   * is under (h - at) / blend, else it stays in the band below. Two tones dither into each other, no contour.
+   */
+  blend?: number
+}
+/**
+ * One static field drawn in several tones (cool grey → warm → hot, shadow → mid → highlight), as a single
+ * multi-tone layer (`Layer.toneOf`): `field` is evaluated once per cell of `grid` and the band and value
+ * memoised, and the sampler reads value and tone in one scan. Values below the first stop draw nothing.
+ * Off-grid samples (thumbnails) are computed directly. Returned as a one-element array so it spreads into
+ * a layer stack. Like `baked`, only for fields that never change (no `t`, no data); `seed` picks the dither hash.
+ */
+export function toneRamp(field: Field, stops: ToneStop[], { grid = TILE, seed = 7 }: { grid?: GridConfig; seed?: number } = {}): Layer[] {
+  const { cols, rows } = grid
+  let hit = -1, hitValue = 0
+  const pick = (u: number, v: number, c: number, r: number) => {
+    const h = field(u, v)
+    for (let i = stops.length - 1; i >= 0; i--) {
+      const s = stops[i]
+      if (!(h >= s.at) || (s.blend && hash01(c * 151 + r, seed) >= (h - s.at) / s.blend)) continue
+      hit = i; hitValue = s.value ? s.value(h) : h; return
+    }
+    hit = -1; hitValue = 0
+  }
+  // On first use: one pass over the field's window fills the value (Float32, the sampler's own precision)
+  // and band of every cell, and the box of lit cells (the layer's bounds).
+  let values: Float32Array | undefined, bands: Int8Array | undefined
+  const box: [number, number, number, number] = [cols, rows, -1, -1]
+  const fill = () => {
+    if (values) return
+    values = new Float32Array(cols * rows); bands = new Int8Array(cols * rows).fill(-1)
+    const b = field.bounds
+    const c0 = b ? Math.max(0, Math.floor(b[0])) : 0, r0 = b ? Math.max(0, Math.floor(b[1])) : 0
+    const c1 = b ? Math.min(cols - 1, Math.ceil(b[2])) : cols - 1, r1 = b ? Math.min(rows - 1, Math.ceil(b[3])) : rows - 1
+    for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+      pick(cellU(c, cols), cellU(r, rows), c, r)
+      if (hit < 0) continue
+      values[r * cols + c] = hitValue; bands[r * cols + c] = hit
+      if (c < box[0]) box[0] = c
+      if (r < box[1]) box[1] = r
+      if (c > box[2]) box[2] = c
+      if (r > box[3]) box[3] = r
+    }
+  }
+  /** Table index of a cell centre of `grid`, else -1 (thumbnails, another grid: computed directly). */
+  const cellAt = (u: number, v: number) => {
+    const x = u * (cols - 1), y = v * (rows - 1), c = Math.round(x), r = Math.round(y)
+    return c >= 0 && r >= 0 && c < cols && r < rows && Math.abs(x - c) < 1e-6 && Math.abs(y - r) < 1e-6 ? r * cols + c : -1
+  }
+  const offGrid = (u: number, v: number) => pick(u, v, Math.round(u * (cols - 1)), Math.round(v * (rows - 1)))
+  const f: Field = (u, v) => {
+    const i = cellAt(u, v)
+    if (i >= 0) { fill(); return values![i] }
+    offGrid(u, v)
+    return hit >= 0 ? hitValue : 0
+  }
+  Object.defineProperty(f, 'bounds', { get: () => (fill(), box), enumerable: true })
+  const toneOf = (_: number, u: number, v: number): Tone | undefined => {
+    const i = cellAt(u, v)
+    if (i >= 0) { fill(); return stops[bands![i]]?.tone }
+    offGrid(u, v)
+    return stops[hit]?.tone
+  }
+  return [{ field: f, toneOf }]
+}
 export const staticLayers = (layers: Layer[]) => () => layers
 /** Flatten a preset to a single field (thumbnails, exports, tests). */
 export const presetField = (p: WidgetPreset, ctx: WidgetContext = { t: 0, data: p.defaults ?? {} }): Field => {
@@ -89,29 +191,34 @@ export const withChrome = (p: WidgetPreset): WidgetPreset['layers'] => {
 
 /** Cell-space drawing helpers bound to one grid — what every reference card is built from. */
 export const TAU = Math.PI * 2
+/** Layout helpers whose fields `presetToSpec` (src/spec) can carry as `generator` layers: same name, same JSON args. */
+export const LAYOUT_GENERATORS = ['dot', 'rect', 'hrule', 'vrule', 'disc', 'ring', 'box', 'sprite', 'bars', 'cbars', 'line', 'icon', 'cjk'] as const
+export type LayoutGenerator = typeof LAYOUT_GENERATORS[number]
 export function layoutFor(grid: GridConfig) {
   const W = grid.cols, H = grid.rows
+  /** Tag a helper's fields with their name, grid and args (Field.from) — spec export metadata only. */
+  const tag = <F extends (...args: never[]) => Field>(gen: LayoutGenerator, make: F): F => ((...args: Parameters<F>) => { const f = make(...args); f.from = { gen, grid, args }; return f }) as F
   return {
     W, H,
     text: (str: string, col: number, row: number, opts: TextOptions & { align?: 'left' | 'center' | 'right' } = {}) => textAt(grid, str, col, row, opts),
     size: textSize,
-    dot: (col: number, row: number, value = 1) => dotAt(grid, col, row, value),
-    rect: (col: number, row: number, w: number, h: number, value = 1) => rectCells(grid, col, row, w, h, value),
-    hrule: (col: number, row: number, w: number, step = 1, value = 1) => hRule(grid, col, row, w, step, value),
-    vrule: (col: number, row: number, h: number, step = 1, value = 1) => vRule(grid, col, row, h, step, value),
-    disc: (cx: number, cy: number, r: number, value = 1) => discCells(grid, cx, cy, r, value),
-    ring: (cx: number, cy: number, r: number, opts: Parameters<typeof ringCells>[4] = {}) => ringCells(grid, cx, cy, r, opts),
+    dot: tag('dot', (col: number, row: number, value = 1) => dotAt(grid, col, row, value)),
+    rect: tag('rect', (col: number, row: number, w: number, h: number, value = 1) => rectCells(grid, col, row, w, h, value)),
+    hrule: tag('hrule', (col: number, row: number, w: number, step = 1, value = 1) => hRule(grid, col, row, w, step, value)),
+    vrule: tag('vrule', (col: number, row: number, h: number, step = 1, value = 1) => vRule(grid, col, row, h, step, value)),
+    disc: tag('disc', (cx: number, cy: number, r: number, value = 1) => discCells(grid, cx, cy, r, value)),
+    ring: tag('ring', (cx: number, cy: number, r: number, opts: Parameters<typeof ringCells>[4] = {}) => ringCells(grid, cx, cy, r, opts)),
     /** Outlined rectangle, `step` controls dotting of the outline. */
-    box: (col: number, row: number, w: number, h: number, step = 1, value = 1): Field => {
+    box: tag('box', (col: number, row: number, w: number, h: number, step = 1, value = 1): Field => {
       return combine(hRule(grid, col, row, w, step, value), hRule(grid, col, row + h - 1, w, step, value), vRule(grid, col, row, h, step, value), vRule(grid, col + w - 1, row, h, step, value))
-    },
-    sprite: (rows: string[], col: number, row: number, scale = 1) => spriteAt(grid, rows, col, row, scale),
-    bars: (values: number[], col: number, base: number, height: number, barW = 1, gap = 1, every = 1) => barsAt(grid, values, col, base, height, barW, gap, every),
-    cbars: (values: number[], col: number, centre: number, half: number, barW = 1, gap = 1) => centeredBarsAt(grid, values, col, centre, half, barW, gap),
-    line: (points: [number, number][], every = 1, value = 1) => polylineCells(grid, points, every, value),
-    place: (field: Field, col: number, row: number, w: number, h: number) => placeCells(grid, field, col, row, w, h),
-    icon: (name: keyof typeof iconPaths, col: number, row: number, size: number, opts: { fill?: boolean; stroke?: number } = {}) => placeCells(grid, cachedIconField(name, iconPaths[name], 64, opts), col, row, size, size),
-    cjk: (text: string, col: number, row: number, cell: number) => placeCells(grid, cjkTextField(text), col, row, cell * [...text].length, cell),
+    }),
+    sprite: tag('sprite', (rows: string[], col: number, row: number, scale = 1) => spriteAt(grid, rows, col, row, scale)),
+    bars: tag('bars', (values: number[], col: number, base: number, height: number, barW = 1, gap = 1, every = 1) => barsAt(grid, values, col, base, height, barW, gap, every)),
+    cbars: tag('cbars', (values: number[], col: number, centre: number, half: number, barW = 1, gap = 1) => centeredBarsAt(grid, values, col, centre, half, barW, gap)),
+    line: tag('line', (points: [number, number][], every = 1, value = 1) => polylineCells(grid, points, every, value)),
+    place: (field: Field, col: number, row: number, w: number, h: number) => { const f = placeCells(grid, field, col, row, w, h); f.from = { gen: 'place', grid, args: [col, row, w, h], inner: field }; return f },
+    icon: tag('icon', (name: keyof typeof iconPaths, col: number, row: number, size: number, opts: { fill?: boolean; stroke?: number } = {}) => placeCells(grid, cachedIconField(name, iconPaths[name], 64, opts), col, row, size, size)),
+    cjk: tag('cjk', (text: string, col: number, row: number, cell: number) => placeCells(grid, cjkTextField(text), col, row, cell * [...text].length, cell)),
     /**
      * Hero text on its own lattice: `lattice` card cells per dot, anchored at card cell (col,row).
      * `smooth` gives the 2-dot-stroke display weight. Width in card cells = size(...)[0] * lattice.
@@ -160,7 +267,7 @@ export function layoutFor(grid: GridConfig) {
       return { field: one, sites, size }
     },
     /** Arbitrary dot sites. */
-    dots: (points: Pt[], size = 1.8): LatticeField => ({ field: one, sites: points, lattice: size }),
+    dots: (points: Pt[], size = 1.8): LatticeField => ({ field: one, sites: points, size }),
     /** Layout helpers for a coarser lattice anchored at card cell (col,row); wrap results with `.at()`. */
     lattice: (k: number, col = 0, row = 0) => {
       const sub = latticeGrid(grid, k, [col, row])

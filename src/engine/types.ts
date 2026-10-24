@@ -4,7 +4,18 @@ export type CellBounds = [number, number, number, number]
  * A field maps u/v in [0,1]² to a value in [0,1]. Cell-space layout helpers also attach `bounds`
  * (the only cells that can be non-zero) so the sampler can skip the rest of the grid.
  */
-export interface Field { (u: number, v: number): number; bounds?: CellBounds }
+export interface Field {
+  (u: number, v: number): number
+  bounds?: CellBounds
+  /** The string a text helper (`textAt`) drew — metadata for `describe()`, never read by the sampler. */
+  text?: string
+  /** How a helper built this field (IR source, a named layout generator) — metadata for spec export (`src/spec`), never read by the sampler. */
+  from?: FieldOrigin
+}
+/** Provenance of a field: compiled from Field IR `src`, or made by layout generator `gen` on `grid` with JSON-able `args` (`place` also keeps its `inner` field). */
+export type FieldOrigin =
+  | { ir: string; raw?: boolean }
+  | { gen: string; grid: GridConfig; args: unknown[]; inner?: Field }
 
 export interface GridConfig { cols: number; rows: number; pitch?: number; aspect?: number }
 export interface DotStyle {
@@ -26,6 +37,14 @@ export interface Layer {
   field: Field
   tone?: Tone
   /**
+   * Multi-tone layer: the tone of each dot this layer wins, read in the same sampler pass from the
+   * cell's (unquantized) value and u/v on the grid being sampled. Overrides `tone`; `undefined` falls
+   * back to the value-based grey scale. One such layer equals splitting it into one layer per tone
+   * (each lit only where `toneOf` returns its tone) at the same place in the stack, at the cost of one scan
+   * (`sites` dots come out in site order rather than tone order; the set is the same).
+   */
+  toneOf?: (value: number, u: number, v: number) => Tone | undefined
+  /**
    * Sample this layer on its own coarser lattice: dots `lattice`× the card pitch apart and
    * `lattice`× bigger (hero numerals in the references sit on ~2–4× the label pitch).
    * The field sees u/v over that lattice, which starts at `origin` (card cells).
@@ -36,13 +55,13 @@ export interface Layer {
   /**
    * Sample this layer at explicit dot sites (card-cell coordinates, fractional allowed) instead
    * of a rectangular lattice — evenly spaced dots along rings, arcs and rays. The field is read
-   * at each site's card u/v; dots are `lattice`× the card dot. Sites at the same position merge
+   * at each site's card u/v; dots are `size`× the card dot. Sites at the same position merge
    * (highest value wins, later layer wins ties), so an accent arc can reuse its track's sites.
    */
   sites?: [number, number][]
   /**
-   * Dot size of a `sites` layer relative to a card dot (2 ≈ hero dot). Older presets pass this as
-   * `lattice`, which is still honoured when `size` is absent; `lattice` otherwise means pitch.
+   * Dot size of a `sites` layer relative to a card dot (2 ≈ hero dot). Every board passes this as `size`;
+   * a legacy `lattice` on a site layer is still honoured when `size` is absent (`lattice` otherwise means pitch).
    */
   size?: number
 }

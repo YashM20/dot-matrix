@@ -25,3 +25,7 @@ dist-ssr
 
 # headless card snapshots (pnpm snap)
 .snapshots
+.claude/worktrees/
+
+# local like/kill history (P6 authoring, record_verdict)
+.dot480/

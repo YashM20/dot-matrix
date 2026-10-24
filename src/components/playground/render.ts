@@ -14,6 +14,8 @@ export interface ResolvedWidget {
   grid: GridConfig
   style: DotStyle
   animated: boolean
+  /** The preset's `springKeys` (data glides instead of dissolving); none for photos. */
+  springKeys?: string[]
 }
 
 export function resolveCurrent(state: PlaygroundState): ResolvedWidget {
@@ -38,6 +40,7 @@ export function resolveCurrent(state: PlaygroundState): ResolvedWidget {
       quantizeSteps: photo ? undefined : state.quantizeSteps || undefined,
     },
     animated: !photo && state.animated,
+    springKeys: photo ? undefined : preset.springKeys,
   }
 }
 

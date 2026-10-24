@@ -1,0 +1,28 @@
+{
+  "name": "dot-matrix-mcp",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Dot/480 MCP App server: the Agent Heartbeat card as an inline ui://dot-card resource",
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": {
+    "build": "tsx scripts/build-view.ts",
+    "start": "tsx scripts/build-view.ts && tsx src/main.ts",
+    "serve": "tsx src/main.ts",
+    "typecheck": "tsc --noEmit",
+    "test": "tsx scripts/build-view.ts && tsx test/server.ts && tsx test/author.ts && tsx test/headless.ts",
+    "author:seeds": "tsx ../scripts/author/seeds.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^2.0.3",
+    "@modelcontextprotocol/server": "^2.3.1",
+    "zod": "^4.2.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "esbuild": "^0.28.2",
+    "tsx": "^4.20.0",
+    "typescript": "~6.0.2"
+  },
+  "pnpm": { "onlyBuiltDependencies": ["esbuild"] }
+}

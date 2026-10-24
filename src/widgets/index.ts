@@ -7,23 +7,65 @@ import { metroBoard } from './boards/metro'
 import { rideBoard } from './boards/ride'
 import { audioBoard } from './boards/audio'
 import { componentsBoard } from './boards/components'
+import { departuresBoard } from './boards/departures'
+import { instrumentBoard, instrumentShared } from './boards/instrument'
+import { irBoard } from './boards/ir'
+import { cinemaBoard } from './boards/cinema'
+import { lightBoard } from './boards/light'
+import { levelsBoard } from './boards/levels'
+import { heartbeatBoard } from './boards/heartbeat'
+import { simBoard } from './boards/sim'
+import { physicsBoard } from './boards/physics'
+import { lockBoard } from './boards/glyph'
+import { liveBoard, liveSources } from './boards/live'
+import { mirrorBoard } from './boards/mirror'
+import { gpuBoard } from './boards/gpu'
+import { surfacesBoard, surfacesSources } from './boards/surfaces'
+import { typeBoard } from './boards/type'
+import { scopeBoard, scopeShared } from './boards/scope'
+import { healBoard } from './boards/heal'
+import { boardIds, boardManifest, resolveBoardId, type BoardContents, type BoardDef, type BoardId } from './manifest'
+import { registerPresets } from './registry'
 
-export interface BoardDef { id: string; title: string; columns: number; items: WidgetPreset[] }
-/** Every reference board in public/images, in the order they appear there. */
-export const boards: BoardDef[] = [
-  { id: 'henry', title: 'DOT / 480 — OLED MICRO INTERFACE SYSTEM', columns: 3, items: henryBoard },
-  { id: 'deerflow12', title: 'DEERFLOW AIoT DASHBOARD — 12', columns: 3, items: deerflow12Board },
-  { id: 'mosaic', title: 'DEERFLOW MOSAIC — AIoT COMMAND CENTER', columns: 3, items: mosaicBoard },
-  { id: 'henry3', title: 'HENRY LI — 14A / 247W', columns: 3, items: henry3Board },
-  { id: 'metro', title: 'METRO / OXYGEN / QUIET', columns: 3, items: metroBoard },
-  { id: 'ride', title: 'RIDE / HENRY / SYSTEM', columns: 3, items: rideBoard },
-  { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, items: audioBoard },
-  { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, items: componentsBoard },
-]
-export const boardIds = boards.map(b => b.id)
-export const boardById = (id: string): BoardDef | undefined => boards.find(b => b.id === id)
+/**
+ * Eager registry: every board with its cards, for scripts, the playground and the worker. The app shell
+ * imports `./manifest` instead (one lazy chunk per board); titles/columns come from there.
+ */
+const contents = {
+  henry: { items: henryBoard },
+  deerflow12: { items: deerflow12Board },
+  mosaic: { items: mosaicBoard },
+  henry3: { items: henry3Board },
+  metro: { items: metroBoard },
+  ride: { items: rideBoard },
+  audio: { items: audioBoard },
+  departures: { items: departuresBoard },
+  instrument: { items: instrumentBoard, shared: instrumentShared },
+  ir: { items: irBoard },
+  cinema: { items: cinemaBoard },
+  light: { items: lightBoard },
+  levels: { items: levelsBoard },
+  heartbeat: { items: heartbeatBoard },
+  sim: { items: simBoard },
+  lock: { items: lockBoard },
+  live: { items: liveBoard, sources: liveSources },
+  mirror: { items: mirrorBoard },
+  gpu: { items: gpuBoard },
+  surfaces: { items: surfacesBoard, sources: surfacesSources },
+  components: { items: componentsBoard },
+  type: { items: typeBoard },
+  physics: { items: physicsBoard },
+  scope: { items: scopeBoard, shared: scopeShared },
+  heal: { items: healBoard },
+} satisfies Record<BoardId, BoardContents>
+export const boards: BoardDef[] = boardManifest.map(({ id, title, columns }) => ({ id, title, columns, ...contents[id] }))
+export { boardIds }
+export const boardById = (id: string): BoardDef | undefined => { const key = resolveBoardId(id); return boards.find(b => b.id === key) }
 
 export const widgetPresets: WidgetPreset[] = boards.flatMap(b => b.items)
-export const widgetById = (id: string): WidgetPreset | undefined => widgetPresets.find(p => p.id === id)
+export const widgetById = (id: string): WidgetPreset | undefined => widgetPresets.find(p => p.id === id) ?? (id.startsWith('glyph-') ? widgetById(`lock-${id.slice(6)}`) : undefined)
 
+registerPresets(widgetPresets)
+
+export type { BoardContents, BoardDef, BoardMeta } from './manifest'
 export * from './types'

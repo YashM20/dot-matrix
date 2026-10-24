@@ -52,7 +52,7 @@ Two surface tones do all the work: `{colors.bg}` (near-black canvas) behind ever
 ### Font System
 Dot/480 has **no conventional font family** — every text role is a precomputed bitmap dot-grid glyph set (see `bitmapFont.ts`), not a rasterized TTF. Latin letters, digits, and punctuation use a hand-authored 5×7 base grid; larger display sizes reuse the same glyph proportions scaled to 7×9 or 9×13 grids rather than switching typeface. CJK and any glyph outside the curated set fall back to a live-rasterized SDF pass over **Noto Sans SC**, sampled onto the same dot grid so it never visually breaks continuity with the bitmap font.
 
-There is no italic, no variable weight, and no letter-spacing tuning — hierarchy is built entirely from **grid size** (how many dots tall a glyph is) and **color** (`{colors.value}` vs `{colors.label}` vs `{colors.mute}`), never from a second typeface.
+The bitmap tiers have no italic, no variable weight, and no letter-spacing tuning (the opt-in dot type below has all three) — hierarchy is built entirely from **grid size** (how many dots tall a glyph is) and **color** (`{colors.value}` vs `{colors.label}` vs `{colors.mute}`), never from a second typeface.
 
 ### Hierarchy — TILE cards (the reference-fidelity standard)
 
@@ -69,6 +69,9 @@ Cards are `TILE` rasters: **144×144 dots at 2.25px** (`src/widgets/types.ts`), 
 `smooth` upsamples a glyph 2× with Scale2x: strokes two dots thick, diagonals stepping one dot — the reference numeral weight. Rings, arcs, rays and dot sliders use **dot sites** (`T.dotRing` / `T.dotLine` / `T.dotDisc` / `T.dotBars` / `T.dots`): evenly spaced dots along the curve, never square-grid rasters. A red marker or status dot is a single site dot (`T.dots([[x, y]], 7–9)`).
 
 Legacy `CARD` (80×74 @ 4px) cards still render, with whole-dot `scale` text (`L.text(..., { scale: [2, 3] })`) and the CSS card header; new cards should be TILE.
+
+### Dot type (variable stroke font, C8)
+A second, opt-in face for display and kinetic type: `src/engine/type` (`typeField` / `typeLayers` / `typeFrame`). Glyphs (A–Z, 0–9, punctuation) are hand-authored **centrelines** in a 10-unit cap box; the outline is the signed distance to them, so one field gives every size and four axes: `weight` (stroke 0.7–3.1 units), `width` (×0.6–1.4), `roundness` (curves and stroke ends are superellipses, n = 2 + 10(1 − r)²: 1 round, 0 squarish) and `slant` (shear). Upright static text is **hinted**: cap line, baseline, stems and arc boxes snap to the lattice and strokes round to whole dots. Moving or slanted text is unhinted, and its edge dots take part values that the sampler quantizes. Spacing is proportional, with kerning from side profiles (AV, LT, TA tuck in). Big type sits on a coarser `lattice` through `typeFrame`, like `T.big`. Kinetic helpers: `typeMorph` (SDF blend, letter-by-letter `sweep`), `typeMigration` (dot flight word to word), `marqueeField` (offset in 1/`sub` cell steps), `waveGlyphs` / `bounceGlyphs` / `weightWave` / `breathe`. CJK and emoji go through an offscreen-canvas luma raster **in the browser only**. Node and goldens skip them. The 5×7 bitmap font stays the label/body face, and `textAt` output is unchanged. Board: `?board=type`.
 
 ### Principles
 Every size in the hierarchy is a strict multiple of the base grid unit — there is no arbitrary in-between size. Weight is simulated by dot density, not a bold-font variant: a "heavier" numeral is achieved by widening `{grid.pitch}` or increasing `{dotStyle.sizeMax}` for that glyph's field, never by swapping a font file. This keeps every text role rendering through the exact same `Field → Sampler → Renderer` pipeline as every icon, chart, and photo in the system.
@@ -108,6 +111,27 @@ Dot/480 has effectively no drop-shadow elevation. Depth, where it exists at all,
 - **Status dot:** the `{component.statusDot}` (4–6px solid red circle, top-right of a card) is the system's one consistent ornamental/state marker — equivalent role to a corner-square motif in other systems.
 - **Radial rings:** concentric polar-field rings (activity rings, breathing circles, gauges) are the closest thing Dot/480 has to a "hero" decorative device — used prominently but always in the same grey/red palette, never a separate accent.
 
+### Light (Raster light stack, P3)
+Relief and light are fields too: a signed distance becomes a cached height and normal raster (`heightRaster`, `normalRaster`), and per frame only the light moves (`lambert`, `phong`, `illuminate`). Rules:
+- Lit surfaces sit on a coarser lattice (2× on the `light` board) and are split into tone bands (`faint` → `mid` → `idle`), never one grey ramp.
+- **Gloss** = the specular highlight drawn two quantize steps (+0.5) above the diffuse dot under it, in `value`.
+- **Torch** = the primary pointer as a point light (`torch(x, y)`); without a pointer the light drifts slowly.
+- **Emissive** = the accent shape plus a `bloom` halo in `{colors.dotActiveDim}`, with a one-dot moat between the two. The halo is never `dotActive`.
+
+#### Materials
+A material is a dot vocabulary, not a shader: given one normal raster and one light it decides which dots exist, how many quantize steps they take and which tone carries them (`src/engine/light/material.ts`, each returns `Layer[]`). No new color tokens; materials only use the existing tones.
+
+| Material | Function | Dot rule |
+|---|---|---|
+| Matte | `matte` | Lambert split into `faint` → `mid` → `idle` bands |
+| Gloss | `gloss` | Body capped at 1 − 2 steps (`faint`/`mid`/`idle`); highlight exactly +1 step on its rim, +2 at its core, in `value` |
+| Glass | `glass` | The layer behind, offset toward the centre by the normal in whole cells; a one-band fresnel rim in `mid`; highlight in `value` |
+| Emissive | `emissive` | The shape plus its `bloom` halo behind a one-dot moat; `active` + `activeDim` by default, white (`value` + `mid`/`faint`) when the board's red is taken |
+| Metal | `metal` | No diffuse: hard studio stripes read off the normal (sky, glow strip, black horizon, ground, lit floor) plus the light's own reflection |
+| Fabric | `fabric` | Lambert ordered-dithered between adjacent size steps (Bayer 4×4), capped at 3 steps, one tone per step |
+
+**Board-wide light:** a board shares one light direction, the sun of the wall-clock hour (`sunAt(hourOf(date))`: rises on the left at 6, highest at noon, sets on the right at 18, a lower moon at night). Over a card the pointer replaces it as a torch.
+
 ## Shapes
 
 ### Dot Roundness Scale
@@ -130,7 +154,7 @@ Individual dot shape is controlled by one continuous parameter (the superellipse
 
 ## Components
 
-> **No hover states documented.** Dot/480 widgets are designed primarily for display surfaces (LED panels, kiosk screens) where hover is not a meaningful input; interactive variants below cover Default, Active/Selected, and Disabled only.
+> **Interactive states.** Hover, press, focus, drag and long-press follow the grammar and tokens in [Interaction](#interaction); the variants below cover Default, Active/Selected and Disabled.
 
 ### Buttons & Controls
 
@@ -165,6 +189,20 @@ Individual dot shape is controlled by one continuous parameter (the superellipse
 **`waveform`**
 - Vertical dot-bars sampled from an amplitude field, scrub-position marked by a single `{colors.dotActive}` dot along a baseline.
 - Powers: audio player, voice recorder, "listening" agent state, interpreter dual-waveform, EKG monitor (Gaussian-composite variant).
+
+**Agent presence** (`src/widgets/boards/heartbeat.ts`, board `heartbeat`)
+- One organism (a lobed metaball cluster on a 3-cell lattice: mid body, highlight up-left) whose behaviour is a closed token set. Agents write `data.state` and never draw; `heartbeatState(name)` returns the parameters, and `blendStates` mixes two of them while a sprung `data.state` (`springKeys`) moves between stops (~0.4 s).
+- Cards carry an eyebrow label naming the state plus a 1× status line (`mid` text, `value` metric); the organism is the hero, so the state is never spelled out twice.
+
+| State | Motion | Accent |
+|---|---|---|
+| `thinking` | big, lobed, slow breath (0.2 Hz), lobes drift and the body wanders | none |
+| `tool-running` | condensed; ring of sites with a comet sweeping (8 s/rev), the highlight turns to face it | none |
+| `awaiting-approval` | lub-dub pulse at 0.85 Hz with a neutral ripple ring | the organism in `{colors.dotActive}`; text stays neutral |
+| `error` | still body; 0.5 s bursts of whole-lattice-cell row offsets and band dropouts at 12 steps/s | none |
+| `done` | condenses into a dot check mark | none |
+
+- Red is spent once per board: a card that can switch into `awaiting-approval` (the `hb-agent` demo) pulses in `value` instead.
 
 ### Cards
 
@@ -210,6 +248,39 @@ Individual dot shape is controlled by one continuous parameter (the superellipse
 - Four corner-bracket glyphs (`⌐ ¬ L J` style, dot-rasterized) framing a live/static photo field, optional bounding-box labels (`{typography.micro}` in a bordered pill) for vision-AI object detection.
 - `REC`/status text pairs with `{component.statusDot}` when actively capturing.
 
+**Halftone ladder (live media)**
+- Camera and video go through `halftone` / `halftoneStream` (`src/engine/halftone/`), never a raw threshold: step 1 = ordered multi-level threshold, step 2 = structure-aware (edge-preserving, local contrast, crisp edges) for faces.
+- Live input uses the stream (STBN slices + hysteresis): a still scene must not shimmer (verify: ≤ 10% of plain thresholding's dot changes per frame).
+- 6 levels; level → size (.3–1 of `sizeMax`) and tone (`faint` → `mid` → `idle` → `value`). Photo exemption: `quantizeSteps: 0`.
+- Before the user starts the camera (and in snapshots), show a deterministic stand-in (test portrait) and a prompt; the camera is requested only from a control. Red only for `REC` while live.
+
+## Interaction
+
+Interaction is a state the card's *data* is in, not a CSS layer on top. The input layer (pointer, touch, keyboard) edits `data[key]` for each declared `Control` and fills `hover` / `pressed` / `focus` in the frame context; the card redraws through the same `Field → Sampler → Renderer` pipeline. Feedback is therefore always made of dots: a glow is a field, a press is a size step, a focus ring is a row of sites. No state introduces a new colour.
+
+### Interaction tokens
+
+| Token | Value | Applies to |
+|---|---|---|
+| `{interaction.hoverGlowRadius}` | 6 cells (falloff to 0 at the radius, soft ramp about 1 cell wide per the organic-edge rule) | Soft light pool under the pointer, drawn behind the hovered control |
+| `{interaction.hoverGlowTone}` | `value` at the centre, `mid` at the rim. **Never `{colors.dotActive}`** | Hover glow layer tone |
+| `{interaction.pressStep}` | 1 `{grid.quantizeSteps}` step down (`1 / quantizeSteps`: 0.2 at the default 5); **0.25** on unquantized styles | Dot size (radius value) of a pressed control, relative to its resting value |
+| `{interaction.springHalfLife.data}` | 0.12 s, critically damped | Data keys that glide to a new value (`springKeys`): sliders, knobs, scrub position |
+| `{interaction.springHalfLife.release}` | 0.08 s, under-damped (damping ratio 0.5, one visible overshoot) | Press release: the dot size springs back past rest once, then settles |
+| `{interaction.focusDash}` | 3 dots lit, 2 dots dark (one 5-site period) along the control's dotted outline | Keyboard focus ring (marching dots) |
+| `{interaction.focusSpeed}` | 8 cells per second (at most 1 cell per frame at 12 fps), linear | Marching speed of the focus dash; held still under reduced motion |
+| `{interaction.hitPad}` | Pad each target by whole cells until it is at least 24 px square (`ceil(24 / pxPerCell)` cells per axis); **44 px** when the pointer is touch | Hit-test rectangle around every control; never changes what is drawn |
+
+### Grammar rules
+
+- **Hover glow** is `value`/`mid`, never the accent. Red keeps its meaning (live, hot, primary); hover and focus never use it.
+- **Press** is one quantize step *down* in dot size, so the control visibly sinks. On release it springs back with `{interaction.springHalfLife.release}`. It is never a colour change.
+- **Data motion** uses `{interaction.springHalfLife.data}`: the value glides on a critically damped spring and snaps to the next integer cell or lattice step each frame.
+- **Focus** is marching dots: the control's own outline sites light in the `{interaction.focusDash}` pattern and travel at `{interaction.focusSpeed}`. It replaces the `{colors.hairlineActive}` card border for in-card controls; the hairline treatment stays for whole-card selection.
+- **Drag scrubs whole dot columns.** A horizontal drag moves a value one whole column (or lattice step) at a time, never a fractional position. Bars, sliders and playheads quantize to site columns, so the control always sits exactly on dots.
+- **Long-press is a radial-reveal progress.** Holding a control reveals a ring of sites clockwise from 12 o'clock around the press point; the action fires when the ring closes. Releasing early un-reveals it on the release spring.
+- **Hit pad** is invisible. Targets below 24 px (44 px on touch) grow their hit rectangle, not their dots.
+
 ## Do's and Don'ts
 
 ### Do
@@ -220,6 +291,7 @@ Individual dot shape is controlled by one continuous parameter (the superellipse
 - Keep card composition to a 3-column grid with equal `{spacing.cardGap}` gutters as the default — deviate only for genuinely wide content (waveforms, chat).
 - Build all hierarchy from **grid size** and **color role**, never from a second typeface or italic/bold variant — there isn't one.
 - Auto-select Canvas rendering for any widget exceeding ~2,000 dots or requiring animation; keep SVG for static, sparse, copy-paste-friendly widgets.
+- Choose WebGL2 only by content, never by convenience: a card gets it when a layer is tagged for the GPU (`gpuIR` for a Field IR program evaluated per dot on the GPU, `gpuValues` for a CPU field sampled straight into a value texture) and WebGL2 works; `renderer: 'webgl'` forces it. Tag a layer only when its fine dot count is out of Canvas reach (≳ 100k dots, or a pitch below ~1 card px). The tagged field is still an ordinary `Field` at the card's lattice, which is what goldens, SVG export, `describe()` and the Canvas fallback (no WebGL2, context lost, shader failure) draw. One WebGL2 context per page, which is shared by every card and copied into each card's own canvas. Squircles are exact superellipses (n = 2 + 30r²) with analytic AA, so WebGL ink matches the true dot area. Canvas (Skia) under-covers sub-pixel dots: it draws 79% of a 0.6 px dot. A card of sub-2px dots therefore reads up to ~7% heavier on WebGL (parity gate: mean Δ ≤ 2/255, ≤ 2.5% of pixels off by > 16, PSNR ≥ 32 dB; `scripts/webgl.ts`). The GPU path does not do `sizeCurve`, `jitter` or `sites`; such layers stay on the CPU. A GPU layer does not suppress CPU card cells under its dots, so keep chrome outside its window.
 
 ### Don't
 - Don't introduce a second accent hue. `{colors.accentAmber}` exists only inside the `deerflowMosaic` hero preset's ambient lighting — never on flat `dot480` chrome, never on a CTA.
@@ -264,10 +336,44 @@ Unlike a typical responsive system that reflows layout, Dot/480's primary respon
 6. Keep `{colors.dotActive}` scarce per board — if more than one card shows a solid red fill/ring in the same 3×3 grid, ask whether one of them is actually "informational" rather than "live," and recolor it to `{colors.dotIdle}`.
 7. Before adding a new generator type, check whether the need can be expressed as a new `Field` function feeding the existing sampler/renderer/theme pipeline — new generators should be rare; new widget *presets* (a new config on top of existing generators) should be common.
 
+## Devices
+
+One card, many physical surfaces (P5, `src/engine/device/`). `toDevice(spec, profile, { ctx })` samples the card (or its curated `variants['CxR']` when the device grid has one), splats each dot's light (area × opacity × colour luminance; `{colors.dotActive}` = full light, monochrome panels have no red) onto the device grid area-weighted, then applies the profile's tone map. Simulators are pure in t: `createEinkSim`, `createFlipSim`, `ledGlow`, `plotPaths` / `plotAt` / `plotterSVG`. Board `surfaces` shows the same timer on all five.
+
+| Profile | Grid | Mask | Bits / tone map | Pitch | Dot | Refresh (demo) | Physics |
+|---|---|---|---|---|---|---|---|
+| `browser` | 144×144 | — | 8 / linear | .6 mm | circle | 60 Hz | — (the card itself) |
+| `glyph-matrix-25` | 25×25 | round, 489 LEDs | 8 / linear (PWM), γ 2.2 | 1.5 mm | circle | 60 Hz | LED bloom .14 to 8 neighbours, off-lens glow .05 |
+| `trmnl-800x480` | 800×480 | — | 1 / blue-noise dither (STBN slice 0, static) | .2 mm | square | 1 Hz | e-ink: full refresh every 10 (.9 s flash), partial .32 s, ghost .3 × .8 per partial |
+| `flipdisc-28x14` | 28×14 | — | 1 / threshold .5 | 10 mm | disc | 1 Hz | column scan 20 ms, rotation ω 60 rad/s, ζ .32 (overshoot 1.35, settle .24 s) |
+| `plotter` | 48×48 | — | 2 / blue-noise | 2 mm | pen | — | level k = k loops (r .42 cells), draw 90 / travel 260 cells/s, NN travel order |
+
+- **Variants vs resampling:** grids under ~32 cells (`25x25`, `28x14`) get a curated layout (MASTER-PLAN §3.9); bigger ones resample the authored TILE card. Previews of big panels use `previewProfile(p, k)` (the TRMNL card shows 1/6: 133×80, one pixel per card cell).
+- **Card look:** e-ink paper = `{colors.dotIdle}` dots, ink = no dot, ghost = one tone step down; LEDs and discs are dot sites in size/tone bands; flip-disc black faces stay visible in `faint`.
+- **Time:** device cards read board time `t + data.clockOffset`; `createClockSync` (`src/engine/clockSync.ts`) keeps tabs on one epoch over BroadcastChannel. Flip-disc clack is app-side (`src/media/clack.ts`), off unless `?clack=1`.
+
+## Display skins
+
+One global switch (header control, `?skin=`, localStorage `dot480:skin`, `setSkin(name)`) shows every board on a different physical display (C7, `src/engine/display/`, `src/components/skins/`). A skin is a **post-raster stage**: the card is sampled and rasterized exactly as on OLED, then an overlay canvas redraws that raster with the display's physics. Skins change physics, never palette roles: neutrals may take a phosphor's colour, but the board's one `{colors.dotActive}` keeps its hue on every skin (the colour matrix passes the red column through; reflective skins keep the cell's own hue as pigment). Goldens are untouched (browser only).
+
+| Skin | Physics | Refresh drawn on switch |
+|---|---|---|
+| `oled` | none: the card as sampled (default, no overlay, `display: contents` wrapper) | overlay wipes off top → bottom |
+| `crt` | afterglow v′ = max(v, old·e^(−Δt/τ)), τ .085 s; 2-level mip bloom; scanlines; barrel glass k .05; rounded vignette | beam line, then the raster opens vertically |
+| `vfd` | neutrals → cyan-green phosphor, glow, diamond wire mesh + filament wires | filament warm-up stutter |
+| `led` | cell light (area × opacity) → round lens per cell; unlit lenses visible; ~1-cell diffuser bleed (Glyph Matrix physics) | rows scan in top → bottom |
+| `eink` | 1-bit blue-noise ink on paper; partial refresh .32 s with ghosts (.3 × .8); every 10th refresh full (TRMNL physics) | full-refresh flash (also on board change) |
+| `flipdisc` | 2-tone discs (`value` face, `dotFaint` back, accent pigment), column sweep .34 s, underdamped flips (ω 60, ζ .32); clack muted by default | discs sweep from black |
+| `nixie` | neutrals → warm neon, 3-level glow, hex anode mesh, slow flicker | ignition stutter |
+
+- **Cost:** emissive skins are GPU-side 2D ops (drawImage, composites, mips, one SVG colour-matrix filter). E-ink and flip-disc read back one `cols × rows` image a few times a second at most. A static card is re-skinned from its existing frame (no re-sample); a running card's canvas is copied once per its own tick.
+- **Reduced motion:** no power-on animation, no e-ink flash (partials only), no nixie flicker.
+- Not yet: split-flap skin (the split-flap text motion already exists per card), real-hardware calibration.
+
 ## Known Gaps
 
 - **Physical LED-panel calibration not yet measured** — the `led-panel` breakpoint's pitch-locking behavior is specified but not validated against real hardware bit-depth/gamma response.
-- **Hover states not documented** by system policy — Dot/480 targets primarily non-hover display surfaces.
+- **Interaction tokens are specified, not yet measured** — `{interaction.*}` values (glow radius, spring half-lives, focus dash, hit pad) are design targets until tuned against real pointer/touch latency.
 - **Superformula (N-fold decorative dot shapes)** deferred per the engineering plan — only the squircle exponent range is currently implemented.
 - **Low-density halftone legibility** below ~32×32 grid cells is a known hard limit, not yet mitigated beyond the gamma-boost + pre-blur tweaks documented in the engineering plan.
 - **Modal / dialog styling** not present in any captured reference board — no `dot-modal` component exists yet.

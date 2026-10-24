@@ -1,0 +1,33 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "ui-text-field",
+  "type": "registry:component",
+  "title": "Text Field (Dot/480)",
+  "description": "Components v2 dot-matrix card `ui-text-field`: Field → Sampler → Renderer, animated (Canvas). Controls: Callsign (stepper). Props: data, theme, renderer, pitch, onInput.",
+  "dependencies": [
+    "@dot480/react@^0.1.0",
+    "@dot480/core@^0.1.0"
+  ],
+  "files": [
+    {
+      "path": "registry/dot480/ui-text-field/ui-text-field.tsx",
+      "type": "registry:component",
+      "content": "'use client'\n/** Text Field — Dot/480 card `ui-text-field` (interactive: pointer + keyboard edit its data). */\nimport { DotCard, type DotCardProps } from '@dot480/react'\n\nexport type DotTextFieldProps = Omit<DotCardProps, 'preset' | 'spec'>\n\nexport function DotTextField(props: DotTextFieldProps) {\n  return <DotCard preset=\"ui-text-field\" {...props} />\n}\n"
+    }
+  ],
+  "categories": [
+    "dot-matrix",
+    "components-v2"
+  ],
+  "meta": {
+    "preset": "ui-text-field",
+    "controls": [
+      "len"
+    ],
+    "grid": {
+      "cols": 144,
+      "rows": 144,
+      "pitch": 2.25
+    }
+  }
+}

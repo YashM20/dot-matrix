@@ -6,6 +6,7 @@
  */
 import { glyph } from '../../engine/fields/bitmapFont'
 import { hash01 } from '../../engine/math'
+import { decodeText, splitFlapCells, type FlapCell } from '../../engine/motion/text'
 import type { Field } from '../../engine/types'
 import { TAU, TILE, bounded, combine, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
@@ -37,7 +38,7 @@ const bitsOf = (ch: string) => NUM[ch] ?? glyph(ch).map(row => row.map(b => (b ?
  * Text as explicit dot sites: `px`/`py` cells between dots, `size` = dot size. Unlike a lattice
  * layer this keeps the reference's dot-to-gap ratio (big dots with clear air between them).
  */
-function dotText(str: string, x: number, y: number, o: { px: number; py?: number; size: number; gap?: number; align?: 'left' | 'center' | 'right' }): LatticeField {
+export function dotText(str: string, x: number, y: number, o: { px: number; py?: number; size: number; gap?: number; align?: 'left' | 'center' | 'right' }): LatticeField {
   const { px, py = px, size, gap = 1 } = o, chars = [...str].map(bitsOf)
   const cols = chars.reduce((n, g) => n + g[0].length, 0) + gap * (chars.length - 1), w = (cols - 1) * px
   let cx = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x
@@ -47,6 +48,34 @@ function dotText(str: string, x: number, y: number, o: { px: number; py?: number
     cx += (g[0].length + gap) * px
   }
   return T.dots(sites, size)
+}
+/**
+ * Split-flap text as dot sites: like `dotText`, but a column mid-flip shows the new top half and
+ * the old bottom half, with the flap folding about the glyph's middle — its rows squeeze toward
+ * the hinge by |cos(πφ)| (old top half falling, then new bottom half landing) and hide whatever it
+ * covers. Returns `[faces, flap]`; the flap dims while it is steep, so the fold reads as depth.
+ */
+export function flapText(cells: FlapCell[], x: number, y: number, o: { px: number; py?: number; size: number; gap?: number }): [LatticeField, LatticeField] {
+  const { px, py = px, size, gap = 1 } = o
+  const faces: Pt[] = [], flap: Pt[] = []
+  let cx = x
+  for (const { from, to, phase } of cells) {
+    const a = bitsOf(from), b = bitsOf(to), rows = b.length, hinge = y + ((rows - 1) / 2) * py
+    const fold = Math.abs(Math.cos(Math.PI * phase)), reach = (rows / 2) * py * fold
+    b.forEach((row, r) => [...row].forEach((bit, c) => {
+      const top = r < rows / 2, sy = y + r * py, sx = cx + c * px
+      if (phase >= 1) { if (bit === '#') faces.push([sx, sy]); return }
+      // behind the flap: new top half (uncovered as the flap falls), old bottom half (until it lands)
+      const face = top ? bit : a[r]?.[c]
+      const covered = top ? phase < .5 && sy > hinge - reach : phase >= .5 && sy < hinge + reach
+      if (face === '#' && !covered) faces.push([sx, sy])
+      // the flap: old top half folding down (φ < ½), then the new bottom half unfolding (φ ≥ ½)
+      const flapBit = phase < .5 ? (top ? a[r]?.[c] : '.') : (top ? '.' : bit)
+      if (flapBit === '#') (fold > .8 ? faces : flap).push([sx, hinge + (sy - hinge) * fold])
+    }))
+    cx += (b[0].length + gap) * px
+  }
+  return [T.dots(faces, size), T.dots(flap, size)]
 }
 const side = (ax: number, ay: number, bx: number, by: number, x: number, y: number) => (bx - ax) * (y - ay) - (by - ay) * (x - ax)
 const segDist = (ax: number, ay: number, bx: number, by: number, x: number, y: number) => {
@@ -100,21 +129,26 @@ const inPill = (x0: number, y0: number, w: number, h: number, hole?: [number, nu
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 const DAYS3 = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
-const timeNow = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}` }
+const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
 const dateNow = () => { const d = new Date(); return `${MONTHS[d.getMonth()]} ${d.getDate()} ${DAYS3[d.getDay()]}` }
 
 // ── 01 HOME ─────────────────────────────────────────────────────────────────
 export const homeClock: WidgetPreset = {
-  id: 'home-clock', name: '01 Home', label: '01  HOME', group: 'text', live: true, clock: true, ...tile,
+  id: 'home-clock', name: '01 Home', label: '01  HOME', group: 'text', live: true, clock: true, burst: 1.2, ...tile,
   defaults: { battery: 0.78 },
-  layers: ({ data }) => {
+  layers: ({ data, since }) => {
     // battery gauge: 27 dots on a half ring, 9 o'clock → 3 o'clock; charged run white, the rest dim
     const n = 27, lit = Math.round(data.battery * n), gauge = Array.from({ length: n }, (_, i): Pt => {
       const a = -Math.PI / 2 + (Math.PI * i) / (n - 1)
       return [100 + 32 * Math.sin(a), 129.5 - 32 * Math.cos(a)]
     })
+    // on the minute the changed digits flip, split-flap style, one column after another
+    const now = new Date(), digits = { px: 4.3, py: 4.8, size: 4.7 }
+    const [faces, flap] = since === undefined ? [dotText(hhmm(now), 3, 35.5, digits)]
+      : flapText(splitFlapCells(hhmm(new Date(+now - 60_000)), hhmm(now), since, { flip: .32, stagger: .12 }), 3, 35.5, digits)
     return [
-      layer(dotText(timeNow(), 3, 35.5, { px: 4.3, py: 4.8, size: 4.7 })),
+      layer(faces),
+      ...(flap ? [layer(flap, 'mid')] : []),
       layer(T.big(dateNow(), 4, 86, SMALL), 'idle'),
       layer(T.text(`${Math.round(data.battery * 100)}%`, 4, 124, { smooth: true })),
       layer(T.dots(gauge.slice(lit), 3.3), 'mid'),
@@ -148,7 +182,7 @@ const transport = (x: number, dir: 1 | -1) => {
 }
 export const music: WidgetPreset = {
   id: 'music', name: '02 Music', group: 'photo', ...tile,
-  defaults: { position: 0.44 },
+  defaults: { position: 0.44 }, springKeys: ['position'],
   layers: ({ data }) => {
     const knob = 2 + data.position * 138
     return [
@@ -165,7 +199,7 @@ export const music: WidgetPreset = {
 // ── 03 TIMER ────────────────────────────────────────────────────────────────
 export const timer: WidgetPreset = {
   id: 'timer', name: '03 Timer', group: 'polar', ...tile,
-  defaults: { progress: 0.38 },
+  defaults: { progress: 0.38 }, springKeys: ['progress'],
   layers: ({ data }) => {
     const ring = { spacing: (TAU * 60) / 104, size: 3.1 }
     return [
@@ -190,15 +224,28 @@ const cloudSites: Pt[] = [
   }),
   ...Array.from({ length: 10 }, (_, k): Pt => [91 + 4 + k * SP, BASE]),
 ].map(([x, y]): Pt => [x, BASE - (BASE - y) * LIFT]) // the sheet's cloud is taller than round lobes
+/** Cities the card cycles through (same-length strings so the decode never reflows). */
+const CITIES = [['TOKYO', '24', 'M 26° / L 18°'], ['OSAKA', '22', 'M 25° / L 17°'], ['KYOTO', '21', 'M 24° / L 16°']]
+const CITY_S = 6
+/** City `k` of the cycle at time `t`, decoding in from the previous one (t < CITY_S = the static Tokyo frame). */
+const weatherAt = (t: number) => {
+  const k = Math.floor(Math.max(0, t) / CITY_S), tau = t - k * CITY_S, next = CITIES[k % 3]
+  if (k === 0) return next
+  const prev = CITIES[(k - 1) % 3]
+  return next.map((s, i) => decodeText(prev[i], s, tau, { seed: i + 1 }))
+}
 export const weather: WidgetPreset = {
-  id: 'weather', name: '04 Weather', label: '04  WEATHER', group: 'icon', ...tile,
-  layers: () => [
-    layer(T.big('TOKYO', 1.5, 29, { lattice: 1.35 }), 'idle'),
-    layer(dotText('24', 2.5, 49, { px: 3, py: 4.3, size: 3.1 })), layer(T.dotRing(50, 53, 3.6, { spacing: (TAU * 3.6) / 8, size: 2.4 })),
-    layer(T.dots(cloudSites, 2.7)),
-    layer(T.big('M 26° / L 18°', 1, 107, SMALL), 'idle'),
-    layer(T.big('CLOUDY', 1, 129, { lattice: 1.15 }), 'idle'),
-  ],
+  id: 'weather', name: '04 Weather', label: '04  WEATHER', group: 'icon', animated: true, ...tile,
+  layers: ({ t }) => {
+    const [city, temp, range] = weatherAt(t)
+    return [
+      layer(T.big(city, 1.5, 29, { lattice: 1.35 }), 'idle'),
+      layer(dotText(temp, 2.5, 49, { px: 3, py: 4.3, size: 3.1 })), layer(T.dotRing(50, 53, 3.6, { spacing: (TAU * 3.6) / 8, size: 2.4 })),
+      layer(T.dots(cloudSites, 2.7)),
+      layer(T.big(range, 1, 107, SMALL), 'idle'),
+      layer(T.big('CLOUDY', 1, 129, { lattice: 1.15 }), 'idle'),
+    ]
+  },
 }
 
 // ── 05 FITNESS ──────────────────────────────────────────────────────────────
@@ -206,7 +253,7 @@ const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 const WEEK = [7, 9, 7, 6, 8, 9, 8], TODAY_EXTRA = 7
 export const fitness: WidgetPreset = {
   id: 'fitness', name: '05 Fitness', group: 'polar', ...tile,
-  defaults: { move: 0.62, exercise: 0.58, stand: 0.6 },
+  defaults: { move: 0.62, exercise: 0.58, stand: 0.6 }, springKeys: ['move', 'exercise', 'stand'],
   layers: ({ data }) => {
     const rings = ([[26.5, data.move, 'value'], [21, data.exercise, 'active'], [15.5, data.stand, 'active']] as const).flatMap(([r, p, tone]) => {
       const o = { spacing: (TAU * r) / Math.round((TAU * r) / 3.8), size: 3.3 }
@@ -227,17 +274,32 @@ export const fitness: WidgetPreset = {
 }
 
 // ── 06 MESSAGES ─────────────────────────────────────────────────────────────
-const bubble = (top: number, initial: string, name: string, time: string, l1: string, l2: string) => [
+const bubble = (top: number, initial: string, name: string, time: string, l1: string, l2: string, cursor?: 0 | 1) => [
   layer(roundRect(1, top, 142, 55, 6), 'mid'),
   layer(T.dotRing(16, top + 27, 11.5, { spacing: 1.6, size: .7 }), 'idle'),
   layer(T.big(initial, 16, top + 22, { lattice: 1.4, align: 'center' })),
   layer(T.text(name, 35, top + 11)), layer(T.text(time, 137, top + 11, { align: 'right' }), 'idle'),
   layer(T.text(l1, 35, top + 24), 'idle'), layer(T.text(l2, 35, top + 37), 'idle'),
+  // text cursor: a one-dot bar after the last typed character
+  ...(cursor === undefined ? [] : [layer(T.vrule(35 + T.size(cursor ? l2 : l1)[0] + 1, top + (cursor ? 37 : 24), 7))]),
 ]
+/**
+ * Typewriter on the newest message: the full text holds (the static frame), then it is retyped
+ * at `CPS` characters a second behind a solid cursor, which blinks once the line is complete.
+ */
+const NEWEST = ['SEE YOU SOON.', "LET'S MEET UP."] as const, TYPE_PERIOD = 9, TYPE_HOLD = 3, CPS = 12
+const typewriter = (t: number): [string, string, (0 | 1)?] => {
+  const tau = (((t % TYPE_PERIOD) + TYPE_PERIOD) % TYPE_PERIOD) - TYPE_HOLD, [a, b] = NEWEST
+  if (tau < 0) return [a, b]
+  const n = Math.floor(tau * CPS)
+  if (n < a.length) return [a.slice(0, n), '', 0]
+  if (n < a.length + b.length) return [a, b.slice(0, n - a.length), 1]
+  return Math.floor(tau * 2.5) % 2 ? [a, b] : [a, b, 1]
+}
 export const messages: WidgetPreset = {
-  id: 'messages', name: '06 Messages', group: 'composite', live: true, ...tile,
-  layers: () => [
-    ...bubble(17, 'A', 'ALEX', '10:30', 'SEE YOU SOON.', "LET'S MEET UP."),
+  id: 'messages', name: '06 Messages', group: 'composite', live: true, animated: true, ...tile,
+  layers: ({ t }) => [
+    ...bubble(17, 'A', 'ALEX', '10:30', ...typewriter(t)),
     ...bubble(77, 'M', 'MAYA', '09:12', "DON'T FORGET", 'THE REPORT.'),
     layer(T.dots([[65, 140]], 3.4)), ...[72, 79].map(x => layer(T.dotRing(x, 140, 1.7, { spacing: 1.05, size: .55 }), 'idle')),
   ],

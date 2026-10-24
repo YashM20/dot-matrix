@@ -1,0 +1,29 @@
+# Response headers for Cloudflare Pages (same file format on Netlify). docs/DEPLOY.md explains each one.
+# Pages joins repeated headers with a comma, so Cache-Control is set only on the paths that need it
+# (HTML keeps the host default: revalidate every load, so a new deploy is picked up at once).
+#
+# Permissions-Policy: camera for the mirror board, microphone for audio-reactive boards, motion sensors
+# for tilt, geolocation for a future "use my location"; payment and bluetooth off. Others keep the default.
+# CSP: 'self' scripts only (no inline, no eval: the IR `function` backend falls back to closures);
+# workers from our own chunks (blob: for exports); WebCodecs and getUserMedia need no CSP grant;
+# connect-src lists the live board's APIs (src/data/sources.ts) plus wss: for the `?np=` now-playing socket.
+# No COOP/COEP: nothing needs SharedArrayBuffer, and COEP would block cross-origin API responses.
+/*
+  X-Content-Type-Options: nosniff
+  Referrer-Policy: strict-origin-when-cross-origin
+  Permissions-Policy: camera=(self), microphone=(self), geolocation=(self), accelerometer=(self), gyroscope=(self), payment=(), bluetooth=()
+  Content-Security-Policy: default-src 'self'; script-src 'self'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; font-src 'self' data:; connect-src 'self' https://api.open-meteo.com https://api.github.com https://github-contributions-api.jogruber.de wss: ws://localhost:* ws://127.0.0.1:*; object-src 'none'; base-uri 'self'; form-action 'self'
+
+# Hashed build output (Vite `assets/`): never changes under the same name.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Prebuilt OG images and reference images: stable names, may change on a deploy.
+/og/*
+  Cache-Control: public, max-age=86400
+/images/*
+  Cache-Control: public, max-age=86400
+
+# Hand-written dev page with an inline script: no CSP there.
+/lab/*
+  ! Content-Security-Policy

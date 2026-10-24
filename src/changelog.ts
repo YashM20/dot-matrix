@@ -15,6 +15,51 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 
 export const releases: Release[] = [
   {
+    version: '0.9', date: '2026-10-23', title: 'Ditherpunk for UI: the tour',
+    summary: 'A long, hands-on walk through how the dots are made, with the real engine running in every figure.',
+    changes: [
+      { kind: 'new', text: 'Fourteen short chapters, from "why dots" to light, sand, halftone, five display types and an agent heartbeat. Each one has something to drag, toggle or edit.' },
+      { kind: 'new', text: 'Scratch a halftone portrait and watch it heal, carry a torch down a dark corridor, and watch an hourglass clock pour the time into place.' },
+      { kind: 'new', text: 'Edit a tiny dot program right in the page, then open it in DOTS to keep going.' },
+      { kind: 'improved', text: 'Figures load only when you scroll to them, and show still frames if you prefer reduced motion.' },
+    ],
+    link: { href: 'essay.html', label: 'READ THE ESSAY' },
+  },
+  {
+    version: '0.8', date: '2026-10-23', title: 'Dot Studio: build your own card',
+    summary: 'A new STUDIO tab: stack layers of dot fields and text, give them states and transitions, and watch them play.',
+    changes: [
+      { kind: 'new', text: 'Layers you can stack, hide, reorder by dragging, tint and blend. Write a field as a few lines of maths, add hero text or rings of dots.' },
+      { kind: 'new', text: 'A timeline: scrub through how the card builds in, changes and leaves, and pick the dissolve pattern and easing for each, drawn in dots.' },
+      { kind: 'new', text: 'States: name a few sets of values, connect them, then click an arrow (or press the card) to watch it dissolve from one to the other.' },
+      { kind: 'new', text: 'Open any card from the boards and take it apart layer by layer, or pull in a program from the DOTS tab.' },
+      { kind: 'new', text: 'A side-by-side sheet against the favourite cards, a quality scorecard, previews on a tiny LED matrix, e-ink, flip-disc and pen plotter, and exports to PNG, SVG, animated PNG, GIF and video.' },
+      { kind: 'improved', text: 'Everything saves in your browser, with undo and redo, and can be downloaded as a file.' },
+    ],
+    link: { href: '?tab=studio', label: 'OPEN STUDIO' },
+  },
+  {
+    version: '0.7', date: '2026-10-23', title: 'DOTS: write a field, share it as a link',
+    summary: 'A new DOTS tab where you write a few lines of maths and watch them run as a dot display, then share them as a short link.',
+    changes: [
+      { kind: 'new', text: 'A live editor for tiny dot programs. Type, and the card redraws as you go. Mistakes are marked at their exact line and column.' },
+      { kind: 'new', text: 'Scrub through time, pause on any frame, set the loop length, and pick the grid, dot size and tone. Every data value you use gets its own slider, and the pointer is an input too.' },
+      { kind: 'new', text: 'Share: a program fits in a short, compressed link. Opening a broken or tampered link shows what is wrong and never runs it.' },
+      { kind: 'new', text: 'Remix: every edit remembers what it came from. Your programs build a small remix graph, drawn in dots, starting from eight examples: ripple, plasma, rings, spiral, rain, lissajous, checker warp and heartbeat.' },
+    ],
+    link: { href: '?tab=dots', label: 'OPEN DOTS' },
+  },
+  {
+    version: '0.6', date: '2026-10-22', title: 'Departures, and boards that leave',
+    summary: 'A new flagship board where every change is mechanical, and smooth handovers between boards.',
+    changes: [
+      { kind: 'new', text: 'Departures board: a live transit board. Split-flap rows cascade when a train leaves, a Swiss station clock sweeps and pauses at 12, and a train glides along its line.' },
+      { kind: 'new', text: 'The home clock flips its digits on the minute, like a split-flap clock, folding about the middle.' },
+      { kind: 'new', text: 'Switching boards or views now dissolves the old cards out, corner to corner, before the new ones build in.' },
+    ],
+    link: { href: '?board=departures', label: 'OPEN DEPARTURES' },
+  },
+  {
     version: '0.5', date: '2026-10-14', title: 'Boards that come alive',
     summary: 'The first motion work: boards build themselves in, dot by dot, and every change dissolves instead of cutting. Under the hood, everything got lighter and steadier.',
     changes: [

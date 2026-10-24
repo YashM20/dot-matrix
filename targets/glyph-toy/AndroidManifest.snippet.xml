@@ -1,0 +1,18 @@
+<!-- Merge into app/src/main/AndroidManifest.xml (GlyphMatrix Developer Kit README, "Glyph Toy" section). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="com.nothing.ketchum.permission.ENABLE" />
+    <application>
+        <service
+            android:name=".DotToyService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.nothing.glyph.TOY" />
+            </intent-filter>
+            <meta-data android:name="com.nothing.glyph.toy.name" android:resource="@string/toy_name" />
+            <meta-data android:name="com.nothing.glyph.toy.image" android:resource="@drawable/toy_preview" />
+            <meta-data android:name="com.nothing.glyph.toy.summary" android:resource="@string/toy_summary" />
+            <meta-data android:name="com.nothing.glyph.toy.longpress" android:value="1" />
+            <meta-data android:name="com.nothing.glyph.toy.aod_support" android:value="1" />
+        </service>
+    </application>
+</manifest>

@@ -1,0 +1,21 @@
+{
+  "name": "@dot480/core",
+  "version": "0.1.0",
+  "description": "Dot/480 field-based dot-matrix UI engine: Field -> Grid Sampler -> Renderer. Framework-free, zero dependencies.",
+  "license": "MIT",
+  "type": "module",
+  "sideEffects": false,
+  "files": ["dist"],
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/types/packages/core/src/index.d.ts",
+  "exports": {
+    ".": { "types": "./dist/types/packages/core/src/index.d.ts", "default": "./dist/index.js" },
+    "./ir": { "types": "./dist/types/packages/core/src/ir.d.ts", "default": "./dist/ir.js" },
+    "./presets": { "types": "./dist/types/packages/core/src/presets.d.ts", "default": "./dist/presets.js" },
+    "./card": { "types": "./dist/types/packages/core/src/card.d.ts", "default": "./dist/card.js" },
+    "./spec": { "types": "./dist/types/packages/core/src/spec.d.ts", "default": "./dist/spec.js" },
+    "./package.json": "./package.json"
+  },
+  "keywords": ["dot-matrix", "led", "canvas", "svg", "generative", "ui"]
+}

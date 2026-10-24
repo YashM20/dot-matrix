@@ -1,0 +1,31 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry-item.json",
+  "name": "music",
+  "type": "registry:component",
+  "title": "Music (Dot/480)",
+  "description": "Widget dot-matrix card `music`: Field → Sampler → Renderer, static (SVG under 2000 dots). Props: data, theme, renderer, pitch, onInput.",
+  "dependencies": [
+    "@dot480/react@^0.1.0",
+    "@dot480/core@^0.1.0"
+  ],
+  "files": [
+    {
+      "path": "registry/dot480/music/music.tsx",
+      "type": "registry:component",
+      "content": "'use client'\n/** 02 Music — Dot/480 card `music`. */\nimport { DotCard, type DotCardProps } from '@dot480/react'\n\nexport type DotMusicProps = Omit<DotCardProps, 'preset' | 'spec'>\n\nexport function DotMusic(props: DotMusicProps) {\n  return <DotCard preset=\"music\" {...props} />\n}\n"
+    }
+  ],
+  "categories": [
+    "dot-matrix",
+    "widgets"
+  ],
+  "meta": {
+    "preset": "music",
+    "controls": [],
+    "grid": {
+      "cols": 144,
+      "rows": 144,
+      "pitch": 2.25
+    }
+  }
+}
