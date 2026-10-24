@@ -31,6 +31,8 @@ type Tab = typeof tabs[number]
 // ?tab=dots&p=<encoded> opens a shared Field IR program in the DOTS REPL.
 const params = new URLSearchParams(window.location.search)
 const singleCard = params.get('card')
+// ?tab=essay: the essay is its own page (essay.html, a separate Vite entry so it deploys alone)
+if (params.get('tab')?.toLowerCase() === 'essay') window.location.replace(`essay.html${window.location.hash}`)
 
 export default function App() {
   const [tab, setTab] = useState<Tab>(tabs.find(t => t === params.get('tab')?.toUpperCase()) ?? 'BOARDS')
