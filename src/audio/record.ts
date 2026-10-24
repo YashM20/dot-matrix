@@ -46,29 +46,43 @@ export function startRecording(audio: MediaStream, root: HTMLElement | null, fps
       video = comp.out.captureStream(fps)
     } catch { comp = null; video = null }
   }
-  const kind: 'video' | 'audio' = video ? 'video' : 'audio'
-  const mime = kind === 'video' ? av! : ao
-  if (!mime) return null
-  const stream = new MediaStream([...(video?.getVideoTracks() ?? []), ...audio.getAudioTracks()])
-  const rec = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 160_000, ...(kind === 'video' && { videoBitsPerSecond: 6_000_000 }) })
-  const parts: Blob[] = []
-  rec.ondataavailable = e => { if (e.data.size) parts.push(e.data) }
+  // the video+audio take, plus an audio-only safety take (some browsers / headless encoders give the AV one no data)
+  const takes: Take[] = []
+  if (video && av) takes.push(take(new MediaStream([...video.getVideoTracks(), ...audio.getAudioTracks()]), av, 'video'))
+  if (ao) takes.push(take(audio, ao, 'audio'))
+  if (!takes.length) return null
   let raf = 0
   const loop = () => { comp?.draw(); raf = requestAnimationFrame(loop) }
   if (comp) raf = requestAnimationFrame(loop)
   const t0 = performance.now()
+  return {
+    kind: takes[0].kind,
+    stop: async () => {
+      cancelAnimationFrame(raf)
+      const blobs = await Promise.all(takes.map(t => t.stop()))
+      video?.getTracks().forEach(t => t.stop())
+      const i = blobs.findIndex(b => b && b.size > 0)
+      if (i < 0) { console.warn('dot480 REC: the recorder gave no data'); return null }
+      const { kind, mime } = takes[i], stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
+      if (kind === 'audio' && video) console.warn('dot480 REC: the video take was empty; saved audio only')
+      return { blob: blobs[i]!, kind, mime, seconds: (performance.now() - t0) / 1000, name: `dot480-jam-${stamp}${kind === 'audio' ? '-audio' : ''}.webm` }
+    },
+  }
+}
+
+interface Take { kind: 'video' | 'audio'; mime: string; stop(): Promise<Blob | null> }
+function take(stream: MediaStream, mime: string, kind: 'video' | 'audio'): Take {
+  const rec = new MediaRecorder(stream, { mimeType: mime, audioBitsPerSecond: 160_000, ...(kind === 'video' && { videoBitsPerSecond: 6_000_000 }) })
+  const parts: Blob[] = []
+  rec.ondataavailable = e => { if (e.data.size) parts.push(e.data) }
+  rec.onerror = e => console.warn(`dot480 REC (${kind}): recorder error`, (e as Event & { error?: unknown }).error ?? e)
   rec.start(250)
   return {
-    kind,
+    kind, mime,
     stop: () => new Promise(resolve => {
-      cancelAnimationFrame(raf)
-      if (rec.state === 'inactive') { resolve(null); return }
-      rec.onstop = () => {
-        video?.getTracks().forEach(t => t.stop())
-        const seconds = (performance.now() - t0) / 1000, blob = new Blob(parts, { type: mime.split(';')[0] })
-        const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')
-        resolve(blob.size ? { blob, kind, mime, seconds, name: `dot480-jam-${stamp}${kind === 'audio' ? '-audio' : ''}.webm` } : null)
-      }
+      const done = () => resolve(parts.length ? new Blob(parts, { type: mime.split(';')[0] }) : null)
+      if (rec.state === 'inactive') { done(); return }
+      rec.onstop = done
       rec.stop()
     }),
   }

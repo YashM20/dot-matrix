@@ -101,6 +101,9 @@
 - [-] Cross-engine goldens, `snap --replay/--ref/--diff`, the G6 flash check → Track L.
 - [-] Engine barrel curation + library `.d.ts` build → P6 packaging.
 
+**Web plan (2026-10-23)**
+- [x] C5 Sound: `src/audio/` (WebAudio synth + drums, lookahead scheduler on `bpm`, AnalyserNode meter, mic, REC); SOUND toggle on the transport; `scope` board (scope, spectrum, mic). Browser check `npx tsx scripts/audio-chrome.ts` (URL=dev server): onsets ≤0.4 ms off grid. REC muxes board video + audio via MediaRecorder; in headless the video take is empty, so it saves audio-only.
+
 ## How to resume (read first)
 1. `pnpm i`, then `pnpm dev`.
    - Tabs: BOARDS, GALLERY, WORKSPACE, LOG and DRAW.

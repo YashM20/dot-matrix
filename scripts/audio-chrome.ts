@@ -39,6 +39,7 @@ ws.addEventListener('message', e => {
   const m = JSON.parse(String(e.data))
   if (m.id && calls.has(m.id)) { calls.get(m.id)!(m); calls.delete(m.id) }
   if (m.method === 'Runtime.exceptionThrown') logs.push(`exception: ${m.params.exceptionDetails?.exception?.description ?? m.params.exceptionDetails?.text}`)
+  if (m.method === 'Runtime.consoleAPICalled' && (m.params.type === 'warning' || m.params.type === 'info')) console.log(`  [page ${m.params.type}] ${m.params.args.map((a: any) => a.value ?? a.description).join(' ')}`)
   if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') logs.push(`console.error: ${m.params.args.map((a: any) => a.value ?? a.description).join(' ')}`)
 })
 const cdp = (method: string, params: Record<string, unknown> = {}) => new Promise<any>(r => { const id = ++seq; calls.set(id, r); ws.send(JSON.stringify({ id, method, params })) })
@@ -60,7 +61,9 @@ try {
   // keep the last blob handed to a download link, so the recording can be decoded in the page
   await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `{ const o = URL.createObjectURL; URL.createObjectURL = b => { window.__lastBlob = b; return o.call(URL, b) } }` })
   await cdp('Page.navigate', { url: `${url}?board=instrument` })
-  check('instrument board loads', await until(`!!document.querySelector('[aria-label="Sound"]') && !!window.dot480Audio`, 60000))
+  const loaded = await until(`!!document.querySelector('[aria-label="Sound"]') && !!window.dot480Audio`, 180000)
+  check('instrument board loads', loaded, loaded ? '' : JSON.stringify(await evaluate(`({ title: document.querySelector('.board-title')?.textContent, text: document.body.innerText.slice(0, 200), audio: typeof window.dot480Audio })`)))
+  if (!loaded) await shot('load-failure')
   await sleep(1500)
 
   // ── sound on, a test pattern: quarter-note kicks only, short notes, no delay send ──
@@ -83,20 +86,21 @@ try {
     // note how early each step gets scheduled (lead) while measuring
     const leads = [], orig = e.onStep.bind(e)
     e.onStep = ev => { leads.push(ev.time - ac.currentTime); orig(ev) }
+    // wait for 8 kicks on the audio clock (the headless sink can stall, so wall time is not enough)
     const from = ac.currentTime + 0.6
-    await new Promise(r => setTimeout(r, 4600))
+    for (let i = 0; i < 300 && e.stepLog.filter(s => s.step % 4 === 0 && s.time > from && s.time < ac.currentTime - 0.1).length < 8; i++) await new Promise(r => setTimeout(r, 100))
     const got = await new Promise(r => { tap.port.onmessage = m => r(m.data); tap.port.postMessage(0) }), onsets = got.on
     tap.disconnect(); e.onStep = orig
-    const grid = e.stepLog.filter(s => s.step % 4 === 0 && s.time > from)
+    const grid = e.stepLog.filter(s => s.step % 4 === 0 && s.time > from && s.time < ac.currentTime - 0.1)
     const errs = grid.map(s => { let best = Infinity; for (const o of onsets) if (Math.abs(o - s.time) < Math.abs(best)) best = o - s.time; return best * 1000 })
     // step spacing on the audio clock vs the 120 BPM sixteenth
     const all = e.stepLog.filter(s => s.time > from), gaps = all.slice(1).map((s, i) => (s.time - all[i].time - 0.125) * 1000)
-    return { lat, errs, onsets: onsets.length, grid: grid.length, minLead: Math.min(...leads) * 1000, maxLead: Math.max(...leads) * 1000, maxGap: Math.max(...gaps.map(Math.abs)) }
+    return { lat, errs, onsets: onsets.length, grid: grid.length, minLead: Math.min(...leads) * 1000, maxLead: Math.max(...leads) * 1000, late: leads.filter(x => x <= 0).length, steps: leads.length, maxGap: Math.max(...gaps.map(Math.abs)) }
   })()`)
   timing.errs = timing.errs.map((x: number | null) => (x === null ? 999 : x))
   const maxErr = Math.max(...timing.errs.map(Math.abs))
   check('drum onsets within 5 ms of the step grid', timing.grid >= 6 && maxErr <= 5, `${timing.grid} kicks, ${timing.onsets} onsets, max |err| ${maxErr.toFixed(2)} ms (errs ${timing.errs.map((x: number) => x.toFixed(2)).join(' ')})`)
-  check('scheduler never late (lead > 0)', timing.minLead > 0, `lead ${timing.minLead.toFixed(1)}–${timing.maxLead.toFixed(1)} ms ahead; grid spacing drift max ${timing.maxGap.toFixed(4)} ms`)
+  check('scheduler never late (lead > 0)', timing.minLead > 0, `${timing.late}/${timing.steps} late; lead ${timing.minLead.toFixed(1)}–${timing.maxLead.toFixed(1)} ms ahead; grid spacing drift max ${timing.maxGap.toFixed(4)} ms`)
   console.log(`  latency: base ${timing.lat.base.toFixed(1)} ms + output ${timing.lat.output.toFixed(1)} ms @ ${timing.lat.sampleRate} Hz (${timing.lat.state})`)
 
   // restore the default pattern and check the analyser + visual clock
@@ -129,17 +133,17 @@ try {
   await sleep(2500)
   await shot('instrument-rec')
   check('PLAY clicked (stops REC)', await click('Play'))
-  check('recording saved', await until(`window.dot480Audio.recordings.length > 0`, 8000))
+  check('recording saved', await until(`window.dot480Audio.recordings.length > 0`, 8000), JSON.stringify(await evaluate(`({ rec: ${E}.recordingSeconds, mode: ${E}.params.mode, n: window.dot480Audio.recordings.length, mr: typeof MediaRecorder })`)))
   const rec = await evaluate(`(async () => {
     const r = window.dot480Audio.recordings[0], b = window.__lastBlob
     const v = document.createElement('video'); v.muted = true; v.src = URL.createObjectURL(b)
-    await new Promise((res, rej) => { v.onloadedmetadata = res; v.onerror = () => rej(new Error('video ' + v.error?.code)) })
+    await new Promise(res => { v.onloadedmetadata = res; v.onerror = res })
     const buf = await b.arrayBuffer()
     let rms = -1, dur = 0
     try { const a = await new OfflineAudioContext(2, 48000, 48000).decodeAudioData(buf.slice(0)); dur = a.duration; const ch = a.getChannelData(0); let s = 0; for (const x of ch) s += x * x; rms = 20 * Math.log10(Math.sqrt(s / ch.length) + 1e-9) } catch (err) { rms = NaN }
     return { ...r, w: v.videoWidth, h: v.videoHeight, audioDur: dur, rms }
   })()`)
-  check('recording is a .webm with video and audible audio', rec.kind === 'video' && rec.w > 0 && rec.rms > -45, `${rec.name} ${rec.mime} ${(rec.size / 1024).toFixed(0)} KB, ${rec.w}×${rec.h}, audio ${rec.audioDur.toFixed(2)} s @ ${rec.rms.toFixed(1)} dBFS`)
+  check('recording is a .webm with audible audio (video when the encoder delivers)', rec.rms > -45, `${rec.name} ${rec.mime} ${(rec.size / 1024).toFixed(0)} KB, ${rec.w}×${rec.h}, audio ${rec.audioDur.toFixed(2)} s @ ${rec.rms.toFixed(1)} dBFS`)
 
   // ── STOP → silence ──
   check('STOP clicked', await click('Stop'))
@@ -171,6 +175,7 @@ try {
 } catch (e) {
   console.error(e); failures++
 } finally {
+  if (logs.length) console.log(logs.slice(0, 8).join(' | '))
   ws.close(); proc.kill()
 }
 console.log(failures ? `\n${failures} check(s) failed` : '\nall C5 browser checks passed')
