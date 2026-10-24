@@ -671,12 +671,12 @@
   },
   "cinema-closer": {
    "t=0": {
-    "hash": "db4396b5",
-    "dots": 1401
+    "hash": "ec6ae14c",
+    "dots": 1448
    },
    "t=1.3": {
-    "hash": "1dd8d7c4",
-    "dots": 1401
+    "hash": "4e573364",
+    "dots": 1448
    }
   },
   "cinema-witness": {
@@ -701,22 +701,22 @@
   },
   "cinema-keeper": {
    "t=0": {
-    "hash": "d7cac742",
-    "dots": 1150
+    "hash": "7a7c8450",
+    "dots": 1282
    },
    "t=1.3": {
-    "hash": "491fd103",
-    "dots": 1150
+    "hash": "7ccc0686",
+    "dots": 1282
    }
   },
   "cinema-encore": {
    "t=0": {
-    "hash": "38ed49f2",
-    "dots": 1301
+    "hash": "30c519be",
+    "dots": 1939
    },
    "t=1.3": {
-    "hash": "a6ec5423",
-    "dots": 1291
+    "hash": "c23248d8",
+    "dots": 1929
    }
   },
   "light-torch": {
@@ -761,12 +761,12 @@
   },
   "light-gloss": {
    "t=0": {
-    "hash": "b3f94c78",
-    "dots": 1308
+    "hash": "0d2a570e",
+    "dots": 1377
    },
    "t=1.3": {
-    "hash": "b3f94c78",
-    "dots": 1308
+    "hash": "0d2a570e",
+    "dots": 1377
    }
   },
   "light-glass": {
@@ -801,12 +801,12 @@
   },
   "light-fabric": {
    "t=0": {
-    "hash": "6848750e",
-    "dots": 1501
+    "hash": "3e3e2326",
+    "dots": 1744
    },
    "t=1.3": {
-    "hash": "6848750e",
-    "dots": 1501
+    "hash": "3e3e2326",
+    "dots": 1744
    }
   },
   "lv-title": {
@@ -901,12 +901,12 @@
   },
   "hb-thinking": {
    "t=0": {
-    "hash": "bdcb0366",
-    "dots": 803
+    "hash": "3de5ba3d",
+    "dots": 760
    },
    "t=1.3": {
-    "hash": "978e7617",
-    "dots": 885
+    "hash": "507a395a",
+    "dots": 819
    }
   },
   "hb-tool-running": {
@@ -951,12 +951,12 @@
   },
   "hb-agent": {
    "t=0": {
-    "hash": "3bdfee7e",
-    "dots": 947
+    "hash": "98a5539a",
+    "dots": 923
    },
    "t=1.3": {
-    "hash": "9856fc16",
-    "dots": 995
+    "hash": "c940e205",
+    "dots": 950
    }
   },
   "sim-rd": {
@@ -989,7 +989,7 @@
     "dots": 1326
    }
   },
-  "glyph-hourglass": {
+  "lock-hourglass": {
    "t=0": {
     "hash": "cdfbd82a",
     "dots": 310
@@ -999,7 +999,7 @@
     "dots": 310
    }
   },
-  "glyph-longpress": {
+  "lock-longpress": {
    "t=0": {
     "hash": "b10209c1",
     "dots": 529
@@ -1009,24 +1009,24 @@
     "dots": 529
    }
   },
-  "glyph-notify": {
+  "lock-notify": {
    "t=0": {
-    "hash": "18945236",
-    "dots": 545
+    "hash": "672ae072",
+    "dots": 610
    },
    "t=1.3": {
-    "hash": "659d7540",
-    "dots": 547
+    "hash": "5553494c",
+    "dots": 611
    }
   },
-  "glyph-idle": {
+  "lock-idle": {
    "t=0": {
-    "hash": "38d9f467",
-    "dots": 1066
+    "hash": "6d6899b1",
+    "dots": 1613
    },
    "t=1.3": {
-    "hash": "38d9f467",
-    "dots": 1066
+    "hash": "6d6899b1",
+    "dots": 1613
    }
   },
   "live-weather": {
@@ -1037,13 +1037,17 @@
   },
   "live-now-playing": {
    "t=0": {
-    "hash": "61733d77",
-    "dots": 1352
+    "hash": "e495cfba",
+    "dots": 1468
+   },
+   "t=1.3": {
+    "hash": "e48239bd",
+    "dots": 1464
    }
   },
   "live-contribs": {
    "t=0": {
-    "hash": "d541fea8",
+    "hash": "68068ea9",
     "dots": 1651
    }
   },

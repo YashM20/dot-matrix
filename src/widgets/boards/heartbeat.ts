@@ -27,11 +27,12 @@ export interface HeartbeatParams {
   /** Row-offset stutter strength. */ glitch: number
   /** Condensed into a check mark. */ check: number
   /** 1 = the pulse is the board's accent (`active`); only one state may set it. */ accent: number
+  /** Lobes shaded as their own spheres (each one its own highlight), so buds read apart from the core. */ bud: number
 }
 export type HeartbeatState = 'thinking' | 'tool-running' | 'awaiting-approval' | 'error' | 'done'
-const base: HeartbeatParams = { core: 14, lobe: 9, spread: 12, drift: .2, breathHz: .2, breath: .08, wander: 0, beatHz: 0, beat: 0, orbit: 0, orbitPeriod: 8, glitch: 0, check: 0, accent: 0 }
+const base: HeartbeatParams = { core: 14, lobe: 9, spread: 12, drift: .2, breathHz: .2, breath: .08, wander: 0, beatHz: 0, beat: 0, orbit: 0, orbitPeriod: 8, glitch: 0, check: 0, accent: 0, bud: 0 }
 export const HEARTBEAT: Readonly<Record<HeartbeatState, Readonly<HeartbeatParams>>> = {
-  thinking: { ...base, core: 14, lobe: 11, spread: 18, drift: .18, breathHz: .2, breath: .1, wander: 3 },
+  thinking: { ...base, core: 11, lobe: 9, spread: 27, drift: .18, breathHz: .2, breath: .1, wander: 3, bud: 1 },
   'tool-running': { ...base, core: 13, lobe: 7, spread: 8, drift: .9, breathHz: .7, breath: .04, orbit: 1 },
   'awaiting-approval': { ...base, core: 15, lobe: 8, spread: 9, drift: .3, breathHz: 0, breath: 0, beatHz: .85, beat: .18, accent: 1 },
   error: { ...base, core: 14, lobe: 9, spread: 11, drift: .06, breathHz: .3, breath: .03, glitch: 1 },
@@ -105,8 +106,19 @@ const organism = (p: HeartbeatParams, t: number, s: Stage, tone: Tone): Layer =>
     if (!body) return 0
     // key light from the upper left: the lit side of the dense interior is highlight, the rest mid
     const lx = bs[0].x + lightX * reach - x, ly = bs[0].y + lightY * reach - y
-    const lit = smoothstep(1.1, 2.2, S) * (p.check + (1 - p.check) * Math.exp(-(lx * lx + ly * ly) / (2 * (.5 * reach) ** 2)))
-    return body * (.48 + .25 * pulse + (.52 - .25 * pulse) * lit)
+    let lit = smoothstep(1.1, 2.2, S) * (p.check + (1 - p.check) * Math.exp(-(lx * lx + ly * ly) / (2 * (.5 * reach) ** 2)))
+    if (p.bud > 0) {
+      // budding: each lobe is its own sphere under an up-left key light (normal off the ball that owns the dot)
+      let best = 0, b = bs[0]
+      for (const q of bs) { const w = (q.r * q.r) / ((x - q.x) ** 2 + (y - q.y) ** 2 + 1e-3); if (w > best) { best = w; b = q } }
+      const nx = clamp((x - b.x) / b.r, -1, 1), ny = clamp((y - b.y) / b.r, -1, 1), nz = Math.sqrt(Math.max(0, 1 - nx * nx - ny * ny))
+      const sphere = clamp(-.5 * nx - .55 * ny + .67 * nz) ** 1.3
+      // where two balls share a dot (the necks between buds) the surface turns away: darker, so lobes read apart
+      const share = clamp((best / S - .45) / .4)
+      lit = lit * (1 - p.bud) + p.bud * sphere * share
+    }
+    const floor = .48 - .1 * p.bud
+    return body * (floor + .25 * pulse + (1 - floor - .25 * pulse) * lit)
   }
   return layer(T.lattice(K, 0, s.row).at(T.lattice(K, 0, s.row).place(f, 0, 0, COLS, s.h)), tone)
 }

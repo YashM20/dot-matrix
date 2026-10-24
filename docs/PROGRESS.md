@@ -137,6 +137,7 @@
   - board frame Σ exceeds the 8 ms bench budget under load;
   - no GPU path yet.
 - [x] C5 Sound: `src/audio/` (WebAudio synth + drums, lookahead scheduler on `bpm`, AnalyserNode meter, mic, REC); SOUND toggle on the transport; `scope` board (scope, spectrum, mic). Browser check `npx tsx scripts/audio-chrome.ts` (URL=dev server): onsets ≤0.4 ms off grid. REC muxes board video + audio via MediaRecorder; in headless the video take is empty, so it saves audio-only.
+- [x] Lift (craft: cinema, light, live, heartbeat, lock): `cinema-encore` singer silhouette at a mic stand in a curtain spot (was an "A"), `cinema-closer` two flame-lit profiles on black (was the vase illusion), `cinema-keeper` black rock + surf + per-row swell; `light-gloss` black lacquer (void body, highlight held toward the lit limb, floor-bounce rim), `light-fabric` higher-ambient weave + shadow-side sheen rim; `live-now-playing` seeded sun-over-sea cover + EQ animated from `t` (12 fps), `live-contribs` level 0/1 sizes 1.15/1.75; `hb-thinking` budding lobes (new `bud` token: per-lobe sphere shading, darker necks; `hb-agent` state 0 follows); board `glyph` → `lock` (`LOCK — LOCK SCREEN EXPERIENCES`, cards `lock-*`, `?board=glyph`, `/glyph/` and `?card=glyph-*` still resolve via `boardAliases` in `manifest.ts`), `lock-notify` 5×7 badge digit, `lock-idle` finer 60-site labyrinth that keeps rearranging. Snapshots `.snapshots/{before,r1..r5}`.
 
 ## How to resume (read first)
 1. `pnpm i`, then `pnpm dev`.

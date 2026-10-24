@@ -16,14 +16,14 @@ import { levelsBoard } from './boards/levels'
 import { heartbeatBoard } from './boards/heartbeat'
 import { simBoard } from './boards/sim'
 import { physicsBoard } from './boards/physics'
-import { glyphBoard } from './boards/glyph'
+import { lockBoard } from './boards/glyph'
 import { liveBoard, liveSources } from './boards/live'
 import { mirrorBoard } from './boards/mirror'
 import { gpuBoard } from './boards/gpu'
 import { surfacesBoard, surfacesSources } from './boards/surfaces'
 import { typeBoard } from './boards/type'
 import { scopeBoard, scopeShared } from './boards/scope'
-import { boardIds, boardManifest, type BoardContents, type BoardDef, type BoardId } from './manifest'
+import { boardIds, boardManifest, resolveBoardId, type BoardContents, type BoardDef, type BoardId } from './manifest'
 import { registerPresets } from './registry'
 
 /**
@@ -46,7 +46,7 @@ const contents = {
   levels: { items: levelsBoard },
   heartbeat: { items: heartbeatBoard },
   sim: { items: simBoard },
-  glyph: { items: glyphBoard },
+  lock: { items: lockBoard },
   live: { items: liveBoard, sources: liveSources },
   mirror: { items: mirrorBoard },
   gpu: { items: gpuBoard },
@@ -58,10 +58,10 @@ const contents = {
 } satisfies Record<BoardId, BoardContents>
 export const boards: BoardDef[] = boardManifest.map(({ id, title, columns }) => ({ id, title, columns, ...contents[id] }))
 export { boardIds }
-export const boardById = (id: string): BoardDef | undefined => boards.find(b => b.id === id)
+export const boardById = (id: string): BoardDef | undefined => { const key = resolveBoardId(id); return boards.find(b => b.id === key) }
 
 export const widgetPresets: WidgetPreset[] = boards.flatMap(b => b.items)
-export const widgetById = (id: string): WidgetPreset | undefined => widgetPresets.find(p => p.id === id)
+export const widgetById = (id: string): WidgetPreset | undefined => widgetPresets.find(p => p.id === id) ?? (id.startsWith('glyph-') ? widgetById(`lock-${id.slice(6)}`) : undefined)
 
 registerPresets(widgetPresets)
 

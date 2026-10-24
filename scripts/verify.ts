@@ -771,12 +771,12 @@ import { heartbeatCard, HEARTBEAT_STATES } from '../src/widgets/boards/heartbeat
   c0 = performance.now(); for (let i = 0; i < 30; i++) morph(disc, box, i / 29, { grid: g }); const perMorph = (performance.now() - c0) / 30
   assert('sdf morph: ends reproduce both masks, halfway is in between, EDT cached per shape', ends && between && cached, `${perMorph.toFixed(3)} ms per 40×40 morph`)
 
-  // glyph-longpress: the demo hold loop locks → migrates → app → back; the app view and the lock are both site layers
+  // lock-longpress: the demo hold loop locks → migrates → app → back; the app view and the lock are both site layers
   const lp = withChrome(glyphLongpress), hold = { hold: 1 }
   const at = (t: number) => sampleLayers(lp({ t, data: hold }), glyphLongpress.grid, glyphLongpress.style, dot480).length
   const lpFrames = [0, 2.4, 3.6, 6.5].map(at)
   c0 = performance.now(); for (let i = 0; i < 30; i++) at(2.1 + i * .04); const lpMs = (performance.now() - c0) / 30
-  assert('glyph-longpress: hold → unlock → migrate → app → back renders every phase', lpFrames.every(n => n > 100), `dots ${lpFrames.join('/')}, migrating frame ${lpMs.toFixed(2)} ms`)
+  assert('lock-longpress: hold → unlock → migrate → app → back renders every phase', lpFrames.every(n => n > 100), `dots ${lpFrames.join('/')}, migrating frame ${lpMs.toFixed(2)} ms`)
 }
 // 13) live data (P4-E): fixtures, backoff, caching, pause, transports — fake env, no network
 await liveChecks(assert)

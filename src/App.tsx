@@ -2,7 +2,7 @@ import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
 import { Board, VIEW_EXIT_MS, cardMotion } from './components/Board'
 import { DotWidget } from './components/DotWidget'
 import { useExitSwap } from './hooks/useExitSwap'
-import { boardIds, prefetchBoard } from './widgets/manifest'
+import { boardIds, prefetchBoard, resolveBoardId } from './widgets/manifest'
 import { boardFromPath, setPageMeta } from './site/meta'
 import './App.css'
 
@@ -34,7 +34,7 @@ const singleCard = params.get('card')
 
 export default function App() {
   const [tab, setTab] = useState<Tab>(tabs.find(t => t === params.get('tab')?.toUpperCase()) ?? 'BOARDS')
-  const [board, setBoard] = useState(boardIds.includes(params.get('board') ?? '') ? params.get('board')! : boardFromPath(window.location.pathname) ?? boardIds[0])
+  const [board, setBoard] = useState(boardIds.includes(resolveBoardId(params.get('board') ?? '')) ? resolveBoardId(params.get('board')!) : boardFromPath(window.location.pathname) ?? boardIds[0])
   // per-view <title>, description and OG tags (crawlers get the same from the prebuilt dist/<board>/index.html)
   useEffect(() => setPageMeta(tab === 'BOARDS' ? board : undefined), [tab, board])
   // the old view dissolves out before the new one mounts and enters (instant under reduced motion)

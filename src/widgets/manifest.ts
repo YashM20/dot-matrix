@@ -42,7 +42,7 @@ export const boardManifest = [
   { id: 'levels', title: 'LEVELS — HIVE, NINE WORLDS', columns: 3, load: () => import('./boards/levels').then(m => ({ items: m.levelsBoard })) },
   { id: 'heartbeat', title: 'HEARTBEAT — AGENT PRESENCE', columns: 3, load: () => import('./boards/heartbeat').then(m => ({ items: m.heartbeatBoard })) },
   { id: 'sim', title: 'SIM — LIVING FIELDS', columns: 3, load: () => import('./boards/sim').then(m => ({ items: m.simBoard })) },
-  { id: 'glyph', title: 'GLYPH — LOCK EXPERIENCES', columns: 2, load: () => import('./boards/glyph').then(m => ({ items: m.glyphBoard })) },
+  { id: 'lock', title: 'LOCK — LOCK SCREEN EXPERIENCES', columns: 2, load: () => import('./boards/glyph').then(m => ({ items: m.lockBoard })) },
   { id: 'live', title: 'LIVE — WEATHER, NOW PLAYING, CONTRIBUTIONS', columns: 3, load: () => import('./boards/live').then(m => ({ items: m.liveBoard, sources: m.liveSources })) },
   { id: 'mirror', title: 'MIRROR — LIVE HALFTONE', columns: 3, load: () => import('./boards/mirror').then(m => ({ items: m.mirrorBoard })) },
   { id: 'gpu', title: 'GPU — HALF A MILLION DOTS', columns: 2, load: () => import('./boards/gpu').then(m => ({ items: m.gpuBoard })) },
@@ -55,6 +55,9 @@ export const boardManifest = [
 
 export type BoardId = typeof boardManifest[number]['id']
 export const boardIds: string[] = boardManifest.map(b => b.id)
+/** Old board ids that still resolve (deep links, bookmarks, paths): `?board=glyph` / `/glyph/` open the lock board. */
+export const boardAliases: Readonly<Record<string, string>> = { glyph: 'lock' }
+export const resolveBoardId = (id: string): string => boardAliases[id] ?? id
 export const boardMeta = (id: string): BoardMeta | undefined => boardManifest.find(b => b.id === id)
 
 const loaded = new Map<string, Promise<BoardDef>>()

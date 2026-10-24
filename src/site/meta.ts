@@ -4,7 +4,7 @@
  * copies, so crawlers that don't run JS see the right card). Images are `dist/og/<board>.png`
  * (`scripts/site/og.ts`). Board URLs: `/<board>/` (path) or the older `?board=<id>`; both open the board.
  */
-import { boardIds, boardMeta } from '../widgets/manifest'
+import { boardIds, boardMeta, resolveBoardId } from '../widgets/manifest'
 
 export const SITE_NAME = 'DOT/480'
 export const SITE_TITLE = 'DOT/480 — a field-based dot-matrix UI engine'
@@ -14,8 +14,8 @@ export interface PageMeta { title: string; description: string; path: string; im
 
 /** The board a path like `/light/` names, if any. */
 export function boardFromPath(path: string): string | undefined {
-  const seg = path.split('/').filter(Boolean)[0]
-  return seg && boardIds.includes(seg) ? seg : undefined
+  const seg = path.split('/').filter(Boolean)[0], id = seg && resolveBoardId(seg)
+  return id && boardIds.includes(id) ? id : undefined
 }
 
 /** Meta for a board's deep link, or the site default (`boardId` undefined or unknown). */
