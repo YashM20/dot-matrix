@@ -5,7 +5,7 @@
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
 ## Status board (updated 2026-10-22)
-**Where we are:** On branch `feat/p1-complete`: P0 agent items done (P0-A mosaic mount ~31–34 ms, gate 30 ms, still open). P1-A..F done. P2-A..J done (browser + axe pass done; only `--mute` contrast 4.14:1 left, a design call). P3-A..G done: light/raster engine, Cinema, Levels, lift pass, Field IR v0, multi-tone layer, materials + time-of-day light. P4-A..G done (agent side): sim engine, Heartbeat, Glyph, migration + SDF morph, live data, webcam halftone mirror, MCP App + describe(). P5 started 2026-10-23 (parallel agents). P6 not started. 146 presets.
+**Where we are (2026-10-24):** everything is merged into `feat/p1-complete` — P0–P6 agent work (P6-D Studio, P6-F essay included) and the Web plan tracks W0, C2–C8, C10 and the craft lift. 173 presets, 31 boards. Direction: personal website (`docs/WEB-PLAN.md`). Not started from the Web plan: C1 (WebGPU compute) and C9 (multiplayer). All agent worktrees are merged and removed.
 `main` = `666c0eb` (PR #2 merged: TILE boards + P0 + P1 motion core).
 
 | Phase | Plan | Done | State |
@@ -15,8 +15,8 @@
 | P2 Interaction + Components v2 | 3 wk | P2-A..J done | 🟢 Instrument taste pass + `--mute` contrast decision left |
 | P3 Depth, light, material, Field IR | 3 wk | P3-A..G done | 🟢 Taste passes (Cinema, Levels, light) + exit gates left |
 | P4 Hero transitions, simulation, agents, live data | 3 wk | P4-A..G done | 🟢 Taste passes, real-host MCP test, 60 s Glyph recording gate left |
-| P5 GPU, devices, display physics | 3 wk | P5-B..E merged; P5-A in progress | 🔵 WebGL2 renderer unfinished (rate limit); real hardware + HVS-SSIM gates left |
-| P6 Authoring + ecosystem | 4 wk | P6-A/B/C/E merged; P6-D, P6-F in progress | 🔵 Dot Studio + launch essay unfinished (rate limit); nothing published |
+| P5 GPU, devices, display physics | 3 wk | P5-A..E merged | 🟢 Real hardware, HVS-SSIM and the 100k CPU-dots gate left |
+| P6 Authoring + ecosystem | 4 wk | P6-A..F merged | 🟢 Publishing dropped (personal site); essay to become the front page |
 | Track L (Perception Lab) / Track R (research spikes) | parallel | 0 | ⚪ |
 
 ### Remaining for P0 / P1, by who can unblock it
@@ -82,11 +82,12 @@
 - [~] P6-E: authoring MCP tools (`mcp/src/author.ts`, logic in `scripts/author/`, docs `docs/MCP-APP.md` › Authoring tools). `render_card` (PNG image content + describe), `score_card` (G1–G5 + tonal depth / density / motion-legibility proxies; Bradley–Terry rank + exemplars when history exists), `refine_card` (deterministic rule-based §2.7 loop: a round is kept only if it scores better; no LLM inside, the host model is the critic via `feedback`), `record_verdict` (`.dot480/verdicts.jsonl`, gitignored), `push_to_device` (stub: not configured unless a loopback URL or a local folder is set). Fidelity scoring factored into `scripts/lib/fidelity.ts`; CLI output unchanged. Seeds (`scripts/author/seeds.ts`): speckle 5/7 → 7/7 in 1 round, red flood 6/7 → 7/7 in 2, strobe 5–6/8 → 8/8 in 3. `mcp/test/author.ts` runs in `pnpm test`. Card input is IR + params until card spec v1 (`src/spec`) lands (TODO). **Not verified:** inside a real host, the gates' agreement with the user's taste (κ, P0-F), a real device.
 - [~] P6-F: essay "Ditherpunk for UI" (`essay.html`, its own Vite entry so it deploys alone; `src/essay/`; `?tab=essay` redirects): a builder's explorable deep-dive (~3.3k words, 14 sections, no pitch) with 15 lazy-mounted live figures (IntersectionObserver, one chunk each) on the real engine: resolution, drag-the-field pipeline + pitch, quantize steps + squircle exponent, cluster vs lattice/sites, second-accent toggle, enter masks, Departures, Instrument knobs, torch + "Torch in the Dark" (level-03 relit by the cursor), Hourglass/sand/RD, white-noise vs STBN vs STBN+hysteresis flicker counts, "Mirror that Heals" (scratch, regrows from the edges), editable Field IR → DOTS link, five surfaces, heartbeat + its 25×25 LED phone-back. Figures register only the presets they embed (`src/widgets/registry`), so the essay never loads every board: first view ~124 KB JS gz. Headless Chrome `scripts/essay-browser.ts` (1280 + 375, mount on scroll + input per figure, no console errors, no overflow, reduced-motion stills; screenshots `.snapshots/essay/`). Not done: essay as the site index, OG image, Mirror regrowth is an RD-like front (no NCA), Torch has no normals/parallax, real-phone tilt untested.
 
-**Resume here (2026-10-23, session limit hit):**
-- Unmerged agent work is saved in worktrees under `.claude/worktrees/` — P5-A WebGL2 renderer (`worktree-agent-a520014850d0cde8f`), P6-D Dot Studio (`worktree-agent-ab037e72f7115a61c`), launch essay (`worktree-agent-aa2661170ff4f86e0`). Resume each agent, or commit its WIP and merge into `feat/p1-complete`, then `pnpm golden --check` + `pnpm check`.
-- `pnpm check` currently fails only `mirror-camera live frame ≤ 4 ms` (5.4–6.9 ms) — measured with 3–9 agents loading the machine; re-measure on an idle machine before treating it as a regression.
-- `feat/p1-complete` is ~40 commits ahead of origin: push failed (Git Credential Manager crash; `gh` account `yashmhj` has no write access). Fix credentials, then `git push`.
-- Direction: personal project, website only (no release/monetization). Active plan: `docs/WEB-PLAN.md` (ship the site first, then the cool tracks C1–C10). `docs/NEXT-PLAN.md` §1/§2 still apply; `docs/MARKET-RESEARCH.md` is reference only. Rename the "Glyph" board to LOCK (trademark caution).
+**Resume here (2026-10-24):**
+- Everything is merged; no agent worktrees remain. `pnpm golden --check` matches all 173 presets; `pnpm build` passes with first-load JS ≈ 139 kB gz (budget 150).
+- `pnpm check` fails only `mirror-camera live frame ≤ 4 ms`. An interleaved A/B against the P4-F merge commit (`3ad98b2`) gave the same time (≈ 5.5 ms median both), so it is not a regression: the 4 ms budget is too tight for this laptop and swings with load. Decide: raise the budget, or make it best-of-N, or optimise the 12k-dot sampling. `migrate perf` and `type field` pass when the machine is idle.
+- Push is blocked: Git Credential Manager crashes and the `gh` account `yashmhj` has no write access to `YashM20/dot-matrix`. Fix credentials, then `git push`.
+- Deploy (W0, `docs/DEPLOY.md`): create the Cloudflare Pages project `dot480`, add repo secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and variable `SITE_URL`.
+- Next (Web plan): make the essay the front page; C1 WebGPU compute; taste session on the new boards (type, physics, heal, scope, lock, levels game, skins).
 
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.
