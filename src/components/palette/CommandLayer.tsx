@@ -4,17 +4,18 @@
  * shell, the X-ray inspector, the time machine bar, a small dock with the same toggles, toasts, an
  * fps meter and the boss fight. Every shortcut ignores keys typed into inputs and editors.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { findPreset } from '../../widgets/manifest'
 import { DotWidget } from '../DotWidget'
-import { Inspector } from '../xray/Inspector'
 import { TimeMachine } from '../xray/TimeMachine'
-import { remixQuery } from '../xray/remix'
 import { boardTime, freeze, hoveredCard, resume, scrub, setXR, toast, toggleCard, toggleGlobal, useXR, xrState } from '../xray/store'
 import { TABS, boardOfCard, type CommandApi } from './api'
-import { Palette } from './Palette'
 import { setReducedMotion } from './reducedMotion'
-import { Shell } from './Shell'
+
+// the panels load on first use: first-load JS stays inside the site budget
+const Inspector = lazy(() => import('../xray/Inspector').then(m => ({ default: m.Inspector })))
+const Palette = lazy(() => import('./Palette').then(m => ({ default: m.Palette })))
+const Shell = lazy(() => import('./Shell').then(m => ({ default: m.Shell })))
 
 const KONAMI = ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a']
 const editable = (t: EventTarget | null) => {
@@ -79,7 +80,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     async remix(cardId, data) {
       const preset = await findPreset(cardId)
       if (!preset) return toast(`no card ${cardId}`)
-      void remixQuery(preset, data).then(({ query, stub }) => {
+      void import('../xray/remix').then(m => m.remixQuery(preset, data)).then(({ query, stub }) => {
         if (stub) toast(`${preset.name} is not Field IR yet: DOTS opens a stub from describe()`)
         if (!setTab || view.current.tab === 'DOTS') return go(query)
         history.pushState(null, '', query)
@@ -182,7 +183,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
   }, [boss])
 
   return <>
-    <Inspector onRemix={(id, data) => api.remix(id, data)} onStudio={id => api.studio(id)} onCopyLink={id => api.copyLink(id)} />
+    {anyXray && <Suspense fallback={null}><Inspector onRemix={(id, data) => api.remix(id, data)} onStudio={id => api.studio(id)} onCopyLink={id => api.copyLink(id)} /></Suspense>}
     <TimeMachine />
     <div className="pal-dock" role="toolbar" aria-label="Explore">
       <button aria-pressed={anyXray} onClick={() => toggleGlobal()} title="X-ray every card (X on a hovered card, ⇧X all)">X-RAY</button>
@@ -192,8 +193,8 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     </div>
     {fpsHud && <FpsHud />}
     <div className="pal-toast" role="status" aria-live="polite">{note && <span key={note.id}>{note.text}</span>}</div>
-    {palette && <Palette api={api} hoveredCard={hovered} onClose={() => setPalette(false)} />}
-    {shell && <Shell api={api} onClose={() => setShell(false)} />}
+    {palette && <Suspense fallback={null}><Palette api={api} hoveredCard={hovered} onClose={() => setPalette(false)} /></Suspense>}
+    {shell && <Suspense fallback={null}><Shell api={api} onClose={() => setShell(false)} /></Suspense>}
     {boss && <div className="pal-boss" role="dialog" aria-modal="true" aria-label="Boss fight: Level 07, the queen" onMouseDown={e => { if (e.target === e.currentTarget) setBoss(false) }}>
       <div className="pal-boss-card">
         <p className="pal-boss-title">↑↑↓↓←→←→BA · LEVEL 07 · THE QUEEN</p>

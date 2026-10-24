@@ -134,19 +134,20 @@ try {
   }
   // ── time machine
   if (run('time')) {
-  await open('?board=levels'); await sleep(1500)
+  // main-thread sampling: a seek redraws in the same animation frame (a loaded worker can answer seconds late)
+  await open('?board=levels&worker=0'); await sleep(1500)
   await key('t', 0, 200)
   check('T freezes the clock and shows the time machine', await waitFor(`!!document.querySelector('.xr-time')`, 2000))
   await js(`(() => { const el = document.querySelector('.xr-time input[type=range]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, 5); el.dispatchEvent(new Event('input', { bubbles: true })) })()`)
-  await sleep(900)
-  const sigA = await cardSig('.board-view [data-card-id="lv-queen"]')
-  await sleep(700)
-  const sigB = await cardSig('.board-view [data-card-id="lv-queen"]')
+  // the seeked frame can land a few hundred ms late on a loaded machine (worker round trip): wait until it settles
+  const settled = async (sel: string) => { let prev = await cardSig(sel); for (let i = 0; i < 15; i++) { await sleep(300); const s = await cardSig(sel); if (s === prev) return s; prev = s } return prev }
+  const sigA = await settled('.board-view [data-card-id="lv-corridor"]')
+  await sleep(1000)
+  const sigB = await cardSig('.board-view [data-card-id="lv-corridor"]')
   const tShown = await text('.xr-time-t')
   check('scrubbing sets board time and the frame holds still', /T = 5\.00s/.test(tShown) && sigA === sigB, `${tShown}; frame ${sigA === sigB ? 'still' : 'moving'} ${sigA} ${sigB}`)
   await js(`(() => { const el = document.querySelector('.xr-time input[type=range]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, 9.5); el.dispatchEvent(new Event('input', { bubbles: true })) })()`)
-  await sleep(900)
-  const sigC = await cardSig('.board-view [data-card-id="lv-queen"]')
+  const sigC = await settled('.board-view [data-card-id="lv-corridor"]')
   check('scrubbing to another t redraws animated cards', sigC !== sigB, `${sigB} → ${sigC}`)
   await shot('04-time-machine')
   await js(`document.activeElement?.blur()`)
@@ -159,6 +160,8 @@ try {
   await key('k', 2)
   check('Ctrl-K opens the palette, focus in the combobox', await waitFor(`document.activeElement?.getAttribute('role') === 'combobox'`, 2000))
   await typeText('queen')
+  // cards join the search once the lazy board chunks load
+  await waitFor(`(document.querySelector('.pal-item--sel')?.textContent ?? '').includes('lv-queen')`, 8000)
   const first = await text('.pal-item--sel'), aria = await js(`(() => { const i = document.activeElement; return i.getAttribute('aria-activedescendant') === document.querySelector('[role=option][aria-selected=true]')?.id && i.getAttribute('aria-expanded') === 'true' && !!document.getElementById(i.getAttribute('aria-controls')) })()`)
   check('palette fuzzy-finds a card; ARIA combobox wiring holds', /lv-queen/.test(first) && aria, first)
   await shot('05-palette')
