@@ -15,6 +15,7 @@ import { lightBoard } from './boards/light'
 import { levelsBoard } from './boards/levels'
 import { heartbeatBoard } from './boards/heartbeat'
 import { simBoard } from './boards/sim'
+import { physicsBoard } from './boards/physics'
 import { glyphBoard } from './boards/glyph'
 import { liveBoard, liveSources } from './boards/live'
 import { mirrorBoard } from './boards/mirror'
@@ -51,6 +52,7 @@ const contents = {
   surfaces: { items: surfacesBoard, sources: surfacesSources },
   components: { items: componentsBoard },
   type: { items: typeBoard },
+  physics: { items: physicsBoard },
 } satisfies Record<BoardId, BoardContents>
 export const boards: BoardDef[] = boardManifest.map(({ id, title, columns }) => ({ id, title, columns, ...contents[id] }))
 export { boardIds }

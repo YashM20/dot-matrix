@@ -104,6 +104,11 @@
   - `public/_headers`: immutable `/assets/*`; a CSP with `'self'` scripts, workers, camera, the live APIs and no eval; no COOP/COEP.
   - `public/_redirects`: SPA fallback.
   - CI: `deploy` job (`cloudflare/wrangler-action`). Push to `main` → production, a PR → a preview. It is skipped until the `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` secrets exist. CI also runs the bundle budget and uploads a `site` artifact.
+- [x] C2: dot physics you can touch, CPU-first (`src/engine/physics/`, `?board=physics`). The engine pieces:
+  - `createWorld`/`worldAt` is pure in t (a SimField with checkpoints, a loop and a seam pull) until the first input, then live at fixed dt (it drops time, never stretches a step) and heals back after 3 s idle;
+  - stable fluids with warm-started Jacobi, MacCormack ink, vorticity and buoyancy;
+  - PBD cloth with aero wind, and a shape-matched jelly with an area constraint;
+  - disc particles with a spatial hash.
 - [x] C8: **kinetic dot type** (`src/engine/type/`, `?board=type`): stroke font (67 glyphs, SDF centrelines) with weight / width / roundness / slant axes, lattice hinting, profile kerning; `typeMorph` (SDF, letter sweep), `typeMigration`, quantized `marqueeField`, wave / bounce / weight-wave / breathe; CJK/emoji via offscreen canvas in the browser only (skipped headlessly). Board: VARIABLE (3 knobs), MORPH, MARQUEE (ON AIR = the one red), KINETIC, FLIGHT, TYPE ANYTHING (`data.text` textId, migrates on change). Verify `scripts/type.ts` (9 checks), goldens +6. Not done: ⌘K wiring, CJK not seen in a real browser, lowercase.
 
   Lazy boards:
@@ -125,6 +130,12 @@
   - DRAW stays hidden in the narrow nav (deliberate; still reachable at `?tab=draw`).
 
   **Needs the user:** Cloudflare project + secrets + `SITE_URL` variable (`docs/DEPLOY.md` › What you need to do), and git push credentials. Not verified: the headers on a real Pages deploy (`wrangler pages dev dist` locally); Safari/Firefox.
+
+  Cards: `phys-splash` (a swipe knocks DEPARTURES loose, the dots settle and Hilbert-migrate back, a full splash re-forms as ARRIVALS; the in-flight dots are the board's only red), `phys-ink`, `phys-flag`, `phys-jelly`, `phys-pit`. Input is the pointer plus Enter = kick plus `data.gx/gy` tilt; the DeviceOrientation wiring is not done. Verify has 13 checks (`scripts/physics.ts`); goldens +5. Weak spots:
+  - the cards throw inside the sampling worker so that they stay on the main thread; a `WidgetPreset` flag would be cleaner;
+  - motion runs at the 12 fps animated tier;
+  - board frame Σ exceeds the 8 ms bench budget under load;
+  - no GPU path yet.
 
 ## How to resume (read first)
 1. `pnpm i`, then `pnpm dev`.
