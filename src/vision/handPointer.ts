@@ -43,7 +43,7 @@ const emit = (patch: Partial<HandModeState>) => {
   for (const f of subs) f()
 }
 
-let video: HTMLVideoElement | null = null, holding = false, token = 0, raf = 0, lastTime = -1, lastProc = -Infinity
+let video: HTMLVideoElement | null = null, holding = false, token = 0, raf = 0, lastTime = -1, lastProc = -Infinity, credit = 2
 let ctx: CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D | null = null
 let tracker: HandTracker | null = null
 let over: Element | null = null, captured: Element | null = null, downAt: Element | null = null
@@ -132,9 +132,11 @@ const stopLoop = () => { cancelAnimationFrame(raf); raf = 0; if (vfc) video?.can
 function frame(now: number, presented?: number) {
   schedule()
   const vd = video
-  // ≤ ~45 fps of tracking even on a 60 fps camera
+  // ≤ ~45 fps of tracking even on a 60 fps camera, as an average (a credit of up to 2 frames refills every
+  // 22 ms): a 30 fps camera whose frames land on back-to-back vsyncs (16.7 ms, then 50 ms) loses none of them,
+  // where a hard 22 ms gap dropped every early one (~30% of frames under jank)
   const key = presented ?? vd?.currentTime ?? -1
-  if (!vd || vd.readyState < 2 || key === lastTime || now - lastProc < 22) return
+  if (!vd || vd.readyState < 2 || key === lastTime || Math.min(2, credit + (now - lastProc) / 22) < 1) return
   const vw = vd.videoWidth, vh = vd.videoHeight
   if (!vw || !vh) return
   if (!ctx) {
@@ -142,6 +144,7 @@ function frame(now: number, presented?: number) {
     ctx = c.getContext('2d', { willReadFrequently: true }) as typeof ctx
     if (!ctx) return
   }
+  credit = Math.min(2, credit + (now - lastProc) / 22) - 1
   lastTime = key; lastProc = now
   const aspect = W / H, sw = Math.min(vw, vh * aspect), sh = sw / aspect
   ctx.setTransform(-1, 0, 0, 1, W, 0)
