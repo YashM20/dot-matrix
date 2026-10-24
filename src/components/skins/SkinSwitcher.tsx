@@ -1,5 +1,5 @@
 import { useRef, type KeyboardEvent } from 'react'
-import { SKINS, SKIN_NAMES } from '../../engine/display/skins'
+import { SKINS, SKIN_NAMES } from '../../engine/display/names'
 import { setClack, setSkin, useClack, useDisplaySkin } from './store'
 
 /**

@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
 import { Board, VIEW_EXIT_MS, cardMotion } from './components/Board'
 import { DotWidget } from './components/DotWidget'
 import { SkinSwitcher } from './components/skins/SkinSwitcher'
-import { CommandLayer } from './components/palette/CommandLayer'
 import { useExitSwap } from './hooks/useExitSwap'
 import { boardIds, prefetchBoard, resolveBoardId } from './widgets/manifest'
 import { boardFromPath, setPageMeta } from './site/meta'
@@ -26,6 +25,26 @@ const galleryItems = ['home-clock', 'music', 'timer', 'weather', 'fitness', 'mes
 // STUDIO (P6-D) is its own tab, not a WORKSPACE upgrade: WORKSPACE stays the one-preset tuner (style,
 // photo, exports); STUDIO edits a layered card document. Lazy, so the other tabs don't load the editor.
 const Studio = lazy(() => import('./components/studio/Studio').then(m => ({ default: m.Studio })))
+// x-ray / time machine / ⌘K palette / dot shell (C10): out of the first load, mounted once the page is idle
+// (or on the first key press, so a quick ⌘K still finds it)
+const CommandLayerLazy = lazy(() => import('./components/palette/CommandLayer').then(m => ({ default: m.CommandLayer })))
+type CommandLayerProps = Parameters<typeof import('./components/palette/CommandLayer').CommandLayer>[0]
+function CommandLayer(props: CommandLayerProps) {
+  const [ready, setReady] = useState(false)
+  useEffect(() => {
+    if (ready) return
+    const go = () => setReady(true)
+    const w = window as Window & { requestIdleCallback?: Window['requestIdleCallback']; cancelIdleCallback?: Window['cancelIdleCallback'] }
+    const hasIdle = typeof w.requestIdleCallback === 'function'
+    const idle = hasIdle ? w.requestIdleCallback!(go, { timeout: 2000 }) : window.setTimeout(go, 800)
+    window.addEventListener('keydown', go, { once: true })
+    return () => {
+      if (hasIdle) w.cancelIdleCallback?.(idle); else window.clearTimeout(idle)
+      window.removeEventListener('keydown', go)
+    }
+  }, [ready])
+  return ready ? <Suspense fallback={null}><CommandLayerLazy {...props} /></Suspense> : null
+}
 const tabs = ['BOARDS', 'GALLERY', 'WORKSPACE', 'STUDIO', 'LOG', 'DOTS', 'DRAW'] as const
 type Tab = typeof tabs[number]
 

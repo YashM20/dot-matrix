@@ -4,8 +4,7 @@
  * command palette, a terminal `skin crt`); it keeps the URL and storage in sync.
  */
 import { useSyncExternalStore } from 'react'
-import { isSkinName, type SkinName } from '../../engine/display/skins'
-import { clackEnabled } from '../../media/clack'
+import { isSkinName, type SkinName } from '../../engine/display/names'
 
 const KEY = 'dot480:skin', CLACK_KEY = 'dot480:clack'
 
@@ -20,6 +19,11 @@ function initialSkin(): SkinName {
 let skin: SkinName = initialSkin()
 /** Seconds (performance clock) of the last switch: cards time their refresh from it. */
 let changedAt = 0
+// same rule as `clackEnabled()` in src/media/clack.ts, inlined so the switcher doesn't pull the audio module in
+const clackEnabled = (): boolean => {
+  if (typeof location === 'undefined') return false
+  try { return new URLSearchParams(location.search).get('clack') === '1' || localStorage.getItem('dot480:clack') === '1' } catch { return false }
+}
 let clack = clackEnabled()
 const listeners = new Set<() => void>()
 const emit = () => { for (const l of listeners) l() }

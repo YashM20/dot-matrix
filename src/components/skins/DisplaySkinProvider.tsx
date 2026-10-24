@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { SKIN_NAMES } from '../../engine/display/skins'
+import { SKIN_NAMES } from '../../engine/display/names'
 import { setSkin, useDisplaySkin } from './store'
 
 /**
