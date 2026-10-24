@@ -4,6 +4,7 @@ import { beginDrag, dragValue, pick, quantizeTime, releaseValue, sharedClock, to
 import type { ClockSubscriber, Control, ControlPatch, DragStart, GridConfig, Pointer } from '../engine'
 import type { InteractionContext } from './useDotField'
 import { LATENCY_PROBE, resolveMarks, type LatencyMark } from './latencyProbe'
+import { HAND_POINTER_ID } from '../vision/pointerId'
 
 /** How long a keyboard-pressed button stays down (ms). */
 const KEY_PRESS_MS = 140
@@ -144,7 +145,7 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
     const prev = pointers.current.get(e.pointerId), last = stamps.current.get(e.pointerId)
     const dt = prev && last !== undefined ? (e.timeStamp - last) / 1000 : 0
     const p: Pointer = {
-      id: e.pointerId, x, y,
+      id: e.pointerId === HAND_POINTER_ID ? 'hand' : e.pointerId, x, y,
       inside: x >= -.5 && y >= -.5 && x <= g.cols - .5 && y <= g.rows - .5,
       down: prev?.down ?? false, tDown: prev?.tDown ?? 0, tUp: prev?.tUp ?? 0,
       vx: dt > 0 ? (x - prev!.x) / dt : prev?.vx ?? 0, vy: dt > 0 ? (y - prev!.y) / dt : prev?.vy ?? 0,

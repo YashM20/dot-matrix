@@ -7,6 +7,7 @@
  */
 import type { CellBounds, GridConfig } from '../engine/types'
 import { createRaster, type Raster } from '../engine/raster'
+import { acquireCamera, releaseCamera } from './stream'
 
 export type CameraStatus = 'idle' | 'starting' | 'live' | 'denied' | 'error'
 export interface CameraCapture {
@@ -51,12 +52,12 @@ export function createCamera(grid: GridConfig, box: CellBounds = [0, 0, grid.col
     get frame() { return frame },
     async start() {
       if (status === 'live' || status === 'starting') return
-      if (!navigator.mediaDevices?.getUserMedia) { set('error'); return }
       const mine = ++token
       set('starting')
       try {
-        const s = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false })
-        if (mine !== token) { s.getTracks().forEach(t => t.stop()); return } // stopped while the prompt was open
+        // the shared stream (one device for every card and HAND mode); a test may swap in a synthetic one
+        const s = await acquireCamera()
+        if (mine !== token) { releaseCamera(); return } // stopped while the prompt was open
         stream = s
         video ??= Object.assign(document.createElement('video'), { muted: true, playsInline: true })
         video.srcObject = s
@@ -65,13 +66,14 @@ export function createCamera(grid: GridConfig, box: CellBounds = [0, 0, grid.col
         set('live')
       } catch (error) {
         if (mine !== token) return
-        stream?.getTracks().forEach(t => t.stop()); stream = null
-        set((error as DOMException)?.name === 'NotAllowedError' || (error as DOMException)?.name === 'SecurityError' ? 'denied' : 'error')
+        if (stream) { stream = null; releaseCamera() }
+        const name = (error as DOMException)?.name
+        set(name === 'NotAllowedError' || name === 'SecurityError' ? 'denied' : 'error')
       }
     },
     stop() {
       token++
-      stream?.getTracks().forEach(t => t.stop()); stream = null
+      if (stream) { stream = null; releaseCamera() }
       if (video) { video.pause(); video.srcObject = null }
       if (status !== 'denied' && status !== 'error') set('idle')
     },

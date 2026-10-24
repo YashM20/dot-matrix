@@ -6,6 +6,7 @@ import { registeredPreset } from '../widgets/registry'
 import { findPreset } from '../widgets/manifest'
 import { DotCanvas, type DotCanvasProps } from './DotCanvas'
 import { useCamera, withMedia } from '../media/useCamera'
+import { HAND_KEY, useHandMode } from '../media/useHand'
 
 export interface DotWidgetProps {
   /** Preset id from `widgetPresets` (ignored when `preset` is given). */
@@ -50,9 +51,12 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
   // live media (P4): a camera card's feed starts only once its own control turned `cam` on
   const merged = { ...preset?.defaults, ...data, ...shared, ...local }
   const camera = useCamera(preset?.media === 'camera', !!merged.cam, preset?.grid)
+  // HAND mode (C6): a card with a `hand` toggle drives the page-wide hand pointer
+  const hand = useHandMode(!!preset?.controls?.some(c => c.key === HAND_KEY)), { intercept } = hand
   const layers = useMemo(() => preset && (preset.media ? withMedia(withChrome(preset), camera.read) : withChrome(preset)), [preset, camera.read])
   const sharedKey = sharedKeys?.join(',') ?? ''
-  const onInput = useCallback((patch: ControlPatch) => {
+  const onInput = useCallback((input: ControlPatch) => {
+    const patch = intercept(input)
     // split the patch: shared keys go to the board store, the rest stay on this card
     const keys = sharedKey ? new Set(sharedKey.split(',')) : null, mine: ControlPatch = {}, board: ControlPatch = {}
     let ownEdit = false, boardEdit = false
@@ -62,7 +66,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
     }
     if (ownEdit) setLocal(prev => ({ ...prev, ...mine }))
     if (boardEdit) onShared!(board)
-  }, [sharedKey, onShared])
+  }, [sharedKey, onShared, intercept])
   if (!preset || !layers) return null
   const native = preset.grid.pitch ?? theme.gridPx, pitch = density ?? native, k = pitch / native
   // radii are px tuned for the preset's own pitch — scale them with density so dots keep their proportion
@@ -81,7 +85,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
         {preset.live && <i className="status-dot" />}
       </header>}
       <div className="dot-card-body">
-        <DotCanvas layers={layers} data={preset.media ? { ...merged, ...camera.data } : merged} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={camera.status === 'live' ? 30 : undefined} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
+        <DotCanvas layers={layers} data={preset.media ? { ...merged, ...camera.data, ...hand.data } : { ...merged, ...hand.data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={camera.status === 'live' ? 30 : undefined} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
           controls={interactive ? controls : undefined} onInput={interactive ? onInput : undefined} />
       </div>
     </div>
