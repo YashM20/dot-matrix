@@ -1,7 +1,7 @@
 import { departures, nextTrain, stationClock } from '../../widgets/boards/departures'
 import { Card } from '../ui/Card'
 import { Cards } from '../ui/kit'
-import { registerPresets } from '../../widgets/registered'
+import { registerPresets } from '../../widgets/registry'
 
 // registry cards: the sample worker can rebuild them by id, static ones share the sample cache
 registerPresets([departures, stationClock, nextTrain])

@@ -2,7 +2,7 @@ import { surfacesBoard, surfacesSources } from '../../widgets/boards/surfaces'
 import { pick, useLiveData } from '../../data/useLiveData'
 import { Card } from '../ui/Card'
 import { Cards } from '../ui/kit'
-import { registerPresets } from '../../widgets/registered'
+import { registerPresets } from '../../widgets/registry'
 
 // registry cards: the sample worker can rebuild them by id, static ones share the sample cache
 registerPresets(surfacesBoard)

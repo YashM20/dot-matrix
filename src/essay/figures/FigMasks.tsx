@@ -4,7 +4,7 @@ import { withChrome } from '../../widgets/types'
 import { platform } from '../../widgets/boards/departures'
 import { DotCanvas } from '../../components/DotCanvas'
 import { Choice, Controls, Panel } from '../ui/kit'
-import { registerPresets } from '../../widgets/registered'
+import { registerPresets } from '../../widgets/registry'
 
 // registry cards: the sample worker can rebuild them by id, static ones share the sample cache
 registerPresets([platform])

@@ -2,7 +2,7 @@ import { mirrorLadder } from '../../widgets/boards/mirror'
 import { Card } from '../ui/Card'
 import { Cards, Controls } from '../ui/kit'
 import { mirrorHeals, scratchMirror } from './mirrorHeals'
-import { registerPresets } from '../../widgets/registered'
+import { registerPresets } from '../../widgets/registry'
 
 // registry cards: the sample worker can rebuild them by id, static ones share the sample cache
 registerPresets([mirrorLadder])
