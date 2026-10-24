@@ -5,7 +5,8 @@
  */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { rank } from './fuzzy'
-import { paletteItems, type CommandApi } from './api'
+import { allBoards, paletteItems, type CommandApi } from './api'
+import type { BoardDef } from '../../widgets/manifest'
 
 function Highlight({ text, hits }: { text: string; hits: number[] }): ReactNode {
   if (!hits.length) return text
@@ -22,7 +23,10 @@ export function Palette({ api, hoveredCard, onClose }: { api: CommandApi; hovere
   const [index, setIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null), listRef = useRef<HTMLUListElement>(null)
   const listId = useId(), base = useId()
-  const items = useMemo(() => paletteItems(hoveredCard), [hoveredCard])
+  // boards come from the manifest at once; their cards join the search when the board chunks have loaded
+  const [boards, setBoards] = useState<BoardDef[]>([])
+  useEffect(() => { let live = true; allBoards().then(b => { if (live) setBoards(b) }, () => {}); return () => { live = false } }, [])
+  const items = useMemo(() => paletteItems(hoveredCard, boards), [hoveredCard, boards])
   const results = useMemo(() => rank(items, query, 60), [items, query])
   const sel = Math.min(index, Math.max(0, results.length - 1))
   const optionId = (i: number) => `${base}-o${i}`

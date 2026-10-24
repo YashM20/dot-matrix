@@ -5,7 +5,7 @@
  * fps meter and the boss fight. Every shortcut ignores keys typed into inputs and editors.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { widgetById } from '../../widgets'
+import { findPreset } from '../../widgets/manifest'
 import { DotWidget } from '../DotWidget'
 import { Inspector } from '../xray/Inspector'
 import { TimeMachine } from '../xray/TimeMachine'
@@ -61,8 +61,8 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       if (!setTab || !setBoard) return go(`?board=${id}`)
       setTab('BOARDS'); setBoard(id)
     },
-    focusCard(cardId, opts) {
-      const b = boardOfCard(cardId)
+    async focusCard(cardId, opts) {
+      const b = await boardOfCard(cardId)
       if (!b) return toast(`no card ${cardId}`)
       this.openBoard(b.id)
       // the old view exits before the new one mounts: wait for the card, then bring it to the eye
@@ -76,8 +76,8 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       }
       window.setTimeout(find, 60)
     },
-    remix(cardId, data) {
-      const preset = widgetById(cardId)
+    async remix(cardId, data) {
+      const preset = await findPreset(cardId)
       if (!preset) return toast(`no card ${cardId}`)
       void remixQuery(preset, data).then(({ query, stub }) => {
         if (stub) toast(`${preset.name} is not Field IR yet: DOTS opens a stub from describe()`)
@@ -86,8 +86,8 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
         setTab('DOTS')
       }, e => toast(`remix failed: ${(e as Error).message}`))
     },
-    studio(cardId) {
-      if (!widgetById(cardId)) return toast(`no card ${cardId}`)
+    async studio(cardId) {
+      if (!(await findPreset(cardId))) return toast(`no card ${cardId}`)
       if (!setTab) return go(`?tab=studio`)
       // lazy, like the tab itself: the editor only loads when asked for
       void Promise.all([import('../studio/store'), import('../studio/doc')]).then(([{ useStudio }, { importPreset }]) => {
@@ -194,7 +194,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     <div className="pal-toast" role="status" aria-live="polite">{note && <span key={note.id}>{note.text}</span>}</div>
     {palette && <Palette api={api} hoveredCard={hovered} onClose={() => setPalette(false)} />}
     {shell && <Shell api={api} onClose={() => setShell(false)} />}
-    {boss && widgetById('lv-queen') && <div className="pal-boss" role="dialog" aria-modal="true" aria-label="Boss fight: Level 07, the queen" onMouseDown={e => { if (e.target === e.currentTarget) setBoss(false) }}>
+    {boss && <div className="pal-boss" role="dialog" aria-modal="true" aria-label="Boss fight: Level 07, the queen" onMouseDown={e => { if (e.target === e.currentTarget) setBoss(false) }}>
       <div className="pal-boss-card">
         <p className="pal-boss-title">↑↑↓↓←→←→BA · LEVEL 07 · THE QUEEN</p>
         <DotWidget type="lv-queen" enter={{ delay: 0, mask: 'radial', duration: 900 }} />

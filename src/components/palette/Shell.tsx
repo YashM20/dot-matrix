@@ -8,12 +8,12 @@ import { describe } from '../../engine/describe'
 import { textAt } from '../../engine/layout'
 import { hasGlyph } from '../../engine/fields/bitmapFont'
 import type { DotStyle, GridConfig, Layer } from '../../engine'
-import { boards } from '../../widgets'
+import { boardManifest, loadBoard } from '../../widgets/manifest'
 import { tileStyle } from '../../widgets/types'
 import { DotCanvas } from '../DotCanvas'
 import { boardTime, probes, xrState } from '../xray/store'
 import { fuzzy } from './fuzzy'
-import { SKINS, TABS, boardOfCard, type CommandApi } from './api'
+import { SKINS, TABS, allBoards, type CommandApi } from './api'
 
 const CHARS = 78, LINES = 13, LH = 9, PAD = 3
 const GRID: GridConfig = { cols: CHARS * 6 + PAD * 2, rows: (LINES + 1) * LH + PAD * 2, pitch: 2.25 }
@@ -42,8 +42,8 @@ function measureFps(ms = 600): Promise<number> {
   })
 }
 /** Best card id for a loose name (`queen`, `lv-queen`, `Level 07`). */
-function findCard(q: string) {
-  const all = boards.flatMap(b => b.items)
+async function findCard(q: string) {
+  const all = (await allBoards()).flatMap(b => b.items)
   const exact = all.find(p => p.id === q || p.name.toLowerCase() === q)
   if (exact) return exact
   let best: { p: (typeof all)[number]; s: number } | null = null
@@ -51,7 +51,8 @@ function findCard(q: string) {
   return best?.p
 }
 function findBoard(q: string) {
-  return boards.find(b => b.id === q) ?? boards.find(b => b.id.startsWith(q)) ?? boards.find(b => b.title.toLowerCase().includes(q))
+  const bs = boardManifest
+  return bs.find(b => b.id === q) ?? bs.find(b => b.id.startsWith(q)) ?? bs.find(b => b.title.toLowerCase().includes(q))
 }
 
 export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }) {
@@ -73,22 +74,23 @@ export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }
       case 'exit': case 'quit': return onClose()
       case 'ls': {
         if (arg) {
-          const b = findBoard(arg)
-          if (!b) return print({ kind: 'err', text: `ls: no board "${arg}"` })
+          const m = findBoard(arg)
+          if (!m) return print({ kind: 'err', text: `ls: no board "${arg}"` })
+          const b = await loadBoard(m.id)
           return print(`${b.id} — ${b.title}`, ...b.items.map(p => `  ${p.id.padEnd(22)}${p.name}${p.animated ? ' ·' : ''}`))
         }
-        const ids = boards.map(b => (b.id === api.board ? `*${b.id}` : ` ${b.id}`))
+        const ids = boardManifest.map(b => (b.id === api.board ? `*${b.id}` : ` ${b.id}`))
         for (let i = 0; i < ids.length; i += 5) print(ids.slice(i, i + 5).map(s => s.padEnd(15)).join(''))
-        return print({ kind: 'dim', text: `${boards.length} boards · ls <board> lists its cards · tabs: ${TABS.join(' ').toLowerCase()}` })
+        return print({ kind: 'dim', text: `${boardManifest.length} boards · ls <board> lists its cards · tabs: ${TABS.join(' ').toLowerCase()}` })
       }
       case 'open': case 'load': case 'cd': {
         if (!arg) return print({ kind: 'err', text: `${cmd}: which board? try ls` })
         const tab = TABS.find(t => t.toLowerCase() === arg)
         if (tab) { api.openTab(tab); return print(`→ ${tab}`) }
         const b = findBoard(arg)
-        if (b) { api.openBoard(b.id); return print(`→ ${b.id.toUpperCase()} (${b.items.length} cards)`) }
-        const c = findCard(arg)
-        if (c) { api.focusCard(c.id); return print(`→ ${c.name} on ${boardOfCard(c.id)?.id.toUpperCase() ?? '?'}`) }
+        if (b) { api.openBoard(b.id); return print(`→ ${b.id.toUpperCase()}`) }
+        const c = await findCard(arg)
+        if (c) { void api.focusCard(c.id); return print(`→ ${c.name}`) }
         return print({ kind: 'err', text: `${cmd}: nothing called "${arg}"` })
       }
       case 'xray': case 'x-ray': {
@@ -115,19 +117,19 @@ export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }
       }
       case 'play': case 'resume': api.resume(); return print('clock running')
       case 'describe': case 'cat': {
-        const c = arg ? findCard(arg) : undefined
+        const c = arg ? await findCard(arg) : undefined
         if (!c) return print({ kind: 'err', text: `${cmd}: which card? e.g. describe queen` })
         return print(...wrapLines(describe(c, {}).summary))
       }
       case 'remix': {
-        const c = arg ? findCard(arg) : undefined
+        const c = arg ? await findCard(arg) : undefined
         if (!c) return print({ kind: 'err', text: 'remix: which card? e.g. remix rings' })
-        api.remix(c.id); return print(`→ DOTS with ${c.id}`)
+        void api.remix(c.id); return print(`→ DOTS with ${c.id}`)
       }
       case 'studio': case 'edit': {
-        const c = arg ? findCard(arg) : undefined
+        const c = arg ? await findCard(arg) : undefined
         if (!c) return print({ kind: 'err', text: `${cmd}: which card? e.g. studio queen` })
-        api.studio(c.id); return print(`→ STUDIO with ${c.id}`)
+        void api.studio(c.id); return print(`→ STUDIO with ${c.id}`)
       }
       case 'skin': {
         if (!arg || !(SKINS as readonly string[]).includes(arg)) return print({ kind: 'err', text: `skin: one of ${SKINS.join(', ')}` })

@@ -2,7 +2,7 @@
  * What the palette and the dot shell can do: one command API shared by both (built in `CommandLayer`
  * from the App's tab / board state), plus the palette's item list.
  */
-import { boards, widgetPresets } from '../../widgets'
+import { boardIds, boardManifest, loadBoard, type BoardDef } from '../../widgets/manifest'
 import type { RendererOverride } from '../xray/store'
 import type { MotionSetting } from './reducedMotion'
 
@@ -15,10 +15,10 @@ export interface CommandApi {
   openTab(tab: string): void
   openBoard(id: string): void
   /** Open the board holding `cardId`, scroll to the card and flash it. */
-  focusCard(cardId: string, opts?: { xray?: boolean }): void
-  remix(cardId: string, data?: Record<string, number>): void
+  focusCard(cardId: string, opts?: { xray?: boolean }): void | Promise<void>
+  remix(cardId: string, data?: Record<string, number>): void | Promise<void>
   /** Open the card in STUDIO as a layer stack (`importPreset`). */
-  studio(cardId: string): void
+  studio(cardId: string): void | Promise<void>
   copyLink(cardId?: string): void
   toggleXray(force?: boolean): void
   freeze(): void
@@ -44,10 +44,13 @@ export interface PaletteItem {
   run(api: CommandApi): void
 }
 
+/** Every board, loading the chunks not loaded yet (the palette's card search, the shell). */
+export const allBoards = (): Promise<BoardDef[]> => Promise.all(boardIds.map(loadBoard))
 /** The board a card lives on (first one, board order). */
-export const boardOfCard = (cardId: string) => boards.find(b => b.items.some(p => p.id === cardId))
+export const boardOfCard = async (cardId: string) => (await allBoards()).find(b => b.items.some(p => p.id === cardId))
 
-export function paletteItems(hoveredCard?: string): PaletteItem[] {
+/** Palette items: actions, views and boards (from the manifest) at once; cards once `boards` have loaded. */
+export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): PaletteItem[] {
   const items: PaletteItem[] = []
   const act = (id: string, text: string, run: PaletteItem['run'], hint?: string, keywords?: string) => items.push({ id: `a:${id}`, group: 'Action', text, run, hint, keywords, boost: 20 })
   act('xray', 'Toggle X-ray on every card', a => a.toggleXray(), '⇧X', 'xray inspect debug grid field layers')
@@ -66,13 +69,15 @@ export function paletteItems(hoveredCard?: string): PaletteItem[] {
   act('worker-on', 'Renderer: worker sampling (reloads)', a => a.setWorker(true), '', 'worker thread')
   for (const s of SKINS) act(`skin-${s}`, `Skin: ${s}`, a => a.setSkin(s), 'soon', 'display skin theme crt lcd')
   for (const t of TABS) items.push({ id: `v:${t}`, group: 'View', text: `Go to ${t}`, run: a => a.openTab(t), keywords: t.toLowerCase(), boost: 30 })
-  for (const b of boards) items.push({ id: `b:${b.id}`, group: 'Board', text: `${b.id.toUpperCase()} — ${b.title}`, keywords: b.items.map(p => p.name).join(' '), hint: `${b.items.length} cards`, boost: 40, run: a => a.openBoard(b.id) })
+  for (const m of boardManifest) {
+    const b = boards.find(x => x.id === m.id)
+    items.push({ id: `b:${m.id}`, group: 'Board', text: `${m.id.toUpperCase()} — ${m.title}`, keywords: b?.items.map(p => p.name).join(' '), hint: b ? `${b.items.length} cards` : undefined, boost: 40, run: a => a.openBoard(m.id) })
+  }
   const seen = new Set<string>()
-  for (const p of widgetPresets) {
+  for (const b of boards) for (const p of b.items) {
     if (seen.has(p.id)) continue
     seen.add(p.id)
-    const b = boardOfCard(p.id)
-    items.push({ id: `c:${p.id}`, group: 'Card', text: `${p.name} · ${p.id}`, keywords: `${b?.id ?? ''} ${p.group}`, hint: b?.id.toUpperCase(), run: a => a.focusCard(p.id) })
+    items.push({ id: `c:${p.id}`, group: 'Card', text: `${p.name} · ${p.id}`, keywords: `${b.id} ${p.group}`, hint: b.id.toUpperCase(), run: a => a.focusCard(p.id) })
   }
   return items
 }

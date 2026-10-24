@@ -2424,6 +2424,40 @@ label b {
   }
 }
 
+/* ── W0 mobile pass (375 px, scripts/site/mobile.ts): tap targets at least 24 px (WCAG 2.5.8), touch padding ── */
+.view-loading {
+  min-height: 60vh
+}
+
+@media(max-width:760px) {
+  /* the view tabs were 10 px tall: pad them to a 24 px target without moving the text */
+  .topbar nav button {
+    min-height: 24px;
+    min-width: 24px;
+    padding-block: 7px
+  }
+
+  .topbar {
+    gap: 6px 24px
+  }
+
+  .log-link {
+    display: inline-flex;
+    align-items: center;
+    min-height: 24px
+  }
+}
+
+@media (pointer: coarse) {
+  .board-tabs button {
+    min-height: 28px
+  }
+
+  :is(.shell) select,
+  :is(.shell) input[type=range] {
+    min-height: 24px
+  }
+}
 /* ── STUDIO (P6-D) ───────────────────────────────────────────────────────── */
 .st-layout {
   display: grid;
@@ -2547,3 +2581,29 @@ label b {
   .st-layout { grid-template-columns: 1fr }
 }
 .st-hint code { font: inherit; color: var(--label); background: none; padding: 0 }
+
+/* W0: playground controls on touch screens (number fields, dither toggles, group headers) */
+@media (pointer: coarse) {
+  .pg-layout input,
+  .pg-layout button {
+    min-height: 24px
+  }
+}
+
+/* W0: STUDIO at phone widths: the timeline rows wrap instead of pushing the page 4 px wide */
+@media (max-width: 480px) {
+  .st-layout > *,
+  .st-track,
+  .st-transport > * {
+    min-width: 0
+  }
+
+  .st-transport,
+  .st-track-opts {
+    grid-template-columns: repeat(2, minmax(0, 1fr))
+  }
+
+  .st-track-head {
+    flex-wrap: wrap
+  }
+}
