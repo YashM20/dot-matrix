@@ -38,6 +38,9 @@ const js = async (expression: string) => {
   return r.result?.result?.value
 }
 let failures = 0
+/** `C10_ONLY=time,shell` runs just those sections. */
+const only = process.env.C10_ONLY?.split(',')
+const run = (name: string) => !only || only.includes(name)
 const check = (name: string, ok: boolean, detail = '') => { console.log(`${ok ? '✓' : '✗'} ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failures++ }
 const shot = async (name: string) => { const r = await cdp('Page.captureScreenshot', { format: 'png' }); writeFileSync(join(out, `${name}.png`), Buffer.from(r.result.data, 'base64')) }
 const waitFor = async (expr: string, ms = 8000) => { for (let i = 0; i < ms / 100; i++) { if (await js(expr).catch(() => false)) return true; await sleep(100) } return false }
@@ -57,8 +60,8 @@ const typeText = async (s: string) => { await cdp('Input.insertText', { text: s 
 const move = (x: number, y: number) => cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y })
 /** Centre (or a fraction inside) of the n-th card's dot surface, in page px (after scrolling it into view). */
 const cardPoint = (sel: string, fx = .5, fy = .5) => js(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); el.scrollIntoView({ block: 'center' }); const b = el.querySelector('.dot-card-body > :first-child').getBoundingClientRect(); return { x: b.left + b.width * ${fx}, y: b.top + b.height * ${fy} } })()`) as Promise<{ x: number; y: number }>
-/** Signature of a card's drawn pixels (canvas) or markup (svg). */
-const cardSig = (sel: string) => js(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); const c = el.querySelector('.dot-card-body canvas:not(.xr-grid)'); if (!c) return 'svg:' + (el.querySelector('.dot-svg')?.innerHTML.length ?? -1); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0, s = 0; for (let i = 0; i < d.length; i += 4) if (d[i] + d[i+1] + d[i+2] > 60) { n++; s = (s * 31 + i + d[i]) % 1000003 } return n + ':' + s })()`) as Promise<string>
+/** Signature of a card's drawn pixels (canvas) or markup (svg). The first readback of a GPU canvas can differ in low bits: read twice. */
+const cardSig = (sel: string) => js(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); const c = el.querySelector('.dot-card-body canvas:not(.xr-grid)'); if (!c) return 'svg:' + (el.querySelector('.dot-svg')?.innerHTML.length ?? -1); const g = c.getContext('2d'); g.getImageData(0, 0, 1, 1); const d = g.getImageData(0, 0, c.width, c.height).data; let n = 0, s = 0; for (let i = 0; i < d.length; i += 4) if (d[i] + d[i+1] + d[i+2] > 60) { n++; s = (s * 31 + i + d[i]) % 1000003 } return n + ':' + s })()`) as Promise<string>
 const open = async (query: string) => { await cdp('Page.navigate', { url: `${base}${query}` }); return waitFor(`document.querySelectorAll('[data-xr-key]').length > 0`, 30000) }
 
 try {
@@ -67,6 +70,7 @@ try {
   await cdp('Browser.grantPermissions', { permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'], origin: new URL(base).origin }).catch(() => null)
 
   // ── X-ray on three boards
+  if (run('xray')) {
   for (const [i, board, card] of [[1, 'henry', 'settings'], [2, 'levels', 'lv-queen'], [3, 'components', '']] as const) {
     const ok = await open(`?board=${board}`)
     check(`${board}: board opens`, ok, ok ? '' : logs.join(' | '))
@@ -79,10 +83,13 @@ try {
     check(`${board}: ⇧X x-rays every card`, (await count('.xr-overlay')) === cards, `${await count('.xr-overlay')}/${cards}`)
     // hover a lit dot: walk a few points until the tooltip names a layer
     let tip = ''
-    for (const [fx, fy] of [[.5, .5], [.3, .3], [.5, .2], [.2, .7], [.7, .6], [.1, .05], [.4, .8]]) {
+    // aim at a lit dot first (the brightest pixel row nearest the middle of the card's canvas), then wander
+    const lp = await js(`(() => { const el = document.querySelector(${JSON.stringify(target)}); el.scrollIntoView({ block: 'center' }); const c = el.querySelector('.dot-card-body canvas:not(.xr-grid)'); if (!c) return null; const g = c.getContext('2d'), d = g.getImageData(0, 0, c.width, c.height).data; let best = null, bd = 1e9; for (let y = 0; y < c.height; y += 2) for (let x = 0; x < c.width; x += 2) { const i = (y * c.width + x) * 4; if (d[i] + d[i+1] + d[i+2] > 400) { const dd = Math.hypot(x - c.width / 2, y - c.height / 2); if (dd < bd) { bd = dd; best = [x / c.width, y / c.height] } } } if (!best) return null; const b = c.getBoundingClientRect(); return { x: b.left + best[0] * b.width, y: b.top + best[1] * b.height } })()`) as { x: number; y: number } | null
+    if (lp) { await move(lp.x, lp.y); await sleep(300); tip = await text(`${target} .xr-tip`) }
+    if (!/layer \d/.test(tip)) for (const [fx, fy] of [[.5, .5], [.3, .3], [.5, .2], [.2, .7], [.7, .6], [.1, .05], [.4, .8], [.08, .04], [.15, .05], [.25, .05], [.12, .3], [.12, .5], [.6, .3]]) {
       const p = await cardPoint(target, fx, fy)
       await move(p.x, p.y); await sleep(250)
-      tip = await text('.xr-tip')
+      tip = await text(`${target} .xr-tip`)
       if (/layer \d/.test(tip)) break
     }
     check(`${board}: hover explains the dot (value → size step, tone, layer)`, /value .*(step|unquantized).*tone .* layer \d/.test(tip), tip.slice(0, 120))
@@ -113,7 +120,9 @@ try {
     check(`${board}: x-ray off leaves no overlay${board === 'henry' ? ' and the same pixels' : ''}`, (await count('.xr-overlay')) === 0 && (board !== 'henry' || after === before), board === 'henry' ? `${before} vs ${after}` : '')
   }
 
+  }
   // ── per-card X while hovering
+  if (run('card')) {
   await open('?board=metro'); await sleep(1500)
   const p = await cardPoint('.board-view [data-xr-key]:nth-child(2)')
   await move(p.x, p.y); await sleep(150)
@@ -122,27 +131,31 @@ try {
   await key('x')
   check('X again turns it off', (await count('.xr-overlay')) === 0)
 
+  }
   // ── time machine
+  if (run('time')) {
   await open('?board=levels'); await sleep(1500)
   await key('t', 0, 200)
   check('T freezes the clock and shows the time machine', await waitFor(`!!document.querySelector('.xr-time')`, 2000))
   await js(`(() => { const el = document.querySelector('.xr-time input[type=range]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, 5); el.dispatchEvent(new Event('input', { bubbles: true })) })()`)
-  await sleep(300)
+  await sleep(900)
   const sigA = await cardSig('.board-view [data-card-id="lv-queen"]')
-  await sleep(600)
+  await sleep(700)
   const sigB = await cardSig('.board-view [data-card-id="lv-queen"]')
   const tShown = await text('.xr-time-t')
-  check('scrubbing sets board time and the frame holds still', /T = 5\.00s/.test(tShown) && sigA === sigB, `${tShown}; frame ${sigA === sigB ? 'still' : 'moving'}`)
+  check('scrubbing sets board time and the frame holds still', /T = 5\.00s/.test(tShown) && sigA === sigB, `${tShown}; frame ${sigA === sigB ? 'still' : 'moving'} ${sigA} ${sigB}`)
   await js(`(() => { const el = document.querySelector('.xr-time input[type=range]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, 9.5); el.dispatchEvent(new Event('input', { bubbles: true })) })()`)
-  await sleep(400)
+  await sleep(900)
   const sigC = await cardSig('.board-view [data-card-id="lv-queen"]')
-  check('scrubbing to another t redraws animated cards', sigC !== sigB)
+  check('scrubbing to another t redraws animated cards', sigC !== sigB, `${sigB} → ${sigC}`)
   await shot('04-time-machine')
   await js(`document.activeElement?.blur()`)
   await key(' ')
   check('Space resumes', !(await js(`!!document.querySelector('.xr-time')`)))
 
+  }
   // ── ⌘K palette
+  if (run('palette')) {
   await key('k', 2)
   check('Ctrl-K opens the palette, focus in the combobox', await waitFor(`document.activeElement?.getAttribute('role') === 'combobox'`, 2000))
   await typeText('queen')
@@ -150,7 +163,7 @@ try {
   check('palette fuzzy-finds a card; ARIA combobox wiring holds', /lv-queen/.test(first) && aria, first)
   await shot('05-palette')
   await open('?board=henry'); await sleep(1200)
-  await key('k', 2); await typeText('levl')
+  await key('k', 2); await typeText('levels')
   await key('ArrowDown'); await key('ArrowUp')
   const pick = await text('.pal-item--sel')
   await key('Enter')
@@ -161,7 +174,9 @@ try {
   check('palette action toggles x-ray', (await count('.xr-overlay')) > 0)
   await key('x', 8); await sleep(300)
 
+  }
   // ── dot shell
+  if (run('shell')) {
   await key('`')
   check('` opens the dot shell', await waitFor(`!!document.querySelector('.pal-shell') && document.activeElement?.classList.contains('pal-shell-input')`, 2000))
   for (const c of ['help', 'ls', 'ls levels']) { await typeText(c); await key('Enter') }
@@ -182,7 +197,9 @@ try {
   await key('Escape')
   check('Esc closes the shell', (await count('.pal-shell')) === 0)
 
+  }
   // ── remix in DOTS
+  if (run('remix')) {
   await open('?board=ir'); await sleep(1500)
   await key('x', 8); await sleep(300)
   const ip = await cardPoint('.board-view [data-xr-key]')
@@ -202,8 +219,19 @@ try {
   const stubErr = await text('.dw-status')
   check('remix a non-IR card opens a describe() stub that runs', /remix of/.test(stub) && !/error/i.test(stubErr), stubErr.slice(0, 80))
   await shot('07b-remix-stub')
+  await open('?board=levels'); await sleep(1500)
+  await key('x', 8); await sleep(300)
+  const sp = await cardPoint('.board-view [data-card-id="lv-queen"]')
+  await move(sp.x, sp.y); await sleep(400)
+  await js(`[...document.querySelectorAll('.xr-panel button')].find(b => b.textContent === 'OPEN IN STUDIO').click()`)
+  const studio = await waitFor(`!!document.querySelector('.st-layout') && document.body.innerText.includes('lv-queen')`, 15000)
+  check('Open in Studio imports the card as a layer stack', studio)
+  await sleep(800)
+  await shot('07c-remix-studio')
 
+  }
   // ── Konami
+  if (run('konami')) {
   await open('?board=metro'); await sleep(1200)
   for (const k of ['ArrowUp', 'ArrowUp', 'ArrowDown', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ArrowLeft', 'ArrowRight', 'b', 'a']) await key(k)
   check('Konami code opens the boss card', await waitFor(`!!document.querySelector('.pal-boss [data-card-id="lv-queen"]')`, 3000))
@@ -212,6 +240,7 @@ try {
   await key('Escape')
   check('Esc flees the boss', (await count('.pal-boss')) === 0)
 
+  }
   const errs = logs.filter(l => !/favicon|ERR_|net::|403|font/i.test(l))
   check('no console errors or exceptions', !errs.length, errs.slice(0, 3).join(' | '))
 } catch (e) {

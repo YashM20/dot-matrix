@@ -10,7 +10,7 @@ import { sharedClock } from '../../engine/clock'
 import type { DotStyle, GridConfig, Layer, ThemeTokens } from '../../engine'
 import type { WidgetContext, WidgetPreset } from '../../widgets/types'
 
-export type RendererOverride = 'auto' | 'svg' | 'canvas'
+export type RendererOverride = 'auto' | 'svg' | 'canvas' | 'webgl'
 export interface XRState {
   /** X-ray every card. */
   global: boolean

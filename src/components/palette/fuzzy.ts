@@ -27,13 +27,13 @@ export function fuzzy(query: string, text: string): Match | null {
 }
 
 /** Rank `items` by the best match over their `text` (and optional `keywords`, matched but not highlighted). */
-export function rank<T extends { text: string; keywords?: string }>(items: T[], query: string, limit = 50): { item: T; hits: number[] }[] {
+export function rank<T extends { text: string; keywords?: string; boost?: number }>(items: T[], query: string, limit = 50): { item: T; hits: number[] }[] {
   if (!query.trim()) return items.slice(0, limit).map(item => ({ item, hits: [] }))
   const out: { item: T; hits: number[]; score: number }[] = []
   for (const item of items) {
     const m = fuzzy(query, item.text), k = item.keywords ? fuzzy(query, item.keywords) : null
     const best = m && (!k || m.score >= k.score - 50) ? m : k ? { score: k.score - 50, hits: [] } : null
-    if (best) out.push({ item, hits: best.hits, score: best.score })
+    if (best) out.push({ item, hits: best.hits, score: best.score + (item.boost ?? 0) })
   }
   return out.sort((a, b) => b.score - a.score).slice(0, limit)
 }

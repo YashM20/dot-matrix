@@ -23,7 +23,7 @@ type Line = { kind: 'in' | 'out' | 'dim' | 'err'; text: string }
 const HELP: Line[] = [
   ['help', 'this list'], ['ls [board]', 'boards, or the cards on one'], ['open <board|tab|card>', 'go there (alias: load)'],
   ['xray [on|off]', 'x-ray every card'], ['fps', 'measure frames, list x-ray cards'], ['t [seconds]', 'freeze the clock at t; t alone prints it'],
-  ['play', 'resume the clock'], ['describe <card>', 'what a card says about itself'], ['remix <card>', 'open a card in DOTS'],
+  ['play', 'resume the clock'], ['describe <card>', 'what a card says about itself'], ['remix <card>', 'open a card in DOTS'], ['studio <card>', 'open a card in STUDIO'],
   ['skin <name>', 'display skin (soon)'], ['clear · exit', ''],
 ].map(([c, d]) => ({ kind: 'out', text: `  ${c.padEnd(24)}${d}` }) as Line)
 
@@ -123,6 +123,11 @@ export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }
         const c = arg ? findCard(arg) : undefined
         if (!c) return print({ kind: 'err', text: 'remix: which card? e.g. remix rings' })
         api.remix(c.id); return print(`→ DOTS with ${c.id}`)
+      }
+      case 'studio': case 'edit': {
+        const c = arg ? findCard(arg) : undefined
+        if (!c) return print({ kind: 'err', text: `${cmd}: which card? e.g. studio queen` })
+        api.studio(c.id); return print(`→ STUDIO with ${c.id}`)
       }
       case 'skin': {
         if (!arg || !(SKINS as readonly string[]).includes(arg)) return print({ kind: 'err', text: `skin: one of ${SKINS.join(', ')}` })

@@ -86,6 +86,15 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
         setTab('DOTS')
       }, e => toast(`remix failed: ${(e as Error).message}`))
     },
+    studio(cardId) {
+      if (!widgetById(cardId)) return toast(`no card ${cardId}`)
+      if (!setTab) return go(`?tab=studio`)
+      // lazy, like the tab itself: the editor only loads when asked for
+      void Promise.all([import('../studio/store'), import('../studio/doc')]).then(([{ useStudio }, { importPreset }]) => {
+        useStudio.getState().replace(importPreset(cardId), `imported ${cardId} from x-ray`)
+        setTab('STUDIO')
+      }, e => toast(`studio failed: ${(e as Error).message}`))
+    },
     copyLink(cardId) {
       const { tab: t, board: b } = view.current
       const query = cardId ? `?card=${cardId}` : t === 'BOARDS' ? `?board=${b}` : t === 'DOTS' && location.search.includes('p=') ? location.search : `?tab=${t.toLowerCase()}`
@@ -173,7 +182,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
   }, [boss])
 
   return <>
-    <Inspector onRemix={(id, data) => api.remix(id, data)} onCopyLink={id => api.copyLink(id)} />
+    <Inspector onRemix={(id, data) => api.remix(id, data)} onStudio={id => api.studio(id)} onCopyLink={id => api.copyLink(id)} />
     <TimeMachine />
     <div className="pal-dock" role="toolbar" aria-label="Explore">
       <button aria-pressed={anyXray} onClick={() => toggleGlobal()} title="X-ray every card (X on a hovered card, ⇧X all)">X-RAY</button>

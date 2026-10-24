@@ -9,7 +9,7 @@ import { presetToSpec } from '../../spec'
 import { fmt, layerKind, layerName, layerIR } from './probe'
 import { muteLayer, probes, setXR, soloLayer, toggleGlobal, useXR } from './store'
 
-export function Inspector({ onRemix, onCopyLink }: { onRemix: (cardId: string, data: Record<string, number>) => void; onCopyLink: (cardId?: string) => void }) {
+export function Inspector({ onRemix, onStudio, onCopyLink }: { onRemix: (cardId: string, data: Record<string, number>) => void; onStudio: (cardId: string) => void; onCopyLink: (cardId?: string) => void }) {
   const active = useXR(s => s.active)
   const anyOn = useXR(s => s.global || s.on.size > 0)
   const solo = useXR(s => (active ? s.solo[active] : undefined))
@@ -50,7 +50,8 @@ export function Inspector({ onRemix, onCopyLink }: { onRemix: (cardId: string, d
       </dl>
       <div className="xr-actions">
         <button onClick={() => onRemix(probe.preset.id, probe.data)}>OPEN IN DOTS</button>
-        <button onClick={() => onCopyLink(probe.preset.id)}>COPY LINK</button>
+        <button onClick={() => onStudio(probe.preset.id)}>OPEN IN STUDIO</button>
+        <button onClick={() => onCopyLink(probe.preset.id)}>LINK</button>
       </div>
       <div className="xr-tabs" role="tablist" aria-label="Inspector sections">
         {(['layers', 'data', 'describe', 'spec'] as const).map(t => <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'selected' : ''} onClick={() => setTab(t)}>{t.toUpperCase()}</button>)}

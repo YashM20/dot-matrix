@@ -16,7 +16,7 @@ export interface XRayHook {
   layers: ((ctx: WidgetContext) => Layer[]) | undefined
   /** Indexes hidden by solo / mute (of the full layer list). */
   skip: (i: number) => boolean
-  renderer: 'svg' | 'canvas' | undefined
+  renderer: 'svg' | 'canvas' | 'webgl' | undefined
   onMode: (mode: string) => void
   mode: () => string
 }
