@@ -44,7 +44,7 @@ jobs:
         run: pnpm check
 
       # also writes dist/og/*.png and dist/<board>/index.html (vite.config.ts → scripts/site/postbuild.ts);
-      # SITE_URL (repo variable, e.g. https://dot480.pages.dev) makes og:image / og:url absolute
+      # SITE_URL (repo variable, e.g. your Vercel production URL) makes og:image / og:url absolute
       - name: Build
         run: pnpm build
         env:
@@ -71,50 +71,3 @@ jobs:
       - name: Perf report
         run: pnpm bench
         continue-on-error: true
-
-  # Cloudflare Pages, direct upload (docs/DEPLOY.md). Push to main → production; a PR → a preview at
-  # <branch>.<project>.pages.dev. Skipped (green) until the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID
-  # secrets exist, and on PRs from forks (no secrets there).
-  deploy:
-    name: deploy (Cloudflare Pages)
-    needs: check
-    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    permissions:
-      contents: read
-      deployments: write
-    env:
-      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-      CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-      PROJECT: ${{ vars.CLOUDFLARE_PROJECT_NAME || 'dot480' }}
-      BRANCH: ${{ github.event_name == 'pull_request' && github.head_ref || 'main' }}
-    steps:
-      - name: Secrets present?
-        id: gate
-        run: |
-          # branch names become a preview alias and a CLI argument: keep [A-Za-z0-9._-] only
-          echo "branch=$(printf %s "$BRANCH" | tr -c 'A-Za-z0-9._-' '-')" >> "$GITHUB_OUTPUT"
-          if [ -n "$CLOUDFLARE_API_TOKEN" ] && [ -n "$CLOUDFLARE_ACCOUNT_ID" ]; then echo "ok=true" >> "$GITHUB_OUTPUT"
-          else echo "ok=false" >> "$GITHUB_OUTPUT"; echo "Cloudflare secrets not set: skipping deploy (docs/DEPLOY.md)" >> "$GITHUB_STEP_SUMMARY"; fi
-
-      - name: Download site
-        if: steps.gate.outputs.ok == 'true'
-        uses: actions/download-artifact@v4
-        with:
-          name: site
-          path: dist
-
-      - name: Deploy
-        if: steps.gate.outputs.ok == 'true'
-        id: wrangler
-        uses: cloudflare/wrangler-action@v3
-        with:
-          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
-          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
-          command: pages deploy dist --project-name=${{ env.PROJECT }} --branch=${{ steps.gate.outputs.branch }} --commit-hash=${{ github.event.pull_request.head.sha || github.sha }}
-          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Summary
-        if: steps.gate.outputs.ok == 'true'
-        run: echo "Deployed ${{ steps.gate.outputs.branch }} → ${{ steps.wrangler.outputs.deployment-url }}" >> "$GITHUB_STEP_SUMMARY"

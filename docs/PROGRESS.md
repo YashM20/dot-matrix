@@ -85,8 +85,8 @@
 **Resume here (2026-10-24):**
 - Everything is merged; no agent worktrees remain. On an idle machine `pnpm check` passes in full, `pnpm golden --check` matches all 173 presets, and `pnpm build` passes with first-load JS ≈ 149 kB gz (budget 150; skins overlay, command layer and hand tracker load on demand).
 - Browser integration scripts (run against `pnpm dev`): `scripts/c10-browser.ts` 45/45, `c6-browser.ts` PASS, `game-browser.ts` 16/16, `essay-browser.ts` 39/39, `studio-browser.ts` 23/23, `skins-browser.ts` clean. Timing checks (`mirror-camera`, `migrate perf`, `type field`) fail only under heavy machine load (A/B showed no regression).
-- Push is blocked: Git Credential Manager crashes and the `gh` account `yashmhj` has no write access to `YashM20/dot-matrix`. Fix credentials, then `git push`.
-- Deploy (W0, `docs/DEPLOY.md`): create the Cloudflare Pages project `dot480`, add repo secrets `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID` and variable `SITE_URL`.
+- Merged to `main` via PR #4 (2026-10-24). `git push` works again (`gh auth setup-git`, account YashM20).
+- Deploy: Vercel auto-deploys `main` (production) and every PR (preview); host config in `vercel.json`, details in `docs/DEPLOY.md`. Cloudflare setup removed 2026-10-24.
 - Next (Web plan): make the essay the front page; C1 WebGPU compute; C9 multiplayer (optional); a taste session on the new boards (type, physics, heal, scope, lock, the HIVE game, skins).
 
 **Needs the user (blocked):**
@@ -102,10 +102,10 @@
 - [-] Engine barrel curation + library `.d.ts` build → P6 packaging.
 
 **Web plan (2026-10-23)** (`docs/WEB-PLAN.md`)
-- [x] W0: **ship the site** (agent side; `docs/DEPLOY.md`). Static deploy for Cloudflare Pages:
-  - `public/_headers`: immutable `/assets/*`; a CSP with `'self'` scripts, workers, camera, the live APIs and no eval; no COOP/COEP.
-  - `public/_redirects`: SPA fallback.
-  - CI: `deploy` job (`cloudflare/wrangler-action`). Push to `main` → production, a PR → a preview. It is skipped until the `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` secrets exist. CI also runs the bundle budget and uploads a `site` artifact.
+- [x] W0: **ship the site** (agent side; `docs/DEPLOY.md`). Static deploy, hosted on Vercel (Cloudflare Pages setup removed 2026-10-24):
+  - `vercel.json` headers: immutable `/assets/*`; a CSP with `'self'` scripts, workers, camera, the live APIs and no eval; no COOP/COEP.
+  - `vercel.json` rewrite: SPA fallback (real files such as `/<board>/index.html` win).
+  - CI checks and builds only (Vercel deploys). CI also runs the bundle budget and uploads a `site` artifact.
 - [x] C2: dot physics you can touch, CPU-first (`src/engine/physics/`, `?board=physics`). The engine pieces:
   - `createWorld`/`worldAt` is pure in t (a SimField with checkpoints, a loop and a seam pull) until the first input, then live at fixed dt (it drops time, never stretches a step) and heals back after 3 s idle;
   - stable fluids with warm-started Jacobi, MacCormack ink, vorticity and buoyancy;
@@ -135,7 +135,7 @@
   - View tabs were 10 px tap targets. Fixed in `App.css` (append-only): 24 px tabs, and 24 px selects/ranges/playground controls on coarse pointers.
   - DRAW stays hidden in the narrow nav (deliberate; still reachable at `?tab=draw`).
 
-  **Needs the user:** Cloudflare project + secrets + `SITE_URL` variable (`docs/DEPLOY.md` › What you need to do), and git push credentials. Not verified: the headers on a real Pages deploy (`wrangler pages dev dist` locally); Safari/Firefox.
+  **Needs the user:** optional `SITE_URL` in Vercel for a custom domain (`docs/DEPLOY.md`). Not verified: the `vercel.json` headers on a live deploy (`npx vercel dev` locally); Safari/Firefox.
 
   Cards: `phys-splash` (a swipe knocks DEPARTURES loose, the dots settle and Hilbert-migrate back, a full splash re-forms as ARRIVALS; the in-flight dots are the board's only red), `phys-ink`, `phys-flag`, `phys-jelly`, `phys-pit`. Input is the pointer plus Enter = kick plus `data.gx/gy` tilt; the DeviceOrientation wiring is not done. Verify has 13 checks (`scripts/physics.ts`); goldens +5. Weak spots:
   - the cards throw inside the sampling worker so that they stay on the main thread; a `WidgetPreset` flag would be cleaner;
