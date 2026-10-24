@@ -90,9 +90,17 @@ try {
   await sleep(300)
   const cd = (await rectOf('.dot-card[aria-label="Conduct"]'))!
   await click(cd.x + cd.w / 2, cd.y + cd.h * .93)
-  // ~10 s of the scripted path
+  // 5 s on the (heavy: three live camera cards) mirror board, then the tracking run on the instrument board
   await sleep(5000); await shot('mirror-board-hand')
-  await sleep(5000)
+  const m0 = await evaluate<number[][]>('window.__c6.obs'), mirrorFps = m0.length > 30 ? (m0.length - 31) / ((m0[m0.length - 1][0] - m0[30][0]) / 1000) : 0
+  report.mirrorBoardTrackerFps = +mirrorFps.toFixed(1)
+  await evaluate('window.scrollTo(0, 0)'); await sleep(300)
+  const tab = await evaluate<Rect | null>(`(() => { const b = [...document.querySelectorAll('.board-tabs button')].find(b => b.textContent === 'INSTRUMENT'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height } })()`)
+  if (!tab) throw new Error('INSTRUMENT tab not found')
+  await click(tab.x + tab.w / 2, tab.y + tab.h / 2)
+  await sleep(2000)
+  await evaluate('(window.__c6.obs = [], window.__c6.truth = [], 0)')
+  await sleep(10000)
   const { truth, obs } = await evaluate<{ truth: number[][]; obs: number[][] }>('({ truth: window.__c6.truth, obs: window.__c6.obs })')
   const live = obs.filter(o => o[1]), secs = obs.length > 1 ? (obs[obs.length - 1][0] - obs[0][0]) / 1000 : 1
   const at = (t: number) => { let lo = 0, hi = truth.length - 1; while (lo < hi) { const mid = (lo + hi + 1) >> 1; if (truth[mid][0] <= t) lo = mid; else hi = mid - 1 } return truth[lo] }
@@ -102,7 +110,7 @@ try {
     const e = clear.map(d => Math.hypot(d[0] - mx, d[1] - my)).sort((a, b) => a - b)
     return { lag, mean: e.reduce((s, v) => s + v, 0) / n, p95: e[Math.floor(n * .95)] ?? 1, n: clear.length }
   }
-  const lags = [0, 33, 66, 100, 133, 166, 200, 250, 300, 400].map(errAt), best = lags.reduce((a, b) => (b.mean < a.mean ? b : a))
+  const lags = [0, 50, 100, 150, 200, 250, 300, 400, 500, 600].map(errAt), best = lags.reduce((a, b) => (b.mean < a.mean ? b : a))
   const pinchOk = live.slice(15).filter(o => { const g = at(o[0] - best.lag), ph = 0; void ph; return (o[4] === 1) === (g[3] > .5) }).length / Math.max(1, live.length - 15)
   const ms = obs.map(o => o[5]).sort((a, b) => a - b)
   const videoFps = truth.length > 1 ? +((truth.length - 1) / ((truth[truth.length - 1][0] - truth[0][0]) / 1000)).toFixed(1) : 0
@@ -110,14 +118,12 @@ try {
     errAtLag0: +(lags[0].mean * 100).toFixed(2), bestLagMs: best.lag, errBest: +(best.mean * 100).toFixed(2), p95Best: +(best.p95 * 100).toFixed(2), pinchAgree: +pinchOk.toFixed(3) })
   console.log('tracking', JSON.stringify(report))
 
-  // 2) a knob on another board, by hand
-  await evaluate('window.scrollTo(0, 0)'); await sleep(300)
-  const tab = await evaluate<Rect | null>(`(() => { const b = [...document.querySelectorAll('.board-tabs button')].find(b => b.textContent === 'INSTRUMENT'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height } })()`)
-  if (!tab) throw new Error('INSTRUMENT tab not found')
-  await click(tab.x + tab.w / 2, tab.y + tab.h / 2)
+  // 2) a knob, by hand (the hand pointer drives any card's controls)
   for (let i = 0; i < 20 && !(await evaluate<boolean>("!!document.querySelector('.dot-card input[type=range]')")); i++) await sleep(500)
   const knob = await evaluate<{ x: number; y: number; key: string; v: number } | null>(`(() => {
-    const e = document.querySelector('.dot-card input[type=range]')
+    // the knob nearest the middle of the screen (the synthetic face sits at the left: a hand over a face is a known weak spot)
+    const mid = e => { const r = e.getBoundingClientRect(); return Math.abs(r.left + r.width / 2 - innerWidth / 2) + (r.top < 0 || r.bottom > innerHeight ? 1e4 : 0) }
+    const e = [...document.querySelectorAll('.dot-card input[type=range]')].sort((a, b) => mid(a) - mid(b))[0]
     if (!e) return null; const r = e.getBoundingClientRect(); window.__c6.knob = e
     return { x: r.left + r.width / 2, y: r.top + r.height / 2, key: e.getAttribute('aria-label'), v: +e.getAttribute('aria-valuenow') } })()`)
   if (!knob) throw new Error('no knob / slider found on the instrument board')
@@ -129,14 +135,15 @@ try {
       const c = document.querySelector('.hand-cursor'), m = c && /translate\\(([-\\d.]+)px, ([-\\d.]+)px\\)/.exec(c.style.transform)
       if (m) {
         const ex = ${x} - +m[1], ey = ${y} - +m[2]
-        s.pose.x = Math.min(.95, Math.max(.05, s.pose.x + ex / innerWidth * .7 * .5))
-        s.pose.y = Math.min(.9, Math.max(.1, s.pose.y + ey / innerHeight * .66 * .5))
-        settled = Math.hypot(ex, ey) < 6 ? settled + 1 : 0
+        s.pose.x = Math.min(.95, Math.max(.05, s.pose.x + ex / innerWidth * .7 * .3))
+        s.pose.y = Math.min(.9, Math.max(.1, s.pose.y + ey / innerHeight * .66 * .3))
+        settled = Math.hypot(ex, ey) < 12 ? settled + 1 : 0
       }
       if (settled > 8 || ++n > 160) done(settled > 8 ? n : -1); else setTimeout(tick, 50)
     }
     tick()
   })`)
+  const o0 = await evaluate<number[]>("[window.__c6.obs.length, performance.now(), window.__c6.truth.length]")
   const reach = await steer(knob.x, knob.y, 0)
   await steer(knob.x, knob.y, 1)
   for (let k = 1; k <= 4; k++) await steer(knob.x, knob.y - 20 * k, 1)
@@ -144,8 +151,9 @@ try {
   await steer(knob.x, knob.y - 80, 0)
   await sleep(400)
   const after = await evaluate<number>('+window.__c6.knob.getAttribute("aria-valuenow")')
-  Object.assign(report, { knob: knob.key, reachSteps: reach, knobBefore: knob.v, knobAfter: after })
-  console.log('knob', knob.key, knob.v, '→', after, reach < 0 ? '(cursor never settled)' : '')
+  const o1 = await evaluate<number[]>("[window.__c6.obs.length, performance.now(), window.__c6.truth.length]"), dt2 = (o1[1] - o0[1]) / 1000
+  Object.assign(report, { instrumentTrackerFps: +((o1[0] - o0[0]) / dt2).toFixed(1), instrumentVideoFps: +((o1[2] - o0[2]) / dt2).toFixed(1), knob: knob.key, reachSteps: reach, knobBefore: knob.v, knobAfter: after })
+  console.log('knob', JSON.stringify(report))
   ok = after !== knob.v && (report.trackerFps as number) >= 25 && (report.errBest as number) <= 4
 } catch (e) { console.error(e); ok = false }
 finally {

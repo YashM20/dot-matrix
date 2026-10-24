@@ -1063,6 +1063,26 @@
     "dots": 11049
    }
   },
+  "mirror-shadow": {
+   "t=0": {
+    "hash": "ac2b1f9e",
+    "dots": 4213
+   },
+   "t=1.3": {
+    "hash": "b0cfdb2a",
+    "dots": 4179
+   }
+  },
+  "mirror-conduct": {
+   "t=0": {
+    "hash": "2d491756",
+    "dots": 1438
+   },
+   "t=1.3": {
+    "hash": "3d3a6987",
+    "dots": 1438
+   }
+  },
   "gpu-plasma": {
    "t=0": {
     "hash": "eea3ca4a",

@@ -124,10 +124,17 @@ function apply(o: HandObservation) {
   emit({ present: true, down: !!captured })
 }
 
-function frame(now: number) {
-  raf = requestAnimationFrame(frame)
+/** Next tick: once per decoded camera frame where supported (no polling, no missed frames), else per animation frame. */
+let vfc = 0
+const schedule = () => { if (video?.requestVideoFrameCallback) vfc = video.requestVideoFrameCallback((t, meta) => frame(t, meta.presentedFrames)); else raf = requestAnimationFrame(frame) }
+const stopLoop = () => { cancelAnimationFrame(raf); raf = 0; if (vfc) video?.cancelVideoFrameCallback?.(vfc); vfc = 0 }
+
+function frame(now: number, presented?: number) {
+  schedule()
   const vd = video
-  if (!vd || vd.readyState < 2 || vd.currentTime === lastTime || now - lastProc < 30) return
+  // ≤ ~45 fps of tracking even on a 60 fps camera
+  const key = presented ?? vd?.currentTime ?? -1
+  if (!vd || vd.readyState < 2 || key === lastTime || now - lastProc < 22) return
   const vw = vd.videoWidth, vh = vd.videoHeight
   if (!vw || !vh) return
   if (!ctx) {
@@ -135,7 +142,7 @@ function frame(now: number) {
     ctx = c.getContext('2d', { willReadFrequently: true }) as typeof ctx
     if (!ctx) return
   }
-  lastTime = vd.currentTime; lastProc = now
+  lastTime = key; lastProc = now
   const aspect = W / H, sw = Math.min(vw, vh * aspect), sh = sw / aspect
   ctx.setTransform(-1, 0, 0, 1, W, 0)
   ctx.drawImage(vd, (vw - sw) / 2, (vh - sh) / 2, sw, sh, 0, 0, W, H)
@@ -157,7 +164,7 @@ async function start() {
     await video.play()
     if (mine !== token) return
     tracker?.reset(); lastTime = -1
-    cancelAnimationFrame(raf); raf = requestAnimationFrame(frame)
+    stopLoop(); schedule()
     emit({ status: 'live' }); hudText(HUD.live)
   } catch (e) {
     if (mine !== token) return
@@ -167,7 +174,7 @@ async function start() {
 }
 function halt() {
   token++
-  cancelAnimationFrame(raf); raf = 0
+  stopLoop()
   vanish(lx, ly)
   if (video) { video.pause(); video.srcObject = null }
   if (holding) { holding = false; releaseCamera() }
