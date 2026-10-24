@@ -38,6 +38,7 @@ import { bytecodeChecks } from './bytecode'
 import { esp32Checks } from '../targets/test/esp32'
 import { targetsChecks } from '../targets/test/targets'
 import { bufferChecks } from './buffer'
+import { gameChecks } from './game'
 import { typeChecks } from './type'
 import { physicsChecks } from './physics'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
@@ -830,6 +831,9 @@ import { gpuBoard } from '../src/widgets/boards/gpu'
 studioChecks(assert)
 // C2) physics: worlds, stable fluids, PBD cloth / jelly, particles + spatial hash, the physics board (scripts/physics.ts)
 physicsChecks(assert)
+
+// C4) HIVE game: autopilot reaches the boss, input replay is bit-identical, frame budget (scripts/game.ts)
+gameChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')

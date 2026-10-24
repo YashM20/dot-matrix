@@ -1,0 +1,56 @@
+.hive-start {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin: 0 0 14px;
+  padding: 6px 12px 6px 6px;
+  background: var(--surface, #111315);
+  border: 1px solid var(--line, rgba(255, 255, 255, .08));
+  border-radius: 10px;
+  color: var(--mute, #6e7278);
+  font: 500 10px var(--mono, monospace);
+  letter-spacing: .16em;
+  cursor: pointer;
+  text-align: left
+}
+.hive-start:hover, .hive-start:focus-visible { border-color: var(--label, #8a8f98); color: var(--label, #8a8f98) }
+.hive-start:focus-visible { outline: 2px solid var(--label, #8a8f98); outline-offset: 2px }
+.hive-start canvas { display: block }
+
+.hive-play {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  background: #070809;
+  text-align: left;
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none
+}
+.hive-play canvas { display: block }
+.hive-play .hive-screen { outline: none; cursor: crosshair }
+.hive-bar {
+  display: flex;
+  gap: 18px;
+  align-items: center;
+  color: #6e7278;
+  font: 500 10px var(--mono, monospace);
+  letter-spacing: .16em
+}
+.hive-bar button {
+  background: none;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 6px;
+  color: #8a8f98;
+  font: inherit;
+  letter-spacing: inherit;
+  padding: 5px 10px;
+  cursor: pointer
+}
+.hive-bar button:focus-visible { outline: 2px solid #8a8f98; outline-offset: 2px }
+.hive-pad { touch-action: none }
