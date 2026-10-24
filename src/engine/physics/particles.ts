@@ -110,7 +110,8 @@ export function particlesStep(p: Particles, s: Float32Array, dt: number, gx = 0,
     if (sp > vmax * vmax) { const k = vmax / Math.sqrt(sp); vx *= k; vy *= k }
     s[PX + i] = s[X + i]; s[PY + i] = s[Y + i]; s[X + i] += vx; s[Y + i] += vy
   }
-  const hs = p.hash, { cols, rows, start, items, cellOf } = hs
+  // resting contacts (normal speed under ~4 steps of gravity) do not bounce: piles sit still instead of buzzing
+  const rest = 4 * p.g * dt * dt, hs = p.hash, { cols, rows, start, items, cellOf } = hs
   for (let it = 0; it < p.iterations; it++) {
     buildHash(hs, s, n, X, Y, K)
     for (let i = 0; i < n; i++) {
@@ -140,7 +141,7 @@ export function particlesStep(p: Particles, s: Float32Array, dt: number, gx = 0,
             if (p.bounce > 0 && it === 0) {
               const rvx = (s[X + j] - s[PX + j]) - (s[X + i] - s[PX + i]), rvy = (s[Y + j] - s[PY + j]) - (s[Y + i] - s[PY + i])
               const vn = rvx * nx + rvy * ny
-              if (vn < 0) {
+              if (vn < -rest) {
                 const imp = -vn * p.bounce / wsum
                 s[PX + i] += nx * imp * wi; s[PY + i] += ny * imp * wi; s[PX + j] -= nx * imp * wj; s[PY + j] -= ny * imp * wj
               }
@@ -149,25 +150,27 @@ export function particlesStep(p: Particles, s: Float32Array, dt: number, gx = 0,
         }
       }
     }
-    bounds(p, s, gx, gy, hold)
+    bounds(p, s, gx, gy, rest, hold)
   }
 }
 
 /** Keep dynamic discs inside the box; reflect the normal velocity (restitution) and damp the tangential one. */
-function bounds(p: Particles, s: Float32Array, gx: number, gy: number, hold?: (i: number) => boolean) {
+function bounds(p: Particles, s: Float32Array, gx: number, gy: number, rest: number, hold?: (i: number) => boolean) {
   const { n, X, Y, PX, PY, K, r, restitution: e, friction } = p, [x0, y0, x1, y1] = p.bounds
   // which walls act as floors: those the gravity presses into
   const fl = gx < -.3, fr = gx > .3, ft = gy < -.3, fb = gy > .3 || (Math.abs(gx) <= .3 && Math.abs(gy) <= .3)
   for (let i = 0; i < n; i++) {
     if (s[K + i] !== P_DYNAMIC || hold?.(i)) continue
     const ri = r[i]
-    let x = s[X + i], y = s[Y + i]
-    const vx = x - s[PX + i], vy = y - s[PY + i]
-    if (x < x0 + ri) { x = x0 + ri; s[PX + i] = x + vx * e; if (fl) s[PY + i] = y - vy * friction }
-    else if (x > x1 - ri) { x = x1 - ri; s[PX + i] = x + vx * e; if (fr) s[PY + i] = y - vy * friction }
-    if (y < y0 + ri) { y = y0 + ri; s[PY + i] = y + vy * e; if (ft) s[PX + i] = x - vx * friction }
-    else if (y > y1 - ri) { y = y1 - ri; s[PY + i] = y + vy * e; if (fb) s[PX + i] = x - vx * friction }
-    s[X + i] = x; s[Y + i] = y
+    let x = s[X + i], y = s[Y + i], vx = x - s[PX + i], vy = y - s[PY + i], slideX = false, slideY = false
+    // into a wall: reflect (restitution) above the resting speed, stop below it; floors damp the slide along them
+    if (x < x0 + ri) { x = x0 + ri; if (vx < 0) vx = -vx > rest ? -vx * e : 0; slideY = fl }
+    else if (x > x1 - ri) { x = x1 - ri; if (vx > 0) vx = vx > rest ? -vx * e : 0; slideY = fr }
+    if (y < y0 + ri) { y = y0 + ri; if (vy < 0) vy = -vy > rest ? -vy * e : 0; slideX = ft }
+    else if (y > y1 - ri) { y = y1 - ri; if (vy > 0) vy = vy > rest ? -vy * e : 0; slideX = fb }
+    if (slideX) vx *= friction
+    if (slideY) vy *= friction
+    s[X + i] = x; s[Y + i] = y; s[PX + i] = x - vx; s[PY + i] = y - vy
   }
 }
 

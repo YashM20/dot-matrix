@@ -101,6 +101,19 @@
 - [-] Cross-engine goldens, `snap --replay/--ref/--diff`, the G6 flash check → Track L.
 - [-] Engine barrel curation + library `.d.ts` build → P6 packaging.
 
+**Web plan (2026-10-23)**
+- [x] C2: dot physics you can touch, CPU-first (`src/engine/physics/`, `?board=physics`). The engine pieces:
+  - `createWorld`/`worldAt` is pure in t (a SimField with checkpoints, a loop and a seam pull) until the first input, then live at fixed dt (it drops time, never stretches a step) and heals back after 3 s idle;
+  - stable fluids with warm-started Jacobi, MacCormack ink, vorticity and buoyancy;
+  - PBD cloth with aero wind, and a shape-matched jelly with an area constraint;
+  - disc particles with a spatial hash.
+
+  Cards: `phys-splash` (a swipe knocks DEPARTURES loose, the dots settle and Hilbert-migrate back, a full splash re-forms as ARRIVALS; the in-flight dots are the board's only red), `phys-ink`, `phys-flag`, `phys-jelly`, `phys-pit`. Input is the pointer plus Enter = kick plus `data.gx/gy` tilt; the DeviceOrientation wiring is not done. Verify has 13 checks (`scripts/physics.ts`); goldens +5. Weak spots:
+  - the cards throw inside the sampling worker so that they stay on the main thread; a `WidgetPreset` flag would be cleaner;
+  - motion runs at the 12 fps animated tier;
+  - board frame Σ exceeds the 8 ms bench budget under load;
+  - no GPU path yet.
+
 ## How to resume (read first)
 1. `pnpm i`, then `pnpm dev`.
    - Tabs: BOARDS, GALLERY, WORKSPACE, LOG and DRAW.

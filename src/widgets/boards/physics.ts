@@ -183,8 +183,8 @@ export const physicsSplash: WidgetPreset = {
 // A 48×38 tank on a 3-cell lattice. Each drop lands with downward speed and sinks (ink is heavier than
 // water), so it rolls up into a vortex mushroom. Dots are density: size steps, faint → mid → value.
 const FW = 48, FH = 38, FL = 3, FY = 30
-const fluid = createFluid({ w: FW, h: FH, iterations: 16, vorticity: 7, dissipation: .08, damping: .22, sink: 20 })
-const I_DT = 1 / 30, I_PERIOD = 10, I_LEN = Math.round(I_PERIOD / I_DT), FALL = .45
+const fluid = createFluid({ w: FW, h: FH, iterations: 8, vorticity: 7, dissipation: .08, damping: .22, sink: 20 })
+const I_DT = 1 / 24, I_PERIOD = 10, I_LEN = Math.round(I_PERIOD / I_DT), FALL = .45
 const DROPS = [{ at: .4, x: .32 }, { at: 2.9, x: .66 }, { at: 5.4, x: .45 }, { at: 7.9, x: .74 }]
 const toTank: Map2 = (x, y) => [(x + .5) / FL - .5, (y - FY + .5) / FL - .5]
 function inkStep(s: Float32Array, n: number, inp: StepInput) {
@@ -197,7 +197,7 @@ function inkStep(s: Float32Array, n: number, inp: StepInput) {
   }
   fluidStep(fluid, s, I_DT, inp.gx, inp.gy)
 }
-const inkWorld = createWorld({ size: fluidSize(fluid), dt: I_DT, lead: 3, period: I_PERIOD, seam: 1.2, every: 15, maxSteps: 900, maxLiveSteps: 4, init: () => {}, step: inkStep })
+const inkWorld = createWorld({ size: fluidSize(fluid), dt: I_DT, lead: 3, period: I_PERIOD, seam: 1.2, every: 12, maxSteps: 720, maxLiveSteps: 4, init: () => {}, step: inkStep })
 const inkTone = (v: number): Tone => (v >= .86 ? 'value' : v >= .68 ? 'idle' : v >= .48 ? 'mid' : 'faint')
 export const physicsInk: WidgetPreset = {
   id: 'phys-ink', name: 'Physics Ink', label: '02  INK', ...tile, controls: touch('ink', 'Stir the ink'),
@@ -226,7 +226,7 @@ export const physicsInk: WidgetPreset = {
 // the sheet billows and folds. Perspective scales dots with depth; tone is the fold's light (|n·L|).
 const FC = 21, FR = 15, FSP = 5.4, FX0 = 72 - ((FC - 1) * FSP) / 2, FY0 = 26
 const cloth = createCloth({ cols: FC, rows: FR, spacing: FSP, origin: [FX0, FY0, 0], pin: (i, j) => j === 0 && i % 4 === 0, iterations: 6, g: 150, lift: 6, drag: .99, shear: .7, bend: .2 })
-const C_GRAB = clothSize(cloth), F_DT = 1 / 60, F_PERIOD = 10
+const C_GRAB = clothSize(cloth), F_DT = 1 / 30, F_PERIOD = 10
 const PRINT = new Uint8Array(FC * FR)
 ;[...'480'].forEach((ch, ci) => glyph(ch).forEach((row, gy) => row.forEach((on, gx) => { if (on) PRINT[(4 + gy) * FC + 2 + ci * 6 + gx] = 1 })))
 let windT = 0
@@ -256,7 +256,7 @@ function flagStep(s: Float32Array, n: number, inp: StepInput) {
   s[C_GRAB] = grab
 }
 const flagWorld = createWorld({
-  size: C_GRAB + 2, dt: F_DT, lead: 4, period: F_PERIOD, seam: 1, every: 30, maxSteps: 1200, maxLiveSteps: 6,
+  size: C_GRAB + 2, dt: F_DT, lead: 4, period: F_PERIOD, seam: 1, every: 15, maxSteps: 600, maxLiveSteps: 4,
   init: s => { clothInit(cloth, s); s[C_GRAB] = -1 }, step: flagStep, blend: blendHead(C_GRAB),
 })
 const LIGHT = (() => { const v = [-.75, -.35, .55], l = Math.hypot(...v); return v.map(x => x / l) })()
@@ -315,10 +315,10 @@ const jellyWorld = createWorld({
 })
 // raster on a 2-cell lattice under the label: value + tone per lattice cell, rebuilt per frame
 const JL = 2, JOY = 12, JC = 72, JR = 66
-const jVal = new Float32Array(JC * JR), jTone = new Int8Array(JC * JR), xs = new Float64Array(64)
+const jVal = new Float32Array(JC * JR), jTone = new Int8Array(JC * JR), jIn = new Uint8Array(JC * JR), xs = new Float64Array(64)
 const J_TONES: Tone[] = ['faint', 'mid', 'idle', 'value']
 function jellyRaster(s: Float32Array, t: number): [number, number] {
-  jVal.fill(0)
+  jVal.fill(0); jIn.fill(0)
   const { n, X, Y } = soft, f = softFrame(soft, s), cs = Math.cos(f.angle), sn = Math.sin(f.angle)
   let y0 = Infinity, y1 = -Infinity, x0 = Infinity, x1 = -Infinity
   for (let i = 0; i < n; i++) { y0 = Math.min(y0, s[Y + i]); y1 = Math.max(y1, s[Y + i]); x0 = Math.min(x0, s[X + i]); x1 = Math.max(x1, s[X + i]) }
@@ -338,20 +338,21 @@ function jellyRaster(s: Float32Array, t: number): [number, number] {
         const x = (c + .5) * JL - .5, dx = x - f.cx, dy = y - f.cy
         const lx = (cs * dx + sn * dy) / soft.rx, ly = (-sn * dx + cs * dy) / soft.ry
         // eyes: void holes in the body frame; they blink every 3.3 s
-        const ex = Math.abs(lx) - .33, ey = (ly + .12) / (.2 * blink)
+        const i = r * JC + c, ex = Math.abs(lx) - .33, ey = (ly + .12) / (.2 * blink)
+        jIn[i] = 1
         if ((ex / .11) ** 2 + ey * ey < 1) continue
-        let d = Infinity
-        for (let i = 0, j = n - 1; i < n; j = i++) {
-          const ax = s[X + j], ay = s[Y + j], bx = s[X + i] - ax, by = s[Y + i] - ay, l2 = bx * bx + by * by
-          const k = l2 > 0 ? clamp(((x - ax) * bx + (y - ay) * by) / l2, 0, 1) : 0
-          d = Math.min(d, Math.hypot(x - ax - bx * k, y - ay - by * k))
-        }
-        const i = r * JC + c, hl = ((lx + .42) / .2) ** 2 + ((ly + .5) / .13) ** 2
+        const hl = ((lx + .42) / .2) ** 2 + ((ly + .5) / .13) ** 2
         let tone = 1, v = clamp(.62 - .3 * ly, .35, .95)
-        if (hl < 1) { tone = 3; v = 1 } else if (d < 2.4) { tone = 2; v = .9 } else if (ly > .5) { tone = 0; v = .7 }
+        if (hl < 1) { tone = 3; v = 1 } else if (ly > .5) { tone = 0; v = .7 }
         jVal[i] = v; jTone[i] = tone
       }
     }
+  }
+  // the rim: body cells with a 4-neighbour outside the body (one lattice cell ≈ 2 card cells, a soft glassy edge)
+  for (let r = r0; r <= r1; r++) for (let c = 0; c < JC; c++) {
+    const i = r * JC + c
+    if (!jIn[i] || !jVal[i] || jTone[i] === 3) continue
+    if (c === 0 || c === JC - 1 || r === 0 || r === JR - 1 || !jIn[i - 1] || !jIn[i + 1] || !jIn[i - JC] || !jIn[i + JC]) { jTone[i] = 2; jVal[i] = .9 }
   }
   return [x0, x1]
 }

@@ -4,7 +4,7 @@
  * State (in a world's Float32Array, `FLUID_CHANNELS` planes of w×h): u, v (cells / s), ink density d and the
  * pressure p (kept so each projection warm-starts from the last one, which is why a few Jacobi sweeps do).
  * A step is a fixed sequence of passes, each a pure map over the grid that reads one set of planes and writes
- * another: forces (buoyancy along gravity, vorticity confinement, damping) → project → advect u, v
+ * another: forces (buoyancy along gravity, vorticity confinement, damping) → advect u, v
  * (semi-Lagrangian, bilinear, unconditionally stable) → project → advect d (MacCormack, limited) → dissipate. Every pass is one
  * compute dispatch on a GPU; Jacobi (not Gauss–Seidel) keeps that true for the pressure solve.
  * Walls: zero normal velocity on the border cells, zero-gradient pressure. Framework-free.
@@ -157,7 +157,7 @@ function forces(f: Fluid, s: Float32Array, dt: number, gx: number, gy: number) {
     if (i > 0 && j > 0 && i < w - 1 && j < h - 1) {
       // N = ∇|ω| / |∇|ω||, f = ε (N × ω)
       const nx = .5 * (Math.abs(curl[c + 1]) - Math.abs(curl[c - 1])), ny = .5 * (Math.abs(curl[c + w]) - Math.abs(curl[c - w]))
-      const len = Math.hypot(nx, ny) + 1e-5, wv = curl[c]
+      const len = Math.sqrt(nx * nx + ny * ny) + 1e-5, wv = curl[c]
       fu += eps * dt * (ny / len) * wv; fv -= eps * dt * (nx / len) * wv
     }
     let u = (s[U + c] + fu) * damp, v = (s[V + c] + fv) * damp
@@ -170,8 +170,8 @@ function forces(f: Fluid, s: Float32Array, dt: number, gx: number, gy: number) {
 /** One stable-fluids step of `dt` seconds with gravity (gx, gy) in g. */
 export function fluidStep(f: Fluid, s: Float32Array, dt: number, gx = 0, gy = 1): void {
   forces(f, s, dt, gx, gy)
-  project(f, s)
-  // self-advection: both planes backtrace through the same (projected) field, written after both are read
+  // self-advection: both planes backtrace through the same field, written after both are read; one projection
+  // after it (the warm-started pressure makes a second one before it unnecessary at this resolution)
   const { w, h, U, V, D, n, a, b } = f
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
     const c = j * w + i, x = i - dt * s[U + c], y = j - dt * s[V + c]
@@ -186,13 +186,15 @@ export function fluidStep(f: Fluid, s: Float32Array, dt: number, gx = 0, gy = 1)
 
 /** Total ink (mass accounting in tests). */
 export function fluidInk(f: Fluid, s: Float32Array): number { let m = 0; for (let c = 0; c < f.n; c++) m += s[f.D + c]; return m }
-/** Largest |divergence| after a projection (tests). */
-export function fluidMaxDivergence(f: Fluid, s: Float32Array): number {
+/** The projection pass alone (tests, and callers that edit velocity outside a step). */
+export const fluidProject = (f: Fluid, s: Float32Array): void => project(f, s)
+/** Mean |divergence| over the interior (tests: a projection cuts it by a large factor). */
+export function fluidDivergence(f: Fluid, s: Float32Array): number {
   const { w, h, U, V } = f
   let m = 0
   for (let j = 1; j < h - 1; j++) for (let i = 1; i < w - 1; i++) {
-    const c = j * w + i, d = Math.abs(.5 * (s[U + c + 1] - s[U + c - 1] + s[V + c + w] - s[V + c - w]))
-    if (d > m) m = d
+    const c = j * w + i
+    m += Math.abs(.5 * (s[U + c + 1] - s[U + c - 1] + s[V + c + w] - s[V + c - w]))
   }
-  return m
+  return m / ((w - 2) * (h - 2))
 }

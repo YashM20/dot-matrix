@@ -86,7 +86,7 @@ export function clothNormals(c: Cloth, s: Float32Array): void {
     const ax = s[X + r] - s[X + l], ay = s[Y + r] - s[Y + l], az = s[Z + r] - s[Z + l]
     const bx = s[X + d] - s[X + u], by = s[Y + d] - s[Y + u], bz = s[Z + d] - s[Z + u]
     let x = ay * bz - az * by, y = az * bx - ax * bz, z = ax * by - ay * bx
-    const len = Math.hypot(x, y, z) || 1
+    const len = Math.sqrt(x * x + y * y + z * z) || 1
     x /= len; y /= len; z /= len
     nx[p] = x; ny[p] = y; nz[p] = z
   }
@@ -269,7 +269,7 @@ export function softStep(b: Soft, s: Float32Array, dt: number, o: SoftStepOption
     }
     // perimeter: neighbouring particles keep their rest spacing
     for (let i = 0; i < n; i++) {
-      const j = (i + 1) % n, dx = s[X + j] - s[X + i], dy = s[Y + j] - s[Y + i], d = Math.hypot(dx, dy)
+      const j = (i + 1) % n, dx = s[X + j] - s[X + i], dy = s[Y + j] - s[Y + i], d = Math.sqrt(dx * dx + dy * dy)
       if (d < 1e-6) continue
       const c = b.perimeter * .5 * (d - b.edge[i]) / d
       s[X + i] += dx * c; s[Y + i] += dy * c; s[X + j] -= dx * c; s[Y + j] -= dy * c
@@ -288,7 +288,7 @@ export function softStep(b: Soft, s: Float32Array, dt: number, o: SoftStepOption
       for (let i = 0; i < n; i++) { s[X + i] += windScratch[2 * i]; s[Y + i] += windScratch[2 * i + 1] }
     }
     for (const pk of o.pokes ?? []) for (let i = 0; i < n; i++) {
-      const dx = s[X + i] - pk.x, dy = s[Y + i] - pk.y, d = Math.hypot(dx, dy)
+      const dx = s[X + i] - pk.x, dy = s[Y + i] - pk.y, d = Math.sqrt(dx * dx + dy * dy)
       if (d < pk.r && d > 1e-6) { s[X + i] = pk.x + dx / d * pk.r; s[Y + i] = pk.y + dy / d * pk.r }
     }
     if (g) { s[X + g.p] = g.x; s[Y + g.p] = g.y }

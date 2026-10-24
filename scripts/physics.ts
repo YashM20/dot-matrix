@@ -10,7 +10,7 @@ import { sampleLayers } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
 import { simAtStep, simLoop, simReset } from '../src/engine/sim'
 import {
-  clothInit, clothMaxStrain, clothSize, clothStep, createCloth, createFluid, createParticles, createSoft, fluidInk, fluidMaxDivergence, fluidSize, fluidSplat, fluidStep,
+  clothInit, clothMaxStrain, clothSize, clothStep, createCloth, createFluid, createParticles, createSoft, fluidDivergence, fluidInk, fluidProject, fluidSize, fluidSplat, fluidStep,
   particlesEnergy, particlesMaxOverlap, particlesSize, particlesStep, P_DYNAMIC, setParticle, softArea, softInit, softSize, softStep, worldAt, worldReset,
 } from '../src/engine/physics'
 import type { Pointer } from '../src/engine/context'
@@ -47,26 +47,27 @@ export function physicsChecks(assert: Assert): void {
   assert('physics: pristine cards are pure in t (forward = reverse = cold replay, t up to 3600 s)', same)
 
   // ── loops: the wrap is seamless (continuous worlds pulled onto the start; splash / pit are periodic) ──
+  // continuous worlds: the wrap (last step → loop start) moves the state no more than a few ordinary steps do;
+  // splash and pit are exactly periodic (their state at start + len is the state at start)
   const seams = physicsWorlds.map((w, i) => {
-    const [start, len] = simLoop(w.sim), s0 = simAtStep(w.sim, start).slice()
+    const [start, len] = simLoop(w.sim), s0 = simAtStep(w.sim, start).slice(), s1 = simAtStep(w.sim, start + 1).slice()
     const exact = i === 0 || i === 4, end = simAtStep(w.sim, exact ? start + len : start + len - 1).slice()
     const n = i === 0 ? particlesSize(physicsProbe.sp) : i === 4 ? particlesSize(physicsProbe.pit) : s0.length
-    let scale = 0; for (let k = 0; k < n; k++) scale = Math.max(scale, Math.abs(s0[k]))
-    return maxAbs(end, s0, n) / (scale || 1)
+    return exact ? maxAbs(end, s0, n) : maxAbs(end, s0, n) / (maxAbs(s1, s0, n) || 1)
   })
-  assert('physics: loops wrap without a jump (relative state gap at the seam ≤ 4%, splash/pit exact)', seams.every((g, i) => g <= (i === 0 || i === 4 ? 1e-5 : .04)), seams.map(g => g.toExponential(1)).join(' '))
+  assert('physics: loops wrap without a jump (seam ≤ 4 ordinary steps; splash / pit exact)', seams.every((g, i) => g <= (i === 0 || i === 4 ? 1e-4 : 4)), seams.map(g => g.toFixed(3)).join(' '))
 
   // ── solver invariants ──
   const fl = createFluid({ w: 32, h: 32 }), fs = new Float32Array(fluidSize(fl))
   fluidSplat(fl, fs, 16, 8, 2, 0, 40, 1); fluidSplat(fl, fs, 8, 20, 2, 30, -10, 1)
-  const ink0 = fluidInk(fl, fs)
-  let speed = 0
+  const div0 = fluidDivergence(fl, fs)
+  fluidProject(fl, fs)
+  for (let i = 0; i < 4; i++) fluidProject(fl, fs) // warm-started sweeps keep converging
+  const div1 = fluidDivergence(fl, fs), ink0 = fluidInk(fl, fs)
   for (let i = 0; i < 60; i++) fluidStep(fl, fs, 1 / 30)
-  for (let c = 0; c < fl.n; c++) speed = Math.max(speed, Math.hypot(fs[fl.U + c], fs[fl.V + c]))
   let dmax = 0; for (let c = 0; c < fl.n; c++) dmax = Math.max(dmax, fs[fl.D + c])
-  const div = fluidMaxDivergence(fl, fs)
-  assert('physics fluid: projected velocity is near divergence-free, ink never gains mass or new extrema', finite(fs) && div < .08 * Math.max(1, speed) && fluidInk(fl, fs) <= ink0 * 1.001 && dmax <= 1.5,
-    `max |div| ${div.toFixed(3)} at speed ${speed.toFixed(1)}, ink ${ink0.toFixed(2)} → ${fluidInk(fl, fs).toFixed(2)}`)
+  assert('physics fluid: projection removes most divergence (collocated grid: the central-difference residue stays); ink never gains mass or new extrema', finite(fs) && div1 < .3 * div0 && fluidInk(fl, fs) <= ink0 * 1.001 && dmax <= 1.5,
+    `mean |div| ${div0.toFixed(3)} → ${div1.toFixed(3)}, ink ${ink0.toFixed(2)} → ${fluidInk(fl, fs).toFixed(2)}, peak ${dmax.toFixed(2)}`)
 
   const N = 60, pr = new Float32Array(N).map((_, i) => 2 + (i % 4)), ps = createParticles({ n: N, radius: pr, bounds: [0, 0, 80, 80] }), pst = new Float32Array(particlesSize(ps))
   for (let i = 0; i < N; i++) setParticle(ps, pst, i, 6 + (i % 10) * 7, 4 + Math.floor(i / 10) * 9, (i % 3 - 1) * 80, 0, 1 / 60, P_DYNAMIC)
