@@ -126,6 +126,8 @@
 
   **Needs the user:** Cloudflare project + secrets + `SITE_URL` variable (`docs/DEPLOY.md` › What you need to do), and git push credentials. Not verified: the headers on a real Pages deploy (`wrangler pages dev dist` locally); Safari/Firefox.
 
+- [x] Lift (craft: cinema, light, live, heartbeat, lock): `cinema-encore` singer silhouette at a mic stand in a curtain spot (was an "A"), `cinema-closer` two flame-lit profiles on black (was the vase illusion), `cinema-keeper` black rock + surf + per-row swell; `light-gloss` black lacquer (void body, highlight held toward the lit limb, floor-bounce rim), `light-fabric` higher-ambient weave + shadow-side sheen rim; `live-now-playing` seeded sun-over-sea cover + EQ animated from `t` (12 fps), `live-contribs` level 0/1 sizes 1.15/1.75; `hb-thinking` budding lobes (new `bud` token: per-lobe sphere shading, darker necks; `hb-agent` state 0 follows); board `glyph` → `lock` (`LOCK — LOCK SCREEN EXPERIENCES`, cards `lock-*`, `?board=glyph`, `/glyph/` and `?card=glyph-*` still resolve via `boardAliases` in `manifest.ts`), `lock-notify` 5×7 badge digit, `lock-idle` finer 60-site labyrinth that keeps rearranging. Snapshots `.snapshots/{before,r1..r5}`.
+
 ## How to resume (read first)
 1. `pnpm i`, then `pnpm dev`.
    - Tabs: BOARDS, GALLERY, WORKSPACE, LOG and DRAW.
