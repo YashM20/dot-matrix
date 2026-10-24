@@ -12,7 +12,7 @@ import './hive.css'
 const HivePlay = lazy(() => import('./HivePlay'))
 /** The title card's cursor (levels.ts `CURSOR`), copied so the button doesn't pull the lazily loaded levels board in. */
 const CURSOR = ['#...', '##..', '###.', '####', '###.', '##..', '#...']
-const GRID = { cols: 64, rows: 11 }, PITCH = 3
+const GRID = { cols: 80, rows: 11 }, PITCH = 3
 const T = layoutFor(GRID)
 const cursor = T.lattice(1, 3, 2)
 const style = { ...tileStyle, sizeMin: .3 * PITCH / 2.25, sizeMax: .95 * PITCH / 2.25 }
