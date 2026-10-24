@@ -32,6 +32,13 @@ export interface MasterClock {
   /** Stop advancing time (e.g. page hidden); subscribers keep their last frame. */
   pause(): void
   resume(): void
+  /**
+   * Jump board time to `T` seconds (the time machine scrubber). Every subscriber redraws at the new
+   * time on the next animation frame, also while paused, so a frozen board can be scrubbed.
+   */
+  seek(T: number): void
+  /** True between `pause()` and `resume()`. */
+  isPaused(): boolean
 }
 
 /** Card-quantized time for board time `T` at `fps`. */
@@ -48,20 +55,25 @@ export function createMasterClock(opts: ClockOptions = {}): MasterClock {
   let elapsed = 0, last = 0, handle = 0, running = false, paused = false
 
   const T = () => elapsed + (running ? (now() - last) / 1000 : 0)
-  function tick() {
-    handle = 0
-    if (!running) return
-    const time = T()
+  function frame(time: number) {
     for (const [sub, state] of subs) {
       const { t, frame } = quantizeTime(time, sub.fps)
       if (frame === state.frame && !state.dirty) continue
       state.frame = frame; state.dirty = false
       sub.onFrame(t, frame)
     }
+  }
+  function tick() {
+    handle = 0
+    if (!running) return
+    frame(T())
     handle = raf(tick)
   }
+  // a seek while stopped draws one frame at the new time (no loop)
+  function once() { handle = 0; if (!running) frame(T()) }
   function start() {
     if (running || paused || !subs.size) return
+    if (handle) caf(handle) // a pending seek frame: the loop draws it
     running = true; last = now(); handle = raf(tick)
   }
   function stop() {
@@ -79,6 +91,12 @@ export function createMasterClock(opts: ClockOptions = {}): MasterClock {
     time: T,
     pause() { paused = true; stop() },
     resume() { paused = false; start() },
+    seek(t) {
+      elapsed = Number.isFinite(t) ? Math.max(0, t) : elapsed; last = now()
+      for (const state of subs.values()) state.dirty = true
+      if (!running && !handle) handle = raf(once)
+    },
+    isPaused: () => paused,
   }
 }
 
