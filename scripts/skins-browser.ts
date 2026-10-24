@@ -47,6 +47,10 @@ const shot = async (name: string) => {
   writeFileSync(join(OUT, `${name}.png`), Buffer.from(r.result.data, 'base64'))
   console.log(`  .snapshots/c7/${name}.png`)
 }
+/** Wait (≤ 30 s) until the board's cards are mounted (lazy boards and a loaded machine make fixed sleeps flaky). */
+const settled = async () => {
+  for (let i = 0; i < 60; i++) { if (await evaluate<number>(`document.querySelectorAll('.dot-card canvas, .dot-card .dot-svg').length`) > 0) return; await sleep(500) }
+}
 await cdp('Runtime.enable'); await cdp('Page.enable'); await cdp('Profiler.enable')
 await cdp('Emulation.setDeviceMetricsOverride', { width: 1400, height: 1000, deviceScaleFactor: 1, mobile: false })
 
@@ -66,11 +70,12 @@ try {
   // 1) board × skin sheets
   for (const board of BOARDS) for (const skin of SKINS) {
     await cdp('Page.navigate', { url: `${URL0}/?board=${board}&skin=${skin}` })
+    await settled()
     await sleep(skin === 'eink' || skin === 'flipdisc' ? 4200 : 3200)
     await shot(`${board}-${skin}`)
   }
   // live switches: the refresh itself
-  await cdp('Page.navigate', { url: `${URL0}/?board=${BOARDS[0]}&skin=oled` }); await sleep(3000)
+  await cdp('Page.navigate', { url: `${URL0}/?board=${BOARDS[0]}&skin=oled` }); await settled(); await sleep(3000)
   for (const [to, times] of [['crt', [90, 260, 520]], ['eink', [250, 600, 1000]], ['oled', [120]]] as const) {
     await evaluate(`window.dot480.setSkin(${JSON.stringify(to)})`)
     let t0 = 0
@@ -89,7 +94,7 @@ try {
   let oledBusy = 0
   for (const skin of ['oled', 'crt', 'led', 'vfd', 'nixie', 'eink', 'flipdisc']) {
     await cdp('Page.navigate', { url: `${URL0}/?board=${PERF}&skin=${skin}` })
-    await sleep(6000)
+    await settled(); await sleep(4000)
     await evaluate(`(() => { const p = window.__skinPerf || {}; for (const k in p) { p[k].frame.length = 0; p[k].render.length = 0 } })()`)
     await cdp('Profiler.setSamplingInterval', { interval: 200 }); await cdp('Profiler.start')
     await sleep(SECS * 1000)
@@ -110,7 +115,7 @@ try {
   // the 144² gate: one animated TILE card alone (mini-game), crt and led
   console.log('\nsingle 144² animated card (mini-game), stage ms per card frame:')
   for (const skin of ['crt', 'led']) {
-    await cdp('Page.navigate', { url: `${URL0}/?card=mini-game&skin=${skin}` }); await sleep(3000)
+    await cdp('Page.navigate', { url: `${URL0}/?card=mini-game&skin=${skin}` }); await settled(); await sleep(3000)
     await evaluate(`(() => { const p = window.__skinPerf || {}; for (const k in p) { p[k].frame.length = 0; p[k].render.length = 0 } })()`)
     await sleep(SECS * 1000)
     const s = await evaluate<{ mean: number; p95: number; n: number; w: number }>(`(() => {
