@@ -1,8 +1,9 @@
 import type { ControlPatch, DotStyle, ThemeTokens } from '../engine'
 import { dot480 } from '../engine'
-import { useCallback, useMemo, useState } from 'react'
-import type { WidgetPreset } from '../widgets'
-import { widgetById, withChrome } from '../widgets'
+import { useCallback, useEffect, useMemo, useState } from 'react'
+import { withChrome, type WidgetPreset } from '../widgets/types'
+import { registeredPreset } from '../widgets/registry'
+import { findPreset } from '../widgets/manifest'
 import { DotCanvas, type DotCanvasProps } from './DotCanvas'
 import { useCamera, withMedia } from '../media/useCamera'
 import { HAND_KEY, useHandMode } from '../media/useHand'
@@ -36,7 +37,15 @@ export interface DotWidgetProps {
 }
 
 export function DotWidget({ type, density, dotShape, roundness, size, theme = dot480, animated, data, tick, preset: presetProp, enter, exit, shared, sharedKeys, onShared }: DotWidgetProps) {
-  const preset = presetProp ?? widgetById(type)
+  // by id: a preset of a board loaded so far, else the boards are loaded (lazy chunks) and searched
+  const [found, setFound] = useState<WidgetPreset>()
+  const preset = presetProp ?? registeredPreset(type) ?? found
+  useEffect(() => {
+    if (presetProp || registeredPreset(type)) return
+    let live = true
+    findPreset(type).then(p => { if (live) setFound(p) }, () => {})
+    return () => { live = false }
+  }, [presetProp, type])
   // interactive data (P2): input patches merged over the defaults and the `data` prop
   const [local, setLocal] = useState<ControlPatch>({})
   // live media (P4): a camera card's feed starts only once its own control turned `cam` on

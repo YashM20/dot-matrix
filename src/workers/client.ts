@@ -8,7 +8,7 @@
  */
 import { dotBufferOver, type DotBuffer } from '../engine/buffer/dotBuffer'
 import type { DotStyle, GridConfig, ThemeTokens } from '../engine/types'
-import { widgetPresets, withChrome } from '../widgets'
+import { workerIds } from '../widgets/registry'
 import type { DropRequest, SampleReply, SampleRequest } from './protocol'
 
 let worker: Worker | null | undefined
@@ -31,10 +31,8 @@ function getWorker(): Worker | null {
 }
 
 /** Preset id behind a layers function, if it is a registered preset's `withChrome(p)` the worker can rebuild (no live media). */
-let ids: WeakMap<object, string> | undefined
 export function workerPresetId(layers: object): string | undefined {
-  ids ??= new WeakMap(widgetPresets.filter(p => !p.media).map(p => [withChrome(p), p.id]))
-  return ids.get(layers)
+  return workerIds.get(layers)
 }
 
 export interface RemoteSampler {

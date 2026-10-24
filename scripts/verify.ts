@@ -39,6 +39,7 @@ import { bytecodeChecks } from './bytecode'
 import { esp32Checks } from '../targets/test/esp32'
 import { targetsChecks } from '../targets/test/targets'
 import { bufferChecks } from './buffer'
+import { typeChecks } from './type'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -797,6 +798,8 @@ esp32Checks(assert, { pathOnly: true })
 await targetsChecks(assert)
 // P5-B) struct-of-arrays DotBuffer, buffer canvas renderer, worker protocol (scripts/buffer.ts)
 bufferChecks(assert)
+// C8) dot type: stroke font, axes, kerning, SDF morph, marquee, CJK skip, the type board (scripts/type.ts)
+typeChecks(assert)
 
 // P5-A) WebGL2 renderer, CPU half: pass mapping ≡ sampler, routing, colours (GPU half: `npx tsx scripts/webgl.ts` in headless Chrome)
 import { baseStyle } from '../src/widgets/types'
