@@ -6,11 +6,12 @@ import { lazy, Suspense, useCallback, useEffect, useRef, useState } from 'react'
 import type { ThemeTokens } from '../../engine/types'
 import { dot480 } from '../../engine/theme/tokens'
 import { layer, layoutFor, tileStyle } from '../../widgets/types'
-import { CURSOR } from '../../widgets/boards/levels'
 import { paint, sampleInto, surfaceFor } from './dots'
 import './hive.css'
 
 const HivePlay = lazy(() => import('./HivePlay'))
+/** The title card's cursor (levels.ts `CURSOR`), copied so the button doesn't pull the lazily loaded levels board in. */
+const CURSOR = ['#...', '##..', '###.', '####', '###.', '##..', '#...']
 const GRID = { cols: 64, rows: 11 }, PITCH = 3
 const T = layoutFor(GRID)
 const cursor = T.lattice(1, 3, 2)

@@ -126,6 +126,8 @@
 
   **Needs the user:** Cloudflare project + secrets + `SITE_URL` variable (`docs/DEPLOY.md` › What you need to do), and git push credentials. Not verified: the headers on a real Pages deploy (`wrangler pages dev dist` locally); Safari/Firefox.
 
+- [x] C4: **playable HIVE** (`src/game/`, `src/components/game/`, `?board=levels&play=1`): a PRESS START button on the levels board opens a full-screen 192×144 dot game: title → corridor (first-person DDA raycast, torches, drones you shoot) → warren (top-down maze, 3 keys, BFS grubs) → surface (run / jump / stomp side-scroller, parallax ≡ `lv-surface`) → warp → the queen (bullet patterns in 3 phases, shell armoured while her red eye is shut, health bar) → win / game over (continue countdown) → initials → high scores (localStorage). Fixed 60 Hz deterministic sim, render per display frame; keyboard, Gamepad API, dot touch pad, optional pointer-lock mouse-look; whole-cell shake, Bayer dither-burst hit flashes, mask dissolves between stages and a dot migration into the boss (all off under reduced motion); pause on blur; 20 s idle → autopilot demo; sound hooks call `src/audio` if it exists. Engine: `src/engine/scene` (hall + grid ray casters, promoted from `levels.ts`; lv-* goldens unchanged). Checks: `scripts/game.ts` in verify (autopilot reaches the boss in ~79 s, recorded inputs replay bit-identically, sky ≡ card), `scripts/game-browser.ts` (CDP, 16 checks, screenshots `.snapshots/c4/`). Left: corridor frame is the heavy one (~10 ms layers + sample, ~25 k dots); bot cannot beat the queen; taste pass on difficulty.
+
 ## How to resume (read first)
 1. `pnpm i`, then `pnpm dev`.
    - Tabs: BOARDS, GALLERY, WORKSPACE, LOG and DRAW.
