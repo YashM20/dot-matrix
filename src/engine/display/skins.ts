@@ -39,7 +39,7 @@ export const SKIN_PHYSICS = {
   /** The TRMNL panel physics; `gapS` = the controller's idle time between two refreshes. */
   eink: { ...(DEVICES['trmnl-800x480'].physics as EinkPhysics), gapS: .12 },
   /** The flip-disc profile physics; a card is ~144 columns wide, so the column scan is compressed into `sweepS`. */
-  flipdisc: { ...(DEVICES['flipdisc-28x14'].physics as FlipPhysics), sweepS: .34, threshold: .42, maxHz: 12 },
+  flipdisc: { ...(DEVICES['flipdisc-28x14'].physics as FlipPhysics), sweepS: .34, threshold: .24, maxHz: 12 },
   nixie: { phosphor: [1, .5, .14] as Phosphor, bloom: [.7, .42, .26] as const, mesh: .3, onS: .85 },
 } as const
 

@@ -62,7 +62,8 @@ export function createEinkPanel(cols: number, rows: number, physics: EinkPhysics
       full = panel.count % physics.fullEvery === 0
       panel.count++
       for (let i = 0, c = 0, r = 0; i < n; i++) {
-        const on = f.level[i] > stbn(c, r, 0) ? 1 : 0
+        // a steep tone curve first: text (idle tone and up) prints solid, the faint grid is a light speckle
+        const on = Math.min(1, Math.max(0, (f.level[i] - .12) / .42)) > stbn(c, r, 0) ? 1 : 0
         if (full) ghost[i] = 0
         else ghost[i] = inked[i] && !on ? Math.max(ghost[i] * physics.ghostDecay, physics.ghost) : on ? 0 : ghost[i] * physics.ghostDecay
         inked[i] = on

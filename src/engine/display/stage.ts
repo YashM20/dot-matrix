@@ -298,7 +298,29 @@ export function createDisplayStage(skin: SkinName, o: StageOptions): DisplayStag
   // flipdisc
   const P = SKIN_PHYSICS.flipdisc, panel = createFlipPanel(cols, rows, P), n = cols * rows
   const face = new Uint8Array(n), tilt = new Float32Array(n), R = .46 * Math.min(cw, ch)
-  let nextSample = -Infinity, drawn = false
+  let nextSample = -Infinity
+  // dirty redraw: each cell remembers the sprite it shows (colour × width bucket); only changed cells are drawn
+  const shown = new Int32Array(n).fill(-1), BUCKETS = 8, SW = Math.ceil(cw) + 1, SH = Math.ceil(ch) + 1
+  const palette: string[] = [colors.off, colors.bright], paletteIx = new Map<string, number>(palette.map((c, i) => [c, i]))
+  const sprites = new Map<number, HTMLCanvasElement>()
+  const sprite = (ci: number, b: number) => {
+    const key = ci * (BUCKETS + 1) + b
+    let s = sprites.get(key)
+    if (!s) {
+      const sf = surface(doc, SW, SH)
+      sf.x.fillStyle = colors.panel; sf.x.fillRect(0, 0, SW, SH)
+      if (b > 0) { sf.x.fillStyle = palette[ci]; sf.x.beginPath(); sf.x.ellipse(cw / 2, ch / 2, R * b / BUCKETS, R, 0, 0, Math.PI * 2); sf.x.fill() }
+      sprites.set(key, (s = sf.c))
+    }
+    return s
+  }
+  const colorIx = (i: number) => {
+    const q = (v: number) => Math.min(255, Math.round(v / 17) * 17)
+    const key = `rgb(${q(panel.rgb[i * 3])},${q(panel.rgb[i * 3 + 1])},${q(panel.rgb[i * 3 + 2])})`
+    let ix = paletteIx.get(key)
+    if (ix === undefined) { ix = palette.length; palette.push(key); paletteIx.set(key, ix) }
+    return ix
+  }
   return {
     ...base,
     render(out, t) {
@@ -307,7 +329,7 @@ export function createDisplayStage(skin: SkinName, o: StageOptions): DisplayStag
         // the first frame of an instant stage lands settled (no sweep, no clack)
         const first = nextSample === -Infinity && o.instant, events = panel.push(sample(), first ? t - 60 : t, P.threshold)
         if (first) events.length = 0
-        pending = false; nextSample = t + 1 / P.maxHz; drawn = false
+        pending = false; nextSample = t + 1 / P.maxHz
         if (events.length && o.onFlip) {
           // one clack per ~12 columns (a real panel's write is a rattle, not 144 separate ticks)
           const buckets = new Map<number, { at: number; count: number }>()
@@ -316,21 +338,16 @@ export function createDisplayStage(skin: SkinName, o: StageOptions): DisplayStag
         }
       }
       const moving = panel.at(t, face, tilt)
-      if (!moving && drawn) return pending
-      drawn = true
-      out.globalCompositeOperation = 'source-over'; out.globalAlpha = 1
-      out.fillStyle = colors.panel; out.fillRect(0, 0, w, h)
-      const paths = new Map<string, Path2D>()
+      out.globalCompositeOperation = 'source-over'; out.globalAlpha = 1; out.imageSmoothingEnabled = false
+      if (shown[0] === -1) { out.fillStyle = colors.panel; out.fillRect(0, 0, w, h) }
       for (let i = 0; i < n; i++) {
-        const rx = R * Math.ceil(tilt[i] * 8) / 8
-        if (rx < .3) continue
-        const f = face[i], key = f === 0 ? colors.off : f === 1 ? colors.bright : `rgb(${panel.rgb[i * 3]},${panel.rgb[i * 3 + 1]},${panel.rgb[i * 3 + 2]})`
-        let p = paths.get(key)
-        if (!p) paths.set(key, (p = new Path2D()))
-        const cx = (i % cols + .5) * cw, cy = (Math.floor(i / cols) + .5) * ch
-        p.moveTo(cx + rx, cy); p.ellipse(cx, cy, rx, R, 0, 0, Math.PI * 2)
+        const b = Math.ceil(tilt[i] * BUCKETS), f = face[i], ci = f === 2 ? colorIx(i) : f
+        const key = ci * (BUCKETS + 1) + b
+        if (shown[i] === key) continue
+        shown[i] = key
+        const c = i % cols, r = (i - c) / cols, x0 = Math.floor(c * cw), y0 = Math.floor(r * ch)
+        out.drawImage(sprite(ci, b), 0, 0, Math.floor((c + 1) * cw) - x0, Math.floor((r + 1) * ch) - y0, x0, y0, Math.floor((c + 1) * cw) - x0, Math.floor((r + 1) * ch) - y0)
       }
-      for (const [key, p] of paths) { out.fillStyle = key; out.fill(p) }
       return moving > 0 || pending
     },
   }

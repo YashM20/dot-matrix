@@ -8,7 +8,7 @@
  *     without re-sampling.
  * The stage then draws on its own rAF only while it has something moving (decay, flips, refresh).
  */
-import { useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createDisplayStage, type DisplayStage, type SkinName } from '../../engine/display'
 import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { sharedClock } from '../../engine/clock'
@@ -63,13 +63,10 @@ class Runner {
   scratch: HTMLCanvasElement | null = null
   built: SkinName | null = null
   gain = 1
-  renders = 0
-  feeds = 0
   step = () => {
     this.raf = 0
     const { stage, ctx } = this
     if (!stage || !ctx) return
-    this.renders++
     const t0 = performance.now(), more = stage.render(ctx, now())
     record(stage.skin, 'render', performance.now() - t0)
     if (more) this.raf = requestAnimationFrame(this.step)
@@ -79,7 +76,6 @@ class Runner {
   feed(src: CanvasImageSource) {
     const stage = this.stage
     if (!stage) return
-    this.feeds++
     const t0 = performance.now()
     stage.frame(src, now())
     record(stage.skin, 'frame', performance.now() - t0)
@@ -137,16 +133,21 @@ export function DisplaySurface({ children, mode, dots, running, fps, cols, rows,
     const delay = switched && !same ? Math.min(1, Math.max(0, wrap.getBoundingClientRect().top / window.innerHeight)) * .3 : 0
     runner.stage = createDisplayStage(drawn, { cols, rows, w: W, h: H, gain: runner.gain, delay, instant: same || calm, noFlash: calm, onFlip: playClack })
     runner.ctx = ctx; runner.built = drawn
-    ;(wrap as unknown as { __runner: Runner }).__runner = runner
     setStageId(id => id + 1)
     return () => runner.stop()
   }, [drawn, W, H, cols, rows])
 
   const copying = running && mode === 'canvas'
-  // static frame: rasterize the card's dots here (no re-sample) and hand them to the stage
-  useLayoutEffect(() => {
+  // static frame, no re-sample: a canvas card (2D or WebGL-composited) is copied once DotCanvas's own static
+  // draw effect ran (a microtask after this effect flush); an SVG card's dots are rasterized here
+  useEffect(() => {
     const runner = runnerOf(runnerRef)
     if (!runner.stage || copying) return
+    if (mode === 'canvas') {
+      let live = true
+      queueMicrotask(() => { const src = wrapRef.current?.firstElementChild; if (live && src instanceof HTMLCanvasElement && src.width) runner.feed(src) })
+      return () => { live = false }
+    }
     const c = runner.scratch ??= document.createElement('canvas')
     if (c.width !== W || c.height !== H) { c.width = W; c.height = H }
     const x = c.getContext('2d')
@@ -154,7 +155,7 @@ export function DisplaySurface({ children, mode, dots, running, fps, cols, rows,
     x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, W, H); x.setTransform(W / width, 0, 0, H / height, 0, 0)
     renderCanvas(x, dots)
     runner.feed(c)
-  }, [stageId, dots, copying]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [stageId, dots, copying, mode]) // eslint-disable-line react-hooks/exhaustive-deps
   // running canvas: copy it once per its own tick, after DotCanvas drew (a microtask after the clock callbacks)
   useLayoutEffect(() => {
     const runner = runnerOf(runnerRef)

@@ -61,6 +61,8 @@ if (PAGE) {
 }
 
 try {
+  // warm the dev server's module graph (the first load is slow)
+  await cdp('Page.navigate', { url: `${URL0}/?board=${BOARDS[0]}` }); await sleep(10000)
   // 1) board × skin sheets
   for (const board of BOARDS) for (const skin of SKINS) {
     await cdp('Page.navigate', { url: `${URL0}/?board=${board}&skin=${skin}` })
@@ -87,7 +89,7 @@ try {
   let oledBusy = 0
   for (const skin of ['oled', 'crt', 'led', 'vfd', 'nixie', 'eink', 'flipdisc']) {
     await cdp('Page.navigate', { url: `${URL0}/?board=${PERF}&skin=${skin}` })
-    await sleep(3500)
+    await sleep(6000)
     await evaluate(`(() => { const p = window.__skinPerf || {}; for (const k in p) { p[k].frame.length = 0; p[k].render.length = 0 } })()`)
     await cdp('Profiler.setSamplingInterval', { interval: 200 }); await cdp('Profiler.start')
     await sleep(SECS * 1000)
@@ -112,7 +114,7 @@ try {
     await evaluate(`(() => { const p = window.__skinPerf || {}; for (const k in p) { p[k].frame.length = 0; p[k].render.length = 0 } })()`)
     await sleep(SECS * 1000)
     const s = await evaluate<{ mean: number; p95: number; n: number; w: number }>(`(() => {
-      const p = window.__skinPerf[${JSON.stringify(skin)}], f = p.frame, r = p.render, n = Math.min(f.length, r.length), per = []
+      const p = (window.__skinPerf || {})[${JSON.stringify(skin)}] || { frame: [], render: [] }, f = p.frame, r = p.render, n = Math.min(f.length, r.length), per = []
       for (let i = 0; i < n; i++) per.push(f[i] + r[i])
       per.sort((a, b) => a - b)
       return { n, mean: per.reduce((a, b) => a + b, 0) / (n || 1), p95: per[Math.floor(n * .95)] || 0, w: document.querySelector('.skin-overlay')?.width ?? 0 }
