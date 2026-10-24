@@ -51,6 +51,7 @@ export const boardManifest = [
   { id: 'type', title: 'TYPE — VARIABLE DOT TYPE', columns: 3, load: () => import('./boards/type').then(m => ({ items: m.typeBoard })) },
   { id: 'physics', title: 'PHYSICS — DOTS YOU CAN TOUCH', columns: 3, load: () => import('./boards/physics').then(m => ({ items: m.physicsBoard })) },
   { id: 'scope', title: 'SCOPE — THE INSTRUMENT, SEEN', columns: 3, load: () => import('./boards/scope').then(m => ({ items: m.scopeBoard, shared: m.scopeShared })) },
+  { id: 'heal', title: 'HEAL — THE MIRROR THAT HEALS', columns: 3, load: () => import('./boards/heal').then(m => ({ items: m.healBoard })) },
 ] as const satisfies readonly (BoardMeta & { load: () => Promise<BoardContents> })[]
 
 export type BoardId = typeof boardManifest[number]['id']

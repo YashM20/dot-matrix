@@ -41,6 +41,7 @@ import { bufferChecks } from './buffer'
 import { gameChecks } from './game'
 import { typeChecks } from './type'
 import { physicsChecks } from './physics'
+import { ncaChecks } from './nca/checks'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -834,6 +835,8 @@ physicsChecks(assert)
 
 // C4) HIVE game: autopilot reaches the boss, input replay is bit-identical, frame budget (scripts/game.ts)
 gameChecks(assert)
+// C3) Growing NCA: BPTT grad check, Int8 asset, regrowth gate, step cost, timeline purity, heal board (scripts/nca/checks.ts)
+ncaChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')
