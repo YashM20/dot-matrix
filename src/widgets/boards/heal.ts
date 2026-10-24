@@ -16,7 +16,7 @@ const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
 const model = ncaModel(lizardNca)
 /** Board grid: the model was trained on a narrower crop; the seed sits at the same place relative to the centre. */
-const W = 32, H = model.h, DT = 1 / 24, SEED_X = model.seedAt[0] + ((W - model.w) >> 1)
+const W = 32, H = model.h, DT = 1 / 30, SEED_X = model.seedAt[0] + ((W - model.w) >> 1)
 /** The lizard on a 4× lattice: 32 × 28 grid cells → 128 × 112 card cells, centred under the label. */
 const K = 4, OX = (TILE.cols - W * K) >> 1, OY = 11
 const GRID = T.lattice(K, OX, OY)
@@ -92,7 +92,7 @@ export const healMirror: WidgetPreset = {
 }
 
 // ── 02 X-ray: the same rule, seen through four hidden channels (2 × 2 small multiples on a 2× lattice).
-// Positive state in `value`, negative in `faint`, dot size = |h|. Loop [1.4 s, 11.4 s) from mid-growth;
+// Positive state in `value`, negative in `mid`, dot size = |h| / panel peak, the silhouette faint. Loop [1.4 s, 11.4 s) from mid-growth;
 // a wound in the head at 5 s shows the chemistry rushing back in, a reseed at 10 s closes the loop.
 const XK = 2, XW = W * XK, XH = H * XK, GAP = 4, XO = (TILE.cols - 2 * XW - GAP) >> 1, XY0 = 12
 const XRAY = (String(lizardNca.meta?.xray ?? '2,3,4,5')).split(',').map(Number).slice(0, 4)
@@ -106,12 +106,17 @@ export const healXray: WidgetPreset = {
     const g = ncaRunAt(xrayRun, ctx.t), out: Layer[] = []
     XRAY.forEach((ch, k) => {
       const col = XO + (k % 2) * (XW + GAP), row = XY0 + (k >> 1) * (XH + GAP / 2), L = T.lattice(XK, col, row)
+      // each panel is normalised to its own peak |h|, so a quiet channel still reads (like an x-ray's window)
+      let peak = .05
+      for (let i = 0; i < g.cells.length; i += model.channels) if (g.cells[i] > .1) peak = Math.max(peak, Math.abs(g.cells[i + ch]))
       const put = (sign: 1 | -1) => L.at(L.place(ncaMapField(g, (c, i) => {
         if (c[i] <= .1) return 0
-        const v = c[i + ch] * sign
-        return v <= .08 ? 0 : v > 1 ? 1 : v
+        const v = c[i + ch] * sign / peak
+        return v <= .12 ? 0 : v > 1 ? 1 : v
       }), 0, 0, W, H))
-      out.push(layer(put(-1), 'faint'), layer(put(1), 'value'), layer(T.text(`H${ch}`, col, row), 'idle'))
+      // the body's silhouette as small faint dots underneath, where the channel is quiet
+      const ghost = L.at(L.place(ncaMapField(g, (c, i) => c[i] > .5 && Math.abs(c[i + ch]) / peak <= .12 ? .4 : 0), 0, 0, W, H))
+      out.push(layer(ghost, 'faint'), layer(put(-1), 'mid'), layer(put(1), 'value'), layer(T.text(`H${ch}`, col, row), 'idle'))
     })
     return [...out, ...footer(xrayRun, ctx.t, `STEP ${pad(ncaStepAt(xrayRun, ctx.t) - xrayRun.start)}`, `${model.channels}CH ${model.hidden}H`)]
   },

@@ -2,7 +2,7 @@
 import { ncaGrid, ncaModel, ncaSeed, ncaStep, type NcaGrid } from '../../src/engine/nca'
 import { lizardNca } from '../../src/assets/nca/lizard'
 import { lizardTarget } from './target'
-import { evaluate, iou } from './eval'
+import { evaluate, iou, STEP_DT } from './eval'
 
 const m = ncaModel(lizardNca), target = lizardTarget()
 const marks = process.argv.slice(2).map(Number).filter(n => n > 0)
@@ -31,4 +31,4 @@ for (let r = 0; r < frames[0].length; r++) console.log(frames.map(f => f[r].padE
 console.log(lizardNca.meta)
 const ev = evaluate(m, target)
 console.log(`grown IoU .9 at step ${ev.grownStep}; IoU ${ev.grownIou.toFixed(3)} at 200; +400 steps ${ev.longIou.toFixed(3)}`)
-for (const c of ev.cuts) console.log(`  ${c.name.padEnd(12)} removed ${(c.removed * 100).toFixed(0)}%  back in ${c.steps} steps (${(c.steps / 24).toFixed(2)} s), IoU ${c.iou.toFixed(3)}`)
+for (const c of ev.cuts) console.log(`  ${c.name.padEnd(12)} removed ${(c.removed * 100).toFixed(0)}%  back in ${c.steps} steps (${(c.steps * STEP_DT).toFixed(2)} s), IoU ${c.iou.toFixed(3)} vs uncut twin ${c.twin.toFixed(3)}`)

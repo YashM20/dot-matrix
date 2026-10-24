@@ -1,9 +1,9 @@
 /**
  * Verify section for C3 (Growing NCA): BPTT gradient check, asset decode + size, determinism of the
- * timeline, regrowth from a 50% cut (gate < 5 s at 24 steps/s), step cost at the board grid and at 64²,
+ * timeline, regrowth from a 50% cut (gate < 5 s at 30 steps/s), step cost at the board grid and at 64²,
  * pointer scratches, and the heal board rendering. Imported by scripts/verify.ts.
  */
-import { ncaAliveCount, ncaErase, ncaGrid, ncaModel, ncaRun, ncaRunAt, ncaRunAtStep, ncaScratch, ncaSeed, ncaStep } from '../../src/engine/nca'
+import { ncaAliveCount, ncaGrid, ncaModel, ncaRun, ncaRunAt, ncaRunAtStep, ncaScratch, ncaSeed, ncaStep } from '../../src/engine/nca'
 import { sampleLayers } from '../../src/engine/sampler/gridSampler'
 import { dot480 } from '../../src/engine/theme/tokens'
 import { lizardNca } from '../../src/assets/nca/lizard'
@@ -11,7 +11,7 @@ import { healBoard } from '../../src/widgets/boards/heal'
 import { withChrome } from '../../src/widgets'
 import { gradCheck } from './gradcheck'
 import { lizardTarget } from './target'
-import { iou, STEP_DT } from './eval'
+import { iou, regrow, STEP_DT } from './eval'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const hashCells = (a: Float32Array) => { let h = 0x811c9dc5; const u = new Uint32Array(a.buffer, a.byteOffset, a.length); for (let i = 0; i < u.length; i++) { h ^= u[i]; h = Math.imul(h, 0x01000193) >>> 0 } return h }
@@ -25,20 +25,17 @@ export function ncaChecks(assert: Assert): void {
   assert('nca: Int8 asset decodes to the declared shape', m.w1.length === m.hidden * 3 * m.channels && m.w2.length === m.hidden * m.channels && m.b1.length === m.hidden,
     `${m.channels} ch, ${m.hidden} hidden, ${params} params, ${bytes} B base64 weights`)
 
-  // grow from the seed, then a 50% cut (left half) must be back within 5 s at 24 steps/s
+  // grow from the seed, then a 50% cut (left half) must be back within 5 s at 30 steps/s
   const target = lizardTarget(), g = ncaGrid(m.w, m.h, m.channels)
   let s = new Float32Array(g.cells.length)
   const step = (n: number) => { ncaStep(m, g.cells, s, g.w, g.h, 1, n); const t = g.cells; g.cells = s; s = t }
   ncaSeed(g, m.seedAt[0], m.seedAt[1])
   for (let n = 0; n < 160; n++) step(n)
-  const grownIou = iou(g, target), before = ncaAliveCount(g), removed = ncaErase(g, x => x < m.w / 2) / Math.max(1, before)
-  let k = 0
-  while (k < 240 && iou(g, target) < Math.min(.9, grownIou - .03)) step(1000 + k++)
-  assert('nca: regrows from a 50% cut in < 5 s at 24 steps/s', grownIou > .6 && removed > .4 && k * STEP_DT < 5,
-    `grown IoU ${grownIou.toFixed(2)}, cut ${(removed * 100).toFixed(0)}%, back in ${k} steps = ${(k * STEP_DT).toFixed(2)} s`)
+  const grownIou = iou(g, target), grown = g.cells.slice(), rg = regrow(m, grown, x => x < m.w / 2, target, 240)
+  assert('nca: regrows from a 50% cut in < 5 s at 30 steps/s (≥ 90% of an uncut twin IoU)', grownIou > .8 && rg.removed > .4 && rg.steps * STEP_DT < 5,
+    `grown IoU ${grownIou.toFixed(2)}, cut ${(rg.removed * 100).toFixed(0)}%, back in ${rg.steps} steps = ${(rg.steps * STEP_DT).toFixed(2)} s (IoU ${rg.iou.toFixed(2)} vs twin ${rg.twin.toFixed(2)})`)
 
   // step cost: the board grid with a grown lizard, and 64² holding four lizards
-  const grown = g.cells.slice()
   let t0 = performance.now()
   for (let n = 0; n < 48; n++) step(3000 + n)
   const boardMs = (performance.now() - t0) / 48

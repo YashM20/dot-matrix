@@ -38,6 +38,7 @@ import { bytecodeChecks } from './bytecode'
 import { esp32Checks } from '../targets/test/esp32'
 import { targetsChecks } from '../targets/test/targets'
 import { bufferChecks } from './buffer'
+import { ncaChecks } from './nca/checks'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -824,6 +825,8 @@ import { gpuBoard } from '../src/widgets/boards/gpu'
 }
 // P6-D) Dot Studio: document model, undo/redo, reference stacks, spec v1 / DOTS import, timeline (scripts/studio.ts)
 studioChecks(assert)
+// C3) Growing NCA: BPTT grad check, Int8 asset, regrowth gate, step cost, timeline purity, heal board (scripts/nca/checks.ts)
+ncaChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')

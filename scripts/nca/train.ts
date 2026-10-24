@@ -14,7 +14,7 @@ import { ncaModel } from '../../src/engine/nca'
 import { makeTrainer, paramCount, rng, seedState, views, type Dims } from './core'
 import { lizardTarget, GRID_H, GRID_W, SEED_AT } from './target'
 import { toAsset, writeAsset } from './asset'
-import { evaluate } from './eval'
+import { evaluate, pickXray, STEP_DT } from './eval'
 
 const arg = (k: string, d: number) => { const i = process.argv.indexOf(`--${k}`); return i > 0 ? Number(process.argv[i + 1]) : d }
 const MINUTES = arg('minutes', 12), WORKERS = arg('workers', 3), BATCH = arg('batch', 8), POOL = arg('pool', 256)
@@ -30,13 +30,20 @@ const grownCells = (() => { let n = 0; for (let i = 0; i < target.length; i += 2
 
 // params: glorot-uniform w1, zero b1, zero w2 (the paper's "do nothing" start)
 let params = new Float32Array(paramCount(dims))
+let prior = { iterations: 0, seconds: 0, sessions: 0 }
 {
   const { w1 } = views(dims, params), lim = Math.sqrt(6 / (3 * dims.C + dims.HID))
   for (let i = 0; i < w1.length; i++) w1[i] = (R() * 2 - 1) * lim
 }
 if (process.argv.includes('--resume') && existsSync(FLOAT_FILE)) {
   const saved = Float32Array.from(JSON.parse(readFileSync(FLOAT_FILE, 'utf8')) as number[])
-  if (saved.length === params.length) { params = saved; console.log('resumed from', FLOAT_FILE) }
+  if (saved.length === params.length) {
+    params = saved
+    // carry the earlier sessions' totals into the asset's provenance
+    const prev = (await import('../../src/assets/nca/lizard')).lizardNca.meta ?? {}
+    prior = { iterations: Number(prev.iterations ?? 0), seconds: Number(prev.seconds ?? 0), sessions: Number(prev.sessions ?? 1) }
+    console.log('resumed from', FLOAT_FILE, prior)
+  }
 }
 const m1 = new Float32Array(params.length), m2 = new Float32Array(params.length)
 const tensors = (() => { const P = 3 * dims.C, a = dims.HID * P, b = a + dims.HID; return [[0, a], [a, b], [b, params.length]] as [number, number][] })()
@@ -120,13 +127,14 @@ while (performance.now() - t0 < budget) {
     const line = `it ${String(it).padStart(4)}  ${((performance.now() - t0) / 1e3).toFixed(0).padStart(4)} s  steps ${steps}  loss ${loss.toFixed(5)}  ema log10 ${Math.log10(ema).toFixed(3)}  over ${over.toFixed(3)}  lr ${lr.toExponential(1)}`
     console.log(line); log.push(line)
   }
-  if (it % 100 === 0) save({ iterations: it, seconds: Math.round((performance.now() - t0) / 1e3), loss: Number(ema.toPrecision(4)) })
+  if (it % 100 === 0) save({ iterations: prior.iterations + it, seconds: prior.seconds + Math.round((performance.now() - t0) / 1e3), sessions: prior.sessions + 1, loss: Number(ema.toPrecision(4)) })
 }
 const seconds = Math.round((performance.now() - t0) / 1e3)
-const asset = save({ iterations: it, seconds, loss: Number(ema.toPrecision(4)), batch: BATCH, pool: POOL, steps: `${S0}-${S1}` })
+const meta = { iterations: prior.iterations + it, seconds: prior.seconds + seconds, sessions: prior.sessions + 1, loss: Number(ema.toPrecision(4)), batch: BATCH, pool: POOL, steps: `${S0}-${S1}` }
 for (const w of workers) await w.terminate()
+const asset = save({ ...meta, xray: pickXray(ncaModel(save(meta))).join(',') })
 const ev = evaluate(ncaModel(asset), target)
 console.log(`\ntrained ${it} iterations in ${seconds} s, final loss (ema) ${ema.toExponential(3)}`)
 console.log(`params ${params.length}, asset Int8 ${params.length - dims.HID} B + ${dims.HID * 3} scales/bias`)
 console.log(`grown: IoU .9 at step ${ev.grownStep}, IoU ${ev.grownIou.toFixed(3)} at 200, mse ${ev.grownMse.toFixed(4)}; IoU after +400 steps ${ev.longIou.toFixed(3)}`)
-for (const c of ev.cuts) console.log(`  cut ${c.name.padEnd(12)} removed ${(c.removed * 100).toFixed(0)}%  back in ${c.steps} steps (${(c.steps / 24).toFixed(2)} s at 24 steps/s), IoU ${c.iou.toFixed(3)}`)
+for (const c of ev.cuts) console.log(`  cut ${c.name.padEnd(12)} removed ${(c.removed * 100).toFixed(0)}%  back in ${c.steps} steps (${(c.steps * STEP_DT).toFixed(2)} s at 30 steps/s), IoU ${c.iou.toFixed(3)} vs uncut twin ${c.twin.toFixed(3)}`)
