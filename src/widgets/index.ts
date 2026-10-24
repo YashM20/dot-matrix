@@ -22,6 +22,7 @@ import { mirrorBoard } from './boards/mirror'
 import { gpuBoard } from './boards/gpu'
 import { surfacesBoard, surfacesSources } from './boards/surfaces'
 import { typeBoard } from './boards/type'
+import { scopeBoard, scopeShared } from './boards/scope'
 import { boardIds, boardManifest, type BoardContents, type BoardDef, type BoardId } from './manifest'
 import { registerPresets } from './registry'
 
@@ -53,6 +54,7 @@ const contents = {
   components: { items: componentsBoard },
   type: { items: typeBoard },
   physics: { items: physicsBoard },
+  scope: { items: scopeBoard, shared: scopeShared },
 } satisfies Record<BoardId, BoardContents>
 export const boards: BoardDef[] = boardManifest.map(({ id, title, columns }) => ({ id, title, columns, ...contents[id] }))
 export { boardIds }
