@@ -2,12 +2,14 @@
  * What the palette and the dot shell can do: one command API shared by both (built in `CommandLayer`
  * from the App's tab / board state), plus the palette's item list.
  */
-import { boardIds, boardManifest, loadBoard, type BoardDef } from '../../widgets/manifest'
+import { SKINS as SKIN_INFO, SKIN_NAMES } from '../../engine/display/names'
+import { boardIds, boardLabel, boardManifest, loadBoard, type BoardDef } from '../../widgets/manifest'
 import type { RendererOverride } from '../xray/store'
 import type { MotionSetting } from './reducedMotion'
 
 export const TABS = ['BOARDS', 'GALLERY', 'WORKSPACE', 'STUDIO', 'LOG', 'DOTS', 'DRAW'] as const
-export const SKINS = ['crt', 'lcd', 'e-ink', 'led', 'vfd', 'none'] as const
+/** The display skins, from the engine's list (so the palette, shell and header can't drift apart). */
+export const SKINS = SKIN_NAMES
 
 export interface CommandApi {
   tab: string
@@ -67,11 +69,11 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   for (const r of ['auto', 'svg', 'canvas', 'webgl'] as const) act(`r-${r}`, `Renderer: ${r}`, a => a.setRenderer(r), '', 'renderer svg canvas webgl')
   act('worker-off', 'Renderer: main-thread sampling (no worker, reloads)', a => a.setWorker(false), '', 'worker thread')
   act('worker-on', 'Renderer: worker sampling (reloads)', a => a.setWorker(true), '', 'worker thread')
-  for (const s of SKINS) act(`skin-${s}`, `Skin: ${s}`, a => a.setSkin(s), 'soon', 'display skin theme crt lcd')
+  for (const s of SKINS) act(`skin-${s}`, `Display skin — ${SKIN_INFO[s].title}`, a => a.setSkin(s), '', `display skin theme ${s}`)
   for (const t of TABS) items.push({ id: `v:${t}`, group: 'View', text: `Go to ${t}`, run: a => a.openTab(t), keywords: t.toLowerCase(), boost: 30 })
   for (const m of boardManifest) {
     const b = boards.find(x => x.id === m.id)
-    items.push({ id: `b:${m.id}`, group: 'Board', text: `${m.id.toUpperCase()} — ${m.title}`, keywords: b?.items.map(p => p.name).join(' '), hint: b ? `${b.items.length} cards` : undefined, boost: 40, run: a => a.openBoard(m.id) })
+    items.push({ id: `b:${m.id}`, group: 'Board', text: `${boardLabel(m.id)} — ${m.title}`, keywords: `${m.id} ${b?.items.map(p => p.name).join(' ') ?? ''}`, hint: b ? `${b.items.length} cards` : undefined, boost: 40, run: a => a.openBoard(m.id) })
   }
   const seen = new Set<string>()
   for (const b of boards) for (const p of b.items) {

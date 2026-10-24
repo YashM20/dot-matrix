@@ -133,7 +133,7 @@ export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }
       }
       case 'skin': {
         if (!arg || !(SKINS as readonly string[]).includes(arg)) return print({ kind: 'err', text: `skin: one of ${SKINS.join(', ')}` })
-        api.setSkin(arg); return print(`skin ${arg}: noted. display skins land with C7`)
+        api.setSkin(arg); return print(`display: ${arg}`)
       }
       case 'boss': case 'konami': case 'queen': api.boss(); onClose(); return
       case 'whoami': return print('a visitor, sampled at 144×144')

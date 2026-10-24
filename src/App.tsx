@@ -1,10 +1,11 @@
-import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentType } from 'react'
 import { Board, VIEW_EXIT_MS, cardMotion } from './components/Board'
+import { BoardPicker } from './components/BoardPicker'
 import { DotWidget } from './components/DotWidget'
 import { SkinSwitcher } from './components/skins/SkinSwitcher'
 import { useExitSwap } from './hooks/useExitSwap'
-import { boardIds, prefetchBoard, resolveBoardId } from './widgets/manifest'
-import { boardFromPath, setPageMeta } from './site/meta'
+import { boardIds, liveBoards, resolveBoardId } from './widgets/manifest'
+import { boardFromPath, setPageMeta, syncUrl } from './site/meta'
 import './App.css'
 
 // every view but BOARDS is its own chunk, fetched when its tab opens (first-load budget, docs/WEB-PLAN.md §1)
@@ -21,7 +22,6 @@ const TransitionLab = later(() => import('./components/playground/TransitionLab'
 const WidgetGallery = later(() => import('./components/playground/WidgetGallery'), 'WidgetGallery')
 
 const galleryItems = ['home-clock', 'music', 'timer', 'weather', 'fitness', 'messages', 'camera', 'settings', 'system']
-// DRAW stays last: the narrow layout hides the last tab
 // STUDIO (P6-D) is its own tab, not a WORKSPACE upgrade: WORKSPACE stays the one-preset tuner (style,
 // photo, exports); STUDIO edits a layered card document. Lazy, so the other tabs don't load the editor.
 const Studio = lazy(() => import('./components/studio/Studio').then(m => ({ default: m.Studio })))
@@ -72,14 +72,37 @@ type Tab = typeof tabs[number]
 // ?tab=dots&p=<encoded> opens a shared Field IR program in the DOTS REPL.
 const params = new URLSearchParams(window.location.search)
 const singleCard = params.get('card')
+/** The view the address bar names: first render, and Back / Forward (`syncUrl` writes it back). */
+function viewFromUrl(): { tab: Tab; board: string } {
+  const q = new URLSearchParams(window.location.search), b = resolveBoardId(q.get('board') ?? '')
+  return { tab: tabs.find(t => t === q.get('tab')?.toUpperCase()) ?? 'BOARDS', board: boardIds.includes(b) ? b : boardFromPath(window.location.pathname) ?? boardIds[0] }
+}
+
+/** One line of intent above the boards (docs/UX-PLAN.md §5.1): dismissible, and it stays dismissed. */
+function IntroLine() {
+  const [shown, setShown] = useState(() => { try { return localStorage.getItem('dot480:intro') !== 'off' } catch { return true } })
+  if (!shown) return null
+  return <p className="intro-line">
+    <span>Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid. Touch the cards, switch the display, or press <b>X-RAY</b> to see how one works.</span>
+    <a href="/essay.html">Read the essay →</a>
+    <button type="button" aria-label="Hide this note" onClick={() => { setShown(false); try { localStorage.setItem('dot480:intro', 'off') } catch { /* private mode */ } }}>×</button>
+  </p>
+}
 // ?tab=essay: the essay is its own page (essay.html, a separate Vite entry so it deploys alone)
-if (params.get('tab')?.toLowerCase() === 'essay') window.location.replace(`essay.html${window.location.hash}`)
+if (params.get('tab')?.toLowerCase() === 'essay') window.location.replace(`/essay.html${window.location.hash}`)
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>(tabs.find(t => t === params.get('tab')?.toUpperCase()) ?? 'BOARDS')
-  const [board, setBoard] = useState(boardIds.includes(resolveBoardId(params.get('board') ?? '')) ? resolveBoardId(params.get('board')!) : boardFromPath(window.location.pathname) ?? boardIds[0])
-  // per-view <title>, description and OG tags (crawlers get the same from the prebuilt dist/<board>/index.html)
-  useEffect(() => setPageMeta(tab === 'BOARDS' ? board : undefined), [tab, board])
+  const [tab, setTab] = useState<Tab>(() => viewFromUrl().tab)
+  const [board, setBoard] = useState(() => viewFromUrl().board)
+  // per-view <title>, description and OG tags (crawlers get the same from the prebuilt dist/<board>/index.html),
+  // and the address bar: each view change is a history entry; the first render only normalises the URL
+  const first = useRef(true)
+  useEffect(() => { setPageMeta(tab === 'BOARDS' ? board : undefined); syncUrl(tab, board, !first.current); first.current = false }, [tab, board])
+  useEffect(() => {
+    const onPop = () => { const v = viewFromUrl(); setTab(v.tab); setBoard(v.board) }
+    window.addEventListener('popstate', onPop)
+    return () => window.removeEventListener('popstate', onPop)
+  }, [])
   // the old view dissolves out before the new one mounts and enters (instant under reduced motion)
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const [view, leaving] = useExitSwap(`${tab}|${board}`, shown => reduced || !/^(BOARDS|GALLERY)\|/.test(shown) ? 0 : VIEW_EXIT_MS)
@@ -87,14 +110,16 @@ export default function App() {
   if (singleCard) return <main className="shell"><section className="gallery-view"><div className="gallery-grid"><DotWidget type={singleCard} /></div></section><CommandLayer tab="BOARDS" board={board} /></main>
   return <main className="shell">
     <h1 className="sr-only">DOT/480 dot-matrix UI engine</h1>
-    <header className="topbar"><div className="brand"><i aria-hidden="true"/> DOT/480 <small>{tab === 'WORKSPACE' ? 'PLAYGROUND' : tab}</small></div>
+    <header className="topbar"><div className="brand"><i aria-hidden="true"/> DOT/480 <small>{tab}</small></div>
       <nav aria-label="Views">{tabs.map(t => <button key={t} className={tab === t ? 'selected' : ''} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}</nav>
       <SkinSwitcher />
-      <div className="live"><i aria-hidden="true"/> LIVE</div></header>
+      {/* red means live: only while a board streams real data */}
+      {tab === 'BOARDS' && liveBoards.includes(board) && <div className="live"><i aria-hidden="true"/> LIVE DATA</div>}</header>
     <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
     {shownTab === 'BOARDS' ? (
       <section className="boards-view">
-        <div className="board-tabs" role="group" aria-label="Boards">{boardIds.map(id => <button key={id} className={board === id ? 'selected' : ''} aria-pressed={board === id} onClick={() => setBoard(id)} onPointerEnter={() => prefetchBoard(id)} onFocus={() => prefetchBoard(id)}>{id.toUpperCase()}</button>)}</div>
+        <IntroLine />
+        <BoardPicker board={board} onPick={setBoard} />
         <Board key={shownBoard} id={shownBoard} leaving={leaving} />
       </section>
     ) : shownTab === 'GALLERY' ? (
@@ -132,5 +157,6 @@ export default function App() {
     </Suspense>
     {/* C10: ⌘K palette, dot shell, X-ray inspector, time machine */}
     <CommandLayer tab={tab} board={board} setTab={t => setTab(t as Tab)} setBoard={setBoard} />
-    <footer className="bottom">DOT/480 / <b>CONFIGURATION 01</b><span>FIELD → GRID SAMPLER → RENDERER</span><span>STATUS: <b>NOMINAL</b></span></footer></main>
+    <footer className="bottom"><span>DOT/480 · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span><span>FIELD → GRID SAMPLER → RENDERER</span>
+      <span><a href="/essay.html">HOW IT WORKS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a></span></footer></main>
 }

@@ -34,6 +34,9 @@ import { deviceChecks } from './device'
 import { exportChecks } from './export'
 import { dotsChecks } from './dots'
 import { studioChecks } from './studio'
+import { boardGroups, boardIds, boardLabel, groupOf } from '../src/widgets/manifest'
+import { boardBlurbs } from '../src/widgets/blurbs'
+import { boardFromPath } from '../src/site/meta'
 import { specChecks } from './spec'
 import { bytecodeChecks } from './bytecode'
 import { esp32Checks } from '../targets/test/esp32'
@@ -842,6 +845,16 @@ physicsChecks(assert)
 gameChecks(assert)
 // C3) Growing NCA: BPTT grad check, Int8 asset, regrowth gate, step cost, timeline purity, heal board (scripts/nca/checks.ts)
 ncaChecks(assert)
+
+// UX U1) board picker (docs/UX-PLAN.md §4.2): every board in exactly one group after START HERE, a label and a blurb; old paths still open
+{
+  const homes = boardIds.map(id => boardGroups.filter(g => g.id !== 'start' && (g.boards as readonly string[]).includes(id)).length)
+  assert('ux: every board sits in exactly one picker group (START HERE aside)', homes.every(n => n === 1), boardIds.filter((_, i) => homes[i] !== 1).join(', '))
+  assert('ux: START HERE lists only real boards, each also in its own group', boardGroups[0].boards.every(id => boardIds.includes(id) && groupOf(id) !== 'start'))
+  const labels = boardIds.map(boardLabel)
+  assert('ux: board labels are unique and every board has a blurb', new Set(labels).size === labels.length && boardIds.every(id => (boardBlurbs as Record<string, string>)[id]?.length > 10))
+  assert('ux: old board paths still resolve (/light/, /glyph/ → lock)', boardFromPath('/light/') === 'light' && boardFromPath('/glyph/') === 'lock' && boardFromPath('/') === undefined)
+}
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')

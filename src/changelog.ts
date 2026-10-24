@@ -15,6 +15,18 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 
 export const releases: Release[] = [
   {
+    version: '0.10', date: '2026-10-24', title: 'Easier to find your way',
+    summary: 'The boards are grouped and named in plain words, each one says what it is, and the site loads faster.',
+    changes: [
+      { kind: 'new', text: 'START HERE: a short tour of the best boards. The rest sit in four groups: Interfaces, Data, Play and Engine.' },
+      { kind: 'new', text: 'Every board has a one-line description under its title, and first-time visitors get a short note on what this is and what to try.' },
+      { kind: 'improved', text: 'Back and Forward now move between boards and views, and every view has its own link.' },
+      { kind: 'improved', text: 'On a phone, one board menu replaces five rows of buttons, and every tab (including DRAW) is reachable.' },
+      { kind: 'improved', text: 'The first visit loads about 6 kB less: the synth only loads with the Instrument and Scope boards.' },
+      { kind: 'fixed', text: 'The ⌘K palette and the dot shell list the real display types (CRT, VFD, LED, e-ink, flip-disc, Nixie).' },
+    ],
+  },
+  {
     version: '0.9', date: '2026-10-23', title: 'Ditherpunk for UI: the tour',
     summary: 'A long, hands-on walk through how the dots are made, with the real engine running in every figure.',
     changes: [
@@ -23,7 +35,7 @@ export const releases: Release[] = [
       { kind: 'new', text: 'Edit a tiny dot program right in the page, then open it in DOTS to keep going.' },
       { kind: 'improved', text: 'Figures load only when you scroll to them, and show still frames if you prefer reduced motion.' },
     ],
-    link: { href: 'essay.html', label: 'READ THE ESSAY' },
+    link: { href: '/essay.html', label: 'READ THE ESSAY' },
   },
   {
     version: '0.8', date: '2026-10-23', title: 'Dot Studio: build your own card',
@@ -115,8 +127,8 @@ export const releases: Release[] = [
 ]
 
 export const upcoming: Upcoming[] = [
-  { phase: '0', title: 'Foundations', status: 'in progress', text: 'Mostly done: deterministic output, lighter rendering and quality tooling. Still to come: a shared type scale, card-quality scoring and faster first paint on the heaviest board.' },
-  { phase: '1', title: 'Motion', status: 'in progress', text: 'Boards that enter with dithered reveals, digits that flip and decode, values that spring into place, and a split-flap departures board.' },
-  { phase: '2', title: 'Touch', status: 'planned', text: 'Components you can use: knobs, sliders, toggles and lists with press, hover and focus feedback in dots.' },
-  { phase: '3', title: 'Depth and light', status: 'planned', text: 'Lit buttons, shadows, parallax and film-poster portraits.' },
+  { phase: 'U2', title: 'Cards that explain themselves', status: 'next', text: 'A small hint on every card you can touch, and on every card a way to see how it works, remix it, copy its link or save it as a PNG.' },
+  { phase: 'U3', title: 'Explore, make, about', status: 'planned', text: 'Seven tabs become three. The four ways to make something (tune, compose, code, draw) live in one place that starts simple.' },
+  { phase: 'U5', title: 'Everything for power users', status: 'planned', text: 'A ? sheet with every shortcut and link option, a pro mode that opens every panel, and a menu for the display types.' },
+  { phase: 'C1', title: 'A million dots', status: 'planned', text: 'Fields evaluated on the GPU with WebGPU: a full-screen field that follows the cursor, and a zoom from one card into a million dots.' },
 ]

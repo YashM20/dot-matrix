@@ -1,8 +1,8 @@
 /**
  * Page meta per deep link: `<title>`, description, canonical URL and OG/Twitter tags. Shared by the app
- * (runtime updates as you switch boards) and `scripts/site/pages.ts` (prebuilt `dist/<board>/index.html`
+ * (runtime updates as you switch boards) and `scripts/site/postbuild.ts` (prebuilt `dist/<board>/index.html`
  * copies, so crawlers that don't run JS see the right card). Images are `dist/og/<board>.png`
- * (`scripts/site/og.ts`). Board URLs: `/<board>/` (path) or the older `?board=<id>`; both open the board.
+ * (`scripts/og.ts`). Board URLs: `/<board>/` (path) or the older `?board=<id>`; both open the board.
  */
 import { boardIds, boardMeta, resolveBoardId } from '../widgets/manifest'
 
@@ -50,11 +50,7 @@ export function metaTags(m: PageMeta, origin = ''): [attr: 'name' | 'property', 
   ]
 }
 
-/**
- * Apply a board's meta to the live document (or the default with no board), and keep the address bar
- * on the board's path so a copied link previews the right board. Other query params (debug flags like
- * `?worker=0`) are kept; `board`, `tab` and `p` are folded into the path.
- */
+/** Apply a board's meta to the live document, or the site default with no board. */
 export function setPageMeta(boardId?: string) {
   const m = pageMeta(boardId)
   document.title = m.title
@@ -66,10 +62,21 @@ export function setPageMeta(boardId?: string) {
   let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
   if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.append(canonical) }
   canonical.href = location.origin + m.path
-  if (!boardId) return
+}
+
+/**
+ * Keep the address bar on the view, so a copied link opens it and Back / Forward walk the views
+ * (docs/UX-PLAN.md U0). The path names the board (`/light/`; the first board keeps `/`), `?tab=<view>`
+ * names any other view, and the older `?board=` folds into the path. Other params (`?worker=0`,
+ * `?skin=`, the DOTS `?p=`) stay. `push` adds a history entry; the first render only replaces.
+ */
+export function syncUrl(tab: string, boardId: string, push: boolean) {
   const q = new URLSearchParams(location.search)
-  for (const k of ['board', 'tab', 'p']) q.delete(k)
-  const path = boardId === boardIds[0] && boardFromPath(location.pathname) === undefined ? location.pathname : m.path
+  q.delete('board')
+  if (tab === 'BOARDS') q.delete('tab'); else q.set('tab', tab.toLowerCase())
+  if (tab !== 'DOTS') q.delete('p')
+  const path = boardId === boardIds[0] && boardFromPath(location.pathname) === undefined ? location.pathname : pageMeta(boardId).path
   const next = path + (q.size ? `?${q}` : '') + location.hash
-  if (next !== location.pathname + location.search + location.hash) history.replaceState(history.state, '', next)
+  if (next === location.pathname + location.search + location.hash) return
+  if (push) history.pushState(null, '', next); else history.replaceState(history.state, '', next)
 }

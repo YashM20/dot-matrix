@@ -30,7 +30,8 @@ body {
 .shell {
   width: min(1488px, calc(100% - 48px));
   margin: auto;
-  padding: 22px 0 28px
+  /* room under the footer for the fixed tool dock, so it never sits on the last line */
+  padding: 22px 0 64px
 }
 
 .topbar,
@@ -337,6 +338,17 @@ label b {
   color: var(--label)
 }
 
+.bottom a {
+  color: var(--label);
+  text-decoration: none
+}
+
+.bottom a:hover,
+.bottom a:focus-visible {
+  color: var(--value);
+  text-decoration: underline
+}
+
 @media(max-width:760px) {
   .shell {
     width: min(100% - 28px, 560px);
@@ -344,11 +356,8 @@ label b {
   }
 
   .topbar nav {
-    gap: 11px
-  }
-
-  .topbar nav button:last-child {
-    display: none
+    gap: 4px 11px;
+    flex-wrap: wrap
   }
 
   .brand small {
@@ -386,7 +395,7 @@ label b {
     justify-content: center
   }
 
-  .bottom span:first-of-type {
+  .bottom span:nth-of-type(2) {
     display: none
   }
 }
@@ -781,6 +790,122 @@ label b {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--spacing-cardGap)
+}
+
+/* ── UX U1: intent line, grouped board picker, board blurb (docs/UX-PLAN.md §4.2, §5.1) ── */
+.intro-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  text-align: left;
+  gap: 6px 16px;
+  margin: 0 0 16px;
+  color: var(--label);
+  font: 400 12px/1.5 var(--mono);
+  letter-spacing: .02em
+}
+
+.intro-line b {
+  font-weight: 500;
+  color: var(--value)
+}
+
+.intro-line a {
+  color: var(--value);
+  white-space: nowrap
+}
+
+.intro-line button {
+  margin-left: auto;
+  padding: 0 6px;
+  min-width: 24px;
+  min-height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: none;
+  color: var(--mute);
+  font: 500 12px var(--mono);
+  cursor: pointer
+}
+
+.intro-line button:hover,
+.intro-line button:focus-visible {
+  color: var(--value)
+}
+
+.board-groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 18px;
+  margin-bottom: 10px
+}
+
+.board-groups button {
+  padding: 4px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: none;
+  color: var(--mute);
+  font: 500 10px var(--mono);
+  letter-spacing: .14em;
+  cursor: pointer
+}
+
+.board-groups button.selected {
+  color: var(--value);
+  border-bottom-color: var(--value)
+}
+
+.board-groups button:hover {
+  color: var(--label)
+}
+
+.board-group-blurb {
+  color: var(--mute);
+  font: 400 11px var(--mono);
+  letter-spacing: .02em
+}
+
+.board-select {
+  display: none
+}
+
+.board-view .board-blurb {
+  min-height: 1.5em;
+  margin: -6px 0 14px;
+  color: var(--mute);
+  font: 400 11px/1.5 var(--mono);
+  letter-spacing: .02em
+}
+
+@media(max-width:760px) {
+  .board-picker .board-groups,
+  .board-picker .board-tabs {
+    display: none
+  }
+
+  .board-select {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    color: var(--mute);
+    font: 500 10px var(--mono);
+    letter-spacing: .14em
+  }
+
+  .board-select select {
+    flex: 1;
+    min-height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: 99px;
+    background: var(--surface);
+    color: var(--value);
+    font: 500 11px var(--mono);
+    letter-spacing: .1em
+  }
 }
 
 .board-tabs {

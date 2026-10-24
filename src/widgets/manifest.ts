@@ -61,6 +61,26 @@ export const boardAliases: Readonly<Record<string, string>> = { glyph: 'lock' }
 export const resolveBoardId = (id: string): string => boardAliases[id] ?? id
 export const boardMeta = (id: string): BoardMeta | undefined => boardManifest.find(b => b.id === id)
 
+/**
+ * The board picker (docs/UX-PLAN.md §4.2): plain names and groups. UI only: ids, paths, OG pages and goldens
+ * don't depend on them. Every board sits in exactly one group after START HERE, the curated tour
+ * (`scripts/verify.ts` checks). One-line descriptions are in `./blurbs.ts`, lazy.
+ */
+const LABELS: Partial<Record<BoardId, string>> = { henry: 'MICRO UI', deerflow12: 'DASHBOARD', henry3: 'PERSONAL', ir: 'PROGRAMS', sim: 'LIVING', gpu: '500K DOTS' }
+export const boardLabel = (id: string): string => LABELS[id as BoardId] ?? id.toUpperCase()
+export const boardGroups = [
+  { id: 'start', label: 'START HERE', boards: ['henry', 'mosaic', 'physics', 'heal', 'levels', 'instrument', 'cinema'] },
+  { id: 'ui', label: 'INTERFACES', boards: ['henry', 'deerflow12', 'mosaic', 'henry3', 'metro', 'ride', 'audio', 'lock', 'components', 'surfaces'] },
+  { id: 'data', label: 'DATA', boards: ['live', 'departures', 'heartbeat'] },
+  { id: 'play', label: 'PLAY', boards: ['levels', 'physics', 'instrument', 'scope', 'mirror', 'heal'] },
+  { id: 'engine', label: 'ENGINE', boards: ['ir', 'sim', 'light', 'gpu', 'type', 'cinema'] },
+] as const satisfies readonly { id: string; label: string; boards: readonly BoardId[] }[]
+export type BoardGroupId = typeof boardGroups[number]['id']
+/** The group a board lives in (START HERE is a tour, not a home). */
+export const groupOf = (id: string): BoardGroupId => boardGroups.find(g => g.id !== 'start' && (g.boards as readonly string[]).includes(id))?.id ?? 'start'
+/** Boards that stream live data: the header shows LIVE while one is open. */
+export const liveBoards: readonly string[] = ['live', 'surfaces'] satisfies BoardId[]
+
 const loaded = new Map<string, Promise<BoardDef>>()
 /**
  * The board's definition, loading its chunk on first call (an unknown id loads the first board).
