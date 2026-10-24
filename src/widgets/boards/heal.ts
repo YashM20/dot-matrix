@@ -45,8 +45,8 @@ const lastKey = new WeakMap<NcaRun, string>()
 function scratch(run: NcaRun, ctx: WidgetContext) {
   for (const p of ctx.pointers ?? []) {
     const gx = (p.x - OX) / K, gy = (p.y - OY) / K
-    if (p.down && !p.up && gx >= -1 && gy >= -1 && gx <= W + 1 && gy <= H + 1) ncaScratch(run, ctx.t, gx, gy, 2.2, p.id)
-    else ncaLift(run, p.id)
+    if (p.down && !p.up && gx >= -1 && gy >= -1 && gx <= W + 1 && gy <= H + 1) ncaScratch(run, ctx.t, gx, gy, 2.2, p.id === 'hand' ? -1 : p.id)
+    else ncaLift(run, p.id === 'hand' ? -1 : p.id)
   }
   if (ctx.focus === 'sx' && ctx.data.sx !== undefined) {
     const key = `${ctx.data.sx},${ctx.data.sy}`

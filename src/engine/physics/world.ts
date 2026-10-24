@@ -226,10 +226,13 @@ export function worldAt(w: World, t: number, frame?: FrameInput): Float32Array {
 /** The loop-folded step the last `worldAt(w, t)` showed (schedules drawn outside the state, e.g. a falling drop). */
 export const worldStep = (w: World, t: number): number => (w.mode === 'pristine' ? simStep(w.sim, t) : w.liveN)
 
+/** Numeric id for a pointer; the camera hand (`'hand'`) gets a fixed id that touch/mouse ids never use. */
+export const pointerNum = (id: number | 'hand'): number => (id === 'hand' ? -1 : id)
+
 /** Pointer records from a frame context (released touches dropped), mapped into world units. */
-export function framePointers(pointers: readonly { id: number; x: number; y: number; down: boolean; up?: boolean }[] | undefined, map: (x: number, y: number) => [number, number]): FrameInput['pointers'] {
+export function framePointers(pointers: readonly { id: number | 'hand'; x: number; y: number; down: boolean; up?: boolean }[] | undefined, map: (x: number, y: number) => [number, number]): FrameInput['pointers'] {
   if (!pointers?.length) return undefined
   const out: NonNullable<FrameInput['pointers']> = []
-  for (const p of pointers) { if (p.up) continue; const [x, y] = map(p.x, p.y); out.push({ id: p.id, x, y, down: p.down }) }
+  for (const p of pointers) { if (p.up) continue; const [x, y] = map(p.x, p.y); out.push({ id: pointerNum(p.id), x, y, down: p.down }) }
   return out
 }
