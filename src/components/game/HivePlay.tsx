@@ -34,17 +34,17 @@ const INTO: Partial<Record<Stage, Mask>> = {
 const DISSOLVE_MS = 620, MIGRATE_MS = 950
 
 // ── on-screen touch pad, drawn in dots ──────────────────────────────────────────────────────────
-const PAD = { cols: 120, rows: 34 }
+const PAD = { cols: 120, rows: 38 }
 const P = layoutFor(PAD)
 const PAD_KEYS: { b: number; x: number; y: number; r: number; label?: string }[] = [
-  { b: BTN.up, x: 18, y: 7, r: 6 }, { b: BTN.down, x: 18, y: 27, r: 6 }, { b: BTN.left, x: 8, y: 17, r: 6 }, { b: BTN.right, x: 28, y: 17, r: 6 },
-  { b: BTN.start, x: 60, y: 17, r: 5, label: 'START' }, { b: BTN.b, x: 91, y: 21, r: 7, label: 'B' }, { b: BTN.a, x: 108, y: 13, r: 8, label: 'A' },
+  { b: BTN.up, x: 18, y: 8, r: 6 }, { b: BTN.down, x: 18, y: 30, r: 6 }, { b: BTN.left, x: 7, y: 19, r: 6 }, { b: BTN.right, x: 29, y: 19, r: 6 },
+  { b: BTN.start, x: 60, y: 15, r: 5, label: 'START' }, { b: BTN.b, x: 90, y: 19, r: 7, label: 'B' }, { b: BTN.a, x: 108, y: 14, r: 8, label: 'A' },
 ]
 function padBits(pts: Iterable<[number, number]>): number {
   let b = 0
   for (const [x, y] of pts) {
     // the d-pad reads as a stick: direction from its centre, diagonals allowed
-    const dx = x - 18, dy = y - 17
+    const dx = x - 18, dy = y - 19
     if (Math.hypot(dx, dy) < 17 && Math.hypot(dx, dy) > 2.5) {
       const a = Math.atan2(dy, dx), s = Math.PI / 8
       if (Math.abs(a) < 3 * s) b |= BTN.right
@@ -60,7 +60,7 @@ function padBits(pts: Iterable<[number, number]>): number {
 function padLayers(held: number) {
   return PAD_KEYS.flatMap(k => [
     layer(P.dotDisc(k.x, k.y, k.r, { spacing: 2, size: 1.6 }), held & k.b ? 'value' : 'faint'),
-    ...(k.label ? [layer(P.big(k.label, k.x, k.y + k.r + 2 > PAD.rows - 6 ? k.y - 2 : k.y + k.r + 1, { lattice: .9, align: 'center' }), 'mid')] : []),
+    ...(k.label ? [layer(P.big(k.label, k.x, k.y + k.r + 2, { lattice: .9, align: 'center' }), 'mid')] : []),
   ])
 }
 

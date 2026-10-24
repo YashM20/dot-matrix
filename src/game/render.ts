@@ -409,12 +409,12 @@ function entryLayers(g: Game): Layer[] {
 const RANK = ['1ST', '2ND', '3RD', '4TH', '5TH', '6TH']
 const ROW_TONE = ['value', 'idle', 'idle', 'mid', 'mid', 'faint'] as const
 function scoresLayers(g: Game): Layer[] {
-  const RL = 1.3, row = (i: number) => 56 + i * 14, top = g.table[0]
+  const RL = 1.3, row = (i: number) => 60 + i * 14, top = g.table[0]
   const out: Layer[] = [
     title('HIGH SCORES'),
-    layer(T.big(`1ST ${top?.name ?? '---'}`, 24, 21, { lattice: CAP }), g.mine === 0 ? 'active' : 'idle'),
-    layer(T.big(scoreText(top?.score ?? 0), W / 2, 28, { lattice: 2, smooth: true, align: 'center' })),
-    layer(T.hrule(24, 50, W - 48, 2), 'faint'),
+    layer(T.big(`1ST ${top?.name ?? '---'}`, 24, 17, { lattice: CAP }), g.mine === 0 ? 'active' : 'idle'),
+    layer(T.big(scoreText(top?.score ?? 0), W / 2, 25, { lattice: 2, smooth: true, align: 'center' })),
+    layer(T.hrule(24, 55, W - 48, 2), 'faint'),
   ]
   g.table.slice(1).forEach((r, k) => {
     const i = k + 1, tone = g.mine === i ? 'active' : ROW_TONE[i]
