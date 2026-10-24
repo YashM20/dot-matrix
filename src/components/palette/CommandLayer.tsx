@@ -50,6 +50,10 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
   const anyXray = useXR(s => s.global || s.on.size > 0), frozen = useXR(s => s.frozen), fpsHud = useXR(s => s.fpsHud), note = useXR(s => s.toast)
   const view = useRef({ tab, board }); view.current = { tab, board }
 
+  // the layer itself mounts once the page is idle: warm the palette / shell chunks now, so a ⌘K followed by
+  // quick typing finds the input already there instead of dropping the first keystrokes into the page
+  useEffect(() => { void import('./Palette'); void import('./Shell') }, [])
+
   const go = useCallback((query: string) => { window.location.assign(`${location.pathname}${query}`) }, [])
   const api: CommandApi = useMemo(() => ({
     get tab() { return view.current.tab },

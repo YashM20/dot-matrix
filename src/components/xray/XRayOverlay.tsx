@@ -49,20 +49,33 @@ export function XRayOverlay({ xr, preset, layers, data, grid, style, theme, anim
   useLayoutEffect(() => {
     const root = rootRef.current, body = root?.parentElement
     if (!root || !body) return
-    const surface = () => [...body.children].find(el => el !== root && !el.classList.contains('xr-overlay')) as HTMLElement | undefined
+    // the first box-generating element: the OLED skin wrapper (`.skin-surface`) is `display: contents`, so
+    // it has no rect of its own; step into it (past the skin overlay) to the canvas / svg it wraps
+    const surface = () => {
+      let s = [...body.children].find(el => el !== root && !el.classList.contains('xr-overlay')) as HTMLElement | undefined
+      while (s && getComputedStyle(s).display === 'contents') s = [...s.children].find(el => !el.classList.contains('skin-overlay')) as HTMLElement | undefined
+      return s
+    }
+    let observed: HTMLElement | undefined
+    const ro = new ResizeObserver(() => measure())
+    const mo = new MutationObserver(() => measure())
     const measure = () => {
       const s = surface(); if (!s) return
+      if (s !== observed) {
+        if (observed) ro.unobserve(observed)
+        ro.observe(s); observed = s
+        // the surface swaps (svg ↔ canvas) inside its wrapper on transients: watch the wrapper too
+        if (s.parentElement && s.parentElement !== body) mo.observe(s.parentElement, { childList: true })
+      }
       const b = body.getBoundingClientRect(), r = s.getBoundingClientRect()
       setBox(prev => {
         const next = { left: r.left - b.left + body.scrollLeft, top: r.top - b.top + body.scrollTop, width: r.width, height: r.height }
         return prev && Math.abs(prev.left - next.left) < .5 && Math.abs(prev.top - next.top) < .5 && Math.abs(prev.width - next.width) < .5 && Math.abs(prev.height - next.height) < .5 ? prev : next
       })
     }
+    ro.observe(body)
+    mo.observe(body, { childList: true })
     measure()
-    const ro = new ResizeObserver(measure); ro.observe(body)
-    const s = surface(); if (s) ro.observe(s)
-    // the surface element swaps (svg ↔ canvas) on transients: re-measure when the body's children change
-    const mo = new MutationObserver(measure); mo.observe(body, { childList: true })
     return () => { ro.disconnect(); mo.disconnect() }
   }, [])
 
@@ -122,7 +135,9 @@ export function XRayOverlay({ xr, preset, layers, data, grid, style, theme, anim
   // publish what the inspector needs
   const worker = () => stats.worker
   const probe: CardProbe = { key: xr.key, preset, layers, data, grid, style, theme, animated, fps: cardFps, mode: xr.mode, worker, stats }
-  probes.set(xr.key, probe)
+  // on commit, not during render: a render React throws away (a sibling suspending on a lazy board chunk)
+  // would otherwise leave a probe behind for a card that never showed an overlay (the shell's `fps` listed those)
+  useLayoutEffect(() => { probes.set(xr.key, probe) })
   useEffect(() => () => { probes.delete(xr.key) }, [xr.key])
 
   // draw the grid

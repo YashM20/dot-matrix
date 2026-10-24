@@ -58,8 +58,8 @@ async function key(k: string, mods = 0, holdMs = 0) {
 }
 const typeText = async (s: string) => { await cdp('Input.insertText', { text: s }); await sleep(150) }
 const move = (x: number, y: number) => cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y })
-/** Centre (or a fraction inside) of the n-th card's dot surface, in page px (after scrolling it into view). */
-const cardPoint = (sel: string, fx = .5, fy = .5) => js(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); el.scrollIntoView({ block: 'center' }); const b = el.querySelector('.dot-card-body > :first-child').getBoundingClientRect(); return { x: b.left + b.width * ${fx}, y: b.top + b.height * ${fy} } })()`) as Promise<{ x: number; y: number }>
+/** Centre (or a fraction inside) of the n-th card's dot surface (the canvas / svg inside the C7 skin wrapper, which is `display: contents` under OLED), in page px (after scrolling it into view). */
+const cardPoint = (sel: string, fx = .5, fy = .5) => js(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); el.scrollIntoView({ block: 'center' }); const b = el.querySelector('.dot-card-body .skin-surface > :first-child').getBoundingClientRect(); return { x: b.left + b.width * ${fx}, y: b.top + b.height * ${fy} } })()`) as Promise<{ x: number; y: number }>
 /** Signature of a card's drawn pixels (canvas) or markup (svg). The first readback of a GPU canvas can differ in low bits: read twice. */
 const cardSig = (sel: string) => js(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); const c = el.querySelector('.dot-card-body canvas:not(.xr-grid)'); if (!c) return 'svg:' + (el.querySelector('.dot-svg')?.innerHTML.length ?? -1); const g = c.getContext('2d'); g.getImageData(0, 0, 1, 1); const d = g.getImageData(0, 0, c.width, c.height).data; let n = 0, s = 0; for (let i = 0; i < d.length; i += 4) if (d[i] + d[i+1] + d[i+2] > 60) { n++; s = (s * 31 + i + d[i]) % 1000003 } return n + ':' + s })()`) as Promise<string>
 const open = async (query: string) => { await cdp('Page.navigate', { url: `${base}${query}` }); return waitFor(`document.querySelectorAll('[data-xr-key]').length > 0`, 30000) }
@@ -97,7 +97,7 @@ try {
     check(`${board}: HUD shows renderer, fps, dots`, /(SVG|CANVAS|WEBGL)/.test(hud) && /DOTS/.test(hud) && !/^.*\b0 DOTS/.test(hud), hud)
     await waitFor(`!!document.querySelector('.xr-panel .xr-layers li')`, 3000)
     const panel = await text('.xr-panel')
-    check(`${board}: inspector lists layers + runtime`, /RENDERER/.test(panel) && (await count('.xr-panel .xr-layers li')) > 0, `${await count('.xr-panel .xr-layers li')} layers`)
+    check(`${board}: inspector lists layers + runtime`, /RENDERER/.test(panel) && (await count('.xr-panel .xr-layers li')) > 0, `${await count('.xr-panel .xr-layers li')} layers${/RENDERER/.test(panel) ? '' : '; no RENDERER in: ' + panel.slice(0, 120)}`)
     await shot(`0${i}-xray-${board}`)
     if (board === 'henry') {
       // solo / mute change the card; un-muting brings the exact frame back
@@ -166,13 +166,14 @@ try {
   check('palette fuzzy-finds a card; ARIA combobox wiring holds', /lv-queen/.test(first) && aria, first)
   await shot('05-palette')
   await open('?board=henry'); await sleep(1200)
-  await key('k', 2); await typeText('levels')
+  // a fresh page: wait for the palette input to take focus before typing (the layer and its panels load lazily)
+  await key('k', 2); await waitFor(`document.activeElement?.getAttribute('role') === 'combobox'`, 4000); await typeText('levels')
   await key('ArrowDown'); await key('ArrowUp')
-  const pick = await text('.pal-item--sel')
+  const pick = `${await text('.pal-item--sel')} (query "${await js(`document.querySelector('.pal input')?.value ?? ''`)}")`
   await key('Enter')
   const opened = await waitFor(`document.querySelector('.board-tabs .selected')?.textContent === 'LEVELS'`, 4000)
   check('palette search + Enter opens a board', opened && (await count('.pal')) === 0, pick)
-  await key('k', 2); await typeText('xray every')
+  await key('k', 2); await waitFor(`document.activeElement?.getAttribute('role') === 'combobox'`, 4000); await typeText('xray every')
   await key('Enter'); await sleep(600)
   check('palette action toggles x-ray', (await count('.xr-overlay')) > 0)
   await key('x', 8); await sleep(300)

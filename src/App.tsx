@@ -26,24 +26,44 @@ const galleryItems = ['home-clock', 'music', 'timer', 'weather', 'fitness', 'mes
 // photo, exports); STUDIO edits a layered card document. Lazy, so the other tabs don't load the editor.
 const Studio = lazy(() => import('./components/studio/Studio').then(m => ({ default: m.Studio })))
 // x-ray / time machine / ⌘K palette / dot shell (C10): out of the first load, mounted once the page is idle
-// (or on the first key press, so a quick ⌘K still finds it)
+// (or on the first key press). A layer key that triggered the mount (⌘K / Ctrl-K, `, X) is replayed to the
+// layer once it is listening, so a quick ⌘K still opens the palette instead of being swallowed.
 const CommandLayerLazy = lazy(() => import('./components/palette/CommandLayer').then(m => ({ default: m.CommandLayer })))
 type CommandLayerProps = Parameters<typeof import('./components/palette/CommandLayer').CommandLayer>[0]
+const layerKey = (e: KeyboardEvent) => ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') || (!e.metaKey && !e.ctrlKey && !e.altKey && (e.key === '`' || e.key === 'x' || e.key === 'X'))
+/** Re-dispatches the key that mounted the layer; rendered after it, so its effect runs once the layer listens. */
+function ReplayKey({ ev }: { ev: KeyboardEvent | null }) {
+  useEffect(() => {
+    if (!ev) return
+    const target = ev.target instanceof Node && ev.target.isConnected ? ev.target : window
+    target.dispatchEvent(new KeyboardEvent('keydown', { key: ev.key, code: ev.code, ctrlKey: ev.ctrlKey, metaKey: ev.metaKey, shiftKey: ev.shiftKey, altKey: ev.altKey, bubbles: true, cancelable: true }))
+  }, [ev])
+  return null
+}
 function CommandLayer(props: CommandLayerProps) {
   const [ready, setReady] = useState(false)
+  const [pending, setPending] = useState<KeyboardEvent | null>(null)
   useEffect(() => {
     if (ready) return
     const go = () => setReady(true)
+    const onKey = (e: KeyboardEvent) => {
+      const editing = e.target instanceof HTMLElement && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))
+      if (layerKey(e) && !(editing && !e.metaKey && !e.ctrlKey)) {
+        if (e.metaKey || e.ctrlKey) e.preventDefault() // keep the browser's own ⌘K / Ctrl-K away
+        setPending(e)
+      }
+      go()
+    }
     const w = window as Window & { requestIdleCallback?: Window['requestIdleCallback']; cancelIdleCallback?: Window['cancelIdleCallback'] }
     const hasIdle = typeof w.requestIdleCallback === 'function'
     const idle = hasIdle ? w.requestIdleCallback!(go, { timeout: 2000 }) : window.setTimeout(go, 800)
-    window.addEventListener('keydown', go, { once: true })
+    window.addEventListener('keydown', onKey, { once: true })
     return () => {
       if (hasIdle) w.cancelIdleCallback?.(idle); else window.clearTimeout(idle)
-      window.removeEventListener('keydown', go)
+      window.removeEventListener('keydown', onKey)
     }
   }, [ready])
-  return ready ? <Suspense fallback={null}><CommandLayerLazy {...props} /></Suspense> : null
+  return ready ? <Suspense fallback={null}><CommandLayerLazy {...props} /><ReplayKey ev={pending} /></Suspense> : null
 }
 const tabs = ['BOARDS', 'GALLERY', 'WORKSPACE', 'STUDIO', 'LOG', 'DOTS', 'DRAW'] as const
 type Tab = typeof tabs[number]
