@@ -29,6 +29,7 @@ import type { Field } from '../src/engine/types'
 import { irChecks } from './ir'
 import { liveChecks } from './live'
 import { halftoneChecks } from './halftone'
+import { visionChecks } from './vision'
 import { deviceChecks } from './device'
 import { exportChecks } from './export'
 import { dotsChecks } from './dots'
@@ -780,6 +781,8 @@ import { heartbeatCard, HEARTBEAT_STATES } from '../src/widgets/boards/heartbeat
 await liveChecks(assert)
 // P4-F) halftone ladder + STBN temporal stability + live camera card timing (scripts/halftone.ts)
 halftoneChecks(assert)
+// C6) hand tracker on the synthetic camera: pointer error, pinch, cost, no ghost from a still face (scripts/vision.ts)
+visionChecks(assert)
 // P5-C) device profiles, toDevice, display simulators, cross-tab clock sync (scripts/device.ts)
 deviceChecks(assert)
 // P5-D) export: APNG / GIF encoders, WebM / MP4 muxers, plotter SVG (scripts/export.ts)

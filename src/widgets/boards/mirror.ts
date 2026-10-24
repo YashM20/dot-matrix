@@ -232,7 +232,7 @@ const audience = lazy(() => {
   for (let y = 0; y < TILE.rows; y++) for (let x = 0; x < TILE.cols; x++) m[y * TILE.cols + x] = inPortrait(HX + (x - 34) / .75, HY + (y - 118) / .75) ? 1 : 0
   return m
 })
-const HAND_S = 36
+const HAND_S = 30
 const shadowTone = (v: number): Tone => (v >= .8 ? 'value' : v >= .55 ? 'idle' : v >= .3 ? 'mid' : 'faint')
 const shadowControl: Control = { key: 'cam', kind: 'toggle', box: [0, 0, 144, 144], label: 'Shadow puppet: start or stop the webcam (video stays on this device)' }
 
@@ -255,7 +255,7 @@ export const mirrorShadow: WidgetPreset = {
     // far plane (wall + spot) shifts against the near plane (the shadow): depth from relative motion
     const lx = 72 - px * 4, ly = 72 - py * 3, sx = px * 9, sy = py * 6, R = 62
     const cols = TILE.cols, fixture = live ? null : audience(), hand = live ? null : handPath(t)
-    const hx = hand ? 34 + hand.x * 84 : 0, hy = hand ? 50 + hand.y * 40 : 0
+    const hx = hand ? 30 + hand.x * 90 : 0, hy = hand ? 40 + hand.y * 36 : 0
     // text plates stay clear (lattice dots would hide the label / prompt): rows under the label, the bottom two lines
     const plateTop = live ? 144 : 122
     /** Occlusion 0..1 at card cell (x, y) of the object plane. */

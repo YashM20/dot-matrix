@@ -1,5 +1,5 @@
 /**
- * Dependency-free hand tracker (WEB-PLAN C6) on a small mirrored RGBA camera frame (~128×96).
+ * Dependency-free hand tracker (WEB-PLAN C6) on a small mirrored RGBA camera frame (~96×72).
  *
  *   skin      YCbCr box (Cr 135–180, Cb 80–135, Y > 40): cheap, lighting-tolerant-ish, colour-blind to grey walls
  *   change    per-pixel background model (running mean of luma, selective update) + a motion history image
@@ -12,7 +12,7 @@
  *             against its recent open size; hysteresis + two-frame debounce
  *
  * When the frame has almost no skin (gloves, coloured light) it falls back to a motion-only mask.
- * Runs in well under a millisecond at 128×96, so it stays on the main thread (no worker needed).
+ * Runs in about a millisecond at 96×72 on a laptop, so it stays on the main thread (no worker needed).
  */
 import { components, largestHole, majority, palmCentre, type Blob } from './blobs'
 import { OneEuro } from './oneEuro'

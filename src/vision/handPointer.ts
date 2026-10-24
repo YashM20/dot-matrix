@@ -1,7 +1,7 @@
 /**
  * HAND mode (WEB-PLAN C6): the webcam hand tracker as a virtual pointer for the whole page.
  *
- * While on, each new camera frame (≤ 30 fps) is drawn mirrored into a 128×96 canvas, tracked
+ * While on, each new camera frame (≤ 30 fps) is drawn mirrored into a 96×72 canvas, tracked
  * (`createHandTracker`), mapped from the comfortable middle of the camera view to the viewport, and replayed
  * as real `PointerEvent`s (`pointerId` = `HAND_POINTER_ID`, `pointerType: 'pen'`): `pointerover` / `out`
  * when the element under the hand changes, `pointermove` every frame, `pointerdown` / `up` on pinch. The
@@ -18,7 +18,7 @@ import { createHandTracker, type HandObservation, type HandTracker } from './tra
 
 import { HAND_POINTER_ID } from './pointerId'
 export { HAND_POINTER_ID }
-const W = 128, H = 96
+const W = 96, H = 72
 /** The part of the camera view that maps to the whole viewport (arms rarely reach the frame edge). */
 const REACH = { x0: .15, x1: .85, y0: .12, y1: .78 }
 
