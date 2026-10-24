@@ -81,7 +81,7 @@ export const glyphHourglass: WidgetPreset = {
       layer(T.dots(draining.filter(p => p[1] < 140), DIG.size), 'mid'),
       layer(T.dots(falling, DIG.size), 'idle'),
       layer(T.dots(settled, DIG.size)),
-      layer(T.dots(heap, HEAP.size), 'idle'),
+      layer(T.dots(heap.filter(p => p[1] < 142), HEAP.size), 'idle'), // the draining heap leaves through the bottom edge
       layer(T.dots(stream, HEAP.size)),
     ]
   },

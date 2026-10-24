@@ -269,7 +269,8 @@ export const physicsFlag: WidgetPreset = {
     clothNormals(cloth, s)
     const sites: Site[] = [], rings: Pt[] = []
     for (let p = 0; p < cloth.n; p++) {
-      const k = clamp(FOCAL / (FOCAL - s[cloth.Z + p]), .7, 1.5), x = 72 + (s[cloth.X + p] - 72) * k, y = 20 + (s[cloth.Y + p] - 20) * k
+      // perspective can swing a corner past the card edge: keep the dot on the card
+      const k = clamp(FOCAL / (FOCAL - s[cloth.Z + p]), .7, 1.5), x = clamp(72 + (s[cloth.X + p] - 72) * k, 1, 143), y = clamp(20 + (s[cloth.Y + p] - 20) * k, 1, 143)
       if (!cloth.invMass[p]) { rings.push([x, y]); continue }
       const shade = Math.abs(cloth.nx[p] * LIGHT[0] + cloth.ny[p] * LIGHT[1] + cloth.nz[p] * LIGHT[2])
       const tone: Tone = PRINT[p] ? (shade > .3 ? 'value' : 'idle') : shade > .55 ? 'mid' : 'faint'
