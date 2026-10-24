@@ -32,6 +32,9 @@
   user-select: none;
   -webkit-user-select: none
 }
+/* the full-screen game covers the board: take its cards out of rendering while playing (covered cards still
+   count as on screen, so nine animated canvases kept compositing under the game: ~200 ms frames headless) */
+.board-view:has(.hive-play) > .board-grid { display: none }
 .hive-play canvas { display: block }
 .hive-play .hive-screen { outline: none; cursor: crosshair }
 .hive-bar {
