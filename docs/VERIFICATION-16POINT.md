@@ -1,4 +1,7 @@
 # 16-Point Verification — Adversarial Review Post-Implementation
+
+> **Historical (2026-08-22).** Line numbers and results refer to the first build. For the current state see `docs/PROGRESS.md`, and for every doc see `docs/README.md`.
+
 **Date:** 2026-08-22
 **Method:** Read actual source, not summary. File:line, what code does, PASS/FAIL, fix if valid.
 

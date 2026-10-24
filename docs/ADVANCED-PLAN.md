@@ -1,5 +1,8 @@
 # ADVANCED-PLAN — research, findings, roadmap
 
+> **Reference (snapshot 2026-10-14).** Its findings became MASTER-PLAN phases P0–P6, which are all built. Its numbers (71 presets, 8 boards) are historical. Current state: `docs/PROGRESS.md`.
+
+
 > Snapshot 2026-10-14, branch `feat/tile-boards` (d2bbb22). Sources: code audit, benchmark (`.snapshots/bench/`), web research on techniques and on the product landscape. Architecture lives in `DOT-MATRIX-ENGINE-PLAN.md`, tokens in `DESIGN.md`; this file only plans.
 
 ## 1. Baseline

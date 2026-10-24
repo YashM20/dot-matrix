@@ -1,5 +1,8 @@
 # MASTER PLAN — Dot/480: the perceptual compiler for dot surfaces
 
+> **Status (2026-10-24):** phases P0–P6 are built (see `docs/PROGRESS.md`). The active plans are now `docs/WEB-PLAN.md` (what the site does) and `docs/UX-PLAN.md` (how visitors find it). The gates (§2) and open decisions (§11) here are still cited.
+
+
 > **v2** · 2026-10-14 · branch `feat/tile-boards`.
 > v1 was reviewed adversarially by three critics: engine architecture, design/fidelity, and vision/research. Every accepted amendment is folded in; the appendix logs what changed and why.
 > **Inputs:**

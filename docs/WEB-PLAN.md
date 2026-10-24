@@ -5,6 +5,13 @@
 > This doc replaces the product phases in `docs/NEXT-PLAN.md` §3 (P7 launch / hosted service, P10 plugins, P13 partnerships). `docs/MARKET-RESEARCH.md` is kept as reference only.
 >
 > Still valid in NEXT-PLAN: §1 gap audit, §2 consolidation, §4 Track R and §6 agent lessons.
+>
+> **Status (2026-10-24):**
+> - **Done and live:** W0, C2–C8, C10 and the craft lift.
+> - **Not started:** C1 (WebGPU compute) and C9 (multiplayer, optional).
+> - **Open:** the essay as the front door (C10). UX-PLAN §7 proposes keeping a board as the front door, with the intent line linking to the essay.
+> - **How visitors find all this:** `docs/UX-PLAN.md`. U0 and U1 are built.
+> - **Per-item detail:** `docs/PROGRESS.md` › Web plan.
 
 ## 0. Principles
 - **The site is the product.** Every idea is judged by one question: would someone on HN keep clicking for ten minutes?
@@ -29,7 +36,7 @@
 |---|---|
 | Host | **Vercel** (connected to the repo: `main` → production, PRs → previews; config in `vercel.json`). |
 | Build | `pnpm build` → `dist/`, plus the essay entry (`essay.html`) and SPA fallback for deep links. |
-| CI | Extend `.github/workflows/ci.yml`: `check` + `golden --check` + `build`, then deploy on push to `main`. Deploy preview per PR. |
+| CI | `.github/workflows/ci.yml`: `check` + `golden --check` + `build` + bundle budget. CI does not deploy: Vercel deploys `main` and a preview per branch or PR. |
 | Speed | Lazy-load boards by route; budget 150 kB gz first load; the cards' worker path on by default. |
 | Shareability | Per-board / per-card OG images (prebuilt at build time with `scripts/og.ts`); `<title>`/description per deep link. |
 | Mobile | Every board usable at 375 px; touch on all controls; reduced-motion stills. |

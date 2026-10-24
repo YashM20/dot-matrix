@@ -1,12 +1,12 @@
 # PROGRESS — handoff checklist
 
 > Single source of truth for **what is done, what is in progress, what was skipped and what is next**.
-> Update this file in the same commit as the work. Plan: `docs/MASTER-PLAN.md` (v2). Research: `docs/MOTION-INTERACTION-DEPTH.md`, `docs/ADVANCED-PLAN.md`. Taste: `docs/STYLE-BIBLE.md`.
+> Update this file in the same commit as the work. Active plans: `docs/WEB-PLAN.md` (what the site does) and `docs/UX-PLAN.md` (how visitors find it); every doc and its status: `docs/README.md`. Original phase plan: `docs/MASTER-PLAN.md` (v2). Research: `docs/MOTION-INTERACTION-DEPTH.md`, `docs/ADVANCED-PLAN.md`. Taste: `docs/STYLE-BIBLE.md`.
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
-## Status board (updated 2026-10-22)
-**Where we are (2026-10-24):** everything is merged into `feat/p1-complete` — P0–P6 agent work (P6-D Studio, P6-F essay included) and the Web plan tracks W0, C2–C8, C10 and the craft lift. 173 presets, 31 boards. Direction: personal website (`docs/WEB-PLAN.md`). Not started from the Web plan: C1 (WebGPU compute) and C9 (multiplayer). All agent worktrees are merged and removed.
-`main` = `666c0eb` (PR #2 merged: TILE boards + P0 + P1 motion core).
+## Status board (updated 2026-10-24)
+**Where we are (2026-10-24):** everything is merged into `feat/p1-complete` — P0–P6 agent work (P6-D Studio, P6-F essay included) and the Web plan tracks W0, C2–C8, C10 and the craft lift. 173 presets, 25 boards. Direction: personal website (`docs/WEB-PLAN.md`). Not started from the Web plan: C1 (WebGPU compute) and C9 (multiplayer). All agent worktrees are merged and removed.
+`main` = `82778a4` (PR #4: P1–P6 and the web plan; PR #5: Vercel only). UX U0 + U1 is on branch `feat/ux-u0-u1` (pushed, not merged).
 
 | Phase | Plan | Done | State |
 |---|---|---|---|
@@ -17,6 +17,7 @@
 | P4 Hero transitions, simulation, agents, live data | 3 wk | P4-A..G done | 🟢 Taste passes, real-host MCP test, 60 s Glyph recording gate left |
 | P5 GPU, devices, display physics | 3 wk | P5-A..E merged | 🟢 Real hardware, HVS-SSIM and the 100k CPU-dots gate left |
 | P6 Authoring + ecosystem | 4 wk | P6-A..F merged | 🟢 Publishing dropped (personal site); essay to become the front page |
+| UX U0–U6 (`docs/UX-PLAN.md`) | about 2 wk | U0 + U1 done | 🟢 On `feat/ux-u0-u1`. Next: U2 (card hints and action strip). Taste decisions listed in UX-PLAN §7 |
 | Track L (Perception Lab) / Track R (research spikes) | parallel | 0 | ⚪ |
 
 ### Remaining for P0 / P1, by who can unblock it
@@ -83,11 +84,12 @@
 - [~] P6-F: essay "Ditherpunk for UI" (`essay.html`, its own Vite entry so it deploys alone; `src/essay/`; `?tab=essay` redirects): a builder's explorable deep-dive (~3.3k words, 14 sections, no pitch) with 15 lazy-mounted live figures (IntersectionObserver, one chunk each) on the real engine: resolution, drag-the-field pipeline + pitch, quantize steps + squircle exponent, cluster vs lattice/sites, second-accent toggle, enter masks, Departures, Instrument knobs, torch + "Torch in the Dark" (level-03 relit by the cursor), Hourglass/sand/RD, white-noise vs STBN vs STBN+hysteresis flicker counts, "Mirror that Heals" (scratch, regrows from the edges), editable Field IR → DOTS link, five surfaces, heartbeat + its 25×25 LED phone-back. Figures register only the presets they embed (`src/widgets/registry`), so the essay never loads every board: first view ~124 KB JS gz. Headless Chrome `scripts/essay-browser.ts` (1280 + 375, mount on scroll + input per figure, no console errors, no overflow, reduced-motion stills; screenshots `.snapshots/essay/`). Not done: essay as the site index, OG image, Mirror regrowth is an RD-like front (no NCA), Torch has no normals/parallax, real-phone tilt untested.
 
 **Resume here (2026-10-24):**
-- Everything is merged; no agent worktrees remain. On an idle machine `pnpm check` passes in full, `pnpm golden --check` matches all 173 presets, and `pnpm build` passes with first-load JS ≈ 149 kB gz (budget 150; skins overlay, command layer and hand tracker load on demand).
+- Everything is merged; no agent worktrees remain. On an idle machine `pnpm check` passes in full, `pnpm golden --check` matches all 173 presets, and `pnpm build` passes with first-load JS 142.9 kB gz (budget 150; the skins overlay, command layer, hand tracker, board descriptions and, since U1, the audio engine load on demand).
 - Browser integration scripts (run against `pnpm dev`): `scripts/c10-browser.ts` 45/45, `c6-browser.ts` PASS, `game-browser.ts` 16/16, `essay-browser.ts` 39/39, `studio-browser.ts` 23/23, `skins-browser.ts` clean. Timing checks (`mirror-camera`, `migrate perf`, `type field`) fail only under heavy machine load (A/B showed no regression).
 - Merged to `main` via PR #4 (2026-10-24). `git push` works again (`gh auth setup-git`, account YashM20).
 - Deploy: Vercel auto-deploys `main` (production) and every PR (preview); host config in `vercel.json`, details in `docs/DEPLOY.md`. Cloudflare setup removed 2026-10-24.
-- Next (Web plan): make the essay the front page; C1 WebGPU compute; C9 multiplayer (optional); a taste session on the new boards (type, physics, heal, scope, lock, the HIVE game, skins).
+- UX plan (`docs/UX-PLAN.md`, low floor / high ceiling): U0 + U1 built on `feat/ux-u0-u1`. Boards are grouped (START HERE, INTERFACES, DATA, PLAY, ENGINE), with plain labels, one-line descriptions, an intent line, and a mobile board select. The URL follows every view, and Back / Forward work. The audio engine is lazy, so first load is 142.9 kB gz. Next: U2 (card hint verbs + action strip: how it works / remix / link / PNG). The taste-session decisions are listed in UX-PLAN §7.
+- Next (Web plan): a taste session (UX-PLAN §7 decisions plus the new boards); UX U2; make the essay the front page or keep a board (UX-PLAN §7.4); C1 WebGPU compute; C9 multiplayer (optional); a taste session on the new boards (type, physics, heal, scope, lock, the HIVE game, skins).
 
 **Needs the user (blocked):**
 - [ ] P0-D: lattice ladder migration (35 → 8 sizes). Changes how the liked boards look → decision §11.5.
@@ -145,6 +147,31 @@
 - [x] C5 Sound: `src/audio/` (WebAudio synth + drums, lookahead scheduler on `bpm`, AnalyserNode meter, mic, REC); SOUND toggle on the transport; `scope` board (scope, spectrum, mic). Browser check `npx tsx scripts/audio-chrome.ts` (URL=dev server): onsets ≤0.4 ms off grid. REC muxes board video + audio via MediaRecorder; in headless the video take is empty, so it saves audio-only.
 - [x] Lift (craft: cinema, light, live, heartbeat, lock): `cinema-encore` singer silhouette at a mic stand in a curtain spot (was an "A"), `cinema-closer` two flame-lit profiles on black (was the vase illusion), `cinema-keeper` black rock + surf + per-row swell; `light-gloss` black lacquer (void body, highlight held toward the lit limb, floor-bounce rim), `light-fabric` higher-ambient weave + shadow-side sheen rim; `live-now-playing` seeded sun-over-sea cover + EQ animated from `t` (12 fps), `live-contribs` level 0/1 sizes 1.15/1.75; `hb-thinking` budding lobes (new `bud` token: per-lobe sphere shading, darker necks; `hb-agent` state 0 follows); board `glyph` → `lock` (`LOCK — LOCK SCREEN EXPERIENCES`, cards `lock-*`, `?board=glyph`, `/glyph/` and `?card=glyph-*` still resolve via `boardAliases` in `manifest.ts`), `lock-notify` 5×7 badge digit, `lock-idle` finer 60-site labyrinth that keeps rearranging. Snapshots `.snapshots/{before,r1..r5}`.
 - [x] C3 Growing NCA, board `heal` (heal-mirror / heal-xray / heal-persist). Engine `src/engine/nca/`: 12 ch, 48 hidden, Int8 asset `src/assets/nca/lizard.ts` (2,352 params, ~3 KB). Training: `scripts/nca/train.ts`, plain-TS BPTT on worker threads, 4,374 iterations in 3 sessions (39 min total; smaller than planned because this laptop was at 100% load). Regrowth after a top-half cut (47%): 50 steps = 1.7 s at 30 steps/s. Left/right/bottom cuts regrow the body, but the limbs on that side only come back as stubs. Step cost under load: 6 ms (board grid) and 26 ms (64², four lizards). The 2 ms gate is unverified on an idle machine.
+
+**UX plan (2026-10-24)** (`docs/UX-PLAN.md`: low floor, high ceiling; the build log is §9)
+- [x] U0 fixes:
+  - the ⌘K palette and the shell use the real skin list (`SKIN_NAMES`);
+  - DRAW is reachable at 375 px;
+  - 64 px of bottom room for the dock;
+  - LIVE DATA shows only on boards with live sources;
+  - plain footer;
+  - the brand label shows the tab;
+  - the URL follows every view (`syncUrl`), and Back / Forward work;
+  - root-absolute essay links.
+- [x] U1 orientation:
+  - board groups START HERE, INTERFACES, DATA, PLAY and ENGINE (`boardGroups`), with plain labels (`boardLabel`);
+  - `BoardPicker.tsx`: group tabs and chips on desktop, a native select at ≤ 760 px;
+  - one-line board and group descriptions (`src/widgets/blurbs.ts`, lazy) under the board title;
+  - a dismissible intent line;
+  - 4 `ux:` checks in verify.
+- [x] Budget: the audio engine is lazy (`src/audio/AudioCards.tsx`): first load 148.9 → 142.9 kB gz.
+- [ ] U2 card ladder: hint verbs on cards with controls, cursors, an action strip (how it works / remix / link / PNG), an X-ray SUMMARY tab and glossary.
+- [ ] U3 EXPLORE / MAKE / ABOUT (after the taste session).
+- [ ] U4 staged makers (folds, plain labels).
+- [ ] U5 power layer: `?` sheet, Pro mode, DISPLAY ▾ menu, dock → `⋯ TOOLS` on phones.
+- [ ] U6 test with 3 people.
+- Open (user): the board names and groups, the START HERE list, the landing board (still `henry`), GALLERY, the essay as the front door.
+- Known: the `audio-chrome.ts` "mic analyser non-silent" check fails on this machine on `main` too (Chrome's fake mic); `c6-browser.ts` was not re-run after U1.
 
 ## How to resume (read first)
 1. `pnpm i`, then `pnpm dev`.
@@ -322,6 +349,11 @@ Plan reference: MASTER-PLAN §4 P1. **Flagship: Departures.**
 Work the **Status board** list top to bottom: P1-A → P1-F, then P0-A → P0-C. When all of those are ticked, P1 is closed and P2 (interaction + Components v2) starts.
 
 ## Known issues / notes for the next agent
+- Found in the 2026-10-24 doc sweep and left as is:
+  - **Two different `plotterSVG` functions:** `src/export/plotter.ts` takes dots, and `src/engine/device/plotter.ts` takes a pen plan. The engine index re-exports the device one, so watch imports.
+  - **`scripts/c10.ts` checks don't run:** `scripts/verify.ts` doesn't import them, so they never run under `pnpm verify`.
+  - **Possibly stale package docs:** `packages/README.md` still describes `@dot480/core/spec` as card spec v0. Check this before relying on the package docs; the packages are unpublished.
+  - **Hard-coded colours:** `src/engine/display/stage.ts` `STAGE_COLORS` hard-codes hex colours. The e-ink paper grey is deliberately not a token.
 - **Browser checks (2026-10-23, P2-F):** data springs (WORKSPACE sliders on timer, music, fitness) glide in the browser after the preview started passing `springKeys`. Transition Lab REPLAY / ENTER / EXIT / CHANGE, mask, duration and easing all redraw. The React warning "Cannot update a component (`Board`) while rendering `DotCanvas`" did not reproduce (instrument board, shared keys, every control); no console errors or warnings on the four boards. In an agent worktree, the WORKSPACE font 403s because `node_modules` is a junction outside Vite's `fs.allow`; that only happens in worktrees.
 - Agent worktrees live under `.claude/worktrees/` (gitignored, and ignored by the Vite watcher).
 - Root `index.css` sets centred text. New views must set `text-align: left` (the LOG view does).

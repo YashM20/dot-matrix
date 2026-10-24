@@ -1,5 +1,7 @@
 # BLOCK INVENTORY — 7 Reference Boards → Engine Families
 
+> **Historical (2026-08-22).** An inventory of the 7 original reference boards. The site now has 25 boards and 173 cards; for the current state see `docs/PROGRESS.md`, and for every doc see `docs/README.md`.
+
 > Source: `public/images/*` (7 boards), `PRD.md §0` goal: reproduce *every widget type* pixel-for-pixel.
 > This doc is the inventory the user explicitly demanded before code: "first check all the images and each and every block create list. we need support for all that"
 > Status column = engine coverage. Updated 2026-08-22 post-fix pass 3 (see docs/ADVERSARIAL-REVIEW.md §2 — stale rows reconciled).

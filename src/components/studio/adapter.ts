@@ -1,8 +1,8 @@
 /**
  * Studio document ↔ card specs. The Studio keeps its own JSON document (`doc.ts`); specs are adapters
- * on top, so the card spec v1 (`src/spec/`, in progress) plugs in here as one more `CardAdapter`
- * without touching the editor. Today: the JSON spec v0 that `@dot480/core` reads (`presetFromSpec`),
- * IR layers only (text / sites / reference layers have no v0 form and are reported as dropped).
+ * on top: each format is one `CardAdapter`, so the editor never changes. Two today: card spec v1
+ * (`src/spec/`, below), and the JSON spec v0 that `@dot480/core` reads (`presetFromSpec`), IR layers
+ * only (text / sites / reference layers have no v0 form and are reported as dropped).
  */
 import type { Control } from '../../engine/context'
 import type { DotStyle, GridConfig, Tone } from '../../engine/types'

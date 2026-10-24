@@ -4,7 +4,7 @@
  * Node built-ins only); this file is the MCP surface. No LLM is called here: the host model is the
  * critic, it reads renders + scores and steers `refine_card` with `feedback`.
  *
- * TODO(spec v1): accept a card spec v1 document (`src/spec`) as the card input once it lands; for
+ * TODO(spec v1): accept a card spec v1 document (`src/spec`, landed in P6-A) as the card input; for
  * now a card is `{ id }` (any preset) or `{ ir, grid?, lattice?, tone?, accent?, … }`.
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
