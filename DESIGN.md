@@ -352,6 +352,24 @@ One card, many physical surfaces (P5, `src/engine/device/`). `toDevice(spec, pro
 - **Card look:** e-ink paper = `{colors.dotIdle}` dots, ink = no dot, ghost = one tone step down; LEDs and discs are dot sites in size/tone bands; flip-disc black faces stay visible in `faint`.
 - **Time:** device cards read board time `t + data.clockOffset`; `createClockSync` (`src/engine/clockSync.ts`) keeps tabs on one epoch over BroadcastChannel. Flip-disc clack is app-side (`src/media/clack.ts`), off unless `?clack=1`.
 
+## Display skins
+
+One global switch (header control, `?skin=`, localStorage `dot480:skin`, `setSkin(name)`) shows every board on a different physical display (C7, `src/engine/display/`, `src/components/skins/`). A skin is a **post-raster stage**: the card is sampled and rasterized exactly as on OLED, then an overlay canvas redraws that raster with the display's physics. Skins change physics, never palette roles: neutrals may take a phosphor's colour, but the board's one `{colors.dotActive}` keeps its hue on every skin (the colour matrix passes the red column through; reflective skins keep the cell's own hue as pigment). Goldens are untouched (browser only).
+
+| Skin | Physics | Refresh drawn on switch |
+|---|---|---|
+| `oled` | none: the card as sampled (default, no overlay, `display: contents` wrapper) | overlay wipes off top → bottom |
+| `crt` | afterglow v′ = max(v, old·e^(−Δt/τ)), τ .085 s; 2-level mip bloom; scanlines; barrel glass k .05; rounded vignette | beam line, then the raster opens vertically |
+| `vfd` | neutrals → cyan-green phosphor, glow, diamond wire mesh + filament wires | filament warm-up stutter |
+| `led` | cell light (area × opacity) → round lens per cell; unlit lenses visible; ~1-cell diffuser bleed (Glyph Matrix physics) | rows scan in top → bottom |
+| `eink` | 1-bit blue-noise ink on paper; partial refresh .32 s with ghosts (.3 × .8); every 10th refresh full (TRMNL physics) | full-refresh flash (also on board change) |
+| `flipdisc` | 2-tone discs (`value` face, `dotFaint` back, accent pigment), column sweep .34 s, underdamped flips (ω 60, ζ .32); clack muted by default | discs sweep from black |
+| `nixie` | neutrals → warm neon, 3-level glow, hex anode mesh, slow flicker | ignition stutter |
+
+- **Cost:** emissive skins are GPU-side 2D ops (drawImage, composites, mips, one SVG colour-matrix filter). E-ink and flip-disc read back one `cols × rows` image a few times a second at most. A static card is re-skinned from its existing frame (no re-sample); a running card's canvas is copied once per its own tick.
+- **Reduced motion:** no power-on animation, no e-ink flash (partials only), no nixie flicker.
+- Not yet: split-flap skin (the split-flap text motion already exists per card), real-hardware calibration.
+
 ## Known Gaps
 
 - **Physical LED-panel calibration not yet measured** — the `led-panel` breakpoint's pitch-locking behavior is specified but not validated against real hardware bit-depth/gamma response.

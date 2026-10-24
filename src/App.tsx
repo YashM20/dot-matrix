@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useState, type ComponentType } from 'react'
 import { Board, VIEW_EXIT_MS, cardMotion } from './components/Board'
 import { DotWidget } from './components/DotWidget'
+import { SkinSwitcher } from './components/skins/SkinSwitcher'
 import { useExitSwap } from './hooks/useExitSwap'
 import { boardIds, prefetchBoard, resolveBoardId } from './widgets/manifest'
 import { boardFromPath, setPageMeta } from './site/meta'
@@ -48,6 +49,7 @@ export default function App() {
     <h1 className="sr-only">DOT/480 dot-matrix UI engine</h1>
     <header className="topbar"><div className="brand"><i aria-hidden="true"/> DOT/480 <small>{tab === 'WORKSPACE' ? 'PLAYGROUND' : tab}</small></div>
       <nav aria-label="Views">{tabs.map(t => <button key={t} className={tab === t ? 'selected' : ''} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}</nav>
+      <SkinSwitcher />
       <div className="live"><i aria-hidden="true"/> LIVE</div></header>
     <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
     {shownTab === 'BOARDS' ? (

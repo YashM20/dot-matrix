@@ -2012,3 +2012,147 @@ label b {
     flex-wrap: wrap
   }
 }
+
+/* ── C7 display skins (src/components/skins/, src/engine/display/) ── */
+.skin-switch {
+  display: flex;
+  align-items: center;
+  gap: 10px
+}
+
+.skin-seg {
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px dotted rgba(255, 255, 255, .2);
+  border-radius: 999px
+}
+
+.topbar .skin-seg button,
+.topbar .skin-clack {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border-radius: 999px;
+  color: var(--mute)
+}
+
+.skin-seg button i {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: .35
+}
+
+/* the selected segment is a dot-matrix fill, not a solid pill */
+.topbar .skin-seg button.selected {
+  color: var(--value);
+  background: radial-gradient(circle, rgba(255, 255, 255, .16) .8px, transparent 1.1px) 0 0 / 4px 4px
+}
+
+.skin-seg button.selected i {
+  opacity: 1
+}
+
+.topbar .skin-clack {
+  border: 1px dotted rgba(255, 255, 255, .2)
+}
+
+.topbar .skin-clack.selected {
+  color: var(--value)
+}
+
+.skin-seg button:focus-visible,
+.skin-clack:focus-visible {
+  outline: 1px dashed var(--value);
+  outline-offset: 1px
+}
+
+@media(max-width:760px) {
+  .topbar .skin-seg button {
+    padding: 5px 6px
+  }
+
+  .skin-seg button i {
+    display: none
+  }
+}
+
+/* OLED: the wrapper is not even a box */
+.skin-surface {
+  display: contents
+}
+
+.skin-surface:not([data-skin="oled"]) {
+  display: grid;
+  width: 100%;
+  min-width: 0;
+  position: relative
+}
+
+.skin-surface:not([data-skin="oled"]) > * {
+  grid-area: 1 / 1
+}
+
+.skin-surface:not([data-skin="oled"]):not([data-leaving]) > :not(.skin-overlay) {
+  visibility: hidden
+}
+
+.skin-overlay {
+  pointer-events: none;
+  position: relative
+}
+
+/* emissive skins add light over the card; reflective ones (e-ink, flip-disc) cover it */
+.skin-surface[data-skin="crt"] > .skin-overlay,
+.skin-surface[data-skin="vfd"] > .skin-overlay,
+.skin-surface[data-skin="led"] > .skin-overlay,
+.skin-surface[data-skin="nixie"] > .skin-overlay {
+  mix-blend-mode: screen
+}
+
+/* CRT glass: rounded tube corners and a vignette towards them */
+.skin-surface[data-skin="crt"] > .skin-overlay {
+  border-radius: 5% / 5%;
+  -webkit-mask-image: radial-gradient(ellipse 72% 72% at 50% 50%, #000 62%, rgba(0, 0, 0, .5) 100%);
+  mask-image: radial-gradient(ellipse 72% 72% at 50% 50%, #000 62%, rgba(0, 0, 0, .5) 100%)
+}
+
+.skin-surface[data-skin="eink"] > .skin-overlay {
+  border-radius: 2px
+}
+
+.skin-surface[data-skin="nixie"] > .skin-overlay {
+  animation: skin-nixie-flicker 5.3s steps(1) infinite
+}
+
+@keyframes skin-nixie-flicker {
+  0%, 100% { opacity: 1 }
+  31% { opacity: .94 }
+  32% { opacity: 1 }
+  67% { opacity: .9 }
+  68% { opacity: .97 }
+  69% { opacity: 1 }
+}
+
+/* back to OLED: the old display wipes off row by row, top to bottom (a refresh) */
+.skin-surface[data-skin] > .skin-overlay.skin-overlay--out {
+  animation: skin-off .3s cubic-bezier(.3, 0, .8, .15) forwards
+}
+
+@keyframes skin-off {
+  from { clip-path: inset(0 0 0 0) }
+  to { clip-path: inset(100% 0 0 0) }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skin-surface[data-skin] > .skin-overlay.skin-overlay--out {
+    animation-duration: 1ms
+  }
+
+  .skin-surface[data-skin="nixie"] > .skin-overlay {
+    animation: none
+  }
+}
