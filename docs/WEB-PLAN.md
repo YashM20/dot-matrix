@@ -27,7 +27,7 @@
 ## 1. Ship the site (W0: about 3 days, do first)
 | Item | Detail |
 |---|---|
-| Host | **Cloudflare Pages** (recommended: free, fast, fine with workers, deploy previews per branch). Alternatives are Vercel or GitHub Pages; anything that serves `dist/` works. |
+| Host | **Vercel** (connected to the repo: `main` → production, PRs → previews; config in `vercel.json`). |
 | Build | `pnpm build` → `dist/`, plus the essay entry (`essay.html`) and SPA fallback for deep links. |
 | CI | Extend `.github/workflows/ci.yml`: `check` + `golden --check` + `build`, then deploy on push to `main`. Deploy preview per PR. |
 | Speed | Lazy-load boards by route; budget 150 kB gz first load; the cards' worker path on by default. |
@@ -115,7 +115,7 @@
 ### C9 · Multiplayer, optional and no backend required
 - **What:** "r/place for dots". A shared canvas or a shared Instrument jam over WebRTC.
   - For a no-server start, peers connect by copying a link.
-  - A tiny free relay (a Cloudflare Durable Object) can be added later if wanted.
+  - A tiny hosted relay (a small WebSocket service; Vercel functions do not hold sockets) can be added later if wanted.
   - It falls back to solo.
 - **Wow moment:** two people's cursors as torch lights on the same `light` board.
 - **Note:** only if the user wants it. It's the one item that needs infra.

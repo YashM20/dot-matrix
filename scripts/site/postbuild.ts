@@ -7,7 +7,7 @@
  *    description, canonical and OG/Twitter tags (`src/site/meta.ts`), so a shared `/light/` link previews
  *    the Light board without running JS. `dist/index.html` gets the default tags the same way.
  *
- * `SITE_URL` (e.g. https://dot480.pages.dev) makes og:url / og:image absolute, which most link
+ * `SITE_URL` (or, on Vercel, `VERCEL_PROJECT_PRODUCTION_URL`) makes og:url / og:image absolute, which most link
  * unfurlers require; without it they stay root-relative.
  *
  *   npx tsx scripts/site/postbuild.ts            → both steps on ./dist
@@ -20,7 +20,8 @@ import { boards } from '../../src/widgets'
 import { metaTags, pageMeta } from '../../src/site/meta'
 
 const DIST = 'dist'
-const origin = (process.env.SITE_URL ?? '').replace(/\/+$/, '')
+const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL
+const origin = (process.env.SITE_URL || (vercel ? `https://${vercel}` : '')).replace(/\/+$/, '')
 /** OG hero card per board, where the first card that needs no live media is not the best face. */
 const HERO: Record<string, string> = {}
 
