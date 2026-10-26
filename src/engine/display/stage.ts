@@ -15,6 +15,7 @@
  * Time `t` is seconds on any monotonic clock the caller owns (the engine never reads the time itself).
  */
 import { hash01 } from '../math'
+import { dot480 } from '../theme/tokens'
 import { decayFactor, settleSeconds } from './afterglow'
 import { cellFrame, createEinkPanel, createFlipPanel } from './panels'
 import { SKIN_PHYSICS, phosphorMatrix, type Phosphor, type SkinName } from './skins'
@@ -26,8 +27,11 @@ export interface StageColors {
   /** Flip-disc bright face, black face and panel; e-ink paper and ink. */
   bright: string; off: string; panel: string; paper: string; ink: string
 }
-/** Physics colours of the reflective skins, taken from the dot480 tones (`value`, `dotFaint`, `bg`); paper is a light grey, not a token. */
-export const STAGE_COLORS: StageColors = { bright: '#F2F3F5', off: '#2E3033', panel: '#0A0B0C', paper: '#D3D3CD', ink: '#070809' }
+/**
+ * Physics colours of the reflective skins. Disc faces and ink are the dot480 tones (`value`, `dotFaint`, `bg`).
+ * The flip-disc panel (a hair above `bg`) matches no token; the e-ink paper grey is deliberately not one.
+ */
+export const STAGE_COLORS: StageColors = { bright: dot480.value!, off: dot480.dotFaint!, panel: '#0A0B0C', paper: '#D3D3CD', ink: dot480.bg }
 
 export interface StageOptions {
   /** Card grid (cells) and the backing size of the frames (px). */

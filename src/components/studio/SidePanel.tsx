@@ -5,7 +5,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { saveAs } from 'file-saver'
-import { DEVICES, plotPaths, plotterSVG as devicePlotSVG, previewProfile, toDevice, type DeviceFrame, type DeviceId } from '../../engine/device'
+import { DEVICES, plotPaths, penPlanSVG as devicePlotSVG, previewProfile, toDevice, type DeviceFrame, type DeviceId } from '../../engine/device'
 import { renderSVG } from '../../engine/renderer/svgRenderer'
 import { dot480 } from '../../engine/theme/tokens'
 import { plotterSVG, recordClip, type ClipFormat } from '../../export'

@@ -4,7 +4,7 @@
  */
 import { createClockSync, type ChannelPort } from '../src/engine/clockSync'
 import {
-  createEinkSim, createFlipSim, DEVICES, deviceMask, flipAngle, frameMean, plotAt, plotPaths, plotterSVG, previewProfile, toDevice,
+  createEinkSim, createFlipSim, DEVICES, deviceMask, flipAngle, frameMean, plotAt, plotPaths, penPlanSVG, previewProfile, toDevice,
 } from '../src/engine/device'
 import { sampleLayers } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
@@ -84,7 +84,7 @@ export function deviceChecks(assert: Assert) {
     if (lv > 0) { lit++; cover &&= seen.get(i) === 1 && plan.strokes.find(s => s.row * pf.cols + s.col === i)!.loops.length === lv }
     else cover &&= !seen.has(i)
   }
-  const end = plotAt(plan, plan.duration + 1e-6), svg = plotterSVG(plan)
+  const end = plotAt(plan, plan.duration + 1e-6), svg = penPlanSVG(plan)
   assert('plotter: paths cover every lit dot once (loops = tone level), replay finishes, SVG has one path per stroke',
     cover && lit === plan.strokes.length && end.done === plan.strokes.length && (svg.match(/<path /g) ?? []).length === lit,
     `${lit} strokes, draw ${plan.drawLen.toFixed(0)} + travel ${plan.travelLen.toFixed(0)} cells, ${plan.duration.toFixed(1)} s`)

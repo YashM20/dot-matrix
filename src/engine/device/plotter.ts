@@ -2,7 +2,8 @@
  * Pen-plotter output: device frame → pen paths. A lit pixel at tone level k (of 2^bits − 1) is drawn
  * as k concentric pen loops, so darker tones carry more ink. Pixels are visited in greedy
  * nearest-neighbour order from the home corner (short pen-up travel), and `plotAt` replays the plan
- * in time at the profile's draw / travel speeds. `plotterSVG` is the file you would send to the machine.
+ * in time at the profile's draw / travel speeds. `penPlanSVG` is the file you would send to the machine
+ * (not `plotterSVG` in `src/export/plotter.ts`, which plots a card's dots directly).
  */
 import type { PlotterPhysics } from './profile'
 import type { DeviceFrame } from './toDevice'
@@ -85,7 +86,7 @@ export function plotAt(plan: PlotPlan, tau: number): PlotState {
 }
 
 /** Plotter SVG: one `<path>` per stroke (pen-down polylines), `mm` per cell from the profile pitch. */
-export function plotterSVG(plan: PlotPlan, mm = 2): string {
+export function penPlanSVG(plan: PlotPlan, mm = 2): string {
   const W = plan.cols * mm, H = plan.rows * mm, f = (n: number) => +(n * mm).toFixed(3)
   const paths = plan.strokes.map(s => `<path d="${s.loops.map(lp => `M${lp.map(([x, y]) => `${f(x)} ${f(y)}`).join('L')}`).join('')}"/>`)
   return `<svg xmlns="http://www.w3.org/2000/svg" width="${W}mm" height="${H}mm" viewBox="0 0 ${W} ${H}"><g fill="none" stroke="#000" stroke-width="${(plan.physics.pen * mm).toFixed(3)}" stroke-linecap="round">${paths.join('')}</g></svg>`
