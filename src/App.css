@@ -2734,31 +2734,83 @@ label b {
 }
 
 /* ── C7 display skins (src/components/skins/, src/engine/display/) ── */
+/* the DISPLAY ▾ menu button (docs/UX-PLAN.md §4.3): grey chrome, the menu lists each skin with one line */
 .skin-switch {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px
 }
 
-.skin-seg {
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px dotted rgba(255, 255, 255, .2);
-  border-radius: 999px
-}
-
-.topbar .skin-seg button,
+.topbar .skin-menu-btn,
 .topbar .skin-clack {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 9px;
+  min-height: 24px;
+  padding: 0 10px;
+  border: 1px dotted rgba(255, 255, 255, .2);
   border-radius: 999px;
   color: var(--mute)
 }
 
-.skin-seg button i {
+.skin-menu-btn b {
+  font-weight: inherit;
+  color: var(--value)
+}
+
+.skin-menu-btn span {
+  font-size: 9px;
+  transition: transform .15s
+}
+
+.skin-menu-btn[aria-expanded="true"] span {
+  transform: rotate(180deg)
+}
+
+.skin-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  display: grid;
+  gap: 2px;
+  width: min(330px, calc(100vw - 24px));
+  padding: 4px;
+  border: 1px dotted rgba(255, 255, 255, .2);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .55)
+}
+
+.skin-menu--right {
+  left: auto;
+  right: 0
+}
+
+.topbar .skin-menu button {
+  display: grid;
+  grid-template-columns: 4px 44px 1fr;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  text-align: left;
+  color: var(--mute)
+}
+
+.skin-menu button b {
+  font-weight: inherit
+}
+
+.skin-menu button span {
+  letter-spacing: .04em;
+  text-transform: none;
+  line-height: 1.35
+}
+
+.skin-menu button i {
   width: 4px;
   height: 4px;
   border-radius: 50%;
@@ -2766,38 +2818,31 @@ label b {
   opacity: .35
 }
 
-/* the selected segment is a dot-matrix fill, not a solid pill */
-.topbar .skin-seg button.selected {
+.topbar .skin-menu button:hover,
+.topbar .skin-menu button:focus-visible {
+  color: var(--label);
+  background: rgba(255, 255, 255, .05)
+}
+
+/* the selected skin is a dot-matrix fill, not a solid pill */
+.topbar .skin-menu button.selected {
   color: var(--value);
   background: radial-gradient(circle, rgba(255, 255, 255, .16) .8px, transparent 1.1px) 0 0 / 4px 4px
 }
 
-.skin-seg button.selected i {
+.skin-menu button.selected i {
   opacity: 1
-}
-
-.topbar .skin-clack {
-  border: 1px dotted rgba(255, 255, 255, .2)
 }
 
 .topbar .skin-clack.selected {
   color: var(--value)
 }
 
-.skin-seg button:focus-visible,
+.skin-menu-btn:focus-visible,
+.skin-menu button:focus-visible,
 .skin-clack:focus-visible {
   outline: 1px dashed var(--value);
   outline-offset: 1px
-}
-
-@media(max-width:760px) {
-  .topbar .skin-seg button {
-    padding: 5px 6px
-  }
-
-  .skin-seg button i {
-    display: none
-  }
 }
 
 /* OLED: the wrapper is not even a box */
