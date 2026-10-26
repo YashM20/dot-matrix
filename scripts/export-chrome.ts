@@ -51,7 +51,7 @@ const check = (name: string, ok: boolean, detail = '') => { console.log(`${ok ? 
 try {
   await cdp('Page.enable'); await cdp('Runtime.enable')
   await cdp('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: join(outDir, 'ui') })
-  await cdp('Page.navigate', { url: `${url}?tab=workspace` })
+  await cdp('Page.navigate', { url: `${url}?make=tune` })
   check('playground loads', await until(`!!document.querySelector('.pg-export')`, 60000))
 
   // ── recordClip in the page, every format ──

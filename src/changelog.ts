@@ -1,5 +1,5 @@
 /**
- * Public changelog shown in the LOG tab. Written for visitors, not contributors —
+ * Public changelog shown in ABOUT (once the LOG tab). Written for visitors, not contributors —
  * the engineering history lives in CHANGELOG.md at the repo root.
  */
 export type ChangeKind = 'new' | 'improved' | 'fixed'
@@ -48,7 +48,7 @@ export const releases: Release[] = [
       { kind: 'new', text: 'A side-by-side sheet against the favourite cards, a quality scorecard, previews on a tiny LED matrix, e-ink, flip-disc and pen plotter, and exports to PNG, SVG, animated PNG, GIF and video.' },
       { kind: 'improved', text: 'Everything saves in your browser, with undo and redo, and can be downloaded as a file.' },
     ],
-    link: { href: '?tab=studio', label: 'OPEN STUDIO' },
+    link: { href: '?make=compose', label: 'OPEN MAKE · COMPOSE' },
   },
   {
     version: '0.7', date: '2026-10-23', title: 'DOTS: write a field, share it as a link',
@@ -59,7 +59,7 @@ export const releases: Release[] = [
       { kind: 'new', text: 'Share: a program fits in a short, compressed link. Opening a broken or tampered link shows what is wrong and never runs it.' },
       { kind: 'new', text: 'Remix: every edit remembers what it came from. Your programs build a small remix graph, drawn in dots, starting from eight examples: ripple, plasma, rings, spiral, rain, lissajous, checker warp and heartbeat.' },
     ],
-    link: { href: '?tab=dots', label: 'OPEN DOTS' },
+    link: { href: '?make=code', label: 'OPEN MAKE · CODE' },
   },
   {
     version: '0.6', date: '2026-10-22', title: 'Departures, and boards that leave',
@@ -69,7 +69,7 @@ export const releases: Release[] = [
       { kind: 'new', text: 'The home clock flips its digits on the minute, like a split-flap clock, folding about the middle.' },
       { kind: 'new', text: 'Switching boards or views now dissolves the old cards out, corner to corner, before the new ones build in.' },
     ],
-    link: { href: '?board=departures', label: 'OPEN DEPARTURES' },
+    link: { href: '/departures/', label: 'OPEN DEPARTURES' },
   },
   {
     version: '0.5', date: '2026-10-14', title: 'Boards that come alive',

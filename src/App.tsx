@@ -1,16 +1,17 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ComponentType } from 'react'
-import { Board, VIEW_EXIT_MS, cardMotion } from './components/Board'
+import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { Board, VIEW_EXIT_MS } from './components/Board'
 import { BoardPicker } from './components/BoardPicker'
 import { DotWidget } from './components/DotWidget'
 import { SkinSwitcher } from './components/skins/SkinSwitcher'
 import { useExitSwap } from './hooks/useExitSwap'
-import { boardIds, liveBoards, resolveBoardId } from './widgets/manifest'
-import { boardFromPath, setPageMeta, syncUrl } from './site/meta'
+import { liveBoards } from './widgets/manifest'
+import { setPageMeta, syncUrl } from './site/meta'
+import { GALLERY_BOARD, MODE_LINES, MODES, VIEWS, placeFromName, placeView, sameView, urlForView, viewFromUrl, type Mode, type View } from './site/views'
 import './App.css'
 
-// every view but BOARDS is its own chunk, fetched when its tab opens (first-load budget, docs/WEB-PLAN.md §1)
+// every view but EXPLORE (and every MAKE mode) is its own chunk, fetched when it opens (first-load budget, docs/WEB-PLAN.md §1)
 const later = <K extends string>(load: () => Promise<{ [k in K]: ComponentType }>, name: K) => lazy(() => load().then(m => ({ default: m[name] })))
-const Changelog = later(() => import('./components/Changelog'), 'Changelog')
+const About = later(() => import('./components/About'), 'About')
 const DrawBoard = later(() => import('./components/draw/DrawBoard'), 'DrawBoard')
 const DotsRepl = later(() => import('./components/dwitter/DotsRepl'), 'DotsRepl')
 const ControlsPanel = later(() => import('./components/playground/ControlsPanel'), 'ControlsPanel')
@@ -21,9 +22,8 @@ const PreviewCanvas = later(() => import('./components/playground/PreviewCanvas'
 const TransitionLab = later(() => import('./components/playground/TransitionLab'), 'TransitionLab')
 const WidgetGallery = later(() => import('./components/playground/WidgetGallery'), 'WidgetGallery')
 
-const galleryItems = ['home-clock', 'music', 'timer', 'weather', 'fitness', 'messages', 'camera', 'settings', 'system']
-// STUDIO (P6-D) is its own tab, not a WORKSPACE upgrade: WORKSPACE stays the one-preset tuner (style,
-// photo, exports); STUDIO edits a layered card document. Lazy, so the other tabs don't load the editor.
+// COMPOSE (the Studio, P6-D) is its own mode, not a TUNE upgrade: TUNE stays the one-preset tuner (style,
+// photo, exports); COMPOSE edits a layered card document. Lazy, so the other views don't load the editor.
 const Studio = lazy(() => import('./components/studio/Studio').then(m => ({ default: m.Studio })))
 // x-ray / time machine / ⌘K palette / dot shell (C10): out of the first load, mounted once the page is idle
 // (or on the first key press). A layer key that triggered the mount (⌘K / Ctrl-K, `, X) is replayed to the
@@ -65,17 +65,21 @@ function CommandLayer(props: CommandLayerProps) {
   }, [ready])
   return ready ? <Suspense fallback={null}><CommandLayerLazy {...props} /><ReplayKey ev={pending} /></Suspense> : null
 }
-const tabs = ['BOARDS', 'GALLERY', 'WORKSPACE', 'STUDIO', 'LOG', 'DOTS', 'DRAW'] as const
-type Tab = typeof tabs[number]
-
-// Deep links: ?board=<id> opens a board, ?card=<id> renders one card alone (handy for screenshots/bisecting),
-// ?tab=dots&p=<encoded> opens a shared Field IR program in the DOTS REPL.
-const params = new URLSearchParams(window.location.search)
-const singleCard = params.get('card')
-/** The view the address bar names: first render, and Back / Forward (`syncUrl` writes it back). */
-function viewFromUrl(): { tab: Tab; board: string } {
-  const q = new URLSearchParams(window.location.search), b = resolveBoardId(q.get('board') ?? '')
-  return { tab: tabs.find(t => t === q.get('tab')?.toUpperCase()) ?? 'BOARDS', board: boardIds.includes(b) ? b : boardFromPath(window.location.pathname) ?? boardIds[0] }
+// Deep links (all resolved in src/site/views.ts): `/<board>/` or ?board=<id> opens a board, ?make=<mode> a MAKE
+// mode (?make=code&p=<encoded> a shared Field IR program), ?about the about page, ?card=<id> one card alone
+// (handy for screenshots/bisecting); every old ?tab= still opens the view it became.
+const urlView = (mode?: Mode) => viewFromUrl(location.search, location.pathname, mode)
+const singleCard = urlView().card
+/** A row of real tabs: arrow keys move between them, the selected one is the only tab stop. */
+function Tabs<T extends string>({ label, items, value, onPick, className }: { label: string; items: readonly T[]; value: T; onPick: (t: T) => void; className: string }) {
+  const onKey = (e: ReactKeyboardEvent<HTMLButtonElement>, i: number) => {
+    const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
+    if (!d) return
+    e.preventDefault()
+    const j = (i + d + items.length) % items.length
+    onPick(items[j]); (e.currentTarget.parentElement?.children[j] as HTMLElement | undefined)?.focus()
+  }
+  return <div className={className} role="tablist" aria-label={label}>{items.map((t, i) => <button key={t} type="button" role="tab" id={`tab-${t}`} aria-selected={value === t} tabIndex={value === t ? 0 : -1} className={value === t ? 'selected' : ''} onClick={() => onPick(t)} onKeyDown={e => onKey(e, i)}>{t}</button>)}</div>
 }
 
 /** One line of intent above the boards (docs/UX-PLAN.md §5.1): dismissible, and it stays dismissed. */
@@ -89,74 +93,95 @@ function IntroLine() {
   </p>
 }
 // ?tab=essay: the essay is its own page (essay.html, a separate Vite entry so it deploys alone)
-if (params.get('tab')?.toLowerCase() === 'essay') window.location.replace(`/essay.html${window.location.hash}`)
+if (urlView().essay) window.location.replace(`/essay.html${window.location.hash}`)
 
 export default function App() {
-  const [tab, setTab] = useState<Tab>(() => viewFromUrl().tab)
-  const [board, setBoard] = useState(() => viewFromUrl().board)
+  const [view, setView] = useState<View>(() => urlView().view)
+  const [mode, setMode] = useState<Mode>(() => urlView().mode)
+  const [board, setBoard] = useState(() => urlView().board)
   // per-view <title>, description and OG tags (crawlers get the same from the prebuilt dist/<board>/index.html),
-  // and the address bar: each view change is a history entry; the first render only normalises the URL
+  // and the address bar: moving to another view is a history entry; the first render, and a URL that already
+  // names this view in an older form (a remix's ?tab=dots&p=…), are only normalised in place
   const first = useRef(true)
-  useEffect(() => { setPageMeta(tab === 'BOARDS' ? board : undefined); syncUrl(tab, board, !first.current); first.current = false }, [tab, board])
   useEffect(() => {
-    const onPop = () => { const v = viewFromUrl(); setTab(v.tab); setBoard(v.board) }
+    setPageMeta(view === 'EXPLORE' ? board : undefined)
+    const want = { view, mode, board }
+    syncUrl(urlForView(want, location.search, location.pathname), !first.current && !sameView(urlView(mode), want))
+    first.current = false
+  }, [view, mode, board])
+  useEffect(() => {
+    const onPop = () => { const v = urlView(); setView(v.view); setBoard(v.board); if (v.view === 'MAKE') setMode(v.mode) }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
+  /** A view or MAKE mode by any name it has had (palette, shell, command layer: old tab names too). */
+  const go = (name: string) => {
+    const p = placeFromName(name)
+    if (!p) return
+    if (name.toLowerCase() === 'gallery') setBoard(GALLERY_BOARD)
+    const v = placeView(p, mode); setMode(v.mode); setView(v.view)
+  }
+  const place = view === 'MAKE' ? mode : view
   // the old view dissolves out before the new one mounts and enters (instant under reduced motion)
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const [view, leaving] = useExitSwap(`${tab}|${board}`, shown => reduced || !/^(BOARDS|GALLERY)\|/.test(shown) ? 0 : VIEW_EXIT_MS)
-  const [shownTab, shownBoard] = view.split('|') as [Tab, string]
-  if (singleCard) return <main className="shell"><section className="gallery-view"><div className="gallery-grid"><DotWidget type={singleCard} /></div></section><CommandLayer tab="BOARDS" board={board} /></main>
+  const [shown, leaving] = useExitSwap(`${place}|${board}`, s => reduced || !s.startsWith('EXPLORE|') ? 0 : VIEW_EXIT_MS)
+  const [shownPlace, shownBoard] = shown.split('|') as [string, string]
+  if (singleCard) return <main className="shell"><section className="gallery-view"><div className="gallery-grid"><DotWidget type={singleCard} /></div></section><CommandLayer tab="EXPLORE" board={board} /></main>
   return <main className="shell">
     <h1 className="sr-only">DOT/480 dot-matrix UI engine</h1>
-    <header className="topbar"><div className="brand"><i aria-hidden="true"/> DOT/480 <small>{tab}</small></div>
-      <nav aria-label="Views">{tabs.map(t => <button key={t} className={tab === t ? 'selected' : ''} aria-pressed={tab === t} onClick={() => setTab(t)}>{t}</button>)}</nav>
+    <header className="topbar"><div className="brand"><i aria-hidden="true"/> DOT/480 <small>{view === 'MAKE' ? `MAKE · ${mode}` : view}</small></div>
+      <Tabs className="view-tabs" label="Views" items={VIEWS} value={view} onPick={setView} />
       <SkinSwitcher />
       {/* red means live: only while a board streams real data */}
-      {tab === 'BOARDS' && liveBoards.includes(board) && <div className="live"><i aria-hidden="true"/> LIVE DATA</div>}</header>
+      {view === 'EXPLORE' && liveBoards.includes(board) && <div className="live"><i aria-hidden="true"/> LIVE DATA</div>}</header>
     <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
-    {shownTab === 'BOARDS' ? (
-      <section className="boards-view">
+    {shownPlace === 'EXPLORE' ? (
+      <section className="boards-view" role="tabpanel" aria-labelledby="tab-EXPLORE">
         <IntroLine />
         <BoardPicker board={board} onPick={setBoard} />
         <Board key={shownBoard} id={shownBoard} leaving={leaving} />
       </section>
-    ) : shownTab === 'GALLERY' ? (
-      <section className="gallery-view">
-        <h2 className="gallery-title">DOT/480 — 480×480 OLED MICRO INTERFACE SYSTEM</h2>
-        <div className="gallery-grid">
-          {galleryItems.map((type, i) => <DotWidget key={type} type={type} {...cardMotion(i, 3, galleryItems.length, leaving)} />)}
-        </div>
-      </section>
-    ) : shownTab === 'LOG' ? (
-      <Changelog />
-    ) : shownTab === 'STUDIO' ? (
-      <Suspense fallback={<p className="st-hint">Loading the Studio…</p>}><Studio /></Suspense>
-    ) : shownTab === 'DOTS' ? (
-      <DotsRepl />
-    ) : shownTab === 'DRAW' ? (
-      <DrawBoard />
+    ) : shownPlace === 'ABOUT' ? (
+      <section className="about-view" role="tabpanel" aria-labelledby="tab-ABOUT"><About /></section>
     ) : (
-      <section className="pg-layout">
-        <WidgetGallery />
-        <div className="pg-center">
-          <PreviewCanvas />
-          <ExportPanel />
-          <div className="pg-bottom-row">
-            <DataEditor />
-            <PhotoUpload />
-            <TransitionLab />
-          </div>
+      // MAKE: the mode switch stays put while a mode's chunk loads
+      <section className="make-view" role="tabpanel" aria-labelledby="tab-MAKE">
+        <div className="make-head">
+          <Tabs className="make-modes" label="Make mode" items={MODES} value={mode} onPick={setMode} />
+          <p className="make-line">{MODE_LINES[mode]}</p>
         </div>
-        <div className="pg-side" role="region" aria-label="Controls">
-          <ControlsPanel />
+        <div className="make-panel" role="tabpanel" aria-labelledby={`tab-${shownPlace}`}>
+        <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
+        {shownPlace === 'COMPOSE' ? (
+          <Suspense fallback={<p className="st-hint">Loading the Studio…</p>}><Studio /></Suspense>
+        ) : shownPlace === 'CODE' ? (
+          <DotsRepl />
+        ) : shownPlace === 'DRAW' ? (
+          <DrawBoard />
+        ) : (
+          <section className="pg-layout">
+            <WidgetGallery />
+            <div className="pg-center">
+              <PreviewCanvas />
+              <ExportPanel />
+              <div className="pg-bottom-row">
+                <DataEditor />
+                <PhotoUpload />
+                <TransitionLab />
+              </div>
+            </div>
+            <div className="pg-side" role="region" aria-label="Controls">
+              <ControlsPanel />
+            </div>
+          </section>
+        )}
+        </Suspense>
         </div>
       </section>
     )}
     </Suspense>
-    {/* C10: ⌘K palette, dot shell, X-ray inspector, time machine */}
-    <CommandLayer tab={tab} board={board} setTab={t => setTab(t as Tab)} setBoard={setBoard} />
+    {/* C10: ⌘K palette, dot shell, X-ray inspector, time machine; `tab` is the place (a view or a MAKE mode) */}
+    <CommandLayer tab={place} board={board} setTab={go} setBoard={setBoard} />
     <footer className="bottom"><span>DOT/480 · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span><span>FIELD → GRID SAMPLER → RENDERER</span>
-      <span><a href="/essay.html">HOW IT WORKS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a></span></footer></main>
+      <span><a href="/essay.html">HOW IT WORKS</a> · <a href="?about" onClick={e => { e.preventDefault(); setView('ABOUT') }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a></span></footer></main>
 }

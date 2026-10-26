@@ -117,5 +117,5 @@ export async function decodeShare(s: string): Promise<SharedProgram> {
   return checkShared({ src: d.s, grid: d.g, lattice: d.l, tone: d.o, parent: d.p })
 }
 
-/** `?tab=dots&p=<encoded>` on the current origin and path. */
-export const shareUrl = (encoded: string, base: string = `${location.origin}${location.pathname}`) => `${base}?tab=dots&p=${encoded}`
+/** `?make=code&p=<encoded>` (MAKE · CODE) on the current origin and path; the older `?tab=dots&p=` still opens. */
+export const shareUrl = (encoded: string, base: string = `${location.origin}${location.pathname}`) => `${base}?make=code&p=${encoded}`

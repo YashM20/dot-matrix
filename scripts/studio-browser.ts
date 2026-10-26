@@ -63,9 +63,9 @@ try {
   await cdp('Page.enable'); await cdp('Runtime.enable')
   await cdp('Emulation.setDeviceMetricsOverride', { width: 1680, height: 1300, deviceScaleFactor: 1, mobile: false })
   await cdp('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: out }).catch(() => cdp('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: out }))
-  await cdp('Page.navigate', { url: `${base}?tab=studio` })
+  await cdp('Page.navigate', { url: `${base}?make=compose` })
   const opened = await waitFor(`!!document.querySelector('.st-canvas')`, 120000)
-  check('STUDIO tab opens from ?tab=studio', opened, opened ? '' : logs.join(' | '))
+  check('MAKE · COMPOSE (the Studio) opens from ?make=compose', opened, opened ? '' : logs.join(' | '))
   if (!opened) { await shot('00-failed'); throw new Error('tab did not open') }
   await sleep(1200)
   check('the starter card draws', (await lit()).n > 500)

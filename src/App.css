@@ -71,7 +71,7 @@ body {
   margin-left: 8px
 }
 
-.topbar nav {
+.topbar .view-tabs {
   display: flex;
   gap: 24px
 }
@@ -355,7 +355,7 @@ label b {
     padding-top: 16px
   }
 
-  .topbar nav {
+  .topbar .view-tabs {
     gap: 4px 11px;
     flex-wrap: wrap
   }
@@ -2556,7 +2556,7 @@ label b {
 
 @media(max-width:760px) {
   /* the view tabs were 10 px tall: pad them to a 24 px target without moving the text */
-  .topbar nav button {
+  .topbar .view-tabs button {
     min-height: 24px;
     min-width: 24px;
     padding-block: 7px
@@ -2874,5 +2874,148 @@ label b {
 
   .skin-surface[data-skin="nixie"] > .skin-overlay {
     animation: none
+  }
+}
+
+/* UX U3: EXPLORE / MAKE / ABOUT (docs/UX-PLAN.md §4.1) */
+.topbar .view-tabs button:focus-visible,
+.make-modes button:focus-visible {
+  outline: 1px solid var(--label);
+  outline-offset: 4px
+}
+
+/* MAKE: the mode switch and its one grey line, in the topbar's type */
+.make-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 20px;
+  padding: 16px 0 4px;
+  font: 500 10px/1 var(--mono);
+  letter-spacing: .14em
+}
+
+.make-modes {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 99px
+}
+
+.make-modes button {
+  min-height: 24px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 99px;
+  background: none;
+  color: var(--mute);
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer
+}
+
+.make-modes button:hover {
+  color: var(--label)
+}
+
+.make-modes button.selected {
+  background: var(--raised);
+  color: var(--value)
+}
+
+.make-line {
+  margin: 0;
+  color: var(--mute);
+  letter-spacing: .06em
+}
+
+/* ABOUT: the intro, shortcuts and URL params above the changelog */
+.about-intro {
+  text-align: left;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 18px 0 8px;
+  border-bottom: 1px solid var(--line)
+}
+
+.about-flavour {
+  margin: 0 0 14px;
+  color: var(--mute);
+  font: 500 9px var(--mono);
+  letter-spacing: .16em
+}
+
+.about-lede {
+  max-width: 68ch;
+  margin: 0 0 14px;
+  color: var(--label);
+  font: 400 13px/1.6 var(--mono)
+}
+
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 0 0 22px;
+  font: 500 11px var(--mono);
+  letter-spacing: .06em
+}
+
+.about-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--value)
+}
+
+.about-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px 36px;
+  padding-bottom: 18px
+}
+
+.about-keys h3 {
+  margin: 0 0 10px;
+  color: var(--mute);
+  font: 500 9px var(--mono);
+  letter-spacing: .16em
+}
+
+.about-keys dl {
+  margin: 0
+}
+
+.about-keys dl > div {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  gap: 12px;
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+  font: 400 11px/1.5 var(--mono)
+}
+
+.about-keys dt {
+  color: var(--value)
+}
+
+.about-keys kbd {
+  font: inherit;
+  overflow-wrap: anywhere
+}
+
+.about-keys dd {
+  margin: 0;
+  color: var(--label)
+}
+
+@media(max-width:760px) {
+  .make-head {
+    padding-top: 12px
+  }
+
+  .about-keys dl > div {
+    grid-template-columns: 1fr
   }
 }

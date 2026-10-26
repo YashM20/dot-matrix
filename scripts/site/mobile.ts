@@ -120,7 +120,8 @@ try {
     check('crawler HTML for /cinema/ carries its meta', crawl.includes('<title>CINEMA') && crawl.includes('/og/cinema.png'))
   }
 
-  const items = only ?? [...boardIds, ...['gallery', 'workspace', 'studio', 'log', 'dots', 'draw'].map(t => `tab:${t}`)]
+  // the views other than EXPLORE (docs/UX-PLAN.md §4.1): the four MAKE modes and ABOUT, by their canonical query
+  const items = only ?? [...boardIds, ...['make=tune', 'make=compose', 'make=code', 'make=draw', 'about'].map(t => `tab:${t}`)]
   for (const id of items.filter(i => !i.startsWith('tab:'))) {
     logs = []
     await cdp('Page.navigate', { url: `${base}${id}/` })
@@ -133,13 +134,13 @@ try {
   }
   for (const tab of items.filter(i => i.startsWith('tab:')).map(i => i.slice(4))) {
     logs = []
-    await cdp('Page.navigate', { url: `${base}?tab=${tab}` })
+    await cdp('Page.navigate', { url: `${base}?${tab}` })
     // the view's chunk has loaded once the Suspense placeholder is gone and the view has content
     check(`tab ${tab}: loads`, await waitFor(`!document.querySelector('.view-loading') && document.querySelector('.shell > :is(section, div)')?.getBoundingClientRect().height > 100`, 30000))
     await sleep(2500)
     await audit(`tab ${tab}`)
     if (logs.length) check(`tab ${tab}: no console errors`, false, logs.slice(0, 3).join(' | '))
-    await shot(`tab-${tab}`)
+    await shot(`view-${tab.replace('=', '-')}`)
   }
 } finally {
   ws.close(); proc.kill()
