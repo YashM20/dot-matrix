@@ -50,6 +50,18 @@ export function toast(text: string) {
   window.setTimeout(() => { if (state.toast?.id === id) setXR({ toast: null }) }, 2400)
 }
 
+// ── U2 card actions: the card strip (eager) hands them to the lazy command layer; queued until it listens ──
+export type CardAction = 'how' | 'remix' | 'link' | 'png'
+export interface CardActionArgs { key: string; preset: WidgetPreset; data: Record<string, number>; layers: (ctx: WidgetContext) => Layer[]; grid: GridConfig; style: DotStyle; theme: ThemeTokens; animated: boolean }
+type CardActionFn = (action: CardAction, a: CardActionArgs) => void
+let actionFn: CardActionFn | null = null, queued: Parameters<CardActionFn> | null = null
+export function cardAction(...a: Parameters<CardActionFn>) { if (actionFn) actionFn(...a); else queued = a }
+export function onCardAction(fn: CardActionFn) {
+  actionFn = fn
+  if (queued) { const q = queued; queued = null; fn(...q) }
+  return () => { if (actionFn === fn) actionFn = null }
+}
+
 // ── X-ray ───────────────────────────────────────────────────────────────────────────────
 export const isXRay = (s: XRState, key: string) => s.global || s.on.has(key)
 export function toggleCard(key: string) {

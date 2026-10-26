@@ -9,7 +9,7 @@ import { getSkin, setSkin as setDisplaySkin } from '../skins/store'
 import { findPreset } from '../../widgets/manifest'
 import { DotWidget } from '../DotWidget'
 import { TimeMachine } from '../xray/TimeMachine'
-import { boardTime, freeze, hoveredCard, resume, scrub, setXR, toast, toggleCard, toggleGlobal, useXR, xrState } from '../xray/store'
+import { boardTime, freeze, hoveredCard, isXRay, onCardAction, resume, scrub, setXR, toast, toggleCard, toggleGlobal, useXR, xrState } from '../xray/store'
 import { placeFromName, placeView, urlForView, type Place } from '../../site/views'
 import { boardOfCard, type CommandApi } from './api'
 import { setReducedMotion } from './reducedMotion'
@@ -136,6 +136,23 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     openShell() { setPalette(false); setShell(true) },
     boss() { setPalette(false); setShell(false); setBoss(true) },
   }), [setTab, setBoard, go, urlOf])
+
+  // U2 card action strip (DotWidget): ⓘ opens this card's X-ray, REMIX goes to DOTS (IR card) or STUDIO, LINK, PNG
+  useEffect(() => onCardAction((action, { key, preset, data, layers, grid, style, theme, animated }) => {
+    if (action === 'how') {
+      const s = xrState()
+      return isXRay(s, key) && s.active === key ? toggleCard(key) : setXR({ on: s.global ? s.on : new Set(s.on).add(key), active: key })
+    }
+    if (action === 'link') return api.copyLink(preset.id)
+    if (action === 'remix') return void import('../xray/remix').then(m => (m.cardIR(preset, data) ? api.remix(preset.id, data) : api.studio(preset.id)))
+    void Promise.all([import('../../export/source'), import('../../export/still')]).then(([{ layerSource }, { stillPNG }]) => stillPNG(layerSource(layers, grid, style, theme, data), animated ? boardTime() : 0))
+      .then(blob => {
+        const a = document.createElement('a'), url = URL.createObjectURL(blob)
+        a.href = url; a.download = `${preset.id}.png`; a.click()
+        window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+        toast(`${preset.id}.png saved`)
+      }, e => toast(`png failed: ${(e as Error).message}`))
+  }), [api])
 
   // a frozen clock would stall the next view's entrance: a view change resumes it
   const viewKey = `${tab}|${board}`, lastView = useRef(viewKey)
