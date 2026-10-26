@@ -137,7 +137,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     boss() { setPalette(false); setShell(false); setBoss(true) },
   }), [setTab, setBoard, go, urlOf])
 
-  // U2 card action strip (DotWidget): ⓘ opens this card's X-ray, REMIX goes to DOTS (IR card) or STUDIO, LINK, PNG
+  // U2 card action strip (DotWidget): ⓘ opens this card's X-ray, REMIX goes to MAKE · CODE (IR card) or MAKE · COMPOSE, LINK, PNG
   useEffect(() => onCardAction((action, { key, preset, data, layers, grid, style, theme, animated }) => {
     if (action === 'how') {
       const s = xrState()

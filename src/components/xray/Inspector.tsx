@@ -71,8 +71,8 @@ export function Inspector({ onRemix, onStudio, onCopyLink }: { onRemix: (cardId:
         <div><dt>STEPS</dt><dd>{probe.style.quantizeSteps ?? '—'}</dd></div>
       </dl>
       <div className="xr-actions">
-        <button onClick={() => onRemix(probe.preset.id, probe.data)}>OPEN IN DOTS</button>
-        <button onClick={() => onStudio(probe.preset.id)}>OPEN IN STUDIO</button>
+        <button onClick={() => onRemix(probe.preset.id, probe.data)}>OPEN IN CODE</button>
+        <button onClick={() => onStudio(probe.preset.id)}>OPEN IN COMPOSE</button>
         <button onClick={() => onCopyLink(probe.preset.id)}>LINK</button>
       </div>
       <div className="xr-tabs" role="tablist" aria-label="Inspector sections">
