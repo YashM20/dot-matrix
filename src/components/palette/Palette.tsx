@@ -7,6 +7,7 @@ import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type R
 import { rank } from './fuzzy'
 import { allBoards, paletteItems, type CommandApi } from './api'
 import type { BoardDef } from '../../widgets/manifest'
+import { useSwipeDown } from '../../hooks/useSwipeDown'
 
 function Highlight({ text, hits }: { text: string; hits: number[] }): ReactNode {
   if (!hits.length) return text
@@ -21,7 +22,8 @@ function Highlight({ text, hits }: { text: string; hits: number[] }): ReactNode 
 export function Palette({ api, hoveredCard, onClose }: { api: CommandApi; hoveredCard?: string; onClose: () => void }) {
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
-  const inputRef = useRef<HTMLInputElement>(null), listRef = useRef<HTMLUListElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null), listRef = useRef<HTMLUListElement>(null), palRef = useRef<HTMLDivElement>(null)
+  useSwipeDown(palRef, onClose) // phones: the palette is a sheet
   const listId = useId(), base = useId()
   // boards come from the manifest at once; their cards join the search when the board chunks have loaded
   const [boards, setBoards] = useState<BoardDef[]>([])
@@ -55,14 +57,16 @@ export function Palette({ api, hoveredCard, onClose }: { api: CommandApi; hovere
   const heads = results.map((r, i) => i === 0 || results[i - 1].item.group !== r.item.group)
   return (
     <div className="pal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div className="pal" role="dialog" aria-modal="true" aria-label="Command palette">
+      <div ref={palRef} className="pal" role="dialog" aria-modal="true" aria-label="Command palette">
+        <div className="sheet-grab pal-grab" data-sheet-grab aria-hidden="true"><i /></div>
         <div className="pal-field">
           <span className="pal-prompt" aria-hidden="true">⌘K</span>
           <input ref={inputRef} className="pal-input" role="combobox" aria-expanded="true" aria-controls={listId} aria-autocomplete="list"
             aria-activedescendant={results.length ? optionId(sel) : undefined} aria-label="Search boards, cards and actions"
-            placeholder="Search boards, cards, actions…" value={query} onChange={e => { setQuery(e.target.value); setIndex(0) }} onKeyDown={onKey} spellCheck={false} autoComplete="off" />
+            placeholder="Search boards, cards, actions…" value={query} onChange={e => { setQuery(e.target.value); setIndex(0) }} onKeyDown={onKey} spellCheck={false} autoComplete="off" enterKeyHint="go" />
+          <button type="button" className="pal-cancel" onClick={onClose}>CANCEL</button>
         </div>
-        <ul ref={listRef} id={listId} className="pal-list" role="listbox" aria-label="Results">
+        <ul ref={listRef} id={listId} className="pal-list" role="listbox" aria-label="Results" data-sheet-scroll>
           {results.map(({ item, hits }, i) => {
             const head = heads[i] ? item.group : ''
             return <li key={item.id} id={optionId(i)} role="option" aria-selected={i === sel} className={`pal-item${i === sel ? ' pal-item--sel' : ''}`}

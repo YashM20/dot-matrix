@@ -96,8 +96,9 @@ try {
     // everything fetched must be the entry or one of its modulepreloads (the static closure): no lazy chunk
     const first = await jsFiles(), html = await (await fetch(base)).text()
     const preload = new Set([...html.matchAll(/(?:src|href)="\/assets\/([^"]+\.js)"/g)].map(m => m[1]))
-    // after first paint, by design: the board blurbs (UX U1) and the command layer, mounted once the page is idle (C10)
-    const deferred = /^(sampleWorker|blurbs|CommandLayer|Palette|Shell|fuzzy|describe)-/
+    // after first paint, by design: the board blurbs (UX U1), the command layer, mounted once the page is idle (C10),
+    // and the phone sheets it warms (the board sheet, the sheet itself, the display list)
+    const deferred = /^(sampleWorker|blurbs|CommandLayer|Palette|Shell|fuzzy|describe|BoardSheet|Sheet|SkinList|useSwipeDown)-/
     const extra = first.filter(f => !preload.has(f) && !deferred.test(f))
     check('first load fetches only the entry and its static imports', extra.length === 0, `${first.length} JS files${extra.length ? `; lazy: ${extra.join(', ')}` : ''}`)
     await js(`document.querySelector('.board-tabs [data-board="${boardIds[2]}"]').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))`)

@@ -1,13 +1,16 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Board, VIEW_EXIT_MS } from './components/Board'
-import { BoardPicker } from './components/BoardPicker'
+import { BoardPicker, NextBoard } from './components/BoardPicker'
 import { DotWidget } from './components/DotWidget'
 import { SkinSwitcher } from './components/skins/SkinSwitcher'
 import { useExitSwap } from './hooks/useExitSwap'
-import { liveBoards } from './widgets/manifest'
+import { useXR } from './components/xray/store'
+import { boardLabel, liveBoards } from './widgets/manifest'
+import { onLayerWake, requestLayer } from './site/layer'
 import { setPageMeta, syncUrl } from './site/meta'
 import { GALLERY_BOARD, MODE_LINES, MODES, VIEWS, placeFromName, placeView, sameView, urlForView, viewFromUrl, type Mode, type View } from './site/views'
 import './App.css'
+import './site/mobile.css'
 
 // every view but EXPLORE (and every MAKE mode) is its own chunk, fetched when it opens (first-load budget, docs/WEB-PLAN.md §1)
 const later = <K extends string>(load: () => Promise<{ [k in K]: ComponentType }>, name: K) => lazy(() => load().then(m => ({ default: m[name] })))
@@ -24,6 +27,9 @@ const WidgetGallery = later(() => import('./components/playground/WidgetGallery'
 
 // COMPOSE (the Studio, P6-D) is its own mode, not a TUNE upgrade: TUNE stays the one-preset tuner (style,
 // photo, exports); COMPOSE edits a layered card document. Lazy, so the other views don't load the editor.
+// the phone board sheet: its own chunk, fetched on the first tap (or once the command layer has mounted)
+const loadBoardSheet = () => import('./components/BoardSheet')
+const BoardSheet = lazy(() => loadBoardSheet().then(m => ({ default: m.BoardSheet })))
 const Studio = lazy(() => import('./components/studio/Studio').then(m => ({ default: m.Studio })))
 // x-ray / time machine / ⌘K palette / dot shell (C10): out of the first load, mounted once the page is idle
 // (or on the first key press). A layer key that triggered the mount (⌘K / Ctrl-K, `, X) is replayed to the
@@ -58,11 +64,13 @@ function CommandLayer(props: CommandLayerProps) {
     const hasIdle = typeof w.requestIdleCallback === 'function'
     const idle = hasIdle ? w.requestIdleCallback!(go, { timeout: 2000 }) : window.setTimeout(go, 800)
     window.addEventListener('keydown', onKey, { once: true })
+    const unwake = onLayerWake(go) // a tap on the phone tab bar's TOOLS / SEARCH
     return () => {
       if (hasIdle) w.cancelIdleCallback?.(idle); else window.clearTimeout(idle)
-      window.removeEventListener('keydown', onKey)
+      window.removeEventListener('keydown', onKey); unwake()
     }
   }, [ready])
+  useEffect(() => { if (ready) void loadBoardSheet() }, [ready])
   return ready ? <Suspense fallback={null}><CommandLayerLazy {...props} /><ReplayKey ev={pending} /></Suspense> : null
 }
 // Deep links (all resolved in src/site/views.ts): `/<board>/` or ?board=<id> opens a board, ?make=<mode> a MAKE
@@ -87,11 +95,41 @@ function IntroLine() {
   const [shown, setShown] = useState(() => { try { return localStorage.getItem('dot480:intro') !== 'off' } catch { return true } })
   if (!shown) return null
   return <p className="intro-line">
-    <span>Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid. Touch the cards, switch the display, or press <b>X-RAY</b> to see how one works.</span>
+    <span>Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid. Touch the cards, switch the display, or press <b>X-RAY</b><span className="intro-tools"> in TOOLS</span> to see how one works.</span>
     <a href="/essay.html">Read the essay →</a>
     <button type="button" aria-label="Hide this note" onClick={() => { setShown(false); try { localStorage.setItem('dot480:intro', 'off') } catch { /* private mode */ } }}>×</button>
   </p>
 }
+/** A 5×5 dot glyph for the tab bar: chrome, drawn as dots like everything else ('1' = a dot). */
+function Glyph({ rows }: { rows: string }) {
+  return <svg className="glyph" viewBox="0 0 5 5" aria-hidden="true">{[...rows.replace(/\s/g, '')].map((c, i) => <circle key={i} cx={i % 5 + .5} cy={Math.floor(i / 5) + .5} r={c === '1' ? .36 : .14} className={c === '1' ? 'on' : ''} />)}</svg>
+}
+const GLYPHS: Record<View | 'TOOLS' | 'SEARCH', string> = {
+  EXPLORE: '11011 11011 00000 11011 11011',
+  MAKE: '00100 00100 11111 00100 00100',
+  ABOUT: '00100 00000 00100 00100 00100',
+  TOOLS: '10001 01010 00100 01010 10001',
+  SEARCH: '01110 10001 10001 01110 00001',
+}
+const toTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+
+/**
+ * Phones: the bottom tab bar (EXPLORE / MAKE / ABOUT, then TOOLS for the dock, the DISPLAY menu and the
+ * palette). The current view is `aria-current="page"`; tapping it again goes back to the top, and on
+ * EXPLORE at the top it opens every board. TOOLS carries a dot while X-ray or the time machine is on.
+ */
+function TabBar({ view, onView, onBoards }: { view: View; onView: (v: View) => void; onBoards: () => void }) {
+  const busy = useXR(s => s.global || s.on.size > 0 || s.frozen)
+  const pick = (v: View) => {
+    if (v !== view) { window.scrollTo(0, 0); return onView(v) }
+    if (v === 'EXPLORE' && window.scrollY < 8) onBoards(); else toTop()
+  }
+  return <nav className="tabbar" aria-label="Main">
+    {VIEWS.map(v => <button key={v} type="button" aria-current={view === v ? 'page' : undefined} onClick={() => pick(v)}><Glyph rows={GLYPHS[v]} /><span>{v}</span></button>)}
+    <button type="button" aria-haspopup="dialog" className={busy ? 'busy' : ''} onClick={() => requestLayer('tools')}><Glyph rows={GLYPHS.TOOLS} /><span>TOOLS</span></button>
+  </nav>
+}
+
 // ?tab=essay: the essay is its own page (essay.html, a separate Vite entry so it deploys alone)
 if (urlView().essay) window.location.replace(`/essay.html${window.location.hash}`)
 
@@ -99,6 +137,7 @@ export default function App() {
   const [view, setView] = useState<View>(() => urlView().view)
   const [mode, setMode] = useState<Mode>(() => urlView().mode)
   const [board, setBoard] = useState(() => urlView().board)
+  const [boards, setBoards] = useState(false) // the phone board sheet
   // per-view <title>, description and OG tags (crawlers get the same from the prebuilt dist/<board>/index.html),
   // and the address bar: moving to another view is a history entry; the first render, and a URL that already
   // names this view in an older form (a remix's ?tab=dots&p=…), are only normalised in place
@@ -127,19 +166,26 @@ export default function App() {
   const [shown, leaving] = useExitSwap(`${place}|${board}`, s => reduced || !s.startsWith('EXPLORE|') ? 0 : VIEW_EXIT_MS)
   const [shownPlace, shownBoard] = shown.split('|') as [string, string]
   if (singleCard) return <main className="shell"><section className="gallery-view"><div className="gallery-grid"><DotWidget type={singleCard} /></div></section><CommandLayer tab="EXPLORE" board={board} /></main>
-  return <main className="shell">
+  const title = view === 'MAKE' ? `MAKE · ${mode}` : view === 'EXPLORE' ? boardLabel(board) : view
+  return <main className="shell" data-view={view}>
     <h1 className="sr-only">DOT/480 dot-matrix UI engine</h1>
     <header className="topbar"><div className="brand"><i aria-hidden="true"/> DOT/480 <small>{view === 'MAKE' ? `MAKE · ${mode}` : view}</small></div>
+      {/* phones: the place's name (on EXPLORE it opens every board) and search; the tab bar holds the views */}
+      {view === 'EXPLORE'
+        ? <button type="button" className="topbar-place" aria-haspopup="dialog" aria-label={`Board: ${title}. All boards`} onClick={() => setBoards(true)}>{title}<span aria-hidden="true"> ▾</span></button>
+        : <span className="topbar-place">{title}</span>}
       <Tabs className="view-tabs" label="Views" items={VIEWS} value={view} onPick={setView} />
       <SkinSwitcher />
       {/* red means live: only while a board streams real data */}
-      {view === 'EXPLORE' && liveBoards.includes(board) && <div className="live"><i aria-hidden="true"/> LIVE DATA</div>}</header>
+      {view === 'EXPLORE' && liveBoards.includes(board) && <div className="live"><i aria-hidden="true"/> LIVE DATA</div>}
+      <button type="button" className="topbar-search" aria-label="Search boards, cards and actions" aria-haspopup="dialog" onClick={() => requestLayer('palette')}><Glyph rows={GLYPHS.SEARCH} /></button></header>
     <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
     {shownPlace === 'EXPLORE' ? (
       <section className="boards-view" role="tabpanel" aria-labelledby="tab-EXPLORE">
         <IntroLine />
-        <BoardPicker board={board} onPick={setBoard} />
+        <BoardPicker board={board} onPick={setBoard} onAll={() => setBoards(true)} />
         <Board key={shownBoard} id={shownBoard} leaving={leaving} />
+        <NextBoard board={board} onPick={setBoard} />
       </section>
     ) : shownPlace === 'ABOUT' ? (
       <section className="about-view" role="tabpanel" aria-labelledby="tab-ABOUT"><About /></section>
@@ -182,6 +228,8 @@ export default function App() {
     </Suspense>
     {/* C10: ⌘K palette, dot shell, X-ray inspector, time machine; `tab` is the place (a view or a MAKE mode) */}
     <CommandLayer tab={place} board={board} setTab={go} setBoard={setBoard} />
+    {boards && <Suspense fallback={null}><BoardSheet board={board} onClose={() => setBoards(false)} onPick={id => { window.scrollTo(0, 0); setView('EXPLORE'); setBoard(id) }} /></Suspense>}
+    <TabBar view={view} onView={setView} onBoards={() => setBoards(true)} />
     <footer className="bottom"><span>DOT/480 · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span><span>FIELD → GRID SAMPLER → RENDERER</span>
       <span><a href="/essay.html">HOW IT WORKS</a> · <a href="?about" onClick={e => { e.preventDefault(); setView('ABOUT') }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a></span></footer></main>
 }
