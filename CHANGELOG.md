@@ -3,6 +3,23 @@
 All notable engineering changes to Dot/480 are recorded here, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://dot-matrix1.vercel.app, deployed from `main`), not a published package: there are no tagged or npm releases, so entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
 
+## [Unreleased] — 2026-10-26 · UX U2–U4, U5 DISPLAY menu, cleanup (branch `feat/ux-u0-u1`)
+Build log: `docs/UX-PLAN.md` §9. Built by parallel agents in worktrees, merged and fully checked once.
+### Added
+- **U2:** card hint verbs; the card action strip ⓘ / REMIX / LINK / PNG (`DotWidget.tsx`, `xray/store.ts` `cardAction`, `src/export/still.ts`); X-ray SUMMARY tab and glossary (`src/components/glossary.ts`); X-ray as a bottom sheet at ≤ 760 px.
+- **U3:** EXPLORE / MAKE (TUNE · COMPOSE · CODE · DRAW) / ABOUT; the pure URL resolver `src/site/views.ts` with an alias table for every old `?tab=` / `?board=` / path; lazy `About.tsx`; `src/site/shortcuts.ts`; 4 `ux:` verify checks.
+- **U4:** `src/site/pro.ts` (Pro mode: `?pro=1` / `localStorage`), `src/components/More.tsx` (remembered folds), staged makers per UX-PLAN §5.4, a single column on phones.
+- **U5 slice:** the DISPLAY ▾ menu (`SkinSwitcher.tsx`) replaces the 7 skin buttons.
+- `docs/SHARE-PLAN.md`: widget metadata, slug + short uid links (`/widget/<slug or uid>/`, room for org scopes), a widget page with iOS-style pill action bars, copy/share/embed, the shadcn registry.
+- AGENTS.md › Testing: module-level checks while iterating; the full suite before a push or merge of bulk work, or after core changes.
+### Changed
+- GALLERY is gone (`?tab=gallery` opens EXPLORE). LOG moved into ABOUT. Share links write `?make=code&p=`.
+- The device plotter's `plotterSVG` is renamed `penPlanSVG`. `STAGE_COLORS` uses `value`, `dotFaint` and `bg` tokens (same hex). `scripts/c10.ts` runs under verify.
+- Probes use the new URLs (`studio-browser` and `dots-browser` add `&pro=1`); `c10-browser` expects the SUMMARY tab.
+- First-load JS 142.9 → 143.87 kB gz.
+### Fixed
+- `packages/README.md` described `@dot480/core/spec` as card spec v0.
+
 ## [Unreleased] — 2026-10-24 · UX U0 + U1 (branch `feat/ux-u0-u1`)
 Plan: `docs/UX-PLAN.md` (low floor, high ceiling); the build log, with what, why, checks and pending items, is §9.
 ### Added

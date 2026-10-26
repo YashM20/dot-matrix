@@ -16,13 +16,15 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 export const releases: Release[] = [
   {
     version: '0.11', date: '2026-10-26', title: 'Explore, make, about',
-    summary: 'Seven tabs became three, every card can explain itself, and the display types live in one menu.',
+    summary: 'Seven tabs became three, every card can explain itself, the makers start simple, and the display types live in one menu.',
     changes: [
       { kind: 'new', text: 'Three places: EXPLORE (the boards), MAKE (tune, compose, code and draw in one spot) and ABOUT (what this is, shortcuts, link options and this log). Every old link still opens the same thing.' },
       { kind: 'new', text: 'Hover or focus a card (or tap ⋯ on a phone) for four actions: ⓘ how it works, REMIX, LINK and PNG.' },
       { kind: 'new', text: 'Cards you can touch say how in grey at the top: DRAG, TAP, HOLD, SCRATCH, CAMERA or SOUND.' },
       { kind: 'new', text: 'The X-ray opens on a plain-words SUMMARY, with tap-to-read definitions for field, lattice, site, tone, quantize and IR. On a phone it is a bottom sheet.' },
       { kind: 'improved', text: 'One DISPLAY menu replaces the row of seven display buttons, with a line on what each one looks like. Every target is big enough to tap.' },
+      { kind: 'improved', text: 'The four makers start simple: the main controls show, and everything else waits in named MORE sections that remember how you left them. Add ?pro=1 to open them all.' },
+      { kind: 'improved', text: 'On a phone the makers are one column with the canvas pinned at the top.' },
     ],
   },
   {

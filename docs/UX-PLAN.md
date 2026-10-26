@@ -1,6 +1,6 @@
 # UX-PLAN: low floor, high ceiling
 
-> **Status (2026-10-26):** U0–U3 are built on branch `feat/ux-u0-u1` (not merged to `main` yet), with the DISPLAY ▾ slice of U5. U4 is in progress. The build log is §9: what changed, why, the files, how it was checked, and what's pending. It sits alongside `docs/WEB-PLAN.md` (what the site does) and `docs/SHARE-PLAN.md` (per-card pages, export and the shadcn registry, planned).
+> **Status (2026-10-26):** U0–U4 are built on branch `feat/ux-u0-u1` (not merged to `main` yet), with the DISPLAY ▾ slice of U5. U4 is built too. The build log is §9: what changed, why, the files, how it was checked, and what's pending. It sits alongside `docs/WEB-PLAN.md` (what the site does) and `docs/SHARE-PLAN.md` (per-card pages, export and the shadcn registry, planned).
 > **Goal (from the user):** the layouts and UI are too complicated and confusing. Anyone should be able to land, explore and dive in, and power users should still get everything. Nothing may break.
 
 ## 1. Research, short
@@ -192,7 +192,7 @@ Every other board shows its id. Ids and URLs never change.
 | **U1 · Orientation** | Grouped board picker (desktop row and mobile menu); plain labels; a one-line description per board and group; START HERE tour; intent line | 1–2 days | **Done** 2026-10-24 (§9); the DISPLAY ▾ menu moved to U5 |
 | **U2 · Card ladder** | Header hint verbs; cursors; action strip (ⓘ / Remix / Link / PNG); X-ray SUMMARY tab and glossary; X-ray as a bottom sheet on mobile | 2 days | **Done** 2026-10-26 (§9) |
 | **U3 · IA merge** | EXPLORE / MAKE / ABOUT; alias table and verify check; GALLERY folded in; LOG and essay links in ABOUT | 2 days | **Done** 2026-10-26 (§9), with the plan's proposed names; the taste session can still rename |
-| **U4 · Staged makers** | More folds and plain labels in TUNE/COMPOSE/CODE/DRAW; remembered fold state; mobile single column | 3–4 days | Not started |
+| **U4 · Staged makers** | More folds and plain labels in TUNE/COMPOSE/CODE/DRAW; remembered fold state; mobile single column | 3–4 days | **Done** 2026-10-26 (§9); Pro renderer/worker/FPS controls and raw ids moved to U5 |
 | **U5 · Power layer** | `?` help sheet from one shortcut registry; palette completeness; Pro mode; shell `help` from the same registry; DISPLAY ▾ menu; the dock folds into `⋯ TOOLS` on phones | 1–2 days | DISPLAY ▾ menu **done** 2026-10-26 (§9); the rest next |
 | **U6 · Check with people** | 3 friends, 5 minutes each, no hints (§8) | 1 hour + fixes | Not started |
 
@@ -207,11 +207,11 @@ Order: U0, U1 and U2 deliver most of the clarity without moving any tool. U3 and
 ## 8. How we'll know it worked
 | Check | Target | Before (audit) | After U1 |
 |---|---|---|---|
-| Top-level choices on first screen | ≤ 4 views, ≤ 6 groups | 7 tabs + 25 chips + 7 skins | 7 tabs + 5 groups (7 boards in the open group) + 7 skins; tabs drop to 3 in U3 |
+| Top-level choices on first screen | ≤ 4 views, ≤ 6 groups | 7 tabs + 25 chips + 7 skins | After U1: 7 tabs + 5 groups + 7 skins. **After U3/U5: 3 views + 5 groups + one DISPLAY ▾ button** |
 | First card top at 375 px | ≤ 300 px | about 640 px | 360 px with the intent line; about 250 px once it is dismissed |
-| Features reachable only by key or URL | 0 | X-ray-all, time scrub, shell, Pro toggles, all URL params | unchanged (U2 and U5) |
+| Features reachable only by key or URL | 0 | X-ray-all, time scrub, shell, Pro toggles, all URL params | After U2–U4: per-card X-ray, remix, link and PNG are on the card; keys and URL params are listed in ABOUT; Pro has no switch yet (`?pro=1` only, U5) |
 | A newcomer, unprompted, can… | say what the site is in 5 s; make a card react in 30 s; reach "how it works" in 1 min; remix and copy a link in 3 min | not tested; likely fails 1 and 3 | the intent line and descriptions target 1; untested with people (U6) |
-| Breakage | Goldens unchanged; every old link resolves; budget ≤ 150 kB; probes pass | n/a | goldens 173/173; old links resolve; 142.9 kB gz; probes pass (§9) |
+| Breakage | Goldens unchanged; every old link resolves; budget ≤ 150 kB; probes pass | n/a | U1: goldens 173/173, 142.9 kB gz. **U2–U5 merged: goldens 173/173, every old link resolves (verify), 143.87 kB gz, probes pass (§9)** |
 
 ## 9. Build log
 
@@ -275,6 +275,59 @@ U0 and U1 fix orientation (rung 0 of the ladder, §3) without moving any tool, s
 - **Still key-only:** features that are keyboard-only stay that way until U2 (card action strip) and U5 (`?` sheet).
 - **Pre-existing, not touched:** the skin segments are 20 px tall at 375 px, under the 24 px tap target. The mobile probe lists them.
 - **Not run:** `scripts/c6-browser.ts` (camera and hand tracking). It clicks the INSTRUMENT chip from the MIRROR board, and both sit in PLAY, so it should still find it. It needs a camera-emulating Chrome run to confirm.
+
+### U2 + U3 + U4 + U5 slice (2026-10-26, branch `feat/ux-u0-u1`)
+
+**How it was built.** Four agents in parallel git worktrees, one per phase, plus one for cleanup (below). Each checked only its own area (AGENTS.md › Testing). They were merged in the order U3, U2, U5, cleanup, U4, and the full suite ran once on the merged branch. Merge fixes:
+- `App.css`: each agent appended one block, and two of the blocks lost their closing braces in the merge. The braces were restored, and the counts match (602 `{` / 602 `}`).
+- `CommandLayer.tsx`: U2's imports were combined with U3's.
+- The X-ray buttons were renamed to OPEN IN CODE / OPEN IN COMPOSE, and the probes use U3's URLs plus `&pro=1` (U4).
+
+**Why.** U2–U5 cover rungs 1–5 of the ladder (§3):
+- U2: touch, peek and remix from the card itself;
+- U3: three places instead of seven tabs;
+- U4: makers that start simple;
+- the U5 slice: one display menu.
+
+The taste-session names (§7) were not decided, so U3 uses the plan's proposals. They can still be renamed: the alias table keeps every link working.
+
+| Phase | Change | Files |
+|---|---|---|
+| U2 | **Hint verb** in grey on cards with controls, picked in this order: CAMERA, SCRATCH, HOLD, SOUND, DRAG, TAP. It sits in the header, or in the top padding when the card draws its own name in dots. | `src/components/DotWidget.tsx` |
+| U2 | **Action strip** ⓘ / REMIX / LINK / PNG. It shows on hover and on keyboard focus; on touch a `⋯` button opens it. It is routed through `cardAction()` / `onCardAction()` in the X-ray store, which queues clicks until the command layer mounts. REMIX goes to MAKE · CODE (IR cards) or MAKE · COMPOSE. PNG is `src/export/still.ts`, loaded lazily. | `DotWidget.tsx`; `xray/store.ts`; `palette/CommandLayer.tsx`; `src/export/still.ts` |
+| U2 | **X-ray SUMMARY** is the first, default tab: fields, dot count, lattice and sites, quantize, IR, and what each control does. A **glossary** of field, lattice, site, tone, quantize and IR shows on hover or tap. At ≤ 760 px the X-ray is a **bottom sheet**. | `xray/Inspector.tsx`; `src/components/glossary.ts` |
+| U3 | **EXPLORE / MAKE / ABOUT** with real tablist semantics and arrow keys. MAKE has a **TUNE · COMPOSE · CODE · DRAW** switch with one grey line per mode. **ABOUT** (lazy) holds the intro, the essay and source links, keys and URL params (`src/site/shortcuts.ts`), and the changelog. GALLERY is gone. | `src/App.tsx`; `src/components/About.tsx`; `src/site/shortcuts.ts` |
+| U3 | **URLs.** The pure resolver `src/site/views.ts` (`viewFromUrl`, `urlForView`, `TAB_ALIASES`) gives canonical `/<board>/`, `?make=<mode>` and `?about`. Every old `?tab=` / `?board=` / path resolves, which 4 new `ux:` verify checks enforce. The palette has one item per view and mode, and the shell `open` takes old and new names. | `views.ts`; `meta.ts` (`syncUrl`); `palette/*`; `src/lib/share.ts`; `scripts/verify.ts` |
+| U4 | **Pro mode**: `src/site/pro.ts` (`isPro`, `setPro`, `togglePro`, `subscribePro`) reads `?pro=1` or `localStorage dot480:pro`. **`<More>`** (`src/components/More.tsx`) is a remembered `<details>` fold (`dot480:fold:<id>`) that is open by default in Pro. Folded content stays mounted. | `pro.ts`; `More.tsx` |
+| U4 | **Staged makers** per §5.4 (plain label first, term second). TUNE folds data, photo, transition lab, advanced, appearance, and video/plotter/code export. COMPOSE folds states, timeline, bindings, card, scorecard, bar sheet, devices and spec. CODE folds the remix graph, grid/tone and data. DRAW folds pitch, history and trace. On phones the makers are a single column with a sticky canvas. | `playground/*`, `studio/Studio.tsx`, `studio/SidePanel.tsx`, `dwitter/*`, `draw/*`; `App.css` |
+| U5 slice | A **DISPLAY: OLED ▾** menu replaces the 7 skin buttons: `menuitemradio` items with one line each, full keyboard support, targets ≥ 24 px. | `src/components/skins/SkinSwitcher.tsx`; `App.css` |
+| Cleanup | The device plotter is renamed `penPlanSVG` (no more `plotterSVG` clash). `scripts/c10.ts` runs under verify (`c10Checks`). `packages/README.md` gets the spec story right. Three `STAGE_COLORS` now use tokens. The `c6-browser` probe passes after U1. | `src/engine/device/plotter.ts`, `scripts/verify.ts`, `scripts/c10.ts`, `src/engine/display/stage.ts`, `packages/README.md` |
+
+**How it was checked (merged branch, full suite once):**
+- `tsc -b` clean; oxlint shows only the 6 old warnings.
+- `verify` passes everything except "mirror-camera ≤ 4 ms", a timing check. Its code didn't change, and run alone it measured 3.9, 5.0 and 5.3 ms, so it's machine variance.
+- `pnpm check` itself refused to start: pnpm's dependency check wanted to reinstall. The three steps were run directly instead.
+- Goldens: 173/173 match.
+- Full build; `size.ts --check` reports **143.87 kB gz** (budget 150).
+- `scripts/site/mobile.ts` passes on `vite preview`, including `?make=*` and `?about`.
+- Probes on the dev server:
+  - `c10-browser`: all 48 pass;
+  - `dots-browser`: all pass;
+  - `studio-browser`: all pass.
+- Per agent, before merge: U2's headless strip and sheet checks; U3's 25 Back/Forward and alias checks; U5's keyboard and 375 px menu checks; and `c6-browser`.
+
+**Pending / known:**
+- **U5 rest:**
+  - the `?` help sheet (data is ready in `src/site/shortcuts.ts`);
+  - a visible Pro switch (the API is ready);
+  - Pro's renderer/worker/FPS controls and raw ids;
+  - the dock folding into `⋯ TOOLS` on phones.
+- **U6:** test with 3 people.
+- **Taste session (§7):** the names, groups, landing board and front door.
+- `studio-browser` "scrub: the enter track…" fails intermittently, on base too: its fixed 250 ms wait races idle scorecard work.
+- Small tap targets left: the dock buttons are 23 px, the footer links 10 px tall, and COMPOSE's layer rows 22 px.
+- A dev server started inside `.claude/worktrees/` doesn't see edits (`vite.config.ts` ignores `.claude/**`), so restart it after every change.
+- Next product plan: `docs/SHARE-PLAN.md` (widget metadata, slug + short uid links, widget page with pill action bars, copy/share/embed, shadcn registry).
 
 ## Sources
 - [NN/g: Progressive Disclosure](https://nngroup.com/articles/progressive-disclosure/)
