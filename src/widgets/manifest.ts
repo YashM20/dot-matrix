@@ -60,6 +60,12 @@ export const boardIds: string[] = boardManifest.map(b => b.id)
 export const boardAliases: Readonly<Record<string, string>> = { glyph: 'lock' }
 export const resolveBoardId = (id: string): string => boardAliases[id] ?? id
 export const boardMeta = (id: string): BoardMeta | undefined => boardManifest.find(b => b.id === id)
+/**
+ * Old card ids (slugs) that still open their card (docs/SHARE-PLAN.md §3): a renamed card adds `old: 'new'`
+ * here and its old `/widget/<old>/` link keeps working forever. The lock board's cards were `glyph-*`.
+ */
+export const cardAliases: Readonly<Record<string, string>> = {}
+export const resolveCardId = (id: string): string => cardAliases[id] ?? (id.startsWith('glyph-') ? `lock-${id.slice(6)}` : id)
 
 /**
  * The board picker (docs/UX-PLAN.md §4.2): plain names and groups. UI only: ids, paths, OG pages and goldens

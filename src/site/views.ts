@@ -6,6 +6,7 @@
  */
 import { boardIds, resolveBoardId } from '../widgets/manifest'
 import { boardFromPath, pageMeta } from './meta'
+import { widgetRoute, type WidgetRoute } from './routes'
 
 export const VIEWS = ['EXPLORE', 'MAKE', 'ABOUT'] as const
 export type View = typeof VIEWS[number]
@@ -27,7 +28,8 @@ export const GALLERY_BOARD = 'henry'
 /** A place by any of its names, old or new, any case. */
 export const placeFromName = (name: string): Place | undefined => TAB_ALIASES[name.trim().toLowerCase()]
 
-export interface ViewState { view: View; mode: Mode; board: string; card?: string; essay?: boolean }
+/** `widget`: the single-widget page (`/widget/<key>/`, `/<uid>`, the old `?card=`; src/site/routes.ts), shown over EXPLORE. */
+export interface ViewState { view: View; mode: Mode; board: string; card?: string; widget?: WidgetRoute; essay?: boolean }
 export const isMode = (s: string): s is Mode => (MODES as readonly string[]).includes(s)
 /** A place as view + mode (a mode means MAKE in it; any other place keeps `mode`). */
 export const placeView = (p: Place, mode: Mode = 'TUNE'): { view: View; mode: Mode } => isMode(p) ? { view: 'MAKE', mode: p } : { view: p, mode }
@@ -38,9 +40,12 @@ export function viewFromUrl(search: string, pathname: string, mode: Mode = 'TUNE
   const make = (q.get('make') ?? '').toUpperCase()
   const place: Place = q.has('about') ? 'ABOUT' : isMode(make) ? make : q.has('make') ? 'MAKE' : placeFromName(tab) ?? (q.get('p') ? 'CODE' : 'EXPLORE')
   const board = boardIds.includes(b) ? b : tab === 'gallery' ? GALLERY_BOARD : boardFromPath(pathname) ?? boardIds[0]
+  // a widget page needs a widget-shaped path or ?card=; a MAKE / ABOUT link that also carries ?card= opens that view
+  const widget = place === 'EXPLORE' ? widgetRoute(pathname, search) : undefined
   return {
     ...placeView(place, mode), board,
     ...(q.get('card') && { card: q.get('card')! }), ...(tab === 'essay' && { essay: true }),
+    ...(widget && { widget }),
   }
 }
 
@@ -52,7 +57,8 @@ export function urlForView(v: Pick<ViewState, 'view' | 'mode' | 'board'>, search
   const head = v.view === 'ABOUT' ? 'about' : v.view === 'MAKE' ? `make=${v.mode.toLowerCase()}` : ''
   const query = [head, q.toString()].filter(Boolean).join('&')
   // the first board keeps whatever non-board path served the page (`/`, `/index.html`)
-  const path = v.board === boardIds[0] && boardFromPath(pathname) === undefined ? pathname : pageMeta(v.board).path
+  // (a widget page's path is not one of those: leaving it goes to `/`)
+  const path = v.board === boardIds[0] && boardFromPath(pathname) === undefined ? (widgetRoute(pathname) ? '/' : pathname) : pageMeta(v.board).path
   return path + (query ? `?${query}` : '')
 }
 
