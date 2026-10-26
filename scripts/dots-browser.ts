@@ -62,9 +62,11 @@ try {
   await cdp('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1100, deviceScaleFactor: 1, mobile: false })
   await cdp('Browser.grantPermissions', { permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'], origin: new URL(base).origin }).catch(() => null)
 
-  const opened = await go(`${base}?tab=dots`)
-  check('DOTS tab opens from ?tab=dots', opened, opened ? '' : `${logs.join(' | ')} ${(await js('document.body.innerText').catch(() => '')).slice(0, 300)}`)
+  // Pro mode opens every "More" fold (UX U4): `pro=1` for this load, localStorage for the reloads below
+  const opened = await go(`${base}?make=code&pro=1`)
+  check('MAKE · CODE (DOTS) opens from ?make=code', opened, opened ? '' : `${logs.join(' | ')} ${(await js('document.body.innerText').catch(() => '')).slice(0, 300)}`)
   if (!opened) { await shot('00-failed'); throw new Error('tab did not open') }
+  await js(`localStorage.setItem('dot480:pro', 'on')`)
   await sleep(900)
   const first = await lit()
   check('the first example (ripple) draws on the preview canvas', first.n > 500, `${first.n} lit px`)
@@ -99,7 +101,7 @@ try {
   await clickText('.dw-share button', 'COPY LINK'); await sleep(400)
   const clip = await js(`navigator.clipboard.readText().catch(() => '')`) as string
   const url = clip || await js('location.href') as string
-  check('COPY LINK puts a ?tab=dots&p=… link on the clipboard', /\?tab=dots&p=[bz][A-Za-z0-9_-]+$/.test(url) && (await text('.dw-share')).includes('COPIED'), `${url.length} chars${clip ? '' : ' (clipboard unavailable: read location)'}`)
+  check('COPY LINK puts a ?make=code&p=… link on the clipboard', /\?make=code&p=[bz][A-Za-z0-9_-]+$/.test(url) && (await text('.dw-share')).includes('COPIED'), `${url.length} chars${clip ? '' : ' (clipboard unavailable: read location)'}`)
   check('the link is compact (deflated)', /&p=z/.test(url) && url.length < 400, url.slice(url.indexOf('&p=')).slice(0, 48) + '…')
   check('the program was saved to the gallery', await js(`[...document.querySelectorAll('.dw-list button')].some(b => b.textContent.startsWith('blobs'))`))
   check('reloading from the link opens the same program', await go(url) && await waitFor(`document.querySelector('.dw-code textarea').value === ${JSON.stringify(PROGRAM)}`))

@@ -5,10 +5,11 @@
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { saveAs } from 'file-saver'
-import { DEVICES, plotPaths, plotterSVG as devicePlotSVG, previewProfile, toDevice, type DeviceFrame, type DeviceId } from '../../engine/device'
+import { DEVICES, plotPaths, penPlanSVG as devicePlotSVG, previewProfile, toDevice, type DeviceFrame, type DeviceId } from '../../engine/device'
 import { renderSVG } from '../../engine/renderer/svgRenderer'
 import { dot480 } from '../../engine/theme/tokens'
 import { plotterSVG, recordClip, type ClipFormat } from '../../export'
+import { More } from '../More'
 import { cardPreset, cardToJSON, type StudioCard } from './doc'
 import { specV0 } from './adapter'
 import { drawBarSheet, scoreCard, type Score } from './sheet'
@@ -117,10 +118,14 @@ function ExportMenu() {
         <button type="button" onClick={async () => saveAs(await pngOf(svgOf(card, t())), `${name}.png`)}>PNG</button>
         <button type="button" onClick={() => saveAs(new Blob([svgOf(card, t())], { type: 'image/svg+xml' }), `${name}.svg`)}>SVG</button>
         <button type="button" onClick={() => saveAs(new Blob([`<!doctype html><html><body style="background:${theme.bg};display:grid;place-items:center;height:100vh;margin:0">${svgOf(card, t())}</body></html>`], { type: 'text/html' }), `${name}.html`)}>HTML</button>
-        <button type="button" onClick={plot}>PLOTTER SVG</button>
-        <button type="button" onClick={() => saveAs(new Blob([cardToJSON(card)], { type: 'application/json' }), `${name}.studio.json`)}>DOC JSON</button>
-        <button type="button" onClick={spec}>SPEC v0</button>
       </div>
+      <More id="compose-export-more" label="Plotter, JSON & spec" tech="plotter SVG, doc JSON, spec v0">
+        <div className="st-row st-wrap">
+          <button type="button" onClick={plot}>PLOTTER SVG</button>
+          <button type="button" onClick={() => saveAs(new Blob([cardToJSON(card)], { type: 'application/json' }), `${name}.studio.json`)}>DOC JSON</button>
+          <button type="button" onClick={spec}>SPEC v0</button>
+        </div>
+      </More>
       <div className="st-row st-wrap">
         <b className="st-lbl">CLIP · TIMELINE {card.timeline.length} S</b>
         <select aria-label="Clip format" value={format} onChange={e => setFormat(e.target.value as ClipFormat)}>{FORMATS.map(f => <option key={f} value={f}>{f.toUpperCase()}</option>)}</select>
@@ -189,10 +194,10 @@ function Devices() {
 export function SidePanel() {
   return (
     <div className="st-side" role="region" aria-label="Review and export">
-      <Scorecard />
-      <BarSheet />
       <ExportMenu />
-      <Devices />
+      <More id="compose-scorecard" label="Quality checks" tech="scorecard" className="more--panel"><Scorecard /></More>
+      <More id="compose-barsheet" label="Speed" tech="bar sheet" className="more--panel"><BarSheet /></More>
+      <More id="compose-devices" label="Device preview" tech="toDevice" className="more--panel"><Devices /></More>
     </div>
   )
 }

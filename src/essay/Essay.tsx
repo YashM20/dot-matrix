@@ -43,7 +43,7 @@ export function Essay() {
       <header className="hero">
         <nav className="site-nav" aria-label="Site">
           <span className="kicker"><i aria-hidden="true" /> DOT/480</span>
-          <span><a href="./">BOARDS</a><a href="./?tab=dots">DOTS</a><a href="./?tab=log">LOG</a></span>
+          <span><a href="./">EXPLORE</a><a href="./?make=code">MAKE</a><a href="./?about">ABOUT</a></span>
         </nav>
         <DotTitle text="Ditherpunk for UI" level={1} max={10} smooth />
         <p className="lede">
@@ -242,7 +242,7 @@ export function Essay() {
           The spirit comes straight from <A href="https://www.dwitter.net/">Dwitter</A> (a demo in 140 characters) and <A href="https://tixy.land/">Tixy</A> (a 16×16 grid driven by one
           expression of <C>t, i, x, y</C>). Edit the program below. A mistake shows its message and the card keeps the last program that worked.
         </p>
-        <Figure id="ir" body={fig.ir} minHeight={420} caption={<>Your program on a 3× lattice. "Open in the DOTS tab" carries it over as a share link, compressed into the URL, with a scrubber, data sliders and a remix graph.</>} />
+        <Figure id="ir" body={fig.ir} minHeight={420} caption={<>Your program on a 3× lattice. "Open in MAKE · CODE" carries it over as a share link, compressed into the URL, with a scrubber, data sliders and a remix graph.</>} />
       </Sec>
 
       <Sec id="surfaces" num="12" title="One field, five surfaces">
@@ -283,9 +283,9 @@ export function Essay() {
           <li>Gabriel Lamé's superellipse (1818), and every designer who argued about squircles since.</li>
         </ul>
         <p className="outro">
-          That's the tour. The rest of the site is the workshop: twenty-odd <a href="./">boards</a> of cards (try <a href="./?board=departures">Departures</a>,
-          {' '}<a href="./?board=levels">Levels</a> and <a href="./?board=glyph">Lock</a>), a <a href="./?tab=dots">DOTS</a> tab for writing your own fields and sharing them as links,
-          and a <a href="./?tab=log">log</a> of what changed.
+          That's the tour. The rest of the site is the workshop: twenty-odd <a href="./">boards</a> of cards (try <a href="./departures/">Departures</a>,
+          {' '}<a href="./levels/">Levels</a> and <a href="./lock/">Lock</a>), a <a href="./?make=code">code</a> mode for writing your own fields and sharing them as links,
+          and a <a href="./?about">log</a> of what changed.
         </p>
       </section>
       <footer className="essay-foot">DOT/480 · FIELD → GRID SAMPLER → RENDERER · <span>NO GRADIENTS WERE HARMED</span></footer>

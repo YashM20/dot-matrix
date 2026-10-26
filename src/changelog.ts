@@ -1,5 +1,5 @@
 /**
- * Public changelog shown in the LOG tab. Written for visitors, not contributors —
+ * Public changelog shown in ABOUT (once the LOG tab). Written for visitors, not contributors —
  * the engineering history lives in CHANGELOG.md at the repo root.
  */
 export type ChangeKind = 'new' | 'improved' | 'fixed'
@@ -15,6 +15,31 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 
 export const releases: Release[] = [
   {
+    version: '0.11', date: '2026-10-26', title: 'Explore, make, about',
+    summary: 'Seven tabs became three, every card can explain itself, the makers start simple, and the display types live in one menu.',
+    changes: [
+      { kind: 'new', text: 'Three places: EXPLORE (the boards), MAKE (tune, compose, code and draw in one spot) and ABOUT (what this is, shortcuts, link options and this log). Every old link still opens the same thing.' },
+      { kind: 'new', text: 'Hover or focus a card (or tap ⋯ on a phone) for four actions: ⓘ how it works, REMIX, LINK and PNG.' },
+      { kind: 'new', text: 'Cards you can touch say how in grey at the top: DRAG, TAP, HOLD, SCRATCH, CAMERA or SOUND.' },
+      { kind: 'new', text: 'The X-ray opens on a plain-words SUMMARY, with tap-to-read definitions for field, lattice, site, tone, quantize and IR. On a phone it is a bottom sheet.' },
+      { kind: 'improved', text: 'One DISPLAY menu replaces the row of seven display buttons, with a line on what each one looks like. Every target is big enough to tap.' },
+      { kind: 'improved', text: 'The four makers start simple: the main controls show, and everything else waits in named MORE sections that remember how you left them. Add ?pro=1 to open them all.' },
+      { kind: 'improved', text: 'On a phone the makers are one column with the canvas pinned at the top.' },
+    ],
+  },
+  {
+    version: '0.10', date: '2026-10-24', title: 'Easier to find your way',
+    summary: 'The boards are grouped and named in plain words, each one says what it is, and the site loads faster.',
+    changes: [
+      { kind: 'new', text: 'START HERE: a short tour of the best boards. The rest sit in four groups: Interfaces, Data, Play and Engine.' },
+      { kind: 'new', text: 'Every board has a one-line description under its title, and first-time visitors get a short note on what this is and what to try.' },
+      { kind: 'improved', text: 'Back and Forward now move between boards and views, and every view has its own link.' },
+      { kind: 'improved', text: 'On a phone, one board menu replaces five rows of buttons, and every tab (including DRAW) is reachable.' },
+      { kind: 'improved', text: 'The first visit loads about 6 kB less: the synth only loads with the Instrument and Scope boards.' },
+      { kind: 'fixed', text: 'The ⌘K palette and the dot shell list the real display types (CRT, VFD, LED, e-ink, flip-disc, Nixie).' },
+    ],
+  },
+  {
     version: '0.9', date: '2026-10-23', title: 'Ditherpunk for UI: the tour',
     summary: 'A long, hands-on walk through how the dots are made, with the real engine running in every figure.',
     changes: [
@@ -23,7 +48,7 @@ export const releases: Release[] = [
       { kind: 'new', text: 'Edit a tiny dot program right in the page, then open it in DOTS to keep going.' },
       { kind: 'improved', text: 'Figures load only when you scroll to them, and show still frames if you prefer reduced motion.' },
     ],
-    link: { href: 'essay.html', label: 'READ THE ESSAY' },
+    link: { href: '/essay.html', label: 'READ THE ESSAY' },
   },
   {
     version: '0.8', date: '2026-10-23', title: 'Dot Studio: build your own card',
@@ -36,7 +61,7 @@ export const releases: Release[] = [
       { kind: 'new', text: 'A side-by-side sheet against the favourite cards, a quality scorecard, previews on a tiny LED matrix, e-ink, flip-disc and pen plotter, and exports to PNG, SVG, animated PNG, GIF and video.' },
       { kind: 'improved', text: 'Everything saves in your browser, with undo and redo, and can be downloaded as a file.' },
     ],
-    link: { href: '?tab=studio', label: 'OPEN STUDIO' },
+    link: { href: '?make=compose', label: 'OPEN MAKE · COMPOSE' },
   },
   {
     version: '0.7', date: '2026-10-23', title: 'DOTS: write a field, share it as a link',
@@ -47,7 +72,7 @@ export const releases: Release[] = [
       { kind: 'new', text: 'Share: a program fits in a short, compressed link. Opening a broken or tampered link shows what is wrong and never runs it.' },
       { kind: 'new', text: 'Remix: every edit remembers what it came from. Your programs build a small remix graph, drawn in dots, starting from eight examples: ripple, plasma, rings, spiral, rain, lissajous, checker warp and heartbeat.' },
     ],
-    link: { href: '?tab=dots', label: 'OPEN DOTS' },
+    link: { href: '?make=code', label: 'OPEN MAKE · CODE' },
   },
   {
     version: '0.6', date: '2026-10-22', title: 'Departures, and boards that leave',
@@ -57,7 +82,7 @@ export const releases: Release[] = [
       { kind: 'new', text: 'The home clock flips its digits on the minute, like a split-flap clock, folding about the middle.' },
       { kind: 'new', text: 'Switching boards or views now dissolves the old cards out, corner to corner, before the new ones build in.' },
     ],
-    link: { href: '?board=departures', label: 'OPEN DEPARTURES' },
+    link: { href: '/departures/', label: 'OPEN DEPARTURES' },
   },
   {
     version: '0.5', date: '2026-10-14', title: 'Boards that come alive',
@@ -115,8 +140,7 @@ export const releases: Release[] = [
 ]
 
 export const upcoming: Upcoming[] = [
-  { phase: '0', title: 'Foundations', status: 'in progress', text: 'Mostly done: deterministic output, lighter rendering and quality tooling. Still to come: a shared type scale, card-quality scoring and faster first paint on the heaviest board.' },
-  { phase: '1', title: 'Motion', status: 'in progress', text: 'Boards that enter with dithered reveals, digits that flip and decode, values that spring into place, and a split-flap departures board.' },
-  { phase: '2', title: 'Touch', status: 'planned', text: 'Components you can use: knobs, sliders, toggles and lists with press, hover and focus feedback in dots.' },
-  { phase: '3', title: 'Depth and light', status: 'planned', text: 'Lit buttons, shadows, parallax and film-poster portraits.' },
+  { phase: 'U5', title: 'Everything for power users', status: 'next', text: 'A ? sheet with every shortcut and link option, and a pro mode that opens every panel.' },
+  { phase: 'S1', title: 'A page for every card', status: 'planned', text: 'Each card gets its own short link (/widget/<id>/) and page, with copy as PNG, SVG or HTML, share and embed.' },
+  { phase: 'C1', title: 'A million dots', status: 'planned', text: 'Fields evaluated on the GPU with WebGPU: a full-screen field that follows the cursor, and a zoom from one card into a million dots.' },
 ]

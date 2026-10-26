@@ -1,5 +1,8 @@
 # MOTION · INTERACTION · DEPTH — research and plan
 
+> **Reference (2026-10-14).** This research became phases P1–P3, which are built. Current state: `docs/PROGRESS.md`; the interaction grammar now lives in `DESIGN.md` › Interaction.
+
+
 > 2026-10-14, branch `feat/tile-boards`. Companion to `ADVANCED-PLAN.md` (hardening/perf/product). Sources: code audit, three web-research passes (motion, interaction+depth, market). Architecture stays in `DOT-MATRIX-ENGINE-PLAN.md`, tokens in `DESIGN.md`.
 
 ## 0. The one rule that falls out of the research

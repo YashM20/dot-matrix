@@ -11,9 +11,19 @@ This file only holds things that would break the project if an agent guessed wro
 - Every visual = `Field → Grid Sampler → Renderer`. Never hand-draw a widget outside this pipeline. Widgets are `Layer[]` (field + tone) placed in cell space via `src/engine/layout.ts`; text goes through `textAt`/`T.big` so glyph pixels stay dot-aligned. Bigger elements use a coarser `lattice` or dot `sites`, never clusters of small dots. Check new cards against their reference with `pnpm snap`.
 - One accent color per board (`{colors.dotActive}`). If you're about to add a second, stop and ask.
 - Quantize UI dot sizes (`{grid.quantizeSteps}`); only photos skip quantization.
-- `src/engine/` stays framework-free — no React, no UI library, no new npm dependency, ever. It's plain TypeScript + browser Canvas/SVG APIs only. New deps (if truly needed) only go in the app-level `package.json` for playground UI code (`src/components/playground/`), never for anything under `src/engine/`.
+- `src/engine/` stays framework-free — no React, no UI library, no new npm dependency, ever. It's plain TypeScript + browser Canvas/SVG/WebGL2 APIs only. New deps (if truly needed) only go in the app-level `package.json` for playground UI code (`src/components/playground/`), never for anything under `src/engine/`.
 - Dot roundness = squircle exponent (`cornerRoundness` → `n = 2 + 30r²`), not a radius enum. Don't reintroduce shape presets.
-- Renderer choice (`svg` vs `canvas`) is decided by dot-count/animation, not by convenience — check the rule in `DESIGN.md` before hardcoding one.
+- Renderer choice (`svg` / `canvas` / `webgl`) is decided by dot count, animation and GPU-tagged layers, not by convenience — check the rules in `DESIGN.md` before hardcoding one.
+
+## The site
+- Card pixels are pinned by `goldens/hashes.json`: UI/chrome work must keep `pnpm golden --check` matching. Regenerate goldens only for an intended card change.
+- First-load JS stays ≤ 150 kB gz (`scripts/site/size.ts --check`, run in CI). New views and features load lazily.
+- Board ids are URLs (`/<board>/`). Rename what visitors see with `boardLabel`; keep old ids working with `boardAliases` (`src/widgets/manifest.ts`).
+- Which doc is current: `docs/README.md`. What's done and next: `docs/PROGRESS.md`.
+
+## Testing: run what the change touches
+- While iterating, test the module, not the world: `npx tsc -b`, `npx oxlint <changed files>`, the area's own script (`npx tsx scripts/<area>.ts`, see its header), `pnpm golden --check` only if card pixels could move, `scripts/site/size.ts --check` (after `vite build`) only if first-load imports changed, and only the browser probe for the area you touched.
+- Run the full suite (`pnpm check`, `pnpm golden --check`, size, the browser probes) only before a push or merge of bulk/cross-cutting work, or after a core change (sampler, renderers, layout, fields, `widgets/types`, manifest). It is slow; don't rerun it per edit.
 
 ## Before changing a generator or token
 1. Check if it's already covered by an existing `Field` function — new generators should be rare.

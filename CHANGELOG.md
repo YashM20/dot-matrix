@@ -1,9 +1,184 @@
 # Changelog
 
-All notable changes to Dot/480 are recorded here, newest first.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). The project has no tagged releases yet, so entries are grouped by date and commit.
+All notable engineering changes to Dot/480 are recorded here, newest first.
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://dot-matrix1.vercel.app, deployed from `main`), not a published package: there are no tagged or npm releases, so entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
 
-## [Unreleased] — 2026-10-14 · Phase 0 foundations + Phase 1 motion core
+## [Unreleased] — 2026-10-26 · UX U2–U4, U5 DISPLAY menu, cleanup (branch `feat/ux-u0-u1`)
+Build log: `docs/UX-PLAN.md` §9. Built by parallel agents in worktrees, merged and fully checked once.
+### Added
+- **U2:** card hint verbs; the card action strip ⓘ / REMIX / LINK / PNG (`DotWidget.tsx`, `xray/store.ts` `cardAction`, `src/export/still.ts`); X-ray SUMMARY tab and glossary (`src/components/glossary.ts`); X-ray as a bottom sheet at ≤ 760 px.
+- **U3:** EXPLORE / MAKE (TUNE · COMPOSE · CODE · DRAW) / ABOUT; the pure URL resolver `src/site/views.ts` with an alias table for every old `?tab=` / `?board=` / path; lazy `About.tsx`; `src/site/shortcuts.ts`; 4 `ux:` verify checks.
+- **U4:** `src/site/pro.ts` (Pro mode: `?pro=1` / `localStorage`), `src/components/More.tsx` (remembered folds), staged makers per UX-PLAN §5.4, a single column on phones.
+- **U5 slice:** the DISPLAY ▾ menu (`SkinSwitcher.tsx`) replaces the 7 skin buttons.
+- `docs/SHARE-PLAN.md`: widget metadata, slug + short uid links (`/widget/<slug or uid>/`, room for org scopes), a widget page with iOS-style pill action bars, copy/share/embed, the shadcn registry.
+- AGENTS.md › Testing: module-level checks while iterating; the full suite before a push or merge of bulk work, or after core changes.
+### Changed
+- GALLERY is gone (`?tab=gallery` opens EXPLORE). LOG moved into ABOUT. Share links write `?make=code&p=`.
+- The device plotter's `plotterSVG` is renamed `penPlanSVG`. `STAGE_COLORS` uses `value`, `dotFaint` and `bg` tokens (same hex). `scripts/c10.ts` runs under verify.
+- Probes use the new URLs (`studio-browser` and `dots-browser` add `&pro=1`); `c10-browser` expects the SUMMARY tab.
+- First-load JS 142.9 → 143.87 kB gz.
+### Fixed
+- `packages/README.md` described `@dot480/core/spec` as card spec v0.
+
+## [Unreleased] — 2026-10-24 · UX U0 + U1 (branch `feat/ux-u0-u1`)
+Plan: `docs/UX-PLAN.md` (low floor, high ceiling); the build log, with what, why, checks and pending items, is §9.
+### Added
+- **App**
+  - Grouped board picker `src/components/BoardPicker.tsx`: group tabs and chips on desktop, one native select at ≤ 760 px.
+  - Groups and plain labels in `src/widgets/manifest.ts`: `boardGroups` (START HERE, INTERFACES, DATA, PLAY, ENGINE), `boardLabel`, `groupOf`, `liveBoards`.
+  - START HERE is a curated tour (henry, mosaic, physics, heal, levels, instrument, cinema); every other board has exactly one home group.
+  - One-line board descriptions in `src/widgets/blurbs.ts` (a lazy chunk, read via `src/components/useBlurbs.ts`), shown under the board title.
+  - A dismissible intent line above the boards, with an essay link; dismissal persists in `localStorage` (`dot480:intro`).
+  - The URL follows every view (`syncUrl` in `src/site/meta.ts`): the path names the board, `?tab=` names other views; Back / Forward walk them (`popstate`).
+  - LOG: public release 0.10 "Easier to find your way" (`src/changelog.ts`).
+- **Tooling:** `scripts/verify.ts` checks the picker groups, unique labels, a blurb per board and that old paths (`/light/`, `/glyph/` → lock) still resolve.
+### Changed
+- **Perf:** the audio engine left the first load (`src/audio/AudioCards.tsx`, lazy on INSTRUMENT / SCOPE): first-load JS 148.9 → 142.9 kB gz (budget 150).
+- **App**
+  - The footer is plain ("EVERY PIXEL IS A DOT SAMPLED FROM A FIELD"), with HOW IT WORKS (essay) and SOURCE links; the "STATUS: NOMINAL" filler is gone.
+  - The header LIVE badge shows only on boards that stream live data (`liveBoards`: live, surfaces), as LIVE DATA.
+  - The brand label shows the tab name; WORKSPACE no longer reads "PLAYGROUND".
+  - Essay links are root-absolute (`/essay.html`), so they work from `/<board>/` paths.
+  - Palette board entries use the plain labels and still match on the board id.
+  - At 375 px the nav wraps so DRAW is reachable, and the first card starts at about 360 px (was about 640 px).
+- **Tooling:** `scripts/site/mobile.ts` and `scripts/audio-chrome.ts` drive the new picker; the first-load check allows the idle-loaded blurbs and command-layer chunks.
+### Fixed
+- The ⌘K palette and the dot shell listed placeholder skins (`lcd`, `e-ink`, `none`, marked "soon"); both now read the real list from `src/engine/display/names.ts`.
+- The dot shell's `skin` command no longer says "display skins land with C7".
+- The shell leaves 64 px of bottom room so the dock no longer overlaps it.
+### Docs
+- New: `docs/UX-PLAN.md` (research, audit, the ladder, phases U0–U6, the build log) and `docs/README.md` (an index of every doc with its status: current, reference, historical).
+- Rewritten for the current code:
+  - `README.md`;
+  - the `docs/DOT-MATRIX-ENGINE-PLAN.md` module map and subsystems;
+  - the status boards in `docs/PROGRESS.md` and `docs/WEB-PLAN.md`;
+  - `docs/DEPLOY.md` deep links (URL history);
+  - the LOG tab's "coming up" list (U2, U3, U5, C1).
+- `AGENTS.md`: the engine APIs now include WebGL2, the renderer choice includes `webgl`, and a short "The site" section covers goldens, the first-load budget and board ids as URLs.
+- Status banners on finished or historical docs: MASTER-PLAN, ADVANCED-PLAN, MOTION-INTERACTION-DEPTH, ADVERSARIAL-REVIEW, VERIFICATION-16POINT, BLOCK-INVENTORY and HARNESS.
+- Stale code comments fixed: `ir/reference.ts` (GPU parity), `studio/adapter.ts` (spec v1), `mcp/src/author.ts`, and `site/meta.ts` (script paths).
+
+## 2026-10-24 · `43eb614` (PR #5) — Vercel only
+### Added
+- **Deploy:** `vercel.json` with the SPA rewrite, the security headers (CSP, `nosniff`, referrer and permissions policies) and caching that the Cloudflare files carried.
+- OG URLs fall back to `https://$VERCEL_PROJECT_PRODUCTION_URL` when `SITE_URL` is unset (`scripts/site/postbuild.ts`).
+### Changed
+- Vercel auto-deploys `main` to production and every PR to a preview; CI only checks and builds.
+- `docs/DEPLOY.md`, `docs/WEB-PLAN.md` and `docs/PROGRESS.md` describe the Vercel setup.
+### Removed
+- The Cloudflare Pages setup: the wrangler deploy job in `.github/workflows/ci.yml`, `public/_headers` and `public/_redirects`.
+
+## 2026-10-23/24 · PR #4 (`feat/p1-complete`), part 3 — P5–P6 and the Web plan (W0, C2–C8, C10, lift)
+Merged to `main` as `bc5fcaa` on 2026-10-24. At merge: 173 presets, `pnpm golden --check` matches all, first-load JS ≈ 149 kB gz.
+### Added
+- **Engine (P5)**
+  - P5-A WebGL2 renderer (`src/engine/renderer/webgl/`): instanced squircle quads, IR on the GPU via `emitGLSL`, lost-context recovery; `gpu` board (up to 507k dots).
+  - P5-B struct-of-arrays `DotBuffer` (`src/engine/buffer/`), `renderer/canvasBuffer.ts`, and worker sampling (`src/workers/`) to `ImageBitmap`.
+  - P5-C device profiles and `toDevice` (`src/engine/device/`), e-ink / flip-disc / LED / plotter simulators, `surfaces` board ("One Field, Five Surfaces").
+  - P5-E IR bytecode VM (`src/engine/ir/bytecode.ts`), C99 interpreter `targets/esp32/dotvm.c`, and Node senders in `targets/` (WLED DDP, AWTRIX, TRMNL, Tronbyt, Glyph Toy); tested against local fakes only.
+- **Engine (Web plan)**
+  - C2 dot physics (`src/engine/physics/`): pure-in-t worlds, stable fluids, PBD cloth and jelly, disc particles; `physics` board (`phys-*`).
+  - C3 growing NCA (`src/engine/nca/`, Int8 lizard asset `src/assets/nca/lizard.ts`, trainer `scripts/nca/train.ts`); `heal` board.
+  - C7 display skins (`src/engine/display/`, `src/components/skins/`): oled, crt, vfd, led, eink, flipdisc, nixie as a post-raster stage; `afterglow` raster op.
+  - C8 kinetic dot type (`src/engine/type/`): variable stroke font, `typeMorph`, `typeMigration`, `marqueeField`; `type` board.
+  - `src/engine/scene`: hall and grid DDA ray casters promoted from `levels.ts` (lv-* goldens unchanged).
+- **Authoring (P6)**
+  - P6-A card spec v1 (`src/spec/`, `schema/card.v1.schema.json`, `examples/specs/`): validator, preset ↔ spec round trip, `migrateSpec`.
+  - P6-B packages (`packages/`): `@dot480/core`, `@dot480/react`, `@dot480/element` (`<dot-card>`) and a shadcn registry (`registry/`); not published.
+  - P6-C DOTS tab (`src/components/dwitter/`, `src/lib/share.ts`): Field IR REPL, share links, remix graph.
+  - P6-D Dot Studio (STUDIO tab, `src/components/studio/`): layered card document, timeline, state machine, bindings, scorecard and exports.
+  - P6-E authoring MCP tools (`mcp/src/author.ts`, `scripts/author/`): `render_card`, `score_card`, `refine_card`, `record_verdict`, `push_to_device` (stub).
+  - P6-F essay "Ditherpunk for UI" (`essay.html`, its own Vite entry; `src/essay/`) with 15 lazy live figures.
+- **App (Web plan)**
+  - W0: lazy boards (`src/widgets/manifest.ts`, one `import()` per board, prefetch on hover/focus; `src/widgets/registry.ts`), other views `React.lazy`.
+  - W0: `/<board>/` deep links, runtime meta from `src/site/meta.ts`, crawler pages and OG images from `scripts/site/postbuild.ts`.
+  - C4 playable HIVE (`src/game/`, `src/components/game/`, `?board=levels&play=1`): five stages, the queen, high scores, autopilot demo.
+  - C5 sound (`src/audio/`): WebAudio synth and drums, lookahead scheduler, meter, mic, REC; `scope` board.
+  - C6 camera hand tracking without ML deps (`src/vision/`): HAND mode as a page-wide pointer, shared camera stream (`media/stream.ts`); `mirror-shadow`, `mirror-conduct`.
+  - C10 explorable layer (`src/components/xray/`, `src/components/palette/`): X-ray, inspector, time machine, ⌘K palette, dot shell, remix to DOTS / STUDIO.
+  - P5-D exports (`src/export/`): APNG, GIF, WebM, MP4, plotter SVG; OG PNG via `scripts/og.ts`.
+  - LOG: public releases 0.7 (DOTS), 0.8 (Dot Studio) and 0.9 (the essay).
+- **Tooling:** `scripts/site/size.ts --check` (first-load budget 150 kB gz), `scripts/site/mobile.ts` (375 px pass), and headless Chrome checks `c10-browser`, `c6-browser`, `game-browser`, `essay-browser`, `studio-browser`, `skins-browser`, `webgl`, `browser-perf`, `export-chrome`, `audio-chrome`.
+- **Tooling:** verify sections for buffer, device, export, DOTS, studio, spec, bytecode, ESP32, physics, type, display, vision, game and NCA.
+- **CI:** the bundle budget check and a `site` artifact upload.
+- **Docs:** `docs/WEB-PLAN.md` (personal-site direction), `docs/DEPLOY.md`, `docs/NEXT-PLAN.md`, `docs/MARKET-RESEARCH.md` (later marked superseded), `docs/MCP-APP.md`, `packages/README.md`, `targets/README.md`; DESIGN.md "Display skins".
+- `.gitattributes` (LF text, binary images); renormalizing changed nothing.
+### Changed
+- **Lift** (craft pass): `cinema-encore`, `cinema-closer`, `cinema-keeper`, `light-gloss`, `light-fabric`, `live-now-playing` (sun cover, animated EQ), `live-contribs`, `hb-thinking` (new `bud` token).
+- Board `glyph` → `lock` (cards `lock-*`); `/glyph/` and `?board=glyph` still resolve via `boardAliases`.
+- `DotCanvas` picks `webgl` for cards with tagged layers, else Canvas; registered animated cards sample in the worker.
+- The renderer path and the essay no longer import every board (registered presets only).
+- Palette and shell search boards through the manifest.
+- **Perf:** first load kept under budget: lazy skin overlay, command layer mounted on idle, hand tracker on demand (157 → 148.5 kB gz).
+- **Deps:** vite ^8.2.4 and source-map-js ^1.2.2 via an override (Dependabot alerts; supersedes #3).
+### Fixed
+- Skins: boards opened with `?skin=` stayed OLED once the overlay became lazy.
+- C10: X-ray hover through the OLED skin wrapper; the key that mounts the idle command layer is replayed; probes register on commit.
+- C6: hand tracking capped at ~45 fps on average instead of a hard 22 ms gap (back to 28–29 fps).
+- The camera hand pointer id maps to a number in physics and heal.
+- HIVE: the covered levels board stops rendering while the game plays (initials entry lost letters).
+- Levels: PRESS START fits its button.
+- The draining hourglass heap and the flag's perspective corner stay on the card (CI failed at hh:mm:00–01).
+- Mobile: view tabs and playground controls get 24 px targets; STUDIO timeline rows no longer overflow at 375 px.
+
+## 2026-10-22/23 · PR #4, part 2 — P2 interaction, P3 depth + Field IR, P4 living boards
+### Added
+- **Engine (P2)**
+  - `Control` contract in `src/engine/context.ts`: cards declare `controls`; the input layer edits `data` and fills `hover`/`pressed`/`focus`.
+  - P2-A input layer (`src/engine/interaction/`): `toLocal`, `pick`, drag/release/key values; `useControlInput` and an a11y `ControlOverlay`.
+  - P2-H released touches linger 520 ms for ripples; P2-I `size` only re-grids, so controls survive it.
+  - P2-J board-level shared data (`BoardDef.shared`).
+- **Engine (P3)**
+  - P3-A Raster stack (`src/engine/raster/`) and light stack (`src/engine/light/`): blur, morphology, SDF heights and normals, Lambert/Phong, bloom.
+  - P3-E Field IR v0 (`src/engine/ir/`): parser, JS and GLSL backends, JSON, reference interpreter; `scripts/ir.ts`, `goldens/ir-glsl.json`.
+  - P3-F multi-tone layer `Layer.toneOf`; `toneRamp` returns one layer.
+  - P3-G materials as dot vocabularies (`src/engine/light/material.ts`): matte, gloss, glass, emissive, metal, fabric; wall-clock `sunAt`.
+- **Engine (P4)**
+  - P4-A SimFields (`src/engine/sim/`): deterministic fixed-dt stepper with checkpoints; Gray–Scott, falling sand, Life.
+  - P4-D migration and SDF morph (`src/engine/migrate/`): Hilbert-rank pairing, `DotCanvas` `migrate` transient.
+  - P4-F halftone ladder with STBN (`src/engine/halftone/`) and webcam capture (`src/media/`).
+  - P4-G `describe()` (`src/engine/describe.ts`) and Agent Heartbeat as an MCP App (`mcp/`, deps in `mcp/` only).
+- **Boards**
+  - P2-B/E Components v2: `ui-segmented`, `ui-stepped-slider`, `ui-knob`, `ui-stepper`, `ui-check`, `ui-tabs`, `ui-progress`, `ui-loaders`, `ui-keypad`, `ui-text-field`, `ui-chips`, `ui-toast`.
+  - P2-C **Instrument** (`instrument.ts`): knobs, crank, XY pad, 16-step sequencer, transport, meter.
+  - P3-B **Cinema** (nine Afterlight posters), P3-C **Levels** (nine HIVE game-world cards), `light`, `ir`.
+  - P4-B **Heartbeat** (`heartbeat.ts`): tokenized agent presence states; P4-C **Glyph** lock board; `sim`; P4-E `live` (`src/data/`: poll, broadcast, websocket, mediaSession); `mirror`.
+- **Tooling:** `pnpm snap --ctx '<json>'` for state snapshots; dev latency probe `src/hooks/latencyProbe.ts` (`__dotLatency()`).
+- **Docs:** DESIGN.md "Interaction" tokens and "Agent presence".
+### Changed
+- P3-D lift: `silhouette`, `thermal-puppy`, `vision-camera`, `ev-charge`; P2-D lift: `henry-bear`, `sunburst`.
+- `ui-toggle` / `ui-slider` draw hover glow and a marching focus ring; segmented controls pass `optionLabels`.
+- Toast becomes a dismissible two-toast notification stack.
+- Input commits inside its rAF: input latency p50 ~35 → 16.8 ms, p95 ~65 → 40.4 ms (dev build, headless Chrome).
+### Fixed
+- P2-F browser and a11y pass: radiogroup focus follows a pointer pick; the WORKSPACE preview honours `springKeys`; cards are `<div>` instead of `<article role=…>`.
+
+## 2026-10-22 · PR #4, part 1 — P1 complete, P0 leftovers
+### Added
+- **Engine:** `splitFlapCells` and a `burst` preset flag with `ctx.since` (live sampling for 1.2 s after the minute tick).
+- **Boards:** **Departures** flagship (`src/widgets/boards/departures.ts`): split-flap list, Swiss station clock, platform flip, countdown, line map, service status.
+- **App**
+  - P1-A board-to-board exit → enter transition (`DotCanvas.exit`, `cardMotion()`, `useExitSwap`, `VIEW_EXIT_MS` = 420 ms).
+  - P1-B home-clock split-flap on the minute tick.
+  - P1-D data springs (`WidgetPreset.springKeys`) on timer, music, fitness and audio-levels.
+  - P1-E messages typewriter, audio-levels peak-hold, weather city decode.
+  - P1-F Transition Lab in WORKSPACE (`src/components/playground/TransitionLab.tsx`).
+  - LOG: public release 0.6.
+### Changed
+- **Perf (P0-A):** sampler windows, baked photo fields (`baked()`), static sample cache across board visits; mosaic mount 117–200 → about 30–33 ms (gate borderline).
+- P0-B: permanent bounds-vs-no-bounds check in verify §14 (all presets).
+- P0-C: site literals use `Layer.size` (`T.dots`, metro `afterlight`); verify lints for it.
+- Dev: the Vite watcher ignores `.claude` worktrees.
+
+## 2026-10-14 → 10-19 · `fa47cd9`, `4abf78a`, PR #2 — motion tests, merge to main
+### Added
+- **Tooling:** verify §13, 20 checks on the motion primitives (masks, reveal, springs, easing, decode, split-flap).
+- **CI:** first green run on GitHub; Linux goldens match the Windows baselines.
+- **Docs:** user priority feedback in `docs/PROGRESS.md` (visible work first).
+### Changed
+- PR #2 (`feat/tile-boards`) merged to `main` on 2026-10-19: TILE boards, Phase 0 and the Phase 1 motion core.
+
+## 2026-10-14 · Phase 0 foundations + Phase 1 motion core
 ### Added
 - **Engine**
   - `src/engine/math.ts`: deterministic `hash32`/`hash01` (murmur3 finaliser), plus `clamp`/`mix`/`smoothstep`.

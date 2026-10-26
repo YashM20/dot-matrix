@@ -4,7 +4,7 @@
  * `mix(x,y,a) = x·(1−a) + y·a`, `smoothstep` = clamp-then-Hermite, `clamp = min(max(x,lo),hi)`,
  * `min(x,y) = y < x ? y : x`, `step(e,x) = x < e ? 0 : 1`, hash = the uint ops of the GLSL helper.
  * It walks the AST directly (no compilation) and is the oracle the JS backends are tested
- * against until real GPU parity lands (P5). `f32: true` rounds every value to float32, a rough
+ * against; GPU parity is checked separately (`scripts/webgl.ts`). `f32: true` rounds every value to float32, a rough
  * stand-in for `highp` drift (informational only: GPU transcendentals are not correctly rounded).
  */
 import type { Node } from './ast'

@@ -132,7 +132,7 @@ try {
       await sleep(300)
       const err = await js(`document.querySelector('#fig-ir .ir-status').textContent`) as string, still = await sig('ir')
       const href = await js(`document.querySelector('#fig-ir a.ctl-link').getAttribute('href')`) as string
-      return { ok: typed.ok && /^ERROR/.test(err) && still.n > 0 && /tab=dots&p=/.test(href), detail: `${typed.detail}; "${err.slice(0, 40)}"; link ${href.slice(0, 40)}…` }
+      return { ok: typed.ok && /^ERROR/.test(err) && still.n > 0 && /make=code&p=/.test(href), detail: `${typed.detail}; "${err.slice(0, 40)}"; link ${href.slice(0, 40)}…` }
     },
     surfaces: async () => { const a = await sig('surfaces'); await sleep(1500); const b = await sig('surfaces'); return { ok: a.n > 500 && a.sig !== b.sig, detail: `${a.n} lit, animating` } },
     agents: () => changed('agents', () => clickText('#fig-agents', 'Awaiting'), 900),

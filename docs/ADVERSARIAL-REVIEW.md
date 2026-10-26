@@ -1,4 +1,7 @@
 # ADVERSARIAL REVIEW — Final Pass (2026-08-22, after sub-agent fix loop)
+
+> **Historical (2026-08-22).** A review of the first build. The code has changed a lot since then; for the current state see `docs/PROGRESS.md`, and for every doc see `docs/README.md`.
+
 **Verdict:** 6.4/10 — system now demonstrates the brief, but not the moat.
 
 ## Executive

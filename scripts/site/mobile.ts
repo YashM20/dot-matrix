@@ -96,10 +96,12 @@ try {
     // everything fetched must be the entry or one of its modulepreloads (the static closure): no lazy chunk
     const first = await jsFiles(), html = await (await fetch(base)).text()
     const preload = new Set([...html.matchAll(/(?:src|href)="\/assets\/([^"]+\.js)"/g)].map(m => m[1]))
-    const extra = first.filter(f => !preload.has(f) && !f.startsWith('sampleWorker'))
+    // after first paint, by design: the board blurbs (UX U1) and the command layer, mounted once the page is idle (C10)
+    const deferred = /^(sampleWorker|blurbs|CommandLayer|Palette|Shell|fuzzy|describe)-/
+    const extra = first.filter(f => !preload.has(f) && !deferred.test(f))
     check('first load fetches only the entry and its static imports', extra.length === 0, `${first.length} JS files${extra.length ? `; lazy: ${extra.join(', ')}` : ''}`)
-    await js(`document.querySelector('.board-tabs button:nth-child(3)').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))`)
-    await js(`document.querySelector('.board-tabs button:nth-child(3)').dispatchEvent(new PointerEvent('pointerenter'))`)
+    await js(`document.querySelector('.board-tabs [data-board="${boardIds[2]}"]').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))`)
+    await js(`document.querySelector('.board-tabs [data-board="${boardIds[2]}"]').dispatchEvent(new PointerEvent('pointerenter'))`)
     await sleep(1500)
     const after = await jsFiles()
     check(`hovering the ${boardIds[2]} tab prefetches its chunk`, after.some(f => f.startsWith(`${boardIds[2]}-`)), after.filter(f => !first.includes(f)).join(', '))
@@ -118,7 +120,8 @@ try {
     check('crawler HTML for /cinema/ carries its meta', crawl.includes('<title>CINEMA') && crawl.includes('/og/cinema.png'))
   }
 
-  const items = only ?? [...boardIds, ...['gallery', 'workspace', 'studio', 'log', 'dots', 'draw'].map(t => `tab:${t}`)]
+  // the views other than EXPLORE (docs/UX-PLAN.md §4.1): the four MAKE modes and ABOUT, by their canonical query
+  const items = only ?? [...boardIds, ...['make=tune', 'make=compose', 'make=code', 'make=draw', 'about'].map(t => `tab:${t}`)]
   for (const id of items.filter(i => !i.startsWith('tab:'))) {
     logs = []
     await cdp('Page.navigate', { url: `${base}${id}/` })
@@ -131,13 +134,13 @@ try {
   }
   for (const tab of items.filter(i => i.startsWith('tab:')).map(i => i.slice(4))) {
     logs = []
-    await cdp('Page.navigate', { url: `${base}?tab=${tab}` })
+    await cdp('Page.navigate', { url: `${base}?${tab}` })
     // the view's chunk has loaded once the Suspense placeholder is gone and the view has content
     check(`tab ${tab}: loads`, await waitFor(`!document.querySelector('.view-loading') && document.querySelector('.shell > :is(section, div)')?.getBoundingClientRect().height > 100`, 30000))
     await sleep(2500)
     await audit(`tab ${tab}`)
     if (logs.length) check(`tab ${tab}: no console errors`, false, logs.slice(0, 3).join(' | '))
-    await shot(`tab-${tab}`)
+    await shot(`view-${tab.replace('=', '-')}`)
   }
 } finally {
   ws.close(); proc.kill()

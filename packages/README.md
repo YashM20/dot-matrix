@@ -5,7 +5,7 @@ Publishable builds of the engine. Nothing lives here twice: each package's entry
 
 | Package | What | Entries |
 |---|---|---|
-| `@dot480/core` | Curated engine API: fields, sampler, renderers, layout/text, motion, interaction, Field IR, raster/light, sim, halftone, describe. Zero runtime deps, `sideEffects: false`, ESM. | `.` · `./ir` · `./presets` (the 146-card library) · `./card` (`mountCard`, framework-free DOM runtime) · `./spec` (JSON card spec v0) |
+| `@dot480/core` | Curated engine API: fields, sampler, renderers, layout/text, motion, interaction, Field IR, raster/light, sim, halftone, describe. Zero runtime deps, `sideEffects: false`, ESM. | `.` · `./ir` · `./presets` (the 146-card library) · `./card` (`mountCard`, framework-free DOM runtime) · `./spec` (`presetFromSpec`: the minimal package JSON spec, IR layers on a grid; not card spec v1) |
 | `@dot480/react` | `<DotCard preset="timer" data={…} />` / `<DotCard spec={…} />`, `useDotField(source, grid, style)`. Peer dep `react >= 18`. | `.` |
 | `@dot480/element` | `<dot-card>` custom element: shadow DOM, reduced motion, no framework. | `.` (registers on import) · `./standalone` (one file, core inlined) |
 
@@ -62,6 +62,10 @@ as `registry:component` items, each a 6-line `<DotCard preset=…>` wrapper (`re
 
 ## Not done yet
 - Not published to npm; the registry has no host yet.
-- The JSON spec is v0 (IR layers); swap to the P6 card spec v1 (`src/spec`) when it lands.
+- `@dot480/core/spec` (and `<DotCard spec>` / `<dot-card src>`) still takes the minimal package spec
+  `{ grid, style?, layers: [{ ir, tone?, lattice? }], defaults?, controls?, animated? }` via `presetFromSpec`. Card spec v1 has
+  landed in `src/spec` (`loadSpec`, `validateSpec`, `specToPreset`, `presetToSpec`, `migrateSpec`; `schema/card.v1.schema.json`,
+  `examples/specs/`) but no package entry exports it yet. `migrateSpec` does not read the package shape: its v0 is the P3 draft
+  `{ spec: 0, cols, rows, layers: [{ type, … }] }`. Swapping the packages to v1 is still to do.
 - `<dot-card>` has no enter/exit board choreography, migration, live data sources or camera media (playground-only for now).
 - The standalone element bundle carries every preset; a per-card lazy split would cut it.

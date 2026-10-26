@@ -13,7 +13,8 @@ import { tileStyle } from '../../widgets/types'
 import { DotCanvas } from '../DotCanvas'
 import { boardTime, probes, xrState } from '../xray/store'
 import { fuzzy } from './fuzzy'
-import { SKINS, TABS, allBoards, type CommandApi } from './api'
+import { MODES, VIEWS, placeFromName } from '../../site/views'
+import { SKINS, allBoards, type CommandApi } from './api'
 
 const CHARS = 78, LINES = 13, LH = 9, PAD = 3
 const GRID: GridConfig = { cols: CHARS * 6 + PAD * 2, rows: (LINES + 1) * LH + PAD * 2, pitch: 2.25 }
@@ -21,9 +22,9 @@ const STYLE: DotStyle = tileStyle
 type Line = { kind: 'in' | 'out' | 'dim' | 'err'; text: string }
 
 const HELP: Line[] = [
-  ['help', 'this list'], ['ls [board]', 'boards, or the cards on one'], ['open <board|tab|card>', 'go there (alias: load)'],
+  ['help', 'this list'], ['ls [board]', 'boards, or the cards on one'], ['open <board|view|card>', 'go there (alias: load)'],
   ['xray [on|off]', 'x-ray every card'], ['fps', 'measure frames, list x-ray cards'], ['t [seconds]', 'freeze the clock at t; t alone prints it'],
-  ['play', 'resume the clock'], ['describe <card>', 'what a card says about itself'], ['remix <card>', 'open a card in DOTS'], ['studio <card>', 'open a card in STUDIO'],
+  ['play', 'resume the clock'], ['describe <card>', 'what a card says about itself'], ['remix <card>', 'open a card in MAKE · CODE'], ['studio <card>', 'open a card in MAKE · COMPOSE'],
   ['skin <name>', 'display skin (soon)'], ['clear · exit', ''],
 ].map(([c, d]) => ({ kind: 'out', text: `  ${c.padEnd(24)}${d}` }) as Line)
 
@@ -81,12 +82,12 @@ export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }
         }
         const ids = boardManifest.map(b => (b.id === api.board ? `*${b.id}` : ` ${b.id}`))
         for (let i = 0; i < ids.length; i += 5) print(ids.slice(i, i + 5).map(s => s.padEnd(15)).join(''))
-        return print({ kind: 'dim', text: `${boardManifest.length} boards · ls <board> lists its cards · tabs: ${TABS.join(' ').toLowerCase()}` })
+        return print({ kind: 'dim', text: `${boardManifest.length} boards · ls <board> lists its cards · views: ${[...VIEWS, ...MODES].join(' ').toLowerCase()}` })
       }
       case 'open': case 'load': case 'cd': {
         if (!arg) return print({ kind: 'err', text: `${cmd}: which board? try ls` })
-        const tab = TABS.find(t => t.toLowerCase() === arg)
-        if (tab) { api.openTab(tab); return print(`→ ${tab}`) }
+        const place = placeFromName(arg) // a view or a MAKE mode, by its old tab name too (studio, dots, log…)
+        if (place) { api.openTab(arg); return print(`→ ${VIEWS.includes(place as never) ? place : `MAKE · ${place}`}`) }
         const b = findBoard(arg)
         if (b) { api.openBoard(b.id); return print(`→ ${b.id.toUpperCase()}`) }
         const c = await findCard(arg)
@@ -124,16 +125,16 @@ export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }
       case 'remix': {
         const c = arg ? await findCard(arg) : undefined
         if (!c) return print({ kind: 'err', text: 'remix: which card? e.g. remix rings' })
-        void api.remix(c.id); return print(`→ DOTS with ${c.id}`)
+        void api.remix(c.id); return print(`→ MAKE · CODE with ${c.id}`)
       }
       case 'studio': case 'edit': {
         const c = arg ? await findCard(arg) : undefined
         if (!c) return print({ kind: 'err', text: `${cmd}: which card? e.g. studio queen` })
-        void api.studio(c.id); return print(`→ STUDIO with ${c.id}`)
+        void api.studio(c.id); return print(`→ MAKE · COMPOSE with ${c.id}`)
       }
       case 'skin': {
         if (!arg || !(SKINS as readonly string[]).includes(arg)) return print({ kind: 'err', text: `skin: one of ${SKINS.join(', ')}` })
-        api.setSkin(arg); return print(`skin ${arg}: noted. display skins land with C7`)
+        api.setSkin(arg); return print(`display: ${arg}`)
       }
       case 'boss': case 'konami': case 'queen': api.boss(); onClose(); return
       case 'whoami': return print('a visitor, sampled at 144×144')

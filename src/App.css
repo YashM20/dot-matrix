@@ -30,7 +30,8 @@ body {
 .shell {
   width: min(1488px, calc(100% - 48px));
   margin: auto;
-  padding: 22px 0 28px
+  /* room under the footer for the fixed tool dock, so it never sits on the last line */
+  padding: 22px 0 64px
 }
 
 .topbar,
@@ -70,7 +71,7 @@ body {
   margin-left: 8px
 }
 
-.topbar nav {
+.topbar .view-tabs {
   display: flex;
   gap: 24px
 }
@@ -337,18 +338,26 @@ label b {
   color: var(--label)
 }
 
+.bottom a {
+  color: var(--label);
+  text-decoration: none
+}
+
+.bottom a:hover,
+.bottom a:focus-visible {
+  color: var(--value);
+  text-decoration: underline
+}
+
 @media(max-width:760px) {
   .shell {
     width: min(100% - 28px, 560px);
     padding-top: 16px
   }
 
-  .topbar nav {
-    gap: 11px
-  }
-
-  .topbar nav button:last-child {
-    display: none
+  .topbar .view-tabs {
+    gap: 4px 11px;
+    flex-wrap: wrap
   }
 
   .brand small {
@@ -386,7 +395,7 @@ label b {
     justify-content: center
   }
 
-  .bottom span:first-of-type {
+  .bottom span:nth-of-type(2) {
     display: none
   }
 }
@@ -781,6 +790,122 @@ label b {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--spacing-cardGap)
+}
+
+/* ── UX U1: intent line, grouped board picker, board blurb (docs/UX-PLAN.md §4.2, §5.1) ── */
+.intro-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  text-align: left;
+  gap: 6px 16px;
+  margin: 0 0 16px;
+  color: var(--label);
+  font: 400 12px/1.5 var(--mono);
+  letter-spacing: .02em
+}
+
+.intro-line b {
+  font-weight: 500;
+  color: var(--value)
+}
+
+.intro-line a {
+  color: var(--value);
+  white-space: nowrap
+}
+
+.intro-line button {
+  margin-left: auto;
+  padding: 0 6px;
+  min-width: 24px;
+  min-height: 24px;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  background: none;
+  color: var(--mute);
+  font: 500 12px var(--mono);
+  cursor: pointer
+}
+
+.intro-line button:hover,
+.intro-line button:focus-visible {
+  color: var(--value)
+}
+
+.board-groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 18px;
+  margin-bottom: 10px
+}
+
+.board-groups button {
+  padding: 4px 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: none;
+  color: var(--mute);
+  font: 500 10px var(--mono);
+  letter-spacing: .14em;
+  cursor: pointer
+}
+
+.board-groups button.selected {
+  color: var(--value);
+  border-bottom-color: var(--value)
+}
+
+.board-groups button:hover {
+  color: var(--label)
+}
+
+.board-group-blurb {
+  color: var(--mute);
+  font: 400 11px var(--mono);
+  letter-spacing: .02em
+}
+
+.board-select {
+  display: none
+}
+
+.board-view .board-blurb {
+  min-height: 1.5em;
+  margin: -6px 0 14px;
+  color: var(--mute);
+  font: 400 11px/1.5 var(--mono);
+  letter-spacing: .02em
+}
+
+@media(max-width:760px) {
+  .board-picker .board-groups,
+  .board-picker .board-tabs {
+    display: none
+  }
+
+  .board-select {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    color: var(--mute);
+    font: 500 10px var(--mono);
+    letter-spacing: .14em
+  }
+
+  .board-select select {
+    flex: 1;
+    min-height: 36px;
+    padding: 0 10px;
+    border: 1px solid var(--line);
+    border-radius: 99px;
+    background: var(--surface);
+    color: var(--value);
+    font: 500 11px var(--mono);
+    letter-spacing: .1em
+  }
 }
 
 .board-tabs {
@@ -2431,7 +2556,7 @@ label b {
 
 @media(max-width:760px) {
   /* the view tabs were 10 px tall: pad them to a 24 px target without moving the text */
-  .topbar nav button {
+  .topbar .view-tabs button {
     min-height: 24px;
     min-width: 24px;
     padding-block: 7px
@@ -2609,31 +2734,83 @@ label b {
 }
 
 /* ── C7 display skins (src/components/skins/, src/engine/display/) ── */
+/* the DISPLAY ▾ menu button (docs/UX-PLAN.md §4.3): grey chrome, the menu lists each skin with one line */
 .skin-switch {
+  position: relative;
   display: flex;
   align-items: center;
   gap: 10px
 }
 
-.skin-seg {
-  display: flex;
-  gap: 2px;
-  padding: 2px;
-  border: 1px dotted rgba(255, 255, 255, .2);
-  border-radius: 999px
-}
-
-.topbar .skin-seg button,
+.topbar .skin-menu-btn,
 .topbar .skin-clack {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 5px 9px;
+  min-height: 24px;
+  padding: 0 10px;
+  border: 1px dotted rgba(255, 255, 255, .2);
   border-radius: 999px;
   color: var(--mute)
 }
 
-.skin-seg button i {
+.skin-menu-btn b {
+  font-weight: inherit;
+  color: var(--value)
+}
+
+.skin-menu-btn span {
+  font-size: 9px;
+  transition: transform .15s
+}
+
+.skin-menu-btn[aria-expanded="true"] span {
+  transform: rotate(180deg)
+}
+
+.skin-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  z-index: 60;
+  display: grid;
+  gap: 2px;
+  width: min(330px, calc(100vw - 24px));
+  padding: 4px;
+  border: 1px dotted rgba(255, 255, 255, .2);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 12px 32px rgba(0, 0, 0, .55)
+}
+
+.skin-menu--right {
+  left: auto;
+  right: 0
+}
+
+.topbar .skin-menu button {
+  display: grid;
+  grid-template-columns: 4px 44px 1fr;
+  align-items: center;
+  gap: 10px;
+  min-height: 28px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  text-align: left;
+  color: var(--mute)
+}
+
+.skin-menu button b {
+  font-weight: inherit
+}
+
+.skin-menu button span {
+  letter-spacing: .04em;
+  text-transform: none;
+  line-height: 1.35
+}
+
+.skin-menu button i {
   width: 4px;
   height: 4px;
   border-radius: 50%;
@@ -2641,38 +2818,31 @@ label b {
   opacity: .35
 }
 
-/* the selected segment is a dot-matrix fill, not a solid pill */
-.topbar .skin-seg button.selected {
+.topbar .skin-menu button:hover,
+.topbar .skin-menu button:focus-visible {
+  color: var(--label);
+  background: rgba(255, 255, 255, .05)
+}
+
+/* the selected skin is a dot-matrix fill, not a solid pill */
+.topbar .skin-menu button.selected {
   color: var(--value);
   background: radial-gradient(circle, rgba(255, 255, 255, .16) .8px, transparent 1.1px) 0 0 / 4px 4px
 }
 
-.skin-seg button.selected i {
+.skin-menu button.selected i {
   opacity: 1
-}
-
-.topbar .skin-clack {
-  border: 1px dotted rgba(255, 255, 255, .2)
 }
 
 .topbar .skin-clack.selected {
   color: var(--value)
 }
 
-.skin-seg button:focus-visible,
+.skin-menu-btn:focus-visible,
+.skin-menu button:focus-visible,
 .skin-clack:focus-visible {
   outline: 1px dashed var(--value);
   outline-offset: 1px
-}
-
-@media(max-width:760px) {
-  .topbar .skin-seg button {
-    padding: 5px 6px
-  }
-
-  .skin-seg button i {
-    display: none
-  }
 }
 
 /* OLED: the wrapper is not even a box */
@@ -2749,5 +2919,485 @@ label b {
 
   .skin-surface[data-skin="nixie"] > .skin-overlay {
     animation: none
+  }
+}
+
+/* UX U3: EXPLORE / MAKE / ABOUT (docs/UX-PLAN.md §4.1) */
+.topbar .view-tabs button:focus-visible,
+.make-modes button:focus-visible {
+  outline: 1px solid var(--label);
+  outline-offset: 4px
+}
+
+/* MAKE: the mode switch and its one grey line, in the topbar's type */
+.make-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 20px;
+  padding: 16px 0 4px;
+  font: 500 10px/1 var(--mono);
+  letter-spacing: .14em
+}
+
+.make-modes {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border: 1px solid var(--line);
+  border-radius: 99px
+}
+
+.make-modes button {
+  min-height: 24px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 99px;
+  background: none;
+  color: var(--mute);
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: pointer
+}
+
+.make-modes button:hover {
+  color: var(--label)
+}
+
+.make-modes button.selected {
+  background: var(--raised);
+  color: var(--value)
+}
+
+.make-line {
+  margin: 0;
+  color: var(--mute);
+  letter-spacing: .06em
+}
+
+/* ABOUT: the intro, shortcuts and URL params above the changelog */
+.about-intro {
+  text-align: left;
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 18px 0 8px;
+  border-bottom: 1px solid var(--line)
+}
+
+.about-flavour {
+  margin: 0 0 14px;
+  color: var(--mute);
+  font: 500 9px var(--mono);
+  letter-spacing: .16em
+}
+
+.about-lede {
+  max-width: 68ch;
+  margin: 0 0 14px;
+  color: var(--label);
+  font: 400 13px/1.6 var(--mono)
+}
+
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 24px;
+  margin: 0 0 22px;
+  font: 500 11px var(--mono);
+  letter-spacing: .06em
+}
+
+.about-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--value)
+}
+
+.about-cols {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 18px 36px;
+  padding-bottom: 18px
+}
+
+.about-keys h3 {
+  margin: 0 0 10px;
+  color: var(--mute);
+  font: 500 9px var(--mono);
+  letter-spacing: .16em
+}
+
+.about-keys dl {
+  margin: 0
+}
+
+.about-keys dl > div {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  gap: 12px;
+  padding: 5px 0;
+  border-top: 1px solid var(--line);
+  font: 400 11px/1.5 var(--mono)
+}
+
+.about-keys dt {
+  color: var(--value)
+}
+
+.about-keys kbd {
+  font: inherit;
+  overflow-wrap: anywhere
+}
+
+.about-keys dd {
+  margin: 0;
+  color: var(--label)
+}
+
+@media(max-width:760px) {
+  .make-head {
+    padding-top: 12px
+  }
+
+  .about-keys dl > div {
+    grid-template-columns: 1fr
+  }
+}
+
+/* UX U2: card ladder (docs/UX-PLAN.md §5.2–5.3) */
+.dot-card {
+  position: relative
+}
+
+/* the hint verb: grey, never the accent (red keeps "live / active") */
+.dot-card-hint {
+  margin-left: 10px;
+  color: var(--mute);
+  font: 600 8px var(--mono);
+  letter-spacing: .16em
+}
+
+/* the bar sits in the card's top padding: hint (dot-drawn cards), action strip, ⋯ on touch */
+.dot-card-bar {
+  position: absolute;
+  top: 3px;
+  right: 14px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-height: 12px;
+  pointer-events: none
+}
+
+.dot-card-bar > .dot-card-hint {
+  margin: 0
+}
+
+.dot-card-acts {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  background: rgba(17, 19, 21, .94);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  opacity: 0;
+  transition: opacity .12s
+}
+
+.dot-card:hover .dot-card-acts,
+.dot-card-bar:focus-within .dot-card-acts,
+.dot-card-bar.open .dot-card-acts {
+  opacity: 1;
+  pointer-events: auto
+}
+
+.dot-card-bar button {
+  min-width: 24px;
+  min-height: 22px;
+  padding: 3px 6px;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--mute);
+  font: 600 8px var(--mono);
+  letter-spacing: .12em;
+  cursor: pointer
+}
+
+.dot-card-bar button:hover,
+.dot-card-bar button:focus-visible,
+.dot-card-bar button[aria-pressed="true"],
+.dot-card-bar button[aria-expanded="true"] {
+  color: var(--value);
+  border-color: var(--line)
+}
+
+.dot-card-acts button:first-child {
+  font-size: 11px;
+  letter-spacing: 0
+}
+
+.dot-card-more {
+  display: none;
+  pointer-events: auto
+}
+
+/* touch: nothing is hover-only; ⋯ opens the strip */
+@media (hover: none), (pointer: coarse) {
+  .dot-card-more {
+    display: inline-block;
+    min-width: 28px;
+    min-height: 28px;
+    font-size: 13px !important;
+    background: rgba(17, 19, 21, .7) !important
+  }
+
+  .dot-card-acts {
+    display: none;
+    right: 32px
+  }
+
+  .dot-card-bar.open .dot-card-acts {
+    display: flex
+  }
+}
+
+/* X-ray SUMMARY tab and glossary words */
+.xr-tabs {
+  flex-wrap: wrap
+}
+
+.xr-summary p,
+.xr-summary ul {
+  margin: 0 0 8px;
+  color: var(--value)
+}
+
+.xr-summary ul {
+  padding-left: 14px
+}
+
+.xr-summary code {
+  color: var(--label)
+}
+
+.xr-panel .xr-term {
+  padding: 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px dotted var(--mute);
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: help
+}
+
+.xr-panel .xr-term[aria-expanded="true"] {
+  color: var(--value);
+  border-bottom-style: solid
+}
+
+.xr-summary .xr-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--label)
+}
+
+.xr-summary .xr-def {
+  padding: 6px 8px;
+  background: var(--raised);
+  border-radius: 6px;
+  color: var(--label)
+}
+
+.xr-def b {
+  color: var(--value);
+  margin-right: 4px
+}
+
+/* small screens: the inspector is a bottom sheet, so it no longer covers the board picker */
+@media(max-width:760px) {
+  .xr-panel {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    max-height: 55vh;
+    border-radius: 12px 12px 0 0;
+    padding-bottom: env(safe-area-inset-bottom)
+  }
+}
+
+/* UX U4: staged makers (docs/UX-PLAN.md §5.4) */
+/* "More" folds (src/components/More.tsx): grey, never the accent; plain label first, engine term second */
+.more {
+  min-width: 0;
+  text-align: left
+}
+
+.more > summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 6px 0;
+  list-style: none;
+  cursor: pointer;
+  border-radius: 6px;
+  color: var(--label);
+  font: 500 9px var(--mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  user-select: none
+}
+
+.more > summary::-webkit-details-marker {
+  display: none
+}
+
+.more > summary::before {
+  content: '';
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--mute);
+  transform: rotate(-90deg);
+  transition: transform .15s
+}
+
+.more[open] > summary::before {
+  transform: none
+}
+
+.more > summary small {
+  color: var(--mute);
+  font: inherit;
+  letter-spacing: .04em;
+  text-transform: none
+}
+
+.more > summary:hover,
+.more > summary:hover small {
+  color: var(--value)
+}
+
+.more > summary:focus-visible {
+  outline: 1px solid var(--label);
+  outline-offset: 2px
+}
+
+.more-body {
+  min-width: 0
+}
+
+/* a whole panel folded: the closed fold is a slim panel-coloured bar */
+.more--panel > summary {
+  padding: 11px var(--spacing-cardPad);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--card-corner-exp)*4px)
+}
+
+.more--panel[open] > summary {
+  margin-bottom: 8px
+}
+
+.pg-bottom-row {
+  align-items: start
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more > summary::before {
+    transition: none
+  }
+}
+
+/* phones: each maker is one column, the canvas pinned at the top while its controls scroll under it */
+@media (max-width: 760px) {
+  .pg-layout,
+  .st-layout,
+  .dw-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 14px
+  }
+
+  .pg-center,
+  .st-col,
+  .st-side,
+  .dw-main,
+  .dw-side,
+  .draw-layout > .draw-main {
+    display: contents !important
+  }
+
+  .pg-preview,
+  .st-stage,
+  .dw-stage,
+  .draw-canvas-card {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    order: -9;
+    box-shadow: 0 10px 18px -12px rgba(0, 0, 0, .9)
+  }
+
+  /* keep the pinned canvas to about 40% of the screen */
+  .pg-preview .pg-stage {
+    min-height: 0;
+    padding: 10px
+  }
+
+  .pg-preview .pg-stage > *,
+  .dw-stage > * {
+    width: min(100%, 40vh);
+    margin: auto
+  }
+
+  .st-stage .st-canvas {
+    max-width: min(100%, 40vh)
+  }
+
+  .draw-canvas-card > div:last-child > div {
+    max-width: min(100%, 40vh) !important
+  }
+
+  .pg-preview-meta {
+    display: none
+  }
+
+  /* the most used controls next, then the folds in page order */
+  .pg-gallery {
+    order: -8;
+    max-height: 32vh
+  }
+
+  .pg-side,
+  .st-toolbar,
+  .dw-panel[aria-label='Time'] {
+    order: -7
+  }
+
+  .st-layers,
+  .dw-panel[aria-label='Program'] {
+    order: -6
+  }
+
+  .st-right > .st-panel:first-child {
+    order: -5
+  }
+
+  .st-side > .st-panel[aria-label='Export'] {
+    order: -4
   }
 }

@@ -1,5 +1,8 @@
 # Visual-Equivalence Harness — Minimal
 
+> **Historical.** The commands below are outdated (npm, module counts). Use `pnpm check`, `pnpm golden --check`, `pnpm snap` and `pnpm fidelity`: see README › Scripts and `docs/README.md`.
+
+
 ## Automated
 ```bash
 npx tsc -b              # 0 errors required

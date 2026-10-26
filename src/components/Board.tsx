@@ -1,14 +1,20 @@
-import { Suspense, use, useCallback, useEffect, useId, useState, type CSSProperties } from 'react'
+import { lazy, Suspense, use, useCallback, useEffect, useId, useState, type CSSProperties } from 'react'
 import { DotWidget } from './DotWidget'
 import { usePlayground } from './playground/store'
 import { presets } from '../engine/theme/tokens'
-import { boardMeta, loadBoard, type BoardDef } from '../widgets/manifest'
+import { boardMeta, loadBoard, type BoardDef, type BoardId } from '../widgets/manifest'
 import type { ControlPatch } from '../engine'
+import type { WidgetPreset } from '../widgets/types'
 import { duration } from '../engine/motion'
 import type { DotCanvasProps } from './DotCanvas'
 import { pick, useLiveData } from '../data/useLiveData'
-import { useAudio } from '../audio/useAudio'
 import { HiveStart } from './game/HiveStart'
+import { useBlurbs } from './useBlurbs'
+
+// sound (C5) is its own chunk: only the instrument / scope boards fetch the audio engine
+const loadAudio = () => import('../audio/AudioCards')
+const AudioCards = lazy(() => loadAudio().then(m => ({ default: m.AudioCards })))
+const AUDIO_BOARDS = new Set(['instrument', 'scope'])
 
 /** Total exit window for a view of cards: the last card on the diagonal finishes by then. */
 export const VIEW_EXIT_MS = 420
@@ -52,6 +58,7 @@ function seedShared(board: BoardDef): ControlPatch {
 
 /** A board by id: its chunk loads on first open (`widgets/manifest`); the title holds the place meanwhile. */
 export function Board({ id, leaving = false }: { id: string; leaving?: boolean }) {
+  if (AUDIO_BOARDS.has(id)) void loadAudio() // fetched alongside the board chunk, not after it
   return <Suspense fallback={<section className="board-view" aria-busy="true"><h2 className="board-title">{boardMeta(id)?.title}</h2></section>}>
     <LoadedBoard id={id} leaving={leaving} />
   </Suspense>
@@ -70,19 +77,23 @@ function LoadedBoard({ id, leaving }: { id: string; leaving: boolean }) {
   const sharing = !!board.shared?.length
   // live sources (`BoardDef.sources`): fixture → cached → live data, merged over each card's defaults
   const live = useLiveData(board.sources)
-  // sound (C5): the shared store drives src/audio on the instrument/scope boards; cards get live analysis
-  const withAudio = useAudio(board.id, shared, onShared, titleId)
+  const blurb = useBlurbs()?.boardBlurbs[board.id as BoardId]
+  const cards = (map: (p: WidgetPreset) => WidgetPreset) => board.items.map((preset, i) => <DotWidget key={preset.id} type={preset.id} preset={map(preset)} theme={theme} tick={preset.clock ? tick : undefined}
+    data={board.sources ? pick(live, preset.defaults) : undefined}
+    {...(sharing ? { shared, sharedKeys: board.shared, onShared } : {})} {...cardMotion(i, board.columns, board.items.length, leaving)} />)
   return (
     <section className="board-view" aria-labelledby={titleId}>
       <h2 className="board-title" id={titleId}>{board.title}</h2>
+      <p className="board-blurb">{blurb}</p>
       {/* C4: the levels board opens HIVE in play mode (the cards stay as attract-mode previews) */}
       {board.id === 'levels' && <HiveStart theme={theme} />}
       {/* column count is a CSS var so the responsive breakpoints in App.css can step it down (3 → 2 → 1) */}
       <div className="board-grid" style={{ '--board-cols': board.columns } as CSSProperties}>
         {/* cards enter (and exit) on a diagonal stagger, each revealing its dots in Bayer order */}
-        {board.items.map((preset, i) => <DotWidget key={preset.id} type={preset.id} preset={withAudio(preset)} theme={theme} tick={preset.clock ? tick : undefined}
-          data={board.sources ? pick(live, preset.defaults) : undefined}
-          {...(sharing ? { shared, sharedKeys: board.shared, onShared } : {})} {...cardMotion(i, board.columns, board.items.length, leaving)} />)}
+        {/* sound (C5): on the instrument / scope boards the shared store drives src/audio and the cards get live analysis */}
+        {AUDIO_BOARDS.has(board.id)
+          ? <Suspense fallback={null}><AudioCards boardId={board.id} shared={shared} onShared={onShared} titleId={titleId}>{cards}</AudioCards></Suspense>
+          : cards(p => p)}
       </div>
     </section>
   )

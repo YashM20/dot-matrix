@@ -1,8 +1,13 @@
 import { widgetById } from '../../widgets'
+import { More } from '../More'
 import { usePlayground } from './store'
 
 /** One slider per key in the selected preset's `defaults` — widgets opt in by declaring defaults. */
 export function DataEditor() {
+  return <More id="tune-data" label="Live data" tech="data" className="more--panel"><DataSliders /></More>
+}
+
+function DataSliders() {
   const presetId = usePlayground(s => s.presetId)
   const widgetData = usePlayground(s => s.widgetData)
   const setWidgetData = usePlayground(s => s.setWidgetData)

@@ -154,7 +154,7 @@ try {
   check('PLAY resumes', await until(`${E}.playing`, 3000))
 
   // ── scope board, music still going; then the mic ──
-  await evaluate(`[...document.querySelectorAll('.board-tabs button')].find(b => b.textContent === 'SCOPE').click()`)
+  await evaluate(`(s => { s.value = 'scope'; s.dispatchEvent(new Event('change', { bubbles: true })) })(document.querySelector('.board-select select'))`)
   check('scope board mounts, transport keeps playing', await until(`!!document.querySelector('[aria-label="Listen to the microphone"]')`, 8000) && await until(`${E}.playing`, 3000))
   await sleep(2500)
   check('still playing after the board switch grace period', await evaluate(`${E}.playing`))
@@ -169,7 +169,7 @@ try {
   check('mic off releases the device', await until(`${E}.micState === 'idle'`, 3000))
 
   // leaving both audio boards stops the sound
-  await evaluate(`[...document.querySelectorAll('.board-tabs button')].find(b => b.textContent === 'COMPONENTS').click()`)
+  await evaluate(`(s => { s.value = 'components'; s.dispatchEvent(new Event('change', { bubbles: true })) })(document.querySelector('.board-select select'))`)
   check('leaving the audio boards stops the transport', await until(`!${E}.playing && !${E}.sound`, 6000))
   check('no exceptions or console errors', logs.length === 0, logs.slice(0, 5).join(' | '))
 } catch (e) {

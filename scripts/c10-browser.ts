@@ -95,6 +95,10 @@ try {
     check(`${board}: hover explains the dot (value → size step, tone, layer)`, /value .*(step|unquantized).*tone .* layer \d/.test(tip), tip.slice(0, 120))
     const hud = await text(`${target} .xr-hud`)
     check(`${board}: HUD shows renderer, fps, dots`, /(SVG|CANVAS|WEBGL)/.test(hud) && /DOTS/.test(hud) && !/^.*\b0 DOTS/.test(hud), hud)
+    // U2: the inspector opens on SUMMARY (plain words); LAYERS is one tab behind it
+    await waitFor(`!!document.querySelector('.xr-panel .xr-summary')`, 3000)
+    check(`${board}: inspector opens on SUMMARY (dots, glossary words)`, /\d dots? on a/.test(await text('.xr-panel .xr-summary')) && (await count('.xr-panel .xr-summary .xr-term')) >= 5)
+    await js(`[...document.querySelectorAll('.xr-tabs button')].find(b => b.textContent === 'LAYERS').click()`)
     await waitFor(`!!document.querySelector('.xr-panel .xr-layers li')`, 3000)
     const panel = await text('.xr-panel')
     check(`${board}: inspector lists layers + runtime`, /RENDERER/.test(panel) && (await count('.xr-panel .xr-layers li')) > 0, `${await count('.xr-panel .xr-layers li')} layers${/RENDERER/.test(panel) ? '' : '; no RENDERER in: ' + panel.slice(0, 120)}`)
@@ -208,7 +212,7 @@ try {
   await key('x', 8); await sleep(300)
   const ip = await cardPoint('.board-view [data-xr-key]')
   await move(ip.x, ip.y); await sleep(400)
-  await js(`[...document.querySelectorAll('.xr-panel button')].find(b => b.textContent === 'OPEN IN DOTS').click()`)
+  await js(`[...document.querySelectorAll('.xr-panel button')].find(b => b.textContent === 'OPEN IN CODE').click()`)
   const dots = await waitFor(`!!document.querySelector('.dw-code textarea') && document.querySelector('.dw-code textarea').value.length > 10`, 8000)
   const src = await js(`document.querySelector('.dw-code textarea')?.value ?? ''`) as string
   check('remix an IR card opens DOTS with its program', dots && !/remix of/.test(src), src.slice(0, 60).replace(/\n/g, ' '))
@@ -217,7 +221,7 @@ try {
   await key('x', 8); await sleep(300)
   const hp = await cardPoint('.board-view [data-xr-key]')
   await move(hp.x, hp.y); await sleep(400)
-  await js(`[...document.querySelectorAll('.xr-panel button')].find(b => b.textContent === 'OPEN IN DOTS').click()`)
+  await js(`[...document.querySelectorAll('.xr-panel button')].find(b => b.textContent === 'OPEN IN CODE').click()`)
   await waitFor(`(document.querySelector('.dw-code textarea')?.value ?? '').includes('remix of')`, 8000)
   const stub = await js(`document.querySelector('.dw-code textarea')?.value ?? ''`) as string
   const stubErr = await text('.dw-status')
@@ -227,7 +231,7 @@ try {
   await key('x', 8); await sleep(300)
   const sp = await cardPoint('.board-view [data-card-id="lv-queen"]')
   await move(sp.x, sp.y); await sleep(400)
-  await js(`[...document.querySelectorAll('.xr-panel button')].find(b => b.textContent === 'OPEN IN STUDIO').click()`)
+  await js(`[...document.querySelectorAll('.xr-panel button')].find(b => b.textContent === 'OPEN IN COMPOSE').click()`)
   const studio = await waitFor(`!!document.querySelector('.st-layout') && document.body.innerText.includes('lv-queen')`, 15000)
   check('Open in Studio imports the card as a layer stack', studio)
   await sleep(800)

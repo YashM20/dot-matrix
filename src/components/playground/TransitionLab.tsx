@@ -4,6 +4,7 @@ import { ease, masks, maskByName, revealDots, transitionDots, type EaseName, typ
 import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { sampleLayers } from '../../engine/sampler/gridSampler'
 import { widgetPresets, withChrome } from '../../widgets'
+import { More } from '../More'
 import { getTheme, resolveCurrent } from './render'
 import { usePlayground } from './store'
 
@@ -12,8 +13,12 @@ const maskNames = Object.keys(masks) as MaskName[]
 const easeNames = Object.keys(ease) as EaseName[]
 const modes: Mode[] = ['enter', 'exit', 'change']
 
-/** Replays the engine's buffer-level transitions (revealDots / transitionDots) on the selected preset. */
 export function TransitionLab() {
+  return <More id="tune-transitions" label="Enter & exit motion" tech="transition lab" className="more--panel"><TransitionPanel /></More>
+}
+
+/** Replays the engine's buffer-level transitions (revealDots / transitionDots) on the selected preset. */
+function TransitionPanel() {
   const state = usePlayground()
   const [mask, setMask] = useState<MaskName>('bayer')
   const [ms, setMs] = useState(420)

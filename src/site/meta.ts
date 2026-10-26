@@ -1,8 +1,8 @@
 /**
  * Page meta per deep link: `<title>`, description, canonical URL and OG/Twitter tags. Shared by the app
- * (runtime updates as you switch boards) and `scripts/site/pages.ts` (prebuilt `dist/<board>/index.html`
+ * (runtime updates as you switch boards) and `scripts/site/postbuild.ts` (prebuilt `dist/<board>/index.html`
  * copies, so crawlers that don't run JS see the right card). Images are `dist/og/<board>.png`
- * (`scripts/site/og.ts`). Board URLs: `/<board>/` (path) or the older `?board=<id>`; both open the board.
+ * (`scripts/og.ts`). Board URLs: `/<board>/` (path) or the older `?board=<id>`; both open the board.
  */
 import { boardIds, boardMeta, resolveBoardId } from '../widgets/manifest'
 
@@ -50,11 +50,7 @@ export function metaTags(m: PageMeta, origin = ''): [attr: 'name' | 'property', 
   ]
 }
 
-/**
- * Apply a board's meta to the live document (or the default with no board), and keep the address bar
- * on the board's path so a copied link previews the right board. Other query params (debug flags like
- * `?worker=0`) are kept; `board`, `tab` and `p` are folded into the path.
- */
+/** Apply a board's meta to the live document, or the site default with no board. */
 export function setPageMeta(boardId?: string) {
   const m = pageMeta(boardId)
   document.title = m.title
@@ -66,10 +62,16 @@ export function setPageMeta(boardId?: string) {
   let canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]')
   if (!canonical) { canonical = document.createElement('link'); canonical.rel = 'canonical'; document.head.append(canonical) }
   canonical.href = location.origin + m.path
-  if (!boardId) return
-  const q = new URLSearchParams(location.search)
-  for (const k of ['board', 'tab', 'p']) q.delete(k)
-  const path = boardId === boardIds[0] && boardFromPath(location.pathname) === undefined ? location.pathname : m.path
-  const next = path + (q.size ? `?${q}` : '') + location.hash
-  if (next !== location.pathname + location.search + location.hash) history.replaceState(history.state, '', next)
+}
+
+/**
+ * Keep the address bar on the view, so a copied link opens it and Back / Forward walk the views
+ * (docs/UX-PLAN.md U0, U3). `pathAndQuery` is the view's canonical URL (`urlForView` in `./views`: the
+ * board path, `?make=<mode>`, `?about`; other params stay). `push` adds a history entry; otherwise it
+ * only replaces (the first render, or an older URL form of the same view).
+ */
+export function syncUrl(pathAndQuery: string, push: boolean) {
+  const next = pathAndQuery + location.hash
+  if (next === location.pathname + location.search + location.hash) return
+  if (push) history.pushState(null, '', next); else history.replaceState(history.state, '', next)
 }
