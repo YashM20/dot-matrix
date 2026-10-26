@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { flushSync } from 'react-dom'
-import { beginDrag, dragValue, pick, quantizeTime, releaseValue, sharedClock, toLocal } from '../engine'
-import type { ClockSubscriber, Control, ControlPatch, DragStart, GridConfig, Pointer } from '../engine'
+import { TOUCH, beginDrag, classifyMove, dragValue, isTap, pick, quantizeTime, releaseValue, sharedClock, toLocal, touchIntent } from '../engine'
+import type { ClockSubscriber, Control, ControlPatch, DragStart, GridConfig, Pointer, TouchIntent } from '../engine'
 import type { InteractionContext } from './useDotField'
 import { LATENCY_PROBE, resolveMarks, type LatencyMark } from './latencyProbe'
 import { HAND_POINTER_ID } from '../vision/pointerId'
@@ -10,9 +10,32 @@ import { HAND_POINTER_ID } from '../vision/pointerId'
 const KEY_PRESS_MS = 140
 /** How long a released touch pointer lingers in `pointers[]` (ms), so tDown-based ripples (0.5 s) finish. */
 const LINGER_MS = 520
+/** A long-press context menu this soon (ms) after a touch on the card is swallowed. */
+const CONTEXT_MENU_MS = 1500
 
 interface Drag { control: Control; start: DragStart; before: ControlPatch }
 interface Live { hover?: string; pressed?: string; focus?: string }
+/** The fields of a pointer event the input layer reads, copied: React clears `currentTarget` after dispatch, and candidate touches replay later. */
+interface Ev { pointerId: number; clientX: number; clientY: number; timeStamp: number; pressure: number; pointerType: string; isPrimary: boolean; root: HTMLElement; target: EventTarget | null }
+const copy = (e: ReactPointerEvent<HTMLElement>): Ev => ({ pointerId: e.pointerId, clientX: e.clientX, clientY: e.clientY, timeStamp: e.timeStamp, pressure: e.pressure, pointerType: e.pointerType, isPrimary: e.isPrimary, root: e.currentTarget, target: e.target })
+/** A touch that has not shown yet that it is meant for the card (`engine/interaction/gesture.ts`): no value, no pointer, no capture. */
+interface Candidate { down: Ev; last: Ev; key: string | null; intent: TouchIntent | 'none'; tClock: number; shown: boolean; timer: number }
+
+/** A touch that lands this soon (ms) after the page scrolled is stopping a fling, not touching the card. */
+const FLING_MS = 120
+/** `performance.now()` of the page's last scroll (any scroller), from one passive capture listener for every card. */
+let lastScroll = -Infinity, watchingScroll = false
+function watchScroll() {
+  if (watchingScroll || typeof window === 'undefined') return
+  watchingScroll = true
+  window.addEventListener('scroll', () => { lastScroll = performance.now() }, { capture: true, passive: true })
+}
+
+const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+/** One short tick when a hold grabs a card: feature-detected, never under reduced motion or before the page had a real activation. */
+function haptic() {
+  try { if (!reducedMotion() && navigator.userActivation?.hasBeenActive !== false) navigator.vibrate?.(10) } catch { /* unsupported */ }
+}
 
 /** Plain snapshot for the frame context; undefined at rest so a resting card samples exactly as before. */
 function snapshot(live: Live, pointers: Map<number, Pointer>): InteractionContext | undefined {
@@ -33,17 +56,26 @@ export interface ControlInput {
   inputAt: { readonly current: number }
   /** Register the live clock subscriber (invalidated on input so feedback does not wait for the card's fps tick); returns the unbind. */
   bindLive(sub: ClockSubscriber): () => void
-  /** Pointer handlers for the element that shows the whole grid (pointer capture lands on it). */
+  /** Pointer handlers (and the ref / state attribute) for the element that shows the whole grid (pointer capture lands on it). */
   handlers: {
+    ref(el: HTMLElement | null): void
+    'data-engaged'?: ''
     onPointerDown(e: ReactPointerEvent<HTMLElement>): void
     onPointerMove(e: ReactPointerEvent<HTMLElement>): void
     onPointerUp(e: ReactPointerEvent<HTMLElement>): void
     onPointerCancel(e: ReactPointerEvent<HTMLElement>): void
     onPointerLeave(e: ReactPointerEvent<HTMLElement>): void
     onLostPointerCapture(e: ReactPointerEvent<HTMLElement>): void
+    onContextMenu(e: ReactMouseEvent<HTMLElement>): void
     /** Dev latency probe only: stamps keyboard input on the overlay's controls. */
     onKeyDownCapture?(e: ReactKeyboardEvent<HTMLElement>): void
   }
+  /**
+   * Touch: the card is engaged (a hold grabbed one of its drag controls). Its drag controls then take every
+   * touch at once, page scroll included, until `disengage()`: a touch outside the card, Escape, DONE, or idle.
+   */
+  engaged: boolean
+  disengage(): void
   /** Call after every canvas draw with the data it drew (input → frame bookkeeping; feeds the dev latency probe). */
   drawn(data: Record<string, number>): void
   /** Current value of a data key (pending input included). */
@@ -61,6 +93,10 @@ export interface ControlInput {
  * `hover` / `pressed` / `focus` / `pointers` for the frame context. Everything is batched to one
  * commit per animation frame; a static card re-samples only when hover / press / focus / data change
  * or while a drag moves (plain hovering does not re-sample it).
+ *
+ * Mouse and pen act on press. Touch is scroll-first (`TOUCH` policy, docs/UX-PLAN.md › Touch policy): a
+ * touch is a candidate the card does not see until it is a still tap (acts on lift), a horizontal drag on
+ * a drag control, or a hold; only a claimed touch captures the pointer and blocks the page's scroll.
  */
 export function useControlInput(controls: Control[] | undefined, grid: GridConfig, data: Record<string, number>, onInput?: (patch: ControlPatch) => void): ControlInput {
   const [ix, setIx] = useState<InteractionContext | undefined>(undefined)
@@ -76,6 +112,11 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
   const pending = useRef<ControlPatch | null>(null), moved = useRef(false), keyPress = useRef<string | undefined>(undefined)
   const raf = useRef(0), keyTimer = useRef(0)
   const lingers = useRef(new Map<number, number>()), lingerDirty = useRef(false)
+  // touch policy: candidates, touches the card claimed (they block the page's scroll), taps being replayed
+  const candidates = useRef(new Map<number, Candidate>()), claimed = useRef(new Set<number>()), taps = useRef(new Map<number, number>())
+  const touchAt = useRef(-Infinity), root = useRef<HTMLElement | null>(null)
+  const [engaged, setEngaged] = useState(false)
+  const engagedRef = useRef(false), idleTimer = useRef(0)
   // dev latency probe (P2-G): event stamps since the last flush, and marks waiting for the draw that shows them
   const stamped = useRef<number[]>([]), marks = useRef<LatencyMark[]>([])
   /** Canvas draws reported by the owner (`drawn`): tells `flush` whether its commit already redrew the card. */
@@ -84,9 +125,11 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
   const unlinger = (id: number) => { const h = lingers.current.get(id); if (h !== undefined) { window.clearTimeout(h); lingers.current.delete(id) } }
   // reset the handles too: StrictMode re-runs effects, and a stale handle would block every later schedule()
   useEffect(() => () => {
-    cancelAnimationFrame(raf.current); raf.current = 0; window.clearTimeout(keyTimer.current)
+    cancelAnimationFrame(raf.current); raf.current = 0; window.clearTimeout(keyTimer.current); window.clearTimeout(idleTimer.current)
     for (const h of lingers.current.values()) window.clearTimeout(h)
-    lingers.current.clear()
+    for (const c of candidates.current.values()) window.clearTimeout(c.timer)
+    for (const h of taps.current.values()) window.clearTimeout(h)
+    lingers.current.clear(); candidates.current.clear(); taps.current.clear(); claimed.current.clear()
   }, [])
 
   const value = useCallback((key: string) => {
@@ -134,14 +177,52 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
 
   const syncPressed = () => {
     let key = keyPress.current
+    // a still candidate on a tap control shows its press after the press delay (no value change yet)
+    for (const c of candidates.current.values()) if (c.shown && c.key) key = c.key
     for (const d of drags.current.values()) key = d.control.key
     live.current.pressed = key
   }
 
+  // engagement (touch): a hold grabbed the card; the card lets go on a touch elsewhere, Escape, DONE or when idle
+  const disengage = useCallback(() => {
+    window.clearTimeout(idleTimer.current)
+    if (!engagedRef.current) return
+    engagedRef.current = false
+    setEngaged(false)
+  }, [])
+  const bumpIdle = () => {
+    window.clearTimeout(idleTimer.current)
+    if (!engagedRef.current) return
+    const wait = () => { idleTimer.current = window.setTimeout(() => { if (claimed.current.size) wait(); else disengage() }, TOUCH.idle) }
+    wait()
+  }
+  const engage = () => {
+    if (!engagedRef.current) { engagedRef.current = true; setEngaged(true) }
+    bumpIdle()
+  }
+  useEffect(() => {
+    if (!engaged) return
+    const away = (e: PointerEvent) => { if (!root.current?.contains(e.target as Node)) disengage() }
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') disengage() }
+    document.addEventListener('pointerdown', away, true); document.addEventListener('keydown', key)
+    return () => { document.removeEventListener('pointerdown', away, true); document.removeEventListener('keydown', key) }
+  }, [engaged, disengage])
+
+  // a claimed touch owns the gesture: its touchmoves stop the page scroll (non-passive, on this card only; an
+  // unclaimed touch is never prevented, so scrolling over a card stays on the compositor's fast path)
+  const [touchMove] = useState(() => (e: TouchEvent) => { if (claimed.current.size && e.cancelable) e.preventDefault() })
+  const ref = useCallback((el: HTMLElement | null) => {
+    root.current?.removeEventListener('touchmove', touchMove)
+    root.current = el
+    el?.addEventListener('touchmove', touchMove, { passive: false })
+    if (el) watchScroll()
+  }, [touchMove])
+
+  /** Pointer position in card cells (no bookkeeping). */
+  const locate = (e: Ev) => toLocal(e.clientX, e.clientY, e.root.getBoundingClientRect(), gridRef.current)
   /** Update the pointer record for an event; returns it in card cells. */
-  const track = (e: ReactPointerEvent<HTMLElement>, patch: Partial<Pointer> = {}): Pointer => {
-    const rect = e.currentTarget.getBoundingClientRect(), g = gridRef.current
-    const { x, y } = toLocal(e.clientX, e.clientY, rect, g)
+  const track = (e: Ev, patch: Partial<Pointer> = {}): Pointer => {
+    const g = gridRef.current, { x, y } = locate(e)
     const prev = pointers.current.get(e.pointerId), last = stamps.current.get(e.pointerId)
     const dt = prev && last !== undefined ? (e.timeStamp - last) / 1000 : 0
     const p: Pointer = {
@@ -155,12 +236,42 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
     pointers.current.set(e.pointerId, p); stamps.current.set(e.pointerId, e.timeStamp)
     return p
   }
-  const keyAt = (e: ReactPointerEvent<HTMLElement>, p: Pointer) =>
-    pick(controlsRef.current, p.x, p.y) ?? ((e.target as HTMLElement).closest?.('[data-dot-hit]') as HTMLElement | null)?.dataset.dotHit ?? null
+  const keyAt = (e: Ev, p: { x: number; y: number }) =>
+    pick(controlsRef.current, p.x, p.y) ?? ((e.target as HTMLElement | null)?.closest?.('[data-dot-hit]') as HTMLElement | null)?.dataset.dotHit ?? null
   const control = (key: string | null) => (key ? controlsRef.current?.find(c => c.key === key) : undefined)
-  const hovers = (e: ReactPointerEvent<HTMLElement>) => e.isPrimary && e.pointerType !== 'touch'
+  const hovers = (e: Ev) => e.isPrimary && e.pointerType !== 'touch'
 
-  const finish = (e: ReactPointerEvent<HTMLElement>, cancel: boolean) => {
+  /**
+   * Press a control: the pointer goes down on it, the drag starts and the value answers. `claim` (mouse, pen and
+   * claimed touches) captures the pointer; a touch claim also blocks the page's scroll while it lasts.
+   */
+  const grab = (e: Ev, c: Control, claim: boolean, tDown = sharedClock().time()) => {
+    const p = track(e, { down: true, up: false, tDown })
+    if (claim) {
+      try { e.root.setPointerCapture?.(e.pointerId) } catch { /* pointer already gone (synthetic events) */ }
+      if (e.pointerType === 'touch') claimed.current.add(e.pointerId)
+    }
+    const target = e.root.querySelector<HTMLElement>(`[data-dot-focus="${CSS.escape(c.key)}"]`)
+    // pointer-initiated focus is never "visible": no focus ring in the context (keyboard use turns it back on)
+    target?.focus({ preventScroll: true, focusVisible: false } as FocusOptions)
+    live.current.focus = undefined
+    const d = dataRef.current, start = beginDrag(c, p.x, p.y, { ...d, ...pending.current })
+    const before: ControlPatch = { [c.key]: value(c.key) }
+    if (c.kind === 'xy') { const ky = c.keyY ?? `${c.key}Y`; before[ky] = value(ky) }
+    drags.current.set(e.pointerId, { control: c, start, before })
+    set(dragValue(c, start, p))
+    if (hovers(e)) live.current.hover = c.key
+    syncPressed(); schedule()
+  }
+  const drag = (e: Ev) => {
+    const p = track(e), d = drags.current.get(e.pointerId)
+    if (d) { set(dragValue(d.control, d.start, p)); moved.current = true }
+    else if (hovers(e)) live.current.hover = keyAt(e, p) ?? undefined
+    schedule()
+  }
+
+  const finish = (e: Ev, cancel: boolean) => {
+    claimed.current.delete(e.pointerId)
     const d = drags.current.get(e.pointerId)
     if (d) { drags.current.delete(e.pointerId); set(cancel ? d.before : releaseValue(d.control)) }
     const p = pointers.current.get(e.pointerId)
@@ -182,45 +293,104 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
     syncPressed(); schedule()
   }
 
+  // ── touch candidates ──
+  const drop = (c: Candidate) => {
+    window.clearTimeout(c.timer)
+    candidates.current.delete(c.down.pointerId)
+    if (c.shown) { c.shown = false; syncPressed(); schedule() }
+  }
+  const candidate = (e: Ev, key: string | null, intent: TouchIntent | 'none') => {
+    const c = control(key), cand: Candidate = { down: e, last: e, key, intent, tClock: sharedClock().time(), shown: false, timer: 0 }
+    if (c && intent === 'tap') cand.timer = window.setTimeout(() => {
+      // still after the press delay: the press shows; a button goes down for real (held while the finger stays)
+      if (c.kind === 'button') { drop(cand); grab(cand.last, c, false, cand.tClock); return }
+      cand.shown = true; syncPressed(); schedule()
+    }, TOUCH.pressDelay)
+    else if (c && intent === 'drag') cand.timer = window.setTimeout(() => {
+      // held still: grab it (any direction from here on) and engage the card
+      drop(cand); grab(cand.last, c, true, cand.tClock); engage(); haptic()
+    }, TOUCH.hold)
+    candidates.current.set(e.pointerId, cand)
+  }
+  /** A real tap: replay it as a short press where the finger landed (so toggles, options, steppers and sliders act on lift). */
+  const tap = (cand: Candidate) => {
+    const e = cand.down, c = control(cand.key)
+    if (c) grab(e, c, false, cand.tClock)
+    else { track(e, { down: true, up: false, tDown: cand.tClock }); schedule() }
+    taps.current.set(e.pointerId, window.setTimeout(() => { taps.current.delete(e.pointerId); finish(e, false) }, TOUCH.tapPress))
+  }
+
   const handlers: ControlInput['handlers'] = {
-    onPointerDown(e) {
-      if (e.pointerType === 'mouse' && e.button !== 0) return
-      note(e)
-      unlinger(e.pointerId)
-      const p = track(e, { down: true, up: false, tDown: sharedClock().time() })
-      const key = keyAt(e, p), c = control(key)
-      if (!c) { schedule(); return }
+    ref,
+    ...(engaged ? { 'data-engaged': '' as const } : {}),
+    onPointerDown(r) {
+      if (r.pointerType === 'mouse' && r.button !== 0) return
+      note(r)
+      unlinger(r.pointerId)
+      const e = copy(r)
+      if (e.pointerType === 'touch') {
+        touchAt.current = performance.now(); bumpIdle()
+        // a finger that lands to stop a fling (the page was just scrolling) is the page's: no tap, no hold
+        if (touchAt.current - lastScroll < FLING_MS) return
+        const key = keyAt(e, locate(e)), c = control(key), intent = c ? touchIntent(c) : 'none'
+        // an engaged card's drag controls answer at once (their hit pads are `touch-action: none` then)
+        if (c && intent === 'drag' && engagedRef.current) { r.preventDefault(); grab(e, c, true); return }
+        candidate(e, key, intent)
+        return
+      }
+      const c = control(keyAt(e, locate(e)))
+      if (!c) { track(e, { down: true, up: false, tDown: sharedClock().time() }); schedule(); return }
       // no text selection, native drag or emulated mouse events; focus the control ourselves
-      e.preventDefault()
-      try { e.currentTarget.setPointerCapture?.(e.pointerId) } catch { /* pointer already gone (synthetic events) */ }
-      const target = e.currentTarget.querySelector<HTMLElement>(`[data-dot-focus="${CSS.escape(c.key)}"]`)
-      // pointer-initiated focus is never "visible": no focus ring in the context (keyboard use turns it back on)
-      target?.focus({ preventScroll: true, focusVisible: false } as FocusOptions)
-      live.current.focus = undefined
-      const d = dataRef.current, start = beginDrag(c, p.x, p.y, { ...d, ...pending.current })
-      const before: ControlPatch = { [c.key]: value(c.key) }
-      if (c.kind === 'xy') { const ky = c.keyY ?? `${c.key}Y`; before[ky] = value(ky) }
-      drags.current.set(e.pointerId, { control: c, start, before })
-      set(dragValue(c, start, p))
-      if (hovers(e)) live.current.hover = c.key
-      syncPressed(); schedule()
+      r.preventDefault()
+      grab(e, c, true)
     },
-    onPointerMove(e) {
-      note(e)
-      const p = track(e), d = drags.current.get(e.pointerId)
-      if (d) { set(dragValue(d.control, d.start, p)); moved.current = true }
-      else if (hovers(e)) live.current.hover = keyAt(e, p) ?? undefined
+    onPointerMove(r) {
+      note(r)
+      const e = copy(r), cand = candidates.current.get(e.pointerId)
+      if (cand) {
+        cand.last = e
+        const verdict = classifyMove(cand.intent, e.clientX - cand.down.clientX, e.clientY - cand.down.clientY)
+        if (verdict === 'scroll') drop(cand)
+        else if (verdict === 'claim') { drop(cand); grab(cand.down, control(cand.key)!, true, cand.tClock); drag(e) }
+        return
+      }
+      // a button pressed by a still finger is not claimed: moving away is a scroll, so the press is called off
+      if (e.pointerType === 'touch' && drags.current.has(e.pointerId) && !claimed.current.has(e.pointerId) && !taps.current.has(e.pointerId)) {
+        const p = pointers.current.get(e.pointerId), here = locate(e), g = gridRef.current, rect = e.root.getBoundingClientRect()
+        if (p && Math.hypot((here.x - p.x) * rect.width / g.cols, (here.y - p.y) * rect.height / g.rows) > TOUCH.slop) { finish(e, true); return }
+      }
+      if (taps.current.has(e.pointerId)) return
+      drag(e)
+    },
+    onPointerUp(r) {
+      note(r)
+      const e = copy(r), cand = candidates.current.get(e.pointerId)
+      if (cand) {
+        drop(cand)
+        if (isTap(control(cand.key), Math.hypot(e.clientX - cand.down.clientX, e.clientY - cand.down.clientY), e.timeStamp - cand.down.timeStamp)) tap(cand)
+        return
+      }
+      if (taps.current.has(e.pointerId)) return
+      finish(e, false)
+    },
+    onPointerCancel(r) {
+      note(r)
+      const e = copy(r), cand = candidates.current.get(e.pointerId)
+      if (cand) { drop(cand); return }
+      finish(e, true)
+    },
+    // capture moving from a child (the implicit touch capture) to the root bubbles up here: only the root's own loss ends a drag
+    onLostPointerCapture(r) { if (r.target === r.currentTarget && drags.current.has(r.pointerId)) finish(copy(r), false) },
+    onPointerLeave(r) {
+      const cand = candidates.current.get(r.pointerId)
+      if (cand) { drop(cand); return }
+      if (drags.current.has(r.pointerId) || taps.current.has(r.pointerId) || pointers.current.get(r.pointerId)?.up) return
+      pointers.current.delete(r.pointerId); stamps.current.delete(r.pointerId)
+      if (r.isPrimary) live.current.hover = undefined
       schedule()
     },
-    onPointerUp(e) { note(e); finish(e, false) },
-    onPointerCancel(e) { note(e); finish(e, true) },
-    onLostPointerCapture(e) { if (drags.current.has(e.pointerId)) finish(e, false) },
-    onPointerLeave(e) {
-      if (drags.current.has(e.pointerId) || pointers.current.get(e.pointerId)?.up) return
-      pointers.current.delete(e.pointerId); stamps.current.delete(e.pointerId)
-      if (e.isPrimary) live.current.hover = undefined
-      schedule()
-    },
+    // a long press on a card is not a request for the page's context menu (or a "save image" sheet)
+    onContextMenu(r) { if (performance.now() - touchAt.current < CONTEXT_MENU_MS) r.preventDefault() },
     // keydown reaches the root before the overlay control handles it; the flush drops it if nothing changed
     ...(LATENCY_PROBE ? { onKeyDownCapture(e: ReactKeyboardEvent<HTMLElement>) { note(e); schedule() } } : {}),
   }
@@ -247,7 +417,12 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
 
   // controls removed (e.g. preset swap): drop stale state
   const controlKey = controls?.map(c => c.key).join(',') ?? ''
-  useEffect(() => { drags.current.clear(); live.current = {}; schedule() }, [controlKey, schedule])
+  useEffect(() => {
+    drags.current.clear(); claimed.current.clear(); live.current = {}
+    for (const c of candidates.current.values()) window.clearTimeout(c.timer)
+    candidates.current.clear()
+    schedule()
+  }, [controlKey, schedule])
 
   const bindLive = useCallback((sub: ClockSubscriber) => {
     liveSub.current = sub
@@ -256,5 +431,5 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
 
   const drawn = useCallback((d: Record<string, number>) => { draws.current++; if (LATENCY_PROBE) resolveMarks(marks.current, d) }, [])
 
-  return { ix, ixRef, inputAt, bindLive, handlers, value, set, press, focus, drawn }
+  return { ix, ixRef, inputAt, bindLive, handlers, engaged, disengage, value, set, press, focus, drawn }
 }
