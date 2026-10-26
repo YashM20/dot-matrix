@@ -41,7 +41,7 @@ src/engine/                       framework-free TypeScript + browser Canvas/SVG
   physics/                        worlds (pristine SimField loop, live fork on input): createWorld/worldAt/worldStep; stable fluids, Verlet particles + spatial hash, PBD cloth + soft body
   nca/                            neural cellular automata, CPU inference from Int8 weights: ncaModel, ncaRun timeline, ncaScratch, ncaField/ncaMapField
   scene/raycast.ts                castHall (analytic hall), castGrid (DDA maze), lamp, fog, seam, project — HIVE cards and game
-  device/                         profiles (DEVICES, deviceProfile), toDevice (card → device frame + tone map), simulators: eink, flipdisc, led, plotter (pen plan, plotterSVG)
+  device/                         profiles (DEVICES, deviceProfile), toDevice (card → device frame + tone map), simulators: eink, flipdisc, led, plotter (pen plan, penPlanSVG)
   display/                        display skins oled/crt/vfd/led/eink/flipdisc/nixie: SKINS, SKIN_PHYSICS, afterglow decay, e-ink/flip panels, createDisplayStage (Canvas 2D post-raster)
   (checks live in scripts/ — `pnpm verify`)
 src/widgets/

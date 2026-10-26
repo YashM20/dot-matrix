@@ -338,7 +338,7 @@ Unlike a typical responsive system that reflows layout, Dot/480's primary respon
 
 ## Devices
 
-One card, many physical surfaces (P5, `src/engine/device/`). `toDevice(spec, profile, { ctx })` samples the card (or its curated `variants['CxR']` when the device grid has one), splats each dot's light (area × opacity × colour luminance; `{colors.dotActive}` = full light, monochrome panels have no red) onto the device grid area-weighted, then applies the profile's tone map. Simulators are pure in t: `createEinkSim`, `createFlipSim`, `ledGlow`, `plotPaths` / `plotAt` / `plotterSVG`. Board `surfaces` shows the same timer on all five.
+One card, many physical surfaces (P5, `src/engine/device/`). `toDevice(spec, profile, { ctx })` samples the card (or its curated `variants['CxR']` when the device grid has one), splats each dot's light (area × opacity × colour luminance; `{colors.dotActive}` = full light, monochrome panels have no red) onto the device grid area-weighted, then applies the profile's tone map. Simulators are pure in t: `createEinkSim`, `createFlipSim`, `ledGlow`, `plotPaths` / `plotAt` / `penPlanSVG`. Board `surfaces` shows the same timer on all five.
 
 | Profile | Grid | Mask | Bits / tone map | Pitch | Dot | Refresh (demo) | Physics |
 |---|---|---|---|---|---|---|---|

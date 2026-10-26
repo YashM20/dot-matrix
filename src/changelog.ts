@@ -15,6 +15,17 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 
 export const releases: Release[] = [
   {
+    version: '0.11', date: '2026-10-26', title: 'Explore, make, about',
+    summary: 'Seven tabs became three, every card can explain itself, and the display types live in one menu.',
+    changes: [
+      { kind: 'new', text: 'Three places: EXPLORE (the boards), MAKE (tune, compose, code and draw in one spot) and ABOUT (what this is, shortcuts, link options and this log). Every old link still opens the same thing.' },
+      { kind: 'new', text: 'Hover or focus a card (or tap ⋯ on a phone) for four actions: ⓘ how it works, REMIX, LINK and PNG.' },
+      { kind: 'new', text: 'Cards you can touch say how in grey at the top: DRAG, TAP, HOLD, SCRATCH, CAMERA or SOUND.' },
+      { kind: 'new', text: 'The X-ray opens on a plain-words SUMMARY, with tap-to-read definitions for field, lattice, site, tone, quantize and IR. On a phone it is a bottom sheet.' },
+      { kind: 'improved', text: 'One DISPLAY menu replaces the row of seven display buttons, with a line on what each one looks like. Every target is big enough to tap.' },
+    ],
+  },
+  {
     version: '0.10', date: '2026-10-24', title: 'Easier to find your way',
     summary: 'The boards are grouped and named in plain words, each one says what it is, and the site loads faster.',
     changes: [
@@ -127,8 +138,7 @@ export const releases: Release[] = [
 ]
 
 export const upcoming: Upcoming[] = [
-  { phase: 'U2', title: 'Cards that explain themselves', status: 'next', text: 'A small hint on every card you can touch, and on every card a way to see how it works, remix it, copy its link or save it as a PNG.' },
-  { phase: 'U3', title: 'Explore, make, about', status: 'planned', text: 'Seven tabs become three. The four ways to make something (tune, compose, code, draw) live in one place that starts simple.' },
-  { phase: 'U5', title: 'Everything for power users', status: 'planned', text: 'A ? sheet with every shortcut and link option, a pro mode that opens every panel, and a menu for the display types.' },
+  { phase: 'U5', title: 'Everything for power users', status: 'next', text: 'A ? sheet with every shortcut and link option, and a pro mode that opens every panel.' },
+  { phase: 'S1', title: 'A page for every card', status: 'planned', text: 'Each card gets its own page and link, with copy as PNG, SVG or HTML, share, embed, and iPhone widget sizes.' },
   { phase: 'C1', title: 'A million dots', status: 'planned', text: 'Fields evaluated on the GPU with WebGPU: a full-screen field that follows the cursor, and a zoom from one card into a million dots.' },
 ]

@@ -1,6 +1,6 @@
 # UX-PLAN: low floor, high ceiling
 
-> **Status (2026-10-24):** U0 and U1 are built and pushed on branch `feat/ux-u0-u1` (not merged to `main` yet). The build log is §9: what changed, why, the files, how it was checked, and what's pending. U2–U6 are not started. It sits alongside `docs/WEB-PLAN.md`: WEB-PLAN says *what* the site does, this doc says *how a visitor finds it*.
+> **Status (2026-10-26):** U0–U3 are built on branch `feat/ux-u0-u1` (not merged to `main` yet), with the DISPLAY ▾ slice of U5. U4 is in progress. The build log is §9: what changed, why, the files, how it was checked, and what's pending. It sits alongside `docs/WEB-PLAN.md` (what the site does) and `docs/SHARE-PLAN.md` (per-card pages, export and the shadcn registry, planned).
 > **Goal (from the user):** the layouts and UI are too complicated and confusing. Anyone should be able to land, explore and dive in, and power users should still get everything. Nothing may break.
 
 ## 1. Research, short
@@ -190,10 +190,10 @@ Every other board shows its id. Ids and URLs never change.
 |---|---|---|---|
 | **U0 · Fixes** | Palette skin bug; DRAW reachable on mobile; dock padding so it doesn't overlap the footer; LIVE badge only when live; plainer footer; URL pushes tab/board | ½ day | **Done** 2026-10-24 (§9) |
 | **U1 · Orientation** | Grouped board picker (desktop row and mobile menu); plain labels; a one-line description per board and group; START HERE tour; intent line | 1–2 days | **Done** 2026-10-24 (§9); the DISPLAY ▾ menu moved to U5 |
-| **U2 · Card ladder** | Header hint verbs; cursors; action strip (ⓘ / Remix / Link / PNG); X-ray SUMMARY tab and glossary; X-ray as a bottom sheet on mobile | 2 days | **Next** |
-| **U3 · IA merge** | EXPLORE / MAKE / ABOUT; alias table and verify check; GALLERY folded in; LOG and essay links in ABOUT | 2 days | After the taste session |
+| **U2 · Card ladder** | Header hint verbs; cursors; action strip (ⓘ / Remix / Link / PNG); X-ray SUMMARY tab and glossary; X-ray as a bottom sheet on mobile | 2 days | **Done** 2026-10-26 (§9) |
+| **U3 · IA merge** | EXPLORE / MAKE / ABOUT; alias table and verify check; GALLERY folded in; LOG and essay links in ABOUT | 2 days | **Done** 2026-10-26 (§9), with the plan's proposed names; the taste session can still rename |
 | **U4 · Staged makers** | More folds and plain labels in TUNE/COMPOSE/CODE/DRAW; remembered fold state; mobile single column | 3–4 days | Not started |
-| **U5 · Power layer** | `?` help sheet from one shortcut registry; palette completeness; Pro mode; shell `help` from the same registry; DISPLAY ▾ menu; the dock folds into `⋯ TOOLS` on phones | 1–2 days | Not started |
+| **U5 · Power layer** | `?` help sheet from one shortcut registry; palette completeness; Pro mode; shell `help` from the same registry; DISPLAY ▾ menu; the dock folds into `⋯ TOOLS` on phones | 1–2 days | DISPLAY ▾ menu **done** 2026-10-26 (§9); the rest next |
 | **U6 · Check with people** | 3 friends, 5 minutes each, no hints (§8) | 1 hour + fixes | Not started |
 
 Order: U0, U1 and U2 deliver most of the clarity without moving any tool. U3 and U4 are the bigger structural changes, so they come after the taste session confirms names and groups.

@@ -1,6 +1,6 @@
 # Docs index
 
-Which doc to read for what, and how current each one is (checked 2026-10-24). Files stay where they are, because code comments cite them by path.
+Which doc to read for what, and how current each one is (checked 2026-10-26). Files stay where they are, because code comments cite them by path.
 
 **Start here:** `AGENTS.md` (invariants that must not break) → `DESIGN.md` (tokens, components, interaction) → `docs/PROGRESS.md` (what's done and what's next).
 
@@ -14,6 +14,7 @@ Which doc to read for what, and how current each one is (checked 2026-10-24). Fi
 | [`PROGRESS.md`](PROGRESS.md) | **Source of truth** for what is done, in progress, skipped and next, plus the "Resume here" notes for the next session |
 | [`WEB-PLAN.md`](WEB-PLAN.md) | The active product plan: a personal website, with tracks C1–C10 |
 | [`UX-PLAN.md`](UX-PLAN.md) | The active UX plan: low floor, high ceiling. Phases U0–U6 plus the build log (§9). |
+| [`SHARE-PLAN.md`](SHARE-PLAN.md) | Planned (2026-10-26): a page and stable link per card, copy as PNG / SVG / HTML, share and embed, iOS widget sizes, the shadcn registry. Phases S0–S7 and the owner's open decisions. |
 | [`DOT-MATRIX-ENGINE-PLAN.md`](DOT-MATRIX-ENGINE-PLAN.md) | Architecture: module map, pipeline, lattices and sites, subsystems |
 | [`STYLE-BIBLE.md`](STYLE-BIBLE.md) | Taste: what makes a card good, taken from the four liked cards |
 | [`DEPLOY.md`](DEPLOY.md) | Vercel deploy, build outputs, headers, CSP, CI |
