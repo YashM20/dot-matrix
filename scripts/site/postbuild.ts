@@ -12,13 +12,17 @@
  *    `<meta name="dot480:widget">` (uid, slug, board: the app loads only that board's chunk) and schema.org
  *    JSON-LD. `dist/widgets.json` is the full derived index (`scripts/widgets/meta.ts`).
  *
+ * Widget OG images are cached in `node_modules/.cache/dot480-og` (or `OG_CACHE`), keyed by the OG renderer's source and
+ * the card's golden hashes: a cold run renders all of them (~2 min), a warm one copies.
+ *
  * `SITE_URL` (or, on Vercel, `VERCEL_PROJECT_PRODUCTION_URL`) makes og:url / og:image absolute, which most link
  * unfurlers require; without it they stay root-relative.
  *
  *   npx tsx scripts/site/postbuild.ts            → every step on ./dist
  *   npx tsx scripts/site/postbuild.ts --no-og    → pages only (fast)
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { createHash } from 'node:crypto'
+import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { ogImage } from '../og'
 import { boards } from '../../src/widgets'
@@ -84,8 +88,20 @@ export function postbuild({ og = true } = {}) {
   const jobs: [file: string, card: string][] = [['default', heroOf(boards[0].id)], ...boards.map(b => [b.id, heroOf(b.id)] as [string, string])]
   for (const [file, card] of jobs) writeFileSync(join(DIST, 'og', `${file}.png`), ogImage(card).png())
   const t2 = performance.now()
-  for (const w of widgets) writeFileSync(join(DIST, 'og', 'widget', `${w.uid}.png`), ogImage(w.slug).png())
-  console.log(`site: ${jobs.length} board + ${widgets.length} widget OG images in dist/og/ (${((t2 - t1) / 1000).toFixed(1)} s + ${((performance.now() - t2) / 1000).toFixed(1)} s)`)
+  // ~0.7 s per image: cached by the renderer's source + the card's golden hashes, so only changed cards re-render
+  const cache = process.env.OG_CACHE || join('node_modules', '.cache', 'dot480-og'), golden = goldenOf(), salt = createHash('sha1').update(OG_SOURCES.map(f => readFileSync(f)).join('\0')).digest('hex')
+  mkdirSync(cache, { recursive: true })
+  let fresh = 0
+  for (const w of widgets) {
+    const key = createHash('sha1').update(`${salt}|${w.slug}|${JSON.stringify(golden[w.slug] ?? null)}`).digest('hex').slice(0, 16), hit = join(cache, `${w.uid}-${key}.png`)
+    if (!existsSync(hit)) { writeFileSync(hit, ogImage(w.slug).png()); fresh++ }
+    copyFileSync(hit, join(DIST, 'og', 'widget', `${w.uid}.png`))
+  }
+  console.log(`site: ${jobs.length} board + ${widgets.length} widget OG images (${fresh} rendered, ${widgets.length - fresh} cached) in dist/og/ (${((t2 - t1) / 1000).toFixed(1)} s + ${((performance.now() - t2) / 1000).toFixed(1)} s)`)
 }
+
+/** What a widget OG image depends on besides its card: the OG layout and the raster path. */
+const OG_SOURCES = ['scripts/og.ts', 'scripts/lib/raster.ts', 'scripts/lib/cards.ts', 'scripts/lib/stats.ts', 'src/engine/sampler/gridSampler.ts']
+const goldenOf = (): Record<string, unknown> => JSON.parse(readFileSync('goldens/hashes.json', 'utf8')).presets
 
 if (/[\\/]scripts[\\/]site[\\/]postbuild\.ts$/.test(process.argv[1] ?? '')) postbuild({ og: !process.argv.includes('--no-og') })
