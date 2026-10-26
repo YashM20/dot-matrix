@@ -21,6 +21,10 @@ This file only holds things that would break the project if an agent guessed wro
 - Board ids are URLs (`/<board>/`). Rename what visitors see with `boardLabel`; keep old ids working with `boardAliases` (`src/widgets/manifest.ts`).
 - Which doc is current: `docs/README.md`. What's done and next: `docs/PROGRESS.md`.
 
+## Testing: run what the change touches
+- While iterating, test the module, not the world: `npx tsc -b`, `npx oxlint <changed files>`, the area's own script (`npx tsx scripts/<area>.ts`, see its header), `pnpm golden --check` only if card pixels could move, `scripts/site/size.ts --check` (after `vite build`) only if first-load imports changed, and only the browser probe for the area you touched.
+- Run the full suite (`pnpm check`, `pnpm golden --check`, size, the browser probes) only before a push or merge of bulk/cross-cutting work, or after a core change (sampler, renderers, layout, fields, `widgets/types`, manifest). It is slow; don't rerun it per edit.
+
 ## Before changing a generator or token
 1. Check if it's already covered by an existing `Field` function — new generators should be rare.
 2. Update `DESIGN.md` token tables in the same PR if you add/rename a token. Stale tokens are worse than missing docs.
