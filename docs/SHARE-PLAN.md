@@ -2,13 +2,13 @@
 
 > **Status: plan only (2026-10-26).** Nothing here is built. It assumes UX U2 (card action strip) and U3 (EXPLORE / MAKE / ABOUT, `src/site/views.ts`) are merged first; both are now on `feat/ux-u0-u1` (not yet on `main`).
 > **Goal (from the owner):** "Add export / share support: copy as SVG, HTML, PNG, or a shareable single widget. Unique links/ids attached to every widget. A proper single-widget display page with actions, a new iOS kind of view: pills, horizontal, vertical, kinda iOS duo. And support for a shadcn registry."
-> **Owner clarifications (2026-10-26):** the "iOS view" means **the action buttons**: iOS-style pills in the navbar and at the screen edges, nothing more (not widget sizes). Widget links are short and simple, **`/widget/<id>/`**, and the scheme must extend later (an org or workspace scope) without breaking any link.
+> **Owner clarifications (2026-10-26):** the "iOS view" means **the action buttons**: iOS-style pills in the navbar and at the screen edges, nothing more (not widget sizes). Widget links are short and simple, **`/widget/<id>/`**, and the scheme must extend later (an org or workspace scope) without breaking any link. Every widget has **metadata**, and a URL works with **either its name or a short id**: `/widget/panel/` and `/widget/k7m2qx9a/` open the same widget.
 > It sits next to `docs/UX-PLAN.md`. UX-PLAN covers how a visitor finds things; this doc covers how one card leaves the site.
 
 ## 1. Goal and what exists today
 
 **Goal:**
-- Every card has a stable id and its own URL.
+- Every card has metadata, a readable name (slug), a permanent short id, and its own URL that accepts either.
 - That URL opens a single-card page with actions: copy PNG / SVG / HTML / link, embed, share, remix, and add via shadcn.
 - Its actions sit in iOS-style pill bars: one in the navbar, one at the bottom edge.
 - The cards install as a hosted shadcn registry.
@@ -52,34 +52,60 @@
 
 ## 3. Per-widget identity and URLs
 
-**Ids.**
-- The preset id **is** the widget id.
-  - It is already unique (173/173), kebab-case and pinned by `goldens/hashes.json`.
-  - Don't add a second id scheme. A content hash is only needed for user-made cards (§3, "Remixed cards").
-- **Freeze rule.** Once a card id ships, it never disappears. A rename adds an entry to a new `cardAliases` table (`src/widgets/manifest.ts`, next to `boardAliases`), and the `glyph-*` → `lock-*` rule moves into that table.
-- **Verify check (`scripts/verify.ts`).** Every id in `goldens/hashes.json` resolves through presets plus `cardAliases`, ids stay kebab-case and ≤ 32 chars, and no board id uses a reserved segment.
-  - Reserved segments: `widget`, `w`, `embed`, `r`, `og`, `oembed`, `assets`, `images`, `lab`, `docs`, and anything starting with `@` (kept for scopes, below).
+**Two keys per widget; both work everywhere.**
+
+| Key | Example | What it is | Can it change? |
+|---|---|---|---|
+| **slug** | `panel`, `timer`, `hb-agent` | Today's preset id: kebab-case, readable, already unique (173/173) and pinned by `goldens/hashes.json` | It can be renamed. The old slug goes into a `cardAliases` table (`src/widgets/manifest.ts`, beside `boardAliases`) and keeps working forever. The `glyph-*` → `lock-*` rule moves there too. |
+| **uid** | `k7m2qx9a` | A short permanent id: 8 characters from the lowercase Crockford base-32 alphabet `0123456789abcdefghjkmnpqrstvwxyz` (no `i l o u`, so it reads aloud and survives handwriting). 32⁸ ≈ 10¹² values. | Never. Never reused, even if the widget is deleted. |
+
+- **Telling them apart.** A uid is exactly 8 characters and always has at least two digits and one letter. Slugs and board ids may never match that pattern (verify check), so any URL segment is unambiguous: try uid → slug → `cardAliases`.
+- **No new dependency.** A nanoid-style generator is about 10 lines on `crypto.getRandomValues`, in `scripts/widgets/ids.ts`. Its `--assign` mode adds uids only for presets that don't have one yet, appending to the committed **`src/widgets/ids.json`** (`{ "<slug>": "<uid>" }`); it never rewrites an entry. Random rather than a hash of the slug, so a rename can never tempt anyone to "recompute" it.
+- **Verify checks (`scripts/verify.ts`):**
+  - every preset has a uid, and uids are unique and match the pattern;
+  - every golden id still resolves through presets plus `cardAliases`, so nothing silently disappears;
+  - slugs stay kebab-case, ≤ 32 characters, and never match the uid pattern;
+  - board ids avoid the uid pattern and the reserved segments: `widget`, `w`, `embed`, `r`, `og`, `oembed`, `assets`, `images`, `lab`, `docs`, and anything starting with `@` (kept for scopes, below).
+
+**Metadata for every widget.** One `WidgetMeta` record per widget, in two layers so nothing is typed twice or drifts:
+
+| Layer | Fields | Where |
+|---|---|---|
+| **Authored** (a person writes it) | `blurb` (one line, required), `tags` (topic words: clock, health, music…), `keywords` (search), `added` (date, filled once by `--assign` from git) | `src/widgets/meta.ts`, a lazy chunk like `blurbs.ts` (board blurbs already live there) |
+| **Derived** (computed at build, never hand-edited) | `uid`, `slug`, `name`, `label`, `board`, `group`, `scope` (empty today), `grid`, `animated`, `interactive` and the control kinds, `hint` (the U2 verb), `live`, `media` (camera / mic), `dots` (visible count), `layers` (field kinds), `ir` (has a Field IR program), `version` (its golden hash), `aliases` | `scripts/widgets/meta.ts`, run by postbuild |
+
+- **Outputs:**
+  - `dist/widgets.json`: the full index (about 25 kB gz). It is fetched lazily by the widget page, search and the palette, and read by oEmbed, the registry and the MCP tools. It is never in first load.
+  - On each widget page: title, description, canonical link, `og:*`, `<meta name="dot480:widget" content="<uid>" data-slug data-board>`, and schema.org JSON-LD (`CreativeWork`: name, description, identifier = uid, url, image, dateModified).
+  - The registry items (§6) carry the same fields in `meta`, so `shadcn` users see them too.
+- **Verify:** every preset has a `blurb`, and the derived layer builds without errors for all 173 widgets.
 
 **URL scheme.** Short and plain, and it fits U3's canonical URLs: a path names a thing, and the query names a view or state.
 
 | URL | Opens | Notes |
 |---|---|---|
-| `/widget/<id>/` | **Single-card page (canonical)** | Prebuilt `dist/widget/<id>/index.html` with per-card meta and OG. It needs its own namespace because `metro`, `ride` and `departures` are both board ids and card ids. |
-| `/widget/<id>/?skin=crt&t=12.5&d=progress:.8,mode:2` | Same card in a given state | Every param is optional; see the state table below |
-| `?card=<id>` (any path) | Old link | Kept forever: `replaceState` to `/widget/<id>/` and keep the other params. The skins probe keeps working. |
-| `/embed/<id>` | Bare card for iframes | A Vercel rewrite to `embed.html` (no files per card); §5.1 |
-| `/r/<name>.json`, `/r/registry.json` | shadcn registry | Static files; §6 |
-| `/og/widget/<id>.png`, `/oembed/<id>.json` | OG image, oEmbed | Built at deploy |
+| `/widget/<slug>/` | **Widget page (canonical)** | Prebuilt `dist/widget/<slug>/index.html` with per-widget meta and OG. It needs its own namespace because `metro`, `ride` and `departures` are both board ids and card ids. |
+| `/widget/<uid>/` | The same page | Prebuilt copy (so chat-app previews work), `rel=canonical` → the slug URL; the app keeps the uid form in the address bar |
+| `/<uid>` | The same page (the shortest share link) | Also a prebuilt copy. Safe at the root because a uid can never be a board id (the pattern check) |
+| `/widget/<old-slug>/` | The renamed widget | Via `cardAliases`, then `replaceState` to the current slug |
+| `/widget/<key>/?skin=crt&t=12.5&d=progress:.8,mode:2` | Same widget in a given state | Every param is optional; see the state table below |
+| `?card=<slug>` (any path) | Old link | Kept forever: `replaceState` to `/widget/<slug>/`, keeping the other params. The skins probe keeps working. |
+| `/embed/<slug or uid>` | Bare card for iframes | A Vercel rewrite to `embed.html` (no files per card); §5.1 |
+| `/r/<slug>.json`, `/r/registry.json` | shadcn registry | Static files; §6 |
+| `/og/widget/<uid>.png`, `/oembed/<uid>.json` | OG image, oEmbed | Built at deploy, keyed by uid so a rename doesn't break cached previews |
+
+- **Copy Link** copies the readable `/widget/<slug>/`; the More sheet adds **Copy short link** (`/<uid>`). Both open the same thing forever (decision 6).
+- Static pages: three small HTML files per widget (slug, `widget/<uid>`, root `<uid>`), about 3 KB each, so 519 files in all. Postbuild writes them from one template.
 
 **Extensible later (orgs, workspaces).** One route table, not ad-hoc parsing:
-- `src/site/views.ts` gets a small ordered `routes` list, e.g. `{ path: 'widget/:id', view: 'widget' }`, and both `viewFromUrl` and `urlForView` read it. A new kind of page is one line.
-- The grammar keeps one optional **scope** in front: `[/@<scope>]/widget/<id>/`. Today the scope is always empty (the site's own widgets). Later, `/@acme/widget/timer/` or `/@acme/w/<workspace>/widget/<id>/` can name an org's or workspace's widget without touching existing links.
-- Ids stay plain strings now. A scoped widget's full id is `<scope>/<id>` internally, so storage, exports and the registry (`@dot480/<id>` today, `@<scope>/<id>` later) use the same key.
-- The `@` prefix is reserved now (verify check), so no board id can collide with a future scope.
+- `src/site/views.ts` gets a small ordered `routes` list, e.g. `{ path: 'widget/:key', view: 'widget' }`, and both `viewFromUrl` and `urlForView` read it. A new kind of page is one line.
+- The grammar keeps one optional **scope** in front: `[/@<scope>]/widget/<slug or uid>/`. Today the scope is always empty (the site's own widgets). Later, `/@acme/widget/timer/` or `/@acme/w/<workspace>/widget/<key>/` can name an org's or workspace's widget without touching existing links.
+- **Slugs are unique within a scope; uids are unique everywhere.** So `/<uid>` keeps working with no scope even when orgs exist, and two orgs can both have a `timer`. Internally a widget's full key is `<scope>/<slug>`, and its uid is the stable foreign key for storage, exports, analytics and the registry (`@dot480/<slug>` today, `@<scope>/<slug>` later).
+- When widgets come from a database instead of `ids.json`, only the lookup behind the route changes; the URL forms above stay identical.
 
-**Board context.** `/widget/<id>/` must not load all 25 board chunks the way `findPreset` does today.
-- The prebuilt page carries `<meta name="dot480:card" content="<id>" data-board="<board>">`. The app reads it and loads only that board's chunk.
-- If the meta tag is missing (an old `?card=` link, or a dev server), it falls back to a lazy `cards-index` chunk (a postbuild-generated `{ id: board }` map, about 1.5 kB gz, never in first load), then to `findPreset`.
+**Board context.** `/widget/<key>/` must not load all 25 board chunks the way `findPreset` does today.
+- The prebuilt page carries the `dot480:widget` meta (uid, slug, board). The app reads it and loads only that board's chunk.
+- If the meta tag is missing (an old `?card=` link, or a dev server), it falls back to a lazy `widgets-index` chunk (a postbuild-generated `{ uid, slug, board }` list, about 2 kB gz, never in first load), then to `findPreset`.
 
 **State encoding.** It is query-string based, so links survive copy/paste and the prebuilt page and OG image still apply.
 
@@ -115,9 +141,9 @@
 | **COPY PNG** · **COPY SVG** · **COPY LINK** · **SHARE** (only where `canShare` works) · **REMIX** · **ⓘ HOW** | Copy HTML (3 tabs: static SVG / iframe / `<dot-card>`) · Embed code + oEmbed note · Download PNG / SVG / GIF / WebM / MP4 (reuses `src/export`) · **Add via shadcn** (`npx shadcn add …` with a copy button, the `@dot480` namespace snippet, and Open in v0) · Card spec JSON (`presetToSpec`; says when layers were baked) |
 
 - **The board card strip (U2) changes:**
-  - LINK copies `/widget/<id>/` instead of `?card=`;
+  - LINK copies `/widget/<slug>/` instead of `?card=`;
   - the card name in the header links to the card page;
-  - PNG stays a download (decision 10).
+  - PNG stays a download (decision 4).
 
 ### 4.2 Mobile (≤ 760 px)
 - The card is full width (pitch scales, never the grid).
@@ -143,7 +169,7 @@ What the owner meant: the page's buttons look and sit like iOS 26 toolbars. Smal
 - Reduced motion shows one still frame, and the pill bars don't animate.
 - Nothing is hover-only.
 - **OG and crawler pages:** postbuild writes, per card:
-  - `dist/widget/<id>/index.html`, with title `<Card name> · DOT/480`, a description from the blurb or `describe()`, a canonical link, and `og:image` = `/og/widget/<id>.png` from the existing `ogImage(id)`;
+  - `dist/widget/<slug>/index.html`, with title `<Card name> · DOT/480`, a description from the blurb or `describe()`, a canonical link, and `og:image` = `/og/widget/<uid>.png` from the existing `ogImage(id)`;
   - the oEmbed discovery link.
 - State params (`?skin`, `?t`, `?d`) share the default OG image, because static pages can't vary by query.
 
@@ -154,9 +180,9 @@ All of this lives in `src/export/clipboard.ts` (pure helpers plus one DOM wrappe
 | Action | Exact behaviour | Clipboard / API | Fallback | Size (estimate; measure in S2) |
 |---|---|---|---|---|
 | **Copy PNG** | Current frame (`t` from the time machine if frozen) at 2×, 14 px padding, on `{colors.bg}`, through `stillPNG` (U2) | `clipboard.write([new ClipboardItem({ 'image/png': pngPromise })])`, **called synchronously in the click**, so Safari works | No `ClipboardItem`, or rejected → download `<id>.png` + toast | ≈ 30–80 KB |
-| **Copy SVG** | `renderSVG` of the current frame, with a `<title>` and a `<!-- dot480 card <id> · /widget/<id>/ -->` comment | `{ 'text/plain': svg }`, plus `'image/svg+xml'` when `ClipboardItem.supports?.('image/svg+xml')` (Chrome 124+). Pasting the text into Figma gives vectors (unverified; check in S2). | `writeText(svg)` → download `<id>.svg` | ≈ 20–60 KB raw (39 B/dot), 5–12 KB gz |
-| **Copy HTML** | Three tabs: **static** (inline SVG in a `<div style="background:#000">`, no JS, works in email); **iframe** (`<iframe src="…/embed/<id>" width height loading="lazy" title>`); **web component** (`<script type="module" src="…/dot-card.js">` + `<dot-card card="<id>">`, only if decision 7 hosts it) | `writeText(code)`, text/plain only (it's code, not rich paste) | A selectable `<textarea>` | Static ≈ SVG; iframe ≈ 200 B; element ≈ 250 B + 115 kB gz script |
-| **Copy link** | Canonical `/widget/<id>/` plus the state params (§3) | `writeText(url)` | A selectable input in the toast | (none) |
+| **Copy SVG** | `renderSVG` of the current frame, with a `<title>` and a `<!-- dot480 card <id> · /widget/<slug>/ -->` comment | `{ 'text/plain': svg }`, plus `'image/svg+xml'` when `ClipboardItem.supports?.('image/svg+xml')` (Chrome 124+). Pasting the text into Figma gives vectors (unverified; check in S2). | `writeText(svg)` → download `<id>.svg` | ≈ 20–60 KB raw (39 B/dot), 5–12 KB gz |
+| **Copy HTML** | Three tabs: **static** (inline SVG in a `<div style="background:#000">`, no JS, works in email); **iframe** (`<iframe src="…/embed/<id>" width height loading="lazy" title>`); **web component** (`<script type="module" src="…/dot-card.js">` + `<dot-card card="<id>">`, only if decision 3 hosts it) | `writeText(code)`, text/plain only (it's code, not rich paste) | A selectable `<textarea>` | Static ≈ SVG; iframe ≈ 200 B; element ≈ 250 B + 115 kB gz script |
+| **Copy link** | Canonical `/widget/<slug>/` plus the state params (§3) | `writeText(url)` | A selectable input in the toast | (none) |
 | **Share** | `navigator.share({ files: [png], title, text: url })`. The URL goes in `text` too, because some targets drop `url` when files are attached (unverified). | Shown only when `navigator.canShare?.({ files: [probe] })`; the PNG promise starts on pointerdown | `share({ title, url })` → hidden (Firefox desktop) | PNG as above |
 | **Embed** | §5.1 | (none) | (none) | (none) |
 | **Download clip** | Existing `recordClip` (APNG / GIF / WebM / MP4) for the 103 animated cards | (none) | WebM via MediaRecorder (existing) | GIF ≈ 32 KB / 2 s |
@@ -172,17 +198,17 @@ All of this lives in `src/export/clipboard.ts` (pure helpers plus one DOM wrappe
 ### 5.1 Embed and oEmbed
 - **`embed.html`** is a separate Vite entry, like `essay.html`.
   - It has no app shell. It mounts the card with `@dot480/core/card` `mountCard` (≈ 20 kB gz) and the card's board chunk.
-  - It reads `skin`, `t`, `d` and `theme`. A tiny dot-text "DOT/480 ↗" link opens `/widget/<id>/` in a new tab.
+  - It reads `skin`, `t`, `d` and `theme`. A tiny dot-text "DOT/480 ↗" link opens `/widget/<slug>/` in a new tab.
   - It has no copy buttons, so no `clipboard-write` permission is needed.
   - Budget: ≤ 40 kB gz plus the board chunk, checked by `size.ts --entry embed` (new flag).
 - **`vercel.json`:**
   - rewrite `/embed/(.*)` → `/embed.html`;
   - exclude `embed/` from the main CSP rule's regex, and give `/embed/(.*)` its own CSP: the same directives plus **`frame-ancestors *`**;
-  - optionally add `frame-ancestors 'self'` to every other page (decision 6);
+  - optionally add `frame-ancestors 'self'` to every other page (decision 2);
   - verify with `curl -I` on a preview, rather than relying on header precedence.
-- **oEmbed:** postbuild writes `dist/oembed/<id>.json` with `{ version: "1.0", type: "rich", html: <iframe>, width, height, title, provider_name: "DOT/480", provider_url, thumbnail_url: og image }`, and the card page links to it.
+- **oEmbed:** postbuild writes `dist/oembed/<uid>.json` with `{ version: "1.0", type: "rich", html: <iframe>, width, height, title, provider_name: "DOT/480", provider_url, thumbnail_url: og image }`, and the card page links to it.
   - `maxwidth` / `maxheight` are ignored (static file). The iframe is responsive (`width:100%; aspect-ratio`).
-  - Notion needs Iframely to pick the domain up; it isn't guaranteed (decision 6).
+  - Notion needs Iframely to pick the domain up; it isn't guaranteed (decision 2).
 
 ## 6. shadcn registry
 
@@ -227,7 +253,7 @@ All of this lives in `src/export/clipboard.ts` (pure helpers plus one DOM wrappe
   - no change under `src/engine/` is required;
   - the bundlers and shadcn tooling live in `packages/scripts/` and run through `npx`, with no new dependency anywhere unless one is truly needed (and then app-level only).
 - **Links never break:**
-  - `?card=` redirects to `/widget/<id>/`;
+  - `?card=` redirects to `/widget/<slug>/`;
   - the `routes` table and the reserved `@` scope prefix keep later org / workspace URLs from colliding with today's;
   - `cardAliases` handles renames;
   - the reserved-segment check runs;
@@ -247,22 +273,24 @@ All of this lives in `src/export/clipboard.ts` (pure helpers plus one DOM wrappe
 
 | Phase | Scope | Size | Depends on | Checks while building (module level) |
 |---|---|---|---|---|
-| **S0 · Ids and URLs** | `cardAliases`, the reserved-segment (incl. `@`) and frozen-id verify checks; the `routes` table in `views.ts` with `/widget/<id>/`; `?card=` → canonical; `dot480:card` meta; postbuild widget pages, `og/widget/*.png` and `oembed/*.json`; build-time measurement | 1 day | U3 merged | `verify` (new `share:` checks), `postbuild.ts --no-og` then a timed full run, `skins-browser.ts` (uses `?card=`) |
-| **S1 · Widget page + pill bars** | Lazy `WidgetPage`: top and bottom pill bars (`PillBar`), prev/next, stage, side rail, actions wired to the existing U2 actions; strip LINK → `/widget/<id>/`; one capsule and a sheet on phones; vertical dock on wide screens; a11y | 2 days | U2 + S0 | `tsc`, oxlint, a new `scripts/site/widget-browser.ts` probe at 1440 and 375 (no console errors, keyboard path through both toolbars, `size.ts --board`) |
+| **S0 · Ids, metadata and URLs** | `scripts/widgets/ids.ts --assign` and `src/widgets/ids.json` (173 uids); `cardAliases`; authored `meta.ts` (blurbs for 173 widgets) and the derived `widgets.json`; the uid-pattern, reserved-segment and frozen-id verify checks; the `routes` table in `views.ts` resolving slug, uid and aliases; `?card=` → canonical; postbuild widget pages (3 per widget), JSON-LD, `og/widget/*.png` and `oembed/*.json`; build-time measurement | 1.5–2 days (the 173 blurbs are most of it) | U3 merged | `verify` (new `share:` checks), `postbuild.ts --no-og` then a timed full run, `skins-browser.ts` (uses `?card=`) |
+| **S1 · Widget page + pill bars** | Lazy `WidgetPage`: top and bottom pill bars (`PillBar`), prev/next, stage, side rail, actions wired to the existing U2 actions; strip LINK → `/widget/<slug>/`; one capsule and a sheet on phones; vertical dock on wide screens; a11y | 2 days | U2 + S0 | `tsc`, oxlint, a new `scripts/site/widget-browser.ts` probe at 1440 and 375 (no console errors, keyboard path through both toolbars, `size.ts --board`) |
 | **S2 · Copy and share** | `src/export/clipboard.ts` and `snippets.ts`; Copy PNG/SVG/HTML/link, Share, downloads; camera opt-in; measured sizes written back into §5 | 1–1.5 days | S1 | Node checks for the snippet builders and the `d` parser; CDP probe with clipboard permission granted (read back PNG, SVG and text); manual Safari / iOS / Firefox pass |
 | **S3 · Embed** | `embed.html` entry, rewrite, per-route CSP with `frame-ancestors`, oEmbed discovery, `size.ts --entry embed` | 1–1.5 days | S0 | `curl -I` on a preview; the embed rendered inside a cross-origin test page; budget |
 | **S4 · Registry v1** | Copy-in items (runtime, card wrapper, board libs, 173 cards); hosting at `/r/`; headers; schema and dependency checks; install smoke; widget page "Add via shadcn" panel | 2 days | None for packaging (can start now; it's in `packages/`). The panel needs S1. | `registry.ts --check`, the schema check, the bundle size check, the manual `shadcn add` smoke |
 | **S5 · Docs and polish** | ABOUT › "Share & embed" (URL params, registry snippet); README deep links; `CHANGELOG.md` and `src/changelog.ts`; `PROGRESS.md` | ½ day | All | (none) |
 
 - **Order:** S4 packaging can start now. Then S0 → S1 → S2 → S3 → S5, once U2 and U3 are on `main`, because they own `App.tsx`, `views.ts` and `DotWidget.tsx`.
-- **Total:** about 8–9 days.
+- **Total:** about 9–10 days.
 - **Every phase is its own PR.** Each one runs the full suite before merge: `pnpm check`, `pnpm golden --check`, a build, `size.ts --check`, and the mobile / C10 / skins probes.
 
 ## 9. Decisions for the owner
-Decided 2026-10-26: the "iOS view" is pill-style action bars (§4.3), not widget sizes; links are `/widget/<id>/` with room for a scope (§3).
+Decided 2026-10-26: the "iOS view" is pill-style action bars (§4.3), not widget sizes; links are `/widget/<key>/` with room for a scope, and the key can be the name (slug) or a short permanent id (uid), with metadata for every widget (§3).
 
 1. **shadcn.** Copy-in bundles with no npm (recommended, and it respects "no publishing")? Or publish `@dot480/*` after all? And should it be listed in the shadcn directory? WEB-PLAN §5 said no listings.
 2. **Embeds.** Allow anyone to iframe `/embed/*`, and lock every other page to `frame-ancestors 'self'`? Ask Iframely to allow the domain for Notion?
 3. **Host `/dot-card.js`.** The `<dot-card>` standalone is 115 kB gz with every preset. Host it now, or wait for a per-board split?
 4. **The strip's PNG button.** Keep it as a download (U2 as built), or make it copy to the clipboard, with download moving into More?
 5. **Vertical dock.** On wide screens, dock the bottom pill group vertically on the right edge (proposed), or keep it horizontal everywhere?
+6. **Canonical form.** Readable slug as canonical with the uid as the short link (proposed), or the uid everywhere?
+7. **uid shape.** 8 characters of Crockford base-32 (proposed; ~10¹² values), or shorter (6 characters ≈ 10⁹, still plenty for a personal site, but less room if orgs come)?
