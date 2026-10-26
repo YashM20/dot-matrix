@@ -11,18 +11,16 @@ Every visual is `Layer[]` (a `Field(u,v) → [0,1]` plus a colour tone) → grid
   - **DATA**, live weather, transit and agent state;
   - **PLAY**: physics, a synth, the HIVE game, camera halftone, a portrait that heals;
   - **ENGINE**: Field IR programs, simulations, raster light, half a million GPU dots, variable dot type.
-- **Tabs:**
-  - GALLERY;
-  - WORKSPACE, which tunes one preset and exports it;
-  - STUDIO, which layers and animates a card;
-  - DOTS, a Field IR editor with shareable links;
-  - DRAW, which paints dots;
-  - LOG, the visitor changelog.
+- **Three places:**
+  - EXPLORE: the boards;
+  - MAKE, with four modes: TUNE (tune one preset and export it), COMPOSE (layer and animate a card), CODE (a Field IR editor with shareable links) and DRAW (paint dots). Each starts simple, with the rest in MORE folds; `?pro=1` opens them all;
+  - ABOUT: what this is, keys and link options, and the changelog.
 - **Explore any card:**
-  - **X-RAY** shows the field, layers and spec behind a card;
+  - hover or focus a card (tap `⋯` on a phone) for **ⓘ / REMIX / LINK / PNG**;
+  - **X-RAY** shows the field, layers and spec behind a card, starting with a plain-words SUMMARY;
   - **TIME** freezes and scrubs the clock;
   - **⌘K** opens a palette and **`** a dot shell;
-  - **display skins** re-render everything as CRT, VFD, LED, e-ink, flip-disc or Nixie.
+  - the **DISPLAY ▾** menu re-renders everything as CRT, VFD, LED, e-ink, flip-disc or Nixie.
 - **Essay:** "Ditherpunk for UI" at `/essay.html`, a hands-on tour of how the dots are made.
 
 ## Layout of the repo
@@ -48,12 +46,12 @@ Browser probes run against a dev or preview server, e.g. `npx tsx scripts/c10-br
 
 ## Links into the site
 - `/<board>/`, for example `/light/`, opens a board.
-- `?tab=studio|dots|draw|workspace|gallery|log` opens a view.
+- `?make=tune|compose|code|draw` opens MAKE in that mode; `?about` opens ABOUT.
 - `?card=<id>` renders one card alone.
-- `?tab=dots&p=…` opens a shared DOTS program.
-- `?skin=crt` picks a display skin.
+- `?make=code&p=…` opens a shared CODE program.
+- `?skin=crt` picks a display skin; `?pro=1` opens every fold.
 
-The address bar follows what you open, and Back and Forward work. Old `?board=` links and the renamed `/glyph/` board still resolve.
+The address bar follows what you open, and Back and Forward work. Every old link still resolves (`?tab=…`, `?board=…`, the renamed `/glyph/` board) through the alias table in `src/site/views.ts`.
 
 ## Writing a card
 ```ts
