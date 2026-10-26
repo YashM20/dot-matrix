@@ -23,9 +23,9 @@ The post-build step runs from the `site-postbuild` plugin in `vite.config.ts`. `
 
 ## Deep links
 - `/<board>/` (for example `/light/`) is the shareable form.
-- Other views are `?tab=<view>` on the current board's path, for example `/light/?tab=studio`.
-- The address bar follows every board and view, and each change is a history entry, so Back and Forward work. This is `syncUrl` in `src/site/meta.ts`; the first render only normalises the URL.
-- `?board=<id>` folds into the path. `?card=<id>`, `?tab=dots&p=…`, `?skin=` and `?worker=0` still work and are kept.
+- MAKE is `?make=<tune|compose|code|draw>` and ABOUT is `?about`, on the current board's path, for example `/light/?make=compose`.
+- The address bar follows every board and view, and each change is a history entry, so Back and Forward work. The URL forms live in the pure resolver `src/site/views.ts`; `syncUrl` in `src/site/meta.ts` writes them, and the first render only normalises the URL.
+- Old forms resolve through the alias table in `views.ts` (checked by verify): `?board=<id>` folds into the path, and `?tab=workspace|studio|dots|draw|log|gallery` map to the new views. `?card=<id>`, `?make=code&p=…`, `?skin=`, `?pro=1` and `?worker=0` are kept.
 - Old ids resolve through `boardAliases` (`/glyph/` opens `/lock/`).
 - Links to `essay.html` must be root-absolute (`/essay.html`): a relative link breaks under `/<board>/` paths.
 - SPA fallback: `vercel.json` rewrites any path to `/index.html`. Vercel serves real files first, so board pages (`dist/<board>/index.html`), assets and OG images are unaffected.
