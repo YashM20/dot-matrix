@@ -62,9 +62,11 @@ try {
   await cdp('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1100, deviceScaleFactor: 1, mobile: false })
   await cdp('Browser.grantPermissions', { permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'], origin: new URL(base).origin }).catch(() => null)
 
-  const opened = await go(`${base}?make=code`)
+  // Pro mode opens every "More" fold (UX U4): `pro=1` for this load, localStorage for the reloads below
+  const opened = await go(`${base}?make=code&pro=1`)
   check('MAKE · CODE (DOTS) opens from ?make=code', opened, opened ? '' : `${logs.join(' | ')} ${(await js('document.body.innerText').catch(() => '')).slice(0, 300)}`)
   if (!opened) { await shot('00-failed'); throw new Error('tab did not open') }
+  await js(`localStorage.setItem('dot480:pro', 'on')`)
   await sleep(900)
   const first = await lit()
   check('the first example (ripple) draws on the preview canvas', first.n > 500, `${first.n} lit px`)

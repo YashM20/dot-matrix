@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { DotCanvas } from '../DotCanvas'
+import { More } from '../More'
 import { gridField } from '../../engine/fields/heatmapField'
 import { dot480 } from '../../engine/theme/tokens'
 import { useDrawBoard } from '../../hooks/useDrawBoard'
@@ -38,7 +39,7 @@ export function DrawBoard() {
     return () => window.removeEventListener('keydown', onKey)
   }, [undo, redo, setBrush, setEraseMode])
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 0' }}>
+    <div className="draw-layout" style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: '16px 0' }}>
       <DrawToolbar width={b.width} height={b.height} pitch={b.pitch} brush={b.brush} canUndo={b.canUndo} canRedo={b.canRedo} matrix={b.matrix} cols={b.cols} rows={b.rows} onResize={b.resize} onPitch={b.setPitch} onBrush={b.setBrush} onClear={b.clear} onUndo={b.undo} onRedo={b.redo} eraseMode={b.eraseMode} onEraseMode={b.setEraseMode} onLoadMatrix={b.loadMatrix} />
       <div className="draw-main" style={{ display: 'flex', gap: 16, alignItems: 'start', flexWrap: 'wrap' as const }}>
         <div className="draw-canvas-card" style={{ flex: '1 1 360px', minWidth: 320, background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -48,7 +49,9 @@ export function DrawBoard() {
           </div>
         </div>
         <div className="draw-ref" style={{ width: 340, flexShrink: 0 }}>
-          <ReferencePanel refUrl={b.refUrl} overlay={b.overlay} refOpacity={b.refOpacity} cols={b.cols} rows={b.rows} onRefFile={b.setRefFromFile} onOpacity={b.setRefOpacity} onOverlay={b.setOverlay} onAutoTrace={b.replaceMatrix} />
+          <More id="draw-reference" label="Trace a picture" tech="reference, auto-trace" className="more--panel">
+            <ReferencePanel refUrl={b.refUrl} overlay={b.overlay} refOpacity={b.refOpacity} cols={b.cols} rows={b.rows} onRefFile={b.setRefFromFile} onOpacity={b.setRefOpacity} onOverlay={b.setOverlay} onAutoTrace={b.replaceMatrix} />
+          </More>
         </div>
       </div>
       <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 16, padding: 16 }}>

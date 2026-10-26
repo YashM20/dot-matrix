@@ -9,6 +9,7 @@ import { useEffect, useRef, useState } from 'react'
 import { decodeShare } from '../../lib/share'
 import { widgetById, widgetPresets } from '../../widgets'
 import { EXAMPLES } from '../dwitter/examples'
+import { More } from '../More'
 import { looksLikeSpec, presetAsSpecCard, specV1 } from './adapter'
 import { cardFromJSON, importDots, importPreset, librarySave, libraryList, newCard, type StudioCard } from './doc'
 import { CardPanel, Inspector } from './Inspector'
@@ -84,19 +85,20 @@ export function Studio() {
   }, [undo, redo])
   return (
     <section className="st-layout" aria-label="Dot Studio">
+      {/* UX U4: canvas, layers, inspector and export stay open; the rest folds under named "More" sections */}
       <div className="st-col st-left">
         <LayerList />
-        <MachinePanel />
+        <More id="compose-states" label="States & edges" tech="state machine" className="more--panel"><MachinePanel /></More>
       </div>
       <div className="st-col st-center">
         <Toolbar />
         <StudioCanvas />
-        <Timeline />
+        <More id="compose-timeline" label="Animation" tech="timeline" className="more--panel"><Timeline /></More>
       </div>
       <div className="st-col st-right">
         <Inspector />
-        <BindingPanel />
-        <CardPanel />
+        <More id="compose-bindings" label="Live data" tech="bindings" className="more--panel"><BindingPanel /></More>
+        <More id="compose-card" label="Card size & dot style" tech="card" className="more--panel"><CardPanel /></More>
       </div>
       <SidePanel />
     </section>

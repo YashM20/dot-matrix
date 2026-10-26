@@ -3235,3 +3235,169 @@ label b {
     padding-bottom: env(safe-area-inset-bottom)
   }
 }
+
+/* UX U4: staged makers (docs/UX-PLAN.md §5.4) */
+/* "More" folds (src/components/More.tsx): grey, never the accent; plain label first, engine term second */
+.more {
+  min-width: 0;
+  text-align: left
+}
+
+.more > summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px 8px;
+  padding: 6px 0;
+  list-style: none;
+  cursor: pointer;
+  border-radius: 6px;
+  color: var(--label);
+  font: 500 9px var(--mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  user-select: none
+}
+
+.more > summary::-webkit-details-marker {
+  display: none
+}
+
+.more > summary::before {
+  content: '';
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--mute);
+  transform: rotate(-90deg);
+  transition: transform .15s
+}
+
+.more[open] > summary::before {
+  transform: none
+}
+
+.more > summary small {
+  color: var(--mute);
+  font: inherit;
+  letter-spacing: .04em;
+  text-transform: none
+}
+
+.more > summary:hover,
+.more > summary:hover small {
+  color: var(--value)
+}
+
+.more > summary:focus-visible {
+  outline: 1px solid var(--label);
+  outline-offset: 2px
+}
+
+.more-body {
+  min-width: 0
+}
+
+/* a whole panel folded: the closed fold is a slim panel-coloured bar */
+.more--panel > summary {
+  padding: 11px var(--spacing-cardPad);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: calc(var(--card-corner-exp)*4px)
+}
+
+.more--panel[open] > summary {
+  margin-bottom: 8px
+}
+
+.pg-bottom-row {
+  align-items: start
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more > summary::before {
+    transition: none
+  }
+}
+
+/* phones: each maker is one column, the canvas pinned at the top while its controls scroll under it */
+@media (max-width: 760px) {
+  .pg-layout,
+  .st-layout,
+  .dw-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 14px
+  }
+
+  .pg-center,
+  .st-col,
+  .st-side,
+  .dw-main,
+  .dw-side,
+  .draw-layout > .draw-main {
+    display: contents !important
+  }
+
+  .pg-preview,
+  .st-stage,
+  .dw-stage,
+  .draw-canvas-card {
+    position: sticky;
+    top: 0;
+    z-index: 3;
+    order: -9;
+    box-shadow: 0 10px 18px -12px rgba(0, 0, 0, .9)
+  }
+
+  /* keep the pinned canvas to about 40% of the screen */
+  .pg-preview .pg-stage {
+    min-height: 0;
+    padding: 10px
+  }
+
+  .pg-preview .pg-stage > *,
+  .dw-stage > * {
+    width: min(100%, 40vh);
+    margin: auto
+  }
+
+  .st-stage .st-canvas {
+    max-width: min(100%, 40vh)
+  }
+
+  .draw-canvas-card > div:last-child > div {
+    max-width: min(100%, 40vh) !important
+  }
+
+  .pg-preview-meta {
+    display: none
+  }
+
+  /* the most used controls next, then the folds in page order */
+  .pg-gallery {
+    order: -8;
+    max-height: 32vh
+  }
+
+  .pg-side,
+  .st-toolbar,
+  .dw-panel[aria-label='Time'] {
+    order: -7
+  }
+
+  .st-layers,
+  .dw-panel[aria-label='Program'] {
+    order: -6
+  }
+
+  .st-right > .st-panel:first-child {
+    order: -5
+  }
+
+  .st-side > .st-panel[aria-label='Export'] {
+    order: -4
+  }
+}

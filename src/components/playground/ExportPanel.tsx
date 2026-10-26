@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { saveAs } from 'file-saver'
+import { More } from '../More'
 import { usePlayground, type PlaygroundState } from './store'
 import { getTheme, renderCurrentSVG, resolveCurrent, snippetFor } from './render'
 import { layerSource, plotterSVG, recordClip, type ClipFormat, type PlotResult, type Sweep } from '../../export'
@@ -117,11 +118,15 @@ export function ExportPanel() {
         <button onClick={exportPNG}>PNG</button>
         <button onClick={exportSVG}>SVG</button>
         <button onClick={exportHTML}>HTML</button>
-        <button onClick={copySnippet}>REACT SNIPPET</button>
       </div>
-      <ClipExport />
-      <PlotterExport />
-      <pre className="pg-snippet" tabIndex={0} aria-label="Component snippet">{snippetFor(state)}</pre>
+      <More id="tune-export-more" label="Video, plotter & code" tech="clip, plotter SVG, React snippet">
+        <ClipExport />
+        <PlotterExport />
+        <div className="pg-export-row">
+          <button onClick={copySnippet}>REACT SNIPPET</button>
+        </div>
+        <pre className="pg-snippet" tabIndex={0} aria-label="Component snippet">{snippetFor(state)}</pre>
+      </More>
     </section>
   )
 }
