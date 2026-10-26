@@ -95,6 +95,10 @@ try {
     check(`${board}: hover explains the dot (value → size step, tone, layer)`, /value .*(step|unquantized).*tone .* layer \d/.test(tip), tip.slice(0, 120))
     const hud = await text(`${target} .xr-hud`)
     check(`${board}: HUD shows renderer, fps, dots`, /(SVG|CANVAS|WEBGL)/.test(hud) && /DOTS/.test(hud) && !/^.*\b0 DOTS/.test(hud), hud)
+    // U2: the inspector opens on SUMMARY (plain words); LAYERS is one tab behind it
+    await waitFor(`!!document.querySelector('.xr-panel .xr-summary')`, 3000)
+    check(`${board}: inspector opens on SUMMARY (dots, glossary words)`, /\d dots? on a/.test(await text('.xr-panel .xr-summary')) && (await count('.xr-panel .xr-summary .xr-term')) >= 5)
+    await js(`[...document.querySelectorAll('.xr-tabs button')].find(b => b.textContent === 'LAYERS').click()`)
     await waitFor(`!!document.querySelector('.xr-panel .xr-layers li')`, 3000)
     const panel = await text('.xr-panel')
     check(`${board}: inspector lists layers + runtime`, /RENDERER/.test(panel) && (await count('.xr-panel .xr-layers li')) > 0, `${await count('.xr-panel .xr-layers li')} layers${/RENDERER/.test(panel) ? '' : '; no RENDERER in: ' + panel.slice(0, 120)}`)
