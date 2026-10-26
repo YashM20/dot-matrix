@@ -1,6 +1,6 @@
 # SHARE-PLAN: one card, its own page, every way out
 
-> **Status: plan only (2026-10-26).** Nothing here is built. It assumes UX U2 (card action strip) and U3 (EXPLORE / MAKE / ABOUT, `src/site/views.ts`) are merged first; both exist as branches today.
+> **Status: plan only (2026-10-26).** Nothing here is built. It assumes UX U2 (card action strip) and U3 (EXPLORE / MAKE / ABOUT, `src/site/views.ts`) are merged first; both are now on `feat/ux-u0-u1` (not yet on `main`).
 > **Goal (from the owner):** "Add export / share support: copy as SVG, HTML, PNG, or a shareable single widget. Unique links/ids attached to every widget. A proper single-widget display page with actions, a new iOS kind of view: pills, horizontal, vertical, kinda iOS duo. And support for a shadcn registry."
 > It sits next to `docs/UX-PLAN.md`. UX-PLAN covers how a visitor finds things; this doc covers how one card leaves the site.
 
