@@ -8,6 +8,7 @@ import { IR_LIMITS, type IREnv, type IRProgram } from '../../engine/ir'
 import { decodeShare, encodeShare, programHash, shareUrl, SHARE_GRIDS, SHARE_LATTICES, SHARE_TONES, type ShareGrid, type SharedProgram, type ShareTone } from '../../lib/share'
 import type { WidgetContext } from '../../widgets/types'
 import { DotCanvas } from '../DotCanvas'
+import { More } from '../More'
 import { CodeEditor } from './CodeEditor'
 import { EXAMPLES } from './examples'
 import { clearGallery, loadGallery, recordProgram, type Entry } from './gallery'
@@ -171,19 +172,23 @@ export function DotsRepl() {
           </div>
           <label className="dw-field">LOOP <select value={loop} onChange={e => changeLoop(Number(e.target.value))}>{LOOPS.map(l => <option key={l} value={l}>{l} s</option>)}</select></label>
         </section>
-        <section className="pg-panel dw-panel dw-pickers" aria-label="Card">
-          <label className="dw-field">GRID <select value={settings.grid} onChange={e => setSettings(s => ({ ...s, grid: e.target.value as ShareGrid }))}>{Object.keys(SHARE_GRIDS).map(g => <option key={g} value={g}>{GRID_LABEL[g as ShareGrid]}</option>)}</select></label>
-          <label className="dw-field">LATTICE <select value={settings.lattice} onChange={e => setSettings(s => ({ ...s, lattice: Number(e.target.value) }))}>{SHARE_LATTICES.map(l => <option key={l} value={l}>{l}× · {Math.floor(grid.cols / l)}×{Math.floor(grid.rows / l)} DOTS</option>)}</select></label>
-          <label className="dw-field">TONE <select value={settings.tone} onChange={e => setSettings(s => ({ ...s, tone: e.target.value as ShareTone }))}>{SHARE_TONES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}</select></label>
-        </section>
-        <section className="pg-panel dw-panel" aria-label="Data">
-          <h2>DATA</h2>
-          {keys.length ? keys.map(k => (
-            <label key={k} className="dw-slider"><span>data.{k}</span>
-              <input type="range" min={0} max={1} step={.01} value={data[k]} onChange={e => { setValues(v => ({ ...v, [k]: Number(e.target.value) })); setRev(r => r + 1) }} />
-              <output>{data[k].toFixed(2)}</output></label>
-          )) : <p className="dw-hint">Write <code>data.speed</code> (any name) and a 0–1 slider appears here. <code>pointer.x</code>/<code>.y</code> follow the cursor over the card (−1 when away).</p>}
-        </section>
+        <More id="code-card" label="Grid, dot size & tone" tech="grid / lattice / tone" className="more--panel">
+          <section className="pg-panel dw-panel dw-pickers" aria-label="Card">
+            <label className="dw-field">GRID <select value={settings.grid} onChange={e => setSettings(s => ({ ...s, grid: e.target.value as ShareGrid }))}>{Object.keys(SHARE_GRIDS).map(g => <option key={g} value={g}>{GRID_LABEL[g as ShareGrid]}</option>)}</select></label>
+            <label className="dw-field">LATTICE <select value={settings.lattice} onChange={e => setSettings(s => ({ ...s, lattice: Number(e.target.value) }))}>{SHARE_LATTICES.map(l => <option key={l} value={l}>{l}× · {Math.floor(grid.cols / l)}×{Math.floor(grid.rows / l)} DOTS</option>)}</select></label>
+            <label className="dw-field">TONE <select value={settings.tone} onChange={e => setSettings(s => ({ ...s, tone: e.target.value as ShareTone }))}>{SHARE_TONES.map(t => <option key={t} value={t}>{t.toUpperCase()}</option>)}</select></label>
+          </section>
+        </More>
+        <More id="code-data" label="Live data" tech="data.* sliders" className="more--panel">
+          <section className="pg-panel dw-panel" aria-label="Data">
+            <h2>DATA</h2>
+            {keys.length ? keys.map(k => (
+              <label key={k} className="dw-slider"><span>data.{k}</span>
+                <input type="range" min={0} max={1} step={.01} value={data[k]} onChange={e => { setValues(v => ({ ...v, [k]: Number(e.target.value) })); setRev(r => r + 1) }} />
+                <output>{data[k].toFixed(2)}</output></label>
+            )) : <p className="dw-hint">Write <code>data.speed</code> (any name) and a 0–1 slider appears here. <code>pointer.x</code>/<code>.y</code> follow the cursor over the card (−1 when away).</p>}
+          </section>
+        </More>
       </div>
     </section>
   )

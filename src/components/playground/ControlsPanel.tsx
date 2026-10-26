@@ -1,15 +1,13 @@
-import { useState } from 'react'
 import type { DotStyle } from '../../engine'
 import { squircleExponent } from '../../engine'
 import { widgetPresets } from '../../widgets'
+import { More } from '../More'
 import { usePlayground, type ThemeName } from './store'
 
 const shapes: DotStyle['shape'][] = ['circle', 'square', 'squircle']
 
 export function ControlsPanel() {
   const s = usePlayground()
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ advanced: true, appearance: true })
-  const toggle = (g: string) => setCollapsed(c => ({ ...c, [g]: !c[g] }))
 
   const handleRandomize = () => {
     const preset = widgetPresets[Math.floor(Math.random() * widgetPresets.length)]
@@ -49,57 +47,45 @@ export function ControlsPanel() {
         <p className="pg-hint">0 = circle (n=2) · 0.26 = squircle (n=4) · 1 = square</p>
       </div>
 
-      <div className="pg-control-group">
-        <button className="pg-group-toggle" onClick={() => toggle('advanced')}>
-          <h3>ADVANCED</h3>
-          <span className={`pg-group-arrow ${collapsed.advanced ? '' : 'open'}`} />
-        </button>
-        {!collapsed.advanced && <>
-          <label>
-            <span>SIZE MIN</span>
-            <input type="range" min={0} max={2} step={0.05} value={s.sizeMin} onChange={e => s.setSizeMin(+e.target.value)} />
-            <b>{s.sizeMin.toFixed(2)}</b>
-          </label>
-          <label>
-            <span>SIZE MAX</span>
-            <input type="range" min={0.2} max={4} step={0.05} value={s.sizeMax} onChange={e => s.setSizeMax(+e.target.value)} />
-            <b>{s.sizeMax.toFixed(2)}</b>
-          </label>
-          <p className="pg-hint">Max dot radius in grid units</p>
-          <label>
-            <span>JITTER</span>
-            <input type="range" min={0} max={1} step={0.05} value={s.jitter} onChange={e => s.setJitter(+e.target.value)} />
-            <b>{s.jitter.toFixed(2)}</b>
-          </label>
-          <p className="pg-hint">0 = gridded · 1 = organic offset</p>
-          <label>
-            <span>QUANTIZE</span>
-            <input type="range" min={0} max={10} step={1} value={s.quantizeSteps} onChange={e => s.setQuantizeSteps(+e.target.value)} />
-            <b>{s.quantizeSteps || 'OFF'}</b>
-          </label>
-          <p className="pg-hint">Posterize dot sizes into N steps</p>
-        </>}
-      </div>
+      <More id="tune-advanced" label="Dot size & texture" tech="advanced" className="pg-control-group">
+        <label>
+          <span>SIZE MIN</span>
+          <input type="range" min={0} max={2} step={0.05} value={s.sizeMin} onChange={e => s.setSizeMin(+e.target.value)} />
+          <b>{s.sizeMin.toFixed(2)}</b>
+        </label>
+        <label>
+          <span>SIZE MAX</span>
+          <input type="range" min={0.2} max={4} step={0.05} value={s.sizeMax} onChange={e => s.setSizeMax(+e.target.value)} />
+          <b>{s.sizeMax.toFixed(2)}</b>
+        </label>
+        <p className="pg-hint">Max dot radius in grid units</p>
+        <label>
+          <span>JITTER</span>
+          <input type="range" min={0} max={1} step={0.05} value={s.jitter} onChange={e => s.setJitter(+e.target.value)} />
+          <b>{s.jitter.toFixed(2)}</b>
+        </label>
+        <p className="pg-hint">0 = gridded · 1 = organic offset</p>
+        <label>
+          <span>QUANTIZE</span>
+          <input type="range" min={0} max={10} step={1} value={s.quantizeSteps} onChange={e => s.setQuantizeSteps(+e.target.value)} />
+          <b>{s.quantizeSteps || 'OFF'}</b>
+        </label>
+        <p className="pg-hint">Posterize dot sizes into N steps</p>
+      </More>
 
-      <div className="pg-control-group">
-        <button className="pg-group-toggle" onClick={() => toggle('appearance')}>
-          <h3>APPEARANCE</h3>
-          <span className={`pg-group-arrow ${collapsed.appearance ? '' : 'open'}`} />
-        </button>
-        {!collapsed.appearance && <>
-          <label>
-            <span>THEME</span>
-            <select value={s.theme} onChange={e => s.setTheme(e.target.value as ThemeName)}><option value="dot480">DOT480</option><option value="deerflowMosaic">MOSAIC</option></select>
-            <b style={{ fontSize: 9 }}>{s.theme === 'dot480' ? '480' : 'MOSAIC'}</b>
-          </label>
-          <label>
-            <span>ANIMATED</span>
-            <input type="checkbox" checked={s.animated} onChange={e => s.setAnimated(e.target.checked)} />
-            <b>{s.animated ? 'ON' : 'OFF'}</b>
-          </label>
-          <p className="pg-hint">Runs the preset clock at 12 fps on Canvas; static presets just re-sample</p>
-        </>}
-      </div>
+      <More id="tune-appearance" label="Theme & motion" tech="appearance" className="pg-control-group">
+        <label>
+          <span>THEME</span>
+          <select value={s.theme} onChange={e => s.setTheme(e.target.value as ThemeName)}><option value="dot480">DOT480</option><option value="deerflowMosaic">MOSAIC</option></select>
+          <b style={{ fontSize: 9 }}>{s.theme === 'dot480' ? '480' : 'MOSAIC'}</b>
+        </label>
+        <label>
+          <span>ANIMATED</span>
+          <input type="checkbox" checked={s.animated} onChange={e => s.setAnimated(e.target.checked)} />
+          <b>{s.animated ? 'ON' : 'OFF'}</b>
+        </label>
+        <p className="pg-hint">Runs the preset clock at 12 fps on Canvas; static presets just re-sample</p>
+      </More>
     </section>
   )
 }

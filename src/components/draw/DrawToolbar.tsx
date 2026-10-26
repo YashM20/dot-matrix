@@ -3,6 +3,7 @@ import { gridField } from '../../engine/fields/heatmapField'
 import { fieldToSVG } from '../../lib/exportField'
 import { DRAW_LIMITS, type DrawMatrix } from '../../lib/drawGrid'
 import { dot480 } from '../../engine/theme/tokens'
+import { More } from '../More'
 
 interface Props {
   width: number; height: number; pitch: number; brush: number
@@ -96,24 +97,6 @@ export function DrawToolbar({ width, height, pitch, brush, canUndo, canRedo, mat
     <div style={{ background: 'var(--surface)', border: '1px solid var(--line)', borderRadius: 12, overflow: 'hidden' }}>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', padding: '10px 14px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ font: '500 8px var(--mono)', color: 'var(--mute)', letterSpacing: '.12em', textTransform: 'uppercase' }}>CANVAS</span>
-          <div style={sectionGap} />
-          <label style={labelStyle} title="Canvas width in px — Enter or blur to apply, Esc to revert">W <DraftNumberInput label="canvas width" value={width} min={DRAW_LIMITS.minPx} max={DRAW_LIMITS.maxPx} step={8} onCommit={w=>onResize(w,height)} style={baseInput} /></label>
-          <label style={labelStyle} title="Canvas height in px — Enter or blur to apply, Esc to revert">H <DraftNumberInput label="canvas height" value={height} min={DRAW_LIMITS.minPx} max={DRAW_LIMITS.maxPx} step={8} onCommit={h=>onResize(width,h)} style={baseInput} /></label>
-        </div>
-        <div style={sectionGap} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ font: '500 8px var(--mono)', color: 'var(--mute)', letterSpacing: '.12em', textTransform: 'uppercase' }}>GRID</span>
-          <div style={sectionGap} />
-          <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ font: '500 9px var(--mono)', color: 'var(--mute)' }}>PITCH</span>
-            <input type="range" min={DRAW_LIMITS.minPitch} max={DRAW_LIMITS.maxPitch} step={1} value={pitch} onChange={e=>onPitch(+e.target.value)} style={{ width: 100, accentColor: RED }} />
-            <b style={{ color: 'var(--value)', fontSize: 11, minWidth: 28, textAlign: 'right' as const }}>{pitch}px</b>
-            <span style={{ font: '500 8px var(--mono)', color: 'var(--mute)', minWidth: 60 }}>{cols}×{rows}</span>
-          </label>
-        </div>
-        <div style={sectionGap} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <span style={{ font: '500 8px var(--mono)', color: 'var(--mute)', letterSpacing: '.12em', textTransform: 'uppercase' }}>BRUSH</span>
           <div style={sectionGap} />
           <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -121,14 +104,6 @@ export function DrawToolbar({ width, height, pitch, brush, canUndo, canRedo, mat
             <b style={{ color: 'var(--value)', fontSize: 11, minWidth: 16 }}>{brush}</b>
             <button onClick={()=>onEraseMode(!eraseMode)} style={{ ...baseBtn, borderColor: eraseMode ? RED : 'var(--line)', background: eraseMode ? 'rgba(255,59,48,.12)' : 'none', color: eraseMode ? RED : 'var(--value)' }}>{eraseMode ? 'ERASER' : 'BRUSH'}</button>
           </label>
-        </div>
-        <div style={sectionGap} />
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-          <span style={{ font: '500 8px var(--mono)', color: 'var(--mute)', letterSpacing: '.12em', textTransform: 'uppercase' }}>HISTORY</span>
-          <div style={sectionGap} />
-          <button onClick={onUndo} disabled={!canUndo} style={{ ...baseBtn, opacity: canUndo ? 1 : .35, cursor: canUndo ? 'pointer' : 'default', color: canUndo ? 'var(--value)' : 'var(--mute)' }}><span style={{display:'inline-block',transform:'rotate(90deg)'}}>⏎</span> UNDO</button>
-          <button onClick={onRedo} disabled={!canRedo} style={{ ...baseBtn, opacity: canRedo ? 1 : .35, cursor: canRedo ? 'pointer' : 'default', color: canRedo ? 'var(--value)' : 'var(--mute)' }}>REDO <span style={{display:'inline-block',transform:'rotate(-90deg)'}}>⏎</span></button>
-          <button onClick={onClear} style={{ ...baseBtn, borderColor: 'rgba(255,59,48,.4)', color: 'rgba(255,59,48,.9)' }}>CLEAR</button>
         </div>
         <div style={{ flex: 1, minWidth: 200 }} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -144,6 +119,39 @@ export function DrawToolbar({ width, height, pitch, brush, canUndo, canRedo, mat
         <button onClick={()=>setExpanded(!expanded)} style={{ ...baseBtn, padding: '7px 14px' }} aria-label="shortcuts">
           <span style={{display:'inline-block',transform: expanded ? 'rotate(-90deg)' : 'rotate(90deg)', transition: 'transform .15s'}}>⏎</span>
         </button>
+      </div>
+      {/* UX U4: size, pitch and history fold under "More" (keys B / E / [ ] / Ctrl+Z keep working) */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'start', padding: '0 14px 10px' }}>
+        <More id="draw-size" label="Canvas size & dot spacing" tech="pitch">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ font: '500 8px var(--mono)', color: 'var(--mute)', letterSpacing: '.12em', textTransform: 'uppercase' }}>CANVAS</span>
+              <div style={sectionGap} />
+              <label style={labelStyle} title="Canvas width in px — Enter or blur to apply, Esc to revert">W <DraftNumberInput label="canvas width" value={width} min={DRAW_LIMITS.minPx} max={DRAW_LIMITS.maxPx} step={8} onCommit={w=>onResize(w,height)} style={baseInput} /></label>
+              <label style={labelStyle} title="Canvas height in px — Enter or blur to apply, Esc to revert">H <DraftNumberInput label="canvas height" value={height} min={DRAW_LIMITS.minPx} max={DRAW_LIMITS.maxPx} step={8} onCommit={h=>onResize(width,h)} style={baseInput} /></label>
+            </div>
+            <div style={sectionGap} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ font: '500 8px var(--mono)', color: 'var(--mute)', letterSpacing: '.12em', textTransform: 'uppercase' }}>GRID</span>
+              <div style={sectionGap} />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ font: '500 9px var(--mono)', color: 'var(--mute)' }}>PITCH</span>
+                <input type="range" min={DRAW_LIMITS.minPitch} max={DRAW_LIMITS.maxPitch} step={1} value={pitch} onChange={e=>onPitch(+e.target.value)} style={{ width: 100, accentColor: RED }} />
+                <b style={{ color: 'var(--value)', fontSize: 11, minWidth: 28, textAlign: 'right' as const }}>{pitch}px</b>
+                <span style={{ font: '500 8px var(--mono)', color: 'var(--mute)', minWidth: 60 }}>{cols}×{rows}</span>
+              </label>
+            </div>
+          </div>
+        </More>
+        <More id="draw-history" label="History" tech="undo, redo, clear">
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ font: '500 8px var(--mono)', color: 'var(--mute)', letterSpacing: '.12em', textTransform: 'uppercase' }}>HISTORY</span>
+            <div style={sectionGap} />
+            <button onClick={onUndo} disabled={!canUndo} style={{ ...baseBtn, opacity: canUndo ? 1 : .35, cursor: canUndo ? 'pointer' : 'default', color: canUndo ? 'var(--value)' : 'var(--mute)' }}><span style={{display:'inline-block',transform:'rotate(90deg)'}}>⏎</span> UNDO</button>
+            <button onClick={onRedo} disabled={!canRedo} style={{ ...baseBtn, opacity: canRedo ? 1 : .35, cursor: canRedo ? 'pointer' : 'default', color: canRedo ? 'var(--value)' : 'var(--mute)' }}>REDO <span style={{display:'inline-block',transform:'rotate(-90deg)'}}>⏎</span></button>
+            <button onClick={onClear} style={{ ...baseBtn, borderColor: 'rgba(255,59,48,.4)', color: 'rgba(255,59,48,.9)' }}>CLEAR</button>
+          </div>
+        </More>
       </div>
       {expanded && (
         <div style={{ borderTop: '1px solid var(--line)', padding: '10px 14px', display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, background: 'var(--raised)' }}>

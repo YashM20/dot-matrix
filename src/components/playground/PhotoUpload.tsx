@@ -2,9 +2,14 @@ import { useRef, useState } from 'react'
 import type { DragEvent } from 'react'
 import { dotifyUpload } from '../../lib/photoDotify'
 import { widgetById, widgetPresets } from '../../widgets'
+import { More } from '../More'
 import { usePlayground } from './store'
 
 export function PhotoUpload() {
+  return <More id="tune-photo" label="Your photo as dots" tech="photo dither" className="more--panel"><PhotoPanel /></More>
+}
+
+function PhotoPanel() {
   const setPhoto = usePlayground(s => s.setPhoto)
   const photoName = usePlayground(s => s.photoName)
   const presetId = usePlayground(s => s.presetId)
