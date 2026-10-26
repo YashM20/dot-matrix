@@ -879,6 +879,7 @@ ncaChecks(assert)
   const bad = old.filter(([u, v, m, b]) => !is(at(u), v, m, b)).map(([u]) => `${u} → ${JSON.stringify(at(u))}`)
   assert('ux: every old URL (?tab=… any case, ?board=, /<board>/, aliases, ?p=) opens the view it became', !bad.length, bad.join('; '))
   assert('ux: ?card= and ?tab=essay are recognised', at('/?card=music').card === 'music' && at('/?tab=essay').essay === true && !at('/?tab=log').essay)
+  assert('ux: /privacy and /terms hand over to their static pages', at('/privacy').legal === 'privacy' && at('/terms/').legal === 'terms' && !at('/').legal && !at('/privacy-x').legal)
   // canonical URLs: every place on the first board and on another, with other params kept and old ones folded away
   const canon = (u: string, v: Pick<ViewState, 'view' | 'mode' | 'board'>) => { const x = new URL(u, 'https://x'); return urlForView(v, x.search, x.pathname) }
   const want: [string, Pick<ViewState, 'view' | 'mode' | 'board'>, string][] = [
