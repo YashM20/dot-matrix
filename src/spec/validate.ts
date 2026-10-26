@@ -203,7 +203,7 @@ export function validateSpec(input: unknown): SpecResult {
   }
 
   const control = (c: unknown, path: string) => {
-    if (!obj(c, path, ['key', 'kind', 'box', 'min', 'max', 'step', 'orientation', 'keyY', 'options', 'optionLabels', 'perTurn', 'wrap', 'label'], ['key', 'kind', 'box', 'label'])) return
+    if (!obj(c, path, ['key', 'kind', 'box', 'min', 'max', 'step', 'orientation', 'keyY', 'options', 'optionLabels', 'perTurn', 'wrap', 'gesture', 'label'], ['key', 'kind', 'box', 'label'])) return
     if ('key' in c) str(c.key, `${path}.key`, { pattern: KEY })
     if ('kind' in c) oneOf(c.kind, `${path}.kind`, CONTROL_KINDS)
     if ('box' in c) tuple(c.box, `${path}.box`, 4)
@@ -214,6 +214,7 @@ export function validateSpec(input: unknown): SpecResult {
     if ('options' in c) num(c.options, `${path}.options`, { int: true, min: 1, max: 64 })
     if ('optionLabels' in c && arr(c.optionLabels, `${path}.optionLabels`, { max: 64 })) c.optionLabels.forEach((s, i) => str(s, `${path}.optionLabels[${i}]`, { max: SPEC_LIMITS.text }))
     if ('wrap' in c) bool(c.wrap, `${path}.wrap`)
+    if ('gesture' in c) oneOf(c.gesture, `${path}.gesture`, ['surface'])
     if ('label' in c) str(c.label, `${path}.label`, { min: 1, max: SPEC_LIMITS.text })
   }
   const transition = (x: unknown, path: string) => {
