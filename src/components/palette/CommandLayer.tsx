@@ -11,6 +11,7 @@ import { DotWidget } from '../DotWidget'
 import { TimeMachine } from '../xray/TimeMachine'
 import { boardTime, freeze, hoveredCard, isXRay, onCardAction, resume, scrub, setXR, toast, toggleCard, toggleGlobal, useXR, xrState } from '../xray/store'
 import { placeFromName, placeView, urlForView, type Place } from '../../site/views'
+import { widgetPath } from '../../site/routes'
 import { boardOfCard, type CommandApi } from './api'
 import { setReducedMotion } from './reducedMotion'
 
@@ -109,8 +110,8 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     },
     copyLink(cardId) {
       const { tab: t, board: b } = view.current
-      // a card alone, or this view's canonical link (a CODE program keeps its ?p=)
-      const url = location.origin + (cardId ? `${location.pathname}?card=${cardId}` : urlForView({ ...placeView(placeFromName(t) ?? 'EXPLORE'), board: b }, location.search, location.pathname))
+      // a card's own page (canonical /widget/<slug>/, docs/SHARE-PLAN.md §3), or this view's canonical link (a CODE program keeps its ?p=)
+      const url = location.origin + (cardId ? widgetPath(cardId) : urlForView({ ...placeView(placeFromName(t) ?? 'EXPLORE'), board: b }, location.search, location.pathname))
       const done = () => toast('link copied')
       if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(done, () => toast(url))
       else toast(url)
