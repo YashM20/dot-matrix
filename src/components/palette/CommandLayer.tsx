@@ -101,11 +101,12 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     async studio(cardId) {
       if (!(await findPreset(cardId))) return toast(`no card ${cardId}`)
       if (!setTab) return window.location.assign(urlOf('COMPOSE'))
-      // lazy, like the mode itself: the editor only loads when asked for
-      void Promise.all([import('../studio/store'), import('../studio/doc')]).then(([{ useStudio }, { importPreset }]) => {
-        useStudio.getState().replace(importPreset(cardId), `imported ${cardId} from x-ray`)
+      // lazy, like MAKE itself: the editor only loads when asked for; the card lands as a new frame
+      void import('../editor/store').then(({ useEditor }) => {
+        if (!useEditor.getState().insertPreset(cardId)) return toast(`could not open ${cardId}`)
+        useEditor.getState().setLeft('layers')
         setTab('COMPOSE')
-      }, e => toast(`studio failed: ${(e as Error).message}`))
+      }, e => toast(`editor failed: ${(e as Error).message}`))
     },
     copyLink(cardId) {
       const { tab: t, board: b } = view.current

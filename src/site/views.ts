@@ -1,7 +1,7 @@
 /**
  * The site's three views and MAKE's four modes, and their URLs (docs/UX-PLAN.md §4.1). Pure and DOM-free,
  * so `scripts/verify.ts` checks every old link in Node. Canonical: EXPLORE is the board path (`/light/`; the
- * first board keeps `/`), MAKE is `?make=tune|compose|code|draw` (a DOTS program keeps `&p=`), ABOUT is
+ * first board keeps `/`), MAKE is `?make` (the editor; `=compose|code|draw` open it on that tool, a DOTS program keeps `&p=`), ABOUT is
  * `?about`. Old links resolve through `TAB_ALIASES`, `?board=`, `boardAliases` and a bare `?p=`.
  */
 import { boardIds, resolveBoardId } from '../widgets/manifest'
@@ -11,8 +11,11 @@ export const VIEWS = ['EXPLORE', 'MAKE', 'ABOUT'] as const
 export type View = typeof VIEWS[number]
 export const MODES = ['TUNE', 'COMPOSE', 'CODE', 'DRAW'] as const
 export type Mode = typeof MODES[number]
-/** One grey line under the MAKE switch, per mode. */
-export const MODE_LINES: Record<Mode, string> = { TUNE: "change a preset's look", COMPOSE: 'layer and animate a card', CODE: 'write a field program', DRAW: 'paint dots' }
+/**
+ * MAKE is one editor (docs/EDITOR-PLAN.md); a mode is only where it opens: TUNE = assets + design,
+ * COMPOSE = layers, CODE = the code tool (a `&p=` program imported), DRAW = the draw tool.
+ */
+export const MODE_LINES: Record<Mode, string> = { TUNE: 'the editor: presets and their look', COMPOSE: 'the editor: layers and animation', CODE: 'the editor: write a field program', DRAW: 'the editor: paint dots' }
 /** A view, or a MAKE mode (which means MAKE in that mode): what the palette, shell and command layer navigate to. */
 export type Place = View | Mode
 export const PLACES = ['EXPLORE', ...MODES, 'ABOUT'] as const
@@ -49,7 +52,8 @@ export function urlForView(v: Pick<ViewState, 'view' | 'mode' | 'board'>, search
   const q = new URLSearchParams(search)
   for (const k of ['tab', 'board', 'make', 'about', 'card']) q.delete(k)
   if (v.view !== 'MAKE' || v.mode !== 'CODE') q.delete('p')
-  const head = v.view === 'ABOUT' ? 'about' : v.view === 'MAKE' ? `make=${v.mode.toLowerCase()}` : ''
+  // the editor's default way in (TUNE) is plain `?make`
+  const head = v.view === 'ABOUT' ? 'about' : v.view === 'MAKE' ? (v.mode === 'TUNE' ? 'make' : `make=${v.mode.toLowerCase()}`) : ''
   const query = [head, q.toString()].filter(Boolean).join('&')
   // the first board keeps whatever non-board path served the page (`/`, `/index.html`)
   const path = v.board === boardIds[0] && boardFromPath(pathname) === undefined ? pathname : pageMeta(v.board).path
