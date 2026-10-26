@@ -66,17 +66,12 @@ export function setPageMeta(boardId?: string) {
 
 /**
  * Keep the address bar on the view, so a copied link opens it and Back / Forward walk the views
- * (docs/UX-PLAN.md U0). The path names the board (`/light/`; the first board keeps `/`), `?tab=<view>`
- * names any other view, and the older `?board=` folds into the path. Other params (`?worker=0`,
- * `?skin=`, the DOTS `?p=`) stay. `push` adds a history entry; the first render only replaces.
+ * (docs/UX-PLAN.md U0, U3). `pathAndQuery` is the view's canonical URL (`urlForView` in `./views`: the
+ * board path, `?make=<mode>`, `?about`; other params stay). `push` adds a history entry; otherwise it
+ * only replaces (the first render, or an older URL form of the same view).
  */
-export function syncUrl(tab: string, boardId: string, push: boolean) {
-  const q = new URLSearchParams(location.search)
-  q.delete('board')
-  if (tab === 'BOARDS') q.delete('tab'); else q.set('tab', tab.toLowerCase())
-  if (tab !== 'DOTS') q.delete('p')
-  const path = boardId === boardIds[0] && boardFromPath(location.pathname) === undefined ? location.pathname : pageMeta(boardId).path
-  const next = path + (q.size ? `?${q}` : '') + location.hash
+export function syncUrl(pathAndQuery: string, push: boolean) {
+  const next = pathAndQuery + location.hash
   if (next === location.pathname + location.search + location.hash) return
   if (push) history.pushState(null, '', next); else history.replaceState(history.state, '', next)
 }

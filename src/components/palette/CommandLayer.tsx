@@ -10,7 +10,8 @@ import { findPreset } from '../../widgets/manifest'
 import { DotWidget } from '../DotWidget'
 import { TimeMachine } from '../xray/TimeMachine'
 import { boardTime, freeze, hoveredCard, resume, scrub, setXR, toast, toggleCard, toggleGlobal, useXR, xrState } from '../xray/store'
-import { TABS, boardOfCard, type CommandApi } from './api'
+import { placeFromName, placeView, urlForView, type Place } from '../../site/views'
+import { boardOfCard, type CommandApi } from './api'
 import { setReducedMotion } from './reducedMotion'
 
 // the panels load on first use: first-load JS stays inside the site budget
@@ -25,6 +26,7 @@ const editable = (t: EventTarget | null) => {
 }
 
 export interface CommandLayerProps {
+  /** The place: EXPLORE, ABOUT, or a MAKE mode (TUNE, COMPOSE, CODE, DRAW); `setTab` takes any name, old tabs too. */
   tab: string
   board: string
   /** Absent in single-card mode: navigation then reloads into the requested view. */
@@ -55,17 +57,19 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
   useEffect(() => { void import('./Palette'); void import('./Shell') }, [])
 
   const go = useCallback((query: string) => { window.location.assign(`${location.pathname}${query}`) }, [])
+  // a place's canonical URL on this board (src/site/views.ts): reloads in single-card mode, links, remix
+  const urlOf = useCallback((p: Place, search = location.search) => urlForView({ ...placeView(p), board: view.current.board }, search, location.pathname), [])
   const api: CommandApi = useMemo(() => ({
     get tab() { return view.current.tab },
     get board() { return view.current.board },
     openTab(t) {
-      const name = TABS.find(x => x === t.toUpperCase()) ?? 'BOARDS'
-      if (!setTab) return go(`?tab=${name.toLowerCase()}`)
+      const name = placeFromName(t) ? t : 'EXPLORE'
+      if (!setTab) return window.location.assign(urlOf(placeFromName(name)!))
       setTab(name)
     },
     openBoard(id) {
       if (!setTab || !setBoard) return go(`?board=${id}`)
-      setTab('BOARDS'); setBoard(id)
+      setTab('EXPLORE'); setBoard(id)
     },
     async focusCard(cardId, opts) {
       const b = await boardOfCard(cardId)
@@ -86,25 +90,27 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       const preset = await findPreset(cardId)
       if (!preset) return toast(`no card ${cardId}`)
       void import('../xray/remix').then(m => m.remixQuery(preset, data)).then(({ query, stub }) => {
-        if (stub) toast(`${preset.name} is not Field IR yet: DOTS opens a stub from describe()`)
-        if (!setTab || view.current.tab === 'DOTS') return go(query)
-        history.pushState(null, '', query)
-        setTab('DOTS')
+        if (stub) toast(`${preset.name} is not Field IR yet: CODE opens a stub from describe()`)
+        const q = new URLSearchParams(location.search); q.set('p', new URLSearchParams(query).get('p') ?? '')
+        const url = urlOf('CODE', `?${q}`)
+        if (!setTab || view.current.tab === 'CODE') return window.location.assign(url)
+        history.pushState(null, '', url)
+        setTab('CODE')
       }, e => toast(`remix failed: ${(e as Error).message}`))
     },
     async studio(cardId) {
       if (!(await findPreset(cardId))) return toast(`no card ${cardId}`)
-      if (!setTab) return go(`?tab=studio`)
-      // lazy, like the tab itself: the editor only loads when asked for
+      if (!setTab) return window.location.assign(urlOf('COMPOSE'))
+      // lazy, like the mode itself: the editor only loads when asked for
       void Promise.all([import('../studio/store'), import('../studio/doc')]).then(([{ useStudio }, { importPreset }]) => {
         useStudio.getState().replace(importPreset(cardId), `imported ${cardId} from x-ray`)
-        setTab('STUDIO')
+        setTab('COMPOSE')
       }, e => toast(`studio failed: ${(e as Error).message}`))
     },
     copyLink(cardId) {
       const { tab: t, board: b } = view.current
-      const query = cardId ? `?card=${cardId}` : t === 'BOARDS' ? `?board=${b}` : t === 'DOTS' && location.search.includes('p=') ? location.search : `?tab=${t.toLowerCase()}`
-      const url = `${location.origin}${location.pathname}${query}`
+      // a card alone, or this view's canonical link (a CODE program keeps its ?p=)
+      const url = location.origin + (cardId ? `${location.pathname}?card=${cardId}` : urlForView({ ...placeView(placeFromName(t) ?? 'EXPLORE'), board: b }, location.search, location.pathname))
       const done = () => toast('link copied')
       if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(done, () => toast(url))
       else toast(url)
@@ -129,7 +135,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     toggleFps(force) { setXR(s => ({ fpsHud: force ?? !s.fpsHud })) },
     openShell() { setPalette(false); setShell(true) },
     boss() { setPalette(false); setShell(false); setBoss(true) },
-  }), [setTab, setBoard, go])
+  }), [setTab, setBoard, go, urlOf])
 
   // a frozen clock would stall the next view's entrance: a view change resumes it
   const viewKey = `${tab}|${board}`, lastView = useRef(viewKey)

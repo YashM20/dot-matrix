@@ -1,6 +1,6 @@
 /**
  * DOTS tab — "Dwitter for dots": a Field IR REPL with a live card, a time scrubber, `data.*` sliders,
- * short share links (`?tab=dots&p=…`) and a local remix graph. Every frame goes through the normal
+ * short share links (`?make=code&p=…`, MAKE · CODE) and a local remix graph. Every frame goes through the normal
  * pipeline (DotCanvas → sampler → renderer); shared programs are only parsed, never run when invalid.
  */
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from 'react'
@@ -111,7 +111,7 @@ export function DotsRepl() {
       encodeShare({ ...current, ...(parent && { parent }) }).then(enc => {
         if (gone) return
         setLink(enc)
-        if (compiled.program && urlOwned.current) history.replaceState(null, '', `?tab=dots&p=${enc}`)
+        if (compiled.program && urlOwned.current) history.replaceState(null, '', `?make=code&p=${enc}`)
       }, () => { if (!gone) setLink('') })
     }, 250)
     return () => { gone = true; window.clearTimeout(h) }

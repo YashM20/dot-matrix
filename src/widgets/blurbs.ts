@@ -14,7 +14,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   audio: 'Audio gear in dots: vibe pad, MIDI, recorder, radio and a live interpreter.',
   departures: 'A split-flap departures board, flipping letter by letter.',
   instrument: 'A playable synth: turn the knobs, program the sixteen steps and press play. Sound on.',
-  ir: 'Cards written as Field IR programs. The same code runs in the DOTS editor.',
+  ir: 'Cards written as Field IR programs. The same code runs in MAKE · CODE.',
   cinema: 'Nine animated scenes from the Afterlight cycle: light, motion and silhouettes.',
   light: 'Lit dots: drag the torch across matte, gloss, glass, metal and fabric.',
   levels: 'HIVE, a dot-matrix game in nine worlds. Press start and play with the keyboard.',

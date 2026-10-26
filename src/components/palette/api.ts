@@ -4,22 +4,24 @@
  */
 import { SKINS as SKIN_INFO, SKIN_NAMES } from '../../engine/display/names'
 import { boardIds, boardLabel, boardManifest, loadBoard, type BoardDef } from '../../widgets/manifest'
+import { MODE_LINES, PLACES, isMode } from '../../site/views'
 import type { RendererOverride } from '../xray/store'
 import type { MotionSetting } from './reducedMotion'
 
-export const TABS = ['BOARDS', 'GALLERY', 'WORKSPACE', 'STUDIO', 'LOG', 'DOTS', 'DRAW'] as const
 /** The display skins, from the engine's list (so the palette, shell and header can't drift apart). */
 export const SKINS = SKIN_NAMES
 
 export interface CommandApi {
+  /** The place: EXPLORE, ABOUT or a MAKE mode. */
   tab: string
   board: string
+  /** A view or MAKE mode by any name, old tab names too (`src/site/views.ts`). */
   openTab(tab: string): void
   openBoard(id: string): void
   /** Open the board holding `cardId`, scroll to the card and flash it. */
   focusCard(cardId: string, opts?: { xray?: boolean }): void | Promise<void>
   remix(cardId: string, data?: Record<string, number>): void | Promise<void>
-  /** Open the card in STUDIO as a layer stack (`importPreset`). */
+  /** Open the card in MAKE · COMPOSE as a layer stack (`importPreset`). */
   studio(cardId: string): void | Promise<void>
   copyLink(cardId?: string): void
   toggleXray(force?: boolean): void
@@ -46,6 +48,12 @@ export interface PaletteItem {
   run(api: CommandApi): void
 }
 
+// what each place used to be called, and what people may type for it
+const PLACE_WORDS: Record<(typeof PLACES)[number], string> = {
+  EXPLORE: 'boards gallery home', TUNE: 'make workspace playground preset style', COMPOSE: 'make studio layers timeline',
+  CODE: 'make dots repl dwitter ir program', DRAW: 'make paint', ABOUT: 'log changelog essay shortcuts help keys',
+}
+
 /** Every board, loading the chunks not loaded yet (the palette's card search, the shell). */
 export const allBoards = (): Promise<BoardDef[]> => Promise.all(boardIds.map(loadBoard))
 /** The board a card lives on (first one, board order). */
@@ -58,9 +66,8 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   act('xray', 'Toggle X-ray on every card', a => a.toggleXray(), '⇧X', 'xray inspect debug grid field layers')
   act('time', 'Time machine: freeze and scrub the board', a => a.freeze(), 'T', 'pause clock scrub time')
   act('resume', 'Time machine: resume the clock', a => a.resume(), 'SPACE', 'play unpause')
-  if (hoveredCard) act('remix-hover', `Open ${hoveredCard} in DOTS (remix)`, a => a.remix(hoveredCard), '', 'remix dots ir program')
-  if (hoveredCard) act('studio-hover', `Open ${hoveredCard} in STUDIO`, a => a.studio(hoveredCard), '', 'remix studio edit layers')
-  act('remix', 'Open DOTS (Field IR REPL)', a => a.openTab('DOTS'), '', 'dwitter repl ir program')
+  if (hoveredCard) act('remix-hover', `Open ${hoveredCard} in MAKE · CODE (remix)`, a => a.remix(hoveredCard), '', 'remix dots ir program')
+  if (hoveredCard) act('studio-hover', `Open ${hoveredCard} in MAKE · COMPOSE`, a => a.studio(hoveredCard), '', 'remix studio edit layers')
   act('link', 'Copy deep link to this view', a => a.copyLink(), '', 'share url clipboard')
   if (hoveredCard) act('link-card', `Copy deep link to ${hoveredCard}`, a => a.copyLink(hoveredCard), '', 'share url clipboard card')
   act('shell', 'Open the dot shell', a => a.openShell(), '`', 'terminal console cli')
@@ -70,7 +77,7 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   act('worker-off', 'Renderer: main-thread sampling (no worker, reloads)', a => a.setWorker(false), '', 'worker thread')
   act('worker-on', 'Renderer: worker sampling (reloads)', a => a.setWorker(true), '', 'worker thread')
   for (const s of SKINS) act(`skin-${s}`, `Display skin — ${SKIN_INFO[s].title}`, a => a.setSkin(s), '', `display skin theme ${s}`)
-  for (const t of TABS) items.push({ id: `v:${t}`, group: 'View', text: `Go to ${t}`, run: a => a.openTab(t), keywords: t.toLowerCase(), boost: 30 })
+  for (const p of PLACES) items.push({ id: `v:${p}`, group: 'View', text: isMode(p) ? `Go to MAKE · ${p}: ${MODE_LINES[p]}` : `Go to ${p}`, run: a => a.openTab(p), keywords: `${p.toLowerCase()} ${PLACE_WORDS[p]}`, boost: 30 })
   for (const m of boardManifest) {
     const b = boards.find(x => x.id === m.id)
     items.push({ id: `b:${m.id}`, group: 'Board', text: `${boardLabel(m.id)} — ${m.title}`, keywords: `${m.id} ${b?.items.map(p => p.name).join(' ') ?? ''}`, hint: b ? `${b.items.length} cards` : undefined, boost: 40, run: a => a.openBoard(m.id) })
