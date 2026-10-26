@@ -139,6 +139,6 @@ export const releases: Release[] = [
 
 export const upcoming: Upcoming[] = [
   { phase: 'U5', title: 'Everything for power users', status: 'next', text: 'A ? sheet with every shortcut and link option, and a pro mode that opens every panel.' },
-  { phase: 'S1', title: 'A page for every card', status: 'planned', text: 'Each card gets its own page and link, with copy as PNG, SVG or HTML, share, embed, and iPhone widget sizes.' },
+  { phase: 'S1', title: 'A page for every card', status: 'planned', text: 'Each card gets its own short link (/widget/<id>/) and page, with copy as PNG, SVG or HTML, share and embed.' },
   { phase: 'C1', title: 'A million dots', status: 'planned', text: 'Fields evaluated on the GPU with WebGPU: a full-screen field that follows the cursor, and a zoom from one card into a million dots.' },
 ]
