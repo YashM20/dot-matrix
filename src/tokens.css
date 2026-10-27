@@ -61,12 +61,11 @@
   --hair-dot: 1px;                      /* dotted hairline: a 1 px dot ... */
   --hair-pitch: 4px;                    /* ... every 4 px */
 
-  /* ── radius ── */
-  --card-corner-exp: 4;                                  /* {rounded.cardCorner}: squircle n */
-  --radius-sm: 4px;                                      /* small marks: kbd, chips, swatches */
-  --radius-ctl: 8px;                                     /* controls: fields, buttons, tiles */
-  --radius-panel: 12px;                                  /* raised surfaces: menus, popovers, dialogs */
-  --radius-card: calc(var(--card-corner-exp) * 4px);     /* cards and sheets: 16 px today, 12 px in T1 */
+  /* ── radius: cards 12, controls 8, pills full ── */
+  --radius-sm: 4px;       /* small marks: kbd, chips, swatches */
+  --radius-ctl: 8px;      /* controls: fields, buttons, tiles, menu rows */
+  --radius-panel: 12px;   /* raised surfaces: menus, popovers, dialogs */
+  --radius-card: 12px;    /* {rounded.cardCorner}: cards and sheets */
   --radius-pill: 999px;
 
   /* ── motion: hover in instantly, out over 150 ms ── */
@@ -94,4 +93,33 @@
   --fs-h1-hero: clamp(2.375rem, 5vw, 4.5rem);    /* hero heading, 38–72 px */
   --lh-tight: 1.1;
   --lh-body: 1.6;
+
+  /* ── design language in chrome (T1, docs/LAYOUT-THEME-PLAN.md §1b; DESIGN.md › Chrome states) ── */
+  /* edges: rules and dividers are dotted hairlines, a 1 px dot every 4 px (border-image: var(--hair-x) 1) */
+  --line-dot: color-mix(in srgb, var(--tint) 24%, transparent);
+  --hair-x: repeating-linear-gradient(90deg, var(--line-dot) 0 var(--hair-dot), transparent 0 var(--hair-pitch));
+  --hair-y: repeating-linear-gradient(180deg, var(--line-dot) 0 var(--hair-dot), transparent 0 var(--hair-pitch));
+  --line-hover: color-mix(in srgb, var(--tint) 28%, transparent);   /* a hovered outline */
+  --card-edge: inset 0 1px 0 color-mix(in srgb, var(--tint) 4%, transparent); /* the card's 1 px top highlight */
+  /* states: hover is a lightness lift, press one step more, never a colour change */
+  --wash-hover: color-mix(in srgb, var(--tint) 5%, transparent);
+  --wash-press: color-mix(in srgb, var(--tint) 9%, transparent);
+  /* the one signature effect, accent-driven: active, focus and live only (scripts/site/css-tokens.ts) */
+  --glow-halo: 0 0 var(--space-4) color-mix(in srgb, var(--red) 30%, transparent);
+  --glow: 0 0 0 1px var(--red), var(--glow-halo);
+  --glow-wash: color-mix(in srgb, var(--red) 12%, transparent);     /* the accent wash behind an active item */
+  /* raised layers (menus, popovers, sheets, ⌘K) are glass: translucent raised, one small blur, never stacked */
+  --glass: color-mix(in srgb, var(--raised) 84%, transparent);
+  --glass-blur: blur(16px) saturate(140%);
+  --shadow-raised: 0 4px 40px 8px color-mix(in srgb, var(--shade) 40%, transparent), 0 0 0 .5px color-mix(in srgb, var(--shade) 80%, transparent), inset 0 .5px 0 color-mix(in srgb, var(--tint) 25%, transparent);
+  /* tooltips: the first waits, the next ones in the same group show at once */
+  --dur-tip: 400ms;
+}
+
+/* phones: a smaller, cheaper blur and a more opaque glass */
+@media (max-width: 760px), (pointer: coarse) {
+  :root {
+    --glass: color-mix(in srgb, var(--raised) 92%, transparent);
+    --glass-blur: blur(8px)
+  }
 }

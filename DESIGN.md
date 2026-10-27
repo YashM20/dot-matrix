@@ -69,6 +69,19 @@ The page chrome reads these custom properties (`src/tokens.css`), never a hex. V
 | `--dim` | `#4A4E54` | — | the dimmest text: units and sub-labels in the editor |
 | `--dot-faint` | `#2E3033` | `{colors.dotFaint}` | off switches |
 
+**Chrome materials** (T1, docs/LAYOUT-THEME-PLAN.md §1b). Built from the roles above, so a theme swap carries them.
+
+| CSS token | Built from | Use |
+|---|---|---|
+| `--line-dot` | `--tint` at 24% | the ink of a dotted hairline |
+| `--hair-x` / `--hair-y` | a 1 px `--line-dot` dot every `--hair-pitch` | rules and dividers: `border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1` (`--hair-y` for a vertical divider). Card and panel *edges* stay the solid `--line` |
+| `--line-hover` | `--tint` at 28% | the outline of a hovered or focused outlined control |
+| `--card-edge` | inset 1 px `--tint` at 4% | the card's top-edge highlight (with its single hairline) |
+| `--wash-hover` / `--wash-press` | `--tint` at 5% / 9% | hover is a lightness lift, press one step more; never a colour change |
+| `--glow`, `--glow-halo`, `--glow-wash` | `--red`: a 1 px ring + 16 px halo at 30%; the halo alone; a 12% wash | **the one signature effect**, only on active, focus and live selectors (the lint enforces it) |
+| `--glass` / `--glass-blur` | `--raised` at 84% / `blur(16px) saturate(140%)`; phones and coarse pointers 92% / `blur(8px)` | raised layers only: menus, popovers, sheets, ⌘K |
+| `--shadow-raised` | `--shade` 40% spread, a .5 px `--shade` ring, an inset .5 px `--tint` top | every raised layer, toasts and tooltips |
+
 ## Typography
 
 ### Font System
@@ -207,7 +220,7 @@ A material is a dot vocabulary, not a shader: given one normal raster and one li
 | `{rounded.soft}` | 0.12 | 2.4 | Slightly softened dots for photo halftones |
 | `{rounded.circle}` | 0 | 2 (true circle) | Status dots, avatar circles, radial-ring markers, PIN dots |
 
-Individual dot shape is controlled by one continuous parameter (the superellipse exponent) rather than a discrete shape enum — sliding from `{rounded.sharp}` to `{rounded.circle}` smoothly passes through every intermediate "squircle" state. Card container corners use the same exponent at a larger scale (`{rounded.cardCorner}`, default n=4, ≈16px effective radius) so card chrome and dot chrome always read as the same geometric family.
+Individual dot shape is controlled by one continuous parameter (the superellipse exponent) rather than a discrete shape enum — sliding from `{rounded.sharp}` to `{rounded.circle}` smoothly passes through every intermediate "squircle" state. Card container corners are the chrome radius `{rounded.cardCorner}` (`--radius-card`, 12 px) so card chrome and dot chrome always read as the same geometric family.
 
 ### Chrome radius (CSS)
 Dots and in-card shapes use the squircle exponent above. The HTML chrome around them (card containers, controls, menus) uses a short radius scale in `src/tokens.css`; `scripts/site/css-tokens.ts` fails on a raw px radius (percentages, for circles and CRT glass, are fine).
@@ -217,7 +230,7 @@ Dots and in-card shapes use the squircle exponent above. The HTML chrome around 
 | `--radius-sm` | 4 px | small marks: kbd, chips, swatches, inline code |
 | `--radius-ctl` | 8 px | controls: fields, buttons, tiles |
 | `--radius-panel` | 12 px | raised surfaces: menus, popovers, dialogs |
-| `--radius-card` | `calc(--card-corner-exp × 4px)` = 16 px | `dot-card`, sheets; `{rounded.cardCorner}`, n = `--card-corner-exp` (4). docs/LAYOUT-THEME-PLAN.md §1b moves cards to 12 px in T1 |
+| `--radius-card` | 12 px | `dot-card`, sheets (`{rounded.cardCorner}`). Cards 12, controls 8, pills full: nothing else |
 | `--radius-pill` | 999 px | pills, round buttons |
 
 A surface that wraps a rounded child with padding takes the child's radius plus the padding (`calc(var(--radius-panel) + var(--space-2))`), so the corners stay concentric.
@@ -354,17 +367,32 @@ The HTML chrome (sheets, menus, pills, tabs) animates with these durations only 
 
 | Token | Value | Use |
 |---|---|---|
-| `--dur-in` | 0 ms | hover in: instant (T1 moves transitions onto the resting state only) |
+| `--dur-in` | 0 ms | hover and press in: instant (the resting state carries the transition) |
 | `--dur-out` | 150 ms | hover out, press, small fades |
 | `--dur-move` | 220 ms | a sheet or panel following a drag or snapping to a stop |
 | `--dur-enter` | 280 ms | a sheet arriving; a display powering off |
 | `--ease` | `cubic-bezier(.2, .8, .2, 1)` | chrome easing |
+| `--dur-tip` | 400 ms | the first tooltip in a group waits this long; the next ones show at once |
 
 Allowlisted exceptions (effects, not chrome): the X-RAY flash (1.2 s), the nixie flicker loop (5.3 s), and the 1 ms reduced-motion end-state trick.
 
+### Chrome states (CSS)
+Every HTML control in the chrome has the same four states plus disabled, from the same tokens (`src/App.css` › chrome states). `scripts/site/css-tokens.ts` checks that every `:hover` selector has its `:active` and `:focus-visible` twin, that `--glow*` appears only on active / focus / live selectors, that no `outline: none` lacks a replacement, and that nothing uses `transition: all`.
+
+| State | Look | Motion |
+|---|---|---|
+| rest | neutral text (`--mute` / `--label`) on its surface | carries the transition: `color, background-color, border-color, box-shadow, opacity, transform` over `--dur-out` |
+| hover | `--wash-hover` or `--line-hover`, text one step up | in at once (`--dur-in`), out over `--dur-out` |
+| press (`:active`) | `--wash-press` | in at once; on touch, chrome also sinks to `scale(.96)` |
+| focus (`:focus-visible`) | the accent ring: `outline: 1px solid --red`, offset 2 px (inside, -2 px, for rows that fill their container), plus `--glow-halo` | none |
+| active / selected / on / live | the accent at full strength with `--glow-wash` or `--glow-halo` | none |
+| disabled | 40% opacity, no pointer | — |
+
+No state changes a size, so nothing shifts. On coarse pointers every chrome target is at least 40 px (44 px on phones). Menus, popovers and ⌘K open with no animation; only sheets slide in (`--dur-enter`). `prefers-reduced-motion` removes all of it. In-card controls are different: they draw hover, press and focus in dots (below).
+
 ### Grammar rules
 
-- **Hover glow** is `value`/`mid`, never the accent. Red keeps its meaning (live, hot, primary); hover and focus never use it.
+- **Hover glow** is `value`/`mid`, never the accent. Red keeps its meaning (live, hot, primary); hover and focus inside a card never use it. (The HTML chrome's keyboard focus ring is the accent, per Chrome states above: it marks "here", outside the card's dots.)
 - **Press** is one quantize step *down* in dot size, so the control visibly sinks. On release it springs back with `{interaction.springHalfLife.release}`. It is never a colour change.
 - **Data motion** uses `{interaction.springHalfLife.data}`: the value glides on a critically damped spring and snaps to the next integer cell or lattice step each frame.
 - **Focus** is marching dots: the control's own outline sites light in the `{interaction.focusDash}` pattern and travel at `{interaction.focusSpeed}`. It replaces the `{colors.hairlineActive}` card border for in-card controls; the hairline treatment stays for whole-card selection.
@@ -393,6 +421,22 @@ Allowlisted exceptions (effects, not chrome): the X-RAY flash (1.2 s), the nixie
 - Don't force SVG rendering on a widget with thousands of animated dots (waveforms, games, dense photos) — this is the single most likely performance foot-gun in the system.
 - Don't use a fixed border-radius token where the squircle exponent can be used instead — the continuous roundness slider is a deliberate replacement for a discrete radius scale.
 - Don't let card-to-card spacing shrink to fit denser widget content — `{spacing.cardGap}` stays constant; density is absorbed inside the card via `{grid.pitch}`, never at the layout level.
+
+### Chrome components (one per job)
+The HTML chrome has one component per job; a new control reuses one of these instead of adding a look.
+
+| Component | Class(es) | Used by |
+|---|---|---|
+| **pill** | outlined pill: `.board-tabs button`, `.skin-menu-btn`, `.intro-line button`, `.ed-textbtn`, `.ed-row-btns button`; capsule pill: `.pill` + `.pill-btn` (`PillBar`) | board picker, DISPLAY ▾, the widget page bars, editor actions |
+| **segmented** | `.ed-seg` (`role=radio` items); text tabs `.view-tabs`, `.board-groups`, `.ed-tabs` | editor options; views, groups and panels |
+| **sheet** | `Sheet` (`.sheet` › `.sheet-rest` + `.sheet-panel` › `.sheet-grab`, `.sheet-head`, `.sheet-body`): a scroll-snap sheet; the five-dot grab handle is shared with `.pal-grab`, `.ed-sheet-grab`, `.xr-grip` | BOARDS, TOOLS; the phone ⌘K, the editor and X-ray sheets reuse its handle and surface |
+| **menu** | the raised layer (`.skin-menu`, `.ed-menu`, `.wp-more`, `.pal`, `.sheet-panel`) with rows (`.skin-menu button`, `.ed-menu button`, `.wp-more button`, `.pal-item`, sheet rows): `--radius-panel` outside, `--radius-ctl` rows, `--wash-hover` / `--wash-press` | DISPLAY ▾, editor menus, widget MORE, ⌘K, sheets |
+| **tooltip** | `[data-tip]` (+ `[data-kbd]` for the keycap) inside a group (`.pal-dock`, `.pill-bar`) | the dock; the widget page pill bars |
+| **keycap** | `kbd` in `.pal`, `.pal-shell`, `.pal-boss`, `.xr-time`, and the tooltip keycap: a dotted edge on a dot-matrix fill | ⌘K footer and hints, the shell, the time machine |
+
+**Tooltip rules.** One at a time (the hovered control). The first in a group waits `--dur-tip`; moving to a neighbour shows its tooltip at once, until the pointer leaves the group (a registered `--tip-on` custom property that switches on after the delay and off at once, no JS). Keyboard focus shows it without the wait; a press hides it. No motion.
+
+**Hover intent.** DISPLAY ▾ opens after the mouse rests on it for 100 ms (without taking focus) and closes 150 ms after the mouse leaves it; a click or the keyboard opens it as before.
 
 ## Responsive Behavior
 
