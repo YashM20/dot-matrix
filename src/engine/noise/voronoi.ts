@@ -32,7 +32,7 @@ const metricIndex = (m: Metric | undefined) => (m === 'l1' ? 1 : m === 'linf' ? 
 /** Search result (module scratch, no allocation per call): f1, f2, nearest point x, y, its cell i, j. */
 const S = new Float64Array(6)
 /*
- * The exact F1 (and F2 when `want` = 2) search, one copy per metric (a per-cell metric switch costs ~15%).
+ * The exact F1 (and F2 when `want` = 2) search, one copy per metric (no per-cell metric switch; L1/L∞ use Math.abs/max, which compile branch-free).
  * Pass 0: the 3×3 block in row order. Pass 1, only while the wanted distance is > 1 (squared L2 > 1 ⇔ L2 > 1):
  * the ±2 ring in row order, skipping a ring cell whose points are ≥ lx, ly away per axis when that bound can't beat
  * the wanted distance (same result as scanning it: only a strictly nearer point updates f1/f2). `h` is
@@ -53,8 +53,7 @@ function search0(x: number, y: number, seed: number, want: 1 | 2, jitter: number
   if ((want === 1 ? f1 : f2) > 1) {
     for (let j = -2; j <= 2; j++) {
       const cj = cy + j, hb = ((b0 + j * IH_B) | 0) ^ sc, ly = j === 2 ? 2 - fy : j === -2 ? 1 + fy : 0, edge = j === -2 || j === 2
-      for (let i = -2; i <= 2; i++) {
-        if (!edge && i > -2 && i < 2) continue
+      for (let i = -2, step = edge ? 1 : 4; i <= 2; i += step) { // the ring only: whole top / bottom rows, ±2 elsewhere
         const lx = i === 2 ? 2 - fx : i === -2 ? 1 + fx : 0, lb = lx * lx + ly * ly
         if (!(lb < (want === 1 ? f1 : f2))) continue
         const ci = cx + i, h = fmix32(((a0 + i * IH_A) | 0) ^ hb), px = ci + jitter * (h & 0xffff) * Q16, py = cj + jitter * (h >>> 16) * Q16
@@ -74,19 +73,18 @@ function search1(x: number, y: number, seed: number, want: 1 | 2, jitter: number
     const cj = cy + j, hb = ((b0 + j * IH_B) | 0) ^ sc
     for (let i = -1; i <= 1; i++) {
       const ci = cx + i, h = fmix32(((a0 + i * IH_A) | 0) ^ hb), px = ci + jitter * (h & 0xffff) * Q16, py = cj + jitter * (h >>> 16) * Q16
-      const dx = px - x, dy = py - y, d = (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy)
+      const dx = px - x, dy = py - y, d = Math.abs(dx) + Math.abs(dy)
       if (d < f1) { f2 = f1; f1 = d; bx = px; by = py; bi = ci; bj = cj } else if (d < f2) f2 = d
     }
   }
   if ((want === 1 ? f1 : f2) > 1) {
     for (let j = -2; j <= 2; j++) {
       const cj = cy + j, hb = ((b0 + j * IH_B) | 0) ^ sc, ly = j === 2 ? 2 - fy : j === -2 ? 1 + fy : 0, edge = j === -2 || j === 2
-      for (let i = -2; i <= 2; i++) {
-        if (!edge && i > -2 && i < 2) continue
+      for (let i = -2, step = edge ? 1 : 4; i <= 2; i += step) {
         const lx = i === 2 ? 2 - fx : i === -2 ? 1 + fx : 0, lb = lx + ly
         if (!(lb < (want === 1 ? f1 : f2))) continue
         const ci = cx + i, h = fmix32(((a0 + i * IH_A) | 0) ^ hb), px = ci + jitter * (h & 0xffff) * Q16, py = cj + jitter * (h >>> 16) * Q16
-        const dx = px - x, dy = py - y, d = (dx < 0 ? -dx : dx) + (dy < 0 ? -dy : dy)
+        const dx = px - x, dy = py - y, d = Math.abs(dx) + Math.abs(dy)
         if (d < f1) { f2 = f1; f1 = d; bx = px; by = py; bi = ci; bj = cj } else if (d < f2) f2 = d
       }
     }
@@ -102,19 +100,18 @@ function search2(x: number, y: number, seed: number, want: 1 | 2, jitter: number
     const cj = cy + j, hb = ((b0 + j * IH_B) | 0) ^ sc
     for (let i = -1; i <= 1; i++) {
       const ci = cx + i, h = fmix32(((a0 + i * IH_A) | 0) ^ hb), px = ci + jitter * (h & 0xffff) * Q16, py = cj + jitter * (h >>> 16) * Q16
-      const dx = px - x, dy = py - y, ax = dx < 0 ? -dx : dx, ay = dy < 0 ? -dy : dy, d = ax > ay ? ax : ay
+      const dx = px - x, dy = py - y, d = Math.max(Math.abs(dx), Math.abs(dy))
       if (d < f1) { f2 = f1; f1 = d; bx = px; by = py; bi = ci; bj = cj } else if (d < f2) f2 = d
     }
   }
   if ((want === 1 ? f1 : f2) > 1) {
     for (let j = -2; j <= 2; j++) {
       const cj = cy + j, hb = ((b0 + j * IH_B) | 0) ^ sc, ly = j === 2 ? 2 - fy : j === -2 ? 1 + fy : 0, edge = j === -2 || j === 2
-      for (let i = -2; i <= 2; i++) {
-        if (!edge && i > -2 && i < 2) continue
+      for (let i = -2, step = edge ? 1 : 4; i <= 2; i += step) {
         const lx = i === 2 ? 2 - fx : i === -2 ? 1 + fx : 0, lb = lx > ly ? lx : ly
         if (!(lb < (want === 1 ? f1 : f2))) continue
         const ci = cx + i, h = fmix32(((a0 + i * IH_A) | 0) ^ hb), px = ci + jitter * (h & 0xffff) * Q16, py = cj + jitter * (h >>> 16) * Q16
-        const dx = px - x, dy = py - y, ax = dx < 0 ? -dx : dx, ay = dy < 0 ? -dy : dy, d = ax > ay ? ax : ay
+        const dx = px - x, dy = py - y, d = Math.max(Math.abs(dx), Math.abs(dy))
         if (d < f1) { f2 = f1; f1 = d; bx = px; by = py; bi = ci; bj = cj } else if (d < f2) f2 = d
       }
     }
