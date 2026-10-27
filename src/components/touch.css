@@ -62,9 +62,43 @@
     font-size: 8px
   }
 
+  /* the strip is an overlay: full 44 px targets, readable labels */
   .dot-card-bar.open .dot-card-acts button {
-    min-width: 36px;
-    min-height: 32px
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 10px
+  }
+
+  .dot-card-bar.open .dot-card-acts button:first-child {
+    font-size: 14px
+  }
+
+  /* ⋯ and DONE stay small in the card's top padding, but their hit area is 44 × 44 (an invisible margin) */
+  .dot-card-bar .dot-card-more,
+  .dot-card-bar .dot-card-done {
+    position: relative
+  }
+
+  .dot-card-bar .dot-card-more::after,
+  .dot-card-bar .dot-card-done::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%)
+  }
+
+  /* a card that draws its own name in dots: the grey hint would sit on its dot text; on touch the
+     header hint is gone and only ⋯ (or DONE) stays, nearly transparent until pressed */
+  .dot-card-bar > .dot-card-hint {
+    display: none
+  }
+
+  .dot-card--bleed .dot-card-bar .dot-card-more:not([aria-expanded="true"]) {
+    background: rgba(17, 19, 21, .45) !important;
+    border-color: transparent
   }
 }
 

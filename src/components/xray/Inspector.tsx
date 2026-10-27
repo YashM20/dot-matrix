@@ -15,6 +15,8 @@ import { cardElement, muteLayer, probes, setXR, soloLayer, toggleCard, toggleGlo
 /** At this width the inspector is a bottom sheet (App.css): a grip, swipe down to close, swipe up for more. */
 const SHEET = '(max-width: 760px)'
 const isSheet = () => typeof matchMedia === 'function' && matchMedia(SHEET).matches
+/** Touch screens: the X-ray copy says tap, not hover. */
+const noHover = () => typeof matchMedia === 'function' && matchMedia('(hover: none)').matches
 /** Close the sheet for real: X-ray off for the card it shows (the desktop panel's "hover a card" state means nothing on touch). */
 function dismiss(key: string | null) {
   if (xrState().global) toggleGlobal(false)
@@ -75,7 +77,7 @@ function Summary({ probe, layers, d }: { probe: CardProbe; layers: Layer[]; d: C
     <p>Each dot's size is the field's value{steps ? <>, snapped to {steps} steps ({term('quantize')})</> : ' (not quantized)'}; its colour is its {term('tone')}.{ir && <> Part of it is written in {term('IR')}, so REMIX opens its own program.</>}</p>
     {d.controls.length ? <ul>{d.controls.map(c => <li key={c.key}><b>{c.label}</b> ({c.kind}) sets <code>{c.key}</code>, now {c.valueText}</li>)}</ul>
       : <p>No controls: {probe.animated ? 'it moves on its own clock' : 'it is a still picture'}.</p>}
-    <p className="xr-note">Hover any dot to see its value, size step, tone and layer.</p>
+    <p className="xr-note">{noHover() ? 'Tap' : 'Hover'} any dot to see its value, size step, tone and layer.</p>
     <p className="xr-words">{GLOSSARY_TERMS.map(k => <span key={k}>{term(k)}</span>)}</p>
     {word && <p className="xr-def" role="note"><b>{word}</b> {GLOSSARY[word]}</p>}
   </div>
@@ -111,7 +113,7 @@ export function Inspector({ onRemix, onStudio, onCopyLink }: { onRemix: (cardId:
     try { return JSON.stringify(presetToSpec(probe.preset), null, 1) } catch (e) { return `// presetToSpec failed: ${(e as Error).message}` }
   }, [tab, presetId]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!anyOn) return null
-  if (!probe) return <aside className="xr-panel xr-panel--empty" aria-label="X-ray inspector"><p>Hover an X-ray card to inspect it.</p><button onClick={() => toggleGlobal(false)}>X-RAY OFF</button></aside>
+  if (!probe) return <aside className="xr-panel xr-panel--empty" aria-label="X-ray inspector"><p>{noHover() ? 'Tap' : 'Hover'} an X-ray card to inspect it.</p><button onClick={() => toggleGlobal(false)}>X-RAY OFF</button></aside>
   const d = describe(probe.preset, { t: probe.stats.t, data: probe.data })
   const keys = Object.keys(probe.data).sort()
   const mode = probe.mode(), worker = probe.worker()

@@ -3291,6 +3291,23 @@ label b {
   body:has(.xr-panel:not(.xr-panel--empty)) {
     padding-bottom: min(42dvh, 400px)
   }
+
+  /* the tool dock (TIME, X-RAY) rides on top of the half sheet instead of under it */
+  body:has(.xr-panel:not(.xr-panel--empty):not(.xr-panel--full)) .pal-dock {
+    bottom: calc(min(42dvh, 400px) + 8px)
+  }
+
+  /* touch targets in the sheet: × 44 px, tabs and actions 36 px */
+  .xr-panel .xr-panel-head > button {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 14px
+  }
+
+  .xr-panel .xr-tabs button,
+  .xr-panel .xr-actions button {
+    min-height: 36px
+  }
 }
 
 @media(max-width:760px) and (prefers-reduced-motion: reduce) {
