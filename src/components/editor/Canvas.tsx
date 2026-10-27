@@ -15,7 +15,7 @@ import { dragCells, dragFramePos, draftFrame, pinchCam, PRESS_SLOP, resizeByHand
 import { drawFrame, drawPaste, isAnimated, resolutionFor } from './render'
 import { useEditor, type Camera } from './store'
 
-/** Probe hooks (scripts/studio-browser.ts, dots-browser.ts): draw stats and the selected frame id. */
+/** Probe hooks (scripts/editor-browser.ts): draw stats and the selected frame id. */
 declare global { interface Window { __editor?: { frames: number; drawn: number; maxMs: number; lastMs: number; sel?: string } } }
 
 // ── render registry: one entry per mounted frame canvas ──────────────────────────────────────────

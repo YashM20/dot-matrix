@@ -1,7 +1,7 @@
 /**
  * DOTS tab checks (P6-C, "Dwitter for dots"): share-link round trip and limits, the 8 seed programs,
  * the remix gallery and its dot-rendered graph. `pnpm verify` runs them through `dotsChecks()`; the
- * browser side is `scripts/dots-browser.ts` (needs the dev server).
+ * browser side is the editor probe, `scripts/editor-browser.ts`.
  */
 import { IR_LIMITS, irProgram } from '../src/engine/ir'
 import { sampleLayers } from '../src/engine/sampler/gridSampler'

@@ -2,7 +2,7 @@
  * Dot Studio checks (P6-D): the document model round-trips (JSON + storage), undo / redo, preset
  * reference stacks draw exactly like the presets, DOTS and spec v1 import, blends, the timeline
  * tracks and state firing. `pnpm verify` runs them through `studioChecks()`; the browser side is
- * `scripts/studio-browser.ts` (needs the dev server).
+ * the editor probe, `scripts/editor-browser.ts`.
  */
 import { sampleLayers } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
