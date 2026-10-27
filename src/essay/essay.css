@@ -16,8 +16,9 @@ html { background: var(--bg); scroll-behavior: smooth; -webkit-text-size-adjust:
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto } }
 body { margin: 0; background: var(--bg); color: var(--label); font: var(--fs-lead-18)/1.65 var(--sans); -webkit-font-smoothing: antialiased }
 a { color: var(--value); text-decoration-color: color-mix(in srgb, var(--tint) 30%, transparent); text-underline-offset: 3px }
-a:hover { text-decoration-color: var(--value) }
-:focus-visible { outline: 1px dashed var(--value); outline-offset: 3px }
+a:hover, a:focus-visible, a:active { text-decoration-color: var(--value) }
+/* focus is the accent ring, as on the site (src/App.css) */
+:focus-visible { outline: 1px solid var(--red); outline-offset: 3px }
 code { font: .86em var(--mono); color: var(--value); background: var(--raised); padding: .08em .35em; border-radius: var(--radius-sm); white-space: nowrap }
 strong, b { color: var(--value); font-weight: 600 }
 em { color: var(--value) }
@@ -28,7 +29,7 @@ em { color: var(--value) }
 .essay p, .essay li { max-width: var(--measure) }
 
 /* hero */
-.hero { padding: var(--space-5) 0 calc(var(--space-1) * 10); border-bottom: 1px solid var(--line); margin-bottom: var(--space-5) }
+.hero { padding: var(--space-5) 0 calc(var(--space-1) * 10); border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1; margin-bottom: var(--space-5) }
 .kicker { font: 500 var(--fs-label-11) var(--mono); letter-spacing: .18em; color: var(--mute); display: flex; align-items: center; gap: var(--space-2); margin: 0 0 calc(var(--space-1) * 7) }
 .kicker i { width: 6px; height: 6px; border-radius: 50%; background: var(--red); display: inline-block }
 .lede { font-size: var(--fs-title-20); line-height: 1.55; color: var(--value); margin: calc(var(--space-1) * 7) 0 var(--space-6) }
@@ -36,7 +37,7 @@ em { color: var(--value) }
 .toc li { break-inside: avoid; margin: 0 0 var(--space-1) }
 .toc a { font: var(--fs-label-12)/1.9 var(--mono); color: var(--label); text-decoration: none; letter-spacing: .04em }
 .toc a span { color: var(--mute); margin-right: var(--space-2) }
-.toc a:hover { color: var(--value) }
+.toc a:hover, .toc a:focus-visible, .toc a:active { color: var(--value) }
 
 /* dot-native headings */
 .dot-title { margin: 0; font: inherit }
@@ -104,7 +105,8 @@ em { color: var(--value) }
 .ctl input[type=range] { width: 100%; accent-color: var(--label); height: 28px; background: transparent }
 .ctl-buttons { display: flex; flex-wrap: wrap; gap: var(--space-2) }
 .ctl-buttons button, .ctl-toggle { font: var(--fs-label-12) var(--mono); letter-spacing: .04em; color: var(--label); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-pill); padding: var(--space-2) var(--space-4); cursor: pointer; min-height: 34px }
-.ctl-buttons button:hover, .ctl-toggle:hover { border-color: color-mix(in srgb, var(--tint) 25%, transparent); color: var(--value) }
+.ctl-buttons button:hover, .ctl-buttons button:focus-visible, .ctl-toggle:hover, .ctl-toggle:focus-visible { border-color: var(--line-hover); color: var(--value) }
+.ctl-buttons button:active, .ctl-toggle:active { background: color-mix(in srgb, var(--surface), var(--tint) 6%); color: var(--value) }
 .ctl-buttons button[aria-pressed=true] { color: var(--bg); background: var(--value); border-color: var(--value) }
 .ctl-toggle { display: inline-flex; align-items: center; gap: var(--space-2) }
 .ctl-toggle i { width: 8px; height: 8px; border-radius: 50%; background: var(--dot-faint); display: inline-block }
@@ -115,7 +117,7 @@ em { color: var(--value) }
 .ir { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); align-items: start }
 .ir-code { display: grid; gap: var(--space-2) }
 .ir textarea { width: 100%; resize: vertical; font: var(--fs-label-12)/1.55 var(--mono); color: var(--value); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-panel); padding: var(--space-3); tab-size: 2 }
-.ir textarea:focus { outline: 1px dashed var(--value); outline-offset: 2px }
+.ir textarea:focus { outline: 1px solid var(--red); outline-offset: 2px }
 .ir-status { font: var(--fs-label-11) var(--mono); color: var(--mute); letter-spacing: .06em; min-height: 1.4em }
 .ir-status--err { color: var(--value) }
 
@@ -123,7 +125,7 @@ em { color: var(--value) }
 .credits li { margin: 0 0 .55em }
 .outro { margin-top: 1.6em }
 .essay-foot a { color: inherit }
-.essay-foot { margin-top: var(--space-8); padding-top: var(--space-4); border-top: 1px solid var(--line); font: 500 var(--fs-label-10) var(--mono); letter-spacing: .16em; color: var(--mute); display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap }
+.essay-foot { margin-top: var(--space-8); padding-top: var(--space-4); border-top: 1px solid var(--line); border-image: var(--hair-x) 1; font: 500 var(--fs-label-10) var(--mono); letter-spacing: .16em; color: var(--mute); display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap }
 
 @media (max-width: 900px) {
   .cards--5 { grid-template-columns: repeat(3, 1fr) }
@@ -146,4 +148,4 @@ em { color: var(--value) }
 .site-nav { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-6) }
 .site-nav .kicker { margin: 0 }
 .site-nav a { font: 500 var(--fs-label-11) var(--mono); letter-spacing: .16em; color: var(--label); text-decoration: none; margin-left: var(--space-4) }
-.site-nav a:hover { color: var(--value) }
+.site-nav a:hover, .site-nav a:focus-visible, .site-nav a:active { color: var(--value) }

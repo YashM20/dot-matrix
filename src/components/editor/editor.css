@@ -25,7 +25,8 @@
 }
 .ed-root button { font: inherit; color: inherit; cursor: pointer }
 .ed-root button:disabled { cursor: default; opacity: .4 }
-.ed-root :focus-visible { outline: 1px solid var(--label); outline-offset: 1px }
+/* focus is the site's accent ring (App.css); dense rows keep it close */
+.ed-root :focus-visible { outline-offset: 1px }
 
 /* ── top bar ── */
 .ed-top {
@@ -38,7 +39,7 @@
   border-bottom: 1px solid var(--line);
   flex: none
 }
-.ed-toolgroup { display: flex; gap: var(--space-1); padding-right: var(--space-2); margin-right: var(--space-1); border-right: 1px solid var(--line) }
+.ed-toolgroup { display: flex; gap: var(--space-1); padding-right: var(--space-2); margin-right: var(--space-1); border-right: 1px solid var(--line); border-image: var(--hair-y) 1 }
 .ed-tool, .ed-ibtn {
   position: relative;
   display: grid;
@@ -50,8 +51,10 @@
   border: 1px solid transparent;
   border-radius: var(--radius-ctl)
 }
-.ed-tool:hover, .ed-ibtn:hover:not(:disabled) { border-color: var(--line); background: var(--raised) }
-.ed-tool.on { border-color: var(--ed-sel); background: color-mix(in srgb, var(--red) 6%, transparent) }
+.ed-tool:hover, .ed-tool:focus-visible, .ed-ibtn:hover:not(:disabled), .ed-ibtn:focus-visible:not(:disabled) { border-color: var(--line); background: var(--raised) }
+.ed-tool:active, .ed-ibtn:active:not(:disabled) { border-color: var(--line); background: color-mix(in srgb, var(--raised), var(--tint) 6%) }
+/* the active tool: the accent edge and its wash */
+.ed-tool.on { border-color: var(--ed-sel); background: var(--glow-wash) }
 .ed-tool kbd { position: absolute; right: 3px; bottom: 1px; font: 600 var(--fs-tag-8) var(--mono); color: var(--mute) }
 .ed-icon { display: block; pointer-events: none }
 .ed-docname { flex: 1; min-width: 0; text-align: center; color: var(--label); letter-spacing: .12em; text-transform: uppercase; font-size: var(--fs-label-10); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
@@ -65,10 +68,13 @@
   font-size: var(--fs-tag-9) !important;
   font-weight: 600 !important
 }
-.ed-textbtn:hover { border-color: color-mix(in srgb, var(--value) 30%, transparent) }
+.ed-textbtn:hover, .ed-textbtn:focus-visible { border-color: var(--line-hover) }
+.ed-textbtn:active { background: var(--wash-press) }
 .ed-primary { border-color: color-mix(in srgb, var(--value) 55%, transparent) !important; color: var(--value) }
 .ed-zoom { position: relative; display: flex; align-items: center; gap: 0; border: 1px solid var(--line); border-radius: var(--radius-pill); height: 30px }
 .ed-zoom > button { background: none; border: 0; min-width: 28px; height: 28px; padding: 0 var(--space-2); color: var(--label) }
+.ed-zoom > button:hover, .ed-zoom > button:focus-visible { color: var(--value) }
+.ed-zoom > button:active { background: var(--wash-press) }
 .ed-zoom-pct { min-width: 54px !important; color: var(--value) !important; font-variant-numeric: tabular-nums }
 .ed-menu {
   position: absolute;
@@ -77,13 +83,13 @@
   z-index: 20;
   display: grid;
   min-width: 190px;
-  padding: var(--space-1);
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-ctl)
+  padding: var(--space-1)
+  /* surface, edge, radius and blur: the shared raised layer (App.css) */
 }
-.ed-menu button { display: flex; justify-content: space-between; gap: var(--space-3); text-align: left; padding: var(--space-2) var(--space-2); background: none; border: 0; border-radius: var(--radius-ctl) }
-.ed-menu button:hover, .ed-menu button:focus-visible { background: var(--raised) }
+.ed-menu button { display: flex; justify-content: space-between; gap: var(--space-3); text-align: left; padding: var(--space-2) var(--space-2); background: none; border: 0 }
+.ed-menu button:hover, .ed-menu button:focus-visible { background: var(--wash-hover) }
+.ed-menu button:active { background: var(--wash-press) }
+.ed-menu button:focus-visible { outline-offset: -2px }
 .ed-menu kbd, .ed-keys kbd { color: var(--mute); font: inherit }
 
 /* ── body: left panel · canvas · inspector ── */
@@ -105,7 +111,9 @@
   letter-spacing: .14em
 }
 .ed-tabs button[aria-selected="true"] { color: var(--value); border-bottom-color: var(--value) }
-.ed-tabs button:hover { color: var(--label) }
+.ed-tabs button:hover, .ed-tabs button:focus-visible { color: var(--label) }
+.ed-tabs button:active { color: var(--value) }
+.ed-tabs button:focus-visible { outline-offset: -2px }
 .ed-pane, .ed-insp { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding-bottom: var(--space-8) }
 .ed-empty, .ed-hint { color: var(--mute); font: 500 var(--fs-label-10)/1.5 var(--mono); margin: 0; padding: var(--space-1) 0 }
 .ed-pane > .ed-empty { padding: var(--space-4) }
@@ -115,7 +123,8 @@
 .ed-tree, .ed-tree-layers { list-style: none; margin: 0; padding: 0 }
 .ed-tree { padding: var(--space-2) 0 }
 .ed-row { display: flex; align-items: center; gap: var(--space-1); min-height: 30px; padding: 0 var(--space-2) 0 var(--space-1); border-radius: var(--radius-ctl); margin: 0 var(--space-2) }
-.ed-row:hover { background: color-mix(in srgb, var(--tint) 2.5%, transparent) }
+.ed-row:hover, .ed-row:has(:focus-visible) { background: var(--wash-hover) }
+.ed-row:active { background: var(--wash-press) }
 .ed-row-name {
   flex: 1;
   min-width: 0;
@@ -157,7 +166,8 @@
 .ed-agroup h3 button { background: none; border: 0; padding: var(--space-1) 0; font: inherit; letter-spacing: inherit; color: inherit; text-align: left }
 .ed-agrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--space-2) }
 .ed-asset { width: 100%; display: grid; gap: var(--space-1); justify-items: start; padding: var(--space-2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-ctl); text-align: left; color: var(--label) }
-.ed-asset:hover, .ed-asset:focus-visible { border-color: color-mix(in srgb, var(--value) 28%, transparent) }
+.ed-asset:hover, .ed-asset:focus-visible { border-color: var(--line-hover) }
+.ed-asset:active { background: color-mix(in srgb, var(--surface), var(--tint) 4%) }
 .ed-asset span { font-size: var(--fs-tag-9); letter-spacing: .06em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100% }
 .ed-asset small { font-size: var(--fs-tag-8); color: var(--mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100% }
 .ed-thumb { display: block; width: 100%; height: auto; aspect-ratio: auto; max-height: 112px; object-fit: contain; border-radius: var(--radius-sm); background: var(--surface) }
@@ -166,6 +176,7 @@
 /* ── canvas ── */
 .ed-stage { position: relative; min-width: 0; min-height: 0; overflow: hidden; background: var(--ed-bg) }
 .ed-viewport { position: absolute; inset: 0; overflow: hidden; touch-action: none; user-select: none; -webkit-user-select: none; outline: none }
+.ed-viewport:focus-visible { box-shadow: inset 0 0 0 1px var(--red) }
 .ed-paste { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none }
 .ed-world { position: absolute; left: 0; top: 0; transform-origin: 0 0; will-change: transform }
 .ed-frame { position: absolute; display: block; box-shadow: 0 0 0 1px var(--line); background: var(--surface) }
@@ -188,7 +199,8 @@
   text-overflow: ellipsis
 }
 .ed-flabel small { color: var(--dim); font-size: var(--fs-tag-9) }
-.ed-flabel:hover { color: var(--label) }
+.ed-flabel:hover, .ed-flabel:focus-visible { color: var(--label) }
+.ed-flabel:active { color: var(--value) }
 .ed-flabel.on { color: var(--value) }
 .ed-sel, .ed-hover { position: absolute; pointer-events: none }
 .ed-hover { box-shadow: 0 0 0 1px color-mix(in srgb, var(--value) 32%, transparent) }
@@ -211,11 +223,11 @@
 .ed-banner button { background: none; border: 0; width: 28px; height: 28px; color: var(--mute) }
 
 /* ── inspector ── */
-.ed-sec { padding: var(--space-3) var(--space-4) var(--space-4); border-bottom: 1px solid var(--line); display: grid; gap: var(--space-2); min-width: 0 }
+.ed-sec { padding: var(--space-3) var(--space-4) var(--space-4); border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1; display: grid; gap: var(--space-2); min-width: 0 }
 .ed-sec h3 { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); margin: 0; font: 600 var(--fs-tag-9) var(--mono); letter-spacing: .14em; color: var(--label) }
 .ed-sec h3 small { color: var(--mute); font-weight: 500; letter-spacing: .06em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .ed-link { background: none; border: 0; padding: 0; color: var(--mute); font: inherit; letter-spacing: inherit }
-.ed-link:hover { color: var(--value) }
+.ed-link:hover, .ed-link:focus-visible, .ed-link:active { color: var(--value) }
 .ed-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2) var(--space-2); align-items: end }
 .ed-wide { grid-column: 1 / -1 }
 .ed-field { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); min-width: 0; color: var(--mute); font: 600 var(--fs-tag-8) var(--mono); letter-spacing: .12em }
@@ -231,7 +243,8 @@
   font: 500 var(--fs-label-11) var(--mono);
   letter-spacing: .02em
 }
-.ed-field input:focus, .ed-field select:focus, .ed-json:focus { border-color: color-mix(in srgb, var(--value) 35%, transparent); outline: none }
+/* fields: the accent border is the focus ring (the halo comes from the global :focus-visible) */
+.ed-field input:focus, .ed-field select:focus, .ed-json:focus { border-color: var(--red); outline: none }
 .ed-check { display: flex; align-items: center; gap: var(--space-2); min-height: 30px; color: var(--label); font: 600 var(--fs-tag-8) var(--mono); letter-spacing: .12em }
 .ed-check input { accent-color: var(--dot-idle); width: 14px; height: 14px }
 .ed-slider { display: grid; grid-template-columns: 1fr auto; gap: var(--space-1) var(--space-2); align-items: center; color: var(--mute); font: 600 var(--fs-tag-8) var(--mono); letter-spacing: .12em }
@@ -253,7 +266,8 @@
   font-weight: 600;
   letter-spacing: .12em
 }
-.ed-row-btns button:hover:not(:disabled), .ed-chips button:hover { border-color: color-mix(in srgb, var(--value) 30%, transparent) }
+.ed-row-btns button:hover:not(:disabled), .ed-row-btns button:focus-visible:not(:disabled), .ed-chips button:hover, .ed-chips button:focus-visible { border-color: var(--line-hover) }
+.ed-row-btns button:active:not(:disabled), .ed-chips button:active { background: var(--wash-press) }
 .ed-row-btns button[aria-pressed="true"] { border-color: var(--ed-sel); color: var(--value) }
 .ed-danger { color: var(--red) !important; border-color: color-mix(in srgb, var(--red) 45%, transparent) !important }
 .ed-record { color: var(--red) !important; border-color: color-mix(in srgb, var(--red) 60%, transparent) !important }
@@ -263,7 +277,8 @@
 .ed-insp progress { width: 100%; height: 4px; accent-color: var(--red) }
 .ed-mini-list { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1) }
 .ed-mini-list button { width: 100%; text-align: left; background: none; border: 0; padding: var(--space-1) var(--space-1); color: var(--label); border-radius: var(--radius-sm) }
-.ed-mini-list button:hover { background: var(--raised); color: var(--value) }
+.ed-mini-list button:hover, .ed-mini-list button:focus-visible { background: var(--raised); color: var(--value) }
+.ed-mini-list button:active { background: var(--wash-press); color: var(--value) }
 .ed-code-peek { margin: 0; padding: var(--space-2); background: var(--raised); border-radius: var(--radius-ctl); color: var(--label); font: var(--fs-label-10)/1.5 var(--mono); white-space: pre; overflow: hidden; max-height: 76px }
 .ed-json { min-height: 140px; padding: var(--space-2); font-size: var(--fs-label-10); line-height: 1.45; resize: vertical; white-space: pre }
 .ed-json--ro { display: block; max-height: 280px; overflow: auto; margin: var(--space-2) 0 0 }
@@ -275,7 +290,7 @@
 .ed-transport input { width: 100%; accent-color: var(--dot-idle) }
 .ed-t { color: var(--value); font-variant-numeric: tabular-nums; font-size: var(--fs-label-10); min-width: 58px; text-align: right }
 .ed-play { min-height: 30px; padding: 0 var(--space-3); background: none; border: 1px solid color-mix(in srgb, var(--value) 40%, transparent); border-radius: var(--radius-pill); color: var(--value); font-size: var(--fs-tag-9); font-weight: 600; letter-spacing: .12em }
-.ed-track { display: grid; gap: var(--space-2); padding: var(--space-2) 0; border-top: 1px solid var(--line) }
+.ed-track { display: grid; gap: var(--space-2); padding: var(--space-2) 0; border-top: 1px solid var(--line); border-image: var(--hair-x) 1 }
 .ed-track:first-of-type { border-top: 0 }
 .ed-track-head { display: grid; grid-template-columns: 56px 1fr; gap: var(--space-2); align-items: center }
 .ed-track-head b { font-size: var(--fs-tag-9); letter-spacing: .14em; color: var(--label) }
@@ -288,11 +303,11 @@
 
 /* ── shortcuts dialog ── */
 .ed-modal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: var(--space-4); background: color-mix(in srgb, var(--shade) 62%, transparent) }
-.ed-modal-card { width: min(620px, 100%); max-height: 86dvh; overflow: auto; padding: var(--space-4) calc(var(--space-1) * 5); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-panel) }
+.ed-modal-card { width: min(620px, 100%); max-height: 86dvh; overflow: auto; padding: var(--space-4) calc(var(--space-1) * 5); background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-panel); box-shadow: var(--shadow-raised) }
 .ed-modal-card h2 { display: flex; justify-content: space-between; align-items: center; margin: 0 0 var(--space-2); font: 600 var(--fs-label-10) var(--mono); letter-spacing: .16em; color: var(--value) }
 .ed-modal-card h3 { margin: var(--space-4) 0 var(--space-2); font: 600 var(--fs-tag-9) var(--mono); letter-spacing: .14em; color: var(--label) }
 .ed-keys { display: grid; gap: 0; margin: 0 }
-.ed-keys div { display: grid; grid-template-columns: minmax(120px, 34%) 1fr; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--line) }
+.ed-keys div { display: grid; grid-template-columns: minmax(120px, 34%) 1fr; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1 }
 .ed-keys dt { color: var(--value) }
 .ed-keys dd { margin: 0; color: var(--mute) }
 
@@ -343,17 +358,20 @@ html.ed-lock .pal-dock { display: none }
   z-index: 70;
   display: flex;
   flex-direction: column;
-  background: var(--ed-panel);
+  /* a sheet: the raised glass (one blur; the canvas under it is still) */
+  background: var(--glass);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
   border-top: 1px solid var(--line);
   border-radius: var(--radius-card) var(--radius-card) 0 0;
-  box-shadow: 0 -10px 30px color-mix(in srgb, var(--shade) 50%, transparent);
+  box-shadow: var(--shadow-raised);
   transition: height var(--dur-move) var(--ease);
   padding-bottom: env(safe-area-inset-bottom)
 }
 .ed-sheet.dragging { transition: none }
 .ed-sheet-grab { flex: none; height: 24px; display: grid; place-items: center; touch-action: none; cursor: grab }
-.ed-sheet-grab i { width: 40px; height: 4px; border-radius: var(--radius-sm); background: var(--line-strong) }
-.ed-sheet-head { flex: none; display: flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-1) 0 var(--space-4); border-bottom: 1px solid var(--line) }
+/* .ed-sheet-grab i: the shared five-dot grab handle (src/site/mobile.css) */
+.ed-sheet-head { flex: none; display: flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-1) 0 var(--space-4); border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1 }
 .ed-sheet-head > b { flex: 1; font: 600 var(--fs-label-10) var(--mono); letter-spacing: .16em; color: var(--value) }
 .ed-tabs--sheet { flex: 1; border: 0; padding: 0 }
 .ed-tabs--sheet button { height: 44px }
@@ -374,6 +392,9 @@ html.ed-lock .pal-dock { display: none }
 .is-phone .ed-modal-card { max-height: 92dvh }
 @media (pointer: coarse) {
   .ed-root { --ed-hit: 44px }
+  /* tablets: every editor target is at least 40 px (phones get 44 from .is-phone) */
+  .ed-tool, .ed-ibtn { width: 40px; height: 40px }
+  .ed-textbtn, .ed-zoom > button, .ed-row-btns button, .ed-chips button, .ed-grid2 > button, .ed-play, .ed-seg button, .ed-menu button { min-height: 40px }
   /* 16 px fields: iOS zooms the page when a smaller one takes focus */
   .ed-root input, .ed-root select, .ed-root textarea, .ed-root .dw-mirror { font-size: var(--fs-copy-16) !important }
 }

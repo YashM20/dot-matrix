@@ -4,7 +4,7 @@
 .legal { padding-top: var(--space-6) }
 .legal-nav { display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; font: 500 var(--fs-label-11) var(--mono); letter-spacing: .16em; margin: 0 0 calc(var(--space-1) * 10) }
 .legal-nav a { color: var(--mute); text-decoration: none; display: inline-block; padding: var(--space-2) 0 }
-.legal-nav a:hover, .legal-nav a[aria-current] { color: var(--value) }
+.legal-nav a:hover, .legal-nav a:focus-visible, .legal-nav a:active, .legal-nav a[aria-current] { color: var(--value) }
 .legal-nav span { display: flex; gap: var(--space-4) }
 .legal h1 { font: 600 var(--fs-h1-page)/1.1 var(--sans); color: var(--value); letter-spacing: -.01em; margin: 0 }
 .legal .hero { padding-bottom: calc(var(--space-1) * 7) }
@@ -17,8 +17,8 @@
 .legal li { margin: 0 0 .5em }
 
 /* key → what it holds; two columns on wide screens, stacked on phones */
-.keys { margin: 0 0 1.2em; border-top: 1px solid var(--line) }
-.keys > div { display: grid; grid-template-columns: minmax(0, 15em) minmax(0, 1fr); gap: var(--space-1) calc(var(--space-1) * 5); padding: var(--space-2) 0; border-bottom: 1px solid var(--line) }
+.keys { margin: 0 0 1.2em; border-top: 1px solid var(--line); border-image: var(--hair-x) 1 }
+.keys > div { display: grid; grid-template-columns: minmax(0, 15em) minmax(0, 1fr); gap: var(--space-1) calc(var(--space-1) * 5); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1 }
 .keys dt code { white-space: normal; overflow-wrap: anywhere }
 .keys dd { margin: 0; font-size: var(--fs-copy-16); line-height: 1.55 }
 

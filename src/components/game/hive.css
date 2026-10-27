@@ -15,9 +15,8 @@
   touch-action: manipulation;
   -webkit-tap-highlight-color: transparent
 }
-.hive-start:active { border-color: var(--label) }
 .hive-start:hover, .hive-start:focus-visible { border-color: var(--label); color: var(--label) }
-.hive-start:focus-visible { outline: 2px solid var(--label); outline-offset: 2px }
+.hive-start:active { border-color: var(--label); background: color-mix(in srgb, var(--surface), var(--tint) 4%) }
 .hive-start canvas { display: block }
 
 .hive-play {
@@ -62,5 +61,6 @@
   padding: var(--space-1) var(--space-2);
   cursor: pointer
 }
-.hive-bar button:focus-visible { outline: 2px solid var(--dot-idle); outline-offset: 2px }
+.hive-bar button:hover, .hive-bar button:focus-visible { border-color: var(--line-hover); color: var(--value) }
+.hive-bar button:active { background: var(--wash-press); color: var(--value) }
 .hive-pad { touch-action: none }

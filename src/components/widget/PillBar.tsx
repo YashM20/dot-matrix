@@ -27,6 +27,8 @@ export interface PillButtonProps {
   label: ReactNode
   title: string
   glyph?: string
+  /** The key that does the same, shown as a keycap in the tooltip. */
+  kbd?: string
   onClick?: () => void
   onPointerDown?: () => void
   pressed?: boolean
@@ -34,8 +36,9 @@ export interface PillButtonProps {
   className?: string
   href?: string
 }
-export function PillButton({ label, title, glyph, onClick, onPointerDown, pressed, expanded, className = '', href }: PillButtonProps) {
+export function PillButton({ label, title, glyph, kbd, onClick, onPointerDown, pressed, expanded, className = '', href }: PillButtonProps) {
   const inner = <>{glyph && <span className="pill-glyph" aria-hidden="true">{glyph}</span>}<span className="pill-label">{label}</span></>
-  if (href) return <a className={`pill-btn ${className}`} href={href} title={title} aria-label={title} onClick={e => { if (onClick && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) { e.preventDefault(); onClick() } }}>{inner}</a>
-  return <button type="button" className={`pill-btn ${className}`} title={title} aria-label={title} aria-pressed={pressed} aria-expanded={expanded} onClick={onClick} onPointerDown={onPointerDown}>{inner}</button>
+  // `data-tip` is the bar's grouped tooltip (App.css › tooltip), in place of the native `title`
+  if (href) return <a className={`pill-btn ${className}`} href={href} data-tip={title} data-kbd={kbd} aria-label={title} onClick={e => { if (onClick && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) { e.preventDefault(); onClick() } }}>{inner}</a>
+  return <button type="button" className={`pill-btn ${className}`} data-tip={title} data-kbd={kbd} aria-label={title} aria-pressed={pressed} aria-expanded={expanded} onClick={onClick} onPointerDown={onPointerDown}>{inner}</button>
 }

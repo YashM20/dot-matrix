@@ -264,10 +264,10 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     {anyXray && <Suspense fallback={null}><Inspector onRemix={(id, data) => api.remix(id, data)} onStudio={id => api.studio(id)} onCopyLink={id => api.copyLink(id)} /></Suspense>}
     <TimeMachine />
     <div className="pal-dock" role="toolbar" aria-label="Explore">
-      <button aria-pressed={anyXray} onClick={() => toggleGlobal()} title="X-ray every card (X on a hovered card, ⇧X all)">X-RAY</button>
-      <button aria-pressed={frozen} onClick={() => (frozen ? resume() : api.freeze())} title="Time machine (hold T, Space resumes)">TIME</button>
-      <button onClick={() => setPalette(true)} title="Command palette (⌘K / Ctrl-K)" aria-label="Command palette">⌘K</button>
-      <button onClick={() => setShell(true)} title="Dot shell (`)" aria-label="Dot shell">&gt;_</button>
+      <button aria-pressed={anyXray} onClick={() => toggleGlobal()} data-tip="X-ray every card · ⇧X all" data-kbd="X" aria-keyshortcuts="X Shift+X">X-RAY</button>
+      <button aria-pressed={frozen} onClick={() => (frozen ? resume() : api.freeze())} data-tip="Time machine · hold" data-kbd="T" aria-keyshortcuts="T">TIME</button>
+      <button onClick={() => setPalette(true)} data-tip="Command palette" data-kbd="⌘K" aria-label="Command palette" aria-keyshortcuts="Meta+K Control+K">⌘K</button>
+      <button onClick={() => setShell(true)} data-tip="Dot shell" data-kbd="`" aria-label="Dot shell" aria-keyshortcuts="`">&gt;_</button>
     </div>
     {tools && <ToolsSheet api={api} xray={anyXray} frozen={frozen} onClose={() => setTools(false)} onPalette={() => setPalette(true)} onShell={() => setShell(true)} />}
     {fpsHud && <FpsHud />}

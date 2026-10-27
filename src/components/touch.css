@@ -30,9 +30,11 @@
   touch-action: none
 }
 
-/* the engaged card is the selected card: the hairline-active border (DESIGN.md), the board's one accent */
+/* the engaged card is the selected card: the hairline-active border (DESIGN.md), the board's one accent and
+   its halo (the one glow) */
 .dot-card.dot-card--engaged {
-  border-color: color-mix(in srgb, var(--red) 60%, transparent)
+  border-color: color-mix(in srgb, var(--red) 60%, transparent);
+  box-shadow: var(--card-edge), var(--glow-halo)
 }
 
 /* the way out: DONE, grey like the rest of the bar, always shown while engaged */
@@ -43,12 +45,6 @@
   color: var(--value);
   border-color: var(--line);
   background: color-mix(in srgb, var(--surface) 86%, transparent)
-}
-
-/* pressed feedback for the bar's HTML buttons (in-card controls press in dots) */
-.dot-card-bar button:active {
-  background: var(--raised);
-  color: var(--value)
 }
 
 /* touch: the hint says how to start a drag that has to go up or down (a hold); bigger action targets */
@@ -104,6 +100,6 @@
 
 @media (prefers-reduced-motion: no-preference) {
   .dot-card {
-    transition: border-color var(--dur-out)
+    transition: border-color var(--dur-out), box-shadow var(--dur-out)
   }
 }

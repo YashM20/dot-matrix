@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { SKINS, SKIN_NAMES } from '../../engine/display/names'
 import { getSkin, setClack, setSkin, useClack, useDisplaySkin } from './store'
 
@@ -27,14 +27,27 @@ export function SkinSwitcher() {
   }
   const close = (refocus: boolean) => { setOpen(false); if (refocus) btn.current?.focus() }
   const pick = (name: typeof SKIN_NAMES[number]) => { setSkin(name); close(true) }
+  // hover intent (a mouse resting 100 ms opens it, without taking focus); leaving closes a hover-opened menu
+  // after 150 ms, so the gap between button and menu can be crossed; a click keeps it open
+  const timer = useRef(0), byHover = useRef(false)
+  const intent = (e: ReactPointerEvent<HTMLDivElement>, enter: boolean) => {
+    if (e.pointerType !== 'mouse') return
+    clearTimeout(timer.current)
+    if (enter && !open) timer.current = window.setTimeout(() => { byHover.current = true; show() }, 100)
+    else if (!enter && open && byHover.current) timer.current = window.setTimeout(() => setOpen(false), 150)
+  }
+  useEffect(() => () => clearTimeout(timer.current), [])
 
-  // focus the current skin on open; a press anywhere outside closes
+  // focus the current skin on open (not when hover opened it); a press anywhere outside closes
   useEffect(() => {
-    if (!open) return
-    items.current[SKIN_NAMES.indexOf(getSkin())]?.focus()
+    if (!open) { byHover.current = false; return }
+    if (!byHover.current) items.current[SKIN_NAMES.indexOf(getSkin())]?.focus()
     const down = (e: PointerEvent) => { if (!wrap.current?.contains(e.target as Node)) setOpen(false) }
+    // a hover-opened menu has no focus inside: Escape still closes it
+    const esc = (e: globalThis.KeyboardEvent) => { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('pointerdown', down)
-    return () => document.removeEventListener('pointerdown', down)
+    document.addEventListener('keydown', esc)
+    return () => { document.removeEventListener('pointerdown', down); document.removeEventListener('keydown', esc) }
   }, [open])
 
   const onButtonKey = (e: KeyboardEvent) => {
@@ -59,9 +72,9 @@ export function SkinSwitcher() {
   }
 
   return (
-    <div className="skin-switch" ref={wrap}>
+    <div className="skin-switch" ref={wrap} onPointerEnter={e => intent(e, true)} onPointerLeave={e => intent(e, false)}>
       <button ref={btn} type="button" className="skin-menu-btn" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined}
-        title={SKINS[skin].title} onClick={() => open ? close(false) : show()} onKeyDown={onButtonKey}>
+        onClick={() => { clearTimeout(timer.current); if (open && !byHover.current) close(false); else if (open) { byHover.current = false; items.current[SKIN_NAMES.indexOf(skin)]?.focus() } else show() }} onKeyDown={onButtonKey}>
         DISPLAY: <b>{SKINS[skin].label}</b><span aria-hidden="true">▾</span>
       </button>
       {open && (

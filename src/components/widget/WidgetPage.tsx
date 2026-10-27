@@ -136,9 +136,9 @@ function Loaded({ w, preset, items, meta, onOpen, onBoard }: Loaded & Omit<Widge
     <PillBar label="Navigation" className="wp-top">
       <Pill><PillButton label={boardLabel(w.board)} glyph="‹" title={`Back to the ${boardLabel(w.board)} board`} href={`/${w.board}/`} onClick={() => onBoard(w.board, w.slug)} /></Pill>
       <Pill className="wp-step">
-        <PillButton label="PREV" glyph="←" title={`Previous card: ${widgetTitle(prev.name)}`} href={widgetPath(prev.id)} onClick={() => onOpen(prev.id)} />
+        <PillButton label="PREV" glyph="←" kbd="←" title={`Previous card: ${widgetTitle(prev.name)}`} href={widgetPath(prev.id)} onClick={() => onOpen(prev.id)} />
         <span className="wp-count" aria-label={`card ${i + 1} of ${items.length}`}>{i + 1}/{items.length}</span>
-        <PillButton label="NEXT" glyph="→" title={`Next card: ${widgetTitle(next.name)}`} href={widgetPath(next.id)} onClick={() => onOpen(next.id)} />
+        <PillButton label="NEXT" glyph="→" kbd="→" title={`Next card: ${widgetTitle(next.name)}`} href={widgetPath(next.id)} onClick={() => onOpen(next.id)} />
       </Pill>
     </PillBar>
     <div className="wp-main">
