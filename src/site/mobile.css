@@ -875,3 +875,8 @@ html:has(.sheet[open]) {
     transform: none
   }
 }
+
+/* TILT (light hub) sits beside SHARE: on touch, SHARE gives up its full row when TILT is there */
+.tools-grid .tool-tilt + .tool-share {
+  grid-column: auto
+}

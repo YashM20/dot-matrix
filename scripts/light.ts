@@ -333,6 +333,18 @@ export async function lightChecks(assert: Assert): Promise<void> {
       prec && trips === LIGHT_AZ_BUCKETS * LIGHT_EL_BANDS && fixture.every((x, i) => x === sunAt(14)[i]) && dot(lightOfBucket(0, 7) as V3, [0, -1, 0]) > 0,
       bad || `${trips}/${LIGHT_AZ_BUCKETS * LIGHT_EL_BANDS} buckets; the fixture lights by the sun`)
   }
+  // ── the first consumer (F0.8): the physics board, both ways in (tsc catches a missing board, not a missing `sources`) ──
+  {
+    const { boardManifest } = await import('../src/widgets/manifest')
+    const { boardById } = await import('../src/widgets')
+    const entry = boardManifest.find(b => b.id === 'physics')!
+    const lazy = await entry.load() as { items: { id: string; defaults?: Record<string, number> }[]; sources?: readonly unknown[] }
+    const eager = boardById('physics')!
+    const declared = lazy.items.filter(p => p.defaults?.gx === LIGHT_FIXTURE.gx && p.defaults?.gy === LIGHT_FIXTURE.gy).length
+    assert('light: physics board lists lightSource in both the manifest load() and the eager registry',
+      !!lazy.sources?.includes(mod.lightSource) && !!eager.sources?.includes(mod.lightSource) && declared === lazy.items.length && lazy.items.length === 5,
+      `manifest ${!!lazy.sources?.includes(mod.lightSource)}, registry ${!!eager.sources?.includes(mod.lightSource)}, ${declared}/${lazy.items.length} cards declare gx 0, gy 1`)
+  }
 }
 
 const self = process.argv[1]?.replace(/\\/g, '/')

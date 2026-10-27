@@ -49,7 +49,7 @@ export const boardManifest = [
   { id: 'surfaces', title: 'SURFACES — ONE FIELD, FIVE SURFACES', columns: 5, load: () => import('./boards/surfaces').then(m => ({ items: m.surfacesBoard, sources: m.surfacesSources })) },
   { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, load: () => import('./boards/components').then(m => ({ items: m.componentsBoard })) },
   { id: 'type', title: 'TYPE — VARIABLE DOT TYPE', columns: 3, load: () => import('./boards/type').then(m => ({ items: m.typeBoard })) },
-  { id: 'physics', title: 'PHYSICS — DOTS YOU CAN TOUCH', columns: 3, load: () => import('./boards/physics').then(m => ({ items: m.physicsBoard })) },
+  { id: 'physics', title: 'PHYSICS — DOTS YOU CAN TOUCH', columns: 3, load: () => import('./boards/physics').then(m => ({ items: m.physicsBoard, sources: m.physicsSources })) },
   { id: 'scope', title: 'SCOPE — THE INSTRUMENT, SEEN', columns: 3, load: () => import('./boards/scope').then(m => ({ items: m.scopeBoard, shared: m.scopeShared })) },
   { id: 'heal', title: 'HEAL — THE MIRROR THAT HEALS', columns: 3, load: () => import('./boards/heal').then(m => ({ items: m.healBoard })) },
   { id: 'algorithms', title: 'ALGORITHMS — STIPPLE, ATTRACT, COLLAPSE, AGGREGATE', columns: 2, load: () => import('./boards/algorithms').then(m => ({ items: m.algorithmsBoard })) },
