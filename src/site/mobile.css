@@ -342,8 +342,8 @@ html:has(.sheet[open]) {
   font-weight: inherit
 }
 
-/* ── phones ── */
-@media (max-width: 760px) {
+/* ── phones: portrait (≤ 760 px wide) and short landscape (a touch screen ≤ 500 px tall) ── */
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
   html {
     overscroll-behavior-x: none
   }
@@ -526,11 +526,6 @@ html:has(.sheet[open]) {
     min-width: 40px
   }
 
-  .xr-panel {
-    bottom: var(--tabbar-h);
-    max-height: min(55vh, calc(100dvh - var(--app-top) - var(--tabbar-h)));
-    padding-bottom: 0
-  }
 
   /* board picker: both rows are edge-to-edge strips that scroll sideways under the thumb */
   .board-picker .board-groups,
@@ -758,6 +753,74 @@ html:has(.sheet[open]) {
 
   .pal-shell {
     padding-top: calc(14px + env(safe-area-inset-top))
+  }
+
+  .pal:focus {
+    outline: none
+  }
+
+  .brand small {
+    display: none
+  }
+}
+
+/* portrait: the X-ray bottom sheet (App.css) stands on the tab bar */
+@media (max-width: 760px) {
+  .xr-panel {
+    bottom: var(--tabbar-h);
+    max-height: min(55vh, calc(100dvh - var(--app-top) - var(--tabbar-h)));
+    padding-bottom: 0
+  }
+}
+
+/* short landscape: a compact 44 px top bar and tab bar (glyph beside the word), clear of the notch */
+@media (max-height: 500px) and (pointer: coarse) {
+  :root {
+    --app-top: calc(44px + env(safe-area-inset-top));
+    --tabbar-h: calc(44px + env(safe-area-inset-bottom))
+  }
+
+  .shell {
+    width: calc(100% - 32px - env(safe-area-inset-left) - env(safe-area-inset-right))
+  }
+
+  .tabbar button {
+    flex-direction: row;
+    gap: 9px;
+    min-height: 44px
+  }
+
+  .tabbar .glyph {
+    width: 15px;
+    height: 15px
+  }
+
+  .tabbar .busy::after {
+    top: 8px;
+    left: calc(50% + 4px)
+  }
+
+  .pal {
+    height: calc(100dvh - 12px)
+  }
+}
+
+/* touch: form fields at 16 px so iOS doesn't zoom the page on focus; no keyboard-only hints or tools */
+@media (pointer: coarse) {
+  /* (the MAKE editor sizes its own selects: a wider one there would push its rows past the screen) */
+  :is(input:not([type]), input[type="text"], input[type="search"], input[type="number"], input[type="url"], input[type="email"], input[type="password"], select:not(.make-panel select), textarea) {
+    font-size: 16px !important
+  }
+
+  .pal-hint,
+  .pal-foot,
+  .pal-prompt,
+  .tools-grid .tool-shell {
+    display: none
+  }
+
+  .tools-grid .tool-share {
+    grid-column: 1 / -1
   }
 }
 

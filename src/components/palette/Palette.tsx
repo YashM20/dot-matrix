@@ -5,7 +5,7 @@
  */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { rank } from './fuzzy'
-import { allBoards, paletteItems, type CommandApi } from './api'
+import { allBoards, paletteItems, type CommandApi, type PaletteItem } from './api'
 import type { BoardDef } from '../../widgets/manifest'
 import { useSwipeDown } from '../../hooks/useSwipeDown'
 
@@ -19,6 +19,10 @@ function Highlight({ text, hits }: { text: string; hits: number[] }): ReactNode 
   return out
 }
 
+// touch: open on the list, not the keyboard; boards and places first, developer actions after them
+const coarse = () => window.matchMedia('(pointer: coarse)').matches
+const TOUCH_ORDER: Record<PaletteItem['group'], number> = { Board: 0, View: 1, Action: 2, Card: 3 }
+
 export function Palette({ api, hoveredCard, onClose }: { api: CommandApi; hoveredCard?: string; onClose: () => void }) {
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
@@ -28,16 +32,21 @@ export function Palette({ api, hoveredCard, onClose }: { api: CommandApi; hovere
   // boards come from the manifest at once; their cards join the search when the board chunks have loaded
   const [boards, setBoards] = useState<BoardDef[]>([])
   useEffect(() => { let live = true; allBoards().then(b => { if (live) setBoards(b) }, () => {}); return () => { live = false } }, [])
-  const items = useMemo(() => paletteItems(hoveredCard, boards), [hoveredCard, boards])
+  const [touch] = useState(coarse)
+  const items = useMemo(() => {
+    const all = paletteItems(hoveredCard, boards)
+    return touch ? all.map((item, i) => ({ item, i })).sort((a, b) => TOUCH_ORDER[a.item.group] - TOUCH_ORDER[b.item.group] || a.i - b.i).map(x => x.item) : all
+  }, [hoveredCard, boards, touch])
   const results = useMemo(() => rank(items, query, 60), [items, query])
   const sel = Math.min(index, Math.max(0, results.length - 1))
   const optionId = (i: number) => `${base}-o${i}`
 
   useEffect(() => {
     const prev = document.activeElement as HTMLElement | null
-    inputRef.current?.focus()
+    // a touch opens on the list (the sheet itself takes focus): the keyboard comes up when the field is tapped
+    if (touch) palRef.current?.focus(); else inputRef.current?.focus()
     return () => { prev?.focus?.() }
-  }, [])
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { listRef.current?.querySelector(`[id="${CSS.escape(optionId(sel))}"]`)?.scrollIntoView({ block: 'nearest' }) }, [sel]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const run = (i: number) => { const r = results[i]; if (!r) return; onClose(); r.item.run(api) }
@@ -57,7 +66,8 @@ export function Palette({ api, hoveredCard, onClose }: { api: CommandApi; hovere
   const heads = results.map((r, i) => i === 0 || results[i - 1].item.group !== r.item.group)
   return (
     <div className="pal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div ref={palRef} className="pal" role="dialog" aria-modal="true" aria-label="Command palette">
+      <div ref={palRef} className="pal" role="dialog" aria-modal="true" aria-label="Command palette" tabIndex={-1}
+        onKeyDown={e => { if (e.key === 'Escape' && e.target === e.currentTarget) onClose() }}>
         <div className="sheet-grab pal-grab" data-sheet-grab aria-hidden="true"><i /></div>
         <div className="pal-field">
           <span className="pal-prompt" aria-hidden="true">⌘K</span>

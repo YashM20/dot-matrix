@@ -63,8 +63,9 @@ function ToolsSheet({ api, xray, frozen, onClose, onPalette, onShell }: { api: C
       <button type="button" onClick={run(onPalette)}><b>SEARCH</b><span>Boards, cards and actions</span></button>
       <button type="button" aria-pressed={xray} onClick={run(() => toggleGlobal())}><b>X-RAY</b><span>See how every card is built</span></button>
       <button type="button" aria-pressed={frozen} onClick={run(() => (frozen ? resume() : api.freeze()))}><b>TIME</b><span>Freeze and scrub the clock</span></button>
-      <button type="button" onClick={run(share)}><b>SHARE</b><span>This page's link</span></button>
-      <button type="button" onClick={run(onShell)}><b>SHELL</b><span>Type field commands</span></button>
+      <button type="button" className="tool-share" onClick={run(share)}><b>SHARE</b><span>This page's link</span></button>
+      {/* the shell is a typed terminal: offered where there is a keyboard */}
+      <button type="button" className="tool-shell" onClick={run(onShell)}><b>SHELL</b><span>Type field commands</span></button>
     </div>
     <h3 className="tools-head">DISPLAY</h3>
     <SkinList />
