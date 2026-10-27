@@ -49,6 +49,7 @@ import { typeChecks } from './type'
 import { physicsChecks } from './physics'
 import { ncaChecks } from './nca/checks'
 import { c10Checks } from './c10'
+import { shareChecks } from './widgets/checks'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -894,6 +895,9 @@ ncaChecks(assert)
   const trips = PLACES.flatMap(p => [first, 'light'].map(board => ({ ...placeView(p), board }))).filter(v => { const u = new URL(urlForView(v, '?skin=crt', '/'), 'https://x'); return !is(viewFromUrl(u.search, u.pathname), v.view, v.view === 'MAKE' ? v.mode : null, v.board) })
   assert('ux: every view and MAKE mode round-trips through its canonical URL', !trips.length, trips.map(v => `${v.view}/${v.mode}/${v.board}`).join(', '))
 }
+
+// SHARE S0) widget uids, metadata and URLs (docs/SHARE-PLAN.md §3, scripts/widgets/checks.ts)
+shareChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')

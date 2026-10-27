@@ -24,7 +24,7 @@ import { surfacesBoard, surfacesSources } from './boards/surfaces'
 import { typeBoard } from './boards/type'
 import { scopeBoard, scopeShared } from './boards/scope'
 import { healBoard } from './boards/heal'
-import { boardIds, boardManifest, resolveBoardId, type BoardContents, type BoardDef, type BoardId } from './manifest'
+import { boardIds, boardManifest, resolveBoardId, resolveCardId, type BoardContents, type BoardDef, type BoardId } from './manifest'
 import { registerPresets } from './registry'
 
 /**
@@ -63,7 +63,7 @@ export { boardIds }
 export const boardById = (id: string): BoardDef | undefined => { const key = resolveBoardId(id); return boards.find(b => b.id === key) }
 
 export const widgetPresets: WidgetPreset[] = boards.flatMap(b => b.items)
-export const widgetById = (id: string): WidgetPreset | undefined => widgetPresets.find(p => p.id === id) ?? (id.startsWith('glyph-') ? widgetById(`lock-${id.slice(6)}`) : undefined)
+export const widgetById = (id: string): WidgetPreset | undefined => { const key = resolveCardId(id); return widgetPresets.find(p => p.id === id) ?? (key !== id ? widgetPresets.find(p => p.id === key) : undefined) }
 
 registerPresets(widgetPresets)
 
