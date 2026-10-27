@@ -10,6 +10,7 @@ import type { Mode } from '../../site/views'
 import { librarySave } from '../studio/doc'
 import { Canvas } from './Canvas'
 import { duplicateFrame, duplicateLayer, editFrame, editLayer, frameById, layerOf, movable, moveLayer, nudgeLayer, removeFrame, removeLayer, shareable, topDown } from './doc'
+import { codeTarget, KEY_TOOL, MODE_ENTRY, paintTarget } from './input'
 import { InspectorBody, InspectorTabs } from './Inspector'
 import { AssetsPanel, LayersPanel } from './Panels'
 import { revealAbove, useEditor, type Tool } from './store'
@@ -24,7 +25,6 @@ const TOOLS: { id: Tool; icon: IconName; key: string; label: string; phone: bool
   { id: 'text', icon: 'text', key: 'T', label: 'Text: tap a frame', phone: true },
   { id: 'code', icon: 'code', key: 'C', label: 'Code: add a Field IR layer', phone: true },
 ]
-const KEY_TOOL: Record<string, Tool> = { v: 'move', h: 'hand', f: 'frame', b: 'draw', p: 'draw', t: 'text', c: 'code' }
 
 const phoneQuery = '(max-width: 640px)'
 const subscribeMQ = (cb: () => void) => { const m = matchMedia(phoneQuery); m.addEventListener('change', cb); return () => m.removeEventListener('change', cb) }
@@ -51,23 +51,15 @@ export function Editor({ mode, onExit }: { mode: Mode; onExit?: () => void }) {
 
   // the old MAKE modes are ways in: each picks a tool and the panels it used to be
   useEffect(() => {
-    const s = useEditor.getState(), d = s.h.present
-    if (mode === 'TUNE') { s.setLeft('assets'); s.setRight('design'); s.setTool('move') }
-    else if (mode === 'COMPOSE') { s.setLeft('layers'); s.setRight('design'); s.setTool('move') }
-    else if (mode === 'DRAW') {
-      s.setTool('draw'); s.setLeft('layers'); s.setRight('design')
-      const f = frameById(d, s.sel.frame)?.card.layers.some(l => l.kind === 'paint') ? frameById(d, s.sel.frame) : d.frames.find(x => !x.hidden && x.card.layers.some(l => l.kind === 'paint'))
-      if (f) { const l = topDown(f.card).find(x => x.kind === 'paint'); s.select({ frame: f.id, layer: l?.id }) }
-    } else if (mode === 'CODE') {
-      s.setTool('move'); s.setRight('code'); s.setLeft('layers')
+    const s = useEditor.getState(), d = s.h.present, entry = MODE_ENTRY[mode]
+    s.setTool(entry.tool); s.setLeft(entry.left); s.setRight(entry.right)
+    if (mode === 'DRAW') { const t = paintTarget(d, s.sel); if (t) s.select(t) }
+    else if (mode === 'CODE') {
       const p = new URLSearchParams(location.search).get('p')
       if (p && p !== handledP) {
         handledP = p
         decodeShare(p).then(prog => { useEditor.getState().insertProgram(prog); setBanner('') }, (e: Error) => setBanner(`Could not open this link: ${e.message}`))
-      } else if (!p) {
-        const cur = layerOf(d, s.sel)
-        if (cur?.kind !== 'ir') { for (const f of [...d.frames].reverse()) { const l = topDown(f.card).find(x => x.kind === 'ir'); if (l && !f.hidden) { s.select({ frame: f.id, layer: l.id }); break } } }
-      }
+      } else if (!p) { const t = codeTarget(d, s.sel); if (t) s.select(t) }
       if (phone) s.setSheet('inspector')
     }
   }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps

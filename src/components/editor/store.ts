@@ -10,14 +10,14 @@ import { create } from 'zustand'
 import { commit, historyOf, loadLocal, redo, undo, type History, type StudioCard, type StudioLayer } from '../studio/doc'
 import type { SharedProgram } from '../../lib/share'
 import { addFrame, addLayer, boundsOf, frameById, frameSize, loadDoc, presetCard, programCard, programSource, saveDoc, seedDoc, topDown, type EditorDoc, type EditorFrame, type Sel } from './doc'
+import { clampZ, fitCam, zoomCam, type Camera } from './input'
 
 export type Tool = 'move' | 'hand' | 'frame' | 'draw' | 'text' | 'code'
 export type LeftTab = 'layers' | 'assets'
 export type RightTab = 'design' | 'animate' | 'code' | 'export'
 /** Phone only: which bottom sheet is open. */
 export type Sheet = 'layers' | 'assets' | 'inspector' | null
-export interface Camera { x: number; y: number; z: number }
-export const ZOOM_MIN = .1, ZOOM_MAX = 16
+export { ZOOM_MAX, ZOOM_MIN, type Camera } from './input'
 export interface Brush { size: number; value: number; erase: boolean }
 
 export interface EditorStore {
@@ -69,7 +69,6 @@ export interface EditorStore {
 
 let gestureBase: EditorDoc | undefined
 const first = (() => { const d = loadDoc(); if (d) return d; const studio = loadLocal(); return seedDoc(studio && studio.layers.length ? studio : undefined) })()
-const clampZ = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z))
 
 export const useEditor = create<EditorStore>((set, get) => ({
   h: historyOf(first),
@@ -97,17 +96,8 @@ export const useEditor = create<EditorStore>((set, get) => ({
   select: sel => set({ sel }),
   setTool: tool => set({ tool }),
   setCam: cam => set({ cam: { ...cam, z: clampZ(cam.z) } }),
-  zoomAt: (z, sx, sy) => {
-    const c = get().cam, nz = clampZ(z), k = nz / c.z
-    set({ cam: { z: nz, x: sx - (sx - c.x) * k, y: sy - (sy - c.y) * k } })
-  },
-  fit: (ids = [], max = 2) => {
-    const b = boundsOf(get().h.present, ids), { w, h } = get().vp
-    if (!b) return set({ cam: { x: w / 2, y: h / 2, z: 1 } })
-    const pad = Math.min(96, Math.max(24, Math.min(w, h) * .08)), bw = b[2] - b[0], bh = b[3] - b[1]
-    const z = clampZ(Math.min(max, (w - pad * 2) / Math.max(1, bw), (h - pad * 2) / Math.max(1, bh)))
-    set({ cam: { z, x: (w - bw * z) / 2 - b[0] * z, y: (h - bh * z) / 2 - b[1] * z } })
-  },
+  zoomAt: (z, sx, sy) => set({ cam: zoomCam(get().cam, z, sx, sy) }),
+  fit: (ids = [], max = 2) => { const { w, h } = get().vp; set({ cam: fitCam(boundsOf(get().h.present, ids), w, h, max) }) },
   setVp: (w, h) => set({ vp: { w, h } }),
   setLeft: left => set({ left }),
   setRight: right => set({ right }),

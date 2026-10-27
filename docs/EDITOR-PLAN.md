@@ -1,9 +1,9 @@
 # EDITOR-PLAN: one editor for MAKE
 
-> **Status (2026-10-26):** E0 (the vertical slice, §8) is built on branch `feat/editor`. MAKE is now one
-> editor in `src/components/editor/`. The four old tabs (TUNE · COMPOSE · CODE · DRAW) are gone from the UI.
-> Their URLs still work and open the editor on the matching tool. The old components stay in the tree for now
-> (§7.3), but `App.tsx` no longer imports them.
+> **Status (2026-10-27):** E0 (the vertical slice, §8) and E1 (tests + cleanup, §8.1) are built. MAKE is one
+> editor in `src/components/editor/`. The four old tabs (TUNE · COMPOSE · CODE · DRAW) are gone, and so are
+> their screens. Their URLs still work and open the editor on the matching tool. What the editor still uses
+> from the old code is listed in §7.3.
 >
 > **Why:** the owner's verdict on the four-tab MAKE: "changing layout/workspace and draw tabs isn't the proper
 > way — make it a full Figma-like editor, not the current experience." It must also work natively on a phone.
@@ -159,14 +159,19 @@ global keys (hold T = time machine). `X`, `` ` `` and ⌘K still reach the comma
 - *Remix* still pushes `?make=code&p=…`, which the editor imports.
 
 ### 7.3 Old code
-`studio/*`, `playground/*`, `dwitter/*` and `draw/*` are still importable. The editor reuses:
-- the Studio document, compile, playback, adapters and library;
-- `CodeEditor`, `EXAMPLES` and `lib/share`;
-- `dotifyUpload`;
-- the export module (`recordClip`, `plotterSVG`, `stillPNG`).
+The old screens were deleted in E1: `studio/` (`Studio`, `StudioCanvas`, `Inspector`, `LayerList`,
+`Machine`, `SidePanel`, `Timeline`, its store and the scorecard sheet), `draw/` with `hooks/useDrawBoard`, and
+the playground panels. What stays, because the editor (or the site) uses it:
+- `studio/doc.ts` (the frame model: card document, compile, `paint` layers, history, library),
+  `studio/adapter.ts` (card spec v1 / v0) and `studio/playback.ts` (timeline, states). Every frame and every
+  CODE layer compiles through `compileCard` in `studio/doc.ts`; the editor has no compile entry of its own;
+- `dwitter/`: `CodeEditor`, `EXAMPLES`, `program.ts` and `gallery.ts` (with `scripts/dots.ts`, `scripts/c10.ts`);
+- `playground/store.ts`: only its `theme`, which `Board.tsx` reads;
+- `lib/share`, `dotifyUpload`, and the export module (`recordClip`, `plotterSVG`, `stillPNG`).
 
-The old *screens* (`Studio.tsx`, `DotsRepl.tsx`, `DrawBoard.tsx`, the playground panels) are unused. They can
-be deleted once the browser probes no longer reference them (E1).
+`dwitter/DotsRepl.tsx` (the old CODE screen) is unused too, but still in the tree, with `RemixGraph.tsx`, which
+E5 reuses for remix lineage. The Studio's machine panel and scorecard sheet (E4, E5) can be recovered from git
+at `c619dae`.
 
 ## 8. What E0 built (this branch)
 
@@ -203,6 +208,22 @@ Resolution follows zoom in power-of-two steps, so panning and pinching are pure 
 **Accent:** red appears on the active tool, the selection ({colors.hairlineActive}), resize handles, RECORD,
 DELETE and errors. Hover is grey.
 
+### 8.1 What E1 added
+
+- `src/components/editor/input.ts`: the input logic without React, moved out of `Canvas.tsx`, `Editor.tsx`
+  and `store.ts` unchanged: tool keys (`KEY_TOOL`), where each old mode lands (`MODE_ENTRY`, `paintTarget`,
+  `codeTarget`), camera maths (`zoomCam`, `pinchCam`, `fitCam`) and gesture geometry (`resizeByHandle`,
+  `dragFramePos`, `dragCells`, `draftFrame`).
+- `scripts/editor.ts` (Node, in `pnpm verify`): doc edits, paint encode, resize anchoring from every corner,
+  hit tests, camera, gestures, tool keys and mode entries for every old link, history (gestures, tag
+  coalescing, cancel, the 100-step cap) and storage.
+- `scripts/editor-browser.ts` replaces `studio-browser.ts` and `dots-browser.ts`. It runs on desktop
+  (1440×900) and on a touch phone (390×844), and serves `dist/` itself. The phone pass checks taps, pans,
+  moves, pinch, the dock tools, touch resize, sheets at every detent (the top bar and the sheet's tabs stay
+  uncovered, the selection stays in view), and the site tab bar coming back on leave. It shares its CDP
+  harness (`scripts/lib/cdp.ts`).
+- The old screens are deleted (§7.3).
+
 ## 9. Decisions
 
 - **Frames are cards, not boxes.** There is no nesting of frames, auto layout or constraints. A card is a grid
@@ -215,17 +236,17 @@ DELETE and errors. Hover is grey.
   Once the frame is selected, the same drag moves it. A tap selects on release, so a pan never changes the
   selection.
 
-## 10. Roadmap (not done in E0)
+## 10. Roadmap
 
 | Phase | Scope |
 |---|---|
-| **E1 · tests + cleanup** | `scripts/editor.ts` (Node: doc edits, resize anchoring, paint encode, history gestures, hit tests) in `pnpm verify`. Rewrite `studio-browser.ts` / `dots-browser.ts` as editor probes (desktop + touch). Delete the unused old screens and their CSS (`.pg-*`, `.st-*`, `.dw-layout`, `.draw-*`). |
+| **E1 · tests + cleanup** (done, §8.1) | `scripts/editor.ts` in `pnpm verify`; `scripts/editor-browser.ts` (desktop + touch) replaces `studio-browser.ts` / `dots-browser.ts`; the old screens are deleted. Their CSS (`.pg-*`, `.st-*`, `.dw-layout`, `.draw-*`) goes with the CSS tokens pass (T0). |
 | **E2 · selection** | Marquee and multi-select (⇧-click), group / ungroup layers inside a frame, alignment and distribute, copy / paste (frames and layers, also between tabs), Alt-drag duplicate, smart guides and spacing between frames, lock. |
 | **E3 · editing on canvas** | Direct handles for sites (ring radius / sweep, line ends), text editing in place, lattice / tone quick toggles on the canvas, layer bounds for spec layers, eyedropper for the paint ink. |
-| **E4 · animate** | State-machine edges (the Studio's MachinePanel), bindings with sources (LFO, clock, pointer, fixtures), a preview / prototype mode that fires press / release edges, and a real multi-track timeline strip under the canvas on desktop. |
-| **E5 · share** | A link for a whole frame or document (deflated JSON, the CODE link's codec, a size cap), remix lineage (the old RemixGraph) in CODE, export of every device profile (`toDevice`) in EXPORT, the scorecard and bar sheet as an EXPORT · QUALITY fold. |
+| **E4 · animate** | State-machine edges (the old Studio's machine panel, recoverable at `c619dae`), bindings with sources (LFO, clock, pointer, fixtures), a preview / prototype mode that fires press / release edges, and a real multi-track timeline strip under the canvas on desktop. |
+| **E5 · share** | A link for a whole frame or document (deflated JSON, the CODE link's codec, a size cap), remix lineage (the old RemixGraph) in CODE, export of every device profile (`toDevice`) in EXPORT, the scorecard and bar sheet (the old `studio/sheet.ts`, recoverable at `c619dae`) as an EXPORT · QUALITY fold. |
 | **E6 · phone polish** | Long-press context menu (duplicate / delete / order), haptics-free snap feedback, sheet detent memory, landscape layout with a side sheet, `visualViewport` handling when the keyboard is open, a share sheet (`navigator.share`). |
 | **E7 · performance** | Sample frames in the existing worker, let a zoomed-out canvas draw cached bitmaps, and use WebGL frames for GPU-tagged layers (the renderer rules apply per frame). |
 
-**Next three:** E1 tests (the Node suite and the editor browser probes) and removal of the old screens; E2
-multi-select with copy / paste; E5 frame links, so a non-code frame can be shared like a code layer.
+**Next three:** E2 multi-select with copy / paste; E5 frame links, so a non-code frame can be shared like a
+code layer; E3 text editing in place.

@@ -10,11 +10,12 @@
 import { memo, useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react'
 import { PAINT_LIVE, paintCells, paintLayer, type PaintLayer, type StudioLayer } from '../studio/doc'
 import { EXAMPLES } from '../dwitter/examples'
-import { addFrame, addLayer, blankCard, drawingCard, editFrame, editLayer, encodeCells, frameById, frameSize, hitFrame, hitLayer, layerBounds, layerOf, line, movable, newIRLayer, newTextLayer, nudgeLayer, paintCellAt, pitchOf, programCard, programSource, raiseFrame, resizeFrame, stamp, topDown, type EditorFrame } from './doc'
+import { addFrame, addLayer, blankCard, drawingCard, editFrame, editLayer, encodeCells, frameById, frameSize, hitFrame, hitLayer, layerBounds, layerOf, line, movable, newIRLayer, newTextLayer, nudgeLayer, paintCellAt, pitchOf, programCard, programSource, raiseFrame, stamp, topDown, type EditorFrame } from './doc'
+import { dragCells, dragFramePos, draftFrame, pinchCam, PRESS_SLOP, resizeByHandle, type Handle } from './input'
 import { drawFrame, drawPaste, isAnimated, resolutionFor } from './render'
 import { useEditor, type Camera } from './store'
 
-/** Probe hooks (scripts/studio-browser.ts, dots-browser.ts): draw stats and the selected frame id. */
+/** Probe hooks (scripts/editor-browser.ts): draw stats and the selected frame id. */
 declare global { interface Window { __editor?: { frames: number; drawn: number; maxMs: number; lastMs: number; sel?: string } } }
 
 // ── render registry: one entry per mounted frame canvas ──────────────────────────────────────────
@@ -43,7 +44,6 @@ const FrameView = memo(function FrameView({ f }: { f: EditorFrame }) {
     style={{ left: f.x, top: f.y, width: w, height: h, display: f.hidden ? 'none' : undefined }} />
 })
 
-type Handle = 'nw' | 'ne' | 'sw' | 'se'
 type Op =
   | { kind: 'pan'; sx: number; sy: number; cam: Camera }
   | { kind: 'pinch'; d: number; mx: number; my: number; cam: Camera }
@@ -163,10 +163,8 @@ export function Canvas({ phone }: { phone: boolean }) {
     } else if (o.kind === 'frame-draw') {
       setDraft(undefined)
       if (!commitIt) return
-      const x0 = Math.min(o.wx, o.wx1), y0 = Math.min(o.wy, o.wy1), w = Math.abs(o.wx1 - o.wx), h = Math.abs(o.wy1 - o.wy), pitch = 2.25
-      const big = w > 12 && h > 12
-      const card = blankCard(big ? { cols: Math.max(8, Math.round(w / pitch)), rows: Math.max(8, Math.round(h / pitch)), pitch } : undefined)
-      const id = s.insertCard(card, { at: big ? { x: x0, y: y0 } : { x: o.wx - 162, y: o.wy - 162 }, source: 'blank' })
+      const { grid, at } = draftFrame(o.wx, o.wy, o.wx1, o.wy1)
+      const id = s.insertCard(blankCard(grid), { at, source: 'blank' })
       s.select({ frame: id }); s.setTool('move')
     }
   }, [])
@@ -271,9 +269,8 @@ export function Canvas({ phone }: { phone: boolean }) {
     if (o.kind === 'pinch') {
       const ps = [...pointers.current.values()]
       if (ps.length < 2) return
-      const [a, b] = ps, d = Math.hypot(a.x - b.x, a.y - b.y), mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2
-      const z = Math.min(16, Math.max(.1, o.cam.z * d / Math.max(1, o.d))), k = z / o.cam.z
-      s.setCam({ z, x: mx - (o.mx - o.cam.x) * k, y: my - (o.my - o.cam.y) * k })
+      const [a, b] = ps
+      s.setCam(pinchCam(o.cam, o.d, o.mx, o.my, Math.hypot(a.x - b.x, a.y - b.y), (a.x + b.x) / 2, (a.y + b.y) / 2))
       return
     }
     if (o.kind === 'pan') { s.setCam({ ...o.cam, x: o.cam.x + sx - o.sx, y: o.cam.y + sy - o.sy }); return }
@@ -281,7 +278,7 @@ export function Canvas({ phone }: { phone: boolean }) {
     if (o.kind === 'stroke') { strokeTo(wx, wy); setHover({ sx, sy }); return }
     if (o.kind === 'frame-draw') { o.wx1 = wx; o.wy1 = wy; setDraft([Math.min(o.wx, wx), Math.min(o.wy, wy), Math.abs(wx - o.wx), Math.abs(wy - o.wy)]); return }
     if (o.kind === 'press') {
-      if (Math.hypot(sx - o.sx, sy - o.sy) < (o.touch ? 8 : 3)) return
+      if (Math.hypot(sx - o.sx, sy - o.sy) < (o.touch ? PRESS_SLOP.touch : PRESS_SLOP.mouse)) return
       // touch: dragging a frame that was not selected pans instead (no accidental moves while scrolling around)
       if (o.touch && !o.was) { op.current = { kind: 'pan', sx: o.sx, sy: o.sy, cam: s.cam }; return }
       const f = frameById(s.h.present, o.frame)!
@@ -292,22 +289,19 @@ export function Canvas({ phone }: { phone: boolean }) {
       return onMove(e)
     }
     if (o.kind === 'drag-frame') {
-      const snap = e.shiftKey ? 1 : 4
-      s.live(d => editFrame(d, o.id, f => ({ ...f, x: Math.round((o.x0 + wx - o.wx) / snap) * snap, y: Math.round((o.y0 + wy - o.wy) / snap) * snap })))
+      const at = dragFramePos(o.x0, o.y0, wx - o.wx, wy - o.wy, e.shiftKey)
+      s.live(d => editFrame(d, o.id, f => ({ ...f, ...at })))
       return
     }
     if (o.kind === 'drag-layer') {
-      const f = frameById(s.h.present, o.frame)!, p = pitchOf(f.card)
-      const dc = Math.round((wx - o.wx) / p), dr = Math.round((wy - o.wy) / p) // whole cells: dots stay on the grid
+      const f = frameById(s.h.present, o.frame)!
+      const [dc, dr] = dragCells(pitchOf(f.card), wx - o.wx, wy - o.wy) // whole cells: dots stay on the grid
       s.live(d => editLayer(d, { frame: o.frame, layer: o.layer }, () => nudgeLayer(o.base, dc, dr)))
       return
     }
     if (o.kind === 'resize') {
-      const f0 = o.f0, p = pitchOf(f0.card), dx = Math.round((wx - o.wx) / p), dy = Math.round((wy - o.wy) / p)
-      const west = o.handle.includes('w'), north = o.handle.includes('n')
-      const cols = f0.card.grid.cols + (west ? -dx : dx), rows = f0.card.grid.rows + (north ? -dy : dy)
-      const cc = Math.max(8, Math.min(512, cols)), rr = Math.max(8, Math.min(512, rows))
-      s.live(d => editFrame(d, o.id, () => resizeFrame(f0, cc, rr, west ? cc - f0.card.grid.cols : 0, north ? rr - f0.card.grid.rows : 0)))
+      const next = resizeByHandle(o.f0, o.handle, wx - o.wx, wy - o.wy)
+      s.live(d => editFrame(d, o.id, () => next))
     }
   }
 

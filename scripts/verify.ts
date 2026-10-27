@@ -34,7 +34,6 @@ import { deviceChecks } from './device'
 import { exportChecks } from './export'
 import { dotsChecks } from './dots'
 import { studioChecks } from './studio'
-import { editorChecks } from './editor'
 import { boardGroups, boardIds, boardLabel, groupOf } from '../src/widgets/manifest'
 import { boardBlurbs } from '../src/widgets/blurbs'
 import { boardFromPath } from '../src/site/meta'
@@ -852,8 +851,6 @@ import { gpuBoard } from '../src/widgets/boards/gpu'
 }
 // P6-D) Dot Studio: document model, undo/redo, reference stacks, spec v1 / DOTS import, timeline (scripts/studio.ts)
 studioChecks(assert)
-// MAKE editor (docs/EDITOR-PLAN.md): multi-frame document, paint layers, resize anchoring, hit tests, gestures (scripts/editor.ts)
-editorChecks(assert)
 // C10) X-ray probe ≡ sampler, time-machine seek, remix → Field IR, palette fuzzy rank (scripts/c10.ts)
 c10Checks(assert)
 // C2) physics: worlds, stable fluids, PBD cloth / jelly, particles + spatial hash, the physics board (scripts/physics.ts)
@@ -865,6 +862,11 @@ gameChecks(assert)
 ncaChecks(assert)
 // ALGORITHMS) stippling, attractor density, WFC, DLA: determinism, invariants, timing, the algorithms board (scripts/algorithms.ts)
 algorithmsChecks(assert)
+// editor (E1): MAKE editor document, paint encode, resize anchoring, hit tests, camera, gestures, entries, history (scripts/editor.ts)
+{
+  const { editorChecks } = await import('./editor')
+  editorChecks(assert)
+}
 
 // golden key (F0.5, F0.6, F0.10): dotKey + the style backfill, the square site cover, card fps (scripts/goldenkey.ts)
 import { goldenKeyChecks } from './goldenkey'
