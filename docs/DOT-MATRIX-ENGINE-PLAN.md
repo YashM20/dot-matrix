@@ -39,7 +39,7 @@ src/engine/                       framework-free TypeScript + browser Canvas/SVG
   halftone/                       halftone ladder, halftoneStream, STBN blue-noise mask (stbn, blueNoise)
   sim/                            SimField: createSim, simAt/simPhase/simField/simMapField; grayScott, fallingSand, life
   physics/                        worlds (pristine SimField loop, live fork on input): createWorld/worldAt/worldStep; stable fluids, Verlet particles + spatial hash, PBD cloth + soft body
-  algo/                           niche algorithms as dot sources (docs/ALGORITHMS.md): stipple (weighted Voronoi / Lloyd → sites), attractorDensity (Clifford / de Jong log histogram, dsin/tsin, collapse guard), wfc (tiled WFC + backtracking, scrubbable history), dla (off-lattice DLA, arrival order)
+  algo/                           niche algorithms as dot sources (docs/ALGORITHMS.md; not in the index.ts barrel, import `engine/algo` so it stays off first load): stipple (weighted Voronoi / Lloyd → sites), attractorDensity (Clifford / de Jong log histogram, dsin/tsin, collapse guard), wfc (tiled WFC + backtracking, scrubbable history), dla (off-lattice DLA, arrival order)
   nca/                            neural cellular automata, CPU inference from Int8 weights: ncaModel, ncaRun timeline, ncaScratch, ncaField/ncaMapField
   scene/raycast.ts                castHall (analytic hall), castGrid (DDA maze), lamp, fog, seam, project — HIVE cards and game
   device/                         profiles (DEVICES, deviceProfile), toDevice (card → device frame + tone map), simulators: eink, flipdisc, led, plotter (pen plan, penPlanSVG)

@@ -1,6 +1,6 @@
 # ALGORITHMS — niche algorithms as dot sources
 
-> Current (2026-10-27). Code: `src/engine/algo/` (exported from `src/engine`), cards: `src/widgets/boards/algorithms.ts` (board `algorithms`, `/algorithms/`), checks: `scripts/algorithms.ts` (run by `pnpm verify`; alone: `npx tsx scripts/algorithms.ts`).
+> Current (2026-10-27). Code: `src/engine/algo/` (import from `src/engine/algo`: it is deliberately not re-exported by the `src/engine` barrel, which first-load code imports, so it stays out of the first-load budget), cards: `src/widgets/boards/algorithms.ts` (board `algorithms`, `/algorithms/`), checks: `scripts/algorithms.ts` (run by `pnpm verify`; alone: `npx tsx scripts/algorithms.ts`).
 
 Four algorithms the engine did not have, chosen for what they give a dot matrix: each one produces either **dot sites** (positions, so `sites` layers) or a **field** sampled on the card grid, and each animates by scrubbing its own history, so a card stays a pure function of `t`.
 
