@@ -25,7 +25,24 @@ export interface DotStyle {
   cornerRoundness?: number; opacityMode?: 'constant' | 'fromValue'; jitter?: number; quantizeSteps?: number
 }
 export interface ThemeTokens { bg: string; surface: string; surfaceRaised?: string; hairline?: string; dotIdle: string; dotMid?: string; dotFaint?: string; dotActive: string; dotActiveDim?: string; accentAmber?: string; value?: string; gridPx: number; cornerRadiusCard: number }
-export interface DotInstance { x: number; y: number; r: number; opacity: number; color: string; shape?: DotStyle['shape']; roundness?: number }
+/**
+ * Reserved per-dot form fields (docs/living-matter/F0-foundation.md §2.5): declared now so the golden key
+ * (`scripts/lib/goldenKey.ts`) already hashes them, implemented by the squares track. Renderers and the
+ * sampler ignore them until then. On a `Layer` they are per-layer defaults the sampler stamps onto that layer's dots.
+ */
+export interface DotForm {
+  /** Reserved for Q1 (join pass): 12-bit quadrant mask. Renderers ignore it until Q1. */
+  join?: number
+  /** Reserved for Q1: resolved join geometry; required whenever `join` is set (the golden key reads it). */
+  joint?: { hx: number; hy: number; ro: number; ri: number; seam: number }
+  /** Reserved for Q1/Q3: rotation in radians (Q3 snaps squares to multiples of π/4, stored in radians). */
+  rot?: number
+  /** Reserved for Q2: width/height of a rect cell (1 = square). */
+  aspect?: number
+  /** Reserved for Q3: motif id inside the cell. */
+  motif?: string
+}
+export interface DotInstance extends DotForm { x: number; y: number; r: number; opacity: number; color: string; shape?: DotStyle['shape']; roundness?: number }
 
 /**
  * Colour role of a layer. `auto` = canonical grey band by value (colorFor);
@@ -33,7 +50,7 @@ export interface DotInstance { x: number; y: number; r: number; opacity: number;
  * `active` is the single accent — keep it to one element per card.
  */
 export type Tone = 'auto' | 'active' | 'activeDim' | 'value' | 'idle' | 'mid' | 'faint'
-export interface Layer {
+export interface Layer extends DotForm {
   field: Field
   tone?: Tone
   /**

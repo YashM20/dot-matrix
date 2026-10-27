@@ -1,62 +1,57 @@
 /**
  * Golden hashes of every preset's quantized dot list.
  *
- *   pnpm golden            # (re)write goldens/hashes.json
- *   pnpm golden --check    # compare against goldens/hashes.json, exit 1 listing changed presets
+ *   pnpm golden                   # (re)write goldens/hashes.json
+ *   pnpm golden --check           # compare against goldens/hashes.json, exit 1 listing changed presets
+ *   pnpm golden --backfill-style  # one-shot: add `style` to every entry; refuses (exit 1) unless every hash and dot count is unchanged
  *
  * Each preset is sampled the way the app draws it (`withChrome` → `sampleLayers` on its own
- * grid/style, dot480) at t=0, plus t=1.3 for animated presets. Dots are quantized
- * (x,y → 2dp, r/opacity → 3dp, colour string), sorted so a pure re-ordering of the sampler's
- * output does not count as a change, and hashed with FNV-1a 32. The wall clock is frozen so
- * clock cards hash identically everywhere.
+ * grid/style, dot480) at t=0, plus t=1.3 for animated presets. Each dot becomes its golden key
+ * (`dotKey`, scripts/lib/goldenKey.ts: x,y → 2dp, r/opacity → 3dp, colour, plus the optional
+ * shape/join/rotation/aspect/motif channels), the keys are sorted so a pure re-ordering of the
+ * sampler's output does not count as a change, and hashed with FNV-1a 32. Every entry also stores
+ * the card's `style` signature (`--check` compares it too). The wall clock is frozen so clock cards
+ * hash identically everywhere.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { freezeWallClock } from './lib/freeze'
-import { sampleCard, uniquePresets } from './lib/cards'
-import type { DotInstance } from '../src/engine/types'
+import { uniquePresets } from './lib/cards'
+import { backfillOffenders, diffGoldens, goldenRow, type Goldens } from './lib/goldenKey'
+export { fnv1a } from './lib/goldenKey'
 
 freezeWallClock()
-const FILE = 'goldens/hashes.json', TIMES = { static: [0], animated: [0, 1.3] }
-const check = process.argv.includes('--check')
+const FILE = 'goldens/hashes.json'
+const ABOUT = 'FNV-1a 32 of the sorted quantized dot list per preset (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.'
+const check = process.argv.includes('--check'), backfill = process.argv.includes('--backfill-style')
 
-/** FNV-1a 32 over UTF-16 code units, as 8 hex digits. */
-export function fnv1a(str: string, h = 0x811c9dc5): number {
-  for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0 }
-  return h >>> 0
-}
-const hex = (n: number) => n.toString(16).padStart(8, '0')
-const q = (d: DotInstance) => `${d.x.toFixed(2)},${d.y.toFixed(2)},${d.r.toFixed(3)},${d.opacity.toFixed(3)},${d.color}`
-
-interface Entry { hash: string; dots: number }
-type Goldens = Record<string, Record<string, Entry>>
 const current: Goldens = {}
-for (const p of uniquePresets()) {
-  const row: Record<string, Entry> = {}
-  for (const t of p.animated ? TIMES.animated : TIMES.static) {
-    const keys = sampleCard(p, t).map(q).sort()
-    let h = 0x811c9dc5; for (const k of keys) h = fnv1a(k + ';', h)
-    row[`t=${t}`] = { hash: hex(h), dots: keys.length }
-  }
-  current[p.id] = row
+for (const p of uniquePresets()) current[p.id] = goldenRow(p)
+
+const write = () => {
+  mkdirSync('goldens', { recursive: true })
+  writeFileSync(FILE, JSON.stringify({ about: ABOUT, presets: current }, null, 1) + '\n')
+  console.log(`${FILE}: ${Object.keys(current).length} presets`)
+}
+const read = (): Goldens => {
+  if (!existsSync(FILE)) { console.error(`${FILE} missing — run \`pnpm golden\` first`); process.exit(1) }
+  return JSON.parse(readFileSync(FILE, 'utf8')).presets
 }
 
-if (!check) {
-  mkdirSync('goldens', { recursive: true })
-  const doc = { about: 'FNV-1a 32 of the sorted quantized dot list per preset (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.', presets: current }
-  writeFileSync(FILE, JSON.stringify(doc, null, 1) + '\n')
-  console.log(`${FILE}: ${Object.keys(current).length} presets`)
+if (backfill) {
+  const offenders = backfillOffenders(read(), current)
+  if (offenders.length) {
+    for (const o of offenders) console.error(o)
+    console.error(`\n--backfill-style refused: ${offenders.length} preset row(s) would change, be added or be removed (fix them, or regenerate with \`pnpm golden\` as an intended change)`)
+    process.exit(1)
+  }
+  write()
+  console.log('backfill: every hash and dot count kept; `style` written on every entry')
   process.exit(0)
 }
 
-if (!existsSync(FILE)) { console.error(`${FILE} missing — run \`pnpm golden\` first`); process.exit(1) }
-const golden: Goldens = JSON.parse(readFileSync(FILE, 'utf8')).presets
-const changed: string[] = [], added: string[] = [], removed = Object.keys(golden).filter(id => !(id in current))
-for (const [id, row] of Object.entries(current)) {
-  const g = golden[id]; if (!g) { added.push(id); continue }
-  const diffs = Object.keys({ ...row, ...g }).filter(t => row[t]?.hash !== g[t]?.hash)
-    .map(t => `${t} ${g[t]?.hash ?? '-'}→${row[t]?.hash ?? '-'} (${g[t]?.dots ?? 0}→${row[t]?.dots ?? 0} dots)`)
-  if (diffs.length) changed.push(`${id}: ${diffs.join(', ')}`)
-}
+if (!check) { write(); process.exit(0) }
+
+const { changed, added, removed } = diffGoldens(read(), current)
 for (const c of changed) console.log(`changed  ${c}`)
 for (const a of added) console.log(`added    ${a}`)
 for (const r of removed) console.log(`removed  ${r}`)
