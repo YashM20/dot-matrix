@@ -1,0 +1,12 @@
+{
+ "about": "FNV-1a 32 of fixed input sweeps through src/engine/noise (scripts/noise.ts snapshot()). Identical under every JS engine; re-baseline with `npx tsx scripts/noise.ts --update` only for an intended change.",
+ "hashes": {
+  "dsin": "fc56c084",
+  "tsin": "922930ec",
+  "datan2": "8745eade",
+  "dexp": "a3f7db90",
+  "dpow": "f12c683b",
+  "ihash": "dc4ae669",
+  "rngFor": "01b93185"
+ }
+}

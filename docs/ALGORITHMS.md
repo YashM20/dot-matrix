@@ -6,7 +6,7 @@ Four algorithms the engine did not have, chosen for what they give a dot matrix:
 
 What was already there, and so was not added: Bayer and Floyd–Steinberg dithering (`fields/haltoneField.ts`), void-and-cluster blue noise and STBN (`halftone/`), Bridson Poisson-disc (`fields/scatterField.ts`), Gray–Scott, falling sand and Life (`sim/`), stable fluids, Verlet and PBD (`physics/`), growing NCA (`nca/`), Hilbert ordering and SDF morphs (`migrate/`), ray casting (`scene/`).
 
-All four are plain TypeScript, framework-free, with no dependencies, and deterministic: randomness is `mulberry32` from a seed, and trigonometry inside chaotic or long loops is `dsin`/`tsin` (range reduction + polynomial, or a table of it), which only uses `+`, `×`, `floor`/`round` and is bit-identical in every JS engine. `Math.sin` is not.
+All four are plain TypeScript, framework-free, with no dependencies, and deterministic: randomness is `mulberry32` from a seed, and trigonometry inside chaotic or long loops is `dsin`/`tsin` (range reduction + polynomial, or a table of it), which only uses `+`, `×`, `floor`/`round` and is bit-identical in every JS engine. `Math.sin` is not. Since F0.1 they live in `src/engine/noise/dmath.ts` (with `datan2`, `dexp`, `dpow`, `ihash`, `rngFor`; see [Deterministic math and noise](#deterministic-math-and-noise-srcenginenoise) below); `algo/attractor.ts` re-exports them, so `dla.ts` and the checks import them as before.
 
 | Card | Algorithm | Output | Pipeline | Cost (idle laptop, Node) |
 |---|---|---|---|---|
@@ -87,6 +87,25 @@ dejong    x' = sin(a·y) − cos(b·x)      y' = sin(c·x) − cos(d·y)      |x
 **The card:** a 143 × 114 domain, one disc per card cell, about 1,300 particles. Growth is revealed by arrival order at N ∝ (t/13)^1.7, so the front advances at about constant speed. Tone follows age: the oldest quarter faint, then mid, idle, the young tips white, and the newest 16 red (live). The footer measures the fractal dimension live, as the least-squares slope of log N against log Rg.
 
 ---
+
+## Deterministic math and noise (`src/engine/noise`)
+
+> The shared toolkit of the living-matter tracks (`docs/living-matter/F0-foundation.md` §2). Import `src/engine/noise` (or a file in it) directly: like `algo/`, it is not re-exported by the `src/engine` barrel, so it never reaches first load. Checks: `scripts/noise.ts` (run by `pnpm verify` in the noise slot; alone: `npx tsx scripts/noise.ts`).
+
+### Scalar math (`noise/dmath.ts`)
+Only `+ − × /`, `Math.floor/round/trunc/abs/min/max/sqrt/imul/fround`, comparisons and table reads, which IEEE 754 makes bit-identical in every engine. Measured on 2026-10-27 (Node 22, `scripts/noise.ts`):
+
+| Function | Method | Accuracy (gate → measured) | Cost vs `Math.*` (gate → measured) |
+|---|---|---|---|
+| `dsin` / `dcos` | round to [−π, π], fold to [−π/2, π/2], Taylor to x¹³ | < 1e-8 → 6.6e-10 | n/a |
+| `tsin` / `tcos` | 4096-entry `dsin` table + linear interpolation | < 1e-6 → 2.9e-7 | ~4× cheaper than `dsin` |
+| `datan2(y, x)` | octant reduction, (a − 1)/(a + 1) + π/4 above tan(π/8), odd series to x¹⁹ | ≤ 1e-9 rad → 3.8e-10 (2e6 samples) | ≤ 2× → 0.9× |
+| `dexp(x)` | Cody–Waite k·ln2 split (fdlibm hi/lo), degree-13 Taylor, × 2^k as two exact table factors | rel ≤ 1e-13 on [−708, 709] → 2.2e-16 | ≤ 4× → 0.7–1.4× |
+| `dpow(x, y)` | integer \|y\| ≤ 64: repeated multiplication (so `dpow(x, 2) === x * x`); else `dexp(y · dlog x)`, dlog by exact ×/÷ 2 to [√½, √2] and 2·atanh to s²¹ | rel ≤ 1e-12 where \|y ln x\| ≤ 50 → 1.2e-14; ≤ 1e-9 elsewhere → 2.1e-13 | ≤ 6× → 3.5× |
+| `ihash(a, b, c)` | imul by three odd constants, xor, murmur3 finaliser; int32 inputs | a bijection in `a` alone: no aliasing at ±2²³, where `hash32` (×256 fixed point) aliases | n/a |
+| `rngFor(seed, id, step)` | `mulberry32(ihash(seed, id, step))` | one independent stream per entity and step | n/a |
+
+Edges: `datan2(0, 0) = 0`, signed zeros ignored, NaN → NaN; `dexp` overflows to Infinity above 709.78 and underflows to 0 below −745.1; `dpow(x, 0) = 1`, `dpow(0, y < 0) = Infinity`, a negative base with a non-integer exponent is NaN, with an integer one the sign follows parity. `goldens/noise.json` pins FNV-1a hashes of fixed input sweeps through every function, so a bit change anywhere fails `scripts/noise.ts`.
 
 ## Checks (`scripts/algorithms.ts`)
 - **Stipple:** deterministic; walk ≈ exact; every stipple ends on the density; Lloyd moves shrink; the moon builds cold within its budget.

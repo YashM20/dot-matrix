@@ -52,6 +52,7 @@ import { ncaChecks } from './nca/checks'
 import { c10Checks } from './c10'
 import { shareChecks } from './widgets/checks'
 import { algorithmsChecks } from './algorithms'
+import { noiseChecks } from './noise'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -865,6 +866,8 @@ gameChecks(assert)
 ncaChecks(assert)
 // ALGORITHMS) stippling, attractor density, WFC, DLA: determinism, invariants, timing, the algorithms board (scripts/algorithms.ts)
 algorithmsChecks(assert)
+// F0 noise slot) dmath, gradient noise, Voronoi, curl, the IR noise pack, the determinism lint (scripts/noise.ts)
+noiseChecks(assert)
 
 // UX U1) board picker (docs/UX-PLAN.md §4.2): every board in exactly one group after START HERE, a label and a blurb; old paths still open
 {
