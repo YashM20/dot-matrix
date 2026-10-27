@@ -101,11 +101,24 @@ Only `+ − × /`, `Math.floor/round/trunc/abs/min/max/sqrt/imul/fround`, compar
 | `tsin` / `tcos` | 4096-entry `dsin` table + linear interpolation | < 1e-6 → 2.9e-7 | ~4× cheaper than `dsin` |
 | `datan2(y, x)` | octant reduction, (a − 1)/(a + 1) + π/4 above tan(π/8), odd series to x¹⁹ | ≤ 1e-9 rad → 3.8e-10 (2e6 samples) | ≤ 2× → 0.9× |
 | `dexp(x)` | Cody–Waite k·ln2 split (fdlibm hi/lo), degree-13 Taylor, × 2^k as two exact table factors | rel ≤ 1e-13 on [−708, 709] → 2.2e-16 | ≤ 4× → 0.7–1.4× |
-| `dpow(x, y)` | integer \|y\| ≤ 64: repeated multiplication (so `dpow(x, 2) === x * x`); else `dexp(y · dlog x)`, dlog by exact ×/÷ 2 to [√½, √2] and 2·atanh to s²¹ | rel ≤ 1e-12 where \|y ln x\| ≤ 50 → 1.2e-14; ≤ 1e-9 elsewhere → 2.1e-13 | ≤ 6× → 3.5× |
+| `dpow(x, y)` | integer \|y\| ≤ 64: repeated multiplication (so `dpow(x, 2) === x * x`); else `dexp(y · dlog x)`, dlog splits m · 2^e from the IEEE bits (exact), m ∈ [√½, √2], and 2·atanh to s²¹ | rel ≤ 1e-12 where \|y ln x\| ≤ 50 → 1.2e-14; ≤ 1e-9 elsewhere → 2.1e-13 | ≤ 6× → 2.2–3.6× |
 | `ihash(a, b, c)` | imul by three odd constants, xor, murmur3 finaliser; int32 inputs | a bijection in `a` alone: no aliasing at ±2²³, where `hash32` (×256 fixed point) aliases | n/a |
 | `rngFor(seed, id, step)` | `mulberry32(ihash(seed, id, step))` | one independent stream per entity and step | n/a |
 
 Edges: `datan2(0, 0) = 0`, signed zeros ignored, NaN → NaN; `dexp` overflows to Infinity above 709.78 and underflows to 0 below −745.1; `dpow(x, 0) = 1`, `dpow(0, y < 0) = Infinity`, a negative base with a non-integer exponent is NaN, with an integer one the sign follows parity. `goldens/noise.json` pins FNV-1a hashes of fixed input sweeps through every function, so a bit change anywhere fails `scripts/noise.ts`.
+
+### Gradient noise (`noise/gradient.ts`)
+2-D gradient (Perlin) noise on the integer lattice: quintic fade 6t⁵ − 15t⁴ + 10t³ and 8 gradients (±1,0) (0,±1) (±√½,±√½) picked by `ihash(ix, iy, seed) & 7`, scaled by √2 so the bound is exactly [−1, 1]. Value noise is cheaper but blobby and shows its grid at 144²; simplex needs skew constants and a corner sort for little gain at these sizes. fBm removes the axis alignment by rotating every octave by R = [[0.8, −0.6], [0.6, 0.8]] (4 multiplies, no trig), with octave seeds `seed ^ imul(o, 0x9e3779b9)`.
+
+| Function | Range | Notes |
+|---|---|---|
+| `noise2(x, y, seed)` | [−1, 1] | one lattice cell = one feature; ~6 features across 144 cells is `noise2(c * 6 / 144, …)` |
+| `noise3(x, y, z, seed)`, `noise3Grad(…, out)` | [−1, 1] | 12 edge gradients of improved Perlin noise; scale 1/1.0363 = 1 / the exact sup of the raw sum (1e6 samples reach ≈ 0.92); `noise3Grad` writes the analytic ∂/∂x, ∂/∂y |
+| `fbm2(x, y, octaves, seed, o)` | [−1, 1] | Σ gainᵒ·noise2(Rᵒ·p·lacᵒ) / Σ gainᵒ; octaves floored and clamped to 1..8 (default 4), lacunarity 2, gain .5 |
+| `turb2`, `ridge2` | [0, 1] | Σ gainᵒ·\|n\| (marble, rust, smoke) and Σ gainᵒ·(1 − \|n\|)² (veins, cracks), over Σ gainᵒ |
+| `valueNoise2(x, y, seed)` | [0, 1] | bit-identical to `cinema.ts`'s former private `vnoise` (hash01 lattice, smoothstep fade); migration only |
+
+Map a signed value to a tone with `.5 + .5 * n`. Budgets (`scripts/noise.ts`, normalised to load factor 1; measured 2026-10-27): `noise2` 144² ≤ 1.2 ms (0.41 ms); `fbm2` 4 octaves 144² ≤ 4.5 ms (1.6 ms: bake it, never per frame at full resolution); `fbm2` 4 octaves 48² ≤ 0.8 ms (0.22 ms: per frame on a lattice is fine).
 
 ## Checks (`scripts/algorithms.ts`)
 - **Stipple:** deterministic; walk ≈ exact; every stipple ends on the density; Lloyd moves shrink; the moon builds cold within its budget.

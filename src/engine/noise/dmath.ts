@@ -1,7 +1,8 @@
 /**
  * Deterministic scalar math: the same bits in every JS engine (V8, JSC, SpiderMonkey) and on every run.
  *
- * Rule: only `+ − × /`, `Math.floor/round/trunc/abs/min/max/sqrt/imul/fround`, comparisons and table reads.
+ * Rule: only `+ − × /`, `Math.floor/round/trunc/abs/min/max/sqrt/imul/fround`, comparisons, table reads and
+ * typed-array bit views (a pure copy of the IEEE-754 bits).
  * ECMAScript implements those as correctly rounded IEEE-754 doubles with no FMA contraction, so they agree
  * everywhere; `Math.sin`, `Math.exp`, `Math.pow`, `Math.atan2`, `Math.hypot`, … are only "implementation-approximated"
  * and differ between engines (20k `Math.sin` outputs hash differently under V8 and JSC). Anything a deterministic
@@ -90,20 +91,24 @@ export function dexp(x: number): number {
   const k = Math.round(x * INV_LN2), r = (x - k * LN2_HI) - k * LN2_LO
   const p = 1 + r * (1 + r * (E2 + r * (E3 + r * (E4 + r * (E5 + r * (E6 + r * (E7 + r * (E8 + r * (E9 + r * (E10 + r * (E11 + r * (E12 + r * E13))))))))))))
   // 2^k as two exact factors (k ∈ [−1075, 1024]): p·2^k1 stays normal, so the only rounding is the last product
-  const t = pow2Table(), k1 = k >> 1
+  const t = p2 ?? pow2Table(), k1 = k >> 1
   return p * t[P2_MAX + k1] * t[P2_MAX + k - k1]
 }
 
-const SQRT2 = Math.SQRT2, SQRT_HALF = Math.SQRT1_2
-const P2_STEPS = [512, 256, 128, 64, 32, 16, 8, 4, 2, 1]
-/** ln x for finite x > 0 (private: dpow's log). Exact ×/÷ 2 split to m ∈ [√½, √2], then 2·atanh((m−1)/(m+1)) to s²¹. */
+const SQRT2 = Math.SQRT2
+/**
+ * The exponent/mantissa split reads the IEEE-754 bits through a typed-array view (a pure bit copy, the same
+ * in every engine): x = m·2^e with m ∈ [1, 2), exactly what dividing by 2 until m < 2 would give, without the loop.
+ */
+const F64 = new Float64Array(1), U32 = new Uint32Array(F64.buffer), HI = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1 ? 1 : 0
+/** ln x for finite x > 0 (private: dpow's log). Exact split to m ∈ [√½, √2], then 2·atanh((m−1)/(m+1)) to s²¹. */
 function dlog(x: number): number {
-  const t = pow2Table()
-  let m = x, e = 0
-  if (m < 2.2250738585072014e-308) { m *= t[P2_MAX + 64]; e = -64 } // subnormal: lift it into the normal range first
-  if (m >= 2) { for (const s of P2_STEPS) if (m >= t[P2_MAX + s]) { m *= t[P2_MAX - s]; e += s } }
-  else if (m < 1) { for (const s of P2_STEPS) if (m < t[P2_MAX - s]) { m *= t[P2_MAX + s]; e -= s } }
-  if (m > SQRT2) { m *= .5; e++ } else if (m < SQRT_HALF) { m *= 2; e-- }
+  F64[0] = x
+  let hi = U32[HI], e = (hi >>> 20) - 1023
+  if (e === -1023) { F64[0] = x * 18446744073709551616; hi = U32[HI]; e = (hi >>> 20) - 1087 } // subnormal: × 2^64 first
+  U32[HI] = (hi & 0x000fffff) | 0x3ff00000
+  let m = F64[0]
+  if (m > SQRT2) { m *= .5; e++ }
   const s = (m - 1) / (m + 1), s2 = s * s
   const lnm = 2 * s * (1 + s2 * (1 / 3 + s2 * (1 / 5 + s2 * (1 / 7 + s2 * (1 / 9 + s2 * (1 / 11 + s2 * (1 / 13 + s2 * (1 / 15 + s2 * (1 / 17 + s2 * (1 / 19 + s2 / 21))))))))))
   return e * LN2_HI + (e * LN2_LO + lnm)
@@ -113,7 +118,7 @@ function dlog(x: number): number {
  * x^y, bit-identical across engines.
  *  - Integer y with |y| ≤ 64: plain repeated multiplication x·x·…·x (same op order every call, so
  *    dpow(x, 2) === x * x and dpow(x, 3) === x * x * x; 1/x^|y| for y < 0).
- *  - Otherwise x > 0: dexp(y · dlog(x)), with a private dlog: mantissa/exponent split by exact ×/÷ 2,
+ *  - Otherwise x > 0: dexp(y · dlog(x)), with a private dlog: mantissa/exponent split read from the IEEE bits (exact),
  *    m ∈ [√½, √2], ln m = 2·atanh(s), s = (m − 1)/(m + 1), odd series to s²¹ (|s| ≤ 0.1716, truncation < 1e-18).
  *  - Accuracy: relative error ≤ 1e-12 when |y·ln x| ≤ 50; ≤ 1e-9 over the whole normal range
  *    (both far inside X-advanced's < 1e-7 bar).

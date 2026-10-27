@@ -7,6 +7,12 @@
   "dexp": "a3f7db90",
   "dpow": "f12c683b",
   "ihash": "dc4ae669",
-  "rngFor": "01b93185"
+  "rngFor": "01b93185",
+  "noise2": "a4cc2442",
+  "noise3": "2242bf87",
+  "fbm2": "735a2acb",
+  "turb2": "0b6c5c9b",
+  "ridge2": "e77d3012",
+  "valueNoise2": "140007d6"
  }
 }

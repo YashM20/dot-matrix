@@ -11,8 +11,8 @@
  * `pnpm verify` runs the same checks through `noiseChecks(assert)` (the noise slot, right after `algorithmsChecks`).
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
-import { hash32 } from '../src/engine/math'
-import { datan2, dexp, dpow, dsin, ihash, rngFor, tsin } from '../src/engine/noise'
+import { hash01, hash32 } from '../src/engine/math'
+import { datan2, dexp, dpow, dsin, fbm2, ihash, noise2, noise3, noise3Grad, octaveSeed, ridge2, rngFor, tsin, turb2, valueNoise2 } from '../src/engine/noise'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const NOISE_FILE = 'goldens/noise.json'
@@ -55,7 +55,20 @@ export function snapshot(): Record<string, string> {
     dpow: sweep(1e5, i => i % 4 === 0 ? dpow(r3() * 10 - 5, Math.floor(r3() * 129) - 64) : dpow(r3() * 100, (r3() - .5) * 20)),
     ihash: sweep(1e5, i => ihash(i * 2654435761, -i, i * 7)),
     rngFor: sweep(1e5, i => rngFor(7, i >> 4, i & 15)()),
+    noise2: sweep(1e5, i => noise2((i % 317) * .173 - 20, (i / 317) * .211 - 30, i & 3)),
+    noise3: sweep(1e5, i => noise3((i % 317) * .173 - 20, (i / 317) * .211 - 30, (i % 13) * .37, i & 3)),
+    fbm2: sweep(1e5, i => fbm2((i % 317) * .0731, (i / 317) * .0917, 1 + (i % 8), 5)),
+    turb2: sweep(2e4, i => turb2((i % 141) * .0731, (i / 141) * .0917, 4, 6)),
+    ridge2: sweep(2e4, i => ridge2((i % 141) * .0731, (i / 141) * .0917, 5, 7)),
+    valueNoise2: sweep(2e4, i => valueNoise2((i % 141) * .37, (i / 141) * .29, 9)),
   }
+}
+
+/** Frozen copy of cinema.ts's former private `vnoise` (F0.3 migrates the board to `valueNoise2`). */
+const cinemaVnoise = (x: number, y: number, s: number) => {
+  const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy)
+  const a = hash01(xi, yi, s), b = hash01(xi + 1, yi, s), c = hash01(xi, yi + 1, s), d = hash01(xi + 1, yi + 1, s)
+  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy
 }
 
 export function noiseChecks(assert: Assert, opts: { update?: boolean } = {}): void {
@@ -142,16 +155,98 @@ export function noiseChecks(assert: Assert, opts: { update?: boolean } = {}): vo
     assert('noise: rngFor streams differ per id and step', streams.size === 64 * 64 && again && seeded && dflt && lo >= 0 && hi < 1, `${streams.size}/4096 distinct (id × step), in [${lo.toFixed(4)}, ${hi.toFixed(4)}]`)
   }
 
+  // ── F0.2 gradient noise and fBm ──────────────────────────────────────────────────────────────────
+  {
+    const r = lcg(21)
+    let m2 = 0, m3 = 0, in2 = true, in3 = true, sum = 0
+    for (let i = 0; i < 1e6; i++) {
+      const x = r() * 256 - 128, y = r() * 256 - 128, z = r() * 64, a = noise2(x, y, 3), b = noise3(x, y, z, 3)
+      sum += a
+      if (!(a >= -1 && a <= 1)) in2 = false
+      if (!(b >= -1 && b <= 1)) in3 = false
+      if (Math.abs(a) > m2) m2 = Math.abs(a)
+      if (Math.abs(b) > m3) m3 = Math.abs(b)
+    }
+    assert('noise: noise2/noise3 ∈ [−1,1], max |n| ≥ .9 over 1e6', in2 && in3 && m2 >= .9 && m3 >= .9, `max |noise2| ${m2.toFixed(4)}, max |noise3| ${m3.toFixed(4)}`)
+    let fIn = true, tIn = true, rIn = true
+    for (let i = 0; i < 2e5; i++) {
+      const x = r() * 64 - 32, y = r() * 64 - 32, o = 1 + (i & 7), f = fbm2(x, y, o, i & 15), t = turb2(x, y, o, 2), g = ridge2(x, y, o, 3)
+      if (!(f >= -1 && f <= 1)) fIn = false
+      if (!(t >= 0 && t <= 1)) tIn = false
+      if (!(g >= 0 && g <= 1)) rIn = false
+    }
+    const mean = sum / 1e6
+    assert('noise: fbm2 ∈ [−1,1], turb2/ridge2 ∈ [0,1], |mean(noise2)| < .02', fIn && tIn && rIn && Math.abs(mean) < .02, `mean(noise2) ${mean.toExponential(2)} over 1e6; fbm/turb/ridge over 2e5 × 1–8 octaves`)
+  }
+  {
+    const r = lcg(22), eps = 1e-4
+    let worst = 0
+    for (let i = 0; i < 1e5; i++) {
+      // a pair ε apart that straddles an integer line (x for even i, y for odd i)
+      const k = Math.floor(r() * 200) - 100, off = r() * eps, other = r() * 200 - 100, s = i & 7
+      const d = i & 1 ? Math.abs(noise2(other, k - off + eps, s) - noise2(other, k - off, s)) : Math.abs(noise2(k - off + eps, other, s) - noise2(k - off, other, s))
+      if (d > worst) worst = d
+    }
+    assert('noise: Lipschitz across lattice lines (|Δn| ≤ 4·ε at ε = 1e-4, 1e5 pairs straddling integers)', worst <= 4 * eps, `max |Δn| ${worst.toExponential(2)} (= ${(worst / eps).toFixed(2)}·ε)`)
+  }
+  {
+    const r = lcg(23), N = 1e5
+    let sa = 0, sb = 0, saa = 0, sbb = 0, sab = 0
+    for (let i = 0; i < N; i++) { const x = r() * 500, y = r() * 500, a = noise2(x, y, 1), b = noise2(x, y, 2); sa += a; sb += b; saa += a * a; sbb += b * b; sab += a * b }
+    const rho = (sab / N - (sa / N) * (sb / N)) / Math.sqrt((saa / N - (sa / N) ** 2) * (sbb / N - (sb / N) ** 2))
+    const seeds = [0, 1, 7, -5, 123456].every(seed => new Set(Array.from({ length: 8 }, (_, o) => octaveSeed(seed, o))).size === 8)
+    assert('noise: seeds decorrelated (|ρ(seed 1, seed 2)| < .05) and octave seeds distinct', Math.abs(rho) < .05 && seeds && octaveSeed(42, 0) === 42, `ρ = ${rho.toFixed(4)}`)
+  }
+  {
+    const r = lcg(24), h = 1e-4, c = Math.SQRT1_2
+    let v0 = 0, v45 = 0, v90 = 0
+    for (let i = 0; i < 1e5; i++) {
+      const x = r() * 200 - 100, y = r() * 200 - 100
+      const d0 = (fbm2(x + h, y) - fbm2(x - h, y)) / (2 * h), d45 = (fbm2(x + h * c, y + h * c) - fbm2(x - h * c, y - h * c)) / (2 * h), d90 = (fbm2(x, y + h) - fbm2(x, y - h)) / (2 * h)
+      v0 += d0 * d0; v45 += d45 * d45; v90 += d90 * d90
+    }
+    const q = v0 / v45, q90 = v90 / v45
+    assert('noise: fbm2 isotropic (derivative variance along 0° vs 45° within ±15%)', q > .85 && q < 1.15 && q90 > .85 && q90 < 1.15, `var 0°/45° = ${q.toFixed(3)}, 90°/45° = ${q90.toFixed(3)}`)
+  }
+  {
+    const r = lcg(25), h = 1e-5, out = new Float64Array(3)
+    let err = 0, same = true
+    for (let i = 0; i < 1e5; i++) {
+      const x = r() * 100 - 50, y = r() * 100 - 50, z = r() * 20, s = i & 15
+      noise3Grad(x, y, z, s, out)
+      if (out[0] !== noise3(x, y, z, s)) same = false
+      const dx = (noise3(x + h, y, z, s) - noise3(x - h, y, z, s)) / (2 * h), dy = (noise3(x, y + h, z, s) - noise3(x, y - h, z, s)) / (2 * h)
+      err = Math.max(err, Math.abs(dx - out[1]), Math.abs(dy - out[2]))
+    }
+    assert('noise: noise3Grad matches central differences (h = 1e-5) to 1e-6', err <= 1e-6 && same, `max |Δ| ${err.toExponential(2)} over 1e5 points; n === noise3`)
+  }
+  {
+    const r = lcg(26)
+    let bad = 0
+    for (let i = 0; i < 1e5; i++) { const x = r() * 300 - 50, y = r() * 300 - 50, s = Math.floor(r() * 64); if (!Object.is(valueNoise2(x, y, s), cinemaVnoise(x, y, s))) bad++ }
+    assert('noise: valueNoise2 ≡ cinema vnoise on 1e5 samples (===)', bad === 0, `${bad} differ`)
+  }
+
   // ── budgets (§4): ratio gates are machine-independent; absolute gates scale by the load factor ─────────
   {
     const r = lcg(15), xs = Float64Array.from({ length: 1e6 }, () => r() * 20 - 10), ys = Float64Array.from({ length: 1e6 }, () => r() * 3 + .01)
     let sink = 0
-    const ratio = (a: () => void, b: () => void) => bench(a, 5) / bench(b, 5)
+    // interleaved runs, fastest of each: a ratio of two medians swings with the other processes on a shared box
+    const ratio = (a: () => void, b: () => void) => { a(); b(); let ta = Infinity, tb = Infinity; for (let k = 0; k < 7; k++) { ta = Math.min(ta, time(a)[0]); tb = Math.min(tb, time(b)[0]) } return ta / tb }
     const at = ratio(() => { for (let i = 0; i < 1e6; i++) sink += datan2(xs[i], ys[i] - 1.5) }, () => { for (let i = 0; i < 1e6; i++) sink += Math.atan2(xs[i], ys[i] - 1.5) })
     const ex = ratio(() => { for (let i = 0; i < 1e6; i++) sink += dexp(xs[i]) }, () => { for (let i = 0; i < 1e6; i++) sink += Math.exp(xs[i]) })
     const pw = ratio(() => { for (let i = 0; i < 1e6; i++) sink += dpow(ys[i], xs[i]) }, () => { for (let i = 0; i < 1e6; i++) sink += Math.pow(ys[i], xs[i]) })
-    assert('noise: budget datan2 ≤ 2× Math.atan2, dexp ≤ 4× Math.exp, dpow ≤ 6× Math.pow (1e6 calls, warm median)', at <= 2 && ex <= 4 && pw <= 6 && Number.isFinite(sink),
+    assert('noise: budget datan2 ≤ 2× Math.atan2, dexp ≤ 4× Math.exp, dpow ≤ 6× Math.pow (1e6 calls, fastest of 7 interleaved)', at <= 2 && ex <= 4 && pw <= 6 && Number.isFinite(sink),
       `datan2 ${at.toFixed(2)}×, dexp ${ex.toFixed(2)}×, dpow ${pw.toFixed(2)}×`)
+  }
+  {
+    // explicit loops (a shared `f(c, r)` call site would go polymorphic and time the harness, not the noise)
+    const G = 144, g = 48
+    const n2 = bench(() => { let s = 0; for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) s += noise2(c * 6 / G, r * 6 / G, 1); return s }, 9)
+    const fb = bench(() => { let s = 0; for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) s += fbm2(c * 6 / G, r * 6 / G, 4, 1); return s }, 9)
+    const fl = bench(() => { let s = 0; for (let r = 0; r < g; r++) for (let c = 0; c < g; c++) s += fbm2(c * 6 / g, r * 6 / g, 4, 1); return s }, 15)
+    assert('noise: budget noise2 144² ≤ 1.2 ms, fbm2 4 oct 144² ≤ 4.5 ms, fbm2 4 oct 48² ≤ 0.8 ms (warm median, × load)', n2 <= 1.2 * load && fb <= 4.5 * load && fl <= .8 * load,
+      `noise2 ${n2.toFixed(2)}, fbm2 ${fb.toFixed(2)}, fbm2 48² ${fl.toFixed(2)} ms (÷ load: ${(n2 / load).toFixed(2)} / ${(fb / load).toFixed(2)} / ${(fl / load).toFixed(2)})`)
   }
 }
 
