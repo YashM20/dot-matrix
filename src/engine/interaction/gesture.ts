@@ -49,7 +49,7 @@ export function needsHold(c: Control): boolean {
 export function classifyMove(intent: TouchIntent | 'none', dx: number, dy: number): 'pending' | 'claim' | 'scroll' {
   const ax = Math.abs(dx), ay = Math.abs(dy)
   if (Math.hypot(ax, ay) <= TOUCH.slop) return 'pending'
-  if (intent === 'drag' && ax > TOUCH.slop && ax >= ay * TOUCH.axisRatio) return 'claim'
+  if (intent === 'drag' && ax >= ay * TOUCH.axisRatio) return 'claim'
   return 'scroll'
 }
 

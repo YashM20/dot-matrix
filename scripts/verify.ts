@@ -429,7 +429,7 @@ import { TOUCH, beginDrag, classifyMove, dragValue, isTap, keyValue, needsHold, 
     && touchIntent(slider) === 'drag' && touchIntent(knob) === 'drag' && touchIntent(xy) === 'drag' && touchIntent({ ...btn, gesture: 'surface' }) === 'drag')
   assert('touch: only vertical-travel drags need a hold', !needsHold(slider) && !needsHold(knob) && !needsHold(btn) && needsHold(vslider) && needsHold(xy) && needsHold(crank) && needsHold({ ...btn, gesture: 'surface' }))
   assert('touch move: within slop pending; a vertical swipe is the page\'s; a horizontal one claims drags only',
-    classifyMove('drag', 6, 6) === 'pending' && classifyMove('drag', 3, 40) === 'scroll' && classifyMove('drag', 30, 8) === 'claim' && classifyMove('drag', 20, 19) === 'scroll'
+    classifyMove('drag', 6, 6) === 'pending' && classifyMove('drag', 10, 1) === 'claim' && classifyMove('drag', 3, 40) === 'scroll' && classifyMove('drag', 30, 8) === 'claim' && classifyMove('drag', 20, 19) === 'scroll'
     && classifyMove('tap', 30, 0) === 'scroll' && classifyMove('none', 30, 0) === 'scroll')
   assert('touch tap: still and quick (buttons may be held)', isTap(tog, 4, 200) && !isTap(tog, 14, 100) && !isTap(tog, 2, TOUCH.tapMs + 1) && isTap(btn, 2, 3000) && isTap(undefined, 0, 100))
   assert('settle: quantize from min, then clamp; no float noise', settle({ ...slider, min: .1, max: .9, step: .2 }, .62) === .7 && settle(slider, 3) === 1 && settle({ ...slider, step: .1 }, .3) === .3)
