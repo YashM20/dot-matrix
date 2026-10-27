@@ -305,7 +305,8 @@ html.ed-lock .pal-dock { display: none }
   inset: 0;
   z-index: 60;
   width: 100vw;
-  height: 100dvh;
+  height: 100vh;
+  height: 100dvh; /* follows the iOS toolbar; the canvas is absolutely filled, so nothing jumps */
   min-height: 0;
   margin: 0;
   border: 0;
@@ -373,7 +374,15 @@ html.ed-lock .pal-dock { display: none }
 .is-phone .ed-modal-card { max-height: 92dvh }
 @media (pointer: coarse) {
   .ed-root { --ed-hit: 44px }
+  /* 16 px fields: iOS zooms the page when a smaller one takes focus */
+  .ed-root input, .ed-root select, .ed-root textarea, .ed-root .dw-mirror { font-size: 16px !important }
 }
+/* phone: nothing smaller than 10 px (labels, kinds, sizes) */
+.is-phone .ed-field, .is-phone .ed-slider, .is-phone .ed-check, .is-phone .ed-sec h3, .is-phone .ed-tabs button, .is-phone .ed-row-btns button, .is-phone .ed-chips button, .is-phone .ed-seg button { font-size: 10px }
+.is-phone .ed-row-name b, .is-phone .ed-row-name small, .is-phone .ed-sec h3 small, .is-phone .ed-slider small, .is-phone .ed-asset span, .is-phone .ed-asset small, .is-phone .ed-flabel small, .is-phone .ed-hint, .is-phone .ed-empty { font-size: 10px }
+.is-phone .ed-row-name, .is-phone .ed-mini-list button { font-size: 12px }
 @media (prefers-reduced-motion: reduce) {
   .ed-sheet { transition: none }
 }
+/* the full-screen phone editor is fixed: its section keeps a real height so the page under it is not collapsed */
+.make-view:has(> .ed-root.is-phone) { min-height: 100dvh }

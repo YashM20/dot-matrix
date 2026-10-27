@@ -191,6 +191,15 @@ animate (DESIGN.md). The rAF loop only redraws frames that changed, animate (≤
 previewed. It skips frames that are off screen and carries over to the next tick after ~24 ms of work.
 Resolution follows zoom in power-of-two steps, so panning and pinching are pure CSS transforms.
 
+**Phone audit fixes:** these come from the audit of the old MAKE modes, and are checked in E0:
+- every editor target on a phone is ≥ 44 px, and no editor text is under 10 px;
+- fields are 16 px at `(pointer: coarse)`, so iOS does not zoom on focus;
+- the full-screen editor uses `dvh` (with a `vh` fallback) and an absolutely filled canvas, so it does not
+  jump with the iOS toolbar;
+- ASSETS shows names at once, and thumbnails draw only when they scroll into view, from a queue at ≤ 6 ms
+  per frame (boards stay folded except the first);
+- the editor chunk has its own loading fallback.
+
 **Accent:** red appears on the active tool, the selection ({colors.hairlineActive}), resize handles, RECORD,
 DELETE and errors. Hover is grey.
 

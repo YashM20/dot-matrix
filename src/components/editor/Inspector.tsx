@@ -99,7 +99,8 @@ function FramePanel({ f }: { f: EditorFrame }) {
   const gridName = (Object.keys(GRIDS) as GridName[]).find(k => GRIDS[k].cols === c.grid.cols && GRIDS[k].rows === c.grid.rows)
   const setStyle = (p: Partial<typeof st>, tag: string) => card(x => ({ ...x, style: { ...x.style, ...p } }), tag)
   const ref = c.reference ? widgetById(c.reference) : undefined
-  const keys = [...new Set([...c.bindings.map(b => b.key), ...Object.keys(c.data)])]
+  // every data key the card reads (its code layers included), not only the ones it has defaults for
+  const keys = [...new Set([...c.bindings.map(b => b.key), ...Object.keys(c.data), ...compiledOf(c).keys])]
   return <>
     <Section title="FRAME" aside={c.reference ? `REF ${c.reference.toUpperCase()}` : undefined}>
       <div className="ed-grid2">
@@ -280,7 +281,7 @@ function Animate() {
   if (!f) return <p className="ed-hint">Select a frame to animate it: enter, change and exit tracks with the engine's masks and eases, and the states it moves between.</p>
   const c = f.card, L = c.timeline.length, cur = preview[f.id] ?? c.states[0]?.name
   const state = c.states.find(s => s.name === cur) ?? c.states[0]
-  const keys = [...new Set([...Object.keys(c.data), ...c.bindings.map(b => b.key)])]
+  const keys = [...new Set([...Object.keys(c.data), ...c.bindings.map(b => b.key), ...compiledOf(c).keys])]
   return <>
     <Section title="TIMELINE" aside={`${f.card.name}`}>
       <div className="ed-transport">

@@ -136,7 +136,9 @@ export default function App() {
     ) : (
       // MAKE: one editor; `mode` (any old ?make= / ?tab= name) only picks its starting tool and panels
       <section className="make-view" role="tabpanel" aria-labelledby="tab-MAKE">
-        <Editor mode={mode} onExit={() => setView('EXPLORE')} />
+        <Suspense fallback={<div className="view-loading" aria-busy="true" style={{ minHeight: 'calc(100svh - 120px)' }}>Loading the editor…</div>}>
+          <Editor mode={mode} onExit={() => setView('EXPLORE')} />
+        </Suspense>
       </section>
     )}
     </Suspense>

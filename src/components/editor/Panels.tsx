@@ -90,6 +90,22 @@ export function LayersPanel() {
 }
 
 // ── assets ─────────────────────────────────────────────────────────────────
+/**
+ * Thumbnails draw one at a time from a queue, a few per frame within ~6 ms, so opening ASSETS (173 presets)
+ * never blocks: names show at once, the dots fill in behind them (phones first saw a blank screen).
+ */
+const thumbQueue: (() => void)[] = []
+let thumbTick = 0
+function queueThumb(fn: () => void): () => void {
+  thumbQueue.push(fn)
+  const run = () => {
+    const t0 = performance.now()
+    while (thumbQueue.length && performance.now() - t0 < 6) thumbQueue.shift()!()
+    thumbTick = thumbQueue.length ? requestAnimationFrame(run) : 0
+  }
+  if (!thumbTick) thumbTick = requestAnimationFrame(run)
+  return () => { const i = thumbQueue.indexOf(fn); if (i >= 0) thumbQueue.splice(i, 1) }
+}
 /** A preset / program / card thumbnail: sampled once on a coarse pitch, when it scrolls into view. */
 const Thumb = memo(function Thumb({ make, label }: { make: () => { layers: ReturnType<WidgetPreset['layers']>; grid: WidgetPreset['grid']; style: WidgetPreset['style'] }; label: string }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -107,9 +123,10 @@ const Thumb = memo(function Thumb({ make, label }: { make: () => { layers: Retur
         renderCanvas(ctx, sampleLayers(layers, { ...grid, pitch }, { ...style, sizeMin: style.sizeMin * pitch / p0, sizeMax: style.sizeMax * pitch / p0 }, dot480))
       } catch { /* a thumbnail never breaks the panel */ }
     }
-    const io = new IntersectionObserver(es => { if (es.some(x => x.isIntersecting)) { io.disconnect(); draw() } }, { rootMargin: '200px' })
+    let cancel: (() => void) | undefined
+    const io = new IntersectionObserver(es => { if (es.some(x => x.isIntersecting)) { io.disconnect(); cancel = queueThumb(draw) } }, { rootMargin: '120px' })
     io.observe(c)
-    return () => io.disconnect()
+    return () => { io.disconnect(); cancel?.() }
   }, [make])
   return <canvas ref={ref} className="ed-thumb" role="img" aria-label={label} />
 })

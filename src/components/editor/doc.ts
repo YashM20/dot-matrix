@@ -44,14 +44,15 @@ export const topDown = (c: StudioCard) => [...stackOrder(c.layers)].reverse()
 
 // ── construction ───────────────────────────────────────────────────────────
 export const GAP = 48
-/** A free spot for a `w`×`h` frame: right of the frames in the top row, wrapping after ~4 frames wide. */
-export function placeFor(d: EditorDoc, w: number, _h?: number): { x: number; y: number } {
-  const shown = d.frames.filter(f => !f.hidden)
-  if (!shown.length) return { x: 0, y: 0 }
-  const boxes = shown.map(f => ({ ...frameSize(f), x: f.x, y: f.y }))
-  const left = Math.min(...boxes.map(b => b.x)), right = Math.max(...boxes.map(b => b.x + b.w)), top = Math.min(...boxes.map(b => b.y))
-  const rowW = Math.max(1400, (boxes[0]?.w ?? 400) * 4)
-  if (right + GAP + w - left <= rowW) return { x: snap(right + GAP), y: top }
+/** A free spot for a `w`×`h` frame: right of the last row of frames, or a new row under everything (never overlapping). */
+export function placeFor(d: EditorDoc, w: number, h = w): { x: number; y: number } {
+  const boxes = d.frames.filter(f => !f.hidden).map(f => ({ ...frameSize(f), x: f.x, y: f.y }))
+  if (!boxes.length) return { x: 0, y: 0 }
+  const left = Math.min(...boxes.map(b => b.x)), rowW = Math.max(1400, (boxes[0]?.w ?? 400) * 4)
+  const lastTop = Math.max(...boxes.map(b => b.y)), row = boxes.filter(b => b.y >= lastTop - 1)
+  const free = (x: number, y: number) => !boxes.some(b => x < b.x + b.w + GAP / 2 && b.x < x + w + GAP / 2 && y < b.y + b.h + GAP / 2 && b.y < y + h + GAP / 2)
+  const x = snap(Math.max(...row.map(b => b.x + b.w)) + GAP)
+  if (x + w - left <= rowW && free(x, lastTop)) return { x, y: lastTop }
   return { x: left, y: snap(Math.max(...boxes.map(b => b.y + b.h)) + GAP * 1.5) }
 }
 const snap = (n: number, k = 4) => Math.round(n / k) * k

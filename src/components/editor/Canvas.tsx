@@ -14,7 +14,8 @@ import { addFrame, addLayer, blankCard, drawingCard, editFrame, editLayer, encod
 import { drawFrame, drawPaste, isAnimated, resolutionFor } from './render'
 import { useEditor, type Camera } from './store'
 
-declare global { interface Window { __editor?: { frames: number; drawn: number; maxMs: number; lastMs: number } } }
+/** Probe hooks (scripts/studio-browser.ts, dots-browser.ts): draw stats and the selected frame id. */
+declare global { interface Window { __editor?: { frames: number; drawn: number; maxMs: number; lastMs: number; sel?: string } } }
 
 // ── render registry: one entry per mounted frame canvas ──────────────────────────────────────────
 interface Drawn { card: EditorFrame['card']; theme: string; k: number; state?: string; tl: boolean; t: number }
@@ -94,7 +95,7 @@ export function Canvas({ phone }: { phone: boolean }) {
   useEffect(() => {
     let raf = 0, lastCam: Camera | undefined, lastVp = '', lastPublish = 0, lastTick = performance.now()
     const wall0 = performance.now(), still = reduced()
-    const stats = (window.__editor = { frames: 0, drawn: 0, maxMs: 0, lastMs: 0 })
+    const stats: NonNullable<Window["__editor"]> = (window.__editor = { frames: 0, drawn: 0, maxMs: 0, lastMs: 0 })
     const step = (now: number) => {
       raf = requestAnimationFrame(step)
       const s = useEditor.getState(), d = s.h.present, c = s.cam, dpr = Math.min(2, window.devicePixelRatio || 1), dt = Math.min(.1, (now - lastTick) / 1000)
@@ -120,7 +121,7 @@ export function Canvas({ phone }: { phone: boolean }) {
         stats.lastMs = ms; stats.maxMs = Math.max(stats.maxMs, ms); stats.drawn++
         e.drawn = { card: f.card, theme: f.theme, k, state, tl, t }; e.dirty = false; e.last = now
       }
-      stats.frames = d.frames.length
+      stats.frames = d.frames.length; stats.sel = s.sel.frame
       const vpKey = `${s.vp.w}x${s.vp.h}x${dpr}`
       if (paste.current && (pasteDirty.current || c !== lastCam || vpKey !== lastVp)) {
         drawPaste(paste.current, c, s.vp.w, s.vp.h, dpr, glow.current)
