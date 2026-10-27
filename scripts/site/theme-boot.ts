@@ -54,8 +54,8 @@ const probe = (stored: string | null) => `(() => {
   try { ${stored === null ? `localStorage.removeItem('dot480:theme')` : `localStorage.setItem('dot480:theme', ${JSON.stringify(stored)})`} } catch (e) {}
   window.__violations = []
   document.addEventListener('securitypolicyviolation', e => window.__violations.push(e.violatedDirective + ' ' + (e.blockedURI || 'inline')))
-  const d = document.documentElement
-  new MutationObserver((_, o) => { if (document.body && !window.__atBody) { window.__atBody = { scheme: d.getAttribute('data-scheme'), accent: d.getAttribute('data-accent') }; o.disconnect() } }).observe(d, { childList: true, subtree: true })
+  // <html> may not exist yet when this runs: observe the document itself
+  new MutationObserver((_, o) => { const d = document.documentElement; if (document.body && !window.__atBody) { window.__atBody = { scheme: d.getAttribute('data-scheme'), accent: d.getAttribute('data-accent') }; o.disconnect() } }).observe(document, { childList: true, subtree: true })
 })()`
 
 const cases: { page: string; stored: string | null; os: 'light' | 'dark'; want: [string, string] }[] = [
