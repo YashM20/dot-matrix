@@ -194,6 +194,25 @@ A material is a dot vocabulary, not a shader: given one normal raster and one li
 
 **Board-wide light:** a board shares one light direction, the sun of the wall-clock hour (`sunAt(hourOf(date))`: rises on the left at 6, highest at noon, sets on the right at 18, a lower moon at night). Over a card the pointer replaces it as a torch.
 
+#### Light and tilt input
+The phone's orientation reaches cards as plain numbers from the light hub (`src/site/light.ts`, a `Source`); the engine half is `src/engine/light/input.ts`, imported by path (not through `engine/light`). There is no `data.light` object: card data is numbers only.
+
+| Key | Range | Meaning | Read by |
+|---|---|---|---|
+| `lightSrc` | 0, 1 | 0 = the clock's sun, 1 = tilt (`lightAz` / `lightEl` valid) | lit cards, via `sceneLight()` |
+| `lightAz` | 0..63 | azimuth bucket, clockwise from 12 o'clock | `sceneLight()` / `lightOfBucket` |
+| `lightEl` | 0..7 | elevation band over 10°..80° | `sceneLight()` / `lightOfBucket` |
+| `gx`, `gy` | unit vector, 1/32 steps | gravity direction on the screen; exactly (0, 1) when the phone is held normally (roll < 8°) or lies flat | physics worlds |
+| `tx`, `ty` | −1..1, 1/16 steps | tilt from the rest pose: (0, 0) at rest and inside 2°, ±1 at 24°; `tx` > 0 when the right edge tips down | parallax, sloshing, highlights (never derived from `gx`/`gy`) |
+| `tilt` | 0..4 | tilt state: unsupported, prompt, granted, denied, insecure | UI hints only |
+
+Fixture (goldens, snapshots, no sensor): `{ lightSrc: 0, lightAz: 0, lightEl: 7, gx: 0, gy: 1, tx: 0, ty: 0, tilt: 0 }`.
+- **Precedence** (`sceneLight`): a pointer inside the card (torch) → tilt (`lightSrc` 1) → the sun of the hour.
+- **Opt-in:** a card declares every key it reads in `defaults`, with the fixture values (undeclared keys never arrive), and its board lists `sources: [lightSource]` both in the manifest entry's `load()` and in the eager registry (`src/widgets/index.ts`). The physics board is the first consumer.
+- **Calm by default:** a still phone emits nothing; at most 15 updates/s (4 under reduced motion); listeners only while a consumer board is mounted and the tab is visible.
+- **TILT button:** in the phone TOOLS sheet, shown only where tilt can work (orientation events, a coarse pointer, a secure context); `aria-pressed` while tilt is on. It is the one place that asks iOS for permission (`requestTilt()`, first thing in the tap); cards never ask. Tilt never starts by itself under reduced motion.
+- **Not a touch:** tilt never engages a card, sets pointers or blocks scroll (UX-PLAN §10).
+
 ## Shapes
 
 ### Dot Roundness Scale

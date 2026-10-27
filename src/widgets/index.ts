@@ -15,7 +15,7 @@ import { lightBoard } from './boards/light'
 import { levelsBoard } from './boards/levels'
 import { heartbeatBoard } from './boards/heartbeat'
 import { simBoard } from './boards/sim'
-import { physicsBoard } from './boards/physics'
+import { physicsBoard, physicsSources } from './boards/physics'
 import { lockBoard } from './boards/glyph'
 import { liveBoard, liveSources } from './boards/live'
 import { mirrorBoard } from './boards/mirror'
@@ -55,7 +55,7 @@ const contents = {
   surfaces: { items: surfacesBoard, sources: surfacesSources },
   components: { items: componentsBoard },
   type: { items: typeBoard },
-  physics: { items: physicsBoard },
+  physics: { items: physicsBoard, sources: physicsSources },
   scope: { items: scopeBoard, shared: scopeShared },
   heal: { items: healBoard },
   algorithms: { items: algorithmsBoard },

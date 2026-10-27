@@ -17,6 +17,7 @@ import { setReducedMotion } from './reducedMotion'
 import { onLayerRequest } from '../../site/layer'
 import { Sheet } from '../Sheet'
 import { SkinList } from '../skins/SkinList'
+import { onTiltChange, requestTilt, setTiltOn, tiltOn, tiltState } from '../../site/light'
 
 // the panels load on first use: first-load JS stays inside the site budget
 const Inspector = lazy(() => import('../xray/Inspector').then(m => ({ default: m.Inspector })))
@@ -50,6 +51,24 @@ function FpsHud() {
   return <div className="pal-fps" aria-hidden="true"><b>{fps}</b> FPS · T {boardTime().toFixed(1)}{frozen ? ' ■' : ''}</div>
 }
 
+/**
+ * TILT (docs/living-matter/F0-foundation.md §2.7): light and gravity follow the phone, through the light hub.
+ * Shown only where tilt can work (orientation events, a coarse pointer, a secure context). On iOS the tap is
+ * the permission gesture, so `requestTilt()` is the first thing it does (nothing awaited before it).
+ */
+function TiltButton({ onClose }: { onClose: () => void }) {
+  const [, bump] = useState(0)
+  useEffect(() => onTiltChange(() => bump(n => n + 1)), [])
+  const state = tiltState(), on = tiltOn()
+  if (state === 'unsupported' || state === 'insecure') return null
+  const click = () => {
+    if (on) { setTiltOn(false); toast('tilt off') }
+    else void requestTilt().then(s => toast(s === 'granted' ? 'tilt on: light and gravity follow your phone' : 'tilt blocked: allow motion access in the browser settings'))
+    onClose()
+  }
+  return <button type="button" className="tool-tilt" aria-pressed={on} onClick={click}><b>TILT</b><span>{state === 'denied' ? 'Motion access is blocked' : 'Light and gravity follow your phone'}</span></button>
+}
+
 /** Phones: the dock's tools (and the DISPLAY menu) as one bottom sheet, opened from the tab bar's TOOLS. */
 function ToolsSheet({ api, xray, frozen, onClose, onPalette, onShell }: { api: CommandApi; xray: boolean; frozen: boolean; onClose: () => void; onPalette: () => void; onShell: () => void }) {
   // each tool closes the sheet so its effect is in view; the toggles show their state when it reopens
@@ -64,6 +83,7 @@ function ToolsSheet({ api, xray, frozen, onClose, onPalette, onShell }: { api: C
       <button type="button" onClick={run(onPalette)}><b>SEARCH</b><span>Boards, cards and actions</span></button>
       <button type="button" aria-pressed={xray} onClick={run(() => toggleGlobal())}><b>X-RAY</b><span>See how every card is built</span></button>
       <button type="button" aria-pressed={frozen} onClick={run(() => (frozen ? resume() : api.freeze()))}><b>TIME</b><span>Freeze and scrub the clock</span></button>
+      <TiltButton onClose={onClose} />
       <button type="button" className="tool-share" onClick={run(share)}><b>SHARE</b><span>This page's link</span></button>
       {/* the shell is a typed terminal: offered where there is a keyboard */}
       <button type="button" className="tool-shell" onClick={run(onShell)}><b>SHELL</b><span>Type field commands</span></button>

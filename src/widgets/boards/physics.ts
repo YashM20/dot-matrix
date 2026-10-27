@@ -1,8 +1,9 @@
 /**
  * Board · PHYSICS — dots you can touch (docs/WEB-PLAN.md C2). Every card is a `src/engine/physics` world:
  * a pure function of t (seeded, fixed dt, looped) until a pointer moves on it, then a live simulation that
- * takes the pointer, the keyboard (Enter on the card = a kick) and tilt (`data.gx` / `data.gy`, in g;
- * DeviceOrientation wiring is the app's job). Fluid / cloth / jelly heal back onto the loop after 3 s idle.
+ * takes the pointer, the keyboard (Enter on the card = a kick) and tilt (`data.gx` / `data.gy`, in g, from the
+ * light hub `src/site/light.ts`: exactly (0, 1) while the phone is held normally, so the worlds stay pristine).
+ * Fluid / cloth / jelly heal back onto the loop after 3 s idle.
  * - 01 SPLASH: the departures word; a swipe knocks its dots loose as particles, they settle, then migrate
  *   (Hilbert-ranked, `src/engine/migrate`) back into the word, or into the next word after a full splash.
  *   The board's one red: dots in flight right now (live), cooling to grey as they slow.
@@ -24,6 +25,7 @@ import { hash01 } from '../../engine/math'
 import type { Control } from '../../engine/context'
 import type { DotInstance, Field, Layer, Tone } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { lightSource } from '../../site/light'
 
 const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
@@ -31,6 +33,10 @@ type Pt = [number, number]
 type Map2 = (x: number, y: number) => Pt
 const ident: Map2 = (x, y) => [x, y]
 const clamp = (x: number, lo: number, hi: number) => (x < lo ? lo : x > hi ? hi : x)
+/** Tilt from the light hub: gravity's direction on the screen, the fixture (0, 1) = the worlds' default gravity. */
+const TILT = { gx: 0, gy: 1 }
+/** The board's live data: the light hub (listed in the manifest and the eager registry). */
+export const physicsSources = [lightSource]
 
 // The sampling worker would run its own (pristine) copy of a world and snap back when the pointer leaves.
 const IN_WORKER = typeof (globalThis as { WorkerGlobalScope?: unknown }).WorkerGlobalScope !== 'undefined'
@@ -159,7 +165,7 @@ const splashWorld = createWorld({
 })
 const SPLASH_CAPTION = ['08:42  PLATFORM 3', '08:47  PLATFORM 1']
 export const physicsSplash: WidgetPreset = {
-  id: 'phys-splash', name: 'Physics Splash', label: '01  SPLASH', ...tile, controls: touch('splash', 'Splash the word'),
+  id: 'phys-splash', name: 'Physics Splash', label: '01  SPLASH', ...tile, controls: touch('splash', 'Splash the word'), defaults: { ...TILT },
   layers: ctx => {
     mainThread()
     const s = worldAt(splashWorld, ctx.t, frameOf(ctx, 'splash')), n = worldStep(splashWorld, ctx.t), sites: Site[] = []
@@ -203,7 +209,7 @@ function inkStep(s: Float32Array, n: number, inp: StepInput) {
 const inkWorld = createWorld({ size: fluidSize(fluid), dt: I_DT, lead: 3, period: I_PERIOD, seam: 1.2, every: 12, maxSteps: 720, maxLiveSteps: 4, init: () => {}, step: inkStep })
 const inkTone = (v: number): Tone => (v >= .86 ? 'value' : v >= .68 ? 'idle' : v >= .48 ? 'mid' : 'faint')
 export const physicsInk: WidgetPreset = {
-  id: 'phys-ink', name: 'Physics Ink', label: '02  INK', ...tile, controls: touch('ink', 'Stir the ink'),
+  id: 'phys-ink', name: 'Physics Ink', label: '02  INK', ...tile, controls: touch('ink', 'Stir the ink'), defaults: { ...TILT },
   layers: ctx => {
     mainThread()
     const s = worldAt(inkWorld, ctx.t, frameOf(ctx, 'ink', toTank)), tau = ((worldStep(inkWorld, ctx.t) % I_LEN) * I_DT), D = fluid.D
@@ -265,7 +271,7 @@ const flagWorld = createWorld({
 const LIGHT = (() => { const v = [-.75, -.35, .55], l = Math.hypot(...v); return v.map(x => x / l) })()
 const FOCAL = 170
 export const physicsFlag: WidgetPreset = {
-  id: 'phys-flag', name: 'Physics Flag', label: '03  FLAG', ...tile, controls: touch('flag', 'Grab the flag'),
+  id: 'phys-flag', name: 'Physics Flag', label: '03  FLAG', ...tile, controls: touch('flag', 'Grab the flag'), defaults: { ...TILT },
   layers: ctx => {
     mainThread()
     const s = worldAt(flagWorld, ctx.t, frameOf(ctx, 'flag'))
@@ -363,7 +369,7 @@ function jellyRaster(s: Float32Array, t: number): [number, number] {
 const jellyField: Field = (u, v) => jVal[Math.round(v * (JR - 1)) * JC + Math.round(u * (JC - 1))]
 const jellyToneOf = (_: number, u: number, v: number): Tone => J_TONES[jTone[Math.round(v * (JR - 1)) * JC + Math.round(u * (JC - 1))]]
 export const physicsJelly: WidgetPreset = {
-  id: 'phys-jelly', name: 'Physics Jelly', label: '04  JELLY', ...tile, controls: touch('jelly', 'Poke the jelly'),
+  id: 'phys-jelly', name: 'Physics Jelly', label: '04  JELLY', ...tile, controls: touch('jelly', 'Poke the jelly'), defaults: { ...TILT },
   layers: ctx => {
     mainThread()
     const s = worldAt(jellyWorld, ctx.t, frameOf(ctx, 'jelly')), [x0, x1] = jellyRaster(s, ctx.t)
@@ -424,7 +430,7 @@ const pitWorld = createWorld({
 /** Site size for a disc of radius r cells (a full card dot is ~.95 of the pitch). */
 const discSize = (r: number) => (2 * r) / .95
 export const physicsPit: WidgetPreset = {
-  id: 'phys-pit', name: 'Physics Pit', label: '05  PIT', ...tile, controls: touch('pit', 'Throw a dot'),
+  id: 'phys-pit', name: 'Physics Pit', label: '05  PIT', ...tile, controls: touch('pit', 'Throw a dot'), defaults: { ...TILT },
   layers: ctx => {
     mainThread()
     const s = worldAt(pitWorld, ctx.t, frameOf(ctx, 'pit')), sites: Site[] = [], grab = s[P_GRAB]

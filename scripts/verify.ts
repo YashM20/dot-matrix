@@ -872,6 +872,13 @@ algorithmsChecks(assert)
 import { goldenKeyChecks } from './goldenkey'
 goldenKeyChecks(assert)
 
+// light (F0.7, F0.8): the light / tilt hub (docs/living-matter/F0-foundation.md §2.7): pure core under a fake clock, buckets,
+// sceneLight precedence, the permission flow on a fake window, worker safety (scripts/light.ts)
+{
+  const { lightChecks } = await import('./light')
+  await lightChecks(assert)
+}
+
 // UX U1) board picker (docs/UX-PLAN.md §4.2): every board in exactly one group after START HERE, a label and a blurb; old paths still open
 {
   const homes = boardIds.map(id => boardGroups.filter(g => g.id !== 'start' && (g.boards as readonly string[]).includes(id)).length)
