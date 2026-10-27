@@ -19,7 +19,7 @@ export function About() {
         says how bright each point is; a sampler reads it onto a quantized grid of dots, and a renderer (SVG, Canvas or
         WebGL) draws them, live. EXPLORE has the boards; MAKE lets you tune a preset, compose a card from layers,
         write a field program or paint dots by hand.</p>
-      <p className="about-links"><a href="/essay.html">How it works: the essay →</a><a href="https://github.com/YashM20/dot-matrix">Source →</a></p>
+      <p className="about-links"><a href="/essay.html">How it works: the essay →</a><a href="https://github.com/YashM20/dot-matrix">Source →</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p>
       <div className="about-cols" id="shortcuts">
         <Keys title="KEYBOARD" rows={SHORTCUTS} />
         <Keys title="URL" rows={URL_PARAMS} />

@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="theme-color" content="#070809" />
+    <title>Privacy · DOT/480</title>
+    <meta name="description" content="What Dot/480 stores and sends: no accounts, no cookies, no analytics. A few settings in your browser, and three public APIs on the Live board." />
+    <link rel="stylesheet" href="/src/legal/legal.css" />
+  </head>
+  <body>
+    <main class="essay legal">
+      <nav class="legal-nav" aria-label="Site">
+        <a href="/">← DOT/480</a>
+        <span><a href="/privacy" aria-current="page">PRIVACY</a><a href="/terms">TERMS</a></span>
+      </nav>
+      <header class="hero">
+        <p class="kicker"><i aria-hidden="true"></i> DOT/480 · PRIVACY</p>
+        <h1>Privacy</h1>
+        <p class="lede">Short version: this site has no accounts, no cookies, no analytics and no ads, and your camera, microphone and
+          photos never leave your device. It keeps a few settings in your own browser, and the Live board fetches weather and
+          GitHub data from three public APIs.</p>
+        <p class="stamp">LAST UPDATED 2026-10-26</p>
+      </header>
+
+      <h2>Who runs this</h2>
+      <p>Dot/480 is a personal, non-commercial project by Yash Mahajan. The source code is public at
+        <a href="https://github.com/YashM20/dot-matrix">github.com/YashM20/dot-matrix</a>. There is no backend,
+        no database and nothing to sign in to: the site is a set of static files, and everything runs in your browser.</p>
+
+      <h2>What the site collects</h2>
+      <p>Nothing personal. There are no cookies, no analytics or tracking scripts, no advertising, no fingerprinting
+        and no third-party fonts or CDNs (the typeface is served from this site). The page's Content Security Policy
+        only allows connections to this site and to the APIs listed below.</p>
+
+      <h2>What is stored on your device</h2>
+      <p>A few things are saved in your browser's <code>localStorage</code> for this site so they survive a reload.
+        They stay on your device, are never sent anywhere, and the site works without them.</p>
+      <dl class="keys">
+        <div><dt><code>dot480:intro</code></dt><dd>You closed the one-line intro above the boards.</dd></div>
+        <div><dt><code>dot480:skin</code></dt><dd>The display skin you picked (OLED, CRT, e-ink and so on).</dd></div>
+        <div><dt><code>dot480:clack</code></dt><dd>Whether the flip-disc clack sound is on.</dd></div>
+        <div><dt><code>dot480:pro</code></dt><dd>Pro mode is on.</dd></div>
+        <div><dt><code>dot480:fold:…</code></dt><dd>Which "More" panels in MAKE you left open or closed, one key per panel.</dd></div>
+        <div><dt><code>dot480.dots.gallery</code></dt><dd>Up to 40 DOTS programs you ran or remixed in MAKE · CODE.</dd></div>
+        <div><dt><code>dot480.studio.v1</code>, <code>dot480.studio.library</code></dt><dd>The card you are composing in MAKE · COMPOSE, and the cards you saved there.</dd></div>
+        <div><dt><code>dot480.hive.scores.v1</code></dt><dd>The game's high-score table: three-letter initials and scores.</dd></div>
+        <div><dt><code>dot480:live:…</code></dt><dd>The last weather, now-playing and GitHub readings the Live board received, so it can start from them next time (ignored after 7 days).</dd></div>
+      </dl>
+      <p>Open tabs of the site also talk to each other over a <code>BroadcastChannel</code> (so clocks and live cards stay
+        in step); those messages never leave your browser and aren't stored.</p>
+      <p><b>To clear it all:</b> remove this site's data in your browser settings (usually under site settings or
+        "cookies and site data" for <code>dot-matrix1.vercel.app</code>), or in developer tools under
+        Application → Local storage. In a private window it is gone when you close the window.</p>
+
+      <h2>Camera, microphone and motion</h2>
+      <p>Some cards can use your device's sensors. The camera and microphone are only requested after you press the
+        card's control, and your browser asks you first:</p>
+      <ul>
+        <li><b>Camera</b> (the mirror cards): frames from the front camera are drawn into the page and turned into dots on the spot. They are not recorded, saved or uploaded, and the camera stops when you switch it off or leave the tab.</li>
+        <li><b>Microphone</b> (the audio board): the sound is analysed in the page by the browser's audio engine to move the dots. It never plays through your speakers and is not uploaded.</li>
+        <li><b>Motion and tilt</b> (tilt-reactive cards on phones): orientation readings only move the dots on screen.</li>
+        <li><b>Gamepad</b> (the game): button presses are read while you play.</li>
+      </ul>
+      <p>The site never asks for your location. If you use a REC or export button, the clip or image (a REC clip can
+        include the board's sound) is made in your browser and saved to your device as a download; it is not uploaded. You can revoke any permission in your
+        browser's site settings at any time.</p>
+
+      <h2>Photos and files you open</h2>
+      <p>A photo you drop into "Your photo as dots" or use as a reference in DRAW, and any JSON card or drawing you open,
+        is read and processed inside your browser. It is not uploaded anywhere.</p>
+
+      <h2>Share links</h2>
+      <p>When you share a DOTS program, the program itself is packed into the link (the <code>p=</code> part of the
+        address). Nothing is stored on a server: anyone with the link can read the program, it ends up in browser
+        history like any address, and the request for it appears in the hosting logs described below. Don't put
+        anything private in a program you share. Copy buttons write to your clipboard only when you press them.</p>
+
+      <h2>Third-party services</h2>
+      <p>Only the Live board talks to other services, only while it is on screen, and the requests come straight from
+        your browser. Like any website, each service sees your IP address and browser type when it is contacted.</p>
+      <ul>
+        <li><b>Open-Meteo</b> (<code>api.open-meteo.com</code>) receives the coordinates to forecast, rounded to two
+          decimals. These are Tokyo's by default, or the <code>lat</code> / <code>lon</code> you put in the address;
+          the site does not read or send your location. See <a href="https://open-meteo.com/en/terms">Open-Meteo's terms</a>.</li>
+        <li><b>GitHub contributions</b> (<code>github-contributions-api.jogruber.de</code>, a community service, not
+          GitHub) receives the GitHub username whose public contribution calendar is shown: the author's by default,
+          or the <code>gh</code> you put in the address.</li>
+        <li><b>GitHub</b> (<code>api.github.com</code>) receives the same username, only if the service above fails, to
+          read that user's public activity. See <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's privacy statement</a>.</li>
+        <li><b>A now-playing feed</b>, only if you add one yourself with <code>np=wss://…</code> in the address: your browser then connects to the address you chose.</li>
+      </ul>
+      <p>Links to other sites (GitHub, the essay's references) are ordinary links; once you follow one, that site's
+        own policy applies. The site tells them only that you came from this site, not which page.</p>
+
+      <h2>Hosting</h2>
+      <p>The site is hosted by <a href="https://vercel.com">Vercel</a>. Like any web host, Vercel processes the technical
+        details of each request (such as IP address, browser user agent, the address requested and the time) to deliver
+        and protect the site, under <a href="https://vercel.com/legal/privacy-policy">Vercel's privacy policy</a>.
+        This project does not turn on Vercel's analytics and does not use those logs to identify visitors.</p>
+
+      <h2>The MCP server and scripts</h2>
+      <p>The <code>mcp/</code> server and the scripts in the repository are not part of the website. They only run if you
+        clone the repository and start them on your own computer; the MCP server talks to your AI client over stdio, and
+        its <code>push_to_device</code> tool only sends to a local (loopback) address you configure.</p>
+
+      <h2>Children</h2>
+      <p>The site isn't aimed at children. It doesn't collect personal information from anyone, children included.</p>
+
+      <h2>Changes</h2>
+      <p>If what the site stores or sends changes, this page changes with it and the date above moves. Every past version
+        is in the repository's history.</p>
+
+      <h2>Contact</h2>
+      <p>Questions or concerns: open an issue at
+        <a href="https://github.com/YashM20/dot-matrix/issues">github.com/YashM20/dot-matrix/issues</a>.</p>
+
+      <footer class="essay-foot">DOT/480 · PRIVACY · <span><a href="/terms">TERMS</a> · <a href="/essay.html">HOW IT WORKS</a></span></footer>
+    </main>
+  </body>
+</html>

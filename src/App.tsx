@@ -92,8 +92,9 @@ function IntroLine() {
     <button type="button" aria-label="Hide this note" onClick={() => { setShown(false); try { localStorage.setItem('dot480:intro', 'off') } catch { /* private mode */ } }}>×</button>
   </p>
 }
-// ?tab=essay: the essay is its own page (essay.html, a separate Vite entry so it deploys alone)
-if (urlView().essay) window.location.replace(`/essay.html${window.location.hash}`)
+// ?tab=essay, /privacy, /terms: those are their own pages (essay.html, privacy.html, terms.html: separate Vite entries)
+const handoff = urlView()
+if (handoff.essay || handoff.legal) window.location.replace(`/${handoff.legal ?? 'essay'}.html${window.location.hash}`)
 
 export default function App() {
   const [view, setView] = useState<View>(() => urlView().view)
@@ -183,5 +184,5 @@ export default function App() {
     {/* C10: ⌘K palette, dot shell, X-ray inspector, time machine; `tab` is the place (a view or a MAKE mode) */}
     <CommandLayer tab={place} board={board} setTab={go} setBoard={setBoard} />
     <footer className="bottom"><span>DOT/480 · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span><span>FIELD → GRID SAMPLER → RENDERER</span>
-      <span><a href="/essay.html">HOW IT WORKS</a> · <a href="?about" onClick={e => { e.preventDefault(); setView('ABOUT') }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a></span></footer></main>
+      <span><a href="/essay.html">HOW IT WORKS</a> · <a href="?about" onClick={e => { e.preventDefault(); setView('ABOUT') }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></footer></main>
 }

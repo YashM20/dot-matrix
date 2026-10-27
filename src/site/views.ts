@@ -27,20 +27,21 @@ export const GALLERY_BOARD = 'henry'
 /** A place by any of its names, old or new, any case. */
 export const placeFromName = (name: string): Place | undefined => TAB_ALIASES[name.trim().toLowerCase()]
 
-export interface ViewState { view: View; mode: Mode; board: string; card?: string; essay?: boolean }
+export interface ViewState { view: View; mode: Mode; board: string; card?: string; essay?: boolean; legal?: 'privacy' | 'terms' }
 export const isMode = (s: string): s is Mode => (MODES as readonly string[]).includes(s)
 /** A place as view + mode (a mode means MAKE in it; any other place keeps `mode`). */
 export const placeView = (p: Place, mode: Mode = 'TUNE'): { view: View; mode: Mode } => isMode(p) ? { view: 'MAKE', mode: p } : { view: p, mode }
 
-/** The view a URL names (first render, Back / Forward). `card` = the one-card page, `essay` = redirect to the essay. */
+/** The view a URL names (first render, Back / Forward). `card` = the one-card page, `essay` / `legal` = redirect to
+ * that static page (`/privacy`, `/terms`: vercel.json rewrites them, this catches any server that falls back to the SPA). */
 export function viewFromUrl(search: string, pathname: string, mode: Mode = 'TUNE'): ViewState {
   const q = new URLSearchParams(search), tab = (q.get('tab') ?? '').toLowerCase(), b = resolveBoardId(q.get('board') ?? '')
-  const make = (q.get('make') ?? '').toUpperCase()
+  const make = (q.get('make') ?? '').toUpperCase(), legal = /^\/(privacy|terms)\/?$/.exec(pathname)?.[1] as ViewState['legal']
   const place: Place = q.has('about') ? 'ABOUT' : isMode(make) ? make : q.has('make') ? 'MAKE' : placeFromName(tab) ?? (q.get('p') ? 'CODE' : 'EXPLORE')
   const board = boardIds.includes(b) ? b : tab === 'gallery' ? GALLERY_BOARD : boardFromPath(pathname) ?? boardIds[0]
   return {
     ...placeView(place, mode), board,
-    ...(q.get('card') && { card: q.get('card')! }), ...(tab === 'essay' && { essay: true }),
+    ...(q.get('card') && { card: q.get('card')! }), ...(tab === 'essay' && { essay: true }), ...(legal && { legal }),
   }
 }
 

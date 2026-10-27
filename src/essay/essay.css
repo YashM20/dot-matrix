@@ -127,6 +127,7 @@ em { color: var(--value) }
 .credits { padding-left: 1.2em }
 .credits li { margin: 0 0 .55em }
 .outro { margin-top: 1.6em }
+.essay-foot a { color: inherit }
 .essay-foot { margin-top: 64px; padding-top: 18px; border-top: 1px solid var(--line); font: 500 10px var(--mono); letter-spacing: .16em; color: var(--mute); display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap }
 
 @media (max-width: 900px) {
