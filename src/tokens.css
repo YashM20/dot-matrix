@@ -1,0 +1,97 @@
+/*
+  Dot/480 design tokens: the one token block (docs/LAYOUT-THEME-PLAN.md §1b, §3; DESIGN.md tables).
+  Loaded by src/index.css (the app) and src/essay/essay.css (essay + legal pages).
+  Every other stylesheet uses these names only: no raw colour, spacing, type, radius or duration
+  literals outside this file (scripts/site/css-tokens.ts).
+
+  Colour: the neutral roles carry today's dark palette. The theme engine (T4) swaps their values
+  per scheme and accent; components never name a hue. One accent per board: {colors.dotActive} = --red.
+  Alpha variants are written at the use site as color-mix(in srgb, var(--role) N%, transparent).
+*/
+:root {
+  /* ── colour: accent ({colors.dotActive}) ── */
+  --red: #ff3b30;
+
+  /* ── colour: neutral surfaces, darkest to lightest ── */
+  --bg: #070809;        /* {colors.bg}: the room */
+  --panel: #0d0f11;     /* the bezel: editor chrome, docked bars */
+  --surface: #111315;   /* {colors.surface}: the card glass */
+  --raised: #1b1e21;    /* {colors.surfaceRaised}: menus, rows, fields */
+
+  /* ── colour: neutral lines and ink ── */
+  --line: rgba(255, 255, 255, .08); /* {colors.hairline} */
+  --line-strong: #3a3d42;           /* solid quiet ink: grab handles, grips, off glyphs */
+  --tint: #fff;                     /* the light mixed into washes and lines (alpha via color-mix) */
+  --shade: #000;                    /* the dark mixed into scrims, shadows and masks; the OLED black */
+  --scrim: rgba(0, 0, 0, .55);      /* backdrop behind sheets and dialogs */
+
+  /* ── colour: text and dot greys ── */
+  --value: #f2f3f5;     /* {colors.value}: primary text */
+  --label: #c7cbd1;     /* {colors.label}: labels, secondary text */
+  --dot-idle: #8a8f98;  /* {colors.dotIdle}: native controls, quiet text */
+  --mute: #6e7278;      /* {colors.mute}: meta */
+  --dot-mid: #5b5f66;   /* {colors.dotMid} */
+  --dim: #4a4e54;       /* the dimmest text: units and sub-labels in the editor */
+  --dot-faint: #2e3033; /* {colors.dotFaint} */
+
+  /* ── spacing: the 4 px dot pitch ── */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+  --space-9: 96px;
+  --space-10: 128px;
+  /* rhythm: inside a group / before actions / between sections */
+  --gap-group: var(--space-3);
+  --gap-action: var(--space-6);
+  --gap-section: clamp(var(--space-8), 8vw, var(--space-10));
+  /* cards ({spacing.cardGap}, {spacing.cardPad}) */
+  --spacing-cardGap: var(--space-4);
+  --spacing-cardPad: var(--space-4);
+
+  /* ── layout ── */
+  --frame-max: 90rem;                   /* 1440 px: the board grid and the frame */
+  --frame-pad: clamp(16px, 3vw, 40px);
+  --measure: 68ch;                      /* body text */
+  --measure-head: 42rem;                /* headings */
+  --hair-dot: 1px;                      /* dotted hairline: a 1 px dot ... */
+  --hair-pitch: 4px;                    /* ... every 4 px */
+
+  /* ── radius ── */
+  --card-corner-exp: 4;                                  /* {rounded.cardCorner}: squircle n */
+  --radius-sm: 4px;                                      /* small marks: kbd, chips, swatches */
+  --radius-ctl: 8px;                                     /* controls: fields, buttons, tiles */
+  --radius-panel: 12px;                                  /* raised surfaces: menus, popovers, dialogs */
+  --radius-card: calc(var(--card-corner-exp) * 4px);     /* cards and sheets: 16 px today, 12 px in T1 */
+  --radius-pill: 999px;
+
+  /* ── motion: hover in instantly, out over 150 ms ── */
+  --dur-in: 0ms;
+  --dur-out: 150ms;     /* chrome: hover-out, press, small fades */
+  --dur-move: 220ms;    /* a sheet or panel following a drag or snapping to a stop */
+  --dur-enter: 280ms;   /* a sheet arriving; a display powering off */
+  --ease: cubic-bezier(.2, .8, .2, 1);
+
+  /* ── type: named by role and size (rem, root 16 px); family is --mono or --sans ── */
+  --mono: ui-monospace, Consolas, monospace;
+  --sans: 'Oxanium Variable', system-ui, 'Segoe UI', Roboto, sans-serif;
+  --fs-tag-8: .5rem;          /* in-card hints, tiny badges */
+  --fs-tag-9: .5625rem;       /* card labels, keycaps, chips */
+  --fs-label-10: .625rem;     /* chrome labels, tabs, buttons */
+  --fs-label-11: .6875rem;    /* editor UI, menus */
+  --fs-label-12: .75rem;      /* meta: the plan's one label size */
+  --fs-copy-14: .875rem;      /* short prose, intro lines */
+  --fs-copy-16: 1rem;         /* body copy; phone form fields (no iOS zoom) */
+  --fs-lead-18: 1.125rem;     /* essay prose, lead paragraphs */
+  --fs-title-20: 1.25rem;
+  --fs-title-24: 1.5rem;
+  --fs-title-28: 1.75rem;     /* widget page title */
+  --fs-h1-page: clamp(1.875rem, 6vw, 2.75rem);   /* legal page title, 30–44 px */
+  --fs-h1-hero: clamp(2.375rem, 5vw, 4.5rem);    /* hero heading, 38–72 px */
+  --lh-tight: 1.1;
+  --lh-body: 1.6;
+}

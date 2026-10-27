@@ -47,6 +47,28 @@ Two surface tones do all the work: `{colors.bg}` (near-black canvas) behind ever
 - **Warning** (`{colors.warning}` — `#E8A33D`): battery-low, alert-count badges.
 - **Charging/Positive Delta** (`{colors.deltaPositive}` — `#7BC96F`): retail/analytics up-arrow figures (e.g. "+$23%").
 
+### CSS colour roles (chrome)
+The page chrome reads these custom properties (`src/tokens.css`), never a hex. Values are today's dark palette; the theme engine (docs/LAYOUT-THEME-PLAN.md §4, T4) swaps them per scheme and accent. An alpha variant is written where it is used, `color-mix(in srgb, var(--role) N%, transparent)`, so it follows the role. `scripts/site/css-tokens.ts` fails on a colour literal anywhere else.
+
+| CSS token | Value | Design token | Role |
+|---|---|---|---|
+| `--red` | `#FF3B30` | `{colors.dotActive}` | the one accent: active, live, selected |
+| `--bg` | `#070809` | `{colors.bg}` | the room behind everything |
+| `--panel` | `#0D0F11` | — | the bezel: editor chrome, docked bars |
+| `--surface` | `#111315` | `{colors.surface}` | the card glass |
+| `--raised` | `#1B1E21` | `{colors.surfaceRaised}` | menus, rows, fields |
+| `--line` | `rgba(255,255,255,.08)` | `{colors.hairline}` | 1 px borders and rules |
+| `--line-strong` | `#3A3D42` | — | solid quiet ink: grab handles, grips, off glyphs |
+| `--tint` / `--shade` | `#FFF` / `#000` | — | the light and the dark mixed into washes, lines, scrims, shadows, masks |
+| `--scrim` | `rgba(0,0,0,.55)` | — | backdrop behind sheets and dialogs |
+| `--value` | `#F2F3F5` | `{colors.value}` | primary text |
+| `--label` | `#C7CBD1` | `{colors.label}` | labels, secondary text |
+| `--dot-idle` | `#8A8F98` | `{colors.dotIdle}` | native controls (`accent-color`), the essay's meta grey |
+| `--mute` | `#6E7278` | `{colors.mute}` | meta |
+| `--dot-mid` | `#5B5F66` | `{colors.dotMid}` | quiet bars |
+| `--dim` | `#4A4E54` | — | the dimmest text: units and sub-labels in the editor |
+| `--dot-faint` | `#2E3033` | `{colors.dotFaint}` | off switches |
+
 ## Typography
 
 ### Font System
@@ -76,6 +98,26 @@ A second, opt-in face for display and kinetic type: `src/engine/type` (`typeFiel
 ### Principles
 Every size in the hierarchy is a strict multiple of the base grid unit — there is no arbitrary in-between size. Weight is simulated by dot density, not a bold-font variant: a "heavier" numeral is achieved by widening `{grid.pitch}` or increasing `{dotStyle.sizeMax}` for that glyph's field, never by swapping a font file. This keeps every text role rendering through the exact same `Field → Sampler → Renderer` pipeline as every icon, chart, and photo in the system.
 
+### Chrome type (CSS)
+The page chrome around the cards (topbar, pickers, editor, sheets, essay) is real text. Sizes are tokens named by **role and size** (`src/tokens.css`, rem on a 16 px root); the family is set separately (`--mono` for UI, labels, numbers and meta; `--sans` = Oxanium for headings and prose). Weights 400 / 500 / 600. `scripts/site/css-tokens.ts` fails on a raw px or rem in `font-size` or the `font` shorthand.
+
+| Token | Size | Use |
+|---|---|---|
+| `--fs-tag-8` | 8 px | in-card hints, tiny badges |
+| `--fs-tag-9` | 9 px | card labels, keycaps, chips |
+| `--fs-label-10` | 10 px | chrome labels, tabs, buttons |
+| `--fs-label-11` | 11 px | editor UI, menus |
+| `--fs-label-12` | 12 px | meta: 12 px uppercase mono, +.06em (the plan's one label size) |
+| `--fs-copy-14` | 14 px | short prose, intro lines |
+| `--fs-copy-16` | 16 px | body copy; phone form fields (no iOS focus zoom) |
+| `--fs-lead-18` | 18 px | the page's inherited size; essay prose |
+| `--fs-title-20` / `-24` / `-28` | 20 / 24 / 28 px | titles (28: the widget page) |
+| `--fs-h1-page` | `clamp(30px, 6vw, 44px)` | legal page title |
+| `--fs-h1-hero` | `clamp(38px, 5vw, 72px)` | hero heading |
+| `--lh-tight` / `--lh-body` | 1.1 / 1.6 | headings / copy (adopted in T6) |
+
+The 8–11 px tokens carry today's chrome; T6 (docs/LAYOUT-THEME-PLAN.md) lifts chrome text to a 12 px minimum and retires them.
+
 ### Note on Substitutes
 There is no substitute typeface — the bitmap dot-font *is* the typography system and ships as static data (`bitmapFont.ts`, ~2KB). Any environment that cannot run the sampler falls back to rendering plain system-monospace text at equivalent sizes, which is treated as a degraded/non-brand state, not a real substitute.
 
@@ -83,9 +125,29 @@ There is no substitute typeface — the bitmap dot-font *is* the typography syst
 
 ### Spacing System
 - **Base unit:** `{grid.pitch}` — the px distance between adjacent dot centers, default 4px (matches the reference sheet's "4PX GRID" label).
-- **Tokens (derived from grid units, not raw px):** `{spacing.dot}` (1 grid pitch) · `{spacing.cell}` (4 pitches, ~16px) · `{spacing.cardPad}` (8 pitches, ~32px) · `{spacing.cardGap}` (6 pitches, ~24px) · `{spacing.section}` (16 pitches, ~64px).
+- **CSS tokens** live in one block, `src/tokens.css` (loaded by the app and the essay). Chrome spacing uses only these; `scripts/site/css-tokens.ts` fails on a raw px in margin, padding or gap (1 px hairline overlaps excepted). Off-scale multiples of the pitch are written `calc(var(--space-1) * n)` until T2 (docs/LAYOUT-THEME-PLAN.md) folds them into the three rhythm steps.
+
+| Token | Value | Use |
+|---|---|---|
+| `--space-1` … `--space-5` | 4 · 8 · 12 · 16 · 24 px | inside controls and groups |
+| `--space-6` … `--space-10` | 32 · 48 · 64 · 96 · 128 px | between blocks and sections |
+| `--gap-group` | `--space-3` (12 px) | rhythm: inside a group |
+| `--gap-action` | `--space-6` (32 px) | rhythm: before actions |
+| `--gap-section` | `clamp(--space-8, 8vw, --space-10)` | rhythm: between sections |
+| `--spacing-cardGap` (`{spacing.cardGap}`) | `--space-4` (16 px) | gutter between cards on a board |
+| `--spacing-cardPad` (`{spacing.cardPad}`) | `--space-4` (16 px) | `dot-card` padding |
+
 - **Universal grid rhythm:** every board in the reference set composes as a 3-column card grid with equal `{spacing.cardGap}` gutters — this is the default composition, not one option among many.
 - **Card internal padding:** `{spacing.cardPad}` on all sides, with the eyebrow label sitting flush to the top-left and any `{component.statusDot}` flush to the top-right.
+
+### Layout tokens
+
+| Token | Value | Use |
+|---|---|---|
+| `--frame-max` | 90rem (1440 px) | the widest the board grid (and, from T2, the frame) gets |
+| `--frame-pad` | `clamp(16px, 3vw, 40px)` | the frame's side padding (T2) |
+| `--measure` / `--measure-head` | 68ch / 42rem | longest line of body text / of a heading |
+| `--hair-dot` / `--hair-pitch` | 1 px / 4 px | dotted hairline: a 1 px dot every 4 px |
 
 ### Grid & Container
 - **Default board size:** 3×3 card grid at 1:1 aspect per card (matches every reference board). A 3×4 variant is supported for taller compositions (DeerFlow Mosaic hero board).
@@ -146,6 +208,19 @@ A material is a dot vocabulary, not a shader: given one normal raster and one li
 | `{rounded.circle}` | 0 | 2 (true circle) | Status dots, avatar circles, radial-ring markers, PIN dots |
 
 Individual dot shape is controlled by one continuous parameter (the superellipse exponent) rather than a discrete shape enum — sliding from `{rounded.sharp}` to `{rounded.circle}` smoothly passes through every intermediate "squircle" state. Card container corners use the same exponent at a larger scale (`{rounded.cardCorner}`, default n=4, ≈16px effective radius) so card chrome and dot chrome always read as the same geometric family.
+
+### Chrome radius (CSS)
+Dots and in-card shapes use the squircle exponent above. The HTML chrome around them (card containers, controls, menus) uses a short radius scale in `src/tokens.css`; `scripts/site/css-tokens.ts` fails on a raw px radius (percentages, for circles and CRT glass, are fine).
+
+| Token | Value | Use |
+|---|---|---|
+| `--radius-sm` | 4 px | small marks: kbd, chips, swatches, inline code |
+| `--radius-ctl` | 8 px | controls: fields, buttons, tiles |
+| `--radius-panel` | 12 px | raised surfaces: menus, popovers, dialogs |
+| `--radius-card` | `calc(--card-corner-exp × 4px)` = 16 px | `dot-card`, sheets; `{rounded.cardCorner}`, n = `--card-corner-exp` (4). docs/LAYOUT-THEME-PLAN.md §1b moves cards to 12 px in T1 |
+| `--radius-pill` | 999 px | pills, round buttons |
+
+A surface that wraps a rounded child with padding takes the child's radius plus the padding (`calc(var(--radius-panel) + var(--space-2))`), so the corners stay concentric.
 
 ### Photography / Field Geometry
 - **Halftone photo grid:** default 48×48 to 96×96 cells depending on card size; below ~32 cells, detail recognizability drops sharply (see Caveats in the engineering plan).
@@ -273,6 +348,19 @@ Interaction is a state the card's *data* is in, not a CSS layer on top. The inpu
 | `{interaction.touchSlop}` | 10 px of finger travel | Below it a touch can still be a tap or a hold; past it, a vertical move is the page's scroll and a horizontal one claims a drag control (`TOUCH.slop`, `src/engine/interaction/gesture.ts`) |
 | `{interaction.pressDelay}` | 110 ms still | A touched tap control shows its press (a button goes down) only after this, so a swipe that starts on it never flashes it |
 | `{interaction.holdEngage}` | 300 ms still | Press-and-hold on a drag control grabs it in any direction and engages the card (hairline-active border, DONE in the bar) until a touch elsewhere, Escape, DONE or 8 s idle |
+
+### Chrome motion tokens (CSS)
+The HTML chrome (sheets, menus, pills, tabs) animates with these durations only (`src/tokens.css`); `scripts/site/css-tokens.ts` fails on a raw duration. Card motion stays the engine's own (masks, dissolves, springs above).
+
+| Token | Value | Use |
+|---|---|---|
+| `--dur-in` | 0 ms | hover in: instant (T1 moves transitions onto the resting state only) |
+| `--dur-out` | 150 ms | hover out, press, small fades |
+| `--dur-move` | 220 ms | a sheet or panel following a drag or snapping to a stop |
+| `--dur-enter` | 280 ms | a sheet arriving; a display powering off |
+| `--ease` | `cubic-bezier(.2, .8, .2, 1)` | chrome easing |
+
+Allowlisted exceptions (effects, not chrome): the X-RAY flash (1.2 s), the nixie flicker loop (5.3 s), and the 1 ms reduced-motion end-state trick.
 
 ### Grammar rules
 
