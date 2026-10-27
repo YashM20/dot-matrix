@@ -34,6 +34,7 @@ import { deviceChecks } from './device'
 import { exportChecks } from './export'
 import { dotsChecks } from './dots'
 import { studioChecks } from './studio'
+import { editorChecks } from './editor'
 import { boardGroups, boardIds, boardLabel, groupOf } from '../src/widgets/manifest'
 import { boardBlurbs } from '../src/widgets/blurbs'
 import { boardFromPath } from '../src/site/meta'
@@ -842,6 +843,8 @@ import { gpuBoard } from '../src/widgets/boards/gpu'
 }
 // P6-D) Dot Studio: document model, undo/redo, reference stacks, spec v1 / DOTS import, timeline (scripts/studio.ts)
 studioChecks(assert)
+// MAKE editor (docs/EDITOR-PLAN.md): multi-frame document, paint layers, resize anchoring, hit tests, gestures (scripts/editor.ts)
+editorChecks(assert)
 // C10) X-ray probe ≡ sampler, time-machine seek, remix → Field IR, palette fuzzy rank (scripts/c10.ts)
 c10Checks(assert)
 // C2) physics: worlds, stable fluids, PBD cloth / jelly, particles + spatial hash, the physics board (scripts/physics.ts)
@@ -891,10 +894,11 @@ algorithmsChecks(assert)
     ['/?tab=studio&skin=crt', { view: 'MAKE', mode: 'COMPOSE', board: first }, '/?make=compose&skin=crt'],
     ['/?tab=dots&p=zAbC&worker=0', { view: 'MAKE', mode: 'CODE', board: first }, '/?make=code&p=zAbC&worker=0'],
     ['/light/?make=code&p=zAbC', { view: 'MAKE', mode: 'DRAW', board: 'light' }, '/light/?make=draw'],
+    ['/?make=tune', { view: 'MAKE', mode: 'TUNE', board: first }, '/?make'], ['/?tab=workspace&pro=1', { view: 'MAKE', mode: 'TUNE', board: first }, '/?make&pro=1'],
     ['/?tab=log', { view: 'ABOUT', mode: 'TUNE', board: first }, '/?about'], ['/metro/?about&skin=vfd', { view: 'EXPLORE', mode: 'TUNE', board: 'metro' }, '/metro/?skin=vfd'],
   ]
   const off = want.filter(([u, v, w]) => canon(u, v) !== w).map(([u, v, w]) => `${u} → ${canon(u, v)} (want ${w})`)
-  assert('ux: views write their canonical URL (board path, ?make=<mode>, ?about; ?skin/?worker/?p kept, old params folded)', !off.length, off.join('; '))
+  assert('ux: views write their canonical URL (board path, ?make (the editor) / ?make=<mode>, ?about; ?skin/?worker/?p kept, old params folded)', !off.length, off.join('; '))
   const trips = PLACES.flatMap(p => [first, 'light'].map(board => ({ ...placeView(p), board }))).filter(v => { const u = new URL(urlForView(v, '?skin=crt', '/'), 'https://x'); return !is(viewFromUrl(u.search, u.pathname), v.view, v.view === 'MAKE' ? v.mode : null, v.board) })
   assert('ux: every view and MAKE mode round-trips through its canonical URL', !trips.length, trips.map(v => `${v.view}/${v.mode}/${v.board}`).join(', '))
 }

@@ -6,25 +6,15 @@ import { useExitSwap } from './hooks/useExitSwap'
 import { liveBoards, prefetchBoard } from './widgets/manifest'
 import { widgetPath, type WidgetRoute } from './site/routes'
 import { setPageMeta, syncUrl } from './site/meta'
-import { GALLERY_BOARD, MODE_LINES, MODES, VIEWS, placeFromName, placeView, sameView, urlForView, viewFromUrl, type Mode, type View } from './site/views'
+import { GALLERY_BOARD, VIEWS, placeFromName, placeView, sameView, urlForView, viewFromUrl, type Mode, type View } from './site/views'
 import './App.css'
 
 // every view but EXPLORE (and every MAKE mode) is its own chunk, fetched when it opens (first-load budget, docs/WEB-PLAN.md §1)
 const later = <K extends string>(load: () => Promise<{ [k in K]: ComponentType }>, name: K) => lazy(() => load().then(m => ({ default: m[name] })))
 const About = later(() => import('./components/About'), 'About')
-const DrawBoard = later(() => import('./components/draw/DrawBoard'), 'DrawBoard')
-const DotsRepl = later(() => import('./components/dwitter/DotsRepl'), 'DotsRepl')
-const ControlsPanel = later(() => import('./components/playground/ControlsPanel'), 'ControlsPanel')
-const DataEditor = later(() => import('./components/playground/DataEditor'), 'DataEditor')
-const ExportPanel = later(() => import('./components/playground/ExportPanel'), 'ExportPanel')
-const PhotoUpload = later(() => import('./components/playground/PhotoUpload'), 'PhotoUpload')
-const PreviewCanvas = later(() => import('./components/playground/PreviewCanvas'), 'PreviewCanvas')
-const TransitionLab = later(() => import('./components/playground/TransitionLab'), 'TransitionLab')
-const WidgetGallery = later(() => import('./components/playground/WidgetGallery'), 'WidgetGallery')
-
-// COMPOSE (the Studio, P6-D) is its own mode, not a TUNE upgrade: TUNE stays the one-preset tuner (style,
-// photo, exports); COMPOSE edits a layered card document. Lazy, so the other views don't load the editor.
-const Studio = lazy(() => import('./components/studio/Studio').then(m => ({ default: m.Studio })))
+// MAKE is one editor (docs/EDITOR-PLAN.md): frames on an infinite canvas, layers, a contextual inspector.
+// The old modes (TUNE / COMPOSE / CODE / DRAW) are ways into it. Lazy: no other view loads the editor.
+const Editor = lazy(() => import('./components/editor/Editor').then(m => ({ default: m.Editor })))
 // the single-widget page (docs/SHARE-PLAN.md §4): /widget/<slug|uid>/, /<uid>, ?card=; lazy like the views
 const WidgetPage = lazy(() => import('./components/widget/WidgetPage').then(m => ({ default: m.WidgetPage })))
 // x-ray / time machine / ⌘K palette / dot shell (C10): out of the first load, mounted once the page is idle
@@ -170,39 +160,11 @@ export default function App() {
     ) : shownPlace === 'ABOUT' ? (
       <section className="about-view" role="tabpanel" aria-labelledby="tab-ABOUT"><About /></section>
     ) : (
-      // MAKE: the mode switch stays put while a mode's chunk loads
+      // MAKE: one editor; `mode` (any old ?make= / ?tab= name) only picks its starting tool and panels
       <section className="make-view" role="tabpanel" aria-labelledby="tab-MAKE">
-        <div className="make-head">
-          <Tabs className="make-modes" label="Make mode" items={MODES} value={mode} onPick={setMode} />
-          <p className="make-line">{MODE_LINES[mode]}</p>
-        </div>
-        <div className="make-panel" role="tabpanel" aria-labelledby={`tab-${shownPlace}`}>
-        <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
-        {shownPlace === 'COMPOSE' ? (
-          <Suspense fallback={<p className="st-hint">Loading the Studio…</p>}><Studio /></Suspense>
-        ) : shownPlace === 'CODE' ? (
-          <DotsRepl />
-        ) : shownPlace === 'DRAW' ? (
-          <DrawBoard />
-        ) : (
-          <section className="pg-layout">
-            <WidgetGallery />
-            <div className="pg-center">
-              <PreviewCanvas />
-              <ExportPanel />
-              <div className="pg-bottom-row">
-                <DataEditor />
-                <PhotoUpload />
-                <TransitionLab />
-              </div>
-            </div>
-            <div className="pg-side" role="region" aria-label="Controls">
-              <ControlsPanel />
-            </div>
-          </section>
-        )}
+        <Suspense fallback={<div className="view-loading" aria-busy="true" style={{ minHeight: 'calc(100svh - 120px)' }}>Loading the editor…</div>}>
+          <Editor mode={mode} onExit={() => setView('EXPLORE')} />
         </Suspense>
-        </div>
       </section>
     )}
     </Suspense>

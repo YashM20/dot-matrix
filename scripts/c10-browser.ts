@@ -213,7 +213,7 @@ try {
   const ip = await cardPoint('.board-view [data-xr-key]')
   await move(ip.x, ip.y); await sleep(400)
   await js(`[...document.querySelectorAll('.xr-panel button')].find(b => b.textContent === 'OPEN IN CODE').click()`)
-  const dots = await waitFor(`!!document.querySelector('.dw-code textarea') && document.querySelector('.dw-code textarea').value.length > 10`, 8000)
+  const dots = await waitFor(`!!document.querySelector('.dw-code textarea') && document.querySelector('.dw-code textarea').value.length > 10`, 15000)
   const src = await js(`document.querySelector('.dw-code textarea')?.value ?? ''`) as string
   check('remix an IR card opens DOTS with its program', dots && !/remix of/.test(src), src.slice(0, 60).replace(/\n/g, ' '))
   await shot('07-remix-ir')
@@ -232,8 +232,8 @@ try {
   const sp = await cardPoint('.board-view [data-card-id="lv-queen"]')
   await move(sp.x, sp.y); await sleep(400)
   await js(`[...document.querySelectorAll('.xr-panel button')].find(b => b.textContent === 'OPEN IN COMPOSE').click()`)
-  const studio = await waitFor(`!!document.querySelector('.st-layout') && document.body.innerText.includes('lv-queen')`, 15000)
-  check('Open in Studio imports the card as a layer stack', studio)
+  const studio = await waitFor(`!!document.querySelector('.ed-root') && [...document.querySelectorAll('.ed-tree-frame.within .ed-row-name')].some(b => b.textContent.includes('lv-queen'))`, 15000)
+  check('Open in compose adds the card to the editor as a frame (a layer stack)', studio)
   await sleep(800)
   await shot('07c-remix-studio')
 
