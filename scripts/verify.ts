@@ -879,6 +879,12 @@ goldenKeyChecks(assert)
   await lightChecks(assert)
 }
 
+// theme (T4a): scheme × accent table, gamut / contrast / colour-blind rules, boot script ≡ store, CSP hash, generated files current (scripts/site/theme.ts)
+{
+  const { themeChecks } = await import('./site/theme')
+  await themeChecks(assert)
+}
+
 // UX U1) board picker (docs/UX-PLAN.md §4.2): every board in exactly one group after START HERE, a label and a blurb; old paths still open
 {
   const homes = boardIds.map(id => boardGroups.filter(g => g.id !== 'start' && (g.boards as readonly string[]).includes(id)).length)
