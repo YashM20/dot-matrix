@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent } from 'react'
-import { HIT_PAD, controlRange, keyValue, keyYOf, settle } from '../engine'
+import { HIT_PAD, controlRange, keyValue, keyYOf, settle, touchIntent } from '../engine'
 import type { Control, GridConfig } from '../engine'
 import type { ControlInput } from '../hooks/useControlInput'
 
@@ -10,7 +10,8 @@ import type { ControlInput } from '../hooks/useControlInput'
  * a group of two ranges (xy) and a `radiogroup` (segmented). Buttons and switches share one roving
  * tab stop per card (arrow keys move between them); each range and each radiogroup is its own stop,
  * because arrows change its value. Pointer input is handled by the card itself (`useControlInput`);
- * these elements ignore the pointer, except the aria-hidden hit pads, which only set `touch-action`.
+ * these elements ignore the pointer, except the aria-hidden hit pads, which only set `touch-action`: tap pads
+ * `manipulation`, drag pads `pan-y` (`none` once the card is engaged; touch.css), so a vertical swipe scrolls the page.
  */
 export function ControlOverlay({ controls, grid, data, input }: { controls: Control[]; grid: GridConfig; data: Record<string, number>; input: ControlInput }) {
   const taps = controls.filter(c => c.kind === 'button' || c.kind === 'toggle')
@@ -106,7 +107,7 @@ export function ControlOverlay({ controls, grid, data, input }: { controls: Cont
     <div className="dot-a11y" ref={root}>
       {controls.map(c => {
         const [col, row, w, h] = c.box
-        return <div key={`hit:${c.key}`} className={`dot-a11y-hit dot-a11y-hit--${c.kind === 'button' || c.kind === 'toggle' || c.kind === 'segmented' || c.kind === 'stepper' ? 'tap' : 'drag'}`}
+        return <div key={`hit:${c.key}`} className={`dot-a11y-hit dot-a11y-hit--${touchIntent(c)}`}
           data-dot-hit={c.key} aria-hidden="true" style={place([col - HIT_PAD, row - HIT_PAD, w + 2 * HIT_PAD, h + 2 * HIT_PAD], grid, true)} />
       })}
       {controls.map(one)}

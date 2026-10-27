@@ -1,0 +1,408 @@
+/* SHARE S1: the single-widget page and its iOS-style pill bars (docs/SHARE-PLAN.md §4). Grey chrome only:
+   the card keeps the one accent. Loaded with the lazy WidgetPage chunk. */
+
+.shell--widget {
+  width: 100%;
+  padding: 0
+}
+
+/* ── pills ───────────────────────────────────────────────────────────────────────── */
+.pill-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  background: rgba(27, 30, 33, .78);
+  border: 1px solid rgba(255, 255, 255, .1);
+  border-radius: 999px;
+  -webkit-backdrop-filter: blur(16px) saturate(1.3);
+  backdrop-filter: blur(16px) saturate(1.3)
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .pill {
+    background: var(--raised)
+  }
+}
+
+.pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 14px;
+  background: none;
+  border: 0;
+  border-radius: 999px;
+  color: var(--label);
+  font: 600 10px/1 var(--mono);
+  letter-spacing: .14em;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation
+}
+
+.pill-btn:hover {
+  background: rgba(255, 255, 255, .07);
+  color: var(--value)
+}
+
+.pill-btn:focus-visible {
+  outline: 2px solid var(--value);
+  outline-offset: 1px;
+  color: var(--value)
+}
+
+.pill-btn:active {
+  background: rgba(255, 255, 255, .12)
+}
+
+.pill-btn[aria-pressed="true"],
+.pill-btn[aria-expanded="true"] {
+  background: rgba(255, 255, 255, .12);
+  color: var(--value)
+}
+
+.pill-glyph {
+  color: var(--mute);
+  font-size: 13px;
+  letter-spacing: 0
+}
+
+.pill-btn:hover .pill-glyph,
+.pill-btn[aria-pressed="true"] .pill-glyph {
+  color: var(--value)
+}
+
+@media (pointer: coarse) {
+  .pill-btn {
+    min-width: 44px;
+    min-height: 44px
+  }
+}
+
+/* ── page ────────────────────────────────────────────────────────────────────────── */
+.wp {
+  min-height: 100vh;
+  min-height: 100dvh;
+  box-sizing: border-box;
+  padding: calc(84px + env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) calc(104px + env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  display: flex;
+  flex-direction: column;
+  justify-content: center
+}
+
+.wp-loading {
+  width: min(648px, 100%);
+  aspect-ratio: 1;
+  margin: auto;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface)
+}
+
+.wp-top {
+  position: fixed;
+  z-index: 40;
+  top: calc(12px + env(safe-area-inset-top));
+  left: max(14px, env(safe-area-inset-left));
+  right: max(14px, env(safe-area-inset-right));
+  justify-content: space-between;
+  pointer-events: none
+}
+
+.wp-top > .pill {
+  pointer-events: auto
+}
+
+.wp-count {
+  min-width: 44px;
+  color: var(--mute);
+  font: 500 10px var(--mono);
+  letter-spacing: .1em;
+  text-align: center
+}
+
+.wp-bottom {
+  position: fixed;
+  z-index: 40;
+  left: 0;
+  right: 0;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  width: max-content;
+  max-width: calc(100vw - 16px);
+  margin-inline: auto
+}
+
+.wp-main {
+  display: grid;
+  grid-template-columns: minmax(0, 648px) minmax(240px, 320px);
+  justify-content: center;
+  align-items: center;
+  gap: 48px;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto
+}
+
+.wp-stage {
+  width: 100%;
+  margin-inline: auto
+}
+
+/* the pill bars carry the card's actions here */
+.wp-stage .dot-card-bar {
+  display: none
+}
+
+.wp-rail {
+  min-width: 0;
+  color: var(--label);
+  font: 500 11px/1.6 var(--mono);
+  text-align: left
+}
+
+.wp code {
+  display: inline;
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  color: inherit;
+  font: inherit
+}
+
+.wp-eyebrow {
+  margin: 0 0 10px;
+  color: var(--mute);
+  font: 500 10px var(--mono);
+  letter-spacing: .16em
+}
+
+.wp-rail h1,
+.wp-missing h1 {
+  margin: 0 0 12px;
+  color: var(--value);
+  font: 600 28px/1.1 var(--heading);
+  letter-spacing: .02em
+}
+
+.wp-blurb {
+  margin: 0 0 18px;
+  color: var(--label);
+  font: 400 14px/1.5 var(--sans);
+  letter-spacing: 0
+}
+
+.wp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0 0 20px;
+  padding: 0;
+  list-style: none
+}
+
+.wp-chips li {
+  padding: 5px 10px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 999px;
+  color: var(--label);
+  font: 600 9px var(--mono);
+  letter-spacing: .16em
+}
+
+.wp-facts {
+  margin: 0;
+  border-top: 1px solid var(--line)
+}
+
+.wp-facts > div {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line)
+}
+
+.wp-facts dt {
+  color: var(--mute);
+  font-size: 9px;
+  letter-spacing: .16em;
+  text-transform: uppercase
+}
+
+.wp-facts dd {
+  margin: 0;
+  color: var(--value);
+  overflow-wrap: anywhere
+}
+
+.wp-facts a {
+  color: var(--value);
+  text-underline-offset: 3px
+}
+
+.wp-ids code + code {
+  margin-left: 10px;
+  color: var(--label)
+}
+
+.wp-missing {
+  max-width: 480px;
+  margin: auto;
+  color: var(--label);
+  font: 400 14px/1.5 var(--sans);
+  text-align: center
+}
+
+/* ── more menu: a popover above the bar; a bottom sheet on phones ─────────────────── */
+.wp-more {
+  position: fixed;
+  z-index: 41;
+  left: 0;
+  right: 0;
+  bottom: calc(72px + env(safe-area-inset-bottom));
+  width: 280px;
+  margin-inline: auto;
+  display: flex;
+  flex-direction: column;
+  padding: 6px;
+  background: rgba(27, 30, 33, .94);
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 20px;
+  -webkit-backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px)
+}
+
+.wp-more button {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  background: none;
+  border: 0;
+  border-radius: 14px;
+  color: var(--value);
+  font: 500 11px var(--mono);
+  letter-spacing: .06em;
+  text-align: left;
+  cursor: pointer
+}
+
+.wp-more button:hover,
+.wp-more button:focus-visible {
+  background: rgba(255, 255, 255, .08);
+  outline: none
+}
+
+.wp-more small,
+.wp-more code {
+  color: var(--mute);
+  font: inherit;
+  font-size: 10px
+}
+
+.wp-phone {
+  display: none !important
+}
+
+/* the explore dock repeats X-RAY; below desktop width it would sit under the bottom bar */
+@media (max-width: 1100px) {
+  body:has(.wp) .pal-dock {
+    display: none
+  }
+}
+
+body:has(.wp) .pal-toast {
+  bottom: calc(80px + env(safe-area-inset-bottom))
+}
+
+@media (max-width: 960px) {
+  .wp-main {
+    grid-template-columns: minmax(0, 648px);
+    gap: 28px
+  }
+
+  .wp-rail {
+    width: 100%;
+    max-width: 648px;
+    margin: 0 auto
+  }
+}
+
+/* phones: full-width card, one capsule at the bottom (thumb reach), the rest in a sheet */
+@media (max-width: 760px) {
+  .wp {
+    justify-content: flex-start;
+    padding: calc(70px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left))
+  }
+
+  .wp-rail h1 {
+    font-size: 24px
+  }
+
+  .wp-step .pill-label {
+    display: none
+  }
+
+  .wp-desk {
+    display: none
+  }
+
+  .wp-phone {
+    display: flex !important
+  }
+
+  .wp-bottom {
+    gap: 0;
+    padding: 4px;
+    background: rgba(27, 30, 33, .82);
+    border: 1px solid rgba(255, 255, 255, .1);
+    border-radius: 999px;
+    -webkit-backdrop-filter: blur(16px) saturate(1.3);
+    backdrop-filter: blur(16px) saturate(1.3)
+  }
+
+  .wp-bottom > .pill {
+    padding: 0;
+    background: none;
+    border: 0;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none
+  }
+
+  .wp-bottom .pill-btn {
+    padding: 0 12px
+  }
+
+  .wp-more {
+    position: fixed;
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    bottom: calc(78px + env(safe-area-inset-bottom));
+    width: auto;
+    border-radius: 24px
+  }
+
+  .wp-more button {
+    min-height: 46px;
+    font-size: 12px
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .pill-btn {
+    transition: background-color .12s, color .12s
+  }
+}

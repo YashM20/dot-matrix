@@ -14,8 +14,9 @@ Which doc to read for what, and how current each one is (checked 2026-10-26). Fi
 | [`PROGRESS.md`](PROGRESS.md) | **Source of truth** for what is done, in progress, skipped and next, plus the "Resume here" notes for the next session |
 | [`WEB-PLAN.md`](WEB-PLAN.md) | The active product plan: a personal website, with tracks C1–C10 |
 | [`UX-PLAN.md`](UX-PLAN.md) | The active UX plan: low floor, high ceiling. Phases U0–U6 plus the build log (§9). |
-| [`SHARE-PLAN.md`](SHARE-PLAN.md) | Planned (2026-10-26): metadata, a slug and a short permanent id per widget, a page at `/widget/<slug or id>/`, copy as PNG / SVG / HTML, share and embed, iOS-style pill action bars, the shadcn registry. Phases S0–S5 and the open decisions. |
+| [`SHARE-PLAN.md`](SHARE-PLAN.md) | S0–S1 built (2026-10-26, `feat/share-s0`), S2–S5 planned: metadata, a slug and a short permanent id per widget, a page at `/widget/<slug or id>/`, copy as PNG / SVG / HTML, share and embed, iOS-style pill action bars, the shadcn registry. Phases S0–S5 and the open decisions. |
 | [`DOT-MATRIX-ENGINE-PLAN.md`](DOT-MATRIX-ENGINE-PLAN.md) | Architecture: module map, pipeline, lattices and sites, subsystems |
+| [`ALGORITHMS.md`](ALGORITHMS.md) | The niche algorithms (`src/engine/algo`, the `algorithms` board): weighted Voronoi stippling, strange-attractor density, Wave Function Collapse, DLA. Papers, pipeline mapping, parameters, cost. |
 | [`STYLE-BIBLE.md`](STYLE-BIBLE.md) | Taste: what makes a card good, taken from the four liked cards |
 | [`DEPLOY.md`](DEPLOY.md) | Vercel deploy, build outputs, headers, CSP, CI |
 | [`MCP-APP.md`](MCP-APP.md) | The MCP app (agent heartbeat) and the authoring tools, for personal use |

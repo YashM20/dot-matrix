@@ -34,6 +34,7 @@ import { deviceChecks } from './device'
 import { exportChecks } from './export'
 import { dotsChecks } from './dots'
 import { studioChecks } from './studio'
+import { editorChecks } from './editor'
 import { boardGroups, boardIds, boardLabel, groupOf } from '../src/widgets/manifest'
 import { boardBlurbs } from '../src/widgets/blurbs'
 import { boardFromPath } from '../src/site/meta'
@@ -49,6 +50,8 @@ import { typeChecks } from './type'
 import { physicsChecks } from './physics'
 import { ncaChecks } from './nca/checks'
 import { c10Checks } from './c10'
+import { shareChecks } from './widgets/checks'
+import { algorithmsChecks } from './algorithms'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -367,7 +370,7 @@ import type { Layer, Tone } from '../src/engine/types'
 }
 
 // 15) input layer (P2-A): toLocal, pick, dragValue, keyValue, clamp + quantize
-import { beginDrag, dragValue, keyValue, pick, releaseValue, settle, toLocal, type Control } from '../src/engine/interaction'
+import { TOUCH, beginDrag, classifyMove, dragValue, isTap, keyValue, needsHold, pick, releaseValue, settle, toLocal, touchIntent, type Control } from '../src/engine/interaction'
 {
   const near = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) < eps
   const tl = toLocal(110, 220, { left: 100, top: 200, width: 100, height: 50 }, { cols: 10, rows: 5 })
@@ -423,6 +426,15 @@ import { beginDrag, dragValue, keyValue, pick, releaseValue, settle, toLocal, ty
   assert('keys: unbounded crank has no Home/End, arrows step 1/24 turn', keyValue(crank, 0, 'Home') === null && near(keyValue(crank, 0, 'ArrowRight')!, 1 / 24))
   assert('keys: segmented wraps, toggle / button on Space / Enter', keyValue(seg, 2, 'ArrowRight') === 0 && keyValue(seg, 0, 'ArrowLeft') === 2 && keyValue(seg, 1, 'End') === 2
     && keyValue(tog, 0, ' ') === 1 && keyValue(tog, 1, 'Enter') === 0 && keyValue(tog, 0, 'ArrowRight') === null && keyValue(btn, 0, 'Enter') === 1)
+  // touch policy: scroll first; a tap acts on lift, a horizontal drag or a hold claims a drag control
+  assert('touch intent: tap kinds vs drag kinds; `surface` makes a button a drag surface',
+    touchIntent(btn) === 'tap' && touchIntent(tog) === 'tap' && touchIntent(seg) === 'tap' && touchIntent(stepper) === 'tap'
+    && touchIntent(slider) === 'drag' && touchIntent(knob) === 'drag' && touchIntent(xy) === 'drag' && touchIntent({ ...btn, gesture: 'surface' }) === 'drag')
+  assert('touch: only vertical-travel drags need a hold', !needsHold(slider) && !needsHold(knob) && !needsHold(btn) && needsHold(vslider) && needsHold(xy) && needsHold(crank) && needsHold({ ...btn, gesture: 'surface' }))
+  assert('touch move: within slop pending; a vertical swipe is the page\'s; a horizontal one claims drags only',
+    classifyMove('drag', 6, 6) === 'pending' && classifyMove('drag', 10, 1) === 'claim' && classifyMove('drag', 3, 40) === 'scroll' && classifyMove('drag', 30, 8) === 'claim' && classifyMove('drag', 20, 19) === 'scroll'
+    && classifyMove('tap', 30, 0) === 'scroll' && classifyMove('none', 30, 0) === 'scroll')
+  assert('touch tap: still and quick (buttons may be held)', isTap(tog, 4, 200) && !isTap(tog, 14, 100) && !isTap(tog, 2, TOUCH.tapMs + 1) && isTap(btn, 2, 3000) && isTap(undefined, 0, 100))
   assert('settle: quantize from min, then clamp; no float noise', settle({ ...slider, min: .1, max: .9, step: .2 }, .62) === .7 && settle(slider, 3) === 1 && settle({ ...slider, step: .1 }, .3) === .3)
 
   // every declared control (all boards) has a usable box and a label, and its key is unique per card
@@ -840,6 +852,8 @@ import { gpuBoard } from '../src/widgets/boards/gpu'
 }
 // P6-D) Dot Studio: document model, undo/redo, reference stacks, spec v1 / DOTS import, timeline (scripts/studio.ts)
 studioChecks(assert)
+// MAKE editor (docs/EDITOR-PLAN.md): multi-frame document, paint layers, resize anchoring, hit tests, gestures (scripts/editor.ts)
+editorChecks(assert)
 // C10) X-ray probe ≡ sampler, time-machine seek, remix → Field IR, palette fuzzy rank (scripts/c10.ts)
 c10Checks(assert)
 // C2) physics: worlds, stable fluids, PBD cloth / jelly, particles + spatial hash, the physics board (scripts/physics.ts)
@@ -849,6 +863,8 @@ physicsChecks(assert)
 gameChecks(assert)
 // C3) Growing NCA: BPTT grad check, Int8 asset, regrowth gate, step cost, timeline purity, heal board (scripts/nca/checks.ts)
 ncaChecks(assert)
+// ALGORITHMS) stippling, attractor density, WFC, DLA: determinism, invariants, timing, the algorithms board (scripts/algorithms.ts)
+algorithmsChecks(assert)
 
 // UX U1) board picker (docs/UX-PLAN.md §4.2): every board in exactly one group after START HERE, a label and a blurb; old paths still open
 {
@@ -879,6 +895,7 @@ ncaChecks(assert)
   const bad = old.filter(([u, v, m, b]) => !is(at(u), v, m, b)).map(([u]) => `${u} → ${JSON.stringify(at(u))}`)
   assert('ux: every old URL (?tab=… any case, ?board=, /<board>/, aliases, ?p=) opens the view it became', !bad.length, bad.join('; '))
   assert('ux: ?card= and ?tab=essay are recognised', at('/?card=music').card === 'music' && at('/?tab=essay').essay === true && !at('/?tab=log').essay)
+  assert('ux: /privacy and /terms hand over to their static pages', at('/privacy').legal === 'privacy' && at('/terms/').legal === 'terms' && !at('/').legal && !at('/privacy-x').legal)
   // canonical URLs: every place on the first board and on another, with other params kept and old ones folded away
   const canon = (u: string, v: Pick<ViewState, 'view' | 'mode' | 'board'>) => { const x = new URL(u, 'https://x'); return urlForView(v, x.search, x.pathname) }
   const want: [string, Pick<ViewState, 'view' | 'mode' | 'board'>, string][] = [
@@ -886,13 +903,17 @@ ncaChecks(assert)
     ['/?tab=studio&skin=crt', { view: 'MAKE', mode: 'COMPOSE', board: first }, '/?make=compose&skin=crt'],
     ['/?tab=dots&p=zAbC&worker=0', { view: 'MAKE', mode: 'CODE', board: first }, '/?make=code&p=zAbC&worker=0'],
     ['/light/?make=code&p=zAbC', { view: 'MAKE', mode: 'DRAW', board: 'light' }, '/light/?make=draw'],
+    ['/?make=tune', { view: 'MAKE', mode: 'TUNE', board: first }, '/?make'], ['/?tab=workspace&pro=1', { view: 'MAKE', mode: 'TUNE', board: first }, '/?make&pro=1'],
     ['/?tab=log', { view: 'ABOUT', mode: 'TUNE', board: first }, '/?about'], ['/metro/?about&skin=vfd', { view: 'EXPLORE', mode: 'TUNE', board: 'metro' }, '/metro/?skin=vfd'],
   ]
   const off = want.filter(([u, v, w]) => canon(u, v) !== w).map(([u, v, w]) => `${u} → ${canon(u, v)} (want ${w})`)
-  assert('ux: views write their canonical URL (board path, ?make=<mode>, ?about; ?skin/?worker/?p kept, old params folded)', !off.length, off.join('; '))
+  assert('ux: views write their canonical URL (board path, ?make (the editor) / ?make=<mode>, ?about; ?skin/?worker/?p kept, old params folded)', !off.length, off.join('; '))
   const trips = PLACES.flatMap(p => [first, 'light'].map(board => ({ ...placeView(p), board }))).filter(v => { const u = new URL(urlForView(v, '?skin=crt', '/'), 'https://x'); return !is(viewFromUrl(u.search, u.pathname), v.view, v.view === 'MAKE' ? v.mode : null, v.board) })
   assert('ux: every view and MAKE mode round-trips through its canonical URL', !trips.length, trips.map(v => `${v.view}/${v.mode}/${v.board}`).join(', '))
 }
+
+// SHARE S0) widget uids, metadata and URLs (docs/SHARE-PLAN.md §3, scripts/widgets/checks.ts)
+shareChecks(assert)
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')

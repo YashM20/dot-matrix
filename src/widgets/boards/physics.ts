@@ -35,8 +35,11 @@ const clamp = (x: number, lo: number, hi: number) => (x < lo ? lo : x > hi ? hi 
 // The sampling worker would run its own (pristine) copy of a world and snap back when the pointer leaves.
 const IN_WORKER = typeof (globalThis as { WorkerGlobalScope?: unknown }).WorkerGlobalScope !== 'undefined'
 const mainThread = () => { if (IN_WORKER) throw new Error('physics cards keep their live state on the main thread') }
-/** The whole card below the label is one press target: pointers reach the card, Enter / Space kick it. */
-const touch = (key: string, label: string): Control[] => [{ key, kind: 'button', box: [0, 10, 144, 134], label }]
+/**
+ * The whole card below the label is one press target: pointers reach the card, Enter / Space kick it. On touch
+ * it is a drag surface (a horizontal drag or a hold grabs it; a vertical swipe scrolls the page).
+ */
+const touch = (key: string, label: string): Control[] => [{ key, kind: 'button', gesture: 'surface', box: [0, 10, 144, 134], label }]
 /** This frame's input: pointers mapped into world units, tilt from data, a keyboard press as a kick. */
 function frameOf(ctx: WidgetContext, key: string, map: Map2 = ident): FrameInput {
   const busy = ctx.pointers?.some(p => !p.up && (p.down || p.inside)) ?? false

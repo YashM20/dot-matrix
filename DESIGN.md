@@ -270,6 +270,9 @@ Interaction is a state the card's *data* is in, not a CSS layer on top. The inpu
 | `{interaction.focusDash}` | 3 dots lit, 2 dots dark (one 5-site period) along the control's dotted outline | Keyboard focus ring (marching dots) |
 | `{interaction.focusSpeed}` | 8 cells per second (at most 1 cell per frame at 12 fps), linear | Marching speed of the focus dash; held still under reduced motion |
 | `{interaction.hitPad}` | Pad each target by whole cells until it is at least 24 px square (`ceil(24 / pxPerCell)` cells per axis); **44 px** when the pointer is touch | Hit-test rectangle around every control; never changes what is drawn |
+| `{interaction.touchSlop}` | 10 px of finger travel | Below it a touch can still be a tap or a hold; past it, a vertical move is the page's scroll and a horizontal one claims a drag control (`TOUCH.slop`, `src/engine/interaction/gesture.ts`) |
+| `{interaction.pressDelay}` | 110 ms still | A touched tap control shows its press (a button goes down) only after this, so a swipe that starts on it never flashes it |
+| `{interaction.holdEngage}` | 300 ms still | Press-and-hold on a drag control grabs it in any direction and engages the card (hairline-active border, DONE in the bar) until a touch elsewhere, Escape, DONE or 8 s idle |
 
 ### Grammar rules
 
@@ -280,6 +283,7 @@ Interaction is a state the card's *data* is in, not a CSS layer on top. The inpu
 - **Drag scrubs whole dot columns.** A horizontal drag moves a value one whole column (or lattice step) at a time, never a fractional position. Bars, sliders and playheads quantize to site columns, so the control always sits exactly on dots.
 - **Long-press is a radial-reveal progress.** Holding a control reveals a ring of sites clockwise from 12 o'clock around the press point; the action fires when the ring closes. Releasing early un-reveals it on the release spring.
 - **Hit pad** is invisible. Targets below 24 px (44 px on touch) grow their hit rectangle, not their dots.
+- **Touch is scroll-first.** A vertical swipe over any card scrolls the page and leaves the card untouched. Taps act on lift. A drag control is taken by a horizontal drag or by `{interaction.holdEngage}`; a card you push around in every direction marks its control `gesture: 'surface'`. Details: docs/UX-PLAN.md › Touch policy.
 
 ## Do's and Don'ts
 
@@ -320,6 +324,7 @@ Unlike a typical responsive system that reflows layout, Dot/480's primary respon
 ### Collapsing Strategy
 - **Board grid:** 3-up → 2-up → 1-up at standard tablet/mobile breakpoints; gutters (`{spacing.cardGap}`) hold constant, cards simply get taller in the single-column stack.
 - **Wide widgets:** waveform, chat, and message-list cards span 2 columns at desktop/tablet, collapse to full-width single-column at mobile without changing internal dot density.
+- **Phone shell (≤ 760 px, `src/site/mobile.css`):** the site chrome becomes an app shell. A compact sticky top bar names the place (on EXPLORE it opens the board sheet) and holds search; a bottom tab bar (EXPLORE / MAKE / ABOUT / TOOLS) sits over the home indicator; the board groups and boards are sideways thumb strips; the dock, the DISPLAY ▾ menu and the ⌘K palette become bottom sheets (grab handle, swipe down, backdrop, Escape). Every chrome target is ≥ 44 px; the accent marks only the active tab, board and live state. Layout vars `--app-top` and `--tabbar-h` (both include the safe-area insets) let fixed or pinned UI sit clear of the bars.
 - **Renderer fallback:** below a device-performance threshold (detected via a quick canvas-fill-rate probe), all widgets fall back to Canvas rendering regardless of dot count, trading copy-paste-ability for guaranteed frame rate.
 
 ### Image Behavior

@@ -288,7 +288,7 @@ export function Essay() {
           and a <a href="./?about">log</a> of what changed.
         </p>
       </section>
-      <footer className="essay-foot">DOT/480 · FIELD → GRID SAMPLER → RENDERER · <span>NO GRADIENTS WERE HARMED</span></footer>
+      <footer className="essay-foot">DOT/480 · FIELD → GRID SAMPLER → RENDERER · <span>NO GRADIENTS WERE HARMED</span><span><a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></footer>
     </main>
   )
 }

@@ -4,13 +4,65 @@
  * card's spec (`presetToSpec`), plus Open in DOTS and a deep link. It opens on SUMMARY (UX U2): the same card in
  * plain words, with tap / hover definitions from the glossary.
  */
-import { useEffect, useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import type { Layer } from '../../engine'
 import { describe, type CardDescription } from '../../engine/describe'
 import { presetToSpec } from '../../spec'
 import { GLOSSARY, GLOSSARY_TERMS, type GlossaryTerm } from '../glossary'
 import { fmt, layerKind, layerName, layerIR } from './probe'
-import { muteLayer, probes, setXR, soloLayer, toggleGlobal, useXR, type CardProbe } from './store'
+import { cardElement, muteLayer, probes, setXR, soloLayer, toggleCard, toggleGlobal, useXR, xrState, type CardProbe } from './store'
+
+/** At this width the inspector is a bottom sheet (App.css): a grip, swipe down to close, swipe up for more. */
+const SHEET = '(max-width: 760px)'
+const isSheet = () => typeof matchMedia === 'function' && matchMedia(SHEET).matches
+/** Touch screens: the X-ray copy says tap, not hover. */
+const noHover = () => typeof matchMedia === 'function' && matchMedia('(hover: none)').matches
+/** Close the sheet for real: X-ray off for the card it shows (the desktop panel's "hover a card" state means nothing on touch). */
+function dismiss(key: string | null) {
+  if (xrState().global) toggleGlobal(false)
+  else if (key) toggleCard(key)
+  else setXR({ active: null })
+}
+/**
+ * Bottom-sheet drag on the grip and header: the sheet follows the finger down; let go past 80 px (or a quick
+ * flick) and it steps down (full → half → closed); a pull up past 40 px opens it full. Buttons keep their taps.
+ */
+function useSheetDrag(onClose: () => void) {
+  const [full, setFull] = useState(false)
+  const [dy, setDy] = useState(0)
+  const drag = useRef<{ id: number; y0: number; t0: number; moving: boolean } | null>(null)
+  const end = (e: ReactPointerEvent<HTMLElement>, cancel: boolean) => {
+    const d = drag.current
+    if (!d || d.id !== e.pointerId) return
+    drag.current = null; setDy(0)
+    if (cancel || !d.moving) return
+    const dist = e.clientY - d.y0, v = dist / Math.max(1, e.timeStamp - d.t0)
+    if (dist > 80 || v > .6) { if (full) setFull(false); else onClose() }
+    else if (dist < -40 || v < -.6) setFull(true)
+  }
+  const grip = {
+    onPointerDown(e: ReactPointerEvent<HTMLElement>) {
+      if (!isSheet() || (e.pointerType === 'mouse' && e.button !== 0)) return
+      if ((e.target as HTMLElement).closest('button:not(.xr-grip)')) return
+      drag.current = { id: e.pointerId, y0: e.clientY, t0: e.timeStamp, moving: false }
+    },
+    onPointerMove(e: ReactPointerEvent<HTMLElement>) {
+      const d = drag.current
+      if (!d || d.id !== e.pointerId) return
+      // capture only once it moves, so a tap on the grip stays a click on the grip
+      if (!d.moving && Math.abs(e.clientY - d.y0) > 6) {
+        d.moving = true
+        try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* gone */ }
+      }
+      if (d.moving) setDy(e.clientY - d.y0)
+    },
+    onPointerUp(e: ReactPointerEvent<HTMLElement>) { end(e, false) },
+    onPointerCancel(e: ReactPointerEvent<HTMLElement>) { end(e, true) },
+  }
+  // down follows the finger; up gives a little (rubber band) before it snaps open
+  const style = dy ? { transform: `translateY(${dy > 0 ? dy : dy / 4}px)`, transition: 'none' } : undefined
+  return { full, setFull, grip, style }
+}
 
 const plural = (n: number, w: string) => `${n.toLocaleString('en-US')} ${w}${n === 1 ? '' : 's'}`
 /** SUMMARY: what the card is made of, how many dots, what the controls change; glossary words are buttons. */
@@ -25,7 +77,7 @@ function Summary({ probe, layers, d }: { probe: CardProbe; layers: Layer[]; d: C
     <p>Each dot's size is the field's value{steps ? <>, snapped to {steps} steps ({term('quantize')})</> : ' (not quantized)'}; its colour is its {term('tone')}.{ir && <> Part of it is written in {term('IR')}, so REMIX opens its own program.</>}</p>
     {d.controls.length ? <ul>{d.controls.map(c => <li key={c.key}><b>{c.label}</b> ({c.kind}) sets <code>{c.key}</code>, now {c.valueText}</li>)}</ul>
       : <p>No controls: {probe.animated ? 'it moves on its own clock' : 'it is a still picture'}.</p>}
-    <p className="xr-note">Hover any dot to see its value, size step, tone and layer.</p>
+    <p className="xr-note">{noHover() ? 'Tap' : 'Hover'} any dot to see its value, size step, tone and layer.</p>
     <p className="xr-words">{GLOSSARY_TERMS.map(k => <span key={k}>{term(k)}</span>)}</p>
     {word && <p className="xr-def" role="note"><b>{word}</b> {GLOSSARY[word]}</p>}
   </div>
@@ -44,6 +96,15 @@ export function Inspector({ onRemix, onStudio, onCopyLink }: { onRemix: (cardId:
     return () => clearInterval(id)
   }, [anyOn, active])
   const [tab, setTab] = useState<'summary' | 'layers' | 'data' | 'describe' | 'spec'>('summary')
+  const sheet = useSheetDrag(() => dismiss(active))
+  // sheet: keep the inspected card in view above the half-height sheet (it covers the lower part of the screen)
+  useEffect(() => {
+    if (!active || !isSheet()) return
+    const el = cardElement(active)
+    if (!el) return
+    const r = el.getBoundingClientRect(), sheetTop = window.innerHeight * .58
+    if (r.bottom > sheetTop && r.top > 64) window.scrollBy({ top: Math.min(r.top - 64, r.bottom - sheetTop), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  }, [active])
   const probe = active ? probes.get(active) : undefined
   const presetId = probe?.preset.id
   const layers = useMemo(() => { try { return probe ? probe.layers({ t: probe.stats.t, frame: 0, data: probe.data, grid: probe.grid }) : [] } catch { return [] } }, [probe, probe?.stats.t, probe?.data]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -52,16 +113,19 @@ export function Inspector({ onRemix, onStudio, onCopyLink }: { onRemix: (cardId:
     try { return JSON.stringify(presetToSpec(probe.preset), null, 1) } catch (e) { return `// presetToSpec failed: ${(e as Error).message}` }
   }, [tab, presetId]) // eslint-disable-line react-hooks/exhaustive-deps
   if (!anyOn) return null
-  if (!probe) return <aside className="xr-panel xr-panel--empty" aria-label="X-ray inspector"><p>Hover an X-ray card to inspect it.</p><button onClick={() => toggleGlobal(false)}>X-RAY OFF</button></aside>
+  if (!probe) return <aside className="xr-panel xr-panel--empty" aria-label="X-ray inspector"><p>{noHover() ? 'Tap' : 'Hover'} an X-ray card to inspect it.</p><button onClick={() => toggleGlobal(false)}>X-RAY OFF</button></aside>
   const d = describe(probe.preset, { t: probe.stats.t, data: probe.data })
   const keys = Object.keys(probe.data).sort()
   const mode = probe.mode(), worker = probe.worker()
   return (
-    <aside className="xr-panel" aria-label={`X-ray inspector: ${probe.preset.name}`}>
-      <header className="xr-panel-head">
-        <div><b>{probe.preset.name.toUpperCase()}</b><small>{probe.preset.id} · {probe.preset.group}</small></div>
-        <button aria-label="Close inspector" onClick={() => setXR({ active: null })}>×</button>
-      </header>
+    <aside className={`xr-panel${sheet.full ? ' xr-panel--full' : ''}`} style={sheet.style} aria-label={`X-ray inspector: ${probe.preset.name}`}>
+      <div className="xr-sheet-top" {...sheet.grip}>
+        <button type="button" className="xr-grip" aria-label={sheet.full ? 'Show less of the inspector' : 'Show more of the inspector'} aria-expanded={sheet.full} onClick={() => sheet.setFull(f => !f)} />
+        <header className="xr-panel-head">
+          <div><b>{probe.preset.name.toUpperCase()}</b><small>{probe.preset.id} · {probe.preset.group}</small></div>
+          <button aria-label="Close inspector" onClick={() => (isSheet() ? dismiss(active) : setXR({ active: null }))}>×</button>
+        </header>
+      </div>
       <dl className="xr-runtime">
         <div><dt>RENDERER</dt><dd>{mode}{worker ? ' + worker' : ''}</dd></div>
         <div><dt>FPS</dt><dd>{probe.animated && probe.fps ? `${probe.stats.fps} / ${probe.fps}` : 'static'}</dd></div>

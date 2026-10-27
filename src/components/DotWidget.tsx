@@ -1,6 +1,6 @@
 import type { Control, ControlPatch, DotStyle, ThemeTokens } from '../engine'
-import { dot480 } from '../engine'
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { dot480, needsHold } from '../engine'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { withChrome, type WidgetPreset } from '../widgets/types'
 import { registeredPreset } from '../widgets/registry'
 import { findPreset } from '../widgets/manifest'
@@ -10,6 +10,7 @@ import { HAND_KEY, useHandMode } from '../media/useHand'
 import { useXRay } from './xray/useXRay'
 import { XRayOverlay } from './xray/XRayOverlay'
 import { cardAction, type CardAction } from './xray/store'
+import './touch.css'
 
 /** U2 header hint: what a visitor can do to the card, read off its controls (grey, never the accent). */
 function hintVerb(p: WidgetPreset, cs: Control[]) {
@@ -17,6 +18,8 @@ function hintVerb(p: WidgetPreset, cs: Control[]) {
   return p.media === 'camera' || has(/^(cam|hand)$|camera/i) ? 'CAMERA' : has(/scratch/i) ? 'SCRATCH' : has(/^hold/i) ? 'HOLD'
     : has(/^(mic|sound|audio)$/i) ? 'SOUND' : cs.some(c => /slider|knob|crank|xy/.test(c.kind)) || has(/^(grab|stir|throw|drag)/i) ? 'DRAG' : 'TAP'
 }
+/** The same hint on touch, where a drag that has to go up or down starts with a hold (a vertical swipe scrolls the page). */
+const touchVerb = (verb: string, cs: Control[]) => (verb === 'DRAG' && cs.some(needsHold) ? 'HOLD · DRAG' : undefined)
 const ACTS: [CardAction, string, string][] = [['how', 'ⓘ', 'How it works'], ['remix', 'REMIX', 'Remix this card'], ['link', 'LINK', 'Copy a link to this card'], ['png', 'PNG', 'Download as PNG']]
 
 export interface DotWidgetProps {
@@ -60,6 +63,18 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
   // interactive data (P2): input patches merged over the defaults and the `data` prop
   const [local, setLocal] = useState<ControlPatch>({})
   const [menu, setMenu] = useState(false)
+  // touch engagement (a hold grabbed the card): the way out, shown as DONE in the bar
+  const [letGo, setLetGo] = useState<(() => void) | null>(null)
+  const onEngage = useCallback((exit: (() => void) | null) => setLetGo(() => exit), [])
+  // the ⋯ strip closes on a tap anywhere else or on Escape, like a native menu
+  const bar = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!menu) return
+    const away = (e: PointerEvent) => { if (!bar.current?.contains(e.target as Node)) setMenu(false) }
+    const key = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false) }
+    document.addEventListener('pointerdown', away, true); document.addEventListener('keydown', key)
+    return () => { document.removeEventListener('pointerdown', away, true); document.removeEventListener('keydown', key) }
+  }, [menu])
   // live media (P4): a camera card's feed starts only once its own control turned `cam` on
   const merged = { ...preset?.defaults, ...data, ...shared, ...local }
   const camera = useCamera(preset?.media === 'camera', !!merged.cam, preset?.grid)
@@ -90,24 +105,25 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
   // working unscaled; boxes that fall outside the smaller grid are dropped
   const controls = preset.controls?.filter(({ box: [c, r, bw, bh] }) => c < grid.cols && r < grid.rows && c + bw > 0 && r + bh > 0)
   const interactive = !!controls?.length
-  const hint = interactive ? hintVerb(preset, controls!) : undefined, name = preset.live ? `${preset.name} (live)` : preset.name
+  const hint = interactive ? hintVerb(preset, controls!) : undefined, touchHint = hint && touchVerb(hint, controls!), name = preset.live ? `${preset.name} (live)` : preset.name
   const act = (a: CardAction) => () => { setMenu(false); cardAction(a, { key: xr.key, preset, data: merged, layers, grid, style, theme, animated: !!(animated ?? preset.animated) }) }
   return (
     // a group (it holds the action strip); a static card's body is one dot-matrix picture (role="img"), an
     // interactive card's body holds its accessibility overlay (real controls)
-    <div className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}`} role="group" data-xr-key={xr.key} data-card-id={preset.id} aria-label={name}>
+    <div className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}${letGo ? ' dot-card--engaged' : ''}`} role="group" data-xr-key={xr.key} data-card-id={preset.id} aria-label={name}>
       {preset.chrome !== 'dots' && <header className="dot-card-head" aria-hidden="true">
-        <span className="dot-card-label">{preset.name.toUpperCase()}{hint && <small className="dot-card-hint">{hint}</small>}</span>
+        <span className="dot-card-label">{preset.name.toUpperCase()}{hint && <small className="dot-card-hint" data-touch={touchHint}>{hint}</small>}</span>
         {preset.live && <i className="status-dot" />}
       </header>}
-      <div className={`dot-card-bar${menu ? ' open' : ''}`}>
-        {hint && preset.chrome === 'dots' && <small className="dot-card-hint" aria-hidden="true">{hint}</small>}
+      <div ref={bar} className={`dot-card-bar${menu ? ' open' : ''}`}>
+        {hint && preset.chrome === 'dots' && <small className="dot-card-hint" data-touch={touchHint} aria-hidden="true">{hint}</small>}
+        {letGo && <button type="button" className="dot-card-done" aria-label={`${preset.name}: let go of the card`} onClick={letGo}>DONE</button>}
         <span className="dot-card-acts">{ACTS.map(([a, label, title]) => <button key={a} type="button" aria-label={title} title={title} aria-pressed={a === 'how' ? xr.on : undefined} onClick={act(a)}>{label}</button>)}</span>
         <button type="button" className="dot-card-more" aria-label={`${preset.name}: card actions`} aria-expanded={menu} onClick={() => setMenu(m => !m)}>⋯</button>
       </div>
       <div className="dot-card-body" role={interactive ? undefined : 'img'} aria-label={interactive ? undefined : name}>
         <DotCanvas layers={xr.layers} renderer={xr.renderer} onMode={xr.onMode} data={preset.media ? { ...merged, ...camera.data, ...hand.data } : { ...merged, ...hand.data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={camera.status === 'live' ? 30 : undefined} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
-          controls={interactive ? controls : undefined} onInput={interactive ? onInput : undefined} />
+          controls={interactive ? controls : undefined} onInput={interactive ? onInput : undefined} onEngage={interactive ? onEngage : undefined} />
         {xr.on && <XRayOverlay xr={xr} preset={preset} layers={layers} data={preset.media ? { ...merged, ...camera.data } : merged} grid={grid} style={style} theme={theme}
           animated={!!(animated ?? preset.animated)} fps={camera.status === 'live' ? 30 : undefined} tick={tick} />}
       </div>

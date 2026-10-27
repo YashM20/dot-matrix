@@ -12,11 +12,13 @@ import type { Control } from '../../engine/context'
 import type { DotStyle, Field, GridConfig, Layer, Tone } from '../../engine/types'
 import { ease, masks, type EaseName, type MaskName } from '../../engine/motion'
 import { SHARE_GRIDS, type SharedProgram } from '../../lib/share'
+import { latticeGrid } from '../../engine/sampler/gridSampler'
+import { base64Bytes, BASE64, fromBase64, toBase64 } from '../../spec/codec'
 import { buildLayer, LAYER_KINDS, type LayerSpec } from '../../spec'
 import { layoutFor, tileStyle, TILE, widgetById, withChrome, type WidgetContext, type WidgetPreset } from '../../widgets'
 
 export const STUDIO_VERSION = 1
-export type LayerKind = 'ir' | 'text' | 'sites' | 'preset-layer' | 'spec'
+export type LayerKind = 'ir' | 'text' | 'sites' | 'preset-layer' | 'spec' | 'paint'
 /**
  * How a layer meets the layer below it (in z order). `normal`: its own layer, the sampler's max-value
  * composite (later wins ties). The others fold this layer's field into the one below and draw in the
@@ -51,7 +53,13 @@ export interface SitesLayer extends LayerBase {
 export interface PresetLayer extends LayerBase { kind: 'preset-layer'; params: { preset: string; index: number } }
 /** Any card spec v1 layer (raster, generator, bound text, site lists…), built by `src/spec` `buildLayer`; edited as JSON. */
 export interface SpecLayer extends LayerBase { kind: 'spec'; spec: LayerSpec }
-export type StudioLayer = IRLayer | TextLayer | SitesLayer | PresetLayer | SpecLayer
+/**
+ * Painted dots (the MAKE editor's draw tool): one u8 value (÷255) per cell of the layer's lattice grid,
+ * row-major, `cols`×`rows`, as canonical base64. Cells are locked to the lattice (a resized card crops
+ * or pads them, it never stretches them); the field is read nearest-cell like a raster.
+ */
+export interface PaintLayer extends LayerBase { kind: 'paint'; lattice: number; cols: number; rows: number; cells: string }
+export type StudioLayer = IRLayer | TextLayer | SitesLayer | PresetLayer | SpecLayer | PaintLayer
 
 export interface Motion { mask: MaskName; ease: EaseName; ms: number }
 export interface StudioState { name: string; data: Record<string, number> }
@@ -91,6 +99,28 @@ export const irLayer = (src: string, o: Partial<IRLayer> = {}): IRLayer => ({ ..
 export const textLayer = (text: string, o: Partial<Omit<TextLayer, 'params'>> & { params?: Partial<TextLayer['params']> } = {}): TextLayer => {
   const { params, ...rest } = o
   return { ...base('text', 0), tone: 'value', kind: 'text', lattice: 1, ...rest, params: { text, col: 8, row: 8, align: 'left', scale: 1, smooth: false, ...params } }
+}
+/** An empty paint layer covering `grid` on `lattice` (the grid it will be sampled on). */
+export const paintLayer = (grid: GridConfig, o: Partial<Omit<PaintLayer, 'cols' | 'rows' | 'cells'>> & { cells?: Uint8Array } = {}): PaintLayer => {
+  const { cells, ...rest } = o, lattice = rest.lattice ?? 1, sub = latticeGrid(grid, lattice)
+  const bytes = cells && cells.length === sub.cols * sub.rows ? cells : new Uint8Array(sub.cols * sub.rows)
+  return { ...base('paint', 0), tone: 'value', kind: 'paint', ...rest, lattice, cols: sub.cols, rows: sub.rows, cells: toBase64(bytes) }
+}
+/**
+ * Cells being painted right now, by layer id: a stroke edits a copy here (the compiled field reads it
+ * first), and the finished stroke is committed as one document edit. React-free, module-level.
+ */
+export const PAINT_LIVE = new Map<string, Uint8Array>()
+const paintMemo = new Map<string, Uint8Array>()
+/** The decoded cells of a paint layer (memoised by the base64 string; a handful of layers at most). */
+export function paintCells(l: PaintLayer): Uint8Array {
+  let a = paintMemo.get(l.cells)
+  if (!a) {
+    a = fromBase64(l.cells)
+    if (paintMemo.size > 48) paintMemo.delete(paintMemo.keys().next().value!)
+    paintMemo.set(l.cells, a)
+  }
+  return a
 }
 export const sitesLayer = (o: Partial<Omit<SitesLayer, 'params'>> & { params?: Partial<SitesLayer['params']> } = {}): SitesLayer => {
   const { params, ...rest } = o
@@ -214,6 +244,16 @@ export function compileCard(card: StudioCard, good: ProgramCache = new Map()): C
         ? { ...L.big(s, col, row, { lattice: l.lattice, smooth, align, scale }), tone: tone('value') }
         : { field: textAt(card.grid, s, col, row, { align, scale, smooth }), tone: tone('value') }
       builders.push({ layer: l, build: () => built })
+    } else if (l.kind === 'paint') {
+      const sub = latticeGrid(card.grid, l.lattice), cells = paintCells(l), { cols, rows, id } = l
+      const lattice = l.lattice > 1 ? l.lattice : undefined
+      const field: Field = (u, v) => {
+        const c = Math.round(u * (sub.cols - 1)), r = Math.round(v * (sub.rows - 1))
+        if (c < 0 || r < 0 || c >= cols || r >= rows) return 0
+        return (PAINT_LIVE.get(id) ?? cells)[r * cols + c] / 255
+      }
+      const built: Layer = { field, tone: tone('value'), ...(lattice && { lattice }) }
+      builders.push({ layer: l, build: () => built })
     } else if (l.kind === 'spec') {
       let build: ((ctx: WidgetContext) => Layer) | undefined
       try { build = buildLayer(l.spec, card.grid, { irMode: 'function' }) } catch (e) { errors.set(l.id, new IRError(`spec layer: ${(e as Error).message}`)) }
@@ -293,7 +333,7 @@ export function validateCard(x: unknown): StudioCard {
     const w = `layers[${i}]`
     str(l.id, 64, `${w}.id`); if (ids.has(l.id)) throw new Error(`studio card: duplicate layer id ${l.id}`); ids.add(l.id)
     str(l.name, 64, `${w}.name`)
-    oneOf(l.kind, ['ir', 'text', 'sites', 'preset-layer', 'spec'] as const, `${w}.kind`)
+    oneOf(l.kind, ['ir', 'text', 'sites', 'preset-layer', 'spec', 'paint'] as const, `${w}.kind`)
     oneOf(l.tone, [...TONES, 'preset'] as LayerTone[], `${w}.tone`)
     oneOf(l.blend, BLENDS, `${w}.blend`)
     num(l.z, -1e6, 1e6, `${w}.z`)
@@ -302,6 +342,10 @@ export function validateCard(x: unknown): StudioCard {
     if (l.kind === 'sites') { str(l.src, IR_LIMITS.source, `${w}.src`); num(l.size, .25, 16, `${w}.size`); oneOf(l.params?.shape, ['ring', 'line', 'disc'] as const, `${w}.params.shape`) }
     if (l.kind === 'text') { str(l.params?.text, 64, `${w}.params.text`); num(l.params.col, -512, 512, `${w}.params.col`); num(l.params.row, -512, 512, `${w}.params.row`); num(l.lattice, 1, 16, `${w}.lattice`) }
     if (l.kind === 'spec' && !(l.spec && typeof l.spec === 'object' && (LAYER_KINDS as readonly string[]).includes(l.spec.kind))) throw new Error(`studio card: ${w}.spec must be a card spec v1 layer`)
+    if (l.kind === 'paint') {
+      num(l.lattice, 1, 16, `${w}.lattice`); num(l.cols, 1, 512, `${w}.cols`); num(l.rows, 1, 512, `${w}.rows`)
+      if (typeof l.cells !== 'string' || !BASE64.test(l.cells) || base64Bytes(l.cells) !== l.cols * l.rows) throw new Error(`studio card: ${w}.cells must be base64 of ${w}.cols × ${w}.rows bytes`)
+    }
     if (l.kind === 'preset-layer') { str(l.params?.preset, 64, `${w}.params.preset`); num(l.params.index, 0, 256, `${w}.params.index`) }
   })
   dataOf(c.data, 'data')
@@ -326,18 +370,19 @@ export const cardFromJSON = (json: string): StudioCard => {
 }
 
 // ── undo / redo ────────────────────────────────────────────────────────────
-export interface History { past: StudioCard[]; present: StudioCard; future: StudioCard[]; tag?: string; at: number }
+/** Undo history of any immutable document (a Studio card, the MAKE editor's multi-frame document). */
+export interface History<T = StudioCard> { past: T[]; present: T; future: T[]; tag?: string; at: number }
 export const HISTORY_LIMIT = 100
 /** Edits with the same `tag` within this many ms merge into one undo step (typing, dragging a slider). */
 export const COALESCE_MS = 700
-export const historyOf = (present: StudioCard): History => ({ past: [], present, future: [], at: 0 })
-export function commit(h: History, next: StudioCard, tag?: string, now = Date.now()): History {
+export const historyOf = <T = StudioCard>(present: T): History<T> => ({ past: [], present, future: [], at: 0 })
+export function commit<T>(h: History<T>, next: T, tag?: string, now = Date.now()): History<T> {
   if (next === h.present) return h
   if (tag && tag === h.tag && now - h.at < COALESCE_MS && h.past.length) return { ...h, present: next, future: [], at: now }
   return { past: [...h.past, h.present].slice(-HISTORY_LIMIT), present: next, future: [], tag, at: now }
 }
-export const undo = (h: History): History => h.past.length ? { past: h.past.slice(0, -1), present: h.past[h.past.length - 1], future: [h.present, ...h.future], at: 0 } : h
-export const redo = (h: History): History => h.future.length ? { past: [...h.past, h.present], present: h.future[0], future: h.future.slice(1), at: 0 } : h
+export const undo = <T>(h: History<T>): History<T> => h.past.length ? { past: h.past.slice(0, -1), present: h.past[h.past.length - 1], future: [h.present, ...h.future], at: 0 } : h
+export const redo = <T>(h: History<T>): History<T> => h.future.length ? { past: [...h.past, h.present], present: h.future[0], future: h.future.slice(1), at: 0 } : h
 
 // ── localStorage ───────────────────────────────────────────────────────────
 export const STORAGE_KEY = 'dot480.studio.v1'

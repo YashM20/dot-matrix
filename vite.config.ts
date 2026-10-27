@@ -22,7 +22,8 @@ function sitePostbuild(): Plugin {
 }
 
 // extra HTML entries ship as their own pages when present (the launch essay, docs/WEB-PLAN.md §1)
-const pages = ['essay.html'].filter(f => existsSync(f))
+// privacy.html + terms.html: static legal pages, no JS (vercel.json rewrites /privacy and /terms to them)
+const pages = ['essay.html', 'privacy.html', 'terms.html'].filter(f => existsSync(f))
 
 // https://vite.dev/config/
 export default defineConfig({

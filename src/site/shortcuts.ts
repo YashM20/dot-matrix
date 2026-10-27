@@ -21,7 +21,7 @@ export const URL_PARAMS: readonly Shortcut[] = [
   { keys: '?make=tune|compose|code|draw', does: 'open MAKE in a mode' },
   { keys: '?make=code&p=…', does: 'a shared field program' },
   { keys: '?about', does: 'this page' },
-  { keys: '?card=<id>', does: 'one card alone' },
+  { keys: '/widget/<id>/', does: 'one card on its own page (also /<short id>)' },
   { keys: '?skin=crt|vfd|led|eink|flipdisc|nixie', does: 'display skin' },
   { keys: '?worker=0', does: 'sample on the main thread' },
   { keys: '?clack=1', does: 'flip-disc clack sound' },

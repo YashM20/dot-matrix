@@ -11,8 +11,11 @@
   font: 500 10px var(--mono, monospace);
   letter-spacing: .16em;
   cursor: pointer;
-  text-align: left
+  text-align: left;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent
 }
+.hive-start:active { border-color: var(--label, #8a8f98) }
 .hive-start:hover, .hive-start:focus-visible { border-color: var(--label, #8a8f98); color: var(--label, #8a8f98) }
 .hive-start:focus-visible { outline: 2px solid var(--label, #8a8f98); outline-offset: 2px }
 .hive-start canvas { display: block }
@@ -30,7 +33,11 @@
   text-align: left;
   touch-action: none;
   user-select: none;
-  -webkit-user-select: none
+  -webkit-user-select: none;
+  /* a game owns every touch: no callout sheet, no pull-to-refresh or scroll chaining behind it */
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none
 }
 /* the full-screen game covers the board: take its cards out of rendering while playing (covered cards still
    count as on screen, so nine animated canvases kept compositing under the game: ~200 ms frames headless) */

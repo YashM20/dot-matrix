@@ -52,6 +52,7 @@ export const boardManifest = [
   { id: 'physics', title: 'PHYSICS — DOTS YOU CAN TOUCH', columns: 3, load: () => import('./boards/physics').then(m => ({ items: m.physicsBoard })) },
   { id: 'scope', title: 'SCOPE — THE INSTRUMENT, SEEN', columns: 3, load: () => import('./boards/scope').then(m => ({ items: m.scopeBoard, shared: m.scopeShared })) },
   { id: 'heal', title: 'HEAL — THE MIRROR THAT HEALS', columns: 3, load: () => import('./boards/heal').then(m => ({ items: m.healBoard })) },
+  { id: 'algorithms', title: 'ALGORITHMS — STIPPLE, ATTRACT, COLLAPSE, AGGREGATE', columns: 2, load: () => import('./boards/algorithms').then(m => ({ items: m.algorithmsBoard })) },
 ] as const satisfies readonly (BoardMeta & { load: () => Promise<BoardContents> })[]
 
 export type BoardId = typeof boardManifest[number]['id']
@@ -60,6 +61,12 @@ export const boardIds: string[] = boardManifest.map(b => b.id)
 export const boardAliases: Readonly<Record<string, string>> = { glyph: 'lock' }
 export const resolveBoardId = (id: string): string => boardAliases[id] ?? id
 export const boardMeta = (id: string): BoardMeta | undefined => boardManifest.find(b => b.id === id)
+/**
+ * Old card ids (slugs) that still open their card (docs/SHARE-PLAN.md §3): a renamed card adds `old: 'new'`
+ * here and its old `/widget/<old>/` link keeps working forever. The lock board's cards were `glyph-*`.
+ */
+export const cardAliases: Readonly<Record<string, string>> = {}
+export const resolveCardId = (id: string): string => cardAliases[id] ?? (id.startsWith('glyph-') ? `lock-${id.slice(6)}` : id)
 
 /**
  * The board picker (docs/UX-PLAN.md §4.2): plain names and groups. UI only: ids, paths, OG pages and goldens
@@ -73,7 +80,7 @@ export const boardGroups = [
   { id: 'ui', label: 'INTERFACES', boards: ['henry', 'deerflow12', 'mosaic', 'henry3', 'metro', 'ride', 'audio', 'lock', 'components', 'surfaces'] },
   { id: 'data', label: 'DATA', boards: ['live', 'departures', 'heartbeat'] },
   { id: 'play', label: 'PLAY', boards: ['levels', 'physics', 'instrument', 'scope', 'mirror', 'heal'] },
-  { id: 'engine', label: 'ENGINE', boards: ['ir', 'sim', 'light', 'gpu', 'type', 'cinema'] },
+  { id: 'engine', label: 'ENGINE', boards: ['ir', 'sim', 'algorithms', 'light', 'gpu', 'type', 'cinema'] },
 ] as const satisfies readonly { id: string; label: string; boards: readonly BoardId[] }[]
 export type BoardGroupId = typeof boardGroups[number]['id']
 /** The group a board lives in (START HERE is a tour, not a home). */

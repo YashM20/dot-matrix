@@ -16,6 +16,8 @@ import { useDotField } from '../hooks/useDotField'
 import { useControlInput } from '../hooks/useControlInput'
 import { ControlOverlay } from './ControlOverlay'
 import { DisplaySurface } from './skins/DisplaySurface'
+// card touch policy (pan-y drag pads, engaged state): every interactive surface needs it, the essay's figures too
+import './touch.css'
 
 /** `webgl` (P5): the canvas surface drawn through the shared WebGL2 context; picked for cards with GPU layers when WebGL2 works. */
 export type RenderMode = 'svg' | 'canvas' | 'webgl'
@@ -68,6 +70,8 @@ export interface DotCanvasProps {
    */
   controls?: Control[]
   onInput?: (patch: ControlPatch) => void
+  /** Touch engagement (a hold grabbed the card): called with a way out while engaged, `null` when it lets go. */
+  onEngage?: (exit: (() => void) | null) => void
 }
 const CANVAS_THRESHOLD = 2000
 const MAX_BACKING_SCALE = 3
@@ -146,7 +150,7 @@ type Transient =
   | { kind: 'migrate'; t0: number | null; m: Migration; delay: number; duration: number; back: boolean; out: DotInstance[] }
 
 /** Field → Grid Sampler → Renderer. Picks SVG for sparse static output, Canvas above ~2000 dots or when animated. */
-export function DotCanvas({ field, layers, data, grid, style, theme = dot480, animated, fps, tick = 0, burst, renderer, enter, exit, migrate, change = 'ign', springKeys, onMode, className, controls, onInput }: DotCanvasProps) {
+export function DotCanvas({ field, layers, data, grid, style, theme = dot480, animated, fps, tick = 0, burst, renderer, enter, exit, migrate, change = 'ign', springKeys, onMode, className, controls, onInput, onEngage }: DotCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const svgRef = useRef<HTMLDivElement>(null)
   const reducedMotion = usePrefersReducedMotion()
@@ -158,6 +162,8 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   // reduced motion or off-screen, `tick` for wall-clock cards.
   const input = useControlInput(controls, grid, data ?? {}, onInput)
   const interactive = !!controls?.length && !!layers
+  const touchEngaged = input.engaged, disengage = input.disengage
+  useEffect(() => { onEngage?.(touchEngaged ? disengage : null) }, [touchEngaged, disengage, onEngage])
   // engaged: a control is hovered, pressed or focused, so even a static card runs on the clock (glow, press
   // ripple and the marching focus ring read `t`); under reduced motion it stays a re-sampled still frame
   const engaged = interactive && !reducedMotion && !!(input.ix?.hover || input.ix?.pressed || input.ix?.focus || input.ix?.pointers?.some(p => p.up))

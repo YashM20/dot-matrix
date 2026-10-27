@@ -4,7 +4,8 @@
  * copies, so crawlers that don't run JS see the right card). Images are `dist/og/<board>.png`
  * (`scripts/og.ts`). Board URLs: `/<board>/` (path) or the older `?board=<id>`; both open the board.
  */
-import { boardIds, boardMeta, resolveBoardId } from '../widgets/manifest'
+import { boardIds, boardLabel, boardMeta, resolveBoardId } from '../widgets/manifest'
+import { widgetPath } from './routes'
 
 export const SITE_NAME = 'DOT/480'
 export const SITE_TITLE = 'DOT/480 — a field-based dot-matrix UI engine'
@@ -30,6 +31,22 @@ export function pageMeta(boardId?: string): PageMeta {
   }
 }
 
+/** What a widget page's meta needs (a subset of `WidgetMeta`, src/widgets/meta.ts). */
+export interface WidgetPageInfo { slug: string; uid: string; name: string; blurb: string; board: string; scope?: string }
+/** A card's name without its board numbering (`01 Home` → `Home`). */
+export const widgetTitle = (name: string): string => name.replace(/^\d{2}\s+/, '').trim() || name
+
+/** Meta for a widget page: canonical `/widget/<slug>/`, OG image `/og/widget/<uid>.png` (keyed by uid, so a rename keeps cached previews). */
+export function widgetPageMeta(w: WidgetPageInfo): PageMeta {
+  const name = widgetTitle(w.name)
+  return {
+    title: `${name} · ${SITE_NAME}`,
+    description: `${w.blurb ? `${w.blurb} ` : ''}A dot-matrix widget from the ${boardLabel(w.board)} board of DOT/480: a field sampled onto a quantized dot grid and rendered live.`,
+    path: widgetPath(w.slug, w.scope),
+    image: `/og/widget/${w.uid}.png`,
+  }
+}
+
 /** `[attribute, key, content]` for every meta tag a page carries; `origin` makes URLs absolute (OG needs that). */
 export function metaTags(m: PageMeta, origin = ''): [attr: 'name' | 'property', key: string, content: string][] {
   const url = origin + m.path, image = origin + m.image
@@ -50,9 +67,9 @@ export function metaTags(m: PageMeta, origin = ''): [attr: 'name' | 'property', 
   ]
 }
 
-/** Apply a board's meta to the live document, or the site default with no board. */
-export function setPageMeta(boardId?: string) {
-  const m = pageMeta(boardId)
+/** Apply a board's meta to the live document, or the site default with no board; or any page's `PageMeta`. */
+export function setPageMeta(boardId?: string | PageMeta) {
+  const m = typeof boardId === 'object' ? boardId : pageMeta(boardId)
   document.title = m.title
   for (const [attr, key, content] of metaTags(m, location.origin)) {
     let el = document.head.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`)

@@ -11,8 +11,12 @@ import { DotWidget } from '../DotWidget'
 import { TimeMachine } from '../xray/TimeMachine'
 import { boardTime, freeze, hoveredCard, isXRay, onCardAction, resume, scrub, setXR, toast, toggleCard, toggleGlobal, useXR, xrState } from '../xray/store'
 import { placeFromName, placeView, urlForView, type Place } from '../../site/views'
+import { widgetPath } from '../../site/routes'
 import { boardOfCard, type CommandApi } from './api'
 import { setReducedMotion } from './reducedMotion'
+import { onLayerRequest } from '../../site/layer'
+import { Sheet } from '../Sheet'
+import { SkinList } from '../skins/SkinList'
 
 // the panels load on first use: first-load JS stays inside the site budget
 const Inspector = lazy(() => import('../xray/Inspector').then(m => ({ default: m.Inspector })))
@@ -46,8 +50,31 @@ function FpsHud() {
   return <div className="pal-fps" aria-hidden="true"><b>{fps}</b> FPS · T {boardTime().toFixed(1)}{frozen ? ' ■' : ''}</div>
 }
 
+/** Phones: the dock's tools (and the DISPLAY menu) as one bottom sheet, opened from the tab bar's TOOLS. */
+function ToolsSheet({ api, xray, frozen, onClose, onPalette, onShell }: { api: CommandApi; xray: boolean; frozen: boolean; onClose: () => void; onPalette: () => void; onShell: () => void }) {
+  // each tool closes the sheet so its effect is in view; the toggles show their state when it reopens
+  const run = (f: () => void) => () => { onClose(); f() }
+  const share = () => {
+    const url = location.href
+    if (navigator.share) navigator.share({ title: document.title, url }).catch(() => {})
+    else api.copyLink()
+  }
+  return <Sheet label="TOOLS" onClose={onClose} className="tools-sheet">
+    <div className="tools-grid">
+      <button type="button" onClick={run(onPalette)}><b>SEARCH</b><span>Boards, cards and actions</span></button>
+      <button type="button" aria-pressed={xray} onClick={run(() => toggleGlobal())}><b>X-RAY</b><span>See how every card is built</span></button>
+      <button type="button" aria-pressed={frozen} onClick={run(() => (frozen ? resume() : api.freeze()))}><b>TIME</b><span>Freeze and scrub the clock</span></button>
+      <button type="button" className="tool-share" onClick={run(share)}><b>SHARE</b><span>This page's link</span></button>
+      {/* the shell is a typed terminal: offered where there is a keyboard */}
+      <button type="button" className="tool-shell" onClick={run(onShell)}><b>SHELL</b><span>Type field commands</span></button>
+    </div>
+    <h3 className="tools-head">DISPLAY</h3>
+    <SkinList />
+  </Sheet>
+}
+
 export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps) {
-  const [palette, setPalette] = useState(false), [shell, setShell] = useState(false), [boss, setBoss] = useState(false)
+  const [palette, setPalette] = useState(false), [shell, setShell] = useState(false), [boss, setBoss] = useState(false), [tools, setTools] = useState(false)
   const [hovered, setHovered] = useState<string | undefined>()
   const anyXray = useXR(s => s.global || s.on.size > 0), frozen = useXR(s => s.frozen), fpsHud = useXR(s => s.fpsHud), note = useXR(s => s.toast)
   const view = useRef({ tab, board }); view.current = { tab, board }
@@ -101,22 +128,23 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     async studio(cardId) {
       if (!(await findPreset(cardId))) return toast(`no card ${cardId}`)
       if (!setTab) return window.location.assign(urlOf('COMPOSE'))
-      // lazy, like the mode itself: the editor only loads when asked for
-      void Promise.all([import('../studio/store'), import('../studio/doc')]).then(([{ useStudio }, { importPreset }]) => {
-        useStudio.getState().replace(importPreset(cardId), `imported ${cardId} from x-ray`)
+      // lazy, like MAKE itself: the editor only loads when asked for; the card lands as a new frame
+      void import('../editor/store').then(({ useEditor }) => {
+        if (!useEditor.getState().insertPreset(cardId)) return toast(`could not open ${cardId}`)
+        useEditor.getState().setLeft('layers')
         setTab('COMPOSE')
-      }, e => toast(`studio failed: ${(e as Error).message}`))
+      }, e => toast(`editor failed: ${(e as Error).message}`))
     },
     copyLink(cardId) {
       const { tab: t, board: b } = view.current
-      // a card alone, or this view's canonical link (a CODE program keeps its ?p=)
-      const url = location.origin + (cardId ? `${location.pathname}?card=${cardId}` : urlForView({ ...placeView(placeFromName(t) ?? 'EXPLORE'), board: b }, location.search, location.pathname))
+      // a card's own page (canonical /widget/<slug>/, docs/SHARE-PLAN.md §3), or this view's canonical link (a CODE program keeps its ?p=)
+      const url = location.origin + (cardId ? widgetPath(cardId) : urlForView({ ...placeView(placeFromName(t) ?? 'EXPLORE'), board: b }, location.search, location.pathname))
       const done = () => toast('link copied')
       if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(done, () => toast(url))
       else toast(url)
     },
     toggleXray(force) { toggleGlobal(force) },
-    freeze() { freeze(); toast('time machine: drag the scrubber, ← → step, space resumes') },
+    freeze() { freeze(); toast(matchMedia('(pointer: coarse)').matches ? 'time machine: drag the scrubber, RESUME plays' : 'time machine: drag the scrubber, ← → step, space resumes') },
     resume() { resume() },
     scrub(t) { scrub(t) },
     setRenderer(r) { setXR({ renderer: r }); toast(`renderer: ${r}`) },
@@ -153,6 +181,9 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
         toast(`${preset.id}.png saved`)
       }, e => toast(`png failed: ${(e as Error).message}`))
   }), [api])
+
+  // the phone tab bar: TOOLS opens the tools sheet, SEARCH the palette (src/site/layer.ts)
+  useEffect(() => onLayerRequest(r => { setShell(false); if (r === 'palette') { setTools(false); setPalette(true) } else { setPalette(false); setTools(true) } }), [])
 
   // a frozen clock would stall the next view's entrance: a view change resumes it
   const viewKey = `${tab}|${board}`, lastView = useRef(viewKey)
@@ -218,6 +249,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       <button onClick={() => setPalette(true)} title="Command palette (⌘K / Ctrl-K)" aria-label="Command palette">⌘K</button>
       <button onClick={() => setShell(true)} title="Dot shell (`)" aria-label="Dot shell">&gt;_</button>
     </div>
+    {tools && <ToolsSheet api={api} xray={anyXray} frozen={frozen} onClose={() => setTools(false)} onPalette={() => setPalette(true)} onShell={() => setShell(true)} />}
     {fpsHud && <FpsHud />}
     <div className="pal-toast" role="status" aria-live="polite">{note && <span key={note.id}>{note.text}</span>}</div>
     {palette && <Suspense fallback={null}><Palette api={api} hoveredCard={hovered} onClose={() => setPalette(false)} /></Suspense>}
