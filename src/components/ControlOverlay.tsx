@@ -1,5 +1,5 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent } from 'react'
-import { HIT_PAD, controlRange, keyValue, keyYOf, settle, touchIntent } from '../engine'
+import { HIT_PAD, controlRange, keyValue, keyYOf, settle, touchIntent } from '../engine/interaction'
 import type { Control, GridConfig } from '../engine'
 import type { ControlInput } from '../hooks/useControlInput'
 

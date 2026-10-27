@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import type { DotStyle, Field, GridConfig } from '../../engine'
-import { dot480 } from '../../engine'
+import { dot480 } from '../../engine/theme/tokens'
 // not the eager `widgets` registry: the boards view reads `theme` from this store, and must not pull every
 // board into the first load. Presets resolve once their board loaded (the playground loads them all).
 import { registeredPreset } from '../../widgets/registry'

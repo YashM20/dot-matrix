@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent, type MouseEvent as ReactMouseEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { flushSync } from 'react-dom'
-import { TOUCH, beginDrag, classifyMove, dragValue, isTap, pick, quantizeTime, releaseValue, sharedClock, toLocal, touchIntent } from '../engine'
+import { TOUCH, beginDrag, classifyMove, dragValue, isTap, pick, releaseValue, toLocal, touchIntent } from '../engine/interaction'
+import { quantizeTime, sharedClock } from '../engine/clock'
 import type { ClockSubscriber, Control, ControlPatch, DragStart, GridConfig, Pointer, TouchIntent } from '../engine'
 import type { InteractionContext } from './useDotField'
 import { LATENCY_PROBE, resolveMarks, type LatencyMark } from './latencyProbe'

@@ -1,5 +1,6 @@
 import type { Control, ControlPatch, DotStyle, ThemeTokens } from '../engine'
-import { dot480, needsHold } from '../engine'
+import { dot480 } from '../engine/theme/tokens'
+import { needsHold } from '../engine/interaction'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { withChrome, type WidgetPreset } from '../widgets/types'
 import { registeredPreset } from '../widgets/registry'
