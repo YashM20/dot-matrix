@@ -4,7 +4,16 @@
 > Update this file in the same commit as the work. Active plans: `docs/WEB-PLAN.md` (what the site does) and `docs/UX-PLAN.md` (how visitors find it); every doc and its status: `docs/README.md`. Original phase plan: `docs/MASTER-PLAN.md` (v2). Research: `docs/MOTION-INTERACTION-DEPTH.md`, `docs/ADVANCED-PLAN.md`. Taste: `docs/STYLE-BIBLE.md`.
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
-## Status board (updated 2026-10-26)
+## Status board (updated 2026-10-27)
+**Resume here (2026-10-27):** branch `feat/native-editor-share` merges six parallel tracks on top of `main` (3a1775c, UX U0–U5 slice):
+- **Phone shell** (`src/site/mobile.css`, `BoardSheet`, `Sheet`, `useSwipeDown`, `site/layer.ts`): bottom tab bar EXPLORE / MAKE / ABOUT / TOOLS, sticky title bar that opens a boards sheet, thumb strips, swipe-down sheets, touch palette (no autofocus, boards first), 16 px fields on coarse pointers, safe areas, short-landscape layout, installable PWA (`public/manifest.webmanifest`, dot-field icons).
+- **Touch policy** (`src/engine/interaction/gesture.ts`, `useControlInput`, `touch.css`; `docs/UX-PLAN.md` §10): cards are scroll-first; tap controls act on lift, drag controls on a horizontal drag or a 300 ms hold; physics cards are `gesture: 'surface'`; X-ray is a swipeable bottom sheet.
+- **One editor replaces the four MAKE tabs** (`src/components/editor/`, `docs/EDITOR-PLAN.md`): Figma-like frames on an infinite canvas, LAYERS / ASSETS, DESIGN / ANIMATE / CODE / EXPORT inspector, tools V H F B T C, undo; full-screen with a floating dock and bottom sheets on phones. Old `?make=` / `?tab=` links open it on the matching tool. The old screens (Studio, DotsRepl, DrawBoard, playground panels) are unused and due for deletion (E1).
+- **Share S0–S1 (+ most of S2)** (`docs/SHARE-PLAN.md`): permanent 8-char uids (`src/widgets/ids.json`, `scripts/widgets/ids.ts --assign` after adding widgets), `WidgetMeta` for every widget, `/widget/<slug>/`, `/widget/<uid>/`, `/<uid>`, the single-widget page with pill bars, crawler pages + `dist/widgets.json`.
+- **Algorithms board** (`src/engine/algo/`, `docs/ALGORITHMS.md`): weighted Voronoi stippling, Clifford attractor, Wave Function Collapse, off-lattice DLA. 177 presets, 26 boards.
+- **Privacy / Terms** (`privacy.html`, `terms.html`, `/privacy`, `/terms`).
+Next, ranked (research notes in this session's roadmap): E1 delete the old MAKE screens; E2 multi-select / groups / copy-paste; optimal-transport dot migration; Flow-Lenia; ambient mode + daily card; Android Back closing sheets; first-load JS is 148 kB of 150, so the next first-load addition needs a cut first.
+
 **Where we are (2026-10-24):** everything is merged into `feat/p1-complete` — P0–P6 agent work (P6-D Studio, P6-F essay included) and the Web plan tracks W0, C2–C8, C10 and the craft lift. 173 presets, 25 boards. Direction: personal website (`docs/WEB-PLAN.md`). Not started from the Web plan: C1 (WebGPU compute) and C9 (multiplayer). All agent worktrees are merged and removed.
 `main` = `82778a4` (PR #4: P1–P6 and the web plan; PR #5: Vercel only). UX U0–U4 + the U5 DISPLAY slice are on branch `feat/ux-u0-u1` (pushed, not merged).
 
