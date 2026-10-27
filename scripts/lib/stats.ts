@@ -1,7 +1,7 @@
 /**
  * Browser-safe helpers shared by the instruments (no Node imports): the reference theme, card pitch,
  * the lit-dot test and centroid, and order statistics. `cards.ts` re-exports them; `fidelity.ts`
- * imports them from here so the Studio (P6-D) can run the same gates in the browser.
+ * imports them from here so it stays browser-safe.
  */
 import { dot480 } from '../../src/engine/theme/tokens'
 import type { DotInstance, ThemeTokens } from '../../src/engine/types'
