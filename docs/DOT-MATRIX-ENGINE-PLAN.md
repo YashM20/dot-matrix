@@ -39,6 +39,7 @@ src/engine/                       framework-free TypeScript + browser Canvas/SVG
   halftone/                       halftone ladder, halftoneStream, STBN blue-noise mask (stbn, blueNoise)
   sim/                            SimField: createSim, simAt/simPhase/simField/simMapField; grayScott, fallingSand, life
   physics/                        worlds (pristine SimField loop, live fork on input): createWorld/worldAt/worldStep; stable fluids, Verlet particles + spatial hash, PBD cloth + soft body
+  algo/                           niche algorithms as dot sources (docs/ALGORITHMS.md): stipple (weighted Voronoi / Lloyd → sites), attractorDensity (Clifford / de Jong log histogram, dsin/tsin, collapse guard), wfc (tiled WFC + backtracking, scrubbable history), dla (off-lattice DLA, arrival order)
   nca/                            neural cellular automata, CPU inference from Int8 weights: ncaModel, ncaRun timeline, ncaScratch, ncaField/ncaMapField
   scene/raycast.ts                castHall (analytic hall), castGrid (DDA maze), lamp, fog, seam, project — HIVE cards and game
   device/                         profiles (DEVICES, deviceProfile), toDevice (card → device frame + tone map), simulators: eink, flipdisc, led, plotter (pen plan, penPlanSVG)
@@ -47,7 +48,7 @@ src/engine/                       framework-free TypeScript + browser Canvas/SVG
 src/widgets/
   types.ts                        WidgetPreset { grid, style, chrome?, label?, bleed?, defaults?, layers(ctx) }, TILE/CARD grids, tileStyle, layoutFor() (big, dotRing, dotLine, dotDisc, dotBars, dots, lattice …), toneRamp, cardChrome/withChrome
   sprites.ts                      1-bit pixel art (invaders, bear, deer, pill …)
-  boards/<board>.ts               one file per board (25), one export per card (+ optional `shared` keys, live `sources`)
+  boards/<board>.ts               one file per board (26), one export per card (+ optional `shared` keys, live `sources`)
   manifest.ts                     boardManifest (id, title, columns, lazy `load()` = one chunk per board), loadBoard/prefetchBoard/findPreset, boardGroups/groupOf/boardLabel, liveBoards, boardAliases
   registry.ts                     presets known to this page, filled as chunks load; workerIds (worker path) and the static-sample cache read it
   index.ts                        eager registry (boards[], widgetPresets, widgetById) for scripts, playground and the worker
@@ -82,7 +83,7 @@ mcp/                              MCP server (MCP Apps): set_agent_state, descri
 targets/                          device pushers, Node built-ins only: wled, awtrix, trmnl, tronbyt, glyph-toy, esp32 (dotvm.c = IR bytecode VM)
 schema/, examples/specs/, goldens/  card.v1 JSON Schema, example specs, golden hashes (hashes.json, ir-glsl.json)
 scripts/
-  verify.ts                       `pnpm verify`: acceptance harness; also runs the ir, live, halftone, spec, buffer, export, device, display, physics, nca, type, vision, dots, studio, game, bytecode, targets checks
+  verify.ts                       `pnpm verify`: acceptance harness; also runs the ir, live, halftone, spec, buffer, export, device, display, physics, nca, algorithms, type, vision, dots, studio, game, bytecode, targets checks
   golden.ts, snap.ts              `pnpm golden` (preset hashes); `pnpm snap <id…> | --board <id> | --all | --bar <id>` headless PNGs
   fidelity.ts, bench.ts, og.ts    scorecard gates; per-card perf budgets; OG/email PNG of one card
   site/                           postbuild.ts (OG images + per-board crawler pages), size.ts (first-load JS budget), mobile.ts (375 px audit)
