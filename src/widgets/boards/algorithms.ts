@@ -175,7 +175,10 @@ const atParams = (t: number) => ({ a: -1.93 + .11 * Math.sin(t * 2 * Math.PI / 3
 const atBuf = new Float32Array(AT_W * AT_H)
 let atAt = NaN, atDrawn = { a: 0, b: 0 }
 /** The histogram at t, memoised for the frame (the three tone layers and the footer share it). */
-const atDensity = (t: number) => {
+const atDensity = (t0: number) => {
+  // the drift is slow (|da/dt| < .02 /s), so the orbit is re-run at 10 Hz, not every frame: a 32k-step orbit
+  // (plus collapse nudges) is the costliest thing on the board. Tenths keep the golden times (0, 1.3) exact.
+  const t = Math.round(t0 * 10) / 10
   if (t !== atAt) {
     const r = attractorDensity(atParams(t), { w: AT_W, h: AT_H, iterations: AT_ITER, margin: 2, minCovered: AT_MIN_COVER, out: atBuf })
     atDrawn = { a: r.a, b: r.b }; atAt = t

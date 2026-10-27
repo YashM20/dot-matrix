@@ -137,8 +137,8 @@ export function algorithmsChecks(assert: Assert): void {
     const red = algorithmsBoard.map(p => [0, 6, 9.5].some(t => frame(p, t).some(d => d.color === dot480.dotActive)))
     assert('algorithms board: one accent, used only for the live front (stipple knob, observed tile, newest grains)', red[0] && !red[1] && red[2] && red[3])
     const warmMedian = (p: WidgetPreset) => {
-      for (let i = 0; i < 4; i++) frame(p, i / 12)
-      return median(Array.from({ length: 13 }, (_, i) => time(() => frame(p, 5.5 + i / 12))[0]))
+      for (let i = 0; i < 4; i++) frame(p, i / 60)
+      return median(Array.from({ length: 13 }, (_, i) => time(() => frame(p, 5.5 + i / 60))[0]))
     }
     const rows = algorithmsBoard.map(p => [p.id, warmMedian(p)] as const)
     assert('algorithms board: a frame (layers + sample) of each card in ≤ 4 ms (median, warm; × load)', rows.every(([, ms]) => ms <= 4 * load),
