@@ -40,6 +40,11 @@ export interface Control {
   perTurn?: number
   /** `crank`: wrap around inside [min, max) instead of stopping at the ends. */
   wrap?: boolean
+  /**
+   * Touch: `surface` = the box is a drag surface in every direction (physics toys you push around), not a
+   * tap target. Grabbed like a drag control: a horizontal drag or a press-and-hold (`interaction/gesture.ts`).
+   */
+  gesture?: 'surface'
   /** Accessible name, e.g. "Volume". */
   label: string
 }

@@ -370,7 +370,7 @@ import type { Layer, Tone } from '../src/engine/types'
 }
 
 // 15) input layer (P2-A): toLocal, pick, dragValue, keyValue, clamp + quantize
-import { beginDrag, dragValue, keyValue, pick, releaseValue, settle, toLocal, type Control } from '../src/engine/interaction'
+import { TOUCH, beginDrag, classifyMove, dragValue, isTap, keyValue, needsHold, pick, releaseValue, settle, toLocal, touchIntent, type Control } from '../src/engine/interaction'
 {
   const near = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) < eps
   const tl = toLocal(110, 220, { left: 100, top: 200, width: 100, height: 50 }, { cols: 10, rows: 5 })
@@ -426,6 +426,15 @@ import { beginDrag, dragValue, keyValue, pick, releaseValue, settle, toLocal, ty
   assert('keys: unbounded crank has no Home/End, arrows step 1/24 turn', keyValue(crank, 0, 'Home') === null && near(keyValue(crank, 0, 'ArrowRight')!, 1 / 24))
   assert('keys: segmented wraps, toggle / button on Space / Enter', keyValue(seg, 2, 'ArrowRight') === 0 && keyValue(seg, 0, 'ArrowLeft') === 2 && keyValue(seg, 1, 'End') === 2
     && keyValue(tog, 0, ' ') === 1 && keyValue(tog, 1, 'Enter') === 0 && keyValue(tog, 0, 'ArrowRight') === null && keyValue(btn, 0, 'Enter') === 1)
+  // touch policy: scroll first; a tap acts on lift, a horizontal drag or a hold claims a drag control
+  assert('touch intent: tap kinds vs drag kinds; `surface` makes a button a drag surface',
+    touchIntent(btn) === 'tap' && touchIntent(tog) === 'tap' && touchIntent(seg) === 'tap' && touchIntent(stepper) === 'tap'
+    && touchIntent(slider) === 'drag' && touchIntent(knob) === 'drag' && touchIntent(xy) === 'drag' && touchIntent({ ...btn, gesture: 'surface' }) === 'drag')
+  assert('touch: only vertical-travel drags need a hold', !needsHold(slider) && !needsHold(knob) && !needsHold(btn) && needsHold(vslider) && needsHold(xy) && needsHold(crank) && needsHold({ ...btn, gesture: 'surface' }))
+  assert('touch move: within slop pending; a vertical swipe is the page\'s; a horizontal one claims drags only',
+    classifyMove('drag', 6, 6) === 'pending' && classifyMove('drag', 10, 1) === 'claim' && classifyMove('drag', 3, 40) === 'scroll' && classifyMove('drag', 30, 8) === 'claim' && classifyMove('drag', 20, 19) === 'scroll'
+    && classifyMove('tap', 30, 0) === 'scroll' && classifyMove('none', 30, 0) === 'scroll')
+  assert('touch tap: still and quick (buttons may be held)', isTap(tog, 4, 200) && !isTap(tog, 14, 100) && !isTap(tog, 2, TOUCH.tapMs + 1) && isTap(btn, 2, 3000) && isTap(undefined, 0, 100))
   assert('settle: quantize from min, then clamp; no float noise', settle({ ...slider, min: .1, max: .9, step: .2 }, .62) === .7 && settle(slider, 3) === 1 && settle({ ...slider, step: .1 }, .3) === .3)
 
   // every declared control (all boards) has a usable box and a label, and its key is unique per card

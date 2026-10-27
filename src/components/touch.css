@@ -1,0 +1,109 @@
+/* ── Card touch policy (docs/UX-PLAN.md › Touch policy; src/engine/interaction/gesture.ts) ──────────────────
+   Scroll first. A card never takes a vertical swipe from the page: drag pads pan-y, tap pads manipulation.
+   A hold engages a card; then its drag pads take every touch (touch-action: none) until it lets go. */
+
+/* no double-tap zoom, no callout sheet, no grey tap flash, no text selection from a long press on a card */
+.dot-card {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent
+}
+
+.dot-card-head,
+.dot-card-bar,
+.dot-a11y-root {
+  -webkit-user-select: none;
+  user-select: none
+}
+
+.dot-a11y-root {
+  -webkit-touch-callout: none
+}
+
+/* drag pads: the browser keeps vertical pans (page scroll); a horizontal drag or a hold is the card's */
+.dot-a11y-root .dot-a11y-hit--drag {
+  touch-action: pan-y
+}
+
+/* engaged (a hold grabbed it): the drag pads take the whole gesture, any direction */
+.dot-a11y-root[data-engaged] .dot-a11y-hit--drag {
+  touch-action: none
+}
+
+/* the engaged card is the selected card: the hairline-active border (DESIGN.md), the board's one accent */
+.dot-card.dot-card--engaged {
+  border-color: rgba(255, 59, 48, .6)
+}
+
+/* the way out: DONE, grey like the rest of the bar, always shown while engaged */
+.dot-card-bar .dot-card-done {
+  pointer-events: auto;
+  min-width: 44px;
+  min-height: 28px;
+  color: var(--value);
+  border-color: var(--line);
+  background: rgba(17, 19, 21, .86)
+}
+
+/* pressed feedback for the bar's HTML buttons (in-card controls press in dots) */
+.dot-card-bar button:active {
+  background: var(--raised);
+  color: var(--value)
+}
+
+/* touch: the hint says how to start a drag that has to go up or down (a hold); bigger action targets */
+@media (hover: none), (pointer: coarse) {
+  .dot-card-hint[data-touch] {
+    font-size: 0
+  }
+
+  .dot-card-hint[data-touch]::after {
+    content: attr(data-touch);
+    font-size: 8px
+  }
+
+  /* the strip is an overlay: full 44 px targets, readable labels */
+  .dot-card-bar.open .dot-card-acts button {
+    min-width: 44px;
+    min-height: 44px;
+    font-size: 10px
+  }
+
+  .dot-card-bar.open .dot-card-acts button:first-child {
+    font-size: 14px
+  }
+
+  /* ⋯ and DONE stay small in the card's top padding, but their hit area is 44 × 44 (an invisible margin) */
+  .dot-card-bar .dot-card-more,
+  .dot-card-bar .dot-card-done {
+    position: relative
+  }
+
+  .dot-card-bar .dot-card-more::after,
+  .dot-card-bar .dot-card-done::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 44px;
+    height: 44px;
+    transform: translate(-50%, -50%)
+  }
+
+  /* a card that draws its own name in dots: the grey hint would sit on its dot text; on touch the
+     header hint is gone and only ⋯ (or DONE) stays, nearly transparent until pressed */
+  .dot-card-bar > .dot-card-hint {
+    display: none
+  }
+
+  .dot-card--bleed .dot-card-bar .dot-card-more:not([aria-expanded="true"]) {
+    background: rgba(17, 19, 21, .45) !important;
+    border-color: transparent
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .dot-card {
+    transition: border-color .16s
+  }
+}
