@@ -8,6 +8,33 @@ body {
   color: var(--value)
 }
 
+/* ── chrome states (DESIGN.md › Chrome states): rest, hover, press, focus, disabled ──────────────────────────────
+   The rest state carries the transition, so hover and press come in at once (--dur-in) and fade out over
+   --dur-out. Hover is a lightness lift (--wash-hover), press one step more (--wash-press), never a colour change;
+   the accent glow is for active, focus and live only. No layout shift: states change colour, never size. */
+:where(button, a, summary, [role="tab"], [role="option"], [role="menuitem"], [role="menuitemradio"], [role="radio"]) {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: var(--dur-out);
+  transition-timing-function: var(--ease)
+}
+
+:where(button, a, summary, [role="tab"], [role="option"], [role="menuitem"], [role="menuitemradio"], [role="radio"]):is(:hover, :active, :focus-visible) {
+  transition-duration: var(--dur-in) !important
+}
+
+:where(button):disabled {
+  cursor: default;
+  opacity: .4;
+  pointer-events: none
+}
+
+/* focus is the accent ring in every theme: a 1 px ring and its halo (in-card controls draw theirs in dots) */
+:focus-visible {
+  outline: 1px solid var(--red);
+  outline-offset: 2px;
+  box-shadow: var(--glow-halo)
+}
+
 .shell {
   width: min(1488px, calc(100% - 48px));
   margin: auto;
@@ -28,6 +55,7 @@ body {
 .topbar {
   padding-bottom: var(--space-5);
   border-bottom: 1px solid var(--line);
+  border-image: var(--hair-x) 1;
   flex-wrap: wrap;
   gap: var(--space-3) var(--space-5)
 }
@@ -67,6 +95,12 @@ body {
   cursor: pointer
 }
 
+.topbar button:hover,
+.topbar button:focus-visible {
+  color: var(--label)
+}
+
+.topbar button:active,
 .topbar button.selected {
   color: var(--value)
 }
@@ -75,9 +109,11 @@ body {
   color: var(--red)
 }
 
+/* live: the accent dot with its halo */
 .live i {
   width: 5px;
-  height: 5px
+  height: 5px;
+  box-shadow: var(--glow-halo)
 }
 
 :where(.dot-card) header {
@@ -123,6 +159,7 @@ label b {
 .bottom {
   padding-top: calc(var(--space-1) * 5);
   border-top: 1px solid var(--line);
+  border-image: var(--hair-x) 1;
   font-size: var(--fs-tag-9)
 }
 
@@ -137,7 +174,8 @@ label b {
 }
 
 .bottom a:hover,
-.bottom a:focus-visible {
+.bottom a:focus-visible,
+.bottom a:active {
   color: var(--value);
   text-decoration: underline
 }
@@ -179,7 +217,9 @@ label b {
   padding: var(--spacing-cardPad);
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-card)
+  border-radius: var(--radius-card);
+  /* a single hairline plus a 1 px highlight on the top edge: a hint of glass, not a shadow stack */
+  box-shadow: var(--card-edge)
 }
 
 .dot-card-head {
@@ -271,6 +311,12 @@ label b {
 
 .intro-line button:hover,
 .intro-line button:focus-visible {
+  border-color: var(--line-hover);
+  color: var(--value)
+}
+
+.intro-line button:active {
+  background-color: var(--wash-press);
   color: var(--value)
 }
 
@@ -293,13 +339,18 @@ label b {
   cursor: pointer
 }
 
+.board-groups button:hover,
+.board-groups button:focus-visible {
+  color: var(--label)
+}
+
+.board-groups button:active {
+  color: var(--value)
+}
+
 .board-groups button.selected {
   color: var(--value);
   border-bottom-color: var(--value)
-}
-
-.board-groups button:hover {
-  color: var(--label)
 }
 
 .board-group-blurb {
@@ -343,9 +394,23 @@ label b {
   text-transform: uppercase
 }
 
+.board-tabs button:hover,
+.board-tabs button:focus-visible {
+  border-color: var(--line-hover);
+  color: var(--value)
+}
+
+.board-tabs button:active {
+  background-color: var(--wash-press);
+  color: var(--value)
+}
+
+/* the open board: the accent at full strength, its wash and halo (the one glow) */
 .board-tabs button.selected {
   border-color: var(--red);
-  color: var(--red)
+  background-color: var(--glow-wash);
+  color: var(--red);
+  box-shadow: var(--glow-halo)
 }
 
 .board-view .board-title {
@@ -401,11 +466,6 @@ label b {
   border: 0
 }
 
-:focus-visible {
-  outline: 2px solid var(--value);
-  outline-offset: 3px
-}
-
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -447,7 +507,8 @@ label b {
   grid-template-columns: 120px 1fr;
   gap: var(--space-5);
   padding: var(--space-5) 0;
-  border-top: 1px solid var(--line)
+  border-top: 1px solid var(--line);
+  border-image: var(--hair-x) 1
 }
 
 .log-meta {
@@ -523,7 +584,8 @@ label b {
 }
 
 .log-link:hover,
-.log-link:focus-visible {
+.log-link:focus-visible,
+.log-link:active {
   text-decoration: underline
 }
 
@@ -657,7 +719,8 @@ label b {
   appearance: none;
   -webkit-appearance: none;
   font: inherit;
-  outline: none
+  outline: none;
+  box-shadow: none
 }
 
 .dot-a11y-group > .dot-a11y-ctl {
@@ -705,6 +768,12 @@ label b {
   border-color: color-mix(in srgb, var(--red) 45%, transparent)
 }
 
+/* the code box is the focus target (its textarea draws no outline of its own) */
+.dw-editor:focus-within {
+  border-color: var(--red);
+  box-shadow: var(--glow-halo)
+}
+
 .dw-gutter {
   padding: var(--space-2) 0;
   overflow: hidden;
@@ -712,7 +781,8 @@ label b {
   text-align: right;
   user-select: none;
   max-height: 360px;
-  border-right: 1px solid var(--line)
+  border-right: 1px solid var(--line);
+  border-image: var(--hair-y) 1
 }
 
 .dw-gutter span {
@@ -764,7 +834,8 @@ label b {
   outline: 0;
   background: transparent;
   color: var(--value);
-  caret-color: var(--red)
+  caret-color: var(--red);
+  box-shadow: none
 }
 
 .dw-error {
@@ -772,11 +843,21 @@ label b {
   text-align: left;
   border: 0;
   border-top: 1px solid var(--line);
+  border-image: var(--hair-x) 1;
   background: color-mix(in srgb, var(--red) 8%, transparent);
   color: var(--label);
   font: var(--fs-label-11) var(--mono);
   padding: var(--space-2) var(--space-3);
   cursor: pointer
+}
+
+.dw-error:hover,
+.dw-error:focus-visible {
+  color: var(--value)
+}
+
+.dw-error:active {
+  background-color: color-mix(in srgb, var(--red) 14%, transparent)
 }
 
 .dw-error b,
@@ -894,10 +975,11 @@ label b {
   max-height: calc(100vh - 150px);
   display: flex;
   flex-direction: column;
-  background: color-mix(in srgb, var(--surface) 97%, transparent);
-  border: 1px solid color-mix(in srgb, var(--tint) 14%, transparent);
+  /* a raised panel, opaque: it sits over running cards, where a blur would be redrawn every frame */
+  background: var(--surface);
+  border: 1px solid var(--line);
   border-radius: var(--radius-panel);
-  box-shadow: 0 18px 40px color-mix(in srgb, var(--shade) 45%, transparent);
+  box-shadow: var(--shadow-raised);
   color: var(--label);
   font: 500 var(--fs-label-10)/1.45 var(--mono);
   text-align: left;
@@ -922,7 +1004,12 @@ label b {
 
 .xr-panel button:hover,
 .xr-panel button:focus-visible {
-  border-color: color-mix(in srgb, var(--tint) 30%, transparent);
+  border-color: var(--line-hover);
+  color: var(--value)
+}
+
+.xr-panel button:active {
+  background-color: var(--wash-press);
   color: var(--value)
 }
 
@@ -1000,7 +1087,8 @@ label b {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-1) 0;
-  border-bottom: 1px solid var(--line)
+  border-bottom: 1px solid var(--line);
+  border-image: var(--hair-x) 1
 }
 
 .xr-layers li.xr-off {
@@ -1031,6 +1119,7 @@ label b {
 .xr-data td {
   padding: var(--space-1) 0;
   border-bottom: 1px solid var(--line);
+  border-image: var(--hair-x) 1;
   text-align: left;
   font-weight: 500
 }
@@ -1069,10 +1158,10 @@ label b {
   gap: var(--space-2);
   width: min(760px, calc(100vw - 28px));
   padding: var(--space-2) var(--space-3);
-  background: color-mix(in srgb, var(--surface) 97%, transparent);
+  background: var(--surface);
   border: 1px solid color-mix(in srgb, var(--red) 50%, transparent);
   border-radius: var(--radius-panel);
-  box-shadow: 0 18px 40px color-mix(in srgb, var(--shade) 45%, transparent);
+  box-shadow: var(--shadow-raised);
   color: var(--label);
   font: 600 var(--fs-tag-9) var(--mono);
   letter-spacing: .12em
@@ -1100,6 +1189,17 @@ label b {
   white-space: nowrap
 }
 
+.xr-time button:hover,
+.xr-time button:focus-visible {
+  border-color: var(--line-hover);
+  color: var(--value)
+}
+
+.xr-time button:active {
+  background-color: var(--wash-press);
+  color: var(--value)
+}
+
 .xr-time-t {
   min-width: 82px;
   color: var(--value);
@@ -1110,15 +1210,120 @@ label b {
   color: var(--value) !important
 }
 
+/* ── keycap (one component): a dotted edge on a dot-matrix fill, the key in mono ───────────────────── */
 .xr-time kbd,
 .pal kbd,
 .pal-shell kbd,
-.pal-boss kbd {
-  font: inherit;
+.pal-boss kbd,
+[data-kbd]::before {
+  display: inline-block;
+  min-width: 2.2em;
   padding: 0 var(--space-1);
-  border: 1px solid var(--line);
+  border: 1px dotted var(--line-hover);
   border-radius: var(--radius-sm);
-  color: var(--mute)
+  background: radial-gradient(circle, var(--line-dot) .6px, transparent .9px) 0 0 / 3px 3px;
+  color: var(--label);
+  font: 600 var(--fs-tag-9)/1.5 var(--mono);
+  letter-spacing: .04em;
+  text-align: center;
+  text-transform: none
+}
+
+.pal-foot kbd + kbd {
+  margin-left: var(--space-1)
+}
+
+/* ── tooltip (one component): data-tip names the control, data-kbd its key ─────────────────────────────
+   One at a time (the hovered control only). In a group (the dock, a pill bar) the first waits --dur-tip,
+   the next ones show at once while the pointer stays in the group (a registered --tip-on that turns on
+   after the delay and off at once). Keyboard focus shows it without the wait. No motion. */
+@property --tip-on {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0
+}
+
+.pal-dock,
+.pill-bar {
+  --tip-on: 0;
+  transition: --tip-on 0s
+}
+
+.pal-dock:hover,
+.pill-bar:hover {
+  --tip-on: 1;
+  transition: --tip-on 0s var(--dur-tip)
+}
+
+.pal-dock:focus-within,
+.pill-bar:focus-within {
+  --tip-on: 1
+}
+
+/* pressing hides it; it comes back after the wait */
+.pal-dock:active,
+.pill-bar:active {
+  --tip-on: 0
+}
+
+[data-tip] {
+  position: relative
+}
+
+[data-tip]::after,
+[data-tip][data-kbd]::before {
+  position: absolute;
+  z-index: 90;
+  right: 0;
+  bottom: calc(100% + var(--space-2));
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none
+}
+
+[data-tip]::after {
+  content: attr(data-tip);
+  height: 24px;
+  padding: 0 var(--space-2);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  box-shadow: var(--shadow-raised);
+  color: var(--value);
+  font: 500 var(--fs-label-11)/22px var(--mono);
+  letter-spacing: .02em;
+  text-transform: none;
+  white-space: nowrap
+}
+
+/* the keycap sits inside the bubble's right end */
+[data-tip][data-kbd]::after {
+  padding-right: 4.2em
+}
+
+[data-tip][data-kbd]::before {
+  content: attr(data-kbd);
+  z-index: 91;
+  right: var(--space-2);
+  bottom: calc(100% + var(--space-2) + 4px);
+  height: 16px
+}
+
+[data-tip]:hover::after,
+[data-tip][data-kbd]:hover::before {
+  visibility: visible;
+  opacity: var(--tip-on)
+}
+
+[data-tip]:focus-visible::after,
+[data-tip][data-kbd]:focus-visible::before {
+  visibility: visible;
+  opacity: 1
+}
+
+[data-tip]:active::after,
+[data-tip][data-kbd]:active::before {
+  opacity: 0
 }
 
 /* ── C10 palette, shell, dock (.pal-*) ─────────────────────────────────────────────── */
@@ -1149,12 +1354,20 @@ label b {
 .pal-dock button:hover,
 .pal-dock button:focus-visible {
   color: var(--value);
-  border-color: var(--line)
+  border-color: var(--line);
+  background-color: var(--wash-hover)
 }
 
+.pal-dock button:active {
+  color: var(--value);
+  background-color: var(--wash-press)
+}
+
+/* a tool that is on: the accent, its wash */
 .pal-dock button[aria-pressed="true"] {
   color: var(--red);
-  border-color: color-mix(in srgb, var(--red) 50%, transparent)
+  border-color: color-mix(in srgb, var(--red) 50%, transparent);
+  background-color: var(--glow-wash)
 }
 
 .pal-toast {
@@ -1169,9 +1382,10 @@ label b {
 .pal-toast span {
   display: block;
   padding: var(--space-2) var(--space-3);
-  background: color-mix(in srgb, var(--surface) 97%, transparent);
-  border: 1px solid color-mix(in srgb, var(--tint) 16%, transparent);
+  background: var(--raised);
+  border: 1px solid var(--line);
   border-radius: var(--radius-ctl);
+  box-shadow: var(--shadow-raised);
   color: var(--value);
   font: 500 var(--fs-label-10) var(--mono);
   letter-spacing: .08em;
@@ -1196,6 +1410,7 @@ label b {
   color: var(--value)
 }
 
+/* the scrim only: the palette itself is the one blurred layer (no blur stacking) */
 .pal-backdrop,
 .pal-boss {
   position: fixed;
@@ -1205,16 +1420,44 @@ label b {
   justify-content: center;
   align-items: flex-start;
   padding-top: 12vh;
-  background: var(--scrim);
-  backdrop-filter: blur(3px)
+  background: var(--scrim)
+}
+
+/* ── raised layer (one look): menus, popovers, sheets, ⌘K ─────────────────────────────────────────────
+   Glass: translucent raised, one small blur, the raised shadow; it opens with no animation. Cards keep their
+   single hairline. Used by .skin-menu, .ed-menu (editor), .wp-more (widget page), .pal, .sheet-panel. */
+.skin-menu,
+.ed-menu,
+.wp-more,
+.pal,
+.sheet-panel {
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-raised);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur)
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .skin-menu,
+  .ed-menu,
+  .wp-more,
+  .pal,
+  .sheet-panel {
+    background: var(--raised)
+  }
+}
+
+/* menu rows (one look): a wash on hover, one step more on press */
+.skin-menu button,
+.ed-menu button,
+.wp-more button {
+  border-radius: var(--radius-ctl)
 }
 
 .pal {
   width: min(620px, calc(100vw - 24px));
-  background: color-mix(in srgb, var(--surface) 98%, transparent);
-  border: 1px solid color-mix(in srgb, var(--tint) 14%, transparent);
-  border-radius: var(--radius-panel);
-  box-shadow: 0 30px 70px color-mix(in srgb, var(--shade) 55%, transparent);
   overflow: hidden;
   text-align: left
 }
@@ -1224,7 +1467,13 @@ label b {
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid var(--line)
+  border-bottom: 1px solid var(--line);
+  border-image: var(--hair-x) 1
+}
+
+/* the field always holds focus while the palette is open: its dotted rule turns accent */
+.pal-field:focus-within {
+  border-image: repeating-linear-gradient(90deg, var(--red) 0 var(--hair-dot), transparent 0 var(--hair-pitch)) 1
 }
 
 .pal-prompt {
@@ -1238,7 +1487,9 @@ label b {
   background: transparent;
   border: 0;
   outline: 0;
+  box-shadow: none;
   color: var(--value);
+  caret-color: var(--red);
   font: 500 var(--fs-copy-14) var(--mono)
 }
 
@@ -1266,10 +1517,12 @@ label b {
   margin-top: var(--space-1)
 }
 
+/* the highlighted row (pointer or arrows, one at a time): in at once, out over --dur-out */
 .pal-item--sel {
-  background: var(--raised);
+  background: var(--wash-press);
   color: var(--value);
-  box-shadow: inset 2px 0 0 var(--red)
+  box-shadow: inset 2px 0 0 var(--red);
+  transition-duration: var(--dur-in)
 }
 
 .pal-group {
@@ -1306,6 +1559,7 @@ label b {
   gap: var(--space-4);
   padding: var(--space-2) var(--space-4);
   border-top: 1px solid var(--line);
+  border-image: var(--hair-x) 1;
   color: var(--mute);
   font: 500 var(--fs-tag-9) var(--mono);
   letter-spacing: .1em
@@ -1320,10 +1574,10 @@ label b {
   width: min(1000px, 100vw);
   padding: var(--space-4) var(--space-4) var(--space-2);
   background: var(--bg);
-  border: 1px solid color-mix(in srgb, var(--tint) 12%, transparent);
+  border: 1px solid var(--line);
   border-top: 0;
   border-radius: 0 0 var(--radius-panel) var(--radius-panel);
-  box-shadow: 0 30px 70px color-mix(in srgb, var(--shade) 60%, transparent);
+  box-shadow: var(--shadow-raised);
   text-align: left
 }
 
@@ -1381,6 +1635,17 @@ label b {
   cursor: pointer
 }
 
+.pal-boss-flee:hover,
+.pal-boss-flee:focus-visible {
+  border-color: var(--line-hover);
+  color: var(--value)
+}
+
+.pal-boss-flee:active {
+  background-color: var(--wash-press);
+  color: var(--value)
+}
+
 @media(max-width:640px) {
   .xr-time {
     flex-wrap: wrap
@@ -1419,9 +1684,23 @@ label b {
   }
 }
 
+/* coarse pointers (tablets and phones): every chrome target is at least 40 px; text tabs grow their box, not
+   their type (phones get 44 px from src/site/mobile.css) */
 @media (pointer: coarse) {
-  .board-tabs button {
-    min-height: 28px
+  .topbar button,
+  .board-groups button,
+  .board-tabs button,
+  .intro-line button,
+  .pal-dock button,
+  .xr-panel button,
+  .xr-time button,
+  .pal-boss-flee {
+    min-height: 40px
+  }
+
+  .intro-line button,
+  .pal-dock button {
+    min-width: 40px
   }
 
   :is(.shell) select,
@@ -1456,9 +1735,28 @@ label b {
   color: var(--value)
 }
 
+.topbar .skin-menu-btn:hover,
+.topbar .skin-menu-btn:focus-visible,
+.topbar .skin-clack:hover,
+.topbar .skin-clack:focus-visible {
+  border-color: var(--line-hover);
+  color: var(--label)
+}
+
+.topbar .skin-menu-btn:active,
+.topbar .skin-clack:active {
+  background-color: var(--wash-press);
+  color: var(--value)
+}
+
+.topbar .skin-menu-btn[aria-expanded="true"] {
+  border-color: var(--line-hover);
+  color: var(--value)
+}
+
+/* menus open with no motion: the caret flips at once */
 .skin-menu-btn span {
-  font-size: var(--fs-tag-9);
-  transition: transform var(--dur-out)
+  font-size: var(--fs-tag-9)
 }
 
 .skin-menu-btn[aria-expanded="true"] span {
@@ -1473,11 +1771,7 @@ label b {
   display: grid;
   gap: var(--space-1);
   width: min(330px, calc(100vw - 24px));
-  padding: var(--space-1);
-  border: 1px dotted color-mix(in srgb, var(--tint) 20%, transparent);
-  border-radius: var(--radius-panel);
-  background: var(--surface);
-  box-shadow: 0 12px 32px color-mix(in srgb, var(--shade) 55%, transparent)
+  padding: var(--space-1)
 }
 
 .skin-menu--right {
@@ -1492,7 +1786,6 @@ label b {
   gap: var(--space-2);
   min-height: 28px;
   padding: var(--space-2) var(--space-2);
-  border-radius: var(--radius-ctl);
   text-align: left;
   color: var(--mute)
 }
@@ -1515,16 +1808,26 @@ label b {
   opacity: .35
 }
 
-.topbar .skin-menu button:hover,
-.topbar .skin-menu button:focus-visible {
-  color: var(--label);
-  background: color-mix(in srgb, var(--tint) 5%, transparent)
-}
-
 /* the selected skin is a dot-matrix fill, not a solid pill */
 .topbar .skin-menu button.selected {
   color: var(--value);
   background: radial-gradient(circle, color-mix(in srgb, var(--tint) 16%, transparent) .8px, transparent 1.1px) 0 0 / 4px 4px
+}
+
+.topbar .skin-menu button:hover,
+.topbar .skin-menu button:focus-visible {
+  color: var(--value);
+  background-color: var(--wash-hover)
+}
+
+.topbar .skin-menu button:active {
+  color: var(--value);
+  background-color: var(--wash-press)
+}
+
+/* rows sit edge to edge in the menu: their ring is drawn inside */
+.skin-menu button:focus-visible {
+  outline-offset: -2px
 }
 
 .skin-menu button.selected i {
@@ -1533,13 +1836,6 @@ label b {
 
 .topbar .skin-clack.selected {
   color: var(--value)
-}
-
-.skin-menu-btn:focus-visible,
-.skin-menu button:focus-visible,
-.skin-clack:focus-visible {
-  outline: 1px dashed var(--value);
-  outline-offset: 1px
 }
 
 /* OLED: the wrapper is not even a box */
@@ -1619,9 +1915,8 @@ label b {
   }
 }
 
-/* UX U3: EXPLORE / MAKE / ABOUT (docs/UX-PLAN.md §4.1) */
+/* UX U3: EXPLORE / MAKE / ABOUT (docs/UX-PLAN.md §4.1); their focus is the global accent ring */
 .topbar .view-tabs button:focus-visible {
-  outline: 1px solid var(--label);
   outline-offset: 4px
 }
 
@@ -1631,7 +1926,8 @@ label b {
   max-width: 880px;
   margin: 0 auto;
   padding: var(--space-4) 0 var(--space-2);
-  border-bottom: 1px solid var(--line)
+  border-bottom: 1px solid var(--line);
+  border-image: var(--hair-x) 1
 }
 
 .about-flavour {
@@ -1688,6 +1984,7 @@ label b {
   gap: var(--space-3);
   padding: var(--space-1) 0;
   border-top: 1px solid var(--line);
+  border-image: var(--hair-x) 1;
   font: 400 var(--fs-label-11)/1.5 var(--mono)
 }
 
@@ -1752,11 +2049,14 @@ label b {
   transition: opacity var(--dur-out)
 }
 
+/* the strip shows at once on hover or focus and fades out when the pointer leaves */
 .dot-card:hover .dot-card-acts,
-.dot-card-bar:focus-within .dot-card-acts,
+.dot-card:active .dot-card-acts,
+.dot-card:has(:focus-visible) .dot-card-acts,
 .dot-card-bar.open .dot-card-acts {
   opacity: 1;
-  pointer-events: auto
+  pointer-events: auto;
+  transition-duration: var(--dur-in)
 }
 
 .dot-card-bar button {
@@ -1778,6 +2078,17 @@ label b {
 .dot-card-bar button[aria-expanded="true"] {
   color: var(--value);
   border-color: var(--line)
+}
+
+/* pressed feedback for the bar's HTML buttons (in-card controls press in dots) */
+.dot-card-bar button:active {
+  background: var(--raised);
+  color: var(--value)
+}
+
+/* the bar sits at the card's top edge, inside its clip: the ring is drawn inside */
+.dot-card-bar button:focus-visible {
+  outline-offset: -1px
 }
 
 .dot-card-acts button:first-child {
@@ -1914,11 +2225,7 @@ label b {
   .xr-panel .xr-grip::before {
     content: "";
     display: block;
-    width: 36px;
-    height: 4px;
-    margin: var(--space-2) auto 0;
-    border-radius: var(--radius-sm);
-    background: color-mix(in srgb, var(--tint) 22%, transparent)
+    margin: var(--space-2) auto 0
   }
 
   .xr-panel-head {
@@ -2009,13 +2316,12 @@ label b {
 }
 
 .more > summary:hover,
-.more > summary:hover small {
+.more > summary:hover small,
+.more > summary:focus-visible,
+.more > summary:focus-visible small,
+.more > summary:active,
+.more > summary:active small {
   color: var(--value)
-}
-
-.more > summary:focus-visible {
-  outline: 1px solid var(--label);
-  outline-offset: 2px
 }
 
 .more-body {

@@ -14,6 +14,14 @@
  *   type     px/rem in font-size and in the size slot of the `font` shorthand (line-height after `/` is not checked).
  *   radius   px/rem in border-*radius; % (circles, glass) is fine.
  *   duration non-zero s/ms in transition* and animation*.
+ *
+ * Consistency rules (docs/LAYOUT-THEME-PLAN.md §1b, §1c #15, §6; DESIGN.md › Chrome states):
+ *   four-state  every selector with `:hover` has the same selector with `:active` and with `:focus-visible` (or
+ *               `:focus-within`, `:has(:focus-visible)`) in the same stylesheet. Hover resets inside
+ *               `@media (hover: none)` are exempt.
+ *   glow        `var(--glow…)` (the one signature effect) only on active, focus and live selectors.
+ *   outline     no `outline: none` / `outline: 0` without a replacement (allowlist it with the reason).
+ *   transition  no `transition: all` (name the properties).
  */
 import { readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
@@ -79,4 +87,69 @@ const stale = ALLOW.filter((_, i) => !used.has(i))
 for (const e of stale) console.log(`stale allowlist entry: ${e.file} "${e.has}"`)
 if (summary) for (const [f, c] of Object.entries(counts)) console.log(`  ${f.padEnd(40)} ${Object.entries(c).map(([k, n]) => `${k} ${n}`).join('  ')}`)
 console.log(`css tokens: ${violations} raw literal(s) in ${files.length - TOKEN_FILES.size} stylesheets, allowlist ${ALLOW.length} (${stale.length} stale)`)
-process.exit(violations || stale.length ? 1 : 0)
+
+// ── consistency rules ────────────────────────────────────────────────────────────────────────────────────────────
+/** `outline: none` with a replacement elsewhere: file + selector substring, with the reason. */
+const OUTLINE_OK: { file: string; sel: string; why: string }[] = [
+  { file: 'src/App.css', sel: '.dot-a11y-ctl', why: 'in-card controls: the card draws focus as marching dots (DESIGN.md › Interaction)' },
+  { file: 'src/essay/essay.css', sel: '.dot-a11y-ctl', why: 'in-card controls: the card draws focus as marching dots' },
+  { file: 'src/App.css', sel: '.dw-code textarea', why: 'the editor box shows focus: .dw-editor:focus-within' },
+  { file: 'src/App.css', sel: '.pal-input', why: 'the field row shows focus: .pal-field:focus-within' },
+  { file: 'src/components/editor/editor.css', sel: '.ed-viewport', why: 'the canvas shows focus: .ed-viewport:focus-visible' },
+  { file: 'src/components/editor/editor.css', sel: '.ed-field input:focus', why: 'fields show focus with the accent border' },
+  { file: 'src/components/game/hive.css', sel: '.hive-screen', why: 'the full-screen game owns the screen; it has no other focus target' },
+]
+/** Selectors where the glow may appear: active, selected, pressed, open, focus, live. */
+const LIVE_SEL = /:active|:focus|:checked|\[aria-(pressed|selected|checked|expanded|current)|\[open\]|\[data-engaged\]|\.selected\b|\.on\b|--sel\b|--engaged\b|--live\b|\.live\b|\.busy\b/
+/** Top-level comma split (keeps `:is(a, b)` whole). */
+const splitSel = (s: string) => { const out: string[] = []; let d = 0, cur = ''; for (const ch of s) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && !d) { out.push(cur.trim()); cur = '' } else cur += ch } if (cur.trim()) out.push(cur.trim()); return out }
+const norm = (s: string) => s.replace(/\s+/g, ' ').replace(/\s*([>+~,])\s*/g, '$1').trim()
+interface Rule { sels: string[]; body: string; line: number; media: string }
+function rules(src: string): Rule[] {
+  const out: Rule[] = [], stack: { at: string; kind: 'at' | 'kf' | 'style' }[] = []
+  let start = 0
+  for (let i = 0; i < src.length; i++) {
+    const ch = src[i]
+    if (ch === '{') {
+      const prelude = src.slice(start, i).trim(), top = stack[stack.length - 1]
+      if (prelude.startsWith('@')) stack.push({ at: prelude, kind: /^@(-\w+-)?keyframes/.test(prelude) ? 'kf' : 'at' })
+      else if (top?.kind === 'kf') stack.push({ at: '', kind: 'kf' })
+      else {
+        const end = src.indexOf('}', i)
+        out.push({ sels: splitSel(prelude), body: src.slice(i + 1, end), line: src.slice(0, i).split('\n').length, media: stack.map(s => s.at).join(' ') })
+        i = end; start = end + 1; continue
+      }
+      start = i + 1
+    } else if (ch === '}') { stack.pop(); start = i + 1 } else if (ch === ';' && !stack.length) start = i + 1
+  }
+  return out
+}
+let consistency = 0
+const usedOutline = new Set<number>()
+const fail = (file: string, line: number, what: string) => { consistency++; console.log(`${file}:${line}  ${what}`) }
+for (const file of files) {
+  if (TOKEN_FILES.has(file)) continue
+  const src = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
+  const rs = rules(src), have = new Set(rs.flatMap(r => r.sels.map(norm)))
+  for (const r of rs) {
+    for (const sel of r.sels) {
+      // a selector that already names all three states (`:is(:hover, :active, :focus-visible)`) is its own twin
+      if (sel.includes(':hover') && !(sel.includes(':active') && sel.includes(':focus-visible')) && !/hover:\s*none/.test(r.media)) {
+        const s = norm(sel), act = s.replaceAll(':hover', ':active')
+        const foc = [':focus-visible', ':focus-within', ':has(:focus-visible)'].map(f => s.replaceAll(':hover', f))
+        const miss = [!have.has(act) && ':active', !foc.some(f => have.has(f)) && ':focus-visible'].filter(Boolean)
+        if (miss.length) fail(file, r.line, `four-state  "${s}" has no ${miss.join(' / ')} twin`)
+      }
+    }
+    if (/var\(--glow/.test(r.body)) for (const sel of r.sels) if (!LIVE_SEL.test(sel)) fail(file, r.line, `glow  "${norm(sel)}" is not an active / focus / live selector`)
+    if (/(^|;)\s*outline(-style)?\s*:\s*(none|0)\s*(;|$)/m.test(r.body)) {
+      const ok = OUTLINE_OK.findIndex(e => e.file === file && r.sels.some(s => s.includes(e.sel)))
+      if (ok >= 0) usedOutline.add(ok); else fail(file, r.line, `outline  "${r.sels.map(norm).join(', ')}" removes the focus outline with no replacement`)
+    }
+    if (/(^|;)\s*transition(-property)?\s*:\s*all\b/m.test(r.body)) fail(file, r.line, `transition  "${r.sels.map(norm).join(', ')}" uses transition: all`)
+  }
+}
+const staleOutline = OUTLINE_OK.filter((_, i) => !usedOutline.has(i))
+for (const e of staleOutline) console.log(`stale outline allowlist entry: ${e.file} "${e.sel}"`)
+console.log(`css consistency: ${consistency} issue(s) (four-state, glow, outline, transition), outline allowlist ${OUTLINE_OK.length} (${staleOutline.length} stale)`)
+process.exit(violations || stale.length || consistency || staleOutline.length ? 1 : 0)
