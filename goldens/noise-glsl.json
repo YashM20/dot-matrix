@@ -1,0 +1,16 @@
+{
+ "about": "FNV-1a 32 of emitGLSL() per IR noise field (scripts/noise.ts IR_NOISE_FIELDS), prelude included. Re-baseline with `npx tsx scripts/noise.ts --update` when a codegen change is intended.",
+ "prelude": "a05de650",
+ "fields": {
+  "noise": "07a81418",
+  "fbm1": "51f1b830",
+  "fbm4": "03db67de",
+  "fbm8": "dc4d3ea0",
+  "turb": "834b8f6d",
+  "voronoiF1": "cfed6e6b",
+  "voronoiF2": "b60a69f3",
+  "voronoiEdge": "8d8f89fb",
+  "voronoiId": "a31b3a7e",
+  "letShadow": "3a938957"
+ }
+}

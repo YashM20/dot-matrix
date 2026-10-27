@@ -12,7 +12,7 @@
  * exact for L2 (a second point within 1.80) and L∞ (within 2), and L1's F2 can be wrong only when it exceeds 2
  * (rate measured in scripts/noise.ts). Ties keep the first-scanned cell (fixed scan order, rows then columns).
  */
-import { fmix32, IH_A, IH_B, IH_C, ihash } from './dmath'
+import { fmix32, IH_A, IH_B, IH_C, ihash } from './hash'
 
 export type Metric = 'l2' | 'l1' | 'linf'
 export interface VoronoiOut {

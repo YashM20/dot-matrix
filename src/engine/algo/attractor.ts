@@ -15,9 +15,9 @@
  * everywhere) read with linear interpolation.
  */
 
-import { tcos, tsin } from '../noise/dmath'
-/** The deterministic trig moved to `engine/noise/dmath` (F0.1); re-exported so `dla.ts`, scripts and goldens don't move. */
-export { dcos, dsin, tcos, tsin } from '../noise/dmath'
+import { tcos, tsin } from '../noise/trig'
+/** The deterministic trig moved to `engine/noise` (dmath, F0.1); re-exported so `dla.ts`, scripts and goldens don't move. */
+export { dcos, dsin, tcos, tsin } from '../noise/trig'
 
 export type AttractorKind = 'clifford' | 'dejong'
 export interface AttractorParams { kind?: AttractorKind; a: number; b: number; c: number; d: number }

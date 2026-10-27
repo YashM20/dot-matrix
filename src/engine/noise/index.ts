@@ -6,4 +6,5 @@
  */
 export * from './dmath'
 export * from './gradient'
+export * from './value'
 export * from './voronoi'

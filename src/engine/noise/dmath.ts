@@ -10,33 +10,10 @@
  * `scripts/noise.ts` holds the accuracy gates and the FNV hashes (`goldens/noise.json`) that pin the bits.
  */
 import { mulberry32 } from '../sampler/jitter'
+import { ihash } from './hash'
 
-export const TAU = Math.PI * 2
-const INV_TAU = 1 / TAU
-/** sin(x) to ~2e-7 from +, ×, round only (bit-identical in every engine). Moved verbatim from algo/attractor.ts. */
-export function dsin(x: number): number {
-  // reduce to [-π, π], then fold to [-π/2, π/2] (sin(π - x) = sin x)
-  x -= Math.round(x * INV_TAU) * TAU
-  if (x > Math.PI / 2) x = Math.PI - x
-  else if (x < -Math.PI / 2) x = -Math.PI - x
-  const x2 = x * x
-  // Taylor to x^13 on [-π/2, π/2]: truncation error < 6e-8
-  return x * (1 + x2 * (-1 / 6 + x2 * (1 / 120 + x2 * (-1 / 5040 + x2 * (1 / 362880 + x2 * (-1 / 39916800 + x2 / 6227020800))))))
-}
-export const dcos = (x: number) => dsin(x + Math.PI / 2)
-
-/**
- * Table sine for hot loops: 4096 `dsin` samples per turn + linear interpolation (error < 3e-7), built once.
- * As deterministic as `dsin` (floor, ×, +, table reads) and ~4× cheaper; the orbit only needs determinism.
- */
-const LUT_N = 4096, LUT_K = LUT_N / TAU
-let lut: Float64Array | undefined
-export function tsin(x: number): number {
-  const t = lut ?? (lut = Float64Array.from({ length: LUT_N + 1 }, (_, i) => dsin((i / LUT_N) * TAU)))
-  const f = x * LUT_K, i = Math.floor(f), j = i & (LUT_N - 1), a = t[j]
-  return a + (t[j + 1] - a) * (f - i)
-}
-export const tcos = (x: number) => tsin(x + Math.PI / 2)
+export { TAU, dcos, dsin, tcos, tsin } from './trig'
+export { fmix32, IH_A, IH_B, IH_C, ihash } from './hash'
 
 const HALF_PI = Math.PI / 2, QUARTER_PI = Math.PI / 4
 /** tan(π/8) = √2 − 1: above it, atan(a) = π/4 + atan((a − 1)/(a + 1)) keeps the series argument ≤ 0.4142. */
@@ -146,28 +123,7 @@ export function dpow(x: number, y: number): number {
 }
 const powPos = (x: number, y: number) => (x === Infinity ? (y > 0 ? Infinity : 0) : dexp(y * dlog(x)))
 
-// ── hashing and seeded streams ─────────────────────────────────────────────────────────────────────
-/** murmur3 finaliser (as math.ts): full avalanche on 32 bits → uint32. */
-export function fmix32(h: number): number {
-  h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b)
-  h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35)
-  return (h ^ (h >>> 16)) >>> 0
-}
-/**
- * `ihash`'s three multipliers, for lattice loops that inline it: ihash(a, b, c) ===
- * fmix32(imul(a, IH_A) ^ imul(b, IH_B) ^ imul(c, IH_C)), and imul(a + k, K) === (imul(a, K) + k·K) | 0 for |k| ≤ 2²⁰.
- */
-export const IH_A = 0x8da6b343, IH_B = 0xd8163841, IH_C = 0xcb1ab31f
-/**
- * Integer lattice hash → uint32: h = imul(a, 0x8da6b343) ^ imul(b, 0xd8163841) ^ imul(c, 0xcb1ab31f),
- * then the murmur3 finaliser (as math.ts:17-21). Inputs are taken as int32 (`| 0`). Use it for lattice
- * cells, entity ids and step counters over the full 32-bit range. `hash32` (math.ts) is for
- * fractional inputs: it scales by 256, so integers alias past ±2²³.
- * Mirrored exactly by GLSL `uint` ops (noise/glsl.ts).
- */
-export function ihash(a: number, b = 0, c = 0): number {
-  return fmix32(Math.imul(a, IH_A) ^ Math.imul(b, IH_B) ^ Math.imul(c, IH_C))
-}
+// ── seeded streams ──────────────────────────────────────────────────────────────────────────────────
 /** A seeded stream in [0, 1) per entity and step: mulberry32(ihash(seed, id, step)) (mulberry32: sampler/jitter.ts). */
 export function rngFor(seed: number, id: number, step = 0): () => number {
   return mulberry32(ihash(seed, id, step))

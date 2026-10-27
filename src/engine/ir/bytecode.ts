@@ -7,7 +7,7 @@
  * and interpreters also cap the steps per dot, so crafted code can't hang a device.
  * `verifyBytecode` checks opcodes, operands, slots, jump targets and the stack depth statically.
  */
-import { IRError, IR_FUNCTIONS, validate, type FnName, type Node } from './ast'
+import { IRError, IR_FUNCTIONS, validate, type CoreFn, type Node, type PackFn } from './ast'
 import { irMath, smallPow } from './runtime'
 
 export const BC_VERSION = 1
@@ -25,7 +25,12 @@ export const OP = {
   FN: 0x20,
   JZ: 0x38, JMP: 0x39, FOR: 0x3a, NEXT: 0x3b,
 } as const
-const FNS = Object.keys(IR_FUNCTIONS) as FnName[]
+/**
+ * The core builtins, snapshot when this module loads. It loads with the IR core (first load), before any lazy pack
+ * registers into IR_FUNCTIONS, so pack builtins never get opcodes and 0x20–0x33 never shift; compileBytecode also
+ * rejects them by name. (Module-level code here ships in first load: keep it free of pack logic.)
+ */
+const FNS = Object.keys(IR_FUNCTIONS) as CoreFn[]
 const BIN: Record<string, number> = { '+': OP.ADD, '-': OP.SUB, '*': OP.MUL, '/': OP.DIV, '%': OP.MOD, '^': OP.POW, '<': OP.LT, '<=': OP.LE, '>': OP.GT, '>=': OP.GE, '==': OP.EQ, '!=': OP.NE }
 const INPUT_OP = { u: OP.U, v: OP.V, t: OP.T, 'pointer.x': OP.PX, 'pointer.y': OP.PY, 'pointer.down': OP.PD } as const
 /** Operand bytes per opcode (absent = invalid opcode). */
@@ -69,7 +74,12 @@ export function compileBytecode(ast: Node): Uint8Array {
       case 'data': return emit(OP.DATA, data.indexOf(n.key))
       case 'ref': return emit(OP.LOAD, scope.get(n.name)!)
       case 'neg': c(n.a, scope); return emit(OP.NEG)
-      case 'call': n.args.forEach(a => c(a, scope)); return emit(OP.FN + FNS.indexOf(n.fn))
+      case 'call': {
+        const k = FNS.indexOf(n.fn as CoreFn), pack: PackFn[] = ['noise', 'fbm', 'turb', 'voronoi']
+        // pack builtins (noise, fbm, turb, voronoi) are CPU/GPU only: the device VM has no opcode for them
+        if (k < 0 || pack.includes(n.fn as PackFn)) throw new IRError(`${n.fn}() is not in device bytecode v${BC_VERSION}`)
+        n.args.forEach(a => c(a, scope)); return emit(OP.FN + k)
+      }
       case 'bin': {
         c(n.a, scope)
         if (n.op === '^') { const k = smallPow(n.b); if (k >= 0) return emit(OP.POWI, k) }

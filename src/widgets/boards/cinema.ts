@@ -10,7 +10,7 @@
 import { clamp, hash01, len } from '../../engine/math'
 import { decodeText } from '../../engine/motion/text'
 import { textAt } from '../../engine/layout'
-import { valueNoise2 } from '../../engine/noise/gradient'
+import { valueNoise2 } from '../../engine/noise/value'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import type { Field, Layer, Tone } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'

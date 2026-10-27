@@ -6,6 +6,7 @@
  */
 import { textAt } from '../engine/layout'
 import { contextEnv, irProgram } from '../engine/ir'
+import '../engine/noise/ir' // IR noise pack: noise() fbm() turb() voronoi() in spec IR
 import { hash01 } from '../engine/math'
 import { latticeGrid } from '../engine/sampler/gridSampler'
 import type { Field, GridConfig, Layer, Tone } from '../engine/types'

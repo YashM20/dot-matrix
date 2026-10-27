@@ -2,7 +2,9 @@
  * Checks for the shared noise toolkit (`src/engine/noise`, docs/living-matter/F0-foundation.md §2.1–2.4):
  * deterministic scalar math (dsin/tsin moved unchanged, datan2, dexp, dpow, ihash, rngFor) against `Math.*`,
  * plus FNV-1a hashes of fixed input sweeps pinned in `goldens/noise.json` so any bit drift fails, and the
- * per-call timing budgets (§4, scaled by a measured load factor so a busy box doesn't fail them).
+ * per-call timing budgets (§4, scaled by a measured load factor so a busy box doesn't fail them), and the IR noise
+ * pack (§2.4): closure ≡ function ≡ library on `IR_NOISE_FIELDS`, unreserved pack names, bytecode rejection, and the
+ * GLSL snapshot in `goldens/noise-glsl.json` (GPU parity: the noise row of scripts/webgl.ts).
  *
  *   npx tsx scripts/noise.ts             # run the checks
  *   npx tsx scripts/noise.ts --update    # rewrite goldens/noise.json after an intended change
@@ -11,11 +13,14 @@
  * `pnpm verify` runs the same checks through `noiseChecks(assert)` (the noise slot, right after `algorithmsChecks`).
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { compileBytecode, compileJS, deserialize, emitGLSL, IRError, parse, referenceField, serialize, type IREnv } from '../src/engine/ir'
+import '../src/engine/noise/ir' // the IR noise pack (F0.4)
+import { NOISE_GLSL } from '../src/engine/noise/glsl'
 import { hash01, hash32 } from '../src/engine/math'
 import { curl2, datan2, dexp, dpow, dsin, fbm2, ihash, noise2, noise3, noise3Grad, octaveSeed, ridge2, rngFor, tsin, turb2, valueNoise2, voronoi2, voronoiBorder2, type Metric, type VoronoiOut } from '../src/engine/noise'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
-const NOISE_FILE = 'goldens/noise.json'
+const NOISE_FILE = 'goldens/noise.json', NOISE_GLSL_FILE = 'goldens/noise-glsl.json'
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[s.length >> 1] }
 const time = <T>(f: () => T): [number, T] => { const a = performance.now(), r = f(); return [performance.now() - a, r] }
 
@@ -90,6 +95,43 @@ const cinemaVnoise = (x: number, y: number, s: number) => {
   const a = hash01(xi, yi, s), b = hash01(xi + 1, yi, s), c = hash01(xi, yi + 1, s), d = hash01(xi + 1, yi + 1, s)
   return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy
 }
+
+/**
+ * The IR noise parity fields (F0.4): every pack builtin, fbm at 1 / 4 / 8 octaves, all four voronoi outputs over the
+ * three metrics, and a program that binds the name `noise`. `scripts/webgl.ts` runs them as its noise row (GPU vs JS).
+ */
+export const IR_NOISE_FIELDS: Record<string, string> = {
+  noise: '.5 + .5 * noise(u * 9 - 4.5, v * 9 + t * .3, 7)',
+  fbm1: '.5 + .5 * fbm(u * 6, v * 6 - t * .2, 1, 3)',
+  fbm4: '.5 + .5 * fbm(u * 6 + 11, v * 6, 4, 3)',
+  fbm8: '.5 + .5 * fbm(u * 5 - t * .1, v * 5, 8, -9)',
+  turb: 'turb(u * 7, v * 7 + t * .25, 5, 2)',
+  voronoiF1: 'voronoi(u * 8, v * 8 + t * .2, 1, 0)',
+  voronoiF2: 'voronoi(u * 6 - 3, v * 6, 2, 5) * .5',
+  voronoiEdge: 'voronoi(u * 7, v * 7 - t * .1, 3, 10)',
+  voronoiId: 'voronoi(u * 5 + 2, v * 5, 4, 3)',
+  letShadow: 'let noise = 3; noise * .1 + noise(u * 4, v * 4, 1) * .5',
+}
+/** The same fields as direct library calls, in the IR's operation order (the oracle the backends must equal bit for bit). */
+const IR_NOISE_LIB: Record<string, (u: number, v: number, t: number) => number> = {
+  noise: (u, v, t) => .5 + .5 * noise2(u * 9 - 4.5, v * 9 + t * .3, 7),
+  fbm1: (u, v, t) => .5 + .5 * fbm2(u * 6, v * 6 - t * .2, 1, 3),
+  fbm4: (u, v) => .5 + .5 * fbm2(u * 6 + 11, v * 6, 4, 3),
+  fbm8: (u, v, t) => .5 + .5 * fbm2(u * 5 - t * .1, v * 5, 8, -9),
+  turb: (u, v, t) => turb2(u * 7, v * 7 + t * .25, 5, 2),
+  voronoiF1: (u, v, t) => voronoi2(u * 8, v * 8 + t * .2, 1, 'l2').f1,
+  voronoiF2: (u, v) => voronoi2(u * 6 - 3, v * 6, 2, 'l1').f2 * .5,
+  voronoiEdge: (u, v, t) => { const o = voronoi2(u * 7, v * 7 - t * .1, 3, 'linf'); return o.f2 - o.f1 },
+  voronoiId: (u, v) => voronoi2(u * 5 + 2, v * 5, 4, 'l2').id / 4294967296,
+  letShadow: (u, v) => 3 * .1 + noise2(u * 4, v * 4, 1) * .5,
+}
+/** The three frame inputs of the parity runs (as scripts/lib/webgl-page.ts). */
+const IR_NOISE_ENVS: IREnv[] = [
+  { t: 0 },
+  { t: 1.3, data: { value: .62, k: -2.5 }, pointer: { x: .3, y: .7, down: true } },
+  { t: 7.77, data: { value: -1.4, k: 3 }, pointer: { x: 1.2, y: -.4 } },
+]
+const fnv1a = (str: string) => { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0 } return h.toString(16).padStart(8, '0') }
 
 export function noiseChecks(assert: Assert, opts: { update?: boolean } = {}): void {
   const load0 = loadFactor()
@@ -317,6 +359,61 @@ export function noiseChecks(assert: Assert, opts: { update?: boolean } = {}): vo
       div = Math.max(div, Math.abs(dvx + (a[1] - b[1]) / (2 * dh)))
     }
     assert('noise: curl2 divergence ≤ 1e-4·max|v| (FD over a 64² patch)', div <= 1e-4 * vm, `max |div| ${div.toExponential(2)}, max |v| ${vm.toFixed(3)}`)
+  }
+
+
+  // ── F0.4 the IR builtin pack ─────────────────────────────────────────────────────────────────────
+  {
+    const N = 48, cell = (k: number) => (k + .5) / N
+    const rows = Object.entries(IR_NOISE_FIELDS).map(([name, src]) => {
+      const ast = parse(src), closure = compileJS(ast, { raw: true }), fn = compileJS(ast, { mode: 'function', raw: true }), lib = IR_NOISE_LIB[name]
+      let bad = 0
+      for (const env of IR_NOISE_ENVS) {
+        const a = closure(env), b = fn(env), ref = referenceField(ast, env)
+        for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+          const u = cell(c), v = cell(r), want = lib(u, v, env.t ?? 0)
+          if (!Object.is(a(u, v), want) || !Object.is(b(u, v), want) || !Object.is(ref(u, v), want)) bad++
+        }
+      }
+      return [name, bad, fn.mode] as const
+    })
+    const off = rows.filter(([, bad]) => bad).map(([n, bad]) => `${n} ${bad}`)
+    assert(`ir+noise: closure ≡ function ≡ library call on ${rows.length} fields, 48×48 × 3 envs (===)`, !off.length && rows.every(([, , m]) => m === 'function'),
+      off.length ? off.join(', ') : `${rows.map(([n]) => n).join(', ')}; the reference interpreter agrees too`)
+  }
+  {
+    const src = 'let noise = 3; noise + noise(u, v, 1)'
+    let ok = false, detail = ''
+    try {
+      const f = compileJS(parse(src), { raw: true })()
+      ok = Object.is(f(.3, .7), 3 + noise2(.3, .7, 1))
+      // core builtins stay reserved; a pack name is still a function when called, and an error when bare and unbound
+      const sinBinds = (() => { try { parse('let sin = 1; sin'); return true } catch { return false } })()
+      const bare = (() => { try { parse('noise + 1'); return 'parsed' } catch (e) { return (e as Error).message } })()
+      ok = ok && !sinBinds && /is a function/.test(bare) && deserialize(serialize(parse(src))) !== null
+      detail = `value ${f(.3, .7).toFixed(6)}; "let sin" rejected: ${!sinBinds}; bare "noise": ${bare}`
+    } catch (e) { detail = (e as Error).message }
+    assert('ir+noise: "let noise = 3; noise + noise(u, v, 1)" parses (pack names are not reserved)', ok, detail)
+  }
+  {
+    const msgs = ['noise(u, v, 1)', 'fbm(u, v, 4, 1)', 'turb(u, v, 4, 1)', 'voronoi(u, v, 1, 0)'].map(src => { try { compileBytecode(parse(src)); return 'compiled' } catch (e) { return e instanceof IRError ? e.message : `not an IRError: ${(e as Error).message}` } })
+    const core = (() => { try { return compileBytecode(parse('sin(u) + hash(u, v)')).length > 0 } catch { return false } })()
+    assert('ir+noise: compileBytecode rejects noise() with "not in device bytecode v1"', msgs.every(m => m.includes('not in device bytecode v1')) && core, msgs[0])
+  }
+  {
+    const glsl = Object.fromEntries(Object.entries(IR_NOISE_FIELDS).map(([k, src]) => [k, fnv1a(emitGLSL(parse(src)))]))
+    if (opts.update || !existsSync(NOISE_GLSL_FILE)) {
+      writeFileSync(NOISE_GLSL_FILE, JSON.stringify({ about: 'FNV-1a 32 of emitGLSL() per IR noise field (scripts/noise.ts IR_NOISE_FIELDS), prelude included. Re-baseline with `npx tsx scripts/noise.ts --update` when a codegen change is intended.', prelude: fnv1a(NOISE_GLSL), fields: glsl }, null, 1) + '\n')
+      console.log(`${NOISE_GLSL_FILE}: wrote ${Object.keys(glsl).length} GLSL hashes`)
+    }
+    const golden = JSON.parse(readFileSync(NOISE_GLSL_FILE, 'utf8')) as { prelude: string; fields: Record<string, string> }
+    const drift = Object.keys({ ...glsl, ...golden.fields }).filter(k => glsl[k] !== golden.fields[k])
+    if (golden.prelude !== fnv1a(NOISE_GLSL)) drift.unshift('prelude')
+    const mixed = emitGLSL(parse('noise(u, v, 1) + fbm(u, v, 4, 2) + turb(v, u, 3, 3) + voronoi(u * 4, v * 4, 1, 2) + noise(v, u, 2) + hash(u, v)'))
+    const count = (s: string, needle: string) => s.split(needle).length - 1
+    const once = count(mixed, 'uint ir_ih(') === 1 && count(mixed, 'float ir_voronoi(') === 1 && count(mixed, 'uint ir_fmix(') === 1 && count(mixed, 'ir_noise(') === 3
+    const plain = !emitGLSL(parse('sin(u) + hash(u, v)')).includes('ir_ih')
+    assert('ir+noise: GLSL snapshot = goldens/noise-glsl.json; prelude emitted once per program', !drift.length && once && plain, drift.length ? `changed: ${drift.join(', ')}` : `${Object.keys(glsl).length} fields + prelude; one prelude with the core hash helper beside it`)
   }
 
   // ── budgets (§4): ratio gates are machine-independent; absolute gates scale by the load factor ─────────

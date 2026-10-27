@@ -10,8 +10,7 @@
  * Conventions: one lattice cell is one noise feature (a card that wants ~6 features across 144 cells samples
  * `noise2(c * 6 / 144, …)`); `noise*` / `fbm2` are signed (map with `.5 + .5 * n` for a tone).
  */
-import { hash01 } from '../math'
-import { fmix32, IH_A, IH_B, IH_C } from './dmath'
+import { fmix32, IH_A, IH_B, IH_C } from './hash'
 
 const R = Math.SQRT1_2, SQRT2 = Math.SQRT2
 /** The 8 gradients, indexed by `hash & 7` (noise/glsl.ts has the same table in the same order). */
@@ -143,11 +142,4 @@ export function curl2(x: number, y: number, t: number, seed = 0, out: [number, n
   }
   out[0] = sy; out[1] = -sx
   return out
-}
-
-/** Value noise in [0, 1], bit-identical to cinema.ts's former private vnoise (hash01 lattice, smoothstep fade). For migration only. */
-export function valueNoise2(x: number, y: number, seed: number): number {
-  const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy)
-  const a = hash01(xi, yi, seed), b = hash01(xi + 1, yi, seed), c = hash01(xi, yi + 1, seed), d = hash01(xi + 1, yi + 1, seed)
-  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy
 }

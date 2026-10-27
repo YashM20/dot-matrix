@@ -7,6 +7,7 @@
  * it saves to localStorage / a file as is, and `adapter.ts` maps it to spec v0 now and spec v1 later.
  */
 import { contextEnv, IRError, IR_LIMITS, irProgram, type IRProgram } from '../../engine/ir'
+import '../../engine/noise/ir' // IR noise pack: noise() fbm() turb() voronoi() in studio IR
 import { textAt } from '../../engine/layout'
 import type { Control } from '../../engine/context'
 import type { DotStyle, Field, GridConfig, Layer, Tone } from '../../engine/types'

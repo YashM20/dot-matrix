@@ -5,12 +5,14 @@
  * `scripts/ir.ts` checks them against an independent GLSL-spec interpreter (`reference.ts`).
  */
 import { hash32, len, mix, smoothstep } from '../math'
-import type { FnName } from './ast'
+import type { CoreFn, PackFn } from './ast'
 
 /** Exponents written as an integer literal 0…8 are expanded to multiplications (sign-preserving). */
 export const smallPow = (b: { k: string; v?: number }) => (b.k === 'num' && Number.isInteger(b.v) && b.v! >= 0 && b.v! <= 8 ? b.v! : -1)
 
-export const irMath: Record<FnName | 'mod' | 'pow', (...a: number[]) => number> = {
+type Builtin = (...a: number[]) => number
+/** Core builtins, plus the optional entries a pack (src/engine/noise/ir.ts) assigns on import. */
+export const irMath: Record<CoreFn | 'mod' | 'pow', Builtin> & Partial<Record<PackFn, Builtin>> = {
   sin: Math.sin, cos: Math.cos, abs: Math.abs, floor: Math.floor, sqrt: Math.sqrt, exp: Math.exp, sign: Math.sign,
   fract: x => x - Math.floor(x),
   min: (a, b) => (b < a ? b : a),
