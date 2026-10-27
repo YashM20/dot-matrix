@@ -3,6 +3,14 @@
 All notable engineering changes to Dot/480 are recorded here, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://dot-matrix1.vercel.app, deployed from `main`), not a published package: there are no tagged or npm releases, so entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
 
+## [Unreleased] — 2026-10-27 · ALGORITHMS board (branch `feat/algorithms`)
+Doc: `docs/ALGORITHMS.md`.
+### Added
+- `src/engine/algo/`: `stipple` (weighted Voronoi stippling, Secord 2002: Lloyd relaxation with a bucket ring search, then a Voronoi-neighbour walk; lazy, cached iterations), `attractorDensity` (Clifford / de Jong log-density histogram; deterministic `dsin` / table `tsin`; a collapse guard that nudges out of periodic windows), `wfc` (simple tiled Wave Function Collapse with AC-3, chronological backtracking, fresh seeds and a scrubbable option history), `dla` (off-lattice diffusion-limited aggregation with circle jumps, a near-distance map and bisected contacts).
+- Board `algorithms` (`/algorithms/`, ENGINE group, 2 columns, its own lazy chunk): `algo-stipple` (the moon in 2,400 Lloyd-relaxed stipples), `algo-attractor` (a drifting Clifford attractor), `algo-collapse` (a knot that ties itself, tile by tile), `algo-aggregate` (frost from one grain, with a live fractal-dimension readout). Each card's t = 0 is the finished picture; red marks only the live front.
+- `scripts/algorithms.ts` (run by `pnpm verify`): determinism, invariants (stipples on the density, a consistent WFC tiling with a monotone history, non-overlapping DLA discs touching their parents, D in 1.6–1.85, no attractor collapse along the card path) and timing budgets scaled by a measured load factor.
+- Goldens: 4 new presets (`algo-*`, t = 0 and t = 1.3); the existing hashes are unchanged.
+
 ## [Unreleased] — 2026-10-26 · UX U2–U4, U5 DISPLAY menu, cleanup (branch `feat/ux-u0-u1`)
 Build log: `docs/UX-PLAN.md` §9. Built by parallel agents in worktrees, merged and fully checked once.
 ### Added

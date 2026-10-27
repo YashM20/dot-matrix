@@ -30,6 +30,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   physics: 'Dots you can touch: splash a word, stir ink, grab the flag, poke the jelly, throw a dot.',
   scope: 'The instrument seen as signal: oscilloscope, spectrum and your microphone.',
   heal: 'Scratch the dots with your cursor and watch them grow back.',
+  algorithms: 'Four niche algorithms drawing in dots: Voronoi stippling, a strange attractor, wave function collapse and frost growth.',
 }
 
 export const groupBlurbs: Record<BoardGroupId, string> = {
