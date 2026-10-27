@@ -3,1490 +3,1774 @@
  "presets": {
   "home-clock": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "00577b8a",
     "dots": 482
    }
   },
   "music": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "290c39ca",
     "dots": 2317
    }
   },
   "timer": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "b2443d92",
     "dots": 454
    }
   },
   "weather": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "fe03c7b4",
     "dots": 496
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "fe03c7b4",
     "dots": 496
    }
   },
   "fitness": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "247afc4b",
     "dots": 514
    }
   },
   "messages": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "fb02c34f",
     "dots": 1943
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "fb02c34f",
     "dots": 1943
    }
   },
   "camera": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "26a3c2fd",
     "dots": 672
    }
   },
   "settings": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "d0c21f7a",
     "dots": 2936
    }
   },
   "system": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "90b63d72",
     "dots": 634
    }
   },
   "agent-status": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "ad7c23f1",
     "dots": 867
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "b74b30ab",
     "dots": 867
    }
   },
   "codex-tokens": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "4b1e2c1e",
     "dots": 734
    }
   },
   "device-overview": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "58a122fe",
     "dots": 1011
    }
   },
   "tesla-status": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "8afa5e32",
     "dots": 892
    }
   },
   "pharma-track": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "412c019f",
     "dots": 1540
    }
   },
   "medical-monitor": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "b85109bb",
     "dots": 1004
    }
   },
   "bio-sensor": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "99daf59a",
     "dots": 645
    }
   },
   "word-play": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "6ab89599",
     "dots": 1266
    }
   },
   "retail-analytics": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "f7909b13",
     "dots": 706
    }
   },
   "entertainment": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "feebfd6d",
     "dots": 803
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "5994dbe2",
     "dots": 803
    }
   },
   "game-zone": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "3d7b375b",
     "dots": 678
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "a6fc4957",
     "dots": 678
    }
   },
   "vision-ai": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "d00feae5",
     "dots": 773
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "d00feae5",
     "dots": 773
    }
   },
   "thermal-monitor": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "e02b3790",
     "dots": 6256
    }
   },
   "ev-charge": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "918e955d",
     "dots": 6059
    }
   },
   "codex-usage": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "c338393f",
     "dots": 2030
    }
   },
   "fitness-rings": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "7f733e33",
     "dots": 2326
    }
   },
   "henry-sleep": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "01707341",
     "dots": 3396
    }
   },
   "mini-game": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "729f864f",
     "dots": 803
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "9bb828af",
     "dots": 803
    }
   },
   "ai-assistant": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "32de78d2",
     "dots": 3663
    }
   },
   "vision-camera": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "09c728fa",
     "dots": 13059
    }
   },
   "deerflow-agent": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "cb7ccf31",
     "dots": 1641
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "deddfc50",
     "dots": 1643
    }
   },
   "boarding-pass": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "bcf824ba",
     "dots": 521
    }
   },
   "sunburst": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "1b41b14d",
     "dots": 191
    }
   },
   "power-ring": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "b71c2b5f",
     "dots": 289
    }
   },
   "midnight-circuit": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "2a95ddc7",
     "dots": 907
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "2242ed79",
     "dots": 885
    }
   },
   "silhouette": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "812b6027",
     "dots": 20706
    }
   },
   "inhale": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "7f726483",
     "dots": 480
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "08bb23ba",
     "dots": 491
    }
   },
   "good-morning": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "803dbb9f",
     "dots": 1861
    }
   },
   "cardiology": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "56faeb55",
     "dots": 639
    }
   },
   "listening": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "a0d48f1c",
     "dots": 649
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "c7c6577e",
     "dots": 705
    }
   },
   "metro": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "739f3928",
     "dots": 474
    }
   },
   "oxygen": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "fe84b2c2",
     "dots": 321
    }
   },
   "home-quiet": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "a71bf625",
     "dots": 512
    }
   },
   "final-lap": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "529bb3df",
     "dots": 366
    }
   },
   "newswire": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "fffea371",
     "dots": 940
    }
   },
   "deerflow-stars": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "78a191f9",
     "dots": 496
    }
   },
   "cody": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "4556bd1a",
     "dots": 589
    }
   },
   "tatooine": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "e1571cd6",
     "dots": 1155
    }
   },
   "afterlight": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "aeb6f2a7",
     "dots": 1068
    }
   },
   "ride": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "1753e9b7",
     "dots": 608
    }
   },
   "henry-bear": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "da52242f",
     "dots": 974
    }
   },
   "design-review": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "677401fd",
     "dots": 715
    }
   },
   "memo": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "64213394",
     "dots": 1181
    }
   },
   "wiki": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "84a75d3e",
     "dots": 1007
    }
   },
   "system-menu": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "196251fd",
     "dots": 550
    }
   },
   "last-password": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "4818698d",
     "dots": 441
    }
   },
   "notifications": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "fa652763",
     "dots": 553
    }
   },
   "apps": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "032edaa4",
     "dots": 843
    }
   },
   "audio-levels": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "cc8093c4",
     "dots": 526
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "da389bd8",
     "dots": 526
    }
   },
   "vibe-pad": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "edff296c",
     "dots": 1836
    }
   },
   "midi": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "472cbd4b",
     "dots": 336
    }
   },
   "recorder": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "f8e1837a",
     "dots": 1624
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "0b632cf0",
     "dots": 1624
    }
   },
   "radio": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "002cc42b",
     "dots": 899
    }
   },
   "interpreter": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "b4d00c7c",
     "dots": 760
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "b3c91488",
     "dots": 760
    }
   },
   "thermal-puppy": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "5edd9a62",
     "dots": 20731
    }
   },
   "level-03": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "061a6520",
     "dots": 20013
    }
   },
   "shopping": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "5d39ca39",
     "dots": 1379
    }
   },
   "departures": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "91a6bd3b",
     "dots": 1280
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "91a6bd3b",
     "dots": 1280
    }
   },
   "station-clock": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "b158670e",
     "dots": 247
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "b158670e",
     "dots": 247
    }
   },
   "platform": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "45cacf1c",
     "dots": 417
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "45cacf1c",
     "dots": 417
    }
   },
   "next-train": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "840fea44",
     "dots": 376
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "840fea44",
     "dots": 376
    }
   },
   "line-map": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "176d9958",
     "dots": 777
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "6fbca4de",
     "dots": 767
    }
   },
   "service": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "f511ac60",
     "dots": 618
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "f511ac60",
     "dots": 618
    }
   },
   "inst-cutoff": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "6bd9c745",
     "dots": 213
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "6bd9c745",
     "dots": 213
    }
   },
   "inst-resonance": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "67091625",
     "dots": 255
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "67091625",
     "dots": 255
    }
   },
   "inst-level": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "89f7c8b0",
     "dots": 279
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "0b8133a0",
     "dots": 279
    }
   },
   "inst-attack": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "5fe8c854",
     "dots": 193
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "5fe8c854",
     "dots": 193
    }
   },
   "inst-release": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "c5f68747",
     "dots": 256
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "c5f68747",
     "dots": 256
    }
   },
   "inst-xy": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "718d608a",
     "dots": 319
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "28cca7fe",
     "dots": 318
    }
   },
   "inst-transport": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "6313badd",
     "dots": 515
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "cfac1979",
     "dots": 515
    }
   },
   "inst-sequencer": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "80778385",
     "dots": 319
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "1bfd0af8",
     "dots": 310
    }
   },
   "inst-crank": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "352fb284",
     "dots": 329
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "352fb284",
     "dots": 329
    }
   },
   "ir-ripple": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "7d25eeb9",
     "dots": 1091
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "7cd10071",
     "dots": 1063
    }
   },
   "ir-plasma": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "cbcf12bb",
     "dots": 3227
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "d8bbcd8f",
     "dots": 3653
    }
   },
   "ir-dial": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "99cdb88e",
     "dots": 608
    }
   },
   "cinema-last-call": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "76a1f86f",
     "dots": 1433
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "706822fd",
     "dots": 1433
    }
   },
   "cinema-signal": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "9091ce06",
     "dots": 1388
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "5e06b698",
     "dots": 1388
    }
   },
   "cinema-sundown": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "afaef50e",
     "dots": 1265
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "715d108d",
     "dots": 1265
    }
   },
   "cinema-upstairs": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "3b62611a",
     "dots": 1815
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "6b6854da",
     "dots": 1815
    }
   },
   "cinema-closer": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "ec6ae14c",
     "dots": 1448
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "4e573364",
     "dots": 1448
    }
   },
   "cinema-witness": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "adaded3b",
     "dots": 2668
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "b809cb75",
     "dots": 2668
    }
   },
   "cinema-exit-14": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "232d9200",
     "dots": 871
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "18d462c5",
     "dots": 896
    }
   },
   "cinema-keeper": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "7a7c8450",
     "dots": 1282
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "7ccc0686",
     "dots": 1282
    }
   },
   "cinema-encore": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "30c519be",
     "dots": 1939
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "c23248d8",
     "dots": 1929
    }
   },
   "light-torch": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "f8f438cf",
     "dots": 1997
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "7a7d6f98",
     "dots": 1979
    }
   },
   "light-orb": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "fcfc61c7",
     "dots": 1881
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "fcfc61c7",
     "dots": 1881
    }
   },
   "light-on-air": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "7b6390d2",
     "dots": 1340
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "d62459c9",
     "dots": 1372
    }
   },
   "light-matte": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "e56d7870",
     "dots": 1451
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "e56d7870",
     "dots": 1451
    }
   },
   "light-gloss": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "0d2a570e",
     "dots": 1377
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "0d2a570e",
     "dots": 1377
    }
   },
   "light-glass": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "bf2c51aa",
     "dots": 1315
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "bf2c51aa",
     "dots": 1315
    }
   },
   "light-emissive": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "56bb494e",
     "dots": 2254
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "56bb494e",
     "dots": 2254
    }
   },
   "light-metal": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "d545a3aa",
     "dots": 1542
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "d545a3aa",
     "dots": 1542
    }
   },
   "light-fabric": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "3e3e2326",
     "dots": 1744
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "3e3e2326",
     "dots": 1744
    }
   },
   "lv-title": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "9e88255a",
     "dots": 2828
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "e33e69c8",
     "dots": 2706
    }
   },
   "lv-corridor": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "92f1faec",
     "dots": 20674
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "4c7e5537",
     "dots": 20675
    }
   },
   "lv-vault": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "162fd19c",
     "dots": 9648
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "28fae89c",
     "dots": 9648
    }
   },
   "lv-surface": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "fdcc72d3",
     "dots": 6909
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "174135f1",
     "dots": 6881
    }
   },
   "lv-warren": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "6c8cbb68",
     "dots": 831
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "54d76ffc",
     "dots": 844
    }
   },
   "lv-void": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "bff3df6e",
     "dots": 850
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "4a742ede",
     "dots": 821
    }
   },
   "lv-queen": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "bf838999",
     "dots": 515
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "8f2ffe66",
     "dots": 515
    }
   },
   "lv-over": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "3984adf5",
     "dots": 2032
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "4de03439",
     "dots": 2041
    }
   },
   "lv-scores": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "1e1dfe51",
     "dots": 1521
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "1e1dfe51",
     "dots": 1521
    }
   },
   "hb-thinking": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "3de5ba3d",
     "dots": 760
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "507a395a",
     "dots": 819
    }
   },
   "hb-tool-running": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "223218fa",
     "dots": 624
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "a5d38770",
     "dots": 612
    }
   },
   "hb-awaiting-approval": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "f5c5d9db",
     "dots": 777
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "95464ffc",
     "dots": 759
    }
   },
   "hb-error": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "0afaec55",
     "dots": 558
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "8fd0a520",
     "dots": 578
    }
   },
   "hb-done": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "953f22b8",
     "dots": 455
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "953f22b8",
     "dots": 455
    }
   },
   "hb-agent": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "98a5539a",
     "dots": 923
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "c940e205",
     "dots": 950
    }
   },
   "sim-rd": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "0ae9fde8",
     "dots": 2698
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "dcaf7cc8",
     "dots": 2947
    }
   },
   "sim-sand": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "8d43a2d4",
     "dots": 1251
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "ebdebbef",
     "dots": 1245
    }
   },
   "sim-life": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "fa643ab4",
     "dots": 1582
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "805a6bb7",
     "dots": 1326
    }
   },
   "lock-hourglass": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "cdfbd82a",
     "dots": 310
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "cdfbd82a",
     "dots": 310
    }
   },
   "lock-longpress": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "b10209c1",
     "dots": 529
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "b10209c1",
     "dots": 529
    }
   },
   "lock-notify": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "672ae072",
     "dots": 610
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "5553494c",
     "dots": 611
    }
   },
   "lock-idle": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "6d6899b1",
     "dots": 1613
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "6d6899b1",
     "dots": 1613
    }
   },
   "live-weather": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "66cb190a",
     "dots": 1140
    }
   },
   "live-now-playing": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "e495cfba",
     "dots": 1468
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "e48239bd",
     "dots": 1464
    }
   },
   "live-contribs": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "68068ea9",
     "dots": 1651
    }
   },
   "mirror-camera": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "3c90d1f6",
     "dots": 11904
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "3c90d1f6",
     "dots": 11904
    }
   },
   "mirror-ladder": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "24e8e619",
     "dots": 11049
    }
   },
   "mirror-shadow": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "ac2b1f9e",
     "dots": 4213
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "b0cfdb2a",
     "dots": 4179
    }
   },
   "mirror-conduct": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "2d491756",
     "dots": 1438
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "3d3a6987",
     "dots": 1438
    }
   },
   "gpu-plasma": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "eea3ca4a",
     "dots": 13360
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "f0439330",
     "dots": 14188
    }
   },
   "gpu-starfield": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "769f1933",
     "dots": 1992
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "65ce6ee0",
     "dots": 2418
    }
   },
   "gpu-moire": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "f12c41b4",
     "dots": 9139
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "28c2d13d",
     "dots": 9053
    }
   },
   "surface-browser": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "bf1487c1",
     "dots": 473
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "1a0f0285",
     "dots": 483
    }
   },
   "surface-glyph": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "e15ee132",
     "dots": 757
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "783e903b",
     "dots": 757
    }
   },
   "surface-eink": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "4fa3b7bf",
     "dots": 1438
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "6b199b7f",
     "dots": 11099
    }
   },
   "surface-flipdisc": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "4c1e9650",
     "dots": 1217
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "6867d2c0",
     "dots": 1215
    }
   },
   "surface-plotter": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "a0226e23",
     "dots": 719
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "92a92569",
     "dots": 711
    }
   },
   "ui-toggle": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "6579335f",
     "dots": 248
    }
   },
   "ui-pill": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "ccad0b02",
     "dots": 479
    }
   },
   "ui-slider": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "28eafc4f",
     "dots": 145
    }
   },
   "ui-icon-button": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "368aff15",
     "dots": 384
    }
   },
   "ui-status-dot": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "6d3c61cb",
     "dots": 169
    }
   },
   "ui-segmented": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "157408f3",
     "dots": 403
    }
   },
   "ui-stepped-slider": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "fe615a0c",
     "dots": 352
    }
   },
   "ui-knob": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "b38b1e5c",
     "dots": 165
    }
   },
   "ui-stepper": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "126c7693",
     "dots": 352
    }
   },
   "ui-check": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "ccffa04f",
     "dots": 486
    }
   },
   "ui-tabs": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "13bfa28a",
     "dots": 493
    }
   },
   "ui-progress": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "08ade18b",
     "dots": 471
    }
   },
   "ui-loaders": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "279b46cb",
     "dots": 422
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "4a9e612c",
     "dots": 425
    }
   },
   "ui-keypad": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "54eae425",
     "dots": 282
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "54eae425",
     "dots": 282
    }
   },
   "ui-text-field": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "e69de066",
     "dots": 501
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "e69de066",
     "dots": 501
    }
   },
   "ui-chips": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "cb00f5f5",
     "dots": 706
    }
   },
   "ui-toast": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "26545062",
     "dots": 416
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "1cf00d91",
     "dots": 645
    }
   },
   "type-axes": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "139d5b8a",
     "dots": 1457
    }
   },
   "type-morph": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "a53f131a",
     "dots": 814
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "a53f131a",
     "dots": 814
    }
   },
   "type-marquee": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "63ede90a",
     "dots": 1941
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "dc7b6002",
     "dots": 1903
    }
   },
   "type-kinetic": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "e5885b74",
     "dots": 1350
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "3e0461d4",
     "dots": 1763
    }
   },
   "type-flight": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "d6e67e0d",
     "dots": 645
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "d6e67e0d",
     "dots": 645
    }
   },
   "type-anything": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "3e7828e0",
     "dots": 1053
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "3e7828e0",
     "dots": 1053
    }
   },
   "phys-splash": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "b5fc75d7",
     "dots": 486
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "436dde72",
     "dots": 509
    }
   },
   "phys-ink": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "2434d3ff",
     "dots": 339
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "a118b2d4",
     "dots": 490
    }
   },
   "phys-flag": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "4d1a69cd",
     "dots": 462
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "f91b2768",
     "dots": 462
    }
   },
   "phys-jelly": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "f357c205",
     "dots": 793
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "5bee2756",
     "dots": 803
    }
   },
   "phys-pit": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "0eee790b",
     "dots": 124
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "4e25583e",
     "dots": 124
    }
   },
   "scope-wave": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "7bea591c",
     "dots": 530
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "23cf8324",
     "dots": 431
    }
   },
   "scope-spectrum": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "569ba614",
     "dots": 956
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "30be2d0c",
     "dots": 956
    }
   },
   "scope-mic": {
    "t=0": {
+    "style": "squircle:2.00",
     "hash": "a00f0bbd",
     "dots": 379
    },
    "t=1.3": {
+    "style": "squircle:2.00",
     "hash": "c21d2d19",
     "dots": 345
    }
   },
   "heal-mirror": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "2f900410",
     "dots": 733
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "26df0727",
     "dots": 727
    }
   },
   "heal-xray": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "e042160b",
     "dots": 1588
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "ff61c4a6",
     "dots": 1476
    }
   },
   "heal-persist": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "0dadc841",
     "dots": 632
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "f042027a",
     "dots": 681
    }
   },
   "algo-stipple": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "9e142fe0",
     "dots": 3006
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "9e142fe0",
     "dots": 3006
    }
   },
   "algo-attractor": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "6abfc43b",
     "dots": 4923
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "85157ea0",
     "dots": 4860
    }
   },
   "algo-collapse": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "aba23874",
     "dots": 1179
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "aba23874",
     "dots": 1179
    }
   },
   "algo-aggregate": {
    "t=0": {
+    "style": "squircle:2.30",
     "hash": "79bcfe46",
     "dots": 1653
    },
    "t=1.3": {
+    "style": "squircle:2.30",
     "hash": "3408f0fa",
     "dots": 1703
    }

@@ -8,10 +8,9 @@
  * sampler, goldens, SVG export and the canvas fallback never see a difference; the GPU path samples
  * the same u/v mapping `density`× finer.
  */
-import type { IREnv, IRProgram } from '../../ir'
-import { emitGLSL, parse, irProgram } from '../../ir'
+import type { IREnv } from '../../ir'
 import { latticeGrid, toneColor } from '../../sampler/gridSampler'
-import type { CellBounds, DotInstance, DotStyle, Field, GridConfig, Layer, ThemeTokens, Tone } from '../../types'
+import type { DotInstance, DotStyle, Field, GridConfig, Layer, ThemeTokens, Tone } from '../../types'
 
 export interface GPUTag {
   /** Fine dots per lattice cell along each axis (1 = the CPU sampler's own lattice). */
@@ -22,20 +21,7 @@ export interface GPUTag {
 export type GPUField = Field & { gpu?: GPUTag }
 export const gpuTag = (f: Field): GPUTag | undefined => (f as GPUField).gpu
 
-const glslCache = new Map<string, { glsl: string; data: string[] }>()
-/**
- * A Field IR program as a GPU pass: on WebGL2 the value is computed per dot on the GPU at `density`×
- * the layer's lattice; everywhere else it is the CPU program's Field (`irProgram(src)(env)`).
- */
-export function gpuIR(src: string, env: IREnv = {}, opts: { density?: number; program?: IRProgram; bounds?: CellBounds } = {}): GPUField {
-  const program = opts.program ?? irProgram(src, { mode: 'function' })
-  let g = glslCache.get(src)
-  if (!g) glslCache.set(src, (g = { glsl: emitGLSL(parse(src)), data: program.info.data }))
-  const f: GPUField = program(env)
-  if (opts.bounds) f.bounds = opts.bounds
-  f.gpu = { density: opts.density ?? 1, ir: { ...g, env } }
-  return f
-}
+// `gpuIR` (an IR program as a pass) lives in ./gpuIR.ts so the renderer has no static import of the IR core
 /** A JS field sampled on the CPU straight into the value texture at `density`× (100k+ dots without dot objects). */
 export function gpuValues(field: Field, opts: { density?: number } = {}): GPUField {
   const f: GPUField = (u, v) => field(u, v)

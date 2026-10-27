@@ -310,16 +310,23 @@ Owner gates: clusters ruling before L1.3; activeDim before L1.8 / M1.6; WebGPU b
 | Registry files (`manifest.ts`, `widgets/index.ts`, `blurbs.ts`, `meta.ts`, `ids.json`, `catalog.ts`), `goldens/hashes.json`, PROGRESS, README, CHANGELOG, `src/changelog.ts` | integration-queue commits only |
 
 ### First-load ledger (budget 150 kB gz; 148.14 used on 2026-10-27)
+Measured rows carry the number `scripts/site/size.ts` printed (gzip -9, kB = 1024 B); the others are still estimates.
+
 | Change | Delta (kB gz) | Running |
 |---|---|---|
-| F0.11 cut (required before Q1.4 merges) | ≤ −1.0 | ≈147.1 |
-| F0 registry + fps plumbing | +0.07 | ≈147.2 |
-| Q1 hook points (+0.4 with the array-path fallback) | +0.6 | ≈147.8 |
-| Q2 / Q3 | +0.3 / +0.1 | ≈148.2 |
-| 4 new board manifest rows (pond, squares, materials, workshop) | ≈ +0.25 | ≈148.5 |
-| X1 | ≤ +0.5 | ≈149.0 |
+| baseline (c619dae) | — | 148.14 (measured) |
+| F0.5 / F0.6 square cover (`cover.ts`: `hides` incl. rotation, `coverExponent`) | +0.20 (measured) | 148.34 |
+| F0.10 fps plumbing (`src/widgets/fps.ts`, `DotWidget`) | +0.02 (measured) | 148.37 (measured) |
+| F0.11 cut: first-load modules import engine modules directly, not the `src/engine` barrel; `gpuIR` split out of `passes.ts` | −24.38 (measured; row was ≤ −1.0) | 123.99 (measured) |
+| F0 IR registry hook (F1-A, measured at merge) | ≈ +0.05 | ≈124.0 |
+| Q1 hook points (+0.4 with the array-path fallback) | +0.6 | ≈124.6 |
+| Q2 / Q3 | +0.3 / +0.1 | ≈125.0 |
+| 4 new board manifest rows (pond, squares, materials, workshop) | ≈ +0.25 | ≈125.3 |
+| X1 | ≤ +0.5 | ≈125.8 |
 
-Gates are deltas against this ledger, not absolute numbers. Each merge updates the "Running" column with the measured value. The size check also covers the `sampleWorker` chunk, since it imports the eager registry.
+**Sample worker chunk** (`sampleWorker-*.js`, `size.ts --worker`; not first load, but fetched by every page that animates a card): 153.55 at c619dae → 153.65 after F0.5–F0.11 (+0.10, the cover code; the cut does not touch the worker). Its rows: F0 noise/light additions (measured at merge); L/M boards that stay main-thread should keep their modules out of the worker's registry path (F0 §7 R13).
+
+Gates are deltas against this ledger, not absolute numbers: `size.ts --check --against <base dist> --delta <row> [--worker --worker-delta <row>]` (or `--base <kB>` / `--worker-base <kB>` with the running totals) fails when a change grows past its row; the 150 kB cap stays as the backstop. Each merge updates the "Running" column with the measured value. Keep first-load code off the `src/engine` barrel (`export * from` every module): one value import from it makes every engine module a lazy board uses part of first load (that was the 24 kB).
 
 ## 7. Owner decisions (deduplicated; default in brackets)
 

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { sampleField, sampleLayers } from '../engine'
+import { sampleField, sampleLayers } from '../engine/sampler/gridSampler'
 import type { DotInstance, DotStyle, Field, FrameContext, GridConfig, Layer, ThemeTokens } from '../engine'
 import type { WidgetContext } from '../widgets/types'
 import { staticLayers } from '../widgets/registry'
