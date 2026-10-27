@@ -386,3 +386,5 @@ html.ed-lock .pal-dock { display: none }
 }
 /* the full-screen phone editor is fixed: its section keeps a real height so the page under it is not collapsed */
 .make-view:has(> .ed-root.is-phone) { min-height: 100dvh }
+/* the phone editor is full-screen with its own back button and dock: the site's tab bar and footer step aside */
+.shell:has(.ed-root.is-phone) :is(.tabbar, .bottom, .topbar) { display: none }
