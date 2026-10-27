@@ -304,4 +304,8 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'heal-mirror': ['Scratch the dots with your cursor and watch them grow back.', 'heal nca control'],
   'heal-xray': ['The hidden state that lets the dots regrow, shown as channels.', 'heal nca animated'],
   'heal-persist': ['Scratch it and it heals, even after many cuts.', 'heal nca control'],
+  'algo-stipple': ['A moon drawn by 2,400 dots that settle into place by weighted Voronoi relaxation.', 'algorithm stipple voronoi animated'],
+  'algo-attractor': ['A Clifford strange attractor as a density of dots, its parameters slowly drifting.', 'algorithm attractor chaos animated'],
+  'algo-collapse': ['Wave Function Collapse solving a new knot of tiles every loop.', 'algorithm wfc tiles animated'],
+  'algo-aggregate': ['Frost grown one grain at a time by diffusion-limited aggregation.', 'algorithm dla fractal animated'],
 }

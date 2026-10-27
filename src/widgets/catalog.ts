@@ -176,4 +176,8 @@ export const catalog: readonly CatalogRow[] = [
   ['heal-mirror', 'nf2s1tpn', 'heal'],
   ['heal-xray', '18v65pvv', 'heal'],
   ['heal-persist', 'aq49ah2w', 'heal'],
+  ['algo-stipple', 'k18n7zs1', 'algorithms'],
+  ['algo-attractor', 'sf08q412', 'algorithms'],
+  ['algo-collapse', 'rxjd4n9w', 'algorithms'],
+  ['algo-aggregate', '5ryd1vqh', 'algorithms'],
 ]
