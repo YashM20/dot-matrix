@@ -5,6 +5,11 @@
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
 ## Status board (updated 2026-10-27)
+**Foundation run (2026-10-27, branch `feat/foundation`):** the shared foundation of `docs/LIVING-MATTER-PLAN.md` (F0) and `docs/LAYOUT-THEME-PLAN.md` (T0), done in two phases of two parallel agents each. Priority: F0 first, because it unblocks the L, Q and M tracks and cuts first-load JS (148.14 of 150 kB) before the tracks and the theme spend it. Then T0, which unblocks T1–T6.
+- **Phase 1:** F1-A noise (F0.1–F0.4 and the determinism lint of F0.9); F1-B pixels and budget (F0.5, F0.6, F0.10, F0.11). Merge order: B, then A, then the full suite (the F0.9 join).
+- **Phase 2:** F2-C light hub (F0.7, F0.8, which needs `datan2` from phase 1); F2-D T0 tokens and cleanup. Then the full suite again.
+- **Machine budget** (2 cores, 4 threads, 16 GB): only two agents run at a time; worktrees share `node_modules` through a junction; heavy commands (`vite build`, `pnpm golden`, browser probes, `pnpm check`) take a machine-wide lock so that only one runs at a time.
+
 **Resume here (2026-10-27):** branch `feat/native-editor-share` merges six parallel tracks on top of `main` (3a1775c, UX U0–U5 slice):
 - **Phone shell** (`src/site/mobile.css`, `BoardSheet`, `Sheet`, `useSwipeDown`, `site/layer.ts`): bottom tab bar EXPLORE / MAKE / ABOUT / TOOLS, sticky title bar that opens a boards sheet, thumb strips, swipe-down sheets, touch palette (no autofocus, boards first), 16 px fields on coarse pointers, safe areas, short-landscape layout, installable PWA (`public/manifest.webmanifest`, dot-field icons).
 - **Touch policy** (`src/engine/interaction/gesture.ts`, `useControlInput`, `touch.css`; `docs/UX-PLAN.md` §10): cards are scroll-first; tap controls act on lift, drag controls on a horizontal drag or a 300 ms hold; physics cards are `gesture: 'surface'`; X-ray is a swipeable bottom sheet.
