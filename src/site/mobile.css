@@ -1,0 +1,877 @@
+/*
+  Phone shell (≤ 760 px): a compact sticky top bar with the place's name and search, a bottom tab bar
+  (EXPLORE / MAKE / ABOUT / TOOLS), thumb strips for the board groups and boards, and bottom sheets
+  (boards, tools + display, the ⌘K palette). Desktop keeps its layout: everything phone-only is hidden
+  above the breakpoint. Grey chrome; the one accent (--red = {colors.dotActive}) only marks "active".
+  Exposed for the views: --app-top (the sticky bar's height) and --tabbar-h (the tab bar's, with the
+  home-indicator inset), so pinned or fixed things can sit clear of them.
+*/
+:root {
+  --app-top: calc(52px + env(safe-area-inset-top));
+  --tabbar-h: calc(58px + env(safe-area-inset-bottom));
+  --gutter: calc((100vw - 100%) / 2);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent
+}
+
+/* no double-tap zoom delay on controls; pinch zoom stays (accessibility) */
+button,
+a,
+select,
+summary,
+label,
+input,
+[role="tab"] {
+  touch-action: manipulation
+}
+
+.tabbar,
+.topbar-place,
+.topbar-search,
+.next-board,
+.board-all,
+.pal-grab,
+.pal-cancel,
+.intro-tools {
+  display: none
+}
+
+.glyph {
+  display: block;
+  width: 20px;
+  height: 20px;
+  overflow: visible
+}
+
+.glyph circle {
+  fill: currentColor;
+  opacity: .28
+}
+
+.glyph circle.on {
+  opacity: 1
+}
+
+/* ── bottom sheet (src/components/Sheet.tsx): a modal <dialog> ── */
+html:has(.sheet[open]) {
+  overflow: hidden
+}
+
+.sheet {
+  position: fixed;
+  inset: auto 0 0;
+  width: 100%;
+  max-width: 600px;
+  max-height: min(86dvh, 760px);
+  margin: 0 auto;
+  padding: 0 0 env(safe-area-inset-bottom);
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-bottom: 0;
+  border-radius: 18px 18px 0 0;
+  background: var(--surface);
+  color: var(--value);
+  box-shadow: 0 -20px 60px rgba(0, 0, 0, .5);
+  text-align: left;
+  overflow: hidden;
+  overscroll-behavior: contain;
+  transition: transform .22s cubic-bezier(.2, .8, .2, 1);
+  animation: sheet-in .28s cubic-bezier(.2, .8, .2, 1)
+}
+
+.sheet[open] {
+  display: flex;
+  flex-direction: column
+}
+
+.sheet::backdrop {
+  background: rgba(0, 0, 0, .55);
+  backdrop-filter: blur(2px);
+  animation: sheet-fade .2s ease-out
+}
+
+@keyframes sheet-in {
+  from {
+    transform: translateY(100%)
+  }
+}
+
+@keyframes sheet-fade {
+  from {
+    opacity: 0
+  }
+}
+
+.sheet-grab {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0 2px;
+  touch-action: none
+}
+
+.sheet-grab i {
+  width: 36px;
+  height: 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, .22)
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0 6px 0 18px;
+  border-bottom: 1px solid var(--line);
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none
+}
+
+.sheet-head h2 {
+  margin: 0;
+  color: var(--label);
+  font: 600 10px var(--mono);
+  letter-spacing: .18em
+}
+
+.sheet-done {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  background: none;
+  color: var(--value);
+  font: 600 10px var(--mono);
+  letter-spacing: .14em;
+  cursor: pointer
+}
+
+.sheet-body {
+  flex: 1;
+  min-height: 0;
+  padding: 4px 10px 18px;
+  overflow-y: auto;
+  overscroll-behavior: contain
+}
+
+.sheet button:focus-visible {
+  outline: 1px dashed var(--value);
+  outline-offset: -2px
+}
+
+/* the boards sheet: every group, a row per board with its line; the current one carries the red dot */
+.board-sheet h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+  margin: 16px 8px 4px;
+  color: var(--mute);
+  font: 600 9px var(--mono);
+  letter-spacing: .18em
+}
+
+.board-sheet h3 small {
+  font: 400 10px var(--mono);
+  letter-spacing: .02em
+}
+
+.board-sheet ul {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none
+}
+
+.board-sheet li button,
+.skin-list button {
+  display: grid;
+  grid-template-columns: 6px 1fr;
+  align-items: center;
+  gap: 3px 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 10px;
+  background: none;
+  color: var(--mute);
+  font: 400 10.5px/1.4 var(--mono);
+  letter-spacing: .02em;
+  text-align: left;
+  cursor: pointer
+}
+
+.board-sheet li button b,
+.skin-list button b {
+  color: var(--label);
+  font-weight: 600;
+  font-size: 11px;
+  letter-spacing: .14em
+}
+
+.board-sheet li button span {
+  grid-column: 2
+}
+
+.board-sheet li button i,
+.skin-list button i {
+  grid-row: 1;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .16)
+}
+
+.board-sheet li button.selected,
+.skin-list button.selected {
+  color: var(--label);
+  background: radial-gradient(circle, rgba(255, 255, 255, .13) .8px, transparent 1.1px) 0 0 / 4px 4px
+}
+
+.board-sheet li button.selected b,
+.skin-list button.selected b {
+  color: var(--value)
+}
+
+.board-sheet li button.selected i {
+  background: var(--red)
+}
+
+/* the tools sheet: the dock's toggles as tiles, then the DISPLAY choice */
+.tools-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding-top: 10px;
+  -webkit-user-select: none;
+  user-select: none
+}
+
+.tools-grid button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 6px;
+  min-height: 72px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--raised);
+  color: var(--value);
+  text-align: left;
+  cursor: pointer
+}
+
+.tools-grid button:first-child {
+  grid-column: 1 / -1;
+  min-height: 52px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between
+}
+
+.tools-grid b {
+  font: 600 11px var(--mono);
+  letter-spacing: .16em
+}
+
+.tools-grid span {
+  color: var(--mute);
+  font: 400 10.5px/1.35 var(--mono);
+  letter-spacing: .02em
+}
+
+.tools-grid [aria-pressed="true"] {
+  border-color: rgba(255, 59, 48, .5)
+}
+
+.tools-grid [aria-pressed="true"] b {
+  color: var(--red)
+}
+
+.tools-grid [aria-pressed="true"] b::after {
+  content: ' · ON'
+}
+
+.tools-head {
+  margin: 20px 8px 6px;
+  color: var(--mute);
+  font: 600 9px var(--mono);
+  letter-spacing: .18em
+}
+
+.skin-list {
+  display: grid;
+  gap: 2px
+}
+
+.skin-list button {
+  grid-template-columns: 6px 64px 1fr;
+  min-height: 48px
+}
+
+.skin-list button i {
+  grid-row: auto;
+  background: currentColor;
+  opacity: .4
+}
+
+.skin-list button.selected i {
+  opacity: 1
+}
+
+.skin-list-clack {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  border: 1px dotted rgba(255, 255, 255, .2);
+  border-radius: 99px;
+  background: none;
+  color: var(--mute);
+  font: 600 10px var(--mono);
+  letter-spacing: .14em;
+  cursor: pointer
+}
+
+.skin-list-clack b {
+  color: var(--value);
+  font-weight: inherit
+}
+
+/* ── phones: portrait (≤ 760 px wide) and short landscape (a touch screen ≤ 500 px tall) ── */
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+  html {
+    overscroll-behavior-x: none
+  }
+
+  .shell {
+    min-height: 100dvh;
+    padding: 0 0 calc(var(--tabbar-h) + 20px)
+  }
+
+  /* chrome is not text: no selection, no callout on long press */
+  .topbar,
+  .tabbar,
+  .board-picker,
+  .next-board,
+  .bottom {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none
+  }
+
+  /* compact sticky top bar, edge to edge, under the status bar */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    flex-wrap: nowrap;
+    gap: 8px;
+    min-height: var(--app-top);
+    margin: 0 calc(-1 * var(--gutter)) 14px;
+    padding: env(safe-area-inset-top) max(4px, env(safe-area-inset-right)) 0 max(var(--gutter), env(safe-area-inset-left));
+    background: rgba(7, 8, 9, .84);
+    -webkit-backdrop-filter: saturate(140%) blur(14px);
+    backdrop-filter: saturate(140%) blur(14px)
+  }
+
+  /* MAKE pins its own canvas at the top: the bar scrolls away there */
+  .shell[data-view="MAKE"] .topbar {
+    position: relative
+  }
+
+  .topbar .view-tabs,
+  .topbar .skin-switch {
+    display: none
+  }
+
+  .brand {
+    flex: none;
+    white-space: nowrap
+  }
+
+  .topbar .topbar-place {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 6px;
+    overflow: hidden;
+    color: var(--value);
+    font: 600 11px/44px var(--mono);
+    letter-spacing: .14em;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap
+  }
+
+  .topbar-place span {
+    color: var(--mute)
+  }
+
+  /* LIVE DATA folds to its red dot (the words stay for screen readers) */
+  .live {
+    flex: none;
+    font-size: 0
+  }
+
+  .live i {
+    width: 6px;
+    height: 6px;
+    margin: 0
+  }
+
+  .topbar .topbar-search {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    color: var(--label)
+  }
+
+  .topbar-search .glyph {
+    width: 17px;
+    height: 17px
+  }
+
+  .topbar-search .glyph circle:not(.on) {
+    opacity: 0
+  }
+
+  /* the tab bar: four 58 px targets over the home indicator */
+  .tabbar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    border-top: 1px solid var(--line);
+    background: rgba(10, 11, 12, .9);
+    -webkit-backdrop-filter: saturate(140%) blur(16px);
+    backdrop-filter: saturate(140%) blur(16px)
+  }
+
+  .tabbar button {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    min-height: 58px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--mute);
+    font: 600 9px/1 var(--mono);
+    letter-spacing: .14em;
+    cursor: pointer
+  }
+
+  .tabbar [aria-current="page"] {
+    color: var(--value)
+  }
+
+  .tabbar [aria-current="page"] .glyph .on {
+    fill: var(--red)
+  }
+
+  /* X-ray or the time machine is on */
+  .tabbar .busy::after {
+    content: '';
+    position: absolute;
+    top: 9px;
+    left: calc(50% + 11px);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--red)
+  }
+
+  .tabbar button:focus-visible,
+  .topbar button:focus-visible,
+  .board-picker button:focus-visible,
+  .next-board:focus-visible {
+    outline: 1px dashed var(--value);
+    outline-offset: -3px
+  }
+
+  /* the floating dock is folded into TOOLS; what stayed fixed sits clear of the tab bar */
+  .pal-dock {
+    display: none
+  }
+
+  .pal-toast {
+    bottom: calc(var(--tabbar-h) + 14px)
+  }
+
+  .pal-fps {
+    bottom: calc(var(--tabbar-h) + 10px)
+  }
+
+  .xr-time {
+    bottom: calc(var(--tabbar-h) + 10px)
+  }
+
+  .xr-time button {
+    min-height: 40px;
+    min-width: 40px
+  }
+
+
+  /* board picker: both rows are edge-to-edge strips that scroll sideways under the thumb */
+  .board-picker .board-groups,
+  .board-picker .board-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 2px;
+    margin: 0 calc(-1 * var(--gutter));
+    padding: 0 var(--gutter);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: var(--gutter);
+    scroll-snap-type: x proximity;
+    scrollbar-width: none
+  }
+
+  .board-picker .board-groups::-webkit-scrollbar,
+  .board-picker .board-tabs::-webkit-scrollbar {
+    display: none
+  }
+
+  .board-picker .board-groups button,
+  .board-picker .board-tabs button {
+    flex: none;
+    scroll-snap-align: start;
+    white-space: nowrap
+  }
+
+  /* group names: plain text tabs, 44 px tall */
+  .board-picker .board-groups button {
+    min-height: 44px;
+    padding: 0 9px;
+    border-bottom: 0;
+    font-size: 10px
+  }
+
+  /* the open group: a 1 px rule under its word, not under its padding */
+  .board-picker .board-groups button.selected {
+    background: linear-gradient(var(--value), var(--value)) center bottom 9px / calc(100% - 18px) 1px no-repeat
+  }
+
+  .board-group-blurb {
+    display: none
+  }
+
+  /* pills are 36 px to the eye and 44 px to the finger: the border is the transparent hit pad */
+  .board-picker .board-groups .board-all,
+  .board-picker .board-tabs button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 4px solid transparent;
+    border-radius: 99px;
+    background: none;
+    background-clip: padding-box;
+    box-shadow: inset 0 0 0 1px var(--line);
+    color: var(--mute);
+    font: 500 10px var(--mono);
+    letter-spacing: .12em
+  }
+
+  /* ALL stays at the strip's left edge while the groups scroll under it */
+  .board-picker .board-groups .board-all {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: #070809;
+    background-clip: border-box;
+    box-shadow: inset 0 0 0 1px var(--line), 12px 0 10px -8px #070809;
+    margin-right: 6px;
+    color: var(--value);
+    font-weight: 600;
+    cursor: pointer
+  }
+
+  .board-picker .board-tabs {
+    margin-bottom: 10px
+  }
+
+  .board-picker .board-tabs button.selected {
+    box-shadow: inset 0 0 0 1px var(--red);
+    color: var(--red)
+  }
+
+  /* the board's end: the next board in its group */
+  .next-board {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    min-height: 64px;
+    margin: 18px 0 6px;
+    padding: 0 18px;
+    border: 1px solid var(--line);
+    border-radius: calc(var(--card-corner-exp) * 4px);
+    background: var(--surface);
+    color: var(--value);
+    font: 600 11px var(--mono);
+    letter-spacing: .14em;
+    text-align: left;
+    cursor: pointer
+  }
+
+  .next-board small {
+    color: var(--mute);
+    font-size: 9px
+  }
+
+  .next-board b {
+    flex: 1;
+    font-weight: inherit
+  }
+
+  .next-board span {
+    color: var(--label);
+    font-size: 14px
+  }
+
+  .intro-line {
+    gap: 0 12px;
+    margin-bottom: 6px;
+    font-size: 11.5px
+  }
+
+  .intro-line .intro-tools {
+    display: inline
+  }
+
+  /* the intent line's links and close are full-size targets (the close stays a 24 px ring to the eye) */
+  .intro-line a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px
+  }
+
+  .intro-line button {
+    min-width: 44px;
+    min-height: 44px;
+    border: 10px solid transparent;
+    background-clip: padding-box;
+    box-shadow: inset 0 0 0 1px var(--line)
+  }
+
+  /* footer: stacked lines, links at 44 px */
+  .bottom {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    line-height: 1.6;
+    text-align: left
+  }
+
+  .bottom a,
+  .about-view .log-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding-inline: 2px
+  }
+
+  /* ⌘K palette as a tall sheet: the field near the top (clear of the keyboard), results under it */
+  .pal-backdrop {
+    align-items: flex-end;
+    padding: 0
+  }
+
+  .pal {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: calc(100dvh - env(safe-area-inset-top) - 28px);
+    padding-bottom: env(safe-area-inset-bottom);
+    border-bottom: 0;
+    border-radius: 18px 18px 0 0;
+    transition: transform .22s cubic-bezier(.2, .8, .2, 1);
+    animation: sheet-in .28s cubic-bezier(.2, .8, .2, 1)
+  }
+
+  .pal-grab {
+    display: flex
+  }
+
+  .pal-field {
+    padding: 4px 6px 4px 14px
+  }
+
+  .pal-prompt,
+  .pal-foot,
+  .pal-hint {
+    display: none
+  }
+
+  /* 16 px: iOS doesn't zoom the page into the field */
+  .pal-input {
+    min-height: 44px;
+    font-size: 16px
+  }
+
+  .pal-cancel {
+    display: block;
+    min-height: 44px;
+    padding: 0 10px;
+    border: 0;
+    background: none;
+    color: var(--label);
+    font: 600 10px var(--mono);
+    letter-spacing: .14em;
+    cursor: pointer
+  }
+
+  .pal-list {
+    flex: 1;
+    max-height: none;
+    overscroll-behavior: contain
+  }
+
+  .pal-item {
+    min-height: 48px;
+    font-size: 13px
+  }
+
+  .pal-shell {
+    padding-top: calc(14px + env(safe-area-inset-top))
+  }
+
+  .pal:focus {
+    outline: none
+  }
+
+  .brand small {
+    display: none
+  }
+}
+
+/* portrait: the X-ray bottom sheet (App.css) stands on the tab bar */
+@media (max-width: 760px) {
+  .xr-panel {
+    bottom: var(--tabbar-h);
+    max-height: min(55vh, calc(100dvh - var(--app-top) - var(--tabbar-h)));
+    padding-bottom: 0
+  }
+}
+
+/* short landscape: a compact 44 px top bar and tab bar (glyph beside the word), clear of the notch */
+@media (max-height: 500px) and (pointer: coarse) {
+  :root {
+    --app-top: calc(44px + env(safe-area-inset-top));
+    --tabbar-h: calc(44px + env(safe-area-inset-bottom))
+  }
+
+  .shell {
+    width: calc(100% - 32px - env(safe-area-inset-left) - env(safe-area-inset-right))
+  }
+
+  .tabbar button {
+    flex-direction: row;
+    gap: 9px;
+    min-height: 44px
+  }
+
+  .tabbar .glyph {
+    width: 15px;
+    height: 15px
+  }
+
+  .tabbar .busy::after {
+    top: 8px;
+    left: calc(50% + 4px)
+  }
+
+  .pal {
+    height: calc(100dvh - 12px)
+  }
+}
+
+/* touch: form fields at 16 px so iOS doesn't zoom the page on focus; no keyboard-only hints or tools */
+@media (pointer: coarse) {
+  /* (the MAKE editor sizes its own selects: a wider one there would push its rows past the screen) */
+  :is(input:not([type]), input[type="text"], input[type="search"], input[type="number"], input[type="url"], input[type="email"], input[type="password"], select:not(.make-panel select), textarea) {
+    font-size: 16px !important
+  }
+
+  .pal-hint,
+  .pal-foot,
+  .pal-prompt,
+  .tools-grid .tool-shell {
+    display: none
+  }
+
+  .tools-grid .tool-share {
+    grid-column: 1 / -1
+  }
+}
+
+/* touch: press feedback instead of hover, and no hover colour left stuck after a tap */
+@media (hover: none) {
+  :is(.tabbar button, .topbar-place, .topbar-search, .board-picker button, .next-board, .sheet button, .bottom a, .intro-line button) {
+    transition: transform .12s ease-out, background-color .12s ease-out
+  }
+
+  :is(.topbar-place, .topbar-search, .board-picker button, .next-board, .sheet button, .bottom a, .intro-line button):active {
+    transform: scale(.96)
+  }
+
+  .tabbar button:active .glyph {
+    transform: scale(.86)
+  }
+
+  .tabbar .glyph {
+    transition: transform .12s ease-out
+  }
+
+  :is(.sheet li button, .skin-list button):active {
+    background-color: rgba(255, 255, 255, .06)
+  }
+
+  .board-groups button:not(.selected):hover {
+    color: var(--mute)
+  }
+}
+
+/* an installed app (display: standalone) has no pull-to-refresh to keep */
+@media (display-mode: standalone) {
+  html {
+    overscroll-behavior-y: none
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheet::backdrop,
+  .pal {
+    animation: none;
+    transition: none
+  }
+
+  :is(.tabbar button, .tabbar .glyph, .topbar-place, .topbar-search, .board-picker button, .next-board, .sheet button, .bottom a, .intro-line button) {
+    transition: none
+  }
+
+  :is(.topbar-place, .topbar-search, .board-picker button, .next-board, .sheet button, .bottom a, .intro-line button):active,
+  .tabbar button:active .glyph {
+    transform: none
+  }
+}

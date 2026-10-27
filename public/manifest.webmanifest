@@ -1,0 +1,23 @@
+{
+  "name": "DOT/480 — dot-matrix UI engine",
+  "short_name": "DOT/480",
+  "description": "Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid.",
+  "id": "/",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#070809",
+  "theme_color": "#070809",
+  "categories": ["design", "developer", "entertainment"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Make", "url": "/?make=tune", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
+    { "name": "About", "url": "/?about", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
+  ]
+}

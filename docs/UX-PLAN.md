@@ -193,7 +193,7 @@ Every other board shows its id. Ids and URLs never change.
 | **U2 · Card ladder** | Header hint verbs; cursors; action strip (ⓘ / Remix / Link / PNG); X-ray SUMMARY tab and glossary; X-ray as a bottom sheet on mobile | 2 days | **Done** 2026-10-26 (§9) |
 | **U3 · IA merge** | EXPLORE / MAKE / ABOUT; alias table and verify check; GALLERY folded in; LOG and essay links in ABOUT | 2 days | **Done** 2026-10-26 (§9), with the plan's proposed names; the taste session can still rename |
 | **U4 · Staged makers** | More folds and plain labels in TUNE/COMPOSE/CODE/DRAW; remembered fold state; mobile single column | 3–4 days | **Done** 2026-10-26 (§9); Pro renderer/worker/FPS controls and raw ids moved to U5 |
-| **U5 · Power layer** | `?` help sheet from one shortcut registry; palette completeness; Pro mode; shell `help` from the same registry; DISPLAY ▾ menu; the dock folds into `⋯ TOOLS` on phones | 1–2 days | DISPLAY ▾ menu **done** 2026-10-26 (§9); the rest next |
+| **U5 · Power layer** | `?` help sheet from one shortcut registry; palette completeness; Pro mode; shell `help` from the same registry; DISPLAY ▾ menu; the dock folds into `⋯ TOOLS` on phones | 1–2 days | DISPLAY ▾ menu **done** 2026-10-26 (§9); the dock folds into the phone tab bar's TOOLS sheet **done** 2026-10-26 (phone shell, `src/site/mobile.css`); the rest next |
 | **U6 · Check with people** | 3 friends, 5 minutes each, no hints (§8) | 1 hour + fixes | Not started |
 
 Order: U0, U1 and U2 deliver most of the clarity without moving any tool. U3 and U4 are the bigger structural changes, so they come after the taste session confirms names and groups.
