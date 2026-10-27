@@ -49,6 +49,7 @@ import { typeChecks } from './type'
 import { physicsChecks } from './physics'
 import { ncaChecks } from './nca/checks'
 import { c10Checks } from './c10'
+import { algorithmsChecks } from './algorithms'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -849,6 +850,8 @@ physicsChecks(assert)
 gameChecks(assert)
 // C3) Growing NCA: BPTT grad check, Int8 asset, regrowth gate, step cost, timeline purity, heal board (scripts/nca/checks.ts)
 ncaChecks(assert)
+// ALGORITHMS) stippling, attractor density, WFC, DLA: determinism, invariants, timing, the algorithms board (scripts/algorithms.ts)
+algorithmsChecks(assert)
 
 // UX U1) board picker (docs/UX-PLAN.md §4.2): every board in exactly one group after START HERE, a label and a blurb; old paths still open
 {

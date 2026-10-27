@@ -25,7 +25,7 @@ export interface StippleSpec {
   seed?: number
   /** Lloyd iterations available (default 40). */
   iterations?: number
-  /** Iterations solved with the exact bucket search before the Voronoi walk takes over (default 3; Infinity = all). */
+  /** Iterations solved with the exact bucket search before the Voronoi walk takes over (default 3: while stipples still jump from the random start; Infinity = all). */
   exact?: number
 }
 export interface Stipple {
@@ -100,7 +100,9 @@ export function stipple(spec: StippleSpec): Stipple {
   /**
    * One Lloyd iteration. The first iterations (`exact`) find every pixel's nearest stipple with the bucket
    * ring search; later ones, when stipples move a fraction of a pixel, walk from the pixel's last owner over
-   * the last Voronoi adjacency (the Delaunay greedy walk), ~6 distance tests per pixel.
+   * the last Voronoi adjacency (the Delaunay greedy walk), ~6 distance tests per pixel. The walk uses last
+   * iteration's adjacency, so it can miss a new neighbour; by then moves are tiny and the CVT is the same
+   * (scripts/algorithms.ts bounds the difference against the exact search).
    */
   function step(p: Float32Array, exact: boolean): Float32Array {
     // CSR buckets: count, prefix sum, fill

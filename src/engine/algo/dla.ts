@@ -4,7 +4,7 @@
  * no lattice anisotropy and its particles are natural dot `sites`.
  *
  * Particles are released one at a time on a circle just outside the cluster and random-walk until they
- * touch it, then stick at the contact point. Tips screen the fjords (a walker almost never reaches deep
+ * touch it, then stick where they first touch. Tips screen the fjords (a walker almost never reaches deep
  * into a gap), so the cluster grows the branching, fractal (D ≈ 1.71) frost / coral shape. The arrival
  * order is the growth history: a card reveals particles 0…k(t), and the newest ones are the live front.
  *
@@ -12,7 +12,8 @@
  * walk leaves a circle uniformly on its rim, so this keeps the statistics of the plain walk):
  *  - far from the cluster the circle's radius comes from the cluster radius;
  *  - near it, from `near`, a per-cell lower bound of the distance to the closest particle (to 10 units);
- *  - within 2.5 units, from an exact search of the bucket grid; steps never drop below `minStep`.
+ *  - within 2.5 units, from an exact search of the bucket grid; steps never drop below `minStep`, and a step
+ *    that would overlap is bisected to its first contact, so discs touch and never overlap.
  * A walker that strays past `kill` × the launch radius is relaunched. Deterministic for a seed (`dsin` /
  * `dcos`, mulberry32).
  */
@@ -114,8 +115,12 @@ export function dla(spec: DlaSpec): Dla {
       // within reach: a short step; if it touches, stick at the contact point
       const nx = x + minStep * dcos(a), ny = y + minStep * dsin(a), q = nearest(nx, ny)
       if (q > 1) { x = nx; y = ny; continue }
-      const p = hit, ux = nx - xs[p], uy = ny - ys[p], ul = Math.sqrt(ux * ux + uy * uy) || 1
-      add(xs[p] + ux / ul, ys[p] + uy / ul, p)
+      // the step overlaps: bisect it for the first contact (clear at f = 0, overlapping at f = 1)
+      let lo = 0, hi = 1
+      for (let k = 0; k < 14; k++) { const f = (lo + hi) / 2; if (nearest(x + (nx - x) * f, y + (ny - y) * f) > 1) lo = f; else hi = f }
+      const sx = x + (nx - x) * lo, sy = y + (ny - y) * lo
+      nearest(sx, sy)
+      add(sx, sy, hit)
       break
     }
   }
