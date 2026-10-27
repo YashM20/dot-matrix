@@ -375,6 +375,46 @@ One global switch (header control, `?skin=`, localStorage `dot480:skin`, `setSki
 - **Reduced motion:** no power-on animation, no e-ink flash (partials only), no nixie flicker.
 - Not yet: split-flap skin (the split-flap text motion already exists per card), real-hardware calibration.
 
+## Theme
+
+A theme is **scheme × accent** (docs/LAYOUT-THEME-PLAN.md §4), named `${scheme}_${accent}` (`dark_signal`, `light_cobalt`). `dark_signal` is the canonical theme: goldens, OG images and the no-JS fallback use it, and it equals the colours above exactly. A visitor picks *which* hue is the accent; a board still shows only one (`{colors.dotActive}` = the theme's `accent`).
+
+- **Schemes:** `dark` (today's neutrals, `dot480`) and `light` (the warm `paper` preset: room `#F1F0EC`, card `#F8F8F5`, ink dots). `system` resolves to one of them from `prefers-color-scheme`. Default: `system` + `signal`.
+- **Accents (7):** `signal` (h 29, today's red), `amber` (75), `phosphor` (145), `cyan` (210), `cobalt` (260), `vite` (vite.dev's purple, hand-pinned), `magenta` (350). Hues ≥ 25° apart. Custom hue: T6.
+- **Source:** `src/site/theme/accents.ts` (generator, pure) → `npx tsx scripts/site/theme.ts --write` → `table.ts` (all roles), `dots.ts` (engine tokens), `themes.css` (CSS variables). The site runs no colour math. `scripts/site/theme.ts` checks the table (also in `pnpm verify`).
+
+### Roles
+Components and cards read roles, never hues. Same keys in every theme.
+
+| Group | Roles (CSS `--name`) |
+|---|---|
+| Neutral | `bg`, `panel`, `card`, `raised`, `overlay`, `line`, `line-strong`, `text-1`, `text-2`, `text-3`, `scrim`, `shadow` |
+| Dot tones | `dot-faint`, `dot-mid`, `dot-idle`, `dot-value`, `dot-active` (= `accent`), `dot-active-dim` |
+| Accent | `accent`, `accent-hover`, `accent-press`, `accent-text`, `accent-soft` (12%), `accent-line`, `accent-glow` (35%), `accent-halo`, `on-accent`, `accent-surface` + `accent-surface-text` (hero insets only), `focus-ring` (= `accent-line`), `selection` (accent at 30%) |
+
+Engine side: `themeTokens(scheme, accent)` (`src/site/theme/theme.ts`) returns a `ThemeTokens`: `dot480` (dark) or `PAPER` (light) with the theme's accent, dim and surfaces. `themeTokens('dark', 'signal')` is `dot480` itself.
+
+### Generator rules
+Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5 fills, 6–8 lines, 9–10 solid, 11–12 text). The generator clamps or nudges until every rule passes, and hand-pinned values must pass them too.
+- **Gamut:** every colour is inside sRGB. Chroma is binary-searched at fixed L and h. Cut today: dark cobalt −11%, dark magenta −34% (its L rose to stay clear of the idle grey for protans), light amber −16%, light cyan −14%.
+- **Dots:** `accent`, `accent-line` and `focus-ring` are ≥ 3:1 on `card` and `bg`.
+- **Text:** `text-1/2/3` and `accent-text` are ≥ 4.5:1 on all four surfaces. `accent-text` is also ≥ APCA Lc 60 on `card`.
+- **`on-accent`:** white if it reaches APCA 60 and 4.5:1 on the solid. Otherwise a dark tint of the hue (`oklch(.25 max(.08·C, .04) h)`), darkened until it reaches 4.5:1.
+- **Colour-blind safety:** in normal vision and under simulated protanopia, deuteranopia and tritanopia (Machado 2009), `accent` differs from `dot-value`, `dot-idle` and `dot-mid` by ΔL ≥ .08 or ΔE_OK ≥ .10. If needed, the solid's L is searched ±.15 to get there.
+- **Tone order:** APCA on `card` gives faint < mid < idle < value, and `dot-active-dim` < `dot-active`.
+- **`dot-active-dim`:** dark uses step 7 (a dimmer accent). Light uses step 7 too, a lighter tint (less ink), which matches vite's pinned `#B39AFF`.
+- **Tinted neutrals:** surfaces lean toward the hue by C .005 (vite .014), `line` and `text-3` by .010, `text-2` by .006, and `text-1` by .003. Light gets 70% of these. L is kept. Neutral dot tones stay untinted, and `dark_signal` is not tinted at all.
+- **Pins:** `dark_signal` keeps `#FF3B30` / `#B8241A` / `#FFFFFF`. `vite` dark is `#B39AFF` (line and dim `#6C3BFF`, on-accent `#16171D`, surface `#370A7F`). `vite` light is `#6C3BFF` (text `#6B1EB9`, line `#8A63FE`, dim `#B39AFF`, surface `#F0EBFF` / `#140033`). Dark vite's `accent-text` is `#C2AEFF`, because `#B39AFF` reaches only Lc 55.
+- **Waivers:** two of today's values fail a rule and are kept on `dark_signal` only, until T6: `text-3` `#6E7278` (3.85:1 on card) and `on-accent` white on `#FF3B30` (3.55:1). The check lists them.
+- **Gradient rule:** `accent-halo` (vite: electric `#6C3BFF` → vite `#B39AFF`) is for chrome halos only: glow, focus and live ring, swatch ring. Never use it on dots, text or lines.
+
+### Runtime
+- `<html data-scheme data-accent>` is set before first paint by the inline boot script in `index.html` (`src/site/theme/boot.ts`, sha256 in the CSP in `vercel.json`).
+- After that, `theme.ts` maintains the attributes. Resolution, per field: `?scheme=` / `?accent=`, then `?theme=<scheme>_<accent>`, then localStorage `dot480:theme`, then the defaults. URL params are never persisted.
+- `.no-transition` is on `<html>` for the frame of a switch.
+- Scoping: the attributes may sit on any subtree. When nesting twice, pin both attributes on the subtree.
+- Not wired yet: `themes.css` is not imported, so nothing visible changes. Wiring, the readers, `color-scheme` and `theme-color` come later in T4.
+
 ## Known Gaps
 
 - **Physical LED-panel calibration not yet measured** — the `led-panel` breakpoint's pitch-locking behavior is specified but not validated against real hardware bit-depth/gamma response.
