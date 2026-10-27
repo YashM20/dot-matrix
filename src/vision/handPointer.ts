@@ -65,7 +65,7 @@ function ui() {
   Object.assign(cursor.style, { position: 'fixed', left: '0', top: '0', width: '26px', height: '26px', margin: '-13px 0 0 -13px', borderRadius: '50%', border: '2px solid #fff', color: '#fff', boxShadow: '0 0 0 1px rgba(0,0,0,.55), inset 0 0 0 1px rgba(0,0,0,.35)', pointerEvents: 'none', zIndex: '2147483646', display: 'none', transition: 'background-color .08s' })
   hud = document.createElement('div')
   hud.setAttribute('role', 'status')
-  Object.assign(hud.style, { position: 'fixed', left: '50%', bottom: '14px', transform: 'translateX(-50%)', zIndex: '2147483646', font: '500 12px/1.2 var(--mono, monospace)', letterSpacing: '.04em', padding: '7px 10px 7px 12px', borderRadius: '999px', background: 'var(--bg, #fafafa)', color: 'var(--text-h, #111)', border: '1px solid var(--border, rgba(0,0,0,.1))', boxShadow: '0 2px 12px rgba(0,0,0,.08)', display: 'none', alignItems: 'center', gap: '10px', textAlign: 'left' })
+  Object.assign(hud.style, { position: 'fixed', left: '50%', bottom: '14px', transform: 'translateX(-50%)', zIndex: '2147483646', font: '500 12px/1.2 var(--mono, monospace)', letterSpacing: '.04em', padding: '7px 10px 7px 12px', borderRadius: '999px', background: 'var(--bg, #070809)', color: 'var(--value, #f2f3f5)', border: '1px solid var(--line, rgba(255,255,255,.08))', boxShadow: '0 2px 12px rgba(0,0,0,.08)', display: 'none', alignItems: 'center', gap: '10px', textAlign: 'left' })
   const text = document.createElement('span'), stop = document.createElement('button')
   text.className = 'hand-hud-text'
   stop.type = 'button'; stop.textContent = 'STOP'; stop.setAttribute('aria-label', 'Stop hand mode and the camera')

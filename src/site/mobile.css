@@ -66,17 +66,17 @@ html:has(.sheet[open]) {
   max-height: min(86dvh, 760px);
   margin: 0 auto;
   padding: 0 0 env(safe-area-inset-bottom);
-  border: 1px solid rgba(255, 255, 255, .12);
+  border: 1px solid color-mix(in srgb, var(--tint) 12%, transparent);
   border-bottom: 0;
-  border-radius: 18px 18px 0 0;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
   background: var(--surface);
   color: var(--value);
-  box-shadow: 0 -20px 60px rgba(0, 0, 0, .5);
+  box-shadow: 0 -20px 60px color-mix(in srgb, var(--shade) 50%, transparent);
   text-align: left;
   overflow: hidden;
   overscroll-behavior: contain;
-  transition: transform .22s cubic-bezier(.2, .8, .2, 1);
-  animation: sheet-in .28s cubic-bezier(.2, .8, .2, 1)
+  transition: transform var(--dur-move) var(--ease);
+  animation: sheet-in var(--dur-enter) var(--ease)
 }
 
 .sheet[open] {
@@ -85,9 +85,9 @@ html:has(.sheet[open]) {
 }
 
 .sheet::backdrop {
-  background: rgba(0, 0, 0, .55);
+  background: var(--scrim);
   backdrop-filter: blur(2px);
-  animation: sheet-fade .2s ease-out
+  animation: sheet-fade var(--dur-move) ease-out
 }
 
 @keyframes sheet-in {
@@ -105,15 +105,15 @@ html:has(.sheet[open]) {
 .sheet-grab {
   display: flex;
   justify-content: center;
-  padding: 8px 0 2px;
+  padding: var(--space-2) 0 var(--space-1);
   touch-action: none
 }
 
 .sheet-grab i {
   width: 36px;
   height: 5px;
-  border-radius: 3px;
-  background: rgba(255, 255, 255, .22)
+  border-radius: var(--radius-sm);
+  background: color-mix(in srgb, var(--tint) 22%, transparent)
 }
 
 .sheet-head {
@@ -121,7 +121,7 @@ html:has(.sheet[open]) {
   align-items: center;
   justify-content: space-between;
   min-height: 44px;
-  padding: 0 6px 0 18px;
+  padding: 0 var(--space-2) 0 var(--space-4);
   border-bottom: 1px solid var(--line);
   touch-action: none;
   -webkit-user-select: none;
@@ -131,18 +131,18 @@ html:has(.sheet[open]) {
 .sheet-head h2 {
   margin: 0;
   color: var(--label);
-  font: 600 10px var(--mono);
+  font: 600 var(--fs-label-10) var(--mono);
   letter-spacing: .18em
 }
 
 .sheet-done {
   min-width: 44px;
   min-height: 44px;
-  padding: 0 12px;
+  padding: 0 var(--space-3);
   border: 0;
   background: none;
   color: var(--value);
-  font: 600 10px var(--mono);
+  font: 600 var(--fs-label-10) var(--mono);
   letter-spacing: .14em;
   cursor: pointer
 }
@@ -150,7 +150,7 @@ html:has(.sheet[open]) {
 .sheet-body {
   flex: 1;
   min-height: 0;
-  padding: 4px 10px 18px;
+  padding: var(--space-1) var(--space-2) var(--space-4);
   overflow-y: auto;
   overscroll-behavior: contain
 }
@@ -165,21 +165,21 @@ html:has(.sheet[open]) {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 2px 10px;
-  margin: 16px 8px 4px;
+  gap: var(--space-1) var(--space-2);
+  margin: var(--space-4) var(--space-2) var(--space-1);
   color: var(--mute);
-  font: 600 9px var(--mono);
+  font: 600 var(--fs-tag-9) var(--mono);
   letter-spacing: .18em
 }
 
 .board-sheet h3 small {
-  font: 400 10px var(--mono);
+  font: 400 var(--fs-label-10) var(--mono);
   letter-spacing: .02em
 }
 
 .board-sheet ul {
   display: grid;
-  gap: 2px;
+  gap: var(--space-1);
   margin: 0;
   padding: 0;
   list-style: none
@@ -190,15 +190,15 @@ html:has(.sheet[open]) {
   display: grid;
   grid-template-columns: 6px 1fr;
   align-items: center;
-  gap: 3px 12px;
+  gap: var(--space-1) var(--space-3);
   width: 100%;
   min-height: 52px;
-  padding: 8px 10px;
+  padding: var(--space-2) var(--space-2);
   border: 0;
-  border-radius: 10px;
+  border-radius: var(--radius-ctl);
   background: none;
   color: var(--mute);
-  font: 400 10.5px/1.4 var(--mono);
+  font: 400 var(--fs-label-10)/1.4 var(--mono);
   letter-spacing: .02em;
   text-align: left;
   cursor: pointer
@@ -208,7 +208,7 @@ html:has(.sheet[open]) {
 .skin-list button b {
   color: var(--label);
   font-weight: 600;
-  font-size: 11px;
+  font-size: var(--fs-label-11);
   letter-spacing: .14em
 }
 
@@ -222,13 +222,13 @@ html:has(.sheet[open]) {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, .16)
+  background: color-mix(in srgb, var(--tint) 16%, transparent)
 }
 
 .board-sheet li button.selected,
 .skin-list button.selected {
   color: var(--label);
-  background: radial-gradient(circle, rgba(255, 255, 255, .13) .8px, transparent 1.1px) 0 0 / 4px 4px
+  background: radial-gradient(circle, color-mix(in srgb, var(--tint) 13%, transparent) .8px, transparent 1.1px) 0 0 / 4px 4px
 }
 
 .board-sheet li button.selected b,
@@ -244,8 +244,8 @@ html:has(.sheet[open]) {
 .tools-grid {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
-  padding-top: 10px;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
   -webkit-user-select: none;
   user-select: none
 }
@@ -255,11 +255,11 @@ html:has(.sheet[open]) {
   flex-direction: column;
   align-items: flex-start;
   justify-content: center;
-  gap: 6px;
+  gap: var(--space-2);
   min-height: 72px;
-  padding: 12px 14px;
+  padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   background: var(--raised);
   color: var(--value);
   text-align: left;
@@ -275,18 +275,18 @@ html:has(.sheet[open]) {
 }
 
 .tools-grid b {
-  font: 600 11px var(--mono);
+  font: 600 var(--fs-label-11) var(--mono);
   letter-spacing: .16em
 }
 
 .tools-grid span {
   color: var(--mute);
-  font: 400 10.5px/1.35 var(--mono);
+  font: 400 var(--fs-label-10)/1.35 var(--mono);
   letter-spacing: .02em
 }
 
 .tools-grid [aria-pressed="true"] {
-  border-color: rgba(255, 59, 48, .5)
+  border-color: color-mix(in srgb, var(--red) 50%, transparent)
 }
 
 .tools-grid [aria-pressed="true"] b {
@@ -298,15 +298,15 @@ html:has(.sheet[open]) {
 }
 
 .tools-head {
-  margin: 20px 8px 6px;
+  margin: calc(var(--space-1) * 5) var(--space-2) var(--space-2);
   color: var(--mute);
-  font: 600 9px var(--mono);
+  font: 600 var(--fs-tag-9) var(--mono);
   letter-spacing: .18em
 }
 
 .skin-list {
   display: grid;
-  gap: 2px
+  gap: var(--space-1)
 }
 
 .skin-list button {
@@ -327,12 +327,12 @@ html:has(.sheet[open]) {
 .skin-list-clack {
   width: 100%;
   min-height: 44px;
-  margin-top: 8px;
-  border: 1px dotted rgba(255, 255, 255, .2);
-  border-radius: 99px;
+  margin-top: var(--space-2);
+  border: 1px dotted color-mix(in srgb, var(--tint) 20%, transparent);
+  border-radius: var(--radius-pill);
   background: none;
   color: var(--mute);
-  font: 600 10px var(--mono);
+  font: 600 var(--fs-label-10) var(--mono);
   letter-spacing: .14em;
   cursor: pointer
 }
@@ -350,7 +350,7 @@ html:has(.sheet[open]) {
 
   .shell {
     min-height: 100dvh;
-    padding: 0 0 calc(var(--tabbar-h) + 20px)
+    padding: 0 0 calc(var(--tabbar-h) + calc(var(--space-1) * 5))
   }
 
   /* chrome is not text: no selection, no callout on long press */
@@ -370,11 +370,11 @@ html:has(.sheet[open]) {
     top: 0;
     z-index: 30;
     flex-wrap: nowrap;
-    gap: 8px;
+    gap: var(--space-2);
     min-height: var(--app-top);
-    margin: 0 calc(-1 * var(--gutter)) 14px;
-    padding: env(safe-area-inset-top) max(4px, env(safe-area-inset-right)) 0 max(var(--gutter), env(safe-area-inset-left));
-    background: rgba(7, 8, 9, .84);
+    margin: 0 calc(-1 * var(--gutter)) var(--space-4);
+    padding: env(safe-area-inset-top) max(var(--space-1), env(safe-area-inset-right)) 0 max(var(--gutter), env(safe-area-inset-left));
+    background: color-mix(in srgb, var(--bg) 84%, transparent);
     -webkit-backdrop-filter: saturate(140%) blur(14px);
     backdrop-filter: saturate(140%) blur(14px)
   }
@@ -399,10 +399,10 @@ html:has(.sheet[open]) {
     flex: 1;
     min-width: 0;
     min-height: 44px;
-    padding: 0 6px;
+    padding: 0 var(--space-2);
     overflow: hidden;
     color: var(--value);
-    font: 600 11px/44px var(--mono);
+    font: 600 var(--fs-label-11)/44px var(--mono);
     letter-spacing: .14em;
     text-align: center;
     text-overflow: ellipsis;
@@ -454,7 +454,7 @@ html:has(.sheet[open]) {
     grid-template-columns: repeat(4, 1fr);
     padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     border-top: 1px solid var(--line);
-    background: rgba(10, 11, 12, .9);
+    background: color-mix(in srgb, var(--panel) 90%, transparent);
     -webkit-backdrop-filter: saturate(140%) blur(16px);
     backdrop-filter: saturate(140%) blur(16px)
   }
@@ -465,13 +465,13 @@ html:has(.sheet[open]) {
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 6px;
+    gap: var(--space-2);
     min-height: 58px;
     padding: 0;
     border: 0;
     background: none;
     color: var(--mute);
-    font: 600 9px/1 var(--mono);
+    font: 600 var(--fs-tag-9)/1 var(--mono);
     letter-spacing: .14em;
     cursor: pointer
   }
@@ -533,7 +533,7 @@ html:has(.sheet[open]) {
     display: flex;
     flex-wrap: nowrap;
     align-items: center;
-    gap: 2px;
+    gap: var(--space-1);
     margin: 0 calc(-1 * var(--gutter));
     padding: 0 var(--gutter);
     overflow-x: auto;
@@ -558,9 +558,9 @@ html:has(.sheet[open]) {
   /* group names: plain text tabs, 44 px tall */
   .board-picker .board-groups button {
     min-height: 44px;
-    padding: 0 9px;
+    padding: 0 var(--space-2);
     border-bottom: 0;
-    font-size: 10px
+    font-size: var(--fs-label-10)
   }
 
   /* the open group: a 1 px rule under its word, not under its padding */
@@ -578,14 +578,14 @@ html:has(.sheet[open]) {
     display: inline-flex;
     align-items: center;
     min-height: 44px;
-    padding: 0 12px;
+    padding: 0 var(--space-3);
     border: 4px solid transparent;
-    border-radius: 99px;
+    border-radius: var(--radius-pill);
     background: none;
     background-clip: padding-box;
     box-shadow: inset 0 0 0 1px var(--line);
     color: var(--mute);
-    font: 500 10px var(--mono);
+    font: 500 var(--fs-label-10) var(--mono);
     letter-spacing: .12em
   }
 
@@ -594,17 +594,17 @@ html:has(.sheet[open]) {
     position: sticky;
     left: 0;
     z-index: 1;
-    background: #070809;
+    background: var(--bg);
     background-clip: border-box;
-    box-shadow: inset 0 0 0 1px var(--line), 12px 0 10px -8px #070809;
-    margin-right: 6px;
+    box-shadow: inset 0 0 0 1px var(--line), 12px 0 10px -8px var(--bg);
+    margin-right: var(--space-2);
     color: var(--value);
     font-weight: 600;
     cursor: pointer
   }
 
   .board-picker .board-tabs {
-    margin-bottom: 10px
+    margin-bottom: var(--space-2)
   }
 
   .board-picker .board-tabs button.selected {
@@ -616,16 +616,16 @@ html:has(.sheet[open]) {
   .next-board {
     display: flex;
     align-items: center;
-    gap: 12px;
+    gap: var(--space-3);
     width: 100%;
     min-height: 64px;
-    margin: 18px 0 6px;
-    padding: 0 18px;
+    margin: var(--space-4) 0 var(--space-2);
+    padding: 0 var(--space-4);
     border: 1px solid var(--line);
-    border-radius: calc(var(--card-corner-exp) * 4px);
+    border-radius: var(--radius-card);
     background: var(--surface);
     color: var(--value);
-    font: 600 11px var(--mono);
+    font: 600 var(--fs-label-11) var(--mono);
     letter-spacing: .14em;
     text-align: left;
     cursor: pointer
@@ -633,7 +633,7 @@ html:has(.sheet[open]) {
 
   .next-board small {
     color: var(--mute);
-    font-size: 9px
+    font-size: var(--fs-tag-9)
   }
 
   .next-board b {
@@ -643,13 +643,13 @@ html:has(.sheet[open]) {
 
   .next-board span {
     color: var(--label);
-    font-size: 14px
+    font-size: var(--fs-copy-14)
   }
 
   .intro-line {
-    gap: 0 12px;
-    margin-bottom: 6px;
-    font-size: 11.5px
+    gap: 0 var(--space-3);
+    margin-bottom: var(--space-2);
+    font-size: var(--fs-label-11)
   }
 
   .intro-line .intro-tools {
@@ -675,7 +675,7 @@ html:has(.sheet[open]) {
   .bottom {
     flex-direction: column;
     align-items: flex-start;
-    gap: 10px;
+    gap: var(--space-2);
     line-height: 1.6;
     text-align: left
   }
@@ -687,7 +687,7 @@ html:has(.sheet[open]) {
     justify-content: center;
     min-width: 44px;
     min-height: 44px;
-    padding-inline: 2px
+    padding-inline: var(--space-1)
   }
 
   /* ⌘K palette as a tall sheet: the field near the top (clear of the keyboard), results under it */
@@ -703,9 +703,9 @@ html:has(.sheet[open]) {
     height: calc(100dvh - env(safe-area-inset-top) - 28px);
     padding-bottom: env(safe-area-inset-bottom);
     border-bottom: 0;
-    border-radius: 18px 18px 0 0;
-    transition: transform .22s cubic-bezier(.2, .8, .2, 1);
-    animation: sheet-in .28s cubic-bezier(.2, .8, .2, 1)
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    transition: transform var(--dur-move) var(--ease);
+    animation: sheet-in var(--dur-enter) var(--ease)
   }
 
   .pal-grab {
@@ -713,7 +713,7 @@ html:has(.sheet[open]) {
   }
 
   .pal-field {
-    padding: 4px 6px 4px 14px
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4)
   }
 
   .pal-prompt,
@@ -725,17 +725,17 @@ html:has(.sheet[open]) {
   /* 16 px: iOS doesn't zoom the page into the field */
   .pal-input {
     min-height: 44px;
-    font-size: 16px
+    font-size: var(--fs-copy-16)
   }
 
   .pal-cancel {
     display: block;
     min-height: 44px;
-    padding: 0 10px;
+    padding: 0 var(--space-2);
     border: 0;
     background: none;
     color: var(--label);
-    font: 600 10px var(--mono);
+    font: 600 var(--fs-label-10) var(--mono);
     letter-spacing: .14em;
     cursor: pointer
   }
@@ -748,11 +748,11 @@ html:has(.sheet[open]) {
 
   .pal-item {
     min-height: 48px;
-    font-size: 13px
+    font-size: var(--fs-label-12)
   }
 
   .pal-shell {
-    padding-top: calc(14px + env(safe-area-inset-top))
+    padding-top: calc(var(--space-4) + env(safe-area-inset-top))
   }
 
   .pal:focus {
@@ -786,7 +786,7 @@ html:has(.sheet[open]) {
 
   .tabbar button {
     flex-direction: row;
-    gap: 9px;
+    gap: var(--space-2);
     min-height: 44px
   }
 
@@ -808,8 +808,8 @@ html:has(.sheet[open]) {
 /* touch: form fields at 16 px so iOS doesn't zoom the page on focus; no keyboard-only hints or tools */
 @media (pointer: coarse) {
   /* (the MAKE editor sizes its own selects: a wider one there would push its rows past the screen) */
-  :is(input:not([type]), input[type="text"], input[type="search"], input[type="number"], input[type="url"], input[type="email"], input[type="password"], select:not(.make-panel select), textarea) {
-    font-size: 16px !important
+  :is(input:not([type]), input[type="text"], input[type="search"], input[type="number"], input[type="url"], input[type="email"], input[type="password"], select, textarea) {
+    font-size: var(--fs-copy-16) !important
   }
 
   .pal-hint,
@@ -827,7 +827,7 @@ html:has(.sheet[open]) {
 /* touch: press feedback instead of hover, and no hover colour left stuck after a tap */
 @media (hover: none) {
   :is(.tabbar button, .topbar-place, .topbar-search, .board-picker button, .next-board, .sheet button, .bottom a, .intro-line button) {
-    transition: transform .12s ease-out, background-color .12s ease-out
+    transition: transform var(--dur-out) ease-out, background-color var(--dur-out) ease-out
   }
 
   :is(.topbar-place, .topbar-search, .board-picker button, .next-board, .sheet button, .bottom a, .intro-line button):active {
@@ -839,11 +839,11 @@ html:has(.sheet[open]) {
   }
 
   .tabbar .glyph {
-    transition: transform .12s ease-out
+    transition: transform var(--dur-out) ease-out
   }
 
   :is(.sheet li button, .skin-list button):active {
-    background-color: rgba(255, 255, 255, .06)
+    background-color: color-mix(in srgb, var(--tint) 6%, transparent)
   }
 
   .board-groups button:not(.selected):hover {

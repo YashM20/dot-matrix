@@ -10,17 +10,17 @@
 .pill-bar {
   display: flex;
   align-items: center;
-  gap: 10px
+  gap: var(--space-2)
 }
 
 .pill {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px;
-  background: rgba(27, 30, 33, .78);
-  border: 1px solid rgba(255, 255, 255, .1);
-  border-radius: 999px;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: color-mix(in srgb, var(--raised) 78%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tint) 10%, transparent);
+  border-radius: var(--radius-pill);
   -webkit-backdrop-filter: blur(16px) saturate(1.3);
   backdrop-filter: blur(16px) saturate(1.3)
 }
@@ -35,15 +35,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: var(--space-2);
   min-width: 36px;
   min-height: 36px;
-  padding: 0 14px;
+  padding: 0 var(--space-4);
   background: none;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--label);
-  font: 600 10px/1 var(--mono);
+  font: 600 var(--fs-label-10)/1 var(--mono);
   letter-spacing: .14em;
   text-decoration: none;
   white-space: nowrap;
@@ -53,7 +53,7 @@
 }
 
 .pill-btn:hover {
-  background: rgba(255, 255, 255, .07);
+  background: color-mix(in srgb, var(--tint) 7%, transparent);
   color: var(--value)
 }
 
@@ -64,18 +64,18 @@
 }
 
 .pill-btn:active {
-  background: rgba(255, 255, 255, .12)
+  background: color-mix(in srgb, var(--tint) 12%, transparent)
 }
 
 .pill-btn[aria-pressed="true"],
 .pill-btn[aria-expanded="true"] {
-  background: rgba(255, 255, 255, .12);
+  background: color-mix(in srgb, var(--tint) 12%, transparent);
   color: var(--value)
 }
 
 .pill-glyph {
   color: var(--mute);
-  font-size: 13px;
+  font-size: var(--fs-label-12);
   letter-spacing: 0
 }
 
@@ -96,7 +96,7 @@
   min-height: 100vh;
   min-height: 100dvh;
   box-sizing: border-box;
-  padding: calc(84px + env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) calc(104px + env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
+  padding: calc(calc(var(--space-1) * 21) + env(safe-area-inset-top)) max(var(--space-5), env(safe-area-inset-right)) calc(calc(var(--space-1) * 26) + env(safe-area-inset-bottom)) max(var(--space-5), env(safe-area-inset-left));
   display: flex;
   flex-direction: column;
   justify-content: center
@@ -107,7 +107,7 @@
   aspect-ratio: 1;
   margin: auto;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   background: var(--surface)
 }
 
@@ -128,7 +128,7 @@
 .wp-count {
   min-width: 44px;
   color: var(--mute);
-  font: 500 10px var(--mono);
+  font: 500 var(--fs-label-10) var(--mono);
   letter-spacing: .1em;
   text-align: center
 }
@@ -149,7 +149,7 @@
   grid-template-columns: minmax(0, 648px) minmax(240px, 320px);
   justify-content: center;
   align-items: center;
-  gap: 48px;
+  gap: var(--space-7);
   width: 100%;
   max-width: 1120px;
   margin: 0 auto
@@ -168,7 +168,7 @@
 .wp-rail {
   min-width: 0;
   color: var(--label);
-  font: 500 11px/1.6 var(--mono);
+  font: 500 var(--fs-label-11)/1.6 var(--mono);
   text-align: left
 }
 
@@ -182,42 +182,42 @@
 }
 
 .wp-eyebrow {
-  margin: 0 0 10px;
+  margin: 0 0 var(--space-2);
   color: var(--mute);
-  font: 500 10px var(--mono);
+  font: 500 var(--fs-label-10) var(--mono);
   letter-spacing: .16em
 }
 
 .wp-rail h1,
 .wp-missing h1 {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   color: var(--value);
-  font: 600 28px/1.1 var(--heading);
+  font: 600 var(--fs-title-28)/1.1 var(--sans);
   letter-spacing: .02em
 }
 
 .wp-blurb {
-  margin: 0 0 18px;
+  margin: 0 0 var(--space-4);
   color: var(--label);
-  font: 400 14px/1.5 var(--sans);
+  font: 400 var(--fs-copy-14)/1.5 var(--sans);
   letter-spacing: 0
 }
 
 .wp-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin: 0 0 20px;
+  gap: var(--space-2);
+  margin: 0 0 calc(var(--space-1) * 5);
   padding: 0;
   list-style: none
 }
 
 .wp-chips li {
-  padding: 5px 10px;
-  border: 1px solid rgba(255, 255, 255, .12);
-  border-radius: 999px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--tint) 12%, transparent);
+  border-radius: var(--radius-pill);
   color: var(--label);
-  font: 600 9px var(--mono);
+  font: 600 var(--fs-tag-9) var(--mono);
   letter-spacing: .16em
 }
 
@@ -229,14 +229,14 @@
 .wp-facts > div {
   display: grid;
   grid-template-columns: 84px minmax(0, 1fr);
-  gap: 12px;
-  padding: 8px 0;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
   border-bottom: 1px solid var(--line)
 }
 
 .wp-facts dt {
   color: var(--mute);
-  font-size: 9px;
+  font-size: var(--fs-tag-9);
   letter-spacing: .16em;
   text-transform: uppercase
 }
@@ -253,7 +253,7 @@
 }
 
 .wp-ids code + code {
-  margin-left: 10px;
+  margin-left: var(--space-2);
   color: var(--label)
 }
 
@@ -261,7 +261,7 @@
   max-width: 480px;
   margin: auto;
   color: var(--label);
-  font: 400 14px/1.5 var(--sans);
+  font: 400 var(--fs-copy-14)/1.5 var(--sans);
   text-align: center
 }
 
@@ -276,10 +276,10 @@
   margin-inline: auto;
   display: flex;
   flex-direction: column;
-  padding: 6px;
-  background: rgba(27, 30, 33, .94);
-  border: 1px solid rgba(255, 255, 255, .12);
-  border-radius: 20px;
+  padding: var(--space-2);
+  background: color-mix(in srgb, var(--raised) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tint) 12%, transparent);
+  border-radius: calc(var(--radius-panel) + var(--space-2));
   -webkit-backdrop-filter: blur(18px);
   backdrop-filter: blur(18px)
 }
@@ -287,14 +287,14 @@
 .wp-more button {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
   min-height: 40px;
-  padding: 0 14px;
+  padding: 0 var(--space-4);
   background: none;
   border: 0;
-  border-radius: 14px;
+  border-radius: var(--radius-panel);
   color: var(--value);
-  font: 500 11px var(--mono);
+  font: 500 var(--fs-label-11) var(--mono);
   letter-spacing: .06em;
   text-align: left;
   cursor: pointer
@@ -302,7 +302,7 @@
 
 .wp-more button:hover,
 .wp-more button:focus-visible {
-  background: rgba(255, 255, 255, .08);
+  background: color-mix(in srgb, var(--tint) 8%, transparent);
   outline: none
 }
 
@@ -310,7 +310,7 @@
 .wp-more code {
   color: var(--mute);
   font: inherit;
-  font-size: 10px
+  font-size: var(--fs-label-10)
 }
 
 .wp-phone {
@@ -331,7 +331,7 @@ body:has(.wp) .pal-toast {
 @media (max-width: 960px) {
   .wp-main {
     grid-template-columns: minmax(0, 648px);
-    gap: 28px
+    gap: calc(var(--space-1) * 7)
   }
 
   .wp-rail {
@@ -345,11 +345,11 @@ body:has(.wp) .pal-toast {
 @media (max-width: 760px) {
   .wp {
     justify-content: flex-start;
-    padding: calc(70px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left))
+    padding: calc(calc(var(--space-1) * 18) + env(safe-area-inset-top)) max(var(--space-3), env(safe-area-inset-right)) calc(var(--space-9) + env(safe-area-inset-bottom)) max(var(--space-3), env(safe-area-inset-left))
   }
 
   .wp-rail h1 {
-    font-size: 24px
+    font-size: var(--fs-title-24)
   }
 
   .wp-step .pill-label {
@@ -366,10 +366,10 @@ body:has(.wp) .pal-toast {
 
   .wp-bottom {
     gap: 0;
-    padding: 4px;
-    background: rgba(27, 30, 33, .82);
-    border: 1px solid rgba(255, 255, 255, .1);
-    border-radius: 999px;
+    padding: var(--space-1);
+    background: color-mix(in srgb, var(--raised) 82%, transparent);
+    border: 1px solid color-mix(in srgb, var(--tint) 10%, transparent);
+    border-radius: var(--radius-pill);
     -webkit-backdrop-filter: blur(16px) saturate(1.3);
     backdrop-filter: blur(16px) saturate(1.3)
   }
@@ -383,7 +383,7 @@ body:has(.wp) .pal-toast {
   }
 
   .wp-bottom .pill-btn {
-    padding: 0 12px
+    padding: 0 var(--space-3)
   }
 
   .wp-more {
@@ -392,17 +392,17 @@ body:has(.wp) .pal-toast {
     right: max(8px, env(safe-area-inset-right));
     bottom: calc(78px + env(safe-area-inset-bottom));
     width: auto;
-    border-radius: 24px
+    border-radius: calc(var(--radius-card) + var(--space-2))
   }
 
   .wp-more button {
     min-height: 46px;
-    font-size: 12px
+    font-size: var(--fs-label-12)
   }
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .pill-btn {
-    transition: background-color .12s, color .12s
+    transition: background-color var(--dur-out), color var(--dur-out)
   }
 }
