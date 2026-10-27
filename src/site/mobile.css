@@ -53,67 +53,102 @@ input,
   opacity: 1
 }
 
-/* ── bottom sheet (src/components/Sheet.tsx): a modal <dialog> ── */
+/* ── bottom sheet (one component, src/components/Sheet.tsx): a modal <dialog> that is a scroll-snap sheet ──
+   The dialog fills the screen and scrolls between two stops: the empty rest above the panel (closed) and the
+   panel's end (open). Dragging the panel or its list down past the top is the browser's own scroll; settling
+   on the closed stop closes it. The scrim follows that scroll (a scroll timeline). The panel is the raised
+   glass (App.css › raised layer); the dialog itself never blurs, so there is one blur. */
 html:has(.sheet[open]) {
   overflow: hidden
 }
 
 .sheet {
   position: fixed;
-  inset: auto 0 0;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--scrim);
+  color: var(--value);
+  text-align: left;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none
+}
+
+.sheet::-webkit-scrollbar {
+  display: none
+}
+
+.sheet[open] {
+  display: block
+}
+
+.sheet::backdrop {
+  background: transparent
+}
+
+@supports (animation-timeline: scroll()) {
+  .sheet {
+    background: transparent;
+    animation: sheet-scrim linear both;
+    animation-timeline: scroll(self)
+  }
+}
+
+@keyframes sheet-scrim {
+  to {
+    background-color: var(--scrim)
+  }
+}
+
+/* the closed stop: a tap here closes too */
+.sheet-rest {
+  height: 100%;
+  scroll-snap-align: start
+}
+
+.sheet-panel {
+  display: flex;
+  flex-direction: column;
   width: 100%;
   max-width: 600px;
   max-height: min(86dvh, 760px);
   margin: 0 auto;
   padding: 0 0 env(safe-area-inset-bottom);
-  border: 1px solid color-mix(in srgb, var(--tint) 12%, transparent);
   border-bottom: 0;
   border-radius: var(--radius-card) var(--radius-card) 0 0;
-  background: var(--surface);
-  color: var(--value);
-  box-shadow: 0 -20px 60px color-mix(in srgb, var(--shade) 50%, transparent);
-  text-align: left;
   overflow: hidden;
-  overscroll-behavior: contain;
-  transition: transform var(--dur-move) var(--ease);
-  animation: sheet-in var(--dur-enter) var(--ease)
+  /* it arrives by scrolling up to this stop (Sheet.tsx), not by a transform: a transform would move the
+     panel's snap area and the dialog's scroll range */
+  scroll-snap-align: end
 }
 
-.sheet[open] {
-  display: flex;
-  flex-direction: column
-}
-
-.sheet::backdrop {
-  background: var(--scrim);
-  backdrop-filter: blur(2px);
-  animation: sheet-fade var(--dur-move) ease-out
-}
-
-@keyframes sheet-in {
-  from {
-    transform: translateY(100%)
-  }
-}
-
-@keyframes sheet-fade {
-  from {
-    opacity: 0
-  }
+/* grab handle (one look): five dots, drawn like everything else */
+.sheet-grab i,
+.ed-sheet-grab i,
+.xr-panel .xr-grip::before {
+  width: 36px;
+  height: 4px;
+  border-radius: 0;
+  background: radial-gradient(circle, var(--line-hover) 1.6px, transparent 2px) -2px 0 / 8px 4px repeat-x
 }
 
 .sheet-grab {
   display: flex;
   justify-content: center;
-  padding: var(--space-2) 0 var(--space-1);
-  touch-action: none
+  padding: var(--space-2) 0 var(--space-1)
 }
 
-.sheet-grab i {
-  width: 36px;
-  height: 5px;
-  border-radius: var(--radius-sm);
-  background: color-mix(in srgb, var(--tint) 22%, transparent)
+/* the palette's handle drives its own drag (useSwipeDown) */
+.pal-grab {
+  touch-action: none
 }
 
 .sheet-head {
@@ -123,7 +158,7 @@ html:has(.sheet[open]) {
   min-height: 44px;
   padding: 0 var(--space-2) 0 var(--space-4);
   border-bottom: 1px solid var(--line);
-  touch-action: none;
+  border-image: var(--hair-x) 1;
   -webkit-user-select: none;
   user-select: none
 }
@@ -140,6 +175,7 @@ html:has(.sheet[open]) {
   min-height: 44px;
   padding: 0 var(--space-3);
   border: 0;
+  border-radius: var(--radius-ctl);
   background: none;
   color: var(--value);
   font: 600 var(--fs-label-10) var(--mono);
@@ -147,16 +183,26 @@ html:has(.sheet[open]) {
   cursor: pointer
 }
 
+.sheet-done:hover,
+.sheet-done:focus-visible {
+  background-color: var(--wash-hover)
+}
+
+.sheet-done:active {
+  background-color: var(--wash-press)
+}
+
+/* the list scrolls; at its top a downward drag carries on into the sheet (and closes it) */
 .sheet-body {
   flex: 1;
   min-height: 0;
   padding: var(--space-1) var(--space-2) var(--space-4);
   overflow-y: auto;
-  overscroll-behavior: contain
+  overscroll-behavior-y: auto
 }
 
+/* rows fill the sheet's width: their ring is drawn inside */
 .sheet button:focus-visible {
-  outline: 1px dashed var(--value);
   outline-offset: -2px
 }
 
@@ -240,6 +286,19 @@ html:has(.sheet[open]) {
   background: var(--red)
 }
 
+/* sheet rows (one look, the menu rows' look): a wash on hover, one step more on press, over the selected dots */
+.board-sheet li button:hover,
+.board-sheet li button:focus-visible,
+.skin-list button:hover,
+.skin-list button:focus-visible {
+  background-color: var(--wash-hover)
+}
+
+.board-sheet li button:active,
+.skin-list button:active {
+  background-color: var(--wash-press)
+}
+
 /* the tools sheet: the dock's toggles as tiles, then the DISPLAY choice */
 .tools-grid {
   display: grid;
@@ -259,11 +318,21 @@ html:has(.sheet[open]) {
   min-height: 72px;
   padding: var(--space-3) var(--space-4);
   border: 1px solid var(--line);
-  border-radius: var(--radius-panel);
-  background: var(--raised);
+  border-radius: var(--radius-ctl);
+  background: color-mix(in srgb, var(--tint) 3%, transparent);
   color: var(--value);
   text-align: left;
   cursor: pointer
+}
+
+.tools-grid button:hover,
+.tools-grid button:focus-visible {
+  border-color: var(--line-hover);
+  background-color: var(--wash-hover)
+}
+
+.tools-grid button:active {
+  background-color: var(--wash-press)
 }
 
 .tools-grid button:first-child {
@@ -285,8 +354,10 @@ html:has(.sheet[open]) {
   letter-spacing: .02em
 }
 
+/* a tool that is on: the accent, its wash */
 .tools-grid [aria-pressed="true"] {
-  border-color: color-mix(in srgb, var(--red) 50%, transparent)
+  border-color: var(--red);
+  background-color: var(--glow-wash)
 }
 
 .tools-grid [aria-pressed="true"] b {
@@ -342,6 +413,22 @@ html:has(.sheet[open]) {
   font-weight: inherit
 }
 
+.skin-list-clack:hover,
+.skin-list-clack:focus-visible {
+  border-color: var(--line-hover);
+  color: var(--label)
+}
+
+.skin-list-clack:active {
+  background-color: var(--wash-press)
+}
+
+/* one blur at a time: while a sheet or the palette is up, the bars under its scrim stop blurring */
+html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important
+}
+
 /* ── phones: portrait (≤ 760 px wide) and short landscape (a touch screen ≤ 500 px tall) ── */
 @media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
   html {
@@ -375,8 +462,8 @@ html:has(.sheet[open]) {
     margin: 0 calc(-1 * var(--gutter)) var(--space-4);
     padding: env(safe-area-inset-top) max(var(--space-1), env(safe-area-inset-right)) 0 max(var(--gutter), env(safe-area-inset-left));
     background: color-mix(in srgb, var(--bg) 84%, transparent);
-    -webkit-backdrop-filter: saturate(140%) blur(14px);
-    backdrop-filter: saturate(140%) blur(14px)
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur)
   }
 
   /* MAKE pins its own canvas at the top: the bar scrolls away there */
@@ -454,9 +541,10 @@ html:has(.sheet[open]) {
     grid-template-columns: repeat(4, 1fr);
     padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     border-top: 1px solid var(--line);
+    border-image: var(--hair-x) 1;
     background: color-mix(in srgb, var(--panel) 90%, transparent);
-    -webkit-backdrop-filter: saturate(140%) blur(16px);
-    backdrop-filter: saturate(140%) blur(16px)
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur)
   }
 
   .tabbar button {
@@ -493,14 +581,14 @@ html:has(.sheet[open]) {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: var(--red)
+    background: var(--red);
+    box-shadow: var(--glow-halo)
   }
 
   .tabbar button:focus-visible,
   .topbar button:focus-visible,
   .board-picker button:focus-visible,
   .next-board:focus-visible {
-    outline: 1px dashed var(--value);
     outline-offset: -3px
   }
 
@@ -607,8 +695,10 @@ html:has(.sheet[open]) {
     margin-bottom: var(--space-2)
   }
 
+  /* the open board: accent ring and wash (no halo: the strip clips it) */
   .board-picker .board-tabs button.selected {
     box-shadow: inset 0 0 0 1px var(--red);
+    background-color: var(--glow-wash);
     color: var(--red)
   }
 
@@ -629,6 +719,15 @@ html:has(.sheet[open]) {
     letter-spacing: .14em;
     text-align: left;
     cursor: pointer
+  }
+
+  .next-board:hover,
+  .next-board:focus-visible {
+    border-color: var(--line-hover)
+  }
+
+  .next-board:active {
+    background-color: color-mix(in srgb, var(--surface), var(--tint) 4%)
   }
 
   .next-board small {
@@ -704,8 +803,8 @@ html:has(.sheet[open]) {
     padding-bottom: env(safe-area-inset-bottom);
     border-bottom: 0;
     border-radius: var(--radius-card) var(--radius-card) 0 0;
-    transition: transform var(--dur-move) var(--ease);
-    animation: sheet-in var(--dur-enter) var(--ease)
+    /* ⌘K opens with no motion; the transition is only the drag snapping back */
+    transition: transform var(--dur-move) var(--ease)
   }
 
   .pal-grab {
@@ -753,10 +852,6 @@ html:has(.sheet[open]) {
 
   .pal-shell {
     padding-top: calc(var(--space-4) + env(safe-area-inset-top))
-  }
-
-  .pal:focus {
-    outline: none
   }
 
   .brand small {
