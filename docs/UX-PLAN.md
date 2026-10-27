@@ -329,6 +329,64 @@ The taste-session names (§7) were not decided, so U3 uses the plan's proposals.
 - A dev server started inside `.claude/worktrees/` doesn't see edits (`vite.config.ts` ignores `.claude/**`), so restart it after every change.
 - Next product plan: `docs/SHARE-PLAN.md` (widget metadata, slug + short uid links, widget page with pill action bars, copy/share/embed, shadcn registry).
 
+## 10. Touch policy (cards on phones and tablets)
+
+> Branch `feat/card-touch`, 2026-10-26. The owner's note: on mobile there were "unnecessary touches and stuff happening". A board of cards has to scroll like a native list, and a card must only act when the touch was meant for it.
+
+**Rule: scroll first.** A touch on a card is a *candidate*. The card does not see it (no value, no pointer, no capture) until it proves it is meant for the card. All of it lives in one place, the input layer, so every card inherits it: the thresholds and the classifier are `src/engine/interaction/gesture.ts` (framework-free), and the events, timers and capture are `src/hooks/useControlInput.ts`. Mouse and pen are unchanged and act on press.
+
+| Gesture over a card | What happens |
+|---|---|
+| Vertical swipe, anywhere, controls included | The page scrolls. The card never sees it. |
+| Tap (≤ 10 px of travel, ≤ 700 ms) | Acts on lift: a toggle flips, an option is picked, a stepper steps, a slider jumps there, a physics card is poked. It is replayed as a 90 ms press, so ripples and press steps still play. |
+| Still finger on a button | Its press shows after 110 ms, the native press delay, and it stays down while the finger stays. A move of more than 10 px calls the press off and the page scrolls. "Hold to unlock" still works. |
+| Horizontal drag on a drag control (slider, knob, crank, xy, physics surface) | Claimed at once. It captures the pointer and blocks scroll for that touch only. |
+| Press-and-hold (300 ms still) on a drag control | Grabs it in any direction and **engages** the card: a short haptic tick (`navigator.vibrate(10)`, feature-detected, never under reduced motion), a hairline-active border and **DONE** in the card bar. While engaged, the card's drag pads take every touch at once (`touch-action: none`). |
+| Way out of an engaged card | A touch anywhere else (which also scrolls the page), Escape, DONE, or 8 s without a touch. |
+| A touch that stops a fling | Ignored: no tap and no hold if the page scrolled in the last 120 ms. |
+| Long press | No context menu, callout or text selection on cards. |
+| Double tap | No zoom on cards (`touch-action: manipulation`). Pinch zoom still works. |
+
+- **Declared intent.** `touchIntent(control)`: button, toggle, segmented and stepper are `tap`; slider, knob, crank and xy are `drag`. A card you push around in every direction (the five physics cards) sets `gesture: 'surface'` on its control and is a drag, so it gets the same horizontal-or-hold rule. That is the one explicit flag. The spec validator accepts it.
+- **CSS** (`src/components/touch.css`, imported by `DotWidget` and `DotCanvas`). Tap pads are `manipulation` and drag pads are `pan-y`; they were `none` before, which blocked scrolling over every slider and knob. Drag pads become `none` only while the card is engaged.
+- **Only a claimed touch blocks scroll.** That is the one non-passive `touchmove` listener, on the card root. An unclaimed touch is never prevented, so the compositor scrolls as usual.
+- **Hints on touch.** Where a drag has to go up or down (vertical slider, xy, crank, surface), the grey hint reads `HOLD · DRAG` instead of `DRAG`.
+- **Card strip (⋯).** It closes on a tap anywhere else or on Escape. On touch its buttons are 44 px with 10 px labels. ⋯ and DONE keep their small look but have a 44 px hit area. The grey hint over dot-drawn card names is hidden on touch.
+- **A busy main thread is not a hold.** If the hold timer fires late, it waits once more for queued moves, so a swipe on a slow phone never engages a card.
+- **X-ray sheet (≤ 760 px).** It opens at half height (`min(42dvh, 400px)`) and scrolls the inspected card into view above it. It has a grip: a tap or a swipe up opens it full, and a swipe down steps it back and then closes it (X-ray off for that card, the same as ×). It has safe-area padding and contained overscroll, and the page gets bottom padding so the last card can scroll above it. × is 44 px and the tabs and actions are 36 px. The tool dock moves up above the half sheet. On touch, the copy says "Tap", not "Hover". There is no backdrop, on purpose: the card stays live above the sheet. Still open: the dock's X-RAY button turns on X-ray for every card (shell).
+- **HIVE.** The full-screen game owns every touch, as before, now without a context menu, callout or overscroll.
+
+**Measured.** Setup:
+- headless Chrome with CDP touch events, at 375×812 and 390×844, `isMobile` + `hasTouch`;
+- the physics, components, mirror, instrument and heal boards: 32 interactive cards at 375 px and 33 at 390 px;
+- `vite preview` of `main` (3a1775c) against this branch;
+- "flipped" means an overlay value moved during the gesture, even if it was rolled back afterwards;
+- `getUserMedia` was stubbed to count camera requests.
+
+| 375×812, cards out of 32 | before | after |
+|---|---|---|
+| Vertical swipe that starts on the control: page scrolled | 19 | **32** (33 of 33 at 390 px) |
+| … a value flipped during it | 20 | **0** |
+| … the camera was requested | 2 | **0** |
+| Vertical swipe that starts below the control and crosses it: page scrolled / a value flipped | 23 / 12 | **32 / 0** |
+| Horizontal drag: a value flipped (sliders and knobs are meant to move) | 18 (2 camera requests) | 13 (all of them drag controls; 0 camera) |
+| 800 ms long press: the card's value changed | 10 | **1**. Drag cards engage instead (18) |
+| Hold, then drag up: the card took it instead of the page scrolling | 0 of 32 | 18 of 18 drag cards; the 14 tap cards scroll |
+
+The cards from the audit, before → after:
+- **`mirror-camera`:** three vertical flicks made 3 `getUserMedia` calls and 6 toggle flips before; after, none of either, and the page scrolled 185–198 px each time.
+- **`ui-knob`, `ui-slider`, `inst-cutoff`, `inst-level`:** a vertical swipe moved the page 0 px and changed the value before (up to 15 flips); after, the page moves 165 px and the value doesn't change.
+- **`heal-mirror`:** the page moved 0 px with 26 flips before; after, 198 px and 0 flips.
+- **`ui-toggle` and `ui-stepper`:** a scroll flipped them and flipped them back (2 flips) before; after, 0 flips. A tap still flips the toggle and steps the stepper.
+
+Targets at 390 px:
+- ⋯ is drawn at 28×24 but hits 44×44, and a tap 7 px outside it still opens the strip;
+- the strip buttons are 44–48×44 with 10–14 px labels, and the strip closes on a tap elsewhere;
+- the dot-drawn card hint is hidden on touch;
+- the X-ray sheet is 390×354 (was 390×415), with a grip; × is 44×44, the tabs are 36 px, the dock sits above the half sheet, and the copy says "Tap any dot".
+
+Not measurable headless: the context menu and double-tap zoom never happen with CDP touch, on either build. They are covered by `touch-action: manipulation`, `-webkit-touch-callout: none` and the swallowed `contextmenu`. They need a check on a real iPhone.
+
 ## Sources
 - [NN/g: Progressive Disclosure](https://nngroup.com/articles/progressive-disclosure/)
 - [Pattern Playground: progressive disclosure (staged, reversible)](https://pattern-playground.onrender.com/patterns/progressive-disclosure)
