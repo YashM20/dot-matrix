@@ -147,12 +147,17 @@ export function dpow(x: number, y: number): number {
 const powPos = (x: number, y: number) => (x === Infinity ? (y > 0 ? Infinity : 0) : dexp(y * dlog(x)))
 
 // ── hashing and seeded streams ─────────────────────────────────────────────────────────────────────
-/** murmur3 finaliser (as math.ts): full avalanche on 32 bits. */
-function fmix32(h: number): number {
+/** murmur3 finaliser (as math.ts): full avalanche on 32 bits → uint32. */
+export function fmix32(h: number): number {
   h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b)
   h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35)
   return (h ^ (h >>> 16)) >>> 0
 }
+/**
+ * `ihash`'s three multipliers, for lattice loops that inline it: ihash(a, b, c) ===
+ * fmix32(imul(a, IH_A) ^ imul(b, IH_B) ^ imul(c, IH_C)), and imul(a + k, K) === (imul(a, K) + k·K) | 0 for |k| ≤ 2²⁰.
+ */
+export const IH_A = 0x8da6b343, IH_B = 0xd8163841, IH_C = 0xcb1ab31f
 /**
  * Integer lattice hash → uint32: h = imul(a, 0x8da6b343) ^ imul(b, 0xd8163841) ^ imul(c, 0xcb1ab31f),
  * then the murmur3 finaliser (as math.ts:17-21). Inputs are taken as int32 (`| 0`). Use it for lattice
@@ -161,7 +166,7 @@ function fmix32(h: number): number {
  * Mirrored exactly by GLSL `uint` ops (noise/glsl.ts).
  */
 export function ihash(a: number, b = 0, c = 0): number {
-  return fmix32(Math.imul(a | 0, 0x8da6b343) ^ Math.imul(b | 0, 0xd8163841) ^ Math.imul(c | 0, 0xcb1ab31f))
+  return fmix32(Math.imul(a, IH_A) ^ Math.imul(b, IH_B) ^ Math.imul(c, IH_C))
 }
 /** A seeded stream in [0, 1) per entity and step: mulberry32(ihash(seed, id, step)) (mulberry32: sampler/jitter.ts). */
 export function rngFor(seed: number, id: number, step = 0): () => number {

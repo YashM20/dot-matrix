@@ -13,6 +13,11 @@
   "fbm2": "735a2acb",
   "turb2": "0b6c5c9b",
   "ridge2": "e77d3012",
-  "valueNoise2": "140007d6"
+  "valueNoise2": "140007d6",
+  "voronoiL2": "85648699",
+  "voronoiL1": "1339d388",
+  "voronoiLinf": "939f801a",
+  "voronoiBorder2": "9d7f9da7",
+  "curl2": "b8e95d55"
  }
 }

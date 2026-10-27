@@ -12,14 +12,12 @@
  */
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { hash01, hash32 } from '../src/engine/math'
-import { datan2, dexp, dpow, dsin, fbm2, ihash, noise2, noise3, noise3Grad, octaveSeed, ridge2, rngFor, tsin, turb2, valueNoise2 } from '../src/engine/noise'
+import { curl2, datan2, dexp, dpow, dsin, fbm2, ihash, noise2, noise3, noise3Grad, octaveSeed, ridge2, rngFor, tsin, turb2, valueNoise2, voronoi2, voronoiBorder2, type Metric, type VoronoiOut } from '../src/engine/noise'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const NOISE_FILE = 'goldens/noise.json'
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[s.length >> 1] }
 const time = <T>(f: () => T): [number, T] => { const a = performance.now(), r = f(); return [performance.now() - a, r] }
-/** Median of `n` warm runs (one discarded warm-up), in ms. */
-const bench = (f: () => unknown, n = 7) => { f(); return median(Array.from({ length: n }, () => time(f)[0])) }
 
 /**
  * How much slower this machine is right now than the one the budgets were set on: a fixed float loop that
@@ -61,7 +59,29 @@ export function snapshot(): Record<string, string> {
     turb2: sweep(2e4, i => turb2((i % 141) * .0731, (i / 141) * .0917, 4, 6)),
     ridge2: sweep(2e4, i => ridge2((i % 141) * .0731, (i / 141) * .0917, 5, 7)),
     valueNoise2: sweep(2e4, i => valueNoise2((i % 141) * .37, (i / 141) * .29, 9)),
+    voronoiL2: sweep(4e4, i => { const o = voronoi2((i % 199) * .113 - 9, (i / 199) * .127 - 9, 3, 'l2'); return i & 1 ? o.f2 - o.f1 : o.id + o.x * o.y }),
+    voronoiL1: sweep(4e4, i => { const o = voronoi2((i % 199) * .113 - 9, (i / 199) * .127 - 9, 4, 'l1'); return i & 1 ? o.f2 : o.f1 + o.id }),
+    voronoiLinf: sweep(4e4, i => { const o = voronoi2((i % 199) * .113 - 9, (i / 199) * .127 - 9, 5, 'linf'); return i & 1 ? o.f2 : o.f1 + o.x }),
+    voronoiBorder2: sweep(4e4, i => voronoiBorder2((i % 199) * .113 - 9, (i / 199) * .127 - 9, 6)),
+    curl2: sweep(4e4, i => curl2((i % 199) * .113 - 9, (i / 199) * .127 - 9, (i % 5) * .7, 7)[i & 1]),
   }
+}
+
+/** Brute-force Worley over the 7×7 cells around p, with voronoi.ts's own point and distance formulas: [f1, f2]. */
+function bruteVoronoi(x: number, y: number, seed: number, metric: Metric): [number, number] {
+  const cx = Math.floor(x), cy = Math.floor(y), ds: number[] = []
+  for (let j = -3; j <= 3; j++) for (let i = -3; i <= 3; i++) {
+    const h = ihash(cx + i, cy + j, seed), dx = cx + i + (h & 0xffff) / 65536 - x, dy = cy + j + (h >>> 16) / 65536 - y, ax = Math.abs(dx), ay = Math.abs(dy)
+    ds.push(metric === 'l2' ? dx * dx + dy * dy : metric === 'l1' ? ax + ay : Math.max(ax, ay))
+  }
+  ds.sort((a, b) => a - b)
+  return metric === 'l2' ? [Math.sqrt(ds[0]), Math.sqrt(ds[1])] : [ds[0], ds[1]]
+}
+/** Feature points of the 9×9 cells around p (for the bisector check). */
+const pointsAround = (x: number, y: number, seed: number) => {
+  const cx = Math.floor(x), cy = Math.floor(y), ps: [number, number][] = []
+  for (let j = -4; j <= 4; j++) for (let i = -4; i <= 4; i++) { const h = ihash(cx + i, cy + j, seed); ps.push([cx + i + (h & 0xffff) / 65536, cy + j + (h >>> 16) / 65536]) }
+  return ps
 }
 
 /** Frozen copy of cinema.ts's former private `vnoise` (F0.3 migrates the board to `valueNoise2`). */
@@ -72,8 +92,8 @@ const cinemaVnoise = (x: number, y: number, s: number) => {
 }
 
 export function noiseChecks(assert: Assert, opts: { update?: boolean } = {}): void {
-  const load = loadFactor()
-  console.log(`  noise: load factor ${load.toFixed(2)} (timing budgets scale by it)`)
+  const load0 = loadFactor()
+  console.log(`  noise: load factor ${load0.toFixed(2)} (timing budgets scale by it)`)
   const snap = snapshot()
   if (opts.update || !existsSync(NOISE_FILE)) {
     writeFileSync(NOISE_FILE, JSON.stringify({ about: 'FNV-1a 32 of fixed input sweeps through src/engine/noise (scripts/noise.ts snapshot()). Identical under every JS engine; re-baseline with `npx tsx scripts/noise.ts --update` only for an intended change.', hashes: snap }, null, 1) + '\n')
@@ -227,6 +247,78 @@ export function noiseChecks(assert: Assert, opts: { update?: boolean } = {}): vo
     assert('noise: valueNoise2 ≡ cinema vnoise on 1e5 samples (===)', bad === 0, `${bad} differ`)
   }
 
+  // ── F0.3 Voronoi and curl ────────────────────────────────────────────────────────────────────────
+  {
+    const r = lcg(31), metrics: Metric[] = ['l2', 'l1', 'linf'], f1Bad = [0, 0, 0], f2Bad = [0, 0, 0]
+    for (let i = 0; i < 1e5; i++) {
+      const x = r() * 400 - 200, y = r() * 400 - 200, s = i & 31
+      metrics.forEach((m, k) => {
+        const o = voronoi2(x, y, s, m), [b1, b2] = bruteVoronoi(x, y, s, m)
+        if (o.f1 !== b1) f1Bad[k]++
+        if (o.f2 !== b2) f2Bad[k]++
+      })
+    }
+    assert('noise: voronoi2 F1 exact vs 7×7 brute force, all 3 metrics, 1e5 samples (===)', f1Bad.every(n => n === 0), `mismatches l2/l1/linf ${f1Bad.join('/')}`)
+    const l1Rate = f2Bad[1] / 1e5
+    assert('noise: F2 exact for l2/linf; l1 F2 mismatch rate ≤ 1e-4 (reported)', f2Bad[0] === 0 && f2Bad[2] === 0 && l1Rate <= 1e-4, `F2 mismatches l2 ${f2Bad[0]}, linf ${f2Bad[2]}, l1 ${f2Bad[1]} (rate ${l1Rate.toExponential(1)})`)
+  }
+  {
+    const r = lcg(32), mine: VoronoiOut = { f1: 0, f2: 0, id: 0, x: 0, y: 0 }
+    let ordered = true, stable = true, reused = true
+    const ids = new Set<number>()
+    for (let i = 0; i < 2e4; i++) {
+      const x = r() * 100 - 50, y = r() * 100 - 50, s = i & 7, m: Metric = (['l2', 'l1', 'linf'] as const)[i % 3]
+      const o = voronoi2(x, y, s, m)
+      if (!(o.f1 <= o.f2)) ordered = false
+      const { id, x: px, y: py } = o
+      ids.add(id)
+      // a query nudged towards the feature point stays in its cell: same id and point
+      const q = voronoi2(x + (px - x) * .5, y + (py - y) * .5, s, m, mine)
+      if (q.id !== id || q.x !== px || q.y !== py) stable = false
+      if (q !== mine || voronoi2(x, y, s, m) !== o) reused = false
+    }
+    assert('noise: f1 ≤ f2, id stable per cell, out object reused (no new object per call)', ordered && stable && reused && ids.size > 1e4, `${ids.size} distinct ids over 2e4 queries`)
+  }
+  {
+    const r = lcg(33)
+    let neg = 0, bisect = 0, bisectMax = 0, below = 0
+    for (let i = 0; i < 2e4; i++) {
+      const x = r() * 200 - 100, y = r() * 200 - 100, s = i & 15, d = voronoiBorder2(x, y, s), o = voronoi2(x, y, s, 'l2')
+      if (!(d >= 0)) neg++
+      if (d < (o.f2 - o.f1) / 2 - 1e-12) below++
+      // the midpoint of the two nearest points lies on their bisector; when no third point is nearer there it is on the border
+      const ps = pointsAround(x, y, s).map(([px, py]) => [px, py, (px - x) ** 2 + (py - y) ** 2] as const).sort((a, b) => a[2] - b[2])
+      const mx = (ps[0][0] + ps[1][0]) / 2, my = (ps[0][1] + ps[1][1]) / 2, half = Math.hypot(ps[0][0] - mx, ps[0][1] - my)
+      if (pointsAround(mx, my, s).every(([px, py]) => Math.hypot(px - mx, py - my) >= half - 1e-9)) { bisect++; bisectMax = Math.max(bisectMax, voronoiBorder2(mx, my, s)) }
+    }
+    assert('noise: voronoiBorder2 ≥ 0, ≈ 0 on bisectors (±1e-9), ≥ (f2 − f1)/2 (lower bound)', !neg && !below && bisect > 1e4 && bisectMax <= 1e-9,
+      `${neg} negative, ${below} under the bound; ${bisect} border midpoints, max ${bisectMax.toExponential(1)}`)
+  }
+  {
+    const r = lcg(34), h = 1e-5, out: [number, number] = [0, 0]
+    // ψ exactly as curl2 documents it: Σ gainᵒ·noise3(x·2ᵒ, y·2ᵒ, t·speed, seedᵒ), 2 octaves, speed .25, gain .5
+    const psi = (x: number, y: number, t: number, s: number) => noise3(x, y, t * .25, octaveSeed(s, 0)) + .5 * noise3(x * 2, y * 2, t * .25, octaveSeed(s, 1))
+    let err = 0, vmax = 0
+    for (let i = 0; i < 2e4; i++) {
+      const x = r() * 60 - 30, y = r() * 60 - 30, t = r() * 10, s = i & 7
+      curl2(x, y, t, s, out)
+      const vx = (psi(x, y + h, t, s) - psi(x, y - h, t, s)) / (2 * h), vy = -(psi(x + h, y, t, s) - psi(x - h, y, t, s)) / (2 * h)
+      err = Math.max(err, Math.abs(vx - out[0]), Math.abs(vy - out[1])); vmax = Math.max(vmax, Math.abs(out[0]), Math.abs(out[1]))
+    }
+    assert('noise: curl2 = (∂ψ/∂y, −∂ψ/∂x) of ψ by central differences (≤ 1e-5·max|v|)', err <= 1e-5 * vmax, `max |Δ| ${err.toExponential(2)}, max |v| ${vmax.toFixed(3)}`)
+    let div = 0, vm = 0
+    const a: [number, number] = [0, 0], b: [number, number] = [0, 0], dh = 1e-4
+    for (let j = 0; j < 64; j++) for (let i = 0; i < 64; i++) {
+      const x = 3.1 + i / 16, y = -2.7 + j / 16, t = 1.7
+      curl2(x + dh, y, t, 5, a); curl2(x - dh, y, t, 5, b)
+      const dvx = (a[0] - b[0]) / (2 * dh)
+      vm = Math.max(vm, Math.abs(a[0]), Math.abs(a[1]))
+      curl2(x, y + dh, t, 5, a); curl2(x, y - dh, t, 5, b)
+      div = Math.max(div, Math.abs(dvx + (a[1] - b[1]) / (2 * dh)))
+    }
+    assert('noise: curl2 divergence ≤ 1e-4·max|v| (FD over a 64² patch)', div <= 1e-4 * vm, `max |div| ${div.toExponential(2)}, max |v| ${vm.toFixed(3)}`)
+  }
+
   // ── budgets (§4): ratio gates are machine-independent; absolute gates scale by the load factor ─────────
   {
     const r = lcg(15), xs = Float64Array.from({ length: 1e6 }, () => r() * 20 - 10), ys = Float64Array.from({ length: 1e6 }, () => r() * 3 + .01)
@@ -240,13 +332,32 @@ export function noiseChecks(assert: Assert, opts: { update?: boolean } = {}): vo
       `datan2 ${at.toFixed(2)}×, dexp ${ex.toFixed(2)}×, dpow ${pw.toFixed(2)}×`)
   }
   {
+    // A shared box changes load within seconds, so each timing is normalised by load samples interleaved with it:
+    // n rounds of (a 1e6-step copy of the load-factor loop, ~1.2 ms at load 1; the timed call), then the fastest
+    // call over the fastest load sample (clamped to ≥ 1). Same scale as loadFactor(), but immune to load swings.
+    const spin = () => { let s = 0; for (let i = 0; i < 1e6; i++) s += (i & 7) * .5; return s }
+    const timed = (f: () => unknown, n = 15): [number, number] => {
+      f(); spin()
+      let tb = Infinity, tl = Infinity
+      for (let k = 0; k < n; k++) { tl = Math.min(tl, time(spin)[0]); tb = Math.min(tb, time(f)[0]) }
+      const lf = Math.max(1, tl / 1.2)
+      return [tb, lf]
+    }
+    const fmt = ([ms, lf]: [number, number]) => `${ms.toFixed(2)} ms @ load ${lf.toFixed(2)} → ${(ms / lf).toFixed(2)}`
+    const ok = ([ms, lf]: [number, number], gate: number) => ms <= gate * lf
     // explicit loops (a shared `f(c, r)` call site would go polymorphic and time the harness, not the noise)
     const G = 144, g = 48
-    const n2 = bench(() => { let s = 0; for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) s += noise2(c * 6 / G, r * 6 / G, 1); return s }, 9)
-    const fb = bench(() => { let s = 0; for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) s += fbm2(c * 6 / G, r * 6 / G, 4, 1); return s }, 9)
-    const fl = bench(() => { let s = 0; for (let r = 0; r < g; r++) for (let c = 0; c < g; c++) s += fbm2(c * 6 / g, r * 6 / g, 4, 1); return s }, 15)
-    assert('noise: budget noise2 144² ≤ 1.2 ms, fbm2 4 oct 144² ≤ 4.5 ms, fbm2 4 oct 48² ≤ 0.8 ms (warm median, × load)', n2 <= 1.2 * load && fb <= 4.5 * load && fl <= .8 * load,
-      `noise2 ${n2.toFixed(2)}, fbm2 ${fb.toFixed(2)}, fbm2 48² ${fl.toFixed(2)} ms (÷ load: ${(n2 / load).toFixed(2)} / ${(fb / load).toFixed(2)} / ${(fl / load).toFixed(2)})`)
+    const n2 = timed(() => { let s = 0; for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) s += noise2(c * 6 / G, r * 6 / G, 1); return s })
+    const fb = timed(() => { let s = 0; for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) s += fbm2(c * 6 / G, r * 6 / G, 4, 1); return s })
+    const fl = timed(() => { let s = 0; for (let r = 0; r < g; r++) for (let c = 0; c < g; c++) s += fbm2(c * 6 / g, r * 6 / g, 4, 1); return s }, 15)
+    assert('noise: budget noise2 144² ≤ 1.2 ms, fbm2 4 oct 144² ≤ 4.5 ms, fbm2 4 oct 48² ≤ 0.8 ms (fastest warm run, × interleaved load)', ok(n2, 1.2) && ok(fb, 4.5) && ok(fl, .8),
+      `noise2 ${fmt(n2)}, fbm2 ${fmt(fb)}, fbm2 48² ${fmt(fl)}`)
+    const out = { f1: 0, f2: 0, id: 0, x: 0, y: 0 }
+    const vor = (['l2', 'l1', 'linf'] as const).map(m => timed(() => { let s = 0; for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) s += voronoi2(c * 8 / G, r * 8 / G, 1, m, out).f1; return s }))
+    assert('noise: budget voronoi2 l2 / l1 / linf 144² ≤ 3.5 ms each (fastest warm run, × interleaved load)', vor.every(t => ok(t, 3.5)), vor.map(fmt).join(' / '))
+    const r = lcg(35), px = Float64Array.from({ length: 1000 }, () => r() * 40), py = Float64Array.from({ length: 1000 }, () => r() * 40), v: [number, number] = [0, 0]
+    const cu = timed(() => { let s = 0; for (let i = 0; i < 1000; i++) s += curl2(px[i], py[i], 2.5, 3, v)[0]; return s }, 21)
+    assert('noise: budget curl2 2 oct, 1000 points ≤ 0.3 ms (fastest warm run, × interleaved load)', ok(cu, .3), fmt(cu))
   }
 }
 

@@ -10,6 +10,7 @@
 import { clamp, hash01, len } from '../../engine/math'
 import { decodeText } from '../../engine/motion/text'
 import { textAt } from '../../engine/layout'
+import { valueNoise2 } from '../../engine/noise/gradient'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import type { Field, Layer, Tone } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
@@ -110,12 +111,6 @@ const pl = (pts: Pt[], k: number) => {
   if (k <= pts[0][0]) return pts[0][1]
   for (let i = 0; i < pts.length - 1; i++) if (k <= pts[i + 1][0]) { const [k0, v0] = pts[i], [k1, v1] = pts[i + 1]; return v0 + ((v1 - v0) * (k - k0)) / (k1 - k0) }
   return pts[pts.length - 1][1]
-}
-/** Smooth value noise (deterministic hash lattice, bicubic fade). */
-const vnoise = (x: number, y: number, s: number) => {
-  const xi = Math.floor(x), yi = Math.floor(y), fx = x - xi, fy = y - yi, ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy)
-  const a = hash01(xi, yi, s), b = hash01(xi + 1, yi, s), c = hash01(xi, yi + 1, s), d = hash01(xi + 1, yi + 1, s)
-  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy
 }
 /** A star on lattice cell granularity: same value for every supersample inside one dot. */
 const star = (x: number, y: number, seed: number, density: number) => {
@@ -299,7 +294,7 @@ const WINDOWS: Box[] = [[43.5, 50, 48.5, 58], [29, 71, 35, 78], [41, 71, 47, 78]
 const RED_WINDOW: Box = [75.3, 45.4, 80.3, 52.6]
 const hillY = (x: number) => 104 - 9 * Math.exp(-(((x - 62) / 46) ** 2))
 const upstairs: Luma = (x, y) => {
-  const fog = .3 * vnoise(x / 9, y / 3.2, 5) * Math.exp(-(((y - 106) / 7) ** 2))
+  const fog = .3 * valueNoise2(x / 9, y / 3.2, 5) * Math.exp(-(((y - 106) / 7) ** 2))
   if (y > hillY(x)) return Math.max(0, fog - .02)
   if (HOUSE(x, y)) {
     if (WINDOWS.some(([a, b, c, d]) => rect(x, y, a, b, c, d))) return Math.max(.26, fog)
@@ -310,11 +305,11 @@ const upstairs: Luma = (x, y) => {
   }
   const dm = len(x - MOON[0], y - MOON[1])
   if (dm < MOON_R) {
-    const maria = vnoise(x / 6.5, y / 6.5, 9), limb = Math.sqrt(1 - (dm / MOON_R) ** 2)
+    const maria = valueNoise2(x / 6.5, y / 6.5, 9), limb = Math.sqrt(1 - (dm / MOON_R) ** 2)
     return .7 + .28 * limb - .18 * clamp((maria - .45) / .25)
   }
   // moonlit cloud sky behind the house, falling off to black at the edges
-  const sky = (.16 + .26 * Math.exp(-(dm - MOON_R) / 26)) * (.6 + .6 * vnoise(x / 14, y / 7, 6)) * clamp(1.3 - y / 120)
+  const sky = (.16 + .26 * Math.exp(-(dm - MOON_R) / 26)) * (.6 + .6 * valueNoise2(x / 14, y / 7, 6)) * clamp(1.3 - y / 120)
   return Math.max(fog, sky)
 }
 const upstairsPoster = poster({
@@ -390,7 +385,7 @@ const witness: Luma = (x, y) => {
   if (crease) return .12
   const brow = Math.abs(y - (24 - 10 * (1 - ((x - 76) / 64) ** 2))) < 5 && x > 14 && x < 136
   if (brow && frac((x * .9 + y * 1.6) / 3) < .5) return .3
-  const skin = (.3 + .14 * (x / 143) + .08 * (vnoise(x / 5, y / 5, 21) - .5)) * clamp(1.35 - ell(x, y, EC[0], EC[1], 80, 62))
+  const skin = (.3 + .14 * (x / 143) + .08 * (valueNoise2(x / 5, y / 5, 21) - .5)) * clamp(1.35 - ell(x, y, EC[0], EC[1], 80, 62))
   return below > 0 ? skin * (below < 3 ? .55 : 1) : skin * (above < 9 ? .9 : 1)
 }
 const witnessPoster = poster({
@@ -478,7 +473,7 @@ const keeper: Luma = (x, y) => {
   // the rock: a black mass, its crown lit by the lamp above, surf breaking white along its waterline
   if (ROCKS(x, y)) {
     if (!ROCKS(x, y - 2.4)) return .62 - .3 * clamp(Math.abs(x - LX) / 40)
-    const facet = vnoise(x / 5, y / 3, 55)
+    const facet = valueNoise2(x / 5, y / 3, 55)
     return y < 97 && facet > .62 ? .2 : 0
   }
   const sky = Math.max(beam(x, y, -1, -.3, 175), beam(x, y, 1, .14, 80))
@@ -491,7 +486,7 @@ const keeper: Luma = (x, y) => {
   // one broken swell line per lattice row; dashes lengthen toward the viewer and close up under the lamp
   const k = (y - SEA_Y) / (113 - SEA_Y), row = Math.round((y - yOf(0)) / K)
   const under = Math.exp(-(((x - LX + 2) / (6 + 16 * k)) ** 2))
-  const dash = vnoise(x / (5 + 14 * k), row * 1.7, 53) > .52 - .3 * under
+  const dash = valueNoise2(x / (5 + 14 * k), row * 1.7, 53) > .52 - .3 * under
   return dash ? (.24 + .14 * (row % 2) + .55 * under) * (1 - .25 * k) : 0
 }
 const keeperPoster = poster({

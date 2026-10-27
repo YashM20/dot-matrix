@@ -120,6 +120,14 @@ Edges: `datan2(0, 0) = 0`, signed zeros ignored, NaN → NaN; `dexp` overflows t
 
 Map a signed value to a tone with `.5 + .5 * n`. Budgets (`scripts/noise.ts`, normalised to load factor 1; measured 2026-10-27): `noise2` 144² ≤ 1.2 ms (0.41 ms); `fbm2` 4 octaves 144² ≤ 4.5 ms (1.6 ms: bake it, never per frame at full resolution); `fbm2` 4 octaves 48² ≤ 0.8 ms (0.22 ms: per frame on a lattice is fine).
 
+### Curl noise (`curl2`, in `noise/gradient.ts`)
+Divergence-free 2-D flow after Bridson et al. 2007 (*Curl-noise for procedural fluid flow*): ψ = Σ gainᵒ·noise3(x·2ᵒ, y·2ᵒ, t·speed, seedᵒ), v = (∂ψ/∂y, −∂ψ/∂x), taken from `noise3Grad`'s analytic gradient (one call per octave, no finite differences). Defaults: 2 octaves, speed .25, gain .5; writes into `out`, so nothing is allocated. It is meant for particles and agents (lily-pad drift, marine snow), not per-cell fields. Budget: 1000 points ≤ 0.3 ms.
+
+### Worley / Voronoi (`noise/voronoi.ts`)
+`voronoi2(x, y, seed, metric, out, jitter)` → `{ f1, f2, id, x, y }` in `'l2' | 'l1' | 'linf'`. There is one feature point per lattice cell, at cell + jitter·(h & 0xffff, h >>> 16)/65536 with h = `ihash(cx, cy, seed)`; 16-bit coordinates are exact in float32, so the GPU sees the same points. `id` is a salted `ihash` of the nearest cell (stable per cell, independent of where its point sits), and `x, y` is the nearest feature point (pane and chip centres).
+
+**Exact search with an early out.** Scan the 3×3 cells around floor(p). If the wanted distance (F1, or F2 when it is read) is still > 1, scan the 16-cell ring at ±2, skipping each ring cell whose per-axis lower bound (lx, ly, combined per metric) can't beat the current distance (the same result as scanning it). The search has one copy per metric, so there is no per-cell metric switch. Ring points are always > 1 away along one axis, and points beyond the ring are > 2 away. So F1 is exact in all three metrics, and F2 is exact for L2 and L∞; L1's F2 can only be wrong past 2 (0 mismatches in 1e5 brute-force samples). Ties keep the first-scanned cell, so no float sort is needed. `voronoiBorder2` is the exact distance to the nearest cell border (iq 2012: an exact F1 pass, then the bisector distances over the 5×5 cells around the nearest cell), for lead moats and grout of even width. Budget: 144² ≤ 3.5 ms per metric, so bake panes and terrazzo, or sample on lattices ≥ 2 when animating.
+
 ## Checks (`scripts/algorithms.ts`)
 - **Stipple:** deterministic; walk ≈ exact; every stipple ends on the density; Lloyd moves shrink; the moon builds cold within its budget.
 - **Attractor:** `dsin` < 1e-8 and `tsin` < 1e-6 against `Math.sin`; deterministic; the density is in [0, 1]; the card path never collapses.

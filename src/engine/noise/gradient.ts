@@ -11,23 +11,19 @@
  * `noise2(c * 6 / 144, …)`); `noise*` / `fbm2` are signed (map with `.5 + .5 * n` for a tone).
  */
 import { hash01 } from '../math'
-import { ihash } from './dmath'
+import { fmix32, IH_A, IH_B, IH_C } from './dmath'
 
 const R = Math.SQRT1_2, SQRT2 = Math.SQRT2
 /** The 8 gradients, indexed by `hash & 7` (noise/glsl.ts has the same table in the same order). */
 const GX = Float64Array.of(1, -1, 0, 0, R, -R, R, -R)
 const GY = Float64Array.of(0, 0, 1, -1, R, R, -R, -R)
 
-/** `ihash`'s multipliers and finaliser, inlined for the 4 corners (imul(i + 1, K) = imul(i, K) + K mod 2³²). */
-const HA = 0x8da6b343, HB = 0xd8163841, HC = 0xcb1ab31f
-const fm = (h: number) => { h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); return h ^ (h >>> 16) }
-
 /** Gradient noise in [−1, 1] (×√2 of the classic ±√½ bound, so the bound is exact). Lattice = integer x, y. */
 export function noise2(x: number, y: number, seed = 0): number {
   const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy, gx = fx - 1, gy = fy - 1
-  // corner hashes = ihash(ix + i, iy + j, seed) & 7, bit for bit
-  const x0 = Math.imul(ix, HA), x1 = (x0 + HA) | 0, s = Math.imul(seed, HC), y0 = Math.imul(iy, HB) ^ s, y1 = ((Math.imul(iy, HB) + HB) | 0) ^ s
-  const h00 = fm(x0 ^ y0) & 7, h10 = fm(x1 ^ y0) & 7, h01 = fm(x0 ^ y1) & 7, h11 = fm(x1 ^ y1) & 7
+  // corner hashes = ihash(ix + i, iy + j, seed) & 7, bit for bit, with ihash inlined (see IH_A)
+  const x0 = Math.imul(ix, IH_A), x1 = (x0 + IH_A) | 0, s = Math.imul(seed, IH_C), yb = Math.imul(iy, IH_B), y0 = yb ^ s, y1 = ((yb + IH_B) | 0) ^ s
+  const h00 = fmix32(x0 ^ y0) & 7, h10 = fmix32(x1 ^ y0) & 7, h01 = fmix32(x0 ^ y1) & 7, h11 = fmix32(x1 ^ y1) & 7
   const a = GX[h00] * fx + GY[h00] * fy, b = GX[h10] * gx + GY[h10] * fy
   const c = GX[h01] * fx + GY[h01] * gy, d = GX[h11] * gx + GY[h11] * gy
   const u = fx * fx * fx * (fx * (fx * 6 - 15) + 10), v = fy * fy * fy * (fy * (fy * 6 - 15) + 10)
@@ -58,11 +54,13 @@ const scratch3 = new Float64Array(3)
  */
 export function noise3Grad(x: number, y: number, z: number, seed: number, out: Float64Array): Float64Array {
   const ix = Math.floor(x), iy = Math.floor(y), iz = Math.floor(z), fx = x - ix, fy = y - iy, fz = z - iz
+  // corner hashes = ihash(ix + i, iy + j, s + k) % 12 with s = iz + seed mix, ihash inlined (see IH_A)
   const s = (iz + Math.imul(seed | 0, SEED3)) | 0
-  const g000 = (ihash(ix, iy, s) % 12) * 3, g100 = (ihash(ix + 1, iy, s) % 12) * 3
-  const g010 = (ihash(ix, iy + 1, s) % 12) * 3, g110 = (ihash(ix + 1, iy + 1, s) % 12) * 3
-  const g001 = (ihash(ix, iy, s + 1) % 12) * 3, g101 = (ihash(ix + 1, iy, s + 1) % 12) * 3
-  const g011 = (ihash(ix, iy + 1, s + 1) % 12) * 3, g111 = (ihash(ix + 1, iy + 1, s + 1) % 12) * 3
+  const a0 = Math.imul(ix, IH_A), a1 = (a0 + IH_A) | 0, b0 = Math.imul(iy, IH_B), b1 = (b0 + IH_B) | 0, c0 = Math.imul(s, IH_C), c1 = (c0 + IH_C) | 0
+  const g000 = (fmix32(a0 ^ b0 ^ c0) % 12) * 3, g100 = (fmix32(a1 ^ b0 ^ c0) % 12) * 3
+  const g010 = (fmix32(a0 ^ b1 ^ c0) % 12) * 3, g110 = (fmix32(a1 ^ b1 ^ c0) % 12) * 3
+  const g001 = (fmix32(a0 ^ b0 ^ c1) % 12) * 3, g101 = (fmix32(a1 ^ b0 ^ c1) % 12) * 3
+  const g011 = (fmix32(a0 ^ b1 ^ c1) % 12) * 3, g111 = (fmix32(a1 ^ b1 ^ c1) % 12) * 3
   const ex = fx - 1, ey = fy - 1, ez = fz - 1
   const d000 = G3[g000] * fx + G3[g000 + 1] * fy + G3[g000 + 2] * fz
   const d100 = G3[g100] * ex + G3[g100 + 1] * fy + G3[g100 + 2] * fz
