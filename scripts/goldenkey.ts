@@ -1,6 +1,7 @@
 /**
  * F0's golden-key slot (docs/living-matter/F0-foundation.md §3): the golden key and its one-time `style`
- * backfill (F0.5). Called from verify.ts (`goldenKeyChecks(assert)`); also runnable alone:
+ * backfill (F0.5), the square site cover (F0.6) and per-card fps (F0.10). Called from verify.ts
+ * (`goldenKeyChecks(assert)`); also runnable alone:
  * `npx tsx scripts/goldenkey.ts`.
  */
 import { spawnSync } from 'node:child_process'
@@ -11,6 +12,8 @@ import { sampleLayers, sampleLayersInto } from '../src/engine/sampler/gridSample
 import { mulberry32 } from '../src/engine/sampler/jitter'
 import { createDotBuffer, toDots } from '../src/engine/buffer/dotBuffer'
 import { dot480 } from '../src/engine/theme/tokens'
+import { cardFps, tierOf } from '../src/widgets/fps'
+import { widgetPresets } from '../src/widgets'
 import { freezeWallClock } from './lib/freeze'
 import { sampleCard, uniquePresets } from './lib/cards'
 import { CHANNELS, diffGoldens, dotKey, goldenRow, legacyKey, styleSig, type Goldens } from './lib/goldenKey'
@@ -97,6 +100,21 @@ export function goldenKeyChecks(assert: Assert): void {
       restyle ? line : 'no preset keeps its dot list under a square restyle')
   } finally { globalThis.Date = RealDate }
   coverChecks(assert)
+  fpsChecks(assert)
+}
+
+/** F0.10) per-card fps and the phone tier (src/widgets/fps.ts). */
+function fpsChecks(assert: Assert): void {
+  const rows: [number, number, number][] = [[12, 12, 12], [30, 30, 15], [60, 60, 30], [20, 20, 12], [8, 8, 8], [24, 24, 12], [25, 25, 13]]
+  const bad = rows.filter(([b, full, phone]) => cardFps(b, 'full') !== full || cardFps(b, 'phone') !== phone || cardFps(b, 'phone') > b)
+  const tiers = tierOf(true, false, 16) === 'phone' && tierOf(false, true, 16) === 'phone' && tierOf(false, false, 4) === 'phone' && tierOf(false, false, 5) === 'full' && tierOf(false, false, undefined) === 'full'
+  assert('fps: cardFps full → base; phone → max(12, round(base/2)), never above base (12 → 12, 30 → 15, 60 → 30, 20 → 12)', !bad.length && tiers,
+    `${bad.map(([b]) => `${b} → ${cardFps(b, 'phone')}`).join(', ')}${tiers ? '' : ' tier rules (coarse pointer, saveData, ≤ 4 cores) wrong'}` || 'phone tier: coarse pointer, saveData or ≤ 4 cores')
+  const declared = widgetPresets.filter(p => p.fps !== undefined).map(p => p.id)
+  const src = readFileSync('src/components/DotWidget.tsx', 'utf8')
+  const passes = src.includes("camera.status === 'live' ? 30 : preset.fps !== undefined ? cardFps(preset.fps, fpsTier()) : undefined") && (src.match(/ fps=\{fps\}/g) ?? []).length === 2
+  assert('fps: no existing preset declares fps (so DotWidget passes undefined, as today)', !declared.length && passes,
+    declared.length ? `declared: ${declared.join(', ')}` : passes ? 'DotCanvas and the X-ray overlay get the same fps' : 'DotWidget no longer passes the tiered fps to both')
 }
 
 /** The site cover before F0.6 (gridSampler.ts:222-225 at c619dae), frozen: the cells a site at (x, y) of size k hid. */

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { withChrome, type WidgetPreset } from '../widgets/types'
 import { registeredPreset } from '../widgets/registry'
 import { findPreset } from '../widgets/manifest'
+import { cardFps, fpsTier } from '../widgets/fps'
 import { DotCanvas, type DotCanvasProps } from './DotCanvas'
 import { useCamera, withMedia } from '../media/useCamera'
 import { HAND_KEY, useHandMode } from '../media/useHand'
@@ -106,6 +107,8 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
   const controls = preset.controls?.filter(({ box: [c, r, bw, bh] }) => c < grid.cols && r < grid.rows && c + bw > 0 && r + bh > 0)
   const interactive = !!controls?.length
   const hint = interactive ? hintVerb(preset, controls!) : undefined, touchHint = hint && touchVerb(hint, controls!), name = preset.live ? `${preset.name} (live)` : preset.name
+  // the live camera runs at 30; a card's own `fps` drops a tier on phones; no `fps` keeps DotCanvas's default
+  const fps = camera.status === 'live' ? 30 : preset.fps !== undefined ? cardFps(preset.fps, fpsTier()) : undefined
   const act = (a: CardAction) => () => { setMenu(false); cardAction(a, { key: xr.key, preset, data: merged, layers, grid, style, theme, animated: !!(animated ?? preset.animated) }) }
   return (
     // a group (it holds the action strip); a static card's body is one dot-matrix picture (role="img"), an
@@ -122,10 +125,10 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
         <button type="button" className="dot-card-more" aria-label={`${preset.name}: card actions`} aria-expanded={menu} onClick={() => setMenu(m => !m)}>⋯</button>
       </div>
       <div className="dot-card-body" role={interactive ? undefined : 'img'} aria-label={interactive ? undefined : name}>
-        <DotCanvas layers={xr.layers} renderer={xr.renderer} onMode={xr.onMode} data={preset.media ? { ...merged, ...camera.data, ...hand.data } : { ...merged, ...hand.data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={camera.status === 'live' ? 30 : undefined} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
+        <DotCanvas layers={xr.layers} renderer={xr.renderer} onMode={xr.onMode} data={preset.media ? { ...merged, ...camera.data, ...hand.data } : { ...merged, ...hand.data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={fps} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
           controls={interactive ? controls : undefined} onInput={interactive ? onInput : undefined} onEngage={interactive ? onEngage : undefined} />
         {xr.on && <XRayOverlay xr={xr} preset={preset} layers={layers} data={preset.media ? { ...merged, ...camera.data } : merged} grid={grid} style={style} theme={theme}
-          animated={!!(animated ?? preset.animated)} fps={camera.status === 'live' ? 30 : undefined} tick={tick} />}
+          animated={!!(animated ?? preset.animated)} fps={fps} tick={tick} />}
       </div>
     </div>
   )
