@@ -1,7 +1,8 @@
 # LAYOUT-THEME-PLAN: design language, layout and themes
 
 > Status: **planned, revised** (2026-10-27).
-> **Revision:** vite.dev is a reference for *how a well-made product feels*, not a theme to copy. Everything below is our own dot-matrix design language. "Theme" now means **scheme × accent** (Tamagui-style): light, dark and system, crossed with an accent the visitor can change. Each accent is tuned per scheme so it works in both.
+> **Revision 2:** adds vite.dev's purple as the `vite` accent; ideas from award-winning product sites (§1c); a trimmed, gamut-safe accent list with neutrals tinted toward each accent (§4).
+> **Revision 1:** vite.dev is a reference for *how a well-made product feels*, not a theme to copy. Everything below is our own dot-matrix design language. "Theme" now means **scheme × accent** (Tamagui-style): light, dark and system, crossed with an accent the visitor can change. Each accent is tuned per scheme so it works in both.
 > Sources (2026-10-27):
 > - a teardown of vite.dev's CSS and theme source;
 > - a measured audit of the live site (6 pages × 6 widths; screenshots in `D:\tmp\dot480-shots\layout-audit\`);
@@ -79,6 +80,44 @@ Each step is one small lightness change. A dark `card` reads as a screen, a ligh
 - One component per job: one pill, one segmented control, one sheet, one menu, one tooltip.
 - Every interactive element has the same four states (rest, hover, press, focus) built from the same tokens.
 
+## 1c. Learned from the best (vite.dev and award-winning product sites)
+
+We studied vite.dev, Linear, Vercel (Geist), Stripe, Raycast, Resend, Cursor, Nothing, rauno.me, paco.me, teenage.engineering and family.co, plus Awwwards 2024–26 product winners. Where we could, we read the real CSS:
+- **Lidar Drone Scanning** (Site of the Day, Oct 2026): a real-time point cloud, which shows a dots-only medium can win.
+- **Anime.js** (Site of the Month, May 2025): its 13×13 dot stagger.
+- **Fauna Robotics** (Site of the Day, Jun 2026).
+
+The ideas we adopt, each tied to a phase:
+
+| # | Idea (from) | What it becomes here | Phase | Cost |
+|---|---|---|---|---|
+| 1 | **Hover in instantly, fade out over 150 ms** (Linear: `--speed-highlightFadeIn: 0s; …FadeOut: .15s`) | `--dur-in: 0ms; --dur-out: 150ms`; transitions only on the non-hover state. **No motion** on ⌘K, menus and context menus (rauno: high-frequency actions don't animate) | T1 | S |
+| 2 | **A hero you can touch** (Vercel's drop-to-deploy, Raycast's keyboard) | Home hero card: drop or paste an image, or move the pointer, and it halftones live through the engine. The drop handler loads lazily | T2/T3 | M |
+| 3 | **Dot type only for names** (Nothing: Ndot only for category and product names; body text at weight 100) | Board and widget titles drawn as engine dot text (`textAt` / `T.big`); prose in the display face, meta in mono | T6 | M |
+| 4 | **Grid crosses** (Geist `GridCross`, vite's corner ticks) | Dotted cell rules plus a 5×5 dot "+" where rules meet; cards hide the rules behind them; `aria-hidden`, 3:1 contrast | T3 | M |
+| 5 | **Type named by role and size** (Geist `label-13-mono` / `copy-14`; Linear tracking −.011em at ≥ 15 px) | `--fs-label-12-mono`, `--fs-copy-16`, …; labels at 1.2–1.4 line height, copy at 1.6; tabular numbers on every figure | T0 | S |
+| 6 | **Warm paper** (Cursor: `#f7f7f4` / `#f2f1ed`; Linear's 2–3% L surface levels) | the `paper` neutral preset, not pure white | T4 | S |
+| 7 | **Glass for `raised` only** (Raycast: `0 4px 40px 8px #0006, 0 0 0 .5px #000c, inset 0 .5px #fff4`) | menus, sheets and popovers; cards keep the single hairline | T1 | S |
+| 8 | **CSS scroll edge fades** (Resend: `animation-timeline: scroll(self inline)`) | group tabs and board strip on phones; replaces the sticky ALL pill that covers "RT HERE" | T3 | S |
+| 9 | **Scroll-snap sheet** (Stripe: snap container + scroll-timeline scrim) | phone TOOLS / THEME sheets dismiss by dragging with no gesture JS | T1 | M |
+| 10 | **Hover intent and grouped tooltips** (Stripe 100 ms; Geist: first tooltip delayed, the next ones instant) | DISPLAY and THEME open after 100 ms; dock tooltips wait ≈ 400 ms then show instantly; keycaps drawn as 5×7 dot glyphs | T1/T5 | S |
+| 11 | **No-flash, no-smear theme switch** (next-themes `disableTransitionOnChange`; Cursor `@view-transition` with 0 s root) | boot script plus a `.no-transition` class during non-animated switches; route changes cut, and only the opened card morphs | T4 | S |
+| 12 | **Radial stagger moment** (Anime.js 13×13 dot stagger) | the theme and accent dither wipe is ordered by distance from the pressed control; cards re-sample in that order | T5 | S |
+| 13 | **Live number band** (Stripe's GDP counter, Apple's big stats) | a footer band with one live engine stat (dots drawn this visit, frame ms) as a dot-text card; replaces the 64 px dead strip | T2 | S/M |
+| 14 | **Figure captions** (Linear "Fig 0.1") | `FIG 03.2 · halftone · 4 px` legends on About and essay figures and under the widget-page card | T2/T6 | S |
+| 15 | **Interaction hygiene** (Vercel guidelines) | hit areas 24 / 44 px, `touch-action: manipulation`, no `transition: all`, `text-wrap: balance/pretty`, delayed spinners (150–300 ms, then visible ≥ 300 ms) at the final size | T1/T6 | S |
+
+**Optional:** an opt-in press "tick" that reuses the flip-disc clack (`src/media/clack.ts`), off by default. `navigator.vibrate(5)` works on Android but not iOS.
+
+**Don't copy:**
+- an accent per section (Linear) or coloured halos (Raycast): both are a second hue;
+- gradient waves on chrome (Stripe);
+- pixel webfonts (VT323, Ndot): they fake dots, and ours come from the engine;
+- WebGL/Three.js heroes and scroll-scrubbed image sequences: new deps, the size budget, and scroll hijacking;
+- grain overlays, logo marquees and auto-moving chrome;
+- many font families (Cursor loads ~8), or a 10-hue scale system (Geist);
+- a scroll reveal on every section: at most one, on the hero.
+
 ## 2. What is wrong today (measured)
 
 | # | Problem | Evidence | Cause |
@@ -149,7 +188,7 @@ We take the same model, in CSS and engine tokens:
 ```
 theme = scheme × accent [× contrast]
   scheme   ∈ { dark, light }            ← 'system' resolves to one of these
-  accent   ∈ { signal (red, default), ember, amber, phosphor, mint, cyan, cobalt, violet, magenta } ∪ { custom hue }
+  accent   ∈ { signal (red, default), amber, phosphor, cyan, cobalt, vite (purple), magenta } ∪ { custom hue }
   contrast ∈ { normal, more }           ← auto from prefers-contrast: more
 name: `${scheme}_${accent}` (e.g. dark_signal, light_cobalt), as Tamagui resolves light_red
 ```
@@ -173,30 +212,94 @@ name: `${scheme}_${accent}` (e.g. dark_signal, light_cobalt), as Tamagui resolve
   - `dotActiveDim` = the ramp's dim step for this scheme. In dark it is a dimmer accent; in light it is less ink, a lighter tint;
   - neutral dot roles (`dotFaint`, `dotMid`, `dotIdle`, `value`, `surface`) come from the scheme.
 
-### Accent ramps (generated, then tuned)
-- **Generation:** each accent is one OKLCH hue with a 12-step ramp per scheme, like Radix/Tamagui scales. Steps 1–2 are washes, 3–5 component fills, 6–8 lines, 9–10 the solid, 11–12 text. One generator (`scripts/site/accents.ts`) produces both schemes from `{ hue, chroma }`.
-- **Contrast clamping:** the generator clamps lightness until every rule passes, then writes a static table (no runtime colour math). The rules:
-  - `accent` dots ≥ 3:1 on `card` (WCAG 1.4.11) in both schemes;
-  - `accent-text` ≥ 4.5:1;
-  - `on-accent` ≥ 4.5:1 on `accent`;
-  - the APCA order of the neutral dot tones is preserved;
-  - the accent is distinguishable from `value` at dot size (ΔL or ΔE threshold).
-- **Hand-tuning:** each preset is tuned by eye after generation and stored with its numbers.
-- **Custom hue (later, T6):** a hue slider runs the same generator in the browser (≈ 1 kB, lazy, loaded only when the slider opens). Its output is clamped by the same rules, so any hue the visitor picks stays legible in both schemes.
+### Accent ramps (generated, clamped, a few hand-pinned)
 
-| Accent | Character | Dark solid (start) | Light solid (start) |
+**Generation.** Each accent is one OKLCH hue with a 12-step ramp per scheme (Radix/Tamagui roles):
+- 1–2: washes;
+- 3–5: component fills;
+- 6–8: lines (8 is the focus ring);
+- 9–10: the solid;
+- 11–12: text.
+
+One generator (`scripts/site/accents.ts`) writes a static table, so there is no runtime colour math. `scripts/site/contrast.ts` re-checks the table in CI.
+
+**Rules** (the generator clamps until they pass; hand-pinned presets must pass them too):
+- **Gamut:** every colour stays inside sRGB. Chroma is binary-searched per lightness and hue.
+  - Yellows, greens and cyans lose chroma in light mode; blues and purples lose it at high lightness in dark.
+  - Five of revision 1's starting values were out of gamut: light ember, amber, mint, cyan, and dark cobalt.
+- **Dots:** `accent` ≥ 3:1 on `card` (WCAG 1.4.11).
+- **Text:** `accent-text` ≥ 4.5:1, and ≥ APCA Lc 60 for 12–14 px chrome.
+- **`on-accent`** is chosen by measured contrast, not fixed white: white if APCA ≥ 60, else a dark tint of the same hue, `oklch(.25 max(.08·C, .04) H)`. It must reach ≥ 4.5:1. (vite.dev's white on `#B39AFF` is only 2.34:1; we don't repeat that.)
+- **Colour-blind safety:** each board has one accent against neutrals, so the risk is accent vs grey.
+  - Under protan and deutan simulation, `accent` must differ from `value` and `dotMid` by ΔL ≥ .08 or a ΔE threshold, not by hue alone.
+  - Example: `#FF3B30` drops from L .65 to .53 under protanopia.
+- **Tone order:** the neutral dot tones keep their APCA order (faint < mid < idle < value).
+
+```
+gen(hue, cTarget, scheme, neutrals):
+  bg, card = neutrals[scheme]
+  ramp = L_STEPS[scheme].map((L, i) => gamutClamp(L, cTarget * C_CURVE[i], hue))  // C peaks at step 9
+  solid = ramp[8];  while (wcag(solid, card) < 3)   nudge(solid.L toward contrast); gamutClamp(solid)
+  text  = ramp[10]; while (wcag(text, card) < 4.5)  nudge(text.L);  text.C = min(text.C, solid.C)
+  on    = apca(white, solid) >= 60 ? white : oklch(.25, max(.08*solid.C, .04), hue)
+  line  = first of ramp[5..7] with wcag(step, card) >= 3
+  dim   = scheme == dark ? ramp[6] : ramp[4]            // dark: dimmer; light: less ink
+  assert protanDeutanDistinct(solid, value, dotMid); assert toneOrder(neutrals[scheme])
+  return { solid, hover: ramp[9], press: ramp[7], text, soft: mix(solid, 12%), line,
+           glow: mix(solid, 35%), on, dim, neutrals: tint(neutrals[scheme], hue, scheme) }
+```
+
+**Presets: 7 plus custom.**
+
+Revision 1's `violet` is dropped because it is nearly identical to vite's `#B39AFF`; `vite` replaces it. `ember` (16° from signal) and `mint` (25° from phosphor) are dropped because they are hard to tell apart at dot size. Both remain reachable through the custom hue.
+
+| Accent | Hue | Character | Notes |
 |---|---|---|---|
-| `signal` (default) | today's red | `#FF3B30` | `#E5352B` (text `#B8241A`) |
-| `ember` | orange | OKLCH 0.70 0.19 45 | 0.60 0.19 45 |
-| `amber` | VFD-warm | 0.80 0.16 80 | 0.62 0.15 70 (text darker) |
-| `phosphor` | green CRT | 0.82 0.20 145 | 0.55 0.17 145 |
-| `mint` | soft green-cyan | 0.82 0.12 170 | 0.55 0.11 170 |
-| `cyan` | VFD cyan | 0.80 0.12 210 | 0.55 0.11 220 |
-| `cobalt` | blue | 0.68 0.17 260 | 0.52 0.19 260 |
-| `violet` | purple | 0.70 0.17 300 | 0.52 0.19 300 |
-| `magenta` | pink | 0.70 0.21 350 | 0.55 0.21 350 |
+| `signal` (default) | 29 | today's red | dark solid `#FF3B30` (golden); light text deepens to ≈ `#B8241A` |
+| `amber` | 75 | VFD warm | light solid ≈ 3.75:1, so `accent-text` is darker; `on-accent` is dark |
+| `phosphor` | 145 | green CRT | `on-accent` is dark |
+| `cyan` | 210 | VFD cyan | chroma ≤ ~.094 at L .55 in light |
+| `cobalt` | 260 | blue | dark chroma clamped to ≤ .169 at L .68 |
+| `vite` | 285–294 | vite.dev's purple | **hand-pinned**, table below |
+| `magenta` | 350 | pink | — |
 
-These values are starting points; the generator's clamped output is the source of truth.
+**The `vite` preset.** Taken from `@voidzero-dev/vitepress-theme` tokens: `--color-electric #6C3BFF`, `--color-vite #B39AFF`, the vite docs' light brand `#6B1EB9`, and the hero panels `#370A7F`.
+
+| Role | Dark (on card `#111315`) | Light (on white / paper) |
+|---|---|---|
+| `accent` (dots, solid) | `#B39AFF` (7.96:1) | `#6C3BFF` (5.66:1) |
+| `accent-hover` / `-press` | `#C2AEFF` / `#A388F8` | `#602AE3` / `#6B1EB9` |
+| `accent-text` | `#B39AFF` | `#6B1EB9` (8.36:1) |
+| `accent-soft` | `#B39AFF` at 14% | `#6C3BFF` at 10–14% |
+| `accent-line` | `#6C3BFF` (3.29:1) | `#8A63FE` (3.96:1) |
+| `accent-glow` | radial `electric → vite` (9° apart, so it reads as one accent) | the same at lower alpha |
+| `on-accent` | `#16171D` (7.65:1; white fails) | `#FFFFFF` (5.66:1) |
+| `dotActiveDim` | `#6C3BFF` | `#B39AFF` (less ink) |
+| `accent-surface` (hero insets only) | `#370A7F` | `#F0EBFF` with `#140033` text |
+
+- **Gradient rule:** the two-stop `electric → vite` gradient is allowed **only** in chrome halos (glow, focus and live ring, swatch ring). It is never used on dots, text, lines or any engine tone, so `theme-parity` ("recolour only") holds.
+- **vite's textured buttons:** the photo-texture JPG panned for 16 s is not copied. If we want that feel, it becomes an `electric → vite` **dither drawn in dots** through the engine (the hero card or the primary pill's press state).
+
+**Neutrals tinted toward the accent** (Radix gray pairing, Linear's limited base chroma; vite.dev's own neutrals are mauve, e.g. `#0C0912`, `#14121A`, `#867E8E`). Each accent tints the neutral roles toward its hue by a little OKLCH chroma:
+
+| Role | Chroma |
+|---|---|
+| surfaces (`bg`, `panel`, `card`, `raised`) | 0.004–0.006 |
+| `line`, `text-3` | ≤ 0.012 |
+| `text-1`, `value` | ≤ 0.004 |
+| `vite` surfaces | up to 0.016, to echo VoidZero's mauve |
+
+- Light gets about 70% of these amounts.
+- Neutral dot tones stay untinted (at most 0.006 on `dotFaint`), so the accent still pops.
+- `dark_signal` keeps today's neutrals exactly (`#111315` is already C .005 at hue 248), so **goldens don't move**.
+
+**Extra roles:**
+- `accent-surface` (hero insets only);
+- `focus-ring = accent-line`;
+- `selection = accent-soft at 30%` (`::selection`);
+- `accent-color: var(--accent)` on `:root`, so native checkboxes, ranges and radios follow (Chrome 93, Firefox 92, Safari 26.2).
+
+**Custom hue (T6).** A hue ring (lazy, ≈ 1 kB) runs the same generator in the browser; chroma and lightness are generated, so no illegible pick is possible. **"Match my OS accent" is dropped:** browsers return a fixed blue for `AccentColor` (Firefox 103+, Safari 16.5+, Chrome 149+ outside installed apps) to prevent fingerprinting.
 
 ### Scoping (Tamagui's nested `<Theme>`)
 - **`data-scheme` and `data-accent`** can sit on `<html>` (the visitor's choice) or on any subtree, just as Tamagui nests themes.
@@ -221,7 +324,7 @@ These values are starting points; the generator's clamped output is the source o
    - Listens to `matchMedia` while on `system` and `auto` contrast, and exposes `useTheme()` via `useSyncExternalStore`.
 2. **Tokens in CSS.**
    - Neutral roles are set per `[data-scheme]`.
-   - Accent roles are set per `[data-scheme][data-accent]` from the generated table, about 9 × 2 × 10 declarations (≈ 2 kB CSS gz, which the JS budget doesn't count).
+   - Accent roles are set per `[data-scheme][data-accent]` from the generated table, about 7 × 2 × 14 declarations, including the tinted neutrals (≈ 2 kB CSS gz, which the JS budget doesn't count).
    - A custom hue writes the 10 accent variables inline on `<html>`.
 3. **Engine tokens.** `themeTokens(scheme, accent)` builds a `ThemeTokens` from the same generated table: the neutral preset (`dot480` for dark, `paper` for light) with `dotActive` / `dotActiveDim` replaced. The result is memoised per name, so `useDotField`'s per-theme cache keys stay stable.
    - **Cost:** cards re-sample once per switch. `DotCanvas` already depends on `theme` (`DotCanvas.tsx:419`), and switching back is a cache hit.
@@ -236,9 +339,9 @@ These values are starting points; the generator's clamped output is the source o
 8. **Switch moment.** `document.startViewTransition` with a Bayer dot-dither wipe or circle reveal from the pressed control. Cards re-sample inside the callback. Skipped without the API or under reduced motion.
 
 ### Picker
-- **Desktop:** a THEME popover in the topbar, next to DISPLAY ▾. It holds:
+- **Desktop:** a THEME popover in the topbar, next to DISPLAY ▾. It opens after 100 ms of hover intent, or on click, and holds:
   - scheme as a three-way segmented control (System / Light / Dark);
-  - the accents as a row of 9 dot swatches (each a 7×7 dot glyph in its own colour on the current scheme, the selected one with the glow ring);
+  - the accents as a row of 7 dot swatches (arrow-key roving) (each a 7×7 dot glyph in its own colour on the current scheme, the selected one with the glow ring);
   - a "custom" swatch that opens the hue slider (T6);
   - a live preview: the popover's own controls re-tint as you hover a swatch.
 - **Phones:** the same content as a THEME section in the TOOLS sheet. Swatches are 44 px targets.
@@ -256,15 +359,15 @@ These values are starting points; the generator's clamped output is the source o
 
 | Phase | What | Days | Gate |
 |---|---|---|---|
-| **T0 tokens and cleanup** | spacing, type, radius, motion and layout tokens (§3); delete the index.css starter rules (`#root` centring) and the shadcn block; one `.dot-card` definition (today 3: App.css:411/1020/3070); move raw colour literals into the neutral roles; the `css-tokens` lint | 1.5 | goldens 177/177, size unchanged, no visual change except the centring fix |
-| **T1 design language in chrome** | surfaces (bg / panel / card / raised), dotted hairlines, the one glow effect for active / focus / live, the four-state rule for every control, dot-glyph icons, 150 ms motion; one component per job (pill, segmented, sheet, menu, tooltip) | 2 | component inventory review; screenshot pass at 1440 and 390 |
-| **T2 frame and rhythm** | the frame, one left edge, section bands, header rhythm on the three steps, intro as a measured block; About and widget page inside the frame; editor toolbar aligned; dock no longer over cards; footer as a band (no 64 px dead strip) | 2.5 | layout probe (§6) at 6 widths |
-| **T3 grids and cards** | `density` per board, auto-fill grids, container queries, card cap at `62svh`, orphan rows, phone fixes (ALL pill overlap, intro + picker ≤ 120 px, square cards) | 2 | ≥ 6 cards above the fold at 1440 (standard boards), ≥ 2 (hero); no stretched orphan rows; components steps 5→4→3→2→1 |
-| **T4 scheme × accent core** | accent generator + clamped table (9 accents × 2 schemes); `paper` neutral preset; `theme.ts` store; boot script + CSP hash; CSS roles per `[data-scheme][data-accent]`; `themeTokens()`; scoped `data-scheme` / `data-accent`; theme readers (Board, WidgetPage, editor, draw); the skin rules (emissive = dark + accent tint); polarity insets | 3.5 | theme-parity across all 18 themes; contrast checks pass; no flash (probe); size Δ ≤ +0.5 kB |
-| **T5 picker and moment** | THEME popover (scheme + swatches + live preview), TOOLS section, ⌘K commands, URL params, the dither-wipe switch moment, share-link opt-in | 1.5 | touch probe for the sheet; reduced-motion probe |
-| **T6 type, contrast, more** | type scale everywhere (12 px chrome minimum), display face for headings and prose, `text-wrap`; `contrast: more`; custom-hue slider (lazy generator); docs (DESIGN.md colour, theme, layout and component tables, README, PROGRESS, CHANGELOG, `src/changelog.ts`) | 2.5 | < 10% chrome characters under 12 px; all text ≥ 4.5:1 in every theme; owner taste pass in 4 themes (dark_signal, light_signal, dark_cyan, light_cobalt) |
+| **T0 tokens and cleanup** | spacing, type (named by role and size, §1c #5), radius, motion (`--dur-in 0` / `--dur-out 150ms`) and layout tokens (§3); delete the index.css starter rules (`#root` centring) and the shadcn block; one `.dot-card` definition (today 3: App.css:411/1020/3070); move raw colour literals into the neutral roles; the `css-tokens` lint | 1.5 | goldens 177/177, size unchanged, no visual change except the centring fix |
+| **T1 design language in chrome** | surfaces (bg / panel / card / raised), dotted hairlines, the one glow effect for active / focus / live, the four-state rule for every control, dot-glyph icons; hover in instantly and out over 150 ms, no motion on menus and ⌘K; Raycast-style glass for `raised` only; hover intent and grouped tooltips with dot keycaps; scroll-snap sheets; interaction hygiene (§1c #1, 7, 9, 10, 15); one component per job (pill, segmented, sheet, menu, tooltip) | 2.5 | component inventory review; screenshot pass at 1440 and 390 |
+| **T2 frame and rhythm** | the frame, one left edge, section bands, header rhythm on the three steps, intro as a measured block; About and widget page inside the frame; editor toolbar aligned; dock no longer over cards; footer as a band (no 64 px dead strip) with the live number band; the touchable hero card (drop or paste an image → live halftone); figure captions (§1c #2, 13, 14) | 3.5 | layout probe (§6) at 6 widths |
+| **T3 grids and cards** | `density` per board, auto-fill grids, container queries, card cap at `62svh`, orphan rows, grid crosses where dotted rules meet (if the ruled style is chosen), CSS scroll edge fades on the strips; phone fixes (ALL pill overlap, intro + picker ≤ 120 px, square cards) | 2.5 | ≥ 6 cards above the fold at 1440 (standard boards), ≥ 2 (hero); no stretched orphan rows; components steps 5→4→3→2→1 |
+| **T4 scheme × accent core** | accent generator + clamped table (7 accents × 2 schemes, with `vite` hand-pinned) and tinted neutrals; warm `paper` neutral preset (`#f7f7f4`-like); `.no-transition` during switches; `theme.ts` store; boot script + CSP hash; CSS roles per `[data-scheme][data-accent]`; `themeTokens()`; scoped `data-scheme` / `data-accent`; theme readers (Board, WidgetPage, editor, draw); the skin rules (emissive = dark + accent tint); polarity insets | 3.5 | theme-parity across all 14 themes; gamut, contrast and colour-blind checks pass; contrast checks pass; no flash (probe); size Δ ≤ +0.5 kB |
+| **T5 picker and moment** | THEME popover (scheme + swatches + live preview), TOOLS section, ⌘K commands, URL params, the dither-wipe switch moment ordered by distance from the pressed control (Anime.js-style radial stagger), share-link opt-in | 1.5 | touch probe for the sheet; reduced-motion probe |
+| **T6 type, contrast, more** | type scale everywhere (12 px chrome minimum), display face for headings and prose, board and widget **names in engine dot type** (§1c #3), `text-wrap`; `contrast: more`; custom-hue slider (lazy generator); docs (DESIGN.md colour, theme, layout and component tables, README, PROGRESS, CHANGELOG, `src/changelog.ts`) | 3 | < 10% chrome characters under 12 px; all text ≥ 4.5:1 in every theme; owner taste pass in 4 themes (dark_signal, light_signal, dark_vite, light_cobalt) |
 
-Total ≈ 15.5 agent-days. Order:
+Total ≈ 18.5 agent-days. Order:
 1. T0 first.
 2. T1 and T4 in parallel: T1 owns component CSS; T4 owns tokens, `theme.ts`, `index.html` and the readers.
 3. T2 after T1, then T3.
@@ -291,13 +394,19 @@ Total ≈ 15.5 agent-days. Order:
 
 ## 7. Owner decisions
 1. **Default scheme:** `system` (follow the OS), or dark first. [Recommended: `system`.]
-2. **Accent set:** the 9 listed (signal, ember, amber, phosphor, mint, cyan, cobalt, violet, magenta), or fewer. [Recommended: ship 6 first (signal, amber, phosphor, cyan, cobalt, magenta), then the rest.]
-3. **Custom hue slider** (any hue, contrast-clamped). [Recommended: yes, in T6.]
-4. **Accent-tinted skins:** VFD and LED take the accent; Nixie stays orange. [Recommended: yes for VFD and LED, Nixie physical.]
-5. **"Live" follows the accent:** ("accent means live"), or keep a fixed red live badge. A fixed red would be a second hue on non-red themes. [Recommended: follow the accent.]
-6. **Polarity on paper:** photos and camera as dark insets, materials decided per card. [Recommended.]
-7. **Exports and OG:** canonical `dark_signal`, or the visitor's theme for widget-page exports. [Recommended: OG canonical; exports offer "current theme".]
-8. **Card grid style:** tighter separated cards, or edge-to-edge cells with dotted rules. [Recommended: compare both in T3.]
+2. **Accent set:** signal, amber, phosphor, cyan, cobalt, vite, magenta, plus custom. [Recommended: all 7 in T4.]
+3. **Custom hue ring** (any hue, contrast- and gamut-clamped). [Recommended: yes, in T6.]
+4. **Accent-tinted skins:** VFD and LED take the accent; Nixie stays orange. [Recommended.]
+5. **"Live" follows the accent**, or a fixed red badge (a second hue on non-red themes). [Recommended: follow the accent.]
+6. **Neutral tinting toward the accent:** on (subtle, per the table) or off. [Recommended: on; `dark_signal` unchanged.]
+7. **vite's gradient glow:** the `electric → vite` halo on chrome only. [Recommended: yes; never on dots.]
+8. **Polarity on paper:** photos and camera as dark insets; materials decided per card. [Recommended.]
+9. **Exports and OG:** canonical `dark_signal` for OG; exports offer "current theme". [Recommended.]
+10. **Card grid style:** tighter separated cards, or edge-to-edge cells with dotted rules and grid crosses. [Recommended: compare both in T3.]
+11. **Touchable hero card** on the home page (drop or paste an image → live halftone). [Recommended: yes.]
+12. **Names in dot type** (board and widget titles drawn by the engine). [Recommended: yes.]
+13. **Live number band** in the footer. [Recommended: yes.]
+14. **Press tick sound** (opt-in, reuses the flip-disc clack). [Recommended: off by default, toggle in TOOLS.]
 
 ## Sources
 - **vite.dev:**
@@ -312,4 +421,13 @@ Total ≈ 15.5 agent-days. Order:
   - [Radix palette composition](https://www.radix-ui.com/colors/docs/palette-composition/composing-a-palette);
   - [Primer token names](https://primer.style/product/primitives/token-names/);
   - APCA levels ([summary](https://steve-frenzel.statichost.eu/posts/learning-about-perceptual-contrast)).
+- **Product sites (read from CSS where possible):** linear.app, vercel.com ([Geist guidelines](https://vercel.com/design/guidelines), [grid](https://vercel.com/geist/grid.md), [colors](https://vercel.com/geist/colors.md)), stripe.com, raycast.com, resend.com, cursor.com, nothing.tech, [rauno.me interaction design](https://rauno.me/craft/interaction-design), paco.me (cmdk, next-themes), teenage.engineering, family.co.
+- **Awwwards:** [product winners](https://www.awwwards.com/websites/winner_category_product/), [Anime.js](https://www.awwwards.com/sites/anime-js), [Lidar Drone Scanning](https://www.awwwards.com/sites/lidar-drone-scanning), [Fauna Robotics](https://www.awwwards.com/sites/fauna-robotics).
+- **Colour systems:**
+  - vite: [`@voidzero-dev/vitepress-theme` tokens](https://unpkg.com/@voidzero-dev/vitepress-theme/src/styles/tokens.css), [vite docs styles](https://raw.githubusercontent.com/vitejs/vite/main/docs/.vitepress/theme/styles.css);
+  - [Linear: How we redesigned the Linear UI](https://linear.app/now/how-we-redesigned-the-linear-ui);
+  - [Radix Themes colour](https://www.radix-ui.com/themes/docs/theme/color), [Radix scale](https://www.radix-ui.com/colors/docs/palette-composition/understanding-the-scale);
+  - [Primer colour usage](https://primer.style/product/getting-started/foundations/color-usage/), [GitHub colour-blind themes](https://github.blog/changelog/2022-04-19-protanopia-deuteranopia-colorblind-themes-beta/);
+  - [MDN system colours](https://developer.mozilla.org/en-US/docs/Web/CSS/system-color), [CSSWG #10372 (AccentColor fingerprinting)](https://github.com/w3c/csswg-drafts/issues/10372);
+  - [APCA](https://github.com/Myndex/apca-introduction).
 - **Tamagui:** [themes](https://tamagui.dev/docs/core/theme) (base `light` / `dark`, nested names like `dark_pink`, semantic keys `background`, `border-color`, …) and the [theme builder](https://tamagui.dev/docs/guides/theme-builder) (`createThemes`, `light_accent`, palette ramps, relative levels).
