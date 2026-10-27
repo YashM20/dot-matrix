@@ -4,7 +4,8 @@
  * plus FNV-1a hashes of fixed input sweeps pinned in `goldens/noise.json` so any bit drift fails, and the
  * per-call timing budgets (§4, scaled by a measured load factor so a busy box doesn't fail them), and the IR noise
  * pack (§2.4): closure ≡ function ≡ library on `IR_NOISE_FIELDS`, unreserved pack names, bytecode rejection, and the
- * GLSL snapshot in `goldens/noise-glsl.json` (GPU parity: the noise row of scripts/webgl.ts).
+ * GLSL snapshot in `goldens/noise-glsl.json` (GPU parity: the noise row of scripts/webgl.ts). Also the determinism
+ * lint (scripts/lib/detLint.ts, F0.9) and, when Bun is installed, the Bun/JSC ≡ Node/V8 snapshot comparison.
  *
  *   npx tsx scripts/noise.ts             # run the checks
  *   npx tsx scripts/noise.ts --update    # rewrite goldens/noise.json after an intended change
@@ -12,10 +13,14 @@
  *
  * `pnpm verify` runs the same checks through `noiseChecks(assert)` (the noise slot, right after `algorithmsChecks`).
  */
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { spawnSync } from 'node:child_process'
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { homedir, tmpdir } from 'node:os'
+import { join } from 'node:path'
 import { compileBytecode, compileJS, deserialize, emitGLSL, IRError, parse, referenceField, serialize, type IREnv } from '../src/engine/ir'
 import '../src/engine/noise/ir' // the IR noise pack (F0.4)
 import { NOISE_GLSL } from '../src/engine/noise/glsl'
+import { DET_PATHS, detLint } from './lib/detLint'
 import { hash01, hash32 } from '../src/engine/math'
 import { curl2, datan2, dexp, dpow, dsin, fbm2, ihash, noise2, noise3, noise3Grad, octaveSeed, ridge2, rngFor, tsin, turb2, valueNoise2, voronoi2, voronoiBorder2, type Metric, type VoronoiOut } from '../src/engine/noise'
 
@@ -414,6 +419,42 @@ export function noiseChecks(assert: Assert, opts: { update?: boolean } = {}): vo
     const once = count(mixed, 'uint ir_ih(') === 1 && count(mixed, 'float ir_voronoi(') === 1 && count(mixed, 'uint ir_fmix(') === 1 && count(mixed, 'ir_noise(') === 3
     const plain = !emitGLSL(parse('sin(u) + hash(u, v)')).includes('ir_ih')
     assert('ir+noise: GLSL snapshot = goldens/noise-glsl.json; prelude emitted once per program', !drift.length && once && plain, drift.length ? `changed: ${drift.join(', ')}` : `${Object.keys(glsl).length} fields + prelude; one prelude with the core hash helper beside it`)
+  }
+
+
+  // ── F0.9 the determinism lint and the cross-engine snapshot ──────────────────────────────────────────
+  {
+    const res = detLint()
+    if (res.skipped.length) console.log(`  det: not created yet, skipped: ${res.skipped.join(', ')}`)
+    assert('det: no engine-specific Math in deterministic paths', !res.violations.length && res.scanned.length > 0,
+      res.violations.length ? res.violations.map(v => `${v.file}:${v.line} ${v.rule}`).join('; ') : `${res.scanned.length} files under ${DET_PATHS.length - res.skipped.length}/${DET_PATHS.length} registered paths`)
+    const root = mkdtempSync(join(tmpdir(), 'detlint-'))
+    try {
+      mkdirSync(join(root, 'src/engine/noise'), { recursive: true }); mkdirSync(join(root, 'src/engine/other'), { recursive: true }); mkdirSync(join(root, 'src/engine/matter'), { recursive: true })
+      writeFileSync(join(root, 'src/engine/noise/planted.ts'), '/** Math.sin in a doc comment is fine */\nexport const a = (x: number) => Math.sin(x) // planted\n')
+      writeFileSync(join(root, 'src/engine/noise/allowed.ts'), 'export const b = (x: number) => Math.exp(x) // det-ok: a host-only diagnostic\nexport const c = (x: number) => x ** 2 + x ** -1 + Math.floor(x) + Math.PI\n')
+      writeFileSync(join(root, 'src/engine/matter/sandpile.ts'), 'export const d = (x: number) => x ** .5\n')
+      writeFileSync(join(root, 'src/engine/other/free.ts'), 'export const e = () => Math.random() + Math.atan2(1, 2)\n')
+      const t = detLint(['src/engine/noise/', 'src/engine/matter/sand', 'src/engine/life/'], root)
+      const got = t.violations.map(v => `${v.file}:${v.line}:${v.rule}`).sort().join(' ')
+      const want = ['src/engine/matter/sandpile.ts:1:** with a non-integer exponent', 'src/engine/noise/planted.ts:2:Math.sin'].join(' ')
+      assert('det: a planted Math.sin in a temp file under a registered path fails; det-ok passes; unregistered paths ignored', got === want && t.skipped.join() === 'src/engine/life/', got || 'no violations')
+    } finally { rmSync(root, { recursive: true, force: true }) }
+  }
+  {
+    // optional cross-engine run (Bun / JavaScriptCore): the same sweeps must hash the same as under Node (V8)
+    const bun = [process.env.BUN, join(homedir(), '.bun/bin/bun.exe'), join(homedir(), '.bun/bin/bun')].find(p => p && existsSync(p))
+    if (!bun) console.log('  noise: Bun/JSC snapshot skipped (no bun on this box; set $BUN)')
+    else {
+      const r = spawnSync(bun, ['scripts/noise.ts', '--snapshot'], { encoding: 'utf8', timeout: 120000 })
+      let theirs: Record<string, string> | null = null
+      try { theirs = JSON.parse(r.stdout.trim().split('\n').pop() ?? '') } catch { /* reported below */ }
+      if (!theirs) console.log(`  noise: Bun/JSC snapshot skipped (bun failed: ${(r.stderr || r.error?.message || 'no output').trim().split('\n')[0]})`)
+      else {
+        const diff = Object.keys({ ...snap, ...theirs }).filter(k => snap[k] !== theirs![k])
+        assert('noise: Bun/JSC snapshot ≡ Node/V8', !diff.length, diff.length ? `differ: ${diff.join(', ')}` : `${Object.keys(snap).length} sweeps incl. dexp/dpow, bun ${spawnSync(bun, ['--version'], { encoding: 'utf8' }).stdout.trim()}`)
+      }
+    }
   }
 
   // ── budgets (§4): ratio gates are machine-independent; absolute gates scale by the load factor ─────────
