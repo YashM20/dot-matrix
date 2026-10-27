@@ -1,6 +1,6 @@
 # LIVING-MATTER-PLAN: pond, squares, materials
 
-> Status: **planned** (2026-10-27). Research came from four agents: a teardown of daoho.dev's koi pond, plus surveys of creature and pond algorithms, square-cell design, and physical materials. Nothing here is built yet.
+> Status: **planned, reviewed** (2026-10-27). Research came from four agents: a teardown of daoho.dev's koi pond, plus surveys of creature and pond algorithms, square-cell design, and physical materials. Nothing here is built yet.
 > It covers three new directions that share one foundation:
 > 1. **Living scenes:** a koi pond and other ecosystems drawn in glyph tiles.
 > 2. **Squares:** cells that are spaced or joined squares, not only dots.
@@ -13,6 +13,30 @@
 > - `src/engine` framework-free with no deps;
 > - goldens;
 > - first-load JS ≤ 150 kB gz, with every new board lazy.
+
+## Detailed phase plans
+
+This page is the overview. Each track has a step-by-step plan: steps of about half a day, APIs, parameters, checks, budgets, risks and estimates.
+
+| Doc | Phases |
+|---|---|
+| [`living-matter/F0-foundation.md`](living-matter/F0-foundation.md) | F0.1–F0.11: deterministic math (`dmath`), noise and Voronoi, IR builtins, the golden-key channels and style backfill, the square cover rule, the light and tilt hub, per-card fps, the first-load cut, the determinism lint |
+| [`living-matter/L-pond.md`](living-matter/L-pond.md) | L1 koi pond and water, L2 ecosystems, L3 polish and interaction, L4 full-bleed hero (optional) |
+| [`living-matter/Q-squares.md`](living-matter/Q-squares.md) | Q1 joined squares and `shapeOf`, Q2 the `lcd` and grout skins and rect cells / teletext, Q3 the field pack, rotation, nested shapes and morphs |
+| [`living-matter/M-materials.md`](living-matter/M-materials.md) | M1 relief, anisotropic shine, matcap and weave, M2 glass and caustics, M3 the workshop extras |
+| [`living-matter/X-advanced.md`](living-matter/X-advanced.md) | Advanced additions: XL, XQ, XM, X1 (pond depth), X2 (GPU tier, gated) |
+
+**The plan set was reviewed by an independent agent.** All three blockers and all eleven major findings are fixed in the track docs:
+- **Golden key:** one channel table, with a hash-preserving style backfill done once in F0.5.
+- **Light and tilt:** one data contract, `lightSrc / lightAz / lightEl` plus `tx / ty`.
+- **The "clusters of small dots" rule:** an owner ruling now comes before L1.3, after a half-day prototype.
+- **Frame rate:** per-card fps moves into F0.10. Cards render at 12 fps by default, not at display rate.
+- **Determinism:** one lint, and `dexp` / `dpow` are added to `dmath`.
+- **Caustic pool:** a feasible step and memory budget.
+- **`activeDim`:** not counted as part of the accent until the owner rules on it.
+- **Phase names:** they no longer collide.
+- **First load:** a ledger with delta gates.
+- **Ownership and probes:** file ownership rules, and a touch probe for materials.
 
 ## 1. The reference: how daoho.dev's pond works
 
@@ -68,14 +92,15 @@ The second reference ("Good evening, Marcelo", jellyfish in glyph grids) wasn't 
 
 | Module | API sketch | Unlocks |
 |---|---|---|
-| `src/engine/noise/` | `noise2(x,y,seed)`, `fbm2(x,y,oct,seed)`, `turb2`, `curl2(x,y,t,seed)→[vx,vy]`, `voronoi2(x,y,seed,metric)→{f1,f2,id}` (metric: `l2` \| `l1` \| `linf`), `datan2(y,x)` | koi patterns, curl flow, stone, wood, rust, sand, leather, Chebyshev Voronoi |
+| `src/engine/noise/` (lazy, not in the barrel) | `dmath.ts`: `dsin dcos tsin tcos datan2 dexp dpow` (bit-identical across engines); `noise2/3`, `fbm2`, `turb2`, `curl2→[vx,vy]`, `voronoi2(x,y,seed,metric)→{f1,f2,id}` (metric: `l2` \| `l1` \| `linf`). Full-res 4-octave fBm costs ≈3.2 ms per 144² frame, so **bake it or use a coarser lattice** | koi patterns, curl flow, stone, wood, rust, sand, leather, Chebyshev Voronoi |
 | IR builtins for the same functions | same names in `src/engine/ir` | the same noise on the GPU path |
-| Light input hub (app side, `src/site/light.ts`) | pointer torch → tilt → `sunAt`, low-passed and bucketed to 64 azimuths. One iOS `DeviceOrientationEvent.requestPermission()` button at app level. Feeds `data.light` and `data.gx/gy` | every material card, physics tilt |
-| Golden key extension | append `n…` (shape), `j…` (join), `θ…` (rotation) to the hash key **only when defined** | squares can't regress silently. Today `scripts/golden.ts` hashes only x, y, r, opacity, colour |
+| Light input hub (a `Source`, opted into by boards) | pointer torch → tilt → `sunAt` through `sceneLight()`. Publishes `lightSrc lightAz lightEl` (64 azimuth buckets, ≤ 15 Hz), `tx ty` (tilt offset, 0 at rest) and `gx gy` (gravity, ≈(0,1) upright, physics only). Cards must declare the keys they use in `defaults`, and boards add `sources: [lightSource]`. The iOS permission button lives in the TOOLS sheet | every material card, pond tilt, physics |
+| Golden key channels (F0.5) | optional suffixes `,s<shape>:<r>` (only when a dot differs from its preset's base style), `,j<mask>:<hx>:<hy>:<ro>:<ri>:<seam>`, `,θ<radians>`, `,a<aspect>`, `,m<motif>`. A one-time, hash-preserving `style` backfill of all 177 entries means later diffs only add keys | squares can't regress silently. Today `scripts/golden.ts:28` hashes only x, y, r, opacity, colour |
+| Per-card fps (F0.10) | `WidgetPreset.fps` plus a phone tier. Today animated cards render at `fps ?? (motion ? 12 : 30)` (`DotCanvas.tsx:398`) | smooth koi, Loom shuttle, startles |
 
-Determinism rules:
-- seed each entity with `hash32(seed, id, step)`;
-- use `dsin` / `tsin` / `datan2` and never `Math.atan2` or `Math.hypot` inside a sim step;
+Determinism rules (enforced by one F0.9 source-scan lint over `life/`, `matter/` sims and `squares/` sims):
+- seed each entity with `rngFor` / `ihash(seed, id, step)`;
+- use `dmath` and never `Math.sin`, `Math.atan2`, `Math.hypot`, `Math.exp`, `Math.pow` or `Math.random` inside a sim step;
 - fixed dt;
 - no float sort without a tie-break.
 
@@ -108,7 +133,7 @@ In build order:
 |---|---|---|---|---|
 | `pond-koi` (hero) | 5–6 koi (spine chain, burst-and-glide wave, steering, containment SDF), wave-equation ripples with wakes, Sobel-angle water glyphs, curl-flow lily pads, food pellets, day/night from the hour | hover: wake + curiosity; click: ripple + pellets; fast flick: startle | tap: ripple + food + nearby startle; hold: lure | koi red |
 | `pond-jelly` | 3 jellyfish: asymmetric pulse (fast 30% contraction, slow refill, thrust ∝ ċ), verlet tentacles, marine snow, slow current | cursor pushes the current; click: all pulse | tap: pulse | gonad ring |
-| `pond-slime` | Physarum, 10k agents; networks form between food dots | click: add/remove food | tap: food | food dots |
+| `pond-slime` | Physarum, 1,200 agents on a 3-cell lattice; networks form between food dots | click: add/remove food | tap: food | food dots |
 | `pond-fireflies` | pulse-coupled oscillators with local coupling, sync waves, grass silhouette, night only | hover desyncs a patch | tap: burst that re-syncs | the flash |
 | `pond-murmur` | topological boids (7 nearest, Ballerini 2008), 400 birds, a falcon that sets off agitation waves | the cursor is the falcon | tap: swoop | the falcon |
 | `pond-terrarium` | space-colonisation plant, ant colony, sun arc by hour | click: food / sun | tap: food | the newest growth |
@@ -117,13 +142,16 @@ Budget, measured per frame on a 144² card:
 
 | Part | Cost |
 |---|---|
-| ripple | 0.2 ms |
-| 8 koi | 0.5 ms |
+| ripple (36×33 tiles) | 0.05 ms |
+| 6 koi, with each koi's markings baked into a lookup table | 0.4 ms |
 | glyph matching | 0.3 ms |
 | 400 boids | 0.3 ms |
-| physarum, 10k agents | 1.5 ms |
+| physarum, 1,200 agents on a 3-cell lattice | ≈0.6 ms |
 
-All fit the 4 ms budget. Checkpoint memory: under 5 KB for koi, about 200 KB for physarum (12 checkpoints).
+All fit the 4 ms budget. **Memory rule for every track:** the gate is on total memory per card, meaning checkpoints plus the 6 working copies (head, scratch, 3 views, live), at ≤ 256 KB. There is one justified exception:
+- **`pond-koi`:** ≤ 288 KB (≈280 KB). Falling back to `every 150` gives 229 KB.
+- **Pond board total:** ≤ 1.4 MB.
+- **The caustic pool (M2):** runs its ripple at tile resolution, so it comes to ≈125 KB.
 
 ### Optional: a full-bleed pond hero
 This would be daoho's own placement: a pond behind the EXPLORE intro.
@@ -230,27 +258,99 @@ Items 1, 2 and 5 alone unlock 7 of the 10 cards below.
 
 Also possible: knit, denim, paper with letterpress, wood grain, leather with stitching, sand you carve, ice frost (`dla`), and mercury (`fluid` + matcap).
 
-## 6. Phases
+## 6. Phases, dependencies and schedule
 
-| Phase | What | Size | Gate |
+| Phase | What | Agent-days | Detail |
 |---|---|---|---|
-| **F0 foundation** | noise + IR builtins, `datan2`, golden key extension, square cover fix, light hub | 2–3 days | verify, goldens 177/177 unchanged, noise determinism checks |
-| **L1 pond hero** | `ripple`, `glyphTiles`, `chain`, `body`, `steer`; `pond-koi` card; `/pond/` board | 4–5 days | ≤ 4 ms per frame, t = 0 golden, touch policy probe, taste pass against daoho |
-| **Q1 squares core** | `shapeOf`, join pass + 3 renderers, `{grid.gap}`; Squares board v1 (polyomino, quadtree, metaball, Game Boy LCD) | 4–5 days | SVG = Canvas = WebGL join parity, goldens for the new cards |
-| **M1 materials core** | height + AO, `anisoSpec`, `matcap`, `weave` / `stitch`; Loom, Knob, Grille, Marble, Terrazzo | 4 days | per-card ≤ 4 ms, one accent check |
-| **L2 ecosystems** | `agents`, `oscillators`, `grow`; jelly, slime, fireflies, murmuration, terrarium | 4–5 days | checkpoint memory ≤ 256 KB per card |
-| **M2 glass and water** | glass v2, caustics; Liquid Glass lens, Caustic pool, Stained glass, Embroidery, Rust | 3–4 days | WebGL fallback where density > 1 |
-| **Q2 squares extra** | `lcd` skin, rect cells / teletext, the square field pack | 3 days | skin fidelity snapshot |
+| **F0** | dmath + noise + Voronoi + IR pack; golden channels + style backfill + cover rule + reserved types; light hub; per-card fps; ≥ 1 kB first-load cut; determinism lint | ≈5 | F0 doc |
+| **L1** | ripple, glyph tiles, chain, body, steer; `pond-koi` on `/pond/` (after the L1.0 clusters ruling) | 5–5.5 | L doc |
+| **L2** | physarum / ants, fireflies, space colonisation; jelly, slime, fireflies, murmuration, terrarium | 4–5 | L doc |
+| **L3** | feeding, startle, day/night, glyph-style toggle, reduced-motion stills, phone fps tier, tilt | 2.5–3 | L doc |
+| **L4** | full-bleed pond hero behind EXPLORE (owner yes) | 1.5–2 | L doc |
+| **Q1** | `join` + `shapeOf` + `{grid.gap}` + join-aware SVG / Canvas / WebGL with a parity probe; Squares board v1 | 4.5–5 | Q doc |
+| **Q2** | `lcd` + grout skins, rect cells, teletext sextants, line screens | 3 | Q doc |
+| **Q3** | field pack, rotation, nested shapes, equal-ink dot ↔ square morphs, optional squares skin | 4–5 | Q doc |
+| **M1** | height + AO, anisoSpec, matcap, weave / stitch; Loom, Knob, Grille, Marble, Terrazzo | 4.5 | M doc |
+| **M2** | glass v2, caustics; Lens, Pool (needs L1.2), Window, Patch, Rust (+ candle clock, needs L1.4) | 3.5–4 | M doc |
+| **M3** | workshop board extras, tilt polish | 4–5 | M doc |
+| **XL / XQ / XM / X1 / X2** | advanced additions (marbling, domino arctic circle, kintsugi, Particle Lenia, ageing pond, aperiodic floors, …); X2 GPU tier gated on an AGENTS.md change | ≈38 | X doc |
 
-F0 comes first; after it, L1, Q1 and M1 can run as parallel agents, since their files don't overlap.
+Serial effort is about 46 agent-days for F0, L, Q and M, plus about 38 for X.
 
-## 7. Open decisions (owner)
+### Dependency graph
+```
+F0-B key+backfill, cover, types ─→ Q1.1, Q1.4 ─→ Q1.5–1.11 ─→ Q1.12 ─→ Q2 ─→ Q3 (Q3.1 rotation ─→ XQ)
+F0-A dmath, noise, voronoi, IR ─→ L1.5, L1.8, M1.9–1.10, M2.5, M2.7, Q3.2
+F0-C light hub / TILT ─→ L3.6, M light keys (sunAt fallback until then), M3.10
+F0-D fps + phone tier, first-load cut ─→ L1.7, M1 Loom, M2.4, M3; the cut lands before Q1.4 merges
+No F0 needed: L1.2–1.4, L1.6; Q1.2–1.3; M1.1–1.5
+L1.2 ripple ─→ M2.4 pool;  L1.4 chain ─→ M3 thread, M2 candle
+L1 ─→ L2 ─→ L3 ─→ L4 (owner yes);  L3 ─→ X1;  M1 ─→ M2 ─→ M3 ─→ XM
+Owner gates: clusters ruling before L1.3; activeDim before L1.8 / M1.6; WebGPU before X2
+```
 
-1. **Pond placement:** a board only, or also a full-bleed hero behind the home intro (lazy)?
-2. **Glyph style:** dot micro-pattern glyphs (k = 3–4, the most "dot-matrix"), font glyphs in larger tiles (closest to daoho), or both as a toggle?
-3. **Koi colours:** kohaku in accent red plus greys is faithful to the rules. A board-level exception for orange-and-white koi would break "one accent", so the default is no.
-4. **Tilt lighting on iOS:** it needs a permission tap. Should it be a TOOLS-sheet button, or the first tap on a material card?
-5. **Squares rollout:** should joined squares be allowed on existing boards (e.g. as a DISPLAY skin), or only on new cards?
+### Schedule (4–5 parallel agents, wall-clock days)
+| Days | Lanes |
+|---|---|
+| 1–3 | F0-B (½ d) then F0-D; F0-A (2.5 d); F0-C (1 d). Early starts on new files only: `life/` (L1.0, L1.2–1.4), `squares/` (Q1.2–1.3), `matter/` (M1.1–1.5) |
+| 4–7 | L1.5–1.9 (2 agents); Q1.1, Q1.4–1.11 (2 agents: sampler and renderers, then cards); M1.6–1.10 (2 agents) |
+| 7–8 | Integration queue, one at a time: L1 → Q1 → M1. Each rebases, runs `ids --assign`, `pnpm golden` and the size check, then one full suite; L1 taste pass |
+| 9–13 | L2 (3 agents); M2 (2 agents); Q2 (skins lane owns `display/*`, rect lane owns the sampler). Queue: L2 → M2 → Q2 |
+| 14–20 | L3, Q3, M3 in parallel; L4 if approved; X1 after L3; then XL, XQ, XM; X2 last |
+
+### Shared files: who edits them
+| File | Rule |
+|---|---|
+| `src/engine/types.ts`, `sampler/gridSampler.ts` | F0-B first, then Q only |
+| `src/widgets/types.ts`, `DotWidget.tsx`, `DotCanvas.tsx` | F0-D only |
+| `DESIGN.md` | F0 owns Light (and per-card fps); M appends under Light › Materials after F0 merges; Q owns Shapes and Skins |
+| `scripts/verify.ts` | one insertion point; order: noise, light, golden key, life, squares, materials |
+| `scripts/webgl.ts` | F0.4, then M2.2 (Q has its own `scripts/squares-browser.ts`) |
+| `src/App.tsx` | L4 only |
+| Registry files (`manifest.ts`, `widgets/index.ts`, `blurbs.ts`, `meta.ts`, `ids.json`, `catalog.ts`), `goldens/hashes.json`, PROGRESS, README, CHANGELOG, `src/changelog.ts` | integration-queue commits only |
+
+### First-load ledger (budget 150 kB gz; 148.14 used on 2026-10-27)
+| Change | Delta (kB gz) | Running |
+|---|---|---|
+| F0.11 cut (required before Q1.4 merges) | ≤ −1.0 | ≈147.1 |
+| F0 registry + fps plumbing | +0.07 | ≈147.2 |
+| Q1 hook points (+0.4 with the array-path fallback) | +0.6 | ≈147.8 |
+| Q2 / Q3 | +0.3 / +0.1 | ≈148.2 |
+| 4 new board manifest rows (pond, squares, materials, workshop) | ≈ +0.25 | ≈148.5 |
+| X1 | ≤ +0.5 | ≈149.0 |
+
+Gates are deltas against this ledger, not absolute numbers. Each merge updates the "Running" column with the measured value. The size check also covers the `sampleWorker` chunk, since it imports the eager registry.
+
+## 7. Owner decisions (deduplicated; default in brackets)
+
+**Needed before work starts:**
+1. **Clusters of small dots:** do glyph-tile koi bodies break the rule? Decided from the L1.0 prototype. [If they do, fall back to lattice-4 body interiors, with glyphs only on edges and water.]
+2. **`activeDim`:** is it part of the one accent? [No, until ruled; use size contrast.]
+3. **First-load spend:** Q1's 0.6 kB, after the F0.11 cut. [Use the array-path fallback until the cut lands.]
+
+**Product:**
+
+4. **Pond placement:** board only, or also a full-bleed hero behind EXPLORE (L4)? [Board only; L4 later.]
+5. **Glyph style:** dot micro-patterns or font glyphs? [Dots, with a TYPE toggle in L3.]
+6. **Koi colours:** [Kohaku in accent red plus greys; no orange exception.]
+7. **Fireflies accent:** [The flash.]
+8. **Sound on the pond:** [Out for L1–L3; bubble sounds are an XL option, opt-in.]
+9. **Pond extras:** `localStorage` memory for the ageing pond and kintsugi [opt-in]; camera on the pond [existing camera boards only]; `?day=` seed in shared links [yes].
+
+**Squares and materials:**
+
+10. **Squares skin on existing boards:** A (post-raster), B (sample-time) or none? [A, only if approved.]
+11. **Bead / stud / stitch inner cuts:** do they count as the "shape presets" AGENTS.md forbids? [Allowed as inner cuts.]
+12. **Board groups:** squares and materials [ENGINE]; the Loom [not on START HERE].
+13. **Denim selvedge:** [white `value`; red only if approved.]
+14. **Paper and leather accent:** [none.]
+15. **Rust "days since" epoch:** [2025-10-27.]
+16. **Lens without WebGL2:** [lattice 1, no frost.]
+
+**Platform:**
+
+17. **Tilt:** the iOS permission button goes in the TOOLS sheet [yes; cards never ask]; the physics board is the first light-hub consumer [yes].
+18. **WebGPU in `src/engine`:** needs an AGENTS.md amendment. [No until amended; goldens stay CPU.]
 
 ## Sources
 
