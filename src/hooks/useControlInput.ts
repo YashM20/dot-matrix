@@ -306,10 +306,15 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
       if (c.kind === 'button') { drop(cand); grab(cand.last, c, false, cand.tClock); return }
       cand.shown = true; syncPressed(); schedule()
     }, TOUCH.pressDelay)
-    else if (c && intent === 'drag') cand.timer = window.setTimeout(() => {
-      // held still: grab it (any direction from here on) and engage the card
-      drop(cand); grab(cand.last, c, true, cand.tClock); engage(); haptic()
-    }, TOUCH.hold)
+    else if (c && intent === 'drag') {
+      const hold = (late: boolean) => {
+        // a late timer means the main thread was busy: moves may still be queued, so let them in first (once)
+        if (!late && performance.now() - cand.down.timeStamp > TOUCH.hold + 60) { cand.timer = window.setTimeout(() => hold(true), 30); return }
+        // held still: grab it (any direction from here on) and engage the card
+        drop(cand); grab(cand.last, c, true, cand.tClock); engage(); haptic()
+      }
+      cand.timer = window.setTimeout(() => hold(false), TOUCH.hold)
+    }
     candidates.current.set(e.pointerId, cand)
   }
   /** A real tap: replay it as a short press where the finger landed (so toggles, options, steppers and sliders act on lift). */
