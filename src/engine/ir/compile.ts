@@ -34,7 +34,7 @@ function closures(ast: Node, data: string[]): { k: K; slots: number } {
       case 'neg': { const a = c(n.a, scope); return s => -a(s) }
       case 'cond': { const q = c(n.c, scope), a = c(n.a, scope), b = c(n.b, scope); return s => (q(s) !== 0 ? a(s) : b(s)) }
       case 'call': {
-        const f = M[n.fn], [a, b, d, e] = n.args.map(x => c(x, scope))
+        const f = M[n.fn]!, [a, b, d, e] = n.args.map(x => c(x, scope))
         switch (n.args.length) {
           case 1: return s => f(a(s))
           case 2: return s => f(a(s), b(s))

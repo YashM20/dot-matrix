@@ -1,6 +1,7 @@
 /**
  * WebGL2 renderer checks in headless Chrome (CDP over Node's built-in WebSocket, no npm deps):
- *   1. GPU ≡ JS IR parity: the 20 `IR_TEST_FIELDS` × 3 envs over 48×48, GPU value readback vs `compileJS`.
+ *   1. GPU ≡ JS IR parity: the 20 `IR_TEST_FIELDS` × 3 envs over 48×48, GPU value readback vs `compileJS`; then the
+ *      noise row, the IR noise pack's `IR_NOISE_FIELDS` (scripts/noise.ts) under its own gate (flips ≤ 0.5%).
  *   2. Pixel parity: presets drawn by canvas 2D vs WebGL2 (explicit dots), and the GPU board's passes at
  *      density 1 vs the CPU sample. PNGs (canvas / webgl / diff×4) in `.snapshots/p5a/`.
  *   3. Context loss + restore.
@@ -9,6 +10,8 @@
  *   npx tsx scripts/webgl.ts                 # default GPU path (ANGLE → the machine's GPU when headless has one)
  *   npx tsx scripts/webgl.ts --swiftshader   # force the software rasterizer
  *   npx tsx scripts/webgl.ts --no-perf       # skip the frame-rate probes
+ *   npx tsx scripts/webgl.ts --fields f.json # IR parity over the fields in f.json ({ name: source }) instead of IR_TEST_FIELDS
+ *   npx tsx scripts/webgl.ts --no-noise      # skip the IR noise row
  *   npx tsx scripts/webgl.ts --canvas        # also time the same 100k dots on canvas 2D (slow: ~30 s a frame here)
  * Writes `.snapshots/p5a/report-<backend>.json`. Exit 1 when a parity check fails. Chrome: $CHROME or the usual paths.
  */
@@ -18,6 +21,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { IR_TEST_FIELDS } from './ir'
+import { IR_NOISE_FIELDS } from './noise'
 
 const args = process.argv.slice(2), swift = args.includes('--swiftshader'), backend = swift ? 'swiftshader' : 'gpu'
 const OUT = '.snapshots/p5a'
@@ -25,7 +29,7 @@ mkdirSync(OUT, { recursive: true })
 /** Tolerances (documented in DESIGN.md › renderer rule). */
 // pixels: Skia under-covers sub-pixel circles (probe: canvas draws 96% of the exact area at r = 2 px, 79% at 0.6 px; WebGL 100–109%),
 // so cards built from sub-2px dots read a few % heavier on WebGL; the gate bounds that, not a bias in the shapes
-const TOL = { irAbs: 1e-3, pixelMean: 2, pixelOver16: 2.5, psnr: 32 }
+const TOL = { irAbs: 1e-3, noiseFlips: .005, pixelMean: 2, pixelOver16: 2.5, psnr: 32 }
 
 // esbuild ships with the toolchain (tsx/vite) but is not a direct dependency: call its binary
 execFileSync('npx', ['esbuild', 'scripts/lib/webgl-page.ts', '--bundle', '--format=iife', '--platform=browser', '--target=es2022', `--outfile=${OUT}/page.js`, '--log-level=warning'], { stdio: 'inherit', shell: true })
@@ -95,6 +99,17 @@ try {
   const smooth = Math.max(...ir.map(r => r.maxSmooth)), flips = ir.reduce((n, r) => n + r.flips, 0)
   check(`IR parity: ${ir.length} fields × 3 envs × 48², GPU (float32) readback vs JS (float64)`, ir.every(r => !r.error && r.maxSmooth <= TOL.irAbs && !r.nanMismatch && r.flips <= cells * .01),
     `max |Δ| ${smooth.toExponential(2)} off discontinuities; ${flips} of ${ir.length * cells} cells flip at an exact jump (${ir.filter(r => r.flips).map(r => `${r.name} ${r.flips}`).join(', ') || 'none'})`)
+
+  // 1b. the IR noise pack (scripts/noise.ts IR_NOISE_FIELDS): float32 lattice floors flip at cell lines, so the gate is
+  // max |Δ| ≤ 1e-3 off those lines and at most 0.5% of cells flipping (docs/living-matter/F0-foundation.md F0.4)
+  if (!args.includes('--no-noise')) {
+    const nr = await run(`P5.irParity(${JSON.stringify(IR_NOISE_FIELDS)}, ${TOL.irAbs})`) as typeof ir
+    report.irNoise = nr
+    for (const r of nr) if (r.error || r.maxSmooth > TOL.irAbs || r.nanMismatch || r.flips > cells * TOL.noiseFlips) console.log(`  ${r.name}: max ${r.maxAbs.toExponential(2)}, smooth ${r.maxSmooth.toExponential(2)}, ${r.flips}/${cells} flips, nan≠ ${r.nanMismatch} ${r.error ?? r.worstAt}`)
+    const nSmooth = Math.max(...nr.map(r => r.maxSmooth)), nFlips = nr.reduce((n, r) => n + r.flips, 0)
+    check(`IR noise parity: ${nr.length} noise fields × 3 envs × 48², GPU (float32) vs JS (float64), flips ≤ 0.5%`, nr.every(r => !r.error && r.maxSmooth <= TOL.irAbs && !r.nanMismatch && r.flips <= cells * TOL.noiseFlips),
+      `max |Δ| ${nSmooth.toExponential(2)} off lattice lines; ${nFlips} of ${nr.length * cells} cells flip (${(100 * nFlips / (nr.length * cells)).toFixed(3)}%; ${nr.filter(r => r.flips).map(r => `${r.name} ${r.flips}`).join(', ') || 'none'})`)
+  }
 
   if (args.includes("--ir-only")) throw new Error("--ir-only: stopped after IR parity")
   // 2. pixel parity

@@ -38,7 +38,9 @@ const GLSL: Dialect = {
       case 'sdRing': return `(abs(length(${vec2(a)}) - ${a[2]}) - ${a[3]})`
       case 'sdBox': helpers.add('sdBox'); return `ir_sdBox(${vec2(a)}, ${vec2(a, 2)})`
       case 'hash': helpers.add('hash'); return `ir_hash(${a[0]}, ${a[1]})`
-      default: return `${fn}(${a.join(', ')})`
+      default:
+        // a pack builtin (its name is a GLSL_HELPERS key) is `ir_<fn>` from the pack's prelude, kept under 'noise'
+        return `${fn in GLSL_HELPERS ? (helpers.add('noise'), 'ir_') : ''}${fn}(${a.join(', ')})`
     }
   },
   cmp: (op, a, b) => `float(${a} ${op} ${b})`,
@@ -119,7 +121,11 @@ function emit(ast: Node, d: Dialect): Emitted {
   return { lines, result, helpers, data }
 }
 
-const GLSL_HELPERS: Record<string, string> = {
+/**
+ * GLSL helper sources by name, emitted once per program that uses them. The noise pack adds its prelude under 'noise'
+ * and a key per builtin (so the call branch above knows its names; only 'noise' carries source).
+ */
+export const GLSL_HELPERS: Record<string, string> = {
   sdBox: 'float ir_sdBox(vec2 p, vec2 b) { vec2 d = abs(p) - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }',
   hash: [
     'uint ir_fmix(uint h) { h ^= h >> 16u; h *= 0x85ebca6bu; h ^= h >> 13u; h *= 0xc2b2ae35u; return h ^ (h >> 16u); }',

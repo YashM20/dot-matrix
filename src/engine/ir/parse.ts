@@ -14,7 +14,7 @@
  *
  * `//` starts a line comment. Every error is an `IRError` with the offending line:col.
  */
-import { IR_CONSTANTS, IR_FUNCTIONS, IR_LIMITS, IR_RESERVED, IRError, isFn, validName, validate, type BinOp, type Node } from './ast'
+import { IR_CONSTANTS, IR_FUNCTIONS, IR_LIMITS, IR_RESERVED, IRError, isFn, validName, validate, type BinOp, type FnName, type Node } from './ast'
 
 type Tok = { type: 'num'; v: number; pos: number } | { type: 'name'; v: string; pos: number } | { type: 'op'; v: string; pos: number } | { type: 'end'; v: ''; pos: number }
 const OPS = ['<=', '>=', '==', '!=', '..', '+', '-', '*', '/', '%', '^', '<', '>', '?', ':', '(', ')', ',', '.', ';', '{', '}', '=']
@@ -79,7 +79,7 @@ export function parse(src: string): Node {
   const bindName = (): [string, Tok] => {
     const t = peek()
     if (t.type !== 'name') return fail(`expected a name but found ${describe(t)}`)
-    if (IR_RESERVED.has(t.v) || isFn(t.v)) fail(`"${t.v}" is reserved and cannot be bound`, t)
+    if (IR_RESERVED.has(t.v)) fail(`"${t.v}" is reserved and cannot be bound`, t)
     if (!validName(t.v)) fail(`invalid name "${t.v}" (letters, digits, single "_"; no leading "_")`, t)
     p++; return [t.v, t]
   }
@@ -163,9 +163,9 @@ export function parse(src: string): Node {
       const args: Node[] = []
       if (!isOp(')')) { args.push(expr()); while (isOp(',')) { p++; args.push(expr()) } }
       expect(')')
-      const want = IR_FUNCTIONS[name as keyof typeof IR_FUNCTIONS]
+      const want = (IR_FUNCTIONS as Record<string, number>)[name]
       if (args.length !== want) fail(`${name}() takes ${want} argument(s), got ${args.length}`, t)
-      return node({ k: 'call', fn: name as keyof typeof IR_FUNCTIONS, args }, t)
+      return node({ k: 'call', fn: name as FnName, args }, t)
     }
     if (name === 'u' || name === 'v' || name === 't') return node({ k: 'in', name }, t)
     if (name in IR_CONSTANTS && Object.prototype.hasOwnProperty.call(IR_CONSTANTS, name)) return node({ k: 'num', v: IR_CONSTANTS[name] }, t)

@@ -51,6 +51,7 @@ import { ncaChecks } from './nca/checks'
 import { c10Checks } from './c10'
 import { shareChecks } from './widgets/checks'
 import { algorithmsChecks } from './algorithms'
+import { noiseChecks } from './noise'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -862,6 +863,9 @@ gameChecks(assert)
 ncaChecks(assert)
 // ALGORITHMS) stippling, attractor density, WFC, DLA: determinism, invariants, timing, the algorithms board (scripts/algorithms.ts)
 algorithmsChecks(assert)
+// F0 noise slot) dmath, gradient noise, Voronoi, curl, the IR noise pack, the determinism lint (scripts/noise.ts)
+noiseChecks(assert)
+
 // editor (E1): MAKE editor document, paint encode, resize anchoring, hit tests, camera, gestures, entries, history (scripts/editor.ts)
 {
   const { editorChecks } = await import('./editor')

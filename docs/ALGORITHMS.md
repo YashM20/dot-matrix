@@ -6,7 +6,7 @@ Four algorithms the engine did not have, chosen for what they give a dot matrix:
 
 What was already there, and so was not added: Bayer and Floyd–Steinberg dithering (`fields/haltoneField.ts`), void-and-cluster blue noise and STBN (`halftone/`), Bridson Poisson-disc (`fields/scatterField.ts`), Gray–Scott, falling sand and Life (`sim/`), stable fluids, Verlet and PBD (`physics/`), growing NCA (`nca/`), Hilbert ordering and SDF morphs (`migrate/`), ray casting (`scene/`).
 
-All four are plain TypeScript, framework-free, with no dependencies, and deterministic: randomness is `mulberry32` from a seed, and trigonometry inside chaotic or long loops is `dsin`/`tsin` (range reduction + polynomial, or a table of it), which only uses `+`, `×`, `floor`/`round` and is bit-identical in every JS engine. `Math.sin` is not.
+All four are plain TypeScript, framework-free, with no dependencies, and deterministic: randomness is `mulberry32` from a seed, and trigonometry inside chaotic or long loops is `dsin`/`tsin` (range reduction + polynomial, or a table of it), which only uses `+`, `×`, `floor`/`round` and is bit-identical in every JS engine. `Math.sin` is not. Since F0.1 they live in `src/engine/noise/dmath.ts` (with `datan2`, `dexp`, `dpow`, `ihash`, `rngFor`; see [Deterministic math and noise](#deterministic-math-and-noise-srcenginenoise) below); `algo/attractor.ts` re-exports them, so `dla.ts` and the checks import them as before.
 
 | Card | Algorithm | Output | Pipeline | Cost (idle laptop, Node) |
 |---|---|---|---|---|
@@ -87,6 +87,55 @@ dejong    x' = sin(a·y) − cos(b·x)      y' = sin(c·x) − cos(d·y)      |x
 **The card:** a 143 × 114 domain, one disc per card cell, about 1,300 particles. Growth is revealed by arrival order at N ∝ (t/13)^1.7, so the front advances at about constant speed. Tone follows age: the oldest quarter faint, then mid, idle, the young tips white, and the newest 16 red (live). The footer measures the fractal dimension live, as the least-squares slope of log N against log Rg.
 
 ---
+
+## Deterministic math and noise (`src/engine/noise`)
+
+> The shared toolkit of the living-matter tracks (`docs/living-matter/F0-foundation.md` §2). Import `src/engine/noise` (or a file in it) directly: like `algo/`, it is not re-exported by the `src/engine` barrel, so it never reaches first load. Checks: `scripts/noise.ts` (run by `pnpm verify` in the noise slot; alone: `npx tsx scripts/noise.ts`).
+
+### Scalar math (`noise/dmath.ts`)
+Only `+ − × /`, `Math.floor/round/trunc/abs/min/max/sqrt/imul/fround`, comparisons and table reads, which IEEE 754 makes bit-identical in every engine. Measured on 2026-10-27 (Node 22, `scripts/noise.ts`):
+
+| Function | Method | Accuracy (gate → measured) | Cost vs `Math.*` (gate → measured) |
+|---|---|---|---|
+| `dsin` / `dcos` | round to [−π, π], fold to [−π/2, π/2], Taylor to x¹³ | < 1e-8 → 6.6e-10 | n/a |
+| `tsin` / `tcos` | 4096-entry `dsin` table + linear interpolation | < 1e-6 → 2.9e-7 | ~4× cheaper than `dsin` |
+| `datan2(y, x)` | octant reduction, (a − 1)/(a + 1) + π/4 above tan(π/8), odd series to x¹⁹ | ≤ 1e-9 rad → 3.8e-10 (2e6 samples) | ≤ 2× → 0.9× |
+| `dexp(x)` | Cody–Waite k·ln2 split (fdlibm hi/lo), degree-13 Taylor, × 2^k as two exact table factors | rel ≤ 1e-13 on [−708, 709] → 2.2e-16 | ≤ 4× → 0.7–1.4× |
+| `dpow(x, y)` | integer \|y\| ≤ 64: repeated multiplication (so `dpow(x, 2) === x * x`); else `dexp(y · dlog x)`, dlog splits m · 2^e from the IEEE bits (exact), m ∈ [√½, √2], and 2·atanh to s²¹ | rel ≤ 1e-12 where \|y ln x\| ≤ 50 → 1.2e-14; ≤ 1e-9 elsewhere → 2.1e-13 | ≤ 6× → 2.2–3.6× |
+| `ihash(a, b, c)` | imul by three odd constants, xor, murmur3 finaliser; int32 inputs | a bijection in `a` alone: no aliasing at ±2²³, where `hash32` (×256 fixed point) aliases | n/a |
+| `rngFor(seed, id, step)` | `mulberry32(ihash(seed, id, step))` | one independent stream per entity and step | n/a |
+
+Edges: `datan2(0, 0) = 0`, signed zeros ignored, NaN → NaN; `dexp` overflows to Infinity above 709.78 and underflows to 0 below −745.1; `dpow(x, 0) = 1`, `dpow(0, y < 0) = Infinity`, a negative base with a non-integer exponent is NaN, with an integer one the sign follows parity. `goldens/noise.json` pins FNV-1a hashes of fixed input sweeps through every function, so a bit change anywhere fails `scripts/noise.ts`.
+
+### Gradient noise (`noise/gradient.ts`)
+2-D gradient (Perlin) noise on the integer lattice: quintic fade 6t⁵ − 15t⁴ + 10t³ and 8 gradients (±1,0) (0,±1) (±√½,±√½) picked by `ihash(ix, iy, seed) & 7`, scaled by √2 so the bound is exactly [−1, 1]. Value noise is cheaper but blobby and shows its grid at 144²; simplex needs skew constants and a corner sort for little gain at these sizes. fBm removes the axis alignment by rotating every octave by R = [[0.8, −0.6], [0.6, 0.8]] (4 multiplies, no trig), with octave seeds `seed ^ imul(o, 0x9e3779b9)`.
+
+| Function | Range | Notes |
+|---|---|---|
+| `noise2(x, y, seed)` | [−1, 1] | one lattice cell = one feature; ~6 features across 144 cells is `noise2(c * 6 / 144, …)` |
+| `noise3(x, y, z, seed)`, `noise3Grad(…, out)` | [−1, 1] | 12 edge gradients of improved Perlin noise; scale 1/1.0363 = 1 / the exact sup of the raw sum (1e6 samples reach ≈ 0.92); `noise3Grad` writes the analytic ∂/∂x, ∂/∂y |
+| `fbm2(x, y, octaves, seed, o)` | [−1, 1] | Σ gainᵒ·noise2(Rᵒ·p·lacᵒ) / Σ gainᵒ; octaves floored and clamped to 1..8 (default 4), lacunarity 2, gain .5 |
+| `turb2`, `ridge2` | [0, 1] | Σ gainᵒ·\|n\| (marble, rust, smoke) and Σ gainᵒ·(1 − \|n\|)² (veins, cracks), over Σ gainᵒ |
+| `valueNoise2(x, y, seed)` | [0, 1] | bit-identical to `cinema.ts`'s former private `vnoise` (hash01 lattice, smoothstep fade); migration only |
+
+Map a signed value to a tone with `.5 + .5 * n`. Budgets (`scripts/noise.ts`, normalised to load factor 1; measured 2026-10-27): `noise2` 144² ≤ 1.2 ms (0.4–0.7 ms); `fbm2` 4 octaves 144² ≤ 4.5 ms (1.6–3.4 ms: bake it, never per frame at full resolution); `fbm2` 4 octaves 48² ≤ 0.8 ms (0.22–0.41 ms: per frame on a lattice is fine).
+
+### Curl noise (`curl2`, in `noise/gradient.ts`)
+Divergence-free 2-D flow after Bridson et al. 2007 (*Curl-noise for procedural fluid flow*): ψ = Σ gainᵒ·noise3(x·2ᵒ, y·2ᵒ, t·speed, seedᵒ), v = (∂ψ/∂y, −∂ψ/∂x), taken from `noise3Grad`'s analytic gradient (one call per octave, no finite differences). Defaults: 2 octaves, speed .25, gain .5; writes into `out`, so nothing is allocated. It is meant for particles and agents (lily-pad drift, marine snow), not per-cell fields. Budget: 1000 points ≤ 0.3 ms (0.23 ms).
+
+### Worley / Voronoi (`noise/voronoi.ts`)
+`voronoi2(x, y, seed, metric, out, jitter)` → `{ f1, f2, id, x, y }` in `'l2' | 'l1' | 'linf'`. There is one feature point per lattice cell, at cell + jitter·(h & 0xffff, h >>> 16)/65536 with h = `ihash(cx, cy, seed)`; 16-bit coordinates are exact in float32, so the GPU sees the same points. `id` is a salted `ihash` of the nearest cell (stable per cell, independent of where its point sits), and `x, y` is the nearest feature point (pane and chip centres).
+
+**Exact search with an early out.** Scan the 3×3 cells around floor(p). If the wanted distance (F1, or F2 when it is read) is still > 1, scan the 16-cell ring at ±2, skipping each ring cell whose per-axis lower bound (lx, ly, combined per metric) can't beat the current distance (the same result as scanning it). The search has one copy per metric, so there is no per-cell metric switch. Ring points are always > 1 away along one axis, and points beyond the ring are > 2 away. So F1 is exact in all three metrics, and F2 is exact for L2 and L∞; L1's F2 can only be wrong past 2 (0 mismatches in 1e5 brute-force samples). Ties keep the first-scanned cell, so no float sort is needed. `voronoiBorder2` is the exact distance to the nearest cell border (iq 2012: an exact F1 pass, then the bisector distances over the 5×5 cells around the nearest cell), for lead moats and grout of even width. Budget: 144² ≤ 3.5 ms per metric (2.8 / 3.2 / 3.1 ms for l2 / l1 / linf, normalised by load samples interleaved with each timing on a shared 2-core box), so bake panes and terrazzo, or sample on lattices ≥ 2 when animating.
+
+### Determinism rules and the lint (`scripts/lib/detLint.ts`)
+Deterministic steps (sims whose pristine run is a golden or must replay bit for bit) follow four rules:
+- seed every stream with `rngFor(seed, id, step)`, never `Math.random`;
+- use a fixed `dt`;
+- sort with an id tie-break;
+- take no `Math.*` from the ban list in a step.
+
+`detLint(DET_PATHS)` is the single source scan that enforces the last rule; tracks never write their own. It strips comments, then fails on `Math.(random|sin|cos|tan|asin|acos|atan|atan2|hypot|exp|expm1|log|log1p|log2|log10|pow|cbrt|sinh|cosh|tanh)` and on `**` with an exponent that isn't an integer literal. The replacements are `dsin`/`tsin`/`datan2`/`dexp`/`dpow` and `rngFor`. A same-line `// det-ok: <reason>` lets one line through. The registered paths are `src/engine/noise/`, `src/engine/life/`, `src/engine/matter/sand`, `src/engine/matter/mercury` and `src/engine/squares/tetris`; a path that doesn't exist yet is skipped with a notice, so a track only has to create its files (a new sim file adds one line to `DET_PATHS`). The existing physics (`physics/pbd.ts`, `physics/particles.ts`) is not registered: its `Math.hypot`/`Math.atan2` use is logged debt. The lint runs inside `noiseChecks`, next to the optional cross-engine run: `bun scripts/noise.ts --snapshot` must print the same hashes as Node (`noise: Bun/JSC snapshot ≡ Node/V8`, skipped with a notice when Bun isn't installed).
 
 ## Checks (`scripts/algorithms.ts`)
 - **Stipple:** deterministic; walk ≈ exact; every stipple ends on the density; Lloyd moves shrink; the moon builds cold within its budget.

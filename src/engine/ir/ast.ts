@@ -29,13 +29,21 @@ export const IR_FUNCTIONS = {
   clamp: 3, mix: 3, smoothstep: 3, sdCircle: 3,
   sdBox: 4, sdRing: 4,
 } as const
-export type FnName = keyof typeof IR_FUNCTIONS
+export type CoreFn = keyof typeof IR_FUNCTIONS
+/**
+ * Builtins of the lazy noise pack (`src/engine/noise/ir.ts`, type only). The pack adds them to `IR_FUNCTIONS` (and
+ * `irMath`, `GLSL_HELPERS`, `IR_REF`) on import, so the IR core in first load needs no registry code; until then a
+ * call is an unknown function. They are not reserved words: `IR_RESERVED` snapshots the core names at load.
+ */
+export type PackFn = 'noise' | 'fbm' | 'turb' | 'voronoi'
+export type FnName = CoreFn | PackFn
+/** A callable builtin: a core one, or a pack one once its pack is imported. */
 export const isFn = (name: string): name is FnName => Object.prototype.hasOwnProperty.call(IR_FUNCTIONS, name)
 
 /** Named constants, folded to numbers by the parser. */
 export const IR_CONSTANTS: Record<string, number> = { PI: Math.PI, TAU: Math.PI * 2 }
-/** Words a binding may not use. */
-export const IR_RESERVED = new Set(['let', 'for', 'in', 'with', 'u', 'v', 't', 'pointer', 'data', ...Object.keys(IR_CONSTANTS)])
+/** Words a binding may not use: keywords, inputs, constants and the core builtins (snapshot at load, so pack builtins stay bindable). */
+export const IR_RESERVED = new Set(['let', 'for', 'in', 'with', 'u', 'v', 't', 'pointer', 'data', ...Object.keys(IR_CONSTANTS), ...Object.keys(IR_FUNCTIONS)])
 
 export type Node =
   | { k: 'num'; v: number }
@@ -85,7 +93,7 @@ export function validate(ast: unknown): IRInfo {
     if (depth > maxDepth) maxDepth = depth
     if (typeof n !== 'object' || n === null || Array.isArray(n)) return fail('expected a node object', path)
     const o = n as Record<string, unknown>, d = depth + 1
-    const name = (key: string) => { const s = o[key]; if (typeof s !== 'string' || !validName(s) || IR_RESERVED.has(s) || isFn(s)) fail(`invalid name ${JSON.stringify(s)}`, `${path}.${key}`); return s as string }
+    const name = (key: string) => { const s = o[key]; if (typeof s !== 'string' || !validName(s) || IR_RESERVED.has(s)) fail(`invalid name ${JSON.stringify(s)}`, `${path}.${key}`); return s as string }
     switch (o.k) {
       case 'num': if (typeof o.v !== 'number' || !Number.isFinite(o.v)) fail('number must be finite', `${path}.v`); return
       case 'in': if (typeof o.name !== 'string' || !INPUTS.has(o.name)) fail(`unknown input ${JSON.stringify(o.name)}`, `${path}.name`); if (o.name === 't') usesT = true; else if (o.name !== 'u' && o.name !== 'v') pointer = true; return
@@ -97,7 +105,7 @@ export function validate(ast: unknown): IRInfo {
       case 'call': {
         const fn = o.fn, args = o.args
         if (typeof fn !== 'string' || !isFn(fn)) return fail(`unknown function ${JSON.stringify(fn)}`, `${path}.fn`)
-        if (!Array.isArray(args) || args.length !== IR_FUNCTIONS[fn]) return fail(`${fn}() takes ${IR_FUNCTIONS[fn]} argument(s)`, `${path}.args`)
+        if (!Array.isArray(args) || args.length !== (IR_FUNCTIONS as Record<string, number>)[fn]) return fail(`${fn}() takes ${(IR_FUNCTIONS as Record<string, number>)[fn]} argument(s)`, `${path}.args`)
         args.forEach((a, i) => walk(a, scope, `${path}.args[${i}]`, d, work)); return
       }
       case 'let': { const s = name('name'); walk(o.value, scope, `${path}.value`, d, work); return walk(o.body, new Set(scope).add(s), `${path}.body`, d, work) }
