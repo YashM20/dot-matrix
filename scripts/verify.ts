@@ -883,6 +883,12 @@ goldenKeyChecks(assert)
   await lightChecks(assert)
 }
 
+// life (L1): ripple, glyph tiles, chain, body, steering, the koi pond world, the pond-koi card and its interaction (scripts/life.ts)
+{
+  const { lifeChecks } = await import('./life')
+  await lifeChecks(assert)
+}
+
 // theme (T4a): scheme × accent table, gamut / contrast / colour-blind rules, boot script ≡ store, CSP hash, generated files current (scripts/site/theme.ts)
 {
   const { themeChecks } = await import('./site/theme')
