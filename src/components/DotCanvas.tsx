@@ -16,6 +16,7 @@ import type { Control, ControlPatch, DotInstance, DotStyle, Field, GridConfig, L
 import { dot480 } from '../engine/theme/tokens'
 import type { WidgetContext } from '../widgets/types'
 import { useDotField } from '../hooks/useDotField'
+import { drawn as drawnStat } from '../site/stats'
 import { useControlInput } from '../hooks/useControlInput'
 import { ControlOverlay } from './ControlOverlay'
 import { DisplaySurface } from './skins/DisplaySurface'
@@ -280,6 +281,8 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   const webgl = renderer === 'webgl' || gpuCard, gpuFade = useRef(1)
   const mode: RenderMode = renderer && renderer !== 'webgl' ? renderer : (webgl || animated || live || transient || visible > CANVAS_THRESHOLD ? 'canvas' : 'svg')
   const svg = useMemo(() => mode === 'svg' ? renderSVG(dots, width, height) : '', [mode, dots, width, height])
+  // an SVG frame is drawn once per new dot list: it counts toward the dots this visit has drawn (src/site/stats.ts)
+  useEffect(() => { if (svg) drawnStat.dots += visible }, [svg]) // eslint-disable-line react-hooks/exhaustive-deps
   const scale = useBackingScale(canvasRef, mode === 'canvas', width)
   useEffect(() => { onMode?.(webgl && mode === 'canvas' ? 'webgl' : mode) }, [mode, webgl, onMode])
 
@@ -297,6 +300,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     if (!context) return
     context.clearRect(0, 0, width, height)
     if (!webgl || !renderWebGL(context, frame, passes, theme, gpuFade.current)) renderCanvas(context, frame)
+    drawnStat.dots += frame.length
     input.drawn(drawn)
   }
   /**
@@ -309,6 +313,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     context.clearRect(0, 0, width, height)
     if (bitmap && bitmap.width === canvas.width && bitmap.height === canvas.height) { context.setTransform(1, 0, 0, 1, 0, 0); context.drawImage(bitmap, 0, 0) }
     else renderCanvasBuffer(context, buf)
+    drawnStat.dots += buf.n
     bitmap?.close()
     input.drawn(drawn)
   }

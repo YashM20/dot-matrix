@@ -4,7 +4,7 @@ import { BoardPicker, NextBoard } from './components/BoardPicker'
 import { SkinSwitcher } from './components/skins/SkinSwitcher'
 import { useExitSwap } from './hooks/useExitSwap'
 import { useXR } from './components/xray/store'
-import { boardLabel, liveBoards, prefetchBoard } from './widgets/manifest'
+import { boardIds, boardLabel, liveBoards, prefetchBoard } from './widgets/manifest'
 import { widgetPath, type WidgetRoute } from './site/routes'
 import { onLayerWake, requestLayer } from './site/layer'
 import { setPageMeta, syncUrl } from './site/meta'
@@ -15,6 +15,37 @@ import './site/mobile.css'
 // every view but EXPLORE (and every MAKE mode) is its own chunk, fetched when it opens (first-load budget, docs/WEB-PLAN.md §1)
 const later = <K extends string>(load: () => Promise<{ [k in K]: ComponentType }>, name: K) => lazy(() => load().then(m => ({ default: m[name] })))
 const About = later(() => import('./components/About'), 'About')
+// T2: the home's touchable hero card and the footer's live number band, their own chunks, mounted once the page is idle
+const home = () => import('./components/hero/home')
+const HeroCard = later(home, 'HeroCard'), LiveBand = later(home, 'LiveBand')
+/** True once the page is idle (or 2 s on): what loads after first paint mounts then. */
+const useIdle = () => {
+  'use no memo'
+  const [idle, setIdle] = useState(false)
+  useEffect(() => {
+    const w = window as Window & { requestIdleCallback?: Window['requestIdleCallback'] }, go = () => setIdle(true)
+    if (!w.requestIdleCallback) { const t = window.setTimeout(go, 800); return () => window.clearTimeout(t) }
+    const id = w.requestIdleCallback(go, { timeout: 2000 })
+    return () => w.cancelIdleCallback(id)
+  }, [])
+  return idle
+}
+// static markup: 'use no memo' keeps the compiler's memo slots (first-load bytes) out of these two
+const slot = <div className="home-hero-slot" />
+function Hero() {
+  'use no memo'
+  return <div className="home-hero">{useIdle() ? <Suspense fallback={slot}><HeroCard /></Suspense> : slot}</div>
+}
+/** The footer band: the live number, then the site line (docs/LAYOUT-THEME-PLAN.md §1c #13). */
+function SiteFooter({ onAbout }: { onAbout: () => void }) {
+  'use no memo'
+  const idle = useIdle()
+  return <footer className="bottom">
+    <div className="live-band">{idle && <Suspense fallback={null}><LiveBand /></Suspense>}</div>
+    <div className="bottom-row"><span>DOT/480 · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span><span>FIELD → GRID SAMPLER → RENDERER</span>
+      <span><a href="/essay.html">HOW IT WORKS</a> · <a href="?about" onClick={e => { e.preventDefault(); onAbout() }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></div>
+  </footer>
+}
 // MAKE is one editor (docs/EDITOR-PLAN.md): frames on an infinite canvas, layers, a contextual inspector.
 // The old modes (TUNE / COMPOSE / CODE / DRAW) are ways into it. Lazy: no other view loads the editor.
 const Editor = lazy(() => import('./components/editor/Editor').then(m => ({ default: m.Editor })))
@@ -39,11 +70,12 @@ function ReplayKey({ ev }: { ev: KeyboardEvent | null }) {
   return null
 }
 function CommandLayer(props: CommandLayerProps) {
-  const [ready, setReady] = useState(false)
+  const [woken, setWoken] = useState(false)
   const [pending, setPending] = useState<KeyboardEvent | null>(null)
+  const ready = useIdle() || woken
   useEffect(() => {
     if (ready) return
-    const go = () => setReady(true)
+    const go = () => setWoken(true)
     const onKey = (e: KeyboardEvent) => {
       const editing = e.target instanceof HTMLElement && (e.target.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(e.target.tagName))
       if (layerKey(e) && !(editing && !e.metaKey && !e.ctrlKey)) {
@@ -52,15 +84,9 @@ function CommandLayer(props: CommandLayerProps) {
       }
       go()
     }
-    const w = window as Window & { requestIdleCallback?: Window['requestIdleCallback']; cancelIdleCallback?: Window['cancelIdleCallback'] }
-    const hasIdle = typeof w.requestIdleCallback === 'function'
-    const idle = hasIdle ? w.requestIdleCallback!(go, { timeout: 2000 }) : window.setTimeout(go, 800)
     window.addEventListener('keydown', onKey, { once: true })
     const unwake = onLayerWake(go) // a tap on the phone tab bar's TOOLS / SEARCH
-    return () => {
-      if (hasIdle) w.cancelIdleCallback?.(idle); else window.clearTimeout(idle)
-      window.removeEventListener('keydown', onKey); unwake()
-    }
+    return () => { window.removeEventListener('keydown', onKey); unwake() }
   }, [ready])
   useEffect(() => { if (ready) void loadBoardSheet() }, [ready])
   return ready ? <Suspense fallback={null}><CommandLayerLazy {...props} /><ReplayKey ev={pending} /></Suspense> : null
@@ -181,6 +207,7 @@ export default function App() {
   if (widget) return <main className="shell shell--widget">
     <Suspense fallback={<section className="view-loading" aria-busy="true" />}><WidgetPage route={widget} onOpen={openWidget} onBoard={leaveWidget} /></Suspense>
     <CommandLayer tab="EXPLORE" board={board} setTab={go} setBoard={pickBoard} />
+    <SiteFooter onAbout={() => { setWidget(undefined); setView('ABOUT') }} />
   </main>
   const title = view === 'MAKE' ? 'MAKE' : view === 'EXPLORE' ? boardLabel(board) : view
   return <main className="shell" data-view={view}>
@@ -194,10 +221,13 @@ export default function App() {
       <SkinSwitcher />
       {/* red means live: only while a board streams real data */}
       {view === 'EXPLORE' && liveBoards.includes(board) && <div className="live"><i aria-hidden="true"/> LIVE DATA</div>}
+      {/* the tool dock (CommandLayer portals it here on desktop) */}
+      <div className="topbar-dock" />
       <button type="button" className="topbar-search" aria-label="Search boards, cards and actions" aria-haspopup="dialog" onClick={() => requestLayer('palette')}><Glyph rows={GLYPHS.SEARCH} /></button></header>
     <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
     {shownPlace === 'EXPLORE' ? (
       <section className="boards-view" role="tabpanel" aria-labelledby="tab-EXPLORE">
+        {shownBoard === boardIds[0] && <Hero />}
         <IntroLine />
         <BoardPicker board={board} onPick={setBoard} onAll={() => setBoards(true)} />
         <Board key={shownBoard} id={shownBoard} leaving={leaving} />
@@ -218,6 +248,5 @@ export default function App() {
     <CommandLayer tab={place} board={board} setTab={go} setBoard={setBoard} />
     {boards && <Suspense fallback={null}><BoardSheet board={board} onClose={() => setBoards(false)} onPick={id => { window.scrollTo(0, 0); setView('EXPLORE'); setBoard(id) }} /></Suspense>}
     <TabBar view={view} onView={setView} onBoards={() => setBoards(true)} />
-    <footer className="bottom"><span>DOT/480 · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span><span>FIELD → GRID SAMPLER → RENDERER</span>
-      <span><a href="/essay.html">HOW IT WORKS</a> · <a href="?about" onClick={e => { e.preventDefault(); setView('ABOUT') }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></footer></main>
+    <SiteFooter onAbout={() => setView('ABOUT')} /></main>
 }

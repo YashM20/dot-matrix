@@ -4,7 +4,8 @@
  * shell, the X-ray inspector, the time machine bar, a small dock with the same toggles, toasts, an
  * fps meter and the boss fight. Every shortcut ignores keys typed into inputs and editors.
  */
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { getSkin, setSkin as setDisplaySkin } from '../skins/store'
 import { findPreset } from '../../widgets/manifest'
 import { DotWidget } from '../DotWidget'
@@ -38,6 +39,9 @@ export interface CommandLayerProps {
   setTab?: (tab: string) => void
   setBoard?: (id: string) => void
 }
+
+/** The dock sits in the top bar's slot when the page has one (T2: never over the cards), else it floats bottom right. */
+const dockIn = (dock: ReactNode) => { const slot = document.querySelector('.topbar-dock'); return slot ? createPortal(dock, slot) : dock }
 
 function FpsHud() {
   const [fps, setFps] = useState(0)
@@ -263,12 +267,12 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
   return <>
     {anyXray && <Suspense fallback={null}><Inspector onRemix={(id, data) => api.remix(id, data)} onStudio={id => api.studio(id)} onCopyLink={id => api.copyLink(id)} /></Suspense>}
     <TimeMachine />
-    <div className="pal-dock" role="toolbar" aria-label="Explore">
+    {dockIn(<div className="pal-dock" role="toolbar" aria-label="Explore">
       <button aria-pressed={anyXray} onClick={() => toggleGlobal()} data-tip="X-ray every card · ⇧X all" data-kbd="X" aria-keyshortcuts="X Shift+X">X-RAY</button>
       <button aria-pressed={frozen} onClick={() => (frozen ? resume() : api.freeze())} data-tip="Time machine · hold" data-kbd="T" aria-keyshortcuts="T">TIME</button>
       <button onClick={() => setPalette(true)} data-tip="Command palette" data-kbd="⌘K" aria-label="Command palette" aria-keyshortcuts="Meta+K Control+K">⌘K</button>
       <button onClick={() => setShell(true)} data-tip="Dot shell" data-kbd="`" aria-label="Dot shell" aria-keyshortcuts="`">&gt;_</button>
-    </div>
+    </div>)}
     {tools && <ToolsSheet api={api} xray={anyXray} frozen={frozen} onClose={() => setTools(false)} onPalette={() => setPalette(true)} onShell={() => setShell(true)} />}
     {fpsHud && <FpsHud />}
     <div className="pal-toast" role="status" aria-live="polite">{note && <span key={note.id}>{note.text}</span>}</div>
