@@ -1,4 +1,5 @@
-/* Privacy + Terms (privacy.html, terms.html): static pages, no JS. The essay's tokens and type, plus a few legal-page rules. */
+/* Privacy + Terms (privacy.html, terms.html): static pages; their only script is the inline theme boot in <head>.
+   The essay's tokens, theme roles and type, plus a few legal-page rules. */
 @import '../essay/essay.css';
 
 .legal { padding-top: var(--space-6) }

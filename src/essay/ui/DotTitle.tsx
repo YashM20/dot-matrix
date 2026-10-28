@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import type { DotStyle, GridConfig, Layer } from '../../engine/types'
 import { textAt, textSize } from '../../engine/layout'
 import { DotCanvas } from '../../components/DotCanvas'
+import { useThemeTokens } from '../../site/theme/useTheme'
 
 const STYLE: DotStyle = { shape: 'squircle', sizeMin: .3, sizeMax: 1.55, cornerRoundness: .25, opacityMode: 'fromValue', quantizeSteps: 5 }
 
@@ -32,12 +33,14 @@ export function DotTitle({ text, num, level = 2, max = 22, smooth = false, id }:
     return { grid, layers }
   }, [lines, num, smooth])
   const source = useMemo(() => () => layers, [layers])
+  // the headings sit on the page, not in a card: the site theme's tones (ink on paper in light)
+  const theme = useThemeTokens()
   const Tag = level === 1 ? 'h1' : 'h2'
   return (
     <Tag className={`dot-title dot-title--${level}`} id={id}>
       <span className="sr-only">{num ? `${num}. ` : ''}{text}</span>
       <span className="dot-title-art" style={{ maxWidth: grid.cols * grid.pitch! }} aria-hidden="true">
-        <DotCanvas layers={source} grid={grid} style={STYLE} renderer={level === 1 ? undefined : 'svg'} change={false} enter={level === 1 ? { delay: 150, mask: 'bayer', duration: 1100 } : undefined} />
+        <DotCanvas layers={source} grid={grid} style={STYLE} theme={theme} renderer={level === 1 ? undefined : 'svg'} change={false} enter={level === 1 ? { delay: 150, mask: 'bayer', duration: 1100 } : undefined} />
       </span>
     </Tag>
   )
