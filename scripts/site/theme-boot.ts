@@ -32,8 +32,9 @@ const TYPES: Record<string, string> = { '.html': 'text/html', '.js': 'text/javas
 const vercelRewrites = (JSON.parse(readFileSync('vercel.json', 'utf8')) as { rewrites?: { source: string; destination: string }[] }).rewrites ?? []
 const REWRITES = new Map(vercelRewrites.filter(r => !r.source.includes('(')).map(r => [r.source, r.destination]))
 const server = createServer((req, res) => {
-  const url = (req.url ?? '/').split('?')[0]
-  const path = normalize(decodeURIComponent(REWRITES.get(url) ?? url)).replace(/^([\\/])+/, '')
+  // `?spa`: act like a server without the rewrites (the SPA fallback, e.g. vite preview), so the app's hand-off runs
+  const [url, query = ''] = (req.url ?? '/').split('?'), spa = new URLSearchParams(query).has('spa')
+  const path = normalize(decodeURIComponent((spa ? undefined : REWRITES.get(url)) ?? url)).replace(/^([\\/])+/, '')
   let file = join(DIST, path)
   if (!existsSync(file) || statSync(file).isDirectory()) file = existsSync(join(file, 'index.html')) ? join(file, 'index.html') : join(DIST, 'index.html')
   res.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream', 'Content-Security-Policy': CSP, 'Cache-Control': 'no-store' })
@@ -127,6 +128,15 @@ try {
     }
     check(`${label}: CSP served, no violation (inline boot allowed by its hash)`, !!csp?.includes("script-src 'self' 'sha256-") && Array.isArray(v) && v.length === 0, (v ?? []).join(', '))
     await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: result.identifier })
+  }
+  // the app's hand-off to the static pages (a server that falls back to the SPA) keeps the visit's theme params
+  await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
+  for (const [from, to] of [['/terms?spa&theme=light_vite', '/terms.html?theme=light_vite'], ['/?tab=essay&accent=cobalt&scheme=light', '/essay.html?accent=cobalt&scheme=light']]) {
+    await cdp('Page.navigate', { url: base + from })
+    for (let i = 0; i < 100 && !(await js(`location.pathname + location.search === ${JSON.stringify(to)} && document.readyState === 'complete'`)); i++) await sleep(100)
+    const at = await js(`[location.pathname + location.search, document.documentElement.dataset.scheme, document.documentElement.dataset.accent].join(' ')`) as string | undefined
+    const want = `${to} ${to.includes('light') ? 'light' : 'dark'} ${to.includes('vite') ? 'vite' : 'cobalt'}`
+    check(`${from} hands off to ${to} with the theme kept`, at === want, at)
   }
 } finally {
   ws.close(); proc.kill(); server.close()

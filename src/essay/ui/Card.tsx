@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ControlPatch, ThemeTokens } from '../../engine'
 import { DotCanvas } from '../../components/DotCanvas'
-import { cardScheme } from '../../site/theme/polarity'
 import { themeTokens } from '../../site/theme/theme'
 import { useTheme } from '../../site/theme/useTheme'
 import { withChrome, type WidgetPreset } from '../../widgets/types'
@@ -53,7 +52,10 @@ export function Card({ preset, data, theme: themeProp, dark, shared, sharedKeys,
   }, [keys, onShared])
   useEffect(() => { onData?.(local) }, [local, onData])
   const interactive = !!preset.controls?.length
-  const site = useTheme(), scheme = dark ? 'dark' : cardScheme(preset, site.resolved, 'oled'), inset = scheme !== site.resolved
+  // `cardScheme()` (src/site/theme/polarity.ts) for the essay's OLED-only cards, inlined: importing it here would
+  // make it a module shared with the app's first load and split it into a chunk of its own (+0.16 kB gz)
+  const site = useTheme(), inset = site.resolved === 'light' && (dark || preset.group === 'photo' || preset.media === 'camera')
+  const scheme = inset ? 'dark' : site.resolved
   const theme = themeProp ?? themeTokens(scheme, site.accent)
   return (
     <div className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}${className ? ` ${className}` : ''}`} role={interactive ? 'group' : 'img'} aria-label={preset.name} data-card={preset.id}

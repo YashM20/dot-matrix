@@ -149,9 +149,13 @@ function TabBar({ view, onView, onBoards }: { view: View; onView: (v: View) => v
   </nav>
 }
 
-// ?tab=essay, /privacy, /terms: those are their own pages (essay.html, privacy.html, terms.html: separate Vite entries)
+// ?tab=essay, /privacy, /terms: those are their own pages (essay.html, privacy.html, terms.html: separate Vite entries);
+// the visit's theme params (?theme= / ?scheme= / ?accent=) go along, the pages' boot script reads them too
 const handoff = urlView()
-if (handoff.essay || handoff.legal) window.location.replace(`/${handoff.legal ?? 'essay'}.html${window.location.hash}`)
+if (handoff.essay || handoff.legal) {
+  const keep = location.search.match(/\b(theme|scheme|accent)=[^&]*/g)
+  location.replace(`/${handoff.legal ?? 'essay'}.html${keep ? `?${keep.join('&')}` : ''}${location.hash}`)
+}
 
 export default function App() {
   const [view, setView] = useState<View>(() => urlView().view)
