@@ -2,7 +2,8 @@
  * P5-D export checks (in `pnpm verify`; standalone: npx tsx scripts/export.ts):
  * APNG / GIF encoders round-trip tiny frames and real card clips; WebM / MP4 muxers produce
  * readable containers with the right duration; the plotter path covers every dot and is deterministic.
- * The in-browser WebCodecs run is `scripts/export-chrome.ts`.
+ * (The in-browser WebCodecs probe, `scripts/export-chrome.ts`, drove the old playground export panel and was removed
+ * with it; restore it from git at f9bafb2 to rebuild it against the editor's EXPORT tab.)
  */
 import { APNGWriter, encodePNG } from '../src/export/apng'
 import { GIFWriter, lzwEncode, paletteFromTones } from '../src/export/gif'

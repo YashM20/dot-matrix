@@ -215,9 +215,10 @@ the playground panels. What stays, because the editor (or the site) uses it:
 - (`playground/store.ts`, whose only use was the boards' `theme`, went in T4b: the site theme is `src/site/theme/`);
 - `lib/share`, `dotifyUpload`, and the export module (`recordClip`, `plotterSVG`, `stillPNG`).
 
-`dwitter/DotsRepl.tsx` (the old CODE screen) is unused too, but still in the tree, with `RemixGraph.tsx`, which
-E5 reuses for remix lineage. The Studio's machine panel and scorecard sheet (E4, E5) can be recovered from git
-at `c619dae`.
+`dwitter/DotsRepl.tsx` (the old CODE screen) and `dwitter/RemixGraph.tsx` were deleted in the round-2 cleanup
+(nothing imported them). E5 can restore `RemixGraph.tsx` for remix lineage from git (`git show f9bafb2:src/components/dwitter/RemixGraph.tsx`);
+its graph helpers (`graphLayers`, `layoutGraph`, `nodeAt`) still live in `dwitter/gallery.ts`. The Studio's machine
+panel and scorecard sheet (E4, E5) can be recovered from git at `c619dae`.
 
 ## 8. What E0 built (this branch)
 
