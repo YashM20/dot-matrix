@@ -39,14 +39,21 @@ export const quadrant = (mask: number, q: number): number => (mask >> (3 * q)) &
  * grid count as empty. Key 0 (not joinable) gives NO_JOIN. Writes into `out` when given.
  */
 export function joinMasks(key: Uint16Array, width: number, height: number, out = new Uint16Array(width * height)): Uint16Array {
-  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-    const i = y * width + x, k = key[i]
-    if (!k) { out[i] = NO_JOIN; continue }
-    const up = y > 0, down = y < height - 1, left = x > 0, right = x < width - 1
-    const b = (up && key[i - width] === k ? N : 0) | (up && right && key[i - width + 1] === k ? NE : 0) | (right && key[i + 1] === k ? E : 0)
-      | (down && right && key[i + width + 1] === k ? SE : 0) | (down && key[i + width] === k ? S : 0) | (down && left && key[i + width - 1] === k ? SW : 0)
-      | (left && key[i - 1] === k ? W : 0) | (up && left && key[i - width - 1] === k ? NW : 0)
-    out[i] = LUT4[b]
+  // a copy with a one-cell empty border, so the eight neighbour reads need no bounds tests
+  const PW = width + 2, need = PW * (height + 2)
+  if (padded.length < need) padded = new Uint16Array(need)
+  const p = padded, lut = LUT4
+  p.fill(0, 0, need)
+  for (let y = 0; y < height; y++) p.set(key.subarray(y * width, y * width + width), (y + 1) * PW + 1)
+  for (let y = 0; y < height; y++) {
+    let j = (y + 1) * PW + 1, i = y * width
+    for (let x = 0; x < width; x++, i++, j++) {
+      const k = p[j]
+      if (!k) { out[i] = NO_JOIN; continue }
+      out[i] = lut[(p[j - PW] === k ? N : 0) | (p[j - PW + 1] === k ? NE : 0) | (p[j + 1] === k ? E : 0) | (p[j + PW + 1] === k ? SE : 0)
+        | (p[j + PW] === k ? S : 0) | (p[j + PW - 1] === k ? SW : 0) | (p[j - 1] === k ? W : 0) | (p[j - PW - 1] === k ? NW : 0)]
+    }
   }
   return out
 }
+let padded = new Uint16Array(0)

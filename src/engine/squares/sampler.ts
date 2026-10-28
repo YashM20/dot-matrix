@@ -7,7 +7,6 @@
  */
 import { TONE, toneIndex } from '../buffer/dotBuffer'
 import { cornerFraction, squircleExponent } from '../renderer/shapePath'
-import { quantize } from '../sampler/quantize'
 import type { JoinArgs, JoinFrame } from '../sampler/ext'
 import type { DotStyle, JoinSpec, JointGeom } from '../types'
 import { joinMasks, NO_JOIN } from './mask'
@@ -41,20 +40,33 @@ export function joinPass(a: JoinArgs): JoinFrame | null {
   if (key.length < n) { key = new Uint16Array(n); mask = new Uint16Array(n); join = new Uint16Array(n); tone = new Uint8Array(n); slot = new Int8Array(n) }
   const specs = layers.map(l => (l.join === true ? DEFAULT : l.join))
   const slots = specs.map(J => (J ? slotOf(a.joints, { hx: a.h, hy: a.h, ro: J.outer ?? defaultOuter(style), ri: (J.inner ?? 0) * a.h, seam: (J.seam ?? 0) * 2 * a.h, ox: a.ox, oy: a.oy }) : -1))
-  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
-    const i = (r - r0) * width + (c - c0), v = best[i], o = owner[i]
-    key[i] = 0
-    if (!o || covered?.[i]) { tone[i] = toneIndex(undefined, v); continue }
-    const L = layers[o - 1], J = specs[o - 1]
-    const t = (tone[i] = toneIndex(L.toneOf ? L.toneOf(v, us[c], vs[r]) : L.tone, v))
-    if (!J || slots[o - 1] < 0) continue
-    const lv = quantize(v, steps)
-    if (lv <= 0 || lv < (J.at ?? 0) || ((t === TONE.active || t === TONE.activeDim) && !J.accent)) continue
-    const g = typeof J.group === 'function' ? J.group(us[c], vs[r]) : J.group ?? 0
-    key[i] = (((g & 255) << 7) | (t << 4) | (Math.round(lv * (steps - 1)) & 15)) + 1
-    slot[i] = slots[o - 1]
+  const K = key, T = tone, S = slot, q = steps - 1
+  // per layer, resolved once: the spec's fields, and whether tone and group vary per cell
+  const n0 = layers.length, at = new Float64Array(n0), accent = new Uint8Array(n0), groupFn: (((u: number, v: number) => number) | null)[] = [], group0 = new Int32Array(n0)
+  for (let l = 0; l < n0; l++) {
+    const J = specs[l]
+    if (!J) continue
+    at[l] = J.at ?? 0; accent[l] = J.accent ? 1 : 0
+    groupFn[l] = typeof J.group === 'function' ? J.group : null; group0[l] = typeof J.group === 'number' ? J.group & 255 : 0
   }
-  joinMasks(key.subarray(0, n), width, height, mask)
-  for (let i = 0; i < n; i++) join[i] = key[i] ? mask[i] | (slot[i] << 12) : NO_JOIN
-  return { join, tone }
+  // a run of equal cells (same owner and value) shares tone and step: only per-cell callbacks are re-read
+  let lastO = -1, lastV = -1, lastT = 0, lastStep = 0
+  for (let r = r0; r <= r1; r++) for (let c = c0, i = (r - r0) * width; c <= c1; c++, i++) {
+    const v = best[i], o = owner[i]
+    K[i] = 0
+    if (!o || (covered !== null && covered[i])) { T[i] = toneIndex(undefined, v); continue }
+    const l = o - 1, L = layers[l]
+    let t: number
+    if (o === lastO && v === lastV && !L.toneOf) t = lastT
+    else { t = toneIndex(L.toneOf ? L.toneOf(v, us[c], vs[r]) : L.tone, v); lastO = o; lastV = v; lastT = t; lastStep = Math.round(Math.min(1, v) * q) }
+    T[i] = t
+    const step = lastStep
+    if (slots[l] < 0 || step <= 0 || step / q < at[l] || ((t === TONE.active || t === TONE.activeDim) && !accent[l])) continue
+    const fn = groupFn[l], g = fn ? fn(us[c], vs[r]) & 255 : group0[l]
+    K[i] = ((g << 7) | (t << 4) | (step & 15)) + 1
+    S[i] = slots[l]
+  }
+  const M = joinMasks(K.subarray(0, n), width, height, mask), out = join
+  for (let i = 0; i < n; i++) out[i] = K[i] ? M[i] | (S[i] << 12) : NO_JOIN
+  return { join: out, tone: T }
 }

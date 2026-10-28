@@ -26,10 +26,11 @@ export interface OutlineSink {
 }
 
 /** Resolved extents of one cell: joined half extents (with `bleed`), convex radius and fillet (px). */
-function extents(s: number, g: JointGeom, bleed: number): [number, number, number, number] {
+const EXT = new Float64Array(4)
+function extents(s: number, g: JointGeom, bleed: number): Float64Array {
   const hjx = Math.max(s, g.hx - g.seam / 2), hjy = Math.max(s, g.hy - g.seam / 2)
-  const ro = Math.max(0, Math.min(1, g.ro)) * s, ri = Math.max(0, Math.min(g.ri, hjx - s, hjy - s))
-  return [hjx + bleed, hjy + bleed, ro, ri]
+  EXT[0] = hjx + bleed; EXT[1] = hjy + bleed; EXT[2] = Math.max(0, Math.min(1, g.ro)) * s; EXT[3] = Math.max(0, Math.min(g.ri, hjx - s, hjy - s))
+  return EXT
 }
 
 // One quadrant's outline as vertices in local |offset| coordinates, from the vertical axis to the horizontal
@@ -66,7 +67,7 @@ const SX = [-1, 1, 1, -1], SY = [-1, -1, 1, 1], WALK = [1, 2, 3, 0]
  * an isolated square-cornered cell is the plain square dot. `close: false` leaves it open (Canvas `fill` closes it).
  */
 export function joinOutline(p: OutlineSink, cx: number, cy: number, s: number, g: JointGeom, mask: number, bleed = 0, close = true): void {
-  const [hjx, hjy, ro, ri] = extents(s, g, bleed)
+  const e = extents(s, g, bleed), hjx = e[0], hjy = e[1], ro = e[2], ri = e[3]
   if (mask === ALL_FULL) { p.rect(cx - hjx, cy - hjy, 2 * hjx, 2 * hjy); return }
   if (mask === 0 && ro === 0) { p.rect(cx - s, cy - s, 2 * s, 2 * s); return }
   let first = true
@@ -91,7 +92,7 @@ export function joinOutline(p: OutlineSink, cx: number, cy: number, s: number, g
 /** Is (px, py) inside the joined cell (centre cx, cy, half side s)? The CPU reference for every renderer. */
 export function insideJoined(px: number, py: number, cx: number, cy: number, s: number, g: JointGeom, mask: number): boolean {
   const dx = px - cx, dy = py - cy, q = dy < 0 ? (dx < 0 ? 0 : 1) : dx < 0 ? 3 : 2, ax = Math.abs(dx), ay = Math.abs(dy)
-  const [hjx, hjy, ro, ri] = extents(s, g, 0), code = quadrant(mask, q)
+  const e = extents(s, g, 0), hjx = e[0], hjy = e[1], ro = e[2], ri = e[3], code = quadrant(mask, q)
   if (code === EDGE_H) return ax <= hjx && ay <= s
   if (code === EDGE_V) return ax <= s && ay <= hjy
   if (code === FULL) return ax <= hjx && ay <= hjy
@@ -109,7 +110,7 @@ export function insideJoined(px: number, py: number, cx: number, cy: number, s: 
 const CORNER = 1 - Math.PI / 4
 /** Analytic area (px²) of a joined cell. */
 export function joinArea(s: number, g: JointGeom, mask: number): number {
-  const [hjx, hjy, ro, ri] = extents(s, g, 0)
+  const e = extents(s, g, 0), hjx = e[0], hjy = e[1], ro = e[2], ri = e[3]
   let a = 0
   for (let q = 0; q < 4; q++) {
     const code = quadrant(mask, q)
