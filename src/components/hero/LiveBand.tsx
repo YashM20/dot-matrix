@@ -10,6 +10,7 @@ import type { GridConfig } from '../../engine/types'
 import { textAt, textSize } from '../../engine/layout'
 import { baseStyle, layer } from '../../widgets/types'
 import { drawn } from '../../site/stats'
+import { useThemeTokens } from '../../site/theme/useTheme'
 
 /** 5×7 dot type at a 4 px pitch, one dot of margin; the grid is as wide as the number (a digit more, a few cells more). */
 const PITCH = 4, ROWS = 9
@@ -18,6 +19,8 @@ const EVERY_MS = 250
 
 export function LiveBand() {
   const [count, setCount] = useState(drawn.dots)
+  // the band sits on the page, not in a card, so it takes the site theme's dot tones (ink on paper in light)
+  const theme = useThemeTokens()
   const box = useRef<HTMLDivElement>(null)
   // the band's own redraws are not counted (it would count itself up): the dots its DotCanvas adds between this
   // commit's layout effects and its passive effects (the child's passive effect runs first) are set aside
@@ -43,7 +46,7 @@ export function LiveBand() {
   useLayoutEffect(() => { mark.current = drawn.dots }, [text])
   useEffect(() => { own.current += drawn.dots - mark.current }, [text])
   return <>
-    <div className="live-number" ref={box} style={{ width: cols * PITCH }}><DotCanvas layers={layers} grid={grid} style={STYLE} change={false} /></div>
+    <div className="live-number" ref={box} style={{ width: cols * PITCH }}><DotCanvas layers={layers} grid={grid} style={STYLE} theme={theme} change={false} /></div>
     <p className="fig-cap live-label"><b className="live"><i aria-hidden="true" />LIVE</b>dots drawn this visit, each one sampled from a field <span className="sr-only">: {text}</span></p>
   </>
 }

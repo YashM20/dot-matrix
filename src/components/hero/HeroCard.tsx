@@ -12,6 +12,7 @@ import { createRaster } from '../../engine/raster'
 import { halftone } from '../../engine/halftone'
 import type { DotStyle, Field, GridConfig, Layer, Tone } from '../../engine/types'
 import { tileStyle } from '../../widgets/types'
+import { useTheme, useThemeTokens } from '../../site/theme/useTheme'
 import './hero.css'
 
 const GRID: GridConfig = { cols: 96, rows: 96, pitch: 2.25 }
@@ -73,6 +74,8 @@ export function HeroCard() {
   const [image, setImage] = useState<{ luma: Float32Array; name: string } | null>(null)
   const [aim, setAim] = useState<[number, number]>([-.55, -.6]) // the mouse over the card, in [-1, 1]²
   const [over, setOver] = useState(false)
+  // a photo halftone: a dark inset on every page, in the current accent (the photo polarity rule, DESIGN.md › Theme)
+  const { accent } = useTheme(), theme = useThemeTokens('dark')
   const [note, setNote] = useState('')
   const file = useRef<HTMLInputElement>(null), raf = useRef(0)
   const open = async (f: Blob | null | undefined, name = 'image') => {
@@ -107,10 +110,10 @@ export function HeroCard() {
   const onDrag = (e: DragEvent<HTMLDivElement>) => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); setOver(true) } }
   const onKey = (e: KeyboardEvent<HTMLDivElement>) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); file.current?.click() } }
   return <figure className="hero-fig">
-    <div className="dot-card dot-card--bleed hero-card" data-engaged={over || undefined} role="button" tabIndex={0}
+    <div className="dot-card dot-card--bleed hero-card" data-scheme="dark" data-accent={accent} data-engaged={over || undefined} role="button" tabIndex={0}
       aria-label="Your image as dots: drop or paste an image, or press Enter to pick one" aria-describedby="hero-note"
       onClick={() => file.current?.click()} onKeyDown={onKey} onPointerMove={onMove} onDragOver={onDrag} onDragEnter={onDrag} onDragLeave={() => setOver(false)} onDrop={onDrop}>
-      <DotCanvas layers={layers} grid={GRID} style={STYLE} change={false} enter={{ delay: 0, mask: 'bayer' }} />
+      <DotCanvas layers={layers} grid={GRID} style={STYLE} theme={theme} change={false} enter={{ delay: 0, mask: 'bayer' }} />
     </div>
     <figcaption className="fig-cap"><b>FIG 00</b>{image ? image.name.toUpperCase() : 'YOUR IMAGE'} · {GRID.cols} × {GRID.rows} · HALFTONE STEP 2</figcaption>
     <p className="hero-note" id="hero-note">Drop or paste an image, or <button type="button" onClick={() => file.current?.click()}>pick one</button>{image && <> · <button type="button" onClick={() => { setImage(null); setNote('Back to the sphere.') }}>clear</button></>}. It stays on this device: nothing is uploaded.</p>
