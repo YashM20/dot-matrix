@@ -86,7 +86,22 @@
   - Board `/materials/` in ENGINE, lazy, `sources: [lightSource]`: `mat-loom` (fps 40), `mat-knob`, `mat-grille`, `mat-marble`, `mat-terrazzo`. Every card declares the light-hub keys. `matLight` is a thin wrapper over `sceneLight`.
   - **`activeDim`: no owner ruling**, so the plan's default applies: it is not part of the one accent and no M card uses it. The Loom's trail is size contrast inside its one `active` layer. This is checked.
   - Engine addition: `Control.dial` (`knob`: absolute angle over an arc), so a tap on the knob's arc sets v. It is opt-in, and existing knobs are unchanged.
-  - `scripts/materials.ts` (wired into verify after `lightChecks`): 51 checks. See the deviations and the bench below.
+  - `scripts/materials.ts` (wired into verify after `lightChecks`): 52/52 pass. Goldens: `0 changed, 5 added, 0 removed of 182`.
+  - Size:
+    - first load 120.31 kB gz, +0.24 against the ledger's 120.07 (the row was +0.06). The extra is the `Control.dial` branch in first-load interaction code, plus any base drift since 120.07.
+    - `sampleWorker` 168.56 kB gz (the ledger's last figure was 153.65 at F0).
+  - **Budgets are not met yet.** The `--bench` medians at a measured load of about 2.2–2.6, from unlocked runs:
+
+    | card | warm (ms) | load-normalised (ms) |
+    |---|---|---|
+    | loom | 7.9–10 | ≈ 3.5–4 |
+    | knob | 3.5–4 | ≈ 1.6 |
+    | grille | 10–17 | ≈ 4–7, over |
+    | marble | 7–10 | ≈ 3–4 |
+    | terrazzo | 4.4–5 | ≈ 2 |
+
+    Cold first frames are 25–150 ms. Only the knob is under 30 ms × load.
+  - Under `heavy.mjs` the child runs at below-normal priority, so the load factor reads 33 and the timing gates pass trivially. Re-measure on an idle box. If the grille is still over, use the plan's mitigation: a 1.5 lattice away from the holes, or a per-light-bucket plate cache.
   - Deviations from the M doc:
     - The tie-up toggle redraws the whole panel, because card data carries no edit time, so "only picks ≥ the current one" can't be pure.
     - The marble hero is on lattice 2, not 2.5: smooth `00:00` is 58 dots wide, so 2.5 would overrun the card.
