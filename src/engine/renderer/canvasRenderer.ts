@@ -1,11 +1,14 @@
 import type { DotInstance } from '../types'
 import { BEZIER_MAX_N, bezierHandle, cornerFraction, squircleExponent } from './shapePath'
+import { shapeExt } from './ext'
 
 export type PathSink = Pick<CanvasPath, 'moveTo' | 'lineTo' | 'arcTo' | 'bezierCurveTo' | 'arc' | 'rect' | 'closePath'>
 
-/** Append one dot outline as a sub-path, left open for `fill` (squircles: same curve as the SVG renderer). */
+/** Append one dot outline as a sub-path, left open for `fill` (squircles: same curve as the SVG renderer; joined cells: `shapeExt.canvas`). */
 function addDot(p: PathSink, dot: DotInstance): void {
-  addDotShape(p, dot.x, dot.y, dot.r, dot.shape, dot.shape === 'squircle' ? squircleExponent(dot.roundness ?? 0) : 2, false)
+  const join = shapeExt.canvas
+  if (join && dot.join !== undefined && dot.joint) join(p, dot.x, dot.y, dot.r, dot.join, dot.joint)
+  else addDotShape(p, dot.x, dot.y, dot.r, dot.shape, dot.shape === 'squircle' ? squircleExponent(dot.roundness ?? 0) : 2, false)
 }
 /**
  * One dot outline from plain numbers; `n` = the squircle exponent (read only for `shape: 'squircle'`).

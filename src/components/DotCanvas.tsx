@@ -375,14 +375,14 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
 
   // live frames straight from the master clock; a throwing frame keeps the last good one on screen
   const { cols, rows, pitch: gridPitch } = grid
-  const { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps } = style
+  const { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, gap } = style
   const liveCanvasRef = useRef<HTMLCanvasElement | null>(null)
   // a layout effect, so a static card that just became engaged (SVG → canvas) never shows a blank canvas
   useLayoutEffect(() => {
     if (!live || !ready || mode !== 'canvas' || !layers) return
     const canvas = canvasRef.current
     if (!canvas) return
-    const g = { cols, rows, pitch: gridPitch }, s = { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps }
+    const g = { cols, rows, pitch: gridPitch }, s = { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, gap }
     const frameData = JSON.parse(dataKey) as Record<string, number>
     let failed = false
     const bindLive = input.bindLive
@@ -424,7 +424,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     }
     const off = sharedClock().subscribe(sub), unbind = bindLive(sub)
     return () => { off(); unbind(); remote?.dispose(); releaseDotBuffer(local) }
-  }, [live, ready, mode, webgl, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, theme, dataKey, springKey, fps, motion, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [live, ready, mode, webgl, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, gap, theme, dataKey, springKey, fps, motion, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // C7 display skins: post-raster stage around the surface (src/components/skins/); OLED = no-op wrapper
   const surface = <DisplaySurface mode={mode} dots={dots} running={live || !!transient} fps={transient ? 30 : fps ?? (motion ? 12 : 30)} cols={grid.cols} rows={grid.rows} width={width} height={height}>{mode === 'canvas'

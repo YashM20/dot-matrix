@@ -6,7 +6,7 @@
  */
 import { sampleLayersInto } from '../engine/sampler/gridSampler'
 import { createDotBuffer, dotBufferOver } from '../engine/buffer/dotBuffer'
-import type { DotStyle, GridConfig, ThemeTokens } from '../engine/types'
+import type { DotStyle, GridConfig, JointGeom, ThemeTokens } from '../engine/types'
 import { widgetPresets, withChrome, type WidgetPreset } from '../widgets'
 
 export interface SampleRequest {
@@ -15,13 +15,15 @@ export interface SampleRequest {
   grid: GridConfig; style: DotStyle; theme: ThemeTokens
   /** A retired frame's backing store to sample into (transferred), with its dot capacity. */
   bytes?: ArrayBuffer; capacity?: number
+  /** Its squares channels (`DotBuffer.ext`), transferred with `bytes` when the frame had them. */
+  ext?: ArrayBuffer
   /** Also rasterize the frame (worker `OffscreenCanvas`) at this backing size / scale, so the main thread only blits it. */
   px?: { w: number; h: number; scale: number }
 }
 /** The card unmounted: free its worker-side canvas. */
 export interface DropRequest { kind: 'drop'; card: number }
 export type SampleReply =
-  | { kind: 'frame'; card: number; seq: number; t: number; n: number; capacity: number; bytes: ArrayBuffer; palette: readonly string[]; shape?: DotStyle['shape']; roundness?: number; bitmap?: ImageBitmap }
+  | { kind: 'frame'; card: number; seq: number; t: number; n: number; capacity: number; bytes: ArrayBuffer; palette: readonly string[]; shape?: DotStyle['shape']; roundness?: number; bitmap?: ImageBitmap; ext?: ArrayBuffer; joints?: JointGeom[] }
   | { kind: 'error'; card: number; seq: number; message: string }
 
 let byId: Map<string, WidgetPreset> | undefined
@@ -31,9 +33,9 @@ export function handleSample(req: SampleRequest): SampleReply {
     const p = (byId ??= new Map(widgetPresets.map(w => [w.id, w]))).get(req.preset)
     if (!p) return { kind: 'error', card: req.card, seq: req.seq, message: `unknown preset ${req.preset}` }
     const { grid, style, theme } = req
-    const buf = req.bytes && req.bytes.byteLength && req.capacity ? dotBufferOver(req.capacity, req.bytes) : createDotBuffer(grid.cols * grid.rows)
+    const buf = req.bytes && req.bytes.byteLength && req.capacity ? dotBufferOver(req.capacity, req.bytes, [], req.ext) : createDotBuffer(grid.cols * grid.rows)
     sampleLayersInto(withChrome(p)({ t: req.t, frame: req.frame, data: req.data, grid }), grid, style, theme, buf)
-    return { kind: 'frame', card: req.card, seq: req.seq, t: req.t, n: buf.n, capacity: buf.capacity, bytes: buf.bytes, palette: buf.palette, shape: buf.shape, roundness: buf.roundness }
+    return { kind: 'frame', card: req.card, seq: req.seq, t: req.t, n: buf.n, capacity: buf.capacity, bytes: buf.bytes, palette: buf.palette, shape: buf.shape, roundness: buf.roundness, ext: buf.ext, joints: buf.joints }
   } catch (error) {
     return { kind: 'error', card: req.card, seq: req.seq, message: error instanceof Error ? error.message : String(error) }
   }

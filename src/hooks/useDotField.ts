@@ -42,14 +42,14 @@ const NONE: DotInstance[] = []
  */
 export function useDotField(source: DotSource, grid: GridConfig, style: DotStyle, theme: ThemeTokens, t = 0, data: Record<string, number> = {}, enabled = true, ix?: InteractionContext): DotInstance[] {
   const { cols, rows, pitch } = grid
-  const { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps } = style
+  const { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, gap } = style
   const dataKey = JSON.stringify(data)
   const ixKey = ix ? JSON.stringify(ix) : ''
   const field = 'field' in source ? source.field : undefined
   const layers = 'layers' in source ? source.layers : undefined
   return useMemo(() => {
     if (!enabled) return NONE
-    const g = { cols, rows, pitch }, s = { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps }
+    const g = { cols, rows, pitch }, s = { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, gap }
     const extra = ixKey ? JSON.parse(ixKey) as InteractionContext : undefined
     // a broken preset renders blank instead of taking the whole board down
     try {
@@ -58,5 +58,5 @@ export function useDotField(source: DotSource, grid: GridConfig, style: DotStyle
       // interaction frames (hover / press / focus / pointers) are transient: never cache them
       return !extra && isStatic(layers) ? cached(`${idOf(layers)}|${idOf(theme)}|${JSON.stringify([g, s, t])}|${dataKey}`, sample) : sample()
     } catch (error) { console.error('useDotField: sampling failed', error); return [] }
-  }, [field, layers, cols, rows, pitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, theme, t, dataKey, enabled, ixKey])
+  }, [field, layers, cols, rows, pitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, gap, theme, t, dataKey, enabled, ixKey])
 }
