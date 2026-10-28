@@ -252,6 +252,16 @@ const knurl = once(() => {
   return { a, b }
 })
 const knobScratch = scratch(5, LG15)
+/**
+ * The knob as a dial (`Control.map`): v follows the pointer's angle round the knob over the value arc, so a tap on
+ * the arc jumps there; outside the arc it snaps to the nearer end, and at the axle (no angle) it keeps its value.
+ */
+export function knobDial(x: number, y: number, v: number): number {
+  const dx = x - KNOB_CARD.x, dy = y - KNOB_CARD.y
+  if (Math.hypot(dx, dy) < 7) return v
+  const rel = mod(Math.atan2(dx, -dy) - KNOB_ARC.start, TAU)
+  return rel <= KNOB_ARC.sweep ? rel / KNOB_ARC.sweep : rel - KNOB_ARC.sweep < TAU - rel ? 1 : 0
+}
 /** The knob's specular raster for a light (exported for the bowtie check). */
 export function knobSpec(L: Light): Raster {
   const g = knobGeometry(), out = createRaster(LG15)
@@ -262,7 +272,7 @@ export const matKnob: WidgetPreset = {
   ...tile, id: 'mat-knob', name: 'Knob',
   defaults: { ...LIGHT_DEFAULTS, v: .72 },
   springKeys: ['v'],
-  controls: [{ key: 'v', kind: 'knob', box: [KNOB_CARD.x - 60, KNOB_CARD.y - 60, 120, 120], dial: { start: KNOB_ARC.start, sweep: KNOB_ARC.sweep }, label: 'Volume' }],
+  controls: [{ key: 'v', kind: 'knob', box: [KNOB_CARD.x - 60, KNOB_CARD.y - 60, 120, 120], map: knobDial, label: 'Volume' }],
   layers: ctx => {
     const v = Math.max(0, Math.min(1, ctx.data.v ?? .72)), g = knobGeometry(), [dif, spec, body, rim, core] = knobScratch()
     const L = matLight(ctx, { lattice: L15, torch: { height: 40, falloff: 150 }, pressed: true })
@@ -371,25 +381,40 @@ const vuColumns = once(() => {
 })
 /** The single live peak: the column with the highest peak-hold (ties → the lower band index). */
 export const livePeak = (vu: VU) => { let best = 0; for (let c = 1; c < VU_COLS; c++) if (vu.peak[c] > vu.peak[best]) best = c; return vu.peak[best] > 0 ? best : -1 }
-const grilleScratch = scratch(4)
+const grilleScratch = scratch(2)
+const plates = new Map<string, Layer>()
+const lightKey = (L: Light) => (Array.isArray(L) ? (L as readonly number[]).map(x => x.toFixed(5)).join(',') : `${(L as { at: readonly number[] }).at.map(x => x.toFixed(3)).join(',')}|${(L as { falloff?: number }).falloff ?? 0}`)
+/**
+ * The plate's shading for one light, as one multi-tone surface (body faint / mid, the brushed streak idle), cached per
+ * light (LRU of 8; M §3.2's mitigation): the sun and the tilt hub's buckets repeat, so only a moving torch re-shades.
+ */
+export function grilleSurface(L: Light): Layer {
+  const key = lightKey(L), hit = plates.get(key)
+  if (hit) { plates.delete(key); plates.set(key, hit); return hit }
+  const g = grillePlate(), [dif, spec] = grilleScratch()
+  lambert(g.n, L, { ambient: .1, into: dif })
+  anisoSpec(g.n, g.t, L, { exponent: 40, into: spec })
+  const values = createRaster(TILE, 'card', GRILLE.box), tones = new Uint8Array(TILE.cols * TILE.rows), V = values.data
+  const [x0, y0, x1, y1] = GRILLE.box, cols = TILE.cols, FAINT = 0, MID = 1, IDLE = 2
+  for (let r = y0; r <= y1; r++) for (let c = x0; c <= x1; c++) {
+    const i = r * cols + c
+    if (!g.mask.data[i]) continue
+    const b = dif.data[i] * .4 * g.ao.data[i]
+    if (b < .06) continue
+    if (spec.data[i] >= .35) { V[i] = Math.min(1, b + .25); tones[i] = IDLE } else { V[i] = b; tones[i] = b < .2 ? FAINT : MID }
+  }
+  const toneOf = (_x: number, u: number, v: number): Tone => TONE_LIST[tones[Math.round(v * (TILE.rows - 1)) * cols + Math.round(u * (cols - 1))]]
+  const out: Layer = { field: sample(values), toneOf }
+  plates.set(key, out)
+  if (plates.size > 8) plates.delete(plates.keys().next().value!)
+  return out
+}
 export const matGrille: WidgetPreset = {
   ...tile, id: 'mat-grille', name: 'Grille',
   defaults: { ...LIGHT_DEFAULTS, k: 0 },
   controls: [{ key: 'k', kind: 'button', box: [GRILLE.box[0], GRILLE.box[1], GRILLE.box[2] - GRILLE.box[0], GRILLE.box[3] - GRILLE.box[1]], label: 'Kick' }],
   layers: ctx => {
-    const g = grillePlate(), L = matLight(ctx, { torch: { height: 36, falloff: 170 } }), [dif, spec, body, streak] = grilleScratch()
-    lambert(g.n, L, { ambient: .1, into: dif })
-    anisoSpec(g.n, g.t, L, { exponent: 40, into: spec })
-    body.data.fill(0); streak.data.fill(0)
-    const [x0, y0, x1, y1] = GRILLE.box, cols = TILE.cols
-    for (let r = y0; r <= y1; r++) for (let c = x0; c <= x1; c++) {
-      const i = r * cols + c
-      if (!g.mask.data[i]) continue
-      const b = dif.data[i] * .4 * g.ao.data[i]
-      if (spec.data[i] >= .35 && b >= .06) streak.data[i] = Math.min(1, b + .25)
-      else body.data[i] = b
-    }
-    body.bounds = streak.bounds = GRILLE.box
+    const plate = grilleSurface(matLight(ctx, { torch: { height: 36, falloff: 170 } }))
     const vu = grilleVU(ctx.t + .12, (ctx.data.k ?? 0) >= .5), live = livePeak(vu), by = vuColumns()
     const groups: Record<'idle' | 'value' | 'mid' | 'active', Pt[]> = { idle: [], value: [], mid: [], active: [] }
     for (let col = 0; col < VU_COLS; col++) {
@@ -402,7 +427,7 @@ export const matGrille: WidgetPreset = {
     if (live >= 0 && vu.peak[live] === vu.lit[live]) groups.idle = groups.idle.filter(q => !(q[0] === groups.active[0][0] && q[1] === groups.active[0][1]))
     return [
       cite('BRUSHED · AO'),
-      surfaceLayer([[body, [[.06, .2, 'faint'], [.2, 2, 'mid']]], [streak, 'idle']]),
+      plate,
       layer(T.dots(groups.idle, 2.2), 'idle'), layer(T.dots(groups.value, 2.2), 'value'), layer(T.dots(groups.mid, 2.2), 'mid'),
       ...(groups.active.length ? [layer(T.dots(groups.active, 2.2), 'active')] : []),
       layer(T.text('120 BPM', 0, 134), 'mid'), layer(T.text('L+R', 143, 134, { align: 'right' }), 'faint'),
@@ -588,6 +613,6 @@ export const materialsBoard = [matLoom, matKnob, matGrille, matMarble, matTerraz
 export const materialsSources = [lightSource]
 /** The board's internals, for the checks (`scripts/materials.ts`). */
 export const materialsHooks = {
-  LOOM, LOOM_ORDER, loomAt, loomDraft, loomCloth, drawdownOf, woven, KNOB_ARC, KNOB_CARD, knobSpec, grilleHoles, grillePlate, grilleTarget, grilleVU, livePeak,
+  LOOM, LOOM_ORDER, loomAt, loomDraft, loomCloth, drawdownOf, woven, KNOB_ARC, KNOB_CARD, knobSpec, grilleHoles, grillePlate, grilleSurface, grilleTarget, grilleVU, livePeak,
   engraving, marbleLit, monthOf, chipAt, roman, PANEL, LG15, toCard15,
 }
