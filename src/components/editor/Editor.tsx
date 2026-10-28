@@ -70,8 +70,8 @@ export function Editor({ mode, onExit }: { mode: Mode; onExit?: () => void }) {
   // phone: the editor is the whole screen; the page underneath must not scroll or rubber-band
   useEffect(() => {
     if (!phone) return
-    document.documentElement.classList.add('ed-lock')
-    return () => document.documentElement.classList.remove('ed-lock')
+    document.documentElement.classList.add('ed-scroll-lock')
+    return () => document.documentElement.classList.remove('ed-scroll-lock')
   }, [phone])
 
   useEffect(() => { if (!note) return; const h = setTimeout(() => useEditor.getState().setNote(''), 4200); return () => clearTimeout(h) }, [note])

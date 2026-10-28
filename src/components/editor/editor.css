@@ -313,8 +313,8 @@
 .ed-keys dd { margin: 0; color: var(--mute) }
 
 /* ── phone (≤ 640 px): the whole screen is the editor ── */
-html.ed-lock, html.ed-lock body { overflow: hidden; overscroll-behavior: none }
-html.ed-lock .pal-dock { display: none }
+html.ed-scroll-lock, html.ed-scroll-lock body { overflow: hidden; overscroll-behavior: none }
+html.ed-scroll-lock .pal-dock { display: none }
 .ed-root.is-phone {
   --ed-hit: 44px;
   position: fixed;
