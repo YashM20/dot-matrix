@@ -40,6 +40,8 @@ export interface EditorStore {
   shortcuts: boolean
   /** Touch: SELECT mode (the phone's selection bar). A tap adds to / takes from the selection, a drag on empty canvas draws a marquee. */
   selectMode: boolean
+  /** Something was copied (this tab, another tab, an earlier visit): PASTE is offered. */
+  hasClip: boolean
   edit(fn: (d: EditorDoc) => EditorDoc, tag?: string): void
   begin(): void
   live(fn: (d: EditorDoc) => EditorDoc): void
@@ -63,6 +65,7 @@ export interface EditorStore {
   setNote(n: string): void
   setShortcuts(on: boolean): void
   setSelectMode(on: boolean): void
+  setHasClip(on: boolean): void
   /** Insert a card as a new frame, select it and bring it into view. Returns the frame id. */
   insertCard(card: StudioCard, o?: Partial<EditorFrame> & { at?: { x: number; y: number } }): string
   insertPreset(id: string): string | undefined
@@ -84,7 +87,7 @@ export const useEditor = create<EditorStore>((set, get) => ({
   brush: { size: 2, value: 1, erase: false },
   play: { t: 1, playing: false },
   preview: {},
-  note: '', shortcuts: false, selectMode: false,
+  note: '', shortcuts: false, selectMode: false, hasClip: (() => { try { return !!globalThis.localStorage?.getItem('dot480.editor.clip') } catch { return false } })(),
   edit: (fn, tag) => set(s => ({ h: commit(s.h, fn(s.h.present), tag) })),
   begin: () => { gestureBase = get().h.present },
   live: fn => set(s => ({ h: { ...s.h, present: fn(s.h.present) } })),
@@ -112,6 +115,7 @@ export const useEditor = create<EditorStore>((set, get) => ({
   setNote: note => set({ note }),
   setShortcuts: shortcuts => set({ shortcuts }),
   setSelectMode: selectMode => set({ selectMode }),
+  setHasClip: hasClip => set({ hasClip }),
   insertCard: (card, o) => {
     const { doc, frame } = addFrame(get().h.present, card, o)
     set(s => ({ h: commit(s.h, doc), sel: { frame: frame.id } }))

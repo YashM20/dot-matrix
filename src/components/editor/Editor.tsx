@@ -9,7 +9,8 @@ import { decodeShare, encodeShare, shareUrl } from '../../lib/share'
 import type { Mode } from '../../site/views'
 import { librarySave } from '../studio/doc'
 import { Canvas } from './Canvas'
-import { arrangeSel, copyEverywhere, copySel, cutSel, deleteSel, duplicateSel, groupSel, hasClip, hideSel, lockSel, nudgeSel, orderSel, paste, selectAllSel, selectParent, ungroupSel } from './actions'
+import { arrangeSel, copyEverywhere, copySel, cutSel, deleteSel, duplicateSel, groupSel, hideSel, lockSel, nudgeSel, orderSel, paste, selectAllSel, selectParent, ungroupSel } from './actions'
+import { CLIP_KEY } from './clip'
 import { frameById, groupOf, layerOf, shareable, topDown } from './doc'
 import { codeTarget, KEY_TOOL, MODE_ENTRY, paintTarget } from './input'
 import { InspectorBody, InspectorTabs } from './Inspector'
@@ -191,17 +192,15 @@ function PhoneTools() {
  * draws a marquee; two fingers still pan and zoom.
  */
 function SelBar() {
-  const sel = useEditor(s => s.sel), mode = useEditor(s => s.selectMode), doc = useEditor(s => s.h.present)
-  const [, setCopied] = useState(0)
+  const sel = useEditor(s => s.sel), mode = useEditor(s => s.selectMode), doc = useEditor(s => s.h.present), clip = useEditor(s => s.hasClip)
   const n = selCount(sel), f = frameById(doc, sel.frame), grouped = !!sel.layer && selLayers(sel).some(id => groupOf(f, id))
-  const copy = () => { copyEverywhere(); setCopied(x => x + 1) }
   return <div className="ed-selbar" role="toolbar" aria-label={`Selection: ${n} selected`}>
     <button type="button" className={mode ? 'on' : ''} aria-pressed={mode} aria-label="Select mode: taps add to the selection, a drag on empty canvas draws a marquee" onClick={() => useEditor.getState().setSelectMode(!mode)}>SELECT</button>
     <button type="button" aria-label="Select all" disabled={!doc.frames.length} onClick={selectAllSel}>ALL</button>
     <button type="button" aria-label="Duplicate the selection" disabled={!n} onClick={duplicateSel}>DUP</button>
     {grouped ? <button type="button" aria-label="Ungroup" onClick={ungroupSel}>UNGRP</button> : <button type="button" aria-label="Group the selected layers" disabled={!sel.layer} onClick={groupSel}>GROUP</button>}
-    <button type="button" aria-label="Copy the selection" disabled={!n} onClick={copy}>COPY</button>
-    <button type="button" aria-label="Paste" disabled={!hasClip()} onClick={() => paste()}>PASTE</button>
+    <button type="button" aria-label="Copy the selection" disabled={!n} onClick={copyEverywhere}>COPY</button>
+    <button type="button" aria-label="Paste" disabled={!clip} onClick={() => paste()}>PASTE</button>
     <button type="button" className="ed-danger" aria-label="Delete the selection" disabled={!n} onClick={deleteSel}>DEL</button>
   </div>
 }
@@ -344,9 +343,12 @@ function useShortcuts(phone: boolean) {
       if (e.key === '-') { used(); s.zoomAt(s.cam.z / 1.25, s.vp.w / 2, s.vp.h / 2) }
     }
     // capture: the editor's letters (T text, …) must not also reach the board's global keys (hold T = time machine)
+    // a copy in another tab of this browser offers PASTE here too
+    const onStorage = (e: StorageEvent) => { if (e.key === CLIP_KEY) useEditor.getState().setHasClip(!!e.newValue) }
+    window.addEventListener('storage', onStorage)
     window.addEventListener('keydown', onKey, true)
     for (const t of ['copy', 'cut', 'paste'] as const) document.addEventListener(t, onClip)
-    return () => { window.removeEventListener('keydown', onKey, true); for (const t of ['copy', 'cut', 'paste'] as const) document.removeEventListener(t, onClip) }
+    return () => { window.removeEventListener('storage', onStorage); window.removeEventListener('keydown', onKey, true); for (const t of ['copy', 'cut', 'paste'] as const) document.removeEventListener(t, onClip) }
   }, [phone])
 }
 

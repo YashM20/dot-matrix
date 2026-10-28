@@ -34,7 +34,7 @@ export function copySel(): string | undefined {
   const json = clipToJSON(clip)
   memClip = json
   try { kv()?.setItem(CLIP_KEY, json) } catch { /* storage full: memory still has it */ }
-  s.setNote(`copied ${what()}`)
+  s.setHasClip(true); s.setNote(`copied ${what()}`)
   return json
 }
 /** A COPY button: this browser's clipboard, and the system one when the page may write it. */
@@ -54,7 +54,6 @@ export function currentClip(systemText?: string | null): Clip | undefined {
   for (const json of [kv()?.getItem(CLIP_KEY), memClip]) { if (!json) continue; try { return clipFromJSON(json) } catch { /* stale or foreign: try the next */ } }
   return undefined
 }
-export const hasClip = () => !!(memClip || kv()?.getItem(CLIP_KEY))
 export function paste(systemText?: string | null): boolean {
   const s = st(), clip = currentClip(systemText)
   if (!clip) { s.setNote('nothing to paste: copy frames or layers first'); return false }

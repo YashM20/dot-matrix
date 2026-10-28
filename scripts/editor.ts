@@ -389,6 +389,7 @@ function e2Checks(assert: Assert) {
   const off: string[] = []
   for (const [name, run, ok] of runs) { const n = steps(); run(); const dd = st().h.present; if (steps() !== n + 1 || !ok(dd)) off.push(`${name}: ${steps() - n} steps`) }
   assert('undo: duplicate, delete, align, lock, paste, group, ungroup are one undo step each', !off.length, off.join(' | '))
+  assert('clip: a copy offers PASTE (store state, so the phone bar re-renders)', st().hasClip)
   const n0 = steps(), base = st().h.present
   st().select(framesSel([A, C])); nudgeSel(1, 0); nudgeSel(1, 0); nudgeSel(0, 1)
   assert('undo: a run of nudges of many coalesces into one step; undo puts them all back', steps() === n0 + 1 && frameById(st().h.present, C)!.x === frameById(base, C)!.x + 2 && (st().undo(), st().h.present === base))
