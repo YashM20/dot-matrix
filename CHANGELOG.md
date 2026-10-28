@@ -3,6 +3,21 @@
 All notable engineering changes to Dot/480 are recorded here, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://dot-matrix1.vercel.app, deployed from `main`), not a published package: there are no tagged or npm releases, so entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
 
+## [Unreleased] — 2026-10-28 · Foundation round: F0 engine foundation, T0–T4 layout and themes, E1–E2 editor (branch `feat/foundation`)
+Plans: `docs/living-matter/F0-foundation.md`, `docs/LAYOUT-THEME-PLAN.md`, `docs/EDITOR-PLAN.md`. Status and checks: `docs/PROGRESS.md` › Foundation run.
+### Added
+- **TILT on phones (F0.7–F0.8):** a TILT row in the TOOLS sheet asks for motion access once (iOS) and the physics board follows the phone: tip it and the PIT and INK cards fall that way; held upright they heal back onto their loop. `src/site/light.ts` (a lazy `Source`), `src/engine/light/input.ts`; vertical swipes still scroll, and Reduce Motion never starts tilt by itself.
+- **14 themes (T4a–T4b):** 7 accents × light and dark, following the system by default. Switch with the ⌘K "Theme: …" commands or the TOOLS LIGHT / DARK row. The CSS, the cards, the widget page, the editor chrome and exports all follow it; a no-flash boot script picks the theme before first paint. OG images and goldens stay `dark_signal`.
+- **The frame (T2):** one left edge and a three-step rhythm across the home page, About and the widget page; the dock moved into the top bar; a footer band with a live count of the dots drawn.
+- **Touchable hero card (T2):** drop, paste or pick an image and it becomes a live halftone on the home card. The image stays on the device; nothing is uploaded. `src/components/hero/`.
+- **Figure legends (T2):** a short legend under the widget card and the essay figures.
+- **Editor selection (E2):** multi-select and marquee, groups, locks, align and distribute, smart guides; copy, cut, paste and duplicate across tabs and through the system clipboard (Alt-drag moves a copy); a SELECT bar on phones. Docs migrate from v1 to v2.
+### Changed
+- **Faster first load (F0.11, T4b):** first-load JS 148.14 → 120.07 kB gz. First-load code imports engine modules by path instead of the `src/engine` barrel (−24.4), and the playground store, the widget registry and the home board left first load (−4.4). `scripts/site/size.ts --check` guards the IR parser staying out.
+- **Tokens (T0) and chrome (T1):** one token block (`src/tokens.css`) with a raw-literal lint; first-load CSS 16.68 → 12.54 kB gz; dotted hairlines, one glow, four states on every control, glass on raised layers only, grouped tooltips with dot keycaps; cards have a 12 px radius.
+### Removed
+- The old MAKE screens (E1): 22 files, −2,264 lines; the one editor replaced them.
+
 ## [Unreleased] — 2026-10-27 · ALGORITHMS board (branch `feat/algorithms`)
 Doc: `docs/ALGORITHMS.md`.
 ### Added
