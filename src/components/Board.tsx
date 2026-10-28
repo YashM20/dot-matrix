@@ -1,4 +1,4 @@
-import { lazy, Suspense, use, useCallback, useEffect, useId, useState, type CSSProperties } from 'react'
+import { lazy, Suspense, use, useCallback, useEffect, useId, useState } from 'react'
 import { DotWidget } from './DotWidget'
 import { useThemeTokens } from '../site/theme/useTheme'
 import { boardMeta, loadBoard, type BoardDef, type BoardId } from '../widgets/manifest'
@@ -86,8 +86,8 @@ function LoadedBoard({ id, leaving }: { id: string; leaving: boolean }) {
       <p className="board-blurb">{blurb}</p>
       {/* C4: the levels board opens HIVE in play mode (the cards stay as attract-mode previews) */}
       {board.id === 'levels' && <HiveStart theme={theme} />}
-      {/* column count is a CSS var so the responsive breakpoints in App.css can step it down (3 → 2 → 1) */}
-      <div className="board-grid" style={{ '--board-cols': board.columns } as CSSProperties}>
+      {/* intent, not columns: App.css turns the density into an auto-fill grid (DESIGN.md › Board grid) */}
+      <div className="board-grid" data-density={board.density ?? 'standard'}>
         {/* cards enter (and exit) on a diagonal stagger, each revealing its dots in Bayer order */}
         {/* sound (C5): on the instrument / scope boards the shared store drives src/audio and the cards get live analysis */}
         {AUDIO_BOARDS.has(board.id)

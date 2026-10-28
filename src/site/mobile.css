@@ -33,7 +33,7 @@ input,
 .board-all,
 .pal-grab,
 .pal-cancel,
-.intro-tools {
+.intro-short {
   display: none
 }
 
@@ -678,18 +678,26 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
     letter-spacing: .12em
   }
 
-  /* ALL stays at the strip's left edge while the groups scroll under it */
+  /* ALL leads the group strip and scrolls with it (it used to stick and cover the first group); the edge fades
+     below say there is more */
   .board-picker .board-groups .board-all {
-    position: sticky;
-    left: 0;
-    z-index: 1;
-    background: var(--bg);
-    background-clip: border-box;
-    box-shadow: inset 0 0 0 1px var(--line), 12px 0 10px -8px var(--bg);
     margin-right: var(--space-2);
     color: var(--value);
     font-weight: 600;
     cursor: pointer
+  }
+
+  /* scroll edge fades (T3, §1c #8): a strip fades out at an edge only while there is more to scroll that way.
+     A scroll-driven animation moves the two fade lengths; a strip that fits has no timeline, so no fade */
+  @supports (animation-timeline: scroll()) {
+    .board-picker .board-groups,
+    .board-picker .board-tabs {
+      --fade: var(--space-6);
+      -webkit-mask-image: linear-gradient(90deg, transparent, var(--tint) var(--fade-l), var(--tint) calc(100% - var(--fade-r)), transparent);
+      mask-image: linear-gradient(90deg, transparent, var(--tint) var(--fade-l), var(--tint) calc(100% - var(--fade-r)), transparent);
+      animation: strip-fade linear both;
+      animation-timeline: scroll(self inline)
+    }
   }
 
   /* the open board: accent ring and wash (no halo: the strip clips it) */
@@ -742,25 +750,40 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
     font-size: var(--fs-copy-14)
   }
 
+  /* the intent line is one line here (T3: intro + picker ≤ 120 px): the short sentence, the link, the close */
   .intro-line {
+    flex-wrap: nowrap;
+    align-items: center;
     gap: 0 var(--space-3);
     font-size: var(--fs-label-11)
   }
 
-  .intro-line .intro-tools {
-    display: inline
+  .intro-line .intro-long {
+    display: none
   }
 
-  /* the intent line's links and close are full-size targets (the close stays a 24 px ring to the eye) */
+  .intro-line .intro-short {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
+  }
+
+  /* the link and the close are full-size targets that overhang the line (negative margins), so the line stays
+   one text line tall; the close stays a 24 px ring to the eye */
   .intro-line a {
-    display: inline-flex;
-    align-items: center;
-    min-height: 44px
+    flex: none;
+    padding-block: var(--space-3);
+    margin-block: calc(-1 * var(--space-3))
   }
 
   .intro-line button {
+    flex: none;
     min-width: 44px;
     min-height: 44px;
+    margin-block: calc(-1 * var(--space-4));
+    margin-right: calc(-1 * var(--space-2));
     border: 10px solid transparent;
     background-clip: padding-box;
     box-shadow: inset 0 0 0 1px var(--line)
@@ -964,6 +987,44 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
   :is(.topbar-place, .topbar-search, .board-picker button, .next-board, .sheet button, .bottom a, .intro-line button):active,
   .tabbar button:active .glyph {
     transform: none
+  }
+
+  /* the edge fades follow the scroll position, not time: they are not motion, and a 0 s duration would pin them
+     to their end state */
+  .board-picker .board-groups,
+  .board-picker .board-tabs {
+    animation-duration: auto !important
+  }
+}
+
+/* the strips' edge fades (above): two registered lengths, so the scroll timeline can move them */
+@property --fade-l {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px
+}
+
+@property --fade-r {
+  syntax: '<length>';
+  inherits: false;
+  initial-value: 0px
+}
+
+@keyframes strip-fade {
+  from {
+    --fade-l: 0px;
+    --fade-r: var(--fade)
+  }
+
+  12%,
+  88% {
+    --fade-l: var(--fade);
+    --fade-r: var(--fade)
+  }
+
+  to {
+    --fade-l: var(--fade);
+    --fade-r: 0px
   }
 }
 

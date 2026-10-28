@@ -25,12 +25,12 @@ import { typeBoard } from './boards/type'
 import { scopeBoard, scopeShared } from './boards/scope'
 import { healBoard } from './boards/heal'
 import { algorithmsBoard } from './boards/algorithms'
-import { boardIds, boardManifest, resolveBoardId, resolveCardId, type BoardContents, type BoardDef, type BoardId } from './manifest'
+import { boardIds, boardManifest, resolveBoardId, resolveCardId, type BoardContents, type BoardDef, type BoardId, type BoardMeta } from './manifest'
 import { registerPresets } from './registry'
 
 /**
  * Eager registry: every board with its cards, for scripts, the playground and the worker. The app shell
- * imports `./manifest` instead (one lazy chunk per board); titles/columns come from there.
+ * imports `./manifest` instead (one lazy chunk per board); titles, columns and density come from there.
  */
 const contents = {
   henry: { items: henryBoard },
@@ -60,7 +60,7 @@ const contents = {
   heal: { items: healBoard },
   algorithms: { items: algorithmsBoard },
 } satisfies Record<BoardId, BoardContents>
-export const boards: BoardDef[] = boardManifest.map(({ id, title, columns }) => ({ id, title, columns, ...contents[id] }))
+export const boards: BoardDef[] = boardManifest.map(({ load: _load, ...meta }: BoardMeta & { load: unknown }) => ({ ...meta, ...contents[meta.id as BoardId] }))
 export { boardIds }
 export const boardById = (id: string): BoardDef | undefined => { const key = resolveBoardId(id); return boards.find(b => b.id === key) }
 
