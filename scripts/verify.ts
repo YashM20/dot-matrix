@@ -883,6 +883,13 @@ goldenKeyChecks(assert)
   await lightChecks(assert)
 }
 
+// MATERIALS) M1 (docs/living-matter/M-materials.md): relief + AO, anisotropic sheen, matcaps, weave / stitch, stone, and the
+// materials board (one accent, no activeDim, light keys, frame budgets, per-card invariants) (scripts/materials.ts)
+{
+  const { materialsChecks } = await import('./materials')
+  await materialsChecks(assert)
+}
+
 // theme (T4a): scheme × accent table, gamut / contrast / colour-blind rules, boot script ≡ store, CSP hash, generated files current (scripts/site/theme.ts)
 {
   const { themeChecks } = await import('./site/theme')
