@@ -25,6 +25,7 @@ try {
   // ── desktop ──
   {
     const page = await launch(1280, 900)
+    await page.cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__POND_PROBE__ = true' })
     await page.cdp('Page.navigate', { url: `${server.url}pond/?probe=1` })
     const ready = await page.waitFor(`!!globalThis.__pond && !!${card}?.querySelector('canvas,svg')`, 20000)
     check('life-browser: /pond/ paints pond-koi (desktop)', ready, page.logs.join('; '))
@@ -54,6 +55,7 @@ try {
   // ── touch ──
   {
     const page = await launch(375, 812)
+    await page.cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__POND_PROBE__ = true' })
     await page.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 })
     await page.cdp('Emulation.setDeviceMetricsOverride', { width: 375, height: 812, deviceScaleFactor: 2, mobile: true })
     await page.cdp('Page.navigate', { url: `${server.url}pond/?probe=1` })
@@ -62,10 +64,12 @@ try {
     await page.shot(join(out, 'pond-touch.png'))
     let [x, y, w, h] = await page.js<number[]>(rectOf)
     const y0 = await page.js<number>('scrollY')
-    await page.touch(Array.from({ length: 10 }, (_, i) => [[x + w * .5, y + h * (.85 - i * .07)]]))
+    // a long, steady swipe that starts on the card (headless Chrome has no fling, so the scroll is the finger's travel)
+    await page.touch(Array.from({ length: 24 }, (_, i) => [[x + w * .5, y + h * (.9 - i * .06)]]))
     await sleep(600)
-    const scrolled = (await page.js<number>('scrollY')) - y0
-    check('life-browser: a vertical swipe on the card scrolls ≥ 150 px and the world stays pristine', scrolled >= 150 && (await page.js('__pond.mode()')) === 'pristine', `${scrolled.toFixed(0)} px, ${await page.js('__pond.mode()')}`)
+    const scrolled = (await page.js<number>('scrollY')) - y0, room = (await page.js<number>('document.documentElement.scrollHeight - innerHeight')) - y0
+    // the pond board is one card: the page may have less than 150 px left to scroll, so the swipe must use what there is
+    check('life-browser: a vertical swipe on the card scrolls ≥ 150 px (or to the end of the page) and the world stays pristine', scrolled >= Math.min(150, room - 2) && (await page.js('__pond.mode()')) === 'pristine', `${scrolled.toFixed(0)} px of ${room.toFixed(0)} px room, ${await page.js('__pond.mode()')}`)
     await page.js(`${card}.scrollIntoView({ block: 'center' })`); await sleep(800);
     [x, y, w, h] = await page.js<number[]>(rectOf)
     await page.tap(x + w * .5, y + h * .55)

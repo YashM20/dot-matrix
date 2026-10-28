@@ -52,8 +52,10 @@ export function stateHash(a: Float32Array): string {
   for (let i = 0; i < u.length; i++) { const w = u[i]; for (let b = 0; b < 4; b++) { h ^= (w >>> (8 * b)) & 0xff; h = Math.imul(h, 0x01000193) >>> 0 } }
   return h.toString(16).padStart(8, '0')
 }
-// `?probe=1` (scripts/life-browser.ts): read-outs and a bench in the page, never in normal use
-if (typeof location !== 'undefined' && /[?&]probe=1/.test(location.search)) {
+// the browser probe (scripts/life-browser.ts) sets __POND_PROBE__ before the page loads: the app's canonical URL
+// drops unknown query params before this chunk runs, so `?probe=1` alone only works on a direct load
+const probing = (globalThis as { __POND_PROBE__?: boolean }).__POND_PROBE__ || (typeof location !== 'undefined' && /[?&]probe=1(&|$)/.test(location.search))
+if (probing) {
   (globalThis as { __pond?: unknown }).__pond = {
     mode: () => koiPond.world.mode,
     pellets: () => (koiPond.world.mode === 'pristine' ? 0 : pelletViews(koiPond, koiPond.world.live).length),

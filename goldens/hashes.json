@@ -1774,6 +1774,18 @@
     "hash": "3408f0fa",
     "dots": 1703
    }
+  },
+  "pond-koi": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "7e82b994",
+    "dots": 2275
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "2c5c874e",
+    "dots": 2293
+   }
   }
  }
 }
