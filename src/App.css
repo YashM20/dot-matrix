@@ -757,7 +757,7 @@ label b {
 .dw-editor {
   display: grid;
   grid-template-columns: 34px 1fr;
-  background: var(--shade);
+  background: var(--well);
   border: 1px solid var(--line);
   border-radius: var(--radius-ctl);
   overflow: hidden;
