@@ -866,7 +866,7 @@ algorithmsChecks(assert)
 // F0 noise slot) dmath, gradient noise, Voronoi, curl, the IR noise pack, the determinism lint (scripts/noise.ts)
 noiseChecks(assert)
 
-// editor (E1): MAKE editor document, paint encode, resize anchoring, hit tests, camera, gestures, entries, history (scripts/editor.ts)
+// editor (E1): MAKE editor document, paint encode, resize anchoring, hit tests, camera, gestures, entries, history; E2: selection sets, marquee, group resize, align / distribute, guides, groups, locks, clipboard, migration, undo per command (scripts/editor.ts)
 {
   const { editorChecks } = await import('./editor')
   editorChecks(assert)

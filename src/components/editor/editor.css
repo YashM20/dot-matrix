@@ -410,3 +410,50 @@ html.ed-lock .pal-dock { display: none }
 .make-view:has(> .ed-root.is-phone) { min-height: 100dvh }
 /* the phone editor is full-screen with its own back button and dock: the site's tab bar and footer step aside */
 .shell:has(.ed-root.is-phone) :is(.tabbar, .bottom, .topbar) { display: none }
+
+/* ── E2: many selected, marquee, smart guides, groups, locks, the phone's selection bar ── */
+.ed-sel--group { box-shadow: none; outline: 1px dashed var(--ed-sel); outline-offset: 2px }
+.ed-marquee, .ed-guide, .ed-gap { position: absolute; pointer-events: none }
+.ed-marquee { box-shadow: 0 0 0 1px color-mix(in srgb, var(--value) 55%, transparent); background: color-mix(in srgb, var(--value) 4%, transparent) }
+/* guides are the selection's colour: they only show while a selection is being dragged */
+.ed-guide { background: var(--ed-sel) }
+.ed-guide--x { width: 1px }
+.ed-guide--y { height: 1px }
+.ed-gap--x { height: 0; border-top: 1px dashed color-mix(in srgb, var(--value) 45%, transparent) }
+.ed-gap--y { width: 0; border-left: 1px dashed color-mix(in srgb, var(--value) 45%, transparent) }
+.ed-gap small { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 0 var(--space-1); background: var(--ed-bg); color: var(--label); font-size: var(--fs-tag-9); font-variant-numeric: tabular-nums; white-space: nowrap }
+.ed-flock { color: var(--mute); font-size: var(--fs-tag-9); font-style: normal; letter-spacing: .1em }
+.ed-flabel.locked { color: var(--dim) }
+.ed-lock { flex: none; width: 22px; height: 28px; padding: 0; background: none; border: 0; color: var(--line-strong); opacity: 0 }
+.ed-lock[aria-pressed="true"] { color: var(--mute); opacity: 1 }
+.ed-row:hover .ed-lock, .ed-row:active .ed-lock, .ed-row:focus-within .ed-lock { opacity: 1 }
+.ed-lock:hover, .ed-lock:focus-visible, .ed-lock:active { color: var(--value) }
+.ed-tree-group { list-style: none }
+.ed-tree-layers .ed-row--group { margin-left: var(--space-4) }
+.ed-row--group .ed-row-name b { color: var(--label) }
+.ed-row--group.on { background: var(--raised); box-shadow: inset 0 0 0 1px var(--ed-sel) }
+.ed-row--group.off .ed-row-name { opacity: .45 }
+.ed-tree-members { margin: 0; padding: 0 }
+.ed-tree-layers .ed-row--child { margin-left: var(--space-6) }
+.ed-align { display: grid; grid-template-columns: repeat(3, 1fr) }
+.ed-selbar {
+  position: absolute;
+  left: 50%;
+  bottom: calc(76px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  max-width: calc(100% - var(--space-4))
+}
+.ed-selbar button { min-width: 44px; min-height: 44px; padding: 0 var(--space-2); background: none; border: 1px solid transparent; border-radius: var(--radius-panel); color: var(--label); font-size: var(--fs-label-10); letter-spacing: .08em }
+.ed-selbar button:hover:not(:disabled), .ed-selbar button:focus-visible:not(:disabled) { border-color: var(--line); background: var(--raised) }
+.ed-selbar button:active:not(:disabled) { background: var(--wash-press) }
+.ed-selbar button.on { border-color: var(--ed-sel); background: var(--glow-wash); color: var(--value) }
+.ed-selbar .ed-danger { border-color: transparent !important }
+.is-phone .ed-note { bottom: calc(132px + env(safe-area-inset-bottom)) }
+.is-phone .ed-lock { width: 44px; height: 44px; opacity: 1 }
+.is-phone .ed-lock[aria-pressed="false"] { display: none }
