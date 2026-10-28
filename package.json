@@ -11,6 +11,7 @@
     "golden": "tsx scripts/golden.ts",
     "fidelity": "tsx scripts/fidelity.ts",
     "bench": "tsx scripts/bench.ts",
+    "shots": "tsx scripts/site/shots.ts",
     "lint": "oxlint",
     "preview": "vite preview",
     "check": "tsc -b && oxlint && pnpm verify"
