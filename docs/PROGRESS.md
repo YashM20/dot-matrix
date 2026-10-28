@@ -19,6 +19,7 @@
 - **Each worktree** has a `node_modules` junction. Remove it with `[System.IO.Directory]::Delete(path, $false)` before `git worktree remove`; a recursive delete would empty the shared `node_modules`.
 - **Heavy commands** go through `C:/Users/integrated/AppData/Local/Temp/dmdocs/heavy.mjs` (one at a time across worktrees).
 - **Queued next:** M1 materials, T5 theme picker, E3 editor, T6 type and contrast. Then L2, Q2, M2, Q3, M3, L3 and X.
+- **Queued after round 2:** `docs/POLISH-PLAN.md`, the site polish. It starts with P0 probes, then P1 (broken: the essay route, sticky header, widget-page chrome, Back with sheets), P2 (ugly) and P3 (nits). Owner decisions are in its §3.
 
 **Foundation run (2026-10-27, branch `feat/foundation`):** the shared foundation of `docs/LIVING-MATTER-PLAN.md` (F0) and `docs/LAYOUT-THEME-PLAN.md` (T0), done in two phases of two parallel agents each. Priority: F0 first, because it unblocks the L, Q and M tracks and cuts first-load JS (148.14 of 150 kB) before the tracks and the theme spend it. Then T0, which unblocks T1–T6.
 - **Phase 1:** F1-A noise (F0.1–F0.4 and the determinism lint of F0.9); F1-B pixels and budget (F0.5, F0.6, F0.10, F0.11). Merge order: B, then A, then the full suite (the F0.9 join).
