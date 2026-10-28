@@ -548,7 +548,7 @@ A theme is **scheme × accent** (docs/LAYOUT-THEME-PLAN.md §4), named `${scheme
 - **Source:** `src/site/theme/accents.ts` (generator, pure) → `npx tsx scripts/site/theme.ts --write` → `table.ts` (all roles), `dots.ts` (engine tokens), `themes.css` (CSS variables). The site runs no colour math. `scripts/site/theme.ts` checks the table (also in `pnpm verify`).
 
 ### Roles
-Components and cards read roles, never hues. Same keys in every theme. **One set of names:** the roles are the CSS custom properties of `src/tokens.css` (the table under "CSS colour roles" above); `src/tokens.css` keeps their `dark_signal` values (also the essay and legal pages, which have no theme) and `themes.css` sets them per theme. `--red` is `{colors.dotActive}` whatever hue the theme gives it: the name is kept, never aliased (`--accent`, `--primary` do not exist).
+Components and cards read roles, never hues. Same keys in every theme. **One set of names:** the roles are the CSS custom properties of `src/tokens.css` (the table under "CSS colour roles" above); `src/tokens.css` keeps their `dark_signal` values (the no-attribute fallback of every page) and `themes.css` sets them per theme. `--red` is `{colors.dotActive}` whatever hue the theme gives it: the name is kept, never aliased (`--accent`, `--primary` do not exist).
 
 | Group | Roles (CSS `--name`) |
 |---|---|
@@ -586,7 +586,8 @@ Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5
 - **Gradient rule:** `red-halo` (vite: electric `#6C3BFF` → vite `#B39AFF`) is for chrome halos only: glow, focus and live ring, swatch ring. Never use it on dots, text or lines.
 
 ### Runtime
-- `<html data-scheme data-accent>` is set before first paint by the inline boot script in `index.html` (`src/site/theme/boot.ts`, sha256 in the CSP in `vercel.json`). It also rewrites the `color-scheme` meta and the `theme-color` meta (the scheme's `bg`), which sit above it.
+- `<html data-scheme data-accent>` is set before first paint by the inline boot script in the `<head>` of every HTML entry (`index.html`, `essay.html`, `privacy.html`, `terms.html`; `src/site/theme/boot.ts`, byte-identical everywhere so the one sha256 in the CSP in `vercel.json` covers them). It also rewrites the `color-scheme` meta and the `theme-color` meta (the scheme's `bg`), which sit above it.
+- **Themed pages:** the app, the essay and the privacy and terms pages. The essay and legal pages load `themes.css` through `src/essay/essay.css`; their meta grey is the idle dot grey on dark, the theme's `mute` on paper (all text ≥ 4.5:1 in all 14 themes, checked by `scripts/site/theme.ts`). The legal pages run no bundle, so their `theme-color` stays the scheme's `bg`. Essay figures read `useThemeTokens()`; the halftoned portrait (FIG flicker), the photo cards and the torch-in-the-dark corridor stay dark insets on paper.
 - After that, `theme.ts` maintains the attributes and the metas (`theme-color` = the theme's exact `--bg`). Resolution, per field: `?scheme=` / `?accent=`, then `?theme=<scheme>_<accent>`, then localStorage `dot480:theme`, then the defaults. URL params are never persisted; `setTheme()` persists.
 - `src/index.css` imports `themes.css` right after `tokens.css`: `[data-scheme]` has the same specificity as `:root`, so the later file wins. `color-scheme` comes from `themes.css` (dark when there is no attribute).
 - `.no-transition` is on `<html>` for the frame of a switch. Cards re-sample once per switch (their tokens object changes); switching back is a cache hit.
@@ -598,7 +599,8 @@ Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5
 - **Polarity insets** (`src/site/theme/polarity.ts`): on a light page a card renders as a dark inset (`data-scheme="dark"` + the page's accent on `.dot-card`, dark tokens) when it is a photo or halftone (`group: 'photo'`), the live camera (`media: 'camera'`), or when the display skin is emissive (CRT, VFD, LED, Nixie: dark glass). Reflective skins (e-ink, flip-disc) and every other card follow the page. Nixie's neon stays orange (skin physics).
 - **Editor:** the asset thumbnails and dot icons are chrome and follow the site theme; the frames on the canvas keep their own theme (`dot480` / `deerflowMosaic`), which belongs to the artwork.
 - **Theme parity:** `pnpm golden --theme-parity` samples all 177 presets in all 14 themes and maps every dot's colour back to its tone role through `paletteOf`: the `(x, y, r, opacity, role)` hashes must equal `dark_signal`'s, so a theme only recolours. It reads and writes nothing (`goldens/hashes.json` stays `dark_signal`).
-- **Not themed yet:** the essay and legal pages (static, `dark_signal`), the X-ray overlay's guide lines (white), the skins' own stage colours (`src/engine/display/stage.ts`: VFD phosphor and LED colour do not take the accent yet).
+- **X-ray:** the guide lines are the scheme's `--tint` at a few alphas (`.xr-grid { color }`; light on dark, ink on paper); the HUD and tip use `panel`, `label`, `value`, `mute`.
+- **Not themed yet:** the skins' own stage colours (`src/engine/display/stage.ts`: VFD phosphor and LED colour do not take the accent yet).
 
 ## Known Gaps
 

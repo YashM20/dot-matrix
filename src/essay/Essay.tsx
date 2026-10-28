@@ -142,7 +142,7 @@ export function Essay() {
         <p>
           It's easier to show than to argue. The three cards below are a progress bar, a live status dot and a pair of sliders whose lower one is a live level. Flip the switch to give the sliders their own accent.
         </p>
-        <Figure id="accent" body={fig.accent} minHeight={300} caption={<>With one red your eye lands on the live state first. With two hues the board has two plots and no protagonist, and the blue slider reads like an ad. (The blue theme exists only in this figure.)</>} />
+        <Figure id="accent" body={fig.accent} minHeight={300} caption={<>With one red your eye lands on the live state first. With two hues the board has two plots and no protagonist, and the off-hue slider reads like an ad. (That second hue exists only in this figure: blue, or red when the theme's accent is blue.)</>} />
         <p>
           Scarcity is what gives red its meaning. Once every card is allowed one accent, every board is a rainbow. So the budget is per board, not per card:
           the heartbeat board below pulses in white on the card that could switch to red, because a sibling already owns it.

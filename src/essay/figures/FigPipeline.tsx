@@ -1,6 +1,7 @@
 import { useMemo, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import type { DotStyle, Field, Layer } from '../../engine/types'
 import { DotCanvas } from '../../components/DotCanvas'
+import { useThemeTokens } from '../../site/theme/useTheme'
 import { Controls, Panel, Range } from '../ui/kit'
 import { figStyle } from '../ui/style'
 
@@ -20,6 +21,7 @@ const clamp = (x: number) => Math.min(.95, Math.max(.05, x))
 
 /** Field → Grid Sampler → Renderer, with the reader's hand on the field and on the pitch. */
 export default function FigPipeline() {
+  const theme = useThemeTokens()
   const [at, setAt] = useState<[number, number]>([.62, .3])
   const [n, setN] = useState(28)
   const layers = useMemo(() => { const l: Layer[] = [{ field: blobs(at[0], at[1]), tone: 'auto' }]; return () => l }, [at])
@@ -40,8 +42,8 @@ export default function FigPipeline() {
   return (
     <>
       <div className="pair">
-        <Panel label="1 · FIELD  f(u, v) → 0..1">{surface(<DotCanvas layers={layers} grid={FINE_GRID} style={FINE} change={false} />, 'Drag the blob in the field')}</Panel>
-        <Panel label={`2 · SAMPLED ${n}×${n} · 3 · RENDERED, 5 STEPS`}>{surface(<DotCanvas layers={layers} grid={grid} style={figStyle} change={false} />, 'Drag the blob in the dots')}</Panel>
+        <Panel label="1 · FIELD  f(u, v) → 0..1">{surface(<DotCanvas theme={theme} layers={layers} grid={FINE_GRID} style={FINE} change={false} />, 'Drag the blob in the field')}</Panel>
+        <Panel label={`2 · SAMPLED ${n}×${n} · 3 · RENDERED, 5 STEPS`}>{surface(<DotCanvas theme={theme} layers={layers} grid={grid} style={figStyle} change={false} />, 'Drag the blob in the dots')}</Panel>
       </div>
       <Controls>
         <Range label="Dots per side (pitch)" name="pitch" value={n} min={10} max={60} onChange={setN} />

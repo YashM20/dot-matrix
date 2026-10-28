@@ -6,6 +6,7 @@ import { halftone, halftoneStream } from '../../engine/halftone'
 import { portrait } from '../../widgets/boards/mirror'
 import { layer, layoutFor, type WidgetContext } from '../../widgets/types'
 import { DotCanvas } from '../../components/DotCanvas'
+import { useTheme, useThemeTokens } from '../../site/theme/useTheme'
 import { Controls, Range } from '../ui/kit'
 
 /**
@@ -68,10 +69,12 @@ const SOURCES = { white: panel('white'), stbn: panel('stbn'), stream: panel('str
 export default function FigFlicker() {
   const [noise, setNoise] = useState(.06)
   const data = useMemo(() => ({ noise }), [noise])
+  // a halftoned portrait: a dark inset on a light page (it would print as a negative on paper), as on the boards
+  const { accent } = useTheme(), theme = useThemeTokens('dark')
   return (
     <>
       <div className="cards cards--3">
-        {KINDS.map(k => <div className="panel panel--dark" key={k} data-kind={k}><DotCanvas layers={SOURCES[k]} data={data} grid={GRID} style={STYLE} animated change={false} /></div>)}
+        {KINDS.map(k => <div className="panel panel--dark" key={k} data-kind={k} data-scheme="dark" data-accent={accent}><DotCanvas layers={SOURCES[k]} data={data} grid={GRID} style={STYLE} theme={theme} animated change={false} /></div>)}
       </div>
       <Controls>
         <Range label="Sensor noise" name="noise" value={noise} min={0} max={.15} step={.01} onChange={setNoise} format={v => v.toFixed(2)} />

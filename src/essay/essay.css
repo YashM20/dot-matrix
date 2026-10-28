@@ -1,15 +1,20 @@
-/* "Ditherpunk for UI": the launch essay. Tokens: src/tokens.css (DESIGN.md: one red, four greys, near-black ground). */
+/* "Ditherpunk for UI": the launch essay (and, through src/legal/legal.css, the privacy and terms pages).
+   Tokens: src/tokens.css; the theme roles per [data-scheme] × [data-accent]: src/site/theme/themes.css, right after
+   it (same specificity as its :root: the later file wins). The inline boot script in each page's <head> sets <html>'s
+   attributes before first paint (scripts/site/theme.ts --write); without it the page is dark_signal. */
 @import '../tokens.css';
+@import '../site/theme/themes.css';
 
-/* the essay's own voice: system prose face, a wider mono stack, a lighter meta grey, a fixed prose measure */
+/* the essay's own voice: system prose face, a wider mono stack, a fixed prose measure (color-scheme: themes.css) */
 :root {
-  --mute: var(--dot-idle);
   --mono: ui-monospace, 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
   --sans: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   --measure: 680px;
   --wide: 1120px;
-  color-scheme: dark;
 }
+/* a lighter meta grey on dark: the idle dot grey (>= 4.5:1 on every dark surface, scripts/site/theme.ts checks it); on
+   paper the theme's own mute reads already. Two attribute-level parts: a theme block's specificity, and later. */
+:root:not([data-scheme="light"]), [data-scheme="dark"][data-accent] { --mute: var(--dot-idle) }
 
 * { box-sizing: border-box }
 html { background: var(--bg); scroll-behavior: smooth; -webkit-text-size-adjust: 100% }

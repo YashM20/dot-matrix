@@ -1024,11 +1024,13 @@ label b {
   text-align: left
 }
 
+/* the guide lines' ink: the canvas strokes in this colour at a few alphas (light on dark, ink on paper) */
 .xr-grid {
   position: absolute;
   inset: 0;
   width: 100%;
-  height: 100%
+  height: 100%;
+  color: var(--tint)
 }
 
 .xr-hud {

@@ -5,6 +5,7 @@ import { contextEnv, IRError, irProgram, type IRProgram } from '../../engine/ir'
 import { encodeShare, shareUrl, SHARE_GRIDS } from '../../lib/share'
 import { tileStyle, type WidgetContext } from '../../widgets/types'
 import { DotCanvas } from '../../components/DotCanvas'
+import { useThemeTokens } from '../../site/theme/useTheme'
 import { Panel } from '../ui/kit'
 
 const START = `// sun: follows your pointer, rays turning
@@ -26,6 +27,7 @@ function compile(src: string): { program?: IRProgram; error?: string } {
 
 /** Field IR: edit the program, the card follows; the same source opens in MAKE · CODE. */
 export default function FigIR() {
+  const theme = useThemeTokens()
   const [src, setSrc] = useState(START)
   const compiled = useMemo(() => compile(src), [src])
   // keep drawing the last program that compiled while the source is broken
@@ -50,7 +52,7 @@ export default function FigIR() {
         <a className="ctl-link" href={href}>Open in MAKE · CODE →</a>
       </label>
       <Panel label="THE PROGRAM, SAMPLED">
-        <div className="stage stage--sq"><DotCanvas layers={layers} grid={GRID} style={tileStyle} animated controls={POINTER} onInput={ignore} change={false} /></div>
+        <div className="stage stage--sq"><DotCanvas theme={theme} layers={layers} grid={GRID} style={tileStyle} animated controls={POINTER} onInput={ignore} change={false} /></div>
       </Panel>
     </div>
   )

@@ -3,6 +3,7 @@ import type { MaskName } from '../../engine/motion'
 import { withChrome } from '../../widgets/types'
 import { platform } from '../../widgets/boards/departures'
 import { DotCanvas } from '../../components/DotCanvas'
+import { useThemeTokens } from '../../site/theme/useTheme'
 import { Choice, Controls, Panel } from '../ui/kit'
 import { registerPresets } from '../../widgets/registry'
 
@@ -13,6 +14,7 @@ const MASKS = ['bayer', 'ign', 'noise', 'diagonal', 'radial', 'curtain', 'scan']
 
 /** Enter is a mask, not a keyframe: every dot gets a threshold in 0..1 and appears when progress passes it. */
 export default function FigMasks() {
+  const theme = useThemeTokens()
   const [mask, setMask] = useState<MaskName>('bayer')
   const [run, setRun] = useState(0)
   const layers = useMemo(() => withChrome(platform), [])
@@ -21,7 +23,7 @@ export default function FigMasks() {
     <>
       <Panel label={`ENTER · MASK ${mask.toUpperCase()} · 900 MS`}>
         <div className="stage stage--card">
-          <DotCanvas key={`${mask}-${run}`} layers={layers} data={platform.defaults} grid={platform.grid} style={platform.style} animated={platform.animated} enter={{ delay: 120, mask, duration: 900 }} />
+          <DotCanvas key={`${mask}-${run}`} theme={theme} layers={layers} data={platform.defaults} grid={platform.grid} style={platform.style} animated={platform.animated} enter={{ delay: 120, mask, duration: 900 }} />
         </div>
       </Panel>
       <Controls>

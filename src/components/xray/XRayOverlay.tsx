@@ -152,11 +152,14 @@ export function XRayOverlay({ xr, preset, layers, data, grid, style, theme, anim
     const line = (x0: number, y0: number, x1: number, y1: number) => { g.moveTo(Math.round(x0) + .5, Math.round(y0) + .5); g.lineTo(Math.round(x1) + .5, Math.round(y1) + .5) }
     // card lattice: every cell when it is big enough, else every n-th; majors every 16 cells
     const step = cw >= 5 ? 1 : Math.ceil(5 / cw)
-    g.beginPath(); g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = 1
+    // the ink is the theme's --tint (`.xr-grid { color }` in App.css: white on dark, ink on paper, the card's own
+    // scheme on a dark inset); each guide is that ink at an alpha
+    const ink = getComputedStyle(canvas).color || '#fff', at = (a: number) => { g.strokeStyle = g.fillStyle = ink; g.globalAlpha = a }
+    g.beginPath(); at(.07); g.lineWidth = 1
     for (let c = 0; c <= grid.cols; c += step) line(c * cw, 0, c * cw, H)
     for (let r = 0; r <= grid.rows; r += step) line(0, r * ch, W, r * ch)
     g.stroke()
-    g.beginPath(); g.strokeStyle = 'rgba(255,255,255,.16)'
+    g.beginPath(); at(.16)
     for (let c = 0; c <= grid.cols; c += 16) line(c * cw, 0, c * cw, H)
     for (let r = 0; r <= grid.rows; r += 16) line(0, r * ch, W, r * ch)
     g.stroke()
@@ -168,7 +171,7 @@ export function XRayOverlay({ xr, preset, layers, data, grid, style, theme, anim
       const [ox, oy] = l.origin ?? [0, 0], id = `${k}|${ox},${oy}`
       if (seen.has(id)) continue
       seen.add(id)
-      g.beginPath(); g.setLineDash([2, 3]); g.strokeStyle = 'rgba(255,255,255,.22)'
+      g.beginPath(); g.setLineDash([2, 3]); at(.22)
       for (let x = ox; x <= grid.cols + 1e-6; x += k) line(x * cw, oy * ch, x * cw, H)
       for (let y = oy; y <= grid.rows + 1e-6; y += k) line(ox * cw, y * ch, W, y * ch)
       g.stroke(); g.setLineDash([])
@@ -176,15 +179,17 @@ export function XRayOverlay({ xr, preset, layers, data, grid, style, theme, anim
     // the hovered dot: crosshair + its box (a site is a circle)
     if (hover) {
       const { p } = hover, [bx, by, bw, bh] = p.box
-      g.fillStyle = 'rgba(255,255,255,.06)'
+      at(.06)
       g.fillRect(0, by * ch, W, bh * ch); g.fillRect(bx * cw, 0, bw * cw, H)
-      g.strokeStyle = 'rgba(255,255,255,.92)'; g.lineWidth = 1.25
+      at(.92); g.lineWidth = 1.25
       g.beginPath()
       if (p.kind === 'site') g.arc((bx + bw / 2) * cw, (by + bh / 2) * ch, (bw / 2) * cw + 1, 0, Math.PI * 2)
       else g.rect(bx * cw - .5, by * ch - .5, bw * cw + 1, bh * ch + 1)
       g.stroke()
     }
-  }, [box, hover, grid.cols, grid.rows, stats.t]) // eslint-disable-line react-hooks/exhaustive-deps
+    g.globalAlpha = 1
+    // `theme`: a theme switch re-inks the guides (the card's tokens object changes with it)
+  }, [box, hover, grid.cols, grid.rows, stats.t, theme]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const mode = stats.mode, w = stats.worker
   const tip = hover?.p

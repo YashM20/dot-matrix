@@ -12,7 +12,8 @@ export default function FigLight() {
   return (
     <Cards n={2}>
       <Card preset={lightTorch} />
-      <Card preset={torchDark} />
+      {/* the corridor with the lights off stays dark on paper too: a dark inset */}
+      <Card preset={torchDark} dark />
     </Cards>
   )
 }
