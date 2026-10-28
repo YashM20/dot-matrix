@@ -3,8 +3,7 @@ import { mulberry32 } from './jitter'
 import { quantize } from './quantize'
 import { coverExponent, hides, squareLike } from './cover'
 import { samplerExt, type JoinFrame } from './ext'
-import { squircleExponent } from '../renderer/shapePath'
-import { acquireDotBuffer, paletteOf, pushDot, pushExt, toneIndex, type DotBuffer } from '../buffer/dotBuffer'
+import { acquireDotBuffer, paletteOf, pushDot, toneIndex, type DotBuffer } from '../buffer/dotBuffer'
 /**
  * Canonical tone mapping — single source of truth for dot color by value.
  * Thresholds mirror DESIGN.md Dot Grey Scale:
@@ -54,11 +53,6 @@ const sinkOf = (dots: DotInstance[] | null, buf: DotBuffer | null, palette: read
   ({ dots, buf, palette, fixed: undefined, shape: style.shape, roundness: style.cornerRoundness, pitch, square: squareLike(coverExponent(style.shape, style.cornerRoundness)), joints: null })
 /** Packed join of a plain dot, and the form code of a dot drawn with the frame style (`DotBuffer.join` / `.form`). */
 const NO_JOIN = 0xFFFF, NO_FORM = 15
-/** Form code of a `shapeOf` layer's dot: its roundness snapped to `{grid.shapeSteps}` (1/8), or NO_FORM. */
-const formOf = (l: Layer | undefined, value: number, u: number, v: number): number => {
-  const r = l?.shapeOf?.(value, u, v)
-  return r === undefined ? NO_FORM : Math.round(8 * safe(r))
-}
 
 function emit(out: Sink, value: number, tone: number, x: number, y: number, seed: number, style: DotStyle, scale = 1, join = NO_JOIN, form = NO_FORM): void {
   value = shown(value, style)
@@ -70,14 +64,15 @@ function emit(out: Sink, value: number, tone: number, x: number, y: number, seed
   const opacity = style.opacityMode === 'constant' ? 1 : value
   // {grid.gap}: a square-like dot keeps gap·P of grout to its neighbour (form ≥ 4 ⇔ n ≥ 8)
   if (style.gap !== undefined && (form === NO_FORM ? out.square : form >= 4)) r = Math.min(r, (1 - style.gap) * scale * out.pitch / 2)
+  // squares channels (only once `installSquares()` has run): the join / form hooks write them
+  const ext = join !== NO_JOIN || form !== NO_FORM
   if (out.buf) {
     pushDot(out.buf, jx, jy, r, opacity, tone)
-    if (join !== NO_JOIN || form !== NO_FORM) pushExt(out.buf, out.buf.n - 1, join, form)
+    if (ext) samplerExt.push!(out.buf, out.buf.n - 1, join, form)
     return
   }
   const d: DotInstance = { x: jx, y: jy, r, opacity, color: out.fixed ?? out.palette[tone], shape: out.shape, roundness: out.roundness }
-  if (form !== NO_FORM) { d.shape = 'squircle'; d.roundness = form / 8 }
-  if (join !== NO_JOIN) { d.join = join & 0xFFF; d.joint = out.joints![join >> 12] }
+  if (ext) samplerExt.stamp!(d, join, form, out.joints)
   out.dots!.push(d)
 }
 /** The frame's joint table (created by the first join pass; a buffer frame keeps it on the buffer). */
@@ -225,13 +220,13 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
     // only the cells the group's fields can light are composited and scanned (a caption's lattice spans the card)
     const win = unionWindow(group, sub.cols, sub.rows), [wc0, wr0, wc1, wr1] = win, width = wc1 - wc0 + 1
     const { best, owner } = composite(group, sub, win), us = centres(sub.cols), vs = centres(sub.rows)
-    const J = joinPass(dots, group, best, owner, win, us, vs, null, style, k * pitch / 2, ox * pitch, oy * pitch), shaped = group.some(l => l.shapeOf)
+    const J = joinPass(dots, group, best, owner, win, us, vs, null, style, k * pitch / 2, ox * pitch, oy * pitch)
     for (let row = wr0; row <= wr1; row++) for (let col = wc0; col <= wc1; col++) {
       const j = (row - wr0) * width + (col - wc0), value = best[j]
       // a dot that quantizes to nothing is not drawn, so it must not punch a hole in the card either
       if (value <= 0 || shown(value, style) <= 0) continue
       emit(dots, value, J ? J.tone[j] : toneIndex(toneOf(group, owner[j], value, us[col], vs[row]), value), (ox + (col + .5) * k) * pitch, (oy + (row + .5) * k) * pitch, 1e6 + row * sub.cols + col, style, k,
-        J ? J.join[j] : NO_JOIN, shaped ? formOf(group[owner[j] - 1], value, us[col], vs[row]) : NO_FORM)
+        J ? J.join[j] : NO_JOIN, J ? J.form[j] : NO_FORM)
       // card cells whose centre falls inside this lattice cell
       const c0 = Math.ceil(ox + col * k - .5), c1 = Math.ceil(ox + (col + 1) * k - .5), r0 = Math.ceil(oy + row * k - .5), r1 = Math.ceil(oy + (row + 1) * k - .5)
       for (let r = Math.max(0, r0); r < Math.min(grid.rows, r1); r++) for (let c = Math.max(0, c0); c < Math.min(grid.cols, c1); c++) covered![r * grid.cols + c] = 1
@@ -244,26 +239,26 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
     const u = x / Math.max(1, grid.cols - 1), v = y / Math.max(1, grid.rows - 1), value = safe(layer.field(u, v))
     if (shown(value, style) <= 0) continue
     const key = siteKey(x, y), prev = sites.get(key)
-    if (!prev || value >= prev.value) sites.set(key, { x, y, k: factor(layer.size ?? layer.lattice), value, tone: layer.toneOf ? layer.toneOf(value, u, v) : layer.tone, form: layer.shapeOf ? formOf(layer, value, u, v) : NO_FORM })
+    if (!prev || value >= prev.value) sites.set(key, { x, y, k: factor(layer.size ?? layer.lattice), value, tone: layer.toneOf ? layer.toneOf(value, u, v) : layer.tone, form: layer.shapeOf && samplerExt.form ? samplerExt.form(layer, value, u, v) : NO_FORM })
   }
   // the card cells a site dot hides follow its drawn shape (cover.ts): n from the style, or the site's own `shapeOf` form
   let seed = 2e6
   const n = coverExponent(style.shape, style.cornerRoundness)
   for (const { x, y, k, value, tone, form } of sites.values()) {
     emit(dots, value, toneIndex(tone, value), (x + .5) * pitch, (y + .5) * pitch, seed++, style, k, NO_JOIN, form)
-    const reach = k / 2 + .25, nf = form === NO_FORM ? n : squircleExponent(form / 8)
+    const reach = k / 2 + .25, nf = form === NO_FORM ? n : coverExponent('squircle', form / 8)
     for (let r = Math.max(0, Math.ceil(y - reach)); r <= Math.min(grid.rows - 1, Math.floor(y + reach)); r++)
       for (let c = Math.max(0, Math.ceil(x - reach)); c <= Math.min(grid.cols - 1, Math.floor(x + reach)); c++)
         if (hides(c - x, r - y, reach, nf)) covered![r * grid.cols + c] = 1
   }
   const { best, owner } = composite(base, grid), background = style.opacityMode === 'constant', us = centres(grid.cols), vs = centres(grid.rows)
-  const J = joinPass(dots, base, best, owner, [0, 0, grid.cols - 1, grid.rows - 1], us, vs, covered, style, pitch / 2, 0, 0), shaped = base.some(l => l.shapeOf)
+  const J = joinPass(dots, base, best, owner, [0, 0, grid.cols - 1, grid.rows - 1], us, vs, covered, style, pitch / 2, 0, 0)
   for (let row = 0; row < grid.rows; row++) for (let col = 0; col < grid.cols; col++) {
     const i = row * grid.cols + col, value = best[i]
     // empty cells are invisible unless the style draws every dot (constant opacity); 0 always shows as 0
     if (covered?.[i] || ((value <= 0 || shown(value, style) <= 0) && !background)) continue
     emit(dots, value, J ? J.tone[i] : toneIndex(toneOf(base, owner[i], value, us[col], vs[row]), value), (col + .5) * pitch, (row + .5) * pitch, i, style, 1,
-      J ? J.join[i] : NO_JOIN, shaped && owner[i] ? formOf(base[owner[i] - 1], value, us[col], vs[row]) : NO_FORM)
+      J ? J.join[i] : NO_JOIN, J ? J.form[i] : NO_FORM)
   }
 }
 
@@ -271,5 +266,5 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
 function joinPass(out: Sink, layers: Layer[], best: Float32Array, owner: Uint32Array, win: [number, number, number, number], us: Float64Array, vs: Float64Array,
   covered: Uint8Array | null, style: DotStyle, h: number, ox: number, oy: number): JoinFrame | null {
   const pass = samplerExt.join
-  return pass && layers.some(l => l.join) ? pass({ layers, best, owner, win, us, vs, covered, style, h, ox, oy, joints: jointsOf(out) }) : null
+  return pass && layers.some(l => l.join || l.shapeOf) ? pass({ layers, best, owner, win, us, vs, covered, style, h, ox, oy, joints: jointsOf(out) }) : null
 }

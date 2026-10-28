@@ -14,34 +14,32 @@ let renderSeq = 0
  * opacity sit in one `<g>`. ~30 bytes per dot instead of ~400.
  */
 export function renderSVG(dots: DotInstance[], width: number, height: number): string {
+  // joined squares (src/engine/squares): their own renderer (defs per mask, seam bleed, group opacity)
+  if (shapeExt.svg && dots.some(d => d.join !== undefined)) return shapeExt.svg(dots, width, height)
   const prefix = `d${(renderSeq++).toString(36)}-`
-  const shapes = new Map<string, string>(), groups = new Map<string, string[]>(), joinedGroups = new Set<string>(), join = shapeExt.svg
-  const q = (n: number) => Math.round(n * 20) / 20
+  const shapes = new Map<string, string>(), groups = new Map<string, string[]>()
   let defs = ''
   for (const d of dots) {
     if (!(d.r > 0) || !(d.opacity > 0)) continue
-    const r = q(d.r), g = join && d.join !== undefined ? d.joint : undefined
-    // joined cells (`shapeExt.svg`): one def per mask × size × joint, ≤ 47 masks per level
-    const shapeKey = g ? `j|${d.join}|${r}|${q(g.hx)}|${q(g.hy)}|${q(g.ro)}|${q(g.ri)}|${q(g.seam)}` : `${d.shape}|${d.shape === 'squircle' ? d.roundness ?? 0 : ''}|${r}`
+    const r = Math.round(d.r * 20) / 20
+    const shapeKey = `${d.shape}|${d.shape === 'squircle' ? d.roundness ?? 0 : ''}|${r}`
     let id = shapes.get(shapeKey)
     if (!id) {
       id = prefix + shapes.size.toString(36)
       shapes.set(shapeKey, id)
-      const path = g ? join!(r, d.join!, g) : d.shape === 'square' ? squarePath(0, 0, r) : d.shape === 'squircle' ? squirclePath(0, 0, r, d.roundness) : circlePath(0, 0, r)
+      const path = d.shape === 'square' ? squarePath(0, 0, r) : d.shape === 'squircle' ? squirclePath(0, 0, r, d.roundness) : circlePath(0, 0, r)
       defs += `<path id="${id}" d="${round2(path)}"/>`
     }
     const opacity = Math.round(Math.min(1, d.opacity) * 1000) / 1000
     const key = `${d.color}|${opacity}`
     let list = groups.get(key)
     if (!list) groups.set(key, (list = []))
-    if (g) joinedGroups.add(key)
     list.push(`<use href="#${id}" x="${r2(d.x)}" y="${r2(d.y)}"/>`)
   }
   let body = ''
   for (const [key, list] of groups) {
     const cut = key.lastIndexOf('|'), color = key.slice(0, cut), opacity = key.slice(cut + 1)
-    // a group with joined cells fades as a whole (`opacity`), so the seam bleed between cells never blends twice
-    body += `<g fill="${escape(color)}"${opacity === '1' ? '' : ` ${joinedGroups.has(key) ? '' : 'fill-'}opacity="${opacity}"`}>${list.join('')}</g>`
+    body += `<g fill="${escape(color)}"${opacity === '1' ? '' : ` fill-opacity="${opacity}"`}>${list.join('')}</g>`
   }
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">${defs ? `<defs>${defs}</defs>` : ''}${body}</svg>`
 }

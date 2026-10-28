@@ -22,6 +22,11 @@ import { ControlOverlay } from './ControlOverlay'
 import { DisplaySurface } from './skins/DisplaySurface'
 // card touch policy (pan-y drag pads, engaged state): every interactive surface needs it, the essay's figures too
 import './touch.css'
+import { shapeExt } from '../engine/renderer/ext'
+
+// the squares WebGL join hook (src/engine/squares/gl.ts): its own chunk, fetched by DotGL on the first join frame.
+// Set here because this is main-thread code: the sample worker's build inlines every import() it can reach.
+shapeExt.glLoad = () => import('../engine/squares/gl').then(m => { shapeExt.gl = m.glJoin })
 
 /** `webgl` (P5): the canvas surface drawn through the shared WebGL2 context; picked for cards with GPU layers when WebGL2 works. */
 export type RenderMode = 'svg' | 'canvas' | 'webgl'

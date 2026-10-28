@@ -2,30 +2,29 @@
  * Squares (docs/living-matter/Q-squares.md): spaced and joined square cells. A lazy engine module, not re-exported
  * from the engine barrel: the first-load core only carries inert hook points (`samplerExt`, `shapeExt`), and a board
  * that draws joined squares calls `installSquares()` (idempotent) at the top of its chunk. Static imports here are
- * only what sampling and the Canvas / SVG paths need (the worker carries them too); the GL hook loads on demand.
+ * only what sampling and the Canvas / SVG paths need (the worker carries them too). The WebGL hook is a separate
+ * chunk that DotGL fetches on the main thread (`shapeExt.glLoad`, set in src/components/DotCanvas.tsx).
  */
 import { samplerExt } from '../sampler/ext'
 import { shapeExt } from '../renderer/ext'
 import { joinPass } from './sampler'
-import { canvasJoin } from './canvas'
-import { svgJoin } from './svg'
+import { bufferDot, canvasJoin } from './canvas'
+import { svgDots } from './svg'
+import { attach, decode, formOf, grow, push, stamp } from './buffer'
 
 export { ALL_FULL, CONVEX, DIAG, EDGE_H, EDGE_V, FULL, INNER, LUT4, NO_JOIN, joinMasks, maskOf, quadrant, quadrantCode } from './mask'
 export { inkRadius, insideJoined, joinArea, joinOutline, superellipseArea, type OutlineSink } from './geometry'
 export { defaultOuter, joinPass } from './sampler'
-export { svgBleed, svgJoin } from './svg'
-export { canvasJoin } from './canvas'
+export { svgBleed, svgDots, svgJoin } from './svg'
+export { bufferDot, canvasJoin } from './canvas'
 
-let gl: Promise<unknown> | undefined
-/** Install the join pass and the Canvas / SVG / (lazy) WebGL join renderers. Idempotent. */
+/** Install the join pass, the per-dot form and buffer channels, and the Canvas / SVG join renderers. Idempotent. */
 export function installSquares(): void {
-  samplerExt.join = joinPass
-  shapeExt.canvas = canvasJoin
-  shapeExt.svg = svgJoin
-  shapeExt.glLoad ??= () => (gl ??= import('./gl').then(m => { shapeExt.gl = m.glJoin }, () => { gl = undefined }))
+  Object.assign(samplerExt, { join: joinPass, form: formOf, stamp, push, attach, grow, decode })
+  Object.assign(shapeExt, { canvas: canvasJoin, bufferDot, svg: svgDots })
 }
-/** Remove every squares hook (checks: the missing-hook path draws plain dots). */
+/** Remove the squares hooks (checks: the missing-hook path draws plain dots). The GL hook stays if it loaded. */
 export function uninstallSquares(): void {
-  delete samplerExt.join; delete shapeExt.canvas; delete shapeExt.svg; delete shapeExt.gl; delete shapeExt.glLoad
-  gl = undefined
+  for (const k of ['join', 'form', 'stamp', 'push', 'attach', 'grow', 'decode'] as const) delete samplerExt[k]
+  for (const k of ['canvas', 'bufferDot', 'svg'] as const) delete shapeExt[k]
 }

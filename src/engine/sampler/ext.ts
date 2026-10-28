@@ -1,4 +1,5 @@
-import type { DotStyle, JointGeom, Layer } from '../types'
+import type { DotBuffer } from '../buffer/dotBuffer'
+import type { DotInstance, DotStyle, JointGeom, Layer } from '../types'
 
 /**
  * One composite the join pass reads (the base, or one lattice group): the max composite over the inclusive cell
@@ -11,15 +12,25 @@ export interface JoinArgs {
   us: Float64Array; vs: Float64Array; covered: Uint8Array | null; style: DotStyle
   h: number; ox: number; oy: number; joints: JointGeom[]
 }
-/** Per window cell: the packed join value (bits 0–11 mask, 12–15 joint slot; 0xFFFF = a plain dot) and the tone index it resolved. */
-export interface JoinFrame { join: Uint16Array; tone: Uint8Array }
-export type JoinEmit = (a: JoinArgs) => JoinFrame | null
+/** Per window cell: the packed join value (bits 0–11 mask, 12–15 joint slot; 0xFFFF = a plain dot), the tone index it resolved, and the form code (15 = frame style). */
+export interface JoinFrame { join: Uint16Array; tone: Uint8Array; form: Uint8Array }
 
 /**
- * Optional sampler extensions, installed by lazy engine modules (`installSquares()`, src/engine/squares); all
- * absent by default, so a layer with `join` samples as plain dots until the squares chunk has loaded.
+ * Optional sampler and DotBuffer extensions, installed by lazy engine modules (`installSquares()`, src/engine/squares);
+ * all absent by default, so a layer with `join` / `shapeOf` samples as plain dots until the squares chunk has loaded.
+ * A packed join other than 0xFFFF or a form code other than 15 only exists once they are installed.
  */
 export const samplerExt: {
-  /** Join pass for one composite that has join layers: keys → masks (src/engine/squares/sampler.ts). */
-  join?: JoinEmit
+  /** Join / form pass for one composite that has join or shapeOf layers: keys → masks, and per-dot form codes. */
+  join?: (a: JoinArgs) => JoinFrame
+  /** Form code of a `shapeOf` site dot: its roundness step 0–8, or 15 (the frame style). */
+  form?: (layer: Layer, value: number, u: number, v: number) => number
+  /** Stamp a packed join / form code onto an array-path dot (`joints`: the frame's joint table). */
+  stamp?: (d: DotInstance, join: number, form: number, joints: JointGeom[] | null) => void
+  /** Write a buffer dot's packed join / form code (allocating `ext` on first use). */
+  push?: (buf: DotBuffer, i: number, join: number, form: number) => void
+  /** Attach a transferred `ext` store to a buffer; regrow `ext` to the buffer's new capacity keeping `n` dots; decode it into `toDots` output. */
+  attach?: (buf: DotBuffer, ext: ArrayBuffer) => void
+  grow?: (buf: DotBuffer, n: number) => void
+  decode?: (buf: DotBuffer, out: DotInstance[]) => void
 } = {}

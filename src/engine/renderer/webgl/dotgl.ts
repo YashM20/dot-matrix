@@ -10,7 +10,7 @@
 import type { DotInstance, ThemeTokens } from '../../types'
 import { colorFor, toneColor } from '../../sampler/gridSampler'
 import { squircleExponent } from '../shapePath'
-import { shapeExt } from '../ext'
+import { shapeExt, type GLJoinApi } from '../ext'
 import type { GPUPass } from './passes'
 import { DOTS_VS, DOT_FS, EVAL_VS, LATTICE_VS, PALETTE_SIZE, evalFS } from './shaders'
 
@@ -315,7 +315,8 @@ export class DotGL {
       instances += m
     }
     if (joined.length) {
-      if (!shapeExt.gl!.draw({ gl, program: (k, vs, fs) => this.program(k, vs, fs), loc: (p, name) => this.loc(p as Prog, name), common: (p, a) => common(p as Prog, a), color: c => palette.of(c) }, joined)) { gl.disable(gl.SCISSOR_TEST); return false }
+      // the hook reads gl / program / loc off this DotGL, and gets the frame's uniforms setter and palette
+      if (!shapeExt.gl!.draw(this as unknown as GLJoinApi, joined, (p, a) => common(p as Prog, a), palette)) { gl.disable(gl.SCISSOR_TEST); return false }
       instances += joined.length
     }
     gl.bindVertexArray(null)

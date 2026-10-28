@@ -1,5 +1,5 @@
 /**
- * WebGL2 hook (`shapeExt.gl`, Q-squares §2.4.3), loaded on demand by `shapeExt.glLoad` so the GLSL ships in neither
+ * WebGL2 hook (`shapeExt.gl`, Q-squares §2.4.3), loaded on demand through `shapeExt.glLoad` (set in DotCanvas) so the GLSL ships in neither
  * the worker nor the board chunk. One instanced draw for a frame's joined cells, 28 B per instance:
  * `aDot` (x, y, s, opacity), `aShape` (palette index, joint slot), `aJoin` (the 12-bit mask, exact in f32).
  *
@@ -92,7 +92,7 @@ const states = new WeakMap<WebGL2RenderingContext, State>()
 const joint = new Float32Array(15 * 4), jointO = new Float32Array(15 * 4)
 
 /** Draw `dots` (all with `join` and `joint`) after the classic dots. False: more than 15 joints or a shader failure. */
-function draw(api: GLJoinApi, dots: DotInstance[]): boolean {
+function draw(api: GLJoinApi, dots: DotInstance[], common: (p: { p: WebGLProgram }, alpha: number) => void, palette: { of(c: string): number }): boolean {
   const { gl } = api, prog = api.program('squares-join', JOIN_VS, JOIN_FS)
   if (!prog) return false
   let st = states.get(gl)
@@ -120,10 +120,10 @@ function draw(api: GLJoinApi, dots: DotInstance[]): boolean {
     }
     const b = m * 7
     data[b] = d.x; data[b + 1] = d.y; data[b + 2] = d.r; data[b + 3] = Math.min(1, d.opacity)
-    data[b + 4] = api.color(d.color); data[b + 5] = slot; data[b + 6] = d.join!
+    data[b + 4] = palette.of(d.color); data[b + 5] = slot; data[b + 6] = d.join!
     m++
   }
-  api.common(prog, 1)
+  common(prog, 1)
   gl.uniform4fv(api.loc(prog, 'uJoint'), joint)
   gl.uniform4fv(api.loc(prog, 'uJointO'), jointO)
   gl.bindVertexArray(st.vao)
