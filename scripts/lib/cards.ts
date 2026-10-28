@@ -54,11 +54,21 @@ export function renderCardFull(p: WidgetPreset, { px, t, silhouette = false, sin
   const pad = p.bleed ? 0 : PAD
   const card = new Raster(w + pad * 2, h + pad * 2, theme.bg)
   card.rect(0, 0, card.w, card.h, silhouette ? '#000000' : theme.surface, 14, '#26292d')
-  const n = squircleExponent(p.style.cornerRoundness ?? 0)
+  const n = squircleExponent(p.style.cornerRoundness ?? 0), joined = new Map<string, Float32Array>()
   for (const d of dots) if (visible(d)) {
-    const shape = d.shape === 'circle' ? 2 : d.shape === 'square' ? 40 : n
-    card.dot(pad + d.x * k, pad + d.y * k, d.r * k, shape, silhouette ? '#ffffff' : d.color, silhouette ? 1 : d.opacity)
+    const color = silhouette ? '#ffffff' : d.color, alpha = silhouette ? 1 : d.opacity
+    // joined cells (squares Q1): coverage per (colour, opacity), blended once per group like a Canvas fill
+    if (d.join !== undefined && d.joint) {
+      const key = `${color}|${alpha}`, g = d.joint
+      let cov = joined.get(key)
+      if (!cov) joined.set(key, (cov = new Float32Array(card.w * card.h)))
+      card.coverJoined(cov, pad + d.x * k, pad + d.y * k, d.r * k, d.join, { hx: g.hx * k, hy: g.hy * k, ro: g.ro, ri: g.ri * k, seam: g.seam * k })
+      continue
+    }
+    const shape = d.shape === 'circle' ? 2 : d.shape === 'square' ? 40 : d.shape === 'squircle' && d.roundness !== undefined ? squircleExponent(d.roundness) : n
+    card.dot(pad + d.x * k, pad + d.y * k, d.r * k, shape, color, alpha)
   }
+  for (const [key, cov] of joined) { const cut = key.lastIndexOf('|'); card.blendCoverage(cov, key.slice(0, cut), +key.slice(cut + 1)) }
   return { raster: card, dots, map: (x, y) => [pad + x * k, pad + y * k] }
 }
 export const renderCard = (p: WidgetPreset, o: RenderOptions): Raster => renderCardFull(p, o).raster
