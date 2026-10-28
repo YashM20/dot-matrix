@@ -320,3 +320,10 @@ Add the assertions now as **reported** checks, listed in one array of known-fail
 5. **MAKE hides the site footer at every width:** yes [recommended].
 6. **Unknown paths:** a toast and `replaceState('/')` [recommended], or a not-found band. Also `/about` as an alias of `?about` [recommended].
 7. **The cut list:** approve, reject or amend each of C1–C14 (§1.6).
+
+**Owner answers (2026-10-28).** The polish tasks wait until round 2 is done; don't start them yet.
+- 1: open (no answer yet).
+- 2: the recommended placement.
+- 3: **hide on scroll down, show on scroll up** (not always pinned).
+- 4, 5, 6: as recommended.
+- 7: **all of C1–C14 approved** as proposed.
