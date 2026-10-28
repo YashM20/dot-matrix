@@ -5,6 +5,21 @@
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
 ## Status board (updated 2026-10-27)
+**Round 2 (paused 2026-10-28, branch `feat/round2`, based on main `dbe4716` = PR #9):**
+- **Merged:**
+  - the cleanup: changelog, the barrel rule in AGENTS.md, CI lint and theme checks, the ledger at 120.07 kB gz, the F0 doc, dead code removed, FigSim on the light hub;
+  - the bytecode comment fix.
+- **Paused agents.** Their work sits in `.claude/worktrees/agent-<id>/`, each on branch `worktree-agent-<id>`, uncommitted unless noted. Resume an agent by messaging it, or restart the task from its worktree:
+  - `a4d32da9cf1f84efe` **T3 grids and cards:** 8 files uncommitted.
+  - `ace78a5bc0a435d5d` **Q1 squares core:** 27 files uncommitted.
+  - `af9cbabad1272df9b` **L1 pond:** 3 files uncommitted.
+  - `a783e320f85eb261a` **Essay, legal and X-ray theming:** 1 commit.
+  - `a5e23cfdbf2632857` **VFD/LED skins take the accent:** 7 files uncommitted.
+  - `aed029a7339e33128` **`scripts/site/shots.ts` screenshot tool:** 1 commit; its verification run was cut off.
+- **Each worktree** has a `node_modules` junction. Remove it with `[System.IO.Directory]::Delete(path, $false)` before `git worktree remove`; a recursive delete would empty the shared `node_modules`.
+- **Heavy commands** go through `C:/Users/integrated/AppData/Local/Temp/dmdocs/heavy.mjs` (one at a time across worktrees).
+- **Queued next:** M1 materials, T5 theme picker, E3 editor, T6 type and contrast. Then L2, Q2, M2, Q3, M3, L3 and X.
+
 **Foundation run (2026-10-27, branch `feat/foundation`):** the shared foundation of `docs/LIVING-MATTER-PLAN.md` (F0) and `docs/LAYOUT-THEME-PLAN.md` (T0), done in two phases of two parallel agents each. Priority: F0 first, because it unblocks the L, Q and M tracks and cuts first-load JS (148.14 of 150 kB) before the tracks and the theme spend it. Then T0, which unblocks T1–T6.
 - **Phase 1:** F1-A noise (F0.1–F0.4 and the determinism lint of F0.9); F1-B pixels and budget (F0.5, F0.6, F0.10, F0.11). Merge order: B, then A, then the full suite (the F0.9 join).
 - **Phase 2:** F2-C light hub (F0.7, F0.8, which needs `datan2` from phase 1); F2-D T0 tokens and cleanup. Then the full suite again.
