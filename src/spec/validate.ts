@@ -7,6 +7,7 @@
  */
 import { iconPaths } from '../engine/fields/iconSDF'
 import { IRError, parse, validate as validateIR } from '../engine/ir'
+import '../engine/noise/ir' // IR noise pack: spec IR may call noise() fbm() turb() voronoi(); don't rely on build.ts loading it first
 import { LAYOUT_GENERATORS, type LayoutGenerator } from '../widgets/types'
 import { BASE64, BYTES_PER_SAMPLE, base64Bytes, fromBase64 } from './codec'
 import { GENERATOR_PARAMS, ICON_OPTS, RING_OPTS, type ParamType } from './generators'

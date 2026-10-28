@@ -140,6 +140,12 @@ export const releases: Release[] = [
 ]
 
 export const upcoming: Upcoming[] = [
+  { phase: 'F0', title: 'Tilt your phone', status: 'in progress', text: 'Tap TILT in TOOLS and the physics cards follow your phone: tip it and the dots in the pit and the ink fall that way, hold it upright and they settle back. Scrolling still works.' },
+  { phase: 'T4', title: 'Fourteen themes', status: 'in progress', text: 'Seven accent colours, each in light and dark, following your system. Switch from ⌘K (type "Theme:") or the LIGHT / DARK row in TOOLS.' },
+  { phase: 'T2', title: 'A calmer frame', status: 'in progress', text: 'One left edge and an even rhythm on every page, the dock in the top bar, and a footer band that counts the dots being drawn, live.' },
+  { phase: 'T2 HERO', title: 'Your photo in dots', status: 'in progress', text: 'Drop, paste or pick an image on the home card and it turns into a live halftone. It stays on your device; nothing is uploaded. Figures get short legends too.' },
+  { phase: 'E2', title: 'Select many in the editor', status: 'in progress', text: 'Select several layers or drag a box around them, then group, lock, align and distribute with smart guides. Copy, cut and paste work across tabs; on a phone a SELECT bar does the same.' },
+  { phase: 'F0 LOAD', title: 'Faster first load', status: 'in progress', text: 'The first visit downloads less: 120 kB of code, down from 148 kB.' },
   { phase: 'U5', title: 'Everything for power users', status: 'next', text: 'A ? sheet with every shortcut and link option, and a pro mode that opens every panel.' },
   { phase: 'S1', title: 'A page for every card', status: 'planned', text: 'Each card gets its own short link (/widget/<id>/) and page, with copy as PNG, SVG or HTML, share and embed.' },
   { phase: 'C1', title: 'A million dots', status: 'planned', text: 'Fields evaluated on the GPU with WebGPU: a full-screen field that follows the cursor, and a zoom from one card into a million dots.' },

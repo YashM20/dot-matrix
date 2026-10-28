@@ -43,6 +43,10 @@ jobs:
       - name: Check
         run: pnpm check
 
+      # every stylesheet under src/ uses tokens from src/tokens.css; no raw colour/spacing/type/radius/duration literals
+      - name: CSS token lint
+        run: pnpm exec tsx scripts/site/css-tokens.ts
+
       # also writes dist/og/*.png and dist/<board>/index.html (vite.config.ts → scripts/site/postbuild.ts);
       # SITE_URL (repo variable, e.g. your Vercel production URL) makes og:image / og:url absolute
       - name: Build
@@ -53,6 +57,12 @@ jobs:
       # first-load JS ≤ 150 kB gz (docs/WEB-PLAN.md §1)
       - name: Bundle budget
         run: pnpm exec tsx scripts/site/size.ts --check
+
+      # `pnpm check` (verify → themeChecks) already ran the theme checks, but before the build: with no dist/ it
+      # skips the "dist/index.html kept the boot script byte for byte" check (the CSP hash in vercel.json).
+      # Re-run after the build so that one is gated too.
+      - name: Theme checks on the build
+        run: pnpm exec tsx scripts/site/theme.ts --check
 
       - name: Upload site
         uses: actions/upload-artifact@v4

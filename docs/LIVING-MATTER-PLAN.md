@@ -309,8 +309,8 @@ Owner gates: clusters ruling before L1.3; activeDim before L1.8 / M1.6; WebGPU b
 | `src/App.tsx` | L4 only |
 | Registry files (`manifest.ts`, `widgets/index.ts`, `blurbs.ts`, `meta.ts`, `ids.json`, `catalog.ts`), `goldens/hashes.json`, PROGRESS, README, CHANGELOG, `src/changelog.ts` | integration-queue commits only |
 
-### First-load ledger (budget 150 kB gz; 148.14 used on 2026-10-27)
-Measured rows carry the number `scripts/site/size.ts` printed (gzip -9, kB = 1024 B); the others are still estimates.
+### First-load ledger (budget 150 kB gz; 148.14 used on 2026-10-27, **120.07** on 2026-10-28)
+Measured rows carry the number `scripts/site/size.ts` printed (gzip -9, kB = 1024 B); the others are still estimates. **The tracks budget against the measured 120.07 kB gz** (the foundation round merged, full suite green, 2026-10-28): the planned rows below start from it.
 
 | Change | Delta (kB gz) | Running |
 |---|---|---|
@@ -318,11 +318,14 @@ Measured rows carry the number `scripts/site/size.ts` printed (gzip -9, kB = 102
 | F0.5 / F0.6 square cover (`cover.ts`: `hides` incl. rotation, `coverExponent`) | +0.20 (measured) | 148.34 |
 | F0.10 fps plumbing (`src/widgets/fps.ts`, `DotWidget`) | +0.02 (measured) | 148.37 (measured) |
 | F0.11 cut: first-load modules import engine modules directly, not the `src/engine` barrel; `gpuIR` split out of `passes.ts` | −24.38 (measured; row was ≤ −1.0) | 123.99 (measured) |
-| F0 IR registry hook (F1-A, measured at merge) | ≈ +0.05 | ≈124.0 |
-| Q1 hook points (+0.4 with the array-path fallback) | +0.6 | ≈124.6 |
-| Q2 / Q3 | +0.3 / +0.1 | ≈125.0 |
-| 4 new board manifest rows (pond, squares, materials, workshop) | ≈ +0.25 | ≈125.3 |
-| X1 | ≤ +0.5 | ≈125.8 |
+| F0 IR registry hook (F1-A): the zero-byte fallback (the pack fills the core's existing tables at run time; only `emit.ts` gained a one-line branch) | +0.03 (measured; row was +0.05) | 124.02 |
+| T4b themes wired: the unused playground store went; the widget registry and the home board left first load | −4.4 (measured) | 119.62 |
+| T2 frame and rhythm | +0.29 (measured) | 119.91 |
+| the rest of the round (T0, T1, T4a, F0.7–F0.8, E2, the home fix) and the rounding of the rows above, net | +0.16 (the measured remainder) | **120.07 (measured, the new baseline)** |
+| Q1 hook points (+0.4 with the array-path fallback) | +0.6 | ≈120.7 |
+| Q2 / Q3 | +0.3 / +0.1 | ≈121.1 |
+| 4 new board manifest rows (pond, squares, materials, workshop) | ≈ +0.25 | ≈121.3 |
+| X1 | ≤ +0.5 | ≈121.8 |
 
 **Sample worker chunk** (`sampleWorker-*.js`, `size.ts --worker`; not first load, but fetched by every page that animates a card): 153.55 at c619dae → 153.65 after F0.5–F0.11 (+0.10, the cover code; the cut does not touch the worker). Its rows: F0 noise/light additions (measured at merge); L/M boards that stay main-thread should keep their modules out of the worker's registry path (F0 §7 R13).
 

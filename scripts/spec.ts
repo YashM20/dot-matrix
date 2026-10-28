@@ -14,17 +14,15 @@ import { encodeSamples } from '../src/spec/codec'
 import { EASES, GROUPS, MASKS, THEME_COLORS, TONES, CONTROL_KINDS, GENERATOR_PARAMS, exportPreset, loadSpec, migrateSpec, presetToSpec, specToPreset, validateSpec, type CardSpec } from '../src/spec'
 import { irBoard } from '../src/widgets/boards/ir'
 import { TILE, layoutFor, tileStyle, type WidgetPreset } from '../src/widgets/types'
-import type { DotInstance } from '../src/engine/types'
 import { freezeWallClock } from './lib/freeze'
 import { sampleCard, uniquePresets } from './lib/cards'
+import { hashDots } from './lib/goldenKey'
 import { schemaValidator } from './lib/jsonschema'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const SCHEMA_FILE = 'schema/card.v1.schema.json', EXAMPLES = 'examples/specs'
-const fnv1a = (str: string, h = 0x811c9dc5) => { for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0 } return h >>> 0 }
-const q = (d: DotInstance) => `${d.x.toFixed(2)},${d.y.toFixed(2)},${d.r.toFixed(3)},${d.opacity.toFixed(3)},${d.color}`
-/** The golden hash of `scripts/golden.ts` (sorted quantized dot list, FNV-1a 32). */
-export const goldenHash = (p: WidgetPreset, t: number) => { let h = 0x811c9dc5; for (const k of sampleCard(p, t).map(q).sort()) h = fnv1a(k + ';', h); return h.toString(16).padStart(8, '0') }
+/** The golden hash of `scripts/golden.ts` (the shared golden key: sorted `dotKey` list, FNV-1a 32). */
+export const goldenHash = (p: WidgetPreset, t: number) => hashDots(sampleCard(p, t), p.style).hash
 const goldenTimes = (p: WidgetPreset) => (p.animated ? [0, 1.3] : [0])
 
 // ── fixtures ──

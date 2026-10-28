@@ -1,6 +1,7 @@
 # F0: the shared foundation (noise, IR builtins, light hub, golden key, square cover, card fps, first-load cut)
 
-> Status: **planned** (2026-10-27). This is phase F0 of `docs/LIVING-MATTER-PLAN.md` §2 and §6, steps **F0.1–F0.11**. It must land before L1, Q1 and M1, which then run in parallel. The one exception is F0.11 (the first-load cut): it may land after L1/Q1/M1 start, but it must merge before Q1.4.
+> Status: **done** (2026-10-28; planned 2026-10-27). All of F0.1–F0.11 merged on `feat/foundation` with the full suite green; what landed and the measured numbers are in `docs/PROGRESS.md` › Foundation run, the first-load rows in `docs/LIVING-MATTER-PLAN.md` §6. Where the build differed from this plan, the text below says so (§0 bytecode, §2.4 and §4 the IR hook, §2.7 the gravity dead zone, F0.8 the probe card).
+> This is phase F0 of `docs/LIVING-MATTER-PLAN.md` §2 and §6, steps **F0.1–F0.11**. It must land before L1, Q1 and M1, which then run in parallel. The one exception is F0.11 (the first-load cut): it may land after L1/Q1/M1 start, but it must merge before Q1.4.
 > Phase names across the plan set: **F0**, **L1–L4**, **Q1–Q3**, **M1–M3**, and the advanced phases **XL**, **XQ**, **XM**, **X1** (pond depth) and **X2** (GPU).
 > F0 owns the shared contracts that the track docs (`L-pond.md`, `Q-squares.md`, `M-materials.md`, `X-advanced.md`) depend on by name: the golden key channels (§2.5), the light/tilt keys (§2.7), the square cover rule (§2.6), per-card fps (§2.8), `dmath` and the determinism lint (§2.1, F0.9), and the first-load ledger (§4, F0.11).
 > Every claim below was checked against the code on `docs/living-matter-plan` (ef4dcd8). Cites are `file:line`.
@@ -33,7 +34,7 @@ All of it lands with no card pixel change. First-load growth from F0 itself stay
 - **First load is 148.14 of 150 kB gz** (`scripts/site/size.ts` on the current `dist/`, 20 files).
   - The **IR core is already in first load.** `src/engine/renderer/webgl/passes.ts:12` imports `emitGLSL, parse, irProgram`, so `ast.ts`, `parse.ts`, `compile.ts`, `runtime.ts` and `emit.ts` sit inside the `DotCanvas-*.js` chunk (95.6 kB gz). Strings like `sdRing`, `ir_sdBox` and the parser's "is a function; call it as" message are in that chunk.
   - **`src/engine/math.ts` is its own first-load chunk** (`math-*.js`, 0.32 kB). Anything added to it that a lazy chunk uses ships in first load.
-  - `bytecode.ts` and `reference.ts` are **not** in first load (their strings are absent from the chunk).
+  - `bytecode.ts` and `reference.ts` are **not** in first load (their strings are absent from the chunk). *As built:* `bytecode.ts`'s module-level tables (`OP`, the `FNS` snapshot of the core builtins, `BIN`, `OPERANDS`, filled by top-level loops that the bundler can't drop) ship in every chunk that carries the IR core, and would ride into first load with it (the comment at `bytecode.ts:29-31` assumes the core is there). On the 2026-10-28 build that is the lazy `ir-*` chunk and the sample worker: the opcode table is in those two files and in no first-load file. Either way, the pack check lives inside `compileBytecode` (a name test at call time, `bytecode.ts:78-80`), and nothing pack-specific runs at module level.
 - **The sample worker carries the eager registry.** `src/workers/protocol.ts:10` imports `widgetPresets` from `../widgets` (the eager registry, `src/widgets/index.ts`), so every board module ships in `sampleWorker-*.js` (algo-stipple code is already in it). That chunk is 152.7 kB gz (gzip -9 of `dist/assets/sampleWorker-KW34ihYj.js`). It is not first load, but it is downloaded by every page that animates a card. Physics cards already refuse to run there (`src/widgets/boards/physics.ts:36-37`).
 - **Animated cards run at a fixed rate today.** `DotCanvas` subscribes with `fps: fps ?? (motion ? 12 : 30)` (`src/components/DotCanvas.tsx:398`), and `DotWidget` only ever passes `fps={camera.status === 'live' ? 30 : undefined}` (`src/components/DotWidget.tsx:125,128`). `WidgetPreset` has no `fps` field (`src/widgets/types.ts:14-46`). `DESIGN.md:271` (`{interaction.focusSpeed}`) assumes 12 fps.
 - **Card data is numbers only.** `pick()` keeps the keys a card declares in `defaults` (`src/data/useLiveData.ts:24-30`), and `Board.tsx:82` passes only that subset. There is no object-valued `data.light`.
@@ -232,6 +233,8 @@ Prototype cost at 144² (normalised): l2 2.4 ms, l1 1.55 ms, linf 2.3 ms.
 
 `curl`/`datan2`/`dexp`/`dpow` are not IR builtins: curl drives CPU agents, and the IR already has `atan`, `exp` and `pow`.
 
+**As built: the zero-byte fallback (§4).** The core gained no registry: `src/engine/noise/ir.ts` fills the core's existing tables at import (`IR_FUNCTIONS` for name and arity, `irMath`, the reference's `IR_REF` oracle table, `GLSL_HELPERS.noise`); `IR_RESERVED` snapshots the core names at load, so pack names stay unreserved; `emit.ts` gained the one-line helper branch. Measured +0.03 kB gz first load. The registry design below was the plan's first choice and is kept for the record.
+
 **Why a pack, and the exact hook (all first-load bytes).** The IR core is in first load (§0), so the implementations and the GLSL prelude live in `src/engine/noise/ir.ts` + `glsl.ts`, and register themselves on import. The core only grows by a registry:
 - **`ast.ts`:**
   - `export const IR_EXTRA: Record<string, number> = {}`;
@@ -250,7 +253,7 @@ Prototype cost at 144² (normalised): l2 2.4 ms, l1 1.55 ms, linf 2.3 ms.
   - in GLSL `call`'s default branch: `if (own(IR_EXTRA, fn)) { helpers.add('noise'); return \`ir_${fn}(${a.join(', ')})\` }`.
   - The JS dialect already emits `M.${fn}` (`:58`), and the closure backend reads `M[n.fn]` (`compile.ts:37`, arity ≤ 4 covered).
 - **`runtime.ts`:** the `irMath` type becomes `Record<CoreFn | 'mod' | 'pow', …> & Partial<Record<PackFn, …>>`. The pack assigns `irMath.noise = (x, y, s) => noise2(x, y, s)` and so on.
-- **`bytecode.ts`** (not first load): in `compileBytecode`'s `call` (`:72`), when `FNS.indexOf(fn) < 0`, throw `IRError(\`${fn}() is not in device bytecode v${BC_VERSION}\`)`. `FNS` is fixed at load (`:28`), so the opcodes 0x20–0x33 don't shift, and 0x34–0x37 stay free below `JZ` 0x38 (`:19-26`).
+- **`bytecode.ts`** (its module-level tables ship wherever the IR core does, §0; the check below runs only inside `compileBytecode`): in `compileBytecode`'s `call` (`:72`), when `FNS.indexOf(fn) < 0`, throw `IRError(\`${fn}() is not in device bytecode v${BC_VERSION}\`)`. `FNS` is fixed at load (`:28`), so the opcodes 0x20–0x33 don't shift, and 0x34–0x37 stay free below `JZ` 0x38 (`:19-26`).
 - **`reference.ts`** (not first load): the `fn` switch's fall-through calls `IR_REF[name]` (registered by the pack: the plain JS library function). The library is the oracle; the backends are just wrappers.
 
 **Who imports the pack.** Every lazy chunk that compiles user or spec IR:
@@ -361,7 +364,7 @@ There are two layers. The engine stays pure; the app owns the sensors.
 | `lightSrc` | 0, 1 | 0 = the clock's sun, 1 = tilt (az/el valid) | material and pond cards, via `sceneLight()` |
 | `lightAz` | 0..63 | azimuth bucket | via `sceneLight()` / `lightOfBucket` |
 | `lightEl` | 0..7 | elevation band over 10°..80° | via `sceneLight()` / `lightOfBucket` |
-| `gx`, `gy` | unit vector, 1/32 steps | gravity direction in screen space, ≈ (0, 1) when the phone is held upright; exactly (0, 1) inside the 8° dead zone | physics (`world.ts:154-158`), mercury, sand |
+| `gx`, `gy` | unit vector, 1/32 steps | gravity direction in screen space, ≈ (0, 1) when the phone is held upright; exactly (0, 1) inside the 8° roll dead zone (below) | physics (`world.ts:154-158`), mercury, sand |
 | `tx`, `ty` | −1..1, 1/16 steps | tilt offset from the rest pose: (0, 0) at rest, ±1 at the clamped maximum | material and pond cards (parallax, sloshing, highlights). **They never derive tilt from `gx`/`gy`.** |
 | `tilt` | 0..4 | `TiltState` code | UI hints only |
 
@@ -414,7 +417,8 @@ export function createLightHub(env: LightEnv): { sample(beta: number, gamma: num
 2. **Low-pass** the vector with a one-pole filter, α = 1 − exp(−dt/τ), τ = 150 ms. Filtering the vector, not the Euler angles, avoids the ±180° wrap of β.
 3. **Physics gravity (`gx`, `gy`): publish direction only.**
    - If |g| < 0.3 (the phone is flat), publish (0, 1).
-   - Otherwise take ĝ = g/|g|. If ĝ·(0,1) > cos 8°, publish exactly (0, 1).
+   - Otherwise, with n the 3-D unit gravity (before it is projected onto the screen): if n_y > 0 and |n_x| < sin 8° (gravity within 8° of the screen's vertical plane, i.e. a roll under 8°), publish exactly (0, 1). Else publish the screen direction ĝ = (n_x, n_y)/|(n_x, n_y)|.
+   - *As built, roll, not on-screen angle.* The plan first said ĝ·(0,1) > cos 8° (the angle from vertical on screen), but its own F0.7 test, a held phone at β 25°, γ 5°, puts gravity at atan(sin 5°·cos 25° / sin 25°) ≈ 10.6° off vertical on screen, outside that cone. At a shallow β a small γ becomes a large on-screen angle, so the dead zone is measured on the roll instead (`ROLL_DEAD = sin 8°` against n_x, `src/site/light.ts:32-33, 128`): that case has n_x = sin 5°·cos 25° ≈ 0.079 < sin 8° ≈ 0.139.
    - Otherwise quantise to 1/32.
    - Why: `world.ts:154-158` forks a live world whenever |gx − 0| or |gy − 1| > .02, and a live world only heals after it has been quiet. A phone held normally at β ≈ 30–60° must read as "no input", or physics cards would never return to their pristine loop.
 4. **Tilt offset (`tx`, `ty`).**
@@ -442,7 +446,7 @@ export function createLightHub(env: LightEnv): { sample(beta: number, gamma: num
 - **Remembering a grant.** `sessionStorage['dot480:tilt'] = 'granted'`. After a reload on iOS, the next `click` anywhere re-calls `requestTilt()` once; it resolves without a prompt. The listener is passive, on `click` (never `pointerdown`/`touchmove`), so it can't claim a touch.
 - **Scroll-first** (UX-PLAN §10): tilt is not a touch. It must never engage a card, set `pointers` or block scroll. The browser probe asserts this.
 - **Existing listeners.**
-  - `FigSim.tsx:15-19` listens without permission (it gets nothing on iOS). Migrating it to the hub is optional in F0.8; the essay is lazy.
+  - `FigSim.tsx:15-19` listened without permission (it got nothing on iOS). *Done in the round-2 cleanup:* it subscribes to `lightSource` and leans the hourglass by `tx`; the essay is lazy.
   - `media/useCamera.ts:70-82` stays as it is: it is statically imported by `DotWidget` (first load), and importing the hub there would pull the hub into first load.
 
 ### 2.8 Per-card frame rate (`WidgetPreset.fps`)
@@ -590,7 +594,7 @@ L, Q and M append their `life`, `squares` and `materials` blocks after F0's, in 
   - `light: physics board lists lightSource in both the manifest load() and the eager registry` (verify, light slot).
   - The probe:
     - `TILT shown only with the stub; tap → granted`;
-    - `γ = 40° → sand card's world goes live (window.dot480Live hook / snapshot gx ≠ 0)`;
+    - `γ = 40° → the PIT card's world goes live (snapshot gx ≠ 0)`. *As built:* the physics board has no sand card; the probe uses `phys-pit` (`scripts/light-browser.ts`);
     - `γ back to 0 → gx 0, gy 1 within 300 ms`;
     - `vertical swipe on a physics card still scrolls the page with tilt live (UX §10)`;
     - `no React re-render storm: ≤ 15 board renders/s while sweeping γ` (count via a dev-only render counter or the emit counter).
@@ -682,7 +686,7 @@ Per-call costs come from the prototype at 144² unless noted, normalised to load
 - **First load: delta gates against the ledger** (`docs/LIVING-MATTER-PLAN.md` §6, table in F0.11), never absolute numbers.
   - `noise/*` is never imported by first-load code: it is outside the engine barrel, and `light/input.ts` is imported by path.
   - The F0 row (+0.05 kB gz) covers the IR registry hook (§2.4) and `cover.ts` (§2.6), measured before and after with `size.ts --check`.
-  - If the hook measures more, fall back to the zero-byte variant: the pack mutates the existing `IR_FUNCTIONS`/`irMath` objects at run time, and only `emit.ts` gains the 1-line helper branch.
+  - If the hook measures more, fall back to the zero-byte variant: the pack mutates the existing `IR_FUNCTIONS`/`irMath` objects at run time, and only `emit.ts` gains the 1-line helper branch. *As built:* F0 shipped the zero-byte variant, measured +0.03 kB gz.
   - F0.10's row is +0.02 kB gz. F0.11's row is ≤ −1.0 kB gz.
 - **Worker chunk:** reported per PR by `size.ts --worker` (F0.11), with its own ledger row. F0 adds only `src/site/light.ts` to it (through the physics board).
 - **Goldens:** none move. F0.5 adds `style` to every entry once, with all hashes unchanged. Each step that can touch pixels re-runs `pnpm golden --check`: F0.3 (cinema), F0.5 (key), F0.6 (sampler), F0.8 (physics defaults), F0.10 (fps) and F0.11 (the cut).
