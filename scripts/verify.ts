@@ -938,5 +938,11 @@ goldenKeyChecks(assert)
 // SHARE S0) widget uids, metadata and URLs (docs/SHARE-PLAN.md §3, scripts/widgets/checks.ts)
 shareChecks(assert)
 
+// squares (Q1): join masks, joined-cell geometry, the join pass and hook points, DotBuffer channels, Canvas / SVG joins, the squares board (scripts/squares.ts)
+{
+  const { squaresChecks } = await import('./squares')
+  squaresChecks(assert)
+}
+
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')
