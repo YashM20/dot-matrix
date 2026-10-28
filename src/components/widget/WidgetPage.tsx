@@ -69,7 +69,7 @@ export function WidgetPage({ route, onOpen, onBoard }: WidgetPageProps) {
 }
 
 function Loaded({ w, preset, items, meta, onOpen, onBoard }: Loaded & Omit<WidgetPageProps, 'route'>) {
-  const stage = useRef<HTMLDivElement>(null)
+  const stage = useRef<HTMLElement>(null)
   const [more, setMore] = useState(false)
   const xray = useXR(s => s.global || s.on.size > 0)
   const i = items.findIndex(p => p.id === preset.id), prev = items[(i - 1 + items.length) % items.length], next = items[(i + 1) % items.length]
@@ -147,9 +147,11 @@ function Loaded({ w, preset, items, meta, onOpen, onBoard }: Loaded & Omit<Widge
       </Pill>
     </PillBar>
     <div className="wp-main">
-      <div className="wp-stage" ref={stage} style={{ maxWidth: preset.grid.cols * pitch + 32 }}>
+      <figure className="wp-stage" ref={stage} style={{ maxWidth: preset.grid.cols * pitch + 32 }}>
         <DotWidget type={preset.id} preset={preset} density={pitch} />
-      </div>
+        {/* the figure legend (docs/LAYOUT-THEME-PLAN.md §1c #14) */}
+        <figcaption className="fig-cap"><b>FIG {String(i + 1).padStart(2, '0')}</b>{w.slug} · {meta.grid.cols} × {meta.grid.rows} dots · {meta.grid.pitch} px · {meta.renderer.toUpperCase()}</figcaption>
+      </figure>
       <aside className="wp-rail">
         <p className="wp-eyebrow">{boardLabel(w.board)} · {String(i + 1).padStart(2, '0')}</p>
         <h1 id="wp-title">{name}</h1>

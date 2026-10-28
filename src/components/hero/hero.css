@@ -1,0 +1,93 @@
+/* T2: the touchable hero and the live number band (src/components/hero/). Loaded with their lazy chunk; the
+   slot sizes and the caption style are first-load CSS in App.css (.hero, .fig-cap, .live-band). */
+.hero-fig {
+  margin: 0
+}
+
+/* wide (the hero floats beside the header): the legend sits right of the card, on its bottom edge */
+@media (min-width: 1280px) {
+  .hero-fig {
+    display: grid;
+    grid-template-columns: 216px minmax(0, 1fr);
+    grid-template-rows: 1fr auto;
+    column-gap: var(--gap-group)
+  }
+
+  .hero-card {
+    grid-row: 1 / 3
+  }
+
+  .hero-fig > .fig-cap {
+    align-self: end
+  }
+
+  .hero-fig > :not(.hero-card) {
+    grid-column: 2
+  }
+}
+
+/* scroll first (docs/UX-PLAN.md §10): a tap opens the picker on lift, a swipe scrolls the page */
+.hero-card {
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none
+}
+
+.hero-card:hover {
+  border-color: var(--line-hover)
+}
+
+.hero-card:active {
+  border-color: var(--line-hover);
+  background-color: color-mix(in srgb, var(--surface), var(--tint) 3%)
+}
+
+.hero-card:focus-visible {
+  outline-offset: 2px
+}
+
+/* a file held over the card: the accent edge (the one glow: an active drop target) */
+.hero-card[data-engaged] {
+  border-color: var(--red);
+  box-shadow: var(--glow)
+}
+
+.hero-note {
+  margin: var(--space-1) 0 0;
+  color: var(--mute);
+  font: 400 var(--fs-label-12)/1.5 var(--mono)
+}
+
+.hero-note button {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--value);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer
+}
+
+.hero-note button:hover,
+.hero-note button:focus-visible,
+.hero-note button:active {
+  color: var(--value);
+  text-decoration-thickness: 2px
+}
+
+/* the live number: native size (the box is as wide as its grid), a few dots tall */
+.live-number {
+  max-width: 100%
+}
+
+.live-label {
+  margin: 0
+}
+
+.live-label .live i {
+  margin-right: var(--space-1);
+  vertical-align: middle
+}

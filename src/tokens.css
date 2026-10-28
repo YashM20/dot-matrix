@@ -59,8 +59,11 @@
   --spacing-cardPad: var(--space-4);
 
   /* ── layout ── */
-  --frame-max: 90rem;                   /* 1440 px: the board grid and the frame */
+  --frame-max: 90rem;                   /* 1440 px: the frame, padding included */
   --frame-pad: clamp(16px, 3vw, 40px);
+  /* the frame's content edge, from the viewport edge: for fixed and full-bleed things (editor bar, widget pills) */
+  --frame-inset: calc(max(0px, (100vw - var(--frame-max)) / 2) + var(--frame-pad));
+  --card-max: min(62svh, 520px);        /* a board never shows a card taller than ~62% of the screen */
   --measure: 68ch;                      /* body text */
   --measure-head: 42rem;                /* headings */
   --hair-dot: 1px;                      /* dotted hairline: a 1 px dot ... */
@@ -126,6 +129,13 @@
   --glass: color-mix(in srgb, var(--raised) 84%, transparent);
   --glass-blur: blur(16px) saturate(140%);
   --shadow-raised: 0 4px 40px 8px color-mix(in srgb, var(--shade) 40%, transparent), 0 0 0 .5px color-mix(in srgb, var(--shade) 80%, transparent), inset 0 .5px 0 color-mix(in srgb, var(--tint) 25%, transparent);
+}
+
+/* phones: the same rhythm, one step down (a group stays 12 px; before actions 24) */
+@media (max-width: 760px) {
+  :root {
+    --gap-action: var(--space-5)
+  }
 }
 
 /* phones: a smaller, cheaper blur and a more opaque glass */

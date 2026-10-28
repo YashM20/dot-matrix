@@ -34,7 +34,8 @@
   align-items: center;
   gap: var(--space-2);
   height: 46px;
-  padding: 0 var(--space-2);
+  /* the bar's tools start on the frame's left edge (T2); the canvas under it stays full-bleed */
+  padding: 0 max(var(--space-2), var(--frame-inset));
   background: var(--ed-panel);
   border-bottom: 1px solid var(--line);
   flex: none
@@ -209,7 +210,7 @@
 .ed-sel--layer { box-shadow: 0 0 0 1px var(--ed-sel); outline: 1px dashed color-mix(in srgb, var(--red) 35%, transparent); outline-offset: 3px }
 .ed-sel--draft { box-shadow: 0 0 0 1px color-mix(in srgb, var(--value) 60%, transparent); background: color-mix(in srgb, var(--value) 3%, transparent) }
 .ed-sel--draft small { position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); color: var(--label); font-size: var(--fs-tag-9) }
-.ed-handle { position: absolute; width: 9px; height: 9px; margin: calc(var(--space-1) * -1) 0 0 calc(var(--space-1) * -1); border-radius: 50%; background: var(--ed-bg); box-shadow: 0 0 0 1.5px var(--red); pointer-events: auto }
+.ed-handle { position: absolute; width: 9px; height: 9px; margin: calc(-1 * var(--space-1)) 0 0 calc(-1 * var(--space-1)); border-radius: 50%; background: var(--ed-bg); box-shadow: 0 0 0 1.5px var(--red); pointer-events: auto }
 .ed-handle::after { content: ''; position: absolute; left: 50%; top: 50%; width: var(--ed-hit); height: var(--ed-hit); transform: translate(-50%, -50%); border-radius: 50% }
 .ed-handle.nw { left: 0; top: 0; cursor: nwse-resize }
 .ed-handle.ne { left: 100%; top: 0; cursor: nesw-resize }
@@ -303,7 +304,7 @@
 
 /* ── shortcuts dialog ── */
 .ed-modal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: var(--space-4); background: color-mix(in srgb, var(--shade) 62%, transparent) }
-.ed-modal-card { width: min(620px, 100%); max-height: 86dvh; overflow: auto; padding: var(--space-4) calc(var(--space-1) * 5); background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-panel); box-shadow: var(--shadow-raised) }
+.ed-modal-card { width: min(620px, 100%); max-height: 86dvh; overflow: auto; padding: var(--space-4) var(--space-5); background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-panel); box-shadow: var(--shadow-raised) }
 .ed-modal-card h2 { display: flex; justify-content: space-between; align-items: center; margin: 0 0 var(--space-2); font: 600 var(--fs-label-10) var(--mono); letter-spacing: .16em; color: var(--value) }
 .ed-modal-card h3 { margin: var(--space-4) 0 var(--space-2); font: 600 var(--fs-tag-9) var(--mono); letter-spacing: .14em; color: var(--label) }
 .ed-keys { display: grid; gap: 0; margin: 0 }
