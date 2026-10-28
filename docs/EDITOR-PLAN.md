@@ -166,7 +166,7 @@ the playground panels. What stays, because the editor (or the site) uses it:
   `studio/adapter.ts` (card spec v1 / v0) and `studio/playback.ts` (timeline, states). Every frame and every
   CODE layer compiles through `compileCard` in `studio/doc.ts`; the editor has no compile entry of its own;
 - `dwitter/`: `CodeEditor`, `EXAMPLES`, `program.ts` and `gallery.ts` (with `scripts/dots.ts`, `scripts/c10.ts`);
-- `playground/store.ts`: only its `theme`, which `Board.tsx` reads;
+- (`playground/store.ts`, whose only use was the boards' `theme`, went in T4b: the site theme is `src/site/theme/`);
 - `lib/share`, `dotifyUpload`, and the export module (`recordClip`, `plotterSVG`, `stillPNG`).
 
 `dwitter/DotsRepl.tsx` (the old CODE screen) is unused too, but still in the tree, with `RemixGraph.tsx`, which
