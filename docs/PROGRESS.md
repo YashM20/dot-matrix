@@ -81,6 +81,19 @@
   - `webgl.ts`, `site/mobile.ts`, `light-browser.ts`, `editor-browser.ts`, `site/layout.ts`, `theme-boot.ts`.
   - The mobile and layout probes need a running `vite preview` (ports 4317 and 4318).
 - **Next, waiting for the owner:** Q1 squares, L1 pond and M1 materials (all unblocked by F0); T3 grids; T5 picker; E3.
+- [~] **M1 materials** (branch `worktree-agent-add27cae4d261d877`, docs/living-matter/M-materials.md §3). Not merged; it waits for its integration-queue slot (L1 → Q1 → M1).
+  - Engine (M1.1–M1.5): `src/engine/matter/` (not in the engine barrel) holds relief + AO (blur and horizon), `rake` and `cardMask`; Kajiya–Kay `anisoSpec` with four tangent builders; `matcap` (64² LUT, rotate / tilt, `studioMatcap` ≡ `metal().env` bit for bit); weave drawdowns, drafts and `weaveRelief`; stitches and `contour`; `marble` and `terrazzo`.
+  - Board `/materials/` in ENGINE, lazy, `sources: [lightSource]`: `mat-loom` (fps 40), `mat-knob`, `mat-grille`, `mat-marble`, `mat-terrazzo`. Every card declares the light-hub keys. `matLight` is a thin wrapper over `sceneLight`.
+  - **`activeDim`: no owner ruling**, so the plan's default applies: it is not part of the one accent and no M card uses it. The Loom's trail is size contrast inside its one `active` layer. This is checked.
+  - Engine addition: `Control.dial` (`knob`: absolute angle over an arc), so a tap on the knob's arc sets v. It is opt-in, and existing knobs are unchanged.
+  - `scripts/materials.ts` (wired into verify after `lightChecks`): 51 checks. See the deviations and the bench below.
+  - Deviations from the M doc:
+    - The tie-up toggle redraws the whole panel, because card data carries no edit time, so "only picks ≥ the current one" can't be pure.
+    - The marble hero is on lattice 2, not 2.5: smooth `00:00` is 58 dots wide, so 2.5 would overrun the card.
+    - The year is drawn as void letters rather than a lit groove, because 1-dot grooves don't read.
+    - The matcap LUT agreement is ≥ 97% at 64² (99.3% at 256²), not the plan's 99% at 64².
+    - Terrazzo: a tap selects a day through an `xy` control and stays until the next tap, instead of a 3 s preview, which would need time state.
+  - Still to do: M1.12 `scripts/materials-browser.ts` (the knob touch probe); the `pnpm snap` taste pass beside the reference cards; the CHANGELOG / `src/changelog.ts` rows at integration.
 
 **Resume here (2026-10-27):** branch `feat/native-editor-share` merges six parallel tracks on top of `main` (3a1775c, UX U0–U5 slice):
 - **Phone shell** (`src/site/mobile.css`, `BoardSheet`, `Sheet`, `useSwipeDown`, `site/layer.ts`): bottom tab bar EXPLORE / MAKE / ABOUT / TOOLS, sticky title bar that opens a boards sheet, thumb strips, swipe-down sheets, touch palette (no autofocus, boards first), 16 px fields on coarse pointers, safe areas, short-landscape layout, installable PWA (`public/manifest.webmanifest`, dot-field icons).

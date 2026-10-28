@@ -25,6 +25,7 @@ import { typeBoard } from './boards/type'
 import { scopeBoard, scopeShared } from './boards/scope'
 import { healBoard } from './boards/heal'
 import { algorithmsBoard } from './boards/algorithms'
+import { materialsBoard, materialsSources } from './boards/materials'
 import { boardIds, boardManifest, resolveBoardId, resolveCardId, type BoardContents, type BoardDef, type BoardId } from './manifest'
 import { registerPresets } from './registry'
 
@@ -59,6 +60,7 @@ const contents = {
   scope: { items: scopeBoard, shared: scopeShared },
   heal: { items: healBoard },
   algorithms: { items: algorithmsBoard },
+  materials: { items: materialsBoard, sources: materialsSources },
 } satisfies Record<BoardId, BoardContents>
 export const boards: BoardDef[] = boardManifest.map(({ id, title, columns }) => ({ id, title, columns, ...contents[id] }))
 export { boardIds }

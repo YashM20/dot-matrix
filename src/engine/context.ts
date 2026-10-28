@@ -41,6 +41,12 @@ export interface Control {
   /** `crank`: wrap around inside [min, max) instead of stopping at the ends. */
   wrap?: boolean
   /**
+   * `knob`: absolute dial instead of drag travel. The value follows the pointer's angle round the box centre over
+   * an arc from `start` (radians, clockwise from 12 o'clock) through `sweep`, so a tap on the scale jumps there
+   * (the slider rule on touch). Outside the arc it snaps to the nearer end.
+   */
+  dial?: { start: number; sweep: number }
+  /**
    * Touch: `surface` = the box is a drag surface in every direction (physics toys you push around), not a
    * tap target. Grabbed like a drag control: a horizontal drag or a press-and-hold (`interaction/gesture.ts`).
    */

@@ -180,4 +180,9 @@ export const catalog: readonly CatalogRow[] = [
   ['algo-attractor', 'sf08q412', 'algorithms'],
   ['algo-collapse', 'rxjd4n9w', 'algorithms'],
   ['algo-aggregate', '5ryd1vqh', 'algorithms'],
+  ['mat-loom', '0t47ey59', 'materials'],
+  ['mat-knob', '9942tpm6', 'materials'],
+  ['mat-grille', 'k6h584d5', 'materials'],
+  ['mat-marble', 'cbmez41j', 'materials'],
+  ['mat-terrazzo', '5wg1q77w', 'materials'],
 ]

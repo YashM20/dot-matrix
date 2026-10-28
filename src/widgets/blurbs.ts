@@ -31,6 +31,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   scope: 'The instrument seen as signal: oscilloscope, spectrum and your microphone.',
   heal: 'Scratch the dots with your cursor and watch them grow back.',
   algorithms: 'Four niche algorithms drawing in dots: Voronoi stippling, a strange attractor, wave function collapse and frost growth.',
+  materials: 'Stone, glass, metal, cloth and thread made of dots: relief, one light and a moving part.',
 }
 
 export const groupBlurbs: Record<BoardGroupId, string> = {

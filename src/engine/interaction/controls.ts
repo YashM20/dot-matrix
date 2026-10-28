@@ -125,6 +125,14 @@ export function dragValue(c: Control, start: DragStart, pointer: CellPoint): Con
       return { [c.key]: settle(c, min + clamp(f) * span) }
     }
     case 'knob': {
+      if (c.dial) {
+        const m = centre(c), dx = pointer.x - m.x, dy = pointer.y - m.y
+        // at the axle the angle is meaningless: keep the value
+        if (Math.hypot(dx, dy) < Math.min(w, h) * .06) return { [c.key]: settle(c, start.value) }
+        const sweep = Math.max(1e-9, Math.min(TAU, c.dial.sweep)), rel = (((Math.atan2(dx, -dy) - c.dial.start) % TAU) + TAU) % TAU
+        const f = rel <= sweep ? rel / sweep : rel - sweep < TAU - rel ? 1 : 0
+        return { [c.key]: settle(c, min + f * span) }
+      }
       const travel = (pointer.x - start.x) - (pointer.y - start.y)
       return { [c.key]: settle(c, start.value + travel / (2 * Math.max(w, h, 1)) * span) }
     }

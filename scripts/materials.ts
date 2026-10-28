@@ -17,10 +17,20 @@
  */
 import { readFileSync } from 'node:fs'
 import { ambientOcclusion, anisoSpec, bakeMatcap, basket, cardMask, contour, DRAFTS, fromDraft, heightFromField, herringbone, marble, matcap, matcapMatrix, plain, rake, satin, stitch, stitchHoles, studioMatcap, tangentLinear, tangentRadial, tangentSDF, terrazzo, toDraft, twill, weaveRelief, CHROME, type Drawdown } from '../src/engine/matter'
-import { heightRaster, lightDir, metal, normalRaster, sdfBox, sdfCircle, type Light, type Vec3 } from '../src/engine/light'
-import { createRaster, distanceRaster, rasterize } from '../src/engine/raster'
-import { latticeGrid } from '../src/engine/sampler/gridSampler'
+import { heightRaster, hourOf, lightDir, metal, normalRaster, sdfBox, sdfCircle, torch, type Light, type Vec3 } from '../src/engine/light'
+import { sceneLight } from '../src/engine/light/input'
+import { createRaster, rasterize } from '../src/engine/raster'
+import { latticeGrid, sampleLayers } from '../src/engine/sampler/gridSampler'
+import { beginDrag, dragValue } from '../src/engine/interaction/controls'
+import { touchIntent } from '../src/engine/interaction/gesture'
+import { dot480 } from '../src/engine/theme/tokens'
+import type { Pointer } from '../src/engine/context'
 import type { Field, GridConfig } from '../src/engine/types'
+import { TILE, withChrome, type WidgetContext, type WidgetPreset } from '../src/widgets/types'
+import * as M from '../src/widgets/boards/materials'
+import { lightBoard } from '../src/widgets/boards/light'
+import { LIGHT_DEFAULTS, matGrille, matKnob, matLight, matLoom, materialsBoard, materialsHooks, materialsSources, matTerrazzo } from '../src/widgets/boards/materials'
+import { freezeWallClock } from './lib/freeze'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[s.length >> 1] }
@@ -273,7 +283,174 @@ export async function materialsChecks(assert: Assert, opts: MaterialsOptions = {
     assert('materials: terrazzo: aggregate sites ≥ d apart and never inside the keep-out', minD >= 3.4 - 1e-9 && outside && t.a.length > 0 && t.b.length > 0 && t.c.length > 0, `${all.length} chips (${t.a.length}/${t.b.length}/${t.c.length}), min ${minD.toFixed(2)}`)
   }
 
-  // BOARD-CHECKS
+  if (run('board') || run('cards')) await boardChecks(assert, load, opts, run)
+}
+
+const POINTER = (x: number, y: number, down = false): Pointer => ({ id: 1, x, y, inside: true, down, tDown: 0, tUp: 0, vx: 0, vy: 0, pressure: 0 })
+/** Run `f` with the wall clock frozen at a local date (the golden clock by default), restoring it after. */
+function atClock<T>(f: () => T, y = 2026, m = 0, d = 1, h = 9, min = 41): T {
+  const Real = globalThis.Date
+  freezeWallClock(y, m, d, h, min)
+  try { return f() } finally { globalThis.Date = Real }
+}
+
+async function boardChecks(assert: Assert, load: number, opts: MaterialsOptions, run: (g: string) => boolean): Promise<void> {
+  // cold: a fresh module graph (cache-busting query) so the lazy bakes are measured, before anything else draws
+  type Mod = typeof import('../src/widgets/boards/materials')
+  const fresh = (tag: string) => import(`../src/widgets/boards/materials.ts?cold=${tag}${Date.now()}`).catch(() => null) as Promise<Mod | null>
+  const warmMod = await fresh('a'), coldMod = await fresh('b')
+  const frameOf = (p: WidgetPreset, t: number, pointers?: Pointer[], data?: Record<string, number>) =>
+    sampleLayers(withChrome(p)({ t, data: { ...p.defaults, ...data }, pointers }), p.grid, p.style, dot480)
+  // the sampler and the engine are warm in the app when a board opens: warm them on another lit board first
+  for (const p of lightBoard) for (let i = 0; i < 3; i++) frameOf(p, i)
+  if (warmMod) atClock(() => warmMod.materialsBoard.forEach(p => frameOf(p, 0)))
+  const cold = atClock(() => (coldMod ?? M).materialsBoard.map(p => [p.id, time(() => frameOf(p, 0))[0]] as const))
+  const board = materialsBoard
+  if (run('board')) {
+    const key = (p: WidgetPreset, t: number) => atClock(() => JSON.stringify(frameOf(p, t)))
+    assert('materials board: every card is a pure function of t (same t, same dots, any order)', board.every(p => [0, 1.3, 7.7, 3600].every(t => key(p, t) === key(p, t))) && key(board[0], 7.7) === (key(board[1], 1), key(board[0], 7.7)))
+    let accent = true, detail = ''
+    for (const p of board) for (const t of [0, 1.3, 6]) {
+      const ls = atClock(() => withChrome(p)({ t, data: { ...p.defaults } })), red = ls.filter(l => l.tone === 'active')
+      const dots = atClock(() => frameOf(p, t)).filter(d => d.color === dot480.dotActive)
+      const own = red.length ? new Set(sampleLayers(red, p.grid, p.style, dot480).map(d => `${d.x.toFixed(2)},${d.y.toFixed(2)}`)) : new Set<string>()
+      if (red.length > 1 || !dots.every(d => own.has(`${d.x.toFixed(2)},${d.y.toFixed(2)}`))) { accent = false; detail = `${p.id} t ${t}: ${red.length} red layers` }
+      if (t === 0 && dots.length === 0) { accent = false; detail = `${p.id}: no accent at rest` }
+    }
+    assert('materials board: one accent per card, one red layer, on the live element (every card has it at rest)', accent, detail)
+    const dim = board.some(p => [0, 1.3, 6].some(t => atClock(() => withChrome(p)({ t, data: { ...p.defaults } })).some(l => l.tone === 'activeDim') || atClock(() => frameOf(p, t)).some(d => d.color === dot480.dotActiveDim)))
+    assert('materials board: no activeDim (was-active is size contrast until the owner rules, M §10.6)', !dim)
+    // the red layer of each card is its live element, never a band of a material (bands come from toneBands / anisoSpec / matcap)
+    const redSources = board.every(p => atClock(() => withChrome(p)({ t: 0, data: { ...p.defaults } })).filter(l => l.tone === 'active').every(l => !!l.sites || p.id === 'mat-terrazzo'))
+    assert('materials board: no material dot is dotActive (the red layer is the live sites: shuttle, arc, peak, colon; today\'s chip)', redSources)
+    assert('materials board: quantized (every card style has quantizeSteps ≥ 2)', board.every(p => (p.style.quantizeSteps ?? 0) >= 2))
+    const keys = ['lightSrc', 'lightAz', 'lightEl', 'tx', 'ty']
+    assert('materials board: every card declares lightSrc/lightAz/lightEl/tx/ty in defaults', board.every(p => keys.every(k => p.defaults && k in p.defaults)) && materialsSources.length === 1)
+    const hour = atClock(() => hourOf(new Date()))
+    const ctxs: [string, WidgetContext, Light][] = [
+      ['hover', { t: 0, data: { ...LIGHT_DEFAULTS }, pointers: [POINTER(40, 50)] }, sceneLight({ pointer: { x: 40, y: 50 }, data: { ...LIGHT_DEFAULTS }, hour, torch: { height: 40 } })],
+      ['tilt', { t: 0, data: { ...LIGHT_DEFAULTS, lightSrc: 1, lightAz: 20, lightEl: 3 } }, sceneLight({ data: { ...LIGHT_DEFAULTS, lightSrc: 1, lightAz: 20, lightEl: 3 }, hour })],
+      ['sun', { t: 0, data: { ...LIGHT_DEFAULTS } }, sceneLight({ data: { ...LIGHT_DEFAULTS }, hour })],
+    ]
+    const eq = ctxs.every(([, c, want]) => JSON.stringify(atClock(() => matLight(c, { torch: { height: 40 } }))) === JSON.stringify(want))
+    assert('materials: matLight ≡ sceneLight for 3 synthetic contexts (hover, lightSrc 1, sun)', eq)
+    const warm = (p: WidgetPreset, hover: boolean) => atClock(() => {
+      for (let i = 0; i < 4; i++) frameOf(p, i / 60, hover ? [POINTER(30 + i, 60)] : undefined)
+      return median(Array.from({ length: 13 }, (_, i) => time(() => frameOf(p, 5.5 + i / 60, hover ? [POINTER(34 + i, 60 + (i % 3))] : undefined))[0]))
+    })
+    const rows = board.map(p => ({ id: p.id, rest: warm(p, false), hover: warm(p, true), cold: cold.find(c => c[0] === p.id)![1] }))
+    assert('materials board: frame ≤ 4 ms (median, warm, × load), no pointer and a hovering torch', rows.every(r => r.rest <= 4 * load && r.hover <= 4 * load), rows.map(r => `${r.id} ${r.rest.toFixed(2)}/${r.hover.toFixed(2)}`).join(', ') + ' ms')
+    assert('materials board: cold first frame ≤ 30 ms (× load)', !!coldMod && rows.every(r => r.cold <= 30 * load), rows.map(r => `${r.id} ${r.cold.toFixed(1)}`).join(', ') + ` ms${coldMod ? '' : ' (no fresh module graph)'}`)
+    const H = materialsHooks, [rb] = atClock(() => time(() => H.engraving('12', '34', 2026)))
+    const first = H.engraving('12', '34', 2026); H.engraving('12', '35', 2026); const keep = H.engraving('12', '34', 2026) === first; H.engraving('12', '36', 2026); H.engraving('12', '37', 2026)
+    assert('marble: rebake on a minute change ≤ 10 ms; LRU keeps 2', rb <= 10 * load && keep && H.engraving('12', '34', 2026) !== first, `${rb.toFixed(2)} ms`)
+    if (opts.bench) {
+      console.log('  materials --bench (ms):  card            cold    warm   hover')
+      for (const r of rows) console.log(`                           ${r.id.padEnd(14)} ${r.cold.toFixed(1).padStart(6)} ${r.rest.toFixed(2).padStart(7)} ${r.hover.toFixed(2).padStart(7)}`)
+    }
+  }
+  if (!run('cards')) return
+  const H = materialsHooks
+  // ── loom ──
+  {
+    const s0 = H.loomAt(0), s13 = H.loomAt(1.3)
+    const ls = atClock(() => withChrome(matLoom)({ t: 0, data: { ...matLoom.defaults } }))
+    const allWoven = (() => { for (let r = H.LOOM.box[1]; r <= H.LOOM.box[3]; r++) for (let c = H.LOOM.box[0]; c <= H.LOOM.box[2]; c++) if (!H.woven(s0, c, r)) return false; return true })()
+    assert('loom: t = 0 is a complete twill 2/2 panel (26/26 picks), shuttle parked at the right selvedge', s0.draft === 'twill22' && s0.parked && s0.done === 26 && Math.abs(s0.x - (H.LOOM.box[2] + .5)) < 1e-9 && allWoven && ls.some(l => l.field.text?.includes('26/26')),
+      `t 1.3: ${s13.draft} pick ${s13.pick + 1}, shuttle ${(s13.x - H.LOOM.box[0] + .5).toFixed(2)} cells from the left`)
+    const cloth = H.loomCloth(H.drawdownOf('twill22', DRAFTS.twill22)), truth = weaveRelief(twill(2, 4), { cols: 144, rows: 144 }, { box: H.LOOM.box, crossing: 4, lift: 1.2 })
+    assert('loom: the woven rows equal weaveRelief(DRAFTS.twill22) (drawdown truth)', same(cloth.height.data, truth.height.data) && same(cloth.warp.data, truth.warp.data))
+    const base = fromDraft(H.loomDraft('twill22', {})), edited = fromDraft(H.loomDraft('twill22', { tu5: 1 }))
+    let only = true
+    for (let r = 0; r < 26; r++) for (let c = 0; c < 24; c++) { const hit = c % 4 === 1 && r % 4 === 1; if ((base(c, r) !== edited(c, r)) !== hit) only = false }
+    assert('loom: a tie-up toggle flips exactly the crossings of its shaft × treadle (the panel redraws at once: data has no edit time)', only)
+    let fast = 0
+    for (let i = 0; i < 40 * H.PANEL; i++) { const a = H.loomAt(i / 40), b = H.loomAt((i + 1) / 40); fast = Math.max(fast, Math.abs(b.x - a.x)) }
+    assert('loom: shuttle ≤ 2 cells per frame at the declared fps (STYLE-BIBLE.md:208; the fell steps one pick between throws)', fast <= 2 + 1e-9 && matLoom.fps === 40, `${fast.toFixed(3)} cells / frame at ${matLoom.fps} fps`)
+    const red = atClock(() => withChrome(matLoom)({ t: 1.3, data: { ...matLoom.defaults } })).filter(l => l.tone === 'active' || l.tone === 'activeDim')
+    const sizes = new Set(atClock(() => sampleLayers(red, TILE, matLoom.style, dot480)).map(d => d.r.toFixed(3)))
+    assert('loom: the trail is the shuttle\'s own active layer, smaller sizes, no activeDim', red.length === 1 && red[0].tone === 'active' && (red[0].sites?.length ?? 0) === 3 && sizes.size === 3)
+  }
+  // ── knob ──
+  {
+    const { KNOB_CARD: K, KNOB_ARC: A } = H, cx = 48, cy = 50
+    let worst = 0
+    for (let k = 0; k < 8; k++) {
+      const a = k * 45 * DEG + 7 * DEG, s = H.knobSpec(torch(cx + 30 * Math.sin(a), cy - 30 * Math.cos(a), 40, 150)).data, bins = new Float64Array(360)
+      for (let r = 0; r < 96; r++) for (let c = 0; c < 96; c++) { const dx = c - cx, dy = r - cy; if (dx * dx + dy * dy < 9) continue; bins[Math.round(Math.atan2(dx, -dy) / DEG + 360) % 360] += s[r * 96 + c] }
+      const sm = (i: number) => { let t = 0; for (let j = -4; j <= 4; j++) t += bins[(i + j + 360) % 360]; return t }
+      let p1 = 0; for (let i = 0; i < 360; i++) if (sm(i) > sm(p1)) p1 = i
+      let p2 = -1; for (let i = 0; i < 360; i++) { const d = Math.abs(((i - p1 + 540) % 360) - 180); if (d > 90 && (p2 < 0 || sm(i) > sm(p2))) p2 = i }
+      const off = (x: number, y: number) => Math.abs(((x - y + 540) % 360) - 180), want = a / DEG
+      worst = Math.max(worst, Math.min(off(p1, want), off(p1, want + 180)), Math.min(off(p2, want), off(p2, want + 180)))
+    }
+    assert('knob: the bowtie\'s two brightest lobes lie within ±1 light bucket (5.6°) of the light azimuth, for 8 torch positions', worst <= 360 / 64, `worst ${worst}°`)
+    const reds = (v: number) => atClock(() => frameOf(matKnob, 0, undefined, { v })).filter(d => d.color === dot480.dotActive).length
+    assert('knob: the value arc\'s active sites = round(v · 40)', [0, .25, .5, .72, 1].every(v => reds(v) === Math.round(v * A.n)), [0, .25, .5, .72, 1].map(reds).join('/'))
+    const c = matKnob.controls![0], at = (v: number) => { const a = A.start + v * A.sweep; return { x: K.x + A.r * Math.sin(a), y: K.y - A.r * Math.cos(a) } }
+    const tap = (v: number) => { const p = at(v); return dragValue(c, beginDrag(c, p.x, p.y, { v: .72 }), p).v }
+    assert('knob: a tap on the arc sets v to its angle', [0, .1, .5, .9, 1].every(v => Math.abs(tap(v) - v) < 1e-6) && touchIntent(c) === 'drag', [.1, .5, .9].map(tap).map(x => x.toFixed(3)).join('/'))
+  }
+  // ── grille ──
+  {
+    const g = H.grillePlate(), holes = H.grilleHoles()
+    let inside = 0
+    for (const h of holes) for (let r = Math.floor(h.y - 2); r <= Math.ceil(h.y + 2); r++) for (let cc = h.x - 2; cc <= h.x + 2; cc++) if (Math.hypot(cc - h.x, r - h.y) <= 1.9 && g.mask.data[r * 144 + cc]) inside++
+    let unlit = true, oneRed = true
+    for (const t of [0, .37, 1.3, 2.9, 6]) {
+      const vu = H.grilleVU(t + .12), dots = atClock(() => frameOf(matGrille, t)), pitch = TILE.pitch!
+      const atHole = dots.filter(d => holes.some(h => Math.abs(d.x - (h.x + .5) * pitch) < 1e-3 && Math.abs(d.y - (h.y + .5) * pitch) < 1e-3))
+      const shown = vu.lit.reduce((s, n, col) => s + n + (vu.peak[col] > n ? 1 : 0), 0)
+      if (atHole.length !== shown) unlit = false
+      const red = dots.filter(d => d.color === dot480.dotActive), live = H.livePeak(vu)
+      const want = holes.filter(h => h.col === live).sort((p, q) => q.y - p.y)[vu.peak[live] - 1]
+      if (red.length !== 1 || Math.abs(red[0].x - (want.x + .5) * pitch) > 1e-3 || Math.abs(red[0].y - (want.y + .5) * pitch) > 1e-3) oneRed = false
+    }
+    assert('grille: no plate dot inside a hole or its moat; unlit holes draw nothing', inside === 0 && unlit, `${holes.length} holes`)
+    assert('grille: exactly one active hole, at the highest peak-hold', oneRed)
+    let det = true
+    for (let i = 0; i < 200; i++) { const s = i * .137; if (JSON.stringify(H.grilleVU(s)) !== JSON.stringify(H.grilleVU(s))) det = false }
+    assert('grille: signal deterministic (two fresh runs equal at 200 t\'s)', det && holes.length === 23 * 11 + 22 * 11)
+  }
+  // ── marble ──
+  {
+    const e = H.engraving('09', '41', 2026), n = e.n
+    let ok = true, detail = ''
+    for (const az of [90, 270]) {
+      const L = rake(lightDir(az * DEG, 40 * DEG)) as Vec3, { body, polish } = H.marbleLit(e, L)
+      let lit = 0, litN = 0, far = 0, farN = 0
+      for (let i = 0; i < n.x.length; i++) {
+        if (!e.hero.data[i] || n.mask[i] < .5) continue
+        const tilt = Math.hypot(n.x[i], n.y[i]), facing = (n.x[i] * L[0] + n.y[i] * L[1]) / (tilt || 1)
+        if (tilt < .5) continue // wall cells only (slope ≥ 30°)
+        const v = Math.max(body.data[i], polish.data[i])
+        if (facing > .7) { litN++; if (v >= .62) lit++ }
+        if (facing < -.7) { farN++; if (v < .06) far++ }
+      }
+      if (lit < .8 * litN || far < farN || !litN || !farN) { ok = false; detail = `az ${az}: lit ${lit}/${litN}, far void ${far}/${farN}` }
+      else detail += `az ${az}: lit ${lit}/${litN}, void ${far}/${farN}; `
+    }
+    assert('marble: engraved grooves: lit wall ≥ idle and far wall void under a raked light from either side', ok, detail)
+  }
+  // ── terrazzo ──
+  {
+    const m = H.monthOf(2026, 0), all = [...m.aggregate.a, ...m.aggregate.b, ...m.aggregate.c]
+    let minD = Infinity
+    for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) minD = Math.min(minD, Math.hypot(all[i][0] - all[j][0], all[i][1] - all[j][1]))
+    const clear = all.every(([x, y]) => m.keepOut.data[Math.round(y) * 144 + Math.round(x)] < .5)
+    assert('terrazzo: aggregate sites ≥ d apart and never inside a dilated day chip', minD >= 3.4 - 1e-9 && clear, `${all.length} chips of aggregate, min ${minD.toFixed(2)}`)
+    const cells = new Map<number, number>(); for (const d of m.chip) if (d >= 0) cells.set(d, (cells.get(d) ?? 0) + 1)
+    const ls = atClock(() => withChrome(matTerrazzo)({ t: 0, data: { ...matTerrazzo.defaults } })), red = ls.filter(l => l.tone === 'active')
+    const redDots = atClock(() => sampleLayers(red, TILE, matTerrazzo.style, dot480)), day1 = cells.get(0) ?? -1
+    assert('terrazzo: 31 day chips for Jan 2026, laid from Thursday; today = 1 is the only active layer', m.days === 31 && m.offset === 3 && cells.size === 31 && [...cells.values()].every(k => k >= 12) && red.length === 1 && redDots.length === day1, `${day1} dots in today's chip, ${redDots.length} red`)
+    // the chips are one multi-tone layer on the 1.5 lattice: past days are idle (honed) or value (polished), future mid
+    const past = (d: number) => {
+      const chips = atClock(() => withChrome(matTerrazzo)({ t: 0, data: { ...matTerrazzo.defaults } }), 2026, 0, d).filter(l => l.lattice === 1.5 && l.toneOf)
+      return sampleLayers(chips, TILE, matTerrazzo.style, dot480).filter(q => q.color === dot480.dotIdle || q.color === dot480.value).length
+    }
+    const p1 = past(1), p15 = past(15)
+    assert('terrazzo: past/future split follows the date (frozen 2026-01-01 → 0 past)', p1 === 0 && p15 > 0, `past dots: Jan 1 ${p1}, Jan 15 ${p15}`)
+  }
 }
 
 const self = process.argv[1]?.replace(/\\/g, '/')
