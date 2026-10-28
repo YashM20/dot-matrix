@@ -1,6 +1,14 @@
 # Track Q: squares (spaced and joined), implementation plan
 
-> Status: **planned** (2026-10-27). This is part of [LIVING-MATTER-PLAN](../LIVING-MATTER-PLAN.md) §4 and turns its sketch into phases Q1–Q3.
+> Status: **Q1 built** (2026-10-28, round 2; Q2 and Q3 planned). Q1 shipped on the buffer path (F0.11's cut had landed): `src/engine/squares/` (mask, geometry, sampler join pass, buffer channels, canvas, svg, lazy gl, tetris), the core hook points (`sampler/ext.ts`, `renderer/ext.ts`), the `/squares/` board, `scripts/squares.ts` (in verify) and `scripts/squares-browser.ts` (all gates green). Deviations from the text below:
+> - `JointGeom` keeps F0.5's field names (`ro` as a fraction of s, `ri` / `seam` in px).
+> - More of the work sits behind hooks than §2.2–2.4 say, to save first load: the buffer channels (`samplerExt.push / attach / grow / decode`), per-dot form codes (computed in the join pass, `samplerExt.form` for sites), Canvas buffer dots (`shapeExt.bufferDot`) and the whole SVG of a joined dot list (`shapeExt.svg`, `squares/svg.ts`; plain lists keep `renderSVG` byte for byte).
+> - The GL loader (`shapeExt.glLoad`) is set in `DotCanvas`, not by `installSquares()`: the worker build inlines every reachable `import()`, so a loader in the board module put the GLSL in `sampleWorker-*.js`.
+> - First load: measured Δ +0.92 kB gz (+0.08 of it the manifest row), over the +0.6 row; worker Δ +9.6 kB gz (soft budget +8). The §2.9 micro budgets (join pass 144² ≤ 0.25 ms, path build ≤ 1.2 ms per 5k) are printed, not gated: the shared 2-core box runs a bare 8-neighbour scan of 144² at ~0.3–0.5 ms; the card frame budget is gated.
+> - `squares: ink` gates against the inkiest liked card (afterlight) instead of the median, which the sparse components board dominates.
+> - `sq-quads` draws each quad as one joined block on a 2× lattice (one gutter of grout at every size, 400 splits → 1,201 squares) instead of square sites; `sq-tetris` is a B-type game with a garbage row rising every 12 pieces; the LCD clock digits use 2-pixel spacing so 3× fits 72 px; `spec/validate.ts` does not accept `join` yet.
+>
+> This is part of [LIVING-MATTER-PLAN](../LIVING-MATTER-PLAN.md) §4 and turns its sketch into phases Q1–Q3.
 > It depends on **F0** deliverables owned by the foundation track ([F0-foundation.md](F0-foundation.md)): the square cover rule `hides(n, rot)` (F0.6), the golden key and the reserved `DotInstance` fields (F0.5), the determinism lint (F0.9), `dmath` and `voronoi2` (F0.1, F0.3), and the first-load cut (F0.11). Q depends on them by name and never restates them. The contracts are in §1.4 and the shared-file rules in §1.5.
 > Phase names across the set: F0, L1–L4, Q1–Q3, M1–M3, XL, XQ, XM, X1, X2.
 > Rules that hold throughout (AGENTS.md):

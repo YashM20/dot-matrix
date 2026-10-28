@@ -1,4 +1,5 @@
-import type { DotInstance, DotStyle, ThemeTokens, Tone } from '../types'
+import type { DotInstance, DotStyle, JointGeom, ThemeTokens, Tone } from '../types'
+import { samplerExt } from '../sampler/ext'
 
 /**
  * Struct-of-arrays dot list (MASTER-PLAN §3.10): the sampler writes dots here without allocating an
@@ -17,6 +18,12 @@ export interface DotBuffer {
   palette: readonly string[]
   shape?: DotStyle['shape']
   roundness?: number
+  /**
+   * Optional per-dot channels (squares), all views into `ext` (7 B/dot), allocated by the first `samplerExt.push` (src/engine/squares/buffer.ts); absent
+   * on classic frames. `aspect` (Q2) Float32 at byte 0; `join` Uint16 at 4c (bits 0–11 mask, 12–15 joint slot,
+   * 0xFFFF = plain); `form` Uint8 at 6c (bits 0–3 roundness step /8, 15 = frame style). `joints`: geometry per slot.
+   */
+  ext?: ArrayBuffer; aspect?: Float32Array; join?: Uint16Array; form?: Uint8Array; joints?: JointGeom[]
 }
 
 /** Tone indices of a `DotBuffer`: the grey bands first (value order), then the pinned roles. */
@@ -47,10 +54,12 @@ export function toneIndex(tone: Tone | undefined, value: number): number {
   }
 }
 
-/** A buffer over `bytes` (or a fresh one) holding `capacity` dots. */
-export function dotBufferOver(capacity: number, bytes = new ArrayBuffer(capacity * BYTES_PER_DOT), palette: readonly string[] = []): DotBuffer {
+/** A buffer over `bytes` (or a fresh one) holding `capacity` dots; a squares `ext` store is attached by its hook. */
+export function dotBufferOver(capacity: number, bytes = new ArrayBuffer(capacity * BYTES_PER_DOT), palette: readonly string[] = [], ext?: ArrayBuffer): DotBuffer {
   const c = capacity, f = 4 * c
-  return { x: new Float32Array(bytes, 0, c), y: new Float32Array(bytes, f, c), r: new Float32Array(bytes, 2 * f, c), opacity: new Float32Array(bytes, 3 * f, c), tone: new Uint8Array(bytes, 4 * f, c), n: 0, capacity: c, bytes, palette }
+  const buf: DotBuffer = { x: new Float32Array(bytes, 0, c), y: new Float32Array(bytes, f, c), r: new Float32Array(bytes, 2 * f, c), opacity: new Float32Array(bytes, 3 * f, c), tone: new Uint8Array(bytes, 4 * f, c), n: 0, capacity: c, bytes, palette }
+  if (ext) samplerExt.attach?.(buf, ext)
+  return buf
 }
 export const createDotBuffer = (capacity = 1024): DotBuffer => dotBufferOver(Math.max(16, capacity | 0))
 
@@ -61,6 +70,7 @@ export function reserve(buf: DotBuffer, need: number): void {
   const n = buf.n
   next.x.set(buf.x.subarray(0, n)); next.y.set(buf.y.subarray(0, n)); next.r.set(buf.r.subarray(0, n)); next.opacity.set(buf.opacity.subarray(0, n)); next.tone.set(buf.tone.subarray(0, n))
   buf.x = next.x; buf.y = next.y; buf.r = next.r; buf.opacity = next.opacity; buf.tone = next.tone; buf.capacity = next.capacity; buf.bytes = next.bytes
+  if (buf.ext) samplerExt.grow!(buf, n)
 }
 
 /** Append one dot. */
@@ -75,6 +85,8 @@ export function pushDot(buf: DotBuffer, x: number, y: number, r: number, opacity
 export function toDots(buf: DotBuffer): DotInstance[] {
   const out: DotInstance[] = new Array(buf.n), { x, y, r, opacity, tone, palette, shape, roundness } = buf
   for (let i = 0; i < buf.n; i++) out[i] = { x: x[i], y: y[i], r: r[i], opacity: opacity[i], color: palette[tone[i]], shape, roundness }
+  // squares channels: per-dot form and join (their hook is installed wherever such a frame exists)
+  if (buf.join) samplerExt.decode?.(buf, out)
   return out
 }
 

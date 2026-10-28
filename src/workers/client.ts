@@ -50,17 +50,17 @@ export function remoteSampler(layers: object, onFrame: (buf: DotBuffer, t: numbe
   const card = nextCard++
   let seq = 0, inFlight = false, pending: SampleRequest | null = null, front: DotBuffer | null = null, spare: DotBuffer | null = null, failed = false, disposed = false
   const send = (req: SampleRequest) => {
-    if (spare) { req.bytes = spare.bytes; req.capacity = spare.capacity; spare = null }
+    if (spare) { req.bytes = spare.bytes; req.capacity = spare.capacity; req.ext = spare.ext; spare = null }
     inFlight = true
-    try { w.postMessage(req, req.bytes ? [req.bytes] : []) } catch { failed = true; inFlight = false }
+    try { w.postMessage(req, req.bytes ? (req.ext ? [req.bytes, req.ext] : [req.bytes]) : []) } catch { failed = true; inFlight = false }
   }
   cards.set(card, reply => {
     inFlight = false
     if (disposed) cards.delete(card)
     if (reply.kind === 'error') { failed = true; console.warn('sample worker:', reply.message); return }
     if (disposed) { reply.bitmap?.close(); return }
-    const buf = dotBufferOver(reply.capacity, reply.bytes, reply.palette)
-    buf.n = reply.n; buf.shape = reply.shape; buf.roundness = reply.roundness
+    const buf = dotBufferOver(reply.capacity, reply.bytes, reply.palette, reply.ext)
+    buf.n = reply.n; buf.shape = reply.shape; buf.roundness = reply.roundness; buf.joints = reply.joints
     spare = front; front = buf
     if (pending) { const next = pending; pending = null; send(next) }
     onFrame(buf, reply.t, reply.bitmap)

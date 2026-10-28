@@ -1846,6 +1846,54 @@
     "hash": "2c5c874e",
     "dots": 2293
    }
+  },
+  "sq-tetris": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "028b1b5f",
+    "dots": 1348
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "65cc6f76",
+    "dots": 1348
+   }
+  },
+  "sq-quads": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "66e3a845",
+    "dots": 4637
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "66e3a845",
+    "dots": 4637
+   }
+  },
+  "sq-blob": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "792a8aac",
+    "dots": 2094
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "2ca46b71",
+    "dots": 2083
+   }
+  },
+  "sq-gameboy": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "b45c9493",
+    "dots": 4797
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "5483133b",
+    "dots": 4797
+   }
   }
  }
 }

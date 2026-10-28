@@ -186,4 +186,8 @@ export const catalog: readonly CatalogRow[] = [
   ['mat-marble', 'cbmez41j', 'materials'],
   ['mat-terrazzo', '5wg1q77w', 'materials'],
   ['pond-koi', 'c507ktgt', 'pond'],
+  ['sq-tetris', '2rtb099q', 'squares'],
+  ['sq-quads', '1xsgez8c', 'squares'],
+  ['sq-blob', 'ns450j4j', 'squares'],
+  ['sq-gameboy', 'nddv8c83', 'squares'],
 ]

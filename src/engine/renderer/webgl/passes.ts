@@ -52,10 +52,10 @@ export interface GPUPass {
 
 const factor = (k: number | undefined) => (k !== undefined && Number.isFinite(k) && k > 0 ? k : 1)
 
-/** The pass a tagged layer becomes, or null when the GPU path cannot reproduce it (sites, sizeCurve, jitter). */
+/** The pass a tagged layer becomes, or null when the GPU path cannot reproduce it (sites, join, shapeOf, sizeCurve, jitter, gap). */
 export function layerPass(layer: Layer, grid: GridConfig, style: DotStyle, pitch: number): GPUPass | null {
   const tag = gpuTag(layer.field)
-  if (!tag || layer.sites || style.sizeCurve || style.jitter || !(tag.density > 0)) return null
+  if (!tag || layer.sites || layer.join || layer.shapeOf || style.sizeCurve || style.jitter || style.gap !== undefined || !(tag.density > 0)) return null
   if (tag.ir && layer.toneOf) return null
   const k = factor(layer.lattice), origin = layer.origin ?? [0, 0]
   const base = k === 1 && !layer.origin

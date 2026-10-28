@@ -1,5 +1,6 @@
 import type { DotInstance } from '../types'
 import { circlePath, squarePath, squirclePath } from './shapePath'
+import { shapeExt } from './ext'
 const escape = (value: string) => value.replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char]!)
 /** Two decimals is sub-pixel at any pitch we render; trailing zeros dropped ("12.50" → "12.5"). */
 const r2 = (n: number) => { const r = Math.round(n * 100) / 100; return String(r === 0 ? 0 : r) }
@@ -13,6 +14,8 @@ let renderSeq = 0
  * opacity sit in one `<g>`. ~30 bytes per dot instead of ~400.
  */
 export function renderSVG(dots: DotInstance[], width: number, height: number): string {
+  // joined squares (src/engine/squares): their own renderer (defs per mask, seam bleed, group opacity)
+  if (shapeExt.svg && dots.some(d => d.join !== undefined)) return shapeExt.svg(dots, width, height)
   const prefix = `d${(renderSeq++).toString(36)}-`
   const shapes = new Map<string, string>(), groups = new Map<string, string[]>()
   let defs = ''

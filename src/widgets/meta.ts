@@ -315,4 +315,8 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'mat-marble': ['The time engraved in marble, read by raking light.', 'material stone clock animated'],
   'mat-terrazzo': ['A month of terrazzo chips; today is the red one.', 'material stone calendar'],
   'pond-koi': ['Six koi in a pond of glyph tiles: tap to feed them, hold still to lure them.', 'life koi water creature control animated'],
+  'sq-tetris': ['A Tetris game played by a greedy AI, each settled piece fused into one joined tetromino.', 'squares join tetris game animated'],
+  'sq-quads': ['A portrait found by splitting the worst square into four until 1,201 squares remain (after Fogleman’s Quads).', 'squares join quadtree portrait animated'],
+  'sq-blob': ['Four metaballs on a square lattice whose terraces fuse level by level; the red neck forms where two meet.', 'squares join metaballs animated'],
+  'sq-gameboy': ['A four-shade LCD in spaced squares: the time, the date and a walker over a parallax strip.', 'squares lcd clock pixel animated'],
 }

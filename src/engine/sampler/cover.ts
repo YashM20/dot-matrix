@@ -8,6 +8,9 @@ import { squircleExponent } from '../renderer/shapePath'
 export const coverExponent = (shape: DotStyle['shape'], roundness?: number): number =>
   shape === 'square' ? Infinity : shape === 'squircle' ? squircleExponent(roundness) : 2
 
+/** Square-like: the exponents `hides` treats as a square (its Chebyshev branch, n ≥ 8 or 'square'). The gap clamp and join use this one predicate. */
+export const squareLike = (n: number): boolean => n >= 8
+
 /**
  * The single cover rule (docs/living-matter/F0-foundation.md §2.6): does a site dot of reach R (cells)
  * hide the card cell at offset (dx, dy)? Shaped like the drawn dot. n: from coverExponent; rot: radians.
