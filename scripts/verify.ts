@@ -862,7 +862,7 @@ gameChecks(assert)
 ncaChecks(assert)
 // ALGORITHMS) stippling, attractor density, WFC, DLA: determinism, invariants, timing, the algorithms board (scripts/algorithms.ts)
 algorithmsChecks(assert)
-// editor (E1): MAKE editor document, paint encode, resize anchoring, hit tests, camera, gestures, entries, history (scripts/editor.ts)
+// editor (E1): MAKE editor document, paint encode, resize anchoring, hit tests, camera, gestures, entries, history; E2: selection sets, marquee, group resize, align / distribute, guides, groups, locks, clipboard, migration, undo per command (scripts/editor.ts)
 {
   const { editorChecks } = await import('./editor')
   editorChecks(assert)

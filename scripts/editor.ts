@@ -6,15 +6,22 @@
  * share links for code layers, the camera maths (zoom about a point, pinch, fit), the gesture geometry
  * (drag snapping, the Frame tool), the tool keys and where every old MAKE mode lands, and the history:
  * one undo step per gesture, typing coalesced by tag, a cancelled gesture leaves no trace.
+ * E2 adds selections of many (⇧-click, marquee, select all), groups and locks, group resize from the box,
+ * align / distribute, smart guides, the clipboard (round trip, ids, paste offsets), v1 → v2 migration and
+ * one undo step per command or gesture.
  * `pnpm verify` runs them through `editorChecks()`; run alone with `npx tsx scripts/editor.ts`.
  * The browser side (desktop + touch): `scripts/editor-browser.ts`.
  */
 import { sampleLayers } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
-import { COALESCE_MS, compileCard, irLayer, paintCells, paintLayer, sitesLayer, textLayer, validateCard, type PaintLayer, type SitesLayer, type TextLayer } from '../src/components/studio/doc'
+import { COALESCE_MS, compileCard, historyOf, irLayer, paintCells, paintLayer, sitesLayer, textLayer, validateCard, type PaintLayer, type SitesLayer, type TextLayer } from '../src/components/studio/doc'
 import { addFrame, addLayer, blankCard, boundsOf, cellsFromMatrix, docFromJSON, docToJSON, drawingCard, duplicateFrame, duplicateLayer, editFrame, editLayer, encodeCells, EDITOR_KEY, frameById, frameSize, hitFrame, hitLayer, layerBounds, line, loadDoc, movable, moveLayer, nudgeLayer, paintCellAt, raiseFrame, removeFrame, removeLayer, resizeFrame, saveDoc, seedDoc, shareable, stamp, topDown, type EditorDoc, type EditorFrame } from '../src/components/editor/doc'
 import { codeTarget, dragCells, dragFramePos, draftFrame, fitCam, FRAME_PITCH, KEY_TOOL, MODE_ENTRY, paintTarget, pinchCam, resizeByHandle, zoomCam, ZOOM_MAX, ZOOM_MIN, type Handle } from '../src/components/editor/input'
 import { useEditor } from '../src/components/editor/store'
+import { copyFrames, copyLayers, EDITOR_VERSION, frameOf, groupLayers, lockFrames, lockLayers, MAX_FRAMES, migrateDoc, removeFrames, removeLayers, shiftLayers, ungroup, unitsOf } from '../src/components/editor/doc'
+import { alignDeltas, arrangeFrames, arrangeLayers, canResize, clickLayer, distributeDeltas, frameBox, framesBox, framesSel, inSel, layersSel, marqueeFrames, marqueeLayers, marqueeSel, normBox, resizeGroup, selCount, selectAll, selFrames, selGroup, selLayers, snapBox, toggleSel, unionBox, validSel } from '../src/components/editor/select'
+import { asClip, clipFromJSON, clipOf, clipToJSON, pasteClip } from '../src/components/editor/clip'
+import { arrangeSel, copySel, deleteSel, duplicateSel, groupSel, lockSel, nudgeSel, paste, ungroupSel } from '../src/components/editor/actions'
 import { MODES, viewFromUrl } from '../src/site/views'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
@@ -247,6 +254,153 @@ function e1Checks(assert: Assert) {
   mem.set(EDITOR_KEY, '{"kind":"x"}'); const foreign = loadDoc(kv)
   mem.set(EDITOR_KEY, '{'); const broken = loadDoc(kv)
   assert('storage: saveDoc / loadDoc round-trip; a corrupt or foreign entry loads nothing', saved && !!loaded && docToJSON(loaded) === docToJSON(seed) && !foreign && !broken && !loadDoc({ getItem: () => null, setItem: () => {} }))
+
+  e2Checks(assert)
+}
+
+/** E2: selection sets, marquee, group bounds and resize, align / distribute, guides, groups, locks, clipboard, migration, undo granularity. */
+function e2Checks(assert: Assert) {
+  const empty = (): EditorDoc => ({ kind: 'dot480.editor', v: 2, name: 't', frames: [] })
+  const row = (n: number, gap = 100) => { let d = empty(); for (let i = 0; i < n; i++) d = addFrame(d, blankCard({ cols: 20, rows: 20, pitch: 4 }), { at: { x: i * gap, y: 0 } }).doc; return d }
+  const pos = (d: EditorDoc) => d.frames.map(f => `${f.x},${f.y}`).join(' ')
+
+  // ── selection sets: ⇧-click toggles at the right level, the primary hands over, undo-proof
+  const d0 = row(3), [A, B, C] = d0.frames.map(f => f.id)
+  let s = toggleSel({}, { frame: A }); s = toggleSel(s, { frame: B }); s = toggleSel(s, { frame: C })
+  const three = selFrames(s).join()
+  s = toggleSel(s, { frame: A })
+  assert('select: ⇧-click adds frames and takes one out (the next becomes primary)', three === [A, B, C].join() && s.frame === B && selFrames(s).join() === [B, C].join() && !s.layer && selCount(s) === 2)
+  const t1 = textLayer('A', { params: { col: 1, row: 1 } }), t2 = textLayer('B', { params: { col: 1, row: 10 } }), t3 = textLayer('C', { params: { col: 10, row: 1 } })
+  let dl = [t1, t2, t3].reduce((x, l) => addLayer(x, A, l), d0)
+  let ls = toggleSel(toggleSel({ frame: A, layer: t1.id }, { frame: A, layer: t2.id }), { frame: A, layer: t3.id })
+  const lsAll = selLayers(ls).join()
+  ls = toggleSel(toggleSel(toggleSel(ls, { frame: A, layer: t1.id }), { frame: A, layer: t2.id }), { frame: A, layer: t3.id })
+  const across = toggleSel({ frame: A, layer: t1.id }, { frame: B, layer: 'x' })
+  assert('select: layers of one frame toggle as layers; the last one out leaves the frame; a layer of another frame makes it frames', lsAll === [t1.id, t2.id, t3.id].join() && ls.frame === A && !ls.layer && selFrames(across).join() === [A, B].join() && !across.layer)
+  assert('select: a layer of the one selected frame starts a layer selection; with many frames it toggles the frame', toggleSel({ frame: A }, { frame: A, layer: t1.id }).layer === t1.id && selFrames(toggleSel({ frame: A, more: [B] }, { frame: A, layer: t1.id })).join() === B)
+  assert('select: framesSel / layersSel dedupe and set the primary first', framesSel([B, B, A]).more?.join() === A && layersSel(A, []).layer === undefined && inSel({ frame: A, more: [B] }, { frame: B }) && !inSel({ frame: A, layer: t1.id }, { frame: A, layer: t2.id }))
+  const gone = validSel(removeFrames(d0, [A]), { frame: A, more: [B, 'nope'] }), goneL = validSel(removeLayers(dl, A, [t1.id]), { frame: A, layer: t1.id, more: [t2.id] })
+  assert('select: validSel drops what is gone and hands the primary over', gone.frame === B && !gone.more && goneL.layer === t2.id && !goneL.more)
+  const locked = lockFrames(editFrame(d0, C, f => ({ ...f, hidden: true })), [B])
+  assert('select: ⌘A takes every visible, unlocked frame (or every unlocked layer of the frame)', selFrames(selectAll(locked, {})).join() === A && selLayers(selectAll(lockLayers(dl, A, [t2.id], true), { frame: A, layer: t1.id })).sort().join() === [t1.id, t3.id].sort().join())
+
+  // ── marquee: frames it touches (not hidden, not locked); ⇧ adds; layers by their dots
+  const mq = marqueeFrames(d0, normBox(150, 90, 70, -10)), mqLocked = marqueeFrames(lockFrames(d0, [B]), [85, -10, 250, 90])
+  assert('marquee: a box (any direction) selects the frames it touches; locked and hidden ones are skipped', mq.join() === [A, B].join() && mqLocked.join() === C && !marqueeFrames(d0, [81, 0, 99, 50]).length)
+  assert('marquee: ⇧ adds to the selection; without it replaces it', selFrames(marqueeSel(d0, [210, 0, 220, 10], { frame: A }, true)).join() === [A, C].join() && selFrames(marqueeSel(d0, [210, 0, 220, 10], { frame: A }, false)).join() === C)
+  const fa = frameById(dl, A)!
+  assert('marquee: inside a frame it picks the layers whose lit dots it touches', marqueeLayers(fa, [0, 0, 20, 20]).join() === t1.id && marqueeLayers(fa, [0, 0, 80, 80]).length === 3 && !marqueeLayers(fa, [70, 70, 79, 79]).length)
+
+  // ── groups: group / ungroup round trip, adjacency, tidy, units, a click on a member selects the group
+  const lone = textLayer('D', { params: { col: 12, row: 12 } })
+  dl = addLayer(dl, A, lone) // stack top → bottom: D, C, B, A
+  const g = groupLayers(dl, A, [t1.id, t3.id])
+  const fg = frameById(g.doc, A)!, order = topDown(fg.card).map(l => l.id)
+  assert('group: grouping makes the members adjacent at the topmost member\'s place, and keeps everything else', !!g.id && order.join() === [lone.id, t3.id, t1.id, t2.id].join() && fg.groups?.[0].layers.join() === [t3.id, t1.id].join() && unitsOf(fg).length === 3)
+  const ug = ungroup(g.doc, A, g.id!), fu = frameById(ug, A)!
+  assert('group: ungroup dissolves it and leaves the layers where they are (round trip through JSON too)', !fu.groups && topDown(fu.card).map(l => l.id).join() === order.join() && docToJSON(docFromJSON(docToJSON(g.doc))) === docToJSON(g.doc))
+  const pushed = frameById(moveLayer(g.doc, { frame: A, layer: t2.id }, 2), A)!, dropped = frameById(removeLayers(g.doc, A, [t1.id, t3.id]), A)!, half = frameById(removeLayers(g.doc, A, [t1.id]), A)!
+  assert('group: a layer moved into a group\'s run is pushed below it; removed members leave; an empty group goes', topDown(pushed.card).map(l => l.id).join() === order.join() && !dropped.groups && half.groups?.[0].layers.join() === t3.id)
+  const regroup = groupLayers(g.doc, A, [t1.id, t2.id]), fr2 = frameById(regroup.doc, A)!
+  assert('group: a layer is in one group at most (grouping it again takes it out of the old one)', fr2.groups?.length === 2 && fr2.groups[0].layers.join() === t3.id && fr2.groups[1].layers.join() === [t1.id, t2.id].join())
+  const cg = clickLayer(fg, t1.id, {}), deeper = clickLayer(fg, t1.id, cg), deep = clickLayer(fg, t1.id, {}, true)
+  assert('group: a click on a member selects the whole group; a second click (or ⌘) the one layer', selLayers(cg).sort().join() === [t1.id, t3.id].sort().join() && cg.layer === t1.id && selGroup(g.doc, cg)?.id === g.id && selLayers(deeper).join() === t1.id && selLayers(deep).join() === t1.id)
+  const sh = frameById(shiftLayers(g.doc, A, [t1.id, t3.id], -1), A)!, sh2 = frameById(shiftLayers(g.doc, A, [t2.id], -1), A)!
+  assert('group: Ctrl+] moves a group as one unit; a layer below steps over the whole group', topDown(sh.card).map(l => l.id).join() === [t3.id, t1.id, lone.id, t2.id].join() && topDown(sh2.card).map(l => l.id).join() === [lone.id, t2.id, t3.id, t1.id].join())
+  const cl = copyLayers(g.doc, A, [t1.id, t3.id]), fcl = frameById(cl.doc, A)!, part = frameById(copyLayers(g.doc, A, [t1.id]).doc, A)!
+  assert('group: duplicating a whole group makes a new group; part of a group joins it', cl.ids.length === 2 && fcl.groups?.length === 2 && fcl.groups[1].layers.every(id => cl.ids.includes(id)) && part.groups?.length === 1 && part.groups[0].layers.length === 3)
+
+  // ── locks: locked frames let a click through; locked layers are not hit
+  const lk = lockFrames(d0, [B])
+  assert('lock: a locked frame is passed through by hitFrame(…, skipLocked) and flips back', hitFrame(lk, 110, 10)?.id === B && !hitFrame(lk, 110, 10, true) && !frameById(lockFrames(lk, [B]), B)!.locked)
+  const lkl = lockLayers(dl, A, [t1.id], true), fl = frameById(lkl, A)!
+  assert('lock: a locked layer is not hit (the click finds the frame), and unlocks', hitLayer(frameById(dl, A)!, 1 * 4 + 6, 1 * 4 + 6)?.id === t1.id && !hitLayer(fl, 1 * 4 + 6, 1 * 4 + 6) && !frameById(lockLayers(lkl, A, [t1.id], false), A)!.locks)
+
+  // ── group bounds and resize from the box, anchored at the opposite corner
+  const rd = row(2, 120), fs0 = rd.frames, box0 = framesBox(rd, fs0.map(f => f.id))!
+  const se = resizeGroup(fs0, 'se', 200, 80), boxSe = unionBox(se.map(frameBox))!
+  const nw = resizeGroup(fs0, 'nw', -200, -80), boxNw = unionBox(nw.map(frameBox))!
+  assert('group resize: the box spans the frames; SE keeps the top-left, NW keeps the bottom-right, frames scale in whole cells', JSON.stringify(box0) === '[0,0,200,80]' && boxSe[0] === 0 && boxSe[1] === 0 && se[0].card.grid.cols === 40 && se[1].x === 240 && nw[1].x + frameSize(nw[1]).w === 200 && boxNw[3] === 80 && nw.every(f => Number.isInteger(f.card.grid.cols)), `${JSON.stringify(boxSe)} ${JSON.stringify(boxNw)}`)
+  const tiny = resizeGroup(fs0, 'se', -1e4, -1e4)
+  assert('group resize: frames stay ≥ 8 cells; reference frames are not resizable from the box', tiny.every(f => f.card.grid.cols === 8 && f.card.grid.rows === 8) && !canResize([{ ...fs0[0], card: { ...fs0[0].card, reference: 'level-03' } }]) && canResize(fs0))
+
+  // ── align / distribute
+  const ad = editFrame(editFrame(row(3), row(3).frames[1].id, f => f), row(3).frames[0].id, f => f)
+  let jag = ad; jag = editFrame(jag, jag.frames[1].id, f => ({ ...f, x: 130, y: 40 })); jag = editFrame(jag, jag.frames[2].id, f => ({ ...f, x: 300, y: 10 }))
+  const ids3 = jag.frames.map(f => f.id), left = arrangeFrames(jag, ids3, 'left'), bottom = arrangeFrames(jag, ids3, 'bottom'), dist = arrangeFrames(jag, ids3, 'dist-x')
+  const gaps = dist.frames.map(frameBox).sort((a, b) => a[0] - b[0]).map((b, i, all) => (i ? b[0] - all[i - 1][2] : 0)).slice(1)
+  assert('align: left / bottom line the frames up on the selection box', left.frames.every(f => f.x === 0) && bottom.frames.every(f => f.y + 80 === 120) && left.frames[1].y === 40)
+  assert('distribute: equal gaps, the outer frames stay', Math.abs(gaps[0] - gaps[1]) < .5 && dist.frames[0].x === 0 && dist.frames[2].x === 300 && arrangeFrames(d0, [A, B], 'dist-x') === d0)
+  assert('align: raw deltas (centres; distribute needs 3)', JSON.stringify(alignDeltas([[0, 0, 10, 10], [20, 0, 40, 10]], 'hcenter')) === '[[15,0],[-10,0]]' && distributeDeltas([[0, 0, 1, 1], [5, 0, 6, 1]], 'x').every(([x]) => x === 0))
+  const al = arrangeLayers(dl, A, [t1.id, t3.id], 'left'), at1 = frameById(al, A)!.card.layers.find(l => l.id === t3.id) as TextLayer
+  assert('align: text layers align by their dots in whole cells', at1.params.col === 1 && Number.isInteger(at1.params.col))
+
+  // ── smart guides and spacing
+  const others: [number, number, number, number][] = [[0, 0, 100, 100], [300, 0, 400, 100]]
+  const sn = snapBox([104, 150, 204, 250], others, 6), far = snapBox([120, 150, 220, 250], others, 6), mid = snapBox([147, 3, 247, 103], others, 6)
+  assert('guides: a box within reach snaps its edge to another frame\'s edge and shows the guide; out of reach nothing moves', sn.dx === -4 && sn.guides.some(gd => gd.axis === 'x' && gd.at === 100) && far.dx === 0 && !far.guides.some(gd => gd.axis === 'x'))
+  assert('guides: between two neighbours it snaps to equal spacing, and both gaps are measured', mid.dx === 3 && mid.gaps.filter(gp => gp.axis === 'x').map(gp => gp.b - gp.a).join() === '50,50' && mid.dy === -3, JSON.stringify(mid))
+
+  // ── clipboard: round trip, new ids, paste offsets, cut pastes in place, layers, groups, bad clips
+  const cd = g.doc
+  const clipF = clipOf(cd, framesSel([A, B]))!, json = clipToJSON(clipF), back = clipFromJSON(json)
+  const p1 = pasteClip(cd, back, {}), p1d = typeof p1 === 'string' ? cd : p1.doc
+  const newIds = typeof p1 === 'string' ? [] : selFrames(p1.sel), copyA = frameById(p1d, newIds[0])!
+  assert('clip: frames round-trip as JSON and paste with new frame, card, layer and group ids, 24 px aside', typeof p1 === 'object' && newIds.length === 2 && copyA.x === 24 && copyA.y === 24 && copyA.id !== A && copyA.card.id !== frameById(cd, A)!.card.id && copyA.card.layers.every(l => !frameById(cd, A)!.card.layers.some(m => m.id === l.id)) && copyA.groups?.[0].layers.every(id => copyA.card.layers.some(l => l.id === id)) === true)
+  const p2 = pasteClip(p1d, back, {}), cut = pasteClip(removeFrames(cd, [A, B]), back, {})
+  assert('clip: pasting again steps aside again; after a cut it pastes back in place', typeof p2 === 'object' && frameById(p2.doc, selFrames(p2.sel)[0])!.x === 48 && typeof cut === 'object' && frameById(cut.doc, selFrames(cut.sel)[0])!.x === 0)
+  const clipL = clipOf(cd, layersSel(A, [t1.id, t3.id, lone.id]))!
+  const pl1 = pasteClip(cd, clipFromJSON(clipToJSON(clipL)), { frame: A }), pl2 = pasteClip(cd, clipL, { frame: B }), pl3 = pasteClip(empty(), clipL, {})
+  const fpl = typeof pl1 === 'object' ? frameById(pl1.doc, A)! : undefined, pasted = typeof pl1 === 'object' ? selLayers(pl1.sel) : []
+  const movedT = fpl?.card.layers.find(l => pasted.includes(l.id) && l.kind === 'text' && l.params.text === 'A') as TextLayer | undefined
+  assert('clip: layers paste on top of the frame, the group with them, text 2 cells aside when it would sit on its original', !!fpl && pasted.length === 3 && fpl.groups?.length === 2 && topDown(fpl.card).slice(0, 3).every(l => pasted.includes(l.id)) && movedT?.params.col === 3 && movedT.params.row === 3, `${movedT?.params.col},${movedT?.params.row}`)
+  const into = typeof pl2 === 'object' ? frameById(pl2.doc, B)! : undefined
+  assert('clip: into another frame they keep their cells; onto an empty canvas they get a frame like the one they came from', !!into && into.card.layers.length === 3 && (into.card.layers.find(l => l.kind === 'text' && l.params.text === 'D') as TextLayer).params.col === 12 && typeof pl3 === 'object' && pl3.doc.frames.length === 1 && pl3.doc.frames[0].card.grid.cols === 20)
+  const bad = ['{', '{"kind":"dot480.clip","v":1,"frames":[],"layers":[],"groups":[]}', JSON.stringify({ ...clipF, frames: [{ ...clipF.frames[0], theme: 'pink' }] }), JSON.stringify({ ...clipL, src: undefined })].map(j => { try { clipFromJSON(j); return '' } catch (e) { return (e as Error).message } })
+  assert('clip: broken, empty, invalid or source-less clips are rejected with a reason; foreign text is not a clip', bad.every(Boolean) && !asClip('hello') && !asClip(undefined) && !!asClip(json), bad.join(' | '))
+  const full = { ...empty(), frames: Array.from({ length: MAX_FRAMES }, (_, i) => frameOf(blankCard(), { x: i * 400, y: 0 })) }
+  assert('clip: a paste that would pass the frame limit is refused', typeof pasteClip(full, back, {}) === 'string')
+
+  // ── migration: a v1 document (and a v1 autosave) loads as v2; a future version or a bad group does not
+  const v1 = { ...structuredClone(seedDoc()), v: 1 }, mig = docFromJSON(JSON.stringify(v1))
+  const mem = new Map<string, string>([[EDITOR_KEY, JSON.stringify(v1)]]), kv = { getItem: (k: string) => mem.get(k) ?? null, setItem: (k: string, v: string) => void mem.set(k, v) }
+  const loaded = loadDoc(kv)
+  const future = (() => { try { docFromJSON(JSON.stringify({ ...v1, v: EDITOR_VERSION + 1 })); return '' } catch (e) { return (e as Error).message } })()
+  const badGroup = (() => { try { const x = structuredClone(g.doc); (x.frames[0].groups as unknown) = [{ id: 1 }]; docFromJSON(JSON.stringify(x)); return '' } catch (e) { return (e as Error).message } })()
+  const dangling = structuredClone(g.doc); dangling.frames[0].groups![0].layers.push('ghost'); dangling.frames[0].locks = ['ghost']
+  const tidied = docFromJSON(JSON.stringify(dangling)).frames[0]
+  assert('migrate: a v1 document and a v1 autosave load as v2 with every frame', EDITOR_VERSION === 2 && mig.v === 2 && mig.frames.length === v1.frames.length && migrateDoc(v1) !== v1 && migrateDoc(mig) === mig && loaded?.v === 2 && loaded.frames.length === v1.frames.length)
+  assert('migrate: a newer version or a malformed group is rejected; ids of missing layers are dropped', /version/.test(future) && /groups/.test(badGroup) && !tidied.groups![0].layers.includes('ghost') && !tidied.locks, `${future} | ${badGroup}`)
+
+  // ── undo granularity: every command is one step, a gesture (Alt-drag copy + move) is one step
+  const st = useEditor.getState, steps = () => st().h.past.length
+  useEditor.setState({ h: historyOf(g.doc) }); st().select(framesSel([A, B]))
+  const runs: [string, () => void, (d: EditorDoc) => boolean][] = [
+    ['duplicate', duplicateSel, d => d.frames.length === 5],
+    ['delete', () => { st().select(framesSel(selFrames(st().sel))); deleteSel() }, d => d.frames.length === 3],
+    ['an edit', () => { st().select(framesSel([A, B, C])); st().edit(x => editFrame(x, B, f => ({ ...f, y: 30 }))) }, d => frameById(d, B)!.y === 30],
+    ['align', () => arrangeSel('top'), d => d.frames.every(f => f.y === 0)],
+    ['lock', lockSel, d => d.frames.every(f => f.locked)],
+    ['unlock', lockSel, d => d.frames.every(f => !f.locked)],
+    ['copy + paste', () => { copySel(); paste() }, d => d.frames.length === 6],
+    ['group', () => { st().select(layersSel(A, [t2.id, lone.id])); groupSel() }, d => (frameById(d, A)?.groups?.length ?? 0) === 2],
+    ['ungroup', ungroupSel, d => (frameById(d, A)?.groups?.length ?? 0) === 1],
+  ]
+  const off: string[] = []
+  for (const [name, run, ok] of runs) { const n = steps(); run(); const dd = st().h.present; if (steps() !== n + 1 || !ok(dd)) off.push(`${name}: ${steps() - n} steps`) }
+  assert('undo: duplicate, delete, align, lock, paste, group, ungroup are one undo step each', !off.length, off.join(' | '))
+  const n0 = steps(), base = st().h.present
+  st().select(framesSel([A, C])); nudgeSel(1, 0); nudgeSel(1, 0); nudgeSel(0, 1)
+  assert('undo: a run of nudges of many coalesces into one step; undo puts them all back', steps() === n0 + 1 && frameById(st().h.present, C)!.x === frameById(base, C)!.x + 2 && (st().undo(), st().h.present === base))
+  const n1 = steps()
+  st().begin(); const cp = copyFrames(st().h.present, [A, C], 0, 0); st().live(() => cp.doc)
+  for (let i = 1; i <= 4; i++) st().live(x => ({ ...x, frames: x.frames.map(f => (cp.ids.includes(f.id) ? { ...f, y: f.y + 10 } : f)) }))
+  st().end()
+  const afterAlt = st().h.present
+  st().undo()
+  assert('undo: an Alt-drag (copies made in place, then moved) is one step, and undo takes the copies away', steps() === n1 && afterAlt.frames.length === base.frames.length + 2 && st().h.present.frames.length === base.frames.length && pos(st().h.present) === pos(base))
+  st().redo()
+  assert('undo: redo brings the moved copies back; the selection survives undo of a deleted selection', st().h.present === afterAlt && (st().select(framesSel(cp.ids)), st().undo(), !st().sel.frame || !cp.ids.includes(st().sel.frame!)))
 }
 
 if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, '/')}` || process.argv[1]?.endsWith('editor.ts')) {
