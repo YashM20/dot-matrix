@@ -36,14 +36,24 @@ body {
 }
 
 .shell {
-  width: min(1488px, calc(100% - 48px));
-  margin: auto;
-  /* room under the footer for the fixed tool dock, so it never sits on the last line */
-  padding: var(--space-5) 0 var(--space-8)
+  /* ── the frame (docs/LAYOUT-THEME-PLAN.md §3; DESIGN.md › Layout › Frame): one centred column, padding
+     included in --frame-max; everything inside shares its one left edge. Rhythm between blocks is only
+     --gap-group / --gap-action / --gap-section. */
+  width: 100%;
+  max-width: var(--frame-max);
+  margin-inline: auto;
+  padding: var(--gap-group) var(--frame-pad) 0
+}
+
+/* the frame's quiet panel edge: a dotted hairline down each side */
+@media (min-width: 768px) {
+  .shell {
+    background: var(--hair-y) left top / 1px 100% no-repeat, var(--hair-y) right top / 1px 100% no-repeat
+  }
 }
 
 .topbar,
-.bottom {
+.bottom-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -53,11 +63,22 @@ body {
 }
 
 .topbar {
-  padding-bottom: var(--space-5);
+  padding-bottom: var(--gap-group);
   border-bottom: 1px solid var(--line);
   border-image: var(--hair-x) 1;
   flex-wrap: wrap;
-  gap: var(--space-3) var(--space-5)
+  gap: var(--gap-group);
+  justify-content: flex-start
+}
+
+/* brand left; the view tabs centred in the space before the right end (DISPLAY, LIVE, the tool dock) */
+.topbar .view-tabs {
+  margin-inline: auto
+}
+
+/* the tool dock's slot (the command layer portals the dock in); phones fold the dock into TOOLS */
+.topbar-dock:empty {
+  display: none
 }
 
 .brand {
@@ -156,10 +177,17 @@ label b {
   color: var(--value)
 }
 
+/* the footer band: the live number, then the site line; a section away from the last board */
 .bottom {
-  padding-top: calc(var(--space-1) * 5);
+  display: grid;
+  gap: var(--gap-group);
+  margin-top: var(--gap-section);
+  padding: var(--gap-action) 0;
   border-top: 1px solid var(--line);
-  border-image: var(--hair-x) 1;
+  border-image: var(--hair-x) 1
+}
+
+.bottom-row {
   font-size: var(--fs-tag-9)
 }
 
@@ -181,11 +209,6 @@ label b {
 }
 
 @media(max-width:760px) {
-  .shell {
-    width: min(100% - 28px, 560px);
-    padding-top: var(--space-4)
-  }
-
   .topbar .view-tabs {
     gap: var(--space-1) var(--space-3);
     flex-wrap: wrap
@@ -195,13 +218,13 @@ label b {
     display: none
   }
 
-  .bottom {
-    gap: var(--space-3);
+  .bottom-row {
+    gap: var(--gap-group);
     flex-wrap: wrap;
     justify-content: center
   }
 
-  .bottom span:nth-of-type(2) {
+  .bottom-row span:nth-of-type(2) {
     display: none
   }
 }
@@ -269,8 +292,16 @@ label b {
   height: auto
 }
 
+/* EXPLORE header rhythm: bar → (action) intro → (group) picker → (group) board title → (group) grid.
+   Each block owns only its top margin, so the steps hold in block flow and in the phone's flex column. */
 .boards-view {
-  padding: var(--space-4) 0
+  padding-top: var(--gap-action)
+}
+
+.boards-view::after {
+  content: '';
+  display: block;
+  clear: both
 }
 
 /* ── UX U1: intent line, grouped board picker, board blurb (docs/UX-PLAN.md §4.2, §5.1) ── */
@@ -280,10 +311,17 @@ label b {
   align-items: baseline;
   text-align: left;
   gap: var(--space-2) var(--space-4);
-  margin: 0 0 var(--space-4);
+  /* the row: the measured text, then its link, then × (not at the frame's far edge) */
+  max-width: calc(var(--measure) + 2 * var(--space-10));
+  margin: 0;
   color: var(--label);
   font: 400 var(--fs-label-12)/1.5 var(--mono);
   letter-spacing: .02em
+}
+
+/* the intro is a measured block, not a 166-character line; its link and × sit beside it */
+.intro-line > span:first-child {
+  max-width: var(--measure)
 }
 
 .intro-line b {
@@ -318,6 +356,10 @@ label b {
 .intro-line button:active {
   background-color: var(--wash-press);
   color: var(--value)
+}
+
+.intro-line + .board-picker {
+  margin-top: var(--gap-group)
 }
 
 .board-groups {
@@ -361,7 +403,7 @@ label b {
 
 .board-view .board-blurb {
   min-height: 1.5em;
-  margin: calc(var(--space-2) * -1) 0 var(--space-4);
+  margin: var(--space-1) 0 0;
   color: var(--mute);
   font: 400 var(--fs-label-11)/1.5 var(--mono);
   letter-spacing: .02em
@@ -378,8 +420,7 @@ label b {
 .board-tabs {
   display: flex;
   gap: var(--space-2);
-  flex-wrap: wrap;
-  margin-bottom: var(--space-4)
+  flex-wrap: wrap
 }
 
 .board-tabs button {
@@ -414,31 +455,31 @@ label b {
 }
 
 .board-view .board-title {
-  margin: 0 0 var(--space-3);
+  margin: 0;
   color: var(--label);
   font: 500 var(--fs-label-10) var(--mono);
   letter-spacing: .16em
 }
 
 .board-view {
-  width: 100%;
-  max-width: calc(var(--frame-max) + 2 * var(--spacing-cardGap));
-  margin-inline: auto
+  margin-top: var(--gap-group)
 }
 
+/* columns stop at --card-max (≤ 62svh): a wide screen leaves room at the right instead of growing cards past
+   the fold; the grid keeps the frame's left edge (density-driven grids: T3) */
 .board-grid {
   display: grid;
-  grid-template-columns: repeat(var(--board-cols, 3), minmax(0, 1fr));
+  grid-template-columns: repeat(var(--board-cols, 3), minmax(0, var(--card-max)));
   gap: var(--spacing-cardGap);
   grid-auto-rows: 1fr;
-  max-width: var(--frame-max);
-  margin-inline: auto
+  margin-top: var(--gap-group);
+  clear: both
 }
 
 /* DESIGN.md › Responsive: 3-up → 2-up → 1-up, gutters constant */
 @media(max-width:1100px) {
   .board-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr))
+    grid-template-columns: repeat(2, minmax(0, var(--card-max)))
   }
 }
 
@@ -450,6 +491,91 @@ label b {
   .dot-card {
     aspect-ratio: auto;
     min-height: 380px
+  }
+}
+
+/* ── T2: the touchable hero (home only, docs/LAYOUT-THEME-PLAN.md §1c #2) ──────────────────────────────────
+   The slot is first-load CSS so the box is there before its lazy chunk (src/components/hero/) fills it: beside
+   the header on wide screens, after the board on narrower ones (scroll-first: the cards come first on a phone). */
+.home-hero {
+  width: min(100%, 420px);
+  margin: 0
+}
+
+.home-hero-slot {
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface)
+}
+
+/* wide: a 216 px card with its legend beside it, floated right of the header (it is as tall as the header) */
+@media (min-width: 1280px) {
+  .home-hero {
+    float: right;
+    width: 428px;
+    margin: 0 0 var(--gap-group) var(--gap-action)
+  }
+
+  .home-hero-slot {
+    width: 216px
+  }
+}
+
+@media (max-width: 1279px) {
+  .boards-view {
+    display: flex;
+    flex-direction: column
+  }
+
+  .home-hero {
+    order: 1;
+    margin-top: var(--gap-section)
+  }
+}
+
+/* figure captions (Linear-style legends, §1c #14): one meta line, mono, under the figure */
+.fig-cap {
+  margin: var(--space-2) 0 0;
+  color: var(--mute);
+  font: 400 var(--fs-label-12)/1.5 var(--mono);
+  letter-spacing: .02em
+}
+
+.fig-cap b {
+  margin-right: var(--space-2);
+  color: var(--label);
+  font-weight: 500;
+  letter-spacing: .12em
+}
+
+/* the live number band (§1c #13): one engine stat in dot type, in the footer band */
+.live-band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap-group) var(--space-5);
+  min-height: 40px
+}
+
+/* the tool dock in the top bar (desktop): it no longer floats over cards; tips open downwards */
+.topbar-dock .pal-dock {
+  position: static
+}
+
+.topbar-dock [data-tip]::after {
+  top: calc(100% + var(--space-2));
+  bottom: auto
+}
+
+.topbar-dock [data-tip][data-kbd]::before {
+  top: calc(100% + var(--space-2) + 4px);
+  bottom: auto
+}
+
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+  .topbar-dock {
+    display: none
   }
 }
 
@@ -479,9 +605,8 @@ label b {
 /* LOG tab — public changelog */
 .log-view {
   text-align: left;
-  max-width: 880px;
-  margin: 0 auto;
-  padding: var(--space-4) 0 var(--space-2)
+  max-width: calc(var(--measure) + 144px);
+  margin-top: var(--gap-section)
 }
 
 .log-title {
@@ -492,7 +617,7 @@ label b {
 }
 
 .log-title--next {
-  margin-top: calc(var(--space-1) * 10)
+  margin-top: var(--gap-section)
 }
 
 .log-list,
@@ -1920,26 +2045,25 @@ label b {
   outline-offset: 4px
 }
 
-/* ABOUT: the intro, shortcuts and URL params above the changelog */
+/* ABOUT: bands in the frame (intro, figure, shortcuts, changelog), on the frame's left edge */
+.about-view {
+  padding-top: var(--gap-action)
+}
+
 .about-intro {
-  text-align: left;
-  max-width: 880px;
-  margin: 0 auto;
-  padding: var(--space-4) 0 var(--space-2);
-  border-bottom: 1px solid var(--line);
-  border-image: var(--hair-x) 1
+  text-align: left
 }
 
 .about-flavour {
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--gap-group);
   color: var(--mute);
   font: 500 var(--fs-tag-9) var(--mono);
   letter-spacing: .16em
 }
 
 .about-lede {
-  max-width: 68ch;
-  margin: 0 0 var(--space-4);
+  max-width: var(--measure);
+  margin: var(--gap-group) 0 0;
   color: var(--label);
   font: 400 var(--fs-label-12)/1.6 var(--mono)
 }
@@ -1948,7 +2072,7 @@ label b {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-2) var(--space-5);
-  margin: 0 0 var(--space-5);
+  margin: var(--gap-group) 0 0;
   font: 500 var(--fs-label-11) var(--mono);
   letter-spacing: .06em
 }
@@ -1962,9 +2086,10 @@ label b {
 
 .about-cols {
   display: grid;
+  max-width: calc(2 * var(--measure));
+  margin-top: var(--gap-action);
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: var(--space-4) calc(var(--space-1) * 9);
-  padding-bottom: var(--space-4)
+  gap: var(--gap-group) var(--gap-action)
 }
 
 .about-keys h3 {

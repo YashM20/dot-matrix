@@ -28,7 +28,7 @@ import { join, relative } from 'node:path'
 
 const ROOT = 'src'
 /** The token block(s): the only files allowed to hold raw values. */
-const TOKEN_FILES = new Set(['src/tokens.css'])
+const TOKEN_FILES = new Set(['src/tokens.css', 'src/site/theme/themes.css']) // themes.css: the generated theme table (T4)
 /** Intentional exceptions: file + a substring of `prop: value`, with the reason. Keep it short. */
 const ALLOW: { file: string; has: string; why: string }[] = [
   { file: 'src/App.css', has: 'xr-flash 1.2s', why: 'X-RAY outline flash: a one-shot effect, not chrome motion' },
