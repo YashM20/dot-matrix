@@ -8,9 +8,10 @@ import { renderCanvas } from '../../src/engine/renderer/canvasRenderer'
 import { renderCanvasBuffer } from '../../src/engine/renderer/canvasBuffer'
 import { renderSVG } from '../../src/engine/renderer/svgRenderer'
 import { renderWebGL, sharedDotGL } from '../../src/engine/renderer/webgl/dotgl'
-import { shapeExt } from '../../src/engine/renderer/ext'
 import { squircleExponent } from '../../src/engine/renderer/shapePath'
 import { insideJoined, installSquares } from '../../src/engine/squares'
+import { shapeExt } from '../../src/engine/renderer/ext'
+shapeExt.glLoad = () => import('../../src/engine/squares/gl').then(m => { shapeExt.gl = m.glJoin })
 import { dot480 } from '../../src/engine/theme/tokens'
 import type { DotInstance, GridConfig, Layer } from '../../src/engine/types'
 import { widgetById, withChrome } from '../../src/widgets'
@@ -86,7 +87,7 @@ const toSurface = (img: ImageData): Surface => { const c = document.createElemen
 async function loadGL(): Promise<{ firstFellBack: boolean; thenGL: boolean }> {
   const dots = sampleLayers([{ field: () => 1, join: true } as Layer], { cols: 4, rows: 4, pitch: 4 }, squareStyle, theme)
   const s = surface(16, 16, 2), first = renderWebGL(s.ctx, dots, [], theme)
-  await shapeExt.glLoad?.()
+  await shapeExt.glLoad!()
   return { firstFellBack: !first, thenGL: renderWebGL(s.ctx, dots, [], theme) }
 }
 

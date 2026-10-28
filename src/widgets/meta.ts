@@ -309,7 +309,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'algo-collapse': ['Wave Function Collapse solving a new knot of tiles every loop.', 'algorithm wfc tiles animated'],
   'algo-aggregate': ['Frost grown one grain at a time by diffusion-limited aggregation.', 'algorithm dla fractal animated'],
   'sq-tetris': ['A Tetris game played by a greedy AI, each settled piece fused into one joined tetromino.', 'squares join tetris game animated'],
-  'sq-quads': ['A portrait found by splitting the worst square into four, 1,200 times (after Fogleman’s Quads).', 'squares join quadtree portrait animated'],
+  'sq-quads': ['A portrait found by splitting the worst square into four until 1,201 squares remain (after Fogleman’s Quads).', 'squares join quadtree portrait animated'],
   'sq-blob': ['Four metaballs on a square lattice whose terraces fuse level by level; the red neck forms where two meet.', 'squares join metaballs animated'],
   'sq-gameboy': ['A four-shade LCD in spaced squares: the time, the date and a walker over a parallax strip.', 'squares lcd clock pixel animated'],
 }

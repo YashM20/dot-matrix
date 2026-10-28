@@ -287,7 +287,7 @@ export const sqBlob: WidgetPreset = {
 // parallax strip (far hills, near ground). The colon is the red, at 1 Hz.
 const LK = 2, L_ORIGIN: Pt = [0, 12], LW = 72, LH = 64
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'], DAYS = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
-/** The walker, 16 × 16, two frames ('#' value, '+' idle, '.' unlit). */
+/** The walker, 16 × 16, two frames ('#' value, '+' mid, '.' unlit). */
 const WALKER = [[
   '.....####.......', '....######......', '....##+#+#......', '....######......', '.....####.......', '......##........',
   '....######......', '...########.....', '...#.####.#.....', '...#.####.#.....', '.....####.......', '.....#..#.......',
@@ -303,7 +303,7 @@ export const sqGameboy: WidgetPreset = {
   layers: ctx => {
     const t = ctx.t, px = new Uint8Array(LW * LH), set = (x: number, y: number, s: number) => { if (x >= 0 && y >= 0 && x < LW && y < LH) px[y * LW + x] = s }
     // sky: two clouds drifting left (mid)
-    for (const [cx, cy, w, speed] of [[20, 32, 9, 1.5], [58, 27, 7, 1]]) {
+    for (const [cx, cy, w, speed] of [[20, 37, 9, 1.5], [58, 35, 7, 1]]) {
       const x0 = Math.round(mod(cx - t * speed, LW + 20) - 10)
       for (let x = 0; x < w; x++) { set(x0 + x, cy, 2); if (x > 1 && x < w - 2) set(x0 + x, cy - 1, 2) }
     }
@@ -317,11 +317,11 @@ export const sqGameboy: WidgetPreset = {
     for (let x = 0; x < LW; x++) {
       const u = Math.floor(x + run)
       set(x, 54, 2)
-      for (let y = 55; y < LH; y++) set(x, y, (u + y) % 4 === 0 || (u * 3 + y * 5) % 13 === 0 ? 1 : 0)
+      for (let y = 55; y < LH; y++) set(x, y, (u + y) % 4 === 0 ? 1 : 0)
     }
     // the walker, two frames at 4 Hz
     const frame = WALKER[Math.floor(t * 4) & 1]
-    frame.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') set(10 + x, 38 + y, ch === '#' ? 4 : 3) }))
+    frame.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') set(10 + x, 38 + y, ch === '#' ? 4 : 2) }))
     // HH:MM, 3× in LCD pixels; the colon goes in its own (red) layer
     const now = new Date(), hh = String(now.getHours()).padStart(2, '0'), mm = String(now.getMinutes()).padStart(2, '0')
     const digit = (ch: string, x0: number) => glyph(ch).forEach((row, gy) => row.forEach((on, gx) => { if (on) for (let i = 0; i < 9; i++) set(x0 + gx * 3 + (i % 3), 3 + gy * 3 + Math.floor(i / 3), 4) }))

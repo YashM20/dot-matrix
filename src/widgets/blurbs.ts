@@ -31,7 +31,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   scope: 'The instrument seen as signal: oscilloscope, spectrum and your microphone.',
   heal: 'Scratch the dots with your cursor and watch them grow back.',
   algorithms: 'Four niche algorithms drawing in dots: Voronoi stippling, a strange attractor, wave function collapse and frost growth.',
-  squares: 'Square cells, spaced and joined: Tetris pieces that fuse, a face found by 1,200 splits, terraced metaballs and a four-shade LCD.',
+  squares: 'Square cells, spaced and joined: Tetris pieces that fuse, a face found in 1,201 quads, terraced metaballs and a four-shade LCD.',
 }
 
 export const groupBlurbs: Record<BoardGroupId, string> = {
