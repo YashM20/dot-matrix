@@ -1,6 +1,7 @@
 import type { DotInstance, DotStyle, Field, GridConfig, Layer, ThemeTokens, Tone } from '../types'
 import { mulberry32 } from './jitter'
 import { quantize } from './quantize'
+import { coverExponent, hides } from './cover'
 import { acquireDotBuffer, paletteOf, pushDot, toneIndex, type DotBuffer } from '../buffer/dotBuffer'
 /**
  * Canonical tone mapping — single source of truth for dot color by value.
@@ -216,13 +217,15 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
     const key = siteKey(x, y), prev = sites.get(key)
     if (!prev || value >= prev.value) sites.set(key, { x, y, k: factor(layer.size ?? layer.lattice), value, tone: layer.toneOf ? layer.toneOf(value, u, v) : layer.tone })
   }
+  // the card cells a site dot hides follow its drawn shape (cover.ts); n once per call, from the style
   let seed = 2e6
+  const n = coverExponent(style.shape, style.cornerRoundness)
   for (const { x, y, k, value, tone } of sites.values()) {
     emit(dots, value, toneIndex(tone, value), (x + .5) * pitch, (y + .5) * pitch, seed++, style, k)
     const reach = k / 2 + .25
     for (let r = Math.max(0, Math.ceil(y - reach)); r <= Math.min(grid.rows - 1, Math.floor(y + reach)); r++)
       for (let c = Math.max(0, Math.ceil(x - reach)); c <= Math.min(grid.cols - 1, Math.floor(x + reach)); c++)
-        if (Math.hypot(c - x, r - y) <= reach) covered![r * grid.cols + c] = 1
+        if (hides(c - x, r - y, reach, n)) covered![r * grid.cols + c] = 1
   }
   const { best, owner } = composite(base, grid), background = style.opacityMode === 'constant', us = centres(grid.cols), vs = centres(grid.rows)
   for (let row = 0; row < grid.rows; row++) for (let col = 0; col < grid.cols; col++) {

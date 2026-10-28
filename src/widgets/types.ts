@@ -19,6 +19,11 @@ export interface WidgetPreset {
   live?: boolean
   /** Re-sampled on a timer with a running `t`. */
   animated?: boolean
+  /**
+   * Animation rate on the shared clock while the card is live (default: DotCanvas's 12, or 30 when engaged /
+   * reduced motion). Halved on phones, never below 12 (`cardFps`, src/widgets/fps.ts). Goldens don't see it: they sample fixed t.
+   */
+  fps?: number
   /** Reads the wall clock (time/date text) — re-sampled on each minute tick; other static cards never re-sample. */
   clock?: boolean
   /**

@@ -5,6 +5,83 @@
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
 ## Status board (updated 2026-10-27)
+**Foundation run (2026-10-27, branch `feat/foundation`):** the shared foundation of `docs/LIVING-MATTER-PLAN.md` (F0) and `docs/LAYOUT-THEME-PLAN.md` (T0), done in two phases of two parallel agents each. Priority: F0 first, because it unblocks the L, Q and M tracks and cuts first-load JS (148.14 of 150 kB) before the tracks and the theme spend it. Then T0, which unblocks T1–T6.
+- **Phase 1:** F1-A noise (F0.1–F0.4 and the determinism lint of F0.9); F1-B pixels and budget (F0.5, F0.6, F0.10, F0.11). Merge order: B, then A, then the full suite (the F0.9 join).
+- **Phase 2:** F2-C light hub (F0.7, F0.8, which needs `datan2` from phase 1); F2-D T0 tokens and cleanup. Then the full suite again.
+- **Machine budget** (2 cores, 4 threads, 16 GB): worktrees share `node_modules` through a junction; heavy commands (`vite build`, `pnpm golden`, browser probes, `pnpm check`) take a machine-wide lock so only one runs at a time. The owner later raised the run to six parallel agents.
+- **Merged so far:**
+  - [x] **F0.5 golden key.** `scripts/lib/goldenKey.ts` adds optional channels `,s<shape>:<r>`, `,j<mask>:<hx>:<hy>:<ro>:<ri>:<seam>`, `,θ<rad>`, `,a<aspect>` and `,m<motif>` after `legacyKey`. Every entry stores `style`; the one-time backfill is done, so later golden diffs read "0 changed, N added".
+  - [x] **F0.6 square cover.** `hides()` in `src/engine/sampler/cover.ts` is the one cover rule. Rotated non-circles reach R·√2, so Q1 must widen the scan box when it passes `rot`.
+  - [x] **F0.10 per-card fps.** Added `WidgetPreset.fps` and `src/widgets/fps.ts`; the phone tier halves the rate, min 12. Note: any machine with 4 or fewer cores counts as a phone.
+  - [x] **F0.11 first-load cut: 148.14 → 123.99 kB gz.** First-load code imported the `src/engine` barrel by value; it now imports by path. `size.ts --check` guards against the IR parser returning to first load. It also gained `--worker` and delta gates.
+  - [x] **F0.7–F0.8 light and tilt hub.**
+    - `src/site/light.ts` and `src/engine/light/input.ts`, the TILT button in TOOLS, and the physics board on the hub.
+    - Tests: `scripts/light.ts` 16/16; `scripts/light-browser.ts` 9/9.
+    - The two `Math.atan2` calls in `bucketLight` become `datan2` when F0.1 merges.
+    - Real-iPhone checklist (Safari over HTTPS):
+      - the permission prompt appears once;
+      - rolling the phone tips the PIT and INK cards;
+      - upright, the cards heal back onto their loop;
+      - a reload doesn't re-prompt;
+      - a Safari restart re-asks;
+      - vertical swipes still scroll;
+      - with Reduce Motion on, tilt doesn't start by itself.
+  - [x] **E1 editor tests and cleanup.**
+    - `scripts/editor.ts` (56 checks) runs in verify; `scripts/editor-browser.ts` passes 66/66 (desktop and touch).
+    - 22 old MAKE files are deleted (−2,264 lines). `studio/doc.ts`, `adapter.ts` and `playback.ts` stay, since the editor uses them.
+    - Dead probes still to fix: `scripts/export-chrome.ts` and `scripts/c10-browser.ts`.
+  - [x] **T0 tokens.**
+    - `src/tokens.css` is the one token block, and the `scripts/site/css-tokens.ts` lint finds 0 raw literals.
+    - The starter, shadcn and old-MAKE CSS is deleted: first-load CSS went 16.68 → 12.54 kB gz.
+    - To follow up: wire the lint into CI.
+  - [x] **T1 chrome design language.**
+    - Applied: surfaces, dotted hairlines, one glow, four states with a lint, glass for raised layers only, grouped tooltips with dot keycaps, hover intent, scroll-snap sheets, card radius 12.
+    - Not yet done: the sticky ALL pill still covers the first group tab on phones (T3).
+  - [x] **T4a theme engine.**
+    - `src/site/theme/` holds the OKLCH generator, the 14-theme table, the store, and a no-flash boot script with its CSP hash in `vercel.json`. Checks: `scripts/site/theme.ts` 22/22 and `scripts/site/theme-boot.ts` 14/14.
+    - Two `dark_signal` contrast waivers are left for T6: text-3 at 3.85:1, and white on `#FF3B30` at 3.55:1.
+  - [x] **F0.1–F0.4 noise toolkit and the F0.9 determinism lint.**
+    - What landed: `src/engine/noise/` (dmath, gradient, Voronoi, curl) and the IR noise pack, registered through the zero-byte fallback hook.
+    - Checks:
+      - `scripts/noise.ts` 32/32;
+      - a Bun/JSC snapshot matches Node;
+      - GPU parity max |Δ| 4e-6 with 0 flips;
+      - first load +0.03 kB gz.
+    - `bucketLight` now uses `datan2`.
+    - The Voronoi time budget flakes when other heavy work runs at the same time.
+  - [x] **T4b themes wired.**
+    - What it covers: all 14 themes drive the CSS, the cards, the widget page, the editor chrome and exports.
+    - Defaults: the default is `system`. OG images and goldens stay `dark_signal`, and editor frames keep `dot480`.
+    - Checks: `golden --theme-parity` (14 × 177 only recolour) and `theme-boot.ts` 29/29.
+    - Size: first load −4.4 kB gz, because the unused playground store went and the widget registry and home board left first load.
+    - For T5: the palette's "Theme: …" commands and the TOOLS LIGHT/DARK row are placeholders.
+    - For T6: the two `dark_signal` contrast waivers, `--dim`, and the skin stage colours.
+  - [x] **T2 frame and rhythm.**
+    - What it covers:
+      - one left edge and a three-step rhythm;
+      - About and the widget page inside the frame;
+      - the dock moved into the top bar;
+      - a footer band with a live dots-drawn count;
+      - the touchable hero card (drop, paste or pick an image; it stays on the device);
+      - figure legends;
+      - `scripts/site/layout.ts` at six widths.
+    - Size: first load +0.29 kB gz.
+    - For T3: density-driven auto-fill grids, at least 6 cards above the fold at 1440, the phone header at ≤ 120 px, and the ALL pill.
+  - [x] **E2 editor selection.**
+    - Selection: multi-select and marquee, groups, locks, align and distribute, and smart guides.
+    - Clipboard: copy, cut, paste and duplicate, across tabs and through the system clipboard; Alt-drag moves a copy.
+    - Phone: a SELECT bar.
+    - Doc v2, with v1 migration.
+    - Checks: editor Node 95, browser probe 99.
+- **Full suite on `feat/foundation` (2026-10-28): all green.**
+  - `pnpm check`;
+  - goldens 177/177 and theme parity;
+  - first-load JS **120.07 kB gz**, down from 148.14 at the start of the run;
+  - theme and CSS lints;
+  - `webgl.ts`, `site/mobile.ts`, `light-browser.ts`, `editor-browser.ts`, `site/layout.ts`, `theme-boot.ts`.
+  - The mobile and layout probes need a running `vite preview` (ports 4317 and 4318).
+- **Next, waiting for the owner:** Q1 squares, L1 pond and M1 materials (all unblocked by F0); T3 grids; T5 picker; E3.
+
 **Resume here (2026-10-27):** branch `feat/native-editor-share` merges six parallel tracks on top of `main` (3a1775c, UX U0–U5 slice):
 - **Phone shell** (`src/site/mobile.css`, `BoardSheet`, `Sheet`, `useSwipeDown`, `site/layer.ts`): bottom tab bar EXPLORE / MAKE / ABOUT / TOOLS, sticky title bar that opens a boards sheet, thumb strips, swipe-down sheets, touch palette (no autofocus, boards first), 16 px fields on coarse pointers, safe areas, short-landscape layout, installable PWA (`public/manifest.webmanifest`, dot-field icons).
 - **Touch policy** (`src/engine/interaction/gesture.ts`, `useControlInput`, `touch.css`; `docs/UX-PLAN.md` §10): cards are scroll-first; tap controls act on lift, drag controls on a horizontal drag or a 300 ms hold; physics cards are `gesture: 'surface'`; X-ray is a swipeable bottom sheet.

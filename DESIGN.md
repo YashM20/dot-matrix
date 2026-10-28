@@ -47,6 +47,42 @@ Two surface tones do all the work: `{colors.bg}` (near-black canvas) behind ever
 - **Warning** (`{colors.warning}` — `#E8A33D`): battery-low, alert-count badges.
 - **Charging/Positive Delta** (`{colors.deltaPositive}` — `#7BC96F`): retail/analytics up-arrow figures (e.g. "+$23%").
 
+### CSS colour roles (chrome)
+The page chrome reads these custom properties (`src/tokens.css`), never a hex. Values are today's dark palette (`dark_signal`); the theme CSS (`src/site/theme/themes.css`, generated; see Theme below) sets the same names per scheme and accent, plus the accent family (`--red-text`, `--on-red`, `--red-line`, ...). An alpha variant is written where it is used, `color-mix(in srgb, var(--role) N%, transparent)`, so it follows the role. `scripts/site/css-tokens.ts` fails on a colour literal anywhere else (the two token files excepted).
+
+| CSS token | Value | Design token | Role |
+|---|---|---|---|
+| `--red` | `#FF3B30` | `{colors.dotActive}` | the one accent: active, live, selected (the theme's accent, whatever its hue) |
+| `--bg` | `#070809` | `{colors.bg}` | the room behind everything |
+| `--panel` | `#0D0F11` | — | the bezel: editor chrome, docked bars |
+| `--surface` | `#111315` | `{colors.surface}` | the card glass |
+| `--raised` | `#1B1E21` | `{colors.surfaceRaised}` | menus, rows, fields |
+| `--line` | `rgba(255,255,255,.08)` | `{colors.hairline}` | 1 px borders and rules |
+| `--line-strong` | `#3A3D42` | — | solid quiet ink: grab handles, grips, off glyphs |
+| `--tint` / `--shade` | `#FFF` / `#000` | — | the light and the dark mixed into washes, lines, scrims, shadows, masks |
+| `--well` | `#000` | — | the recess below the surface: code wells (light: the brightest paper) |
+| `--scrim` | `rgba(0,0,0,.55)` | — | backdrop behind sheets and dialogs |
+| `--value` | `#F2F3F5` | `{colors.value}` | primary text |
+| `--label` | `#C7CBD1` | `{colors.label}` | labels, secondary text |
+| `--dot-idle` | `#8A8F98` | `{colors.dotIdle}` | native controls (`accent-color`), the essay's meta grey |
+| `--mute` | `#6E7278` | `{colors.mute}` | meta |
+| `--dot-mid` | `#5B5F66` | `{colors.dotMid}` | quiet bars |
+| `--dim` | `#4A4E54` | — | the dimmest text: units and sub-labels in the editor |
+| `--dot-faint` | `#2E3033` | `{colors.dotFaint}` | off switches |
+
+**Chrome materials** (T1, docs/LAYOUT-THEME-PLAN.md §1b). Built from the roles above, so a theme swap carries them.
+
+| CSS token | Built from | Use |
+|---|---|---|
+| `--line-dot` | `--tint` at 24% | the ink of a dotted hairline |
+| `--hair-x` / `--hair-y` | a 1 px `--line-dot` dot every `--hair-pitch` | rules and dividers: `border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1` (`--hair-y` for a vertical divider). Card and panel *edges* stay the solid `--line` |
+| `--line-hover` | `--tint` at 28% | the outline of a hovered or focused outlined control |
+| `--card-edge` | inset 1 px `--tint` at 4% | the card's top-edge highlight (with its single hairline) |
+| `--wash-hover` / `--wash-press` | `--tint` at 5% / 9% | hover is a lightness lift, press one step more; never a colour change |
+| `--glow`, `--glow-halo`, `--glow-wash` | `--red`: a 1 px ring + 16 px halo at 30%; the halo alone; a 12% wash | **the one signature effect**, only on active, focus and live selectors (the lint enforces it) |
+| `--glass` / `--glass-blur` | `--raised` at 84% / `blur(16px) saturate(140%)`; phones and coarse pointers 92% / `blur(8px)` | raised layers only: menus, popovers, sheets, ⌘K |
+| `--shadow-raised` | `--shade` 40% spread, a .5 px `--shade` ring, an inset .5 px `--tint` top | every raised layer, toasts and tooltips |
+
 ## Typography
 
 ### Font System
@@ -76,6 +112,26 @@ A second, opt-in face for display and kinetic type: `src/engine/type` (`typeFiel
 ### Principles
 Every size in the hierarchy is a strict multiple of the base grid unit — there is no arbitrary in-between size. Weight is simulated by dot density, not a bold-font variant: a "heavier" numeral is achieved by widening `{grid.pitch}` or increasing `{dotStyle.sizeMax}` for that glyph's field, never by swapping a font file. This keeps every text role rendering through the exact same `Field → Sampler → Renderer` pipeline as every icon, chart, and photo in the system.
 
+### Chrome type (CSS)
+The page chrome around the cards (topbar, pickers, editor, sheets, essay) is real text. Sizes are tokens named by **role and size** (`src/tokens.css`, rem on a 16 px root); the family is set separately (`--mono` for UI, labels, numbers and meta; `--sans` = Oxanium for headings and prose). Weights 400 / 500 / 600. `scripts/site/css-tokens.ts` fails on a raw px or rem in `font-size` or the `font` shorthand.
+
+| Token | Size | Use |
+|---|---|---|
+| `--fs-tag-8` | 8 px | in-card hints, tiny badges |
+| `--fs-tag-9` | 9 px | card labels, keycaps, chips |
+| `--fs-label-10` | 10 px | chrome labels, tabs, buttons |
+| `--fs-label-11` | 11 px | editor UI, menus |
+| `--fs-label-12` | 12 px | meta: 12 px uppercase mono, +.06em (the plan's one label size) |
+| `--fs-copy-14` | 14 px | short prose, intro lines |
+| `--fs-copy-16` | 16 px | body copy; phone form fields (no iOS focus zoom) |
+| `--fs-lead-18` | 18 px | the page's inherited size; essay prose |
+| `--fs-title-20` / `-24` / `-28` | 20 / 24 / 28 px | titles (28: the widget page) |
+| `--fs-h1-page` | `clamp(30px, 6vw, 44px)` | legal page title |
+| `--fs-h1-hero` | `clamp(38px, 5vw, 72px)` | hero heading |
+| `--lh-tight` / `--lh-body` | 1.1 / 1.6 | headings / copy (adopted in T6) |
+
+The 8–11 px tokens carry today's chrome; T6 (docs/LAYOUT-THEME-PLAN.md) lifts chrome text to a 12 px minimum and retires them.
+
 ### Note on Substitutes
 There is no substitute typeface — the bitmap dot-font *is* the typography system and ships as static data (`bitmapFont.ts`, ~2KB). Any environment that cannot run the sampler falls back to rendering plain system-monospace text at equivalent sizes, which is treated as a degraded/non-brand state, not a real substitute.
 
@@ -83,9 +139,40 @@ There is no substitute typeface — the bitmap dot-font *is* the typography syst
 
 ### Spacing System
 - **Base unit:** `{grid.pitch}` — the px distance between adjacent dot centers, default 4px (matches the reference sheet's "4PX GRID" label).
-- **Tokens (derived from grid units, not raw px):** `{spacing.dot}` (1 grid pitch) · `{spacing.cell}` (4 pitches, ~16px) · `{spacing.cardPad}` (8 pitches, ~32px) · `{spacing.cardGap}` (6 pitches, ~24px) · `{spacing.section}` (16 pitches, ~64px).
+- **CSS tokens** live in one block, `src/tokens.css` (loaded by the app and the essay). Chrome spacing uses only these; `scripts/site/css-tokens.ts` fails on a raw px in margin, padding or gap (1 px hairline overlaps excepted). Gaps between blocks use only the three rhythm steps; there are no off-scale `calc(var(--space-1) * n)` values left (T2).
+
+| Token | Value | Use |
+|---|---|---|
+| `--space-1` … `--space-5` | 4 · 8 · 12 · 16 · 24 px | inside controls and groups |
+| `--space-6` … `--space-10` | 32 · 48 · 64 · 96 · 128 px | between blocks and sections |
+| `--gap-group` | `--space-3` (12 px) | rhythm: inside a group |
+| `--gap-action` | `--space-6` (32 px); `--space-5` (24 px) ≤ 760 px | rhythm: before actions, and between the top bar and a view |
+| `--gap-section` | `clamp(--space-8, 8vw, --space-10)` | rhythm: between sections (the last board and the footer band, ABOUT's bands) |
+| `--spacing-cardGap` (`{spacing.cardGap}`) | `--space-4` (16 px) | gutter between cards on a board |
+| `--spacing-cardPad` (`{spacing.cardPad}`) | `--space-4` (16 px) | `dot-card` padding |
+
 - **Universal grid rhythm:** every board in the reference set composes as a 3-column card grid with equal `{spacing.cardGap}` gutters — this is the default composition, not one option among many.
 - **Card internal padding:** `{spacing.cardPad}` on all sides, with the eyebrow label sitting flush to the top-left and any `{component.statusDot}` flush to the top-right.
+
+### Layout tokens
+
+| Token | Value | Use |
+|---|---|---|
+| `--frame-max` | 90rem (1440 px) | the frame (`.shell`), its side padding included |
+| `--frame-pad` | `clamp(16px, 3vw, 40px)` | the frame's side padding |
+| `--frame-inset` | `max(0, (100vw − --frame-max) / 2) + --frame-pad` | the frame's content edge from the viewport edge, for fixed or full-bleed things (the editor bar, the widget page's pinned pills) |
+| `--card-max` | `min(62svh, 520px)` | the widest (so, for square cards, the tallest) a board column gets |
+| `--measure` / `--measure-head` | 68ch / 42rem | longest line of body text / of a heading |
+| `--hair-dot` / `--hair-pitch` | 1 px / 4 px | dotted hairline: a 1 px dot every 4 px |
+
+### Frame and rhythm (T2, docs/LAYOUT-THEME-PLAN.md §3)
+- **One frame, one left edge.** Every page is one centred column (`.shell`: `--frame-max` wide with `--frame-pad` inside it), with a dotted hairline down each side from 768 px. The top bar, the intro, the board picker, the board title, the grid, ABOUT's bands, the widget page's top row and card, the footer band and the editor's first tool all start on its content edge (`scripts/site/layout.ts` checks ±1 px at six widths).
+- **Rhythm.** Each block owns its top margin only, and every vertical gap between blocks is one of the three steps: top bar → view `--gap-action`; intro → picker → board title → grid `--gap-group` each; last block → footer band `--gap-section`. The probe fails on any other gap.
+- **Measure.** Prose keeps `--measure` (the intro line, the ABOUT lede, the changelog); the intro's link and close sit beside the measured text, not under it.
+- **Cards.** Board columns are `minmax(0, --card-max)`: a card is never taller than 62svh, and on a wide screen a two-column board leaves room at the right rather than leaving the frame's edge (density-driven grids are T3).
+- **Home hero.** The touchable card (`src/components/hero/`) floats right of the header from 1280 px (it is no taller than the header, so the grid does not move) and comes after the board below that: on a phone the cards come first.
+- **Footer band.** One band a section below the last block: the live number (dots drawn this visit, in dot type) over the site line. No dead strip under it: the tool dock lives in the top bar on desktop and in TOOLS on a phone.
+- **Figure legends.** One mono meta line under a figure: `FIG 03 · <subject> · <grid> · <pitch>` (`.fig-cap`, and the essay's `figcaption[data-fig]`).
 
 ### Grid & Container
 - **Default board size:** 3×3 card grid at 1:1 aspect per card (matches every reference board). A 3×4 variant is supported for taller compositions (DeerFlow Mosaic hero board).
@@ -132,6 +219,25 @@ A material is a dot vocabulary, not a shader: given one normal raster and one li
 
 **Board-wide light:** a board shares one light direction, the sun of the wall-clock hour (`sunAt(hourOf(date))`: rises on the left at 6, highest at noon, sets on the right at 18, a lower moon at night). Over a card the pointer replaces it as a torch.
 
+#### Light and tilt input
+The phone's orientation reaches cards as plain numbers from the light hub (`src/site/light.ts`, a `Source`); the engine half is `src/engine/light/input.ts`, imported by path (not through `engine/light`). There is no `data.light` object: card data is numbers only.
+
+| Key | Range | Meaning | Read by |
+|---|---|---|---|
+| `lightSrc` | 0, 1 | 0 = the clock's sun, 1 = tilt (`lightAz` / `lightEl` valid) | lit cards, via `sceneLight()` |
+| `lightAz` | 0..63 | azimuth bucket, clockwise from 12 o'clock | `sceneLight()` / `lightOfBucket` |
+| `lightEl` | 0..7 | elevation band over 10°..80° | `sceneLight()` / `lightOfBucket` |
+| `gx`, `gy` | unit vector, 1/32 steps | gravity direction on the screen; exactly (0, 1) when the phone is held normally (roll < 8°) or lies flat | physics worlds |
+| `tx`, `ty` | −1..1, 1/16 steps | tilt from the rest pose: (0, 0) at rest and inside 2°, ±1 at 24°; `tx` > 0 when the right edge tips down | parallax, sloshing, highlights (never derived from `gx`/`gy`) |
+| `tilt` | 0..4 | tilt state: unsupported, prompt, granted, denied, insecure | UI hints only |
+
+Fixture (goldens, snapshots, no sensor): `{ lightSrc: 0, lightAz: 0, lightEl: 7, gx: 0, gy: 1, tx: 0, ty: 0, tilt: 0 }`.
+- **Precedence** (`sceneLight`): a pointer inside the card (torch) → tilt (`lightSrc` 1) → the sun of the hour.
+- **Opt-in:** a card declares every key it reads in `defaults`, with the fixture values (undeclared keys never arrive), and its board lists `sources: [lightSource]` both in the manifest entry's `load()` and in the eager registry (`src/widgets/index.ts`). The physics board is the first consumer.
+- **Calm by default:** a still phone emits nothing; at most 15 updates/s (4 under reduced motion); listeners only while a consumer board is mounted and the tab is visible.
+- **TILT button:** in the phone TOOLS sheet, shown only where tilt can work (orientation events, a coarse pointer, a secure context); `aria-pressed` while tilt is on. It is the one place that asks iOS for permission (`requestTilt()`, first thing in the tap); cards never ask. Tilt never starts by itself under reduced motion.
+- **Not a touch:** tilt never engages a card, sets pointers or blocks scroll (UX-PLAN §10).
+
 ## Shapes
 
 ### Dot Roundness Scale
@@ -145,7 +251,20 @@ A material is a dot vocabulary, not a shader: given one normal raster and one li
 | `{rounded.soft}` | 0.12 | 2.4 | Slightly softened dots for photo halftones |
 | `{rounded.circle}` | 0 | 2 (true circle) | Status dots, avatar circles, radial-ring markers, PIN dots |
 
-Individual dot shape is controlled by one continuous parameter (the superellipse exponent) rather than a discrete shape enum — sliding from `{rounded.sharp}` to `{rounded.circle}` smoothly passes through every intermediate "squircle" state. Card container corners use the same exponent at a larger scale (`{rounded.cardCorner}`, default n=4, ≈16px effective radius) so card chrome and dot chrome always read as the same geometric family.
+Individual dot shape is controlled by one continuous parameter (the superellipse exponent) rather than a discrete shape enum — sliding from `{rounded.sharp}` to `{rounded.circle}` smoothly passes through every intermediate "squircle" state. Card container corners are the chrome radius `{rounded.cardCorner}` (`--radius-card`, 12 px) so card chrome and dot chrome always read as the same geometric family.
+
+### Chrome radius (CSS)
+Dots and in-card shapes use the squircle exponent above. The HTML chrome around them (card containers, controls, menus) uses a short radius scale in `src/tokens.css`; `scripts/site/css-tokens.ts` fails on a raw px radius (percentages, for circles and CRT glass, are fine).
+
+| Token | Value | Use |
+|---|---|---|
+| `--radius-sm` | 4 px | small marks: kbd, chips, swatches, inline code |
+| `--radius-ctl` | 8 px | controls: fields, buttons, tiles |
+| `--radius-panel` | 12 px | raised surfaces: menus, popovers, dialogs |
+| `--radius-card` | 12 px | `dot-card`, sheets (`{rounded.cardCorner}`). Cards 12, controls 8, pills full: nothing else |
+| `--radius-pill` | 999 px | pills, round buttons |
+
+A surface that wraps a rounded child with padding takes the child's radius plus the padding (`calc(var(--radius-panel) + var(--space-2))`), so the corners stay concentric.
 
 ### Photography / Field Geometry
 - **Halftone photo grid:** default 48×48 to 96×96 cells depending on card size; below ~32 cells, detail recognizability drops sharply (see Caveats in the engineering plan).
@@ -268,15 +387,43 @@ Interaction is a state the card's *data* is in, not a CSS layer on top. The inpu
 | `{interaction.springHalfLife.data}` | 0.12 s, critically damped | Data keys that glide to a new value (`springKeys`): sliders, knobs, scrub position |
 | `{interaction.springHalfLife.release}` | 0.08 s, under-damped (damping ratio 0.5, one visible overshoot) | Press release: the dot size springs back past rest once, then settles |
 | `{interaction.focusDash}` | 3 dots lit, 2 dots dark (one 5-site period) along the control's dotted outline | Keyboard focus ring (marching dots) |
-| `{interaction.focusSpeed}` | 8 cells per second (at most 1 cell per frame at 12 fps), linear | Marching speed of the focus dash; held still under reduced motion |
+| `{interaction.focusSpeed}` | 8 cells per second (at most 1 cell per frame at the card's fps, 12 by default), linear, stepped by time, not by frame | Marching speed of the focus dash; held still under reduced motion |
 | `{interaction.hitPad}` | Pad each target by whole cells until it is at least 24 px square (`ceil(24 / pxPerCell)` cells per axis); **44 px** when the pointer is touch | Hit-test rectangle around every control; never changes what is drawn |
 | `{interaction.touchSlop}` | 10 px of finger travel | Below it a touch can still be a tap or a hold; past it, a vertical move is the page's scroll and a horizontal one claims a drag control (`TOUCH.slop`, `src/engine/interaction/gesture.ts`) |
 | `{interaction.pressDelay}` | 110 ms still | A touched tap control shows its press (a button goes down) only after this, so a swipe that starts on it never flashes it |
 | `{interaction.holdEngage}` | 300 ms still | Press-and-hold on a drag control grabs it in any direction and engages the card (hairline-active border, DONE in the bar) until a touch elsewhere, Escape, DONE or 8 s idle |
 
+### Chrome motion tokens (CSS)
+The HTML chrome (sheets, menus, pills, tabs) animates with these durations only (`src/tokens.css`); `scripts/site/css-tokens.ts` fails on a raw duration. Card motion stays the engine's own (masks, dissolves, springs above).
+
+| Token | Value | Use |
+|---|---|---|
+| `--dur-in` | 0 ms | hover and press in: instant (the resting state carries the transition) |
+| `--dur-out` | 150 ms | hover out, press, small fades |
+| `--dur-move` | 220 ms | a sheet or panel following a drag or snapping to a stop |
+| `--dur-enter` | 280 ms | a sheet arriving; a display powering off |
+| `--ease` | `cubic-bezier(.2, .8, .2, 1)` | chrome easing |
+| `--dur-tip` | 400 ms | the first tooltip in a group waits this long; the next ones show at once |
+
+Allowlisted exceptions (effects, not chrome): the X-RAY flash (1.2 s), the nixie flicker loop (5.3 s), and the 1 ms reduced-motion end-state trick.
+
+### Chrome states (CSS)
+Every HTML control in the chrome has the same four states plus disabled, from the same tokens (`src/App.css` › chrome states). `scripts/site/css-tokens.ts` checks that every `:hover` selector has its `:active` and `:focus-visible` twin, that `--glow*` appears only on active / focus / live selectors, that no `outline: none` lacks a replacement, and that nothing uses `transition: all`.
+
+| State | Look | Motion |
+|---|---|---|
+| rest | neutral text (`--mute` / `--label`) on its surface | carries the transition: `color, background-color, border-color, box-shadow, opacity, transform` over `--dur-out` |
+| hover | `--wash-hover` or `--line-hover`, text one step up | in at once (`--dur-in`), out over `--dur-out` |
+| press (`:active`) | `--wash-press` | in at once; on touch, chrome also sinks to `scale(.96)` |
+| focus (`:focus-visible`) | the accent ring: `outline: 1px solid --red`, offset 2 px (inside, -2 px, for rows that fill their container), plus `--glow-halo` | none |
+| active / selected / on / live | the accent at full strength with `--glow-wash` or `--glow-halo` | none |
+| disabled | 40% opacity, no pointer | — |
+
+No state changes a size, so nothing shifts. On coarse pointers every chrome target is at least 40 px (44 px on phones). Menus, popovers and ⌘K open with no animation; only sheets slide in (`--dur-enter`). `prefers-reduced-motion` removes all of it. In-card controls are different: they draw hover, press and focus in dots (below).
+
 ### Grammar rules
 
-- **Hover glow** is `value`/`mid`, never the accent. Red keeps its meaning (live, hot, primary); hover and focus never use it.
+- **Hover glow** is `value`/`mid`, never the accent. Red keeps its meaning (live, hot, primary); hover and focus inside a card never use it. (The HTML chrome's keyboard focus ring is the accent, per Chrome states above: it marks "here", outside the card's dots.)
 - **Press** is one quantize step *down* in dot size, so the control visibly sinks. On release it springs back with `{interaction.springHalfLife.release}`. It is never a colour change.
 - **Data motion** uses `{interaction.springHalfLife.data}`: the value glides on a critically damped spring and snaps to the next integer cell or lattice step each frame.
 - **Focus** is marching dots: the control's own outline sites light in the `{interaction.focusDash}` pattern and travel at `{interaction.focusSpeed}`. It replaces the `{colors.hairlineActive}` card border for in-card controls; the hairline treatment stays for whole-card selection.
@@ -295,6 +442,7 @@ Interaction is a state the card's *data* is in, not a CSS layer on top. The inpu
 - Keep card composition to a 3-column grid with equal `{spacing.cardGap}` gutters as the default — deviate only for genuinely wide content (waveforms, chat).
 - Build all hierarchy from **grid size** and **color role**, never from a second typeface or italic/bold variant — there isn't one.
 - Auto-select Canvas rendering for any widget exceeding ~2,000 dots or requiring animation; keep SVG for static, sparse, copy-paste-friendly widgets.
+- Animate on the shared clock at 12 fps by default (30 while a card is engaged or under reduced motion). A card that needs more declares `fps` on its preset; on a phone (coarse pointer, save-data, or ≤ 4 cores) it runs at max(12, round(fps / 2)) and never above its own rate (`cardFps`, `src/widgets/fps.ts`). Step motion by time, not by frame, so it reads the same at any rate; goldens sample fixed t and never see `fps`.
 - Choose WebGL2 only by content, never by convenience: a card gets it when a layer is tagged for the GPU (`gpuIR` for a Field IR program evaluated per dot on the GPU, `gpuValues` for a CPU field sampled straight into a value texture) and WebGL2 works; `renderer: 'webgl'` forces it. Tag a layer only when its fine dot count is out of Canvas reach (≳ 100k dots, or a pitch below ~1 card px). The tagged field is still an ordinary `Field` at the card's lattice, which is what goldens, SVG export, `describe()` and the Canvas fallback (no WebGL2, context lost, shader failure) draw. One WebGL2 context per page, which is shared by every card and copied into each card's own canvas. Squircles are exact superellipses (n = 2 + 30r²) with analytic AA, so WebGL ink matches the true dot area. Canvas (Skia) under-covers sub-pixel dots: it draws 79% of a 0.6 px dot. A card of sub-2px dots therefore reads up to ~7% heavier on WebGL (parity gate: mean Δ ≤ 2/255, ≤ 2.5% of pixels off by > 16, PSNR ≥ 32 dB; `scripts/webgl.ts`). The GPU path does not do `sizeCurve`, `jitter` or `sites`; such layers stay on the CPU. A GPU layer does not suppress CPU card cells under its dots, so keep chrome outside its window.
 
 ### Don't
@@ -305,6 +453,22 @@ Interaction is a state the card's *data* is in, not a CSS layer on top. The inpu
 - Don't force SVG rendering on a widget with thousands of animated dots (waveforms, games, dense photos) — this is the single most likely performance foot-gun in the system.
 - Don't use a fixed border-radius token where the squircle exponent can be used instead — the continuous roundness slider is a deliberate replacement for a discrete radius scale.
 - Don't let card-to-card spacing shrink to fit denser widget content — `{spacing.cardGap}` stays constant; density is absorbed inside the card via `{grid.pitch}`, never at the layout level.
+
+### Chrome components (one per job)
+The HTML chrome has one component per job; a new control reuses one of these instead of adding a look.
+
+| Component | Class(es) | Used by |
+|---|---|---|
+| **pill** | outlined pill: `.board-tabs button`, `.skin-menu-btn`, `.intro-line button`, `.ed-textbtn`, `.ed-row-btns button`; capsule pill: `.pill` + `.pill-btn` (`PillBar`) | board picker, DISPLAY ▾, the widget page bars, editor actions |
+| **segmented** | `.ed-seg` (`role=radio` items); text tabs `.view-tabs`, `.board-groups`, `.ed-tabs` | editor options; views, groups and panels |
+| **sheet** | `Sheet` (`.sheet` › `.sheet-rest` + `.sheet-panel` › `.sheet-grab`, `.sheet-head`, `.sheet-body`): a scroll-snap sheet; the five-dot grab handle is shared with `.pal-grab`, `.ed-sheet-grab`, `.xr-grip` | BOARDS, TOOLS; the phone ⌘K, the editor and X-ray sheets reuse its handle and surface |
+| **menu** | the raised layer (`.skin-menu`, `.ed-menu`, `.wp-more`, `.pal`, `.sheet-panel`) with rows (`.skin-menu button`, `.ed-menu button`, `.wp-more button`, `.pal-item`, sheet rows): `--radius-panel` outside, `--radius-ctl` rows, `--wash-hover` / `--wash-press` | DISPLAY ▾, editor menus, widget MORE, ⌘K, sheets |
+| **tooltip** | `[data-tip]` (+ `[data-kbd]` for the keycap) inside a group (`.pal-dock`, `.pill-bar`) | the dock; the widget page pill bars |
+| **keycap** | `kbd` in `.pal`, `.pal-shell`, `.pal-boss`, `.xr-time`, and the tooltip keycap: a dotted edge on a dot-matrix fill | ⌘K footer and hints, the shell, the time machine |
+
+**Tooltip rules.** One at a time (the hovered control). The first in a group waits `--dur-tip`; moving to a neighbour shows its tooltip at once, until the pointer leaves the group (a registered `--tip-on` custom property that switches on after the delay and off at once, no JS). Keyboard focus shows it without the wait; a press hides it. No motion.
+
+**Hover intent.** DISPLAY ▾ opens after the mouse rests on it for 100 ms (without taking focus) and closes 150 ms after the mouse leaves it; a click or the keyboard opens it as before.
 
 ## Responsive Behavior
 
@@ -374,6 +538,67 @@ One global switch (header control, `?skin=`, localStorage `dot480:skin`, `setSki
 - **Cost:** emissive skins are GPU-side 2D ops (drawImage, composites, mips, one SVG colour-matrix filter). E-ink and flip-disc read back one `cols × rows` image a few times a second at most. A static card is re-skinned from its existing frame (no re-sample); a running card's canvas is copied once per its own tick.
 - **Reduced motion:** no power-on animation, no e-ink flash (partials only), no nixie flicker.
 - Not yet: split-flap skin (the split-flap text motion already exists per card), real-hardware calibration.
+
+## Theme
+
+A theme is **scheme × accent** (docs/LAYOUT-THEME-PLAN.md §4), named `${scheme}_${accent}` (`dark_signal`, `light_cobalt`). `dark_signal` is the canonical theme: goldens, OG images and the no-JS fallback use it, and it equals the colours above exactly. A visitor picks *which* hue is the accent; a board still shows only one (`{colors.dotActive}` = the theme's `--red`).
+
+- **Schemes:** `dark` (today's neutrals, `dot480`) and `light` (the warm `paper` preset: room `#F1F0EC`, card `#F8F8F5`, ink dots). `system` resolves to one of them from `prefers-color-scheme`. Default: `system` + `signal`, so a visitor whose OS is light gets `light_signal`.
+- **Accents (7):** `signal` (h 29, today's red), `amber` (75), `phosphor` (145), `cyan` (210), `cobalt` (260), `vite` (vite.dev's purple, hand-pinned), `magenta` (350). Hues ≥ 25° apart. Custom hue: T6.
+- **Source:** `src/site/theme/accents.ts` (generator, pure) → `npx tsx scripts/site/theme.ts --write` → `table.ts` (all roles), `dots.ts` (engine tokens), `themes.css` (CSS variables). The site runs no colour math. `scripts/site/theme.ts` checks the table (also in `pnpm verify`).
+
+### Roles
+Components and cards read roles, never hues. Same keys in every theme. **One set of names:** the roles are the CSS custom properties of `src/tokens.css` (the table under "CSS colour roles" above); `src/tokens.css` keeps their `dark_signal` values (also the essay and legal pages, which have no theme) and `themes.css` sets them per theme. `--red` is `{colors.dotActive}` whatever hue the theme gives it: the name is kept, never aliased (`--accent`, `--primary` do not exist).
+
+| Group | Roles (CSS `--name`) |
+|---|---|
+| Neutral | `bg`, `panel`, `surface`, `raised`, `line`, `line-strong`, `tint`, `shade`, `well`, `scrim`, `value`, `label`, `mute`, `dim` |
+| Dot tones | `dot-faint`, `dot-mid`, `dot-idle`, plus `value` (the brightest tone) |
+| Accent | `red` ({colors.dotActive}), `red-dim` ({colors.dotActiveDim}), `red-hover`, `red-press`, `red-text` (the accent as text, ≥ 4.5:1), `red-line` (active border, focus ring, ≥ 3:1), `on-red` ({colors.onActive}, text on a solid fill), `red-surface` + `red-surface-text` (hero insets only), `red-halo` (chrome halos only), `selection` (`::selection`, the accent at 30%) |
+
+The 12% wash and the glow are built from `--red` in `src/tokens.css` (`--glow-wash`, `--glow-halo`, `--glow`); they and the other chrome materials (`--line-dot`, `--hair-x`/`-y`, `--wash-*`, `--glass`, `--shadow-raised`) are declared on `:root, [data-scheme]`, so a pinned subtree draws its own lines and glow.
+
+In `light`, `--tint` is the ink (washes and dotted lines darken the paper) and `--shade` a deep ink (shadows, scrims). Text roles in light: `value` ≈ L .22, `label` .38, `mute` .50, `dim` .62.
+
+| Theme | `--red` | `--red-text` | `--on-red` | `--red-dim` |
+|---|---|---|---|---|
+| `dark_signal` | `#FF3B30` | `#FFA193` | `#FFFFFF` | `#B8241A` |
+| `light_signal` | `#E43226` | `#B42219` | `#190403` | `#FF9687` |
+| `dark_vite` | `#B39AFF` | `#C2AEFF` | `#16171D` | `#6C3BFF` |
+| `light_cobalt` | `#105FD9` | `#0145A7` | `#FFFFFF` | `#8DB8FF` |
+
+The other ten are in `src/site/theme/table.ts` (`npx tsx scripts/site/theme.ts` prints them all).
+
+Engine side: `themeTokens(scheme, accent)` (`src/site/theme/theme.ts`) returns a `ThemeTokens`: `dot480` (dark) or `PAPER` (light) with the theme's accent, dim, value and surfaces. On the site it reads them from the theme CSS (so the first load carries no colour table); `tokensOf()` (`src/site/theme/tokens.ts`) gives the same from the generated table for scripts. Both return `dot480` itself for `dark_signal`, and memoise per name. The browser probe checks they agree in all 14 themes.
+
+### Generator rules
+Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5 fills, 6–8 lines, 9–10 solid, 11–12 text). The generator clamps or nudges until every rule passes, and hand-pinned values must pass them too.
+- **Gamut:** every colour is inside sRGB. Chroma is binary-searched at fixed L and h. Cut today: dark cobalt −11%, dark magenta −34% (its L rose to stay clear of the idle grey for protans), light amber −16%, light cyan −14%.
+- **Dots:** `red` and `red-line` are ≥ 3:1 on `surface` and `bg`.
+- **Text:** `value`, `label`, `mute` and `red-text` are ≥ 4.5:1 on all four surfaces. `red-text` is also ≥ APCA Lc 60 on `surface`. `dim` is not held to it (units and sub-labels; T6).
+- **`on-red`:** white if it reaches APCA 60 and 4.5:1 on the solid. Otherwise a dark tint of the hue (`oklch(.25 max(.08·C, .04) h)`), darkened until it reaches 4.5:1.
+- **Colour-blind safety:** in normal vision and under simulated protanopia, deuteranopia and tritanopia (Machado 2009), `red` differs from `value`, `dot-idle` and `dot-mid` by ΔL ≥ .08 or ΔE_OK ≥ .10. If needed, the solid's L is searched ±.15 to get there.
+- **Tone order:** APCA on `surface` gives faint < mid < idle < value, and `red-dim` < `red`.
+- **`red-dim`:** dark uses step 7 (a dimmer accent). Light uses step 7 too, a lighter tint (less ink), which matches vite's pinned `#B39AFF`.
+- **Tinted neutrals:** surfaces lean toward the hue by C .005 (vite .014), `line`, `line-strong`, `mute` and `dim` by .010, `label` by .006, and `value` by .003. Light gets 70% of these. L is kept. Neutral dot tones stay untinted, and `dark_signal` is not tinted at all.
+- **Pins:** `dark_signal` keeps `#FF3B30` / `#B8241A` / `#FFFFFF`. `vite` dark is `#B39AFF` (line and dim `#6C3BFF`, on-red `#16171D`, surface `#370A7F`). `vite` light is `#6C3BFF` (text `#6B1EB9`, line `#8A63FE`, dim `#B39AFF`, surface `#F0EBFF` / `#140033`). Dark vite's `red-text` is `#C2AEFF`, because `#B39AFF` reaches only Lc 55.
+- **Waivers:** two of today's values fail a rule and are kept on `dark_signal` only, until T6: `mute` `#6E7278` (3.85:1 on the surface) and `on-red` white on `#FF3B30` (3.55:1). The check lists them.
+- **Gradient rule:** `red-halo` (vite: electric `#6C3BFF` → vite `#B39AFF`) is for chrome halos only: glow, focus and live ring, swatch ring. Never use it on dots, text or lines.
+
+### Runtime
+- `<html data-scheme data-accent>` is set before first paint by the inline boot script in `index.html` (`src/site/theme/boot.ts`, sha256 in the CSP in `vercel.json`). It also rewrites the `color-scheme` meta and the `theme-color` meta (the scheme's `bg`), which sit above it.
+- After that, `theme.ts` maintains the attributes and the metas (`theme-color` = the theme's exact `--bg`). Resolution, per field: `?scheme=` / `?accent=`, then `?theme=<scheme>_<accent>`, then localStorage `dot480:theme`, then the defaults. URL params are never persisted; `setTheme()` persists.
+- `src/index.css` imports `themes.css` right after `tokens.css`: `[data-scheme]` has the same specificity as `:root`, so the later file wins. `color-scheme` comes from `themes.css` (dark when there is no attribute).
+- `.no-transition` is on `<html>` for the frame of a switch. Cards re-sample once per switch (their tokens object changes); switching back is a cache hit.
+- **Scoping:** a subtree pins a theme by carrying **both** attributes (`data-scheme` and `data-accent`); its descendants inherit. (A subtree with only one attribute is not supported: the CSS has one compound selector per theme, which keeps nested scopes unambiguous.)
+- **Switching, for now:** ⌘K "Theme: `<scheme>_<accent>`" (14 commands) and "Theme: system"; TOOLS (phones) has a LIGHT / DARK row; `?theme=light_cobalt` in the URL; `dot480.setTheme({ scheme, accent })` in the console. The THEME popover is T5.
+
+### Theme readers and the display skin
+- **Cards** (`DotWidget`): without a `theme` prop they take the site theme (`useTheme()` + `themeTokens()`), so the boards, the widget page and the ⌘K preview follow it. Exports (PNG, SVG, the card's actions) use the card's tokens at that moment: what the visitor sees. OG images (`scripts/site/postbuild.ts`) and goldens stay on `dark_signal`.
+- **Polarity insets** (`src/site/theme/polarity.ts`): on a light page a card renders as a dark inset (`data-scheme="dark"` + the page's accent on `.dot-card`, dark tokens) when it is a photo or halftone (`group: 'photo'`), the live camera (`media: 'camera'`), or when the display skin is emissive (CRT, VFD, LED, Nixie: dark glass). Reflective skins (e-ink, flip-disc) and every other card follow the page. Nixie's neon stays orange (skin physics).
+- **Editor:** the asset thumbnails and dot icons are chrome and follow the site theme; the frames on the canvas keep their own theme (`dot480` / `deerflowMosaic`), which belongs to the artwork.
+- **Theme parity:** `pnpm golden --theme-parity` samples all 177 presets in all 14 themes and maps every dot's colour back to its tone role through `paletteOf`: the `(x, y, r, opacity, role)` hashes must equal `dark_signal`'s, so a theme only recolours. It reads and writes nothing (`goldens/hashes.json` stays `dark_signal`).
+- **Not themed yet:** the essay and legal pages (static, `dark_signal`), the X-ray overlay's guide lines (white), the skins' own stage colours (`src/engine/display/stage.ts`: VFD phosphor and LED colour do not take the accent yet).
 
 ## Known Gaps
 

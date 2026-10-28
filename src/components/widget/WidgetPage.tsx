@@ -18,6 +18,9 @@ import { stillPNG } from '../../export/still'
 import { cardHTML, cardSVG } from '../../export/snippets'
 import { canShare, copyPNG, copySVG, copyText, download, shareCard, type Outcome } from '../../export/clipboard'
 import { boardTime, cardAction, toast, useXR } from '../xray/store'
+import { getSkin } from '../skins/store'
+import { getTheme, themeTokens } from '../../site/theme/theme'
+import { cardScheme } from '../../site/theme/polarity'
 import { DotWidget } from '../DotWidget'
 import { Pill, PillBar, PillButton } from './PillBar'
 import './WidgetPage.css'
@@ -66,24 +69,26 @@ export function WidgetPage({ route, onOpen, onBoard }: WidgetPageProps) {
 }
 
 function Loaded({ w, preset, items, meta, onOpen, onBoard }: Loaded & Omit<WidgetPageProps, 'route'>) {
-  const stage = useRef<HTMLDivElement>(null)
+  const stage = useRef<HTMLElement>(null)
   const [more, setMore] = useState(false)
   const xray = useXR(s => s.global || s.on.size > 0)
   const i = items.findIndex(p => p.id === preset.id), prev = items[(i - 1 + items.length) % items.length], next = items[(i + 1) % items.length]
   const name = widgetTitle(preset.name), url = location.origin + widgetPath(w.slug, w.scope), short = location.origin + shortPath(w.uid)
   const share = useMemo(() => canShare(), [])
   const pitch = (preset.grid.pitch ?? dot480.gridPx) * 2
-  const source = () => presetSource(preset, dot480)
+  // exports are what the visitor sees: the card's theme at the moment of export (the site theme, or its dark inset)
+  const theme = () => { const s = getTheme(); return themeTokens(cardScheme(preset, s.resolved, getSkin()), s.accent) }
+  const source = () => presetSource(preset, theme())
   const t = () => (preset.animated ? boardTime() : 0)
   const png = () => stillPNG(source(), t())
   const svg = () => {
-    const src = source()
-    return cardSVG(src.frame(t()), { width: src.width, height: src.height, background: dot480.surface, border: dot480.hairline, radius: dot480.cornerRadiusCard }, { name, slug: w.slug, url })
+    const src = source(), th = theme()
+    return cardSVG(src.frame(t()), { width: src.width, height: src.height, background: th.surface, border: th.hairline, radius: th.cornerRadiusCard }, { name, slug: w.slug, url })
   }
   const report = (what: string) => (o: Outcome) => { if (said[o]) toast(`${what} ${said[o]}`) }
   const actionArgs = () => {
     const key = stage.current?.querySelector<HTMLElement>('[data-xr-key]')?.dataset.xrKey ?? ''
-    return { key, preset, data: { ...preset.defaults }, layers: withChrome(preset), grid: preset.grid, style: preset.style, theme: dot480, animated: !!preset.animated }
+    return { key, preset, data: { ...preset.defaults }, layers: withChrome(preset), grid: preset.grid, style: preset.style, theme: theme(), animated: !!preset.animated }
   }
   const sharePNG = useRef<Promise<Blob> | undefined>(undefined)
   const act = {
@@ -136,15 +141,17 @@ function Loaded({ w, preset, items, meta, onOpen, onBoard }: Loaded & Omit<Widge
     <PillBar label="Navigation" className="wp-top">
       <Pill><PillButton label={boardLabel(w.board)} glyph="‹" title={`Back to the ${boardLabel(w.board)} board`} href={`/${w.board}/`} onClick={() => onBoard(w.board, w.slug)} /></Pill>
       <Pill className="wp-step">
-        <PillButton label="PREV" glyph="←" title={`Previous card: ${widgetTitle(prev.name)}`} href={widgetPath(prev.id)} onClick={() => onOpen(prev.id)} />
+        <PillButton label="PREV" glyph="←" kbd="←" title={`Previous card: ${widgetTitle(prev.name)}`} href={widgetPath(prev.id)} onClick={() => onOpen(prev.id)} />
         <span className="wp-count" aria-label={`card ${i + 1} of ${items.length}`}>{i + 1}/{items.length}</span>
-        <PillButton label="NEXT" glyph="→" title={`Next card: ${widgetTitle(next.name)}`} href={widgetPath(next.id)} onClick={() => onOpen(next.id)} />
+        <PillButton label="NEXT" glyph="→" kbd="→" title={`Next card: ${widgetTitle(next.name)}`} href={widgetPath(next.id)} onClick={() => onOpen(next.id)} />
       </Pill>
     </PillBar>
     <div className="wp-main">
-      <div className="wp-stage" ref={stage} style={{ maxWidth: preset.grid.cols * pitch + 32 }}>
+      <figure className="wp-stage" ref={stage} style={{ maxWidth: preset.grid.cols * pitch + 32 }}>
         <DotWidget type={preset.id} preset={preset} density={pitch} />
-      </div>
+        {/* the figure legend (docs/LAYOUT-THEME-PLAN.md §1c #14) */}
+        <figcaption className="fig-cap"><b>FIG {String(i + 1).padStart(2, '0')}</b>{w.slug} · {meta.grid.cols} × {meta.grid.rows} dots · {meta.grid.pitch} px · {meta.renderer.toUpperCase()}</figcaption>
+      </figure>
       <aside className="wp-rail">
         <p className="wp-eyebrow">{boardLabel(w.board)} · {String(i + 1).padStart(2, '0')}</p>
         <h1 id="wp-title">{name}</h1>

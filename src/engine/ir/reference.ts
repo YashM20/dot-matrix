@@ -10,6 +10,12 @@
 import type { Node } from './ast'
 import type { IREnv } from './compile'
 
+/**
+ * Oracles for pack builtins (noise, fbm, …), registered by the pack on import: the plain JS library functions.
+ * The library is the oracle; the JS and GLSL backends are wrappers around it.
+ */
+export const IR_REF: Record<string, (...a: number[]) => number> = {}
+
 interface Scope { name: string; value: number; up: Scope | null }
 const lookup = (s: Scope | null, name: string): number => { for (; s; s = s.up) if (s.name === name) return s.value; throw new Error(`unbound ${name}`) }
 
@@ -62,6 +68,8 @@ export function referenceField(ast: Node, env: IREnv, opts: { f32?: boolean } = 
         return (h >>> 8) * (1 / 16777216)
       }
     }
+    const pack = Object.prototype.hasOwnProperty.call(IR_REF, name) ? IR_REF[name] : undefined
+    if (pack) return pack(...a)
     throw new Error(`no builtin ${name}`)
   }
   const ev = (n: Node, s: Scope | null): number => {

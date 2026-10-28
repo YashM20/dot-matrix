@@ -10,14 +10,15 @@ import { create } from 'zustand'
 import { commit, historyOf, loadLocal, redo, undo, type History, type StudioCard, type StudioLayer } from '../studio/doc'
 import type { SharedProgram } from '../../lib/share'
 import { addFrame, addLayer, boundsOf, frameById, frameSize, loadDoc, presetCard, programCard, programSource, saveDoc, seedDoc, topDown, type EditorDoc, type EditorFrame, type Sel } from './doc'
+import { clampZ, fitCam, zoomCam, type Camera } from './input'
+import { validSel } from './select'
 
 export type Tool = 'move' | 'hand' | 'frame' | 'draw' | 'text' | 'code'
 export type LeftTab = 'layers' | 'assets'
 export type RightTab = 'design' | 'animate' | 'code' | 'export'
 /** Phone only: which bottom sheet is open. */
 export type Sheet = 'layers' | 'assets' | 'inspector' | null
-export interface Camera { x: number; y: number; z: number }
-export const ZOOM_MIN = .1, ZOOM_MAX = 16
+export { ZOOM_MAX, ZOOM_MIN, type Camera } from './input'
 export interface Brush { size: number; value: number; erase: boolean }
 
 export interface EditorStore {
@@ -37,6 +38,10 @@ export interface EditorStore {
   preview: Record<string, string>
   note: string
   shortcuts: boolean
+  /** Touch: SELECT mode (the phone's selection bar). A tap adds to / takes from the selection, a drag on empty canvas draws a marquee. */
+  selectMode: boolean
+  /** Something was copied (this tab, another tab, an earlier visit): PASTE is offered. */
+  hasClip: boolean
   edit(fn: (d: EditorDoc) => EditorDoc, tag?: string): void
   begin(): void
   live(fn: (d: EditorDoc) => EditorDoc): void
@@ -59,6 +64,8 @@ export interface EditorStore {
   setPreview(frame: string, state: string): void
   setNote(n: string): void
   setShortcuts(on: boolean): void
+  setSelectMode(on: boolean): void
+  setHasClip(on: boolean): void
   /** Insert a card as a new frame, select it and bring it into view. Returns the frame id. */
   insertCard(card: StudioCard, o?: Partial<EditorFrame> & { at?: { x: number; y: number } }): string
   insertPreset(id: string): string | undefined
@@ -69,7 +76,6 @@ export interface EditorStore {
 
 let gestureBase: EditorDoc | undefined
 const first = (() => { const d = loadDoc(); if (d) return d; const studio = loadLocal(); return seedDoc(studio && studio.layers.length ? studio : undefined) })()
-const clampZ = (z: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, z))
 
 export const useEditor = create<EditorStore>((set, get) => ({
   h: historyOf(first),
@@ -81,7 +87,7 @@ export const useEditor = create<EditorStore>((set, get) => ({
   brush: { size: 2, value: 1, erase: false },
   play: { t: 1, playing: false },
   preview: {},
-  note: '', shortcuts: false,
+  note: '', shortcuts: false, selectMode: false, hasClip: (() => { try { return !!globalThis.localStorage?.getItem('dot480.editor.clip') } catch { return false } })(),
   edit: (fn, tag) => set(s => ({ h: commit(s.h, fn(s.h.present), tag) })),
   begin: () => { gestureBase = get().h.present },
   live: fn => set(s => ({ h: { ...s.h, present: fn(s.h.present) } })),
@@ -92,22 +98,13 @@ export const useEditor = create<EditorStore>((set, get) => ({
     set(s => (s.h.present === base ? {} : { h: { past: [...s.h.past, base].slice(-100), present: s.h.present, future: [], at: 0 } }))
   },
   cancel: () => { const base = gestureBase; gestureBase = undefined; if (base) set(s => ({ h: { ...s.h, present: base } })) },
-  undo: () => set(s => { const h = undo(s.h); return { h, sel: valid(h.present, s.sel) } }),
-  redo: () => set(s => { const h = redo(s.h); return { h, sel: valid(h.present, s.sel) } }),
-  select: sel => set({ sel }),
+  undo: () => set(s => { const h = undo(s.h); return { h, sel: validSel(h.present, s.sel) } }),
+  redo: () => set(s => { const h = redo(s.h); return { h, sel: validSel(h.present, s.sel) } }),
+  select: sel => set({ sel: sel.more?.length ? sel : sel.more ? { frame: sel.frame, layer: sel.layer } : sel }),
   setTool: tool => set({ tool }),
   setCam: cam => set({ cam: { ...cam, z: clampZ(cam.z) } }),
-  zoomAt: (z, sx, sy) => {
-    const c = get().cam, nz = clampZ(z), k = nz / c.z
-    set({ cam: { z: nz, x: sx - (sx - c.x) * k, y: sy - (sy - c.y) * k } })
-  },
-  fit: (ids = [], max = 2) => {
-    const b = boundsOf(get().h.present, ids), { w, h } = get().vp
-    if (!b) return set({ cam: { x: w / 2, y: h / 2, z: 1 } })
-    const pad = Math.min(96, Math.max(24, Math.min(w, h) * .08)), bw = b[2] - b[0], bh = b[3] - b[1]
-    const z = clampZ(Math.min(max, (w - pad * 2) / Math.max(1, bw), (h - pad * 2) / Math.max(1, bh)))
-    set({ cam: { z, x: (w - bw * z) / 2 - b[0] * z, y: (h - bh * z) / 2 - b[1] * z } })
-  },
+  zoomAt: (z, sx, sy) => set({ cam: zoomCam(get().cam, z, sx, sy) }),
+  fit: (ids = [], max = 2) => { const { w, h } = get().vp; set({ cam: fitCam(boundsOf(get().h.present, ids), w, h, max) }) },
   setVp: (w, h) => set({ vp: { w, h } }),
   setLeft: left => set({ left }),
   setRight: right => set({ right }),
@@ -117,6 +114,8 @@ export const useEditor = create<EditorStore>((set, get) => ({
   setPreview: (frame, state) => set(s => ({ preview: { ...s.preview, [frame]: state } })),
   setNote: note => set({ note }),
   setShortcuts: shortcuts => set({ shortcuts }),
+  setSelectMode: selectMode => set({ selectMode }),
+  setHasClip: hasClip => set({ hasClip }),
   insertCard: (card, o) => {
     const { doc, frame } = addFrame(get().h.present, card, o)
     set(s => ({ h: commit(s.h, doc), sel: { frame: frame.id } }))
@@ -137,12 +136,6 @@ export const useEditor = create<EditorStore>((set, get) => ({
   addLayerTo: (frame, l) => { get().edit(d => addLayer(d, frame, l)); set({ sel: { frame, layer: l.id } }) },
 }))
 
-/** Drop a selection the document no longer has (after undo / redo / delete). */
-function valid(d: EditorDoc, s: Sel): Sel {
-  const f = frameById(d, s.frame)
-  if (!f) return {}
-  return f.card.layers.some(l => l.id === s.layer) ? s : { frame: f.id }
-}
 /** Bring a frame into view if it is (mostly) off screen; zooms out if it does not fit. */
 export function reveal(id: string) {
   const { h, cam, vp, fit } = useEditor.getState(), f = frameById(h.present, id)

@@ -34,7 +34,6 @@ import { deviceChecks } from './device'
 import { exportChecks } from './export'
 import { dotsChecks } from './dots'
 import { studioChecks } from './studio'
-import { editorChecks } from './editor'
 import { boardGroups, boardIds, boardLabel, groupOf } from '../src/widgets/manifest'
 import { boardBlurbs } from '../src/widgets/blurbs'
 import { boardFromPath } from '../src/site/meta'
@@ -52,6 +51,7 @@ import { ncaChecks } from './nca/checks'
 import { c10Checks } from './c10'
 import { shareChecks } from './widgets/checks'
 import { algorithmsChecks } from './algorithms'
+import { noiseChecks } from './noise'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
 let failures = 0
@@ -852,8 +852,6 @@ import { gpuBoard } from '../src/widgets/boards/gpu'
 }
 // P6-D) Dot Studio: document model, undo/redo, reference stacks, spec v1 / DOTS import, timeline (scripts/studio.ts)
 studioChecks(assert)
-// MAKE editor (docs/EDITOR-PLAN.md): multi-frame document, paint layers, resize anchoring, hit tests, gestures (scripts/editor.ts)
-editorChecks(assert)
 // C10) X-ray probe ≡ sampler, time-machine seek, remix → Field IR, palette fuzzy rank (scripts/c10.ts)
 c10Checks(assert)
 // C2) physics: worlds, stable fluids, PBD cloth / jelly, particles + spatial hash, the physics board (scripts/physics.ts)
@@ -865,6 +863,31 @@ gameChecks(assert)
 ncaChecks(assert)
 // ALGORITHMS) stippling, attractor density, WFC, DLA: determinism, invariants, timing, the algorithms board (scripts/algorithms.ts)
 algorithmsChecks(assert)
+// F0 noise slot) dmath, gradient noise, Voronoi, curl, the IR noise pack, the determinism lint (scripts/noise.ts)
+noiseChecks(assert)
+
+// editor (E1): MAKE editor document, paint encode, resize anchoring, hit tests, camera, gestures, entries, history; E2: selection sets, marquee, group resize, align / distribute, guides, groups, locks, clipboard, migration, undo per command (scripts/editor.ts)
+{
+  const { editorChecks } = await import('./editor')
+  editorChecks(assert)
+}
+
+// golden key (F0.5, F0.6, F0.10): dotKey + the style backfill, the square site cover, card fps (scripts/goldenkey.ts)
+import { goldenKeyChecks } from './goldenkey'
+goldenKeyChecks(assert)
+
+// light (F0.7, F0.8): the light / tilt hub (docs/living-matter/F0-foundation.md §2.7): pure core under a fake clock, buckets,
+// sceneLight precedence, the permission flow on a fake window, worker safety (scripts/light.ts)
+{
+  const { lightChecks } = await import('./light')
+  await lightChecks(assert)
+}
+
+// theme (T4a): scheme × accent table, gamut / contrast / colour-blind rules, boot script ≡ store, CSP hash, generated files current (scripts/site/theme.ts)
+{
+  const { themeChecks } = await import('./site/theme')
+  await themeChecks(assert)
+}
 
 // UX U1) board picker (docs/UX-PLAN.md §4.2): every board in exactly one group after START HERE, a label and a blurb; old paths still open
 {

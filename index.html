@@ -5,8 +5,13 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- viewport-fit=cover: the shell pads itself with env(safe-area-inset-*) (src/site/mobile.css); pinch zoom stays -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <!-- the theme boot below rewrites these two to the visitor's scheme before first paint -->
     <meta name="theme-color" content="#070809" />
     <meta name="color-scheme" content="dark" />
+    <!-- no-flash theme boot: src/site/theme/boot.ts (written by scripts/site/theme.ts --write; its sha256 is in vercel.json's CSP) -->
+    <!-- theme-boot -->
+    <script>(function(){try{var d=document.documentElement,q=new URLSearchParams(location.search),S=/^(system|dark|light)$/,A=/^(signal|amber|phosphor|cyan|cobalt|vite|magenta)$/,t=(q.get('theme')||'').split('_'),j=null,s,a;if(!(S.test(t[0])&&A.test(t[1])))t=[];try{j=JSON.parse(localStorage.getItem('dot480:theme'))}catch(e){}j=j||{};s=[q.get('scheme'),t[0],j.scheme].filter(function(x){return S.test(x)})[0]||'system';a=[q.get('accent'),t[1],j.accent].filter(function(x){return A.test(x)})[0]||'signal';if(s=='system')s=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';d.setAttribute('data-scheme',s);d.setAttribute('data-accent',a);var m=document.querySelector('meta[name=color-scheme]');if(m)m.content=s;m=document.querySelector('meta[name=theme-color]');if(m)m.content=s=='light'?'#F1F0EC':'#070809'}catch(e){}})()</script>
+    <!-- /theme-boot -->
     <!-- installable: Add to Home Screen opens it standalone, like an app -->
     <link rel="manifest" href="/manifest.webmanifest" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />

@@ -9,10 +9,14 @@ import { decodeShare, encodeShare, shareUrl } from '../../lib/share'
 import type { Mode } from '../../site/views'
 import { librarySave } from '../studio/doc'
 import { Canvas } from './Canvas'
-import { duplicateFrame, duplicateLayer, editFrame, editLayer, frameById, layerOf, movable, moveLayer, nudgeLayer, removeFrame, removeLayer, shareable, topDown } from './doc'
+import { arrangeSel, copyEverywhere, copySel, cutSel, deleteSel, duplicateSel, groupSel, hideSel, lockSel, nudgeSel, orderSel, paste, selectAllSel, selectParent, ungroupSel } from './actions'
+import { CLIP_KEY } from './clip'
+import { frameById, groupOf, layerOf, shareable, topDown } from './doc'
+import { codeTarget, KEY_TOOL, MODE_ENTRY, paintTarget } from './input'
 import { InspectorBody, InspectorTabs } from './Inspector'
 import { AssetsPanel, LayersPanel } from './Panels'
 import { revealAbove, useEditor, type Tool } from './store'
+import { selCount, selFrames, selLayers, type Align } from './select'
 import { DotIcon, type IconName } from './ui'
 import './editor.css'
 
@@ -24,7 +28,6 @@ const TOOLS: { id: Tool; icon: IconName; key: string; label: string; phone: bool
   { id: 'text', icon: 'text', key: 'T', label: 'Text: tap a frame', phone: true },
   { id: 'code', icon: 'code', key: 'C', label: 'Code: add a Field IR layer', phone: true },
 ]
-const KEY_TOOL: Record<string, Tool> = { v: 'move', h: 'hand', f: 'frame', b: 'draw', p: 'draw', t: 'text', c: 'code' }
 
 const phoneQuery = '(max-width: 640px)'
 const subscribeMQ = (cb: () => void) => { const m = matchMedia(phoneQuery); m.addEventListener('change', cb); return () => m.removeEventListener('change', cb) }
@@ -51,23 +54,15 @@ export function Editor({ mode, onExit }: { mode: Mode; onExit?: () => void }) {
 
   // the old MAKE modes are ways in: each picks a tool and the panels it used to be
   useEffect(() => {
-    const s = useEditor.getState(), d = s.h.present
-    if (mode === 'TUNE') { s.setLeft('assets'); s.setRight('design'); s.setTool('move') }
-    else if (mode === 'COMPOSE') { s.setLeft('layers'); s.setRight('design'); s.setTool('move') }
-    else if (mode === 'DRAW') {
-      s.setTool('draw'); s.setLeft('layers'); s.setRight('design')
-      const f = frameById(d, s.sel.frame)?.card.layers.some(l => l.kind === 'paint') ? frameById(d, s.sel.frame) : d.frames.find(x => !x.hidden && x.card.layers.some(l => l.kind === 'paint'))
-      if (f) { const l = topDown(f.card).find(x => x.kind === 'paint'); s.select({ frame: f.id, layer: l?.id }) }
-    } else if (mode === 'CODE') {
-      s.setTool('move'); s.setRight('code'); s.setLeft('layers')
+    const s = useEditor.getState(), d = s.h.present, entry = MODE_ENTRY[mode]
+    s.setTool(entry.tool); s.setLeft(entry.left); s.setRight(entry.right)
+    if (mode === 'DRAW') { const t = paintTarget(d, s.sel); if (t) s.select(t) }
+    else if (mode === 'CODE') {
       const p = new URLSearchParams(location.search).get('p')
       if (p && p !== handledP) {
         handledP = p
         decodeShare(p).then(prog => { useEditor.getState().insertProgram(prog); setBanner('') }, (e: Error) => setBanner(`Could not open this link: ${e.message}`))
-      } else if (!p) {
-        const cur = layerOf(d, s.sel)
-        if (cur?.kind !== 'ir') { for (const f of [...d.frames].reverse()) { const l = topDown(f.card).find(x => x.kind === 'ir'); if (l && !f.hidden) { s.select({ frame: f.id, layer: l.id }); break } } }
-      }
+      } else if (!p) { const t = codeTarget(d, s.sel); if (t) s.select(t) }
       if (phone) s.setSheet('inspector')
     }
   }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -91,6 +86,7 @@ export function Editor({ mode, onExit }: { mode: Mode; onExit?: () => void }) {
           <Canvas phone={phone} />
           {banner && <p className="ed-banner" role="alert">{banner}<button type="button" aria-label="Dismiss" onClick={() => setBanner('')}>×</button></p>}
           <p className="ed-note" role="status" aria-live="polite">{note}</p>
+          {phone && !sheet && <SelBar />}
           {phone && !sheet && <PhoneTools />}
         </div>
         {!phone && <aside className="ed-right" aria-label="Inspector"><InspectorTabs /><InspectorBody /></aside>}
@@ -190,6 +186,25 @@ function PhoneTools() {
   </nav>
 }
 
+/**
+ * Phone: the selection bar above the dock. SELECT is a mode, not a long press, so it never fights a pan:
+ * while it is on, a tap adds to (or takes from) the selection and a one-finger drag on empty canvas
+ * draws a marquee; two fingers still pan and zoom.
+ */
+function SelBar() {
+  const sel = useEditor(s => s.sel), mode = useEditor(s => s.selectMode), doc = useEditor(s => s.h.present), clip = useEditor(s => s.hasClip)
+  const n = selCount(sel), f = frameById(doc, sel.frame), grouped = !!sel.layer && selLayers(sel).some(id => groupOf(f, id))
+  return <div className="ed-selbar" role="toolbar" aria-label={`Selection: ${n} selected`}>
+    <button type="button" className={mode ? 'on' : ''} aria-pressed={mode} aria-label="Select mode: taps add to the selection, a drag on empty canvas draws a marquee" onClick={() => useEditor.getState().setSelectMode(!mode)}>SELECT</button>
+    <button type="button" aria-label="Select all" disabled={!doc.frames.length} onClick={selectAllSel}>ALL</button>
+    <button type="button" aria-label="Duplicate the selection" disabled={!n} onClick={duplicateSel}>DUP</button>
+    {grouped ? <button type="button" aria-label="Ungroup" onClick={ungroupSel}>UNGRP</button> : <button type="button" aria-label="Group the selected layers" disabled={!sel.layer} onClick={groupSel}>GROUP</button>}
+    <button type="button" aria-label="Copy the selection" disabled={!n} onClick={copyEverywhere}>COPY</button>
+    <button type="button" aria-label="Paste" disabled={!clip} onClick={() => paste()}>PASTE</button>
+    <button type="button" className="ed-danger" aria-label="Delete the selection" disabled={!n} onClick={deleteSel}>DEL</button>
+  </div>
+}
+
 // ── phone bottom sheet ─────────────────────────────────────────────────────
 const DETENTS = [.36, .6, .9]
 function Sheet({ onClose }: { onClose: () => void }) {
@@ -238,52 +253,86 @@ function Sheet({ onClose }: { onClose: () => void }) {
 // ── keyboard ───────────────────────────────────────────────────────────────
 export const EDITOR_KEYS: [string, string][] = [
   ['V', 'move / select'], ['H · hold Space', 'hand (pan)'], ['F', 'frame: drag out a new card'], ['B', 'draw dots'], ['E', 'eraser'], ['[ ]', 'brush size'],
-  ['T', 'text: click a frame'], ['C', 'code: add a Field IR layer'], ['Esc', 'back to move · select the parent · deselect'], ['Enter / ⇧Enter', 'into the frame\'s layers / up to the frame'],
-  ['Ctrl+Z · Ctrl+⇧Z / Ctrl+Y', 'undo · redo'], ['Delete', 'delete the selection'], ['Ctrl+D', 'duplicate'], ['Ctrl+] / Ctrl+[', 'bring forward / send backward'],
-  ['Ctrl+⇧H', 'hide / show'], ['arrows (⇧ ×10)', 'nudge a frame (px) or a text / sites layer (cells)'], ['Ctrl+S', 'save the frame to this browser (ASSETS · SAVED)'],
-  ['⇧1 · ⇧2 · ⇧0', 'zoom to fit · to selection · 100 %'], ['Ctrl + / Ctrl − · wheel', 'zoom · pan (Ctrl+wheel or pinch zooms)'], ['?', 'this list'],
+  ['T', 'text: click a frame'], ['C', 'code: add a Field IR layer'], ['Esc', 'back to move · select the parent · deselect'], ['Enter / ⇧Enter', 'into the frame\'s layers / up to the group or the frame'],
+  ['⇧-click · drag on empty canvas', 'add to the selection · marquee (⇧ adds)'], ['Ctrl-drag on a frame', 'marquee its layers'], ['Ctrl+A', 'select all (frames, or the frame\'s layers)'],
+  ['Ctrl+Z · Ctrl+⇧Z / Ctrl+Y', 'undo · redo'], ['Delete', 'delete the selection'], ['Ctrl+D · Alt-drag', 'duplicate'],
+  ['Ctrl+C · Ctrl+X · Ctrl+V', 'copy · cut · paste (any tab of this browser; the system clipboard as JSON)'], ['Ctrl+G · Ctrl+⇧G', 'group layers · ungroup'], ['Ctrl+⇧L', 'lock / unlock'],
+  ['Alt+A D · W S · H V', 'align left right · top bottom · centres'], ['Alt+⇧H · Alt+⇧V', 'distribute horizontally · vertically'], ['Ctrl+] / Ctrl+[', 'bring forward / send backward'],
+  ['Ctrl+⇧H', 'hide / show'], ['arrows (⇧ ×10)', 'nudge frames (px) or text / sites layers (cells)'], ['drag (hold Ctrl: no snapping)', 'frames snap to the edges, centres and spacing of the others'],
+  ['Ctrl+S', 'save the frame to this browser (ASSETS · SAVED)'], ['⇧1 · ⇧2 · ⇧0', 'zoom to fit · to selection · 100 %'], ['Ctrl + / Ctrl − · wheel', 'zoom · pan (Ctrl+wheel or pinch zooms)'], ['?', 'this list'],
 ]
+const ALIGN_KEYS: Record<string, Align> = { KeyA: 'left', KeyD: 'right', KeyW: 'top', KeyS: 'bottom', KeyH: 'hcenter', KeyV: 'vcenter' }
+/** Text is selected on the page (a copy then copies the text, not the editor's selection). */
+const textSelected = () => !!globalThis.getSelection?.()?.toString()
 function useShortcuts(phone: boolean) {
   useEffect(() => {
+    // the system clipboard: copy / cut / paste events carry the clip as JSON text (no permission needed);
+    // keys that raise no event (synthetic ones) fall back to navigator.clipboard and this browser's last copy
+    let raised = false
+    const onClip = (e: ClipboardEvent) => {
+      if (editable(e.target) || textSelected() || document.querySelector('.pal-backdrop, .pal-shell')) return
+      raised = true
+      if (e.type === 'paste') { e.preventDefault(); paste(e.clipboardData?.getData('text/plain')); return }
+      const json = e.type === 'cut' ? cutSel() : copySel()
+      if (json) { e.clipboardData?.setData('text/plain', json); e.preventDefault() }
+    }
+    const later = (fn: () => void) => { raised = false; setTimeout(() => { if (!raised) fn() }, 0) }
+    const toSystem = (json?: string) => { if (json) void navigator.clipboard?.writeText(json).catch(() => { /* not allowed: this browser's copy still pastes */ }) }
     const onKey = (e: KeyboardEvent) => {
       if (editable(e.target) || document.querySelector('.pal-backdrop, .pal-shell')) return
       const s = useEditor.getState(), d = s.h.present, mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase()
       const f = frameById(d, s.sel.frame), l = layerOf(d, s.sel)
       const used = () => { e.preventDefault(); e.stopImmediatePropagation() }
       if (mod) {
+        // copy / cut / paste: the browser's own event goes first (the system clipboard); only the board's keys are stopped
+        if ((k === 'c' || k === 'x') && !e.shiftKey && !e.altKey) { if (textSelected()) return; e.stopImmediatePropagation(); later(() => toSystem(k === 'x' ? cutSel() : copySel())); return }
+        if (k === 'v' && !e.shiftKey && !e.altKey) { e.stopImmediatePropagation(); later(() => paste()); return }
         if (k === 'z' && !e.shiftKey) { used(); s.undo() }
         else if ((k === 'z' && e.shiftKey) || k === 'y') { used(); s.redo() }
-        else if (k === 'd') { used(); if (f && l) { const r = duplicateLayer(d, { frame: f.id, layer: l.id }); s.edit(() => r.doc); if (r.id) s.select({ frame: f.id, layer: r.id }) } else if (f) { const r = duplicateFrame(d, f.id); s.edit(() => r.doc); if (r.id) s.select({ frame: r.id }) } }
+        else if (k === 'a') { used(); selectAllSel() }
+        else if (k === 'g') { used(); if (e.shiftKey) ungroupSel(); else groupSel() }
+        else if (k === 'l' && e.shiftKey) { used(); lockSel() }
+        else if (k === 'd') { used(); duplicateSel() }
         else if (k === 's') { used(); if (f) { try { librarySave(f.card); s.setNote(`saved "${f.card.name}" to this browser (ASSETS · SAVED)`) } catch (err) { s.setNote((err as Error).message) } } else s.setNote('select a frame to save it') }
         else if (k === '=' || k === '+') { used(); s.zoomAt(s.cam.z * 1.25, s.vp.w / 2, s.vp.h / 2) }
         else if (k === '-') { used(); s.zoomAt(s.cam.z / 1.25, s.vp.w / 2, s.vp.h / 2) }
         else if (k === '0') { used(); s.zoomAt(1, s.vp.w / 2, s.vp.h / 2) }
-        else if ((k === ']' || k === '[') && f && l) { used(); const i = topDown(f.card).findIndex(x => x.id === l.id); s.edit(d2 => moveLayer(d2, { frame: f.id, layer: l.id }, i + (k === ']' ? -1 : 1))) }
-        else if (k === 'h' && e.shiftKey && f) { used(); if (l) s.edit(d2 => editLayer(d2, { frame: f.id, layer: l.id }, x => ({ ...x, visible: !x.visible }))); else s.edit(d2 => editFrame(d2, f.id, x => ({ ...x, hidden: !x.hidden }))) }
+        else if ((k === ']' || k === '[') && f && l) { used(); orderSel(k === ']' ? -1 : 1) }
+        else if (k === 'h' && e.shiftKey && f) { used(); hideSel() }
         return
       }
-      if (e.altKey) return
+      if (e.altKey) {
+        const how = e.shiftKey ? (e.code === 'KeyH' ? 'dist-x' : e.code === 'KeyV' ? 'dist-y' : undefined) : ALIGN_KEYS[e.code]
+        if (how && f) { used(); arrangeSel(how) }
+        return
+      }
       if (e.shiftKey && (e.code === 'Digit1' || e.code === 'Digit2' || e.code === 'Digit0')) {
         used()
-        if (e.code === 'Digit1') s.fit(); else if (e.code === 'Digit2') { if (f) s.fit([f.id], 8) } else s.zoomAt(1, s.vp.w / 2, s.vp.h / 2)
+        if (e.code === 'Digit1') s.fit(); else if (e.code === 'Digit2') { if (f) s.fit(l ? [f.id] : selFrames(s.sel), 8) } else s.zoomAt(1, s.vp.w / 2, s.vp.h / 2)
         return
       }
       if (e.key === '?') { used(); s.setShortcuts(!s.shortcuts); return }
       if (e.key === 'Escape') {
         if (s.shortcuts) { used(); s.setShortcuts(false); return }
         if (s.tool !== 'move') { used(); s.setTool('move'); return }
-        if (l && f) { used(); s.select({ frame: f.id }); return }
+        if (s.selectMode) { used(); s.setSelectMode(false); return }
+        if (l && f) { used(); selectParent(); return }
         if (f) { used(); s.select({}); return }
         if (phone && s.sheet) { used(); s.setSheet(null) }
         return
       }
-      if (e.key === 'Enter' && f) { used(); if (e.shiftKey) s.select({ frame: f.id }); else if (!l) { const first = topDown(f.card)[0]; if (first) s.select({ frame: f.id, layer: first.id }) } return }
-      if ((e.key === 'Delete' || e.key === 'Backspace') && f) { used(); if (l) { s.edit(d2 => removeLayer(d2, { frame: f.id, layer: l.id })); s.select({ frame: f.id }) } else { s.edit(d2 => removeFrame(d2, f.id)); s.select({}) } return }
+      if (e.key === 'Enter' && f) {
+        used()
+        if (e.shiftKey) { if (!selectParent()) s.select({ frame: f.id }) }
+        else if (!l) { const first = topDown(f.card)[0]; if (first) s.select({ frame: f.id, layer: first.id }) }
+        else if (selCount(s.sel) > 1) s.select({ frame: f.id, layer: l.id }) // into a group: its first layer
+        return
+      }
+      if ((e.key === 'Delete' || e.key === 'Backspace') && f) { used(); deleteSel(); return }
       if (e.key.startsWith('Arrow') && f) {
         used()
         const n = e.shiftKey ? 10 : 1, dx = e.key === 'ArrowLeft' ? -n : e.key === 'ArrowRight' ? n : 0, dy = e.key === 'ArrowUp' ? -n : e.key === 'ArrowDown' ? n : 0
-        if (l && movable(l)) s.edit(d2 => editLayer(d2, { frame: f.id, layer: l.id }, x => nudgeLayer(x, dx, dy)), `nudge:${l.id}`)
-        else if (!l) s.edit(d2 => editFrame(d2, f.id, x => ({ ...x, x: x.x + dx, y: x.y + dy })), `nudge:${f.id}`)
+        nudgeSel(dx, dy)
         return
       }
       if (e.repeat) return
@@ -294,8 +343,12 @@ function useShortcuts(phone: boolean) {
       if (e.key === '-') { used(); s.zoomAt(s.cam.z / 1.25, s.vp.w / 2, s.vp.h / 2) }
     }
     // capture: the editor's letters (T text, …) must not also reach the board's global keys (hold T = time machine)
+    // a copy in another tab of this browser offers PASTE here too
+    const onStorage = (e: StorageEvent) => { if (e.key === CLIP_KEY) useEditor.getState().setHasClip(!!e.newValue) }
+    window.addEventListener('storage', onStorage)
     window.addEventListener('keydown', onKey, true)
-    return () => window.removeEventListener('keydown', onKey, true)
+    for (const t of ['copy', 'cut', 'paste'] as const) document.addEventListener(t, onClip)
+    return () => { window.removeEventListener('storage', onStorage); window.removeEventListener('keydown', onKey, true); for (const t of ['copy', 'cut', 'paste'] as const) document.removeEventListener(t, onClip) }
   }, [phone])
 }
 
@@ -305,7 +358,7 @@ function Shortcuts({ onClose }: { onClose: () => void }) {
       <h2>SHORTCUTS <button type="button" className="ed-ibtn" aria-label="Close" autoFocus onClick={onClose}>×</button></h2>
       <dl className="ed-keys">{EDITOR_KEYS.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       <h3>TOUCH</h3>
-      <dl className="ed-keys"><div><dt>one finger</dt><dd>use the tool · drag empty canvas to pan · tap to select</dd></div><div><dt>two fingers</dt><dd>pinch to zoom · drag to pan</dd></div><div><dt>sheet handle</dt><dd>drag or tap to resize, drag down to close</dd></div></dl>
+      <dl className="ed-keys"><div><dt>one finger</dt><dd>use the tool · drag empty canvas to pan · tap to select</dd></div><div><dt>two fingers</dt><dd>pinch to zoom · drag to pan</dd></div><div><dt>SELECT (bar above the tools)</dt><dd>taps add to the selection · one finger on empty canvas draws a marquee · DUP, GROUP, COPY, PASTE, DEL act on it</dd></div><div><dt>sheet handle</dt><dd>drag or tap to resize, drag down to close</dd></div></dl>
     </div>
   </div>
 }

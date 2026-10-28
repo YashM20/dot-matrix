@@ -30,9 +30,11 @@
   touch-action: none
 }
 
-/* the engaged card is the selected card: the hairline-active border (DESIGN.md), the board's one accent */
+/* the engaged card is the selected card: the hairline-active border (DESIGN.md), the board's one accent and
+   its halo (the one glow) */
 .dot-card.dot-card--engaged {
-  border-color: rgba(255, 59, 48, .6)
+  border-color: color-mix(in srgb, var(--red) 60%, transparent);
+  box-shadow: var(--card-edge), var(--glow-halo)
 }
 
 /* the way out: DONE, grey like the rest of the bar, always shown while engaged */
@@ -42,13 +44,7 @@
   min-height: 28px;
   color: var(--value);
   border-color: var(--line);
-  background: rgba(17, 19, 21, .86)
-}
-
-/* pressed feedback for the bar's HTML buttons (in-card controls press in dots) */
-.dot-card-bar button:active {
-  background: var(--raised);
-  color: var(--value)
+  background: color-mix(in srgb, var(--surface) 86%, transparent)
 }
 
 /* touch: the hint says how to start a drag that has to go up or down (a hold); bigger action targets */
@@ -59,18 +55,18 @@
 
   .dot-card-hint[data-touch]::after {
     content: attr(data-touch);
-    font-size: 8px
+    font-size: var(--fs-tag-8)
   }
 
   /* the strip is an overlay: full 44 px targets, readable labels */
   .dot-card-bar.open .dot-card-acts button {
     min-width: 44px;
     min-height: 44px;
-    font-size: 10px
+    font-size: var(--fs-label-10)
   }
 
   .dot-card-bar.open .dot-card-acts button:first-child {
-    font-size: 14px
+    font-size: var(--fs-copy-14)
   }
 
   /* ⋯ and DONE stay small in the card's top padding, but their hit area is 44 × 44 (an invisible margin) */
@@ -97,13 +93,13 @@
   }
 
   .dot-card--bleed .dot-card-bar .dot-card-more:not([aria-expanded="true"]) {
-    background: rgba(17, 19, 21, .45) !important;
+    background: color-mix(in srgb, var(--surface) 45%, transparent) !important;
     border-color: transparent
   }
 }
 
 @media (prefers-reduced-motion: no-preference) {
   .dot-card {
-    transition: border-color .16s
+    transition: border-color var(--dur-out), box-shadow var(--dur-out)
   }
 }

@@ -4,6 +4,7 @@
  * the normal Field → Grid Sampler → Renderer pipeline.
  */
 import { IRError, irProgram, type IREnv, type IRProgram } from '../../engine/ir'
+import '../../engine/noise/ir' // IR noise pack: noise() fbm() turb() voronoi() in DOTS programs
 import type { Layer } from '../../engine/types'
 import { SHARE_GRIDS, type SharedProgram } from '../../lib/share'
 import { tileStyle } from '../../widgets/types'

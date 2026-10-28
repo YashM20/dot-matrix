@@ -1,15 +1,20 @@
 import type { Control, ControlPatch, DotStyle, ThemeTokens } from '../engine'
-import { dot480, needsHold } from '../engine'
+import { needsHold } from '../engine/interaction'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { withChrome, type WidgetPreset } from '../widgets/types'
 import { registeredPreset } from '../widgets/registry'
 import { findPreset } from '../widgets/manifest'
+import { cardFps, fpsTier } from '../widgets/fps'
 import { DotCanvas, type DotCanvasProps } from './DotCanvas'
 import { useCamera, withMedia } from '../media/useCamera'
 import { HAND_KEY, useHandMode } from '../media/useHand'
 import { useXRay } from './xray/useXRay'
 import { XRayOverlay } from './xray/XRayOverlay'
 import { cardAction, type CardAction } from './xray/store'
+import { useDisplaySkin } from './skins/store'
+import { useTheme } from '../site/theme/useTheme'
+import { themeTokens } from '../site/theme/theme'
+import { cardScheme } from '../site/theme/polarity'
 import './touch.css'
 
 /** U2 header hint: what a visitor can do to the card, read off its controls (grey, never the accent). */
@@ -31,6 +36,7 @@ export interface DotWidgetProps {
   roundness?: number
   /** Override the preset's own grid, in px; cols/rows are derived from density. */
   size?: { w: number; h: number }
+  /** Engine tokens. Default: the site theme (src/site/theme), with photo / camera / emissive-skin cards pinned dark on a light page. */
   theme?: ThemeTokens
   /** Run the preset's clock. Defaults to the preset's `animated` flag. */
   animated?: boolean
@@ -50,9 +56,10 @@ export interface DotWidgetProps {
   onShared?: (patch: ControlPatch) => void
 }
 
-export function DotWidget({ type, density, dotShape, roundness, size, theme = dot480, animated, data, tick, preset: presetProp, enter, exit, shared, sharedKeys, onShared }: DotWidgetProps) {
+export function DotWidget({ type, density, dotShape, roundness, size, theme: themeProp, animated, data, tick, preset: presetProp, enter, exit, shared, sharedKeys, onShared }: DotWidgetProps) {
   // by id: a preset of a board loaded so far, else the boards are loaded (lazy chunks) and searched
   const [found, setFound] = useState<WidgetPreset>()
+  const site = useTheme(), skin = useDisplaySkin()
   const preset = presetProp ?? registeredPreset(type) ?? found
   useEffect(() => {
     if (presetProp || registeredPreset(type)) return
@@ -97,6 +104,9 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
     if (boardEdit) onShared!(board)
   }, [sharedKey, onShared, intercept])
   if (!preset || !layers) return null
+  // the card's scheme: the page's, or a dark inset (a photo, the camera, an emissive skin) on a light page
+  const scheme = cardScheme(preset, site.resolved, skin), inset = !themeProp && scheme !== site.resolved
+  const theme = themeProp ?? themeTokens(scheme, site.accent)
   const native = preset.grid.pitch ?? theme.gridPx, pitch = density ?? native, k = pitch / native
   // radii are px tuned for the preset's own pitch — scale them with density so dots keep their proportion
   const style: DotStyle = { ...preset.style, sizeMin: preset.style.sizeMin * k, sizeMax: preset.style.sizeMax * k, shape: dotShape ?? preset.style.shape, cornerRoundness: roundness ?? preset.style.cornerRoundness }
@@ -106,11 +116,14 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
   const controls = preset.controls?.filter(({ box: [c, r, bw, bh] }) => c < grid.cols && r < grid.rows && c + bw > 0 && r + bh > 0)
   const interactive = !!controls?.length
   const hint = interactive ? hintVerb(preset, controls!) : undefined, touchHint = hint && touchVerb(hint, controls!), name = preset.live ? `${preset.name} (live)` : preset.name
+  // the live camera runs at 30; a card's own `fps` drops a tier on phones; no `fps` keeps DotCanvas's default
+  const fps = camera.status === 'live' ? 30 : preset.fps !== undefined ? cardFps(preset.fps, fpsTier()) : undefined
   const act = (a: CardAction) => () => { setMenu(false); cardAction(a, { key: xr.key, preset, data: merged, layers, grid, style, theme, animated: !!(animated ?? preset.animated) }) }
   return (
     // a group (it holds the action strip); a static card's body is one dot-matrix picture (role="img"), an
     // interactive card's body holds its accessibility overlay (real controls)
-    <div className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}${letGo ? ' dot-card--engaged' : ''}`} role="group" data-xr-key={xr.key} data-card-id={preset.id} aria-label={name}>
+    <div className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}${letGo ? ' dot-card--engaged' : ''}`} role="group" data-xr-key={xr.key} data-card-id={preset.id} aria-label={name}
+      {...(inset ? { 'data-scheme': scheme, 'data-accent': site.accent } : {})}>
       {preset.chrome !== 'dots' && <header className="dot-card-head" aria-hidden="true">
         <span className="dot-card-label">{preset.name.toUpperCase()}{hint && <small className="dot-card-hint" data-touch={touchHint}>{hint}</small>}</span>
         {preset.live && <i className="status-dot" />}
@@ -122,10 +135,10 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme = do
         <button type="button" className="dot-card-more" aria-label={`${preset.name}: card actions`} aria-expanded={menu} onClick={() => setMenu(m => !m)}>⋯</button>
       </div>
       <div className="dot-card-body" role={interactive ? undefined : 'img'} aria-label={interactive ? undefined : name}>
-        <DotCanvas layers={xr.layers} renderer={xr.renderer} onMode={xr.onMode} data={preset.media ? { ...merged, ...camera.data, ...hand.data } : { ...merged, ...hand.data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={camera.status === 'live' ? 30 : undefined} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
+        <DotCanvas layers={xr.layers} renderer={xr.renderer} onMode={xr.onMode} data={preset.media ? { ...merged, ...camera.data, ...hand.data } : { ...merged, ...hand.data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={fps} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
           controls={interactive ? controls : undefined} onInput={interactive ? onInput : undefined} onEngage={interactive ? onEngage : undefined} />
         {xr.on && <XRayOverlay xr={xr} preset={preset} layers={layers} data={preset.media ? { ...merged, ...camera.data } : merged} grid={grid} style={style} theme={theme}
-          animated={!!(animated ?? preset.animated)} fps={camera.status === 'live' ? 30 : undefined} tick={tick} />}
+          animated={!!(animated ?? preset.animated)} fps={fps} tick={tick} />}
       </div>
     </div>
   )

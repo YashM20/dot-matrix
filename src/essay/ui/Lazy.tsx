@@ -31,7 +31,7 @@ export function Figure({ id, body: Body, caption, wide, minHeight = 320 }: {
       <div className="fig-body" style={near ? undefined : { minHeight }}>
         {near ? <Suspense fallback={<div className="fig-wait" style={{ minHeight }} aria-hidden="true" />}><Body /></Suspense> : <div className="fig-wait" aria-hidden="true" />}
       </div>
-      {caption && <figcaption>{caption}</figcaption>}
+      {caption && <figcaption data-fig={id}>{caption}</figcaption>}
     </figure>
   )
 }

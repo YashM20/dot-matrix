@@ -15,9 +15,12 @@ import { TILE, widgetById } from '../../widgets'
 import { EXAMPLES } from '../dwitter/examples'
 import { compileCard, importDots, importPreset, irLayer, newCard, newId, normalizeZ, paintCells, paintLayer, stackOrder, textLayer, validateCard, type PaintLayer, type StudioCard, type StudioLayer } from '../studio/doc'
 
-export const EDITOR_VERSION = 1
+/** v2 (E2): frames may carry `locked`, `locks` and `groups`. A v1 document is a valid v2 one (`migrateDoc`). */
+export const EDITOR_VERSION = 2
 export type ThemeName = keyof typeof presets
 export const THEMES = Object.keys(presets) as ThemeName[]
+/** Layers grouped inside a frame (E2): a run of adjacent layers in the stack, listed top → bottom. */
+export interface LayerGroup { id: string; name: string; layers: string[] }
 export interface EditorFrame {
   id: string
   /** World position of the top-left corner, CSS px at 100 %. */
@@ -25,13 +28,25 @@ export interface EditorFrame {
   y: number
   theme: ThemeName
   hidden?: boolean
+  /** Locked on the canvas: clicks, marquees and select-all pass through it; it is not dragged or resized. LAYERS still selects it. */
+  locked?: boolean
+  /** Ids of this frame's layers locked on the canvas (not hit, not dragged). */
+  locks?: string[]
+  /** Layer groups; a layer is in at most one (no nesting: a card is a flat stack of fields). */
+  groups?: LayerGroup[]
   /** Where it came from: `preset:<id>`, `program:<hash>` (dedupes `?make=code&p=` reloads), `draw`, `blank`. */
   source?: string
   card: StudioCard
 }
 export interface EditorDoc { kind: 'dot480.editor'; v: number; name: string; frames: EditorFrame[] }
-/** A selection: a frame, or one layer inside it. */
-export interface Sel { frame?: string; layer?: string }
+/**
+ * A selection: frames, or layers inside one frame (never both, never layers of two frames).
+ * `frame` / `layer` are the primary (what the inspector shows); `more` holds the other ids at the same
+ * level: frame ids when `layer` is unset, else layer ids of `frame`.
+ */
+export interface Sel { frame?: string; layer?: string; more?: string[] }
+/** One layer of one frame. */
+export interface LayerRef { frame: string; layer: string }
 
 export const pitchOf = (c: StudioCard) => c.grid.pitch ?? 4
 /** Frame size in world px. */
@@ -102,29 +117,38 @@ export function seedDoc(extra?: StudioCard): EditorDoc {
 
 // ── edits (pure: each returns a new document; untouched frames and layers keep their identity) ──
 export const editFrame = (d: EditorDoc, id: string, fn: (f: EditorFrame) => EditorFrame): EditorDoc => ({ ...d, frames: d.frames.map(f => (f.id === id ? fn(f) : f)) })
-export const editCard = (d: EditorDoc, id: string, fn: (c: StudioCard) => StudioCard): EditorDoc => editFrame(d, id, f => ({ ...f, card: fn(f.card) }))
-export const editLayer = (d: EditorDoc, s: Required<Sel>, fn: (l: StudioLayer) => StudioLayer): EditorDoc =>
+/** Edit a frame's card; its groups and locks follow the new stack (`tidyGroups`). */
+export const editCard = (d: EditorDoc, id: string, fn: (c: StudioCard) => StudioCard): EditorDoc => editFrame(d, id, f => tidyGroups({ ...f, card: fn(f.card) }))
+export const editLayer = (d: EditorDoc, s: LayerRef, fn: (l: StudioLayer) => StudioLayer): EditorDoc =>
   editCard(d, s.frame, c => ({ ...c, layers: c.layers.map(l => (l.id === s.layer ? fn(l) : l)) }))
 export function addLayer(d: EditorDoc, frame: string, l: StudioLayer): EditorDoc {
   return editCard(d, frame, c => ({ ...c, layers: normalizeZ([...stackOrder(c.layers), l]), animated: c.animated || l.kind === 'ir' && /\bt\b/.test(l.src) }))
 }
-export const removeLayer = (d: EditorDoc, s: Required<Sel>): EditorDoc => editCard(d, s.frame, c => ({ ...c, layers: normalizeZ(stackOrder(c.layers).filter(l => l.id !== s.layer)) }))
+export const removeLayer = (d: EditorDoc, s: LayerRef): EditorDoc => editCard(d, s.frame, c => ({ ...c, layers: normalizeZ(stackOrder(c.layers).filter(l => l.id !== s.layer)) }))
 export const removeFrame = (d: EditorDoc, id: string): EditorDoc => ({ ...d, frames: d.frames.filter(f => f.id !== id) })
-export function duplicateLayer(d: EditorDoc, s: Required<Sel>): { doc: EditorDoc; id?: string } {
+export function duplicateLayer(d: EditorDoc, s: LayerRef): { doc: EditorDoc; id?: string } {
   const l = layerOf(d, s)
   if (!l) return { doc: d }
   const c = { ...structuredClone(l), id: newId(), name: `${l.name} copy` }
   return { doc: editCard(d, s.frame, card => { const list = stackOrder(card.layers), i = list.findIndex(x => x.id === l.id); list.splice(i + 1, 0, c); return { ...card, layers: normalizeZ(list) } }), id: c.id }
 }
+/** A deep copy of a frame with new frame, card, layer and group ids (groups and locks follow), moved by `dx`, `dy`. */
+export function cloneFrame(f: EditorFrame, dx = 0, dy = 0): EditorFrame {
+  const ids = new Map(f.card.layers.map(l => [l.id, newId()] as const)), re = (id: string) => ids.get(id) ?? id
+  const card = { ...structuredClone(f.card), id: newId('c'), layers: f.card.layers.map(l => ({ ...structuredClone(l), id: re(l.id) })) }
+  const copy: EditorFrame = { ...f, id: newId('f'), x: f.x + dx, y: f.y + dy, card, source: undefined }
+  if (f.groups) copy.groups = f.groups.map(g => ({ ...g, id: newId('g'), layers: g.layers.map(re) }))
+  if (f.locks) copy.locks = f.locks.map(re)
+  return copy
+}
 export function duplicateFrame(d: EditorDoc, id: string): { doc: EditorDoc; id?: string } {
   const f = frameById(d, id)
   if (!f) return { doc: d }
-  const card = { ...structuredClone(f.card), id: newId('c'), layers: f.card.layers.map(l => ({ ...structuredClone(l), id: newId() })) }
-  const copy = { ...f, id: newId('f'), x: f.x + frameSize(f).w + GAP, card, source: undefined }
+  const copy = cloneFrame(f, frameSize(f).w + GAP, 0)
   return { doc: { ...d, frames: [...d.frames, copy] }, id: copy.id }
 }
 /** Move a layer to list position `to` (0 = top of the stack). */
-export function moveLayer(d: EditorDoc, s: Required<Sel>, to: number): EditorDoc {
+export function moveLayer(d: EditorDoc, s: LayerRef, to: number): EditorDoc {
   return editCard(d, s.frame, c => {
     const list = topDown(c), from = list.findIndex(l => l.id === s.layer)
     if (from < 0 || to < 0 || to >= list.length || from === to) return c
@@ -165,6 +189,131 @@ function repaint(l: PaintLayer, grid: GridConfig, dc: number, dr: number): Paint
     if (sc >= 0 && sr >= 0 && sc < l.cols && sr < l.rows) out[r * sub.cols + c] = a[sr * l.cols + sc]
   }
   return { ...l, cols: sub.cols, rows: sub.rows, cells: toBase64(out) }
+}
+
+// ── groups, locks and edits of many (E2) ──────────────────────────────────────
+export const groupOf = (f: EditorFrame | undefined, layer?: string) => (layer ? f?.groups?.find(g => g.layers.includes(layer)) : undefined)
+/**
+ * Keep a frame's groups and locks in step with its stack: ids of removed layers go, empty groups go,
+ * a layer sits in one group only, and each group's members are adjacent, at the place of its topmost
+ * member (a layer moved into a group's run is pushed below it). Returns `f` itself when nothing changes.
+ */
+export function tidyGroups(f: EditorFrame): EditorFrame {
+  if (!f.groups?.length && !f.locks?.length) {
+    if (!f.groups && !f.locks) return f
+    const { groups: _g, locks: _l, ...bare } = f
+    return bare
+  }
+  const list = topDown(f.card).map(l => l.id), have = new Set(list), seen = new Set<string>()
+  const groups = (f.groups ?? []).map(g => ({ ...g, layers: list.filter(id => g.layers.includes(id) && !seen.has(id) && (seen.add(id), true)) })).filter(g => g.layers.length)
+  const of = new Map(groups.flatMap(g => g.layers.map(id => [id, g] as const)))
+  const out: string[] = [], done = new Set<LayerGroup>()
+  for (const id of list) {
+    const g = of.get(id)
+    if (!g) out.push(id)
+    else if (!done.has(g)) { done.add(g); out.push(...g.layers) }
+  }
+  const locks = f.locks?.filter(id => have.has(id))
+  const sameGroups = groups.length === (f.groups?.length ?? 0) && groups.every((g, i) => g.layers.join() === f.groups![i].layers.join())
+  const sameLocks = (locks?.length ?? 0) === (f.locks?.length ?? 0)
+  const sameOrder = out.join() === list.join()
+  if (sameGroups && sameLocks && sameOrder) return f
+  const { groups: _g, locks: _l, ...rest } = f
+  const next: EditorFrame = { ...rest }
+  const g2 = sameGroups ? f.groups : groups, l2 = sameLocks ? f.locks : locks
+  if (g2?.length) next.groups = g2
+  if (l2?.length) next.locks = l2
+  if (!sameOrder) { const by = new Map(f.card.layers.map(l => [l.id, l] as const)); next.card = { ...f.card, layers: normalizeZ(out.map(id => by.get(id)!).reverse()) } }
+  return next
+}
+/** The stack as units, top → bottom: a group is one unit, every other layer its own. */
+export function unitsOf(f: EditorFrame): string[][] {
+  const out: string[][] = [], done = new Set<LayerGroup>(), list = topDown(f.card)
+  for (const l of list) {
+    const g = groupOf(f, l.id)
+    if (!g) out.push([l.id])
+    else if (!done.has(g)) { done.add(g); out.push(list.filter(x => g.layers.includes(x.id)).map(x => x.id)) }
+  }
+  return out
+}
+/** Group layers of a frame (≥ 1). Layers leave the groups they were in; the group sits at its topmost member. */
+export function groupLayers(d: EditorDoc, frame: string, ids: string[], name?: string): { doc: EditorDoc; id?: string } {
+  const f = frameById(d, frame), take = f ? topDown(f.card).map(l => l.id).filter(id => ids.includes(id)) : []
+  if (!f || !take.length) return { doc: d }
+  const id = newId('g'), n = (f.groups?.length ?? 0) + 1
+  const groups = [...(f.groups ?? []).map(g => ({ ...g, layers: g.layers.filter(x => !take.includes(x)) })), { id, name: name ?? `group ${n}`, layers: take }]
+  return { doc: editFrame(d, frame, x => tidyGroups({ ...x, groups })), id }
+}
+/** Dissolve a group: its layers stay where they are in the stack. */
+export const ungroup = (d: EditorDoc, frame: string, group: string): EditorDoc =>
+  editFrame(d, frame, f => tidyGroups({ ...f, groups: f.groups?.filter(g => g.id !== group) }))
+export const renameGroup = (d: EditorDoc, frame: string, group: string, name: string): EditorDoc =>
+  editFrame(d, frame, f => ({ ...f, groups: f.groups?.map(g => (g.id === group ? { ...g, name: name.slice(0, 64) } : g)) }))
+/** Lock or unlock frames (`on` undefined: flip each). */
+export const lockFrames = (d: EditorDoc, ids: string[], on?: boolean): EditorDoc => ({
+  ...d,
+  frames: d.frames.map(f => {
+    if (!ids.includes(f.id)) return f
+    const { locked: _, ...rest } = f
+    return on ?? !f.locked ? { ...rest, locked: true } : rest
+  }),
+})
+/** Lock or unlock layers of a frame. */
+export const lockLayers = (d: EditorDoc, frame: string, ids: string[], on: boolean): EditorDoc => editFrame(d, frame, f => {
+  const set = new Set(f.locks ?? [])
+  for (const id of ids) { if (on) set.add(id); else set.delete(id) }
+  const { locks: _, ...rest } = f
+  return set.size ? { ...rest, locks: [...set] } : rest
+})
+export const removeFrames = (d: EditorDoc, ids: string[]): EditorDoc => ({ ...d, frames: d.frames.filter(f => !ids.includes(f.id)) })
+export const removeLayers = (d: EditorDoc, frame: string, ids: string[]): EditorDoc => editCard(d, frame, c => ({ ...c, layers: normalizeZ(stackOrder(c.layers).filter(l => !ids.includes(l.id))) }))
+/** Copy frames as one block moved by `dx`, `dy`. Returns the copies' ids in document order. */
+export function copyFrames(d: EditorDoc, ids: string[], dx: number, dy: number): { doc: EditorDoc; ids: string[] } {
+  const copies = d.frames.filter(f => ids.includes(f.id)).map(f => cloneFrame(f, dx, dy))
+  return { doc: { ...d, frames: [...d.frames, ...copies] }, ids: copies.map(f => f.id) }
+}
+/** Duplicate frames as a block, to the right of their bounds (one frame: right of itself). */
+export function duplicateFrames(d: EditorDoc, ids: string[]): { doc: EditorDoc; ids: string[] } {
+  const fs = d.frames.filter(f => ids.includes(f.id))
+  if (!fs.length) return { doc: d, ids: [] }
+  const x0 = Math.min(...fs.map(f => f.x)), x1 = Math.max(...fs.map(f => f.x + frameSize(f).w))
+  return copyFrames(d, ids, x1 - x0 + GAP, 0)
+}
+/**
+ * Copy layers of a frame in place, each right above its original, moved `dc`, `dr` cells (text, sites).
+ * A copied whole group becomes a new group; a copy of part of a group joins that group.
+ */
+export function copyLayers(d: EditorDoc, frame: string, ids: string[], dc = 0, dr = 0): { doc: EditorDoc; ids: string[] } {
+  const f = frameById(d, frame)
+  if (!f) return { doc: d, ids: [] }
+  const map = new Map<string, string>(), stack: StudioLayer[] = []
+  for (const l of stackOrder(f.card.layers)) {
+    stack.push(l)
+    if (!ids.includes(l.id)) continue
+    const c = { ...nudgeLayer(structuredClone(l), dc, dr), id: newId(), name: `${l.name} copy`.slice(0, 64) }
+    map.set(l.id, c.id); stack.push(c)
+  }
+  if (!map.size) return { doc: d, ids: [] }
+  const groups = (f.groups ?? []).flatMap((g): LayerGroup[] => {
+    if (g.layers.every(id => map.has(id))) return [g, { id: newId('g'), name: `${g.name} copy`.slice(0, 64), layers: g.layers.map(id => map.get(id)!) }]
+    return [{ ...g, layers: g.layers.flatMap(id => (map.has(id) ? [map.get(id)!, id] : [id])) }]
+  })
+  const { groups: _, ...rest } = f
+  const next = tidyGroups({ ...rest, ...(groups.length && { groups }), card: { ...f.card, layers: normalizeZ(stack) } })
+  return { doc: editFrame(d, frame, () => next), ids: ids.filter(id => map.has(id)).map(id => map.get(id)!) }
+}
+/** Move the units (groups or single layers) holding `ids` one step up (`-1`, toward the top) or down (`1`). */
+export function shiftLayers(d: EditorDoc, frame: string, ids: string[], dir: -1 | 1): EditorDoc {
+  const f = frameById(d, frame)
+  if (!f) return d
+  const units = unitsOf(f), on = units.map(u => u.some(id => ids.includes(id))), order = units.map((_, i) => i)
+  for (const i of dir < 0 ? [...order] : [...order].reverse()) {
+    const at = order.indexOf(i), j = at + dir
+    if (on[i] && j >= 0 && j < order.length && !on[order[j]]) { order[at] = order[j]; order[j] = i }
+  }
+  if (order.every((v, i) => v === i)) return d
+  const by = new Map(f.card.layers.map(l => [l.id, l] as const)), out = order.flatMap(i => units[i])
+  return editCard(d, frame, c => ({ ...c, layers: normalizeZ(out.map(id => by.get(id)!).reverse()) }))
 }
 
 // ── paint ──────────────────────────────────────────────────────────────────
@@ -230,21 +379,21 @@ export function layerBounds(f: EditorFrame, l: StudioLayer): [number, number, nu
   for (const d of layerDots(f, l)) if (lit(d)) { x0 = Math.min(x0, d.x - d.r); y0 = Math.min(y0, d.y - d.r); x1 = Math.max(x1, d.x + d.r); y1 = Math.max(y1, d.y + d.r) }
   return x0 <= x1 ? [x0, y0, x1, y1] : undefined
 }
-/** The topmost visible layer with a lit dot under frame px `x`, `y` (within half a lattice cell). */
+/** The topmost visible, unlocked layer with a lit dot under frame px `x`, `y` (within half a lattice cell). */
 export function hitLayer(f: EditorFrame, x: number, y: number): StudioLayer | undefined {
   const pitch = pitchOf(f.card)
   for (const l of topDown(f.card)) {
-    if (!l.visible) continue
+    if (!l.visible || f.locks?.includes(l.id)) continue
     const reach = Math.max(pitch * ('lattice' in l ? l.lattice : 1) * .75, pitch)
     if (layerDots(f, l).some(d => lit(d) && Math.abs(d.x - x) <= Math.max(reach, d.r) && Math.abs(d.y - y) <= Math.max(reach, d.r))) return l
   }
   return undefined
 }
-/** The topmost visible frame containing world point `x`, `y`. */
-export function hitFrame(d: EditorDoc, x: number, y: number): EditorFrame | undefined {
+/** The topmost visible frame containing world point `x`, `y` (`skipLocked`: locked frames let the point through). */
+export function hitFrame(d: EditorDoc, x: number, y: number, skipLocked = false): EditorFrame | undefined {
   for (let i = d.frames.length - 1; i >= 0; i--) {
     const f = d.frames[i], { w, h } = frameSize(f)
-    if (!f.hidden && x >= f.x && y >= f.y && x <= f.x + w && y <= f.y + h) return f
+    if (!f.hidden && !(skipLocked && f.locked) && x >= f.x && y >= f.y && x <= f.x + w && y <= f.y + h) return f
   }
   return undefined
 }
@@ -266,9 +415,34 @@ export function shareable(f: EditorFrame, l: StudioLayer): SharedProgram | strin
 }
 
 // ── validation, JSON, storage ──────────────────────────────────────────────
-const MAX_FRAMES = 48
-export function validateDoc(x: unknown): EditorDoc {
+export const MAX_FRAMES = 48
+/**
+ * Bring an older document up to `EDITOR_VERSION`. v1 → v2: frames gained the optional `locked`, `locks`
+ * and `groups` (a v1 frame has none), so only the version changes. Anything else is returned as is.
+ */
+export function migrateDoc(x: unknown): unknown {
   const d = x as EditorDoc
+  if (d && typeof d === 'object' && d.kind === 'dot480.editor' && d.v === 1) return { ...d, v: 2 }
+  return x
+}
+const strs = (a: unknown, max: number) => Array.isArray(a) && a.length <= max && a.every(s => typeof s === 'string' && s.length <= 64)
+/** A frame's E2 fields: bad types throw; ids of layers the card no longer has are dropped (`tidyGroups`). */
+function validateExtras(f: EditorFrame, w: string): EditorFrame {
+  if (f.locked !== undefined && typeof f.locked !== 'boolean') throw new Error(`editor document: ${w}.locked must be a boolean`)
+  if (f.locks !== undefined && !strs(f.locks, 64)) throw new Error(`editor document: ${w}.locks must be an array of layer ids`)
+  if (f.groups !== undefined) {
+    if (!Array.isArray(f.groups) || f.groups.length > 64) throw new Error(`editor document: ${w}.groups must be an array of ≤ 64`)
+    const ids = new Set<string>()
+    f.groups.forEach((g, i) => {
+      if (!g || typeof g.id !== 'string' || ids.has(g.id) || typeof g.name !== 'string' || g.name.length > 64 || !strs(g.layers, 64)) throw new Error(`editor document: ${w}.groups[${i}] needs a unique id, a name and layer ids`)
+      ids.add(g.id)
+    })
+  }
+  return tidyGroups(f)
+}
+/** Check (and migrate) a parsed document; throws an `Error` naming the first bad field. */
+export function validateDoc(x: unknown): EditorDoc {
+  const d = migrateDoc(x) as EditorDoc
   if (!d || typeof d !== 'object' || d.kind !== 'dot480.editor') throw new Error('editor document: not a dot480.editor document')
   if (typeof d.v !== 'number' || d.v < 1 || d.v > EDITOR_VERSION) throw new Error('editor document: unknown version')
   if (typeof d.name !== 'string' || d.name.length > 64) throw new Error('editor document: name must be a string of ≤ 64 chars')
@@ -281,7 +455,8 @@ export function validateDoc(x: unknown): EditorDoc {
     if (!THEMES.includes(f.theme)) throw new Error(`editor document: frames[${i}].theme must be one of ${THEMES.join(', ')}`)
     try { validateCard(f.card) } catch (e) { throw new Error(`editor document: frames[${i}]: ${(e as Error).message}`) }
   })
-  return d
+  const frames = d.frames.map((f, i) => validateExtras(f, `frames[${i}]`))
+  return frames.every((f, i) => f === d.frames[i]) ? d : { ...d, frames }
 }
 export const docToJSON = (d: EditorDoc) => JSON.stringify(d)
 export function docFromJSON(json: string): EditorDoc {
@@ -290,6 +465,7 @@ export function docFromJSON(json: string): EditorDoc {
   try { x = JSON.parse(json) } catch (e) { throw new Error(`editor document: not JSON (${(e as Error).message})`) }
   return validateDoc(x)
 }
+/** The autosave slot. Its name predates v2 and stays: a v1 document saved there loads through `migrateDoc`. */
 export const EDITOR_KEY = 'dot480.editor.v1'
 type KV = Pick<Storage, 'getItem' | 'setItem'>
 const kvOf = (): KV | undefined => { try { return globalThis.localStorage } catch { return undefined } }

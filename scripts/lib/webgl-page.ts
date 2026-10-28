@@ -7,6 +7,7 @@ import { cellU, sampleLayers } from '../../src/engine/sampler/gridSampler'
 import { renderCanvas } from '../../src/engine/renderer/canvasRenderer'
 import { gpuIR, gpuValues, layerPass, renderWebGL, sharedDotGL, splitGPULayers, type GPUField, type GPUPass } from '../../src/engine/renderer/webgl'
 import { irProgram } from '../../src/engine/ir'
+import '../../src/engine/noise/ir' // the IR noise pack, for the noise parity row
 import { dot480 } from '../../src/engine/theme/tokens'
 import type { DotInstance, DotStyle, GridConfig, Layer } from '../../src/engine/types'
 import { widgetById, withChrome } from '../../src/widgets'

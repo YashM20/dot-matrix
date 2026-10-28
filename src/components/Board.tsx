@@ -1,7 +1,6 @@
 import { lazy, Suspense, use, useCallback, useEffect, useId, useState, type CSSProperties } from 'react'
 import { DotWidget } from './DotWidget'
-import { usePlayground } from './playground/store'
-import { presets } from '../engine/theme/tokens'
+import { useThemeTokens } from '../site/theme/useTheme'
 import { boardMeta, loadBoard, type BoardDef, type BoardId } from '../widgets/manifest'
 import type { ControlPatch } from '../engine'
 import type { WidgetPreset } from '../widgets/types'
@@ -66,8 +65,8 @@ export function Board({ id, leaving = false }: { id: string; leaving?: boolean }
 
 function LoadedBoard({ id, leaving }: { id: string; leaving: boolean }) {
   const board = use(loadBoard(id))
-  const themeName = usePlayground(s => s.theme)
-  const theme = presets[themeName]
+  // the site theme (src/site/theme): each card resolves its own tokens (a photo card pins the dark scheme)
+  const theme = useThemeTokens()
   const tick = useMinuteTick()
   const titleId = useId()
   // board-level shared data (`BoardDef.shared`): one store, merged into every card, written by any card's controls
@@ -78,7 +77,7 @@ function LoadedBoard({ id, leaving }: { id: string; leaving: boolean }) {
   // live sources (`BoardDef.sources`): fixture → cached → live data, merged over each card's defaults
   const live = useLiveData(board.sources)
   const blurb = useBlurbs()?.boardBlurbs[board.id as BoardId]
-  const cards = (map: (p: WidgetPreset) => WidgetPreset) => board.items.map((preset, i) => <DotWidget key={preset.id} type={preset.id} preset={map(preset)} theme={theme} tick={preset.clock ? tick : undefined}
+  const cards = (map: (p: WidgetPreset) => WidgetPreset) => board.items.map((preset, i) => <DotWidget key={preset.id} type={preset.id} preset={map(preset)} tick={preset.clock ? tick : undefined}
     data={board.sources ? pick(live, preset.defaults) : undefined}
     {...(sharing ? { shared, sharedKeys: board.shared, onShared } : {})} {...cardMotion(i, board.columns, board.items.length, leaving)} />)
   return (

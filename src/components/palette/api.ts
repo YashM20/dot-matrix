@@ -7,6 +7,8 @@ import { boardIds, boardLabel, boardManifest, loadBoard, type BoardDef } from '.
 import { MODE_LINES, PLACES, isMode } from '../../site/views'
 import type { RendererOverride } from '../xray/store'
 import type { MotionSetting } from './reducedMotion'
+import { ACCENTS, SCHEMES } from '../../site/theme/names'
+import { setTheme } from '../../site/theme/theme'
 
 /** The display skins, from the engine's list (so the palette, shell and header can't drift apart). */
 export const SKINS = SKIN_NAMES
@@ -77,6 +79,9 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   act('worker-off', 'Renderer: main-thread sampling (no worker, reloads)', a => a.setWorker(false), '', 'worker thread')
   act('worker-on', 'Renderer: worker sampling (reloads)', a => a.setWorker(true), '', 'worker thread')
   for (const s of SKINS) act(`skin-${s}`, `Display skin — ${SKIN_INFO[s].title}`, a => a.setSkin(s), '', `display skin theme ${s}`)
+  // the site theme (scheme × accent, src/site/theme): the full picker is T5; these are for testing and quick switches
+  act('theme-system', 'Theme: system (follow the OS light / dark)', () => setTheme({ scheme: 'system' }), '', 'theme scheme colour color mode os auto')
+  for (const s of SCHEMES) for (const c of ACCENTS) act(`theme-${s}_${c}`, `Theme: ${s}_${c}`, () => setTheme({ scheme: s, accent: c }), '', `theme colour color scheme accent ${s} ${c} ${s === 'light' ? 'paper day' : 'night'}`)
   for (const p of PLACES) items.push({ id: `v:${p}`, group: 'View', text: isMode(p) ? `Go to MAKE · ${p}: ${MODE_LINES[p]}` : `Go to ${p}`, run: a => a.openTab(p), keywords: `${p.toLowerCase()} ${PLACE_WORDS[p]}`, boost: 30 })
   for (const m of boardManifest) {
     const b = boards.find(x => x.id === m.id)

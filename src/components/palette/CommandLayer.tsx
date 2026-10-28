@@ -4,7 +4,8 @@
  * shell, the X-ray inspector, the time machine bar, a small dock with the same toggles, toasts, an
  * fps meter and the boss fight. Every shortcut ignores keys typed into inputs and editors.
  */
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { createPortal } from 'react-dom'
 import { getSkin, setSkin as setDisplaySkin } from '../skins/store'
 import { findPreset } from '../../widgets/manifest'
 import { DotWidget } from '../DotWidget'
@@ -17,6 +18,9 @@ import { setReducedMotion } from './reducedMotion'
 import { onLayerRequest } from '../../site/layer'
 import { Sheet } from '../Sheet'
 import { SkinList } from '../skins/SkinList'
+import { onTiltChange, requestTilt, setTiltOn, tiltOn, tiltState } from '../../site/light'
+import { setTheme } from '../../site/theme/theme'
+import { useTheme } from '../../site/theme/useTheme'
 
 // the panels load on first use: first-load JS stays inside the site budget
 const Inspector = lazy(() => import('../xray/Inspector').then(m => ({ default: m.Inspector })))
@@ -38,6 +42,9 @@ export interface CommandLayerProps {
   setBoard?: (id: string) => void
 }
 
+/** The dock sits in the top bar's slot when the page has one (T2: never over the cards), else it floats bottom right. */
+const dockIn = (dock: ReactNode) => { const slot = document.querySelector('.topbar-dock'); return slot ? createPortal(dock, slot) : dock }
+
 function FpsHud() {
   const [fps, setFps] = useState(0)
   useEffect(() => {
@@ -48,6 +55,30 @@ function FpsHud() {
   }, [])
   const frozen = useXR(s => s.frozen)
   return <div className="pal-fps" aria-hidden="true"><b>{fps}</b> FPS · T {boardTime().toFixed(1)}{frozen ? ' ■' : ''}</div>
+}
+
+/**
+ * TILT (docs/living-matter/F0-foundation.md §2.7): light and gravity follow the phone, through the light hub.
+ * Shown only where tilt can work (orientation events, a coarse pointer, a secure context). On iOS the tap is
+ * the permission gesture, so `requestTilt()` is the first thing it does (nothing awaited before it).
+ */
+function TiltButton({ onClose }: { onClose: () => void }) {
+  const [, bump] = useState(0)
+  useEffect(() => onTiltChange(() => bump(n => n + 1)), [])
+  const state = tiltState(), on = tiltOn()
+  if (state === 'unsupported' || state === 'insecure') return null
+  const click = () => {
+    if (on) { setTiltOn(false); toast('tilt off') }
+    else void requestTilt().then(s => toast(s === 'granted' ? 'tilt on: light and gravity follow your phone' : 'tilt blocked: allow motion access in the browser settings'))
+    onClose()
+  }
+  return <button type="button" className="tool-tilt" aria-pressed={on} onClick={click}><b>TILT</b><span>{state === 'denied' ? 'Motion access is blocked' : 'Light and gravity follow your phone'}</span></button>
+}
+
+/** TOOLS · LIGHT / DARK: flips the scheme, keeping the accent (the full THEME section with the accents is T5). */
+function SchemeButton({ onClose }: { onClose: () => void }) {
+  const next = useTheme().resolved === 'light' ? 'dark' : 'light'
+  return <button type="button" className="tool-scheme" onClick={() => { onClose(); setTheme({ scheme: next }) }}><b>{next.toUpperCase()}</b><span>Switch to the {next} theme</span></button>
 }
 
 /** Phones: the dock's tools (and the DISPLAY menu) as one bottom sheet, opened from the tab bar's TOOLS. */
@@ -64,6 +95,8 @@ function ToolsSheet({ api, xray, frozen, onClose, onPalette, onShell }: { api: C
       <button type="button" onClick={run(onPalette)}><b>SEARCH</b><span>Boards, cards and actions</span></button>
       <button type="button" aria-pressed={xray} onClick={run(() => toggleGlobal())}><b>X-RAY</b><span>See how every card is built</span></button>
       <button type="button" aria-pressed={frozen} onClick={run(() => (frozen ? resume() : api.freeze()))}><b>TIME</b><span>Freeze and scrub the clock</span></button>
+      <TiltButton onClose={onClose} />
+      <SchemeButton onClose={onClose} />
       <button type="button" className="tool-share" onClick={run(share)}><b>SHARE</b><span>This page's link</span></button>
       {/* the shell is a typed terminal: offered where there is a keyboard */}
       <button type="button" className="tool-shell" onClick={run(onShell)}><b>SHELL</b><span>Type field commands</span></button>
@@ -243,12 +276,12 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
   return <>
     {anyXray && <Suspense fallback={null}><Inspector onRemix={(id, data) => api.remix(id, data)} onStudio={id => api.studio(id)} onCopyLink={id => api.copyLink(id)} /></Suspense>}
     <TimeMachine />
-    <div className="pal-dock" role="toolbar" aria-label="Explore">
-      <button aria-pressed={anyXray} onClick={() => toggleGlobal()} title="X-ray every card (X on a hovered card, ⇧X all)">X-RAY</button>
-      <button aria-pressed={frozen} onClick={() => (frozen ? resume() : api.freeze())} title="Time machine (hold T, Space resumes)">TIME</button>
-      <button onClick={() => setPalette(true)} title="Command palette (⌘K / Ctrl-K)" aria-label="Command palette">⌘K</button>
-      <button onClick={() => setShell(true)} title="Dot shell (`)" aria-label="Dot shell">&gt;_</button>
-    </div>
+    {dockIn(<div className="pal-dock" role="toolbar" aria-label="Explore">
+      <button aria-pressed={anyXray} onClick={() => toggleGlobal()} data-tip="X-ray every card · ⇧X all" data-kbd="X" aria-keyshortcuts="X Shift+X">X-RAY</button>
+      <button aria-pressed={frozen} onClick={() => (frozen ? resume() : api.freeze())} data-tip="Time machine · hold" data-kbd="T" aria-keyshortcuts="T">TIME</button>
+      <button onClick={() => setPalette(true)} data-tip="Command palette" data-kbd="⌘K" aria-label="Command palette" aria-keyshortcuts="Meta+K Control+K">⌘K</button>
+      <button onClick={() => setShell(true)} data-tip="Dot shell" data-kbd="`" aria-label="Dot shell" aria-keyshortcuts="`">&gt;_</button>
+    </div>)}
     {tools && <ToolsSheet api={api} xray={anyXray} frozen={frozen} onClose={() => setTools(false)} onPalette={() => setPalette(true)} onShell={() => setShell(true)} />}
     {fpsHud && <FpsHud />}
     <div className="pal-toast" role="status" aria-live="polite">{note && <span key={note.id}>{note.text}</span>}</div>

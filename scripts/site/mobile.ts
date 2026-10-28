@@ -83,6 +83,54 @@ const audit = async (name: string) => {
   return a
 }
 
+/**
+ * F0.10 per-card fps, end to end (DotWidget → the X-ray HUD's `<measured>/<subscribed> FPS`): no shipped card
+ * sets `fps`, so one animated card gets `fps:30` patched into its JS chunk as it is served. Desktop (fine
+ * pointer, 8 cores) must subscribe at 30, a coarse-pointer page at the phone tier's 15.
+ */
+async function fpsRow() {
+  const { boards } = await import('../../src/widgets')
+  const pick = boards.filter(b => b.id !== boardIds[0] && b.id !== 'physics').flatMap(b => b.items.map(p => ({ board: b.id, p })))
+    .find(({ p }) => p.animated && !p.media && !p.clock && !p.burst && !p.controls?.length && p.fps === undefined)
+  if (!pick) { check('fps: a card with fps 30 subscribes at 30 on desktop and 15 on a coarse-pointer page', false, 'no plain animated card to patch'); return }
+  // the minifier may print the id as "…", '…' or `…`
+  const id = pick.p.id, lit = new RegExp(`id:(["'\`])${id.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\1`)
+  let patched = 0
+  const onPaused = async (e: MessageEvent) => {
+    const m = JSON.parse(String(e.data))
+    if (m.method !== 'Fetch.requestPaused') return
+    const { requestId, responseStatusCode, responseHeaders } = m.params
+    const r = await cdp('Fetch.getResponseBody', { requestId })
+    const body = r.result ? (r.result.base64Encoded ? Buffer.from(r.result.body, 'base64').toString('utf8') : r.result.body) as string : ''
+    if (!lit.test(body)) { await cdp('Fetch.continueRequest', { requestId }); return }
+    patched++
+    const headers = (responseHeaders as { name: string; value: string }[]).filter(h => !/^content-(length|encoding)$/i.test(h.name))
+    await cdp('Fetch.fulfillRequest', { requestId, responseCode: responseStatusCode, responseHeaders: headers, body: Buffer.from(body.replace(lit, m => `${m},fps:30`)).toString('base64') })
+  }
+  ws.addEventListener('message', onPaused)
+  await cdp('Network.enable'); await cdp('Network.setCacheDisabled', { cacheDisabled: true })
+  await cdp('Fetch.enable', { patterns: [{ urlPattern: '*/assets/*.js', requestStage: 'Response' }] })
+  const subscribed = async (phone: boolean) => {
+    await cdp('Emulation.setDeviceMetricsOverride', phone ? { width: W, height: H, deviceScaleFactor: 1, mobile: true } : { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
+    await cdp('Emulation.setTouchEmulationEnabled', phone ? { enabled: true, maxTouchPoints: 5 } : { enabled: false })
+    await cdp('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: 8 }) // only the pointer decides here
+    await cdp('Page.navigate', { url: `${base}${pick.board}/` })
+    const card = `document.querySelector('[data-card-id="${id}"]')`
+    if (!await waitFor(`!!${card}?.querySelector('canvas, svg')`, 20000)) return 'card did not render'
+    await js(`${card}.querySelector('button[aria-label="How it works"]').click()`)
+    const hud = `(${card}.textContent.match(/(\\d+)\\/(\\d+) FPS/) || [])[2]`
+    return await waitFor(`!!${hud}`, 10000) ? Number(await js(hud)) : 'no X-ray fps HUD'
+  }
+  try {
+    const desk = await subscribed(false), phone = await subscribed(true)
+    check('fps: a card with fps 30 subscribes at 30 on desktop and 15 on a coarse-pointer page', desk === 30 && phone === 15 && patched >= 2,
+      `${pick.board}/${id}: desktop ${desk}, phone ${phone} (chunk patched ${patched}×)`)
+  } finally {
+    ws.removeEventListener('message', onPaused)
+    await cdp('Fetch.disable'); await cdp('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: 0 }).catch(() => {})
+  }
+}
+
 try {
   await cdp('Page.enable'); await cdp('Runtime.enable')
   await cdp('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: true })
@@ -97,8 +145,10 @@ try {
     const first = await jsFiles(), html = await (await fetch(base)).text()
     const preload = new Set([...html.matchAll(/(?:src|href)="\/assets\/([^"]+\.js)"/g)].map(m => m[1]))
     // after first paint, by design: the board blurbs (UX U1), the command layer, mounted once the page is idle (C10),
-    // and the phone sheets it warms (the board sheet, the sheet itself, the display list)
-    const deferred = /^(sampleWorker|blurbs|CommandLayer|Palette|Shell|fuzzy|describe|BoardSheet|Sheet|SkinList|useSwipeDown)-/
+    // and the phone sheets it warms (the board sheet, the sheet itself, the display list); the home's hero card and
+    // live number band (T2: the `home` chunk and the halftone it draws with), mounted once the page is idle; and the
+    // home board itself (`henry`), which loads like every other board since T4b took the widget registry off first load
+    const deferred = /^(sampleWorker|blurbs|CommandLayer|Palette|Shell|fuzzy|describe|BoardSheet|Sheet|SkinList|useSwipeDown|home|halftone|mask|henry)-/
     const extra = first.filter(f => !preload.has(f) && !deferred.test(f))
     check('first load fetches only the entry and its static imports', extra.length === 0, `${first.length} JS files${extra.length ? `; lazy: ${extra.join(', ')}` : ''}`)
     await js(`document.querySelector('.board-tabs [data-board="${boardIds[2]}"]').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))`)
@@ -123,7 +173,7 @@ try {
 
   // the views other than EXPLORE (docs/UX-PLAN.md §4.1): the four MAKE modes and ABOUT, by their canonical query
   const items = only ?? [...boardIds, ...['make=tune', 'make=compose', 'make=code', 'make=draw', 'about'].map(t => `tab:${t}`)]
-  for (const id of items.filter(i => !i.startsWith('tab:'))) {
+  for (const id of items.filter(i => !i.startsWith('tab:') && i !== 'fps')) {
     logs = []
     await cdp('Page.navigate', { url: `${base}${id}/` })
     const ok = await waitFor(boardReady, 20000)
@@ -143,6 +193,7 @@ try {
     if (logs.length) check(`tab ${tab}: no console errors`, false, logs.slice(0, 3).join(' | '))
     await shot(`view-${tab.replace('=', '-')}`)
   }
+  if (!only || only.includes('fps')) await fpsRow()
 } finally {
   ws.close(); proc.kill()
   await sleep(300)

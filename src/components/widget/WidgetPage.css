@@ -1,28 +1,29 @@
 /* SHARE S1: the single-widget page and its iOS-style pill bars (docs/SHARE-PLAN.md §4). Grey chrome only:
    the card keeps the one accent. Loaded with the lazy WidgetPage chunk. */
 
+/* the widget page is a band in the frame (docs/LAYOUT-THEME-PLAN.md §3 Pages): the shell's frame and left edge,
+   the footer band under it, and room at the bottom for the fixed action bar */
 .shell--widget {
-  width: 100%;
-  padding: 0
+  padding-bottom: calc(var(--space-9) + env(safe-area-inset-bottom))
 }
 
 /* ── pills ───────────────────────────────────────────────────────────────────────── */
 .pill-bar {
   display: flex;
   align-items: center;
-  gap: 10px
+  gap: var(--space-2)
 }
 
 .pill {
   display: flex;
   align-items: center;
-  gap: 2px;
-  padding: 4px;
-  background: rgba(27, 30, 33, .78);
-  border: 1px solid rgba(255, 255, 255, .1);
-  border-radius: 999px;
-  -webkit-backdrop-filter: blur(16px) saturate(1.3);
-  backdrop-filter: blur(16px) saturate(1.3)
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur)
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
@@ -35,15 +36,15 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: var(--space-2);
   min-width: 36px;
   min-height: 36px;
-  padding: 0 14px;
+  padding: 0 var(--space-4);
   background: none;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-pill);
   color: var(--label);
-  font: 600 10px/1 var(--mono);
+  font: 600 var(--fs-label-10)/1 var(--mono);
   letter-spacing: .14em;
   text-decoration: none;
   white-space: nowrap;
@@ -52,36 +53,47 @@
   touch-action: manipulation
 }
 
-.pill-btn:hover {
-  background: rgba(255, 255, 255, .07);
-  color: var(--value)
-}
-
+/* the four states (the focus ring is the global accent ring) */
+.pill-btn:hover,
 .pill-btn:focus-visible {
-  outline: 2px solid var(--value);
-  outline-offset: 1px;
+  background: var(--wash-hover);
   color: var(--value)
 }
 
-.pill-btn:active {
-  background: rgba(255, 255, 255, .12)
+.pill-btn:active,
+.pill-btn[aria-expanded="true"] {
+  background: var(--wash-press);
+  color: var(--value)
 }
 
-.pill-btn[aria-pressed="true"],
-.pill-btn[aria-expanded="true"] {
-  background: rgba(255, 255, 255, .12);
+/* a pill that is on (X-RAY): the accent wash */
+.pill-btn[aria-pressed="true"] {
+  background: var(--glow-wash);
   color: var(--value)
 }
 
 .pill-glyph {
   color: var(--mute);
-  font-size: 13px;
+  font-size: var(--fs-label-12);
   letter-spacing: 0
 }
 
 .pill-btn:hover .pill-glyph,
+.pill-btn:focus-visible .pill-glyph,
+.pill-btn:active .pill-glyph,
 .pill-btn[aria-pressed="true"] .pill-glyph {
   color: var(--value)
+}
+
+/* tooltips (App.css › tooltip): the top bar's open below, its first pill's from the left edge */
+.wp-top [data-tip]::after {
+  top: calc(100% + var(--space-2));
+  bottom: auto
+}
+
+.wp-top > .pill:first-child [data-tip]::after {
+  right: auto;
+  left: 0
 }
 
 @media (pointer: coarse) {
@@ -92,31 +104,17 @@
 }
 
 /* ── page ────────────────────────────────────────────────────────────────────────── */
-.wp {
-  min-height: 100vh;
-  min-height: 100dvh;
-  box-sizing: border-box;
-  padding: calc(84px + env(safe-area-inset-top)) max(24px, env(safe-area-inset-right)) calc(104px + env(safe-area-inset-bottom)) max(24px, env(safe-area-inset-left));
-  display: flex;
-  flex-direction: column;
-  justify-content: center
-}
-
 .wp-loading {
   width: min(648px, 100%);
   aspect-ratio: 1;
-  margin: auto;
+  margin: var(--gap-action) 0 0;
   border: 1px solid var(--line);
-  border-radius: 16px;
+  border-radius: var(--radius-card);
   background: var(--surface)
 }
 
+/* desktop: the page's own top row, on the frame edge; a phone pins it (below) */
 .wp-top {
-  position: fixed;
-  z-index: 40;
-  top: calc(12px + env(safe-area-inset-top));
-  left: max(14px, env(safe-area-inset-left));
-  right: max(14px, env(safe-area-inset-right));
   justify-content: space-between;
   pointer-events: none
 }
@@ -128,7 +126,7 @@
 .wp-count {
   min-width: 44px;
   color: var(--mute);
-  font: 500 10px var(--mono);
+  font: 500 var(--fs-label-10) var(--mono);
   letter-spacing: .1em;
   text-align: center
 }
@@ -147,17 +145,15 @@
 .wp-main {
   display: grid;
   grid-template-columns: minmax(0, 648px) minmax(240px, 320px);
-  justify-content: center;
-  align-items: center;
-  gap: 48px;
-  width: 100%;
-  max-width: 1120px;
-  margin: 0 auto
+  justify-content: start;
+  align-items: start;
+  gap: var(--gap-action) var(--space-7);
+  margin-top: var(--gap-action)
 }
 
 .wp-stage {
   width: 100%;
-  margin-inline: auto
+  margin: 0
 }
 
 /* the pill bars carry the card's actions here */
@@ -168,7 +164,7 @@
 .wp-rail {
   min-width: 0;
   color: var(--label);
-  font: 500 11px/1.6 var(--mono);
+  font: 500 var(--fs-label-11)/1.6 var(--mono);
   text-align: left
 }
 
@@ -182,61 +178,63 @@
 }
 
 .wp-eyebrow {
-  margin: 0 0 10px;
+  margin: 0 0 var(--space-2);
   color: var(--mute);
-  font: 500 10px var(--mono);
+  font: 500 var(--fs-label-10) var(--mono);
   letter-spacing: .16em
 }
 
 .wp-rail h1,
 .wp-missing h1 {
-  margin: 0 0 12px;
+  margin: 0 0 var(--space-3);
   color: var(--value);
-  font: 600 28px/1.1 var(--heading);
+  font: 600 var(--fs-title-28)/1.1 var(--sans);
   letter-spacing: .02em
 }
 
 .wp-blurb {
-  margin: 0 0 18px;
+  margin: 0 0 var(--space-4);
   color: var(--label);
-  font: 400 14px/1.5 var(--sans);
+  font: 400 var(--fs-copy-14)/1.5 var(--sans);
   letter-spacing: 0
 }
 
 .wp-chips {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin: 0 0 20px;
+  gap: var(--space-2);
+  margin: 0 0 var(--gap-group);
   padding: 0;
   list-style: none
 }
 
 .wp-chips li {
-  padding: 5px 10px;
-  border: 1px solid rgba(255, 255, 255, .12);
-  border-radius: 999px;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid color-mix(in srgb, var(--tint) 12%, transparent);
+  border-radius: var(--radius-pill);
   color: var(--label);
-  font: 600 9px var(--mono);
+  font: 600 var(--fs-tag-9) var(--mono);
   letter-spacing: .16em
 }
 
 .wp-facts {
   margin: 0;
-  border-top: 1px solid var(--line)
+  border-top: 1px solid var(--line);
+  border-image: var(--hair-x) 1
 }
 
 .wp-facts > div {
   display: grid;
   grid-template-columns: 84px minmax(0, 1fr);
-  gap: 12px;
-  padding: 8px 0;
-  border-bottom: 1px solid var(--line)
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--line);
+  border-image: var(--hair-x) 1
 }
 
 .wp-facts dt {
   color: var(--mute);
-  font-size: 9px;
+  font-size: var(--fs-tag-9);
   letter-spacing: .16em;
   text-transform: uppercase
 }
@@ -253,16 +251,15 @@
 }
 
 .wp-ids code + code {
-  margin-left: 10px;
+  margin-left: var(--space-2);
   color: var(--label)
 }
 
 .wp-missing {
-  max-width: 480px;
-  margin: auto;
+  max-width: var(--measure);
+  margin: var(--gap-action) 0 0;
   color: var(--label);
-  font: 400 14px/1.5 var(--sans);
-  text-align: center
+  font: 400 var(--fs-copy-14)/1.5 var(--sans)
 }
 
 /* ── more menu: a popover above the bar; a bottom sheet on phones ─────────────────── */
@@ -276,25 +273,20 @@
   margin-inline: auto;
   display: flex;
   flex-direction: column;
-  padding: 6px;
-  background: rgba(27, 30, 33, .94);
-  border: 1px solid rgba(255, 255, 255, .12);
-  border-radius: 20px;
-  -webkit-backdrop-filter: blur(18px);
-  backdrop-filter: blur(18px)
+  padding: var(--space-1)
+  /* surface, edge, radius and blur: the shared raised layer (App.css) */
 }
 
 .wp-more button {
   display: flex;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
   min-height: 40px;
-  padding: 0 14px;
+  padding: 0 var(--space-4);
   background: none;
   border: 0;
-  border-radius: 14px;
   color: var(--value);
-  font: 500 11px var(--mono);
+  font: 500 var(--fs-label-11) var(--mono);
   letter-spacing: .06em;
   text-align: left;
   cursor: pointer
@@ -302,15 +294,22 @@
 
 .wp-more button:hover,
 .wp-more button:focus-visible {
-  background: rgba(255, 255, 255, .08);
-  outline: none
+  background: var(--wash-hover)
+}
+
+.wp-more button:active {
+  background: var(--wash-press)
+}
+
+.wp-more button:focus-visible {
+  outline-offset: -2px
 }
 
 .wp-more small,
 .wp-more code {
   color: var(--mute);
   font: inherit;
-  font-size: 10px
+  font-size: var(--fs-label-10)
 }
 
 .wp-phone {
@@ -330,26 +329,36 @@ body:has(.wp) .pal-toast {
 
 @media (max-width: 960px) {
   .wp-main {
-    grid-template-columns: minmax(0, 648px);
-    gap: 28px
+    grid-template-columns: minmax(0, 648px)
   }
 
   .wp-rail {
     width: 100%;
-    max-width: 648px;
-    margin: 0 auto
+    max-width: 648px
   }
 }
 
 /* phones: full-width card, one capsule at the bottom (thumb reach), the rest in a sheet */
 @media (max-width: 760px) {
+  /* the top pills stay pinned under the status bar (iOS-style); the page starts under them */
   .wp {
-    justify-content: flex-start;
-    padding: calc(70px + env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) calc(96px + env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left))
+    padding-top: calc(var(--space-8) + env(safe-area-inset-top))
+  }
+
+  .wp-top {
+    position: fixed;
+    z-index: 40;
+    top: calc(var(--gap-group) + env(safe-area-inset-top));
+    left: max(var(--frame-inset), env(safe-area-inset-left));
+    right: max(var(--frame-inset), env(safe-area-inset-right))
+  }
+
+  .wp-main {
+    margin-top: 0
   }
 
   .wp-rail h1 {
-    font-size: 24px
+    font-size: var(--fs-title-24)
   }
 
   .wp-step .pill-label {
@@ -366,12 +375,12 @@ body:has(.wp) .pal-toast {
 
   .wp-bottom {
     gap: 0;
-    padding: 4px;
-    background: rgba(27, 30, 33, .82);
-    border: 1px solid rgba(255, 255, 255, .1);
-    border-radius: 999px;
-    -webkit-backdrop-filter: blur(16px) saturate(1.3);
-    backdrop-filter: blur(16px) saturate(1.3)
+    padding: var(--space-1);
+    background: var(--glass);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-pill);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur)
   }
 
   .wp-bottom > .pill {
@@ -383,7 +392,7 @@ body:has(.wp) .pal-toast {
   }
 
   .wp-bottom .pill-btn {
-    padding: 0 12px
+    padding: 0 var(--space-3)
   }
 
   .wp-more {
@@ -391,18 +400,13 @@ body:has(.wp) .pal-toast {
     left: max(8px, env(safe-area-inset-left));
     right: max(8px, env(safe-area-inset-right));
     bottom: calc(78px + env(safe-area-inset-bottom));
-    width: auto;
-    border-radius: 24px
+    width: auto
   }
 
   .wp-more button {
     min-height: 46px;
-    font-size: 12px
+    font-size: var(--fs-label-12)
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  .pill-btn {
-    transition: background-color .12s, color .12s
-  }
-}
+/* motion: the shared chrome states in App.css (in at once, out over --dur-out; none under reduced motion) */
