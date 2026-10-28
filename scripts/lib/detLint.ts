@@ -20,7 +20,7 @@ export const DET_PATHS = [
   'src/engine/life/', // L: pond and ecosystem sims
   'src/engine/matter/sand', // M3: sand / erosion sim (M's bakes are not scanned)
   'src/engine/matter/mercury', // M2: mercury sim
-  'src/engine/squares/tetris', // Q3: the tetris sim
+  'src/engine/squares/', // Q: masks, geometry, the tetris sim (Q1)
 ] as const
 
 const BANNED = /\bMath\.(random|sin|cos|tan|asin|acos|atan|atan2|hypot|exp|expm1|log|log1p|log2|log10|pow|cbrt|sinh|cosh|tanh)(?![\w$])/
