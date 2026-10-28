@@ -29,6 +29,8 @@ export interface SkinSurfaceProps {
   /** Logical px of the frame (cols × pitch, rows × pitch). */
   width: number
   height: number
+  /** The card theme's `dotActive`: VFD and LED glow in it; a theme switch rebuilds the stage settled, no reload. */
+  accent?: string
 }
 
 const MAX_BACKING_SCALE = 3
@@ -96,7 +98,7 @@ const wrapOf = (overlay: RefObject<HTMLCanvasElement | null>, wrap: RefObject<HT
  * Lazy part of the display stage (loaded on the first non-OLED skin): the overlay canvas and its stage,
  * mounted as a sibling of the card surface inside `DisplaySurface`'s wrapper, which it marks via `wrapRef`.
  */
-export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, width, height }: SkinSurfaceProps & { wrapRef: RefObject<HTMLDivElement | null> }) {
+export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, width, height, accent }:SkinSurfaceProps & { wrapRef: RefObject<HTMLDivElement | null> }) {
   const skin = useDisplaySkin()
   // the overlay keeps its last skin while it wipes off after a switch back to OLED
   const [last, setLast] = useState<SkinName>(skin)
@@ -131,6 +133,8 @@ export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, wid
   }, [wrapRef, drawn, width])
 
   const W = Math.round(width * scale), H = Math.round(height * scale)
+  // only VFD and LED read the accent, so a theme switch rebuilds just those (the other stages keep their state)
+  const tint = drawn === 'vfd' || drawn === 'led' ? accent : undefined
   // the stage: one per (skin, backing size); a resize keeps the skin without replaying its power-on
   useLayoutEffect(() => {
     const runner = runnerOf(runnerRef), canvas = overlayRef.current, wrap = wrapOf(overlayRef, wrapRef)
@@ -141,11 +145,11 @@ export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, wid
     const same = runner.built === drawn, calm = reduced(), switched = now() - skinChangedAt() < 1.5
     // a switch sweeps down the page like a raster scan; a fresh card (board change) refreshes at once
     const delay = switched && !same ? Math.min(1, Math.max(0, wrap.getBoundingClientRect().top / window.innerHeight)) * .3 : 0
-    runner.stage = createDisplayStage(drawn, { cols, rows, w: W, h: H, gain: runner.gain, delay, instant: same || calm, noFlash: calm, onFlip: playClack })
+    runner.stage = createDisplayStage(drawn, { cols, rows, w: W, h: H, gain: runner.gain, delay, instant: same || calm, noFlash: calm, onFlip: playClack, accent: tint })
     runner.ctx = ctx; runner.built = drawn
     setStageId(id => id + 1)
     return () => runner.stop()
-  }, [wrapRef, drawn, W, H, cols, rows])
+  }, [wrapRef, drawn, W, H, cols, rows, tint])
 
   const copying = running && mode === 'canvas'
   // static frame, no re-sample: a canvas card (2D or WebGL-composited) is copied once DotCanvas's own static

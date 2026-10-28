@@ -523,14 +523,14 @@ One card, many physical surfaces (P5, `src/engine/device/`). `toDevice(spec, pro
 
 ## Display skins
 
-One global switch (header control, `?skin=`, localStorage `dot480:skin`, `setSkin(name)`) shows every board on a different physical display (C7, `src/engine/display/`, `src/components/skins/`). A skin is a **post-raster stage**: the card is sampled and rasterized exactly as on OLED, then an overlay canvas redraws that raster with the display's physics. Skins change physics, never palette roles: neutrals may take a phosphor's colour, but the board's one `{colors.dotActive}` keeps its hue on every skin (the colour matrix passes the red column through; reflective skins keep the cell's own hue as pigment). Goldens are untouched (browser only).
+One global switch (header control, `?skin=`, localStorage `dot480:skin`, `setSkin(name)`) shows every board on a different physical display (C7, `src/engine/display/`, `src/components/skins/`). A skin is a **post-raster stage**: the card is sampled and rasterized exactly as on OLED, then an overlay canvas redraws that raster with the display's physics. Skins change physics, never palette roles: neutrals may take a phosphor's colour, the board's one `{colors.dotActive}` stays the only hue. **VFD and LED take the theme accent** (owner decision 4): the app passes the card theme's `dotActive` into the stage (`StageOptions.accent`), neutrals glow in the accent's hue at full drive lifted towards white (`white` .3 VFD, .12 LED), and the colour matrix `[accent phosphor]·pinv([accent 1])` passes the accent itself unchanged; a theme switch rebuilds the VFD / LED stages live. The CRT's phosphor stays white (every colour passes) and Nixie's neon stays orange (its matrix passes only the red column, so under a non-red accent the tube is all neon); reflective skins keep the cell's own hue as pigment. Every dark accent × VFD / LED stays inside sRGB with lit dots ≥ 3:1 on the stage (`scripts/display.ts`). Goldens are untouched (browser only).
 
 | Skin | Physics | Refresh drawn on switch |
 |---|---|---|
 | `oled` | none: the card as sampled (default, no overlay, `display: contents` wrapper) | overlay wipes off top → bottom |
 | `crt` | afterglow v′ = max(v, old·e^(−Δt/τ)), τ .085 s; 2-level mip bloom; scanlines; barrel glass k .05; rounded vignette | beam line, then the raster opens vertically |
-| `vfd` | neutrals → cyan-green phosphor, glow, diamond wire mesh + filament wires | filament warm-up stutter |
-| `led` | cell light (area × opacity) → round lens per cell; unlit lenses visible; ~1-cell diffuser bleed (Glyph Matrix physics) | rows scan in top → bottom |
+| `vfd` | neutrals → the accent's phosphor (accent kept), glow, diamond wire mesh + filament wires | filament warm-up stutter |
+| `led` | cell light (area × opacity) in the accent's die colour (accent kept) → round lens per cell; unlit lenses visible, accent-tinted; ~1-cell diffuser bleed (Glyph Matrix physics) | rows scan in top → bottom |
 | `eink` | 1-bit blue-noise ink on paper; partial refresh .32 s with ghosts (.3 × .8); every 10th refresh full (TRMNL physics) | full-refresh flash (also on board change) |
 | `flipdisc` | 2-tone discs (`value` face, `dotFaint` back, accent pigment), column sweep .34 s, underdamped flips (ω 60, ζ .32); clack muted by default | discs sweep from black |
 | `nixie` | neutrals → warm neon, 3-level glow, hex anode mesh, slow flicker | ignition stutter |
@@ -595,10 +595,10 @@ Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5
 
 ### Theme readers and the display skin
 - **Cards** (`DotWidget`): without a `theme` prop they take the site theme (`useTheme()` + `themeTokens()`), so the boards, the widget page and the ⌘K preview follow it. Exports (PNG, SVG, the card's actions) use the card's tokens at that moment: what the visitor sees. OG images (`scripts/site/postbuild.ts`) and goldens stay on `dark_signal`.
-- **Polarity insets** (`src/site/theme/polarity.ts`): on a light page a card renders as a dark inset (`data-scheme="dark"` + the page's accent on `.dot-card`, dark tokens) when it is a photo or halftone (`group: 'photo'`), the live camera (`media: 'camera'`), or when the display skin is emissive (CRT, VFD, LED, Nixie: dark glass). Reflective skins (e-ink, flip-disc) and every other card follow the page. Nixie's neon stays orange (skin physics).
+- **Polarity insets** (`src/site/theme/polarity.ts`): on a light page a card renders as a dark inset (`data-scheme="dark"` + the page's accent on `.dot-card`, dark tokens) when it is a photo or halftone (`group: 'photo'`), the live camera (`media: 'camera'`), or when the display skin is emissive (CRT, VFD, LED, Nixie: dark glass). Reflective skins (e-ink, flip-disc) and every other card follow the page. On that dark glass VFD and LED glow in the accent (`DotCanvas` passes `theme.dotActive` to the stage); Nixie's neon stays orange (skin physics).
 - **Editor:** the asset thumbnails and dot icons are chrome and follow the site theme; the frames on the canvas keep their own theme (`dot480` / `deerflowMosaic`), which belongs to the artwork.
 - **Theme parity:** `pnpm golden --theme-parity` samples all 177 presets in all 14 themes and maps every dot's colour back to its tone role through `paletteOf`: the `(x, y, r, opacity, role)` hashes must equal `dark_signal`'s, so a theme only recolours. It reads and writes nothing (`goldens/hashes.json` stays `dark_signal`).
-- **Not themed yet:** the essay and legal pages (static, `dark_signal`), the X-ray overlay's guide lines (white), the skins' own stage colours (`src/engine/display/stage.ts`: VFD phosphor and LED colour do not take the accent yet).
+- **Not themed yet:** the essay and legal pages (static, `dark_signal`), the X-ray overlay's guide lines (white), the reflective skins' physics colours (`STAGE_COLORS` in `src/engine/display/stage.ts`: flip-disc faces and panel, e-ink paper and ink stay `dot480`).
 
 ## Known Gaps
 
