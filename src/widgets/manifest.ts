@@ -62,6 +62,7 @@ export const boardManifest = [
   { id: 'heal', title: 'HEAL — THE MIRROR THAT HEALS', columns: 3, density: 'hero', load: () => import('./boards/heal').then(m => ({ items: m.healBoard })) },
   { id: 'algorithms', title: 'ALGORITHMS — STIPPLE, ATTRACT, COLLAPSE, AGGREGATE', columns: 2, density: 'hero', load: () => import('./boards/algorithms').then(m => ({ items: m.algorithmsBoard })) },
   { id: 'materials', title: 'MATERIALS — WOVEN, SPUN, CARVED, POURED', columns: 3, density: 'standard', load: () => import('./boards/materials').then(m => ({ items: m.materialsBoard, sources: m.materialsSources })) },
+  { id: 'pond', title: 'POND — LIVING SCENES IN GLYPH TILES', columns: 3, density: 'standard', load: () => import('./boards/pond/index').then(m => ({ items: m.pondBoard })) },
 ] as const satisfies readonly (BoardMeta & { load: () => Promise<BoardContents> })[]
 
 export type BoardId = typeof boardManifest[number]['id']
@@ -88,7 +89,7 @@ export const boardGroups = [
   { id: 'start', label: 'START HERE', boards: ['henry', 'mosaic', 'physics', 'heal', 'levels', 'instrument', 'cinema'] },
   { id: 'ui', label: 'INTERFACES', boards: ['henry', 'deerflow12', 'mosaic', 'henry3', 'metro', 'ride', 'audio', 'lock', 'components', 'surfaces'] },
   { id: 'data', label: 'DATA', boards: ['live', 'departures', 'heartbeat'] },
-  { id: 'play', label: 'PLAY', boards: ['levels', 'physics', 'instrument', 'scope', 'mirror', 'heal'] },
+  { id: 'play', label: 'PLAY', boards: ['levels', 'physics', 'instrument', 'scope', 'mirror', 'heal', 'pond'] },
   { id: 'engine', label: 'ENGINE', boards: ['ir', 'sim', 'algorithms', 'light', 'materials', 'gpu', 'type', 'cinema'] },
 ] as const satisfies readonly { id: string; label: string; boards: readonly BoardId[] }[]
 export type BoardGroupId = typeof boardGroups[number]['id']

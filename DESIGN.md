@@ -476,6 +476,11 @@ No state changes a size, so nothing shifts. On coarse pointers every chrome targ
 - Build all hierarchy from **grid size** and **color role**, never from a second typeface or italic/bold variant — there isn't one.
 - Auto-select Canvas rendering for any widget exceeding ~2,000 dots or requiring animation; keep SVG for static, sparse, copy-paste-friendly widgets.
 - Animate on the shared clock at 12 fps by default (30 while a card is engaged or under reduced motion). A card that needs more declares `fps` on its preset; on a phone (coarse pointer, save-data, or ≤ 4 cores) it runs at max(12, round(fps / 2)) and never above its own rate (`cardFps`, `src/widgets/fps.ts`). Step motion by time, not by frame, so it reads the same at any rate; goldens sample fixed t and never see `fps`.
+  Cards that declare a rate:
+
+  | Card | `fps` | Why |
+  |---|---|---|
+  | `pond-koi` | 30 | swimming koi stutter at 12 (docs/living-matter/L-pond.md D7); 15 on a phone |
 - Choose WebGL2 only by content, never by convenience: a card gets it when a layer is tagged for the GPU (`gpuIR` for a Field IR program evaluated per dot on the GPU, `gpuValues` for a CPU field sampled straight into a value texture) and WebGL2 works; `renderer: 'webgl'` forces it. Tag a layer only when its fine dot count is out of Canvas reach (≳ 100k dots, or a pitch below ~1 card px). The tagged field is still an ordinary `Field` at the card's lattice, which is what goldens, SVG export, `describe()` and the Canvas fallback (no WebGL2, context lost, shader failure) draw. One WebGL2 context per page, which is shared by every card and copied into each card's own canvas. Squircles are exact superellipses (n = 2 + 30r²) with analytic AA, so WebGL ink matches the true dot area. Canvas (Skia) under-covers sub-pixel dots: it draws 79% of a 0.6 px dot. A card of sub-2px dots therefore reads up to ~7% heavier on WebGL (parity gate: mean Δ ≤ 2/255, ≤ 2.5% of pixels off by > 16, PSNR ≥ 32 dB; `scripts/webgl.ts`). The GPU path does not do `sizeCurve`, `jitter` or `sites`; such layers stay on the CPU. A GPU layer does not suppress CPU card cells under its dots, so keep chrome outside its window.
 
 ### Don't

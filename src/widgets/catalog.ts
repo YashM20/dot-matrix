@@ -185,4 +185,5 @@ export const catalog: readonly CatalogRow[] = [
   ['mat-grille', 'k6h584d5', 'materials'],
   ['mat-marble', 'cbmez41j', 'materials'],
   ['mat-terrazzo', '5wg1q77w', 'materials'],
+  ['pond-koi', 'c507ktgt', 'pond'],
 ]

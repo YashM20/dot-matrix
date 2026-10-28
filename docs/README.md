@@ -20,6 +20,7 @@ Which doc to read for what, and how current each one is (checked 2026-10-26). Fi
 | [`LIVING-MATTER-PLAN.md`](LIVING-MATTER-PLAN.md) | Planned (2026-10-27): a living koi pond and ecosystems in glyph tiles (after daoho.dev), spaced and joined squares, physical-material cards (stone, glass, metal, fabric, thread). Overview, schedule, first-load ledger and owner decisions; the step-by-step track plans are in `living-matter/` (F0 foundation, L pond, Q squares, M materials, X advanced). |
 | [`DOT-MATRIX-ENGINE-PLAN.md`](DOT-MATRIX-ENGINE-PLAN.md) | Architecture: module map, pipeline, lattices and sites, subsystems |
 | [`ALGORITHMS.md`](ALGORITHMS.md) | The niche algorithms (`src/engine/algo`, the `algorithms` board): weighted Voronoi stippling, strange-attractor density, Wave Function Collapse, DLA. Papers, pipeline mapping, parameters, cost. |
+| [`LIFE.md`](LIFE.md) | Living scenes (`src/engine/life`, the `pond` board): wave-equation water, dot micro-glyph tiles, koi spines, bodies and steering, the koi pond world. Modules, the body-style ruling, parameters and deviations from the L plan, checks. |
 | [`STYLE-BIBLE.md`](STYLE-BIBLE.md) | Taste: what makes a card good, taken from the four liked cards |
 | [`DEPLOY.md`](DEPLOY.md) | Vercel deploy, build outputs, headers, CSP, CI |
 | [`MCP-APP.md`](MCP-APP.md) | The MCP app (agent heartbeat) and the authoring tools, for personal use |

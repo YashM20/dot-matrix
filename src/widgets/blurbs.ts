@@ -32,6 +32,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   heal: 'Scratch the dots with your cursor and watch them grow back.',
   algorithms: 'Four niche algorithms drawing in dots: Voronoi stippling, a strange attractor, wave function collapse and frost growth.',
   materials: 'Stone, glass, metal, cloth and thread made of dots: relief, one light and a moving part.',
+  pond: 'A koi pond and other small ecosystems, drawn in glyph tiles. Tap to feed, hold to lure.',
 }
 
 export const groupBlurbs: Record<BoardGroupId, string> = {

@@ -314,4 +314,5 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'mat-grille': ['A perforated speaker grille lit from behind by the beat.', 'material metal audio animated'],
   'mat-marble': ['The time engraved in marble, read by raking light.', 'material stone clock animated'],
   'mat-terrazzo': ['A month of terrazzo chips; today is the red one.', 'material stone calendar'],
+  'pond-koi': ['Six koi in a pond of glyph tiles: tap to feed them, hold still to lure them.', 'life koi water creature control animated'],
 }
