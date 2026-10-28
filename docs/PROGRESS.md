@@ -29,11 +29,11 @@
   - [x] **E1 editor tests and cleanup.**
     - `scripts/editor.ts` (56 checks) runs in verify; `scripts/editor-browser.ts` passes 66/66 (desktop and touch).
     - 22 old MAKE files are deleted (−2,264 lines). `studio/doc.ts`, `adapter.ts` and `playback.ts` stay, since the editor uses them.
-    - Dead probes still to fix: `scripts/export-chrome.ts` and `scripts/c10-browser.ts`.
+    - [x] Dead probes (round-2 cleanup): `scripts/export-chrome.ts` deleted (it drove the removed `.pg-export` panel); `scripts/c10-browser.ts` passes 50/50 on `vite preview` as it is (`.dw-code textarea` is the editor's CODE inspector now). `dwitter/DotsRepl.tsx` and `RemixGraph.tsx` deleted too (RemixGraph is restorable for E5, see `docs/EDITOR-PLAN.md`).
   - [x] **T0 tokens.**
     - `src/tokens.css` is the one token block, and the `scripts/site/css-tokens.ts` lint finds 0 raw literals.
     - The starter, shadcn and old-MAKE CSS is deleted: first-load CSS went 16.68 → 12.54 kB gz.
-    - To follow up: wire the lint into CI.
+    - [x] The lint runs in CI (round-2 cleanup), and `scripts/site/theme.ts --check` runs again after the build, so the `dist/index.html` boot-script check is gated too.
   - [x] **T1 chrome design language.**
     - Applied: surfaces, dotted hairlines, one glow, four states with a lint, glass for raised layers only, grouped tooltips with dot keycaps, hover intent, scroll-snap sheets, card radius 12.
     - Not yet done: the sticky ALL pill still covers the first group tab on phones (T3).

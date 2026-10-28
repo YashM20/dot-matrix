@@ -17,6 +17,9 @@ Plans: `docs/living-matter/F0-foundation.md`, `docs/LAYOUT-THEME-PLAN.md`, `docs
 - **Tokens (T0) and chrome (T1):** one token block (`src/tokens.css`) with a raw-literal lint; first-load CSS 16.68 → 12.54 kB gz; dotted hairlines, one glow, four states on every control, glass on raised layers only, grouped tooltips with dot keycaps; cards have a 12 px radius.
 ### Removed
 - The old MAKE screens (E1): 22 files, −2,264 lines; the one editor replaced them.
+- Round-2 cleanup: `src/components/dwitter/DotsRepl.tsx` and `RemixGraph.tsx` (unused since the editor; RemixGraph is restorable for E5) and `scripts/export-chrome.ts` (it drove the removed playground export panel).
+### Tooling
+- CI runs the CSS token lint and re-runs `scripts/site/theme.ts --check` after the build (the `dist/index.html` boot-script check). `scripts/spec.ts` and `scripts/physics.ts` use the shared golden key helpers (`scripts/lib/goldenKey.ts`). `src/spec/validate.ts` loads the IR noise pack itself. The essay's sim figure leans the hourglass through the light hub.
 
 ## [Unreleased] — 2026-10-27 · ALGORITHMS board (branch `feat/algorithms`)
 Doc: `docs/ALGORITHMS.md`.
