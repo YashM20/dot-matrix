@@ -17,8 +17,10 @@ import { EXAMPLES } from '../dwitter/examples'
 import { presetAsSpecCard, specV1 } from '../studio/adapter'
 import { BLENDS, LATTICES, paintCells, SITE_SIZES, TONES, type LayerTone, type PaintLayer, type SitesLayer, type StudioCard, type StudioLayer, type TextLayer, type IRLayer, type Motion } from '../studio/doc'
 import { trackSpans, type Track } from '../studio/playback'
-import { cellsFromMatrix, duplicateFrame, duplicateLayer, editCard, editFrame, editLayer, encodeCells, frameById, layerOf, moveLayer, newIRLayer, removeFrame, removeLayer, seedDoc, shareable, THEMES, topDown, type EditorFrame, type Sel, type ThemeName } from './doc'
+import { cellsFromMatrix, duplicateFrame, duplicateLayer, editCard, editFrame, editLayer, encodeCells, frameById, groupOf, layerOf, moveLayer, newIRLayer, removeFrame, removeLayer, renameGroup, seedDoc, shareable, THEMES, topDown, type EditorFrame, type Sel, type ThemeName } from './doc'
+import { arrangeSel, copyEverywhere, deleteSel, duplicateSel, groupSel, lockSel, paste, ungroupSel } from './actions'
 import { exporters, recordFrame } from './exporters'
+import { ALIGNS, selCount, selGroup, selIds, type Align } from './select'
 import { compiledOf } from './render'
 import { useEditor, type RightTab } from './store'
 import { MiniDots, Num, Pick, Section, Seg, Slider, Text, useCurve, useMask } from './ui'
@@ -51,10 +53,45 @@ export function InspectorBody() {
 
 // ── DESIGN ─────────────────────────────────────────────────────────────────
 function Design() {
-  const { f, l } = useTarget()
+  const { f, l, doc, sel } = useTarget()
   if (!f) return <DocPanel />
+  if (selCount(sel) > 1 || selGroup(doc, sel)) return <ManyPanel f={f} />
   if (!l) return <FramePanel f={f} />
   return <LayerPanel f={f} l={l} />
+}
+
+const ALIGN_LABEL: Record<Align, string> = { left: 'LEFT', hcenter: 'CENTRE', right: 'RIGHT', top: 'TOP', vcenter: 'MIDDLE', bottom: 'BOTTOM' }
+/** Many frames, many layers of a frame, or a group: align / distribute, group, and the edits of many. */
+function ManyPanel({ f }: { f: EditorFrame }) {
+  const { doc, sel } = useTarget(), { edit, select } = useEditor.getState()
+  const layers = !!sel.layer, ids = selIds(sel), g = selGroup(doc, sel), grouped = layers && ids.some(id => groupOf(f, id))
+  const name = (id: string) => (layers ? f.card.layers.find(l => l.id === id)?.name : frameById(doc, id)?.card.name) ?? id
+  const locked = layers ? ids.every(id => f.locks?.includes(id)) : ids.every(id => frameById(doc, id)?.locked)
+  return <>
+    <Section title={g ? 'GROUP' : 'SELECTION'} aside={layers ? `${ids.length} layers · ${f.card.name}` : `${ids.length} frames`}>
+      {g && <div className="ed-grid2"><Text label="NAME" value={g.name} onChange={v => edit(d => renameGroup(d, f.id, g.id, v), `group:${g.id}`)} /></div>}
+      <ul className="ed-mini-list">{ids.map(id => <li key={id}><button type="button" onClick={() => select(layers ? { frame: f.id, layer: id } : { frame: id })}>{name(id)}</button></li>)}</ul>
+    </Section>
+    <Section title="ALIGN" aside={layers ? (ids.length === 1 ? 'to the frame · text and sites, whole cells' : 'text and sites, whole cells') : 'Alt+A D W S H V'}>
+      <div className="ed-row-btns ed-align">{ALIGNS.map(a => <button key={a} type="button" aria-label={`Align ${ALIGN_LABEL[a].toLowerCase()}`} onClick={() => arrangeSel(a)}>{ALIGN_LABEL[a]}</button>)}</div>
+      <div className="ed-row-btns">
+        <button type="button" disabled={ids.length < 3} onClick={() => arrangeSel('dist-x')}>DISTRIBUTE ↔</button>
+        <button type="button" disabled={ids.length < 3} onClick={() => arrangeSel('dist-y')}>DISTRIBUTE ↕</button>
+      </div>
+    </Section>
+    <Section title="ARRANGE">
+      <div className="ed-row-btns">
+        {layers && !g && <button type="button" onClick={groupSel}>GROUP</button>}
+        {grouped && <button type="button" onClick={ungroupSel}>UNGROUP</button>}
+        <button type="button" onClick={duplicateSel}>DUPLICATE</button>
+        <button type="button" onClick={copyEverywhere}>COPY</button>
+        <button type="button" onClick={() => paste()}>PASTE</button>
+        <button type="button" onClick={lockSel}>{locked ? 'UNLOCK' : 'LOCK'}</button>
+        <button type="button" className="ed-danger" onClick={deleteSel}>DELETE</button>
+      </div>
+      <p className="ed-hint">{layers ? 'Ctrl+G groups, Ctrl+⇧G ungroups. ' : ''}Ctrl+D duplicates, Alt-drag moves a copy, Ctrl+C / Ctrl+V copy and paste (also into another tab).</p>
+    </Section>
+  </>
 }
 
 function DocPanel() {
@@ -146,7 +183,9 @@ function FramePanel({ f }: { f: EditorFrame }) {
       <div className="ed-row-btns">
         <button type="button" onClick={() => fit([f.id], 4)}>ZOOM TO</button>
         <button type="button" onClick={() => { const r = duplicateFrame(useEditor.getState().h.present, f.id); edit(() => r.doc); if (r.id) select({ frame: r.id }) }}>DUPLICATE</button>
+        <button type="button" onClick={copyEverywhere}>COPY</button>
         <button type="button" onClick={() => edit(d => editFrame(d, f.id, x => ({ ...x, hidden: !x.hidden })))}>{f.hidden ? 'SHOW' : 'HIDE'}</button>
+        <button type="button" aria-pressed={!!f.locked} onClick={lockSel}>{f.locked ? 'UNLOCK' : 'LOCK'}</button>
         <button type="button" className="ed-danger" onClick={() => { edit(d => removeFrame(d, f.id)); select({}) }}>DELETE</button>
       </div>
     </Section>
@@ -182,6 +221,9 @@ function LayerPanel({ f, l }: { f: EditorFrame; l: StudioLayer }) {
         <button type="button" disabled={idx <= 0} onClick={() => edit(d => moveLayer(d, sel, idx - 1))} aria-label="Bring forward">FORWARD ↑</button>
         <button type="button" disabled={idx >= f.card.layers.length - 1} onClick={() => edit(d => moveLayer(d, sel, idx + 1))} aria-label="Send backward">BACK ↓</button>
         <button type="button" onClick={() => { const r = duplicateLayer(useEditor.getState().h.present, sel); edit(() => r.doc); if (r.id) select({ frame: f.id, layer: r.id }) }}>DUPLICATE</button>
+        {groupOf(f, l.id) ? <button type="button" onClick={ungroupSel}>UNGROUP</button> : <button type="button" onClick={groupSel}>GROUP</button>}
+        <button type="button" onClick={copyEverywhere}>COPY</button>
+        <button type="button" aria-pressed={!!f.locks?.includes(l.id)} onClick={lockSel}>{f.locks?.includes(l.id) ? 'UNLOCK' : 'LOCK'}</button>
         <button type="button" className="ed-danger" onClick={() => { edit(d => removeLayer(d, sel)); select({ frame: f.id }) }}>DELETE</button>
       </div>
     </Section>

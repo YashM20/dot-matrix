@@ -3,20 +3,24 @@
  * pasteboard dot field behind them, and the selection / hover / handle overlay in screen space.
  *
  * Input: wheel pans, Ctrl/⌘ + wheel (and trackpad pinch) zooms about the pointer; Space-drag, the
- * middle button or the Hand tool pan; on touch one finger uses the tool (or pans empty canvas) and two
- * fingers pinch-zoom and pan. One rAF loop draws every frame that changed, is animating or is being
- * previewed; frames off screen are skipped.
+ * middle button or the Hand tool pan; with Move a mouse drag on empty canvas draws a marquee (⇧ adds),
+ * ⇧-click adds to the selection, a drag moves everything selected (Alt-drag moves copies), frames snap
+ * to each other's edges, centres and spacing (hold Ctrl/⌘ to stop it). On touch one finger uses the
+ * tool (or pans empty canvas; in SELECT mode it draws a marquee and taps add) and two fingers
+ * pinch-zoom and pan. One rAF loop draws every frame that changed, is animating or is being previewed;
+ * frames off screen are skipped.
  */
 import { memo, useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react'
 import { PAINT_LIVE, paintCells, paintLayer, type PaintLayer, type StudioLayer } from '../studio/doc'
 import { EXAMPLES } from '../dwitter/examples'
-import { addFrame, addLayer, blankCard, drawingCard, editFrame, editLayer, encodeCells, frameById, frameSize, hitFrame, hitLayer, layerBounds, layerOf, line, movable, newIRLayer, newTextLayer, nudgeLayer, paintCellAt, pitchOf, programCard, programSource, raiseFrame, stamp, topDown, type EditorFrame } from './doc'
+import { addFrame, addLayer, blankCard, copyFrames, copyLayers, drawingCard, editFrame, editLayer, encodeCells, frameById, frameSize, hitFrame, hitLayer, layerBounds, layerOf, line, movable, newIRLayer, newTextLayer, nudgeLayer, paintCellAt, pitchOf, programCard, programSource, stamp, topDown, type EditorDoc, type EditorFrame } from './doc'
 import { dragCells, dragFramePos, draftFrame, pinchCam, PRESS_SLOP, resizeByHandle, type Handle } from './input'
 import { drawFrame, drawPaste, isAnimated, resolutionFor } from './render'
+import { canResize, clickLayer, frameBox, framesBox, framesSel, inSel, layersSel, marqueeLayers, marqueeSel, normBox, resizeGroup, selFrames, selIds, selLayers, snapBox, toggleSel, type Box, type Gap, type Guide } from './select'
 import { useEditor, type Camera } from './store'
 
-/** Probe hooks (scripts/editor-browser.ts): draw stats and the selected frame id. */
-declare global { interface Window { __editor?: { frames: number; drawn: number; maxMs: number; lastMs: number; sel?: string } } }
+/** Probe hooks (scripts/editor-browser.ts): draw stats, the selected frame id and every selected id. */
+declare global { interface Window { __editor?: { frames: number; drawn: number; maxMs: number; lastMs: number; sel?: string; layer?: string; picks?: string[] } } }
 
 // ── render registry: one entry per mounted frame canvas ──────────────────────────────────────────
 interface Drawn { card: EditorFrame['card']; theme: string; k: number; state?: string; tl: boolean; t: number }
@@ -31,6 +35,13 @@ function feedPointer(f: EditorFrame | undefined, wx: number, wy: number) {
 }
 const readsPointer = (f: EditorFrame) => f.card.layers.some(l => (l.kind === 'ir' || l.kind === 'sites') && l.src.includes('pointer'))
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+/** Bring frames to the top of the canvas, keeping their order. */
+const raiseFrames = (d: EditorDoc, ids: string[]): EditorDoc => {
+  const up = d.frames.filter(f => ids.includes(f.id)), rest = d.frames.filter(f => !ids.includes(f.id))
+  return up.every((f, i) => d.frames[rest.length + i] === f) ? d : { ...d, frames: [...rest, ...up] }
+}
+/** Smart-guide reach in screen px. */
+const SNAP_PX = 6
 
 const FrameView = memo(function FrameView({ f }: { f: EditorFrame }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -45,12 +56,16 @@ const FrameView = memo(function FrameView({ f }: { f: EditorFrame }) {
 })
 
 type Op =
-  | { kind: 'pan'; sx: number; sy: number; cam: Camera }
+  | { kind: 'pan'; sx: number; sy: number; cam: Camera; tapClear?: boolean }
   | { kind: 'pinch'; d: number; mx: number; my: number; cam: Camera }
-  | { kind: 'press'; sx: number; sy: number; wx: number; wy: number; frame: string; layer?: string; touch: boolean; was: boolean }
-  | { kind: 'drag-frame'; id: string; wx: number; wy: number; x0: number; y0: number }
-  | { kind: 'drag-layer'; frame: string; layer: string; wx: number; wy: number; base: StudioLayer }
+  /** Pressed a frame (or its label): a click selects on release (touch) or narrows the selection; a drag moves. */
+  | { kind: 'press'; sx: number; sy: number; wx: number; wy: number; frame: string; layer?: string; touch: boolean; was: boolean; toggle: boolean; inside: boolean }
+  /** A marquee: over frames (world box), or over the layers of `frame` (Ctrl/⌘-drag on it; a click picks `pick`). */
+  | { kind: 'marquee'; sx: number; sy: number; wx: number; wy: number; add: boolean; base: { frame?: string; layer?: string; more?: string[] }; frame?: string; pick?: string; moved: boolean; touch: boolean }
+  | { kind: 'drag-frames'; ids: string[]; wx: number; wy: number; at0: Map<string, { x: number; y: number }>; box0: Box }
+  | { kind: 'drag-layers'; frame: string; base: StudioLayer[]; wx: number; wy: number }
   | { kind: 'resize'; id: string; handle: Handle; wx: number; wy: number; f0: EditorFrame }
+  | { kind: 'resize-group'; handle: Handle; wx: number; wy: number; f0s: EditorFrame[] }
   | { kind: 'frame-draw'; wx: number; wy: number; wx1: number; wy1: number }
   | { kind: 'stroke'; frame: string; layer: string; cells: Uint8Array; last?: [number, number]; value: number }
   | { kind: 'tap'; sx: number; sy: number }
@@ -58,10 +73,12 @@ type Op =
 export function Canvas({ phone }: { phone: boolean }) {
   const vp = useRef<HTMLDivElement>(null), paste = useRef<HTMLCanvasElement>(null)
   const frames = useEditor(s => s.h.present.frames), cam = useEditor(s => s.cam), tool = useEditor(s => s.tool), sel = useEditor(s => s.sel)
-  const brush = useEditor(s => s.brush)
+  const brush = useEditor(s => s.brush), selectMode = useEditor(s => s.selectMode)
   const [space, setSpace] = useState(false)
   const [hover, setHover] = useState<{ frame?: string; layer?: string; sx: number; sy: number } | undefined>()
   const [draft, setDraft] = useState<[number, number, number, number] | undefined>()
+  const [marq, setMarq] = useState<Box | undefined>()
+  const [snaps, setSnaps] = useState<{ guides: Guide[]; gaps: Gap[] } | undefined>()
   const pointers = useRef(new Map<number, { x: number; y: number; type: string }>())
   const op = useRef<Op | undefined>(undefined)
   const glow = useRef<{ x: number; y: number } | undefined>(undefined)
@@ -121,7 +138,7 @@ export function Canvas({ phone }: { phone: boolean }) {
         stats.lastMs = ms; stats.maxMs = Math.max(stats.maxMs, ms); stats.drawn++
         e.drawn = { card: f.card, theme: f.theme, k, state, tl, t }; e.dirty = false; e.last = now
       }
-      stats.frames = d.frames.length; stats.sel = s.sel.frame
+      stats.frames = d.frames.length; stats.sel = s.sel.frame; stats.layer = s.sel.layer; stats.picks = selIds(s.sel)
       const vpKey = `${s.vp.w}x${s.vp.h}x${dpr}`
       if (paste.current && (pasteDirty.current || c !== lastCam || vpKey !== lastVp)) {
         drawPaste(paste.current, c, s.vp.w, s.vp.h, dpr, glow.current)
@@ -153,13 +170,17 @@ export function Canvas({ phone }: { phone: boolean }) {
   const finish = useCallback((commitIt: boolean) => {
     const o = op.current, s = useEditor.getState()
     op.current = undefined
+    setSnaps(undefined)
     if (!o) return
     if (o.kind === 'stroke') {
       if (commitIt) s.live(d => editLayer(d, { frame: o.frame, layer: o.layer }, l => ({ ...l, cells: encodeCells(o.cells) }) as PaintLayer))
       PAINT_LIVE.delete(o.layer); markDirty(o.frame)
       if (commitIt) s.end(); else s.cancel()
-    } else if (o.kind === 'drag-frame' || o.kind === 'drag-layer' || o.kind === 'resize') {
+    } else if (o.kind === 'drag-frames' || o.kind === 'drag-layers' || o.kind === 'resize' || o.kind === 'resize-group') {
       if (commitIt) s.end(); else s.cancel()
+    } else if (o.kind === 'marquee') {
+      setMarq(undefined)
+      if (!commitIt) s.select(o.base)
     } else if (o.kind === 'frame-draw') {
       setDraft(undefined)
       if (!commitIt) return
@@ -171,15 +192,16 @@ export function Canvas({ phone }: { phone: boolean }) {
 
   const startStroke = (wx: number, wy: number, erase: boolean) => {
     const s = useEditor.getState()
-    s.begin()
     let f = hitFrame(s.h.present, wx, wy)
+    if (f?.locked) { s.setNote(`${f.card.name} is locked (Ctrl+⇧L unlocks it)`); return }
+    s.begin()
     if (!f) {
       const card = drawingCard()
       const { doc, frame } = addFrame(s.h.present, card, { at: { x: wx - 160, y: wy - 160 }, source: 'draw' })
       s.live(() => doc); f = frame
     }
     const cur = layerOf(s.h.present, s.sel)
-    let l: StudioLayer | undefined = s.sel.frame === f.id && cur?.kind === 'paint' ? cur : topDown(f.card).find(x => x.kind === 'paint' && x.visible)
+    let l: StudioLayer | undefined = s.sel.frame === f.id && cur?.kind === 'paint' ? cur : topDown(f.card).find(x => x.kind === 'paint' && x.visible && !f!.locks?.includes(x.id))
     if (!l) {
       const nl = paintLayer(f.card.grid, { name: `paint ${f.card.layers.length + 1}`, lattice: pitchOf(f.card) < 3 ? 2 : 1 })
       const fid = f.id
@@ -205,6 +227,26 @@ export function Canvas({ phone }: { phone: boolean }) {
     if (n) markDirty(f.id)
   }
 
+  /** Start moving frames (Alt: copies of them, made in place first; the whole gesture is one undo step). */
+  const dragFrames = (ids: string[], wx: number, wy: number, alt: boolean) => {
+    const s = useEditor.getState()
+    ids = ids.filter(id => !frameById(s.h.present, id)?.locked)
+    if (!ids.length) { op.current = undefined; return }
+    s.begin()
+    if (alt) { const r = copyFrames(s.h.present, ids, 0, 0); s.live(() => r.doc); ids = r.ids; s.select(framesSel(ids)) }
+    else s.live(d => raiseFrames(d, ids))
+    const d = useEditor.getState().h.present
+    op.current = { kind: 'drag-frames', ids, wx, wy, at0: new Map(d.frames.filter(f => ids.includes(f.id)).map(f => [f.id, { x: f.x, y: f.y }])), box0: framesBox(d, ids)! }
+  }
+  /** Start moving text / sites layers of a frame in whole cells (Alt: copies). */
+  const dragLayers = (frame: string, ids: string[], wx: number, wy: number, alt: boolean) => {
+    const s = useEditor.getState()
+    s.begin()
+    if (alt) { const r = copyLayers(s.h.present, frame, ids); s.live(() => r.doc); ids = r.ids; s.select(layersSel(frame, ids)) }
+    const f = frameById(useEditor.getState().h.present, frame)!
+    op.current = { kind: 'drag-layers', frame, wx, wy, base: f.card.layers.filter(l => ids.includes(l.id)) }
+  }
+
   const onDown = (e: RPointerEvent<HTMLDivElement>) => {
     const el = vp.current!
     const { sx, sy } = local(e), { wx, wy } = world(sx, sy), s = useEditor.getState()
@@ -219,36 +261,52 @@ export function Canvas({ phone }: { phone: boolean }) {
     }
     if (pointers.current.size > 2) return
     const target = e.target as HTMLElement, handle = target.closest<HTMLElement>('[data-handle]'), label = target.closest<HTMLElement>('[data-frame-label]')
+    const touch = e.pointerType === 'touch', toggle = e.shiftKey || (touch && s.selectMode)
     if (e.button === 1 || space || s.tool === 'hand') { e.preventDefault(); op.current = { kind: 'pan', sx, sy, cam: s.cam }; return }
     if (e.button !== 0 && !(e.button === 2 && s.tool === 'draw')) return
     if (handle) {
+      if (handle.dataset.group) {
+        const f0s = selFrames(s.sel).map(id => frameById(s.h.present, id)).filter((f): f is EditorFrame => !!f)
+        if (canResize(f0s)) { s.begin(); op.current = { kind: 'resize-group', handle: handle.dataset.handle as Handle, wx, wy, f0s } }
+        return
+      }
       const f = frameById(s.h.present, handle.dataset.frameId)
       if (f) { s.begin(); op.current = { kind: 'resize', id: f.id, handle: handle.dataset.handle as Handle, wx, wy, f0: f } }
       return
     }
     if (label) {
-      const id = label.dataset.frameLabel!
-      s.select({ frame: id })
-      op.current = { kind: 'press', sx, sy, wx, wy, frame: id, touch: false, was: true }
+      const id = label.dataset.frameLabel!, inside = selFrames(s.sel).length > 1 && selFrames(s.sel).includes(id)
+      if (toggle) { if (!inside) s.select(toggleSel(s.sel, { frame: id })) } else if (!inside) s.select({ frame: id })
+      op.current = { kind: 'press', sx, sy, wx, wy, frame: id, touch: false, was: true, toggle, inside }
       return
     }
     if (s.tool === 'draw') { startStroke(wx, wy, s.brush.erase || e.button === 2); return }
     if (s.tool === 'frame') { op.current = { kind: 'frame-draw', wx, wy, wx1: wx, wy1: wy }; return }
     if (s.tool === 'text' || s.tool === 'code') { op.current = { kind: 'tap', sx, sy }; return }
-    // move / select
-    const f = hitFrame(s.h.present, wx, wy)
+    // move / select (locked frames let the press through to the canvas under them)
+    const f = hitFrame(s.h.present, wx, wy, true)
     if (!f) {
-      if (e.pointerType !== 'touch') s.select({})
-      op.current = { kind: 'pan', sx, sy, cam: s.cam }
-      // a tap on empty canvas (not a pan) deselects on touch too: decided on pointer up
-      ;(op.current as Op & { tapClear?: boolean }).tapClear = e.pointerType === 'touch'
+      if (!touch || s.selectMode) {
+        // empty canvas: a marquee (a mouse drag, or one finger in SELECT mode); a click deselects
+        if (!toggle) s.select({})
+        op.current = { kind: 'marquee', sx, sy, wx, wy, add: toggle, base: toggle ? s.sel : {}, moved: false, touch }
+        return
+      }
+      // touch: pan; a tap on empty canvas (not a pan) deselects, decided on pointer up
+      op.current = { kind: 'pan', sx, sy, cam: s.cam, tapClear: true }
       return
     }
-    const was = s.sel.frame === f.id
     const l = hitLayer(f, wx - f.x, wy - f.y)
-    const touch = e.pointerType === 'touch'
-    if (!touch) s.select(l ? { frame: f.id, layer: l.id } : { frame: f.id })
-    op.current = { kind: 'press', sx, sy, wx, wy, frame: f.id, layer: l?.id, touch, was }
+    if ((e.ctrlKey || e.metaKey) && !touch) {
+      // Ctrl/⌘ on a frame: a drag marquees its layers; a click picks the layer under the pointer, even inside a group
+      op.current = { kind: 'marquee', sx, sy, wx, wy, add: e.shiftKey, base: s.sel, frame: f.id, pick: l?.id, moved: false, touch }
+      return
+    }
+    const hit = l ? { frame: f.id, layer: l.id } : { frame: f.id }
+    const inside = s.sel.layer ? inSel(s.sel, hit) : selFrames(s.sel).length > 1 && selFrames(s.sel).includes(f.id)
+    const was = s.sel.frame === f.id || inside
+    if (!touch && !inside) s.select(toggle ? toggleSel(s.sel, hit) : l ? clickLayer(f, l.id, s.sel) : { frame: f.id })
+    op.current = { kind: 'press', sx, sy, wx, wy, frame: f.id, layer: l?.id, touch, was, toggle, inside }
   }
 
   const onMove = (e: RPointerEvent<HTMLDivElement>) => {
@@ -260,7 +318,7 @@ export function Canvas({ phone }: { phone: boolean }) {
       // hover: outline, pasteboard glow, the pointer for cards that read it, the brush ring
       if (e.pointerType === 'touch') return
       glow.current = { x: sx, y: sy }; pasteDirty.current = true
-      const f = hitFrame(s.h.present, wx, wy)
+      const f = hitFrame(s.h.present, wx, wy, s.tool === 'move')
       const l = f && s.tool === 'move' ? hitLayer(f, wx - f.x, wy - f.y) : undefined
       feedPointer(f && readsPointer(f) ? f : undefined, wx, wy)
       setHover(h => (h?.frame === f?.id && h?.layer === l?.id && s.tool !== 'draw' ? h : { frame: f?.id, layer: l?.id, sx, sy }))
@@ -277,31 +335,71 @@ export function Canvas({ phone }: { phone: boolean }) {
     if (o.kind === 'tap') return
     if (o.kind === 'stroke') { strokeTo(wx, wy); setHover({ sx, sy }); return }
     if (o.kind === 'frame-draw') { o.wx1 = wx; o.wy1 = wy; setDraft([Math.min(o.wx, wx), Math.min(o.wy, wy), Math.abs(wx - o.wx), Math.abs(wy - o.wy)]); return }
+    if (o.kind === 'marquee') {
+      if (!o.moved && Math.hypot(sx - o.sx, sy - o.sy) < (o.touch ? PRESS_SLOP.touch : PRESS_SLOP.mouse)) return
+      o.moved = true
+      const b = normBox(o.wx, o.wy, wx, wy), d = s.h.present
+      setMarq(b)
+      if (o.frame) {
+        const f = frameById(d, o.frame)
+        if (!f) return
+        const ids = marqueeLayers(f, [b[0] - f.x, b[1] - f.y, b[2] - f.x, b[3] - f.y])
+        s.select(layersSel(f.id, o.add && o.base.frame === f.id ? [...selLayers(o.base), ...ids] : ids))
+      } else s.select(marqueeSel(d, b, o.base, o.add))
+      return
+    }
     if (o.kind === 'press') {
       if (Math.hypot(sx - o.sx, sy - o.sy) < (o.touch ? PRESS_SLOP.touch : PRESS_SLOP.mouse)) return
       // touch: dragging a frame that was not selected pans instead (no accidental moves while scrolling around)
       if (o.touch && !o.was) { op.current = { kind: 'pan', sx: o.sx, sy: o.sy, cam: s.cam }; return }
-      const f = frameById(s.h.present, o.frame)!
-      const l = o.layer ? f.card.layers.find(x => x.id === o.layer) : undefined
-      s.begin()
-      if (l && movable(l)) { s.select({ frame: f.id, layer: l.id }); op.current = { kind: 'drag-layer', frame: f.id, layer: l.id, wx: o.wx, wy: o.wy, base: l } }
-      else { s.live(d => raiseFrame(d, f.id)); if (!o.layer) s.select({ frame: f.id }); op.current = { kind: 'drag-frame', id: f.id, wx: o.wx, wy: o.wy, x0: f.x, y0: f.y } }
-      return onMove(e)
-    }
-    if (o.kind === 'drag-frame') {
-      const at = dragFramePos(o.x0, o.y0, wx - o.wx, wy - o.wy, e.shiftKey)
-      s.live(d => editFrame(d, o.id, f => ({ ...f, ...at })))
+      const d = s.h.present, f = frameById(d, o.frame)!, cur = s.sel
+      const l = o.layer ? f.card.layers.find(x => x.id === o.layer) : undefined, hit = l ? { frame: f.id, layer: l.id } : { frame: f.id }
+      const free = (id: string) => movable(f.card.layers.find(x => x.id === id)) && !f.locks?.includes(id)
+      if (cur.layer && cur.frame === f.id && inSel(cur, hit)) {
+        // pressed inside a layer selection: its text / sites layers move; a field layer drags the frame
+        const ids = selLayers(cur).filter(free)
+        if (l && free(l.id) && ids.length) dragLayers(f.id, ids, o.wx, o.wy, e.altKey)
+        else dragFrames([f.id], o.wx, o.wy, e.altKey)
+      } else if (!cur.layer && selFrames(cur).includes(f.id) && (o.inside || o.toggle || !o.touch)) {
+        dragFrames(selFrames(cur), o.wx, o.wy, e.altKey)
+      } else if (l && free(l.id)) {
+        s.select({ frame: f.id, layer: l.id }); dragLayers(f.id, [l.id], o.wx, o.wy, e.altKey)
+      } else {
+        if (!o.layer) s.select({ frame: f.id })
+        dragFrames([f.id], o.wx, o.wy, e.altKey)
+      }
+      if (op.current) return onMove(e)
       return
     }
-    if (o.kind === 'drag-layer') {
+    if (o.kind === 'drag-frames') {
+      const d = s.h.present, raw: Box = [o.box0[0] + wx - o.wx, o.box0[1] + wy - o.wy, o.box0[2] + wx - o.wx, o.box0[3] + wy - o.wy]
+      const grid = dragFramePos(o.box0[0], o.box0[1], wx - o.wx, wy - o.wy, e.shiftKey)
+      let dx = grid.x - o.box0[0], dy = grid.y - o.box0[1]
+      if (!(e.ctrlKey || e.metaKey)) {
+        const others = d.frames.filter(f => !f.hidden && !o.ids.includes(f.id)).map(frameBox)
+        const sn = snapBox(raw, others, SNAP_PX / s.cam.z)
+        if (sn.dx || sn.guides.some(g => g.axis === 'x')) dx = raw[0] - o.box0[0] + sn.dx
+        if (sn.dy || sn.guides.some(g => g.axis === 'y')) dy = raw[1] - o.box0[1] + sn.dy
+        const fin: Box = [o.box0[0] + dx, o.box0[1] + dy, o.box0[2] + dx, o.box0[3] + dy], shown = snapBox(fin, others, 0)
+        setSnaps({ guides: shown.guides, gaps: shown.gaps })
+      } else setSnaps(undefined)
+      s.live(x => ({ ...x, frames: x.frames.map(f => { const a = o.at0.get(f.id); return a ? { ...f, x: a.x + dx, y: a.y + dy } : f }) }))
+      return
+    }
+    if (o.kind === 'drag-layers') {
       const f = frameById(s.h.present, o.frame)!
       const [dc, dr] = dragCells(pitchOf(f.card), wx - o.wx, wy - o.wy) // whole cells: dots stay on the grid
-      s.live(d => editLayer(d, { frame: o.frame, layer: o.layer }, () => nudgeLayer(o.base, dc, dr)))
+      s.live(d => o.base.reduce((x, b) => editLayer(x, { frame: o.frame, layer: b.id }, () => nudgeLayer(b, dc, dr)), d))
       return
     }
     if (o.kind === 'resize') {
       const next = resizeByHandle(o.f0, o.handle, wx - o.wx, wy - o.wy)
       s.live(d => editFrame(d, o.id, () => next))
+      return
+    }
+    if (o.kind === 'resize-group') {
+      const next = new Map(resizeGroup(o.f0s, o.handle, wx - o.wx, wy - o.wy).map(f => [f.id, f]))
+      s.live(d => ({ ...d, frames: d.frames.map(f => next.get(f.id) ?? f) }))
     }
   }
 
@@ -312,14 +410,25 @@ export function Canvas({ phone }: { phone: boolean }) {
     if (!o) return
     if (o.kind === 'press') {
       op.current = undefined
-      // a tap (no drag): select what is under it (touch selects on release, so a pan never changes the selection)
-      if (o.touch) s.select(o.layer ? { frame: o.frame, layer: o.layer } : { frame: o.frame })
+      const f = frameById(s.h.present, o.frame), hit = o.layer ? { frame: o.frame, layer: o.layer } : { frame: o.frame }
+      if (!f) return
+      // a click (no drag). Touch selects on release, so a pan never changes the selection; a click inside
+      // a selection of many narrows it to what is under the pointer (⇧: takes it out)
+      if (o.toggle) { if (o.touch || o.inside) s.select(toggleSel(s.sel, hit)) }
+      else if (o.touch || o.inside) s.select(o.layer ? clickLayer(f, o.layer, s.sel) : { frame: o.frame })
       return
     }
     if (o.kind === 'pan') {
       op.current = undefined
       const { sx, sy } = local(e)
-      if ((o as Op & { tapClear?: boolean }).tapClear && Math.hypot(sx - o.sx, sy - o.sy) < 8) s.select({})
+      if (o.tapClear && Math.hypot(sx - o.sx, sy - o.sy) < 8) s.select({})
+      return
+    }
+    if (o.kind === 'marquee') {
+      op.current = undefined
+      setMarq(undefined)
+      // a Ctrl/⌘-click on a frame: the layer under the pointer (even inside a group), or the frame
+      if (!o.moved && o.frame) s.select(o.pick ? (o.add ? toggleSel(s.sel, { frame: o.frame, layer: o.pick }) : { frame: o.frame, layer: o.pick }) : { frame: o.frame })
       return
     }
     if (o.kind === 'tap') {
@@ -327,6 +436,7 @@ export function Canvas({ phone }: { phone: boolean }) {
       const { sx, sy } = local(e), { wx, wy } = world(sx, sy)
       if (Math.hypot(sx - o.sx, sy - o.sy) > 10) return
       const f = hitFrame(s.h.present, wx, wy), p = f ? pitchOf(f.card) : 1
+      if (f?.locked) { s.setNote(`${f.card.name} is locked (Ctrl+⇧L unlocks it)`); return }
       if (s.tool === 'text') {
         if (!f) { s.setNote('Tap inside a frame to add text'); return }
         s.addLayerTo(f.id, newTextLayer(f.card.layers.length + 1, Math.round((wx - f.x) / p), Math.round((wy - f.y) / p)))
@@ -347,9 +457,10 @@ export function Canvas({ phone }: { phone: boolean }) {
   const cursor = space || tool === 'hand' ? 'grab' : tool === 'draw' ? 'none' : tool === 'frame' || tool === 'code' ? 'crosshair' : tool === 'text' ? 'text' : 'default'
   const doc = useEditor(s => s.h.present)
   const selFrame = frameById(doc, sel.frame), selLayer = layerOf(doc, sel)
+  const scr = (b: Box): CSSProperties => ({ left: b[0] * cam.z + cam.x, top: b[1] * cam.z + cam.y, width: (b[2] - b[0]) * cam.z, height: (b[3] - b[1]) * cam.z })
   const box = (f: EditorFrame, b?: [number, number, number, number]): CSSProperties => {
     const { w, h } = frameSize(f), [x0, y0, x1, y1] = b ?? [0, 0, w, h]
-    return { left: (f.x + x0) * cam.z + cam.x, top: (f.y + y0) * cam.z + cam.y, width: (x1 - x0) * cam.z, height: (y1 - y0) * cam.z }
+    return scr([f.x + x0, f.y + y0, f.x + x1, f.y + y1])
   }
   const hoverFrame = hover?.frame && frameById(doc, hover.frame), hoverLayer = hoverFrame && hover?.layer ? hoverFrame.card.layers.find(l => l.id === hover.layer) : undefined
   const brushCell = (() => {
@@ -357,25 +468,34 @@ export function Canvas({ phone }: { phone: boolean }) {
     const f = hover.frame ? frameById(doc, hover.frame) : selFrame, l = selLayer?.kind === 'paint' ? selLayer : f && topDown(f.card).find(x => x.kind === 'paint')
     return (f ? pitchOf(f.card) * (l && 'lattice' in l ? l.lattice : 1) : 4) * cam.z
   })()
-  const resizable = selFrame && !selLayer && !selFrame.card.reference
+  const picked = selFrames(sel).map(id => frameById(doc, id)).filter((f): f is EditorFrame => !!f && !f.hidden), many = picked.length > 1
+  const groupBox = many ? framesBox(doc, picked.map(f => f.id)) : undefined
+  const resizable = !many && selFrame && !selLayer && !selFrame.card.reference && !selFrame.locked
+  const pickedLayers = selFrame && sel.layer ? selLayers(sel).map(id => selFrame.card.layers.find(l => l.id === id)).filter((l): l is StudioLayer => !!l) : []
+  const handles = (group: boolean, id?: string) => (['nw', 'ne', 'sw', 'se'] as Handle[]).map(hd => <i key={hd} className={`ed-handle ${hd}`} data-handle={hd} data-frame-id={id} data-group={group ? '1' : undefined} />)
   return (
-    <div ref={vp} className={`ed-viewport tool-${tool}`} style={{ cursor }} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onCancel} onPointerLeave={onLeave}
-      onContextMenu={e => e.preventDefault()} role="application" aria-label="Canvas: frames of dot cards. Arrow keys nudge the selection, Shift+1 fits everything.">
+    <div ref={vp} className={`ed-viewport tool-${tool}${selectMode ? ' is-selecting' : ''}`} style={{ cursor }} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onCancel} onPointerLeave={onLeave}
+      onContextMenu={e => e.preventDefault()} role="application" aria-label="Canvas: frames of dot cards. Drag on empty canvas to select, arrow keys nudge the selection, Shift+1 fits everything.">
       <canvas ref={paste} className="ed-paste" aria-hidden="true" />
       <div className="ed-world" style={{ transform: `translate(${cam.x}px, ${cam.y}px) scale(${cam.z})` }}>
         {frames.map(f => <FrameView key={f.id} f={f} />)}
       </div>
       <div className="ed-overlay">
         {frames.filter(f => !f.hidden).map(f => {
-          const b = box(f), on = sel.frame === f.id
-          return <button key={f.id} type="button" tabIndex={-1} data-frame-label={f.id} className={`ed-flabel${on ? ' on' : ''}`} style={{ left: b.left, top: (b.top as number) - 22, maxWidth: Math.max(48, b.width as number) }}
-            onClick={() => useEditor.getState().select({ frame: f.id })}>{f.card.name}<small>{f.card.grid.cols}×{f.card.grid.rows}</small></button>
+          const b = box(f), on = selFrames(sel).includes(f.id) || sel.frame === f.id
+          return <button key={f.id} type="button" tabIndex={-1} data-frame-label={f.id} className={`ed-flabel${on ? ' on' : ''}${f.locked ? ' locked' : ''}`} style={{ left: b.left, top: (b.top as number) - 22, maxWidth: Math.max(48, b.width as number) }}
+            onClick={e => { if (e.detail === 0) useEditor.getState().select({ frame: f.id }) /* keyboard / script: pointer clicks select on press and release */ }}>{f.card.name}<small>{f.card.grid.cols}×{f.card.grid.rows}</small>{f.locked && <i className="ed-flock">LOCKED</i>}</button>
         })}
-        {hoverFrame && !(sel.frame === hoverFrame.id && !sel.layer && !hoverLayer) && <div className="ed-hover" style={box(hoverFrame, hoverLayer && layerBounds(hoverFrame, hoverLayer))} />}
-        {selFrame && !selFrame.hidden && <div className={`ed-sel${selLayer ? ' ed-sel--parent' : ''}`} style={box(selFrame)}>
-          {resizable && (['nw', 'ne', 'sw', 'se'] as Handle[]).map(hd => <i key={hd} className={`ed-handle ${hd}`} data-handle={hd} data-frame-id={selFrame.id} />)}
+        {hoverFrame && !(selFrames(sel).includes(hoverFrame.id) && !hoverLayer) && <div className="ed-hover" style={box(hoverFrame, hoverLayer && layerBounds(hoverFrame, hoverLayer))} />}
+        {selFrame && !selFrame.hidden && !many && <div className={`ed-sel${selLayer ? ' ed-sel--parent' : ''}`} style={box(selFrame)}>
+          {resizable && handles(false, selFrame.id)}
         </div>}
-        {selFrame && selLayer && <div className="ed-sel ed-sel--layer" style={box(selFrame, layerBounds(selFrame, selLayer) ?? [0, 0, frameSize(selFrame).w, frameSize(selFrame).h])} />}
+        {many && picked.map(f => <div key={f.id} className="ed-sel ed-sel--pick" style={box(f)} />)}
+        {groupBox && <div className="ed-sel ed-sel--group" style={scr(groupBox)}>{canResize(picked) && handles(true)}</div>}
+        {selFrame && pickedLayers.map(l => <div key={l.id} className="ed-sel ed-sel--layer" style={box(selFrame, layerBounds(selFrame, l) ?? [0, 0, frameSize(selFrame).w, frameSize(selFrame).h])} />)}
+        {marq && <div className="ed-marquee" style={scr(marq)} />}
+        {snaps?.guides.map((g, i) => <div key={`g${i}`} className={`ed-guide ed-guide--${g.axis}`} style={g.axis === 'x' ? { left: g.at * cam.z + cam.x, top: g.from * cam.z + cam.y, height: (g.to - g.from) * cam.z } : { top: g.at * cam.z + cam.y, left: g.from * cam.z + cam.x, width: (g.to - g.from) * cam.z }} />)}
+        {snaps?.gaps.map((g, i) => <div key={`p${i}`} className={`ed-gap ed-gap--${g.axis}`} style={g.axis === 'x' ? { left: g.a * cam.z + cam.x, top: g.at * cam.z + cam.y, width: (g.b - g.a) * cam.z } : { top: g.a * cam.z + cam.y, left: g.at * cam.z + cam.x, height: (g.b - g.a) * cam.z }}><small>{Math.round(g.b - g.a)}</small></div>)}
         {draft && <div className="ed-sel ed-sel--draft" style={{ left: draft[0] * cam.z + cam.x, top: draft[1] * cam.z + cam.y, width: draft[2] * cam.z, height: draft[3] * cam.z }}><small>{Math.round(draft[2] / 2.25)}×{Math.round(draft[3] / 2.25)}</small></div>}
         {tool === 'draw' && hover && <div className={`ed-brush${brush.erase ? ' erase' : ''}`} style={{ left: hover.sx, top: hover.sy, width: Math.max(6, (brush.size * 2 - 1) * brushCell), height: Math.max(6, (brush.size * 2 - 1) * brushCell) }} />}
       </div>

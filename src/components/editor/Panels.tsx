@@ -13,7 +13,8 @@ import { boards, CARD, TILE, withChrome, type WidgetPreset } from '../../widgets
 import { EXAMPLES, type Example } from '../dwitter/examples'
 import { compiledOf } from './render'
 import { libraryList, paintLayer, type StudioCard, type StudioLayer } from '../studio/doc'
-import { blankCard, drawingCard, editFrame, editLayer, frameById, moveLayer, programCard, topDown, type EditorFrame } from './doc'
+import { blankCard, drawingCard, editFrame, editLayer, frameById, groupOf, lockFrames, lockLayers, moveLayer, programCard, renameGroup, topDown, unitsOf, type EditorFrame, type LayerGroup } from './doc'
+import { layersSel, selFrames, selGroup, selLayers, toggleSel } from './select'
 import { useEditor } from './store'
 
 const KIND: Record<StudioLayer['kind'], string> = { ir: 'CODE', text: 'TEXT', sites: 'SITES', 'preset-layer': 'REF', spec: 'SPEC', paint: 'PAINT' }
@@ -24,24 +25,36 @@ function Rename({ value, onDone }: { value: string; onDone: (v?: string) => void
     onKeyDown={e => { e.stopPropagation(); if (e.key === 'Enter') onDone(v.trim() || value); else if (e.key === 'Escape') onDone() }} onBlur={() => onDone(v.trim() || value)} />
 }
 
+/** ⇧ / ⌘ / Ctrl-click, or any tap in the phone's SELECT mode, adds to the selection instead of replacing it. */
+const adds = (e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => e.shiftKey || e.metaKey || e.ctrlKey || useEditor.getState().selectMode
+
 function FrameRows({ f }: { f: EditorFrame }) {
   const sel = useEditor(s => s.sel), { select, edit } = useEditor.getState()
   const [open, setOpen] = useState(true)
+  const [shut, setShut] = useState<Record<string, boolean>>({})
   const [renaming, setRenaming] = useState<string | null>(null)
   const [drag, setDrag] = useState<{ id: string; to: number } | null>(null)
   const list = useRef<HTMLOListElement>(null)
   const layers = topDown(f.card), errors = compiledOf(f.card).errors
+  const picks = sel.frame === f.id ? selLayers(sel) : [], whole = selGroup(useEditor.getState().h.present, sel)
   const isOpen = open || sel.frame === f.id && !!sel.layer
-  const pick = (layer?: string) => select(layer ? { frame: f.id, layer } : { frame: f.id })
+  const pick = (e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean } | undefined, layer?: string) => {
+    const s = useEditor.getState().sel, hit = layer ? { frame: f.id, layer } : { frame: f.id }
+    select(e && adds(e) ? toggleSel(s, hit) : hit)
+  }
+  const pickGroup = (e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }, g: LayerGroup) => {
+    const s = useEditor.getState().sel
+    select(adds(e) && s.frame === f.id && s.layer ? layersSel(f.id, [...selLayers(s), ...g.layers]) : layersSel(f.id, g.layers))
+  }
   const indexAt = (y: number) => {
-    const rows = [...(list.current?.children ?? [])] as HTMLElement[]
-    const i = rows.findIndex(r => { const b = r.getBoundingClientRect(); return y < b.top + b.height / 2 })
-    return i < 0 ? rows.length - 1 : i
+    const rows = [...(list.current?.querySelectorAll<HTMLElement>('[data-index]') ?? [])]
+    const r = rows.find(x => { const b = x.getBoundingClientRect(); return y < b.top + b.height / 2 }) ?? rows[rows.length - 1]
+    return r ? Number(r.dataset.index) : 0
   }
   const onGrip = (e: PointerEvent<HTMLElement>, id: string, i: number) => {
     e.preventDefault(); e.stopPropagation()
     e.currentTarget.setPointerCapture(e.pointerId)
-    setDrag({ id, to: i }); pick(id)
+    setDrag({ id, to: i }); pick(undefined, id)
   }
   const onGripMove = (e: PointerEvent<HTMLElement>) => { if (drag) setDrag({ ...drag, to: indexAt(e.clientY) }) }
   const onGripUp = () => { if (drag) { const from = layers.findIndex(l => l.id === drag.id); if (from !== drag.to) edit(d => moveLayer(d, { frame: f.id, layer: drag.id }, drag.to)) } setDrag(null) }
@@ -49,26 +62,49 @@ function FrameRows({ f }: { f: EditorFrame }) {
     if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); e.stopPropagation(); edit(d => moveLayer(d, { frame: f.id, layer: id }, i + (e.key === 'ArrowUp' ? -1 : 1))) }
     else if (e.key === 'F2') { e.preventDefault(); setRenaming(id) }
   }
-  const frameOn = sel.frame === f.id && !sel.layer
+  const frameOn = selFrames(sel).includes(f.id)
+  const lockBtn = (on: boolean, label: string, flip: () => void) => <button type="button" className="ed-lock" aria-pressed={on} aria-label={`${on ? 'Unlock' : 'Lock'} ${label}`} title={`${on ? 'Unlock' : 'Lock'} · Ctrl+⇧L`} onClick={flip}>{on ? '◆' : '◇'}</button>
+  const row = (l: StudioLayer, i: number, child: boolean) => {
+    const on = picks.includes(l.id), dragging = drag?.id === l.id, locked = !!f.locks?.includes(l.id)
+    return (
+      <li key={l.id} data-index={i} className={`ed-row ed-row--layer${child ? ' ed-row--child' : ''}${on ? ' on' : ''}${l.visible ? '' : ' off'}${dragging ? ' drag' : ''}${drag && drag.to === i && !dragging ? ' drop' : ''}`}>
+        <span className="ed-grip" role="button" tabIndex={-1} aria-label={`Drag to reorder ${l.name}`} onPointerDown={e => onGrip(e, l.id, i)} onPointerMove={onGripMove} onPointerUp={onGripUp} onPointerCancel={() => setDrag(null)}>⋮⋮</span>
+        {renaming === l.id ? <Rename value={l.name} onDone={v => { setRenaming(null); if (v) edit(d => editLayer(d, { frame: f.id, layer: l.id }, x => ({ ...x, name: v }))) }} />
+          : <button type="button" className="ed-row-name" aria-pressed={on} title="Select (⇧ adds) · double-click or F2 renames · Alt+↑/↓ reorders" onClick={e => pick(e, l.id)} onDoubleClick={() => setRenaming(l.id)} onKeyDown={e => onKey(e, l.id, i)}>
+            <b>{KIND[l.kind]}</b>{l.name}{errors.has(l.id) && <i className="ed-err" title={errors.get(l.id)!.message}>ERR</i>}{l.blend !== 'normal' && <small>{l.blend}</small>}</button>}
+        {lockBtn(locked, l.name, () => edit(d => lockLayers(d, f.id, [l.id], !locked)))}
+        <button type="button" className="ed-eye" aria-pressed={l.visible} aria-label={`${l.visible ? 'Hide' : 'Show'} ${l.name}`} onClick={() => edit(d => editLayer(d, { frame: f.id, layer: l.id }, x => ({ ...x, visible: !x.visible })))}>{l.visible ? '●' : '○'}</button>
+      </li>
+    )
+  }
+  const index = new Map(layers.map((l, i) => [l.id, i] as const)), byId = new Map(layers.map(l => [l.id, l] as const))
   return (
     <li className={`ed-tree-frame${frameOn ? ' on' : ''}${sel.frame === f.id ? ' within' : ''}${f.hidden ? ' off' : ''}`}>
       <div className="ed-row ed-row--frame">
         <button type="button" className="ed-twist" aria-expanded={isOpen} aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${f.card.name}`} onClick={() => setOpen(!isOpen)}>{isOpen ? '▾' : '▸'}</button>
         {renaming === f.id ? <Rename value={f.card.name} onDone={v => { setRenaming(null); if (v) edit(d => editFrame(d, f.id, x => ({ ...x, card: { ...x.card, name: v } }))) }} />
-          : <button type="button" className="ed-row-name" aria-pressed={frameOn} onClick={() => pick()} onDoubleClick={() => setRenaming(f.id)} onKeyDown={e => { if (e.key === 'F2') setRenaming(f.id) }}>
+          : <button type="button" className="ed-row-name" aria-pressed={frameOn} onClick={e => pick(e)} onDoubleClick={() => setRenaming(f.id)} onKeyDown={e => { if (e.key === 'F2') setRenaming(f.id) }}>
             <b>#</b>{f.card.name}<small>{f.card.grid.cols}×{f.card.grid.rows}</small></button>}
+        {lockBtn(!!f.locked, `frame ${f.card.name}`, () => edit(d => lockFrames(d, [f.id])))}
         <button type="button" className="ed-eye" aria-pressed={!f.hidden} aria-label={`${f.hidden ? 'Show' : 'Hide'} frame ${f.card.name}`} onClick={() => edit(d => editFrame(d, f.id, x => ({ ...x, hidden: !x.hidden })))}>{f.hidden ? '○' : '●'}</button>
       </div>
       {isOpen && <ol ref={list} className="ed-tree-layers" aria-label={`Layers of ${f.card.name}`}>
-        {layers.map((l, i) => {
-          const on = sel.frame === f.id && sel.layer === l.id, dragging = drag?.id === l.id
+        {unitsOf(f).map(u => {
+          const g = groupOf(f, u[0])
+          if (!g) return row(byId.get(u[0])!, index.get(u[0])!, false)
+          const members = u.map(id => byId.get(id)!), gOn = whole?.id === g.id, inside = !gOn && picks.some(id => g.layers.includes(id))
+          const gOpen = !shut[g.id] || inside, shown = members.some(l => l.visible), locked = g.layers.every(id => f.locks?.includes(id))
           return (
-            <li key={l.id} className={`ed-row ed-row--layer${on ? ' on' : ''}${l.visible ? '' : ' off'}${dragging ? ' drag' : ''}${drag && drag.to === i && !dragging ? ' drop' : ''}`}>
-              <span className="ed-grip" role="button" tabIndex={-1} aria-label={`Drag to reorder ${l.name}`} onPointerDown={e => onGrip(e, l.id, i)} onPointerMove={onGripMove} onPointerUp={onGripUp} onPointerCancel={() => setDrag(null)}>⋮⋮</span>
-              {renaming === l.id ? <Rename value={l.name} onDone={v => { setRenaming(null); if (v) edit(d => editLayer(d, { frame: f.id, layer: l.id }, x => ({ ...x, name: v }))) }} />
-                : <button type="button" className="ed-row-name" aria-pressed={on} title="Select · double-click or F2 renames · Alt+↑/↓ reorders" onClick={() => pick(l.id)} onDoubleClick={() => setRenaming(l.id)} onKeyDown={e => onKey(e, l.id, i)}>
-                  <b>{KIND[l.kind]}</b>{l.name}{errors.has(l.id) && <i className="ed-err" title={errors.get(l.id)!.message}>ERR</i>}{l.blend !== 'normal' && <small>{l.blend}</small>}</button>}
-              <button type="button" className="ed-eye" aria-pressed={l.visible} aria-label={`${l.visible ? 'Hide' : 'Show'} ${l.name}`} onClick={() => edit(d => editLayer(d, { frame: f.id, layer: l.id }, x => ({ ...x, visible: !x.visible })))}>{l.visible ? '●' : '○'}</button>
+            <li key={g.id} className="ed-tree-group">
+              <div className={`ed-row ed-row--group${gOn ? ' on' : ''}${shown ? '' : ' off'}`}>
+                <button type="button" className="ed-twist" aria-expanded={gOpen} aria-label={`${gOpen ? 'Collapse' : 'Expand'} group ${g.name}`} onClick={() => setShut(x => ({ ...x, [g.id]: gOpen }))}>{gOpen ? '▾' : '▸'}</button>
+                {renaming === g.id ? <Rename value={g.name} onDone={v => { setRenaming(null); if (v) edit(d => renameGroup(d, f.id, g.id, v)) }} />
+                  : <button type="button" className="ed-row-name" aria-pressed={gOn} title="Select the group · double-click or F2 renames · Ctrl+⇧G ungroups" onClick={e => pickGroup(e, g)} onDoubleClick={() => setRenaming(g.id)} onKeyDown={e => { if (e.key === 'F2') setRenaming(g.id) }}>
+                    <b>GROUP</b>{g.name}<small>{members.length}</small></button>}
+                {lockBtn(locked, `group ${g.name}`, () => edit(d => lockLayers(d, f.id, g.layers, !locked)))}
+                <button type="button" className="ed-eye" aria-pressed={shown} aria-label={`${shown ? 'Hide' : 'Show'} group ${g.name}`} onClick={() => edit(d => g.layers.reduce((x, id) => editLayer(x, { frame: f.id, layer: id }, l => ({ ...l, visible: !shown })), d))}>{shown ? '●' : '○'}</button>
+              </div>
+              {gOpen && <ol className="ed-tree-layers ed-tree-members" aria-label={`Layers of group ${g.name}`}>{members.map(l => row(l, index.get(l.id)!, true))}</ol>}
             </li>
           )
         })}
