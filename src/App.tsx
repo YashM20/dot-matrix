@@ -114,7 +114,9 @@ function IntroLine() {
   const [shown, setShown] = useState(() => { try { return localStorage.getItem('dot480:intro') !== 'off' } catch { return true } })
   if (!shown) return null
   return <p className="intro-line">
-    <span>Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid. Touch the cards, switch the display, or press <b>X-RAY</b><span className="intro-tools"> in TOOLS</span> to see how one works.</span>
+    {/* phones show the short line (one text line, so intro + picker stay ≤ 120 px; src/site/mobile.css) */}
+    <span className="intro-long">Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid. Touch the cards, switch the display, or press <b>X-RAY</b> to see how one works.</span>
+    <span className="intro-short">Every card is a live dot field.</span>
     <a href="/essay.html">Read the essay →</a>
     <button type="button" aria-label="Hide this note" onClick={() => { setShown(false); try { localStorage.setItem('dot480:intro', 'off') } catch { /* private mode */ } }}>×</button>
   </p>
