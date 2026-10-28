@@ -96,6 +96,42 @@
   - `webgl.ts`, `site/mobile.ts`, `light-browser.ts`, `editor-browser.ts`, `site/layout.ts`, `theme-boot.ts`.
   - The mobile and layout probes need a running `vite preview` (ports 4317 and 4318).
 - **Next, waiting for the owner:** Q1 squares, L1 pond and M1 materials (all unblocked by F0); T3 grids; T5 picker; E3.
+- [~] **M1 materials** (branch `worktree-agent-add27cae4d261d877`, docs/living-matter/M-materials.md §3). Not merged; it waits for its integration-queue slot (L1 → Q1 → M1).
+  - Engine (M1.1–M1.5): `src/engine/matter/` (not in the engine barrel) holds relief + AO (blur and horizon), `rake` and `cardMask`; Kajiya–Kay `anisoSpec` with four tangent builders; `matcap` (64² LUT, rotate / tilt, `studioMatcap` ≡ `metal().env` bit for bit); weave drawdowns, drafts and `weaveRelief`; stitches and `contour`; `marble` and `terrazzo`.
+  - Board `/materials/` in ENGINE, lazy, `sources: [lightSource]`: `mat-loom` (fps 40), `mat-knob`, `mat-grille`, `mat-marble`, `mat-terrazzo`. Every card declares the light-hub keys. `matLight` is a thin wrapper over `sceneLight`.
+  - **`activeDim`: no owner ruling**, so the plan's default applies: it is not part of the one accent and no M card uses it. The Loom's trail is size contrast inside its one `active` layer. This is checked.
+  - Engine addition: `Control.map` (`(x, y, value) => value`), an absolute pointer → value mapping for drag controls. The knob passes its dial function (`knobDial`, in the lazy board), so a tap on the arc sets v. It is opt-in, and existing controls are unchanged.
+  - Checks:
+    - `scripts/materials.ts`: 52 checks.
+    - `scripts/materials-browser.ts` (M1.12): 11/11 on `vite preview` :4391, at 375×812 touch and 1280 desktop.
+    - Goldens: 5 added, then all 182 match after the grille change.
+  - Size, measured against a fresh build of the merge-base `dbe4716`, so there is no drift:
+    - first load 120.07 → 120.24 kB gz (+0.18; the ledger row was +0.06):
+      - +0.10 the manifest row and its ENGINE group slot;
+      - +0.04 Vite's preload-map entry for the new lazy chunk;
+      - +0.03 `Control.map` in the first-load interaction code.
+    - `sampleWorker` 156.56 → 168.73 kB gz (+12.18). The worker imports the eager registry, so the board and `matter/` ship in it. Keeping them out of the worker is open (F0 §7 R13).
+  - Frame budget. `--bench` at normal priority with the heavy lock held (no other heavy job), two runs, load factor 1.62 / 1.81. Raw ms, warm / hover (median of 13):
+
+    | card | run 1 | run 2 | cold (ms) |
+    |---|---|---|---|
+    | loom | 4.85 / 6.82 | 4.60 / 4.42 | 53–79 |
+    | knob | 2.01 / 1.59 | 1.70 / 2.11 | 18–28 |
+    | grille | 3.22 / 4.79 | 3.66 / 4.57 | 55–84 |
+    | marble | 3.52 / 5.20 | 2.83 / 2.19 | 54–66 |
+    | terrazzo | 2.25 / 2.63 | 3.06 / 4.67 | 68–132 |
+
+    - Grille: the plate shading is now cached per light (LRU of 8, M §3.2's mitigation), so the sun and tilt buckets don't re-shade. Warm is 3.2–3.7 ms raw.
+    - The ≤ 4 ms × load gate passed in run 2 and failed in run 1 (Loom and Marble hover).
+    - **Cold first frames are still over 30 ms × load**, except the knob. The bakes (relief, EDT, AO, marble turbulence, the terrazzo month) run on the first frame. Still to do: split the bakes, or warm them in idle time.
+    - The marble rebake is 11–18 ms (the budget is 10 ms × load).
+  - Deviations from the M doc:
+    - The tie-up toggle redraws the whole panel, because card data carries no edit time, so "only picks ≥ the current one" can't be pure.
+    - The marble hero is on lattice 2, not 2.5: smooth `00:00` is 58 dots wide, so 2.5 would overrun the card.
+    - The year is drawn as void letters rather than a lit groove, because 1-dot grooves don't read.
+    - The matcap LUT agreement is ≥ 97% at 64² (99.3% at 256²), not the plan's 99% at 64².
+    - Terrazzo: a tap selects a day through an `xy` control and stays until the next tap, instead of a 3 s preview, which would need time state.
+  - Still to do: cold bakes ≤ 30 ms; the worker chunk; the `pnpm snap` taste pass beside the reference cards; the CHANGELOG / `src/changelog.ts` rows at integration.
 
 **Resume here (2026-10-27):** branch `feat/native-editor-share` merges six parallel tracks on top of `main` (3a1775c, UX U0–U5 slice):
 - **Phone shell** (`src/site/mobile.css`, `BoardSheet`, `Sheet`, `useSwipeDown`, `site/layer.ts`): bottom tab bar EXPLORE / MAKE / ABOUT / TOOLS, sticky title bar that opens a boards sheet, thumb strips, swipe-down sheets, touch palette (no autofocus, boards first), 16 px fields on coarse pointers, safe areas, short-landscape layout, installable PWA (`public/manifest.webmanifest`, dot-field icons).

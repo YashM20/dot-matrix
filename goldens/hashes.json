@@ -1774,6 +1774,66 @@
     "hash": "3408f0fa",
     "dots": 1703
    }
+  },
+  "mat-loom": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "78e0bd90",
+    "dots": 8146
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "efef927f",
+    "dots": 3448
+   }
+  },
+  "mat-knob": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "22532cdc",
+    "dots": 2362
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "22532cdc",
+    "dots": 2362
+   }
+  },
+  "mat-grille": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "89d46222",
+    "dots": 7199
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "e860493f",
+    "dots": 7181
+   }
+  },
+  "mat-marble": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "f3d30c22",
+    "dots": 5924
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "f3d30c22",
+    "dots": 5924
+   }
+  },
+  "mat-terrazzo": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "50c3d27b",
+    "dots": 2682
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "50c3d27b",
+    "dots": 2682
+   }
   }
  }
 }

@@ -308,4 +308,10 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'algo-attractor': ['A Clifford strange attractor as a density of dots, its parameters slowly drifting.', 'algorithm attractor chaos animated'],
   'algo-collapse': ['Wave Function Collapse solving a new knot of tiles every loop.', 'algorithm wfc tiles animated'],
   'algo-aggregate': ['Frost grown one grain at a time by diffusion-limited aggregation.', 'algorithm dla fractal animated'],
+  // materials: woven, spun, carved, poured (docs/living-matter/M-materials.md)
+  'mat-loom': ['A loom weaving twill live, with its draft shown as dots.', 'material weave textile animated control'],
+  'mat-knob': ['A spun-aluminium knob whose highlight follows the light.', 'material metal knob control'],
+  'mat-grille': ['A perforated speaker grille lit from behind by the beat.', 'material metal audio animated'],
+  'mat-marble': ['The time engraved in marble, read by raking light.', 'material stone clock animated'],
+  'mat-terrazzo': ['A month of terrazzo chips; today is the red one.', 'material stone calendar'],
 }

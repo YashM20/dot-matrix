@@ -325,6 +325,7 @@ Measured rows carry the number `scripts/site/size.ts` printed (gzip -9, kB = 102
 | Q1 hook points (+0.4 with the array-path fallback) | +0.6 | ≈120.7 |
 | Q2 / Q3 | +0.3 / +0.1 | ≈121.1 |
 | 4 new board manifest rows (pond, squares, materials, workshop) | ≈ +0.25 | ≈121.3 |
+| M1 materials, measured against its merge-base build (dbe4716) | +0.18: the row and its group slot +0.10, the preload-map entry +0.04, `Control.map` +0.03; each board row costs ≈ +0.14, not 0.06 | ≈120.4 with T3 and the essay theming (120.18) |
 | X1 | ≤ +0.5 | ≈121.8 |
 
 **Sample worker chunk** (`sampleWorker-*.js`, `size.ts --worker`; not first load, but fetched by every page that animates a card): 153.55 at c619dae → 153.65 after F0.5–F0.11 (+0.10, the cover code; the cut does not touch the worker). Its rows: F0 noise/light additions (measured at merge); L/M boards that stay main-thread should keep their modules out of the worker's registry path (F0 §7 R13).

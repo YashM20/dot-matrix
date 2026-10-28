@@ -232,6 +232,23 @@ A material is a dot vocabulary, not a shader: given one normal raster and one li
 | Emissive | `emissive` | The shape plus its `bloom` halo behind a one-dot moat; `active` + `activeDim` by default, white (`value` + `mid`/`faint`) when the board's red is taken |
 | Metal | `metal` | No diffuse: hard studio stripes read off the normal (sky, glow strip, black horizon, ground, lit floor) plus the light's own reflection |
 | Fabric | `fabric` | Lambert ordered-dithered between adjacent size steps (Bayer 4×4), capped at 3 steps, one tone per step |
+| Brushed / spun | `anisoSpec` + `anisoLayers` (`src/engine/matter`) | Body capped at 1 − 2 steps; the Kajiya–Kay streak +1 step at `rim`, +2 at `core` in `value`; tangent presets linear / radial / SDF |
+| Matcap | `matcap` | Environment read off the normal through a 64² LUT, hard stops; rotates with the light azimuth, tips ≤ 25° with the tilt offset (`tx`, `ty`), none at rest |
+| Woven | `weave` drafts + `weaveRelief` | Threads ≥ 3 cells with a 1-cell void gap; warp one band above weft; sheen along the thread |
+| Stitched | `stitch` / `stitchField` | Hard dashes on card pitch; unsewn stitches are needle holes; the needle may be the accent |
+| Stone | `marble`, `terrazzo` | Veins ≥ 2 cells drop one band; engraving is a V-groove, lit wall / dark wall under raking light (`rake(L)`, ≤ 18°) |
+
+Material comes from relief, never from hue (no colour tokens). "Was active" is size contrast in the one `active` layer: `{colors.dotActiveDim}` is not used on material boards until the owner rules (M-materials §10.6). `src/engine/matter` is not in the engine barrel: import it by path.
+
+| Material token | Value |
+|---|---|
+| `{material.minPeriod}` | 2 cells of the layer's lattice (3 with a cross-profile) |
+| `{material.rakeElevation}` | 8°–18° |
+| `{material.aniso.exponent}` | brushed 40–48 · spun 80 · weave 32 · satin thread 24 |
+| `{material.ao}` | radius 1.5–3 cells, strength .5–.8 |
+| `{material.bake.cold}` | ≤ 30 ms |
+| `{material.bake.rebake}` | ≤ 10 ms |
+| `{material.frame}` | ≤ 4 ms |
 
 **Board-wide light:** a board shares one light direction, the sun of the wall-clock hour (`sunAt(hourOf(date))`: rises on the left at 6, highest at noon, sets on the right at 18, a lower moon at night). Over a card the pointer replaces it as a torch.
 
