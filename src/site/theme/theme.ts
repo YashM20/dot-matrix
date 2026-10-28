@@ -6,14 +6,17 @@
  *    never persisted (an embed's `?accent=` must not overwrite the visitor's choice); `setTheme` persists.
  *  - `system` follows `prefers-color-scheme` live (a `matchMedia` listener while on `system`).
  *  - Writes `data-scheme` (resolved: `dark` / `light`) and `data-accent` on `<html>`, the same attributes the
- *    inline boot script (`boot.ts`) set before first paint, with `.no-transition` on `<html>` for the switch.
- *  - `themeTokens()` gives canvas readers the engine `ThemeTokens` of the current (or a named) theme:
- *    `dark_signal` is `dot480` itself, so today's cards and their caches are untouched.
- * `useTheme()` (React) lives in `useTheme.ts` next to this file.
+ *    inline boot script (`boot.ts`) set before first paint, with `.no-transition` on `<html>` for the switch;
+ *    the `color-scheme` meta, and the `theme-color` meta as the theme's exact `--bg` (the boot script can only
+ *    give the scheme's).
+ *  - `themeTokens()` gives canvas readers the engine `ThemeTokens` of the current (or a named) theme, read from
+ *    the theme CSS (themes.css, already on the page), so the first load carries no colour table:
+ *    `dark_signal` is `dot480` itself, so today's cards and their caches are untouched. `tokens.ts` has the
+ *    same values from the generated table for scripts (no DOM).
+ * `useTheme()` / `useThemeTokens()` (React) live in `useTheme.ts` next to this file.
  */
 import type { ThemeTokens } from '../../engine/types'
 import { dot480 } from '../../engine/theme/tokens'
-import { DOT_TABLE, PAPER } from './dots'
 import { DEFAULT_ACCENT, DEFAULT_SCHEME, isAccent, isSchemePref, parseThemeName, themeName, type AccentId, type Scheme, type SchemePref, type ThemeName } from './names'
 
 export const STORAGE_KEY = 'dot480:theme'
@@ -57,10 +60,19 @@ function apply(s: ThemeState, animate = false): void {
   if (!animate) root.classList.add('no-transition')
   root.dataset.scheme = s.resolved
   root.dataset.accent = s.accent
+  metas(s)
   if (!animate) {
     void getComputedStyle(root).color // flush styles with transitions off
     requestAnimationFrame(() => requestAnimationFrame(() => root.classList.remove('no-transition')))
   }
+}
+
+/** The browser chrome follows the theme: `color-scheme` (native controls, scrollbars) and `theme-color` (the bar). */
+function metas(s: ThemeState): void {
+  const meta = (name: string) => document.querySelector<HTMLMetaElement>(`meta[name=${name}]`)
+  const cs = meta('color-scheme'), tc = meta('theme-color'), bg = getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()
+  if (cs) cs.content = s.resolved
+  if (tc && bg) tc.content = bg
 }
 
 function update(next: ThemePrefs): void {
@@ -73,8 +85,10 @@ function update(next: ThemePrefs): void {
 }
 
 mq?.addEventListener?.('change', () => { if (prefs.scheme === 'system') update({ ...prefs }) })
-// the boot script set these already; this only repairs a page whose boot script was blocked
+// the boot script set the attributes already (this only repairs a page whose boot script was blocked); the exact
+// theme-color needs the CSS, which has loaded by the time the bundle runs
 apply(state)
+if (hasDom) metas(state)
 
 export const getTheme = (): ThemeState => state
 export function subscribeTheme(cb: () => void): () => void { listeners.add(cb); return () => { listeners.delete(cb) } }
@@ -88,16 +102,33 @@ export function setTheme(next: Partial<ThemePrefs>): void {
 export const setScheme = (scheme: SchemePref) => setTheme({ scheme })
 export const setAccent = (accent: AccentId) => setTheme({ accent })
 
+/** Engine token ← the CSS variable it is read from (scripts/site/theme.ts `ENGINE_VARS` checks themes.css declares them all). */
+const VARS: [keyof ThemeTokens, string][] = [['bg', '--bg'], ['surface', '--surface'], ['surfaceRaised', '--raised'], ['hairline', '--line'], ['dotIdle', '--dot-idle'], ['dotMid', '--dot-mid'], ['dotFaint', '--dot-faint'], ['value', '--value'], ['dotActive', '--red'], ['dotActiveDim', '--red-dim']]
 const memo = new Map<ThemeName, ThemeTokens>()
+/** The tokens of a theme as its CSS declares them: read off `<html>` when it shows that theme, else off a hidden probe. */
+function fromCss(scheme: Scheme, accent: AccentId): ThemeTokens | undefined {
+  const root = document.documentElement, own = root.dataset.scheme === scheme && root.dataset.accent === accent
+  const el = own ? root : Object.assign(document.createElement('i'), { hidden: true })
+  if (!own) { el.dataset.scheme = scheme; el.dataset.accent = accent; (document.body ?? root).appendChild(el) }
+  const cs = getComputedStyle(el), t: ThemeTokens = { ...dot480 }
+  // --red-dim exists only in themes.css: without it the theme CSS isn't applied yet, so don't memoise a guess
+  const ok = !!cs.getPropertyValue('--red-dim').trim()
+  for (const [k, v] of VARS) { const x = cs.getPropertyValue(v).trim(); if (x) (t as unknown as Record<string, unknown>)[k] = x }
+  if (!own) el.remove()
+  return ok ? t : undefined
+}
 /**
- * Engine tokens of a theme (default: the current one): the scheme's neutral preset (`dot480` dark, `PAPER`
- * light) with the accent and the tinted surfaces from the generated table. Memoised per name, so per-theme
- * caches keyed on the object stay stable; `dark_signal` is `dot480` itself.
+ * Engine tokens of a theme (default: the current one): the scheme's neutral preset (`dot480` dark, the paper
+ * preset light) with the accent and the tinted surfaces, as the theme CSS declares them. Memoised per name, so
+ * per-theme caches keyed on the object stay stable; `dark_signal` (and anything without a DOM) is `dot480` itself.
  */
 export function themeTokens(scheme: Scheme = state.resolved, accent: AccentId = state.accent): ThemeTokens {
   const name = themeName(scheme, accent)
-  if (name === 'dark_signal') return dot480
+  if (name === 'dark_signal' || !hasDom) return dot480
   let t = memo.get(name)
-  if (!t) memo.set(name, t = { ...(scheme === 'dark' ? dot480 : PAPER), ...DOT_TABLE[name] })
+  if (!t) { t = fromCss(scheme, accent); if (!t) return dot480; memo.set(name, t) }
   return t
 }
+
+// consoles, probes and the shell: `dot480.setTheme({ scheme: 'light', accent: 'cobalt' })`
+if (hasDom) { const w = window as unknown as { dot480?: Record<string, unknown> }; w.dot480 = { ...w.dot480, setTheme, themeTokens, getTheme } }

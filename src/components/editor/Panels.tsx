@@ -6,7 +6,7 @@
 import { memo, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { sampleLayers } from '../../engine/sampler/gridSampler'
-import { dot480 } from '../../engine/theme/tokens'
+import { useThemeTokens } from '../../site/theme/useTheme'
 import { dotifyUpload } from '../../lib/photoDotify'
 import { SHARE_GRIDS } from '../../lib/share'
 import { boards, CARD, TILE, withChrome, type WidgetPreset } from '../../widgets'
@@ -109,6 +109,8 @@ function queueThumb(fn: () => void): () => void {
 /** A preset / program / card thumbnail: sampled once on a coarse pitch, when it scrolls into view. */
 const Thumb = memo(function Thumb({ make, label }: { make: () => { layers: ReturnType<WidgetPreset['layers']>; grid: WidgetPreset['grid']; style: WidgetPreset['style'] }; label: string }) {
   const ref = useRef<HTMLCanvasElement>(null)
+  // thumbnails are chrome: the site theme's surface and dot tones (the frames on the canvas keep their own theme)
+  const theme = useThemeTokens()
   useEffect(() => {
     const c = ref.current
     if (!c) return
@@ -118,16 +120,16 @@ const Thumb = memo(function Thumb({ make, label }: { make: () => { layers: Retur
       try {
         const { layers, grid, style } = make(), W = 112, pitch = W / Math.max(grid.cols, grid.rows), k = Math.min(2, window.devicePixelRatio || 1), p0 = grid.pitch ?? 4
         c.width = Math.round(grid.cols * pitch * k); c.height = Math.round(grid.rows * pitch * k)
-        ctx.fillStyle = dot480.surface; ctx.fillRect(0, 0, c.width, c.height)
+        ctx.fillStyle = theme.surface; ctx.fillRect(0, 0, c.width, c.height)
         ctx.setTransform(k, 0, 0, k, 0, 0)
-        renderCanvas(ctx, sampleLayers(layers, { ...grid, pitch }, { ...style, sizeMin: style.sizeMin * pitch / p0, sizeMax: style.sizeMax * pitch / p0 }, dot480))
+        renderCanvas(ctx, sampleLayers(layers, { ...grid, pitch }, { ...style, sizeMin: style.sizeMin * pitch / p0, sizeMax: style.sizeMax * pitch / p0 }, theme))
       } catch { /* a thumbnail never breaks the panel */ }
     }
     let cancel: (() => void) | undefined
     const io = new IntersectionObserver(es => { if (es.some(x => x.isIntersecting)) { io.disconnect(); cancel = queueThumb(draw) } }, { rootMargin: '120px' })
     io.observe(c)
     return () => { io.disconnect(); cancel?.() }
-  }, [make])
+  }, [make, theme])
   return <canvas ref={ref} className="ed-thumb" role="img" aria-label={label} />
 })
 type ThumbMake = Parameters<typeof Thumb>[0]['make']

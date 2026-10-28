@@ -48,11 +48,11 @@ Two surface tones do all the work: `{colors.bg}` (near-black canvas) behind ever
 - **Charging/Positive Delta** (`{colors.deltaPositive}` — `#7BC96F`): retail/analytics up-arrow figures (e.g. "+$23%").
 
 ### CSS colour roles (chrome)
-The page chrome reads these custom properties (`src/tokens.css`), never a hex. Values are today's dark palette; the theme engine (docs/LAYOUT-THEME-PLAN.md §4, T4) swaps them per scheme and accent. An alpha variant is written where it is used, `color-mix(in srgb, var(--role) N%, transparent)`, so it follows the role. `scripts/site/css-tokens.ts` fails on a colour literal anywhere else.
+The page chrome reads these custom properties (`src/tokens.css`), never a hex. Values are today's dark palette (`dark_signal`); the theme CSS (`src/site/theme/themes.css`, generated; see Theme below) sets the same names per scheme and accent, plus the accent family (`--red-text`, `--on-red`, `--red-line`, ...). An alpha variant is written where it is used, `color-mix(in srgb, var(--role) N%, transparent)`, so it follows the role. `scripts/site/css-tokens.ts` fails on a colour literal anywhere else (the two token files excepted).
 
 | CSS token | Value | Design token | Role |
 |---|---|---|---|
-| `--red` | `#FF3B30` | `{colors.dotActive}` | the one accent: active, live, selected |
+| `--red` | `#FF3B30` | `{colors.dotActive}` | the one accent: active, live, selected (the theme's accent, whatever its hue) |
 | `--bg` | `#070809` | `{colors.bg}` | the room behind everything |
 | `--panel` | `#0D0F11` | — | the bezel: editor chrome, docked bars |
 | `--surface` | `#111315` | `{colors.surface}` | the card glass |
@@ -60,6 +60,7 @@ The page chrome reads these custom properties (`src/tokens.css`), never a hex. V
 | `--line` | `rgba(255,255,255,.08)` | `{colors.hairline}` | 1 px borders and rules |
 | `--line-strong` | `#3A3D42` | — | solid quiet ink: grab handles, grips, off glyphs |
 | `--tint` / `--shade` | `#FFF` / `#000` | — | the light and the dark mixed into washes, lines, scrims, shadows, masks |
+| `--well` | `#000` | — | the recess below the surface: code wells (light: the brightest paper) |
 | `--scrim` | `rgba(0,0,0,.55)` | — | backdrop behind sheets and dialogs |
 | `--value` | `#F2F3F5` | `{colors.value}` | primary text |
 | `--label` | `#C7CBD1` | `{colors.label}` | labels, secondary text |
@@ -529,43 +530,64 @@ One global switch (header control, `?skin=`, localStorage `dot480:skin`, `setSki
 
 ## Theme
 
-A theme is **scheme × accent** (docs/LAYOUT-THEME-PLAN.md §4), named `${scheme}_${accent}` (`dark_signal`, `light_cobalt`). `dark_signal` is the canonical theme: goldens, OG images and the no-JS fallback use it, and it equals the colours above exactly. A visitor picks *which* hue is the accent; a board still shows only one (`{colors.dotActive}` = the theme's `accent`).
+A theme is **scheme × accent** (docs/LAYOUT-THEME-PLAN.md §4), named `${scheme}_${accent}` (`dark_signal`, `light_cobalt`). `dark_signal` is the canonical theme: goldens, OG images and the no-JS fallback use it, and it equals the colours above exactly. A visitor picks *which* hue is the accent; a board still shows only one (`{colors.dotActive}` = the theme's `--red`).
 
-- **Schemes:** `dark` (today's neutrals, `dot480`) and `light` (the warm `paper` preset: room `#F1F0EC`, card `#F8F8F5`, ink dots). `system` resolves to one of them from `prefers-color-scheme`. Default: `system` + `signal`.
+- **Schemes:** `dark` (today's neutrals, `dot480`) and `light` (the warm `paper` preset: room `#F1F0EC`, card `#F8F8F5`, ink dots). `system` resolves to one of them from `prefers-color-scheme`. Default: `system` + `signal`, so a visitor whose OS is light gets `light_signal`.
 - **Accents (7):** `signal` (h 29, today's red), `amber` (75), `phosphor` (145), `cyan` (210), `cobalt` (260), `vite` (vite.dev's purple, hand-pinned), `magenta` (350). Hues ≥ 25° apart. Custom hue: T6.
 - **Source:** `src/site/theme/accents.ts` (generator, pure) → `npx tsx scripts/site/theme.ts --write` → `table.ts` (all roles), `dots.ts` (engine tokens), `themes.css` (CSS variables). The site runs no colour math. `scripts/site/theme.ts` checks the table (also in `pnpm verify`).
 
 ### Roles
-Components and cards read roles, never hues. Same keys in every theme.
+Components and cards read roles, never hues. Same keys in every theme. **One set of names:** the roles are the CSS custom properties of `src/tokens.css` (the table under "CSS colour roles" above); `src/tokens.css` keeps their `dark_signal` values (also the essay and legal pages, which have no theme) and `themes.css` sets them per theme. `--red` is `{colors.dotActive}` whatever hue the theme gives it: the name is kept, never aliased (`--accent`, `--primary` do not exist).
 
 | Group | Roles (CSS `--name`) |
 |---|---|
-| Neutral | `bg`, `panel`, `card`, `raised`, `overlay`, `line`, `line-strong`, `text-1`, `text-2`, `text-3`, `scrim`, `shadow` |
-| Dot tones | `dot-faint`, `dot-mid`, `dot-idle`, `dot-value`, `dot-active` (= `accent`), `dot-active-dim` |
-| Accent | `accent`, `accent-hover`, `accent-press`, `accent-text`, `accent-soft` (12%), `accent-line`, `accent-glow` (35%), `accent-halo`, `on-accent`, `accent-surface` + `accent-surface-text` (hero insets only), `focus-ring` (= `accent-line`), `selection` (accent at 30%) |
+| Neutral | `bg`, `panel`, `surface`, `raised`, `line`, `line-strong`, `tint`, `shade`, `well`, `scrim`, `value`, `label`, `mute`, `dim` |
+| Dot tones | `dot-faint`, `dot-mid`, `dot-idle`, plus `value` (the brightest tone) |
+| Accent | `red` ({colors.dotActive}), `red-dim` ({colors.dotActiveDim}), `red-hover`, `red-press`, `red-text` (the accent as text, ≥ 4.5:1), `red-line` (active border, focus ring, ≥ 3:1), `on-red` ({colors.onActive}, text on a solid fill), `red-surface` + `red-surface-text` (hero insets only), `red-halo` (chrome halos only), `selection` (`::selection`, the accent at 30%) |
 
-Engine side: `themeTokens(scheme, accent)` (`src/site/theme/theme.ts`) returns a `ThemeTokens`: `dot480` (dark) or `PAPER` (light) with the theme's accent, dim and surfaces. `themeTokens('dark', 'signal')` is `dot480` itself.
+The 12% wash and the glow are built from `--red` in `src/tokens.css` (`--glow-wash`, `--glow-halo`, `--glow`); they and the other chrome materials (`--line-dot`, `--hair-x`/`-y`, `--wash-*`, `--glass`, `--shadow-raised`) are declared on `:root, [data-scheme]`, so a pinned subtree draws its own lines and glow.
+
+In `light`, `--tint` is the ink (washes and dotted lines darken the paper) and `--shade` a deep ink (shadows, scrims). Text roles in light: `value` ≈ L .22, `label` .38, `mute` .50, `dim` .62.
+
+| Theme | `--red` | `--red-text` | `--on-red` | `--red-dim` |
+|---|---|---|---|---|
+| `dark_signal` | `#FF3B30` | `#FFA193` | `#FFFFFF` | `#B8241A` |
+| `light_signal` | `#E43226` | `#B42219` | `#190403` | `#FF9687` |
+| `dark_vite` | `#B39AFF` | `#C2AEFF` | `#16171D` | `#6C3BFF` |
+| `light_cobalt` | `#105FD9` | `#0145A7` | `#FFFFFF` | `#8DB8FF` |
+
+The other ten are in `src/site/theme/table.ts` (`npx tsx scripts/site/theme.ts` prints them all).
+
+Engine side: `themeTokens(scheme, accent)` (`src/site/theme/theme.ts`) returns a `ThemeTokens`: `dot480` (dark) or `PAPER` (light) with the theme's accent, dim, value and surfaces. On the site it reads them from the theme CSS (so the first load carries no colour table); `tokensOf()` (`src/site/theme/tokens.ts`) gives the same from the generated table for scripts. Both return `dot480` itself for `dark_signal`, and memoise per name. The browser probe checks they agree in all 14 themes.
 
 ### Generator rules
 Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5 fills, 6–8 lines, 9–10 solid, 11–12 text). The generator clamps or nudges until every rule passes, and hand-pinned values must pass them too.
 - **Gamut:** every colour is inside sRGB. Chroma is binary-searched at fixed L and h. Cut today: dark cobalt −11%, dark magenta −34% (its L rose to stay clear of the idle grey for protans), light amber −16%, light cyan −14%.
-- **Dots:** `accent`, `accent-line` and `focus-ring` are ≥ 3:1 on `card` and `bg`.
-- **Text:** `text-1/2/3` and `accent-text` are ≥ 4.5:1 on all four surfaces. `accent-text` is also ≥ APCA Lc 60 on `card`.
-- **`on-accent`:** white if it reaches APCA 60 and 4.5:1 on the solid. Otherwise a dark tint of the hue (`oklch(.25 max(.08·C, .04) h)`), darkened until it reaches 4.5:1.
-- **Colour-blind safety:** in normal vision and under simulated protanopia, deuteranopia and tritanopia (Machado 2009), `accent` differs from `dot-value`, `dot-idle` and `dot-mid` by ΔL ≥ .08 or ΔE_OK ≥ .10. If needed, the solid's L is searched ±.15 to get there.
-- **Tone order:** APCA on `card` gives faint < mid < idle < value, and `dot-active-dim` < `dot-active`.
-- **`dot-active-dim`:** dark uses step 7 (a dimmer accent). Light uses step 7 too, a lighter tint (less ink), which matches vite's pinned `#B39AFF`.
-- **Tinted neutrals:** surfaces lean toward the hue by C .005 (vite .014), `line` and `text-3` by .010, `text-2` by .006, and `text-1` by .003. Light gets 70% of these. L is kept. Neutral dot tones stay untinted, and `dark_signal` is not tinted at all.
-- **Pins:** `dark_signal` keeps `#FF3B30` / `#B8241A` / `#FFFFFF`. `vite` dark is `#B39AFF` (line and dim `#6C3BFF`, on-accent `#16171D`, surface `#370A7F`). `vite` light is `#6C3BFF` (text `#6B1EB9`, line `#8A63FE`, dim `#B39AFF`, surface `#F0EBFF` / `#140033`). Dark vite's `accent-text` is `#C2AEFF`, because `#B39AFF` reaches only Lc 55.
-- **Waivers:** two of today's values fail a rule and are kept on `dark_signal` only, until T6: `text-3` `#6E7278` (3.85:1 on card) and `on-accent` white on `#FF3B30` (3.55:1). The check lists them.
-- **Gradient rule:** `accent-halo` (vite: electric `#6C3BFF` → vite `#B39AFF`) is for chrome halos only: glow, focus and live ring, swatch ring. Never use it on dots, text or lines.
+- **Dots:** `red` and `red-line` are ≥ 3:1 on `surface` and `bg`.
+- **Text:** `value`, `label`, `mute` and `red-text` are ≥ 4.5:1 on all four surfaces. `red-text` is also ≥ APCA Lc 60 on `surface`. `dim` is not held to it (units and sub-labels; T6).
+- **`on-red`:** white if it reaches APCA 60 and 4.5:1 on the solid. Otherwise a dark tint of the hue (`oklch(.25 max(.08·C, .04) h)`), darkened until it reaches 4.5:1.
+- **Colour-blind safety:** in normal vision and under simulated protanopia, deuteranopia and tritanopia (Machado 2009), `red` differs from `value`, `dot-idle` and `dot-mid` by ΔL ≥ .08 or ΔE_OK ≥ .10. If needed, the solid's L is searched ±.15 to get there.
+- **Tone order:** APCA on `surface` gives faint < mid < idle < value, and `red-dim` < `red`.
+- **`red-dim`:** dark uses step 7 (a dimmer accent). Light uses step 7 too, a lighter tint (less ink), which matches vite's pinned `#B39AFF`.
+- **Tinted neutrals:** surfaces lean toward the hue by C .005 (vite .014), `line`, `line-strong`, `mute` and `dim` by .010, `label` by .006, and `value` by .003. Light gets 70% of these. L is kept. Neutral dot tones stay untinted, and `dark_signal` is not tinted at all.
+- **Pins:** `dark_signal` keeps `#FF3B30` / `#B8241A` / `#FFFFFF`. `vite` dark is `#B39AFF` (line and dim `#6C3BFF`, on-red `#16171D`, surface `#370A7F`). `vite` light is `#6C3BFF` (text `#6B1EB9`, line `#8A63FE`, dim `#B39AFF`, surface `#F0EBFF` / `#140033`). Dark vite's `red-text` is `#C2AEFF`, because `#B39AFF` reaches only Lc 55.
+- **Waivers:** two of today's values fail a rule and are kept on `dark_signal` only, until T6: `mute` `#6E7278` (3.85:1 on the surface) and `on-red` white on `#FF3B30` (3.55:1). The check lists them.
+- **Gradient rule:** `red-halo` (vite: electric `#6C3BFF` → vite `#B39AFF`) is for chrome halos only: glow, focus and live ring, swatch ring. Never use it on dots, text or lines.
 
 ### Runtime
-- `<html data-scheme data-accent>` is set before first paint by the inline boot script in `index.html` (`src/site/theme/boot.ts`, sha256 in the CSP in `vercel.json`).
-- After that, `theme.ts` maintains the attributes. Resolution, per field: `?scheme=` / `?accent=`, then `?theme=<scheme>_<accent>`, then localStorage `dot480:theme`, then the defaults. URL params are never persisted.
-- `.no-transition` is on `<html>` for the frame of a switch.
-- Scoping: the attributes may sit on any subtree. When nesting twice, pin both attributes on the subtree.
-- Not wired yet: `themes.css` is not imported, so nothing visible changes. Wiring, the readers, `color-scheme` and `theme-color` come later in T4.
+- `<html data-scheme data-accent>` is set before first paint by the inline boot script in `index.html` (`src/site/theme/boot.ts`, sha256 in the CSP in `vercel.json`). It also rewrites the `color-scheme` meta and the `theme-color` meta (the scheme's `bg`), which sit above it.
+- After that, `theme.ts` maintains the attributes and the metas (`theme-color` = the theme's exact `--bg`). Resolution, per field: `?scheme=` / `?accent=`, then `?theme=<scheme>_<accent>`, then localStorage `dot480:theme`, then the defaults. URL params are never persisted; `setTheme()` persists.
+- `src/index.css` imports `themes.css` right after `tokens.css`: `[data-scheme]` has the same specificity as `:root`, so the later file wins. `color-scheme` comes from `themes.css` (dark when there is no attribute).
+- `.no-transition` is on `<html>` for the frame of a switch. Cards re-sample once per switch (their tokens object changes); switching back is a cache hit.
+- **Scoping:** a subtree pins a theme by carrying **both** attributes (`data-scheme` and `data-accent`); its descendants inherit. (A subtree with only one attribute is not supported: the CSS has one compound selector per theme, which keeps nested scopes unambiguous.)
+- **Switching, for now:** ⌘K "Theme: `<scheme>_<accent>`" (14 commands) and "Theme: system"; TOOLS (phones) has a LIGHT / DARK row; `?theme=light_cobalt` in the URL; `dot480.setTheme({ scheme, accent })` in the console. The THEME popover is T5.
+
+### Theme readers and the display skin
+- **Cards** (`DotWidget`): without a `theme` prop they take the site theme (`useTheme()` + `themeTokens()`), so the boards, the widget page and the ⌘K preview follow it. Exports (PNG, SVG, the card's actions) use the card's tokens at that moment: what the visitor sees. OG images (`scripts/site/postbuild.ts`) and goldens stay on `dark_signal`.
+- **Polarity insets** (`src/site/theme/polarity.ts`): on a light page a card renders as a dark inset (`data-scheme="dark"` + the page's accent on `.dot-card`, dark tokens) when it is a photo or halftone (`group: 'photo'`), the live camera (`media: 'camera'`), or when the display skin is emissive (CRT, VFD, LED, Nixie: dark glass). Reflective skins (e-ink, flip-disc) and every other card follow the page. Nixie's neon stays orange (skin physics).
+- **Editor:** the asset thumbnails and dot icons are chrome and follow the site theme; the frames on the canvas keep their own theme (`dot480` / `deerflowMosaic`), which belongs to the artwork.
+- **Theme parity:** `pnpm golden --theme-parity` samples all 177 presets in all 14 themes and maps every dot's colour back to its tone role through `paletteOf`: the `(x, y, r, opacity, role)` hashes must equal `dark_signal`'s, so a theme only recolours. It reads and writes nothing (`goldens/hashes.json` stays `dark_signal`).
+- **Not themed yet:** the essay and legal pages (static, `dark_signal`), the X-ray overlay's guide lines (white), the skins' own stage colours (`src/engine/display/stage.ts`: VFD phosphor and LED colour do not take the accent yet).
 
 ## Known Gaps
 

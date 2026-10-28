@@ -18,6 +18,9 @@ import { stillPNG } from '../../export/still'
 import { cardHTML, cardSVG } from '../../export/snippets'
 import { canShare, copyPNG, copySVG, copyText, download, shareCard, type Outcome } from '../../export/clipboard'
 import { boardTime, cardAction, toast, useXR } from '../xray/store'
+import { getSkin } from '../skins/store'
+import { getTheme, themeTokens } from '../../site/theme/theme'
+import { cardScheme } from '../../site/theme/polarity'
 import { DotWidget } from '../DotWidget'
 import { Pill, PillBar, PillButton } from './PillBar'
 import './WidgetPage.css'
@@ -73,17 +76,19 @@ function Loaded({ w, preset, items, meta, onOpen, onBoard }: Loaded & Omit<Widge
   const name = widgetTitle(preset.name), url = location.origin + widgetPath(w.slug, w.scope), short = location.origin + shortPath(w.uid)
   const share = useMemo(() => canShare(), [])
   const pitch = (preset.grid.pitch ?? dot480.gridPx) * 2
-  const source = () => presetSource(preset, dot480)
+  // exports are what the visitor sees: the card's theme at the moment of export (the site theme, or its dark inset)
+  const theme = () => { const s = getTheme(); return themeTokens(cardScheme(preset, s.resolved, getSkin()), s.accent) }
+  const source = () => presetSource(preset, theme())
   const t = () => (preset.animated ? boardTime() : 0)
   const png = () => stillPNG(source(), t())
   const svg = () => {
-    const src = source()
-    return cardSVG(src.frame(t()), { width: src.width, height: src.height, background: dot480.surface, border: dot480.hairline, radius: dot480.cornerRadiusCard }, { name, slug: w.slug, url })
+    const src = source(), th = theme()
+    return cardSVG(src.frame(t()), { width: src.width, height: src.height, background: th.surface, border: th.hairline, radius: th.cornerRadiusCard }, { name, slug: w.slug, url })
   }
   const report = (what: string) => (o: Outcome) => { if (said[o]) toast(`${what} ${said[o]}`) }
   const actionArgs = () => {
     const key = stage.current?.querySelector<HTMLElement>('[data-xr-key]')?.dataset.xrKey ?? ''
-    return { key, preset, data: { ...preset.defaults }, layers: withChrome(preset), grid: preset.grid, style: preset.style, theme: dot480, animated: !!preset.animated }
+    return { key, preset, data: { ...preset.defaults }, layers: withChrome(preset), grid: preset.grid, style: preset.style, theme: theme(), animated: !!preset.animated }
   }
   const sharePNG = useRef<Promise<Blob> | undefined>(undefined)
   const act = {

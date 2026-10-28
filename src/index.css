@@ -1,14 +1,16 @@
 @import "tailwindcss";
 @import "@fontsource-variable/oxanium";
 @import "./tokens.css";
+/* the theme roles per [data-scheme] × [data-accent]: after tokens.css (same specificity, the later wins) */
+@import "./site/theme/themes.css";
 
 /*
   Page base. Tokens live in src/tokens.css (DESIGN.md has the tables); component styles in App.css.
   Oxanium is the display face: its squared geometry is the closest real typeface to the bitmap dot-font.
 */
 
+/* color-scheme comes with the theme (themes.css) */
 html {
-  color-scheme: light dark;
   background: var(--bg);
   font-synthesis: none;
   text-rendering: optimizeLegibility;

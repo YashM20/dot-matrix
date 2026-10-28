@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useRef, type ReactNode } from 'react'
 import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { sampleLayers } from '../../engine/sampler/gridSampler'
-import { dot480 } from '../../engine/theme/tokens'
+import { useThemeTokens } from '../../site/theme/useTheme'
 import type { DotStyle, Field, Layer, Tone } from '../../engine/types'
 import { polylineCells } from '../../engine/layout'
 import { ease, masks, type EaseName, type MaskName } from '../../engine/motion'
@@ -38,6 +38,8 @@ const ICON_STYLE: DotStyle = { shape: 'squircle', sizeMin: 0, sizeMax: 1, corner
 export function DotIcon({ name, tone = 'value', px = 2.6 }: { name: IconName; tone?: Tone; px?: number }) {
   const ref = useRef<HTMLCanvasElement>(null)
   const rows = ICONS[name], h = rows.length, w = rows[0].length
+  // chrome icons take the site theme's dot tones (ink on paper in light)
+  const theme = useThemeTokens()
   useEffect(() => {
     const c = ref.current, ctx = c?.getContext('2d')
     if (!c || !ctx) return
@@ -46,8 +48,8 @@ export function DotIcon({ name, tone = 'value', px = 2.6 }: { name: IconName; to
     const field: Field = (u, v) => { const ch = rows[Math.round(v * (h - 1))]?.[Math.round(u * (w - 1))]; return ch === '#' ? 1 : ch === '+' ? .5 : 0 }
     ctx.setTransform(k, 0, 0, k, 0, 0)
     ctx.clearRect(0, 0, w * px, h * px)
-    renderCanvas(ctx, sampleLayers([{ field, tone }], { cols: w, rows: h, pitch: px }, { ...ICON_STYLE, sizeMax: px * .46, sizeMin: px * .1 }, dot480))
-  }, [name, tone, px, rows, w, h])
+    renderCanvas(ctx, sampleLayers([{ field, tone }], { cols: w, rows: h, pitch: px }, { ...ICON_STYLE, sizeMax: px * .46, sizeMin: px * .1 }, theme))
+  }, [name, tone, px, rows, w, h, theme])
   return <canvas ref={ref} className="ed-icon" aria-hidden="true" style={{ width: w * px, height: h * px }} />
 }
 
@@ -55,14 +57,15 @@ export function DotIcon({ name, tone = 'value', px = 2.6 }: { name: IconName; to
 const MINI = { cols: 30, rows: 18, pitch: 2.25 }
 export function MiniDots({ layers, label }: { layers: Layer[]; label: string }) {
   const ref = useRef<HTMLCanvasElement>(null)
+  const theme = useThemeTokens()
   useEffect(() => {
     const c = ref.current, ctx = c?.getContext('2d')
     if (!c || !ctx) return
     const k = 2
     c.width = MINI.cols * MINI.pitch * k; c.height = MINI.rows * MINI.pitch * k
     ctx.setTransform(k, 0, 0, k, 0, 0)
-    renderCanvas(ctx, sampleLayers(layers, MINI, { ...tileStyle, quantizeSteps: 4 }, dot480))
-  }, [layers])
+    renderCanvas(ctx, sampleLayers(layers, MINI, { ...tileStyle, quantizeSteps: 4 }, theme))
+  }, [layers, theme])
   return <canvas ref={ref} className="ed-mini" style={{ width: MINI.cols * MINI.pitch, height: MINI.rows * MINI.pitch }} role="img" aria-label={label} />
 }
 export function useCurve(name: EaseName): Layer[] {

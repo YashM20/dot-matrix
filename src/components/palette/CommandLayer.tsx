@@ -18,6 +18,8 @@ import { onLayerRequest } from '../../site/layer'
 import { Sheet } from '../Sheet'
 import { SkinList } from '../skins/SkinList'
 import { onTiltChange, requestTilt, setTiltOn, tiltOn, tiltState } from '../../site/light'
+import { setTheme } from '../../site/theme/theme'
+import { useTheme } from '../../site/theme/useTheme'
 
 // the panels load on first use: first-load JS stays inside the site budget
 const Inspector = lazy(() => import('../xray/Inspector').then(m => ({ default: m.Inspector })))
@@ -69,6 +71,12 @@ function TiltButton({ onClose }: { onClose: () => void }) {
   return <button type="button" className="tool-tilt" aria-pressed={on} onClick={click}><b>TILT</b><span>{state === 'denied' ? 'Motion access is blocked' : 'Light and gravity follow your phone'}</span></button>
 }
 
+/** TOOLS · LIGHT / DARK: flips the scheme, keeping the accent (the full THEME section with the accents is T5). */
+function SchemeButton({ onClose }: { onClose: () => void }) {
+  const next = useTheme().resolved === 'light' ? 'dark' : 'light'
+  return <button type="button" className="tool-scheme" onClick={() => { onClose(); setTheme({ scheme: next }) }}><b>{next.toUpperCase()}</b><span>Switch to the {next} theme</span></button>
+}
+
 /** Phones: the dock's tools (and the DISPLAY menu) as one bottom sheet, opened from the tab bar's TOOLS. */
 function ToolsSheet({ api, xray, frozen, onClose, onPalette, onShell }: { api: CommandApi; xray: boolean; frozen: boolean; onClose: () => void; onPalette: () => void; onShell: () => void }) {
   // each tool closes the sheet so its effect is in view; the toggles show their state when it reopens
@@ -84,6 +92,7 @@ function ToolsSheet({ api, xray, frozen, onClose, onPalette, onShell }: { api: C
       <button type="button" aria-pressed={xray} onClick={run(() => toggleGlobal())}><b>X-RAY</b><span>See how every card is built</span></button>
       <button type="button" aria-pressed={frozen} onClick={run(() => (frozen ? resume() : api.freeze()))}><b>TIME</b><span>Freeze and scrub the clock</span></button>
       <TiltButton onClose={onClose} />
+      <SchemeButton onClose={onClose} />
       <button type="button" className="tool-share" onClick={run(share)}><b>SHARE</b><span>This page's link</span></button>
       {/* the shell is a typed terminal: offered where there is a keyboard */}
       <button type="button" className="tool-shell" onClick={run(onShell)}><b>SHELL</b><span>Type field commands</span></button>

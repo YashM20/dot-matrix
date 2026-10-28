@@ -3,7 +3,10 @@
  * WebSocket, no deps). Serves `dist/` itself (an in-process static server that lives only for the run) with the
  * production CSP header from `vercel.json`, then for each case (stored choice × OS scheme × URL × page) asserts:
  *  - when `<body>` is first inserted (before anything can paint) `<html>` already has the expected
- *    `data-scheme` / `data-accent`;
+ *    `data-scheme` / `data-accent`, and the `color-scheme` / `theme-color` metas already name that scheme;
+ *  - once loaded, the theme CSS is applied (`<html>`'s `--bg` and `--red` are the theme's, from the generated table),
+ *    `theme-color` is the theme's exact `--bg`, and on the first case the runtime `themeTokens()` (read from the
+ *    CSS) equals `tokensOf()` (the generated table) for all 14 themes;
  *  - the CSP header was served and no `securitypolicyviolation` fired (the inline script's sha256 matched:
  *    a wrong hash blocks the script and leaves the attributes unset).
  * Needs a build: `npx vite build` (or `pnpm build`), then `npx tsx scripts/site/theme-boot.ts`. Chrome: $CHROME or the usual paths.
@@ -13,6 +16,9 @@ import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs
 import { createServer } from 'node:http'
 import { tmpdir } from 'node:os'
 import { extname, join, normalize } from 'node:path'
+import { THEME_TABLE } from '../../src/site/theme/table'
+import { tokensOf } from '../../src/site/theme/tokens'
+import { ACCENTS, SCHEMES, themeName } from '../../src/site/theme/names'
 
 const DIST = 'dist'
 if (!existsSync(join(DIST, 'index.html'))) { console.log('no dist/index.html (run npx vite build first): skipped'); process.exit(0) }
@@ -55,7 +61,8 @@ const probe = (stored: string | null) => `(() => {
   window.__violations = []
   document.addEventListener('securitypolicyviolation', e => window.__violations.push(e.violatedDirective + ' ' + (e.blockedURI || 'inline')))
   // <html> may not exist yet when this runs: observe the document itself
-  new MutationObserver((_, o) => { const d = document.documentElement; if (document.body && !window.__atBody) { window.__atBody = { scheme: d.getAttribute('data-scheme'), accent: d.getAttribute('data-accent') }; o.disconnect() } }).observe(document, { childList: true, subtree: true })
+  const meta = n => document.querySelector('meta[name=' + n + ']')?.content
+  new MutationObserver((_, o) => { const d = document.documentElement; if (document.body && !window.__atBody) { window.__atBody = { scheme: d.getAttribute('data-scheme'), accent: d.getAttribute('data-accent'), cs: meta('color-scheme'), tc: meta('theme-color') }; o.disconnect() } }).observe(document, { childList: true, subtree: true })
 })()`
 
 const cases: { page: string; stored: string | null; os: 'light' | 'dark'; want: [string, string] }[] = [
@@ -74,10 +81,30 @@ try {
     const { result } = await cdp('Page.addScriptToEvaluateOnNewDocument', { source: probe(c.stored) })
     await cdp('Page.navigate', { url: base + c.page })
     for (let i = 0; i < 100 && !(await js('document.readyState === "complete" && !!window.__atBody')); i++) await sleep(100)
-    const at = await js('window.__atBody') as { scheme: string; accent: string } | undefined, v = await js('window.__violations') as string[] | undefined
+    const at = await js('window.__atBody') as { scheme: string; accent: string; cs?: string; tc?: string } | undefined, v = await js('window.__violations') as string[] | undefined
     const csp = await js(`fetch(location.href).then(r => r.headers.get('content-security-policy'))`) as string | null
     const label = `${c.page} · stored ${c.stored ?? 'nothing'} · OS ${c.os}`
     check(`${label}: <html> is ${c.want.join('_')} when <body> starts`, at?.scheme === c.want[0] && at?.accent === c.want[1], JSON.stringify(at))
+    check(`${label}: color-scheme and theme-color metas name the scheme when <body> starts`, at?.cs === c.want[0] && !!at?.tc && (c.want[0] === 'light' ? at.tc !== '#070809' : at.tc === '#070809'), JSON.stringify(at))
+    const roles = THEME_TABLE[`${c.want[0]}_${c.want[1]}` as keyof typeof THEME_TABLE]
+    for (let i = 0; i < 30 && !(await js(`document.querySelector('meta[name=theme-color]').content.toUpperCase() === ${JSON.stringify(roles.bg)}`)); i++) await sleep(100)
+    const live = await js(`(() => { const s = getComputedStyle(document.documentElement); return { bg: s.getPropertyValue('--bg').trim(), red: s.getPropertyValue('--red').trim(), cs: s.colorScheme, tc: document.querySelector('meta[name=theme-color]').content } })()`) as { bg: string; red: string; cs: string; tc: string }
+    check(`${label}: the theme CSS applies (--bg ${roles.bg}, --red ${roles.red}, color-scheme ${c.want[0]}) and theme-color is the exact --bg`, live?.bg.toUpperCase() === roles.bg && live?.red.toUpperCase() === roles.red && live?.cs === c.want[0] && live?.tc.toUpperCase() === roles.bg, JSON.stringify(live))
+    if (c === cases[0]) {
+      const KEYS = ['bg', 'surface', 'surfaceRaised', 'hairline', 'dotIdle', 'dotMid', 'dotFaint', 'value', 'dotActive', 'dotActiveDim'] as const
+      const names = SCHEMES.flatMap(s => ACCENTS.map(a => [s, a] as const))
+      // both sides through a canvas fillStyle (the browser's own colour serialization: Chrome hands custom properties
+      // back normalised, e.g. rgba(249, 244, 238, 0.08) as #f9f4ee14)
+      const expRaw = names.map(([s, a]) => { const t = tokensOf(s, a); return KEYS.map(k => String(t[k])) })
+      const pair = await js(`(() => { const x = document.createElement('canvas').getContext('2d'), n = v => { x.fillStyle = '#000'; x.fillStyle = v; return x.fillStyle }
+        return JSON.stringify([${JSON.stringify(names)}.map(([s, a]) => { const t = window.dot480.themeTokens(s, a); return ${JSON.stringify(KEYS)}.map(k => n(String(t[k]))) }), ${JSON.stringify(expRaw)}.map(r => r.map(n))]) })()`) as string | undefined
+      const [g, e] = pair ? JSON.parse(pair) as [string[][], string[][]] : [undefined, []]
+      const got = g && JSON.stringify(g), exp = JSON.stringify(e)
+      const off = got ? names.filter((_, i) => JSON.stringify(JSON.parse(got)[i]) !== JSON.stringify(JSON.parse(exp)[i])).map(([s, a]) => themeName(s, a)) : ['(no window.dot480.themeTokens)']
+      const first = got && off.length ? names.findIndex(([s, a]) => themeName(s, a) === off[0]) : -1
+      const why = first >= 0 ? KEYS.map((k, j) => [k, JSON.parse(got!)[first][j], JSON.parse(exp)[first][j]]).filter(([, g, e]) => g !== e).map(([k, g, e]) => `${k} ${g} ≠ ${e}`).join('; ') : ''
+      check('runtime themeTokens() (read from the theme CSS) ≡ tokensOf() (generated table) in all 14 themes', !off.length, `${off.join(', ')}${why ? ` (${off[0]}: ${why})` : ''}`)
+    }
     check(`${label}: CSP served, no violation (inline boot allowed by its hash)`, !!csp?.includes("script-src 'self' 'sha256-") && Array.isArray(v) && v.length === 0, (v ?? []).join(', '))
     await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: result.identifier })
   }
