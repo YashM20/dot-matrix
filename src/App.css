@@ -465,33 +465,156 @@ label b {
   margin-top: var(--gap-group)
 }
 
-/* columns stop at --card-max (≤ 62svh): a wide screen leaves room at the right instead of growing cards past
-   the fold; the grid keeps the frame's left edge (density-driven grids: T3) */
+/* ── T3: the board grid (docs/LAYOUT-THEME-PLAN.md §3; DESIGN.md › Board grid) ─────────────────────────────
+   Boards declare intent, not columns: data-density (hero / standard / dense) picks --card-min, and the grid
+   fits as many columns as hold it (auto-fill), so a board steps 5 → 4 → 3 → 2 → 1 as the frame narrows. The
+   grid is its own container: cards size their insides to the card (container queries), and orphan rows are
+   placed from the grid's width, not the viewport's. A card is square (phones too) and never taller than
+   --card-max. */
 .board-grid {
+  --card-min: var(--card-min-standard);
   display: grid;
-  grid-template-columns: repeat(var(--board-cols, 3), minmax(0, var(--card-max)));
+  grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min), 100%), 1fr));
   gap: var(--spacing-cardGap);
   grid-auto-rows: 1fr;
   margin-top: var(--gap-group);
-  clear: both
+  clear: both;
+  container: board-grid / inline-size
 }
 
-/* DESIGN.md › Responsive: 3-up → 2-up → 1-up, gutters constant */
-@media(max-width:1100px) {
-  .board-grid {
-    grid-template-columns: repeat(2, minmax(0, var(--card-max)))
+.board-grid[data-density="hero"] {
+  --card-min: var(--card-min-hero)
+}
+
+.board-grid[data-density="dense"] {
+  --card-min: var(--card-min-dense)
+}
+
+/* wide and short screens: the column outgrows the 62svh cap, so the card stops and sits in the middle of it */
+.board-grid > .dot-card {
+  width: 100%;
+  max-width: var(--card-max);
+  justify-self: center;
+  container: card / inline-size
+}
+
+/* small tiles (dense boards, a narrow frame): the hint verb goes, the label sits tighter, the body may shrink */
+@container card (width < 240px) {
+  .dot-card-head {
+    margin-bottom: var(--space-1)
+  }
+
+  .dot-card-head .dot-card-hint {
+    display: none
+  }
+
+  .dot-card-body {
+    min-height: 0
   }
 }
 
-@media(max-width:640px) {
-  .board-grid {
-    grid-template-columns: minmax(0, 1fr)
+/* Orphans (separated cards only): a last row less than half full is centred under the row above; a fuller one
+   stays on the columns. The column count per width mirrors auto-fill: n columns fit when the grid is at least
+   n·--card-min + (n−1)·--spacing-cardGap wide (tokens.css: 340 / 240 / 200, gap 16). Two columns never orphan. */
+@container board-grid (1052px <= width) {
+  :root:not([data-grid="ruled"]) .board-grid[data-density="hero"] > :nth-child(3n+1):last-child {
+    translate: calc(1 * (100% + var(--spacing-cardGap)))
+  }
+}
+
+@container board-grid (752px <= width < 1008px) {
+  :root:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(3n+1):last-child {
+    translate: calc(1 * (100% + var(--spacing-cardGap)))
+  }
+}
+
+@container board-grid (1008px <= width < 1264px) {
+  :root:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(4n+1):last-child {
+    translate: calc(1.5 * (100% + var(--spacing-cardGap)))
+  }
+}
+
+@container board-grid (1264px <= width) {
+  :root:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(5n+1):last-child {
+    translate: calc(2 * (100% + var(--spacing-cardGap)))
   }
 
-  .dot-card {
-    aspect-ratio: auto;
-    min-height: 380px
+  :root:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(5n+1):nth-last-child(2),
+  :root:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(5n+1):nth-last-child(2) + * {
+    translate: calc(1.5 * (100% + var(--spacing-cardGap)))
   }
+}
+
+@container board-grid (632px <= width < 848px) {
+  :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(3n+1):last-child {
+    translate: calc(1 * (100% + var(--spacing-cardGap)))
+  }
+}
+
+@container board-grid (848px <= width < 1064px) {
+  :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(4n+1):last-child {
+    translate: calc(1.5 * (100% + var(--spacing-cardGap)))
+  }
+}
+
+@container board-grid (1064px <= width < 1280px) {
+  :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(5n+1):last-child {
+    translate: calc(2 * (100% + var(--spacing-cardGap)))
+  }
+
+  :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(5n+1):nth-last-child(2),
+  :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(5n+1):nth-last-child(2) + * {
+    translate: calc(1.5 * (100% + var(--spacing-cardGap)))
+  }
+}
+
+@container board-grid (1280px <= width) {
+  :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(6n+1):last-child {
+    translate: calc(2.5 * (100% + var(--spacing-cardGap)))
+  }
+
+  :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(6n+1):nth-last-child(2),
+  :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(6n+1):nth-last-child(2) + * {
+    translate: calc(2 * (100% + var(--spacing-cardGap)))
+  }
+}
+
+/* Ruled cells (decision 10, html[data-grid="ruled"]): edge to edge, no gutter. Each cell draws its own dotted
+   rules and, at each corner, the quarter of a 5×5 dot cross that falls inside it; cells overlap by the 1 px
+   rule, so neighbours draw the same dots and a cross is whole only where four cells meet (a T on an outer
+   edge, an L at a corner, nothing where no cell is). Orphans stay on the columns. */
+:root[data-grid="ruled"] .board-grid {
+  --arm-x: repeating-linear-gradient(90deg, var(--mute) 0 var(--hair-dot), transparent 0 2px);
+  --arm-y: repeating-linear-gradient(180deg, var(--mute) 0 var(--hair-dot), transparent 0 2px);
+  /* the gutter moves into the track, so a density drops columns at the same widths as separated cards */
+  grid-template-columns: repeat(auto-fill, minmax(min(calc(var(--card-min) + var(--spacing-cardGap)), 100%), 1fr));
+  gap: 0
+}
+
+:root[data-grid="ruled"] .board-grid > .dot-card {
+  width: calc(100% + 1px);
+  max-width: calc(var(--card-max) + 1px);
+  margin: 0 -1px -1px 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background:
+    var(--arm-x) left top / 5px 1px no-repeat, var(--arm-y) left top / 1px 5px no-repeat,
+    var(--arm-x) right top / 5px 1px no-repeat, var(--arm-y) right top / 1px 5px no-repeat,
+    var(--arm-x) left bottom / 5px 1px no-repeat, var(--arm-y) left bottom / 1px 5px no-repeat,
+    var(--arm-x) right bottom / 5px 1px no-repeat, var(--arm-y) right bottom / 1px 5px no-repeat,
+    var(--hair-x) left top / 100% 1px no-repeat, var(--hair-x) left bottom / 100% 1px no-repeat,
+    var(--hair-y) left top / 1px 100% no-repeat, var(--hair-y) right top / 1px 100% no-repeat,
+    var(--surface)
+}
+
+/* a bleed card's picture stops inside its rules */
+:root[data-grid="ruled"] .board-grid > .dot-card--bleed {
+  padding: 1px
+}
+
+:root[data-grid="ruled"] .board-grid > .dot-card.dot-card--engaged {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--red) 60%, transparent), var(--glow-halo)
 }
 
 /* ── T2: the touchable hero (home only, docs/LAYOUT-THEME-PLAN.md §1c #2) ──────────────────────────────────

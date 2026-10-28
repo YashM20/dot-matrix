@@ -64,6 +64,11 @@
   /* the frame's content edge, from the viewport edge: for fixed and full-bleed things (editor bar, widget pills) */
   --frame-inset: calc(max(0px, (100vw - var(--frame-max)) / 2) + var(--frame-pad));
   --card-max: min(62svh, 520px);        /* a board never shows a card taller than ~62% of the screen */
+  /* board density (BoardMeta.density): the narrowest a card gets before the grid drops a column. The grid
+     queries in App.css mirror these numbers: change both together (DESIGN.md › Board grid) */
+  --card-min-hero: 340px;               /* showpieces: 3 columns in the frame, 2 on a tablet */
+  --card-min-standard: 240px;           /* the default: 5 → 4 → 3 → 2 → 1 columns from 1440 to a phone */
+  --card-min-dense: 200px;              /* dashboards of small tiles: up to 6 columns */
   --measure: 68ch;                      /* body text */
   --measure-head: 42rem;                /* headings */
   --hair-dot: 1px;                      /* dotted hairline: a 1 px dot ... */
