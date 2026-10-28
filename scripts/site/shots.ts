@@ -17,10 +17,11 @@
  *
  * Pages are full-page captures (capped at 4000 px); states (palette, menus, sheets, editor selection, the hero
  * with a test image) are viewport captures. Reduced motion is emulated so nothing is caught mid-animation, and
- * `prefers-color-scheme` follows the theme's scheme. Files: `<theme>-<shot>-<size>.png`.
+ * `prefers-color-scheme` follows the theme's scheme. Files: `<theme>-<shot>-<size>.png`. A shot whose page never
+ * got ready is marked NOT READY, a near-uniform capture BLANK (log and contact sheet); either makes the exit code 1.
  */
 import { spawnSync } from 'node:child_process'
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:net'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -184,17 +185,26 @@ if (!argv.includes('--no-build')) {
 
 let server: { url: string; stop: () => void } | undefined
 let page: Page | undefined
+let chromePid: number | undefined
 let cleaned = false
+const alive = (pid: number) => { try { process.kill(pid, 0); return true } catch { return false } }
 const cleanup = async () => {
   if (cleaned) return
   cleaned = true
+  // Chrome can outlive a plain kill of the process `launch` spawned: ask it to quit, then make sure by pid
+  if (page) await Promise.race([page.cdp('Browser.close'), sleep(2000)]).catch(() => {})
   try { await page?.close() } catch { /* already gone */ }
+  for (let i = 0; chromePid && alive(chromePid) && i < 20; i++) await sleep(100)
+  if (chromePid && alive(chromePid)) {
+    if (process.platform === 'win32') spawnSync(`taskkill /pid ${chromePid} /t /f`, { shell: true, stdio: 'ignore' })
+    else try { process.kill(chromePid, 'SIGKILL') } catch { /* gone */ }
+  }
   server?.stop()
   try { rmSync(tmp, { recursive: true, force: true }) } catch { /* */ }
 }
 for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => { void cleanup().then(() => process.exit(130)) })
 
-type Row = { file: string; theme: string; shot: string; size: string; ok: boolean }
+type Row = { file: string; theme: string; shot: string; size: string; status: 'ok' | 'not ready' | 'blank' }
 const rows: Row[] = []
 let failed = 0
 try {
@@ -202,6 +212,7 @@ try {
   const base = server.url
   page = await launch(1440, 900)
   const p = page
+  chromePid = (await p.cdp('SystemInfo.getProcessInfo')).result?.processInfo?.find((x: { type: string }) => x.type === 'browser')?.id
   /** Wait until the number of drawn cards in the viewport stops changing (lazy mounts), max `ms`. */
   const settle = async (ms = 6000) => {
     await p.js(`document.fonts.ready.then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))`).catch(() => {})
@@ -239,20 +250,24 @@ try {
         if (sh.sizes && !sh.sizes.includes(s.id as '1440' | '390')) continue
         const t = Date.now()
         const url = `${base}${sh.path}${sh.path.includes('?') ? '&' : '?'}theme=${theme}`
+        // the old document is marked before each navigation: until the new one replaces it, nothing is "ready"
+        const mark = () => p.js(`window.__shotsOld = 1`).catch(() => {})
+        const fresh = `!window.__shotsOld && (${sh.ready})`
         if (sh.editor) {
-          await p.cdp('Page.navigate', { url }); await p.waitFor(EDITOR, 60000)
-          await p.js(`localStorage.removeItem('dot480.editor.v1')`); await p.cdp('Page.reload')
-          await sleep(300)
-        } else await p.cdp('Page.navigate', { url })
-        await sleep(300)
-        let ok = await p.waitFor(sh.ready, 45000)
+          await mark(); await p.cdp('Page.navigate', { url }); await p.waitFor(`!window.__shotsOld && (${EDITOR})`, 60000)
+          await p.js(`localStorage.removeItem('dot480.editor.v1')`)
+          await mark(); await p.cdp('Page.reload')
+        } else { await mark(); await p.cdp('Page.navigate', { url }) }
+        let ok = await p.waitFor(fresh, 45000)
         await settle()
         if (ok && sh.act) ok = await sh.act(p, s)
         const file = `${theme}-${sh.name}-${s.id}.png`
         await capture(join(out, file), s, !!sh.full && !sh.act)
-        rows.push({ file, theme, shot: sh.name, size: s.id, ok })
-        if (!ok) failed++
-        console.log(`${ok ? 'ok       ' : 'NOT READY'} ${file} (${((Date.now() - t) / 1000).toFixed(1)} s)`)
+        // a near-uniform frame compresses to almost nothing (blank: ~0.01 B/px; real content: > 0.15 B/px)
+        const status: Row['status'] = !ok ? 'not ready' : statSync(join(out, file)).size < s.W * s.H / 40 ? 'blank' : 'ok'
+        rows.push({ file, theme, shot: sh.name, size: s.id, status })
+        if (status !== 'ok') failed++
+        console.log(`${status.toUpperCase().padEnd(9)} ${file} (${((Date.now() - t) / 1000).toFixed(1)} s)`)
       }
     }
   }
@@ -266,14 +281,14 @@ const sections = SIZES.flatMap(s => themes.map(theme => {
   const items = rows.filter(r => r.size === s.id && r.theme === theme)
   if (!items.length) return ''
   return `<section><h2>${esc(theme)} · ${s.W}×${s.H}${s.phone ? ' touch' : ''}</h2><div class="grid${s.phone ? ' phone' : ''}">${items.map(r =>
-    `<figure${r.ok ? '' : ' class="bad"'}><a href="${r.file}"><img loading="lazy" src="${r.file}" alt="${esc(r.shot)}"></a><figcaption>${esc(r.shot)}${r.ok ? '' : ' · NOT READY'}</figcaption></figure>`).join('')}</div></section>`
+    `<figure${r.status === 'ok' ? '' : ' class="bad"'}><a href="${r.file}"><img loading="lazy" src="${r.file}" alt="${esc(r.shot)}"></a><figcaption>${esc(r.shot)}${r.status === 'ok' ? '' : ` · ${r.status.toUpperCase()}`}</figcaption></figure>`).join('')}</div></section>`
 }))
 writeFileSync(join(out, 'index.html'), `<!doctype html><meta charset="utf-8"><title>Dot/480 shots</title>
 <style>body{margin:24px;background:#111;color:#ccc;font:13px/1.4 ui-monospace,monospace}h1{font-size:16px}h2{font-size:13px;margin:28px 0 10px;color:#fff}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px;align-items:start}.grid.phone{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
 figure{margin:0}img{display:block;width:100%;max-height:520px;object-fit:cover;object-position:top;border:1px solid #333;background:#000}figcaption{padding:4px 0}.bad figcaption{color:#f55}</style>
-<h1>Dot/480 · ${rows.length} shots · ${new Date().toISOString().slice(0, 16).replace('T', ' ')}${failed ? ` · ${failed} not ready` : ''}</h1>
+<h1>Dot/480 · ${rows.length} shots · ${new Date().toISOString().slice(0, 16).replace('T', ' ')}${failed ? ` · ${failed} not ready or blank` : ''}</h1>
 ${sections.join('\n')}
 `)
-console.log(`\n${rows.length} shots (${failed} not ready) in ${((Date.now() - t0) / 1000).toFixed(0)} s → ${join(out, 'index.html')}`)
+console.log(`\n${rows.length} shots (${failed} not ready or blank) in ${((Date.now() - t0) / 1000).toFixed(0)} s → ${join(out, 'index.html')}`)
 process.exit(failed ? 1 : 0)
