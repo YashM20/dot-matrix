@@ -146,8 +146,9 @@ try {
     const preload = new Set([...html.matchAll(/(?:src|href)="\/assets\/([^"]+\.js)"/g)].map(m => m[1]))
     // after first paint, by design: the board blurbs (UX U1), the command layer, mounted once the page is idle (C10),
     // and the phone sheets it warms (the board sheet, the sheet itself, the display list); the home's hero card and
-    // live number band (T2: the `home` chunk and the halftone it draws with), mounted once the page is idle
-    const deferred = /^(sampleWorker|blurbs|CommandLayer|Palette|Shell|fuzzy|describe|BoardSheet|Sheet|SkinList|useSwipeDown|home|halftone|mask)-/
+    // live number band (T2: the `home` chunk and the halftone it draws with), mounted once the page is idle; and the
+    // home board itself (`henry`), which loads like every other board since T4b took the widget registry off first load
+    const deferred = /^(sampleWorker|blurbs|CommandLayer|Palette|Shell|fuzzy|describe|BoardSheet|Sheet|SkinList|useSwipeDown|home|halftone|mask|henry)-/
     const extra = first.filter(f => !preload.has(f) && !deferred.test(f))
     check('first load fetches only the entry and its static imports', extra.length === 0, `${first.length} JS files${extra.length ? `; lazy: ${extra.join(', ')}` : ''}`)
     await js(`document.querySelector('.board-tabs [data-board="${boardIds[2]}"]').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))`)
