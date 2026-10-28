@@ -138,15 +138,15 @@ There is no substitute typeface — the bitmap dot-font *is* the typography syst
 
 ### Spacing System
 - **Base unit:** `{grid.pitch}` — the px distance between adjacent dot centers, default 4px (matches the reference sheet's "4PX GRID" label).
-- **CSS tokens** live in one block, `src/tokens.css` (loaded by the app and the essay). Chrome spacing uses only these; `scripts/site/css-tokens.ts` fails on a raw px in margin, padding or gap (1 px hairline overlaps excepted). Off-scale multiples of the pitch are written `calc(var(--space-1) * n)` until T2 (docs/LAYOUT-THEME-PLAN.md) folds them into the three rhythm steps.
+- **CSS tokens** live in one block, `src/tokens.css` (loaded by the app and the essay). Chrome spacing uses only these; `scripts/site/css-tokens.ts` fails on a raw px in margin, padding or gap (1 px hairline overlaps excepted). Gaps between blocks use only the three rhythm steps; there are no off-scale `calc(var(--space-1) * n)` values left (T2).
 
 | Token | Value | Use |
 |---|---|---|
 | `--space-1` … `--space-5` | 4 · 8 · 12 · 16 · 24 px | inside controls and groups |
 | `--space-6` … `--space-10` | 32 · 48 · 64 · 96 · 128 px | between blocks and sections |
 | `--gap-group` | `--space-3` (12 px) | rhythm: inside a group |
-| `--gap-action` | `--space-6` (32 px) | rhythm: before actions |
-| `--gap-section` | `clamp(--space-8, 8vw, --space-10)` | rhythm: between sections |
+| `--gap-action` | `--space-6` (32 px); `--space-5` (24 px) ≤ 760 px | rhythm: before actions, and between the top bar and a view |
+| `--gap-section` | `clamp(--space-8, 8vw, --space-10)` | rhythm: between sections (the last board and the footer band, ABOUT's bands) |
 | `--spacing-cardGap` (`{spacing.cardGap}`) | `--space-4` (16 px) | gutter between cards on a board |
 | `--spacing-cardPad` (`{spacing.cardPad}`) | `--space-4` (16 px) | `dot-card` padding |
 
@@ -157,10 +157,21 @@ There is no substitute typeface — the bitmap dot-font *is* the typography syst
 
 | Token | Value | Use |
 |---|---|---|
-| `--frame-max` | 90rem (1440 px) | the widest the board grid (and, from T2, the frame) gets |
-| `--frame-pad` | `clamp(16px, 3vw, 40px)` | the frame's side padding (T2) |
+| `--frame-max` | 90rem (1440 px) | the frame (`.shell`), its side padding included |
+| `--frame-pad` | `clamp(16px, 3vw, 40px)` | the frame's side padding |
+| `--frame-inset` | `max(0, (100vw − --frame-max) / 2) + --frame-pad` | the frame's content edge from the viewport edge, for fixed or full-bleed things (the editor bar, the widget page's pinned pills) |
+| `--card-max` | `min(62svh, 520px)` | the widest (so, for square cards, the tallest) a board column gets |
 | `--measure` / `--measure-head` | 68ch / 42rem | longest line of body text / of a heading |
 | `--hair-dot` / `--hair-pitch` | 1 px / 4 px | dotted hairline: a 1 px dot every 4 px |
+
+### Frame and rhythm (T2, docs/LAYOUT-THEME-PLAN.md §3)
+- **One frame, one left edge.** Every page is one centred column (`.shell`: `--frame-max` wide with `--frame-pad` inside it), with a dotted hairline down each side from 768 px. The top bar, the intro, the board picker, the board title, the grid, ABOUT's bands, the widget page's top row and card, the footer band and the editor's first tool all start on its content edge (`scripts/site/layout.ts` checks ±1 px at six widths).
+- **Rhythm.** Each block owns its top margin only, and every vertical gap between blocks is one of the three steps: top bar → view `--gap-action`; intro → picker → board title → grid `--gap-group` each; last block → footer band `--gap-section`. The probe fails on any other gap.
+- **Measure.** Prose keeps `--measure` (the intro line, the ABOUT lede, the changelog); the intro's link and close sit beside the measured text, not under it.
+- **Cards.** Board columns are `minmax(0, --card-max)`: a card is never taller than 62svh, and on a wide screen a two-column board leaves room at the right rather than leaving the frame's edge (density-driven grids are T3).
+- **Home hero.** The touchable card (`src/components/hero/`) floats right of the header from 1280 px (it is no taller than the header, so the grid does not move) and comes after the board below that: on a phone the cards come first.
+- **Footer band.** One band a section below the last block: the live number (dots drawn this visit, in dot type) over the site line. No dead strip under it: the tool dock lives in the top bar on desktop and in TOOLS on a phone.
+- **Figure legends.** One mono meta line under a figure: `FIG 03 · <subject> · <grid> · <pitch>` (`.fig-cap`, and the essay's `figcaption[data-fig]`).
 
 ### Grid & Container
 - **Default board size:** 3×3 card grid at 1:1 aspect per card (matches every reference board). A 3×4 variant is supported for taller compositions (DeerFlow Mosaic hero board).
