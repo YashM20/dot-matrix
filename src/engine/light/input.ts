@@ -9,6 +9,7 @@
  */
 import { lightDir, torch, type Light, type Vec3 } from './shade'
 import { sunAt } from './material'
+import { datan2 } from '../noise/dmath'
 
 export const LIGHT_AZ_BUCKETS = 64, LIGHT_EL_BANDS = 8
 /** Elevation bands cover 10°..80° above the surface, `LIGHT_EL_BANDS` equal bands. */
@@ -46,10 +47,9 @@ export function stickyRound(x: number, prev: number | undefined, margin = .25, w
  */
 export function bucketLight(dir: Vec3, prev?: LightBucket): LightBucket {
   const x = dir[0], y = dir[1], z = dir[2], h = Math.sqrt(x * x + y * y)
-  // TODO(F0.1): datan2 (same bucket in every engine)
-  const az = Math.atan2(x, -y)
-  // TODO(F0.1): datan2
-  const el = Math.atan2(z, h) / DEG
+  // datan2: the same bucket in every engine
+  const az = datan2(x, -y)
+  const el = datan2(z, h) / DEG
   const a = wrapBucket((az / TAU) * LIGHT_AZ_BUCKETS)
   const e = clamp((el - LIGHT_EL_MIN) / BAND - .5, 0, LIGHT_EL_BANDS - 1)
   return {
