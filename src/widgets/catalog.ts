@@ -180,4 +180,8 @@ export const catalog: readonly CatalogRow[] = [
   ['algo-attractor', 'sf08q412', 'algorithms'],
   ['algo-collapse', 'rxjd4n9w', 'algorithms'],
   ['algo-aggregate', '5ryd1vqh', 'algorithms'],
+  ['sq-tetris', '2rtb099q', 'squares'],
+  ['sq-quads', '1xsgez8c', 'squares'],
+  ['sq-blob', 'ns450j4j', 'squares'],
+  ['sq-gameboy', 'nddv8c83', 'squares'],
 ]
