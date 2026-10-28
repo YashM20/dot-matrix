@@ -246,12 +246,27 @@ Fixture (goldens, snapshots, no sensor): `{ lightSrc: 0, lightAz: 0, lightEl: 7,
 
 | Token | `cornerRoundness` | Exponent (`n`) | Use |
 |---|---|---|---|
-| `{rounded.sharp}` | 1 | 32 (visually square) | Dense data grids (sleep-stage blocks) — or `shape: 'square'` |
+| `{rounded.sharp}` | 1 | 32 (visually square) | Dense data grids (sleep-stage blocks) — or `shape: 'square'`. Join-capable when square-like, i.e. when the site cover `hides` treats it as a square (n ≥ 8, or `square`) |
 | `{rounded.default}` | 0.25 | ≈3.9 | Standard dot shape across nearly every widget — `baseStyle` |
 | `{rounded.soft}` | 0.12 | 2.4 | Slightly softened dots for photo halftones |
 | `{rounded.circle}` | 0 | 2 (true circle) | Status dots, avatar circles, radial-ring markers, PIN dots |
 
 Individual dot shape is controlled by one continuous parameter (the superellipse exponent) rather than a discrete shape enum — sliding from `{rounded.sharp}` to `{rounded.circle}` smoothly passes through every intermediate "squircle" state. Card container corners are the chrome radius `{rounded.cardCorner}` (`--radius-card`, 12 px) so card chrome and dot chrome always read as the same geometric family.
+
+### Square cells (squares, `src/engine/squares`)
+Square dots can keep a gutter and fuse with their equal neighbours into one shape (docs/living-matter/Q-squares.md). A joined cell is four quarter tiles chosen from its eight neighbours (47 masks); cells join only with the same tone, join group and quantized level.
+
+| Token | Default | Use |
+|---|---|---|
+| `{grid.gap}` (`DotStyle.gap`) | unset (no clamp); squares cards .16 | Gutter between square cells as a fraction of pitch: s = min(r, (1 − gap)·P/2) |
+| `{grid.shapeSteps}` | 8 | `Layer.shapeOf` roundness snaps to 1/8 (quantized, like sizes) |
+| `{join.at}` | 0 | Minimum quantized value that joins (`Layer.join.at`) |
+| `{join.group}` | 0 | Join id, a number or `(u, v) => id`; cells join only within one id (pieces, quads) |
+| `{join.outer}` | from the squircle (`cornerFraction(n)`), 0 for `square` | Convex corner radius of joined blobs, fraction of the half side |
+| `{join.inner}` | 0 | Concave fillet at notches, fraction of the half pitch (visible with a gutter) |
+| `{join.seam}` | 0 | Seam left inside joined blobs, fraction of the pitch |
+
+Ink: a square holds 4/π the ink of a circle of the same r, and a joined interior cell is P², so joined fills go one grey band lower (`idle`, not `value`; `value` stays for type and small marks). `squareStyle` (src/widgets/boards/squares.ts) is `square`, sizes .25–1.125, gap .16, five levels.
 
 ### Chrome radius (CSS)
 Dots and in-card shapes use the squircle exponent above. The HTML chrome around them (card containers, controls, menus) uses a short radius scale in `src/tokens.css`; `scripts/site/css-tokens.ts` fails on a raw px radius (percentages, for circles and CRT glass, are fine).
@@ -441,9 +456,10 @@ No state changes a size, so nothing shifts. On coarse pointers every chrome targ
 - Anchor a `{component.statusDot}` to any card reporting a live state. It is the system's identity tag, equivalent in role to a signature ornamental motif in any other design system.
 - Keep card composition to a 3-column grid with equal `{spacing.cardGap}` gutters as the default — deviate only for genuinely wide content (waveforms, chat).
 - Build all hierarchy from **grid size** and **color role**, never from a second typeface or italic/bold variant — there isn't one.
+- Fuse cells with `Layer.join`, never with rects drawn outside the pipeline. The accent joins only with `join.accent`.
 - Auto-select Canvas rendering for any widget exceeding ~2,000 dots or requiring animation; keep SVG for static, sparse, copy-paste-friendly widgets.
 - Animate on the shared clock at 12 fps by default (30 while a card is engaged or under reduced motion). A card that needs more declares `fps` on its preset; on a phone (coarse pointer, save-data, or ≤ 4 cores) it runs at max(12, round(fps / 2)) and never above its own rate (`cardFps`, `src/widgets/fps.ts`). Step motion by time, not by frame, so it reads the same at any rate; goldens sample fixed t and never see `fps`.
-- Choose WebGL2 only by content, never by convenience: a card gets it when a layer is tagged for the GPU (`gpuIR` for a Field IR program evaluated per dot on the GPU, `gpuValues` for a CPU field sampled straight into a value texture) and WebGL2 works; `renderer: 'webgl'` forces it. Tag a layer only when its fine dot count is out of Canvas reach (≳ 100k dots, or a pitch below ~1 card px). The tagged field is still an ordinary `Field` at the card's lattice, which is what goldens, SVG export, `describe()` and the Canvas fallback (no WebGL2, context lost, shader failure) draw. One WebGL2 context per page, which is shared by every card and copied into each card's own canvas. Squircles are exact superellipses (n = 2 + 30r²) with analytic AA, so WebGL ink matches the true dot area. Canvas (Skia) under-covers sub-pixel dots: it draws 79% of a 0.6 px dot. A card of sub-2px dots therefore reads up to ~7% heavier on WebGL (parity gate: mean Δ ≤ 2/255, ≤ 2.5% of pixels off by > 16, PSNR ≥ 32 dB; `scripts/webgl.ts`). The GPU path does not do `sizeCurve`, `jitter` or `sites`; such layers stay on the CPU. A GPU layer does not suppress CPU card cells under its dots, so keep chrome outside its window.
+- Choose WebGL2 only by content, never by convenience: a card gets it when a layer is tagged for the GPU (`gpuIR` for a Field IR program evaluated per dot on the GPU, `gpuValues` for a CPU field sampled straight into a value texture) and WebGL2 works; `renderer: 'webgl'` forces it. Tag a layer only when its fine dot count is out of Canvas reach (≳ 100k dots, or a pitch below ~1 card px). The tagged field is still an ordinary `Field` at the card's lattice, which is what goldens, SVG export, `describe()` and the Canvas fallback (no WebGL2, context lost, shader failure) draw. One WebGL2 context per page, which is shared by every card and copied into each card's own canvas. Squircles are exact superellipses (n = 2 + 30r²) with analytic AA, so WebGL ink matches the true dot area. Canvas (Skia) under-covers sub-pixel dots: it draws 79% of a 0.6 px dot. A card of sub-2px dots therefore reads up to ~7% heavier on WebGL (parity gate: mean Δ ≤ 2/255, ≤ 2.5% of pixels off by > 16, PSNR ≥ 32 dB; `scripts/webgl.ts`). The GPU path does not do `sizeCurve`, `jitter`, `sites`, `join`, `shapeOf` or `{grid.gap}`; such layers stay CPU instances. Joined cells draw with no cracks on all three renderers: Canvas fills joined neighbours in one path, WebGL cuts quads on integer cell edges, SVG bleeds joined sides and fades the group with `opacity` (`scripts/squares-browser.ts` gates). A GPU layer does not suppress CPU card cells under its dots, so keep chrome outside its window.
 
 ### Don't
 - Don't introduce a second accent hue. `{colors.accentAmber}` exists only inside the `deerflowMosaic` hero preset's ambient lighting — never on flat `dot480` chrome, never on a CTA.
@@ -604,6 +620,7 @@ Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5
 
 - **Physical LED-panel calibration not yet measured** — the `led-panel` breakpoint's pitch-locking behavior is specified but not validated against real hardware bit-depth/gamma response.
 - **Interaction tokens are specified, not yet measured** — `{interaction.*}` values (glow radius, spring half-lives, focus dash, hit pad) are design targets until tuned against real pointer/touch latency.
+- **Square joins** connect through edges only: diagonal `conn: 8` bridges (quadrant code 5) and rotation (limited to π/4) are Q3; SVG joins rely on a seam bleed, so an SVG export of a joined card overlaps neighbours by ≤ 0.5 px.
 - **Superformula (N-fold decorative dot shapes)** deferred per the engineering plan — only the squircle exponent range is currently implemented.
 - **Low-density halftone legibility** below ~32×32 grid cells is a known hard limit, not yet mitigated beyond the gamma-boost + pre-blur tweaks documented in the engineering plan.
 - **Modal / dialog styling** not present in any captured reference board — no `dot-modal` component exists yet.
