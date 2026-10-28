@@ -308,4 +308,5 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'algo-attractor': ['A Clifford strange attractor as a density of dots, its parameters slowly drifting.', 'algorithm attractor chaos animated'],
   'algo-collapse': ['Wave Function Collapse solving a new knot of tiles every loop.', 'algorithm wfc tiles animated'],
   'algo-aggregate': ['Frost grown one grain at a time by diffusion-limited aggregation.', 'algorithm dla fractal animated'],
+  'pond-koi': ['Six koi in a pond of glyph tiles: tap to feed them, hold still to lure them.', 'life koi water creature control animated'],
 }

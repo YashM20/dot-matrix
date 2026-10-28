@@ -180,4 +180,5 @@ export const catalog: readonly CatalogRow[] = [
   ['algo-attractor', 'sf08q412', 'algorithms'],
   ['algo-collapse', 'rxjd4n9w', 'algorithms'],
   ['algo-aggregate', '5ryd1vqh', 'algorithms'],
+  ['pond-koi', 'c507ktgt', 'pond'],
 ]
