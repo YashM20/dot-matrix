@@ -12,7 +12,7 @@ import { kuramotoOrder, pulseStep, type PulseSpec } from './oscillators'
 import { lsystem, turtleSites } from './grow'
 import { phaseSteps } from './pond'
 import { pressDiscrete, pressInit, pressStep, PRESS_SLOTS, PRESS_TAP, pressAt, seamBlend } from './loop'
-import { clearTiles, EDGE3, edgeOfTangent, flickerOn, glyphOf, putBig, putGlyph, T_ACTIVE, T_FAINT, type TileGrid, type TileRaster } from './glyphTiles'
+import { clearTiles, EDGE3, edgeOfTangent, flickerOn, glyphOf, putBig, putGlyph, T_ACTIVE, T_FAINT, T_MID, type TileGrid, type TileRaster } from './glyphTiles'
 
 export const FLY_DT = 1 / 30
 export const FLIES = 160
@@ -76,7 +76,7 @@ export function createFireflies(spec: FirefliesSpec): Fireflies {
   const blend = seamBlend({ size, discrete: [...pressDiscrete(G), ...Array.from({ length: N }, (_, i) => K + i)], turns: Array.from({ length: N }, (_, i) => PH + i) })
   const world = createWorld({
     size, dt, lead: spec.lead, period: spec.period, seam: spec.seam,
-    every: 75, maxCheckpoints: 26, maxSteps: Math.round((spec.lead + spec.period) / dt) + 60, idle: 4, heal: 2, maxLiveSteps: 4,
+    every: 80, maxCheckpoints: 24, maxSteps: Math.round((spec.lead + spec.period) / dt) + 60, idle: 4, heal: 2, maxLiveSteps: 4,
     init, step, blend,
   })
   return { world, spec, layout: { X, Y, K, PH, AGE, G, size }, pulse, grass: bakeGrass(spec, seed) }
@@ -126,7 +126,7 @@ export function drawFireflies(f: Fireflies, s: Float32Array, t: number, hour: nu
   clearTiles(r)
   const night = hour < 5.5 || hour >= 19.5
   if (night) for (let ty = 0; ty < 18; ty++) for (let tx = 0; tx < cols; tx++) if (flickerOn(tx, ty, t, .025, .02, .3)) putGlyph(r, tx, ty, DOT, T_FAINT, .6)
-  for (let i = 0; i < cols * rows; i++) if (f.grass[i] >= 0) putGlyph(r, i % cols, (i / cols) | 0, EDGE3.glyphs[f.grass[i]], T_FAINT, .6)
+  for (let i = 0; i < cols * rows; i++) if (f.grass[i] >= 0) putGlyph(r, i % cols, (i / cols) | 0, EDGE3.glyphs[f.grass[i]], T_MID, .6)
   for (let pass = 0; pass < 3; pass++) for (let i = 0; i < FLIES; i++) {
     const a = s[AGE + i], kind = a < FLASH_PEAK ? 2 : a < FLASH_TAIL ? 1 : 0
     if (kind !== pass) continue
@@ -134,6 +134,6 @@ export function drawFireflies(f: Fireflies, s: Float32Array, t: number, hour: nu
     if (tx < 0 || ty < 0 || tx >= cols || ty >= rows) continue
     if (kind === 2) putBig(r, tx, ty, T_ACTIVE, 1)
     else if (kind === 1) { if (r.bigTone[ty * cols + tx] < 0) putGlyph(r, tx, ty, DOT, T_ACTIVE, .6) }
-    else putGlyph(r, tx, ty, DOT, T_FAINT, .8)
+    else putGlyph(r, tx, ty, DOT, T_MID, .6)
   }
 }

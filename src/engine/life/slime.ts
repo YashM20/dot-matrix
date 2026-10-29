@@ -14,6 +14,12 @@ export const SLIME_DT = 1 / 15
 /** Trail lattice: 48 × 44 cells of 3 card cells from card (0, 11). */
 export const SLIME_W = 48, SLIME_H = 44, SLIME_PITCH = 3, SLIME_OY = 11
 export const SLIME_FOODS = 8
+/**
+ * Agents and food strength. The plan's 1,200 agents (57 % of the lattice cells) collapse into one fat blob on a
+ * 48 × 44 lattice; 600 (28 %) with SO 5, decay .15 and a half-strength 3×3 blur form a network between the foods.
+ * Food deposits 60 a step within 1.2 lattice cells (the plan's 10 was weaker than the agents' own trail).
+ */
+export const SLIME_AGENTS = 600, SLIME_FOOD_DEPOSIT = 60, SLIME_FOOD_R = 1.2
 export interface SlimeSpec {
   seed: number; tiles: TileGrid
   /** Base foods (card cells), on from the start. */
@@ -25,11 +31,23 @@ export interface SlimeSpec {
 export interface SlimeLayout { G: number; FOOD: number; size: number }
 export interface Slime { world: World; spec: SlimeSpec; phys: Physarum; layout: SlimeLayout }
 
+/**
+ * The dish: a superellipse ((x − 24)/23.5)⁴ + ((y − 22)/21.5)⁴ < 1 on the lattice. A square lattice lets the
+ * agents run along its walls into the corners; the rounded dish keeps the network between the foods.
+ */
+export const SLIME_MASK: Uint8Array = (() => {
+  const m = new Uint8Array(SLIME_W * SLIME_H)
+  for (let y = 0; y < SLIME_H; y++) for (let x = 0; x < SLIME_W; x++) {
+    const u = (x + .5 - 24) / 23.5, v = (y + .5 - 22) / 21.5
+    m[y * SLIME_W + x] = u * u * u * u + v * v * v * v < 1 ? 1 : 0
+  }
+  return m
+})()
 /** Lattice coordinates of a card cell. */
 export const slimeLx = (x: number) => x / SLIME_PITCH, slimeLy = (y: number) => (y - SLIME_OY) / SLIME_PITCH
 
 export function createSlime(spec: SlimeSpec): Slime {
-  const phys = createPhysarum({ w: SLIME_W, h: SLIME_H, agents: 1200, seed: spec.seed, sa: 16, ra: 32, so: 4, ss: 1, deposit: 5, decay: .1 }, 0)
+  const phys = createPhysarum({ w: SLIME_W, h: SLIME_H, agents: SLIME_AGENTS, seed: spec.seed, sa: 16, ra: 32, so: 5, ss: 1, deposit: 5, decay: .15, blur: .5, mask: SLIME_MASK }, 0)
   const FOOD = phys.size, G = FOOD + 3 * SLIME_FOODS, size = G + PRESS_SLOTS
   const dt = SLIME_DT, start = Math.round(spec.lead / dt), len = Math.round(spec.period / dt)
   const xOn = spec.extra ? Math.round(spec.extra.on / dt) : -1, xOff = spec.extra ? Math.round(spec.extra.off / dt) : -1
@@ -59,8 +77,8 @@ export function createSlime(spec: SlimeSpec): Slime {
       else if (free >= 0 && py >= SLIME_OY) { s[FOOD + 3 * free] = Math.max(2, Math.min(141, px)); s[FOOD + 3 * free + 1] = Math.max(SLIME_OY + 2, Math.min(141, py)); s[FOOD + 3 * free + 2] = 1 }
     }
     let m = 0
-    for (let k = 0; k < SLIME_FOODS; k++) { const o = FOOD + 3 * k; if (s[o + 2] >= .5) { foodList[m++] = slimeLx(s[o]); foodList[m++] = slimeLy(s[o + 1]); foodList[m++] = 1 } }
-    physarumStep(phys, s, n, foodList.subarray(0, m), 10)
+    for (let k = 0; k < SLIME_FOODS; k++) { const o = FOOD + 3 * k; if (s[o + 2] >= .5) { foodList[m++] = slimeLx(s[o]); foodList[m++] = slimeLy(s[o + 1]); foodList[m++] = SLIME_FOOD_R } }
+    physarumStep(phys, s, n, foodList.subarray(0, m), SLIME_FOOD_DEPOSIT)
   }
   // agent headings and the food switches are discrete; positions and the trail lerp
   const discrete: number[] = [...pressDiscrete(G)]
@@ -69,7 +87,7 @@ export function createSlime(spec: SlimeSpec): Slime {
   const blend = seamBlend({ size, discrete })
   const world = createWorld({
     size, dt, lead: spec.lead, period: spec.period, seam: spec.seam,
-    every: 300, maxCheckpoints: 4, maxSteps: Math.round((spec.lead + spec.period) / dt) + 60, idle: 4, heal: 2, maxLiveSteps: 4,
+    every: 150, maxCheckpoints: 6, maxSteps: Math.round((spec.lead + spec.period) / dt) + 60, idle: 4, heal: 2, maxLiveSteps: 4,
     init, step, blend,
   })
   return { world, spec, phys, layout: { G, FOOD, size } }
@@ -82,10 +100,10 @@ export function slimeFoods(p: Slime, s: Float32Array): FoodView[] {
   return out
 }
 /**
- * Display level of a trail value: a saturating curve close to log(1 + T)/log(41) (the plan's display map), without
- * the log: T/(T + 7)·1.18, clamped to 1 (T = 3 → .35, 10 → .69, 40 → 1).
+ * Display level of a trail value: a saturating curve in place of the plan's log(1 + T)/log(41) (no log in a deterministic
+ * dir): T/(T + 20)·1.5, clamped to 1 (T = 5 → .3, 20 → .75, 40 → 1).
  */
-export const slimeLevel = (T: number) => { const v = T > 0 ? (1.18 * T) / (T + 7) : 0; return v < 1 ? v : 1 }
+export const slimeLevel = (T: number) => { const v = T > 0 ? (1.5 * T) / (T + 20) : 0; return v < 1 ? v : 1 }
 
 const sub = new Float32Array(16)
 /** Trail level at a card cell (bilinear on the lattice). */

@@ -20,8 +20,9 @@ const tables = (() => {
 })()
 const wrap8 = (h: number) => ((h % 256) + 256) % 256
 
-/** 3×3 mean (zero-flux edges, mask cells hold 0) from `src` into `dst`, then × keep. */
-function diffuse(src: Float32Array, off: number, w: number, h: number, keep: number, tmp: Float32Array, mask?: Uint8Array) {
+/** 3×3 mean (zero-flux edges, mask cells hold 0) blended in by `blur` (1 = the full mean), then × keep. */
+function diffuse(src: Float32Array, off: number, w: number, h: number, keep: number, tmp: Float32Array, mask?: Uint8Array, blur = 1) {
+  const kb = (keep * blur) / 9, ks = keep * (1 - blur)
   for (let y = 0; y < h; y++) {
     const y0 = y > 0 ? y - 1 : 0, y1 = y < h - 1 ? y + 1 : h - 1
     for (let x = 0; x < w; x++) {
@@ -30,7 +31,7 @@ function diffuse(src: Float32Array, off: number, w: number, h: number, keep: num
       const x0 = x > 0 ? x - 1 : 0, x1 = x < w - 1 ? x + 1 : w - 1
       tmp[i] = (src[off + y0 * w + x0] + src[off + y0 * w + x] + src[off + y0 * w + x1]
         + src[off + y * w + x0] + src[off + i] + src[off + y * w + x1]
-        + src[off + y1 * w + x0] + src[off + y1 * w + x] + src[off + y1 * w + x1]) * (keep / 9)
+        + src[off + y1 * w + x0] + src[off + y1 * w + x] + src[off + y1 * w + x1]) * kb + src[off + i] * ks
     }
   }
   for (let i = 0; i < w * h; i++) src[off + i] = tmp[i]
@@ -44,6 +45,8 @@ export interface PhysarumSpec {
   deposit?: number
   /** Fraction lost per step, after the diffuse. */
   decay?: number
+  /** How much of the 3×3 mean replaces each cell per step (1 = Jones' full mean; less keeps veins sharp on a coarse lattice). */
+  blur?: number
   /** 1 = the agents may go there. */
   mask?: Uint8Array
 }
@@ -59,7 +62,7 @@ export interface Physarum extends Required<Omit<PhysarumSpec, 'mask'>> {
 export function createPhysarum(spec: PhysarumSpec, offset = 0): Physarum {
   const { w, h, agents } = spec, T = offset, AX = T + w * h, AY = AX + agents, AH = AY + agents
   return {
-    sa: 16, ra: 32, so: 4, ss: 1, deposit: 5, decay: .1, ...spec,
+    sa: 16, ra: 32, so: 4, ss: 1, deposit: 5, decay: .1, blur: 1, ...spec,
     T, AX, AY, AH, size: w * h + 3 * agents, cos: tables.cos, sin: tables.sin, tmp: new Float32Array(w * h),
   }
 }
@@ -102,7 +105,7 @@ export function physarumStep(p: Physarum, s: Float32Array, n: number, food?: Arr
     s[T + (ny | 0) * w + (nx | 0)] += deposit
   }
   if (food) for (let k = 0; k + 2 < food.length; k += 3) stamp(s, T, w, h, food[k], food[k + 1], food[k + 2], c => c + foodDeposit)
-  diffuse(s, T, w, h, 1 - p.decay, p.tmp, p.mask)
+  diffuse(s, T, w, h, 1 - p.decay, p.tmp, p.mask, p.blur)
   if (repel) stamp(s, T, w, h, repel[0], repel[1], repel[2], () => 0)
 }
 /** Apply `f` to every lattice cell within r of (cx, cy). */
@@ -123,6 +126,10 @@ export interface AntsSpec {
   diffuseEvery?: number
   /** Lattice cells per step (default .5). */
   speed?: number
+  /** Deposit scale: an ant lays deposit·(1 − since/600) a step (default 1, the plan's). */
+  deposit?: number
+  /** Share of the 3×3 mean each diffuse mixes in (default 1). */
+  blur?: number
 }
 /** Per ant: x, y, heading (0..255), carrying (0 / 1), since (steps since it left the nest or the crumb). */
 export const ANT_STRIDE = 5
@@ -135,7 +142,7 @@ export interface Ants extends Required<AntsSpec> {
 }
 export function createAnts(spec: AntsSpec, offset = 0): Ants {
   const cells = spec.w * spec.h, HOME = offset, FOOD = HOME + cells, A = FOOD + cells
-  return { evaporate: .006, diffuseEvery: 4, speed: .5, ...spec, HOME, FOOD, A, size: 2 * cells + ANT_STRIDE * spec.ants, tmp: new Float32Array(cells) }
+  return { evaporate: .006, diffuseEvery: 4, speed: .5, deposit: 1, blur: 1, ...spec, HOME, FOOD, A, size: 2 * cells + ANT_STRIDE * spec.ants, tmp: new Float32Array(cells) }
 }
 /** Ants start at the nest, fanned out over all headings; no pheromone yet. */
 export function antsInit(a: Ants, s: Float32Array): void {
@@ -146,7 +153,7 @@ export function antsInit(a: Ants, s: Float32Array): void {
   }
   for (let i = 0; i < 2 * a.w * a.h; i++) s[a.HOME + i] = 0
 }
-const SENSE_A = 24, SENSE_D = 2.5, TURN = 12, SMELL = 3.5, NEST_R = 1.6, NEST_SMELL = 5, GRAB_R = 1.2
+const HOMING = 3, FOLLOW = .04, SENSE_A = 24, SENSE_D = 2.5, TURN = 12, SMELL = 5, NEST_R = 1.6, NEST_SMELL = 5, GRAB_R = 1.2
 /**
  * One step. Searching ants follow FOOD and lay HOME; carrying ants follow HOME and lay FOOD; deposit = 1 − since/600
  * (≥ 0). An ant smells a crumb (or, carrying, the nest) within a few cells and heads straight for it; a searching
@@ -179,9 +186,13 @@ export function antsStep(a: Ants, s: Float32Array, n: number, crumbs: Float32Arr
       const f = read(P, x + cos[hd] * SENSE_D, y + sin[hd] * SENSE_D)
       const l = read(P, x + cos[wrap8(hd - SENSE_A)] * SENSE_D, y + sin[wrap8(hd - SENSE_A)] * SENSE_D)
       const r = read(P, x + cos[wrap8(hd + SENSE_A)] * SENSE_D, y + sin[wrap8(hd + SENSE_A)] * SENSE_D)
-      if (l > f && l >= r && l > .02) hd = wrap8(hd - TURN)
-      else if (r > f && r > l && r > .02) hd = wrap8(hd + TURN)
-      hd = wrap8(hd + Math.floor(rng() * 9) - 4)
+      if (l > f && l >= r && l > FOLLOW) hd = wrap8(hd - TURN)
+      else if (r > f && r > l && r > FOLLOW) hd = wrap8(hd + TURN)
+      // on a trail an ant keeps its line; off it, it explores (a wider random walk)
+      const onTrail = f > FOLLOW || l > FOLLOW || r > FOLLOW
+      hd = wrap8(hd + (onTrail ? Math.floor(rng() * 7) - 3 : Math.floor(rng() * 25) - 12))
+      // path integration: a carrying ant also knows roughly where home is, and drifts toward it
+      if (carry) { const d = wrap8(headingTo(a.nest[0] - x, a.nest[1] - y) - hd); hd = wrap8(hd + (d < 128 ? Math.min(d, HOMING) : -Math.min(256 - d, HOMING))) }
     }
     if (avoid) {
       const dx = x - avoid[0], dy = y - avoid[1]
@@ -194,7 +205,7 @@ export function antsStep(a: Ants, s: Float32Array, n: number, crumbs: Float32Arr
     if (nx < 0 || ny < 0 || nx >= w || ny >= h) { hd = wrap8(hd + 128 + Math.floor(rng() * 33) - 16); nx = x; ny = y }
     s[o + ANT_X] = nx; s[o + ANT_Y] = ny; s[o + ANT_H] = hd
     // lay the trail back to where this ant came from
-    const since = s[o + ANT_SINCE] + 1, dep = since < 600 ? 1 - since / 600 : 0
+    const since = s[o + ANT_SINCE] + 1, dep = since < 600 ? a.deposit * (1 - since / 600) : 0
     s[o + ANT_SINCE] = since
     const cell = (ny | 0) * w + (nx | 0)
     if (carry) { s[FOOD + cell] = Math.min(4, s[FOOD + cell] + dep) } else { s[HOME + cell] = Math.min(4, s[HOME + cell] + dep) }
@@ -211,7 +222,7 @@ export function antsStep(a: Ants, s: Float32Array, n: number, crumbs: Float32Arr
     }
   }
   const keep = 1 - a.evaporate
-  if (n % a.diffuseEvery === 0) { diffuse(s, HOME, w, h, keep, a.tmp); diffuse(s, FOOD, w, h, keep, a.tmp) }
+  if (n % a.diffuseEvery === 0) { diffuse(s, HOME, w, h, keep, a.tmp, undefined, a.blur); diffuse(s, FOOD, w, h, keep, a.tmp, undefined, a.blur) }
   else for (let i = 0; i < 2 * w * h; i++) s[HOME + i] *= keep
 }
 /** Byte heading of a direction, no trig: the table entry with the largest dot product (256 compares, ±0.7°). */

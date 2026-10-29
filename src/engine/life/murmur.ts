@@ -26,7 +26,7 @@ const SKY = { cx: 72, cy: 77, a: 58, b: 52 }
 export const skySdf = (x: number, y: number) => { const u = (x - SKY.cx) / SKY.a, v = (y - SKY.cy) / SKY.b; return (Math.sqrt(u * u + v * v) - 1) * SKY.b }
 /** The falcon's autopilot: a Lissajous figure over the loop (period 20 s), x = 72 + 60·sin(2πt/20), y = 72 + 40·sin(4πt/20 + 1). */
 export const falconPath = (t: number): [number, number] => [72 + 60 * dsin((TAU * t) / 20), 72 + 40 * dsin((2 * TAU * t) / 20 + 1)]
-const MIN_U = 22, MAX_U = 38, ACC = 60, FLEE_R = 22, K_NN = 7
+const MIN_U = 22, MAX_U = 38, ACC = 60, FLEE_R = 16, K_NN = 7, ROOST = .35
 
 export function createMurmur(spec: MurmurSpec): Murmur {
   const N = BIRDS, X = 0, Y = N, VX = 2 * N, VY = 3 * N, A = 4 * N, G = 5 * N, size = G + 16
@@ -83,10 +83,17 @@ export function createMurmur(spec: MurmurSpec): Murmur {
     kNearest(s, N, X, Y, hash, K_NN, nn)
     force.fill(0)
     flock(s, N, { X, Y, VX, VY }, hash, { k: K_NN, sep: 3, wSep: 2, wAli: 1, wCoh: .6, nn }, force)
+    // the roost: a weak pull toward the whole flock's centre, so a topological flock (which has no global cohesion)
+    // keeps to one body instead of tearing into a ring around the falcon
+    let gx = 0, gy = 0
+    for (let i = 0; i < N; i++) { gx += s[X + i]; gy += s[Y + i] }
+    gx /= N; gy /= N
     for (let i = 0; i < N; i++) {
       const vx = s[VX + i], vy = s[VY + i], u = Math.sqrt(vx * vx + vy * vy) || 1
       ag.x = s[X + i]; ag.y = s[Y + i]; ag.hx = vx / u; ag.hy = vy / u; ag.u = u
       f[0] = force[2 * i]; f[1] = force[2 * i + 1]
+      const rx = gx - ag.x, ry = gy - ag.y, rl = Math.sqrt(rx * rx + ry * ry)
+      if (rl > 1e-6) { const w = ROOST * Math.min(1, rl / 40); f[0] += (w * rx) / rl; f[1] += (w * ry) / rl }
       contain(ag, skySdf, .4, 10, 1.5, f)
       wander(ag, i, n, dt, { dist: 8, rad: 4, rate: .25, seed }, .2, f)
       const dx = ag.x - fx, dy = ag.y - fy, d2 = dx * dx + dy * dy

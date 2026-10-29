@@ -12,7 +12,7 @@ import { kuramotoStep } from './oscillators'
 import { turnCap, turnToward, type Agent } from './steer'
 import { phaseSteps } from './pond'
 import { pressDiscrete, pressInit, pressStep, PRESS_SLOTS, PRESS_TAP, seamBlend } from './loop'
-import { clearTiles, EDGE3, edgeOfTangent, glyphOf, matchTile, putGlyph, RAMP3, rampGlyph, SHAPE3, T_ACTIVE, T_FAINT, T_MID, T_VALUE, type TileGrid, type TileRaster } from './glyphTiles'
+import { clearTiles, EDGE3, edgeOfGradient, edgeOfTangent, glyphOf, matchTile, putGlyph, RAMP3, rampGlyph, SHAPE3, T_ACTIVE, T_FAINT, T_MID, T_VALUE, type TileGrid, type TileRaster } from './glyphTiles'
 
 export const JELLY_DT = 1 / 30
 export interface JellySpec {
@@ -25,8 +25,11 @@ export interface JellyLayout { J: number; TENT: number; ARM: number; PUSH: numbe
 export interface Jelly { world: World; spec: JellySpec; layout: JellyLayout; tentacles: Rope[][]; arms: Rope[][] }
 const JS = 12, J_X = 0, J_Y = 1, J_AX = 2, J_AY = 3, J_VX = 4, J_VY = 5, J_TH = 6, J_C = 7, J_DC = 8
 export const TENTACLES = 8, TENT_NODES = 10, ARMS = 4, ARM_NODES = 8, PUSH_N = 12
-/** Thrust per unit contraction rate (cells/s²), drag (1/s) and the sink (cells/s). The plan's 26 crossed the card in 10 s; 14 coasts. */
-export const THRUST = 14, DRAG = .9, SINK = .6
+/**
+ * Thrust per unit contraction rate (cells/s²), drag (1/s) and the sink (cells/s). The plan's 26 gives a 26 cells/s
+ * lurch per pulse and crosses the card in 10 s; 7 lurches visibly and drifts about 3 cells/s.
+ */
+export const THRUST = 7, DRAG = .9, SINK = .6
 /** Kuramoto coupling between the three bells. */
 export const JELLY_K = .25
 /** The box the bell centres keep to (card cells). */
@@ -110,23 +113,30 @@ export function createJelly(spec: JellySpec): Jelly {
       const thrust = THRUST * (dc > 0 ? dc : 0)
       s[o + J_VX] += (thrust * s[o + J_AX] - DRAG * (s[o + J_VX] - flowOut[0])) * dt
       s[o + J_VY] += (thrust * s[o + J_AY] - DRAG * (s[o + J_VY] - flowOut[1] - SINK)) * dt
-      // walls: a soft spring back into the box
+      // walls: a soft spring back into the box; bells nudge each other apart
       const x = s[o + J_X], y = s[o + J_Y]
       if (x < BOX[0]) s[o + J_VX] += (BOX[0] - x) * 2 * dt; else if (x > BOX[2]) s[o + J_VX] -= (x - BOX[2]) * 2 * dt
       if (y < BOX[1]) s[o + J_VY] += (BOX[1] - y) * 2 * dt; else if (y > BOX[3]) s[o + J_VY] -= (y - BOX[3]) * 2 * dt
+      for (let q = 0; q < NB; q++) {
+        if (q === b) continue
+        const ox2 = J + JS * q, ex = x - s[ox2 + J_X], ey = y - s[ox2 + J_Y], want = spec.bells[b].r + spec.bells[q].r + 10, d2 = ex * ex + ey * ey
+        if (d2 < want * want && d2 > 1e-6) { const d = Math.sqrt(d2), k = (want - d) * 1.5 * dt / d; s[o + J_VX] += ex * k; s[o + J_VY] += ey * k }
+      }
       s[o + J_X] += s[o + J_VX] * dt; s[o + J_Y] += s[o + J_VY] * dt
-      // the axis turns (≤ .6 rad/s) toward a wandering heading, mostly up, bent back toward the middle near the walls
-      const wa = .9 * noise2(.04 * tNow, b * 3.1 + .5, seed)
+      // the axis turns (≤ .6 rad/s) toward a wandering heading, mostly up; near the top a bell rolls over and swims
+      // down, near the bottom it rights itself, near a side it turns back in
+      const wa = .55 * noise2(.04 * tNow, b * 3.1 + .5, seed)
       let dx = dsin(wa), dy = -dcos(wa)
-      dx += (72 - x) / 60; dy += (75 - y) / 50
+      dx += x < 40 ? (40 - x) / 10 : x > 104 ? (104 - x) / 10 : 0
+      dy += y < 48 ? (48 - y) / 6 : y > 100 ? (100 - y) / 10 : 0
       const dl = Math.sqrt(dx * dx + dy * dy) || 1
       ag.hx = s[o + J_AX]; ag.hy = s[o + J_AY]
       turnToward(ag, dx / dl, dy / dl, turn)
       s[o + J_AX] = ag.hx; s[o + J_AY] = ag.hy
       // tentacles and oral arms: pinned to the bell, dragged by the current, hanging a little
       pins(s, b, pinXY)
-      for (let k = 0; k < TENTACLES; k++) ropeStep(tentacles[b][k], s, dt, pinXY[2 * k], pinXY[2 * k + 1], 0, 6, flowAt)
-      for (let k = 0; k < ARMS; k++) ropeStep(arms[b][k], s, dt, pinXY[2 * (TENTACLES + k)], pinXY[2 * (TENTACLES + k) + 1], 0, 4, flowAt)
+      for (let k = 0; k < TENTACLES; k++) ropeStep(tentacles[b][k], s, dt, pinXY[2 * k], pinXY[2 * k + 1], 0, 2.5, flowAt)
+      for (let k = 0; k < ARMS; k++) ropeStep(arms[b][k], s, dt, pinXY[2 * (TENTACLES + k)], pinXY[2 * (TENTACLES + k) + 1], 0, 2, flowAt)
     }
   }
   const discrete = [...pressDiscrete(G)], angles = spec.bells.map((_, b) => J + JS * b + J_TH), units = spec.bells.map((_, b) => J + JS * b + J_AX)
@@ -187,30 +197,30 @@ export function drawJelly(j: Jelly, s: Float32Array, t: number, r: TileRaster): 
     const tx0 = Math.max(0, Math.floor((v.x - reach - ox) / pitch)), tx1 = Math.min(cols - 1, Math.floor((v.x + reach - ox) / pitch))
     const ty0 = Math.max(0, Math.floor((v.y - reach - oy) / pitch)), ty1 = Math.min(rows - 1, Math.floor((v.y + reach - oy) / pitch))
     for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
-      let cov = 0
+      let cov = 0, gx = 0, gy = 0
       for (let q = 0; q < 16; q++) {
         const px = ox + tx * pitch + (q & 3) + .5 - v.x, py = oy + ty * pitch + (q >> 2) + .5 - v.y
         const a = px * v.ax + py * v.ay, bb = px * nx + py * ny
         const inside = a >= -.15 * H && pow24(bb / R) + pow24(a / H) <= 1 ? 1 : 0
         sub[q] = inside; cov += inside
+        if (inside) { gx += (q & 3) - 1.5; gy += (q >> 2) - 1.5 }
       }
       cov /= 16
       if (cov < .2) continue
-      if (cov < .85) { putGlyph(r, tx, ty, matchTile(SHAPE3, sub), T_VALUE, .8); continue }
+      // the rim: a line along the bell's edge (across the inward normal, the centroid of the covered cells), or the
+      // shape-matched glyph where the normal is unclear (corners of the margin)
+      if (cov < .85) { putGlyph(r, tx, ty, gx * gx + gy * gy > 1 ? edgeOfGradient(EDGE3, gx, gy) : matchTile(SHAPE3, sub), T_VALUE, .8); continue }
       const px = ox + tx * pitch + 2 - v.x, py = oy + ty * pitch + 2 - v.y, a = px * v.ax + py * v.ay, bb = px * nx + py * ny
       const g = pow24(bb / R) + pow24(a / H), edge = Math.min((1 - g) * Math.min(R, H) / 2.4, a + .15 * H)
       const rim = edge < 3 ? 1 - edge / 3 : 0
       putGlyph(r, tx, ty, rampGlyph(RAMP3, .15 + .35 * rim), rim > .5 ? T_VALUE : T_MID, .8)
     }
-    // gonads: two horseshoes (centre a = .1H, b = ±.35R, radius .22R), open toward the margin
+    // gonads: two horseshoes at a = .1H, b = ±.35R. Their radius (.22R ≈ 2–3 cells) is smaller than a tile, so each
+    // is one ring glyph (the plan's arc of line glyphs covered 3–4 tiles of a 5-tile bell)
     for (const side of [-1, 1]) {
-      const ca = .1 * H, cb = side * .35 * R, rr = Math.max(1.6, .22 * R)
-      for (let k = 0; k <= 8; k++) {
-        const ang = -.125 * TAU + (k / 8) * .75 * TAU, ca2 = dcos(ang), sa2 = dsin(ang)
-        const a = ca + rr * sa2, bb = cb + rr * ca2, x = v.x + v.ax * a + nx * bb, y = v.y + v.ay * a + ny * bb
-        const ta = rr * ca2, tb = -rr * sa2, gx = v.ax * ta + nx * tb, gy = v.ay * ta + ny * tb
-        putGlyph(r, Math.floor((x - ox) / pitch), Math.floor((y - oy) / pitch), edgeOfTangent(EDGE3, gx, gy), T_ACTIVE, 1)
-      }
+      const a = .1 * H, bb = side * .35 * R, x = v.x + v.ax * a + nx * bb, y = v.y + v.ay * a + ny * bb
+      putGlyph(r, Math.floor((x - ox) / pitch), Math.floor((y - oy) / pitch), RING, T_ACTIVE, 1)
     }
   }
 }
+const RING = glyphOf(EDGE3, 'o')

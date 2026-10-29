@@ -10,7 +10,7 @@ import type { WidgetPreset } from '../../types'
 import { caption, frameOf, hourNow, mainThread, tile, touch } from './shared'
 
 export const FLY_TILES: TileGrid = { cols: 36, rows: 33, pitch: 4, ox: 0, oy: 11 }
-export const fireflies: Fireflies = createFireflies({ seed: 480, tiles: FLY_TILES, lead: 25, period: 40, seam: 3 })
+export const fireflies: Fireflies = createFireflies({ seed: 480, tiles: FLY_TILES, lead: 24, period: 40, seam: 3 })
 const raster = createTileRaster({ cols: 144, rows: 144 }, FLY_TILES)
 
 export const pondFireflies: WidgetPreset = {

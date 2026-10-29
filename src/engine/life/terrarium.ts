@@ -7,6 +7,7 @@ import { createWorld, type StepInput, type World } from '../physics/world'
 import { fbm2, rngFor, voronoi2 } from '../noise'
 import { ANT_CARRY, ANT_STRIDE, ANT_X, ANT_Y, antsInit, antsStep, createAnts, type Ants } from './agents'
 import { colonise, type Colony } from './grow'
+import { phaseSteps } from './pond'
 import { pressDiscrete, pressInit, pressStep, PRESS_HOLD, PRESS_SLOTS, PRESS_TAP, pressAt, seamBlend } from './loop'
 import { clearTiles, EDGE3, edgeOfTangent, putBig, putGlyph, RAMP3, rampGlyph, T_ACTIVE, T_FAINT, T_IDLE, T_MID, T_VALUE, type TileGrid, type TileRaster } from './glyphTiles'
 
@@ -20,6 +21,8 @@ export interface TerrariumSpec {
   crumbs: [number, number][]
   /** Creeper root (card cells). */
   root: [number, number]
+  /** The autopilot's crumbs: [loop phase s, x, y] (card cells), each into a free slot. */
+  drops?: [number, number, number][]
   lead: number; period: number; seam: number
 }
 export interface TerraLayout { CR: number; G: number; size: number }
@@ -30,11 +33,16 @@ export interface Terrarium {
 }
 const toLx = (x: number) => x / TERRA_PITCH, toLy = (y: number) => (y - TERRA_OY) / TERRA_PITCH
 export const antCardX = (lx: number) => lx * TERRA_PITCH, antCardY = (ly: number) => TERRA_OY + ly * TERRA_PITCH
+/**
+ * Pheromone per ant step (× (1 − since/600)). The plan's 1 with .006 evaporation saturates the whole floor within
+ * 10 s (90 ants lay 90 a step against .6 % loss); .05 leaves trails that stand out from the wandering.
+ */
+export const ANT_DEPOSIT = .05
 /** The lamp's reach (card cells): ants turn away inside it, tones brighten inside it. */
 export const LAMP_R = 24
 
 export function createTerrarium(spec: TerrariumSpec): Terrarium {
-  const ants = createAnts({ w: TERRA_W, h: TERRA_H, ants: 90, nest: [toLx(spec.nest[0]), toLy(spec.nest[1])], seed: spec.seed, evaporate: .006, diffuseEvery: 4, speed: .6 }, 0)
+  const ants = createAnts({ w: TERRA_W, h: TERRA_H, ants: 90, nest: [toLx(spec.nest[0]), toLy(spec.nest[1])], seed: spec.seed, evaporate: .006, diffuseEvery: 4, speed: .5, deposit: ANT_DEPOSIT, blur: .4 }, 0)
   const CR = ants.size, G = CR + 3 * CRUMBS, size = G + PRESS_SLOTS
   const dt = TERRA_DT
   const avoid: [number, number, number] = [0, 0, LAMP_R / TERRA_PITCH]
@@ -52,22 +60,30 @@ export function createTerrarium(spec: TerrariumSpec): Terrarium {
     }
     pressInit(s, G)
   }
-  function step(s: Float32Array, n: number, inp: StepInput) {
-    const press = pressStep(s, G, inp.pointers[0], dt)
-    if (press === PRESS_TAP) {
-      const [px, py] = pressAt(s, G)
-      for (let k = 0; k < CRUMBS; k++) {
-        const o = CR + 3 * k
-        if (s[o + 2] >= 1 || py < TERRA_OY) continue
-        s[o] = Math.max(1, Math.min(TERRA_W - 1, toLx(px))); s[o + 1] = Math.max(1, Math.min(TERRA_H - 1, toLy(py))); s[o + 2] = CRUMB_BITES
-        break
-      }
+  /** Put a crumb (card cells) in the first empty slot; none free → no crumb. */
+  const dropCrumb = (s: Float32Array, px: number, py: number) => {
+    if (py < TERRA_OY) return
+    for (let k = 0; k < CRUMBS; k++) {
+      const o = CR + 3 * k
+      if (s[o + 2] >= 1) continue
+      s[o] = Math.max(1, Math.min(TERRA_W - 1, toLx(px))); s[o + 1] = Math.max(1, Math.min(TERRA_H - 1, toLy(py))); s[o + 2] = CRUMB_BITES
+      return
     }
+  }
+  const start = Math.round(spec.lead / dt), len = Math.round(spec.period / dt)
+  const drops = (spec.drops ?? []).map(([sec, x, y]) => ({ at: Math.round(sec / dt), x, y }))
+  function step(s: Float32Array, n: number, inp: StepInput) {
+    const press = pressStep(s, G, inp.pointers[0], dt), ph = phaseSteps(n, start, len)
+    for (const d of drops) if (ph === d.at) dropCrumb(s, d.x, d.y)
+    if (press === PRESS_TAP) { const [px, py] = pressAt(s, G); dropCrumb(s, px, py) }
+    if (inp.kick) dropCrumb(s, 80, 80)
     let lamp: [number, number, number] | undefined
     if (press === PRESS_HOLD) { const [px, py] = pressAt(s, G); avoid[0] = toLx(px); avoid[1] = toLy(py); lamp = avoid }
     antsStep(ants, s, n, s.subarray(CR, CR + 3 * CRUMBS), lamp)
   }
+  // crumb positions snap at the seam (a crumb never slides across the floor); their bites lerp
   const discrete: number[] = [...pressDiscrete(G)]
+  for (let k = 0; k < CRUMBS; k++) discrete.push(CR + 3 * k, CR + 3 * k + 1)
   for (let i = 0; i < ants.ants; i++) discrete.push(ants.A + ANT_STRIDE * i + 2, ants.A + ANT_STRIDE * i + ANT_CARRY)
   const world = createWorld({
     size, dt, lead: spec.lead, period: spec.period, seam: spec.seam,
@@ -138,13 +154,13 @@ export function drawTerrarium(t: Terrarium, s: Float32Array, c: Colony, time: nu
     return dx * dx + dy * dy < LAMP_R * LAMP_R && tone < T_VALUE ? tone + 1 : tone
   }
   for (let i = 0; i < T; i++) if (t.stones[i] >= 0) { const tx = i % cols, ty = (i / cols) | 0; putGlyph(r, tx, ty, RAMP3.glyphs[t.stones[i]], lit(tx, ty, T_FAINT), .6) }
-  // pheromone trails: the food trail (and the home trail, weaker), as density
-  const { FOOD, HOME } = t.ants
+  // the food trail, as density (the home trail spreads around the nest and stays unseen)
+  const { FOOD } = t.ants
   for (let ty = 0; ty < rows; ty++) for (let tx = 0; tx < cols; tx++) {
     const lx = Math.floor(toLx(ox + tx * pitch + 2)), ly = Math.floor(toLy(oy + ty * pitch + 2))
     if (lx < 0 || ly < 0 || lx >= TERRA_W || ly >= TERRA_H) continue
-    const v = Math.max(s[FOOD + ly * TERRA_W + lx], .35 * s[HOME + ly * TERRA_W + lx])
-    if (v > .12) putGlyph(r, tx, ty, rampGlyph(RAMP3, Math.min(.7, .15 + v * .4)), lit(tx, ty, T_FAINT), .6)
+    const v = s[FOOD + ly * TERRA_W + lx]
+    if (v > .22) putGlyph(r, tx, ty, rampGlyph(RAMP3, Math.min(.6, .1 + v * .5)), lit(tx, ty, T_MID), .6)
   }
   // the nest: a ring of line glyphs around a dark hole
   const [nx, ny] = t.spec.nest

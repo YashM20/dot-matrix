@@ -15,6 +15,7 @@ export const TERRA_TILES: TileGrid = { cols: 36, rows: 33, pitch: 4, ox: 0, oy: 
 export const terrarium: Terrarium = createTerrarium({
   seed: 480, tiles: TERRA_TILES, nest: [34, 116], root: [12, 20],
   crumbs: [[104, 112], [70, 58], [126, 46]],
+  drops: [[14, 120, 82], [30, 64, 40], [44, 96, 128]],
   lead: 10, period: 60, seam: 3,
 })
 const raster = createTileRaster({ cols: 144, rows: 144 }, TERRA_TILES)

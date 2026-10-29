@@ -11,7 +11,7 @@ import { caption, frameOf, mainThread, tile, touch } from './shared'
 export const JELLY_TILES: TileGrid = { cols: 36, rows: 33, pitch: 4, ox: 0, oy: 11 }
 export const jelly: Jelly = createJelly({
   seed: 480, tiles: JELLY_TILES,
-  bells: [{ r: 13, period: 1.8, x: 46, y: 62 }, { r: 11, period: 2.1, x: 104, y: 46 }, { r: 9, period: 2.4, x: 92, y: 104 }],
+  bells: [{ r: 17, period: 1.8, x: 44, y: 60 }, { r: 14, period: 2.1, x: 106, y: 44 }, { r: 11, period: 2.4, x: 90, y: 108 }],
   lead: 6, period: 40, seam: 3,
 })
 const raster = createTileRaster({ cols: 144, rows: 144 }, JELLY_TILES)
