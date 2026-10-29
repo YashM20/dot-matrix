@@ -53,9 +53,7 @@ The housekeeping list:
   - It is a FIFO ticket queue in `dm-heavy-queue/`, with a v2 lock that refreshes a heartbeat every 5 s and goes stale after 45 s.
   - A command is killed after `HEAVY_TIMEOUT_MIN` (default 40).
   - Timing checks sample load next to the timed code (`scripts/lib/load.ts`).
-- **Worktree setup:** `cmd /c mklink /J node_modules D:\MyRepo
-extjs\dot-matrix
-ode_modules`.
+- **Worktree setup:** `cmd /c mklink /J node_modules D:\MyRepo\nextjs\dot-matrix\node_modules`.
 - **Worktree cleanup:**
   1. Delete the junction with `[System.IO.Directory]::Delete(path, $false)`; never recursive.
   2. `git worktree unlock`.
