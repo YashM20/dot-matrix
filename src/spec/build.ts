@@ -28,14 +28,15 @@ const madeBy = new WeakMap<Field, LayerSpec>()
 export const specLayerOf = (field: Field): LayerSpec | undefined => madeBy.get(field)
 
 /** The grid a layer's field is laid out on: the card grid, or the layer's lattice. */
-export const layerGrid = (grid: GridConfig, l: { lattice?: number; origin?: [number, number] }): GridConfig =>
+export const layerGrid = (grid: GridConfig, l: { lattice?: number | [number, number]; origin?: [number, number] }): GridConfig =>
   l.lattice !== undefined || l.origin ? latticeGrid(grid, l.lattice ?? 1, l.origin ?? [0, 0]) : grid
 const cellOf = (u: number, n: number) => Math.round(u * (n - 1))
 
-function placement(l: { tone?: Tone; lattice?: number; origin?: [number, number]; join?: JoinLayerSpec }): Omit<Layer, 'field'> {
+function placement(l: { tone?: Tone; lattice?: number | [number, number]; origin?: [number, number]; join?: JoinLayerSpec; sizeAxis?: Layer['sizeAxis'] }): Omit<Layer, 'field'> {
   const o: Omit<Layer, 'field'> = {}
   if (l.tone !== undefined) o.tone = l.tone
-  if (l.lattice !== undefined) o.lattice = l.lattice
+  if (l.lattice !== undefined) o.lattice = typeof l.lattice === 'number' ? l.lattice : [l.lattice[0], l.lattice[1]]
+  if (l.sizeAxis !== undefined) o.sizeAxis = l.sizeAxis
   if (l.origin) o.origin = [l.origin[0], l.origin[1]]
   if (l.join !== undefined) o.join = l.join === true ? true : { ...l.join }
   return o

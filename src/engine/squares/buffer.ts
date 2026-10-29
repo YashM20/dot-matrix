@@ -1,7 +1,7 @@
 /**
  * The squares channels of a `DotBuffer` and of array-path dots (Q-squares §2.2), as `samplerExt` hooks so the
  * first-load buffer carries only the field names. `ext` holds three views, 7 B/dot, Float32 first so every view is
- * aligned for any capacity c: `aspect` (Q2) at byte 0, `join` Uint16 at 4c (bits 0–11 mask, 12–15 joint slot;
+ * aligned for any capacity c: `aspect` Float32 at byte 0 (a rect cell's ry / rx; 0 = none, i.e. 1), `join` Uint16 at 4c (bits 0–11 mask, 12–15 joint slot;
  * 0xFFFF = plain), `form` Uint8 at 6c (bits 0–3 roundness step /8; 15 = frame style).
  */
 import type { DotBuffer } from '../buffer/dotBuffer'
@@ -25,15 +25,16 @@ export function formOf(layer: Layer, value: number, u: number, v: number): numbe
   const r = layer.shapeOf?.(value, u, v)
   return r === undefined || !Number.isFinite(r) ? NO_FORM : Math.round(8 * Math.max(0, Math.min(1, r)))
 }
-/** `samplerExt.stamp`: the array-path dot's per-dot roundness and join. */
-export function stamp(d: DotInstance, join: number, form: number, joints: JointGeom[] | null): void {
+/** `samplerExt.stamp`: the array-path dot's per-dot roundness, join and rect aspect. */
+export function stamp(d: DotInstance, join: number, form: number, joints: JointGeom[] | null, aspect = 1): void {
   if (form !== NO_FORM) { d.shape = 'squircle'; d.roundness = form / 8 }
   if (join !== NO_JOIN) { d.join = join & 0xFFF; d.joint = joints![join >> 12] }
+  if (aspect !== 1) d.aspect = aspect
 }
 /** `samplerExt.push`: the buffer dot's channels. */
-export function push(buf: DotBuffer, i: number, join: number, form: number): void {
+export function push(buf: DotBuffer, i: number, join: number, form: number, aspect = 1): void {
   if (!buf.ext) fresh(buf)
-  buf.join![i] = join; buf.form![i] = form
+  buf.join![i] = join; buf.form![i] = form; buf.aspect![i] = aspect === 1 ? 0 : aspect
 }
 /** `samplerExt.attach`: views over a transferred store, when its size fits the capacity. */
 export function attach(buf: DotBuffer, ext: ArrayBuffer): void {
@@ -46,6 +47,6 @@ export function grow(buf: DotBuffer, n: number): void {
 }
 /** `samplerExt.decode`: `toDots` output gets per-dot roundness and join, as the array path stamps them. */
 export function decode(buf: DotBuffer, out: DotInstance[]): void {
-  const { join, form, joints } = buf
-  for (let i = 0; i < out.length; i++) stamp(out[i], join![i], form![i], joints ?? null)
+  const { join, form, joints, aspect } = buf
+  for (let i = 0; i < out.length; i++) stamp(out[i], join![i], form![i], joints ?? null, aspect![i] || 1)
 }

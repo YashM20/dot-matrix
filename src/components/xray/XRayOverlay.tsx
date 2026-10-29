@@ -166,14 +166,14 @@ export function XRayOverlay({ xr, preset, layers, data, grid, style, theme, anim
     // coarser layer lattices: dashed, inside each layer's bounds when it has some
     const seen = new Set<string>()
     for (const l of frameLayers(stats.t)) {
-      const k = l.lattice ?? 1
-      if (l.sites || (k === 1 && !l.origin)) continue
-      const [ox, oy] = l.origin ?? [0, 0], id = `${k}|${ox},${oy}`
+      const [kx, ky] = typeof l.lattice === 'object' ? l.lattice : [l.lattice ?? 1, l.lattice ?? 1]
+      if (l.sites || (kx === 1 && ky === 1 && !l.origin)) continue
+      const [ox, oy] = l.origin ?? [0, 0], id = `${kx}x${ky}|${ox},${oy}`
       if (seen.has(id)) continue
       seen.add(id)
       g.beginPath(); g.setLineDash([2, 3]); at(.22)
-      for (let x = ox; x <= grid.cols + 1e-6; x += k) line(x * cw, oy * ch, x * cw, H)
-      for (let y = oy; y <= grid.rows + 1e-6; y += k) line(ox * cw, y * ch, W, y * ch)
+      for (let x = ox; x <= grid.cols + 1e-6; x += kx) line(x * cw, oy * ch, x * cw, H)
+      for (let y = oy; y <= grid.rows + 1e-6; y += ky) line(ox * cw, y * ch, W, y * ch)
       g.stroke(); g.setLineDash([])
     }
     // the hovered dot: crosshair + its box (a site is a circle)

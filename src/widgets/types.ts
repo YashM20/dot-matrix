@@ -166,12 +166,12 @@ export const staticLayers = (layers: Layer[]) => () => layers
 /** Flatten a preset to a single field (thumbnails, exports, tests). */
 export const presetField = (p: WidgetPreset, ctx: WidgetContext = { t: 0, data: p.defaults ?? {} }): Field => {
   const ls = withChrome(p)(ctx).map(l => {
-    if (l.sites) { const reach = (l.size ?? l.lattice ?? 1) / 2 + .25, cells = l.sites; return (u: number, v: number) => { const x = u * (p.grid.cols - 1), y = v * (p.grid.rows - 1); return cells.some(([sx, sy]) => Math.hypot(x - sx, y - sy) <= reach) ? l.field(u, v) : 0 } }
+    if (l.sites) { const reach = (l.size ?? (typeof l.lattice === 'number' ? l.lattice : 1)) / 2 + .25, cells = l.sites; return (u: number, v: number) => { const x = u * (p.grid.cols - 1), y = v * (p.grid.rows - 1); return cells.some(([sx, sy]) => Math.hypot(x - sx, y - sy) <= reach) ? l.field(u, v) : 0 } }
     if (!l.lattice && !l.origin) return l.field
     // map card u/v onto the layer's lattice so the flattened field lines up
-    const k = l.lattice ?? 1, [ox, oy] = l.origin ?? [0, 0], sub = latticeGrid(p.grid, k, [ox, oy])
+    const [kx, ky] = typeof l.lattice === 'object' ? l.lattice : [l.lattice ?? 1, l.lattice ?? 1], [ox, oy] = l.origin ?? [0, 0], sub = latticeGrid(p.grid, [kx, ky], [ox, oy])
     return (u: number, v: number) => {
-      const c = Math.floor((u * (p.grid.cols - 1) + .5 - ox) / k), r = Math.floor((v * (p.grid.rows - 1) + .5 - oy) / k)
+      const c = Math.floor((u * (p.grid.cols - 1) + .5 - ox) / kx), r = Math.floor((v * (p.grid.rows - 1) + .5 - oy) / ky)
       return c < 0 || r < 0 || c >= sub.cols || r >= sub.rows ? 0 : l.field(sub.cols === 1 ? .5 : c / (sub.cols - 1), sub.rows === 1 ? .5 : r / (sub.rows - 1))
     }
   })

@@ -50,7 +50,7 @@ const jsonSafe = (x: unknown): boolean => {
 
 /** Same dots from both layers on `grid`: values on the sampler's windows (sites: per site), tones, placement. */
 function sameLayer(a: Layer, b: Layer, grid: GridConfig): boolean {
-  if (a.tone !== b.tone || (a.lattice ?? 1) !== (b.lattice ?? 1) || String(a.origin ?? '') !== String(b.origin ?? '')) return false
+  if (a.tone !== b.tone || String(a.lattice ?? 1) !== String(b.lattice ?? 1) || String(a.origin ?? '') !== String(b.origin ?? '') || (a.sizeAxis ?? 'both') !== (b.sizeAxis ?? 'both')) return false
   if (!a.sites && JSON.stringify(a.join ?? null) !== JSON.stringify(b.join ?? null)) return false
   if (a.sites || b.sites) {
     if (!a.sites || !b.sites || a.sites.length !== b.sites.length || (a.size ?? a.lattice ?? 1) !== (b.size ?? b.lattice ?? 1)) return false
@@ -72,10 +72,11 @@ function sameLayer(a: Layer, b: Layer, grid: GridConfig): boolean {
   return true
 }
 
-function placed(l: Layer): Pick<RasterLayerSpec, 'tone' | 'lattice' | 'origin' | 'join'> {
-  const o: Pick<RasterLayerSpec, 'tone' | 'lattice' | 'origin' | 'join'> = {}
+function placed(l: Layer): Pick<RasterLayerSpec, 'tone' | 'lattice' | 'origin' | 'join' | 'sizeAxis'> {
+  const o: Pick<RasterLayerSpec, 'tone' | 'lattice' | 'origin' | 'join' | 'sizeAxis'> = {}
   if (l.tone !== undefined) o.tone = l.tone
-  if (l.lattice !== undefined) o.lattice = l.lattice
+  if (l.lattice !== undefined) o.lattice = typeof l.lattice === 'number' ? l.lattice : [l.lattice[0], l.lattice[1]]
+  if (l.sizeAxis !== undefined) o.sizeAxis = l.sizeAxis
   if (l.origin) o.origin = [l.origin[0], l.origin[1]]
   // a function group never gets here (exportPreset refuses it); sites ignore join
   if (l.join !== undefined && !l.sites) o.join = l.join === true ? true : clone(l.join) as JoinLayerSpec
@@ -116,7 +117,7 @@ function convert(l: Layer, grid: GridConfig): LayerSpec | string {
   if (known) return clone(known)
   const from = l.field.from
   if (l.sites) {
-    const sites = l.sites.filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y)), size = l.size ?? l.lattice
+    const sites = l.sites.filter(([x, y]) => Number.isFinite(x) && Number.isFinite(y)), size = l.size ?? (typeof l.lattice === 'number' ? l.lattice : undefined)
     const base = { kind: 'sites' as const, points: sites.map(([x, y]) => [x, y] as [number, number]), ...(size !== undefined && { size }), ...(l.tone !== undefined && { tone: l.tone }) }
     if (from && 'ir' in from && !from.raw && !l.toneOf) return { ...base, bind: from.ir }
     const su = (x: number) => x / Math.max(1, grid.cols - 1), sv = (y: number) => y / Math.max(1, grid.rows - 1)
@@ -127,7 +128,9 @@ function convert(l: Layer, grid: GridConfig): LayerSpec | string {
   }
   if (l.toneOf) return 'multi-tone field'
   if (!from) return 'bespoke field'
-  const p = placed(l), sub = layerGrid(grid, l)
+  // rect cells (squares Q2) travel as baked raster layers only
+  if (typeof l.lattice === 'object' || l.sizeAxis !== undefined) return 'rect cells'
+  const p = placed(l) as Omit<ReturnType<typeof placed>, 'lattice' | 'sizeAxis'> & { lattice?: number }, sub = layerGrid(grid, l)
   if ('ir' in from) return from.raw ? 'raw IR' : { kind: 'ir', src: from.ir, ...p }
   if (!sameDims(from.grid, sub)) return `${from.gen} laid out on another grid`
   const args = from.args.slice()
