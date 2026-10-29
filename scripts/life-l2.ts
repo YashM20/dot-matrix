@@ -38,7 +38,8 @@ export async function lifeL2Checks(assert: Assert, pond: () => Promise<typeof im
   const tapAt = (w: World, t0: number, x: number, y: number) => {
     let t = t0
     const at = (f?: FrameInput) => { t += 1 / 30; return worldAt(w, t, f) }
-    at({ pointers: [{ id: 7, x, y, down: true }] }); at({ pointers: [{ id: 7, x, y, down: true }] })
+    // three down frames: the first only forks the world (0 steps), and a 15 Hz world steps every other 30 Hz frame
+    at({ pointers: [{ id: 7, x, y, down: true }] }); at({ pointers: [{ id: 7, x, y, down: true }] }); at({ pointers: [{ id: 7, x, y, down: true }] })
     const s = at() // the touch lifts: the pointer leaves the frame
     return { s, t, at }
   }

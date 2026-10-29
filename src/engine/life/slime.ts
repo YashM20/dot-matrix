@@ -107,13 +107,17 @@ export function slimeFoods(p: Slime, s: Float32Array): FoodView[] {
 export const slimeLevel = (T: number) => { const v = T > 0 ? (1.5 * T) / (T + 20) : 0; return v < 1 ? v : 1 }
 
 const sub = new Float32Array(16)
-/** Trail level at a card cell (bilinear on the lattice). */
-function levelAt(s: Float32Array, x: number, y: number): number {
+/** The trail as display levels, filled once per frame by drawSlime. */
+const lv = new Float32Array(SLIME_W * SLIME_H)
+/** Display level at a card cell (bilinear on the level grid `lv`). */
+function levelAt(x: number, y: number): number {
   const lx = slimeLx(x) - .5, ly = slimeLy(y) - .5
   const x0 = Math.floor(lx), y0 = Math.floor(ly), fx = lx - x0, fy = ly - y0
-  const at = (cx: number, cy: number) => { cx = cx < 0 ? 0 : cx >= SLIME_W ? SLIME_W - 1 : cx; cy = cy < 0 ? 0 : cy >= SLIME_H ? SLIME_H - 1 : cy; return s[cy * SLIME_W + cx] }
-  const v = (at(x0, y0) * (1 - fx) + at(x0 + 1, y0) * fx) * (1 - fy) + (at(x0, y0 + 1) * (1 - fx) + at(x0 + 1, y0 + 1) * fx) * fy
-  return slimeLevel(v)
+  // clamped corners, no closure (a closure per call is 19k allocations a frame)
+  const xa = x0 < 0 ? 0 : x0 >= SLIME_W ? SLIME_W - 1 : x0, xb = x0 + 1 < 0 ? 0 : x0 + 1 >= SLIME_W ? SLIME_W - 1 : x0 + 1
+  const ya = (y0 < 0 ? 0 : y0 >= SLIME_H ? SLIME_H - 1 : y0) * SLIME_W, yb = (y0 + 1 < 0 ? 0 : y0 + 1 >= SLIME_H ? SLIME_H - 1 : y0 + 1) * SLIME_W
+  const v = (lv[ya + xa] * (1 - fx) + lv[ya + xb] * fx) * (1 - fy) + (lv[yb + xa] * (1 - fx) + lv[yb + xb] * fx) * fy
+  return v
 }
 /**
  * Draw the trail into `r`. Per tile: the level at its 4 × 4 card-cell centres (sub16); below .14 the tile stays
@@ -123,18 +127,19 @@ function levelAt(s: Float32Array, x: number, y: number): number {
 export function drawSlime(p: Slime, s: Float32Array, r: TileRaster): void {
   const { cols, rows, pitch, ox, oy } = p.spec.tiles
   clearTiles(r)
+  for (let i = 0; i < SLIME_W * SLIME_H; i++) lv[i] = slimeLevel(s[i])
   for (let ty = 0; ty < rows; ty++) for (let tx = 0; tx < cols; tx++) {
     let mean = 0
-    for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) { const v = levelAt(s, ox + tx * pitch + i + .5, oy + ty * pitch + j + .5); sub[j * 4 + i] = v; mean += v }
+    for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) { const v = levelAt(ox + tx * pitch + i + .5, oy + ty * pitch + j + .5); sub[j * 4 + i] = v; mean += v }
     mean /= 16
     if (mean < .14) continue
-    // structure tensor on the raw trail around the tile centre
+    // structure tensor on the levels around the tile centre
     const cx = Math.floor(slimeLx(ox + tx * pitch + 2)), cy = Math.floor(slimeLy(oy + ty * pitch + 2))
     let jxx = 0, jxy = 0, jyy = 0
     for (let b = -1; b <= 1; b++) for (let a = -1; a <= 1; a++) {
       const x = cx + a, y = cy + b
       if (x < 1 || y < 1 || x >= SLIME_W - 1 || y >= SLIME_H - 1) continue
-      const gx = slimeLevel(s[y * SLIME_W + x + 1]) - slimeLevel(s[y * SLIME_W + x - 1]), gy = slimeLevel(s[(y + 1) * SLIME_W + x]) - slimeLevel(s[(y - 1) * SLIME_W + x])
+      const gx = lv[y * SLIME_W + x + 1] - lv[y * SLIME_W + x - 1], gy = lv[(y + 1) * SLIME_W + x] - lv[(y - 1) * SLIME_W + x]
       jxx += gx * gx; jxy += gx * gy; jyy += gy * gy
     }
     const tr = jxx + jyy, dd = Math.sqrt((jxx - jyy) * (jxx - jyy) + 4 * jxy * jxy), coh = tr > 1e-9 ? dd / tr : 0
