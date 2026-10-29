@@ -281,12 +281,41 @@ async function desktop() {
     await h.go(`${base}?tab=dots&p=${bad}`, `!!document.querySelector('.dw-error')`); await sleep(600)
     check('an invalid shared program shows its IR error and is not run', /^1:\d+/.test(await h.text('.dw-error')) && (await h.lit()).n === 0, await h.text('.dw-error'))
     await p.shot(join(out, 'desktop-04-links.png'))
+    await desktopFit(p)
     await desktopE2(p, h)
     await desktopE3(p, h)
     check('desktop: no uncaught errors or console errors', p.logs.length === 0, p.logs.slice(0, 3).join(' | '))
   } catch (e) {
     check('desktop run', false, String(e)); await p.shot(join(out, 'desktop-99-error.png')).catch(() => null)
   } finally { await p.close() }
+}
+
+// ── the editor fits the window: at desktop sizes its bottom edge is inside the window once the page above has
+//    settled. The tool dock (CommandLayer's .pal-dock, a lazy chunk portaled into the site bar) lands after the
+//    editor's first measure and makes the bar taller; a height measured once ran the editor past the window
+//    (PR #11). Fresh loads, so the dock really arrives late; leaves the page at 1440×900.
+async function desktopFit(p: Page) {
+  const bad: string[] = [], seen: string[] = []
+  for (const [W, H] of [[1440, 900], [1280, 720], [1920, 1080]] as const) {
+    await p.cdp('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false })
+    await p.cdp('Page.navigate', { url: `${base}?make&pro=1` })
+    const ok = await p.waitFor(`!!document.querySelector('.ed-root .ed-frame') && !!document.querySelector('.topbar-dock .pal-dock')`, 60000)
+    // settled: fonts loaded, then the editor's bottom edge and the site bar hold still for 10 frames in a row
+    const m = ok ? await p.js<{ b: number; bar: number; H: number; sy: number }>(`document.fonts.ready.then(() => new Promise(res => {
+      const ed = document.querySelector('.ed-root'), bar = document.querySelector('.topbar')
+      let last = '', same = 0, n = 0
+      const tick = () => {
+        const b = ed.getBoundingClientRect().bottom, t = bar?.getBoundingClientRect().bottom ?? 0, k = b.toFixed(1) + '/' + t.toFixed(1)
+        same = k === last ? same + 1 : 0; last = k
+        if (same >= 10 || ++n > 300) res({ b, bar: t, H: innerHeight, sy: scrollY }); else requestAnimationFrame(tick)
+      }
+      requestAnimationFrame(tick)
+    }))`) : undefined
+    seen.push(m ? `${W}×${H}: bottom ${m.b.toFixed(1)}, bar ${m.bar.toFixed(1)}, scrollY ${m.sy}` : `${W}×${H}: editor or dock never loaded`)
+    if (!m || m.b > m.H + .5 || m.sy !== 0) bad.push(`${W}×${H}`)
+  }
+  check('the editor fits the window at desktop sizes once the tool dock has landed (bottom edge ≤ window height, no page scroll)', !bad.length, (bad.length ? `over: ${bad.join(', ')}; ` : '') + seen.join(' | '))
+  await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
 }
 
 // ── E2 on desktop: selections of many, marquee, group move / resize, align, distribute, guides,
