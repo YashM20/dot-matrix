@@ -355,8 +355,8 @@ const TT_INDEX: [string, string][] = [['NEWS', '101'], ['SPORT', '102'], ['WEATH
 const TT_SUBS = ['SIX CELLS A CHARACTER', 'BLOCKS FUSE ON CONTACT', 'SEPARATED: GROUT SHOWS', 'ONE RED: THE SECONDS']
 /** The weather map: an island on 22 × 21 sub-cells (land 1, sea 0), from two blobs and a ragged hash coast. */
 const ttLand = (x: number, y: number) => {
-  const a = ((x - 9) / 6.5) ** 2 + ((y - 7) / 5.5) ** 2, b = ((x - 12) / 5) ** 2 + ((y - 15) / 5.5) ** 2, c = ((x - 4) / 3) ** 2 + ((y - 13) / 2.5) ** 2
-  return Math.min(a, b, c) + .35 * (hash01(x, y, 17) - .5) < 1
+  const a = ((x - 10) / 6.5) ** 2 + ((y - 7) / 5.5) ** 2, b = ((x - 12) / 5) ** 2 + ((y - 15) / 5.5) ** 2
+  return Math.min(a, b) + .25 * (hash01(x, y, 17) - .5) < 1
 }
 /** A 2 × 3 sextant from a sub-cell predicate at character (c, r). */
 const sext = (c: number, r: number, on: (x: number, y: number) => boolean) => { let b = 0; for (let i = 0; i < 6; i++) if (on(c * 2 + (i & 1), r * 3 + (i >> 1))) b |= 1 << i; return b }
@@ -367,7 +367,7 @@ export const sqTeletext: WidgetPreset = {
     const put = (s: string, c: number, r: number, fg: Tone, bg?: Tone) => [...s].forEach((ch, i) => { if (c + i < TT_COLS) page[r][c + i] = { ch, fg, ...(bg ? { bg } : {}) } })
     // header (row 0 is the label row: TELETEXT is the card chrome): page number, HH:MM, and the seconds in red
     const now = new Date(), two = (n: number) => String(n).padStart(2, '0')
-    put('P100', 10, 0, 'faint'); put(`${two(now.getHours())}:${two(now.getMinutes())}:`, 16, 0, 'idle'); put(two(now.getSeconds()), 22, 0, 'active')
+    put('P100', 10, 0, 'mid'); put(`${two(now.getHours())}:${two(now.getMinutes())}:`, 16, 0, 'idle'); put(two(now.getSeconds()), 22, 0, 'active')
     // banner: SQUARES in contiguous sextants (the 5 × 7 font, one sub-cell per font pixel) on a joined panel
     const word = 'SQUARES', bx = Math.floor((TT_COLS * 2 - (word.length * 6 - 1)) / 2), by = 1
     const ink = (x: number, y: number) => { const gx = x - bx, gy = y - by, k = Math.floor(gx / 6); return gx >= 0 && gy >= 0 && gy < 7 && k < word.length && gx % 6 < 5 && !!glyph(word[k])[gy]?.[gx % 6] }
@@ -375,9 +375,9 @@ export const sqTeletext: WidgetPreset = {
     put(' SQUARE CELLS SINCE 1974', 0, 4, 'idle')
     // a contiguous rule: the bottom sub-row of every cell, one joined line
     for (let c = 0; c < TT_COLS; c++) page[5][c] = { sextant: 48, fg: 'mid' }
-    // index (left) and the weather map (right, separated graphics): land mid, a rain band idle drifting east
+    // index (left) and the weather map (right, separated graphics): land mid, a rain band (idle) drifting east
     TT_INDEX.forEach(([name, n], i) => { put(name, 0, 6 + i, 'idle'); put(n, 8, 6 + i, 'value') })
-    const front = mod(t * 1.5, 34) - 8
+    const front = mod(t * 1.5 + 10, 34) - 8
     for (let r = 0; r < 7; r++) for (let c = 0; c < 11; c++) {
       const land = (x: number, y: number) => ttLand(x, y), rain = (x: number, y: number) => ttLand(x, y) && Math.abs(x - front - y * .45) < 2.2
       const bits = sext(c, r, land), wet = sext(c, r, rain)
@@ -398,20 +398,21 @@ export const sqTeletext: WidgetPreset = {
 // cells (1 × 3, `sizeAxis: 'y'`): each cell keeps its full width and takes the luma as its height, and the cells of a
 // line join across levels, so every line is one continuous stroke whose weight steps with the value. Lines sway a
 // cell at a time. Under it a solid-bar spectrum on 3 × 1 cells (`sizeAxis: 'x'`): the stroke weight of the line
-// being scanned, 42 bars; the red is the bar at the current peak.
+// being scanned (normalised to its peak), 42 bars; the red is the bar at the peak.
 const LN_ORIGIN: Pt = [8, 9], LN_W = 128, LN_LINES = 36, LN_K: Pt = [1, 3], SP_ORIGIN: Pt = [8, 118], SP_BARS = 42, SP_H = 13
 /** Stroke value of line `r` at column `c` (portrait luma, a gentle whole-cell sway). */
 const lineValue = (c: number, r: number, t: number) => {
   const sway = Math.round(1.6 * tsin(t * .9 + r * .42)), x = c - sway
-  return x < 0 || x >= LN_W ? 0 : clamp(portrait(LN_ORIGIN[0] + x, LN_ORIGIN[1] + r * LN_K[1] + 1) * 1.25)
+  return x < 0 || x >= LN_W ? 0 : clamp(portrait(LN_ORIGIN[0] + x, LN_ORIGIN[1] + r * LN_K[1] + 1))
 }
 export const sqLines: WidgetPreset = {
   id: 'sq-lines', name: 'Squares Lines', label: 'LINES', ...tile,
   layers: ctx => {
-    const t = ctx.t, scan = Math.floor(mod(t * 3, LN_LINES))
+    const t = ctx.t, scan = Math.floor(mod(t * 3 + 14, LN_LINES))
     const lines = cells(LN_K, LN_ORIGIN, LN_W, LN_LINES, (c, r) => lineValue(c, r, t), { tone: 'idle', join: true, sizeAxis: 'y' })
     // spectrum: per bar, the mean stroke value of the scanned line over its 3 columns, as a height in rows
-    const h = Array.from({ length: SP_BARS }, (_, b) => { let s = 0; for (let i = 0; i < 3; i++) s += quantize(lineValue(b * 3 + i, scan, t), squareStyle.quantizeSteps!); return Math.round(s / 3 * SP_H) })
+    const m = Array.from({ length: SP_BARS }, (_, b) => { let s = 0; for (let i = 0; i < 3; i++) s += quantize(lineValue(b * 3 + i, scan, t), squareStyle.quantizeSteps!); return s / 3 })
+    const top = Math.max(1e-9, ...m), h = m.map(x => Math.round(x / top * SP_H))
     let peak = 0
     for (let b = 1; b < SP_BARS; b++) if (h[b] > h[peak]) peak = b
     const bar = (b: number, r: number) => h[b] > 0 && r >= SP_H - h[b]

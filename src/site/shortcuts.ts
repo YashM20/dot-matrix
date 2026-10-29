@@ -22,7 +22,7 @@ export const URL_PARAMS: readonly Shortcut[] = [
   { keys: '?make=code&p=…', does: 'a shared field program' },
   { keys: '?about', does: 'this page' },
   { keys: '/widget/<id>/', does: 'one card on its own page (also /<short id>)' },
-  { keys: '?skin=crt|vfd|led|eink|flipdisc|nixie', does: 'display skin' },
+  { keys: '?skin=crt|vfd|led|eink|flipdisc|nixie|lcd|grout', does: 'display skin' },
   { keys: '?worker=0', does: 'sample on the main thread' },
   { keys: '?clack=1', does: 'flip-disc clack sound' },
   { keys: '?tab=…, ?board=…', does: 'old links: still open the view they named' },

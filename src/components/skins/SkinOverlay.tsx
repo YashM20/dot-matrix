@@ -44,7 +44,7 @@ export interface SkinSurfaceProps {
 function stageColors(tones: SkinSurfaceProps['tones']): Partial<StageColors> | undefined {
   if (!tones || !/^#[0-9a-f]{6}$/i.test(tones.surface)) return undefined
   const n = parseInt(tones.surface.slice(1), 16), luma = .2126 * (n >> 16) + .7152 * ((n >> 8) & 255) + .0722 * (n & 255)
-  return luma > 128 ? { paper: tones.surface, ink: tones.value, panel: tones.surface, bright: tones.value, off: tones.dotFaint } : undefined
+  return luma > 128 ? { paper: tones.surface, ink: tones.value, panel: tones.surface, bright: tones.value, off: tones.dotFaint, tile: tones.surface, grout: tones.dotFaint } : undefined
 }
 
 const MAX_BACKING_SCALE = 3
@@ -149,8 +149,8 @@ export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, wid
   const W = Math.round(width * scale), H = Math.round(height * scale)
   // only VFD and LED read the accent, so a theme switch rebuilds just those (the other stages keep their state)
   const tint = drawn === 'vfd' || drawn === 'led' ? accent : undefined
-  // e-ink and flip-disc read the neutral tones (a light card); a string key, so an equal palette doesn't rebuild
-  const colorKey = drawn === 'eink' || drawn === 'flipdisc' ? JSON.stringify(stageColors(tones) ?? null) : 'null'
+  // e-ink, flip-disc and the mosaic read the neutral tones (a light card); a string key, so an equal palette doesn't rebuild
+  const colorKey = drawn === 'eink' || drawn === 'flipdisc' || drawn === 'grout' ? JSON.stringify(stageColors(tones) ?? null) : 'null'
   // the stage: one per (skin, backing size); a resize keeps the skin without replaying its power-on
   useLayoutEffect(() => {
     const runner = runnerOf(runnerRef), canvas = overlayRef.current, wrap = wrapOf(overlayRef, wrapRef)

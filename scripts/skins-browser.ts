@@ -16,7 +16,7 @@ import { join } from 'node:path'
 
 const arg = (k: string, d: string) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d }
 const URL0 = arg('url', 'http://localhost:5204'), BOARDS = arg('boards', 'mosaic,components,levels').split(','), PERF = arg('perf', 'mosaic'), SECS = +arg('secs', '4')
-const ALL = ['oled', 'crt', 'vfd', 'led', 'eink', 'flipdisc', 'nixie']
+const ALL = ['oled', 'crt', 'vfd', 'led', 'eink', 'flipdisc', 'nixie', 'lcd', 'grout']
 const SKINS = arg('skins', 'all') === 'all' ? ALL : arg('skins', '').split(',')
 const OUT = join(import.meta.dirname, '../.snapshots/c7')
 mkdirSync(OUT, { recursive: true })
