@@ -2,12 +2,15 @@
  * Worker sampling protocol + the worker-side handler (MASTER-PLAN §3.11). The preset module runs in the
  * worker: a request names a preset by id, the worker builds its layers with `withChrome`, samples them into
  * a `DotBuffer` over the `ArrayBuffer` the main thread handed over (transferred), and transfers it back.
+ * Presets come from the registry (`widgets/registry.ts`): the worker fills it one board chunk at a time
+ * (`sampleWorker.ts`), headless checks by importing the eager registry (`src/widgets`).
  * Plain module so headless checks can call `handleSample` without a Worker.
  */
 import { sampleLayersInto } from '../engine/sampler/gridSampler'
 import { createDotBuffer, dotBufferOver } from '../engine/buffer/dotBuffer'
 import type { DotStyle, GridConfig, JointGeom, ThemeTokens } from '../engine/types'
-import { widgetPresets, withChrome, type WidgetPreset } from '../widgets'
+import { withChrome } from '../widgets/types'
+import { registeredPreset } from '../widgets/registry'
 
 export interface SampleRequest {
   kind: 'sample'; card: number; seq: number; preset: string
@@ -26,11 +29,10 @@ export type SampleReply =
   | { kind: 'frame'; card: number; seq: number; t: number; n: number; capacity: number; bytes: ArrayBuffer; palette: readonly string[]; shape?: DotStyle['shape']; roundness?: number; bitmap?: ImageBitmap; ext?: ArrayBuffer; joints?: JointGeom[] }
   | { kind: 'error'; card: number; seq: number; message: string }
 
-let byId: Map<string, WidgetPreset> | undefined
-/** Sample one frame; the reply's `bytes` must be transferred. */
+/** Sample one frame of a registered preset; the reply's `bytes` must be transferred. */
 export function handleSample(req: SampleRequest): SampleReply {
   try {
-    const p = (byId ??= new Map(widgetPresets.map(w => [w.id, w]))).get(req.preset)
+    const p = registeredPreset(req.preset)
     if (!p) return { kind: 'error', card: req.card, seq: req.seq, message: `unknown preset ${req.preset}` }
     const { grid, style, theme } = req
     const buf = req.bytes && req.bytes.byteLength && req.capacity ? dotBufferOver(req.capacity, req.bytes, [], req.ext) : createDotBuffer(grid.cols * grid.rows)
