@@ -1,4 +1,4 @@
-import type { Field, GridConfig } from '../types'
+import type { CellBounds, Field, GridConfig } from '../types'
 import { createRaster, rasterize, rasterWindow, sample, tightBounds, type Raster, type SpaceId } from '../raster/raster'
 import { blur } from '../raster/ops'
 import type { HeightRaster } from '../light/height'
@@ -37,24 +37,35 @@ function cached<K extends object, V>(store: WeakMap<K, Map<string, V>>, owner: K
   return v
 }
 
+/** Cells i … end of a row: coverage (mode 0 all, 1 field > 0, 2 the mask clamped to 0..1) and the scaled height under it. */
+function coverRow(mode: number, M: Float32Array, S: Float32Array, O: Float32Array, K: Float32Array, scale: number, i: number, end: number): void {
+  for (; i <= end; i++) {
+    const cover = mode === 0 ? 1 : mode === 1 ? (M[i] > 0 ? 1 : 0) : Math.max(0, Math.min(1, M[i]))
+    K[i] = cover
+    if (cover > 0) O[i] = S[i] * scale * cover
+  }
+}
+
 /**
  * Height without an SDF: `field` (0..1) evaluated per cell of `grid` and scaled to cells. Stone veins, weave
  * relief, rust and ripples become relief this way. Cached like `heightRaster` (per field identity → grid,
  * space and options; LRU of 8), so calling it from `layers()` costs a map lookup. Keep the field object stable.
+ * A baked raster on `grid` itself can stand in for the field: its values are used as they are, with no second
+ * rasterization (≡ passing `sample(raster)`, which returns the stored value at every cell centre).
  */
-export function heightFromField(field: Field, grid: GridConfig, o: FieldHeightOptions = {}): HeightRaster {
+export function heightFromField(field: Field | Raster, grid: GridConfig, o: FieldHeightOptions = {}): HeightRaster {
   const scale = o.scale ?? 2, smooth = o.smooth ?? 0, space = o.space ?? 'card', m = o.mask ?? 'field'
   const maskId = typeof m === 'string' ? m : `r${idOf(m)}`
   return cached(fieldHeights, field, `${grid.cols}x${grid.rows}|${space}|${scale}|${smooth}|${maskId}`, () => {
-    const raw = rasterize(field, grid, space), n = grid.cols * grid.rows
+    const raw = typeof field === 'function' ? rasterize(field, grid, space) : field.grid.cols === grid.cols && field.grid.rows === grid.rows && field.space === space ? field : rasterize(sample(field), grid, space)
+    const n = grid.cols * grid.rows
     const src = smooth > 0 ? blur(raw, smooth) : raw
     const out: HeightRaster = { ...createRaster(grid, space), mask: new Float32Array(n) }
-    for (let i = 0; i < n; i++) {
-      const cover = m === 'all' ? 1 : m === 'field' ? (raw.data[i] > 0 ? 1 : 0) : Math.max(0, Math.min(1, m.data[i]))
-      out.mask[i] = cover
-      if (cover > 0) out.data[i] = src.data[i] * scale * cover
-    }
-    out.bounds = m === 'all' ? [0, 0, grid.cols - 1, grid.rows - 1] : tightBounds({ ...out, data: out.mask }) ?? [0, 0, -1, -1]
+    // coverage can only be non-zero inside the field's (or the mask raster's) window: visit just that, row by row
+    const mode = m === 'all' ? 0 : m === 'field' ? 1 : 2, cover = typeof m === 'string' ? raw.data : m.data
+    const win: CellBounds = typeof m === 'string' ? (mode === 0 ? [0, 0, grid.cols - 1, grid.rows - 1] : rasterWindow(raw)) : rasterWindow(m)
+    for (let r = win[1]; r <= win[3]; r++) coverRow(mode, cover, src.data, out.data, out.mask, scale, r * grid.cols + win[0], r * grid.cols + win[2])
+    out.bounds = m === 'all' ? [0, 0, grid.cols - 1, grid.rows - 1] : tightBounds({ ...out, data: out.mask, bounds: win }) ?? [0, 0, -1, -1]
     return out
   })
 }
@@ -135,17 +146,21 @@ export function rake(light: Light, hi = 18 * DEG, lo = 8 * DEG): Light {
 export function cardMask(lf: { field: Field; lattice?: number; origin?: [number, number] }, grid: GridConfig, at = .5): Raster {
   const k = lf.lattice ?? 1, [ox, oy] = lf.origin ?? [0, 0], { cols, rows } = grid
   const lc = Math.max(1, Math.floor((cols - ox) / k)), lr = Math.max(1, Math.floor((rows - oy) / k))
-  const lit = new Uint8Array(lc * lr)
-  for (let j = 0; j < lr; j++) for (let i = 0; i < lc; i++) lit[j * lc + i] = lf.field(lc === 1 ? .5 : i / (lc - 1), lr === 1 ? .5 : j / (lr - 1)) >= at ? 1 : 0
+  const lit = new Uint8Array(lc * lr), b = lf.field.bounds
+  // a bounded field (text, sprites) is 0 outside its bounds: evaluate, and fill, only the lattice window it can light
+  const i0 = b ? Math.max(0, Math.floor(b[0])) : 0, j0 = b ? Math.max(0, Math.floor(b[1])) : 0
+  const i1 = b ? Math.min(lc - 1, Math.ceil(b[2])) : lc - 1, j1 = b ? Math.min(lr - 1, Math.ceil(b[3])) : lr - 1
+  for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) lit[j * lc + i] = lf.field(lc === 1 ? .5 : i / (lc - 1), lr === 1 ? .5 : j / (lr - 1)) >= at ? 1 : 0
   const out = createRaster(grid)
-  for (let r = 0; r < rows; r++) {
+  const win: CellBounds = [Math.max(0, Math.floor(i0 * k + ox - .5)), Math.max(0, Math.floor(j0 * k + oy - .5)), Math.min(cols - 1, Math.ceil((i1 + 1) * k + ox)), Math.min(rows - 1, Math.ceil((j1 + 1) * k + oy))]
+  if (i0 <= i1 && j0 <= j1) for (let r = win[1]; r <= win[3]; r++) {
     const j = Math.floor((r + .5 - oy) / k)
     if (j < 0 || j >= lr) continue
-    for (let c = 0; c < cols; c++) {
+    for (let c = win[0]; c <= win[2]; c++) {
       const i = Math.floor((c + .5 - ox) / k)
       if (i >= 0 && i < lc && lit[j * lc + i]) out.data[r * cols + c] = 1
     }
   }
-  out.bounds = tightBounds(out) ?? [0, 0, -1, -1]
+  out.bounds = (i0 <= i1 && j0 <= j1 ? tightBounds({ ...out, bounds: win }) : undefined) ?? [0, 0, -1, -1]
   return out
 }

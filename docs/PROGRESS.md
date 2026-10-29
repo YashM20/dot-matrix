@@ -143,6 +143,24 @@
     - Grille: the plate shading is now cached per light (LRU of 8, M §3.2's mitigation), so the sun and tilt buckets don't re-shade. Warm is 3.2–3.7 ms raw.
     - The ≤ 4 ms × load gate passed in run 2 and failed in run 1 (Loom and Marble hover).
     - **Cold first frames are still over 30 ms × load**, except the knob. The bakes (relief, EDT, AO, marble turbulence, the terrazzo month) run on the first frame. Still to do: split the bakes, or warm them in idle time.
+    - **Cold-frame pass (round 2, pixel-identical: all 187 goldens match).** In the check's cold module even the engine helpers are barely warm, so the first frame runs mostly interpreted and its cost is the work it does. The bakes now do much less, and their per-cell loops sit in small per-row helpers that reach compiled code inside that one frame:
+      - terrazzo: each day's chip is laid over its own box instead of testing 31 days per cell; the keep-out is a 3×3 row helper over the chips' box; Poisson uses a typed grid, nearest cells first, and d² with an exact `hypot` fallback at the edge;
+      - grille: the hole distance is stamped round each hole (exact d² < 16, ≡ the EDT) instead of a hole raster and two full-grid EDTs; `heightFromField` takes the baked raster and visits only the mask's window;
+      - marble: `cardMask`, `toLattice15`, the colon and its clearing visit only their bounds;
+      - loom: per-row woven runs, and the bare-warp relief is skipped while the shuttle is parked (t = 0);
+      - knob: the SDF is rasterized once for both profiles;
+      - every card: `surfaceLayer` / `tonedLayer` moved to `engine/matter/surface.ts`; the VU caches its per-beat hash.
+    - Cold first frame, ms ÷ load, from `--only board --bench` with the heavy lock held at normal priority. Before: 3 runs at load 2.4–4.7. After: 4 runs at load 1.3–2.5, the box being quieter by then.
+
+      | card | before | after |
+      |---|---|---|
+      | loom | 27–89 | 8–18 |
+      | knob | 8–19 | 6–14 |
+      | grille | 50–124 | 12–24 |
+      | marble | 39–111 | 13–31 |
+      | terrazzo | 65–97 | 17–21 |
+
+      The check passed in 3 of the 4 after-runs; the failing run had marble at 30.9. Warm frames are 0.9–3.1 ms ÷ load, loom 1.7–2.9. First-load code is unchanged: `raster/ops.ts` was left alone because it ships in first load. The +0.01 kB gz that `size.ts --against` reports is lazy-chunk hash names inside `main` / `manifest` / `useTheme`; the bytes are identical apart from those names.
     - The marble rebake is 11–18 ms (the budget is 10 ms × load).
   - Deviations from the M doc:
     - The tie-up toggle redraws the whole panel, because card data carries no edit time, so "only picks ≥ the current one" can't be pure.
@@ -150,7 +168,7 @@
     - The year is drawn as void letters rather than a lit groove, because 1-dot grooves don't read.
     - The matcap LUT agreement is ≥ 97% at 64² (99.3% at 256²), not the plan's 99% at 64².
     - Terrazzo: a tap selects a day through an `xy` control and stays until the next tap, instead of a 3 s preview, which would need time state.
-  - Still to do: cold bakes ≤ 30 ms; the worker chunk; the `pnpm snap` taste pass beside the reference cards; the CHANGELOG / `src/changelog.ts` rows at integration.
+  - Still to do: cold bakes ≤ 30 ms with margin (marble is borderline under load: its engraving still runs two full EDTs and two text masks); the worker chunk; the `pnpm snap` taste pass beside the reference cards; the CHANGELOG / `src/changelog.ts` rows at integration.
 
 **Resume here (2026-10-27):** branch `feat/native-editor-share` merges six parallel tracks on top of `main` (3a1775c, UX U0–U5 slice):
 - **Phone shell** (`src/site/mobile.css`, `BoardSheet`, `Sheet`, `useSwipeDown`, `site/layer.ts`): bottom tab bar EXPLORE / MAKE / ABOUT / TOOLS, sticky title bar that opens a boards sheet, thumb strips, swipe-down sheets, touch palette (no autofocus, boards first), 16 px fields on coarse pointers, safe areas, short-landscape layout, installable PWA (`public/manifest.webmanifest`, dot-field icons).
