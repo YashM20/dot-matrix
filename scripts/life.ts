@@ -26,6 +26,7 @@ import { dot480 } from '../src/engine/theme/tokens'
 import { withChrome, type WidgetPreset } from '../src/widgets/types'
 import { freezeWallClock } from './lib/freeze'
 import { fmtLoaded, medianLoaded } from './lib/load'
+import { lifeL2Checks } from './life-l2'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[s.length >> 1] }
@@ -488,6 +489,9 @@ export async function lifeChecks(assert: Assert): Promise<void> {
     assert('pond-koi: live frame with a moving pointer ≤ 4 ms × load', live.ms <= 4 * live.load, `${fmtLoaded(live)}, mode ${W.mode}`)
     worldReset(W); simReset(sim)
   }
+
+  // ── L2: the ecosystems (scripts/life-l2.ts) ──
+  await lifeL2Checks(assert, pond)
 
   // ── determinism across engines (Bun / JSC), when available ──
   {

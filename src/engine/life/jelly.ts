@@ -89,7 +89,7 @@ export function createJelly(spec: JellySpec): Jelly {
     tNow = ph * dt; pushS = s
     // ── input: a tap pulses every bell now; a moving pointer (hover, or an engaged drag) pushes the current ──
     const p = inp.pointers[0]
-    if (pressStep(s, G, p, dt) === PRESS_TAP) for (let b = 0; b < NB; b++) s[J + JS * b + J_TH] = 0
+    if (pressStep(s, G, p, dt) === PRESS_TAP || inp.kick) for (let b = 0; b < NB; b++) s[J + JS * b + J_TH] = 0
     for (let i = 0; i < PUSH_N * PUSH_N * 2; i++) s[PUSH + i] *= .96
     if (p && p.vx * p.vx + p.vy * p.vy > 4) {
       const gx0 = p.x / 12 - .5, gy0 = p.y / 12 - .5

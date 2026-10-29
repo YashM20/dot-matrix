@@ -32,6 +32,8 @@ export interface Colony {
   /** Descendant count per node (itself included). */
   descendants: Int32Array
   count: number; iterations: number
+  /** Per attractor: 1 = still alive when growth stopped (checks). */
+  alive: Uint8Array
 }
 
 const cache = new Map<string, Colony>()
@@ -114,7 +116,7 @@ function grow(spec: ColonySpec): Colony {
   for (let i = count - 1; i > 0; i--) if (parent[i] >= 0) desc[parent[i]] += desc[i]
   const thickness = new Float32Array(count)
   for (let i = 0; i < count; i++) thickness[i] = dpow(desc[i], 1 / 2.5)
-  return { x: x.slice(0, count), y: y.slice(0, count), parent: parent.slice(0, count), born: born.slice(0, count), thickness, descendants: desc, count, iterations: it - 1 }
+  return { x: x.slice(0, count), y: y.slice(0, count), parent: parent.slice(0, count), born: born.slice(0, count), thickness, descendants: desc, count, iterations: it - 1, alive }
 }
 
 // ── L-systems ───────────────────────────────────────────────────────────────────────────────────────

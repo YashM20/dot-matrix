@@ -64,8 +64,9 @@ export function createSlime(spec: SlimeSpec): Slime {
   function step(s: Float32Array, n: number, inp: StepInput) {
     const ph = phaseSteps(n, start, len)
     if (spec.extra) { if (ph === xOn) s[FOOD + 3 * XS + 2] = 1; else if (ph === xOff) s[FOOD + 3 * XS + 2] = 0 }
-    if (pressStep(s, G, inp.pointers[0], dt) === PRESS_TAP) {
-      const [px, py] = pressAt(s, G)
+    const tap = pressStep(s, G, inp.pointers[0], dt) === PRESS_TAP
+    if (tap || inp.kick) {
+      const [px, py] = tap ? pressAt(s, G) : [72, 77]
       let near = -1, free = -1, nd = 8 * 8
       for (let k = 0; k < SLIME_FOODS; k++) {
         const o = FOOD + 3 * k

@@ -57,9 +57,9 @@ export function createMurmur(spec: MurmurSpec): Murmur {
     const moving = !!p && !p.down && p.vx * p.vx + p.vy * p.vy > 9
     s[G + F_IDLE] = moving || press === PRESS_HOLD ? 0 : s[G + F_IDLE] + dt
     let mode = s[G + F_MODE]
-    if (press === PRESS_TAP) {
+    if (press === PRESS_TAP || inp.kick) {
       // a swoop: a .8 s dive through the flock near the tap (its centroid within 30 cells), or through the tap point
-      const [px, py] = pressAt(s, G + G_PRESS)
+      const [px, py] = press === PRESS_TAP ? pressAt(s, G + G_PRESS) : [72, 77]
       let cx = 0, cy = 0, m = 0
       for (let i = 0; i < N; i++) { const dx = s[X + i] - px, dy = s[Y + i] - py; if (dx * dx + dy * dy < 900) { cx += s[X + i]; cy += s[Y + i]; m++ } }
       const tx = m ? cx / m : px, ty = m ? cy / m : py

@@ -57,8 +57,9 @@ export function createFireflies(spec: FirefliesSpec): Fireflies {
     const p = inp.pointers[0]
     s[G + G_HOVER] += dt
     if (p && !p.down && p.vx * p.vx + p.vy * p.vy > 25 && s[G + G_HOVER] >= .25) { s[G + G_HOVER] = 0; scramble(s, p.x, p.y, 20, n + 101) }
-    if (pressStep(s, G, p, dt) === PRESS_TAP) {
-      const [px, py] = pressAt(s, G)
+    const tap = pressStep(s, G, p, dt) === PRESS_TAP
+    if (tap || inp.kick) {
+      const [px, py] = tap ? pressAt(s, G) : [72, 64]
       for (let i = 0; i < N; i++) { const dx = s[X + i] - px, dy = s[Y + i] - py; if (dx * dx + dy * dy < 30 * 30) s[PH + i] = 1 }
     }
     // ── autopilot ──
