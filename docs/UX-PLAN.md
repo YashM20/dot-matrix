@@ -1,6 +1,6 @@
 # UX-PLAN: low floor, high ceiling
 
-> **Status (2026-10-26):** U0–U4 are built on branch `feat/ux-u0-u1` (not merged to `main` yet), with the DISPLAY ▾ slice of U5. U4 is built too. The build log is §9: what changed, why, the files, how it was checked, and what's pending. It sits alongside `docs/WEB-PLAN.md` (what the site does) and `docs/SHARE-PLAN.md` (per-card pages, export and the shadcn registry, planned).
+> **Status (2026-10-26; merged the same day in PR #6):** U0–U4 are built and on `main`, with the DISPLAY ▾ slice of U5. U4 is built too. The build log is §9: what changed, why, the files, how it was checked, and what's pending. It sits alongside `docs/WEB-PLAN.md` (what the site does) and `docs/SHARE-PLAN.md` (per-card pages, export and the shadcn registry, planned).
 > **Goal (from the user):** the layouts and UI are too complicated and confusing. Anyone should be able to land, explore and dive in, and power users should still get everything. Nothing may break.
 
 ## 1. Research, short
