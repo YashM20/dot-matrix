@@ -11,6 +11,7 @@ import { presets } from '../../engine/theme/tokens'
 import type { DotInstance, GridConfig, ThemeTokens } from '../../engine/types'
 import { SHARE_GRIDS, SHARE_LATTICES, SHARE_TONES, programHash, type ShareGrid, type SharedProgram, type ShareTone } from '../../lib/share'
 import { toBase64 } from '../../spec/codec'
+import type { LayerSpec } from '../../spec/types'
 import { TILE, widgetById } from '../../widgets'
 import { EXAMPLES } from '../dwitter/examples'
 import { compileCard, importDots, importPreset, irLayer, newCard, newId, normalizeZ, paintCells, paintLayer, stackOrder, textLayer, validateCard, type PaintLayer, type StudioCard, type StudioLayer } from '../studio/doc'
@@ -159,13 +160,33 @@ export function moveLayer(d: EditorDoc, s: LayerRef, to: number): EditorDoc {
 /** Bring a frame to the top of the canvas (drawn last, hit first). */
 export const raiseFrame = (d: EditorDoc, id: string): EditorDoc => { const f = frameById(d, id); return f && d.frames[d.frames.length - 1] !== f ? { ...d, frames: [...d.frames.filter(x => x !== f), f] } : d }
 
-/** Shift a layer that has a position (text, sites) by whole cells. Others are fields over the whole card. */
+/**
+ * A card spec v1 layer shifted by whole card cells (E3), or undefined when it has no place of its own:
+ * sites move their points; text moves its anchor (card cells) or, on a lattice, its lattice origin;
+ * a generator and an IR field placed into `bounds` move their origin. A full-card field, a raster: no.
+ */
+export function nudgeSpec(s: LayerSpec, dc: number, dr: number): LayerSpec | undefined {
+  const origin = (o: [number, number] | undefined, lattice: number | undefined) => {
+    const next: [number, number] = [(o?.[0] ?? 0) + dc, (o?.[1] ?? 0) + dr]
+    return !next[0] && !next[1] && lattice === undefined ? undefined : next
+  }
+  const withOrigin = <T extends { origin?: [number, number]; lattice?: number }>(x: T): T => {
+    const { origin: _, ...rest } = x, o = origin(x.origin, x.lattice)
+    return (o ? { ...rest, origin: o } : rest) as T
+  }
+  if (s.kind === 'sites') return { ...s, points: s.points.map(p => (p.length === 3 ? [p[0] + dc, p[1] + dr, p[2]] : [p[0] + dc, p[1] + dr])) }
+  if (s.kind === 'text') return (s.lattice ?? 1) === 1 && !s.origin ? { ...s, at: [s.at[0] + dc, s.at[1] + dr] } : withOrigin(s)
+  if (s.kind === 'generator' || (s.kind === 'ir' && s.bounds)) return withOrigin(s)
+  return undefined
+}
+/** Shift a layer that has a position (text, sites, placed spec layers) by whole cells. Others are fields over the whole card. */
 export function nudgeLayer(l: StudioLayer, dc: number, dr: number): StudioLayer {
   if (l.kind === 'text') return { ...l, params: { ...l.params, col: l.params.col + dc, row: l.params.row + dr } }
   if (l.kind === 'sites') return { ...l, params: { ...l.params, cx: l.params.cx + dc, cy: l.params.cy + dr, x1: l.params.x1 + dc, y1: l.params.y1 + dr } }
+  if (l.kind === 'spec' && (dc || dr)) { const spec = nudgeSpec(l.spec, dc, dr); return spec ? { ...l, spec } : l }
   return l
 }
-export const movable = (l?: StudioLayer) => l?.kind === 'text' || l?.kind === 'sites'
+export const movable = (l?: StudioLayer) => l?.kind === 'text' || l?.kind === 'sites' || (l?.kind === 'spec' && !!nudgeSpec(l.spec, 1, 0))
 
 /**
  * Resize a frame to `cols`×`rows` cells, `dc`/`dr` cells added on the left/top (negative = removed).
@@ -177,7 +198,7 @@ export function resizeFrame(f: EditorFrame, cols: number, rows: number, dc = 0, 
   const pitch = pitchOf(f.card), grid = { ...f.card.grid, cols, rows }
   const layers = f.card.layers.map((l): StudioLayer => {
     if (l.kind === 'paint') return repaint(l, grid, dc, dr)
-    return dc || dr ? nudgeLayer(l, dc, dr) : l
+    return (dc || dr) && (l.kind === 'text' || l.kind === 'sites') ? nudgeLayer(l, dc, dr) : l
   })
   return { ...f, x: f.x - dc * pitch, y: f.y - dr * pitch, card: { ...f.card, grid, layers } }
 }

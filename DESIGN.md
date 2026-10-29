@@ -518,6 +518,7 @@ The HTML chrome has one component per job; a new control reuses one of these ins
 | **segmented** | `.ed-seg` (`role=radio` items); text tabs `.view-tabs`, `.board-groups`, `.ed-tabs` | editor options; views, groups and panels |
 | **sheet** | `Sheet` (`.sheet` › `.sheet-rest` + `.sheet-panel` › `.sheet-grab`, `.sheet-head`, `.sheet-body`): a scroll-snap sheet; the five-dot grab handle is shared with `.pal-grab`, `.ed-sheet-grab`, `.xr-grip` | BOARDS, TOOLS; the phone ⌘K, the editor and X-ray sheets reuse its handle and surface |
 | **menu** | the raised layer (`.skin-menu`, `.ed-menu`, `.wp-more`, `.pal`, `.sheet-panel`) with rows (`.skin-menu button`, `.ed-menu button`, `.wp-more button`, `.pal-item`, sheet rows): `--radius-panel` outside, `--radius-ctl` rows, `--wash-hover` / `--wash-press` | DISPLAY ▾, editor menus, widget MORE, ⌘K, sheets |
+| **floating bar** | `.ed-selbar`, `.ed-qbar`: a `--surface` bar over the canvas (1 px `--line`, `--radius-card` / `--radius-ctl`), grey buttons, the accent edge and `--glow-wash` only on a pressed one | the editor's phone selection bar; the quick bar over a selected layer (tone, lattice, size, EDIT, INK, PICK) |
 | **tooltip** | `[data-tip]` (+ `[data-kbd]` for the keycap) inside a group (`.pal-dock`, `.pill-bar`) | the dock; the widget page pill bars |
 | **keycap** | `kbd` in `.pal`, `.pal-shell`, `.pal-boss`, `.xr-time`, and the tooltip keycap: a dotted edge on a dot-matrix fill | ⌘K footer and hints, the shell, the time machine |
 

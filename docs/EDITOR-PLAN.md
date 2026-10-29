@@ -1,6 +1,7 @@
 # EDITOR-PLAN: one editor for MAKE
 
-> **Status (2026-10-27):** E0 (the vertical slice, §8), E1 (tests + cleanup, §8.1) and E2 (selection, §8.2) are built. MAKE is one
+> **Status (2026-10-29):** E0 (the vertical slice, §8), E1 (tests + cleanup, §8.1), E2 (selection, §8.2) and E3 (editing on
+> canvas, §4.2, §8.3) are built. MAKE is one
 > editor in `src/components/editor/`. The four old tabs (TUNE · COMPOSE · CODE · DRAW) are gone, and so are
 > their screens. Their URLs still work and open the editor on the matching tool. What the editor still uses
 > from the old code is listed in §7.3.
@@ -105,8 +106,8 @@ PaintLayer  { kind: 'paint', lattice, cols, rows, cells /* base64 u8, one per la
 | Move | V | Click selects the layer under the pointer (its lit dots, sampled alone). Empty frame area selects the frame. Drag moves the frame, or a text / sites layer in whole cells. Corner handles resize the frame in cells (text, sites and paint stay put). A mouse drag on empty canvas draws a marquee (touch: pans; see §4.1). |
 | Hand | H, hold Space, middle button | Pan. |
 | Frame | F | Drag out a new card (cells at 2.25 px, the TILE pitch). A click makes a 144² tile. |
-| Draw | B (E = eraser, `[` `]` = size) | Paints into the selected or topmost paint layer. Makes one if needed (lattice 2 on TILE frames), or makes a drawing frame on empty canvas. Right-drag erases. INK sets the dot value. |
-| Text | T | Click a frame: a text layer at that cell (5×7 on a 2× lattice). Its text field is focused. |
+| Draw | B (E = eraser, `[` `]` = size, I = eyedropper) | Paints into the selected or topmost paint layer. Makes one if needed (lattice 2 on TILE frames), or makes a drawing frame on empty canvas. Right-drag erases. INK sets the dot value; I (or Alt-click, or PICK) takes it from a painted dot. |
+| Text | T | Click a frame: a text layer at that cell (5×7 on a 2× lattice), typed into on the canvas at once (§4.2). |
 | Code | C | Click a frame: a Field IR layer, and the CODE tab opens. Empty canvas: a new code frame from the first example. |
 
 Also: Enter / ⇧Enter (into the frame's layers / back up), Esc (back to Move, then up, then deselect),
@@ -151,6 +152,40 @@ global keys (hold T = time machine). `X`, `` ` `` and ⌘K still reach the comma
   a mode rather than a long press, so it never competes with a pan (UX-PLAN §10, *scroll first*): while it
   is on, a tap adds to the selection or takes out, a one-finger drag on empty canvas draws a marquee, and
   two fingers still pan and zoom; LAYERS rows add too. Off, one finger pans as before.
+
+### 4.2 Editing on canvas (E3)
+
+- **Handles of a layer.** One selected sites layer shows its own handles: a ring has a radius handle on the ring
+  and a sweep handle where its arc ends (red); a disc a radius handle; a line one at each end. Radii and ends
+  land on whole cells (1…512). The sweep snaps to the ring's own site step (`2π / n`, `n` = `dotRing`'s count),
+  so an arc always ends on a dot of its full-ring track, from one step to the full ring. START ° / SWEEP ° are
+  also in DESIGN.
+- **Spec layers have a place.** A card spec v1 layer with a place of its own moves in whole card cells (drag,
+  arrows, align): sites move their points, text its anchor (on a lattice: its origin), a generator or an IR
+  field placed into `bounds` its origin. A full-card field and a raster don't move. A spec IR field's selection
+  box is its declared bounds (its whole lattice grid when it has none), with four corners that resize the bounds
+  in whole layer cells (≥ 1×1; the opposite corner stays). DESIGN · PLACE has COL ROW W H, the origin and WHOLE
+  CARD (drop the bounds); the JSON follows every change made elsewhere. Resizing the frame still leaves spec
+  layers to the card (only text, sites and paint keep their place on screen).
+- **Text in place.** A double-click on a text layer, Enter on the selected one, or (touch) a tap on the selected
+  one types into it on the canvas; so does the Text tool. A text layer or a spec text with literal `text`
+  qualifies (a bound number does not). One input, always mounted and invisible, takes the keys (a tap focuses it
+  in its own handler, so a phone opens its keyboard); the letters are the frame's own dots, redrawn through
+  `textAt` / `T.big` as you type, upper case, ≤ 64. The caret and the selected range are drawn over the frame in
+  the middle of a glyph gap (never across a glyph); a press in the text moves the caret. Enter, DONE, a press
+  elsewhere or a blur commit the session as **one undo step**; Esc cancels it. A text typed empty is removed; a
+  text the Text tool just made and left empty leaves no layer and no undo step. On a phone the text being typed
+  pans into the top third, above the keyboard. Locked layers and frames are not typed into.
+- **The quick bar** floats over the one selected layer (above it, below when there is no room, inside the canvas;
+  on a phone above the selection bar, 44 px targets). It holds the kind, TONE (a tap steps through the tones, ⇧
+  back; spec and reference layers also have OWN), LATTICE − / + on the ladder for code, text and spec IR / text /
+  generator layers (a spec text anchor or IR bounds are rescaled so the layer keeps its place on the card),
+  SIZE − / + for sites (`SITE_SIZES`), EDIT / DONE for text, and INK − / + with PICK for paint. Each toggle is one
+  undo step. Its buttons never take focus, so DONE works while typing. No bar on locked layers and frames.
+- **The eyedropper** (I, PICK in the quick bar and in DESIGN · BRUSH, Alt-click while drawing): the next press
+  takes the ink of the painted cell under it (the selected paint layer first, else the topmost one lit there) and
+  rounds it onto the INK ladder (.2 … 1); an empty cell leaves the ink as it was. It never paints and is not a
+  document edit. Esc stops it.
 
 ## 5. Panels
 
@@ -293,6 +328,26 @@ DELETE and errors. Hover is grey.
 Not in E2 (left for later): nested groups; dragging a layer out of a group in LAYERS (it stays in its group;
 ungroup first); a layer marquee on touch; pasting plain text or images from the system clipboard.
 
+### 8.3 What E3 added
+
+- `direct.ts` (React-free): `siteHandles` / `dragSiteHandle`, `ringCount`; `hasBounds`, `specBounds`, `specBox`,
+  `resizeSpecBounds`, `layerBox`; `editableText`, `textOf`, `withText`, `textGeo` (carets in glyph gaps) and
+  `caretAt`; `tonesFor`, `stepTone`, `latticeOf`, `nextRung`, `stepLattice`, `stepSize`; `inkAt`, `inkStep`.
+- `typing.ts`: the typing session (`startTyping`, `typeText`, `placeCaret`, `commitTyping`, `cancelTyping`) over
+  the store's gesture (`begin` / `live` / `end`), so one session is one undo step.
+- `OnCanvas.tsx`: the quick bar and the in-place input with its caret. `doc.ts`: `nudgeSpec`; `movable` and
+  `nudgeLayer` cover placed spec layers. `store.ts`: `picking`, `typing`.
+- `Canvas.tsx`: the site and bounds handles, double-click and tap-to-type, the caret press, the eyedropper, and a
+  touch `pointerdown` that cancels its compatibility mouse events (they would blur the text being typed).
+  `Editor.tsx`: Enter types, I picks, Esc stops a pick; the shortcut list. `Inspector.tsx`: START ° / SWEEP °,
+  PICK INK, the spec PLACE fields, the spec JSON kept in step.
+- Tests: `scripts/editor.ts` adds `editorE3Checks` (30 checks, in `pnpm verify`); `scripts/editor-browser.ts` has
+  an E3 pass on desktop and on the phone, and its Text tool checks now type on the canvas.
+
+Not in E3 (left for later): a start handle for arcs (START ° is in DESIGN), dragging the centre of a ring apart
+from the layer (the layer drag does it), handles for generator params and raster windows, word selection on a
+double-click (it selects all), and text typed in place across several lines (the 5×7 text is one line).
+
 ## 9. Decisions
 
 - **Frames are cards, not boxes.** There is no nesting of frames, auto layout or constraints. A card is a grid
@@ -311,11 +366,11 @@ ungroup first); a layer marquee on touch; pasting plain text or images from the 
 |---|---|
 | **E1 · tests + cleanup** (done, §8.1) | `scripts/editor.ts` in `pnpm verify`; `scripts/editor-browser.ts` (desktop + touch) replaces `studio-browser.ts` / `dots-browser.ts`; the old screens are deleted. Their CSS (`.pg-*`, `.st-*`, `.dw-layout`, `.draw-*`) goes with the CSS tokens pass (T0). |
 | **E2 · selection** (done, §4.1, §8.2) | Marquee and multi-select (⇧-click), group / ungroup layers inside a frame, alignment and distribute, copy / paste (frames and layers, also between tabs), Alt-drag duplicate, smart guides and spacing between frames, lock. |
-| **E3 · editing on canvas** | Direct handles for sites (ring radius / sweep, line ends), text editing in place, lattice / tone quick toggles on the canvas, layer bounds for spec layers, eyedropper for the paint ink. |
+| **E3 · editing on canvas** (done, §4.2, §8.3) | Direct handles for sites (ring radius / sweep, line ends), text editing in place, lattice / tone quick toggles on the canvas, layer bounds for spec layers, eyedropper for the paint ink. |
 | **E4 · animate** | State-machine edges (the old Studio's machine panel, recoverable at `c619dae`), bindings with sources (LFO, clock, pointer, fixtures), a preview / prototype mode that fires press / release edges, and a real multi-track timeline strip under the canvas on desktop. |
 | **E5 · share** | A link for a whole frame or document (deflated JSON, the CODE link's codec, a size cap), remix lineage (the old RemixGraph) in CODE, export of every device profile (`toDevice`) in EXPORT, the scorecard and bar sheet (the old `studio/sheet.ts`, recoverable at `c619dae`) as an EXPORT · QUALITY fold. |
 | **E6 · phone polish** | Long-press context menu (duplicate / delete / order), haptics-free snap feedback, sheet detent memory, landscape layout with a side sheet, `visualViewport` handling when the keyboard is open, a share sheet (`navigator.share`). |
 | **E7 · performance** | Sample frames in the existing worker, let a zoomed-out canvas draw cached bitmaps, and use WebGL frames for GPU-tagged layers (the renderer rules apply per frame). |
 
-**Next three:** E3 text editing in place (and handles for sites); E5 frame links, so a non-code frame can be
-shared like a code layer; E6 the long-press menu on the phone (it can reuse E2's `actions.ts`).
+**Next three:** E5 frame links, so a non-code frame can be shared like a code layer; E6 the long-press menu on
+the phone (it can reuse E2's `actions.ts`, and the E3 quick bar for a layer); E4 the state-machine edges.

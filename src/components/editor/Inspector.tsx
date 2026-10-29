@@ -17,7 +17,8 @@ import { EXAMPLES } from '../dwitter/examples'
 import { presetAsSpecCard, specV1 } from '../studio/adapter'
 import { BLENDS, LATTICES, paintCells, SITE_SIZES, TONES, type LayerTone, type PaintLayer, type SitesLayer, type StudioCard, type StudioLayer, type TextLayer, type IRLayer, type Motion } from '../studio/doc'
 import { trackSpans, type Track } from '../studio/playback'
-import { cellsFromMatrix, duplicateFrame, duplicateLayer, editCard, editFrame, editLayer, encodeCells, frameById, groupOf, layerOf, moveLayer, newIRLayer, removeFrame, removeLayer, renameGroup, seedDoc, shareable, THEMES, topDown, type EditorFrame, type Sel, type ThemeName } from './doc'
+import { specBounds } from './direct'
+import { cellsFromMatrix, duplicateFrame, duplicateLayer, editCard, editFrame, editLayer, encodeCells, frameById, groupOf, layerOf, movable, moveLayer, newIRLayer, removeFrame, removeLayer, renameGroup, seedDoc, shareable, THEMES, topDown, type EditorFrame, type Sel, type ThemeName } from './doc'
 import { arrangeSel, copyEverywhere, deleteSel, duplicateSel, groupSel, lockSel, paste, ungroupSel } from './actions'
 import { exporters, recordFrame } from './exporters'
 import { ALIGNS, selCount, selGroup, selIds, type Align } from './select'
@@ -72,7 +73,7 @@ function ManyPanel({ f }: { f: EditorFrame }) {
       {g && <div className="ed-grid2"><Text label="NAME" value={g.name} onChange={v => edit(d => renameGroup(d, f.id, g.id, v), `group:${g.id}`)} /></div>}
       <ul className="ed-mini-list">{ids.map(id => <li key={id}><button type="button" onClick={() => select(layers ? { frame: f.id, layer: id } : { frame: id })}>{name(id)}</button></li>)}</ul>
     </Section>
-    <Section title="ALIGN" aside={layers ? (ids.length === 1 ? 'to the frame · text and sites, whole cells' : 'text and sites, whole cells') : 'Alt+A D W S H V'}>
+    <Section title="ALIGN" aside={layers ? (ids.length === 1 ? 'to the frame · text, sites, placed spec · whole cells' : 'text, sites, placed spec · whole cells') : 'Alt+A D W S H V'}>
       <div className="ed-row-btns ed-align">{ALIGNS.map(a => <button key={a} type="button" aria-label={`Align ${ALIGN_LABEL[a].toLowerCase()}`} onClick={() => arrangeSel(a)}>{ALIGN_LABEL[a]}</button>)}</div>
       <div className="ed-row-btns">
         <button type="button" disabled={ids.length < 3} onClick={() => arrangeSel('dist-x')}>DISTRIBUTE ↔</button>
@@ -214,7 +215,7 @@ function LayerPanel({ f, l }: { f: EditorFrame; l: StudioLayer }) {
     {l.kind === 'sites' && <SiteFields l={l} />}
     {l.kind === 'paint' && <PaintFields f={f} l={l} />}
     {(l.kind === 'ir' || l.kind === 'sites') && <Section title="FIELD"><pre className="ed-code-peek">{l.src.split('\n').slice(0, 4).join('\n')}</pre><div className="ed-row-btns"><button type="button" onClick={() => setRight('code')}>EDIT CODE</button></div></Section>}
-    {l.kind === 'spec' && <SpecFields key={l.id} l={l} />}
+    {l.kind === 'spec' && <SpecFields key={l.id} f={f} l={l} />}
     {ro && <p className="ed-hint">Layer <b>#{l.params.index}</b> of preset <b>{l.params.preset}</b>, live and read-only. Select its frame and press MAKE EDITABLE to change its field or text.</p>}
     <Section title="ARRANGE">
       <div className="ed-row-btns">
@@ -233,7 +234,7 @@ function LayerPanel({ f, l }: { f: EditorFrame; l: StudioLayer }) {
 function TextFields({ l }: { l: TextLayer }) {
   const { layer } = useTarget()
   const set = (p: Partial<TextLayer['params']>, tag = `text:${l.id}`) => layer(x => ({ ...x, params: { ...(x as TextLayer).params, ...p } }) as StudioLayer, tag)
-  return <Section title="TEXT" aside="drag it on the canvas">
+  return <Section title="TEXT" aside="drag it · double-click (tap when selected) to type on the canvas">
     <div className="ed-grid2">
       <label className="ed-field ed-wide"><span>TEXT</span><input data-focus="text" value={l.params.text} maxLength={64} autoCapitalize="characters" spellCheck={false} onChange={e => set({ text: e.target.value.toUpperCase() })} /></label>
       <Num label="COL" value={l.params.col} onChange={col => set({ col }, `col:${l.id}`)} />
@@ -247,7 +248,8 @@ function TextFields({ l }: { l: TextLayer }) {
 function SiteFields({ l }: { l: SitesLayer }) {
   const { layer } = useTarget(), p = l.params
   const set = (q: Partial<SitesLayer['params']>, k: string) => layer(x => ({ ...x, params: { ...(x as SitesLayer).params, ...q } }) as StudioLayer, `${k}:${l.id}`)
-  return <Section title="SITES" aside="drag it on the canvas">
+  const deg = (r: number) => Math.round((r * 180) / Math.PI), rad = (d: number) => (d * Math.PI) / 180
+  return <Section title="SITES" aside="drag it, or its handles on the canvas">
     <div className="ed-grid2">
       <Pick label="SHAPE" value={p.shape} options={['ring', 'line', 'disc'] as const} onChange={shape => set({ shape }, 'shape')} />
       <Pick label="SIZE" value={l.size} options={SITE_SIZES} onChange={size => layer(x => ({ ...x, size }) as StudioLayer)} fmt={s => `${s}×`} />
@@ -255,11 +257,12 @@ function SiteFields({ l }: { l: SitesLayer }) {
       <Num label={p.shape === 'line' ? 'Y0' : 'CY'} value={p.cy} onChange={cy => set({ cy }, 'cy')} />
       {p.shape === 'line' ? <><Num label="X1" value={p.x1} onChange={x1 => set({ x1 }, 'x1')} /><Num label="Y1" value={p.y1} onChange={y1 => set({ y1 }, 'y1')} /></> : <Num label="RADIUS" value={p.r} min={1} max={512} onChange={r => set({ r }, 'r')} />}
       <Num label="SPACING" value={p.spacing} min={1} max={64} step={.5} onChange={spacing => set({ spacing }, 'sp')} />
+      {p.shape === 'ring' && <><Num label="START °" value={deg(p.start)} min={-360} max={360} step={5} onChange={d => set({ start: rad(d) }, 'start')} /><Num label="SWEEP °" value={deg(p.sweep)} min={1} max={360} step={5} onChange={d => set({ sweep: rad(d) }, 'sweep')} /></>}
     </div>
   </Section>
 }
 function PaintFields({ f, l }: { f: EditorFrame; l: PaintLayer }) {
-  const { layer } = useTarget(), brush = useEditor(s => s.brush), { setBrush, setTool, setNote } = useEditor.getState(), tool = useEditor(s => s.tool)
+  const { layer } = useTarget(), brush = useEditor(s => s.brush), picking = useEditor(s => s.picking), { setBrush, setTool, setNote, setPicking } = useEditor.getState(), tool = useEditor(s => s.tool)
   const [busy, setBusy] = useState(false)
   const file = useRef<HTMLInputElement>(null)
   const lit = paintCells(l).reduce((n, v) => n + (v > 0 ? 1 : 0), 0)
@@ -276,8 +279,9 @@ function PaintFields({ f, l }: { f: EditorFrame; l: PaintLayer }) {
   }
   return <Section title="BRUSH" aside={`${l.cols}×${l.rows} · ${lit} lit`}>
     <div className="ed-row-btns">
-      <button type="button" aria-pressed={tool === 'draw' && !brush.erase} onClick={() => { setTool('draw'); setBrush({ erase: false }) }}>PAINT (B)</button>
-      <button type="button" aria-pressed={tool === 'draw' && brush.erase} onClick={() => { setTool('draw'); setBrush({ erase: true }) }}>ERASE (E)</button>
+      <button type="button" aria-pressed={tool === 'draw' && !brush.erase && !picking} onClick={() => { setTool('draw'); setBrush({ erase: false }) }}>PAINT (B)</button>
+      <button type="button" aria-pressed={tool === 'draw' && brush.erase && !picking} onClick={() => { setTool('draw'); setBrush({ erase: true }) }}>ERASE (E)</button>
+      <button type="button" aria-pressed={picking} onClick={() => { setPicking(!picking); if (!picking) setNote('PICK: tap a painted dot to take its ink') }} title="Eyedropper: the ink of a painted dot (I, or Alt-click while drawing)">PICK INK (I)</button>
     </div>
     <Slider label="SIZE" hint="[ ]" value={brush.size} min={1} max={8} step={1} onChange={size => setBrush({ size })} fmt={v => String(v)} />
     <Slider label="INK" hint="dot value" value={brush.value} min={.2} max={1} step={.2} onChange={value => setBrush({ value })} />
@@ -287,18 +291,35 @@ function PaintFields({ f, l }: { f: EditorFrame; l: PaintLayer }) {
       <button type="button" disabled={busy} onClick={() => file.current?.click()}>{busy ? 'TRACING…' : 'TRACE A PICTURE'}</button>
     </div>
     <input ref={file} type="file" accept="image/*" hidden aria-label="Picture to trace into this paint layer" onChange={e => { void trace(e.target.files?.[0]); e.target.value = '' }} />
-    <p className="ed-hint">Paints whole cells of the {l.lattice}× lattice in {f.card.name}. Right-drag erases. Two fingers pan and zoom.</p>
+    <p className="ed-hint">Paints whole cells of the {l.lattice}× lattice in {f.card.name}. Right-drag erases; PICK INK (or Alt-click) takes the ink of a painted dot. Two fingers pan and zoom.</p>
   </Section>
 }
-function SpecFields({ l }: { l: Extract<StudioLayer, { kind: 'spec' }> }) {
+function SpecFields({ f, l }: { f: EditorFrame; l: Extract<StudioLayer, { kind: 'spec' }> }) {
   const { layer } = useTarget()
   const [text, setText] = useState(() => JSON.stringify(l.spec, null, 1)), [err, setErr] = useState('')
-  const big = text.length > 20000
-  return <Section title="SPEC JSON" aside={l.spec.kind}>
-    <textarea className="ed-json" aria-label="Spec layer JSON" spellCheck={false} rows={8} readOnly={big} value={big ? text.slice(0, 20000) : text}
-      onChange={e => { const v = e.target.value; setText(v); try { const spec = JSON.parse(v); if (!spec?.kind) throw new Error('needs a "kind"'); layer(x => ({ ...x, spec }) as StudioLayer, `spec:${l.id}`); setErr('') } catch (er) { setErr((er as Error).message) } }} />
-    {err && <p className="ed-bad" role="alert">JSON: {err}</p>}
-  </Section>
+  // a change made elsewhere (a drag, the bounds handles, the quick bar, undo) rewrites the JSON; typing here does not
+  const mine = useRef(l.spec)
+  useEffect(() => { if (l.spec !== mine.current) { mine.current = l.spec; setText(JSON.stringify(l.spec, null, 1)); setErr('') } }, [l.spec])
+  const big = text.length > 20000, s = l.spec
+  const setSpec = (spec: typeof s, tag: string) => layer(x => ({ ...x, spec }) as StudioLayer, `${tag}:${l.id}`)
+  const ir = s.kind === 'ir' ? s : undefined, b = ir ? specBounds(f, ir) : undefined
+  return <>
+    {(ir || (movable(l) && s.kind !== 'sites')) && <Section title="PLACE" aside={ir ? 'bounds in layer cells · drag the corners on the canvas' : 'drag it on the canvas · whole cells'}>
+      <div className="ed-grid2">
+        {ir && b && (['COL', 'ROW', 'W', 'H'] as const).map((k, i) => <Num key={k} label={k} value={b[i]} min={i > 1 ? 1 : -512} max={512} onChange={v => { const nb = [...b] as [number, number, number, number]; nb[i] = Math.round(v); setSpec({ ...ir, bounds: nb }, 'bounds') }} />)}
+        {'origin' in s || s.kind !== 'sites' ? <>
+          <Num label="ORIGIN X" value={(s as { origin?: [number, number] }).origin?.[0] ?? 0} onChange={x => setSpec({ ...s, origin: [Math.round(x), (s as { origin?: [number, number] }).origin?.[1] ?? 0] } as typeof s, 'origin')} />
+          <Num label="ORIGIN Y" value={(s as { origin?: [number, number] }).origin?.[1] ?? 0} onChange={y => setSpec({ ...s, origin: [(s as { origin?: [number, number] }).origin?.[0] ?? 0, Math.round(y)] } as typeof s, 'origin')} />
+        </> : null}
+      </div>
+      {ir?.bounds && <div className="ed-row-btns"><button type="button" onClick={() => { const { bounds: _, ...rest } = ir; setSpec(rest, 'bounds') }}>WHOLE CARD</button></div>}
+    </Section>}
+    <Section title="SPEC JSON" aside={l.spec.kind}>
+      <textarea className="ed-json" aria-label="Spec layer JSON" spellCheck={false} rows={8} readOnly={big} value={big ? text.slice(0, 20000) : text}
+        onChange={e => { const v = e.target.value; setText(v); try { const spec = JSON.parse(v); if (!spec?.kind) throw new Error('needs a "kind"'); mine.current = spec; layer(x => ({ ...x, spec }) as StudioLayer, `spec:${l.id}`); setErr('') } catch (er) { setErr((er as Error).message) } }} />
+      {err && <p className="ed-bad" role="alert">JSON: {err}</p>}
+    </Section>
+  </>
 }
 
 // ── ANIMATE ────────────────────────────────────────────────────────────────

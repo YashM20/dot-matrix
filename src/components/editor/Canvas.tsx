@@ -11,12 +11,15 @@
  * frames off screen are skipped.
  */
 import { memo, useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react'
-import { PAINT_LIVE, paintCells, paintLayer, type PaintLayer, type StudioLayer } from '../studio/doc'
+import { PAINT_LIVE, paintCells, paintLayer, type PaintLayer, type SitesLayer, type SpecLayer, type StudioLayer } from '../studio/doc'
 import { EXAMPLES } from '../dwitter/examples'
-import { addFrame, addLayer, blankCard, copyFrames, copyLayers, drawingCard, editFrame, editLayer, encodeCells, frameById, frameSize, hitFrame, hitLayer, layerBounds, layerOf, line, movable, newIRLayer, newTextLayer, nudgeLayer, paintCellAt, pitchOf, programCard, programSource, stamp, topDown, type EditorDoc, type EditorFrame } from './doc'
+import { addFrame, addLayer, blankCard, copyFrames, copyLayers, drawingCard, editFrame, editLayer, encodeCells, frameById, frameSize, hitFrame, hitLayer, layerOf, line, movable, newIRLayer, newTextLayer, nudgeLayer, paintCellAt, pitchOf, programCard, programSource, stamp, topDown, type EditorDoc, type EditorFrame } from './doc'
 import { dragCells, dragFramePos, draftFrame, pinchCam, PRESS_SLOP, resizeByHandle, type Handle } from './input'
 import { drawFrame, drawPaste, isAnimated, resolutionFor } from './render'
-import { canResize, clickLayer, frameBox, framesBox, framesSel, inSel, layersSel, marqueeLayers, marqueeSel, normBox, resizeGroup, selFrames, selIds, selLayers, snapBox, toggleSel, type Box, type Gap, type Guide } from './select'
+import { canResize, clickLayer, frameBox, framesBox, framesSel, inSel, layersSel, marqueeLayers, marqueeSel, normBox, resizeGroup, selCount, selFrames, selIds, selLayers, snapBox, toggleSel, type Box, type Gap, type Guide } from './select'
+import { caretAt, dragSiteHandle, editableText, hasBounds, inkAt, inkStep, layerBox, resizeSpecBounds, siteHandles, textGeo, type SiteHandle } from './direct'
+import { InText, QuickBar } from './OnCanvas'
+import { commitTyping, placeCaret, startTyping } from './typing'
 import { useEditor, type Camera } from './store'
 
 /** Probe hooks (scripts/editor-browser.ts): draw stats, the selected frame id and every selected id. */
@@ -59,7 +62,7 @@ type Op =
   | { kind: 'pan'; sx: number; sy: number; cam: Camera; tapClear?: boolean }
   | { kind: 'pinch'; d: number; mx: number; my: number; cam: Camera }
   /** Pressed a frame (or its label): a click selects on release (touch) or narrows the selection; a drag moves. */
-  | { kind: 'press'; sx: number; sy: number; wx: number; wy: number; frame: string; layer?: string; touch: boolean; was: boolean; toggle: boolean; inside: boolean }
+  | { kind: 'press'; sx: number; sy: number; wx: number; wy: number; frame: string; layer?: string; touch: boolean; was: boolean; toggle: boolean; inside: boolean; already?: boolean }
   /** A marquee: over frames (world box), or over the layers of `frame` (Ctrl/⌘-drag on it; a click picks `pick`). */
   | { kind: 'marquee'; sx: number; sy: number; wx: number; wy: number; add: boolean; base: { frame?: string; layer?: string; more?: string[] }; frame?: string; pick?: string; moved: boolean; touch: boolean }
   | { kind: 'drag-frames'; ids: string[]; wx: number; wy: number; at0: Map<string, { x: number; y: number }>; box0: Box }
@@ -69,6 +72,10 @@ type Op =
   | { kind: 'frame-draw'; wx: number; wy: number; wx1: number; wy1: number }
   | { kind: 'stroke'; frame: string; layer: string; cells: Uint8Array; last?: [number, number]; value: number }
   | { kind: 'tap'; sx: number; sy: number }
+  /** A sites handle (E3): ring radius / sweep, disc radius, line ends. */
+  | { kind: 'site'; frame: string; l0: SitesLayer; handle: SiteHandle }
+  /** A corner of a spec field's bounds (E3). */
+  | { kind: 'bounds'; frame: string; l0: SpecLayer & { spec: Extract<SpecLayer['spec'], { kind: 'ir' }> }; handle: Handle; wx: number; wy: number }
 
 export function Canvas({ phone }: { phone: boolean }) {
   const vp = useRef<HTMLDivElement>(null), paste = useRef<HTMLCanvasElement>(null)
@@ -176,7 +183,7 @@ export function Canvas({ phone }: { phone: boolean }) {
       if (commitIt) s.live(d => editLayer(d, { frame: o.frame, layer: o.layer }, l => ({ ...l, cells: encodeCells(o.cells) }) as PaintLayer))
       PAINT_LIVE.delete(o.layer); markDirty(o.frame)
       if (commitIt) s.end(); else s.cancel()
-    } else if (o.kind === 'drag-frames' || o.kind === 'drag-layers' || o.kind === 'resize' || o.kind === 'resize-group') {
+    } else if (o.kind === 'drag-frames' || o.kind === 'drag-layers' || o.kind === 'resize' || o.kind === 'resize-group' || o.kind === 'site' || o.kind === 'bounds') {
       if (commitIt) s.end(); else s.cancel()
     } else if (o.kind === 'marquee') {
       setMarq(undefined)
@@ -227,6 +234,18 @@ export function Canvas({ phone }: { phone: boolean }) {
     if (n) markDirty(f.id)
   }
 
+  /** The eyedropper: the ink of the painted dot under the pointer becomes the brush's (one of its .2 steps). */
+  const pickInk = (wx: number, wy: number) => {
+    const s = useEditor.getState(), f = hitFrame(s.h.present, wx, wy)
+    s.setPicking(false)
+    const hit = f && inkAt(f, wx - f.x, wy - f.y, s.sel.frame === f.id ? s.sel.layer : undefined)
+    if (!f || !hit) { s.setNote('no paint there: the eyedropper takes the ink of a painted dot'); return }
+    s.select({ frame: f.id, layer: hit.layer.id })
+    if (hit.value <= 0) { s.setNote(`that cell of ${hit.layer.name} is empty: the ink stays ${s.brush.value.toFixed(1)}`); return }
+    const v = inkStep(hit.value)
+    s.setBrush({ value: v, erase: false }); s.setNote(`ink ${v.toFixed(1)} from ${hit.layer.name}`)
+  }
+
   /** Start moving frames (Alt: copies of them, made in place first; the whole gesture is one undo step). */
   const dragFrames = (ids: string[], wx: number, wy: number, alt: boolean) => {
     const s = useEditor.getState()
@@ -249,7 +268,20 @@ export function Canvas({ phone }: { phone: boolean }) {
 
   const onDown = (e: RPointerEvent<HTMLDivElement>) => {
     const el = vp.current!
+    // the quick bar's buttons are buttons: no canvas gesture, no capture (their click must land)
+    if ((e.target as HTMLElement).closest('.ed-qbar')) return
     const { sx, sy } = local(e), { wx, wy } = world(sx, sy), s = useEditor.getState()
+    // a touch must not fire the compatibility mousedown: it would blur the text being typed in place
+    if (e.pointerType === 'touch') e.preventDefault()
+    if (s.typing && !pointers.current.size) {
+      // typing in place: a press on the text moves the caret; anywhere else finishes the text first
+      const f = frameById(s.h.present, s.typing.frame), l = f?.card.layers.find(x => x.id === s.typing!.layer), g = l && textGeo(l)
+      if (f && g && e.button === 0) {
+        const p = pitchOf(f.card), c = (wx - f.x) / p, r = (wy - f.y) / p
+        if (c >= g.left - 1 && c <= g.carets[g.carets.length - 1] + 1 && r >= g.top - 1 && r <= g.top + g.h + 1) { e.preventDefault(); placeCaret(caretAt(g, c)); return }
+      }
+      commitTyping()
+    }
     pointers.current.set(e.pointerId, { x: sx, y: sy, type: e.pointerType })
     try { el.setPointerCapture(e.pointerId) } catch { /* synthetic */ }
     if (pointers.current.size === 2) {
@@ -264,6 +296,13 @@ export function Canvas({ phone }: { phone: boolean }) {
     const touch = e.pointerType === 'touch', toggle = e.shiftKey || (touch && s.selectMode)
     if (e.button === 1 || space || s.tool === 'hand') { e.preventDefault(); op.current = { kind: 'pan', sx, sy, cam: s.cam }; return }
     if (e.button !== 0 && !(e.button === 2 && s.tool === 'draw')) return
+    const site = target.closest<HTMLElement>('[data-site]'), bnd = target.closest<HTMLElement>('[data-bounds]')
+    if (site || bnd) {
+      const f = frameById(s.h.present, s.sel.frame), l = layerOf(s.h.present, s.sel)
+      if (f && site && l?.kind === 'sites') { s.begin(); op.current = { kind: 'site', frame: f.id, l0: l, handle: site.dataset.site as SiteHandle } }
+      else if (f && bnd && hasBounds(l)) { s.begin(); op.current = { kind: 'bounds', frame: f.id, l0: l, handle: bnd.dataset.bounds as Handle, wx, wy } }
+      return
+    }
     if (handle) {
       if (handle.dataset.group) {
         const f0s = selFrames(s.sel).map(id => frameById(s.h.present, id)).filter((f): f is EditorFrame => !!f)
@@ -280,7 +319,7 @@ export function Canvas({ phone }: { phone: boolean }) {
       op.current = { kind: 'press', sx, sy, wx, wy, frame: id, touch: false, was: true, toggle, inside }
       return
     }
-    if (s.tool === 'draw') { startStroke(wx, wy, s.brush.erase || e.button === 2); return }
+    if (s.tool === 'draw') { if (s.picking || (e.altKey && e.button === 0)) pickInk(wx, wy); else startStroke(wx, wy, s.brush.erase || e.button === 2); return }
     if (s.tool === 'frame') { op.current = { kind: 'frame-draw', wx, wy, wx1: wx, wy1: wy }; return }
     if (s.tool === 'text' || s.tool === 'code') { op.current = { kind: 'tap', sx, sy }; return }
     // move / select (locked frames let the press through to the canvas under them)
@@ -305,8 +344,10 @@ export function Canvas({ phone }: { phone: boolean }) {
     const hit = l ? { frame: f.id, layer: l.id } : { frame: f.id }
     const inside = s.sel.layer ? inSel(s.sel, hit) : selFrames(s.sel).length > 1 && selFrames(s.sel).includes(f.id)
     const was = s.sel.frame === f.id || inside
+    // a tap on the one selected text layer types into it (touch; a mouse double-clicks)
+    const already = !!l && s.sel.layer === l.id && selCount(s.sel) === 1 && editableText(l)
     if (!touch && !inside) s.select(toggle ? toggleSel(s.sel, hit) : l ? clickLayer(f, l.id, s.sel) : { frame: f.id })
-    op.current = { kind: 'press', sx, sy, wx, wy, frame: f.id, layer: l?.id, touch, was, toggle, inside }
+    op.current = { kind: 'press', sx, sy, wx, wy, frame: f.id, layer: l?.id, touch, was, toggle, inside, already }
   }
 
   const onMove = (e: RPointerEvent<HTMLDivElement>) => {
@@ -392,6 +433,13 @@ export function Canvas({ phone }: { phone: boolean }) {
       s.live(d => o.base.reduce((x, b) => editLayer(x, { frame: o.frame, layer: b.id }, () => nudgeLayer(b, dc, dr)), d))
       return
     }
+    if (o.kind === 'site' || o.kind === 'bounds') {
+      const f = frameById(s.h.present, o.frame)
+      if (!f) return
+      const next = o.kind === 'site' ? dragSiteHandle(f, o.l0, o.handle, wx - f.x, wy - f.y) : resizeSpecBounds(f, o.l0, o.handle, wx - o.wx, wy - o.wy)
+      s.live(d => editLayer(d, { frame: o.frame, layer: o.l0.id }, () => next))
+      return
+    }
     if (o.kind === 'resize') {
       const next = resizeByHandle(o.f0, o.handle, wx - o.wx, wy - o.wy)
       s.live(d => editFrame(d, o.id, () => next))
@@ -412,6 +460,7 @@ export function Canvas({ phone }: { phone: boolean }) {
       op.current = undefined
       const f = frameById(s.h.present, o.frame), hit = o.layer ? { frame: o.frame, layer: o.layer } : { frame: o.frame }
       if (!f) return
+      if (o.touch && o.already && !o.toggle && o.layer && startTyping(o.frame, o.layer)) return
       // a click (no drag). Touch selects on release, so a pan never changes the selection; a click inside
       // a selection of many narrows it to what is under the pointer (⇧: takes it out)
       if (o.toggle) { if (o.touch || o.inside) s.select(toggleSel(s.sel, hit)) }
@@ -439,9 +488,11 @@ export function Canvas({ phone }: { phone: boolean }) {
       if (f?.locked) { s.setNote(`${f.card.name} is locked (Ctrl+⇧L unlocks it)`); return }
       if (s.tool === 'text') {
         if (!f) { s.setNote('Tap inside a frame to add text'); return }
-        s.addLayerTo(f.id, newTextLayer(f.card.layers.length + 1, Math.round((wx - f.x) / p), Math.round((wy - f.y) / p)))
-        s.setTool('move'); s.setRight('design'); if (phone) s.setSheet('inspector')
-        window.setTimeout(() => document.querySelector<HTMLInputElement>('.ed-insp [data-focus="text"]')?.select(), 60)
+        // the new layer and what is typed into it on the canvas are one undo step
+        const nl = newTextLayer(f.card.layers.length + 1, Math.round((wx - f.x) / p), Math.round((wy - f.y) / p)), fid = f.id
+        s.begin(); s.live(d => addLayer(d, fid, nl))
+        s.setTool('move'); s.setRight('design')
+        startTyping(fid, nl.id, { begun: true, created: true })
       } else {
         if (f) s.addLayerTo(f.id, newIRLayer(f.card.layers.length + 1))
         else { const ex = EXAMPLES[0]; const id = s.insertCard(programCard(ex), { at: { x: wx - 162, y: wy - 162 }, source: programSource(ex) }); s.select({ frame: id, layer: topDown(frameById(s.h.present, id)!.card)[0]?.id }) }
@@ -451,10 +502,19 @@ export function Canvas({ phone }: { phone: boolean }) {
     }
     finish(true)
   }
+  /** A double-click on a text layer types into it on the canvas (all of its text selected). */
+  const onDouble = (e: { clientX: number; clientY: number }) => {
+    const s = useEditor.getState()
+    if (s.tool !== 'move' || s.typing) return
+    const { sx, sy } = local(e), { wx, wy } = world(sx, sy), f = hitFrame(s.h.present, wx, wy, true)
+    const l = f && !f.locked ? hitLayer(f, wx - f.x, wy - f.y) : undefined
+    if (f && l && editableText(l)) startTyping(f.id, l.id)
+  }
   const onCancel = (e: RPointerEvent<HTMLDivElement>) => { pointers.current.delete(e.pointerId); if (op.current?.kind !== 'pinch') finish(false); else if (pointers.current.size < 2) op.current = undefined }
   const onLeave = () => { glow.current = undefined; pasteDirty.current = true; if (!op.current) setHover(undefined); feedPointer(undefined, 0, 0) }
 
-  const cursor = space || tool === 'hand' ? 'grab' : tool === 'draw' ? 'none' : tool === 'frame' || tool === 'code' ? 'crosshair' : tool === 'text' ? 'text' : 'default'
+  const picking = useEditor(s => s.picking), typing = useEditor(s => s.typing), vpSize = useEditor(s => s.vp)
+  const cursor = space || tool === 'hand' ? 'grab' : tool === 'draw' ? (picking ? 'crosshair' : 'none') : tool === 'frame' || tool === 'code' ? 'crosshair' : tool === 'text' ? 'text' : 'default'
   const doc = useEditor(s => s.h.present)
   const selFrame = frameById(doc, sel.frame), selLayer = layerOf(doc, sel)
   const scr = (b: Box): CSSProperties => ({ left: b[0] * cam.z + cam.x, top: b[1] * cam.z + cam.y, width: (b[2] - b[0]) * cam.z, height: (b[3] - b[1]) * cam.z })
@@ -472,10 +532,17 @@ export function Canvas({ phone }: { phone: boolean }) {
   const groupBox = many ? framesBox(doc, picked.map(f => f.id)) : undefined
   const resizable = !many && selFrame && !selLayer && !selFrame.card.reference && !selFrame.locked
   const pickedLayers = selFrame && sel.layer ? selLayers(sel).map(id => selFrame.card.layers.find(l => l.id === id)).filter((l): l is StudioLayer => !!l) : []
+  // E3: one layer selected → its box, its own handles (sites, spec bounds) and the quick bar
+  const one = selFrame && !selFrame.hidden && selLayer && selCount(sel) === 1 ? selLayer : undefined
+  const editable = !!one && !!selFrame && !selFrame.locked && !selFrame.locks?.includes(one.id) && !selFrame.card.reference
+  const direct = editable && tool === 'move' && !typing
+  const oneBox = one && selFrame ? layerBox(selFrame, one) ?? [0, 0, frameSize(selFrame).w, frameSize(selFrame).h] : undefined
+  const showBar = !!oneBox && !!selFrame && !selFrame.locked && !selFrame.locks?.includes(one!.id) && (tool === 'move' || (tool === 'draw' && one!.kind === 'paint'))
+  const typingFrame = typing && frameById(doc, typing.frame), typingLayer = typingFrame ? typingFrame.card.layers.find(l => l.id === typing!.layer) : undefined
   const handles = (group: boolean, id?: string) => (['nw', 'ne', 'sw', 'se'] as Handle[]).map(hd => <i key={hd} className={`ed-handle ${hd}`} data-handle={hd} data-frame-id={id} data-group={group ? '1' : undefined} />)
   return (
     <div ref={vp} className={`ed-viewport tool-${tool}${selectMode ? ' is-selecting' : ''}`} style={{ cursor }} onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onCancel} onPointerLeave={onLeave}
-      onContextMenu={e => e.preventDefault()} role="application" aria-label="Canvas: frames of dot cards. Drag on empty canvas to select, arrow keys nudge the selection, Shift+1 fits everything.">
+      onDoubleClick={onDouble} onContextMenu={e => e.preventDefault()} role="application" aria-label="Canvas: frames of dot cards. Drag on empty canvas to select, arrow keys nudge the selection, Shift+1 fits everything.">
       <canvas ref={paste} className="ed-paste" aria-hidden="true" />
       <div className="ed-world" style={{ transform: `translate(${cam.x}px, ${cam.y}px) scale(${cam.z})` }}>
         {frames.map(f => <FrameView key={f.id} f={f} />)}
@@ -486,18 +553,24 @@ export function Canvas({ phone }: { phone: boolean }) {
           return <button key={f.id} type="button" tabIndex={-1} data-frame-label={f.id} className={`ed-flabel${on ? ' on' : ''}${f.locked ? ' locked' : ''}`} style={{ left: b.left, top: (b.top as number) - 22, maxWidth: Math.max(48, b.width as number) }}
             onClick={e => { if (e.detail === 0) useEditor.getState().select({ frame: f.id }) /* keyboard / script: pointer clicks select on press and release */ }}>{f.card.name}<small>{f.card.grid.cols}×{f.card.grid.rows}</small>{f.locked && <i className="ed-flock">LOCKED</i>}</button>
         })}
-        {hoverFrame && !(selFrames(sel).includes(hoverFrame.id) && !hoverLayer) && <div className="ed-hover" style={box(hoverFrame, hoverLayer && layerBounds(hoverFrame, hoverLayer))} />}
+        {hoverFrame && !(selFrames(sel).includes(hoverFrame.id) && !hoverLayer) && <div className="ed-hover" style={box(hoverFrame, hoverLayer && layerBox(hoverFrame, hoverLayer))} />}
         {selFrame && !selFrame.hidden && !many && <div className={`ed-sel${selLayer ? ' ed-sel--parent' : ''}`} style={box(selFrame)}>
           {resizable && handles(false, selFrame.id)}
         </div>}
         {many && picked.map(f => <div key={f.id} className="ed-sel ed-sel--pick" style={box(f)} />)}
         {groupBox && <div className="ed-sel ed-sel--group" style={scr(groupBox)}>{canResize(picked) && handles(true)}</div>}
-        {selFrame && pickedLayers.map(l => <div key={l.id} className="ed-sel ed-sel--layer" style={box(selFrame, layerBounds(selFrame, l) ?? [0, 0, frameSize(selFrame).w, frameSize(selFrame).h])} />)}
+        {selFrame && pickedLayers.map(l => <div key={l.id} className={`ed-sel ed-sel--layer${hasBounds(l) ? ' ed-sel--bounds' : ''}`} data-layer-box={l.id} style={box(selFrame, layerBox(selFrame, l) ?? [0, 0, frameSize(selFrame).w, frameSize(selFrame).h])}>
+          {direct && hasBounds(l) && (['nw', 'ne', 'sw', 'se'] as Handle[]).map(hd => <i key={hd} className={`ed-handle ${hd}`} data-bounds={hd} aria-label={`Bounds corner ${hd}`} />)}
+        </div>)}
+        {direct && one?.kind === 'sites' && selFrame && siteHandles(selFrame, one).map(hd => <i key={hd.id} className={`ed-handle ed-handle--site is-${hd.id}`} data-site={hd.id} aria-label={hd.id === 'r' ? 'Radius' : hd.id === 'sweep' ? 'Arc sweep' : hd.id === 'a' ? 'Line start' : 'Line end'}
+          style={{ left: (selFrame.x + hd.x) * cam.z + cam.x, top: (selFrame.y + hd.y) * cam.z + cam.y }} />)}
+        <InText f={typingFrame || undefined} l={typingLayer} cam={cam} />
         {marq && <div className="ed-marquee" style={scr(marq)} />}
         {snaps?.guides.map((g, i) => <div key={`g${i}`} className={`ed-guide ed-guide--${g.axis}`} style={g.axis === 'x' ? { left: g.at * cam.z + cam.x, top: g.from * cam.z + cam.y, height: (g.to - g.from) * cam.z } : { top: g.at * cam.z + cam.y, left: g.from * cam.z + cam.x, width: (g.to - g.from) * cam.z }} />)}
         {snaps?.gaps.map((g, i) => <div key={`p${i}`} className={`ed-gap ed-gap--${g.axis}`} style={g.axis === 'x' ? { left: g.a * cam.z + cam.x, top: g.at * cam.z + cam.y, width: (g.b - g.a) * cam.z } : { top: g.a * cam.z + cam.y, left: g.at * cam.z + cam.x, height: (g.b - g.a) * cam.z }}><small>{Math.round(g.b - g.a)}</small></div>)}
         {draft && <div className="ed-sel ed-sel--draft" style={{ left: draft[0] * cam.z + cam.x, top: draft[1] * cam.z + cam.y, width: draft[2] * cam.z, height: draft[3] * cam.z }}><small>{Math.round(draft[2] / 2.25)}×{Math.round(draft[3] / 2.25)}</small></div>}
-        {tool === 'draw' && hover && <div className={`ed-brush${brush.erase ? ' erase' : ''}`} style={{ left: hover.sx, top: hover.sy, width: Math.max(6, (brush.size * 2 - 1) * brushCell), height: Math.max(6, (brush.size * 2 - 1) * brushCell) }} />}
+        {showBar && <QuickBar key={one!.id} f={selFrame!} l={one!} phone={phone} vp={vpSize} box={[(selFrame!.x + oneBox![0]) * cam.z + cam.x, (selFrame!.y + oneBox![1]) * cam.z + cam.y, (selFrame!.x + oneBox![2]) * cam.z + cam.x, (selFrame!.y + oneBox![3]) * cam.z + cam.y]} />}
+        {tool === 'draw' && !picking && hover && <div className={`ed-brush${brush.erase ? ' erase' : ''}`} style={{ left: hover.sx, top: hover.sy, width: Math.max(6, (brush.size * 2 - 1) * brushCell), height: Math.max(6, (brush.size * 2 - 1) * brushCell) }} />}
       </div>
     </div>
   )

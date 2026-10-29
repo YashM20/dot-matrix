@@ -18,6 +18,14 @@
   - `aed029a7339e33128` **`scripts/site/shots.ts` screenshot tool:** 1 commit; its verification run was cut off.
 - **Each worktree** has a `node_modules` junction. Remove it with `[System.IO.Directory]::Delete(path, $false)` before `git worktree remove`; a recursive delete would empty the shared `node_modules`.
 - **Heavy commands** go through `C:/Users/integrated/AppData/Local/Temp/dmdocs/heavy.mjs` (one at a time across worktrees).
+- [x] **E3 editor: editing on canvas** (branch `worktree-agent-a603245a37988c6ee`, on `feat/round2` 0741d3b; `docs/EDITOR-PLAN.md` §4.2, §8.3). Not merged.
+  - Sites handles: a ring's radius and sweep (the sweep snaps to the ring's own sites, so an arc ends on a dot of its track), a disc's radius, a line's ends; whole cells.
+  - Spec layers: placed ones (sites, text, generators, IR fields with `bounds`) move in whole cells; an IR field's box is its declared bounds, resized by four corners; DESIGN · PLACE edits them and the spec JSON follows.
+  - Text typed in place (double-click, Enter, a tap on the selected text, the Text tool): one invisible input, the letters are the frame's own dots through `textAt` / `T.big`, a caret drawn in the glyph gaps; one session = one undo step, Esc cancels, an emptied text goes. On a phone the text pans above the keyboard.
+  - The quick bar over the selected layer: TONE, LATTICE − / + (spec text / bounds rescaled to stay put), SIZE for sites, EDIT / DONE, INK and PICK; one undo step each; 44 px on phones, above the selection bar.
+  - The eyedropper: I, PICK, Alt-click while drawing; rounds onto the INK ladder; never paints.
+  - Checks: editor Node 125 (95 + 30 E3 in `editorE3Checks`, in verify); browser probe desktop 76/76 and phone 45/45 (E3: 14 desktop, 8 phone); goldens 182/182; first-load JS 120.41 → 120.41 kB gz (Δ +0.00, against a build of 0741d3b); CSS token lint clean.
+  - Left for later: an arc start handle (START ° is in DESIGN), handles for generator params and raster windows, word selection on double-click, multi-line text.
 - **Queued next:** M1 materials, T5 theme picker, E3 editor, T6 type and contrast. Then L2, Q2, M2, Q3, M3, L3 and X.
 - **Queued after round 2:** `docs/POLISH-PLAN.md`, the site polish. It starts with P0 probes, then P1 (broken: the essay route, sticky header, widget-page chrome, Back with sheets), P2 (ugly) and P3 (nits). Owner decisions are in its §3.
 

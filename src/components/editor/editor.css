@@ -457,3 +457,56 @@ html.ed-scroll-lock .pal-dock { display: none }
 .is-phone .ed-note { bottom: calc(132px + env(safe-area-inset-bottom)) }
 .is-phone .ed-lock { width: 44px; height: 44px; opacity: 1 }
 .is-phone .ed-lock[aria-pressed="false"] { display: none }
+
+/* ── E3: editing on canvas ── */
+/* a layer's own handles: a ring's radius and sweep, a disc's radius, a line's ends (absolute, not corners) */
+.ed-handle--site { cursor: grab }
+.ed-handle--site:active { cursor: grabbing }
+.ed-handle--site.is-sweep { background: var(--red) }
+/* a spec field's declared bounds: the box it is placed into, resized by its corners */
+.ed-sel--bounds { outline-style: solid }
+/* the quick bar over the selected layer: grey chrome, an active PICK takes the accent edge */
+.ed-qbar {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 1px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--shade) 40%, transparent);
+  pointer-events: auto;
+  white-space: nowrap;
+  font-size: var(--fs-label-10);
+  letter-spacing: .06em
+}
+.ed-qbar-kind { padding: 0 var(--space-1) 0 var(--space-2); color: var(--dim) }
+.ed-qbar-step { display: flex; align-items: center }
+.ed-qbar-step > b, .ed-qbar button b { font-weight: 600; color: var(--value); font-variant-numeric: tabular-nums }
+.ed-qbar-step > b { min-width: 3.2em; text-align: center }
+.ed-qbar button { min-width: 28px; height: 28px; padding: 0 var(--space-2); background: none; border: 1px solid transparent; border-radius: var(--radius-ctl); color: var(--label) }
+.ed-qbar button:hover:not(:disabled), .ed-qbar button:focus-visible:not(:disabled) { border-color: var(--line); background: var(--raised) }
+.ed-qbar button:active:not(:disabled) { background: var(--wash-press) }
+.ed-qbar button[aria-pressed="true"] { border-color: var(--ed-sel); background: var(--glow-wash); color: var(--value) }
+.is-phone .ed-qbar { gap: 0; padding: var(--space-1) }
+.is-phone .ed-qbar button { min-width: 44px; height: 44px }
+/* text typed in place: the input is invisible (the letters are the frame's dots); the caret sits in a glyph gap */
+.ed-intext {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  margin: 0;
+  opacity: 0; /* never seen: the caret and the text box show where focus is */
+  pointer-events: none;
+  background: none;
+  color: transparent;
+  caret-color: transparent;
+  font-size: var(--fs-copy-16)
+}
+.ed-caret { position: absolute; width: 2px; margin-left: -1px; background: var(--red); pointer-events: none }
+.ed-textsel { position: absolute; background: color-mix(in srgb, var(--red) 22%, transparent); box-shadow: 0 0 0 1px var(--ed-sel); pointer-events: none }

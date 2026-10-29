@@ -42,6 +42,10 @@ export interface EditorStore {
   selectMode: boolean
   /** Something was copied (this tab, another tab, an earlier visit): PASTE is offered. */
   hasClip: boolean
+  /** Draw tool: the next press picks the ink from the paint under it (the eyedropper, I / Alt-click). */
+  picking: boolean
+  /** The text layer being typed on the canvas (E3), if any. */
+  typing?: { frame: string; layer: string }
   edit(fn: (d: EditorDoc) => EditorDoc, tag?: string): void
   begin(): void
   live(fn: (d: EditorDoc) => EditorDoc): void
@@ -66,6 +70,8 @@ export interface EditorStore {
   setShortcuts(on: boolean): void
   setSelectMode(on: boolean): void
   setHasClip(on: boolean): void
+  setPicking(on: boolean): void
+  setTyping(t?: { frame: string; layer: string }): void
   /** Insert a card as a new frame, select it and bring it into view. Returns the frame id. */
   insertCard(card: StudioCard, o?: Partial<EditorFrame> & { at?: { x: number; y: number } }): string
   insertPreset(id: string): string | undefined
@@ -87,7 +93,7 @@ export const useEditor = create<EditorStore>((set, get) => ({
   brush: { size: 2, value: 1, erase: false },
   play: { t: 1, playing: false },
   preview: {},
-  note: '', shortcuts: false, selectMode: false, hasClip: (() => { try { return !!globalThis.localStorage?.getItem('dot480.editor.clip') } catch { return false } })(),
+  note: '', shortcuts: false, selectMode: false, picking: false, hasClip: (() => { try { return !!globalThis.localStorage?.getItem('dot480.editor.clip') } catch { return false } })(),
   edit: (fn, tag) => set(s => ({ h: commit(s.h, fn(s.h.present), tag) })),
   begin: () => { gestureBase = get().h.present },
   live: fn => set(s => ({ h: { ...s.h, present: fn(s.h.present) } })),
@@ -101,7 +107,7 @@ export const useEditor = create<EditorStore>((set, get) => ({
   undo: () => set(s => { const h = undo(s.h); return { h, sel: validSel(h.present, s.sel) } }),
   redo: () => set(s => { const h = redo(s.h); return { h, sel: validSel(h.present, s.sel) } }),
   select: sel => set({ sel: sel.more?.length ? sel : sel.more ? { frame: sel.frame, layer: sel.layer } : sel }),
-  setTool: tool => set({ tool }),
+  setTool: tool => set({ tool, picking: false }),
   setCam: cam => set({ cam: { ...cam, z: clampZ(cam.z) } }),
   zoomAt: (z, sx, sy) => set({ cam: zoomCam(get().cam, z, sx, sy) }),
   fit: (ids = [], max = 2) => { const { w, h } = get().vp; set({ cam: fitCam(boundsOf(get().h.present, ids), w, h, max) }) },
@@ -116,6 +122,8 @@ export const useEditor = create<EditorStore>((set, get) => ({
   setShortcuts: shortcuts => set({ shortcuts }),
   setSelectMode: selectMode => set({ selectMode }),
   setHasClip: hasClip => set({ hasClip }),
+  setPicking: picking => set(picking ? { picking, tool: 'draw' } : { picking }),
+  setTyping: typing => set({ typing }),
   insertCard: (card, o) => {
     const { doc, frame } = addFrame(get().h.present, card, o)
     set(s => ({ h: commit(s.h, doc), sel: { frame: frame.id } }))
