@@ -810,8 +810,8 @@ async function desktopE5(p: Page, h: Helpers) {
   await p.js(`window.__editorLink = ''`)
   await h.clickText('.ed-insp button', 'FRAME LINK')
   await p.waitFor(`/\\?make&d=/.test(window.__editorLink ?? '')`, 15000)
-  const link = await p.js<string>(`window.__editorLink`), out = await h.text('.ed-insp .ed-url'), id = /#([0-9a-f]{8})/.exec(out)?.[1] ?? ''
-  check('E5: FRAME LINK makes a deflated ?make&d=… link under the cap, shown with its length and id', linkRe.test(link) && link.length < 12000 && /FRAME LINK \d+ CHARS · DEFLATE · #[0-9a-f]{8}/.test(out) && await p.js(`document.querySelector('.ed-insp .ed-link-url').value`) === link, `${link.length} chars; ${out}`)
+  const link = await p.js<string>(`window.__editorLink`), info = await h.text('.ed-insp .ed-url'), id = /#([0-9a-f]{8})/.exec(info)?.[1] ?? ''
+  check('E5: FRAME LINK makes a deflated ?make&d=… link under the cap, shown with its length and id', linkRe.test(link) && link.length < 12000 && /FRAME LINK \d+ CHARS · DEFLATE · #[0-9a-f]{8}/.test(info) && await p.js(`document.querySelector('.ed-insp .ed-link-url').value`) === link, `${link.length} chars; ${info}`)
 
   // open it: one new frame, selected, drawn; a reload and Back keep it to one
   const opened = await h.go(link, `document.querySelectorAll('.ed-frame').length === ${n0 + 1} && !!window.__editor?.sel`)
