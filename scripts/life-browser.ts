@@ -7,10 +7,12 @@
  *    pristine; a tap drops pellets; a 300 ms hold engages the card (lure) and the page does not scroll while engaged;
  *  - screenshots (dark and light_signal) into `<out>` (default .snapshots/l1).
  * Needs dist/: `npx vite build`, then `npx tsx scripts/life-browser.ts [outDir]` (it runs `vite preview` itself).
+ * Never hangs: every CDP call has a timeout (scripts/lib/cdp.ts), the pages and the preview server close in `finally`,
+ * and a watchdog (`LIFE_BROWSER_TIMEOUT_S`, default 300 s) kills Chrome and the server and fails the run.
  */
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
-import { findChrome, launch, serveDist, sleep } from './lib/cdp'
+import { findChrome, launch, serveDist, sleep, type Page } from './lib/cdp'
 import { lifeSnapshot } from './life'
 
 const out = process.argv[2] ?? join('.snapshots', 'l1')
@@ -18,13 +20,21 @@ mkdirSync(out, { recursive: true })
 if (!findChrome()) { console.log('no Chrome found (set $CHROME): skipped'); process.exit(0) }
 let failures = 0
 const check = (name: string, ok: boolean, detail = '') => { console.log(`${ok ? '✓' : '✗'} ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failures++ }
-const server = await serveDist(4321)
+const server = await serveDist(Number(process.env.PREVIEW_PORT) || 4321)
+const pages = new Set<Page>()
+const open = async (w: number, h: number) => { const p = await launch(w, h); pages.add(p); return p }
+const closeAll = async () => { for (const p of pages) await p.close().catch(() => {}); pages.clear(); server.stop() }
+const limit = (Number(process.env.LIFE_BROWSER_TIMEOUT_S) || 300) * 1000
+const watchdog = setTimeout(() => {
+  console.log(`✗ life-browser: the probe ran over ${limit / 1000} s (a step never finished); killing Chrome and the preview server`)
+  void closeAll().finally(() => process.exit(1))
+}, limit)
 const card = `document.querySelector('[data-card-id="pond-koi"]')`
 const rectOf = `(() => { const r = ${card}.querySelector('canvas,svg').getBoundingClientRect(); return [r.x, r.y, r.width, r.height] })()`
 try {
   // ── desktop ──
   {
-    const page = await launch(1280, 900)
+    const page = await open(1280, 900)
     await page.cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__POND_PROBE__ = true' })
     await page.cdp('Page.navigate', { url: `${server.url}pond/?probe=1` })
     const ready = await page.waitFor(`!!globalThis.__pond && !!${card}?.querySelector('canvas,svg')`, 20000)
@@ -42,7 +52,8 @@ try {
     await page.mouse('mouseMoved', 5, 5, 0)
     check('life-browser: 7 s idle heals back to pristine', await page.waitFor(`__pond.mode() === 'pristine'`, 9000), await page.js('__pond.mode()'))
     await page.cdp('Emulation.setCPUThrottlingRate', { rate: 4 })
-    const ms = await page.js<number>('__pond.bench(24)')
+    // bounded: a starved box at 4× throttle must fail this check, not hang the run
+    const ms = await page.js<number>('__pond.bench(24)', 90_000).catch((e: Error) => { console.log(`  bench: ${e.message}`); return Infinity })
     await page.cdp('Emulation.setCPUThrottlingRate', { rate: 1 })
     check('life-browser: pond-koi median card draw ≤ 16 ms at 4× throttle', ms <= 16, `${ms.toFixed(2)} ms`)
     await page.cdp('Page.navigate', { url: `${server.url}pond/?theme=light_signal` })
@@ -50,11 +61,11 @@ try {
     await page.js(`${card}.scrollIntoView({ block: 'center' })`); await sleep(1500)
     await page.shot(join(out, 'pond-light.png'))
     check('life-browser: no uncaught errors (desktop)', !page.logs.filter(l => !/main thread/.test(l)).length, page.logs.join('; '))
-    await page.close()
+    await page.close(); pages.delete(page)
   }
   // ── touch ──
   {
-    const page = await launch(375, 812)
+    const page = await open(375, 812)
     await page.cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__POND_PROBE__ = true' })
     await page.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 })
     await page.cdp('Emulation.setDeviceMetricsOverride', { width: 375, height: 812, deviceScaleFactor: 2, mobile: true })
@@ -84,7 +95,9 @@ try {
     await page.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
     check('life-browser: a 300 ms hold engages the card (lure) and the page does not scroll during the engaged drag', engaged && lure === 1 && still < 2, `engaged ${engaged}, lure ${lure}, scrolled ${still.toFixed(0)} px`)
     check('life-browser: no uncaught errors (touch)', !page.logs.filter(l => !/main thread/.test(l)).length, page.logs.join('; '))
-    await page.close()
+    await page.close(); pages.delete(page)
   }
-} finally { server.stop() }
+} catch (e) {
+  check('life-browser: the probe ran to the end', false, (e as Error).message)
+} finally { clearTimeout(watchdog); await closeAll() }
 if (failures) { console.log(`\n${failures} probe check(s) failed`); process.exit(1) }

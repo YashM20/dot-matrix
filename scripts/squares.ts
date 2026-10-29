@@ -23,6 +23,8 @@ import { boards, widgetById, withChrome, type WidgetPreset } from '../src/widget
 import { squareStyle, squaresBoard, squaresSources as Q } from '../src/widgets/boards/squares'
 import { handleSample } from '../src/workers/protocol'
 import { renderCardFull, sampleCard, uniquePresets } from './lib/cards'
+import { freezeWallClock } from './lib/freeze'
+import { fmtLoaded, medianLoaded, onceLoaded } from './lib/load'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[s.length >> 1] }
@@ -246,7 +248,8 @@ export function squaresChecks(assert: Assert): void {
   // ── Q1.9–Q1.11 the board ───────────────────────────────────────────────────────────────────────────
   {
     // Tetris sim
-    const [ms, a] = time(() => tetris({ w: 10, h: 18, seed: 3, max: 400, garbage: 6, rise: 12 })), b = tetris({ w: 10, h: 18, seed: 3, max: 400, garbage: 6, rise: 12 })
+    // the load is sampled next to each timing (scripts/lib/load.ts): a factor from the top of the script goes stale
+    const pre = onceLoaded(() => tetris({ w: 10, h: 18, seed: 3, max: 400, garbage: 6, rise: 12 })), a = pre.value, b = tetris({ w: 10, h: 18, seed: 3, max: 400, garbage: 6, rise: 12 })
     const eq = (x: ArrayLike<number>, y: ArrayLike<number>) => x.length === y.length && Array.prototype.every.call(x, (v: number, i: number) => v === y[i])
     assert('squares: tetris determinism (two fresh sims are bit-equal)', eq(a.boards, b.boards) && eq(a.locked, b.locked) && eq(a.colour, b.colour) && eq(a.score, b.score) && a.count === b.count, `${a.count} placements, ${a.lines[a.count]} lines`)
     let illegal = 0
@@ -267,9 +270,9 @@ export function squaresChecks(assert: Assert): void {
         for (const j of [c + 1 < 10 ? board[r * 10 + c + 1] : -1, r + 1 < 18 ? board[(r + 1) * 10 + c] : -1]) if (j >= 0 && j !== id && a.colour[j] === a.colour[id]) clash++
       }
     assert('squares: tetris colouring (no two touching pieces share a group)', clash === 0, `${Math.max(...a.colour) + 1} groups, ${clash} clashes; garbage ${GARBAGE}`)
-    assert('squares: tetris precompute ≤ 30 ms (once, cached)', ms <= 30 * load, `${ms.toFixed(1)} ms`)
-    const [qms] = time(() => Q.quadTree())
-    assert('squares: quads precompute ≤ 30 ms (once, cached)', qms <= 30 * load, `${qms.toFixed(1)} ms`)
+    assert('squares: tetris precompute ≤ 30 ms (once, cached)', pre.ms <= 30 * pre.load, fmtLoaded(pre, 1))
+    const qt = onceLoaded(() => Q.quadTree())
+    assert('squares: quads precompute ≤ 30 ms (once, cached)', qt.ms <= 30 * qt.load, fmtLoaded(qt, 1))
 
     // the cards
     const lit = squaresBoard.map(p => { const d = sampleCard(p, 0); return [p.id, d.filter(x => x.opacity > 0).length, d.filter(x => x.join !== undefined).length] as const })
@@ -291,7 +294,12 @@ export function squaresChecks(assert: Assert): void {
     // (deviation from Q-squares §2.5: the median of the liked cards is dominated by the sparse components board, so the
     // gate is the inkiest liked full-frame card, the afterlight face; the median ratio is printed alongside)
     const refs = [widgetById('level-03')!, widgetById('afterlight')!, ...boards.find(b => b.id === 'mosaic')!.items, ...boards.find(b => b.id === 'components')!.items]
-    const refInks = refs.map(p => inkOf(p)), refMedian = median(refInks), refMax = Math.max(...refInks), inks = squaresBoard.map(p => [p.id, inkOf(p)] as const)
+    // at the goldens' frozen wall clock (09:41): the LCD card draws HH:MM and the date, so its ink moves with the time of day
+    const RealDate = Date
+    freezeWallClock()
+    let refInks: number[], inks: (readonly [string, number])[]
+    try { refInks = refs.map(p => inkOf(p)); inks = squaresBoard.map(p => [p.id, inkOf(p)] as const) } finally { globalThis.Date = RealDate }
+    const refMedian = median(refInks), refMax = Math.max(...refInks)
     assert('squares: ink (snap raster, px 1: each card ≤ 1.15 × the inkiest liked reference card)', inks.every(([, x]) => x <= 1.15 * refMax),
       `liked max ${refMax.toFixed(4)}, median ${refMedian.toFixed(4)}; ` + inks.map(([id, x]) => `${id} ${x.toFixed(4)} (${(x / refMax).toFixed(2)}× max, ${(x / refMedian).toFixed(2)}× median)`).join(', '))
 
@@ -315,9 +323,9 @@ export function squaresChecks(assert: Assert): void {
     const each = median(Array.from({ length: 9 }, () => time(() => { for (const d of dots) joinOutline(path, d.x, d.y, d.r, d.joint!, d.join!, 0, false) })[0])) / Math.max(1, dots.length)
     console.log(`  squares: Canvas path build (budget ≤ 1.2 ms per 5k join dots on a desktop): ${(each * 5000).toFixed(3)} ms per 5k (${dots.length} in sq-quads)`)
     const frame = (p: WidgetPreset, t: number) => { const ls = withChrome(p)({ t, data: {} }); return sampleLayersInto(ls, p.grid, p.style, dot480) }
-    const warm = (p: WidgetPreset) => { for (let i = 0; i < 4; i++) frame(p, i / 12); return median(Array.from({ length: 13 }, (_, i) => time(() => frame(p, 5.5 + i / 12))[0])) }
+    const warm = (p: WidgetPreset) => { for (let i = 0; i < 4; i++) frame(p, i / 12); return medianLoaded(i => frame(p, 5.5 + i / 12), 13) }
     const rows = squaresBoard.map(p => [p.id, warm(p)] as const)
-    assert('squares: frame ≤ 4 ms (layers + sample, median warm × load)', rows.every(([, ms]) => ms <= 4 * load), rows.map(([id, ms]) => `${id} ${ms.toFixed(2)}`).join(', ') + ' ms')
+    assert('squares: frame ≤ 4 ms (layers + sample, median warm × load)', rows.every(([, r]) => r.ms <= 4 * r.load), rows.map(([id, r]) => `${id} ${fmtLoaded(r)}`).join(', '))
   }
 }
 

@@ -90,8 +90,18 @@ export function validateSpec(input: unknown): SpecResult {
     if ('tone' in l) tone(l.tone, `${path}.tone`)
     if ('lattice' in l) num(l.lattice, `${path}.lattice`, { exMin: 0, max: 64 })
     if ('origin' in l) tuple(l.origin, `${path}.origin`, 2)
+    if ('join' in l) joinSpec(l.join, `${path}.join`)
   }
-  const PLACED = ['kind', 'tone', 'lattice', 'origin'] as const
+  /** `Layer.join` (squares): `true`, or a JoinSpec with a numeric group (a group function cannot travel in a spec). */
+  const joinSpec = (x: unknown, path: string) => {
+    if (x === true) return
+    if (!obj(x, path, ['at', 'conn', 'outer', 'inner', 'seam', 'group', 'accent'])) return
+    for (const k of ['at', 'outer', 'inner', 'seam'] as const) if (k in x) num(x[k], `${path}.${k}`, { min: 0, max: 1 })
+    if ('conn' in x) oneOf(x.conn, `${path}.conn`, [4, 8])
+    if ('group' in x) num(x.group, `${path}.group`, { int: true, min: 0, max: 255 })
+    if ('accent' in x) bool(x.accent, `${path}.accent`)
+  }
+  const PLACED = ['kind', 'tone', 'lattice', 'origin', 'join'] as const
 
   // ── generator params ──
   const param = (x: unknown, path: string, t: ParamType) => {
@@ -240,7 +250,7 @@ export function validateSpec(input: unknown): SpecResult {
     if ('pitch' in g) num(g.pitch, '$.grid.pitch', { exMin: 0, max: 64 })
     if ('aspect' in g) num(g.aspect, '$.grid.aspect', { exMin: 0, max: 16 })
   }
-  if ('style' in s && obj(s.style, '$.style', ['shape', 'sizeMin', 'sizeMax', 'cornerRoundness', 'opacityMode', 'jitter', 'quantizeSteps'], ['shape', 'sizeMin', 'sizeMax'])) {
+  if ('style' in s && obj(s.style, '$.style', ['shape', 'sizeMin', 'sizeMax', 'cornerRoundness', 'opacityMode', 'jitter', 'quantizeSteps', 'gap'], ['shape', 'sizeMin', 'sizeMax'])) {
     const st = s.style as O
     if ('shape' in st) oneOf(st.shape, '$.style.shape', ['circle', 'square', 'squircle', 'superformula'])
     const a = 'sizeMin' in st && num(st.sizeMin, '$.style.sizeMin', { min: 0, max: 8 }), b = 'sizeMax' in st && num(st.sizeMax, '$.style.sizeMax', { min: 0, max: 8 })
@@ -249,6 +259,7 @@ export function validateSpec(input: unknown): SpecResult {
     if ('opacityMode' in st) oneOf(st.opacityMode, '$.style.opacityMode', ['constant', 'fromValue'])
     if ('jitter' in st) num(st.jitter, '$.style.jitter', { min: 0, max: 1 })
     if ('quantizeSteps' in st) num(st.quantizeSteps, '$.style.quantizeSteps', { int: true, min: 0, max: 64 })
+    if ('gap' in st) num(st.gap, '$.style.gap', { min: 0, max: 1 })
   }
   if ('theme' in s && obj(s.theme, '$.theme', THEME_COLORS)) for (const [k, v] of Object.entries(s.theme as O)) if (THEME_COLORS.includes(k as never)) str(v, `$.theme.${k}`, { pattern: COLOR })
   if ('data' in s) dataMap(s.data, '$.data')

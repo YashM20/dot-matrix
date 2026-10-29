@@ -25,6 +25,7 @@ import { sampleLayers } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
 import { withChrome, type WidgetPreset } from '../src/widgets/types'
 import { freezeWallClock } from './lib/freeze'
+import { fmtLoaded, medianLoaded } from './lib/load'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[s.length >> 1] }
@@ -395,19 +396,18 @@ export async function lifeChecks(assert: Assert): Promise<void> {
     assert('pond: one accent: the only chromatic colour is dotActive (no dotActiveDim until the owner rules, D2), and red only inside koi cover', bad === 0 && redOut === 0 && reds > 0, `${reds} red dots, ${redOut} outside cover, ${bad} off-palette`)
     // frame budget, warm
     for (let i = 0; i < 8; i++) frame(5 + i / 30)
-    const rows: number[] = [], split = { draw: 0, layers: 0, sample: 0 }
-    for (let i = 0; i < 15; i++) {
+    // the load is sampled next to the frames (scripts/lib/load.ts): a factor from the top of the script goes stale
+    const split = { draw: 0, layers: 0, sample: 0 }
+    const fr = medianLoaded(i => {
       const t = 5.5 + i / 30
       const a = performance.now(), ls = withChrome(card)({ t, data: {} }), b = performance.now()
       sampleLayers(ls, card.grid, card.style, dot480)
-      const c = performance.now()
-      rows.push(c - a); split.layers += b - a; split.sample += c - b
-    }
-    const ms = median(rows)
+      split.layers += b - a; split.sample += performance.now() - b
+    }, 15)
     // the draw alone (world already at t)
     const s = worldAt(W, 5.5), r = pondProbe.koi.raster
     const draw = median(Array.from({ length: 9 }, () => time(() => drawKoiPond(P, s, 5.5, 9.7, r))[0]))
-    assert('pond-koi: frame (layers + sample) ≤ 4 ms median warm × load', ms <= 4 * load, `${ms.toFixed(2)} ms (layers incl. step + draw ${(split.layers / 15).toFixed(2)}, sample ${(split.sample / 15).toFixed(2)}; draw alone ${draw.toFixed(2)})`)
+    assert('pond-koi: frame (layers + sample) ≤ 4 ms median warm × load', fr.ms <= 4 * fr.load, `${fmtLoaded(fr)} (layers incl. step + draw ${(split.layers / 15).toFixed(2)}, sample ${(split.sample / 15).toFixed(2)}; draw alone ${draw.toFixed(2)})`)
     // glyph matching: memo hits after 60 frames, and its cost per frame
     matchStats.hits = matchStats.misses = 0
     for (let i = 0; i < 60; i++) frame(8 + i / 30)
@@ -484,9 +484,8 @@ export async function lifeChecks(assert: Assert): Promise<void> {
     const fv = koiView(P, s, 4)
     assert('pond-koi: a 120 cells/s flick startles the koi it passes', fv.refractory > 0, `mode ${fv.mode}, refractory ${fv.refractory.toFixed(2)}`)
     // live frame cost with a moving pointer
-    const live: number[] = []
-    for (let k = 0; k < 20; k++) { t += 1 / 30; const f = { pointers: [{ id: 5, x: 40 + k * 3, y: 70 + (k % 5), down: false, inside: true, tDown: 0, tUp: 0, vx: 0, vy: 0, pressure: 0 }] }; live.push(time(() => sampleLayers(withChrome(card)({ t, data: {}, ...f }), card.grid, card.style, dot480))[0]) }
-    assert('pond-koi: live frame with a moving pointer ≤ 4 ms × load', median(live) <= 4 * load, `${median(live).toFixed(2)} ms, mode ${W.mode}`)
+    const live = medianLoaded(k => { t += 1 / 30; const f = { pointers: [{ id: 5, x: 40 + k * 3, y: 70 + (k % 5), down: false, inside: true, tDown: 0, tUp: 0, vx: 0, vy: 0, pressure: 0 }] }; return sampleLayers(withChrome(card)({ t, data: {}, ...f }), card.grid, card.style, dot480) }, 20)
+    assert('pond-koi: live frame with a moving pointer ≤ 4 ms × load', live.ms <= 4 * live.load, `${fmtLoaded(live)}, mode ${W.mode}`)
     worldReset(W); simReset(sim)
   }
 
