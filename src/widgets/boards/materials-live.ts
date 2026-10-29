@@ -44,7 +44,7 @@ const TILE_P = 7
  * (ripple units) and the breeze, a small splat every 3 steps at a hashed spot that keeps the surface moving between
  * drips, so the net never goes flat. (The plan's drip amp .6 left the slopes too small to bend light visibly at depth 6.)
  */
-export const WATER = { depth: 6, gain: 3, ior: 1.33, drip: 2.4, pebble: 3, breeze: .45 }
+export const WATER = { depth: 6, gain: 12, ior: 1.33, drip: 2.4, pebble: 3, breeze: 1 }
 const cardToRx = (x: number) => (x - 1.5) / RIPPLE.pitch, cardToRy = (y: number) => (y - RIPPLE.oy - 1.5) / RIPPLE.pitch
 const latX = (i: number) => (i + .5) * K2 - .5
 const inBasinCard = (x: number, y: number) => x >= latX(BASIN.i0) - 1 && x <= latX(BASIN.i1) + 1 && y >= latX(BASIN.j0) - 1 && y <= latX(BASIN.j1) + 1
@@ -241,7 +241,7 @@ function plateRow(H: Float32Array, M: Float32Array, E: Float32Array, r: number):
     E[i] = .2 * (1 - Math.min(1, inset / 10))
   }
 }
-/** The plate's static half (baked once): relief, coverage and r's noise + edge terms. The noise is fBm on a 3-cell grid, read bilinearly (its finest octave is 5.5 cells: no 1-cell grain). */
+/** The plate's static half (baked once): relief, coverage and r's noise + edge terms. The noise is fBm on a 3-cell grid, read bilinearly (2 octaves, the finer one 13 cells: the rust grows in patches, not grain). */
 const rustBase = once(() => {
   const n = COLS * TILE.rows, H = new Float32Array(n), M = new Float32Array(n), E = new Float32Array(n)
   for (let r = PLATE.y0; r <= PLATE.y1; r++) plateRow(H, M, E, r)
@@ -251,7 +251,7 @@ const rustBase = once(() => {
   return { H, M, E }
 })
 function noiseRow(G: Float32Array, gw: number, j: number): void {
-  for (let i = 0; i < gw; i++) G[j * gw + i] = fbm2((PLATE.x0 + 3 * i) / 22, (PLATE.y0 + 3 * j) / 22, 3, 917)
+  for (let i = 0; i < gw; i++) G[j * gw + i] = fbm2((PLATE.x0 + 3 * i) / 26, (PLATE.y0 + 3 * j) / 26, 2, 31)
 }
 function noiseUp(G: Float32Array, gw: number, E: Float32Array, M: Float32Array, r: number): void {
   const fy = (r - PLATE.y0) / 3, j = Math.floor(fy), ty = fy - j
@@ -320,9 +320,10 @@ const rustLightKey = (L: Light) => (Array.isArray(L) ? (L as readonly number[]).
 function shadeRow(M: Float32Array, A: Float32Array, D: Float32Array, S: Float32Array, V: Float32Array, Tn: Uint8Array, r: number): void {
   for (let c = PLATE.x0, i = r * COLS + c; c <= PLATE.x1; c++, i++) {
     if (!(M[i] > .5)) continue
-    const b = D[i] * .55 * A[i], s = S[i]
+    // bare steel is bright (idle where it faces the light); the grooves fall to faint / void in their own shadow
+    const b = (.3 + .5 * D[i]) * A[i] * A[i], s = S[i]
     if (b < .06) continue
-    if (s >= .75) { V[i] = Math.min(1, b + .5); Tn[i] = 3 } else if (s >= .35) { V[i] = Math.min(1, b + .25); Tn[i] = 2 } else { V[i] = b; Tn[i] = b < .3 ? 0 : 1 }
+    if (s >= .6) { V[i] = Math.min(1, b + .25); Tn[i] = 3 } else { V[i] = b; Tn[i] = b < .3 ? 0 : b < .62 ? 1 : 2 }
   }
 }
 const rustScratch = once(() => ({ dif: createRaster(TILE), spec: createRaster(TILE), values: createRaster(TILE, 'card', PLATE_BOX), tones: new Uint8Array(COLS * TILE.rows), front: createRaster(TILE, 'card', PLATE_BOX) }))
@@ -338,17 +339,20 @@ function shadedPlate(p: RustPlate, L: Light): Shaded {
   if (shadedPlates.size > 6) shadedPlates.delete(shadedPlates.keys().next().value!)
   return out
 }
-/** Band of r above θ drawn as the live front (thin: ≤ 250 dots on this plate). */
-export const FRONT = .012
-/** Row r of the frame: bare plate below θ; rust above it, which kills the sheen (light rust mid; deep rust faint, pitted to mid); the front in red. */
+/** How far past θ the front reaches (r units): the front is the rust's edge cells, only where it is still this fresh. */
+export const FRONT = .008
+/**
+ * Row r of the frame: bare plate below θ; rust above it, which kills the sheen (fresh rust mid; deep rust faint,
+ * pitted to mid on 2×2 blocks); the front in red: rust cells with bare steel next to them (4-neighbours), still fresh.
+ */
 function rustFrameRow(p: RustPlate, sh: Shaded, theta: number, V: Float32Array, Tn: Uint8Array, F: Float32Array, r: number): void {
   const M = p.n.mask, R = p.rust
   for (let c = PLATE.x0, i = r * COLS + c; c <= PLATE.x1; c++, i++) {
     if (!(M[i] > .5)) continue
     const d = R[i] - theta
     if (d <= 0) { V[i] = sh.values[i]; Tn[i] = sh.tones[i]; continue }
-    if (d < FRONT) { F[i] = .5; continue }
-    if (d <= .15 || stbn(c >> 1, r >> 1) < .3) { V[i] = .45; Tn[i] = 1 } else { V[i] = .25; Tn[i] = 0 }
+    if (d < FRONT && (R[i - 1] <= theta || R[i + 1] <= theta || R[i - COLS] <= theta || R[i + COLS] <= theta)) { F[i] = .75; continue }
+    if (d <= .12 || stbn(c >> 1, r >> 1) < .3) { V[i] = .4; Tn[i] = 1 } else { V[i] = .22; Tn[i] = 0 }
   }
 }
 /** World state: [0] seconds since RESET (−1: none), [1] extra days of rust from hovering (a day per second). */

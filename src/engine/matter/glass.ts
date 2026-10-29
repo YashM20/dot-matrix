@@ -57,6 +57,7 @@ export function snellLUT(profile: BezelProfile, o: { bezel: number; thickness: n
     const f = eta * cosi - Math.sqrt(1 - sin2t), tx = f * nx, ty = -eta + f * ny
     const depth = o.thickness * profile(x) + base
     raw[i] = ty < 0 ? depth * tx / -ty : 0
+    if (Math.abs(raw[i]) < 1e-9) raw[i] = 0 // ior 1 (or a flat run) is exactly no displacement, not rounding noise
     nz[i] = ny
   }
   let max = 0

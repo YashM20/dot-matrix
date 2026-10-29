@@ -136,7 +136,7 @@ function satinRow(M: Float32Array, D: Float32Array, S: Float32Array, B: Float32A
 // the flame through thin wax, e^(−.35·thickness) (thickness = the distance to the silhouette), so the rim near the
 // flame glows. It stands 96 cells at midnight and loses 4 an hour; hour notches run down its side. Three drips are
 // Verlet ropes (track L's `ropeStep`) run once to rest and frozen.
-export const CANDLE = { cx: 72, x0: 51, x1: 93, base: 128, full: 32, perHour: 4 }
+export const CANDLE = { cx: 72, x0: 48, x1: 96, base: 130, full: 34, perHour: 4 }
 const C_R = (CANDLE.x1 - CANDLE.x0) / 2
 /** The top of the wax (card row) at a fractional hour. */
 export const candleTop = (hour: number) => CANDLE.full + CANDLE.perHour * (((hour % 24) + 24) % 24)
@@ -163,13 +163,13 @@ function waxRow(V: Float32Array, j: number, top: number, hour: number, L: Vec3 |
     const x = toCard15(i), nx = (x - CANDLE.cx) / C_R, k = j * LG15.cols + i
     if (Math.abs(nx) > 1) continue
     // the side is a cylinder; the top 3 cells round over toward the light above
-    const lip = Math.max(0, 1 - (y - top) / 3), nz0 = Math.sqrt(1 - nx * nx), ny = -.7 * lip, nz = nz0 * (1 - .3 * lip)
+    const lip = Math.max(0, 1 - (y - top) / 3), nz0 = Math.sqrt(1 - nx * nx), ny = -.4 * lip, nz = nz0 * (1 - .2 * lip)
     let lx = 0, ly = 0, lz = 1
     if (torchAt) { const dx = torchAt[0] - x, dy = torchAt[1] - y, dz = torchAt[2], l = Math.hypot(dx, dy, dz) || 1; lx = dx / l; ly = dy / l; lz = dz / l } else if (L) { lx = L[0]; ly = L[1]; lz = L[2] }
     const ndl = nx * lx + ny * ly + nz * lz, wrap = Math.max(0, (ndl + .5) / 1.5)
     const thick = Math.max(0, Math.min(x - CANDLE.x0, CANDLE.x1 - x, y - top)), d = Math.hypot(x - fx, y - fy)
     const trans = Math.exp(-.35 * thick) / (1 + (d / 16) ** 2)
-    let v = .16 + .4 * wrap + 1.3 * trans
+    let v = .2 + .48 * wrap + 1.2 * trans
     // hour notches on the left of the front: one per hour still to burn (period 4 cells)
     const h = (y - CANDLE.full) / CANDLE.perHour
     if (x < CANDLE.x0 + 7 && h > hour && Math.abs(h - Math.round(h)) * CANDLE.perHour < .8) v -= .25

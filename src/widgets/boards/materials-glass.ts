@@ -42,13 +42,13 @@ export function lensRim(ctx: WidgetContext, c: Pt): { angle: number; power: numb
   const angle = p && Math.hypot(p.x - c[0], p.y - c[1]) > 1 ? Math.atan2(p.y - c[1], p.x - c[0]) : -60 * DEG + 25 * DEG * tx
   return { angle, power: 3 - Math.max(0, Math.min(1, ty)) }
 }
-/** The dial's ticks at card pitch (5-minute ticks .75, the others .5), on whole cells. Baked once. */
+/** The dial's ticks at card pitch (5-minute ticks 1 with an inner dot, the others .75), on whole cells. Baked once. */
 const dialTicks = once(() => {
   const r = createRaster(TILE)
   for (let k = 0; k < 60; k++) {
     const a = k * 6 * DEG, x = Math.round(DIAL.cx + DIAL.r * Math.sin(a)), y = Math.round(DIAL.cy - DIAL.r * Math.cos(a))
-    r.data[y * COLS + x] = k % 5 ? .5 : .75
-    if (k % 5 === 0) { const xi = Math.round(DIAL.cx + (DIAL.r - 2) * Math.sin(a)), yi = Math.round(DIAL.cy - (DIAL.r - 2) * Math.cos(a)); r.data[yi * COLS + xi] = .75 }
+    r.data[y * COLS + x] = k % 5 ? .75 : 1
+    if (k % 5 === 0) { const xi = Math.round(DIAL.cx + (DIAL.r - 2) * Math.sin(a)), yi = Math.round(DIAL.cy - (DIAL.r - 2) * Math.cos(a)); r.data[yi * COLS + xi] = 1 }
   }
   return r
 })
@@ -82,10 +82,13 @@ export function lensHero(hh: string, mm: string): Hero {
   if (heroes.size > 2) heroes.delete(heroes.keys().next().value!)
   return h
 }
-/** The floor: a dot every second cell, as a tent in x and y (1 on the even cells, 0 on the odd ones), × .25. */
+/**
+ * The floor: a dot every second cell, × .5 (faint). A narrow tent (radius ½ cell) round each dot, so a sample that the
+ * glass moves off a dot by more than half a cell reads nothing: under the lens the screen stays dots, bent, not a haze.
+ */
 const floorAt = (x: number, y: number) => {
-  const fx = 1 - Math.abs(x - 2 * Math.round(x / 2)), fy = 1 - Math.abs(y - 2 * Math.round(y / 2))
-  return fx > 0 && fy > 0 ? .25 * fx * fy : 0
+  const fx = 1 - 2 * Math.abs(x - 2 * Math.round(x / 2)), fy = 1 - 2 * Math.abs(y - 2 * Math.round(y / 2))
+  return fx > 0 && fy > 0 ? .5 * fx * fy : 0
 }
 /** The scene behind the glass at a point (cells): ticks, then the floor outside the ring's clear band and the hero's keep-out. */
 function behindAt(ticks: Float32Array, near: Uint8Array, x: number, y: number): number {
@@ -104,7 +107,7 @@ export function apparent(off: (c: number, r: number, out: Float64Array) => numbe
   for (let k = 0; k < 8; k++) { if (off(p[0], p[1], d) < 0 && k === 0) return p; p = [q[0] - d[0], q[1] - d[1]] }
   return p
 }
-const VALUE_IN = .875, MID_LO = .45
+const VALUE_IN = .875, MID_LO = .625
 export const matLens: WidgetPreset = {
   ...tile, id: 'mat-lens', name: 'Lens', clock: true,
   defaults: { ...LIGHT_DEFAULTS, lx: .6944, ly: .5606 },
@@ -126,15 +129,18 @@ export const matLens: WidgetPreset = {
       const bez = off(x, y, d)
       if (bez < 0) {
         const val = behind(u, v)
-        if (val > 0 && val <= .25) { // the floor only: cut where the lens's shadow falls (the outline moved down 3 cells)
+        if (val > 0 && val <= .5) { // the floor only: cut where the lens's shadow falls (the outline moved down 3 cells)
           const sx = Math.abs(x - c[0]) - (LENS.hw - LENS.radius), sy = Math.abs(y - 3 - c[1])
           const sd = Math.hypot(Math.max(sx, 0), Math.max(sy, 0)) + Math.min(Math.max(sx, sy), 0) - LENS.radius
           if (sd < 1.5) return 0
         }
         return val
       }
-      if (lens.rim(u, v) >= .5) return 1
-      const val = lens.through(u, v)
+      // the specular rim on the outer quarter of the bezel; the glass's edge (its outer 1.5 cells, where Fresnel climbs)
+      // shows a step up even over an empty scene, on the screen's own 2-cell rhythm, so the pill reads as an outline
+      if (bez < .25 && lens.rim(u, v) >= .7) return 1
+      let val = lens.through(u, v)
+      if (bez < .125) { const b = Math.max(val, floorAt(x, y)); return b > 0 ? Math.min(1, b + step) : 0 }
       return val > 0 ? Math.min(1, val + (lens.fresnel(u, v) >= .15 ? step : 0)) : 0
     }
     screen.bounds = [0, 12, W1, H1]
@@ -168,11 +174,10 @@ export const matLens: WidgetPreset = {
 const WIN = { x0: 22, x1: 122, spring: 70, bottom: 140, R: 54.16, frame: 4, rose: { cx: 72, cy: 52, r: 34 }, cell: 13, seed: 41 }
 /** Signed distance to the lancet outline (cells, < 0 inside): a rectangle under a pointed arch of two circles. */
 export function lancetSdf(x: number, y: number): number {
-  const half = (WIN.x1 - WIN.x0) / 2, mx = (WIN.x0 + WIN.x1) / 2
-  const rect = Math.max(Math.abs(x - mx) - half, y - WIN.bottom, WIN.spring - y)
-  const a1 = Math.hypot(x - (WIN.x0 + WIN.R), y - WIN.spring) - WIN.R, a2 = Math.hypot(x - (WIN.x1 - WIN.R), y - WIN.spring) - WIN.R
-  const arch = Math.max(a1, a2, y - WIN.spring)
-  return Math.min(rect, arch)
+  const side = Math.abs(x - (WIN.x0 + WIN.x1) / 2) - (WIN.x1 - WIN.x0) / 2
+  if (y > WIN.spring) return Math.max(side, y - WIN.bottom)
+  // above the springing line: inside both arcs (each centred on the far side of the span)
+  return Math.max(Math.hypot(x - (WIN.x0 + WIN.R), y - WIN.spring), Math.hypot(x - (WIN.x1 - WIN.R), y - WIN.spring)) - WIN.R
 }
 /** The rose's 19 sites: 12 petals on a ring of 24 (petal k at k o'clock, 0 at the top), 6 inner at 11, the centre. */
 export const ROSE_SITES: Pt[] = [
@@ -267,13 +272,13 @@ function paneRow(geo: WindowGeo, V: Float32Array, Tn: Uint8Array, A: Float32Arra
     // antique glass: seeds on 2×2 lattice blocks, ~6% of them a step down
     if (stbn(i >> 1, j >> 1) < .06) v -= step
     // the hour's petal: red at its own transmittance size, two size steps smaller at night (size contrast, no activeDim)
-    if (p === petal) { A[k] = Math.max(.25, Math.min(1, cls[p] * Math.max(gain, .6) - (night ? 2 * step : 0))); continue }
+    if (p === petal) { A[k] = Math.min(1, Math.max(.75, cls[p] * gain + step) - (night ? 2 * step : 0)); continue }
     v = Math.max(0, Math.min(1, v))
     if (v < .06) continue
     V[k] = v; Tn[k] = v < .3 ? 0 : v < .62 ? 1 : 2
   }
 }
-/** Came glints: mid where phong(light, 30) ≥ .4 on the lead's round top, never brighter. */
+/** Came glints: mid where phong(light, 30) ≥ .2 on the lead's round top, never brighter. */
 function cameGlints(geo: WindowGeo, L: Light, G: Float32Array): void {
   const { came, nx, ny, nz } = geo, point = !Array.isArray(L), at = point ? (L as { at: Vec3 }).at : null
   let lx = 0, ly = 0, lz = 1
@@ -284,7 +289,7 @@ function cameGlints(geo: WindowGeo, L: Light, G: Float32Array): void {
     const ndl = nx[k] * lx + ny[k] * ly + nz[k] * lz
     if (ndl <= 0) continue
     const rv = 2 * ndl * nz[k] - lz // R·V with V = (0, 0, 1)
-    if (rv > 0 && rv ** 30 >= .4) G[i] = .5
+    if (rv > 0 && rv ** 30 >= .2) G[i] = .5
   }
 }
 const winScratch = once(() => ({ panes: createRaster(LG15), tones: new Uint8Array(LG15.cols * LG15.rows), petal: createRaster(LG15), glints: createRaster(TILE), frame: createRaster(TILE) }))
@@ -315,7 +320,6 @@ export const matWindow: WidgetPreset = {
     s.glints.bounds = WIN_BOX
     return [
       cite('ROSE · LANCET'),
-      layer(T.text(`${pad2(now.getHours())}:${pad2(now.getMinutes())}`, 0, 134), 'faint'),
       surfaceLayer([[frameRaster(), [[.06, .3, 'faint'], [.3, 2, 'mid']]], [s.glints, 'mid']]),
       tonedLayer(s.panes, s.tones, L15),
       { field: sample(s.petal), tone: 'active', lattice: L15, origin: [0, 0] },
