@@ -32,8 +32,9 @@ import { boardIds, boardManifest, resolveBoardId, resolveCardId, type BoardConte
 import { registerPresets } from './registry'
 
 /**
- * Eager registry: every board with its cards, for scripts, the playground and the worker. The app shell
- * imports `./manifest` instead (one lazy chunk per board); titles, columns and density come from there.
+ * Eager registry: every board with its cards, for scripts and the playground. The app shell imports `./manifest`
+ * instead (one lazy chunk per board; titles, columns and density come from there), and so does the sample worker,
+ * which loads only the board of the card it is asked for (`src/workers/sampleWorker.ts`).
  */
 const contents = {
   henry: { items: henryBoard },
