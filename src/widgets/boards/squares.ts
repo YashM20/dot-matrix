@@ -359,14 +359,19 @@ const ttLand = (x: number, y: number) => {
   return Math.min(a, b) + .25 * (hash01(x, y, 17) - .5) < 1
 }
 /** A 2 × 3 sextant from a sub-cell predicate at character (c, r). */
+let ttCache: { key: string; layers: Layer[] } | undefined
 const sext = (c: number, r: number, on: (x: number, y: number) => boolean) => { let b = 0; for (let i = 0; i < 6; i++) if (on(c * 2 + (i & 1), r * 3 + (i >> 1))) b |= 1 << i; return b }
 export const sqTeletext: WidgetPreset = {
   id: 'sq-teletext', name: 'Squares Teletext', label: 'TELETEXT', ...tile, clock: true,
   layers: ctx => {
-    const t = ctx.t, page: (TtCell | null)[][] = Array.from({ length: TT_ROWS }, () => new Array<TtCell | null>(TT_COLS).fill(null))
+    // the page changes with the clock's second, the subtitle and the rain front (half a sub-cell at a time): one cached build
+    const t = ctx.t, now = new Date(), front = Math.floor(mod(t * 1.5 + 10, 34) * 2) / 2 - 8, sub = Math.floor(mod(t, 4 * TT_SUBS.length) / 4)
+    const key = `${now.getHours()}:${now.getMinutes()}:${now.getSeconds()}|${sub}|${front}`
+    if (ttCache?.key === key) return ttCache.layers
+    const page: (TtCell | null)[][] = Array.from({ length: TT_ROWS }, () => new Array<TtCell | null>(TT_COLS).fill(null))
     const put = (s: string, c: number, r: number, fg: Tone, bg?: Tone) => [...s].forEach((ch, i) => { if (c + i < TT_COLS) page[r][c + i] = { ch, fg, ...(bg ? { bg } : {}) } })
     // header (row 0 is the label row: TELETEXT is the card chrome): page number, HH:MM, and the seconds in red
-    const now = new Date(), two = (n: number) => String(n).padStart(2, '0')
+    const two = (n: number) => String(n).padStart(2, '0')
     put('P100', 10, 0, 'mid'); put(`${two(now.getHours())}:${two(now.getMinutes())}:`, 16, 0, 'idle'); put(two(now.getSeconds()), 22, 0, 'active')
     // banner: SQUARES in contiguous sextants (the 5 × 7 font, one sub-cell per font pixel) on a joined panel
     const word = 'SQUARES', bx = Math.floor((TT_COLS * 2 - (word.length * 6 - 1)) / 2), by = 1
@@ -377,7 +382,6 @@ export const sqTeletext: WidgetPreset = {
     for (let c = 0; c < TT_COLS; c++) page[5][c] = { sextant: 48, fg: 'mid' }
     // index (left) and the weather map (right, separated graphics): land mid, a rain band (idle) drifting east
     TT_INDEX.forEach(([name, n], i) => { put(name, 0, 6 + i, 'idle'); put(n, 8, 6 + i, 'value') })
-    const front = mod(t * 1.5 + 10, 34) - 8
     for (let r = 0; r < 7; r++) for (let c = 0; c < 11; c++) {
       const land = (x: number, y: number) => ttLand(x, y), rain = (x: number, y: number) => ttLand(x, y) && Math.abs(x - front - y * .45) < 2.2
       const bits = sext(c, r, land), wet = sext(c, r, rain)
@@ -385,11 +389,12 @@ export const sqTeletext: WidgetPreset = {
       else if (bits) page[6 + r][13 + c] = { sextant: bits, fg: 'mid', sep: true }
     }
     // subtitles on a joined panel, one line every 4 s (a full line at t = 0)
-    put(` ${TT_SUBS[Math.floor(mod(t, 4 * TT_SUBS.length) / 4)].padEnd(22)} `, 0, 14, 'value', 'faint')
+    put(` ${TT_SUBS[sub].padEnd(22)} `, 0, 14, 'value', 'faint')
     // fastext: four links in four greys
     put('NEWS', 0, 15, 'value'); put('SPORT', 6, 15, 'idle'); put('TV', 13, 15, 'mid'); put('INDEX', 19, 15, 'faint')
-    // (the land mask keeps one weather cell lit where the rain band sits over sea: rain only over land)
-    return teletextLayers(page, { grid: TILE, cols: TT_COLS, rows: TT_ROWS, origin: [0, 0], cell: TT_CELL, mode: 'contiguous', baseline: 0 })
+    const layers = teletextLayers(page, { grid: TILE, cols: TT_COLS, rows: TT_ROWS, origin: [0, 0], cell: TT_CELL, mode: 'contiguous', baseline: 0 })
+    ttCache = { key, layers }
+    return layers
   },
 }
 

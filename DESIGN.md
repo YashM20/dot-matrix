@@ -305,6 +305,16 @@ Square dots can keep a gutter and fuse with their equal neighbours into one shap
 
 Ink: a square holds 4/π the ink of a circle of the same r, and a joined interior cell is P², so joined fills go one grey band lower (`idle`, not `value`; `value` stays for type and small marks). `squareStyle` (src/widgets/boards/squares.ts) is `square`, sizes .25–1.125, gap .16, five levels.
 
+**Rect cells** (Q2): `Layer.lattice: [kx, ky]` samples on kx × ky cells (fractional allowed); the dot's half width is the ramp × kx and its half height the ramp × ky, each clamped to its own gutter, and `DotInstance.aspect` = ry / rx carries the shape (absent = 1). Cover keeps the centre-inside rule per axis. `Layer.sizeAxis` picks the side the value drives:
+
+| `sizeAxis` | Half sides | Opacity | Joins (with `join`) | Use |
+|---|---|---|---|---|
+| `'both'` (default) | ramp·kx × ramp·ky | from the value | as square cells (same tone, group, level) | rect pixels, teletext sextants on non-2:3 cells |
+| `'y'` | full (1 − gap)·kx·P/2 × ramp·ky | 1 (solid: the weight is the tone) | along x only, across levels: a line is one stroke | line screens |
+| `'x'` | ramp·kx × full (1 − gap)·ky·P/2 | 1 | along y only, across levels | solid bars |
+
+A plain rect cell is the box (`square`), the rounded rect with corner min(rx, ry)·cornerFraction(n) (squircles, n > 8), or the superellipse stretched to rx × ry (n ≤ 8). Teletext (`src/engine/squares/teletext.ts`): sextant mosaics on `[cell / 2, cell / 3]` sub-cells, contiguous = joined per tone, separated = spaced squares (the gutter shows); backgrounds are joined panels at level .5 under the foreground.
+
 ### Chrome radius (CSS)
 Dots and in-card shapes use the squircle exponent above. The HTML chrome around them (card containers, controls, menus) uses a short radius scale in `src/tokens.css`; `scripts/site/css-tokens.ts` fails on a raw px radius (percentages, for circles and CRT glass, are fine).
 
@@ -503,7 +513,7 @@ No state changes a size, so nothing shifts. On coarse pointers every chrome targ
   |---|---|---|
   | `pond-koi` | 30 | swimming koi stutter at 12 (docs/living-matter/L-pond.md D7); 15 on a phone |
   | `mat-loom` | 40 | the shuttle runs 80 cells/s, 2 cells a frame at 40 (docs/living-matter/M-materials.md, STYLE-BIBLE ≤ 2 cells a frame); 20 on a phone, with a size-contrast trail |
-- Choose WebGL2 only by content, never by convenience: a card gets it when a layer is tagged for the GPU (`gpuIR` for a Field IR program evaluated per dot on the GPU, `gpuValues` for a CPU field sampled straight into a value texture) and WebGL2 works; `renderer: 'webgl'` forces it. Tag a layer only when its fine dot count is out of Canvas reach (≳ 100k dots, or a pitch below ~1 card px). The tagged field is still an ordinary `Field` at the card's lattice, which is what goldens, SVG export, `describe()` and the Canvas fallback (no WebGL2, context lost, shader failure) draw. One WebGL2 context per page, which is shared by every card and copied into each card's own canvas. Squircles are exact superellipses (n = 2 + 30r²) with analytic AA, so WebGL ink matches the true dot area. Canvas (Skia) under-covers sub-pixel dots: it draws 79% of a 0.6 px dot. A card of sub-2px dots therefore reads up to ~7% heavier on WebGL (parity gate: mean Δ ≤ 2/255, ≤ 2.5% of pixels off by > 16, PSNR ≥ 32 dB; `scripts/webgl.ts`). The GPU path does not do `sizeCurve`, `jitter`, `sites`, `join`, `shapeOf` or `{grid.gap}`; such layers stay CPU instances. Joined cells draw with no cracks on all three renderers: Canvas fills joined neighbours in one path, WebGL cuts quads on integer cell edges, SVG bleeds joined sides and fades the group with `opacity` (`scripts/squares-browser.ts` gates). A GPU layer does not suppress CPU card cells under its dots, so keep chrome outside its window.
+- Choose WebGL2 only by content, never by convenience: a card gets it when a layer is tagged for the GPU (`gpuIR` for a Field IR program evaluated per dot on the GPU, `gpuValues` for a CPU field sampled straight into a value texture) and WebGL2 works; `renderer: 'webgl'` forces it. Tag a layer only when its fine dot count is out of Canvas reach (≳ 100k dots, or a pitch below ~1 card px). The tagged field is still an ordinary `Field` at the card's lattice, which is what goldens, SVG export, `describe()` and the Canvas fallback (no WebGL2, context lost, shader failure) draw. One WebGL2 context per page, which is shared by every card and copied into each card's own canvas. Squircles are exact superellipses (n = 2 + 30r²) with analytic AA, so WebGL ink matches the true dot area. Canvas (Skia) under-covers sub-pixel dots: it draws 79% of a 0.6 px dot. A card of sub-2px dots therefore reads up to ~7% heavier on WebGL (parity gate: mean Δ ≤ 2/255, ≤ 2.5% of pixels off by > 16, PSNR ≥ 32 dB; `scripts/webgl.ts`). The GPU path does not do `sizeCurve`, `jitter`, `sites`, `join`, `shapeOf`, rect cells (`lattice: [kx, ky]`, `sizeAxis`) or `{grid.gap}`; such layers stay CPU instances. Joined and rect cells draw with no cracks on all three renderers: Canvas fills joined neighbours in one path, WebGL cuts quads on integer cell edges, SVG bleeds joined sides and fades the group with `opacity` (`scripts/squares-browser.ts` gates). A GPU layer does not suppress CPU card cells under its dots, so keep chrome outside its window.
 
 ### Don't
 - Don't introduce a second accent hue. `{colors.accentAmber}` exists only inside the `deerflowMosaic` hero preset's ambient lighting — never on flat `dot480` chrome, never on a CTA.
@@ -595,8 +605,10 @@ One global switch (header control, `?skin=`, localStorage `dot480:skin`, `setSki
 | `eink` | 1-bit blue-noise ink on paper; partial refresh .32 s with ghosts (.3 × .8); every 10th refresh full (TRMNL physics) | full-refresh flash (also on board change) |
 | `flipdisc` | 2-tone discs (`value` face, `dotFaint` back, accent pigment), column sweep .34 s, underdamped flips (ω 60, ζ .32); clack muted by default | discs sweep from black |
 | `nixie` | neutrals → warm neon, 3-level glow, hex anode mesh, slow flicker | ignition stutter |
+| `lcd` | reflective: cell average, symmetric liquid-crystal lag v′ = v + (target − v)(1 − e^(−Δt/τ)), τ .15 s; square pixels with a .12 clear gutter; neutrals → ink on a pale backplane (paper / ink are skin physics, not tokens), the accent prints as pigment; the pixels' shadow on the backplane (offset .35 / .5 cell, blur .5, α .22) | pixels fade in from a blank panel (τ) |
+| `grout` | mosaic: one flat tile per cell on grout (gap .14; the scheme's `bg`, a light card's faint tone), a 1 px bevel (+12% top-left, −18% bottom-right), a fixed ±3% luma jitter per tile; the tile keeps the cell's hue | tiles set in a diagonal sweep (.3 s) |
 
-- **Cost:** emissive skins are GPU-side 2D ops (drawImage, composites, mips, one SVG colour-matrix filter). E-ink and flip-disc read back one `cols × rows` image a few times a second at most. A static card is re-skinned from its existing frame (no re-sample); a running card's canvas is copied once per its own tick.
+- **Cost:** emissive skins, LCD and grout are GPU-side 2D ops (drawImage, composites, mips, one SVG colour-matrix filter; no readback). E-ink and flip-disc read back one `cols × rows` image a few times a second at most. A static card is re-skinned from its existing frame (no re-sample); a running card's canvas is copied once per its own tick.
 - **Reduced motion:** no power-on animation, no e-ink flash (partials only), no nixie flicker.
 - Not yet: split-flap skin (the split-flap text motion already exists per card), real-hardware calibration.
 
@@ -689,6 +701,7 @@ Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5
 - **Physical LED-panel calibration not yet measured** — the `led-panel` breakpoint's pitch-locking behavior is specified but not validated against real hardware bit-depth/gamma response.
 - **Interaction tokens are specified, not yet measured** — `{interaction.*}` values (glow radius, spring half-lives, focus dash, hit pad) are design targets until tuned against real pointer/touch latency.
 - **Square joins** connect through edges only: diagonal `conn: 8` bridges (quadrant code 5) and rotation (limited to π/4) are Q3; SVG joins rely on a seam bleed, so an SVG export of a joined card overlaps neighbours by ≤ 0.5 px.
+- **Rect cells** travel in a spec only as baked `raster` layers (`lattice: [kx, ky]`, `sizeAxis`); an IR, text or generator layer on a rect lattice is baked. Without `installSquares()` a rect cell draws as a plain dot of half side rx.
 - **Superformula (N-fold decorative dot shapes)** deferred per the engineering plan — only the squircle exponent range is currently implemented.
 - **Low-density halftone legibility** below ~32×32 grid cells is a known hard limit, not yet mitigated beyond the gamma-boost + pre-blur tweaks documented in the engineering plan.
 - **Modal / dialog styling** not present in any captured reference board — no `dot-modal` component exists yet.

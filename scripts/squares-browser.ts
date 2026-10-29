@@ -7,7 +7,9 @@
  *   gates: pixel parity of every renderer vs Canvas(array) (mean Δ ≤ 2/255, ≤ 2.5% px off by > 16, PSNR ≥ 32 dB);
  *          no crack: along every boundary between FULL joined cells the darkest luma ≥ interior − 3/255 (Canvas,
  *          WebGL) or − 6/255 (SVG, bleed); no double blend: at opacity .5 the brightest ≤ interior + 3/255;
- *          the first join frame falls back to Canvas (the GL hook is lazy), the next one draws on WebGL2
+ *          the first join frame falls back to Canvas (the GL hook is lazy), the next one draws on WebGL2;
+ *          rect parity (Q2: the teletext and line cards in the pixel gates) and line continuity (joined rect lines on
+ *          [1, 3] with sizeAxis y, one level and stepping levels: no crack, no double blend on any renderer)
  *
  *   npx tsx scripts/squares-browser.ts                 # default GPU path
  *   npx tsx scripts/squares-browser.ts --swiftshader   # software rasterizer
@@ -23,7 +25,7 @@ const args = process.argv.slice(2), swift = args.includes('--swiftshader'), back
 const OUT = '.snapshots/squares'
 mkdirSync(OUT, { recursive: true })
 const TOL = { pixelMean: 2, pixelOver16: 2.5, psnr: 32, crack: 3, crackSvg: 6, blend: 3 }
-const CARDS = ['sq-tetris', 'sq-quads', 'sq-blob', 'sq-gameboy']
+const CARDS = ['sq-tetris', 'sq-quads', 'sq-blob', 'sq-gameboy', 'sq-teletext', 'sq-lines']
 
 execFileSync('npx', ['esbuild', 'scripts/lib/squares-page.ts', '--bundle', '--format=iife', '--platform=browser', '--target=es2022', `--outfile=${OUT}/page.js`, '--log-level=warning'], { stdio: 'inherit', shell: true })
 const html = join(OUT, 'page.html')
@@ -100,6 +102,19 @@ try {
     worst.canvas <= TOL.crack && worst.webgl <= TOL.crack && worst.svg <= TOL.crackSvg, `worst crack /255: canvas ${worst.canvas}, webgl ${worst.webgl}, svg ${worst.svg}`)
   check('squares-browser: no double blend (opacity .5: boundary ≤ interior + 3/255)', worstBlend.canvas <= TOL.blend && worstBlend.webgl <= TOL.blend && worstBlend.svg <= TOL.blend,
     `worst /255: canvas ${worstBlend.canvas}, webgl ${worstBlend.webgl}, svg ${worstBlend.svg}`)
+
+  // Q2.6 line continuity: joined rect lines (one level, and stepping levels) show no crack and no double blend
+  const lines = await run('SQ.lines(2)') as { step: boolean; opacity: number; gl: boolean; canvas: { crack: number; blend: number }; webgl: { crack: number; blend: number }; svg: { crack: number; blend: number } }[]
+  report.lines = lines
+  const lw = { canvas: 0, webgl: 0, svg: 0 }, lb = { canvas: 0, webgl: 0, svg: 0 }
+  for (const l of lines) for (const name of ['canvas', 'webgl', 'svg'] as const) {
+    if (name === 'webgl' && !l.gl) continue
+    // with stepping levels the stroke's height changes along the row, but its centre row is lit at every level
+    lw[name] = Math.max(lw[name], l[name].crack); lb[name] = Math.max(lb[name], l[name].blend)
+  }
+  check('squares-browser: line continuity (rect lines on [1, 3], sizeAxis y, joined across levels: centre row ≥ mean − 3/255 on Canvas and WebGL, − 6 on SVG; ≤ mean + 3 at opacity .5)',
+    lw.canvas <= TOL.crack && lw.webgl <= TOL.crack && lw.svg <= TOL.crackSvg && lb.canvas <= TOL.blend && lb.webgl <= TOL.blend && lb.svg <= TOL.blend,
+    `crack /255: canvas ${lw.canvas}, webgl ${lw.webgl}, svg ${lw.svg}; blend: canvas ${lb.canvas}, webgl ${lb.webgl}, svg ${lb.svg}`)
 
   if (logs.length) console.log(logs.slice(0, 8).join('\n'))
 } catch (e) {

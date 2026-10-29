@@ -190,4 +190,6 @@ export const catalog: readonly CatalogRow[] = [
   ['sq-quads', '1xsgez8c', 'squares'],
   ['sq-blob', 'ns450j4j', 'squares'],
   ['sq-gameboy', 'nddv8c83', 'squares'],
+  ['sq-teletext', 'chdwwa80', 'squares'],
+  ['sq-lines', 'a3b7yp0r', 'squares'],
 ]
