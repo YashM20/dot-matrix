@@ -23,13 +23,13 @@ export interface JellySpec {
 }
 export interface JellyLayout { J: number; TENT: number; ARM: number; PUSH: number; G: number; size: number }
 export interface Jelly { world: World; spec: JellySpec; layout: JellyLayout; tentacles: Rope[][]; arms: Rope[][] }
-const JS = 12, J_X = 0, J_Y = 1, J_AX = 2, J_AY = 3, J_VX = 4, J_VY = 5, J_TH = 6, J_C = 7, J_DC = 8
+const JS = 12, J_X = 0, J_Y = 1, J_AX = 2, J_AY = 3, J_VX = 4, J_VY = 5, J_TH = 6, J_C = 7, J_DC = 8, J_ACT = 9
 export const TENTACLES = 8, TENT_NODES = 10, ARMS = 4, ARM_NODES = 8, PUSH_N = 12
 /**
  * Thrust per unit contraction rate (cells/s²), drag (1/s) and the sink (cells/s). The plan's 26 gives a 26 cells/s
  * lurch per pulse and crosses the card in 10 s; 7 lurches visibly and drifts about 3 cells/s.
  */
-export const THRUST = 7, DRAG = .9, SINK = .6
+export const THRUST = 9, DRAG = .9, SINK = 1.6
 /** Kuramoto coupling between the three bells. */
 export const JELLY_K = .25
 /** The box the bell centres keep to (card cells). */
@@ -77,7 +77,7 @@ export function createJelly(spec: JellySpec): Jelly {
       const o = J + JS * b
       s[o + J_X] = bell.x; s[o + J_Y] = bell.y; s[o + J_AX] = 0; s[o + J_AY] = -1
       s[o + J_TH] = (TAU * (ihash(seed, b, 5) / 4294967296 + ph0 * dt / bell.period)) % TAU
-      s[o + J_C] = contraction(s[o + J_TH] / TAU)
+      s[o + J_ACT] = .6; s[o + J_C] = contraction(s[o + J_TH] / TAU) * (.15 + .85 * .6)
       pins(s, b, pinXY)
       for (let k = 0; k < TENTACLES; k++) ropeInit(tentacles[b][k], s, pinXY[2 * k], pinXY[2 * k + 1])
       for (let k = 0; k < ARMS; k++) ropeInit(arms[b][k], s, pinXY[2 * (TENTACLES + k)], pinXY[2 * (TENTACLES + k) + 1])
@@ -104,15 +104,23 @@ export function createJelly(spec: JellySpec): Jelly {
     for (let b = 0; b < NB; b++) theta[b] = s[J + JS * b + J_TH]
     kuramotoStep(theta, omega, JELLY_K, all, dt)
     for (let b = 0; b < NB; b++) {
-      const o = J + JS * b, c = contraction(theta[b] / TAU), dc = (c - s[o + J_C]) / dt
+      // activity: spells of swimming and resting (slow noise), resting near the top, swimming near the bottom; the
+      // pulse's depth follows it, so a resting bell barely pulses and sinks
+      const o = J + JS * b, yb = s[o + J_Y]
+      let act = .35 + 1.8 * noise2(.025 * tNow, b * 5.3 + .2, seed + 1)
+      act = Math.min(act, (yb - 48) / 30, 1); if (yb > 100) act = Math.max(act, (yb - 100) / 14)
+      act = act < 0 ? 0 : act > 1 ? 1 : act
+      s[o + J_ACT] += (act - s[o + J_ACT]) * dt / 1.5
+      const c = contraction(theta[b] / TAU) * (.15 + .85 * s[o + J_ACT]), dc = (c - s[o + J_C]) / dt
       s[o + J_TH] = theta[b]; s[o + J_DC] = dc; s[o + J_C] = c
       // the current at the bell
       curl2(s[o + J_X] / 50, s[o + J_Y] / 50, .03 * tNow, seed, cur); cur[0] *= 2; cur[1] *= 2
       flowAt(s[o + J_X], s[o + J_Y], flowOut)
-      // swim: thrust along the axis while contracting, drag toward the current, a slow sink
+      // swim: thrust along the axis while contracting, drag toward the current, a slow sink (a bell is heavy next to
+      // its tentacles: it takes half the current, the ropes all of it, so upwellings don't pin bells to the top)
       const thrust = THRUST * (dc > 0 ? dc : 0)
-      s[o + J_VX] += (thrust * s[o + J_AX] - DRAG * (s[o + J_VX] - flowOut[0])) * dt
-      s[o + J_VY] += (thrust * s[o + J_AY] - DRAG * (s[o + J_VY] - flowOut[1] - SINK)) * dt
+      s[o + J_VX] += (thrust * s[o + J_AX] - DRAG * (s[o + J_VX] - .5 * flowOut[0])) * dt
+      s[o + J_VY] += (thrust * s[o + J_AY] - DRAG * (s[o + J_VY] - .5 * flowOut[1] - SINK)) * dt
       // walls: a soft spring back into the box; bells nudge each other apart
       const x = s[o + J_X], y = s[o + J_Y]
       if (x < BOX[0]) s[o + J_VX] += (BOX[0] - x) * 2 * dt; else if (x > BOX[2]) s[o + J_VX] -= (x - BOX[2]) * 2 * dt
@@ -123,12 +131,11 @@ export function createJelly(spec: JellySpec): Jelly {
         if (d2 < want * want && d2 > 1e-6) { const d = Math.sqrt(d2), k = (want - d) * 1.5 * dt / d; s[o + J_VX] += ex * k; s[o + J_VY] += ey * k }
       }
       s[o + J_X] += s[o + J_VX] * dt; s[o + J_Y] += s[o + J_VY] * dt
-      // the axis turns (≤ .6 rad/s) toward a wandering heading, mostly up; near the top a bell rolls over and swims
-      // down, near the bottom it rights itself, near a side it turns back in
+      // the axis turns (≤ .6 rad/s) toward a wandering heading within ±.55 rad of up, leaning back in near a side
       const wa = .55 * noise2(.04 * tNow, b * 3.1 + .5, seed)
-      let dx = dsin(wa), dy = -dcos(wa)
-      dx += x < 40 ? (40 - x) / 10 : x > 104 ? (104 - x) / 10 : 0
-      dy += y < 48 ? (48 - y) / 6 : y > 100 ? (100 - y) / 10 : 0
+      let dx = dsin(wa)
+      const dy = -dcos(wa)
+      dx += x < 40 ? (40 - x) / 20 : x > 104 ? (104 - x) / 20 : 0
       const dl = Math.sqrt(dx * dx + dy * dy) || 1
       ag.hx = s[o + J_AX]; ag.hy = s[o + J_AY]
       turnToward(ag, dx / dl, dy / dl, turn)
