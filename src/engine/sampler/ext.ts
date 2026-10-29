@@ -26,6 +26,11 @@ export const samplerExt: {
   join?: (a: JoinArgs) => JoinFrame
   /** Form code of a `shapeOf` site dot: its roundness step 0–8, or 15 (the frame style). */
   form?: (layer: Layer, value: number, u: number, v: number) => number
+  /**
+   * A rect cell's half width and aspect (squares Q2): `r` = the dot's ramp radius on kx (gap-clamped), `ky` the y
+   * factor, `axis` a bar / line ('x' / 'y' keep the other side full), `gap` the clamp applied (0 = none), `pitch` card px.
+   */
+  rect?: (r: number, kx: number, ky: number, axis: 'x' | 'y' | undefined, gap: number, pitch: number) => [number, number]
   /** Stamp a packed join / form code and a rect cell's aspect (ry / rx, 1 = none) onto an array-path dot (`joints`: the frame's joint table). */
   stamp?: (d: DotInstance, join: number, form: number, joints: JointGeom[] | null, aspect: number) => void
   /** Write a buffer dot's packed join / form code and aspect (allocating `ext` on first use). */

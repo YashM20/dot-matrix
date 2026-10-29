@@ -25,6 +25,15 @@ export function formOf(layer: Layer, value: number, u: number, v: number): numbe
   const r = layer.shapeOf?.(value, u, v)
   return r === undefined || !Number.isFinite(r) ? NO_FORM : Math.round(8 * Math.max(0, Math.min(1, r)))
 }
+/**
+ * `samplerExt.rect`: a rect cell's half width and aspect. ry follows the same ramp on ky (each side clamped to its own
+ * gutter); a bar ('x') keeps its height full, a line ('y') its width.
+ */
+export function rect(r: number, kx: number, ky: number, axis: 'x' | 'y' | undefined, gap: number, pitch: number): [number, number] {
+  let ry = r / kx * ky
+  if (axis === 'y') r = (1 - gap) * kx * pitch / 2; else if (axis === 'x') ry = (1 - gap) * ky * pitch / 2
+  return [r, r > 0 ? ry / r : 1]
+}
 /** `samplerExt.stamp`: the array-path dot's per-dot roundness, join and rect aspect. */
 export function stamp(d: DotInstance, join: number, form: number, joints: JointGeom[] | null, aspect = 1): void {
   if (form !== NO_FORM) { d.shape = 'squircle'; d.roundness = form / 8 }

@@ -19,6 +19,6 @@ export const SKINS: Record<SkinName, SkinInfo> = {
   eink: { name: 'eink', label: 'INK', title: 'E-ink: 1-bit dither, ghosting, full-refresh flash', blend: 'normal' },
   flipdisc: { name: 'flipdisc', label: 'FLIP', title: 'Flip-disc: two-faced discs with inertia (clack optional)', blend: 'normal' },
   nixie: { name: 'nixie', label: 'NIXIE', title: 'Nixie-ish: warm neon glow behind a hex anode mesh', blend: 'screen' },
-  lcd: { name: 'lcd', label: 'LCD', title: 'LCD: square pixels, backplane shadow, slow liquid-crystal response', blend: 'normal' },
-  grout: { name: 'grout', label: 'GROUT', title: 'Mosaic: one tile per cell, grout lines, bevelled edges', blend: 'normal' },
+  lcd: { name: 'lcd', label: 'LCD', title: 'LCD: square pixels, slow response, backplane shadow', blend: 'normal' },
+  grout: { name: 'grout', label: 'GROUT', title: 'Mosaic: a tile per cell, grout, bevels', blend: 'normal' },
 }
