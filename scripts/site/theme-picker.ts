@@ -239,6 +239,30 @@ try {
   const over = await js(`(() => { const n = window.__vt.length; document.querySelector('.theme-pop [data-accent=vite]').click(); return { now: document.documentElement.dataset.accent, vt: window.__vt.length - n } })()`) as { now: string; vt: number }
   check('reduced motion (the ⌘K override): instant, no view transition', over.now === 'vite' && over.vt === 0, JSON.stringify(over))
 
+  // ── T6: the custom hue ──
+  await open('/')
+  await click(btn.x, btn.y)
+  await waitFor('!!document.querySelector(".theme-pop .theme-custom")', 3000)
+  check('the custom swatch is the 8th option, a rim before any hue is set', await js(`(() => { const o = [...document.querySelectorAll('.theme-pop [role=option]')]; return o.length === 8 && o[7].classList.contains('theme-custom') && !!o[7].querySelector('.theme-disc--ring') })()`) === true)
+  const cu = (await centreOf('.theme-pop .theme-custom'))!
+  await click(cu.x, cu.y)
+  check('a click picks custom at the current accent\'s hue (signal, 29°) and opens the hue slider', await waitFor(`document.documentElement.dataset.accent === 'custom' && !!document.getElementById('theme-custom') && !!document.querySelector('.theme-pop .theme-hue input')`, 6000) && await js(`document.querySelector('.theme-pop .theme-hue input').value`) === '29', String(await stored())?.slice(0, 80))
+  const track = await js(`document.querySelectorAll('.theme-pop .theme-hue-track circle').length`)
+  check('the slider track is 36 dots in their own generated colours', track === 36, String(track))
+  const red0 = await js(`getComputedStyle(document.documentElement).getPropertyValue('--red').trim()`)
+  // the range is a native control: set it as the browser would on a drag, then let the rAF apply it
+  await js(`(() => { const i = document.querySelector('.theme-pop .theme-hue input'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(i, '212'); i.dispatchEvent(new Event('input', { bubbles: true })) })()`)
+  check('moving the slider re-generates the theme (the page --red changes, hue 212 is stored with its CSS)', await waitFor(`getComputedStyle(document.documentElement).getPropertyValue('--red').trim() !== ${JSON.stringify(red0)} && (localStorage.getItem('dot480:theme') || '').includes('"hue":212')`, 4000))
+  const s1 = JSON.parse((await stored())!) as { accent: string; css: string }
+  check('the stored custom theme scopes both schemes', s1.accent === 'custom' && s1.css.includes('[data-scheme="dark"][data-accent="custom"]') && s1.css.includes('[data-scheme="light"][data-accent="custom"]'))
+  await open('/', { keep: true })
+  check('a reload boots the custom hue before first paint (the boot script writes its style)', await html('accent') === 'custom' && await js(`!!document.getElementById('theme-custom')`) === true)
+  await click(btn.x, btn.y)
+  await waitFor('!!document.querySelector(".theme-pop [data-accent=cobalt][role=option]")', 3000)
+  await js(`document.querySelector('.theme-pop [data-accent=cobalt][role=option]').click()`)
+  check('a preset pick leaves custom, and the stored hue stays for the custom swatch', await waitFor(`document.documentElement.dataset.accent === 'cobalt'`, 3000) && (await stored())?.includes('"hue":212') === true)
+  await key('Escape', 'Escape', 27)
+
   // ── touch: TOOLS › THEME ──
   await open('/', { phone: true })
   check('phone: the header THEME button is hidden', await js(`getComputedStyle(document.querySelector('.theme-switch')).display === 'none'`) === true)
@@ -249,7 +273,7 @@ try {
   await shot('sheet')
   const sizes = await js(`[...document.querySelectorAll('.tools-sheet .theme-ctl :is([role=radio], [role=option], .theme-share)')].map(e => { const r = e.getBoundingClientRect(); return [e.getAttribute('aria-label') || e.textContent, Math.round(r.width), Math.round(r.height)] })`) as [string, number, number][]
   const small = sizes.filter(([, w, h]) => w < 44 || h < 44)
-  check(`touch targets ≥ 44 px (${sizes.length} controls)`, sizes.length === 11 && !small.length, JSON.stringify(small))
+  check(`touch targets ≥ 44 px (${sizes.length} controls)`, sizes.length === 12 && !small.length, JSON.stringify(small))
   check('the sheet has no horizontal overflow', await js(`(() => { const p = document.querySelector('.tools-sheet .sheet-body'); return p.scrollWidth <= p.clientWidth + 1 })()`) === true)
   const n0 = await vts()
   const ph = (await centreOf('.tools-sheet [data-accent="phosphor"][role=option]'))!
@@ -262,6 +286,11 @@ try {
   const lt = (await centreOf('.tools-sheet .theme-seg [role=radio]:nth-child(2)'))!
   await tap(lt.x, lt.y)
   check('a tap on LIGHT switches the scheme', await waitFor(`document.documentElement.dataset.scheme === 'light'`, 3000))
+  await sleep(900)
+  const tc = (await centreOf('.tools-sheet .theme-custom'))!
+  await tap(tc.x, tc.y)
+  check('phone: a tap on custom opens the hue slider in the sheet (44 px tall)', await waitFor(`document.documentElement.dataset.accent === 'custom' && !!document.querySelector('.tools-sheet .theme-hue input')`, 6000) && await js(`document.querySelector('.tools-sheet .theme-hue').getBoundingClientRect().height >= 44`) === true)
+  await shot('sheet-custom')
   check('no page errors', errors.length === 0, errors.join(' | '))
 } finally {
   ws.close(); proc.kill(); server.close()

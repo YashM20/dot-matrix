@@ -3,6 +3,19 @@
 All notable engineering changes to Dot/480 are recorded here, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://dot-matrix1.vercel.app, deployed from `main`), not a published package: there are no tagged or npm releases, so entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
 
+## [Unreleased] — 2026-10-29 · T6 type, contrast and the custom hue (round 2)
+Plan: `docs/LAYOUT-THEME-PLAN.md` §1c #3 and #15, §4 Custom hue, §5 T6. Status: `docs/PROGRESS.md`.
+### Added
+- **Custom hue** (`src/site/theme/custom.ts`, lazy): an 8th THEME swatch opens a hue slider over 36 generated dots. The browser runs the same generator as the presets; chroma and lightness come from the neighbouring presets and are clamped by the rules, so every hue (swept 0–359 × 2 schemes in `scripts/site/theme.ts`) passes them. The CSS is stored with the choice and replayed by the boot script (no flash).
+- **`prefers-contrast: more`:** per theme, label, mute and accent text at ≥ 7:1, the glyph grey at ≥ 4.5:1, hairlines twice as strong, opaque raised layers.
+- **Names in dot type** (`src/components/DotName.tsx`): board names and the widget page's card name are drawn by the engine through `textAt` and `DotCanvas`, wrapped to their box; the subtitle after "—" stays a mono label.
+- Probes: the layout probe now fails a page with ≥ 10% of its chrome characters under 12 px; `theme-boot.ts` checks a stored custom hue paints before first paint and the contrast-more roles; `theme-picker.ts` checks the custom swatch and slider on desktop and in the phone sheet.
+### Changed
+- **No contrast waivers:** `--mute` `#6E7278` → `#81858B` (≥ 4.5:1 on every surface), `--dim` is now a non-text glyph grey (`#65696F`, ≥ 3:1), `dark_signal`'s `on-red` is the red's dark ink (white was 3.55:1). Accent text is `--red-text` everywhere (21 rules used `--red`, which fails on paper); a check fails any `color:` that is not a text role. Goldens unchanged (none of these is an engine token).
+- **Type:** chrome text is 12 px minimum (120 rules lifted; under 12 only in-card text, keycaps, glyph marks and on-canvas badges). Prose (intro, blurbs, About, changelog) is in Oxanium; `text-wrap: balance` on headings, `pretty` on prose.
+- **Skins:** e-ink and flip-disc take a light card's paper and ink; the footer's live number is a dark inset under an emissive skin on a light page (it was dark ink on dark glass); the X-ray HUD figures use `--red-text`.
+- Boot script 900 → 960 B budget (the custom hue's style).
+
 ## [Unreleased] — 2026-10-28 · T5 theme picker and the switch moment (round 2)
 Plan: `docs/LAYOUT-THEME-PLAN.md` §4 Picker, §5 T5. Status: `docs/PROGRESS.md`.
 ### Added

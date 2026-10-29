@@ -133,7 +133,7 @@ export function ThemeControls({ shown, onPreview, focus = false }: { shown?: { s
         onPointerEnter={e => { if (isMouse(e)) preview({ accent: a }) }} onFocus={() => preview({ accent: a })}
         onClick={e => pickAccent(a, e.currentTarget)}><Swatch /></button>)}
       <button type="button" role="option" aria-selected={t.accent === 'custom'} tabIndex={t.accent === 'custom' ? 0 : -1}
-        aria-label={`custom: ${t.custom ? `hue ${t.custom.hue}` : 'any hue'}`} aria-expanded={hueOpen || t.accent === 'custom'} className="theme-custom"
+        aria-label={`custom: ${t.custom ? `hue ${t.custom.hue}` : 'any hue'}`} className="theme-custom"
         {...(t.custom ? { 'data-scheme': view.scheme, 'data-accent': 'custom' } : {})}
         onPointerEnter={e => { void loadCustom(); if (isMouse(e) && t.custom) preview({ accent: 'custom' }) }} onFocus={() => { if (t.custom) preview({ accent: 'custom' }) }}
         onClick={e => pickCustom(e.currentTarget)}><Swatch ring={!t.custom} /></button>
