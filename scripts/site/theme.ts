@@ -20,7 +20,7 @@
  * Called from verify.ts (`themeChecks(assert)`); runnable alone.
  */
 import { createHash } from 'node:crypto'
-import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { existsSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { ACCENT_ROLES, ACCENT_SPECS, DARK, DOT_ROLES, generateAll, NEUTRAL_ROLES, NEUTRALS, neutralRoles, PINS, type Role, type Theme } from '../../src/site/theme/accents'
 import { apca, CVD_DE, CVD_DL, distinctness, gamutMisses, hexToRgb, wcag } from '../../src/site/theme/color'
 import { BOOT_END, BOOT_SCRIPT, BOOT_START, bootTag } from '../../src/site/theme/boot'
@@ -255,7 +255,12 @@ export async function themeChecks(assert: Assert, { print = false } = {}): Promi
   const pages = PAGES.filter(f => existsSync(f)), unplaced = pages.filter(f => !bootPlaced(readFileSync(f, 'utf8')))
   assert(`theme: every HTML entry (${pages.join(', ')}) carries the boot script exactly once, in <head>, after the color-scheme and theme-color metas it rewrites`, pages.includes('index.html') && !unplaced.length, unplaced.join(', '))
   assert(`theme: vercel.json script-src has the boot script's sha256 (${bootHash()})`, csp.includes(`script-src 'self' ${bootHash()}`))
-  const built = pages.map(f => `dist/${f}`).filter(f => existsSync(f)), lost = built.filter(f => !readFileSync(f, 'utf8').includes(bootTag()))
+  // a dist/ page older than its source entry or the boot script is a leftover of an earlier build (`pnpm check` runs
+  // before `vite build` in CI and the full suite), so it says nothing about this tree: name it, don't judge it
+  const mtime = (f: string) => statSync(f).mtimeMs, bootSrc = 'src/site/theme/boot.ts'
+  const present = pages.filter(f => existsSync(`dist/${f}`)), old = present.filter(f => mtime(`dist/${f}`) < Math.max(mtime(f), mtime(bootSrc)))
+  if (old.length) console.log(`  theme: ${old.map(f => `dist/${f}`).join(', ')} older than the source (a stale build): not checked; run \`vite build\` first`)
+  const built = present.filter(f => !old.includes(f)).map(f => `dist/${f}`), lost = built.filter(f => !readFileSync(f, 'utf8').includes(bootTag()))
   if (built.length) assert(`theme: the built pages (${built.join(', ')}) kept the boot script byte for byte (the CSP hash holds after vite build)`, !lost.length, lost.join(', '))
   const unwired = PAGE_CSS.filter(f => { const s = readFileSync(f, 'utf8'), a = s.indexOf('../tokens.css'), b = s.indexOf('../site/theme/themes.css'); return a < 0 || b < a })
   assert(`theme: the essay and legal pages import themes.css after tokens.css (${PAGE_CSS.join(', ')})`, !unwired.length, unwired.join(', '))

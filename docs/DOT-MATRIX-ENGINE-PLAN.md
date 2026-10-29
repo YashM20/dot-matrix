@@ -200,13 +200,14 @@ Outputs live in `src/export/` (app level, not engine; Node built-ins and browser
 ## Card spec v1
 A card as JSON (`src/spec/`, schema `schema/card.v1.schema.json`, JSON Schema 2020-12; MASTER-PLAN §3.12, P6). It lives above `src/widgets` because it builds `WidgetPreset`s with `layoutFor`, so it is not under `src/engine` (which must not import the widget layer); it is framework-free all the same, with no dependencies.
 ```
-{ version: 1, id, name, group?, grid: { cols, rows, pitch?, aspect? }, style (DotStyle minus sizeCurve),
+{ version: 1, id, name, group?, grid: { cols, rows, pitch?, aspect? }, style (DotStyle minus sizeCurve; `gap` included),
   theme?: { dotActive: '#rrggbb', … DESIGN.md colour tokens }, data?: defaults, controls?: Control[],
   layers: [ { kind: 'ir', src, tone?, lattice?, origin?, bounds?: [col,row,w,h], toneStops?: [{ at, tone, blend? }] }
           | { kind: 'text', text | bind, format?: { decimals, pad, prefix, suffix }, at, align?, scale?, smooth?, lattice?, origin?, tone? }
           | { kind: 'sites', points: [x,y] | [x,y,value], bind?, size?, tone?, tones?: (Tone|null)[] }
           | { kind: 'raster', grid, window?, format: 'f64'|'f32'|'u8', asset: base64, tones?: { palette, asset }, lattice?, origin?, tone? }
           | { kind: 'generator', name: 'ring'|'bars'|'icon'|…, params: JSON[] , lattice?, origin?, tone? } ],
+          (ir / text / raster / generator also take `join?: true | { at?, conn?, outer?, inner?, seam?, group?: 0–255, accent? }`, squares)
   states?: { name: { data } }, initial?, transitions?: { enter?, change?: … | false, exit? } ({ mask, ease?, duration?, delay? }),
   springKeys?, live?, clock?, burst?, chrome?, label?, bleed?, media? }
 ```
@@ -220,7 +221,7 @@ A card as JSON (`src/spec/`, schema `schema/card.v1.schema.json`, JSON Schema 20
   - named generators → `generator`;
   - everything else bakes to a `raster` on the layer's own grid (card or lattice) at the export frame. That covers bespoke TS fields, `combine`/`dim`, multi-tone `toneRamp`s and photos. `lossless` precision picks Float32 when every sample fits, else Float64; tones go in a palette channel.
 
-  Every converted layer is rebuilt and compared cell by cell (sites: per site) with the original; a mismatch falls back to the bake. A preset built from a spec exports back verbatim. `sizeCurve` styles (`mirror-*`) are refused.
+  Every converted layer is rebuilt and compared cell by cell (sites: per site) with the original; a mismatch falls back to the bake. A preset built from a spec exports back verbatim. `sizeCurve` styles (`mirror-*`) are refused, and so are cards with a per-cell function the sampler calls that no bake can capture: a `shapeOf` layer or a `join` whose `group` is a function (`sq-tetris`, `sq-quads`); a numeric `join` travels (`sq-blob`).
 - **`migrateSpec(json)`**: v1 passes through. v0 (the P3 draft: `spec: 0`, flat `cols`/`rows`, `title`, `{ type: 'ir'|'text'|'dots' }` layers) is mapped to v1. Unknown versions throw. `loadSpec` = parse + migrate + validate.
 - **Tests:** `scripts/spec.ts` (in `pnpm verify`; `--examples` rewrites `examples/specs/*.json`). It checks that the schema enums equal the TS constants, and that the schema (via a test-only 2020-12 evaluator, `scripts/lib/jsonschema.ts`) and the validator agree on 48 fixtures. Every preset goes through preset → spec → JSON → preset: 144/146 keep their golden hash (the IR-board cards at both golden times). The 87 with no baked layer travel as IR/text/sites/generators; TS code that moves sites per frame exports as its t = 0 frame. Re-export is byte-stable. Examples: `ir-ripple.json`, `text-sites-gauge.json` (hand-written: IR-bound arc + numeral, states, transitions, springKeys), `baked-photo.json` (`silhouette`, Float32 raster + tone palette).
 ## DotBuffer and worker sampling (P5-B)

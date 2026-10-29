@@ -13,6 +13,7 @@ import { hash01 } from '../src/engine/math'
 import { withChrome } from '../src/widgets'
 import { mirrorCamera, mirrorPortrait } from '../src/widgets/boards/mirror'
 import { spawnSync } from 'node:child_process'
+import { loadOf, spinMs } from './lib/load'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 
@@ -107,33 +108,34 @@ export function halftoneChecks(assert: Assert): { flicker: Record<string, number
   assert('halftone stream: deterministic, idempotent for a repeated frame, follows a moving scene (local-tone error < ½ of a frozen one)',
     det && idem && lagErr < frozenErr / 2, `motion error ${lagErr.toFixed(4)} vs frozen ${frozenErr.toFixed(4)}`)
 
-  // ── timing in a fresh process (a heap full of other checks' garbage is not what a card pays in the app) ──
+  // ── timing in a fresh process (a heap full of other checks' garbage is not what a card pays in the app); the budget
+  // scales by the load sampled between its frames (scripts/lib/load.ts), like every other frame budget ──
   const child = spawnSync(process.execPath, ['--import', 'tsx', 'scripts/halftone.ts', '--timing'], { encoding: 'utf8' })
-  const [frameMs, buildMs] = (child.stdout.trim().split(/\s+/).map(Number) as [number, number])
-  assert('mirror-camera live frame at 144² (STBN stream step 2 + sample) ≤ 4 ms (median of 40, best of 3, fresh process)', child.status === 0 && frameMs <= 4,
-    child.status === 0 ? `${frameMs.toFixed(2)} ms (halftone ${buildMs.toFixed(2)} ms)` : child.stderr.slice(0, 200))
+  const [frameMs, buildMs, load] = (child.stdout.trim().split(/\s+/).map(Number) as [number, number, number])
+  assert('mirror-camera live frame at 144² (STBN stream step 2 + sample) ≤ 4 ms × load (median of 40, best of 3, fresh process)', child.status === 0 && frameMs <= 4 * load,
+    child.status === 0 ? `${frameMs.toFixed(2)} ms @ ${load.toFixed(2)} (halftone ${buildMs.toFixed(2)} ms)` : child.stderr.slice(0, 200))
   return { flicker, frameMs }
 }
 
-/** The live camera card's frame cost: median of 40 frames, best of 3 runs (a busy machine only adds time). */
-export function cameraFrameMs(): [number, number] {
+/** The live camera card's frame cost: median of 40 frames, best of 3 runs (a busy machine only adds time), and the load factor sampled between that run's frames. */
+export function cameraFrameMs(): [number, number, number] {
   // ── timing: the live camera card at 144² (stream step 2 + sampling + chrome): median of 40 frames, best of 3
   // runs (a busy machine only ever adds time, so the best run is the closest to the card's own cost) ──
   const portrait = mirrorPortrait(), grid = portrait.grid, AMP = .06
-  const cam = createRaster(grid, 'card', portrait.bounds), layers = withChrome(mirrorCamera), runs: [number, number][] = []
+  const cam = createRaster(grid, 'card', portrait.bounds), layers = withChrome(mirrorCamera), runs: [number, number, number][] = []
   for (let run = 0; run < 3; run++) {
-    const times: number[] = [], build: number[] = []
+    const times: number[] = [], build: number[] = [], spins: number[] = []
     for (let f = 0; f < 48; f++) {
       cam.data.set(noisy(portrait, f, AMP, f & 3).data)
+      if (f >= 8) spins.push(spinMs())
       const a = performance.now()
       const ls = layers({ t: f / 30, frame: run * 48 + f, data: { cam: 1, camState: 2 }, media: { camera: cam } }), b = performance.now()
       sampleLayers(ls, mirrorCamera.grid, mirrorCamera.style, dot480)
       if (f >= 8) { times.push(performance.now() - a); build.push(b - a) }
     }
-    runs.push([median(times), median(build)])
+    runs.push([median(times), median(build), loadOf(spins)])
   }
-  const [frameMs, buildMs] = runs.reduce((a, b) => (b[0] < a[0] ? b : a))
-  return [frameMs, buildMs]
+  return runs.reduce((a, b) => (b[0] < a[0] ? b : a))
 }
 
 if (process.argv.includes('--timing')) console.log(cameraFrameMs().join(' '))

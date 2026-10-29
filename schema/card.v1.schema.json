@@ -99,6 +99,11 @@
      "type": "integer",
      "minimum": 0,
      "maximum": 64
+    },
+    "gap": {
+     "type": "number",
+     "minimum": 0,
+     "maximum": 1
     }
    },
    "additionalProperties": false,
@@ -289,6 +294,54 @@
    "minItems": 2,
    "maxItems": 2
   },
+  "join": {
+   "description": "Layer.join (squares): fuse equal cells into joined squares. true, or a JoinSpec whose group is a number (a group function cannot travel in a spec).",
+   "anyOf": [
+    {
+     "const": true
+    },
+    {
+     "type": "object",
+     "properties": {
+      "at": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 1
+      },
+      "conn": {
+       "enum": [
+        4,
+        8
+       ]
+      },
+      "outer": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 1
+      },
+      "inner": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 1
+      },
+      "seam": {
+       "type": "number",
+       "minimum": 0,
+       "maximum": 1
+      },
+      "group": {
+       "type": "integer",
+       "minimum": 0,
+       "maximum": 255
+      },
+      "accent": {
+       "type": "boolean"
+      }
+     },
+     "additionalProperties": false
+    }
+   ]
+  },
   "key": {
    "type": "string",
    "pattern": "^[A-Za-z][A-Za-z0-9_]{0,63}$"
@@ -429,6 +482,9 @@
     "origin": {
      "$ref": "#/$defs/vec2"
     },
+    "join": {
+     "$ref": "#/$defs/join"
+    },
     "src": {
      "$ref": "#/$defs/ir"
     },
@@ -510,6 +566,9 @@
     },
     "origin": {
      "$ref": "#/$defs/vec2"
+    },
+    "join": {
+     "$ref": "#/$defs/join"
     },
     "text": {
      "type": "string",
@@ -683,6 +742,9 @@
     "origin": {
      "$ref": "#/$defs/vec2"
     },
+    "join": {
+     "$ref": "#/$defs/join"
+    },
     "grid": {
      "type": "object",
      "properties": {
@@ -786,6 +848,9 @@
     },
     "origin": {
      "$ref": "#/$defs/vec2"
+    },
+    "join": {
+     "$ref": "#/$defs/join"
     },
     "name": {
      "enum": [
