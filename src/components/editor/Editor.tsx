@@ -12,11 +12,13 @@ import { Canvas } from './Canvas'
 import { arrangeSel, copyEverywhere, copySel, cutSel, deleteSel, duplicateSel, groupSel, hideSel, lockSel, nudgeSel, orderSel, paste, selectAllSel, selectParent, ungroupSel } from './actions'
 import { CLIP_KEY } from './clip'
 import { frameById, groupOf, layerOf, shareable, topDown } from './doc'
+import { editableText } from './direct'
 import { codeTarget, KEY_TOOL, MODE_ENTRY, paintTarget } from './input'
 import { InspectorBody, InspectorTabs } from './Inspector'
 import { AssetsPanel, LayersPanel } from './Panels'
 import { revealAbove, useEditor, type Tool } from './store'
 import { selCount, selFrames, selLayers, type Align } from './select'
+import { startTyping } from './typing'
 import { DotIcon, type IconName } from './ui'
 import './editor.css'
 
@@ -253,12 +255,12 @@ function Sheet({ onClose }: { onClose: () => void }) {
 // ── keyboard ───────────────────────────────────────────────────────────────
 export const EDITOR_KEYS: [string, string][] = [
   ['V', 'move / select'], ['H · hold Space', 'hand (pan)'], ['F', 'frame: drag out a new card'], ['B', 'draw dots'], ['E', 'eraser'], ['[ ]', 'brush size'],
-  ['T', 'text: click a frame'], ['C', 'code: add a Field IR layer'], ['Esc', 'back to move · select the parent · deselect'], ['Enter / ⇧Enter', 'into the frame\'s layers / up to the group or the frame'],
+  ['T', 'text: click a frame, then type on the canvas'], ['Enter · double-click a text layer', 'type into it on the canvas (Enter finishes, Esc cancels)'], ['I · Alt-click (draw)', 'eyedropper: take the ink of a painted dot'], ['C', 'code: add a Field IR layer'], ['Esc', 'back to move · select the parent · deselect'], ['Enter / ⇧Enter', 'into the frame\'s layers / up to the group or the frame'],
   ['⇧-click · drag on empty canvas', 'add to the selection · marquee (⇧ adds)'], ['Ctrl-drag on a frame', 'marquee its layers'], ['Ctrl+A', 'select all (frames, or the frame\'s layers)'],
   ['Ctrl+Z · Ctrl+⇧Z / Ctrl+Y', 'undo · redo'], ['Delete', 'delete the selection'], ['Ctrl+D · Alt-drag', 'duplicate'],
   ['Ctrl+C · Ctrl+X · Ctrl+V', 'copy · cut · paste (any tab of this browser; the system clipboard as JSON)'], ['Ctrl+G · Ctrl+⇧G', 'group layers · ungroup'], ['Ctrl+⇧L', 'lock / unlock'],
   ['Alt+A D · W S · H V', 'align left right · top bottom · centres'], ['Alt+⇧H · Alt+⇧V', 'distribute horizontally · vertically'], ['Ctrl+] / Ctrl+[', 'bring forward / send backward'],
-  ['Ctrl+⇧H', 'hide / show'], ['arrows (⇧ ×10)', 'nudge frames (px) or text / sites layers (cells)'], ['drag (hold Ctrl: no snapping)', 'frames snap to the edges, centres and spacing of the others'],
+  ['Ctrl+⇧H', 'hide / show'], ['arrows (⇧ ×10)', 'nudge frames (px) or text / sites / placed spec layers (cells)'], ['handles on a selected layer', 'ring radius and sweep, line ends, a spec field\'s bounds (whole cells)'], ['quick bar over a layer', 'tone, lattice or dot size, EDIT, ink and PICK: one undo step each'], ['drag (hold Ctrl: no snapping)', 'frames snap to the edges, centres and spacing of the others'],
   ['Ctrl+S', 'save the frame to this browser (ASSETS · SAVED)'], ['⇧1 · ⇧2 · ⇧0', 'zoom to fit · to selection · 100 %'], ['Ctrl + / Ctrl − · wheel', 'zoom · pan (Ctrl+wheel or pinch zooms)'], ['?', 'this list'],
 ]
 const ALIGN_KEYS: Record<string, Align> = { KeyA: 'left', KeyD: 'right', KeyW: 'top', KeyS: 'bottom', KeyH: 'hcenter', KeyV: 'vcenter' }
@@ -314,6 +316,7 @@ function useShortcuts(phone: boolean) {
       if (e.key === '?') { used(); s.setShortcuts(!s.shortcuts); return }
       if (e.key === 'Escape') {
         if (s.shortcuts) { used(); s.setShortcuts(false); return }
+        if (s.picking) { used(); s.setPicking(false); return }
         if (s.tool !== 'move') { used(); s.setTool('move'); return }
         if (s.selectMode) { used(); s.setSelectMode(false); return }
         if (l && f) { used(); selectParent(); return }
@@ -325,6 +328,7 @@ function useShortcuts(phone: boolean) {
         used()
         if (e.shiftKey) { if (!selectParent()) s.select({ frame: f.id }) }
         else if (!l) { const first = topDown(f.card)[0]; if (first) s.select({ frame: f.id, layer: first.id }) }
+        else if (selCount(s.sel) === 1 && editableText(l) && !f.locked) startTyping(f.id, l.id) // type into the text on the canvas
         else if (selCount(s.sel) > 1) s.select({ frame: f.id, layer: l.id }) // into a group: its first layer
         return
       }
@@ -337,6 +341,7 @@ function useShortcuts(phone: boolean) {
       }
       if (e.repeat) return
       if (KEY_TOOL[k] && !e.shiftKey) { used(); s.setTool(KEY_TOOL[k]); if (k === 'b' || k === 'p') s.setBrush({ erase: false }); return }
+      if (k === 'i' && !e.shiftKey) { used(); s.setPicking(true); s.setNote('PICK: click a painted dot to take its ink'); return }
       if (k === 'e' && !e.shiftKey) { used(); s.setTool('draw'); s.setBrush({ erase: !(s.tool === 'draw' && s.brush.erase) }); return }
       if (e.key === '[' || e.key === ']') { used(); s.setBrush({ size: Math.max(1, Math.min(8, s.brush.size + (e.key === ']' ? 1 : -1))) }); return }
       if (e.key === '+' || e.key === '=') { used(); s.zoomAt(s.cam.z * 1.25, s.vp.w / 2, s.vp.h / 2); return }
@@ -358,7 +363,7 @@ function Shortcuts({ onClose }: { onClose: () => void }) {
       <h2>SHORTCUTS <button type="button" className="ed-ibtn" aria-label="Close" autoFocus onClick={onClose}>×</button></h2>
       <dl className="ed-keys">{EDITOR_KEYS.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       <h3>TOUCH</h3>
-      <dl className="ed-keys"><div><dt>one finger</dt><dd>use the tool · drag empty canvas to pan · tap to select</dd></div><div><dt>two fingers</dt><dd>pinch to zoom · drag to pan</dd></div><div><dt>SELECT (bar above the tools)</dt><dd>taps add to the selection · one finger on empty canvas draws a marquee · DUP, GROUP, COPY, PASTE, DEL act on it</dd></div><div><dt>sheet handle</dt><dd>drag or tap to resize, drag down to close</dd></div></dl>
+      <dl className="ed-keys"><div><dt>one finger</dt><dd>use the tool · drag empty canvas to pan · tap to select</dd></div><div><dt>two fingers</dt><dd>pinch to zoom · drag to pan</dd></div><div><dt>tap a selected text layer</dt><dd>type into it on the canvas · DONE or return finishes</dd></div><div><dt>quick bar · handles</dt><dd>over the selected layer: tone, lattice, size, EDIT, INK, PICK · drag a handle for the radius, sweep, ends or bounds</dd></div><div><dt>SELECT (bar above the tools)</dt><dd>taps add to the selection · one finger on empty canvas draws a marquee · DUP, GROUP, COPY, PASTE, DEL act on it</dd></div><div><dt>sheet handle</dt><dd>drag or tap to resize, drag down to close</dd></div></dl>
     </div>
   </div>
 }
