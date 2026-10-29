@@ -44,14 +44,20 @@ export function Editor({ mode, onExit }: { mode: Mode; onExit?: () => void }) {
   const sheet = useEditor(s => s.sheet), note = useEditor(s => s.note), shortcuts = useEditor(s => s.shortcuts)
   const [banner, setBanner] = useState('')
   const root = useRef<HTMLElement>(null)
-  // desktop: fill the window below the site bar (the footer sits below the fold)
+  // desktop: fill the window below the site bar (the footer sits below the fold). Re-measured when the page
+  // above changes height too: the site bar grows after mount (the lazily loaded tool dock is portaled into it),
+  // and a height measured once would leave the editor's bottom edge below the window.
   useLayoutEffect(() => {
     const el = root.current
     if (!el || phone) return
     const size = () => { const top = el.getBoundingClientRect().top + window.scrollY; el.style.setProperty('--ed-h', `${Math.max(520, window.innerHeight - top)}px`) }
     size()
     window.addEventListener('resize', size)
-    return () => window.removeEventListener('resize', size)
+    // next frame, not inside the callback: resizing the editor resizes the observed page (no RO loop error)
+    let raf = 0
+    const ro = new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(size) })
+    ro.observe(document.documentElement)
+    return () => { window.removeEventListener('resize', size); ro.disconnect(); cancelAnimationFrame(raf) }
   }, [phone])
 
   // the old MAKE modes are ways in: each picks a tool and the panels it used to be
