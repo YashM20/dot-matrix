@@ -206,6 +206,8 @@ export const matCandle: WidgetPreset = {
     S.wax.data.fill(0); S.flame.data.fill(0)
     for (let j = 0; j < LG15.rows; j++) waxRow(S.wax.data, j, top, hour, dir, torchCard, fx, fy, drips)
     flameInto(S.flame.data, ctx.reducedMotion ? 0 : ctx.t, fx, top - 17, base)
+    const fj = Math.max(0, Math.floor((top - 22) / L15)), fi = Math.floor((fx - 8) / L15)
+    S.flame.bounds = [fi, fj, fi + Math.ceil(16 / L15), Math.min(LG15.rows - 1, fj + Math.ceil(24 / L15))]
     const marks = [6, 12, 18].filter(h => h > hour).map(h => layer(cap(String(h), CANDLE.x1 + 4, CANDLE.full + CANDLE.perHour * h - 2), 'faint'))
     return [
       cite('WAX · SUBSURFACE'),

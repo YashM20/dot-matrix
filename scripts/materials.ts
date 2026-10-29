@@ -363,7 +363,7 @@ function causticChecks(assert: Assert): void {
 /** Cards with no red in their pristine run (M §4.2: the pool's pebble only appears when one is dropped). */
 const NO_ACCENT_AT_REST = new Set(['mat-pool'])
 /** Cards whose live element is a region rather than sites. */
-const RED_REGIONS = new Set(['mat-terrazzo', 'mat-window', 'mat-rust', 'mat-candle'])
+const RED_REGIONS = new Set(['mat-terrazzo', 'mat-window', 'mat-candle'])
 const POINTER = (x: number, y: number, down = false): Pointer => ({ id: 1, x, y, inside: true, down, tDown: 0, tUp: 0, vx: 0, vy: 0, pressure: 0 })
 /** Run `f` with the wall clock frozen at a local date (the golden clock by default), restoring it after. */
 function atClock<T>(f: () => T, y = 2026, m = 0, d = 1, h = 9, min = 41): T {
@@ -406,8 +406,8 @@ async function boardChecks(assert: Assert, load: number, opts: MaterialsOptions,
     const dim = board.some(p => [0, 1.3, 6].some(t => atClock(() => withChrome(p)({ t, data: { ...p.defaults } })).some(l => l.tone === 'activeDim') || atClock(() => frameOf(p, t)).some(d => d.color === dot480.dotActiveDim)))
     assert('materials board: no activeDim (was-active is size contrast until the owner rules, M §10.6)', !dim)
     // the red layer of each card is its live element, never a band of a material (bands come from toneBands / anisoSpec / matcap)
-    const redSources = board.every(p => atClock(() => withChrome(p)({ t: 0, data: { ...p.defaults } })).filter(l => l.tone === 'active').every(l => !!l.sites || p.id === 'mat-terrazzo'))
-    assert('materials board: no material dot is dotActive (the red layer is the live sites: shuttle, arc, peak, colon; today\'s chip)', redSources)
+    const redSources = board.every(p => atClock(() => withChrome(p)({ t: 0, data: { ...p.defaults } })).filter(l => l.tone === 'active').every(l => !!l.sites || RED_REGIONS.has(p.id)))
+    assert('materials board: no material dot is dotActive (the red layer is the live sites: shuttle, arc, peak, colon, second, needle, rust front; or a live region: today\'s chip, the hour\'s pane, the flame)', redSources)
     assert('materials board: quantized (every card style has quantizeSteps ≥ 2)', board.every(p => (p.style.quantizeSteps ?? 0) >= 2))
     const keys = ['lightSrc', 'lightAz', 'lightEl', 'tx', 'ty']
     assert('materials board: every card declares lightSrc/lightAz/lightEl/tx/ty in defaults', board.every(p => keys.every(k => p.defaults && k in p.defaults)) && materialsSources.length === 1)
@@ -586,17 +586,19 @@ function m2CardChecks(assert: Assert, frameOf: FrameFn): void {
     // a tap at t = 10 drops a pebble: the world forks live, the sinking pebble is the only red, and it heals back after idle
     worldReset(w)
     const at = (t: number, pointers: Pointer[] = []) => atClock(() => frameOf(pool, t, pointers))
-    at(9.9)
-    at(10, [POINTER(60, 70, true)])
+    // a tap holds the pointer down for a few frames (gesture.ts TOUCH.tapPress 90 ms): the world forks on the first one
+    // and steps the press on the next
+    at(9.9, [POINTER(60, 70)])
+    for (let k = 0; k < 3; k++) at(10 + k / 30, [POINTER(60, 70, true)])
     const live = w.mode === 'live'
-    at(10 + 1 / 30)
+    at(10 + 3 / 30)
     const sinking = at(10.4).filter(d => d.color === dot480.dotActive)
     let t = 10.4
     while (w.mode !== 'pristine' && t < 20) { t += 1 / 30; at(t) }
     assert('pool: a tap forks live, the pebble is the only active dot, heals to pristine after idle', live && sinking.length === 1 && w.mode === 'pristine' && t < 20, `live ${live}, red ${sinking.length}, pristine again at t ${t.toFixed(2)}`)
     const src = readFileSync(new URL('../src/widgets/boards/materials-live.ts', import.meta.url), 'utf8')
     const imp = src.match(/import \{([^}]*)\} from '\.\.\/\.\.\/engine\/life\/ripple'/)?.[1].split(',').map(x => x.trim()).sort().join(',')
-    assert('pool: uses only createRipple / rippleStep / rippleSplat / rippleGrad (the L1.2 API)', imp === 'createRipple,rippleGrad,rippleSplat,rippleStep' && !/engine\/life\/(?!ripple')/.test(src), imp)
+    assert('pool: uses only createRipple / rippleStep / rippleSplat / rippleGrad (the L1.2 API)', imp === 'createRipple,rippleGrad,rippleSplat,rippleStep' && !/from '\.\.\/\.\.\/engine\/life\/(?!ripple')/.test(src), imp)
     worldReset(w)
   }
   // ── window ──
@@ -632,8 +634,9 @@ function m2CardChecks(assert: Assert, frameOf: FrameFn): void {
     let worst = 0
     for (let r = 50; r < 110; r++) for (let c = 50; c < 95; c++) {
       if (H.boltSdf(c, r) > -.5) continue
-      const gx = H.boltSdf(c + .5, r) - H.boltSdf(c - .5, r), gy = H.boltSdf(c, r + .5) - H.boltSdf(c, r - .5), l = Math.hypot(gx, gy)
-      if (l < .95) continue // the medial ridge
+      // the iso-lines by the same ±1-cell differences the tangents use; skip the medial ridge and the corners' kinks
+      const gx = (H.boltSdf(c + 1, r) - H.boltSdf(c - 1, r)) / 2, gy = (H.boltSdf(c, r + 1) - H.boltSdf(c, r - 1)) / 2, l = Math.hypot(gx, gy)
+      if (l < .95) continue
       const i = r * 144 + c
       worst = Math.max(worst, Math.abs(t.x[i] * -gy / l + t.y[i] * gx / l))
     }
@@ -668,7 +671,8 @@ function m2CardChecks(assert: Assert, frameOf: FrameFn): void {
     worldReset(w)
     const front = reds(rust, 0), ls = atClock(() => withChrome(rust)({ t: 0, data: { ...rust.defaults } }))
     atClock(() => withChrome(rust)({ t: 20, data: { ...rust.defaults } }))
-    atClock(() => withChrome(rust)({ t: 20 + 1 / 12, data: { ...rust.defaults, k: 1 } }))
+    // a click holds the button for a few frames: the world forks on the first and takes the kick on the next
+    for (let k = 1; k <= 3; k++) atClock(() => withChrome(rust)({ t: 20 + k / 30, data: { ...rust.defaults, k: 1 } }))
     const forked = w.mode === 'live'
     atClock(() => withChrome(rust)({ t: 20.5, data: { ...rust.defaults } }))
     const sanded = atClock(() => H.rustShown(w.live, new Date()))

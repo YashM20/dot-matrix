@@ -52,13 +52,18 @@ const dialTicks = once(() => {
   }
   return r
 })
-/** Bilinear read of a card-pitch raster at a point in cells (0 off the card). */
-function bilinear(D: Float32Array, x: number, y: number): number {
+/** One texel of a w × h raster, 0 outside it. */
+const texel = (D: Float32Array, w: number, h: number, c: number, r: number) => (c < 0 || r < 0 || c >= w || r >= h ? 0 : D[r * w + c])
+/**
+ * Bilinear read of a w × h raster at (x, y) in its cells (0 outside). Module-level on purpose: a per-call closure here
+ * cost ~35× (measured 38 ms vs ~1 ms for 20k reads), the difference between a 4 ms frame and a 40 ms one.
+ */
+function bilinear(D: Float32Array, w: number, h: number, x: number, y: number): number {
   const i = Math.floor(x), j = Math.floor(y), fx = x - i, fy = y - j
-  if (i < -1 || j < -1 || i > W1 || j > H1) return 0
-  const at = (c: number, r: number) => (c < 0 || r < 0 || c > W1 || r > H1 ? 0 : D[r * COLS + c])
-  const a = at(i, j), b = at(i + 1, j), c = at(i, j + 1), d = at(i + 1, j + 1)
-  return (a + (b - a) * fx) + ((c + (d - c) * fx) - (a + (b - a) * fx)) * fy
+  if (i < -1 || j < -1 || i >= w || j >= h) return 0
+  const a = texel(D, w, h, i, j), b = texel(D, w, h, i + 1, j), c = texel(D, w, h, i, j + 1), d = texel(D, w, h, i + 1, j + 1)
+  const top = a + (b - a) * fx
+  return top + ((c + (d - c) * fx) - top) * fy
 }
 /** The hero time on its lattice, as a bitmap read bilinearly (so under the glass it warps smoothly), plus its keep-out on card pitch. */
 interface Hero { key: string; lc: number; lr: number; ox: number; oy: number; bits: Float32Array; near: Uint8Array; box: Box }
@@ -92,7 +97,7 @@ const floorAt = (x: number, y: number) => {
 }
 /** The scene behind the glass at a point (cells): ticks, then the floor outside the ring's clear band and the hero's keep-out. */
 function behindAt(ticks: Float32Array, near: Uint8Array, x: number, y: number): number {
-  const t = bilinear(ticks, x, y)
+  const t = bilinear(ticks, COLS, TILE.rows, x, y)
   if (t > 0) return t
   const dx = x - DIAL.cx, dy = y - DIAL.cy, d2 = dx * dx + dy * dy
   if (d2 > 54.5 * 54.5 && d2 < 61.5 * 61.5) return 0
@@ -107,6 +112,37 @@ export function apparent(off: (c: number, r: number, out: Float64Array) => numbe
   for (let k = 0; k < 8; k++) { if (off(p[0], p[1], d) < 0 && k === 0) return p; p = [q[0] - d[0], q[1] - d[1]] }
   return p
 }
+/**
+ * The scene behind the glass, baked per minute (the hero's keep-out moves with the time) at the points the screen is
+ * sampled at: card cell centres (the Canvas path, goldens) and, on first use, the GPU pass's points at density 2 (288²:
+ * x = (f − ½) / 2, a quarter cell either side of each centre; passes.ts `layerPass`).
+ * Bit-identical to `behindAt` there; anything else (the refracted reads under the glass) is computed exactly.
+ */
+interface LensScene { card: Float32Array; fine: Float32Array | null; ticks: Float32Array; near: Uint8Array }
+const scenes = new WeakMap<Hero, LensScene>()
+const FINE = 2 * COLS
+function sceneRow(out: Float32Array, w: number, step: number, at0: number, ticks: Float32Array, near: Uint8Array, r: number): void {
+  for (let c = 0; c < w; c++) out[r * w + c] = behindAt(ticks, near, at0 + c * step, at0 + r * step)
+}
+function lensScene(h: Hero, ticks: Float32Array): LensScene {
+  let s = scenes.get(h)
+  if (!s) {
+    const card = new Float32Array(COLS * TILE.rows)
+    for (let r = 12; r < TILE.rows; r++) sceneRow(card, COLS, 1, 0, ticks, h.near, r)
+    scenes.set(h, (s = { card, fine: null, ticks, near: h.near }))
+  }
+  return s
+}
+function sceneAt(s: LensScene, x: number, y: number): number {
+  const c = Math.round(x), r = Math.round(y)
+  if (Math.abs(x - c) < 1e-6 && Math.abs(y - r) < 1e-6) return s.card[r * COLS + c]
+  const fx = 2 * x + .5, fy = 2 * y + .5, c2 = Math.round(fx), r2 = Math.round(fy)
+  if (Math.abs(fx - c2) < 1e-6 && Math.abs(fy - r2) < 1e-6 && c2 >= 0 && r2 >= 0 && c2 < FINE && r2 < FINE) {
+    if (!s.fine) { const f = new Float32Array(FINE * FINE); for (let i = 23; i < FINE; i++) sceneRow(f, FINE, .5, -.25, s.ticks, s.near, i); s.fine = f }
+    return s.fine[r2 * FINE + c2]
+  }
+  return behindAt(s.ticks, s.near, x, y)
+}
 const VALUE_IN = .875, MID_LO = .625
 export const matLens: WidgetPreset = {
   ...tile, id: 'mat-lens', name: 'Lens', clock: true,
@@ -120,15 +156,19 @@ export const matLens: WidgetPreset = {
     // the live second, refracted by the same offset as the scene (the scene's own tick there is cleared under it)
     const s = now.getSeconds(), a = s * 6 * DEG, q: Pt = [Math.round(DIAL.cx + DIAL.r * Math.sin(a)), Math.round(DIAL.cy - DIAL.r * Math.cos(a))], sec = apparent(off, q)
     const behind: Field = (u, v) => behindAt(ticks, near, u * W1, v * H1)
+    const scene = lensScene(hero, ticks)
     const lens = liquidGlass(behind, TILE, o), d = new Float64Array(2)
     const step = .25
     // the screen: through + Fresnel (+1 step on the bezel) + the specular rim, minus the contact shadow and the second's cell
     const screen: Field = (u, v) => {
       const x = u * W1, y = v * H1
       if ((x - sec[0]) ** 2 + (y - sec[1]) ** 2 < 2.2) return 0
-      const bez = off(x, y, d)
+      // most of the card is far from the glass and its shadow: the scene as baked this minute, no lens maths
+      const far = Math.abs(x - c[0]) > LENS.hw + 1 || y < c[1] - LENS.hh - 1 || y > c[1] + LENS.hh + 5
+      const bez = far ? -1 : off(x, y, d)
       if (bez < 0) {
-        const val = behind(u, v)
+        const val = sceneAt(scene, x, y)
+        if (far) return val
         if (val > 0 && val <= .5) { // the floor only: cut where the lens's shadow falls (the outline moved down 3 cells)
           const sx = Math.abs(x - c[0]) - (LENS.hw - LENS.radius), sy = Math.abs(y - 3 - c[1])
           const sd = Math.hypot(Math.max(sx, 0), Math.max(sy, 0)) + Math.min(Math.max(sx, sy), 0) - LENS.radius
@@ -139,9 +179,10 @@ export const matLens: WidgetPreset = {
       // the specular rim on the outer quarter of the bezel; the glass's edge (its outer 1.5 cells, where Fresnel climbs)
       // shows a step up even over an empty scene, on the screen's own 2-cell rhythm, so the pill reads as an outline
       if (bez < .25 && lens.rim(u, v) >= .7) return 1
-      let val = lens.through(u, v)
+      // ≡ lens.through(u, v) (the offset is already in d); Fresnel only reaches .15 on the bezel's outer fifth
+      const val = d[0] === 0 && d[1] === 0 ? behindAt(ticks, near, x, y) : behindAt(ticks, near, x + d[0], y + d[1])
       if (bez < .125) { const b = Math.max(val, floorAt(x, y)); return b > 0 ? Math.min(1, b + step) : 0 }
-      return val > 0 ? Math.min(1, val + (lens.fresnel(u, v) >= .15 ? step : 0)) : 0
+      return val > 0 ? Math.min(1, val + (bez < .2 && lens.fresnel(u, v) >= .15 ? step : 0)) : 0
     }
     screen.bounds = [0, 12, W1, H1]
     const toneOf = (val: number, u: number, v: number): Tone => (val >= VALUE_IN ? (lens.inside(u, v) ? 'value' : 'idle') : val >= MID_LO ? 'mid' : 'faint')
@@ -151,10 +192,7 @@ export const matLens: WidgetPreset = {
       const i = u * (lc - 1), j = v * (lr - 1), x = ox + (i + .5) * HERO.k - .5, y = oy + (j + .5) * HERO.k - .5
       if (off(x, y, d) < 0) { const k = Math.round(j) * lc + Math.round(i); return bits[k] ?? 0 }
       const si = (x + d[0] + .5 - ox) / HERO.k - .5, sj = (y + d[1] + .5 - oy) / HERO.k - .5
-      const i0 = Math.floor(si), j0 = Math.floor(sj), fx = si - i0, fy = sj - j0
-      const at = (a: number, b: number) => (a < 0 || b < 0 || a >= lc || b >= lr ? 0 : bits[b * lc + a])
-      const top = at(i0, j0) + (at(i0 + 1, j0) - at(i0, j0)) * fx, bot = at(i0, j0 + 1) + (at(i0 + 1, j0 + 1) - at(i0, j0 + 1)) * fx
-      return top + (bot - top) * fy
+      return bilinear(bits, lc, lr, si, sj)
     }
     // the lens can pull the hero out to its own outline: the layer covers the glyphs' box and the lens's
     const toLat = (x: number) => (x + .5 - ox) / HERO.k - .5, toLatY = (y: number) => (y + .5 - oy) / HERO.k - .5

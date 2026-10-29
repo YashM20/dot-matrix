@@ -15,7 +15,7 @@ import { createRipple, rippleGrad, rippleSplat, rippleStep } from '../../engine/
 import { causticSplat } from '../../engine/matter/caustics'
 import { tonedLayer } from '../../engine/matter/surface'
 import { createWorld, framePointers, worldAt, type FrameInput, type StepInput, type World } from '../../engine/physics/world'
-import { createRaster, sample, type Raster } from '../../engine/raster/raster'
+import { createRaster, type Raster } from '../../engine/raster/raster'
 import { ambientOcclusion, cardMask } from '../../engine/matter/relief'
 import { anisoSpec, tangentLinear, type TangentRaster } from '../../engine/matter/aniso'
 import { normalRaster, type HeightRaster, type NormalRaster } from '../../engine/light/height'
@@ -316,17 +316,19 @@ export function rustThreshold(p: RustPlate, cover: number): number {
 interface Shaded { values: Float32Array; tones: Uint8Array }
 const shadedPlates = new Map<string, Shaded>()
 const rustLightKey = (L: Light) => (Array.isArray(L) ? (L as readonly number[]).map(x => x.toFixed(5)).join(',') : (L as { at: readonly number[] }).at.map(x => x.toFixed(3)).join(','))
-/** Row r of the bare plate: the body faint / mid (Lambert × AO), the brushed streak a step up (idle), its core two (value). */
+/** Row r of the bare plate: the body by Lambert × AO² (bright steel idle, grooves faint / void), the brushed streak in value, a void brushing groove every third row. */
 function shadeRow(M: Float32Array, A: Float32Array, D: Float32Array, S: Float32Array, V: Float32Array, Tn: Uint8Array, r: number): void {
   for (let c = PLATE.x0, i = r * COLS + c; c <= PLATE.x1; c++, i++) {
     if (!(M[i] > .5)) continue
     // bare steel is bright (idle where it faces the light); the grooves fall to faint / void in their own shadow
     const b = (.3 + .5 * D[i]) * A[i] * A[i], s = S[i]
     if (b < .06) continue
+    // the brushing: every third row of open plate is a void groove along the grain (period 3, a cross-profile)
+    if ((r - PLATE.y0) % 3 === 2 && A[i] > .97) continue
     if (s >= .6) { V[i] = Math.min(1, b + .25); Tn[i] = 3 } else { V[i] = b; Tn[i] = b < .3 ? 0 : b < .62 ? 1 : 2 }
   }
 }
-const rustScratch = once(() => ({ dif: createRaster(TILE), spec: createRaster(TILE), values: createRaster(TILE, 'card', PLATE_BOX), tones: new Uint8Array(COLS * TILE.rows), front: createRaster(TILE, 'card', PLATE_BOX) }))
+const rustScratch = once(() => ({ dif: createRaster(TILE), spec: createRaster(TILE), values: createRaster(TILE, 'card', PLATE_BOX), tones: new Uint8Array(COLS * TILE.rows) }))
 /** The bare brushed plate for one light (cached per engraving × light, LRU of 6: the sun and tilt buckets repeat). */
 function shadedPlate(p: RustPlate, L: Light): Shaded {
   const key = `${p.key}|${rustLightKey(L)}`, hit = shadedPlates.get(key)
@@ -345,14 +347,17 @@ export const FRONT = .008
  * Row r of the frame: bare plate below θ; rust above it, which kills the sheen (fresh rust mid; deep rust faint,
  * pitted to mid on 2×2 blocks); the front in red: rust cells with bare steel next to them (4-neighbours), still fresh.
  */
-function rustFrameRow(p: RustPlate, sh: Shaded, theta: number, V: Float32Array, Tn: Uint8Array, F: Float32Array, r: number): void {
+function rustFrameRow(p: RustPlate, sh: Shaded, theta: number, V: Float32Array, Tn: Uint8Array, F: [number, number, number][], r: number): void {
   const M = p.n.mask, R = p.rust
   for (let c = PLATE.x0, i = r * COLS + c; c <= PLATE.x1; c++, i++) {
     if (!(M[i] > .5)) continue
     const d = R[i] - theta
     if (d <= 0) { V[i] = sh.values[i]; Tn[i] = sh.tones[i]; continue }
-    if (d < FRONT && (R[i - 1] <= theta || R[i + 1] <= theta || R[i - COLS] <= theta || R[i + COLS] <= theta)) { F[i] = .75; continue }
-    if (d <= .12 || stbn(c >> 1, r >> 1) < .3) { V[i] = .4; Tn[i] = 1 } else { V[i] = .22; Tn[i] = 0 }
+    if (d < FRONT && (R[i - 1] <= theta || R[i + 1] <= theta || R[i - COLS] <= theta || R[i + COLS] <= theta)) { F.push([c, r, .75]); continue }
+    if (d <= .12) { V[i] = .4; Tn[i] = 1; continue }
+    // deep rust: pitted on 2×2 blocks (a third raised to mid, a fifth eaten through to void)
+    const n = stbn(c >> 1, r >> 1)
+    if (n < .3) { V[i] = .4; Tn[i] = 1 } else if (n > .8) continue; else { V[i] = .22; Tn[i] = 0 }
   }
 }
 /** World state: [0] seconds since RESET (−1: none), [1] extra days of rust from hovering (a day per second). */
@@ -383,14 +388,16 @@ export const matRust: WidgetPreset = {
     const s = worldAt(rustWorld, ctx.t, ctx.reducedMotion ? undefined : { pointers: framePointers(ctx.pointers, (x, y) => [x, y]), kick: (ctx.data.k ?? 0) >= .5 })
     const show = rustShown(s, new Date()), engraved = show.count === show.days, p = rustPlate(engraved ? String(show.days) : '')
     const sh = shadedPlate(p, matLight(ctx, { torch: { height: 40, falloff: 170 } })), S = rustScratch(), theta = rustThreshold(p, rustCover(show.creep))
-    S.values.data.fill(0); S.tones.fill(0); S.front.data.fill(0)
-    for (let r = PLATE.y0; r <= PLATE.y1; r++) rustFrameRow(p, sh, theta, S.values.data, S.tones, S.front.data, r)
-    S.values.bounds = S.front.bounds = PLATE_BOX
+    S.values.data.fill(0); S.tones.fill(0)
+    // the front as sites on whole cells (a few hundred at most): no scan of the plate for a thin line
+    const front: [number, number, number][] = []
+    for (let r = PLATE.y0; r <= PLATE.y1; r++) rustFrameRow(p, sh, theta, S.values.data, S.tones, front, r)
+    S.values.bounds = PLATE_BOX
     return [
       cite('DAYS · RUST'),
       tonedLayer(S.values, S.tones),
       ...(engraved ? [] : [layer(T.big(String(show.count), 72, COUNT_ROW, { lattice: 2.5, smooth: true, align: 'center' }), 'idle')]),
-      { field: sample(S.front), tone: 'active' },
+      ...(front.length ? [layer(valuedSites(front, 1), 'active')] : []),
     ]
   },
 }
