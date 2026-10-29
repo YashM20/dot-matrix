@@ -14,17 +14,15 @@ import { encodeSamples } from '../src/spec/codec'
 import { EASES, GROUPS, MASKS, THEME_COLORS, TONES, CONTROL_KINDS, GENERATOR_PARAMS, exportPreset, loadSpec, migrateSpec, presetToSpec, specToPreset, validateSpec, type CardSpec } from '../src/spec'
 import { irBoard } from '../src/widgets/boards/ir'
 import { TILE, layoutFor, tileStyle, type WidgetPreset } from '../src/widgets/types'
-import type { DotInstance } from '../src/engine/types'
 import { freezeWallClock } from './lib/freeze'
 import { sampleCard, uniquePresets } from './lib/cards'
+import { hashDots } from './lib/goldenKey'
 import { schemaValidator } from './lib/jsonschema'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const SCHEMA_FILE = 'schema/card.v1.schema.json', EXAMPLES = 'examples/specs'
-const fnv1a = (str: string, h = 0x811c9dc5) => { for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0 } return h >>> 0 }
-const q = (d: DotInstance) => `${d.x.toFixed(2)},${d.y.toFixed(2)},${d.r.toFixed(3)},${d.opacity.toFixed(3)},${d.color}`
-/** The golden hash of `scripts/golden.ts` (sorted quantized dot list, FNV-1a 32). */
-export const goldenHash = (p: WidgetPreset, t: number) => { let h = 0x811c9dc5; for (const k of sampleCard(p, t).map(q).sort()) h = fnv1a(k + ';', h); return h.toString(16).padStart(8, '0') }
+/** The golden hash of `scripts/golden.ts` (the shared golden key: sorted `dotKey` list, FNV-1a 32). */
+export const goldenHash = (p: WidgetPreset, t: number) => hashDots(sampleCard(p, t), p.style).hash
 const goldenTimes = (p: WidgetPreset) => (p.animated ? [0, 1.3] : [0])
 
 // ── fixtures ──
@@ -45,6 +43,7 @@ const FIXTURES: [string, unknown, Expect, string?][] = [
   ['raster u8 full grid', withLayer({ kind: 'raster', grid: { cols: 4, rows: 2 }, format: 'u8', asset: encodeSamples([0, .5, 1, 0, 0, 0, 1, 1], 'u8') }), 'valid'],
   ['generator ring + opts', withLayer({ kind: 'generator', name: 'ring', params: [16, 16, 10, { thickness: 2, every: 3 }], tone: 'faint' }), 'valid'],
   ['generator icon', withLayer({ kind: 'generator', name: 'icon', params: [icon, 2, 2, 16, { fill: true }] }), 'valid'],
+  ['squares: style gap, join true / JoinSpec', { ...base(), style: { shape: 'square', sizeMin: .25, sizeMax: 1.125, quantizeSteps: 5, gap: .16 }, layers: [{ kind: 'ir', src: 'u', lattice: 2, join: { at: .5, inner: .35, group: 3, accent: true, conn: 4 } }, { kind: 'raster', grid: { cols: 1, rows: 1 }, format: 'u8', asset: 'AA==', join: true }] }, 'valid'],
   ['full header', {
     ...base(), group: 'chart', grid: { cols: 32, rows: 32, pitch: 2.25 }, theme: { dotActive: '#ff3b30', bg: '#0b0c0dff' }, data: { value: .5, mode: 0 },
     controls: [{ key: 'value', kind: 'knob', box: [0, 0, 32, 32], min: 0, max: 1, step: .01, label: 'Value' }, { key: 'mode', kind: 'segmented', box: [0, 28, 32, 4], options: 2, optionLabels: ['A', 'B'], label: 'Mode' }],
@@ -75,6 +74,9 @@ const FIXTURES: [string, unknown, Expect, string?][] = [
   ['oversize IR', withLayer({ kind: 'ir', src: 'u+'.repeat(2500) + 'u' }), 'invalid', '$.layers[0].src'],
   ['asset not base64', withLayer({ kind: 'raster', grid: { cols: 1, rows: 1 }, format: 'u8', asset: '***' }), 'invalid', '$.layers[0].asset'],
   ['data key not an identifier', { ...base(), data: { '1abc': 1 } }, 'invalid', '$.data.1abc'],
+  ['join group not a number', withLayer({ kind: 'ir', src: 'u', join: { group: 'piece' } }), 'invalid', '$.layers[0].join'],
+  ['join false', withLayer({ kind: 'text', text: 'A', at: [0, 0], join: false }), 'invalid', '$.layers[0].join'],
+  ['join on sites', withLayer({ kind: 'sites', points: [[1, 1]], join: true }), 'invalid', '$.layers[0].join'],
   ['generator param type', withLayer({ kind: 'generator', name: 'bars', params: ['1,2', 0, 10, 8] }), 'invalid', '$.layers[0].params[0]'],
   ['IR syntax error', withLayer({ kind: 'ir', src: 'u +* v' }), 'semantic', '$.layers[0].src'],
   ['IR unknown function', withLayer({ kind: 'ir', src: 'foo(u)' }), 'semantic', '$.layers[0].src'],
@@ -154,7 +156,7 @@ export function specChecks(assert: Assert, opts: { writeExamples?: boolean } = {
   const kinds: Record<string, number> = {}, unsupported: string[] = [], mismatched: string[] = [], unstable: string[] = [], irOk: string[] = []
   for (const p of uniquePresets()) {
     let rep
-    try { rep = exportPreset(p) } catch (e) { unsupported.push(`${p.id} (${(e as Error).message.slice(0, 60)})`); continue }
+    try { rep = exportPreset(p) } catch (e) { unsupported.push(`${p.id} (${(e as Error).message.slice(0, 100)})`); continue }
     exported++
     const json = JSON.stringify(rep.spec), back = specToPreset(JSON.parse(json))
     bytes += json.length

@@ -3,7 +3,8 @@
  * X-ray on three boards (hover tooltip, inspector, solo/mute, pixels unchanged once off), per-card X,
  * the time machine (T, scrub, Space), the ⌘K palette (search + open), the dot shell (help, ls, xray,
  * t, open), remix in DOTS and the Konami boss. Screenshots in `.snapshots/c10/`.
- *   pnpm dev --port 5201, then `npx tsx scripts/c10-browser.ts [baseUrl]`
+ *   pnpm dev --port 5201 (or `vite build` + `vite preview`), then `npx tsx scripts/c10-browser.ts [baseUrl]`
+ *   "OPEN IN CODE" lands in the editor's CODE inspector (`.dw-code textarea`); "OPEN IN COMPOSE" adds a frame.
  */
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'

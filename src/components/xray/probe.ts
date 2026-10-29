@@ -4,7 +4,10 @@
  * card lattice; max value wins, later layers win ties). Read-only: nothing here feeds the renderer.
  */
 import { cellU, latticeGrid } from '../../engine/sampler/gridSampler'
+import { coverExponent, squareLike } from '../../engine/sampler/cover'
+import { samplerExt } from '../../engine/sampler/ext'
 import { quantize } from '../../engine/sampler/quantize'
+import { dot480 } from '../../engine/theme/tokens'
 import type { DotStyle, GridConfig, Layer, Tone } from '../../engine'
 
 const safe = (x: number) => (Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 0)
@@ -60,12 +63,24 @@ export interface DotProbe {
 
 /**
  * Probe card-cell point (fx, fy) (fractional cells, 0..cols). `skip(i)` hides layers (mute/solo),
- * keeping indexes of the full list.
+ * keeping indexes of the full list. `pitch`: the card pitch in px (the sampler's `grid.pitch ?? theme.gridPx`).
  */
-export function probeDot(layers: Layer[], grid: GridConfig, style: DotStyle, fx: number, fy: number, skip: (i: number) => boolean = () => false): DotProbe {
+export function probeDot(layers: Layer[], grid: GridConfig, style: DotStyle, fx: number, fy: number, skip: (i: number) => boolean = () => false, pitch = grid.pitch ?? dot480.gridPx): DotProbe {
   const { cols, rows } = grid
   const col = Math.max(0, Math.min(cols - 1, Math.floor(fx))), row = Math.max(0, Math.min(rows - 1, Math.floor(fy)))
-  const radius = (v: number, k: number) => { const s = shown(v, style), e = style.sizeCurve ? style.sizeCurve(s) : s; return (style.sizeMin + (style.sizeMax - style.sizeMin) * e) * k }
+  const styleSquare = squareLike(coverExponent(style.shape, style.cornerRoundness))
+  // the sampler's radius (gridSampler `emit`): size ramp × lattice, then the {grid.gap} clamp on square-like dots. A dot's
+  // form is its layer's `shapeOf` roundness step (once the squares hooks are installed; 15 = the style's own shape), and
+  // a joined cell keeps the clamped r (the join only reshapes its outline)
+  const radius = (l: Layer | undefined, v: number, k: number, u: number, w: number) => {
+    const s = shown(v, style), e = style.sizeCurve ? style.sizeCurve(s) : s
+    let r = (style.sizeMin + (style.sizeMax - style.sizeMin) * e) * k
+    if (style.gap !== undefined) {
+      const form = l?.shapeOf && samplerExt.form ? samplerExt.form(l, v, u, w) : 15
+      if (form === 15 ? styleSquare : form >= 4) r = Math.min(r, (1 - style.gap) * k * pitch / 2)
+    }
+    return r
+  }
   const toneName = (l: Layer, v: number, u: number, w: number): string => {
     const t: Tone | undefined = l.toneOf ? l.toneOf(v, u, w) : l.tone
     return !t || t === 'auto' ? `auto → ${bandOf(v)}` : t
@@ -73,7 +88,7 @@ export function probeDot(layers: Layer[], grid: GridConfig, style: DotStyle, fx:
   const result = (i: number, value: number, kind: DotProbe['kind'], box: DotProbe['box'], k: number, u: number, v: number): DotProbe => {
     const s = shown(value, style), steps = style.quantizeSteps && style.quantizeSteps >= 2 ? style.quantizeSteps : undefined
     return {
-      col, row, value, shown: s, step: steps ? Math.round(s * (steps - 1)) : undefined, steps, r: radius(value, k),
+      col, row, value, shown: s, step: steps ? Math.round(s * (steps - 1)) : undefined, steps, r: radius(layers[i], value, k, u, v),
       tone: i < 0 ? '—' : toneName(layers[i], value, u, v), layer: i, name: i < 0 ? '—' : layerName(layers[i]), kind, box, u, v,
     }
   }

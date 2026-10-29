@@ -20,7 +20,7 @@
   border-top: 1px solid var(--line);
   color: var(--value);
   text-align: left;
-  font: 500 var(--fs-label-11)/1.35 var(--mono);
+  font: 500 var(--fs-label-12)/1.35 var(--mono);
   -webkit-tap-highlight-color: transparent
 }
 .ed-root button { font: inherit; color: inherit; cursor: pointer }
@@ -58,7 +58,7 @@
 .ed-tool.on { border-color: var(--ed-sel); background: var(--glow-wash) }
 .ed-tool kbd { position: absolute; right: 3px; bottom: 1px; font: 600 var(--fs-tag-8) var(--mono); color: var(--mute) }
 .ed-icon { display: block; pointer-events: none }
-.ed-docname { flex: 1; min-width: 0; text-align: center; color: var(--label); letter-spacing: .12em; text-transform: uppercase; font-size: var(--fs-label-10); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.ed-docname { flex: 1; min-width: 0; text-align: center; color: var(--label); letter-spacing: .12em; text-transform: uppercase; font-size: var(--fs-label-12); overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .ed-textbtn {
   min-height: 30px;
   padding: 0 var(--space-3);
@@ -66,7 +66,7 @@
   border-radius: var(--radius-pill);
   background: none;
   letter-spacing: .12em;
-  font-size: var(--fs-tag-9) !important;
+  font-size: var(--fs-label-12) !important;
   font-weight: 600 !important
 }
 .ed-textbtn:hover, .ed-textbtn:focus-visible { border-color: var(--line-hover) }
@@ -107,7 +107,7 @@
   border-bottom: 1px solid transparent;
   margin-bottom: -1px;
   color: var(--mute);
-  font-size: var(--fs-tag-9);
+  font-size: var(--fs-label-12);
   font-weight: 600;
   letter-spacing: .14em
 }
@@ -116,7 +116,7 @@
 .ed-tabs button:active { color: var(--value) }
 .ed-tabs button:focus-visible { outline-offset: -2px }
 .ed-pane, .ed-insp { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding-bottom: var(--space-8) }
-.ed-empty, .ed-hint { color: var(--mute); font: 500 var(--fs-label-10)/1.5 var(--mono); margin: 0; padding: var(--space-1) 0 }
+.ed-empty, .ed-hint { color: var(--mute); font: 500 var(--fs-label-12)/1.5 var(--mono); margin: 0; padding: var(--space-1) 0 }
 .ed-pane > .ed-empty { padding: var(--space-4) }
 .ed-hint b { color: var(--label); font-weight: 600 }
 
@@ -141,8 +141,8 @@
   overflow: hidden;
   color: var(--label)
 }
-.ed-row-name b { flex: none; color: var(--mute); font-size: var(--fs-tag-8); font-weight: 600; letter-spacing: .1em; min-width: 30px }
-.ed-row-name small { color: var(--mute); font-size: var(--fs-tag-9); margin-left: auto; padding-left: var(--space-2) }
+.ed-row-name b { flex: none; color: var(--mute); font-size: var(--fs-label-12); font-weight: 600; letter-spacing: .1em; min-width: 30px }
+.ed-row-name small { color: var(--mute); font-size: var(--fs-label-12); margin-left: auto; padding-left: var(--space-2) }
 .ed-row--frame .ed-row-name { color: var(--value) }
 .ed-row--frame .ed-row-name b { min-width: 0 }
 .ed-tree-frame.on > .ed-row, .ed-row--layer.on { background: var(--raised); box-shadow: inset 0 0 0 1px var(--ed-sel) }
@@ -152,25 +152,25 @@
 .ed-row.drag { opacity: .5 }
 .ed-row.drop { box-shadow: inset 0 2px 0 var(--value) }
 .ed-twist, .ed-eye { flex: none; width: 24px; height: 28px; padding: 0; background: none; border: 0; color: var(--mute) }
-.ed-eye[aria-pressed="false"] { color: var(--line-strong) }
-.ed-grip { flex: none; width: 16px; height: 28px; display: grid; place-items: center; color: var(--line-strong); cursor: grab; touch-action: none; user-select: none; font-size: var(--fs-tag-9); letter-spacing: -2px }
+.ed-eye[aria-pressed="false"] { color: var(--dim) }
+.ed-grip { flex: none; width: 16px; height: 28px; display: grid; place-items: center; color: var(--dim); cursor: grab; touch-action: none; user-select: none; font-size: var(--fs-tag-9); letter-spacing: -2px }
 .ed-grip:active { cursor: grabbing; color: var(--value) }
-.ed-err { color: var(--red); font-style: normal; font-size: var(--fs-tag-8); letter-spacing: .1em }
+.ed-err { color: var(--red-text); font-style: normal; font-size: var(--fs-label-12); letter-spacing: .1em }
 .ed-rename { flex: 1; min-width: 0; height: 26px; background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--value); font: inherit; padding: 0 var(--space-2) }
 .ed-tree-layers > .ed-empty { padding: var(--space-1) 0 var(--space-2) var(--space-6) }
 
 /* assets */
 .ed-assets { padding: var(--space-2) var(--space-2) var(--space-8) }
 .ed-search { width: 100%; height: 32px; padding: 0 var(--space-2); background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-ctl); color: var(--value); font: inherit }
-.ed-agroup h3 { display: flex; justify-content: space-between; align-items: center; margin: var(--space-4) var(--space-1) var(--space-2); font: 600 var(--fs-tag-9) var(--mono); letter-spacing: .14em; color: var(--label) }
+.ed-agroup h3 { display: flex; justify-content: space-between; align-items: center; margin: var(--space-4) var(--space-1) var(--space-2); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .14em; color: var(--label) }
 .ed-agroup h3 small { color: var(--mute); font-weight: 500; letter-spacing: .04em }
 .ed-agroup h3 button { background: none; border: 0; padding: var(--space-1) 0; font: inherit; letter-spacing: inherit; color: inherit; text-align: left }
 .ed-agrid { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: var(--space-2) }
 .ed-asset { width: 100%; display: grid; gap: var(--space-1); justify-items: start; padding: var(--space-2); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-ctl); text-align: left; color: var(--label) }
 .ed-asset:hover, .ed-asset:focus-visible { border-color: var(--line-hover) }
 .ed-asset:active { background: color-mix(in srgb, var(--surface), var(--tint) 4%) }
-.ed-asset span { font-size: var(--fs-tag-9); letter-spacing: .06em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100% }
-.ed-asset small { font-size: var(--fs-tag-8); color: var(--mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100% }
+.ed-asset span { font-size: var(--fs-label-12); letter-spacing: .06em; text-transform: uppercase; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100% }
+.ed-asset small { font-size: var(--fs-label-12); color: var(--mute); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100% }
 .ed-thumb { display: block; width: 100%; height: auto; aspect-ratio: auto; max-height: 112px; object-fit: contain; border-radius: var(--radius-sm); background: var(--surface) }
 .ed-thumb--photo { display: grid; place-items: center; aspect-ratio: 1; color: var(--mute); font-size: var(--fs-tag-9); letter-spacing: .2em; border: 1px dashed var(--line) }
 
@@ -193,13 +193,13 @@
   border: 0;
   pointer-events: auto;
   color: var(--mute);
-  font: 500 var(--fs-label-10) var(--mono) !important;
+  font: 500 var(--fs-label-12) var(--mono) !important;
   letter-spacing: .06em;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis
 }
-.ed-flabel small { color: var(--dim); font-size: var(--fs-tag-9) }
+.ed-flabel small { color: var(--mute); font-size: var(--fs-label-12) }
 .ed-flabel:hover, .ed-flabel:focus-visible { color: var(--label) }
 .ed-flabel:active { color: var(--value) }
 .ed-flabel.on { color: var(--value) }
@@ -209,7 +209,7 @@
 .ed-sel--parent { box-shadow: 0 0 0 1px color-mix(in srgb, var(--red) 22%, transparent) }
 .ed-sel--layer { box-shadow: 0 0 0 1px var(--ed-sel); outline: 1px dashed color-mix(in srgb, var(--red) 35%, transparent); outline-offset: 3px }
 .ed-sel--draft { box-shadow: 0 0 0 1px color-mix(in srgb, var(--value) 60%, transparent); background: color-mix(in srgb, var(--value) 3%, transparent) }
-.ed-sel--draft small { position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); color: var(--label); font-size: var(--fs-tag-9) }
+.ed-sel--draft small { position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%); color: var(--label); font-size: var(--fs-label-12) }
 .ed-handle { position: absolute; width: 9px; height: 9px; margin: calc(-1 * var(--space-1)) 0 0 calc(-1 * var(--space-1)); border-radius: 50%; background: var(--ed-bg); box-shadow: 0 0 0 1.5px var(--red); pointer-events: auto }
 .ed-handle::after { content: ''; position: absolute; left: 50%; top: 50%; width: var(--ed-hit); height: var(--ed-hit); transform: translate(-50%, -50%); border-radius: 50% }
 .ed-handle.nw { left: 0; top: 0; cursor: nwse-resize }
@@ -218,20 +218,20 @@
 .ed-handle.se { left: 100%; top: 100%; cursor: nwse-resize }
 .ed-brush { position: absolute; transform: translate(-50%, -50%); border-radius: 50%; box-shadow: 0 0 0 1px color-mix(in srgb, var(--value) 75%, transparent), 0 0 0 2px color-mix(in srgb, var(--shade) 50%, transparent); pointer-events: none }
 .ed-brush.erase { box-shadow: 0 0 0 1px color-mix(in srgb, var(--value) 50%, transparent); outline: 1px dashed color-mix(in srgb, var(--value) 50%, transparent) }
-.ed-note { position: absolute; left: 12px; bottom: 12px; margin: 0; max-width: min(520px, 70%); color: var(--label); font-size: var(--fs-label-10); pointer-events: none; text-shadow: 0 0 6px var(--shade) }
+.ed-note { position: absolute; left: 12px; bottom: 12px; margin: 0; max-width: min(520px, 70%); color: var(--label); font-size: var(--fs-label-12); pointer-events: none; text-shadow: 0 0 6px var(--shade) }
 .ed-note:empty { display: none }
 .ed-banner { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); display: flex; gap: var(--space-2); align-items: center; margin: 0; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); background: var(--surface); border: 1px solid color-mix(in srgb, var(--red) 50%, transparent); border-radius: var(--radius-ctl); color: var(--value); z-index: 5 }
 .ed-banner button { background: none; border: 0; width: 28px; height: 28px; color: var(--mute) }
 
 /* ── inspector ── */
 .ed-sec { padding: var(--space-3) var(--space-4) var(--space-4); border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1; display: grid; gap: var(--space-2); min-width: 0 }
-.ed-sec h3 { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); margin: 0; font: 600 var(--fs-tag-9) var(--mono); letter-spacing: .14em; color: var(--label) }
+.ed-sec h3 { display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-2); margin: 0; font: 600 var(--fs-label-12) var(--mono); letter-spacing: .14em; color: var(--label) }
 .ed-sec h3 small { color: var(--mute); font-weight: 500; letter-spacing: .06em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .ed-link { background: none; border: 0; padding: 0; color: var(--mute); font: inherit; letter-spacing: inherit }
 .ed-link:hover, .ed-link:focus-visible, .ed-link:active { color: var(--value) }
 .ed-grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-2) var(--space-2); align-items: end }
 .ed-wide { grid-column: 1 / -1 }
-.ed-field { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); min-width: 0; color: var(--mute); font: 600 var(--fs-tag-8) var(--mono); letter-spacing: .12em }
+.ed-field { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); min-width: 0; color: var(--mute); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .12em }
 .ed-field input, .ed-field select, .ed-json {
   width: 100%;
   min-width: 0;
@@ -241,19 +241,19 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-ctl);
   color: var(--value);
-  font: 500 var(--fs-label-11) var(--mono);
+  font: 500 var(--fs-label-12) var(--mono);
   letter-spacing: .02em
 }
 /* fields: the accent border is the focus ring (the halo comes from the global :focus-visible) */
 .ed-field input:focus, .ed-field select:focus, .ed-json:focus { border-color: var(--red); outline: none }
-.ed-check { display: flex; align-items: center; gap: var(--space-2); min-height: 30px; color: var(--label); font: 600 var(--fs-tag-8) var(--mono); letter-spacing: .12em }
+.ed-check { display: flex; align-items: center; gap: var(--space-2); min-height: 30px; color: var(--label); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .12em }
 .ed-check input { accent-color: var(--dot-idle); width: 14px; height: 14px }
-.ed-slider { display: grid; grid-template-columns: 1fr auto; gap: var(--space-1) var(--space-2); align-items: center; color: var(--mute); font: 600 var(--fs-tag-8) var(--mono); letter-spacing: .12em }
-.ed-slider small { margin-left: var(--space-2); color: var(--dim); font-weight: 500; letter-spacing: .04em; text-transform: none }
-.ed-slider output { color: var(--value); font: 500 var(--fs-label-10) var(--mono); font-variant-numeric: tabular-nums }
+.ed-slider { display: grid; grid-template-columns: 1fr auto; gap: var(--space-1) var(--space-2); align-items: center; color: var(--mute); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .12em }
+.ed-slider small { margin-left: var(--space-2); color: var(--mute); font-weight: 500; letter-spacing: .04em; text-transform: none }
+.ed-slider output { color: var(--value); font: 500 var(--fs-label-12) var(--mono); font-variant-numeric: tabular-nums }
 .ed-slider input { grid-column: 1 / -1; width: 100%; height: 22px; accent-color: var(--dot-idle); margin: 0 }
 .ed-seg { display: flex; border: 1px solid var(--line); border-radius: var(--radius-pill); padding: var(--space-1); gap: var(--space-1) }
-.ed-seg button { flex: 1; min-height: 26px; background: none; border: 0; border-radius: var(--radius-pill); color: var(--mute); font-size: var(--fs-tag-9); letter-spacing: .1em }
+.ed-seg button { flex: 1; min-height: 26px; background: none; border: 0; border-radius: var(--radius-pill); color: var(--mute); font-size: var(--fs-label-12); letter-spacing: .1em }
 .ed-seg button[aria-checked="true"] { background: var(--raised); color: var(--value) }
 .ed-row-btns { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center }
 .ed-row-btns button, .ed-chips button, .ed-sec > button, .ed-insp > .ed-row-btns button, .ed-grid2 > button {
@@ -263,16 +263,16 @@
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
   color: var(--value);
-  font-size: var(--fs-tag-9);
+  font-size: var(--fs-label-12);
   font-weight: 600;
   letter-spacing: .12em
 }
 .ed-row-btns button:hover:not(:disabled), .ed-row-btns button:focus-visible:not(:disabled), .ed-chips button:hover, .ed-chips button:focus-visible { border-color: var(--line-hover) }
 .ed-row-btns button:active:not(:disabled), .ed-chips button:active { background: var(--wash-press) }
 .ed-row-btns button[aria-pressed="true"] { border-color: var(--ed-sel); color: var(--value) }
-.ed-danger { color: var(--red) !important; border-color: color-mix(in srgb, var(--red) 45%, transparent) !important }
-.ed-record { color: var(--red) !important; border-color: color-mix(in srgb, var(--red) 60%, transparent) !important }
-.ed-bad { color: var(--red); margin: 0; font-size: var(--fs-label-10) }
+.ed-danger { color: var(--red-text) !important; border-color: color-mix(in srgb, var(--red) 45%, transparent) !important }
+.ed-record { color: var(--red-text) !important; border-color: color-mix(in srgb, var(--red) 60%, transparent) !important }
+.ed-bad { color: var(--red-text); margin: 0; font-size: var(--fs-label-12) }
 .ed-status { color: var(--label) }
 .ed-insp > .ed-hint, .ed-insp > .ed-row-btns { padding: var(--space-4) }
 .ed-insp progress { width: 100%; height: 4px; accent-color: var(--red) }
@@ -280,21 +280,21 @@
 .ed-mini-list button { width: 100%; text-align: left; background: none; border: 0; padding: var(--space-1) var(--space-1); color: var(--label); border-radius: var(--radius-sm) }
 .ed-mini-list button:hover, .ed-mini-list button:focus-visible { background: var(--raised); color: var(--value) }
 .ed-mini-list button:active { background: var(--wash-press); color: var(--value) }
-.ed-code-peek { margin: 0; padding: var(--space-2); background: var(--raised); border-radius: var(--radius-ctl); color: var(--label); font: var(--fs-label-10)/1.5 var(--mono); white-space: pre; overflow: hidden; max-height: 76px }
-.ed-json { min-height: 140px; padding: var(--space-2); font-size: var(--fs-label-10); line-height: 1.45; resize: vertical; white-space: pre }
+.ed-code-peek { margin: 0; padding: var(--space-2); background: var(--raised); border-radius: var(--radius-ctl); color: var(--label); font: var(--fs-label-12)/1.5 var(--mono); white-space: pre; overflow: hidden; max-height: 76px }
+.ed-json { min-height: 140px; padding: var(--space-2); font-size: var(--fs-label-12); line-height: 1.45; resize: vertical; white-space: pre }
 .ed-json--ro { display: block; max-height: 280px; overflow: auto; margin: var(--space-2) 0 0 }
-.ed-share output, .ed-url { color: var(--mute); font-size: var(--fs-tag-9); letter-spacing: .08em }
+.ed-share output, .ed-url { color: var(--mute); font-size: var(--fs-label-12); letter-spacing: .08em }
 .ed-url b { color: var(--value) }
 .ed-insp .dw-editor { min-height: 220px }
-.ed-insp .dw-status { font-size: var(--fs-tag-9); color: var(--mute) }
+.ed-insp .dw-status { font-size: var(--fs-label-12); color: var(--mute) }
 .ed-transport { display: grid; grid-template-columns: auto 1fr auto; gap: var(--space-2); align-items: center }
 .ed-transport input { width: 100%; accent-color: var(--dot-idle) }
-.ed-t { color: var(--value); font-variant-numeric: tabular-nums; font-size: var(--fs-label-10); min-width: 58px; text-align: right }
-.ed-play { min-height: 30px; padding: 0 var(--space-3); background: none; border: 1px solid color-mix(in srgb, var(--value) 40%, transparent); border-radius: var(--radius-pill); color: var(--value); font-size: var(--fs-tag-9); font-weight: 600; letter-spacing: .12em }
+.ed-t { color: var(--value); font-variant-numeric: tabular-nums; font-size: var(--fs-label-12); min-width: 58px; text-align: right }
+.ed-play { min-height: 30px; padding: 0 var(--space-3); background: none; border: 1px solid color-mix(in srgb, var(--value) 40%, transparent); border-radius: var(--radius-pill); color: var(--value); font-size: var(--fs-label-12); font-weight: 600; letter-spacing: .12em }
 .ed-track { display: grid; gap: var(--space-2); padding: var(--space-2) 0; border-top: 1px solid var(--line); border-image: var(--hair-x) 1 }
 .ed-track:first-of-type { border-top: 0 }
 .ed-track-head { display: grid; grid-template-columns: 56px 1fr; gap: var(--space-2); align-items: center }
-.ed-track-head b { font-size: var(--fs-tag-9); letter-spacing: .14em; color: var(--label) }
+.ed-track-head b { font-size: var(--fs-label-12); letter-spacing: .14em; color: var(--label) }
 .ed-lane { position: relative; height: 6px; border-radius: var(--radius-sm); background: var(--raised) }
 .ed-lane i { position: absolute; top: 0; bottom: 0; border-radius: var(--radius-sm); background: var(--dot-mid) }
 .ed-track-viz { display: flex; gap: var(--space-2) }
@@ -305,16 +305,16 @@
 /* ── shortcuts dialog ── */
 .ed-modal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: var(--space-4); background: color-mix(in srgb, var(--shade) 62%, transparent) }
 .ed-modal-card { width: min(620px, 100%); max-height: 86dvh; overflow: auto; padding: var(--space-4) var(--space-5); background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-panel); box-shadow: var(--shadow-raised) }
-.ed-modal-card h2 { display: flex; justify-content: space-between; align-items: center; margin: 0 0 var(--space-2); font: 600 var(--fs-label-10) var(--mono); letter-spacing: .16em; color: var(--value) }
-.ed-modal-card h3 { margin: var(--space-4) 0 var(--space-2); font: 600 var(--fs-tag-9) var(--mono); letter-spacing: .14em; color: var(--label) }
+.ed-modal-card h2 { display: flex; justify-content: space-between; align-items: center; margin: 0 0 var(--space-2); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .16em; color: var(--value) }
+.ed-modal-card h3 { margin: var(--space-4) 0 var(--space-2); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .14em; color: var(--label) }
 .ed-keys { display: grid; gap: 0; margin: 0 }
 .ed-keys div { display: grid; grid-template-columns: minmax(120px, 34%) 1fr; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1 }
 .ed-keys dt { color: var(--value) }
 .ed-keys dd { margin: 0; color: var(--mute) }
 
 /* ── phone (≤ 640 px): the whole screen is the editor ── */
-html.ed-lock, html.ed-lock body { overflow: hidden; overscroll-behavior: none }
-html.ed-lock .pal-dock { display: none }
+html.ed-scroll-lock, html.ed-scroll-lock body { overflow: hidden; overscroll-behavior: none }
+html.ed-scroll-lock .pal-dock { display: none }
 .ed-root.is-phone {
   --ed-hit: 44px;
   position: fixed;
@@ -373,7 +373,7 @@ html.ed-lock .pal-dock { display: none }
 .ed-sheet-grab { flex: none; height: 24px; display: grid; place-items: center; touch-action: none; cursor: grab }
 /* .ed-sheet-grab i: the shared five-dot grab handle (src/site/mobile.css) */
 .ed-sheet-head { flex: none; display: flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-1) 0 var(--space-4); border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1 }
-.ed-sheet-head > b { flex: 1; font: 600 var(--fs-label-10) var(--mono); letter-spacing: .16em; color: var(--value) }
+.ed-sheet-head > b { flex: 1; font: 600 var(--fs-label-12) var(--mono); letter-spacing: .16em; color: var(--value) }
 .ed-tabs--sheet { flex: 1; border: 0; padding: 0 }
 .ed-tabs--sheet button { height: 44px }
 .ed-sheet-body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; touch-action: pan-y }
@@ -400,8 +400,8 @@ html.ed-lock .pal-dock { display: none }
   .ed-root input, .ed-root select, .ed-root textarea, .ed-root .dw-mirror { font-size: var(--fs-copy-16) !important }
 }
 /* phone: nothing smaller than 10 px (labels, kinds, sizes) */
-.is-phone .ed-field, .is-phone .ed-slider, .is-phone .ed-check, .is-phone .ed-sec h3, .is-phone .ed-tabs button, .is-phone .ed-row-btns button, .is-phone .ed-chips button, .is-phone .ed-seg button { font-size: var(--fs-label-10) }
-.is-phone .ed-row-name b, .is-phone .ed-row-name small, .is-phone .ed-sec h3 small, .is-phone .ed-slider small, .is-phone .ed-asset span, .is-phone .ed-asset small, .is-phone .ed-flabel small, .is-phone .ed-hint, .is-phone .ed-empty { font-size: var(--fs-label-10) }
+.is-phone .ed-field, .is-phone .ed-slider, .is-phone .ed-check, .is-phone .ed-sec h3, .is-phone .ed-tabs button, .is-phone .ed-row-btns button, .is-phone .ed-chips button, .is-phone .ed-seg button { font-size: var(--fs-label-12) }
+.is-phone .ed-row-name b, .is-phone .ed-row-name small, .is-phone .ed-sec h3 small, .is-phone .ed-slider small, .is-phone .ed-asset span, .is-phone .ed-asset small, .is-phone .ed-flabel small, .is-phone .ed-hint, .is-phone .ed-empty { font-size: var(--fs-label-12) }
 .is-phone .ed-row-name, .is-phone .ed-mini-list button { font-size: var(--fs-label-12) }
 @media (prefers-reduced-motion: reduce) {
   .ed-sheet { transition: none }
@@ -422,9 +422,9 @@ html.ed-lock .pal-dock { display: none }
 .ed-gap--x { height: 0; border-top: 1px dashed color-mix(in srgb, var(--value) 45%, transparent) }
 .ed-gap--y { width: 0; border-left: 1px dashed color-mix(in srgb, var(--value) 45%, transparent) }
 .ed-gap small { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); padding: 0 var(--space-1); background: var(--ed-bg); color: var(--label); font-size: var(--fs-tag-9); font-variant-numeric: tabular-nums; white-space: nowrap }
-.ed-flock { color: var(--mute); font-size: var(--fs-tag-9); font-style: normal; letter-spacing: .1em }
-.ed-flabel.locked { color: var(--dim) }
-.ed-lock { flex: none; width: 22px; height: 28px; padding: 0; background: none; border: 0; color: var(--line-strong); opacity: 0 }
+.ed-flock { color: var(--mute); font-size: var(--fs-label-12); font-style: normal; letter-spacing: .1em }
+.ed-flabel.locked { color: var(--mute) }
+.ed-lock { flex: none; width: 22px; height: 28px; padding: 0; background: none; border: 0; color: var(--dim); opacity: 0 }
 .ed-lock[aria-pressed="true"] { color: var(--mute); opacity: 1 }
 .ed-row:hover .ed-lock, .ed-row:active .ed-lock, .ed-row:focus-within .ed-lock { opacity: 1 }
 .ed-lock:hover, .ed-lock:focus-visible, .ed-lock:active { color: var(--value) }
@@ -449,7 +449,7 @@ html.ed-lock .pal-dock { display: none }
   border-radius: var(--radius-card);
   max-width: calc(100% - var(--space-4))
 }
-.ed-selbar button { min-width: 44px; min-height: 44px; padding: 0 var(--space-2); background: none; border: 1px solid transparent; border-radius: var(--radius-panel); color: var(--label); font-size: var(--fs-label-10); letter-spacing: .08em }
+.ed-selbar button { min-width: 44px; min-height: 44px; padding: 0 var(--space-2); background: none; border: 1px solid transparent; border-radius: var(--radius-panel); color: var(--label); font-size: var(--fs-label-12); letter-spacing: .08em }
 .ed-selbar button:hover:not(:disabled), .ed-selbar button:focus-visible:not(:disabled) { border-color: var(--line); background: var(--raised) }
 .ed-selbar button:active:not(:disabled) { background: var(--wash-press) }
 .ed-selbar button.on { border-color: var(--ed-sel); background: var(--glow-wash); color: var(--value) }
@@ -457,3 +457,56 @@ html.ed-lock .pal-dock { display: none }
 .is-phone .ed-note { bottom: calc(132px + env(safe-area-inset-bottom)) }
 .is-phone .ed-lock { width: 44px; height: 44px; opacity: 1 }
 .is-phone .ed-lock[aria-pressed="false"] { display: none }
+
+/* ── E3: editing on canvas ── */
+/* a layer's own handles: a ring's radius and sweep, a disc's radius, a line's ends (absolute, not corners) */
+.ed-handle--site { cursor: grab }
+.ed-handle--site:active { cursor: grabbing }
+.ed-handle--site.is-sweep { background: var(--red) }
+/* a spec field's declared bounds: the box it is placed into, resized by its corners */
+.ed-sel--bounds { outline-style: solid }
+/* the quick bar over the selected layer: grey chrome, an active PICK takes the accent edge */
+.ed-qbar {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 1px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  box-shadow: 0 4px 16px color-mix(in srgb, var(--shade) 40%, transparent);
+  pointer-events: auto;
+  white-space: nowrap;
+  font-size: var(--fs-label-12);
+  letter-spacing: .06em
+}
+.ed-qbar-kind { padding: 0 var(--space-1) 0 var(--space-2); color: var(--mute) }
+.ed-qbar-step { display: flex; align-items: center }
+.ed-qbar-step > b, .ed-qbar button b { font-weight: 600; color: var(--value); font-variant-numeric: tabular-nums }
+.ed-qbar-step > b { min-width: 3.2em; text-align: center }
+.ed-qbar button { min-width: 28px; height: 28px; padding: 0 var(--space-2); background: none; border: 1px solid transparent; border-radius: var(--radius-ctl); color: var(--label) }
+.ed-qbar button:hover:not(:disabled), .ed-qbar button:focus-visible:not(:disabled) { border-color: var(--line); background: var(--raised) }
+.ed-qbar button:active:not(:disabled) { background: var(--wash-press) }
+.ed-qbar button[aria-pressed="true"] { border-color: var(--ed-sel); background: var(--glow-wash); color: var(--value) }
+.is-phone .ed-qbar { gap: 0; padding: var(--space-1) }
+.is-phone .ed-qbar button { min-width: 44px; height: 44px }
+/* text typed in place: the input is invisible (the letters are the frame's dots); the caret sits in a glyph gap */
+.ed-intext {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  margin: 0;
+  opacity: 0; /* never seen: the caret and the text box show where focus is */
+  pointer-events: none;
+  background: none;
+  color: transparent;
+  caret-color: transparent;
+  font-size: var(--fs-copy-16)
+}
+.ed-caret { position: absolute; width: 2px; margin-left: -1px; background: var(--red); pointer-events: none }
+.ed-textsel { position: absolute; background: color-mix(in srgb, var(--red) 22%, transparent); box-shadow: 0 0 0 1px var(--ed-sel); pointer-events: none }

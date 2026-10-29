@@ -1,6 +1,7 @@
 import type { DotBuffer } from '../buffer/dotBuffer'
 import { addDotShape, type PathSink } from './canvasRenderer'
 import { squircleExponent } from './shapePath'
+import { shapeExt } from './ext'
 
 /** Opacity buckets per fill (same 1/1000 bucketing as `renderCanvas`). */
 const STEPS = 1000
@@ -13,7 +14,7 @@ type Ctx = Pick<CanvasRenderingContext2D, 'fill' | 'globalAlpha' | 'fillStyle'>
  * `makePath` is injectable for headless counting.
  */
 export function renderCanvasBuffer(ctx: Ctx, buf: DotBuffer, makePath: () => PathSink & Path2D = () => new Path2D()): number {
-  const groups = new Map<number, PathSink & Path2D>(), { x, y, r, opacity, tone, shape } = buf
+  const groups = new Map<number, PathSink & Path2D>(), { x, y, r, opacity, tone, shape } = buf, ext = buf.join && shapeExt.bufferDot
   const n = shape === 'squircle' ? squircleExponent(buf.roundness ?? 0) : 2
   for (let i = 0; i < buf.n; i++) {
     const ri = r[i], oi = opacity[i]
@@ -21,7 +22,8 @@ export function renderCanvasBuffer(ctx: Ctx, buf: DotBuffer, makePath: () => Pat
     const key = tone[i] * (STEPS + 1) + Math.round(Math.min(1, oi) * STEPS)
     let path = groups.get(key)
     if (!path) groups.set(key, (path = makePath()))
-    addDotShape(path, x[i], y[i], ri, shape, n, false)
+    // squares channels (absent on classic frames): the hook draws joined cells and per-dot roundness
+    if (!(ext && ext(path, buf, i))) addDotShape(path, x[i], y[i], ri, shape, n, false)
   }
   for (const [key, path] of groups) {
     ctx.globalAlpha = (key % (STEPS + 1)) / STEPS

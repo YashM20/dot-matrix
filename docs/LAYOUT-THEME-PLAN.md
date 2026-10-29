@@ -1,6 +1,6 @@
 # LAYOUT-THEME-PLAN: design language, layout and themes
 
-> Status: **planned, revised** (2026-10-27).
+> Status: **T0–T6 built** (T6 on 2026-10-29, not merged yet; `docs/PROGRESS.md`). Planned and revised 2026-10-27.
 > **Revision 2:** adds vite.dev's purple as the `vite` accent; ideas from award-winning product sites (§1c); a trimmed, gamut-safe accent list with neutrals tinted toward each accent (§4).
 > **Revision 1:** vite.dev is a reference for *how a well-made product feels*, not a theme to copy. Everything below is our own dot-matrix design language. "Theme" now means **scheme × accent** (Tamagui-style): light, dark and system, crossed with an accent the visitor can change. Each accent is tuned per scheme so it works in both.
 > Sources (2026-10-27):

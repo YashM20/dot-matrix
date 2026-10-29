@@ -14,6 +14,7 @@ import { createDotBuffer, toDots } from '../src/engine/buffer/dotBuffer'
 import { dot480 } from '../src/engine/theme/tokens'
 import { cardFps, tierOf } from '../src/widgets/fps'
 import { widgetPresets } from '../src/widgets'
+import { withChrome, type WidgetPreset } from '../src/widgets/types'
 import { freezeWallClock } from './lib/freeze'
 import { sampleCard, uniquePresets } from './lib/cards'
 import { CHANNELS, diffGoldens, dotKey, goldenRow, legacyKey, styleSig, type Goldens } from './lib/goldenKey'
@@ -35,17 +36,25 @@ export function goldenKeyChecks(assert: Assert): void {
   freezeWallClock()
   try {
     // F0.5) the key
+    // A dot keys as legacyKey + its channel suffixes. Every dot of a card without join / shapeOf layers (the 177 pre-F0
+    // cards and every plain card since) must carry no suffix, so no existing hash can move; dots of cards that opt in
+    // (squares: `join`, `shapeOf`) carry exactly their channels after the unchanged legacy prefix.
     const presets = uniquePresets()
-    let dots = 0
-    const off: string[] = []
+    let dots = 0, suffixed = 0
+    const off: string[] = [], opted = new Set<string>()
+    const optsIn = (p: WidgetPreset, t: number) => withChrome(p)({ t, data: { ...p.defaults } }).some(l => l.join !== undefined || l.shapeOf !== undefined)
     for (const p of presets) for (const t of [0, 1.3]) {
-      const ds = sampleCard(p, t)
+      const ds = sampleCard(p, t), canSuffix = optsIn(p, t)
       dots += ds.length
-      const bad = ds.find(d => dotKey(d, p.style) !== legacyKey(d))
-      if (bad) off.push(`${p.id} t=${t}: ${dotKey(bad, p.style)}`)
+      for (const d of ds) {
+        const k = dotKey(d, p.style), L = legacyKey(d)
+        if (k === L) continue
+        if (canSuffix && k.startsWith(L)) { suffixed++; opted.add(p.id); continue }
+        off.push(`${p.id} t=${t}: ${k}`); break
+      }
     }
-    assert(`golden key: dotKey ≡ legacyKey on every dot of all ${presets.length} presets at t=0 and t=1.3`, !off.length && presets.length >= 177,
-      off.length ? off.slice(0, 4).join('; ') : `${dots} dots`)
+    assert(`golden key: dotKey ≡ legacyKey on every dot of all ${presets.length} presets at t=0 and t=1.3, except the channel suffixes of join / shapeOf cards`, !off.length && presets.length >= 177,
+      off.length ? off.slice(0, 4).join('; ') : `${dots} dots; ${suffixed} suffixed on ${[...opted].join(', ') || 'none'}`)
 
     const base: DotStyle = { shape: 'squircle', sizeMin: .2, sizeMax: .95, cornerRoundness: .1 }
     const d0: DotInstance = { x: 1.5, y: 2.25, r: .5, opacity: .6, color: '#fff', shape: 'squircle', roundness: .1 }
@@ -110,11 +119,20 @@ function fpsChecks(assert: Assert): void {
   const tiers = tierOf(true, false, 16) === 'phone' && tierOf(false, true, 16) === 'phone' && tierOf(false, false, 4) === 'phone' && tierOf(false, false, 5) === 'full' && tierOf(false, false, undefined) === 'full'
   assert('fps: cardFps full → base; phone → max(12, round(base/2)), never above base (12 → 12, 30 → 15, 60 → 30, 20 → 12)', !bad.length && tiers,
     `${bad.map(([b]) => `${b} → ${cardFps(b, 'phone')}`).join(', ')}${tiers ? '' : ' tier rules (coarse pointer, saveData, ≤ 4 cores) wrong'}` || 'phone tier: coarse pointer, saveData or ≤ 4 cores')
-  const declared = widgetPresets.filter(p => p.fps !== undefined).map(p => p.id)
+  // the allow-list is DESIGN.md's "Cards that declare a rate" table: every declared fps is a row there, with the same rate
+  const declared = new Map(widgetPresets.filter(p => p.fps !== undefined).map(p => [p.id, p.fps!]))
+  const design = readFileSync('DESIGN.md', 'utf8'), at = design.indexOf('Cards that declare a rate:')
+  const table = new Map<string, number>()
+  if (at >= 0) for (const line of design.slice(at).split('\n').slice(1)) {
+    const m = /^\s*\|\s*`([\w-]+)`\s*\|\s*(\d+)\s*\|/.exec(line)
+    if (m) table.set(m[1], Number(m[2]))
+    else if (table.size && !/^\s*\|/.test(line)) break
+  }
+  const drift = [...new Set([...declared.keys(), ...table.keys()])].filter(id => declared.get(id) !== table.get(id)).map(id => `${id}: preset ${declared.get(id) ?? '-'}, DESIGN.md ${table.get(id) ?? '-'}`)
   const src = readFileSync('src/components/DotWidget.tsx', 'utf8')
   const passes = src.includes("camera.status === 'live' ? 30 : preset.fps !== undefined ? cardFps(preset.fps, fpsTier()) : undefined") && (src.match(/ fps=\{fps\}/g) ?? []).length === 2
-  assert('fps: no existing preset declares fps (so DotWidget passes undefined, as today)', !declared.length && passes,
-    declared.length ? `declared: ${declared.join(', ')}` : passes ? 'DotCanvas and the X-ray overlay get the same fps' : 'DotWidget no longer passes the tiered fps to both')
+  assert('fps: the presets that declare fps are exactly DESIGN.md\'s fps table, at its rates (DotWidget passes the tiered fps to DotCanvas and the X-ray overlay)', table.size > 0 && !drift.length && passes,
+    !table.size ? 'no fps table under "Cards that declare a rate:" in DESIGN.md' : drift.length ? drift.join('; ') : passes ? [...declared].map(([id, f]) => `${id} ${f}`).join(', ') : 'DotWidget no longer passes the tiered fps to both')
 }
 
 /** The site cover before F0.6 (gridSampler.ts:222-225 at c619dae), frozen: the cells a site at (x, y) of size k hid. */

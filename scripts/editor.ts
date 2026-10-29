@@ -9,6 +9,10 @@
  * E2 adds selections of many (⇧-click, marquee, select all), groups and locks, group resize from the box,
  * align / distribute, smart guides, the clipboard (round trip, ids, paste offsets), v1 → v2 migration and
  * one undo step per command or gesture.
+ * E3 (`editorE3Checks`): sites handles (radius, a sweep that ends on a dot of the ring, line ends), spec
+ * layers that move in whole cells and spec fields resized by their bounds, carets of text typed in place
+ * that sit in glyph gaps (5×7 and `T.big`, through the engine), the quick toggles (tone, lattice, size),
+ * the eyedropper, and a typing session as one undo step (Esc and an emptied layer leave no trace).
  * `pnpm verify` runs them through `editorChecks()`; run alone with `npx tsx scripts/editor.ts`.
  * The browser side (desktop + touch): `scripts/editor-browser.ts`.
  */
@@ -23,6 +27,10 @@ import { alignDeltas, arrangeFrames, arrangeLayers, canResize, clickLayer, distr
 import { asClip, clipFromJSON, clipOf, clipToJSON, pasteClip } from '../src/components/editor/clip'
 import { arrangeSel, copySel, deleteSel, duplicateSel, groupSel, lockSel, nudgeSel, paste, ungroupSel } from '../src/components/editor/actions'
 import { MODES, viewFromUrl } from '../src/site/views'
+import { caretAt, dragSiteHandle, editableText, inkAt, inkStep, latticeOf, layerBox, resizeSpecBounds, ringCount, siteHandles, specBox, stepLattice, stepSize, stepTone, textGeo, withText } from '../src/components/editor/direct'
+import { cancelTyping, commitTyping, startTyping, typeText } from '../src/components/editor/typing'
+import { layerDots, lit as litDot, nudgeSpec } from '../src/components/editor/doc'
+import type { SpecLayer, StudioLayer } from '../src/components/studio/doc'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const litCount = (ds: { r: number; opacity: number }[]) => ds.filter(d => d.r > 0 && d.opacity > 0).length
@@ -404,9 +412,118 @@ function e2Checks(assert: Assert) {
   assert('undo: redo brings the moved copies back; the selection survives undo of a deleted selection', st().h.present === afterAlt && (st().select(framesSel(cp.ids)), st().undo(), !st().sel.frame || !cp.ids.includes(st().sel.frame!)))
 }
 
+/** E3: editing on the canvas (docs/EDITOR-PLAN.md §8.3). */
+export function editorE3Checks(assert: Assert) {
+  const TAU = Math.PI * 2
+  const frameWith = (...layers: Parameters<typeof addLayer>[2][]) => {
+    let d = addFrame({ kind: 'dot480.editor', v: EDITOR_VERSION, name: 't', frames: [] }, blankCard({ cols: 80, rows: 80, pitch: 4 }), { at: { x: 0, y: 0 } }).doc
+    for (const l of layers) d = addLayer(d, d.frames[0].id, l)
+    return d
+  }
+  const F = (d: EditorDoc) => d.frames[0]
+
+  // ── sites handles
+  const ring = sitesLayer({ params: { shape: 'ring', cx: 40, cy: 40, r: 20, spacing: 4.5, start: 0, sweep: TAU } })
+  const dr = frameWith(ring), f0 = F(dr), hs = siteHandles(f0, ring)
+  const rH = hs.find(h => h.id === 'r')!, swH = hs.find(h => h.id === 'sweep')!
+  assert('E3 sites: a full ring has a radius handle on the ring (6 o\'clock) and a sweep handle at its start (12 o\'clock)', Math.abs(rH.x - 40.5 * 4) < 1e-6 && Math.abs(rH.y - 60.5 * 4) < 1e-6 && Math.abs(swH.x - 40.5 * 4) < 1e-6 && Math.abs(swH.y - 20.5 * 4) < 1e-6, JSON.stringify(hs))
+  const bigger = dragSiteHandle(f0, ring, 'r', 40.5 * 4, (40.5 + 27.4) * 4)
+  assert('E3 sites: dragging the radius handle sets the radius in whole cells (1…512)', bigger.params.r === 27 && dragSiteHandle(f0, ring, 'r', 40.5 * 4, 40.5 * 4).params.r === 1)
+  // drag the sweep handle to 3 o'clock: a quarter, snapped to the ring's own sites
+  const n = ringCount(20, 4.5), quarter = dragSiteHandle(f0, ring, 'sweep', (40.5 + 20) * 4, 40.6 * 4)
+  const k = Math.round(quarter.params.sweep / (TAU / n))
+  assert('E3 sites: the sweep handle snaps to the ring\'s site step (an arc ends on a dot of its track)', Math.abs(quarter.params.sweep - (k * TAU) / n) < 1e-9 && Math.abs(quarter.params.sweep - TAU / 4) <= TAU / n / 2 + 1e-9, `${quarter.params.sweep} vs ${TAU / 4}`)
+  const arcDots = layerDots(F(frameWith(quarter)), quarter).filter(litDot), ringDots = layerDots(f0, ring).filter(litDot)
+  assert('E3 sites: the arc draws k + 1 of the full ring\'s dots, each exactly on one of them', arcDots.length === k + 1 && arcDots.every(a => ringDots.some(r => Math.abs(r.x - a.x) < 1e-6 && Math.abs(r.y - a.y) < 1e-6)), `${arcDots.length} vs ${k + 1}`)
+  const back = dragSiteHandle(f0, ring, 'sweep', 40.4 * 4, 19 * 4), tiny = dragSiteHandle(f0, quarter, 'sweep', 40.6 * 4 + 2, 20.5 * 4)
+  assert('E3 sites: the sweep runs from one step to the full ring', back.params.sweep === TAU && tiny.params.sweep > 0 && tiny.params.sweep <= TAU / n + 1e-9, `${back.params.sweep} ${tiny.params.sweep}`)
+  const ln = sitesLayer({ params: { shape: 'line', cx: 10, cy: 10, x1: 30, y1: 10 } }), fl = F(frameWith(ln)), lh = siteHandles(fl, ln)
+  const moved = dragSiteHandle(fl, ln, 'b', 50.2 * 4, 22.7 * 4), moved2 = dragSiteHandle(fl, moved, 'a', 3.6 * 4, 5.1 * 4)
+  assert('E3 sites: a line has a handle at each end; each end lands on a whole cell', lh.map(h => h.id).join() === 'a,b' && moved.params.x1 === 50 && moved.params.y1 === 22 && moved2.params.cx === 3 && moved2.params.cy === 5 && moved2.params.x1 === 50)
+  const disc = sitesLayer({ params: { shape: 'disc', cx: 40, cy: 40, r: 10 } })
+  assert('E3 sites: a disc has one radius handle, on its right', siteHandles(f0, disc).length === 1 && siteHandles(f0, disc)[0].x === 50.5 * 4 && dragSiteHandle(f0, disc, 'r', 40.5 * 4, 55.5 * 4).params.r === 15)
+
+  // ── spec layers: moved in whole cells; IR fields resized by their bounds
+  const spec = (s: SpecLayer['spec']): SpecLayer => ({ id: `s${Math.random().toString(36).slice(2, 7)}`, name: 'spec', kind: 'spec', tone: 'preset', z: 0, blend: 'normal', visible: true, spec: s })
+  const sText = spec({ kind: 'text', text: 'AB', at: [4, 5] }), sBig = spec({ kind: 'text', text: 'AB', at: [2, 2], lattice: 2 })
+  const sSites = spec({ kind: 'sites', points: [[1, 2], [3, 4, .5]] }), sField = spec({ kind: 'ir', src: 'u' }), sBox = spec({ kind: 'ir', src: '1', bounds: [4, 4, 6, 3], lattice: 2 })
+  const nt = nudgeSpec(sText.spec, 2, -1) as { at: number[] }, nb = nudgeSpec(sBig.spec, 3, 1) as { at: number[]; origin: number[] }, ns = nudgeSpec(sSites.spec, 1, 1) as { points: number[][] }
+  assert('E3 spec: text moves its anchor (card cells), lattice text its origin, sites their points; a full-card field does not move', nt.at.join() === '6,4' && nb.at.join() === '2,2' && nb.origin.join() === '3,1' && ns.points.map(p => p.join()).join('|') === '2,3|4,5,0.5' && !nudgeSpec(sField.spec, 1, 0) && movable(sText) && !movable(sField) && movable(sBox))
+  const ds = frameWith(sText, sBox), fs = F(ds)
+  const textMoved = layerBox(F(editLayer(ds, { frame: fs.id, layer: sText.id }, l => nudgeLayer(l, 3, 2))), F(editLayer(ds, { frame: fs.id, layer: sText.id }, l => nudgeLayer(l, 3, 2))).card.layers.find(l => l.id === sText.id)!)!
+  const textAt0 = layerBox(fs, fs.card.layers.find(l => l.id === sText.id)!)!
+  assert('E3 spec: a moved spec text draws whole cells further (its lit dots, through the engine)', Math.abs(textMoved[0] - textAt0[0] - 12) < 1e-6 && Math.abs(textMoved[1] - textAt0[1] - 8) < 1e-6, `${textAt0} → ${textMoved}`)
+  const resized = resizeFrame(fs, 90, 90, 4, 4)
+  assert('E3 spec: resizing the frame from its top-left does not move spec layers (they are fields of the card)', (resized.card.layers.find(l => l.id === sText.id) as SpecLayer).spec === sText.spec)
+  const box0 = specBox(fs, sBox.spec as never)
+  assert('E3 spec: an IR field\'s box is its bounds on its lattice (frame px); a full-card field\'s box is the card', box0.join() === [32, 32, 80, 56].join() && specBox(fs, sField.spec as never).join() === '0,0,320,320', box0.join())
+  const lb = layerBox(fs, sBox)!, sbDots = layerDots(fs, sBox).filter(litDot)
+  assert('E3 spec: the selection box of a bounded field is its declared bounds, and every lit dot is inside it', lb.join() === box0.join() && sbDots.length > 0 && sbDots.every(d => d.x > lb[0] && d.x < lb[2] && d.y > lb[1] && d.y < lb[3]))
+  const se = resizeSpecBounds(fs, sBox as never, 'se', 16.4, 7.6), nw = resizeSpecBounds(fs, sBox as never, 'nw', 8, 8), pinch = resizeSpecBounds(fs, sBox as never, 'nw', 400, 400)
+  const bOf = (l: SpecLayer) => (l.spec as { bounds: number[] }).bounds.join()
+  assert('E3 spec: bounds corners resize in whole layer cells, the opposite corner stays, never below 1×1', bOf(se) === '4,4,8,4' && bOf(nw) === '5,5,5,2' && bOf(pinch) === '9,6,1,1', `${bOf(se)} ${bOf(nw)} ${bOf(pinch)}`)
+  const grown = F(editLayer(ds, { frame: fs.id, layer: sBox.id }, () => se)), gDots = layerDots(grown, grown.card.layers.find(l => l.id === sBox.id)!).filter(litDot)
+  assert('E3 spec: the resized field draws over its new bounds (through the engine)', gDots.length > sbDots.length && gDots.every(d => d.x < (2 * (4 + 8)) * 4 + 1e-6), `${sbDots.length} → ${gDots.length}`)
+
+  // ── text in place: carets between glyphs (5×7 and T.big), through the engine
+  const caretsClear = (l: Parameters<typeof textGeo>[0]) => {
+    const d = frameWith(l), f = F(d), g = textGeo(l)!, dots = layerDots(f, f.card.layers.find(x => x.id === l.id)!).filter(litDot), p = 4
+    const inner = g.carets.slice(1, -1)
+    return { g, ok: dots.length > 0 && inner.every(c => dots.every(dd => Math.abs(dd.x / p - c) >= g.k * .5 - 1e-6 || dd.y / p < g.top || dd.y / p > g.top + g.h)), left: Math.min(...dots.map(dd => dd.x / p)), right: Math.max(...dots.map(dd => dd.x / p)) }
+  }
+  const t5 = caretsClear(textLayer('HELLO', { params: { col: 6, row: 10 } })), tC = caretsClear(textLayer('MID', { params: { col: 40, row: 30, align: 'center' } }))
+  const tBig = caretsClear(textLayer('AB12', { lattice: 2, params: { col: 4, row: 40 } })), tSpec = caretsClear(spec({ kind: 'text', text: 'SPEC', at: [3, 3], lattice: 2, origin: [1, 1] }))
+  assert('E3 text: one caret per gap plus both ends; none cuts a glyph (5×7 left / centre, T.big, spec on a lattice)', [t5, tC, tBig, tSpec].every(x => x.ok) && t5.g.carets.length === 6 && tBig.g.carets.length === 5, [t5, tC, tBig, tSpec].map(x => x.ok).join())
+  assert('E3 text: the first caret is the text\'s left edge and the last its right edge (in cells)', [t5, tC, tBig, tSpec].every(x => Math.abs(x.g.carets[0] - (x.left - .5 * x.g.k)) < 1e-6 && Math.abs(x.g.carets[x.g.carets.length - 1] - (x.right + .5 * x.g.k)) < 1e-6), [t5, tC, tBig, tSpec].map(x => `${x.g.carets[0]}/${x.left}`).join(' '))
+  assert('E3 text: a press picks the nearest caret', caretAt(t5.g, 6.2) === 0 && caretAt(t5.g, 17.9) === 2 && caretAt(t5.g, 99) === 5)
+  const bound = spec({ kind: 'text', bind: 'data.x', at: [1, 1] })
+  assert('E3 text: text layers and literal spec text are typed in place (upper case, ≤ 64); a bound number is not', editableText(textLayer('a')) && editableText(sText) && !editableText(bound) && (withText(textLayer('a'), 'hi there') as TextLayer).params.text === 'HI THERE' && (withText(sText, 'x'.repeat(80)) as SpecLayer & { spec: { text: string } }).spec.text.length === 64)
+
+  // ── quick toggles
+  const tl = textLayer('Q', { tone: 'value', lattice: 1 })
+  const cycle = Array.from({ length: 7 }, (_, i) => i).reduce<StudioLayer[]>((a) => [...a, stepTone(a[a.length - 1])], [tl])
+  assert('E3 quick: TONE cycles through every tone and wraps; ⇧ goes back; spec / reference layers can keep their own', new Set(cycle.slice(0, 7).map(l => l.tone)).size === 7 && cycle[7].tone === 'value' && stepTone(stepTone(tl), -1).tone === 'value' && stepTone(spec({ kind: 'ir', src: '1', tone: 'mid' }), 1).tone !== 'preset' && ['preset', 'auto'].includes(stepTone({ ...sField, tone: 'activeDim' }, 1).tone))
+  const up = stepLattice(tl, 1), top = [1, 2, 3, 4, 5, 6, 7].reduce<StudioLayer>(l => stepLattice(l, 1), tl)
+  assert('E3 quick: LATTICE steps the ladder (1 → 1.3 …, stops at 4), paint and sites have none', latticeOf(up) === 1.3 && latticeOf(top) === 4 && stepLattice(top, 1) === top && stepLattice(tl, -1) === tl && latticeOf(paintLayer({ cols: 8, rows: 8 })) === undefined && latticeOf(ring) === undefined)
+  const sBig2 = stepLattice(spec({ kind: 'text', text: 'AB', at: [10, 6] }), 1) as SpecLayer & { spec: { at: number[]; lattice: number } }
+  assert('E3 quick: a spec text on a coarser lattice keeps its place on the card (anchor rescaled)', sBig2.spec.lattice === 1.3 && sBig2.spec.at.join() === '8,5', sBig2.spec.at.join())
+  assert('E3 quick: SIZE steps a sites layer\'s dot size along SITE_SIZES', stepSize(ring, 1).size === 2.5 && stepSize(ring, -1).size === 1.6 && stepSize({ ...ring, size: 4 }, 1).size === 4)
+
+  // ── eyedropper
+  const pl = paintLayer({ cols: 80, rows: 80 }, { lattice: 2 }), cells = new Uint8Array(pl.cols * pl.rows)
+  cells[5 * pl.cols + 7] = 153; cells[0] = 255
+  const painted = { ...pl, cells: encodeCells(cells) } as PaintLayer, fp = F(frameWith(painted))
+  const hit = inkAt(fp, (7 + .5) * 8, (5 + .5) * 8), emptyHit = inkAt(fp, 300, 300)
+  assert('E3 pick: the eyedropper reads the painted cell under the pointer (its lattice), empty cells read 0', !!hit && Math.abs(hit.value - .6) < 1e-9 && hit.layer.id === painted.id && emptyHit?.value === 0 && !inkAt(f0, 10, 10))
+  assert('E3 pick: a picked value lands on the INK ladder (.2 … 1)', inkStep(.6) === .6 && inkStep(.47) === .4 && inkStep(.01) === .2 && inkStep(1.3) === 1)
+
+  // ── typing in place through the store: one session = one undo step; Esc and an emptied layer leave no trace
+  const st = useEditor.getState, steps = () => st().h.past.length
+  const tx = textLayer('OLD', { params: { col: 4, row: 4 } }), td = frameWith(tx), FID = F(td).id
+  useEditor.setState({ h: historyOf(td) })
+  const n0 = steps()
+  const textNow = () => ((frameById(st().h.present, FID)!.card.layers.find(l => l.id === tx.id) as TextLayer | undefined)?.params.text)
+  startTyping(FID, tx.id); typeText('n'); typeText('ne'); typeText('new'); commitTyping()
+  assert('E3 typing: every keystroke redraws the layer; the session is one undo step', textNow() === 'NEW' && steps() === n0 + 1 && !st().typing && (st().undo(), textNow() === 'OLD') && (st().redo(), textNow() === 'NEW'))
+  const n1 = steps()
+  startTyping(FID, tx.id); typeText('nope'); cancelTyping()
+  assert('E3 typing: Esc puts the text back and leaves no undo step', textNow() === 'NEW' && steps() === n1)
+  startTyping(FID, tx.id); typeText(''); commitTyping()
+  assert('E3 typing: a layer typed empty is removed (one undo step brings it back)', textNow() === undefined && steps() === n1 + 1 && (st().undo(), textNow() === 'NEW'))
+  const n2 = steps(), fresh = textLayer('TEXT', { params: { col: 1, row: 1 } })
+  st().begin(); st().live(d => addLayer(d, FID, fresh)); startTyping(FID, fresh.id, { begun: true, created: true }); typeText(''); commitTyping()
+  assert('E3 typing: a text the Text tool just made and left empty leaves no layer and no undo step', steps() === n2 && !frameById(st().h.present, FID)!.card.layers.some(l => l.id === fresh.id))
+  st().begin(); st().live(d => addLayer(d, FID, fresh)); startTyping(FID, fresh.id, { begun: true, created: true }); typeText('hey'); commitTyping()
+  assert('E3 typing: a new text and what is typed into it undo together', steps() === n2 + 1 && (st().undo(), !frameById(st().h.present, FID)!.card.layers.some(l => l.id === fresh.id)))
+  const locked = { ...td, frames: td.frames.map(f => ({ ...f, locks: [tx.id] })) }
+  useEditor.setState({ h: historyOf(locked) })
+  assert('E3 typing: a locked layer is not typed into', !startTyping(FID, tx.id) && !st().typing)
+}
+
 if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, '/')}` || process.argv[1]?.endsWith('editor.ts')) {
   let failed = 0
   editorChecks((name, cond, detail = '') => { console.log(`${cond ? '✓' : '✗'} ${name}${detail && !cond ? ` — ${detail}` : ''}`); if (!cond) failed++ })
+  editorE3Checks((name, cond, detail = '') => { console.log(`${cond ? '✓' : '✗'} ${name}${detail && !cond ? ` — ${detail}` : ''}`); if (!cond) failed++ })
   if (failed) { console.error(`\n${failed} editor check(s) failed`); process.exit(1) }
   console.log('\nAll editor checks passed')
   process.exit(0)

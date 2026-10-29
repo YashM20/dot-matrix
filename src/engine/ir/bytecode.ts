@@ -26,9 +26,10 @@ export const OP = {
   JZ: 0x38, JMP: 0x39, FOR: 0x3a, NEXT: 0x3b,
 } as const
 /**
- * The core builtins, snapshot when this module loads. It loads with the IR core (first load), before any lazy pack
- * registers into IR_FUNCTIONS, so pack builtins never get opcodes and 0x20–0x33 never shift; compileBytecode also
- * rejects them by name. (Module-level code here ships in first load: keep it free of pack logic.)
+ * The core builtins, snapshot when this module loads. It loads with the IR core (the lazy `ir` chunk and the sample
+ * worker, not first load since F0.11), before any lazy pack registers into IR_FUNCTIONS, so pack builtins never get
+ * opcodes and 0x20–0x33 never shift; compileBytecode also rejects them by name. Keep module-level code free of pack
+ * logic: it travels with the IR core wherever that loads.
  */
 const FNS = Object.keys(IR_FUNCTIONS) as CoreFn[]
 const BIN: Record<string, number> = { '+': OP.ADD, '-': OP.SUB, '*': OP.MUL, '/': OP.DIV, '%': OP.MOD, '^': OP.POW, '<': OP.LT, '<=': OP.LE, '>': OP.GT, '>=': OP.GE, '==': OP.EQ, '!=': OP.NE }

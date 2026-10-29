@@ -1,7 +1,9 @@
 /**
  * Headless Chrome over CDP with Node's built-in WebSocket (no deps), for the browser probes: launch a
  * page, evaluate, wait, screenshot, mouse / touch / key input, and collect uncaught errors. `serveDist`
- * runs `vite preview` on `dist/` for the length of a probe, so no server outlives it.
+ * runs `vite preview` on `dist/` for the length of a probe, so no server outlives it. Every CDP call has a
+ * timeout (`CDP_TIMEOUT_MS`, default 120 s) and fails when the socket closes, so a hung or dead Chrome makes
+ * a probe fail instead of waiting forever.
  */
 import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -24,9 +26,14 @@ export async function serveDist(port: number): Promise<{ url: string; stop: () =
   throw new Error(`vite preview did not answer on ${url}`)
 }
 
+/** Default ms a CDP call may take before it rejects (`$CDP_TIMEOUT_MS` overrides). */
+export const CDP_TIMEOUT_MS = Number(process.env.CDP_TIMEOUT_MS) || 120_000
+
 export interface Page {
-  cdp: (method: string, params?: Record<string, unknown>) => Promise<any>
-  js: <T = unknown>(expression: string) => Promise<T>
+  /** One CDP call; rejects after `timeoutMs` (default `CDP_TIMEOUT_MS`) or when the socket closes. */
+  cdp: (method: string, params?: Record<string, unknown>, timeoutMs?: number) => Promise<any>
+  /** Evaluate (awaiting promises); rejects on an exception, after `timeoutMs`, or when the socket closes. */
+  js: <T = unknown>(expression: string, timeoutMs?: number) => Promise<T>
   waitFor: (expr: string, ms?: number) => Promise<boolean>
   /** Uncaught exceptions and console.error lines since the last `logs.length = 0`. */
   logs: string[]
@@ -54,25 +61,47 @@ export async function launch(width: number, height: number): Promise<Page> {
   if (!port) { proc.kill(); throw new Error('Chrome did not open a DevTools port') }
   const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json() as { type: string; webSocketDebuggerUrl: string }[]
   const ws = new WebSocket(targets.find(t => t.type === 'page')!.webSocketDebuggerUrl)
-  await new Promise(r => ws.addEventListener('open', r, { once: true }))
+  let openTimer: ReturnType<typeof setTimeout> | undefined
+  const opened = await new Promise<boolean>(r => { openTimer = setTimeout(() => r(false), 20000); ws.addEventListener('open', () => r(true), { once: true }) })
+  clearTimeout(openTimer)
+  if (!opened) { ws.close(); proc.kill(); throw new Error('the CDP socket did not open in 20 s') }
   let seq = 0
-  const calls = new Map<number, (m: any) => void>(), logs: string[] = []
+  const calls = new Map<number, { done: (m: any) => void; fail: (e: Error) => void }>(), logs: string[] = []
+  let closed: Error | null = null
+  const drop = (why: string) => { closed ??= new Error(why); for (const c of calls.values()) c.fail(closed); calls.clear() }
+  ws.addEventListener('close', () => drop('CDP socket closed (Chrome exited or crashed)'))
+  ws.addEventListener('error', () => drop('CDP socket error'))
+  proc.on('exit', () => drop('Chrome exited'))
   const downloads: { name: string; bytes: number }[] = [], names = new Map<string, string>()
   ws.addEventListener('message', e => {
     const m = JSON.parse(String(e.data))
-    if (m.id && calls.has(m.id)) { calls.get(m.id)!(m); calls.delete(m.id) }
+    if (m.id && calls.has(m.id)) { calls.get(m.id)!.done(m); calls.delete(m.id) }
     if (m.method === 'Runtime.exceptionThrown') logs.push(`exception: ${m.params.exceptionDetails?.exception?.description ?? m.params.exceptionDetails?.text}`)
     if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') logs.push(`console.error: ${m.params.args.map((a: any) => a.value ?? a.description).join(' ')}`)
     if (/^(Browser|Page)\.downloadWillBegin$/.test(m.method)) names.set(m.params.guid, m.params.suggestedFilename)
     if (/^(Browser|Page)\.downloadProgress$/.test(m.method) && m.params.state === 'completed' && names.has(m.params.guid)) { downloads.push({ name: names.get(m.params.guid)!, bytes: m.params.receivedBytes }); names.delete(m.params.guid) }
   })
-  const cdp = (method: string, params: Record<string, unknown> = {}) => new Promise<any>(r => { const id = ++seq; calls.set(id, r); ws.send(JSON.stringify({ id, method, params })) })
-  const js = async <T = unknown>(expression: string): Promise<T> => {
-    const r = await cdp('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true })
+  const cdp = (method: string, params: Record<string, unknown> = {}, timeoutMs = CDP_TIMEOUT_MS) => new Promise<any>((resolve, reject) => {
+    if (closed) { reject(closed); return }
+    const id = ++seq
+    const timer = setTimeout(() => { calls.delete(id); reject(new Error(`CDP ${method} timed out after ${timeoutMs} ms`)) }, timeoutMs)
+    calls.set(id, { done: m => { clearTimeout(timer); resolve(m) }, fail: e => { clearTimeout(timer); reject(e) } })
+    ws.send(JSON.stringify({ id, method, params }))
+  })
+  const js = async <T = unknown>(expression: string, timeoutMs = CDP_TIMEOUT_MS): Promise<T> => {
+    const r = await cdp('Runtime.evaluate', { expression, returnByValue: true, awaitPromise: true }, timeoutMs)
     if (r.result?.exceptionDetails) throw new Error(r.result.exceptionDetails.exception?.description ?? 'eval failed')
     return r.result?.result?.value as T
   }
-  const waitFor = async (expr: string, ms = 8000) => { for (let i = 0; i < ms / 100; i++) { if (await js(expr).catch(() => false)) return true; await sleep(100) } return false }
+  // wall-clock bound: each poll may take at most what is left (≥ 1 s), so a busy page can't stretch the wait
+  const waitFor = async (expr: string, ms = 8000) => {
+    const end = Date.now() + ms
+    for (;;) {
+      if (await js(expr, Math.max(1000, end - Date.now())).catch(() => false)) return true
+      if (closed || Date.now() >= end) return false
+      await sleep(100)
+    }
+  }
   const mouse = async (type: string, x: number, y: number, buttons = 1) => { await cdp('Input.dispatchMouseEvent', { type, x, y, button: 'left', buttons: type === 'mouseReleased' ? 0 : buttons, clickCount: 1 }) }
   const drag = async (x0: number, y0: number, x1: number, y1: number, steps = 12) => {
     await mouse('mouseMoved', x0, y0, 0); await mouse('mousePressed', x0, y0)
@@ -92,7 +121,7 @@ export async function launch(width: number, height: number): Promise<Page> {
     await sleep(120)
   }
   const shot = async (file: string) => { const r = await cdp('Page.captureScreenshot', { format: 'png' }); writeFileSync(file, Buffer.from(r.result.data, 'base64')) }
-  const close = async () => { ws.close(); proc.kill(); await sleep(300); try { rmSync(profile, { recursive: true, force: true }) } catch { /* Chrome may still hold files */ } }
+  const close = async () => { drop('page closed'); ws.close(); proc.kill(); await sleep(300); try { rmSync(profile, { recursive: true, force: true }) } catch { /* Chrome may still hold files */ } }
   await cdp('Page.enable'); await cdp('Runtime.enable')
   const allowDownloads = async (dir: string) => {
     const r = await cdp('Browser.setDownloadBehavior', { behavior: 'allowAndName', downloadPath: dir, eventsEnabled: true })

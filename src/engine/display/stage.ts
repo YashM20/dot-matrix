@@ -6,8 +6,8 @@
  * read back a cols × rows cell image a few times a second at most.
  *
  *   crt      afterglow persistence (max(v, old·e^(−Δt/τ))), 2-level mip bloom, scanlines, barrel glass; power-on collapse
- *   vfd      neutrals → cyan-green phosphor (accent column kept), glow, diamond mesh + filament wires; warm-up
- *   led      cell average → round lens per cell, unlit lenses visible, 1-cell bleed; row scan-in
+ *   vfd      neutrals → the accent's phosphor (the accent itself kept), glow, diamond mesh + filament wires; warm-up
+ *   led      cell average → round lens per cell in the accent's LED colour, unlit lenses visible, 1-cell bleed; row scan-in
  *   eink     1-bit blue-noise ink on paper, partial refresh ghosts, full-refresh flash (first refresh is full)
  *   flipdisc 2-tone discs, column sweep, underdamped flips (device physics), clack events
  *   nixie    neutrals → warm neon, 3-level glow, hex anode mesh; ignition flicker
@@ -18,7 +18,7 @@ import { hash01 } from '../math'
 import { dot480 } from '../theme/tokens'
 import { decayFactor, settleSeconds } from './afterglow'
 import { cellFrame, createEinkPanel, createFlipPanel } from './panels'
-import { SKIN_PHYSICS, phosphorMatrix, type Phosphor, type SkinName } from './skins'
+import { SKIN_PHYSICS, phosphorMatrix, rgbOf, skinPhosphor, type AccentLit, type Phosphor, type SkinName } from './skins'
 
 type C2D = CanvasRenderingContext2D
 interface Surface { c: HTMLCanvasElement; x: C2D }
@@ -41,6 +41,8 @@ export interface StageOptions {
   /** Seconds after the first frame before the power-on refresh starts (a page-wide scan). */
   delay?: number
   colors?: Partial<StageColors>
+  /** The board's accent (`#RRGGBB`, the theme's `dotActive`; default dot480's): VFD and LED glow in it, every emissive skin passes it through. */
+  accent?: string
   /** Skip the power-on refresh (a resize, reduced motion): the first frame lands settled. */
   instant?: boolean
   /** No full-refresh flash on e-ink (reduced motion): every refresh is a partial one. */
@@ -71,8 +73,13 @@ const black = (s: Surface | C2D, w: number, h: number) => {
   x.globalAlpha = 1; x.globalCompositeOperation = 'source-over'; x.fillStyle = '#000'; x.fillRect(0, 0, w, h)
 }
 
-/** One hidden SVG colour-matrix filter per phosphor, shared by every stage on the page. */
-function phosphorFilter(doc: Document, id: string, phosphor: Phosphor): string {
+/**
+ * One hidden SVG colour-matrix filter per (skin, accent), shared by every stage on the page: VFD / LED send neutrals
+ * to the accent's light and keep the accent; Nixie sends them to its neon and passes only the red column (physics).
+ */
+function phosphorFilter(doc: Document, skin: AccentLit | 'nixie', accent: string): { url: string; phosphor: Phosphor } {
+  const a = skin === 'nixie' ? undefined : rgbOf(accent), phosphor = skin === 'nixie' ? SKIN_PHYSICS.nixie.phosphor : skinPhosphor(skin, a!)
+  const id = a ? `dm-phosphor-${skin}-${accent.slice(1).toLowerCase()}` : 'dm-phosphor-nixie'
   if (!doc.getElementById(id)) {
     const ns = 'http://www.w3.org/2000/svg'
     let host = doc.getElementById('dm-display-filters') as SVGSVGElement | null
@@ -84,10 +91,10 @@ function phosphorFilter(doc: Document, id: string, phosphor: Phosphor): string {
     }
     const filter = doc.createElementNS(ns, 'filter'), m = doc.createElementNS(ns, 'feColorMatrix')
     filter.id = id; filter.setAttribute('color-interpolation-filters', 'sRGB')
-    m.setAttribute('type', 'matrix'); m.setAttribute('values', phosphorMatrix(phosphor).join(' '))
+    m.setAttribute('type', 'matrix'); m.setAttribute('values', phosphorMatrix(phosphor, a).join(' '))
     filter.appendChild(m); host.appendChild(filter)
   }
-  return `url(#${id})`
+  return { url: `url(#${id})`, phosphor }
 }
 
 /** Mip chain for cheap bloom: each level a 1/k downsample; drawn back up with `lighter` at its alpha. */
@@ -130,6 +137,7 @@ export function createDisplayStage(skin: SkinName, o: StageOptions): DisplayStag
   if (skin === 'oled') return null
   const doc = o.doc ?? document, { cols, rows } = o, w = Math.max(1, Math.round(o.w)), h = Math.max(1, Math.round(o.h))
   const colors = { ...STAGE_COLORS, ...o.colors }, gain = o.gain ?? 1, cw = w / cols, ch = h / rows
+  const accent = /^#[0-9a-f]{6}$/i.test(o.accent ?? '') ? o.accent! : dot480.dotActive
   const raw = surface(doc, w, h, { alpha: false })
   black(raw, w, h)
   let start: number | null = o.instant ? -1e9 : null, changedAt = -Infinity, pending = false
@@ -183,7 +191,7 @@ export function createDisplayStage(skin: SkinName, o: StageOptions): DisplayStag
 
   if (skin === 'vfd' || skin === 'nixie') {
     const P = SKIN_PHYSICS[skin], comp = surface(doc, w, h, { alpha: false })
-    const filter = phosphorFilter(doc, `dm-phosphor-${skin}`, P.phosphor)
+    const filter = phosphorFilter(doc, skin, accent).url
     const levels = mips(doc, w, h, skin === 'vfd' ? [4, 14] : [4, 12, 32])
     const mesh = layer(doc, w, h, x => {
       x.strokeStyle = `rgba(0,0,0,${P.mesh})`; x.lineWidth = Math.max(1, cw * .22)
@@ -231,13 +239,18 @@ export function createDisplayStage(skin: SkinName, o: StageOptions): DisplayStag
     const lensFill = (x: C2D) => { const pat = x.createPattern(tile.c, 'repeat')!; pat.setTransform(new DOMMatrix().scale(cw / S, ch / S)); return pat }
     const lens = surface(doc, w, h, { alpha: false })
     black(lens, w, h); lens.x.fillStyle = lensFill(lens.x); lens.x.fillRect(0, 0, w, h)
+    // the dies are the accent's LED colour: neutral light takes it (the accent passes), unlit lenses and the write line are tinted by it
+    const die = phosphorFilter(doc, 'led', accent), cellFilter = `${gain !== 1 ? `brightness(${gain.toFixed(3)}) ` : ''}${die.url}`
+    const tint = surface(doc, w, h, { alpha: false })
+    tint.x.fillStyle = `rgb(${die.phosphor.map(v => Math.round(v * 255)).join(',')})`; tint.x.fillRect(0, 0, w, h)
+    tint.x.globalCompositeOperation = 'multiply'; tint.x.drawImage(lens.c, 0, 0); tint.x.globalCompositeOperation = 'source-over'
     const off = surface(doc, w, h, { alpha: false })
-    black(off, w, h); off.x.globalAlpha = Math.min(1, P.offGlow * 2.6); off.x.drawImage(lens.c, 0, 0); off.x.globalAlpha = 1
+    black(off, w, h); off.x.globalAlpha = Math.min(1, P.offGlow * 2.6); off.x.drawImage(tint.c, 0, 0); off.x.globalAlpha = 1
     return {
       ...base,
       render(out, t) {
-        // cell light: mip-averaged dot area × opacity, normalised to a full dot
-        cell.x.filter = gain !== 1 ? `brightness(${gain.toFixed(3)})` : 'none'; cell.x.drawImage(raw.c, 0, 0, cols, rows); cell.x.filter = 'none'
+        // cell light: mip-averaged dot area × opacity, normalised to a full dot, in the die colour
+        cell.x.filter = cellFilter; cell.x.drawImage(raw.c, 0, 0, cols, rows); cell.x.filter = 'none'
         lit.x.imageSmoothingEnabled = false; lit.x.drawImage(cell.c, 0, 0, w, h); multiply(lit.x, lens)
         out.globalCompositeOperation = 'source-over'; out.drawImage(off.c, 0, 0)
         out.globalCompositeOperation = 'lighten'; out.drawImage(lit.c, 0, 0)
@@ -250,7 +263,7 @@ export function createDisplayStage(skin: SkinName, o: StageOptions): DisplayStag
         if (p < 1) {
           const y = Math.max(0, Math.round(rows * smooth(p))) * ch
           out.fillStyle = '#000'; out.fillRect(0, y, w, h - y)
-          if (p > 0) { out.globalCompositeOperation = 'lighter'; out.globalAlpha = .35; out.drawImage(lens.c, 0, y, w, ch, 0, y, w, ch); out.globalAlpha = 1; out.globalCompositeOperation = 'source-over' }
+          if (p > 0) { out.globalCompositeOperation = 'lighter'; out.globalAlpha = .35; out.drawImage(tint.c, 0, y, w, ch, 0, y, w, ch); out.globalAlpha = 1; out.globalCompositeOperation = 'source-over' }
         }
         return p < 1
       },

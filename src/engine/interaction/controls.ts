@@ -119,6 +119,7 @@ export function dragValue(c: Control, start: DragStart, pointer: CellPoint): Con
   const { min, max, step } = controlRange(c), [col, row, w, h] = c.box
   const span = Number.isFinite(max - min) ? max - min : 1
   const vertical = c.orientation === 'vertical'
+  if (c.map && c.kind !== 'xy') return { [c.key]: settle(c, c.map(pointer.x, pointer.y, start.value)) }
   switch (c.kind) {
     case 'slider': {
       const f = vertical ? (row + h - pointer.y) / (h || 1) : (pointer.x - col) / (w || 1)

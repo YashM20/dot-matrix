@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { GridConfig, Layer } from '../../engine/types'
 import { DotCanvas } from '../../components/DotCanvas'
+import { useThemeTokens } from '../../site/theme/useTheme'
 import { layer, layoutFor, tileStyle } from '../../widgets/types'
 import { Choice, Controls, Panel } from '../ui/kit'
 
@@ -25,12 +26,13 @@ const scenes: Record<'cluster' | 'lattice', Layer[]> = {
 }
 
 export default function FigLattice() {
+  const theme = useThemeTokens()
   const [mode, setMode] = useState<'cluster' | 'lattice'>('cluster')
   const source = useMemo(() => () => scenes[mode], [mode])
   return (
     <>
       <Panel label={mode === 'cluster' ? 'CLUSTERS OF SMALL DOTS (WRONG)' : 'ONE BIGGER DOT PER FONT PIXEL (RIGHT)'}>
-        <div className="stage stage--wide"><DotCanvas layers={source} grid={GRID} style={STYLE} renderer="svg" change="bayer" /></div>
+        <div className="stage stage--wide"><DotCanvas theme={theme} layers={source} grid={GRID} style={STYLE} renderer="svg" change="bayer" /></div>
       </Panel>
       <Controls>
         <Choice label="Bigger elements as" options={['cluster', 'lattice'] as const} value={mode} onChange={setMode} names={{ cluster: 'Clusters', lattice: 'Lattice + sites' }} />

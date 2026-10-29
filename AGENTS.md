@@ -18,6 +18,7 @@ This file only holds things that would break the project if an agent guessed wro
 ## The site
 - Card pixels are pinned by `goldens/hashes.json`: UI/chrome work must keep `pnpm golden --check` matching. Regenerate goldens only for an intended card change.
 - First-load JS stays ≤ 150 kB gz (`scripts/site/size.ts --check`, run in CI). New views and features load lazily.
+- First-load code never value-imports the `src/engine` barrel (one value import pulls every engine module into first load): import engine modules by path; type imports are fine. `size.ts --check` fails if the IR parser returns to first load.
 - Board ids are URLs (`/<board>/`). Rename what visitors see with `boardLabel`; keep old ids working with `boardAliases` (`src/widgets/manifest.ts`).
 - Which doc is current: `docs/README.md`. What's done and next: `docs/PROGRESS.md`.
 

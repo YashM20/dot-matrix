@@ -12,7 +12,7 @@ import { type WidgetContext, type WidgetPreset } from '../widgets/types'
 import { buildLayer, layerGrid, specLayerOf, type BuildOptions, type SpecPreset } from './build'
 import { encodeSamples, toBase64 } from './codec'
 import { GENERATOR_PARAMS } from './generators'
-import { SpecError, type CardSpec, type LayerKind, type LayerSpec, type RasterLayerSpec, type Window } from './types'
+import { SpecError, type CardSpec, type JoinLayerSpec, type LayerKind, type LayerSpec, type RasterLayerSpec, type Window } from './types'
 import { validateSpec } from './validate'
 
 export interface ExportOptions extends BuildOptions {
@@ -51,6 +51,7 @@ const jsonSafe = (x: unknown): boolean => {
 /** Same dots from both layers on `grid`: values on the sampler's windows (sites: per site), tones, placement. */
 function sameLayer(a: Layer, b: Layer, grid: GridConfig): boolean {
   if (a.tone !== b.tone || (a.lattice ?? 1) !== (b.lattice ?? 1) || String(a.origin ?? '') !== String(b.origin ?? '')) return false
+  if (!a.sites && JSON.stringify(a.join ?? null) !== JSON.stringify(b.join ?? null)) return false
   if (a.sites || b.sites) {
     if (!a.sites || !b.sites || a.sites.length !== b.sites.length || (a.size ?? a.lattice ?? 1) !== (b.size ?? b.lattice ?? 1)) return false
     return a.sites.every(([x, y], i) => {
@@ -71,12 +72,19 @@ function sameLayer(a: Layer, b: Layer, grid: GridConfig): boolean {
   return true
 }
 
-function placed(l: Layer): Pick<RasterLayerSpec, 'tone' | 'lattice' | 'origin'> {
-  const o: Pick<RasterLayerSpec, 'tone' | 'lattice' | 'origin'> = {}
+function placed(l: Layer): Pick<RasterLayerSpec, 'tone' | 'lattice' | 'origin' | 'join'> {
+  const o: Pick<RasterLayerSpec, 'tone' | 'lattice' | 'origin' | 'join'> = {}
   if (l.tone !== undefined) o.tone = l.tone
   if (l.lattice !== undefined) o.lattice = l.lattice
   if (l.origin) o.origin = [l.origin[0], l.origin[1]]
+  // a function group never gets here (exportPreset refuses it); sites ignore join
+  if (l.join !== undefined && !l.sites) o.join = l.join === true ? true : clone(l.join) as JoinLayerSpec
   return o
+}
+/** Why a layer cannot travel in a spec at all (not even baked), or undefined: per-cell functions the sampler calls. */
+function unportable(l: Layer): string | undefined {
+  if (l.shapeOf) return 'shapeOf is a per-cell function and cannot be carried by a spec'
+  if (l.join && l.join !== true && typeof l.join.group === 'function' && !l.sites) return 'a join group function cannot be carried by a spec (a spec join group is a number)'
 }
 
 /** A layer's field (and multi-tone `toneOf`) sampled over its scan window on its own grid. */
@@ -153,7 +161,7 @@ export function exportPreset(p: WidgetPreset, opts: ExportOptions = {}): ExportR
   if (!sp || sp.group !== undefined) spec.group = p.group
   if (p.grid.pitch !== undefined) spec.grid.pitch = p.grid.pitch
   if (p.grid.aspect !== undefined) spec.grid.aspect = p.grid.aspect
-  for (const k of ['cornerRoundness', 'opacityMode', 'jitter', 'quantizeSteps'] as const) if (p.style[k] !== undefined) (spec.style as unknown as Record<string, unknown>)[k] = p.style[k]
+  for (const k of ['cornerRoundness', 'opacityMode', 'jitter', 'quantizeSteps', 'gap'] as const) if (p.style[k] !== undefined) (spec.style as unknown as Record<string, unknown>)[k] = p.style[k]
   if (sp?.theme) spec.theme = clone(sp.theme)
   const data = sp ? sp.data : p.defaults
   if (data) spec.data = { ...data }
@@ -166,7 +174,10 @@ export function exportPreset(p: WidgetPreset, opts: ExportOptions = {}): ExportR
 
   const kinds: Record<LayerKind, number> = { ir: 0, text: 0, sites: 0, raster: 0, generator: 0 }, baked: ExportReport['baked'] = []
   const probe = { ...spec, layers: [] as LayerSpec[] }
-  p.layers(ctx).forEach((l, index) => {
+  const layers = p.layers(ctx)
+  const refused = layers.flatMap((l, index) => { const why = unportable(l); return why ? [{ path: `$.layers[${index}]`, message: why }] : [] })
+  if (refused.length) throw new SpecError(refused)
+  layers.forEach((l, index) => {
     let out = convert(l, p.grid)
     if (typeof out !== 'string') {
       probe.layers = [out]

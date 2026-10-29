@@ -17,11 +17,11 @@ import type { Pointer } from '../src/engine/context'
 import type { DotInstance } from '../src/engine/types'
 import { withChrome, type WidgetPreset } from '../src/widgets'
 import { physicsBoard, physicsProbe, physicsWorlds } from '../src/widgets/boards/physics'
+import { fnv1a, legacyKey } from './lib/goldenKey'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
-const fnv1a = (str: string, h = 0x811c9dc5) => { for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0 } return h >>> 0 }
-const q = (d: DotInstance) => `${d.x.toFixed(2)},${d.y.toFixed(2)},${d.r.toFixed(3)},${d.opacity.toFixed(3)},${d.color}`
-const hashDots = (ds: DotInstance[]) => { let h = 0x811c9dc5; for (const k of ds.map(q).sort()) h = fnv1a(k + ';', h); return h }
+/** Frame fingerprint: the golden key's per-dot `legacyKey`, sorted, FNV-1a 32 (compared only between frames here). */
+const hashDots = (ds: DotInstance[]) => { let h = 0x811c9dc5; for (const k of ds.map(legacyKey).sort()) h = fnv1a(k + ';', h); return h }
 const ptr = (x: number, y: number, down: boolean, id = 1): Pointer => ({ id, x, y, inside: x >= 0 && y >= 0 && x < 144 && y < 144, down, tDown: 0, tUp: 0, vx: 0, vy: 0, pressure: down ? .5 : 0 })
 const frame = (p: WidgetPreset, t: number, pointers?: Pointer[], data: Record<string, number> = {}) =>
   sampleLayers(withChrome(p)({ t, data, pointers }), p.grid, p.style, dot480)

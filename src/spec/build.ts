@@ -12,7 +12,7 @@ import { latticeGrid } from '../engine/sampler/gridSampler'
 import type { Field, GridConfig, Layer, Tone } from '../engine/types'
 import { layoutFor, type WidgetContext, type WidgetPreset } from '../widgets/types'
 import { decodeSamples, fromBase64 } from './codec'
-import { SpecError, type CardSpec, type LayerSpec, type TextLayerSpec, type ToneStopSpec } from './types'
+import { SpecError, type CardSpec, type JoinLayerSpec, type LayerSpec, type TextLayerSpec, type ToneStopSpec } from './types'
 import { validateSpec } from './validate'
 
 export interface BuildOptions {
@@ -32,11 +32,12 @@ export const layerGrid = (grid: GridConfig, l: { lattice?: number; origin?: [num
   l.lattice !== undefined || l.origin ? latticeGrid(grid, l.lattice ?? 1, l.origin ?? [0, 0]) : grid
 const cellOf = (u: number, n: number) => Math.round(u * (n - 1))
 
-function placement(l: { tone?: Tone; lattice?: number; origin?: [number, number] }): Omit<Layer, 'field'> {
+function placement(l: { tone?: Tone; lattice?: number; origin?: [number, number]; join?: JoinLayerSpec }): Omit<Layer, 'field'> {
   const o: Omit<Layer, 'field'> = {}
   if (l.tone !== undefined) o.tone = l.tone
   if (l.lattice !== undefined) o.lattice = l.lattice
   if (l.origin) o.origin = [l.origin[0], l.origin[1]]
+  if (l.join !== undefined) o.join = l.join === true ? true : { ...l.join }
   return o
 }
 /** Tone by value band (highest `at` ≤ value wins; `blend` dithers the band's lower edge by a per-cell hash), else the layer tone. */

@@ -1,6 +1,7 @@
 # Track L: living scenes (the Pond board, `/pond/`)
 
-> Status: **plan** (2026-10-27). Part of [`LIVING-MATTER-PLAN.md`](../LIVING-MATTER-PLAN.md) §3, expanded so an agent can build it without re-doing the research. Read that overview's §1 (the daoho.dev teardown) first. File:line citations are to `main` as of ef4dcd8.
+> Status: **L1 built** (2026-10-28): `src/engine/life/`, the `pond` board with `pond-koi`, `scripts/life.ts`, [`docs/LIFE.md`](../LIFE.md). L1.0 ran as a scratch prototype; style **B** (lattice interiors) is the default pending the owner's ruling (switch: `DEFAULT_BODY_STYLE` in `pond.ts`). Deviations from the numbers below are listed in LIFE.md (slower burst/cruise, speed-dependent turn radius, joint limit .11, half-width .13, shorter koi, bigger pads, second feed at 28 s, C-start turn 90–105°, contain look-ahead 1.2 s). L2–L4: **plan**.
+> Original status: **plan** (2026-10-27). Part of [`LIVING-MATTER-PLAN.md`](../LIVING-MATTER-PLAN.md) §3, expanded so an agent can build it without re-doing the research. Read that overview's §1 (the daoho.dev teardown) first. File:line citations are to `main` as of ef4dcd8.
 > Phases: **L1** water + glyph tiles + creature core + `pond-koi` · **L2** ecosystems (5 cards) · **L3** polish and interaction depth · **L4** (optional) a full-bleed hero behind EXPLORE. Later pond work lives in the advanced doc's **XL** and **X1** (pond depth); the shared phase names are F0, L1–L4, Q1–Q3, M1–M3, XL, XQ, XM, X1, X2.
 > Depends on **F0**:
 > - `src/engine/noise`: `noise2`, `fbm2`, `curl2`, `voronoi2`, plus `dmath.ts` (`dsin dcos tsin tcos datan2 dexp dpow`, `ihash`, `rngFor`);

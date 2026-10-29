@@ -54,7 +54,15 @@ export interface SpecStyle {
   shape: 'circle' | 'square' | 'squircle' | 'superformula'
   sizeMin: number; sizeMax: number
   cornerRoundness?: number; opacityMode?: 'constant' | 'fromValue'; jitter?: number; quantizeSteps?: number
+  /** Gutter between square cells, fraction of the cell pitch (`{grid.gap}`, `DotStyle.gap`). */
+  gap?: number
 }
+
+/**
+ * Serializable `JoinSpec` (squares, docs/living-matter/Q-squares.md §2.1): equal cells of the layer fuse into joined
+ * squares. `group` is a number only; a per-cell group function (like `shapeOf`) cannot travel in a spec.
+ */
+export type JoinLayerSpec = true | { at?: number; conn?: 4 | 8; outer?: number; inner?: number; seam?: number; group?: number; accent?: boolean }
 
 interface Placed {
   tone?: Tone
@@ -62,6 +70,8 @@ interface Placed {
   lattice?: number
   /** Lattice origin in card cells. */
   origin?: Vec2
+  /** Fuse equal cells into joined squares (`Layer.join`). */
+  join?: JoinLayerSpec
 }
 /** One band of an IR layer's tone ramp: values ≥ `at` draw in `tone` (highest band wins); `blend` dithers the band's lower edge. */
 export interface ToneStopSpec { at: number; tone: Tone; blend?: number }

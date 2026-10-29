@@ -25,12 +25,16 @@ import { typeBoard } from './boards/type'
 import { scopeBoard, scopeShared } from './boards/scope'
 import { healBoard } from './boards/heal'
 import { algorithmsBoard } from './boards/algorithms'
-import { boardIds, boardManifest, resolveBoardId, resolveCardId, type BoardContents, type BoardDef, type BoardId } from './manifest'
+import { squaresBoard } from './boards/squares'
+import { pondBoard } from './boards/pond/index'
+import { materialsBoard, materialsSources } from './boards/materials'
+import { boardIds, boardManifest, resolveBoardId, resolveCardId, type BoardContents, type BoardDef, type BoardId, type BoardMeta } from './manifest'
 import { registerPresets } from './registry'
 
 /**
- * Eager registry: every board with its cards, for scripts, the playground and the worker. The app shell
- * imports `./manifest` instead (one lazy chunk per board); titles/columns come from there.
+ * Eager registry: every board with its cards, for scripts and the playground. The app shell imports `./manifest`
+ * instead (one lazy chunk per board; titles, columns and density come from there), and so does the sample worker,
+ * which loads only the board of the card it is asked for (`src/workers/sampleWorker.ts`).
  */
 const contents = {
   henry: { items: henryBoard },
@@ -59,8 +63,11 @@ const contents = {
   scope: { items: scopeBoard, shared: scopeShared },
   heal: { items: healBoard },
   algorithms: { items: algorithmsBoard },
+  materials: { items: materialsBoard, sources: materialsSources },
+  pond: { items: pondBoard },
+  squares: { items: squaresBoard },
 } satisfies Record<BoardId, BoardContents>
-export const boards: BoardDef[] = boardManifest.map(({ id, title, columns }) => ({ id, title, columns, ...contents[id] }))
+export const boards: BoardDef[] = boardManifest.map(({ load: _load, ...meta }: BoardMeta & { load: unknown }) => ({ ...meta, ...contents[meta.id as BoardId] }))
 export { boardIds }
 export const boardById = (id: string): BoardDef | undefined => { const key = resolveBoardId(id); return boards.find(b => b.id === key) }
 

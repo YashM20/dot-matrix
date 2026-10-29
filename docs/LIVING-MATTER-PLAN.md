@@ -309,8 +309,8 @@ Owner gates: clusters ruling before L1.3; activeDim before L1.8 / M1.6; WebGPU b
 | `src/App.tsx` | L4 only |
 | Registry files (`manifest.ts`, `widgets/index.ts`, `blurbs.ts`, `meta.ts`, `ids.json`, `catalog.ts`), `goldens/hashes.json`, PROGRESS, README, CHANGELOG, `src/changelog.ts` | integration-queue commits only |
 
-### First-load ledger (budget 150 kB gz; 148.14 used on 2026-10-27)
-Measured rows carry the number `scripts/site/size.ts` printed (gzip -9, kB = 1024 B); the others are still estimates.
+### First-load ledger (budget 150 kB gz; 148.14 used on 2026-10-27, **120.07** on 2026-10-28)
+Measured rows carry the number `scripts/site/size.ts` printed (gzip -9, kB = 1024 B); the others are still estimates. **The tracks budget against the measured 120.07 kB gz** (the foundation round merged, full suite green, 2026-10-28): the planned rows below start from it.
 
 | Change | Delta (kB gz) | Running |
 |---|---|---|
@@ -318,13 +318,26 @@ Measured rows carry the number `scripts/site/size.ts` printed (gzip -9, kB = 102
 | F0.5 / F0.6 square cover (`cover.ts`: `hides` incl. rotation, `coverExponent`) | +0.20 (measured) | 148.34 |
 | F0.10 fps plumbing (`src/widgets/fps.ts`, `DotWidget`) | +0.02 (measured) | 148.37 (measured) |
 | F0.11 cut: first-load modules import engine modules directly, not the `src/engine` barrel; `gpuIR` split out of `passes.ts` | −24.38 (measured; row was ≤ −1.0) | 123.99 (measured) |
-| F0 IR registry hook (F1-A, measured at merge) | ≈ +0.05 | ≈124.0 |
-| Q1 hook points (+0.4 with the array-path fallback) | +0.6 | ≈124.6 |
-| Q2 / Q3 | +0.3 / +0.1 | ≈125.0 |
-| 4 new board manifest rows (pond, squares, materials, workshop) | ≈ +0.25 | ≈125.3 |
-| X1 | ≤ +0.5 | ≈125.8 |
+| F0 IR registry hook (F1-A): the zero-byte fallback (the pack fills the core's existing tables at run time; only `emit.ts` gained a one-line branch) | +0.03 (measured; row was +0.05) | 124.02 |
+| T4b themes wired: the unused playground store went; the widget registry and the home board left first load | −4.4 (measured) | 119.62 |
+| T2 frame and rhythm | +0.29 (measured) | 119.91 |
+| the rest of the round (T0, T1, T4a, F0.7–F0.8, E2, the home fix) and the rounding of the rows above, net | +0.16 (the measured remainder) | **120.07 (measured, the new baseline)** |
+| Q1 hook points (+0.4 with the array-path fallback) | +0.6 | ≈120.7 |
+| Q2 / Q3 | +0.3 / +0.1 | ≈121.1 |
+| 4 new board manifest rows (pond, squares, materials, workshop) | ≈ +0.25 | ≈121.3 |
+| M1 materials, measured against its merge-base build (dbe4716) | +0.18: the row and its group slot +0.10, the preload-map entry +0.04, `Control.map` +0.03; each board row costs ≈ +0.14, not 0.06 | ≈120.4 with T3 and the essay theming (120.18) |
+| X1 | ≤ +0.5 | ≈121.8 |
 
-**Sample worker chunk** (`sampleWorker-*.js`, `size.ts --worker`; not first load, but fetched by every page that animates a card): 153.55 at c619dae → 153.65 after F0.5–F0.11 (+0.10, the cover code; the cut does not touch the worker). Its rows: F0 noise/light additions (measured at merge); L/M boards that stay main-thread should keep their modules out of the worker's registry path (F0 §7 R13).
+**Sample worker** (`size.ts --worker`; not first load, but fetched by every page that animates a card). Since the worker split it has two numbers: the **initial load** (`sampleWorker-*.js` and its static imports: sampler, Canvas buffer renderer, manifest, card catalog) and, **per board**, what the first request of one of its cards adds (that board's `wk-*` chunk and the shared chunks it imports, fetched once per page).
+
+| Change | Initial (kB gz) | Per board |
+|---|---|---|
+| c619dae | 153.55 (measured) | all boards in the one chunk |
+| F0.5–F0.11 (the cover code; the cut does not touch the worker) | 153.65 (+0.10, measured) | all in |
+| round 2 (materials +12, squares +9.6, the rest of the round) | 178.31 (measured, de40e71) | all in |
+| **worker split** (F0 §7 R13): the worker imports the manifest instead of the eager registry and loads one board chunk per card (`loadBoard`, board from `catalog.ts`); ES worker chunks named `wk-*`; physics joins pond as a worker-build stub (all its cards are main-thread) | **17.14 (measured; −161.17)**. First load unchanged: 121.65 → 121.65 | measured: materials 20.79, squares 17.58, surfaces 16.13, type 14.78, lock 14.35, live 13.44, heartbeat 9.27, light 8.56, departures 8.42, mirror 8.21, gpu 7.65, ir 7.44, heal 7.42, algorithms 7.40, mosaic 7.19, cinema 6.94, components 6.33, levels 6.08, henry 5.68, audio 4.96, instrument 4.74, deerflow12 4.45, sim 3.88, metro 3.56, ride 2.82, scope 2.66, henry3 2.47; physics 0.07 and pond 0.05 (stubs). All 45 worker chunks: 175.64 |
+
+A new board's row is its per-board number; it no longer grows the initial load unless the worker itself changes (`src/workers/`, the sampler, the buffer renderer, the manifest or the catalog). `size.ts --worker --check` also fails when `uJointO` (squares GL, Q1.7) or `EDGE3` (pond) shows up in any worker chunk. Cold first worker frame (worker construction → first frame reply, headless Chrome on a preview build, median of 3, base → split): henry 4111 → 1012 ms, light 1733 → 972, materials 1452 → 912, squares 751 → 783, sim 778 → 932, mosaic 1162 → 1240 (unthrottled; same within noise on a loaded 2-core box); with slow-4G throttling every board is faster (e.g. squares 2421 → 1202, sim 2170 → 970). Opening a second board later costs one board-chunk fetch before its first worker frame; the card shows its main-thread first frame meanwhile.
 
 Gates are deltas against this ledger, not absolute numbers: `size.ts --check --against <base dist> --delta <row> [--worker --worker-delta <row>]` (or `--base <kB>` / `--worker-base <kB>` with the running totals) fails when a change grows past its row; the 150 kB cap stays as the backstop. Each merge updates the "Running" column with the measured value. Keep first-load code off the `src/engine` barrel (`export * from` every module): one value import from it makes every engine module a lazy board uses part of first load (that was the 24 kB).
 

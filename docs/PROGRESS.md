@@ -5,6 +5,51 @@
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
 ## Status board (updated 2026-10-27)
+**Round 2 (paused 2026-10-28, branch `feat/round2`, based on main `dbe4716` = PR #9):**
+- **Merged:**
+  - the cleanup: changelog, the barrel rule in AGENTS.md, CI lint and theme checks, the ledger at 120.07 kB gz, the F0 doc, dead code removed, FigSim on the light hub;
+  - the bytecode comment fix.
+- **Paused agents.** Their work sits in `.claude/worktrees/agent-<id>/`, each on branch `worktree-agent-<id>`, uncommitted unless noted. Resume an agent by messaging it, or restart the task from its worktree:
+  - `a4d32da9cf1f84efe` **T3 grids and cards:** 8 files uncommitted.
+  - `ace78a5bc0a435d5d` **Q1 squares core:** 27 files uncommitted.
+  - `af9cbabad1272df9b` **L1 pond:** 3 files uncommitted.
+  - `a783e320f85eb261a` **Essay, legal and X-ray theming:** 1 commit.
+  - `a5e23cfdbf2632857` **VFD/LED skins take the accent:** 7 files uncommitted.
+  - `aed029a7339e33128` **`scripts/site/shots.ts` screenshot tool:** 1 commit; its verification run was cut off.
+- **Each worktree** has a `node_modules` junction. Remove it with `[System.IO.Directory]::Delete(path, $false)` before `git worktree remove`; a recursive delete would empty the shared `node_modules`.
+- **Heavy commands** go through `C:/Users/integrated/AppData/Local/Temp/dmdocs/heavy.mjs` (one at a time across worktrees).
+- [x] **E3 editor: editing on canvas** (branch `worktree-agent-a603245a37988c6ee`, on `feat/round2` 0741d3b; `docs/EDITOR-PLAN.md` §4.2, §8.3). Not merged.
+  - Sites handles: a ring's radius and sweep (the sweep snaps to the ring's own sites, so an arc ends on a dot of its track), a disc's radius, a line's ends; whole cells.
+  - Spec layers: placed ones (sites, text, generators, IR fields with `bounds`) move in whole cells; an IR field's box is its declared bounds, resized by four corners; DESIGN · PLACE edits them and the spec JSON follows.
+  - Text typed in place (double-click, Enter, a tap on the selected text, the Text tool): one invisible input, the letters are the frame's own dots through `textAt` / `T.big`, a caret drawn in the glyph gaps; one session = one undo step, Esc cancels, an emptied text goes. On a phone the text pans above the keyboard.
+  - The quick bar over the selected layer: TONE, LATTICE − / + (spec text / bounds rescaled to stay put), SIZE for sites, EDIT / DONE, INK and PICK; one undo step each; 44 px on phones, above the selection bar.
+  - The eyedropper: I, PICK, Alt-click while drawing; rounds onto the INK ladder; never paints.
+  - Checks: editor Node 125 (95 + 30 E3 in `editorE3Checks`, in verify); browser probe desktop 76/76 and phone 45/45 (E3: 14 desktop, 8 phone); goldens 182/182; first-load JS 120.41 → 120.41 kB gz (Δ +0.00, against a build of 0741d3b); CSS token lint clean.
+  - Left for later: an arc start handle (START ° is in DESIGN), handles for generator params and raster windows, word selection on double-click, multi-line text.
+- **Queued next:** M1 materials, T5 theme picker, E3 editor, T6 type and contrast (T6 done, below). Then L2, Q2, M2, Q3, M3, L3 and X.
+- **Queued after round 2:** `docs/POLISH-PLAN.md`, the site polish. It starts with P0 probes, then P1 (broken: the essay route, sticky header, widget-page chrome, Back with sheets), P2 (ugly) and P3 (nits). Owner decisions are in its §3.
+- [x] **T6 type, contrast, more** (branch `worktree-agent-a5cf9c4ead82b0da0`, on `feat/round2` 4b60ecf; not merged; docs/LAYOUT-THEME-PLAN.md §5 T6):
+  - **Contrast, no waivers:** `--mute` `#6E7278` → `#81858B`; `--dim` is a non-text glyph grey (`#65696F`, ≥ 3:1; the editor's 4 text uses moved to `--mute`); `dark_signal`'s `on-red` is generated (dark ink `#321A16`; white was 3.55:1); 21 `color: var(--red)` rules → `--red-text` (red fails 4.5:1 on paper), the X-ray HUD badge included. `theme.ts --check` gained: dot-idle as a text role, dim ≥ 3:1, a CSS scan that every `color:` is a text role, the contrast-more roles, and a sweep of all 360 custom hues × 2 schemes (gamut, text, dots, lines, colour-blind, tone order). No goldens moved (none is an engine token).
+  - **`prefers-contrast: more`:** a generated `@media` block per theme in themes.css (label, mute, red-text ≥ 7:1, dim ≥ 4.5:1, hairline alpha ×2) and the materials in tokens.css (stronger dotted rules, opaque raised layers).
+  - **Custom hue:** an 8th swatch in THEME and TOOLS › THEME opens a hue slider (native range over 36 generated dots). `src/site/theme/custom.ts` (lazy, 4.3 kB gz with the generator: the plan's ≈ 1 kB was the slider alone) runs `accents.ts` in the browser; `specForHue` interpolates C and L between neighbouring presets, and `pickSolid` now also searches ±.3 in L and lower chroma (needed for a few light pink-reds under protanopia; presets unchanged). The store keeps `{accent: "custom", hue, css}`; the boot script writes the CSS into `<style id="theme-custom">` before first paint (boot 900 → 960 B budget, 934 B). Custom share links carry `?scheme=` only.
+  - **Type:** 12 px chrome minimum (120 rules lifted to `--fs-label-12`; under 12 px only in-card text, keycaps, glyph marks, on-canvas badges); prose (intro, blurbs, About lede, changelog) in Oxanium; `text-wrap: balance` / `pretty`; board names and the widget page's card name in engine dot type (`src/components/DotName.tsx`, `textAt` through `DotCanvas`, word-wrapped to the box; the subtitle after "—" stays a mono label).
+  - **Skins:** e-ink and flip-disc take a light card's paper and ink (`SkinOverlay` → `StageOptions.colors`; dark cards keep `STAGE_COLORS`); the footer's live number is a dark inset under an emissive skin on a light page.
+  - **Checks:** `npx tsc -b` and oxlint clean on the changed files; `css-tokens.ts` 0 raw literals; `theme.ts --check` 30/30 on a fresh build; `theme-boot.ts` all passed (custom hue no-flash and contrast-more cases added); `theme-picker.ts` all passed (custom swatch, slider, reload, phone sheet added; 12 touch targets ≥ 44 px); `layout.ts` all passed with the new < 10% gate (chrome under 12 px: 0–1% on boards, 4% on MAKE, 0% elsewhere); `mobile.ts` all passed; goldens 187/187 unchanged.
+  - **Size:** first-load JS 122.19 → 123.47 kB gz (+1.28: the dot names on the board heading, the custom-aware store and the stage tones); first-load CSS 17.08 → 17.53 kB gz (+0.45: the contrast-more blocks). Lazy: `custom` 4.3 kB gz.
+  - **Screenshots** for the owner's taste pass: `C:/Users/integrated/AppData/Local/Temp/dmdocs/t6shots/index.html` (dark_signal, light_signal, dark_vite, light_cobalt; 108 shots). The 4 phone `palette` shots are marked NOT READY by `shots.ts` (the sheet opens, but focus is not in its input on touch) though the captures look right.
+  - **Taste decisions for the owner:** accent text in `dark_signal` is now the generated `#FFA193` (salmon) instead of `#FF3B30` (which passes WCAG 4.72:1 on `raised` but only APCA Lc 40; a pin like `#FF6856`, 5.87:1, Lc 47, would keep it redder if the owner prefers and the APCA rule is relaxed); dark ink on the red fill; the dot-name size (pitch 3 board, pitch 4 card, dots 84% of the pitch); Oxanium for prose at 14 px; keycaps kept at 9 px.
+  - **Left:** a CONTRAST: MORE toggle in the picker (only the OS setting is honoured now); `?hue=` links for custom themes; names in dot type on the About and essay headings (only board and card names now).
+- [x] **T5 picker and moment** (branch `worktree-agent-a70c72cff7bd3964e`, 1 commit, not merged; docs/LAYOUT-THEME-PLAN.md §4 Picker, §5 T5):
+  - THEME next to DISPLAY ▾ (`src/components/theme/ThemeButton.tsx`, first load): 100 ms hover intent (it warms the chunk), click / ArrowDown pins it with focus inside; the popover (`ThemePicker.tsx` + `picker.css`, lazy) has SYSTEM / LIGHT / DARK, the 7 accents as 7×7 dot swatches (listbox, arrow roving), a tone ramp, and the share-link switch. Live preview: the popover re-scopes itself (`data-scheme` + `data-accent`) to the hovered or focused choice. Phones: TOOLS › THEME, the same controls at 44 px (the LIGHT / DARK tile is gone).
+  - The switch moment (`src/site/theme/moment.ts`): a view transition with a halftone mask front from the pressed control (`mask-composite` fold of disc and dot layers, `--dur-wipe` 720 ms, `pointer-events: none` on the overlay). Instant under reduced motion (OS or the ⌘K override), without the API, or in a hidden tab. A pick drops `?theme=` / `?scheme=` / `?accent=` from the URL.
+  - ⌘K (C1 of docs/POLISH-PLAN.md, approved): "Theme: system / light / dark", "Accent: <name>" ×7 and "Accent: next" replace the 15 raw rows.
+  - Share links (`src/site/theme/share.ts`, opt-in, off by default): ⌘K copy link, the card LINK, TOOLS › SHARE and the widget page's LINK / SHORT / SHARE add `?theme=<resolved>`.
+  - Checks: `scripts/site/theme-picker.ts` (new browser probe, desktop + touch sheet + reduced motion; 43/43, twice in a row on the final build; captures in `.snapshots/t5/`); `theme.ts --check` and `theme-boot.ts` pass; goldens 182/182 unchanged; CSS token lint clean.
+  - Size: first-load JS +0.55 kB gz (120.41 → 120.95; the THEME button), first-load CSS +0.35 kB gz (the button and the wipe); the popover is a lazy chunk of 3.28 kB JS + 0.89 kB CSS gz.
+  - Header: THEME measures nothing and lives in the header's flow, so the later hide-on-scroll header (POLISH P1) needs no change here.
+  - Learned: a view transition moves hit-testing off the page, which reads as the mouse leaving a hover-opened popover; THEME waits for the wipe to end and re-hit-tests (`elementFromPoint`) before closing. Headless screenshots only show a wipe frame when the animation is paused (the probe holds it).
+  - Left: the custom hue swatch (T6); the essay and legal pages have no picker (they follow the stored choice).
+
 **Foundation run (2026-10-27, branch `feat/foundation`):** the shared foundation of `docs/LIVING-MATTER-PLAN.md` (F0) and `docs/LAYOUT-THEME-PLAN.md` (T0), done in two phases of two parallel agents each. Priority: F0 first, because it unblocks the L, Q and M tracks and cuts first-load JS (148.14 of 150 kB) before the tracks and the theme spend it. Then T0, which unblocks T1–T6.
 - **Phase 1:** F1-A noise (F0.1–F0.4 and the determinism lint of F0.9); F1-B pixels and budget (F0.5, F0.6, F0.10, F0.11). Merge order: B, then A, then the full suite (the F0.9 join).
 - **Phase 2:** F2-C light hub (F0.7, F0.8, which needs `datan2` from phase 1); F2-D T0 tokens and cleanup. Then the full suite again.
@@ -29,11 +74,11 @@
   - [x] **E1 editor tests and cleanup.**
     - `scripts/editor.ts` (56 checks) runs in verify; `scripts/editor-browser.ts` passes 66/66 (desktop and touch).
     - 22 old MAKE files are deleted (−2,264 lines). `studio/doc.ts`, `adapter.ts` and `playback.ts` stay, since the editor uses them.
-    - Dead probes still to fix: `scripts/export-chrome.ts` and `scripts/c10-browser.ts`.
+    - [x] Dead probes (round-2 cleanup): `scripts/export-chrome.ts` deleted (it drove the removed `.pg-export` panel); `scripts/c10-browser.ts` passes 50/50 on `vite preview` as it is (`.dw-code textarea` is the editor's CODE inspector now). `dwitter/DotsRepl.tsx` and `RemixGraph.tsx` deleted too (RemixGraph is restorable for E5, see `docs/EDITOR-PLAN.md`).
   - [x] **T0 tokens.**
     - `src/tokens.css` is the one token block, and the `scripts/site/css-tokens.ts` lint finds 0 raw literals.
     - The starter, shadcn and old-MAKE CSS is deleted: first-load CSS went 16.68 → 12.54 kB gz.
-    - To follow up: wire the lint into CI.
+    - [x] The lint runs in CI (round-2 cleanup), and `scripts/site/theme.ts --check` runs again after the build, so the `dist/index.html` boot-script check is gated too.
   - [x] **T1 chrome design language.**
     - Applied: surfaces, dotted hairlines, one glow, four states with a lint, glass for raised layers only, grouped tooltips with dot keycaps, hover intent, scroll-snap sheets, card radius 12.
     - Not yet done: the sticky ALL pill still covers the first group tab on phones (T3).
@@ -54,7 +99,7 @@
     - Defaults: the default is `system`. OG images and goldens stay `dark_signal`, and editor frames keep `dot480`.
     - Checks: `golden --theme-parity` (14 × 177 only recolour) and `theme-boot.ts` 29/29.
     - Size: first load −4.4 kB gz, because the unused playground store went and the widget registry and home board left first load.
-    - For T5: the palette's "Theme: …" commands and the TOOLS LIGHT/DARK row are placeholders.
+    - For T5 (done, see T5 below): the palette's "Theme: …" commands and the TOOLS LIGHT/DARK row were placeholders.
     - For T6: the two `dark_signal` contrast waivers, `--dim`, and the skin stage colours.
   - [x] **T2 frame and rhythm.**
     - What it covers:
@@ -81,6 +126,60 @@
   - `webgl.ts`, `site/mobile.ts`, `light-browser.ts`, `editor-browser.ts`, `site/layout.ts`, `theme-boot.ts`.
   - The mobile and layout probes need a running `vite preview` (ports 4317 and 4318).
 - **Next, waiting for the owner:** Q1 squares, L1 pond and M1 materials (all unblocked by F0); T3 grids; T5 picker; E3.
+- [~] **M1 materials** (branch `worktree-agent-add27cae4d261d877`, docs/living-matter/M-materials.md §3). Not merged; it waits for its integration-queue slot (L1 → Q1 → M1).
+  - Engine (M1.1–M1.5): `src/engine/matter/` (not in the engine barrel) holds relief + AO (blur and horizon), `rake` and `cardMask`; Kajiya–Kay `anisoSpec` with four tangent builders; `matcap` (64² LUT, rotate / tilt, `studioMatcap` ≡ `metal().env` bit for bit); weave drawdowns, drafts and `weaveRelief`; stitches and `contour`; `marble` and `terrazzo`.
+  - Board `/materials/` in ENGINE, lazy, `sources: [lightSource]`: `mat-loom` (fps 40), `mat-knob`, `mat-grille`, `mat-marble`, `mat-terrazzo`. Every card declares the light-hub keys. `matLight` is a thin wrapper over `sceneLight`.
+  - **`activeDim`: no owner ruling**, so the plan's default applies: it is not part of the one accent and no M card uses it. The Loom's trail is size contrast inside its one `active` layer. This is checked.
+  - Engine addition: `Control.map` (`(x, y, value) => value`), an absolute pointer → value mapping for drag controls. The knob passes its dial function (`knobDial`, in the lazy board), so a tap on the arc sets v. It is opt-in, and existing controls are unchanged.
+  - Checks:
+    - `scripts/materials.ts`: 52 checks.
+    - `scripts/materials-browser.ts` (M1.12): 11/11 on `vite preview` :4391, at 375×812 touch and 1280 desktop.
+    - Goldens: 5 added, then all 182 match after the grille change.
+  - Size, measured against a fresh build of the merge-base `dbe4716`, so there is no drift:
+    - first load 120.07 → 120.24 kB gz (+0.18; the ledger row was +0.06):
+      - +0.10 the manifest row and its ENGINE group slot;
+      - +0.04 Vite's preload-map entry for the new lazy chunk;
+      - +0.03 `Control.map` in the first-load interaction code.
+    - `sampleWorker` 156.56 → 168.73 kB gz (+12.18). The worker imports the eager registry, so the board and `matter/` ship in it. Keeping them out of the worker is open (F0 §7 R13).
+  - Frame budget. `--bench` at normal priority with the heavy lock held (no other heavy job), two runs, load factor 1.62 / 1.81. Raw ms, warm / hover (median of 13):
+
+    | card | run 1 | run 2 | cold (ms) |
+    |---|---|---|---|
+    | loom | 4.85 / 6.82 | 4.60 / 4.42 | 53–79 |
+    | knob | 2.01 / 1.59 | 1.70 / 2.11 | 18–28 |
+    | grille | 3.22 / 4.79 | 3.66 / 4.57 | 55–84 |
+    | marble | 3.52 / 5.20 | 2.83 / 2.19 | 54–66 |
+    | terrazzo | 2.25 / 2.63 | 3.06 / 4.67 | 68–132 |
+
+    - Grille: the plate shading is now cached per light (LRU of 8, M §3.2's mitigation), so the sun and tilt buckets don't re-shade. Warm is 3.2–3.7 ms raw.
+    - The ≤ 4 ms × load gate passed in run 2 and failed in run 1 (Loom and Marble hover).
+    - **Cold first frames are still over 30 ms × load**, except the knob. The bakes (relief, EDT, AO, marble turbulence, the terrazzo month) run on the first frame. Still to do: split the bakes, or warm them in idle time.
+    - **Cold-frame pass (round 2, pixel-identical: all 187 goldens match).** In the check's cold module even the engine helpers are barely warm, so the first frame runs mostly interpreted and its cost is the work it does. The bakes now do much less, and their per-cell loops sit in small per-row helpers that reach compiled code inside that one frame:
+      - terrazzo: each day's chip is laid over its own box instead of testing 31 days per cell; the keep-out is a 3×3 row helper over the chips' box; Poisson uses a typed grid, nearest cells first, and d² with an exact `hypot` fallback at the edge;
+      - grille: the hole distance is stamped round each hole (exact d² < 16, ≡ the EDT) instead of a hole raster and two full-grid EDTs; `heightFromField` takes the baked raster and visits only the mask's window;
+      - marble: `cardMask`, `toLattice15`, the colon and its clearing visit only their bounds;
+      - loom: per-row woven runs, and the bare-warp relief is skipped while the shuttle is parked (t = 0);
+      - knob: the SDF is rasterized once for both profiles;
+      - every card: `surfaceLayer` / `tonedLayer` moved to `engine/matter/surface.ts`; the VU caches its per-beat hash.
+    - Cold first frame, ms ÷ load, from `--only board --bench` with the heavy lock held at normal priority. Before: 3 runs at load 2.4–4.7. After: 4 runs at load 1.3–2.5, the box being quieter by then.
+
+      | card | before | after |
+      |---|---|---|
+      | loom | 27–89 | 8–18 |
+      | knob | 8–19 | 6–14 |
+      | grille | 50–124 | 12–24 |
+      | marble | 39–111 | 13–31 |
+      | terrazzo | 65–97 | 17–21 |
+
+      The check passed in 3 of the 4 after-runs; the failing run had marble at 30.9. Warm frames are 0.9–3.1 ms ÷ load, loom 1.7–2.9. First-load code is unchanged: `raster/ops.ts` was left alone because it ships in first load. The +0.01 kB gz that `size.ts --against` reports is lazy-chunk hash names inside `main` / `manifest` / `useTheme`; the bytes are identical apart from those names.
+    - The marble rebake is 11–18 ms (the budget is 10 ms × load).
+  - Deviations from the M doc:
+    - The tie-up toggle redraws the whole panel, because card data carries no edit time, so "only picks ≥ the current one" can't be pure.
+    - The marble hero is on lattice 2, not 2.5: smooth `00:00` is 58 dots wide, so 2.5 would overrun the card.
+    - The year is drawn as void letters rather than a lit groove, because 1-dot grooves don't read.
+    - The matcap LUT agreement is ≥ 97% at 64² (99.3% at 256²), not the plan's 99% at 64².
+    - Terrazzo: a tap selects a day through an `xy` control and stays until the next tap, instead of a 3 s preview, which would need time state.
+  - Still to do: cold bakes ≤ 30 ms with margin (marble is borderline under load: its engraving still runs two full EDTs and two text masks); the worker chunk; the `pnpm snap` taste pass beside the reference cards; the CHANGELOG / `src/changelog.ts` rows at integration.
 
 **Resume here (2026-10-27):** branch `feat/native-editor-share` merges six parallel tracks on top of `main` (3a1775c, UX U0–U5 slice):
 - **Phone shell** (`src/site/mobile.css`, `BoardSheet`, `Sheet`, `useSwipeDown`, `site/layer.ts`): bottom tab bar EXPLORE / MAKE / ABOUT / TOOLS, sticky title bar that opens a boards sheet, thumb strips, swipe-down sheets, touch palette (no autofocus, boards first), 16 px fields on coarse pointers, safe areas, short-landscape layout, installable PWA (`public/manifest.webmanifest`, dot-field icons).

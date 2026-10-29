@@ -1,0 +1,273 @@
+/* T5 THEME picker (src/components/theme/ThemePicker.tsx): loaded with its lazy chunk, so first-load CSS carries only
+   the header button and the switch moment (src/App.css). The popover and each swatch carry data-scheme +
+   data-accent, so their roles resolve to the previewed theme (DESIGN.md › Theme › Picker). */
+.theme-pop {
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 60;
+  width: min(328px, calc(100vw - 24px));
+  padding: var(--space-3);
+  color: var(--label);
+  font: 500 var(--fs-label-12)/1.3 var(--mono);
+  letter-spacing: .1em;
+  text-align: left
+}
+
+.theme-ctl {
+  display: grid;
+  gap: var(--space-3)
+}
+
+.theme-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 16px
+}
+
+.theme-head b {
+  color: var(--red-text);
+  font-weight: 600
+}
+
+.theme-head span {
+  color: var(--mute);
+  font-size: var(--fs-label-12)
+}
+
+/* the shown theme's dot tones: faint, mid, idle, value, the accent */
+.theme-ramp {
+  width: 40px;
+  height: 8px;
+  margin-left: auto
+}
+
+.theme-ramp .t-faint { fill: var(--dot-faint) }
+.theme-ramp .t-mid { fill: var(--dot-mid) }
+.theme-ramp .t-idle { fill: var(--dot-idle) }
+.theme-ramp .t-value { fill: var(--value) }
+.theme-ramp .t-red { fill: var(--red) }
+
+/* segmented: SYSTEM / LIGHT / DARK (the .ed-seg look) */
+.theme-seg {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-1);
+  padding: var(--space-1);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill)
+}
+
+.theme-ctl .theme-seg button {
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: 0;
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--mute);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .12em;
+  cursor: pointer
+}
+
+.theme-ctl .theme-seg button:hover,
+.theme-ctl .theme-seg button:focus-visible {
+  color: var(--label);
+  background-color: var(--wash-hover)
+}
+
+.theme-ctl .theme-seg button:active {
+  color: var(--value);
+  background-color: var(--wash-press)
+}
+
+.theme-ctl .theme-seg button[aria-checked="true"] {
+  color: var(--red-text);
+  background-color: var(--glow-wash);
+  box-shadow: inset 0 0 0 1px var(--red-line)
+}
+
+/* the accents: 7 dot discs, each in its own colour (the button is its own theme scope) */
+.theme-swatches {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: var(--space-1)
+}
+
+.theme-ctl .theme-swatches button {
+  display: grid;
+  place-items: center;
+  min-width: 32px;
+  min-height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: none;
+  cursor: pointer
+}
+
+.theme-ctl .theme-swatches button:hover,
+.theme-ctl .theme-swatches button:focus-visible {
+  background-color: var(--wash-hover)
+}
+
+.theme-ctl .theme-swatches button:active {
+  background-color: var(--wash-press)
+}
+
+/* the picked accent: its halo behind the disc and a ring in its line colour */
+.theme-ctl .theme-swatches button[aria-selected="true"] {
+  background: var(--red-halo);
+  box-shadow: inset 0 0 0 1px var(--red-line)
+}
+
+.theme-disc {
+  width: 18px;
+  height: 18px;
+  fill: var(--red)
+}
+
+/* the custom swatch before a hue is set: the rim of the disc, in the quiet grey */
+.theme-disc--ring {
+  fill: var(--mute)
+}
+
+/* the custom hue (T6): a native range over a row of dots, each the generated accent of its hue on this scheme */
+.theme-hue {
+  position: relative;
+  display: grid;
+  height: 28px
+}
+
+.theme-hue > * {
+  grid-area: 1 / 1
+}
+
+.theme-hue-track {
+  width: 100%;
+  height: 10px;
+  align-self: center
+}
+
+.theme-hue input {
+  width: 100%;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+  appearance: none
+}
+
+.theme-hue input::-webkit-slider-runnable-track {
+  height: 28px;
+  background: none
+}
+
+.theme-hue input::-moz-range-track {
+  height: 28px;
+  background: none
+}
+
+/* the thumb: a ring in the line colour around the picked hue's dot */
+.theme-hue input::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+  margin-top: var(--space-1);
+  border: 2px solid var(--value);
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 1px var(--bg);
+  appearance: none
+}
+
+.theme-hue input::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--value);
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 1px var(--bg)
+}
+
+.theme-hue input:focus-visible {
+  outline: 2px solid var(--red-line);
+  outline-offset: 2px;
+  border-radius: var(--radius-pill)
+}
+
+.theme-line {
+  margin: 0;
+  color: var(--mute);
+  font-size: var(--fs-label-12);
+  letter-spacing: .06em;
+  text-transform: uppercase
+}
+
+.theme-ctl .theme-share {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  min-height: 28px;
+  padding: 0 var(--space-2);
+  border: 1px dotted color-mix(in srgb, var(--tint) 20%, transparent);
+  border-radius: var(--radius-ctl);
+  background: none;
+  color: var(--mute);
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .06em;
+  text-align: left;
+  cursor: pointer
+}
+
+.theme-ctl .theme-share:hover,
+.theme-ctl .theme-share:focus-visible {
+  border-color: var(--line-hover);
+  color: var(--label)
+}
+
+.theme-ctl .theme-share:active {
+  background-color: var(--wash-press);
+  color: var(--value)
+}
+
+.theme-share b {
+  color: var(--mute);
+  font-weight: 600;
+  letter-spacing: .12em
+}
+
+.theme-ctl .theme-share[aria-checked="true"] b {
+  color: var(--red-text)
+}
+
+/* TOOLS › THEME: the popover's controls at touch size (44 px targets) */
+.tools-sheet .theme-ctl {
+  padding: 0 var(--space-2);
+  color: var(--label);
+  font: 500 var(--fs-label-12)/1.3 var(--mono);
+  letter-spacing: .1em
+}
+
+.tools-sheet .theme-ctl .theme-seg button,
+.tools-sheet .theme-ctl .theme-share {
+  min-height: 44px
+}
+
+.tools-sheet .theme-ctl .theme-swatches {
+  grid-template-columns: repeat(4, 1fr)
+}
+
+.tools-sheet .theme-ctl .theme-swatches button {
+  min-width: 44px;
+  min-height: 44px
+}
+
+.tools-sheet .theme-hue {
+  height: 44px
+}
+
+.tools-sheet .theme-disc {
+  width: 22px;
+  height: 22px
+}

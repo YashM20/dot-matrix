@@ -17,12 +17,12 @@
  * this module lazily).
  */
 import { apca, distinctness, fromOklch, gamutClamp, oklch, rgba, wcag, type Oklch } from './color'
-import { ACCENTS, SCHEMES, themeName, type AccentId, type Scheme, type ThemeName } from './names'
+import { ACCENTS, SCHEMES, type AccentChoice, type AccentId, type Scheme, type ThemeKey, type ThemeName } from './names'
 
 /** The opaque neutral roles of one scheme (hex); the translucent ones derive from them. */
 export interface Neutrals {
   bg: string; panel: string; surface: string; raised: string
-  /** Text: primary, secondary, meta, and the dimmest (units, sub-labels; not held to 4.5:1). */
+  /** Text: primary, secondary, meta (all ≥ 4.5:1 on every surface). `dim` is not text: quiet glyphs and off states (≥ 3:1, WCAG 1.4.11). */
   value: string; label: string; mute: string; dim: string
   /** Solid quiet ink: grab handles, grips, off glyphs. */
   'line-strong': string
@@ -36,12 +36,13 @@ export interface Neutrals {
 }
 
 /**
- * Today's dark site, exactly (src/tokens.css `:root`, DESIGN.md colour tokens, `dot480` in src/engine/theme/tokens.ts).
- * `dark_signal` is this with no tint, so goldens and the current chrome don't move.
+ * Today's dark site (src/tokens.css `:root`, DESIGN.md colour tokens, `dot480` in src/engine/theme/tokens.ts).
+ * `dark_signal` is this with no tint, so goldens don't move. T6 lifted the two chrome greys that failed: `mute`
+ * #6E7278 (3.46:1 on `raised`) → #81858B (4.51:1), and `dim` #4A4E54 (2.0:1) → #65696F (3.03:1, glyphs only).
  */
 export const DARK: Neutrals = {
   bg: '#070809', panel: '#0D0F11', surface: '#111315', raised: '#1B1E21',
-  value: '#F2F3F5', label: '#C7CBD1', mute: '#6E7278', dim: '#4A4E54', 'line-strong': '#3A3D42', tint: '#FFFFFF', shade: '#000000', well: '#000000',
+  value: '#F2F3F5', label: '#C7CBD1', mute: '#81858B', dim: '#65696F', 'line-strong': '#3A3D42', tint: '#FFFFFF', shade: '#000000', well: '#000000',
   faint: '#2E3033', mid: '#5B5F66', idle: '#8A8F98',
 }
 /** Today's alphas (src/tokens.css: `--line` .08, `--scrim` .55). */
@@ -52,7 +53,7 @@ const PAPER_HUE = 95
 const paper = (L: number, C: number) => fromOklch(gamutClamp(L, C, PAPER_HUE))
 export const LIGHT: Neutrals = {
   bg: paper(.955, .005), panel: paper(.935, .005), surface: paper(.978, .004), raised: paper(.995, .003),
-  value: paper(.22, .004), label: paper(.38, .005), mute: paper(.5, .006), dim: paper(.62, .005), 'line-strong': paper(.8, .004),
+  value: paper(.22, .004), label: paper(.38, .005), mute: paper(.5, .006), dim: paper(.6, .005), 'line-strong': paper(.8, .004),
   tint: paper(.22, .004), shade: paper(.18, .004), well: paper(1, 0),
   faint: paper(.86, .003), mid: paper(.66, .003), idle: paper(.4, .003),
 }
@@ -91,7 +92,8 @@ export type Role = (typeof NEUTRAL_ROLES)[number] | (typeof DOT_ROLES)[number] |
 export type Roles = Record<Role, string>
 
 export interface Theme {
-  name: ThemeName; scheme: Scheme; accent: AccentId
+  /** `scheme_accent`; `dark_custom` / `light_custom` for the custom hue. */
+  name: ThemeKey; scheme: Scheme; accent: AccentChoice
   roles: Roles
   /** The 12-step ramp (hex), Radix numbering 1..12 at index 0..11. */
   ramp: string[]
@@ -128,7 +130,7 @@ function nudge(c: Oklch, scheme: Scheme, ok: (hex: string) => boolean, Ctarget =
 }
 
 /** The scheme's neutrals tinted toward `hue` (L kept; chroma per role). `dark_signal` stays untouched. */
-export function tint(base: Neutrals, scheme: Scheme, accent: AccentId, hue: number): Neutrals {
+export function tint(base: Neutrals, scheme: Scheme, accent: AccentChoice, hue: number): Neutrals {
   if (scheme === 'dark' && accent === 'signal') return { ...base }
   const k = scheme === 'light' ? .7 : 1, at = (hex: string, C: number) => clampHex(oklch(hex).L, C * k, hue)
   const sC = accent === 'vite' ? TINT.viteSurface : TINT.surface
@@ -139,15 +141,17 @@ export function tint(base: Neutrals, scheme: Scheme, accent: AccentId, hue: numb
     'line-strong': at(base['line-strong'], TINT.line),
     tint: scheme === 'dark' ? clampHex(.97, TINT.line, hue) : at(base.tint, TINT.line),
   }
-  // tinted text keeps ≥ 4.5:1 on every surface (today's dark mute is 3.8:1 on the surface: raised here, waived on dark_signal)
+  // tinted text keeps ≥ 4.5:1 on every surface; the glyph grey ≥ 3:1
   for (const r of ['value', 'label', 'mute'] as const) n[r] = fromOklch(nudge(oklch(n[r]), scheme, h => worst(h, n) >= 4.5))
+  n.dim = fromOklch(nudge(oklch(n.dim), scheme, h => worst(h, n) >= 3))
   return n
 }
 
 /** Hand-pinned roles (they win over the generator, and must pass the same rules). */
 export const PINS: Partial<Record<ThemeName, Partial<Roles>>> = {
-  // today's site: {colors.dotActive}, {colors.dotActiveDim}, {colors.onActive}
-  dark_signal: { red: '#FF3B30', 'red-dim': '#B8241A', 'on-red': '#FFFFFF' },
+  // today's site: {colors.dotActive}, {colors.dotActiveDim} (the goldens). {colors.onActive} is generated: white on
+  // #FF3B30 is 3.55:1, so text on the red fill is the hue's dark ink (T6)
+  dark_signal: { red: '#FF3B30', 'red-dim': '#B8241A' },
   // vite.dev: --color-vite #B39AFF, --color-electric #6C3BFF, vite docs' light brand #6B1EB9, hero panels #370A7F
   dark_vite: {
     red: '#B39AFF', 'red-hover': '#C2AEFF', 'red-press': '#A388F8', 'red-text': '#C2AEFF',
@@ -181,15 +185,16 @@ const onPage = (hex: string, n: Neutrals) => Math.min(wcag(hex, n.surface), wcag
 export const greysOf = (n: { value: string; idle: string; mid: string }) => [n.value, n.idle, n.mid]
 
 /**
- * The solid: the L closest to the target (searched ±.15 in .005 steps, chroma re-clamped at each L) that
- * reaches 3:1 on the surface and bg and stays distinct from the greys in every simulated vision. Falls back to
- * the most distinct L that has the contrast.
+ * The solid: the L closest to the target (searched ±.3 in .005 steps, nearest first, chroma re-clamped at each L) that
+ * reaches 3:1 on the surface and bg and stays distinct from the greys in every simulated vision. When no L does at
+ * the target chroma (a few custom hues: a pink-red on paper reads as the dark grey to a protan eye), the search
+ * repeats with less chroma. Falls back to the most distinct candidate that has the contrast.
  */
 function pickSolid(target: Oklch, Ct: number, n: Neutrals): Oklch {
   const greys = greysOf(n)
   let fallback: { c: Oklch; score: number } | undefined
-  for (let i = 0; i <= 60; i++) {
-    const d = (i % 2 ? 1 : -1) * Math.ceil(i / 2) * .005, c = gamutClamp(target.L + d, Ct, target.h), hex = fromOklch(c)
+  for (const k of [1, .85, .7, .55]) for (let i = 0; i <= 120; i++) {
+    const d = (i % 2 ? 1 : -1) * Math.ceil(i / 2) * .005, c = gamutClamp(target.L + d, Ct * k, target.h), hex = fromOklch(c)
     if (onPage(hex, n) < 3) continue
     const s = distinctness(hex, greys).score
     if (s >= 1) return c
@@ -198,14 +203,32 @@ function pickSolid(target: Oklch, Ct: number, n: Neutrals): Oklch {
   return fallback?.c ?? target
 }
 
-/** Generate one theme (pins applied). */
-export function generate(scheme: Scheme, accent: AccentId): Theme {
-  const spec = ACCENT_SPECS[accent], h = spec.hue, Ct = spec.C[scheme], name = themeName(scheme, accent)
+/** Generate one preset theme (pins applied). */
+export const generate = (scheme: Scheme, accent: AccentId): Theme => generateFrom(scheme, ACCENT_SPECS[accent], accent)
+
+/**
+ * The spec of any hue (the custom hue, T6): chroma and lightness are not the visitor's to pick, they are
+ * interpolated around the hue circle between the two neighbouring presets, and the generator's rules then
+ * clamp them (gamut, 3:1 dots, 4.5:1 text, distinct from the greys), so no pick can be illegible.
+ */
+export function specForHue(hue: number): AccentSpec {
+  const h = ((hue % 360) + 360) % 360, ring = ACCENTS.map(a => ACCENT_SPECS[a]).sort((a, b) => a.hue - b.hue)
+  const i = ring.findIndex(s => s.hue > h), b = ring[i < 0 ? 0 : i], a = ring[i <= 0 ? ring.length - 1 : i - 1]
+  const span = ((b.hue - a.hue) + 360) % 360 || 360, t = (((h - a.hue) + 360) % 360) / span
+  const mix = (x: Record<Scheme, number>, y: Record<Scheme, number>) => ({ dark: x.dark + (y.dark - x.dark) * t, light: x.light + (y.light - x.light) * t })
+  return { id: 'signal', hue: h, character: 'custom', C: mix(a.C, b.C), L: mix(a.L, b.L) }
+}
+/** A theme for any hue (the custom accent): the preset generator, unpinned, neutrals tinted toward the hue. */
+export const generateHue = (scheme: Scheme, hue: number): Theme => generateFrom(scheme, specForHue(hue), 'custom')
+
+function generateFrom(scheme: Scheme, spec: AccentSpec, accent: AccentChoice): Theme {
+  const h = spec.hue, Ct = spec.C[scheme], name = `${scheme}_${accent}` as ThemeKey
   const n = tint(NEUTRALS[scheme], scheme, accent, h), surf = n.surface
   const steps = L_STEPS[scheme](spec.L[scheme])
   const ramp = steps.map((L, i) => gamutClamp(L, Ct * C_CURVE[i], h))
+  const pins = (PINS as Partial<Record<ThemeKey, Partial<Roles>>>)[name] ?? {}
   // a pinned solid anchors the derived roles (hover, press, text) too
-  const pinnedSolid = PINS[name]?.red, solid = pinnedSolid ? oklch(pinnedSolid) : pickSolid(ramp[8], Ct, n)
+  const solid = pins.red ? oklch(pins.red) : pickSolid(ramp[8], Ct, n)
   const text = nudge({ ...ramp[10], C: Math.min(ramp[10].C, solid.C) }, scheme, x => worst(x, n) >= 4.5 && Math.abs(apca(x, surf)) >= 60, Math.min(ramp[10].C, solid.C))
   const lineStep = [5, 6, 7].map(i => ramp[i]).find(c => onPage(fromOklch(c), n) >= 3) ?? nudge(ramp[7], scheme, x => onPage(x, n) >= 3)
   // hover lifts toward contrast (lighter on dark, darker on light); press sinks (dimmer on dark, deeper on light)
@@ -220,11 +243,41 @@ export function generate(scheme: Scheme, accent: AccentId): Theme {
     'red-line': fromOklch(lineStep), 'on-red': onAccent(solidHex, solid), 'red-surface': fromOklch(inset), 'red-surface-text': insetText,
     'red-halo': `radial-gradient(closest-side, ${rgba(solidHex, .35)}, transparent)`, selection: rgba(solidHex, .3),
   }
-  const pins = PINS[name] ?? {}
   // the washes follow a pinned solid unless pinned themselves
   if (pins.red) Object.assign(roles, { 'red-halo': `radial-gradient(closest-side, ${rgba(pins.red, .35)}, transparent)`, selection: rgba(pins.red, .3) })
   Object.assign(roles, pins)
   return { name, scheme, accent, roles, ramp: ramp.map(fromOklch), solid: { L: solid.L, C: solid.C, requestedC: Ct }, pinned: Object.keys(pins) as Role[] }
+}
+
+/** The roles `prefers-contrast: more` raises (DESIGN.md › Theme › Contrast). */
+export const MORE_ROLES = ['label', 'mute', 'dim', 'red-text', 'line'] as const
+export type MoreRole = (typeof MORE_ROLES)[number]
+/** AAA for text under `prefers-contrast: more`; the glyph grey reaches the text bar; the hairline alpha doubles. */
+export const MORE = { text: 7, dim: 4.5, line: { dark: .16, light: .24 } } as const
+/**
+ * `prefers-contrast: more`: label, mute and the accent text pushed to 7:1 (AAA) on every surface, the glyph grey to
+ * 4.5:1, the hairline alpha doubled. Same hues; only lightness moves (chroma re-clamped), so the theme still reads.
+ */
+export function moreRoles(t: Theme): Record<MoreRole, string> {
+  const r = t.roles, n = { bg: r.bg, panel: r.panel, surface: r.surface, raised: r.raised } as Neutrals
+  const lift = (hex: string, min: number) => fromOklch(nudge(oklch(hex), t.scheme, x => worst(x, n) >= min))
+  return { label: lift(r.label, MORE.text), mute: lift(r.mute, MORE.text), dim: lift(r.dim, MORE.dim), 'red-text': lift(r['red-text'], MORE.text), line: rgba(r.tint, MORE.line[t.scheme]) }
+}
+
+/** CSS declarations of roles (`--role: value;`), in the given order. */
+export const decls = (r: Partial<Record<Role, string>>, keys: readonly Role[], indent = '  ') => keys.filter(k => r[k] !== undefined).map(k => `${indent}--${k}: ${r[k]};`)
+/** Every role a custom-hue theme writes (it has no base block of its own: neutrals, dots and the accent family). */
+export const ALL_ROLES = [...NEUTRAL_ROLES, ...DOT_ROLES, ...ACCENT_ROLES] as const
+/**
+ * The custom hue's theme CSS, both schemes (scoped like the presets: `[data-scheme][data-accent="custom"]`, so a dark
+ * inset on a light page gets the dark one), with its `prefers-contrast: more` blocks. The store keeps it in
+ * localStorage and the boot script puts it in a `<style>` before first paint (`boot.ts`).
+ */
+export function customCss(hue: number): string {
+  return SCHEMES.map(s => {
+    const t = generateHue(s, hue), sel = `[data-scheme="${s}"][data-accent="custom"]`
+    return `${sel}{${decls(t.roles, ALL_ROLES, '').join('')}}@media (prefers-contrast: more){${sel}{${decls(moreRoles(t), MORE_ROLES, '').join('')}}}`
+  }).join('')
 }
 
 /** White when it reaches APCA 60 and WCAG 4.5:1 on the solid, else `oklch(.25 max(.08·C, .04) H)` darkened to 4.5:1. */

@@ -4,6 +4,8 @@
  */
 import { deflateSync } from 'node:zlib'
 import { glyph } from '../../src/engine/fields/bitmapFont'
+import { insideJoined } from '../../src/engine/squares/geometry'
+import type { JointGeom } from '../../src/engine/types'
 
 export function rgb(color: string): number[] {
   const m = color.match(/^#([0-9a-f]{6})$/i); if (m) return [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16))
@@ -34,6 +36,24 @@ export class Raster {
       }
       this.blend(x, y, c, (hit / 16) * alpha)
     }
+  }
+  /**
+   * Coverage of a joined square cell (squares Q1), 4×4 supersampled through the CPU reference `insideJoined`, added
+   * into `cov` (one value per raster pixel). Joined neighbours share a colour and opacity, so a group's coverage is
+   * summed and blended once (`blendCoverage`), like Canvas's one fill per path: no seam. Raster px throughout.
+   */
+  coverJoined(cov: Float32Array, cx: number, cy: number, s: number, mask: number, g: JointGeom) {
+    const rx = Math.max(g.hx, s) + 1, ry = Math.max(g.hy, s) + 1
+    for (let y = Math.max(0, Math.floor(cy - ry)); y <= Math.min(this.h - 1, Math.ceil(cy + ry)); y++) for (let x = Math.max(0, Math.floor(cx - rx)); x <= Math.min(this.w - 1, Math.ceil(cx + rx)); x++) {
+      let hit = 0
+      for (let sy = 0; sy < 4; sy++) for (let sx = 0; sx < 4; sx++) if (insideJoined(x + (sx + .5) / 4, y + (sy + .5) / 4, cx, cy, s, g, mask)) hit++
+      if (hit) cov[y * this.w + x] += hit / 16
+    }
+  }
+  /** Blend a coverage map (clamped to 1) in one colour at `alpha`. */
+  blendCoverage(cov: Float32Array, color: string, alpha: number) {
+    const c = rgb(color)
+    for (let i = 0; i < cov.length; i++) if (cov[i] > 0) this.blend(i % this.w, Math.floor(i / this.w), c, Math.min(1, cov[i]) * alpha)
   }
   rect(x0: number, y0: number, w: number, h: number, color: string, radius = 0, stroke?: string) {
     const c = rgb(color), s = stroke ? rgb(stroke) : null

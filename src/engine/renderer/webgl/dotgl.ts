@@ -10,6 +10,7 @@
 import type { DotInstance, ThemeTokens } from '../../types'
 import { colorFor, toneColor } from '../../sampler/gridSampler'
 import { squircleExponent } from '../shapePath'
+import { shapeExt, type GLJoinApi } from '../ext'
 import type { GPUPass } from './passes'
 import { DOTS_VS, DOT_FS, EVAL_VS, LATTICE_VS, PALETTE_SIZE, evalFS } from './shaders'
 
@@ -244,8 +245,8 @@ export class DotGL {
     this.ensure()
     const palette = new Palette(), theme = o.theme
     const auto: [number, number, number] = [palette.of(colorFor(0, theme)), palette.of(colorFor(.5, theme)), palette.of(colorFor(1, theme))]
-    const dots = o.dots ?? [], passes = o.passes ?? []
-    // explicit dots → instance buffer (colour → palette index)
+    const dots = o.dots ?? [], passes = o.passes ?? [], joined: DotInstance[] = []
+    // explicit dots → instance buffer (colour → palette index); joined cells go to the squares GL hook
     const n = dots.length
     if (this.inst.length < n * 6) this.inst = new Float32Array(Math.max(n * 6, this.inst.length * 2))
     let m = 0
@@ -253,10 +254,13 @@ export class DotGL {
       if (!(d.r > 0) || !(d.opacity > 0)) continue
       const c = palette.of(d.color)
       if (c < 0) return false
+      if (d.join !== undefined) { joined.push(d); continue }
       const b = m * 6
       this.inst[b] = d.x; this.inst[b + 1] = d.y; this.inst[b + 2] = d.r; this.inst[b + 3] = Math.min(1, d.opacity); this.inst[b + 4] = shapeN(d); this.inst[b + 5] = c
       m++
     }
+    // join frames need the lazy GL hook: until it has loaded, Canvas draws them (false)
+    if (joined.length && !shapeExt.gl) { shapeExt.glLoad?.(); return false }
     // value textures first (they switch framebuffers and viewports)
     const lattice = this.program('lattice', LATTICE_VS, DOT_FS), dotProg = this.program('dots', DOTS_VS, DOT_FS)
     if (!lattice || !dotProg) return false
@@ -309,6 +313,11 @@ export class DotGL {
       gl.bufferData(gl.ARRAY_BUFFER, this.inst.subarray(0, m * 6), gl.STREAM_DRAW)
       gl.drawArraysInstanced(gl.TRIANGLE_STRIP, 0, 4, m)
       instances += m
+    }
+    if (joined.length) {
+      // the hook reads gl / program / loc off this DotGL, and gets the frame's uniforms setter and palette
+      if (!shapeExt.gl!.draw(this as unknown as GLJoinApi, joined, (p, a) => common(p as Prog, a), palette)) { gl.disable(gl.SCISSOR_TEST); return false }
+      instances += joined.length
     }
     gl.bindVertexArray(null)
     gl.disable(gl.SCISSOR_TEST)

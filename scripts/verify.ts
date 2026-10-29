@@ -866,10 +866,10 @@ algorithmsChecks(assert)
 // F0 noise slot) dmath, gradient noise, Voronoi, curl, the IR noise pack, the determinism lint (scripts/noise.ts)
 noiseChecks(assert)
 
-// editor (E1): MAKE editor document, paint encode, resize anchoring, hit tests, camera, gestures, entries, history; E2: selection sets, marquee, group resize, align / distribute, guides, groups, locks, clipboard, migration, undo per command (scripts/editor.ts)
+// editor (E1): MAKE editor document, paint encode, resize anchoring, hit tests, camera, gestures, entries, history; E2: selection sets, marquee, group resize, align / distribute, guides, groups, locks, clipboard, migration, undo per command; E3: sites handles, spec bounds, text carets, quick toggles, eyedropper, typing sessions (scripts/editor.ts)
 {
-  const { editorChecks } = await import('./editor')
-  editorChecks(assert)
+  const { editorChecks, editorE3Checks } = await import('./editor')
+  editorChecks(assert); editorE3Checks(assert)
 }
 
 // golden key (F0.5, F0.6, F0.10): dotKey + the style backfill, the square site cover, card fps (scripts/goldenkey.ts)
@@ -881,6 +881,19 @@ goldenKeyChecks(assert)
 {
   const { lightChecks } = await import('./light')
   await lightChecks(assert)
+}
+
+// MATERIALS) M1 (docs/living-matter/M-materials.md): relief + AO, anisotropic sheen, matcaps, weave / stitch, stone, and the
+// materials board (one accent, no activeDim, light keys, frame budgets, per-card invariants) (scripts/materials.ts)
+{
+  const { materialsChecks } = await import('./materials')
+  await materialsChecks(assert)
+}
+
+// life (L1): ripple, glyph tiles, chain, body, steering, the koi pond world, the pond-koi card and its interaction (scripts/life.ts)
+{
+  const { lifeChecks } = await import('./life')
+  await lifeChecks(assert)
 }
 
 // theme (T4a): scheme × accent table, gamut / contrast / colour-blind rules, boot script ≡ store, CSP hash, generated files current (scripts/site/theme.ts)
@@ -937,6 +950,12 @@ goldenKeyChecks(assert)
 
 // SHARE S0) widget uids, metadata and URLs (docs/SHARE-PLAN.md §3, scripts/widgets/checks.ts)
 shareChecks(assert)
+
+// squares (Q1): join masks, joined-cell geometry, the join pass and hook points, DotBuffer channels, Canvas / SVG joins, the squares board (scripts/squares.ts)
+{
+  const { squaresChecks } = await import('./squares')
+  squaresChecks(assert)
+}
 
 if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
 else console.log('\nAll acceptance checks passed')

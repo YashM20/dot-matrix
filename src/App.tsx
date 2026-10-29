@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type K
 import { Board, VIEW_EXIT_MS } from './components/Board'
 import { BoardPicker, NextBoard } from './components/BoardPicker'
 import { SkinSwitcher } from './components/skins/SkinSwitcher'
+import { ThemeButton } from './components/theme/ThemeButton'
 import { useExitSwap } from './hooks/useExitSwap'
 import { useXR } from './components/xray/store'
 import { boardIds, boardLabel, liveBoards, prefetchBoard } from './widgets/manifest'
@@ -114,7 +115,9 @@ function IntroLine() {
   const [shown, setShown] = useState(() => { try { return localStorage.getItem('dot480:intro') !== 'off' } catch { return true } })
   if (!shown) return null
   return <p className="intro-line">
-    <span>Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid. Touch the cards, switch the display, or press <b>X-RAY</b><span className="intro-tools"> in TOOLS</span> to see how one works.</span>
+    {/* phones show the short line (one text line, so intro + picker stay ≤ 120 px; src/site/mobile.css) */}
+    <span className="intro-long">Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid. Touch the cards, switch the display, or press <b>X-RAY</b> to see how one works.</span>
+    <span className="intro-short">Every card is a live dot field.</span>
     <a href="/essay.html">Read the essay →</a>
     <button type="button" aria-label="Hide this note" onClick={() => { setShown(false); try { localStorage.setItem('dot480:intro', 'off') } catch { /* private mode */ } }}>×</button>
   </p>
@@ -149,9 +152,13 @@ function TabBar({ view, onView, onBoards }: { view: View; onView: (v: View) => v
   </nav>
 }
 
-// ?tab=essay, /privacy, /terms: those are their own pages (essay.html, privacy.html, terms.html: separate Vite entries)
+// ?tab=essay, /privacy, /terms: those are their own pages (essay.html, privacy.html, terms.html: separate Vite entries);
+// the visit's theme params (?theme= / ?scheme= / ?accent=) go along, the pages' boot script reads them too
 const handoff = urlView()
-if (handoff.essay || handoff.legal) window.location.replace(`/${handoff.legal ?? 'essay'}.html${window.location.hash}`)
+if (handoff.essay || handoff.legal) {
+  const keep = location.search.match(/\b(theme|scheme|accent)=[^&]*/g)
+  location.replace(`/${handoff.legal ?? 'essay'}.html${keep ? `?${keep.join('&')}` : ''}${location.hash}`)
+}
 
 export default function App() {
   const [view, setView] = useState<View>(() => urlView().view)
@@ -219,6 +226,7 @@ export default function App() {
         : <span className="topbar-place">{title}</span>}
       <Tabs className="view-tabs" label="Views" items={VIEWS} value={view} onPick={setView} />
       <SkinSwitcher />
+      <ThemeButton />
       {/* red means live: only while a board streams real data */}
       {view === 'EXPLORE' && liveBoards.includes(board) && <div className="live"><i aria-hidden="true"/> LIVE DATA</div>}
       {/* the tool dock (CommandLayer portals it here on desktop) */}

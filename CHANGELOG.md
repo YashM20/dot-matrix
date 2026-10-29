@@ -3,6 +3,47 @@
 All notable engineering changes to Dot/480 are recorded here, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://dot-matrix1.vercel.app, deployed from `main`), not a published package: there are no tagged or npm releases, so entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
 
+## [Unreleased] — 2026-10-29 · T6 type, contrast and the custom hue (round 2)
+Plan: `docs/LAYOUT-THEME-PLAN.md` §1c #3 and #15, §4 Custom hue, §5 T6. Status: `docs/PROGRESS.md`.
+### Added
+- **Custom hue** (`src/site/theme/custom.ts`, lazy): an 8th THEME swatch opens a hue slider over 36 generated dots. The browser runs the same generator as the presets; chroma and lightness come from the neighbouring presets and are clamped by the rules, so every hue (swept 0–359 × 2 schemes in `scripts/site/theme.ts`) passes them. The CSS is stored with the choice and replayed by the boot script (no flash).
+- **`prefers-contrast: more`:** per theme, label, mute and accent text at ≥ 7:1, the glyph grey at ≥ 4.5:1, hairlines twice as strong, opaque raised layers.
+- **Names in dot type** (`src/components/DotName.tsx`): board names and the widget page's card name are drawn by the engine through `textAt` and `DotCanvas`, wrapped to their box; the subtitle after "—" stays a mono label.
+- Probes: the layout probe now fails a page with ≥ 10% of its chrome characters under 12 px; `theme-boot.ts` checks a stored custom hue paints before first paint and the contrast-more roles; `theme-picker.ts` checks the custom swatch and slider on desktop and in the phone sheet.
+### Changed
+- **No contrast waivers:** `--mute` `#6E7278` → `#81858B` (≥ 4.5:1 on every surface), `--dim` is now a non-text glyph grey (`#65696F`, ≥ 3:1), `dark_signal`'s `on-red` is the red's dark ink (white was 3.55:1). Accent text is `--red-text` everywhere (21 rules used `--red`, which fails on paper); a check fails any `color:` that is not a text role. Goldens unchanged (none of these is an engine token).
+- **Type:** chrome text is 12 px minimum (120 rules lifted; under 12 only in-card text, keycaps, glyph marks and on-canvas badges). Prose (intro, blurbs, About, changelog) is in Oxanium; `text-wrap: balance` on headings, `pretty` on prose.
+- **Skins:** e-ink and flip-disc take a light card's paper and ink; the footer's live number is a dark inset under an emissive skin on a light page (it was dark ink on dark glass); the X-ray HUD figures use `--red-text`.
+- Boot script 900 → 960 B budget (the custom hue's style).
+
+## [Unreleased] — 2026-10-28 · T5 theme picker and the switch moment (round 2)
+Plan: `docs/LAYOUT-THEME-PLAN.md` §4 Picker, §5 T5. Status: `docs/PROGRESS.md`.
+### Added
+- **THEME popover** next to DISPLAY ▾ (`src/components/theme/`): SYSTEM / LIGHT / DARK, the 7 accents as 7×7 dot swatches, a tone ramp and a live preview (the popover re-scopes itself to the hovered or focused theme). Opens on 100 ms of hover intent or a click; its content is a lazy chunk. Phones get the same controls in TOOLS › THEME (44 px targets).
+- **The switch moment** (`src/site/theme/moment.ts`): a view transition whose halftone front spreads from the pressed control (CSS mask fold, `--dur-wipe` 720 ms). Instant under reduced motion or without the API.
+- **Share-link opt-in** (`src/site/theme/share.ts`): copied and shared links carry `?theme=` when the visitor turns it on.
+- `scripts/site/theme-picker.ts`: the browser probe for all of it (touch sheet and reduced motion included).
+### Changed
+- ⌘K: the 15 "Theme: dark_signal…" rows became "Theme: system / light / dark", "Accent: <name>" and "Accent: next". The TOOLS LIGHT / DARK tile is gone (TOOLS › THEME replaces it). An explicit pick drops `?theme=` / `?scheme=` / `?accent=` from the address bar.
+
+## [Unreleased] — 2026-10-28 · Foundation round: F0 engine foundation, T0–T4 layout and themes, E1–E2 editor (branch `feat/foundation`)
+Plans: `docs/living-matter/F0-foundation.md`, `docs/LAYOUT-THEME-PLAN.md`, `docs/EDITOR-PLAN.md`. Status and checks: `docs/PROGRESS.md` › Foundation run.
+### Added
+- **TILT on phones (F0.7–F0.8):** a TILT row in the TOOLS sheet asks for motion access once (iOS) and the physics board follows the phone: tip it and the PIT and INK cards fall that way; held upright they heal back onto their loop. `src/site/light.ts` (a lazy `Source`), `src/engine/light/input.ts`; vertical swipes still scroll, and Reduce Motion never starts tilt by itself.
+- **14 themes (T4a–T4b):** 7 accents × light and dark, following the system by default. Switch with the ⌘K "Theme: …" commands or the TOOLS LIGHT / DARK row. The CSS, the cards, the widget page, the editor chrome and exports all follow it; a no-flash boot script picks the theme before first paint. OG images and goldens stay `dark_signal`.
+- **The frame (T2):** one left edge and a three-step rhythm across the home page, About and the widget page; the dock moved into the top bar; a footer band with a live count of the dots drawn.
+- **Touchable hero card (T2):** drop, paste or pick an image and it becomes a live halftone on the home card. The image stays on the device; nothing is uploaded. `src/components/hero/`.
+- **Figure legends (T2):** a short legend under the widget card and the essay figures.
+- **Editor selection (E2):** multi-select and marquee, groups, locks, align and distribute, smart guides; copy, cut, paste and duplicate across tabs and through the system clipboard (Alt-drag moves a copy); a SELECT bar on phones. Docs migrate from v1 to v2.
+### Changed
+- **Faster first load (F0.11, T4b):** first-load JS 148.14 → 120.07 kB gz. First-load code imports engine modules by path instead of the `src/engine` barrel (−24.4), and the playground store, the widget registry and the home board left first load (−4.4). `scripts/site/size.ts --check` guards the IR parser staying out.
+- **Tokens (T0) and chrome (T1):** one token block (`src/tokens.css`) with a raw-literal lint; first-load CSS 16.68 → 12.54 kB gz; dotted hairlines, one glow, four states on every control, glass on raised layers only, grouped tooltips with dot keycaps; cards have a 12 px radius.
+### Removed
+- The old MAKE screens (E1): 22 files, −2,264 lines; the one editor replaced them.
+- Round-2 cleanup: `src/components/dwitter/DotsRepl.tsx` and `RemixGraph.tsx` (unused since the editor; RemixGraph is restorable for E5) and `scripts/export-chrome.ts` (it drove the removed playground export panel).
+### Tooling
+- CI runs the CSS token lint and re-runs `scripts/site/theme.ts --check` after the build (the `dist/index.html` boot-script check). `scripts/spec.ts` and `scripts/physics.ts` use the shared golden key helpers (`scripts/lib/goldenKey.ts`). `src/spec/validate.ts` loads the IR noise pack itself. The essay's sim figure leans the hourglass through the light hub.
+
 ## [Unreleased] — 2026-10-27 · ALGORITHMS board (branch `feat/algorithms`)
 Doc: `docs/ALGORITHMS.md`.
 ### Added

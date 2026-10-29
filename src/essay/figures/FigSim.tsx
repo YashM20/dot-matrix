@@ -4,6 +4,7 @@ import { simRd, simSand } from '../../widgets/boards/sim'
 import { Card } from '../ui/Card'
 import { Cards, Controls, Range } from '../ui/kit'
 import { registerPresets } from '../../widgets/registry'
+import { lightSource } from '../../site/light'
 
 // registry cards: the sample worker can rebuild them by id, static ones share the sample cache
 registerPresets([glyphHourglass, simSand, simRd])
@@ -11,12 +12,10 @@ registerPresets([glyphHourglass, simSand, simRd])
 /** Simulation as a field: the Hourglass clock from the Lock board, falling sand, Gray-Scott reaction-diffusion. */
 export default function FigSim() {
   const [tilt, setTilt] = useState(0)
-  // tilt the phone and the stream leans (no permission prompt: browsers that gate the sensor simply send nothing)
-  useEffect(() => {
-    const on = (e: DeviceOrientationEvent) => { if (e.gamma != null) setTilt(Math.max(-1, Math.min(1, Math.round(e.gamma / 4.5) / 10))) }
-    window.addEventListener('deviceorientation', on)
-    return () => window.removeEventListener('deviceorientation', on)
-  }, [])
+  // tilt the phone and the stream leans: the light hub's `tx` (−1..1 from the rest pose, 0 inside its dead zone).
+  // The hub owns the sensor: no listener unless tilt is on (granted via TILT, or Android), none under reduced motion
+  // until asked, and it emits only on a change (≤ 15 Hz).
+  useEffect(() => lightSource.subscribe(s => setTilt(Math.round((s.data.tx ?? 0) * 10) / 10)), [])
   return (
     <>
       <Cards n={3}>

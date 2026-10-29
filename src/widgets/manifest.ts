@@ -1,5 +1,5 @@
 /**
- * Board manifest: ids, titles and columns of every board, each with a lazy `load()` of its module.
+ * Board manifest: ids, titles, columns and density of every board, each with a lazy `load()` of its module.
  * The app imports only this file up front, so each board is its own chunk, fetched when it is opened
  * (or when its tab is hovered: `prefetchBoard`). `./index.ts` is the eager registry built from the same
  * list for scripts, the playground and the worker.
@@ -22,37 +22,48 @@ export interface BoardContents {
   /** Live data (`src/data`): subscribed while the board is mounted; each card gets the keys its defaults declare. */
   sources?: readonly Source[]
 }
-export interface BoardMeta { id: string; title: string; columns: number }
+/**
+ * How a board's cards fill the screen (docs/LAYOUT-THEME-PLAN.md §3, DESIGN.md › Board grid): the site grid is
+ * `repeat(auto-fill, minmax(--card-min, 1fr))` with `--card-min` per density. `hero`: few cards that want size
+ * (showpieces, cameras, lock screens); `standard`: the default; `dense`: many small tiles (dashboards).
+ * A board without one is `standard`.
+ */
+export type BoardDensity = 'hero' | 'standard' | 'dense'
+/** `columns` is the reference sheet's column count (snapshots, the entry stagger); the site grid uses `density`. */
+export interface BoardMeta { id: string; title: string; columns: number; density?: BoardDensity }
 export interface BoardDef extends BoardMeta, BoardContents {}
 
 /** Every reference board in public/images, in the order they appear there. */
 export const boardManifest = [
-  { id: 'henry', title: 'DOT / 480 — OLED MICRO INTERFACE SYSTEM', columns: 3, load: () => import('./boards/henry').then(m => ({ items: m.henryBoard })) },
-  { id: 'deerflow12', title: 'DEERFLOW AIoT DASHBOARD — 12', columns: 3, load: () => import('./boards/deerflow12').then(m => ({ items: m.deerflow12Board })) },
-  { id: 'mosaic', title: 'DEERFLOW MOSAIC — AIoT COMMAND CENTER', columns: 3, load: () => import('./boards/mosaic').then(m => ({ items: m.mosaicBoard })) },
-  { id: 'henry3', title: 'HENRY LI — 14A / 247W', columns: 3, load: () => import('./boards/henry3').then(m => ({ items: m.henry3Board })) },
-  { id: 'metro', title: 'METRO / OXYGEN / QUIET', columns: 3, load: () => import('./boards/metro').then(m => ({ items: m.metroBoard })) },
-  { id: 'ride', title: 'RIDE / HENRY / SYSTEM', columns: 3, load: () => import('./boards/ride').then(m => ({ items: m.rideBoard })) },
-  { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, load: () => import('./boards/audio').then(m => ({ items: m.audioBoard })) },
-  { id: 'departures', title: 'DEPARTURES — LIVE TRANSIT BOARD', columns: 3, load: () => import('./boards/departures').then(m => ({ items: m.departuresBoard })) },
-  { id: 'instrument', title: 'INSTRUMENT — DOT/480 DEVICE', columns: 3, load: () => import('./boards/instrument').then(m => ({ items: m.instrumentBoard, shared: m.instrumentShared })) },
-  { id: 'ir', title: 'FIELD IR — DOT PROGRAMS', columns: 3, load: () => import('./boards/ir').then(m => ({ items: m.irBoard })) },
-  { id: 'cinema', title: 'CINEMA — THE AFTERLIGHT CYCLE', columns: 3, load: () => import('./boards/cinema').then(m => ({ items: m.cinemaBoard })) },
-  { id: 'light', title: 'LIGHT — RASTER LIGHT STACK', columns: 3, load: () => import('./boards/light').then(m => ({ items: m.lightBoard })) },
-  { id: 'levels', title: 'LEVELS — HIVE, NINE WORLDS', columns: 3, load: () => import('./boards/levels').then(m => ({ items: m.levelsBoard })) },
-  { id: 'heartbeat', title: 'HEARTBEAT — AGENT PRESENCE', columns: 3, load: () => import('./boards/heartbeat').then(m => ({ items: m.heartbeatBoard })) },
-  { id: 'sim', title: 'SIM — LIVING FIELDS', columns: 3, load: () => import('./boards/sim').then(m => ({ items: m.simBoard })) },
-  { id: 'lock', title: 'LOCK — LOCK SCREEN EXPERIENCES', columns: 2, load: () => import('./boards/glyph').then(m => ({ items: m.lockBoard })) },
-  { id: 'live', title: 'LIVE — WEATHER, NOW PLAYING, CONTRIBUTIONS', columns: 3, load: () => import('./boards/live').then(m => ({ items: m.liveBoard, sources: m.liveSources })) },
-  { id: 'mirror', title: 'MIRROR — LIVE HALFTONE', columns: 3, load: () => import('./boards/mirror').then(m => ({ items: m.mirrorBoard })) },
-  { id: 'gpu', title: 'GPU — HALF A MILLION DOTS', columns: 2, load: () => import('./boards/gpu').then(m => ({ items: m.gpuBoard })) },
-  { id: 'surfaces', title: 'SURFACES — ONE FIELD, FIVE SURFACES', columns: 5, load: () => import('./boards/surfaces').then(m => ({ items: m.surfacesBoard, sources: m.surfacesSources })) },
-  { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, load: () => import('./boards/components').then(m => ({ items: m.componentsBoard })) },
-  { id: 'type', title: 'TYPE — VARIABLE DOT TYPE', columns: 3, load: () => import('./boards/type').then(m => ({ items: m.typeBoard })) },
-  { id: 'physics', title: 'PHYSICS — DOTS YOU CAN TOUCH', columns: 3, load: () => import('./boards/physics').then(m => ({ items: m.physicsBoard, sources: m.physicsSources })) },
-  { id: 'scope', title: 'SCOPE — THE INSTRUMENT, SEEN', columns: 3, load: () => import('./boards/scope').then(m => ({ items: m.scopeBoard, shared: m.scopeShared })) },
-  { id: 'heal', title: 'HEAL — THE MIRROR THAT HEALS', columns: 3, load: () => import('./boards/heal').then(m => ({ items: m.healBoard })) },
-  { id: 'algorithms', title: 'ALGORITHMS — STIPPLE, ATTRACT, COLLAPSE, AGGREGATE', columns: 2, load: () => import('./boards/algorithms').then(m => ({ items: m.algorithmsBoard })) },
+  { id: 'henry', title: 'DOT / 480 — OLED MICRO INTERFACE SYSTEM', columns: 3, density: 'standard', load: () => import('./boards/henry').then(m => ({ items: m.henryBoard })) },
+  { id: 'deerflow12', title: 'DEERFLOW AIoT DASHBOARD — 12', columns: 3, density: 'dense', load: () => import('./boards/deerflow12').then(m => ({ items: m.deerflow12Board })) },
+  { id: 'mosaic', title: 'DEERFLOW MOSAIC — AIoT COMMAND CENTER', columns: 3, density: 'standard', load: () => import('./boards/mosaic').then(m => ({ items: m.mosaicBoard })) },
+  { id: 'henry3', title: 'HENRY LI — 14A / 247W', columns: 3, density: 'standard', load: () => import('./boards/henry3').then(m => ({ items: m.henry3Board })) },
+  { id: 'metro', title: 'METRO / OXYGEN / QUIET', columns: 3, density: 'standard', load: () => import('./boards/metro').then(m => ({ items: m.metroBoard })) },
+  { id: 'ride', title: 'RIDE / HENRY / SYSTEM', columns: 3, density: 'standard', load: () => import('./boards/ride').then(m => ({ items: m.rideBoard })) },
+  { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, density: 'standard', load: () => import('./boards/audio').then(m => ({ items: m.audioBoard })) },
+  { id: 'departures', title: 'DEPARTURES — LIVE TRANSIT BOARD', columns: 3, density: 'dense', load: () => import('./boards/departures').then(m => ({ items: m.departuresBoard })) },
+  { id: 'instrument', title: 'INSTRUMENT — DOT/480 DEVICE', columns: 3, density: 'standard', load: () => import('./boards/instrument').then(m => ({ items: m.instrumentBoard, shared: m.instrumentShared })) },
+  { id: 'ir', title: 'FIELD IR — DOT PROGRAMS', columns: 3, density: 'hero', load: () => import('./boards/ir').then(m => ({ items: m.irBoard })) },
+  { id: 'cinema', title: 'CINEMA — THE AFTERLIGHT CYCLE', columns: 3, density: 'standard', load: () => import('./boards/cinema').then(m => ({ items: m.cinemaBoard })) },
+  { id: 'light', title: 'LIGHT — RASTER LIGHT STACK', columns: 3, density: 'standard', load: () => import('./boards/light').then(m => ({ items: m.lightBoard })) },
+  { id: 'levels', title: 'LEVELS — HIVE, NINE WORLDS', columns: 3, density: 'standard', load: () => import('./boards/levels').then(m => ({ items: m.levelsBoard })) },
+  { id: 'heartbeat', title: 'HEARTBEAT — AGENT PRESENCE', columns: 3, density: 'standard', load: () => import('./boards/heartbeat').then(m => ({ items: m.heartbeatBoard })) },
+  { id: 'sim', title: 'SIM — LIVING FIELDS', columns: 3, density: 'hero', load: () => import('./boards/sim').then(m => ({ items: m.simBoard })) },
+  { id: 'lock', title: 'LOCK — LOCK SCREEN EXPERIENCES', columns: 2, density: 'hero', load: () => import('./boards/glyph').then(m => ({ items: m.lockBoard })) },
+  { id: 'live', title: 'LIVE — WEATHER, NOW PLAYING, CONTRIBUTIONS', columns: 3, density: 'hero', load: () => import('./boards/live').then(m => ({ items: m.liveBoard, sources: m.liveSources })) },
+  { id: 'mirror', title: 'MIRROR — LIVE HALFTONE', columns: 3, density: 'hero', load: () => import('./boards/mirror').then(m => ({ items: m.mirrorBoard })) },
+  { id: 'gpu', title: 'GPU — HALF A MILLION DOTS', columns: 2, density: 'hero', load: () => import('./boards/gpu').then(m => ({ items: m.gpuBoard })) },
+  { id: 'surfaces', title: 'SURFACES — ONE FIELD, FIVE SURFACES', columns: 5, density: 'standard', load: () => import('./boards/surfaces').then(m => ({ items: m.surfacesBoard, sources: m.surfacesSources })) },
+  { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, density: 'standard', load: () => import('./boards/components').then(m => ({ items: m.componentsBoard })) },
+  { id: 'type', title: 'TYPE — VARIABLE DOT TYPE', columns: 3, density: 'standard', load: () => import('./boards/type').then(m => ({ items: m.typeBoard })) },
+  { id: 'physics', title: 'PHYSICS — DOTS YOU CAN TOUCH', columns: 3, density: 'standard', load: () => import('./boards/physics').then(m => ({ items: m.physicsBoard, sources: m.physicsSources })) },
+  { id: 'scope', title: 'SCOPE — THE INSTRUMENT, SEEN', columns: 3, density: 'hero', load: () => import('./boards/scope').then(m => ({ items: m.scopeBoard, shared: m.scopeShared })) },
+  { id: 'heal', title: 'HEAL — THE MIRROR THAT HEALS', columns: 3, density: 'hero', load: () => import('./boards/heal').then(m => ({ items: m.healBoard })) },
+  { id: 'algorithms', title: 'ALGORITHMS — STIPPLE, ATTRACT, COLLAPSE, AGGREGATE', columns: 2, density: 'hero', load: () => import('./boards/algorithms').then(m => ({ items: m.algorithmsBoard })) },
+  { id: 'materials', title: 'MATERIALS — WOVEN, SPUN, CARVED, POURED', columns: 3, density: 'standard', load: () => import('./boards/materials').then(m => ({ items: m.materialsBoard, sources: m.materialsSources })) },
+  { id: 'pond', title: 'POND — LIVING SCENES IN GLYPH TILES', columns: 3, density: 'standard', load: () => import('./boards/pond/index').then(m => ({ items: m.pondBoard })) },
+  { id: 'squares', title: 'SQUARES — SPACED AND JOINED', columns: 2, density: 'hero', load: () => import('./boards/squares').then(m => ({ items: m.squaresBoard })) },
 ] as const satisfies readonly (BoardMeta & { load: () => Promise<BoardContents> })[]
 
 export type BoardId = typeof boardManifest[number]['id']
@@ -79,8 +90,8 @@ export const boardGroups = [
   { id: 'start', label: 'START HERE', boards: ['henry', 'mosaic', 'physics', 'heal', 'levels', 'instrument', 'cinema'] },
   { id: 'ui', label: 'INTERFACES', boards: ['henry', 'deerflow12', 'mosaic', 'henry3', 'metro', 'ride', 'audio', 'lock', 'components', 'surfaces'] },
   { id: 'data', label: 'DATA', boards: ['live', 'departures', 'heartbeat'] },
-  { id: 'play', label: 'PLAY', boards: ['levels', 'physics', 'instrument', 'scope', 'mirror', 'heal'] },
-  { id: 'engine', label: 'ENGINE', boards: ['ir', 'sim', 'algorithms', 'light', 'gpu', 'type', 'cinema'] },
+  { id: 'play', label: 'PLAY', boards: ['levels', 'physics', 'instrument', 'scope', 'mirror', 'heal', 'pond'] },
+  { id: 'engine', label: 'ENGINE', boards: ['ir', 'sim', 'algorithms', 'squares', 'light', 'materials', 'gpu', 'type', 'cinema'] },
 ] as const satisfies readonly { id: string; label: string; boards: readonly BoardId[] }[]
 export type BoardGroupId = typeof boardGroups[number]['id']
 /** The group a board lives in (START HERE is a tour, not a home). */
