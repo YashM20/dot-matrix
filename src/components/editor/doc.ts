@@ -426,13 +426,20 @@ export function boundsOf(d: EditorDoc, ids: string[] = []): [number, number, num
 }
 
 // ── share (CODE): an IR layer as a `?make=code&p=` program, when its frame and settings fit a share link ──
-export function shareable(f: EditorFrame, l: StudioLayer): SharedProgram | string {
+/**
+ * The program link of a code layer, or why it has none. Its parent (E5, remix lineage) is the program the
+ * frame was made from (`source: 'program:<hash>'`) when the code changed since; unchanged, `known` gives that
+ * program's own parent (the gallery's record), so the same program makes the same link.
+ */
+export function shareable(f: EditorFrame, l: StudioLayer, known?: (hash: string) => string | undefined): SharedProgram | string {
   if (l.kind !== 'ir') return 'only a code (Field IR) layer has a share link'
   const g = (Object.keys(SHARE_GRIDS) as ShareGrid[]).find(k => SHARE_GRIDS[k].cols === f.card.grid.cols && SHARE_GRIDS[k].rows === f.card.grid.rows)
   if (!g) return 'share links need a tile 144×144, wide 216×108 or tall 108×162 frame'
   if (!(SHARE_LATTICES as readonly number[]).includes(l.lattice)) return `share links use lattice ${SHARE_LATTICES.join(', ')}`
   const tone = (SHARE_TONES as readonly string[]).includes(l.tone) ? l.tone as ShareTone : 'auto'
-  return { src: l.src, grid: g, lattice: l.lattice, tone }
+  const p = { src: l.src, grid: g, lattice: l.lattice, tone }, from = f.source?.startsWith('program:') ? f.source.slice(8) : undefined
+  const parent = !from ? undefined : from !== programHash(p) ? from : known?.(from)
+  return parent ? { ...p, parent } : p
 }
 
 // ── validation, JSON, storage ──────────────────────────────────────────────

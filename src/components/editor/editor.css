@@ -510,3 +510,39 @@ html.ed-scroll-lock .pal-dock { display: none }
 }
 .ed-caret { position: absolute; width: 2px; margin-left: -1px; background: var(--red); pointer-events: none }
 .ed-textsel { position: absolute; background: color-mix(in srgb, var(--red) 22%, transparent); box-shadow: 0 0 0 1px var(--ed-sel); pointer-events: none }
+
+/* ── E5: links, remix lineage, EXPORT · DEVICES and QUALITY ── */
+.ed-link-url { width: 100%; min-width: 0; min-height: 30px; padding: 0 var(--space-2); background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-ctl); color: var(--label); font: 500 var(--fs-label-12) var(--mono); text-overflow: ellipsis }
+.ed-link-url:focus { border-color: var(--red); outline: none }
+.ed-lineage { margin: 0; color: var(--mute); font: 500 var(--fs-label-12)/1.6 var(--mono); overflow-wrap: anywhere }
+.ed-lineage b { color: var(--label); font-weight: 600 }
+.ed-lineage--list { padding-left: var(--space-4); display: grid; gap: var(--space-1) }
+.ed-graph { border: 1px solid var(--line); border-radius: var(--radius-ctl); overflow: hidden; background: var(--surface) }
+.ed-graph canvas { display: block; width: 100%; height: auto; cursor: pointer }
+.ed-remixes small { color: var(--mute); margin-left: var(--space-1) }
+.ed-remixes button[aria-current] { color: var(--value); background: var(--raised) }
+.ed-devices-wrap, .ed-score-wrap { display: grid; gap: var(--space-2); min-width: 0 }
+.ed-devices { display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr)); gap: var(--space-2); margin: 0 }
+.ed-devices figure { margin: 0; display: grid; gap: var(--space-1); align-content: start; min-width: 0 }
+.ed-devices canvas { display: block; width: 100%; max-height: 132px; object-fit: contain; image-rendering: pixelated; border-radius: var(--radius-sm); background: var(--raised) }
+.ed-devices figcaption { color: var(--label); font: 600 var(--fs-label-12)/1.35 var(--mono); letter-spacing: .08em; display: grid }
+.ed-devices figcaption small { color: var(--mute); font-weight: 500; letter-spacing: .04em }
+.ed-score-sum { margin: 0; color: var(--label); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .12em }
+.ed-score-sum small { color: var(--mute); margin-left: var(--space-2) }
+.ed-score { list-style: none; margin: 0; padding: 0; display: grid; gap: var(--space-1) }
+.ed-score li { display: grid; grid-template-columns: 44px 1fr; gap: 0 var(--space-2); color: var(--label); font: 600 var(--fs-label-12)/1.4 var(--mono); letter-spacing: .06em }
+.ed-score li small { grid-column: 2; color: var(--mute); font-weight: 500; letter-spacing: .02em }
+.ed-score li b { color: var(--value) }
+.ed-score li.fail b { color: var(--red-text) }
+.ed-score li.info b { color: var(--mute) }
+.ed-metrics { display: grid; grid-template-columns: auto 1fr; gap: var(--space-1) var(--space-3); margin: 0; font: 500 var(--fs-label-12) var(--mono) }
+.ed-metrics dt { color: var(--mute); letter-spacing: .08em }
+.ed-metrics dd { margin: 0; color: var(--value); font-variant-numeric: tabular-nums }
+.ed-hist { display: flex; align-items: flex-end; gap: 2px; height: 22px }
+.ed-hist i { flex: 1; background: var(--dot-mid); border-radius: 1px }
+.ed-bar { display: grid; gap: var(--space-2); min-width: 0; padding-top: var(--space-2) }
+.ed-bar-scroll { overflow: hidden; border-radius: var(--radius-ctl); border: 1px solid var(--line) }
+.ed-bar canvas { display: block; width: 100%; height: auto }
+.ed-bar--big .ed-bar-scroll { overflow: auto; max-height: 60vh }
+.ed-bar--big canvas { width: auto; max-width: none }
+.is-phone .ed-link-url { min-height: 44px }

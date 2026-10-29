@@ -2,11 +2,15 @@
  * Editor commands on the selection (E2), shared by the keyboard, the inspector and the phone's selection
  * bar: duplicate, delete, copy / cut / paste, group / ungroup, lock, select all, align / distribute,
  * nudge, order, hide. Each is one `edit`, so one undo step. React-free (the Node suite runs them).
+ * E5: the links SHARE and EXPORT · LINK make (a program, the selected frames, the document).
  */
-import { copyLayers, duplicateFrames, editFrame, editLayer, frameById, groupLayers, groupOf, lockFrames, lockLayers, movable, nudgeLayer, removeFrames, removeLayers, shiftLayers, ungroup, type EditorDoc } from './doc'
+import { copyLayers, duplicateFrames, editFrame, editLayer, frameById, groupLayers, groupOf, layerOf, lockFrames, lockLayers, movable, nudgeLayer, removeFrames, removeLayers, shareable, shiftLayers, ungroup, type EditorDoc } from './doc'
 import { asClip, CLIP_KEY, clipFromJSON, clipOf, clipToJSON, pasteClip, type Clip } from './clip'
 import { arrangeFrames, arrangeLayers, framesSel, layersSel, selCount, selectAll, selFrames, selGroup, selLayers, type Align } from './select'
 import { useEditor } from './store'
+import { encodeShare, programHash, shareUrl, type SharedProgram } from '../../lib/share'
+import { loadGallery, recordProgram } from '../dwitter/gallery'
+import { encodeLink, linkPayload, linkUrl, loadLinks, recordLink, type LinkKind } from './link'
 
 const st = () => useEditor.getState()
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`
@@ -127,4 +131,43 @@ export function selectParent(d: EditorDoc = st().h.present) {
   if (g && !selGroup(d, sel)) s.select(layersSel(f.id, [sel.layer, ...g.layers.filter(id => id !== sel.layer)]))
   else s.select({ frame: f.id })
   return true
+}
+
+// ── links (E5) ─────────────────────────────────────────────────────────────
+export interface MadeLink { url: string; kind: LinkKind | 'program'; id: string; parent?: string; chars: number; deflated: boolean }
+const made = (url: string, packed: string, kind: MadeLink['kind'], id: string, parent?: string): MadeLink => {
+  ;(globalThis as { __editorLink?: string }).__editorLink = url
+  return { url, kind, id, ...(parent && { parent }), chars: url.length, deflated: packed[0] === 'z' }
+}
+/** The program's parent as this browser's gallery knows it (a program shared again unchanged keeps its parent). */
+export const knownParent = (hash: string) => loadGallery().find(e => e.id === hash)?.parent
+/** A program link; the program goes into the remix gallery (with its parent), so CODE draws its lineage. */
+export async function programLink(p: SharedProgram): Promise<MadeLink> {
+  const packed = await encodeShare(p)
+  recordProgram(loadGallery(), p)
+  return made(shareUrl(packed), packed, 'program', programHash(p), p.parent)
+}
+/** A link of frames (one: a frame link; none: the whole document). Throws with the reason (too big, empty). */
+export async function framesLink(ids: string[]): Promise<MadeLink> {
+  const p = linkPayload(st().h.present, ids, loadLinks())
+  if (typeof p === 'string') throw new Error(p)
+  const packed = await encodeLink(p)
+  recordLink(p)
+  return made(linkUrl(packed), packed, p.kind, p.id, p.parent)
+}
+/**
+ * SHARE: a selected code layer that fits a program link → that; else the selected frames (a frame link for
+ * one) → a frame link; nothing selected → the document. Throws with the reason a link could not be made.
+ */
+export async function shareSel(): Promise<MadeLink> {
+  const s = st(), d = s.h.present, sel = s.sel, f = frameById(d, sel.frame), l = layerOf(d, sel)
+  if (f && l && l.kind === 'ir' && selLayers(sel).length === 1) {
+    const p = shareable(f, l, knownParent)
+    if (typeof p !== 'string') return programLink(p)
+  }
+  return framesLink(f ? (sel.layer ? [f.id] : selFrames(sel)) : [])
+}
+/** Copy text to the system clipboard; false when the page may not (the caller shows the link instead). */
+export async function copyText(text: string): Promise<boolean> {
+  try { await navigator.clipboard.writeText(text); return true } catch { return false }
 }

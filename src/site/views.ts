@@ -1,7 +1,8 @@
 /**
  * The site's three views and MAKE's four modes, and their URLs (docs/UX-PLAN.md §4.1). Pure and DOM-free,
  * so `scripts/verify.ts` checks every old link in Node. Canonical: EXPLORE is the board path (`/light/`; the
- * first board keeps `/`), MAKE is `?make` (the editor; `=compose|code|draw` open it on that tool, a DOTS program keeps `&p=`), ABOUT is
+ * first board keeps `/`), MAKE is `?make` (the editor; `=compose|code|draw` open it on that tool, a DOTS program keeps `&p=`, a frame or document link
+ * `&d=`), ABOUT is
  * `?about`. Old links resolve through `TAB_ALIASES`, `?board=`, `boardAliases` and a bare `?p=`.
  */
 import { boardIds, resolveBoardId } from '../widgets/manifest'
@@ -58,6 +59,7 @@ export function urlForView(v: Pick<ViewState, 'view' | 'mode' | 'board'>, search
   const q = new URLSearchParams(search)
   for (const k of ['tab', 'board', 'make', 'about', 'card']) q.delete(k)
   if (v.view !== 'MAKE' || v.mode !== 'CODE') q.delete('p')
+  if (v.view !== 'MAKE') q.delete('d') // a frame / document link (`?make&d=`, the editor's E5) is MAKE's alone
   // the editor's default way in (TUNE) is plain `?make`
   const head = v.view === 'ABOUT' ? 'about' : v.view === 'MAKE' ? (v.mode === 'TUNE' ? 'make' : `make=${v.mode.toLowerCase()}`) : ''
   const query = [head, q.toString()].filter(Boolean).join('&')

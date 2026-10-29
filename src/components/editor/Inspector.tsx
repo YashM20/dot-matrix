@@ -3,7 +3,7 @@
  * the selected layer's properties), ANIMATE (timeline tracks, states — COMPOSE's timeline), CODE (the
  * Field IR editor with its share link — what CODE did) and EXPORT (every TUNE / COMPOSE export).
  */
-import { useEffect, useRef, useState } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import { IR_LIMITS } from '../../engine/ir'
 import { ease, masks, type EaseName, type MaskName } from '../../engine/motion'
 import { squircleExponent } from '../../engine/renderer/shapePath'
@@ -19,13 +19,17 @@ import { BLENDS, LATTICES, paintCells, SITE_SIZES, TONES, type LayerTone, type P
 import { trackSpans, type Track } from '../studio/playback'
 import { specBounds } from './direct'
 import { cellsFromMatrix, duplicateFrame, duplicateLayer, editCard, editFrame, editLayer, encodeCells, frameById, groupOf, layerOf, movable, moveLayer, newIRLayer, removeFrame, removeLayer, renameGroup, seedDoc, shareable, THEMES, topDown, type EditorFrame, type Sel, type ThemeName } from './doc'
-import { arrangeSel, copyEverywhere, deleteSel, duplicateSel, groupSel, lockSel, paste, ungroupSel } from './actions'
+import { arrangeSel, copyEverywhere, copyText, deleteSel, duplicateSel, framesLink, groupSel, knownParent, lockSel, paste, programLink, ungroupSel } from './actions'
+import { LinkLineage, RemixGraph } from './Lineage'
 import { exporters, recordFrame } from './exporters'
-import { ALIGNS, selCount, selGroup, selIds, type Align } from './select'
+import { ALIGNS, selCount, selFrames, selGroup, selIds, type Align } from './select'
 import { compiledOf } from './render'
 import { useEditor, type RightTab } from './store'
 import { MiniDots, Num, Pick, Section, Seg, Slider, Text, useCurve, useMask } from './ui'
 
+// EXPORT's review folds load with the fold, not with the editor (device simulators, the fidelity scorecard)
+const Devices = lazy(() => import('./Review').then(m => ({ default: m.Devices })))
+const Quality = lazy(() => import('./Review').then(m => ({ default: m.Quality })))
 const TABS: { id: RightTab; label: string }[] = [{ id: 'design', label: 'DESIGN' }, { id: 'animate', label: 'ANIMATE' }, { id: 'code', label: 'CODE' }, { id: 'export', label: 'EXPORT' }]
 const GRIDS = { 'tile 144×144': SHARE_GRIDS.square, 'wide 216×108': SHARE_GRIDS.wide, 'tall 108×162': SHARE_GRIDS.tall, 'card 80×74': { ...CARD, pitch: 4 } } as const
 type GridName = keyof typeof GRIDS
@@ -374,7 +378,7 @@ function Code() {
   const { f, l } = useTarget(), { setRight, select } = useEditor.getState()
   if (f && l && (l.kind === 'ir' || l.kind === 'sites')) return <CodeLayer key={l.id} f={f} l={l} />
   if (!f) return <><p className="ed-hint">Select a code layer, or tap a frame with the code tool (<b>C</b>) to add one. A new code frame starts from an example.</p>
-    <div className="ed-row-btns"><button type="button" onClick={() => { useEditor.getState().insertProgram(EXAMPLES[0]) }}>NEW CODE FRAME</button></div></>
+    <div className="ed-row-btns"><button type="button" onClick={() => { useEditor.getState().insertProgram(EXAMPLES[0]) }}>NEW CODE FRAME</button></div><RemixGraph /></>
   const code = topDown(f.card).filter(x => x.kind === 'ir' || x.kind === 'sites')
   return <>
     <Section title="CODE LAYERS" aside={f.card.name}>
@@ -382,6 +386,8 @@ function Code() {
       <div className="ed-row-btns"><button type="button" onClick={() => { useEditor.getState().addLayerTo(f.id, newIRLayer(f.card.layers.length + 1)); setRight('code') }}>+ CODE LAYER</button></div>
     </Section>
     <SpecPeek f={f} />
+    <LinkLineage f={f} />
+    <RemixGraph current={f.source?.startsWith('program:') ? f.source.slice(8) : undefined} />
   </>
 }
 function SpecPeek({ f }: { f: EditorFrame }) {
@@ -392,20 +398,20 @@ function SpecPeek({ f }: { f: EditorFrame }) {
 function CodeLayer({ f, l }: { f: EditorFrame; l: IRLayer | SitesLayer }) {
   const { layer, card } = useTarget()
   const compiled = compiledOf(f.card), err = compiled.errors.get(l.id)
-  const [link, setLink] = useState(''), [copied, setCopied] = useState(false)
-  const share = shareable(f, l)
+  const [link, setLink] = useState(''), [copied, setCopied] = useState(false), [version, setVersion] = useState(0)
+  const share = shareable(f, l, knownParent)
   useEffect(() => {
     if (typeof share === 'string' || err) { setLink(''); return }
     let gone = false
     const h = setTimeout(() => { encodeShare(share).then(enc => { if (!gone) setLink(enc) }, () => { if (!gone) setLink('') }) }, 250)
     return () => { gone = true; clearTimeout(h) }
-  }, [typeof share === 'string' ? share : `${share.src}|${share.grid}|${share.lattice}|${share.tone}`, !!err]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [typeof share === 'string' ? share : `${share.src}|${share.grid}|${share.lattice}|${share.tone}|${share.parent}`, !!err, version]) // eslint-disable-line react-hooks/exhaustive-deps
   const copy = async () => {
-    if (!link) return
-    const url = shareUrl(link)
-    try { await navigator.clipboard.writeText(url) } catch { /* clipboard blocked: the link is shown below */ }
-    ;(window as { __editorLink?: string }).__editorLink = url
-    setCopied(true); setTimeout(() => setCopied(false), 1400)
+    if (!link || typeof share === 'string') return
+    const m = await programLink(share) // records it in the remix gallery, under its parent
+    useEditor.getState().setLink(m)
+    await copyText(m.url) // clipboard closed: the link is shown below
+    setCopied(true); setVersion(v => v + 1); setTimeout(() => setCopied(false), 1400)
   }
   const keys = [...new Set(compiled.keys)].filter(k => l.src.includes(`data.${k}`))
   const near = l.src.length > IR_LIMITS.source * .9
@@ -422,11 +428,13 @@ function CodeLayer({ f, l }: { f: EditorFrame; l: IRLayer | SitesLayer }) {
           <button type="button" className="ed-primary" onClick={copy} disabled={!link}>{copied ? 'COPIED' : 'COPY LINK'}</button>
           <output className="ed-url" title={link ? shareUrl(link) : ''}>{link ? <>LINK <b>{shareUrl(link).length}</b> CHARS · {link[0] === 'z' ? 'DEFLATE' : 'PLAIN'}</> : '—'}</output>
         </div>
-        <p className="ed-hint">The link opens this program in the editor on any device; nothing is uploaded.</p></>}
+        {share.parent && <p className="ed-hint">Remix of <b>#{share.parent}</b>: the link records it.</p>}
+        <p className="ed-hint">The link opens this program in the editor on any device; nothing is uploaded. The whole frame (style, data, every layer) has a link in EXPORT · LINK.</p></>}
     </Section>
     {keys.length > 0 && <Section title="DATA" aside="data.* sliders">
       {keys.map(k => <Slider key={k} label={`data.${k}`} value={f.card.data[k] ?? 0} min={0} max={1} step={.01} onChange={v => card(c => ({ ...c, data: { ...c.data, [k]: v } }), `data:${k}`)} />)}
     </Section>}
+    <RemixGraph current={typeof share === 'string' ? undefined : programHash(share)} version={version} />
   </>
 }
 
@@ -437,7 +445,7 @@ function Export() {
   const [format, setFormat] = useState<ClipFormat>('apng'), [fps, setFps] = useState(24), [scale, setScale] = useState(1)
   const [progress, setProgress] = useState<number | null>(null), [status, setStatus] = useState('')
   const abort = useRef<AbortController | null>(null)
-  if (!f) return <p className="ed-hint">Select a frame (or a layer in it) to export it as PNG, SVG, HTML, a clip of its timeline, a plotter SVG or a card spec.</p>
+  if (!f) return <><LinkPanel /><p className="ed-hint">Select a frame (or a layer in it) to export it as PNG, SVG, HTML, a clip of its timeline, a plotter SVG, a card spec, every device, or to check its quality.</p></>
   const T = Math.min(t, f.card.timeline.length)
   const run = async (fn: () => unknown) => { try { const r = await fn(); setStatus(typeof r === 'string' ? r : 'saved') } catch (e) { setStatus(`failed: ${(e as Error).message}`) } }
   const record = async () => {
@@ -472,6 +480,53 @@ function Export() {
       </div>
     </More>
     {status && <p className="ed-hint ed-status" role="status">{status}</p>}
+    <LinkPanel />
+    <More id="editor-export-devices" label="Devices" tech="toDevice · every profile"><WhenOpen>{() => <Devices f={f} t={T} />}</WhenOpen></More>
+    <More id="editor-export-quality" label="Quality" tech="scorecard · bar sheet"><WhenOpen>{() => <Quality f={f} t={T} />}</WhenOpen></More>
   </>
+}
+
+/** Children only while the enclosing fold is open (a `More` keeps its children mounted), behind a lazy chunk. */
+function WhenOpen({ children }: { children: () => ReactNode }) {
+  const ref = useRef<HTMLSpanElement>(null), [open, setOpen] = useState(false)
+  useEffect(() => {
+    const d = ref.current?.closest('details')
+    if (!d) return
+    const on = () => setOpen(d.open)
+    on(); d.addEventListener('toggle', on)
+    return () => d.removeEventListener('toggle', on)
+  }, [])
+  return <><span ref={ref} hidden />{open && <Suspense fallback={<p className="ed-hint">Loading…</p>}>{children()}</Suspense>}</>
+}
+
+const KIND_LABEL = { program: 'PROGRAM', frame: 'FRAME', doc: 'FRAMES' } as const
+/**
+ * EXPORT · LINK (E5): a link of the selected frame (or frames), or of the whole document: deflated JSON in
+ * `?make&d=…`, copied when the page may and shown to copy by hand. Too big for a URL: the reason, and the file.
+ */
+function LinkPanel() {
+  const doc = useEditor(s => s.h.present), sel = useEditor(s => s.sel), last = useEditor(s => s.link)
+  const [busy, setBusy] = useState(false), [msg, setMsg] = useState('')
+  const ids = sel.frame ? (sel.layer ? [sel.frame] : selFrames(sel)) : []
+  const make = async (which: string[]) => {
+    setBusy(true); setMsg('')
+    try {
+      const m = await framesLink(which)
+      useEditor.getState().setLink(m)
+      setMsg(await copyText(m.url) ? 'COPIED' : 'READY: copy it below')
+    } catch (e) { setMsg(`no link: ${(e as Error).message}. DOWNLOAD JSON (DESIGN with nothing selected) keeps it all.`) } finally { setBusy(false) }
+  }
+  return <Section title="LINK" aside="?make&d=… · nothing uploaded">
+    <div className="ed-row-btns">
+      {ids.length > 0 && <button type="button" disabled={busy} onClick={() => make(ids)}>{ids.length === 1 ? 'FRAME LINK' : `LINK ${ids.length} FRAMES`}</button>}
+      <button type="button" disabled={busy || !doc.frames.length} onClick={() => make([])}>DOCUMENT LINK</button>
+    </div>
+    {msg && <p className={msg.startsWith('no link') ? 'ed-bad' : 'ed-hint'} role="status">{msg}</p>}
+    {last && <>
+      <input className="ed-link-url" readOnly value={last.url} aria-label="The last link made" onFocus={e => e.currentTarget.select()} />
+      <output className="ed-url">{KIND_LABEL[last.kind]} LINK <b>{last.chars}</b> CHARS · {last.deflated ? 'DEFLATE' : 'PLAIN'} · #{last.id}{last.parent ? ` · REMIX OF #${last.parent}` : ''}</output>
+    </>}
+    <p className="ed-hint">A frame link carries the whole card (style, data, every layer, groups, locks); a document link every frame. Opening one adds its frames to that canvas, once: a reload or Back re-selects them.</p>
+  </Section>
 }
 export type { Sel }
