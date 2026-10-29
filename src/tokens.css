@@ -34,9 +34,9 @@
   --value: #f2f3f5;     /* {colors.value}: primary text */
   --label: #c7cbd1;     /* {colors.label}: labels, secondary text */
   --dot-idle: #8a8f98;  /* {colors.dotIdle}: native controls, quiet text */
-  --mute: #6e7278;      /* {colors.mute}: meta */
+  --mute: #81858b;      /* {colors.mute}: meta (≥ 4.5:1 on every surface) */
   --dot-mid: #5b5f66;   /* {colors.dotMid} */
-  --dim: #4a4e54;       /* the dimmest text: units and sub-labels in the editor */
+  --dim: #65696f;       /* not text: quiet glyphs and off states (grip, lock, hidden eye), ≥ 3:1 */
   --dot-faint: #2e3033; /* {colors.dotFaint} */
 
   /* ── spacing: the 4 px dot pitch ── */
@@ -92,11 +92,13 @@
   /* ── type: named by role and size (rem, root 16 px); family is --mono or --sans ── */
   --mono: ui-monospace, Consolas, monospace;
   --sans: 'Oxanium Variable', system-ui, 'Segoe UI', Roboto, sans-serif;
-  --fs-tag-8: .5rem;          /* in-card hints, tiny badges */
-  --fs-tag-9: .5625rem;       /* card labels, keycaps, chips */
-  --fs-label-10: .625rem;     /* chrome labels, tabs, buttons */
-  --fs-label-11: .6875rem;    /* editor UI, menus */
-  --fs-label-12: .75rem;      /* meta: the plan's one label size */
+  /* T6: 12 px is the chrome minimum. The four sizes under it are for text inside a card (its own small print), keycaps
+     and glyph marks (▾, the grip) and on-canvas badges only; scripts/site/layout.ts gates chrome text under 12 px < 10% */
+  --fs-tag-8: .5rem;          /* in-card hints */
+  --fs-tag-9: .5625rem;       /* card labels, keycaps, glyph marks, on-canvas badges */
+  --fs-label-10: .625rem;     /* in-card header */
+  --fs-label-11: .6875rem;    /* in-card action row */
+  --fs-label-12: .75rem;      /* chrome: labels, tabs, buttons, menus, meta (uppercase mono, +.06em) */
   --fs-copy-14: .875rem;      /* short prose, intro lines */
   --fs-copy-16: 1rem;         /* body copy; phone form fields (no iOS zoom) */
   --fs-lead-18: 1.125rem;     /* essay prose, lead paragraphs */
@@ -149,5 +151,21 @@
   :root, [data-scheme] {
     --glass: color-mix(in srgb, var(--raised) 92%, transparent);
     --glass-blur: blur(8px)
+  }
+}
+
+/*
+  prefers-contrast: more (T6; DESIGN.md › Theme › Contrast). The colour roles are raised per theme in themes.css (text
+  to 7:1, the glyph grey to 4.5:1, the hairline alpha doubled); here the chrome materials follow: stronger dotted
+  rules and hover outlines, firmer washes, and opaque raised layers instead of glass. Last in the file, so it wins.
+*/
+@media (prefers-contrast: more) {
+  :root, [data-scheme] {
+    --line-dot: color-mix(in srgb, var(--tint) 44%, transparent);
+    --line-hover: color-mix(in srgb, var(--tint) 50%, transparent);
+    --wash-hover: color-mix(in srgb, var(--tint) 9%, transparent);
+    --wash-press: color-mix(in srgb, var(--tint) 15%, transparent);
+    --glass: var(--raised);
+    --glass-blur: none
   }
 }

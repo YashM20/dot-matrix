@@ -9,7 +9,7 @@
  * TOOLS sheet and the palette import it.
  */
 import { resolveScheme, getTheme, setTheme, type ThemePrefs } from './theme'
-import { isAccent, isSchemePref, themeName } from './names'
+import { isAccentChoice, isSchemePref, themeName } from './names'
 
 export type WipeOrigin = Element | { x: number; y: number } | null | undefined
 type VT = { finished: Promise<void> }
@@ -38,7 +38,7 @@ let seq = 0
 export function switchTheme(next: Partial<ThemePrefs>, from?: WipeOrigin): void {
   dropUrlParams()
   const now = getTheme()
-  const scheme = isSchemePref(next.scheme) ? next.scheme : now.scheme, accent = isAccent(next.accent) ? next.accent : now.accent
+  const scheme = isSchemePref(next.scheme) ? next.scheme : now.scheme, accent = isAccentChoice(next.accent) ? next.accent : now.accent
   const changes = themeName(resolveScheme(scheme, matchMedia('(prefers-color-scheme: light)').matches), accent) !== now.name
   const doc = document as Document & { startViewTransition?: (update: () => void) => VT }
   if (!changes || !doc.startViewTransition || document.visibilityState === 'hidden' || matchMedia('(prefers-reduced-motion: reduce)').matches) return setTheme(next)

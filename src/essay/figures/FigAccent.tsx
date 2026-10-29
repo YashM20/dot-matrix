@@ -6,7 +6,7 @@ import { Cards, Controls, Toggle } from '../ui/kit'
 import { registerPresets } from '../../widgets/registry'
 import { themeTokens } from '../../site/theme/theme'
 import { useTheme, useThemeTokens } from '../../site/theme/useTheme'
-import type { AccentId } from '../../site/theme/names'
+import type { AccentChoice, AccentId } from '../../site/theme/names'
 
 // registry cards: the sample worker can rebuild them by id, static ones share the sample cache
 registerPresets([progressCard, statusDotCard, sliderCard])
@@ -19,15 +19,16 @@ const BLUEISH: readonly AccentId[] = ['cyan', 'cobalt', 'vite']
  * This theme exists only in this figure (never a token, never on a board). On dark it is today's blue;
  * on paper the light cobalt; when the page's accent is blue itself, the signal red.
  */
-function secondOf(base: ThemeTokens, scheme: 'dark' | 'light', accent: AccentId): ThemeTokens {
-  const other = BLUEISH.includes(accent) ? themeTokens(scheme, 'signal') : scheme === 'light' ? themeTokens('light', 'cobalt') : undefined
+function secondOf(base: ThemeTokens, scheme: 'dark' | 'light', accent: AccentChoice, hue = 0): ThemeTokens {
+  const blue = accent === 'custom' ? hue >= 180 && hue <= 300 : BLUEISH.includes(accent)
+  const other = blue ? themeTokens(scheme, 'signal') : scheme === 'light' ? themeTokens('light', 'cobalt') : undefined
   return { ...base, dotActive: other?.dotActive ?? '#2F7BFF', dotActiveDim: other?.dotActiveDim ?? '#1D4FA8' }
 }
 
 export default function FigAccent() {
   const [second, setSecond] = useState(false)
-  const { resolved, accent } = useTheme(), theme = useThemeTokens()
-  const off = useMemo(() => secondOf(theme, resolved, accent), [theme, resolved, accent])
+  const { resolved, accent, custom } = useTheme(), theme = useThemeTokens(), hue = custom?.hue
+  const off = useMemo(() => secondOf(theme, resolved, accent, hue), [theme, resolved, accent, hue])
   return (
     <>
       <Cards n={3}>

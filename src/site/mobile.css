@@ -166,7 +166,7 @@ html:has(.sheet[open]) {
 .sheet-head h2 {
   margin: 0;
   color: var(--label);
-  font: 600 var(--fs-label-10) var(--mono);
+  font: 600 var(--fs-label-12) var(--mono);
   letter-spacing: .18em
 }
 
@@ -178,7 +178,7 @@ html:has(.sheet[open]) {
   border-radius: var(--radius-ctl);
   background: none;
   color: var(--value);
-  font: 600 var(--fs-label-10) var(--mono);
+  font: 600 var(--fs-label-12) var(--mono);
   letter-spacing: .14em;
   cursor: pointer
 }
@@ -214,12 +214,12 @@ html:has(.sheet[open]) {
   gap: var(--space-1) var(--space-2);
   margin: var(--space-4) var(--space-2) var(--space-1);
   color: var(--mute);
-  font: 600 var(--fs-tag-9) var(--mono);
+  font: 600 var(--fs-label-12) var(--mono);
   letter-spacing: .18em
 }
 
 .board-sheet h3 small {
-  font: 400 var(--fs-label-10) var(--mono);
+  font: 400 var(--fs-label-12) var(--mono);
   letter-spacing: .02em
 }
 
@@ -244,7 +244,7 @@ html:has(.sheet[open]) {
   border-radius: var(--radius-ctl);
   background: none;
   color: var(--mute);
-  font: 400 var(--fs-label-10)/1.4 var(--mono);
+  font: 400 var(--fs-label-12)/1.4 var(--mono);
   letter-spacing: .02em;
   text-align: left;
   cursor: pointer
@@ -254,7 +254,7 @@ html:has(.sheet[open]) {
 .skin-list button b {
   color: var(--label);
   font-weight: 600;
-  font-size: var(--fs-label-11);
+  font-size: var(--fs-label-12);
   letter-spacing: .14em
 }
 
@@ -344,13 +344,13 @@ html:has(.sheet[open]) {
 }
 
 .tools-grid b {
-  font: 600 var(--fs-label-11) var(--mono);
+  font: 600 var(--fs-label-12) var(--mono);
   letter-spacing: .16em
 }
 
 .tools-grid span {
   color: var(--mute);
-  font: 400 var(--fs-label-10)/1.35 var(--mono);
+  font: 400 var(--fs-label-12)/1.35 var(--mono);
   letter-spacing: .02em
 }
 
@@ -361,7 +361,7 @@ html:has(.sheet[open]) {
 }
 
 .tools-grid [aria-pressed="true"] b {
-  color: var(--red)
+  color: var(--red-text)
 }
 
 .tools-grid [aria-pressed="true"] b::after {
@@ -371,7 +371,7 @@ html:has(.sheet[open]) {
 .tools-head {
   margin: var(--space-5) var(--space-2) var(--space-2);
   color: var(--mute);
-  font: 600 var(--fs-tag-9) var(--mono);
+  font: 600 var(--fs-label-12) var(--mono);
   letter-spacing: .18em
 }
 
@@ -403,7 +403,7 @@ html:has(.sheet[open]) {
   border-radius: var(--radius-pill);
   background: none;
   color: var(--mute);
-  font: 600 var(--fs-label-10) var(--mono);
+  font: 600 var(--fs-label-12) var(--mono);
   letter-spacing: .14em;
   cursor: pointer
 }
@@ -491,7 +491,7 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
     padding: 0 var(--space-2);
     overflow: hidden;
     color: var(--value);
-    font: 600 var(--fs-label-11)/44px var(--mono);
+    font: 600 var(--fs-label-12)/44px var(--mono);
     letter-spacing: .14em;
     text-align: center;
     text-overflow: ellipsis;
@@ -561,7 +561,7 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
     border: 0;
     background: none;
     color: var(--mute);
-    font: 600 var(--fs-tag-9)/1 var(--mono);
+    font: 600 var(--fs-label-12)/1 var(--mono);
     letter-spacing: .14em;
     cursor: pointer
   }
@@ -650,7 +650,7 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
     min-height: 44px;
     padding: 0 var(--space-2);
     border-bottom: 0;
-    font-size: var(--fs-label-10)
+    font-size: var(--fs-label-12)
   }
 
   /* the open group: a 1 px rule under its word, not under its padding */
@@ -675,7 +675,7 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
     background-clip: padding-box;
     box-shadow: inset 0 0 0 1px var(--line);
     color: var(--mute);
-    font: 500 var(--fs-label-10) var(--mono);
+    font: 500 var(--fs-label-12) var(--mono);
     letter-spacing: .12em
   }
 
@@ -705,7 +705,7 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
   .board-picker .board-tabs button.selected {
     box-shadow: inset 0 0 0 1px var(--red);
     background-color: var(--glow-wash);
-    color: var(--red)
+    color: var(--red-text)
   }
 
   /* the board's end: the next board in its group */
@@ -721,7 +721,7 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
     border-radius: var(--radius-card);
     background: var(--surface);
     color: var(--value);
-    font: 600 var(--fs-label-11) var(--mono);
+    font: 600 var(--fs-label-12) var(--mono);
     letter-spacing: .14em;
     text-align: left;
     cursor: pointer
@@ -738,7 +738,7 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
 
   .next-board small {
     color: var(--mute);
-    font-size: var(--fs-tag-9)
+    font-size: var(--fs-label-12)
   }
 
   .next-board b {
@@ -756,7 +756,7 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
     flex-wrap: nowrap;
     align-items: center;
     gap: 0 var(--space-3);
-    font-size: var(--fs-label-11)
+    font-size: var(--fs-label-12)
   }
 
   .intro-line .intro-long {
@@ -854,7 +854,7 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
     border: 0;
     background: none;
     color: var(--label);
-    font: 600 var(--fs-label-10) var(--mono);
+    font: 600 var(--fs-label-12) var(--mono);
     letter-spacing: .14em;
     cursor: pointer
   }

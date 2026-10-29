@@ -83,6 +83,14 @@
   max-width: 100%
 }
 
+/* an emissive skin on a light page: the number is a small dark display, as the cards are (LiveBand.tsx) */
+.live-number--inset {
+  box-sizing: content-box;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  background: var(--surface)
+}
+
 .live-label {
   margin: 0
 }
