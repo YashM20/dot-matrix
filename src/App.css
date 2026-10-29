@@ -454,11 +454,26 @@ label b {
   box-shadow: var(--glow-halo)
 }
 
+/* the board name in the engine's dot type (DotName.tsx, T6), its subtitle a mono label on the name's baseline row */
 .board-view .board-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-4);
   margin: 0;
-  color: var(--label);
-  font: 500 var(--fs-label-12) var(--mono);
-  letter-spacing: .16em
+  color: var(--mute);
+  font: 500 var(--fs-label-12)/1 var(--mono);
+  letter-spacing: .12em
+}
+
+.dot-name {
+  display: block;
+  flex: none;
+  max-width: 100%
+}
+
+.board-title-sub {
+  padding-bottom: var(--space-1)
 }
 
 .board-view {

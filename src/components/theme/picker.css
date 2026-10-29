@@ -6,7 +6,7 @@
   top: calc(100% + 6px);
   right: 0;
   z-index: 60;
-  width: min(296px, calc(100vw - 24px));
+  width: min(328px, calc(100vw - 24px));
   padding: var(--space-3);
   color: var(--label);
   font: 500 var(--fs-label-12)/1.3 var(--mono);
@@ -91,7 +91,7 @@
 /* the accents: 7 dot discs, each in its own colour (the button is its own theme scope) */
 .theme-swatches {
   display: grid;
-  grid-template-columns: repeat(7, 1fr);
+  grid-template-columns: repeat(8, 1fr);
   gap: var(--space-1)
 }
 
@@ -126,6 +126,73 @@
   width: 18px;
   height: 18px;
   fill: var(--red)
+}
+
+/* the custom swatch before a hue is set: the rim of the disc, in the quiet grey */
+.theme-disc--ring {
+  fill: var(--mute)
+}
+
+/* the custom hue (T6): a native range over a row of dots, each the generated accent of its hue on this scheme */
+.theme-hue {
+  position: relative;
+  display: grid;
+  height: 28px
+}
+
+.theme-hue > * {
+  grid-area: 1 / 1
+}
+
+.theme-hue-track {
+  width: 100%;
+  height: 10px;
+  align-self: center
+}
+
+.theme-hue input {
+  width: 100%;
+  margin: 0;
+  background: none;
+  cursor: pointer;
+  appearance: none
+}
+
+.theme-hue input::-webkit-slider-runnable-track {
+  height: 28px;
+  background: none
+}
+
+.theme-hue input::-moz-range-track {
+  height: 28px;
+  background: none
+}
+
+/* the thumb: a ring in the line colour around the picked hue's dot */
+.theme-hue input::-webkit-slider-thumb {
+  width: 20px;
+  height: 20px;
+  margin-top: var(--space-1);
+  border: 2px solid var(--value);
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 1px var(--bg);
+  appearance: none
+}
+
+.theme-hue input::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--value);
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 1px var(--bg)
+}
+
+.theme-hue input:focus-visible {
+  outline: 2px solid var(--red-line);
+  outline-offset: 2px;
+  border-radius: var(--radius-pill)
 }
 
 .theme-line {
@@ -187,9 +254,17 @@
   min-height: 44px
 }
 
+.tools-sheet .theme-ctl .theme-swatches {
+  grid-template-columns: repeat(4, 1fr)
+}
+
 .tools-sheet .theme-ctl .theme-swatches button {
   min-width: 44px;
   min-height: 44px
+}
+
+.tools-sheet .theme-hue {
+  height: 44px
 }
 
 .tools-sheet .theme-disc {

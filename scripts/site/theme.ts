@@ -29,7 +29,7 @@ import { join } from 'node:path'
 import { ACCENT_ROLES, ACCENT_SPECS, customCss, DARK, decls, DOT_ROLES, generateAll, generateHue, MORE, MORE_ROLES, moreRoles, NEUTRAL_ROLES, NEUTRALS, neutralRoles, PINS, type Role, type Theme } from '../../src/site/theme/accents'
 import { apca, CVD_DE, CVD_DL, distinctness, gamutMisses, hexToRgb, wcag } from '../../src/site/theme/color'
 import { BOOT_END, BOOT_SCRIPT, BOOT_START, bootTag } from '../../src/site/theme/boot'
-import { ACCENTS, SCHEMES, type Scheme, type ThemeName } from '../../src/site/theme/names'
+import { ACCENTS, SCHEMES, type Scheme } from '../../src/site/theme/names'
 import type { ThemeTokens } from '../../src/engine/types'
 import { dot480 } from '../../src/engine/theme/tokens'
 

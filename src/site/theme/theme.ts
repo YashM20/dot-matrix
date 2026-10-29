@@ -55,7 +55,9 @@ const LIGHT_QUERY = '(prefers-color-scheme: light)'
 const mq = hasDom && typeof matchMedia === 'function' ? matchMedia(LIGHT_QUERY) : undefined
 const readStored = (): string | null => { try { return localStorage.getItem(STORAGE_KEY) } catch { return null } }
 
-let prefs: ThemePrefs = hasDom ? (({ fromUrl: _, ...p }) => p)(resolvePrefs(location.search, readStored())) : { scheme: DEFAULT_SCHEME, accent: DEFAULT_ACCENT }
+/** The prefs without the `fromUrl` flag. */
+const prefsOf = (r: ThemePrefs & { fromUrl: boolean }): ThemePrefs => ({ scheme: r.scheme, accent: r.accent, ...(r.custom ? { custom: r.custom } : {}) })
+let prefs: ThemePrefs = hasDom ? prefsOf(resolvePrefs(location.search, readStored())) : { scheme: DEFAULT_SCHEME, accent: DEFAULT_ACCENT }
 let state: ThemeState = derive(prefs)
 const listeners = new Set<() => void>()
 

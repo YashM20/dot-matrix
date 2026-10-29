@@ -184,7 +184,11 @@
   letter-spacing: .16em
 }
 
-.wp-rail h1,
+/* the card's name in dot type (DotName.tsx, T6); the missing-card title stays text */
+.wp-rail h1 {
+  margin: 0 0 var(--space-3)
+}
+
 .wp-missing h1 {
   margin: 0 0 var(--space-3);
   color: var(--value);
@@ -357,7 +361,7 @@ body:has(.wp) .pal-toast {
     margin-top: 0
   }
 
-  .wp-rail h1 {
+  .wp-missing h1 {
     font-size: var(--fs-title-24)
   }
 

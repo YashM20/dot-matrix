@@ -432,7 +432,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   }, [live, ready, mode, webgl, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, gap, theme, dataKey, springKey, fps, motion, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // C7 display skins: post-raster stage around the surface (src/components/skins/); OLED = no-op wrapper
-  const surface = <DisplaySurface mode={mode} dots={dots} running={live || !!transient} fps={transient ? 30 : fps ?? (motion ? 12 : 30)} cols={grid.cols} rows={grid.rows} width={width} height={height} accent={theme.dotActive} tones={{ surface: theme.surface, value: theme.value ?? theme.dotIdle, dotFaint: theme.dotFaint }}>{mode === 'canvas'
+  const surface = <DisplaySurface mode={mode} dots={dots} running={live || !!transient} fps={transient ? 30 : fps ?? (motion ? 12 : 30)} cols={grid.cols} rows={grid.rows} width={width} height={height} accent={theme.dotActive} tones={{ surface: theme.surface, value: theme.value ?? theme.dotIdle, dotFaint: theme.dotFaint ?? theme.dotIdle }}>{mode === 'canvas'
     ? <canvas ref={canvasRef} className={className} style={{ width: '100%', height: 'auto', display: 'block', aspectRatio: `${width} / ${height}` }} aria-hidden="true" />
     : <div ref={svgRef} className={`dot-svg ${className ?? ''}`} style={{ aspectRatio: `${width} / ${height}`, width: '100%', height: 'auto' }} dangerouslySetInnerHTML={{ __html: svg }} aria-hidden="true" />}</DisplaySurface>
   if (!interactive) return surface
