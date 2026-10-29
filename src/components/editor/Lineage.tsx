@@ -33,7 +33,7 @@ export function RemixGraph({ current, version = 0 }: { current?: string; version
       c.width = Math.round(g.cols * g.pitch! * k); c.height = Math.round(g.rows * g.pitch! * k)
       ctx.setTransform(k, 0, 0, k, 0, 0); ctx.fillStyle = theme.surface; ctx.fillRect(0, 0, c.width, c.height)
       renderCanvas(ctx, sampleLayers(graphLayers(graph, current), g, graphStyle, theme))
-      c.dataset.nodes = String(graph.nodes.length)
+      c.dataset.nodes = String(graph.nodes.length); c.dataset.cols = String(g.cols); c.dataset.rows = String(g.rows)
     }, 60)
     return () => clearTimeout(h)
   }, [graph, current, theme])
@@ -57,7 +57,7 @@ export function RemixGraph({ current, version = 0 }: { current?: string; version
 /** The frame / document links a frame came from (E5). */
 export function LinkLineage({ f, version = 0 }: { f: EditorFrame; version?: number }) {
   const id = linkSource(f)
-  const chain = useMemo(() => (id ? lineage(id, loadLinks()) : []), [id, version])
+  const chain = useMemo(() => (id ? lineage(id, loadLinks()) : []), [id, version]) // eslint-disable-line react-hooks/exhaustive-deps
   return <Section title="LINK LINEAGE" aside={id ? `#${id}` : 'not from a link'}>
     {chain.length ? <ol className="ed-lineage ed-lineage--list" aria-label="Link lineage">{chain.map((r, i) => <li key={r.id}>{i === 0 ? 'OPENED FROM' : 'REMIX OF'} <b>#{r.id}</b>{'name' in r ? ` · ${r.name} · ${r.kind === 'frame' ? 'frame' : `${r.frames} frames`}` : ' · not seen in this browser'}</li>)}</ol>
       : <p className="ed-hint">This frame was made here. Share it from EXPORT · LINK; a frame opened from a link and shared again records that link as its parent.</p>}

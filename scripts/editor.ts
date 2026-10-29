@@ -13,6 +13,8 @@
  * layers that move in whole cells and spec fields resized by their bounds, carets of text typed in place
  * that sit in glyph gaps (5×7 and `T.big`, through the engine), the quick toggles (tone, lattice, size),
  * the eyedropper, and a typing session as one undo step (Esc and an emptied layer leave no trace).
+ * E5 (`editorE5Checks`, async): frame and document links, lineage, the cap, `?make&d=`, remix parents and
+ * the graph, every device profile, the scorecard.
  * `pnpm verify` runs them through `editorChecks()`; run alone with `npx tsx scripts/editor.ts`.
  * The browser side (desktop + touch): `scripts/editor-browser.ts`.
  */
@@ -31,6 +33,16 @@ import { caretAt, dragSiteHandle, editableText, inkAt, inkStep, latticeOf, layer
 import { cancelTyping, commitTyping, startTyping, typeText } from '../src/components/editor/typing'
 import { layerDots, lit as litDot, nudgeSpec } from '../src/components/editor/doc'
 import type { SpecLayer, StudioLayer } from '../src/components/studio/doc'
+import { cardPreset } from '../src/components/studio/doc'
+import { decodeLink, encodeLink, lineage, LINK_MAX_ENCODED, linkId, linkPayload, LINKS_KEY, linkUrl, loadLinks, openLinkIn, recordLink } from '../src/components/editor/link'
+import { deviceFile, DEVICE_IDS, deviceFrames, devicePixels, exportScale, plotterPlan } from '../src/components/editor/devices'
+import { scoreCard } from '../src/components/editor/quality'
+import { compiledOf } from '../src/components/editor/render'
+import { editCard } from '../src/components/editor/doc'
+import { decodeShare, encodeShare, programHash, ShareError } from '../src/lib/share'
+import { EXAMPLES } from '../src/components/dwitter/examples'
+import { graphLayers, layoutGraph, SEEDS } from '../src/components/dwitter/gallery'
+import { urlForView } from '../src/site/views'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const litCount = (ds: { r: number; opacity: number }[]) => ds.filter(d => d.r > 0 && d.opacity > 0).length
@@ -520,10 +532,114 @@ export function editorE3Checks(assert: Assert) {
   assert('E3 typing: a locked layer is not typed into', !startTyping(FID, tx.id) && !st().typing)
 }
 
+/**
+ * E5 (`editorE5Checks`, async: the link codec deflates): frame and document links round-trip (deflated and
+ * plain) with a stable id; opening one adds its frames once (a reload or Back re-selects them, one undo step);
+ * sharing again unchanged makes the same link, changed records its parent; the cap, corrupt and malformed
+ * links; the lineage registry; `?make&d=` in the URL scheme; a program's remix parent and the remix graph;
+ * every device profile through `toDevice`; the scorecard on a frame.
+ */
+export async function editorE5Checks(assert: Assert) {
+  const seed = seedDoc(), [A, B, C] = seed.frames
+  const kvMem = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v) } } }
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+  const reason = async (s: string) => { try { await decodeLink(s); return '' } catch (e) { return (e as Error).message } }
+  const plainOf = (x: unknown) => 'b' + Buffer.from(JSON.stringify(x)).toString('base64url')
+
+  // ── round trip: a frame and the document, deflated and plain
+  const pf = linkPayload(seed, [C.id]), pd = linkPayload(seed)
+  if (typeof pf === 'string' || typeof pd === 'string') { assert('E5 link: payloads', false, String(pf)); return }
+  const z = await encodeLink(pf), b = await encodeLink(pf, { compress: false }), zd = await encodeLink(pd)
+  const [bf, bb, bd] = await Promise.all([decodeLink(z), decodeLink(b), decodeLink(zd)])
+  assert('E5 link: a frame link round-trips deflated and plain (same frames, same id, no ids or sources inside)', z[0] === 'z' && b[0] === 'b' && z.length < b.length && bf.id === pf.id && bb.id === pf.id && bf.kind === 'frame' && same(bf.frames, pf.frames) && same(bb.frames, pf.frames) && !('id' in bf.frames[0]) && !('source' in bf.frames[0]) && bf.frames[0].x === 0 && bf.frames[0].y === 0, `${z.length} / ${b.length} chars`)
+  assert('E5 link: a document link holds every frame, placed from the top-left of their block, named after the document', bd.kind === 'doc' && bd.frames.length === seed.frames.length && bd.name === seed.name && Math.min(...bd.frames.map(f => f.x)) === 0 && Math.min(...bd.frames.map(f => f.y)) === 0 && bd.frames[1].x - bd.frames[0].x === B.x - A.x && zd.length < LINK_MAX_ENCODED, `${zd.length} chars`)
+  assert('E5 link: the id does not depend on key order or frame ids', linkId('frame', pf.name, pf.frames) === pf.id && linkId('frame', pf.name, pf.frames.map(f => Object.fromEntries(Object.entries(f).reverse()) as typeof f)) === pf.id && linkId('frame', `${pf.name}!`, pf.frames) !== pf.id)
+
+  // ── open: one block in a free spot, new ids, `source: link:<id>`; again: nothing new
+  const o1 = openLinkIn(seed, bd, () => `n${Math.random().toString(36).slice(2, 8)}`)
+  if (typeof o1 === 'string') { assert('E5 open', false, o1); return }
+  const boxes = o1.doc.frames.map(f => ({ ...frameSize(f), x: f.x, y: f.y }))
+  const overlap = boxes.some((a, i) => boxes.some((c, j) => i < j && a.x < c.x + c.w && c.x < a.x + a.w && a.y < c.y + c.h && c.y < a.y + a.h))
+  const opened = o1.doc.frames.filter(f => o1.ids.includes(f.id))
+  assert('E5 open: a document link adds its frames as one block (new ids, source link:<id>, nothing overlaps)', o1.opened && opened.length === 3 && opened.every(f => f.source === `link:${bd.id}` && !seed.frames.some(s => s.id === f.id)) && !overlap && opened[1].x - opened[0].x === B.x - A.x)
+  const o2 = openLinkIn(o1.doc, bd, () => 'x')
+  assert('E5 open: the same link opened again (a reload, Back) re-selects its frames and changes nothing', typeof o2 === 'object' && !o2.opened && o2.doc === o1.doc && same(o2.ids, o1.ids))
+  const full = { ...seed, frames: Array.from({ length: MAX_FRAMES }, (_, i) => ({ ...C, id: `k${i}` })) }
+  assert('E5 open: a link that would pass the frame limit is refused with a reason', typeof openLinkIn(full, bf, () => 'y') === 'string')
+
+  // ── lineage: unchanged = the same link; changed = a remix of it
+  const kv = kvMem()
+  recordLink(pf, kv)
+  const got = openLinkIn(seed, bf, () => 'g1') as { doc: EditorDoc; ids: string[] }
+  const again = linkPayload(got.doc, got.ids, loadLinks(kv))
+  const renamed = editCard(got.doc, 'g1', c => ({ ...c, name: 'mine' })), remix = linkPayload(renamed, ['g1'], loadLinks(kv))
+  assert('E5 lineage: a frame opened from a link and shared again unchanged makes the same link (no parent)', typeof again === 'object' && again.id === pf.id && !again.parent && (await encodeLink(again)) === z)
+  assert('E5 lineage: changed, its link records the link it came from as the parent', typeof remix === 'object' && remix.id !== pf.id && remix.parent === pf.id && (await decodeLink(await encodeLink(remix))).parent === pf.id)
+  if (typeof remix === 'object') {
+    recordLink(remix, kv)
+    const r2 = openLinkIn(seed, remix, () => 'g2') as { doc: EditorDoc }
+    const back = linkPayload(r2.doc, ['g2'], loadLinks(kv))
+    assert('E5 lineage: a remix shared again unchanged keeps its parent (from the registry)', typeof back === 'object' && back.id === remix.id && back.parent === pf.id)
+    const chain = lineage(remix.id, loadLinks(kv))
+    assert('E5 lineage: the registry gives the chain, newest first, ending at an id this browser never saw', chain.length === 2 && chain[0].id === remix.id && chain[1].id === pf.id && same(lineage('deadbeef', []), [{ id: 'deadbeef' }]))
+  }
+  const loop = [{ id: 'aaaaaaaa', parent: 'bbbbbbbb', name: 'a', kind: 'frame' as const, frames: 1, at: 0 }, { id: 'bbbbbbbb', parent: 'aaaaaaaa', name: 'b', kind: 'frame' as const, frames: 1, at: 0 }]
+  const kv2 = kvMem()
+  for (let i = 0; i < 45; i++) recordLink({ id: i.toString(16).padStart(8, '0'), name: `n${i}`, kind: 'frame', frames: [] }, kv2)
+  kv2.setItem('junk', '1')
+  assert('E5 lineage: a loop in the registry ends; the registry keeps the newest 40 and drops bad rows', lineage('aaaaaaaa', loop).length === 2 && loadLinks(kv2).length === 40 && loadLinks(kv2)[0].id === (5).toString(16).padStart(8, '0') && (kv2.setItem(LINKS_KEY, '[{"id":"nope"},5]'), loadLinks(kv2).length === 0))
+
+  // ── cap, corrupt and malformed links
+  const noisy = paintLayer({ cols: 160, rows: 160, pitch: 4 }, { lattice: 1 }), rnd = new Uint8Array(160 * 160)
+  let s = 7
+  for (let i = 0; i < rnd.length; i++) { s = (s * 1103515245 + 12345) >>> 0; rnd[i] = s >>> 24 }
+  const big = addFrame(seed, { ...blankCard({ cols: 160, rows: 160, pitch: 4 }), layers: [{ ...noisy, cells: encodeCells(rnd) }] }).doc
+  const bigP = linkPayload(big, [big.frames[big.frames.length - 1].id])
+  let capMsg = ''
+  try { if (typeof bigP === 'object') await encodeLink(bigP) } catch (e) { capMsg = e instanceof ShareError ? e.message : `not a ShareError: ${e}` }
+  assert(`E5 cap: a link past ${LINK_MAX_ENCODED} characters is refused with its length`, /more than 12000/.test(capMsg), capMsg)
+  const frame0 = pf.frames[0]
+  const bad = await Promise.all([
+    reason('zNotARealLink'), reason('qabc'), reason('b' + 'A'.repeat(LINK_MAX_ENCODED + 1)), reason(plainOf({ v: 2, k: 'f', n: 'x', f: [frame0] })),
+    reason(plainOf({ v: 1, k: 'f', n: 'x', f: [frame0, frame0] })), reason(plainOf({ v: 1, k: 'd', n: 'x', f: [] })), reason(plainOf({ v: 1, k: 'f', n: 'x', f: [{ ...frame0, theme: 'pink' }] })),
+    reason(plainOf({ v: 1, k: 'f', n: 'x', f: [frame0], p: 'nothex!!' })), reason(plainOf({ v: 1, k: 'f', n: 'x', f: [{ ...frame0, card: { ...frame0.card, layers: [{ kind: 'ir', src: 1 }] } }] })),
+  ])
+  assert('E5 corrupt: bad links are refused with a reason (inflate, format, size, version, kind, empty, theme, parent, card)', bad.every(Boolean), bad.map(x => x || '(accepted)').join(' | '))
+
+  // ── through the store: opened once, one undo step, selected; the URL scheme
+  useEditor.setState({ h: historyOf(seed), sel: {} })
+  const st = useEditor.getState, n0 = st().h.past.length
+  const ids1 = st().openLink(bd), n1 = st().h.past.length, ids2 = st().openLink(bd)
+  assert('E5 store: openLink adds the frames as one undo step and selects them; again it only re-selects', Array.isArray(ids1) && ids1.length === 3 && n1 === n0 + 1 && same(ids2, ids1) && st().h.past.length === n1 && same(selFrames(st().sel), ids1) && (st().undo(), st().h.present.frames.length === seed.frames.length))
+  const v = viewFromUrl('?make&d=zAbc', '/'), q = (view: 'EXPLORE' | 'MAKE') => urlForView({ view, mode: 'TUNE', board: v.board }, '?make&d=zAbc', '/')
+  assert('E5 url: ?make&d= opens MAKE; the link stays while in MAKE and goes when leaving it', v.view === 'MAKE' && /[?&]d=zAbc/.test(q('MAKE')) && !/d=/.test(q('EXPLORE')) && linkUrl('zAbc', 'https://x.dev/') === 'https://x.dev/?make&d=zAbc', `${q('MAKE')} | ${q('EXPLORE')}`)
+
+  // ── programs: the remix parent and the graph
+  const ripple = EXAMPLES[0], code = C, ir = topDown(code.card).find(l => l.kind === 'ir')!
+  const changed = { ...ir, src: `${ir.kind === 'ir' ? ir.src : ''} * .9` }
+  const p0 = shareable(code, ir), p1 = shareable(code, changed), p2 = shareable(code, ir, h => (h === programHash(ripple) ? 'cafebabe' : undefined))
+  assert('E5 remix: a code layer changed since its program records that program as the parent; unchanged it keeps the program\'s own', typeof p0 === 'object' && !p0.parent && typeof p1 === 'object' && p1.parent === programHash(ripple) && typeof p2 === 'object' && p2.parent === 'cafebabe' && (await decodeShare(await encodeShare(p1))).parent === programHash(ripple))
+  const seedE = SEEDS[0], mineE = { ...ripple, src: `${ripple.src} * .9`, id: 'aaaa0001', name: 'mine', at: 9, parent: seedE.id }, deeper = { ...mineE, src: `${mineE.src} * .8`, id: 'aaaa0002', name: 'deeper', parent: mineE.id }
+  const g = layoutGraph([...SEEDS, mineE, deeper])
+  const nm = g.nodes.find(n => n.entry.id === 'aaaa0001'), nd = g.nodes.find(n => n.entry.id === 'aaaa0002')
+  assert('E5 remix: the graph puts a remix one row under its parent, linked to it, and draws edges in dots', !!nm && !!nd && nm.row === 1 && nd.row === 2 && nm.parent?.entry.id === seedE.id && nd.parent === nm && graphLayers(g, 'aaaa0002').length === 3)
+
+  // ── devices: every profile through toDevice; quality: the scorecard on a frame
+  const dev = deviceFrames(A, 1), fullDev = deviceFrames(A, 1, false) // level-03: lit enough for the flip-disc threshold
+  const trmnl = dev.find(fr => fr.profile.id.startsWith('trmnl')), trmnlFull = fullDev.find(fr => fr.profile.id === 'trmnl-800x480')
+  const lit = (fr: (typeof dev)[number]) => fr.out.reduce((a, x) => a + x, 0) / fr.out.length
+  assert('E5 devices: a frame goes through toDevice onto every profile (TRMNL previewed at ¼, exported at 800×480)', dev.length === DEVICE_IDS.length && fullDev.length === DEVICE_IDS.length && trmnl?.cols === 200 && trmnlFull?.cols === 800 && trmnlFull.rows === 480 && dev.every(fr => fr.out.length === fr.cols * fr.rows && lit(fr) > .005), dev.map(fr => `${fr.profile.id} ${fr.cols}×${fr.rows} ${lit(fr).toFixed(2)}`).join(', '))
+  const px = devicePixels(dev[0]), glyph = dev.find(fr => fr.profile.mask === 'round')!
+  assert('E5 devices: pixels are one RGBA per device pixel (a round panel\'s missing corners near black), exports upscale in whole pixels, the plotter has a pen plan', px.length === dev[0].cols * dev[0].rows * 4 && devicePixels(glyph)[0] === 7 && exportScale(glyph) === 19 && exportScale(trmnlFull!) === 1 && /<svg/.test(fullDev.map(plotterPlan).find(Boolean) ?? '') && deviceFile('x', trmnl!) === 'x-trmnl-800x480-0.25.png')
+  const score = scoreCard(cardPreset(code.card, compiledOf(code.card)))
+  assert('E5 quality: the scorecard scores a frame (G1, G3 pass on the ripple frame; metrics counted)', score.g1.pass && score.g3.pass && score.metrics.dots > 1000 && score.metrics.histogram.length === 10, JSON.stringify({ g1: score.g1, g3: score.g3 }))
+}
+
 if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, '/')}` || process.argv[1]?.endsWith('editor.ts')) {
   let failed = 0
   editorChecks((name, cond, detail = '') => { console.log(`${cond ? '✓' : '✗'} ${name}${detail && !cond ? ` — ${detail}` : ''}`); if (!cond) failed++ })
   editorE3Checks((name, cond, detail = '') => { console.log(`${cond ? '✓' : '✗'} ${name}${detail && !cond ? ` — ${detail}` : ''}`); if (!cond) failed++ })
+  await editorE5Checks((name, cond, detail = '') => { console.log(`${cond ? '✓' : '✗'} ${name}${detail && !cond ? ` — ${detail}` : ''}`); if (!cond) failed++ })
   if (failed) { console.error(`\n${failed} editor check(s) failed`); process.exit(1) }
   console.log('\nAll editor checks passed')
   process.exit(0)

@@ -29,6 +29,8 @@ export interface LinkPayload { kind: LinkKind; name: string; frames: LinkFrame[]
 export interface LinkRecord { id: string; parent?: string; name: string; kind: LinkKind; frames: number; at: number }
 
 const LINK_SRC = 'link:'
+/** A frame without its id and source (what a link carries). */
+function bare(f: Partial<EditorFrame>): LinkFrame { const out = { ...f }; delete out.id; delete out.source; return out as LinkFrame }
 /** The link a frame came from, if a link opened it. */
 export const linkSource = (f: Pick<EditorFrame, 'source'> | undefined) => (f?.source?.startsWith(LINK_SRC) ? f.source.slice(LINK_SRC.length) : undefined)
 
@@ -50,7 +52,7 @@ export function linkPayload(d: EditorDoc, ids: string[] = [], links: LinkRecord[
   if (!fs.length) return 'there is nothing to share: the document has no frames'
   const kind: LinkKind = ids.length === 1 ? 'frame' : 'doc', name = kind === 'frame' ? fs[0].card.name : d.name
   const x0 = Math.min(...fs.map(f => f.x)), y0 = Math.min(...fs.map(f => f.y))
-  const frames = fs.map(({ id: _, source: __, ...f }) => ({ ...f, x: f.x - x0, y: f.y - y0 }))
+  const frames = fs.map(f => ({ ...bare(f), x: f.x - x0, y: f.y - y0 }))
   const id = linkId(kind, name, frames)
   const from = new Set(fs.map(linkSource)), only = from.size === 1 ? [...from][0] : undefined
   const parent = only === undefined ? undefined : only !== id ? only : links.find(r => r.id === id)?.parent
@@ -73,8 +75,8 @@ export async function decodeLink(s: string): Promise<LinkPayload> {
   const kind: LinkKind = x.k === 'f' ? 'frame' : 'doc', raw = f as LinkFrame[]
   const id = linkId(kind, n, raw)
   // checked like a document (cards, themes, groups, locks); ids are only for the check
-  const checked = validateDoc({ kind: 'dot480.editor', v: EDITOR_VERSION, name: n, frames: raw.map((fr, i) => { const { id: _, source: __, ...rest } = fr as EditorFrame; return { ...rest, id: `f${i}` } }) })
-  const frames = checked.frames.map(({ id: _, source: __, ...rest }) => rest)
+  const checked = validateDoc({ kind: 'dot480.editor', v: EDITOR_VERSION, name: n, frames: raw.map((fr, i) => ({ ...bare(fr), id: `f${i}` })) })
+  const frames = checked.frames.map(bare)
   return { kind, name: n, frames, id, ...(p !== undefined && { parent: p as string }) }
 }
 

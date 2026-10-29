@@ -871,6 +871,11 @@ noiseChecks(assert)
   const { editorChecks, editorE3Checks } = await import('./editor')
   editorChecks(assert); editorE3Checks(assert)
 }
+// editor E5: frame / document links (round trip, open once, lineage, cap, corrupt links), ?make&d=, remix parents and graph, devices, scorecard (scripts/editor.ts)
+{
+  const { editorE5Checks } = await import('./editor')
+  await editorE5Checks(assert)
+}
 
 // golden key (F0.5, F0.6, F0.10): dotKey + the style backfill, the square site cover, card fps (scripts/goldenkey.ts)
 import { goldenKeyChecks } from './goldenkey'
