@@ -20,8 +20,8 @@
   --scrim: rgba(0, 0, 0, 0.55);
   --value: #F2F3F5;
   --label: #C7CBD1;
-  --mute: #6E7278;
-  --dim: #4A4E54;
+  --mute: #81858B;
+  --dim: #65696F;
   --dot-faint: #2E3033;
   --dot-mid: #5B5F66;
   --dot-idle: #8A8F98;
@@ -41,7 +41,7 @@
   --value: #1B1B19;
   --label: #43423F;
   --mute: #64635F;
-  --dim: #878683;
+  --dim: #81807D;
   --dot-faint: #D1D1CF;
   --dot-mid: #939290;
   --dot-idle: #484846;
@@ -53,7 +53,7 @@
   --red-press: #E91D14;
   --red-text: #FFA193;
   --red-line: #CF3024;
-  --on-red: #FFFFFF;
+  --on-red: #321A16;
   --red-surface: #5C0301;
   --red-surface-text: #F2F3F5;
   --red-halo: radial-gradient(closest-side, rgba(255, 59, 48, 0.35), transparent);
@@ -70,7 +70,7 @@
   --value: #F4F3F1;
   --label: #CDCAC6;
   --mute: #88847E;
-  --dim: #514D48;
+  --dim: #6C6862;
   --red: #FBAC16;
   --red-dim: #865900;
   --red-hover: #FFC166;
@@ -94,7 +94,7 @@
   --value: #F2F4F2;
   --label: #C8CCC8;
   --mute: #818681;
-  --dim: #4A4F4A;
+  --dim: #656A65;
   --red: #59DE65;
   --red-dim: #00791E;
   --red-hover: #6BEF75;
@@ -118,7 +118,7 @@
   --value: #F1F4F4;
   --label: #C7CCCD;
   --mute: #7E8688;
-  --dim: #484F51;
+  --dim: #626A6C;
   --red: #1CD5ED;
   --red-dim: #00707E;
   --red-hover: #3DE5FE;
@@ -136,8 +136,6 @@
   --line: rgba(241, 245, 252, 0.08);
   --tint: #F1F5FC;
   --label: #C8CBCF;
-  --mute: #81858B;
-  --dim: #4B4E53;
   --red: #5696FF;
   --red-dim: #295FB8;
   --red-hover: #72A7FF;
@@ -161,7 +159,7 @@
   --value: #F3F3F5;
   --label: #CACACE;
   --mute: #84848A;
-  --dim: #4D4D53;
+  --dim: #68686E;
   --red: #B39AFF;
   --red-dim: #6C3BFF;
   --red-hover: #C2AEFF;
@@ -184,8 +182,8 @@
   --tint: #FBF2F6;
   --value: #F5F2F3;
   --label: #CEC9CB;
-  --mute: #8C8487;
-  --dim: #524C4E;
+  --mute: #8C8386;
+  --dim: #6F676A;
   --red: #FF92C8;
   --red-dim: #A62871;
   --red-hover: #FFAED4;
@@ -209,7 +207,7 @@
   --value: #1C1A1A;
   --label: #444141;
   --mute: #676261;
-  --dim: #8A8584;
+  --dim: #847F7E;
   --red: #E43226;
   --red-dim: #FF9687;
   --red-hover: #D21810;
@@ -233,7 +231,7 @@
   --value: #1B1B1A;
   --label: #434240;
   --mute: #65625F;
-  --dim: #898682;
+  --dim: #83807C;
   --red: #BB7E00;
   --red-dim: #E7AB50;
   --red-hover: #A87100;
@@ -257,7 +255,7 @@
   --value: #1A1B1A;
   --label: #414341;
   --mute: #616461;
-  --dim: #848784;
+  --dim: #7E817E;
   --red: #279936;
   --red-dim: #7CCE80;
   --red-hover: #098926;
@@ -281,7 +279,7 @@
   --value: #1A1B1B;
   --label: #404343;
   --mute: #5F6465;
-  --dim: #828788;
+  --dim: #7C8182;
   --red: #007F8E;
   --red-dim: #6EC7D6;
   --red-hover: #006F7D;
@@ -305,7 +303,7 @@
   --value: #1A1B1C;
   --label: #414244;
   --mute: #616367;
-  --dim: #84868A;
+  --dim: #7E8084;
   --red: #105FD9;
   --red-dim: #8DB8FF;
   --red-hover: #0051C3;
@@ -329,7 +327,7 @@
   --value: #1B1B1C;
   --label: #424244;
   --mute: #636267;
-  --dim: #86858A;
+  --dim: #807F84;
   --red: #6C3BFF;
   --red-dim: #B39AFF;
   --red-hover: #602AE3;
@@ -353,7 +351,7 @@
   --value: #1C1A1B;
   --label: #444142;
   --mute: #666163;
-  --dim: #8A8487;
+  --dim: #847E81;
   --red: #C91B86;
   --red-dim: #FF8BC5;
   --red-hover: #B50077;
@@ -365,6 +363,106 @@
   --red-surface-text: #2E011B;
   --red-halo: radial-gradient(closest-side, rgba(201, 27, 134, 0.35), transparent);
   --selection: rgba(201, 27, 134, 0.3);
+}
+@media (prefers-contrast: more) {
+  [data-scheme="dark"][data-accent="signal"], :where(:root) {
+    --label: #C7CBD1;
+    --mute: #A4A8AE;
+    --dim: #81858B;
+    --red-text: #FFA193;
+    --line: rgba(255, 255, 255, 0.16);
+  }
+  [data-scheme="dark"][data-accent="amber"] {
+    --label: #CDCAC6;
+    --mute: #ABA7A1;
+    --dim: #88847D;
+    --red-text: #FFCE8A;
+    --line: rgba(249, 244, 238, 0.16);
+  }
+  [data-scheme="dark"][data-accent="phosphor"] {
+    --label: #C8CCC8;
+    --mute: #A4A9A4;
+    --dim: #818681;
+    --red-text: #89F58F;
+    --line: rgba(241, 247, 241, 0.16);
+  }
+  [data-scheme="dark"][data-accent="cyan"] {
+    --label: #C7CCCD;
+    --mute: #A1A9AB;
+    --dim: #7D8688;
+    --red-text: #77EBFF;
+    --line: rgba(238, 247, 249, 0.16);
+  }
+  [data-scheme="dark"][data-accent="cobalt"] {
+    --label: #C8CBCF;
+    --mute: #A5AAB0;
+    --dim: #81858B;
+    --red-text: #98BFFF;
+    --line: rgba(241, 245, 252, 0.16);
+  }
+  [data-scheme="dark"][data-accent="vite"] {
+    --label: #CACACE;
+    --mute: #A9A9AF;
+    --dim: #84848A;
+    --red-text: #C2AEFF;
+    --line: rgba(245, 244, 252, 0.16);
+  }
+  [data-scheme="dark"][data-accent="magenta"] {
+    --label: #CEC9CB;
+    --mute: #AFA6A9;
+    --dim: #8B8386;
+    --red-text: #FF98CA;
+    --line: rgba(251, 242, 246, 0.16);
+  }
+  [data-scheme="light"][data-accent="signal"] {
+    --label: #444141;
+    --mute: #4F4B4A;
+    --dim: #6D6867;
+    --red-text: #9E0001;
+    --line: rgba(30, 26, 25, 0.24);
+  }
+  [data-scheme="light"][data-accent="amber"] {
+    --label: #434240;
+    --mute: #4F4C49;
+    --dim: #6C6965;
+    --red-text: #694500;
+    --line: rgba(29, 26, 23, 0.24);
+  }
+  [data-scheme="light"][data-accent="phosphor"] {
+    --label: #414341;
+    --mute: #4A4C4A;
+    --dim: #676A67;
+    --red-text: #005914;
+    --line: rgba(25, 28, 25, 0.24);
+  }
+  [data-scheme="light"][data-accent="cyan"] {
+    --label: #404343;
+    --mute: #484C4D;
+    --dim: #656A6B;
+    --red-text: #00555F;
+    --line: rgba(23, 28, 29, 0.24);
+  }
+  [data-scheme="light"][data-accent="cobalt"] {
+    --label: #414244;
+    --mute: #4A4B4F;
+    --dim: #67696D;
+    --red-text: #0145A7;
+    --line: rgba(25, 27, 30, 0.24);
+  }
+  [data-scheme="light"][data-accent="vite"] {
+    --label: #424244;
+    --mute: #4C4B4F;
+    --dim: #69686D;
+    --red-text: #6A1CB7;
+    --line: rgba(27, 26, 30, 0.24);
+  }
+  [data-scheme="light"][data-accent="magenta"] {
+    --label: #444142;
+    --mute: #504B4D;
+    --dim: #6D676A;
+    --red-text: #940060;
+    --line: rgba(30, 26, 27, 0.24);
+  }
 }
 ::selection { background: var(--selection); }
 .no-transition, .no-transition *, .no-transition *::before, .no-transition *::after { transition: none !important; }

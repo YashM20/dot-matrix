@@ -39,8 +39,8 @@ Two surface tones do all the work: `{colors.bg}` (near-black canvas) behind ever
 ### Text
 - **Label** (`{colors.label}` — `#C7CBD1`): card eyebrow labels ("HOME", "MUSIC", "SYSTEM") — always uppercase, always `{typography.caption}`.
 - **Value** (`{colors.value}` — `#F2F3F5`): primary dot-font numerals/short strings (clock time, percentages, scores).
-- **Mute** (`{colors.mute}` — `#6E7278`): secondary metadata under a primary value (date, sub-label, unit).
-- **On Active** (`{colors.onActive}` — `#FFFFFF`): text/labels drawn directly on a `{colors.dotActive}` fill (destructive pill button label, selected settings row).
+- **Mute** (`{colors.mute}` — `#81858B`): secondary metadata under a primary value (date, sub-label, unit). ≥ 4.5:1 on every surface (T6 lifted it from `#6E7278`, which was 3.46:1 on `{colors.surfaceRaised}`).
+- **On Active** (`{colors.onActive}` — `#321A16`): text/labels drawn directly on a `{colors.dotActive}` fill (destructive pill button label, selected settings row). The red's own dark ink: white on `#FF3B30` is only 3.55:1 (T6).
 
 ### Semantic
 - **Success** (`{colors.success}` — `#3FBF63`): rare — only appears in "Great job!" word-game feedback and checklist-complete states. Never used for a primary CTA.
@@ -64,10 +64,10 @@ The page chrome reads these custom properties (`src/tokens.css`), never a hex. V
 | `--scrim` | `rgba(0,0,0,.55)` | — | backdrop behind sheets and dialogs |
 | `--value` | `#F2F3F5` | `{colors.value}` | primary text |
 | `--label` | `#C7CBD1` | `{colors.label}` | labels, secondary text |
-| `--dot-idle` | `#8A8F98` | `{colors.dotIdle}` | native controls (`accent-color`), the essay's meta grey |
-| `--mute` | `#6E7278` | `{colors.mute}` | meta |
+| `--dot-idle` | `#8A8F98` | `{colors.dotIdle}` | native controls (`accent-color`), the essay's meta grey, quiet text (≥ 4.5:1) |
+| `--mute` | `#81858B` | `{colors.mute}` | meta, sub-labels, units (≥ 4.5:1) |
 | `--dot-mid` | `#5B5F66` | `{colors.dotMid}` | quiet bars |
-| `--dim` | `#4A4E54` | — | the dimmest text: units and sub-labels in the editor |
+| `--dim` | `#65696F` | — | **not text**: quiet glyphs and off states (the editor's grip, lock, hidden eye), ≥ 3:1 (WCAG 1.4.11) |
 | `--dot-faint` | `#2E3033` | `{colors.dotFaint}` | off switches |
 
 **Chrome materials** (T1, docs/LAYOUT-THEME-PLAN.md §1b). Built from the roles above, so a theme swap carries them.
@@ -117,12 +117,12 @@ The page chrome around the cards (topbar, pickers, editor, sheets, essay) is rea
 
 | Token | Size | Use |
 |---|---|---|
-| `--fs-tag-8` | 8 px | in-card hints, tiny badges |
-| `--fs-tag-9` | 9 px | card labels, keycaps, chips |
-| `--fs-label-10` | 10 px | chrome labels, tabs, buttons |
-| `--fs-label-11` | 11 px | editor UI, menus |
-| `--fs-label-12` | 12 px | meta: 12 px uppercase mono, +.06em (the plan's one label size) |
-| `--fs-copy-14` | 14 px | short prose, intro lines |
+| `--fs-tag-8` | 8 px | in-card hints only |
+| `--fs-tag-9` | 9 px | card labels, keycaps, glyph marks (▾, the grip), on-canvas badges (the editor's gap readout, a thumbnail label) |
+| `--fs-label-10` | 10 px | the card header only |
+| `--fs-label-11` | 11 px | the card's action row only |
+| `--fs-label-12` | 12 px | **the chrome minimum**: labels, tabs, buttons, menus, the editor, sheets, meta (uppercase mono, +.06em) |
+| `--fs-copy-14` | 14 px | short prose in the display face: the intro, board and group blurbs, changelog summaries |
 | `--fs-copy-16` | 16 px | body copy; phone form fields (no iOS focus zoom) |
 | `--fs-lead-18` | 18 px | the page's inherited size; essay prose |
 | `--fs-title-20` / `-24` / `-28` | 20 / 24 / 28 px | titles (28: the widget page) |
@@ -130,7 +130,11 @@ The page chrome around the cards (topbar, pickers, editor, sheets, essay) is rea
 | `--fs-h1-hero` | `clamp(38px, 5vw, 72px)` | hero heading |
 | `--lh-tight` / `--lh-body` | 1.1 / 1.6 | headings / copy (adopted in T6) |
 
-The 8–11 px tokens carry today's chrome; T6 (docs/LAYOUT-THEME-PLAN.md) lifts chrome text to a 12 px minimum and retires them.
+**T6 type rules** (docs/LAYOUT-THEME-PLAN.md §5 T6):
+- **12 px chrome minimum.** Under 12 px only inside a card (its own small print), keycaps, glyph marks and on-canvas badges. `scripts/site/layout.ts` fails a page where 10% or more of the chrome characters (outside cards; hidden and `aria-hidden` text skipped) are under 12 px, at all six widths.
+- **Families by role:** `--mono` for UI, labels, numbers and meta; `--sans` (Oxanium) for prose (the intro, blurbs, the About lede, changelog summaries and entry titles, the widget page's blurb) and text headings. Prose carries no tracking.
+- **Names in dot type** (§1c #3): board names and the widget page's card name are drawn by the engine (`src/components/DotName.tsx`: `textAt` layers on a cell grid at pitch 3 for a board, 4 for a card, through `DotCanvas`), and wrap at word boundaries to their box. A board title `NAME — what it is` splits: the name in dots, the rest as a 12 px mono label on the name's bottom row. The canvas is `aria-hidden`; the heading holds the name as screen-reader text.
+- **`text-wrap`:** `balance` on h1–h4, `pretty` on p, li, dd, figcaption and blockquote (`src/index.css`).
 
 ### Note on Substitutes
 There is no substitute typeface — the bitmap dot-font *is* the typography system and ships as static data (`bitmapFont.ts`, ~2KB). Any environment that cannot run the sampler falls back to rendering plain system-monospace text at equivalent sizes, which is treated as a degraded/non-brand state, not a real substitute.
@@ -601,7 +605,7 @@ One global switch (header control, `?skin=`, localStorage `dot480:skin`, `setSki
 A theme is **scheme × accent** (docs/LAYOUT-THEME-PLAN.md §4), named `${scheme}_${accent}` (`dark_signal`, `light_cobalt`). `dark_signal` is the canonical theme: goldens, OG images and the no-JS fallback use it, and it equals the colours above exactly. A visitor picks *which* hue is the accent; a board still shows only one (`{colors.dotActive}` = the theme's `--red`).
 
 - **Schemes:** `dark` (today's neutrals, `dot480`) and `light` (the warm `paper` preset: room `#F1F0EC`, card `#F8F8F5`, ink dots). `system` resolves to one of them from `prefers-color-scheme`. Default: `system` + `signal`, so a visitor whose OS is light gets `light_signal`.
-- **Accents (7):** `signal` (h 29, today's red), `amber` (75), `phosphor` (145), `cyan` (210), `cobalt` (260), `vite` (vite.dev's purple, hand-pinned), `magenta` (350). Hues ≥ 25° apart. Custom hue: T6.
+- **Accents (7 + custom):** `signal` (h 29, today's red), `amber` (75), `phosphor` (145), `cyan` (210), `cobalt` (260), `vite` (vite.dev's purple, hand-pinned), `magenta` (350). Hues ≥ 25° apart. `custom`: any hue 0–359, generated in the browser (see Custom hue below).
 - **Source:** `src/site/theme/accents.ts` (generator, pure) → `npx tsx scripts/site/theme.ts --write` → `table.ts` (all roles), `dots.ts` (engine tokens), `themes.css` (CSS variables). The site runs no colour math. `scripts/site/theme.ts` checks the table (also in `pnpm verify`).
 
 ### Roles
@@ -615,11 +619,11 @@ Components and cards read roles, never hues. Same keys in every theme. **One set
 
 The 12% wash and the glow are built from `--red` in `src/tokens.css` (`--glow-wash`, `--glow-halo`, `--glow`); they and the other chrome materials (`--line-dot`, `--hair-x`/`-y`, `--wash-*`, `--glass`, `--shadow-raised`) are declared on `:root, [data-scheme]`, so a pinned subtree draws its own lines and glow.
 
-In `light`, `--tint` is the ink (washes and dotted lines darken the paper) and `--shade` a deep ink (shadows, scrims). Text roles in light: `value` ≈ L .22, `label` .38, `mute` .50, `dim` .62.
+In `light`, `--tint` is the ink (washes and dotted lines darken the paper) and `--shade` a deep ink (shadows, scrims). Text roles in light: `value` ≈ L .22, `label` .38, `mute` .50; the glyph grey `dim` .60.
 
 | Theme | `--red` | `--red-text` | `--on-red` | `--red-dim` |
 |---|---|---|---|---|
-| `dark_signal` | `#FF3B30` | `#FFA193` | `#FFFFFF` | `#B8241A` |
+| `dark_signal` | `#FF3B30` | `#FFA193` | `#321A16` | `#B8241A` |
 | `light_signal` | `#E43226` | `#B42219` | `#190403` | `#FF9687` |
 | `dark_vite` | `#B39AFF` | `#C2AEFF` | `#16171D` | `#6C3BFF` |
 | `light_cobalt` | `#105FD9` | `#0145A7` | `#FFFFFF` | `#8DB8FF` |
@@ -632,15 +636,25 @@ Engine side: `themeTokens(scheme, accent)` (`src/site/theme/theme.ts`) returns a
 Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5 fills, 6–8 lines, 9–10 solid, 11–12 text). The generator clamps or nudges until every rule passes, and hand-pinned values must pass them too.
 - **Gamut:** every colour is inside sRGB. Chroma is binary-searched at fixed L and h. Cut today: dark cobalt −11%, dark magenta −34% (its L rose to stay clear of the idle grey for protans), light amber −16%, light cyan −14%.
 - **Dots:** `red` and `red-line` are ≥ 3:1 on `surface` and `bg`.
-- **Text:** `value`, `label`, `mute` and `red-text` are ≥ 4.5:1 on all four surfaces. `red-text` is also ≥ APCA Lc 60 on `surface`. `dim` is not held to it (units and sub-labels; T6).
+- **Text:** `value`, `label`, `mute`, `dot-idle` and `red-text` are ≥ 4.5:1 on all four surfaces, in every theme, with no waiver. `red-text` is also ≥ APCA Lc 60 on `surface`. `dim` is not text and is ≥ 3:1. Every `color:` in the site CSS must be one of these roles (or `bg` / `tint` / `on-red` / `red-surface-text` on their fills, `dim` on the editor's glyphs): accent text is always `--red-text`, never `--red` (`scripts/site/theme.ts`).
 - **`on-red`:** white if it reaches APCA 60 and 4.5:1 on the solid. Otherwise a dark tint of the hue (`oklch(.25 max(.08·C, .04) h)`), darkened until it reaches 4.5:1.
-- **Colour-blind safety:** in normal vision and under simulated protanopia, deuteranopia and tritanopia (Machado 2009), `red` differs from `value`, `dot-idle` and `dot-mid` by ΔL ≥ .08 or ΔE_OK ≥ .10. If needed, the solid's L is searched ±.15 to get there.
+- **Colour-blind safety:** in normal vision and under simulated protanopia, deuteranopia and tritanopia (Machado 2009), `red` differs from `value`, `dot-idle` and `dot-mid` by ΔL ≥ .08 or ΔE_OK ≥ .10. If needed, the solid's L is searched ±.3 (nearest first) to get there, then at .85, .7 and .55 of the chroma (a few custom pink-reds on paper need it).
 - **Tone order:** APCA on `surface` gives faint < mid < idle < value, and `red-dim` < `red`.
 - **`red-dim`:** dark uses step 7 (a dimmer accent). Light uses step 7 too, a lighter tint (less ink), which matches vite's pinned `#B39AFF`.
 - **Tinted neutrals:** surfaces lean toward the hue by C .005 (vite .014), `line`, `line-strong`, `mute` and `dim` by .010, `label` by .006, and `value` by .003. Light gets 70% of these. L is kept. Neutral dot tones stay untinted, and `dark_signal` is not tinted at all.
-- **Pins:** `dark_signal` keeps `#FF3B30` / `#B8241A` / `#FFFFFF`. `vite` dark is `#B39AFF` (line and dim `#6C3BFF`, on-red `#16171D`, surface `#370A7F`). `vite` light is `#6C3BFF` (text `#6B1EB9`, line `#8A63FE`, dim `#B39AFF`, surface `#F0EBFF` / `#140033`). Dark vite's `red-text` is `#C2AEFF`, because `#B39AFF` reaches only Lc 55.
-- **Waivers:** two of today's values fail a rule and are kept on `dark_signal` only, until T6: `mute` `#6E7278` (3.85:1 on the surface) and `on-red` white on `#FF3B30` (3.55:1). The check lists them.
+- **Pins:** `dark_signal` keeps `#FF3B30` / `#B8241A` (its `on-red` is generated: the dark ink `#321A16`). `vite` dark is `#B39AFF` (line and dim `#6C3BFF`, on-red `#16171D`, surface `#370A7F`). `vite` light is `#6C3BFF` (text `#6B1EB9`, line `#8A63FE`, dim `#B39AFF`, surface `#F0EBFF` / `#140033`). Dark vite's `red-text` is `#C2AEFF`, because `#B39AFF` reaches only Lc 55.
+- **No waivers (T6):** the two `dark_signal` exceptions are gone: `mute` is `#81858B` (was `#6E7278`, 3.46:1 on `raised`) and `on-red` is the dark ink (white was 3.55:1). Neither is an engine token, so no card moved.
 - **Gradient rule:** `red-halo` (vite: electric `#6C3BFF` → vite `#B39AFF`) is for chrome halos only: glow, focus and live ring, swatch ring. Never use it on dots, text or lines.
+
+### Contrast (`prefers-contrast: more`, T6)
+- `themes.css` has a `@media (prefers-contrast: more)` block per theme: `label`, `mute` and `red-text` at ≥ 7:1 (AAA) on every surface, `dim` at ≥ 4.5:1, the hairline alpha doubled (dark .16, light .24). Only lightness moves, so each theme keeps its look (`moreRoles()` in `accents.ts`; checked in all 14 themes and on every custom hue).
+- `src/tokens.css` follows with the materials: dotted rules at 44% ink, hover outlines at 50%, firmer washes, and opaque raised layers (no glass, no blur).
+- The custom hue's CSS carries the same block.
+
+### Custom hue (T6)
+- The 8th swatch in the picker. The visitor picks only the hue (a slider, 0–359°); chroma and lightness are interpolated around the hue circle between the two neighbouring presets and then clamped by the generator's rules, so no pick can be illegible: `scripts/site/theme.ts` sweeps all 360 hues × 2 schemes through the text, dot, line, colour-blind, tone-order and gamut rules.
+- `src/site/theme/custom.ts` (lazy, with the generator) turns a hue into CSS for both schemes, scoped like the presets (`[data-scheme][data-accent="custom"]`, plus its contrast block). The store keeps `{ accent: "custom", hue, css }` in `dot480:theme` and writes the CSS into `<style id="theme-custom">`; the boot script writes the same style before first paint, so a custom hue doesn't flash either. `custom` resolves only while its CSS is stored; a picked preset keeps the stored hue for the swatch.
+- Neutrals are tinted toward the custom hue like a preset's. Share links of a custom theme carry only `?scheme=` (the hue lives in the sender's storage). The essay figure that shows a deliberate second accent treats custom hues 180–300° as blue.
 
 ### Runtime
 - `<html data-scheme data-accent>` is set before first paint by the inline boot script in the `<head>` of every HTML entry (`index.html`, `essay.html`, `privacy.html`, `terms.html`; `src/site/theme/boot.ts`, byte-identical everywhere so the one sha256 in the CSP in `vercel.json` covers them). It also rewrites the `color-scheme` meta and the `theme-color` meta (the scheme's `bg`), which sit above it.
@@ -653,7 +667,7 @@ Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5
 
 ### Picker (T5)
 - **Where:** the header's THEME button sits right after DISPLAY ▾ (its dot is the current `--red`), and opens a popover (`src/components/theme/`; the popover's content is a lazy chunk, fetched during the hover intent). Phones hide it; TOOLS has a THEME section with the same controls above DISPLAY. Nothing in it measures the header, so a header that hides on scroll keeps working.
-- **Controls** (`ThemeControls`, shared): the shown theme's name (in `red-text`) and its tone ramp (faint, mid, idle, value, accent: five dots); scheme as a segmented SYSTEM / LIGHT / DARK (`role=radio`, arrows pick); the 7 accents as swatches, each a 7×7 dot disc in its own colour on the shown scheme (a horizontal `listbox`: arrows, Home and End move focus, Enter, Space or a click picks; the picked one has its `red-halo` behind it and a `red-line` ring); a line on the accent; the share-link switch. Targets: 32 px in the popover, 44 px in the sheet.
+- **Controls** (`ThemeControls`, shared): the shown theme's name (in `red-text`) and its tone ramp (faint, mid, idle, value, accent: five dots); scheme as a segmented SYSTEM / LIGHT / DARK (`role=radio`, arrows pick); the 7 accents and `custom` as swatches (custom is a rim of dots until a hue is set; picking it opens the hue slider, a native range over 36 dots, each the generated accent of its hue on the shown scheme; dragging applies at once, without the wipe), each a 7×7 dot disc in its own colour on the shown scheme (a horizontal `listbox`: arrows, Home and End move focus, Enter, Space or a click picks; the picked one has its `red-halo` behind it and a `red-line` ring); a line on the accent; the share-link switch. Targets: 32 px in the popover, 44 px in the sheet.
 - **Live preview:** hovering (mouse) or focusing a swatch or a scheme puts that theme's `data-scheme` + `data-accent` on the popover's root, so the popover itself (glass, text, ring, ramp) shows it; the page changes only on a pick. Each swatch is its own scope (both attributes), so its disc is `var(--red)` of that theme: no colour table in JS.
 - **The switch moment** (`src/site/theme/moment.ts`, `switchTheme`): a pick runs `document.startViewTransition`; the new page shows through a mask whose halftone front spreads from the pressed control's centre (solid inside, then dots of .5, .32 and .16 of a 10 px lattice: a fold of disc and dot masks with `mask-composite`), so what is near the control turns first and the far corner last, over `--dur-wipe`. The band is 8% of the distance to the farthest corner (≥ 40 px). The old page is a still underneath; the cards re-sample once, live under the mask. Palette commands wipe from the middle of the screen. **Instant**, with no transition, under reduced motion (the OS setting or the ⌘K override), without the API, or in a hidden tab.
 - **URL params** still apply to the visit and are never stored; an explicit pick (popover, sheet, ⌘K) drops `theme` / `scheme` / `accent` from the address bar, so a reload keeps the pick.
@@ -666,8 +680,9 @@ Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5
 - **Polarity insets** (`src/site/theme/polarity.ts`): on a light page a card renders as a dark inset (`data-scheme="dark"` + the page's accent on `.dot-card`, dark tokens) when it is a photo or halftone (`group: 'photo'`), the live camera (`media: 'camera'`), or when the display skin is emissive (CRT, VFD, LED, Nixie: dark glass). Reflective skins (e-ink, flip-disc) and every other card follow the page. On that dark glass VFD and LED glow in the accent (`DotCanvas` passes `theme.dotActive` to the stage); Nixie's neon stays orange (skin physics).
 - **Editor:** the asset thumbnails and dot icons are chrome and follow the site theme; the frames on the canvas keep their own theme (`dot480` / `deerflowMosaic`), which belongs to the artwork.
 - **Theme parity:** `pnpm golden --theme-parity` samples all 177 presets in all 14 themes and maps every dot's colour back to its tone role through `paletteOf`: the `(x, y, r, opacity, role)` hashes must equal `dark_signal`'s, so a theme only recolours. It reads and writes nothing (`goldens/hashes.json` stays `dark_signal`).
-- **X-ray:** the guide lines are the scheme's `--tint` at a few alphas (`.xr-grid { color }`; light on dark, ink on paper); the HUD and tip use `panel`, `label`, `value`, `mute`.
-- **Not themed yet:** the reflective skins' physics colours (`STAGE_COLORS` in `src/engine/display/stage.ts`: flip-disc faces and panel, e-ink paper and ink stay `dot480`).
+- **X-ray:** the guide lines are the scheme's `--tint` at a few alphas (`.xr-grid { color }`; light on dark, ink on paper); the HUD and tip use `panel`, `label`, `value`, `mute`, and the HUD's figures `red-text`.
+- **Reflective skin colours (T6):** on a light card e-ink is the card's own paper (`surface`) with the theme's ink (`value`), and flip-disc discs turn from `dotFaint` to `value` on the card surface (`SkinOverlay` passes the card's tones as `StageOptions.colors`). On a dark card the stage keeps its physics colours (`STAGE_COLORS`).
+- **The live number band** (footer) follows the skin like a card: under an emissive skin on a light page it is a small dark inset with the dark scheme's tones, not dark ink on dark glass.
 
 ## Known Gaps
 

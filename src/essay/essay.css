@@ -35,7 +35,7 @@ em { color: var(--value) }
 
 /* hero */
 .hero { padding: var(--space-5) 0 var(--gap-action); border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1; margin-bottom: var(--space-5) }
-.kicker { font: 500 var(--fs-label-11) var(--mono); letter-spacing: .18em; color: var(--mute); display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--gap-action) }
+.kicker { font: 500 var(--fs-label-12) var(--mono); letter-spacing: .18em; color: var(--mute); display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--gap-action) }
 .kicker i { width: 6px; height: 6px; border-radius: 50%; background: var(--red); display: inline-block }
 .lede { font-size: var(--fs-title-20); line-height: 1.55; color: var(--value); margin: var(--gap-action) 0 }
 .toc ol { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: var(--gap-action) }
@@ -56,7 +56,7 @@ em { color: var(--value) }
 .steps { padding-left: 1.2em; margin: 0 0 1.2em }
 .steps li { margin: 0 0 .6em }
 .moment { border-left: 2px solid var(--red); padding: var(--space-1) 0 var(--space-1) var(--space-4); color: var(--label); margin: 1.4em 0 }
-.moment > b:first-child { display: block; font: 500 var(--fs-label-11) var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--mute); margin-bottom: var(--space-1) }
+.moment > b:first-child { display: block; font: 500 var(--fs-label-12) var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--mute); margin-bottom: var(--space-1) }
 
 /* figures */
 .fig { margin: var(--gap-action) 0; counter-increment: fig }
@@ -66,10 +66,10 @@ em { color: var(--value) }
 .fig figcaption { font-size: var(--fs-copy-14); line-height: 1.55; color: var(--mute); margin-top: var(--space-3); max-width: var(--measure) }
 .fig--wide figcaption { margin-left: auto; margin-right: auto }
 /* the figure legend (Linear-style, docs/LAYOUT-THEME-PLAN.md §1c #14): FIG 07 · MASKS, one meta line over the caption */
-.fig figcaption[data-fig]::before { content: 'FIG ' counter(fig, decimal-leading-zero) ' · ' attr(data-fig); display: block; margin-bottom: var(--space-1); font: 500 var(--fs-label-11)/1.4 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--label) }
+.fig figcaption[data-fig]::before { content: 'FIG ' counter(fig, decimal-leading-zero) ' · ' attr(data-fig); display: block; margin-bottom: var(--space-1); font: 500 var(--fs-label-12)/1.4 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--label) }
 
 .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-card); padding: var(--space-4) }
-.panel-label { font: 500 var(--fs-label-10)/1.4 var(--mono); letter-spacing: .14em; color: var(--mute); margin-bottom: var(--space-2); min-height: 14px }
+.panel-label { font: 500 var(--fs-label-12)/1.4 var(--mono); letter-spacing: .14em; color: var(--mute); margin-bottom: var(--space-2); min-height: 14px }
 .panel-note { font: var(--fs-label-12) var(--mono); color: var(--mute); margin-top: var(--space-2) }
 .stage { width: 100%; margin: 0 auto }
 .stage--sq { max-width: 420px }
@@ -107,7 +107,7 @@ em { color: var(--value) }
 .ctls { display: flex; flex-wrap: wrap; gap: var(--space-3) var(--space-5); align-items: center; margin-top: var(--space-4) }
 .ctl { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-3); font: var(--fs-label-12) var(--mono); color: var(--label); flex: 1 1 280px }
 .ctl--choice { grid-template-columns: 1fr; gap: var(--space-2); flex-basis: 100% }
-.ctl-label { letter-spacing: .06em; color: var(--mute); text-transform: uppercase; font: 500 var(--fs-label-11) var(--mono) }
+.ctl-label { letter-spacing: .06em; color: var(--mute); text-transform: uppercase; font: 500 var(--fs-label-12) var(--mono) }
 .ctl output { color: var(--value); min-width: 4.5em; text-align: right; font-variant-numeric: tabular-nums }
 .ctl input[type=range] { width: 100%; accent-color: var(--label); height: 28px; background: transparent }
 .ctl-buttons { display: flex; flex-wrap: wrap; gap: var(--space-2) }
@@ -125,14 +125,14 @@ em { color: var(--value) }
 .ir-code { display: grid; gap: var(--space-2) }
 .ir textarea { width: 100%; resize: vertical; font: var(--fs-label-12)/1.55 var(--mono); color: var(--value); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-panel); padding: var(--space-3); tab-size: 2 }
 .ir textarea:focus { outline: 1px solid var(--red); outline-offset: 2px }
-.ir-status { font: var(--fs-label-11) var(--mono); color: var(--mute); letter-spacing: .06em; min-height: 1.4em }
+.ir-status { font: var(--fs-label-12) var(--mono); color: var(--mute); letter-spacing: .06em; min-height: 1.4em }
 .ir-status--err { color: var(--value) }
 
 .credits { padding-left: 1.2em }
 .credits li { margin: 0 0 .55em }
 .outro { margin-top: 1.6em }
 .essay-foot a { color: inherit }
-.essay-foot { margin-top: var(--space-8); padding-top: var(--space-4); border-top: 1px solid var(--line); border-image: var(--hair-x) 1; font: 500 var(--fs-label-10) var(--mono); letter-spacing: .16em; color: var(--mute); display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap }
+.essay-foot { margin-top: var(--space-8); padding-top: var(--space-4); border-top: 1px solid var(--line); border-image: var(--hair-x) 1; font: 500 var(--fs-label-12) var(--mono); letter-spacing: .16em; color: var(--mute); display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap }
 
 @media (max-width: 900px) {
   .cards--5 { grid-template-columns: repeat(3, 1fr) }
@@ -154,5 +154,5 @@ em { color: var(--value) }
 /* site nav: the essay is the front door; the boards, DOTS and the log are one click away */
 .site-nav { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-6) }
 .site-nav .kicker { margin: 0 }
-.site-nav a { font: 500 var(--fs-label-11) var(--mono); letter-spacing: .16em; color: var(--label); text-decoration: none; margin-left: var(--space-4) }
+.site-nav a { font: 500 var(--fs-label-12) var(--mono); letter-spacing: .16em; color: var(--label); text-decoration: none; margin-left: var(--space-4) }
 .site-nav a:hover, .site-nav a:focus-visible, .site-nav a:active { color: var(--value) }

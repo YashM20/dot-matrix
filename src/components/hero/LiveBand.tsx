@@ -3,6 +3,8 @@
  * (every frame a DotCanvas paints adds its dots, src/site/stats.ts), drawn in dot type through the pipeline like
  * any card. It reads the counter at most 4 times a second, only while the band is on screen and the tab visible;
  * under reduced motion it does not tick, it shows the count from when it came into view. Lazy (App mounts it idle).
+ * Display skins dress it like a card: an emissive skin (CRT, VFD, LED, Nixie) is dark glass, so on a light page the
+ * number sits in a dark inset with the dark scheme's tones (`polarity.ts`), never dark ink on dark glass (T6).
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { DotCanvas } from '../DotCanvas'
@@ -10,7 +12,9 @@ import type { GridConfig } from '../../engine/types'
 import { textAt, textSize } from '../../engine/layout'
 import { baseStyle, layer } from '../../widgets/types'
 import { drawn } from '../../site/stats'
-import { useThemeTokens } from '../../site/theme/useTheme'
+import { useTheme, useThemeTokens } from '../../site/theme/useTheme'
+import { useDisplaySkin } from '../skins/store'
+import { SKINS } from '../../engine/display/names'
 
 /** 5×7 dot type at a 4 px pitch, one dot of margin; the grid is as wide as the number (a digit more, a few cells more). */
 const PITCH = 4, ROWS = 9
@@ -19,8 +23,10 @@ const EVERY_MS = 250
 
 export function LiveBand() {
   const [count, setCount] = useState(drawn.dots)
-  // the band sits on the page, not in a card, so it takes the site theme's dot tones (ink on paper in light)
-  const theme = useThemeTokens()
+  // the band sits on the page, not in a card, so it takes the site theme's dot tones (ink on paper in light); under an
+  // emissive skin it is a dark inset on a light page, like the cards (the skin's own stage tones)
+  const site = useTheme(), glass = SKINS[useDisplaySkin()].blend === 'screen', inset = glass && site.resolved === 'light'
+  const theme = useThemeTokens(glass ? 'dark' : undefined)
   const box = useRef<HTMLDivElement>(null)
   // the band's own redraws are not counted (it would count itself up): the dots its DotCanvas adds between this
   // commit's layout effects and its passive effects (the child's passive effect runs first) are set aside
@@ -46,7 +52,8 @@ export function LiveBand() {
   useLayoutEffect(() => { mark.current = drawn.dots }, [text])
   useEffect(() => { own.current += drawn.dots - mark.current }, [text])
   return <>
-    <div className="live-number" ref={box} style={{ width: cols * PITCH }}><DotCanvas layers={layers} grid={grid} style={STYLE} theme={theme} change={false} /></div>
+    <div className={`live-number${inset ? ' live-number--inset' : ''}`} ref={box} style={{ width: cols * PITCH }}
+      {...(inset ? { 'data-scheme': 'dark', 'data-accent': site.accent } : {})}><DotCanvas layers={layers} grid={grid} style={STYLE} theme={theme} change={false} /></div>
     <p className="fig-cap live-label"><b className="live"><i aria-hidden="true" />LIVE</b>dots drawn this visit, each one sampled from a field <span className="sr-only">: {text}</span></p>
   </>
 }

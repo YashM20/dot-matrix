@@ -18,7 +18,8 @@
  *    overlap, at either end of its scroll (the old sticky ALL pill covered the first group);
  *  - section gaps only from the token set: each vertical gap between the page's blocks is --gap-group, --gap-action
  *    or --gap-section (as computed at that width), ±1 px;
- *  - reported, not gated (T6): the share of chrome characters (outside cards) set under 12 px.
+ *  - type (T6): under 10% of the chrome characters (outside cards; hidden, screen-reader-only and aria-hidden text
+ *    skipped) set under 12 px, on every page at every width.
  *
  * Needs a server for dist/: `npx vite build && npx vite preview --port 4318`, then
  * `npx tsx scripts/site/layout.ts [baseUrl] [--shots <dir>] [--grid ruled|cards]`. `--grid` sets
@@ -188,6 +189,7 @@ try {
       if (m.scrollW > W + 1) fail(`${tag}: horizontal overflow (scrollWidth ${m.scrollW})`)
       const set = Object.values(m.tok), bad = m.gaps.filter(g => !set.some(t => Math.abs(g.px - t) <= 1))
       if (bad.length) fail(`${tag}: gaps off the token set (${set.map(t => t.toFixed(1)).join(' / ')}): ${bad.map(g => `${g.from}→${g.to} ${g.px}`).join(', ')}`)
+      if (m.small >= .1) fail(`${tag}: ${(m.small * 100).toFixed(1)}% of the chrome characters are under 12 px, want < 10%`)
       if (p.kind === 'board') {
         if (m.tallest > .62 * H + 1) fail(`${tag}: card ${m.tallest}px tall > 62svh (${Math.round(.62 * H)})`)
         if (m.orphanStretched) fail(`${tag}: last row stretched`)

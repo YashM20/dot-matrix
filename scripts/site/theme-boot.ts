@@ -10,7 +10,10 @@
  *    bundle, keep the boot script's scheme bg), and on the first case the runtime `themeTokens()` (read from the
  *    CSS) equals `tokensOf()` (the generated table) for all 14 themes;
  *  - the CSP header was served and no `securitypolicyviolation` fired (the inline script's sha256 matched:
- *    a wrong hash blocks the script and leaves the attributes unset).
+ *    a wrong hash blocks the script and leaves the attributes unset);
+ *  - T6: a stored custom hue paints without a flash too (its `<style id="theme-custom">` exists when `<body>`
+ *    starts, and the page's roles are the generator's for that hue), and `prefers-contrast: more` raises the text
+ *    roles to the generated AAA values.
  * Needs a build: `npx vite build` (or `pnpm build`), then `npx tsx scripts/site/theme-boot.ts`. Chrome: $CHROME or the usual paths.
  */
 import { spawn } from 'node:child_process'
@@ -21,7 +24,7 @@ import { extname, join, normalize } from 'node:path'
 import { THEME_TABLE } from '../../src/site/theme/table'
 import { tokensOf } from '../../src/site/theme/tokens'
 import { ACCENTS, SCHEMES, themeName } from '../../src/site/theme/names'
-import { NEUTRALS } from '../../src/site/theme/accents'
+import { customCss, generate, generateHue, moreRoles, NEUTRALS } from '../../src/site/theme/accents'
 
 const DIST = 'dist'
 if (!existsSync(join(DIST, 'index.html'))) { console.log('no dist/index.html (run npx vite build first): skipped'); process.exit(0) }
@@ -70,9 +73,10 @@ const probe = (stored: string | null) => `(() => {
   document.addEventListener('securitypolicyviolation', e => window.__violations.push(e.violatedDirective + ' ' + (e.blockedURI || 'inline')))
   // <html> may not exist yet when this runs: observe the document itself
   const meta = n => document.querySelector('meta[name=' + n + ']')?.content
-  new MutationObserver((_, o) => { const d = document.documentElement; if (document.body && !window.__atBody) { window.__atBody = { scheme: d.getAttribute('data-scheme'), accent: d.getAttribute('data-accent'), cs: meta('color-scheme'), tc: meta('theme-color') }; o.disconnect() } }).observe(document, { childList: true, subtree: true })
+  new MutationObserver((_, o) => { const d = document.documentElement; if (document.body && !window.__atBody) { window.__atBody = { scheme: d.getAttribute('data-scheme'), accent: d.getAttribute('data-accent'), cs: meta('color-scheme'), tc: meta('theme-color'), custom: !!document.getElementById('theme-custom') }; o.disconnect() } }).observe(document, { childList: true, subtree: true })
 })()`
 
+const HUE = 212, CUSTOM = JSON.stringify({ scheme: 'light', accent: 'custom', hue: HUE, css: customCss(HUE) })
 const cases: { page: string; stored: string | null; os: 'light' | 'dark'; want: [string, string] }[] = [
   { page: '/', stored: null, os: 'dark', want: ['dark', 'signal'] },
   { page: '/', stored: null, os: 'light', want: ['light', 'signal'] },
@@ -88,6 +92,9 @@ const cases: { page: string; stored: string | null; os: 'light' | 'dark'; want: 
   { page: '/privacy', stored: null, os: 'dark', want: ['dark', 'signal'] },
   { page: '/privacy', stored: '{"scheme":"light","accent":"amber"}', os: 'dark', want: ['light', 'amber'] },
   { page: '/terms', stored: '{"scheme":"system","accent":"magenta"}', os: 'light', want: ['light', 'magenta'] },
+  // T6: the custom hue (its CSS stored next to it), on the app and the essay
+  { page: '/', stored: CUSTOM, os: 'light', want: ['light', 'custom'] },
+  { page: '/essay.html', stored: CUSTOM.replace('"light"', '"dark"'), os: 'light', want: ['dark', 'custom'] },
 ]
 /** Pages without a bundle (the legal pages: only the boot script runs): theme-color stays the scheme's untinted bg. */
 const STATIC = (page: string) => /^\/(privacy|terms)\b/.test(page)
@@ -99,12 +106,12 @@ try {
     const { result } = await cdp('Page.addScriptToEvaluateOnNewDocument', { source: probe(c.stored) })
     await cdp('Page.navigate', { url: base + c.page })
     for (let i = 0; i < 100 && !(await js('document.readyState === "complete" && !!window.__atBody')); i++) await sleep(100)
-    const at = await js('window.__atBody') as { scheme: string; accent: string; cs?: string; tc?: string } | undefined, v = await js('window.__violations') as string[] | undefined
+    const at = await js('window.__atBody') as { scheme: string; accent: string; cs?: string; tc?: string; custom?: boolean } | undefined, v = await js('window.__violations') as string[] | undefined
     const csp = await js(`fetch(location.href).then(r => r.headers.get('content-security-policy'))`) as string | null
     const label = `${c.page} · stored ${c.stored ?? 'nothing'} · OS ${c.os}`
-    check(`${label}: <html> is ${c.want.join('_')} when <body> starts`, at?.scheme === c.want[0] && at?.accent === c.want[1], JSON.stringify(at))
+    check(`${label}: <html> is ${c.want.join('_')} when <body> starts${c.want[1] === 'custom' ? ', with the custom hue\'s <style>' : ''}`, at?.scheme === c.want[0] && at?.accent === c.want[1] && at.custom === (c.want[1] === 'custom'), JSON.stringify(at))
     check(`${label}: color-scheme and theme-color metas name the scheme when <body> starts`, at?.cs === c.want[0] && !!at?.tc && (c.want[0] === 'light' ? at.tc !== '#070809' : at.tc === '#070809'), JSON.stringify(at))
-    const roles = THEME_TABLE[`${c.want[0]}_${c.want[1]}` as keyof typeof THEME_TABLE]
+    const roles = c.want[1] === 'custom' ? generateHue(c.want[0] as 'dark' | 'light', HUE).roles : THEME_TABLE[`${c.want[0]}_${c.want[1]}` as keyof typeof THEME_TABLE]
     const tc = STATIC(c.page) ? SCHEME_BG[c.want[0]] : roles.bg
     for (let i = 0; i < 30 && !(await js(`document.querySelector('meta[name=theme-color]').content.toUpperCase() === ${JSON.stringify(tc)}`)); i++) await sleep(100)
     // the body's colours too: a page whose own CSS pins a colour would show the theme's --bg on <html> but not paint it
@@ -127,6 +134,17 @@ try {
       check('runtime themeTokens() (read from the theme CSS) ≡ tokensOf() (generated table) in all 14 themes', !off.length, `${off.join(', ')}${why ? ` (${off[0]}: ${why})` : ''}`)
     }
     check(`${label}: CSP served, no violation (inline boot allowed by its hash)`, !!csp?.includes("script-src 'self' 'sha256-") && Array.isArray(v) && v.length === 0, (v ?? []).join(', '))
+    await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: result.identifier })
+  }
+  // T6: prefers-contrast: more raises the text roles (themes.css @media block) on dark_signal and light_cobalt
+  for (const [scheme, accent] of [['dark', 'signal'], ['light', 'cobalt']] as const) {
+    await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }, { name: 'prefers-contrast', value: 'more' }] })
+    const { result } = await cdp('Page.addScriptToEvaluateOnNewDocument', { source: probe(JSON.stringify({ scheme, accent })) })
+    await cdp('Page.navigate', { url: base + '/' })
+    for (let i = 0; i < 100 && !(await js('document.readyState === "complete"')); i++) await sleep(100)
+    const want = moreRoles(generate(scheme, accent))
+    const got = await js(`(() => { const s = getComputedStyle(document.documentElement); return ['label', 'mute', 'dim', 'red-text'].map(k => s.getPropertyValue('--' + k).trim().toUpperCase()) })()`) as string[] | undefined
+    check(`prefers-contrast: more on ${scheme}_${accent}: label / mute / dim / red-text are the AAA values`, JSON.stringify(got) === JSON.stringify([want.label, want.mute, want.dim, want['red-text']]), `${JSON.stringify(got)} vs ${JSON.stringify([want.label, want.mute, want.dim, want['red-text']])}`)
     await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: result.identifier })
   }
   // the app's hand-off to the static pages (a server that falls back to the SPA) keeps the visit's theme params

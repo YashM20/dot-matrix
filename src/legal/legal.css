@@ -3,14 +3,14 @@
 @import '../essay/essay.css';
 
 .legal { padding-top: var(--space-6) }
-.legal-nav { display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; font: 500 var(--fs-label-11) var(--mono); letter-spacing: .16em; margin: 0 0 var(--gap-action) }
+.legal-nav { display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; font: 500 var(--fs-label-12) var(--mono); letter-spacing: .16em; margin: 0 0 var(--gap-action) }
 .legal-nav a { color: var(--mute); text-decoration: none; display: inline-block; padding: var(--space-2) 0 }
 .legal-nav a:hover, .legal-nav a:focus-visible, .legal-nav a:active, .legal-nav a[aria-current] { color: var(--value) }
 .legal-nav span { display: flex; gap: var(--space-4) }
 .legal h1 { font: 600 var(--fs-h1-page)/1.1 var(--sans); color: var(--value); letter-spacing: -.01em; margin: 0 }
 .legal .hero { padding-bottom: var(--gap-action) }
 .legal .lede { margin: var(--gap-group) 0 0 }
-.legal .stamp { font: 500 var(--fs-label-11) var(--mono); letter-spacing: .14em; color: var(--mute); margin: var(--space-4) 0 0 }
+.legal .stamp { font: 500 var(--fs-label-12) var(--mono); letter-spacing: .14em; color: var(--mute); margin: var(--space-4) 0 0 }
 .legal h2 { font: 500 var(--fs-label-12)/1.4 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--value); margin: var(--gap-action) 0 var(--space-4) }
 .legal h3 { font: 600 var(--fs-copy-16)/1.4 var(--sans); color: var(--value); margin: var(--space-5) 0 var(--space-2) }
 .legal p, .legal ul { margin: 0 0 1em }

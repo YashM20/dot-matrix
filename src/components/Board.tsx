@@ -1,5 +1,6 @@
 import { lazy, Suspense, use, useCallback, useEffect, useId, useState } from 'react'
 import { DotWidget } from './DotWidget'
+import { BoardTitle } from './DotName'
 import { useThemeTokens } from '../site/theme/useTheme'
 import { boardMeta, loadBoard, type BoardDef, type BoardId } from '../widgets/manifest'
 import type { ControlPatch } from '../engine'
@@ -58,7 +59,7 @@ function seedShared(board: BoardDef): ControlPatch {
 /** A board by id: its chunk loads on first open (`widgets/manifest`); the title holds the place meanwhile. */
 export function Board({ id, leaving = false }: { id: string; leaving?: boolean }) {
   if (AUDIO_BOARDS.has(id)) void loadAudio() // fetched alongside the board chunk, not after it
-  return <Suspense fallback={<section className="board-view" aria-busy="true"><h2 className="board-title">{boardMeta(id)?.title}</h2></section>}>
+  return <Suspense fallback={<section className="board-view" aria-busy="true"><BoardTitle title={boardMeta(id)?.title ?? ''} /></section>}>
     <LoadedBoard id={id} leaving={leaving} />
   </Suspense>
 }
@@ -82,7 +83,7 @@ function LoadedBoard({ id, leaving }: { id: string; leaving: boolean }) {
     {...(sharing ? { shared, sharedKeys: board.shared, onShared } : {})} {...cardMotion(i, board.columns, board.items.length, leaving)} />)
   return (
     <section className="board-view" aria-labelledby={titleId}>
-      <h2 className="board-title" id={titleId}>{board.title}</h2>
+      <BoardTitle title={board.title} id={titleId} />
       <p className="board-blurb">{blurb}</p>
       {/* C4: the levels board opens HIVE in play mode (the cards stay as attract-mode previews) */}
       {board.id === 'levels' && <HiveStart theme={theme} />}

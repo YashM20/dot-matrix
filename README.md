@@ -20,7 +20,8 @@ Every visual is `Layer[]` (a `Field(u,v) → [0,1]` plus a colour tone) → grid
   - **X-RAY** shows the field, layers and spec behind a card, starting with a plain-words SUMMARY;
   - **TIME** freezes and scrubs the clock;
   - **⌘K** opens a palette and **`** a dot shell;
-  - the **DISPLAY ▾** menu re-renders everything as CRT, VFD, LED, e-ink, flip-disc or Nixie.
+  - the **DISPLAY ▾** menu re-renders everything as CRT, VFD, LED, e-ink, flip-disc or Nixie;
+  - **THEME** picks light, dark or system and one of 7 accents, or any hue on a slider (the site generates a theme that stays legible); text is ≥ 12 px and ≥ 4.5:1 in every theme, and stronger when the OS asks for more contrast.
 - **Essay:** "Ditherpunk for UI" at `/essay.html`, a hands-on tour of how the dots are made.
 
 ## Layout of the repo
@@ -50,6 +51,7 @@ Browser probes run against a dev or preview server, e.g. `npx tsx scripts/c10-br
 - `?card=<id>` renders one card alone.
 - `?make=code&p=…` opens a shared CODE program.
 - `?skin=crt` picks a display skin; `?pro=1` opens every fold.
+- `?theme=light_cobalt` (or `?scheme=` and `?accent=`) shows a theme for the visit without storing it.
 
 The address bar follows what you open, and Back and Forward work. Every old link still resolves (`?tab=…`, `?board=…`, the renamed `/glyph/` board) through the alias table in `src/site/views.ts`.
 
