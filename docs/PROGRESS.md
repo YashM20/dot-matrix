@@ -4,20 +4,85 @@
 > Update this file in the same commit as the work. Active plans: `docs/WEB-PLAN.md` (what the site does) and `docs/UX-PLAN.md` (how visitors find it); every doc and its status: `docs/README.md`. Original phase plan: `docs/MASTER-PLAN.md` (v2). Research: `docs/MOTION-INTERACTION-DEPTH.md`, `docs/ADVANCED-PLAN.md`. Taste: `docs/STYLE-BIBLE.md`.
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
+## Live run state: resume here (updated 2026-10-29)
+> The coordinator keeps this block current. Read it after any interruption or compaction, before doing anything else.
+
+**Shipped:** round 2 is on main and live.
+- **PR #10:** merge `2b4780e`, branch `feat/round2`.
+- **PR #11:** merge `bcacd5a`, the desktop editor re-measures its height, which fixed the marquee; `shots.ts` covers the new boards.
+- **Full suite** (`dmdocs/full2.sh`): green except one editor check, which PR #11 fixed.
+- **Sizes:** first load 123.49 kB gz; the worker's initial chunk 17.14 kB gz.
+
+**Working branch:** `feat/round3`. It tracks origin and equals main plus nothing new yet. Merge each round-3 agent here; PR to main when the owner says.
+
+**Running agents (round 3):**
+- Each runs in `.claude/worktrees/agent-<id>/` on branch `worktree-agent-<id>`.
+- Resume one with SendMessage to `<id>`. If its worktree is gone, restart from the brief and its last WIP commit.
+- Each keeps a resume note in its latest WIP commit message.
+
+| id | task | spec | owns | preview port |
+|---|---|---|---|---|
+| `a8dfb81136182c15c` | **L2 ecosystems**: physarum/ants, fireflies, space colonisation; jelly, slime, fireflies, murmuration, terrarium cards | `docs/living-matter/L-pond.md` §L2 | `src/engine/life/`, the pond board, `scripts/life*.ts` | 4385 |
+| `a9dfd85cca3ece366` | **Q2 squares**: lcd and grout skins, rect cells, teletext sextants, line screens | `docs/living-matter/Q-squares.md` Q2 | `src/engine/squares/`, the squares board, `scripts/squares*.ts` | 4386 |
+| `a4b5a283f78296248` | **M2 glass and water**: glass v2, caustics; Lens, Pool, Window, Patch, Rust, the candle clock | `docs/living-matter/M-materials.md` M2 | `src/engine/matter/`, the materials board, `scripts/materials*.ts` | 4391 |
+| `ae843d4fcd441b7d8` | **E5 share**: frame/document links, remix lineage, device exports, the QUALITY fold | `docs/EDITOR-PLAN.md` §10 E5 | `src/components/editor/` | 4383/4384 |
+| `a144235843227f454` | **Round-2 housekeeping** (listed below) | this block | the changelogs, `docs/README.md`, the test scripts named in the list | 4389/4390 |
+
+The housekeeping list:
+- CHANGELOG and `src/changelog.ts` rows for round 2;
+- the `shots.ts` phone palette NOT READY bug;
+- an "editor fits the window" probe check;
+- the pond swipe flake;
+- the marble cold-frame options (investigate only);
+- `docs/README.md` statuses.
+
+**Next, in order** (each starts when an agent above frees a slot):
+- **Within each track, phases are sequential:** Q3 after Q2, M3 after M2, L3 after L2.
+- **Editor:** E6 phone polish after E5.
+- **Then:** the X phases.
+- **The polish plan** (`docs/POLISH-PLAN.md`) waits until the owner says to start. When it starts: P0 probes first (one agent), then P1 (four agents). The owner has answered:
+  - the desktop header hides on scroll down;
+  - all 14 cuts are approved;
+  - the other recommendations are accepted;
+  - the essay's name and URL are **still open**.
+
+**How the coordinator runs agents:**
+- **Agent count:** at most 4 at a time; the owner allows 2–3 extra quick ones. Each agent runs in its own worktree.
+- **Commits:** no Co-Authored-By or "Generated with Claude Code" lines, ever. Commit or push only when the owner asks; the owner has said to merge to main via a PR when asked ("merge push").
+- **Heavy work:** every build, golden run, timing run and browser probe goes through `node C:/Users/integrated/AppData/Local/Temp/dmdocs/heavy.mjs "<cmd>"`.
+  - It is a FIFO ticket queue in `dm-heavy-queue/`, with a v2 lock that refreshes a heartbeat every 5 s and goes stale after 45 s.
+  - A command is killed after `HEAVY_TIMEOUT_MIN` (default 40).
+  - Timing checks sample load next to the timed code (`scripts/lib/load.ts`).
+- **Worktree setup:** `cmd /c mklink /J node_modules D:\MyRepo
+extjs\dot-matrix
+ode_modules`.
+- **Worktree cleanup:**
+  1. Delete the junction with `[System.IO.Directory]::Delete(path, $false)`; never recursive.
+  2. `git worktree unlock`.
+  3. `git worktree remove --force`.
+  4. `git branch -D worktree-agent-<id>`.
+- **Merging an agent:** `git merge --no-ff`. The usual conflicts are additive unions: `manifest.ts` (board rows plus `density`, the group lists), `index.ts`, `ids.json`, `goldens/hashes.json` (merge the JSON with a script), `catalog.ts`, `meta.ts`, `blurbs.ts`, `verify.ts` blocks, and DESIGN.md tables. Then run `npx tsc -b` and the area checks.
+- **Full suite before a PR to main:** `bash C:/Users/integrated/AppData/Local/Temp/dmdocs/full2.sh` through heavy.mjs.
+  - It runs the build first, then `pnpm check`, goldens, parity, size, theme, CSS tokens and WebGL.
+  - It then starts previews on 4317 and 4318 and runs the mobile, light, editor, layout, theme-boot, picker, squares, life and materials probes.
+  - Logs and the summary go to `dmdocs/full-r2/`.
+- **Screenshots:** `npx tsx scripts/site/shots.ts --pages … --themes … --sizes 1440,390 --out <dir>`. The round-2 shots are in `dmdocs/r2shots/`.
+- **Rate limits and restarts:** resume each agent by SendMessage after the reset. Clear dead locks if the holder PID is gone.
+
+**Open owner decisions:**
+- the essay's name and URL;
+- koi body style B (the default) or A;
+- `activeDim` (unruled; every card uses size contrast);
+- the pond's 288 KB memory exception;
+- whether VFD on the default theme turns red (it follows the accent) or stays cyan-green;
+- the ruled grid (built, off);
+- `dark_signal` accent text: salmon `#FFA193` now, or `#FF6856` if APCA is relaxed;
+- the first-load overages Q1 +0.92 and T6 +1.28 (both accepted for now);
+- the real-iPhone tilt checklist.
+
+**Round 2 (done; merged as PR #10):** the T3, T5, T6, E3, M1, L1 and Q1 entries below are kept as the as-built record; read "not merged" in them as merged.
+
 ## Status board (updated 2026-10-27)
-**Round 2 (paused 2026-10-28, branch `feat/round2`, based on main `dbe4716` = PR #9):**
-- **Merged:**
-  - the cleanup: changelog, the barrel rule in AGENTS.md, CI lint and theme checks, the ledger at 120.07 kB gz, the F0 doc, dead code removed, FigSim on the light hub;
-  - the bytecode comment fix.
-- **Paused agents.** Their work sits in `.claude/worktrees/agent-<id>/`, each on branch `worktree-agent-<id>`, uncommitted unless noted. Resume an agent by messaging it, or restart the task from its worktree:
-  - `a4d32da9cf1f84efe` **T3 grids and cards:** 8 files uncommitted.
-  - `ace78a5bc0a435d5d` **Q1 squares core:** 27 files uncommitted.
-  - `af9cbabad1272df9b` **L1 pond:** 3 files uncommitted.
-  - `a783e320f85eb261a` **Essay, legal and X-ray theming:** 1 commit.
-  - `a5e23cfdbf2632857` **VFD/LED skins take the accent:** 7 files uncommitted.
-  - `aed029a7339e33128` **`scripts/site/shots.ts` screenshot tool:** 1 commit; its verification run was cut off.
-- **Each worktree** has a `node_modules` junction. Remove it with `[System.IO.Directory]::Delete(path, $false)` before `git worktree remove`; a recursive delete would empty the shared `node_modules`.
-- **Heavy commands** go through `C:/Users/integrated/AppData/Local/Temp/dmdocs/heavy.mjs` (one at a time across worktrees).
 - [x] **E3 editor: editing on canvas** (branch `worktree-agent-a603245a37988c6ee`, on `feat/round2` 0741d3b; `docs/EDITOR-PLAN.md` §4.2, §8.3). Not merged.
   - Sites handles: a ring's radius and sweep (the sweep snaps to the ring's own sites, so an arc ends on a dot of its track), a disc's radius, a line's ends; whole cells.
   - Spec layers: placed ones (sites, text, generators, IR fields with `bounds`) move in whole cells; an IR field's box is its declared bounds, resized by four corners; DESIGN · PLACE edits them and the spec JSON follows.
