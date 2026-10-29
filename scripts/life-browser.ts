@@ -34,6 +34,8 @@ const watchdog = setTimeout(() => {
   void closeAll().finally(() => process.exit(1))
 }, limit)
 const card = `document.querySelector('[data-card-id="pond-koi"]')`
+/** Ready waits (ms): a first paint on a starved shared box has taken over 20 s (a load wait, not a budget). */
+const READY_MS = 60_000
 const rectOf = `(() => { const r = ${card}.querySelector('canvas,svg').getBoundingClientRect(); return [r.x, r.y, r.width, r.height] })()`
 try {
   // ── desktop ──
@@ -42,7 +44,7 @@ try {
     const page = await open(1280, 900)
     await page.cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__POND_PROBE__ = true' })
     await page.cdp('Page.navigate', { url: `${server.url}pond/?probe=1` })
-    const ready = await page.waitFor(`!!globalThis.__pond && !!${card}?.querySelector('canvas,svg')`, 20000)
+    const ready = await page.waitFor(`!!globalThis.__pond && !!${card}?.querySelector('canvas,svg')`, READY_MS)
     check('life-browser: /pond/ paints pond-koi (desktop)', ready, page.logs.join('; '))
     await page.js(`${card}.scrollIntoView({ block: 'center' })`); await sleep(1500)
     await page.shot(join(out, 'pond-desktop.png'))
@@ -63,7 +65,7 @@ try {
     await page.cdp('Emulation.setCPUThrottlingRate', { rate: 1 })
     check('life-browser: pond-koi median card draw ≤ 16 ms at 4× throttle', ms <= 16, `${ms.toFixed(2)} ms`)
     await page.cdp('Page.navigate', { url: `${server.url}pond/?theme=light_signal` })
-    await page.waitFor(`!!${card}?.querySelector('canvas,svg')`, 20000)
+    await page.waitFor(`!!${card}?.querySelector('canvas,svg')`, READY_MS)
     await page.js(`${card}.scrollIntoView({ block: 'center' })`); await sleep(1500)
     await page.shot(join(out, 'pond-light.png'))
     check('life-browser: no uncaught errors (desktop)', !page.logs.filter(l => !/main thread/.test(l)).length, page.logs.join('; '))
@@ -76,7 +78,7 @@ try {
     await page.cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__POND_PROBE__ = true' })
     await page.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 })
     await page.cdp('Emulation.setDeviceMetricsOverride', { width: 375, height: 812, deviceScaleFactor: 2, mobile: true })
-    const load = () => page.cdp('Page.navigate', { url: `${server.url}pond/?probe=1` }).then(() => page.waitFor(`!!globalThis.__pond && !!${card}?.querySelector('canvas,svg')`, 20000))
+    const load = () => page.cdp('Page.navigate', { url: `${server.url}pond/?probe=1` }).then(() => page.waitFor(`!!globalThis.__pond && !!${card}?.querySelector('canvas,svg')`, READY_MS))
     check('life-browser: /pond/ paints pond-koi (touch 375)', await load(), page.logs.join('; '))
     // The swipe. Two things made it flaky on a loaded box:
     //  - room: the pond board is one card, and since the density grids (T3) the page has only ~100 px to scroll below
