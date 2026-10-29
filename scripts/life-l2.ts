@@ -156,7 +156,7 @@ export async function lifeL2Checks(assert: Assert, pond: () => Promise<typeof im
     const near = pre.map((v, i) => (Math.hypot(v.x - cx, v.y - cy) < 30 ? i : -1)).filter(i => i >= 0)
     let t = t0, fired = new Set<number>()
     const at = (fr?: FrameInput) => { t += 1 / 30; const s = worldAt(W, t, fr); flyViews(f, s).forEach((v, i) => { if (v.age < 1.5 / 30) fired.add(i) }); return s }
-    at({ pointers: [{ id: 2, x: cx, y: cy, down: true }] }); fired = new Set(); at(); at()
+    at({ pointers: [{ id: 2, x: cx, y: cy, down: true }] }); at({ pointers: [{ id: 2, x: cx, y: cy, down: true }] }); fired = new Set(); at(); at()
     const share = near.filter(i => fired.has(i)).length / Math.max(1, near.length)
     for (let k = 0; k < 220; k++) at()
     assert('pond-fireflies: tap → ≥ 80 % of flies within 30 cells fire within 2 steps; heals', share >= .8 && W.mode === 'pristine', `${(share * 100).toFixed(0)} % of ${near.length}, ${W.mode}`)
@@ -243,7 +243,7 @@ export async function lifeL2Checks(assert: Assert, pond: () => Promise<typeof im
     for (let i = 0; i < 48 * 44; i++) if (s0[T.ants.FOOD + i] >= .22) trailCells++
     assert('pond-terrarium: t = 0 shows ants on trails (≥ 60 trail cells, ≥ 10 ants carrying) and a lush creeper (≥ 300 nodes shown)', trailCells >= 60 && carrying >= 10 && creeperShown(0) * c.iterations > 0 && c.count >= 300, `${trailCells} trail cells, ${carrying} carrying`)
     const { s: s1, at } = tapAt(W, 6, 90, 60)
-    const added = s1[T.layout.CR + 2 + 3 * 3] >= 1 || s1[T.layout.CR + 2 + 3 * 4] >= 1
+    const added = Array.from({ length: 5 }, (_, k) => T.layout.CR + 3 * k).some(o => s1[o + 2] >= 39 && Math.hypot(s1[o] - 30, s1[o + 1] - (60 - 11) / 3) < 1)
     for (let k = 0; k < 220; k++) at()
     assert('pond-terrarium: a tap drops a crumb; heals', added && W.mode === 'pristine', `${W.mode}`)
     worldReset(W)
