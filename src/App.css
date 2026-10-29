@@ -1675,8 +1675,9 @@ label b {
 
 /* ── raised layer (one look): menus, popovers, sheets, ⌘K ─────────────────────────────────────────────
    Glass: translucent raised, one small blur, the raised shadow; it opens with no animation. Cards keep their
-   single hairline. Used by .skin-menu, .ed-menu (editor), .wp-more (widget page), .pal, .sheet-panel. */
+   single hairline. Used by .skin-menu, .theme-pop, .ed-menu (editor), .wp-more (widget page), .pal, .sheet-panel. */
 .skin-menu,
+.theme-pop,
 .ed-menu,
 .wp-more,
 .pal,
@@ -1691,6 +1692,7 @@ label b {
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
   .skin-menu,
+  .theme-pop,
   .ed-menu,
   .wp-more,
   .pal,
@@ -2086,6 +2088,65 @@ label b {
 
 .topbar .skin-clack.selected {
   color: var(--value)
+}
+
+/* ── T5 THEME (src/components/theme/): the header button (DISPLAY ▾'s look, its dot the accent) and the switch
+   moment. The popover and the controls it shares with the phone TOOLS sheet are styled by
+   src/components/theme/picker.css, which loads with their lazy chunk. ── */
+.theme-switch {
+  position: relative;
+  display: flex;
+  align-items: center
+}
+
+.theme-menu-btn i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--red)
+}
+
+/* the switch moment (src/site/theme/moment.ts): the new page shows through a halftone front spreading from the
+   pressed control: solid inside, then big, mid and small dots on one lattice (a fold of disc and dot masks:
+   D0 ∪ (big ∩ (D1 ∪ (mid ∩ (D2 ∪ (small ∩ D3)))))). The old page stays still underneath. */
+@property --wipe {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 1
+}
+
+@keyframes theme-wipe {
+  from { --wipe: 0 }
+  to { --wipe: 1 }
+}
+
+/* the page stays usable during the wipe: hover, the next pick, scrolling reach the real elements */
+html.theme-wipe::view-transition {
+  pointer-events: none
+}
+
+html.theme-wipe::view-transition-old(root),
+html.theme-wipe::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal
+}
+
+html.theme-wipe::view-transition-new(root) {
+  --wipe-pitch: 10px;
+  --wipe-at: circle at var(--wipe-x) var(--wipe-y);
+  --wipe-f: calc(var(--wipe) * (var(--wipe-far) + 3 * var(--wipe-band)));
+  mask-image:
+    radial-gradient(var(--wipe-at), var(--shade) calc(var(--wipe-f) - 3 * var(--wipe-band)), transparent 0),
+    radial-gradient(circle, var(--shade) calc(var(--wipe-pitch) * .5), transparent calc(var(--wipe-pitch) * .5 + .5px)),
+    radial-gradient(var(--wipe-at), var(--shade) calc(var(--wipe-f) - 2 * var(--wipe-band)), transparent 0),
+    radial-gradient(circle, var(--shade) calc(var(--wipe-pitch) * .32), transparent calc(var(--wipe-pitch) * .32 + .5px)),
+    radial-gradient(var(--wipe-at), var(--shade) calc(var(--wipe-f) - var(--wipe-band)), transparent 0),
+    radial-gradient(circle, var(--shade) calc(var(--wipe-pitch) * .16), transparent calc(var(--wipe-pitch) * .16 + .5px)),
+    radial-gradient(var(--wipe-at), var(--shade) var(--wipe-f), transparent 0);
+  mask-size: 100% 100%, var(--wipe-pitch) var(--wipe-pitch), 100% 100%, var(--wipe-pitch) var(--wipe-pitch), 100% 100%, var(--wipe-pitch) var(--wipe-pitch), 100% 100%;
+  mask-repeat: no-repeat, repeat, no-repeat, repeat, no-repeat, repeat, no-repeat;
+  mask-composite: add, intersect, add, intersect, add, intersect, add;
+  animation: theme-wipe var(--dur-wipe) var(--ease) both
 }
 
 /* OLED: the wrapper is not even a box */

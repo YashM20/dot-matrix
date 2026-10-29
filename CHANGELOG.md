@@ -3,6 +3,16 @@
 All notable engineering changes to Dot/480 are recorded here, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://dot-matrix1.vercel.app, deployed from `main`), not a published package: there are no tagged or npm releases, so entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
 
+## [Unreleased] — 2026-10-28 · T5 theme picker and the switch moment (round 2)
+Plan: `docs/LAYOUT-THEME-PLAN.md` §4 Picker, §5 T5. Status: `docs/PROGRESS.md`.
+### Added
+- **THEME popover** next to DISPLAY ▾ (`src/components/theme/`): SYSTEM / LIGHT / DARK, the 7 accents as 7×7 dot swatches, a tone ramp and a live preview (the popover re-scopes itself to the hovered or focused theme). Opens on 100 ms of hover intent or a click; its content is a lazy chunk. Phones get the same controls in TOOLS › THEME (44 px targets).
+- **The switch moment** (`src/site/theme/moment.ts`): a view transition whose halftone front spreads from the pressed control (CSS mask fold, `--dur-wipe` 720 ms). Instant under reduced motion or without the API.
+- **Share-link opt-in** (`src/site/theme/share.ts`): copied and shared links carry `?theme=` when the visitor turns it on.
+- `scripts/site/theme-picker.ts`: the browser probe for all of it (touch sheet and reduced motion included).
+### Changed
+- ⌘K: the 15 "Theme: dark_signal…" rows became "Theme: system / light / dark", "Accent: <name>" and "Accent: next". The TOOLS LIGHT / DARK tile is gone (TOOLS › THEME replaces it). An explicit pick drops `?theme=` / `?scheme=` / `?accent=` from the address bar.
+
 ## [Unreleased] — 2026-10-28 · Foundation round: F0 engine foundation, T0–T4 layout and themes, E1–E2 editor (branch `feat/foundation`)
 Plans: `docs/living-matter/F0-foundation.md`, `docs/LAYOUT-THEME-PLAN.md`, `docs/EDITOR-PLAN.md`. Status and checks: `docs/PROGRESS.md` › Foundation run.
 ### Added
