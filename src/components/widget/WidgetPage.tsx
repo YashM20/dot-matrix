@@ -20,6 +20,7 @@ import { canShare, copyPNG, copySVG, copyText, download, shareCard, type Outcome
 import { boardTime, cardAction, toast, useXR } from '../xray/store'
 import { getSkin } from '../skins/store'
 import { getTheme, themeTokens } from '../../site/theme/theme'
+import { withTheme } from '../../site/theme/share'
 import { cardScheme } from '../../site/theme/polarity'
 import { DotWidget } from '../DotWidget'
 import { Pill, PillBar, PillButton } from './PillBar'
@@ -95,11 +96,12 @@ function Loaded({ w, preset, items, meta, onOpen, onBoard }: Loaded & Omit<Widge
     png: () => void copyPNG(png(), `${w.slug}.png`).then(report('PNG')),
     svg: () => void copySVG(svg(), `${w.slug}.svg`).then(report('SVG')),
     html: () => void copyText(cardHTML(svg(), { name, slug: w.slug, url })).then(report('HTML')),
-    link: () => void copyText(url).then(o => toast(o === 'copied' ? 'link copied' : url)),
-    short: () => void copyText(short).then(o => toast(o === 'copied' ? `short link copied: ${shortPath(w.uid)}` : short)),
+    // the share-link opt-in (THEME popover) adds the visitor's ?theme=
+    link: () => { const u = withTheme(url); void copyText(u).then(o => toast(o === 'copied' ? 'link copied' : u)) },
+    short: () => { const u = withTheme(short); void copyText(u).then(o => toast(o === 'copied' ? `short link copied: ${shortPath(w.uid)}` : u)) },
     savePNG: () => void png().then(b => { download(b, `${w.slug}.png`); toast(`${w.slug}.png saved`) }, () => toast('PNG failed')),
     saveSVG: () => { download(new Blob([svg()], { type: 'image/svg+xml' }), `${w.slug}.svg`); toast(`${w.slug}.svg saved`) },
-    share: () => { const p = sharePNG.current ?? png(); sharePNG.current = undefined; void shareCard({ title: `${name} · DOT/480`, url, png: p, file: `${w.slug}.png` }).then(report('card')) },
+    share: () => { const p = sharePNG.current ?? png(); sharePNG.current = undefined; void shareCard({ title: `${name} · DOT/480`, url: withTheme(url), png: p, file: `${w.slug}.png` }).then(report('card')) },
     remix: () => cardAction('remix', actionArgs()),
     xray: () => cardAction('how', actionArgs()),
   }

@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type K
 import { Board, VIEW_EXIT_MS } from './components/Board'
 import { BoardPicker, NextBoard } from './components/BoardPicker'
 import { SkinSwitcher } from './components/skins/SkinSwitcher'
+import { ThemeButton } from './components/theme/ThemeButton'
 import { useExitSwap } from './hooks/useExitSwap'
 import { useXR } from './components/xray/store'
 import { boardIds, boardLabel, liveBoards, prefetchBoard } from './widgets/manifest'
@@ -225,6 +226,7 @@ export default function App() {
         : <span className="topbar-place">{title}</span>}
       <Tabs className="view-tabs" label="Views" items={VIEWS} value={view} onPick={setView} />
       <SkinSwitcher />
+      <ThemeButton />
       {/* red means live: only while a board streams real data */}
       {view === 'EXPLORE' && liveBoards.includes(board) && <div className="live"><i aria-hidden="true"/> LIVE DATA</div>}
       {/* the tool dock (CommandLayer portals it here on desktop) */}

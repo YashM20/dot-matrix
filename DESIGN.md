@@ -437,6 +437,7 @@ The HTML chrome (sheets, menus, pills, tabs) animates with these durations only 
 | `--dur-enter` | 280 ms | a sheet arriving; a display powering off |
 | `--ease` | `cubic-bezier(.2, .8, .2, 1)` | chrome easing |
 | `--dur-tip` | 400 ms | the first tooltip in a group waits this long; the next ones show at once |
+| `--dur-wipe` | 720 ms | the theme switch: the halftone front crossing the screen from the pressed control (Theme › Picker) |
 
 Allowlisted exceptions (effects, not chrome): the X-RAY flash (1.2 s), the nixie flicker loop (5.3 s), and the 1 ms reduced-motion end-state trick.
 
@@ -493,15 +494,15 @@ The HTML chrome has one component per job; a new control reuses one of these ins
 | Component | Class(es) | Used by |
 |---|---|---|
 | **pill** | outlined pill: `.board-tabs button`, `.skin-menu-btn`, `.intro-line button`, `.ed-textbtn`, `.ed-row-btns button`; capsule pill: `.pill` + `.pill-btn` (`PillBar`) | board picker, DISPLAY ▾, the widget page bars, editor actions |
-| **segmented** | `.ed-seg` (`role=radio` items); text tabs `.view-tabs`, `.board-groups`, `.ed-tabs` | editor options; views, groups and panels |
+| **segmented** | `.ed-seg` (`role=radio` items; the editor's), `.theme-seg` (the THEME picker's, same look); text tabs `.view-tabs`, `.board-groups`, `.ed-tabs` | editor options; views, groups and panels |
 | **sheet** | `Sheet` (`.sheet` › `.sheet-rest` + `.sheet-panel` › `.sheet-grab`, `.sheet-head`, `.sheet-body`): a scroll-snap sheet; the five-dot grab handle is shared with `.pal-grab`, `.ed-sheet-grab`, `.xr-grip` | BOARDS, TOOLS; the phone ⌘K, the editor and X-ray sheets reuse its handle and surface |
-| **menu** | the raised layer (`.skin-menu`, `.ed-menu`, `.wp-more`, `.pal`, `.sheet-panel`) with rows (`.skin-menu button`, `.ed-menu button`, `.wp-more button`, `.pal-item`, sheet rows): `--radius-panel` outside, `--radius-ctl` rows, `--wash-hover` / `--wash-press` | DISPLAY ▾, editor menus, widget MORE, ⌘K, sheets |
+| **menu** | the raised layer (`.skin-menu`, `.theme-pop`, `.ed-menu`, `.wp-more`, `.pal`, `.sheet-panel`) with rows (`.skin-menu button`, `.ed-menu button`, `.wp-more button`, `.pal-item`, sheet rows): `--radius-panel` outside, `--radius-ctl` rows, `--wash-hover` / `--wash-press` | DISPLAY ▾, THEME, editor menus, widget MORE, ⌘K, sheets |
 | **tooltip** | `[data-tip]` (+ `[data-kbd]` for the keycap) inside a group (`.pal-dock`, `.pill-bar`) | the dock; the widget page pill bars |
 | **keycap** | `kbd` in `.pal`, `.pal-shell`, `.pal-boss`, `.xr-time`, and the tooltip keycap: a dotted edge on a dot-matrix fill | ⌘K footer and hints, the shell, the time machine |
 
 **Tooltip rules.** One at a time (the hovered control). The first in a group waits `--dur-tip`; moving to a neighbour shows its tooltip at once, until the pointer leaves the group (a registered `--tip-on` custom property that switches on after the delay and off at once, no JS). Keyboard focus shows it without the wait; a press hides it. No motion.
 
-**Hover intent.** DISPLAY ▾ opens after the mouse rests on it for 100 ms (without taking focus) and closes 150 ms after the mouse leaves it; a click or the keyboard opens it as before.
+**Hover intent.** DISPLAY ▾ and THEME open after the mouse rests on them for 100 ms (without taking focus) and close 150 ms after the mouse leaves; a click or the keyboard opens them with focus inside. THEME fetches its popover chunk during those 100 ms. Touch never opens them by hover (`pointerType` must be `mouse`).
 
 ## Responsive Behavior
 
@@ -625,7 +626,17 @@ Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5
 - `src/index.css` imports `themes.css` right after `tokens.css`: `[data-scheme]` has the same specificity as `:root`, so the later file wins. `color-scheme` comes from `themes.css` (dark when there is no attribute).
 - `.no-transition` is on `<html>` for the frame of a switch. Cards re-sample once per switch (their tokens object changes); switching back is a cache hit.
 - **Scoping:** a subtree pins a theme by carrying **both** attributes (`data-scheme` and `data-accent`); its descendants inherit. (A subtree with only one attribute is not supported: the CSS has one compound selector per theme, which keeps nested scopes unambiguous.)
-- **Switching, for now:** ⌘K "Theme: `<scheme>_<accent>`" (14 commands) and "Theme: system"; TOOLS (phones) has a LIGHT / DARK row; `?theme=light_cobalt` in the URL; `dot480.setTheme({ scheme, accent })` in the console. The THEME popover is T5.
+- **Switching:** the THEME popover (desktop header) and TOOLS › THEME (phones), below; ⌘K "Theme: system / light / dark", "Accent: `<name>`" (7) and "Accent: next"; `?theme=light_cobalt` (or `?scheme=` + `?accent=`) in the URL; `dot480.setTheme({ scheme, accent })` in the console (instant, no wipe).
+
+### Picker (T5)
+- **Where:** the header's THEME button sits right after DISPLAY ▾ (its dot is the current `--red`), and opens a popover (`src/components/theme/`; the popover's content is a lazy chunk, fetched during the hover intent). Phones hide it; TOOLS has a THEME section with the same controls above DISPLAY. Nothing in it measures the header, so a header that hides on scroll keeps working.
+- **Controls** (`ThemeControls`, shared): the shown theme's name (in `red-text`) and its tone ramp (faint, mid, idle, value, accent: five dots); scheme as a segmented SYSTEM / LIGHT / DARK (`role=radio`, arrows pick); the 7 accents as swatches, each a 7×7 dot disc in its own colour on the shown scheme (a horizontal `listbox`: arrows, Home and End move focus, Enter, Space or a click picks; the picked one has its `red-halo` behind it and a `red-line` ring); a line on the accent; the share-link switch. Targets: 32 px in the popover, 44 px in the sheet.
+- **Live preview:** hovering (mouse) or focusing a swatch or a scheme puts that theme's `data-scheme` + `data-accent` on the popover's root, so the popover itself (glass, text, ring, ramp) shows it; the page changes only on a pick. Each swatch is its own scope (both attributes), so its disc is `var(--red)` of that theme: no colour table in JS.
+- **The switch moment** (`src/site/theme/moment.ts`, `switchTheme`): a pick runs `document.startViewTransition`; the new page shows through a mask whose halftone front spreads from the pressed control's centre (solid inside, then dots of .5, .32 and .16 of a 10 px lattice: a fold of disc and dot masks with `mask-composite`), so what is near the control turns first and the far corner last, over `--dur-wipe`. The band is 8% of the distance to the farthest corner (≥ 40 px). The old page is a still underneath; the cards re-sample once, live under the mask. Palette commands wipe from the middle of the screen. **Instant**, with no transition, under reduced motion (the OS setting or the ⌘K override), without the API, or in a hidden tab.
+- **URL params** still apply to the visit and are never stored; an explicit pick (popover, sheet, ⌘K) drops `theme` / `scheme` / `accent` from the address bar, so a reload keeps the pick.
+- **Share links (opt-in, off by default):** "Shared links keep my theme" (`src/site/theme/share.ts`, localStorage `dot480:share-theme`). On, the links the site copies or shares (⌘K "Copy deep link", the card's LINK, TOOLS › SHARE, the widget page's LINK, SHORT and SHARE) carry `?theme=<scheme>_<accent>` of what the visitor sees (`system` resolved). Card HTML and SVG exports keep the canonical link.
+- **Probe:** `scripts/site/theme-picker.ts` (after a build): hover intent, the preview, the wipe's origin and its mask (held at 20% and 45% and captured to `.snapshots/t5/`), the popover staying open through the wipe, the keyboard, share links, ⌘K, URL params, reduced motion (instant), and the touch sheet (44 px, no overflow, taps switch with the sheet open).
+- **Hover during the wipe:** a view transition moves hit-testing off the page, which reads as the mouse leaving; a hover-opened THEME waits for the wipe to end and re-hit-tests the mouse's last position before it closes.
 
 ### Theme readers and the display skin
 - **Cards** (`DotWidget`): without a `theme` prop they take the site theme (`useTheme()` + `themeTokens()`), so the boards, the widget page and the ⌘K preview follow it. Exports (PNG, SVG, the card's actions) use the card's tokens at that moment: what the visitor sees. OG images (`scripts/site/postbuild.ts`) and goldens stay on `dark_signal`.

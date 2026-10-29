@@ -20,6 +20,16 @@
 - **Heavy commands** go through `C:/Users/integrated/AppData/Local/Temp/dmdocs/heavy.mjs` (one at a time across worktrees).
 - **Queued next:** M1 materials, T5 theme picker, E3 editor, T6 type and contrast. Then L2, Q2, M2, Q3, M3, L3 and X.
 - **Queued after round 2:** `docs/POLISH-PLAN.md`, the site polish. It starts with P0 probes, then P1 (broken: the essay route, sticky header, widget-page chrome, Back with sheets), P2 (ugly) and P3 (nits). Owner decisions are in its §3.
+- [x] **T5 picker and moment** (branch `worktree-agent-a70c72cff7bd3964e`, 1 commit, not merged; docs/LAYOUT-THEME-PLAN.md §4 Picker, §5 T5):
+  - THEME next to DISPLAY ▾ (`src/components/theme/ThemeButton.tsx`, first load): 100 ms hover intent (it warms the chunk), click / ArrowDown pins it with focus inside; the popover (`ThemePicker.tsx` + `picker.css`, lazy) has SYSTEM / LIGHT / DARK, the 7 accents as 7×7 dot swatches (listbox, arrow roving), a tone ramp, and the share-link switch. Live preview: the popover re-scopes itself (`data-scheme` + `data-accent`) to the hovered or focused choice. Phones: TOOLS › THEME, the same controls at 44 px (the LIGHT / DARK tile is gone).
+  - The switch moment (`src/site/theme/moment.ts`): a view transition with a halftone mask front from the pressed control (`mask-composite` fold of disc and dot layers, `--dur-wipe` 720 ms, `pointer-events: none` on the overlay). Instant under reduced motion (OS or the ⌘K override), without the API, or in a hidden tab. A pick drops `?theme=` / `?scheme=` / `?accent=` from the URL.
+  - ⌘K (C1 of docs/POLISH-PLAN.md, approved): "Theme: system / light / dark", "Accent: <name>" ×7 and "Accent: next" replace the 15 raw rows.
+  - Share links (`src/site/theme/share.ts`, opt-in, off by default): ⌘K copy link, the card LINK, TOOLS › SHARE and the widget page's LINK / SHORT / SHARE add `?theme=<resolved>`.
+  - Checks: `scripts/site/theme-picker.ts` (new browser probe, desktop + touch sheet + reduced motion; 43/43, twice in a row on the final build; captures in `.snapshots/t5/`); `theme.ts --check` and `theme-boot.ts` pass; goldens 182/182 unchanged; CSS token lint clean.
+  - Size: first-load JS +0.55 kB gz (120.41 → 120.95; the THEME button), first-load CSS +0.35 kB gz (the button and the wipe); the popover is a lazy chunk of 3.28 kB JS + 0.89 kB CSS gz.
+  - Header: THEME measures nothing and lives in the header's flow, so the later hide-on-scroll header (POLISH P1) needs no change here.
+  - Learned: a view transition moves hit-testing off the page, which reads as the mouse leaving a hover-opened popover; THEME waits for the wipe to end and re-hit-tests (`elementFromPoint`) before closing. Headless screenshots only show a wipe frame when the animation is paused (the probe holds it).
+  - Left: the custom hue swatch (T6); the essay and legal pages have no picker (they follow the stored choice).
 
 **Foundation run (2026-10-27, branch `feat/foundation`):** the shared foundation of `docs/LIVING-MATTER-PLAN.md` (F0) and `docs/LAYOUT-THEME-PLAN.md` (T0), done in two phases of two parallel agents each. Priority: F0 first, because it unblocks the L, Q and M tracks and cuts first-load JS (148.14 of 150 kB) before the tracks and the theme spend it. Then T0, which unblocks T1–T6.
 - **Phase 1:** F1-A noise (F0.1–F0.4 and the determinism lint of F0.9); F1-B pixels and budget (F0.5, F0.6, F0.10, F0.11). Merge order: B, then A, then the full suite (the F0.9 join).
@@ -70,7 +80,7 @@
     - Defaults: the default is `system`. OG images and goldens stay `dark_signal`, and editor frames keep `dot480`.
     - Checks: `golden --theme-parity` (14 × 177 only recolour) and `theme-boot.ts` 29/29.
     - Size: first load −4.4 kB gz, because the unused playground store went and the widget registry and home board left first load.
-    - For T5: the palette's "Theme: …" commands and the TOOLS LIGHT/DARK row are placeholders.
+    - For T5 (done, see T5 below): the palette's "Theme: …" commands and the TOOLS LIGHT/DARK row were placeholders.
     - For T6: the two `dark_signal` contrast waivers, `--dim`, and the skin stage colours.
   - [x] **T2 frame and rhythm.**
     - What it covers:

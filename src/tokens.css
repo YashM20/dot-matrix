@@ -86,6 +86,7 @@
   --dur-out: 150ms;     /* chrome: hover-out, press, small fades */
   --dur-move: 220ms;    /* a sheet or panel following a drag or snapping to a stop */
   --dur-enter: 280ms;   /* a sheet arriving; a display powering off */
+  --dur-wipe: 720ms;    /* the theme switch: the halftone front crossing the screen from the pressed control */
   --ease: cubic-bezier(.2, .8, .2, 1);
 
   /* ── type: named by role and size (rem, root 16 px); family is --mono or --sans ── */

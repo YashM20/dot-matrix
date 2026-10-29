@@ -473,7 +473,8 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
   }
 
   .topbar .view-tabs,
-  .topbar .skin-switch {
+  .topbar .skin-switch,
+  .topbar .theme-switch {
     display: none
   }
 
