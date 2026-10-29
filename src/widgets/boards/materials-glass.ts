@@ -143,7 +143,81 @@ function sceneAt(s: LensScene, x: number, y: number): number {
   }
   return behindAt(s.ticks, s.near, x, y)
 }
+/** One frame's screen values (NaN = not yet computed): card cells first, then the 288² GPU points. */
+const memoBuf = new Float32Array(COLS * TILE.rows + FINE * FINE)
+let memoKey = ''
+function screenMemo(key: string): Float32Array {
+  if (key !== memoKey) { memoKey = key; memoBuf.fill(NaN) }
+  return memoBuf
+}
+/** Where a point (cells) sits in the memo: a card cell centre, a GPU point at density 2, or −1 (computed fresh). */
+function memoIndex(x: number, y: number): number {
+  const c = Math.round(x), r = Math.round(y)
+  if (Math.abs(x - c) < 1e-6 && Math.abs(y - r) < 1e-6) return c >= 0 && r >= 0 && c < COLS && r < TILE.rows ? r * COLS + c : -1
+  const fx = 2 * x + .5, fy = 2 * y + .5, c2 = Math.round(fx), r2 = Math.round(fy)
+  return Math.abs(fx - c2) < 1e-6 && Math.abs(fy - r2) < 1e-6 && c2 >= 0 && r2 >= 0 && c2 < FINE && r2 < FINE ? COLS * TILE.rows + r2 * FINE + c2 : -1
+}
 const VALUE_IN = .875, MID_LO = .625
+/**
+ * This frame's lens, read by the screen's and the hero's fields. The fields themselves are made once: a field closure
+ * made per frame starts every frame with fresh type feedback, and over 20k–80k reads that alone cost ~10× here.
+ */
+interface LensFrame {
+  c: Pt; sec: Pt; hero: Hero; scene: LensScene; ticks: Float32Array; memo: Float32Array
+  off: (c: number, r: number, out: Float64Array) => number; lens: ReturnType<typeof liquidGlass>
+}
+let LF: LensFrame | null = null
+const lensD = new Float64Array(2)
+/** The screen: through + Fresnel (+1 step on the bezel) + the specular rim, minus the contact shadow and the second's cell. */
+function screenAt(u: number, v: number): number {
+  const F = LF!, x = u * W1, y = v * H1, c = F.c, d = lensD
+  if ((x - F.sec[0]) ** 2 + (y - F.sec[1]) ** 2 < 2.2) return 0
+  // most of the card is far from the glass and its shadow: the scene as baked this minute, no lens maths
+  const far = Math.abs(x - c[0]) > LENS.hw + 1 || y < c[1] - LENS.hh - 1 || y > c[1] + LENS.hh + 5
+  const bez = far ? -1 : F.off(x, y, d)
+  if (bez < 0) {
+    const val = sceneAt(F.scene, x, y)
+    if (far) return val
+    if (val > 0 && val <= .5) { // the floor only: cut where the lens's shadow falls (the outline moved down 3 cells)
+      const sx = Math.abs(x - c[0]) - (LENS.hw - LENS.radius), sy = Math.abs(y - 3 - c[1])
+      const sd = Math.hypot(Math.max(sx, 0), Math.max(sy, 0)) + Math.min(Math.max(sx, sy), 0) - LENS.radius
+      if (sd < 1.5) return 0
+    }
+    return val
+  }
+  // the specular rim on the outer quarter of the bezel; the glass's edge (its outer 1.5 cells, where Fresnel climbs)
+  // shows a step up even over an empty scene, on the screen's own 2-cell rhythm, so the pill reads as an outline
+  if (bez < .25 && F.lens.rim(u, v) >= .7) return 1
+  // ≡ lens.through(u, v) (the offset is already in d); Fresnel only reaches .15 on the bezel's outer fifth
+  const val = d[0] === 0 && d[1] === 0 ? behindAt(F.ticks, F.hero.near, x, y) : behindAt(F.ticks, F.hero.near, x + d[0], y + d[1])
+  if (bez < .125) { const b = Math.max(val, floorAt(x, y)); return b > 0 ? Math.min(1, b + .25) : 0 }
+  return val > 0 ? Math.min(1, val + (bez < .2 && F.lens.fresnel(u, v) >= .15 ? .25 : 0)) : 0
+}
+/**
+ * The screen only changes when the lens, its rim light, the second or the minute does: between those frames (12 a
+ * second at rest) every value is a lookup, at the card's cell centres and at the GPU pass's points alike.
+ */
+const screenField: Field = (u, v) => {
+  const k = memoIndex(u * W1, v * H1)
+  if (k < 0) return screenAt(u, v)
+  const memo = LF!.memo, hit = memo[k]
+  return hit === hit ? hit : (memo[k] = screenAt(u, v))
+}
+screenField.bounds = [0, 12, W1, H1]
+/** The screen as the board's one GPU layer: density 2 on WebGL2; this same field at card pitch on Canvas and in goldens. */
+const screenGPU = gpuValues(screenField, { density: 2 })
+const screenTone = (val: number, u: number, v: number): Tone => (val >= VALUE_IN ? (LF!.lens.inside(u, v) ? 'value' : 'idle') : val >= MID_LO ? 'mid' : 'faint')
+/** The hero on its 1.5 lattice: each dot reads the glyph bitmap at its refracted point (bilinear: the strokes warp). */
+const heroField: Field = (u, v) => {
+  const { lc, lr, ox, oy, bits } = LF!.hero, d = lensD
+  const i = u * (lc - 1), j = v * (lr - 1), x = ox + (i + .5) * HERO.k - .5, y = oy + (j + .5) * HERO.k - .5
+  if (LF!.off(x, y, d) < 0) return bits[Math.round(j) * lc + Math.round(i)] ?? 0
+  return bilinear(bits, lc, lr, (x + d[0] + .5 - ox) / HERO.k - .5, (y + d[1] + .5 - oy) / HERO.k - .5)
+}
+const heroTone = (_val: number, u: number, v: number): Tone => {
+  const { lc, lr, ox, oy } = LF!.hero
+  return LF!.lens.inside((ox + (u * (lc - 1) + .5) * HERO.k - .5) / W1, (oy + (v * (lr - 1) + .5) * HERO.k - .5) / H1) ? 'value' : 'idle'
+}
 export const matLens: WidgetPreset = {
   ...tile, id: 'mat-lens', name: 'Lens', clock: true,
   defaults: { ...LIGHT_DEFAULTS, lx: .6944, ly: .5606 },
@@ -152,55 +226,18 @@ export const matLens: WidgetPreset = {
   layers: ctx => {
     const now = new Date(), c = lensCentre(ctx.data), rim = lensRim(ctx, c), hero = lensHero(pad2(now.getHours()), pad2(now.getMinutes()))
     const o: LiquidGlassOptions = { cx: c[0], cy: c[1], hw: LENS.hw, hh: LENS.hh, radius: LENS.radius, bezel: LENS.bezel, lut: lensLUT(), magnify: LENS.magnify, frost: LENS.frost, rimAngle: rim.angle, rimPower: rim.power }
-    const ticks = dialTicks().data, near = hero.near, off = lensOffset(o)
+    const ticks = dialTicks().data, off = lensOffset(o)
     // the live second, refracted by the same offset as the scene (the scene's own tick there is cleared under it)
     const s = now.getSeconds(), a = s * 6 * DEG, q: Pt = [Math.round(DIAL.cx + DIAL.r * Math.sin(a)), Math.round(DIAL.cy - DIAL.r * Math.cos(a))], sec = apparent(off, q)
-    const behind: Field = (u, v) => behindAt(ticks, near, u * W1, v * H1)
-    const scene = lensScene(hero, ticks)
-    const lens = liquidGlass(behind, TILE, o), d = new Float64Array(2)
-    const step = .25
-    // the screen: through + Fresnel (+1 step on the bezel) + the specular rim, minus the contact shadow and the second's cell
-    const screen: Field = (u, v) => {
-      const x = u * W1, y = v * H1
-      if ((x - sec[0]) ** 2 + (y - sec[1]) ** 2 < 2.2) return 0
-      // most of the card is far from the glass and its shadow: the scene as baked this minute, no lens maths
-      const far = Math.abs(x - c[0]) > LENS.hw + 1 || y < c[1] - LENS.hh - 1 || y > c[1] + LENS.hh + 5
-      const bez = far ? -1 : off(x, y, d)
-      if (bez < 0) {
-        const val = sceneAt(scene, x, y)
-        if (far) return val
-        if (val > 0 && val <= .5) { // the floor only: cut where the lens's shadow falls (the outline moved down 3 cells)
-          const sx = Math.abs(x - c[0]) - (LENS.hw - LENS.radius), sy = Math.abs(y - 3 - c[1])
-          const sd = Math.hypot(Math.max(sx, 0), Math.max(sy, 0)) + Math.min(Math.max(sx, sy), 0) - LENS.radius
-          if (sd < 1.5) return 0
-        }
-        return val
-      }
-      // the specular rim on the outer quarter of the bezel; the glass's edge (its outer 1.5 cells, where Fresnel climbs)
-      // shows a step up even over an empty scene, on the screen's own 2-cell rhythm, so the pill reads as an outline
-      if (bez < .25 && lens.rim(u, v) >= .7) return 1
-      // ≡ lens.through(u, v) (the offset is already in d); Fresnel only reaches .15 on the bezel's outer fifth
-      const val = d[0] === 0 && d[1] === 0 ? behindAt(ticks, near, x, y) : behindAt(ticks, near, x + d[0], y + d[1])
-      if (bez < .125) { const b = Math.max(val, floorAt(x, y)); return b > 0 ? Math.min(1, b + step) : 0 }
-      return val > 0 ? Math.min(1, val + (bez < .2 && lens.fresnel(u, v) >= .15 ? step : 0)) : 0
-    }
-    screen.bounds = [0, 12, W1, H1]
-    const toneOf = (val: number, u: number, v: number): Tone => (val >= VALUE_IN ? (lens.inside(u, v) ? 'value' : 'idle') : val >= MID_LO ? 'mid' : 'faint')
-    // the hero on its 1.5 lattice: each dot reads the glyph bitmap at its refracted point (bilinear: the strokes warp)
-    const { lc, lr, ox, oy, bits, box } = hero
-    const heroField: Field = (u, v) => {
-      const i = u * (lc - 1), j = v * (lr - 1), x = ox + (i + .5) * HERO.k - .5, y = oy + (j + .5) * HERO.k - .5
-      if (off(x, y, d) < 0) { const k = Math.round(j) * lc + Math.round(i); return bits[k] ?? 0 }
-      const si = (x + d[0] + .5 - ox) / HERO.k - .5, sj = (y + d[1] + .5 - oy) / HERO.k - .5
-      return bilinear(bits, lc, lr, si, sj)
-    }
+    const lens = liquidGlass((u, v) => behindAt(ticks, hero.near, u * W1, v * H1), TILE, o)
+    LF = { c, sec, hero, scene: lensScene(hero, ticks), ticks, off, lens, memo: screenMemo(`${c[0]},${c[1]},${rim.angle},${rim.power},${s},${hero.key}`) }
     // the lens can pull the hero out to its own outline: the layer covers the glyphs' box and the lens's
-    const toLat = (x: number) => (x + .5 - ox) / HERO.k - .5, toLatY = (y: number) => (y + .5 - oy) / HERO.k - .5
+    const { lc, lr, ox, oy, box } = hero, toLat = (x: number) => (x + .5 - ox) / HERO.k - .5, toLatY = (y: number) => (y + .5 - oy) / HERO.k - .5
     heroField.bounds = [Math.max(0, Math.min(box[0], Math.floor(toLat(c[0] - LENS.hw)))), Math.max(0, Math.min(box[1], Math.floor(toLatY(c[1] - LENS.hh)))), Math.min(lc - 1, Math.max(box[2], Math.ceil(toLat(c[0] + LENS.hw)))), Math.min(lr - 1, Math.max(box[3], Math.ceil(toLatY(c[1] + LENS.hh))))]
     return [
       cite('SNELL · N 1.5'),
-      { field: gpuValues(screen, { density: 2 }), toneOf },
-      { field: heroField, lattice: HERO.k, origin: [ox, oy], toneOf: (_val, u, v) => (lens.inside(((ox + (u * (lc - 1) + .5) * HERO.k - .5)) / W1, (oy + (v * (lr - 1) + .5) * HERO.k - .5) / H1) ? 'value' : 'idle') },
+      { field: screenGPU, toneOf: screenTone },
+      { field: heroField, lattice: HERO.k, origin: [ox, oy], toneOf: heroTone },
       layer(valuedSites([[sec[0], sec[1], 1]], 1.6), 'active'),
     ]
   },

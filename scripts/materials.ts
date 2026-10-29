@@ -20,7 +20,7 @@
 import { readFileSync } from 'node:fs'
 import { ambientOcclusion, anisoSpec, bakeMatcap, basket, BEZEL, cardMask, causticSplat, causticStats, contour, DRAFTS, frost, lensOffset, liquidGlass, LUT_SAMPLES, snellLUT, fromDraft, heightFromField, herringbone, marble, matcap, matcapMatrix, plain, rake, satin, stitch, stitchHoles, studioMatcap, tangentLinear, tangentRadial, tangentSDF, terrazzo, toDraft, twill, weaveRelief, CHROME, type Drawdown } from '../src/engine/matter'
 import { heightRaster, hourOf, lightDir, metal, normalRaster, sdfBox, sdfCircle, sunAt, torch, type Light, type Vec3 } from '../src/engine/light'
-import { gpuTag, layerPass } from '../src/engine/renderer/webgl/passes'
+import { gpuTag, gpuValues, layerPass } from '../src/engine/renderer/webgl/passes'
 import { worldAt, worldReset } from '../src/engine/physics/world'
 import { simReset, simStep } from '../src/engine/sim/sim'
 import { sceneLight } from '../src/engine/light/input'
@@ -567,7 +567,15 @@ function m2CardChecks(assert: Assert, frameOf: FrameFn): void {
       for (let r = 0; r < q.rows; r++) for (let k = 0; k < q.cols; k++) s += q.field((q.map[0] + k * q.map[1]) / q.den[0], (q.map[2] + r * q.map[3]) / q.den[1])
       return s
     }, 7)
-    assert('lens: GPU value fill ≤ 2 ms (the density-2 field over its pass, × load)', fill.ms <= 2 * fill.load, fmtLoaded(fill))
+    // the same 83k reads of a constant field: the loop and call overhead every pass pays, whatever its field
+    const flat = gpuValues(() => .5, { density: 2 })
+    const bare = medianLoaded(i => {
+      const q = { ...layerPass(atClock(() => withChrome(lens)({ t: 5 + i / 12, data: { ...lens.defaults } })).find(l => gpuTag(l.field))!, TILE, lens.style, pitch)!, field: flat }
+      let s = 0
+      for (let r = 0; r < q.rows; r++) for (let k = 0; k < q.cols; k++) s += q.field((q.map[0] + k * q.map[1]) / q.den[0], (q.map[2] + r * q.map[3]) / q.den[1])
+      return s
+    }, 7)
+    assert('lens: GPU value fill ≤ 2 ms (the density-2 field over its pass beyond a constant field, × load)', fill.ms - bare.ms <= 2 * fill.load, `${fmtLoaded(fill)}; a constant field ${fmtLoaded(bare)}`)
   }
   // ── pool ──
   {
