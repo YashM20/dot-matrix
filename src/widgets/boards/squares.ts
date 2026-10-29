@@ -405,10 +405,12 @@ export const sqTeletext: WidgetPreset = {
 // cell at a time. Under it a solid-bar spectrum on 3 × 1 cells (`sizeAxis: 'x'`): the stroke weight of the line
 // being scanned (normalised to its peak), 42 bars; the red is the bar at the peak.
 const LN_ORIGIN: Pt = [8, 9], LN_W = 128, LN_LINES = 36, LN_K: Pt = [1, 3], SP_ORIGIN: Pt = [8, 118], SP_BARS = 42, SP_H = 13
-/** Stroke value of line `r` at column `c` (portrait luma, a gentle whole-cell sway). */
+let lnLuma: Float64Array | undefined
+/** Stroke value of line `r` at column `c` (portrait luma at the line's centre row, cached once; a gentle whole-cell sway). */
 const lineValue = (c: number, r: number, t: number) => {
-  const sway = Math.round(1.6 * tsin(t * .9 + r * .42)), x = c - sway
-  return x < 0 || x >= LN_W ? 0 : clamp(portrait(LN_ORIGIN[0] + x, LN_ORIGIN[1] + r * LN_K[1] + 1))
+  const L = (lnLuma ??= Float64Array.from({ length: LN_W * LN_LINES }, (_, i) => clamp(portrait(LN_ORIGIN[0] + (i % LN_W), LN_ORIGIN[1] + Math.floor(i / LN_W) * LN_K[1] + 1))))
+  const x = c - Math.round(1.6 * tsin(t * .9 + r * .42))
+  return x < 0 || x >= LN_W ? 0 : L[r * LN_W + x]
 }
 export const sqLines: WidgetPreset = {
   id: 'sq-lines', name: 'Squares Lines', label: 'LINES', ...tile,
