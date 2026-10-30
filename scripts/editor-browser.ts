@@ -295,7 +295,7 @@ async function desktop() {
 //    editor's first measure and make the bar 11 px taller; a height measured once then ran the editor past the
 //    window (PR #11). Whether the dock lands before or after that measure depends on load order, so after a fresh
 //    load settles, the probe also grows the site bar by 11 px itself (what the late dock did) and the editor must
-//    still fit. Checked against a build without PR #11: the natural load fit there, the grown bar did not.
+//    still fit. A build without PR #11 fit on the natural load (the dock landed first), hence the grown bar.
 //    Leaves the page at 1440×900.
 const FIT_SETTLE = `document.fonts.ready.then(() => new Promise(res => {
   const ed = document.querySelector('.ed-root'), bar = document.querySelector('.topbar')
