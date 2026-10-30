@@ -69,12 +69,11 @@ function emit(out: Sink, value: number, tone: number, x: number, y: number, seed
   // same arithmetic as `applyJitter`, without the tuple
   if (style.jitter) { const amount = style.jitter * scale, random = mulberry32(seed); jx = x + (random() - .5) * amount; jy = y + (random() - .5) * amount }
   let r = (style.sizeMin + (style.sizeMax - style.sizeMin) * eased) * scale, aspect = 1
-  // a per-dot form (shapeOf, rotation, motif) is drawn by the squares hooks; a shapeOf dot keeps the style's ink
-  if (form !== NO_FORM && samplerExt.ink) r = samplerExt.ink(r, form, out.shape, out.roundness)
   const opacity = style.opacityMode === 'constant' || axis ? 1 : value, f = form & 15, sq = style.gap !== undefined && (f === NO_FORM ? out.square : f >= 4)
   // {grid.gap}: a square-like dot keeps gap·P of grout to its neighbour (roundness step ≥ 4 ⇔ n ≥ 8)
   if (sq) r = Math.min(r, (1 - style.gap!) * scale * out.pitch / 2)
-  if (ky && samplerExt.rect) [r, aspect] = samplerExt.rect(r, scale, ky, axis, sq ? style.gap! : 0, out.pitch)
+  // rect cells, and form dots (a shapeOf dot keeps the style's ink): the squares hook
+  if ((ky || form !== NO_FORM) && samplerExt.rect) [r, aspect] = samplerExt.rect(r, scale, ky, axis, sq ? style.gap! : 0, out.pitch, form, out)
   // squares channels (only once `installSquares()` has run): the join / form / aspect hooks write them
   const ext = join !== NO_JOIN || form !== NO_FORM || aspect !== 1
   if (out.buf) {
@@ -263,7 +262,7 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
   const n = coverExponent(style.shape, style.cornerRoundness)
   for (const { x, y, k, value, tone, form } of sites.values()) {
     emit(dots, value, toneIndex(tone, value), (x + .5) * pitch, (y + .5) * pitch, seed++, style, k, NO_JOIN, form)
-    const reach = k / 2 + .25, f = form & 15, nf = f === NO_FORM ? n : coverExponent('squircle', f / 8), rot = form & 16 ? Math.PI / 4 : 0, box = rot ? reach * Math.SQRT2 : reach
+    const reach = k / 2 + .25, f = form & 15, nf = f === NO_FORM ? n : coverExponent('squircle', f / 8), rot = (form & 16) * Math.PI / 64, box = rot ? reach * Math.SQRT2 : reach
     for (let r = Math.max(0, Math.ceil(y - box)); r <= Math.min(grid.rows - 1, Math.floor(y + box)); r++)
       for (let c = Math.max(0, Math.ceil(x - box)); c <= Math.min(grid.cols - 1, Math.floor(x + box)); c++)
         if (hides(c - x, r - y, reach, nf, rot)) covered![r * grid.cols + c] = 1

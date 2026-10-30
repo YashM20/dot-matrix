@@ -29,13 +29,13 @@ export const samplerExt: {
    * rotation (`Layer.rotation`, squares Q3), bits 5–7 the motif (1 bead, 2 stud, 3 stitch). 15 = a plain dot.
    */
   form?: (layer: Layer, value: number, u: number, v: number) => number
-  /** A form dot's half side (squares Q3): a `shapeOf` roundness step keeps the frame style's ink (`shape`, `roundness`). */
-  ink?: (r: number, form: number, shape: DotStyle['shape'], roundness: number | undefined) => number
   /**
    * A rect cell's half width and aspect (squares Q2): `r` = the dot's ramp radius on kx (gap-clamped), `ky` the y
-   * factor, `axis` a bar / line ('x' / 'y' keep the other side full), `gap` the clamp applied (0 = none), `pitch` card px.
+   * factor (0 = a square cell), `axis` a bar / line ('x' / 'y' keep the other side full), `gap` the clamp applied
+   * (0 = none), `pitch` card px. Also called for a form dot (squares Q3, `form` ≠ 15): a `shapeOf` roundness step keeps
+   * the frame style's ink (`style`: its shape and roundness).
    */
-  rect?: (r: number, kx: number, ky: number, axis: 'x' | 'y' | undefined, gap: number, pitch: number) => [number, number]
+  rect?: (r: number, kx: number, ky: number, axis: 'x' | 'y' | undefined, gap: number, pitch: number, form: number, style: { shape: DotStyle['shape']; roundness: number | undefined }) => [number, number]
   /** Stamp a packed join / form code and a rect cell's aspect (ry / rx, 1 = none) onto an array-path dot (`joints`: the frame's joint table). */
   stamp?: (d: DotInstance, join: number, form: number, joints: JointGeom[] | null, aspect: number) => void
   /** Write a buffer dot's packed join / form code and aspect (allocating `ext` on first use). */

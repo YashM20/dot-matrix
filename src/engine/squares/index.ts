@@ -11,7 +11,7 @@ import { joinPass } from './sampler'
 import { bufferDot, canvasDot } from './canvas'
 import { svgDots } from './svg'
 import { attach, decode, grow, push, rect, stamp } from './buffer'
-import { formCode, inkOf } from './form'
+import { formCode } from './form'
 
 export { ALL_FULL, CONVEX, DIAG, EDGE_H, EDGE_V, FULL, INNER, LUT4, NO_JOIN, joinMasks, maskOf, quadrant, quadrantCode } from './mask'
 export { inkRadius, insideJoined, insideRect, joinArea, joinOutline, rectOutline, superellipseArea, type OutlineSink } from './geometry'
@@ -22,11 +22,11 @@ export { BEAD, MOTIFS, NO_FORM, ROT45, STITCH, STUD, drawnArea, formArea, formCo
 
 /** Install the join pass, the per-dot form (roundness, rotation, motif, equal ink), aspect and buffer channels, and the Canvas / SVG join, rect and form renderers. Idempotent. */
 export function installSquares(): void {
-  Object.assign(samplerExt, { join: joinPass, form: formCode, ink: inkOf, rect, stamp, push, attach, grow, decode })
+  Object.assign(samplerExt, { join: joinPass, form: formCode, rect, stamp, push, attach, grow, decode })
   Object.assign(shapeExt, { canvas: canvasDot, bufferDot, svg: svgDots })
 }
 /** Remove the squares hooks (checks: the missing-hook path draws plain dots). The GL hook stays if it loaded. */
 export function uninstallSquares(): void {
-  for (const k of ['join', 'form', 'ink', 'rect', 'stamp', 'push', 'attach', 'grow', 'decode'] as const) delete samplerExt[k]
+  for (const k of ['join', 'form', 'rect', 'stamp', 'push', 'attach', 'grow', 'decode'] as const) delete samplerExt[k]
   for (const k of ['canvas', 'bufferDot', 'svg'] as const) delete shapeExt[k]
 }

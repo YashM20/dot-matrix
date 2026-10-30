@@ -5,8 +5,8 @@
  * 0xFFFF = plain), `form` Uint8 at 6c (bits 0–3 roundness step /8, 15 = frame style; bit 4 rotated by π/4; bits 5–7 the motif, src/engine/squares/form.ts).
  */
 import type { DotBuffer } from '../buffer/dotBuffer'
-import type { DotInstance, JointGeom } from '../types'
-import { MOTIFS, MOTIF_SHIFT, ROT45 } from './form'
+import type { DotInstance, DotStyle, JointGeom } from '../types'
+import { MOTIFS, MOTIF_SHIFT, ROT45, inkOf } from './form'
 
 const NO_JOIN = 0xFFFF, NO_FORM = 15
 
@@ -23,9 +23,13 @@ function fresh(buf: DotBuffer, old?: { aspect?: Float32Array; join?: Uint16Array
 
 /**
  * `samplerExt.rect`: a rect cell's half width and aspect. ry follows the same ramp on ky (each side clamped to its own
- * gutter); a bar ('x') keeps its height full, a line ('y') its width.
+ * gutter); a bar ('x') keeps its height full, a line ('y') its width. A form dot (Q3) first takes the equal-ink half
+ * side of its roundness step (`inkOf`); a square cell (ky = 0) keeps aspect 1.
  */
-export function rect(r: number, kx: number, ky: number, axis: 'x' | 'y' | undefined, gap: number, pitch: number): [number, number] {
+export function rect(r: number, kx: number, ky: number, axis: 'x' | 'y' | undefined, gap: number, pitch: number, form = NO_FORM, style?: { shape: DotStyle['shape']; roundness: number | undefined }): [number, number] {
+  // the gutter clamp again after the ink scale (a scale ≥ 1 can't push a square-like dot past its gutter)
+  if (form !== NO_FORM && style) { r = inkOf(r, form, style.shape, style.roundness); if (gap) r = Math.min(r, (1 - gap) * kx * pitch / 2) }
+  if (!ky) return [r, 1]
   let ry = r / kx * ky
   if (axis === 'y') r = (1 - gap) * kx * pitch / 2; else if (axis === 'x') ry = (1 - gap) * ky * pitch / 2
   return [r, r > 0 ? ry / r : 1]
