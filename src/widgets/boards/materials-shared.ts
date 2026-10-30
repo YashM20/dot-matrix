@@ -50,6 +50,15 @@ export function matLight(ctx: WidgetContext, o: MatLightOptions = {}): Light {
   return o.rake ? rake(L) : L
 }
 
+/**
+ * A torch snapped to a q-cell grid (directional lights pass through): a moving pointer then repeats the same light for
+ * a few frames, so per-light shading caches hit while it sweeps (a torch 30–40 cells up moves its light imperceptibly).
+ */
+export function snapTorch(L: Light, q: number): Light {
+  if (Array.isArray(L)) return L
+  const p = L as { at: readonly [number, number, number]; falloff?: number }
+  return { ...p, at: [Math.round(p.at[0] / q) * q, Math.round(p.at[1] / q) * q, p.at[2]] }
+}
 /** Scratch rasters per card, allocated on first use and reused every frame. */
 export function scratch(n: number, grid = TILE): () => Raster[] { return once(() => Array.from({ length: n }, () => createRaster(grid))) }
 /** A raster's values as a layer (nearest), on a lattice or card pitch. */

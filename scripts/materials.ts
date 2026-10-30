@@ -18,13 +18,13 @@
  * each card's cold / warm / hover frame.
  */
 import { readFileSync } from 'node:fs'
-import { ambientOcclusion, anisoSpec, bakeMatcap, basket, BEZEL, cardMask, causticSplat, causticStats, contour, DRAFTS, frost, lensOffset, liquidGlass, LUT_SAMPLES, snellLUT, fromDraft, heightFromField, herringbone, marble, matcap, matcapMatrix, plain, rake, satin, stitch, stitchHoles, studioMatcap, tangentLinear, tangentRadial, tangentSDF, terrazzo, toDraft, twill, weaveRelief, CHROME, type Drawdown } from '../src/engine/matter'
+import { ambientOcclusion, anisoSpec, bakeMatcap, basket, BEZEL, cardMask, causticSplat, causticStats, contour, DRAFTS, frost, insetDistance, lensOffset, liquidGlass, LUT_SAMPLES, snellLUT, fromDraft, heightFromField, herringbone, marble, matcap, matcapMatrix, plain, rake, satin, stitch, stitchHoles, studioMatcap, tangentLinear, tangentRadial, tangentSDF, terrazzo, toDraft, twill, weaveRelief, CHROME, type Drawdown } from '../src/engine/matter'
 import { heightRaster, hourOf, lightDir, metal, normalRaster, sdfBox, sdfCircle, sunAt, torch, type Light, type Vec3 } from '../src/engine/light'
 import { gpuTag, gpuValues, layerPass } from '../src/engine/renderer/webgl/passes'
 import { worldAt, worldReset } from '../src/engine/physics/world'
 import { simReset, simStep } from '../src/engine/sim/sim'
 import { sceneLight } from '../src/engine/light/input'
-import { createRaster, rasterize } from '../src/engine/raster'
+import { createRaster, distanceRaster, rasterize } from '../src/engine/raster'
 import { latticeGrid, sampleLayers } from '../src/engine/sampler/gridSampler'
 import { beginDrag, dragValue } from '../src/engine/interaction/controls'
 import { touchIntent } from '../src/engine/interaction/gesture'
@@ -102,6 +102,10 @@ export async function materialsChecks(assert: Assert, opts: MaterialsOptions = {
     let lit = 0; for (const v of m.data) lit += v
     // lattice dot (3, 2) spans card x ∈ [17.5, 20), y ∈ [25, 27.5): centres x + ½ in range → cols 17, 18, 19; rows 25, 26 (a 2.5 lattice alternates 3 and 2 cells)
     assert('materials: cardMask: a lattice dot fills the card cells whose centres fall in it', lit === 6 && m.data[25 * 144 + 17] === 1 && m.data[26 * 144 + 19] === 1 && m.data[27 * 144 + 19] === 0, `${lit} cells`)
+    // the marble's engraving: a banded inset distance stands in for two full-grid EDTs (identical heights, bit for bit)
+    const glyphs = atClock(() => materialsHooks.engraving('09', '41', 2026).hero), prof = { shape: 'linear' as const, width: 1.6, height: -1.8 }
+    const viaEdt = heightRaster(distanceRaster(glyphs), prof), viaBand = heightRaster(insetDistance(glyphs), prof)
+    assert('materials: insetDistance ≡ distanceRaster under an engraving profile (heights and coverage bit for bit)', same(viaEdt.data, viaBand.data) && same(viaEdt.mask, viaBand.mask))
     const barrel = readFileSync(new URL('../src/engine/index.ts', import.meta.url), 'utf8')
     assert('materials: engine/matter is not in the engine barrel', !barrel.includes("'./matter"))
   }

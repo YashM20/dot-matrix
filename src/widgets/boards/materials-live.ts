@@ -26,7 +26,7 @@ import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { hash01 } from '../../engine/math'
 import type { Light, Vec3 } from '../../engine/light/shade'
 import { TILE, layer, type WidgetContext, type WidgetPreset } from '../types'
-import { LIGHT_DEFAULTS, cite, matLight, once, T, tile, valuedSites } from './materials-shared'
+import { LIGHT_DEFAULTS, cite, matLight, once, snapTorch, T, tile, valuedSites } from './materials-shared'
 
 // The sampling worker would run its own (pristine) copy of the world and snap back when the pointer leaves.
 const IN_WORKER = typeof (globalThis as { WorkerGlobalScope?: unknown }).WorkerGlobalScope !== 'undefined'
@@ -109,21 +109,28 @@ function poolInput(ctx: WidgetContext): FrameInput | undefined {
   return { pointers: framePointers(ctx.pointers, (x, y) => [cardToRx(x), cardToRy(y)]), kick: (ctx.data.k ?? 0) >= .5 && !busy }
 }
 
-interface PoolScratch { gx: Float32Array; gy: Float32Array; caustic: ReturnType<typeof createRaster>; values: ReturnType<typeof createRaster>; tones: Uint8Array; water: Uint8Array; g: Float32Array }
+interface PoolScratch { rx: Float32Array; ry: Float32Array; gx: Float32Array; gy: Float32Array; caustic: ReturnType<typeof createRaster>; values: ReturnType<typeof createRaster>; tones: Uint8Array; water: Uint8Array; g: Float32Array }
 const poolScratch = once((): PoolScratch => {
   const n = LG2.cols * LG2.rows, water = new Uint8Array(n)
   for (let j = BASIN.j0; j <= BASIN.j1; j++) for (let i = BASIN.i0; i <= BASIN.i1; i++) water[j * LG2.cols + i] = 1
   const caustic = createRaster(LG2)
   caustic.bounds = [BASIN.i0, BASIN.j0, BASIN.i1, BASIN.j1]
-  return { gx: new Float32Array(n), gy: new Float32Array(n), caustic, values: createRaster(LG2), tones: new Uint8Array(n), water, g: new Float32Array(3) }
+  return { rx: new Float32Array(RIPPLE.w * RIPPLE.h), ry: new Float32Array(RIPPLE.w * RIPPLE.h), gx: new Float32Array(n), gy: new Float32Array(n), caustic, values: createRaster(LG2), tones: new Uint8Array(n), water, g: new Float32Array(3) }
 })
 /** Lattice cells i0 … i1 of row j: the water's slope (per lattice cell) from the ripple, bilinear. */
-function gradRow(s: Float32Array, S: PoolScratch, j: number): void {
-  const ry = cardToRy(latX(j)), g = S.g
+/** Ripple row m: the slope at each ripple cell centre (`rippleGrad` once per cell: 4× fewer calls than per lattice cell). */
+function rippleSlopeRow(s: Float32Array, S: PoolScratch, m: number): void {
+  const g = S.g
+  for (let k = 0, i = m * RIPPLE.w; k < RIPPLE.w; k++, i++) { rippleGrad(ripple, s, k, m, g); S.rx[i] = g[1]; S.ry[i] = g[2] }
+}
+/** Lattice row j: the water's slope per lattice cell, bilinear between the ripple cells' slopes. */
+function gradRow(S: PoolScratch, j: number): void {
+  const fy = Math.max(0, Math.min(RIPPLE.h - 1.001, cardToRy(latX(j)))), m = Math.floor(fy), ty = fy - m, k2 = K2 / RIPPLE.pitch
   for (let i = BASIN.i0; i <= BASIN.i1; i++) {
-    rippleGrad(ripple, s, cardToRx(latX(i)), ry, g)
-    const k = j * LG2.cols + i
-    S.gx[k] = g[1] * (K2 / RIPPLE.pitch); S.gy[k] = g[2] * (K2 / RIPPLE.pitch)
+    const fx = Math.max(0, Math.min(RIPPLE.w - 1.001, cardToRx(latX(i)))), q = Math.floor(fx), tx = fx - q, a = m * RIPPLE.w + q, b = a + RIPPLE.w, k = j * LG2.cols + i
+    const gx0 = S.rx[a] + (S.rx[a + 1] - S.rx[a]) * tx, gx1 = S.rx[b] + (S.rx[b + 1] - S.rx[b]) * tx
+    const gy0 = S.ry[a] + (S.ry[a + 1] - S.ry[a]) * tx, gy1 = S.ry[b] + (S.ry[b + 1] - S.ry[b]) * tx
+    S.gx[k] = (gx0 + (gx1 - gx0) * ty) * k2; S.gy[k] = (gy0 + (gy1 - gy0) * ty) * k2
   }
 }
 /** The floor under the water at a lattice point: grout .2 (faint) on every 7th row and column, tile .55 (mid) between. */
@@ -168,7 +175,8 @@ export const matPool: WidgetPreset = {
   layers: ctx => {
     if (IN_WORKER) throw new Error('mat-pool keeps its live state on the main thread')
     const s = worldAt(poolWorld, ctx.t, poolInput(ctx)), S = poolScratch(), L = matLight(ctx, { lattice: K2, torch: { height: 50, falloff: 200 } })
-    for (let j = BASIN.j0; j <= BASIN.j1; j++) gradRow(s, S, j)
+    for (let m = 0; m < RIPPLE.h; m++) rippleSlopeRow(s, S, m)
+    for (let j = BASIN.j0; j <= BASIN.j1; j++) gradRow(S, j)
     const [lx, ly] = leanOf(L)
     causticSplat((x, y, out) => { const k = Math.round(y) * LG2.cols + Math.round(x); out[0] = 0; out[1] = S.gx[k]; out[2] = S.gy[k] }, S.caustic, { depth: WATER.depth, gain: WATER.gain, ior: WATER.ior, mask: S.water, shift: [lx, ly] })
     S.caustic.bounds = [BASIN.i0, BASIN.j0, BASIN.i1, BASIN.j1]
@@ -210,14 +218,15 @@ export function poolMemory(): { bytes: number; checkpoints: number } {
 // ── 10 RUST ─ a steel sign counting days, slowly rusting over ─────────────────────────────────────────────
 // Brushed plate on card pitch (Kajiya–Kay p 48 along x), four domed rivets, the lettering engraved (−1.2) with AO in
 // the grooves. Rust grows by a field r = fbm + crevices (1 − AO) + edges, over the cells where r is above the
-// threshold that covers 1 − e^(−days/180) of the plate (a 256-bin histogram, exact to a bin). The live front is red.
+// threshold that covers 1 − e^(−days/180) of the plate (a 512-bin histogram, exact to a bin). The live front is red.
 const PLATE = { x0: 6, y0: 18, x1: 137, y1: 127, r: 3 }
 const P_CX = (PLATE.x0 + PLATE.x1) / 2, P_CY = (PLATE.y0 + PLATE.y1) / 2, P_HW = (PLATE.x1 - PLATE.x0) / 2, P_HH = (PLATE.y1 - PLATE.y0) / 2
 const PLATE_BOX: [number, number, number, number] = [PLATE.x0, PLATE.y0, PLATE.x1, PLATE.y1]
 /** Signed distance to the plate's rounded outline (cells, < 0 inside). */
 const plateSdf = (x: number, y: number) => {
   const qx = Math.abs(x - P_CX) - (P_HW - PLATE.r), qy = Math.abs(y - P_CY) - (P_HH - PLATE.r)
-  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - PLATE.r
+  const ax = qx > 0 ? qx : 0, ay = qy > 0 ? qy : 0
+  return Math.sqrt(ax * ax + ay * ay) + Math.min(Math.max(qx, qy), 0) - PLATE.r
 }
 const RIVETS: [number, number][] = [[13, 25], [130, 25], [13, 120], [130, 120]]
 /** The sign's epoch: the plan's own day (M §10.4, an owner call). */
@@ -229,41 +238,38 @@ export const rustCover = (days: number) => 1 - Math.exp(-Math.max(0, days) / 180
 const RESET_BOX: [number, number, number, number] = [50, 100, 44, 16]
 const COUNT_ROW = 40, SAND = 1.2
 
-/** Row r of the plate: the bevelled slab and the rivets' domes (height), coverage, and the rust's edge term. */
-function plateRow(H: Float32Array, M: Float32Array, E: Float32Array, r: number): void {
+/** Row r of the plate: the bevelled slab and the rivets' domes (height), coverage, and r's static terms (edges + noise). */
+function plateRow(G: Float32Array, gw: number, H: Float32Array, M: Float32Array, E: Float32Array, r: number): void {
+  const fy = (r - PLATE.y0) / 3, j = Math.floor(fy), ty = fy - j
   for (let c = PLATE.x0, i = r * COLS + c; c <= PLATE.x1; c++, i++) {
     const sd = plateSdf(c, r)
     if (sd >= .5) continue
     const inset = Math.max(0, -sd)
     let h = 1.2 * Math.min(1, inset / 1.5)
-    for (const [x, y] of RIVETS) { const d = Math.hypot(c - x, r - y); if (d < 3.5) h += 1.2 * Math.sqrt(1 - (d / 3.5) ** 2) }
+    for (let k = 0; k < RIVETS.length; k++) {
+      const dx = c - RIVETS[k][0], dy = r - RIVETS[k][1], d2 = dx * dx + dy * dy
+      if (d2 < 12.25) h += 1.2 * Math.sqrt(1 - d2 / 12.25)
+    }
     H[i] = h; M[i] = Math.min(1, .5 - sd)
-    E[i] = .2 * (1 - Math.min(1, inset / 10))
+    const fx = (c - PLATE.x0) / 3, k = Math.floor(fx), tx = fx - k, a = j * gw + k
+    const top = G[a] + (G[a + 1] - G[a]) * tx, bot = G[a + gw] + (G[a + gw + 1] - G[a + gw]) * tx
+    E[i] = .2 * (1 - Math.min(1, inset / 10)) + top + (bot - top) * ty
   }
 }
 /** The plate's static half (baked once): relief, coverage and r's noise + edge terms. The noise is fBm on a 3-cell grid, read bilinearly (2 octaves, the finer one 13 cells: the rust grows in patches, not grain). */
 const rustBase = once(() => {
   const n = COLS * TILE.rows, H = new Float32Array(n), M = new Float32Array(n), E = new Float32Array(n)
-  for (let r = PLATE.y0; r <= PLATE.y1; r++) plateRow(H, M, E, r)
   const gw = Math.ceil((PLATE.x1 - PLATE.x0) / 3) + 2, gh = Math.ceil((PLATE.y1 - PLATE.y0) / 3) + 2, G = new Float32Array(gw * gh)
   for (let j = 0; j < gh; j++) noiseRow(G, gw, j)
-  for (let r = PLATE.y0; r <= PLATE.y1; r++) noiseUp(G, gw, E, M, r)
+  for (let r = PLATE.y0; r <= PLATE.y1; r++) plateRow(G, gw, H, M, E, r)
   return { H, M, E }
 })
 function noiseRow(G: Float32Array, gw: number, j: number): void {
   for (let i = 0; i < gw; i++) G[j * gw + i] = fbm2((PLATE.x0 + 3 * i) / 26, (PLATE.y0 + 3 * j) / 26, 2, 31)
 }
-function noiseUp(G: Float32Array, gw: number, E: Float32Array, M: Float32Array, r: number): void {
-  const fy = (r - PLATE.y0) / 3, j = Math.floor(fy), ty = fy - j
-  for (let c = PLATE.x0, i = r * COLS + c; c <= PLATE.x1; c++, i++) {
-    if (!(M[i] > 0)) continue
-    const fx = (c - PLATE.x0) / 3, k = Math.floor(fx), tx = fx - k, a = j * gw + k
-    const top = G[a] + (G[a + 1] - G[a]) * tx, bot = G[a + gw] + (G[a + gw + 1] - G[a + gw]) * tx
-    E[i] += top + (bot - top) * ty
-  }
-}
 export interface RustPlate { key: string; n: NormalRaster; ao: Raster; rust: Float32Array; lo: number; hi: number; cum: Float64Array; total: number; t: TangentRaster }
-const HIST = 256
+/** The histogram: 512 bins over r's whole range (|fbm| < 1, + edges .2, + crevices .3), so one pass bins it. */
+const HIST = 512, R_LO = -1.2, R_HI = 1.7
 const rustPlates = new Map<string, RustPlate>()
 /** Row r: engrave the lettering (−1.2) into the slab. */
 function engraveRow(H: Float32Array, base: Float32Array, M: Float32Array, cut: Float32Array[], r: number): void {
@@ -275,9 +281,22 @@ function engraveRow(H: Float32Array, base: Float32Array, M: Float32Array, cut: F
   }
 }
 /** Row r of the rust field: the static terms plus the crevices (1 − AO). */
-function rustRow(R: Float32Array, E: Float32Array, M: Float32Array, A: Float32Array, r: number): void {
-  for (let c = PLATE.x0, i = r * COLS + c; c <= PLATE.x1; c++, i++) if (M[i] > 0) R[i] = E[i] + .3 * (1 - A[i])
+function rustRow(R: Float32Array, E: Float32Array, M: Float32Array, A: Float32Array, bins: Float64Array, r: number): number {
+  let n = 0
+  for (let c = PLATE.x0, i = r * COLS + c; c <= PLATE.x1; c++, i++) {
+    if (!(M[i] > 0)) continue
+    const v = R[i] = E[i] + .3 * (1 - A[i])
+    if (M[i] > .5) { bins[Math.max(0, Math.min(HIST - 1, Math.floor((v - R_LO) / (R_HI - R_LO) * HIST)))]++; n++ }
+  }
+  return n
 }
+/** The RESET button's 1-cell outline as a 0/1 mask on card pitch (≡ T.box(…RESET_BOX)). */
+const resetFrame = once(() => {
+  const m = new Float32Array(COLS * TILE.rows), [x, y, w, h] = RESET_BOX
+  for (let c = x; c < x + w; c++) { m[y * COLS + c] = 1; m[(y + h - 1) * COLS + c] = 1 }
+  for (let r = y; r < y + h; r++) { m[r * COLS + x] = 1; m[r * COLS + x + w - 1] = 1 }
+  return m
+})
 /** The engraved plate for one count (LRU of 2: the count changes once a day): normals, AO, the rust field and its histogram. */
 export function rustPlate(count: string): RustPlate {
   const hit = rustPlates.get(count)
@@ -286,16 +305,14 @@ export function rustPlate(count: string): RustPlate {
     cardMask(T.big('DAYS SINCE', 72, 25, { lattice: 1.3, align: 'center' }), TILE),
     ...(count ? [cardMask(T.big(count, 72, COUNT_ROW, { lattice: 2.5, smooth: true, align: 'center' }), TILE)] : []),
     cardMask({ field: T.text('RESET', 72, RESET_BOX[1] + 5, { align: 'center' }) }, TILE),
-    cardMask({ field: T.box(RESET_BOX[0], RESET_BOX[1], RESET_BOX[2], RESET_BOX[3]) }, TILE),
   ].map(m => m.data)
+  cut.push(resetFrame()) // the button's outline, cell for cell (T.box has no bounds: cardMask would scan the card)
   const h: HeightRaster = { ...createRaster(TILE, 'card', PLATE_BOX), mask: b.M }
   for (let r = PLATE.y0; r <= PLATE.y1; r++) engraveRow(h.data, b.H, b.M, cut, r)
   const n = normalRaster(h), ao = ambientOcclusion(h, { radius: 2, strength: .7 }), rust = new Float32Array(COLS * TILE.rows)
-  for (let r = PLATE.y0; r <= PLATE.y1; r++) rustRow(rust, b.E, b.M, ao.data, r)
-  let lo = Infinity, hi = -Infinity, total = 0
-  for (let i = 0; i < rust.length; i++) if (b.M[i] > .5) { const v = rust[i]; if (v < lo) lo = v; if (v > hi) hi = v; total++ }
-  const bins = new Float64Array(HIST), span = (hi - lo) || 1
-  for (let i = 0; i < rust.length; i++) if (b.M[i] > .5) bins[Math.min(HIST - 1, Math.floor((rust[i] - lo) / span * HIST))]++
+  const bins = new Float64Array(HIST), lo = R_LO, hi = R_HI
+  let total = 0
+  for (let r = PLATE.y0; r <= PLATE.y1; r++) total += rustRow(rust, b.E, b.M, ao.data, bins, r)
   // cum[k] = the cells in bins ≥ k (above bin k's lower edge)
   const cum = new Float64Array(HIST + 1)
   for (let k = HIST - 1; k >= 0; k--) cum[k] = cum[k + 1] + bins[k]
@@ -387,7 +404,7 @@ export const matRust: WidgetPreset = {
     if (IN_WORKER) throw new Error('mat-rust keeps its live state on the main thread')
     const s = worldAt(rustWorld, ctx.t, ctx.reducedMotion ? undefined : { pointers: framePointers(ctx.pointers, (x, y) => [x, y]), kick: (ctx.data.k ?? 0) >= .5 })
     const show = rustShown(s, new Date()), engraved = show.count === show.days, p = rustPlate(engraved ? String(show.days) : '')
-    const sh = shadedPlate(p, matLight(ctx, { torch: { height: 40, falloff: 170 } })), S = rustScratch(), theta = rustThreshold(p, rustCover(show.creep))
+    const sh = shadedPlate(p, snapTorch(matLight(ctx, { torch: { height: 40, falloff: 170 } }), 3)), S = rustScratch(), theta = rustThreshold(p, rustCover(show.creep))
     S.values.data.fill(0); S.tones.fill(0)
     // the front as sites on whole cells (a few hundred at most): no scan of the plate for a thin line
     const front: [number, number, number][] = []

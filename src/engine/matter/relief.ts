@@ -164,3 +164,35 @@ export function cardMask(lf: { field: Field; lattice?: number; origin?: [number,
   out.bounds = (i0 <= i1 && j0 <= j1 ? tightBounds({ ...out, bounds: win }) : undefined) ?? [0, 0, -1, -1]
   return out
 }
+
+/** Row y of `insetDistance`: each lit cell's squared distance to the nearest unlit cell centre within the cap. */
+function insetRow(D: Float32Array, O: Float32Array, cols: number, rows: number, y: number, at: number, k: number, c2: number): void {
+  for (let x = 0, i = y * cols; x < cols; x++, i++) {
+    if (!(D[i] >= at)) continue
+    let best = c2
+    for (let dy = -k; dy <= k; dy++) {
+      const yy = y + dy
+      if (yy < 0 || yy >= rows) continue
+      for (let dx = -k, j = yy * cols + x - k; dx <= k; dx++, j++) {
+        const xx = x + dx
+        if (xx < 0 || xx >= cols || D[j] >= at) continue
+        const d2 = dx * dx + dy * dy
+        if (d2 < best) best = d2
+      }
+    }
+    O[i] = .5 - Math.sqrt(best)
+  }
+}
+/**
+ * The inside half of `distanceRaster` (raster/ops.ts), banded: a lit cell (value ≥ `at`) gets .5 − its distance to the
+ * nearest unlit cell centre, capped at `cap` cells; every unlit cell gets 1 (outside: no coverage, no height). For a
+ * height profile that saturates within `cap − .5` cells (an engraving's wall), `heightRaster` of this ≡ `heightRaster`
+ * of `distanceRaster`, bit for bit, at a fraction of the cost: a (2·cap + 1)² search per lit cell instead of two
+ * full-grid distance transforms. Lazy (matter only): `raster/ops.ts` ships in first load.
+ */
+export function insetDistance(r: Raster, cap = 3, at = .5): Raster {
+  const { cols, rows } = r.grid, out = createRaster(r.grid, r.space), k = Math.ceil(cap)
+  out.data.fill(1)
+  for (let y = 0; y < rows; y++) insetRow(r.data, out.data, cols, rows, y, at, k, cap * cap)
+  return out
+}

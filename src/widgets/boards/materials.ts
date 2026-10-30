@@ -23,7 +23,7 @@ import { illuminate, lambert, phong, type Light } from '../../engine/light/shade
 import { MATTE_BANDS, type ToneBand } from '../../engine/light/material'
 import { sdfBox, sdfCircle } from '../../engine/light/sdf'
 import { createRaster, rasterize, rasterWindow, sample, type Raster } from '../../engine/raster/raster'
-import { distanceRaster } from '../../engine/raster/ops'
+import { insetDistance } from '../../engine/matter/relief'
 import { noise2 } from '../../engine/noise/gradient'
 import { dexp, dpow } from '../../engine/noise/dmath'
 import { hash01 } from '../../engine/math'
@@ -460,7 +460,7 @@ export function engraving(hh: string, mm: string, year: number): Engraving {
   const top = pts.filter(p => p[1] < midY), bottom = pts.filter(p => p[1] >= midY), colon = top.length && bottom.length ? [centroid(top), centroid(bottom)] : []
   const hero = toLattice15(cut), year15 = rasterize(layoutFor(LG15).text(`ANNO ${roman(year)}`, 48, YEAR_ROW, { align: 'center' }), LG15)
   // the year is a hairline (1-dot strokes): drawn as void, not relief, so its AO doesn't swallow the gaps between letters
-  const h = stackHeights(plaqueHeight(), heightRaster(distanceRaster(hero), { shape: 'linear', width: 1.6, height: -1.8 }))
+  const h = stackHeights(plaqueHeight(), heightRaster(insetDistance(hero), { shape: 'linear', width: 1.6, height: -1.8 }))
   // the colon's sites sit over the plaque lattice: clear the stone under them (sites don't hide lattice dots)
   const clear = new Uint8Array(LG15.cols * LG15.rows)
   // only the lattice cells within 3 cells of a colon dot (their box, then the exact distance test)

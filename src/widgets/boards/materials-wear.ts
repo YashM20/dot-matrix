@@ -13,7 +13,7 @@ import { twill } from '../../engine/matter/weave'
 import { createRaster, sample, type Raster } from '../../engine/raster/raster'
 import type { CellBounds } from '../../engine/types'
 import { TILE, layer, type WidgetPreset } from '../types'
-import { L15, LG15, LIGHT_DEFAULTS, T, cap, cite, matLight, mod, once, pad2, scratch, tile, toCard15, valuedSites, type Pt } from './materials-shared'
+import { L15, LG15, LIGHT_DEFAULTS, T, cap, cite, matLight, mod, once, pad2, scratch, snapTorch, tile, toCard15, valuedSites, type Pt } from './materials-shared'
 
 const COLS = TILE.cols
 
@@ -89,20 +89,26 @@ function turned(L: Light): Light {
   return { ...(L as object), at: [PATCH.cx - dy, PATCH.cy + dx, at[2]] }
 }
 const patchScratch = scratch(5)
+let satinKey = ''
 export const matPatch: WidgetPreset = {
   ...tile, id: 'mat-patch', name: 'Patch',
   defaults: { ...LIGHT_DEFAULTS, turn: 0 },
   controls: [{ key: 'turn', kind: 'toggle', box: [PBOX[0], PBOX[1], PBOX[2] - PBOX[0], PBOX[3] - PBOX[1]], label: 'Turn the patch in the light' }],
   layers: ctx => {
     const g = patchGeo(), [dif, spec, body, rim, core] = patchScratch()
-    let L = matLight(ctx, { torch: { height: 36, falloff: 160 } })
+    let L = snapTorch(matLight(ctx, { torch: { height: 36, falloff: 160 } }), 3)
     if ((ctx.data.turn ?? 0) >= .5) L = turned(L)
-    lambert(g.n, L, { ambient: .1, into: dif })
-    anisoSpec(g.n, g.t, L, { exponent: 24, into: spec })
-    body.data.fill(0); rim.data.fill(0); core.data.fill(0)
-    const [c0, r0, c1, r1] = g.n.bounds ?? PBOX
-    for (let r = r0; r <= r1; r++) satinRow(g.n.mask, dif.data, spec.data, body.data, rim.data, core.data, r, c0, c1)
-    body.bounds = rim.bounds = core.bounds = g.n.bounds
+    // the satin depends on the light alone: re-shade only when it changes (the sun holds for minutes; a torch snaps to 3 cells)
+    const key = JSON.stringify(L)
+    if (key !== satinKey) {
+      satinKey = key
+      lambert(g.n, L, { ambient: .1, into: dif })
+      anisoSpec(g.n, g.t, L, { exponent: 24, into: spec })
+      body.data.fill(0); rim.data.fill(0); core.data.fill(0)
+      const [c0, r0, c1, r1] = g.n.bounds ?? PBOX
+      for (let r = r0; r <= r1; r++) satinRow(g.n.mask, dif.data, spec.data, body.data, rim.data, core.data, r, c0, c1)
+      body.bounds = rim.bounds = core.bounds = g.n.bounds
+    }
     // the running stitch: sewn dashes idle, the rest only needle holes, the needle red with a short thread behind it
     const st = g.run, sw = sewing(ctx.t, st.count, st.total), sewn: Pt[] = [], holes: Pt[] = []
     for (let k = 0; k < st.count; k++) {

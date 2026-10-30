@@ -39,7 +39,8 @@ const lensLUT = once(() => snellLUT(BEZEL.squircle, { bezel: LENS.bezel, thickne
 /** The rim light for this frame: kube's −60° at rest, toward a hovering pointer, nudged by the tilt offset (tx, ty; never gx/gy). */
 export function lensRim(ctx: WidgetContext, c: Pt): { angle: number; power: number } {
   const p = ctx.pointers?.find(q => q.inside && !q.up && !q.down), tx = ctx.data.tx ?? 0, ty = ctx.data.ty ?? 0
-  const angle = p && Math.hypot(p.x - c[0], p.y - c[1]) > 1 ? Math.atan2(p.y - c[1], p.x - c[0]) : -60 * DEG + 25 * DEG * tx
+  // toward a hovering pointer, in 64 steps (the screen memo then holds while the pointer drifts); else kube's −60°, tilted
+  const angle = p && Math.hypot(p.x - c[0], p.y - c[1]) > 1 ? Math.round(Math.atan2(p.y - c[1], p.x - c[0]) / (Math.PI / 32)) * (Math.PI / 32) : -60 * DEG + 25 * DEG * tx
   return { angle, power: 3 - Math.max(0, Math.min(1, ty)) }
 }
 /** The dial's ticks at card pitch (5-minute ticks 1 with an inner dot, the others .75), on whole cells. Baked once. */
