@@ -7,11 +7,12 @@
  * replace the present without a history entry, and `end` commits the whole gesture as one undo step.
  */
 import { create } from 'zustand'
-import { commit, historyOf, loadLocal, redo, undo, type History, type StudioCard, type StudioLayer } from '../studio/doc'
+import { commit, historyOf, loadLocal, newId, redo, undo, type History, type StudioCard, type StudioLayer } from '../studio/doc'
 import type { SharedProgram } from '../../lib/share'
 import { addFrame, addLayer, boundsOf, frameById, frameSize, loadDoc, presetCard, programCard, programSource, saveDoc, seedDoc, topDown, type EditorDoc, type EditorFrame, type Sel } from './doc'
 import { clampZ, fitCam, zoomCam, type Camera } from './input'
-import { validSel } from './select'
+import { openLinkIn, recordLink, type LinkPayload } from './link'
+import { framesSel, validSel } from './select'
 
 export type Tool = 'move' | 'hand' | 'frame' | 'draw' | 'text' | 'code'
 export type LeftTab = 'layers' | 'assets'
@@ -46,6 +47,8 @@ export interface EditorStore {
   picking: boolean
   /** The text layer being typed on the canvas (E3), if any. */
   typing?: { frame: string; layer: string }
+  /** The last link SHARE or EXPORT · LINK made (E5): shown in EXPORT · LINK to copy by hand when the clipboard is closed. */
+  link?: { url: string; kind: 'program' | 'frame' | 'doc'; id: string; parent?: string; chars: number; deflated: boolean }
   edit(fn: (d: EditorDoc) => EditorDoc, tag?: string): void
   begin(): void
   live(fn: (d: EditorDoc) => EditorDoc): void
@@ -72,12 +75,18 @@ export interface EditorStore {
   setHasClip(on: boolean): void
   setPicking(on: boolean): void
   setTyping(t?: { frame: string; layer: string }): void
+  setLink(l?: EditorStore['link']): void
   /** Insert a card as a new frame, select it and bring it into view. Returns the frame id. */
   insertCard(card: StudioCard, o?: Partial<EditorFrame> & { at?: { x: number; y: number } }): string
   insertPreset(id: string): string | undefined
   /** A shared / example program: re-selects the frame it already made (a `?make=code&p=` reload), else adds one. */
   insertProgram(p: SharedProgram): string
   addLayerTo(frame: string, l: StudioLayer): void
+  /**
+   * A frame / document link (E5): its frames come in as one block (one undo step), selected and brought
+   * into view; a link this document already opened re-selects its frames. Returns their ids, or why not.
+   */
+  openLink(p: LinkPayload): string[] | string
 }
 
 let gestureBase: EditorDoc | undefined
@@ -124,6 +133,7 @@ export const useEditor = create<EditorStore>((set, get) => ({
   setHasClip: hasClip => set({ hasClip }),
   setPicking: picking => set(picking ? { picking, tool: 'draw' } : { picking }),
   setTyping: typing => set({ typing }),
+  setLink: link => set({ link }),
   insertCard: (card, o) => {
     const { doc, frame } = addFrame(get().h.present, card, o)
     set(s => ({ h: commit(s.h, doc), sel: { frame: frame.id } }))
@@ -142,6 +152,14 @@ export const useEditor = create<EditorStore>((set, get) => ({
     return id
   },
   addLayerTo: (frame, l) => { get().edit(d => addLayer(d, frame, l)); set({ sel: { frame, layer: l.id } }) },
+  openLink: p => {
+    const r = openLinkIn(get().h.present, p, () => newId('f'))
+    if (typeof r === 'string') return r
+    set(s => ({ ...(r.opened && { h: commit(s.h, r.doc) }), sel: framesSel(r.ids) }))
+    recordLink(p)
+    if (r.ids.length === 1) reveal(r.ids[0]); else get().fit(r.ids)
+    return r.ids
+  },
 }))
 
 /** Bring a frame into view if it is (mostly) off screen; zooms out if it does not fit. */

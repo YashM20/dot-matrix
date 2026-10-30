@@ -1,7 +1,7 @@
 # EDITOR-PLAN: one editor for MAKE
 
-> **Status (2026-10-29):** E0 (the vertical slice, §8), E1 (tests + cleanup, §8.1), E2 (selection, §8.2) and E3 (editing on
-> canvas, §4.2, §8.3) are built. MAKE is one
+> **Status (2026-10-29):** E0 (the vertical slice, §8), E1 (tests + cleanup, §8.1), E2 (selection, §8.2), E3 (editing on
+> canvas, §4.2, §8.3) and E5 (share, §7.4, §8.4) are built. MAKE is one
 > editor in `src/components/editor/`. The four old tabs (TUNE · COMPOSE · CODE · DRAW) are gone, and so are
 > their screens. Their URLs still work and open the editor on the matching tool. What the editor still uses
 > from the old code is listed in §7.3.
@@ -209,9 +209,16 @@ global keys (hold T = time machine). `X`, `` ` `` and ⌘K still reach the comma
 - **CODE:**
   - A code layer: the Field IR editor (line:col errors; the last good program keeps drawing), START FROM AN
     EXAMPLE, the share link (`?make=code&p=…`, COPY LINK, its length and codec), and `data.*` sliders.
-  - A frame: its code layers, + CODE LAYER, and the frame as card spec v1 (read-only), a little like Dev Mode.
+  - A frame: its code layers, + CODE LAYER, the frame as card spec v1 (read-only), a little like Dev Mode, and
+    its LINK LINEAGE (E5, §7.4).
+  - Both, and nothing selected: REMIX, the remix graph (E5): the examples and the programs this browser shared or
+    opened, in dots, each under the program it came from; a click on a node opens it.
 - **EXPORT** (the selected frame): PNG / SVG / HTML at the current *t*; a clip of the timeline
-  (APNG / GIF / WebM / MP4, fps, scale, cancel); plotter SVG, Studio JSON, card spec v1, spec v0.
+  (APNG / GIF / WebM / MP4, fps, scale, cancel); plotter SVG, Studio JSON, card spec v1, spec v0. E5 adds LINK
+  (a frame, the selected frames or the document as a link, §7.4; with nothing selected EXPORT shows only this),
+  and two folds that load only when opened: DEVICES (the frame through `toDevice` on every device profile;
+  EXPORT ALL DEVICES writes a PNG per profile at its own resolution and the plotter's pen plan) and QUALITY (the
+  scorecard: gates G1–G3, G5 and the metrics, as `pnpm fidelity`; and the bar sheet, as `pnpm snap --bar`).
 
 ## 6. How each old tab maps in
 
@@ -234,6 +241,8 @@ global keys (hold T = time machine). `X`, `` ` `` and ⌘K still reach the comma
   - `?tab=dots&p=…` and a bare `?p=…`;
   - `/<board>/?tab=studio`.
 
+- `?make&d=<link>` (E5) opens a frame or document link (§7.4) on any tool; `urlForView` drops `d` when leaving MAKE.
+
 ### 7.2 Hand-offs
 - The command layer's *Open in compose* / x-ray card action calls `useEditor.insertPreset(id)` (lazy import)
   and then opens MAKE · COMPOSE.
@@ -251,9 +260,29 @@ the playground panels. What stays, because the editor (or the site) uses it:
 - `lib/share`, `dotifyUpload`, and the export module (`recordClip`, `plotterSVG`, `stillPNG`).
 
 `dwitter/DotsRepl.tsx` (the old CODE screen) and `dwitter/RemixGraph.tsx` were deleted in the round-2 cleanup
-(nothing imported them). E5 can restore `RemixGraph.tsx` for remix lineage from git (`git show f9bafb2:src/components/dwitter/RemixGraph.tsx`);
-its graph helpers (`graphLayers`, `layoutGraph`, `nodeAt`) still live in `dwitter/gallery.ts`. The Studio's machine
-panel and scorecard sheet (E4, E5) can be recovered from git at `c619dae`.
+(nothing imported them). E5 restored the remix graph as `editor/Lineage.tsx` (its helpers `graphLayers`, `layoutGraph`,
+`nodeAt` live in `dwitter/gallery.ts`) and the scorecard sheet as `editor/quality.ts`. The Studio's machine panel (E4)
+can be recovered from git at `c619dae`.
+
+### 7.4 Frame and document links (E5)
+- **SHARE** (top bar, both layouts): a selected code layer on a share grid → its program link (`?make=code&p=`);
+  selected frames → a frame link (one) or a link of them; nothing selected → the whole document. Copied when the
+  page may, else EXPORT · LINK opens with the link in a field to copy by hand. EXPORT · LINK has FRAME LINK /
+  LINK n FRAMES and DOCUMENT LINK.
+- **Format** (`src/components/editor/link.ts`): `{ v: 1, k: 'f' | 'd', n: name, f: frames, p?: parent }`, packed by the
+  CODE link's codec (`packJSON` / `unpackJSON` in `lib/share`: deflate-raw + base64url, `b…` plain when shorter).
+  Frames go without ids and `source`, placed from the top-left of their block. Decoding checks them as a document
+  (`validateDoc`) and evaluates nothing.
+- **Cap:** 12,000 characters packed (under the host's 14 kB URL limit with the origin and path) and 1 MB inflated.
+  Past it, the reason (its length) and DOWNLOAD JSON.
+- **Opening:** the frames come in as one block in a free spot, one undo step, selected and in view. Each gets
+  `source: 'link:<id>'` (the id: FNV-1a over the frames, kind and name, keys sorted), so a reload, Back or the
+  same link again re-selects them instead of adding copies; shared again unchanged they make the same link. A bad
+  link shows the banner and adds nothing.
+- **Lineage:** frames a link opened and then changed make a link whose `p` is that link's id. This browser keeps
+  the links it made or opened (`localStorage['dot480.editor.links']`, the newest 40), and CODE · LINK LINEAGE shows
+  the chain. Programs work the same way through `parent` (`shareable` reads the frame's `program:<hash>`), and
+  every program link made or opened goes into the remix gallery (`dot480.dots.gallery`) that CODE · REMIX draws.
 
 ## 8. What E0 built (this branch)
 
@@ -344,6 +373,34 @@ ungroup first); a layer marquee on touch; pasting plain text or images from the 
 - Tests: `scripts/editor.ts` adds `editorE3Checks` (30 checks, in `pnpm verify`); `scripts/editor-browser.ts` has
   an E3 pass on desktop and on the phone, and its Text tool checks now type on the canvas.
 
+### 8.4 What E5 added
+
+- `link.ts` (React-free): the frame / document link (`linkPayload`, `encodeLink` / `decodeLink`, `linkId`, `linkUrl`,
+  `openLinkIn`, `linkedFrames`) and the lineage registry (`recordLink`, `loadLinks`, `lineage`). `lib/share`: the codec as
+  `packJSON` / `unpackJSON` (program links use it, their format unchanged), `hashText`, `isHash`. `store.ts`: `openLink`,
+  `link` (the last one made). `actions.ts`: `shareSel`, `framesLink`, `programLink`, `knownParent`, `copyText`. `doc.ts`:
+  `shareable` gives a parent.
+- `Lineage.tsx`: REMIX (the old `RemixGraph`, restored from `f9bafb2`: the graph in dots, a click opens a program, your
+  programs listed with their parents, CLEAR MY PROGRAMS) and LINK LINEAGE.
+- `devices.ts` (React-free): `deviceFrames` (every `DEVICES` profile through `toDevice`; previews show the TRMNL at ¼),
+  `devicePixels`, `exportScale`, `plotterPlan`. `quality.ts`: the old `studio/sheet.ts` (`c619dae`): `drawBarSheet`,
+  `scoreCard`. `Review.tsx`: the DEVICES and QUALITY folds, one lazy chunk fetched when a fold opens (`WhenOpen` in
+  `Inspector.tsx`).
+- `Editor.tsx`: `?make&d=` opens once per page load (the frames' `source` dedupes reloads and Back); SHARE as in §7.4.
+  `views.ts`: `d` belongs to MAKE.
+- Tests: `scripts/editor.ts` adds `editorE5Checks` (21 checks, async, in `pnpm verify`); `scripts/editor-browser.ts` has an
+  E5 pass on desktop (a link made, opened once, reload, Back, lineage, the document link, every device exported,
+  quality, the cap, a corrupt link, the remix graph) and on the phone (SHARE, open, reload, Back, EXPORT · LINK /
+  DEVICES / QUALITY in the sheet). The phone's SHARE check now expects a frame link.
+- Two traps found on the way: the site builds with the React Compiler, which memoizes a `useMemo` by what its
+  callback reads, so a storage read keyed only by a `version` in the deps array never refreshes (the stamp must
+  be an argument: `galleryAt(version)`); and `navigator.clipboard.writeText` can stay pending (an unfocused page,
+  an unanswered prompt), so `copyText` gives up after 1.5 s and nothing waits on it.
+
+Not in E5 (left for later): `navigator.share` (E6); a short-link service (links stay self-contained, so a big
+document is a file, not a link); frame lineage drawn as a graph (it is a list); a document link that replaces the
+canvas (it adds its frames).
+
 Not in E3 (left for later): a start handle for arcs (START ° is in DESIGN), dragging the centre of a ring apart
 from the layer (the layer drag does it), handles for generator params and raster windows, word selection on a
 double-click (it selects all), and text typed in place across several lines (the 5×7 text is one line).
@@ -368,9 +425,9 @@ double-click (it selects all), and text typed in place across several lines (the
 | **E2 · selection** (done, §4.1, §8.2) | Marquee and multi-select (⇧-click), group / ungroup layers inside a frame, alignment and distribute, copy / paste (frames and layers, also between tabs), Alt-drag duplicate, smart guides and spacing between frames, lock. |
 | **E3 · editing on canvas** (done, §4.2, §8.3) | Direct handles for sites (ring radius / sweep, line ends), text editing in place, lattice / tone quick toggles on the canvas, layer bounds for spec layers, eyedropper for the paint ink. |
 | **E4 · animate** | State-machine edges (the old Studio's machine panel, recoverable at `c619dae`), bindings with sources (LFO, clock, pointer, fixtures), a preview / prototype mode that fires press / release edges, and a real multi-track timeline strip under the canvas on desktop. |
-| **E5 · share** | A link for a whole frame or document (deflated JSON, the CODE link's codec, a size cap), remix lineage (the old RemixGraph) in CODE, export of every device profile (`toDevice`) in EXPORT, the scorecard and bar sheet (the old `studio/sheet.ts`, recoverable at `c619dae`) as an EXPORT · QUALITY fold. |
+| **E5 · share** (done, §7.4, §8.4) | A link for a whole frame or document (deflated JSON, the CODE link's codec, a size cap), remix lineage (the old RemixGraph) in CODE, export of every device profile (`toDevice`) in EXPORT, the scorecard and bar sheet (the old `studio/sheet.ts`, recoverable at `c619dae`) as an EXPORT · QUALITY fold. |
 | **E6 · phone polish** | Long-press context menu (duplicate / delete / order), haptics-free snap feedback, sheet detent memory, landscape layout with a side sheet, `visualViewport` handling when the keyboard is open, a share sheet (`navigator.share`). |
 | **E7 · performance** | Sample frames in the existing worker, let a zoomed-out canvas draw cached bitmaps, and use WebGL frames for GPU-tagged layers (the renderer rules apply per frame). |
 
-**Next three:** E5 frame links, so a non-code frame can be shared like a code layer; E6 the long-press menu on
-the phone (it can reuse E2's `actions.ts`, and the E3 quick bar for a layer); E4 the state-machine edges.
+**Next three:** E6 the long-press menu on the phone (it can reuse E2's `actions.ts`, and the E3 quick bar for a
+layer) and a share sheet (`navigator.share` over E5's `shareSel`); E4 the state-machine edges; E7 frames in the worker.

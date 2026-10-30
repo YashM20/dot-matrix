@@ -5,13 +5,15 @@
  * sheets with a drag handle. The old MAKE modes are entry points: `mode` picks the tool and panels.
  */
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type PointerEvent } from 'react'
-import { decodeShare, encodeShare, shareUrl } from '../../lib/share'
+import { decodeShare } from '../../lib/share'
 import type { Mode } from '../../site/views'
 import { librarySave } from '../studio/doc'
 import { Canvas } from './Canvas'
-import { arrangeSel, copyEverywhere, copySel, cutSel, deleteSel, duplicateSel, groupSel, hideSel, lockSel, nudgeSel, orderSel, paste, selectAllSel, selectParent, ungroupSel } from './actions'
+import { arrangeSel, copyEverywhere, copySel, copyText, cutSel, deleteSel, duplicateSel, groupSel, hideSel, lockSel, nudgeSel, orderSel, paste, selectAllSel, selectParent, shareSel, ungroupSel } from './actions'
 import { CLIP_KEY } from './clip'
-import { frameById, groupOf, layerOf, shareable, topDown } from './doc'
+import { frameById, groupOf, layerOf, topDown } from './doc'
+import { decodeLink, LINK_PARAM } from './link'
+import { loadGallery, recordProgram } from '../dwitter/gallery'
 import { editableText } from './direct'
 import { codeTarget, KEY_TOOL, MODE_ENTRY, paintTarget } from './input'
 import { InspectorBody, InspectorTabs } from './Inspector'
@@ -36,8 +38,8 @@ const subscribeMQ = (cb: () => void) => { const m = matchMedia(phoneQuery); m.ad
 const usePhone = () => useSyncExternalStore(subscribeMQ, () => matchMedia(phoneQuery).matches, () => false)
 const editable = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))
 
-/** `?make=code&p=…` already imported this page load (a re-render or re-entry must not import it twice). */
-let handledP = ''
+/** `?make=code&p=…` / `?make&d=…` already imported this page load (a re-render or re-entry must not import it twice). */
+let handledP = '', handledD = ''
 
 export function Editor({ mode, onExit }: { mode: Mode; onExit?: () => void }) {
   const phone = usePhone()
@@ -69,11 +71,24 @@ export function Editor({ mode, onExit }: { mode: Mode; onExit?: () => void }) {
       const p = new URLSearchParams(location.search).get('p')
       if (p && p !== handledP) {
         handledP = p
-        decodeShare(p).then(prog => { useEditor.getState().insertProgram(prog); setBanner('') }, (e: Error) => setBanner(`Could not open this link: ${e.message}`))
+        decodeShare(p).then(prog => { useEditor.getState().insertProgram(prog); recordProgram(loadGallery(), prog); setBanner('') }, (e: Error) => setBanner(`Could not open this link: ${e.message}`))
       } else if (!p) { const t = codeTarget(d, s.sel); if (t) s.select(t) }
       if (phone) s.setSheet('inspector')
     }
   }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // a frame / document link (`?make&d=…`, E5): its frames come in once; a reload or Back re-selects them
+  useEffect(() => {
+    const d = new URLSearchParams(location.search).get(LINK_PARAM)
+    if (!d || d === handledD) return
+    handledD = d
+    decodeLink(d).then(link => {
+      const s = useEditor.getState(), r = s.openLink(link)
+      if (typeof r === 'string') { setBanner(`Could not open this link: ${r}`); return }
+      setBanner('')
+      s.setNote(`${link.kind === 'frame' ? 'frame' : `${link.frames.length} frame${link.frames.length === 1 ? '' : 's'}`} from a link: ${link.name}${link.parent ? ` · remix of #${link.parent}` : ''}`)
+    }, (e: Error) => setBanner(`Could not open this link: ${e.message}`))
+  }, [mode])
 
   // phone: the editor is the whole screen; the page underneath must not scroll or rubber-band
   useEffect(() => {
@@ -122,18 +137,23 @@ function ToolButton({ t, phone }: { t: typeof TOOLS[number]; phone: boolean }) {
     onClick={() => useEditor.getState().setTool(t.id)}><DotIcon name={t.icon} tone={on ? 'active' : 'value'} px={phone ? 3 : 2.6} />{!phone && <kbd>{t.key}</kbd>}</button>
 }
 
-function useShare() {
-  const doc = useEditor(s => s.h.present), sel = useEditor(s => s.sel)
-  const f = frameById(doc, sel.frame), l = layerOf(doc, sel) ?? (f && topDown(f.card).find(x => x.kind === 'ir'))
-  const p = f && l ? shareable(f, l) : undefined
-  return async () => {
-    const s = useEditor.getState()
-    if (!p || typeof p === 'string') { s.setRight('export'); if (s.sheet !== null || matchMedia(phoneQuery).matches) s.setSheet('inspector'); s.setNote(p ?? 'Select a frame to share or export it'); return }
-    try {
-      const url = shareUrl(await encodeShare(p))
-      ;(window as { __editorLink?: string }).__editorLink = url
-      try { await navigator.clipboard.writeText(url); s.setNote('Link copied: it opens this program in the editor') } catch { s.setNote(url) }
-    } catch (e) { s.setNote(`share failed: ${(e as Error).message}`) }
+const LINK_WHAT = { program: 'this program', frame: 'this frame', doc: 'these frames' } as const
+/**
+ * SHARE (E5): a selected code layer → its program link; selected frames → a frame link (one) or a link of
+ * them; nothing selected → the document. Copied when the page may; a link too big for a URL opens EXPORT
+ * with the reason (DOWNLOAD JSON still works).
+ */
+async function share() {
+  const s = useEditor.getState()
+  try {
+    const m = await shareSel(), what = m.kind === 'doc' && !s.sel.frame ? 'the whole document' : LINK_WHAT[m.kind]
+    s.setLink(m)
+    if (await copyText(m.url)) { s.setNote(`Link copied (${m.chars} chars): it opens ${what} in the editor`); return }
+    s.setRight('export'); if (s.sheet !== null || matchMedia(phoneQuery).matches) s.setSheet('inspector')
+    s.setNote('Link ready: copy it from EXPORT · LINK')
+  } catch (e) {
+    s.setRight('export'); if (s.sheet !== null || matchMedia(phoneQuery).matches) s.setSheet('inspector')
+    s.setNote(`No link: ${(e as Error).message}`)
   }
 }
 
@@ -155,7 +175,7 @@ function Zoom({ phone }: { phone: boolean }) {
 
 function TopBar({ phone, onExit }: { phone: boolean; onExit?: () => void }) {
   const canUndo = useEditor(s => s.h.past.length > 0), canRedo = useEditor(s => s.h.future.length > 0), name = useEditor(s => s.h.present.name)
-  const { undo, redo } = useEditor.getState(), share = useShare()
+  const { undo, redo } = useEditor.getState()
   if (phone) return (
     <header className="ed-top" role="toolbar" aria-label="Editor">
       {onExit && <button type="button" className="ed-ibtn" aria-label="Leave the editor" onClick={onExit}><DotIcon name="back" px={3} /></button>}
