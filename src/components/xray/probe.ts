@@ -3,7 +3,7 @@
  * fields the sampler asked, in the same order it asks them (lattice groups → explicit sites → the
  * card lattice; max value wins, later layers win ties). Read-only: nothing here feeds the renderer.
  */
-import { cellU, factors, latticeGrid } from '../../engine/sampler/gridSampler'
+import { cellU, latticeGrid } from '../../engine/sampler/gridSampler'
 import { coverExponent, squareLike } from '../../engine/sampler/cover'
 import { samplerExt } from '../../engine/sampler/ext'
 import { quantize } from '../../engine/sampler/quantize'
@@ -11,7 +11,8 @@ import { dot480 } from '../../engine/theme/tokens'
 import type { DotStyle, GridConfig, Layer, Tone } from '../../engine'
 
 const safe = (x: number) => (Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 0)
-const factor = (k: number | undefined) => (k !== undefined && Number.isFinite(k) && k > 0 ? k : 1)
+/** A lattice factor (a rect lattice, squares Q2, reads as its x factor here). */
+const factor = (k: number | number[] | undefined) => (k = typeof k == 'object' ? k[0] : k, k !== undefined && Number.isFinite(k) && k > 0 ? k : 1)
 const shown = (v: number, style: DotStyle) => (style.quantizeSteps ? quantize(v, style.quantizeSteps) : v)
 
 /** A short human name for a layer: its text, its layout generator, `ir`, or its tone. */
@@ -29,8 +30,8 @@ export function layerName(l: Layer): string {
 /** Where the layer samples: the card lattice, a coarser lattice, or explicit sites. */
 export function layerKind(l: Layer): string {
   if (l.sites) return `sites ×${l.sites.length}${l.size ? ` · size ${l.size}` : ''}`
-  const [kx, ky] = factors(l.lattice)
-  return kx !== 1 || ky !== 1 || l.origin ? `lattice ${kx === ky ? kx : `${kx}×${ky}`}×${l.origin ? ` @${l.origin.join(',')}` : ''}` : 'card lattice'
+  const k = factor(l.lattice)
+  return k !== 1 || l.origin ? `lattice ${k}×${l.origin ? ` @${l.origin.join(',')}` : ''}` : 'card lattice'
 }
 /** IR source behind a layer (directly or wrapped by a layout generator), if any. */
 export function layerIR(l: Layer): string | undefined {
@@ -101,7 +102,7 @@ export function probeDot(layers: Layer[], grid: GridConfig, style: DotStyle, fx:
     const l = layers[i]
     if (skip(i)) continue
     if (l.sites) {
-      const k = l.size !== undefined ? factor(l.size) : factors(l.lattice)[0], reach = k / 2 + .25
+      const k = factor(l.size ?? l.lattice), reach = k / 2 + .25
       for (const [x, y] of l.sites) {
         const d = Math.hypot(fx - .5 - x, fy - .5 - y)
         if (d > reach || d > siteD + 1e-9) continue
@@ -113,16 +114,14 @@ export function probeDot(layers: Layer[], grid: GridConfig, style: DotStyle, fx:
       }
       continue
     }
-    const [kx, ky] = factors(l.lattice), axis = l.sizeAxis === 'both' ? undefined : l.sizeAxis
-    if (kx === 1 && ky === 1 && !l.origin && !axis) continue
-    const key = `${kx}x${ky}${axis ?? ''}|${l.origin ?? '0,0'}`
+    if (factor(l.lattice) === 1 && !l.origin) continue
+    const key = `${factor(l.lattice)}|${l.origin ?? '0,0'}`
     groups.set(key, [...(groups.get(key) ?? []), i])
   }
-  const area = (l: Layer) => { const [kx, ky] = factors(l.lattice); return kx * ky }
-  const sorted = [...groups.values()].sort((a, b) => area(layers[b[0]]) - area(layers[a[0]]))
+  const sorted = [...groups.values()].sort((a, b) => factor(layers[b[0]].lattice) - factor(layers[a[0]].lattice))
   for (const group of sorted) {
-    const first = layers[group[0]], [k, ky] = factors(first.lattice), [ox, oy] = first.origin ?? [0, 0], sub = latticeGrid(grid, [k, ky], [ox, oy])
-    const lc = Math.floor((fx - ox) / k), lr = Math.floor((fy - oy) / ky)
+    const first = layers[group[0]], k = factor(first.lattice), [ox, oy] = first.origin ?? [0, 0], sub = latticeGrid(grid, k, [ox, oy])
+    const lc = Math.floor((fx - ox) / k), lr = Math.floor((fy - oy) / k)
     if (lc < 0 || lr < 0 || lc >= sub.cols || lr >= sub.rows) continue
     const u = cellU(lc, sub.cols), v = cellU(lr, sub.rows)
     let best = 0, win = -1
@@ -132,7 +131,7 @@ export function probeDot(layers: Layer[], grid: GridConfig, style: DotStyle, fx:
       if (b && (lc < Math.floor(b[0]) || lc > Math.ceil(b[2]) || lr < Math.floor(b[1]) || lr > Math.ceil(b[3]))) continue
       const value = safe(layers[i].field(u, v)); if (value > 0 && value >= best) { best = value; win = i }
     }
-    if (win >= 0 && shown(best, style) > 0) lattice = result(win, best, 'lattice', [ox + lc * k, oy + lr * ky, k, ky], k, u, v)
+    if (win >= 0 && shown(best, style) > 0) lattice = result(win, best, 'lattice', [ox + lc * k, oy + lr * k, k, k], k, u, v)
   }
   // 3. the card lattice, unless a lattice / site dot covers this cell
   if (site) return site
@@ -141,7 +140,7 @@ export function probeDot(layers: Layer[], grid: GridConfig, style: DotStyle, fx:
   let best = 0, win = -1
   for (let i = 0; i < layers.length; i++) {
     const l = layers[i]
-    if (skip(i) || l.sites || factors(l.lattice).some(k => k !== 1) || l.origin || (l.sizeAxis && l.sizeAxis !== 'both')) continue
+    if (skip(i) || l.sites || factor(l.lattice) !== 1 || l.origin) continue
     const b = l.field.bounds
     if (b && (col < Math.floor(b[0]) || col > Math.ceil(b[2]) || row < Math.floor(b[1]) || row > Math.ceil(b[3]))) continue
     const value = safe(l.field(u, v))
