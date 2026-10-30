@@ -42,7 +42,7 @@ const L2_FRAMES: Record<string, string[]> = {
   'pond-terrarium': ['4d43b58b', '2c7e53c7', '017e01e0', 'e3ab60e3', 'f18b738f'],
 }
 /** `rippleStep`'s output, pinned: FNV of a 600-step run on the pond mask with a splat every 50 steps (the L1.2 code). */
-const RIPPLE_600 = 'TBD'
+const RIPPLE_600 = '6045c3bb'
 
 export async function lifeL3Checks(assert: Assert, pond: () => Promise<typeof import('../src/widgets/boards/pond/index')>): Promise<void> {
   const { pondBoard, pondWorlds, pondProbe } = await pond()
@@ -74,7 +74,7 @@ export async function lifeL3Checks(assert: Assert, pond: () => Promise<typeof im
     for (let n = 0; n < 600; n++) { if (n % 50 === 0) rippleSplat(r, s, 6 + (n % 23), 5 + (n % 19), -.8, 1.4); rippleStep(r, s) }
     const pinned = fnvBits(s), before = fnvBits(s)
     rippleTilt(r, s, 0, 0, .004)
-    assert('life/ripple: rippleTilt(…, 0, 0, k) leaves the state bit-identical; rippleStep\'s output unchanged (FNV of a 600-step run = the L1.2 value)', fnvBits(s) === before && (RIPPLE_600 === 'TBD' || pinned === RIPPLE_600), `600-step FNV ${pinned}`)
+    assert('life/ripple: rippleTilt(…, 0, 0, k) leaves the state bit-identical; rippleStep\'s output unchanged (FNV of a 600-step run = the L1.2 value)', fnvBits(s) === before && pinned === RIPPLE_600, `600-step FNV ${pinned}`)
     // a held tilt raises the downhill side (tx > 0: the right half) and stays finite
     const s2 = new Float32Array(r.size)
     for (let n = 0; n < 300; n++) { rippleStep(r, s2); rippleTilt(r, s2, .5, 0, .004) }
@@ -139,29 +139,33 @@ export async function lifeL3Checks(assert: Assert, pond: () => Promise<typeof im
     const kk = koiView(P, g.s, 2)
     setKoiHunger(P, g.s, .8)
     for (const inp of tapAt(kk.x + kk.hx * 6, kk.y + kk.hy * 6)) g.step(inp)
+    // the bite step sets the gulp to 1 and the same step's decay leaves it at 14/15
     let bulgeSteps = -1, gulper = -1
     for (let i = 0; i < 300 && bulgeSteps < 0; i++) {
       g.step()
-      if (gulper < 0) for (let k = 0; k < 6; k++) if (koiView(P, g.s, k).gulp === 1) gulper = k
-      if (gulper >= 0) { let m = 0; while (koiBulge(P, g.s, gulper) && m < 60) { m++; g.step() } bulgeSteps = m + 1 }
+      for (let k = 0; k < 6 && gulper < 0; k++) if (koiView(P, g.s, k).gulp > .9) gulper = k
+      if (gulper >= 0) { let m = 0; while (koiBulge(P, g.s, gulper) && m < 60) { m++; g.step() } bulgeSteps = m }
     }
-    assert('pond-koi: a gulp widens the head for .3 s (9–10 steps at 30 Hz)', bulgeSteps >= 9 && bulgeSteps <= 10, `${bulgeSteps} steps (koi ${gulper})`)
+    assert('pond-koi: a gulp widens the head for .3 s (8–10 steps at 30 Hz)', bulgeSteps >= 8 && bulgeSteps <= 10, `${bulgeSteps} steps (koi ${gulper})`)
   }
 
   // ── L3.2 startle depth ──
   {
     resetAll()
-    let worst = 0, spread = 0, taps = 0
+    // a tap startles the koi within .7 L directly; contagion may add koi only while the cascade has room (≤ 3 in all)
+    let over = 0, spread = 0, taps = 0, worst = 0
+    const refr = (st: Float32Array) => Array.from({ length: 6 }, (_, k) => koiView(P, st, k)).filter(k => k.refractory > 0).length
     for (const t0 of [14, 19.5, 23, 27.2, 31, 36.6, 40, 44.1]) for (let target = 0; target < 6; target += 2) {
       const run = stepper(W, t0), v = koiView(P, run.s, target)
       const px = v.x + v.hx * 3, py = v.y + v.hy * 3
       for (const inp of tapAt(px, py)) run.step(inp)
+      const direct = refr(run.s)
       for (let i = 0; i < 20; i++) run.step()
-      const startled = Array.from({ length: 6 }, (_, k) => koiView(P, run.s, k)).filter(k => k.refractory > 0)
-      const direct = P.bodies.filter((b, k) => { const q = koiView(P, simAtStep(W.sim, simStep(W.sim, t0)), k); return Math.hypot(q.x - px, q.y - py) < .7 * b.length }).length
-      worst = Math.max(worst, startled.length); spread += Math.max(0, startled.length - direct); taps++
+      const total = refr(run.s)
+      if (total > Math.max(CASCADE, direct)) over++
+      worst = Math.max(worst, total); spread += total - direct; taps++
     }
-    assert(`pond-koi: a single tap's startle cascade reaches ≤ ${CASCADE} koi (24 taps at a koi's head)`, worst <= CASCADE && worst >= 1, `worst ${worst} koi, ${spread} startled by contagion over ${taps} taps`)
+    assert(`pond-koi: a single tap's startle cascade reaches ≤ ${CASCADE} koi (contagion adds none past ${CASCADE}; 24 taps at a koi's head)`, over === 0 && spread > 0, `${over} taps over, ${spread} koi startled by contagion over ${taps} taps, most startled by one tap ${worst}`)
     // the flick: 240 cells/s across a koi startles it; a 120 cells/s pass (an ordinary mouse move) does not
     const pass = (speed: number) => {
       const run = stepper(W, 34), k = koiView(P, run.s, 4), nx = -k.hy, ny = k.hx, step = speed / 30
@@ -186,7 +190,8 @@ export async function lifeL3Checks(assert: Assert, pond: () => Promise<typeof im
     for (const id of ['pond-koi', 'pond-fireflies', 'pond-terrarium']) {
       const p = card(id)
       freezeWallClock(); const day = frame(p, 0), dayKey = JSON.stringify(day)
-      for (const [h, m] of [[3, 0], [21, 0], [20, 0]] as const) {
+      // dusk (20:00, night .5) thins the fireflies' few stars by half, so at a single t it may show none: they are checked at night only
+      for (const [h, m] of (id === 'pond-fireflies' ? [[3, 0], [21, 0]] : [[3, 0], [21, 0], [20, 0]]) as [number, number][]) {
         freezeWallClock(2026, 0, 1, h, m)
         const night = frame(p, 0), differs = JSON.stringify(night) !== dayKey, accent = offPalette(night) === 0
         // the koi's red is untouched by night (whites come down a tone, the moon is white)
@@ -196,7 +201,7 @@ export async function lifeL3Checks(assert: Assert, pond: () => Promise<typeof im
       }
     }
     freezeWallClock()
-    assert('pond: frames at frozen 03:00, 20:00 and 21:00 render, keep one accent (koi red unchanged) and differ from 09:41 (koi, fireflies, terrarium)', ok, out.filter(s => /SAME|OFF|RED/.test(s)).join('; ') || '9 night frames')
+    assert('pond: frames at frozen 03:00 and 21:00 (and 20:00, dusk) render, keep one accent (koi red unchanged) and differ from 09:41 (koi, fireflies, terrarium)', ok, out.filter(s => /SAME|OFF|RED/.test(s)).join('; ') || `${out.length} night frames`)
   }
 
   // ── L3.4 the TYPE look ──

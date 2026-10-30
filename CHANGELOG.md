@@ -3,6 +3,17 @@
 All notable engineering changes to Dot/480 are recorded here, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://dot-matrix1.vercel.app, deployed from `main`), not a published package: there are no tagged or npm releases, so entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
 
+## [Unreleased] — 2026-10-30 · L3 pond polish (round 3, `feat/round3`)
+Plan: `docs/living-matter/L-pond.md` §L3; as built: `docs/LIFE.md` "L3".
+### Added
+- **Pond depth:** koi hunger (sated koi ignore food), feeding bursts and gulps, circling back to a missed pellet; startle contagion (a cascade of at most 3 koi); day and night by the hour (render-only: the moon's reflection, dimmer whites, fireflies' stars, a thinner terrarium floor at night); salt on the slime and a lantern on the fireflies (holds).
+- **DOTS / TYPE switch** on `pond-koi` (`glyphs`): the same scene in 5×7 font glyphs on 6×8 tiles; shown on hover or focus, default DOTS.
+- **Tilt and light on the pond:** `pond-koi` reads the light hub (`pondSources`); `rippleTilt` (new, `rippleStep` untouched) sloshes the water, `lightSrc` 1 lights the koi by tilt.
+- `scripts/life-l3.ts` (in `scripts/life.ts`); `scripts/life-browser.ts` covers all six cards at 375 and 390 px (phone fps tier, swipe, tap, hold) and reduced motion.
+### Changed
+- The koi flick threshold is 200 cells/s (was 90, reached by ordinary mouse moves); the hover wake follows the pointer's speed.
+- Goldens: 0 changed (frames at rest equal the L2 frames bit for bit).
+
 ## 2026-10-29 · PR #10 (`feat/round2`) and PR #11 — round 2: materials, pond, squares, editing on canvas, the worker trim, themed essay and legal pages
 Merged to `main` as `2b4780e` (PR #10) and `bcacd5a` (PR #11). T5 and T6, also in PR #10, have their own entries below. Status: `docs/PROGRESS.md`; plans: `docs/LIVING-MATTER-PLAN.md`, `docs/living-matter/`, `docs/EDITOR-PLAN.md` §8.3, `docs/LAYOUT-THEME-PLAN.md` (T3).
 ### Added
