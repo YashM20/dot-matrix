@@ -32,7 +32,7 @@ export const SKIN_PHYSICS = {
    * cells, blurred `blur` cells, at `alpha`; `paper` / `ink` = the backplane and a fully driven pixel (sRGB 0..1:
    * skin physics, not tokens, like the e-ink paper); `pigment` = how dark the accent prints on the paper.
    */
-  lcd: { tau: .15, gutter: .12, shadow: { dx: .35, dy: .5, alpha: .22, blur: .5 }, paper: [.77, .81, .63] as Phosphor, ink: [.12, .16, .1] as Phosphor, pigment: .82, off: .96, onS: .4 },
+  lcd: { tau: .15, gutter: .12, shadow: { dx: .35, dy: .5, alpha: .22, blur: .5 }, paper: [.77, .81, .63] as Phosphor, ink: [.12, .16, .1] as Phosphor, pigment: .82, off: .93, onS: .4 },
   /** Mosaic (squares Q2): one tile per cell with a `gap` of grout, a 1 px bevel (`hi` lighter top-left, `lo` darker bottom-right), ± `jitter` luma per tile. */
   grout: { gap: .14, bevel: { hi: .12, lo: .18 }, jitter: .03, onS: .3 },
 } as const

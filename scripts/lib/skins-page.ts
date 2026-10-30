@@ -7,11 +7,11 @@ import { SKIN_PHYSICS } from '../../src/engine/display/skins'
 import { dot480 } from '../../src/engine/theme/tokens'
 
 const COLS = 12, ROWS = 8, CELL = 12, W = COLS * CELL, H = ROWS * CELL
-/** A card frame: cell (2, 2) white, cell (5, 2) the accent, the rest unlit (transparent, as a card canvas is). */
+/** A card frame: a 3 × 3 white block around cell (2, 2), one in the accent around (6, 2), the rest unlit (transparent, as a card canvas is). */
 function card(lit = true): HTMLCanvasElement {
   const c = document.createElement('canvas'); c.width = W; c.height = H
   const x = c.getContext('2d')!
-  if (lit) { x.fillStyle = '#ffffff'; x.fillRect(2 * CELL, 2 * CELL, CELL, CELL); x.fillStyle = dot480.dotActive; x.fillRect(5 * CELL, 2 * CELL, CELL, CELL) }
+  if (lit) { x.fillStyle = '#ffffff'; x.fillRect(1 * CELL, 1 * CELL, 3 * CELL, 3 * CELL); x.fillStyle = dot480.dotActive; x.fillRect(5 * CELL, 1 * CELL, 3 * CELL, 3 * CELL) }
   return c
 }
 const px = (c: HTMLCanvasElement, x: number, y: number) => Array.from(c.getContext('2d')!.getImageData(Math.floor(x), Math.floor(y), 1, 1).data.slice(0, 3))
@@ -25,7 +25,7 @@ function lcd() {
   // settled: unlit pixel, gutter, a white pixel, the accent pixel
   st.frame(card(), 0); st.render(ctx, 0); st.render(ctx, 5)
   const paper = P.paper.map(v => v * 255), ink = P.ink.map(v => v * 255)
-  const gutter = px(o, 8 * CELL + .5, 6 * CELL + CELL / 2), unlit = px(o, 8.5 * CELL, 5.5 * CELL), white = px(o, 2.5 * CELL, 2.5 * CELL), red = px(o, 5.5 * CELL, 2.5 * CELL)
+  const gutter = px(o, 8 * CELL + .5, 6 * CELL + CELL / 2), unlit = px(o, 8.5 * CELL, 5.5 * CELL), white = px(o, 2.5 * CELL, 2.5 * CELL), red = px(o, 6.5 * CELL, 2.5 * CELL)
   // step response: blank panel, a white frame at t = 0, measured after τ (63% from paper to ink, on the luma)
   const step = createDisplayStage('lcd', { cols: COLS, rows: ROWS, w: W, h: H, instant: true })!
   step.frame(card(false), 0); step.render(ctx, 0); step.render(ctx, 2)
@@ -40,7 +40,7 @@ function grout() {
   const o = out(), ctx = o.getContext('2d')!
   const st = createDisplayStage('grout', { cols: COLS, rows: ROWS, w: W, h: H, instant: true })!
   st.frame(card(), 0); const busy0 = st.render(ctx, 0)
-  const g = px(o, 8 * CELL, 6.5 * CELL), tile = px(o, 8.5 * CELL, 5.5 * CELL), white = px(o, 2.5 * CELL, 2.5 * CELL), red = px(o, 5.5 * CELL, 2.5 * CELL)
+  const g = px(o, 8 * CELL, 6.5 * CELL), tile = px(o, 8.5 * CELL, 5.5 * CELL), white = px(o, 2.5 * CELL, 2.5 * CELL), red = px(o, 6.5 * CELL, 2.5 * CELL)
   const want = [1, 3, 5].map(i => parseInt(STAGE_COLORS.grout.slice(i, i + 2), 16))
   return { grout: g, want, tile, white, red, busy0, redHue: hue(red), accentHue: hue([255, 59, 48]) }
 }
