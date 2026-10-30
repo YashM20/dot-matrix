@@ -409,9 +409,9 @@ function CodeLayer({ f, l }: { f: EditorFrame; l: IRLayer | SitesLayer }) {
   const copy = async () => {
     if (!link || typeof share === 'string') return
     const m = await programLink(share) // records it in the remix gallery, under its parent
-    useEditor.getState().setLink(m)
+    useEditor.getState().setLink(m); setVersion(v => v + 1) // the graph shows it now, whatever the clipboard does
     await copyText(m.url) // clipboard closed: the link is shown below
-    setCopied(true); setVersion(v => v + 1); setTimeout(() => setCopied(false), 1400)
+    setCopied(true); setTimeout(() => setCopied(false), 1400)
   }
   const keys = [...new Set(compiled.keys)].filter(k => l.src.includes(`data.${k}`))
   const near = l.src.length > IR_LIMITS.source * .9

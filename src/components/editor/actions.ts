@@ -167,7 +167,12 @@ export async function shareSel(): Promise<MadeLink> {
   }
   return framesLink(f ? (sel.layer ? [f.id] : selFrames(sel)) : [])
 }
-/** Copy text to the system clipboard; false when the page may not (the caller shows the link instead). */
-export async function copyText(text: string): Promise<boolean> {
-  try { await navigator.clipboard.writeText(text); return true } catch { return false }
+/**
+ * Copy text to the system clipboard; false when the page may not (the caller shows the link instead). A
+ * write left pending (an unfocused page, a permission prompt nobody answers) counts as not copied after 1.5 s.
+ */
+export async function copyText(text: string, ms = 1500): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<boolean>(r => { timer = setTimeout(() => r(false), ms) })
+  try { return await Promise.race([navigator.clipboard.writeText(text).then(() => true, () => false), late]) } catch { return false } finally { clearTimeout(timer) }
 }
