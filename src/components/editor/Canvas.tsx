@@ -306,7 +306,8 @@ export function Canvas({ phone, landscape = false }: { phone: boolean; landscape
   }
   const holdFor = (o: Op | undefined, touch: boolean) => {
     clearTimeout(hold.current); hold.current = undefined
-    if (touch && o?.kind === 'press' && useEditor.getState().tool === 'move') hold.current = setTimeout(() => longPress(o), LONG_PRESS_MS)
+    // decided on the next frame: moves queued behind a busy main thread are handled first, and a finger that moved never opens it
+    if (touch && o?.kind === 'press' && useEditor.getState().tool === 'move') hold.current = setTimeout(() => requestAnimationFrame(() => longPress(o)), LONG_PRESS_MS)
   }
   /** The finger that opened the menu lifted: its items take taps from now on (the lift itself never picks one). */
   const arm = () => { const m = useEditor.getState().menu; if (m && !m.armed) setTimeout(() => { const n = useEditor.getState().menu; if (n === m) useEditor.getState().setMenu({ ...m, armed: true }) }, 60) }

@@ -1066,8 +1066,10 @@ async function phoneE6(p: Page, h: Helpers, tapEl: (s: string) => Promise<void>)
   await sleep(500)
   const away = await accentPx(p)
   for (let i = 1; i <= 8; i++) { await sleep(20); await p.cdp('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pt(bx, by + 48 + (dy + 1 - 48) * i / 8) }) }
-  await sleep(60)
-  const lit = await accentPx(p), cues1 = await p.js<number>(`window.__editor?.cues ?? 0`), guides = await p.js<number>(`document.querySelectorAll('.ed-guide').length`)
+  // the cue lasts 420 ms: look for its dots a few times while it shows (a busy frame can draw it late)
+  let lit = 0
+  for (let i = 0; i < 8 && !lit; i++) { await sleep(40); lit = await accentPx(p) }
+  const cues1 = await p.js<number>(`window.__editor?.cues ?? 0`), guides = await p.js<number>(`document.querySelectorAll('.ed-guide').length`)
   await sleep(900)
   const after = await accentPx(p)
   await p.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await sleep(300)
