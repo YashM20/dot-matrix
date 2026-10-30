@@ -22,12 +22,12 @@
 
 | id | task | spec | owns | preview port |
 |---|---|---|---|---|
-| `a8dfb81136182c15c` | **L2 ecosystems**: physarum/ants, fireflies, space colonisation; jelly, slime, fireflies, murmuration, terrarium cards | `docs/living-matter/L-pond.md` §L2 | `src/engine/life/`, the pond board, `scripts/life*.ts` | 4385 |
+| `aeefcc1925b62b2b8` | **L3 pond polish**: feeding and startle depth, day/night, the DOTS/TYPE toggle, reduced motion and touch, tilt and light, the slime/fireflies/terrarium holds (L4 not included) | `docs/living-matter/L-pond.md` §L3 | `src/engine/life/`, the pond board, `scripts/life*.ts` | 4385 |
 | `a9dfd85cca3ece366` | **Q2 squares**: lcd and grout skins, rect cells, teletext sextants, line screens | `docs/living-matter/Q-squares.md` Q2 | `src/engine/squares/`, the squares board, `scripts/squares*.ts` | 4386 |
 | `a4b5a283f78296248` | **M2 glass and water**: glass v2, caustics; Lens, Pool, Window, Patch, Rust, the candle clock | `docs/living-matter/M-materials.md` M2 | `src/engine/matter/`, the materials board, `scripts/materials*.ts` | 4391 |
 | `ae843d4fcd441b7d8` | **E5 share**: frame/document links, remix lineage, device exports, the QUALITY fold | `docs/EDITOR-PLAN.md` §10 E5 | `src/components/editor/` | 4383/4384 |
 
-**Done in round 3 and merged on `feat/round3`:** round-2 housekeeping (7bc8ecf). It added the changelog rows (round 2's `src/changelog.ts` rows are still marked "in progress"; turn them into a 0.12 release), the phone palette shot, the editor-fit check (its final variant hasn't run in a browser yet; the full suite covers it) and the pond swipe fix (scroll room plus a retry for a late first move). It also updated the doc statuses. Marble option 1 (banded distance, about 4× cheaper) went to M2.
+**Done in round 3 and merged on `feat/round3`:** L2 ecosystems (ac9e089: jelly, slime, fireflies, murmur and terrarium on `/pond/`; life 102/102, browser 22/22, goldens +5, first-load Δ about 0; owner taste pass wanted on jelly and fireflies). Round-2 housekeeping (7bc8ecf). It added the changelog rows (round 2's `src/changelog.ts` rows are still marked "in progress"; turn them into a 0.12 release), the phone palette shot, the editor-fit check (its final variant hasn't run in a browser yet; the full suite covers it) and the pond swipe fix (scroll room plus a retry for a late first move). It also updated the doc statuses. Marble option 1 (banded distance, about 4× cheaper) went to M2.
 
 The housekeeping list (done):
 - CHANGELOG and `src/changelog.ts` rows for round 2;
@@ -38,7 +38,7 @@ The housekeeping list (done):
 - `docs/README.md` statuses.
 
 **Next, in order** (each starts when an agent above frees a slot):
-- **Within each track, phases are sequential:** Q3 after Q2, M3 after M2, L3 after L2.
+- **Within each track, phases are sequential:** Q3 after Q2, M3 after M2. L3 is running.
 - **Editor:** E6 phone polish after E5.
 - **Then:** the X phases.
 - **The polish plan** (`docs/POLISH-PLAN.md`) waits until the owner says to start. When it starts: P0 probes first (one agent), then P1 (four agents). The owner has answered:
