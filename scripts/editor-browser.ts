@@ -1048,27 +1048,32 @@ async function phoneE6(p: Page, h: Helpers, tapEl: (s: string) => Promise<void>)
   await p.touch(Array.from({ length: 40 }, () => [[ax - 20, ay], [ax + 20, ay + 20]])); await sleep(400)
   check('phone E6: a finger that moves (it drags) or two fingers held still open no menu', !movedOpen && !(await menuOpen()))
   await holdAt(p, ax, ay)
-  const opened = await menuOpen()
-  await p.tap(8, H / 2); await sleep(350)
-  check('phone E6: a tap outside the menu closes it and changes nothing else', opened && !(await menuOpen()) && await h.sel() === sel0, `${opened}`)
+  const opened = await menuOpen(), mr = (await h.rect(MENU))!
+  // canvas beside the menu (a press there only closes it, even on a frame)
+  await p.tap(mr.x > 195 ? 12 : 378, mr.y + mr.h / 2); await sleep(350)
+  const sel1 = await h.sel()
+  check('phone E6: a tap outside the menu closes it and changes nothing else', opened && !(await menuOpen()) && sel1 === sel0, JSON.stringify({ opened, still: await menuOpen(), sel0, sel1, mr }))
 
   // ── the snap cue: a drag that reaches a guide lights accent dots on the pasteboard for a moment
   await fitAll()
-  const [, f1] = await order(), b = (await h.frameRect(f1))!, [bx, by] = mid(b)
+  const [g0, f1] = await order(), b = (await h.frameRect(f1))!, [bx, by] = mid(b), g = (await h.frameRect(g0))!
   await p.tap(bx, by); await sleep(300)
+  const picked = await h.sel(), dy = g.y - b.y // the drag ends with f1's top 1 px off f0's: within reach of that guide
   const pt = (x: number, y: number) => [{ x, y, id: 0, radiusX: 2, radiusY: 2, force: 1 }]
   const cues0 = await p.js<number>(`window.__editor?.cues ?? 0`), px0 = await accentPx(p)
   await p.cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt(bx, by) })
   for (let i = 1; i <= 8; i++) { await sleep(20); await p.cdp('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pt(bx, by + i * 6) }) }
   await sleep(500)
   const away = await accentPx(p)
-  for (let i = 1; i <= 8; i++) { await sleep(20); await p.cdp('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pt(bx, by + 48 - i * 6 + 1) }) }
+  for (let i = 1; i <= 8; i++) { await sleep(20); await p.cdp('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pt(bx, by + 48 + (dy + 1 - 48) * i / 8) }) }
   await sleep(60)
   const lit = await accentPx(p), cues1 = await p.js<number>(`window.__editor?.cues ?? 0`), guides = await p.js<number>(`document.querySelectorAll('.ed-guide').length`)
   await sleep(900)
   const after = await accentPx(p)
-  await p.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await sleep(300) // it ends snapped where it began: no edit, no undo step
-  check('phone E6: a drag that snaps to a guide lights accent dots on the pasteboard, which go again (no accent dots before or after)', px0 === 0 && away === 0 && cues1 > cues0 && guides > 0 && lit > 10 && after === 0, JSON.stringify({ px0, away, lit, after, cues: cues1 - cues0, guides }))
+  await p.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await sleep(300)
+  const moved = Math.abs((await h.frameRect(f1))!.y - b.y) > .5
+  if (moved) await tapEl('.ed-top [aria-label="Undo"]')
+  check('phone E6: a drag that snaps to a guide lights accent dots on the pasteboard, which go again (no accent dots before or after)', picked === f1 && px0 === 0 && away === 0 && cues1 > cues0 && guides > 0 && lit > 10 && after === 0, JSON.stringify({ picked: picked === f1, dy, px0, away, lit, after, cues: cues1 - cues0, guides }))
 
   // ── detent memory: LAYERS left at 90 % opens at 90 % again, after a reload too; the inspector keeps its own
   const detent = () => p.js<string | null>(`document.querySelector('.ed-sheet')?.dataset.detent ?? null`)
@@ -1115,17 +1120,18 @@ async function phoneE6(p: Page, h: Helpers, tapEl: (s: string) => Promise<void>)
   await p.key('Escape', 'Escape', 27); await sleep(300)
   await p.js(`window.__setKb(0)`); await sleep(400)
 
-  // ── the layer menu: the quick bar comes inside it; TO FRONT moves the layer to the top of its frame
+  // ── the layer menu: the quick bar comes inside it; TO BACK moves the layer to the bottom of its frame
+  // (the text the typing left selected: a long press on it opens the menu, never typing; the ring has handles under its dots)
   await tapEl('.ed-zoom-pct'); await p.js(`[...document.querySelectorAll('.ed-menu button')].find(b => b.textContent.startsWith('Zoom to fit')).click()`); await sleep(500)
-  await p.tap(...(await e.at(40, 28))); await sleep(400)
-  const ringSel = await p.js<string | undefined>(`window.__editor?.layer`) === E3.ring
-  await holdAt(p, ...(await e.at(40, 28)))
-  const inMenuBar = await p.js<boolean>(`!!document.querySelector('${MENU} .ed-qbar [data-q="tone"]') && !document.querySelector('.ed-overlay > .ed-qbar')`)
-  await tapEl(`${MENU} .ed-qbar [data-q="tone"]`)
-  const toned = (await e.saved<{ tone: string }>(E3.ring)).tone, still = await menuOpen()
-  await tapEl(item('front'))
-  const ls = await e.layers() as unknown as { id: string; z: number }[], topZ = Math.max(...ls.map(l => l.z))
-  check('phone E6: a long press on a layer: its menu holds the quick bar (TONE steps, the menu stays); TO FRONT puts the layer on top', ringSel && inMenuBar && toned === 'faint' && still && ls.find(l => l.id === E3.ring)?.z === topZ, JSON.stringify({ ringSel, inMenuBar, toned, still }))
+  const textSel = await p.js<string | undefined>(`window.__editor?.layer`) === E3.text, tone0 = (await e.saved<{ tone: string }>(E3.text)).tone
+  await holdAt(p, ...(await e.at(8, 71)))
+  const inMenuBar = await p.js<boolean>(`!!document.querySelector('${MENU} .ed-qbar [data-q="tone"]') && !document.querySelector('.ed-overlay > .ed-qbar')`), noTyping = !(await p.js<boolean>(`document.activeElement?.matches('.ed-intext.on') ?? false`))
+  if (inMenuBar) await tapEl(`${MENU} .ed-qbar [data-q="tone"]`)
+  const toned = (await e.saved<{ tone: string }>(E3.text)).tone, still = await menuOpen()
+  if (still) await tapEl(item('back'))
+  const ls = await e.layers() as unknown as { id: string; z: number }[], lowZ = Math.min(...ls.map(l => l.z))
+  check('phone E6: a long press on a layer: its menu holds the quick bar (TONE steps, the menu stays); TO BACK puts the layer at the bottom', textSel && inMenuBar && noTyping && toned !== tone0 && still && ls.find(l => l.id === E3.text)?.z === lowZ, JSON.stringify({ textSel, inMenuBar, noTyping, tone0, toned, still, z: ls.map(l => `${l.id}:${l.z}`) }))
+  await p.shot(join(out, 'phone-09-layer-menu.png'))
 
   // ── SHARE through the share sheet (stubbed): shared, cancelled, refused, hung
   const shareOnce = async (mode: string | null) => {
