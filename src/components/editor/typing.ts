@@ -8,6 +8,7 @@
  */
 import { editLayer, frameById, layerOf, pitchOf, removeLayer } from './doc'
 import { editableText, textGeo, textOf, withText } from './direct'
+import { isPhone } from './phone'
 import { validSel } from './select'
 import { useEditor } from './store'
 
@@ -72,9 +73,11 @@ export function cancelTyping() {
   if (input && document.activeElement === input) input.blur()
 }
 
+/** E6: the visible canvas changed (the keyboard opened or closed): the text being typed moves back into view. */
+export const keepTypingInView = () => { if (session) keepInView(session.frame, session.layer) }
 /** Phone: the keyboard takes the lower half, so the text being typed moves up into the top third. */
 function keepInView(frame: string, layer: string) {
-  if (typeof matchMedia !== 'function' || !matchMedia('(max-width: 640px)').matches) return
+  if (!isPhone()) return
   const s = st(), f = frameById(s.h.present, frame), l = layerOf(s.h.present, { frame, layer }), g = l && textGeo(l)
   if (!f || !g) return
   const y = (f.y + g.top * pitchOf(f.card)) * s.cam.z + s.cam.y, want = s.vp.h * .22

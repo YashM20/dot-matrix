@@ -9,21 +9,24 @@
  * tool (or pans empty canvas; in SELECT mode it draws a marquee and taps add) and two fingers
  * pinch-zoom and pan. One rAF loop draws every frame that changed, is animating or is being previewed;
  * frames off screen are skipped.
+ * E6: a long press (touch, Move) on a frame or layer opens the long-press menu; a drag that snaps to a
+ * guide lights the pasteboard's dots along it for a moment (the snap cue, in the accent).
  */
 import { memo, useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react'
 import { PAINT_LIVE, paintCells, paintLayer, type PaintLayer, type SitesLayer, type SpecLayer, type StudioLayer } from '../studio/doc'
 import { EXAMPLES } from '../dwitter/examples'
 import { addFrame, addLayer, blankCard, copyFrames, copyLayers, drawingCard, editFrame, editLayer, encodeCells, frameById, frameSize, hitFrame, hitLayer, layerOf, line, movable, newIRLayer, newTextLayer, nudgeLayer, paintCellAt, pitchOf, programCard, programSource, stamp, topDown, type EditorDoc, type EditorFrame } from './doc'
 import { dragCells, dragFramePos, draftFrame, pinchCam, PRESS_SLOP, resizeByHandle, type Handle } from './input'
-import { drawFrame, drawPaste, isAnimated, resolutionFor } from './render'
+import { drawFrame, drawPaste, isAnimated, resolutionFor, type PasteCue } from './render'
 import { canResize, clickLayer, frameBox, framesBox, framesSel, inSel, layersSel, marqueeLayers, marqueeSel, normBox, resizeGroup, selCount, selFrames, selIds, selLayers, snapBox, toggleSel, type Box, type Gap, type Guide } from './select'
 import { caretAt, dragSiteHandle, editableText, hasBounds, inkAt, inkStep, layerBox, resizeSpecBounds, siteHandles, textGeo, type SiteHandle } from './direct'
-import { InText, QuickBar } from './OnCanvas'
+import { InText, LongPressMenu, QuickBar } from './OnCanvas'
+import { CUE_MS, LONG_PRESS_MS, snappedGuides } from './phone'
 import { commitTyping, placeCaret, startTyping } from './typing'
 import { useEditor, type Camera } from './store'
 
 /** Probe hooks (scripts/editor-browser.ts): draw stats, the selected frame id and every selected id. */
-declare global { interface Window { __editor?: { frames: number; drawn: number; maxMs: number; lastMs: number; sel?: string; layer?: string; picks?: string[] } } }
+declare global { interface Window { __editor?: { frames: number; drawn: number; maxMs: number; lastMs: number; sel?: string; layer?: string; picks?: string[]; cues?: number; cueLit?: number } } }
 
 // ── render registry: one entry per mounted frame canvas ──────────────────────────────────────────
 interface Drawn { card: EditorFrame['card']; theme: string; k: number; state?: string; tl: boolean; t: number }
@@ -45,6 +48,8 @@ const raiseFrames = (d: EditorDoc, ids: string[]): EditorDoc => {
 }
 /** Smart-guide reach in screen px. */
 const SNAP_PX = 6
+/** The site's accent (the theme's `--red`), for the snap cue's dots. */
+const accentOf = (el: Element | null) => { const v = el ? getComputedStyle(el).getPropertyValue('--red').trim() : ''; return /^#[0-9a-f]{6}$/i.test(v) ? v : undefined }
 
 const FrameView = memo(function FrameView({ f }: { f: EditorFrame }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -77,7 +82,7 @@ type Op =
   /** A corner of a spec field's bounds (E3). */
   | { kind: 'bounds'; frame: string; l0: SpecLayer & { spec: Extract<SpecLayer['spec'], { kind: 'ir' }> }; handle: Handle; wx: number; wy: number }
 
-export function Canvas({ phone }: { phone: boolean }) {
+export function Canvas({ phone, landscape = false }: { phone: boolean; landscape?: boolean }) {
   const vp = useRef<HTMLDivElement>(null), paste = useRef<HTMLCanvasElement>(null)
   const frames = useEditor(s => s.h.present.frames), cam = useEditor(s => s.cam), tool = useEditor(s => s.tool), sel = useEditor(s => s.sel)
   const brush = useEditor(s => s.brush), selectMode = useEditor(s => s.selectMode)
@@ -90,6 +95,10 @@ export function Canvas({ phone }: { phone: boolean }) {
   const op = useRef<Op | undefined>(undefined)
   const glow = useRef<{ x: number; y: number } | undefined>(undefined)
   const pasteDirty = useRef(true)
+  /** E6: the long press in wait, the guides engaged at the last drag step, and the snap cue showing. */
+  const hold = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+  const engaged = useRef<Guide[] | undefined>(undefined)
+  const cue = useRef<{ guides: Guide[]; t0: number; accent?: string } | undefined>(undefined)
 
   // viewport size → store (fit / reveal), and the first fit
   useEffect(() => {
@@ -147,8 +156,18 @@ export function Canvas({ phone }: { phone: boolean }) {
       }
       stats.frames = d.frames.length; stats.sel = s.sel.frame; stats.layer = s.sel.layer; stats.picks = selIds(s.sel)
       const vpKey = `${s.vp.w}x${s.vp.h}x${dpr}`
+      // the snap cue: lit while it lasts, fading (reduced motion: held), then drawn away once
+      let cueNow: PasteCue | undefined
+      const cu = cue.current
+      if (cu) {
+        const age = now - cu.t0
+        if (age > CUE_MS) cue.current = undefined
+        else cueNow = { k: still ? 1 : Math.max(.25, 1 - age / CUE_MS), guides: cu.guides.map(g => g.axis === 'x' ? { axis: g.axis, at: g.at * c.z + c.x, from: g.from * c.z + c.y, to: g.to * c.z + c.y } : { axis: g.axis, at: g.at * c.z + c.y, from: g.from * c.z + c.x, to: g.to * c.z + c.x }) }
+        pasteDirty.current = true
+      }
       if (paste.current && (pasteDirty.current || c !== lastCam || vpKey !== lastVp)) {
-        drawPaste(paste.current, c, s.vp.w, s.vp.h, dpr, glow.current)
+        drawPaste(paste.current, c, s.vp.w, s.vp.h, dpr, glow.current, cueNow, cu?.accent)
+        stats.cueLit = cueNow ? cueNow.k : 0
         lastCam = c; lastVp = vpKey; pasteDirty.current = false
       }
     }
@@ -177,7 +196,7 @@ export function Canvas({ phone }: { phone: boolean }) {
   const finish = useCallback((commitIt: boolean) => {
     const o = op.current, s = useEditor.getState()
     op.current = undefined
-    setSnaps(undefined)
+    setSnaps(undefined); engaged.current = undefined
     if (!o) return
     if (o.kind === 'stroke') {
       if (commitIt) s.live(d => editLayer(d, { frame: o.frame, layer: o.layer }, l => ({ ...l, cells: encodeCells(o.cells) }) as PaintLayer))
@@ -254,8 +273,10 @@ export function Canvas({ phone }: { phone: boolean }) {
     s.begin()
     if (alt) { const r = copyFrames(s.h.present, ids, 0, 0); s.live(() => r.doc); ids = r.ids; s.select(framesSel(ids)) }
     else s.live(d => raiseFrames(d, ids))
-    const d = useEditor.getState().h.present
-    op.current = { kind: 'drag-frames', ids, wx, wy, at0: new Map(d.frames.filter(f => ids.includes(f.id)).map(f => [f.id, { x: f.x, y: f.y }])), box0: framesBox(d, ids)! }
+    const d = useEditor.getState().h.present, box0 = framesBox(d, ids)!
+    // guides it already sits on are not a snap: the cue is for the ones a drag reaches
+    engaged.current = snapBox(box0, d.frames.filter(f => !f.hidden && !ids.includes(f.id)).map(frameBox), 0).guides
+    op.current = { kind: 'drag-frames', ids, wx, wy, at0: new Map(d.frames.filter(f => ids.includes(f.id)).map(f => [f.id, { x: f.x, y: f.y }])), box0 }
   }
   /** Start moving text / sites layers of a frame in whole cells (Alt: copies). */
   const dragLayers = (frame: string, ids: string[], wx: number, wy: number, alt: boolean) => {
@@ -266,13 +287,39 @@ export function Canvas({ phone }: { phone: boolean }) {
     op.current = { kind: 'drag-layers', frame, wx, wy, base: f.card.layers.filter(l => ids.includes(l.id)) }
   }
 
+  /** The snap cue: the pasteboard's dots along the guides a drag just reached light up in the accent, then fade. */
+  const snapCue = (guides: Guide[]) => {
+    cue.current = { guides, t0: performance.now(), accent: cue.current?.accent ?? accentOf(vp.current) }
+    pasteDirty.current = true
+    if (window.__editor) window.__editor.cues = (window.__editor.cues ?? 0) + 1
+  }
+  /** A finger held still on a frame or layer (Move): select it unless it is in the selection, then the menu. */
+  const longPress = (o: Extract<Op, { kind: 'press' }>) => {
+    hold.current = undefined
+    if (op.current !== o || pointers.current.size !== 1) return
+    op.current = undefined
+    const s = useEditor.getState(), f = frameById(s.h.present, o.frame)
+    if (!f) return
+    const hit = o.layer ? { frame: f.id, layer: o.layer } : { frame: f.id }
+    if (!inSel(s.sel, hit)) s.select(o.layer ? clickLayer(f, o.layer, s.sel) : hit)
+    useEditor.getState().setMenu({ x: o.sx, y: o.sy, armed: false })
+  }
+  const holdFor = (o: Op | undefined, touch: boolean) => {
+    clearTimeout(hold.current); hold.current = undefined
+    if (touch && o?.kind === 'press' && useEditor.getState().tool === 'move') hold.current = setTimeout(() => longPress(o), LONG_PRESS_MS)
+  }
+  /** The finger that opened the menu lifted: its items take taps from now on (the lift itself never picks one). */
+  const arm = () => { const m = useEditor.getState().menu; if (m && !m.armed) setTimeout(() => { const n = useEditor.getState().menu; if (n === m) useEditor.getState().setMenu({ ...m, armed: true }) }, 60) }
+
   const onDown = (e: RPointerEvent<HTMLDivElement>) => {
     const el = vp.current!
-    // the quick bar's buttons are buttons: no canvas gesture, no capture (their click must land)
-    if ((e.target as HTMLElement).closest('.ed-qbar')) return
+    // the quick bar's and the menu's buttons are buttons: no canvas gesture, no capture (their click must land)
+    if ((e.target as HTMLElement).closest('.ed-qbar, .ed-cmenu')) return
     const { sx, sy } = local(e), { wx, wy } = world(sx, sy), s = useEditor.getState()
     // a touch must not fire the compatibility mousedown: it would blur the text being typed in place
     if (e.pointerType === 'touch') e.preventDefault()
+    // the long-press menu is open: a press anywhere else only closes it
+    if (s.menu) { s.setMenu(undefined); return }
     if (s.typing && !pointers.current.size) {
       // typing in place: a press on the text moves the caret; anywhere else finishes the text first
       const f = frameById(s.h.present, s.typing.frame), l = f?.card.layers.find(x => x.id === s.typing!.layer), g = l && textGeo(l)
@@ -286,6 +333,7 @@ export function Canvas({ phone }: { phone: boolean }) {
     try { el.setPointerCapture(e.pointerId) } catch { /* synthetic */ }
     if (pointers.current.size === 2) {
       // a second finger: whatever the first one started is abandoned; pinch-zoom + pan from here
+      clearTimeout(hold.current); hold.current = undefined
       if (op.current?.kind !== 'pan') finish(false)
       const [a, b] = [...pointers.current.values()]
       op.current = { kind: 'pinch', d: Math.hypot(a.x - b.x, a.y - b.y), mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2, cam: s.cam }
@@ -317,6 +365,7 @@ export function Canvas({ phone }: { phone: boolean }) {
       const id = label.dataset.frameLabel!, inside = selFrames(s.sel).length > 1 && selFrames(s.sel).includes(id)
       if (toggle) { if (!inside) s.select(toggleSel(s.sel, { frame: id })) } else if (!inside) s.select({ frame: id })
       op.current = { kind: 'press', sx, sy, wx, wy, frame: id, touch: false, was: true, toggle, inside }
+      holdFor(op.current, touch)
       return
     }
     if (s.tool === 'draw') { if (s.picking || (e.altKey && e.button === 0)) pickInk(wx, wy); else startStroke(wx, wy, s.brush.erase || e.button === 2); return }
@@ -348,6 +397,7 @@ export function Canvas({ phone }: { phone: boolean }) {
     const already = !!l && s.sel.layer === l.id && selCount(s.sel) === 1 && editableText(l)
     if (!touch && !inside) s.select(toggle ? toggleSel(s.sel, hit) : l ? clickLayer(f, l.id, s.sel) : { frame: f.id })
     op.current = { kind: 'press', sx, sy, wx, wy, frame: f.id, layer: l?.id, touch, was, toggle, inside, already }
+    holdFor(op.current, touch)
   }
 
   const onMove = (e: RPointerEvent<HTMLDivElement>) => {
@@ -423,7 +473,10 @@ export function Canvas({ phone }: { phone: boolean }) {
         if (sn.dy || sn.guides.some(g => g.axis === 'y')) dy = raw[1] - o.box0[1] + sn.dy
         const fin: Box = [o.box0[0] + dx, o.box0[1] + dy, o.box0[2] + dx, o.box0[3] + dy], shown = snapBox(fin, others, 0)
         setSnaps({ guides: shown.guides, gaps: shown.gaps })
-      } else setSnaps(undefined)
+        const fresh = snappedGuides(engaged.current, shown.guides)
+        engaged.current = shown.guides
+        if (fresh.length) snapCue(fresh)
+      } else { setSnaps(undefined); engaged.current = [] }
       s.live(x => ({ ...x, frames: x.frames.map(f => { const a = o.at0.get(f.id); return a ? { ...f, x: a.x + dx, y: a.y + dy } : f }) }))
       return
     }
@@ -453,6 +506,8 @@ export function Canvas({ phone }: { phone: boolean }) {
 
   const onUp = (e: RPointerEvent<HTMLDivElement>) => {
     pointers.current.delete(e.pointerId)
+    clearTimeout(hold.current); hold.current = undefined
+    arm()
     const o = op.current, s = useEditor.getState()
     if (o?.kind === 'pinch') { if (pointers.current.size < 2) op.current = undefined; return }
     if (!o) return
@@ -510,10 +565,10 @@ export function Canvas({ phone }: { phone: boolean }) {
     const l = f && !f.locked ? hitLayer(f, wx - f.x, wy - f.y) : undefined
     if (f && l && editableText(l)) startTyping(f.id, l.id)
   }
-  const onCancel = (e: RPointerEvent<HTMLDivElement>) => { pointers.current.delete(e.pointerId); if (op.current?.kind !== 'pinch') finish(false); else if (pointers.current.size < 2) op.current = undefined }
+  const onCancel = (e: RPointerEvent<HTMLDivElement>) => { pointers.current.delete(e.pointerId); clearTimeout(hold.current); hold.current = undefined; arm(); if (op.current?.kind !== 'pinch') finish(false); else if (pointers.current.size < 2) op.current = undefined }
   const onLeave = () => { glow.current = undefined; pasteDirty.current = true; if (!op.current) setHover(undefined); feedPointer(undefined, 0, 0) }
 
-  const picking = useEditor(s => s.picking), typing = useEditor(s => s.typing), vpSize = useEditor(s => s.vp)
+  const picking = useEditor(s => s.picking), typing = useEditor(s => s.typing), vpSize = useEditor(s => s.vp), menu = useEditor(s => s.menu)
   const cursor = space || tool === 'hand' ? 'grab' : tool === 'draw' ? (picking ? 'crosshair' : 'none') : tool === 'frame' || tool === 'code' ? 'crosshair' : tool === 'text' ? 'text' : 'default'
   const doc = useEditor(s => s.h.present)
   const selFrame = frameById(doc, sel.frame), selLayer = layerOf(doc, sel)
@@ -569,7 +624,8 @@ export function Canvas({ phone }: { phone: boolean }) {
         {snaps?.guides.map((g, i) => <div key={`g${i}`} className={`ed-guide ed-guide--${g.axis}`} style={g.axis === 'x' ? { left: g.at * cam.z + cam.x, top: g.from * cam.z + cam.y, height: (g.to - g.from) * cam.z } : { top: g.at * cam.z + cam.y, left: g.from * cam.z + cam.x, width: (g.to - g.from) * cam.z }} />)}
         {snaps?.gaps.map((g, i) => <div key={`p${i}`} className={`ed-gap ed-gap--${g.axis}`} style={g.axis === 'x' ? { left: g.a * cam.z + cam.x, top: g.at * cam.z + cam.y, width: (g.b - g.a) * cam.z } : { top: g.a * cam.z + cam.y, left: g.at * cam.z + cam.x, height: (g.b - g.a) * cam.z }}><small>{Math.round(g.b - g.a)}</small></div>)}
         {draft && <div className="ed-sel ed-sel--draft" style={{ left: draft[0] * cam.z + cam.x, top: draft[1] * cam.z + cam.y, width: draft[2] * cam.z, height: draft[3] * cam.z }}><small>{Math.round(draft[2] / 2.25)}×{Math.round(draft[3] / 2.25)}</small></div>}
-        {showBar && <QuickBar key={one!.id} f={selFrame!} l={one!} phone={phone} vp={vpSize} box={[(selFrame!.x + oneBox![0]) * cam.z + cam.x, (selFrame!.y + oneBox![1]) * cam.z + cam.y, (selFrame!.x + oneBox![2]) * cam.z + cam.x, (selFrame!.y + oneBox![3]) * cam.z + cam.y]} />}
+        {showBar && !menu && <QuickBar key={one!.id} f={selFrame!} l={one!} phone={phone} landscape={landscape} vp={vpSize} box={[(selFrame!.x + oneBox![0]) * cam.z + cam.x, (selFrame!.y + oneBox![1]) * cam.z + cam.y, (selFrame!.x + oneBox![2]) * cam.z + cam.x, (selFrame!.y + oneBox![3]) * cam.z + cam.y]} />}
+        {menu && <LongPressMenu at={menu} vp={vpSize} f={showBar ? selFrame : undefined} l={showBar ? one : undefined} phone={phone} />}
         {tool === 'draw' && !picking && hover && <div className={`ed-brush${brush.erase ? ' erase' : ''}`} style={{ left: hover.sx, top: hover.sy, width: Math.max(6, (brush.size * 2 - 1) * brushCell), height: Math.max(6, (brush.size * 2 - 1) * brushCell) }} />}
       </div>
     </div>

@@ -3,6 +3,7 @@
  * lattice or site size, EDIT for text, INK and PICK for paint) and the input for text typed in place,
  * with its caret drawn between glyphs. Neither draws the layer: every edit goes back into the card and
  * the frame redraws through the engine. Grey chrome; the accent only for the caret and an active PICK.
+ * E6: the phone's long-press menu (duplicate, order, delete), with the quick bar inside it for one layer.
  */
 import { useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type MouseEvent as RMouseEvent, type ReactNode } from 'react'
 import type { PaintLayer, SitesLayer, StudioLayer } from '../studio/doc'
@@ -10,6 +11,7 @@ import { editLayer, pitchOf, type EditorFrame } from './doc'
 import { editableText, inkStep, latticeOf, nextRung, stepLattice, stepSize, stepTone, textGeo, tonesFor, type FBox } from './direct'
 import { LATTICES, SITE_SIZES } from '../studio/doc'
 import { useEditor, type Camera } from './store'
+import { menuItems, runMenu, selTitle } from './actions'
 import { bindTypingInput, cancelTyping, commitTyping, startTyping, typeText } from './typing'
 
 const KIND: Record<StudioLayer['kind'], string> = { ir: 'CODE', text: 'TEXT', sites: 'SITES', 'preset-layer': 'REF', spec: 'SPEC', paint: 'PAINT' }
@@ -24,7 +26,7 @@ function Q({ q, label, disabled, pressed, onClick, children }: { q: string; labe
  * The quick bar above the selected layer (below it when there is no room). Each toggle is one edit, so
  * one undo step. `box` is the layer's box in screen px.
  */
-export function QuickBar({ f, l, box, phone, vp }: { f: EditorFrame; l: StudioLayer; box: FBox; phone: boolean; vp: { w: number; h: number } }) {
+export function QuickBar({ f, l, box, phone, landscape = false, vp, inline = false }: { f: EditorFrame; l: StudioLayer; box: FBox; phone: boolean; landscape?: boolean; vp: { w: number; h: number }; inline?: boolean }) {
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<CSSProperties>({ visibility: 'hidden' })
   const typing = useEditor(s => s.typing?.layer === l.id), brush = useEditor(s => s.brush), picking = useEditor(s => s.picking)
@@ -34,16 +36,17 @@ export function QuickBar({ f, l, box, phone, vp }: { f: EditorFrame; l: StudioLa
   // place it: centred over the box, above it (below if it would leave the canvas), inside the viewport
   useLayoutEffect(() => {
     const el = ref.current
-    if (!el) return
-    const w = el.offsetWidth, h = el.offsetHeight, gap = 10, low = phone ? 150 : 8
+    if (!el || inline) return
+    // clear of the phone's dock and selection bar: stacked upright, side by side on a phone on its side
+    const w = el.offsetWidth, h = el.offsetHeight, gap = 10, low = landscape ? 80 : phone ? 150 : 8
     let y = box[1] - h - gap
     if (y < 8) y = box[3] + gap
     y = Math.max(8, Math.min(vp.h - h - low, y))
     const x = Math.max(8, Math.min(vp.w - w - 8, (box[0] + box[2]) / 2 - w / 2))
     setPos({ left: x, top: y })
-  }, [box[0], box[1], box[2], box[3], vp.w, vp.h, phone, l, typing, brush, picking]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [box[0], box[1], box[2], box[3], vp.w, vp.h, phone, landscape, inline, l, typing, brush, picking]) // eslint-disable-line react-hooks/exhaustive-deps
   const tone = l.tone === 'preset' ? 'OWN' : l.tone.toUpperCase()
-  return <div ref={ref} className="ed-qbar" role="toolbar" aria-label={`Quick edits: ${l.name}`} style={pos}>
+  return <div ref={ref} className={`ed-qbar${inline ? ' ed-qbar--inline' : ''}`} role="toolbar" aria-label={`Quick edits: ${l.name}`} style={inline ? undefined : pos}>
     <span className="ed-qbar-kind" aria-hidden="true">{KIND[l.kind]}</span>
     <Q q="tone" label={`Tone: ${tone.toLowerCase()} (tap for the next one of ${tonesFor(l).length}, ⇧ for the one before)`} onClick={e => set(x => stepTone(x, e.shiftKey ? -1 : 1))}>TONE <b>{tone}</b></Q>
     {k !== undefined && <span className="ed-qbar-step" role="group" aria-label={`Lattice ${num(k)}`}>
@@ -101,4 +104,34 @@ export function InText({ f, l, cam }: { f?: EditorFrame; l?: StudioLayer; cam: C
       ? <i className="ed-caret" aria-hidden="true" style={{ left: sx(g.carets[a]), top, height: Math.max(6, h) }} />
       : <i className="ed-textsel" aria-hidden="true" style={{ left: sx(g.carets[a]), top, width: sx(g.carets[b]) - sx(g.carets[a]), height: Math.max(6, h) }} />)}
   </>
+}
+
+/**
+ * The long-press menu (E6, touch): DUPLICATE, the stack order (FORWARD, BACKWARD, TO FRONT, TO BACK) and
+ * DELETE for the selected frames or layers, each the command the keys and the selection bar run (one undo
+ * step). One layer brings its quick bar along (tone, lattice or size, EDIT, ink). It opens above the finger
+ * (below when there is no room), never under it, and takes taps only once that finger has lifted.
+ */
+export function LongPressMenu({ at, vp, f, l, phone }: { at: { x: number; y: number; armed: boolean }; vp: { w: number; h: number }; f?: EditorFrame; l?: StudioLayer; phone: boolean }) {
+  const ref = useRef<HTMLDivElement>(null)
+  const doc = useEditor(s => s.h.present), sel = useEditor(s => s.sel), withBar = !!l
+  const [pos, setPos] = useState<CSSProperties>({ visibility: 'hidden' })
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el) return
+    const w = el.offsetWidth, h = el.offsetHeight, finger = 28, pad = 8
+    let y = at.y - finger - h
+    if (y < pad) y = at.y + finger + 8 <= vp.h - h - pad ? at.y + finger + 8 : Math.max(pad, Math.min(vp.h - h - pad, y))
+    setPos({ left: Math.max(pad, Math.min(vp.w - w - pad, at.x - w / 2)), top: y })
+  }, [at.x, at.y, vp.w, vp.h, withBar])
+  const items = menuItems(doc, sel), close = () => useEditor.getState().setMenu(undefined)
+  return <div ref={ref} className={`ed-cmenu${at.armed ? '' : ' is-arming'}`} role="menu" aria-label={`Selection: ${selTitle(doc, sel)}`} style={pos}
+    onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); close() } }}>
+    <b className="ed-cmenu-head">{selTitle(doc, sel)}</b>
+    {f && l && <QuickBar f={f} l={l} box={[0, 0, 0, 0]} phone={phone} vp={vp} inline />}
+    <div className="ed-cmenu-items">
+      {items.map(it => <button key={it.id} type="button" role="menuitem" data-menu={it.id} className={it.danger ? 'ed-danger' : undefined} disabled={it.disabled}
+        onPointerDown={e => e.preventDefault()} onClick={() => { if (!useEditor.getState().menu?.armed) return; close(); runMenu(it.id) }}>{it.label}</button>)}
+    </div>
+  </div>
 }

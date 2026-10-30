@@ -1,8 +1,11 @@
 /**
  * MAKE: one editor (docs/EDITOR-PLAN.md). Desktop: a tool bar on top, LAYERS / ASSETS on the left, the
  * infinite canvas in the middle and a contextual inspector (DESIGN / ANIMATE / CODE / EXPORT) on the right.
- * Phone (≤ 640 px): a full-screen canvas, a floating tool bar at the bottom, and the panels as bottom
- * sheets with a drag handle. The old MAKE modes are entry points: `mode` picks the tool and panels.
+ * Phone (≤ 640 px, or a phone on its side): a full-screen canvas, a floating tool bar at the bottom, and the
+ * panels as bottom sheets with a drag handle (on its side: a side sheet). The old MAKE modes are entry points:
+ * `mode` picks the tool and panels.
+ * E6: the sheet remembers its detent per panel, the keyboard never covers the sheet or the text being typed
+ * (`visualViewport`), and SHARE opens the system share sheet when there is one.
  */
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type PointerEvent } from 'react'
 import { decodeShare } from '../../lib/share'
@@ -18,9 +21,10 @@ import { editableText } from './direct'
 import { codeTarget, KEY_TOOL, MODE_ENTRY, paintTarget } from './input'
 import { InspectorBody, InspectorTabs } from './Inspector'
 import { AssetsPanel, LayersPanel } from './Panels'
+import { DETENTS, detentFor, isPhone, keyboardBox, LANDSCAPE_QUERY, panelOf, PHONE_QUERY, rememberDetent, rememberedDetent, shareLink, type Layout, type ShareOutcome } from './phone'
 import { revealAbove, useEditor, type Tool } from './store'
 import { selCount, selFrames, selLayers, type Align } from './select'
-import { startTyping } from './typing'
+import { keepTypingInView, startTyping } from './typing'
 import { DotIcon, type IconName } from './ui'
 import './editor.css'
 
@@ -33,16 +37,41 @@ const TOOLS: { id: Tool; icon: IconName; key: string; label: string; phone: bool
   { id: 'code', icon: 'code', key: 'C', label: 'Code: add a Field IR layer', phone: true },
 ]
 
-const phoneQuery = '(max-width: 640px)'
-const subscribeMQ = (cb: () => void) => { const m = matchMedia(phoneQuery); m.addEventListener('change', cb); return () => m.removeEventListener('change', cb) }
-const usePhone = () => useSyncExternalStore(subscribeMQ, () => matchMedia(phoneQuery).matches, () => false)
+const subscribeMQ = (cb: () => void) => {
+  const ms = [matchMedia(PHONE_QUERY), matchMedia(LANDSCAPE_QUERY)]
+  for (const m of ms) m.addEventListener('change', cb)
+  return () => { for (const m of ms) m.removeEventListener('change', cb) }
+}
+const layoutNow = (): Layout => (!matchMedia(PHONE_QUERY).matches ? 'desktop' : matchMedia(LANDSCAPE_QUERY).matches ? 'landscape' : 'portrait')
+const useLayout = () => useSyncExternalStore(subscribeMQ, layoutNow, (): Layout => 'desktop')
+type KeyboardBox = ReturnType<typeof keyboardBox>
+/**
+ * Phone: the part of the screen an on-screen keyboard leaves (`visualViewport`), or undefined when none is
+ * open. The editor then fills just that part, so the sheet sits on the keyboard and the canvas above it.
+ */
+function useKeyboard(phone: boolean): KeyboardBox {
+  const [box, setBox] = useState<KeyboardBox>(undefined)
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!phone || !vv) return
+    let raf = 0
+    const on = () => {
+      cancelAnimationFrame(raf)
+      raf = requestAnimationFrame(() => { const b = keyboardBox(window.innerHeight, vv); setBox(p => (p?.top === b?.top && p?.height === b?.height ? p : b)) })
+    }
+    on()
+    vv.addEventListener('resize', on); vv.addEventListener('scroll', on)
+    return () => { cancelAnimationFrame(raf); vv.removeEventListener('resize', on); vv.removeEventListener('scroll', on) }
+  }, [phone])
+  return phone ? box : undefined
+}
 const editable = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))
 
 /** `?make=code&p=…` / `?make&d=…` already imported this page load (a re-render or re-entry must not import it twice). */
 let handledP = '', handledD = ''
 
 export function Editor({ mode, onExit }: { mode: Mode; onExit?: () => void }) {
-  const phone = usePhone()
+  const layout = useLayout(), phone = layout !== 'desktop', landscape = layout === 'landscape', kb = useKeyboard(phone)
   const sheet = useEditor(s => s.sheet), note = useEditor(s => s.note), shortcuts = useEditor(s => s.shortcuts)
   const [banner, setBanner] = useState('')
   const root = useRef<HTMLElement>(null)
@@ -100,13 +129,27 @@ export function Editor({ mode, onExit }: { mode: Mode; onExit?: () => void }) {
   useEffect(() => { if (!note) return; const h = setTimeout(() => useEditor.getState().setNote(''), 4200); return () => clearTimeout(h) }, [note])
   useShortcuts(phone)
 
+  // the keyboard opened or closed: once the canvas has its new size, the text being typed and the field
+  // with focus in the sheet move back into view (the caret stays visible)
+  const kbH = kb?.height
+  useEffect(() => {
+    if (!phone) return
+    const t = setTimeout(() => {
+      keepTypingInView()
+      const a = document.activeElement
+      if (a instanceof HTMLElement && a.closest('.ed-sheet')) a.scrollIntoView({ block: 'nearest' })
+    }, 120)
+    return () => clearTimeout(t)
+  }, [kbH, phone])
+
   return (
-    <section ref={root} className={`ed-root${phone ? ' is-phone' : ''}`} aria-label="Editor">
+    <section ref={root} className={`ed-root${phone ? ' is-phone' : ''}${landscape ? ' is-landscape' : ''}${kb ? ' has-kb' : ''}`} aria-label="Editor"
+      style={kb ? { top: kb.top, height: kb.height } : undefined}>
       <TopBar phone={phone} onExit={onExit} />
       <div className="ed-body">
         {!phone && <LeftPanel />}
         <div className="ed-stage">
-          <Canvas phone={phone} />
+          <Canvas phone={phone} landscape={landscape} />
           {banner && <p className="ed-banner" role="alert">{banner}<button type="button" aria-label="Dismiss" onClick={() => setBanner('')}>×</button></p>}
           <p className="ed-note" role="status" aria-live="polite">{note}</p>
           {phone && !sheet && <SelBar />}
@@ -114,7 +157,7 @@ export function Editor({ mode, onExit }: { mode: Mode; onExit?: () => void }) {
         </div>
         {!phone && <aside className="ed-right" aria-label="Inspector"><InspectorTabs /><InspectorBody /></aside>}
       </div>
-      {phone && sheet && <Sheet key={sheet} onClose={() => useEditor.getState().setSheet(null)} />}
+      {phone && sheet && <Sheet key={sheet} side={landscape} vh={kb?.height} onClose={() => useEditor.getState().setSheet(null)} />}
       {shortcuts && <Shortcuts onClose={() => useEditor.getState().setShortcuts(false)} />}
     </section>
   )
@@ -138,21 +181,29 @@ function ToolButton({ t, phone }: { t: typeof TOOLS[number]; phone: boolean }) {
 }
 
 const LINK_WHAT = { program: 'this program', frame: 'this frame', doc: 'these frames' } as const
+/** The probe's view of the last SHARE: what the share sheet, the clipboard or EXPORT · LINK did with it. */
+declare global { interface Window { __editorShared?: ShareOutcome } }
 /**
  * SHARE (E5): a selected code layer → its program link; selected frames → a frame link (one) or a link of
- * them; nothing selected → the document. Copied when the page may; a link too big for a URL opens EXPORT
- * with the reason (DOWNLOAD JSON still works).
+ * them; nothing selected → the document. On a phone with a share sheet (E6) the link goes to
+ * `navigator.share`; else (or when the share is refused) it is copied when the page may; else EXPORT · LINK
+ * opens with it to copy by hand. A share the visitor cancels is not an error. A link too big for a URL opens
+ * EXPORT with the reason (DOWNLOAD JSON still works).
  */
 async function share() {
-  const s = useEditor.getState()
+  const s = useEditor.getState(), toExport = () => { s.setRight('export'); if (s.sheet !== null || isPhone()) s.setSheet('inspector') }
   try {
     const m = await shareSel(), what = m.kind === 'doc' && !s.sel.frame ? 'the whole document' : LINK_WHAT[m.kind]
     s.setLink(m)
-    if (await copyText(m.url)) { s.setNote(`Link copied (${m.chars} chars): it opens ${what} in the editor`); return }
-    s.setRight('export'); if (s.sheet !== null || matchMedia(phoneQuery).matches) s.setSheet('inspector')
-    s.setNote('Link ready: copy it from EXPORT · LINK')
+    const name = m.kind === 'program' ? 'a dot program' : m.kind === 'frame' ? (frameById(s.h.present, s.sel.frame)?.card.name ?? 'a frame') : s.h.present.name
+    const out: ShareOutcome = isPhone() ? await shareLink({ url: m.url, title: `${name} · Dot/480`, text: `Open ${what} in the Dot/480 editor` }, copyText) : (await copyText(m.url)) ? 'copied' : 'manual'
+    window.__editorShared = out
+    if (out === 'shared') s.setNote(`Link shared (${m.chars} chars): it opens ${what} in the editor`)
+    else if (out === 'copied') s.setNote(`Link copied (${m.chars} chars): it opens ${what} in the editor`)
+    else if (out === 'manual') { toExport(); s.setNote('Link ready: copy it from EXPORT · LINK') }
+    // cancelled: the visitor closed the share sheet; nothing to say (EXPORT · LINK still has the link)
   } catch (e) {
-    s.setRight('export'); if (s.sheet !== null || matchMedia(phoneQuery).matches) s.setSheet('inspector')
+    toExport()
     s.setNote(`No link: ${(e as Error).message}`)
   }
 }
@@ -233,18 +284,32 @@ function SelBar() {
   </div>
 }
 
-// ── phone bottom sheet ─────────────────────────────────────────────────────
-const DETENTS = [.36, .6, .9]
-function Sheet({ onClose }: { onClose: () => void }) {
+// ── phone bottom sheet (on its side: a side sheet) ─────────────────────────
+/**
+ * The phone's sheet: LAYERS, ASSETS or the inspector. Upright it is a bottom sheet with detents (36 / 60 /
+ * 90 % of what the keyboard leaves visible): drag or tap the handle, drag down to close. It opens at the
+ * detent it was last left at for that panel (E6: this session, and across reloads in localStorage). On its
+ * side the phone gets a side sheet at the right instead, the full height under the top bar.
+ */
+function Sheet({ onClose, side, vh: visible }: { onClose: () => void; side: boolean; vh?: number }) {
   const sheet = useEditor(s => s.sheet), right = useEditor(s => s.right)
-  const [detent, setDetent] = useState(sheet === 'inspector' && right === 'code' ? 2 : 1)
+  const panel = panelOf(sheet ?? 'inspector', right)
+  const [detent, setDetentNow] = useState(() => detentFor(panel))
+  const setDetent = (i: number) => { setDetentNow(i); rememberDetent(panel, i) }
+  // another inspector tab in the same sheet: the detent that tab was last left at, if it was
+  const [shown, setShown] = useState(panel)
+  if (shown !== panel) { setShown(panel); const r = rememberedDetent(panel); if (r !== undefined) setDetentNow(r) }
   const [drag, setDrag] = useState<number | null>(null)
-  const start = useRef<{ y: number; h: number } | null>(null)
-  const vh = typeof window === 'undefined' ? 800 : (window.visualViewport?.height ?? window.innerHeight)
+  const start = useRef<{ y: number; h: number } | null>(null), ref = useRef<HTMLDivElement>(null)
+  const vh = visible ?? (typeof window === 'undefined' ? 800 : (window.visualViewport?.height ?? window.innerHeight))
   const h = drag ?? DETENTS[detent] * vh
   const selFrame = useEditor(s => s.sel.frame)
-  // the selection stays in view above the sheet (after the height transition)
-  useEffect(() => { if (drag !== null) return; const t = setTimeout(() => revealAbove(DETENTS[detent] * vh), 240); return () => clearTimeout(t) }, [detent, drag, selFrame, vh])
+  // the selection stays in view beside the sheet (after the height transition)
+  useEffect(() => {
+    if (drag !== null) return
+    const t = setTimeout(() => { if (side) revealAbove(0, ref.current?.offsetWidth ?? 0); else revealAbove(DETENTS[detent] * vh) }, 240)
+    return () => clearTimeout(t)
+  }, [detent, drag, selFrame, vh, side])
   const onDown = (e: PointerEvent<HTMLDivElement>) => { e.currentTarget.setPointerCapture(e.pointerId); start.current = { y: e.clientY, h } }
   const onMove = (e: PointerEvent<HTMLDivElement>) => { if (start.current) setDrag(Math.max(80, Math.min(vh * .95, start.current.h - (e.clientY - start.current.y)))) }
   const onUp = (e: PointerEvent<HTMLDivElement>) => {
@@ -253,7 +318,7 @@ function Sheet({ onClose }: { onClose: () => void }) {
     if (!st) return
     const moved = Math.abs(e.clientY - st.y) > 6, now = drag ?? st.h
     setDrag(null)
-    if (!moved) { setDetent(d => (d + 1) % DETENTS.length); return } // a tap on the handle steps the detent
+    if (!moved) { setDetent((detent + 1) % DETENTS.length); return } // a tap on the handle steps the detent
     if (now < DETENTS[0] * vh * .7) { onClose(); return }
     let best = 0
     DETENTS.forEach((d, i) => { if (Math.abs(d * vh - now) < Math.abs(DETENTS[best] * vh - now)) best = i })
@@ -265,10 +330,10 @@ function Sheet({ onClose }: { onClose: () => void }) {
   else if (sheet === 'assets') body = <AssetsPanel onInserted={onClose} />
   else body = <InspectorBody />
   return (
-    <div className={`ed-sheet${drag !== null ? ' dragging' : ''}`} role="dialog" aria-modal="false" aria-label={title ?? 'Inspector'} style={{ height: h }}>
-      <div className="ed-sheet-grab" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
+    <div ref={ref} className={`ed-sheet${side ? ' ed-sheet--side' : ''}${drag !== null ? ' dragging' : ''}`} role="dialog" aria-modal="false" aria-label={title ?? 'Inspector'} data-detent={side ? undefined : detent} style={side ? undefined : { height: h }}>
+      {!side && <div className="ed-sheet-grab" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
         role="slider" aria-label="Sheet height: drag, or tap to step" aria-valuemin={0} aria-valuemax={2} aria-valuenow={detent} tabIndex={0}
-        onKeyDown={e => { if (e.key === 'ArrowUp') setDetent(d => Math.min(2, d + 1)); else if (e.key === 'ArrowDown') { if (detent === 0) onClose(); else setDetent(d => d - 1) } }}><i /></div>
+        onKeyDown={e => { if (e.key === 'ArrowUp') setDetent(Math.min(2, detent + 1)); else if (e.key === 'ArrowDown') { if (detent === 0) onClose(); else setDetent(detent - 1) } }}><i /></div>}
       <div className="ed-sheet-head">
         {title ? <b>{title}</b> : <InspectorTabs className="ed-tabs--sheet" />}
         <button type="button" className="ed-ibtn" aria-label="Close" onClick={onClose}>×</button>
@@ -325,7 +390,7 @@ function useShortcuts(phone: boolean) {
         else if (k === '=' || k === '+') { used(); s.zoomAt(s.cam.z * 1.25, s.vp.w / 2, s.vp.h / 2) }
         else if (k === '-') { used(); s.zoomAt(s.cam.z / 1.25, s.vp.w / 2, s.vp.h / 2) }
         else if (k === '0') { used(); s.zoomAt(1, s.vp.w / 2, s.vp.h / 2) }
-        else if ((k === ']' || k === '[') && f && l) { used(); orderSel(k === ']' ? -1 : 1) }
+        else if ((k === ']' || k === '[') && f && l) { used(); orderSel(k === ']' ? 'forward' : 'backward') }
         else if (k === 'h' && e.shiftKey && f) { used(); hideSel() }
         return
       }
@@ -341,6 +406,7 @@ function useShortcuts(phone: boolean) {
       }
       if (e.key === '?') { used(); s.setShortcuts(!s.shortcuts); return }
       if (e.key === 'Escape') {
+        if (s.menu) { used(); s.setMenu(undefined); return }
         if (s.shortcuts) { used(); s.setShortcuts(false); return }
         if (s.picking) { used(); s.setPicking(false); return }
         if (s.tool !== 'move') { used(); s.setTool('move'); return }
@@ -389,7 +455,7 @@ function Shortcuts({ onClose }: { onClose: () => void }) {
       <h2>SHORTCUTS <button type="button" className="ed-ibtn" aria-label="Close" autoFocus onClick={onClose}>×</button></h2>
       <dl className="ed-keys">{EDITOR_KEYS.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       <h3>TOUCH</h3>
-      <dl className="ed-keys"><div><dt>one finger</dt><dd>use the tool · drag empty canvas to pan · tap to select</dd></div><div><dt>two fingers</dt><dd>pinch to zoom · drag to pan</dd></div><div><dt>tap a selected text layer</dt><dd>type into it on the canvas · DONE or return finishes</dd></div><div><dt>quick bar · handles</dt><dd>over the selected layer: tone, lattice, size, EDIT, INK, PICK · drag a handle for the radius, sweep, ends or bounds</dd></div><div><dt>SELECT (bar above the tools)</dt><dd>taps add to the selection · one finger on empty canvas draws a marquee · DUP, GROUP, COPY, PASTE, DEL act on it</dd></div><div><dt>sheet handle</dt><dd>drag or tap to resize, drag down to close</dd></div></dl>
+      <dl className="ed-keys"><div><dt>one finger</dt><dd>use the tool · drag empty canvas to pan · tap to select</dd></div><div><dt>two fingers</dt><dd>pinch to zoom · drag to pan</dd></div><div><dt>tap a selected text layer</dt><dd>type into it on the canvas · DONE or return finishes</dd></div><div><dt>quick bar · handles</dt><dd>over the selected layer: tone, lattice, size, EDIT, INK, PICK · drag a handle for the radius, sweep, ends or bounds</dd></div><div><dt>SELECT (bar above the tools)</dt><dd>taps add to the selection · one finger on empty canvas draws a marquee · DUP, GROUP, COPY, PASTE, DEL act on it</dd></div><div><dt>long press a frame or layer</dt><dd>its menu: duplicate, forward, backward, to front, to back, delete (a layer brings its quick bar)</dd></div><div><dt>sheet handle</dt><dd>drag or tap to resize, drag down to close; each panel opens where you left it</dd></div></dl>
     </div>
   </div>
 }

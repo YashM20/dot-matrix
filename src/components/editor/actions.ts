@@ -3,8 +3,9 @@
  * bar: duplicate, delete, copy / cut / paste, group / ungroup, lock, select all, align / distribute,
  * nudge, order, hide. Each is one `edit`, so one undo step. React-free (the Node suite runs them).
  * E5: the links SHARE and EXPORT · LINK make (a program, the selected frames, the document).
+ * E6: stack order for frames as well as layers (forward, backward, to front, to back) and the phone's long-press menu.
  */
-import { copyLayers, duplicateFrames, editFrame, editLayer, frameById, groupLayers, groupOf, layerOf, lockFrames, lockLayers, movable, nudgeLayer, removeFrames, removeLayers, shareable, shiftLayers, ungroup, type EditorDoc } from './doc'
+import { copyLayers, duplicateFrames, editFrame, editLayer, frameById, groupLayers, groupOf, layerOf, lockFrames, lockLayers, movable, nudgeLayer, orderFrames, orderLayers, removeFrames, removeLayers, shareable, ungroup, type EditorDoc, type Order, type Sel } from './doc'
 import { asClip, CLIP_KEY, clipFromJSON, clipOf, clipToJSON, pasteClip, type Clip } from './clip'
 import { arrangeFrames, arrangeLayers, framesSel, layersSel, selCount, selectAll, selFrames, selGroup, selLayers, type Align } from './select'
 import { useEditor } from './store'
@@ -111,10 +112,43 @@ export function nudgeSel(dx: number, dy: number) {
     if (ids.length) s.edit(x => ids.reduce((y, id) => editFrame(y, id, f => ({ ...f, x: f.x + dx, y: f.y + dy })), x), `nudge:${ids.join()}`)
   }
 }
-/** Ctrl+] / Ctrl+[: the selected layers (or their groups) one step up / down the stack. */
-export function orderSel(dir: -1 | 1) {
-  const s = st(), sel = s.sel
-  if (sel.layer && sel.frame) s.edit(d => shiftLayers(d, sel.frame!, selLayers(sel), dir))
+/** The document with the selection moved in its stack: layers (their groups as units) in the frame, frames on the canvas. */
+export function orderDoc(d: EditorDoc, sel: Sel, how: Order): EditorDoc {
+  if (sel.layer && sel.frame) return orderLayers(d, sel.frame, selLayers(sel), how)
+  return sel.frame ? orderFrames(d, selFrames(sel), how) : d
+}
+/** Ctrl+] / Ctrl+[ and the long-press menu: the selection forward, backward, to the front or to the back (one undo step). */
+export function orderSel(how: Order) {
+  const s = st(), d = s.h.present, next = orderDoc(d, s.sel, how)
+  if (next !== d) s.edit(() => next)
+}
+
+// ── the long-press menu (E6) ───────────────────────────────────────────────
+export type MenuId = 'duplicate' | Order | 'delete'
+export interface MenuItem { id: MenuId; label: string; disabled: boolean; danger?: boolean }
+const ORDER_LABEL: Record<Order, string> = { forward: 'FORWARD', backward: 'BACKWARD', front: 'TO FRONT', back: 'TO BACK' }
+/** What the long-press menu offers for the selection (frames or layers), and which items would change nothing. */
+export function menuItems(d: EditorDoc, sel: Sel): MenuItem[] {
+  const any = !!sel.frame
+  return [
+    { id: 'duplicate', label: 'DUPLICATE', disabled: !any },
+    ...(['forward', 'backward', 'front', 'back'] as Order[]).map(how => ({ id: how, label: ORDER_LABEL[how], disabled: !any || orderDoc(d, sel, how) === d })),
+    { id: 'delete', label: 'DELETE', disabled: !any, danger: true },
+  ]
+}
+/** Run a menu item on the current selection: the same command the keys and the selection bar use. */
+export function runMenu(id: MenuId) {
+  if (id === 'duplicate') duplicateSel()
+  else if (id === 'delete') deleteSel()
+  else orderSel(id)
+}
+/** The selection in words, for the menu's head: `FRAME level 03`, `3 LAYERS`. */
+export function selTitle(d: EditorDoc, sel: Sel): string {
+  const f = frameById(d, sel.frame)
+  if (!f) return ''
+  if (sel.layer) { const n = selLayers(sel).length; return n > 1 ? `${n} LAYERS` : `LAYER ${layerOf(d, sel)?.name ?? ''}` }
+  const n = selFrames(sel).length
+  return n > 1 ? `${n} FRAMES` : `FRAME ${f.card.name}`
 }
 /** Ctrl+⇧H: hide / show the selection (all follow the primary). */
 export function hideSel() {
