@@ -9,7 +9,7 @@ import { renderCanvasBuffer } from '../../src/engine/renderer/canvasBuffer'
 import { renderSVG } from '../../src/engine/renderer/svgRenderer'
 import { renderWebGL, sharedDotGL } from '../../src/engine/renderer/webgl/dotgl'
 import { squircleExponent } from '../../src/engine/renderer/shapePath'
-import { insideJoined, installSquares } from '../../src/engine/squares'
+import { insideJoined, insideRect, installSquares } from '../../src/engine/squares'
 import { shapeExt } from '../../src/engine/renderer/ext'
 shapeExt.glLoad = () => import('../../src/engine/squares/gl').then(m => { shapeExt.gl = m.glJoin })
 import { dot480 } from '../../src/engine/theme/tokens'
@@ -57,13 +57,13 @@ function reference(dots: DotInstance[], w: number, h: number, scale: number, n: 
     const key = `${d.color}|${Math.round(Math.min(1, d.opacity) * 1000) / 1000}`
     let cov = groups.get(key)
     if (!cov) groups.set(key, (cov = new Float32Array(W * H)))
-    const cx = d.x * scale, cy = d.y * scale, s = d.r * scale, g = d.joint && d.join !== undefined ? { ...d.joint, hx: d.joint.hx * scale, hy: d.joint.hy * scale, ri: d.joint.ri * scale, seam: d.joint.seam * scale } : null
-    const reach = (g ? Math.max(g.hx, g.hy, s) : s) + 1, e = d.shape === 'square' ? Infinity : d.shape === 'squircle' ? squircleExponent(d.roundness ?? 0) : n
+    const cx = d.x * scale, cy = d.y * scale, s = d.r * scale, hs = s * (d.aspect ?? 1), g = d.joint && d.join !== undefined ? { ...d.joint, hx: d.joint.hx * scale, hy: d.joint.hy * scale, ri: d.joint.ri * scale, seam: d.joint.seam * scale } : null
+    const reach = (g ? Math.max(g.hx, g.hy, s, hs) : Math.max(s, hs)) + 1, e = d.shape === 'square' ? Infinity : d.shape === 'squircle' ? squircleExponent(d.roundness ?? 0) : n, rect = d.aspect !== undefined
     for (let y = Math.max(0, Math.floor(cy - reach)); y < Math.min(H, Math.ceil(cy + reach)); y++) for (let x = Math.max(0, Math.floor(cx - reach)); x < Math.min(W, Math.ceil(cx + reach)); x++) {
       let hit = 0
       for (let sy = 0; sy < 4; sy++) for (let sx = 0; sx < 4; sx++) {
         const px = x + (sx + .5) / 4, py = y + (sy + .5) / 4
-        if (g ? insideJoined(px, py, cx, cy, s, g, d.join!) : e === Infinity ? Math.max(Math.abs(px - cx), Math.abs(py - cy)) <= s : (Math.abs(px - cx) / s) ** e + (Math.abs(py - cy) / s) ** e <= 1) hit++
+        if (g ? insideJoined(px, py, cx, cy, s, g, d.join!, hs) : rect ? insideRect(px, py, cx, cy, s, hs, e) : e === Infinity ? Math.max(Math.abs(px - cx), Math.abs(py - cy)) <= s : (Math.abs(px - cx) / s) ** e + (Math.abs(py - cy) / s) ** e <= 1) hit++
       }
       cov[y * W + x] += hit / 16
     }
@@ -148,6 +148,37 @@ async function cracks(scale: number) {
   return rows
 }
 
+/**
+ * Line continuity (Q2.6): rect cells on [1, 3] with `sizeAxis: 'y'` and `join`, one level per run, at opacity 1 and .5.
+ * Along each line's centre row, the darkest luma vs the run's mean (a crack) and the brightest (double blend), per renderer;
+ * plus the same line with the level stepping every 3 cells (joins across levels), and plain rect cells (parity only).
+ */
+async function lines(scale: number) {
+  const grid: GridConfig = { cols: 48, rows: 24, pitch: 2.25 }, P = grid.pitch!, out: Record<string, unknown>[] = []
+  const luma = (img: ImageData, x: number, y: number) => { const i = (y * img.width + x) * 4; return .2126 * img.data[i] + .7152 * img.data[i + 1] + .0722 * img.data[i + 2] }
+  for (const step of [false, true]) for (const opacity of [1, .5]) {
+    const field = (u: number, v: number) => { const c = Math.round(u * 47), r = Math.round(v * 7); return c >= 4 && c < 44 && r >= 1 && r < 7 ? (step ? [.5, .75, 1][Math.floor(c / 3) % 3] : .75) : 0 }
+    const layer: Layer = { field, lattice: [1, 3], sizeAxis: 'y', join: true, tone: 'idle' }
+    const dots = sampleLayers([layer], grid, squareStyle, theme).map(d => ({ ...d, opacity }))
+    const w = grid.cols * P, h = grid.rows * P, C = surface(w, h, scale), G = surface(w, h, scale)
+    renderCanvas(C.ctx, dots); const gl = renderWebGL(G.ctx, dots, [], theme)
+    const S = await svgImage(dots, w, h, scale)
+    const row: Record<string, unknown> = { step, opacity, gl }
+    for (const [name, s] of [['canvas', C], ['webgl', G], ['svg', S]] as const) {
+      const img = grab(s)
+      let lo = 255, hi = 0, sum = 0, n = 0
+      for (let r = 1; r < 7; r++) {
+        const y = Math.floor((r + .5) * 3 * P * scale)
+        for (let x = Math.ceil(5 * P * scale); x < Math.floor(43 * P * scale); x++) { const L = luma(img, x, y); lo = Math.min(lo, L); hi = Math.max(hi, L); sum += L; n++ }
+      }
+      const mean = sum / n
+      row[name] = { mean: +mean.toFixed(2), crack: +(mean - lo).toFixed(2), blend: +(hi - mean).toFixed(2) }
+    }
+    out.push(row)
+  }
+  return out
+}
+
 function info() {
   const gl = sharedDotGL()
   if (!gl?.gl) return { webgl2: false }
@@ -155,4 +186,4 @@ function info() {
   return { webgl2: true, renderer: ext ? gl.gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.gl.getParameter(gl.gl.RENDERER) }
 }
 
-;(window as unknown as { SQ: unknown }).SQ = { info, loadGL, card, cracks }
+;(window as unknown as { SQ: unknown }).SQ = { info, loadGL, card, cracks, lines }

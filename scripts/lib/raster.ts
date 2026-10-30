@@ -4,7 +4,7 @@
  */
 import { deflateSync } from 'node:zlib'
 import { glyph } from '../../src/engine/fields/bitmapFont'
-import { insideJoined } from '../../src/engine/squares/geometry'
+import { insideJoined, insideRect } from '../../src/engine/squares/geometry'
 import type { JointGeom } from '../../src/engine/types'
 
 export function rgb(color: string): number[] {
@@ -42,11 +42,19 @@ export class Raster {
    * into `cov` (one value per raster pixel). Joined neighbours share a colour and opacity, so a group's coverage is
    * summed and blended once (`blendCoverage`), like Canvas's one fill per path: no seam. Raster px throughout.
    */
-  coverJoined(cov: Float32Array, cx: number, cy: number, s: number, mask: number, g: JointGeom) {
-    const rx = Math.max(g.hx, s) + 1, ry = Math.max(g.hy, s) + 1
+  coverJoined(cov: Float32Array, cx: number, cy: number, s: number, mask: number, g: JointGeom, hs = s) {
+    const rx = Math.max(g.hx, s) + 1, ry = Math.max(g.hy, hs) + 1
     for (let y = Math.max(0, Math.floor(cy - ry)); y <= Math.min(this.h - 1, Math.ceil(cy + ry)); y++) for (let x = Math.max(0, Math.floor(cx - rx)); x <= Math.min(this.w - 1, Math.ceil(cx + rx)); x++) {
       let hit = 0
-      for (let sy = 0; sy < 4; sy++) for (let sx = 0; sx < 4; sx++) if (insideJoined(x + (sx + .5) / 4, y + (sy + .5) / 4, cx, cy, s, g, mask)) hit++
+      for (let sy = 0; sy < 4; sy++) for (let sx = 0; sx < 4; sx++) if (insideJoined(x + (sx + .5) / 4, y + (sy + .5) / 4, cx, cy, s, g, mask, hs)) hit++
+      if (hit) cov[y * this.w + x] += hit / 16
+    }
+  }
+  /** Coverage of a plain rect cell (squares Q2: half sides sx × sy, exponent n, Infinity = square), the anisotropic dot, 4×4 supersampled. */
+  coverRect(cov: Float32Array, cx: number, cy: number, sx: number, sy: number, n: number) {
+    for (let y = Math.max(0, Math.floor(cy - sy - 1)); y <= Math.min(this.h - 1, Math.ceil(cy + sy + 1)); y++) for (let x = Math.max(0, Math.floor(cx - sx - 1)); x <= Math.min(this.w - 1, Math.ceil(cx + sx + 1)); x++) {
+      let hit = 0
+      for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) if (insideRect(x + (i + .5) / 4, y + (j + .5) / 4, cx, cy, sx, sy, n)) hit++
       if (hit) cov[y * this.w + x] += hit / 16
     }
   }

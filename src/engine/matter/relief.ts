@@ -143,8 +143,9 @@ export function rake(light: Light, hi = 18 * DEG, lo = 8 * DEG): Light {
  * card cells, usually the card's own): every lattice dot lit ≥ `at` fills the k×k card cells whose centres fall in it.
  * The lattice dot of card cell c is ⌊(c + ½ − origin) / k⌋ (the sampler's lattice placement).
  */
-export function cardMask(lf: { field: Field; lattice?: number; origin?: [number, number] }, grid: GridConfig, at = .5): Raster {
-  const k = lf.lattice ?? 1, [ox, oy] = lf.origin ?? [0, 0], { cols, rows } = grid
+export function cardMask(lf: { field: Field; lattice?: number | [number, number]; origin?: [number, number] }, grid: GridConfig, at = .5): Raster {
+  // (square lattices; a rect lattice, squares Q2, reads its x factor)
+  const k = typeof lf.lattice === 'object' ? lf.lattice[0] : lf.lattice ?? 1, [ox, oy] = lf.origin ?? [0, 0], { cols, rows } = grid
   const lc = Math.max(1, Math.floor((cols - ox) / k)), lr = Math.max(1, Math.floor((rows - oy) / k))
   const lit = new Uint8Array(lc * lr), b = lf.field.bounds
   // a bounded field (text, sprites) is 0 outside its bounds: evaluate, and fill, only the lattice window it can light

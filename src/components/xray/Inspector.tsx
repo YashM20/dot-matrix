@@ -69,7 +69,7 @@ const plural = (n: number, w: string) => `${n.toLocaleString('en-US')} ${w}${n =
 function Summary({ probe, layers, d }: { probe: CardProbe; layers: Layer[]; d: CardDescription }) {
   const [word, setWord] = useState<GlossaryTerm | null>(null)
   const term = (k: GlossaryTerm, label: string = k): ReactNode => <button type="button" className="xr-term" title={GLOSSARY[k]} aria-expanded={word === k} onClick={() => setWord(w => (w === k ? null : k))}>{label}</button>
-  const coarse = layers.filter(l => !l.sites && (l.lattice ?? 1) > 1).length, sited = layers.filter(l => l.sites).length, ir = layers.some(l => layerIR(l))
+  const coarse = layers.filter(l => !l.sites && (typeof l.lattice == 'object' || (l.lattice ?? 1) > 1)).length, sited = layers.filter(l => l.sites).length, ir = layers.some(l => layerIR(l))
   const names = [...new Set(layers.map(layerName))], steps = probe.style.quantizeSteps
   return <div className="xr-summary">
     <p>{probe.preset.name} is {plural(layers.length, 'layer')} of {term('field', 'fields')} ({names.slice(0, 4).join(', ')}{names.length > 4 ? ', …' : ''}), sampled into <b>{plural(probe.stats.dots, 'dot')}</b> on a {probe.grid.cols}×{probe.grid.rows} grid.</p>

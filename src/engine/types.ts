@@ -59,7 +59,8 @@ export interface JoinSpec {
 export interface JointGeom { hx: number; hy: number; ro: number; ri: number; seam: number; ox?: number; oy?: number }
 /**
  * Per-dot form fields (docs/living-matter/F0-foundation.md §2.5), hashed by the golden key (`scripts/lib/goldenKey.ts`).
- * On a `Layer`, `rot` / `aspect` / `motif` are per-layer defaults the sampler stamps onto that layer's dots (Q2, Q3).
+ * On a `Layer`, `rot` / `motif` are per-layer defaults the sampler stamps onto that layer's dots (Q3); `aspect` comes from
+ * a rect lattice (`Layer.lattice: [kx, ky]`, `Layer.sizeAxis`), so a layer has none of its own.
  */
 export interface DotForm {
   /** Join mask (squares Q1): 12 bits, 3 per quadrant (NW, NE, SE, SW), codes CONVEX…INNER (src/engine/squares/mask.ts). Set by join layers only. */
@@ -68,7 +69,10 @@ export interface DotForm {
   joint?: JointGeom
   /** Reserved for Q3: rotation in radians (squares snap to multiples of π/4, stored in radians). */
   rot?: number
-  /** Reserved for Q2: width/height of a rect cell (1 = square). */
+  /**
+   * Rect cell (squares Q2): ry / rx, the half height over the half width `r`. Absent = 1 (a square-like or round dot).
+   * Set by rect lattices (`Layer.lattice: [kx, ky]`, `Layer.sizeAxis`); drawn by the squares hooks (src/engine/squares).
+   */
   aspect?: number
   /** Reserved for Q3: motif id inside the cell. */
   motif?: string
@@ -81,7 +85,7 @@ export interface DotInstance extends DotForm { x: number; y: number; r: number; 
  * `active` is the single accent — keep it to one element per card.
  */
 export type Tone = 'auto' | 'active' | 'activeDim' | 'value' | 'idle' | 'mid' | 'faint'
-export interface Layer extends Omit<DotForm, 'join' | 'joint'> {
+export interface Layer extends Omit<DotForm, 'join' | 'joint' | 'aspect'> {
   field: Field
   tone?: Tone
   /**
@@ -96,9 +100,17 @@ export interface Layer extends Omit<DotForm, 'join' | 'joint'> {
    * Sample this layer on its own coarser lattice: dots `lattice`× the card pitch apart and
    * `lattice`× bigger (hero numerals in the references sit on ~2–4× the label pitch).
    * The field sees u/v over that lattice, which starts at `origin` (card cells).
-   * Card dots underneath a lit lattice dot are suppressed.
+   * Card dots underneath a lit lattice dot are suppressed. `[kx, ky]` = rect cells (squares Q2, fractional allowed):
+   * kx× the pitch across, ky× down; the dot's half sides follow each factor (`DotInstance.aspect` = ry / rx).
    */
-  lattice?: number
+  lattice?: number | [number, number]
+  /**
+   * Which side of a rect cell the size ramp drives (squares Q2): 'both' (default, keeps the cell's aspect), or 'x' /
+   * 'y' for bars and line screens: that side follows the value, the other stays full ((1 − gap)·k·P/2). An 'x' / 'y'
+   * cell is solid (opacity 1: its thickness is the tone), and with `join` it fuses only along its full side, across
+   * levels, so a line is one stroke of varying weight.
+   */
+  sizeAxis?: 'both' | 'x' | 'y'
   origin?: [number, number]
   /**
    * Sample this layer at explicit dot sites (card-cell coordinates, fractional allowed) instead

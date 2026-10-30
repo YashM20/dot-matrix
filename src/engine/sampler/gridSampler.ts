@@ -38,6 +38,10 @@ export const cellU = (col: number, cols: number) => (cols === 1 ? 0.5 : col / (c
 const shown = (value: number, style: DotStyle) => (style.quantizeSteps ? quantize(value, style.quantizeSteps) : value)
 /** A positive, finite lattice/size factor (bad input falls back to 1 instead of throwing or flipping radii). */
 const factor = (k: number | undefined) => (k !== undefined && Number.isFinite(k) && k > 0 ? k : 1)
+/** A layer's lattice factors per axis: `lattice` (square cells) or `[kx, ky]` (rect cells, squares Q2). */
+export const factors = (k: Layer['lattice']): [number, number] => (Array.isArray(k) ? [factor(k[0]), factor(k[1])] : [factor(k), factor(k)])
+/** A bar / line axis ('x' / 'y'), or undefined ('both', unset). */
+const axisOf = (l: Layer) => (l.sizeAxis === 'both' ? undefined : l.sizeAxis)
 
 /**
  * Where emitted dots go: a `DotInstance[]` (the classic API) or a struct-of-arrays `DotBuffer`.
@@ -54,33 +58,39 @@ const sinkOf = (dots: DotInstance[] | null, buf: DotBuffer | null, palette: read
 /** Packed join of a plain dot, and the form code of a dot drawn with the frame style (`DotBuffer.join` / `.form`). */
 const NO_JOIN = 0xFFFF, NO_FORM = 15
 
-function emit(out: Sink, value: number, tone: number, x: number, y: number, seed: number, style: DotStyle, scale = 1, join = NO_JOIN, form = NO_FORM): void {
+/**
+ * One dot. `scale` = the lattice factor (kx on a rect lattice); `ky` > 0 makes it a rect cell (squares Q2): its half
+ * height and `aspect` come from the squares hook (`samplerExt.rect`); `axis` 'x' / 'y' (a bar / line) is solid.
+ */
+function emit(out: Sink, value: number, tone: number, x: number, y: number, seed: number, style: DotStyle, scale = 1, join = NO_JOIN, form = NO_FORM, ky = 0, axis?: 'x' | 'y'): void {
   value = shown(value, style)
   const eased = style.sizeCurve ? style.sizeCurve(value) : value
   let jx = x, jy = y
   // same arithmetic as `applyJitter`, without the tuple
   if (style.jitter) { const amount = style.jitter * scale, random = mulberry32(seed); jx = x + (random() - .5) * amount; jy = y + (random() - .5) * amount }
-  let r = (style.sizeMin + (style.sizeMax - style.sizeMin) * eased) * scale
-  const opacity = style.opacityMode === 'constant' ? 1 : value
+  let r = (style.sizeMin + (style.sizeMax - style.sizeMin) * eased) * scale, aspect = 1
+  const opacity = style.opacityMode === 'constant' || axis ? 1 : value, sq = style.gap !== undefined && (form === NO_FORM ? out.square : form >= 4)
   // {grid.gap}: a square-like dot keeps gap·P of grout to its neighbour (form ≥ 4 ⇔ n ≥ 8)
-  if (style.gap !== undefined && (form === NO_FORM ? out.square : form >= 4)) r = Math.min(r, (1 - style.gap) * scale * out.pitch / 2)
-  // squares channels (only once `installSquares()` has run): the join / form hooks write them
-  const ext = join !== NO_JOIN || form !== NO_FORM
+  if (sq) r = Math.min(r, (1 - style.gap!) * scale * out.pitch / 2)
+  if (ky && samplerExt.rect) [r, aspect] = samplerExt.rect(r, scale, ky, axis, sq ? style.gap! : 0, out.pitch)
+  // squares channels (only once `installSquares()` has run): the join / form / aspect hooks write them
+  const ext = join !== NO_JOIN || form !== NO_FORM || aspect !== 1
   if (out.buf) {
     pushDot(out.buf, jx, jy, r, opacity, tone)
-    if (ext) samplerExt.push!(out.buf, out.buf.n - 1, join, form)
+    if (ext) samplerExt.push?.(out.buf, out.buf.n - 1, join, form, aspect)
     return
   }
   const d: DotInstance = { x: jx, y: jy, r, opacity, color: out.fixed ?? out.palette[tone], shape: out.shape, roundness: out.roundness }
-  if (ext) samplerExt.stamp!(d, join, form, out.joints)
+  if (ext) samplerExt.stamp?.(d, join, form, out.joints, aspect)
   out.dots!.push(d)
 }
 /** The frame's joint table (created by the first join pass; a buffer frame keeps it on the buffer). */
 const jointsOf = (out: Sink): JointGeom[] => (out.joints ??= out.buf ? (out.buf.joints = []) : [])
 
-/** The cell grid a lattice layer is sampled on (see `Layer.lattice`). */
-export function latticeGrid(grid: GridConfig, lattice: number, origin: [number, number] = [0, 0]): GridConfig {
-  return { cols: Math.max(1, Math.floor((grid.cols - origin[0]) / lattice)), rows: Math.max(1, Math.floor((grid.rows - origin[1]) / lattice)) }
+/** The cell grid a lattice layer is sampled on (see `Layer.lattice`; `[kx, ky]` floors each axis on its own). */
+export function latticeGrid(grid: GridConfig, lattice: number | [number, number], origin: [number, number] = [0, 0]): GridConfig {
+  const [kx, ky] = factors(lattice)
+  return { cols: Math.max(1, Math.floor((grid.cols - origin[0]) / kx)), rows: Math.max(1, Math.floor((grid.rows - origin[1]) / ky)) }
 }
 
 export function sampleField(field: Field, grid: GridConfig, style: DotStyle, theme: ThemeTokens, colorForFn: ColorFor = colorFor): DotInstance[] {
@@ -179,7 +189,7 @@ export function sampleLayers(layers: Layer[], grid: GridConfig, style: DotStyle,
 export function sampleLayersInto(layers: Layer[], grid: GridConfig, style: DotStyle, theme: ThemeTokens, buf: DotBuffer = acquireDotBuffer(grid.cols * grid.rows)): DotBuffer {
   buf.n = 0; buf.palette = paletteOf(theme); buf.shape = style.shape; buf.roundness = style.cornerRoundness; buf.joints = undefined
   // a buffer that carried squares channels before: back to "plain dot, frame style" for every slot
-  if (buf.join) { buf.join.fill(NO_JOIN); buf.form!.fill(NO_FORM) }
+  if (buf.join) { buf.join.fill(NO_JOIN); buf.form!.fill(NO_FORM); buf.aspect!.fill(0) }
   scratch.enter()
   try { sampleLayersOnce(sinkOf(null, buf, buf.palette, style, grid.pitch ?? theme.gridPx), layers, grid, style, theme) } finally { scratch.leave() }
   return buf
@@ -208,27 +218,31 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
   const base: Layer[] = [], lattices = new Map<string, Layer[]>(), sited: Layer[] = []
   for (const layer of layers) {
     if (layer.sites) { sited.push(layer); continue }
-    if (factor(layer.lattice) === 1 && !layer.origin) { base.push(layer); continue }
-    const key = `${factor(layer.lattice)}|${layer.origin ?? '0,0'}`
+    const [kx, ky] = factors(layer.lattice), axis = axisOf(layer)
+    if (kx * ky === 1 && !layer.origin && !axis) { base.push(layer); continue }
+    // a rect lattice (or a bar / line axis) is its own group: one cell geometry per composite
+    const key = `${kx},${ky},${axis}|${layer.origin ?? '0,0'}`
     const group = lattices.get(key)
     if (group) group.push(layer); else lattices.set(key, [layer])
   }
   const covered = lattices.size || sited.length ? scratch.covered(grid.cols * grid.rows) : null
-  const groups = [...lattices.values()].sort((a, b) => factor(b[0].lattice) - factor(a[0].lattice))
+  const area = (l: Layer[]) => factors(l[0].lattice).reduce((a, b) => a * b)
+  const groups = [...lattices.values()].sort((a, b) => area(b) - area(a))
   for (const group of groups) {
-    const k = factor(group[0].lattice), [ox, oy] = group[0].origin ?? [0, 0], sub = latticeGrid(grid, k, [ox, oy])
+    const [k, ky] = factors(group[0].lattice), [ox, oy] = group[0].origin ?? [0, 0], sub = latticeGrid(grid, [k, ky], [ox, oy])
+    const axis = axisOf(group[0]), rect = k !== ky || axis ? ky : 0
     // only the cells the group's fields can light are composited and scanned (a caption's lattice spans the card)
     const win = unionWindow(group, sub.cols, sub.rows), [wc0, wr0, wc1, wr1] = win, width = wc1 - wc0 + 1
     const { best, owner } = composite(group, sub, win), us = centres(sub.cols), vs = centres(sub.rows)
-    const J = joinPass(dots, group, best, owner, win, us, vs, null, style, k * pitch / 2, ox * pitch, oy * pitch)
+    const J = joinPass(dots, group, best, owner, win, us, vs, null, style, k * pitch / 2, ox * pitch, oy * pitch, ky * pitch / 2)
     for (let row = wr0; row <= wr1; row++) for (let col = wc0; col <= wc1; col++) {
       const j = (row - wr0) * width + (col - wc0), value = best[j]
       // a dot that quantizes to nothing is not drawn, so it must not punch a hole in the card either
       if (value <= 0 || shown(value, style) <= 0) continue
-      emit(dots, value, J ? J.tone[j] : toneIndex(toneOf(group, owner[j], value, us[col], vs[row]), value), (ox + (col + .5) * k) * pitch, (oy + (row + .5) * k) * pitch, 1e6 + row * sub.cols + col, style, k,
-        J ? J.join[j] : NO_JOIN, J ? J.form[j] : NO_FORM)
-      // card cells whose centre falls inside this lattice cell
-      const c0 = Math.ceil(ox + col * k - .5), c1 = Math.ceil(ox + (col + 1) * k - .5), r0 = Math.ceil(oy + row * k - .5), r1 = Math.ceil(oy + (row + 1) * k - .5)
+      emit(dots, value, J ? J.tone[j] : toneIndex(toneOf(group, owner[j], value, us[col], vs[row]), value), (ox + (col + .5) * k) * pitch, (oy + (row + .5) * ky) * pitch, 1e6 + row * sub.cols + col, style, k,
+        J ? J.join[j] : NO_JOIN, J ? J.form[j] : NO_FORM, rect, axis)
+      // card cells whose centre falls inside this lattice cell (per axis on a rect lattice)
+      const c0 = Math.ceil(ox + col * k - .5), c1 = Math.ceil(ox + (col + 1) * k - .5), r0 = Math.ceil(oy + row * ky - .5), r1 = Math.ceil(oy + (row + 1) * ky - .5)
       for (let r = Math.max(0, r0); r < Math.min(grid.rows, r1); r++) for (let c = Math.max(0, c0); c < Math.min(grid.cols, c1); c++) covered![r * grid.cols + c] = 1
     }
   }
@@ -239,7 +253,7 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
     const u = x / Math.max(1, grid.cols - 1), v = y / Math.max(1, grid.rows - 1), value = safe(layer.field(u, v))
     if (shown(value, style) <= 0) continue
     const key = siteKey(x, y), prev = sites.get(key)
-    if (!prev || value >= prev.value) sites.set(key, { x, y, k: factor(layer.size ?? layer.lattice), value, tone: layer.toneOf ? layer.toneOf(value, u, v) : layer.tone, form: layer.shapeOf && samplerExt.form ? samplerExt.form(layer, value, u, v) : NO_FORM })
+    if (!prev || value >= prev.value) sites.set(key, { x, y, k: factor(layer.size ?? (layer.lattice as number)), value, tone: layer.toneOf ? layer.toneOf(value, u, v) : layer.tone, form: layer.shapeOf && samplerExt.form ? samplerExt.form(layer, value, u, v) : NO_FORM })
   }
   // the card cells a site dot hides follow its drawn shape (cover.ts): n from the style, or the site's own `shapeOf` form
   let seed = 2e6
@@ -264,7 +278,7 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
 
 /** The join pass for one composite (`samplerExt.join`, installed by src/engine/squares), or null: no join layer, or not installed. */
 function joinPass(out: Sink, layers: Layer[], best: Float32Array, owner: Uint32Array, win: [number, number, number, number], us: Float64Array, vs: Float64Array,
-  covered: Uint8Array | null, style: DotStyle, h: number, ox: number, oy: number): JoinFrame | null {
+  covered: Uint8Array | null, style: DotStyle, h: number, ox: number, oy: number, hy = h): JoinFrame | null {
   const pass = samplerExt.join
-  return pass && layers.some(l => l.join || l.shapeOf) ? pass({ layers, best, owner, win, us, vs, covered, style, h, ox, oy, joints: jointsOf(out) }) : null
+  return pass && layers.some(l => l.join || l.shapeOf) ? pass({ layers, best, owner, win, us, vs, covered, style, h, hy, ox, oy, joints: jointsOf(out) }) : null
 }

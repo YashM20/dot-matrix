@@ -324,4 +324,6 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'sq-quads': ['A portrait found by splitting the worst square into four until 1,201 squares remain (after Fogleman’s Quads).', 'squares join quadtree portrait animated'],
   'sq-blob': ['Four metaballs on a square lattice whose terraces fuse level by level; the red neck forms where two meet.', 'squares join metaballs animated'],
   'sq-gameboy': ['A four-shade LCD in spaced squares: the time, the date and a walker over a parallax strip.', 'squares lcd clock pixel animated'],
+  'sq-teletext': ['A teletext page in square cells: sextant block graphics that fuse where they touch, a separated weather map, the clock’s seconds in red.', 'squares teletext sextant mosaic clock animated'],
+  'sq-lines': ['A portrait as a 36-line screen on rect cells, each line one stroke whose weight is the tone, over a solid-bar spectrum.', 'squares lines halftone portrait bars animated'],
 }

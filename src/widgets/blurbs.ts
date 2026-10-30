@@ -33,7 +33,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   algorithms: 'Four niche algorithms drawing in dots: Voronoi stippling, a strange attractor, wave function collapse and frost growth.',
   materials: 'Stone, glass, metal, cloth and thread made of dots: relief, one light and a moving part.',
   pond: 'A koi pond and other small ecosystems, drawn in glyph tiles. Tap to feed, hold to lure.',
-  squares: 'Square cells, spaced and joined: Tetris pieces that fuse, a face found in 1,201 quads, terraced metaballs and a four-shade LCD.',
+  squares: 'Square cells, spaced and joined: Tetris pieces that fuse, a face found in 1,201 quads, metaballs, an LCD, teletext and a line screen.',
 }
 
 export const groupBlurbs: Record<BoardGroupId, string> = {

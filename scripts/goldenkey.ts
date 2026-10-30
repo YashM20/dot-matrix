@@ -42,7 +42,7 @@ export function goldenKeyChecks(assert: Assert): void {
     const presets = uniquePresets()
     let dots = 0, suffixed = 0
     const off: string[] = [], opted = new Set<string>()
-    const optsIn = (p: WidgetPreset, t: number) => withChrome(p)({ t, data: { ...p.defaults } }).some(l => l.join !== undefined || l.shapeOf !== undefined)
+    const optsIn = (p: WidgetPreset, t: number) => withChrome(p)({ t, data: { ...p.defaults } }).some(l => l.join !== undefined || l.shapeOf !== undefined || typeof l.lattice === 'object' || l.sizeAxis !== undefined)
     for (const p of presets) for (const t of [0, 1.3]) {
       const ds = sampleCard(p, t), canSuffix = optsIn(p, t)
       dots += ds.length
@@ -53,7 +53,7 @@ export function goldenKeyChecks(assert: Assert): void {
         off.push(`${p.id} t=${t}: ${k}`); break
       }
     }
-    assert(`golden key: dotKey ≡ legacyKey on every dot of all ${presets.length} presets at t=0 and t=1.3, except the channel suffixes of join / shapeOf cards`, !off.length && presets.length >= 177,
+    assert(`golden key: dotKey ≡ legacyKey on every dot of all ${presets.length} presets at t=0 and t=1.3, except the channel suffixes of join / shapeOf / rect-cell cards`, !off.length && presets.length >= 177,
       off.length ? off.slice(0, 4).join('; ') : `${dots} dots; ${suffixed} suffixed on ${[...opted].join(', ') || 'none'}`)
 
     const base: DotStyle = { shape: 'squircle', sizeMin: .2, sizeMax: .95, cornerRoundness: .1 }

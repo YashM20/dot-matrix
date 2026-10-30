@@ -1,5 +1,5 @@
 /** Skin names and switcher labels only (no physics): what the always-loaded switcher and store need. */
-export const SKIN_NAMES = ['oled', 'crt', 'vfd', 'led', 'eink', 'flipdisc', 'nixie'] as const
+export const SKIN_NAMES = ['oled', 'crt', 'vfd', 'led', 'eink', 'flipdisc', 'nixie', 'lcd', 'grout'] as const
 export type SkinName = typeof SKIN_NAMES[number]
 export const isSkinName = (s: unknown): s is SkinName => typeof s === 'string' && (SKIN_NAMES as readonly string[]).includes(s)
 
@@ -19,4 +19,6 @@ export const SKINS: Record<SkinName, SkinInfo> = {
   eink: { name: 'eink', label: 'INK', title: 'E-ink: 1-bit dither, ghosting, full-refresh flash', blend: 'normal' },
   flipdisc: { name: 'flipdisc', label: 'FLIP', title: 'Flip-disc: two-faced discs with inertia (clack optional)', blend: 'normal' },
   nixie: { name: 'nixie', label: 'NIXIE', title: 'Nixie-ish: warm neon glow behind a hex anode mesh', blend: 'screen' },
+  lcd: { name: 'lcd', label: 'LCD', title: 'LCD: square pixels, slow response', blend: 'normal' },
+  grout: { name: 'grout', label: 'GROUT', title: 'Mosaic: tiles and grout', blend: 'normal' },
 }

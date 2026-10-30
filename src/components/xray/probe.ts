@@ -11,7 +11,8 @@ import { dot480 } from '../../engine/theme/tokens'
 import type { DotStyle, GridConfig, Layer, Tone } from '../../engine'
 
 const safe = (x: number) => (Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 0)
-const factor = (k: number | undefined) => (k !== undefined && Number.isFinite(k) && k > 0 ? k : 1)
+/** A lattice factor (a rect lattice, squares Q2, reads as its x factor here). */
+const factor = (k: number | number[] | undefined) => (k = typeof k == 'object' ? k[0] : k, k !== undefined && Number.isFinite(k) && k > 0 ? k : 1)
 const shown = (v: number, style: DotStyle) => (style.quantizeSteps ? quantize(v, style.quantizeSteps) : v)
 
 /** A short human name for a layer: its text, its layout generator, `ir`, or its tone. */

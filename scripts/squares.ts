@@ -6,16 +6,18 @@
  * Pixel parity across SVG / Canvas / WebGL lives in the browser probe `scripts/squares-browser.ts`.
  * Timings are printed; budgets scale by a measured load factor so a busy box doesn't fail them.
  */
-import { sampleLayers, sampleLayersInto } from '../src/engine/sampler/gridSampler'
+import { latticeGrid, sampleLayers, sampleLayersInto } from '../src/engine/sampler/gridSampler'
+import { gpuValues, layerPass } from '../src/engine/renderer/webgl/passes'
+import { sextantBits, sextantChar, teletextLayers, type TtCell } from '../src/engine/squares/teletext'
 import { createDotBuffer, dotBufferOver, toDots } from '../src/engine/buffer/dotBuffer'
 import { renderCanvasBuffer } from '../src/engine/renderer/canvasBuffer'
 import { renderSVG } from '../src/engine/renderer/svgRenderer'
 import { coverExponent, squareLike } from '../src/engine/sampler/cover'
 import { dot480 } from '../src/engine/theme/tokens'
-import type { DotInstance, DotStyle, JointGeom, Layer, Tone } from '../src/engine/types'
+import type { DotInstance, DotStyle, Field, JointGeom, Layer, Tone } from '../src/engine/types'
 import {
-  ALL_FULL, CONVEX, EDGE_H, EDGE_V, FULL, INNER, LUT4, installSquares, insideJoined, inkRadius, joinArea, joinOutline,
-  joinPass, maskOf, quadrant, uninstallSquares, type OutlineSink,
+  ALL_FULL, CONVEX, EDGE_H, EDGE_V, FULL, INNER, LUT4, installSquares, insideJoined, insideRect, inkRadius, joinArea, joinOutline,
+  joinPass, maskOf, quadrant, rectOutline, uninstallSquares, type OutlineSink,
 } from '../src/engine/squares'
 import { tetris, GARBAGE, EMPTY, ROTATIONS } from '../src/engine/squares/tetris'
 import { detLint } from './lib/detLint'
@@ -36,7 +38,7 @@ function loadFactor(): number {
 }
 /** Deterministic PRNG for the fuzzers (mulberry32). */
 const rng = (seed: number) => () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
-const key = (d: DotInstance) => `${d.x},${d.y},${d.r},${d.opacity},${d.color},${d.shape},${d.roundness},${d.join},${d.joint ? JSON.stringify(d.joint) : ''}`
+const key = (d: DotInstance) => `${d.x},${d.y},${d.r},${d.opacity},${d.color},${d.shape},${d.roundness},${d.join},${d.joint ? JSON.stringify(d.joint) : ''},${d.aspect}`
 const lumaOf = (c: string) => { const m = /^#([0-9a-f]{6})$/i.exec(c); if (!m) return .5; const v = [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16) / 255); return .2126 * v[0] + .7152 * v[1] + .0722 * v[2] }
 /** Ink of a card: mean luma above the card surface over the snap raster (px 1, dot480; joined cells through `insideJoined`). */
 function inkOf(p: WidgetPreset, t = 0): number {
@@ -179,7 +181,7 @@ export function squaresChecks(assert: Assert): void {
       const ls = withChrome(p)({ t, data: {} }), a = sampleLayers(ls, p.grid, p.style, dot480)
       const b = toDots(sampleLayersInto(withChrome(p)({ t, data: {} }), p.grid, p.style, dot480, createDotBuffer(64)))
       // float32 rounding of the buffer: compare through Math.fround
-      const fa = a.map(d => key({ ...d, x: Math.fround(d.x), y: Math.fround(d.y), r: Math.fround(d.r), opacity: Math.fround(d.opacity) })).sort(), fb = b.map(key).sort()
+      const fa = a.map(d => key({ ...d, x: Math.fround(d.x), y: Math.fround(d.y), r: Math.fround(d.r), opacity: Math.fround(d.opacity), aspect: d.aspect === undefined ? undefined : Math.fround(d.aspect) })).sort(), fb = b.map(key).sort()
       const ok = fa.length === fb.length && fa.every((k, i) => k === fb[i]), joined = a.filter(d => d.join !== undefined).length
       same &&= ok && (joined > 0 || p.id === 'sq-gameboy'); detail += `${p.id}@${t} ${a.length}/${joined}j${ok ? '' : ' ≠'}  `
     }
@@ -245,6 +247,100 @@ export function squaresChecks(assert: Assert): void {
       / opacity="0\.5"/.test(svg) && / fill-opacity="0\.25"/.test(svg) && !/fill-opacity="0\.5"/.test(svg))
   }
 
+  // ── Q2 rect cells, teletext, line screens ──────────────────────────────────────────────────────────
+  {
+    const P = 2.25, G = { cols: 40, rows: 40, pitch: P }
+    // rect cover: a lit [kx, ky] cell clears exactly the card cells whose centre lies inside it, per axis (fractional factors too)
+    let coverBad = 0, coverN = 0
+    for (const kx of [1.5, 1.8, 2, 3]) for (const ky of [1.5, 1.8, 2, 3]) for (const [ox, oy] of [[0, 0], [1, 2], [.5, 1.5]] as const) {
+      const sub = latticeGrid(G, [kx, ky], [ox, oy]), c = 3, r = 4
+      const one: Field = (u, v) => (Math.round(u * (sub.cols - 1)) === c && Math.round(v * (sub.rows - 1)) === r ? 1 : 0)
+      const ds = sampleLayers([{ field: () => .5, tone: 'mid' }, { field: one, lattice: [kx, ky], origin: [ox, oy], tone: 'value' }], G, style, dot480)
+      const inside = (a: number, k: number, o: number, i: number) => a + .5 >= o + i * k && a + .5 < o + (i + 1) * k
+      let want = 0
+      for (let y = 0; y < G.rows; y++) for (let x = 0; x < G.cols; x++) if (inside(x, kx, ox, c) && inside(y, ky, oy, r)) want++
+      const got = G.cols * G.rows - (ds.length - 1)
+      coverN++; if (got !== want) coverBad++
+    }
+    const six = sampleLayers([{ field: () => .5 }, { field: (u, v) => (u === 0 && v === 0 ? 1 : 0), lattice: [2, 3] }], G, style, dot480)
+    assert('squares: rect cover (a [2, 3] cell clears exactly the 6 card cells under it; fuzz over kx, ky ∈ {1.5, 1.8, 2, 3} and origins: the centre-inside rule per axis)',
+      coverBad === 0 && six.length === G.cols * G.rows - 6 + 1, `${coverBad}/${coverN} off, [2, 3] cleared ${G.cols * G.rows - six.length + 1}`)
+
+    // rect geometry: half sides from kx and ky (each clamped to its gutter); a bar / line keeps one side full and is solid
+    const at = (l: Partial<Layer>, v = 1) => sampleLayers([{ field: (u, w) => (u === 0 && w === 0 ? v : 0), ...l }], { cols: 12, rows: 12, pitch: P }, style, dot480)[0]
+    const full = (k: number) => (1 - style.gap!) * k * P / 2, ramp = (v: number) => style.sizeMin + (style.sizeMax - style.sizeMin) * v
+    const both = at({ lattice: [2, 3] }), ly = at({ lattice: [1, 3], sizeAxis: 'y' }, .5), lx = at({ lattice: [3, 1], sizeAxis: 'x' }, .5), sq = at({ lattice: 2 })
+    const close = (a: number, b: number) => Math.abs(a - b) < 1e-9
+    assert('squares: rect aspect (r = rx, aspect = ry / rx; both sides gap-clamped; sizeAxis y: rx full, x: ry full, solid; square lattices carry no aspect)',
+      close(both.r, full(2)) && close(both.r * both.aspect!, full(3)) && close(ly.r, full(1)) && close(ly.r * ly.aspect!, ramp(.5) * 3) && ly.opacity === 1
+      && close(lx.r, ramp(.5) * 3) && close(lx.r * lx.aspect!, full(1)) && lx.opacity === 1 && sq.aspect === undefined,
+      `[2,3] ${both.r.toFixed(3)}×${(both.r * both.aspect!).toFixed(3)}, y ${ly.r.toFixed(3)}×${(ly.r * ly.aspect!).toFixed(3)} α${ly.opacity}, x ${lx.r.toFixed(3)}×${(lx.r * lx.aspect!).toFixed(3)}`)
+
+    // GPU passes refuse rect layers (CPU instances, like sites, join and shapeOf)
+    const gf = gpuValues(() => 1), grid = { cols: 24, rows: 24, pitch: P }, plain: DotStyle = { ...style, gap: undefined }
+    assert('squares: GPU passes refuse rect cells (lattice [kx, ky], sizeAxis) as they refuse join / shapeOf / gap',
+      layerPass({ field: gf, lattice: 2 }, grid, plain, P) !== null && layerPass({ field: gf, lattice: [2, 3] }, grid, plain, P) === null && layerPass({ field: gf, lattice: 2, sizeAxis: 'y' }, grid, plain, P) === null
+      && layerPass({ field: gf, lattice: 2, join: true }, grid, plain, P) === null)
+
+    // line joins: a 'y' line fuses along x across levels, never along y; an 'x' bar the other way
+    const lvl = (u: number, v: number) => [.25, .5, .75, 1][(Math.round(u * 11) + Math.round(v * 7)) % 4]
+    const lines = sampleLayers([{ field: lvl, lattice: [1, 3], sizeAxis: 'y', join: true, tone: 'idle' }], { cols: 12, rows: 24, pitch: P }, style, dot480)
+    const bars = sampleLayers([{ field: lvl, lattice: [3, 1], sizeAxis: 'x', join: true, tone: 'idle' }], { cols: 24, rows: 12, pitch: P }, style, dot480)
+    const onlyAlong = (ds: DotInstance[], keep: number) => ds.every(d => d.join !== undefined && [0, 1, 2, 3].every(q => [CONVEX, keep].includes(quadrant(d.join!, q))))
+    const runs = (ds: DotInstance[], dx: number, dy: number) => ds.filter(d => ds.some(e => close(e.x, d.x + dx) && close(e.y, d.y + dy))).every(d => quadrant(d.join!, dx ? 1 : 2) !== CONVEX)
+    assert('squares: line joins (sizeAxis y: one stroke along x across levels, no join along y; sizeAxis x: along y only)',
+      onlyAlong(lines, EDGE_H) && runs(lines, P, 0) && onlyAlong(bars, EDGE_V) && runs(bars, 0, P), `${lines.length} line cells, ${bars.length} bar cells`)
+
+    // rect geometry = reference: a recording sink of rectOutline / joinOutline (hs ≠ s) against insideRect / insideJoined
+    let worst = 0
+    for (const n of [Infinity, 32, 9.5, 4, 2]) {
+      const rec = new Recorder(), b = new Recorder()
+      rectOutline(Object.assign(rec, { bezierCurveTo(ax: number, ay: number, bx: number, by: number, x: number, y: number) { flatten(rec, ax, ay, bx, by, x, y) } }), 0, 0, 7, 3.5, n)
+      let diff = 0
+      for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) { const px = -8 + (x + .37) / 2, py = -8 + (y + .41) / 2; if (insideRect(px, py, 0, 0, 7, 3.5, n) !== rec.inside(px, py)) diff++ }
+      worst = Math.max(worst, diff / 1024)
+      void b
+    }
+    let jWorst = 0
+    const g: JointGeom = { hx: 8, hy: 12, ro: .4, ri: 1.5, seam: 0 }
+    for (const mask of new Set(LUT4)) {
+      const rec = new Recorder()
+      joinOutline(rec, 0, 0, 6.5, g, mask, 0, true, 9)
+      let diff = 0
+      for (let y = 0; y < 24; y++) for (let x = 0; x < 16; x++) { const px = -8 + x + .37, py = -12 + y + .41; if (insideJoined(px, py, 0, 0, 6.5, g, mask, 9) !== rec.inside(px, py)) diff++ }
+      jWorst = Math.max(jWorst, diff / 384)
+    }
+    assert('squares: rect outline = reference (plain rect cells n ∈ {∞, 32, 9.5, 4, 2} and 47 joined masks on a 16 × 24 cell: ≤ 1% of pixels differ)', worst <= .01 && jWorst <= .005, `plain ${(worst * 100).toFixed(2)}%, joined ${(jWorst * 100).toFixed(2)}%`)
+
+    // buffer = array for rect cells (aspect channel)
+    const rl: Layer[] = [{ field: lvl, lattice: [1, 3], sizeAxis: 'y', join: true, tone: 'idle' }, { field: (u, v) => lvl(v, u) * .75, lattice: [2, 3], origin: [0, 1], tone: 'mid' }]
+    const ra = sampleLayers(rl, { cols: 24, rows: 24, pitch: P }, style, dot480), rb = toDots(sampleLayersInto(rl, { cols: 24, rows: 24, pitch: P }, style, dot480, createDotBuffer(16)))
+    const fa = ra.map(d => key({ ...d, x: Math.fround(d.x), y: Math.fround(d.y), r: Math.fround(d.r), opacity: Math.fround(d.opacity), aspect: d.aspect === undefined ? undefined : Math.fround(d.aspect) })).sort(), fb = rb.map(key).sort()
+    assert('squares: rect buffer = array (the aspect channel survives toDots; Float32)', fa.length === fb.length && fa.every((k, i) => k === fb[i]) && ra.some(d => d.aspect !== undefined), `${ra.length} dots`)
+
+    // SVG: rect defs by aspect; Canvas: one sub-path per rect cell
+    const svg = renderSVG(ra, 54, 54)
+    assert('squares: rect svg (rect cells drawn through the squares SVG with their own defs)', ra.filter(d => d.aspect !== undefined && d.join === undefined).length > 0 && /<path id="q/.test(svg))
+
+    // teletext
+    const chars = new Set<string>()
+    let rt = 0
+    for (let b = 0; b < 64; b++) { const c = sextantChar(b); chars.add(c); if (sextantBits(c) === b) rt++ }
+    assert('squares: sextant map (64 ↔ 64: distinct characters, U+1FB00…1FB3B plus space, ▌, ▐, █; round trip)', chars.size === 64 && rt === 64 && sextantChar(1) === '\u{1FB00}' && sextantChar(62) === '\u{1FB3B}', `${chars.size} distinct, ${rt} round trip`)
+    const page = (sep: boolean): (TtCell | null)[][] => [[{ sextant: 63, fg: 'idle', sep }, { sextant: 63, fg: 'idle', sep }]]
+    const tt = (sep: boolean) => sampleLayers(teletextLayers(page(sep), { grid: { cols: 24, rows: 18, pitch: P }, cols: 2, rows: 1, origin: [0, 0], cell: [6, 9], mode: 'contiguous' }), { cols: 24, rows: 18, pitch: P }, style, dot480)
+    const con = tt(false), sepd = tt(true)
+    assert('squares: teletext contiguous fuses (2 adjacent full-mosaic cells give one joined component; separated stays spaced)',
+      con.length === 12 && con.every(d => d.join !== undefined) && components(con, 3 * P) === 1 && con.filter(d => d.join === ALL_FULL).length === 2 && quadrant(con.find(d => Math.abs(d.x - 2.5 * 3 * P) < 1e-9 && Math.abs(d.y - .5 * 3 * P) < 1e-9)!.join!, 1) === EDGE_H
+      && sepd.length === 12 && sepd.every(d => d.join === undefined), `${con.length} sub-cells, ${components(con, 3 * P)} component(s)`)
+
+    // the line card: every pair of horizontally adjacent lit cells of a line is joined (one stroke per run)
+    const ln = sampleCard(widgetById('sq-lines')!, 0).filter(d => d.aspect !== undefined && d.join !== undefined && d.color === dot480.dotIdle)
+    let breaks = 0
+    for (const d of ln) { const e = ln.find(x => close(x.y, d.y) && close(x.x, d.x + P)); if (e && quadrant(d.join!, 1) !== EDGE_H) breaks++ }
+    assert('squares: line continuity (sq-lines: every equal-row neighbour pair of a line is joined, across levels)', breaks === 0 && ln.length > 1000, `${ln.length} line cells, ${breaks} breaks`)
+  }
+
   // ── Q1.9–Q1.11 the board ───────────────────────────────────────────────────────────────────────────
   {
     // Tetris sim
@@ -277,7 +373,11 @@ export function squaresChecks(assert: Assert): void {
     // the cards
     const lit = squaresBoard.map(p => { const d = sampleCard(p, 0); return [p.id, d.filter(x => x.opacity > 0).length, d.filter(x => x.join !== undefined).length] as const })
     assert('squares: t=0 picture (every card is a finished picture at t = 0; the three join cards join)', lit.every(([id, n, j]) => n > 500 && (id === 'sq-gameboy' || j > 10)), lit.map(([id, n, j]) => `${id} ${n}/${j}j`).join(', '))
-    const pure = squaresBoard.every(p => { const x = sampleCard(p, 7.3).map(key).join(), _ = sampleCard(p, 2.1), y = sampleCard(p, 7.3).map(key).join(); return x === y && !!_ })
+    // (under a frozen wall clock: the LCD and teletext headers read the time)
+    const RealNow = Date
+    freezeWallClock()
+    let pure: boolean
+    try { pure = squaresBoard.every(p => { const x = sampleCard(p, 7.3).map(key).join(), _ = sampleCard(p, 2.1), y = sampleCard(p, 7.3).map(key).join(); return x === y && !!_ }) } finally { globalThis.Date = RealNow }
     assert('squares: pure in t (a frame is a function of t: the same t samples the same dots after other frames)', pure)
     // the blob's accent: at most one joined red component per frame over t ∈ 0:20:0.5
     let worstComp = 0, withNeck = 0
@@ -287,9 +387,11 @@ export function squaresChecks(assert: Assert): void {
     }
     assert('squares: blob accent (≤ 1 joined red component per frame over t ∈ 0:20:0.5)', worstComp <= 1 && withNeck > 0, `max ${worstComp}, neck in ${withNeck}/41 frames`)
     // accents: one red element per card frame (the falling piece, the newest split's 4 quads, the neck, the colon)
-    const PITCH: Record<string, number> = { 'sq-tetris': 6, 'sq-quads': 2, 'sq-blob': 3, 'sq-gameboy': 2 }
-    const reds = squaresBoard.map(p => [p.id, [0, 1.3, 5.7].map(t => components(sampleCard(p, t).filter(x => x.color === dot480.dotActive), PITCH[p.id] * 2.25))] as const)
-    assert('squares: one accent per card (the red is one live element: ≤ 1 connected piece, 2 for the LCD colon dots)', reds.every(([id, n]) => n.every(x => x <= (id === 'sq-gameboy' ? 2 : 1))), reds.map(([id, n]) => `${id} ${n.join('/')}`).join(', '))
+    // (teletext: the red is the header's two seconds digits: every red dot sits in that 2-character box)
+    const PITCH: Record<string, number> = { 'sq-tetris': 6, 'sq-quads': 2, 'sq-blob': 3, 'sq-gameboy': 2, 'sq-teletext': 1, 'sq-lines': 1 }
+    const ALLOW: Record<string, number> = { 'sq-gameboy': 2 }
+    const reds = squaresBoard.map(p => [p.id, [0, 1.3, 5.7].map(t => { const r = sampleCard(p, t).filter(x => x.color === dot480.dotActive); return p.id === 'sq-teletext' ? (r.length && r.every(d => d.x > 132 * 2.25 && d.y < 9 * 2.25) ? 1 : 99) : components(r, PITCH[p.id] * 2.25) })] as const)
+    assert('squares: one accent per card (the red is one live element: ≤ 1 connected piece; 2 for the LCD colon dots; the teletext seconds digits)', reds.every(([id, n]) => n.every(x => x <= (ALLOW[id] ?? 1))), reds.map(([id, n]) => `${id} ${n.join('/')}`).join(', '))
     // ink: ≤ 1.15 × the median of the liked reference cards (level-03, afterlight, mosaic, components)
     // (deviation from Q-squares §2.5: the median of the liked cards is dominated by the sparse components board, so the
     // gate is the inkiest liked full-frame card, the afterlight face; the median ratio is printed alongside)
@@ -329,6 +431,15 @@ export function squaresChecks(assert: Assert): void {
   }
 }
 
+/** A cubic Bézier flattened to 16 line segments into a recorder (the rect outline's soft shapes). */
+function flatten(rec: { cmds: unknown[]; lineTo(x: number, y: number): void }, ax: number, ay: number, bx: number, by: number, x: number, y: number) {
+  const last = rec.cmds[rec.cmds.length - 1] as [string, number, number] | undefined, ord = rec.cmds.slice().reverse().find(c => (c as string[])[0] === 'M' || (c as string[])[0] === 'L') as [string, number, number]
+  const [x0, y0] = last && (last[0] === 'M' || last[0] === 'L') ? [last[1], last[2]] : [ord[1], ord[2]]
+  for (let i = 1; i <= 16; i++) {
+    const t = i / 16, m = 1 - t
+    rec.lineTo(m * m * m * x0 + 3 * m * m * t * ax + 3 * m * t * t * bx + t * t * t * x, m * m * m * y0 + 3 * m * m * t * ay + 3 * m * t * t * by + t * t * t * y)
+  }
+}
 /** Path sink that only counts commands (headless Canvas path). */
 class NullPath {
   count = () => {}

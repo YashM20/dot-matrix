@@ -8,15 +8,23 @@
  * 2. Perf: on the `--perf` board, the stage's own JS ms per card frame (frame copy + render, from the page's
  *    `__skinPerf` probe) and the main-thread busy ms per 12 fps tick (CPU profile) per skin vs OLED.
  * 3. Console errors / exceptions are listed. Needs the dev server running; Chrome from $CHROME or the usual paths.
+ *
+ *   npx tsx scripts/skins-browser.ts --fidelity   # no server: the lcd and grout stages (squares Q2) on a synthetic card
+ *
+ *    lcd: the gutter is the paper (± 20/255), an unlit pixel a touch darker, white → ink, the accent keeps its hue (± 6°),
+ *         a step reaches 63% (± 8%) after τ and the stage stops asking for frames once settled;
+ *    grout: the grout is the stage's grout colour (± 2/255), unlit tiles sit above it, the accent keeps its hue (± 6°).
+ *    Exit 1 when one fails; PNGs in .snapshots/c7/fidelity-*.png.
  */
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const arg = (k: string, d: string) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d }
 const URL0 = arg('url', 'http://localhost:5204'), BOARDS = arg('boards', 'mosaic,components,levels').split(','), PERF = arg('perf', 'mosaic'), SECS = +arg('secs', '4')
-const ALL = ['oled', 'crt', 'vfd', 'led', 'eink', 'flipdisc', 'nixie']
+const ALL = ['oled', 'crt', 'vfd', 'led', 'eink', 'flipdisc', 'nixie', 'lcd', 'grout']
 const SKINS = arg('skins', 'all') === 'all' ? ALL : arg('skins', '').split(',')
 const OUT = join(import.meta.dirname, '../.snapshots/c7')
 mkdirSync(OUT, { recursive: true })
@@ -53,6 +61,32 @@ const settled = async () => {
 }
 await cdp('Runtime.enable'); await cdp('Page.enable'); await cdp('Profiler.enable')
 await cdp('Emulation.setDeviceMetricsOverride', { width: 1400, height: 1000, deviceScaleFactor: 1, mobile: false })
+
+// --fidelity: the lcd / grout stages on a synthetic card (esbuild page, file://), measured in pixels
+if (process.argv.includes('--fidelity')) {
+  execFileSync('npx', ['esbuild', 'scripts/lib/skins-page.ts', '--bundle', '--format=iife', '--platform=browser', '--target=es2022', `--outfile=${OUT}/skins-page.js`, '--log-level=warning'], { stdio: 'inherit', shell: true })
+  const html = join(OUT, 'skins-page.html')
+  writeFileSync(html, `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0"><script>${readFileSync(join(OUT, 'skins-page.js'), 'utf8').replace(/<\/script/gi, '<\\/script')}</script></body></html>`)
+  await cdp('Page.navigate', { url: pathToFileURL(html).href })
+  for (let i = 0; i < 80 && !(await evaluate<boolean>('!!window.SK').catch(() => false)); i++) await sleep(100)
+  let fail = 0
+  const ok = (name: string, cond: boolean, detail: string) => { if (!cond) fail++; console.log(`${cond ? '✓' : '✗'} ${name} — ${detail}`) }
+  const near = (a: number[], b: number[], d: number) => a.every((v, i) => Math.abs(v - b[i]) <= d)
+  const hd = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b))
+  const L = (c: number[]) => .2126 * c[0] + .7152 * c[1] + .0722 * c[2]
+  const l = await evaluate<{ gutter: number[]; unlit: number[]; white: number[]; red: number[]; paper: number[]; ink: number[]; frac: number; busy: boolean; settled: boolean; redHue: number; accentHue: number }>('SK.lcd()')
+  ok('skins-browser: lcd (gutter = paper, unlit pixel darker, white → ink, accent hue kept, 63% after τ, settles)',
+    near(l.gutter, l.paper, 20) && L(l.unlit) < L(l.gutter) && near(l.white, l.ink, 24) && hd(l.redHue, l.accentHue) <= 6 && Math.abs(l.frac - (1 - Math.exp(-1))) <= .08 && l.busy && l.settled,
+    `gutter ${l.gutter} (paper ${l.paper.map(Math.round)}), unlit ${l.unlit}, white ${l.white} (ink ${l.ink.map(Math.round)}), accent ${l.red} hue ${l.redHue.toFixed(1)}°/${l.accentHue.toFixed(1)}°, step ${(l.frac * 100).toFixed(1)}% at τ`)
+  const g = await evaluate<{ grout: number[]; want: number[]; tile: number[]; white: number[]; red: number[]; busy0: boolean; redHue: number; accentHue: number }>('SK.grout()')
+  ok('skins-browser: grout (grout = bg ± 2/255, unlit tiles above it, accent hue kept)', near(g.grout, g.want, 2) && L(g.tile) > L(g.grout) && L(g.white) > 200 && hd(g.redHue, g.accentHue) <= 6,
+    `grout ${g.grout} (want ${g.want}), tile ${g.tile}, white ${g.white}, accent ${g.red} hue ${g.redHue.toFixed(1)}°/${g.accentHue.toFixed(1)}°`)
+  for (const skin of ['lcd', 'grout']) { const d = await evaluate<string>(`SK.shot(${JSON.stringify(skin)})`); writeFileSync(join(OUT, `fidelity-${skin}.png`), Buffer.from(d.split(',')[1], 'base64')) }
+  for (const m of logs) console.log('  ' + m)
+  ws.close(); proc.kill(); await sleep(300)
+  try { rmSync(profile, { recursive: true, force: true }) } catch { /* chrome still holds it */ }
+  process.exit(fail ? 1 : 0)
+}
 
 // debug: `--page '?board=mosaic&skin=eink' --wait 4000 --eval '<expr>' [--shot name]` → prints the value and exits
 const EVAL = arg('eval-file', '') ? readFileSync(arg('eval-file', ''), 'utf8') : arg('eval', ''), PAGE = arg('page', '')

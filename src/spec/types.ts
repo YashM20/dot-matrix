@@ -104,8 +104,12 @@ export interface SitesLayerSpec {
  * `asset` = base64 little-endian Float64 / Float32 / Uint8 (÷255) over `window` (row-major); cells outside are 0.
  * `tones`: base64 Uint8 palette indices per window cell (255 = value-based grey).
  */
-export interface RasterLayerSpec extends Placed {
+export interface RasterLayerSpec extends Omit<Placed, 'lattice'> {
   kind: 'raster'
+  /** As `Placed.lattice`, or `[kx, ky]`: rect cells (squares Q2, `Layer.lattice`; a baked layer only). */
+  lattice?: number | Vec2
+  /** Rect cells: which side the size ramp drives ('x' / 'y': solid bars and line screens, `Layer.sizeAxis`). */
+  sizeAxis?: 'both' | 'x' | 'y'
   grid: { cols: number; rows: number }
   window?: Window
   format: 'f64' | 'f32' | 'u8'
