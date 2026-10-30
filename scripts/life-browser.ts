@@ -7,6 +7,11 @@
  *    pristine; a tap drops pellets; a 300 ms hold engages the card (lure) and the page does not scroll while engaged;
  *  - L2: each ecosystem card (jelly, slime, fireflies, murmur, terrarium) paints, a click forks its live world, and
  *    its frame at 4× CPU throttle is ≤ 16 ms (`__pondBoard`, src/widgets/boards/pond/index.ts);
+ *  - L3.5, on all six cards at 375 and 390 px (touch, coarse pointer): each card draws at F0.10's phone tier
+ *    (`cardFps(fps, 'phone')`, counted draws over 2 s), a vertical swipe that starts on it scrolls ≥ 150 px with its
+ *    world pristine, a tap acts (the world forks live) and a 300 ms hold engages it;
+ *  - L3.5 reduced motion (390 px, `prefers-reduced-motion: reduce`): no card's pixels change over 2 s or after a tap,
+ *    and every world stays pristine;
  *  - screenshots (dark and light_signal) into `<out>` (default .snapshots/l1).
  * Needs dist/: `npx vite build`, then `npx tsx scripts/life-browser.ts [outDir]` (it runs `vite preview` itself).
  * Never hangs: every CDP call has a timeout (scripts/lib/cdp.ts), the pages and the preview server close in `finally`,
@@ -16,6 +21,7 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { findChrome, launch, serveDist, sleep, type Page } from './lib/cdp'
 import { lifeSnapshot } from './life'
+import { cardFps } from '../src/widgets/fps'
 
 const out = process.argv[2] ?? join('.snapshots', 'l1')
 mkdirSync(out, { recursive: true })
@@ -26,7 +32,7 @@ const server = await serveDist(Number(process.env.PREVIEW_PORT) || 4321)
 const pages = new Set<Page>()
 const open = async (w: number, h: number) => { const p = await launch(w, h); pages.add(p); return p }
 const closeAll = async () => { for (const p of pages) await p.close().catch(() => {}); pages.clear(); server.stop() }
-const limit = (Number(process.env.LIFE_BROWSER_TIMEOUT_S) || 600) * 1000
+const limit = (Number(process.env.LIFE_BROWSER_TIMEOUT_S) || 1200) * 1000
 const t0 = Date.now()
 let step = 'start'
 /** Name the step the watchdog would report, with the time it started. */
@@ -148,6 +154,101 @@ try {
     await page.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
     check('life-browser: a 300 ms hold engages the card (lure) and the page does not scroll during the engaged drag', engaged && lure === 1 && still < 2, `engaged ${engaged}, lure ${lure}, scrolled ${still.toFixed(0)} px`)
     check('life-browser: no uncaught errors (touch)', !page.logs.filter(l => !/main thread/.test(l)).length, page.logs.join('; '))
+    await page.close(); pages.delete(page)
+  }
+  // ── L3.5: all six cards on a phone, at 375 and 390 px ──
+  const IDS = ['pond-koi', 'pond-jelly', 'pond-slime', 'pond-fireflies', 'pond-murmur', 'pond-terrarium']
+  const elOf = (id: string) => `document.querySelector('[data-card-id="${id}"]')`
+  const rectOfEl = (id: string) => `(() => { const r = ${elOf(id)}.querySelector('canvas,svg').getBoundingClientRect(); return [r.x, r.y, r.width, r.height] })()`
+  const phone = async (width: number, reduce = false) => {
+    const page = await open(width, 844)
+    await page.cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__POND_PROBE__ = true' })
+    await page.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 })
+    await page.cdp('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 2, mobile: true })
+    if (reduce) await page.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })
+    await page.cdp('Page.navigate', { url: `${server.url}pond/?probe=1` })
+    const ok = await page.waitFor(`!!globalThis.__pondBoard && !!${card}?.querySelector('canvas,svg')`, READY_MS)
+    await page.js(`(() => {
+      const room = document.createElement('div'); room.style.height = innerHeight + 'px'; document.body.append(room)
+      globalThis.__swipe = {}
+      addEventListener('touchstart', () => { __swipe.start ??= performance.now() }, { capture: true, passive: true })
+      addEventListener('touchmove', () => { __swipe.move ??= performance.now() }, { capture: true, passive: true })
+    })()`)
+    return { page, ok }
+  }
+  for (const width of [375, 390]) {
+    at(`phone ${width}: load`)
+    const { page, ok } = await phone(width)
+    const coarse = await page.js<boolean>(`matchMedia('(pointer: coarse)').matches`)
+    check(`life-browser: /pond/ paints at ${width} px (coarse pointer ${coarse})`, ok, page.logs.join('; '))
+    const swipeBad: string[] = [], tapBad: string[] = [], holdBad: string[] = [], fpsBad: string[] = [], rates: string[] = []
+    // the phone tier first, on the untouched page: draws counted over 2 s with each card on screen (input makes a
+    // card draw on the next animation frame as well, so this runs before any card is touched); one re-count if over
+    for (const id of IDS) {
+      at(`phone ${width}: ${id} fps`)
+      const want = cardFps((await page.js<number>(`__pondBoard.fps('${id}')`)) ?? 12, 'phone')
+      await page.js(`${elOf(id)}.scrollIntoView({ block: 'center' })`); await sleep(900)
+      let rate = Infinity
+      for (let k = 0; k < 2 && !(rate <= want * 1.15 + 1); k++) {
+        const d0 = await page.js<number>(`__pondBoard.draws('${id}')`); await sleep(2000)
+        rate = Math.min(rate, ((await page.js<number>(`__pondBoard.draws('${id}')`)) - d0) / 2)
+      }
+      rates.push(`${id.slice(5)} ${rate.toFixed(1)}/${want}`)
+      if (!(rate <= want * 1.15 + 1 && rate >= 3)) fpsBad.push(`${id} ${rate.toFixed(1)} fps (tier ${want})`)
+    }
+    for (const id of IDS) {
+      at(`phone ${width}: ${id}`)
+      const el = elOf(id)
+      // the swipe (a try whose first move came after the hold time was a hold by the policy: retried, as above)
+      let res = { scrolled: 0, gap: Infinity, mode: '' }
+      for (let tries = 0; tries < 3; tries++) {
+        await page.js(`__swipe.start = undefined; __swipe.move = undefined; ${el}.scrollIntoView({ block: 'start' }); window.scrollBy(0, -40)`); await sleep(700)
+        const [x, y, w, h] = await page.js<number[]>(rectOfEl(id)), y0 = await page.js<number>('scrollY')
+        await page.touch(Array.from({ length: 24 }, (_, i) => [[x + w * .5, Math.min(y + h * .85, 830) - i * 14]]))
+        await sleep(500)
+        const tm = await page.js<{ start?: number; move?: number }>('__swipe')
+        res = { scrolled: (await page.js<number>('scrollY')) - y0, gap: (tm.move ?? Infinity) - (tm.start ?? 0), mode: await page.js<string>(`__pondBoard.mode('${id}')`) }
+        if (res.gap < 300) break
+      }
+      if (!(res.gap < 300 && res.scrolled >= 150 && res.mode === 'pristine')) swipeBad.push(`${id} ${res.scrolled.toFixed(0)} px ${res.mode} (first move ${res.gap.toFixed(0)} ms)`)
+      // a tap acts
+      await page.js(`${el}.scrollIntoView({ block: 'center' })`); await sleep(600)
+      const [x, y, w, h] = await page.js<number[]>(rectOfEl(id))
+      await page.tap(x + w * .5, y + h * .55)
+      if (!(await page.waitFor(`__pondBoard.mode('${id}') !== 'pristine'`, 2500))) tapBad.push(id)
+      // a 300 ms hold engages
+      await page.cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: x + w * .4, y: y + h * .5 }] })
+      await sleep(450)
+      if (!(await page.js<boolean>(`${el}.classList.contains('dot-card--engaged') || !!${el}.closest('[data-engaged]')`))) holdBad.push(id)
+      await page.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] })
+      await sleep(200)
+    }
+    check(`life-browser: ${width} px: each pond card draws at F0.10's phone tier (draws/s / tier)`, !fpsBad.length, fpsBad.join('; ') || rates.join(', '))
+    check(`life-browser: ${width} px: on all 6 cards a vertical swipe scrolls ≥ 150 px with the world pristine`, !swipeBad.length, swipeBad.join('; '))
+    check(`life-browser: ${width} px: on all 6 cards a tap acts (the world forks live)`, !tapBad.length, tapBad.join(', '))
+    check(`life-browser: ${width} px: on all 6 cards a 300 ms hold engages the card`, !holdBad.length, holdBad.join(', '))
+    check(`life-browser: no uncaught errors (${width} px)`, !page.logs.filter(l => !/main thread/.test(l)).length, page.logs.join('; '))
+    await page.close(); pages.delete(page)
+  }
+  // ── L3.5 reduced motion: nothing moves, a tap reaches no world ──
+  {
+    at('reduced motion')
+    const { page, ok } = await phone(390, true)
+    const pixels = (id: string) => page.js<string>(`(() => {
+      const c = ${elOf(id)}.querySelector('canvas'); if (!c) return ${elOf(id)}.querySelector('svg').innerHTML
+      const s = c.toDataURL(); let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619) >>> 0 } return h.toString(16)
+    })()`)
+    const bad: string[] = []
+    for (const id of IDS) {
+      await page.js(`${elOf(id)}.scrollIntoView({ block: 'center' })`); await sleep(900)
+      const a = await pixels(id); await sleep(2000)
+      const b = await pixels(id)
+      const [x, y, w, h] = await page.js<number[]>(rectOfEl(id))
+      await page.tap(x + w * .5, y + h * .55); await sleep(1000)
+      const c = await pixels(id), mode = await page.js<string>(`__pondBoard.mode('${id}')`)
+      if (a !== b || b !== c || mode !== 'pristine') bad.push(`${id}${a !== b ? ' moved' : ''}${b !== c ? ' tap changed it' : ''}${mode !== 'pristine' ? ` ${mode}` : ''}`)
+    }
+    check('life-browser: reduced motion: no pond card changes over 2 s or after a tap, every world pristine (390 px)', ok && !bad.length, bad.join('; '))
     await page.close(); pages.delete(page)
   }
 } catch (e) {

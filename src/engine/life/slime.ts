@@ -7,8 +7,9 @@
 import { createWorld, type StepInput, type World } from '../physics/world'
 import { createPhysarum, physarumInit, physarumStep, type Physarum } from './agents'
 import { phaseSteps } from './pond'
-import { pressDiscrete, pressInit, pressStep, PRESS_SLOTS, PRESS_TAP, pressAt, seamBlend } from './loop'
-import { clearTiles, EDGE3, edgeOfGradient, putGlyph, RAMP3, rampGlyph, T_FAINT, T_IDLE, T_MID, T_VALUE, type TileGrid, type TileRaster } from './glyphTiles'
+import { pressDiscrete, pressInit, pressStep, PRESS_HOLD, PRESS_SLOTS, PRESS_TAP, pressAt, seamBlend } from './loop'
+import { stbn } from '../halftone/mask'
+import { clearTiles, EDGE3, edgeOfGradient, glyphOf, putGlyph, RAMP3, rampGlyph, T_FAINT, T_IDLE, T_MID, T_VALUE, type TileGrid, type TileRaster } from './glyphTiles'
 
 export const SLIME_DT = 1 / 15
 /** Trail lattice: 48 × 44 cells of 3 card cells from card (0, 11). */
@@ -20,6 +21,12 @@ export const SLIME_FOODS = 8
  * Food deposits 60 a step within 1.2 lattice cells (the plan's 10 was weaker than the agents' own trail).
  */
 export const SLIME_AGENTS = 600, SLIME_FOOD_DEPOSIT = 60, SLIME_FOOD_R = 1.2
+/**
+ * L3.7: a held press is salt. Every step it clears the trail within SALT_R lattice cells of the finger (physarum's
+ * `repel`), so the agents, which only follow trail, turn away and the network re-routes around it. The plan's 10
+ * cells were for the lattice-2 grid; 5 lattice-3 cells (15 card cells) is about the same reach on the card.
+ */
+export const SALT_R = 5
 export interface SlimeSpec {
   seed: number; tiles: TileGrid
   /** Base foods (card cells), on from the start. */
@@ -64,7 +71,7 @@ export function createSlime(spec: SlimeSpec): Slime {
   function step(s: Float32Array, n: number, inp: StepInput) {
     const ph = phaseSteps(n, start, len)
     if (spec.extra) { if (ph === xOn) s[FOOD + 3 * XS + 2] = 1; else if (ph === xOff) s[FOOD + 3 * XS + 2] = 0 }
-    const tap = pressStep(s, G, inp.pointers[0], dt) === PRESS_TAP
+    const press = pressStep(s, G, inp.pointers[0], dt), tap = press === PRESS_TAP
     if (tap || inp.kick) {
       const [px, py] = tap ? pressAt(s, G) : [72, 77]
       let near = -1, free = -1, nd = 8 * 8
@@ -79,8 +86,11 @@ export function createSlime(spec: SlimeSpec): Slime {
     }
     let m = 0
     for (let k = 0; k < SLIME_FOODS; k++) { const o = FOOD + 3 * k; if (s[o + 2] >= .5) { foodList[m++] = slimeLx(s[o]); foodList[m++] = slimeLy(s[o + 1]); foodList[m++] = SLIME_FOOD_R } }
-    physarumStep(phys, s, n, foodList.subarray(0, m), SLIME_FOOD_DEPOSIT)
+    let repel: [number, number, number] | undefined
+    if (press === PRESS_HOLD) { const [px, py] = pressAt(s, G); salt[0] = slimeLx(px); salt[1] = slimeLy(py); repel = salt }
+    physarumStep(phys, s, n, foodList.subarray(0, m), SLIME_FOOD_DEPOSIT, repel)
   }
+  const salt: [number, number, number] = [0, 0, SALT_R]
   // agent headings and the food switches are discrete; positions and the trail lerp
   const discrete: number[] = [...pressDiscrete(G)]
   for (let i = 0; i < phys.agents; i++) discrete.push(phys.AH + i)
@@ -100,6 +110,11 @@ export function slimeFoods(p: Slime, s: Float32Array): FoodView[] {
   for (let k = 0; k < SLIME_FOODS; k++) { const o = p.layout.FOOD + 3 * k; out.push({ x: s[o], y: s[o + 1], on: s[o + 2] >= .5 }) }
   return out
 }
+/** The salt (card cells) while a press is held, else undefined (the card passes it to `drawSlime`). */
+export function slimeSalt(p: Slime, s: Float32Array): [number, number] | undefined {
+  const G = p.layout.G
+  return s[G + 3] > .5 ? [s[G + 1], s[G + 2]] : undefined
+}
 /**
  * Display level of a trail value: a saturating curve in place of the plan's log(1 + T)/log(41) (no log in a deterministic
  * dir): T/(T + 20)·1.5, clamped to 1 (T = 5 → .3, 20 → .75, 40 → 1).
@@ -107,6 +122,7 @@ export function slimeFoods(p: Slime, s: Float32Array): FoodView[] {
 export const slimeLevel = (T: number) => { const v = T > 0 ? (1.5 * T) / (T + 20) : 0; return v < 1 ? v : 1 }
 
 const sub = new Float32Array(16)
+const PLUS = glyphOf(EDGE3, '+'), DOT = glyphOf(EDGE3, '·')
 /** The trail as display levels, filled once per frame by drawSlime. */
 const lv = new Float32Array(SLIME_W * SLIME_H)
 /** Display level at a card cell (bilinear on the level grid `lv`). */
@@ -124,9 +140,17 @@ function levelAt(x: number, y: number): number {
  * dark; a structure tensor over the 3 × 3 lattice cells around the tile centre gives the vein direction, and
  * coherence > .4 draws a line along it, else a density glyph. Tones by level: faint < .35 ≤ mid < .6 ≤ idle < .85 ≤ value.
  */
-export function drawSlime(p: Slime, s: Float32Array, r: TileRaster): void {
+export function drawSlime(p: Slime, s: Float32Array, r: TileRaster, salt?: [number, number]): void {
   const { cols, rows, pitch, ox, oy } = p.spec.tiles
   clearTiles(r)
+  // salt grains on the bare agar under a held press: a fixed blue-noise scatter of `+` and `·` in value
+  if (salt) {
+    const R = SALT_R * SLIME_PITCH
+    for (let ty = 0; ty < rows; ty++) for (let tx = 0; tx < cols; tx++) {
+      const dx = ox + tx * pitch + 1.5 - salt[0], dy = oy + ty * pitch + 1.5 - salt[1], th = stbn(tx, ty, 3)
+      if (dx * dx + dy * dy < R * R && th < .45) putGlyph(r, tx, ty, th < .15 ? PLUS : DOT, T_VALUE, .8)
+    }
+  }
   for (let i = 0; i < SLIME_W * SLIME_H; i++) lv[i] = slimeLevel(s[i])
   for (let ty = 0; ty < rows; ty++) for (let tx = 0; tx < cols; tx++) {
     let mean = 0
@@ -142,6 +166,7 @@ export function drawSlime(p: Slime, s: Float32Array, r: TileRaster): void {
       const gx = lv[y * SLIME_W + x + 1] - lv[y * SLIME_W + x - 1], gy = lv[(y + 1) * SLIME_W + x] - lv[(y - 1) * SLIME_W + x]
       jxx += gx * gx; jxy += gx * gy; jyy += gy * gy
     }
+    if (salt) { const dx = ox + tx * pitch + 1.5 - salt[0], dy = oy + ty * pitch + 1.5 - salt[1], R = SALT_R * SLIME_PITCH; if (dx * dx + dy * dy < R * R) continue }
     const tr = jxx + jyy, dd = Math.sqrt((jxx - jyy) * (jxx - jyy) + 4 * jxy * jxy), coh = tr > 1e-9 ? dd / tr : 0
     const tone = mean < .35 ? T_FAINT : mean < .6 ? T_MID : mean < .85 ? T_IDLE : T_VALUE
     const value = mean < .35 ? .6 : mean < .85 ? .8 : 1

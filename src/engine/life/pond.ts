@@ -15,13 +15,14 @@
  */
 import { createWorld, type StepInput, type World } from '../physics/world'
 import { curl2, dcos, dsin, fbm2, ihash, noise2, rngFor, TAU, voronoi2 } from '../noise'
-import { createRipple, rippleAdd, rippleGrad, rippleSplat, rippleStep, type Ripple } from './ripple'
+import { createRipple, rippleAdd, rippleGrad, rippleSplat, rippleStep, rippleTilt, type Ripple } from './ripple'
 import { chainFollow, chainInit, createChain, type Chain } from './chain'
 import { bodyRaster, createBodyRaster, koiPattern, markingAt, MARK_RED, MARK_SUMI, PART_BODY, profileAt, tailBeatHz, type BodySpec, type KoiKind } from './body'
 import { align, arrive, contain, CSTART, integrate, separate, startle, turnCap, wander, type Agent } from './steer'
+import { moonAcross, nightness, nightTile } from './sky'
 import {
-  clearTiles, EDGE3, edgeOfGradient, edgeOfTangent, flickerOn, glyphOf, matchTile, putBig, putGlyph, RAMP3, rampGlyph, SHAPE3,
-  T_ACTIVE, T_FAINT, T_IDLE, T_MID, T_VALUE, type TileGrid, type TileRaster,
+  clearTiles, EDGE3, edgeOfGradient, edgeOfTangent, flickerOn, FONT57, glyphOf, matchTile, putBig, putGlyph, RAMP3, rampGlyph, SHAPE3,
+  T_ACTIVE, T_FAINT, T_IDLE, T_MID, T_VALUE, type Glyph, type TileGrid, type TileRaster,
 } from './glyphTiles'
 
 export interface KoiPondSpec {
@@ -71,12 +72,18 @@ const NODES = 20, PELLETS = 18
  * body as stiff as a koi's (a C-start still curls it visibly).
  */
 const BEND = .11
-const KS = 16, SPS = 2 * NODES, PS = 8
-/** Koi slots. */
+const KS = 19, SPS = 2 * NODES, PS = 8
+/** Floats per koi in the state (the checks read slots 5 and 6, phase and beat). */
+export const KOI_SLOTS = KS
+/**
+ * Koi slots. L3 added the circle-back (K_BACK: pellet + 1 while circling back to a missed pellet, −(pellet + 1) once
+ * done with it, 0 none; K_BACKT its time left) and the startle contagion timer (K_CONTAG).
+ */
 const K_HX = 0, K_HY = 1, K_U = 2, K_Z = 3, K_ZT = 4, K_PHASE = 5, K_BEAT = 6, K_MODE = 7, K_LEFT = 8, K_SIGN = 9, K_REFR = 10, K_FOOD = 11, K_HUNGER = 12, K_GULP = 13, K_CURIOUS = 14, K_TURN = 15
+const K_BACK = 16, K_BACKT = 17, K_CONTAG = 18
 export const MODE_CRUISE = 0, MODE_BURST = 1, MODE_GLIDE = 2, MODE_BEND = 3, MODE_ESCAPE = 4
-/** Globals. */
-const G_STILL = 0, G_PRESS = 1, G_PX = 2, G_PY = 3, G_LURE = 4, G_LX = 5, G_LY = 6, G_NEXT = 7, G_WALL = 8
+/** Globals (G_CASC: what is left of the current startle cascade, L3.2). */
+const G_STILL = 0, G_PRESS = 1, G_PX = 2, G_PY = 3, G_LURE = 4, G_LX = 5, G_LY = 6, G_NEXT = 7, G_WALL = 8, G_CASC = 9
 /** Pellet slots and states. */
 const P_X = 0, P_Y = 1, P_H = 2, P_VH = 3, P_STATE = 4, P_AGE = 5, P_VX = 6, P_VY = 7
 export const PEL_OFF = 0, PEL_FALLING = 1, PEL_FLOATING = 2, PEL_EATEN = 3, PEL_SINKING = 4
@@ -98,9 +105,34 @@ const INTERIOR = .6
 const TURN_RADIUS = .9, TURN_RADIUS_WALL = .45
 let lastW = -1, lastCap = TURN_CRUISE
 /** Fixed light for koi shading, normalised (a literal: (−.45, −.55, .70) / 0.99373). */
-const KL = [-.45 / .99373035, -.55 / .99373035, .70 / .99373035] as const
+export const KOI_LIGHT = [-.45 / .99373035, -.55 / .99373035, .70 / .99373035] as const
+const KL = KOI_LIGHT
+/** The light this frame's koi are shaded by (drawKoiPond's `light`, else KOI_LIGHT). */
+let kl: readonly [number, number, number] = KL
 /** Water crest light (screen), ∇h·L > .12 → '='. */
 const WL = [-.6, -.8] as const
+
+// ── L3: feeding, startle and tilt depth ──
+/**
+ * Hunger rises .02/s and a pellet takes .35 off; a koi below .2 is sated and ignores food. The pristine run's first
+ * feed (loop phase 6 s) meets koi at ≥ .36, so they all eat; two or three pellets sate one for about ten seconds.
+ */
+export const HUNGER_RATE = .02, HUNGER_BITE = .35, SATED = .2
+/** A gulp shows as a head 1 cell wider for .3 s: K_GULP decays ×(1 − dt/.5) a step, so it is above .54 for .3 s. */
+export const GULP_SHOW = .54
+/** A missed pellet: circle back once, arriving slowly (max .6 L/s, slowing within 1 L), for at most 3 s. */
+const BACK_U = .6, BACK_SLOW = 1, BACK_T = 3
+/** Startle contagion: a startled koi startles the koi within .5 L of its head 80 ms later (2 steps); a cascade startles at most 3 koi. */
+export const CONTAG_R = .5, CONTAG_S = .08, CASCADE = 3
+/**
+ * A pointer flick startles koi within .9 L at this speed (cells/s). L1 used 90, which an ordinary mouse pass reaches
+ * (a 380 px card is 2.6 px a cell: 90 cells/s is 240 px/s); 200 cells/s (~520 px/s) is a deliberate flick.
+ */
+export const FLICK = 200
+/** Water tilt forcing per step (`rippleTilt`) and the pellets' downhill drift per unit tilt (cells/s). */
+export const TILT_K = .004, TILT_DRIFT = 8
+/** The hover wake's depth by pointer speed: none below 10 cells/s, the L1 depth (.04) at 50, at most .06. */
+const wakeAmp = (speed: number) => -.04 * Math.min(1.5, (speed - 10) / 40)
 
 export function pondLayout(koi: number, tiles: TileGrid): PondLayout {
   const G = 0, KOI = 16, SPINE = KOI + KS * koi, PEL = SPINE + SPS * koi, RIP = PEL + PS * PELLETS
@@ -160,12 +192,38 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
       s[o + P_X] = px; s[o + P_Y] = py; s[o + P_H] = 1; s[o + P_VH] = -rng() * .5; s[o + P_STATE] = PEL_FALLING; s[o + P_AGE] = 0; s[o + P_VX] = 0; s[o + P_VY] = 0
     }
   }
-  function startleKoi(s: Float32Array, i: number, sx: number, sy: number, n: number) {
+  /** C-start koi i away from (sx, sy) unless it is refractory; it passes the startle on 80 ms later (contagion). */
+  function startleKoi(s: Float32Array, i: number, sx: number, sy: number, n: number): boolean {
     const o = KO(i), c = chains[i]
-    if (s[o + K_REFR] > 0) return
+    if (s[o + K_REFR] > 0) return false
     a.x = s[c.X]; a.y = s[c.Y]; a.hx = s[o + K_HX]; a.hy = s[o + K_HY]; a.u = s[o + K_U]
     startle(a, sx, sy, ihash(seed, i, n) / 4294967296, cs)
     s[o + K_MODE] = MODE_BEND; s[o + K_LEFT] = Math.round(CSTART.bend / dt) * dt; s[o + K_SIGN] = cs[2]; s[o + K_TURN] = cs[3]; s[o + K_REFR] = CSTART.refractory
+    s[o + K_CONTAG] = CONTAG_S
+    return true
+  }
+  /** A burst; when the koi is going for food the burst also leaves a tiny ripple at its head (L3.1). */
+  function burst(s: Float32Array, i: number, n: number, food: boolean) {
+    newMode(s, i, MODE_BURST, n)
+    if (food) { const c = chains[i]; rippleSplat(ripple, s, toRx(s[c.X]), toRy(s[c.Y]), -.08, .8) }
+  }
+  /** The contagion pass: each koi whose timer runs out startles the koi within .5 L of its head, while the cascade lasts. */
+  function contagion(s: Float32Array, n: number) {
+    for (let i = 0; i < K; i++) {
+      const o = KO(i)
+      if (!(s[o + K_CONTAG] > 0)) continue
+      s[o + K_CONTAG] -= dt
+      if (s[o + K_CONTAG] > dt * .5) continue
+      s[o + K_CONTAG] = 0
+      const c = chains[i], x = s[c.X], y = s[c.Y], r = CONTAG_R * bodies[i].length
+      for (let j = 0; j < K && s[lay.G + G_CASC] >= 1; j++) {
+        if (j === i) continue
+        const cj = chains[j]
+        let near = false
+        for (let q = 0; q < NODES && !near; q++) { const dx = s[cj.X + q] - x, dy = s[cj.Y + q] - y; near = dx * dx + dy * dy < r * r }
+        if (near && startleKoi(s, j, x, y, n)) s[lay.G + G_CASC] -= 1
+      }
+    }
   }
   function newMode(s: Float32Array, i: number, mode: number, n: number) {
     const o = KO(i), rng = rngFor(seed, i, n)
@@ -181,7 +239,9 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
       if (spec.sdf(px, py) < 0) {
         dropPellets(s, px, py, 5 + Math.floor(3 * (ihash(seed, n, 5) / 4294967296)), 7, n)
         rippleSplat(ripple, s, toRx(px), toRy(py), -.5, 1)
-        for (let i = 0; i < K; i++) { const c = chains[i], dx = s[c.X] - px, dy = s[c.Y] - py, r = .7 * bodies[i].length; if (dx * dx + dy * dy < r * r) startleKoi(s, i, px, py, n) }
+        let hit = 0
+        for (let i = 0; i < K; i++) { const c = chains[i], dx = s[c.X] - px, dy = s[c.Y] - py, r = .7 * bodies[i].length; if (dx * dx + dy * dy < r * r && startleKoi(s, i, px, py, n)) hit++ }
+        if (hit) s[G + G_CASC] = Math.max(0, CASCADE - hit)
       }
     }
     s[G + G_PRESS] = -1; s[G + G_LURE] = 0
@@ -204,10 +264,14 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
       }
       if (p.released && s[G + G_PRESS] >= 0) release(s, n)
       if (!p.down && !p.released) { s[G + G_PRESS] = -1; s[G + G_LURE] = 0 }
-      if (!p.down && ptrIn && ptrSpeed > 10) rippleSplat(ripple, s, toRx(p.x), toRy(p.y), -.04, .7)
-      if (ptrSpeed > 90) for (let i = 0; i < K; i++) {
-        const c = chains[i], dx = s[c.X] - p.x, dy = s[c.Y] - p.y, r = .9 * bodies[i].length
-        if (dx * dx + dy * dy < r * r) startleKoi(s, i, p.x, p.y, n)
+      if (!p.down && ptrIn && ptrSpeed > 10) rippleSplat(ripple, s, toRx(p.x), toRy(p.y), wakeAmp(ptrSpeed), .7)
+      if (ptrSpeed > FLICK) {
+        let hit = 0
+        for (let i = 0; i < K; i++) {
+          const c = chains[i], dx = s[c.X] - p.x, dy = s[c.Y] - p.y, r = .9 * bodies[i].length
+          if (dx * dx + dy * dy < r * r && startleKoi(s, i, p.x, p.y, n)) hit++
+        }
+        if (hit) s[G + G_CASC] = Math.max(0, CASCADE - hit)
       }
       s[G + G_STILL] = ptrIn && !p.down && ptrSpeed < 6 ? s[G + G_STILL] + dt : 0
     } else {
@@ -229,6 +293,9 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
       if (ph >= k.at - 90 && ph < k.at) s[o + K_ZT] = 0
       if (ph === k.at) { rippleSplat(ripple, s, toRx(s[c.X]), toRy(s[c.Y]), -.6, 1); s[o + K_GULP] = 1; s[o + K_ZT] = .3 }
     }
+
+    // ── startle contagion (L3.2) ──
+    contagion(s, n)
 
     // ── steer + integrate ──
     // neighbours: heads (x, y) and (hx, hy, u)
@@ -274,21 +341,40 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
           if (dx * dx + dy * dy < (1.2 * L) ** 2) { others[3 * na] = heads[3 * j]; others[3 * na + 1] = heads[3 * j + 1]; others[3 * na + 2] = heads[3 * j + 2]; na++ }
         }
         align(a, others, na, .15 * L, f)
-        // food: the nearest floating pellet within 2.5 L, in front
-        let food = -1, fd = (2.5 * L) ** 2
-        for (let k = 0; k < PELLETS; k++) {
+        // food (L3.1): a hungry koi takes the nearest floating pellet within 2.5 L, in front; a sated one ignores food.
+        // A koi that loses its pellet behind it circles back for it once, slowly.
+        const hungry = s[o + K_HUNGER] >= SATED, prevFood = s[o + K_FOOD]
+        let food = -1, fd = (2.5 * L) ** 2, back = s[o + K_BACK]
+        if (back > 0) {
+          const k = back - 1
+          s[o + K_BACKT] -= dt
+          if (hungry && s[o + K_BACKT] > 0 && s[lay.PEL + PS * k + P_STATE] === PEL_FLOATING) food = k
+          else { s[o + K_BACK] = -back; back = 0 }
+        }
+        if (food < 0 && hungry) for (let k = 0; k < PELLETS; k++) {
           const po = lay.PEL + PS * k
           if (s[po + P_STATE] !== PEL_FLOATING) continue
           const dx = s[po + P_X] - a.x, dy = s[po + P_Y] - a.y, d = dx * dx + dy * dy
           if (d < fd && (dx * a.hx + dy * a.hy) > -.2 * Math.sqrt(d)) { fd = d; food = k }
         }
+        if (food < 0 && hungry && prevFood >= 0 && s[o + K_BACK] !== -(prevFood + 1)) {
+          const po = lay.PEL + PS * prevFood, dx = s[po + P_X] - a.x, dy = s[po + P_Y] - a.y
+          if (s[po + P_STATE] === PEL_FLOATING && dx * dx + dy * dy < (2.5 * L) ** 2) { food = prevFood; back = prevFood + 1; s[o + K_BACK] = back; s[o + K_BACKT] = BACK_T }
+        }
         s[o + K_FOOD] = food
         if (food >= 0) {
           const po = lay.PEL + PS * food
-          arrive(a, s[po + P_X], s[po + P_Y], BURST_U * L, .3 * L, 1.2 * L, f)
+          if (back > 0) arrive(a, s[po + P_X], s[po + P_Y], BACK_U * L, BACK_SLOW * L, 1.2 * L, f)
+          else arrive(a, s[po + P_X], s[po + P_Y], BURST_U * L, .3 * L, 1.2 * L, f)
           s[o + K_ZT] = Math.min(s[o + K_ZT], .1)
+          // a koi that has just spotted food rushes it
+          if (prevFood < 0 && back <= 0 && (mode === MODE_GLIDE || mode === MODE_CRUISE)) { burst(s, i, n, true); mode = MODE_BURST }
           const dx = s[po + P_X] - a.x, dy = s[po + P_Y] - a.y
-          if (dx * dx + dy * dy < 2.2 * 2.2 + (.05 * L) ** 2 && s[o + K_Z] < .35) { s[po + P_STATE] = PEL_EATEN; s[po + P_AGE] = 0; s[o + K_GULP] = 1; s[o + K_HUNGER] = Math.max(0, s[o + K_HUNGER] - .2); rippleSplat(ripple, s, toRx(s[po + P_X]), toRy(s[po + P_Y]), -.25, .8) }
+          if (dx * dx + dy * dy < 2.2 * 2.2 + (.05 * L) ** 2 && s[o + K_Z] < .35) {
+            s[po + P_STATE] = PEL_EATEN; s[po + P_AGE] = 0; s[o + K_GULP] = 1; s[o + K_HUNGER] = Math.max(0, s[o + K_HUNGER] - HUNGER_BITE)
+            if (back > 0) s[o + K_BACK] = -back
+            rippleSplat(ripple, s, toRx(s[po + P_X]), toRy(s[po + P_Y]), -.25, .8)
+          }
         }
         // curiosity: the two nearest koi orbit a still pointer
         s[o + K_CURIOUS] = curious0 >= 0 && ((curious0 & 0xff) === i + 1 || ((curious0 >> 8) & 0xff) === i + 1) ? 1 : 0
@@ -320,7 +406,7 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
           beat *= 1 - dt / .6
           a.u = Math.max(CRUISE * L, a.u * (1 - dt / 2.2))
           if (a.u <= CRUISE * L * 1.05) beat = Math.max(beat, .3)
-          if (s[o + K_LEFT] <= 0) { newMode(s, i, MODE_BURST, n); mode = MODE_BURST }
+          if (s[o + K_LEFT] <= 0) { burst(s, i, n, food >= 0); mode = MODE_BURST }
         }
         s[o + K_BEAT] = beat
         // curious or lured koi slow down near the point
@@ -345,7 +431,7 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
       s[o + K_PHASE] = phase
       s[o + K_Z] += (s[o + K_ZT] - s[o + K_Z]) * (dt / 2)
       s[o + K_GULP] *= 1 - dt / .5
-      s[o + K_HUNGER] = Math.min(1, s[o + K_HUNGER] + dt / 60)
+      s[o + K_HUNGER] = Math.min(1, s[o + K_HUNGER] + HUNGER_RATE * dt)
     }
 
     // ── pellets ──
@@ -358,7 +444,7 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
         if (s[o + P_H] <= 0) { s[o + P_H] = 0; s[o + P_STATE] = PEL_FLOATING; s[o + P_AGE] = 0; rippleSplat(ripple, s, toRx(s[o + P_X]), toRy(s[o + P_Y]), -.35, .8) }
       } else if (st === PEL_FLOATING) {
         const v = curl2(s[o + P_X] / 40, s[o + P_Y] / 40, .05 * t, seed, cv)
-        s[o + P_VX] = v[0] * 1.5; s[o + P_VY] = v[1] * 1.5
+        s[o + P_VX] = v[0] * 1.5 + inp.gx * TILT_DRIFT; s[o + P_VY] = v[1] * 1.5 + inp.gy * TILT_DRIFT
         const x = s[o + P_X] + s[o + P_VX] * dt, y = s[o + P_Y] + s[o + P_VY] * dt
         if (insideWater(x, y)) { s[o + P_X] = x; s[o + P_Y] = y }
         if (s[o + P_AGE] > 14) { s[o + P_STATE] = PEL_SINKING; s[o + P_AGE] = 0 }
@@ -379,6 +465,8 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
       }
     }
     rippleStep(ripple, s)
+    // tilt (L3.6): the card passes the light hub's (tx, ty) as the world's gravity channel; 0 in the pristine run
+    rippleTilt(ripple, s, inp.gx, inp.gy, TILT_K)
     const fn = lay.fw * lay.fh
     for (let i = 0; i < fn; i++) s[F + i] *= .95
     if ((n & 1) === 0) {
@@ -415,7 +503,7 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
       const ha = ang + Math.PI / 2 + (h(3) - .5) * 1.2, hx = dcos(ha), hy = dsin(ha)
       s[o + K_HX] = hx; s[o + K_HY] = hy; s[o + K_U] = CRUISE * spec.koi[i].length
       s[o + K_Z] = s[o + K_ZT] = .2 + .5 * h(4); s[o + K_PHASE] = TAU * h(5); s[o + K_BEAT] = .3
-      s[o + K_MODE] = MODE_GLIDE; s[o + K_LEFT] = 1 + 2.5 * h(6); s[o + K_FOOD] = -1; s[o + K_SIGN] = 1
+      s[o + K_MODE] = MODE_GLIDE; s[o + K_LEFT] = 1 + 2.5 * h(6); s[o + K_FOOD] = -1; s[o + K_SIGN] = 1; s[o + K_HUNGER] = .25 * h(8)
       chainInit(chains[i], s, x, y, hx, hy)
     }
   }
@@ -423,7 +511,7 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
   // blend: lerp the continuous floats; discrete slots snap at k ≥ .5; headings renormalised, phases on the circle
   const discrete = new Uint8Array(lay.size), phases: number[] = [], headsAt: number[] = []
   for (const g of [G_PRESS, G_LURE, G_NEXT]) discrete[lay.G + g] = 1
-  for (let i = 0; i < K; i++) { const o = KO(i); discrete[o + K_MODE] = discrete[o + K_SIGN] = discrete[o + K_FOOD] = 1; phases.push(o + K_PHASE); headsAt.push(o + K_HX) }
+  for (let i = 0; i < K; i++) { const o = KO(i); discrete[o + K_MODE] = discrete[o + K_SIGN] = discrete[o + K_FOOD] = discrete[o + K_BACK] = 1; phases.push(o + K_PHASE); headsAt.push(o + K_HX) }
   for (let k = 0; k < PELLETS; k++) discrete[lay.PEL + PS * k + P_STATE] = 1
   const isPhase = new Uint8Array(lay.size)
   for (const q of phases) isPhase[q] = 1
@@ -452,24 +540,37 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
   const world = createWorld({
     size: lay.size, dt, lead: spec.lead, period: spec.period, seam: spec.seam,
     every: 120, maxCheckpoints: 16, maxSteps: 2400, idle: 4, heal: 2, maxLiveSteps: 4,
+    // no gravity: the pond reads the input's (gx, gy) as the hub's tilt (tx, ty), exactly 0 at rest and in the pristine run
+    gravity: [0, 0],
     init, step, blend,
   })
   return { world, spec, ripple, chains, markings, bodyStyle: spec.bodyStyle ?? DEFAULT_BODY_STYLE, layout: lay, bank, shore, water, bodies }
 }
 
 // ── read-outs (cards, checks, probes) ───────────────────────────────────────────────────────────────
-export interface KoiView { x: number; y: number; hx: number; hy: number; u: number; z: number; beat: number; phase: number; mode: number; refractory: number; curious: number }
+export interface KoiView {
+  x: number; y: number; hx: number; hy: number; u: number; z: number; beat: number; phase: number; mode: number; refractory: number; curious: number
+  /** L3.1: hunger 0..1, the gulp pulse, the pellet it is after (−1 none) and its circle-back slot (> 0 circling back). */
+  hunger: number; gulp: number; food: number; back: number
+}
 export function koiView(p: KoiPond, s: Float32Array, i: number): KoiView {
   const o = p.layout.KOI + KS * i, c = p.chains[i]
-  return { x: s[c.X], y: s[c.Y], hx: s[o + K_HX], hy: s[o + K_HY], u: s[o + K_U], z: s[o + K_Z], beat: s[o + K_BEAT], phase: s[o + K_PHASE], mode: s[o + K_MODE], refractory: s[o + K_REFR], curious: s[o + K_CURIOUS] }
+  return {
+    x: s[c.X], y: s[c.Y], hx: s[o + K_HX], hy: s[o + K_HY], u: s[o + K_U], z: s[o + K_Z], beat: s[o + K_BEAT], phase: s[o + K_PHASE], mode: s[o + K_MODE], refractory: s[o + K_REFR], curious: s[o + K_CURIOUS],
+    hunger: s[o + K_HUNGER], gulp: s[o + K_GULP], food: s[o + K_FOOD], back: s[o + K_BACK],
+  }
 }
+/** The head bulge (cells) koi i draws with: 1 during the first .3 s of a gulp (L3.1), else 0. */
+export const koiBulge = (p: KoiPond, s: Float32Array, i: number) => (s[p.layout.KOI + KS * i + K_GULP] > GULP_SHOW ? 1 : 0)
+/** Set every koi's hunger (checks: sated koi ignore food). */
+export function setKoiHunger(p: KoiPond, s: Float32Array, v: number): void { for (let i = 0; i < p.spec.koi.length; i++) s[p.layout.KOI + KS * i + K_HUNGER] = v }
 export interface PelletView { x: number; y: number; h: number; state: number; age: number }
 export function pelletViews(p: KoiPond, s: Float32Array): PelletView[] {
   const out: PelletView[] = []
   for (let k = 0; k < PELLETS; k++) { const o = p.layout.PEL + PS * k; if (s[o + P_STATE] !== PEL_OFF) out.push({ x: s[o + P_X], y: s[o + P_Y], h: s[o + P_H], state: s[o + P_STATE], age: s[o + P_AGE] }) }
   return out
 }
-export const pondGlobals = (p: KoiPond, s: Float32Array) => ({ still: s[p.layout.G + G_STILL], press: s[p.layout.G + G_PRESS], lure: s[p.layout.G + G_LURE], lureX: s[p.layout.G + G_LX], lureY: s[p.layout.G + G_LY], wallHits: s[p.layout.G + G_WALL] })
+export const pondGlobals = (p: KoiPond, s: Float32Array) => ({ still: s[p.layout.G + G_STILL], press: s[p.layout.G + G_PRESS], lure: s[p.layout.G + G_LURE], lureX: s[p.layout.G + G_LX], lureY: s[p.layout.G + G_LY], wallHits: s[p.layout.G + G_WALL], cascade: s[p.layout.G + G_CASC] })
 
 // ── drawing ─────────────────────────────────────────────────────────────────────────────────────────
 const body = createBodyRaster()
@@ -484,12 +585,22 @@ const tileOrder: number[] = []
 /** Quantize-friendly value steps: 1 → .8 → .6 → 0 (no dot). */
 const stepDown = (v: number, k: number) => { let x = v >= .95 ? 2 : v >= .75 ? 1 : 0; x -= k; return x >= 2 ? 1 : x === 1 ? .8 : x === 0 ? .6 : 0 }
 
+export interface KoiDrawOpts {
+  /** Unit light for the koi shading (x right, y down, z up; L3.6: the hub's tilt light). Default KOI_LIGHT. */
+  light?: readonly [number, number, number]
+  /** The hub's tilt (tx, ty): lily pads drift 3 cells per unit downhill (render-time). Default none. */
+  tilt?: readonly [number, number]
+}
 /**
- * Draw the scene state at t into `r` (water, foam, shadows, koi, pellets, pads), day/night from `hour`.
- * Values sit on quantize steps (.6, .8, 1); the only accent is the red marking of a koi (`active`, never activeDim).
+ * Draw the scene state at t into `r` (water, foam, shadows, koi, pellets, pads), day/night from `hour` (sky.ts:
+ * night 21–05, ramps at dusk and dawn; by day nothing changes). Values sit on quantize steps (.6, .8, 1); the only
+ * accent is the red marking of a koi (`active`, never activeDim). A raster on another tile grid than the scene's
+ * (L3.4's TYPE grid, `KOI_TYPE_TILES`) is drawn in 5×7 font glyphs by `drawKoiType`.
  */
-export function drawKoiPond(p: KoiPond, s: Float32Array, t: number, hour: number, r: TileRaster): void {
-  const { tiles } = p.spec, { cols, rows, pitch, ox, oy } = tiles, K = p.spec.koi.length, night = hour < 5 || hour >= 20.5
+export function drawKoiPond(p: KoiPond, s: Float32Array, t: number, hour: number, r: TileRaster, opts: KoiDrawOpts = {}): void {
+  const { tiles } = p.spec, { cols, rows, pitch, ox, oy } = tiles, K = p.spec.koi.length, nl = nightness(hour)
+  if (r.grid.pitchY !== undefined || r.grid.cols !== cols || r.grid.rows !== rows || r.grid.pitch !== pitch) { drawKoiType(p, s, t, hour, r, opts); return }
+  kl = opts.light ?? KL
   clearTiles(r)
   // bank
   for (let i = 0; i < cols * rows; i++) if (p.bank[i] >= 0) putGlyph(r, i % cols, (i / cols) | 0, RAMP3.glyphs[p.bank[i]], T_FAINT, .6)
@@ -498,6 +609,7 @@ export function drawKoiPond(p: KoiPond, s: Float32Array, t: number, hour: number
   for (let ty = 0; ty < rows; ty++) for (let tx = 0; tx < cols; tx++) {
     const i = ty * cols + tx
     if (!p.water[i]) continue
+    const night = nightTile(tx, ty, nl)
     if (p.shore[i] >= 0) { putGlyph(r, tx, ty, EDGE3.glyphs[p.shore[i]], night ? T_FAINT : T_MID, .8); continue }
     rippleGrad(p.ripple, s, tx, ty, grad)
     const gx = grad[1], gy = grad[2], gl = Math.sqrt(gx * gx + gy * gy)
@@ -508,8 +620,9 @@ export function drawKoiPond(p: KoiPond, s: Float32Array, t: number, hour: number
     else if (gl >= .025) putGlyph(r, tx, ty, edgeOfGradient(EDGE3, gx, gy), T_FAINT, .6)
     else if (foam > .2) putGlyph(r, tx, ty, COLON, T_FAINT, .6)
     else if (surfaceLine(p.spec.seed, tx, ty, t)) putGlyph(r, tx, ty, edgeOfGradient(EDGE3, sgrad[0], sgrad[1]), T_FAINT, .6)
-    else if (foam > .08 || flickerOn(tx, ty, t, night ? .06 : .035, .2)) putGlyph(r, tx, ty, DOT, T_FAINT, .6)
+    else if (foam > .08 || flickerOn(tx, ty, t, night ? .07 : .035, .2)) putGlyph(r, tx, ty, DOT, T_FAINT, .6)
   }
+  if (nl > 0) moonColumn(p, s, t, hour, nl, r, DASH)
   // koi tile lists (deepest first)
   tileOrder.length = 0
   for (let k = 0; k < K; k++) tileOrder.push(k)
@@ -526,7 +639,7 @@ export function drawKoiPond(p: KoiPond, s: Float32Array, t: number, hour: number
     }
   }
   // bodies
-  for (const k of tileOrder) drawKoi(p, s, k, tilesFor(k), t, r)
+  for (const k of tileOrder) drawKoi(p, s, k, tilesFor(k), t, r, nl)
   // pellets
   for (const pv of pelletViews(p, s)) {
     const tx = Math.floor((pv.x - ox) / pitch), ty = Math.floor((pv.y - oy) / pitch)
@@ -539,7 +652,8 @@ export function drawKoiPond(p: KoiPond, s: Float32Array, t: number, hour: number
   const pads = p.spec.pads ?? []
   for (let i = 0; i < pads.length; i++) {
     const [bx, by, pr] = pads[i], seed = p.spec.seed
-    const cx = bx + 6 * noise2(.03 * t, i, seed), cy = by + 6 * noise2(.03 * t, i + 9, seed)
+    let cx = bx + 6 * noise2(.03 * t, i, seed), cy = by + 6 * noise2(.03 * t, i + 9, seed)
+    if (opts.tilt) { cx += 3 * opts.tilt[0]; cy += 3 * opts.tilt[1] }
     const na = TAU * (ihash(seed, i, 41) / 4294967296), nx = dcos(na), ny = dsin(na)
     const t0x = Math.floor((cx - pr - ox) / pitch), t1x = Math.ceil((cx + pr - ox) / pitch), t0y = Math.floor((cy - pr - oy) / pitch), t1y = Math.ceil((cy + pr - oy) / pitch)
     for (let ty = t0y; ty <= t1y; ty++) for (let tx = t0x; tx <= t1x; tx++) {
@@ -564,12 +678,34 @@ function surfaceLine(seed: number, tx: number, ty: number, t: number): boolean {
   sgrad[0] = (noise2(x + .1, y, seed + 3) - noise2(x - .1, y, seed + 3)) / 4.2; sgrad[1] = (noise2(x, y + .1, seed + 3) - noise2(x, y - .1, seed + 3)) / 2.6
   return true
 }
-const EQ = glyphOf(EDGE3, '='), COLON = glyphOf(EDGE3, ':'), DOT = glyphOf(EDGE3, '·'), O = glyphOf(EDGE3, 'o'), STAR = glyphOf(EDGE3, '*'), PLUS = glyphOf(EDGE3, '+')
+const EQ = glyphOf(EDGE3, '='), COLON = glyphOf(EDGE3, ':'), DOT = glyphOf(EDGE3, '·'), O = glyphOf(EDGE3, 'o'), STAR = glyphOf(EDGE3, '*'), PLUS = glyphOf(EDGE3, '+'), DASH = glyphOf(EDGE3, '-')
+
+/**
+ * The moon's reflection at night (L3.3): a broken vertical column of `-` glyphs in `value` across the water, at the
+ * moon's place on its arc (sky.ts `moonAcross`), each row pushed sideways by a slow wobble and by the water's slope
+ * there (∇h, so ripples bend it). Rows thin out toward the ends; at dusk and dawn the STBN night dither thins it too.
+ * Works on any tile grid of the scene's card (`water` and `shore` are that grid's).
+ */
+function moonColumn(p: KoiPond, s: Float32Array, t: number, hour: number, nl: number, r: TileRaster, dash: Glyph, water = p.water, shore = p.shore, rx?: (tx: number, ty: number) => [number, number]) {
+  const g = r.grid, seed = p.spec.seed, mid = (moonAcross(hour) * 144 - g.ox - (g.pitch - 1) / 2) / g.pitch
+  for (let ty = 0; ty < g.rows; ty++) {
+    const u = ty / (g.rows - 1), gap = noise2(ty * .9, t * 1.1, seed + 12)
+    if (gap < -.3 + 1.1 * Math.abs(u - .45)) continue
+    const at = rx ? rx(Math.round(mid), ty) : [mid, ty] as [number, number]
+    rippleGrad(p.ripple, s, at[0], at[1], grad)
+    const x = Math.round(mid + 1.1 * noise2(ty * .55, t * .45, seed + 11) + (g.pitch === 4 ? 8 : 5) * grad[1])
+    for (let k = 0; k < (gap > .35 && u > .25 && u < .7 ? 2 : 1); k++) {
+      const tx = x + k * (grad[1] >= 0 ? 1 : -1), i = ty * g.cols + tx
+      if (tx < 0 || tx >= g.cols || !water[i] || shore[i] >= 0 || !nightTile(tx, ty, nl)) continue
+      putGlyph(r, tx, ty, dash, T_VALUE, k ? .8 : 1)
+    }
+  }
+}
 
 /** Splat koi k and reduce it to tiles: cover, mean (s, vn), shade and dominant part per tile. */
 function collectTiles(p: KoiPond, s: Float32Array, k: number, T: KoiTiles) {
   const { cols, rows, pitch, ox, oy } = p.spec.tiles, o = p.layout.KOI + KS * k, b = p.bodies[k]
-  bodyRaster(b, p.chains[k], s, s[o + K_PHASE], s[o + K_BEAT], body)
+  bodyRaster(b, p.chains[k], s, s[o + K_PHASE], s[o + K_BEAT], body, s[o + K_GULP] > GULP_SHOW ? 1 : 0)
   T.n = 0
   if (!body.w) return
   const hw = (b.halfWidth ?? .11) * b.length
@@ -589,7 +725,7 @@ function collectTiles(p: KoiPond, s: Float32Array, k: number, T: KoiTiles) {
           const sv = body.s[bi], B = hw * profileAt(Math.min(.999, sv))
           let vn = B > 1e-6 ? body.v[bi] / B : 0
           if (vn > 1) vn = 1; else if (vn < -1) vn = -1
-          const nz = Math.sqrt(1 - vn * vn), dot = vn * (body.nx[bi] * KL[0] + body.ny[bi] * KL[1]) + nz * KL[2]
+          const nz = Math.sqrt(1 - vn * vn), dot = vn * (body.nx[bi] * kl[0] + body.ny[bi] * kl[1]) + nz * kl[2]
           ss += sv; vv += vn; sh += .35 + .65 * (dot > 0 ? dot : 0)
           if (body.part[bi] === PART_BODY) nb++; else nf++
         }
@@ -604,7 +740,7 @@ function collectTiles(p: KoiPond, s: Float32Array, k: number, T: KoiTiles) {
   }
 }
 
-function drawKoi(p: KoiPond, s: Float32Array, k: number, T: KoiTiles, t: number, r: TileRaster) {
+function drawKoi(p: KoiPond, s: Float32Array, k: number, T: KoiTiles, t: number, r: TileRaster, nl: number) {
   const { cols } = p.spec.tiles, o = p.layout.KOI + KS * k, z = s[o + K_Z], lut = p.markings[k], lattice = p.bodyStyle === 'lattice'
   const deep = z > .6, dz = z > .45 ? 1 : 0
   for (let q = 0; q < T.n; q++) {
@@ -612,14 +748,16 @@ function drawKoi(p: KoiPond, s: Float32Array, k: number, T: KoiTiles, t: number,
     if (cover < .2) continue
     const fin = T.part[q] !== PART_BODY, mark = fin ? 0 : markingAt(lut, T.s[q], T.vn[q])
     const red = mark === MARK_RED, sumi = mark === MARK_SUMI
-    let bright = red ? T_ACTIVE : sumi ? T_MID : deep ? T_IDLE : T_VALUE
+    // at night the whites come down a tone (value → idle, idle → mid); red stays red
+    const dark = nl > 0 && nightTile(tx, ty, nl) ? 1 : 0
+    let bright = red ? T_ACTIVE : sumi ? T_MID : (deep ? T_IDLE : T_VALUE) - dark
     const flick = flickerOn(tx, ty, t, .03, .25, k * .37) ? 1 : 0
     if (cover < INTERIOR) {
       for (let i = 0; i < 16; i++) sub16[i] = T.sub[q * 16 + i]
       putGlyph(r, tx, ty, matchTile(SHAPE3, sub16), bright, stepDown(.8, dz))
       continue
     }
-    if (fin) { putGlyph(r, tx, ty, rampGlyph(RAMP3, .5), deep ? T_IDLE : T_VALUE, stepDown(.8, dz)); continue }
+    if (fin) { putGlyph(r, tx, ty, rampGlyph(RAMP3, .5), (deep ? T_IDLE : T_VALUE) - dark, stepDown(.8, dz)); continue }
     const shade = T.shade[q]
     if (lattice) {
       // style B: one lattice-4 dot per interior tile; shading is dot size (red stays one colour)
@@ -657,4 +795,140 @@ function occupied(r: TileRaster, tx: number, ty: number): boolean {
   const { pitch, ox, oy } = r.grid
   for (let j = 0; j < 3; j++) for (let i = 0; i < 3; i++) { const t = r.tone[(oy + ty * pitch + j) * r.cardW + ox + tx * pitch + i]; if (t === T_ACTIVE || t === T_VALUE) return true }
   return false
+}
+
+// ── TYPE (L3.4): the same scene in 5×7 font glyphs ─────────────────────────────────────────────────
+/** The TYPE look's tile grid: 24 × 16 tiles of 6 × 8 card cells (a 5×7 glyph + gutter) from card row 12. */
+export const KOI_TYPE_TILES: TileGrid = { cols: 24, rows: 16, pitch: 6, pitchY: 8, ox: 0, oy: 12 }
+interface TypeBake { water: Uint8Array; bank: Int16Array; shore: Int16Array; rx: Float32Array; ry: Float32Array }
+const typeBakes = new WeakMap<KoiPond, Map<string, TypeBake>>()
+/** Font glyphs by density, for stones and koi interiors (FONT57 has no ramp order of its own that reads as density). */
+const TYPE_RAMP = ['.', ':', '+', '*', '%', '#'].map(c => glyphOf(FONT57, c))
+const TYPE_BODY = ['*', '#', '●'].map(c => glyphOf(FONT57, c))
+const F_TILDE = glyphOf(FONT57, '~'), F_COLON = glyphOf(FONT57, ':'), F_DOT = glyphOf(FONT57, '.'), F_O = glyphOf(FONT57, 'o')
+const F_STAR = glyphOf(FONT57, '*'), F_PLUS = glyphOf(FONT57, '+'), F_DASH = glyphOf(FONT57, '-'), F_RING = glyphOf(FONT57, '○')
+/** Card-cell centre of a TYPE tile's glyph (5 × 7 from the tile's corner). */
+const glyphCx = (g: TileGrid, tx: number) => g.ox + tx * g.pitch + 2, glyphCy = (g: TileGrid, ty: number) => g.oy + ty * (g.pitchY ?? g.pitch) + 3
+/** Water, bank and shore of the scene on another tile grid, baked once per grid; plus each tile's ripple coordinates. */
+function typeBake(p: KoiPond, g: TileGrid): TypeBake {
+  let m = typeBakes.get(p)
+  if (!m) typeBakes.set(p, (m = new Map()))
+  const key = `${g.cols}x${g.rows}/${g.pitch}x${g.pitchY}@${g.ox},${g.oy}`
+  const hit = m.get(key)
+  if (hit) return hit
+  const n = g.cols * g.rows, kt = p.spec.tiles, sdf = p.spec.sdf, seed = p.spec.seed
+  const b: TypeBake = { water: new Uint8Array(n), bank: new Int16Array(n).fill(-1), shore: new Int16Array(n).fill(-1), rx: new Float32Array(n), ry: new Float32Array(n) }
+  for (let ty = 0; ty < g.rows; ty++) for (let tx = 0; tx < g.cols; tx++) {
+    const i = ty * g.cols + tx, x = glyphCx(g, tx), y = glyphCy(g, ty), d = sdf(x, y)
+    b.rx[i] = (x - kt.ox - 1.5) / kt.pitch; b.ry[i] = (y - kt.oy - 1.5) / kt.pitch
+    if (d < 0) {
+      b.water[i] = 1
+      if (d > -4.5) b.shore[i] = edgeOfGradient(FONT57, sdf(x + 1, y) - sdf(x - 1, y), sdf(x, y + 1) - sdf(x, y - 1)).index
+      continue
+    }
+    const vo = voronoi2(x / 9, y / 9, seed, 'l2')
+    if (vo.f2 - vo.f1 < .1) continue
+    const lv = .3 * (fbm2(x / 9, y / 9, 3, seed) * .5 + .5) + .6 * (1 - Math.min(1, vo.f1 * 1.4))
+    b.bank[i] = TYPE_RAMP[Math.max(0, Math.min(TYPE_RAMP.length - 1, Math.floor(lv * TYPE_RAMP.length)))].index
+  }
+  m.set(key, b)
+  return b
+}
+const tsub = new Float32Array(16)
+/**
+ * The TYPE look (L3.4): the same world drawn in 5×7 font glyphs on 6×8 tiles. Water slopes are font line glyphs,
+ * crests `~`, calm water `.` twinkles; the bank is font density glyphs; koi interiors are density glyphs by shade
+ * (`= * % #`), edges and fins the best-matching font glyph; red markings stay the one accent. No lattice dots: on a
+ * font grid every mark is a glyph.
+ */
+function drawKoiType(p: KoiPond, s: Float32Array, t: number, hour: number, r: TileRaster, opts: KoiDrawOpts) {
+  const g = r.grid, { cols, rows } = g, py = g.pitchY ?? g.pitch, K = p.spec.koi.length, nl = nightness(hour), bk = typeBake(p, g)
+  kl = opts.light ?? KL
+  clearTiles(r)
+  for (let i = 0; i < cols * rows; i++) if (bk.bank[i] >= 0) putGlyph(r, i % cols, (i / cols) | 0, FONT57.glyphs[bk.bank[i]], T_FAINT, .6)
+  const F = p.layout.FOAM, { fw, fh } = p.layout
+  for (let ty = 0; ty < rows; ty++) for (let tx = 0; tx < cols; tx++) {
+    const i = ty * cols + tx
+    if (!bk.water[i]) continue
+    const night = nightTile(tx, ty, nl)
+    if (bk.shore[i] >= 0) { putGlyph(r, tx, ty, FONT57.glyphs[bk.shore[i]], night ? T_FAINT : T_MID, .8); continue }
+    rippleGrad(p.ripple, s, bk.rx[i], bk.ry[i], grad)
+    const gx = grad[1], gy = grad[2], gl = Math.sqrt(gx * gx + gy * gy)
+    const fx = Math.max(0, Math.min(fw - 1, Math.round(bk.rx[i] / 2))), fy = Math.max(0, Math.min(fh - 1, Math.round(bk.ry[i] / 2))), foam = s[F + fy * fw + fx]
+    if (gx * WL[0] + gy * WL[1] > .12) { putGlyph(r, tx, ty, F_TILDE, T_VALUE, 1); continue }
+    if (gl >= .18) putGlyph(r, tx, ty, edgeOfGradient(FONT57, gx, gy), night ? T_MID : T_IDLE, .8)
+    else if (gl >= .08) putGlyph(r, tx, ty, edgeOfGradient(FONT57, gx, gy), night ? T_FAINT : T_MID, .8)
+    else if (gl >= .025) putGlyph(r, tx, ty, edgeOfGradient(FONT57, gx, gy), T_FAINT, .6)
+    else if (foam > .2) putGlyph(r, tx, ty, F_COLON, T_FAINT, .6)
+    else if (surfaceLine(p.spec.seed, bk.rx[i], bk.ry[i], t)) putGlyph(r, tx, ty, edgeOfGradient(FONT57, sgrad[0], sgrad[1]), T_FAINT, .6)
+    else if (foam > .08 || flickerOn(tx, ty, t, night ? .07 : .035, .2)) putGlyph(r, tx, ty, F_DOT, T_FAINT, .6)
+  }
+  if (nl > 0) moonColumn(p, s, t, hour, nl, r, F_DASH, bk.water, bk.shore, (tx, ty) => { const i = ty * cols + Math.max(0, Math.min(cols - 1, tx)); return [bk.rx[i], bk.ry[i]] })
+  // koi, deepest first: splat the body, then per font tile its cover, mean (s, v/B), shade and part
+  tileOrder.length = 0
+  for (let k = 0; k < K; k++) tileOrder.push(k)
+  const zOf = (k: number) => s[p.layout.KOI + KS * k + K_Z]
+  tileOrder.sort((a, b) => zOf(b) - zOf(a) || a - b)
+  for (const k of tileOrder) {
+    const o = p.layout.KOI + KS * k, b = p.bodies[k], z = zOf(k), deep = z > .6, dz = z > .45 ? 1 : 0, lut = p.markings[k]
+    bodyRaster(b, p.chains[k], s, s[o + K_PHASE], s[o + K_BEAT], body, s[o + K_GULP] > GULP_SHOW ? 1 : 0)
+    if (!body.w) continue
+    const hw = (b.halfWidth ?? .11) * b.length
+    const tx0 = Math.max(0, Math.floor((body.x0 - g.ox) / g.pitch)), tx1 = Math.min(cols - 1, Math.floor((body.x0 + body.w - 1 - g.ox) / g.pitch))
+    const ty0 = Math.max(0, Math.floor((body.y0 - g.oy) / py)), ty1 = Math.min(rows - 1, Math.floor((body.y0 + body.h - 1 - g.oy) / py))
+    for (let ty = ty0; ty <= ty1; ty++) for (let tx = tx0; tx <= tx1; tx++) {
+      let cov = 0, ss = 0, vv = 0, sh = 0, nb = 0, nf = 0
+      tsub.fill(0)
+      for (let y = 0; y < 7; y++) for (let x = 0; x < 5; x++) {
+        const bx = g.ox + tx * g.pitch + x - body.x0, by = g.oy + ty * py + y - body.y0
+        if (bx < 0 || by < 0 || bx >= body.w || by >= body.h) continue
+        const bi = by * body.w + bx, c = body.cover[bi]
+        if (!(c > 0)) continue
+        cov += c
+        const sv = body.s[bi], B = hw * profileAt(Math.min(.999, sv))
+        let vn = B > 1e-6 ? body.v[bi] / B : 0
+        if (vn > 1) vn = 1; else if (vn < -1) vn = -1
+        const nz = Math.sqrt(1 - vn * vn), dot = vn * (body.nx[bi] * kl[0] + body.ny[bi] * kl[1]) + nz * kl[2]
+        ss += sv; vv += vn; sh += .35 + .65 * (dot > 0 ? dot : 0)
+        if (body.part[bi] === PART_BODY) nb++; else nf++
+      }
+      const cover = cov / 35
+      if (cover < .15) continue
+      // the matcher's 16 samples, at the alphabet's own descriptor points
+      for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) {
+        const bx = g.ox + tx * g.pitch + Math.floor(((i + .5) * 5) / 4) - body.x0, by = g.oy + ty * py + Math.floor(((j + .5) * 7) / 4) - body.y0
+        tsub[j * 4 + i] = bx >= 0 && by >= 0 && bx < body.w && by < body.h ? body.cover[by * body.w + bx] : 0
+      }
+      const m = nb + nf, fin = nf > nb, mark = fin ? 0 : markingAt(lut, ss / m, vv / m), red = mark === MARK_RED, sumi = mark === MARK_SUMI
+      const dark = nl > 0 && nightTile(tx, ty, nl) ? 1 : 0
+      const tone = red ? T_ACTIVE : sumi ? T_MID : (deep ? T_IDLE : T_VALUE) - dark
+      if (cover < .55 || fin) { putGlyph(r, tx, ty, matchTile(FONT57, tsub), tone, stepDown(.8, dz)); continue }
+      const shade = sh / m, gi = Math.max(0, Math.min(TYPE_BODY.length - 1, Math.floor(shade * TYPE_BODY.length)))
+      putGlyph(r, tx, ty, TYPE_BODY[gi], tone, stepDown(shade >= .75 ? 1 : shade >= .5 ? .8 : .6, dz + (red && deep ? 1 : 0)) || .6)
+    }
+  }
+  // pellets
+  for (const pv of pelletViews(p, s)) {
+    const tx = Math.floor((pv.x - g.ox) / g.pitch), ty = Math.floor((pv.y - g.oy) / py)
+    if (pv.state === PEL_FLOATING) putGlyph(r, tx, ty, F_O, T_VALUE, 1)
+    else if (pv.state === PEL_FALLING) putGlyph(r, tx, ty, F_DOT, T_VALUE, .8)
+    else if (pv.state === PEL_SINKING) putGlyph(r, tx, ty, F_DOT, T_MID, .6)
+    else if (pv.state === PEL_EATEN) putGlyph(r, tx, ty, pv.age < .2 ? F_STAR : F_PLUS, pv.age < .2 ? T_VALUE : T_MID, .8)
+  }
+  // lily pads, over the koi: a ring of font line glyphs around `%`, the notch left open
+  const pads = p.spec.pads ?? []
+  for (let i = 0; i < pads.length; i++) {
+    const [bx, by, pr] = pads[i], seed = p.spec.seed
+    let cx = bx + 6 * noise2(.03 * t, i, seed), cy = by + 6 * noise2(.03 * t, i + 9, seed)
+    if (opts.tilt) { cx += 3 * opts.tilt[0]; cy += 3 * opts.tilt[1] }
+    const na = TAU * (ihash(seed, i, 41) / 4294967296), nx = dcos(na), ny = dsin(na)
+    for (let ty = Math.floor((cy - pr - g.oy) / py); ty <= Math.ceil((cy + pr - g.oy) / py); ty++) for (let tx = Math.floor((cx - pr - g.ox) / g.pitch); tx <= Math.ceil((cx + pr - g.ox) / g.pitch); tx++) {
+      if (tx < 0 || ty < 0 || tx >= cols || ty >= rows || !bk.water[ty * cols + tx]) continue
+      const qx = glyphCx(g, tx) - cx, qy = glyphCy(g, ty) - cy, d = Math.sqrt(qx * qx + qy * qy)
+      if (d > pr + 1) continue
+      if (d > 1 && (qx * nx + qy * ny) / d > .9396926) continue
+      if (d > pr - 3.5) putGlyph(r, tx, ty, edgeOfTangent(FONT57, -qy, qx), T_IDLE, .8)
+      else putGlyph(r, tx, ty, F_RING, T_MID, .8)
+    }
+  }
 }

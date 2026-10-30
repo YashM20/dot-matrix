@@ -62,7 +62,7 @@ export const boardManifest = [
   { id: 'heal', title: 'HEAL — THE MIRROR THAT HEALS', columns: 3, density: 'hero', load: () => import('./boards/heal').then(m => ({ items: m.healBoard })) },
   { id: 'algorithms', title: 'ALGORITHMS — STIPPLE, ATTRACT, COLLAPSE, AGGREGATE', columns: 2, density: 'hero', load: () => import('./boards/algorithms').then(m => ({ items: m.algorithmsBoard })) },
   { id: 'materials', title: 'MATERIALS — WOVEN, SPUN, CARVED, POURED', columns: 3, density: 'standard', load: () => import('./boards/materials').then(m => ({ items: m.materialsBoard, sources: m.materialsSources })) },
-  { id: 'pond', title: 'POND — LIVING SCENES IN GLYPH TILES', columns: 3, density: 'standard', load: () => import('./boards/pond/index').then(m => ({ items: m.pondBoard })) },
+  { id: 'pond', title: 'POND — LIVING SCENES IN GLYPH TILES', columns: 3, density: 'standard', load: () => import('./boards/pond/index').then(m => ({ items: m.pondBoard, sources: m.pondSources })) },
   { id: 'squares', title: 'SQUARES — SPACED AND JOINED', columns: 2, density: 'hero', load: () => import('./boards/squares').then(m => ({ items: m.squaresBoard })) },
 ] as const satisfies readonly (BoardMeta & { load: () => Promise<BoardContents> })[]
 

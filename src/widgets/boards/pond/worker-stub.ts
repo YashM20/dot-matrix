@@ -6,3 +6,5 @@
 import type { WidgetPreset } from '../../types'
 
 export const pondBoard: WidgetPreset[] = []
+/** No sources in the worker either (the light hub is a main-thread `Source`). */
+export const pondSources = []

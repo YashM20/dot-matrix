@@ -21,7 +21,7 @@ Which doc to read for what, and how current each one is (checked 2026-10-29, aft
 | [`EDITOR-PLAN.md`](EDITOR-PLAN.md) | The one MAKE editor (`src/components/editor/`): research, the document model, desktop and phone layouts, phases E0–E6. E0–E3 built and merged (E3 in round 2, PR #10); E5 (share) in progress (round 3); E4 and E6 planned. |
 | [`DOT-MATRIX-ENGINE-PLAN.md`](DOT-MATRIX-ENGINE-PLAN.md) | Architecture: module map, pipeline, lattices and sites, subsystems |
 | [`ALGORITHMS.md`](ALGORITHMS.md) | The niche algorithms (`src/engine/algo`, the `algorithms` board): weighted Voronoi stippling, strange-attractor density, Wave Function Collapse, DLA. Papers, pipeline mapping, parameters, cost. |
-| [`LIFE.md`](LIFE.md) | Current for L1 (L2 in progress). Living scenes (`src/engine/life`, the `pond` board): wave-equation water, dot micro-glyph tiles, koi spines, bodies and steering, the koi pond world. Modules, the body-style ruling, parameters and deviations from the L plan, checks. |
+| [`LIFE.md`](LIFE.md) | Current for L1, L2 and L3. Living scenes (`src/engine/life`, the `pond` board): wave-equation water, dot micro-glyph tiles, koi spines, bodies and steering, the koi pond world. Modules, the body-style ruling, parameters and deviations from the L plan, checks. |
 | [`STYLE-BIBLE.md`](STYLE-BIBLE.md) | Taste: what makes a card good, taken from the four liked cards |
 | [`DEPLOY.md`](DEPLOY.md) | Vercel deploy, build outputs, headers, CSP, CI |
 | [`MCP-APP.md`](MCP-APP.md) | The MCP app (agent heartbeat) and the authoring tools, for personal use |
