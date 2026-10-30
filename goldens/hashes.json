@@ -1835,6 +1835,78 @@
     "dots": 2682
    }
   },
+  "mat-lens": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "690e142b",
+    "dots": 4144
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "690e142b",
+    "dots": 4144
+   }
+  },
+  "mat-pool": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "d180f3ca",
+    "dots": 4255
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "10310947",
+    "dots": 4256
+   }
+  },
+  "mat-window": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "a6550a34",
+    "dots": 3543
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "a6550a34",
+    "dots": 3543
+   }
+  },
+  "mat-patch": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "19487a94",
+    "dots": 6939
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "f678c808",
+    "dots": 6881
+   }
+  },
+  "mat-rust": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "d5f450a2",
+    "dots": 10744
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "d5f450a2",
+    "dots": 10744
+   }
+  },
+  "mat-candle": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "3f9a09e9",
+    "dots": 1666
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "1a749505",
+    "dots": 1664
+   }
+  },
   "pond-koi": {
    "t=0": {
     "style": "squircle:2.30",

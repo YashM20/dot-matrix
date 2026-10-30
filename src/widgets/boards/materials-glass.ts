@@ -157,9 +157,10 @@ function sceneAt(s: LensScene, x: number, y: number): number {
 /** One frame's screen values (NaN = not yet computed): card cells first, then the 288² GPU points. */
 const memoBuf = new Float32Array(COLS * TILE.rows + FINE * FINE)
 let memoKey = ''
-function screenMemo(key: string): Float32Array {
-  if (key !== memoKey) { memoKey = key; memoBuf.fill(NaN) }
-  return memoBuf
+function screenMemo(key: string): { memo: Float32Array; fresh: boolean } {
+  if (key === memoKey) return { memo: memoBuf, fresh: false }
+  memoKey = key; memoBuf.fill(NaN)
+  return { memo: memoBuf, fresh: true }
 }
 /** Where a point (cells) sits in the memo: a card cell centre, a GPU point at density 2, or −1 (computed fresh). */
 function memoIndex(x: number, y: number): number {
@@ -204,6 +205,11 @@ function screenAt(u: number, v: number): number {
   if (bez < .125) { const b = Math.max(val, floorAt(x, y)); return b > 0 ? Math.min(1, b + .25) : 0 }
   return val > 0 ? Math.min(1, val + (bez < .2 && F.lens.fresnel(u, v) >= .15 ? .25 : 0)) : 0
 }
+/** Row r of the screen at card cell centres, into the memo. */
+function screenRow(memo: Float32Array, r: number): void {
+  const v = r / H1
+  for (let c = 0, i = r * COLS; c < COLS; c++, i++) memo[i] = screenAt(c / W1, v)
+}
 /**
  * The screen only changes when the lens, its rim light, the second or the minute does: between those frames (12 a
  * second at rest) every value is a lookup, at the card's cell centres and at the GPU pass's points alike.
@@ -241,7 +247,11 @@ export const matLens: WidgetPreset = {
     // the live second, refracted by the same offset as the scene (the scene's own tick there is cleared under it)
     const s = now.getSeconds(), a = s * 6 * DEG, q: Pt = [Math.round(DIAL.cx + DIAL.r * Math.sin(a)), Math.round(DIAL.cy - DIAL.r * Math.cos(a))], sec = apparent(off, q)
     const lens = liquidGlass((u, v) => behindAt(ticks, hero.near, u * W1, v * H1), TILE, o)
-    LF = { c, sec, hero, scene: lensScene(hero, ticks), ticks, off, lens, memo: screenMemo(`${c[0]},${c[1]},${rim.angle},${rim.power},${s},${hero.key}`) }
+    const m = screenMemo(`${c[0]},${c[1]},${rim.angle},${rim.power},${s},${hero.key}`)
+    LF = { c, sec, hero, scene: lensScene(hero, ticks), ticks, off, lens, memo: m.memo }
+    // a new screen: fill its card-pitch values row by row here (a tight loop compiles at once), so the sampler's reads
+    // are lookups even on the first frame
+    if (m.fresh) for (let r = 12; r < TILE.rows; r++) screenRow(m.memo, r)
     // the lens can pull the hero out to its own outline: the layer covers the glyphs' box and the lens's
     const { lc, lr, ox, oy, box } = hero, toLat = (x: number) => (x + .5 - ox) / HERO.k - .5, toLatY = (y: number) => (y + .5 - oy) / HERO.k - .5
     heroField.bounds = [Math.max(0, Math.min(box[0], Math.floor(toLat(c[0] - LENS.hw)))), Math.max(0, Math.min(box[1], Math.floor(toLatY(c[1] - LENS.hh)))), Math.min(lc - 1, Math.max(box[2], Math.ceil(toLat(c[0] + LENS.hw)))), Math.min(lr - 1, Math.max(box[3], Math.ceil(toLatY(c[1] + LENS.hh))))]
