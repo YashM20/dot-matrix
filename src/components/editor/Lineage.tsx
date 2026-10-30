@@ -17,11 +17,17 @@ import { useEditor } from './store'
 import { Section } from './ui'
 
 const graphStyle = { ...DOTS_STYLE, sizeMin: .15, sizeMax: .62 }
+/**
+ * localStorage reads keyed by a stamp the caller bumps after a write. The stamp is an input on purpose: the React
+ * Compiler memoizes by what a callback reads, so a dependency the callback never reads would never refresh it.
+ */
+const galleryAt = (_stamp: number) => loadGallery()
+const linksAt = (_stamp: number) => loadLinks()
 
 /** The remix graph; `current` is the selected program's hash, `version` bumps when the gallery changed. */
 export function RemixGraph({ current, version = 0 }: { current?: string; version?: number }) {
   const [cleared, setCleared] = useState(0)
-  const list = useMemo(() => loadGallery(), [version, cleared]) // eslint-disable-line react-hooks/exhaustive-deps
+  const list = useMemo(() => galleryAt(version + cleared), [version, cleared])
   const graph = useMemo(() => layoutGraph(list), [list])
   const theme = useThemeTokens(), ref = useRef<HTMLCanvasElement>(null)
   useEffect(() => {
@@ -57,7 +63,7 @@ export function RemixGraph({ current, version = 0 }: { current?: string; version
 /** The frame / document links a frame came from (E5). */
 export function LinkLineage({ f, version = 0 }: { f: EditorFrame; version?: number }) {
   const id = linkSource(f)
-  const chain = useMemo(() => (id ? lineage(id, loadLinks()) : []), [id, version]) // eslint-disable-line react-hooks/exhaustive-deps
+  const chain = useMemo(() => (id ? lineage(id, linksAt(version)) : []), [id, version])
   return <Section title="LINK LINEAGE" aside={id ? `#${id}` : 'not from a link'}>
     {chain.length ? <ol className="ed-lineage ed-lineage--list" aria-label="Link lineage">{chain.map((r, i) => <li key={r.id}>{i === 0 ? 'OPENED FROM' : 'REMIX OF'} <b>#{r.id}</b>{'name' in r ? ` · ${r.name} · ${r.kind === 'frame' ? 'frame' : `${r.frames} frames`}` : ' · not seen in this browser'}</li>)}</ol>
       : <p className="ed-hint">This frame was made here. Share it from EXPORT · LINK; a frame opened from a link and shared again records that link as its parent.</p>}
