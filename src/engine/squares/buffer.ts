@@ -2,10 +2,11 @@
  * The squares channels of a `DotBuffer` and of array-path dots (Q-squares §2.2), as `samplerExt` hooks so the
  * first-load buffer carries only the field names. `ext` holds three views, 7 B/dot, Float32 first so every view is
  * aligned for any capacity c: `aspect` Float32 at byte 0 (a rect cell's ry / rx; 0 = none, i.e. 1), `join` Uint16 at 4c (bits 0–11 mask, 12–15 joint slot;
- * 0xFFFF = plain), `form` Uint8 at 6c (bits 0–3 roundness step /8; 15 = frame style).
+ * 0xFFFF = plain), `form` Uint8 at 6c (bits 0–3 roundness step /8, 15 = frame style; bit 4 rotated by π/4; bits 5–7 the motif, src/engine/squares/form.ts).
  */
 import type { DotBuffer } from '../buffer/dotBuffer'
-import type { DotInstance, JointGeom, Layer } from '../types'
+import type { DotInstance, JointGeom } from '../types'
+import { MOTIFS, MOTIF_SHIFT, ROT45 } from './form'
 
 const NO_JOIN = 0xFFFF, NO_FORM = 15
 
@@ -20,11 +21,6 @@ function fresh(buf: DotBuffer, old?: { aspect?: Float32Array; join?: Uint16Array
   if (old?.join) { buf.aspect!.set(old.aspect!.subarray(0, n)); buf.join!.set(old.join.subarray(0, n)); buf.form!.set(old.form!.subarray(0, n)) }
 }
 
-/** `samplerExt.form`: a `shapeOf` layer's roundness snapped to `{grid.shapeSteps}` (1/8), or 15. */
-export function formOf(layer: Layer, value: number, u: number, v: number): number {
-  const r = layer.shapeOf?.(value, u, v)
-  return r === undefined || !Number.isFinite(r) ? NO_FORM : Math.round(8 * Math.max(0, Math.min(1, r)))
-}
 /**
  * `samplerExt.rect`: a rect cell's half width and aspect. ry follows the same ramp on ky (each side clamped to its own
  * gutter); a bar ('x') keeps its height full, a line ('y') its width.
@@ -34,9 +30,14 @@ export function rect(r: number, kx: number, ky: number, axis: 'x' | 'y' | undefi
   if (axis === 'y') r = (1 - gap) * kx * pitch / 2; else if (axis === 'x') ry = (1 - gap) * ky * pitch / 2
   return [r, r > 0 ? ry / r : 1]
 }
-/** `samplerExt.stamp`: the array-path dot's per-dot roundness, join and rect aspect. */
+/** `samplerExt.stamp`: the array-path dot's per-dot roundness, rotation (π/4, radians), motif, join and rect aspect. */
 export function stamp(d: DotInstance, join: number, form: number, joints: JointGeom[] | null, aspect = 1): void {
-  if (form !== NO_FORM) { d.shape = 'squircle'; d.roundness = form / 8 }
+  if (form !== NO_FORM) {
+    const f = form & 15
+    if (f !== NO_FORM) { d.shape = 'squircle'; d.roundness = f / 8 }
+    if (form & ROT45) d.rot = Math.PI / 4
+    if (form >> MOTIF_SHIFT) d.motif = MOTIFS[form >> MOTIF_SHIFT]
+  }
   if (join !== NO_JOIN) { d.join = join & 0xFFF; d.joint = joints![join >> 12] }
   if (aspect !== 1) d.aspect = aspect
 }

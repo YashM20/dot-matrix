@@ -130,6 +130,11 @@ export function migrate(from: readonly DotInstance[], to: readonly DotInstance[]
         const d = out[k] ??= { x: 0, y: 0, r: 0, opacity: 0, color: '' }
         d.x = f[w]; d.y = f[w + 1]; d.r = f[w + 2]; d.opacity = f[w + 3]; d.color = colorAt(k, mix)
         d.shape = src.shape; d.roundness = src.roundness
+        // squares forms ride along; a join mask only at the endpoints (a moving dot never draws a stale mask)
+        if (src.join !== undefined || src.aspect || src.rot || src.motif || d.join !== undefined || d.aspect || d.rot || d.motif) {
+          const end = mix <= 0 || mix >= 1
+          d.join = end ? src.join : undefined; d.joint = end ? src.joint : undefined; d.aspect = src.aspect; d.rot = src.rot; d.motif = src.motif
+        }
       }
       return out
     },

@@ -1,8 +1,10 @@
 /**
  * WebGL2 hook (`shapeExt.gl`, Q-squares §2.4.3, §3.2), loaded on demand through `shapeExt.glLoad` (set in DotCanvas) so the GLSL ships in
  * neither the worker nor the board chunk. One instanced draw for a frame's joined and rect cells, 36 B per instance:
- * `aDot` (x, y, s, opacity), `aShape` (palette index, joint slot), `aJoin` (the 12-bit mask, exact in f32; −1 = a
- * plain rect cell), `aRect` (half height, and for a plain rect its corner radius in px, or −n for a soft superellipse).
+ * `aDot` (x, y, s, opacity), `aShape` (palette index, joint slot), `aJoin` (the 12-bit mask, exact in f32; −1 − f = a
+ * plain cell, f = rot45 | motif << 1, squares Q3), `aRect` (half height, and for a plain cell its corner radius in px, or
+ * −n for a soft superellipse). A rotated cell turns its SDF by 45° (a diamond); a motif cuts a bead hole or a stud ring
+ * (`max(d, −hole)`), or draws the cell as an X (`min` of two diagonal bars, clipped to the box).
  *
  * Watertight edges: a joined side of the quad lies exactly on the cell boundary, computed from the integer cell
  * index (`ox + i·P` and `ox + (i + 1)·P` are the same expression on the same inputs in both neighbours), so the
@@ -27,6 +29,7 @@ layout(location = 2) in float aJoin;
 layout(location = 3) in vec2 aRect;
 out vec2 vP;
 flat out uint vMask;
+flat out uint vForm;
 flat out vec4 vGeom;
 flat out vec2 vS;
 flat out vec2 vH;
@@ -37,12 +40,12 @@ void main() {
   int slot = clamp(int(aShape.y + 0.5), 0, 14);
   vec4 J = uJoint[slot], O = uJointO[slot];
   bool plain = aJoin < 0.0;
-  uint m = plain ? 0u : uint(aJoin + 0.5);
+  uint m = plain ? 0u : uint(aJoin + 0.5), f = plain ? uint(-aJoin - 0.5) : 0u;
   vec2 c = aDot.xy, P = 2.0 * J.xy, S = vec2(aDot.z, aRect.x);
   vec2 ix = floor((c - O.xy) / P);
   vec2 lo = O.xy + ix * P, hi = O.xy + (ix + 1.0) * P;
   uint q0 = m & 7u, q1 = (m >> 3u) & 7u, q2 = (m >> 6u) & 7u;
-  vec2 pad = S + 1.0 / uScale;
+  vec2 pad = ((f & 1u) != 0u ? vec2(max(S.x, S.y) * 1.4143) : S) + 1.0 / uScale;
   float left = hasH(q0) ? lo.x : c.x - pad.x, right = hasH(q1) ? hi.x : c.x + pad.x;
   float top = hasV(q0) ? lo.y : c.y - pad.y, bottom = hasV(q2) ? hi.y : c.y + pad.y;
   vec2 pos = vec2((gl_VertexID & 1) == 1 ? right : left, (gl_VertexID >> 1) == 1 ? bottom : top);
@@ -50,6 +53,7 @@ void main() {
   vec2 hj = plain ? S : max(S, J.xy - seam);
   vP = (pos - c) * uScale;
   vMask = m;
+  vForm = f;
   // ro, ri, seam flag (device px), and n (> 0: a plain rect cell of a soft superellipse, drawn stretched)
   float ro = plain ? max(aRect.y, 0.0) : clamp(J.z, 0.0, 1.0) * min(S.x, S.y), ri = plain ? 0.0 : max(0.0, min(J.w, min(hj.x - S.x, hj.y - S.y)));
   vGeom = vec4(ro * uScale, ri * uScale, !plain && seam > 0.0 ? 1.0 : 0.0, plain && aRect.y < 0.0 ? -aRect.y : 0.0);
@@ -65,6 +69,7 @@ void main() {
 export const JOIN_FS = `${HEAD}
 in vec2 vP;
 flat in uint vMask;
+flat in uint vForm;
 flat in vec4 vGeom;
 flat in vec2 vS;
 flat in vec2 vH;
@@ -72,7 +77,9 @@ in vec4 vColor;
 out vec4 o;
 float sdBox(vec2 a, vec2 b) { vec2 d = a - b; return length(max(d, 0.0)) + min(max(d.x, d.y), 0.0); }
 void main() {
-  vec2 a = abs(vP), S = vS;
+  // a rotated cell (form bit 0): the point turned back by 45°
+  vec2 p = (vForm & 1u) != 0u ? vec2(vP.x + vP.y, vP.y - vP.x) * 0.70710678 : vP;
+  vec2 a = abs(p), S = vS;
   float ro = vGeom.x, ri = vGeom.y, n = vGeom.w, d;
   if (n > 0.0) {
     // a soft superellipse stretched to S: |x/Sx|^n + |y/Sy|^n = 1, distance from the field over its gradient
@@ -81,7 +88,7 @@ void main() {
     vec2 grad = qn / q / S * pow(t, 1.0 / n - 1.0);
     d = (pow(t, 1.0 / n) - 1.0) / max(length(grad), 1e-6);
   } else {
-    uint q = vP.y < 0.0 ? (vP.x < 0.0 ? 0u : 1u) : (vP.x < 0.0 ? 3u : 2u);
+    uint q = p.y < 0.0 ? (p.x < 0.0 ? 0u : 1u) : (p.x < 0.0 ? 3u : 2u);
     uint code = (vMask >> (3u * q)) & 7u;
     // fused: joined arms run 2 px past the quad, so the quad edge (on the cell boundary) is the only cut
     vec2 E = vGeom.z > 0.5 ? vH : vH + 2.0;
@@ -94,6 +101,12 @@ void main() {
       d = max(sdBox(a, E), -notch);
     } else d = sdBox(a, S - ro) - ro;
   }
+  // motifs (squares Q3): 1 bead hole, 2 stud ring, 3 stitch (the X of the box)
+  uint mo = vForm >> 1u;
+  float L = length(p), s = S.x;
+  if (mo == 1u) d = max(d, 0.4 * s - L);
+  else if (mo == 2u) d = max(d, 0.07 * s - abs(L - 0.6 * s));
+  else if (mo == 3u) d = max(sdBox(a, S), (min(abs(p.y - p.x), abs(p.y + p.x)) - 0.4 * s) * 0.70710678);
   float cov = clamp(0.5 - d, 0.0, 1.0);
   if (cov <= 0.0) discard;
   o = vColor * cov;
@@ -141,7 +154,9 @@ function draw(api: GLJoinApi, dots: DotInstance[], common: (p: { p: WebGLProgram
     }
     const b = m * F, hs = d.r * (d.aspect ?? 1)
     data[b] = d.x; data[b + 1] = d.y; data[b + 2] = d.r; data[b + 3] = Math.min(1, d.opacity)
-    data[b + 4] = palette.of(d.color); data[b + 5] = slot; data[b + 6] = g ? d.join! : -1; data[b + 7] = hs
+    // a plain cell's form: rot45 | motif << 1 (rect cells ignore both)
+    const mo = d.motif === 'bead' ? 1 : d.motif === 'stud' ? 2 : d.motif === 'stitch' ? 3 : 0, form = d.aspect === undefined ? (d.rot ? 1 : 0) | (mo << 1) : 0
+    data[b + 4] = palette.of(d.color); data[b + 5] = slot; data[b + 6] = g ? d.join! : -1 - form; data[b + 7] = hs
     // a plain rect cell: the corner of its rounded rect (px; 0 = the box), or −n for a soft superellipse (n ≤ 8)
     const n = d.shape === 'square' ? Infinity : d.shape === 'squircle' ? exponent(d.roundness) : 2
     data[b + 8] = g ? 0 : n > 8 ? (n === Infinity ? 0 : Math.min(d.r, hs) * corner(n)) : -n

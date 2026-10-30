@@ -12,7 +12,7 @@ import { cornerFraction, squircleExponent } from '../renderer/shapePath'
 import type { JoinArgs, JoinFrame } from '../sampler/ext'
 import type { DotStyle, JoinSpec, JointGeom } from '../types'
 import { joinMasks, NO_JOIN } from './mask'
-import { formOf } from './buffer'
+import { formCode as formOf } from './form'
 
 const DEFAULT: JoinSpec = {}
 /** Convex corner of a joined blob when `join.outer` is unset: the style's own corner (0 for 'square', 1 for circles). */
@@ -35,8 +35,8 @@ const ALONG = [[0, 1, 2, 3, 4, 5, 6, 7], [0, 1, 0, 1, 1, 0, 0, 0], [0, 0, 2, 2, 
 const along = (m: number, a: number) => { const t = ALONG[a]; return t[m & 7] | t[(m >> 3) & 7] << 3 | t[(m >> 6) & 7] << 6 | t[(m >> 9) & 7] << 9 }
 let warned = false
 /**
- * One composite's pass over its join and `shapeOf` layers: per window cell the packed join value (mask | slot << 12,
- * or NO_JOIN), the tone index, and the form code (a `shapeOf` layer's roundness step, else 15).
+ * One composite's pass over its join and form (`shapeOf`, `rotation`, `motif`) layers: per window cell the packed join
+ * value (mask | slot << 12, or NO_JOIN), the tone index, and the form code (src/engine/squares/form.ts; 15 = plain).
  */
 export function joinPass(a: JoinArgs): JoinFrame {
   const { layers, best, owner, win, us, vs, covered, style } = a, steps = style.quantizeSteps ?? 0, joins = steps >= 2
@@ -65,13 +65,14 @@ export function joinPass(a: JoinArgs): JoinFrame {
     K[i] = 0; F[i] = 15
     if (!o || (covered !== null && covered[i])) { T[i] = ti(undefined, v); continue }
     const l = o - 1, L = layers[l]
-    if (L.shapeOf) F[i] = formOf(L, v, us[c], vs[r])
+    if (L.shapeOf || L.rotation || L.motif) F[i] = formOf(L, v, us[c], vs[r])
     let t: number
     if (o === lastO && v === lastV && !L.toneOf) t = lastT
     else { t = ti(L.toneOf ? L.toneOf(v, us[c], vs[r]) : L.tone, v); lastO = o; lastV = v; lastT = t; lastStep = Math.round(Math.min(1, v) * q) }
     T[i] = t
     const step = lastStep
-    if (slots[l] < 0 || step <= 0 || step / q < at[l] || ((t === ACTIVE || t === DIM) && !accent[l])) continue
+    // rotated and motif dots never join (form bits 4–7)
+    if (slots[l] < 0 || step <= 0 || step / q < at[l] || ((t === ACTIVE || t === DIM) && !accent[l]) || F[i] > 15) continue
     const fn = groupFn[l], g = fn ? fn(us[c], vs[r]) & 255 : group0[l], ax = axes[l]
     K[i] = ((g << 7) | (t << 4) | (ax ? 0 : step & 15)) + 1
     S[i] = slots[l] | ax << 4
