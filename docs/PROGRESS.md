@@ -4,7 +4,7 @@
 > Update this file in the same commit as the work. Active plans: `docs/WEB-PLAN.md` (what the site does) and `docs/UX-PLAN.md` (how visitors find it); every doc and its status: `docs/README.md`. Original phase plan: `docs/MASTER-PLAN.md` (v2). Research: `docs/MOTION-INTERACTION-DEPTH.md`, `docs/ADVANCED-PLAN.md`. Taste: `docs/STYLE-BIBLE.md`.
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
-## Live run state: resume here (updated 2026-10-29)
+## Live run state: resume here (updated 2026-10-30)
 > The coordinator keeps this block current. Read it after any interruption or compaction, before doing anything else.
 
 **Shipped:** round 2 is on main and live.
@@ -26,9 +26,10 @@
 | `a9dfd85cca3ece366` | **Q2 squares**: lcd and grout skins, rect cells, teletext sextants, line screens | `docs/living-matter/Q-squares.md` Q2 | `src/engine/squares/`, the squares board, `scripts/squares*.ts` | 4386 |
 | `a4b5a283f78296248` | **M2 glass and water**: glass v2, caustics; Lens, Pool, Window, Patch, Rust, the candle clock | `docs/living-matter/M-materials.md` M2 | `src/engine/matter/`, the materials board, `scripts/materials*.ts` | 4391 |
 | `ae843d4fcd441b7d8` | **E5 share**: frame/document links, remix lineage, device exports, the QUALITY fold | `docs/EDITOR-PLAN.md` §10 E5 | `src/components/editor/` | 4383/4384 |
-| `a144235843227f454` | **Round-2 housekeeping** (listed below) | this block | the changelogs, `docs/README.md`, the test scripts named in the list | 4389/4390 |
 
-The housekeeping list:
+**Done in round 3 and merged on `feat/round3`:** round-2 housekeeping (7bc8ecf). It added the changelog rows (round 2's `src/changelog.ts` rows are still marked "in progress"; turn them into a 0.12 release), the phone palette shot, the editor-fit check (its final variant hasn't run in a browser yet; the full suite covers it) and the pond swipe fix (scroll room plus a retry for a late first move). It also updated the doc statuses. Marble option 1 (banded distance, about 4× cheaper) went to M2.
+
+The housekeeping list (done):
 - CHANGELOG and `src/changelog.ts` rows for round 2;
 - the `shots.ts` phone palette NOT READY bug;
 - an "editor fits the window" probe check;
@@ -65,7 +66,9 @@ The housekeeping list:
   - It then starts previews on 4317 and 4318 and runs the mobile, light, editor, layout, theme-boot, picker, squares, life and materials probes.
   - Logs and the summary go to `dmdocs/full-r2/`.
 - **Screenshots:** `npx tsx scripts/site/shots.ts --pages … --themes … --sizes 1440,390 --out <dir>`. The round-2 shots are in `dmdocs/r2shots/`.
-- **Rate limits and restarts:** resume each agent by SendMessage after the reset. Clear dead locks if the holder PID is gone.
+- **Rate limits and restarts:** resume each agent by SendMessage after the reset.
+  - Clear a dead lock file only if its holder PID is gone.
+  - Never clear `dm-heavy-queue/` while waiters are alive. heavy.mjs now recreates a missing ticket, but older waiters will wait forever.
 
 **Open owner decisions:**
 - the essay's name and URL;
