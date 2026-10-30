@@ -15,6 +15,8 @@
 
 **Working branch:** `feat/round3`. It tracks origin and equals main plus nothing new yet. Merge each round-3 agent here; PR to main when the owner says.
 
+**Last interruption (2026-10-30, about 16:35):** the T3 server restarted, then the 5-hour limit was hit; both reset at 17:00. Every dead lock and ticket was cleared, and all four agents were resumed with SendMessage from these commits: E6 5cca800, Q3 d715e49, M2 0dd76a7, L3 1e7ddb8.
+
 **Running agents (round 3):**
 - Each runs in `.claude/worktrees/agent-<id>/` on branch `worktree-agent-<id>`.
 - Resume one with SendMessage to `<id>`. If its worktree is gone, restart from the brief and its last WIP commit.
@@ -68,6 +70,7 @@ The housekeeping list (done):
 - **Screenshots:** `npx tsx scripts/site/shots.ts --pages … --themes … --sizes 1440,390 --out <dir>`. The round-2 shots are in `dmdocs/r2shots/`.
 - **Rate limits and restarts:** resume each agent by SendMessage after the reset.
   - Clear a dead lock file only if its holder PID is gone.
+  - **Health watchdog:** `node C:/Users/integrated/AppData/Local/Temp/dmdocs/watchdog.mjs <agent ids…>` under Monitor (30 min; re-arm). It prints only problems: a dead or stale lock, a heavy command over 30 min, 5 or more waiters, or an agent with no file or git activity for 25 min.
   - Never clear `dm-heavy-queue/` while waiters are alive. heavy.mjs now recreates a missing ticket, but older waiters will wait forever.
 
 **Open owner decisions:**
