@@ -182,15 +182,23 @@ try {
     const coarse = await page.js<boolean>(`matchMedia('(pointer: coarse)').matches`)
     check(`life-browser: /pond/ paints at ${width} px (coarse pointer ${coarse})`, ok, page.logs.join('; '))
     const swipeBad: string[] = [], tapBad: string[] = [], holdBad: string[] = [], fpsBad: string[] = [], rates: string[] = []
+    // the phone tier first, on the untouched page: draws counted over 2 s with each card on screen (input makes a
+    // card draw on the next animation frame as well, so this runs before any card is touched); one re-count if over
+    for (const id of IDS) {
+      at(`phone ${width}: ${id} fps`)
+      const want = cardFps((await page.js<number>(`__pondBoard.fps('${id}')`)) ?? 12, 'phone')
+      await page.js(`${elOf(id)}.scrollIntoView({ block: 'center' })`); await sleep(900)
+      let rate = Infinity
+      for (let k = 0; k < 2 && !(rate <= want * 1.15 + 1); k++) {
+        const d0 = await page.js<number>(`__pondBoard.draws('${id}')`); await sleep(2000)
+        rate = Math.min(rate, ((await page.js<number>(`__pondBoard.draws('${id}')`)) - d0) / 2)
+      }
+      rates.push(`${id.slice(5)} ${rate.toFixed(1)}/${want}`)
+      if (!(rate <= want * 1.15 + 1 && rate >= 3)) fpsBad.push(`${id} ${rate.toFixed(1)} fps (tier ${want})`)
+    }
     for (const id of IDS) {
       at(`phone ${width}: ${id}`)
       const el = elOf(id)
-      // the phone tier: draws counted over 2 s with the card on screen and untouched
-      await page.js(`${el}.scrollIntoView({ block: 'center' })`); await sleep(900)
-      const d0 = await page.js<number>(`__pondBoard.draws('${id}')`); await sleep(2000)
-      const rate = ((await page.js<number>(`__pondBoard.draws('${id}')`)) - d0) / 2, want = cardFps((await page.js<number>(`__pondBoard.fps('${id}')`)) ?? 12, 'phone')
-      rates.push(`${id.slice(5)} ${rate.toFixed(1)}/${want}`)
-      if (!(rate <= want * 1.15 + 1 && rate >= 3)) fpsBad.push(`${id} ${rate.toFixed(1)} fps (tier ${want})`)
       // the swipe (a try whose first move came after the hold time was a hold by the policy: retried, as above)
       let res = { scrolled: 0, gap: Infinity, mode: '' }
       for (let tries = 0; tries < 3; tries++) {

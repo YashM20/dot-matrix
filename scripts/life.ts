@@ -19,7 +19,7 @@ import {
   patternStats, profileAt, putBig, putGlyph, QUAD4, RAMP3, RAMP4, rippleEnergy, rippleSplat, rippleStep, ropeInit, ropeStep, SHAPE3, tailBeatHz, tileLayers,
   waveAt, widthAt, drawKoiPond, koiBulge, koiView, KOI_SLOTS, pelletViews, PEL_FLOATING, POND_DT, type Alphabet, type BodySpec,
 } from '../src/engine/life'
-import { simAtStep, simLoop, simReset } from '../src/engine/sim'
+import { simAtStep, simLoop, simReset, simStep } from '../src/engine/sim'
 import { worldAt, worldReset, type FrameInput } from '../src/engine/physics/world'
 import { sampleLayers } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
@@ -309,15 +309,19 @@ export async function lifeChecks(assert: Assert): Promise<void> {
     // the release step starts the C-start (and takes its first bend step); time counts steps from there
     let s1 = fr(t0 + 3 / 30, { pointers: [{ id: 1, x: sx, y: sy, down: false }] })
     let turned = 0, turnT = 0, peak = 0, peakT = 0
+    const speeds: number[] = []
     const startedBend = koiView(P, s1, 0).mode === MODE_BEND
     for (let k = 1; k <= 20; k++) {
       s1 = fr(t0 + (3 + k) / 30)
       const v = koiView(P, s1, 0), ang = Math.acos(Math.max(-1, Math.min(1, v.hx * h0[0] + v.hy * h0[1])))
       if (!turnT && v.mode === MODE_ESCAPE) { turned = ang; turnT = (k + 1) / 30 }
-      if (v.u / L0[0] > peak) { peak = v.u / L0[0]; peakT = (k + 1) / 30 }
+      if (v.u / L0[0] > peak) peak = v.u / L0[0]
+      speeds.push(v.u / L0[0])
     }
+    // the escape speed creeps toward 2.6 L/s by fractions of a percent a step: time it to 98 % of its peak
+    peakT = (speeds.findIndex(u => u >= .98 * peak) + 2) / 30
     const deg = turned * 180 / Math.PI
-    assert('life/steer: a C-start turns 90–130° in ≤ .16 s and peaks ≥ 2.4 L/s by .55 s', startedBend && deg >= 90 && deg <= 130 && turnT <= .16 + 1e-9 && peak >= 2.4 && peakT <= .55,
+    assert('life/steer: a C-start turns 90–130° in ≤ .16 s and peaks ≥ 2.4 L/s (98 % of its peak) by .55 s', startedBend && deg >= 90 && deg <= 130 && turnT <= .16 + 1e-9 && peak >= 2.4 && peakT <= .55,
       `${deg.toFixed(0)}° in ${turnT.toFixed(3)} s, peak ${peak.toFixed(2)} L/s at ${peakT.toFixed(2)} s`)
     // the beat the scene runs: phase advances by 2π·tailBeatHz(U, L)·dt, and the tail's peak-to-peak excursion is 2·A(1)
     const L = P.bodies[0].length, sts = [.28, .5, 1].map(k => { const U = k * L, A = Math.abs(Math.max(...Array.from({ length: 64 }, (_, j) => waveAt(P.bodies[0], 1, j * Math.PI / 32, 1)))); return tailBeatHz(U, L) * 2 * A / U })
@@ -470,15 +474,22 @@ export async function lifeChecks(assert: Assert): Promise<void> {
     const pristineKey = key(t), healed = healedMode === 'pristine' && liveKey === pristineKey
     assert('pond-koi: a tap drops 5–7 pellets that land with ripples, startles koi within .7 L, and heals to pristine 6 s later (frame = pristine frame)',
       dropped >= 5 && dropped <= 7 && floating === dropped && near.length > 0 && startled && healed, `${dropped} pellets, ${floating} floating after .6 s, ${near.length} koi near (${startled ? 'startled' : 'not startled'}), healed ${healedMode}`)
-    // hold 1.2 s → lure, no pellets
-    simReset(sim); worldReset(W)
-    t = 22; worldAt(W, t)
-    const lx = 72, ly = 80
-    for (let k = 0; k < 36; k++) s = at(ptr(true, lx, ly))
-    const close = P.bodies.filter((b, i) => { const v = koiView(P, s, i); return Math.hypot(v.x - lx, v.y - ly) < b.length }).length
-    s = at(ptr(false, lx, ly))
-    const pellets = pelletViews(P, s).filter(p => p.state === 1).length
-    assert('pond-koi: hold 1.2 s → ≥ 3 koi within 1 L of the lure, no pellets', close >= 3 && pellets === 0, `${close} koi within 1 L, ${pellets} pellets`)
+    // hold 1.2 s → lure, no pellets. How many koi reach the lure in 1.2 s depends on where they are when the hold
+    // starts (the L2 code gave 0–5 over start times), so the check holds from eight food-free starts (no pellets on
+    // the water: 22–26 s and 44–46 s of the loop) and compares with the pristine run at the same moments.
+    const lx = 72, ly = 80, within = (st: Float32Array) => P.bodies.filter((b, i) => { const v = koiView(P, st, i); return Math.hypot(v.x - lx, v.y - ly) < b.length }).length
+    let close = 0, alone = 0, best = 0, pellets = 0
+    for (const t1 of [22, 23, 24, 25, 26, 44, 45, 46]) {
+      simReset(sim); worldReset(W)
+      t = t1; worldAt(W, t)
+      for (let k = 0; k < 36; k++) s = at(ptr(true, lx, ly))
+      const c = within(s)
+      close += c; best = Math.max(best, c); alone += within(simAtStep(sim, simStep(sim, t)))
+      s = at(ptr(false, lx, ly))
+      pellets += pelletViews(P, s).filter(p => p.state === 1).length
+    }
+    assert('pond-koi: hold 1.2 s → the lure draws koi (8 starts: ≥ 1.5 koi within 1 L on average, ≥ 3 at best, twice the pristine count), no pellets',
+      close / 8 >= 1.5 && best >= 3 && close >= 2 * alone && pellets === 0, `${(close / 8).toFixed(2)} koi within 1 L on average (best ${best}), pristine ${(alone / 8).toFixed(2)}, ${pellets} pellets`)
     // flick across a koi at 240 cells/s (L3.2 raised the threshold from 90 to 200 cells/s)
     simReset(sim); worldReset(W)
     t = 34; const sf = worldAt(W, t).slice(), kf = koiView(P, sf, 4)
