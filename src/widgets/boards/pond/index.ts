@@ -30,9 +30,14 @@ export const pondProbe = { koi: koiProbe, jelly, slime, fireflies, murmur, terra
 const probing = (globalThis as { __POND_PROBE__?: boolean }).__POND_PROBE__ || (typeof location !== 'undefined' && /[?&]probe=1(&|$)/.test(location.search))
 if (probing) {
   const byId = new Map(pondBoard.map((p, i) => [p.id, { preset: p, world: pondWorlds[i] }]))
+  // count each card's draws (the probe reads its frame rate: the phone tier, reduced motion)
+  const draws = new Map<string, number>()
+  for (const p of pondBoard) { const f = p.layers; p.layers = ctx => { draws.set(p.id, (draws.get(p.id) ?? 0) + 1); return f(ctx) } }
   ;(globalThis as { __pondBoard?: unknown }).__pondBoard = {
     ids: () => pondBoard.map(p => p.id),
     mode: (id: string) => byId.get(id)?.world.mode,
+    draws: (id: string) => draws.get(id) ?? 0,
+    fps: (id: string) => byId.get(id)?.preset.fps,
     /** Median ms of `layers` + sample for `frames` pristine frames of card `id` (a fresh t range: each frame steps the world). */
     bench: (id: string, frames = 24) => {
       const c = byId.get(id)

@@ -133,9 +133,9 @@ function bakeGrass(spec: FirefliesSpec, seed: number): Int16Array {
 }
 
 /** The lantern while a press is held (card cells; `lit` during its flash), else undefined. */
-export function flyLantern(f: Fireflies, s: Float32Array): { x: number; y: number; lit: boolean } | undefined {
+export function flyLantern(f: Fireflies, s: Float32Array): { x: number; y: number; lit: boolean; phase: number } | undefined {
   const G = f.layout.G
-  return s[G + 3] > .5 ? { x: s[G + 1], y: s[G + 2], lit: s[G + G_LAGE] < LANTERN_LIT } : undefined
+  return s[G + 3] > .5 ? { x: s[G + 1], y: s[G + 2], lit: s[G + G_LAGE] < LANTERN_LIT, phase: s[G + G_LANT] } : undefined
 }
 export interface FlyView { x: number; y: number; phase: number; age: number }
 export function flyViews(f: Fireflies, s: Float32Array): FlyView[] {

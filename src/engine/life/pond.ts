@@ -804,7 +804,7 @@ interface TypeBake { water: Uint8Array; bank: Int16Array; shore: Int16Array; rx:
 const typeBakes = new WeakMap<KoiPond, Map<string, TypeBake>>()
 /** Font glyphs by density, for stones and koi interiors (FONT57 has no ramp order of its own that reads as density). */
 const TYPE_RAMP = ['.', ':', '+', '*', '%', '#'].map(c => glyphOf(FONT57, c))
-const TYPE_BODY = ['=', '*', '%', '#'].map(c => glyphOf(FONT57, c))
+const TYPE_BODY = ['*', '#', '●'].map(c => glyphOf(FONT57, c))
 const F_TILDE = glyphOf(FONT57, '~'), F_COLON = glyphOf(FONT57, ':'), F_DOT = glyphOf(FONT57, '.'), F_O = glyphOf(FONT57, 'o')
 const F_STAR = glyphOf(FONT57, '*'), F_PLUS = glyphOf(FONT57, '+'), F_DASH = glyphOf(FONT57, '-'), F_RING = glyphOf(FONT57, '○')
 /** Card-cell centre of a TYPE tile's glyph (5 × 7 from the tile's corner). */
@@ -860,6 +860,7 @@ function drawKoiType(p: KoiPond, s: Float32Array, t: number, hour: number, r: Ti
     else if (gl >= .08) putGlyph(r, tx, ty, edgeOfGradient(FONT57, gx, gy), night ? T_FAINT : T_MID, .8)
     else if (gl >= .025) putGlyph(r, tx, ty, edgeOfGradient(FONT57, gx, gy), T_FAINT, .6)
     else if (foam > .2) putGlyph(r, tx, ty, F_COLON, T_FAINT, .6)
+    else if (surfaceLine(p.spec.seed, bk.rx[i], bk.ry[i], t)) putGlyph(r, tx, ty, edgeOfGradient(FONT57, sgrad[0], sgrad[1]), T_FAINT, .6)
     else if (foam > .08 || flickerOn(tx, ty, t, night ? .07 : .035, .2)) putGlyph(r, tx, ty, F_DOT, T_FAINT, .6)
   }
   if (nl > 0) moonColumn(p, s, t, hour, nl, r, F_DASH, bk.water, bk.shore, (tx, ty) => { const i = ty * cols + Math.max(0, Math.min(cols - 1, tx)); return [bk.rx[i], bk.ry[i]] })
