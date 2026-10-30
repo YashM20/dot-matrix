@@ -10,6 +10,10 @@
 > - Patch: the tap action is a TURN toggle that rotates the light a quarter about the patch (each stitch direction catches it anew); "sew 4× faster for 1 s" needs time state.
 > - Rust: the front is the rust's edge cells within .008 of θ (≤ 250 dots), drawn as sites; hover adds a day of rust per second (120× real time was invisible); RESET sands in 1.2 s and time-lapses back at max(10, days / 6) days/s so it always finishes inside the 8 s idle; while the count is time-lapsing it is drawn in `idle` dots, not engraved. Bare steel is bright with a void brushing groove every third row; rust is darker, pitted.
 > - Candle: a pillar on the 1.5 lattice, 96 cells at midnight, 4 per hour; hour notches; three frozen Verlet drips; the flame (curl-noise sway) is the accent. No interaction beyond the hover torch.
+> - Marble (M1, cold-frame fix): the engraving's `distanceRaster` (two full-grid EDTs) is replaced by `matter/relief.ts` `insetDistance`, a banded inset distance (cap 3 cells) that gives bit-identical heights and coverage under the engraving profile (checked; goldens unchanged).
+> - Lens GPU value fill: gated as the field's cost beyond a constant field's over the same 288 × 264 pass (the loop's own overhead), ≤ 2 ms × load; measured 2–3.5 ms ÷ load depending on the box.
+>
+> **Sizes** (against a fresh build of `bcacd5a`): first-load JS 123.49 → 123.52 kB gz (+0.02; ledger row +0.03); worker initial 17.14 → 17.21 (+0.07: the catalog's six new rows); the `wk-materials` board chunk 22.18 → 33.38 kB gz (+11.2: glass, caustics, the lens / window / patch / candle cards, `life/chain`; the pool and the rust sign are a stub there). Goldens: 6 added, 0 changed (193).
 > It depends **by name** on two other tracks:
 > - **F0:**
 >   - `src/engine/noise` (`noise2`, `fbm2`, `turb2`, `curl2`, `voronoi2`) and `src/engine/noise/dmath.ts` (`dsin`, `dcos`, `tsin`, `tcos`, `datan2`, `dexp`, `dpow`);
