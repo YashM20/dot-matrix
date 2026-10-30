@@ -1978,6 +1978,90 @@
     "hash": "c104157d",
     "dots": 3376
    }
+  },
+  "sq-schotter": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "a620486a",
+    "dots": 1371
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "14828880",
+    "dots": 1375
+   }
+  },
+  "sq-blocks": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "47cc57ba",
+    "dots": 2480
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "a0e7e144",
+    "dots": 2481
+   }
+  },
+  "sq-sort": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "7a2d3d8c",
+    "dots": 2646
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "2532908a",
+    "dots": 2543
+   }
+  },
+  "sq-truchet": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "892b8aa5",
+    "dots": 3990
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "892b8aa5",
+    "dots": 3990
+   }
+  },
+  "sq-stitch": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "692ff659",
+    "dots": 1118
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "53c31ace",
+    "dots": 1119
+   }
+  },
+  "sq-beads": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "8ac16c15",
+    "dots": 778
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "c0a48341",
+    "dots": 778
+   }
+  },
+  "sq-morph": {
+   "t=0": {
+    "style": "circle:2.00",
+    "hash": "a280d9c3",
+    "dots": 4838
+   },
+   "t=1.3": {
+    "style": "circle:2.00",
+    "hash": "b9507ad7",
+    "dots": 4840
+   }
   }
  }
 }

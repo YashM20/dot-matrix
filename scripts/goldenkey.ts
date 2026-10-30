@@ -38,11 +38,11 @@ export function goldenKeyChecks(assert: Assert): void {
     // F0.5) the key
     // A dot keys as legacyKey + its channel suffixes. Every dot of a card without join / shapeOf layers (the 177 pre-F0
     // cards and every plain card since) must carry no suffix, so no existing hash can move; dots of cards that opt in
-    // (squares: `join`, `shapeOf`) carry exactly their channels after the unchanged legacy prefix.
+    // (squares: `join`, `shapeOf`, rect cells, Q3 `rotation` / `motif`) carry exactly their channels after the unchanged legacy prefix.
     const presets = uniquePresets()
     let dots = 0, suffixed = 0
     const off: string[] = [], opted = new Set<string>()
-    const optsIn = (p: WidgetPreset, t: number) => withChrome(p)({ t, data: { ...p.defaults } }).some(l => l.join !== undefined || l.shapeOf !== undefined || typeof l.lattice === 'object' || l.sizeAxis !== undefined)
+    const optsIn = (p: WidgetPreset, t: number) => withChrome(p)({ t, data: { ...p.defaults } }).some(l => l.join !== undefined || l.shapeOf !== undefined || typeof l.lattice === 'object' || l.sizeAxis !== undefined || l.rotation !== undefined || l.motif !== undefined)
     for (const p of presets) for (const t of [0, 1.3]) {
       const ds = sampleCard(p, t), canSuffix = optsIn(p, t)
       dots += ds.length
@@ -53,7 +53,7 @@ export function goldenKeyChecks(assert: Assert): void {
         off.push(`${p.id} t=${t}: ${k}`); break
       }
     }
-    assert(`golden key: dotKey ≡ legacyKey on every dot of all ${presets.length} presets at t=0 and t=1.3, except the channel suffixes of join / shapeOf / rect-cell cards`, !off.length && presets.length >= 177,
+    assert(`golden key: dotKey ≡ legacyKey on every dot of all ${presets.length} presets at t=0 and t=1.3, except the channel suffixes of join / shapeOf / rect-cell / rotation / motif cards`, !off.length && presets.length >= 177,
       off.length ? off.slice(0, 4).join('; ') : `${dots} dots; ${suffixed} suffixed on ${[...opted].join(', ') || 'none'}`)
 
     const base: DotStyle = { shape: 'squircle', sizeMin: .2, sizeMax: .95, cornerRoundness: .1 }
