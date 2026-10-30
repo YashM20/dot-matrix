@@ -1,6 +1,7 @@
 # LIVING-MATTER-PLAN: pond, squares, materials
 
-> Status: **planned, reviewed** (2026-10-27). Research came from four agents: a teardown of daoho.dev's koi pond, plus surveys of creature and pond algorithms, square-cell design, and physical materials. Nothing here is built yet.
+> Status (2026-10-29): **F0 done** (PR #9); **L1, Q1 and M1 built and merged** in round 2 (PR #10): the `pond`, `squares` and `materials` boards; L2, Q2 and M2 in progress (round 3); L3, L4, Q3, M3 and X planned. What landed and how it differs from this plan: the status line of each track doc in `living-matter/`, and `docs/PROGRESS.md`.
+> Planned and reviewed 2026-10-27. Research came from four agents: a teardown of daoho.dev's koi pond, plus surveys of creature and pond algorithms, square-cell design, and physical materials.
 > It covers three new directions that share one foundation:
 > 1. **Living scenes:** a koi pond and other ecosystems drawn in glyph tiles.
 > 2. **Squares:** cells that are spaced or joined squares, not only dots.

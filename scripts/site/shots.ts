@@ -90,9 +90,21 @@ const SHOTS: Shot[] = [
   // ── states
   {
     name: 'palette', path: '', ready: HOME,
-    act: async p => {
+    act: async (p, s) => {
+      if (s.phone) {
+        // touch: the topbar search opens the palette as a sheet that takes focus itself, so the list shows and
+        // the keyboard stays down until the field is tapped (Palette.tsx). Ready = that sheet, focused, with rows.
+        const sheet = `(() => { const pal = document.querySelector('.pal'); return !!pal && document.activeElement === pal && !!pal.querySelector('[role=option]:not([aria-disabled])') })()`
+        const ok = await openWith(p, '.topbar-search', sheet)
+        await sleep(800) // the sheet slides up
+        return ok
+      }
+      // ⌘K toggles, so press it only while the palette is closed; desktop focus goes to the search field
       const open = `!!document.querySelector('.pal') && document.activeElement?.getAttribute('role') === 'combobox'`
-      for (let i = 0; i < 5 && !await p.js(open); i++) { await p.js(`document.activeElement?.blur()`); await p.key('k', 'KeyK', 75, CTRL); await p.waitFor(open, 3000) }
+      for (let i = 0; i < 5 && !await p.js(open); i++) {
+        if (!await p.js(`!!document.querySelector('.pal')`)) { await p.js(`document.activeElement?.blur()`); await p.key('k', 'KeyK', 75, CTRL) }
+        await p.waitFor(open, 3000)
+      }
       return p.js(open) as Promise<boolean>
     },
   },
