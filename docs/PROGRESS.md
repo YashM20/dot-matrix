@@ -24,12 +24,23 @@
 
 | id | task | spec | owns | preview port |
 |---|---|---|---|---|
-| `aeefcc1925b62b2b8` | **L3 pond polish**: feeding and startle depth, day/night, the DOTS/TYPE toggle, reduced motion and touch, tilt and light, the slime/fireflies/terrarium holds (L4 not included) | `docs/living-matter/L-pond.md` §L3 | `src/engine/life/`, the pond board, `scripts/life*.ts` | 4385 |
+| `ac4ef06b6e269c85b` | **X1 pond depth**: the suminagashi `pond-marble` card, the daily and ageing pond (`?day=`, storage only after opt-in), packed glyph hysteresis only if memory allows, View Transitions from board to widget | `docs/living-matter/X-advanced.md` §7 X1 | `src/engine/life/`, the pond board, `scripts/life*.ts`, the View Transitions hook in `src/site/` | 4385 |
 | `a34596589e36c316d` | **Q3 squares**: the square field pack (Chebyshev/Manhattan Voronoi, Schotter, Molnár, pixel sort, block glitch, multi-scale Truchet), π/4 rotation, nested motifs, dot ↔ square morphs, the §4.4 cards. The DISPLAY "squares" skin is left out (owner decision) | `docs/living-matter/Q-squares.md` §4 | `src/engine/squares/`, the squares board, `scripts/squares*.ts` | 4386 |
 | `a525b2c5aebad3e34` | **M3 workshop**: the new `/workshop/` board, with knit, denim, paper, wood, leather, sand, ice, mercury and thread; plus the M3.10 tilt-lighting polish. The §10 owner options stay off | `docs/living-matter/M-materials.md` §5 | `src/engine/matter/`, the workshop and materials boards, `scripts/materials*.ts` | 4391 |
 | `ab02542b616c4c2e1` | **E6 phone polish**: long-press menu, snap cue, sheet detent memory, landscape side sheet, `visualViewport`, `navigator.share` | `docs/EDITOR-PLAN.md` §10 E6 | `src/components/editor/` | 4383/4384 |
 
-**Done in round 3 and merged on `feat/round3`:** M2 glass and water (0cf937f, from 0dd76a7):
+**Done in round 3 and merged on `feat/round3`:** L3 pond polish (merged from 3e7ecaf; L3.1–L3.8):
+- **Checks:** life 120/120 and all life-browser checks pass; goldens 0 changed, 0 added; every pond card's default frames are identical to L2.
+- **Sizes:** first load −0.01; worker initial +0.07.
+- **Core edit:** `DotCanvas`/`useDotField` interaction frames now carry `ctx.reducedMotion`. This turns on M's reduced-motion branch; the physics board still ignores the flag.
+- **Owner calls:**
+  - the DOTS/TYPE default (currently DOTS);
+  - a fireflies taste pass (they're faint by day);
+  - the night thresholds;
+  - the real-iPhone tilt check.
+- **L4** (the hero) waits for the owner's yes.
+
+M2 glass and water (0cf937f, from 0dd76a7):
 - **What it adds:** the `glass.ts` and `caustics.ts` engines, and six cards (`mat-lens` is the board's one GPU layer; `mat-pool` runs at 30 fps; `mat-rust`, `mat-window`, `mat-patch` and `mat-candle`).
 - **Marble:** the banded `insetDistance` is bit-identical, and the cold frame dropped from about 31 to 15–19 ms per unit of load.
 - **Checks:** goldens 0 changed, 6 added; browser probe 15/15.
@@ -51,7 +62,8 @@ The housekeeping list (done):
 - `docs/README.md` statuses.
 
 **Next, in order** (each starts when an agent above frees a slot):
-- **Within each track, phases are sequential:** Q3, L3 and M3 are running.
+- **Within each track, phases are sequential:** Q3, M3 and X1 are running.
+- **After them:** XQ after Q3 (it needs Q3.1's rotation), XM after M3 (it edits `matter/`), XL after X1. L4 only on the owner's yes; X2 only after the WebGPU decision.
 - **Editor:** E6 is running; then E4 machine edges and E7 frames in the worker.
 - **Then:** the X phases.
 - **The polish plan** (`docs/POLISH-PLAN.md`) waits until the owner says to start. When it starts: P0 probes first (one agent), then P1 (four agents). The owner has answered:
