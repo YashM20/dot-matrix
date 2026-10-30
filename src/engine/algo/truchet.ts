@@ -40,17 +40,17 @@ export function truchetTiles(o: TruchetOptions): TruchetTile[] {
   return out
 }
 const B = 1 / 6
+/** On the band of the quarter ring of radius ½ around corner (cx, cy)? */
+const ring = (x: number, y: number, cx: number, cy: number) => { const dx = x - cx, dy = y - cy; return Math.abs(Math.sqrt(dx * dx + dy * dy) - .5) <= B }
+/** Inside the stub disc of radius B at an edge midpoint (cx, cy)? */
+const stub = (x: number, y: number, cx: number, cy: number) => { const dx = x - cx, dy = y - cy; return dx * dx + dy * dy <= B * B }
 /** A motif at local (x, y) ∈ [0, 1]²: is it ink (before the level's inversion)? */
 export function motifAt(kind: number, x: number, y: number): boolean {
-  const ring = (cx: number, cy: number) => { const dx = x - cx, dy = y - cy; return Math.abs(Math.sqrt(dx * dx + dy * dy) - .5) <= B }
-  const stub = (cx: number, cy: number) => { const dx = x - cx, dy = y - cy; return dx * dx + dy * dy <= B * B }
-  switch (kind) {
-    case 0: return ring(0, 0) || ring(1, 1)
-    case 1: return ring(1, 0) || ring(0, 1)
-    case 2: return Math.abs(x - .5) <= B || Math.abs(y - .5) <= B
-    case 3: return Math.abs(y - .5) <= B || stub(.5, 0) || stub(.5, 1)
-    default: return Math.abs(x - .5) <= B || stub(0, .5) || stub(1, .5)
-  }
+  if (kind === 0) return ring(x, y, 0, 0) || ring(x, y, 1, 1)
+  if (kind === 1) return ring(x, y, 1, 0) || ring(x, y, 0, 1)
+  if (kind === 2) return Math.abs(x - .5) <= B || Math.abs(y - .5) <= B
+  if (kind === 3) return Math.abs(y - .5) <= B || stub(x, y, .5, 0) || stub(x, y, .5, 1)
+  return Math.abs(x - .5) <= B || stub(x, y, 0, .5) || stub(x, y, 1, .5)
 }
 /**
  * The tile that shows at cell point (px, py) once `placed` tiles are down (−1 = none yet): the deepest placed tile

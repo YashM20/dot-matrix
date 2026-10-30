@@ -25,7 +25,7 @@ import { TILE, layer, type WidgetPreset } from '../types'
 import { portrait } from './mirror'
 import { FOOT, T, cap, cells, cite, footer, mod, pad, squareStyle, thousands, tile, type Pt } from './squaresKit'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
-import { morphFront, squareMorph } from '../../engine/squares/morph'
+import { frontOf, squareMorph } from '../../engine/squares/morph'
 import { squaresPack } from './squaresPack'
 
 export { squareStyle }
@@ -318,8 +318,8 @@ export const sqGameboy: WidgetPreset = {
 // the panel and turns each pixel from a dot into a square of the same ink (`shapeOf`, equal-ink half sides), then the
 // passed rows fuse (`join` from level .5: the digits, hills and walker become solid shapes) and the front sweeps back.
 // The red is the front: the LCD row it is crossing.
-/** Round-dot style of the morph: circles .89 of the half pitch; squares come out .79 (equal ink), under the .1 gutter. */
-export const morphStyle: DotStyle = { shape: 'circle', sizeMin: .25, sizeMax: 1, gap: .1, quantizeSteps: 5, opacityMode: 'fromValue' }
+/** Round-dot style of the morph: circles .8 of the half pitch; squares come out .71 (equal ink), under the .1 gutter. */
+export const morphStyle: DotStyle = { shape: 'circle', sizeMin: .25, sizeMax: .9, gap: .1, quantizeSteps: 5, opacityMode: 'fromValue' }
 const M_LOOP = 14, M_OFF = 4.2, M_WIDTH = .3
 /** Morph position k ∈ [0, 1] at t: a triangle wave with a short hold at each end. */
 export const morphK = (t: number) => { const p = mod(t + M_OFF, M_LOOP) / M_LOOP, tri = p < .5 ? 2 * p : 2 - 2 * p; return clamp(tri * 1.2 - .1) }
@@ -327,13 +327,17 @@ const M_ROWS = latticeGrid(TILE, LK, L_ORIGIN).rows
 export const sqMorph: WidgetPreset = {
   id: 'sq-morph', name: 'Squares Morph', label: 'MORPH', ...tile, style: morphStyle, clock: true,
   layers: ctx => {
-    const px = lcdWithColon(ctx.t), k = morphK(ctx.t), opts = { width: M_WIDTH, join: { at: .5, outer: 0 } }
+    const px = lcdWithColon(ctx.t), k = morphK(ctx.t), opts = { width: M_WIDTH, join: { at: .5, outer: 0 }, rows: M_ROWS }
     // the front row: where the wavefront crosses w = .5 (the LCD row whose dots are halfway to squares)
-    let front = -1
-    for (let r = 0; r < LH; r++) { const w = morphFront(k, .5, r / (M_ROWS - 1), opts); if (w > 0 && w < 1 && (front < 0 || Math.abs(w - .5) < Math.abs(morphFront(k, .5, front / (M_ROWS - 1), opts) - .5))) front = r }
+    const w = frontOf(k, opts)
+    let front = -1, best = 1
+    for (let r = 0; r < LH; r++) { const x = w(.5, r / (M_ROWS - 1)); if (x > 0 && x < 1 && Math.abs(x - .5) < best) { best = Math.abs(x - .5); front = r } }
     const lcd = cells(LK, L_ORIGIN, LW, LH, (c, r) => (r === front ? 0 : px[r * LW + c] ? 1 : .25), { toneOf: (c, r) => SHADE[px[r * LW + c]] })
     const red = cells(LK, L_ORIGIN, LW, LH, (c, r) => (r === front ? (px[r * LW + c] ? 1 : .25) : 0), { tone: 'active' })
-    return [layer(cap(`SHAPE ${pad(k * 100, 3)}%`, 143, 1, 'right'), 'faint'), ...squareMorph([lcd, red], k, opts)]
+    // only the front row can light: bound the red layer's window to it
+    red.field.bounds = front < 0 ? [0, 0, -1, -1] : [0, front, LW - 1, front]
+    // the red row is always mid-turn (never joined): only its shape follows the front
+    return [layer(cap(`SHAPE ${pad(k * 100, 3)}%`, 143, 1, 'right'), 'faint'), ...squareMorph([lcd], k, opts), ...squareMorph([red], k, { width: M_WIDTH })]
   },
 }
 

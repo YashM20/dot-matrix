@@ -61,9 +61,10 @@ export const sqSchotter: WidgetPreset = {
 // ── 08 BLOCKS ─ Voronoi under L∞ ──────────────────────────────────────────────────────────────────────
 // Thesis: "Measure distance in squares and Voronoi turns into Mondrian." Fourteen drifting seeds on a 3× lattice;
 // each region is one joined block (join group = region id), so the grout between blocks is the Voronoi edge. Under
-// L∞ the edges run along the axes and the diagonals; the second half of the loop measures in L1 (Manhattan), where
+// L∞ the edges run along the axes and the diagonals (joined fills at a quarter and a half level: a band low); the second half of the loop measures in L1 (Manhattan), where
 // the same seeds give diamonds. Regions arrive one at a time; the red is the newest.
 const V_K = 3, V_ORIGIN: Pt = [0, 12], V_W = 48, V_H = 40, V_SEEDS = 14, V_LOOP = 24, V_FIRST = 6, V_OFF = 9
+const V_LEVEL: Partial<Record<Tone, number>> = { faint: .25, mid: .25, idle: .5 }
 const V_TONES: Tone[] = ['faint', 'mid', 'faint', 'idle', 'mid', 'faint', 'idle', 'mid', 'faint', 'idle', 'mid', 'faint', 'mid', 'idle']
 export const sqBlocks: WidgetPreset = {
   id: 'sq-blocks', name: 'Squares Blocks', label: 'BLOCKS', ...tile,
@@ -73,7 +74,7 @@ export const sqBlocks: WidgetPreset = {
     const vo = blockVoronoi({ seed: 11, n, metric, w: V_W, h: V_H, t, drift: 3 }), id = (c: number, r: number) => vo.id[r * V_W + c]
     return [
       cite('MONDRIAN 1930'),
-      cells(V_K, V_ORIGIN, V_W, V_H, (c, r) => (id(c, r) === n - 1 ? 0 : 1), { toneOf: (c, r) => V_TONES[id(c, r)], group: id, join: true }),
+      cells(V_K, V_ORIGIN, V_W, V_H, (c, r) => (id(c, r) === n - 1 ? 0 : V_LEVEL[V_TONES[id(c, r)]]), { toneOf: (c, r) => V_TONES[id(c, r)], group: id, join: true }),
       cells(V_K, V_ORIGIN, V_W, V_H, (c, r) => (id(c, r) === n - 1 ? 1 : 0), { tone: 'active', group: id, join: { accent: true } }),
       layer(T.text(`REGIONS ${pad(n, 2)}`, 0, FOOT), 'idle'),
       layer(T.text(metric === 'linf' ? 'CHEBYSHEV' : 'MANHATTAN', 143, FOOT, { align: 'right' }), 'faint'),
@@ -127,17 +128,23 @@ export const sqSort: WidgetPreset = {
 // inverts the colour. Tiles are placed breadth first, so the pattern resolves level by level; the ink fuses into
 // one joined figure. The red is the tile being placed.
 const R_K = 2, R_ORIGIN: Pt = [0, 22], R_COLS = 3, R_ROWS = 2, R_SIZE = 24, R_W = 72, R_H = 48, R_LOOP = 16, R_REVEAL = 12, R_OFF = 13.5
-let truchet: TruchetTile[] | undefined
+let truchet: TruchetTile[] | undefined, truchetLast: { placed: number; ink: Uint8Array; owner: Int16Array } | undefined
+/** Ink and the showing tile per lattice cell with `placed` tiles down (cached: it changes a few times a second at most). */
+function truchetFrame(ts: TruchetTile[], placed: number): { placed: number; ink: Uint8Array; owner: Int16Array } {
+  if (truchetLast?.placed === placed) return truchetLast
+  const ink = new Uint8Array(R_W * R_H), owner = new Int16Array(R_W * R_H)
+  for (let r = 0; r < R_H; r++) for (let c = 0; c < R_W; c++) {
+    const j = r * R_W + c
+    ink[j] = truchetInk(ts, R_COLS, R_ROWS, c + .5, r + .5, placed); owner[j] = truchetTileAt(ts, R_COLS, R_ROWS, c + .5, r + .5, placed)
+  }
+  return (truchetLast = { placed, ink, owner })
+}
 const tiles = () => (truchet ??= truchetTiles({ seed: 6, cols: R_COLS, rows: R_ROWS, size: R_SIZE, split: [.85, .5] }))
 export const sqTruchet: WidgetPreset = {
   id: 'sq-truchet', name: 'Squares Truchet', label: 'TRUCHET', ...tile,
   layers: ctx => {
     const ts = tiles(), p = mod(ctx.t + R_OFF, R_LOOP), placed = Math.max(1, Math.min(ts.length, Math.ceil((p / R_REVEAL) * ts.length))), live = placed - 1
-    const ink = new Uint8Array(R_W * R_H), owner = new Int16Array(R_W * R_H)
-    for (let r = 0; r < R_H; r++) for (let c = 0; c < R_W; c++) {
-      const j = r * R_W + c
-      ink[j] = truchetInk(ts, R_COLS, R_ROWS, c + .5, r + .5, placed); owner[j] = truchetTileAt(ts, R_COLS, R_ROWS, c + .5, r + .5, placed)
-    }
+    const { ink, owner } = truchetFrame(ts, placed)
     const level = ts[live].level
     return [
       cite('CARLSON 2018'),
@@ -213,7 +220,7 @@ export const sqStitch: WidgetPreset = {
 // LEGO plate with its stud (`motif: 'stud'`); the split sweeps across and back. Both motifs are cuts in the cell's own
 // colour; the shape is still the exponent. The red is the bird's eye.
 const B_K = 6, B_ORIGIN: Pt = [0, 12], B_W = 24, B_H = 22, B_LOOP = 16
-/** The sprite ('.' empty, '1' value, '2' idle, '3' mid, '4' faint, 'e' the eye). */
+/** The sprite ('.' empty, '1' belly, '2' body, '3' outline, '4' ground, 'e' the eye). */
 const SPRITE = [
   '........................',
   '........................',
@@ -238,7 +245,8 @@ const SPRITE = [
   '........44.44...........',
   '4444444444444444444444..',
 ]
-const B_TONE: Record<string, Tone> = { 1: 'value', 2: 'idle', 3: 'mid', 4: 'faint', e: 'active' }
+/** A band low for a sprite this large (Q-squares §2.5): the belly idle, the body mid, the outline and ground faint. */
+const B_TONE: Record<string, Tone> = { 1: 'idle', 2: 'mid', 3: 'faint', 4: 'faint', e: 'active' }
 const pix = (c: number, r: number) => SPRITE[r]?.[c] ?? '.'
 export const sqBeads: WidgetPreset = {
   id: 'sq-beads', name: 'Squares Beads', label: 'BEADS', ...tile,

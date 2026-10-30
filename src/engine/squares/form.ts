@@ -50,10 +50,21 @@ const corner = (n: number) => (n === Infinity ? 0 : (Math.SQRT2 * (1 - dpow(2, -
 /** Area of the drawn dot of exponent n at half side 1: the rounded square for n > 8, the superellipse below. */
 export const drawnArea = (n: number): number => (n > BEZIER_MAX_N ? 4 - (4 - Math.PI) * corner(n) ** 2 : superellipseArea(n))
 
+/** Ink factors per frame style (`shape|roundness`): √(A(n_style) / A(n_step)) for the 9 roundness steps. */
+const inkTables = new Map<string, Float64Array>()
+let lastShape: DotStyle['shape'] | undefined, lastRound: number | undefined, lastTable: Float64Array | undefined
 /** `samplerExt.ink`: a `shapeOf` dot (roundness step ≠ 15) holds the ink of the frame style's dot of the same r. */
 export function inkOf(r: number, form: number, shape: DotStyle['shape'], roundness: number | undefined): number {
   const f = form & 15
-  return f === NO_FORM ? r : r * Math.sqrt(drawnArea(shapeExponent(shape, roundness)) / drawnArea(squircleExponent(f / 8)))
+  if (f === NO_FORM) return r
+  let t = shape === lastShape && roundness === lastRound ? lastTable : inkTables.get(`${shape}|${roundness ?? 0}`)
+  if (!t) {
+    const a = drawnArea(shapeExponent(shape, roundness))
+    t = Float64Array.from({ length: 9 }, (_, i) => Math.sqrt(a / drawnArea(squircleExponent(i / 8))))
+    inkTables.set(`${shape}|${roundness ?? 0}`, t)
+  }
+  lastShape = shape; lastRound = roundness; lastTable = t
+  return r * t[Math.min(8, f)]
 }
 
 /** What `formOutline` draws into: an outline sink that also takes cubic Béziers (soft squircles). */

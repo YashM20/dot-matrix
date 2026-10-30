@@ -16,21 +16,24 @@ export interface MorphOptions {
   join?: JoinSpec | true
   /** Distance metric: 'row' (|v − from.v|, a straight front; the default) or 'radial'. */
   metric?: 'row' | 'radial'
+  /** Rows of the layers' grid: with a row front, each half of a split layer bounds its window to its own rows. */
+  rows?: number
 }
-/** The front's progress w ∈ [0, 1] at (u, v) for morph position k ∈ [0, 1]: 0 = still a dot, 1 = a square. */
-export function morphFront(k: number, u: number, v: number, opts: MorphOptions = {}): number {
-  const [fu, fv] = opts.from ?? [.5, 0], width = opts.width ?? .25
-  let d: number
-  if (opts.metric === 'radial') {
-    const du = u - fu, dv = v - fv, mu = Math.max(fu, 1 - fu), mv = Math.max(fv, 1 - fv)
-    d = Math.sqrt(du * du + dv * dv) / Math.sqrt(mu * mu + mv * mv)
-  } else d = Math.abs(v - fv) / Math.max(fv, 1 - fv)
-  const x = Math.max(0, Math.min(1, (Math.max(0, Math.min(1, k)) * (1 + width) - d) / width))
-  return x * x * (3 - 2 * x)
+/** The front at morph position k ∈ [0, 1]: (u, v) → w ∈ [0, 1], 0 = still a dot, 1 = a square. */
+export function frontOf(k: number, opts: MorphOptions = {}): (u: number, v: number) => number {
+  const [fu, fv] = opts.from ?? [.5, 0], width = opts.width ?? .25, at = Math.max(0, Math.min(1, k)) * (1 + width)
+  const mu = Math.max(fu, 1 - fu), mv = Math.max(fv, 1 - fv), radial = opts.metric === 'radial', norm = radial ? 1 / Math.sqrt(mu * mu + mv * mv) : 1 / mv
+  return (u, v) => {
+    const du = u - fu, dv = v - fv, d = (radial ? Math.sqrt(du * du + dv * dv) : Math.abs(dv)) * norm
+    const x = Math.max(0, Math.min(1, (at - d) / width))
+    return x * x * (3 - 2 * x)
+  }
 }
-const masked = (f: Field, keep: (u: number, v: number) => boolean): Field => {
-  const g: Field = (u, v) => (keep(u, v) ? f(u, v) : 0)
-  if (f.bounds) g.bounds = f.bounds
+/** The front's progress w at (u, v) for morph position k (see `frontOf`). */
+export const morphFront = (k: number, u: number, v: number, opts: MorphOptions = {}): number => frontOf(k, opts)(u, v)
+const masked = (f: Field, keep: (u: number, v: number) => boolean, rows?: [number, number]): Field => {
+  const g: Field = (u, v) => (keep(u, v) ? f(u, v) : 0), b = f.bounds
+  if (b || rows) g.bounds = [b?.[0] ?? 0, Math.max(b?.[1] ?? 0, rows?.[0] ?? 0), b?.[2] ?? Infinity, Math.min(b?.[3] ?? Infinity, rows?.[1] ?? Infinity)]
   return g
 }
 /**
@@ -40,14 +43,18 @@ const masked = (f: Field, keep: (u: number, v: number) => boolean): Field => {
  * still turning, and the cells the front has passed, which join.
  */
 export function squareMorph(layers: Layer[], k: number, opts: MorphOptions = {}): Layer[] {
-  const w = (u: number, v: number) => morphFront(k, u, v, opts)
+  const w = frontOf(k, opts)
   const shapeOf = (_: number, u: number, v: number) => { const x = w(u, v); return x > 0 ? x : undefined }
+  // a row front: the rows that have turned (w = 1) and the rest, so each half of a split layer only visits its own rows
+  const n = opts.metric === 'radial' ? 0 : opts.rows ?? 0, lo = [Infinity, Infinity], hi = [-1, -1]
+  for (let r = 0; r < n; r++) { const k = w(.5, n === 1 ? .5 : r / (n - 1)) >= 1 ? 1 : 0; lo[k] = Math.min(lo[k], r); hi[k] = Math.max(hi[k], r) }
+  const span = (done: boolean): [number, number] | undefined => (n ? [lo[done ? 1 : 0], hi[done ? 1 : 0]] : undefined)
   return layers.flatMap((l): Layer[] => {
     if (l.sites) return [{ ...l, shapeOf }]
     if (!opts.join) return [{ ...l, shapeOf }]
     return [
-      { ...l, field: masked(l.field, (u, v) => w(u, v) < 1), shapeOf },
-      { ...l, field: masked(l.field, (u, v) => w(u, v) >= 1), shapeOf: () => 1, join: opts.join },
+      { ...l, field: masked(l.field, (u, v) => w(u, v) < 1, span(false)), shapeOf },
+      { ...l, field: masked(l.field, (u, v) => w(u, v) >= 1, span(true)), shapeOf: () => 1, join: opts.join },
     ]
   })
 }
