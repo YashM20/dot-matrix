@@ -1,7 +1,9 @@
 /**
  * Board · MATERIALS (M1, docs/living-matter/M-materials.md §3): cloth, spun aluminium, perforated steel, marble and
- * terrazzo, each made of relief + one light + a micro-pattern of whole size steps (`src/engine/matter`). Material
- * never comes from hue: height → normal → tone band, AO, an anisotropic sheen, and the card's one moving part in red.
+ * terrazzo here; M2 (§4: liquid glass, a caustic pool, stained glass, embroidery, rust, a wax candle) in
+ * `materials-glass.ts` (lens, window), `materials-live.ts` (pool, rust: main thread only) and `materials-wear.ts` (patch, candle),
+ * with the shared shell in `materials-shared.ts`.
+ * Each is made of relief + one light + a micro-pattern of whole size steps (`src/engine/matter`). Material never comes from hue: height → normal → tone band, AO, an anisotropic sheen, and the card's one moving part in red.
  *
  * Rules (M §1):
  * - One accent per card, on the live element only (the shuttle, the value arc, the peak hole, the colon, today's chip).
@@ -14,81 +16,26 @@
  * - The light is `sceneLight` (src/engine/light/input.ts) through `matLight`: the hovering pointer as a torch, else the
  *   tilt hub (`lightSrc` 1), else the sun of the hour. Every card declares the hub keys in `defaults`.
  */
-import { ambientOcclusion, anisoSpec, cardMask, DRAFTS, fromDraft, marble, rake, surfaceLayer, tangentLinear, tangentRadial, terrazzo, tonedLayer, weaveRelief, type Draft, type Drawdown, type TangentRaster } from '../../engine/matter'
+import { ambientOcclusion, anisoSpec, cardMask, DRAFTS, fromDraft, marble, surfaceLayer, tangentLinear, tangentRadial, terrazzo, tonedLayer, weaveRelief, type Draft, type Drawdown, type TangentRaster } from '../../engine/matter'
 import { heightFromField } from '../../engine/matter/relief'
 import { heightRaster, normalRaster, stackHeights, type HeightRaster, type NormalRaster } from '../../engine/light/height'
 import { illuminate, lambert, phong, type Light } from '../../engine/light/shade'
-import { hourOf, MATTE_BANDS, type ToneBand } from '../../engine/light/material'
+import { MATTE_BANDS, type ToneBand } from '../../engine/light/material'
 import { sdfBox, sdfCircle } from '../../engine/light/sdf'
-import { sceneLight } from '../../engine/light/input'
 import { createRaster, rasterize, rasterWindow, sample, type Raster } from '../../engine/raster/raster'
-import { distanceRaster } from '../../engine/raster/ops'
-import { latticeGrid } from '../../engine/sampler/gridSampler'
+import { insetDistance } from '../../engine/matter/relief'
 import { noise2 } from '../../engine/noise/gradient'
 import { dexp, dpow } from '../../engine/noise/dmath'
 import { hash01 } from '../../engine/math'
-import type { Field, Layer, Tone } from '../../engine/types'
+import type { Field, Layer } from '../../engine/types'
 import { lightSource } from '../../site/light'
-import { TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { TILE, layer, layoutFor, type WidgetPreset } from '../types'
+import { cap, cellToLattice15, cite, DEG, L15, LG15, LIGHT_DEFAULTS, matLight, mod, once, pad2, rasterLayer, scratch, T, TAU, tile, toCard15, valuedSites, type Box, type Pt } from './materials-shared'
+import { matLens, matWindow, glassHooks } from './materials-glass'
+import { matPool, matRust, poolHooks } from './materials-live'
+import { matPatch, matCandle, wearHooks } from './materials-wear'
 
-const T = layoutFor(TILE)
-type Pt = [number, number]
-type Box = [number, number, number, number]
-const DEG = Math.PI / 180, TAU = Math.PI * 2
-const mod = (a: number, n: number) => ((a % n) + n) % n
-const pad2 = (n: number) => String(n).padStart(2, '0')
-/** Lazily baked once, on first use (never at import: opening the board doesn't stall). */
-const once = <V>(make: () => V) => { let v: V | undefined; return () => (v ??= make()) }
-
-// ── shared plumbing ───────────────────────────────────────────────────────────────────────────────
-/** The light hub's fixture values (F0): every card declares them, or `Board.tsx` never passes them in. */
-export const LIGHT_DEFAULTS = { lightSrc: 0, lightAz: 0, lightEl: 7, tx: 0, ty: 0 } as const
-const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
-/** Caption tier (0.72 lattice), as on the algorithms board. */
-const cap = (s: string, col: number, row: number, align?: 'left' | 'center' | 'right') => T.big(s, col, row, { lattice: .72, align })
-/** Top-right: what the card is built on, faint. */
-const cite = (s: string) => layer(cap(s, 143, 1, 'right'), 'faint')
-
-export interface MatLightOptions {
-  /** The normals' lattice (card cells per dot) and its origin, to map the pointer (default: card pitch). */
-  lattice?: number; origin?: [number, number]
-  /** The pointer torch: height above the surface and falloff, cells of the normals' grid. */
-  torch?: { height: number; falloff?: number }
-  /** Clamp the elevation of a directional light to 8°..18° (engraving). Torches pass through. */
-  rake?: boolean
-  /** Keep the torch on a pressed pointer too (a dragged knob keeps its light instead of jumping to the sun). */
-  pressed?: boolean
-}
-/**
- * The board light: a thin wrapper over `sceneLight` (M rule 8) that adds nothing to its order. It passes the pointer
- * while it hovers this card (mapped onto the normals' lattice), the card's torch, and `rake` when asked.
- */
-export function matLight(ctx: WidgetContext, o: MatLightOptions = {}): Light {
-  const p = ctx.pointers?.find(q => q.inside && !q.up && (o.pressed || !q.down)), k = o.lattice ?? 1, [ox, oy] = o.origin ?? [0, 0]
-  const pointer = p ? { x: (p.x + .5 - ox) / k - .5, y: (p.y + .5 - oy) / k - .5 } : null
-  const L = sceneLight({ pointer, data: ctx.data, hour: hourOf(new Date()), torch: o.torch })
-  return o.rake ? rake(L) : L
-}
-
-/** Scratch rasters per card, allocated on first use and reused every frame. */
-function scratch(n: number, grid = TILE): () => Raster[] { return once(() => Array.from({ length: n }, () => createRaster(grid))) }
-/** A raster's values as a layer (nearest), on a lattice or card pitch. */
-const rasterLayer = (r: Raster, tone: Tone, k?: number): Layer => (k ? { field: sample(r), tone, lattice: k, origin: [0, 0] } : { field: sample(r), tone })
-/** Sites with a per-site value (one field reads it back by position). */
-function valuedSites(points: readonly (readonly [number, number, number])[], size: number): Omit<Layer, 'tone'> {
-  const sites = points.map(p => [p[0], p[1]] as Pt), N = TILE.cols - 1
-  const field: Field = (u, v) => {
-    const x = u * N, y = v * N
-    for (const p of points) if (Math.abs(p[0] - x) < 1e-3 && Math.abs(p[1] - y) < 1e-3) return p[2]
-    return 0
-  }
-  return { field, sites, size }
-}
-const L15 = 1.5, LG15 = latticeGrid(TILE, L15)
-/** Card cell ↔ 1.5-lattice cell (the sampler's lattice placement, origin 0). */
-const toCard15 = (j: number) => (j + .5) * L15 - .5
-/** Card cell → the 1.5-lattice cell it lies in, ⌊(c + ½) / 1.5⌋, tabled (the card is square: rows and columns alike). */
-const cellToLattice15 = once(() => Int32Array.from({ length: Math.max(TILE.cols, TILE.rows) }, (_, c) => Math.floor((c + .5) / L15)))
+export { LIGHT_DEFAULTS, matLight, type MatLightOptions } from './materials-shared'
 
 // ── 01 LOOM ─ cloth appears one pick at a time; the shuttle is the only thing moving ─────────────────
 // Twill, satin, herringbone, basket and plain in turn (26 picks a panel, 1.2 s a pick at 40 fps: 2 cells a frame).
@@ -513,7 +460,7 @@ export function engraving(hh: string, mm: string, year: number): Engraving {
   const top = pts.filter(p => p[1] < midY), bottom = pts.filter(p => p[1] >= midY), colon = top.length && bottom.length ? [centroid(top), centroid(bottom)] : []
   const hero = toLattice15(cut), year15 = rasterize(layoutFor(LG15).text(`ANNO ${roman(year)}`, 48, YEAR_ROW, { align: 'center' }), LG15)
   // the year is a hairline (1-dot strokes): drawn as void, not relief, so its AO doesn't swallow the gaps between letters
-  const h = stackHeights(plaqueHeight(), heightRaster(distanceRaster(hero), { shape: 'linear', width: 1.6, height: -1.8 }))
+  const h = stackHeights(plaqueHeight(), heightRaster(insetDistance(hero), { shape: 'linear', width: 1.6, height: -1.8 }))
   // the colon's sites sit over the plaque lattice: clear the stone under them (sites don't hide lattice dots)
   const clear = new Uint8Array(LG15.cols * LG15.rows)
   // only the lattice cells within 3 cells of a colon dot (their box, then the exact distance test)
@@ -702,11 +649,13 @@ export const matTerrazzo: WidgetPreset = {
   },
 }
 
-export const materialsBoard = [matLoom, matKnob, matGrille, matMarble, matTerrazzo]
+/** M1 (loom … terrazzo), then M2: glass and water (lens, pool, window), then wear (patch, rust, candle). */
+export const materialsBoard = [matLoom, matKnob, matGrille, matMarble, matTerrazzo, matLens, matPool, matWindow, matPatch, matRust, matCandle]
 /** Live data for the board: the light / tilt hub (F0), subscribed while the board is open. */
 export const materialsSources = [lightSource]
 /** The board's internals, for the checks (`scripts/materials.ts`). */
 export const materialsHooks = {
   LOOM, LOOM_ORDER, loomAt, loomDraft, loomCloth, drawdownOf, woven, KNOB_ARC, KNOB_CARD, knobSpec, grilleHoles, grillePlate, grilleSurface, grilleTarget, grilleVU, livePeak,
   engraving, marbleLit, monthOf, chipAt, roman, PANEL, LG15, toCard15,
+  ...glassHooks, ...poolHooks, ...wearHooks,
 }

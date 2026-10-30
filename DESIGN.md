@@ -241,8 +241,12 @@ A material is a dot vocabulary, not a shader: given one normal raster and one li
 | Woven | `weave` drafts + `weaveRelief` | Threads ≥ 3 cells with a 1-cell void gap; warp one band above weft; sheen along the thread |
 | Stitched | `stitch` / `stitchField` | Hard dashes on card pitch; unsewn stitches are needle holes; the needle may be the accent |
 | Stone | `marble`, `terrazzo` | Veins ≥ 2 cells drop one band; engraving is a V-groove, lit wall / dark wall under raking light (`rake(L)`, ≤ 18°) |
+| Liquid glass | `liquidGlass` (`snellLUT`, `BEZEL`, `frost`) | Dots stay on the grid, the sampled value moves (sub-cell); Snell LUT (127 samples, n 1.5) on a squircle bezel; the flat top magnifies 1.06; Fresnel +1 step on the bezel's outer 1.5 cells; the specular rim (−60°, toward a hovering pointer) in `value`. The screen behind is the one GPU layer (`gpuValues`, density 2); its lattice-1 field is what Canvas, goldens and SVG draw |
+| Caustics | `causticSplat`, `refractFloor` | Forward photon splat (2×2 stratified photons per cell, tent + [1 2 1]² binomial: a 1.5-cell B-spline footprint), mean 1 on flat water; net ≥ 1.6 → +1 step in `value`, < .7 → `faint`; the floor read through the water at p − depth·(1 − 1/n)·∇h |
+| Stained glass | `voronoiSites` (exact bisectors, the rose) + F0 `voronoi2` ((F2 − F1)/2, the lancet) | Panes in three transmittances (.35 / .6 / .85) × the sky's gain, on the 1.5 lattice; lead came is void with `mid` glints only, a 1-cell moat between came and panes; the live pane is red at its own transmittance size |
+| Rust, wax | `fbm2` + AO thresholds (rust), wrap diffuse + e^(−σ·thickness) transmission (wax) | Rust kills the sheen: it replaces the brushed bands (fresh `mid`, deep `faint` pitted on 2×2 blocks), crevices first; only the advancing edge is red. Wax glows near the flame through its thin rim; the flame is the accent |
 
-Material comes from relief, never from hue (no colour tokens). "Was active" is size contrast in the one `active` layer: `{colors.dotActiveDim}` is not used on material boards until the owner rules (M-materials §10.6). `src/engine/matter` is not in the engine barrel: import it by path.
+Material comes from relief, never from hue (no colour tokens). On the materials board only `mat-lens` is GPU-tagged (a fine glass screen is the point of that card); every other material card is CPU by dot count, and the two live-fork cards (`mat-pool`, `mat-rust`) sample on the main thread. "Was active" is size contrast in the one `active` layer: `{colors.dotActiveDim}` is not used on material boards until the owner rules (M-materials §10.6). `src/engine/matter` is not in the engine barrel: import it by path.
 
 | Material token | Value |
 |---|---|
@@ -253,6 +257,11 @@ Material comes from relief, never from hue (no colour tokens). "Was active" is s
 | `{material.bake.cold}` | ≤ 30 ms |
 | `{material.bake.rebake}` | ≤ 10 ms |
 | `{material.frame}` | ≤ 4 ms |
+| `{material.glass.ior}` | 1.5 |
+| `{material.glass.lutSamples}` | 127 |
+| `{material.glass.bezel}` | `squircle` |
+| `{material.water.ior}` | 1.33 |
+| `{material.caustic.net}` | 1.6 |
 
 **Board-wide light:** a board shares one light direction, the sun of the wall-clock hour (`sunAt(hourOf(date))`: rises on the left at 6, highest at noon, sets on the right at 18, a lower moon at night). Over a card the pointer replaces it as a torch.
 
@@ -518,6 +527,7 @@ No state changes a size, so nothing shifts. On coarse pointers every chrome targ
   | `pond-murmur` | 24 | birds fly 22–38 cells/s, about 1.5 cells a frame at 24, so the sheet turns smoothly; 12 on a phone |
   | `pond-terrarium` | 12 | the creeper and the ants are slow; the default rate, declared for the record |
   | `mat-loom` | 40 | the shuttle runs 80 cells/s, 2 cells a frame at 40 (docs/living-matter/M-materials.md, STYLE-BIBLE ≤ 2 cells a frame); 20 on a phone, with a size-contrast trail |
+  | `mat-pool` | 30 | the ripple steps at dt 1/30 (track L's tuning): one step a frame; 15 on a phone |
 - Choose WebGL2 only by content, never by convenience: a card gets it when a layer is tagged for the GPU (`gpuIR` for a Field IR program evaluated per dot on the GPU, `gpuValues` for a CPU field sampled straight into a value texture) and WebGL2 works; `renderer: 'webgl'` forces it. Tag a layer only when its fine dot count is out of Canvas reach (≳ 100k dots, or a pitch below ~1 card px). The tagged field is still an ordinary `Field` at the card's lattice, which is what goldens, SVG export, `describe()` and the Canvas fallback (no WebGL2, context lost, shader failure) draw. One WebGL2 context per page, which is shared by every card and copied into each card's own canvas. Squircles are exact superellipses (n = 2 + 30r²) with analytic AA, so WebGL ink matches the true dot area. Canvas (Skia) under-covers sub-pixel dots: it draws 79% of a 0.6 px dot. A card of sub-2px dots therefore reads up to ~7% heavier on WebGL (parity gate: mean Δ ≤ 2/255, ≤ 2.5% of pixels off by > 16, PSNR ≥ 32 dB; `scripts/webgl.ts`). The GPU path does not do `sizeCurve`, `jitter`, `sites`, `join`, `shapeOf`, rect cells (`lattice: [kx, ky]`, `sizeAxis`) or `{grid.gap}`; such layers stay CPU instances. Joined and rect cells draw with no cracks on all three renderers: Canvas fills joined neighbours in one path, WebGL cuts quads on integer cell edges, SVG bleeds joined sides and fades the group with `opacity` (`scripts/squares-browser.ts` gates). A GPU layer does not suppress CPU card cells under its dots, so keep chrome outside its window.
 
 ### Don't
