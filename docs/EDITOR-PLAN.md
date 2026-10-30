@@ -392,6 +392,10 @@ ungroup first); a layer marquee on touch; pasting plain text or images from the 
   E5 pass on desktop (a link made, opened once, reload, Back, lineage, the document link, every device exported,
   quality, the cap, a corrupt link, the remix graph) and on the phone (SHARE, open, reload, Back, EXPORT · LINK /
   DEVICES / QUALITY in the sheet). The phone's SHARE check now expects a frame link.
+- Two traps found on the way: the site builds with the React Compiler, which memoizes a `useMemo` by what its
+  callback reads, so a storage read keyed only by a `version` in the deps array never refreshes (the stamp must
+  be an argument: `galleryAt(version)`); and `navigator.clipboard.writeText` can stay pending (an unfocused page,
+  an unanswered prompt), so `copyText` gives up after 1.5 s and nothing waits on it.
 
 Not in E5 (left for later): `navigator.share` (E6); a short-link service (links stay self-contained, so a big
 document is a file, not a link); frame lineage drawn as a graph (it is a list); a document link that replaces the
