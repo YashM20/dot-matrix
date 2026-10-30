@@ -64,7 +64,7 @@ export const sqSchotter: WidgetPreset = {
 // L∞ the edges run along the axes and the diagonals (joined fills at a quarter and a half level: a band low); the second half of the loop measures in L1 (Manhattan), where
 // the same seeds give diamonds. Regions arrive one at a time; the red is the newest.
 const V_K = 3, V_ORIGIN: Pt = [0, 12], V_W = 48, V_H = 40, V_SEEDS = 14, V_LOOP = 24, V_FIRST = 6, V_OFF = 9
-const V_LEVEL: Partial<Record<Tone, number>> = { faint: .25, mid: .25, idle: .5 }
+const V_LEVEL: Record<string, number> = { faint: .25, mid: .25, idle: .5 }
 const V_TONES: Tone[] = ['faint', 'mid', 'faint', 'idle', 'mid', 'faint', 'idle', 'mid', 'faint', 'idle', 'mid', 'faint', 'mid', 'idle']
 export const sqBlocks: WidgetPreset = {
   id: 'sq-blocks', name: 'Squares Blocks', label: 'BLOCKS', ...tile,
