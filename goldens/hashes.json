@@ -1847,6 +1847,66 @@
     "dots": 2293
    }
   },
+  "pond-jelly": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "219ec2d2",
+    "dots": 791
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "beb03ce7",
+    "dots": 795
+   }
+  },
+  "pond-slime": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "dcaba5a5",
+    "dots": 1756
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "98b0aef8",
+    "dots": 1783
+   }
+  },
+  "pond-fireflies": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "fd91e8aa",
+    "dots": 679
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "620ca0aa",
+    "dots": 665
+   }
+  },
+  "pond-murmur": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "cf5fc263",
+    "dots": 638
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "5c050f5e",
+    "dots": 546
+   }
+  },
+  "pond-terrarium": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "37b26e2c",
+    "dots": 2764
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "7cb32f01",
+    "dots": 2788
+   }
+  },
   "sq-tetris": {
    "t=0": {
     "style": "square:2.00",
