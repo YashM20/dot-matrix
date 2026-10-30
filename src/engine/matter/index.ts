@@ -14,3 +14,8 @@ export * from './surface'
 // M2
 export * from './glass'
 export * from './caustics'
+// M3 (the workshop board): bakes only. The step code (`sand`, `mercury`, `thread`: physics and life wrappers, in the
+// determinism lint) is imported by path, so the materials chunk never pulls the fluid or the rope.
+export * from './knit'
+export * from './wood'
+export * from './leather'
