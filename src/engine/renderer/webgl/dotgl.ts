@@ -254,7 +254,7 @@ export class DotGL {
       if (!(d.r > 0) || !(d.opacity > 0)) continue
       const c = palette.of(d.color)
       if (c < 0) return false
-      if (d.join !== undefined || d.aspect !== undefined) { joined.push(d); continue }
+      if (d.join !== undefined || d.aspect) { joined.push(d); continue }
       const b = m * 6
       this.inst[b] = d.x; this.inst[b + 1] = d.y; this.inst[b + 2] = d.r; this.inst[b + 3] = Math.min(1, d.opacity); this.inst[b + 4] = shapeN(d); this.inst[b + 5] = c
       m++

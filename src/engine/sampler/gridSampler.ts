@@ -89,7 +89,7 @@ const jointsOf = (out: Sink): JointGeom[] => (out.joints ??= out.buf ? (out.buf.
 
 /** The cell grid a lattice layer is sampled on (see `Layer.lattice`; `[kx, ky]` floors each axis on its own). */
 export function latticeGrid(grid: GridConfig, lattice: number | [number, number], origin: [number, number] = [0, 0]): GridConfig {
-  const [kx, ky] = typeof lattice === 'number' ? [lattice, lattice] : lattice
+  const [kx, ky] = factors(lattice)
   return { cols: Math.max(1, Math.floor((grid.cols - origin[0]) / kx)), rows: Math.max(1, Math.floor((grid.rows - origin[1]) / ky)) }
 }
 
@@ -226,7 +226,7 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
     if (group) group.push(layer); else lattices.set(key, [layer])
   }
   const covered = lattices.size || sited.length ? scratch.covered(grid.cols * grid.rows) : null
-  const area = (l: Layer[]) => { const [kx, ky] = factors(l[0].lattice); return kx * ky }
+  const area = (l: Layer[]) => factors(l[0].lattice).reduce((a, b) => a * b)
   const groups = [...lattices.values()].sort((a, b) => area(b) - area(a))
   for (const group of groups) {
     const [k, ky] = factors(group[0].lattice), [ox, oy] = group[0].origin ?? [0, 0], sub = latticeGrid(grid, [k, ky], [ox, oy])

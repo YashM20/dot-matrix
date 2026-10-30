@@ -15,7 +15,7 @@ let renderSeq = 0
  */
 export function renderSVG(dots: DotInstance[], width: number, height: number): string {
   // joined squares and rect cells (src/engine/squares): their own renderer (defs per mask / aspect, seam bleed, group opacity)
-  if (shapeExt.svg && dots.some(d => d.join !== undefined || d.aspect !== undefined)) return shapeExt.svg(dots, width, height)
+  if (shapeExt.svg && dots.some(d => d.join !== undefined || d.aspect)) return shapeExt.svg(dots, width, height)
   const prefix = `d${(renderSeq++).toString(36)}-`
   const shapes = new Map<string, string>(), groups = new Map<string, string[]>()
   let defs = ''

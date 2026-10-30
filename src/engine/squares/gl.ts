@@ -11,7 +11,6 @@
  * quad edge is the cut), and straight edges need no Steiner ink correction.
  */
 import type { GLJoinApi } from '../renderer/ext'
-import { BEZIER_MAX_N, cornerFraction, squircleExponent } from '../renderer/shapePath'
 import type { DotInstance, JointGeom } from '../types'
 
 const HEAD = '#version 300 es\nprecision highp float;\nprecision highp int;\n'
@@ -103,6 +102,9 @@ void main() {
 
 interface State { vao: WebGLVertexArrayObject; buf: WebGLBuffer; data: Float32Array }
 const F = 9
+// shapePath's squircleExponent / cornerFraction, inlined: an import of a first-load module would give this chunk a preload list
+const exponent = (r = 0) => { const c = Math.max(0, Math.min(1, r)); return 2 + 30 * c * c }
+const corner = (n: number) => (Math.SQRT2 * (1 - 2 ** (-1 / n))) / (Math.SQRT2 - 1) // det-ok: GPU-side corner size, not sim state
 const states = new WeakMap<WebGL2RenderingContext, State>()
 const joint = new Float32Array(15 * 4), jointO = new Float32Array(15 * 4)
 
@@ -141,8 +143,8 @@ function draw(api: GLJoinApi, dots: DotInstance[], common: (p: { p: WebGLProgram
     data[b] = d.x; data[b + 1] = d.y; data[b + 2] = d.r; data[b + 3] = Math.min(1, d.opacity)
     data[b + 4] = palette.of(d.color); data[b + 5] = slot; data[b + 6] = g ? d.join! : -1; data[b + 7] = hs
     // a plain rect cell: the corner of its rounded rect (px; 0 = the box), or −n for a soft superellipse (n ≤ 8)
-    const n = d.shape === 'square' ? Infinity : d.shape === 'squircle' ? squircleExponent(d.roundness ?? 0) : 2
-    data[b + 8] = g ? 0 : n > BEZIER_MAX_N ? (n === Infinity ? 0 : Math.min(d.r, hs) * cornerFraction(n)) : -n
+    const n = d.shape === 'square' ? Infinity : d.shape === 'squircle' ? exponent(d.roundness) : 2
+    data[b + 8] = g ? 0 : n > 8 ? (n === Infinity ? 0 : Math.min(d.r, hs) * corner(n)) : -n
     m++
   }
   common(prog, 1)
