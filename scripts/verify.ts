@@ -876,6 +876,11 @@ noiseChecks(assert)
   const { editorE5Checks } = await import('./editor')
   await editorE5Checks(assert)
 }
+// editor E6: phone layouts, sheet detent memory, the keyboard box, the snap cue, stack order and the long-press menu, the share sheet's fallbacks (scripts/editor.ts)
+{
+  const { editorE6Checks } = await import('./editor')
+  await editorE6Checks(assert)
+}
 
 // golden key (F0.5, F0.6, F0.10): dotKey + the style backfill, the square site cover, card fps (scripts/goldenkey.ts)
 import { goldenKeyChecks } from './goldenkey'

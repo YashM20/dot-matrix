@@ -82,26 +82,19 @@ export function pasteDots(cam: { x: number; y: number; z: number }, w: number, h
   // grid cell c sits at screen ox + (c - 1) s: the sampler puts its centre at (c + .5) s, so shift by ox - 1.5 s
   const ox = ((cam.x % s) + s) % s, oy = ((cam.y % s) + s) % s, sx = ox - 1.5 * s, sy = oy - 1.5 * s
   const at = (u: number, v: number) => [sx + (u * (cols - 1) + .5) * s, sy + (v * (rows - 1) + .5) * s] as const
-  const base: Field = () => .8
+  // the snap cue: the columns (rows) of dots either side of each guide (a frame edge covers one of them),
+  // along its span and two dots past each end, so some always show beside the frames
+  const cued = cue && cue.k > 0 && cue.guides.length ? cue.guides : undefined
+  const onCue = (x: number, y: number) => !!cued && cued.some(g => { const [a, b] = g.axis === 'x' ? [x, y] : [y, x]; return Math.abs(a - g.at) <= s && b >= g.from - 2 * s && b <= g.to + 2 * s })
+  // a cued dot is the cue's alone (the sampler keeps the strongest layer: a fading cue must not lose to the base)
+  const base: Field = cued ? (u, v) => (onCue(...at(u, v)) ? 0 : .8) : () => .8
   const layers: Layer[] = [{ field: base, tone: 'faint' }]
   if (glow) {
     const R = 6 * s
-    const f: Field = (u, v) => { const [x, y] = at(u, v), d = Math.hypot(x - glow.x, y - glow.y); return d >= R ? 0 : .5 + .5 * (1 - d / R) }
+    const f: Field = (u, v) => { const [x, y] = at(u, v), d = Math.hypot(x - glow.x, y - glow.y); return d >= R || onCue(x, y) ? 0 : .5 + .5 * (1 - d / R) }
     layers.push({ field: f, tone: 'mid' })
   }
-  if (cue && cue.k > 0 && cue.guides.length) {
-    // the columns (rows) of dots either side of each guide (a frame edge covers one of them), along its
-    // span and two dots past each end, so some always show beside the frames
-    const f: Field = (u, v) => {
-      const [x, y] = at(u, v)
-      for (const g of cue.guides) {
-        const [a, b] = g.axis === 'x' ? [x, y] : [y, x]
-        if (Math.abs(a - g.at) <= s && b >= g.from - 2 * s && b <= g.to + 2 * s) return cue.k
-      }
-      return 0
-    }
-    layers.push({ field: f, tone: 'active' })
-  }
+  if (cued) layers.push({ field: (u, v) => (onCue(...at(u, v)) ? cue!.k : 0), tone: 'active' })
   const theme = accent ? { ...dot480, dotActive: accent } : dot480
   const dots = sampleLayers(layers, { cols, rows, pitch: s }, { ...PASTE_STYLE, sizeMax: Math.min(1.6, .9 + s / 40) }, theme)
   return { dots, sx, sy, pitch: s }
