@@ -6,7 +6,7 @@
  */
 import { BEZEL, lensOffset, liquidGlass, snellLUT, voronoiSites, type LiquidGlassOptions } from '../../engine/matter'
 import { gpuValues } from '../../engine/renderer/webgl/passes'
-import { voronoi2, voronoiBorder2 } from '../../engine/noise/voronoi'
+import { voronoi2 } from '../../engine/noise/voronoi'
 import { stbn } from '../../engine/halftone/mask'
 import { hourOf } from '../../engine/light/material'
 import { sceneLight } from '../../engine/light/input'
@@ -125,11 +125,21 @@ const FINE = 2 * COLS
 function sceneRow(out: Float32Array, w: number, step: number, at0: number, ticks: Float32Array, near: Uint8Array, r: number): void {
   for (let c = 0; c < w; c++) out[r * w + c] = behindAt(ticks, near, at0 + c * step, at0 + r * step)
 }
+/** Row r of the scene at card cell centres: ≡ `behindAt` at whole cells (the bilinear and the tent collapse to lookups). */
+function sceneCardRow(out: Float32Array, ticks: Float32Array, near: Uint8Array, r: number): void {
+  const dy = r - DIAL.cy
+  for (let c = 0, i = r * COLS; c < COLS; c++, i++) {
+    const t = ticks[i]
+    if (t > 0) { out[i] = t; continue }
+    const dx = c - DIAL.cx, d2 = dx * dx + dy * dy
+    out[i] = (d2 > 54.5 * 54.5 && d2 < 61.5 * 61.5) || near[i] ? 0 : (c & 1) === 0 && (r & 1) === 0 ? .5 : 0
+  }
+}
 function lensScene(h: Hero, ticks: Float32Array): LensScene {
   let s = scenes.get(h)
   if (!s) {
     const card = new Float32Array(COLS * TILE.rows)
-    for (let r = 12; r < TILE.rows; r++) sceneRow(card, COLS, 1, 0, ticks, h.near, r)
+    for (let r = 12; r < TILE.rows; r++) sceneCardRow(card, ticks, h.near, r)
     scenes.set(h, (s = { card, fine: null, ticks, near: h.near }))
   }
   return s
@@ -287,8 +297,9 @@ function windowRow(geo: WindowGeo, rose: { id: Int16Array; border: Float32Array 
     let border: number, id: number
     if (rd < rr) { border = Math.min(rose.border[i], rr - rd); id = rose.id[i] }
     else {
+      // the lead's half-width measure: (F2 − F1)/2 in cells (one Worley search; ≤ the exact bisector distance)
       voronoi2(c / WIN.cell, r / WIN.cell, WIN.seed, 'l2', out)
-      border = Math.min(voronoiBorder2(c / WIN.cell, r / WIN.cell, WIN.seed) * WIN.cell, rd - rr)
+      border = Math.min((out.f2 - out.f1) * WIN.cell / 2, rd - rr)
       let k = lancetIds.get(out.id)
       if (k === undefined) lancetIds.set(out.id, (k = 19 + lancetIds.size))
       id = k

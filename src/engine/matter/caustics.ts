@@ -65,25 +65,24 @@ function splatRow(grad: HeightGrad, D: Float32Array, M: ArrayLike<number> | unde
  * Forward-splat caustics: every photon at water cell p lands on the floor at q = p − K·∇h(p) with
  * K = gain · depth · (1 − 1/ior), and deposits 1/photons² into the floor raster with a bilinear (tent) splat,
  * then a [1 2 1]² / 16 binomial pass. Mean 1 on flat water; > 1 where the surface focuses light (the net).
- * Writes into `into` (cleared over its bounds, grown by 2 for the footprint); photons landing off the raster are dropped
- * and counted in `causticStats.lost`.
+ * Writes into `into`: its `bounds` (default the whole raster) are where photons start; the whole raster is cleared and
+ * blurred, since a bent photon may land anywhere on it. Photons landing off the raster are dropped and counted in
+ * `causticStats.lost`. Deterministic: nothing is read from an earlier call.
  */
 export function causticSplat(grad: HeightGrad, into: Raster, o: CausticOptions = {}): Raster {
   const { cols, rows } = into.grid, P = Math.max(1, Math.round(o.photons ?? 2)), K = (o.gain ?? 3) * (o.depth ?? 6) * (1 - 1 / (o.ior ?? 1.33))
   const [sx, sy] = o.shift ?? [0, 0], D = into.data, b = into.bounds ?? [0, 0, cols - 1, rows - 1]
-  const c0 = Math.max(0, b[0] - 2), r0 = Math.max(0, b[1] - 2), c1 = Math.min(cols - 1, b[2] + 2), r1 = Math.min(rows - 1, b[3] + 2)
-  for (let r = r0; r <= r1; r++) D.fill(0, r * cols + c0, r * cols + c1 + 1)
+  D.fill(0)
   let lost = 0, emitted = 0
   for (let r = Math.max(0, b[1]); r <= Math.min(rows - 1, b[3]); r++) {
     lost += splatRow(grad, D, o.mask, cols, rows, r, Math.max(0, b[0]), Math.min(cols - 1, b[2]), P, K, sx, sy)
     if (o.mask) { for (let c = b[0]; c <= b[2]; c++) if (o.mask[r * cols + c] > 0) emitted++ } else emitted += b[2] - b[0] + 1
   }
-  // the binomial [1 2 1] / 4 along x, then y, over the grown window (zero outside the raster)
+  // the binomial [1 2 1] / 4 along x, then y (zero outside the raster)
   if (tmp.length < D.length) tmp = new Float32Array(D.length)
-  for (let r = r0; r <= r1; r++) blurRowX(D, tmp, r * cols, c0, c1, cols)
-  for (let r = r0; r <= r1; r++) blurRowY(tmp, D, r, c0, c1, cols, rows)
+  for (let r = 0; r < rows; r++) blurRowX(D, tmp, r * cols, 0, cols - 1, cols)
+  for (let r = 0; r < rows; r++) blurRowY(tmp, D, r, 0, cols - 1, cols, rows)
   causticStats.emitted = emitted; causticStats.lost = lost
-  into.bounds = [c0, r0, c1, r1]
   return into
 }
 function blurRowX(S: Float32Array, O: Float32Array, row: number, c0: number, c1: number, cols: number): void {
