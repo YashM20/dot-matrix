@@ -871,12 +871,16 @@ async function desktopE5(p: Page, h: Helpers) {
   await p.waitFor(`Number(document.querySelector('.ed-insp .ed-graph canvas')?.dataset.nodes) >= 8`, 15000)
   const nodes0 = Number(await p.js(`document.querySelector('.ed-insp .ed-graph canvas').dataset.nodes`))
   await h.typeIR(PROGRAM.replace('blobs:', 'blobs e5:')); await h.blur()
-  await h.clickText('.ed-insp button', 'COPY LINK'); await sleep(900)
+  // the link is encoded (debounced) after the typing: COPY LINK is enabled once it is ready
+  await p.waitFor(`(() => { const b = [...document.querySelectorAll('.ed-insp button')].find(b => b.textContent.trim() === 'COPY LINK'); return !!b && !b.disabled })()`, 30000)
+  await h.clickText('.ed-insp button', 'COPY LINK')
+  await p.waitFor(`Number(document.querySelector('.ed-insp .ed-graph canvas')?.dataset.nodes) === ${nodes0 + 1}`, 30000)
   const remixes = await p.js<string[]>(`[...document.querySelectorAll('.ed-insp .ed-remixes button')].map(b => b.textContent)`)
   check('E5: COPY LINK puts the program in the remix graph, under the example it came from', remixes.length >= 1 && remixes.some(r => /^blobs e5.*← #[0-9a-f]{8}/.test(r)) && Number(await p.js(`document.querySelector('.ed-insp .ed-graph canvas').dataset.nodes`)) === nodes0 + 1, `nodes ${nodes0}; ${remixes.join(' | ')}`)
+  await p.js(`document.querySelector('.ed-insp .ed-graph canvas').scrollIntoView({ block: 'center' })`); await sleep(300) // REMIX sits below the code editor
   const n1 = await count(), g = (await h.rect('.ed-insp .ed-graph canvas'))!, cols = Number(await p.js(`document.querySelector('.ed-insp .ed-graph canvas').dataset.cols`)), rows = Number(await p.js(`document.querySelector('.ed-insp .ed-graph canvas').dataset.rows`))
   // the second example's thumbnail: slot 1 of row 0 (centre at lattice cell 32, 11 on a 2× lattice)
-  await p.mouse('mouseMoved', g.x + g.w * (64 / cols), g.y + g.h * (22 / rows), 0); await p.mouse('mousePressed', g.x + g.w * (64 / cols), g.y + g.h * (22 / rows)); await p.mouse('mouseReleased', g.x + g.w * (64 / cols), g.y + g.h * (22 / rows)); await sleep(900)
+  await p.mouse('mouseMoved', g.x + g.w * (64 / cols), g.y + g.h * (22 / rows), 0); await p.mouse('mousePressed', g.x + g.w * (64 / cols), g.y + g.h * (22 / rows)); await p.mouse('mouseReleased', g.x + g.w * (64 / cols), g.y + g.h * (22 / rows)); await p.waitFor(`document.querySelectorAll('.ed-frame').length === ${n1 + 1}`, 15000)
   check('E5: a click on a node in the remix graph opens that program as a frame', await count() === n1 + 1, `${n1} → ${await count()}`)
   await p.shot(join(out, 'desktop-e5-remix.png'))
 }
