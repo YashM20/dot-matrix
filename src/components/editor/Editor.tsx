@@ -390,7 +390,7 @@ function useShortcuts(phone: boolean) {
         else if (k === '=' || k === '+') { used(); s.zoomAt(s.cam.z * 1.25, s.vp.w / 2, s.vp.h / 2) }
         else if (k === '-') { used(); s.zoomAt(s.cam.z / 1.25, s.vp.w / 2, s.vp.h / 2) }
         else if (k === '0') { used(); s.zoomAt(1, s.vp.w / 2, s.vp.h / 2) }
-        else if ((k === ']' || k === '[') && f && l) { used(); orderSel(k === ']' ? 'forward' : 'backward') }
+        else if ((k === ']' || k === '[') && f) { used(); orderSel(k === ']' ? 'forward' : 'backward') }
         else if (k === 'h' && e.shiftKey && f) { used(); hideSel() }
         return
       }

@@ -1067,12 +1067,13 @@ async function phoneE6(p: Page, h: Helpers, tapEl: (s: string) => Promise<void>)
   const lit = await accentPx(p), cues1 = await p.js<number>(`window.__editor?.cues ?? 0`), guides = await p.js<number>(`document.querySelectorAll('.ed-guide').length`)
   await sleep(900)
   const after = await accentPx(p)
-  await p.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await sleep(300)
-  await tapEl('.ed-top [aria-label="Undo"]')
+  await p.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await sleep(300) // it ends snapped where it began: no edit, no undo step
   check('phone E6: a drag that snaps to a guide lights accent dots on the pasteboard, which go again (no accent dots before or after)', px0 === 0 && away === 0 && cues1 > cues0 && guides > 0 && lit > 10 && after === 0, JSON.stringify({ px0, away, lit, after, cues: cues1 - cues0, guides }))
 
   // ── detent memory: LAYERS left at 90 % opens at 90 % again, after a reload too; the inspector keeps its own
   const detent = () => p.js<string | null>(`document.querySelector('.ed-sheet')?.dataset.detent ?? null`)
+  // the earlier passes left the inspector at 36 %: start from nothing remembered (storage, and the session by a reload)
+  await p.js(`localStorage.removeItem('dot480.editor.sheet')`); await p.cdp('Page.reload'); await p.waitFor(`!!document.querySelector('.ed-dock')`, 30000); await sleep(800)
   await tapEl('.ed-dock .ed-tool[aria-label="Layers"]')
   const d0 = await detent()
   await tapEl('.ed-sheet-grab'); await sleep(300)
