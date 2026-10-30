@@ -19,60 +19,18 @@ import { quantize } from '../../engine/sampler/quantize'
 import { EMPTY, GARBAGE, tetris, ROTATIONS, type TetrisHistory } from '../../engine/squares/tetris'
 import { tsin } from '../../engine/noise/trig'
 import { glyph } from '../../engine/fields/bitmapFont'
-import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { clamp, hash01 } from '../../engine/math'
-import type { DotStyle, Field, JoinSpec, Layer, Tone } from '../../engine/types'
-import { TILE, layer, layoutFor, type WidgetPreset } from '../types'
+import type { DotStyle, Layer, Tone } from '../../engine/types'
+import { TILE, layer, type WidgetPreset } from '../types'
 import { portrait } from './mirror'
+import { FOOT, T, cap, cells, cite, footer, mod, pad, squareStyle, thousands, tile, type Pt } from './squaresKit'
+import { latticeGrid } from '../../engine/sampler/gridSampler'
+import { morphFront, squareMorph } from '../../engine/squares/morph'
+import { squaresPack } from './squaresPack'
+
+export { squareStyle }
 
 installSquares()
-
-const T = layoutFor(TILE)
-type Pt = [number, number]
-const N = TILE.cols - 1
-/**
- * Squares card style: `square` dots, five quantized levels, and a .16 gutter (`{grid.gap}`), so a full cell's half
- * side is .84 of the half pitch, about the tile circle's radius (4/π its ink).
- */
-export const squareStyle: DotStyle = { shape: 'square', sizeMin: .25, sizeMax: 1.125, gap: .16, quantizeSteps: 5, opacityMode: 'fromValue' }
-const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: squareStyle, animated: true } as const
-
-const cap = (s: string, col: number, row: number, align?: 'left' | 'center' | 'right') => T.big(s, col, row, { lattice: .72, align })
-/** Top-right: the work the card is after. */
-const cite = (s: string) => layer(cap(s, 143, 1, 'right'), 'faint')
-const FOOT = 137, RAIL_Y = 132
-/** Footer: a faint dotted rail filled in `mid` to `k`, an optional live (red) knob, a counter left and one stat right. */
-function footer(k: number, left: string, right: string, live = false): Layer[] {
-  const done: Pt[] = [], rest: Pt[] = [], end = N * clamp(k)
-  let knob: Pt | undefined
-  for (let c = 0; c <= N; c += 3) (c <= end ? done : rest).push([c, RAIL_Y])
-  if (live && done.length) knob = done.pop()
-  return [
-    layer(T.dots(rest, .9), 'faint'), layer(T.dots(done, 1.1), 'mid'),
-    ...(knob ? [layer(T.dots([knob], 2.2), 'active')] : []),
-    layer(T.text(left, 0, FOOT), 'idle'),
-    layer(T.text(right, 143, FOOT, { align: 'right' }), 'faint'),
-  ]
-}
-const pad = (n: number, w: number) => String(Math.max(0, Math.round(n))).padStart(w, '0')
-const thousands = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-const mod = (x: number, m: number) => ((x % m) + m) % m
-
-/**
- * A layer on a `k`× lattice (`[kx, ky]`: rect cells) at card cell `origin`, read per lattice cell: `value(c, r)` over
- * [0, w) × [0, h) (0 outside), optionally a tone, a join group per cell and a size axis. The field is bounded, so the
- * sampler only visits the box.
- */
-function cells(k: number | Pt, origin: Pt, w: number, h: number, value: (c: number, r: number) => number,
-  opts: { tone?: Tone; toneOf?: (c: number, r: number) => Tone | undefined; join?: JoinSpec | true; group?: (c: number, r: number) => number; sizeAxis?: Layer['sizeAxis'] } = {}): Layer {
-  const sub = latticeGrid(TILE, k, origin), X = Math.max(1, sub.cols - 1), Y = Math.max(1, sub.rows - 1)
-  const at = (u: number, v: number): [number, number] => [Math.round(u * X), Math.round(v * Y)]
-  const field: Field = (u, v) => { const [c, r] = at(u, v); return c < 0 || r < 0 || c >= w || r >= h ? 0 : value(c, r) }
-  field.bounds = [0, 0, w - 1, h - 1]
-  const { tone, toneOf, group } = opts
-  const join: JoinSpec | true | undefined = group ? { ...(opts.join === true || !opts.join ? {} : opts.join), group: (u, v) => { const [c, r] = at(u, v); return group(c, r) } } : opts.join
-  return { field, lattice: k, origin, tone, ...(toneOf ? { toneOf: (_: number, u: number, v: number) => { const [c, r] = at(u, v); return toneOf(c, r) } } : {}), ...(join ? { join } : {}), ...(opts.sizeAxis ? { sizeAxis: opts.sizeAxis } : {}) }
-}
 
 // ── 01 TETRIS ─ seven shapes, one rule ────────────────────────────────────────────────────────────────
 // Thesis: "Seven shapes, one rule: only equals fuse." A 10 × 18 well on a 6× lattice. The settled stack is one
@@ -303,44 +261,79 @@ const WALKER = [[
   '......##........', '.....#.#........', '.....#..#.......', '................',
 ]]
 const SHADE: Tone[] = ['faint', 'faint', 'mid', 'idle', 'value']
+/** The LCD's shade per pixel (0 unlit … 4 value) at t, the colon's phase and its pixels (shared with sq-morph). */
+function lcdFrame(t: number): { px: Uint8Array; colon: boolean; dots: Set<number> } {
+  const px = new Uint8Array(LW * LH), set = (x: number, y: number, s: number) => { if (x >= 0 && y >= 0 && x < LW && y < LH) px[y * LW + x] = s }
+  // sky: two clouds drifting left (mid)
+  for (const [cx, cy, w, speed] of [[20, 37, 9, 1.5], [58, 35, 7, 1]]) {
+    const x0 = Math.round(mod(cx - t * speed, LW + 20) - 10)
+    for (let x = 0; x < w; x++) { set(x0 + x, cy, 2); if (x > 1 && x < w - 2) set(x0 + x, cy - 1, 2) }
+  }
+  // far hills (mid), scrolling at a third of the ground speed
+  const run = t * 6
+  for (let x = 0; x < LW; x++) {
+    const u = x + run / 3, top = 49 - Math.round(3 + 2.5 * tsin(u * .11) + 1.5 * tsin(u * .27 + 1))
+    for (let y = top; y < 54; y++) set(x, y, 1)
+  }
+  // near ground: a lit lip (idle), then a scrolling dither (idle / mid)
+  for (let x = 0; x < LW; x++) {
+    const u = Math.floor(x + run)
+    set(x, 54, 2)
+    for (let y = 55; y < LH; y++) set(x, y, (u + y) % 4 === 0 ? 1 : 0)
+  }
+  // the walker, two frames at 4 Hz
+  const frame = WALKER[Math.floor(t * 4) & 1]
+  frame.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') set(10 + x, 38 + y, ch === '#' ? 4 : 2) }))
+  // HH:MM, 3× in LCD pixels; the colon goes in its own (red) layer
+  const now = new Date(), hh = String(now.getHours()).padStart(2, '0'), mm = String(now.getMinutes()).padStart(2, '0')
+  const digit = (ch: string, x0: number) => glyph(ch).forEach((row, gy) => row.forEach((on, gx) => { if (on) for (let i = 0; i < 9; i++) set(x0 + gx * 3 + (i % 3), 3 + gy * 3 + Math.floor(i / 3), 4) }))
+  digit(hh[0], 1); digit(hh[1], 18); digit(mm[0], 38); digit(mm[1], 55)
+  // the date under the clock (1×, idle)
+  const date = `${DAYS[now.getDay()]} ${String(now.getDate()).padStart(2, '0')} ${MONTHS[now.getMonth()]}`, dx0 = Math.round((LW - date.length * 6 + 1) / 2)
+  ;[...date].forEach((ch, k) => glyph(ch).forEach((row, gy) => row.forEach((on, gx) => { if (on) set(dx0 + k * 6 + gx, 27 + gy, 2) })))
+  const colon = (Math.floor(t) & 1) === 0
+  const dots = new Set([[34, 9], [35, 9], [34, 10], [35, 10], [34, 17], [35, 17], [34, 18], [35, 18]].map(([x, y]) => y * LW + x))
+  return { px, colon, dots }
+}
+/** The LCD with its colon lit when on (the morph draws it in the panel's own shade). */
+function lcdWithColon(t: number): Uint8Array {
+  const { px, colon, dots } = lcdFrame(t)
+  if (colon) for (const i of dots) px[i] = 4
+  return px
+}
 export const sqGameboy: WidgetPreset = {
   id: 'sq-gameboy', name: 'Squares LCD', label: 'LCD', ...tile, clock: true,
   layers: ctx => {
-    const t = ctx.t, px = new Uint8Array(LW * LH), set = (x: number, y: number, s: number) => { if (x >= 0 && y >= 0 && x < LW && y < LH) px[y * LW + x] = s }
-    // sky: two clouds drifting left (mid)
-    for (const [cx, cy, w, speed] of [[20, 37, 9, 1.5], [58, 35, 7, 1]]) {
-      const x0 = Math.round(mod(cx - t * speed, LW + 20) - 10)
-      for (let x = 0; x < w; x++) { set(x0 + x, cy, 2); if (x > 1 && x < w - 2) set(x0 + x, cy - 1, 2) }
-    }
-    // far hills (mid), scrolling at a third of the ground speed
-    const run = t * 6
-    for (let x = 0; x < LW; x++) {
-      const u = x + run / 3, top = 49 - Math.round(3 + 2.5 * tsin(u * .11) + 1.5 * tsin(u * .27 + 1))
-      for (let y = top; y < 54; y++) set(x, y, 1)
-    }
-    // near ground: a lit lip (idle), then a scrolling dither (idle / mid)
-    for (let x = 0; x < LW; x++) {
-      const u = Math.floor(x + run)
-      set(x, 54, 2)
-      for (let y = 55; y < LH; y++) set(x, y, (u + y) % 4 === 0 ? 1 : 0)
-    }
-    // the walker, two frames at 4 Hz
-    const frame = WALKER[Math.floor(t * 4) & 1]
-    frame.forEach((row, y) => [...row].forEach((ch, x) => { if (ch !== '.') set(10 + x, 38 + y, ch === '#' ? 4 : 2) }))
-    // HH:MM, 3× in LCD pixels; the colon goes in its own (red) layer
-    const now = new Date(), hh = String(now.getHours()).padStart(2, '0'), mm = String(now.getMinutes()).padStart(2, '0')
-    const digit = (ch: string, x0: number) => glyph(ch).forEach((row, gy) => row.forEach((on, gx) => { if (on) for (let i = 0; i < 9; i++) set(x0 + gx * 3 + (i % 3), 3 + gy * 3 + Math.floor(i / 3), 4) }))
-    digit(hh[0], 1); digit(hh[1], 18); digit(mm[0], 38); digit(mm[1], 55)
-    // the date under the clock (1×, idle)
-    const date = `${DAYS[now.getDay()]} ${String(now.getDate()).padStart(2, '0')} ${MONTHS[now.getMonth()]}`, dx0 = Math.round((LW - date.length * 6 + 1) / 2)
-    ;[...date].forEach((ch, k) => glyph(ch).forEach((row, gy) => row.forEach((on, gx) => { if (on) set(dx0 + k * 6 + gx, 27 + gy, 2) })))
-    const colon = (Math.floor(t) & 1) === 0
-    const dots = new Set([[34, 9], [35, 9], [34, 10], [35, 10], [34, 17], [35, 17], [34, 18], [35, 18]].map(([x, y]) => y * LW + x))
+    const { px, colon, dots } = lcdFrame(ctx.t)
     return [
       cite('DMG-01 1989'),
       cells(LK, L_ORIGIN, LW, LH, (c, r) => (colon && dots.has(r * LW + c) ? 0 : px[r * LW + c] ? 1 : .25), { toneOf: (c, r) => SHADE[px[r * LW + c]] }),
       ...(colon ? [cells(LK, L_ORIGIN, LW, LH, (c, r) => (dots.has(r * LW + c) ? 1 : 0), { tone: 'active' })] : []),
     ]
+  },
+}
+
+// ── 13 MORPH ─ dots become squares ────────────────────────────────────────────────────────────────────
+// Thesis: "Same ink, new shape: dots turn square, then fuse." The LCD face on a round-dot style: a front sweeps down
+// the panel and turns each pixel from a dot into a square of the same ink (`shapeOf`, equal-ink half sides), then the
+// passed rows fuse (`join` from level .5: the digits, hills and walker become solid shapes) and the front sweeps back.
+// The red is the front: the LCD row it is crossing.
+/** Round-dot style of the morph: circles .89 of the half pitch; squares come out .79 (equal ink), under the .1 gutter. */
+export const morphStyle: DotStyle = { shape: 'circle', sizeMin: .25, sizeMax: 1, gap: .1, quantizeSteps: 5, opacityMode: 'fromValue' }
+const M_LOOP = 14, M_OFF = 4.2, M_WIDTH = .3
+/** Morph position k ∈ [0, 1] at t: a triangle wave with a short hold at each end. */
+export const morphK = (t: number) => { const p = mod(t + M_OFF, M_LOOP) / M_LOOP, tri = p < .5 ? 2 * p : 2 - 2 * p; return clamp(tri * 1.2 - .1) }
+const M_ROWS = latticeGrid(TILE, LK, L_ORIGIN).rows
+export const sqMorph: WidgetPreset = {
+  id: 'sq-morph', name: 'Squares Morph', label: 'MORPH', ...tile, style: morphStyle, clock: true,
+  layers: ctx => {
+    const px = lcdWithColon(ctx.t), k = morphK(ctx.t), opts = { width: M_WIDTH, join: { at: .5, outer: 0 } }
+    // the front row: where the wavefront crosses w = .5 (the LCD row whose dots are halfway to squares)
+    let front = -1
+    for (let r = 0; r < LH; r++) { const w = morphFront(k, .5, r / (M_ROWS - 1), opts); if (w > 0 && w < 1 && (front < 0 || Math.abs(w - .5) < Math.abs(morphFront(k, .5, front / (M_ROWS - 1), opts) - .5))) front = r }
+    const lcd = cells(LK, L_ORIGIN, LW, LH, (c, r) => (r === front ? 0 : px[r * LW + c] ? 1 : .25), { toneOf: (c, r) => SHADE[px[r * LW + c]] })
+    const red = cells(LK, L_ORIGIN, LW, LH, (c, r) => (r === front ? (px[r * LW + c] ? 1 : .25) : 0), { tone: 'active' })
+    return [layer(cap(`SHAPE ${pad(k * 100, 3)}%`, 143, 1, 'right'), 'faint'), ...squareMorph([lcd, red], k, opts)]
   },
 }
 
@@ -434,6 +427,6 @@ export const sqLines: WidgetPreset = {
   },
 }
 
-export const squaresBoard = [sqTetris, sqQuads, sqBlob, sqGameboy, sqTeletext, sqLines]
+export const squaresBoard = [sqTetris, sqQuads, sqBlob, sqGameboy, sqTeletext, sqLines, ...squaresPack, sqMorph]
 /** The board's sims and sizes, for the checks (`scripts/squares.ts`). */
 export const squaresSources = { game, quadTree, ballsAt, blobFrame, B_OFF, B_LOOP, TETRIS: { w: TW, h: TH, k: TK, origin: T_ORIGIN }, BLOB: { k: BK, origin: B_ORIGIN, w: BW, h: BH }, QUADS: { size: Q_SIZE, k: QK, origin: Q_ORIGIN, splits: Q_SPLITS } }

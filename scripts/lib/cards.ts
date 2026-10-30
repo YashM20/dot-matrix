@@ -4,6 +4,7 @@
  */
 import { sampleLayers } from '../../src/engine/sampler/gridSampler'
 import { squircleExponent } from '../../src/engine/renderer/shapePath'
+import { MOTIFS, shapeExponent } from '../../src/engine/squares/form'
 import type { DotInstance, DotStyle } from '../../src/engine/types'
 import { boards, withChrome, type WidgetContext, type WidgetPreset } from '../../src/widgets'
 import { Raster } from './raster'
@@ -58,13 +59,14 @@ export function renderCardFull(p: WidgetPreset, { px, t, silhouette = false, sin
   for (const d of dots) if (visible(d)) {
     const color = silhouette ? '#ffffff' : d.color, alpha = silhouette ? 1 : d.opacity
     const shape = d.shape === 'circle' ? 2 : d.shape === 'square' ? 40 : d.shape === 'squircle' && d.roundness !== undefined ? squircleExponent(d.roundness) : n
-    // joined and rect cells (squares Q1, Q2): coverage per (colour, opacity), blended once per group like a Canvas fill
-    if ((d.join !== undefined && d.joint) || d.aspect !== undefined) {
+    // joined, rect, rotated and motif cells (squares Q1–Q3): coverage per (colour, opacity), blended once per group like a Canvas fill
+    if ((d.join !== undefined && d.joint) || d.aspect !== undefined || d.rot || d.motif) {
       const key = `${color}|${alpha}`, g = d.joint, hs = d.r * k * (d.aspect ?? 1)
       let cov = joined.get(key)
       if (!cov) joined.set(key, (cov = new Float32Array(card.w * card.h)))
       if (g && d.join !== undefined) card.coverJoined(cov, pad + d.x * k, pad + d.y * k, d.r * k, d.join, { hx: g.hx * k, hy: g.hy * k, ro: g.ro, ri: g.ri * k, seam: g.seam * k }, hs)
-      else card.coverRect(cov, pad + d.x * k, pad + d.y * k, d.r * k, hs, d.shape === 'square' ? Infinity : shape)
+      else if (d.aspect !== undefined) card.coverRect(cov, pad + d.x * k, pad + d.y * k, d.r * k, hs, d.shape === 'square' ? Infinity : shape)
+      else card.coverForm(cov, pad + d.x * k, pad + d.y * k, d.r * k, shapeExponent(d.shape, d.roundness), !!d.rot, d.motif ? MOTIFS.indexOf(d.motif as never) : 0)
       continue
     }
     card.dot(pad + d.x * k, pad + d.y * k, d.r * k, shape, color, alpha)

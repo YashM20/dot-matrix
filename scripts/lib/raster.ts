@@ -5,6 +5,7 @@
 import { deflateSync } from 'node:zlib'
 import { glyph } from '../../src/engine/fields/bitmapFont'
 import { insideJoined, insideRect } from '../../src/engine/squares/geometry'
+import { insideForm } from '../../src/engine/squares/form'
 import type { JointGeom } from '../../src/engine/types'
 
 export function rgb(color: string): number[] {
@@ -55,6 +56,15 @@ export class Raster {
     for (let y = Math.max(0, Math.floor(cy - sy - 1)); y <= Math.min(this.h - 1, Math.ceil(cy + sy + 1)); y++) for (let x = Math.max(0, Math.floor(cx - sx - 1)); x <= Math.min(this.w - 1, Math.ceil(cx + sx + 1)); x++) {
       let hit = 0
       for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) if (insideRect(x + (i + .5) / 4, y + (j + .5) / 4, cx, cy, sx, sy, n)) hit++
+      if (hit) cov[y * this.w + x] += hit / 16
+    }
+  }
+  /** Coverage of a rotated or motif cell (squares Q3: half side s, exponent n, Infinity = square), 4×4 supersampled through `insideForm`. */
+  coverForm(cov: Float32Array, cx: number, cy: number, s: number, n: number, rot45: boolean, motif: number) {
+    const R = s * (rot45 ? Math.SQRT2 : 1) + 1
+    for (let y = Math.max(0, Math.floor(cy - R)); y <= Math.min(this.h - 1, Math.ceil(cy + R)); y++) for (let x = Math.max(0, Math.floor(cx - R)); x <= Math.min(this.w - 1, Math.ceil(cx + R)); x++) {
+      let hit = 0
+      for (let j = 0; j < 4; j++) for (let i = 0; i < 4; i++) if (insideForm(x + (i + .5) / 4, y + (j + .5) / 4, cx, cy, s, n, rot45, motif)) hit++
       if (hit) cov[y * this.w + x] += hit / 16
     }
   }
