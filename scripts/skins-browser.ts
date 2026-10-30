@@ -20,6 +20,7 @@ import { execFileSync, spawn } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
 
 const arg = (k: string, d: string) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d }
 const URL0 = arg('url', 'http://localhost:5204'), BOARDS = arg('boards', 'mosaic,components,levels').split(','), PERF = arg('perf', 'mosaic'), SECS = +arg('secs', '4')
@@ -66,7 +67,7 @@ if (process.argv.includes('--fidelity')) {
   execFileSync('npx', ['esbuild', 'scripts/lib/skins-page.ts', '--bundle', '--format=iife', '--platform=browser', '--target=es2022', `--outfile=${OUT}/skins-page.js`, '--log-level=warning'], { stdio: 'inherit', shell: true })
   const html = join(OUT, 'skins-page.html')
   writeFileSync(html, `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0"><script>${readFileSync(join(OUT, 'skins-page.js'), 'utf8').replace(/<\/script/gi, '<\\/script')}</script></body></html>`)
-  await cdp('Page.navigate', { url: `file:///${html.replace(/\/g, '/')}` })
+  await cdp('Page.navigate', { url: pathToFileURL(html).href })
   for (let i = 0; i < 80 && !(await evaluate<boolean>('!!window.SK').catch(() => false)); i++) await sleep(100)
   let fail = 0
   const ok = (name: string, cond: boolean, detail: string) => { if (!cond) fail++; console.log(`${cond ? '✓' : '✗'} ${name} — ${detail}`) }
