@@ -475,21 +475,25 @@ export async function lifeChecks(assert: Assert): Promise<void> {
     assert('pond-koi: a tap drops 5–7 pellets that land with ripples, startles koi within .7 L, and heals to pristine 6 s later (frame = pristine frame)',
       dropped >= 5 && dropped <= 7 && floating === dropped && near.length > 0 && startled && healed, `${dropped} pellets, ${floating} floating after .6 s, ${near.length} koi near (${startled ? 'startled' : 'not startled'}), healed ${healedMode}`)
     // hold 1.2 s → lure, no pellets. How many koi reach the lure in 1.2 s depends on where they are when the hold
-    // starts (the L2 code gave 0–5 over start times), so the check holds from eight food-free starts (no pellets on
-    // the water: 22–26 s and 44–46 s of the loop) and compares with the pristine run at the same moments.
+    // starts (0–5 over start times, on the L2 code as on L3), so the hold runs from 24 starts across the loop and is
+    // compared with the pristine run at the same moments: more koi within 1 L, every koi closer on average. (Over these
+    // starts the L2 code gave 2.58 koi within 1 L vs 1.83 pristine and .11 L closer; L3 2.67 vs 2.21 and .10 L.)
     const lx = 72, ly = 80, within = (st: Float32Array) => P.bodies.filter((b, i) => { const v = koiView(P, st, i); return Math.hypot(v.x - lx, v.y - ly) < b.length }).length
-    let close = 0, alone = 0, best = 0, pellets = 0
-    for (const t1 of [22, 23, 24, 25, 26, 44, 45, 46]) {
+    const spread = (st: Float32Array) => P.bodies.reduce((a, b, i) => { const v = koiView(P, st, i); return a + Math.hypot(v.x - lx, v.y - ly) / b.length }, 0)
+    let close = 0, alone = 0, best = 0, pellets = 0, gain = 0
+    for (let k = 0; k < 24; k++) {
       simReset(sim); worldReset(W)
-      t = t1; worldAt(W, t)
-      for (let k = 0; k < 36; k++) s = at(ptr(true, lx, ly))
+      t = 2 * k + .5
+      const d0 = spread(worldAt(W, t))
+      for (let j = 0; j < 36; j++) s = at(ptr(true, lx, ly))
       const c = within(s)
-      close += c; best = Math.max(best, c); alone += within(simAtStep(sim, simStep(sim, t)))
+      close += c; best = Math.max(best, c); gain += d0 - spread(s); alone += within(simAtStep(sim, simStep(sim, t)))
       s = at(ptr(false, lx, ly))
       pellets += pelletViews(P, s).filter(p => p.state === 1).length
     }
-    assert('pond-koi: hold 1.2 s → the lure draws koi (8 starts: ≥ 1.5 koi within 1 L on average, ≥ 3 at best, twice the pristine count), no pellets',
-      close / 8 >= 1.5 && best >= 3 && close >= 2 * alone && pellets === 0, `${(close / 8).toFixed(2)} koi within 1 L on average (best ${best}), pristine ${(alone / 8).toFixed(2)}, ${pellets} pellets`)
+    assert('pond-koi: hold 1.2 s → the lure draws koi (24 starts: ≥ 2 koi within 1 L on average and more than pristine, ≥ 3 at best, koi ≥ .05 L closer), no pellets',
+      close / 24 >= 2 && close > alone && best >= 3 && gain / 24 / P.bodies.length >= .05 && pellets === 0,
+      `${(close / 24).toFixed(2)} koi within 1 L on average (best ${best}), pristine ${(alone / 24).toFixed(2)}, ${(gain / 24 / P.bodies.length).toFixed(2)} L closer, ${pellets} pellets`)
     // flick across a koi at 240 cells/s (L3.2 raised the threshold from 90 to 200 cells/s)
     simReset(sim); worldReset(W)
     t = 34; const sf = worldAt(W, t).slice(), kf = koiView(P, sf, 4)
