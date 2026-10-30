@@ -1,11 +1,13 @@
 /**
  * Board · POND — living scenes in glyph tiles (docs/living-matter/L-pond.md, docs/LIFE.md). L1: 01 KOI. L2: 02 JELLY,
  * 03 SLIME, 04 FIREFLIES, 05 MURMUR, 06 TERRARIUM. Every card is a `src/engine/life` scene on a physics world: a
- * pure function of t until touched, then live, healing back. Cards are main-thread only; the sampling worker's
+ * pure function of t until touched, then live, healing back. L3: the koi read the light hub (tilt sloshes the water,
+ * `lightSrc` 1 lights them by tilt), so the board lists `pondSources` in the manifest and the eager registry. Cards are main-thread only; the sampling worker's
  * build resolves this module to `./worker-stub.ts` (vite.config.ts `mainThreadOnly`), so `engine/life` never ships
  * in `sampleWorker-*.js`.
  */
 import type { World } from '../../../engine/physics/world'
+import { lightSource } from '../../../site/light'
 import { sampleLayers } from '../../../engine/sampler/gridSampler'
 import { dot480 } from '../../../engine/theme/tokens'
 import type { WidgetPreset } from '../../types'
@@ -17,6 +19,8 @@ import { pondSlime, slime } from './slime'
 import { pondTerrarium, terrarium } from './terrarium'
 
 export const pondBoard: WidgetPreset[] = [pondKoi, pondJelly, pondSlime, pondFireflies, pondMurmur, pondTerrarium]
+/** The board's live data: the light hub (L3.6; `pond-koi` declares its keys). */
+export const pondSources = [lightSource]
 /** The board's worlds (tests reset them), in card order. */
 export const pondWorlds: World[] = [koiPond.world, jelly.world, slime.world, fireflies.world, murmur.world, terrarium.world]
 /** Read-outs for tests and the browser probe. */

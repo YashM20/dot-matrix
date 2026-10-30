@@ -3,7 +3,7 @@
  * (`glyphTiles`), creature spines (`chain`), fish bodies and markings (`body`), Reynolds steering and boids (`steer`)
  * and the koi pond scene (`pond`); L2's ecosystems: physarum and ants (`agents`), coupled oscillators
  * (`oscillators`), space colonisation and L-systems (`grow`), the seam blend and press tracker (`loop`), and the
- * jelly, slime, firefly, murmuration and terrarium scenes.
+ * jelly, slime, firefly, murmuration and terrarium scenes; L3's day and night (`sky`).
  *
  * Lazy: not re-exported from `src/engine/index.ts` (the barrel is first-load code; the same rule as
  * `src/engine/algo` and `src/engine/noise`). Boards import `engine/life` directly. Deterministic: this directory is in
@@ -24,3 +24,4 @@ export * from './slime'
 export * from './fireflies'
 export * from './murmur'
 export * from './terrarium'
+export * from './sky'

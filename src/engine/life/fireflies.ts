@@ -8,11 +8,12 @@
 import { createWorld, type StepInput, type World } from '../physics/world'
 import { createHash, type SpatialHash } from '../physics/particles'
 import { curl2, ihash, rngFor, TAU } from '../noise'
-import { kuramotoOrder, pulseStep, type PulseSpec } from './oscillators'
+import { kuramotoOrder, pulseF, pulseFInv, pulseStep, type PulseSpec } from './oscillators'
+import { nightness, nightTile } from './sky'
 import { lsystem, turtleSites } from './grow'
 import { phaseSteps } from './pond'
-import { pressDiscrete, pressInit, pressStep, PRESS_SLOTS, PRESS_TAP, pressAt, seamBlend } from './loop'
-import { clearTiles, EDGE3, edgeOfTangent, flickerOn, glyphOf, putBig, putGlyph, T_ACTIVE, T_FAINT, T_MID, type TileGrid, type TileRaster } from './glyphTiles'
+import { pressDiscrete, pressInit, pressStep, PRESS_HOLD, PRESS_SLOTS, PRESS_TAP, pressAt, seamBlend } from './loop'
+import { clearTiles, EDGE3, edgeOfTangent, flickerOn, glyphOf, putBig, putGlyph, T_ACTIVE, T_FAINT, T_MID, T_VALUE, type TileGrid, type TileRaster } from './glyphTiles'
 
 export const FLY_DT = 1 / 30
 export const FLIES = 160
@@ -28,6 +29,14 @@ export interface Fireflies {
 /** Flash timing (s): the peak (a lattice dot), then a small red dot. */
 export const FLASH_PEAK = .07, FLASH_TAIL = .2
 const G_HOVER = PRESS_SLOTS // seconds since the last hover scramble
+/** The lantern (L3.7): its phase (turns; 0 = not lit) and the seconds since its last flash. 0 in the pristine run. */
+const G_LANT = PRESS_SLOTS + 1, G_LAGE = PRESS_SLOTS + 2
+/**
+ * A held press is a lantern: it flashes at 1 Hz (the flies' own period) and each flash kicks every fly within
+ * LANTERN_R the Mirollo–Strogatz way, harder than a neighbour (ε .35 against .07), so the flies near the finger fall
+ * into its rhythm within a few flashes.
+ */
+export const LANTERN_T = 1, LANTERN_R = 30, LANTERN_EPS = .35, LANTERN_LIT = .12
 
 export function createFireflies(spec: FirefliesSpec): Fireflies {
   const N = FLIES, X = 0, Y = N, K = 2 * N, PH = 3 * N, AGE = 4 * N, G = 5 * N, size = G + PRESS_SLOTS + 4
@@ -57,7 +66,21 @@ export function createFireflies(spec: FirefliesSpec): Fireflies {
     const p = inp.pointers[0]
     s[G + G_HOVER] += dt
     if (p && !p.down && p.vx * p.vx + p.vy * p.vy > 25 && s[G + G_HOVER] >= .25) { s[G + G_HOVER] = 0; scramble(s, p.x, p.y, 20, n + 101) }
-    const tap = pressStep(s, G, p, dt) === PRESS_TAP
+    const press = pressStep(s, G, p, dt), tap = press === PRESS_TAP
+    if (press === PRESS_HOLD) {
+      s[G + G_LAGE] += dt
+      if (s[G + G_LANT] <= 0 || s[G + G_LANT] >= 1) {
+        // flash: kick the flies within reach (x = f(φ) + ε; x ≥ 1 fires on this step's pulse round)
+        const [lx, ly] = pressAt(s, G)
+        for (let i = 0; i < N; i++) {
+          const dx = s[X + i] - lx, dy = s[Y + i] - ly
+          if (dx * dx + dy * dy >= LANTERN_R * LANTERN_R) continue
+          const x = pulseF(s[PH + i]) + LANTERN_EPS
+          s[PH + i] = x >= 1 ? 1 : pulseFInv(x)
+        }
+        s[G + G_LANT] = dt / LANTERN_T; s[G + G_LAGE] = 0
+      } else s[G + G_LANT] += dt / LANTERN_T
+    } else if (s[G + G_LANT] !== 0) { s[G + G_LANT] = 0; s[G + G_LAGE] = 0 }
     if (tap || inp.kick) {
       const [px, py] = tap ? pressAt(s, G) : [72, 64]
       for (let i = 0; i < N; i++) { const dx = s[X + i] - px, dy = s[Y + i] - py; if (dx * dx + dy * dy < 30 * 30) s[PH + i] = 1 }
@@ -109,6 +132,11 @@ function bakeGrass(spec: FirefliesSpec, seed: number): Int16Array {
   return out
 }
 
+/** The lantern while a press is held (card cells; `lit` during its flash), else undefined. */
+export function flyLantern(f: Fireflies, s: Float32Array): { x: number; y: number; lit: boolean } | undefined {
+  const G = f.layout.G
+  return s[G + 3] > .5 ? { x: s[G + 1], y: s[G + 2], lit: s[G + G_LAGE] < LANTERN_LIT } : undefined
+}
 export interface FlyView { x: number; y: number; phase: number; age: number }
 export function flyViews(f: Fireflies, s: Float32Array): FlyView[] {
   const { X, Y, PH, AGE } = f.layout
@@ -121,12 +149,16 @@ export function flySync(f: Fireflies, s: Float32Array): number {
   return kuramotoOrder(syncTheta)
 }
 const DOT = glyphOf(EDGE3, '·')
-/** Draw the meadow: stars (night only), grass, then the flies (resting dots, then flashes on top). */
+/**
+ * Draw the meadow: stars (by the hour: they come out through dusk, sky.ts), grass, then the flies (resting dots, then
+ * flashes on top), and the lantern while a press is held (a white lattice dot when it flashes: the finger's light is
+ * not a fly's, so it is never the accent).
+ */
 export function drawFireflies(f: Fireflies, s: Float32Array, t: number, hour: number, r: TileRaster): void {
   const { cols, rows, pitch, ox, oy } = f.spec.tiles, { X, Y, AGE } = f.layout
   clearTiles(r)
-  const night = hour < 5.5 || hour >= 19.5
-  if (night) for (let ty = 0; ty < 18; ty++) for (let tx = 0; tx < cols; tx++) if (flickerOn(tx, ty, t, .025, .02, .3)) putGlyph(r, tx, ty, DOT, T_FAINT, .6)
+  const nl = nightness(hour)
+  if (nl > 0) for (let ty = 0; ty < 18; ty++) for (let tx = 0; tx < cols; tx++) if (flickerOn(tx, ty, t, .025, .02, .3) && nightTile(tx, ty, nl)) putGlyph(r, tx, ty, DOT, T_FAINT, .6)
   for (let i = 0; i < cols * rows; i++) if (f.grass[i] >= 0) putGlyph(r, i % cols, (i / cols) | 0, EDGE3.glyphs[f.grass[i]], T_MID, .6)
   for (let pass = 0; pass < 3; pass++) for (let i = 0; i < FLIES; i++) {
     const a = s[AGE + i], kind = a < FLASH_PEAK ? 2 : a < FLASH_TAIL ? 1 : 0
@@ -136,5 +168,11 @@ export function drawFireflies(f: Fireflies, s: Float32Array, t: number, hour: nu
     if (kind === 2) putBig(r, tx, ty, T_ACTIVE, 1)
     else if (kind === 1) { if (r.bigTone[ty * cols + tx] < 0) putGlyph(r, tx, ty, DOT, T_ACTIVE, .6) }
     else putGlyph(r, tx, ty, DOT, T_MID, .6)
+  }
+  const lantern = flyLantern(f, s)
+  if (lantern) {
+    const tx = Math.floor((lantern.x - ox) / pitch), ty = Math.floor((lantern.y - oy) / pitch)
+    if (lantern.lit) putBig(r, tx, ty, T_VALUE, 1)
+    else putGlyph(r, tx, ty, glyphOf(EDGE3, 'o'), T_MID, .8)
   }
 }

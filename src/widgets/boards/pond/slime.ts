@@ -4,7 +4,7 @@
  * coherent) and density glyphs; the food dots are the accent. The loop (40 s) adds a sixth food at 14 s and takes it
  * away at 30 s, so the network re-routes and heals. Tap to add or remove food.
  */
-import { createSlime, createTileRaster, drawSlime, slimeFoods, tileLayers, type Slime, type TileGrid } from '../../../engine/life'
+import { createSlime, createTileRaster, drawSlime, slimeFoods, slimeSalt, tileLayers, type Slime, type TileGrid } from '../../../engine/life'
 import { worldAt } from '../../../engine/physics/world'
 import { layer, type WidgetPreset } from '../../types'
 import { caption, frameOf, mainThread, T, tile, touch } from './shared'
@@ -23,7 +23,7 @@ export const pondSlime: WidgetPreset = {
   layers: ctx => {
     mainThread()
     const s = worldAt(slime.world, ctx.t, frameOf(ctx, 'slime'))
-    drawSlime(slime, s, raster)
+    drawSlime(slime, s, raster, slimeSalt(slime, s))
     const food = slimeFoods(slime, s).filter(f => f.on).map(f => [f.x, f.y] as [number, number])
     return [caption(`${food.length} FOOD`), ...tileLayers(raster), layer(T.dots(food, 2.6), 'active')]
   },

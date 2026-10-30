@@ -8,6 +8,7 @@ import { fbm2, rngFor, voronoi2 } from '../noise'
 import { ANT_CARRY, ANT_STRIDE, ANT_X, ANT_Y, antsInit, antsStep, createAnts, type Ants } from './agents'
 import { colonise, type Colony } from './grow'
 import { phaseSteps } from './pond'
+import { nightTile } from './sky'
 import { pressDiscrete, pressInit, pressStep, PRESS_HOLD, PRESS_SLOTS, PRESS_TAP, pressAt, seamBlend } from './loop'
 import { clearTiles, EDGE3, edgeOfTangent, putBig, putGlyph, RAMP3, rampGlyph, T_ACTIVE, T_FAINT, T_IDLE, T_MID, T_VALUE, type TileGrid, type TileRaster } from './glyphTiles'
 
@@ -143,17 +144,24 @@ const BIG_THICK = 4.2
 /**
  * Draw the floor (stones, ant trails, the nest), then the creeper: per tile, the thickest visible stem; thick stems
  * (pipe thickness ≥ 4.2) as one lattice-4 dot, the rest as a line along the stem, tips brighter; the newest second
- * of growth in `active`. `lamp` (card cells, or undefined) brightens tones within LAMP_R.
+ * of growth in `active`. `lamp` (card cells, or undefined) brightens tones within LAMP_R. `night` (sky.ts
+ * `nightness`, 0 by day) thins the floor: up to 60 % of the stones fade out, outside the lamp's light.
  */
-export function drawTerrarium(t: Terrarium, s: Float32Array, c: Colony, time: number, r: TileRaster, lamp?: [number, number]): void {
+export function drawTerrarium(t: Terrarium, s: Float32Array, c: Colony, time: number, r: TileRaster, lamp?: [number, number], night = 0): void {
   const { cols, rows, pitch, ox, oy } = t.spec.tiles, T = cols * rows
   clearTiles(r)
-  const lit = (tx: number, ty: number, tone: number) => {
-    if (!lamp) return tone
+  const inLamp = (tx: number, ty: number) => {
+    if (!lamp) return false
     const dx = ox + tx * pitch + 1.5 - lamp[0], dy = oy + ty * pitch + 1.5 - lamp[1]
-    return dx * dx + dy * dy < LAMP_R * LAMP_R && tone < T_VALUE ? tone + 1 : tone
+    return dx * dx + dy * dy < LAMP_R * LAMP_R
   }
-  for (let i = 0; i < T; i++) if (t.stones[i] >= 0) { const tx = i % cols, ty = (i / cols) | 0; putGlyph(r, tx, ty, RAMP3.glyphs[t.stones[i]], lit(tx, ty, T_FAINT), .6) }
+  const lit = (tx: number, ty: number, tone: number) => (inLamp(tx, ty) && tone < T_VALUE ? tone + 1 : tone)
+  for (let i = 0; i < T; i++) {
+    if (t.stones[i] < 0) continue
+    const tx = i % cols, ty = (i / cols) | 0
+    if (night > 0 && !inLamp(tx, ty) && nightTile(tx, ty, .6 * night)) continue
+    putGlyph(r, tx, ty, RAMP3.glyphs[t.stones[i]], lit(tx, ty, T_FAINT), .6)
+  }
   // the food trail, as density (the home trail spreads around the nest and stays unseen)
   const { FOOD } = t.ants
   for (let ty = 0; ty < rows; ty++) for (let tx = 0; tx < cols; tx++) {

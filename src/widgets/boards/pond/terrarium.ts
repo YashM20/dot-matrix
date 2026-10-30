@@ -4,7 +4,7 @@
  * the newest growth in red (the accent); ninety ants lay home and food trails between their nest and the crumbs.
  * Tap to drop a crumb; hold to light a lamp the ants shy away from.
  */
-import { antViews, createTerrarium, createTileRaster, creeperFor, crumbViews, drawTerrarium, terraLamp, tileLayers, type Terrarium, type TileGrid } from '../../../engine/life'
+import { antViews, createTerrarium, createTileRaster, creeperFor, crumbViews, drawTerrarium, nightness, terraLamp, tileLayers, type Terrarium, type TileGrid } from '../../../engine/life'
 import { sunAt } from '../../../engine/light/material'
 import { worldAt } from '../../../engine/physics/world'
 import type { Layer } from '../../../engine/types'
@@ -32,7 +32,7 @@ export const pondTerrarium: WidgetPreset = {
   layers: ctx => {
     mainThread()
     const s = worldAt(terrarium.world, ctx.t, frameOf(ctx, 'terra')), hour = hourNow()
-    drawTerrarium(terrarium, s, creeperNow(hour), ctx.t, raster, terraLamp(terrarium, s))
+    drawTerrarium(terrarium, s, creeperNow(hour), ctx.t, raster, terraLamp(terrarium, s), nightness(hour))
     const ants = antViews(terrarium, s), crumbs = crumbViews(terrarium, s).filter(c => c.bites >= 1)
     const out: Layer[] = [caption(timeOfDay(hour)), ...tileLayers(raster)]
     if (crumbs.length) out.push(layer(T.dots(crumbs.map(c => [c.x, c.y]), 2.2), 'value'))
