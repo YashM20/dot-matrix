@@ -16,7 +16,7 @@ import { heightRaster, normalRaster, stackHeights, type HeightRaster, type Norma
 import { illuminate, lambert, type Light, type Vec3 } from '../../engine/light/shade'
 import { sdfBox } from '../../engine/light/sdf'
 import { fbm2 } from '../../engine/noise/gradient'
-import { createRaster, rasterize, rasterWindow, type Raster } from '../../engine/raster/raster'
+import { createRaster, rasterWindow, type Raster } from '../../engine/raster/raster'
 import type { CellBounds, Layer } from '../../engine/types'
 import { lightSource } from '../../site/light'
 import { TILE, layer, type WidgetPreset } from '../types'
@@ -163,7 +163,7 @@ export const matDenim: WidgetPreset = {
 // V-groove (raking light, as on the marble); the colon is the live red.
 const PLANK = { cx: 48, cy: 51, hw: 45, hh: 41, r: 3 }
 const PLANK_SDF = sdfBox(LG15, PLANK.cx, PLANK.cy, PLANK.hw, PLANK.hh, PLANK.r)
-export const WOOD = { k: 1 / 5.5, pith: { y: -26, x: 30, depth: 6, slope: .32 }, knots: [[74, 76, 8]] as [number, number, number][], heroRow: 74, heroK: 2 }
+export const WOOD = { k: 1 / 5.5, pith: { y: -30, x: 48, depth: 0, slope: .34 }, knots: [[74, 76, 8]] as [number, number, number][], heroRow: 74, heroK: 2 }
 const woodBase = once(() => {
   const box: CellBounds = [PLANK.cx - PLANK.hw - 1, PLANK.cy - PLANK.hh - 1, PLANK.cx + PLANK.hw + 1, PLANK.cy + PLANK.hh + 1]
   const rings = woodRings(LG15, { k: WOOD.k, pith: WOOD.pith, knots: WOOD.knots, box })
@@ -197,12 +197,12 @@ function woodRow(e: WoodCut, ring: Float32Array, fleck: Float32Array, D: Float32
   const M = e.n.mask, A = e.ao.data
   for (let i = j * LG15.cols, end = i + LG15.cols; i < end; i++) {
     if (M[i] < .5) continue
-    const fl = fleck[i], b = Math.min(1, Math.max(0, D[i] - .1) * gain) * (1 - .42 * late(ring[i])) * (fl === 2 ? .45 : fl === 1 ? 1.18 : 1) * A[i]
+    const fl = fleck[i], b = Math.min(1, Math.max(0, D[i] - .1) * gain) * (1 - .62 * late(ring[i])) * (fl === 2 ? .45 : fl === 1 ? 1.18 : 1) * A[i]
     let t = bandOf(b)
     if (t < 0) continue
     // the lacquer: the polish (Phong) in value, the chatoyance along the rings a step up
-    if (P[i] >= .45 && b >= .2) t = VALUE
-    else if (K[i] >= .55 && t < VALUE && b >= .2) t++
+    if (P[i] >= .7 && b >= .3) t = VALUE
+    else if (K[i] >= .8 && t < IDLE && b >= .3) t++
     V[i] = t === bandOf(b) ? b : BAND_MID[t]; Tn[i] = t
   }
 }
@@ -217,7 +217,7 @@ export const matWood: WidgetPreset = {
       illuminate(e.n, L, { ambient: .1, shininess: 30, into: dif, intoSpecular: spe })
       anisoSpec(e.n, b.t, L, { exponent: 24, into: kk })
       // the flat face reads at ~.6 whatever the (raked) light, as on the marble
-      const Ld = Array.isArray(L) ? L as readonly number[] : [0, 0, 1], Lz = Ld[2] / (Math.hypot(Ld[0], Ld[1], Ld[2]) || 1), gain = .62 / (.9 * Math.max(.05, Lz))
+      const Ld = Array.isArray(L) ? L as readonly number[] : [0, 0, 1], Lz = Ld[2] / (Math.hypot(Ld[0], Ld[1], Ld[2]) || 1), gain = .7 / (.9 * Math.max(.05, Lz))
       const [, r0, , r1] = e.n.bounds ?? [0, 0, 0, LG15.rows - 1]
       for (let j = r0; j <= r1; j++) woodRow(e, b.rings.ring.data, b.rings.fleck.data, dif.data, spe.data, kk.data, out.values.data, out.tones, gain, j)
       return out
@@ -273,7 +273,9 @@ function leatherRow(H: Float32Array, M: Float32Array, r: number): void {
     const inset = -s, pocketIn = r - LEATHER.pocket, grain = .42 * leatherAt(c, r) * Math.min(1, inset / 4)
     let h = 1.1 * roundEdge(inset, 3) + grain
     if (pocketIn >= 0) h += .9 * roundEdge(Math.min(inset, pocketIn + .5), 2.5)
-    H[i] = h; M[i] = 1
+    H[i] = h
+    // the creases (the Worley borders) are void, away from the burnished edge: the grain reads as pebbles
+    M[i] = inset > 4 && grain < .1 && Math.abs(pocketIn) > 2 ? 0 : 1
   }
 }
 const leatherScratch = scratch(2)
@@ -283,11 +285,11 @@ function leatherShadeRow(g: LeatherGeo, D: Float32Array, P: Float32Array, V: Flo
   for (let c = LBOX[0], i = r * COLS + c; c <= LBOX[2]; c++, i++) {
     if (M[i] <= 0 || g.text[i]) continue
     const b = D[i] * A[i] * A[i]
-    if (g.thread[i]) { const t = P[i] >= .5 ? VALUE : b >= .35 ? IDLE : MID; V[i] = t === VALUE ? 1 : Math.max(.46, b); Tn[i] = t; continue }
-    let t = bandOf(b * .9)
+    if (g.thread[i]) { const t = P[i] >= .3 || b >= .5 ? VALUE : IDLE; V[i] = t === VALUE ? 1 : Math.max(.7, b); Tn[i] = t; continue }
+    let t = bandOf(b * .62)
     if (t < 0) continue
-    if (P[i] >= .4 && t >= MID) t = Math.min(IDLE, t + 1) // the burnish: a step up where the sheen crosses
-    V[i] = t === bandOf(b * .9) ? b * .9 : BAND_MID[t]; Tn[i] = t
+    if (P[i] >= .5 && t >= MID) t = Math.min(IDLE, t + 1) // the burnish: a step up where the sheen crosses
+    V[i] = t === bandOf(b * .62) ? b * .62 : BAND_MID[t]; Tn[i] = t
   }
 }
 export const matLeather: WidgetPreset = {

@@ -28,11 +28,14 @@ export function createMercury(w: number, h: number, beads = 3): Mercury {
   return { fluid, B, beads, size: B + beads * BEAD }
 }
 
-/** The settled pool: ink 1 below the fill line (row `fill` of the grid, a 1-row soft edge), still. */
-export function mercuryInit(m: Mercury, s: Float32Array, fill: number): void {
+/**
+ * The settled pool, still: ink 1 inside the half ellipse resting on the grid's low wall (centre column cx, radii rx,
+ * ry in cells), with a 1-cell soft edge.
+ */
+export function mercuryInit(m: Mercury, s: Float32Array, rx: number, ry: number, cx = m.fluid.w / 2): void {
   const f = m.fluid
   for (let j = 0; j < f.h; j++) for (let i = 0; i < f.w; i++) {
-    const t = j + .5 - fill
+    const dx = (i + .5 - cx) / rx, dy = (j + .5 - f.h) / ry, t = (1 - Math.sqrt(dx * dx + dy * dy)) * Math.min(rx, ry)
     s[f.D + j * f.w + i] = t >= .5 ? 1 : t <= -.5 ? 0 : t + .5
   }
 }

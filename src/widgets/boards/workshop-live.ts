@@ -14,7 +14,7 @@
 import { ambientOcclusion, cardMask, insetDistance, knitRelief, tonedLayer, type KnitOptions } from '../../engine/matter'
 import { anisoSpec } from '../../engine/matter/aniso'
 import { heightRaster, normalRaster, stackHeights, type HeightRaster, type NormalRaster } from '../../engine/light/height'
-import { illuminate, lambert, type Light, type Vec3 } from '../../engine/light/shade'
+import { lambert, type Light, type Vec3 } from '../../engine/light/shade'
 import { createWorld, framePointers, worldAt, type StepInput, type World } from '../../engine/physics/world'
 import { dla, type Dla } from '../../engine/algo/dla'
 import { fbm2 } from '../../engine/noise/gradient'
@@ -51,7 +51,7 @@ export const KNIT_OPTS: KnitOptions = { stitch: [KNIT.W, KNIT.H], lean: .35, lif
 const PERIOD_ROWS = 16, TILE_H = PERIOD_ROWS * KNIT.H, PAD = 4, KG: GridConfig = { cols: KNIT.N * KNIT.W, rows: TILE_H + 2 * PAD }
 const KNIT_DUR = KNIT.N * KNIT.stitch, CYCLE = KNIT_DUR + KNIT.stitch
 const knitTile = once(() => {
-  const r = knitRelief(KG, [0, 0, KG.cols - 1, KG.rows - 1], { ...KNIT_OPTS, y0: -PAD })
+  const r = knitRelief(KG, [0, 0, KG.cols - 1, KG.rows - 1], { ...KNIT_OPTS, y0: -PAD, floor: .5 })
   return { n: normalRaster(r.height), t: r.tangent, ao: ambientOcclusion(r.height, { radius: 1.5, strength: .5 }) }
 })
 export interface KnitState { rows: number; k: number; f: number; shift: number; dir: 1 | -1; x: number }
@@ -166,11 +166,11 @@ export const matKnit: WidgetPreset = {
 
 // ── 03 PAPER ─ cotton paper, DOT/480 letterpressed into it ─────────────────────────────────────────────────
 // Card pitch. A deckle-edged sheet (a rounded box whose edge is torn by fBm), cotton fibres as a fine relief
-// (heightFromField-style: fBm, .4 cells), DOT/480 debossed (smooth walls, −1.5) under a raking light: the wall facing
+// (heightFromField-style: fBm, .4 cells), DOT over 480 debossed (smooth walls, −1.5; the plan had one line, which overruns the sheet) under a raking light: the wall facing
 // the light climbs to idle, the far wall falls to void, and the ink sits on the floor of the impression in value. The
 // paper stays faint / mid. A tap is one more impression: the ink lifts and is laid again from the strokes' middle
 // out over 0.4 s, and the count goes up. No red: nothing on paper is live.
-export const PAPER = { box: [10, 18, 133, 136] as Box, r: 3, word: 'DOT/480', row: 58, k: 2.5, inkAt: 1.1 }
+export const PAPER = { box: [10, 18, 133, 136] as Box, r: 3, lines: [['DOT', 34], ['480', 62]] as [string, number][], k: 2.5, inkAt: 1.9 }
 const PCX = (PAPER.box[0] + PAPER.box[2]) / 2, PCY = (PAPER.box[1] + PAPER.box[3]) / 2, PHW = (PAPER.box[2] - PAPER.box[0]) / 2, PHH = (PAPER.box[3] - PAPER.box[1]) / 2
 /** Signed distance to the deckle edge (cells, < 0 on the sheet): a rounded box, the edge torn by fBm along it. */
 export function deckle(x: number, y: number): number {
@@ -178,13 +178,17 @@ export function deckle(x: number, y: number): number {
   return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - PAPER.r + 1.3 * fbm2(x / 3.2, y / 3.2, 3, 41) + .8 * fbm2(x / 11, y / 11, 2, 43)
 }
 const PBOX: CellBounds = [PAPER.box[0] - 3, PAPER.box[1] - 3, PAPER.box[2] + 3, PAPER.box[3] + 3]
+/** `floor`: per cell, how deep into a stroke it lies (cells to the nearest unprinted cell; 0 off the letters). */
 interface PaperGeo { n: NormalRaster; ao: Raster; floor: Float32Array; inset: Raster }
 const paperGeo = once((): PaperGeo => {
   const N = COLS * TILE.rows, h: HeightRaster = { ...createRaster(TILE, 'card', PBOX), mask: new Float32Array(N) }
   for (let r = PBOX[1]; r <= PBOX[3]; r++) paperRow(h.data, h.mask, r)
-  const word = cardMask(T.big(PAPER.word, 72, PAPER.row, { lattice: PAPER.k, smooth: true, align: 'center' }), TILE), inset = insetDistance(word)
+  const [a, b] = PAPER.lines.map(([w, row]) => cardMask(T.big(w, 72, row, { lattice: PAPER.k, smooth: true, align: 'center' }), TILE))
+  for (let i = 0; i < a.data.length; i++) a.data[i] = Math.max(a.data[i], b.data[i])
+  a.bounds = undefined
+  const inset = insetDistance(a)
   const cut = stackHeights(h, heightRaster(inset, { shape: 'smooth', width: 1.8, height: -1.5 }))
-  return { n: normalRaster(cut), ao: ambientOcclusion(cut, { radius: 2, strength: .6 }), floor: inset.data, inset }
+  return { n: normalRaster(cut), ao: ambientOcclusion(cut, { radius: 2, strength: .6 }), floor: inset.data.map(v => (v < 1 ? .5 - v : 0)), inset }
 })
 function paperRow(H: Float32Array, M: Float32Array, r: number): void {
   for (let c = PBOX[0], i = r * COLS + c; c <= PBOX[2]; c++, i++) {
@@ -204,7 +208,8 @@ function paperShadeRow(g: PaperGeo, D: Float32Array, V: Float32Array, Tn: Uint8A
     if (F[i] >= PAPER.inkAt) { ink[i] = 1; continue } // the impression's floor: the ink's (drawn per frame)
     const b = Math.min(1, Math.max(0, D[i] - .1) * gain) * A[i]
     // paper is quiet (faint / mid); only a deboss wall turned to the light climbs to idle
-    const t = b < .07 ? -1 : b < .36 ? FAINT : F[i] > 0 && b >= .66 ? IDLE : MID
+    // the fibres' shadowed valleys are void (the paper's tooth)
+    const t = b < .17 ? -1 : b < .36 ? FAINT : F[i] > 0 && b >= .66 ? IDLE : MID
     if (t < 0) continue
     V[i] = t === IDLE ? b : Math.min(t === FAINT ? .29 : .6, b); Tn[i] = t
   }
@@ -217,7 +222,7 @@ const paperWorld = once((): World => createWorld({
 }))
 const PAPER_HIT: Box = [PAPER.box[0], PAPER.box[1], PAPER.box[2] - PAPER.box[0], PAPER.box[3] - PAPER.box[1]]
 /** How much of the impression carries ink, e seconds after a tap: none for .12 s (the ink lifts), then from the strokes' middle out by .4 s. */
-export const inkReach = (e: number) => (e < 0 || e >= .4 ? 0 : e < .12 ? Infinity : PAPER.inkAt + 2.6 * (1 - (e - .12) / .28))
+export const inkReach = (e: number) => (e < 0 || e >= .4 ? 0 : e < .12 ? Infinity : PAPER.inkAt + 1.2 * (1 - (e - .12) / .28))
 const paperFrame = once(() => ({ values: createRaster(TILE, 'card', PBOX), tones: new Uint8Array(COLS * TILE.rows) }))
 export const matPaper: WidgetPreset = {
   ...tile, id: 'mat-paper', name: 'Paper',
@@ -242,8 +247,8 @@ export const matPaper: WidgetPreset = {
     return [
       cite('LETTERPRESS'),
       tonedLayer(F.values, F.tones),
-      layer(T.text(`NO. ${String(count).padStart(4, '0')}`, 72, 96, { align: 'center' }), 'mid'),
-      layer(T.text('COTTON 300 GSM', 72, 108, { align: 'center' }), 'faint'),
+      layer(T.text(`NO. ${String(count).padStart(4, '0')}`, 72, 102, { align: 'center' }), 'mid'),
+      layer(T.text('COTTON 300 GSM', 72, 114, { align: 'center' }), 'faint'),
     ]
   },
 }
@@ -254,7 +259,7 @@ export const matPaper: WidgetPreset = {
 // red (as `algo-aggregate`). Each grain's branch direction (parent → child) is its tangent: a Kajiya–Kay glint
 // flashes on the branches turned across the light. Hoar (fBm speckle on 2-cell blocks) creeps in from the corners.
 // A breath, the hovering pointer or a tap for 2 s, melts the frost round it; it freezes back from the edge in.
-export const ICE = { n: 2600, w: 96, seed: 17, unit: 1.375, cx: 72, cy: 78, grow: 14, hold: 4, thaw: 2, offset: 13.6, front: 16, breath: 16 }
+export const ICE = { n: 2600, w: 96, seed: 17, unit: 1.6, cx: 72, cy: 78, grow: 14, hold: 4, thaw: 2, offset: 13.6, front: 16, breath: 16 }
 const ICE_P = ICE.grow + ICE.hold + ICE.thaw
 let fern: Dla | undefined
 /** The cluster (baked once, on the first frame): the same as `dla({ w: 96, h: 96, n: 2600, seed: 17 })`. */
@@ -325,8 +330,8 @@ export const matIce: WidgetPreset = {
       groups[spark > .9 && age < .7 ? 'value' : age > .85 ? 'mid' : 'idle'].push([x, y])
     }
     const out: Layer[] = [cite('WITTEN-SANDER 1981'), layer(T.dots(g.hoar.filter(([x, y]) => m2 === 0 || (x - s[0]) ** 2 + (y - s[1]) ** 2 >= m2), .8), 'faint')]
-    for (const tone of ['mid', 'idle', 'value'] as const) if (groups[tone].length) out.push(layer(T.dots(groups[tone], 1.1), tone))
-    if (groups.active.length) out.push(layer(T.dots(groups.active, 1.25), 'active'))
+    for (const tone of ['mid', 'idle', 'value'] as const) if (groups[tone].length) out.push(layer(T.dots(groups[tone], 1.3), tone))
+    if (groups.active.length) out.push(layer(T.dots(groups.active, 1.45), 'active'))
     return out
   },
 }

@@ -21,6 +21,7 @@ import { bakeMatcap, LIQUID, matcapMatrix, tonedLayer } from '../../engine/matte
 import { fluidDensityAt } from '../../engine/physics/fluid'
 import { createWorld, framePointers, worldAt, type FrameInput, type StepInput, type World } from '../../engine/physics/world'
 import { stbn } from '../../engine/halftone/mask'
+import { dsin } from '../../engine/noise/dmath'
 import { createRaster } from '../../engine/raster/raster'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import type { Light, Vec3 } from '../../engine/light/shade'
@@ -95,7 +96,7 @@ function sandBlend(a: Float32Array, b: Float32Array, k: number): void {
 }
 export const sandWorld = once((): World => createWorld({
   size: S_SIZE, dt: DT, lead: 0, period: 1, every: 30, maxSteps: 120, maxCheckpoints: 4, idle: 12, heal: 1.5, maxLiveSteps: 4,
-  init: s => { sandGarden(sand, s, SAND.stones, { base: 2, depth: .45, period: 3, rings: 9 }); s[S_RK + 2] = 1 },
+  init: s => { sandGarden(sand, s, SAND.stones, { base: 2, depth: .62, period: 3, rings: 9 }); s[S_RK + 2] = 1 },
   step: sandStep, blend: sandBlend,
 }))
 /** Every stone at this state: the garden's two and the dropped ones (x, y, r in sand cells). */
@@ -114,7 +115,7 @@ function sandHeightRow(s: Float32Array, stones: [number, number, number][], Hs: 
     let h = s[k], who = -1
     for (let q = 0; q < stones.length; q++) {
       const [x, y, r] = stones[q], dx = i - x, dy = j - y, d2 = (dx * dx + dy * dy) / (r * r)
-      if (d2 < 1) { const top = 2.2 + 3.2 * Math.sqrt(1 - d2); if (top > h) { h = top; who = q } }
+      if (d2 < 1) { const top = 2 + 1.8 * Math.sqrt(1 - d2); if (top > h) { h = top; who = q } }
     }
     Hs[k] = h; St[k] = who
   }
@@ -132,7 +133,7 @@ function sandShadeRow(Hs: Float32Array, St: Int8Array, V: Float32Array, Tn: Uint
     const ndl = Math.max(0, nx * lx + ny * ly + nz * lz), lat = (j + SAND.j0) * LG2.cols + i + SAND.i0
     if (St[k] >= 0) {
       // a stone: smooth, a band brighter, its polish in value (the eye straight above)
-      const hx = lx, hy = ly, hz = lz + 1, h2 = Math.hypot(hx, hy, hz) || 1, spec = (nx * hx + ny * hy + nz * hz) / h2, b = Math.min(1, (.12 + .88 * ndl) * gain * .9)
+      const hx = lx, hy = ly, hz = lz + 1, h2 = Math.hypot(hx, hy, hz) || 1, spec = (nx * hx + ny * hy + nz * hz) / h2, b = Math.min(1, .62 + .3 * ndl * gain)
       if (spec > .96) { V[lat] = 1; Tn[lat] = VALUE } else { const t = bandOf(b); if (t >= 0) { V[lat] = b; Tn[lat] = t } }
       continue
     }
@@ -191,7 +192,7 @@ export const matSand: WidgetPreset = {
 // its density turned into a height (smoothstep, 4 cells) on the 2× lattice, read through the LIQUID matcap (a 64²
 // LUT; tipped by the tilt offset tx, ty, which is 0, 0 at rest: an upright phone and the goldens see it untipped), plus
 // the lamp's own reflection. Gravity tips the pool; the light never reads gx / gy.
-export const MERC = { i0: 7, j0: 15, fw: 29, fh: 25, fill: 14.5 }
+export const MERC = { i0: 7, j0: 15, fw: 29, fh: 25, rx: 12, ry: 11, blur: 5 }
 const mercury: Mercury = createMercury(MERC.fw, MERC.fh)
 const M_PR = mercury.size, M_SIZE = M_PR + 4
 const mercX = (x: number) => ((x + .5) / K2 - .5 - MERC.i0 - .5) / 2, mercY = (y: number) => ((y + .5) / K2 - .5 - MERC.j0 - .5) / 2
@@ -205,7 +206,7 @@ function mercStep(s: Float32Array, _n: number, inp: StepInput): void {
 }
 export const mercuryWorld = once((): World => createWorld({
   size: M_SIZE, dt: DT, lead: 0, period: 1, every: 30, maxSteps: 120, maxCheckpoints: 4, idle: 4, heal: 1.5, maxLiveSteps: 3,
-  init: s => mercuryInit(mercury, s, MERC.fill), step: mercStep,
+  init: s => mercuryInit(mercury, s, MERC.rx, MERC.ry), step: mercStep,
   // heal: the ink blends home; beads are let go (their mass rejoins the pool's blend)
   blend: (a, b, k) => { for (let i = 0; i < mercury.B; i++) a[i] += (b[i] - a[i]) * k; for (let q = 0; q < mercury.beads; q++) a[mercury.B + BEAD * q + 5] *= 1 - k },
 }))
@@ -213,11 +214,35 @@ const LIQ = once(() => bakeMatcap(LIQUID))
 const MW = 2 * MERC.fw, MH = 2 * MERC.fh
 const mercFrame = once(() => {
   const values = createRaster(LG2, 'card', [MERC.i0 - 1, MERC.j0 - 1, MERC.i0 + MW, MERC.j0 + MH]), tones = new Uint8Array(LG2.cols * LG2.rows)
-  return { values, tones, layer: tonedLayer(values, tones, K2), h: new Float32Array(MW * MH) }
+  return { values, tones, layer: tonedLayer(values, tones, K2), h: new Float32Array(MW * MH), a: new Float32Array(MW * MH) }
 })
 const smooth01 = (x: number) => (x <= 0 ? 0 : x >= 1 ? 1 : x * x * (3 - 2 * x))
-function mercHeightRow(s: Float32Array, Hs: Float32Array, j: number): void {
-  for (let i = 0; i < MW; i++) Hs[j * MW + i] = 4 * smooth01((fluidDensityAt(mercury.fluid, s, (i - .5) / 2, (j - .5) / 2) - .3) / .45)
+/** Row j: the metal's coverage (density through a smoothstep), on the lattice. */
+function mercCoverRow(s: Float32Array, A: Float32Array, j: number): void {
+  for (let i = 0; i < MW; i++) A[j * MW + i] = smooth01((fluidDensityAt(mercury.fluid, s, (i - .5) / 2, (j - .5) / 2) - .3) / .4)
+}
+/** A box blur of radius r along rows (dx 1) or columns (dx MW) from `src` into `dst`, one line. */
+function boxLine(src: Float32Array, dst: Float32Array, start: number, step: number, n: number, r: number): void {
+  let acc = 0
+  for (let k = -r; k <= r; k++) acc += src[start + Math.max(0, Math.min(n - 1, k)) * step]
+  for (let k = 0; k < n; k++) {
+    dst[start + k * step] = acc / (2 * r + 1)
+    acc += src[start + Math.min(n - 1, k + r + 1) * step] - src[start + Math.max(0, k - r) * step]
+  }
+}
+/**
+ * The pool's surface: coverage blurred twice (a smooth dome with surface tension's rounded rim), × 5 cells, and kept
+ * only where there is metal; the matcap then reads a curved surface, not a flat sheet.
+ */
+function mercHeights(s: Float32Array, Hs: Float32Array, A: Float32Array): void {
+  for (let j = 0; j < MH; j++) mercCoverRow(s, A, j)
+  for (let pass = 0; pass < 2; pass++) {
+    for (let j = 0; j < MH; j++) boxLine(pass ? Hs : A, pass ? A : Hs, j * MW, 1, MW, MERC.blur)
+    for (let i = 0; i < MW; i++) boxLine(pass ? A : Hs, pass ? Hs : A, i, MW, MH, MERC.blur)
+    if (!pass) Hs.set(A)
+  }
+  for (let j = 0; j < MH; j++) mercCoverRow(s, A, j)
+  for (let k = 0; k < Hs.length; k++) Hs[k] = A[k] > .5 ? 1 + 9 * Hs[k] * Hs[k] : 0
 }
 function mercShadeRow(Hs: Float32Array, V: Float32Array, Tn: Uint8Array, R: number[] | null, lut: Float32Array, size: number, L: Light, j: number): void {
   const point = !Array.isArray(L), at = point ? (L as { at: Vec3 }).at : null, d = point ? null : L as Vec3, half = (size - 1) / 2
@@ -241,7 +266,7 @@ function mercShadeRow(Hs: Float32Array, V: Float32Array, Tn: Uint8Array, R: numb
     const env = lut[(iy < 0 ? 0 : iy >= size ? size - 1 : iy) * size + (ix < 0 ? 0 : ix >= size ? size - 1 : ix)]
     // the black of the studio stays a faint rim of the metal, so the pool keeps one outline
     const t = env >= .9 ? VALUE : env >= .62 ? IDLE : env >= .3 ? MID : FAINT
-    V[lat] = t === FAINT ? .16 : env; Tn[lat] = t
+    V[lat] = t === FAINT ? .26 : env; Tn[lat] = t
   }
 }
 /** The tray's rim: one mid cell round the pool's box. */
@@ -255,7 +280,7 @@ const mercPristine = lru<{ values: Float32Array; tones: Uint8Array }>(8)
 function mercShade(s: Float32Array, L: Light, tilt: [number, number]): void {
   const F = mercFrame(), V = F.values.data, Tn = F.tones, lut = LIQ(), R = matcapMatrix(0, tilt)
   V.fill(0); Tn.fill(0)
-  for (let j = 0; j < MH; j++) mercHeightRow(s, F.h, j)
+  mercHeights(s, F.h, F.a)
   for (let j = 0; j < MH; j++) mercShadeRow(F.h, V, Tn, R, lut.data, lut.size, L, j)
   mercRim(V, Tn)
 }
@@ -284,17 +309,18 @@ export const matMercury: WidgetPreset = {
 // 3-cell capsules along the rope, its tangent twisted ±20° every 2 cells (a plied thread: the sheen breaks into a
 // twist). Drag pulls the needle (the spool pays out, the needle's eye is red while pulled), release winds it back;
 // a tap flicks it.
-export const SPOOL = { x0: 56, x1: 88, y0: 17, y1: 33, flange: 4, exitY: 34, cx: 72 }
+export const SPOOL = { x0: 50, x1: 94, y0: 16, y1: 36, flange: 4, exitY: 37, cx: 72, breeze: 8 }
 const thread: Thread = createThread(40, 2.2)
 const T_PR = thread.size, T_SIZE = T_PR + 4
 function threadWorldStep(s: Float32Array, _n: number, inp: StepInput): void {
-  if (inp.live < 0) return // hanging at rest
+  // pristine: a slow breeze sways it (8 s, seamed: a pure function of t); t = 0 is the thread hanging at rest
+  if (inp.live < 0) { threadStep(thread, s, DT, { x: SPOOL.cx, y: SPOOL.exitY, gx: .07 * dsin(2 * Math.PI * _n * DT / SPOOL.breeze), gy: 1 }); return }
   const press = pressOf(s, T_PR, inp, 1.5), p = inp.pointers[0]
   const flick = press === 'tap' ? (s[T_PR] < s[thread.rope.X + thread.rope.n - 1] ? 70 : -70) : inp.kick ? 70 : 0
   threadStep(thread, s, DT, { x: SPOOL.cx, y: SPOOL.exitY, gx: inp.gx, gy: inp.gy, pull: press === 'drag' && p ? [p.x, p.y] : null, flick })
 }
 export const threadWorld = once((): World => createWorld({
-  size: T_SIZE, dt: DT, lead: 0, period: 1, every: 30, maxSteps: 120, maxCheckpoints: 4, idle: 4, heal: 1.5,
+  size: T_SIZE, dt: DT, lead: 0, period: SPOOL.breeze, seam: 1, every: 30, maxSteps: 300, maxCheckpoints: 12, idle: 4, heal: 1.5,
   init: s => threadInit(thread, s, SPOOL.cx, SPOOL.exitY), step: threadWorldStep,
   blend: (a, b, k) => { for (let i = 0; i < thread.S + 1; i++) a[i] += (b[i] - a[i]) * k; a[thread.S + 1] = 0 },
 }))
@@ -309,9 +335,11 @@ function lightAt(L: Light, x: number, y: number, z: number, out: Float64Array): 
   out[0] = lx / l; out[1] = ly / l; out[2] = lz / l
 }
 const LV = new Float64Array(3)
+/** The thread's half width (cells): a 5-cell cord, so its twist has room to catch the light. */
+const THREAD_R = 2.5
 /** One capsule of thread from (ax, ay) to (bx, by), 3 cells wide, its arc length starting at s0: lit, twisted, into the frame. */
 function threadSeg(V: Float32Array, Tn: Uint8Array, HP: Float32Array, L: Light, ax: number, ay: number, bx: number, by: number, s0: number, tone: number): void {
-  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy, l = Math.sqrt(l2) || 1, ux = dx / l, uy = dy / l, R = 1.5
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy, l = Math.sqrt(l2) || 1, ux = dx / l, uy = dy / l, R = THREAD_R
   for (let y = Math.max(12, Math.floor(Math.min(ay, by) - R)); y <= Math.min(143, Math.ceil(Math.max(ay, by) + R)); y++) {
     for (let x = Math.max(0, Math.floor(Math.min(ax, bx) - R)); x <= Math.min(143, Math.ceil(Math.max(ax, bx) + R)); x++) {
       const t = l2 > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0, ex = x - (ax + dx * t), ey = y - (ay + dy * t), d = Math.hypot(ex, ey)
@@ -324,7 +352,7 @@ function threadSeg(V: Float32Array, Tn: Uint8Array, HP: Float32Array, L: Light, 
       const tw = (Math.floor((s0 + t * l) / 2) & 1 ? 1 : -1) * 20 * DEG, c = Math.cos(tw), sn = Math.sin(tw), tx = ux * c - uy * sn, ty = ux * sn + uy * c
       lightAt(L, x, y, 2 * hp, LV)
       const ndl = Math.max(0, nx * LV[0] + ny * LV[1] + nz * LV[2]), hx = LV[0], hy = LV[1], hz = LV[2] + 1, hl = Math.hypot(hx, hy, hz) || 1
-      const th = (tx * hx + ty * hy) / hl, kk = (1 - th * th) ** 12, b = .2 + .62 * ndl
+      const th = (tx * hx + ty * hy) / hl, kk = (1 - th * th) ** 12, b = .34 + .62 * ndl
       if (tone === ACTIVE) { V[i] = .85; Tn[i] = ACTIVE; continue }
       const tt = kk > .8 && b > .45 ? VALUE : b >= .62 || kk > .55 ? IDLE : b >= .3 ? MID : FAINT
       V[i] = tt === VALUE ? 1 : tt === IDLE ? Math.max(.62, b) : b; Tn[i] = tt
@@ -354,7 +382,7 @@ function spoolBake(L: Light, phase: number): { values: Float32Array; tones: Uint
     const across = (w - .5) / 1, nyLocal = across * .7, ny = v + nyLocal, nz = Math.sqrt(Math.max(.05, 1 - Math.min(1, ny * ny)))
     lightAt(L, x, y, 3, LV)
     const ndl = Math.max(0, ny * LV[1] + nz * LV[2]), hy = LV[1], hz = LV[2] + 1, hx = LV[0], hl = Math.hypot(hx, hy, hz) || 1
-    const th = (.98 * hx + .18 * hy) / hl, kk = (1 - th * th) ** 12, b = .2 + .6 * ndl
+    const th = (.98 * hx + .18 * hy) / hl, kk = (1 - th * th) ** 12, b = .3 + .6 * ndl
     const t = kk > .8 && b > .4 ? VALUE : b >= .62 || kk > .55 ? IDLE : b >= .3 ? MID : FAINT
     V[i] = t === VALUE ? 1 : t === IDLE ? Math.max(.62, b) : b; Tn[i] = t
   }

@@ -28,6 +28,7 @@ import { algorithmsBoard } from './boards/algorithms'
 import { squaresBoard } from './boards/squares'
 import { pondBoard } from './boards/pond/index'
 import { materialsBoard, materialsSources } from './boards/materials'
+import { workshopBoard, workshopSources } from './boards/workshop'
 import { boardIds, boardManifest, resolveBoardId, resolveCardId, type BoardContents, type BoardDef, type BoardId, type BoardMeta } from './manifest'
 import { registerPresets } from './registry'
 
@@ -66,6 +67,7 @@ const contents = {
   materials: { items: materialsBoard, sources: materialsSources },
   pond: { items: pondBoard },
   squares: { items: squaresBoard },
+  workshop: { items: workshopBoard, sources: workshopSources },
 } satisfies Record<BoardId, BoardContents>
 export const boards: BoardDef[] = boardManifest.map(({ load: _load, ...meta }: BoardMeta & { load: unknown }) => ({ ...meta, ...contents[meta.id as BoardId] }))
 export { boardIds }

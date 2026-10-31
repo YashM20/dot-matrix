@@ -94,13 +94,14 @@ export function knitAt(x: number, y: number, o: KnitOptions = {}, out: Float64Ar
  * The fabric relief over `box` of `grid` (cells), with fabric row `y0` (cells) at the box's top: height (mask = the
  * loops, 0 in the crevices between them) and the unit tangent along each arm. A bake (one `knitAt` per cell).
  */
-export function knitRelief(grid: GridConfig, box: CellBounds, o: KnitOptions & { y0?: number } = {}): KnitRelief {
+export function knitRelief(grid: GridConfig, box: CellBounds, o: KnitOptions & { y0?: number; floor?: number } = {}): KnitRelief {
   const { cols, rows } = grid, n = cols * rows, h: HeightRaster = { ...createRaster(grid, 'card', box), mask: new Float32Array(n) }
-  const tx = new Float32Array(n), ty = new Float32Array(n), out = new Float64Array(3), y0 = o.y0 ?? 0
+  const tx = new Float32Array(n), ty = new Float32Array(n), out = new Float64Array(3), y0 = o.y0 ?? 0, floor = o.floor ?? .05
   for (let r = Math.max(0, box[1]); r <= Math.min(rows - 1, box[3]); r++) for (let c = Math.max(0, box[0]); c <= Math.min(cols - 1, box[2]); c++) {
     knitAt(c - box[0], r - box[1] + y0, o, out)
     const i = r * cols + c
-    if (out[0] <= .05) continue
+    // below `floor` (cells) a cell is crevice: void between the loops
+    if (out[0] <= floor) continue
     const l = Math.sqrt(out[1] * out[1] + out[2] * out[2]) || 1
     h.data[i] = out[0]; h.mask[i] = 1; tx[i] = out[1] / l; ty[i] = out[2] / l
   }
