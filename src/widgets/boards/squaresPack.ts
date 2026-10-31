@@ -23,7 +23,7 @@ import { clamp, hash01 } from '../../engine/math'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import type { Layer, Tone } from '../../engine/types'
 import { TILE, layer, type WidgetPreset } from '../types'
-import { portrait } from './portrait'
+import { portrait } from './mirror'
 import { FOOT, T, cells, cite, footer, mod, pad, tile, type Pt } from './squaresKit'
 
 /** A layer of explicit sites (card cells) at one value, size and tone, optionally turned (radians). */
