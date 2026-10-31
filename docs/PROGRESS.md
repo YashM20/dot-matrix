@@ -35,6 +35,15 @@
 - `ab63b9e612f81370b`: **card size.** Restore 3 cards per row at 1440 as the default; the T3 grid in `1636241` made it 5. Add a CARD SIZE option (large / medium / compact) that persists and is set before first paint. Port 4393.
 - `a3d94ebb8cce51597`: **GitHub issues.** It drafts labelled issues for all planned and open work into the scratch folder `dmdocs/issues/`. The coordinator reviews them for public-repo safety, then creates them with `gh`.
 
+**Other-provider children (2026-10-31, the owner's request; started with T3 `delegate_task` in their own worktrees; weaker models, so review before merging):**
+- **Codex (`gpt-6-luna`, high):**
+  - #29: the `mat-lens` WebGL parity entry, in `scripts/webgl.ts` only.
+  - #30: `docs/TILT-CHECKLIST.md`, a new file.
+- **Gemini (`gemini-3.8-flash-high`):**
+  - #48: the 0.12 release notes, in `src/changelog.ts` and `CHANGELOG.md` only.
+  - Round-3 rows go in as "upcoming".
+- Both mark loose ends with `TODO(later):`. Find them with `rg "TODO\(later\)"` when improving their work.
+
 **GitHub issues (created 2026-10-31):** #12–#49 track every planned and open item, labelled by area, phase, status and priority. The repo is public, so keep issue text free of local paths and internal tooling.
 - **In progress:** #13 card size, #14 E6, #15 Q3, #16 M3, #17 X1.
 - **Owner decisions:** #12, a checklist.
