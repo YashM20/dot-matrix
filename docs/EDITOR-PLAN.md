@@ -457,7 +457,9 @@ canvas (it adds its frames).
 - Gotchas: the sampler keeps the strongest layer per dot, so a fading cue on top of the pasteboard's .8 base
   vanished below .8: the base (and the hover glow) step aside on cued dots. A long press must not leave its lift
   on the menu: the tap that ends it can land on an item placed under the finger, so the menu never opens under
-  it and stays `pointer-events: none` until 60 ms after the lift. The sheet became `position: absolute` inside
+  it and stays `pointer-events: none` until 60 ms after the lift. Under load (2 cores, a build next door) a drag's
+  first moves reached the page after the 500 ms timer and the drag became a long press: the timer now decides
+  on the next animation frame, after the queued input, so a finger that moved never opens the menu. The sheet became `position: absolute` inside
   the fixed root, so it follows the root when a keyboard shrinks it. `navigator.share` needs the tap's
   activation: SHARE awaits only the link codec (milliseconds) before it, and a refusal falls back to the copy.
   A remembered inspector detent leaks between probe passes in one profile: a pass that checks detents clears
