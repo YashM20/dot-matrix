@@ -223,7 +223,7 @@ try {
       await p.cdp('Page.navigate', { url: `${server.url}pond/?probe=1` })
       const ready = await p.waitFor(`!!globalThis.__pondBoard && !!${mcard}?.querySelector('canvas,svg')`, READY_MS)
       await p.js(`${mcard}.scrollIntoView({ block: 'center' })`); await sleep(800)
-      await p.js(`${mcard}.querySelector('button[aria-label="Open this card on its own page"]').click()`)
+      await p.js(`${mcard}.querySelector('button[aria-label="Open on its own page"]').click()`)
       const opened = await p.waitFor(`location.pathname === '/widget/pond-marble/' && !!document.querySelector('.wp [data-card-id="pond-marble"] canvas')`, 20000)
       await sleep(900)
       if (mode === 'vt') await p.shot(join(out, 'x1-vt-widget.png'))
