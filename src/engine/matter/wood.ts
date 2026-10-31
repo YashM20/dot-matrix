@@ -14,9 +14,9 @@ export interface WoodOptions {
   pith?: { y: number; x?: number; depth?: number; slope?: number }
   /** Rings per cell (default 1/5.5: a 5.5-cell ring, ≥ 3 everywhere with the warp and knots below). */
   k?: number
-  /** Ring warp: fBm amplitude in rings (default 1.4) and its scale (cells per noise unit, default 48 along the grain, 16 across). */
+  /** Ring warp: fBm amplitude in rings (default 1.1) and its scale (cells per noise unit, default 56 along the grain, 32 across). */
   warp?: number; warpScale?: readonly [number, number]
-  /** Knots: (x, y, radius) in cells; each bends the rings round it (≤ 1 ring) and has a dark core of radius / 3. */
+  /** Knots: (x, y, radius) in cells; each bends the rings round it (.7 ring) and has a dark core of radius / 3. */
   knots?: readonly (readonly [number, number, number])[]
   /** Ray flecks: share of the grid's lenses shown (default .35). */
   flecks?: number
@@ -39,13 +39,14 @@ function phaseAt(x: number, y: number, warp: number, o: WoodOptions): number {
   const p = o.pith ?? { y: -30 }, k = o.k ?? 1 / 5.5
   const z = (p.depth ?? 18) + (p.slope ?? .2) * (x - (p.x ?? 0)), dy = y - p.y
   let ph = k * Math.sqrt(dy * dy + z * z) + warp
-  for (const [kx, ky, kr] of o.knots ?? []) { const dx = x - kx, dk = y - ky; ph += .9 * Math.exp(-(dx * dx + dk * dk) / (kr * kr)) }
+  const knots = o.knots ?? []
+  for (let q = 0; q < knots.length; q++) { const dx = x - knots[q][0], dk = y - knots[q][1], kr = knots[q][2]; ph += .7 * Math.exp(-(dx * dx + dk * dk) / (kr * kr)) }
   return ph
 }
 /** The ring phase at cell (x, y) with the exact (not gridded) warp: for checks. */
 export function woodPhase(x: number, y: number, o: WoodOptions = {}): number {
-  const [sx, sy] = o.warpScale ?? [48, 16]
-  return phaseAt(x, y, (o.warp ?? 1.4) * fbm2(x / sx, y / sy, 3, o.seed ?? 7), o)
+  const [sx, sy] = o.warpScale ?? [56, 32]
+  return phaseAt(x, y, (o.warp ?? 1.1) * fbm2(x / sx, y / sy, 3, o.seed ?? 7), o)
 }
 /** Is (x, y) inside a ray fleck: the lens of the 18 × 3 grid cell it lies in, or of the one beside it. */
 function fleckAt(x: number, y: number, seed: number, share: number): boolean {
@@ -60,7 +61,7 @@ function fleckAt(x: number, y: number, seed: number, share: number): boolean {
 
 /** The board's rings, phase and flecks over `box` (default the grid), baked. */
 export function woodRings(grid: GridConfig, o: WoodOptions = {}): Wood {
-  const { cols, rows } = grid, box = o.box ?? [0, 0, cols - 1, rows - 1], seed = o.seed ?? 7, share = o.flecks ?? .35, amp = o.warp ?? 1.4, [sx, sy] = o.warpScale ?? [48, 16]
+  const { cols, rows } = grid, box = o.box ?? [0, 0, cols - 1, rows - 1], seed = o.seed ?? 7, share = o.flecks ?? .35, amp = o.warp ?? 1.1, [sx, sy] = o.warpScale ?? [56, 32]
   const phase = createRaster(grid, 'card', box), ring = createRaster(grid, 'card', box), fleck = createRaster(grid, 'card', box)
   const c0 = Math.max(0, box[0]), r0 = Math.max(0, box[1]), c1 = Math.min(cols - 1, box[2]), r1 = Math.min(rows - 1, box[3])
   const gw = Math.ceil((c1 - c0) / WARP_STEP) + 2, gh = Math.ceil((r1 - r0) / WARP_STEP) + 2, G = new Float64Array(gw * gh)
@@ -76,6 +77,7 @@ function woodRow(G: Float64Array, gw: number, o: WoodOptions, seed: number, shar
     const i = r * cols + c, ph = phaseAt(c, r, top + (bot - top) * ty, o)
     P[i] = ph; R[i] = ph - Math.floor(ph)
     if (fleckAt(c, r, seed + 1, share)) F[i] = 1
-    for (const [kx, ky, kr] of o.knots ?? []) { const dx = c - kx, dy = r - ky; if (dx * dx + dy * dy < kr * kr / 9) F[i] = 2 }
+    const knots = o.knots ?? []
+    for (let q = 0; q < knots.length; q++) { const dx = c - knots[q][0], dy = r - knots[q][1]; if (dx * dx + dy * dy < knots[q][2] * knots[q][2] / 9) F[i] = 2 }
   }
 }

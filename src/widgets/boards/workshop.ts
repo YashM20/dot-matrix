@@ -71,7 +71,8 @@ type Noise = (c: number, r: number) => number
 /** Wear at a cell: 1 on a whisker stroke or in a faded patch (fBm-broken, so the fade is patchy). */
 function wearAt(c: number, r: number, fine: Noise, broad: Noise): number {
   const n = fine(c, r)
-  for (const [x0, y0, len] of WHISKERS) {
+  for (let q = 0; q < WHISKERS.length; q++) {
+    const x0 = WHISKERS[q][0], y0 = WHISKERS[q][1], len = WHISKERS[q][2]
     const u = (c - x0) / len
     if (u < 0 || u > 1) continue
     const y = y0 - .32 * (c - x0) + .0022 * (c - x0) * (c - x0), taper = Math.sin(Math.PI * Math.min(1, u * 1.15))
@@ -79,11 +80,12 @@ function wearAt(c: number, r: number, fine: Noise, broad: Noise): number {
   }
   return broad(c, r) > .3 && n > 0 ? 1 : 0
 }
-interface DenimGeo { n: NormalRaster; t: TangentRaster; ao: Raster; warp: Raster; wear: Uint8Array; kind: Uint8Array }
+interface DenimGeo { n: NormalRaster; t: TangentRaster; warp: Raster; wear: Uint8Array; kind: Uint8Array }
 /** Cell kinds over the denim: 0 cloth, 1 the pocket opening (void), 2 topstitch, 3 the seam gap (void), 4 selvedge, 5 rivet, 6 its rim gap. */
 const denimGeo = once((): DenimGeo => {
   const r = weaveRelief(twill(3, 4, 1), TILE, { box: DENIM.box, crossing: DENIM.crossing, lift: DENIM.lift })
-  const n = normalRaster(r.height), ao = ambientOcclusion(r.height, { radius: 1.5, strength: .5 })
+  // no AO: the weave's crevices are its void gap already (and AO was a fifth of the cold frame)
+  const n = normalRaster(r.height)
   const N = COLS * TILE.rows, wear = new Uint8Array(N), kind = new Uint8Array(N), stitches = createRaster(TILE)
   for (const off of [3, 6]) {
     const st = stitch(pocketLine(off), { length: 3, gap: 1, width: 1.2 })
@@ -92,7 +94,7 @@ const denimGeo = once((): DenimGeo => {
   const [x0, y0, x1, y1] = DENIM.box, { x: rx, y: ry, r: rr } = DENIM.rivet
   const fine = noiseGrid(9, 9, 23), broad = noiseGrid(38, 30, 29, 6)
   for (let row = y0; row <= y1; row++) denimKindRow(kind, wear, stitches.data, row, x0, x1, rx, ry, rr, fine, broad)
-  return { n, t: r.tangent, ao, warp: r.warp, wear, kind }
+  return { n, t: r.tangent, warp: r.warp, wear, kind }
 })
 function denimKindRow(kind: Uint8Array, wear: Uint8Array, st: Float32Array, row: number, x0: number, x1: number, rx: number, ry: number, rr: number, fine: Noise, broad: Noise): void {
   for (let c = x0, i = row * COLS + c; c <= x1; c++, i++) {
@@ -132,7 +134,7 @@ function domeLight(dx: number, dy: number, r: number, L: Light, x: number, y: nu
 const denimScratch = scratch(2)
 const denimLit = lru<Lit>(8)
 function denimRow(g: DenimGeo, D: Float32Array, S: Float32Array, V: Float32Array, Tn: Uint8Array, L: Light, row: number): void {
-  const [x0, , x1] = DENIM.box, A = g.ao.data, W = g.warp.data, M = g.n.mask, { x: rx, y: ry, r: rr } = DENIM.rivet
+  const [x0, , x1] = DENIM.box, W = g.warp.data, M = g.n.mask, { x: rx, y: ry, r: rr } = DENIM.rivet
   for (let c = x0, i = row * COLS + c; c <= x1; c++, i++) {
     const k = g.kind[i]
     if (k === 1 || k === 3 || k === 6) continue
@@ -145,7 +147,7 @@ function denimRow(g: DenimGeo, D: Float32Array, S: Float32Array, V: Float32Array
       continue
     }
     if (M[i] <= 0) continue
-    const b = D[i] * A[i]
+    const b = D[i]
     if (W[i]) {
       let t = bandOf(b)
       if (t < 0) continue
@@ -159,7 +161,7 @@ export const matDenim: WidgetPreset = {
   ...tile, id: 'mat-denim', name: 'Denim',
   defaults: { ...LIGHT_DEFAULTS },
   layers: ctx => {
-    const L = snapTorch(matLight(ctx, { torch: { height: 40, falloff: 160 } }), 3)
+    const L = snapTorch(matLight(ctx, { torch: { height: 40, falloff: 160 } }), 6)
     const lit = denimLit(lightKey(L), () => {
       const g = denimGeo(), [dif, spec] = denimScratch(), out = litSurface(TILE, DENIM.box)
       lambert(g.n, L, { ambient: .12, into: dif })
@@ -313,7 +315,7 @@ export const matLeather: WidgetPreset = {
   ...tile, id: 'mat-leather', name: 'Leather',
   defaults: { ...LIGHT_DEFAULTS },
   layers: ctx => {
-    const L = snapTorch(matLight(ctx, { torch: { height: 36, falloff: 150 } }), 3)
+    const L = snapTorch(matLight(ctx, { torch: { height: 36, falloff: 150 } }), 6)
     const lit = leatherLit(lightKey(L), () => {
       const g = leatherGeo(), [dif, spe] = leatherScratch(), out = litSurface(TILE, LBOX)
       illuminate(g.n, L, { ambient: .12, shininess: 14, into: dif, intoSpecular: spe })

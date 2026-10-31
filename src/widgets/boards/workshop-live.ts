@@ -137,7 +137,7 @@ export const matKnit: WidgetPreset = {
   layers: ctx => {
     mainThread('mat-knit')
     const s = worldAt(knitWorld(), ctx.t, tapInput(ctx)), st = knitState(knitProgress(ctx.t, s[0]))
-    const L = snapTorch(matLight(ctx, { torch: { height: 36, falloff: 150 } }), 3), key = lightKey(L)
+    const L = snapTorch(matLight(ctx, { torch: { height: 36, falloff: 150 } }), 6), key = lightKey(L)
     const lit = knitLit(key, () => {
       // the tile is in its own cells (KG): a torch over the card moves to tile cells (its columns start at x0)
       const g = knitTile(), [dif, spec] = knitScratch(), TL: Light = Array.isArray(L) ? L : { ...(L as { at: Vec3 }), at: [(L as { at: Vec3 }).at[0] - KNIT.x0, (L as { at: Vec3 }).at[1] - KNIT.top, (L as { at: Vec3 }).at[2]] }
@@ -203,7 +203,11 @@ function paperRow(H: Float32Array, M: Float32Array, r: number): void {
   }
 }
 const paperScratch = scratch(1)
-const paperLit = lru<{ values: Float32Array; tones: Uint8Array; ink: Uint8Array }>(8)
+const paperLit = lru<{ values: Float32Array; tones: Uint8Array; ink: Uint8Array; layer: Layer }>(8)
+/** The ink on the impression's floor: every inkable cell at least `reach` cells into its stroke. */
+function inkRows(V: Float32Array, Tn: Uint8Array, ink: Uint8Array, floor: Float32Array, reach: number): void {
+  for (let r = PBOX[1]; r <= PBOX[3]; r++) for (let c = PBOX[0], i = r * COLS + c; c <= PBOX[2]; c++, i++) if (ink[i] && floor[i] >= reach) { V[i] = .95; Tn[i] = VALUE }
+}
 function paperShadeRow(g: PaperGeo, D: Float32Array, V: Float32Array, Tn: Uint8Array, ink: Uint8Array, gain: number, r: number): void {
   const M = g.n.mask, A = g.ao.data, F = g.floor
   for (let c = PBOX[0], i = r * COLS + c; c <= PBOX[2]; c++, i++) {
@@ -234,22 +238,30 @@ export const matPaper: WidgetPreset = {
   layers: ctx => {
     mainThread('mat-paper')
     const s = worldAt(paperWorld(), ctx.t, tapInput(ctx)), reach = inkReach(s[0])
-    const L = snapTorch(matLight(ctx, { torch: { height: 14, falloff: 120 }, rake: true }), 2)
+    const L = snapTorch(matLight(ctx, { torch: { height: 14, falloff: 120 }, rake: true }), 4)
     const lit = paperLit(lightKey(L), () => {
       const g = paperGeo(), [dif] = paperScratch(), out = { values: new Float32Array(COLS * TILE.rows), tones: new Uint8Array(COLS * TILE.rows), ink: new Uint8Array(COLS * TILE.rows) }
       lambert(g.n, L, { ambient: .1, into: dif })
       const Ld = Array.isArray(L) ? L as readonly number[] : [0, 0, 1], Lz = Ld[2] / (Math.hypot(Ld[0], Ld[1], Ld[2]) || 1), gain = .5 / (.9 * Math.max(.05, Lz))
       for (let r = PBOX[1]; r <= PBOX[3]; r++) paperShadeRow(g, dif.data, out.values, out.tones, out.ink, gain, r)
-      return out
+      // the inked sheet for this light, kept: at rest (no impression running) a frame is this layer as is
+      const full = { values: createRaster(TILE, 'card', PBOX), tones: out.tones.slice() }
+      full.values.data.set(out.values)
+      inkRows(full.values.data, full.tones, out.ink, g.floor, 0)
+      return { ...out, layer: tonedLayer(full.values, full.tones) }
     })
-    const F = paperFrame(), V = F.values.data, Tn = F.tones, floor = paperGeo().floor
-    V.set(lit.values); Tn.set(lit.tones)
-    // the ink: value on the impression's floor (none while it lifts, then spreading out from the strokes' middle)
-    for (let r = PBOX[1]; r <= PBOX[3]; r++) for (let c = PBOX[0], i = r * COLS + c; c <= PBOX[2]; c++, i++) if (lit.ink[i] && floor[i] >= reach) { V[i] = .95; Tn[i] = VALUE }
+    let surface = lit.layer
+    if (reach > 0) {
+      // the ink: value on the impression's floor (none while it lifts, then spreading out from the strokes' middle)
+      const F = paperFrame()
+      F.values.data.set(lit.values); F.tones.set(lit.tones)
+      inkRows(F.values.data, F.tones, lit.ink, paperGeo().floor, reach)
+      surface = tonedLayer(F.values, F.tones)
+    }
     const count = 1 + Math.round(s[1])
     return [
       cite('LETTERPRESS'),
-      tonedLayer(F.values, F.tones),
+      surface,
       layer(T.text(`NO. ${String(count).padStart(4, '0')}`, 72, 102, { align: 'center' }), 'mid'),
       layer(T.text('COTTON 300 GSM', 72, 114, { align: 'center' }), 'faint'),
     ]
@@ -262,11 +274,11 @@ export const matPaper: WidgetPreset = {
 // red (as `algo-aggregate`). Each grain's branch direction (parent → child) is its tangent: a Kajiya–Kay glint
 // flashes on the branches turned across the light. Hoar (fBm speckle on 2-cell blocks) creeps in from the corners.
 // A breath, the hovering pointer or a tap for 2 s, melts the frost round it; it freezes back from the edge in.
-export const ICE = { n: 2600, w: 96, seed: 17, unit: 1.6, cx: 72, cy: 78, grow: 14, hold: 4, thaw: 2, offset: 13.6, front: 16, breath: 16 }
+export const ICE = { n: 2600, w: 96, seed: 17, kill: 1.6, minStep: .6, unit: 1.6, cx: 72, cy: 78, grow: 14, hold: 4, thaw: 2, offset: 13.6, front: 16, breath: 16 }
 const ICE_P = ICE.grow + ICE.hold + ICE.thaw
 let fern: Dla | undefined
-/** The cluster (baked once, on the first frame): the same as `dla({ w: 96, h: 96, n: 2600, seed: 17 })`. */
-export const iceFern = () => (fern ??= dla({ w: ICE.w, h: ICE.w, n: ICE.n, seed: ICE.seed }))
+/** The cluster (baked once, on the first frame): the same as `dla({ w: 96, h: 96, n: 2600, seed: 17, kill: 1.6, minStep: .6 })` (a tighter relaunch circle and longer last steps: a third of the default bake, the same aggregation). */
+export const iceFern = () => (fern ??= dla({ w: ICE.w, h: ICE.w, n: ICE.n, seed: ICE.seed, kill: ICE.kill, minStep: ICE.minStep }))
 /** Grains shown at t (growth N ∝ g^1.7, the hold, then the thaw newest first) and whether the front is live. */
 export function iceCount(t: number, count: number): { k: number; live: boolean } {
   const p = (((t + ICE.offset) % ICE_P) + ICE_P) % ICE_P

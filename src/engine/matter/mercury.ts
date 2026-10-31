@@ -3,7 +3,8 @@
  * (`physics/fluid.ts`) that sinks hard along gravity, so it pools on the tray's low side, flows when the phone tips
  * (gravity `gx`, `gy` feed the step, never the light) and is stirred by a drag. A tap splits a bead off: its mass
  * leaves the pool, it hops out and falls back under the same gravity, and after `REJOIN` seconds it merges again,
- * so mass is the pool's ink plus the beads'.
+ * so mass is the pool's ink plus the beads'. Stable fluids lose ink as they advect (bilinear backtraces against the walls), so
+ * after every step the pool's ink is rescaled to the conserved total (kept in the state) less the beads: mass is exact.
  *
  * Step code: registered with the determinism lint (scripts/lib/detLint.ts `src/engine/matter/mercury`).
  */
@@ -13,6 +14,8 @@ export interface Mercury {
   fluid: Fluid
   /** Beads after the fluid planes: `beads` slots of (x, y, vx, vy, age, mass); mass 0 = empty. */
   B: number; beads: number
+  /** Offset of the conserved total mass (pool + beads), set by `mercuryInit`. */
+  T: number
   /** Total floats of state. */
   size: number
 }
@@ -25,7 +28,7 @@ const BEAD_G = 60
 export function createMercury(w: number, h: number, beads = 3): Mercury {
   const fluid = createFluid({ w, h, iterations: 12, vorticity: 0, dissipation: 0, damping: 2.5, sink: 70, maxSpeed: 40, sharp: true })
   const B = fluidSize(fluid)
-  return { fluid, B, beads, size: B + beads * BEAD }
+  return { fluid, B, beads, T: B + beads * BEAD, size: B + beads * BEAD + 1 }
 }
 
 /**
@@ -38,6 +41,7 @@ export function mercuryInit(m: Mercury, s: Float32Array, rx: number, ry: number,
     const dx = (i + .5 - cx) / rx, dy = (j + .5 - f.h) / ry, t = (1 - Math.sqrt(dx * dx + dy * dy)) * Math.min(rx, ry)
     s[f.D + j * f.w + i] = t >= .5 ? 1 : t <= -.5 ? 0 : t + .5
   }
+  s[m.T] = fluidInk(f, s)
 }
 
 export interface MercuryInput {
@@ -103,4 +107,9 @@ export function mercuryStep(m: Mercury, s: Float32Array, dt: number, inp: Mercur
     if (s[o + 4] >= REJOIN) { give(f, s, x, y, s[o + 5]); s[o + 5] = 0 }
   }
   fluidStep(f, s, dt, inp.gx, inp.gy)
+  // the advection's loss, put back: the pool's ink scaled to the total less the beads
+  let beadMass = 0
+  for (let k = 0; k < m.beads; k++) beadMass += s[m.B + BEAD * k + 5]
+  const ink = fluidInk(f, s), want = s[m.T] - beadMass
+  if (ink > 1e-6 && want > 0) { const k = want / ink; for (let c = 0; c < f.n; c++) s[f.D + c] *= k }
 }
