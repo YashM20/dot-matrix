@@ -100,7 +100,8 @@ function needleRow(V: Float32Array, Tn: Uint8Array, L: Light, r: number): void {
   const off = (r - KNIT.needle) / 1.6
   if (Math.abs(off) >= 1) return
   const ny = off, nz = Math.sqrt(1 - off * off)
-  for (let c = 3, i = r * COLS + c; c <= 140; c++, i++) {
+  // the needle's rows only (14 … top − 1): row r is at (r − 14) · COLS
+  for (let c = 3, i = (r - 14) * COLS + c; c <= 140; c++, i++) {
     let lx: number, ly: number, lz: number
     if (Array.isArray(L)) [lx, ly, lz] = L as Vec3
     else { const at = (L as { at: Vec3 }).at; lx = at[0] - c; ly = at[1] - r; lz = at[2] - 1 }
@@ -127,7 +128,7 @@ function knitCompose(st: KnitState, lit: { values: Float32Array; tones: Uint8Arr
       }
     }
   }
-  for (let r = 14; r < KNIT.top; r++) for (let c = 3, i = r * COLS + 3; c <= 140; c++, i++) if (needle.values[i] > 0) { V[i] = needle.values[i]; Tn[i] = needle.tones[i] }
+  for (let r = 14; r < KNIT.top; r++) for (let c = 3, i = r * COLS + 3, k = (r - 14) * COLS + 3; c <= 140; c++, i++, k++) if (needle.values[k] > 0) { V[i] = needle.values[k]; Tn[i] = needle.tones[k] }
 }
 const needleLit = lru<{ values: Float32Array; tones: Uint8Array }>(8)
 export const matKnit: WidgetPreset = {
@@ -148,7 +149,7 @@ export const matKnit: WidgetPreset = {
       return out
     })
     const needle = needleLit(key, () => {
-      const out = { values: new Float32Array(COLS * TILE.rows), tones: new Uint8Array(COLS * TILE.rows) }
+      const out = { values: new Float32Array(COLS * (KNIT.top - 14)), tones: new Uint8Array(COLS * (KNIT.top - 14)) }
       for (let r = 14; r < KNIT.top; r++) needleRow(out.values, out.tones, L, r)
       return out
     })
