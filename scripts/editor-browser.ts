@@ -48,7 +48,7 @@ import { findChrome, launch, serveDist, sleep, type Page } from './lib/cdp'
 
 const args = process.argv.slice(2), onlyAt = args.indexOf('--only'), only = onlyAt >= 0 ? args[onlyAt + 1] : undefined
 const want = (pass: string) => !only || only.split(',').includes(pass)
-const urlArg = args.find((a, i) => /^https?:/.test(a) && i !== onlyAt + 1)
+const urlArg = args.find((a, i) => /^https?:/.test(a) && !(onlyAt >= 0 && i === onlyAt + 1)) // a base URL anywhere but after --only
 const out = resolve('.snapshots', 'editor')
 rmSync(out, { recursive: true, force: true }); mkdirSync(out, { recursive: true })
 if (!findChrome()) { console.log('no Chrome found (set $CHROME): skipped'); process.exit(0) }
