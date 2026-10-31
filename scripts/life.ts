@@ -28,6 +28,7 @@ import { freezeWallClock } from './lib/freeze'
 import { fmtLoaded, medianLoaded } from './lib/load'
 import { lifeL2Checks } from './life-l2'
 import { lifeL3Checks } from './life-l3'
+import { lifeX1Checks } from './life-x1'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[s.length >> 1] }
@@ -511,6 +512,8 @@ export async function lifeChecks(assert: Assert): Promise<void> {
   await lifeL2Checks(assert, pond)
   // ── L3: polish and interaction depth (scripts/life-l3.ts) ──
   await lifeL3Checks(assert, pond)
+  // ── X1: pond depth (scripts/life-x1.ts) ──
+  await lifeX1Checks(assert, pond)
 
   // ── determinism across engines (Bun / JSC), when available ──
   {
