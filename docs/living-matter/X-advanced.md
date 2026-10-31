@@ -1,6 +1,6 @@
 # X-ADVANCED: techniques beyond the Living Matter plan
 
-> Status: **research** (2026-10-27). Nothing here is built. It extends `docs/LIVING-MATTER-PLAN.md` (the "plan" below) and does not repeat it.
+> Status: **research** (2026-10-27); **X1 built** (2026-10-31: #1, #5 and #18 shipped, #12's stateful half dropped; as built in `docs/LIFE.md` "X1"). The rest is not built. It extends `docs/LIVING-MATTER-PLAN.md` (the "plan" below) and does not repeat it.
 > Scope: advanced, niche or recent techniques that push the three tracks (L living scenes, Q squares, M materials) and the site past the plan. Every pick was checked against the repo and the plan. Anything already built or already planned was dropped (see §6).
 > Invariants are the ones in `AGENTS.md`:
 > - Field → Sampler → Renderer;
@@ -71,6 +71,7 @@ The ranking is wow × fit ÷ cost. The top four each give a "how is this a dot m
 ## 2. Living scenes
 
 ### #1 Suminagashi: closed-form marbling on the pond
+> **X1: built** as `pond-marble` (07 MARBLE). Deviations (LIFE.md "X1"): comb strokes fade (the card loops); the tine falloff is a compact bump; the bake is a tone per cell, not a backward map.
 - **What:** Japanese floating-ink marbling, done the way Lu, Jaffer et al. describe it: every ink drop and every comb stroke is a closed-form homeomorphism of the plane, so there is no fluid solver and no blur.
 - **Why it's striking here:**
   - Ink rings are hard tone contours, and those suit quantized dots far better than diffused ink.
@@ -355,6 +356,7 @@ The ranking is wow × fit ÷ cost. The top four each give a "how is this a dot m
 ## 5. Rendering quality, performance, experience
 
 ### #12 Temporal stability for glyph tiles
+> **X1: the stateful half is dropped.** Packed (+297 floats) it fits the six-koi pond (286.5 KB of 288) but not an aged 9-koi pond (301.1 KB), and pristine hysteresis moves pond-koi's goldens. The STBN half (L1.3) stays.
 - **What:** a fix for crawl and sparkle. The plan's `glyphTiles.ts` snaps Sobel angles to `- / | \` and picks the nearest micro-pattern, so a value or angle hovering on a boundary flips the glyph every frame. daoho hides this behind random 3% flicker.
 - **Split in two.** `glyphTiles.ts` freezes its API at L1.3, and stateful hysteresis does not fit the pond's checkpoint budget as plain floats, so the stateless half ships in L1.3 and the stateful half is deferred.
 - **L1.3 (stateless, inside `glyphTiles.ts` before the freeze):**
@@ -406,6 +408,7 @@ The ranking is wow × fit ÷ cost. The top four each give a "how is this a dot m
 - **Risks:** precision issues on some Windows GPUs are reported. Keep it as a runner-up until #16 exists.
 
 ### #5 A pond that ages: daily seed and growth over visits
+> **X1: built** (`day`, `age` from the pond's day source; `?day=` links; opt-in memory in TOOLS and ⌘K). Not built: "the fish gather where you last fed them" (no side-effect channel from a card).
 - **What:**
   - The **pond of the day:** lily pads, koi varieties and weather are seeded from the local date, so everyone sees the same pond today and a different one tomorrow.
   - **Your pond ages:** koi grow over days of visits, fry hatch every 10 days (capped at 9 fish), and the fish gather where you last fed them.
@@ -472,6 +475,7 @@ The ranking is wow × fit ÷ cost. The top four each give a "how is this a dot m
   - Asking for camera permission on a pond can feel invasive, which is why it stays on the camera boards.
 
 ### #18 View Transitions for board → widget
+> **X1: built** (`src/site/viewTransition.ts`; a new OPEN card action is the in-app way in). The frame flies with its canvas hidden in flight, rather than migrating dots inside it.
 - **What:** `document.startViewTransition()` around the board → `/widget/<slug>/` swap, so the card frame flies to its page.
 - **Status:** same-document view transitions became Baseline in October 2025: Chrome 111, Safari 18, Firefox 144 ([web.dev](https://web.dev/blog/same-document-view-transitions-are-now-baseline-newly-available)).
 - **Dot-specific catch:** a view transition animates **raster snapshots**, so a scaled card bitmap blurs the dot grid mid-flight.
