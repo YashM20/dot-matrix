@@ -34,7 +34,11 @@ export function rect(r: number, kx: number, ky: number, axis: 'x' | 'y' | undefi
   if (axis === 'y') r = (1 - gap) * kx * pitch / 2; else if (axis === 'x') ry = (1 - gap) * ky * pitch / 2
   return [r, r > 0 ? ry / r : 1]
 }
-/** `samplerExt.stamp`: the array-path dot's per-dot roundness, rotation (π/4, radians), motif, join and rect aspect. */
+/**
+ * `samplerExt.stamp`: the array-path dot's per-dot roundness, rotation (π/4, radians), motif, join and rect aspect. A
+ * rotated or motif dot also carries `aspect: 1`, which routes it to the squares hooks in every renderer (the core
+ * renderers test `join` / `aspect` only, so Q3 costs them nothing).
+ */
 export function stamp(d: DotInstance, join: number, form: number, joints: JointGeom[] | null, aspect = 1): void {
   if (form !== NO_FORM) {
     const f = form & 15
@@ -43,7 +47,7 @@ export function stamp(d: DotInstance, join: number, form: number, joints: JointG
     if (form >> MOTIF_SHIFT) d.motif = MOTIFS[form >> MOTIF_SHIFT]
   }
   if (join !== NO_JOIN) { d.join = join & 0xFFF; d.joint = joints![join >> 12] }
-  if (aspect !== 1) d.aspect = aspect
+  if (aspect !== 1 || form > 15) d.aspect = aspect
 }
 /** `samplerExt.push`: the buffer dot's channels. */
 export function push(buf: DotBuffer, i: number, join: number, form: number, aspect = 1): void {

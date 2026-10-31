@@ -75,6 +75,7 @@ export interface DotForm {
   /**
    * Rect cell (squares Q2): ry / rx, the half height over the half width `r`. Absent = 1 (a square-like or round dot).
    * Set by rect lattices (`Layer.lattice: [kx, ky]`, `Layer.sizeAxis`); drawn by the squares hooks (src/engine/squares).
+   * A rotated or motif dot (Q3) carries `aspect: 1`: the mark that routes it to those hooks in every renderer.
    */
   aspect?: number
   /** A nested cut inside the cell (squares Q3, `Layer.motif`): 'bead' (round hole), 'stud' (ring) or 'stitch' (the cell drawn as an X). */

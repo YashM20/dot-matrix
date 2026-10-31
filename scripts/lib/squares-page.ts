@@ -58,7 +58,7 @@ function reference(dots: DotInstance[], w: number, h: number, scale: number, n: 
     let cov = groups.get(key)
     if (!cov) groups.set(key, (cov = new Float32Array(W * H)))
     const cx = d.x * scale, cy = d.y * scale, s = d.r * scale, hs = s * (d.aspect ?? 1), g = d.joint && d.join !== undefined ? { ...d.joint, hx: d.joint.hx * scale, hy: d.joint.hy * scale, ri: d.joint.ri * scale, seam: d.joint.seam * scale } : null
-    const rect = d.aspect !== undefined, form = !g && !rect && (d.rot || d.motif), mo = d.motif ? MOTIFS.indexOf(d.motif as never) : 0
+    const form = !g && (d.aspect ?? 1) === 1 && (d.rot || d.motif), rect = !form && d.aspect !== undefined, mo = d.motif ? MOTIFS.indexOf(d.motif as never) : 0
     const reach = (g ? Math.max(g.hx, g.hy, s, hs) : Math.max(s, hs) * (d.rot ? Math.SQRT2 : 1)) + 1, e = d.shape === 'square' ? Infinity : d.shape === 'squircle' ? squircleExponent(d.roundness ?? 0) : n
     for (let y = Math.max(0, Math.floor(cy - reach)); y < Math.min(H, Math.ceil(cy + reach)); y++) for (let x = Math.max(0, Math.floor(cx - reach)); x < Math.min(W, Math.ceil(cx + reach)); x++) {
       let hit = 0
@@ -191,7 +191,8 @@ async function forms(set: 'diamond' | 'motif', scale: number) {
   let i = 0
   for (const sh of shapes) for (const rot of [0, Math.PI / 4]) for (const motif of motifs) for (const opacity of [1, .6]) {
     const x = 12 + (i % 8) * 22, y = 12 + Math.floor(i / 8) * 22
-    dots.push({ x, y, r: 7, opacity, color: opacity === 1 ? theme.dotIdle : theme.dotActive, ...sh, ...(rot ? { rot } : {}), ...(motif ? { motif } : {}) })
+    // (a form dot carries aspect 1, as the sampler stamps it: the renderers route it to the squares hooks)
+    dots.push({ x, y, r: 7, opacity, color: opacity === 1 ? theme.dotIdle : theme.dotActive, ...sh, ...(rot ? { rot } : {}), ...(motif ? { motif } : {}), ...(rot || motif ? { aspect: 1 } : {}) })
     i++
   }
   const w = 8 * 22 + 2, h = Math.ceil(i / 8) * 22 + 2, A = surface(w, h, scale), G = surface(w, h, scale)

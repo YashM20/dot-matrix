@@ -19,9 +19,10 @@ export function canvasDot(p: PathSink, d: DotInstance): boolean {
   const hs = d.r * (d.aspect ?? 1)
   if (d.join !== undefined && d.joint) { canvasJoin(p, d.x, d.y, d.r, d.join, d.joint, hs); return true }
   const n = shapeExponent(d.shape, d.roundness)
-  if (d.aspect !== undefined) { rectOutline(p as never, d.x, d.y, d.r, hs, n); return true }
-  if (!d.rot && !d.motif) return false
-  formOutline(p as unknown as FormSink, d.x, d.y, d.r, n, !!d.rot, d.motif ? MOTIFS.indexOf(d.motif as never) : 0)
+  // a rotated / motif cell carries aspect 1 (the routing mark); a rect cell (aspect ≠ 1) ignores both
+  if ((d.rot || d.motif) && hs === d.r) { formOutline(p as unknown as FormSink, d.x, d.y, d.r, n, !!d.rot, d.motif ? MOTIFS.indexOf(d.motif as never) : 0); return true }
+  if (d.aspect === undefined) return false
+  rectOutline(p as never, d.x, d.y, d.r, hs, n)
   return true
 }
 /** Buffer dot `i` from its channels: a joined cell, a rect cell, a rotated / motif cell, or a per-dot roundness step; false = a plain dot (frame style). */

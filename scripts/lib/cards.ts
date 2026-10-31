@@ -65,7 +65,7 @@ export function renderCardFull(p: WidgetPreset, { px, t, silhouette = false, sin
       let cov = joined.get(key)
       if (!cov) joined.set(key, (cov = new Float32Array(card.w * card.h)))
       if (g && d.join !== undefined) card.coverJoined(cov, pad + d.x * k, pad + d.y * k, d.r * k, d.join, { hx: g.hx * k, hy: g.hy * k, ro: g.ro, ri: g.ri * k, seam: g.seam * k }, hs)
-      else if (d.aspect !== undefined) card.coverRect(cov, pad + d.x * k, pad + d.y * k, d.r * k, hs, d.shape === 'square' ? Infinity : shape)
+      else if ((d.aspect ?? 1) !== 1 || !(d.rot || d.motif)) card.coverRect(cov, pad + d.x * k, pad + d.y * k, d.r * k, hs, d.shape === 'square' ? Infinity : shape)
       else card.coverForm(cov, pad + d.x * k, pad + d.y * k, d.r * k, shapeExponent(d.shape, d.roundness), !!d.rot, d.motif ? MOTIFS.indexOf(d.motif as never) : 0)
       continue
     }

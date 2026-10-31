@@ -155,7 +155,7 @@ function draw(api: GLJoinApi, dots: DotInstance[], common: (p: { p: WebGLProgram
     const b = m * F, hs = d.r * (d.aspect ?? 1)
     data[b] = d.x; data[b + 1] = d.y; data[b + 2] = d.r; data[b + 3] = Math.min(1, d.opacity)
     // a plain cell's form: rot45 | motif << 1 (rect cells ignore both)
-    const mo = d.motif === 'bead' ? 1 : d.motif === 'stud' ? 2 : d.motif === 'stitch' ? 3 : 0, form = d.aspect === undefined ? (d.rot ? 1 : 0) | (mo << 1) : 0
+    const mo = d.motif === 'bead' ? 1 : d.motif === 'stud' ? 2 : d.motif === 'stitch' ? 3 : 0, form = (d.aspect ?? 1) === 1 ? (d.rot ? 1 : 0) | (mo << 1) : 0
     data[b + 4] = palette.of(d.color); data[b + 5] = slot; data[b + 6] = g ? d.join! : -1 - form; data[b + 7] = hs
     // a plain rect cell: the corner of its rounded rect (px; 0 = the box), or −n for a soft superellipse (n ≤ 8)
     const n = d.shape === 'square' ? Infinity : d.shape === 'squircle' ? exponent(d.roundness) : 2
