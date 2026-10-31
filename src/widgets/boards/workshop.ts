@@ -47,7 +47,7 @@ const litSurface = (grid = TILE, box?: CellBounds, k?: number): Lit => {
 // outseam: a 2-cell white `value` line, not red (M §10.2: the red redline is an owner option and ships off).
 export const DENIM = { box: [2, 12, 141, 141] as Box, crossing: 3, lift: 1, seam: 135, selvedge: [136, 137] as const, pocket: { cx: 132, cy: 12, a: 58, b: 56 }, rivet: { x: 77, y: 17, r: 3.2 } }
 /** The pocket curve's ellipse "radius" at a cell: 1 on the opening, > 1 outside the pocket. */
-const pocketRho = (c: number, r: number) => Math.hypot((c - DENIM.pocket.cx) / DENIM.pocket.a, (r - DENIM.pocket.cy) / DENIM.pocket.b)
+const pocketRho = (c: number, r: number) => { const u = (c - DENIM.pocket.cx) / DENIM.pocket.a, v = (r - DENIM.pocket.cy) / DENIM.pocket.b; return Math.sqrt(u * u + v * v) }
 /** A polyline along the pocket's ellipse grown by `off` cells. */
 function pocketLine(off: number): Pt[] {
   const { cx, cy, a, b } = DENIM.pocket, out: Pt[] = []
@@ -60,27 +60,32 @@ const WHISKERS: readonly (readonly [number, number, number])[] = [[6, 92, 58], [
  * fBm sampled every `step` cells over the card and read back bilinearly: a bake's smooth noise at a ninth of the
  * cost (the wear's breakup is ≥ 9 cells a noise unit, so a 3-cell grid loses nothing visible).
  */
-function noiseGrid(sx: number, sy: number, seed: number, step = 3): (c: number, r: number) => number {
+interface NoiseGrid { G: Float64Array; gw: number; step: number }
+function noiseGrid(sx: number, sy: number, seed: number, step = 3): NoiseGrid {
   const gw = Math.ceil(COLS / step) + 2, gh = Math.ceil(TILE.rows / step) + 2, G = new Float64Array(gw * gh)
   for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) G[j * gw + i] = fbm2(step * i / sx, step * j / sy, 3, seed)
-  return (c, r) => {
-    const fx = c / step, fy = r / step, i = Math.floor(fx), j = Math.floor(fy), tx = fx - i, ty = fy - j, a = j * gw + i
-    const top = G[a] + (G[a + 1] - G[a]) * tx, bot = G[a + gw] + (G[a + gw + 1] - G[a + gw]) * tx
-    return top + (bot - top) * ty
-  }
+  return { G, gw, step }
 }
-type Noise = (c: number, r: number) => number
-/** Wear at a cell: 1 on a whisker stroke or in a faded patch (fBm-broken, so the fade is patchy). */
-function wearAt(c: number, r: number, fine: Noise, broad: Noise): number {
-  const n = fine(c, r)
+/** A noise grid read bilinearly at cell (c, r) (module level: a closure per grid cost ~10× in the first frame). */
+function gridAt(g: NoiseGrid, c: number, r: number): number {
+  const { G, gw, step } = g, fx = c / step, fy = r / step, i = Math.floor(fx), j = Math.floor(fy), tx = fx - i, ty = fy - j, a = j * gw + i
+  const top = G[a] + (G[a + 1] - G[a]) * tx, bot = G[a + gw] + (G[a + gw + 1] - G[a + gw]) * tx
+  return top + (bot - top) * ty
+}
+/** The faded patches: wear where the broad noise is high and the fine one breaks it up. */
+const fadeAt = (c: number, r: number, fine: NoiseGrid, broad: NoiseGrid) => (gridAt(broad, c, r) > .3 && gridAt(fine, c, r) > 0 ? 1 : 0)
+/** The whiskers, stamped along each stroke (a band of ± 2.4 · taper cells round its centre line, fBm-broken). */
+function whiskers(kind: Uint8Array, wear: Uint8Array, fine: NoiseGrid): void {
   for (let q = 0; q < WHISKERS.length; q++) {
     const x0 = WHISKERS[q][0], y0 = WHISKERS[q][1], len = WHISKERS[q][2]
-    const u = (c - x0) / len
-    if (u < 0 || u > 1) continue
-    const y = y0 - .32 * (c - x0) + .0022 * (c - x0) * (c - x0), taper = Math.sin(Math.PI * Math.min(1, u * 1.15))
-    if (Math.abs(r - y) < 2.4 * taper && n > -.25) return 1
+    for (let c = Math.ceil(x0); c <= Math.min(DENIM.seam - 1, x0 + len); c++) {
+      const u = (c - x0) / len, y = y0 - .32 * (c - x0) + .0022 * (c - x0) * (c - x0), w = 2.4 * Math.sin(Math.PI * Math.min(1, u * 1.15))
+      for (let r = Math.max(DENIM.box[1], Math.floor(y - w)); r <= Math.min(DENIM.box[3], Math.ceil(y + w)); r++) {
+        const i = r * COLS + c
+        if (Math.abs(r - y) < w && kind[i] === 0 && gridAt(fine, c, r) > -.25) wear[i] = 1
+      }
+    }
   }
-  return broad(c, r) > .3 && n > 0 ? 1 : 0
 }
 interface DenimGeo { n: NormalRaster; t: TangentRaster; warp: Raster; wear: Uint8Array; kind: Uint8Array }
 /** Cell kinds over the denim: 0 cloth, 1 the pocket opening (void), 2 topstitch, 3 the seam gap (void), 4 selvedge, 5 rivet, 6 its rim gap. */
@@ -96,18 +101,19 @@ const denimGeo = once((): DenimGeo => {
   const [x0, y0, x1, y1] = DENIM.box, { x: rx, y: ry, r: rr } = DENIM.rivet
   const fine = noiseGrid(9, 9, 23), broad = noiseGrid(38, 30, 29, 6)
   for (let row = y0; row <= y1; row++) denimKindRow(kind, wear, stitches.data, row, x0, x1, rx, ry, rr, fine, broad)
+  whiskers(kind, wear, fine)
   return { n, t: r.tangent, warp: r.warp, wear, kind }
 })
-function denimKindRow(kind: Uint8Array, wear: Uint8Array, st: Float32Array, row: number, x0: number, x1: number, rx: number, ry: number, rr: number, fine: Noise, broad: Noise): void {
+function denimKindRow(kind: Uint8Array, wear: Uint8Array, st: Float32Array, row: number, x0: number, x1: number, rx: number, ry: number, rr: number, fine: NoiseGrid, broad: NoiseGrid): void {
   for (let c = x0, i = row * COLS + c; c <= x1; c++, i++) {
-    const d = Math.hypot(c - rx, row - ry)
+    const d = Math.sqrt((c - rx) * (c - rx) + (row - ry) * (row - ry))
     if (d <= rr) { kind[i] = 5; continue }
     if (d <= rr + 1) { kind[i] = 6; continue }
     if (c >= DENIM.selvedge[0] && c <= DENIM.selvedge[1]) { kind[i] = 4; continue }
     if (c === DENIM.seam || c === DENIM.selvedge[1] + 1) { kind[i] = 3; continue }
     if (c < DENIM.seam && Math.abs(pocketRho(c, row) - 1) * Math.min(DENIM.pocket.a, DENIM.pocket.b) < .6) { kind[i] = 1; continue }
     if (st[i]) { kind[i] = 2; continue }
-    if (c < DENIM.seam) wear[i] = wearAt(c, row, fine, broad)
+    if (c < DENIM.seam) wear[i] = fadeAt(c, row, fine, broad)
   }
 }
 /** Mark the cells within `h` of segment (ax, ay)–(bx, by). */
@@ -254,7 +260,8 @@ export const matWood: WidgetPreset = {
 export const LEATHER = { cx: 72, cy: 78, hw: 64, hh: 62, r: 16, pocket: 84, inset: 6, slant: 30 * Math.PI / 180 }
 const outerSdf = (x: number, y: number) => {
   const qx = Math.abs(x - LEATHER.cx) - (LEATHER.hw - LEATHER.r), qy = Math.abs(y - LEATHER.cy) - (LEATHER.hh - LEATHER.r)
-  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - LEATHER.r
+  const ax = qx > 0 ? qx : 0, ay = qy > 0 ? qy : 0
+  return Math.sqrt(ax * ax + ay * ay) + Math.min(Math.max(qx, qy), 0) - LEATHER.r
 }
 const roundEdge = (inset: number, w: number) => { const t = 1 - Math.max(0, Math.min(1, inset / w)); return Math.sqrt(1 - t * t) }
 interface LeatherGeo { n: NormalRaster; ao: Raster; thread: Uint8Array; text: Uint8Array }

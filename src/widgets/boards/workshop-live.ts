@@ -178,7 +178,7 @@ const PCX = (PAPER.box[0] + PAPER.box[2]) / 2, PCY = (PAPER.box[1] + PAPER.box[3
 /** Signed distance to the deckle edge (cells, < 0 on the sheet): a rounded box, the edge torn by fBm along it. */
 export function deckle(x: number, y: number): number {
   const qx = Math.abs(x - PCX) - (PHW - PAPER.r), qy = Math.abs(y - PCY) - (PHH - PAPER.r)
-  const base = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - PAPER.r
+  const ax = qx > 0 ? qx : 0, ay = qy > 0 ? qy : 0, base = Math.sqrt(ax * ax + ay * ay) + Math.min(Math.max(qx, qy), 0) - PAPER.r
   // the tear only moves the edge by ≤ 2.1 cells: away from it the sign is settled, skip the noise
   return Math.abs(base) > 2.5 ? base : base + 1.3 * fbm2(x / 3.2, y / 3.2, 3, 41) + .8 * fbm2(x / 11, y / 11, 2, 43)
 }
