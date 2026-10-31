@@ -1138,7 +1138,7 @@ async function phoneE6(p: Page, h: Helpers, tapEl: (s: string) => Promise<void>)
   // ── SHARE through the share sheet (stubbed): shared, cancelled, refused, hung
   const shareOnce = async (mode: string | null) => {
     await p.js(`window.__shareMode = ${JSON.stringify(mode)}; window.__shared = []; window.__editorShared = undefined; window.__editorLink = ''`)
-    await tapEl('.ed-top [aria-label="Share or export"]'); await sleep(900)
+    await tapEl('.ed-top [aria-label="Share or export"]'); await p.waitFor('window.__editorShared !== undefined', 8000); await sleep(200) // the outcome, then the note it set
     return { out: await p.js<string | undefined>(`window.__editorShared`), shared: await p.js<{ url: string; title: string }[]>(`window.__shared ?? []`), note: await h.text('.ed-note'), sheet: await p.js<boolean>(`!!document.querySelector('.ed-sheet')`) }
   }
   const closeSheet = async () => { if (await p.js(`!!document.querySelector('.ed-sheet')`)) await tapEl('.ed-sheet-head [aria-label="Close"]') }
