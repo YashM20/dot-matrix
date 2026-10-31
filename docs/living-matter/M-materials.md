@@ -26,7 +26,15 @@
 > - Mercury: the pool is a half-ellipse resting on the low wall, its surface the blurred coverage (a flat sheet gave the matcap nothing to read); stepping only when live (the pristine pool lies still).
 > - Thread: a 5-cell cord (3 cells read as a hairline at 1×); the pristine run sways in an 8 s seamed breeze (dmath), so the card lives at rest; the needle's eye is a red site layer while pulled.
 >
-> **Sizes and timings:** filled in at the end of the M3 run (see the final report).
+> - Ice: `dla({ w: 96, h: 96, n: 2600, seed: 17, kill: 1.6, minStep: .6 })`: the default walker took a third of the cold frame; the cluster stops at the domain's radius anyway (698 grains, as N ∝ R^1.71 says).
+> - Mercury: stable fluids lose ink as they advect, so the step rescales the pool's ink to the conserved total (in the state) less the beads: mass is exact, not "within tolerance".
+> - Denim: no AO (the weave's crevices are its void gap already); the whiskers are stamped along their strokes.
+> - Timing harness: `scripts/materials.ts --quick` skips the timing asserts, for functional runs outside the heavy lock.
+> - Owner options (§10), all off and open: the denim redline (§10.2), the leather awl and a live action for paper (§10.3; paper's re-ink is the tap, no red), `activeDim` (§10.6).
+>
+> **Sizes** (against a fresh build of `0cf937f`): first-load JS 123.83 → 124.08 kB gz (+0.25 against a +0.06 ledger row: the manifest row with the §5 title is +0.16, the nine catalog uid rows +0.08); worker initial 17.50 → 17.70 (+0.21); the workshop board's worker request `wk-workshop` 25.21 kB gz (knit, paper, ice, sand, mercury and thread are stubs there); the materials board's request 33.45 → 34.91 (+1.46: its matter modules now sit in a chunk shared with workshop, `wk-voronoi` 12.05, and its own chunk fell 25.57 → 14.97); the workshop deep link (`size.ts --board workshop`) 169.35 kB gz, as the materials one (167.36 at base). Goldens: 9 added, 0 changed (209).
+>
+> **Timings** (`scripts/materials.ts --bench`, the full run, each ÷ its own load; budgets 4 / 30 ms): knit 2.28 / 17.1, denim 2.24 / 20.3, paper 2.08 / 20.4, wood 1.47 / 23.5, leather 1.85 / 21.2, sand 0.92 / 20.0, ice 0.43 / 58.5 (12.9 in the `--only workshop` run: the DLA bake, about 8 ms warm, met a major GC in the big heap), mercury 0.58 / 7.2, thread 1.00 / 4.7 (warm / cold); hover frames ≤ 2.2.
 >
 > It depends **by name** on two other tracks:
 > - **F0:**
