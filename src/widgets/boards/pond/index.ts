@@ -42,6 +42,8 @@ if (probing) {
     mode: (id: string) => byId.get(id)?.world.mode,
     draws: (id: string) => draws.get(id) ?? 0,
     fps: (id: string) => byId.get(id)?.preset.fps,
+    /** The day source's data (X1: `day`, `age`). */
+    day: () => pondDaySource.snapshot().data,
     /** Median ms of `layers` + sample for `frames` pristine frames of card `id` (a fresh t range: each frame steps the world). */
     bench: (id: string, frames = 24) => {
       const c = byId.get(id)

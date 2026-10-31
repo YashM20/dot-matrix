@@ -218,6 +218,11 @@ export async function lifeX1Checks(assert: Assert, pond: () => Promise<typeof im
         rec.length > 0 && rec.length <= 200 && after?.visits === 3 && D.ageOf(after) === 2 && data.size === 0 && writes.every(k => k === S.POND_MEMORY_KEY || k === `-${S.POND_MEMORY_KEY}`) && age === 0,
         `record ${rec.length} B, visits ${after?.visits}, keys ${[...new Set(writes)].join(' ')}`)
       off()
+      const l1 = S.withPondDay('https://x/pond/', true), l2 = S.withPondDay('https://x/widget/pond-koi/?theme=dark_signal', true), l3 = S.withPondDay('https://x/lock/', false)
+      g.location = { search: '', href: 'https://x/pond/' }
+      const l4 = S.withPondDay('https://x/pond/', true)
+      assert('pond links carry ?day=: the page\'s own ?day= (a shared pond stays the one the sender saw), else today; other links pass through',
+        l1 === 'https://x/pond/?day=2026-10-31' && l2 === 'https://x/widget/pond-koi/?theme=dark_signal&day=2026-10-31' && l3 === 'https://x/lock/' && /^https:\/\/x\/pond\/\?day=\d{4}-\d{2}-\d{2}$/.test(l4), [l1, l2, l3, l4].join(' '))
     } finally {
       g.localStorage = saved.localStorage; g.window = saved.window; g.location = saved.location
     }

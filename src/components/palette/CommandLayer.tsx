@@ -218,11 +218,15 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     }
     if (action === 'link') return api.copyLink(preset.id)
     if (action === 'open') {
-      // the widget page, in place: App's popstate handler swaps to it (a view transition where there is one)
+      // the widget page, in place: App's popstate handler swaps to it (a view transition where there is one); its
+      // chunk is fetched first, so the transition's new snapshot can show the landed card
       if (location.pathname === widgetPath(preset.id)) return
-      const q = new URLSearchParams(location.search); q.delete('card')
-      history.pushState(null, '', widgetPath(preset.id) + (q.size ? `?${q}` : ''))
-      return void dispatchEvent(new PopStateEvent('popstate'))
+      const go = () => {
+        const q = new URLSearchParams(location.search); q.delete('card')
+        history.pushState(null, '', widgetPath(preset.id) + (q.size ? `?${q}` : ''))
+        dispatchEvent(new PopStateEvent('popstate'))
+      }
+      return void import('../widget/WidgetPage').then(go, go)
     }
     if (action === 'remix') return void import('../xray/remix').then(m => (m.cardIR(preset, data) ? api.remix(preset.id, data) : api.studio(preset.id)))
     void Promise.all([import('../../export/source'), import('../../export/still')]).then(([{ layerSource }, { stillPNG }]) => stillPNG(layerSource(layers, grid, style, theme, data), animated ? boardTime() : 0))

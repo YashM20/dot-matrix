@@ -80,9 +80,10 @@ let current = { key: '0|', pond: canonical }
 /** The koi pond for (day, age): the canonical one for day 0 without fry; otherwise one world per (day, fry lengths), the last kept. */
 export function koiFor(day: number, age: number): KoiPond {
   const key = `${day}|${fryLengths(age).join(',')}`
-  if (key !== current.key) current = { key, pond: key === '0|' ? canonical : createKoiPond(koiSpecFor(day, age)) }
-  koiPond = current.pond
-  return koiPond
+  // the canonical pond is always kept (benches and thumbnails read it) next to the last other one
+  if (key === '0|') return (koiPond = canonical)
+  if (key !== current.key) current = { key, pond: createKoiPond(koiSpecFor(day, age)) }
+  return (koiPond = current.pond)
 }
 const raster = createTileRaster(KOI_SPEC.card, KOI_TILES)
 /** The TYPE look's raster (L3.4): the same scene on 24 × 16 font tiles of 6 × 8 cells. */
@@ -145,6 +146,8 @@ const probing = (globalThis as { __POND_PROBE__?: boolean }).__POND_PROBE__ || (
 if (probing) {
   (globalThis as { __pond?: unknown }).__pond = {
     mode: () => koiPond.world.mode,
+    /** Koi in the pond drawn last (fry included). */
+    koi: () => koiPond.spec.koi.length,
     pellets: () => (koiPond.world.mode === 'pristine' ? 0 : pelletViews(koiPond, koiPond.world.live).length),
     lure: () => (koiPond.world.mode === 'pristine' ? 0 : pondGlobals(koiPond, koiPond.world.live).lure),
     hash: (n: number) => stateHash(simAtStep(koiPond.world.sim, n)),
