@@ -31,6 +31,19 @@
 | `a525b2c5aebad3e34` | **M3 workshop**: the new `/workshop/` board, with knit, denim, paper, wood, leather, sand, ice, mercury and thread; plus the M3.10 tilt-lighting polish. The §10 owner options stay off | `docs/living-matter/M-materials.md` §5 | `src/engine/matter/`, the workshop and materials boards, `scripts/materials*.ts` | 4391 |
 | `ab02542b616c4c2e1` | **E6 phone polish**: long-press menu, snap cue, sheet detent memory, landscape side sheet, `visualViewport`, `navigator.share` | `docs/EDITOR-PLAN.md` §10 E6 | `src/components/editor/` | 4383/4384 |
 
+**Extra agents (2026-10-31, at the owner's request):**
+- `ab63b9e612f81370b`: **card size.** Restore 3 cards per row at 1440 as the default; the T3 grid in `1636241` made it 5. Add a CARD SIZE option (large / medium / compact) that persists and is set before first paint. Port 4393.
+- `a3d94ebb8cce51597`: **GitHub issues.** It drafts labelled issues for all planned and open work into the scratch folder `dmdocs/issues/`. The coordinator reviews them for public-repo safety, then creates them with `gh`.
+
+**GitHub issues (created 2026-10-31):** #12–#49 track every planned and open item, labelled by area, phase, status and priority. The repo is public, so keep issue text free of local paths and internal tooling.
+- **In progress:** #13 card size, #14 E6, #15 Q3, #16 M3, #17 X1.
+- **Owner decisions:** #12, a checklist.
+- **Next queue:** XQ #20, XM #21, XL #22, E4 #18, E7 #19.
+- **Waiting on the owner:** L4 #23, X2 #24.
+- **Polish** (later): #37–#46.
+- **Release:** 0.12 notes #48; round merge #49.
+- **When merging:** close the issue (or tick its tasks) and drop the `status: in progress` label.
+
 **Done in round 3 and merged on `feat/round3`:** L3 pond polish (merged from 3e7ecaf; L3.1–L3.8):
 - **Checks:** life 120/120 and all life-browser checks pass; goldens 0 changed, 0 added; every pond card's default frames are identical to L2.
 - **Sizes:** first load −0.01; worker initial +0.07.
