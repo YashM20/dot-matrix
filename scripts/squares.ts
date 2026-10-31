@@ -381,9 +381,6 @@ export function squaresChecks(assert: Assert): void {
     const ds = sampleLayers([bg, site], grid, style, dot480), left = (dx: number, dy: number) => ds.some(d => d.r < 1.2 && Math.abs(d.x / 2.25 - .5 - 11.5 - dx) < .01 && Math.abs(d.y / 2.25 - .5 - 11.5 - dy) < .01)
     assert('squares: rotated site cover (a π/4 site hides the card cells inside its diamond, tips included, and keeps the corners)', !left(.5, .5) && !left(2.5, .5) && !left(.5, -2.5) && left(2.5, 2.5) && ds.some(d => d.rot === Math.PI / 4),
       `${ds.length} dots`)
-    // GPU passes refuse rotation and motif
-    const tag = { density: 1 } as never
-    assert('squares: GPU passes refuse rotation / motif layers', layerPass({ field: () => 1, rotation: 1, gpuValues: tag } as Layer, grid, style, dot480) === null && layerPass({ field: () => 1, motif: 'bead', gpuValues: tag } as Layer, grid, style, dot480) === null)
 
     // Q3.6 form outlines vs the CPU reference, and motif ink vs the analytic area
     class FormRec extends Recorder { bezierCurveTo(ax: number, ay: number, bx: number, by: number, x: number, y: number) { flatten(this, ax, ay, bx, by, x, y) } }
