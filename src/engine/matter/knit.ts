@@ -42,10 +42,10 @@ function legs(fx: number, fy: number, W: number, H: number, lean: number, lift: 
   out[0] = best; out[1] = tx; out[2] = 1
   return best
 }
-/** A purl bump: a horizontal loop across the column, highest mid-row. */
+/** A purl bump: a horizontal loop across the column, mid-row; the rows between bumps are a void crease (|v| ≥ .7). */
 function purlBump(fx: number, fy: number, W: number, H: number, lift: number, out: Float64Array): number {
   const v = (fy + .5 - H / 2) / (H / 2), u = (fx + .5) / W
-  const h = v * v < 1 ? lift * .9 * Math.sqrt(1 - v * v) * (.85 + .15 * Math.cos(2 * Math.PI * (u - .5))) : 0
+  const h = v * v < .49 ? lift * .9 * Math.sqrt(1 - v * v) * (.85 + .15 * Math.cos(2 * Math.PI * (u - .5))) : 0
   out[0] = h; out[1] = 1; out[2] = 0
   return h
 }

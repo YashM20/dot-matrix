@@ -936,7 +936,7 @@ function tiltChecks(assert: Assert): void {
   // the hub's bucket: a light turned less than one bucket (1/64 turn) keeps it; a full bucket moves it
   let sticky = true
   for (let k = 0; k < 64; k++) {
-    const a0 = (k + .5) / 64 * 2 * Math.PI, prev = bucketLight(lightDirAt(a0))
+    const a0 = k / 64 * 2 * Math.PI, prev = bucketLight(lightDirAt(a0))
     if (bucketLight(lightDirAt(a0 + .7 / 64 * 2 * Math.PI), prev).az !== prev.az) sticky = false
     if (bucketLight(lightDirAt(a0 + 1 / 64 * 2 * Math.PI), prev).az === prev.az) sticky = false
   }
@@ -951,6 +951,7 @@ function tiltChecks(assert: Assert): void {
   const same0 = both.every(p => [0, 1.3].every(t => atClock(() => JSON.stringify(sampleLayers(withChrome(p)({ t, data: { ...p.defaults, tx: 0, ty: 0 } }), p.grid, p.style, dot480)) === JSON.stringify(sampleLayers(withChrome(p)({ t, data: noTilt({ ...p.defaults }) }), p.grid, p.style, dot480)))))
   assert('materials: tx = ty = 0 → every matcap and KK card equals its no-tilt frame (bit for bit, both boards)', same0 && matcapMatrix(0, [0, 0]) === null)
   // each card's light through matLight: the pointer (hover), else the hub (lightSrc 1), else the sun, each = sceneLight
+  // (a sky-only call, the window's panes, sees no pointer: under hover it is the sun)
   const hour = atClock(() => hourOf(new Date())), ctxs = [
     ['hover', [POINTER(60, 70)], {}], ['tilt', undefined, { lightSrc: 1, lightAz: 20, lightEl: 3 }], ['sun', undefined, {}],
   ] as const
@@ -964,7 +965,7 @@ function tiltChecks(assert: Assert): void {
       for (const { input, light } of lightTrace.calls) {
         const want = sceneLight(input), arr = Array.isArray(light)
         const good = JSON.stringify(want) === JSON.stringify(light) && input.hour === hour
-          && (name === 'hover' ? !!input.pointer || !arr : name === 'tilt' ? arr && JSON.stringify(light) === JSON.stringify(lightOfBucket(20, 3)) : arr && JSON.stringify(light) === JSON.stringify(sunAt(hour)))
+          && (name === 'hover' ? (input.pointer ? !arr : JSON.stringify(light) === JSON.stringify(sunAt(hour))) : name === 'tilt' ? arr && JSON.stringify(light) === JSON.stringify(lightOfBucket(20, 3)) : arr && JSON.stringify(light) === JSON.stringify(sunAt(hour)))
         if (!good) { ok = false; detail = `${p.id} (${name})` }
       }
     }

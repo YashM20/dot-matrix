@@ -47,7 +47,7 @@ const tapped = (inp: StepInput, box: Box) => inp.kick || inp.pointers.some(p => 
 // and scrolled: each finished row pushes the swatch down one row over 0.4 s. The working loop (red) knits across the
 // top row one stitch per 0.4 s, alternating direction like flat knitting; it rests at the row's end, where the next
 // row starts.
-export const KNIT = { x0: 6, top: 22, bottom: 139, W: 6, H: 4, N: 22, needle: 18.5, stitch: .4 }
+export const KNIT = { x0: 6, top: 22, bottom: 129, W: 6, H: 4, N: 22, needle: 18.5, stitch: .4 }
 export const KNIT_OPTS: KnitOptions = { stitch: [KNIT.W, KNIT.H], lean: .35, lift: 1.2, purl: [8, 13], cable: { col: 9, every: 8, cross: 3 } }
 const PERIOD_ROWS = 16, TILE_H = PERIOD_ROWS * KNIT.H, PAD = 4, KG: GridConfig = { cols: KNIT.N * KNIT.W, rows: TILE_H + 2 * PAD }
 const KNIT_DUR = KNIT.N * KNIT.stitch, CYCLE = KNIT_DUR + KNIT.stitch

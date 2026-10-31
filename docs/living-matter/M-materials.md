@@ -14,6 +14,20 @@
 > - Lens GPU value fill: gated as the field's cost beyond a constant field's over the same 288 × 264 pass (the loop's own overhead), ≤ 2 ms × load; measured 2–3.5 ms ÷ load depending on the box.
 >
 > **Sizes** (against a fresh build of `bcacd5a`): first-load JS 123.49 → 123.52 kB gz (+0.02; ledger row +0.03); worker initial 17.14 → 17.21 (+0.07: the catalog's six new rows); the `wk-materials` board chunk 22.18 → 33.38 kB gz (+11.2: glass, caustics, the lens / window / patch / candle cards, `life/chain`; the pool and the rust sign are a stub there). Goldens: 6 added, 0 changed (193).
+>
+> **M3 status (2026-10-31, round 3):** built, not merged. Engine (`src/engine/matter/`): `knit.ts` (`knitAt`, `knitRelief`), `wood.ts` (`woodRings`, `woodPhase`), `leather.ts` (`leatherAt`, `leatherGrain`), and the step code `sand.ts` (`sandCarve`, `sandRake`, `sandRelax`, `sandGarden`), `mercury.ts` (over `physics/fluid.ts`) and `thread.ts` (over L's `life/chain.ts` `ropeStep`, which was on the branch), the three registered by file in F0.9's lint (`thread` added; `sand`, `mercury` were pre-registered) and written with `dmath`. The bakes are in the matter barrel; the step code is imported by path. The lazy board `/workshop/` (play group, 3 columns, the §5 title) has the nine cards: `boards/workshop.ts` (denim, wood, leather: pure, sampled in the worker), `workshop-live.ts` (knit, paper, ice: a small tap world each) and `workshop-physics.ts` (sand, mercury, thread), the last two main thread only behind worker stubs (`vite.config.ts` `mainThreadOnly`). M3.10: one resolver on both boards (`matLight` gained `sky`, so the window's panes no longer call `sceneLight` itself, and `rakeHi`; `lightTrace` lets the checks see every card's light); light-keyed shading caches are LRUs of 8; `scripts/materials.ts` gained the `workshop` and `tilt` groups; `scripts/materials-browser.ts` probes sand, mercury and thread on touch. **Deviations:**
+> - Knit: stitches are 6 × 4 cells (two 3-cell legs: rule 4's cross-profile ≥ 3), not 4 × 4; the V's period is 4 rows. A tap knits a row (a world: the count needs time). The fabric repeats every 16 rows, so it is lit once as a tile and scrolled.
+> - Denim: `twill(3, 4)` (the plan's "3/1"); white selvedge, no red (§10.2 off).
+> - Paper: DOT over 480 on two lines at the 2.5 tier (one line overruns the sheet). The tap re-inks over 0.4 s and counts impressions (`NO. 0002` …); it heals after 8 s idle.
+> - Wood: on the 1.5 lattice like the marble (the hero at lattice 2); rings 5.5 lattice cells; flecks are hashed lenses on an 18 × 3 grid (Worley per cell was the cold-frame cost).
+> - Leather: creases are void (the Worley borders), so the grain reads as pebbles; the stitch line is the analytic inset rounded box (≡ the contour); no awl (§10.3 off).
+> - Sand: lines depth .62 (talus .8 still holds); a tap is a press that lifts without travelling (on touch the finger leaves the frame without a release step).
+> - Ice: 1.6 cells a grain (1.375 left the fern small); the breath is a world (hover = melt, a tap = 2 s, then it freezes back from the edge).
+> - Mercury: the pool is a half-ellipse resting on the low wall, its surface the blurred coverage (a flat sheet gave the matcap nothing to read); stepping only when live (the pristine pool lies still).
+> - Thread: a 5-cell cord (3 cells read as a hairline at 1×); the pristine run sways in an 8 s seamed breeze (dmath), so the card lives at rest; the needle's eye is a red site layer while pulled.
+>
+> **Sizes and timings:** filled in at the end of the M3 run (see the final report).
+>
 > It depends **by name** on two other tracks:
 > - **F0:**
 >   - `src/engine/noise` (`noise2`, `fbm2`, `turb2`, `curl2`, `voronoi2`) and `src/engine/noise/dmath.ts` (`dsin`, `dcos`, `tsin`, `tcos`, `datan2`, `dexp`, `dpow`);
