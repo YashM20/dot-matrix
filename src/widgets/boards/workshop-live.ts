@@ -11,7 +11,8 @@
  * Main thread only (the worlds live here): the sampling worker's build resolves this module to
  * `workshop-live-worker-stub.ts` (vite.config.ts `mainThreadOnly`).
  */
-import { ambientOcclusion, cardMask, insetDistance, knitRelief, tonedLayer, type KnitOptions } from '../../engine/matter'
+import { ambientOcclusion, cardMask, insetDistance, tonedLayer } from '../../engine/matter'
+import { knitRelief, type KnitOptions } from '../../engine/matter/knit'
 import { anisoSpec } from '../../engine/matter/aniso'
 import { heightRaster, normalRaster, stackHeights, type HeightRaster, type NormalRaster } from '../../engine/light/height'
 import { lambert, type Light, type Vec3 } from '../../engine/light/shade'

@@ -10,7 +10,9 @@
  * leather have none; bakes on the first frame, never at import; per frame the light, the sims and lookups only,
  * the lit surfaces cached per light (LRU of 8, M3.10) so the sun and the tilt hub's buckets hit across frames.
  */
-import { ambientOcclusion, cardMask, insetDistance, stitch, tangentSDF, tonedLayer, twill, weaveRelief, woodRings, leatherAt, type TangentRaster } from '../../engine/matter'
+import { ambientOcclusion, cardMask, insetDistance, stitch, tangentSDF, tonedLayer, twill, weaveRelief, type TangentRaster } from '../../engine/matter'
+import { woodRings } from '../../engine/matter/wood'
+import { leatherAt } from '../../engine/matter/leather'
 import { anisoSpec } from '../../engine/matter/aniso'
 import { heightRaster, normalRaster, stackHeights, type HeightRaster, type NormalRaster } from '../../engine/light/height'
 import { illuminate, lambert, type Light, type Vec3 } from '../../engine/light/shade'
@@ -305,10 +307,10 @@ function leatherShadeRow(g: LeatherGeo, D: Float32Array, P: Float32Array, V: Flo
     if (M[i] <= 0 || g.text[i]) continue
     const b = D[i] * A[i] * A[i]
     if (g.thread[i]) { const t = P[i] >= .3 || b >= .5 ? VALUE : IDLE; V[i] = t === VALUE ? 1 : Math.max(.7, b); Tn[i] = t; continue }
-    let t = bandOf(b * .62)
+    let t = bandOf(b * .85)
     if (t < 0) continue
     if (P[i] >= .5 && t >= MID) t = Math.min(IDLE, t + 1) // the burnish: a step up where the sheen crosses
-    V[i] = t === bandOf(b * .62) ? b * .62 : BAND_MID[t]; Tn[i] = t
+    V[i] = t === bandOf(b * .85) ? b * .85 : BAND_MID[t]; Tn[i] = t
   }
 }
 export const matLeather: WidgetPreset = {

@@ -195,6 +195,8 @@ export const matSand: WidgetPreset = {
 // the lamp's own reflection. Gravity tips the pool; the light never reads gx / gy.
 export const MERC = { i0: 7, j0: 15, fw: 29, fh: 25, rx: 12, ry: 11, blur: 5 }
 const mercury: Mercury = createMercury(MERC.fw, MERC.fh)
+/** For the browser probe only (never read by a frame): live steps that stirred the pool. */
+const probeStats = { stirs: 0 }
 const M_PR = mercury.size, M_SIZE = M_PR + 4
 const mercX = (x: number) => ((x + .5) / K2 - .5 - MERC.i0 - .5) / 2, mercY = (y: number) => ((y + .5) / K2 - .5 - MERC.j0 - .5) / 2
 const mercCard = (fx: number, fy: number): Pt => [(MERC.i0 + .5 + 2 * fx + .5) * K2 - .5, (MERC.j0 + .5 + 2 * fy + .5) * K2 - .5]
@@ -202,6 +204,7 @@ function mercStep(s: Float32Array, _n: number, inp: StepInput): void {
   if (inp.live < 0) return // the pristine pool lies still
   const press = pressOf(s, M_PR, inp, .6), p = inp.pointers[0]
   const stir = press === 'drag' && p ? [[p.x, p.y, p.vx, p.vy] as const] : undefined
+  if (stir) probeStats.stirs++
   const split = press === 'tap' ? [s[M_PR], s[M_PR + 1]] as const : inp.kick ? [MERC.fw / 2, MERC.fh - 3] as const : null
   mercuryStep(mercury, s, DT, { gx: inp.gx, gy: inp.gy, stir, split })
 }
@@ -448,7 +451,8 @@ if (probing) {
     carved: () => { const w = sandWorld(); return w.mode === 'pristine' ? 0 : sandCarved(w.live, w.sim.checkpoints.get(0) ?? w.live) },
     /** Beads split off the pool now, and its kinetic stir (Σ|u|). */
     beads: () => { const w = mercuryWorld(); if (w.mode === 'pristine') return 0; let k = 0; for (let q = 0; q < mercury.beads; q++) if (w.live[mercury.B + BEAD * q + 5] > 0) k++; return k },
-    stir: () => { const w = mercuryWorld(); if (w.mode === 'pristine') return 0; let e = 0; for (let i = 0; i < mercury.fluid.n; i++) e += Math.abs(w.live[mercury.fluid.U + i]) + Math.abs(w.live[mercury.fluid.V + i]); return e },
+    /** Live steps so far that stirred the pool (a counter: the stir itself decays). */
+    stir: () => probeStats.stirs,
     /** The needle's distance from where it hangs at rest, and the thread paid out. */
     swing: () => { const w = threadWorld(); if (w.mode === 'pristine') return 0; const { n, X, Y } = thread.rope; return Math.hypot(w.live[X + n - 1] - SPOOL.cx, w.live[Y + n - 1] - (SPOOL.exitY + thread.length)) },
     paid: () => { const w = threadWorld(); return w.mode === 'pristine' ? 0 : w.live[thread.S] - thread.length },

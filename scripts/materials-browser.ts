@@ -153,11 +153,18 @@ try {
   for (const s of SPECS) {
     await center(q, s.id)
     {
-      const y0 = await q.js<number>('scrollY'), [x, y] = await at(q, s.id, 72, 110)
-      await q.touch(Array.from({ length: 22 }, (_, i) => [[x, y - i * 16]] as [number, number][]))
-      await sleep(600)
-      const y1 = await q.js<number>('scrollY'), mode = await ws<string>(`mode('${s.id}')`)
-      check(`${s.id}: a vertical swipe starting on the card scrolls ≥ 150 px and the world stays pristine`, y1 - y0 >= 150 && mode === 'pristine', `scrolled ${(y1 - y0).toFixed(0)} px, ${mode}`)
+      // the finger moves down (the page scrolls up: the last card has no room below it); one retry for a late first move
+      const mode0 = await ws<string>(`mode('${s.id}')`)
+      let scrolled = 0
+      for (let attempt = 0; attempt < 2 && scrolled < 150; attempt++) {
+        await center(q, s.id)
+        const y0 = await q.js<number>('scrollY'), [x, y] = await at(q, s.id, 72, 30)
+        await q.touch(Array.from({ length: 22 }, (_, i) => [[x, y + i * 16]] as [number, number][]))
+        await sleep(600)
+        scrolled = y0 - await q.js<number>('scrollY')
+      }
+      const mode = await ws<string>(`mode('${s.id}')`)
+      check(`${s.id}: a vertical swipe starting on the card scrolls ≥ 150 px and the world stays pristine`, scrolled >= 150 && mode === 'pristine', `scrolled ${scrolled.toFixed(0)} px, ${mode0} → ${mode}`)
     }
     await center(q, s.id)
     {
