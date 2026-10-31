@@ -167,6 +167,8 @@ There is no substitute typeface — the bitmap dot-font *is* the typography syst
 | `--frame-inset` | `max(0, (100vw − --frame-max) / 2) + --frame-pad` | the frame's content edge from the viewport edge, for fixed or full-bleed things (the editor bar, the widget page's pinned pills) |
 | `--card-max` | `min(62svh, 520px)` | the widest (so, for square cards, the tallest) a board card gets; a wider column centres it |
 | `--card-min-hero` / `--card-min-standard` / `--card-min-dense` | 340 / 240 / 200 px | the narrowest card per board density before the grid drops a column (› Board grid) |
+| `--board-cols-max` | 3; 4 under `html[data-cards="m"]`; 99 (no cap) under `"s"` | the most columns a board shows at the visitor's CARD SIZE; a dense board shows one more (› Board grid) |
+| `--board-cols-min` | 1; 2 under `html[data-cards="s"]` | the fewest columns a board shows: COMPACT keeps 2 on a phone (› Board grid) |
 | `--measure` / `--measure-head` | 68ch / 42rem | longest line of body text / of a heading |
 | `--hair-dot` / `--hair-pitch` | 1 px / 4 px | dotted hairline: a 1 px dot every 4 px |
 
@@ -174,25 +176,35 @@ There is no substitute typeface — the bitmap dot-font *is* the typography syst
 - **One frame, one left edge.** Every page is one centred column (`.shell`: `--frame-max` wide with `--frame-pad` inside it), with a dotted hairline down each side from 768 px. The top bar, the intro, the board picker, the board title, the grid, ABOUT's bands, the widget page's top row and card, the footer band and the editor's first tool all start on its content edge (`scripts/site/layout.ts` checks ±1 px at six widths).
 - **Rhythm.** Each block owns its top margin only, and every vertical gap between blocks is one of the three steps: top bar → view `--gap-action`; intro → picker → board title → grid `--gap-group` each; last block → footer band `--gap-section`. The probe fails on any other gap.
 - **Measure.** Prose keeps `--measure` (the intro line, the ABOUT lede, the changelog); the intro's link and close sit beside the measured text, not under it.
-- **Cards.** Board grids are density-driven (› Board grid): a card is square and never taller than 62svh.
+- **Cards.** Board grids are density-driven and capped by the visitor's CARD SIZE (› Board grid): 3 big cards a row by default, a card is square and never taller than 62svh.
 - **Home hero.** The touchable card (`src/components/hero/`) floats right of the header from 1280 px (it is no taller than the header, so the grid does not move) and comes after the board below that: on a phone the cards come first.
 - **Footer band.** One band a section below the last block: the live number (dots drawn this visit, in dot type) over the site line. No dead strip under it: the tool dock lives in the top bar on desktop and in TOOLS on a phone.
 - **Figure legends.** One mono meta line under a figure: `FIG 03 · <subject> · <grid> · <pitch>` (`.fig-cap`, and the essay's `figcaption[data-fig]`).
 
 ### Board grid (T3, docs/LAYOUT-THEME-PLAN.md §3)
-Boards declare intent, not columns. `BoardMeta.density` (`src/widgets/manifest.ts`) is `hero`, `standard` or `dense`; a board without one, new boards included, is `standard`. The grid (`.board-grid[data-density]`, `src/App.css`) is `repeat(auto-fill, minmax(--card-min, 1fr))`, so the column count follows the frame's width. `columns` in the manifest is the reference sheet's count: snapshots and the entry stagger use it, the site grid does not.
+Boards declare intent, not columns. `BoardMeta.density` (`src/widgets/manifest.ts`) is `hero`, `standard` or `dense`; a board without one, new boards included, is `standard`. The grid (`.board-grid[data-density]`, `src/App.css`) is `repeat(auto-fill, minmax(--card-min, 1fr))`, so the column count follows the frame's width, held between the visitor's CARD SIZE bounds: at most `--board-cols-max` columns (one more on a dense board) and at least `--board-cols-min`. The track's minimum is `clamp(width of the cap's columns, --card-min, width of the floor's columns)`. `columns` in the manifest is the reference sheet's count: snapshots and the entry stagger use it, the site grid does not.
 
-| Density | `--card-min` | Columns at 1440 / 1280 / 1024 / 768 / 390 | For | Boards |
-|---|---|---|---|---|
-| `hero` | 340 px | 3 / 3 / 2 / 2 / 1 | a few cards that want size: showpieces, cameras, lock screens | lock, gpu, algorithms, ir, sim, live, mirror, scope, heal |
-| `standard` | 240 px | 5 / 4 / 3 / 2 / 1 | the default | every other board (home, components, surfaces, ...) |
-| `dense` | 200 px | 6 / 5 / 4 / 3 / 1 | dashboards of many small tiles | deerflow12, departures |
+| Density | `--card-min` | For | Boards |
+|---|---|---|---|
+| `hero` | 340 px | a few cards that want size: showpieces, cameras, lock screens | lock, gpu, algorithms, ir, sim, live, mirror, scope, heal, squares |
+| `standard` | 240 px | the default | every other board (home, components, surfaces, ...) |
+| `dense` | 200 px | dashboards of many small tiles | deerflow12, departures |
+
+**CARD SIZE** (owner feedback on round 3: T3's 5 a row at 1440 lost the cards' impact and detail; 3 a row is the default again, and the visitor can choose). Three sizes, set as `html[data-cards]` (`src/site/cards.ts`): only CSS custom properties change, so nothing re-renders. The pick is kept in localStorage `dot480:cards`, and the theme boot script sets the attribute before first paint, so a reload does not reflow. The control is a segmented radio group (LARGE / MEDIUM / COMPACT) under the theme in the THEME popover, under TOOLS › DISPLAY on a phone, and in ⌘K as "Card size: large / medium / compact". A missing attribute reads as LARGE.
+
+| CARD SIZE | `data-cards` | Columns at 1440 / 1280 / 1024 / 768 / 390: standard · dense · hero | Card at 1440 (standard) |
+|---|---|---|---|
+| LARGE (default) | `l` | 3/3/3/2/1 · 4/4/4/3/1 · 3/3/2/2/1 | ~440 px |
+| MEDIUM | `m` | 4/4/3/2/1 · 5/5/4/3/1 · 3/3/2/2/1 | ~330 px |
+| COMPACT (T3's grid) | `s` | 5/4/3/2/2 · 6/5/4/3/2 · 3/3/2/2/2 | ~260 px |
+
+A hero board fits 3 columns at most in the frame, so on a desktop the cap never reaches it; only COMPACT's 2 on a phone changes it.
 
 - **Square, capped.** Cards are square at every width (phones too) and at most `--card-max`; on a wide, short screen the card stops and centres in its column.
 - **Card internals** follow the card, not the viewport: each board card is a size container (`card`). Under 240 px the hint verb goes and the label sits tighter.
-- **Orphans.** A last row less than half full is centred under the row above; a fuller one stays on the columns. It is never stretched. The column count per width comes from container queries on the grid (`board-grid`) that mirror auto-fill: n columns when the grid is at least n·`--card-min` + (n−1)·`{spacing.cardGap}` wide. Change the token and these queries together.
+- **Orphans.** A last row less than half full is centred under the row above; a fuller one stays on the columns. It is never stretched. The column count per width comes from container queries on the grid (`board-grid`) that mirror auto-fill: n columns when the grid is at least n·`--card-min` + (n−1)·`{spacing.cardGap}` wide, up to the CARD SIZE cap (the queries are keyed by `html[data-cards]` too). Change the tokens and these queries together.
 - **Grid style** (owner decision 10). The default is separated cards: a `{spacing.cardGap}` gutter, a radius-12 card, a hairline. The alternative, `html[data-grid="ruled"]`, is edge-to-edge cells with dotted rules: each cell draws its rules and the quarter of a 5×5 dot cross at each corner (in `--mute`, ≥ 3:1). Cells overlap by the 1 px rule, so a cross is whole only where four cells meet, a T on an outer edge and an L at a corner, and nothing is drawn where there is no cell. Ruled orphans stay on the columns.
-- **Checks.** `scripts/site/layout.ts` (6 widths) gates ≥ 6 whole cards above the fold at 1440 on standard and dense boards, and ≥ 2 on hero boards. It also checks that components steps 5 → 4 → 3 → 2 → 1, that no board gains a column as the width shrinks, that orphans sit right, and that cards are square. `--grid ruled` runs it on the alternative.
+- **Checks.** `scripts/site/layout.ts` (6 widths) gates one full row above the fold at 1440 (≥ 3 whole cards on standard boards, ≥ 4 on dense, ≥ 2 on hero) and the LARGE columns per width of home, components, deerflow12 and lock. It also runs each CARD SIZE at 1440, 1280 and 390, and checks that no board gains a column as the width shrinks, that orphans sit right, and that cards are square. `--grid ruled` runs it on the alternative. `scripts/site/theme-boot.ts` checks that a stored size is on `<html>` when `<body>` starts and that the grid's first layout already has its columns; `scripts/site/theme-picker.ts` checks the control (radio semantics, keyboard, persistence, the phone sheet, ⌘K).
 
 ### Grid & Container
 - **Default board size:** 3×3 card grid at 1:1 aspect per card (matches every reference board). A 3×4 variant is supported for taller compositions (DeerFlow Mosaic hero board).
@@ -537,16 +549,16 @@ The HTML chrome has one component per job; a new control reuses one of these ins
 
 | Name | Grid Behavior | Key Changes |
 |---|---|---|
-| desktop-wide / desktop | columns per board density (› Board grid), `{grid.pitch}` = 4px | The frame caps the grid at 1360 px of content: a standard board shows 5 columns, a hero board 3, a dense board 6 |
+| desktop-wide / desktop | columns per board density and CARD SIZE (› Board grid), `{grid.pitch}` = 4px | The frame caps the grid at 1360 px of content: at the default CARD SIZE (LARGE) a standard or hero board shows 3 columns, a dense board 4 (MEDIUM 4 / 5, COMPACT 5 / 6) |
 | tablet | one or two columns fewer, by the same rule | The grid drops a column whenever a card would get narrower than its density's `--card-min`. There is no fixed breakpoint |
-| mobile | 1-column board, square cards | Full stack; `{typography.displayDot}` steps down one tier to `{typography.headingDot}` to preserve legibility at narrow width |
+| mobile | 1-column board (2 at COMPACT), square cards | Full stack; `{typography.displayDot}` steps down one tier to `{typography.headingDot}` to preserve legibility at narrow width |
 | led-panel (physical) | Fixed native resolution | `{grid.pitch}` locked to the panel's real dot pitch; `{grid.quantizeSteps}` reduced to match the panel's actual bit-depth per LED |
 
 ### Density Scaling
 Unlike a typical responsive system that reflows layout, Dot/480's primary responsive lever is **`{grid.pitch}`** — the same widget config renders at native fidelity on a physical LED panel and at high dot-density on a retina display simply by changing one number. Card *composition* (3-column, 2-column, 1-column) follows standard breakpoints; dot *density within* a card is decoupled from viewport size entirely.
 
 ### Collapsing Strategy
-- **Board grid:** auto-fill per density (› Board grid). Gutters (`{spacing.cardGap}`) hold constant, and cards stay square down to the single-column stack.
+- **Board grid:** auto-fill per density, between the CARD SIZE bounds (› Board grid). Gutters (`{spacing.cardGap}`) hold constant, and cards stay square down to the single-column stack.
 - **Phone header (T3):** the intro is one line (a short sentence, the essay link and ×; the targets overhang the line), and the two picker strips sit under it: intro + picker ≤ 120 px. ALL leads the group strip and scrolls with it. Each strip fades at an edge only while there is more to scroll that way: a scroll-driven `mask-image`, `animation-timeline: scroll(self inline)`; a strip that fits has no timeline, so it has no fade.
 - **Wide widgets:** waveform, chat, and message-list cards span 2 columns at desktop/tablet, collapse to full-width single-column at mobile without changing internal dot density.
 - **Phone shell (≤ 760 px, `src/site/mobile.css`):** the site chrome becomes an app shell. A compact sticky top bar names the place (on EXPLORE it opens the board sheet) and holds search; a bottom tab bar (EXPLORE / MAKE / ABOUT / TOOLS) sits over the home indicator; the board groups and boards are sideways thumb strips; the dock, the DISPLAY ▾ menu and the ⌘K palette become bottom sheets (grab handle, swipe down, backdrop, Escape). Every chrome target is ≥ 44 px; the accent marks only the active tab, board and live state. Layout vars `--app-top` and `--tabbar-h` (both include the safe-area insets) let fixed or pinned UI sit clear of the bars.

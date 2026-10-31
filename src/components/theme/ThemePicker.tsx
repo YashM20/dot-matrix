@@ -8,6 +8,7 @@
  *    generated accent of its hue on the shown scheme. The generator (`src/site/theme/custom.ts`) loads lazily on
  *    first use; any hue it gives passes the same contrast rules as the presets;
  *  - the share-link opt-in (`src/site/theme/share.ts`).
+ * Under them in the popover (and under TOOLS › DISPLAY on a phone), `CardSizeControl`: LARGE / MEDIUM / COMPACT.
  * Live preview (popover): hovering or focusing a swatch or a scheme re-scopes the popover itself
  * (`data-scheme` + `data-accent` on its root), so its own controls, its tone ramp and its glass take that theme;
  * the page changes only on a pick. A pick goes through `switchTheme` (the radial halftone wipe from the pressed
@@ -19,6 +20,7 @@ import { resolveScheme, setTheme } from '../../site/theme/theme'
 import { useTheme } from '../../site/theme/useTheme'
 import { switchTheme } from '../../site/theme/moment'
 import { setShareTheme, shareTheme, subscribeShareTheme } from '../../site/theme/share'
+import { CARD_SIZE_LABELS, CARD_SIZE_LINES, CARD_SIZES, cardSize, setCardSize, subscribeCardSize, type CardSize } from '../../site/cards'
 import './picker.css'
 
 const SCHEME_PREFS: readonly SchemePref[] = ['system', 'light', 'dark']
@@ -146,12 +148,35 @@ export function ThemeControls({ shown, onPreview, focus = false }: { shown?: { s
   </div>
 }
 
+/**
+ * CARD SIZE (`src/site/cards.ts`): LARGE / MEDIUM / COMPACT, the same segmented radio group as the scheme (arrows
+ * move and pick). It sets `html[data-cards]` (the grid reflows in CSS, nothing re-renders) and remembers the pick.
+ */
+export function CardSizeControl() {
+  const size = useSyncExternalStore(subscribeCardSize, cardSize, () => 'l' as CardSize)
+  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
+    if (!d) return
+    e.preventDefault()
+    const n = CARD_SIZES.length, j = (CARD_SIZES.indexOf(size) + d + n) % n
+    setCardSize(CARD_SIZES[j]); e.currentTarget.querySelectorAll<HTMLElement>('[role=radio]')[j]?.focus()
+  }
+  return <div className="theme-ctl theme-cards">
+    <div className="theme-head"><b>CARDS · {CARD_SIZE_LABELS[size]}</b><span>{CARD_SIZE_LINES[size].toUpperCase()}</span></div>
+    <div className="theme-seg" role="radiogroup" aria-label="Card size" onKeyDown={onKey}>
+      {CARD_SIZES.map(s => <button key={s} type="button" role="radio" aria-checked={size === s} tabIndex={size === s ? 0 : -1}
+        aria-label={`${CARD_SIZE_LABELS[s].toLowerCase()}: ${CARD_SIZE_LINES[s]}`} onClick={() => setCardSize(s)}>{CARD_SIZE_LABELS[s]}</button>)}
+    </div>
+  </div>
+}
+
 /** The header popover: the controls in a raised layer that takes the previewed theme. */
 export function ThemePopover({ id, focus }: { id: string; focus: boolean }) {
   const t = useTheme()
   const [p, setP] = useState<ThemePreview>({})
   const shown = { scheme: p.scheme ?? t.resolved, accent: p.accent ?? t.accent }
-  return <div id={id} className="theme-pop" role="dialog" aria-label="Theme" data-scheme={shown.scheme} data-accent={shown.accent}>
+  return <div id={id} className="theme-pop" role="dialog" aria-label="Theme and card size" data-scheme={shown.scheme} data-accent={shown.accent}>
     <ThemeControls shown={shown} onPreview={setP} focus={focus} />
+    <CardSizeControl />
   </div>
 }
