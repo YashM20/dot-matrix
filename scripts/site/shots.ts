@@ -14,6 +14,7 @@
  *  --sizes   1440 (1440×900 desktop) and/or 390 (390×844 phone, touch); every desktop shot is taken before any
  *            phone one (touch emulation leaves `pointer: coarse` behind)
  *  --no-build  reuse the current dist/ (else `vite build` runs first, OG postbuild skipped)
+ *  --cards   l, m or s: the CARD SIZE (localStorage `dot480:cards`, src/site/cards.ts); files get a `-cards-<size>` suffix
  *
  * Pages are full-page captures (capped at 4000 px); states (palette, menus, sheets, editor selection, the hero
  * with a test image) are viewport captures. Reduced motion is emulated so nothing is caught mid-animation, and
@@ -39,6 +40,8 @@ const themes = themesArg === 'all' ? ALL : (list('--themes') ?? ['dark_signal', 
 const bad = themes.filter(t => !(ALL as string[]).includes(t))
 if (bad.length) { console.error(`unknown theme(s): ${bad.join(', ')} (known: ${ALL.join(', ')})`); process.exit(2) }
 const only = list('--pages'), sizeOnly = list('--sizes')
+const cards = opt('--cards')
+if (cards !== undefined && !/^[lms]$/.test(cards)) { console.error(`--cards takes l, m or s, not ${cards}`); process.exit(2) }
 
 type Size = { id: string; W: number; H: number; phone: boolean }
 const SIZES: Size[] = [{ id: '1440', W: 1440, H: 900, phone: false }, { id: '390', W: 390, H: 844, phone: true }].filter(s => !sizeOnly || sizeOnly.includes(s.id))
@@ -80,6 +83,7 @@ const SHOTS: Shot[] = [
   { name: 'pond', path: 'pond/', ready: BOARD, full: true },
   { name: 'squares', path: 'squares/', ready: BOARD, full: true },
   { name: 'materials', path: 'materials/', ready: BOARD, full: true },
+  { name: 'mosaic', path: 'mosaic/', ready: BOARD, full: true },
   { name: 'about', path: '?about', ready: STATIC('.about-intro'), full: true },
   { name: 'make', path: '?make=tune', ready: EDITOR, editor: true },
   { name: 'widget-timer', path: 'widget/timer/', ready: `!document.querySelector('.wp[aria-busy], .view-loading') && !!document.querySelector('.wp canvas, .wp svg, [data-card-id] canvas, [data-card-id] svg')`, full: true },
@@ -99,6 +103,10 @@ const SHOTS: Shot[] = [
   {
     name: 'display', path: '', ready: HOME, sizes: ['1440'],
     act: p => openWith(p, '.skin-menu-btn', `!!document.querySelector('.skin-menu [role=menuitemradio]')`),
+  },
+  {
+    name: 'theme', path: '', ready: HOME, sizes: ['1440'],
+    act: p => openWith(p, '.theme-menu-btn', `!!document.querySelector('.theme-pop [role=option]')`),
   },
   {
     name: 'tools', path: '', ready: HOME, sizes: ['390'],
@@ -249,6 +257,7 @@ try {
       // the stored choice too, for pages that read only localStorage
       await p.cdp('Page.navigate', { url: `${base}favicon.svg` }); await sleep(150)
       await p.js(`localStorage.setItem('dot480:theme', ${JSON.stringify(JSON.stringify({ scheme, accent }))})`).catch(() => {})
+      if (cards) await p.js(`localStorage.setItem('dot480:cards', '${cards}')`).catch(() => {})
       for (const sh of shots) {
         if (sh.sizes && !sh.sizes.includes(s.id as '1440' | '390')) continue
         const t = Date.now()
@@ -264,7 +273,7 @@ try {
         let ok = await p.waitFor(fresh, 45000)
         await settle()
         if (ok && sh.act) ok = await sh.act(p, s)
-        const file = `${theme}-${sh.name}-${s.id}.png`
+        const file = `${theme}-${sh.name}-${s.id}${cards ? `-cards-${cards}` : ''}.png`
         await capture(join(out, file), s, !!sh.full && !sh.act)
         // a near-uniform frame compresses to almost nothing (blank: ~0.01 B/px; real content: > 0.15 B/px)
         const status: Row['status'] = !ok ? 'not ready' : statSync(join(out, file)).size < s.W * s.H / 40 ? 'blank' : 'ok'

@@ -6,11 +6,14 @@
  *  - one left edge (±1 px): the top bar, intro, picker, board title, grid, footer (and ABOUT's bands, the widget
  *    page's top row and card, the editor's first tool) all start on the frame's content edge;
  *  - no horizontal overflow (scrollWidth ≤ viewport);
- *  - cards above the fold: at least one whole card on the home board at every width (T2); at 1440, ≥ 6 on standard
- *    and dense boards, ≥ 2 on hero boards (T3; the density is read from the grid's data-density);
+ *  - cards above the fold: at least one whole card on the home board at every width (T2); at 1440, ≥ 3 on standard
+ *    boards, ≥ 4 on dense ones, ≥ 2 on hero ones (one full row at LARGE; the density is read from the grid's data-density);
  *  - every card square (±1 px) and ≤ 62svh tall;
- *  - columns (T3): components steps 5 → 4 → 3 → 2 → 1 (5 at 1920 and 1440, 4 at 1280, 3 at 1024, 2 at 768,
- *    1 at 390), and no board gains a column as the width shrinks;
+ *  - columns at the default CARD SIZE (LARGE): home and components 3 / 3 / 3 / 3 / 2 / 1 from 1920 to 390, deerflow12
+ *    (dense) 4 / 4 / 4 / 4 / 3 / 1, lock (hero) 3 / 3 / 3 / 2 / 2 / 1, and no board gains a column as the width shrinks;
+ *  - CARD SIZE: html[data-cards] l / m / s on components, deerflow12 and lock at 1440, 1280 and 390 gives the
+ *    columns of `SIZE_COLS` (MEDIUM 4, COMPACT 5 at 1440 on a standard board; COMPACT 2 on a phone), with the
+ *    cards square, unstretched and the last row placed right;
  *  - orphans (T3): the last row's cards are as wide as the first row's (never stretched); with separated cards a
  *    last row less than half full is centred (±2 px), a fuller one starts on the first column; ruled cells stay
  *    on the columns;
@@ -36,10 +39,27 @@ const shotDir = args.includes('--shots') ? args[args.indexOf('--shots') + 1] : u
 if (shotDir) mkdirSync(shotDir, { recursive: true })
 const gridStyle = args.includes('--grid') ? args[args.indexOf('--grid') + 1] : undefined
 const WIDTHS: [number, number, boolean][] = [[1920, 1080, false], [1440, 900, false], [1280, 800, false], [1024, 768, false], [768, 1024, false], [390, 844, true]]
-/** T3: the components board's columns per width (5 → 4 → 3 → 2 → 1). */
-const COMPONENT_COLS: Record<number, number> = { 1920: 5, 1440: 5, 1280: 4, 1024: 3, 768: 2, 390: 1 }
-/** T3: whole cards above the fold at 1440, per density. */
-const FOLD_1440: Record<string, number> = { hero: 2, standard: 6, dense: 6 }
+/**
+ * Columns per width at the default CARD SIZE, LARGE (no data-cards): a standard board 3 → 2 → 1, a dense one
+ * 4 → 3 → 1, a hero one 3 → 2 → 1 (its card-min, not the cap). The home board is standard.
+ */
+const COLS: Record<string, Record<number, number>> = {
+  home: { 1920: 3, 1440: 3, 1280: 3, 1024: 3, 768: 2, 390: 1 },
+  components: { 1920: 3, 1440: 3, 1280: 3, 1024: 3, 768: 2, 390: 1 },
+  deerflow12: { 1920: 4, 1440: 4, 1280: 4, 1024: 4, 768: 3, 390: 1 },
+  lock: { 1920: 3, 1440: 3, 1280: 3, 1024: 2, 768: 2, 390: 1 },
+}
+/**
+ * CARD SIZE (html[data-cards]): columns per size, width and board. MEDIUM caps at 4 (dense 5), COMPACT is T3's
+ * uncapped auto-fill (5 → 4 → 3 → 2) with 2 on a phone. Hero boards fit 3 at most, so only the phone changes.
+ */
+const SIZE_COLS: Record<'l' | 'm' | 's', Record<number, Record<string, number>>> = {
+  l: { 1440: { components: 3, deerflow12: 4, lock: 3 }, 1280: { components: 3, deerflow12: 4 }, 390: { components: 1, deerflow12: 1, lock: 1 } },
+  m: { 1440: { components: 4, deerflow12: 5, lock: 3 }, 1280: { components: 4, deerflow12: 5 }, 390: { components: 1, deerflow12: 1, lock: 1 } },
+  s: { 1440: { components: 5, deerflow12: 6, lock: 3 }, 1280: { components: 4, deerflow12: 5 }, 390: { components: 2, deerflow12: 2, lock: 2 } },
+}
+/** Whole cards above the fold at 1440, per density: LARGE gives each card ~440 px, so one full row (T3 wanted 6 at 240 px). */
+const FOLD_1440: Record<string, number> = { hero: 2, standard: 3, dense: 4 }
 const PAGES = [
   { name: 'home', path: '', kind: 'board', hero: true },
   { name: 'components', path: 'components/', kind: 'board' },
@@ -197,7 +217,8 @@ try {
         // T3
         if (m.square > 1) fail(`${tag}: a card is not square (|w − h| up to ${m.square}px)`)
         if (W === 1440 && m.fold < (FOLD_1440[m.density] ?? 6)) fail(`${tag}: ${m.fold} whole card(s) above the fold on a ${m.density} board, want ≥ ${FOLD_1440[m.density] ?? 6}`)
-        if (p.name === 'components' && m.cols !== COMPONENT_COLS[W]) fail(`${tag}: ${m.cols} column(s), want ${COMPONENT_COLS[W]}`)
+        const want = COLS[p.name]?.[W]
+        if (want !== undefined && m.cols !== want) fail(`${tag}: ${m.cols} column(s), want ${want}`)
         const before = colsSeen.get(p.name)
         if (before !== undefined && m.cols > before) fail(`${tag}: ${m.cols} columns, more than the ${before} of the wider screen`)
         colsSeen.set(p.name, m.cols)
@@ -208,6 +229,32 @@ try {
       console.log(`  edge ${edge.toFixed(1)} · gaps ${m.gaps.map(g => `${g.from}→${g.to} ${g.px}`).join(', ') || '—'}${p.kind === 'board' ? ` · ${m.density}: ${m.cols} col, grid at y ${m.gridTop}, cards ${m.cards}, above the fold ${m.fold}, tallest ${m.tallest}, last row ${m.orphan}, intro + picker ${m.head}px · chrome <12px ${(m.small * 100).toFixed(0)}%` : ` · chrome <12px ${(m.small * 100).toFixed(0)}%`}`)
       rows.push(`| ${p.name} | ${W} | ${off.length ? '✗' : '✓'} | ${m.scrollW > W + 1 ? '✗' : '✓'} | ${bad.length ? '✗' : '✓'} | ${p.kind === 'board' ? m.cols : '—'} | ${p.kind === 'board' ? `${m.fold} / ${m.cards}` : '—'} | ${p.kind === 'board' ? `${m.tallest} / ${Math.round(.62 * H)}` : '—'} | ${p.kind === 'board' ? (m.orphanStretched || m.orphan.startsWith('✗') ? '✗' : '✓') : '—'} | ${p.kind === 'board' ? m.head : '—'} | ${(m.small * 100).toFixed(0)}% |`)
       if (shotDir) { const r = await cdp('Page.captureScreenshot', { format: 'png' }); writeFileSync(join(shotDir, `${p.name}-${W}.png`), Buffer.from(r.result.data, 'base64')) }
+    }
+  }
+  // CARD SIZE: each size on the same page (html[data-cards] set live, as the controls do), columns per board and
+  // width; the cards stay square, unstretched, and the last row sits right
+  console.log('\ncard size')
+  for (const [W, H, mobile] of WIDTHS.filter(([w]) => w in SIZE_COLS.l)) {
+    await cdp('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile })
+    await cdp('Emulation.setTouchEmulationEnabled', { enabled: mobile, maxTouchPoints: mobile ? 5 : 0 })
+    for (const name of Object.keys(SIZE_COLS.l[W])) {
+      await cdp('Page.navigate', { url: base + name + '/' })
+      await sleep(400); await waitFor(READY.board); await sleep(800)
+      if (gridStyle) await js(`document.documentElement.dataset.grid = ${JSON.stringify(gridStyle)}`)
+      const seen: string[] = []
+      for (const size of ['l', 'm', 's'] as const) {
+        await js(`document.documentElement.dataset.cards = '${size}'; window.scrollTo(0, 0)`); await sleep(300)
+        const m = await js(MEASURE('board', H)) as M, want = SIZE_COLS[size][W][name], tag = `${name} @${W} cards=${size}`
+        seen.push(`${size} ${m.cols}`)
+        if (m.cols !== want) fail(`${tag}: ${m.cols} column(s), want ${want}`)
+        if (m.square > 1) fail(`${tag}: a card is not square (|w − h| up to ${m.square}px)`)
+        if (m.orphanStretched) fail(`${tag}: last row stretched`)
+        if (m.orphan.startsWith('✗')) fail(`${tag}: last row ${m.orphan.slice(2)}`)
+        if (m.scrollW > W + 1) fail(`${tag}: horizontal overflow (scrollWidth ${m.scrollW})`)
+        if (shotDir) { const r = await cdp('Page.captureScreenshot', { format: 'png' }); writeFileSync(join(shotDir, `${name}-${W}-cards-${size}.png`), Buffer.from(r.result.data, 'base64')) }
+      }
+      console.log(`  ${name} @${W}: ${seen.join(' · ')}`)
+      await js(`delete document.documentElement.dataset.cards`)
     }
   }
 } finally {

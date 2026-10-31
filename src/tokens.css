@@ -67,8 +67,12 @@
   /* board density (BoardMeta.density): the narrowest a card gets before the grid drops a column. The grid
      queries in App.css mirror these numbers: change both together (DESIGN.md › Board grid) */
   --card-min-hero: 340px;               /* showpieces: 3 columns in the frame, 2 on a tablet */
-  --card-min-standard: 240px;           /* the default: 5 → 4 → 3 → 2 → 1 columns from 1440 to a phone */
-  --card-min-dense: 200px;              /* dashboards of small tiles: up to 6 columns */
+  --card-min-standard: 240px;           /* the default: up to 5 columns at 1440 (COMPACT), 2 on a tablet, 1 on a phone */
+  --card-min-dense: 200px;              /* dashboards of small tiles: up to 6 columns (COMPACT) */
+  /* CARD SIZE (DISPLAY; html[data-cards], src/site/cards.ts): the most and the fewest columns a board shows. A dense
+     board shows one more than --board-cols-max. LARGE is this block (3); MEDIUM and COMPACT are below */
+  --board-cols-max: 3;
+  --board-cols-min: 1;
   --measure: 68ch;                      /* body text */
   --measure-head: 42rem;                /* headings */
   --hair-dot: 1px;                      /* dotted hairline: a 1 px dot ... */
@@ -111,6 +115,16 @@
   --lh-body: 1.6;
   /* tooltips: the first waits, the next ones in the same group show at once */
   --dur-tip: 400ms;
+}
+
+/* CARD SIZE: MEDIUM caps a board at 4 columns; COMPACT leaves the density alone (5 at 1440) and puts 2 on a phone */
+:root[data-cards="m"] {
+  --board-cols-max: 4
+}
+
+:root[data-cards="s"] {
+  --board-cols-max: 99;
+  --board-cols-min: 2
 }
 
 /*

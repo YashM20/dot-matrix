@@ -11,7 +11,10 @@
  *  - URL params: `?theme=` / `?scheme=` + `?accent=` apply and aren't stored; a pick drops them from the URL;
  *  - reduced motion (the OS setting, and the palette's override): a pick is instant, with no view transition;
  *  - touch (390 × 844, touch emulation): TOOLS › THEME has 44 px targets, no overflow, and taps switch scheme and
- *    accent with the sheet staying open; the header THEME button is hidden.
+ *    accent with the sheet staying open; the header THEME button is hidden;
+ *  - CARD SIZE: the popover's labelled radio group (LARGE checked by default, one tab stop), a click reflows the
+ *    components board (3 → 4 a row at 1280) without re-mounting a card and stores it, arrows pick, a reload keeps
+ *    it, ⌘K "Card size: large" runs; on a phone TOOLS › DISPLAY › COMPACT puts 2 a row.
  * Captures to look at go to `.snapshots/t5/` (the popover previewing, an accent and a scheme wipe held at 20% and 45%, the phone sheet).
  * Needs a build: `npx vite build`, then `npx tsx scripts/site/theme-picker.ts`. Chrome: $CHROME or the usual paths.
  */
@@ -96,7 +99,7 @@ const open = async (path: string, { os = 'dark', reduce = false, phone = false, 
   await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: os }, { name: 'prefers-reduced-motion', value: reduce ? 'reduce' : 'no-preference' }] })
   await cdp('Emulation.setDeviceMetricsOverride', phone ? { width: 390, height: 844, deviceScaleFactor: 1, mobile: true } : { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false })
   await cdp('Emulation.setTouchEmulationEnabled', phone ? { enabled: true, maxTouchPoints: 5 } : { enabled: false })
-  if (!keep) { await cdp('Page.navigate', { url: base + '/' }); await waitFor('document.readyState === "complete"'); await js(`localStorage.removeItem('dot480:theme'); localStorage.removeItem('dot480:share-theme'); localStorage.setItem('dot480:intro', 'off')`) }
+  if (!keep) { await cdp('Page.navigate', { url: base + '/' }); await waitFor('document.readyState === "complete"'); await js(`localStorage.removeItem('dot480:theme'); localStorage.removeItem('dot480:share-theme'); localStorage.removeItem('dot480:cards'); localStorage.setItem('dot480:intro', 'off')`) }
   await cdp('Page.navigate', { url: base + path })
   await waitFor('document.readyState === "complete"')
   // the command layer (dock, sheets, ⌘K) mounts once the page is idle
@@ -263,6 +266,36 @@ try {
   check('a preset pick leaves custom, and the stored hue stays for the custom swatch', await waitFor(`document.documentElement.dataset.accent === 'cobalt'`, 3000) && (await stored())?.includes('"hue":212') === true)
   await key('Escape', 'Escape', 27)
 
+  // ── CARD SIZE (src/site/cards.ts): a radio group under the theme; a pick reflows the grid, persists, survives a reload ──
+  const firstRow = `(() => { const ys = [...document.querySelectorAll('.board-grid > .dot-card')].map(c => Math.round(c.getBoundingClientRect().top)); return ys.filter(y => y === ys[0]).length })()`
+  const cardsSel = '.theme-pop .theme-cards [role=radiogroup]'
+  await open('/components/')
+  await waitFor('!!document.querySelector(".board-grid canvas, .board-grid svg")', 10000)
+  check('card size: LARGE by default (data-cards="l", 3 cards in the first row at 1280)', await js(`document.documentElement.dataset.cards`) === 'l' && await js(firstRow) === 3, String(await js(firstRow)))
+  await click(btn.x, btn.y)
+  await waitFor(`!!document.querySelector(${JSON.stringify(cardsSel)})`, 3000)
+  const group = await js(`(() => { const g = document.querySelector(${JSON.stringify(cardsSel)}); const r = [...g.querySelectorAll('[role=radio]')]; return { label: g.getAttribute('aria-label'), names: r.map(b => b.getAttribute('aria-label')), checked: r.map(b => b.getAttribute('aria-checked')), tab: r.map(b => b.tabIndex) } })()`) as { label: string; names: string[]; checked: string[]; tab: number[] }
+  check('card size: a labelled radio group of three named radios, LARGE checked and the only tab stop', group.label === 'Card size' && group.names.length === 3 && group.names.every(n => /^(large|medium|compact): /.test(n)) && group.checked.join() === 'true,false,false' && group.tab.join() === '0,-1,-1', JSON.stringify(group))
+  const compact = (await centreOf(`${cardsSel} [role=radio]:nth-child(3)`))!
+  await js(`window.__card0 = document.querySelector('.board-grid > .dot-card canvas, .board-grid > .dot-card svg')`)
+  await click(compact.x, compact.y)
+  check('card size: a click on COMPACT sets data-cards="s", stores it and reflows to 4 a row at 1280', await waitFor(`document.documentElement.dataset.cards === 's' && localStorage.getItem('dot480:cards') === 's' && ${firstRow} === 4`, 3000), String(await js(firstRow)))
+  check('card size: nothing re-mounts (the first card keeps its drawing surface)', await js(`!!window.__card0 && window.__card0.isConnected && document.querySelector('.board-grid > .dot-card canvas, .board-grid > .dot-card svg') === window.__card0`) === true)
+  check('card size: the popover stays open', await js('!!document.querySelector(".theme-pop")') === true)
+  await js(`document.querySelector('${cardsSel} [aria-checked=true]').focus()`)
+  await key('ArrowLeft', 'ArrowLeft', 37)
+  check('card size: ArrowLeft picks MEDIUM and moves focus with it', await waitFor(`document.documentElement.dataset.cards === 'm' && document.activeElement?.getAttribute('aria-checked') === 'true' && /^medium/.test(document.activeElement.getAttribute('aria-label'))`, 2000))
+  await key('Escape', 'Escape', 27)
+  await open('/components/', { keep: true })
+  await waitFor('!!document.querySelector(".board-grid canvas, .board-grid svg")', 10000)
+  check('card size: a reload keeps MEDIUM (4 a row at 1280)', await js(`document.documentElement.dataset.cards`) === 'm' && await js(firstRow) === 4, String(await js(firstRow)))
+  await key('k', 'KeyK', 75, 2)
+  await waitFor('!!document.querySelector(".pal input")', 4000)
+  await cdp('Input.insertText', { text: 'card size large' }); await sleep(200)
+  check('⌘K "card size large" ranks "Card size: large" first', (await js(`document.querySelector('.pal-item')?.textContent`) as string)?.includes('Card size: large'))
+  await key('Enter', 'Enter', 13)
+  check('…and runs it (3 a row, stored)', await waitFor(`document.documentElement.dataset.cards === 'l' && localStorage.getItem('dot480:cards') === 'l' && ${firstRow} === 3`, 3000))
+
   // ── touch: TOOLS › THEME ──
   await open('/', { phone: true })
   check('phone: the header THEME button is hidden', await js(`getComputedStyle(document.querySelector('.theme-switch')).display === 'none'`) === true)
@@ -273,8 +306,16 @@ try {
   await shot('sheet')
   const sizes = await js(`[...document.querySelectorAll('.tools-sheet .theme-ctl :is([role=radio], [role=option], .theme-share)')].map(e => { const r = e.getBoundingClientRect(); return [e.getAttribute('aria-label') || e.textContent, Math.round(r.width), Math.round(r.height)] })`) as [string, number, number][]
   const small = sizes.filter(([, w, h]) => w < 44 || h < 44)
-  check(`touch targets ≥ 44 px (${sizes.length} controls)`, sizes.length === 12 && !small.length, JSON.stringify(small))
+  // 3 schemes, 8 swatches, the share switch, and DISPLAY's 3 card sizes
+  check(`touch targets ≥ 44 px (${sizes.length} controls)`, sizes.length === 15 && !small.length, JSON.stringify(small))
   check('the sheet has no horizontal overflow', await js(`(() => { const p = document.querySelector('.tools-sheet .sheet-body'); return p.scrollWidth <= p.clientWidth + 1 })()`) === true)
+  check('phone: one card a row at LARGE', await js(firstRow) === 1, String(await js(firstRow)))
+  const pc = (await centreOf('.tools-sheet .theme-cards [role=radio]:nth-child(3)'))!
+  await tap(pc.x, pc.y)
+  check('phone: TOOLS › DISPLAY › COMPACT puts 2 cards a row, stored, the sheet still open', await waitFor(`document.documentElement.dataset.cards === 's' && localStorage.getItem('dot480:cards') === 's' && ${firstRow} === 2 && !!document.querySelector('.tools-sheet[open]')`, 3000), String(await js(firstRow)))
+  const pl = (await centreOf('.tools-sheet .theme-cards [role=radio]:nth-child(1)'))!
+  await tap(pl.x, pl.y)
+  check('phone: LARGE goes back to one a row', await waitFor(`document.documentElement.dataset.cards === 'l' && ${firstRow} === 1`, 3000))
   const n0 = await vts()
   const ph = (await centreOf('.tools-sheet [data-accent="phosphor"][role=option]'))!
   await tap(ph.x, ph.y)

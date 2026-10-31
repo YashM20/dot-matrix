@@ -17,7 +17,8 @@
  * order of the dot tones (faint < mid < idle < value, red-dim < red); the accent distinct from `value`
  * and the greys (`dot-idle`, `dot-mid`) under normal vision and simulated protanopia, deuteranopia and
  * tritanopia; `dark_signal` equal to src/tokens.css `:root` (today's colours) and `dot480`; `vite` equal to its
- * pins; the boot script ≡ the store's resolution (attributes, `color-scheme`, `theme-color`); `tokensOf()`;
+ * pins; the boot script ≡ the store's resolution (attributes, `color-scheme`, `theme-color`) and its CARD SIZE
+ * attribute (`data-cards` from `dot480:cards`); `tokensOf()`;
  * the generated files and the CSP hash current; the boot script byte-identical in every HTML entry and in its
  * built copy in dist/; the essay and legal pages wired to themes.css with their text ≥ 4.5:1 in all 14 themes.
  * Called from verify.ts (`themeChecks(assert)`); runnable alone.
@@ -291,8 +292,8 @@ export async function themeChecks(assert: Assert, { print = false } = {}): Promi
   if (built.length) assert(`theme: the built pages (${built.join(', ')}) kept the boot script byte for byte (the CSP hash holds after vite build)`, !lost.length, lost.join(', '))
   const unwired = PAGE_CSS.filter(f => { const s = readFileSync(f, 'utf8'), a = s.indexOf('../tokens.css'), b = s.indexOf('../site/theme/themes.css'); return a < 0 || b < a })
   assert(`theme: the essay and legal pages import themes.css after tokens.css (${PAGE_CSS.join(', ')})`, !unwired.length, unwired.join(', '))
-  // 900 B until T6; the custom hue (its stored CSS into a <style>) took it to ~935
-  assert(`theme: boot script ≤ 960 B (${BOOT_SCRIPT.length} B, ${(await gz(BOOT_SCRIPT))} B gz)`, BOOT_SCRIPT.length <= 960)
+  // 900 B until T6; the custom hue (its stored CSS into a <style>) took it to ~935, the CARD SIZE to ~1010
+  assert(`theme: boot script ≤ 1024 B (${BOOT_SCRIPT.length} B, ${(await gz(BOOT_SCRIPT))} B gz)`, BOOT_SCRIPT.length <= 1024)
 
   // the boot script and the store resolve the same theme
   const { resolvePrefs, resolveScheme, themeTokens } = await import('../../src/site/theme/theme')
@@ -311,6 +312,12 @@ export async function themeChecks(assert: Assert, { print = false } = {}): Promi
   assert('theme: defaults are system + signal; system follows the OS', runBoot('', null, false)['data-scheme'] === 'dark' && runBoot('', null, true)['data-scheme'] === 'light' && runBoot('', null, true)['data-accent'] === 'signal')
   const blocked = runBoot('', null, false, true)
   assert('theme: a blocked localStorage still boots (defaults)', blocked['data-scheme'] === 'dark' && blocked['data-accent'] === 'signal')
+  // CARD SIZE (src/site/cards.ts): `dot480:cards` m / s, anything else LARGE; the theme never depends on it
+  const sizes: [string | null, string][] = [[null, 'l'], ['l', 'l'], ['m', 'm'], ['s', 's'], ['x', 'l'], ['ms', 'l'], ['', 'l'], ['S', 'l']]
+  const sizeOff = sizes.filter(([st, want]) => runBoot('?theme=light_vite', null, false, false, st)['data-cards'] !== want).map(([st]) => String(st))
+  assert(`theme: boot sets data-cards from dot480:cards (${sizes.length} cases: m and s kept, anything else LARGE)`, !sizeOff.length, sizeOff.join(', '))
+  const sizeTheme = runBoot('?theme=light_vite', null, false, false, 's')
+  assert('theme: the card size leaves the theme alone (light_vite with a stored size)', sizeTheme['data-scheme'] === 'light' && sizeTheme['data-accent'] === 'vite' && sizeTheme['theme-color'] === NEUTRALS.light.bg)
 
   // engine tokens (the browser probe, scripts/site/theme-boot.ts, checks the runtime themeTokens() against tokensOf() in every theme)
   const { tokensOf } = await import('../../src/site/theme/tokens')
@@ -366,26 +373,26 @@ function cssTextColours(): { file: string; sel: string; role: string }[] {
 const gz = async (s: string) => (await import('node:zlib')).gzipSync(s, { level: 9 }).length
 
 /** Run the inline boot script against a fake page; returns the attributes it set on <html> and the metas' content. */
-function runBoot(search: string, stored: string | null, prefersLight: boolean, blockStorage = false): Record<string, string> {
+function runBoot(search: string, stored: string | null, prefersLight: boolean, blockStorage = false, cards?: string | null): Record<string, string> {
   const attrs: Record<string, string> = {}, styles: { id: string; textContent: string }[] = []
   const meta = (name: string) => ({ set content(v: string) { attrs[name] = v } })
   const metas: Record<string, object> = { 'meta[name=color-scheme]': meta('color-scheme'), 'meta[name=theme-color]': meta('theme-color') }
   const env = {
     document: {
-      documentElement: { dataset: { set scheme(v: string) { attrs['data-scheme'] = v }, set accent(v: string) { attrs['data-accent'] = v } } }, querySelector: (q: string) => metas[q] ?? null,
+      documentElement: { dataset: { set scheme(v: string) { attrs['data-scheme'] = v }, set accent(v: string) { attrs['data-accent'] = v }, set cards(v: string) { attrs['data-cards'] = v } } }, querySelector: (q: string) => metas[q] ?? null,
       // the style element is appended before its id and text are set: read them back after the run
       createElement: () => ({ id: '', textContent: '' }), head: { appendChild: (el: { id: string; textContent: string }) => { styles.push(el); return el } },
     },
     location: { search },
-    localStorage: { getItem: () => { if (blockStorage) throw new Error('SecurityError'); return stored } },
+    localStorage: { getItem: (k: string) => { if (blockStorage) throw new Error('SecurityError'); return k === 'dot480:cards' ? cards ?? null : stored } },
     matchMedia: (query: string) => ({ matches: prefersLight && query === '(prefers-color-scheme: light)' }),
     URLSearchParams,
   }
   // oxlint-disable-next-line no-new-func -- evaluating the exact inline script text is the point
   new Function(...Object.keys(env), BOOT_SCRIPT)(...Object.values(env))
   for (const el of styles) if (el.id === 'theme-custom') attrs.style = el.textContent
-  // the attribute order of the store's expectation (scheme, accent, style, metas)
-  const order = ['data-scheme', 'data-accent', 'style', 'color-scheme', 'theme-color']
+  // the attribute order of the store's expectation (scheme, accent, style, metas); the card size only when asked for
+  const order = ['data-scheme', 'data-accent', 'style', 'color-scheme', 'theme-color', ...(cards === undefined ? [] : ['data-cards'])]
   return Object.fromEntries(order.filter(k => k in attrs).map(k => [k, attrs[k]]))
 }
 
