@@ -9,7 +9,6 @@ import { gpuValues } from '../../engine/renderer/webgl/passes'
 import { voronoi2 } from '../../engine/noise/voronoi'
 import { stbn } from '../../engine/halftone/mask'
 import { hourOf } from '../../engine/light/material'
-import { sceneLight } from '../../engine/light/input'
 import type { Light, Vec3 } from '../../engine/light/shade'
 import { hash01 } from '../../engine/math'
 import { createRaster, sample } from '../../engine/raster/raster'
@@ -405,7 +404,7 @@ export const matWindow: WidgetPreset = {
   controls: [{ key: 'k', kind: 'button', box: [WIN.x0, 14, WIN.x1 - WIN.x0, WIN.bottom - 14], label: 'Light a pane' }],
   layers: ctx => {
     const g = windowGeometry(), s = winScratch(), now = new Date(), hour = hourOf(now)
-    const sky = sceneLight({ data: ctx.data, hour }), gain = skyGain(hour, sky), night = !(hour >= 6 && hour < 18)
+    const sky = matLight(ctx, { sky: true }), gain = skyGain(hour, sky), night = !(hour >= 6 && hour < 18)
     const lateral = Array.isArray(sky) ? .15 * (sky as Vec3)[0] : 0
     const ptr = ctx.pointers?.find(q => q.inside && !q.up), lamp: Pt | null = ptr && !ptr.down ? [ptr.x, ptr.y] : null
     const pressed = ptr && ptr.down && (ctx.data.k ?? 0) >= .5 ? g.pane[Math.round(ptr.y) * COLS + Math.round(ptr.x)] ?? -1 : -1
