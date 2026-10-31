@@ -8,6 +8,10 @@
  *    moves it; a horizontal drag is claimed at once);
  *  - touch, every material card: a vertical swipe never changes its data (the a11y controls' values);
  *  - desktop 1280: hovering the knob moves the light (the card's pixels change) without changing v; press-drag turns it.
+ *  - touch 375×812, `/workshop/?probe=1` (M3.12): `mat-sand`, `mat-mercury`, `mat-thread`: a vertical swipe scrolls
+ *    ≥ 150 px with the world pristine; a tap acts (a stone, a bead, a flick); a 300 ms hold engages and a drag then
+ *    carves, stirs or pulls without the page scrolling; a horizontal drag is claimed at once. Every other workshop
+ *    card: a vertical swipe never changes data.
  * Skips with a notice when no Chrome is found; exits non-zero on any ✗. Closes Chrome and the preview server.
  *   npx tsx scripts/materials-browser.ts
  */
@@ -130,6 +134,70 @@ try {
   }
   check('touch: no console errors', p.logs.length === 0, p.logs.slice(0, 3).join(' | '))
   await p.close(); page = null
+
+  // ── workshop (M3.12): sand, mercury, thread on touch; the worlds read through `__workshop` (`?probe=1`) ──
+  page = await launch(W, H)
+  const q = page
+  await q.cdp('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: true })
+  await q.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
+  await q.cdp('Page.navigate', { url: `${server.url}workshop/?probe=1` })
+  check('touch: /workshop/ opens with the sand', await q.waitFor(`!!globalThis.__workshop && !!${card('mat-sand')}?.querySelector('canvas, svg')`, 30000))
+  await sleep(1500)
+  const ws = <T,>(expr: string) => q.js<T>(`globalThis.__workshop.${expr}`)
+  /** What each card's tap, hold-drag and horizontal drag should change, read from its world. */
+  const SPECS: { id: string; tap: [number, number]; tapDid: string; tapName: string; drag: (i: number) => [number, number]; dragDid: string; dragName: string }[] = [
+    { id: 'mat-sand', tap: [70, 96], tapDid: 'stones()', tapName: 'drops a stone', drag: i => [30 + 4 * i, 60 + 2 * i], dragDid: 'carved()', dragName: 'carves' },
+    { id: 'mat-mercury', tap: [72, 120], tapDid: 'beads()', tapName: 'splits a bead', drag: i => [44 + 3 * i, 124 - 2 * i], dragDid: 'stir()', dragName: 'stirs' },
+    { id: 'mat-thread', tap: [72, 118], tapDid: 'swing()', tapName: 'flicks it', drag: i => [72 + i, 128 + i], dragDid: 'paid()', dragName: 'pulls it' },
+  ]
+  for (const s of SPECS) {
+    await center(q, s.id)
+    {
+      const y0 = await q.js<number>('scrollY'), [x, y] = await at(q, s.id, 72, 110)
+      await q.touch(Array.from({ length: 22 }, (_, i) => [[x, y - i * 16]] as [number, number][]))
+      await sleep(600)
+      const y1 = await q.js<number>('scrollY'), mode = await ws<string>(`mode('${s.id}')`)
+      check(`${s.id}: a vertical swipe starting on the card scrolls ≥ 150 px and the world stays pristine`, y1 - y0 >= 150 && mode === 'pristine', `scrolled ${(y1 - y0).toFixed(0)} px, ${mode}`)
+    }
+    await center(q, s.id)
+    {
+      const [x, y] = await at(q, s.id, ...s.tap)
+      await q.tap(x, y); await sleep(250)
+      const did = await ws<number>(s.tapDid)
+      check(`${s.id}: a tap ${s.tapName}`, did > (s.id === 'mat-thread' ? 1 : 0), `${s.tapDid} = ${did.toFixed(2)}`)
+    }
+    {
+      const [x0, y0] = await at(q, s.id, ...s.drag(0)), s0 = await q.js<number>('scrollY'), before = await ws<number>(s.dragDid)
+      await q.cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: touchPt(x0, y0) })
+      await sleep(450)
+      const on = await engagedOf(q, s.id)
+      for (let i = 1; i <= 16; i++) { const [x, y] = await at(q, s.id, ...s.drag(i)); await q.cdp('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: touchPt(x, y) }); await sleep(30) }
+      const during = await ws<number>(s.dragDid)
+      await q.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await sleep(400)
+      const s1 = await q.js<number>('scrollY')
+      check(`${s.id}: a 300 ms hold engages and a drag then ${s.dragName}; the page never scrolls while engaged`, on && during > before + (s.id === 'mat-thread' ? 2 : 1e-3) && Math.abs(s1 - s0) < 1, `engaged ${on}, ${s.dragDid} ${before.toFixed(2)} → ${during.toFixed(2)}, scroll Δ ${(s1 - s0).toFixed(0)} px`)
+    }
+    {
+      const [x0, y0] = await at(q, s.id, 40, s.id === 'mat-thread' ? 100 : 80), s0 = await q.js<number>('scrollY'), before = await ws<number>(s.id === 'mat-thread' ? 'swing()' : s.dragDid)
+      await q.touch(Array.from({ length: 14 }, (_, i) => [[x0 + i * 6, y0]] as [number, number][]))
+      await sleep(300)
+      const after = await ws<number>(s.id === 'mat-thread' ? 'swing()' : s.dragDid), s1 = await q.js<number>('scrollY')
+      check(`${s.id}: a horizontal drag is claimed at once without a hold`, after !== before && Math.abs(s1 - s0) < 1, `${before.toFixed(2)} → ${after.toFixed(2)}, scroll Δ ${(s1 - s0).toFixed(0)} px`)
+    }
+  }
+  {
+    let same = true, detail = ''
+    for (const id of ['mat-knit', 'mat-denim', 'mat-paper', 'mat-wood', 'mat-leather', 'mat-ice']) {
+      await center(q, id)
+      const d0 = await dataOf(q), [x, y] = await at(q, id, 72, 100)
+      await q.touch(Array.from({ length: 14 }, (_, i) => [[x, y - i * 14]] as [number, number][]))
+      await sleep(500)
+      if (await dataOf(q) !== d0) { same = false; detail = id }
+    }
+    check('every workshop card (touch): a vertical swipe never changes data', same, detail)
+  }
+  check('workshop touch: no console errors', q.logs.length === 0, q.logs.slice(0, 3).join(' | '))
+  await q.close(); page = null
 
   // ── desktop ─────────────────────────────────────────────────────────────────────────────────────
   page = await launch(1280, 900)

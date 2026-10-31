@@ -10,7 +10,7 @@
  * leather have none; bakes on the first frame, never at import; per frame the light, the sims and lookups only,
  * the lit surfaces cached per light (LRU of 8, M3.10) so the sun and the tilt hub's buckets hit across frames.
  */
-import { ambientOcclusion, cardMask, contour, insetDistance, stitch, tangentSDF, tonedLayer, twill, weaveRelief, woodRings, leatherAt, type TangentRaster } from '../../engine/matter'
+import { ambientOcclusion, cardMask, insetDistance, stitch, tangentSDF, tonedLayer, twill, weaveRelief, woodRings, leatherAt, type TangentRaster } from '../../engine/matter'
 import { anisoSpec } from '../../engine/matter/aniso'
 import { heightRaster, normalRaster, stackHeights, type HeightRaster, type NormalRaster } from '../../engine/light/height'
 import { illuminate, lambert, type Light, type Vec3 } from '../../engine/light/shade'
@@ -54,16 +54,30 @@ function pocketLine(off: number): Pt[] {
 }
 /** The five whiskers: curved strokes rising to the right from the lower left, as (x0, y0, length). */
 const WHISKERS: readonly (readonly [number, number, number])[] = [[6, 92, 58], [10, 103, 66], [8, 114, 54], [16, 124, 60], [12, 134, 44]]
+/**
+ * fBm sampled every `step` cells over the card and read back bilinearly: a bake's smooth noise at a ninth of the
+ * cost (the wear's breakup is ≥ 9 cells a noise unit, so a 3-cell grid loses nothing visible).
+ */
+function noiseGrid(sx: number, sy: number, seed: number, step = 3): (c: number, r: number) => number {
+  const gw = Math.ceil(COLS / step) + 2, gh = Math.ceil(TILE.rows / step) + 2, G = new Float64Array(gw * gh)
+  for (let j = 0; j < gh; j++) for (let i = 0; i < gw; i++) G[j * gw + i] = fbm2(step * i / sx, step * j / sy, 3, seed)
+  return (c, r) => {
+    const fx = c / step, fy = r / step, i = Math.floor(fx), j = Math.floor(fy), tx = fx - i, ty = fy - j, a = j * gw + i
+    const top = G[a] + (G[a + 1] - G[a]) * tx, bot = G[a + gw] + (G[a + gw + 1] - G[a + gw]) * tx
+    return top + (bot - top) * ty
+  }
+}
+type Noise = (c: number, r: number) => number
 /** Wear at a cell: 1 on a whisker stroke or in a faded patch (fBm-broken, so the fade is patchy). */
-function wearAt(c: number, r: number): number {
-  const n = fbm2(c / 9, r / 9, 3, 23)
+function wearAt(c: number, r: number, fine: Noise, broad: Noise): number {
+  const n = fine(c, r)
   for (const [x0, y0, len] of WHISKERS) {
     const u = (c - x0) / len
     if (u < 0 || u > 1) continue
     const y = y0 - .32 * (c - x0) + .0022 * (c - x0) * (c - x0), taper = Math.sin(Math.PI * Math.min(1, u * 1.15))
     if (Math.abs(r - y) < 2.4 * taper && n > -.25) return 1
   }
-  return fbm2(c / 38, r / 30, 3, 29) > .3 && n > 0 ? 1 : 0
+  return broad(c, r) > .3 && n > 0 ? 1 : 0
 }
 interface DenimGeo { n: NormalRaster; t: TangentRaster; ao: Raster; warp: Raster; wear: Uint8Array; kind: Uint8Array }
 /** Cell kinds over the denim: 0 cloth, 1 the pocket opening (void), 2 topstitch, 3 the seam gap (void), 4 selvedge, 5 rivet, 6 its rim gap. */
@@ -76,10 +90,11 @@ const denimGeo = once((): DenimGeo => {
     for (let k = 0; k < st.count; k++) stampSeg(stitches.data, st.segs[4 * k], st.segs[4 * k + 1], st.segs[4 * k + 2], st.segs[4 * k + 3], .6)
   }
   const [x0, y0, x1, y1] = DENIM.box, { x: rx, y: ry, r: rr } = DENIM.rivet
-  for (let row = y0; row <= y1; row++) denimKindRow(kind, wear, stitches.data, row, x0, x1, rx, ry, rr)
+  const fine = noiseGrid(9, 9, 23), broad = noiseGrid(38, 30, 29, 6)
+  for (let row = y0; row <= y1; row++) denimKindRow(kind, wear, stitches.data, row, x0, x1, rx, ry, rr, fine, broad)
   return { n, t: r.tangent, ao, warp: r.warp, wear, kind }
 })
-function denimKindRow(kind: Uint8Array, wear: Uint8Array, st: Float32Array, row: number, x0: number, x1: number, rx: number, ry: number, rr: number): void {
+function denimKindRow(kind: Uint8Array, wear: Uint8Array, st: Float32Array, row: number, x0: number, x1: number, rx: number, ry: number, rr: number, fine: Noise, broad: Noise): void {
   for (let c = x0, i = row * COLS + c; c <= x1; c++, i++) {
     const d = Math.hypot(c - rx, row - ry)
     if (d <= rr) { kind[i] = 5; continue }
@@ -88,7 +103,7 @@ function denimKindRow(kind: Uint8Array, wear: Uint8Array, st: Float32Array, row:
     if (c === DENIM.seam || c === DENIM.selvedge[1] + 1) { kind[i] = 3; continue }
     if (c < DENIM.seam && Math.abs(pocketRho(c, row) - 1) * Math.min(DENIM.pocket.a, DENIM.pocket.b) < .6) { kind[i] = 1; continue }
     if (st[i]) { kind[i] = 2; continue }
-    if (c < DENIM.seam) wear[i] = wearAt(c, row)
+    if (c < DENIM.seam) wear[i] = wearAt(c, row, fine, broad)
   }
 }
 /** Mark the cells within `h` of segment (ax, ay)–(bx, by). */
@@ -242,9 +257,11 @@ interface LeatherGeo { n: NormalRaster; ao: Raster; thread: Uint8Array; text: Ui
 const LBOX: CellBounds = [LEATHER.cx - LEATHER.hw, LEATHER.cy - LEATHER.hh, LEATHER.cx + LEATHER.hw, LEATHER.cy + LEATHER.hh]
 /** The stitch lines: round the outline at the inset, and across the pocket mouth (cells). */
 export const leatherStitches = once(() => {
-  const sdf = createRaster(TILE)
-  for (let r = 0; r < TILE.rows; r++) for (let c = 0; c < COLS; c++) sdf.data[r * COLS + c] = outerSdf(c, r)
-  const loop = contour(sdf, -LEATHER.inset).sort((a, b) => b.length - a.length)[0]
+  // the outline's iso-line at −inset: the same rounded box, shrunk (corner radius r − inset), walked analytically
+  const { cx, cy, hw, hh, r, inset } = LEATHER, ix = hw - r, iy = hh - r, rr = r - inset, loop: Pt[] = []
+  for (const [sx, sy, a0] of [[1, -1, -90], [1, 1, 0], [-1, 1, 90], [-1, -1, 180]] as const) {
+    for (let k = 0; k <= 8; k++) { const a = (a0 + k * 90 / 8) * Math.PI / 180; loop.push([cx + sx * ix + rr * Math.cos(a), cy + sy * iy + rr * Math.sin(a)]) }
+  }
   const y = LEATHER.pocket + 4, mouth: Pt[] = [[LBOX[0] + LEATHER.inset + 3, y], [LBOX[2] - LEATHER.inset - 3, y]]
   return [stitch(loop, { length: 3, gap: 1, width: 1.4 }, true), stitch(mouth, { length: 3, gap: 1, width: 1.4 })]
 })

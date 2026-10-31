@@ -17,7 +17,8 @@ import { heightRaster, normalRaster, stackHeights, type HeightRaster, type Norma
 import { lambert, type Light, type Vec3 } from '../../engine/light/shade'
 import { createWorld, framePointers, worldAt, type StepInput, type World } from '../../engine/physics/world'
 import { dla, type Dla } from '../../engine/algo/dla'
-import { fbm2 } from '../../engine/noise/gradient'
+import { fbm2, noise2 } from '../../engine/noise/gradient'
+import { stbn } from '../../engine/halftone/mask'
 import { hash01 } from '../../engine/math'
 import { createRaster, type Raster } from '../../engine/raster/raster'
 import type { CellBounds, GridConfig, Layer } from '../../engine/types'
@@ -175,7 +176,9 @@ const PCX = (PAPER.box[0] + PAPER.box[2]) / 2, PCY = (PAPER.box[1] + PAPER.box[3
 /** Signed distance to the deckle edge (cells, < 0 on the sheet): a rounded box, the edge torn by fBm along it. */
 export function deckle(x: number, y: number): number {
   const qx = Math.abs(x - PCX) - (PHW - PAPER.r), qy = Math.abs(y - PCY) - (PHH - PAPER.r)
-  return Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - PAPER.r + 1.3 * fbm2(x / 3.2, y / 3.2, 3, 41) + .8 * fbm2(x / 11, y / 11, 2, 43)
+  const base = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - PAPER.r
+  // the tear only moves the edge by ≤ 2.1 cells: away from it the sign is settled, skip the noise
+  return Math.abs(base) > 2.5 ? base : base + 1.3 * fbm2(x / 3.2, y / 3.2, 3, 41) + .8 * fbm2(x / 11, y / 11, 2, 43)
 }
 const PBOX: CellBounds = [PAPER.box[0] - 3, PAPER.box[1] - 3, PAPER.box[2] + 3, PAPER.box[3] + 3]
 /** `floor`: per cell, how deep into a stroke it lies (cells to the nearest unprinted cell; 0 off the letters). */
@@ -194,8 +197,8 @@ function paperRow(H: Float32Array, M: Float32Array, r: number): void {
   for (let c = PBOX[0], i = r * COLS + c; c <= PBOX[2]; c++, i++) {
     const d = deckle(c, r)
     if (d > 0) continue
-    // cotton: a fine fBm and longer fibres (stretched noise), .4 cells; the deckle thins toward the torn edge
-    const fib = .6 * (.5 + .5 * fbm2(c / 2.6, r / 2.6, 2, 47)) + .4 * Math.abs(fbm2(c / 8, r / 1.8, 2, 53))
+    // cotton: the tooth (blue noise, a cell apart) and longer fibres (stretched noise), .4 cells; the deckle thins toward the torn edge
+    const fib = .6 * stbn(c, r, 3) + .4 * Math.abs(noise2(c / 8, r / 1.8, 53))
     H[i] = 1.2 * Math.min(1, -d / 2) + .4 * fib; M[i] = 1
   }
 }

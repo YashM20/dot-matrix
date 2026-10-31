@@ -30,14 +30,14 @@ const mod = (a: number, n: number) => ((a % n) + n) % n
 /** One stitch's legs at (fx, fy) in its own cells (centres at + .5): height and the leg's tangent x (y is 1, unnormalised). */
 function legs(fx: number, fy: number, W: number, H: number, lean: number, lift: number, out: Float64Array): number {
   const x = fx + .5, y = fy + .5, k = lean * (y - H / 2), hw = W / 4, bulge = .75 + .25 * Math.sin(Math.PI * y / H)
-  // this stitch's two legs and the neighbours' legs that reach into it
-  const cs = [W / 4 + k, 3 * W / 4 - k, 3 * W / 4 - k - W, W / 4 + k + W], ts = [lean, -lean, -lean, lean]
+  // this stitch's two legs (left leans +, right −) and the neighbours' legs that reach into it
   let best = 0, tx = 0
   for (let q = 0; q < 4; q++) {
-    const d = Math.abs(x - cs[q]) / hw
+    const c = q === 0 ? W / 4 + k : q === 1 ? 3 * W / 4 - k : q === 2 ? 3 * W / 4 - k - W : W / 4 + k + W
+    const d = Math.abs(x - c) / hw
     if (d >= 1) continue
     const h = lift * Math.sqrt(1 - d * d) * bulge
-    if (h > best) { best = h; tx = ts[q] }
+    if (h > best) { best = h; tx = q === 0 || q === 3 ? lean : -lean }
   }
   out[0] = best; out[1] = tx; out[2] = 1
   return best
@@ -49,16 +49,16 @@ function purlBump(fx: number, fy: number, W: number, H: number, lift: number, ou
   out[0] = h; out[1] = 1; out[2] = 0
   return h
 }
-/** The left strand's slot (0 = left, 1 = right) at fabric row position yr (rows), and whether it is in front. */
-function strand(yr: number, every: number, cross: number): [number, boolean] {
+/** The left strand's slot (0 = left, 1 = right) at fabric row position yr (rows); it is in front while it crosses rightward (q < cross). */
+function strand(yr: number, every: number, cross: number): number {
   const q = mod(yr, 2 * every)
-  if (q < cross) return [smooth(q / cross), true]
-  if (q < every) return [1, false]
-  if (q < every + cross) return [1 - smooth((q - every) / cross), false]
-  return [0, false]
+  if (q < cross) return smooth(q / cross)
+  if (q < every) return 1
+  if (q < every + cross) return 1 - smooth((q - every) / cross)
+  return 0
 }
 /** d(slot)/d(row) of the left strand (rows⁻¹), by central difference. */
-const strandSlope = (yr: number, every: number, cross: number) => (strand(yr + .05, every, cross)[0] - strand(yr - .05, every, cross)[0]) / .1
+const strandSlope = (yr: number, every: number, cross: number) => (strand(yr + .05, every, cross) - strand(yr - .05, every, cross)) / .1
 
 /**
  * The fabric at cell (x, y) (cells from the fabric's origin, x right, y down; row j = ⌊y / height⌋): height in
@@ -69,10 +69,11 @@ export function knitAt(x: number, y: number, o: KnitOptions = {}, out: Float64Ar
   const col = Math.floor(x / W), fy = mod(y, H)
   if (o.cable && col >= o.cable.col && col < o.cable.col + 4) {
     const every = o.cable.every ?? 8, cross = o.cable.cross ?? 3, yr = (y + .5) / H
-    const [sa, frontA] = strand(yr, every, cross), slope = strandSlope(yr, every, cross) * 2 * W / H
-    const bx = x - o.cable.col * W, crossing = mod(yr, 2 * every) < cross || (mod(yr, 2 * every) >= every && mod(yr, 2 * every) < every + cross)
+    const sa = strand(yr, every, cross), q = mod(yr, 2 * every), frontA = q < cross, slope = strandSlope(yr, every, cross) * 2 * W / H
+    const bx = x - o.cable.col * W, crossing = q < cross || (q >= every && q < every + cross)
     let best = -Infinity, tx = 0, ty = 1
-    for (const [slot, front, dir] of [[sa, frontA, 1], [1 - sa, !frontA, -1]] as const) {
+    for (let s = 0; s < 2; s++) {
+      const slot = s ? 1 - sa : sa, front = s ? !frontA : frontA, dir = s ? -1 : 1
       const lx = bx - slot * 2 * W
       if (lx < -.5 || lx >= 2 * W - .5) continue
       legs(mod(lx, W), fy, W, H, lean, lift, out)

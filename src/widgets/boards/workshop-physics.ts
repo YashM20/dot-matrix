@@ -32,7 +32,7 @@ import { cite, DEG, LIGHT_DEFAULTS, lightKey, lru, matLight, once, snapTorch, T,
 const COLS = TILE.cols
 const IN_WORKER = typeof (globalThis as { WorkerGlobalScope?: unknown }).WorkerGlobalScope !== 'undefined'
 const mainThread = (id: string) => { if (IN_WORKER) throw new Error(`${id} keeps its live state on the main thread`) }
-const FAINT = 0, MID = 1, IDLE = 2, VALUE = 3, ACTIVE = 4
+const FAINT = 0, MID = 1, IDLE = 2, VALUE = 3
 const bandOf = (b: number) => (b < .06 ? -1 : b < .3 ? FAINT : b < .62 ? MID : IDLE)
 const DT = 1 / 30
 /** The hub's gravity and tilt defaults (physics cards also take gx / gy: §2.3). */
@@ -51,7 +51,8 @@ function physInput(ctx: WidgetContext, map: (x: number, y: number) => [number, n
  */
 function pressOf(s: Float32Array, o: number, inp: StepInput, slop: number): 'drag' | 'tap' | null {
   const p = inp.pointers[0]
-  if (!p) { s[o + 3] = 0; return null }
+  // a lifted touch leaves the frame (no release step): a press that vanishes after a short travel is a tap too
+  if (!p) { const tap = s[o + 3] && s[o + 2] <= slop; s[o + 3] = 0; return tap ? 'tap' : null }
   if (p.pressed) { s[o] = p.x; s[o + 1] = p.y; s[o + 2] = 0; s[o + 3] = 1 }
   if (p.down && s[o + 3]) { s[o + 2] = Math.max(s[o + 2], Math.hypot(p.x - s[o], p.y - s[o + 1])); return s[o + 2] > slop ? 'drag' : null }
   if (p.released && s[o + 3]) { s[o + 3] = 0; return s[o + 2] <= slop ? 'tap' : null }
@@ -338,7 +339,7 @@ const LV = new Float64Array(3)
 /** The thread's half width (cells): a 5-cell cord, so its twist has room to catch the light. */
 const THREAD_R = 2.5
 /** One capsule of thread from (ax, ay) to (bx, by), 3 cells wide, its arc length starting at s0: lit, twisted, into the frame. */
-function threadSeg(V: Float32Array, Tn: Uint8Array, HP: Float32Array, L: Light, ax: number, ay: number, bx: number, by: number, s0: number, tone: number): void {
+function threadSeg(V: Float32Array, Tn: Uint8Array, HP: Float32Array, L: Light, ax: number, ay: number, bx: number, by: number, s0: number): void {
   const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy, l = Math.sqrt(l2) || 1, ux = dx / l, uy = dy / l, R = THREAD_R
   for (let y = Math.max(12, Math.floor(Math.min(ay, by) - R)); y <= Math.min(143, Math.ceil(Math.max(ay, by) + R)); y++) {
     for (let x = Math.max(0, Math.floor(Math.min(ax, bx) - R)); x <= Math.min(143, Math.ceil(Math.max(ax, bx) + R)); x++) {
@@ -353,7 +354,6 @@ function threadSeg(V: Float32Array, Tn: Uint8Array, HP: Float32Array, L: Light, 
       lightAt(L, x, y, 2 * hp, LV)
       const ndl = Math.max(0, nx * LV[0] + ny * LV[1] + nz * LV[2]), hx = LV[0], hy = LV[1], hz = LV[2] + 1, hl = Math.hypot(hx, hy, hz) || 1
       const th = (tx * hx + ty * hy) / hl, kk = (1 - th * th) ** 12, b = .34 + .62 * ndl
-      if (tone === ACTIVE) { V[i] = .85; Tn[i] = ACTIVE; continue }
       const tt = kk > .8 && b > .45 ? VALUE : b >= .62 || kk > .55 ? IDLE : b >= .3 ? MID : FAINT
       V[i] = tt === VALUE ? 1 : tt === IDLE ? Math.max(.62, b) : b; Tn[i] = tt
     }
@@ -389,7 +389,7 @@ function spoolBake(L: Light, phase: number): { values: Float32Array; tones: Uint
   return { values: V, tones: Tn }
 }
 /** The needle under the free end: 14 cells of steel along the last segment, its eye 3 cells from the top (red while pulled). */
-function needle(V: Float32Array, Tn: Uint8Array, HP: Float32Array, L: Light, x: number, y: number, ux: number, uy: number, pulled: boolean): void {
+function needle(V: Float32Array, Tn: Uint8Array, HP: Float32Array, L: Light, x: number, y: number, ux: number, uy: number, pulled: boolean, eye: Pt[]): void {
   const len = 14
   for (let yy = Math.floor(Math.min(y, y + uy * len) - 2); yy <= Math.ceil(Math.max(y, y + uy * len) + 2); yy++) {
     for (let xx = Math.floor(Math.min(x, x + ux * len) - 2); xx <= Math.ceil(Math.max(x, x + ux * len) + 2); xx++) {
@@ -399,10 +399,11 @@ function needle(V: Float32Array, Tn: Uint8Array, HP: Float32Array, L: Light, x: 
       const half = a > len - 4 ? .9 * (len - a) / 4 + .1 : 1.1 // the point tapers over its last 4 cells
       if (Math.abs(side) > half) continue
       const i = yy * COLS + xx
-      const eye = a >= 1 && a <= 4 && Math.abs(side) < .55
-      if (eye) { V[i] = 0; Tn[i] = 0; HP[i] = 2; continue } // the eye: a slot of void
+      const slot = a >= 1 && a <= 4 && Math.abs(side) < .55
+      if (slot) { V[i] = 0; Tn[i] = 0; HP[i] = 2; continue } // the eye: a slot of void
       HP[i] = 2
-      if (pulled && a <= 5.5) { V[i] = .85; Tn[i] = ACTIVE; continue }
+      // pulled: the eye's steel is the live red, as sites over its cells (one active layer, cut out of the surface)
+      if (pulled && a <= 5.5) { V[i] = 0; Tn[i] = 0; eye.push([xx, yy]); continue }
       lightAt(L, xx, yy, 2, LV)
       const n = side / 1.1, ndl = Math.max(0, -uy * n * LV[0] + ux * n * LV[1] + Math.sqrt(Math.max(0, 1 - n * n)) * LV[2])
       V[i] = ndl > .8 ? 1 : .5 + .3 * ndl; Tn[i] = ndl > .8 ? VALUE : IDLE
@@ -424,12 +425,13 @@ export const matThread: WidgetPreset = {
     let arc = 0
     for (let i = 0; i < n - 1; i++) {
       const ax = s[X + i], ay = s[Y + i], bx = s[X + i + 1], by = s[Y + i + 1]
-      threadSeg(V, Tn, HP, L, ax, ay, bx, by, arc, MID)
+      threadSeg(V, Tn, HP, L, ax, ay, bx, by, arc)
       arc += Math.hypot(bx - ax, by - ay)
     }
     const ex = s[X + n - 1], ey = s[Y + n - 1], qx = ex - s[X + n - 2], qy = ey - s[Y + n - 2], ql = Math.hypot(qx, qy) || 1
-    needle(V, Tn, HP, L, ex - qx / ql * 3, ey - qy / ql * 3, qx / ql, qy / ql, pulled)
-    return [cite('VERLET ROPE'), F.layer]
+    const eye: Pt[] = []
+    needle(V, Tn, HP, L, ex - qx / ql * 3, ey - qy / ql * 3, qx / ql, qy / ql, pulled, eye)
+    return [cite('VERLET ROPE'), F.layer, ...(eye.length ? [layer(T.dots(eye, 1), 'active')] : [])]
   },
 }
 

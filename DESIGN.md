@@ -245,6 +245,13 @@ A material is a dot vocabulary, not a shader: given one normal raster and one li
 | Caustics | `causticSplat`, `refractFloor` | Forward photon splat (2×2 stratified photons per cell, tent + [1 2 1]² binomial: a 1.5-cell B-spline footprint), mean 1 on flat water; net ≥ 1.6 → +1 step in `value`, < .7 → `faint`; the floor read through the water at p − depth·(1 − 1/n)·∇h |
 | Stained glass | `voronoiSites` (exact bisectors, the rose) + F0 `voronoi2` ((F2 − F1)/2, the lancet) | Panes in three transmittances (.35 / .6 / .85) × the sky's gain, on the 1.5 lattice; lead came is void with `mid` glints only, a 1-cell moat between came and panes; the live pane is red at its own transmittance size |
 | Rust, wax | `fbm2` + AO thresholds (rust), wrap diffuse + e^(−σ·thickness) transmission (wax) | Rust kills the sheen: it replaces the brushed bands (fresh `mid`, deep `faint` pitted on 2×2 blocks), crevices first; only the advancing edge is red. Wax glows near the flame through its thin rim; the flame is the accent |
+| Knit | `knitRelief` / `knitAt` (`src/engine/matter/knit.ts`) | Stitches 6 × 4 cells: two 3-cell legs leaning into a V, a void crevice between loops; purl as horizontal bumps; a rope cable's front strand rides up over the crossing; Kajiya–Kay (p 20) along each arm, +1 step at .3, `value` at .6 |
+| Letterpress | `heightRaster` of `insetDistance` (smooth, −1.5) + fibres (blue noise + stretched noise) | Paper stays `faint` / `mid` with its tooth void; under raked light the deboss wall facing the light is `idle`, the far wall void; ink is `value` on the impression's floor only (≥ 1.9 cells into a stroke) |
+| Wood | `woodRings` (`src/engine/matter/wood.ts`) | Rings `fract(k·dist + warp)` round a diving pith (the cathedral), period ≥ 3 lattice cells; latewood a band down, flecks a step up, knot cores `faint`; the lacquer's chatoyance is Kajiya–Kay along the rings (+1 step), its polish `value` |
+| Leather | `leatherAt` / `leatherGrain` (`src/engine/matter/leather.ts`) | Pebbles from Worley cells, creases (the borders) void; a burnished round edge; saddle stitches slanted 30°, the thread `idle` / `value` in AO pits |
+| Sand | `sandRake`, `sandCarve`, `sandRelax` (`src/engine/matter/sand.ts`) | A height raster on the 2× lattice in a world: a tine carves a gaussian and heaps the same volume beside it; repose relaxes slopes over `{material.sand.talus}`; light raked to ≤ 22°; grains a blue-noise band down; the rake head is the accent while it carves |
+| Mercury | `mercuryStep` over `fluid.ts` + the LIQUID matcap | The metal is fluid ink sinking along gravity (`gx`, `gy`: the step only); its height is the blurred coverage (a domed pool), read through the matcap tipped by `tx`, `ty` (none at rest); the lamp's reflection `value`; a split bead is the accent |
+| Thread, frost | `threadStep` over `life/chain.ts` `ropeStep`; `dla` | A 5-cell cord along the rope, its tangent twisted ±20° every 2 cells (the ply catches the light in steps); inextensible at rest; the needle's eye red only while pulled. Frost grains are DLA sites with a Kajiya–Kay glint along each branch; the grains sticking now are red |
 
 Material comes from relief, never from hue (no colour tokens). On the materials board only `mat-lens` is GPU-tagged (a fine glass screen is the point of that card); every other material card is CPU by dot count, and the two live-fork cards (`mat-pool`, `mat-rust`) sample on the main thread. "Was active" is size contrast in the one `active` layer: `{colors.dotActiveDim}` is not used on material boards until the owner rules (M-materials §10.6). `src/engine/matter` is not in the engine barrel: import it by path.
 
@@ -262,6 +269,11 @@ Material comes from relief, never from hue (no colour tokens). On the materials 
 | `{material.glass.bezel}` | `squircle` |
 | `{material.water.ior}` | 1.33 |
 | `{material.caustic.net}` | 1.6 |
+| `{material.sand.talus}` | .8 height units between 4-neighbours (2 relaxation passes a step) |
+| `{material.sand.rake}` | 5 tines, 3 lattice cells apart; light raked to ≤ 22° |
+| `{material.wood.ring}` | 5.5 lattice cells, never under 3 |
+
+On the workshop board (M3) every card is CPU by dot count; the six with a world (knit, paper, ice, sand, mercury, thread) sample on the main thread (worker stubs keep their sims out of the worker), and denim, paper and leather carry no red at all.
 
 **Board-wide light:** a board shares one light direction, the sun of the wall-clock hour (`sunAt(hourOf(date))`: rises on the left at 6, highest at noon, sets on the right at 18, a lower moon at night). Over a card the pointer replaces it as a torch.
 
