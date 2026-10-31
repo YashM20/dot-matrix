@@ -17,6 +17,8 @@
 
 **Last interruption (2026-10-30, about 16:35):** the T3 server restarted, then the 5-hour limit was hit; both reset at 17:00. Every dead lock and ticket was cleared, and all four agents were resumed with SendMessage from these commits: E6 5cca800, Q3 d715e49, M2 0dd76a7, L3 1e7ddb8.
 
+**Interruption (2026-10-31, about 18:09):** the machine slept about 24 h. On wake the heavy lock's timer killed Q3's build. Dead locks and tickets were cleared, and E6, Q3 and M3 were resumed with SendMessage. X1 had stalled in its reading phase with no edits, so it was restarted fresh as `a1291dcb5718aafad`. Lesson: agents must wait on process exit, not on monitor events.
+
 **Running agents (round 3):**
 - Each runs in `.claude/worktrees/agent-<id>/` on branch `worktree-agent-<id>`.
 - Resume one with SendMessage to `<id>`. If its worktree is gone, restart from the brief and its last WIP commit.
@@ -24,7 +26,7 @@
 
 | id | task | spec | owns | preview port |
 |---|---|---|---|---|
-| `ac4ef06b6e269c85b` | **X1 pond depth**: the suminagashi `pond-marble` card, the daily and ageing pond (`?day=`, storage only after opt-in), packed glyph hysteresis only if memory allows, View Transitions from board to widget | `docs/living-matter/X-advanced.md` §7 X1 | `src/engine/life/`, the pond board, `scripts/life*.ts`, the View Transitions hook in `src/site/` | 4385 |
+| `a1291dcb5718aafad` | **X1 pond depth**: the suminagashi `pond-marble` card, the daily and ageing pond (`?day=`, storage only after opt-in), packed glyph hysteresis only if memory allows, View Transitions from board to widget | `docs/living-matter/X-advanced.md` §7 X1 | `src/engine/life/`, the pond board, `scripts/life*.ts`, the View Transitions hook in `src/site/` | 4385 |
 | `a34596589e36c316d` | **Q3 squares**: the square field pack (Chebyshev/Manhattan Voronoi, Schotter, Molnár, pixel sort, block glitch, multi-scale Truchet), π/4 rotation, nested motifs, dot ↔ square morphs, the §4.4 cards. The DISPLAY "squares" skin is left out (owner decision) | `docs/living-matter/Q-squares.md` §4 | `src/engine/squares/`, the squares board, `scripts/squares*.ts` | 4386 |
 | `a525b2c5aebad3e34` | **M3 workshop**: the new `/workshop/` board, with knit, denim, paper, wood, leather, sand, ice, mercury and thread; plus the M3.10 tilt-lighting polish. The §10 owner options stay off | `docs/living-matter/M-materials.md` §5 | `src/engine/matter/`, the workshop and materials boards, `scripts/materials*.ts` | 4391 |
 | `ab02542b616c4c2e1` | **E6 phone polish**: long-press menu, snap cue, sheet detent memory, landscape side sheet, `visualViewport`, `navigator.share` | `docs/EDITOR-PLAN.md` §10 E6 | `src/components/editor/` | 4383/4384 |
