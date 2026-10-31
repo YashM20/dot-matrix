@@ -43,5 +43,15 @@ export function recordPondVisit(today = localDay()): PondMemory | null {
   try { store()?.setItem(POND_MEMORY_KEY, JSON.stringify(next)) } catch { return m }
   return next
 }
+/**
+ * A pond link carries its day (owner decision: `/pond/` links carry `?day=`), so a shared pond is the one the sender
+ * saw: the page's own `?day=` when it has one, else today's local date. Other links pass through.
+ */
+export function withPondDay(url: string, pond: boolean): string {
+  if (!pond) return url
+  const u = new URL(url, location.href), q = new URLSearchParams(location.search).get('day')
+  u.searchParams.set('day', q && /^\d{4}-\d{2}-\d{2}$/.test(q) ? q : localDay())
+  return u.toString()
+}
 /** Called after every on / off switch. Returns the unsubscribe. */
 export function onPondMemory(cb: () => void): () => void { listeners.add(cb); return () => { listeners.delete(cb) } }

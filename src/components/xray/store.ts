@@ -51,7 +51,7 @@ export function toast(text: string) {
 }
 
 // ── U2 card actions: the card strip (eager) hands them to the lazy command layer; queued until it listens ──
-export type CardAction = 'how' | 'remix' | 'link' | 'png'
+export type CardAction = 'how' | 'remix' | 'link' | 'png' | 'open'
 export interface CardActionArgs { key: string; preset: WidgetPreset; data: Record<string, number>; layers: (ctx: WidgetContext) => Layer[]; grid: GridConfig; style: DotStyle; theme: ThemeTokens; animated: boolean }
 type CardActionFn = (action: CardAction, a: CardActionArgs) => void
 let actionFn: CardActionFn | null = null, queued: Parameters<CardActionFn> | null = null

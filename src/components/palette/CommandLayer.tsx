@@ -20,6 +20,7 @@ import { Sheet } from '../Sheet'
 import { SkinList } from '../skins/SkinList'
 import { onTiltChange, requestTilt, setTiltOn, tiltOn, tiltState } from '../../site/light'
 import { withTheme } from '../../site/theme/share'
+import { onPondMemory, pondMemoryOn, setPondMemory, withPondDay } from '../../site/pondMemory'
 import { ThemeControls } from '../theme/ThemePicker'
 
 // the panels load on first use: first-load JS stays inside the site budget
@@ -76,15 +77,26 @@ function TiltButton({ onClose }: { onClose: () => void }) {
 }
 
 /**
+ * POND MEMORY (X1 #5, opt-in): the ageing pond keeps a ~60-byte record of your visits in this browser. Off by default;
+ * nothing is stored until it is turned on, and turning it off deletes the record. Shown on the pond board.
+ */
+function PondMemoryButton({ onClose }: { onClose: () => void }) {
+  const [on, setOn] = useState(pondMemoryOn)
+  useEffect(() => onPondMemory(() => setOn(pondMemoryOn())), [])
+  const click = () => { setPondMemory(!on); toast(on ? 'pond memory off: the record is deleted' : 'pond memory on: your koi age with your visits'); onClose() }
+  return <button type="button" className="tool-pond" aria-pressed={on} onClick={click}><b>POND MEMORY</b><span>{on ? 'Your pond ages with your visits' : 'Off: nothing is stored'}</span></button>
+}
+
+/**
  * Phones: the dock's tools, then THEME (the header popover's controls: scheme, the accents as 44 px swatches, the
  * share-link opt-in) and DISPLAY, as one bottom sheet opened from the tab bar's TOOLS. A tool closes the sheet; a
  * theme pick keeps it open (the wipe spreads from the tapped swatch, over the sheet too), so several can be tried.
  */
-function ToolsSheet({ api, xray, frozen, onClose, onPalette, onShell }: { api: CommandApi; xray: boolean; frozen: boolean; onClose: () => void; onPalette: () => void; onShell: () => void }) {
+function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { api: CommandApi; xray: boolean; frozen: boolean; pond: boolean; onClose: () => void; onPalette: () => void; onShell: () => void }) {
   // each tool closes the sheet so its effect is in view; the toggles show their state when it reopens
   const run = (f: () => void) => () => { onClose(); f() }
   const share = () => {
-    const url = withTheme(location.href)
+    const url = withPondDay(withTheme(location.href), pond)
     if (navigator.share) navigator.share({ title: document.title, url }).catch(() => {})
     else api.copyLink()
   }
@@ -94,6 +106,7 @@ function ToolsSheet({ api, xray, frozen, onClose, onPalette, onShell }: { api: C
       <button type="button" aria-pressed={xray} onClick={run(() => toggleGlobal())}><b>X-RAY</b><span>See how every card is built</span></button>
       <button type="button" aria-pressed={frozen} onClick={run(() => (frozen ? resume() : api.freeze()))}><b>TIME</b><span>Freeze and scrub the clock</span></button>
       <TiltButton onClose={onClose} />
+      {pond && <PondMemoryButton onClose={onClose} />}
       <button type="button" className="tool-share" onClick={run(share)}><b>SHARE</b><span>This page's link</span></button>
       {/* the shell is a typed terminal: offered where there is a keyboard */}
       <button type="button" className="tool-shell" onClick={run(onShell)}><b>SHELL</b><span>Type field commands</span></button>
@@ -170,7 +183,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     copyLink(cardId) {
       const { tab: t, board: b } = view.current
       // a card's own page (canonical /widget/<slug>/, docs/SHARE-PLAN.md §3), or this view's canonical link (a CODE program keeps its ?p=)
-      const url = withTheme(location.origin + (cardId ? widgetPath(cardId) : urlForView({ ...placeView(placeFromName(t) ?? 'EXPLORE'), board: b }, location.search, location.pathname)))
+      const url = withPondDay(withTheme(location.origin + (cardId ? widgetPath(cardId) : urlForView({ ...placeView(placeFromName(t) ?? 'EXPLORE'), board: b }, location.search, location.pathname))), cardId ? cardId.startsWith('pond-') : b === 'pond' && t === 'EXPLORE')
       const done = () => toast('link copied')
       if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(done, () => toast(url))
       else toast(url)
@@ -204,6 +217,13 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       return isXRay(s, key) && s.active === key ? toggleCard(key) : setXR({ on: s.global ? s.on : new Set(s.on).add(key), active: key })
     }
     if (action === 'link') return api.copyLink(preset.id)
+    if (action === 'open') {
+      // the widget page, in place: App's popstate handler swaps to it (a view transition where there is one)
+      if (location.pathname === widgetPath(preset.id)) return
+      const q = new URLSearchParams(location.search); q.delete('card')
+      history.pushState(null, '', widgetPath(preset.id) + (q.size ? `?${q}` : ''))
+      return void dispatchEvent(new PopStateEvent('popstate'))
+    }
     if (action === 'remix') return void import('../xray/remix').then(m => (m.cardIR(preset, data) ? api.remix(preset.id, data) : api.studio(preset.id)))
     void Promise.all([import('../../export/source'), import('../../export/still')]).then(([{ layerSource }, { stillPNG }]) => stillPNG(layerSource(layers, grid, style, theme, data), animated ? boardTime() : 0))
       .then(blob => {
@@ -281,7 +301,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       <button onClick={() => setPalette(true)} data-tip="Command palette" data-kbd="⌘K" aria-label="Command palette" aria-keyshortcuts="Meta+K Control+K">⌘K</button>
       <button onClick={() => setShell(true)} data-tip="Dot shell" data-kbd="`" aria-label="Dot shell" aria-keyshortcuts="`">&gt;_</button>
     </div>)}
-    {tools && <ToolsSheet api={api} xray={anyXray} frozen={frozen} onClose={() => setTools(false)} onPalette={() => setPalette(true)} onShell={() => setShell(true)} />}
+    {tools && <ToolsSheet api={api} xray={anyXray} frozen={frozen} pond={tab === 'EXPLORE' && board === 'pond'} onClose={() => setTools(false)} onPalette={() => setPalette(true)} onShell={() => setShell(true)} />}
     {fpsHud && <FpsHud />}
     <div className="pal-toast" role="status" aria-live="polite">{note && <span key={note.id}>{note.text}</span>}</div>
     {palette && <Suspense fallback={null}><Palette api={api} hoveredCard={hovered} onClose={() => setPalette(false)} /></Suspense>}

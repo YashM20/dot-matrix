@@ -10,6 +10,7 @@ import type { MotionSetting } from './reducedMotion'
 import { ACCENTS, type AccentId } from '../../site/theme/names'
 import { getTheme } from '../../site/theme/theme'
 import { switchTheme } from '../../site/theme/moment'
+import { setPondMemory } from '../../site/pondMemory'
 
 /** The display skins, from the engine's list (so the palette, shell and header can't drift apart). */
 export const SKINS = SKIN_NAMES
@@ -85,6 +86,9 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   const SCHEME_WORDS = { system: 'auto os follow', light: 'paper day white', dark: 'night black' } as const
   for (const s of ['system', 'light', 'dark'] as const) act(`theme-${s}`, `Theme: ${s}${s === 'system' ? ' (follow the OS light / dark)' : ''}`, () => switchTheme({ scheme: s }), '', `theme scheme mode colour color ${SCHEME_WORDS[s]}`)
   for (const c of ACCENTS) act(`accent-${c}`, `Accent: ${c}`, () => switchTheme({ accent: c }), '', `accent theme colour color hue ${c}`)
+  // the ageing pond's memory (X1 #5): opt-in, a ~60-byte record of visits in this browser; off deletes it
+  act('pond-memory-on', 'Pond memory: on (your koi age with your visits)', () => setPondMemory(true), '', 'pond koi age ageing visits storage remember memory')
+  act('pond-memory-off', 'Pond memory: off (deletes the record)', () => setPondMemory(false), '', 'pond koi age ageing visits storage forget memory privacy')
   act('accent-next', 'Accent: next', () => switchTheme({ accent: ACCENTS[(ACCENTS.indexOf(getTheme().accent as AccentId) + 1) % ACCENTS.length] }), '', 'accent theme colour color hue next cycle')
   for (const p of PLACES) items.push({ id: `v:${p}`, group: 'View', text: isMode(p) ? `Go to MAKE · ${p}: ${MODE_LINES[p]}` : `Go to ${p}`, run: a => a.openTab(p), keywords: `${p.toLowerCase()} ${PLACE_WORDS[p]}`, boost: 30 })
   for (const m of boardManifest) {

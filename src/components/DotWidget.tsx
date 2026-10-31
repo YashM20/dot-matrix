@@ -25,7 +25,7 @@ function hintVerb(p: WidgetPreset, cs: Control[]) {
 }
 /** The same hint on touch, where a drag that has to go up or down starts with a hold (a vertical swipe scrolls the page). */
 const touchVerb = (verb: string, cs: Control[]) => (verb === 'DRAG' && cs.some(needsHold) ? 'HOLD · DRAG' : undefined)
-const ACTS: [CardAction, string, string][] = [['how', 'ⓘ', 'How it works'], ['remix', 'REMIX', 'Remix this card'], ['link', 'LINK', 'Copy a link to this card'], ['png', 'PNG', 'Download as PNG']]
+const ACTS: [CardAction, string, string][] = [['how', 'ⓘ', 'How it works'], ['remix', 'REMIX', 'Remix this card'], ['open', 'OPEN', 'Open this card on its own page'], ['link', 'LINK', 'Copy a link to this card'], ['png', 'PNG', 'Download as PNG']]
 
 export interface DotWidgetProps {
   /** Preset id from `widgetPresets` (ignored when `preset` is given). */

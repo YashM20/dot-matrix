@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { flushSync } from 'react-dom'
 import { Board, VIEW_EXIT_MS } from './components/Board'
 import { BoardPicker, NextBoard } from './components/BoardPicker'
 import { SkinSwitcher } from './components/skins/SkinSwitcher'
@@ -9,6 +10,7 @@ import { boardIds, boardLabel, liveBoards, prefetchBoard } from './widgets/manif
 import { widgetPath, type WidgetRoute } from './site/routes'
 import { onLayerWake, requestLayer } from './site/layer'
 import { setPageMeta, syncUrl } from './site/meta'
+import { cardTransition } from './site/viewTransition'
 import { GALLERY_BOARD, VIEWS, placeFromName, placeView, sameView, urlForView, viewFromUrl, type Mode, type View } from './site/views'
 import './App.css'
 import './site/mobile.css'
@@ -177,8 +179,16 @@ export default function App() {
     syncUrl(urlForView(want, location.search, location.pathname), !first.current && !sameView(urlView(mode), want))
     first.current = false
   }, [view, mode, board, widget])
+  // board ⇄ widget page (Back / Forward, a card's OPEN) as a view transition: the card's frame flies (X1, #18)
+  const shownWidget = useRef(widget)
+  useEffect(() => { shownWidget.current = widget })
   useEffect(() => {
-    const onPop = () => { const v = urlView(); setView(v.view); setBoard(v.board); setWidget(v.widget); if (v.view === 'MAKE') setMode(v.mode) }
+    const onPop = () => {
+      const v = urlView(), was = shownWidget.current
+      const apply = () => { setView(v.view); setBoard(v.board); setWidget(v.widget); if (v.view === 'MAKE') setMode(v.mode) }
+      const slug = !v.widget !== !was ? (v.widget ?? was)?.key : undefined
+      if (slug) cardTransition(slug, apply, flushSync, !v.widget); else apply()
+    }
     window.addEventListener('popstate', onPop)
     return () => window.removeEventListener('popstate', onPop)
   }, [])
@@ -197,8 +207,9 @@ export default function App() {
   }
   const leaveWidget = (id: string, slug?: string) => {
     history.pushState(null, '', urlForView({ view: 'EXPLORE', mode, board: id }, location.search, location.pathname))
-    setWidget(undefined); setView('EXPLORE'); setBoard(id)
-    if (!slug) return
+    const apply = () => { setWidget(undefined); setView('EXPLORE'); setBoard(id) }
+    if (!slug) return apply()
+    cardTransition(slug, apply, flushSync, true)
     const t0 = performance.now(), find = () => {
       const el = document.querySelector<HTMLElement>(`.board-view [data-card-id="${CSS.escape(slug)}"]`)
       if (el) el.scrollIntoView({ block: 'center' }); else if (performance.now() - t0 < 3000) window.setTimeout(find, 80)

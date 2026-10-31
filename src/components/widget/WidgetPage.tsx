@@ -22,6 +22,9 @@ import { boardTime, cardAction, toast, useXR } from '../xray/store'
 import { getSkin } from '../skins/store'
 import { getTheme, themeTokens } from '../../site/theme/theme'
 import { withTheme } from '../../site/theme/share'
+import { withPondDay } from '../../site/pondMemory'
+import type { Source } from '../../data/source'
+import { pick, useLiveData } from '../../data/useLiveData'
 import { cardScheme } from '../../site/theme/polarity'
 import { DotWidget } from '../DotWidget'
 import { Pill, PillBar, PillButton } from './PillBar'
@@ -35,7 +38,9 @@ export interface WidgetPageProps {
   onBoard: (board: string, slug?: string) => void
 }
 
-type Loaded = { w: ResolvedWidget; preset: WidgetPreset; items: WidgetPreset[]; meta: WidgetMeta }
+type Loaded = { w: ResolvedWidget; preset: WidgetPreset; items: WidgetPreset[]; meta: WidgetMeta; sources?: readonly Source[] }
+/** Board sources a widget page subscribes to as well (X1): the pond's day (`?day=`, the opt-in age) and the light hub. */
+const PAGE_SOURCES = new Set(['pond-day', 'light'])
 type State = { status: 'loading' } | { status: 'missing' } | ({ status: 'ok' } & Loaded)
 
 const said: Record<Outcome, string> = { copied: 'copied', downloaded: 'saved (copy isn’t available here)', shared: 'shared', cancelled: '', failed: 'failed' }
@@ -52,7 +57,8 @@ export function WidgetPage({ route, onOpen, onBoard }: WidgetPageProps) {
       const items = b.items.filter((p, i) => b.items.findIndex(q => q.id === p.id) === i), preset = items.find(p => p.id === w.slug)
       if (!preset) return setResult({ slug: w.slug, state: { status: 'missing' } })
       const meta = deriveWidgetMeta(preset, { uid: w.uid, board: w.board }, dot480)
-      setResult({ slug: w.slug, state: { status: 'ok', w, preset, items, meta } })
+      const sources = b.sources?.filter(s => PAGE_SOURCES.has(s.id))
+      setResult({ slug: w.slug, state: { status: 'ok', w, preset, items, meta, sources: sources?.length ? sources : undefined } })
       // the address bar shows the canonical slug URL (uid, old slug and ?card= forms are normalised in place)
       const want = canonicalWidgetUrl(w, location.search) + location.hash
       if (want !== location.pathname + location.search + location.hash) history.replaceState(history.state, '', want)
@@ -70,7 +76,8 @@ export function WidgetPage({ route, onOpen, onBoard }: WidgetPageProps) {
   return <Loaded key={state.w.slug} {...state} onOpen={onOpen} onBoard={onBoard} />
 }
 
-function Loaded({ w, preset, items, meta, onOpen, onBoard }: Loaded & Omit<WidgetPageProps, 'route'>) {
+function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & Omit<WidgetPageProps, 'route'>) {
+  const live = useLiveData(sources), pond = w.board === 'pond'
   const stage = useRef<HTMLElement>(null)
   const [more, setMore] = useState(false)
   const xray = useXR(s => s.global || s.on.size > 0)
@@ -98,11 +105,11 @@ function Loaded({ w, preset, items, meta, onOpen, onBoard }: Loaded & Omit<Widge
     svg: () => void copySVG(svg(), `${w.slug}.svg`).then(report('SVG')),
     html: () => void copyText(cardHTML(svg(), { name, slug: w.slug, url })).then(report('HTML')),
     // the share-link opt-in (THEME popover) adds the visitor's ?theme=
-    link: () => { const u = withTheme(url); void copyText(u).then(o => toast(o === 'copied' ? 'link copied' : u)) },
-    short: () => { const u = withTheme(short); void copyText(u).then(o => toast(o === 'copied' ? `short link copied: ${shortPath(w.uid)}` : u)) },
+    link: () => { const u = withPondDay(withTheme(url), pond); void copyText(u).then(o => toast(o === 'copied' ? 'link copied' : u)) },
+    short: () => { const u = withPondDay(withTheme(short), pond); void copyText(u).then(o => toast(o === 'copied' ? `short link copied: ${shortPath(w.uid)}` : u)) },
     savePNG: () => void png().then(b => { download(b, `${w.slug}.png`); toast(`${w.slug}.png saved`) }, () => toast('PNG failed')),
     saveSVG: () => { download(new Blob([svg()], { type: 'image/svg+xml' }), `${w.slug}.svg`); toast(`${w.slug}.svg saved`) },
-    share: () => { const p = sharePNG.current ?? png(); sharePNG.current = undefined; void shareCard({ title: `${name} · DOT/480`, url: withTheme(url), png: p, file: `${w.slug}.png` }).then(report('card')) },
+    share: () => { const p = sharePNG.current ?? png(); sharePNG.current = undefined; void shareCard({ title: `${name} · DOT/480`, url: withPondDay(withTheme(url), pond), png: p, file: `${w.slug}.png` }).then(report('card')) },
     remix: () => cardAction('remix', actionArgs()),
     xray: () => cardAction('how', actionArgs()),
   }
@@ -151,7 +158,7 @@ function Loaded({ w, preset, items, meta, onOpen, onBoard }: Loaded & Omit<Widge
     </PillBar>
     <div className="wp-main">
       <figure className="wp-stage" ref={stage} style={{ maxWidth: preset.grid.cols * pitch + 32 }}>
-        <DotWidget type={preset.id} preset={preset} density={pitch} />
+        <DotWidget type={preset.id} preset={preset} density={pitch} data={sources ? pick(live, preset.defaults) : undefined} />
         {/* the figure legend (docs/LAYOUT-THEME-PLAN.md §1c #14) */}
         <figcaption className="fig-cap"><b>FIG {String(i + 1).padStart(2, '0')}</b>{w.slug} · {meta.grid.cols} × {meta.grid.rows} dots · {meta.grid.pitch} px · {meta.renderer.toUpperCase()}</figcaption>
       </figure>

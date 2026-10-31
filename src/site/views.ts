@@ -60,6 +60,7 @@ export function urlForView(v: Pick<ViewState, 'view' | 'mode' | 'board'>, search
   for (const k of ['tab', 'board', 'make', 'about', 'card']) q.delete(k)
   if (v.view !== 'MAKE' || v.mode !== 'CODE') q.delete('p')
   if (v.view !== 'MAKE') q.delete('d') // a frame / document link (`?make&d=`, the editor's E5) is MAKE's alone
+  if (v.view !== 'EXPLORE' || v.board !== 'pond') q.delete('day') // the pond's day (X1), the pond's alone
   // the editor's default way in (TUNE) is plain `?make`
   const head = v.view === 'ABOUT' ? 'about' : v.view === 'MAKE' ? (v.mode === 'TUNE' ? 'make' : `make=${v.mode.toLowerCase()}`) : ''
   const query = [head, q.toString()].filter(Boolean).join('&')
