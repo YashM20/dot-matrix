@@ -69,6 +69,7 @@ function Code({ lang, text }: { lang: string; text: string }) {
 }
 
 const KIND: Record<VisualKind, string> = { card: 'CARD', diagram: 'DIAGRAM', steps: 'STEPS', interactive: 'INTERACTIVE' }
+const showDrafts = typeof location !== 'undefined' && new URLSearchParams(location.search).has('drafts')
 /**
  * A figure the post asks for that has no drawing yet: its kind, what it shows and its caption.
  * TODO(later): draw the real figures for the `diagram`, `steps` and `interactive` notes (figure components like
@@ -93,9 +94,10 @@ function BlockView({ b }: { b: Block }) {
     case 'list': return <List b={b} />
     case 'code': return <Code lang={b.lang} text={b.text} />
     case 'math': return <p className="post-math" role="math" aria-label={b.tex}><Maths src={b.tex} /></p>
+    // undrawn diagrams stay hidden from visitors until their figure exists (TODO(later) above); `?drafts` shows them
     case 'visual': return b.kind === 'card'
       ? <Figure id={b.what} body={cardBody(b.what)} minHeight={300} caption={sentence(b.notice)} />
-      : <Placeholder {...b} />
+      : showDrafts ? <Placeholder {...b} /> : null
     case 'h': {
       const Tag = b.level === 3 ? 'h3' : 'h4'
       return <Tag id={b.id} className={`post-h post-h--${b.level}`}><Spans c={inline(b.text)} /></Tag>
