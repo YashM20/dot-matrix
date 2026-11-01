@@ -52,18 +52,11 @@ import { c10Checks } from './c10'
 import { shareChecks } from './widgets/checks'
 import { algorithmsChecks } from './algorithms'
 import { noiseChecks } from './noise'
+import { checker } from './lib/check'
 import { masks, ditherEdge, revealDots, transitionDots, criticalSpring, underdampedSpring, DataSprings, decodeText, splitFlapText, splitFlapCells, cubicBezier, ease } from '../src/engine/motion'
 
-let failures = 0, timingMisses = 0
-// Timing budgets (a check named with "≤ N ms" or "budget") report but don't fail unless DOT_TIMING=strict: functionality
-// gates every run, frame budgets are enforced at a later checkpoint (docs/CHECKPOINTS.md, #75).
-const strictTiming = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env.DOT_TIMING === 'strict'
-const isTiming = (name: string) => /≤\s*[\d.]+\s*ms|\bbudget\b/i.test(name)
-function assert(name: string, cond: boolean, detail = '') {
-  if (cond) console.log(`✓ ${name}${detail ? ` — ${detail}` : ''}`)
-  else if (!strictTiming && isTiming(name)) { console.warn(`⚠ ${name} (timing, not enforced)${detail ? ` — ${detail}` : ''}`); timingMisses++ }
-  else { console.error(`✗ ${name}${detail ? ` — ${detail}` : ''}`); failures++ }
-}
+// timing checks warn unless DOT_TIMING=strict (scripts/lib/check.ts, docs/CHECKPOINTS.md, #75)
+const { assert, done } = checker()
 const close = (a: number, b: number, eps = 1e-3) => Math.abs(a - b) < eps
 
 // 1) quantize
@@ -972,6 +965,4 @@ shareChecks(assert)
   squaresChecks(assert)
 }
 
-if (timingMisses) console.warn(`\n${timingMisses} timing budget(s) over (not enforced; DOT_TIMING=strict enforces them)`)
-if (failures) { console.error(`\n${failures} check(s) failed`); (globalThis as { process?: { exit(code: number): void } }).process?.exit(1) }
-else console.log('\nAll acceptance checks passed')
+done('All acceptance checks passed')

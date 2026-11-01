@@ -28,14 +28,14 @@ One checkpoint at a time. A checkpoint is a GitHub milestone with a fixed list o
 
 **At most 3 agents at once.** The box has 2 cores and one heavy lock, and more agents only queue: round 3 saw 5–8 jobs waiting 30–60 min each.
 
-**Frame budgets wait (owner, 2026-11-01): functionality first.** `pnpm verify` reports timing checks (`≤ N ms` and `budget`) as warnings. Only `DOT_TIMING=strict` enforces them, and they come back at a later checkpoint. Workshop speed work in progress is on branch `perf/workshop-cold-frames` (#27).
+**Frame budgets wait (owner, 2026-11-01): functionality first.** `pnpm verify` and every area script (`npx tsx scripts/<area>.ts`) report timing checks (`≤ N ms` and `budget`) as warnings. Only `DOT_TIMING=strict` enforces them, and they come back at a later checkpoint. The rule lives in one place, `scripts/lib/check.ts`. Workshop speed work in progress is on branch `perf/workshop-cold-frames` (#27).
 
 **Two test tiers:**
 
 | Tier | When | What |
 |---|---|---|
-| Quick (agents) | while building | `npx tsc -b`, `npx oxlint <changed>`, the area script with timing off (`--quick` where it exists), `pnpm golden --check`, and size only if first-load imports changed. **No** browser probes, screenshots or timing runs. |
-| Gate (coordinator) | once per checkpoint, idle machine, no agents running | the full suite (`dmdocs/full3.sh`): timing budgets, every browser probe, size, theme, CSS and goldens, then CI. Screenshots are taken once here. |
+| Quick (agents) | while building | `npx tsc -b`, `npx oxlint <changed>`, the area script (timing only warns by default; `--quick` where it exists), `pnpm golden --check`, and size only if first-load imports changed. **No** browser probes, screenshots or timing runs. |
+| Gate (coordinator) | once per checkpoint, idle machine, no agents running | the full suite (`dmdocs/full3.sh`, `DOT_TIMING=strict` once budgets are back): timing budgets, every browser probe, size, theme, CSS and goldens, then CI. Screenshots are taken once here. |
 
 **Shared and lean:**
 - One shared base build per checkpoint for size deltas (`dmdocs/base-cpN/`). Agents compare against it instead of building their own.
