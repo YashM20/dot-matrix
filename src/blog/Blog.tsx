@@ -23,7 +23,7 @@ function SiteNav({ here }: { here?: 'blog' }) {
   )
 }
 const Foot = () => (
-  <footer className="essay-foot">DOT/480 · BLOG · <span>FIELD → GRID SAMPLER → RENDERER</span><span><a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></footer>
+  <footer className="essay-foot"><span>DOT/480 · BLOG</span><span>FIELD → GRID SAMPLER → RENDERER</span><span><a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></footer>
 )
 
 /** The post's meta line: where it sits in the blog, who it is for and how long it takes. */
