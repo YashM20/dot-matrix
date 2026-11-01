@@ -2,13 +2,14 @@
  * SVG for dot lists that hold joined cells (`shapeExt.svg`, Q-squares §2.4.2): `renderSVG` (svgRenderer.ts) with
  * joined defs. Each `<use>` is its own element, so abutting cells would conflate into a hairline: joined sides bleed
  * δ = min(.12·P, .5) px past the cell edge, and a group holding joined cells fades with group `opacity`, so the
- * overlap never blends twice. Rect cells (squares Q2) get one def per (shape, size, aspect to .001). Plain dots and
- * groups come out exactly as `renderSVG` writes them.
+ * overlap never blends twice. Rect cells (squares Q2) get one def per (shape, size, aspect to .001), rotated and motif
+ * cells (squares Q3) one per (shape, size, rotation, motif). Plain dots and groups come out exactly as `renderSVG` writes them.
  */
 import { circlePath, squarePath, squirclePath } from '../renderer/shapePath'
 import type { DotInstance, JointGeom } from '../types'
 import { joinOutline, rectOutline, type OutlineSink } from './geometry'
 import { squircleExponent } from '../renderer/shapePath'
+import { formOutline, MOTIFS, shapeExponent } from './form'
 
 const n3 = (x: number) => String(Math.round(x * 1000) / 1000)
 class PathString implements OutlineSink {
@@ -26,6 +27,12 @@ export const svgBleed = (g: JointGeom): number => (g.seam > 0 ? 0 : Math.min(.24
 export function svgJoin(s: number, mask: number, g: JointGeom, hs = s): string {
   const p = new PathString()
   joinOutline(p, 0, 0, s, g, mask, svgBleed(g), true, hs)
+  return p.d
+}
+/** Path data of a rotated or motif cell (squares Q3) centred at the origin. */
+function svgForm(d: DotInstance, s: number): string {
+  const p = new PathString()
+  formOutline(p, 0, 0, s, shapeExponent(d.shape, d.roundness), !!d.rot, d.motif ? MOTIFS.indexOf(d.motif as never) : 0)
   return p.d
 }
 /** Path data of a plain rect cell centred at the origin. */
@@ -51,12 +58,13 @@ export function svgDots(dots: DotInstance[], width: number, height: number): str
   for (const d of dots) {
     if (!(d.r > 0) || !(d.opacity > 0)) continue
     const r = q(d.r), g = d.join !== undefined ? d.joint : undefined, a = d.aspect === undefined ? 1 : Math.round(d.aspect * 1000) / 1000, hs = r * a
-    const shapeKey = g ? `j|${d.join}|${r}|${a}|${q(g.hx)}|${q(g.hy)}|${q(g.ro)}|${q(g.ri)}|${q(g.seam)}` : `${d.shape}|${d.shape === 'squircle' ? d.roundness ?? 0 : ''}|${r}${a === 1 ? '' : `|${a}`}`
+    const form = !g && a === 1 && (d.rot || d.motif) ? `|${d.rot ? 1 : 0}|${d.motif ?? ''}` : ''
+    const shapeKey = g ? `j|${d.join}|${r}|${a}|${q(g.hx)}|${q(g.hy)}|${q(g.ro)}|${q(g.ri)}|${q(g.seam)}` : `${d.shape}|${d.shape === 'squircle' ? d.roundness ?? 0 : ''}|${r}${a === 1 ? '' : `|${a}`}${form}`
     let id = shapes.get(shapeKey)
     if (!id) {
       id = prefix + shapes.size.toString(36)
       shapes.set(shapeKey, id)
-      const path = g ? svgJoin(r, d.join!, g, hs) : a !== 1 ? svgRect(d, r, hs) : d.shape === 'square' ? squarePath(0, 0, r) : d.shape === 'squircle' ? squirclePath(0, 0, r, d.roundness) : circlePath(0, 0, r)
+      const path = g ? svgJoin(r, d.join!, g, hs) : a !== 1 ? svgRect(d, r, hs) : form ? svgForm(d, r) : d.shape === 'square' ? squarePath(0, 0, r) : d.shape === 'squircle' ? squirclePath(0, 0, r, d.roundness) : circlePath(0, 0, r)
       defs += `<path id="${id}" d="${round2(path)}"/>`
     }
     const opacity = Math.round(Math.min(1, d.opacity) * 1000) / 1000, key = `${d.color}|${opacity}`

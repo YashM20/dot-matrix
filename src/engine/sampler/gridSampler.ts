@@ -69,10 +69,11 @@ function emit(out: Sink, value: number, tone: number, x: number, y: number, seed
   // same arithmetic as `applyJitter`, without the tuple
   if (style.jitter) { const amount = style.jitter * scale, random = mulberry32(seed); jx = x + (random() - .5) * amount; jy = y + (random() - .5) * amount }
   let r = (style.sizeMin + (style.sizeMax - style.sizeMin) * eased) * scale, aspect = 1
-  const opacity = style.opacityMode === 'constant' || axis ? 1 : value, sq = style.gap !== undefined && (form === NO_FORM ? out.square : form >= 4)
-  // {grid.gap}: a square-like dot keeps gap·P of grout to its neighbour (form ≥ 4 ⇔ n ≥ 8)
+  const opacity = style.opacityMode === 'constant' || axis ? 1 : value, f = form & 15, sq = style.gap !== undefined && (f === NO_FORM ? out.square : f >= 4)
+  // {grid.gap}: a square-like dot keeps gap·P of grout to its neighbour (roundness step ≥ 4 ⇔ n ≥ 8)
   if (sq) r = Math.min(r, (1 - style.gap!) * scale * out.pitch / 2)
-  if (ky && samplerExt.rect) [r, aspect] = samplerExt.rect(r, scale, ky, axis, sq ? style.gap! : 0, out.pitch)
+  // rect cells, and form dots (a shapeOf dot keeps the style's ink): the squares hook
+  if ((ky || form !== NO_FORM) && samplerExt.rect) [r, aspect] = samplerExt.rect(r, scale, ky, axis, sq ? style.gap! : 0, out.pitch, form, out)
   // squares channels (only once `installSquares()` has run): the join / form / aspect hooks write them
   const ext = join !== NO_JOIN || form !== NO_FORM || aspect !== 1
   if (out.buf) {
@@ -253,17 +254,18 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
     const u = x / Math.max(1, grid.cols - 1), v = y / Math.max(1, grid.rows - 1), value = safe(layer.field(u, v))
     if (shown(value, style) <= 0) continue
     const key = siteKey(x, y), prev = sites.get(key)
-    if (!prev || value >= prev.value) sites.set(key, { x, y, k: factor(layer.size ?? (layer.lattice as number)), value, tone: layer.toneOf ? layer.toneOf(value, u, v) : layer.tone, form: layer.shapeOf && samplerExt.form ? samplerExt.form(layer, value, u, v) : NO_FORM })
+    if (!prev || value >= prev.value) sites.set(key, { x, y, k: factor(layer.size ?? (layer.lattice as number)), value, tone: layer.toneOf ? layer.toneOf(value, u, v) : layer.tone, form: samplerExt.form ? samplerExt.form(layer, value, u, v) : NO_FORM })
   }
-  // the card cells a site dot hides follow its drawn shape (cover.ts): n from the style, or the site's own `shapeOf` form
+  // the card cells a site dot hides follow its drawn shape (cover.ts): n from the style, or the site's own `shapeOf` form;
+  // a diamond (rotation π/4, form bit 4) reaches √2 further along the axes
   let seed = 2e6
   const n = coverExponent(style.shape, style.cornerRoundness)
   for (const { x, y, k, value, tone, form } of sites.values()) {
     emit(dots, value, toneIndex(tone, value), (x + .5) * pitch, (y + .5) * pitch, seed++, style, k, NO_JOIN, form)
-    const reach = k / 2 + .25, nf = form === NO_FORM ? n : coverExponent('squircle', form / 8)
-    for (let r = Math.max(0, Math.ceil(y - reach)); r <= Math.min(grid.rows - 1, Math.floor(y + reach)); r++)
-      for (let c = Math.max(0, Math.ceil(x - reach)); c <= Math.min(grid.cols - 1, Math.floor(x + reach)); c++)
-        if (hides(c - x, r - y, reach, nf)) covered![r * grid.cols + c] = 1
+    const reach = k / 2 + .25, f = form & 15, nf = f === NO_FORM ? n : coverExponent('squircle', f / 8), rot = (form & 16) * Math.PI / 64, box = rot ? reach * Math.SQRT2 : reach
+    for (let r = Math.max(0, Math.ceil(y - box)); r <= Math.min(grid.rows - 1, Math.floor(y + box)); r++)
+      for (let c = Math.max(0, Math.ceil(x - box)); c <= Math.min(grid.cols - 1, Math.floor(x + box)); c++)
+        if (hides(c - x, r - y, reach, nf, rot)) covered![r * grid.cols + c] = 1
   }
   const { best, owner } = composite(base, grid), background = style.opacityMode === 'constant', us = centres(grid.cols), vs = centres(grid.rows)
   const J = joinPass(dots, base, best, owner, [0, 0, grid.cols - 1, grid.rows - 1], us, vs, covered, style, pitch / 2, 0, 0)
@@ -276,9 +278,9 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
   }
 }
 
-/** The join pass for one composite (`samplerExt.join`, installed by src/engine/squares), or null: no join layer, or not installed. */
+/** The join / form pass for one composite (`samplerExt.join`, installed by src/engine/squares), or null: no join or form layer, or not installed. */
 function joinPass(out: Sink, layers: Layer[], best: Float32Array, owner: Uint32Array, win: [number, number, number, number], us: Float64Array, vs: Float64Array,
   covered: Uint8Array | null, style: DotStyle, h: number, ox: number, oy: number, hy = h): JoinFrame | null {
   const pass = samplerExt.join
-  return pass && layers.some(l => l.join || l.shapeOf) ? pass({ layers, best, owner, win, us, vs, covered, style, h, hy, ox, oy, joints: jointsOf(out) }) : null
+  return pass && layers.some(l => l.join || l.shapeOf || l.rotation || l.motif) ? pass({ layers, best, owner, win, us, vs, covered, style, h, hy, ox, oy, joints: jointsOf(out) }) : null
 }

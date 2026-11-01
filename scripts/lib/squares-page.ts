@@ -9,7 +9,7 @@ import { renderCanvasBuffer } from '../../src/engine/renderer/canvasBuffer'
 import { renderSVG } from '../../src/engine/renderer/svgRenderer'
 import { renderWebGL, sharedDotGL } from '../../src/engine/renderer/webgl/dotgl'
 import { squircleExponent } from '../../src/engine/renderer/shapePath'
-import { insideJoined, insideRect, installSquares } from '../../src/engine/squares'
+import { insideForm, insideJoined, insideRect, installSquares, MOTIFS } from '../../src/engine/squares'
 import { shapeExt } from '../../src/engine/renderer/ext'
 shapeExt.glLoad = () => import('../../src/engine/squares/gl').then(m => { shapeExt.gl = m.glJoin })
 import { dot480 } from '../../src/engine/theme/tokens'
@@ -58,12 +58,13 @@ function reference(dots: DotInstance[], w: number, h: number, scale: number, n: 
     let cov = groups.get(key)
     if (!cov) groups.set(key, (cov = new Float32Array(W * H)))
     const cx = d.x * scale, cy = d.y * scale, s = d.r * scale, hs = s * (d.aspect ?? 1), g = d.joint && d.join !== undefined ? { ...d.joint, hx: d.joint.hx * scale, hy: d.joint.hy * scale, ri: d.joint.ri * scale, seam: d.joint.seam * scale } : null
-    const reach = (g ? Math.max(g.hx, g.hy, s, hs) : Math.max(s, hs)) + 1, e = d.shape === 'square' ? Infinity : d.shape === 'squircle' ? squircleExponent(d.roundness ?? 0) : n, rect = d.aspect !== undefined
+    const form = !g && (d.aspect ?? 1) === 1 && (d.rot || d.motif), rect = !form && d.aspect !== undefined, mo = d.motif ? MOTIFS.indexOf(d.motif as never) : 0
+    const reach = (g ? Math.max(g.hx, g.hy, s, hs) : Math.max(s, hs) * (d.rot ? Math.SQRT2 : 1)) + 1, e = d.shape === 'square' ? Infinity : d.shape === 'squircle' ? squircleExponent(d.roundness ?? 0) : n
     for (let y = Math.max(0, Math.floor(cy - reach)); y < Math.min(H, Math.ceil(cy + reach)); y++) for (let x = Math.max(0, Math.floor(cx - reach)); x < Math.min(W, Math.ceil(cx + reach)); x++) {
       let hit = 0
       for (let sy = 0; sy < 4; sy++) for (let sx = 0; sx < 4; sx++) {
         const px = x + (sx + .5) / 4, py = y + (sy + .5) / 4
-        if (g ? insideJoined(px, py, cx, cy, s, g, d.join!, hs) : rect ? insideRect(px, py, cx, cy, s, hs, e) : e === Infinity ? Math.max(Math.abs(px - cx), Math.abs(py - cy)) <= s : (Math.abs(px - cx) / s) ** e + (Math.abs(py - cy) / s) ** e <= 1) hit++
+        if (g ? insideJoined(px, py, cx, cy, s, g, d.join!, hs) : rect ? insideRect(px, py, cx, cy, s, hs, e) : form ? insideForm(px, py, cx, cy, s, e, !!d.rot, mo) : e === Infinity ? Math.max(Math.abs(px - cx), Math.abs(py - cy)) <= s : (Math.abs(px - cx) / s) ** e + (Math.abs(py - cy) / s) ** e <= 1) hit++
       }
       cov[y * W + x] += hit / 16
     }
@@ -179,6 +180,31 @@ async function lines(scale: number) {
   return out
 }
 
+/**
+ * Diamond and motif parity (Q3.1, Q3.6): a grid of form dots, every exponent (square, n 32, 9.5, 4, circle) × rotation
+ * (0, π/4) × motif (none, bead, stud, stitch), r 7 px at opacity 1 and .6, drawn by Canvas, WebGL, SVG and the CPU
+ * reference; each compared with Canvas. `set`: 'diamond' (no motif) or 'motif' (every motif).
+ */
+async function forms(set: 'diamond' | 'motif', scale: number) {
+  const shapes: Pick<DotInstance, 'shape' | 'roundness'>[] = [{ shape: 'square' }, { shape: 'squircle', roundness: 1 }, { shape: 'squircle', roundness: .5 }, { shape: 'squircle', roundness: .26 }, { shape: 'circle' }]
+  const motifs = set === 'diamond' ? [undefined] : ['bead', 'stud', 'stitch'], dots: DotInstance[] = []
+  let i = 0
+  for (const sh of shapes) for (const rot of [0, Math.PI / 4]) for (const motif of motifs) for (const opacity of [1, .6]) {
+    const x = 12 + (i % 8) * 22, y = 12 + Math.floor(i / 8) * 22
+    // (a form dot carries aspect 1, as the sampler stamps it: the renderers route it to the squares hooks)
+    dots.push({ x, y, r: 7, opacity, color: opacity === 1 ? theme.dotIdle : theme.dotActive, ...sh, ...(rot ? { rot } : {}), ...(motif ? { motif } : {}), ...(rot || motif ? { aspect: 1 } : {}) })
+    i++
+  }
+  const w = 8 * 22 + 2, h = Math.ceil(i / 8) * 22 + 2, A = surface(w, h, scale), G = surface(w, h, scale)
+  renderCanvas(A.ctx, dots); const gl = renderWebGL(G.ctx, dots, [], theme)
+  const S = await svgImage(dots, w, h, scale), R = toSurface(reference(dots, w, h, scale, 2)), a = grab(A), out: Record<string, unknown> = { set, dots: dots.length, gl, canvas: A.c.toDataURL('image/png') }
+  for (const [name, s] of [['webgl', G], ['svg', S], ['cpu', R]] as const) {
+    const d = diffPng(a, grab(s))
+    out[name] = { mean: d.mean, over16: d.over16, psnr: d.psnr, max: d.max, png: s.c.toDataURL('image/png'), diff: d.png }
+  }
+  return out
+}
+
 function info() {
   const gl = sharedDotGL()
   if (!gl?.gl) return { webgl2: false }
@@ -186,4 +212,4 @@ function info() {
   return { webgl2: true, renderer: ext ? gl.gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.gl.getParameter(gl.gl.RENDERER) }
 }
 
-;(window as unknown as { SQ: unknown }).SQ = { info, loadGL, card, cracks, lines }
+;(window as unknown as { SQ: unknown }).SQ = { info, loadGL, card, cracks, lines, forms }

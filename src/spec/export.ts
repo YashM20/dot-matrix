@@ -85,6 +85,7 @@ function placed(l: Layer): Pick<RasterLayerSpec, 'tone' | 'lattice' | 'origin' |
 /** Why a layer cannot travel in a spec at all (not even baked), or undefined: per-cell functions the sampler calls. */
 function unportable(l: Layer): string | undefined {
   if (l.shapeOf) return 'shapeOf is a per-cell function and cannot be carried by a spec'
+  if (l.rotation !== undefined || l.motif) return 'rotation and motif (squares Q3) cannot be carried by a spec yet'
   if (l.join && l.join !== true && typeof l.join.group === 'function' && !l.sites) return 'a join group function cannot be carried by a spec (a spec join group is a number)'
 }
 

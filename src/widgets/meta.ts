@@ -332,4 +332,11 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'sq-gameboy': ['A four-shade LCD in spaced squares: the time, the date and a walker over a parallax strip.', 'squares lcd clock pixel animated'],
   'sq-teletext': ['A teletext page in square cells: sextant block graphics that fuse where they touch, a separated weather map, the clock’s seconds in red.', 'squares teletext sextant mosaic clock animated'],
   'sq-lines': ['A portrait as a 36-line screen on rect cells, each line one stroke whose weight is the tone, over a solid-bar spectrum.', 'squares lines halftone portrait bars animated'],
+  'sq-schotter': ['Nees’ Schotter in 264 squares: order at the top, rubble below, each square turned to one of its two angles; a Molnár ring study beside it.', 'squares schotter generative rotation animated'],
+  'sq-blocks': ['Voronoi measured in squares: under L∞ and L1 the regions become joined blocks, a drifting Mondrian whose newest block is red.', 'squares voronoi chebyshev manhattan join animated'],
+  'sq-sort': ['A portrait pixel-sorted row by row, its mid-tones melting into joined streaks, with block-glitch bursts every four seconds.', 'squares pixel sort glitch portrait animated'],
+  'sq-truchet': ['Multi-scale Truchet tiles at three sizes, the colour flipping each level, placed breadth first until one figure emerges.', 'squares truchet tiles pattern animated'],
+  'sq-stitch': ['A cross-stitch sampler: the alphabet in X stitches inside a wave-function-collapse border, sewn one stitch at a time.', 'squares cross stitch motif sampler wfc animated'],
+  'sq-beads': ['One bird sprite as ironed Perler beads and as LEGO studs, the split between the two toys sweeping across.', 'squares perler lego beads motif pixel animated'],
+  'sq-morph': ['The LCD clock morphing from dots to squares of the same ink, then fusing into solid shapes, and back.', 'squares morph shape clock animated'],
 }

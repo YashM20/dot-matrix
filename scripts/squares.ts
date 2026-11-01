@@ -14,15 +14,23 @@ import { renderCanvasBuffer } from '../src/engine/renderer/canvasBuffer'
 import { renderSVG } from '../src/engine/renderer/svgRenderer'
 import { coverExponent, squareLike } from '../src/engine/sampler/cover'
 import { dot480 } from '../src/engine/theme/tokens'
-import type { DotInstance, DotStyle, Field, JointGeom, Layer, Tone } from '../src/engine/types'
+import type { DotInstance, DotStyle, Field, JoinSpec, JointGeom, Layer, Tone } from '../src/engine/types'
 import {
   ALL_FULL, CONVEX, EDGE_H, EDGE_V, FULL, INNER, LUT4, installSquares, insideJoined, insideRect, inkRadius, joinArea, joinOutline,
   joinPass, maskOf, quadrant, rectOutline, uninstallSquares, type OutlineSink,
 } from '../src/engine/squares'
 import { tetris, GARBAGE, EMPTY, ROTATIONS } from '../src/engine/squares/tetris'
+import { BEAD, STITCH, STUD, drawnArea, formArea, formOutline, inkOf as formInk, insideForm, shapeExponent, snapRot } from '../src/engine/squares/form'
+import { squareMorph } from '../src/engine/squares/morph'
+import { blockDistance, blockVoronoi } from '../src/engine/algo/linfVoronoi'
+import { schotter } from '../src/engine/algo/schotter'
+import { pixelSortData } from '../src/engine/algo/pixelSort'
+import { blockGlitch, glitchBlocks } from '../src/engine/algo/glitch'
+import { motifAt, truchetInk, truchetTiles } from '../src/engine/algo/truchet'
+import { dotKey, legacyKey } from './lib/goldenKey'
 import { detLint } from './lib/detLint'
 import { boards, widgetById, withChrome, type WidgetPreset } from '../src/widgets'
-import { squareStyle, squaresBoard, squaresSources as Q } from '../src/widgets/boards/squares'
+import { morphStyle, squareStyle, squaresBoard, squaresSources as Q } from '../src/widgets/boards/squares'
 import { handleSample } from '../src/workers/protocol'
 import { renderCardFull, sampleCard, uniquePresets } from './lib/cards'
 import { freezeWallClock } from './lib/freeze'
@@ -38,7 +46,7 @@ function loadFactor(): number {
 }
 /** Deterministic PRNG for the fuzzers (mulberry32). */
 const rng = (seed: number) => () => { seed = (seed + 0x6D2B79F5) | 0; let t = Math.imul(seed ^ (seed >>> 15), 1 | seed); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296 }
-const key = (d: DotInstance) => `${d.x},${d.y},${d.r},${d.opacity},${d.color},${d.shape},${d.roundness},${d.join},${d.joint ? JSON.stringify(d.joint) : ''},${d.aspect}`
+const key = (d: DotInstance) => `${d.x},${d.y},${d.r},${d.opacity},${d.color},${d.shape},${d.roundness},${d.join},${d.joint ? JSON.stringify(d.joint) : ''},${d.aspect},${d.rot},${d.motif}`
 const lumaOf = (c: string) => { const m = /^#([0-9a-f]{6})$/i.exec(c); if (!m) return .5; const v = [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16) / 255); return .2126 * v[0] + .7152 * v[1] + .0722 * v[2] }
 /** Ink of a card: mean luma above the card surface over the snap raster (px 1, dot480; joined cells through `insideJoined`). */
 function inkOf(p: WidgetPreset, t = 0): number {
@@ -80,6 +88,8 @@ class Recorder implements OutlineSink {
   }
 }
 
+/** Cards with no join layer at all (spaced squares, rotated sites, motifs). */
+const UNJOINED = new Set(['sq-gameboy', 'sq-schotter', 'sq-stitch', 'sq-beads'])
 export function squaresChecks(assert: Assert): void {
   installSquares()
   const load = loadFactor()
@@ -183,9 +193,9 @@ export function squaresChecks(assert: Assert): void {
       // float32 rounding of the buffer: compare through Math.fround
       const fa = a.map(d => key({ ...d, x: Math.fround(d.x), y: Math.fround(d.y), r: Math.fround(d.r), opacity: Math.fround(d.opacity), aspect: d.aspect === undefined ? undefined : Math.fround(d.aspect) })).sort(), fb = b.map(key).sort()
       const ok = fa.length === fb.length && fa.every((k, i) => k === fb[i]), joined = a.filter(d => d.join !== undefined).length
-      same &&= ok && (joined > 0 || p.id === 'sq-gameboy'); detail += `${p.id}@${t} ${a.length}/${joined}j${ok ? '' : ' ≠'}  `
+      same &&= ok && (joined > 0 || UNJOINED.has(p.id)); detail += `${p.id}@${t} ${a.length}/${joined}j${ok ? '' : ' ≠'}  `
     }
-    assert('squares: buffer = array (toDots(sampleLayersInto) ≡ sampleLayers incl. join and joint, the 4 cards at t = 0, 1.3; the buffer grows from 64)', same, detail)
+    assert('squares: buffer = array (toDots(sampleLayersInto) ≡ sampleLayers incl. join, joint, aspect, rot and motif, every squares card at t = 0, 1.3; the buffer grows from 64)', same, detail)
     const p = squaresBoard[0], req = { kind: 'sample' as const, card: 1, seq: 1, preset: p.id, t: 1.3, frame: 0, data: {}, grid: p.grid, style: p.style, theme: dot480 }
     const r1 = handleSample(req)
     const r2 = r1.kind === 'frame' ? handleSample({ ...req, seq: 2, bytes: r1.bytes, capacity: r1.capacity, ext: r1.ext }) : r1
@@ -214,8 +224,9 @@ export function squaresChecks(assert: Assert): void {
     const one: Layer = { field: () => 1 }, gs = sampleLayers([one], { cols: 2, rows: 1, pitch: 2.25 }, style, dot480)[0], gr = sampleLayers([one], { cols: 2, rows: 1, pitch: 2.25 }, { ...round, gap: .16 }, dot480)[0]
     assert('squares: {grid.gap} clamps square-like dots to (1 − gap)·P/2 and leaves round dots alone', Math.abs(gs.r - .84 * 1.125) < 1e-9 && gr.r === 1.125 && squareLike(coverExponent('square')) && !squareLike(coverExponent('squircle', .1)))
     // every join layer on the board draws on a square-like style
-    const bad = squaresBoard.filter(p => withChrome(p)({ t: 0, data: {} }).some(l => l.join) && !squareLike(coverExponent(p.style.shape, p.style.cornerRoundness)))
-    assert('squares: join styles (every join layer sits on a square-like style, the Chebyshev branch of `hides`)', !bad.length, bad.map(p => p.id).join())
+    // (a join layer may sit on a round style when its `shapeOf` makes its joined cells square: the morph's passed cells)
+    const bad = squaresBoard.filter(p => [0, 4, 9].some(t => withChrome(p)({ t, data: {} }).some(l => l.join && !(l.shapeOf && l.shapeOf(1, .5, .5)! >= .5))) && !squareLike(coverExponent(p.style.shape, p.style.cornerRoundness)))
+    assert('squares: join styles (every join layer sits on a square-like style, the Chebyshev branch of `hides`, or squares its cells with shapeOf)', !bad.length, bad.map(p => p.id).join())
   }
 
   // ── Q1.5 / Q1.6 Canvas and SVG ─────────────────────────────────────────────────────────────────────
@@ -341,6 +352,132 @@ export function squaresChecks(assert: Assert): void {
     assert('squares: line continuity (sq-lines: every equal-row neighbour pair of a line is joined, across levels)', breaks === 0 && ln.length > 1000, `${ln.length} line cells, ${breaks} breaks`)
   }
 
+  // ── Q3 rotation, motifs, equal ink, morphs, the field pack ─────────────────────────────────────────
+  {
+    // Q3.1 rotation: any angle snaps to 0 or π/4 (radians, never a flag value); a rotated dot keys ,θ0.785
+    const angles = Array.from({ length: 721 }, (_, i) => (i - 360) * Math.PI / 97)
+    const snapped = new Set(angles.map(snapRot))
+    const want = (a: number) => (Math.round(a / (Math.PI / 4)) & 1 ? Math.PI / 4 : 0)
+    assert('squares: rot snap (any θ → 0 or π/4 in radians, by the nearest multiple of π/4; NaN → 0)', snapped.size === 2 && snapped.has(0) && snapped.has(Math.PI / 4) && angles.every(a => snapRot(a) === want(a)) && snapRot(NaN) === 0 && snapRot(Math.PI / 2) === 0 && snapRot(-3 * Math.PI / 4) === Math.PI / 4)
+    const rl = (rotation?: Layer['rotation'], motif?: Layer['motif']): Layer => ({ field: () => 1, tone: 'idle', ...(rotation !== undefined ? { rotation } : {}), ...(motif ? { motif } : {}) })
+    const one = (l: Layer) => sampleLayers([l], { cols: 1, rows: 1, pitch: 2.25 }, style, dot480)[0]
+    const turned = one(rl(1)), flat = one(rl(0)), fn = one(rl(() => 3 * Math.PI / 4))
+    assert('squares: rot key (a rotated dot keys `,θ0.785`; an unrotated one adds no suffix)', turned.rot === Math.PI / 4 && fn.rot === Math.PI / 4 && flat.rot === undefined && dotKey(turned, style).endsWith(',θ0.785') && dotKey(flat, style) === legacyKey(flat),
+      dotKey(turned, style))
+    // rotated and motif dots never join; motif keys ,m<name>; buffer = array for both
+    const jl: Layer[] = [{ field: () => 1, join: true, rotation: Math.PI / 4, tone: 'idle' }]
+    const jd = sampleLayers(jl, grid, style, dot480), md = one(rl(undefined, 'stud'))
+    assert('squares: rotated and motif dots never join', jd.length === 24 * 24 && jd.every(d => d.join === undefined && d.rot === Math.PI / 4) && md.join === undefined && md.motif === 'stud' && dotKey(md, style).endsWith(',mstud'))
+    const mixed: Layer[] = [
+      { field: u => (u < .5 ? 1 : 0), rotation: (_, u, v) => (u + v) * 4, motif: 'bead', tone: 'idle' },
+      { field: u => (u >= .5 ? .75 : 0), motif: 'stitch', shapeOf: v => v, tone: 'mid' },
+      { field: () => 1, sites: [[3.5, 3.5], [9, 9], [15.25, 15.75]], size: 4, rotation: Math.PI / 4, motif: 'stud', tone: 'value' },
+    ]
+    const a = sampleLayers(mixed, grid, style, dot480), b = toDots(sampleLayersInto(mixed, grid, style, dot480, createDotBuffer(16)))
+    const fa = a.map(d => key({ ...d, x: Math.fround(d.x), y: Math.fround(d.y), r: Math.fround(d.r), opacity: Math.fround(d.opacity) })).sort(), fb = b.map(key).sort()
+    assert('squares: form buffer = array (rotation and motif survive the form channel and toDots)', fa.length === fb.length && fa.every((k, i) => k === fb[i]) && a.some(d => d.rot) && a.some(d => d.motif === 'stitch') && a.some(d => d.motif === 'stud'), `${a.length} dots`)
+    // a diamond site clears the card cells under it through hides(…, π/4), and the ones under its tips
+    const bg: Layer = { field: () => .5, tone: 'mid' }, site: Layer = { field: () => 1, sites: [[11.5, 11.5]], size: 4, rotation: Math.PI / 4, tone: 'value' }
+    const ds = sampleLayers([bg, site], grid, style, dot480), left = (dx: number, dy: number) => ds.some(d => d.r < 1.2 && Math.abs(d.x / 2.25 - .5 - 11.5 - dx) < .01 && Math.abs(d.y / 2.25 - .5 - 11.5 - dy) < .01)
+    assert('squares: rotated site cover (a π/4 site hides the card cells inside its diamond, tips included, and keeps the corners)', !left(.5, .5) && !left(2.5, .5) && !left(.5, -2.5) && left(2.5, 2.5) && ds.some(d => d.rot === Math.PI / 4),
+      `${ds.length} dots`)
+
+    // Q3.6 form outlines vs the CPU reference, and motif ink vs the analytic area
+    class FormRec extends Recorder { bezierCurveTo(ax: number, ay: number, bx: number, by: number, x: number, y: number) { flatten(this, ax, ay, bx, by, x, y) } }
+    let worst = 0, worstAt = '', inkErr = 0, inkAt = ''
+    for (const n of [Infinity, 32, 9.5, 4, 2]) for (const rot45 of [false, true]) for (const motif of [0, BEAD, STUD, STITCH]) {
+      const s = 7, rec = new FormRec()
+      formOutline(rec, 0, 0, s, n, rot45, motif)
+      let diff = 0, hits = 0
+      for (let y = 0; y < 24; y++) for (let x = 0; x < 24; x++) { const px = -12 + x + .37, py = -12 + y + .41; if (insideForm(px, py, 0, 0, s, n, rot45, motif) !== rec.inside(px, py)) diff++ }
+      if (diff / 576 > worst) { worst = diff / 576; worstAt = `n ${n} rot ${rot45} motif ${motif}` }
+      // the analytic area at s = 12, 16 samples per px
+      if (motif || n === Infinity) {
+        const S = 12
+        for (let y = 0; y < 576; y++) for (let x = 0; x < 576; x++) if (insideForm(-18 + (x + .5) / 16, -18 + (y + .5) / 16, 0, 0, S, n, rot45, motif)) hits++
+        const e = Math.abs(hits / 256 - formArea(S, n, motif)) / formArea(S, n, motif)
+        if (e > inkErr) { inkErr = e; inkAt = `n ${n} rot ${rot45} motif ${motif}` }
+      }
+    }
+    assert('squares: form outline = reference (5 exponents × 2 rotations × 4 motifs, a recording sink vs insideForm: ≤ 1% of pixels differ)', worst <= .01, `worst ${(worst * 100).toFixed(2)}% ${worstAt}`)
+    assert('squares: motif ink (bead, stud and stitch ink = the analytic area within 1%, rotated or not)', inkErr <= .01, `max err ${(inkErr * 100).toFixed(2)}% ${inkAt}`)
+    // equal ink: a shapeOf dot holds the frame style's ink (drawn area × r² constant across the 9 steps)
+    const ref = Math.PI
+    const steps = Array.from({ length: 9 }, (_, i) => { const r = formInk(1, i, 'circle', undefined); return r * r * drawnArea(2 + 30 * (i / 8) ** 2) })
+    assert('squares: equal ink (a shapeOf dot keeps the style dot\'s ink: A(n)·r² within 0.1% over the 9 roundness steps; 15 = untouched)', steps.every(x => Math.abs(x / ref - 1) < .001) && formInk(1.5, 15, 'square', undefined) === 1.5, steps.map(x => (x / ref).toFixed(4)).join(' '))
+
+    // Q3.7 morph: ink holds across k (no join), the ends equal the dot card and the joined card
+    const lcd: Layer = { field: (u, v) => ((Math.round(u * 23) * 7 + Math.round(v * 23) * 3) % 5 === 0 ? 1 : .25), lattice: 2, toneOf: x => (x > .5 ? 'idle' : 'faint') }
+    const g48 = { cols: 48, rows: 48, pitch: 2.25 }, rows = latticeGrid(g48, 2).rows
+    const inkAtK = (k: number) => { let s = 0; for (const d of sampleLayers(squareMorph([lcd], k, { width: .3, rows }), g48, morphStyle, dot480)) s += formArea(d.r, shapeExponent(d.shape, d.roundness), 0) * d.opacity * lumaOf(d.color); return s }
+    const ink0 = inkAtK(0), inks = Array.from({ length: 11 }, (_, i) => inkAtK(i / 10) / ink0)
+    assert('squares: morph ink (card ink within ±3% across k ∈ [0, 1], dots → squares, before the join)', inks.every(x => Math.abs(x - 1) <= .03), inks.map(x => x.toFixed(3)).join(' '))
+    const J: JoinSpec = { at: .5, outer: 0 }, ks = (ls: Layer[]) => sampleLayers(ls, g48, morphStyle, dot480).map(key).sort().join()
+    const end0 = ks(squareMorph([lcd], 0, { width: .3, join: J, rows })) === ks([lcd])
+    const end1 = ks(squareMorph([lcd], 1, { width: .3, join: J, rows })) === ks([{ ...lcd, shapeOf: () => 1, join: J }])
+    assert('squares: morph ends (k = 0 samples as the dot layers; k = 1 as the same layers squared and joined)', end0 && end1, `k=0 ${end0}, k=1 ${end1}`)
+
+    // Q3.2 linf edges: the bisector normal (gradient of d1 − d2) is axis-aligned or diagonal (L∞ and L1)
+    let off = 0, total = 0
+    for (const metric of ['linf', 'l1'] as const) {
+      const vo = blockVoronoi({ seed: 3, n: 9, metric, w: 64, h: 48, t: 2.3, drift: 2 }), S = vo.seeds
+      const dist = (x: number, y: number, i: number) => blockDistance(x - S[2 * i], y - S[2 * i + 1], metric)
+      const rand = rng(17)
+      for (let k = 0; k < 400; k++) {
+        const x = 1 + rand() * 62, y = 1 + rand() * 46, ord = Array.from({ length: 9 }, (_, i) => i).sort((p, q) => dist(x, y, p) - dist(x, y, q) || p - q), i = ord[0], j = ord[1]
+        // bisect towards seed j onto the i | j boundary
+        let ax = x, ay = y, bx = S[2 * j], by = S[2 * j + 1]
+        for (let it = 0; it < 50; it++) { const mx = (ax + bx) / 2, my = (ay + by) / 2; if (dist(mx, my, i) <= dist(mx, my, j)) { ax = mx; ay = my } else { bx = mx; by = my } }
+        const h = 1e-4, f = (px: number, py: number) => dist(px, py, i) - dist(px, py, j), gx = f(ax + h, ay) - f(ax - h, ay), gy = f(ax, ay + h) - f(ax, ay - h)
+        if (Math.abs(gx) < 1e-9 && Math.abs(gy) < 1e-9) continue
+        total++
+        if (!(Math.abs(gx) < 1e-6 || Math.abs(gy) < 1e-6 || Math.abs(Math.abs(gx) - Math.abs(gy)) < 1e-6)) off++
+      }
+    }
+    assert('squares: linf edges (L∞ and L1 Voronoi: every edge runs along an axis or at 45°; ≤ 2% of probes sit on a vertex)', total > 600 && off / total <= .02, `${off}/${total} off-angle`)
+    const v1 = blockVoronoi({ seed: 5, n: 14, w: 48, h: 40, t: 3.1, drift: 3 }), v2 = blockVoronoi({ seed: 5, n: 14, w: 48, h: 40, t: 3.1, drift: 3 })
+    assert('squares: block voronoi determinism (same seed and t: bit-equal regions)', v1.id.every((x, i) => x === v2.id[i]) && v1.area.reduce((s, x) => s + x, 0) === 48 * 40)
+
+    // Q3.3 schotter: determinism, and disorder grows by row (offsets ≤ d / 2 on quarter cells, turns only when d > 0)
+    const s1 = schotter({ seed: 7, k: .8 }), s2 = schotter({ seed: 7, k: .8 }), s3 = schotter({ seed: 7, k: .4 })
+    const sameS = s1.length === 264 && s1.every((q, i) => q.x === s2[i].x && q.y === s2[i].y && q.rot === s2[i].rot)
+    let mono = true, quarter = true
+    for (let r = 1; r < 22; r++) mono &&= s1[r * 12].d >= s1[(r - 1) * 12].d
+    for (const q of s1) {
+      const dx = q.x - q.col - .5, dy = q.y - q.row - .5
+      quarter &&= Math.abs(dx * 4 - Math.round(dx * 4)) < 1e-9 && Math.abs(dy * 4 - Math.round(dy * 4)) < 1e-9 && Math.abs(dx) <= q.d / 2 + .125 && Math.abs(dy) <= q.d / 2 + .125 && (q.d > 0 || (q.rot === 0 && dx === 0 && dy === 0))
+    }
+    const turns = (s: typeof s1) => s.filter(q => q.rot).length
+    assert('squares: schotter determinism and order (bit-equal; disorder monotone by row; offsets on quarter cells within d / 2; more k, more turns)', sameS && mono && quarter && turns(s1) >= turns(s3) && s1.slice(0, 12).every(q => q.rot === 0), `${turns(s1)} turned at k .8, ${turns(s3)} at .4`)
+
+    // Q3.4 pixel sort: runs sorted, values kept as a multiset, ties in index order
+    const rand = rng(29), W = 40, H = 12, data = Float32Array.from({ length: W * H }, () => Math.round(rand() * 8) / 8), src = Float32Array.from(data)
+    const runs = pixelSortData(data, W, H, { lo: .25, hi: .75 })
+    let sortedOk = true
+    for (const r of runs) for (let i = 1; i < r.length; i++) sortedOk &&= data[r.line * W + r.start + i - 1] <= data[r.line * W + r.start + i]
+    const multiset = [...src].sort().join() === [...data].sort().join(), outside = [...src].every((v, i) => (v >= .25 && v <= .75) || data[i] === v)
+    // stability: sort by a key that only sees the integer part, so ties must keep the fractional order they came in
+    const tie = Float64Array.from([.31, .52, .33, .54, .35]), tied = Float64Array.from(tie)
+    pixelSortData(tied, 5, 1, { lo: 0, hi: 1, key: v => (v > .5 ? 1 : 0) })
+    assert('squares: sort stable (runs sorted, the multiset of values kept, cells outside every run untouched, equal keys keep their order)', sortedOk && multiset && outside && runs.length > 10 && [...tied].join() === '0.31,0.33,0.35,0.52,0.54', `${runs.length} runs`)
+    const gl1 = glitchBlocks({ seed: 5, step: 3, blocks: 6, maxShift: 9, cols: 68, rows: 67 }), gl2 = glitchBlocks({ seed: 5, step: 3, blocks: 6, maxShift: 9, cols: 68, rows: 67 })
+    const f0: Field = (u, v) => u * v
+    assert('squares: block glitch (deterministic per step; step < 0 is the identity; shifts are whole cells)', JSON.stringify(gl1) === JSON.stringify(gl2) && blockGlitch(f0, { seed: 5, step: -1, blocks: 6, maxShift: 9, cols: 68, rows: 67 }) === f0 && gl1.every(b => Number.isInteger(b.shift) && b.shift !== 0))
+
+    // Q3.5 truchet: the inversion flips per level (a tile's ink is its motif XOR odd level), placement is breadth first
+    const ts = truchetTiles({ seed: 6, cols: 3, rows: 2, size: 24, split: [.85, .5] })
+    let parity = 0, bfs = true
+    for (let i = 1; i < ts.length; i++) bfs &&= ts[i].level >= ts[i - 1].level
+    for (const t of ts) {
+      if (t.child >= 0) continue
+      const px = t.x + t.size * .5 + .25, py = t.y + t.size * .25 + .25, on = truchetInk(ts, 3, 2, px, py)
+      if ((on === 1) !== (motifAt(t.kind, (px - t.x) / t.size, (py - t.y) / t.size) !== ((t.level & 1) === 1))) parity++
+    }
+    assert('squares: truchet levels (ink = motif XOR odd level on every leaf; tiles placed level by level; three levels present)', parity === 0 && bfs && new Set(ts.map(t => t.level)).size === 3, `${ts.length} tiles, ${parity} parity errors`)
+    const det = detLint(['src/engine/algo/linfVoronoi', 'src/engine/algo/schotter', 'src/engine/algo/pixelSort', 'src/engine/algo/glitch', 'src/engine/algo/truchet', 'src/engine/squares/form', 'src/engine/squares/morph'])
+    assert('det: no engine-specific Math in the Q3 field pack, form and morph (registered with the determinism lint)', !det.violations.length && det.scanned.length >= 7, det.violations.map(v => `${v.file}:${v.line} ${v.rule}`).join('; ') || `${det.scanned.length} files`)
+  }
+
   // ── Q1.9–Q1.11 the board ───────────────────────────────────────────────────────────────────────────
   {
     // Tetris sim
@@ -372,7 +509,7 @@ export function squaresChecks(assert: Assert): void {
 
     // the cards
     const lit = squaresBoard.map(p => { const d = sampleCard(p, 0); return [p.id, d.filter(x => x.opacity > 0).length, d.filter(x => x.join !== undefined).length] as const })
-    assert('squares: t=0 picture (every card is a finished picture at t = 0; the three join cards join)', lit.every(([id, n, j]) => n > 500 && (id === 'sq-gameboy' || j > 10)), lit.map(([id, n, j]) => `${id} ${n}/${j}j`).join(', '))
+    assert('squares: t=0 picture (every card is a finished picture at t = 0; the join cards join)', lit.every(([id, n, j]) => n > 500 && (UNJOINED.has(id) || j > 10)), lit.map(([id, n, j]) => `${id} ${n}/${j}j`).join(', '))
     // (under a frozen wall clock: the LCD and teletext headers read the time)
     const RealNow = Date
     freezeWallClock()
@@ -388,8 +525,9 @@ export function squaresChecks(assert: Assert): void {
     assert('squares: blob accent (≤ 1 joined red component per frame over t ∈ 0:20:0.5)', worstComp <= 1 && withNeck > 0, `max ${worstComp}, neck in ${withNeck}/41 frames`)
     // accents: one red element per card frame (the falling piece, the newest split's 4 quads, the neck, the colon)
     // (teletext: the red is the header's two seconds digits: every red dot sits in that 2-character box)
-    const PITCH: Record<string, number> = { 'sq-tetris': 6, 'sq-quads': 2, 'sq-blob': 3, 'sq-gameboy': 2, 'sq-teletext': 1, 'sq-lines': 1 }
-    const ALLOW: Record<string, number> = { 'sq-gameboy': 2 }
+    const PITCH: Record<string, number> = { 'sq-tetris': 6, 'sq-quads': 2, 'sq-blob': 3, 'sq-gameboy': 2, 'sq-teletext': 1, 'sq-lines': 1, 'sq-schotter': 5, 'sq-blocks': 3, 'sq-sort': 2, 'sq-truchet': 2, 'sq-stitch': 3, 'sq-beads': 6, 'sq-morph': 2 }
+    // the truchet's live tile is one tile whose motif may cut its ink into up to 6 pieces (arcs, stubs, inverted corners)
+    const ALLOW: Record<string, number> = { 'sq-gameboy': 2, 'sq-truchet': 6 }
     const reds = squaresBoard.map(p => [p.id, [0, 1.3, 5.7].map(t => { const r = sampleCard(p, t).filter(x => x.color === dot480.dotActive); return p.id === 'sq-teletext' ? (r.length && r.every(d => d.x > 132 * 2.25 && d.y < 9 * 2.25) ? 1 : 99) : components(r, PITCH[p.id] * 2.25) })] as const)
     assert('squares: one accent per card (the red is one live element: ≤ 1 connected piece; 2 for the LCD colon dots; the teletext seconds digits)', reds.every(([id, n]) => n.every(x => x <= (ALLOW[id] ?? 1))), reds.map(([id, n]) => `${id} ${n.join('/')}`).join(', '))
     // ink: ≤ 1.15 × the median of the liked reference cards (level-03, afterlight, mosaic, components)

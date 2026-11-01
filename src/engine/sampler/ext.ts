@@ -22,15 +22,20 @@ export interface JoinFrame { join: Uint16Array; tone: Uint8Array; form: Uint8Arr
  * aspect (squares Q2) is computed by the core and dropped (a plain dot of half side rx) until they are.
  */
 export const samplerExt: {
-  /** Join / form pass for one composite that has join or shapeOf layers: keys → masks, and per-dot form codes. */
+  /** Join / form pass for one composite that has join, shapeOf, rotation or motif layers: keys → masks, and per-dot form codes. */
   join?: (a: JoinArgs) => JoinFrame
-  /** Form code of a `shapeOf` site dot: its roundness step 0–8, or 15 (the frame style). */
+  /**
+   * Form code of a site dot: bits 0–3 its `shapeOf` roundness step 0–8 (15 = the frame style), bit 4 a π/4
+   * rotation (`Layer.rotation`, squares Q3), bits 5–7 the motif (1 bead, 2 stud, 3 stitch). 15 = a plain dot.
+   */
   form?: (layer: Layer, value: number, u: number, v: number) => number
   /**
    * A rect cell's half width and aspect (squares Q2): `r` = the dot's ramp radius on kx (gap-clamped), `ky` the y
-   * factor, `axis` a bar / line ('x' / 'y' keep the other side full), `gap` the clamp applied (0 = none), `pitch` card px.
+   * factor (0 = a square cell), `axis` a bar / line ('x' / 'y' keep the other side full), `gap` the clamp applied
+   * (0 = none), `pitch` card px. Also called for a form dot (squares Q3, `form` ≠ 15): a `shapeOf` roundness step keeps
+   * the frame style's ink (`style`: its shape and roundness).
    */
-  rect?: (r: number, kx: number, ky: number, axis: 'x' | 'y' | undefined, gap: number, pitch: number) => [number, number]
+  rect?: (r: number, kx: number, ky: number, axis: 'x' | 'y' | undefined, gap: number, pitch: number, form: number, style: { shape: DotStyle['shape']; roundness: number | undefined }) => [number, number]
   /** Stamp a packed join / form code and a rect cell's aspect (ry / rx, 1 = none) onto an array-path dot (`joints`: the frame's joint table). */
   stamp?: (d: DotInstance, join: number, form: number, joints: JointGeom[] | null, aspect: number) => void
   /** Write a buffer dot's packed join / form code and aspect (allocating `ext` on first use). */

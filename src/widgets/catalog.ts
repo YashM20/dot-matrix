@@ -203,4 +203,11 @@ export const catalog: readonly CatalogRow[] = [
   ['sq-gameboy', 'nddv8c83', 'squares'],
   ['sq-teletext', 'chdwwa80', 'squares'],
   ['sq-lines', 'a3b7yp0r', 'squares'],
+  ['sq-schotter', '8pn5n2jr', 'squares'],
+  ['sq-blocks', 'j4m11a1r', 'squares'],
+  ['sq-sort', 'sfsr5e3y', 'squares'],
+  ['sq-truchet', 'vn98qyw8', 'squares'],
+  ['sq-stitch', 'v2dr7g4m', 'squares'],
+  ['sq-beads', 'c5pv0ygb', 'squares'],
+  ['sq-morph', '4kgr5vej', 'squares'],
 ]
