@@ -3,7 +3,19 @@
 All notable engineering changes to Dot/480 are recorded here, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://dot-matrix1.vercel.app, deployed from `main`), not a published package: there are no tagged or npm releases, so entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
 
-## [Unreleased] — 2026-10-30 · L3 pond polish (round 3, `feat/round3`)
+## 0.13 · 2026-11-01 · PR #78 (`feat/round3`), round 3: workshop, glass and water, squares Q2 and Q3, pond L3 and X1, editor E5 and E6
+Merged to `main` as `8a1a6fb` (PR #78). Plans and status: `docs/PROGRESS.md`, `docs/CHECKPOINTS.md` (CP1), `docs/living-matter/`, `docs/EDITOR-PLAN.md`.
+### Added
+- **Workshop board (M3)** (`/workshop/`): nine materials (knit, denim, paper, wood, leather, sand, ice, mercury, thread) and one light resolver for tilt on both material boards. Goldens: 9 added.
+- **Glass and water (M2)**: `mat-lens` (the board's GPU layer), `mat-pool`, `mat-window`, `mat-patch`, `mat-rust`, `mat-candle`; `glass.ts` and `caustics.ts` in `src/engine/matter/`. Goldens: 6 added.
+- **Squares Q2 and Q3**: rect cells, teletext sextants, line screens, `lcd` and `grout` skins, the square field pack, `Layer.rotation`, `Layer.motif`, equal-ink morphs. Goldens: 9 added.
+- **Pond X1**: `pond-marble`, the daily and ageing pond (`?day=`, opt-in POND MEMORY), board to widget View Transitions, the OPEN card action. Goldens: 1 added.
+- **Editor E5 and E6**: frame and document links, remix lineage, EXPORT · DEVICES and QUALITY; the long-press menu, snap cue, sheet detent memory, landscape side sheet, `visualViewport`, `navigator.share`.
+- `scripts/site/prose-lint.ts` and `docs/WRITING.md` (visitor prose, plain voice), `docs/CHECKPOINTS.md`, `docs/TIXY-PLAN.md`, `docs/IQ-PLAN.md`, `docs/TILT-CHECKLIST.md`.
+### Changed
+- `pnpm verify` reports timing budgets as warnings unless `DOT_TIMING=strict`. The X-ray probe applies the squares form hook. The essay got a plain-voice pass.
+
+### Pond L3 (part of 0.13)
 Plan: `docs/living-matter/L-pond.md` §L3; as built: `docs/LIFE.md` "L3".
 ### Added
 - **Pond depth:** koi hunger (sated koi ignore food), feeding bursts and gulps, circling back to a missed pellet; startle contagion (a cascade of at most 3 koi); day and night by the hour (render-only: the moon's reflection, dimmer whites, fireflies' stars, a thinner terrarium floor at night); salt on the slime and a lantern on the fireflies (holds).
