@@ -12,6 +12,7 @@ Which doc to read for what, and how current each one is (checked 2026-10-29, aft
 | [`../README.md`](../README.md) | What the site is, repo layout, scripts, deep links, writing a card |
 | [`../CHANGELOG.md`](../CHANGELOG.md) | Engineering history by date and PR. The visitor-facing notes are `src/changelog.ts` (LOG tab). |
 | [`PROGRESS.md`](PROGRESS.md) | **Source of truth** for what is done, in progress, skipped and next, plus the "Resume here" notes for the next session |
+| [`CHECKPOINTS.md`](CHECKPOINTS.md) | **How work moves**: one checkpoint (GitHub milestone `CPn`) at a time. Build, gate, publish to main, then a breather (clean up, docs, issues) before the next |
 | [`WEB-PLAN.md`](WEB-PLAN.md) | The active product plan: a personal website, with tracks C1–C10 |
 | [`UX-PLAN.md`](UX-PLAN.md) | The active UX plan: low floor, high ceiling. Phases U0–U6 plus the build log (§9). U0–U4 and the U5 DISPLAY slice are built and merged (PR #6); the rest of U5, and U6, are planned. |
 | [`SHARE-PLAN.md`](SHARE-PLAN.md) | S0–S1 and the S2 copy helpers built (2026-10-26) and merged (PR #7); the rest of S2, and S3–S5, planned: metadata, a slug and a short permanent id per widget, a page at `/widget/<slug or id>/`, copy as PNG / SVG / HTML, share and embed, iOS-style pill action bars, the shadcn registry. Phases S0–S5 and the open decisions. |

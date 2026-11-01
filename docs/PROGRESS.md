@@ -4,8 +4,17 @@
 > Update this file in the same commit as the work. Active plans: `docs/WEB-PLAN.md` (what the site does) and `docs/UX-PLAN.md` (how visitors find it); every doc and its status: `docs/README.md`. Original phase plan: `docs/MASTER-PLAN.md` (v2). Research: `docs/MOTION-INTERACTION-DEPTH.md`, `docs/ADVANCED-PLAN.md`. Taste: `docs/STYLE-BIBLE.md`.
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
-## Live run state: resume here (updated 2026-10-30)
+## Live run state: resume here (updated 2026-11-01)
 > The coordinator keeps this block current. Read it after any interruption or compaction, before doing anything else.
+>
+> **Process: [`docs/CHECKPOINTS.md`](CHECKPOINTS.md).** Work one checkpoint at a time: scope, build, gate, publish, breather, then pick the next.
+> - **Current: CP1** (`CP1 · 0.13 · Round 3 to main`). The remaining steps are:
+>   1. the workshop cold-frame fix;
+>   2. the full suite;
+>   3. the PR to main;
+>   4. release 0.13;
+>   5. the breather.
+> - **Start nothing outside CP1** until its breather is done and the owner picks CP2.
 
 **Shipped:** round 2 is on main and live.
 - **PR #10:** merge `2b4780e`, branch `feat/round2`.
