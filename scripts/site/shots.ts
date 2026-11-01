@@ -11,8 +11,9 @@
  *  --themes  `<scheme>_<accent>` names (src/site/theme/names.ts); default dark_signal,light_signal,dark_vite,light_cobalt;
  *            `all` = every scheme × accent (14)
  *  --pages   shot names to keep (pages and states alike, see SHOTS below), e.g. `--pages home,palette,tools`
- *  --sizes   1440 (1440×900 desktop) and/or 390 (390×844 phone, touch); every desktop shot is taken before any
- *            phone one (touch emulation leaves `pointer: coarse` behind)
+ *  --sizes   1440 (1440×900 desktop) and/or 390 (390×844 phone, touch); 844 (844×390, a phone in landscape,
+ *            touch) only when asked for; every desktop shot is taken before any phone one (touch emulation leaves
+ *            `pointer: coarse` behind)
  *  --no-build  reuse the current dist/ (else `vite build` runs first, OG postbuild skipped)
  *  --cards   l, m or s: the CARD SIZE (localStorage `dot480:cards`, src/site/cards.ts); files get a `-cards-<size>` suffix
  *
@@ -44,7 +45,8 @@ const cards = opt('--cards')
 if (cards !== undefined && !/^[lms]$/.test(cards)) { console.error(`--cards takes l, m or s, not ${cards}`); process.exit(2) }
 
 type Size = { id: string; W: number; H: number; phone: boolean }
-const SIZES: Size[] = [{ id: '1440', W: 1440, H: 900, phone: false }, { id: '390', W: 390, H: 844, phone: true }].filter(s => !sizeOnly || sizeOnly.includes(s.id))
+const SIZES: Size[] = [{ id: '1440', W: 1440, H: 900, phone: false }, { id: '390', W: 390, H: 844, phone: true }, { id: '844', W: 844, H: 390, phone: true }]
+  .filter(s => (sizeOnly ? sizeOnly.includes(s.id) : s.id !== '844'))
 
 // ── readiness ─────────────────────────────────────────────────────────────────────────────────────────
 const BOARD = `!!document.querySelector('.board-grid [data-card-id] canvas, .board-grid [data-card-id] svg') && !document.querySelector('.view-loading')`
@@ -58,7 +60,7 @@ interface Shot {
   ready: string
   /** full-page capture (pages) vs viewport (apps and states) */
   full?: boolean
-  sizes?: ('1440' | '390')[]
+  sizes?: ('1440' | '390' | '844')[]
   /** a fresh editor (autosave cleared) */
   editor?: boolean
   /** drive the page into the state; returns false when the state could not be reached */
@@ -84,6 +86,7 @@ const SHOTS: Shot[] = [
   { name: 'squares', path: 'squares/', ready: BOARD, full: true },
   { name: 'materials', path: 'materials/', ready: BOARD, full: true },
   { name: 'mosaic', path: 'mosaic/', ready: BOARD, full: true },
+  { name: 'workshop', path: 'workshop/', ready: BOARD, full: true },
   { name: 'about', path: '?about', ready: STATIC('.about-intro'), full: true },
   { name: 'make', path: '?make=tune', ready: EDITOR, editor: true },
   { name: 'widget-timer', path: 'widget/timer/', ready: `!document.querySelector('.wp[aria-busy], .view-loading') && !!document.querySelector('.wp canvas, .wp svg, [data-card-id] canvas, [data-card-id] svg')`, full: true },
@@ -94,9 +97,21 @@ const SHOTS: Shot[] = [
   // ── states
   {
     name: 'palette', path: '', ready: HOME,
-    act: async p => {
+    act: async (p, s) => {
+      if (s.phone) {
+        // touch: the topbar search opens the palette as a sheet that takes focus itself, so the list shows and
+        // the keyboard stays down until the field is tapped (Palette.tsx). Ready = that sheet, focused, with rows.
+        const sheet = `(() => { const pal = document.querySelector('.pal'); return !!pal && document.activeElement === pal && !!pal.querySelector('[role=option]:not([aria-disabled])') })()`
+        const ok = await openWith(p, '.topbar-search', sheet)
+        await sleep(800) // the sheet slides up
+        return ok
+      }
+      // ⌘K toggles, so press it only while the palette is closed; desktop focus goes to the search field
       const open = `!!document.querySelector('.pal') && document.activeElement?.getAttribute('role') === 'combobox'`
-      for (let i = 0; i < 5 && !await p.js(open); i++) { await p.js(`document.activeElement?.blur()`); await p.key('k', 'KeyK', 75, CTRL); await p.waitFor(open, 3000) }
+      for (let i = 0; i < 5 && !await p.js(open); i++) {
+        if (!await p.js(`!!document.querySelector('.pal')`)) { await p.js(`document.activeElement?.blur()`); await p.key('k', 'KeyK', 75, CTRL) }
+        await p.waitFor(open, 3000)
+      }
       return p.js(open) as Promise<boolean>
     },
   },
@@ -129,7 +144,7 @@ const SHOTS: Shot[] = [
     },
   },
   {
-    name: 'selbar', path: '?make', ready: `${EDITOR} && !!document.querySelector('.ed-selbar')`, editor: true, sizes: ['390'],
+    name: 'selbar', path: '?make', ready: `${EDITOR} && !!document.querySelector('.ed-selbar')`, editor: true, sizes: ['390', '844'],
     act: async p => {
       const btn = `.ed-selbar button[aria-label^="Select mode"]`
       await click(p, btn)
@@ -259,7 +274,7 @@ try {
       await p.js(`localStorage.setItem('dot480:theme', ${JSON.stringify(JSON.stringify({ scheme, accent }))})`).catch(() => {})
       if (cards) await p.js(`localStorage.setItem('dot480:cards', '${cards}')`).catch(() => {})
       for (const sh of shots) {
-        if (sh.sizes && !sh.sizes.includes(s.id as '1440' | '390')) continue
+        if (sh.sizes && !sh.sizes.includes(s.id as '1440' | '390' | '844')) continue
         const t = Date.now()
         const url = `${base}${sh.path}${sh.path.includes('?') ? '&' : '?'}theme=${theme}`
         // the old document is marked before each navigation: until the new one replaces it, nothing is "ready"

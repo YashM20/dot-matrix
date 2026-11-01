@@ -7,11 +7,12 @@
  * replace the present without a history entry, and `end` commits the whole gesture as one undo step.
  */
 import { create } from 'zustand'
-import { commit, historyOf, loadLocal, redo, undo, type History, type StudioCard, type StudioLayer } from '../studio/doc'
+import { commit, historyOf, loadLocal, newId, redo, undo, type History, type StudioCard, type StudioLayer } from '../studio/doc'
 import type { SharedProgram } from '../../lib/share'
 import { addFrame, addLayer, boundsOf, frameById, frameSize, loadDoc, presetCard, programCard, programSource, saveDoc, seedDoc, topDown, type EditorDoc, type EditorFrame, type Sel } from './doc'
 import { clampZ, fitCam, zoomCam, type Camera } from './input'
-import { validSel } from './select'
+import { openLinkIn, recordLink, type LinkPayload } from './link'
+import { framesSel, validSel } from './select'
 
 export type Tool = 'move' | 'hand' | 'frame' | 'draw' | 'text' | 'code'
 export type LeftTab = 'layers' | 'assets'
@@ -46,6 +47,14 @@ export interface EditorStore {
   picking: boolean
   /** The text layer being typed on the canvas (E3), if any. */
   typing?: { frame: string; layer: string }
+  /** The last link SHARE or EXPORT · LINK made (E5): shown in EXPORT · LINK to copy by hand when the clipboard is closed. */
+  link?: { url: string; kind: 'program' | 'frame' | 'doc'; id: string; parent?: string; chars: number; deflated: boolean }
+  /**
+   * Phone (E6): the long-press menu, at `x`, `y` (viewport px, where the finger was). `armed` once that finger
+   * lifted, so the tap that ends the long press never lands on an item. A new selection, undo / redo, another
+   * tool or a sheet close it.
+   */
+  menu?: { x: number; y: number; armed: boolean }
   edit(fn: (d: EditorDoc) => EditorDoc, tag?: string): void
   begin(): void
   live(fn: (d: EditorDoc) => EditorDoc): void
@@ -72,12 +81,19 @@ export interface EditorStore {
   setHasClip(on: boolean): void
   setPicking(on: boolean): void
   setTyping(t?: { frame: string; layer: string }): void
+  setLink(l?: EditorStore['link']): void
+  setMenu(m?: EditorStore['menu']): void
   /** Insert a card as a new frame, select it and bring it into view. Returns the frame id. */
   insertCard(card: StudioCard, o?: Partial<EditorFrame> & { at?: { x: number; y: number } }): string
   insertPreset(id: string): string | undefined
   /** A shared / example program: re-selects the frame it already made (a `?make=code&p=` reload), else adds one. */
   insertProgram(p: SharedProgram): string
   addLayerTo(frame: string, l: StudioLayer): void
+  /**
+   * A frame / document link (E5): its frames come in as one block (one undo step), selected and brought
+   * into view; a link this document already opened re-selects its frames. Returns their ids, or why not.
+   */
+  openLink(p: LinkPayload): string[] | string
 }
 
 let gestureBase: EditorDoc | undefined
@@ -104,17 +120,17 @@ export const useEditor = create<EditorStore>((set, get) => ({
     set(s => (s.h.present === base ? {} : { h: { past: [...s.h.past, base].slice(-100), present: s.h.present, future: [], at: 0 } }))
   },
   cancel: () => { const base = gestureBase; gestureBase = undefined; if (base) set(s => ({ h: { ...s.h, present: base } })) },
-  undo: () => set(s => { const h = undo(s.h); return { h, sel: validSel(h.present, s.sel) } }),
-  redo: () => set(s => { const h = redo(s.h); return { h, sel: validSel(h.present, s.sel) } }),
-  select: sel => set({ sel: sel.more?.length ? sel : sel.more ? { frame: sel.frame, layer: sel.layer } : sel }),
-  setTool: tool => set({ tool, picking: false }),
+  undo: () => set(s => { const h = undo(s.h); return { h, sel: validSel(h.present, s.sel), menu: undefined } }),
+  redo: () => set(s => { const h = redo(s.h); return { h, sel: validSel(h.present, s.sel), menu: undefined } }),
+  select: sel => set({ sel: sel.more?.length ? sel : sel.more ? { frame: sel.frame, layer: sel.layer } : sel, menu: undefined }),
+  setTool: tool => set({ tool, picking: false, menu: undefined }),
   setCam: cam => set({ cam: { ...cam, z: clampZ(cam.z) } }),
   zoomAt: (z, sx, sy) => set({ cam: zoomCam(get().cam, z, sx, sy) }),
   fit: (ids = [], max = 2) => { const { w, h } = get().vp; set({ cam: fitCam(boundsOf(get().h.present, ids), w, h, max) }) },
   setVp: (w, h) => set({ vp: { w, h } }),
   setLeft: left => set({ left }),
   setRight: right => set({ right }),
-  setSheet: sheet => set({ sheet }),
+  setSheet: sheet => set({ sheet, menu: undefined }),
   setBrush: b => set(s => ({ brush: { ...s.brush, ...b } })),
   setPlay: p => set(s => ({ play: { ...s.play, ...p } })),
   setPreview: (frame, state) => set(s => ({ preview: { ...s.preview, [frame]: state } })),
@@ -124,6 +140,8 @@ export const useEditor = create<EditorStore>((set, get) => ({
   setHasClip: hasClip => set({ hasClip }),
   setPicking: picking => set(picking ? { picking, tool: 'draw' } : { picking }),
   setTyping: typing => set({ typing }),
+  setLink: link => set({ link }),
+  setMenu: menu => set({ menu }),
   insertCard: (card, o) => {
     const { doc, frame } = addFrame(get().h.present, card, o)
     set(s => ({ h: commit(s.h, doc), sel: { frame: frame.id } }))
@@ -142,6 +160,14 @@ export const useEditor = create<EditorStore>((set, get) => ({
     return id
   },
   addLayerTo: (frame, l) => { get().edit(d => addLayer(d, frame, l)); set({ sel: { frame, layer: l.id } }) },
+  openLink: p => {
+    const r = openLinkIn(get().h.present, p, () => newId('f'))
+    if (typeof r === 'string') return r
+    set(s => ({ ...(r.opened && { h: commit(s.h, r.doc) }), sel: framesSel(r.ids) }))
+    recordLink(p)
+    if (r.ids.length === 1) reveal(r.ids[0]); else get().fit(r.ids)
+    return r.ids
+  },
 }))
 
 /** Bring a frame into view if it is (mostly) off screen; zooms out if it does not fit. */
@@ -155,13 +181,14 @@ export function reveal(id: string) {
 
 /**
  * Phone: keep the selected frame in the strip of canvas a bottom sheet leaves (`cover` px at the bottom
- * of the viewport): pan it up, and zoom out only when it cannot fit.
+ * of the viewport; a side sheet, E6: `right` px at its right): pan it, and zoom out only when it cannot fit.
  */
-export function revealAbove(cover: number) {
-  const { h, cam, vp, sel, setCam } = useEditor.getState(), f = frameById(h.present, sel.frame)
+export function revealAbove(cover: number, right = 0) {
+  const { h, cam, vp: full, sel, setCam } = useEditor.getState(), f = frameById(h.present, sel.frame)
   if (!f) return
+  const vp = { w: full.w - right, h: full.h }
   const room = vp.h - cover, pad = 12, { w, h: fh } = frameSize(f)
-  if (room < 80) return
+  if (room < 80 || vp.w < 80) return
   let z = cam.z
   if (fh * z > room - pad * 2 || w * z > vp.w - pad * 2) z = Math.max(.1, Math.min((room - pad * 2) / fh, (vp.w - pad * 2) / w))
   const x0 = f.x * z + (z === cam.z ? cam.x : 0), y0 = f.y * z + (z === cam.z ? cam.y : 0)

@@ -735,9 +735,32 @@
      "$ref": "#/$defs/tone"
     },
     "lattice": {
-     "type": "number",
-     "exclusiveMinimum": 0,
-     "maximum": 64
+     "description": "A lattice factor, or [kx, ky]: rect cells (squares Q2, Layer.lattice; baked raster layers only).",
+     "anyOf": [
+      {
+       "type": "number",
+       "exclusiveMinimum": 0,
+       "maximum": 64
+      },
+      {
+       "type": "array",
+       "items": {
+        "type": "number",
+        "exclusiveMinimum": 0,
+        "maximum": 64
+       },
+       "minItems": 2,
+       "maxItems": 2
+      }
+     ]
+    },
+    "sizeAxis": {
+     "description": "Rect cells: which side the size ramp drives ('x' / 'y': solid bars and line screens, Layer.sizeAxis).",
+     "enum": [
+      "both",
+      "x",
+      "y"
+     ]
     },
     "origin": {
      "$ref": "#/$defs/vec2"

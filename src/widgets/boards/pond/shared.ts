@@ -24,11 +24,17 @@ export const touch = (key: string, label: string): Control[] => [{ key, kind: 'b
 
 type Map2 = (x: number, y: number) => [number, number]
 const ident: Map2 = (x, y) => [x, y]
-/** This frame's input: pointers mapped into scene units, a keyboard press as a kick. Reduced motion: no input at all. */
-export function frameOf(ctx: WidgetContext, key: string, map: Map2 = ident): FrameInput | undefined {
+/**
+ * This frame's input: pointers mapped into scene units, a keyboard press as a kick, and with `tilt` the light hub's
+ * tilt (`tx`, `ty`, 0 at rest) as the world's gravity channel (L3.6; such a world sets `gravity: [0, 0]`).
+ * Reduced motion: no input at all, so the card always shows its pristine t.
+ */
+export function frameOf(ctx: WidgetContext, key: string, map: Map2 = ident, tilt = false): FrameInput | undefined {
   if (ctx.reducedMotion) return undefined
   const busy = ctx.pointers?.some(p => !p.up && (p.down || p.inside)) ?? false
-  return { pointers: framePointers(ctx.pointers, map), kick: (ctx.data[key] ?? 0) >= .5 && !busy }
+  const f: FrameInput = { pointers: framePointers(ctx.pointers, map), kick: (ctx.data[key] ?? 0) >= .5 && !busy }
+  if (tilt) { f.gx = ctx.data.tx ?? 0; f.gy = ctx.data.ty ?? 0 }
+  return f
 }
 
 /** Caption tier (0.72 lattice), faint, top-right: as on the algorithms and mosaic boards. */

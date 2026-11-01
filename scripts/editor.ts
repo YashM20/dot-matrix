@@ -13,6 +13,12 @@
  * layers that move in whole cells and spec fields resized by their bounds, carets of text typed in place
  * that sit in glyph gaps (5×7 and `T.big`, through the engine), the quick toggles (tone, lattice, size),
  * the eyedropper, and a typing session as one undo step (Esc and an emptied layer leave no trace).
+ * E5 (`editorE5Checks`, async): frame and document links, lineage, the cap, `?make&d=`, remix parents and
+ * the graph, every device profile, the scorecard.
+ * E6 (`editorE6Checks`, async): the phone layouts (upright, on its side), the sheet's detent memory (per
+ * panel, session and storage), the keyboard box, the snap cue (guides just reached, lit dots along them in
+ * the accent through the engine), stack order for frames and layers and the long-press menu (one undo step
+ * per item), and the share sheet: shared, cancelled (no error, no copy), refused (the clipboard), none, hung.
  * `pnpm verify` runs them through `editorChecks()`; run alone with `npx tsx scripts/editor.ts`.
  * The browser side (desktop + touch): `scripts/editor-browser.ts`.
  */
@@ -31,6 +37,20 @@ import { caretAt, dragSiteHandle, editableText, inkAt, inkStep, latticeOf, layer
 import { cancelTyping, commitTyping, startTyping, typeText } from '../src/components/editor/typing'
 import { layerDots, lit as litDot, nudgeSpec } from '../src/components/editor/doc'
 import type { SpecLayer, StudioLayer } from '../src/components/studio/doc'
+import { cardPreset } from '../src/components/studio/doc'
+import { decodeLink, encodeLink, lineage, LINK_MAX_ENCODED, linkId, linkPayload, LINKS_KEY, linkUrl, loadLinks, openLinkIn, recordLink } from '../src/components/editor/link'
+import { deviceFile, DEVICE_IDS, deviceFrames, devicePixels, exportScale, plotterPlan } from '../src/components/editor/devices'
+import { scoreCard } from '../src/components/editor/quality'
+import { compiledOf } from '../src/components/editor/render'
+import { editCard } from '../src/components/editor/doc'
+import { decodeShare, encodeShare, programHash, ShareError } from '../src/lib/share'
+import { EXAMPLES } from '../src/components/dwitter/examples'
+import { graphLayers, layoutGraph, SEEDS } from '../src/components/dwitter/gallery'
+import { urlForView } from '../src/site/views'
+import { canShareLink, DETENTS, defaultDetent, detentFor, forgetDetents, forgetShare, KEYBOARD_MIN, keyboardBox, layoutFor, loadDetents, panelOf, rememberDetent, rememberedDetent, SHARE_STALE_MS, SHEET_KEY, shareLink, snappedGuides, type ShareNav } from '../src/components/editor/phone'
+import { pasteDots } from '../src/components/editor/render'
+import { orderFrames, orderLayers } from '../src/components/editor/doc'
+import { menuItems, orderDoc, runMenu, selTitle } from '../src/components/editor/actions'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const litCount = (ds: { r: number; opacity: number }[]) => ds.filter(d => d.r > 0 && d.opacity > 0).length
@@ -520,10 +540,232 @@ export function editorE3Checks(assert: Assert) {
   assert('E3 typing: a locked layer is not typed into', !startTyping(FID, tx.id) && !st().typing)
 }
 
+/**
+ * E5 (`editorE5Checks`, async: the link codec deflates): frame and document links round-trip (deflated and
+ * plain) with a stable id; opening one adds its frames once (a reload or Back re-selects them, one undo step);
+ * sharing again unchanged makes the same link, changed records its parent; the cap, corrupt and malformed
+ * links; the lineage registry; `?make&d=` in the URL scheme; a program's remix parent and the remix graph;
+ * every device profile through `toDevice`; the scorecard on a frame.
+ */
+export async function editorE5Checks(assert: Assert) {
+  const seed = seedDoc(), [A, B, C] = seed.frames
+  const kvMem = () => { const m = new Map<string, string>(); return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v) } } }
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+  const reason = async (s: string) => { try { await decodeLink(s); return '' } catch (e) { return (e as Error).message } }
+  const plainOf = (x: unknown) => 'b' + Buffer.from(JSON.stringify(x)).toString('base64url')
+
+  // ── round trip: a frame and the document, deflated and plain
+  const pf = linkPayload(seed, [C.id]), pd = linkPayload(seed)
+  if (typeof pf === 'string' || typeof pd === 'string') { assert('E5 link: payloads', false, String(pf)); return }
+  const z = await encodeLink(pf), b = await encodeLink(pf, { compress: false }), zd = await encodeLink(pd)
+  const [bf, bb, bd] = await Promise.all([decodeLink(z), decodeLink(b), decodeLink(zd)])
+  assert('E5 link: a frame link round-trips deflated and plain (same frames, same id, no ids or sources inside)', z[0] === 'z' && b[0] === 'b' && z.length < b.length && bf.id === pf.id && bb.id === pf.id && bf.kind === 'frame' && same(bf.frames, pf.frames) && same(bb.frames, pf.frames) && !('id' in bf.frames[0]) && !('source' in bf.frames[0]) && bf.frames[0].x === 0 && bf.frames[0].y === 0, `${z.length} / ${b.length} chars`)
+  assert('E5 link: a document link holds every frame, placed from the top-left of their block, named after the document', bd.kind === 'doc' && bd.frames.length === seed.frames.length && bd.name === seed.name && Math.min(...bd.frames.map(f => f.x)) === 0 && Math.min(...bd.frames.map(f => f.y)) === 0 && bd.frames[1].x - bd.frames[0].x === B.x - A.x && zd.length < LINK_MAX_ENCODED, `${zd.length} chars`)
+  assert('E5 link: the id does not depend on key order or frame ids', linkId('frame', pf.name, pf.frames) === pf.id && linkId('frame', pf.name, pf.frames.map(f => Object.fromEntries(Object.entries(f).reverse()) as typeof f)) === pf.id && linkId('frame', `${pf.name}!`, pf.frames) !== pf.id)
+
+  // ── open: one block in a free spot, new ids, `source: link:<id>`; again: nothing new
+  const o1 = openLinkIn(seed, bd, () => `n${Math.random().toString(36).slice(2, 8)}`)
+  if (typeof o1 === 'string') { assert('E5 open', false, o1); return }
+  const boxes = o1.doc.frames.map(f => ({ ...frameSize(f), x: f.x, y: f.y }))
+  const overlap = boxes.some((a, i) => boxes.some((c, j) => i < j && a.x < c.x + c.w && c.x < a.x + a.w && a.y < c.y + c.h && c.y < a.y + a.h))
+  const opened = o1.doc.frames.filter(f => o1.ids.includes(f.id))
+  assert('E5 open: a document link adds its frames as one block (new ids, source link:<id>, nothing overlaps)', o1.opened && opened.length === 3 && opened.every(f => f.source === `link:${bd.id}` && !seed.frames.some(s => s.id === f.id)) && !overlap && opened[1].x - opened[0].x === B.x - A.x)
+  const o2 = openLinkIn(o1.doc, bd, () => 'x')
+  assert('E5 open: the same link opened again (a reload, Back) re-selects its frames and changes nothing', typeof o2 === 'object' && !o2.opened && o2.doc === o1.doc && same(o2.ids, o1.ids))
+  const full = { ...seed, frames: Array.from({ length: MAX_FRAMES }, (_, i) => ({ ...C, id: `k${i}` })) }
+  assert('E5 open: a link that would pass the frame limit is refused with a reason', typeof openLinkIn(full, bf, () => 'y') === 'string')
+
+  // ── lineage: unchanged = the same link; changed = a remix of it
+  const kv = kvMem()
+  recordLink(pf, kv)
+  const got = openLinkIn(seed, bf, () => 'g1') as { doc: EditorDoc; ids: string[] }
+  const again = linkPayload(got.doc, got.ids, loadLinks(kv))
+  const renamed = editCard(got.doc, 'g1', c => ({ ...c, name: 'mine' })), remix = linkPayload(renamed, ['g1'], loadLinks(kv))
+  assert('E5 lineage: a frame opened from a link and shared again unchanged makes the same link (no parent)', typeof again === 'object' && again.id === pf.id && !again.parent && (await encodeLink(again)) === z)
+  assert('E5 lineage: changed, its link records the link it came from as the parent', typeof remix === 'object' && remix.id !== pf.id && remix.parent === pf.id && (await decodeLink(await encodeLink(remix))).parent === pf.id)
+  if (typeof remix === 'object') {
+    recordLink(remix, kv)
+    const r2 = openLinkIn(seed, remix, () => 'g2') as { doc: EditorDoc }
+    const back = linkPayload(r2.doc, ['g2'], loadLinks(kv))
+    assert('E5 lineage: a remix shared again unchanged keeps its parent (from the registry)', typeof back === 'object' && back.id === remix.id && back.parent === pf.id)
+    const chain = lineage(remix.id, loadLinks(kv))
+    assert('E5 lineage: the registry gives the chain, newest first, ending at an id this browser never saw', chain.length === 2 && chain[0].id === remix.id && chain[1].id === pf.id && same(lineage('deadbeef', []), [{ id: 'deadbeef' }]))
+  }
+  const loop = [{ id: 'aaaaaaaa', parent: 'bbbbbbbb', name: 'a', kind: 'frame' as const, frames: 1, at: 0 }, { id: 'bbbbbbbb', parent: 'aaaaaaaa', name: 'b', kind: 'frame' as const, frames: 1, at: 0 }]
+  const kv2 = kvMem()
+  for (let i = 0; i < 45; i++) recordLink({ id: i.toString(16).padStart(8, '0'), name: `n${i}`, kind: 'frame', frames: [] }, kv2)
+  kv2.setItem('junk', '1')
+  assert('E5 lineage: a loop in the registry ends; the registry keeps the newest 40 and drops bad rows', lineage('aaaaaaaa', loop).length === 2 && loadLinks(kv2).length === 40 && loadLinks(kv2)[0].id === (5).toString(16).padStart(8, '0') && (kv2.setItem(LINKS_KEY, '[{"id":"nope"},5]'), loadLinks(kv2).length === 0))
+
+  // ── cap, corrupt and malformed links
+  const noisy = paintLayer({ cols: 160, rows: 160, pitch: 4 }, { lattice: 1 }), rnd = new Uint8Array(160 * 160)
+  let s = 7
+  for (let i = 0; i < rnd.length; i++) { s = (s * 1103515245 + 12345) >>> 0; rnd[i] = s >>> 24 }
+  const big = addFrame(seed, { ...blankCard({ cols: 160, rows: 160, pitch: 4 }), layers: [{ ...noisy, cells: encodeCells(rnd) }] }).doc
+  const bigP = linkPayload(big, [big.frames[big.frames.length - 1].id])
+  let capMsg = ''
+  try { if (typeof bigP === 'object') await encodeLink(bigP) } catch (e) { capMsg = e instanceof ShareError ? e.message : `not a ShareError: ${e}` }
+  assert(`E5 cap: a link past ${LINK_MAX_ENCODED} characters is refused with its length`, /more than 12000/.test(capMsg), capMsg)
+  const frame0 = pf.frames[0]
+  const bad = await Promise.all([
+    reason('zNotARealLink'), reason('qabc'), reason('b' + 'A'.repeat(LINK_MAX_ENCODED + 1)), reason(plainOf({ v: 2, k: 'f', n: 'x', f: [frame0] })),
+    reason(plainOf({ v: 1, k: 'f', n: 'x', f: [frame0, frame0] })), reason(plainOf({ v: 1, k: 'd', n: 'x', f: [] })), reason(plainOf({ v: 1, k: 'f', n: 'x', f: [{ ...frame0, theme: 'pink' }] })),
+    reason(plainOf({ v: 1, k: 'f', n: 'x', f: [frame0], p: 'nothex!!' })), reason(plainOf({ v: 1, k: 'f', n: 'x', f: [{ ...frame0, card: { ...frame0.card, layers: [{ kind: 'ir', src: 1 }] } }] })),
+  ])
+  assert('E5 corrupt: bad links are refused with a reason (inflate, format, size, version, kind, empty, theme, parent, card)', bad.every(Boolean), bad.map(x => x || '(accepted)').join(' | '))
+
+  // ── through the store: opened once, one undo step, selected; the URL scheme
+  useEditor.setState({ h: historyOf(seed), sel: {} })
+  const st = useEditor.getState, n0 = st().h.past.length
+  const ids1 = st().openLink(bd), n1 = st().h.past.length, ids2 = st().openLink(bd)
+  assert('E5 store: openLink adds the frames as one undo step and selects them; again it only re-selects', Array.isArray(ids1) && ids1.length === 3 && n1 === n0 + 1 && same(ids2, ids1) && st().h.past.length === n1 && same(selFrames(st().sel), ids1) && (st().undo(), st().h.present.frames.length === seed.frames.length))
+  const v = viewFromUrl('?make&d=zAbc', '/'), q = (view: 'EXPLORE' | 'MAKE') => urlForView({ view, mode: 'TUNE', board: v.board }, '?make&d=zAbc', '/')
+  assert('E5 url: ?make&d= opens MAKE; the link stays while in MAKE and goes when leaving it', v.view === 'MAKE' && /[?&]d=zAbc/.test(q('MAKE')) && !/d=/.test(q('EXPLORE')) && linkUrl('zAbc', 'https://x.dev/') === 'https://x.dev/?make&d=zAbc', `${q('MAKE')} | ${q('EXPLORE')}`)
+
+  // ── programs: the remix parent and the graph
+  const ripple = EXAMPLES[0], code = C, ir = topDown(code.card).find(l => l.kind === 'ir')!
+  const changed = { ...ir, src: `${ir.kind === 'ir' ? ir.src : ''} * .9` }
+  const p0 = shareable(code, ir), p1 = shareable(code, changed), p2 = shareable(code, ir, h => (h === programHash(ripple) ? 'cafebabe' : undefined))
+  assert('E5 remix: a code layer changed since its program records that program as the parent; unchanged it keeps the program\'s own', typeof p0 === 'object' && !p0.parent && typeof p1 === 'object' && p1.parent === programHash(ripple) && typeof p2 === 'object' && p2.parent === 'cafebabe' && (await decodeShare(await encodeShare(p1))).parent === programHash(ripple))
+  const seedE = SEEDS[0], mineE = { ...ripple, src: `${ripple.src} * .9`, id: 'aaaa0001', name: 'mine', at: 9, parent: seedE.id }, deeper = { ...mineE, src: `${mineE.src} * .8`, id: 'aaaa0002', name: 'deeper', parent: mineE.id }
+  const g = layoutGraph([...SEEDS, mineE, deeper])
+  const nm = g.nodes.find(n => n.entry.id === 'aaaa0001'), nd = g.nodes.find(n => n.entry.id === 'aaaa0002')
+  assert('E5 remix: the graph puts a remix one row under its parent, linked to it, and draws edges in dots', !!nm && !!nd && nm.row === 1 && nd.row === 2 && nm.parent?.entry.id === seedE.id && nd.parent === nm && graphLayers(g, 'aaaa0002').length === 3)
+
+  // ── devices: every profile through toDevice; quality: the scorecard on a frame
+  const dev = deviceFrames(A, 1), fullDev = deviceFrames(A, 1, false) // level-03: lit enough for the flip-disc threshold
+  const trmnl = dev.find(fr => fr.profile.id.startsWith('trmnl')), trmnlFull = fullDev.find(fr => fr.profile.id === 'trmnl-800x480')
+  const lit = (fr: (typeof dev)[number]) => fr.out.reduce((a, x) => a + x, 0) / fr.out.length
+  assert('E5 devices: a frame goes through toDevice onto every profile (TRMNL previewed at ¼, exported at 800×480)', dev.length === DEVICE_IDS.length && fullDev.length === DEVICE_IDS.length && trmnl?.cols === 200 && trmnlFull?.cols === 800 && trmnlFull.rows === 480 && dev.every(fr => fr.out.length === fr.cols * fr.rows && lit(fr) > .005), dev.map(fr => `${fr.profile.id} ${fr.cols}×${fr.rows} ${lit(fr).toFixed(2)}`).join(', '))
+  const px = devicePixels(dev[0]), glyph = dev.find(fr => fr.profile.mask === 'round')!
+  assert('E5 devices: pixels are one RGBA per device pixel (a round panel\'s missing corners near black), exports upscale in whole pixels, the plotter has a pen plan', px.length === dev[0].cols * dev[0].rows * 4 && devicePixels(glyph)[0] === 7 && exportScale(glyph) === 19 && exportScale(trmnlFull!) === 1 && /<svg/.test(fullDev.map(plotterPlan).find(Boolean) ?? '') && deviceFile('x', trmnl!) === 'x-trmnl-800x480-0.25.png')
+  const score = scoreCard(cardPreset(code.card, compiledOf(code.card)))
+  assert('E5 quality: the scorecard scores a frame (G1, G3 pass on the ripple frame; metrics counted)', score.g1.pass && score.g3.pass && score.metrics.dots > 1000 && score.metrics.histogram.length === 10, JSON.stringify({ g1: score.g1, g3: score.g3 }))
+}
+
+/**
+ * E6 (`editorE6Checks`, async: shares settle later): the phone polish without a browser. Layouts, detent
+ * memory, the keyboard box, the snap cue, stack order and the long-press menu, the share sheet.
+ */
+export async function editorE6Checks(assert: Assert) {
+  const kvMem = () => { const m = new Map<string, string>(); return { m, getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v) } } }
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+
+  // ── layouts: a phone upright, a phone on its side, everything else desktop
+  const L = (w: number, h: number) => layoutFor(w, h)
+  assert('E6 layout: 390×844 and 640×900 are a phone upright; 844×390 and 932×430 on its side; 1440×900, 1024×768, 961×400 desktop',
+    L(390, 844) === 'portrait' && L(640, 900) === 'portrait' && L(844, 390) === 'landscape' && L(932, 430) === 'landscape' && L(1440, 900) === 'desktop' && L(1024, 768) === 'desktop' && L(961, 400) === 'desktop' && L(1280, 500) === 'desktop')
+
+  // ── detents: per panel, this session first, then storage, else the default
+  forgetDetents()
+  const kv = kvMem()
+  assert('E6 detents: before anything is remembered a panel opens at the middle detent, CODE at the tall one', detentFor('layers', kv) === 1 && detentFor('inspector:design', kv) === 1 && detentFor('inspector:code', kv) === 2 && defaultDetent('assets') === 1 && rememberedDetent('layers', kv) === undefined && DETENTS.length === 3 && panelOf('inspector', 'export') === 'inspector:export' && panelOf('layers', 'code') === 'layers')
+  rememberDetent('layers', 0, kv); rememberDetent('inspector:code', 1, kv); rememberDetent('assets', 7, kv)
+  assert('E6 detents: a panel opens where it was left (others keep theirs); a detent out of range is not kept', detentFor('layers', kv) === 0 && detentFor('inspector:code', kv) === 1 && detentFor('inspector:design', kv) === 1 && detentFor('assets', kv) === 1 && same(JSON.parse(kv.m.get(SHEET_KEY)!), { layers: 0, 'inspector:code': 1 }))
+  forgetDetents() // a reload: only storage is left
+  assert('E6 detents: after a reload they come back from localStorage', detentFor('layers', kv) === 0 && detentFor('inspector:code', kv) === 1 && rememberedDetent('inspector:design', kv) === undefined)
+  const shut = { getItem: () => { throw new Error('closed') }, setItem: () => { throw new Error('closed') } }
+  rememberDetent('inspector:export', 2, shut)
+  assert('E6 detents: storage closed (private window): the session still remembers', detentFor('inspector:export', shut) === 2 && same(loadDetents(shut), {}))
+  forgetDetents()
+  const junk = kvMem(); junk.setItem(SHEET_KEY, '{"layers":1.5,"assets":-1,"inspector:code":2,"inspector:nope":0,"x":1}')
+  const arr = kvMem(); arr.setItem(SHEET_KEY, '[0,1]')
+  const bad = kvMem(); bad.setItem(SHEET_KEY, '{not json')
+  assert('E6 detents: malformed storage rows are dropped (non-integers, out of range, unknown panels, arrays, bad JSON)', same(loadDetents(junk), { 'inspector:code': 2 }) && same(loadDetents(arr), {}) && same(loadDetents(bad), {}) && detentFor('layers', bad) === 1)
+  forgetDetents()
+
+  // ── the keyboard: what visualViewport leaves visible
+  const k1 = keyboardBox(844, { height: 508, offsetTop: 0 }), k2 = keyboardBox(844, { height: 470, offsetTop: 90 })
+  assert('E6 keyboard: a keyboard (336 px) leaves the top 508 px; a panned visual viewport keeps its offset', same(k1, { top: 0, height: 508, kb: 336 }) && same(k2, { top: 90, height: 470, kb: 284 }))
+  assert(`E6 keyboard: the toolbar settling (< ${KEYBOARD_MIN} px), no visualViewport or a zero height is no keyboard`, keyboardBox(844, { height: 784, offsetTop: 0 }) === undefined && keyboardBox(844, undefined) === undefined && keyboardBox(844, null) === undefined && keyboardBox(844, { height: 0, offsetTop: 0 }) === undefined)
+
+  // ── the snap cue: the guides a drag just reached; their dots in the accent, through the engine
+  const g1 = { axis: 'x' as const, at: 200, from: 40, to: 160 }, g2 = { axis: 'y' as const, at: 80, from: 0, to: 300 }
+  assert('E6 snap cue: guides newly engaged count (a half-pixel wobble does not), ones already engaged do not', same(snappedGuides(undefined, [g1]), [g1]) && same(snappedGuides([g1], [g1, g2]), [g2]) && snappedGuides([g1], [{ ...g1, at: 200.2 }]).length === 0 && snappedGuides([g1, g2], []).length === 0)
+  const cam = { x: 7, y: -3, z: 1 }, accent = '#123456'
+  const lit = pasteDots(cam, 400, 300, undefined, { guides: [g1], k: 1 }, accent)
+  const act = lit.dots.filter(d => d.color === accent && d.opacity > 0 && d.r > 0)
+  const onLine = act.every(d => Math.abs(lit.sx + d.x - g1.at) <= lit.pitch + .01 && lit.sy + d.y >= g1.from - 2 * lit.pitch - .01 && lit.sy + d.y <= g1.to + 2 * lit.pitch + .01)
+  const cols = new Set(act.map(d => Math.round(lit.sx + d.x)))
+  const off = pasteDots(cam, 400, 300, undefined, { guides: [g1], k: 0 }, accent), none = pasteDots(cam, 400, 300, undefined, undefined, accent)
+  const faded = pasteDots(cam, 400, 300, undefined, { guides: [g1], k: .3 }, accent).dots.filter(d => d.color === accent && d.r > 0)
+  assert('E6 snap cue: only the dots along the guide (either side, its span and two past each end) take the accent; none without a cue or at k 0',
+    act.length >= 8 && onLine && cols.size >= 1 && cols.size <= 3 && !off.dots.some(d => d.color === accent && d.r > 0) && !none.dots.some(d => d.color === accent), `${act.length} lit in ${cols.size} columns`)
+  assert('E6 snap cue: fading lowers the lit dots (quantized like every UI dot)', faded.length > 0 && Math.max(...faded.map(d => d.opacity)) < Math.max(...act.map(d => d.opacity)), `${faded.length}`)
+
+  // ── stack order: frames on the canvas, layers in a frame (groups as one unit)
+  const seed = seedDoc(), base = addFrame(seed, blankCard()).doc, ids = base.frames.map(f => f.id), [A, B, C, D] = ids
+  const order = (d: EditorDoc) => d.frames.map(f => f.id)
+  assert('E6 order: frames one step (each past its unmoved neighbour), to the front, to the back; the moved keep their order',
+    same(order(orderFrames(base, [B], 'forward')), [A, C, B, D]) && same(order(orderFrames(base, [C], 'backward')), [A, C, B, D]) && same(order(orderFrames(base, [A, B], 'forward')), [C, A, B, D]) && same(order(orderFrames(base, [A, C], 'front')), [B, D, A, C]) && same(order(orderFrames(base, [B, D], 'back')), [B, D, A, C]))
+  assert('E6 order: a frame already on top (bottom) does not move: the same document comes back', orderFrames(base, [D], 'forward') === base && orderFrames(base, [D], 'front') === base && orderFrames(base, [A], 'back') === base && orderFrames(base, ['nope'], 'front') === base)
+  let ld = base
+  const lf = ld.frames[0].id
+  for (let i = 0; i < 4; i++) ld = addLayer(ld, lf, textLayer(`T${i}`, { name: `t${i}` }))
+  const tops = (d: EditorDoc) => topDown(frameById(d, lf)!.card).map(l => l.name)
+  const names = tops(ld), byName = (n: string) => topDown(frameById(ld, lf)!.card).find(l => l.name === n)!.id
+  const front = orderLayers(ld, lf, [byName('t1')], 'front'), back = orderLayers(ld, lf, [byName('t2')], 'back')
+  const gd = groupLayers(ld, lf, [byName('t0'), byName('t1')]).doc, gfront = orderLayers(gd, lf, [byName('t0')], 'front')
+  assert('E6 order: a layer to the front / back of its frame; a grouped layer takes its group along', tops(front)[0] === 't1' && tops(back).at(-1) === 't2' && tops(front).length === names.length && same(tops(gfront).slice(0, 2), ['t1', 't0']) && orderLayers(ld, lf, [names[0] ? byName(names[0]) : ''], 'front') === ld, `${tops(front).join()} | ${tops(gfront).join()}`)
+
+  // ── the long-press menu: its items, disabled when they would change nothing, one undo step each
+  useEditor.setState({ h: historyOf(base), sel: { frame: D } })
+  const st = useEditor.getState
+  const item = (id: string) => menuItems(st().h.present, st().sel).find(x => x.id === id)!
+  assert('E6 menu: a frame on top offers DUPLICATE, BACKWARD, TO BACK, DELETE; FORWARD and TO FRONT are off', item('forward').disabled && item('front').disabled && !item('backward').disabled && !item('back').disabled && !item('duplicate').disabled && item('delete').danger === true && selTitle(st().h.present, st().sel).startsWith('FRAME ') && menuItems(st().h.present, {}).every(x => x.disabled))
+  const n0 = st().h.past.length
+  runMenu('back')
+  const backed = order(st().h.present)[0] === D && st().h.past.length === n0 + 1
+  runMenu('duplicate')
+  const duped = st().h.present.frames.length === ids.length + 1 && st().h.past.length === n0 + 2 && st().sel.frame !== D
+  runMenu('delete')
+  const deleted = st().h.present.frames.length === ids.length && st().h.past.length === n0 + 3
+  st().undo(); st().undo(); st().undo()
+  assert('E6 menu: TO BACK, DUPLICATE and DELETE run the shared commands, one undo step each; undo puts it all back', backed && duped && deleted && same(order(st().h.present), ids))
+  useEditor.setState({ h: historyOf(ld), sel: { frame: lf, layer: byName('t3') } })
+  const m0 = st().h.past.length
+  runMenu('front'); runMenu('front')
+  assert('E6 menu: a layer goes to the front of its frame (once: again changes nothing and adds no step); the head names it', tops(st().h.present)[0] === 't3' && st().h.past.length === m0 + (names[0] === 't3' ? 0 : 1) && selTitle(st().h.present, st().sel) === 'LAYER t3' && orderDoc(st().h.present, st().sel, 'front') === st().h.present)
+  useEditor.setState({ menu: { x: 1, y: 2, armed: true } }); st().select({ frame: lf })
+  const closedBySel = !st().menu
+  useEditor.setState({ menu: { x: 1, y: 2, armed: true } }); st().undo()
+  const closedByUndo = !st().menu
+  useEditor.setState({ menu: { x: 1, y: 2, armed: true } }); st().setTool('draw'); st().setTool('move')
+  assert('E6 menu: a new selection, undo or another tool closes it', closedBySel && closedByUndo && !st().menu)
+
+  // ── the share sheet: shared, cancelled, refused, none, hung
+  forgetShare()
+  const copies: string[] = [], copy = (ok: boolean) => async (t: string) => { copies.push(t); return ok }
+  const d = { url: 'https://x.dev/?make&d=zAbc', title: 'frame · Dot/480', text: 'open it' }
+  const fake = (how: 'resolve' | 'abort' | 'refuse' | 'hang', canShare?: ShareNav['canShare']): ShareNav & { got: ShareData[] } => {
+    const got: ShareData[] = []
+    return { got, canShare, share: (x: ShareData) => { got.push(x); return how === 'resolve' ? Promise.resolve() : how === 'hang' ? new Promise<void>(() => {}) : Promise.reject(Object.assign(new Error(how), { name: how === 'abort' ? 'AbortError' : 'NotAllowedError' })) } }
+  }
+  const okNav = fake('resolve'), r1 = await shareLink(d, copy(true), okNav)
+  assert('E6 share: a share sheet that takes the link: shared, with its url, title and text; nothing copied', r1 === 'shared' && okNav.got.length === 1 && okNav.got[0].url === d.url && okNav.got[0].title === d.title && okNav.got[0].text === d.text && copies.length === 0)
+  const r2 = await shareLink(d, copy(true), fake('abort'))
+  assert('E6 share: cancelled by the visitor (AbortError) is "cancelled": no error, nothing copied', r2 === 'cancelled' && copies.length === 0)
+  const r3 = await shareLink(d, copy(true), fake('refuse')), r4 = await shareLink(d, copy(false), fake('refuse'))
+  assert('E6 share: refused (no activation left, not allowed): the clipboard instead; closed too: shown to copy by hand', r3 === 'copied' && r4 === 'manual' && copies.length === 2 && copies[0] === d.url)
+  const r5 = await shareLink(d, copy(true), {}), r6 = await shareLink(d, copy(true), undefined), r7 = await shareLink(d, copy(true), fake('resolve', () => false)), r8 = await shareLink(d, copy(true), fake('resolve', () => { throw new Error('x') }))
+  assert('E6 share: no share sheet, no navigator, or canShare says no (or throws): feature-detected, the clipboard', r5 === 'copied' && r6 === 'copied' && r7 === 'copied' && r8 === 'copied' && !canShareLink({}, d) && canShareLink(fake('resolve'), d))
+  let t = 1000
+  const clock = () => t, hung = fake('hang')
+  void shareLink(d, copy(true), hung, clock) // never settles
+  const t0 = Date.now(), r9 = await shareLink(d, copy(true), hung, clock), quick = Date.now() - t0 < 200
+  t += SHARE_STALE_MS + 1
+  const r10 = Promise.race([shareLink(d, copy(true), hung, clock), new Promise(res => setTimeout(() => res('pending'), 30))])
+  const r10v = await r10
+  assert('E6 share: a share sheet that never answers does not block the next SHARE (copied at once); after a minute a share is tried again', r9 === 'copied' && quick && r10v === 'pending' && hung.got.length === 2, `${r9} ${quick} ${r10v} ${hung.got.length}`)
+  forgetShare()
+}
+
 if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, '/')}` || process.argv[1]?.endsWith('editor.ts')) {
   let failed = 0
   editorChecks((name, cond, detail = '') => { console.log(`${cond ? '✓' : '✗'} ${name}${detail && !cond ? ` — ${detail}` : ''}`); if (!cond) failed++ })
   editorE3Checks((name, cond, detail = '') => { console.log(`${cond ? '✓' : '✗'} ${name}${detail && !cond ? ` — ${detail}` : ''}`); if (!cond) failed++ })
+  await editorE5Checks((name, cond, detail = '') => { console.log(`${cond ? '✓' : '✗'} ${name}${detail && !cond ? ` — ${detail}` : ''}`); if (!cond) failed++ })
+  await editorE6Checks((name, cond, detail = '') => { console.log(`${cond ? '✓' : '✗'} ${name}${detail && !cond ? ` — ${detail}` : ''}`); if (!cond) failed++ })
   if (failed) { console.error(`\n${failed} editor check(s) failed`); process.exit(1) }
   console.log('\nAll editor checks passed')
   process.exit(0)

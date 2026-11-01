@@ -6,13 +6,16 @@
  *   joinArea      the analytic area (ink checks)
  *   inkRadius     the radius that gives a superellipse of exponent n the ink of a circle of radius r
  *
- * A cell of half side `s` (the sampler's r) centred at (cx, cy) reaches the cell boundary `hj = h − seam/2` on its
- * joined sides; in quadrant-local coordinates a = |p − c| each quadrant is one of the five shapes of `mask.ts`:
- * CONVEX [0, s]² with its outer corner rounded by ro; EDGE_H [0, hj] × [0, s]; EDGE_V [0, s] × [0, hj]; FULL [0, hj]²;
- * INNER [0, hj]² minus the notch {a.x > s, a.y > s}, whose corner is filleted by ri. Arcs use explicit centres and
+ * A cell of half side `s` (the sampler's r; `hs` = s·aspect down a rect cell, squares Q2) centred at (cx, cy) reaches
+ * the cell boundary `hj = h − seam/2` on its joined sides; in quadrant-local coordinates a = |p − c| each quadrant is
+ * one of the five shapes of `mask.ts`: CONVEX [0, s] × [0, hs] with its outer corner rounded by ro; EDGE_H [0, hj] ×
+ * [0, hs]; EDGE_V [0, s] × [0, hj]; FULL [0, hj]²; INNER [0, hj]² minus the notch {a.x > s, a.y > hs}, whose corner
+ * is filleted by ri. ro is a fraction of the shorter half side. Arcs use explicit centres and
  * quarter angles (exact, no trig), so Canvas and SVG trace the same curve.
  */
 import type { JointGeom } from '../types'
+import { BEZIER_MAX_N, bezierHandle, cornerFraction } from '../renderer/shapePath'
+import { dpow } from '../noise/dmath'
 import { ALL_FULL, EDGE_H, EDGE_V, FULL, INNER, quadrant } from './mask'
 
 /** What `joinOutline` draws into: Canvas `Path2D` / context methods satisfy it (they ignore the arc's end point). */
@@ -27,9 +30,9 @@ export interface OutlineSink {
 
 /** Resolved extents of one cell: joined half extents (with `bleed`), convex radius and fillet (px). */
 const EXT = new Float64Array(4)
-function extents(s: number, g: JointGeom, bleed: number): Float64Array {
-  const hjx = Math.max(s, g.hx - g.seam / 2), hjy = Math.max(s, g.hy - g.seam / 2)
-  EXT[0] = hjx + bleed; EXT[1] = hjy + bleed; EXT[2] = Math.max(0, Math.min(1, g.ro)) * s; EXT[3] = Math.max(0, Math.min(g.ri, hjx - s, hjy - s))
+function extents(s: number, hs: number, g: JointGeom, bleed: number): Float64Array {
+  const hjx = Math.max(s, g.hx - g.seam / 2), hjy = Math.max(hs, g.hy - g.seam / 2)
+  EXT[0] = hjx + bleed; EXT[1] = hjy + bleed; EXT[2] = Math.max(0, Math.min(1, g.ro)) * Math.min(s, hs); EXT[3] = Math.max(0, Math.min(g.ri, hjx - s, hjy - hs))
   return EXT
 }
 
@@ -39,19 +42,19 @@ const V = new Float64Array(7 * 5)
 let nv = 0
 const pt = (x: number, y: number) => { const o = nv++ * 5; V[o] = x; V[o + 1] = y; V[o + 2] = 0 }
 const arcPt = (x: number, y: number, cx: number, cy: number) => { const o = nv++ * 5; V[o] = x; V[o + 1] = y; V[o + 2] = 1; V[o + 3] = cx; V[o + 4] = cy }
-function corner(code: number, s: number, hjx: number, hjy: number, ro: number, ri: number): number {
+function corner(code: number, s: number, hs: number, hjx: number, hjy: number, ro: number, ri: number): number {
   nv = 0
-  if (code === EDGE_H) { pt(0, s); pt(hjx, s); pt(hjx, 0) }
+  if (code === EDGE_H) { pt(0, hs); pt(hjx, hs); pt(hjx, 0) }
   else if (code === EDGE_V) { pt(0, hjy); pt(s, hjy); pt(s, 0) }
   else if (code === FULL) { pt(0, hjy); pt(hjx, hjy); pt(hjx, 0) }
   else if (code === INNER) {
     pt(0, hjy); pt(s, hjy)
-    if (ri > 0) { pt(s, s + ri); arcPt(s + ri, s, s + ri, s + ri) } else pt(s, s)
-    pt(hjx, s); pt(hjx, 0)
+    if (ri > 0) { pt(s, hs + ri); arcPt(s + ri, hs, s + ri, hs + ri) } else pt(s, hs)
+    pt(hjx, hs); pt(hjx, 0)
   } else {
     // CONVEX (and Q3's DIAG until it lands)
-    pt(0, s)
-    if (ro > 0) { pt(s - ro, s); arcPt(s, s - ro, s - ro, s - ro) } else pt(s, s)
+    pt(0, hs)
+    if (ro > 0) { pt(s - ro, hs); arcPt(s, hs - ro, s - ro, hs - ro) } else pt(s, hs)
     pt(s, 0)
   }
   return nv
@@ -62,17 +65,18 @@ const quarter = (dx: number, dy: number) => (Math.abs(dx) >= Math.abs(dy) ? (dx 
 const SX = [-1, 1, 1, -1], SY = [-1, -1, 1, 1], WALK = [1, 2, 3, 0]
 
 /**
- * Append the outline of a joined cell (centre cx, cy, half side s) as one clockwise sub-path. `bleed` extends the
- * joined sides past the cell edge (SVG, where abutting elements would conflate). An interior cell is one rect, and
- * an isolated square-cornered cell is the plain square dot. `close: false` leaves it open (Canvas `fill` closes it).
+ * Append the outline of a joined cell (centre cx, cy, half side s, half height `hs`: s on a square cell) as one
+ * clockwise sub-path. `bleed` extends the joined sides past the cell edge (SVG, where abutting elements would
+ * conflate). An interior cell is one rect, and an isolated square-cornered cell is the plain square (or rect) dot.
+ * `close: false` leaves it open (Canvas `fill` closes it).
  */
-export function joinOutline(p: OutlineSink, cx: number, cy: number, s: number, g: JointGeom, mask: number, bleed = 0, close = true): void {
-  const e = extents(s, g, bleed), hjx = e[0], hjy = e[1], ro = e[2], ri = e[3]
+export function joinOutline(p: OutlineSink, cx: number, cy: number, s: number, g: JointGeom, mask: number, bleed = 0, close = true, hs = s): void {
+  const e = extents(s, hs, g, bleed), hjx = e[0], hjy = e[1], ro = e[2], ri = e[3]
   if (mask === ALL_FULL) { p.rect(cx - hjx, cy - hjy, 2 * hjx, 2 * hjy); return }
-  if (mask === 0 && ro === 0) { p.rect(cx - s, cy - s, 2 * s, 2 * s); return }
+  if (mask === 0 && ro === 0) { p.rect(cx - s, cy - hs, 2 * s, 2 * hs); return }
   let first = true
   for (const q of WALK) {
-    const n = corner(quadrant(mask, q), s, hjx, hjy, ro, ri), sx = SX[q], sy = SY[q], back = q === 2 || q === 0
+    const n = corner(quadrant(mask, q), s, hs, hjx, hjy, ro, ri), sx = SX[q], sy = SY[q], back = q === 2 || q === 0
     for (let k = 1; k < n; k++) {
       const to = back ? n - 1 - k : k, from = back ? to + 1 : to - 1, arcAt = back ? from : to
       const tx = cx + sx * V[to * 5], ty = cy + sy * V[to * 5 + 1]
@@ -89,33 +93,67 @@ export function joinOutline(p: OutlineSink, cx: number, cy: number, s: number, g
   if (close) p.closePath()
 }
 
-/** Is (px, py) inside the joined cell (centre cx, cy, half side s)? The CPU reference for every renderer. */
-export function insideJoined(px: number, py: number, cx: number, cy: number, s: number, g: JointGeom, mask: number): boolean {
+/** Is (px, py) inside the joined cell (centre cx, cy, half side s, half height hs)? The CPU reference for every renderer. */
+export function insideJoined(px: number, py: number, cx: number, cy: number, s: number, g: JointGeom, mask: number, hs = s): boolean {
   const dx = px - cx, dy = py - cy, q = dy < 0 ? (dx < 0 ? 0 : 1) : dx < 0 ? 3 : 2, ax = Math.abs(dx), ay = Math.abs(dy)
-  const e = extents(s, g, 0), hjx = e[0], hjy = e[1], ro = e[2], ri = e[3], code = quadrant(mask, q)
-  if (code === EDGE_H) return ax <= hjx && ay <= s
+  const e = extents(s, hs, g, 0), hjx = e[0], hjy = e[1], ro = e[2], ri = e[3], code = quadrant(mask, q)
+  if (code === EDGE_H) return ax <= hjx && ay <= hs
   if (code === EDGE_V) return ax <= s && ay <= hjy
   if (code === FULL) return ax <= hjx && ay <= hjy
   if (code === INNER) {
     if (ax > hjx || ay > hjy) return false
-    if (ax <= s || ay <= s) return true
-    const fx = ax - s - ri, fy = ay - s - ri
+    if (ax <= s || ay <= hs) return true
+    const fx = ax - s - ri, fy = ay - hs - ri
     return ri > 0 && fx <= 0 && fy <= 0 && fx * fx + fy * fy >= ri * ri
   }
-  if (ax > s || ay > s) return false
-  const fx = ax - s + ro, fy = ay - s + ro
+  if (ax > s || ay > hs) return false
+  const fx = ax - s + ro, fy = ay - hs + ro
   return !(ro > 0 && fx > 0 && fy > 0) || fx * fx + fy * fy <= ro * ro
 }
 
+/**
+ * A rect cell's plain outline (squares Q2; half sides sx × sy, exponent n, Infinity = 'square'), clockwise: the box;
+ * for a square-like squircle (n > 8) the rounded rect whose corner is min(sx, sy)·cornerFraction(n), the same corner
+ * the round renderers give a square cell; for n ≤ 8 (circles, soft squircles) the superellipse stretched to sx × sy
+ * (its four béziers scale exactly). Canvas `Path2D` and the SVG string sink both take it.
+ */
+export function rectOutline(p: OutlineSink & { bezierCurveTo(ax: number, ay: number, bx: number, by: number, x: number, y: number): void }, x: number, y: number, sx: number, sy: number, n: number): void {
+  if (n > BEZIER_MAX_N) {
+    const c = n === Infinity ? 0 : Math.min(sx, sy) * cornerFraction(n)
+    if (c <= 0) { p.rect(x - sx, y - sy, 2 * sx, 2 * sy); return }
+    const H = Math.PI / 2
+    p.moveTo(x - sx + c, y - sy); p.lineTo(x + sx - c, y - sy); p.arc(x + sx - c, y - sy + c, c, -H, 0, false, x + sx, y - sy + c)
+    p.lineTo(x + sx, y + sy - c); p.arc(x + sx - c, y + sy - c, c, 0, H, false, x + sx - c, y + sy)
+    p.lineTo(x - sx + c, y + sy); p.arc(x - sx + c, y + sy - c, c, H, Math.PI, false, x - sx, y + sy - c)
+    p.lineTo(x - sx, y - sy + c); p.arc(x - sx + c, y - sy + c, c, Math.PI, 3 * H, false, x - sx + c, y - sy)
+    return
+  }
+  const h = bezierHandle(n), kx = sx * h, ky = sy * h
+  p.moveTo(x, y - sy); p.bezierCurveTo(x + kx, y - sy, x + sx, y - ky, x + sx, y)
+  p.bezierCurveTo(x + sx, y + ky, x + kx, y + sy, x, y + sy)
+  p.bezierCurveTo(x - kx, y + sy, x - sx, y + ky, x - sx, y)
+  p.bezierCurveTo(x - sx, y - ky, x - kx, y - sy, x, y - sy)
+}
+/** Is (px, py) inside the rect cell of `rectOutline`? (The superellipse itself for n ≤ 8: the béziers are within 0.1% of it.) */
+export function insideRect(px: number, py: number, cx: number, cy: number, sx: number, sy: number, n: number): boolean {
+  const ax = Math.abs(px - cx), ay = Math.abs(py - cy)
+  if (ax > sx || ay > sy) return false
+  if (n > BEZIER_MAX_N) {
+    const c = n === Infinity ? 0 : Math.min(sx, sy) * cornerFraction(n), fx = ax - sx + c, fy = ay - sy + c
+    return !(c > 0 && fx > 0 && fy > 0) || fx * fx + fy * fy <= c * c
+  }
+  return dpow(ax / sx, n) + dpow(ay / sy, n) <= 1
+}
+
 const CORNER = 1 - Math.PI / 4
-/** Analytic area (px²) of a joined cell. */
-export function joinArea(s: number, g: JointGeom, mask: number): number {
-  const e = extents(s, g, 0), hjx = e[0], hjy = e[1], ro = e[2], ri = e[3]
+/** Analytic area (px²) of a joined cell (half height hs = s on a square cell). */
+export function joinArea(s: number, g: JointGeom, mask: number, hs = s): number {
+  const e = extents(s, hs, g, 0), hjx = e[0], hjy = e[1], ro = e[2], ri = e[3]
   let a = 0
   for (let q = 0; q < 4; q++) {
     const code = quadrant(mask, q)
-    a += code === EDGE_H ? hjx * s : code === EDGE_V ? s * hjy : code === FULL ? hjx * hjy
-      : code === INNER ? hjx * hjy - (hjx - s) * (hjy - s) + CORNER * ri * ri : s * s - CORNER * ro * ro
+    a += code === EDGE_H ? hjx * hs : code === EDGE_V ? s * hjy : code === FULL ? hjx * hjy
+      : code === INNER ? hjx * hjy - (hjx - s) * (hjy - hs) + CORNER * ri * ri : s * hs - CORNER * ro * ro
   }
   return a
 }

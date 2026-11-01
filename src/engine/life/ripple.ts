@@ -9,7 +9,7 @@
  * The neighbour sum is grouped (left + right) + (up + down), so a centred drop stays mirror-symmetric bit for bit.
  *
  * API frozen at L1.2: M2's caustic pool consumes createRipple / rippleStep / rippleSplat / rippleGrad (and
- * rippleEnergy). Later water features are new functions; these signatures never change.
+ * rippleEnergy). Later water features are new functions (L3.6: `rippleTilt`); these signatures never change.
  */
 import { dcos } from '../noise/dmath'
 
@@ -78,6 +78,22 @@ export function rippleAdd(r: Ripple, s: Float32Array, x: number, y: number, amou
 }
 function addAt(r: Ripple, s: Float32Array, i: number, j: number, v: number) {
   if (i >= 0 && j >= 0 && i < r.w && j < r.h && r.mask[j * r.w + i]) s[r.H + j * r.w + i] += v
+}
+
+/**
+ * Tilt the water (L3.6; a new function, so `rippleStep` and M2's pool are untouched): add the forcing
+ * −k·(tx·(x − cx) + ty·(y − cy)) to plane P over water cells, about the grid's centre. The next `rippleStep`
+ * subtracts P, so each step pushes the surface toward a plane rising where (tx, ty) points (`tx` > 0 when the right
+ * edge tips down: the water runs right); the damping holds it there and the walls slosh it back. Call it right after
+ * `rippleStep`. Returns at once for tx = ty = 0 (the state is left bit for bit as it was).
+ */
+export function rippleTilt(r: Ripple, s: Float32Array, tx: number, ty: number, k: number): void {
+  if ((tx === 0 && ty === 0) || !Number.isFinite(tx) || !Number.isFinite(ty) || !Number.isFinite(k)) return
+  const { w, h, mask, P } = r, cx = (w - 1) / 2, cy = (h - 1) / 2
+  for (let y = 0; y < h; y++) {
+    const row = y * w, fy = ty * (y - cy)
+    for (let x = 0; x < w; x++) if (mask[row + x]) s[P + row + x] -= k * (tx * (x - cx) + fy)
+  }
 }
 
 /** Height of the current plane at a cell (0 outside the grid and on walls). */

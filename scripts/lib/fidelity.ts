@@ -23,7 +23,9 @@ import { litCentroid, median, pitchOf, quantile, theme, visible } from './stats'
 export const LADDER = [0.72, 1, 1.3, 1.6, 2, 2.5, 3, 4], onLadder = (k: number) => LADDER.some(s => Math.abs(s - k) <= 0.01)
 export const BUDGET = { staticMs: 30, frameMs: 4 }, FPS = 12
 const RUNS = 5
-const factor = (k: number | undefined) => (k !== undefined && Number.isFinite(k) && k > 0 ? k : 1)
+// a rect lattice [kx, ky] is read by its x factor (as the X-ray inspector does)
+const kx = (k: Layer['lattice']) => (Array.isArray(k) ? k[0] : k)
+const factor = (k: Layer['lattice']) => { const x = kx(k); return x !== undefined && Number.isFinite(x) && x > 0 ? x : 1 }
 const isBase = (l: Layer) => !l.sites && factor(l.lattice) === 1 && !l.origin
 const boardOf = new Map<string, string>(); for (const b of boards) for (const p of b.items) if (!boardOf.has(p.id)) boardOf.set(p.id, b.id)
 
@@ -60,8 +62,8 @@ export function scoreFidelity(p: WidgetPreset): FidelityCard {
   const reds = new Set([theme.dotActive, theme.dotActiveDim].filter(Boolean)), redDots = lit.filter(d => reds.has(d.color)).length
 
   // G3 — lattice ladder (explicit values only; the implicit card lattice 1 is on the ladder)
-  const lattices = layers.filter(l => !l.sites && l.lattice !== undefined).map(l => l.lattice!)
-  const siteSizes = layers.filter(l => l.sites).map(l => l.size ?? l.lattice ?? 1)
+  const lattices = layers.filter(l => !l.sites && l.lattice !== undefined).map(l => kx(l.lattice)!)
+  const siteSizes = layers.filter(l => l.sites).map(l => l.size ?? kx(l.lattice) ?? 1)
   const offOf = (ks: number[]) => [...new Set(ks.filter(k => !onLadder(k)))].sort((a, b) => a - b)
   const offLadder = offOf(lattices), offLadderSizes = offOf(siteSizes)
 

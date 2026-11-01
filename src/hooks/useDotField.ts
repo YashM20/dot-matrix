@@ -6,7 +6,7 @@ import { staticLayers } from '../widgets/registry'
 
 export type DotSource = { field: Field } | { layers: (ctx: WidgetContext) => Layer[] }
 /** Interaction fields of the frame context (P2), filled by the input layer in `DotCanvas`. */
-export type InteractionContext = Pick<FrameContext, 'hover' | 'pressed' | 'focus' | 'pointers'>
+export type InteractionContext = Pick<FrameContext, 'hover' | 'pressed' | 'focus' | 'pointers' | 'reducedMotion'>
 
 /**
  * Static sample cache across board visits. A static preset (not `animated`, no `clock`) is a pure

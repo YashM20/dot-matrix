@@ -253,8 +253,19 @@ A material is a dot vocabulary, not a shader: given one normal raster and one li
 | Woven | `weave` drafts + `weaveRelief` | Threads ≥ 3 cells with a 1-cell void gap; warp one band above weft; sheen along the thread |
 | Stitched | `stitch` / `stitchField` | Hard dashes on card pitch; unsewn stitches are needle holes; the needle may be the accent |
 | Stone | `marble`, `terrazzo` | Veins ≥ 2 cells drop one band; engraving is a V-groove, lit wall / dark wall under raking light (`rake(L)`, ≤ 18°) |
+| Liquid glass | `liquidGlass` (`snellLUT`, `BEZEL`, `frost`) | Dots stay on the grid, the sampled value moves (sub-cell); Snell LUT (127 samples, n 1.5) on a squircle bezel; the flat top magnifies 1.06; Fresnel +1 step on the bezel's outer 1.5 cells; the specular rim (−60°, toward a hovering pointer) in `value`. The screen behind is the one GPU layer (`gpuValues`, density 2); its lattice-1 field is what Canvas, goldens and SVG draw |
+| Caustics | `causticSplat`, `refractFloor` | Forward photon splat (2×2 stratified photons per cell, tent + [1 2 1]² binomial: a 1.5-cell B-spline footprint), mean 1 on flat water; net ≥ 1.6 → +1 step in `value`, < .7 → `faint`; the floor read through the water at p − depth·(1 − 1/n)·∇h |
+| Stained glass | `voronoiSites` (exact bisectors, the rose) + F0 `voronoi2` ((F2 − F1)/2, the lancet) | Panes in three transmittances (.35 / .6 / .85) × the sky's gain, on the 1.5 lattice; lead came is void with `mid` glints only, a 1-cell moat between came and panes; the live pane is red at its own transmittance size |
+| Rust, wax | `fbm2` + AO thresholds (rust), wrap diffuse + e^(−σ·thickness) transmission (wax) | Rust kills the sheen: it replaces the brushed bands (fresh `mid`, deep `faint` pitted on 2×2 blocks), crevices first; only the advancing edge is red. Wax glows near the flame through its thin rim; the flame is the accent |
+| Knit | `knitRelief` / `knitAt` (`src/engine/matter/knit.ts`) | Stitches 6 × 4 cells: two 3-cell legs leaning into a V, a void crevice between loops; purl as horizontal bumps; a rope cable's front strand rides up over the crossing; Kajiya–Kay (p 20) along each arm, +1 step at .3, `value` at .6 |
+| Letterpress | `heightRaster` of `insetDistance` (smooth, −1.5) + fibres (blue noise + stretched noise) | Paper stays `faint` / `mid` with its tooth void; under raked light the deboss wall facing the light is `idle`, the far wall void; ink is `value` on the impression's floor only (≥ 1.9 cells into a stroke) |
+| Wood | `woodRings` (`src/engine/matter/wood.ts`) | Rings `fract(k·dist + warp)` round a diving pith (the cathedral), period ≥ 3 lattice cells; latewood a band down, flecks a step up, knot cores `faint`; the lacquer's chatoyance is Kajiya–Kay along the rings (+1 step), its polish `value` |
+| Leather | `leatherAt` / `leatherGrain` (`src/engine/matter/leather.ts`) | Pebbles from Worley cells, creases (the borders) void; a burnished round edge; saddle stitches slanted 30°, the thread `idle` / `value` in AO pits |
+| Sand | `sandRake`, `sandCarve`, `sandRelax` (`src/engine/matter/sand.ts`) | A height raster on the 2× lattice in a world: a tine carves a gaussian and heaps the same volume beside it; repose relaxes slopes over `{material.sand.talus}`; light raked to ≤ 22°; grains a blue-noise band down; the rake head is the accent while it carves |
+| Mercury | `mercuryStep` over `fluid.ts` + the LIQUID matcap | The metal is fluid ink sinking along gravity (`gx`, `gy`: the step only); its height is the blurred coverage (a domed pool), read through the matcap tipped by `tx`, `ty` (none at rest); the lamp's reflection `value`; a split bead is the accent |
+| Thread, frost | `threadStep` over `life/chain.ts` `ropeStep`; `dla` | A 5-cell cord along the rope, its tangent twisted ±20° every 2 cells (the ply catches the light in steps); inextensible at rest; the needle's eye red only while pulled. Frost grains are DLA sites with a Kajiya–Kay glint along each branch; the grains sticking now are red |
 
-Material comes from relief, never from hue (no colour tokens). "Was active" is size contrast in the one `active` layer: `{colors.dotActiveDim}` is not used on material boards until the owner rules (M-materials §10.6). `src/engine/matter` is not in the engine barrel: import it by path.
+Material comes from relief, never from hue (no colour tokens). On the materials board only `mat-lens` is GPU-tagged (a fine glass screen is the point of that card); every other material card is CPU by dot count, and the two live-fork cards (`mat-pool`, `mat-rust`) sample on the main thread. "Was active" is size contrast in the one `active` layer: `{colors.dotActiveDim}` is not used on material boards until the owner rules (M-materials §10.6). `src/engine/matter` is not in the engine barrel: import it by path.
 
 | Material token | Value |
 |---|---|
@@ -265,6 +276,16 @@ Material comes from relief, never from hue (no colour tokens). "Was active" is s
 | `{material.bake.cold}` | ≤ 30 ms |
 | `{material.bake.rebake}` | ≤ 10 ms |
 | `{material.frame}` | ≤ 4 ms |
+| `{material.glass.ior}` | 1.5 |
+| `{material.glass.lutSamples}` | 127 |
+| `{material.glass.bezel}` | `squircle` |
+| `{material.water.ior}` | 1.33 |
+| `{material.caustic.net}` | 1.6 |
+| `{material.sand.talus}` | .8 height units between 4-neighbours (2 relaxation passes a step) |
+| `{material.sand.rake}` | 5 tines, 3 lattice cells apart; light raked to ≤ 22° |
+| `{material.wood.ring}` | 5.5 lattice cells, never under 3 |
+
+On the workshop board (M3) every card is CPU by dot count; the six with a world (knit, paper, ice, sand, mercury, thread) sample on the main thread (worker stubs keep their sims out of the worker), and denim, paper and leather carry no red at all.
 
 **Board-wide light:** a board shares one light direction, the sun of the wall-clock hour (`sunAt(hourOf(date))`: rises on the left at 6, highest at noon, sets on the right at 18, a lower moon at night). Over a card the pointer replaces it as a torch.
 
@@ -283,6 +304,10 @@ The phone's orientation reaches cards as plain numbers from the light hub (`src/
 Fixture (goldens, snapshots, no sensor): `{ lightSrc: 0, lightAz: 0, lightEl: 7, gx: 0, gy: 1, tx: 0, ty: 0, tilt: 0 }`.
 - **Precedence** (`sceneLight`): a pointer inside the card (torch) → tilt (`lightSrc` 1) → the sun of the hour.
 - **Opt-in:** a card declares every key it reads in `defaults`, with the fixture values (undeclared keys never arrive), and its board lists `sources: [lightSource]` both in the manifest entry's `load()` and in the eager registry (`src/widgets/index.ts`). The physics board is the first consumer.
+- **The pond (`pond-koi`, L3):** declares `lightSrc`, `lightAz`, `lightEl`, `tx`, `ty` (`pondSources`). Tilt is water, not gravity: `(tx, ty)` tips the pond's wave field (`rippleTilt`), so the water piles up downhill and sloshes, pellets drift downhill and lily pads 3 cells per unit; any tilt forks the live world, rest is the pristine loop. `lightSrc` 1 shades the koi by the tilt light; otherwise a fixed light, never the clock's sun, so default frames don't move with the hour. The pond reads the hour only for day and night (render-only: night from 21:00 to 05:00, dithered ramps at dusk and dawn; the koi's red never changes).
+- **Glyph style switch (`pond-koi`, `glyphs`):** a two-stop segmented control in the label row (`[104, 0, 40, 9]`): DOTS (0, default) draws 3×3 dot micro-glyphs on 4-cell tiles with lattice-4 dots for koi interiors; TYPE (1) draws the same scene in 5×7 font glyphs on 6×8 tiles, with no lattice dots. The switch shows (DOTS · TYPE, the chosen one in `value`, the other `faint`) while hovered, focused or pressed, or while TYPE is on; otherwise that corner keeps the faint time-of-day caption.
+- **The day and the age (X1, `pond-koi` and `pond-marble`, the board's `pondDaySource`):** `day` = days since 2025-10-27 of the pond's date (a link's `?day=YYYY-MM-DD`, else the local date; rolls over at midnight), `age` = days of visits − 1 from the opt-in pond memory (0 while it is off). Fixture `{ day: 0, age: 0 }`: day 0 is the canonical pond the goldens pin. A day re-seeds the koi (varieties, pads, paths) and the marble's ink, and sets the weather (`calm`, `wind` ×3 drift, `rain` 2.5 drops/s), smooth from day to day; age hatches a fry every 10 days of visits (≤ 3, von Bertalanffy growth to 34 cells). Pond links (⌘K copy, the card's LINK, TOOLS › SHARE, the widget page's LINK / SHORT / SHARE) carry `?day=`; the app drops it off other boards.
+- **Pond memory (X1, opt-in):** TOOLS › POND MEMORY on `/pond/` (and ⌘K "Pond memory: on / off"). Off by default and nothing is stored until it is turned on; on writes one record, localStorage `dot480:pond` = `{ v, born, last, visits }` (≈ 60 B), counted once a day after idle; off deletes it. Only `src/site/pondMemory.ts` touches it.
 - **Calm by default:** a still phone emits nothing; at most 15 updates/s (4 under reduced motion); listeners only while a consumer board is mounted and the tab is visible.
 - **TILT button:** in the phone TOOLS sheet, shown only where tilt can work (orientation events, a coarse pointer, a secure context); `aria-pressed` while tilt is on. It is the one place that asks iOS for permission (`requestTilt()`, first thing in the tap); cards never ask. Tilt never starts by itself under reduced motion.
 - **Not a touch:** tilt never engages a card, sets pointers or blocks scroll (UX-PLAN §10).
@@ -314,8 +339,20 @@ Square dots can keep a gutter and fuse with their equal neighbours into one shap
 | `{join.outer}` | from the squircle (`cornerFraction(n)`), 0 for `square` | Convex corner radius of joined blobs, fraction of the half side |
 | `{join.inner}` | 0 | Concave fillet at notches, fraction of the half pitch (visible with a gutter) |
 | `{join.seam}` | 0 | Seam left inside joined blobs, fraction of the pitch |
+| `Layer.rotation` (Q3) | unset (0) | Radians, per layer or `(value, u, v) => θ`; snapped to π/4 and, by the square's 90° symmetry, stored as 0 or π/4 (`DotInstance.rot`, a diamond). Rotated dots never join; a rotated site hides cells through `hides(…, rot)` |
+| `Layer.motif` (Q3) | unset | A cut in the cell's own colour: `bead` (round hole, radius .4 s), `stud` (ring at .6 s, width .14 s), `stitch` (the cell as an X, arms .4 s across the axis). Roundness stays on the exponent; motif dots never join |
 
-Ink: a square holds 4/π the ink of a circle of the same r, and a joined interior cell is P², so joined fills go one grey band lower (`idle`, not `value`; `value` stays for type and small marks). `squareStyle` (src/widgets/boards/squares.ts) is `square`, sizes .25–1.125, gap .16, five levels.
+Ink: a square holds 4/π the ink of a circle of the same r, and a joined interior cell is P², so joined fills go one grey band lower (`idle`, not `value`; `value` stays for type and small marks). `squareStyle` (src/widgets/boards/squares.ts) is `square`, sizes .25–1.125, gap .16, five levels. A `shapeOf` dot keeps the frame style's ink: its half side scales by √(A(n_style) / A(n)) (A the drawn area), so a dot ↔ square morph (`squareMorph`, src/engine/squares/morph.ts) holds its tone until the passed cells join.
+
+**Rect cells** (Q2): `Layer.lattice: [kx, ky]` samples on kx × ky cells (fractional allowed); the dot's half width is the ramp × kx and its half height the ramp × ky, each clamped to its own gutter, and `DotInstance.aspect` = ry / rx carries the shape (absent = 1). Cover keeps the centre-inside rule per axis. `Layer.sizeAxis` picks the side the value drives:
+
+| `sizeAxis` | Half sides | Opacity | Joins (with `join`) | Use |
+|---|---|---|---|---|
+| `'both'` (default) | ramp·kx × ramp·ky | from the value | as square cells (same tone, group, level) | rect pixels, teletext sextants on non-2:3 cells |
+| `'y'` | full (1 − gap)·kx·P/2 × ramp·ky | 1 (solid: the weight is the tone) | along x only, across levels: a line is one stroke | line screens |
+| `'x'` | ramp·kx × full (1 − gap)·ky·P/2 | 1 | along y only, across levels | solid bars |
+
+A plain rect cell is the box (`square`), the rounded rect with corner min(rx, ry)·cornerFraction(n) (squircles, n > 8), or the superellipse stretched to rx × ry (n ≤ 8). Teletext (`src/engine/squares/teletext.ts`): sextant mosaics on `[cell / 2, cell / 3]` sub-cells, contiguous = joined per tone, separated = spaced squares (the gutter shows); backgrounds are joined panels at level .5 under the foreground.
 
 ### Chrome radius (CSS)
 Dots and in-card shapes use the squircle exponent above. The HTML chrome around them (card containers, controls, menus) uses a short radius scale in `src/tokens.css`; `scripts/site/css-tokens.ts` fails on a raw px radius (percentages, for circles and CRT glass, are fine).
@@ -514,8 +551,15 @@ No state changes a size, so nothing shifts. On coarse pointers every chrome targ
   | Card | `fps` | Why |
   |---|---|---|
   | `pond-koi` | 30 | swimming koi stutter at 12 (docs/living-matter/L-pond.md D7); 15 on a phone |
+  | `pond-jelly` | 20 | bell pulses of 1.8–2.4 s and trailing tentacles (L-pond.md D7); 12 on a phone |
+  | `pond-slime` | 15 | the network re-routes slowly, the sim steps at 15 Hz; 12 on a phone |
+  | `pond-fireflies` | 20 | a flash peaks for .07 s and fades by .2 s; 12 on a phone |
+  | `pond-murmur` | 24 | birds fly 22–38 cells/s, about 1.5 cells a frame at 24, so the sheet turns smoothly; 12 on a phone |
+  | `pond-terrarium` | 12 | the creeper and the ants are slow; the default rate, declared for the record |
+  | `pond-marble` | 20 | koi comb the ink at ~11 cells/s, about half a cell a frame; 12 on a phone |
   | `mat-loom` | 40 | the shuttle runs 80 cells/s, 2 cells a frame at 40 (docs/living-matter/M-materials.md, STYLE-BIBLE ≤ 2 cells a frame); 20 on a phone, with a size-contrast trail |
-- Choose WebGL2 only by content, never by convenience: a card gets it when a layer is tagged for the GPU (`gpuIR` for a Field IR program evaluated per dot on the GPU, `gpuValues` for a CPU field sampled straight into a value texture) and WebGL2 works; `renderer: 'webgl'` forces it. Tag a layer only when its fine dot count is out of Canvas reach (≳ 100k dots, or a pitch below ~1 card px). The tagged field is still an ordinary `Field` at the card's lattice, which is what goldens, SVG export, `describe()` and the Canvas fallback (no WebGL2, context lost, shader failure) draw. One WebGL2 context per page, which is shared by every card and copied into each card's own canvas. Squircles are exact superellipses (n = 2 + 30r²) with analytic AA, so WebGL ink matches the true dot area. Canvas (Skia) under-covers sub-pixel dots: it draws 79% of a 0.6 px dot. A card of sub-2px dots therefore reads up to ~7% heavier on WebGL (parity gate: mean Δ ≤ 2/255, ≤ 2.5% of pixels off by > 16, PSNR ≥ 32 dB; `scripts/webgl.ts`). The GPU path does not do `sizeCurve`, `jitter`, `sites`, `join`, `shapeOf` or `{grid.gap}`; such layers stay CPU instances. Joined cells draw with no cracks on all three renderers: Canvas fills joined neighbours in one path, WebGL cuts quads on integer cell edges, SVG bleeds joined sides and fades the group with `opacity` (`scripts/squares-browser.ts` gates). A GPU layer does not suppress CPU card cells under its dots, so keep chrome outside its window.
+  | `mat-pool` | 30 | the ripple steps at dt 1/30 (track L's tuning): one step a frame; 15 on a phone |
+- Choose WebGL2 only by content, never by convenience: a card gets it when a layer is tagged for the GPU (`gpuIR` for a Field IR program evaluated per dot on the GPU, `gpuValues` for a CPU field sampled straight into a value texture) and WebGL2 works; `renderer: 'webgl'` forces it. Tag a layer only when its fine dot count is out of Canvas reach (≳ 100k dots, or a pitch below ~1 card px). The tagged field is still an ordinary `Field` at the card's lattice, which is what goldens, SVG export, `describe()` and the Canvas fallback (no WebGL2, context lost, shader failure) draw. One WebGL2 context per page, which is shared by every card and copied into each card's own canvas. Squircles are exact superellipses (n = 2 + 30r²) with analytic AA, so WebGL ink matches the true dot area. Canvas (Skia) under-covers sub-pixel dots: it draws 79% of a 0.6 px dot. A card of sub-2px dots therefore reads up to ~7% heavier on WebGL (parity gate: mean Δ ≤ 2/255, ≤ 2.5% of pixels off by > 16, PSNR ≥ 32 dB; `scripts/webgl.ts`). The GPU path does not do `sizeCurve`, `jitter`, `sites`, `join`, `shapeOf`, rect cells (`lattice: [kx, ky]`, `sizeAxis`) or `{grid.gap}`; such layers stay CPU instances. Don't GPU-tag a `rotation` or `motif` layer: `layerPass` doesn't test them (first-load bytes), and a tagged one would draw plain. Joined and rect cells draw with no cracks on all three renderers: Canvas fills joined neighbours in one path, WebGL cuts quads on integer cell edges, SVG bleeds joined sides and fades the group with `opacity` (`scripts/squares-browser.ts` gates). A GPU layer does not suppress CPU card cells under its dots, so keep chrome outside its window.
 
 ### Don't
 - Don't introduce a second accent hue. `{colors.accentAmber}` exists only inside the `deerflowMosaic` hero preset's ambient lighting — never on flat `dot480` chrome, never on a CTA.
@@ -607,8 +651,10 @@ One global switch (header control, `?skin=`, localStorage `dot480:skin`, `setSki
 | `eink` | 1-bit blue-noise ink on paper; partial refresh .32 s with ghosts (.3 × .8); every 10th refresh full (TRMNL physics) | full-refresh flash (also on board change) |
 | `flipdisc` | 2-tone discs (`value` face, `dotFaint` back, accent pigment), column sweep .34 s, underdamped flips (ω 60, ζ .32); clack muted by default | discs sweep from black |
 | `nixie` | neutrals → warm neon, 3-level glow, hex anode mesh, slow flicker | ignition stutter |
+| `lcd` | reflective: cell average, symmetric liquid-crystal lag v′ = v + (target − v)(1 − e^(−Δt/τ)), τ .15 s; square pixels with a .12 clear gutter; neutrals → ink on a pale backplane (paper / ink are skin physics, not tokens), the accent prints as pigment; the pixels' shadow on the backplane (offset .35 / .5 cell, blur .5, α .22) | pixels fade in from a blank panel (τ) |
+| `grout` | mosaic: one flat tile per cell on grout (gap .14; the scheme's `bg`, a light card's faint tone), a 1 px bevel (+12% top-left, −18% bottom-right), a fixed ±3% luma jitter per tile; the tile keeps the cell's hue | tiles set in a diagonal sweep (.3 s) |
 
-- **Cost:** emissive skins are GPU-side 2D ops (drawImage, composites, mips, one SVG colour-matrix filter). E-ink and flip-disc read back one `cols × rows` image a few times a second at most. A static card is re-skinned from its existing frame (no re-sample); a running card's canvas is copied once per its own tick.
+- **Cost:** emissive skins, LCD and grout are GPU-side 2D ops (drawImage, composites, mips, one SVG colour-matrix filter; no readback). E-ink and flip-disc read back one `cols × rows` image a few times a second at most. A static card is re-skinned from its existing frame (no re-sample); a running card's canvas is copied once per its own tick.
 - **Reduced motion:** no power-on animation, no e-ink flash (partials only), no nixie flicker.
 - Not yet: split-flap skin (the split-flap text motion already exists per card), real-hardware calibration.
 
@@ -686,6 +732,7 @@ Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5
 - **Share links (opt-in, off by default):** "Shared links keep my theme" (`src/site/theme/share.ts`, localStorage `dot480:share-theme`). On, the links the site copies or shares (⌘K "Copy deep link", the card's LINK, TOOLS › SHARE, the widget page's LINK, SHORT and SHARE) carry `?theme=<scheme>_<accent>` of what the visitor sees (`system` resolved). Card HTML and SVG exports keep the canonical link.
 - **Probe:** `scripts/site/theme-picker.ts` (after a build): hover intent, the preview, the wipe's origin and its mask (held at 20% and 45% and captured to `.snapshots/t5/`), the popover staying open through the wipe, the keyboard, share links, ⌘K, URL params, reduced motion (instant), and the touch sheet (44 px, no overflow, taps switch with the sheet open).
 - **Hover during the wipe:** a view transition moves hit-testing off the page, which reads as the mouse leaving; a hover-opened THEME waits for the wipe to end and re-hit-tests the mouse's last position before it closes.
+- **Board ⇄ widget page (X1):** a card's OPEN (the card strip: OPEN, LINK, …), Back and Forward, and the widget page's BOARD run `document.startViewTransition` (`src/site/viewTransition.ts`): the card's frame (`view-transition-name: dm-card`) flies between its board slot and the page's stage over `--dur-enter` with `--ease`; its canvas is hidden in flight (`.vt-fly`), so no scaled raster of the dot grid ever shows, and the real canvas draws the dots once it lands. The rest of the page cross-fades. Instant under reduced motion, without the API, or in a hidden tab.
 
 ### Theme readers and the display skin
 - **Cards** (`DotWidget`): without a `theme` prop they take the site theme (`useTheme()` + `themeTokens()`), so the boards, the widget page and the ⌘K preview follow it. Exports (PNG, SVG, the card's actions) use the card's tokens at that moment: what the visitor sees. OG images (`scripts/site/postbuild.ts`) and goldens stay on `dark_signal`.
@@ -700,7 +747,8 @@ Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5
 
 - **Physical LED-panel calibration not yet measured** — the `led-panel` breakpoint's pitch-locking behavior is specified but not validated against real hardware bit-depth/gamma response.
 - **Interaction tokens are specified, not yet measured** — `{interaction.*}` values (glow radius, spring half-lives, focus dash, hit pad) are design targets until tuned against real pointer/touch latency.
-- **Square joins** connect through edges only: diagonal `conn: 8` bridges (quadrant code 5) and rotation (limited to π/4) are Q3; SVG joins rely on a seam bleed, so an SVG export of a joined card overlaps neighbours by ≤ 0.5 px.
+- **Square joins** connect through edges only: diagonal `conn: 8` bridges (quadrant code 5) are not built; rotation is limited to the two square states (0, π/4) and rotated or motif cells never join; SVG joins rely on a seam bleed, so an SVG export of a joined card overlaps neighbours by ≤ 0.5 px. `rotation` and `motif` don't travel in a spec yet (`presetToSpec` refuses them).
+- **Rect cells** travel in a spec only as baked `raster` layers (`lattice: [kx, ky]`, `sizeAxis`); an IR, text or generator layer on a rect lattice is baked. Without `installSquares()` a rect cell draws as a plain dot of half side rx.
 - **Superformula (N-fold decorative dot shapes)** deferred per the engineering plan — only the squircle exponent range is currently implemented.
 - **Low-density halftone legibility** below ~32×32 grid cells is a known hard limit, not yet mitigated beyond the gamma-boost + pre-blur tweaks documented in the engineering plan.
 - **Modal / dialog styling** not present in any captured reference board — no `dot-modal` component exists yet.

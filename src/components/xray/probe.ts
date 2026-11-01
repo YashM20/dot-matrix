@@ -11,7 +11,8 @@ import { dot480 } from '../../engine/theme/tokens'
 import type { DotStyle, GridConfig, Layer, Tone } from '../../engine'
 
 const safe = (x: number) => (Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 0)
-const factor = (k: number | undefined) => (k !== undefined && Number.isFinite(k) && k > 0 ? k : 1)
+/** A lattice factor (a rect lattice, squares Q2, reads as its x factor here). */
+const factor = (k: number | number[] | undefined) => (k = typeof k == 'object' ? k[0] : k, k !== undefined && Number.isFinite(k) && k > 0 ? k : 1)
 const shown = (v: number, style: DotStyle) => (style.quantizeSteps ? quantize(v, style.quantizeSteps) : v)
 
 /** A short human name for a layer: its text, its layout generator, `ir`, or its tone. */
@@ -69,16 +70,16 @@ export function probeDot(layers: Layer[], grid: GridConfig, style: DotStyle, fx:
   const { cols, rows } = grid
   const col = Math.max(0, Math.min(cols - 1, Math.floor(fx))), row = Math.max(0, Math.min(rows - 1, Math.floor(fy)))
   const styleSquare = squareLike(coverExponent(style.shape, style.cornerRoundness))
-  // the sampler's radius (gridSampler `emit`): size ramp × lattice, then the {grid.gap} clamp on square-like dots. A dot's
-  // form is its layer's `shapeOf` roundness step (once the squares hooks are installed; 15 = the style's own shape), and
-  // a joined cell keeps the clamped r (the join only reshapes its outline)
+  // the sampler's radius (gridSampler `emit`): size ramp × lattice, then the {grid.gap} clamp on square-like dots, then
+  // the squares hook for a form dot (`shapeOf` / rotation / motif keep the style's ink). A dot's form comes from the
+  // squares hooks once installed (15 = a plain dot); a joined cell keeps the clamped r (the join only reshapes its outline)
   const radius = (l: Layer | undefined, v: number, k: number, u: number, w: number) => {
     const s = shown(v, style), e = style.sizeCurve ? style.sizeCurve(s) : s
     let r = (style.sizeMin + (style.sizeMax - style.sizeMin) * e) * k
-    if (style.gap !== undefined) {
-      const form = l?.shapeOf && samplerExt.form ? samplerExt.form(l, v, u, w) : 15
-      if (form === 15 ? styleSquare : form >= 4) r = Math.min(r, (1 - style.gap) * k * pitch / 2)
-    }
+    const form = l && samplerExt.form ? samplerExt.form(l, v, u, w) : 15
+    const sq = style.gap !== undefined && ((form & 15) === 15 ? styleSquare : (form & 15) >= 4)
+    if (sq) r = Math.min(r, (1 - style.gap!) * k * pitch / 2)
+    if (form !== 15 && samplerExt.rect) r = samplerExt.rect(r, k, 0, undefined, sq ? style.gap! : 0, pitch, form, { shape: style.shape, roundness: style.cornerRoundness })[0]
     return r
   }
   const toneName = (l: Layer, v: number, u: number, w: number): string => {

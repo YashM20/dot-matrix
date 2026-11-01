@@ -59,18 +59,26 @@ export interface JoinSpec {
 export interface JointGeom { hx: number; hy: number; ro: number; ri: number; seam: number; ox?: number; oy?: number }
 /**
  * Per-dot form fields (docs/living-matter/F0-foundation.md §2.5), hashed by the golden key (`scripts/lib/goldenKey.ts`).
- * On a `Layer`, `rot` / `aspect` / `motif` are per-layer defaults the sampler stamps onto that layer's dots (Q2, Q3).
+ * On a `Layer`, `rot` / `motif` are per-layer defaults the sampler stamps onto that layer's dots (Q3); `aspect` comes from
+ * a rect lattice (`Layer.lattice: [kx, ky]`, `Layer.sizeAxis`), so a layer has none of its own.
  */
 export interface DotForm {
   /** Join mask (squares Q1): 12 bits, 3 per quadrant (NW, NE, SE, SW), codes CONVEX…INNER (src/engine/squares/mask.ts). Set by join layers only. */
   join?: number
   /** Geometry of the joined cell (one object per layer and frame). Present iff `join` is; the golden key reads it. */
   joint?: JointGeom
-  /** Reserved for Q3: rotation in radians (squares snap to multiples of π/4, stored in radians). */
+  /**
+   * Rotation in radians (squares Q3, `Layer.rotation`): snapped to a multiple of π/4 and, with the square's 90°
+   * symmetry, stored as 0 (absent) or π/4: a 45° diamond. Drawn by the squares hooks; circles ignore it.
+   */
   rot?: number
-  /** Reserved for Q2: width/height of a rect cell (1 = square). */
+  /**
+   * Rect cell (squares Q2): ry / rx, the half height over the half width `r`. Absent = 1 (a square-like or round dot).
+   * Set by rect lattices (`Layer.lattice: [kx, ky]`, `Layer.sizeAxis`); drawn by the squares hooks (src/engine/squares).
+   * A rotated or motif dot (Q3) carries `aspect: 1`: the mark that routes it to those hooks in every renderer.
+   */
   aspect?: number
-  /** Reserved for Q3: motif id inside the cell. */
+  /** A nested cut inside the cell (squares Q3, `Layer.motif`): 'bead' (round hole), 'stud' (ring) or 'stitch' (the cell drawn as an X). */
   motif?: string
 }
 export interface DotInstance extends DotForm { x: number; y: number; r: number; opacity: number; color: string; shape?: DotStyle['shape']; roundness?: number }
@@ -81,7 +89,7 @@ export interface DotInstance extends DotForm { x: number; y: number; r: number; 
  * `active` is the single accent — keep it to one element per card.
  */
 export type Tone = 'auto' | 'active' | 'activeDim' | 'value' | 'idle' | 'mid' | 'faint'
-export interface Layer extends Omit<DotForm, 'join' | 'joint'> {
+export interface Layer extends Omit<DotForm, 'join' | 'joint' | 'aspect' | 'rot' | 'motif'> {
   field: Field
   tone?: Tone
   /**
@@ -96,9 +104,17 @@ export interface Layer extends Omit<DotForm, 'join' | 'joint'> {
    * Sample this layer on its own coarser lattice: dots `lattice`× the card pitch apart and
    * `lattice`× bigger (hero numerals in the references sit on ~2–4× the label pitch).
    * The field sees u/v over that lattice, which starts at `origin` (card cells).
-   * Card dots underneath a lit lattice dot are suppressed.
+   * Card dots underneath a lit lattice dot are suppressed. `[kx, ky]` = rect cells (squares Q2, fractional allowed):
+   * kx× the pitch across, ky× down; the dot's half sides follow each factor (`DotInstance.aspect` = ry / rx).
    */
-  lattice?: number
+  lattice?: number | [number, number]
+  /**
+   * Which side of a rect cell the size ramp drives (squares Q2): 'both' (default, keeps the cell's aspect), or 'x' /
+   * 'y' for bars and line screens: that side follows the value, the other stays full ((1 − gap)·k·P/2). An 'x' / 'y'
+   * cell is solid (opacity 1: its thickness is the tone), and with `join` it fuses only along its full side, across
+   * levels, so a line is one stroke of varying weight.
+   */
+  sizeAxis?: 'both' | 'x' | 'y'
   origin?: [number, number]
   /**
    * Sample this layer at explicit dot sites (card-cell coordinates, fractional allowed) instead
@@ -120,7 +136,20 @@ export interface Layer extends Omit<DotForm, 'join' | 'joint'> {
   join?: JoinSpec | true
   /**
    * Per-cell roundness 0..1 (the `cornerRoundness` scale, n = 2 + 30r²), read once per emitted dot and snapped to
-   * `{grid.shapeSteps}` (1/8). `undefined` = the style's roundness. Dot ↔ square morphs, hybrid boards.
+   * `{grid.shapeSteps}` (1/8). `undefined` = the style's roundness. The dot keeps the style's ink (its half side is
+   * scaled by √(A(n_style) / A(n)), A the superellipse area), so a dot ↔ square morph holds its tone.
    */
   shapeOf?: (value: number, u: number, v: number) => number | undefined
+  /**
+   * Rotation in radians (squares Q3), per layer or per cell (read once per dot, like `shapeOf`). Snapped to a multiple
+   * of π/4; with the square's 90° symmetry that is two states, 0 and π/4 (a diamond, `DotInstance.rot`). Rotated dots
+   * never join, and a rotated site hides card cells through `hides(…, rot)`. Rect cells ignore it. Needs `installSquares()`.
+   */
+  rotation?: number | ((value: number, u: number, v: number) => number)
+  /**
+   * A nested cut inside each cell, in the cell's own colour (squares Q3; roundness still comes from the exponent, this
+   * is not a shape preset): 'bead' a centred round hole (Perler), 'stud' a thin ring (a LEGO stud from above),
+   * 'stitch' the cell drawn as an X (cross-stitch). Motif dots never join; rect cells ignore it. Needs `installSquares()`.
+   */
+  motif?: 'bead' | 'stud' | 'stitch'
 }

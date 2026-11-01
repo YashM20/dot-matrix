@@ -20,7 +20,8 @@ This file only holds things that would break the project if an agent guessed wro
 - First-load JS stays ≤ 150 kB gz (`scripts/site/size.ts --check`, run in CI). New views and features load lazily.
 - First-load code never value-imports the `src/engine` barrel (one value import pulls every engine module into first load): import engine modules by path; type imports are fine. `size.ts --check` fails if the IR parser returns to first load.
 - Board ids are URLs (`/<board>/`). Rename what visitors see with `boardLabel`; keep old ids working with `boardAliases` (`src/widgets/manifest.ts`).
-- Which doc is current: `docs/README.md`. What's done and next: `docs/PROGRESS.md`.
+- Which doc is current: `docs/README.md`. What's done and next: `docs/PROGRESS.md`. How work moves: `docs/CHECKPOINTS.md`.
+- File size, for hand-written code and CSS: aim for ≤ 300 lines, review anything over 500, and never exceed 800. Split by concern, not by line count. Generated data (goldens, `ids.json`, lockfiles) is exempt. Enforcement and the current overages: issue #76.
 
 ## Testing: run what the change touches
 - While iterating, test the module, not the world: `npx tsc -b`, `npx oxlint <changed files>`, the area's own script (`npx tsx scripts/<area>.ts`, see its header), `pnpm golden --check` only if card pixels could move, `scripts/site/size.ts --check` (after `vite build`) only if first-load imports changed, and only the browser probe for the area you touched.

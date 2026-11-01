@@ -190,7 +190,10 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   // a live card reads the latest interaction per frame; the static frame re-samples only on a committed change.
   // A live card draws every frame itself, so it skips the static sample (a data edit, or a board-shared key that
   // reaches every card on the board, would otherwise re-sample in render for nothing); it samples again on going static
-  const dots = useDotField(layers ? { layers } : { field: field ?? (() => 0) }, grid, style, theme, animated ? 0 : tick, data, ready && !live, live ? undefined : input.ix)
+  // under reduced motion an interaction frame says so (`ctx.reducedMotion`, engine/context.ts): a card with a live
+  // world (the pond) then keeps its pristine still instead of forking on a tap (L-pond.md L3.5)
+  const ix = live ? undefined : input.ix && reducedMotion ? { ...input.ix, reducedMotion: true } : input.ix
+  const dots = useDotField(layers ? { layers } : { field: field ?? (() => 0) }, grid, style, theme, animated ? 0 : tick, data, ready && !live, ix)
   const pitch = grid.pitch ?? theme.gridPx
   const width = grid.cols * pitch, height = grid.rows * pitch
 

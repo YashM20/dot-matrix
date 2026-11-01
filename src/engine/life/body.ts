@@ -100,9 +100,10 @@ const sp = new Float64Array(4)
 /**
  * Forward-splat the posed body (chain + render-time wave) at card-cell centres. Each segment is scanned over its
  * box; a cell keeps the spine point with the smallest |v|, then cover = 1 inside B(s), a fin or the tail fan.
- * Cell (c, r) has its centre at (c, r) in card cells (the chain's units).
+ * Cell (c, r) has its centre at (c, r) in card cells (the chain's units). `bulge` (cells, L3.1's gulp) widens the
+ * head: + bulge at the snout, tapering to 0 at s = .25 (0, the default, leaves the body exactly as without it).
  */
-export function bodyRaster(b: BodySpec, c: Chain, st: Float32Array, phase: number, beat: number, out: BodyRaster): void {
+export function bodyRaster(b: BodySpec, c: Chain, st: Float32Array, phase: number, beat: number, out: BodyRaster, bulge = 0): void {
   const n = c.n, L = b.length, hw = (b.halfWidth ?? .11) * L
   // pose: each node moves along its normal by the swim wave
   for (let i = 0; i < n; i++) {
@@ -151,7 +152,7 @@ export function bodyRaster(b: BodySpec, c: Chain, st: Float32Array, phase: numbe
     const v = out.v[j]
     if (v === Infinity) continue
     const s = out.s[j], av = v < 0 ? -v : v
-    if (s <= 1 && av <= hw * profileAt(s)) { out.cover[j] = 1; out.part[j] = PART_BODY }
+    if (s <= 1 && (av <= hw * profileAt(s) || (bulge > 0 && s < .25 && av <= hw * profileAt(s) + bulge * (1 - s / .25)))) { out.cover[j] = 1; out.part[j] = PART_BODY }
     else if (b.tail && inTail(s, av)) { out.cover[j] = 1; out.part[j] = PART_TAIL }
   }
   if (!b.fins) return

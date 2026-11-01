@@ -9,6 +9,19 @@ import type { Raster } from '../raster/raster'
 /** Share of the light a dark cell keeps after `dt` seconds with time constant `tau`. */
 export const decayFactor = (dt: number, tau: number): number => (tau > 0 ? Math.exp(-Math.max(0, dt) / tau) : 0)
 
+/**
+ * Liquid-crystal response (the LCD skin): unlike phosphor (`afterglow`, max with decay) it is symmetric, a pixel
+ * follows its drive both ways, v′ = v + (target − v)·(1 − e^(−Δt/τ)): a step reaches 63% after τ. The stage runs it
+ * per cell on the GPU (`globalAlpha` = `ghostStep(Δt, τ)`, the new cell image drawn over the old).
+ */
+export const ghostStep = (dt: number, tau: number): number => (tau > 0 ? 1 - Math.exp(-Math.max(0, dt) / tau) : 1)
+/** One LCD response step of a cell image (Float32, same length): `prev` moves towards `next` (pure, a new array). */
+export function lcdGhost(prev: Float32Array, next: Float32Array, dt: number, tau: number): Float32Array {
+  const k = ghostStep(dt, tau), out = new Float32Array(next.length)
+  for (let i = 0; i < out.length; i++) out[i] = prev[i] + (next[i] - prev[i]) * k
+  return out
+}
+
 /** Seconds until a full-on cell has faded below `floor` (when a persistence stage can stop drawing). */
 export const settleSeconds = (tau: number, floor = 1 / 255): number => (tau > 0 ? tau * Math.log(1 / floor) : 0)
 

@@ -1,6 +1,7 @@
 # LIVING-MATTER-PLAN: pond, squares, materials
 
-> Status: **planned, reviewed** (2026-10-27). Research came from four agents: a teardown of daoho.dev's koi pond, plus surveys of creature and pond algorithms, square-cell design, and physical materials. Nothing here is built yet.
+> Status (2026-10-29): **F0 done** (PR #9); **L1, Q1 and M1 built and merged** in round 2 (PR #10): the `pond`, `squares` and `materials` boards; L2, Q2 and M2 in progress (round 3); L3, L4, Q3, M3 and X planned. What landed and how it differs from this plan: the status line of each track doc in `living-matter/`, and `docs/PROGRESS.md`.
+> Planned and reviewed 2026-10-27. Research came from four agents: a teardown of daoho.dev's koi pond, plus surveys of creature and pond algorithms, square-cell design, and physical materials.
 > It covers three new directions that share one foundation:
 > 1. **Living scenes:** a koi pond and other ecosystems drawn in glyph tiles.
 > 2. **Squares:** cells that are spaced or joined squares, not only dots.
@@ -323,10 +324,11 @@ Measured rows carry the number `scripts/site/size.ts` printed (gzip -9, kB = 102
 | T2 frame and rhythm | +0.29 (measured) | 119.91 |
 | the rest of the round (T0, T1, T4a, F0.7–F0.8, E2, the home fix) and the rounding of the rows above, net | +0.16 (the measured remainder) | **120.07 (measured, the new baseline)** |
 | Q1 hook points (+0.4 with the array-path fallback) | +0.6 | ≈120.7 |
-| Q2 / Q3 | +0.3 / +0.1 | ≈121.1 |
+| Q2 rect cells (`lattice: [kx, ky]`, `sizeAxis`, the aspect channel in `emit`, the hook conditions in the renderers, the `layerPass` refusal) and the `lcd` / `grout` names, measured against a fresh origin/main build (bcacd5a, 123.49) | +0.26 (measured; row was +0.3) | 123.76 (measured) |
+| Q3 (rotation / motif routing in the sampler: `form & 15`, the rotated site cover, the join-pass trigger, `samplerExt.rect` for form dots; the 7 card rows in the preload maps and catalog), measured against a fresh build of 3148928 (123.78) | +0.09 (measured; row was +0.1) | 123.87 (measured) |
 | 4 new board manifest rows (pond, squares, materials, workshop) | ≈ +0.25 | ≈121.3 |
 | M1 materials, measured against its merge-base build (dbe4716) | +0.18: the row and its group slot +0.10, the preload-map entry +0.04, `Control.map` +0.03; each board row costs ≈ +0.14, not 0.06 | ≈120.4 with T3 and the essay theming (120.18) |
-| X1 | ≤ +0.5 | ≈121.8 |
+| X1 pond depth, measured against a build of its base (feat/round3 79b0e04, with PR #50): `src/site/viewTransition.ts` + `flushSync`, the OPEN card action, the `?day=` rule in `views.ts`, the card-flight CSS. Lazy: the pond deep-link closure +6.11 (marble engine, day source, `pondMemory` 0.54 shared with the command layer); the worker's initial load +0.01 (the catalog row; pond stays a stub) | +0.44 (measured; row ≤ +0.5) | 124.29 (measured; base 123.86) |
 
 **Sample worker** (`size.ts --worker`; not first load, but fetched by every page that animates a card). Since the worker split it has two numbers: the **initial load** (`sampleWorker-*.js` and its static imports: sampler, Canvas buffer renderer, manifest, card catalog) and, **per board**, what the first request of one of its cards adds (that board's `wk-*` chunk and the shared chunks it imports, fetched once per page).
 
@@ -336,6 +338,8 @@ Measured rows carry the number `scripts/site/size.ts` printed (gzip -9, kB = 102
 | F0.5–F0.11 (the cover code; the cut does not touch the worker) | 153.65 (+0.10, measured) | all in |
 | round 2 (materials +12, squares +9.6, the rest of the round) | 178.31 (measured, de40e71) | all in |
 | **worker split** (F0 §7 R13): the worker imports the manifest instead of the eager registry and loads one board chunk per card (`loadBoard`, board from `catalog.ts`); ES worker chunks named `wk-*`; physics joins pond as a worker-build stub (all its cards are main-thread) | **17.14 (measured; −161.17)**. First load unchanged: 121.65 → 121.65 | measured: materials 20.79, squares 17.58, surfaces 16.13, type 14.78, lock 14.35, live 13.44, heartbeat 9.27, light 8.56, departures 8.42, mirror 8.21, gpu 7.65, ir 7.44, heal 7.42, algorithms 7.40, mosaic 7.19, cinema 6.94, components 6.33, levels 6.08, henry 5.68, audio 4.96, instrument 4.74, deerflow12 4.45, sim 3.88, metro 3.56, ride 2.82, scope 2.66, henry3 2.47; physics 0.07 and pond 0.05 (stubs). All 45 worker chunks: 175.64 |
+| Q2 (rect cells in the sampler; squares board +2 cards, teletext, the rect hooks) | 17.35 (+0.21, measured) | squares 20.92 (was 17.58) |
+| Q3 (the form and ink hooks; squares board +7 cards, the field pack, wfc), against 3148928 (17.42) | 17.55 (+0.13, measured) | squares 27.95 (was 20.92; the deep link 151.25) |
 
 A new board's row is its per-board number; it no longer grows the initial load unless the worker itself changes (`src/workers/`, the sampler, the buffer renderer, the manifest or the catalog). `size.ts --worker --check` also fails when `uJointO` (squares GL, Q1.7) or `EDGE3` (pond) shows up in any worker chunk. Cold first worker frame (worker construction → first frame reply, headless Chrome on a preview build, median of 3, base → split): henry 4111 → 1012 ms, light 1733 → 972, materials 1452 → 912, squares 751 → 783, sim 778 → 932, mosaic 1162 → 1240 (unthrottled; same within noise on a loaded 2-core box); with slow-4G throttling every board is faster (e.g. squares 2421 → 1202, sim 2170 → 970). Opening a second board later costs one board-chunk fetch before its first worker frame; the card shows its main-thread first frame meanwhile.
 

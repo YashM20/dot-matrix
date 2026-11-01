@@ -2,11 +2,16 @@
  * Editor commands on the selection (E2), shared by the keyboard, the inspector and the phone's selection
  * bar: duplicate, delete, copy / cut / paste, group / ungroup, lock, select all, align / distribute,
  * nudge, order, hide. Each is one `edit`, so one undo step. React-free (the Node suite runs them).
+ * E5: the links SHARE and EXPORT · LINK make (a program, the selected frames, the document).
+ * E6: stack order for frames as well as layers (forward, backward, to front, to back) and the phone's long-press menu.
  */
-import { copyLayers, duplicateFrames, editFrame, editLayer, frameById, groupLayers, groupOf, lockFrames, lockLayers, movable, nudgeLayer, removeFrames, removeLayers, shiftLayers, ungroup, type EditorDoc } from './doc'
+import { copyLayers, duplicateFrames, editFrame, editLayer, frameById, groupLayers, groupOf, layerOf, lockFrames, lockLayers, movable, nudgeLayer, orderFrames, orderLayers, removeFrames, removeLayers, shareable, ungroup, type EditorDoc, type Order, type Sel } from './doc'
 import { asClip, CLIP_KEY, clipFromJSON, clipOf, clipToJSON, pasteClip, type Clip } from './clip'
 import { arrangeFrames, arrangeLayers, framesSel, layersSel, selCount, selectAll, selFrames, selGroup, selLayers, type Align } from './select'
 import { useEditor } from './store'
+import { encodeShare, programHash, shareUrl, type SharedProgram } from '../../lib/share'
+import { loadGallery, recordProgram } from '../dwitter/gallery'
+import { encodeLink, linkPayload, linkUrl, loadLinks, recordLink, type LinkKind } from './link'
 
 const st = () => useEditor.getState()
 const plural = (n: number, w: string) => `${n} ${w}${n === 1 ? '' : 's'}`
@@ -107,10 +112,43 @@ export function nudgeSel(dx: number, dy: number) {
     if (ids.length) s.edit(x => ids.reduce((y, id) => editFrame(y, id, f => ({ ...f, x: f.x + dx, y: f.y + dy })), x), `nudge:${ids.join()}`)
   }
 }
-/** Ctrl+] / Ctrl+[: the selected layers (or their groups) one step up / down the stack. */
-export function orderSel(dir: -1 | 1) {
-  const s = st(), sel = s.sel
-  if (sel.layer && sel.frame) s.edit(d => shiftLayers(d, sel.frame!, selLayers(sel), dir))
+/** The document with the selection moved in its stack: layers (their groups as units) in the frame, frames on the canvas. */
+export function orderDoc(d: EditorDoc, sel: Sel, how: Order): EditorDoc {
+  if (sel.layer && sel.frame) return orderLayers(d, sel.frame, selLayers(sel), how)
+  return sel.frame ? orderFrames(d, selFrames(sel), how) : d
+}
+/** Ctrl+] / Ctrl+[ and the long-press menu: the selection forward, backward, to the front or to the back (one undo step). */
+export function orderSel(how: Order) {
+  const s = st(), d = s.h.present, next = orderDoc(d, s.sel, how)
+  if (next !== d) s.edit(() => next)
+}
+
+// ── the long-press menu (E6) ───────────────────────────────────────────────
+export type MenuId = 'duplicate' | Order | 'delete'
+export interface MenuItem { id: MenuId; label: string; disabled: boolean; danger?: boolean }
+const ORDER_LABEL: Record<Order, string> = { forward: 'FORWARD', backward: 'BACKWARD', front: 'TO FRONT', back: 'TO BACK' }
+/** What the long-press menu offers for the selection (frames or layers), and which items would change nothing. */
+export function menuItems(d: EditorDoc, sel: Sel): MenuItem[] {
+  const any = !!sel.frame
+  return [
+    { id: 'duplicate', label: 'DUPLICATE', disabled: !any },
+    ...(['forward', 'backward', 'front', 'back'] as Order[]).map(how => ({ id: how, label: ORDER_LABEL[how], disabled: !any || orderDoc(d, sel, how) === d })),
+    { id: 'delete', label: 'DELETE', disabled: !any, danger: true },
+  ]
+}
+/** Run a menu item on the current selection: the same command the keys and the selection bar use. */
+export function runMenu(id: MenuId) {
+  if (id === 'duplicate') duplicateSel()
+  else if (id === 'delete') deleteSel()
+  else orderSel(id)
+}
+/** The selection in words, for the menu's head: `FRAME level 03`, `3 LAYERS`. */
+export function selTitle(d: EditorDoc, sel: Sel): string {
+  const f = frameById(d, sel.frame)
+  if (!f) return ''
+  if (sel.layer) { const n = selLayers(sel).length; return n > 1 ? `${n} LAYERS` : `LAYER ${layerOf(d, sel)?.name ?? ''}` }
+  const n = selFrames(sel).length
+  return n > 1 ? `${n} FRAMES` : `FRAME ${f.card.name}`
 }
 /** Ctrl+⇧H: hide / show the selection (all follow the primary). */
 export function hideSel() {
@@ -127,4 +165,48 @@ export function selectParent(d: EditorDoc = st().h.present) {
   if (g && !selGroup(d, sel)) s.select(layersSel(f.id, [sel.layer, ...g.layers.filter(id => id !== sel.layer)]))
   else s.select({ frame: f.id })
   return true
+}
+
+// ── links (E5) ─────────────────────────────────────────────────────────────
+export interface MadeLink { url: string; kind: LinkKind | 'program'; id: string; parent?: string; chars: number; deflated: boolean }
+const made = (url: string, packed: string, kind: MadeLink['kind'], id: string, parent?: string): MadeLink => {
+  ;(globalThis as { __editorLink?: string }).__editorLink = url
+  return { url, kind, id, ...(parent && { parent }), chars: url.length, deflated: packed[0] === 'z' }
+}
+/** The program's parent as this browser's gallery knows it (a program shared again unchanged keeps its parent). */
+export const knownParent = (hash: string) => loadGallery().find(e => e.id === hash)?.parent
+/** A program link; the program goes into the remix gallery (with its parent), so CODE draws its lineage. */
+export async function programLink(p: SharedProgram): Promise<MadeLink> {
+  const packed = await encodeShare(p)
+  recordProgram(loadGallery(), p)
+  return made(shareUrl(packed), packed, 'program', programHash(p), p.parent)
+}
+/** A link of frames (one: a frame link; none: the whole document). Throws with the reason (too big, empty). */
+export async function framesLink(ids: string[]): Promise<MadeLink> {
+  const p = linkPayload(st().h.present, ids, loadLinks())
+  if (typeof p === 'string') throw new Error(p)
+  const packed = await encodeLink(p)
+  recordLink(p)
+  return made(linkUrl(packed), packed, p.kind, p.id, p.parent)
+}
+/**
+ * SHARE: a selected code layer that fits a program link → that; else the selected frames (a frame link for
+ * one) → a frame link; nothing selected → the document. Throws with the reason a link could not be made.
+ */
+export async function shareSel(): Promise<MadeLink> {
+  const s = st(), d = s.h.present, sel = s.sel, f = frameById(d, sel.frame), l = layerOf(d, sel)
+  if (f && l && l.kind === 'ir' && selLayers(sel).length === 1) {
+    const p = shareable(f, l, knownParent)
+    if (typeof p !== 'string') return programLink(p)
+  }
+  return framesLink(f ? (sel.layer ? [f.id] : selFrames(sel)) : [])
+}
+/**
+ * Copy text to the system clipboard; false when the page may not (the caller shows the link instead). A
+ * write left pending (an unfocused page, a permission prompt nobody answers) counts as not copied after 1.5 s.
+ */
+export async function copyText(text: string, ms = 1500): Promise<boolean> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const late = new Promise<boolean>(r => { timer = setTimeout(() => r(false), ms) })
+  try { return await Promise.race([navigator.clipboard.writeText(text).then(() => true, () => false), late]) } catch { return false } finally { clearTimeout(timer) }
 }

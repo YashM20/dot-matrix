@@ -43,7 +43,7 @@ pnpm golden --check          # every preset matches goldens/hashes.json
 pnpm snap --board henry3     # headless PNG of a board (or card ids, or --all) into .snapshots/
 npx tsx scripts/site/size.ts --check   # first-load JS budget: ≤ 150 kB gz
 ```
-Browser probes run against a dev or preview server, e.g. `npx tsx scripts/c10-browser.ts http://localhost:5173/`. See each script's header.
+Browser probes run against a dev or preview server, e.g. `npx tsx scripts/c10-browser.ts http://localhost:5173/`. See each script's header. The probes (run them before a push of cross-cutting work): `c10-browser`, `c6-browser`, `game-browser`, `essay-browser`, `editor-browser`, `skins-browser`, `light-browser`, `materials-browser`, `squares-browser`, `life-browser` (the pond board; builds on `dist/`, starts its own preview), `webgl`, `browser-perf`, and `site/mobile`, `site/layout`, `site/theme-boot`, `site/theme-picker`.
 
 ## Links into the site
 - `/<board>/`, for example `/light/`, opens a board.

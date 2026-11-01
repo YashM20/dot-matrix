@@ -1030,6 +1030,7 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
 }
 
 /* TILT (light hub) sits beside SHARE: on touch, SHARE gives up its full row when TILT is there */
-.tools-grid .tool-tilt + .tool-share {
+.tools-grid .tool-tilt + .tool-share,
+.tools-grid .tool-tilt + .tool-pond + .tool-share {
   grid-column: auto
 }

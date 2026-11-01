@@ -2,8 +2,8 @@
  * C7 display-skin checks (the pure parts of `src/engine/display/`; the canvas stage is browser-only, see
  * scripts/skins-browser.ts). Called from verify.ts (`displayChecks(assert)`); also runnable alone.
  */
-import { afterglow, decayFactor, settleSeconds } from '../src/engine/display/afterglow'
-import { accentLit, applyMatrix, phosphorMatrix, rgbOf, SKIN_NAMES, SKIN_PHYSICS, isSkinName, skinPhosphor } from '../src/engine/display/skins'
+import { afterglow, decayFactor, ghostStep, lcdGhost, settleSeconds } from '../src/engine/display/afterglow'
+import { accentLit, applyMatrix, lcdMatrix, phosphorMatrix, rgbOf, SKIN_NAMES, SKIN_PHYSICS, isSkinName, skinPhosphor } from '../src/engine/display/skins'
 import { ACCENTS } from '../src/site/theme/names'
 import { tokensOf } from '../src/site/theme/tokens'
 import { cellFrame, createEinkPanel, createFlipPanel } from '../src/engine/display/panels'
@@ -59,7 +59,27 @@ export function displayChecks(assert: Assert): void {
   }
   assert(`display: ${accents.length} accents × vfd/led: hue, accent kept, sRGB, lit ≥ 3:1 on the stage`, !issues.length, issues.join('; '))
   assert('display: vfd / led follow the accent, nixie and crt do not', accentLit('vfd') && accentLit('led') && !accentLit('nixie') && !accentLit('crt'))
-  assert('display: skin names', SKIN_NAMES.length === 7 && isSkinName('crt') && !isSkinName('accent'))
+  assert('display: skin names', SKIN_NAMES.length === 9 && isSkinName('crt') && isSkinName('lcd') && isSkinName('grout') && !isSkinName('accent'))
+
+  // LCD (squares Q2): the liquid-crystal response is symmetric and a step reaches 63% after τ (± 10 ms), simulated at 240 Hz
+  {
+    const tau = SKIN_PHYSICS.lcd.tau, dt = 1 / 240, at = (on: boolean) => {
+      let v = Float32Array.from([on ? 0 : 1]), t = 0
+      while ((on ? v[0] : 1 - v[0]) < 1 - Math.exp(-1) && t < 2) { v = lcdGhost(v, Float32Array.from([on ? 1 : 0]), dt, tau); t += dt }
+      return t
+    }
+    const up = at(true), down = at(false)
+    assert(`display: lcd ghost (a step reaches 63% at τ = ${tau * 1000} ms ± 10 ms, on ${(up * 1000).toFixed(1)} ms, off ${(down * 1000).toFixed(1)} ms; symmetric)`,
+      Math.abs(up - tau) <= .01 && Math.abs(down - tau) <= .01 && ghostStep(0, tau) === 0 && Math.abs(ghostStep(1e3, tau) - 1) < 1e-9)
+    // the colour matrix: no light → paper, white → ink, the accent prints as itself darkened (hue kept) on every dark accent
+    const P = SKIN_PHYSICS.lcd, near = (x: readonly number[], y: readonly number[]) => x.every((v, i) => Math.abs(v - y[i]) < 2 / 255)
+    const bad: string[] = []
+    for (const { id, a } of accents) {
+      const m = lcdMatrix(P.paper, P.ink, a, P.pigment), w = applyMatrix(m, [1, 1, 1]), k = applyMatrix(m, [0, 0, 0]), ac = applyMatrix(m, a)
+      if (!near(k, P.paper) || !near(w, P.ink) || !near(ac, a.map(c => c * P.pigment)) || hd(ac, a) > 3) bad.push(`${id}: ${ac.map(v => v.toFixed(2))}`)
+    }
+    assert(`display: lcd matrix (black → paper, white → ink, ${accents.length} accents print as pigment, hue kept)`, !bad.length, bad.join('; '))
+  }
 
   // e-ink: first refresh is full (flash: inverted, then solid ink), partials leave ghosts
   const cols = 8, rows = 4, n = cols * rows, rgba = (on: (i: number) => boolean) => { const d = new Uint8ClampedArray(n * 4); for (let i = 0; i < n; i++) { const v = on(i) ? 255 : 0; d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v; d[i * 4 + 3] = 255 } return d }

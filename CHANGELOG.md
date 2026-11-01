@@ -3,6 +3,40 @@
 All notable engineering changes to Dot/480 are recorded here, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://dot-matrix1.vercel.app, deployed from `main`), not a published package: there are no tagged or npm releases, so entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
 
+## [Unreleased] — 2026-10-30 · L3 pond polish (round 3, `feat/round3`)
+Plan: `docs/living-matter/L-pond.md` §L3; as built: `docs/LIFE.md` "L3".
+### Added
+- **Pond depth:** koi hunger (sated koi ignore food), feeding bursts and gulps, circling back to a missed pellet; startle contagion (a cascade of at most 3 koi); day and night by the hour (render-only: the moon's reflection, dimmer whites, fireflies' stars, a thinner terrarium floor at night); salt on the slime and a lantern on the fireflies (holds).
+- **DOTS / TYPE switch** on `pond-koi` (`glyphs`): the same scene in 5×7 font glyphs on 6×8 tiles; shown on hover or focus, default DOTS.
+- **Tilt and light on the pond:** `pond-koi` reads the light hub (`pondSources`); `rippleTilt` (new, `rippleStep` untouched) sloshes the water, `lightSrc` 1 lights the koi by tilt.
+- `scripts/life-l3.ts` (in `scripts/life.ts`); `scripts/life-browser.ts` covers all six cards at 375 and 390 px (phone fps tier, swipe, tap, hold) and reduced motion.
+### Changed
+- The koi flick threshold is 200 cells/s (was 90, reached by ordinary mouse moves); the hover wake follows the pointer's speed.
+- Goldens: 0 changed (frames at rest equal the L2 frames bit for bit).
+
+## 0.12 — 2026-10-30 · PR #10 (`feat/round2`), PR #11 and PR #50 — round 2: materials, pond, squares, card size, editing on canvas, the worker trim, themed essay and legal pages
+Merged to `main` as `2b4780e` (PR #10), `bcacd5a` (PR #11) and `238e68a` (PR #50). T5 and T6, also in PR #10, have their own entries below. Status: `docs/PROGRESS.md`; plans: `docs/LIVING-MATTER-PLAN.md`, `docs/living-matter/`, `docs/EDITOR-PLAN.md` §8.3, `docs/LAYOUT-THEME-PLAN.md` (T3).
+<!-- TODO(later): confirm whether T5 and T6 (PR #10) and Foundation round (PR #9) entries below should keep [Unreleased] tags or be grouped into release notes -->
+### Added
+- **Materials board (M1)** (`/materials/`, ENGINE, lazy): `mat-loom` (a weave you can tie up, 40 fps), `mat-knob`, `mat-grille`, `mat-marble` (an engraved clock) and `mat-terrazzo` (a month of chips), all lit by the light hub. `src/engine/matter/` (not in the engine barrel): relief and AO, Kajiya–Kay anisotropic sheen, matcaps, weave drafts and relief, stitches, marble and terrazzo. `Control.map` (opt-in) maps a pointer straight to a value, so a tap on the knob's arc sets it. Checks: `scripts/materials.ts` (52), `scripts/materials-browser.ts`; goldens: 5 added.
+- **Pond board (L1)** (`/pond/`, PLAY): `pond-koi` at 30 fps. `src/engine/life/` (lazy, under the determinism lint): wave-equation water, dot micro-glyph tiles, koi spines, bodies and Reynolds steering, the koi pond world. Hover or touch forks a live world (a tap or click drops pellets, a hold lures), which heals back to the pristine loop when idle. Main thread only: the worker build stubs the board. Doc: `docs/LIFE.md`. Checks: `scripts/life.ts` in verify (46), `scripts/life-browser.ts`.
+- **Squares board (Q1)** (`/squares/`, ENGINE): `sq-tetris` (pieces that fuse), `sq-quads` (a face in 1,201 quads), `sq-blob` (terraced metaballs) and `sq-gameboy` (a four-shade LCD clock). `src/engine/squares/`: join masks, joined-cell geometry, the sampler's join pass and `{grid.gap}`, Canvas / SVG / WebGL join renderers behind hooks (`sampler/ext.ts`, `renderer/ext.ts`). Checks: `scripts/squares.ts` in verify, `scripts/squares-browser.ts`; goldens: 4 added.
+- **Editing on canvas (E3):** handles for a sites ring's radius and sweep (whole cells, the sweep ends on a dot), a disc's radius and a line's ends; spec layers move in whole cells and an IR field's bounds resize from four corners; text typed in place in the frame's own dots (one undo step, Esc cancels); a quick bar over the selection (TONE, LATTICE − / +, SIZE, EDIT, INK, PICK); the eyedropper (I, PICK, Alt-click).
+- `scripts/site/shots.ts` (`pnpm shots`): screenshots of every page and UI state in every theme, with a contact sheet; pond, squares and materials included.
+- `docs/POLISH-PLAN.md`: the site audit and the polish phases P0–P3, queued after round 2.
+### Changed
+- **Card size (PR #50):** 3 big cards a row again by default at 1440 (restoring impact from T3's 5-card grid); CARD SIZE option (large / medium / compact) in the THEME popover, TOOLS sheet and ⌘K palette (`html[data-cards]` `l` / `m` / `s`, stored in `localStorage` `dot480:cards`, set before first paint by the boot script); track minimum clamp with `--board-cols-max` (large 3, medium 4, compact uncapped; dense boards +1) and `--board-cols-min` (2 on phones at compact); orphan container queries keyed by size.
+- **Sample worker trim:** the worker imported every board; it now loads only the requesting card's board chunk, once per page. Worker initial load 178.31 → 17.14 kB gz; first load unchanged. `size.ts --worker` reports each board's chunks and fails if the squares joint code or the pond's tiles reach a worker chunk.
+- **Essay, `/privacy`, `/terms` and the X-ray follow the theme:** the same no-flash boot script (one CSP hash for all four pages), the app's links there carry the theme along, essay figures read the theme tokens (photo and camera figures stay dark insets on paper), X-ray guides use the scheme's tint. `theme.ts --check` holds the essay and legal text to 4.5:1 in all 14 themes.
+- **Board grids (T3):** density per board (hero, standard, dense) drives auto-fill grids; square cards capped at 62svh; centred orphan rows; a one-line intro on phones, and ALL scrolls with the group strip.
+- **VFD and LED skins take the theme's accent** (the accent stays exact); Nixie and CRT keep their own colours.
+- **Materials cold first frames 2–4× cheaper** (pixel-identical, all 187 goldens match): the bakes do less work, in small per-row helpers.
+- LOG: public release 0.12 ("Materials, pond and squares") in `src/changelog.ts`.
+### Fixed
+- Round-2 integration: the card spec carries `style.gap` and a JSON `join` (cards with `shapeOf` or a function join are refused with that reason); the X-ray probe applies the gap clamp; the golden key check keeps the legacy prefix; the fps check reads DESIGN.md's table; a stale `dist/` is reported, not judged; every CDP call has a timeout and `life-browser` has a watchdog; load factors are sampled next to the timed code.
+- The phone editor went blank (its scroll lock shared the lock button's class).
+- PR #11: the desktop editor re-measures its height when the site bar grows after mount (the lazy tool dock), so it no longer runs 11 px past the window.
+
 ## [Unreleased] — 2026-10-29 · T6 type, contrast and the custom hue (round 2)
 Plan: `docs/LAYOUT-THEME-PLAN.md` §1c #3 and #15, §4 Custom hue, §5 T6. Status: `docs/PROGRESS.md`.
 ### Added

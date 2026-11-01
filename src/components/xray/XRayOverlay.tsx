@@ -166,7 +166,7 @@ export function XRayOverlay({ xr, preset, layers, data, grid, style, theme, anim
     // coarser layer lattices: dashed, inside each layer's bounds when it has some
     const seen = new Set<string>()
     for (const l of frameLayers(stats.t)) {
-      const k = l.lattice ?? 1
+      const k = (typeof l.lattice == 'object' ? l.lattice[0] : l.lattice) ?? 1
       if (l.sites || (k === 1 && !l.origin)) continue
       const [ox, oy] = l.origin ?? [0, 0], id = `${k}|${ox},${oy}`
       if (seen.has(id)) continue

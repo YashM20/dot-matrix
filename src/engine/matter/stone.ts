@@ -64,3 +64,40 @@ export function terrazzo(box: [number, number, number, number], o: { d?: number;
   })
   return out
 }
+
+export interface SiteVoronoi {
+  /** Per cell of the grid: the nearest site's index, −1 outside the box. */
+  id: Int16Array
+  /** Per cell: the exact distance (cells) to the nearest bisector, i.e. to the cell's pane border; Infinity outside the box. */
+  border: Float32Array
+}
+/** Cells c0 … c1 of row r: the nearest site, then the distance to the nearest bisector with any other site. */
+function siteRow(xs: Float64Array, ys: Float64Array, id: Int16Array, border: Float32Array, r: number, c0: number, c1: number, cols: number): void {
+  const n = xs.length
+  for (let c = c0; c <= c1; c++) {
+    let best = 0, bd = Infinity
+    for (let k = 0; k < n; k++) { const dx = xs[k] - c, dy = ys[k] - r, d = dx * dx + dy * dy; if (d < bd) { bd = d; best = k } }
+    const ax = xs[best] - c, ay = ys[best] - r
+    let md = Infinity
+    for (let k = 0; k < n; k++) {
+      if (k === best) continue
+      const ex = xs[k] - xs[best], ey = ys[k] - ys[best], l = Math.sqrt(ex * ex + ey * ey)
+      if (l === 0) continue
+      const d = ((ax + .5 * ex) * ex + (ay + .5 * ey) * ey) / l // the cell's distance to the bisector of best and k
+      if (d < md) md = d
+    }
+    id[r * cols + c] = best; border[r * cols + c] = md
+  }
+}
+/**
+ * A Voronoi tessellation of custom sites (a rose window's petals), brute force over the box: per cell the nearest
+ * site and the exact distance to the nearest bisector (even-width lead between panes). Sites and cells are in the
+ * grid's cells. A bake: about 2n distance tests per cell (19 sites over 70² cells ≈ 0.2M).
+ */
+export function voronoiSites(sites: readonly (readonly [number, number])[], grid: GridConfig, box?: [number, number, number, number]): SiteVoronoi {
+  const { cols, rows } = grid, id = new Int16Array(cols * rows).fill(-1), border = new Float32Array(cols * rows).fill(Infinity)
+  const xs = Float64Array.from(sites, s => s[0]), ys = Float64Array.from(sites, s => s[1])
+  const [c0, r0, c1, r1] = box ?? [0, 0, cols - 1, rows - 1]
+  if (sites.length) for (let r = Math.max(0, r0); r <= Math.min(rows - 1, r1); r++) siteRow(xs, ys, id, border, r, Math.max(0, c0), Math.min(cols - 1, c1), cols)
+  return { id, border }
+}

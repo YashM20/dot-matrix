@@ -26,6 +26,15 @@ export const SKIN_PHYSICS = {
   /** The flip-disc profile physics; a card is ~144 columns wide, so the column scan is compressed into `sweepS`. */
   flipdisc: { ...(DEVICES['flipdisc-28x14'].physics as FlipPhysics), sweepS: .34, threshold: .24, maxHz: 12 },
   nixie: { phosphor: [1, .5, .14] as Phosphor, bloom: [.7, .42, .26] as const, mesh: .3, onS: .85 },
+  /**
+   * Reflective LCD (squares Q2): τ = liquid-crystal response (s), symmetric (pixels lag on and off alike); `gutter` =
+   * the clear grid between pixels (fraction of a cell); the pixel layer's shadow on the backplane, offset (dx, dy)
+   * cells, blurred `blur` cells, at `alpha`; `paper` / `ink` = the backplane and a fully driven pixel (sRGB 0..1:
+   * skin physics, not tokens, like the e-ink paper); `pigment` = how dark the accent prints on the paper.
+   */
+  lcd: { tau: .15, gutter: .12, shadow: { dx: .35, dy: .5, alpha: .22, blur: .5 }, paper: [.77, .81, .63] as Phosphor, ink: [.12, .16, .1] as Phosphor, pigment: .82, off: .93, onS: .4 },
+  /** Mosaic (squares Q2): one tile per cell with a `gap` of grout, a 1 px bevel (`hi` lighter top-left, `lo` darker bottom-right), ± `jitter` luma per tile. */
+  grout: { gap: .14, bevel: { hi: .12, lo: .18 }, jitter: .03, onS: .3 },
 } as const
 
 /** The skins whose light is the theme accent (VFD phosphor, LED die colour); every other skin keeps a physical hue. */
@@ -68,6 +77,22 @@ export function phosphorMatrix(phosphor: Phosphor, accent?: Phosphor): number[] 
     0, hb, hb, 0, 0,
     0, 0, 0, 1, 0,
   ]
+}
+/**
+ * feColorMatrix (sRGB) of the LCD (reflective): no light → the `paper`, full neutral light → the `ink`, and the accent
+ * prints as itself darkened to `pigment` on the paper. M·1 + o = ink, M·a + o = pigment·a, o = paper, M the
+ * minimum-norm solution (as `phosphorMatrix`); without a usable accent the neutrals alone.
+ */
+export function lcdMatrix(paper: Phosphor, ink: Phosphor, accent?: Phosphor, pigment = .82): number[] {
+  const rows: number[][] = [0, 1, 2].map(i => { const d = (ink[i] - paper[i]) / 3; return [d, d, d] })
+  if (accent) {
+    const aa = accent[0] ** 2 + accent[1] ** 2 + accent[2] ** 2, sa = accent[0] + accent[1] + accent[2], det = 3 * aa - sa * sa
+    if (det > 1e-6) {
+      const u = accent.map(c => (3 * c - sa) / det), v = accent.map(c => (aa - sa * c) / det)
+      for (let i = 0; i < 3; i++) for (let j = 0; j < 3; j++) rows[i][j] = (pigment * accent[i] - paper[i]) * u[j] + (ink[i] - paper[i]) * v[j]
+    }
+  }
+  return [...rows[0], 0, paper[0], ...rows[1], 0, paper[1], ...rows[2], 0, paper[2], 0, 0, 0, 1, 0]
 }
 /** Apply a 4×5 colour matrix to one sRGB colour (0..1) — the CPU reference of the SVG filter. */
 export function applyMatrix(m: number[], [r, g, b]: readonly [number, number, number]): [number, number, number] {

@@ -4,20 +4,224 @@
 > Update this file in the same commit as the work. Active plans: `docs/WEB-PLAN.md` (what the site does) and `docs/UX-PLAN.md` (how visitors find it); every doc and its status: `docs/README.md`. Original phase plan: `docs/MASTER-PLAN.md` (v2). Research: `docs/MOTION-INTERACTION-DEPTH.md`, `docs/ADVANCED-PLAN.md`. Taste: `docs/STYLE-BIBLE.md`.
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
+## Live run state: resume here (updated 2026-11-01)
+> The coordinator keeps this block current. Read it after any interruption or compaction, before doing anything else.
+>
+> **Process: [`docs/CHECKPOINTS.md`](CHECKPOINTS.md).** Work one checkpoint at a time: scope, build, gate, publish, breather, then pick the next.
+> - **Current: CP1** (`CP1 · 0.13 · Round 3 to main`). The remaining steps are:
+>   1. the workshop cold-frame fix;
+>   2. the full suite;
+>   3. the PR to main;
+>   4. release 0.13;
+>   5. the breather.
+> - **Start nothing outside CP1** until its breather is done and the owner picks CP2.
+
+**Shipped:** round 2 is on main and live.
+- **PR #10:** merge `2b4780e`, branch `feat/round2`.
+- **PR #11:** merge `bcacd5a`, the desktop editor re-measures its height, which fixed the marquee; `shots.ts` covers the new boards.
+- **Full suite** (`dmdocs/full2.sh`): green except one editor check, which PR #11 fixed.
+- **Sizes:** first load 123.49 kB gz; the worker's initial chunk 17.14 kB gz.
+
+**Working branch:** `feat/round3`. It tracks origin and equals main plus nothing new yet. Merge each round-3 agent here; PR to main when the owner says.
+
+**Last interruption (2026-10-30, about 16:35):** the T3 server restarted, then the 5-hour limit was hit; both reset at 17:00. Every dead lock and ticket was cleared, and all four agents were resumed with SendMessage from these commits: E6 5cca800, Q3 d715e49, M2 0dd76a7, L3 1e7ddb8.
+
+**Interruption (2026-10-31, about 18:09):** the machine slept about 24 h. On wake the heavy lock's timer killed Q3's build. Dead locks and tickets were cleared, and E6, Q3 and M3 were resumed with SendMessage. X1 had stalled in its reading phase with no edits, so it was restarted fresh as `a1291dcb5718aafad`. Lesson: agents must wait on process exit, not on monitor events.
+
+**Interruption (2026-11-01, about 12:20):** the machine rebooted, and M3 had also hit the 5-hour limit. Every process died, and the full-suite run was killed at its time limit. Dead locks and tickets were cleared, main (PR #50, card size) was merged into feat/round3, and Q3, M3, X1 and E6 were resumed with SendMessage.
+
+**Owner, 2026-11-01:** no more Codex children. Codex's finished branch `chore/mat-lens-tilt-checklist` (a9abf34: the #29 `mat-lens` parity entry; 211b2f4: the #30 tilt checklist) is merged by the coordinator after the #29 parity run is measured. Gemini is being retried for #48.
+
+**Running agents (round 3):**
+- Each runs in `.claude/worktrees/agent-<id>/` on branch `worktree-agent-<id>`.
+- Resume one with SendMessage to `<id>`. If its worktree is gone, restart from the brief and its last WIP commit.
+- Each keeps a resume note in its latest WIP commit message.
+
+| id | task | spec | owns | preview port |
+|---|---|---|---|---|
+| `a1291dcb5718aafad` | **X1 pond depth**: the suminagashi `pond-marble` card, the daily and ageing pond (`?day=`, storage only after opt-in), packed glyph hysteresis only if memory allows, View Transitions from board to widget | `docs/living-matter/X-advanced.md` §7 X1 | `src/engine/life/`, the pond board, `scripts/life*.ts`, the View Transitions hook in `src/site/` | 4385 |
+| `a34596589e36c316d` | **Q3 squares**: the square field pack (Chebyshev/Manhattan Voronoi, Schotter, Molnár, pixel sort, block glitch, multi-scale Truchet), π/4 rotation, nested motifs, dot ↔ square morphs, the §4.4 cards. The DISPLAY "squares" skin is left out (owner decision) | `docs/living-matter/Q-squares.md` §4 | `src/engine/squares/`, the squares board, `scripts/squares*.ts` | 4386 |
+| `a525b2c5aebad3e34` | **M3 workshop**: the new `/workshop/` board, with knit, denim, paper, wood, leather, sand, ice, mercury and thread; plus the M3.10 tilt-lighting polish. The §10 owner options stay off | `docs/living-matter/M-materials.md` §5 | `src/engine/matter/`, the workshop and materials boards, `scripts/materials*.ts` | 4391 |
+| `ab02542b616c4c2e1` | **E6 phone polish**: long-press menu, snap cue, sheet detent memory, landscape side sheet, `visualViewport`, `navigator.share` | `docs/EDITOR-PLAN.md` §10 E6 | `src/components/editor/` | 4383/4384 |
+
+**Extra agents (2026-10-31, at the owner's request):**
+- `ab63b9e612f81370b`: **card size, DONE (e2df574, built on main).** Opened as its own **PR #50** (`feat/card-size` → main; closes #13). Merge `feat/card-size` into `feat/round3` after the full suite. The original brief: Restore 3 cards per row at 1440 as the default; the T3 grid in `1636241` made it 5. Add a CARD SIZE option (large / medium / compact) that persists and is set before first paint. Port 4393.
+- `a3d94ebb8cce51597`: **GitHub issues.** It drafts labelled issues for all planned and open work into the scratch folder `dmdocs/issues/`. The coordinator reviews them for public-repo safety, then creates them with `gh`.
+
+**Other-provider children (2026-10-31, the owner's request; started with T3 `delegate_task` in their own worktrees; weaker models, so review before merging):**
+- **Codex (`gpt-6-luna`, high):**
+  - #29: the `mat-lens` WebGL parity entry, in `scripts/webgl.ts` only.
+  - #30: `docs/TILT-CHECKLIST.md`, a new file.
+- **Gemini (`gemini-3.8-flash-high`):**
+  - #48: the 0.12 release notes, in `src/changelog.ts` and `CHANGELOG.md` only.
+  - Round-3 rows go in as "upcoming".
+- Both mark loose ends with `TODO(later):`. Find them with `rg "TODO\(later\)"` when improving their work.
+
+**Round 3 complete on feat/round3 (2026-11-01):** all of round 3 is merged: E5, E6, Q2, Q3, M2, M3, L3, X1, the 0.12 notes (#48) and the card size from main.
+- **Fixes made at merge:**
+  - squares blurbs shortened to 120 characters or fewer;
+  - the c10 probe check skips rect-lattice cards (#74);
+  - the X-ray probe applies the squares form hook (3015/3015);
+  - the editor CSS passes the token lint.
+- **Open:**
+  - workshop cold first frames: leather 57.7 ms and ice 47.7 ms, against 30 × load. Agent `adc20c67f3e33c6af` is fixing them, performance only.
+  - known timing flakes: mirror-camera, lens GPU fill (#28) and the materials frame.
+- **Full suite:** running detached. It is pid 8624 for heavy.mjs, logs go to `dmdocs/full-r3/`, and the summary lands in `summary.txt`. Merge nothing into the main checkout until it finishes.
+- **Then:** the PR feat/round3 → main (closes #14–#17, #29, #30, #48 and #49), with release 0.13.
+
+**GitHub organisation (2026-11-01):** 8 milestones and parent epics, with children attached as native sub-issues.
+
+| Milestone | Issues |
+|---|---|
+| 0.12 | #48 |
+| 0.13 | Round 3 to main: epic #49 |
+| Engine foundations | #61–#65 |
+| Tixy gallery | epic #51 |
+| Next phases | epic #71 |
+| Polish pass | epic #72 |
+| Follow-ups | epic #73 |
+| Backlog | decisions #12 (parent of #23–#26), plus #69 and #70 |
+
+The IQ epic (#61) is parent of #62–#70. Script: `dmdocs/issues-org/organize.mjs` (idempotent). Pending owner decisions are added to #12 as comments.
+
+**X1 merged (6edc5ff, from f41be18):**
+- **Added:** `pond-marble` (suminagashi), the daily and ageing pond (`?day=`, opt-in POND MEMORY), board-to-widget View Transitions, and a new OPEN action on cards.
+- **#12 hysteresis:** dropped (it fails the memory gate when aged and would move goldens).
+- **Checks:** life 146/146, life-browser 41/41, goldens +1 (0 changed).
+- **Size:** first load +0.44 kB gz.
+
+**IQ techniques plan (2026-11-01):** `docs/IQ-PLAN.md`. Issues:
+- #61: tracking issue.
+- High priority:
+  - #62, IQ1: 2D SDF library.
+  - #63, IQ2: SDF operators.
+  - #64, IQ3: shaping functions.
+  - #65, IQ4: filtered fields for coarse grids.
+- Medium priority:
+  - #66, IQ5: noise.
+  - #67, IQ6: oldschool board.
+  - #68, IQ7: fractals.
+- Low priority: #69, IQ8, 3D SDF scenes.
+- #70: ideation, the other 104 articles.
+
+Licence: code snippets are MIT (the articles index says so); his shader art is protected, so we port techniques only and credit each function. IQ3, IQ1 and IQ2 can start any time; nothing in them is blocked.
+
+**Tixy gallery plan (2026-11-01):** `docs/TIXY-PLAN.md` covers the 52 tixy.land gallery programs, to become a lazy `/tixy/` board with per-card credits. Issues:
+- #51: tracking;
+- #52: **T1, permission, blocks every port.** The tixy repo has no license; the owner sends the drafted request;
+- #53: T2, the `tixy()` adapter and `credit` metadata. It can start now, using original test programs only;
+- #54: T3, the board and ABOUT › CREDITS;
+- #55 to #58: batches A to D (20 / 16 / 8 / 7 programs);
+- #59: T8, webcam (needs a decision);
+- #60: T9, remix in CODE (later).
+
+Until #52 is cleared, put no tixy expressions in the repo or in issues; titles and credits only, with handles in backticks so GitHub doesn't @-notify anyone.
+
+**GitHub issues (created 2026-10-31):** #12–#49 track every planned and open item, labelled by area, phase, status and priority. The repo is public, so keep issue text free of local paths and internal tooling.
+- **In progress:** #13 card size, #14 E6, #15 Q3, #16 M3, #17 X1.
+- **Owner decisions:** #12, a checklist.
+- **Next queue:** XQ #20, XM #21, XL #22, E4 #18, E7 #19.
+- **Waiting on the owner:** L4 #23, X2 #24.
+- **Polish** (later): #37–#46.
+- **Release:** 0.12 notes #48; round merge #49.
+- **When merging:** close the issue (or tick its tasks) and drop the `status: in progress` label.
+
+**Done in round 3 and merged on `feat/round3` (2026-11-01):**
+- **E6, editor phone polish** (from b7d066e):
+  - long-press menu, snap cue, sheet detent memory, landscape side sheet, `visualViewport`, `navigator.share`;
+  - editor-browser 174/175 (one E2 flake) and 81/81 on phone + landscape; first load Δ ≈ 0;
+  - open: long press on LAYERS rows and on the empty canvas.
+- **Q3, squares** (62e0c3b, from 7dc34e1):
+  - rotation, motifs, morphs, the field pack, and 7 cards; the board goes to 3 columns;
+  - goldens: 0 changed, 7 added; first load +0.09; the squares deep link is now **151.25 kB, over the 150 backstop**;
+  - fix option, the owner's call: split `portrait` out of mirror.ts. That brings the deep link to 145.28 but adds +0.03 to first load.
+
+L3 pond polish (merged from 3e7ecaf; L3.1–L3.8):
+- **Checks:** life 120/120 and all life-browser checks pass; goldens 0 changed, 0 added; every pond card's default frames are identical to L2.
+- **Sizes:** first load −0.01; worker initial +0.07.
+- **Core edit:** `DotCanvas`/`useDotField` interaction frames now carry `ctx.reducedMotion`. This turns on M's reduced-motion branch; the physics board still ignores the flag.
+- **Owner calls:**
+  - the DOTS/TYPE default (currently DOTS);
+  - a fireflies taste pass (they're faint by day);
+  - the night thresholds;
+  - the real-iPhone tilt check.
+- **L4** (the hero) waits for the owner's yes.
+
+M2 glass and water (0cf937f, from 0dd76a7):
+- **What it adds:** the `glass.ts` and `caustics.ts` engines, and six cards (`mat-lens` is the board's one GPU layer; `mat-pool` runs at 30 fps; `mat-rust`, `mat-window`, `mat-patch` and `mat-candle`).
+- **Marble:** the banded `insetDistance` is bit-identical, and the cold frame dropped from about 31 to 15–19 ms per unit of load.
+- **Checks:** goldens 0 changed, 6 added; browser probe 15/15.
+- **Sizes:** first load +0.02; `wk-materials` +11.2 kB.
+- **Open:**
+  - the `mat-pool` rest-frame budget is borderline under load;
+  - the lens GPU-fill gate passes about half the time;
+  - no `scripts/webgl.ts` parity entry for `mat-lens` yet;
+  - an owner taste pass (the candle and the window are the weakest).
+
+Q2 squares (c4f5783, from b5ffe0d): rect cells, teletext sextants, line screens, the lcd and grout skins, and the cards `sq-teletext` and `sq-lines`. Goldens: 0 changed, 2 added. First load 123.76 kB gz (+0.26), worker initial +0.21, squares board chunk +3.34; the squares deep link is 143.86. `relief.ts` was widened by one type. Still to do: remove the Q2 `upcoming` row in `src/changelog.ts`. E5 share (merged after 36e9ff0): frame and document links (`?make&d=`), remix lineage, EXPORT · DEVICES and QUALITY. editor.ts all pass, editor-browser 147/147 twice, goldens match, first load 123.50 kB gz (Δ +0.01). The React Compiler `useMemo` trap is recorded in EDITOR-PLAN §8.4. Left open: no short-link service, and a document link adds frames rather than replacing the canvas. L2 ecosystems (ac9e089: jelly, slime, fireflies, murmur and terrarium on `/pond/`; life 102/102, browser 22/22, goldens +5, first-load Δ about 0; owner taste pass wanted on jelly and fireflies). Round-2 housekeeping (7bc8ecf). It added the changelog rows (round 2's `src/changelog.ts` rows are still marked "in progress"; turn them into a 0.12 release), the phone palette shot, the editor-fit check (its final variant hasn't run in a browser yet; the full suite covers it) and the pond swipe fix (scroll room plus a retry for a late first move). It also updated the doc statuses. Marble option 1 (banded distance, about 4× cheaper) went to M2.
+
+The housekeeping list (done):
+- CHANGELOG and `src/changelog.ts` rows for round 2;
+- the `shots.ts` phone palette NOT READY bug;
+- an "editor fits the window" probe check;
+- the pond swipe flake;
+- the marble cold-frame options (investigate only);
+- `docs/README.md` statuses.
+
+**Next, in order** (each starts when an agent above frees a slot):
+- **Within each track, phases are sequential:** Q3, M3 and X1 are running.
+- **After them:** XQ after Q3 (it needs Q3.1's rotation), XM after M3 (it edits `matter/`), XL after X1. L4 only on the owner's yes; X2 only after the WebGPU decision.
+- **Editor:** E6 is running; then E4 machine edges and E7 frames in the worker.
+- **Then:** the X phases.
+- **The polish plan** (`docs/POLISH-PLAN.md`) waits until the owner says to start. When it starts: P0 probes first (one agent), then P1 (four agents). The owner has answered:
+  - the desktop header hides on scroll down;
+  - all 14 cuts are approved;
+  - the other recommendations are accepted;
+  - the essay's name and URL are **still open**.
+
+**How the coordinator runs agents:**
+- **Agent count:** at most 4 at a time; the owner allows 2–3 extra quick ones. Each agent runs in its own worktree.
+- **Commits:** no Co-Authored-By or "Generated with Claude Code" lines, ever. Commit or push only when the owner asks; the owner has said to merge to main via a PR when asked ("merge push").
+- **Heavy work:** every build, golden run, timing run and browser probe goes through `node C:/Users/integrated/AppData/Local/Temp/dmdocs/heavy.mjs "<cmd>"`.
+  - It is a FIFO ticket queue in `dm-heavy-queue/`, with a v2 lock that refreshes a heartbeat every 5 s and goes stale after 45 s.
+  - A command is killed after `HEAVY_TIMEOUT_MIN` (default 40).
+  - Timing checks sample load next to the timed code (`scripts/lib/load.ts`).
+- **Worktree setup:** `cmd /c mklink /J node_modules D:\MyRepo\nextjs\dot-matrix\node_modules`.
+- **Worktree cleanup:**
+  1. Delete the junction with `[System.IO.Directory]::Delete(path, $false)`; never recursive.
+  2. `git worktree unlock`.
+  3. `git worktree remove --force`.
+  4. `git branch -D worktree-agent-<id>`.
+- **Merging an agent:** `git merge --no-ff`. The usual conflicts are additive unions: `manifest.ts` (board rows plus `density`, the group lists), `index.ts`, `ids.json`, `goldens/hashes.json` (merge the JSON with a script), `catalog.ts`, `meta.ts`, `blurbs.ts`, `verify.ts` blocks, and DESIGN.md tables. Then run `npx tsc -b` and the area checks.
+- **PR cadence (owner, 2026-10-31):** PR `feat/round3` → main at regular intervals, about every 3–4 merged agents.
+  - Before opening it, run the full suite (`dmdocs/full3.sh` through heavy.mjs with `HEAVY_TIMEOUT_MIN=150`; logs in `dmdocs/full-r3/`) and make sure it is green.
+  - Merge after CI and Vercel pass, then close the matching issues.
+  - While the suite runs, merge nothing into the main checkout.
+  - The first one covers E5, Q2, M2 and L3 (suite started about 19:45 on 2026-10-31).
+- **Full suite before a PR to main:** `bash C:/Users/integrated/AppData/Local/Temp/dmdocs/full2.sh` through heavy.mjs.
+  - It runs the build first, then `pnpm check`, goldens, parity, size, theme, CSS tokens and WebGL.
+  - It then starts previews on 4317 and 4318 and runs the mobile, light, editor, layout, theme-boot, picker, squares, life and materials probes.
+  - Logs and the summary go to `dmdocs/full-r2/`.
+- **Screenshots:** `npx tsx scripts/site/shots.ts --pages … --themes … --sizes 1440,390 --out <dir>`. The round-2 shots are in `dmdocs/r2shots/`.
+- **Rate limits and restarts:** resume each agent by SendMessage after the reset.
+  - Clear a dead lock file only if its holder PID is gone.
+  - **Health watchdog:** `node C:/Users/integrated/AppData/Local/Temp/dmdocs/watchdog.mjs <agent ids…>` under Monitor (30 min; re-arm). It prints only problems: a dead or stale lock, a heavy command over 30 min, 5 or more waiters, or an agent with no file or git activity for 25 min.
+  - Never clear `dm-heavy-queue/` while waiters are alive. heavy.mjs now recreates a missing ticket, but older waiters will wait forever.
+
+**Open owner decisions:**
+- the essay's name and URL;
+- koi body style B (the default) or A;
+- `activeDim` (unruled; every card uses size contrast);
+- the pond's 288 KB memory exception;
+- whether VFD on the default theme turns red (it follows the accent) or stays cyan-green;
+- the ruled grid (built, off);
+- `dark_signal` accent text: salmon `#FFA193` now, or `#FF6856` if APCA is relaxed;
+- the first-load overages Q1 +0.92 and T6 +1.28 (both accepted for now);
+- the real-iPhone tilt checklist.
+
+**Round 2 (done; merged as PR #10):** the T3, T5, T6, E3, M1, L1 and Q1 entries below are kept as the as-built record; read "not merged" in them as merged.
+
 ## Status board (updated 2026-10-27)
-**Round 2 (paused 2026-10-28, branch `feat/round2`, based on main `dbe4716` = PR #9):**
-- **Merged:**
-  - the cleanup: changelog, the barrel rule in AGENTS.md, CI lint and theme checks, the ledger at 120.07 kB gz, the F0 doc, dead code removed, FigSim on the light hub;
-  - the bytecode comment fix.
-- **Paused agents.** Their work sits in `.claude/worktrees/agent-<id>/`, each on branch `worktree-agent-<id>`, uncommitted unless noted. Resume an agent by messaging it, or restart the task from its worktree:
-  - `a4d32da9cf1f84efe` **T3 grids and cards:** 8 files uncommitted.
-  - `ace78a5bc0a435d5d` **Q1 squares core:** 27 files uncommitted.
-  - `af9cbabad1272df9b` **L1 pond:** 3 files uncommitted.
-  - `a783e320f85eb261a` **Essay, legal and X-ray theming:** 1 commit.
-  - `a5e23cfdbf2632857` **VFD/LED skins take the accent:** 7 files uncommitted.
-  - `aed029a7339e33128` **`scripts/site/shots.ts` screenshot tool:** 1 commit; its verification run was cut off.
-- **Each worktree** has a `node_modules` junction. Remove it with `[System.IO.Directory]::Delete(path, $false)` before `git worktree remove`; a recursive delete would empty the shared `node_modules`.
-- **Heavy commands** go through `C:/Users/integrated/AppData/Local/Temp/dmdocs/heavy.mjs` (one at a time across worktrees).
 - [x] **E3 editor: editing on canvas** (branch `worktree-agent-a603245a37988c6ee`, on `feat/round2` 0741d3b; `docs/EDITOR-PLAN.md` §4.2, §8.3). Not merged.
   - Sites handles: a ring's radius and sweep (the sweep snaps to the ring's own sites, so an arc ends on a dot of its track), a disc's radius, a line's ends; whole cells.
   - Spec layers: placed ones (sites, text, generators, IR fields with `bounds`) move in whole cells; an IR field's box is its declared bounds, resized by four corners; DESIGN · PLACE edits them and the spec JSON follows.

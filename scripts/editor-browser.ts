@@ -23,8 +23,18 @@
  *           selected text; Enter / DONE / a tap elsewhere commit as one undo step, Esc cancels; a click in
  *           the text moves the caret), the Text tool typing on the canvas, and the eyedropper (I, PICK,
  *           Alt-click). The phone pass also checks the quick bar's 44 px targets above the selection bar.
+ *  E6 (phone): a long press opens the menu (not under the finger, 44 px items, taps only after the lift);
+ *           FORWARD / TO FRONT / TO BACK / DUPLICATE / DELETE for frames, one undo step each; a moving finger
+ *           or two fingers open nothing; a tap outside closes it; a layer's menu holds its quick bar; the
+ *           snap cue lights accent dots on the pasteboard while a drag snaps, then they go; the sheet keeps
+ *           its detent per panel (and after a reload); the keyboard (a stubbed `visualViewport`) never covers
+ *           the CODE sheet or the caret of text typed in place; SHARE through a stubbed `navigator.share`:
+ *           shared, cancelled (no error), refused (the clipboard / EXPORT · LINK), hung (the next SHARE copies).
+ *  landscape (844×390, touch): the dock and the selection bar share the bottom row, nothing overlaps or
+ *           overflows, the inspector is a side sheet under the top bar with the selection kept in view
+ *           beside it, and the long-press menu stays inside the screen.
  *
- * `npx vite build && npx tsx scripts/editor-browser.ts [baseUrl] [--only desktop|phone]`: with no URL it
+ * `npx vite build && npx tsx scripts/editor-browser.ts [baseUrl] [--only desktop,phone,landscape]`: with no URL it
  * serves `dist/` itself (`vite preview`, port 4319) and stops it at the end. Screenshots and downloads
  * go to `.snapshots/editor/`. Chrome: $CHROME or the usual install paths.
  */
@@ -37,7 +47,8 @@ import { paintLayer, sitesLayer, textLayer, type SpecLayer } from '../src/compon
 import { findChrome, launch, serveDist, sleep, type Page } from './lib/cdp'
 
 const args = process.argv.slice(2), onlyAt = args.indexOf('--only'), only = onlyAt >= 0 ? args[onlyAt + 1] : undefined
-const urlArg = args.find((a, i) => /^https?:/.test(a) && i !== onlyAt + 1)
+const want = (pass: string) => !only || only.split(',').includes(pass)
+const urlArg = args.find((a, i) => /^https?:/.test(a) && !(onlyAt >= 0 && i === onlyAt + 1)) // a base URL anywhere but after --only
 const out = resolve('.snapshots', 'editor')
 rmSync(out, { recursive: true, force: true }); mkdirSync(out, { recursive: true })
 if (!findChrome()) { console.log('no Chrome found (set $CHROME): skipped'); process.exit(0) }
@@ -281,12 +292,51 @@ async function desktop() {
     await h.go(`${base}?tab=dots&p=${bad}`, `!!document.querySelector('.dw-error')`); await sleep(600)
     check('an invalid shared program shows its IR error and is not run', /^1:\d+/.test(await h.text('.dw-error')) && (await h.lit()).n === 0, await h.text('.dw-error'))
     await p.shot(join(out, 'desktop-04-links.png'))
+    await desktopFit(p)
     await desktopE2(p, h)
     await desktopE3(p, h)
+    await desktopE5(p, h)
     check('desktop: no uncaught errors or console errors', p.logs.length === 0, p.logs.slice(0, 3).join(' | '))
   } catch (e) {
     check('desktop run', false, String(e)); await p.shot(join(out, 'desktop-99-error.png')).catch(() => null)
   } finally { await p.close() }
+}
+
+// ── the editor fits the window: at desktop sizes its bottom edge is inside the window once the page above has
+//    settled. The tool dock (CommandLayer's .pal-dock, a lazy chunk portaled into the site bar) can land after the
+//    editor's first measure and make the bar 11 px taller; a height measured once then ran the editor past the
+//    window (PR #11). Whether the dock lands before or after that measure depends on load order, so after a fresh
+//    load settles, the probe also grows the site bar by 11 px itself (what the late dock did) and the editor must
+//    still fit. A build without PR #11 fit on the natural load (the dock landed first), hence the grown bar.
+//    Leaves the page at 1440×900.
+const FIT_SETTLE = `document.fonts.ready.then(() => new Promise(res => {
+  const ed = document.querySelector('.ed-root'), bar = document.querySelector('.topbar')
+  let last = '', same = 0, n = 0
+  const tick = () => {
+    const b = ed.getBoundingClientRect().bottom, t = bar?.getBoundingClientRect().bottom ?? 0, k = b.toFixed(1) + '/' + t.toFixed(1)
+    same = k === last ? same + 1 : 0; last = k
+    if (same >= 10 || ++n > 300) res({ b, bar: t, H: innerHeight, sy: scrollY }); else requestAnimationFrame(tick)
+  }
+  requestAnimationFrame(tick)
+}))`
+async function desktopFit(p: Page) {
+  type Fit = { b: number; bar: number; H: number; sy: number }
+  const bad: string[] = [], seen: string[] = []
+  const fits = (m?: Fit) => !!m && m.b <= m.H + .5 && m.sy === 0
+  const say = (m?: Fit) => m ? `bottom ${m.b.toFixed(1)}, bar ${m.bar.toFixed(1)}, scrollY ${m.sy}` : 'editor or dock never loaded'
+  for (const [W, H] of [[1440, 900], [1280, 720], [1920, 1080]] as const) {
+    await p.cdp('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false })
+    await p.cdp('Page.navigate', { url: `${base}?make&pro=1` })
+    const ok = await p.waitFor(`!!document.querySelector('.ed-root .ed-frame') && !!document.querySelector('.topbar-dock .pal-dock')`, 60000)
+    const m = ok ? await p.js<Fit>(FIT_SETTLE) : undefined
+    // the late dock, made deterministic: the bar grows 11 px after the editor has measured
+    const g = m ? await p.js<Fit>(`(() => { const bar = document.querySelector('.topbar'); bar.style.minHeight = (bar.getBoundingClientRect().height + 11) + 'px' })(), ${FIT_SETTLE}`) : undefined
+    await p.js(`document.querySelector('.topbar')?.style.removeProperty('min-height')`).catch(() => {})
+    seen.push(`${W}×${H}: ${say(m)}; bar +11 px: ${say(g)}`)
+    if (!fits(m) || !fits(g)) bad.push(`${W}×${H}`)
+  }
+  check('the editor fits the window at desktop sizes once the tool dock has landed, also when the site bar grows after it measured (bottom edge ≤ window height, no page scroll)', !bad.length, (bad.length ? `over: ${bad.join(', ')}; ` : '') + seen.join(' | '))
+  await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
 }
 
 // ── E2 on desktop: selections of many, marquee, group move / resize, align, distribute, guides,
@@ -769,6 +819,389 @@ async function phoneE3(p: Page, h: Helpers, tapEl: (s: string) => Promise<void>)
   check('phone E3: INK + steps the ink up the .2 ladder', await h.text(`.ed-qbar-step:has([data-q="ink-"]) b`) === 'INK 0.8')
 }
 
+// ── E5: share. Frame and document links (made, opened once, kept across a reload and Back), their lineage in
+//    CODE, the remix graph, EXPORT · DEVICES (every toDevice profile, exported) and QUALITY (scorecard, bar
+//    sheet, loaded with the fold), a link too big for a URL, a corrupt link.
+/** A document whose one frame holds 160×160 cells of noise: its link would be far past the cap. */
+function bigDoc(): string {
+  const card = blankCard({ cols: 160, rows: 160, pitch: 4 }, 'noise'), pl = paintLayer(card.grid, { name: 'noise', lattice: 1 }), cells = new Uint8Array(pl.cols * pl.rows)
+  let s = 11
+  for (let i = 0; i < cells.length; i++) { s = (s * 1103515245 + 12345) >>> 0; cells[i] = s >>> 24 }
+  const d = addFrame({ kind: 'dot480.editor', v: EDITOR_VERSION, name: 'big', frames: [] }, card, { at: { x: 0, y: 0 } }).doc
+  return JSON.stringify(addLayer(d, d.frames[0].id, { ...pl, cells: encodeCells(cells) }))
+}
+const linkRe = /\?make&d=[zb][A-Za-z0-9_-]+$/
+/** EXPORT's fold opened by hand (its chunk loads then). */
+const openFold = (p: Page, id: string) => p.js(`(() => { const d = document.querySelector('details[data-fold="${id}"]'); if (!d) throw new Error('no fold ${id}'); d.open = true })()`)
+const reviewLoaded = (p: Page) => p.js<boolean>(`performance.getEntriesByType('resource').some(e => /\\/Review-[^/]*\\.js/.test(e.name))`)
+async function e5Folds(p: Page, h: Helpers, who: string) {
+  await openFold(p, 'editor-export-devices')
+  const drawn = await p.waitFor(`(() => { const cs = [...document.querySelectorAll('.ed-insp .ed-devices canvas')]; return cs.length === 5 && cs.every(c => c.width > 0) && cs.some(c => { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let i = 0; i < d.length; i += 4) if (d[i] > 120) return true; return false }) })()`, 30000)
+  check(`${who}: EXPORT · DEVICES draws the frame on every device profile (toDevice)`, drawn && await reviewLoaded(p), (await p.js<string[]>(`[...document.querySelectorAll('.ed-insp .ed-devices figcaption')].map(f => f.textContent)`)).join(' | '))
+  await openFold(p, 'editor-export-quality')
+  const scored = await p.waitFor(`document.querySelectorAll('.ed-insp .ed-score li').length === 4 && /GATES PASS/.test(document.querySelector('.ed-insp .ed-score-sum')?.textContent ?? '')`, 30000)
+  const bar = await p.waitFor(`(document.querySelector('.ed-insp .ed-bar canvas')?.width ?? 0) > 400`, 30000)
+  check(`${who}: EXPORT · QUALITY shows the scorecard (4 gates, metrics) and draws the bar sheet`, scored && bar, await h.text('.ed-insp .ed-score-sum'))
+}
+
+async function desktopE5(p: Page, h: Helpers) {
+  console.log('  · E5')
+  const sel = () => p.js<string | undefined>(`window.__editor?.sel`)
+  const count = async () => (await h.frameIds()).length
+  // fold choices are remembered: start with both folded, so the review chunk loads only when one opens
+  await p.cdp('Page.navigate', { url: `${base}?make` }); await p.waitFor(`!!document.querySelector('.ed-frame')`, 60000)
+  await p.js(`localStorage.removeItem('dot480.editor.v1'); localStorage.removeItem('dot480.editor.links'); for (const k of ['editor-export-devices', 'editor-export-quality']) localStorage.removeItem('dot480:fold:' + k)`)
+  await p.cdp('Page.reload'); await p.waitFor(`document.querySelectorAll('.ed-frame').length === 3`, 60000); await sleep(900)
+  const [f0] = await h.frameIds(), n0 = await count()
+  await p.js(`document.querySelector('[data-frame-label="${f0}"]').click()`); await sleep(200)
+  await h.clickText('.ed-right [role=tab]', 'EXPORT'); await sleep(300)
+  check('E5: EXPORT has a LINK section, and the review folds are folded and not loaded', await p.js(`!!document.querySelector('.ed-insp section[aria-label="LINK"]')`) && !(await reviewLoaded(p)))
+  await p.js(`window.__editorLink = ''`)
+  await h.clickText('.ed-insp button', 'FRAME LINK')
+  await p.waitFor(`/\\?make&d=/.test(window.__editorLink ?? '')`, 15000)
+  const link = await p.js<string>(`window.__editorLink`), info = await h.text('.ed-insp .ed-url'), id = /#([0-9a-f]{8})/.exec(info)?.[1] ?? ''
+  check('E5: FRAME LINK makes a deflated ?make&d=… link under the cap, shown with its length and id', linkRe.test(link) && link.length < 12000 && /FRAME LINK \d+ CHARS · DEFLATE · #[0-9a-f]{8}/.test(info) && await p.js(`document.querySelector('.ed-insp .ed-link-url').value`) === link, `${link.length} chars; ${info}`)
+
+  // open it: one new frame, selected, drawn; a reload and Back keep it to one
+  const opened = await h.go(link, `document.querySelectorAll('.ed-frame').length === ${n0 + 1} && !!window.__editor?.sel`)
+  const ids1 = await h.frameIds(), got = ids1.find(x => x !== f0 && x === (ids1[ids1.length - 1]))!
+  check('E5: opening the frame link adds the frame once, selects it and draws it', opened && await sel() === got && (await h.lit(got)).n > 500, `${n0} → ${ids1.length}; sel ${await sel()}`)
+  await sleep(700); await p.cdp('Page.reload')
+  await p.waitFor(`document.querySelectorAll('.ed-frame').length >= ${n0 + 1} && window.__editor?.sel === ${JSON.stringify(got)}`, 30000); await sleep(800)
+  check('E5: a reload of the link re-selects its frame instead of adding a copy', await count() === n0 + 1 && await sel() === got, `${await count()} frames, sel ${await sel()}`)
+  await p.js(`document.querySelector('#tab-EXPLORE').click()`); await sleep(900)
+  const away = await p.js<string>('location.search')
+  await p.js(`history.back()`)
+  await p.waitFor(`!!document.querySelector('.ed-frame') && document.querySelectorAll('.ed-frame').length >= ${n0 + 1}`, 30000); await sleep(1000)
+  check('E5: leaving MAKE drops the link from the URL; Back brings it and the editor back, still one copy', !/d=/.test(away) && /[?&]d=/.test(await p.js<string>('location.search')) && await count() === n0 + 1, `away ${away}; back ${await p.js<string>('location.search')}; ${await count()} frames`)
+
+  // lineage: CODE names the link it came from; changed, its new link is a remix of it
+  await p.js(`document.querySelector('[data-frame-label="${got}"]').click()`); await sleep(200)
+  await h.clickText('.ed-right [role=tab]', 'CODE'); await sleep(300)
+  const lin = await h.text('.ed-insp .ed-lineage--list')
+  check('E5: CODE shows the frame\'s link lineage (opened from #id)', !!id && lin.includes(`OPENED FROM #${id}`), lin)
+  await h.clickText('.ed-right [role=tab]', 'DESIGN'); await h.setLabeled('NAME', 'level 03 remix'); await sleep(300)
+  await h.clickText('.ed-right [role=tab]', 'EXPORT'); await h.clickText('.ed-insp button', 'FRAME LINK'); await sleep(800)
+  const remix = await h.text('.ed-insp .ed-url')
+  check('E5: a changed frame\'s link records the link it came from (REMIX OF #id)', remix.includes(`REMIX OF #${id}`) && !remix.includes(`#${id} ·`), remix)
+
+  // the whole document from the top bar, opened in a fresh browser profile's canvas
+  await p.key('Escape', 'Escape', 27); await p.key('Escape', 'Escape', 27); await sleep(200)
+  const nDoc = await count()
+  await p.js(`window.__editorLink = ''`)
+  await h.clickText('.ed-top button', 'SHARE'); await p.waitFor(`/\\?make&d=/.test(window.__editorLink ?? '')`, 15000)
+  const docLink = await p.js<string>(`window.__editorLink`), note = await h.text('.ed-note')
+  check('E5: SHARE with nothing selected copies a link of the whole document', !(await sel()) && linkRe.test(docLink) && /whole document/.test(note), `${docLink.length} chars; ${note}`)
+  await sleep(700); await p.js(`localStorage.removeItem('dot480.editor.v1')`)
+  const docOpened = await h.go(docLink, `document.querySelectorAll('.ed-frame').length >= ${3 + nDoc}`)
+  check('E5: the document link opens every frame (beside the starter canvas of a fresh visit)', docOpened, `${await count()} frames, want ${3 + nDoc}`)
+
+  // the review folds: every device, exported; the scorecard and the bar sheet
+  await p.js(`document.querySelector('[data-frame-label="${(await h.frameIds())[0]}"]').click()`); await sleep(200)
+  await h.clickText('.ed-right [role=tab]', 'EXPORT'); await sleep(300)
+  await e5Folds(p, h, 'E5')
+  const before = p.downloads.length
+  await h.clickText('.ed-insp button', 'EXPORT ALL DEVICES')
+  const all = await h.downloaded(() => p.downloads.slice(before).filter(d => d.name.endsWith('.png')).length >= 5 && p.downloads.slice(before).some(d => d.name.endsWith('-plotter-device.svg')), 30000)
+  check('E5: EXPORT ALL DEVICES writes a PNG per device (TRMNL at 800×480) and the plotter\'s pen plan', all && p.downloads.slice(before).some(d => d.name.endsWith('-trmnl-800x480.png')), p.downloads.slice(before).map(d => d.name).join(', '))
+  await p.shot(join(out, 'desktop-e5-export.png'))
+
+  // a link past the cap: refused with the reason; a corrupt link: a banner
+  await p.js(`localStorage.setItem(${JSON.stringify(EDITOR_KEY)}, ${JSON.stringify(bigDoc())})`); await p.cdp('Page.navigate', { url: `${base}?make` })
+  await p.waitFor(`document.querySelectorAll('.ed-frame').length === 1`, 60000); await sleep(800)
+  await p.js(`document.querySelector('[data-frame-label="${(await h.frameIds())[0]}"]').click()`); await sleep(200)
+  await h.clickText('.ed-right [role=tab]', 'EXPORT'); await h.clickText('.ed-insp button', 'FRAME LINK'); await sleep(1500)
+  check('E5: a frame too big for a link is refused with its length (DOWNLOAD JSON offered)', /more than 12000/.test(await h.text('.ed-insp .ed-bad')) && /DOWNLOAD JSON/.test(await h.text('.ed-insp .ed-bad')), await h.text('.ed-insp .ed-bad'))
+  await p.cdp('Page.navigate', { url: `${base}?make&d=zNotARealLink` })
+  check('E5: a corrupt frame link shows an error banner and adds nothing', await p.waitFor(`/Could not open/.test(document.querySelector('.ed-banner')?.textContent ?? '')`, 30000) && await count() === 1, await h.text('.ed-banner'))
+
+  // remix graph: a changed program's link goes under the program it came from; a node opens a program
+  check('E5: ?make=code opens a code layer', await h.fresh(`${base}?make=code`) && await p.waitFor(`!!document.querySelector('.ed-insp .dw-code textarea')`))
+  await p.waitFor(`Number(document.querySelector('.ed-insp .ed-graph canvas')?.dataset.nodes) >= 8`, 15000)
+  const nodes0 = Number(await p.js(`document.querySelector('.ed-insp .ed-graph canvas').dataset.nodes`))
+  await h.typeIR(PROGRAM.replace('blobs:', 'blobs e5:')); await h.blur()
+  // the link is encoded (debounced) after the typing: COPY LINK is enabled once it is ready
+  await p.waitFor(`(() => { const b = [...document.querySelectorAll('.ed-insp button')].find(b => b.textContent.trim() === 'COPY LINK'); return !!b && !b.disabled })()`, 30000)
+  await h.clickText('.ed-insp button', 'COPY LINK')
+  await p.waitFor(`Number(document.querySelector('.ed-insp .ed-graph canvas')?.dataset.nodes) === ${nodes0 + 1}`, 30000)
+  const remixes = await p.js<string[]>(`[...document.querySelectorAll('.ed-insp .ed-remixes button')].map(b => b.textContent)`)
+  check('E5: COPY LINK puts the program in the remix graph, under the example it came from', remixes.length >= 1 && remixes.some(r => /^blobs e5.*← #[0-9a-f]{8}/.test(r)) && Number(await p.js(`document.querySelector('.ed-insp .ed-graph canvas').dataset.nodes`)) === nodes0 + 1, `nodes ${nodes0}; ${remixes.join(' | ')}`)
+  await p.js(`document.querySelector('.ed-insp .ed-graph canvas').scrollIntoView({ block: 'center' })`); await sleep(300) // REMIX sits below the code editor
+  const n1 = await count(), g = (await h.rect('.ed-insp .ed-graph canvas'))!, cols = Number(await p.js(`document.querySelector('.ed-insp .ed-graph canvas').dataset.cols`)), rows = Number(await p.js(`document.querySelector('.ed-insp .ed-graph canvas').dataset.rows`))
+  // the second example's thumbnail: slot 1 of row 0 (centre at lattice cell 32, 11 on a 2× lattice)
+  await p.mouse('mouseMoved', g.x + g.w * (64 / cols), g.y + g.h * (22 / rows), 0); await p.mouse('mousePressed', g.x + g.w * (64 / cols), g.y + g.h * (22 / rows)); await p.mouse('mouseReleased', g.x + g.w * (64 / cols), g.y + g.h * (22 / rows)); await p.waitFor(`document.querySelectorAll('.ed-frame').length === ${n1 + 1}`, 15000)
+  check('E5: a click on a node in the remix graph opens that program as a frame', await count() === n1 + 1, `${n1} → ${await count()}`)
+  await p.shot(join(out, 'desktop-e5-remix.png'))
+}
+
+async function phoneE5(p: Page, h: Helpers, tapEl: (s: string) => Promise<void>) {
+  console.log('  · E5')
+  const count = async () => (await h.frameIds()).length
+  const ok = await h.fresh(`${base}?make`)
+  const [, f1] = await h.frameIds(), n0 = await count()
+  await p.js(`document.querySelector('[data-frame-label="${f1}"]').click()`); await sleep(300)
+  await p.js(`window.__editorLink = ''`)
+  await tapEl('.ed-top [aria-label="Share or export"]'); await sleep(900)
+  const link = await p.js<string>(`window.__editorLink ?? ''`)
+  check('phone E5: SHARE on the selected frame makes a frame link', ok && linkRe.test(link), `${link.length} chars`)
+  if (await p.js(`!!document.querySelector('.ed-sheet')`)) await tapEl('.ed-sheet-head [aria-label="Close"]')
+  const opened = await h.go(link, `document.querySelectorAll('.ed-frame').length === ${n0 + 1} && !!window.__editor?.sel`)
+  const got = (await h.frameIds())[n0]
+  check('phone E5: the link opens on the phone: one new frame, selected and drawn, no horizontal overflow', opened && await p.js(`window.__editor?.sel`) === got && (await h.lit(got)).n > 100 && await p.js(`document.documentElement.scrollWidth <= 390`))
+  await sleep(700); await p.cdp('Page.reload')
+  await p.waitFor(`document.querySelectorAll('.ed-frame').length >= ${n0 + 1} && window.__editor?.sel === ${JSON.stringify(got)}`, 30000); await sleep(800)
+  check('phone E5: a reload of the link keeps one copy, selected', await count() === n0 + 1 && await p.js(`window.__editor?.sel`) === got)
+  await tapEl('.ed-top [aria-label="Leave the editor"]'); await sleep(900)
+  const away = await p.js<string>('location.search')
+  await p.js(`history.back()`)
+  await p.waitFor(`!!document.querySelector('.ed-root.is-phone .ed-frame') && document.querySelectorAll('.ed-frame').length >= ${n0 + 1}`, 30000); await sleep(1000)
+  check('phone E5: leaving drops the link from the URL; Back opens the editor on it again, still one copy', !/d=/.test(away) && /[?&]d=/.test(await p.js<string>('location.search')) && await count() === n0 + 1, `away ${away}; ${await count()} frames`)
+
+  // EXPORT · LINK, DEVICES and QUALITY in the sheet
+  await p.js(`document.querySelector('[data-frame-label="${got}"]').click()`); await sleep(300)
+  await tapEl('.ed-dock [aria-label^="Inspector"]'); await tapEl('.ed-sheet #ed-tab-export')
+  await p.js(`document.querySelector('.ed-sheet section[aria-label="LINK"]').scrollIntoView()`); await sleep(200)
+  await tapEl('.ed-sheet section[aria-label="LINK"] .ed-row-btns button')
+  await p.waitFor(`!!document.querySelector('.ed-sheet .ed-link-url')`, 15000)
+  const small = await p.js<string[]>(`[...document.querySelectorAll('.ed-sheet section[aria-label="LINK"] button, .ed-sheet .ed-link-url')].filter(b => b.getBoundingClientRect().height < 44).map(b => b.textContent || b.className)`)
+  check('phone E5: EXPORT · LINK in the sheet: the link is shown to copy by hand; its targets are ≥ 44 px', linkRe.test(await p.js<string>(`document.querySelector('.ed-sheet .ed-link-url').value`)) && !small.length, small.join(', '))
+  await e5Folds(p, h, 'phone E5')
+  check('phone E5: the sheet does not overflow sideways with the review folds open', await p.js(`(() => { const b = document.querySelector('.ed-sheet-body'); return b.scrollWidth <= b.clientWidth + 1 })()`))
+  await p.shot(join(out, 'phone-e5-export.png'))
+  await tapEl('.ed-sheet-head [aria-label="Close"]')
+}
+
+// ── E6: phone polish ─────────────────────────────────────────────────────────────────────────────
+/**
+ * Installed before every page load: `navigator.share` as `window.__shareMode` says (unset: no share sheet,
+ * so the older checks copy as before), and a `visualViewport` whose height drops by `window.__kb` (a stand-in
+ * for the on-screen keyboard CDP cannot open), with `__setKb(px)` to raise its resize event.
+ */
+const E6_STUBS = `(() => {
+  Object.defineProperty(Navigator.prototype, 'share', { configurable: true, get() {
+    const m = window.__shareMode
+    if (!m) return undefined
+    return d => { (window.__shared = window.__shared || []).push({ url: d.url, title: d.title }); return m === 'resolve' ? Promise.resolve() : m === 'hang' ? new Promise(() => {}) : Promise.reject(new DOMException(m, m === 'abort' ? 'AbortError' : 'NotAllowedError')) }
+  } })
+  const real = window.visualViewport
+  if (!real) return
+  const t = new EventTarget()
+  const fake = {
+    get height() { return real.height - (window.__kb || 0) }, get width() { return real.width }, get offsetTop() { return real.offsetTop }, get offsetLeft() { return real.offsetLeft },
+    get pageTop() { return real.pageTop }, get pageLeft() { return real.pageLeft }, get scale() { return real.scale },
+    addEventListener: (...a) => { t.addEventListener(...a); real.addEventListener(...a) }, removeEventListener: (...a) => { t.removeEventListener(...a); real.removeEventListener(...a) }, dispatchEvent: e => t.dispatchEvent(e),
+  }
+  Object.defineProperty(window, 'visualViewport', { configurable: true, get: () => fake })
+  window.__setKb = px => { window.__kb = px; t.dispatchEvent(new Event('resize')) }
+})()`
+/** A finger held still at x, y for `ms`, then lifted. */
+const holdAt = async (p: Page, x: number, y: number, ms = 800) => {
+  await p.cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y, id: 0, radiusX: 2, radiusY: 2, force: 1 }] })
+  await sleep(ms)
+  await p.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await sleep(300)
+}
+const MENU = '.ed-cmenu'
+/** Accent-red pixels on the pasteboard canvas (dark_signal: #FF3B30). */
+const accentPx = (p: Page) => p.js<number>(`(() => { const c = document.querySelector('.ed-paste'); const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i + 3] > 40 && d[i] > 150 && d[i + 1] < 110 && d[i + 2] < 110) n++; return n })()`)
+
+async function phoneE6(p: Page, h: Helpers, tapEl: (s: string) => Promise<void>) {
+  console.log('  · E6')
+  const H = 844
+  const menuOpen = () => p.js<boolean>(`!!document.querySelector(${JSON.stringify(MENU)})`)
+  const order = () => h.frameIds()
+  const item = (id: string) => `${MENU} [data-menu="${id}"]`
+  const fitAll = async () => { await tapEl('.ed-zoom-pct'); await p.js(`[...document.querySelectorAll('.ed-menu button')].find(b => b.textContent.startsWith('Zoom to fit')).click()`); await sleep(400) }
+  const ok = await h.fresh(`${base}?make`)
+  if (!ok) { check('phone E6: the editor opens', false); return }
+  await sleep(800); await fitAll()
+
+  // ── the long-press menu on a frame
+  const ids0 = await order(), [f0] = ids0, a = (await h.frameRect(f0))!, [ax, ay] = mid(a)
+  await holdAt(p, ax, ay)
+  const m = await h.rect(MENU), items = await p.js<{ id: string; h: number; off: boolean }[]>(`[...document.querySelectorAll('${MENU} [data-menu]')].map(b => ({ id: b.dataset.menu, h: b.getBoundingClientRect().height, off: b.disabled }))`)
+  const under = !!m && ax >= m.x && ax <= m.r && ay >= m.y && ay <= m.b
+  check('phone E6: a long press on a frame selects it and opens its menu (not under the finger), six items ≥ 44 px, uncovered', await h.sel() === f0 && !!m && !under && items.length === 6 && items.every(i => i.h >= 44) && await h.uncovered(`${MENU} [data-menu]:not(:disabled)`), JSON.stringify({ m, items: items.map(i => i.id + (i.off ? '-' : '')) }))
+  check('phone E6: the bottom frame offers FORWARD and TO FRONT, not BACKWARD or TO BACK', items.find(i => i.id === 'forward')?.off === false && items.find(i => i.id === 'front')?.off === false && items.find(i => i.id === 'backward')?.off === true && items.find(i => i.id === 'back')?.off === true)
+  await p.shot(join(out, 'phone-06-menu.png'))
+  await tapEl(item('forward'))
+  const fwd = await order()
+  check('phone E6: FORWARD moves the frame one up the canvas stack and closes the menu', fwd[1] === f0 && fwd[0] === ids0[1] && !(await menuOpen()), fwd.join())
+  await tapEl('.ed-top [aria-label="Undo"]')
+  check('phone E6: one undo step puts it back', (await order()).join() === ids0.join())
+  await holdAt(p, ax, ay); await tapEl(item('front'))
+  const fr = await order()
+  await holdAt(p, ax, ay); await tapEl(item('back'))
+  check('phone E6: TO FRONT, then TO BACK', fr.at(-1) === f0 && (await order())[0] === f0, `${fr.join()} | ${(await order()).join()}`)
+  await holdAt(p, ax, ay); await tapEl(item('duplicate'))
+  const dup = await order(), copy = dup.find(id => !ids0.includes(id))
+  check('phone E6: DUPLICATE adds a copy, selected', dup.length === ids0.length + 1 && !!copy && await h.sel() === copy)
+  const c = (await h.frameRect(copy!))!
+  await holdAt(p, ...mid(c)); await tapEl(item('delete'))
+  check('phone E6: DELETE removes it', (await order()).length === ids0.length && !(await order()).includes(copy!))
+
+  // nothing opens for a finger that moves, or for two fingers; a tap outside closes the menu (and only that)
+  await p.tap(ax, ay); await sleep(300)
+  const sel0 = await h.sel()
+  await p.touch(Array.from({ length: 30 }, (_, i) => [[ax + i * 2, ay]])); await sleep(500)
+  const movedOpen = await menuOpen()
+  await tapEl('.ed-top [aria-label="Undo"]')
+  await p.touch(Array.from({ length: 40 }, () => [[ax - 20, ay], [ax + 20, ay + 20]])); await sleep(400)
+  check('phone E6: a finger that moves (it drags) or two fingers held still open no menu', !movedOpen && !(await menuOpen()))
+  await holdAt(p, ax, ay)
+  const opened = await menuOpen(), mr = (await h.rect(MENU))!
+  // canvas beside the menu (a press there only closes it, even on a frame)
+  await p.tap(mr.x > 195 ? 12 : 378, mr.y + mr.h / 2); await sleep(350)
+  const sel1 = await h.sel()
+  check('phone E6: a tap outside the menu closes it and changes nothing else', opened && !(await menuOpen()) && sel1 === sel0, JSON.stringify({ opened, still: await menuOpen(), sel0, sel1, mr }))
+
+  // ── the snap cue: a drag that reaches a guide lights accent dots on the pasteboard for a moment
+  await fitAll()
+  const [g0, f1] = await order(), b = (await h.frameRect(f1))!, [bx, by] = mid(b), g = (await h.frameRect(g0))!
+  await p.tap(bx, by); await sleep(300)
+  const picked = await h.sel(), dy = g.y - b.y // the drag ends with f1's top 1 px off f0's: within reach of that guide
+  const pt = (x: number, y: number) => [{ x, y, id: 0, radiusX: 2, radiusY: 2, force: 1 }]
+  const cues0 = await p.js<number>(`window.__editor?.cues ?? 0`), px0 = await accentPx(p)
+  await p.cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: pt(bx, by) })
+  for (let i = 1; i <= 8; i++) { await sleep(20); await p.cdp('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pt(bx, by + i * 6) }) }
+  await sleep(500)
+  const away = await accentPx(p)
+  for (let i = 1; i <= 8; i++) { await sleep(20); await p.cdp('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: pt(bx, by + 48 + (dy + 1 - 48) * i / 8) }) }
+  // the cue lasts 420 ms: look for its dots a few times while it shows (a busy frame can draw it late)
+  let lit = 0
+  for (let i = 0; i < 8 && !lit; i++) { await sleep(40); lit = await accentPx(p) }
+  const cues1 = await p.js<number>(`window.__editor?.cues ?? 0`), guides = await p.js<number>(`document.querySelectorAll('.ed-guide').length`)
+  await sleep(900)
+  const after = await accentPx(p)
+  await p.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await sleep(300)
+  const moved = Math.abs((await h.frameRect(f1))!.y - b.y) > .5
+  if (moved) await tapEl('.ed-top [aria-label="Undo"]')
+  check('phone E6: a drag that snaps to a guide lights accent dots on the pasteboard, which go again (no accent dots before or after)', picked === f1 && px0 === 0 && away === 0 && cues1 > cues0 && guides > 0 && lit > 10 && after === 0, JSON.stringify({ picked: picked === f1, dy, px0, away, lit, after, cues: cues1 - cues0, guides }))
+
+  // ── detent memory: LAYERS left at 90 % opens at 90 % again, after a reload too; the inspector keeps its own
+  const detent = () => p.js<string | null>(`document.querySelector('.ed-sheet')?.dataset.detent ?? null`)
+  // the earlier passes left the inspector at 36 %: start from nothing remembered (storage, and the session by a reload)
+  await p.js(`localStorage.removeItem('dot480.editor.sheet')`); await p.cdp('Page.reload'); await p.waitFor(`!!document.querySelector('.ed-dock')`, 30000); await sleep(800)
+  await tapEl('.ed-dock .ed-tool[aria-label="Layers"]')
+  const d0 = await detent()
+  await tapEl('.ed-sheet-grab'); await sleep(300)
+  const d1 = await detent()
+  await tapEl('.ed-sheet-head [aria-label="Close"]')
+  await tapEl('.ed-dock .ed-tool[aria-label="Layers"]')
+  const d2 = await detent()
+  await tapEl('.ed-sheet-head [aria-label="Close"]')
+  await tapEl('.ed-dock .ed-tool[aria-label^="Inspector"]')
+  const di = await detent()
+  await tapEl('.ed-sheet-head [aria-label="Close"]')
+  await sleep(600); await p.cdp('Page.reload'); await p.waitFor(`!!document.querySelector('.ed-dock')`, 30000); await sleep(800)
+  await tapEl('.ed-dock .ed-tool[aria-label="Layers"]')
+  const d3 = await detent(), stored = await p.js<string | null>(`localStorage.getItem('dot480.editor.sheet')`)
+  await tapEl('.ed-sheet-head [aria-label="Close"]')
+  check('phone E6: the sheet opens where it was left for that panel (LAYERS 60 % → 90 %, again 90 %, after a reload too); the inspector keeps its own', d0 === '1' && d1 === '2' && d2 === '2' && di === '1' && d3 === '2' && /"layers":2/.test(stored ?? ''), JSON.stringify({ d0, d1, d2, di, d3, stored }))
+
+  // ── the keyboard: the CODE sheet sits on it, its tabs and the code stay visible
+  const kbClosed = () => p.js<boolean>(`!document.querySelector('.ed-root.has-kb')`)
+  await h.go(`${base}?make=code`, `!!document.querySelector('.ed-sheet .dw-code textarea')`)
+  await p.js(`document.querySelector('.ed-sheet .dw-code textarea').focus()`); await sleep(200)
+  await p.js(`window.__setKb(330)`); await sleep(700)
+  const vis = H - 330, sh = (await h.rect('.ed-sheet'))!, ta = (await h.rect('.ed-sheet .dw-code textarea'))!, top = (await h.rect('.ed-top'))!
+  check('phone E6: keyboard open: the CODE sheet sits on it (bottom at the keyboard), its tabs, the top bar and the code stay visible', await p.js(`!!document.querySelector('.ed-root.has-kb')`) && near(sh.b, vis, 2) && sh.y >= top.b - 1 && await h.uncovered('.ed-sheet .ed-tabs--sheet [role=tab]') && await h.uncovered('.ed-top button') && ta.y < vis - 20 && ta.b > sh.y + 20, JSON.stringify({ sh, ta, vis }))
+  await p.shot(join(out, 'phone-07-keyboard-code.png'))
+  await p.js(`window.__setKb(0)`); await sleep(600)
+  check('phone E6: keyboard closed: the sheet is back on the bottom edge', await kbClosed() && near((await h.rect('.ed-sheet'))!.b, H, 2))
+  await h.blur(); await tapEl('.ed-sheet-head [aria-label="Close"]')
+
+  // ── the keyboard: the caret of text typed in place stays above it
+  const e = await e3Open(p, h, tapEl)
+  await p.tap(...(await e.at(8, 71))); await sleep(400)
+  await p.tap(...(await e.at(8, 71))); await sleep(500)
+  const typing = await p.js<boolean>(`document.activeElement?.matches('.ed-intext.on') ?? false`)
+  await p.js(`window.__setKb(340)`); await sleep(900)
+  const caret = await h.rect('.ed-caret, .ed-textsel'), tb = (await h.rect('.ed-top'))!
+  check('phone E6: keyboard open while typing on the canvas: the caret (or the selected text) stays between the top bar and the keyboard', typing && !!caret && caret.y >= tb.b - 1 && caret.b <= H - 340 + 1, JSON.stringify({ typing, caret }))
+  await p.shot(join(out, 'phone-08-keyboard-text.png'))
+  await p.key('Escape', 'Escape', 27); await sleep(300)
+  await p.js(`window.__setKb(0)`); await sleep(400)
+
+  // ── the layer menu: the quick bar comes inside it; TO BACK moves the layer to the bottom of its frame
+  // (the text the typing left selected: a long press on it opens the menu, never typing; the ring has handles under its dots)
+  await tapEl('.ed-zoom-pct'); await p.js(`[...document.querySelectorAll('.ed-menu button')].find(b => b.textContent.startsWith('Zoom to fit')).click()`); await sleep(500)
+  const textSel = await p.js<string | undefined>(`window.__editor?.layer`) === E3.text, tone0 = (await e.saved<{ tone: string }>(E3.text)).tone
+  await holdAt(p, ...(await e.at(8, 71)))
+  const inMenuBar = await p.js<boolean>(`!!document.querySelector('${MENU} .ed-qbar [data-q="tone"]') && !document.querySelector('.ed-overlay > .ed-qbar')`), noTyping = !(await p.js<boolean>(`document.activeElement?.matches('.ed-intext.on') ?? false`))
+  if (inMenuBar) await tapEl(`${MENU} .ed-qbar [data-q="tone"]`)
+  const toned = (await e.saved<{ tone: string }>(E3.text)).tone, still = await menuOpen()
+  if (still) await tapEl(item('back'))
+  const ls = await e.layers() as unknown as { id: string; z: number }[], lowZ = Math.min(...ls.map(l => l.z))
+  check('phone E6: a long press on a layer: its menu holds the quick bar (TONE steps, the menu stays); TO BACK puts the layer at the bottom', textSel && inMenuBar && noTyping && toned !== tone0 && still && ls.find(l => l.id === E3.text)?.z === lowZ, JSON.stringify({ textSel, inMenuBar, noTyping, tone0, toned, still, z: ls.map(l => `${l.id}:${l.z}`) }))
+  await p.shot(join(out, 'phone-09-layer-menu.png'))
+
+  // ── SHARE through the share sheet (stubbed): shared, cancelled, refused, hung
+  const shareOnce = async (mode: string | null) => {
+    await p.js(`window.__shareMode = ${JSON.stringify(mode)}; window.__shared = []; window.__editorShared = undefined; window.__editorLink = ''`)
+    await tapEl('.ed-top [aria-label="Share or export"]'); await p.waitFor('window.__editorShared !== undefined', 8000); await sleep(200) // the outcome, then the note it set
+    return { out: await p.js<string | undefined>(`window.__editorShared`), shared: await p.js<{ url: string; title: string }[]>(`window.__shared ?? []`), note: await h.text('.ed-note'), sheet: await p.js<boolean>(`!!document.querySelector('.ed-sheet')`) }
+  }
+  const closeSheet = async () => { if (await p.js(`!!document.querySelector('.ed-sheet')`)) await tapEl('.ed-sheet-head [aria-label="Close"]') }
+  const logs0 = p.logs.length
+  const s1 = await shareOnce('resolve')
+  check('phone E6: SHARE with a share sheet hands it the frame link (shared, said so; no sheet opens)', s1.out === 'shared' && s1.shared.length === 1 && linkRe.test(s1.shared[0].url) && /Dot\/480/.test(s1.shared[0].title) && /shared/i.test(s1.note) && !s1.sheet, JSON.stringify(s1))
+  const s2 = await shareOnce('abort')
+  check('phone E6: a cancelled share is no error: nothing said, no sheet, nothing logged', s2.out === 'cancelled' && s2.shared.length === 1 && !/no link|error|fail/i.test(s2.note) && !s2.sheet && p.logs.length === logs0, JSON.stringify(s2))
+  const s3 = await shareOnce('refuse')
+  check('phone E6: a refused share falls back: copied, or EXPORT · LINK opens with the link', (s3.out === 'copied' && /copied/i.test(s3.note)) || (s3.out === 'manual' && s3.sheet && await h.tab('.ed-sheet') === 'EXPORT'), JSON.stringify(s3))
+  await closeSheet()
+  await p.js(`window.__shareMode = 'hang'; window.__shared = []; window.__editorShared = undefined`)
+  await tapEl('.ed-top [aria-label="Share or export"]'); await sleep(600)
+  const pending = await p.js<string | undefined>(`window.__editorShared`)
+  await tapEl('.ed-top [aria-label="Share or export"]'); await sleep(2200)
+  const next = await p.js<string | undefined>(`window.__editorShared`), asked = await p.js<number>(`window.__shared.length`)
+  check('phone E6: a share sheet that never answers does not block the next SHARE (it copies, or shows the link)', pending === undefined && (next === 'copied' || next === 'manual') && asked === 1, JSON.stringify({ pending, next, asked }))
+  await closeSheet()
+  const s5 = await shareOnce(null)
+  check('phone E6: no share sheet (feature-detected): the clipboard, or EXPORT · LINK, as before', s5.out === 'copied' || (s5.out === 'manual' && s5.sheet), JSON.stringify(s5))
+  await closeSheet()
+  await p.js(`window.__shareMode = undefined`)
+}
+
+/** A phone on its side: the dock and the selection bar on one row, a side sheet, the menu inside the screen. */
+async function landscape() {
+  console.log('\n── phone on its side 844×390, touch')
+  const W = 844, H = 390
+  const p = await launch(W, H), h = helpers(p)
+  const tapEl = async (s: string) => { const r = await h.rect(s); if (!r) throw new Error(`no ${s}`); await p.tap(...mid(r)); await sleep(350) }
+  try {
+    await p.cdp('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 2, mobile: true, screenOrientation: { type: 'landscapePrimary', angle: 90 } })
+    await p.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
+    await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: E6_STUBS })
+    const opened = await h.fresh(`${base}?make`)
+    check('landscape: ?make opens the full-screen phone editor on its side', opened && await p.js(`!!document.querySelector('.ed-root.is-phone.is-landscape')`), opened ? '' : p.logs.join(' | '))
+    if (!opened) return
+    await sleep(1000)
+    const dock = (await h.rect('.ed-dock'))!, bar = (await h.rect('.ed-selbar'))!, top = (await h.rect('.ed-top'))!
+    const small = await p.js<string[]>(`[...document.querySelectorAll('.ed-dock button, .ed-top button, .ed-selbar button')].filter(b => { const r = b.getBoundingClientRect(); return r.width < 44 || r.height < 44 }).map(b => b.getAttribute('aria-label'))`)
+    check('landscape: the dock (left) and the selection bar (right) share the bottom row without overlapping; every target ≥ 44 px and uncovered', near(dock.b, bar.b, 2) && dock.r <= bar.x && dock.x >= 0 && bar.r <= W && dock.y > top.b && !small.length && await h.uncovered('.ed-dock button') && await h.uncovered('.ed-selbar button') && await h.uncovered('.ed-top button'), JSON.stringify({ dock, bar, small }))
+    check('landscape: no horizontal overflow; the site bar steps aside', await p.js(`document.documentElement.scrollWidth <= ${W}`) && await p.js<boolean>(`[...document.querySelectorAll('.tabbar, .topbar')].every(e => getComputedStyle(e).display === 'none')`))
+    await p.shot(join(out, 'landscape-01-open.png'))
+    const [f0] = await h.frameIds(), a = (await h.frameRect(f0))!
+    await p.tap(...mid(a)); await sleep(300)
+    await tapEl('.ed-dock .ed-tool[aria-label^="Inspector"]'); await sleep(700)
+    const sh = (await h.rect('.ed-sheet--side'))!, f = (await h.frameRect(f0))!
+    check('landscape: the inspector is a side sheet: right edge, under the top bar to the bottom, its tabs and the top bar uncovered, no dock behind it', !!sh && near(sh.r, W, 1) && sh.x > W * .45 && sh.y >= top.b - 1 && near(sh.b, H, 1) && await h.uncovered('.ed-sheet .ed-tabs--sheet [role=tab]') && await h.uncovered('.ed-top button') && !(await p.js(`!!document.querySelector('.ed-dock')`)), JSON.stringify(sh))
+    check('landscape: the selected frame stays in view beside the side sheet', f.r <= sh.x + 2 && f.x >= -2 && f.y >= top.b - 2 && f.b <= H + 2, JSON.stringify({ f, sheet: sh.x }))
+    await p.shot(join(out, 'landscape-02-side-sheet.png'))
+    await tapEl('.ed-sheet-head [aria-label="Close"]')
+    const a2 = (await h.frameRect(f0))!
+    await holdAt(p, ...mid(a2))
+    const m = await h.rect(MENU)
+    check('landscape: a long press opens the menu inside the screen, under the top bar', !!m && m.x >= 0 && m.r <= W && m.y >= 0 && m.b <= H, JSON.stringify(m))
+    await p.shot(join(out, 'landscape-03-menu.png'))
+    await p.tap(8, H / 2); await sleep(300)
+    check('landscape: no uncaught errors or console errors', p.logs.length === 0, p.logs.slice(0, 3).join(' | '))
+  } catch (e) {
+    check('landscape run', false, String(e)); await p.shot(join(out, 'landscape-99-error.png')).catch(() => null)
+  } finally { await p.close() }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────────────────────────
 async function phone() {
   console.log('\n── phone 390×844, touch')
@@ -779,6 +1212,7 @@ async function phone() {
   try {
     await p.cdp('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 2, mobile: true })
     await p.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
+    await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: E6_STUBS })
     await p.allowDownloads(out)
     const opened = await h.fresh(`${base}?make`)
     check('phone: ?make opens the full-screen editor', opened && await p.js(`!!document.querySelector('.ed-root.is-phone')`), opened ? '' : p.logs.join(' | '))
@@ -880,9 +1314,14 @@ async function phone() {
     check('phone: CODE compiles in the sheet', /OK/.test(await h.text('.ed-insp .dw-status')), await h.text('.ed-insp .dw-status'))
     await tapEl('.ed-sheet-head [aria-label="Close"]')
 
-    // ── share falls back to EXPORT for a frame that is not on a share grid; PNG downloads
-    await tapEl('.ed-top [aria-label="Share or export"]'); await sleep(400)
-    check('phone: SHARE on a non-share frame opens the sheet on EXPORT', await h.tab('.ed-sheet') === 'EXPORT')
+    // ── share: a selected frame gets a frame link (E5; copied, or EXPORT · LINK opens to copy it by hand); PNG downloads
+    await p.js(`window.__editorLink = ''`)
+    await tapEl('.ed-top [aria-label="Share or export"]'); await sleep(800)
+    const plink = await p.js<string>(`window.__editorLink ?? ''`)
+    check('phone: SHARE on a frame makes a frame link (?make&d=…), copied or shown in EXPORT · LINK', /\?make&d=[zb][A-Za-z0-9_-]+$/.test(plink) && (!(await p.js(`!!document.querySelector('.ed-sheet')`)) || await h.tab('.ed-sheet') === 'EXPORT'), `${plink.length} chars`)
+    if (!(await p.js(`!!document.querySelector('.ed-sheet')`))) await tapEl('.ed-dock [aria-label^="Inspector"]')
+    await tapEl('.ed-sheet #ed-tab-export')
+    check('phone: the inspector sheet opens on EXPORT', await h.tab('.ed-sheet') === 'EXPORT')
     await tapEl('.ed-sheet .ed-insp button.ed-primary')
     check('phone: EXPORT PNG downloads (tapped)', await h.downloaded(d => d.name.endsWith('.png') && d.bytes > 1000), JSON.stringify(p.downloads))
     await tapEl('.ed-sheet-head [aria-label="Close"]')
@@ -909,6 +1348,8 @@ async function phone() {
     check('phone: ?tab=studio opens on Move', (await h.tool()).startsWith('Move') && await p.js(`location.search === '?make=compose'`))
 
     await phoneE3(p, h, tapEl) // after the old links: it replaces the document with its own
+    await phoneE5(p, h, tapEl)
+    await phoneE6(p, h, tapEl)
 
     // ── leaving: the site's tab bar comes back, uncovered
     await tapEl('.ed-top [aria-label="Leave the editor"]'); await sleep(800)
@@ -922,8 +1363,9 @@ async function phone() {
 }
 
 try {
-  if (only !== 'phone') await desktop()
-  if (only !== 'desktop') await phone()
+  if (want('desktop')) await desktop()
+  if (want('phone')) await phone()
+  if (want('landscape')) await landscape()
 } finally { server?.stop() }
 console.log(failures ? `\n${failures} editor browser check(s) failed, ${passes} passed` : `\nAll ${passes} editor browser checks passed`)
 process.exit(failures ? 1 : 0)

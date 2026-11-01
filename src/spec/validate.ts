@@ -88,7 +88,9 @@ export function validateSpec(input: unknown): SpecResult {
   const tone = (x: unknown, path: string) => oneOf(x, path, TONES)
   const placed = (l: O, path: string) => {
     if ('tone' in l) tone(l.tone, `${path}.tone`)
-    if ('lattice' in l) num(l.lattice, `${path}.lattice`, { exMin: 0, max: 64 })
+    // a raster layer may carry rect cells (squares Q2): `[kx, ky]` and the size axis
+    if ('lattice' in l) { if (l.kind === 'raster' && Array.isArray(l.lattice)) { if (arr(l.lattice, `${path}.lattice`, { min: 2, max: 2 })) l.lattice.forEach((k, i) => num(k, `${path}.lattice[${i}]`, { exMin: 0, max: 64 })) } else num(l.lattice, `${path}.lattice`, { exMin: 0, max: 64 }) }
+    if ('sizeAxis' in l) oneOf(l.sizeAxis, `${path}.sizeAxis`, ['both', 'x', 'y'])
     if ('origin' in l) tuple(l.origin, `${path}.origin`, 2)
     if ('join' in l) joinSpec(l.join, `${path}.join`)
   }
@@ -171,7 +173,7 @@ export function validateSpec(input: unknown): SpecResult {
         return
       }
       case 'raster': {
-        if (!obj(l, path, [...PLACED, 'grid', 'window', 'format', 'asset', 'tones'], ['grid', 'format', 'asset'])) return
+        if (!obj(l, path, [...PLACED, 'sizeAxis', 'grid', 'window', 'format', 'asset', 'tones'], ['grid', 'format', 'asset'])) return
         placed(l, path)
         let cells = -1
         const g = l.grid

@@ -4,11 +4,9 @@ import { shapeExt } from './ext'
 
 export type PathSink = Pick<CanvasPath, 'moveTo' | 'lineTo' | 'arcTo' | 'bezierCurveTo' | 'arc' | 'rect' | 'closePath'>
 
-/** Append one dot outline as a sub-path, left open for `fill` (squircles: same curve as the SVG renderer; joined cells: `shapeExt.canvas`). */
+/** Append one dot outline as a sub-path, left open for `fill` (squircles: same curve as the SVG renderer; joined and rect cells: `shapeExt.canvas`). */
 function addDot(p: PathSink, dot: DotInstance): void {
-  const join = shapeExt.canvas
-  if (join && dot.join !== undefined && dot.joint) join(p, dot.x, dot.y, dot.r, dot.join, dot.joint)
-  else addDotShape(p, dot.x, dot.y, dot.r, dot.shape, dot.shape === 'squircle' ? squircleExponent(dot.roundness ?? 0) : 2, false)
+  if ((dot.join === undefined && dot.aspect === undefined) || !shapeExt.canvas?.(p, dot)) addDotShape(p, dot.x, dot.y, dot.r, dot.shape, dot.shape === 'squircle' ? squircleExponent(dot.roundness ?? 0) : 2, false)
 }
 /**
  * One dot outline from plain numbers; `n` = the squircle exponent (read only for `shape: 'squircle'`).

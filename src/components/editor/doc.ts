@@ -337,6 +337,36 @@ export function shiftLayers(d: EditorDoc, frame: string, ids: string[], dir: -1 
   return editCard(d, frame, c => ({ ...c, layers: normalizeZ(out.map(id => by.get(id)!).reverse()) }))
 }
 
+/** Stack order (E6): one step up or down, or all the way to the front or the back. */
+export type Order = 'forward' | 'backward' | 'front' | 'back'
+/** Layers (their groups as one unit) by `how`; the moved ones keep their order among themselves. */
+export function orderLayers(d: EditorDoc, frame: string, ids: string[], how: Order): EditorDoc {
+  const dir = how === 'forward' || how === 'front' ? -1 : 1
+  if (how === 'forward' || how === 'backward') return shiftLayers(d, frame, ids, dir)
+  let x = d
+  for (let i = 0; i < 1024; i++) { const y = shiftLayers(x, frame, ids, dir); if (y === x) break; x = y }
+  return x
+}
+/** Frames up or down the canvas stack (the last frame draws on top); the moved ones keep their order among themselves. */
+export function orderFrames(d: EditorDoc, ids: string[], how: Order): EditorDoc {
+  const on = new Set(ids.filter(id => d.frames.some(f => f.id === id)))
+  if (!on.size) return d
+  let out: EditorFrame[]
+  if (how === 'front' || how === 'back') {
+    const up = d.frames.filter(f => on.has(f.id)), rest = d.frames.filter(f => !on.has(f.id))
+    out = how === 'front' ? [...rest, ...up] : [...up, ...rest]
+  } else {
+    // one step: each moved frame swaps with the unmoved neighbour on that side (the nearest one first)
+    out = [...d.frames]
+    const dir = how === 'forward' ? 1 : -1, at = out.map((_, i) => i)
+    for (const i of dir > 0 ? at.reverse() : at) {
+      const j = i + dir
+      if (on.has(out[i].id) && j >= 0 && j < out.length && !on.has(out[j].id)) [out[i], out[j]] = [out[j], out[i]]
+    }
+  }
+  return out.every((f, i) => f === d.frames[i]) ? d : { ...d, frames: out }
+}
+
 // ── paint ──────────────────────────────────────────────────────────────────
 /** The paint cell under frame-local px `x`, `y` (may be outside the layer). */
 export const paintCellAt = (f: EditorFrame, l: PaintLayer, x: number, y: number) => {
@@ -426,13 +456,20 @@ export function boundsOf(d: EditorDoc, ids: string[] = []): [number, number, num
 }
 
 // ── share (CODE): an IR layer as a `?make=code&p=` program, when its frame and settings fit a share link ──
-export function shareable(f: EditorFrame, l: StudioLayer): SharedProgram | string {
+/**
+ * The program link of a code layer, or why it has none. Its parent (E5, remix lineage) is the program the
+ * frame was made from (`source: 'program:<hash>'`) when the code changed since; unchanged, `known` gives that
+ * program's own parent (the gallery's record), so the same program makes the same link.
+ */
+export function shareable(f: EditorFrame, l: StudioLayer, known?: (hash: string) => string | undefined): SharedProgram | string {
   if (l.kind !== 'ir') return 'only a code (Field IR) layer has a share link'
   const g = (Object.keys(SHARE_GRIDS) as ShareGrid[]).find(k => SHARE_GRIDS[k].cols === f.card.grid.cols && SHARE_GRIDS[k].rows === f.card.grid.rows)
   if (!g) return 'share links need a tile 144×144, wide 216×108 or tall 108×162 frame'
   if (!(SHARE_LATTICES as readonly number[]).includes(l.lattice)) return `share links use lattice ${SHARE_LATTICES.join(', ')}`
   const tone = (SHARE_TONES as readonly string[]).includes(l.tone) ? l.tone as ShareTone : 'auto'
-  return { src: l.src, grid: g, lattice: l.lattice, tone }
+  const p = { src: l.src, grid: g, lattice: l.lattice, tone }, from = f.source?.startsWith('program:') ? f.source.slice(8) : undefined
+  const parent = !from ? undefined : from !== programHash(p) ? from : known?.(from)
+  return parent ? { ...p, parent } : p
 }
 
 // ── validation, JSON, storage ──────────────────────────────────────────────

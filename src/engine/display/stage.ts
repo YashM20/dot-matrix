@@ -11,14 +11,17 @@
  *   eink     1-bit blue-noise ink on paper, partial refresh ghosts, full-refresh flash (first refresh is full)
  *   flipdisc 2-tone discs, column sweep, underdamped flips (device physics), clack events
  *   nixie    neutrals → warm neon, 3-level glow, hex anode mesh; ignition flicker
+ *   lcd      reflective LCD: cell average, symmetric liquid-crystal lag (τ), square pixels with a clear gutter, ink on a
+ *            pale backplane with the pixels' shadow under them; the accent prints as pigment; pixels fade in from blank
+ *   grout    mosaic: one flat tile per cell on grout lines, a 1 px bevel, a fixed ± luma jitter per tile; tiles set in a sweep
  *
  * Time `t` is seconds on any monotonic clock the caller owns (the engine never reads the time itself).
  */
 import { hash01 } from '../math'
 import { dot480 } from '../theme/tokens'
-import { decayFactor, settleSeconds } from './afterglow'
+import { decayFactor, ghostStep, settleSeconds } from './afterglow'
 import { cellFrame, createEinkPanel, createFlipPanel } from './panels'
-import { SKIN_PHYSICS, phosphorMatrix, rgbOf, skinPhosphor, type AccentLit, type Phosphor, type SkinName } from './skins'
+import { SKIN_PHYSICS, lcdMatrix, phosphorMatrix, rgbOf, skinPhosphor, type AccentLit, type Phosphor, type SkinName } from './skins'
 
 type C2D = CanvasRenderingContext2D
 interface Surface { c: HTMLCanvasElement; x: C2D }
@@ -26,12 +29,14 @@ interface Surface { c: HTMLCanvasElement; x: C2D }
 export interface StageColors {
   /** Flip-disc bright face, black face and panel; e-ink paper and ink. */
   bright: string; off: string; panel: string; paper: string; ink: string
+  /** Mosaic (grout skin): an unlit tile (the card surface) and the grout between tiles. */
+  tile: string; grout: string
 }
 /**
  * Physics colours of the reflective skins. Disc faces and ink are the dot480 tones (`value`, `dotFaint`, `bg`).
  * The flip-disc panel (a hair above `bg`) matches no token; the e-ink paper grey is deliberately not one.
  */
-export const STAGE_COLORS: StageColors = { bright: dot480.value!, off: dot480.dotFaint!, panel: '#0A0B0C', paper: '#D3D3CD', ink: dot480.bg }
+export const STAGE_COLORS: StageColors = { bright: dot480.value!, off: dot480.dotFaint!, panel: '#0A0B0C', paper: '#D3D3CD', ink: dot480.bg, tile: dot480.surface, grout: dot480.bg }
 
 export interface StageOptions {
   /** Card grid (cells) and the backing size of the frames (px). */
@@ -80,6 +85,10 @@ const black = (s: Surface | C2D, w: number, h: number) => {
 function phosphorFilter(doc: Document, skin: AccentLit | 'nixie', accent: string): { url: string; phosphor: Phosphor } {
   const a = skin === 'nixie' ? undefined : rgbOf(accent), phosphor = skin === 'nixie' ? SKIN_PHYSICS.nixie.phosphor : skinPhosphor(skin, a!)
   const id = a ? `dm-phosphor-${skin}-${accent.slice(1).toLowerCase()}` : 'dm-phosphor-nixie'
+  return { url: matrixFilter(doc, id, phosphorMatrix(phosphor, a)), phosphor }
+}
+/** A shared hidden SVG feColorMatrix filter (sRGB) by id; returns its `url(#id)`. */
+function matrixFilter(doc: Document, id: string, values: number[]): string {
   if (!doc.getElementById(id)) {
     const ns = 'http://www.w3.org/2000/svg'
     let host = doc.getElementById('dm-display-filters') as SVGSVGElement | null
@@ -91,10 +100,20 @@ function phosphorFilter(doc: Document, skin: AccentLit | 'nixie', accent: string
     }
     const filter = doc.createElementNS(ns, 'filter'), m = doc.createElementNS(ns, 'feColorMatrix')
     filter.id = id; filter.setAttribute('color-interpolation-filters', 'sRGB')
-    m.setAttribute('type', 'matrix'); m.setAttribute('values', phosphorMatrix(phosphor, a).join(' '))
+    m.setAttribute('type', 'matrix'); m.setAttribute('values', values.join(' '))
     filter.appendChild(m); host.appendChild(filter)
   }
-  return { url: `url(#${id})`, phosphor }
+  return `url(#${id})`
+}
+/** A pattern surface (w × h) that is opaque on each cell's inset square and clear in the gutter, edges snapped to device px. */
+function cellMask(doc: Document, w: number, h: number, cols: number, rows: number, inset: number): Surface {
+  const s = surface(doc, w, h), cw = w / cols, ch = h / rows
+  s.x.fillStyle = '#fff'
+  for (let r = 0; r < rows; r++) {
+    const y0 = Math.round(r * ch + inset * ch / 2), y1 = Math.round((r + 1) * ch - inset * ch / 2)
+    for (let c = 0; c < cols; c++) { const x0 = Math.round(c * cw + inset * cw / 2), x1 = Math.round((c + 1) * cw - inset * cw / 2); if (x1 > x0 && y1 > y0) s.x.fillRect(x0, y0, x1 - x0, y1 - y0) }
+  }
+  return s
 }
 
 /** Mip chain for cheap bloom: each level a 1/k downsample; drawn back up with `lighter` at its alpha. */
@@ -265,6 +284,97 @@ export function createDisplayStage(skin: SkinName, o: StageOptions): DisplayStag
           out.fillStyle = '#000'; out.fillRect(0, y, w, h - y)
           if (p > 0) { out.globalCompositeOperation = 'lighter'; out.globalAlpha = .35; out.drawImage(tint.c, 0, y, w, ch, 0, y, w, ch); out.globalAlpha = 1; out.globalCompositeOperation = 'source-over' }
         }
+        return p < 1
+      },
+    }
+  }
+
+  if (skin === 'lcd') {
+    const P = SKIN_PHYSICS.lcd, cell = surface(doc, cols, rows, { alpha: false }), ghost = surface(doc, cols, rows, { alpha: false })
+    cell.x.imageSmoothingQuality = 'high'
+    black(ghost, cols, rows)
+    const hex = (c: Phosphor) => `rgb(${c.map(v => Math.round(v * 255)).join(',')})`
+    const a = rgbOf(accent), filter = `${gain !== 1 ? `brightness(${gain.toFixed(3)}) ` : ''}${matrixFilter(doc, `dm-lcd-${accent.slice(1).toLowerCase()}`, lcdMatrix(P.paper, P.ink, a, P.pigment))}`
+    // square pixels: the ink-mapped image masked to each cell's inset square (gutter = paper), a touch darker than the paper when off
+    const mask = cellMask(doc, w, h, cols, rows, P.gutter), pix = surface(doc, w, h), shade = surface(doc, w, h, { alpha: false })
+    let last: number | null = null
+    return {
+      ...base,
+      render(out, t) {
+        const p = powerOn(t, 0), dt = last === null ? (o.instant ? 1e3 : 0) : t - last
+        last = t
+        if (p < 0) { out.fillStyle = hex(P.paper); out.fillRect(0, 0, w, h); return true }
+        // liquid-crystal response: the new cell image drawn over the old at 1 − e^(−Δt/τ) (a blank panel fades in on power-on)
+        cell.x.drawImage(raw.c, 0, 0, cols, rows)
+        ghost.x.globalAlpha = ghostStep(dt, P.tau); ghost.x.drawImage(cell.c, 0, 0); ghost.x.globalAlpha = 1
+        // pixels: nearest upscale through the LCD matrix, masked to squares
+        const px = pix.x
+        px.globalCompositeOperation = 'source-over'; px.clearRect(0, 0, w, h); px.imageSmoothingEnabled = false
+        px.filter = filter; px.drawImage(ghost.c, 0, 0, w, h); px.filter = 'none'
+        px.globalCompositeOperation = 'multiply'; px.fillStyle = `rgb(${Math.round(P.off * 255)},${Math.round(P.off * 255)},${Math.round(P.off * 255)})`; px.fillRect(0, 0, w, h)
+        px.globalCompositeOperation = 'destination-in'; px.drawImage(mask.c, 0, 0); px.globalCompositeOperation = 'source-over'
+        // backplane: paper, the pixel layer's shadow (offset, blurred, multiplied), then the pixels
+        const sh = shade.x
+        sh.fillStyle = '#fff'; sh.fillRect(0, 0, w, h)
+        sh.filter = `blur(${(P.shadow.blur * cw).toFixed(2)}px)`; sh.drawImage(pix.c, P.shadow.dx * cw, P.shadow.dy * ch); sh.filter = 'none'
+        out.globalCompositeOperation = 'source-over'; out.globalAlpha = 1
+        out.fillStyle = hex(P.paper); out.fillRect(0, 0, w, h)
+        out.globalCompositeOperation = 'multiply'; out.globalAlpha = P.shadow.alpha; out.drawImage(shade.c, 0, 0)
+        out.globalCompositeOperation = 'source-over'; out.globalAlpha = 1; out.drawImage(pix.c, 0, 0)
+        return t - changedAt < settleSeconds(P.tau)
+      },
+    }
+  }
+
+  if (skin === 'grout') {
+    const P = SKIN_PHYSICS.grout, cell = surface(doc, cols, rows, { alpha: false }), card = surface(doc, w, h, { alpha: false }), tiles = surface(doc, w, h)
+    cell.x.imageSmoothingQuality = 'high'
+    const mask = cellMask(doc, w, h, cols, rows, P.gap)
+    // bevel edges: per tile a 1 px top / left line (lighter) and bottom / right line (multiply), and a fixed per-tile luma jitter
+    const hi = surface(doc, w, h), lo = layer(doc, w, h, () => {}), jitter = layer(doc, cols, rows, () => {})
+    {
+      const ccw = w / cols, cch = h / rows, lw = 1, g = lo.x
+      hi.x.fillStyle = `rgba(255,255,255,${P.bevel.hi})`; g.fillStyle = `rgb(${Math.round(255 * (1 - P.bevel.lo))},${Math.round(255 * (1 - P.bevel.lo))},${Math.round(255 * (1 - P.bevel.lo))})`
+      for (let r = 0; r < rows; r++) {
+        const y0 = Math.round(r * cch + P.gap * cch / 2), y1 = Math.round((r + 1) * cch - P.gap * cch / 2)
+        for (let c = 0; c < cols; c++) {
+          const x0 = Math.round(c * ccw + P.gap * ccw / 2), x1 = Math.round((c + 1) * ccw - P.gap * ccw / 2)
+          if (x1 - x0 < 3 || y1 - y0 < 3) continue
+          hi.x.fillRect(x0, y0, x1 - x0, lw); hi.x.fillRect(x0, y0 + lw, lw, y1 - y0 - lw)
+          g.fillRect(x0 + lw, y1 - lw, x1 - x0 - lw, lw); g.fillRect(x1 - lw, y0, lw, y1 - y0 - lw)
+        }
+      }
+      const d = jitter.x.createImageData(cols, rows)
+      for (let i = 0; i < cols * rows; i++) { const v = Math.round(255 * (1 - 2 * P.jitter * hash01(i % cols, Math.floor(i / cols), 23))); d.data[i * 4] = d.data[i * 4 + 1] = d.data[i * 4 + 2] = v; d.data[i * 4 + 3] = 255 }
+      jitter.x.putImageData(d, 0, 0)
+    }
+    // the card over its own surface colour (not black), so a light card's dark dots read as ink on its tiles
+    const frameOn = (src: CanvasImageSource, t: number) => {
+      card.x.fillStyle = colors.tile; card.x.fillRect(0, 0, w, h); card.x.imageSmoothingEnabled = true; card.x.drawImage(src, 0, 0, w, h)
+      changedAt = t; pending = true
+    }
+    return {
+      ...base,
+      frame: frameOn,
+      render(out, t) {
+        const p = powerOn(t, P.onS)
+        // cell average → flat tiles (nearest), the per-tile jitter, bevels, cut to the tile squares
+        cell.x.drawImage(card.c, 0, 0, cols, rows)
+        cell.x.globalCompositeOperation = 'multiply'; cell.x.drawImage(jitter.c, 0, 0); cell.x.globalCompositeOperation = 'source-over'
+        const x = tiles.x
+        x.globalCompositeOperation = 'source-over'; x.clearRect(0, 0, w, h); x.imageSmoothingEnabled = false; x.drawImage(cell.c, 0, 0, w, h)
+        x.globalCompositeOperation = 'lighter'; x.drawImage(hi.c, 0, 0)
+        x.globalCompositeOperation = 'multiply'; x.drawImage(lo.c, 0, 0)
+        x.globalCompositeOperation = 'destination-in'; x.drawImage(mask.c, 0, 0); x.globalCompositeOperation = 'source-over'
+        out.globalCompositeOperation = 'source-over'; out.globalAlpha = 1
+        out.fillStyle = colors.grout; out.fillRect(0, 0, w, h)
+        // power-on: tiles are set in a diagonal sweep, top-left to bottom-right
+        if (p >= 1) out.drawImage(tiles.c, 0, 0)
+        else if (p > 0) {
+          const k = smooth(p) * (cols + rows)
+          for (let r = 0; r < rows; r++) { const n = Math.max(0, Math.min(cols, Math.ceil(k - r))); if (n) { const y0 = Math.round(r * ch), y1 = Math.round((r + 1) * ch), x1 = Math.round(n * cw); out.drawImage(tiles.c, 0, y0, x1, y1 - y0, 0, y0, x1, y1 - y0) } }
+        }
+        pending = false
         return p < 1
       },
     }
