@@ -2,78 +2,78 @@
 
 <!-- VISUAL: kind=shot · what=editor desktop layout with level-03 and untitled frame · notice=left layer tree, central dot canvas, right design panel with dot size controls -->
 
-You can open MAKE by clicking MAKE in the top bar or by opening `?make` in your browser. The screen shows an infinite canvas covered by a grid of faint dots. At the top left sits your tool bar with single-key shortcuts: Move (`V`), Hand (`H`), Frame (`F`), Draw (`B`), Text (`T`), and Code (`C`). On the left sits the LAYERS and ASSETS panel. On the right sits the DESIGN, ANIMATE, CODE, and EXPORT inspector.
+Click MAKE in the top bar or open `?make` in your browser. You see an infinite canvas covered in faint dots. Look at the top left corner. The tool bar gives you six tools: Move (`V`), Hand (`H`), Frame (`F`), Draw (`B`), Text (`T`), and Code (`C`). Layers and assets live on the left. Design, animation, code, and export controls live on the right.
 
 ## Make a blank frame
 
 <!-- VISUAL: kind=steps · what=frame creation with F tool · notice=dragged outline snapping to whole grid cells at 2.25 px tile pitch -->
 
-Press `F` to choose the Frame tool. Move your pointer to the canvas and drag out a rectangle. If you want a square card, click once to place a standard 144 by 144 cell tile.
+Press `F` to grab the Frame tool. Drag a box across the canvas. Click once if you want a square tile: that drops a card that is 144 cells wide and 144 cells tall.
 
-The outline snaps to whole grid points. Each cell has a pitch of 2.25 screen pixels. Look at the DESIGN panel on the right. Under FRAME you see the card dimensions: width, height, columns, and rows. You can type numbers directly into these boxes to change the card size.
+Your dragged outline snaps to whole grid points. Every cell measures 2.25 screen pixels across. Look at the FRAME section in the right panel. It lists your card width, height, columns, and rows. You can type new numbers into these fields to change the card size.
 
 ## Add a live field layer
 
 <!-- VISUAL: kind=card · what=ir-ripple · notice=concentric rings of dots fading toward the card edge on a 3x lattice -->
 
-Press `C` to pick the Code tool, then click inside your new frame. You can also click `+ CODE LAYER` in the LAYERS list. The editor adds a Field IR layer to your frame and opens the CODE tab.
+Press `C` to pick the Code tool, then click inside your frame. The editor adds a code layer to the card and opens the CODE tab on the right. You can also click `+ CODE LAYER` in the left panel.
 
-Your card displays lit dots right away. The default program creates concentric ripple rings that spread outward across the card surface. The editor compiles this code into a pure mathematical function `f(u, v)`. The variables `u` and `v` measure position from 0 at the top left to 1 at the bottom right. The variable `t` tracks elapsed time in seconds. Every dot reads its brightness directly from this function.
+Look at the card. It is already running live dots. Concentric rings ripple outward from the center. The editor compiles this program into a function `f(u, v)`. The coordinate `u` goes from 0 on the left edge to 1 on the right edge. The coordinate `v` goes from 0 on the top edge to 1 on the bottom edge. The clock variable `t` counts seconds. Every dot gets its brightness by sampling this formula.
 
 ## Set tone and dot shape
 
 <!-- VISUAL: kind=diagram · what=squircle roundness slider from r=0 to r=1 · notice=circle at n=2, soft squircle at n=3.9, square at n=32 -->
 
-Click the DESIGN tab in the right inspector. Select your frame in the layer tree and scroll to the DOTS section.
+Click the DESIGN tab in the right panel. Click your frame in the layer list and scroll down to DOTS.
 
-The roundness slider changes the shape of every dot on the card. The engine calculates dot shapes using a superellipse formula. At roundness 0, dots are circles with an exponent of 2. At roundness 0.25, dots take the default squircle shape with an exponent near 3.9. At roundness 1, dots become flat squares with an exponent of 32.
+Drag the roundness slider to change how dots look. The engine draws each dot with a superellipse formula. Pull the slider to 0 for round circles. Leave it at 0.25 for the default squircle shape. Push it to 1 for flat-edged squares.
 
-Below roundness sits the quantize control. Field brightness is rounded into discrete steps. The default value is 5 steps. Smooth mathematical gradients turn into 5 visible bands of dot sizes. If you select your code layer, you can change its tone in the layer inspector. Choose between `faint`, `mid`, `idle`, `value`, or `active`. The `active` tone paints dots in Signal Red (`#FF3B30`), the single accent color used across the site.
+Look below roundness at the quantize slider. The sampler rounds smooth math values into distinct dot sizes. The default setting is 5 steps, which groups brightness into 5 sizes. Click your code layer to pick its tone. You have five choices: `faint`, `mid`, `idle`, `value`, and `active`. The `active` tone paints dots in Signal Red (`#FF3B30`). That red is the only accent color on the entire site.
 
 ## Edit directly on the canvas
 
 <!-- VISUAL: kind=shot · what=canvas selection handles and floating quick bar · notice=red sweep handle on ring, quick bar buttons for tone and lattice -->
 
-Press `V` to return to the Move tool. Click on your frame to select it. Four corner handles appear at the outer edges of the card. Drag any corner handle to resize the frame in whole cell increments. The card contents stay anchored while the grid expands or contracts.
+Press `V` to switch back to the Move tool. Click your frame on the canvas. Corner handles appear at the four corners. Drag any corner to resize the card in whole cell steps. The card grows or shrinks while existing layers keep their coordinates.
 
-Select a specific layer by clicking on its lit dots. When you select a shape layer like a ring, handles appear directly on the shape. A radius handle lets you resize the circle. A red sweep handle lets you pull the arc along its track. The sweep snaps to steps of `2 * PI / n`, keeping every arc ending cleanly on a dot position.
+Click directly on lit dots to select a layer. If you select a ring layer, handles appear on the circle itself. Drag the radius handle to change the circle size. Drag the red sweep handle to change the arc length. The sweep snaps to dot positions along the ring path.
 
-A floating quick bar appears above the selected layer. This bar gives you immediate controls without opening the inspector panels. Click `TONE` to step through brightness tiers. Click `LATTICE -` or `LATTICE +` to change dot spacing. Coarser lattices place larger dots further apart, matching the look of physical electronic panels.
+Look right above your selected layer for the floating quick bar. Tap `TONE` to cycle through brightness levels. Tap `LATTICE -` or `LATTICE +` to change dot spacing. Coarser lattices place bigger dots further apart, like the displays on real lab gear.
 
 ## Type text in place
 
 <!-- VISUAL: kind=steps · what=typing DOTS with T tool · notice=5x7 font rendered in dots with blinking caret between glyph gaps -->
 
-Press `T` to select the Text tool and click inside your frame. An invisible text input mounts to catch your keystrokes. Type your text directly onto the card.
+Press `T` to pick the Text tool, then click inside your frame. An invisible input field catches your keys. Type words straight onto the card.
 
-The letters render straight onto the card grid using an authentic 5 by 7 dot matrix font. Letters are converted to uppercase characters, supporting strings up to 64 characters long. A cursor blinks in the gap between letter cells. Click anywhere inside the text to move the cursor. When you finish typing, press Enter or click the canvas outside the frame. The entire typing session saves as one undo step. Pressing Escape cancels your edit.
+Your letters show up in dots using the 5 by 7 pixel hardware font. All characters convert to uppercase, up to 64 letters long. A cursor blinks in the gap between letters. Click inside the text to move the cursor to a specific spot. Press Enter or click the canvas when you are done. The entire edit saves as a single undo step. Press Escape to cancel.
 
 ## Share your card as a link
 
 <!-- VISUAL: kind=steps · what=top bar share action and link dialog · notice=share URL with compressed payload under 12,000 characters -->
 
-Look at the top bar on the right side. Click the `SHARE` button.
+Look at the top right bar and click `SHARE`.
 
-The editor serializes your frame into JSON and compresses the data using raw DEFLATE compression. It encodes the compressed binary stream into a URL-safe base64 string. The entire card configuration fits into the URL query parameters under the 12,000 character limit. The site copies the link straight to your clipboard.
+The editor turns your card into JSON and squashes it with DEFLATE compression. It converts the compressed bytes into a base64 web link. The whole card fits inside the URL query string, well under the 12,000 character limit. The link copies straight to your clipboard.
 
-Send this URL to another browser. When the recipient opens the link, the engine decompresses the URL string and places the card directly onto their canvas. The shared card keeps its full layer stack, data bindings, and animation timeline.
+Paste that link into another browser tab to test it. The site unpacks the URL and drops your card onto the canvas. Your friend gets the exact same card: layers, math formulas, and animation timeline.
 
 ## Build cards on a phone
 
 <!-- VISUAL: kind=shot · what=phone layout with floating dock and bottom sheet · notice=44 px touch targets, bottom dock with tool icons, sheet at 60% detent -->
 
-Open Dot/480 on a mobile browser to see the phone interface. The canvas expands to fill the entire screen. The site navigation collapses into a slim header bar with back, title, undo, redo, zoom, and share buttons.
+Open Dot/480 on your phone. The canvas fills the whole screen. A small top bar holds your back button, title, undo, redo, zoom level, and share button.
 
-A floating dock sits at the bottom of the screen. The dock holds three segments: the layers button on the left, the tool buttons in the middle (`V`, `F`, `B`, `T`, `C`), and the inspector button on the right. Every touch target is sized to at least 44 pixels. Tap an icon to change your active tool. Use one finger on empty canvas to pan around. Pinch with two fingers to zoom in or out.
+Look at the bottom of the screen. A floating dock sits above your thumb. The layers icon sits on the left. The tool buttons (`V`, `F`, `B`, `T`, `C`) sit in the center. The inspector icon sits on the right. Every button is at least 44 pixels wide for easy tapping. Drag with one finger on empty canvas to pan around. Pinch with two fingers to zoom.
 
-When you tap the inspector or layer icon, a bottom sheet slides up over the canvas. The sheet has three snap points: peek at 36 percent of screen height, half at 60 percent, and full at 90 percent. Drag the top handle of the sheet to change heights. The editor remembers your chosen sheet height for each tab.
+Tap the inspector icon to open the bottom sheet. The sheet slides up over the canvas with three stop positions: peek at 36 percent of the screen, half at 60 percent, and full at 90 percent. Drag the top handle to change the height. The editor remembers the height you pick for each panel.
 
 ## Use mobile selection and gestures
 
 <!-- VISUAL: kind=steps · what=long press menu and native share sheet on mobile · notice=selection bar above dock with DUP and DEL buttons, native share sheet popup -->
 
-Above the dock on mobile sits the selection bar. It contains quick actions: `SELECT`, `ALL`, `DUP`, `GROUP`, `COPY`, `PASTE`, and `DEL`. Tap `SELECT` to enter multi-selection mode. While active, tapping frames adds or removes them from your selection without panning the canvas.
+Look right above the dock for the selection bar. It gives you seven quick buttons: `SELECT`, `ALL`, `DUP`, `GROUP`, `COPY`, `PASTE`, and `DEL`. Tap `SELECT` to turn on multi-selection. While that mode is active, each tap adds or removes cards from your selection group, and the canvas stays put.
 
-Press and hold your finger on a frame or layer for 500 milliseconds to open a context menu. The menu contains six direct commands: `DUPLICATE`, `FORWARD`, `BACKWARD`, `TO FRONT`, `TO BACK`, and `DELETE`. Tap any command to apply it instantly as one undo step.
+Hold your finger still on any card for 500 milliseconds. A popup menu appears above your touch point with six commands: `DUPLICATE`, `FORWARD`, `BACKWARD`, `TO FRONT`, `TO BACK`, and `DELETE`. Tap any command to apply it as one undo step.
 
-When you finish on your phone, tap `SHARE` in the top bar. The editor passes your compressed link to `navigator.share`. This opens your phone's native operating system share sheet, letting you send your card through Messages, Mail, or AirDrop.
+When you want to share your card from your phone, tap `SHARE` in the top bar. The browser calls `navigator.share` and opens your phone's system share sheet. You can send your card link straight to Messages, Mail, or AirDrop.

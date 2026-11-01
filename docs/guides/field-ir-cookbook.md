@@ -2,7 +2,7 @@
 
 <!-- VISUAL: kind=card · what=ir-ripple · notice=concentric rings of dots expanding outward from the center point -->
 
-Field IR is the expression language behind every CODE card in MAKE. Each program computes a brightness value between 0 and 1 for every dot on the grid. The engine supplies normalized coordinates `u` and `v` from 0 to 1, elapsed time `t` in seconds, pointer coordinates `pointer.x` and `pointer.y`, and custom slider values in `data`. You write programs using `let` bindings and standard mathematical functions.
+Field IR is the math language behind every code card in MAKE. Each program computes a brightness value between 0 and 1 for every dot on the grid. The engine supplies normalized coordinates `u` and `v` from 0 to 1, elapsed time `t` in seconds, pointer coordinates `pointer.x` and `pointer.y`, and custom slider values in `data`. You write programs using `let` bindings and standard mathematical functions.
 
 Open MAKE, pick the Code tool (`C`), and paste any of these recipes into the CODE editor tab.
 
@@ -37,9 +37,9 @@ let s = sin(x + t) + sin(y * 1.3 - t * .7)
 .5 + .5 * sin(s * 1.6)
 ```
 
-Change the coordinate multiplier 7 to zoom the wave patterns in or out. Change the multiplier 1.6 in the final sine function to pack more contour bands into each wave swell.
+Change the coordinate multiplier 7 to scale the wave shapes up or down. Change the number 1.6 in the final sine function to pack more bands into each swell.
 
-In dots, this program produces islands of light dots that swell, split, and merge across the card. Because Dot/480 rounds brightness into 5 discrete dot sizes, the continuous plasma waves turn into stepped terraces with crisp boundary contours.
+In dots, this program draws islands of light that drift, split, and merge. Because the engine rounds brightness into 5 dot sizes, the continuous waves form stepped terraces with visible contour lines.
 
 ## Recipe 3: Nested dashed rings
 
@@ -59,7 +59,7 @@ ring * dash * step(r, 4.6) * step(.7, r)
 
 Change the multiplier 9 to fit more or fewer circular tracks onto the card. Adjust `.4` in the dash step to lengthen or shorten the arc dashes. Adjust `.06` to alter the base rotation speed.
 
-In dots, this program draws crisp mechanical orbits. Odd rings rotate clockwise while even rings rotate counter-clockwise. The dots form sharp circular tracks with zero blurring across radial gaps.
+In dots, this program draws crisp mechanical orbits. Odd rings rotate clockwise while even rings rotate counter-clockwise. The dots form sharp circular tracks with clean gaps between rows.
 
 ## Recipe 4: Sweeping clock hand
 
@@ -77,9 +77,9 @@ let r = length(x, y);
 beam * step(r, .45) * step(.05, r)
 ```
 
-Change 60 to change the period of one complete rotation in seconds. Set it to 10 for a fast second sweep, or 60 for a real clock hand. Adjust `.015` to make the hand thinner or thicker. Adjust `.45` to set the outer reach of the hand.
+Change 60 to set the rotation cycle time in seconds. Use 10 for a rapid sweep, or 60 for a real clock hand. Adjust `.015` to make the hand thinner or thicker. Adjust `.45` to set the length of the hand.
 
-In dots, this produces a clean straight needle that ticks around the dial. Because the ray passes through discrete dot centers, dots flick on and off in clean sequence as the ray passes over their coordinates.
+In dots, this produces a straight needle that sweeps across the dial face. Dots turn on and off in clean order as the ray passes over their grid positions.
 
 ## Recipe 5: Falling rain
 
@@ -95,9 +95,9 @@ let lit = step(hash(c, 3), .6);
 lit * exp(-d * 5) * step(d, .6)
 ```
 
-Change 48 to increase or decrease the number of rain lanes across the card width. Adjust `.6` in the `lit` step to thin out or thicken the storm. Adjust the decay factor 5 to shorten or lengthen the droplet tails.
+Change 48 to increase or decrease the count of rain lanes across the card width. Adjust `.6` in the `lit` step to thin out or thicken the rainfall. Adjust the decay factor 5 to shorten or lengthen the droplet tails.
 
-In dots, this renders downward streaks of light. Each column runs at an independent speed. The head of each droplet lights up at full dot size, while its tail trails upward through smaller dot sizes before extinguishing.
+In dots, this renders downward streaks of light. Each column runs at its own speed. The head of each droplet lights up at full dot size, and the tail fades upward through smaller dot sizes before extinguishing.
 
 ## Recipe 6: Hashed noise grid
 
@@ -112,9 +112,9 @@ let n = hash(cx + floor(t * 8), cy);
 step(.55, n) * (.4 + .6 * hash(cx, cy))
 ```
 
-Change 32 to scale the static block size up or down. Change 8 to speed up or slow down the static flicker rate. Adjust `.55` to increase or decrease the sparsity of the active dots.
+Change 32 to scale the static block size up or down. Change 8 to speed up or slow down the static flicker rate. Adjust `.55` to increase or decrease the density of lit dots.
 
-In dots, this looks like digital sensor noise or vintage television static. The grid cells stay locked to whole dot lattice boundaries, producing stable geometric grain rather than blurred analog fuzz.
+In dots, this looks like digital sensor noise or vintage television static. The grid cells stay locked to whole dot lattice boundaries, producing stable geometric grain.
 
 ## Recipe 7: Radial reveal mask
 
