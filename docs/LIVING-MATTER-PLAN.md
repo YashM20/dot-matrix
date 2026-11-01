@@ -328,7 +328,7 @@ Measured rows carry the number `scripts/site/size.ts` printed (gzip -9, kB = 102
 | Q3 (rotation / motif routing in the sampler: `form & 15`, the rotated site cover, the join-pass trigger, `samplerExt.rect` for form dots; the 7 card rows in the preload maps and catalog), measured against a fresh build of 3148928 (123.78) | +0.09 (measured; row was +0.1) | 123.87 (measured) |
 | 4 new board manifest rows (pond, squares, materials, workshop) | ≈ +0.25 | ≈121.3 |
 | M1 materials, measured against its merge-base build (dbe4716) | +0.18: the row and its group slot +0.10, the preload-map entry +0.04, `Control.map` +0.03; each board row costs ≈ +0.14, not 0.06 | ≈120.4 with T3 and the essay theming (120.18) |
-| X1 | ≤ +0.5 | ≈121.8 |
+| X1 pond depth, measured against a build of its base (feat/round3 79b0e04, with PR #50): `src/site/viewTransition.ts` + `flushSync`, the OPEN card action, the `?day=` rule in `views.ts`, the card-flight CSS. Lazy: the pond deep-link closure +6.11 (marble engine, day source, `pondMemory` 0.54 shared with the command layer); the worker's initial load +0.01 (the catalog row; pond stays a stub) | +0.44 (measured; row ≤ +0.5) | 124.29 (measured; base 123.86) |
 
 **Sample worker** (`size.ts --worker`; not first load, but fetched by every page that animates a card). Since the worker split it has two numbers: the **initial load** (`sampleWorker-*.js` and its static imports: sampler, Canvas buffer renderer, manifest, card catalog) and, **per board**, what the first request of one of its cards adds (that board's `wk-*` chunk and the shared chunks it imports, fetched once per page).
 

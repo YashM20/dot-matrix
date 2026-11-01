@@ -12,6 +12,10 @@
  *    world pristine, a tap acts (the world forks live) and a 300 ms hold engages it;
  *  - L3.5 reduced motion (390 px, `prefers-reduced-motion: reduce`): no card's pixels change over 2 s or after a tap,
  *    and every world stays pristine;
+ *  - X1: `?day=` sets the pond's day (and survives the app's URL sync); nothing is stored without the opt-in, TOOLS ›
+ *    POND MEMORY stores one record (an aged record grows fry), and off deletes it; a card's OPEN runs a view
+ *    transition to its widget page and Back runs one home, the flying card's canvas hidden in flight; under reduced
+ *    motion, or without `document.startViewTransition`, the same swaps are instant;
  *  - screenshots (dark and light_signal) into `<out>` (default .snapshots/l1).
  * Needs dist/: `npx vite build`, then `npx tsx scripts/life-browser.ts [outDir]` (it runs `vite preview` itself).
  * Never hangs: every CDP call has a timeout (scripts/lib/cdp.ts), the pages and the preview server close in `finally`,
@@ -51,7 +55,8 @@ try {
     at('desktop: load')
     const page = await open(1280, 900)
     await page.cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__POND_PROBE__ = true' })
-    await page.cdp('Page.navigate', { url: `${server.url}pond/?probe=1` })
+    // day 0 (X1): the canonical pond, so Chrome's pristine run is the one Node hashes
+    await page.cdp('Page.navigate', { url: `${server.url}pond/?probe=1&day=2025-10-27` })
     const ready = await page.waitFor(`!!globalThis.__pond && !!${card}?.querySelector('canvas,svg')`, READY_MS)
     check('life-browser: /pond/ paints pond-koi (desktop)', ready, page.logs.join('; '))
     await page.js(`${card}.scrollIntoView({ block: 'center' })`); await sleep(1500)
@@ -155,6 +160,91 @@ try {
     check('life-browser: a 300 ms hold engages the card (lure) and the page does not scroll during the engaged drag', engaged && lure === 1 && still < 2, `engaged ${engaged}, lure ${lure}, scrolled ${still.toFixed(0)} px`)
     check('life-browser: no uncaught errors (touch)', !page.logs.filter(l => !/main thread/.test(l)).length, page.logs.join('; '))
     await page.close(); pages.delete(page)
+  }
+  // ── X1: ?day=, the opt-in pond memory, view transitions ──
+  {
+    at('X1: ?day= and storage')
+    const page = await open(1280, 900)
+    await page.cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__POND_PROBE__ = true' })
+    const mcard = `document.querySelector('[data-card-id="pond-marble"]')`
+    const go = async (q: string) => { await page.cdp('Page.navigate', { url: `${server.url}pond/${q}` }); return page.waitFor(`!!globalThis.__pondBoard && !!${mcard}?.querySelector('canvas,svg')`, READY_MS) }
+    const ok = await go('?probe=1&day=2026-10-31')
+    await sleep(3000) // past the idle read
+    const d = await page.js<{ day: number; age: number }>('__pondBoard.day()'), search = await page.js<string>('location.search')
+    const stored = await page.js<string[]>('Object.keys(localStorage)')
+    check('life-browser: X1 ?day=2026-10-31 sets day 369 (age 0) and stays in the address bar', ok && d.day === 369 && d.age === 0 && /day=2026-10-31/.test(search), `${JSON.stringify(d)}, ${search}`)
+    check('life-browser: X1 nothing is stored for the pond without the opt-in (after load and the idle read)', !stored.some(k => /pond/.test(k)), stored.join(', '))
+    // an aged record (as if POND MEMORY had been on for 25 visits): 2 fry hatch
+    await page.js(`localStorage.setItem('dot480:pond', JSON.stringify({ v: 1, born: '2026-09-01', last: '2026-10-30', visits: 25 }))`)
+    await go('?probe=1&day=2026-10-31'); await sleep(3000)
+    await page.js(`${card}.scrollIntoView({ block: 'center' })`); await sleep(1200)
+    const aged = await page.js<{ day: number; age: number }>('__pondBoard.day()'), koi = await page.js<number>('__pond.koi()'), rec = await page.js<string>(`localStorage.getItem('dot480:pond')`)
+    check('life-browser: X1 an opted-in record ages the pond: a visit counted once (25 → 26 visits, age 25), 2 fry hatch (8 koi)', aged.age === 25 && koi === 8 && /"visits":26/.test(rec), `${JSON.stringify(aged)}, ${koi} koi, ${rec}`)
+    await page.shot(join(out, 'x1-pond-aged.png'))
+    await page.js(`localStorage.removeItem('dot480:pond')`)
+    await page.close(); pages.delete(page)
+
+    at('X1: TOOLS › POND MEMORY')
+    const ph = await open(390, 844)
+    await ph.cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__POND_PROBE__ = true' })
+    await ph.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 })
+    await ph.cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 2, mobile: true })
+    await ph.cdp('Page.navigate', { url: `${server.url}pond/?probe=1` })
+    await ph.waitFor(`!!globalThis.__pondBoard && !!${card}?.querySelector('canvas,svg')`, READY_MS)
+    const tools = `[...document.querySelectorAll('nav.tabbar button')].find(b => /TOOLS/.test(b.textContent))`
+    await ph.js(`${tools}.click()`)
+    const shown = await ph.waitFor(`!!document.querySelector('.tools-sheet .tool-pond')`, 15000)
+    const before = await ph.js<string | null>(`localStorage.getItem('dot480:pond')`)
+    await ph.js(`document.querySelector('.tools-sheet .tool-pond').click()`); await sleep(400)
+    const on = await ph.js<string | null>(`localStorage.getItem('dot480:pond')`)
+    await ph.js(`${tools}.click()`); await ph.waitFor(`!!document.querySelector('.tools-sheet .tool-pond')`, 15000)
+    const pressed = await ph.js<string | null>(`document.querySelector('.tools-sheet .tool-pond').getAttribute('aria-pressed')`)
+    await ph.js(`document.querySelector('.tools-sheet .tool-pond').click()`); await sleep(400)
+    const off = await ph.js<string | null>(`localStorage.getItem('dot480:pond')`)
+    check('life-browser: X1 TOOLS › POND MEMORY (on /pond/): off at first; on writes one small record; it shows pressed; off deletes it',
+      shown && before === null && !!on && on.length <= 200 && /"visits":1/.test(on) && pressed === 'true' && off === null, `before ${before}, on ${on}, pressed ${pressed}, off ${off}`)
+    check('life-browser: X1 no uncaught errors (TOOLS)', !ph.logs.filter(l => !/main thread/.test(l)).length, ph.logs.join('; '))
+    await ph.close(); pages.delete(ph)
+
+    // view transitions: OPEN on a card, Back home; with and without reduced motion, and without the API
+    const vtRun = async (mode: 'vt' | 'reduce' | 'none') => {
+      at(`X1: view transition (${mode})`)
+      const p = await open(1280, 900)
+      await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: `globalThis.__POND_PROBE__ = true; globalThis.__vt = { n: 0, named: [], hidden: [] };
+        ${mode === 'none' ? 'delete Document.prototype.startViewTransition; delete document.startViewTransition;' : `
+        const o = Document.prototype.startViewTransition
+        if (o) Document.prototype.startViewTransition = function (cb) {
+          __vt.n++
+          const seen = () => { for (const e of document.querySelectorAll('[data-card-id]')) if (e.style.viewTransitionName) { __vt.named.push(e.closest('.wp') ? 'page' : 'board'); const c = e.querySelector('canvas'); if (c) __vt.hidden.push(getComputedStyle(c).visibility) } }
+          seen()
+          return o.call(this, async () => { await cb(); seen() })
+        }`}` })
+      if (mode === 'reduce') await p.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })
+      await p.cdp('Page.navigate', { url: `${server.url}pond/?probe=1` })
+      const ready = await p.waitFor(`!!globalThis.__pondBoard && !!${mcard}?.querySelector('canvas,svg')`, READY_MS)
+      await p.js(`${mcard}.scrollIntoView({ block: 'center' })`); await sleep(800)
+      await p.js(`${mcard}.querySelector('button[aria-label="Open on its own page"]').click()`)
+      const opened = await p.waitFor(`location.pathname === '/widget/pond-marble/' && !!document.querySelector('.wp [data-card-id="pond-marble"] canvas')`, 20000)
+      await sleep(900)
+      if (mode === 'vt') await p.shot(join(out, 'x1-vt-widget.png'))
+      const n1 = await p.js<number>('__vt.n')
+      await p.js('history.back()')
+      const back = await p.waitFor(`location.pathname === '/pond/' && !!${mcard}?.querySelector('canvas')`, 20000)
+      await sleep(900)
+      const vt = await p.js<{ n: number; named: string[]; hidden: string[] }>('__vt')
+      const clean = await p.js<boolean>(`![...document.querySelectorAll('[data-card-id]')].some(e => e.style.viewTransitionName || e.classList.contains('vt-fly'))`)
+      const errs = p.logs.filter(l => !/main thread/.test(l))
+      await p.close(); pages.delete(p)
+      return { ready, opened, back, n1, vt, clean, errs }
+    }
+    const a = await vtRun('vt')
+    check('life-browser: X1 OPEN flies the card to its widget page and Back flies it home (2 view transitions; the card named on both sides, its canvas hidden in flight; names cleared after)',
+      a.ready && a.opened && a.back && a.n1 === 1 && a.vt.n === 2 && a.vt.named.includes('board') && a.vt.named.includes('page') && a.vt.hidden.every(v => v === 'hidden') && a.clean && !a.errs.length,
+      `${JSON.stringify(a.vt)}, opened ${a.opened}, back ${a.back}, clean ${a.clean}${a.errs.length ? `, errors ${a.errs.join('; ')}` : ''}`)
+    const r = await vtRun('reduce')
+    check('life-browser: X1 under reduced motion OPEN and Back are instant swaps (no view transition)', r.ready && r.opened && r.back && r.vt.n === 0 && r.clean && !r.errs.length, `${JSON.stringify(r.vt)}, opened ${r.opened}, back ${r.back}`)
+    const z = await vtRun('none')
+    check('life-browser: X1 without document.startViewTransition OPEN and Back work as before (instant)', z.ready && z.opened && z.back && z.clean && !z.errs.length, `opened ${z.opened}, back ${z.back}${z.errs.length ? `, errors ${z.errs.join('; ')}` : ''}`)
   }
   // ── L3.5: all six cards on a phone, at 375 and 390 px ──
   const IDS = ['pond-koi', 'pond-jelly', 'pond-slime', 'pond-fireflies', 'pond-murmur', 'pond-terrarium']

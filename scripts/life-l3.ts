@@ -57,7 +57,7 @@ export async function lifeL3Checks(assert: Assert, pond: () => Promise<typeof im
   {
     resetAll()
     const bad: string[] = []
-    for (const p of pondBoard) {
+    for (const p of pondBoard.filter(q => L2_FRAMES[q.id])) {
       const ts = p.id === 'pond-koi' ? [0, 1.3, 2.9, 4.4, 5.9] : [0, 1.3, 7.7, 21.2, 33.3]
       ts.forEach((t, i) => {
         if (fnvStr(key(p, t)) !== L2_FRAMES[p.id][i]) bad.push(`${p.id}@${t}`)

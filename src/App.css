@@ -2700,3 +2700,13 @@ html.theme-wipe::view-transition-new(root) {
     transition: none
   }
 }
+
+/* board <-> widget page (X1, X-advanced #18): the card's frame flies; its dots stay off the raster snapshots */
+::view-transition-group(dm-card) {
+  animation-duration: var(--dur-enter);
+  animation-timing-function: var(--ease)
+}
+
+.vt-fly canvas {
+  visibility: hidden
+}

@@ -40,6 +40,13 @@ export interface KoiPondSpec {
   lead: number; period: number; seam: number
   /** Koi interiors: 'lattice' (style B, the L1.0 default) or 'glyph' (style A). */
   bodyStyle?: BodyStyle
+  /**
+   * The day's weather (X1 #5; absent = calm, the canonical pond): `rain` raindrops per second land as small ripples
+   * at hashed water tiles (on the loop phase, so the loop still closes); `wind` (≥ 1) speeds the calm surface's
+   * drifting contour lines and the lily pads' drift by that factor (render-time).
+   */
+  rain?: number
+  wind?: number
 }
 export type BodyStyle = 'glyph' | 'lattice'
 /** The L1.0 ruling's default (L-pond.md §L1 "Body style B"): change it here to switch every pond to style A. */
@@ -286,6 +293,14 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
     for (let i = 0; i < K; i++) {
       const o = KO(i), d = dives[i], q = ph + d.off
       if (q % d.every === 0) s[o + K_ZT] = .1 + .55 * (ihash(seed, i, Math.floor(q / d.every) + 100) / 4294967296)
+    }
+    if (spec.rain) {
+      // raindrops: on the loop phase (pre-roll = loop end), at hashed water tiles; none in the last 3 s before the wrap
+      const h = ihash(seed, ph, 61) / 4294967296
+      if (h < spec.rain * dt && ph < len - 90) {
+        const tx = Math.floor((ihash(seed, ph, 62) / 4294967296) * tiles.cols), ty = Math.floor((ihash(seed, ph, 63) / 4294967296) * tiles.rows)
+        if (water[ty * tiles.cols + tx]) rippleSplat(ripple, s, tx, ty, -.35, .8)
+      }
     }
     for (const k of kisses) {
       if (k.koi >= K) continue
@@ -619,7 +634,7 @@ export function drawKoiPond(p: KoiPond, s: Float32Array, t: number, hour: number
     else if (gl >= .08) putGlyph(r, tx, ty, edgeOfGradient(EDGE3, gx, gy), night ? T_FAINT : T_MID, .8)
     else if (gl >= .025) putGlyph(r, tx, ty, edgeOfGradient(EDGE3, gx, gy), T_FAINT, .6)
     else if (foam > .2) putGlyph(r, tx, ty, COLON, T_FAINT, .6)
-    else if (surfaceLine(p.spec.seed, tx, ty, t)) putGlyph(r, tx, ty, edgeOfGradient(EDGE3, sgrad[0], sgrad[1]), T_FAINT, .6)
+    else if (surfaceLine(p.spec.seed, tx, ty, t * (p.spec.wind ?? 1))) putGlyph(r, tx, ty, edgeOfGradient(EDGE3, sgrad[0], sgrad[1]), T_FAINT, .6)
     else if (foam > .08 || flickerOn(tx, ty, t, night ? .07 : .035, .2)) putGlyph(r, tx, ty, DOT, T_FAINT, .6)
   }
   if (nl > 0) moonColumn(p, s, t, hour, nl, r, DASH)
@@ -652,7 +667,8 @@ export function drawKoiPond(p: KoiPond, s: Float32Array, t: number, hour: number
   const pads = p.spec.pads ?? []
   for (let i = 0; i < pads.length; i++) {
     const [bx, by, pr] = pads[i], seed = p.spec.seed
-    let cx = bx + 6 * noise2(.03 * t, i, seed), cy = by + 6 * noise2(.03 * t, i + 9, seed)
+    const wt = .03 * t * (p.spec.wind ?? 1)
+    let cx = bx + 6 * noise2(wt, i, seed), cy = by + 6 * noise2(wt, i + 9, seed)
     if (opts.tilt) { cx += 3 * opts.tilt[0]; cy += 3 * opts.tilt[1] }
     const na = TAU * (ihash(seed, i, 41) / 4294967296), nx = dcos(na), ny = dsin(na)
     const t0x = Math.floor((cx - pr - ox) / pitch), t1x = Math.ceil((cx + pr - ox) / pitch), t0y = Math.floor((cy - pr - oy) / pitch), t1y = Math.ceil((cy + pr - oy) / pitch)
@@ -860,7 +876,7 @@ function drawKoiType(p: KoiPond, s: Float32Array, t: number, hour: number, r: Ti
     else if (gl >= .08) putGlyph(r, tx, ty, edgeOfGradient(FONT57, gx, gy), night ? T_FAINT : T_MID, .8)
     else if (gl >= .025) putGlyph(r, tx, ty, edgeOfGradient(FONT57, gx, gy), T_FAINT, .6)
     else if (foam > .2) putGlyph(r, tx, ty, F_COLON, T_FAINT, .6)
-    else if (surfaceLine(p.spec.seed, bk.rx[i], bk.ry[i], t)) putGlyph(r, tx, ty, edgeOfGradient(FONT57, sgrad[0], sgrad[1]), T_FAINT, .6)
+    else if (surfaceLine(p.spec.seed, bk.rx[i], bk.ry[i], t * (p.spec.wind ?? 1))) putGlyph(r, tx, ty, edgeOfGradient(FONT57, sgrad[0], sgrad[1]), T_FAINT, .6)
     else if (foam > .08 || flickerOn(tx, ty, t, night ? .07 : .035, .2)) putGlyph(r, tx, ty, F_DOT, T_FAINT, .6)
   }
   if (nl > 0) moonColumn(p, s, t, hour, nl, r, F_DASH, bk.water, bk.shore, (tx, ty) => { const i = ty * cols + Math.max(0, Math.min(cols - 1, tx)); return [bk.rx[i], bk.ry[i]] })
@@ -919,7 +935,8 @@ function drawKoiType(p: KoiPond, s: Float32Array, t: number, hour: number, r: Ti
   const pads = p.spec.pads ?? []
   for (let i = 0; i < pads.length; i++) {
     const [bx, by, pr] = pads[i], seed = p.spec.seed
-    let cx = bx + 6 * noise2(.03 * t, i, seed), cy = by + 6 * noise2(.03 * t, i + 9, seed)
+    const wt = .03 * t * (p.spec.wind ?? 1)
+    let cx = bx + 6 * noise2(wt, i, seed), cy = by + 6 * noise2(wt, i + 9, seed)
     if (opts.tilt) { cx += 3 * opts.tilt[0]; cy += 3 * opts.tilt[1] }
     const na = TAU * (ihash(seed, i, 41) / 4294967296), nx = dcos(na), ny = dsin(na)
     for (let ty = Math.floor((cy - pr - g.oy) / py); ty <= Math.ceil((cy + pr - g.oy) / py); ty++) for (let tx = Math.floor((cx - pr - g.ox) / g.pitch); tx <= Math.ceil((cx + pr - g.ox) / g.pitch); tx++) {

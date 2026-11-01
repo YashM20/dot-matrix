@@ -4,7 +4,7 @@
  * pure function of t until touched, then live, healing back. L3: the koi read the light hub (tilt sloshes the water,
  * `lightSrc` 1 lights them by tilt), so the board lists `pondSources` in the manifest and the eager registry. Cards are main-thread only; the sampling worker's
  * build resolves this module to `./worker-stub.ts` (vite.config.ts `mainThreadOnly`), so `engine/life` never ships
- * in `sampleWorker-*.js`.
+ * in `sampleWorker-*.js`. X1: 07 MARBLE (suminagashi) and the day source (`day.ts`: `?day=`, the opt-in ageing pond).
  */
 import type { World } from '../../../engine/physics/world'
 import { lightSource } from '../../../site/light'
@@ -14,22 +14,26 @@ import type { WidgetPreset } from '../../types'
 import { fireflies, pondFireflies } from './fireflies'
 import { jelly, pondJelly } from './jelly'
 import { koiPond, koiProbe, pondKoi } from './koi'
+import { marbleNow, marbleProbe, pondMarble } from './marble'
+import { pondDaySource } from './day'
 import { murmur, pondMurmur } from './murmur'
 import { pondSlime, slime } from './slime'
 import { pondTerrarium, terrarium } from './terrarium'
 
-export const pondBoard: WidgetPreset[] = [pondKoi, pondJelly, pondSlime, pondFireflies, pondMurmur, pondTerrarium]
-/** The board's live data: the light hub (L3.6; `pond-koi` declares its keys). */
-export const pondSources = [lightSource]
-/** The board's worlds (tests reset them), in card order. */
-export const pondWorlds: World[] = [koiPond.world, jelly.world, slime.world, fireflies.world, murmur.world, terrarium.world]
+export const pondBoard: WidgetPreset[] = [pondKoi, pondJelly, pondSlime, pondFireflies, pondMurmur, pondTerrarium, pondMarble]
+/** The board's live data: the light hub (L3.6; `pond-koi` declares its keys) and the day (X1 #5: `day`, `age`). */
+export const pondSources = [lightSource, pondDaySource]
+/** The board's worlds (tests reset them), in card order. The koi and the marble follow the day: their slots read the current ones. */
+export const pondWorlds: World[] = [koiPond.world, jelly.world, slime.world, fireflies.world, murmur.world, terrarium.world, marbleNow.world]
+Object.defineProperty(pondWorlds, 0, { get: () => koiPond.world, enumerable: true })
+Object.defineProperty(pondWorlds, 6, { get: () => marbleNow.world, enumerable: true })
 /** Read-outs for tests and the browser probe. */
-export const pondProbe = { koi: koiProbe, jelly, slime, fireflies, murmur, terrarium }
+export const pondProbe = { koi: koiProbe, jelly, slime, fireflies, murmur, terrarium, marble: marbleProbe }
 
 // the browser probe (scripts/life-browser.ts) sets __POND_PROBE__ before the page loads (see koi.ts)
 const probing = (globalThis as { __POND_PROBE__?: boolean }).__POND_PROBE__ || (typeof location !== 'undefined' && /[?&]probe=1(&|$)/.test(location.search))
 if (probing) {
-  const byId = new Map(pondBoard.map((p, i) => [p.id, { preset: p, world: pondWorlds[i] }]))
+  const byId = new Map(pondBoard.map((p, i) => [p.id, { preset: p, get world() { return pondWorlds[i] } }]))
   // count each card's draws (the probe reads its frame rate: the phone tier, reduced motion)
   const draws = new Map<string, number>()
   for (const p of pondBoard) { const f = p.layers; p.layers = ctx => { draws.set(p.id, (draws.get(p.id) ?? 0) + 1); return f(ctx) } }
@@ -38,6 +42,8 @@ if (probing) {
     mode: (id: string) => byId.get(id)?.world.mode,
     draws: (id: string) => draws.get(id) ?? 0,
     fps: (id: string) => byId.get(id)?.preset.fps,
+    /** The day source's data (X1: `day`, `age`). */
+    day: () => pondDaySource.snapshot().data,
     /** Median ms of `layers` + sample for `frames` pristine frames of card `id` (a fresh t range: each frame steps the world). */
     bench: (id: string, frames = 24) => {
       const c = byId.get(id)
