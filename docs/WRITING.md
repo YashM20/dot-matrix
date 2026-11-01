@@ -1,6 +1,6 @@
 # WRITING: how visitor text should sound
 
-For everything a visitor reads: the essay (`src/essay/Essay.tsx`), the LOG rows (`src/changelog.ts`), the legal pages (`privacy.html`, `terms.html`), card help text and guides (`docs/guides/*.md`). Engineering docs can be terser, but the "never" list still applies.
+For everything a visitor reads: the essay (`src/essay/Essay.tsx`), the LOG rows (`src/changelog.ts`), the legal pages (`privacy.html`, `terms.html`), card help text and blog posts (`docs/blog/*.md`; the essay is a post too). Engineering docs can be terser, but the "never" list still applies.
 
 `npx tsx scripts/site/prose-lint.ts` checks the mechanical part (see its header). It catches the tells. It can't make the writing good; this page is for that.
 
@@ -110,8 +110,8 @@ Banned in visitor prose (fine in code comments): delve, tapestry, testament, int
 ## Checking
 
 ```
-npx tsx scripts/site/prose-lint.ts                    # essay, LOG rows, legal pages, docs/guides
-npx tsx scripts/site/prose-lint.ts docs/guides/x.md   # one file
+npx tsx scripts/site/prose-lint.ts                    # essay, LOG rows, legal pages, docs/blog
+npx tsx scripts/site/prose-lint.ts docs/blog/x.md     # one file
 ```
 
 Errors must be 0 before a checkpoint ships. Read the warnings and fix the ones that are real. Sources: Wikipedia, "Signs of AI writing", and the owner's list in #77.

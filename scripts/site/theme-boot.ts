@@ -87,16 +87,16 @@ const cases: { page: string; stored: string | null; os: 'light' | 'dark'; want: 
   { page: '/', stored: '{"scheme":"system","accent":"amber"}', os: 'light', want: ['light', 'amber'] },
   { page: '/?theme=light_magenta', stored: '{"scheme":"dark","accent":"vite"}', os: 'dark', want: ['light', 'magenta'] },
   { page: '/light/', stored: '{"scheme":"light","accent":"vite"}', os: 'dark', want: ['light', 'vite'] },
-  // the essay and the legal pages carry the same boot script and load themes.css (src/essay/essay.css)
-  { page: '/essay.html', stored: null, os: 'light', want: ['light', 'signal'] },
-  { page: '/essay.html', stored: '{"scheme":"dark","accent":"vite"}', os: 'light', want: ['dark', 'vite'] },
-  { page: '/essay.html?theme=light_cobalt', stored: null, os: 'dark', want: ['light', 'cobalt'] },
+  // the blog (the essay is a post on it) and the legal pages carry the same boot script and load themes.css (src/essay/essay.css)
+  { page: '/blog/dot-matrix-essay/', stored: null, os: 'light', want: ['light', 'signal'] },
+  { page: '/blog/dot-matrix-essay/', stored: '{"scheme":"dark","accent":"vite"}', os: 'light', want: ['dark', 'vite'] },
+  { page: '/blog/dot-matrix-essay/?theme=light_cobalt', stored: null, os: 'dark', want: ['light', 'cobalt'] },
   { page: '/privacy', stored: null, os: 'dark', want: ['dark', 'signal'] },
   { page: '/privacy', stored: '{"scheme":"light","accent":"amber"}', os: 'dark', want: ['light', 'amber'] },
   { page: '/terms', stored: '{"scheme":"system","accent":"magenta"}', os: 'light', want: ['light', 'magenta'] },
   // T6: the custom hue (its CSS stored next to it), on the app and the essay
   { page: '/', stored: CUSTOM, os: 'light', want: ['light', 'custom'] },
-  { page: '/essay.html', stored: CUSTOM.replace('"light"', '"dark"'), os: 'light', want: ['dark', 'custom'] },
+  { page: '/blog/dot-matrix-essay/', stored: CUSTOM.replace('"light"', '"dark"'), os: 'light', want: ['dark', 'custom'] },
 ]
 /** Pages without a bundle (the legal pages: only the boot script runs): theme-color stays the scheme's untinted bg. */
 const STATIC = (page: string) => /^\/(privacy|terms)\b/.test(page)
@@ -174,7 +174,7 @@ try {
   }
   // the app's hand-off to the static pages (a server that falls back to the SPA) keeps the visit's theme params
   await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
-  for (const [from, to] of [['/terms?spa&theme=light_vite', '/terms.html?theme=light_vite'], ['/?tab=essay&accent=cobalt&scheme=light', '/essay.html?accent=cobalt&scheme=light']]) {
+  for (const [from, to] of [['/terms?spa&theme=light_vite', '/terms.html?theme=light_vite'], ['/?tab=essay&accent=cobalt&scheme=light', '/blog/dot-matrix-essay/?accent=cobalt&scheme=light']]) {
     await cdp('Page.navigate', { url: base + from })
     for (let i = 0; i < 100 && !(await js(`location.pathname + location.search === ${JSON.stringify(to)} && document.readyState === 'complete'`)); i++) await sleep(100)
     const at = await js(`[location.pathname + location.search, document.documentElement.dataset.scheme, document.documentElement.dataset.accent].join(' ')`) as string | undefined

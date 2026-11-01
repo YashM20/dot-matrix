@@ -1,5 +1,5 @@
 /**
- * The launch essay (P6-F, `essay.html`) in headless Chrome over CDP (Node's built-in WebSocket, no deps):
+ * The launch essay (P6-F, now the post `/blog/dot-matrix-essay/` of blog.html) in headless Chrome over CDP (Node's built-in WebSocket, no deps):
  * loads at 1280 and 375 px without console errors, figures mount only when scrolled near, every figure
  * draws and responds to its input, reduced motion shows stills, no horizontal overflow on phones.
  * Needs the dev server (`pnpm dev --port 5200`), then `npx tsx scripts/essay-browser.ts [baseUrl]`.
@@ -78,7 +78,7 @@ async function open(width: number, height: number, mobile: boolean, reduced = fa
   await cdp('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: mobile ? 2 : 1, mobile })
   await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: reduced ? 'reduce' : 'no-preference' }] })
   logs.length = 0
-  await cdp('Page.navigate', { url: `${base}essay.html${process.env.ESSAY_QUERY ?? ''}` })
+  await cdp('Page.navigate', { url: `${base}blog/dot-matrix-essay/${process.env.ESSAY_QUERY ?? ''}` })
   const ok = await waitFor(`!!document.querySelector('.hero .dot-title') && document.readyState === 'complete'`, 30000)
   await js(SIG)
   await sleep(1500)

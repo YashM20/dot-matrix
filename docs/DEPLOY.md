@@ -10,7 +10,8 @@ CI (`.github/workflows/ci.yml`) only checks and builds; it does not deploy. Host
 | Path | From | Notes |
 |---|---|---|
 | `dist/index.html`, `dist/assets/*` | `vite build` | Hashed chunks: one per board (`src/widgets/manifest.ts`), one per non-board view, plus the sample worker. |
-| `dist/essay.html` | `vite build` (second entry) | The "Ditherpunk for UI" essay. |
+| `dist/blog.html` | `vite build` (second entry) | The blog (`src/blog/`): the index and every post, the "Ditherpunk for UI" essay included. `vercel.json` rewrites `/blog/*` to it and redirects `/essay`, `/essay/` and `/essay.html` to `/blog/dot-matrix-essay/`. |
+| `dist/blog/index.html`, `dist/blog/<slug>/index.html` | `scripts/site/postbuild.ts` | Copies of `blog.html` with each post's title, description, canonical, OG/Twitter tags (`og:type` article) and JSON-LD (BlogPosting, CollectionPage for the index). Images: `public/og/blog/<slug>-social.png`, else `/og/default.png`. |
 | `dist/<board>/index.html` | `scripts/site/postbuild.ts` | A copy of `index.html` with that board's `<title>`, description, canonical and OG/Twitter tags (`src/site/meta.ts`). Crawlers get the right preview for `/light/`. The app opens the board from the path. |
 | `dist/og/<board>.png`, `dist/og/default.png` | `scripts/site/postbuild.ts` → `scripts/og.ts` | 1200×630, one hero card per board (the first card without live media; override in `HERO`). |
 
@@ -27,7 +28,7 @@ The post-build step runs from the `site-postbuild` plugin in `vite.config.ts`. `
 - The address bar follows every board and view, and each change is a history entry, so Back and Forward work. The URL forms live in the pure resolver `src/site/views.ts`; `syncUrl` in `src/site/meta.ts` writes them, and the first render only normalises the URL.
 - Old forms resolve through the alias table in `views.ts` (checked by verify): `?board=<id>` folds into the path, and `?tab=workspace|studio|dots|draw|log|gallery` map to the new views. `?card=<id>`, `?make=code&p=…`, `?skin=`, `?pro=1` and `?worker=0` are kept.
 - Old ids resolve through `boardAliases` (`/glyph/` opens `/lock/`).
-- Links to `essay.html` must be root-absolute (`/essay.html`): a relative link breaks under `/<board>/` paths.
+- Links to the blog must be root-absolute (`/blog/`, `/blog/dot-matrix-essay/`): a relative link breaks under `/<board>/` paths. There is no sitemap yet.
 - SPA fallback: `vercel.json` rewrites any path to `/index.html`. Vercel serves real files first, so board pages (`dist/<board>/index.html`), assets and OG images are unaffected.
 
 ## Headers (`vercel.json`)
