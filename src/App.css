@@ -482,14 +482,22 @@ label b {
 
 /* ── T3: the board grid (docs/LAYOUT-THEME-PLAN.md §3; DESIGN.md › Board grid) ─────────────────────────────
    Boards declare intent, not columns: data-density (hero / standard / dense) picks --card-min, and the grid
-   fits as many columns as hold it (auto-fill), so a board steps 5 → 4 → 3 → 2 → 1 as the frame narrows. The
-   grid is its own container: cards size their insides to the card (container queries), and orphan rows are
-   placed from the grid's width, not the viewport's. A card is square (phones too) and never taller than
-   --card-max. */
+   fits as many columns as hold it (auto-fill), between the CARD SIZE bounds (html[data-cards], tokens.css): at
+   most --board-cols-max (one more on a dense board), at least --board-cols-min. So LARGE, the default, steps
+   3 → 2 → 1 as the frame narrows, MEDIUM 4 → 3 → 2 → 1 and COMPACT 5 → 4 → 3 → 2. The grid is its own
+   container: cards size their insides to the card (container queries), and orphan rows are placed from the
+   grid's width, not the viewport's. A card is square (phones too) and never taller than --card-max.
+   The track's minimum is --card-min clamped between the width of --cols columns (the cap: no more fit) and the
+   width of --board-cols-min columns (the floor: that many always fit); the .5 px keeps an exact fit from rounding
+   to one column fewer. */
 .board-grid {
   --card-min: var(--card-min-standard);
+  --cols: var(--board-cols-max);
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(var(--card-min), 100%), 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(clamp(
+    (100% - (var(--cols) - 1) * var(--spacing-cardGap)) / var(--cols) - .5px,
+    var(--card-min),
+    (100% - (var(--board-cols-min) - 1) * var(--spacing-cardGap)) / var(--board-cols-min) - .5px), 1fr));
   gap: var(--spacing-cardGap);
   grid-auto-rows: 1fr;
   margin-top: var(--gap-group);
@@ -502,7 +510,8 @@ label b {
 }
 
 .board-grid[data-density="dense"] {
-  --card-min: var(--card-min-dense)
+  --card-min: var(--card-min-dense);
+  --cols: calc(var(--board-cols-max) + 1)
 }
 
 /* wide and short screens: the column outgrows the 62svh cap, so the card stops and sits in the middle of it */
@@ -530,36 +539,50 @@ label b {
 
 /* Orphans (separated cards only): a last row less than half full is centred under the row above; a fuller one
    stays on the columns. The column count per width mirrors auto-fill: n columns fit when the grid is at least
-   n·--card-min + (n−1)·--spacing-cardGap wide (tokens.css: 340 / 240 / 200, gap 16). Two columns never orphan. */
+   n·--card-min + (n−1)·--spacing-cardGap wide (tokens.css: 340 / 240 / 200, gap 16), up to the CARD SIZE cap:
+   LARGE (no data-cards, or "l") 3 (dense 4), MEDIUM ("m") 4 (dense 5), COMPACT ("s") none. A hero board fits only
+   3 in the frame, so no cap reaches it. Two columns never orphan. */
 @container board-grid (1052px <= width) {
   :root:not([data-grid="ruled"]) .board-grid[data-density="hero"] > :nth-child(3n+1):last-child {
     translate: calc(1 * (100% + var(--spacing-cardGap)))
   }
 }
 
+/* standard: 3 columns from 752 px (LARGE stays at 3), 4 from 1008 (MEDIUM stays at 4), 5 from 1264 */
 @container board-grid (752px <= width < 1008px) {
   :root:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(3n+1):last-child {
     translate: calc(1 * (100% + var(--spacing-cardGap)))
   }
 }
 
+@container board-grid (1008px <= width) {
+  :root:not([data-grid="ruled"], [data-cards="m"], [data-cards="s"]) .board-grid[data-density="standard"] > :nth-child(3n+1):last-child {
+    translate: calc(1 * (100% + var(--spacing-cardGap)))
+  }
+}
+
 @container board-grid (1008px <= width < 1264px) {
-  :root:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(4n+1):last-child {
+  :root:is([data-cards="m"], [data-cards="s"]):not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(4n+1):last-child {
     translate: calc(1.5 * (100% + var(--spacing-cardGap)))
   }
 }
 
 @container board-grid (1264px <= width) {
-  :root:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(5n+1):last-child {
+  :root[data-cards="m"]:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(4n+1):last-child {
+    translate: calc(1.5 * (100% + var(--spacing-cardGap)))
+  }
+
+  :root[data-cards="s"]:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(5n+1):last-child {
     translate: calc(2 * (100% + var(--spacing-cardGap)))
   }
 
-  :root:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(5n+1):nth-last-child(2),
-  :root:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(5n+1):nth-last-child(2) + * {
+  :root[data-cards="s"]:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(5n+1):nth-last-child(2),
+  :root[data-cards="s"]:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(5n+1):nth-last-child(2) + * {
     translate: calc(1.5 * (100% + var(--spacing-cardGap)))
   }
 }
 
+/* dense: 3 columns from 632 px, 4 from 848 (LARGE stays at 4), 5 from 1064 (MEDIUM stays at 5), 6 from 1280 */
 @container board-grid (632px <= width < 848px) {
   :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(3n+1):last-child {
     translate: calc(1 * (100% + var(--spacing-cardGap)))
@@ -572,24 +595,39 @@ label b {
   }
 }
 
+@container board-grid (1064px <= width) {
+  :root:not([data-grid="ruled"], [data-cards="m"], [data-cards="s"]) .board-grid[data-density="dense"] > :nth-child(4n+1):last-child {
+    translate: calc(1.5 * (100% + var(--spacing-cardGap)))
+  }
+}
+
 @container board-grid (1064px <= width < 1280px) {
-  :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(5n+1):last-child {
+  :root:is([data-cards="m"], [data-cards="s"]):not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(5n+1):last-child {
     translate: calc(2 * (100% + var(--spacing-cardGap)))
   }
 
-  :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(5n+1):nth-last-child(2),
-  :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(5n+1):nth-last-child(2) + * {
+  :root:is([data-cards="m"], [data-cards="s"]):not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(5n+1):nth-last-child(2),
+  :root:is([data-cards="m"], [data-cards="s"]):not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(5n+1):nth-last-child(2) + * {
     translate: calc(1.5 * (100% + var(--spacing-cardGap)))
   }
 }
 
 @container board-grid (1280px <= width) {
-  :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(6n+1):last-child {
+  :root[data-cards="m"]:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(5n+1):last-child {
+    translate: calc(2 * (100% + var(--spacing-cardGap)))
+  }
+
+  :root[data-cards="m"]:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(5n+1):nth-last-child(2),
+  :root[data-cards="m"]:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(5n+1):nth-last-child(2) + * {
+    translate: calc(1.5 * (100% + var(--spacing-cardGap)))
+  }
+
+  :root[data-cards="s"]:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(6n+1):last-child {
     translate: calc(2.5 * (100% + var(--spacing-cardGap)))
   }
 
-  :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(6n+1):nth-last-child(2),
-  :root:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(6n+1):nth-last-child(2) + * {
+  :root[data-cards="s"]:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(6n+1):nth-last-child(2),
+  :root[data-cards="s"]:not([data-grid="ruled"]) .board-grid[data-density="dense"] > :nth-child(6n+1):nth-last-child(2) + * {
     translate: calc(2 * (100% + var(--spacing-cardGap)))
   }
 }
@@ -601,8 +639,9 @@ label b {
 :root[data-grid="ruled"] .board-grid {
   --arm-x: repeating-linear-gradient(90deg, var(--mute) 0 var(--hair-dot), transparent 0 2px);
   --arm-y: repeating-linear-gradient(180deg, var(--mute) 0 var(--hair-dot), transparent 0 2px);
-  /* the gutter moves into the track, so a density drops columns at the same widths as separated cards */
-  grid-template-columns: repeat(auto-fill, minmax(min(calc(var(--card-min) + var(--spacing-cardGap)), 100%), 1fr));
+  /* the gutter moves into the track, so a density drops columns at the same widths as separated cards (the same
+     CARD SIZE bounds, with no gap) */
+  grid-template-columns: repeat(auto-fill, minmax(clamp(100% / var(--cols) - .5px, var(--card-min) + var(--spacing-cardGap), 100% / var(--board-cols-min) - .5px), 1fr));
   gap: 0
 }
 

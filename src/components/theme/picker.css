@@ -241,6 +241,18 @@
   color: var(--red-text)
 }
 
+/* CARD SIZE (CardSizeControl): under the theme in the popover, a dotted rule apart; in TOOLS › DISPLAY, above the skins */
+.theme-pop .theme-cards {
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid;
+  border-image: var(--hair-x) 1
+}
+
+.tools-sheet .theme-cards {
+  margin-bottom: var(--space-3)
+}
+
 /* TOOLS › THEME: the popover's controls at touch size (44 px targets) */
 .tools-sheet .theme-ctl {
   padding: 0 var(--space-2);

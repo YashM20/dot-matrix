@@ -11,6 +11,7 @@ import { ACCENTS, type AccentId } from '../../site/theme/names'
 import { getTheme } from '../../site/theme/theme'
 import { switchTheme } from '../../site/theme/moment'
 import { setPondMemory } from '../../site/pondMemory'
+import { CARD_SIZE_LABELS, CARD_SIZE_LINES, CARD_SIZES, setCardSize } from '../../site/cards'
 
 /** The display skins, from the engine's list (so the palette, shell and header can't drift apart). */
 export const SKINS = SKIN_NAMES
@@ -90,6 +91,8 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   act('pond-memory-on', 'Pond memory: on (your koi age with your visits)', () => setPondMemory(true), '', 'pond koi age ageing visits storage remember memory')
   act('pond-memory-off', 'Pond memory: off (deletes the record)', () => setPondMemory(false), '', 'pond koi age ageing visits storage forget memory privacy')
   act('accent-next', 'Accent: next', () => switchTheme({ accent: ACCENTS[(ACCENTS.indexOf(getTheme().accent as AccentId) + 1) % ACCENTS.length] }), '', 'accent theme colour color hue next cycle')
+  // CARD SIZE (src/site/cards.ts): the popover's and TOOLS' LARGE / MEDIUM / COMPACT
+  for (const s of CARD_SIZES) act(`cards-${s}`, `Card size: ${CARD_SIZE_LABELS[s].toLowerCase()} (${CARD_SIZE_LINES[s]})`, () => setCardSize(s), '', `card size cards columns row grid bigger smaller zoom density ${CARD_SIZE_LABELS[s].toLowerCase()}`)
   for (const p of PLACES) items.push({ id: `v:${p}`, group: 'View', text: isMode(p) ? `Go to MAKE · ${p}: ${MODE_LINES[p]}` : `Go to ${p}`, run: a => a.openTab(p), keywords: `${p.toLowerCase()} ${PLACE_WORDS[p]}`, boost: 30 })
   for (const m of boardManifest) {
     const b = boards.find(x => x.id === m.id)
