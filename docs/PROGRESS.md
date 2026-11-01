@@ -19,6 +19,10 @@
 
 **Interruption (2026-10-31, about 18:09):** the machine slept about 24 h. On wake the heavy lock's timer killed Q3's build. Dead locks and tickets were cleared, and E6, Q3 and M3 were resumed with SendMessage. X1 had stalled in its reading phase with no edits, so it was restarted fresh as `a1291dcb5718aafad`. Lesson: agents must wait on process exit, not on monitor events.
 
+**Interruption (2026-11-01, about 12:20):** the machine rebooted, and M3 had also hit the 5-hour limit. Every process died, and the full-suite run was killed at its time limit. Dead locks and tickets were cleared, main (PR #50, card size) was merged into feat/round3, and Q3, M3, X1 and E6 were resumed with SendMessage.
+
+**Owner, 2026-11-01:** no more Codex children. Codex's finished branch `chore/mat-lens-tilt-checklist` (a9abf34: the #29 `mat-lens` parity entry; 211b2f4: the #30 tilt checklist) is merged by the coordinator after the #29 parity run is measured. Gemini is being retried for #48.
+
 **Running agents (round 3):**
 - Each runs in `.claude/worktrees/agent-<id>/` on branch `worktree-agent-<id>`.
 - Resume one with SendMessage to `<id>`. If its worktree is gone, restart from the brief and its last WIP commit.
