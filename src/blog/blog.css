@@ -39,7 +39,7 @@
 .post-code pre code.hl { color: var(--label) }
 .hl-k { color: var(--value); font-weight: 600 }
 .hl-f, .hl-t { color: var(--value) }
-.hl-n, .hl-l { color: var(--red) }
+.hl-n, .hl-l { color: var(--red-text) }
 .hl-s, .hl-p { color: var(--dot-idle) }
 .hl-c { color: var(--mute); font-style: italic }
 
