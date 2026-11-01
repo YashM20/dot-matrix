@@ -15,6 +15,10 @@
  * the eyedropper, and a typing session as one undo step (Esc and an emptied layer leave no trace).
  * E5 (`editorE5Checks`, async): frame and document links, lineage, the cap, `?make&d=`, remix parents and
  * the graph, every device profile, the scorecard.
+ * E6 (`editorE6Checks`, async): the phone layouts (upright, on its side), the sheet's detent memory (per
+ * panel, session and storage), the keyboard box, the snap cue (guides just reached, lit dots along them in
+ * the accent through the engine), stack order for frames and layers and the long-press menu (one undo step
+ * per item), and the share sheet: shared, cancelled (no error, no copy), refused (the clipboard), none, hung.
  * `pnpm verify` runs them through `editorChecks()`; run alone with `npx tsx scripts/editor.ts`.
  * The browser side (desktop + touch): `scripts/editor-browser.ts`.
  */
@@ -43,6 +47,10 @@ import { decodeShare, encodeShare, programHash, ShareError } from '../src/lib/sh
 import { EXAMPLES } from '../src/components/dwitter/examples'
 import { graphLayers, layoutGraph, SEEDS } from '../src/components/dwitter/gallery'
 import { urlForView } from '../src/site/views'
+import { canShareLink, DETENTS, defaultDetent, detentFor, forgetDetents, forgetShare, KEYBOARD_MIN, keyboardBox, layoutFor, loadDetents, panelOf, rememberDetent, rememberedDetent, SHARE_STALE_MS, SHEET_KEY, shareLink, snappedGuides, type ShareNav } from '../src/components/editor/phone'
+import { pasteDots } from '../src/components/editor/render'
+import { orderFrames, orderLayers } from '../src/components/editor/doc'
+import { menuItems, orderDoc, runMenu, selTitle } from '../src/components/editor/actions'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const litCount = (ds: { r: number; opacity: number }[]) => ds.filter(d => d.r > 0 && d.opacity > 0).length
@@ -635,11 +643,129 @@ export async function editorE5Checks(assert: Assert) {
   assert('E5 quality: the scorecard scores a frame (G1, G3 pass on the ripple frame; metrics counted)', score.g1.pass && score.g3.pass && score.metrics.dots > 1000 && score.metrics.histogram.length === 10, JSON.stringify({ g1: score.g1, g3: score.g3 }))
 }
 
+/**
+ * E6 (`editorE6Checks`, async: shares settle later): the phone polish without a browser. Layouts, detent
+ * memory, the keyboard box, the snap cue, stack order and the long-press menu, the share sheet.
+ */
+export async function editorE6Checks(assert: Assert) {
+  const kvMem = () => { const m = new Map<string, string>(); return { m, getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => { m.set(k, v) } } }
+  const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b)
+
+  // ── layouts: a phone upright, a phone on its side, everything else desktop
+  const L = (w: number, h: number) => layoutFor(w, h)
+  assert('E6 layout: 390×844 and 640×900 are a phone upright; 844×390 and 932×430 on its side; 1440×900, 1024×768, 961×400 desktop',
+    L(390, 844) === 'portrait' && L(640, 900) === 'portrait' && L(844, 390) === 'landscape' && L(932, 430) === 'landscape' && L(1440, 900) === 'desktop' && L(1024, 768) === 'desktop' && L(961, 400) === 'desktop' && L(1280, 500) === 'desktop')
+
+  // ── detents: per panel, this session first, then storage, else the default
+  forgetDetents()
+  const kv = kvMem()
+  assert('E6 detents: before anything is remembered a panel opens at the middle detent, CODE at the tall one', detentFor('layers', kv) === 1 && detentFor('inspector:design', kv) === 1 && detentFor('inspector:code', kv) === 2 && defaultDetent('assets') === 1 && rememberedDetent('layers', kv) === undefined && DETENTS.length === 3 && panelOf('inspector', 'export') === 'inspector:export' && panelOf('layers', 'code') === 'layers')
+  rememberDetent('layers', 0, kv); rememberDetent('inspector:code', 1, kv); rememberDetent('assets', 7, kv)
+  assert('E6 detents: a panel opens where it was left (others keep theirs); a detent out of range is not kept', detentFor('layers', kv) === 0 && detentFor('inspector:code', kv) === 1 && detentFor('inspector:design', kv) === 1 && detentFor('assets', kv) === 1 && same(JSON.parse(kv.m.get(SHEET_KEY)!), { layers: 0, 'inspector:code': 1 }))
+  forgetDetents() // a reload: only storage is left
+  assert('E6 detents: after a reload they come back from localStorage', detentFor('layers', kv) === 0 && detentFor('inspector:code', kv) === 1 && rememberedDetent('inspector:design', kv) === undefined)
+  const shut = { getItem: () => { throw new Error('closed') }, setItem: () => { throw new Error('closed') } }
+  rememberDetent('inspector:export', 2, shut)
+  assert('E6 detents: storage closed (private window): the session still remembers', detentFor('inspector:export', shut) === 2 && same(loadDetents(shut), {}))
+  forgetDetents()
+  const junk = kvMem(); junk.setItem(SHEET_KEY, '{"layers":1.5,"assets":-1,"inspector:code":2,"inspector:nope":0,"x":1}')
+  const arr = kvMem(); arr.setItem(SHEET_KEY, '[0,1]')
+  const bad = kvMem(); bad.setItem(SHEET_KEY, '{not json')
+  assert('E6 detents: malformed storage rows are dropped (non-integers, out of range, unknown panels, arrays, bad JSON)', same(loadDetents(junk), { 'inspector:code': 2 }) && same(loadDetents(arr), {}) && same(loadDetents(bad), {}) && detentFor('layers', bad) === 1)
+  forgetDetents()
+
+  // ── the keyboard: what visualViewport leaves visible
+  const k1 = keyboardBox(844, { height: 508, offsetTop: 0 }), k2 = keyboardBox(844, { height: 470, offsetTop: 90 })
+  assert('E6 keyboard: a keyboard (336 px) leaves the top 508 px; a panned visual viewport keeps its offset', same(k1, { top: 0, height: 508, kb: 336 }) && same(k2, { top: 90, height: 470, kb: 284 }))
+  assert(`E6 keyboard: the toolbar settling (< ${KEYBOARD_MIN} px), no visualViewport or a zero height is no keyboard`, keyboardBox(844, { height: 784, offsetTop: 0 }) === undefined && keyboardBox(844, undefined) === undefined && keyboardBox(844, null) === undefined && keyboardBox(844, { height: 0, offsetTop: 0 }) === undefined)
+
+  // ── the snap cue: the guides a drag just reached; their dots in the accent, through the engine
+  const g1 = { axis: 'x' as const, at: 200, from: 40, to: 160 }, g2 = { axis: 'y' as const, at: 80, from: 0, to: 300 }
+  assert('E6 snap cue: guides newly engaged count (a half-pixel wobble does not), ones already engaged do not', same(snappedGuides(undefined, [g1]), [g1]) && same(snappedGuides([g1], [g1, g2]), [g2]) && snappedGuides([g1], [{ ...g1, at: 200.2 }]).length === 0 && snappedGuides([g1, g2], []).length === 0)
+  const cam = { x: 7, y: -3, z: 1 }, accent = '#123456'
+  const lit = pasteDots(cam, 400, 300, undefined, { guides: [g1], k: 1 }, accent)
+  const act = lit.dots.filter(d => d.color === accent && d.opacity > 0 && d.r > 0)
+  const onLine = act.every(d => Math.abs(lit.sx + d.x - g1.at) <= lit.pitch + .01 && lit.sy + d.y >= g1.from - 2 * lit.pitch - .01 && lit.sy + d.y <= g1.to + 2 * lit.pitch + .01)
+  const cols = new Set(act.map(d => Math.round(lit.sx + d.x)))
+  const off = pasteDots(cam, 400, 300, undefined, { guides: [g1], k: 0 }, accent), none = pasteDots(cam, 400, 300, undefined, undefined, accent)
+  const faded = pasteDots(cam, 400, 300, undefined, { guides: [g1], k: .3 }, accent).dots.filter(d => d.color === accent && d.r > 0)
+  assert('E6 snap cue: only the dots along the guide (either side, its span and two past each end) take the accent; none without a cue or at k 0',
+    act.length >= 8 && onLine && cols.size >= 1 && cols.size <= 3 && !off.dots.some(d => d.color === accent && d.r > 0) && !none.dots.some(d => d.color === accent), `${act.length} lit in ${cols.size} columns`)
+  assert('E6 snap cue: fading lowers the lit dots (quantized like every UI dot)', faded.length > 0 && Math.max(...faded.map(d => d.opacity)) < Math.max(...act.map(d => d.opacity)), `${faded.length}`)
+
+  // ── stack order: frames on the canvas, layers in a frame (groups as one unit)
+  const seed = seedDoc(), base = addFrame(seed, blankCard()).doc, ids = base.frames.map(f => f.id), [A, B, C, D] = ids
+  const order = (d: EditorDoc) => d.frames.map(f => f.id)
+  assert('E6 order: frames one step (each past its unmoved neighbour), to the front, to the back; the moved keep their order',
+    same(order(orderFrames(base, [B], 'forward')), [A, C, B, D]) && same(order(orderFrames(base, [C], 'backward')), [A, C, B, D]) && same(order(orderFrames(base, [A, B], 'forward')), [C, A, B, D]) && same(order(orderFrames(base, [A, C], 'front')), [B, D, A, C]) && same(order(orderFrames(base, [B, D], 'back')), [B, D, A, C]))
+  assert('E6 order: a frame already on top (bottom) does not move: the same document comes back', orderFrames(base, [D], 'forward') === base && orderFrames(base, [D], 'front') === base && orderFrames(base, [A], 'back') === base && orderFrames(base, ['nope'], 'front') === base)
+  let ld = base
+  const lf = ld.frames[0].id
+  for (let i = 0; i < 4; i++) ld = addLayer(ld, lf, textLayer(`T${i}`, { name: `t${i}` }))
+  const tops = (d: EditorDoc) => topDown(frameById(d, lf)!.card).map(l => l.name)
+  const names = tops(ld), byName = (n: string) => topDown(frameById(ld, lf)!.card).find(l => l.name === n)!.id
+  const front = orderLayers(ld, lf, [byName('t1')], 'front'), back = orderLayers(ld, lf, [byName('t2')], 'back')
+  const gd = groupLayers(ld, lf, [byName('t0'), byName('t1')]).doc, gfront = orderLayers(gd, lf, [byName('t0')], 'front')
+  assert('E6 order: a layer to the front / back of its frame; a grouped layer takes its group along', tops(front)[0] === 't1' && tops(back).at(-1) === 't2' && tops(front).length === names.length && same(tops(gfront).slice(0, 2), ['t1', 't0']) && orderLayers(ld, lf, [names[0] ? byName(names[0]) : ''], 'front') === ld, `${tops(front).join()} | ${tops(gfront).join()}`)
+
+  // ── the long-press menu: its items, disabled when they would change nothing, one undo step each
+  useEditor.setState({ h: historyOf(base), sel: { frame: D } })
+  const st = useEditor.getState
+  const item = (id: string) => menuItems(st().h.present, st().sel).find(x => x.id === id)!
+  assert('E6 menu: a frame on top offers DUPLICATE, BACKWARD, TO BACK, DELETE; FORWARD and TO FRONT are off', item('forward').disabled && item('front').disabled && !item('backward').disabled && !item('back').disabled && !item('duplicate').disabled && item('delete').danger === true && selTitle(st().h.present, st().sel).startsWith('FRAME ') && menuItems(st().h.present, {}).every(x => x.disabled))
+  const n0 = st().h.past.length
+  runMenu('back')
+  const backed = order(st().h.present)[0] === D && st().h.past.length === n0 + 1
+  runMenu('duplicate')
+  const duped = st().h.present.frames.length === ids.length + 1 && st().h.past.length === n0 + 2 && st().sel.frame !== D
+  runMenu('delete')
+  const deleted = st().h.present.frames.length === ids.length && st().h.past.length === n0 + 3
+  st().undo(); st().undo(); st().undo()
+  assert('E6 menu: TO BACK, DUPLICATE and DELETE run the shared commands, one undo step each; undo puts it all back', backed && duped && deleted && same(order(st().h.present), ids))
+  useEditor.setState({ h: historyOf(ld), sel: { frame: lf, layer: byName('t3') } })
+  const m0 = st().h.past.length
+  runMenu('front'); runMenu('front')
+  assert('E6 menu: a layer goes to the front of its frame (once: again changes nothing and adds no step); the head names it', tops(st().h.present)[0] === 't3' && st().h.past.length === m0 + (names[0] === 't3' ? 0 : 1) && selTitle(st().h.present, st().sel) === 'LAYER t3' && orderDoc(st().h.present, st().sel, 'front') === st().h.present)
+  useEditor.setState({ menu: { x: 1, y: 2, armed: true } }); st().select({ frame: lf })
+  const closedBySel = !st().menu
+  useEditor.setState({ menu: { x: 1, y: 2, armed: true } }); st().undo()
+  const closedByUndo = !st().menu
+  useEditor.setState({ menu: { x: 1, y: 2, armed: true } }); st().setTool('draw'); st().setTool('move')
+  assert('E6 menu: a new selection, undo or another tool closes it', closedBySel && closedByUndo && !st().menu)
+
+  // ── the share sheet: shared, cancelled, refused, none, hung
+  forgetShare()
+  const copies: string[] = [], copy = (ok: boolean) => async (t: string) => { copies.push(t); return ok }
+  const d = { url: 'https://x.dev/?make&d=zAbc', title: 'frame · Dot/480', text: 'open it' }
+  const fake = (how: 'resolve' | 'abort' | 'refuse' | 'hang', canShare?: ShareNav['canShare']): ShareNav & { got: ShareData[] } => {
+    const got: ShareData[] = []
+    return { got, canShare, share: (x: ShareData) => { got.push(x); return how === 'resolve' ? Promise.resolve() : how === 'hang' ? new Promise<void>(() => {}) : Promise.reject(Object.assign(new Error(how), { name: how === 'abort' ? 'AbortError' : 'NotAllowedError' })) } }
+  }
+  const okNav = fake('resolve'), r1 = await shareLink(d, copy(true), okNav)
+  assert('E6 share: a share sheet that takes the link: shared, with its url, title and text; nothing copied', r1 === 'shared' && okNav.got.length === 1 && okNav.got[0].url === d.url && okNav.got[0].title === d.title && okNav.got[0].text === d.text && copies.length === 0)
+  const r2 = await shareLink(d, copy(true), fake('abort'))
+  assert('E6 share: cancelled by the visitor (AbortError) is "cancelled": no error, nothing copied', r2 === 'cancelled' && copies.length === 0)
+  const r3 = await shareLink(d, copy(true), fake('refuse')), r4 = await shareLink(d, copy(false), fake('refuse'))
+  assert('E6 share: refused (no activation left, not allowed): the clipboard instead; closed too: shown to copy by hand', r3 === 'copied' && r4 === 'manual' && copies.length === 2 && copies[0] === d.url)
+  const r5 = await shareLink(d, copy(true), {}), r6 = await shareLink(d, copy(true), undefined), r7 = await shareLink(d, copy(true), fake('resolve', () => false)), r8 = await shareLink(d, copy(true), fake('resolve', () => { throw new Error('x') }))
+  assert('E6 share: no share sheet, no navigator, or canShare says no (or throws): feature-detected, the clipboard', r5 === 'copied' && r6 === 'copied' && r7 === 'copied' && r8 === 'copied' && !canShareLink({}, d) && canShareLink(fake('resolve'), d))
+  let t = 1000
+  const clock = () => t, hung = fake('hang')
+  void shareLink(d, copy(true), hung, clock) // never settles
+  const t0 = Date.now(), r9 = await shareLink(d, copy(true), hung, clock), quick = Date.now() - t0 < 200
+  t += SHARE_STALE_MS + 1
+  const r10 = Promise.race([shareLink(d, copy(true), hung, clock), new Promise(res => setTimeout(() => res('pending'), 30))])
+  const r10v = await r10
+  assert('E6 share: a share sheet that never answers does not block the next SHARE (copied at once); after a minute a share is tried again', r9 === 'copied' && quick && r10v === 'pending' && hung.got.length === 2, `${r9} ${quick} ${r10v} ${hung.got.length}`)
+  forgetShare()
+}
+
 if (import.meta.url === `file://${process.argv[1]?.replace(/\\/g, '/')}` || process.argv[1]?.endsWith('editor.ts')) {
   let failed = 0
   editorChecks((name, cond, detail = '') => { console.log(`${cond ? '✓' : '✗'} ${name}${detail && !cond ? ` — ${detail}` : ''}`); if (!cond) failed++ })
   editorE3Checks((name, cond, detail = '') => { console.log(`${cond ? '✓' : '✗'} ${name}${detail && !cond ? ` — ${detail}` : ''}`); if (!cond) failed++ })
   await editorE5Checks((name, cond, detail = '') => { console.log(`${cond ? '✓' : '✗'} ${name}${detail && !cond ? ` — ${detail}` : ''}`); if (!cond) failed++ })
+  await editorE6Checks((name, cond, detail = '') => { console.log(`${cond ? '✓' : '✗'} ${name}${detail && !cond ? ` — ${detail}` : ''}`); if (!cond) failed++ })
   if (failed) { console.error(`\n${failed} editor check(s) failed`); process.exit(1) }
   console.log('\nAll editor checks passed')
   process.exit(0)

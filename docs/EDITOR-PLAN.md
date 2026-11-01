@@ -1,7 +1,7 @@
 # EDITOR-PLAN: one editor for MAKE
 
-> **Status (2026-10-29):** E0 (the vertical slice, §8), E1 (tests + cleanup, §8.1), E2 (selection, §8.2), E3 (editing on
-> canvas, §4.2, §8.3) and E5 (share, §7.4, §8.4) are built. MAKE is one
+> **Status (2026-10-30):** E0 (the vertical slice, §8), E1 (tests + cleanup, §8.1), E2 (selection, §8.2), E3 (editing on
+> canvas, §4.2, §8.3), E5 (share, §7.4, §8.4) and E6 (phone polish, §4.3, §8.5) are built. MAKE is one
 > editor in `src/components/editor/`. The four old tabs (TUNE · COMPOSE · CODE · DRAW) are gone, and so are
 > their screens. Their URLs still work and open the editor on the matching tool. What the editor still uses
 > from the old code is listed in §7.3.
@@ -17,7 +17,7 @@
 | **Penpot** | The same frame / layer / inspector split, and the document as open data (SVG / JSON). The inspector has a code view of the selection. | — |
 | **tldraw / Excalidraw** | Only a few tools, each with a single-letter key. A floating tool bar. One finger uses the tool and two fingers pan or zoom. The camera is a plain `{x, y, z}` with zoom about the pointer. Tools return to Select after one use. | Freehand vector strokes: our "pen" paints whole dots on a lattice. |
 | **Framer** | Code as a first-class layer: the code panel sits beside the canvas and you share a link to it. | — |
-| **Figma for iOS / Android**, iPad editors (Procreate, Linearity) | A full-screen canvas. A small top bar (back, title, undo / redo, share). A floating bottom tool bar. Panels are bottom sheets with detents (peek / half / full) and a drag handle. Every target is 44 px, nothing works only on hover, and pinch-zoom applies to the canvas only. | Long-press menus (roadmap §10). |
+| **Figma for iOS / Android**, iPad editors (Procreate, Linearity) | A full-screen canvas. A small top bar (back, title, undo / redo, share). A floating bottom tool bar. Panels are bottom sheets with detents (peek / half / full) and a drag handle. Every target is 44 px, nothing works only on hover, and pinch-zoom applies to the canvas only. Long-press menus on objects and the system share sheet (E6, §4.3). | Haptics (the snap cue is visual). |
 
 **Synthesis:** a few modal tools, a canvas of frames, a selection-driven inspector. On a phone the same model
 becomes a full-bleed canvas, a dock and sheets. Each old MAKE tab becomes a *tool* or a *panel* of the one
@@ -65,6 +65,9 @@ Phone (390×844, touch), full screen over the site:
         │ …the same inspector…          │
         └───────────────────────────────┘
 ```
+
+Phone on its side (844×390, E6): the same top bar; the dock bottom-left and the selection bar bottom-right on one
+row; the panels open as a side sheet at the right, under the top bar, with the selection kept in view beside it.
 
 ## 3. Document model
 
@@ -151,7 +154,8 @@ global keys (hold T = time machine). `X`, `` ` `` and ⌘K still reach the comma
 - **Phone:** a selection bar above the dock: SELECT · ALL · DUP · GROUP (UNGRP) · COPY · PASTE · DEL. SELECT is
   a mode rather than a long press, so it never competes with a pan (UX-PLAN §10, *scroll first*): while it
   is on, a tap adds to the selection or takes out, a one-finger drag on empty canvas draws a marquee, and
-  two fingers still pan and zoom; LAYERS rows add too. Off, one finger pans as before.
+  two fingers still pan and zoom; LAYERS rows add too. Off, one finger pans as before. (The E6 long press,
+  §4.3, opens a menu for what is under a still finger; it selects nothing more and never starts a pan.)
 
 ### 4.2 Editing on canvas (E3)
 
@@ -186,6 +190,37 @@ global keys (hold T = time machine). `X`, `` ` `` and ⌘K still reach the comma
   takes the ink of the painted cell under it (the selected paint layer first, else the topmost one lit there) and
   rounds it onto the INK ladder (.2 … 1); an empty cell leaves the ink as it was. It never paints and is not a
   document edit. Esc stops it.
+
+### 4.3 Phone polish (E6)
+
+- **The long-press menu.** A finger held still (500 ms, within the 8 px press slop) on a frame or a layer with
+  Move selects it (kept when it is already in the selection, so a long press on a selection of many acts on all
+  of it) and opens a menu: DUPLICATE, FORWARD, BACKWARD, TO FRONT, TO BACK, DELETE. Each runs the command the keys
+  and the selection bar use (`actions.ts`), one undo step; an item that would change nothing is off. Frames
+  order on the canvas (the last draws on top), layers in their frame (a group moves as one unit). One layer
+  brings its quick bar into the menu (§4.2, the same component). The menu opens above the finger (below when
+  there is no room), never under it, and takes taps only after that finger lifts. A tap elsewhere only closes
+  it; so do a new selection, undo / redo, another tool, a sheet and Esc. A moving finger or a second finger
+  cancels the long press. Ctrl+] / [ now order frames as well.
+- **The snap cue.** When a drag reaches a smart guide, the pasteboard's dots along it light up in the accent
+  and fade over 420 ms (reduced motion: they hold, then go). It is a layer of the pasteboard's own field
+  (Field → Sampler → Canvas renderer, `active` tone = the theme's accent), not a drawn line; guides the frame
+  already sat on when the drag began do not fire it. Desktop drags get it too.
+- **Sheet detents remembered.** The bottom sheet opens at the detent it was last left at for that panel
+  (LAYERS, ASSETS and each inspector tab), this session and across reloads
+  (`localStorage['dot480.editor.sheet']`); a tab switched to inside an open sheet takes its remembered detent
+  if it has one. Until then: 60 %, CODE 90 %.
+- **A phone on its side** (`(max-height: 500px) and (max-width: 960px)`, landscape): the phone layout, with the
+  dock and the selection bar on one bottom row and the panels as a side sheet at the right (≤ 400 px, under the
+  top bar, no detents); the selection is kept in view left of it.
+- **The keyboard.** While an on-screen keyboard covers the bottom of the screen (`visualViewport` is ≥ 120 px
+  shorter than the layout viewport), the editor fills only the part it leaves: the sheet sits on the keyboard,
+  the canvas shrinks above it, the text typed in place moves back into the top third, and a field with focus
+  in the sheet scrolls into view.
+- **The share sheet.** SHARE on a phone hands the link (§7.4) to `navigator.share` when the browser has one
+  that takes it (`canShare`). Refused (the tap's activation ran out, not allowed): the clipboard, else EXPORT ·
+  LINK as before. Cancelled: nothing is said (no error). A share sheet that never answers does not block the
+  next SHARE, which copies instead. EXPORT · LINK adds SHARE… for the last link on such phones.
 
 ## 5. Panels
 
@@ -401,6 +436,38 @@ Not in E5 (left for later): `navigator.share` (E6); a short-link service (links 
 document is a file, not a link); frame lineage drawn as a graph (it is a list); a document link that replaces the
 canvas (it adds its frames).
 
+### 8.5 What E6 added
+
+- `phone.ts` (React-free): `PHONE_QUERY` / `LANDSCAPE_QUERY` and `layoutFor`, `isPhone`; `DETENTS`, `panelOf`,
+  `detentFor` / `rememberedDetent` / `rememberDetent` / `loadDetents` (session map + localStorage); `keyboardBox`;
+  `snappedGuides`, `CUE_MS`; `LONG_PRESS_MS`; `canShareLink` / `shareLink` (share → clipboard → manual).
+  `doc.ts`: `Order`, `orderFrames`, `orderLayers`. `actions.ts`: `orderDoc`, `orderSel(how)`, `menuItems`,
+  `runMenu`, `selTitle`. `render.ts`: `pasteDots` (the pasteboard with the snap cue). `store.ts`: `menu`;
+  `revealAbove(cover, right)`.
+- `OnCanvas.tsx`: `LongPressMenu`; `QuickBar` gets `inline` and `landscape`. `Canvas.tsx`: the long-press timer,
+  the snap cue (`window.__editor.cues` / `cueLit` for the probes). `Editor.tsx`: the layout (portrait /
+  landscape), `useKeyboard`, the side sheet and detent memory in `Sheet`, SHARE through `shareLink`.
+  `typing.ts`: `keepTypingInView`. `Inspector.tsx`: SHARE… in EXPORT · LINK. `editor.css`: the E6 block.
+  `scripts/site/shots.ts`: `--sizes 844` (a phone on its side, only on request).
+- Tests: `scripts/editor.ts` adds `editorE6Checks` (23 checks, async, in `pnpm verify`). `scripts/editor-browser.ts`
+  adds a phone E6 pass and a landscape pass (`--only` now takes a list: `desktop,phone,landscape`). CDP has no
+  on-screen keyboard and headless Chrome's share sheet is not scriptable, so the probe installs stubs before each
+  page load: `navigator.share` follows `window.__shareMode` (unset = no share sheet, so the older checks copy as
+  before) and `visualViewport` reports `window.__kb` px less height, raised by `__setKb(px)`.
+- Gotchas: the sampler keeps the strongest layer per dot, so a fading cue on top of the pasteboard's .8 base
+  vanished below .8: the base (and the hover glow) step aside on cued dots. A long press must not leave its lift
+  on the menu: the tap that ends it can land on an item placed under the finger, so the menu never opens under
+  it and stays `pointer-events: none` until 60 ms after the lift. Under load (2 cores, a build next door) a drag's
+  first moves reached the page after the 500 ms timer and the drag became a long press: the timer now decides
+  on the next animation frame, after the queued input, so a finger that moved never opens the menu. The sheet became `position: absolute` inside
+  the fixed root, so it follows the root when a keyboard shrinks it. `navigator.share` needs the tap's
+  activation: SHARE awaits only the link codec (milliseconds) before it, and a refusal falls back to the copy.
+  A remembered inspector detent leaks between probe passes in one profile: a pass that checks detents clears
+  `dot480.editor.sheet` and reloads first.
+
+Not in E6 (left for later): long press in the LAYERS sheet rows (the menu is on the canvas), a long press on
+empty canvas (paste / select all there), detents for the side sheet (it is one width), haptics.
+
 Not in E3 (left for later): a start handle for arcs (START ° is in DESIGN), dragging the centre of a ring apart
 from the layer (the layer drag does it), handles for generator params and raster windows, word selection on a
 double-click (it selects all), and text typed in place across several lines (the 5×7 text is one line).
@@ -426,8 +493,9 @@ double-click (it selects all), and text typed in place across several lines (the
 | **E3 · editing on canvas** (done, §4.2, §8.3) | Direct handles for sites (ring radius / sweep, line ends), text editing in place, lattice / tone quick toggles on the canvas, layer bounds for spec layers, eyedropper for the paint ink. |
 | **E4 · animate** | State-machine edges (the old Studio's machine panel, recoverable at `c619dae`), bindings with sources (LFO, clock, pointer, fixtures), a preview / prototype mode that fires press / release edges, and a real multi-track timeline strip under the canvas on desktop. |
 | **E5 · share** (done, §7.4, §8.4) | A link for a whole frame or document (deflated JSON, the CODE link's codec, a size cap), remix lineage (the old RemixGraph) in CODE, export of every device profile (`toDevice`) in EXPORT, the scorecard and bar sheet (the old `studio/sheet.ts`, recoverable at `c619dae`) as an EXPORT · QUALITY fold. |
-| **E6 · phone polish** | Long-press context menu (duplicate / delete / order), haptics-free snap feedback, sheet detent memory, landscape layout with a side sheet, `visualViewport` handling when the keyboard is open, a share sheet (`navigator.share`). |
+| **E6 · phone polish** (done, §4.3, §8.5) | Long-press context menu (duplicate / delete / order), haptics-free snap feedback, sheet detent memory, landscape layout with a side sheet, `visualViewport` handling when the keyboard is open, a share sheet (`navigator.share`). |
 | **E7 · performance** | Sample frames in the existing worker, let a zoomed-out canvas draw cached bitmaps, and use WebGL frames for GPU-tagged layers (the renderer rules apply per frame). |
 
-**Next three:** E6 the long-press menu on the phone (it can reuse E2's `actions.ts`, and the E3 quick bar for a
-layer) and a share sheet (`navigator.share` over E5's `shareSel`); E4 the state-machine edges; E7 frames in the worker.
+**Next three:** E4 the state-machine edges (the old machine panel at `c619dae`) with a preview mode that fires
+press / release edges; E7 frames in the existing worker and cached bitmaps when zoomed out; then the phone
+follow-ups left by E6 (long press in LAYERS rows and on empty canvas).

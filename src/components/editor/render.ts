@@ -3,7 +3,8 @@
  * `sampleLayers` via the Studio playback → `renderCanvas`), on the Canvas renderer: frames are TILE-size
  * (> 2,000 dots) and many animate (DESIGN.md renderer rule). The pasteboard behind the frames is a dot
  * field too: a faint constant field on a screen-space grid, with the hover glow under the pointer
- * (`{interaction.hoverGlowRadius}` 6 cells, `value`/`mid`, never the accent).
+ * (`{interaction.hoverGlowRadius}` 6 cells, `value`/`mid`, never the accent). The one accent on it is the snap cue
+ * (E6): for a moment after a drag snaps to a guide, the pasteboard's dots along that guide light up and fade.
  */
 import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { sampleLayers } from '../../engine/sampler/gridSampler'
@@ -68,11 +69,38 @@ export function pastePitch(z: number): number {
   while (p * z > 32 && p > 2) p /= 2
   return p
 }
+/** The snap cue (E6): guides a drag just snapped to, in viewport px, and how lit they are (1 → 0 as it fades). */
+export interface PasteCue { guides: { axis: 'x' | 'y'; at: number; from: number; to: number }[]; k: number }
 /**
- * The pasteboard for the camera `cam` into a viewport-size canvas (CSS px × dpr): one dot per world
- * multiple of the pitch. `glow` = pointer in viewport px (or undefined).
+ * The pasteboard's dots for the camera `cam` over a `w`×`h` viewport (CSS px): one dot per world multiple of
+ * the pitch, the glow under the pointer (`glow`, viewport px), and the snap cue: the dots along each guide
+ * just snapped to, in the accent (`active`, the board's one accent; `accent` is the site theme's). Returns
+ * the dots and where the sampled grid's origin sits on screen.
  */
-export function drawPaste(canvas: HTMLCanvasElement, cam: { x: number; y: number; z: number }, w: number, h: number, dpr: number, glow?: { x: number; y: number }) {
+export function pasteDots(cam: { x: number; y: number; z: number }, w: number, h: number, glow?: { x: number; y: number }, cue?: PasteCue, accent?: string) {
+  const s = pastePitch(cam.z) * cam.z, cols = Math.ceil(w / s) + 2, rows = Math.ceil(h / s) + 2
+  // grid cell c sits at screen ox + (c - 1) s: the sampler puts its centre at (c + .5) s, so shift by ox - 1.5 s
+  const ox = ((cam.x % s) + s) % s, oy = ((cam.y % s) + s) % s, sx = ox - 1.5 * s, sy = oy - 1.5 * s
+  const at = (u: number, v: number) => [sx + (u * (cols - 1) + .5) * s, sy + (v * (rows - 1) + .5) * s] as const
+  // the snap cue: the columns (rows) of dots either side of each guide (a frame edge covers one of them),
+  // along its span and two dots past each end, so some always show beside the frames
+  const cued = cue && cue.k > 0 && cue.guides.length ? cue.guides : undefined
+  const onCue = (x: number, y: number) => !!cued && cued.some(g => { const [a, b] = g.axis === 'x' ? [x, y] : [y, x]; return Math.abs(a - g.at) <= s && b >= g.from - 2 * s && b <= g.to + 2 * s })
+  // a cued dot is the cue's alone (the sampler keeps the strongest layer: a fading cue must not lose to the base)
+  const base: Field = cued ? (u, v) => (onCue(...at(u, v)) ? 0 : .8) : () => .8
+  const layers: Layer[] = [{ field: base, tone: 'faint' }]
+  if (glow) {
+    const R = 6 * s
+    const f: Field = (u, v) => { const [x, y] = at(u, v), d = Math.hypot(x - glow.x, y - glow.y); return d >= R || onCue(x, y) ? 0 : .5 + .5 * (1 - d / R) }
+    layers.push({ field: f, tone: 'mid' })
+  }
+  if (cued) layers.push({ field: (u, v) => (onCue(...at(u, v)) ? cue!.k : 0), tone: 'active' })
+  const theme = accent ? { ...dot480, dotActive: accent } : dot480
+  const dots = sampleLayers(layers, { cols, rows, pitch: s }, { ...PASTE_STYLE, sizeMax: Math.min(1.6, .9 + s / 40) }, theme)
+  return { dots, sx, sy, pitch: s }
+}
+/** The pasteboard into a viewport-size canvas (CSS px × dpr): `pasteDots` through the Canvas renderer. */
+export function drawPaste(canvas: HTMLCanvasElement, cam: { x: number; y: number; z: number }, w: number, h: number, dpr: number, glow?: { x: number; y: number }, cue?: PasteCue, accent?: string) {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
   const cw = Math.round(w * dpr), ch = Math.round(h * dpr)
@@ -80,17 +108,7 @@ export function drawPaste(canvas: HTMLCanvasElement, cam: { x: number; y: number
   if (canvas.height !== ch) canvas.height = ch
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.clearRect(0, 0, cw, ch)
-  const s = pastePitch(cam.z) * cam.z, cols = Math.ceil(w / s) + 2, rows = Math.ceil(h / s) + 2
-  // grid cell c sits at screen ox + (c - 1) s: the sampler puts its centre at (c + .5) s, so shift by ox - 1.5 s
-  const ox = ((cam.x % s) + s) % s, oy = ((cam.y % s) + s) % s, sx = ox - 1.5 * s, sy = oy - 1.5 * s
-  const base: Field = () => .8
-  const layers: Layer[] = [{ field: base, tone: 'faint' }]
-  if (glow) {
-    const R = 6 * s
-    const f: Field = (u, v) => { const x = sx + (u * (cols - 1) + .5) * s, y = sy + (v * (rows - 1) + .5) * s, d = Math.hypot(x - glow.x, y - glow.y); return d >= R ? 0 : .5 + .5 * (1 - d / R) }
-    layers.push({ field: f, tone: 'mid' })
-  }
-  const dots = sampleLayers(layers, { cols, rows, pitch: s }, { ...PASTE_STYLE, sizeMax: Math.min(1.6, .9 + s / 40) }, dot480)
+  const { dots, sx, sy } = pasteDots(cam, w, h, glow, cue, accent)
   ctx.setTransform(dpr, 0, 0, dpr, sx * dpr, sy * dpr)
   renderCanvas(ctx, dots)
 }
