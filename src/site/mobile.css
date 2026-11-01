@@ -940,7 +940,8 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
   }
 }
 
-/* BLOG (on phones the header has no room for it): its own full row at the end of the tools */
+/* LAB and BLOG (on phones the header has no room for them): a full row each at the end of the tools */
+.tools-grid .tool-lab,
 .tools-grid .tool-blog {
   grid-column: 1 / -1
 }

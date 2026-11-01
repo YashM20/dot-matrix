@@ -15,6 +15,7 @@
  *    `dist/blog.html` with the post's title, description, canonical, OG/Twitter tags (`og:type` article) and
  *    schema.org JSON-LD (BlogPosting; CollectionPage for the index). The social image is
  *    `public/og/blog/<slug>-social.png` once it exists, else `/og/default.png`.
+ * 5. The lab page (`src/lab/experiments.ts`): `dist/lab/index.html` from `dist/lab.html`, with its meta and JSON-LD.
  *
  * Widget OG images are cached in `node_modules/.cache/dot480-og` (or `OG_CACHE`), keyed by the OG renderer's source and
  * the card's golden hashes: a cold run renders all of them (~2 min), a warm one copies.
@@ -31,6 +32,7 @@ import { join } from 'node:path'
 import { ogImage } from '../og'
 import { boards } from '../../src/widgets'
 import { BLOG, heroImage, POSTS, postPath, socialImage } from '../../src/blog/posts'
+import { EXPERIMENTS, LAB, experimentPath } from '../../src/lab/experiments'
 import { metaTags, pageMeta, widgetPageMeta, widgetTitle, type PageMeta } from '../../src/site/meta'
 import type { WidgetMeta } from '../../src/widgets/meta'
 import { widgetIndex } from '../widgets/meta'
@@ -102,11 +104,25 @@ export function blogPages() {
   console.log(`site: blog index + ${POSTS.length} post pages`)
 }
 
+/** The lab's crawler page (step 5): `dist/lab/index.html` from `dist/lab.html`, with its meta and a CollectionPage. */
+export function labPage() {
+  const file = join(DIST, 'lab.html')
+  if (!existsSync(file)) return
+  const m: PageMeta = { title: LAB.title, description: LAB.dek, path: LAB.path, image: '/og/default.png' }
+  const html = withMeta(readFileSync(file, 'utf8'), m, [jsonLd({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: LAB.title, description: LAB.dek, url: origin + m.path,
+    hasPart: EXPERIMENTS.map(x => ({ '@type': 'CreativeWork', name: x.title, description: x.dek, url: origin + experimentPath(x.slug), dateCreated: x.date })),
+  })])
+  writeFileSync(file, html); page('lab', html)
+  console.log(`site: lab page (${EXPERIMENTS.length} piece${EXPERIMENTS.length === 1 ? '' : 's'})`)
+}
+
 export function postbuild({ og = true } = {}) {
   const index = readFileSync(join(DIST, 'index.html'), 'utf8')
   writeFileSync(join(DIST, 'index.html'), withMeta(index))
   for (const b of boards) page(b.id, withMeta(index, b.id))
   blogPages()
+  labPage()
   console.log(`site: ${boards.length} board pages${origin ? ` (${origin})` : ' (relative URLs: set SITE_URL for absolute og:image)'}`)
   const t0 = performance.now(), widgets = widgetIndex()
   for (const w of widgets) {

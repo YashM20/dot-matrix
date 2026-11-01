@@ -11,6 +11,7 @@
   "rewrites": [
     { "source": "/blog", "destination": "/blog/index.html" },
     { "source": "/blog/:path*", "destination": "/blog.html" },
+    { "source": "/lab", "destination": "/lab/index.html" },
     { "source": "/privacy", "destination": "/privacy.html" },
     { "source": "/privacy/", "destination": "/privacy.html" },
     { "source": "/terms", "destination": "/terms.html" },
@@ -39,7 +40,7 @@
       ]
     },
     {
-      "source": "/((?!lab/).*)",
+      "source": "/((?!lab/motion-lab).*)",
       "headers": [
         {
           "key": "Content-Security-Policy",

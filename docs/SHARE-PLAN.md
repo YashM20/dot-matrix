@@ -30,7 +30,7 @@
 | Per-page meta and OG | `postbuild` writes `dist/<board>/index.html` with that board's meta, plus 26 OG PNGs (`ogImage(cardId)` already takes a **card** id). | `scripts/site/postbuild.ts`, `scripts/og.ts`, `src/site/meta.ts` |
 | Packages | `@dot480/core` (zero deps; `./card` `mountCard` is 20.2 kB gz), `@dot480/react` `<DotCard>`, and the `<dot-card>` element (the standalone build is 114.8 kB gz with every preset). None are published, and WEB-PLAN §1 dropped publishing. | `packages/*`, `packages/README.md` |
 | shadcn registry | 16 `registry:component` items (10 Components v2 cards plus 6 widgets). Each is a 6-line `<DotCard preset>` wrapper. They depend on **unpublished npm packages**, so `shadcn add` fails today. It isn't hosted. `--check` exists. | `registry/`, `packages/scripts/registry.ts` |
-| Headers | The SPA rewrite `/(.*)` → `index.html` (real files win). CSP `script-src 'self'` applies to everything except `lab/`. There is no `frame-ancestors` and no `X-Frame-Options`, so the site can be framed anywhere today. | `vercel.json` |
+| Headers | The SPA rewrite `/(.*)` → `index.html` (real files win). CSP `script-src 'self'` applies to everything except `lab/motion-lab.html`. There is no `frame-ancestors` and no `X-Frame-Options`, so the site can be framed anywhere today. | `vercel.json` |
 
 ## 2. Research findings
 

@@ -110,7 +110,8 @@ function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { 
       <button type="button" className="tool-share" onClick={run(share)}><b>SHARE</b><span>This page's link</span></button>
       {/* the shell is a typed terminal: offered where there is a keyboard */}
       <button type="button" className="tool-shell" onClick={run(onShell)}><b>SHELL</b><span>Type field commands</span></button>
-      {/* the blog is its own page (blog.html); on phones this is its way in, as the header link is on desktop */}
+      {/* the lab and the blog are their own pages; on phones these are their way in, as the header links are on desktop */}
+      <button type="button" className="tool-lab" onClick={run(() => location.assign('/lab/'))}><b>LAB</b><span>Interactive pieces outside the boards</span></button>
       <button type="button" className="tool-blog" onClick={run(() => location.assign('/blog/'))}><b>BLOG</b><span>The essay and three tutorials</span></button>
     </div>
     <h3 className="tools-head">THEME</h3>
