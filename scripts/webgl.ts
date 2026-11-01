@@ -113,7 +113,7 @@ try {
 
   if (args.includes("--ir-only")) throw new Error("--ir-only: stopped after IR parity")
   // 2. pixel parity
-  const presets: [string, number, number?][] = [['ir-plasma', 1.3], ['ir-dial', 0], ['level-03', 0], ['ui-knob', 0], ['afterlight', 0], ['gpu-plasma', 1.3, 1], ['gpu-starfield', 1.3, 1], ['gpu-moire', 1.3, 1]]
+  const presets: [string, number, number?][] = [['ir-plasma', 1.3], ['ir-dial', 0], ['level-03', 0], ['ui-knob', 0], ['afterlight', 0], ['gpu-plasma', 1.3, 1], ['gpu-starfield', 1.3, 1], ['gpu-moire', 1.3, 1], ['mat-lens', 0, 1]]
   const px: unknown[] = []
   for (const [id, t, density] of presets) {
     const r = await run(`P5.presetParity(${JSON.stringify(id)}, ${t}, 2, ${density ?? 'undefined'})`)
