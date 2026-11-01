@@ -48,6 +48,27 @@
   - Round-3 rows go in as "upcoming".
 - Both mark loose ends with `TODO(later):`. Find them with `rg "TODO\(later\)"` when improving their work.
 
+**GitHub organisation (2026-11-01):** 8 milestones and parent epics, with children attached as native sub-issues.
+
+| Milestone | Issues |
+|---|---|
+| 0.12 | #48 |
+| 0.13 | Round 3 to main: epic #49 |
+| Engine foundations | #61–#65 |
+| Tixy gallery | epic #51 |
+| Next phases | epic #71 |
+| Polish pass | epic #72 |
+| Follow-ups | epic #73 |
+| Backlog | decisions #12 (parent of #23–#26), plus #69 and #70 |
+
+The IQ epic (#61) is parent of #62–#70. Script: `dmdocs/issues-org/organize.mjs` (idempotent). Pending owner decisions are added to #12 as comments.
+
+**X1 merged (6edc5ff, from f41be18):**
+- **Added:** `pond-marble` (suminagashi), the daily and ageing pond (`?day=`, opt-in POND MEMORY), board-to-widget View Transitions, and a new OPEN action on cards.
+- **#12 hysteresis:** dropped (it fails the memory gate when aged and would move goldens).
+- **Checks:** life 146/146, life-browser 41/41, goldens +1 (0 changed).
+- **Size:** first load +0.44 kB gz.
+
 **IQ techniques plan (2026-11-01):** `docs/IQ-PLAN.md`. Issues:
 - #61: tracking issue.
 - High priority:
