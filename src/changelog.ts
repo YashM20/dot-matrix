@@ -15,6 +15,25 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 
 export const releases: Release[] = [
   {
+    version: '0.13', date: '2026-11-01', title: 'A workshop, glass and a pond with a memory',
+    summary: 'A Workshop board of nine materials, glass and water on the materials board, more squares, a pond that reacts and remembers, sharing and phone editing in MAKE, fourteen themes, and a faster first load.',
+    changes: [
+      { kind: 'new', text: 'Workshop board: knitting, denim, paper, wood, leather, a sand tray you can rake, frost on a window, a pool of mercury and a hanging thread, all lit by the same light.' },
+      { kind: 'new', text: 'Glass and water on the materials board: a lens over a clock, a pool you can drip into, a lancet window, rust that ages as you watch, a patch whose light you turn, and a candle clock.' },
+      { kind: 'new', text: 'More squares: rectangular cells, teletext screens, LCD skins, square field patterns, dots turned 45 degrees, bead, stud and stitch motifs, and dots that morph into squares.' },
+      { kind: 'new', text: 'The pond reacts: koi get hungry and ignore food once full, a startled koi startles its neighbours, night darkens the water, and the koi can be drawn in letters (TYPE, top right).' },
+      { kind: 'new', text: 'A pond with a memory: a marbled-ink pond the koi comb as they swim, a pond that changes with the day, and with POND MEMORY on, one that grows with your visits.' },
+      { kind: 'new', text: 'Share from MAKE: send a frame or a whole document as a link that carries the design, see where a remix came from, and export a PNG for every device.' },
+      { kind: 'new', text: 'Fourteen themes: seven accent colours in light and dark, a THEME picker with live previews, and an eighth swatch that builds a readable theme from any hue.' },
+      { kind: 'new', text: 'Your photo in dots: drop, paste or pick an image on the home card and it turns into a live halftone. It stays on your device.' },
+      { kind: 'new', text: 'Tilt your phone: tap TILT in TOOLS and the physics cards and the pond follow how you hold it.' },
+      { kind: 'improved', text: 'MAKE on a phone: a long-press menu, a snap cue, sheets that remember their height, a side sheet in landscape, room for the keyboard, and the phone’s own share sheet.' },
+      { kind: 'improved', text: 'Select many in MAKE: drag a box, group, lock, align and distribute, and copy and paste across tabs.' },
+      { kind: 'improved', text: 'Cards open into their own page with a short glide, and every text passes 4.5:1 contrast in every theme.' },
+      { kind: 'improved', text: 'A smaller first visit: about 124 kB of code, down from 148 kB.' },
+    ],
+  },
+  {
     version: '0.12', date: '2026-10-30', title: 'Materials, pond and squares',
     summary: 'Three new boards (materials, a living koi pond, and joined square dots), plus on-canvas editing in MAKE, big card grids with selectable sizes, and faster background card loading.',
     changes: [
@@ -154,22 +173,6 @@ export const releases: Release[] = [
 ]
 
 export const upcoming: Upcoming[] = [
-  { phase: 'F0', title: 'Tilt your phone', status: 'in progress', text: 'Tap TILT in TOOLS and the physics cards follow your phone: tip it and the dots in the pit and the ink fall that way, hold it upright and they settle back. Scrolling still works.' },
-  { phase: 'T4', title: 'Fourteen themes', status: 'in progress', text: 'Seven accent colours, each in light and dark, following your system.' },
-  { phase: 'T5', title: 'Pick your theme', status: 'in progress', text: 'THEME, next to DISPLAY, shows each accent as a dot swatch and previews it as you hover. Picking one spreads the new colours in dots from where you clicked (at once if you prefer less motion). On a phone it is in TOOLS. Shared links can keep your theme if you switch that on.' },
-  { phase: 'T6', title: 'Readable in every colour', status: 'in progress', text: 'All text is at least 12 px and passes 4.5:1 contrast in every theme, and more if your system asks for more contrast. Board and card names are drawn in the dots themselves; prose is set in the display face. THEME has an eighth swatch: pick any hue on a slider and the site builds a legible theme from it.' },
-  { phase: 'T2', title: 'A calmer frame', status: 'in progress', text: 'One left edge and an even rhythm on every page, the dock in the top bar, and a footer band that counts the dots being drawn, live.' },
-  { phase: 'T2 HERO', title: 'Your photo in dots', status: 'in progress', text: 'Drop, paste or pick an image on the home card and it turns into a live halftone. It stays on your device; nothing is uploaded. Figures get short legends too.' },
-  { phase: 'E2', title: 'Select many in the editor', status: 'in progress', text: 'Select several layers or drag a box around them, then group, lock, align and distribute with smart guides. Copy, cut and paste work across tabs; on a phone a SELECT bar does the same.' },
-  { phase: 'F0 LOAD', title: 'Faster first load', status: 'in progress', text: 'The first visit downloads less: 120 kB of code, down from 148 kB.' },
-  // TODO(later): confirm whether foundation (F0, T2, T4, E2) and theming (T5, T6) should be released in a separate entry or folded into 0.12
-  { phase: 'POND L3', title: 'A pond that notices you', status: 'in progress', text: 'Koi get hungry, gulp and ignore food once full; a startled koi startles its neighbours. At night the pond darkens and the moon shines on the water. Tilt your phone and the water sloshes. Hold on the slime to drop salt, on the fireflies to swing a lantern they follow. The koi can also be drawn in letters (TYPE, top right).' },
-  { phase: 'E5', title: 'Share and remix in the editor', status: 'in progress', text: 'Share a frame or a whole document as a link that carries the design itself. Follow how a design was remixed in a lineage graph, export a PNG for every device profile, and check a card against the quality scorecard.' },
-  { phase: 'E6', title: 'Editor phone polish', status: 'in progress', text: 'Touch editing tuned for phones: a long-press menu, a visual snap cue, sheets that remember their height, a side sheet in landscape, room for the keyboard, and the phone’s own share sheet.' },
-  { phase: 'Q2–Q3', title: 'More squares and new skins', status: 'in progress', text: 'Rectangular cells, teletext screens and LCD skins, plus new square field patterns, 45-degree rotated dots, nested motifs and animated dot-to-square morphs.' },
-  { phase: 'M2', title: 'Glass, caustics and water', status: 'in progress', text: 'Glass that bends what is behind it and water that focuses light: a lens over a clock, a pool you can drip into, a lancet window, rust that ages as you watch, a patch whose light you turn, and a candle clock.' },
-  { phase: 'M3', title: 'A workshop of materials', status: 'in progress', text: 'A new Workshop board: knitting, denim, paper, wood, leather, a sand tray you can rake, frost on a window, a pool of mercury and a hanging thread, all lit by the same light.' },
-  { phase: 'X1', title: 'A pond with a memory', status: 'in progress', text: 'A marbled-ink pond the koi comb as they swim, a pond that changes with the day and, if you turn on POND MEMORY, grows with your visits, and cards that glide into their own page when you open them.' },
   { phase: 'U5', title: 'Everything for power users', status: 'next', text: 'A ? sheet with every shortcut and link option, and a pro mode that opens every panel.' },
   { phase: 'S1', title: 'A page for every card', status: 'planned', text: 'Each card gets its own short link (/widget/<id>/) and page, with copy as PNG, SVG or HTML, share and embed.' },
   { phase: 'C1', title: 'A million dots', status: 'planned', text: 'Fields evaluated on the GPU with WebGPU: a full-screen field that follows the cursor, and a zoom from one card into a million dots.' },
