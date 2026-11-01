@@ -34,6 +34,14 @@
 .post-code-bar button:active { color: var(--value); background: var(--wash-press) }
 .post-code pre { margin: 0; padding: var(--space-4); overflow-x: auto; font: var(--fs-copy-14)/1.6 var(--mono); color: var(--value); tab-size: 2 }
 .post-code pre code { font: inherit; color: inherit; background: none; padding: 0; border-radius: 0; white-space: pre }
+/* syntax (#84): grey tiers from the theme, and the one accent for numbers and literals, like a lit dot.
+   Plain code reads in --label; words that shape the program step up to --value; the quiet parts step down. */
+.post-code pre code.hl { color: var(--label) }
+.hl-k { color: var(--value); font-weight: 600 }
+.hl-f, .hl-t { color: var(--value) }
+.hl-n, .hl-l { color: var(--red) }
+.hl-s, .hl-p { color: var(--dot-idle) }
+.hl-c { color: var(--mute); font-style: italic }
 
 /* a figure still to be drawn: what it will show, in the figure's box */
 .post-todo { min-height: 220px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: var(--space-2); padding: var(--space-5); text-align: center; border: 1px dashed var(--line-strong); border-radius: var(--radius-card); background: var(--surface) }

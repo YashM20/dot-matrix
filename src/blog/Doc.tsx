@@ -3,10 +3,11 @@
  * layout: the title and intro in the hero, a section per `##` with a dot title, live cards as the essay's figures,
  * code with COPY.
  */
-import { Fragment, Suspense, use, useEffect, useState, type ReactNode } from 'react'
+import { Fragment, Suspense, use, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { DotTitle } from '../essay/ui/DotTitle'
 import { Figure } from '../essay/ui/Lazy'
 import { copyText } from '../lib/copyText'
+import { highlight } from './highlight'
 import { cardBody } from './LiveCard'
 import { inline, parse, tex, type Block, type Inline, type ListBlock, type VisualKind } from './markdown'
 import { POSTS, postPath, type PostInfo } from './posts'
@@ -57,13 +58,15 @@ function Code({ lang, text }: { lang: string; text: string }) {
     return () => window.clearTimeout(t)
   }, [state])
   const copy = async () => setState(await copyText(text) ? 'copied' : 'failed')
+  // tokenised once per block; plain runs stay text nodes, so a long snippet costs a few hundred spans at most
+  const tokens = useMemo(() => highlight(text, lang), [text, lang])
   return (
     <div className="post-code">
       <div className="post-code-bar">
         <span>{lang ? lang.toUpperCase() : 'TEXT'}</span>
         <button type="button" onClick={copy} aria-live="polite">{state === 'copied' ? 'COPIED' : state === 'failed' ? 'SELECT TO COPY' : 'COPY'}</button>
       </div>
-      <pre tabIndex={0}><code>{text}</code></pre>
+      <pre tabIndex={0}><code className="hl">{tokens.map((t, i) => (t.k ? <span key={i} className={`hl-${t.k}`}>{t.s}</span> : t.s))}</code></pre>
     </div>
   )
 }

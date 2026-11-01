@@ -965,4 +965,10 @@ shareChecks(assert)
   squaresChecks(assert)
 }
 
+// blog syntax colouring (#84): code blocks round-trip, regex vs division, kinds (scripts/site/highlight.ts)
+{
+  const { highlightChecks } = await import('./site/highlight')
+  highlightChecks(assert)
+}
+
 done('All acceptance checks passed')
