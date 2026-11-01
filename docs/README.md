@@ -24,6 +24,7 @@ Which doc to read for what, and how current each one is (checked 2026-10-29, aft
 | [`ALGORITHMS.md`](ALGORITHMS.md) | The niche algorithms (`src/engine/algo`, the `algorithms` board): weighted Voronoi stippling, strange-attractor density, Wave Function Collapse, DLA. Papers, pipeline mapping, parameters, cost. |
 | [`LIFE.md`](LIFE.md) | Current for L1, L2 and L3. Living scenes (`src/engine/life`, the `pond` board): wave-equation water, dot micro-glyph tiles, koi spines, bodies and steering, the koi pond world. Modules, the body-style ruling, parameters and deviations from the L plan, checks. |
 | [`STYLE-BIBLE.md`](STYLE-BIBLE.md) | Taste: what makes a card good, taken from the four liked cards |
+| [`WRITING.md`](WRITING.md) | Voice for visitor text (essay, LOG, legal pages, guides): plain words, real numbers, the AI-writing tells to avoid, and the visual each section needs. Checked by `scripts/site/prose-lint.ts`. |
 | [`DEPLOY.md`](DEPLOY.md) | Vercel deploy, build outputs, headers, CSP, CI |
 | [`MCP-APP.md`](MCP-APP.md) | The MCP app (agent heartbeat) and the authoring tools, for personal use |
 
