@@ -22,7 +22,7 @@ export function highlightChecks(assert: Assert) {
     }
   }
   assert('highlight: every docs/blog code block round-trips exactly', blocks > 0 && !bad.length, bad.length ? bad.join(', ') : `${blocks} blocks`)
-  assert('highlight: unknown or empty language stays one plain token', highlight('a / b', '').length === 1 && highlight('x', 'brainfuck')[0].k === '')
+  assert('highlight: unknown, empty or Object-prototype language names stay one plain token', ['', 'brainfuck', 'constructor', '__proto__', 'toString'].every(l => { const t = highlight('a / b(1)', l); return t.length === 1 && t[0].k === '' }))
   assert('highlight: regex after ( or = is a string, division after a name or ) is not',
     has(String.raw`if (/\s/.test(c)) x = a / b / c`, 'ts', 's', String.raw`/\s/`) && !kinds('x = a / b / c', 'ts').some(k => k.startsWith('s:')) && !kinds('(a) / 2 / 3', 'ts').some(k => k.startsWith('s:')))
   assert("highlight: // inside a string stays a string; a quote inside a regex class doesn't open one",

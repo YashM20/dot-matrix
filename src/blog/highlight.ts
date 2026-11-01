@@ -91,6 +91,6 @@ function http(src: string): Token[] {
 }
 
 export function highlight(src: string, lang: string): Token[] {
-  const l = LANG[lang.toLowerCase()]
+  const key = lang.toLowerCase(), l = Object.hasOwn(LANG, key) ? LANG[key] : undefined
   return !l ? [{ k: '', s: src }] : l === 'http' ? http(src) : code(src, l)
 }
