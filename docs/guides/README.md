@@ -1,6 +1,6 @@
 # Guides
 
-Four tutorials explain how Dot/480 works under the hood. Each document addresses a specific reader, explores a distinct use case, and provides self-contained code snippets.
+Three tutorials explain how Dot/480 works under the hood. Each document addresses a specific reader, explores a distinct use case, and provides self-contained code snippets.
 
 ## Tutorial index
 
@@ -9,7 +9,6 @@ Four tutorials explain how Dot/480 works under the hood. Each document addresses
 | [`build-your-own-dot-engine.md`](build-your-own-dot-engine.md) | Front-end developer | Build a dot-matrix renderer for web apps | Fields, grid sampling, squircle superellipses, lattices, and canvas rendering |
 | [`a-tiny-language-for-dots.md`](a-tiny-language-for-dots.md) | Tool-maker or creative coder | Build an interactive formula playground | Sandboxed AST parsing, bytecode compilation, URL compression, and remix trees |
 | [`living-matter.md`](living-matter.md) | Generative artist | Make ambient organic pieces | 2D wave equations, steering boids, material relief, and deterministic PRNGs |
-| [`dots-off-the-screen.md`](dots-off-the-screen.md) | Hardware maker | Drive physical displays and plotters | Device profiles, e-ink dithering, microcontroller streaming, and pen toolpaths |
 
 ## Structure
 
