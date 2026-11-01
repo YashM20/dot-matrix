@@ -28,6 +28,8 @@ const WORD = /[A-Za-z_$][\w$]*/y
 const SPACE = /\s+/y
 const PUNCT = /[^\sA-Za-z0-9_$'"`]/y
 const HEADER = /^[\w-]+(?=:)/gm
+const KEY_COLON = /\s*:/y
+const CONTROL = words('if while for with')
 
 function at(re: RegExp, src: string, i: number): string | null {
   re.lastIndex = i
@@ -35,12 +37,17 @@ function at(re: RegExp, src: string, i: number): string | null {
   return m && m[0] ? m[0] : null
 }
 
-/** A `/` starts a regex literal when the last real token can't end an expression (`=`, `(`, `return`, …). */
-const regexOk = (prev: Token | undefined) => !prev || (prev.k === 'p' ? !/[)\]}]$/.test(prev.s) : prev.k === 'k')
+/**
+ * A `/` starts a regex literal when the last real token can't end an expression (`=`, `(`, `return`, …), or is the
+ * `)` that closes an `if` / `while` / `for` condition (`ctrl`): `if (ok) /x/.test(s)` holds a regex, `(a) / 2` divides.
+ */
+const regexOk = (prev: Token | undefined, ctrl: boolean) => !prev || (prev.k === 'p' ? !/[)\]}]$/.test(prev.s) || (prev.s.endsWith(')') && ctrl) : prev.k === 'k')
 
 function code(src: string, lang: Lang): Token[] {
   const out: Token[] = [], kw = lang === 'glsl' ? GLSL_KW : lang === 'sh' ? SH_KW : TS_KW
-  let prev: Token | undefined
+  let prev: Token | undefined, prevWord = '', ctrlClose = false
+  // per open paren: did it start an `if` / `while` / `for` condition
+  const parens: boolean[] = []
   const push = (k: Kind, s: string) => {
     const last = out[out.length - 1]
     if (last && last.k === k && (k === '' || k === 'p')) last.s += s
@@ -51,14 +58,19 @@ function code(src: string, lang: Lang): Token[] {
     let m: string | null
     if ((m = at(SPACE, src, i))) push('', m)
     else if ((m = lang === 'sh' ? at(HASH_COMMENT, src, i) : lang !== 'json' ? at(COMMENT, src, i) : null)) push('c', m)
-    else if ((m = at(STRING, src, i))) push(lang === 'json' && /^\s*:/.test(src.slice(i + m.length, i + m.length + 8)) ? 't' : 's', m)
-    else if (lang === 'ts' && src[i] === '/' && regexOk(prev) && (m = at(REGEX, src, i))) push('s', m)
+    else if ((m = at(STRING, src, i))) push(lang === 'json' && at(KEY_COLON, src, i + m.length) ? 't' : 's', m)
+    else if (lang === 'ts' && src[i] === '/' && regexOk(prev, ctrlClose) && (m = at(REGEX, src, i))) push('s', m)
     else if ((m = at(NUMBER, src, i)) && !/[\w$]/.test(src[i - 1] ?? '')) push('n', m)
     else if ((m = at(WORD, src, i))) {
       const next = src.slice(i + m.length).match(/^\s*(.)/)?.[1]
       push(LITERALS.has(m) ? 'l' : kw.has(m) ? 'k' : next === '(' ? 'f' : (lang === 'ts' && PRIMS.has(m)) || (lang !== 'sh' && /^[A-Z]/.test(m)) ? 't' : '', m)
     }
-    else push('p', (m = at(PUNCT, src, i) ?? src[i]))
+    else {
+      push('p', (m = at(PUNCT, src, i) ?? src[i]))
+      if (m === '(') parens.push(CONTROL.has(prevWord))
+      ctrlClose = m === ')' ? !!parens.pop() : false
+    }
+    if (m.trim()) prevWord = /^[A-Za-z_$]/.test(m) ? m : ''
     i += m.length
   }
   return out
@@ -66,9 +78,10 @@ function code(src: string, lang: Lang): Token[] {
 
 /** HTTP: header names stand out, values stay plain. */
 function http(src: string): Token[] {
-  const out: Token[] = []
+  const out: Token[] = [], blank = src.search(/\n\s*\n/)
   let last = 0
-  for (const m of src.matchAll(HEADER)) {
+  // header names only in the header block: the body after the first blank line stays plain
+  for (const m of src.slice(0, blank < 0 ? src.length : blank).matchAll(HEADER)) {
     if (m.index > last) out.push({ k: '', s: src.slice(last, m.index) })
     out.push({ k: 'k', s: m[0] })
     last = m.index + m[0].length

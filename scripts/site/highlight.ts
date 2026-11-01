@@ -9,6 +9,7 @@ import { highlight, type Kind } from '../../src/blog/highlight'
 import type { Assert } from '../lib/check'
 
 const kinds = (src: string, lang: string) => highlight(src, lang).filter(t => t.k).map(t => `${t.k}:${t.s}`)
+const HTTP_MSG = 'Content-Type: text/plain\n\nstatus: ready'
 const has = (src: string, lang: string, k: Kind, s: string) => kinds(src, lang).includes(`${k}:${s}`)
 
 export function highlightChecks(assert: Assert) {
@@ -30,6 +31,10 @@ export function highlightChecks(assert: Assert) {
     has('export function f(n: number): Env { return g(0x1f, 1.5e3, true) }', 'ts', 'k', 'export') && has('export function f(n: number): Env {}', 'ts', 'f', 'f') &&
     has('let e: Env', 'ts', 't', 'Env') && has('let n: number', 'ts', 't', 'number') && has('g(0x1f)', 'ts', 'n', '0x1f') && has('g(1.5e3)', 'ts', 'n', '1.5e3') && has('g(true)', 'ts', 'l', 'true'))
   assert('highlight: a method after a dot is a call, a digit inside a name is not a number', has('a.toString(16)', 'ts', 'f', 'toString') && !has('vec2 x2', 'glsl', 'n', '2'))
+  assert('highlight: a regex after an if / while condition, division after a grouped expression',
+    has(String.raw`if (ready) /x\d/.test(v)`, 'ts', 's', String.raw`/x\d/`) && has('while (f(a)) /y/.exec(s)', 'ts', 's', '/y/') && !kinds('g(a) / 2 / 3', 'ts').some(k => k.startsWith('s:')))
+  assert('highlight: a JSON key with any whitespace before its colon; HTTP body lines stay plain',
+    has('{ "a"          : 1 }', 'json', 't', '"a"') && !has(HTTP_MSG, 'http', 'k', 'status') && has(HTTP_MSG, 'http', 'k', 'Content-Type'))
   assert('highlight: JSON keys, GLSL types, shell comments, HTTP header names',
     has('{ "a": 1 }', 'json', 't', '"a"') && has('vec3 c = vec3(1.)', 'glsl', 'k', 'vec3') && has('pnpm dev # run', 'sh', 'c', '# run') && has('Content-Type: text/html', 'http', 'k', 'Content-Type'))
 }
