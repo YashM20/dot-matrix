@@ -95,7 +95,8 @@ function knitTileRow(n: NormalRaster, A: Float32Array, D: Float32Array, S: Float
     V[i] = t === bandOf(b) ? b : BAND_MID[t]; Tn[i] = t
   }
 }
-const knitFrame = once(() => ({ values: createRaster(TILE, 'card', [KNIT.x0, 14, KNIT.x0 + KG.cols - 1, KNIT.bottom]), tones: new Uint8Array(COLS * TILE.rows) }))
+/** The frame: the swatch and the needle over it (columns 3 … 140: the needle reaches past the swatch on both sides). */
+const knitFrame = once(() => ({ values: createRaster(TILE, 'card', [3, 14, 140, KNIT.bottom]), tones: new Uint8Array(COLS * TILE.rows) }))
 /** The steel needle across the top: a 3-cell cylinder (Lambert across it) with its brushed streak, baked per light. */
 function needleRow(V: Float32Array, Tn: Uint8Array, L: Light, r: number): void {
   const off = (r - KNIT.needle) / 1.6
