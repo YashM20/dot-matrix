@@ -48,6 +48,17 @@
   - Round-3 rows go in as "upcoming".
 - Both mark loose ends with `TODO(later):`. Find them with `rg "TODO\(later\)"` when improving their work.
 
+**Tixy gallery plan (2026-11-01):** `docs/TIXY-PLAN.md` covers the 52 tixy.land gallery programs, to become a lazy `/tixy/` board with per-card credits. Issues:
+- #51: tracking;
+- #52: **T1, permission, blocks every port.** The tixy repo has no license; the owner sends the drafted request;
+- #53: T2, the `tixy()` adapter and `credit` metadata. It can start now, using original test programs only;
+- #54: T3, the board and ABOUT › CREDITS;
+- #55 to #58: batches A to D (20 / 16 / 8 / 7 programs);
+- #59: T8, webcam (needs a decision);
+- #60: T9, remix in CODE (later).
+
+Until #52 is cleared, put no tixy expressions in the repo or in issues; titles and credits only, with handles in backticks so GitHub doesn't @-notify anyone.
+
 **GitHub issues (created 2026-10-31):** #12–#49 track every planned and open item, labelled by area, phase, status and priority. The repo is public, so keep issue text free of local paths and internal tooling.
 - **In progress:** #13 card size, #14 E6, #15 Q3, #16 M3, #17 X1.
 - **Owner decisions:** #12, a checklist.
