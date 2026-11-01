@@ -48,6 +48,22 @@
   - Round-3 rows go in as "upcoming".
 - Both mark loose ends with `TODO(later):`. Find them with `rg "TODO\(later\)"` when improving their work.
 
+**IQ techniques plan (2026-11-01):** `docs/IQ-PLAN.md`. Issues:
+- #61: tracking issue.
+- High priority:
+  - #62, IQ1: 2D SDF library.
+  - #63, IQ2: SDF operators.
+  - #64, IQ3: shaping functions.
+  - #65, IQ4: filtered fields for coarse grids.
+- Medium priority:
+  - #66, IQ5: noise.
+  - #67, IQ6: oldschool board.
+  - #68, IQ7: fractals.
+- Low priority: #69, IQ8, 3D SDF scenes.
+- #70: ideation, the other 104 articles.
+
+Licence: code snippets are MIT (the articles index says so); his shader art is protected, so we port techniques only and credit each function. IQ3, IQ1 and IQ2 can start any time; nothing in them is blocked.
+
 **Tixy gallery plan (2026-11-01):** `docs/TIXY-PLAN.md` covers the 52 tixy.land gallery programs, to become a lazy `/tixy/` board with per-card credits. Issues:
 - #51: tracking;
 - #52: **T1, permission, blocks every port.** The tixy repo has no license; the owner sends the drafted request;
