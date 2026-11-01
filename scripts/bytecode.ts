@@ -84,10 +84,7 @@ export function bytecodeChecks(assert: Assert, opts: { table?: boolean } = {}) {
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
-  let failures = 0
-  bytecodeChecks((name, cond, detail = '') => {
-    if (cond) console.log(`✓ ${name}${detail ? ` — ${detail}` : ''}`)
-    else { console.error(`✗ ${name}${detail ? ` — ${detail}` : ''}`); failures++ }
-  }, { table: true })
-  if (failures) { console.error(`\n${failures} bytecode check(s) failed`); process.exit(1) }
+  const { assert, done } = (await import('./lib/check')).checker('bytecode')
+  bytecodeChecks(assert, { table: true })
+  done()
 }

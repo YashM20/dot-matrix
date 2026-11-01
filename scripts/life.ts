@@ -537,8 +537,8 @@ const self = process.argv[1]?.replace(/\\/g, '/')
 if (self && import.meta.url.endsWith(self.split('/').slice(-2).join('/'))) {
   if (process.argv.includes('--snapshot')) console.log(JSON.stringify(await lifeSnapshot()))
   else {
-    let failures = 0
-    await lifeChecks((name, cond, detail = '') => { if (!cond) failures++; console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`) })
-    if (failures) process.exit(1)
+    const { assert, done } = (await import('./lib/check')).checker('life')
+    await lifeChecks(assert)
+    done()
   }
 }

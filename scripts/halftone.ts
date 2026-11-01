@@ -140,7 +140,7 @@ export function cameraFrameMs(): [number, number, number] {
 
 if (process.argv.includes('--timing')) console.log(cameraFrameMs().join(' '))
 else if (process.argv[1]?.replace(/\\/g, '/').endsWith('scripts/halftone.ts')) {
-  let failed = 0
-  halftoneChecks((name, cond, detail = '') => { console[cond ? 'log' : 'error'](`${cond ? '✓' : '✗'} ${name}${detail ? ` — ${detail}` : ''}`); if (!cond) failed++ })
-  if (failed) process.exit(1)
+  const { assert, done } = (await import('./lib/check')).checker('halftone')
+  halftoneChecks(assert)
+  done()
 }

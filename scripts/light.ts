@@ -349,8 +349,7 @@ export async function lightChecks(assert: Assert): Promise<void> {
 
 const self = process.argv[1]?.replace(/\\/g, '/')
 if (self && import.meta.url.endsWith(self.split('/').slice(-2).join('/'))) {
-  let failures = 0, n = 0
-  await lightChecks((name, cond, detail = '') => { n++; if (!cond) failures++; console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`) })
-  console.log(`${n - failures}/${n} light checks passed`)
-  if (failures) process.exit(1)
+  const { assert, done } = (await import('./lib/check')).checker('light')
+  await lightChecks(assert)
+  done('light checks passed')
 }

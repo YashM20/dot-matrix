@@ -89,7 +89,7 @@ export function gameChecks(assert: Assert, long = false): void {
 }
 
 if (process.argv[1]?.replace(/\\/g, '/').endsWith('scripts/game.ts')) {
-  let failures = 0
-  gameChecks((name, ok, detail = '') => { console.log(`${ok ? '✓' : '✗'} ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failures++ }, process.argv.includes('--long'))
-  if (failures) process.exit(1)
+  const { assert, done } = (await import('./lib/check')).checker('game')
+  gameChecks(assert, process.argv.includes('--long'))
+  done()
 }

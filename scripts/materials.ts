@@ -1,7 +1,7 @@
 /**
  * Checks for the physical materials (`src/engine/matter`, docs/living-matter/M-materials.md) and the `materials` board.
  * Called from verify.ts (`materialsChecks(assert)`); also runnable alone:
- *   npx tsx scripts/materials.ts [--only <group>] [--bench]
+ *   npx tsx scripts/materials.ts [--only <group>] [--bench] [--quick]
  * Groups:
  *  - relief:   heightFromField (cache, scale, masks), ambient occlusion (blur + horizon), rake, cardMask, the barrel rule
  *  - aniso:    Kajiya–Kay peak / zero, the spun bowtie, range, tangentSDF, one-pass timing
@@ -982,7 +982,7 @@ const lightDirAt = (az: number): Vec3 => lightDir(az, 40 * DEG)
 const self = process.argv[1]?.replace(/\\/g, '/')
 if (self && import.meta.url.endsWith(self.split('/').slice(-2).join('/'))) {
   const args = process.argv.slice(2), only = args.includes('--only') ? args[args.indexOf('--only') + 1] : undefined
-  let failures = 0
-  await materialsChecks((name, cond, detail = '') => { if (!cond) failures++; console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`) }, { only, bench: args.includes('--bench'), quick: args.includes('--quick') })
-  if (failures) process.exit(1)
+  const { assert, done } = (await import('./lib/check')).checker('materials')
+  await materialsChecks(assert, { only, bench: args.includes('--bench'), quick: args.includes('--quick') })
+  done()
 }

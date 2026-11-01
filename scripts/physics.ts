@@ -177,7 +177,7 @@ export function physicsChecks(assert: Assert): void {
 
 const self = process.argv[1]?.replace(/\\/g, '/')
 if (self && import.meta.url.endsWith(self.split('/').slice(-2).join('/'))) {
-  let failures = 0
-  physicsChecks((name, cond, detail = '') => { if (!cond) failures++; console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${detail ? `  (${detail})` : ''}`) })
-  if (failures) process.exit(1)
+  const { assert, done } = (await import('./lib/check')).checker('physics')
+  physicsChecks(assert)
+  done()
 }

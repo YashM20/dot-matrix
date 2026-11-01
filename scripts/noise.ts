@@ -503,11 +503,8 @@ const self = process.argv[1]?.replace(/\\/g, '/')
 if (self && import.meta.url.endsWith(self.split('/').slice(-2).join('/'))) {
   if (process.argv.includes('--snapshot')) console.log(JSON.stringify(snapshot()))
   else {
-    let failures = 0
-    noiseChecks((name, cond, detail = '') => {
-      if (cond) console.log(`✓ ${name}${detail ? ` — ${detail}` : ''}`)
-      else { console.error(`✗ ${name}${detail ? ` — ${detail}` : ''}`); failures++ }
-    }, { update: process.argv.includes('--update') })
-    if (failures) { console.error(`\n${failures} noise check(s) failed`); process.exit(1) }
+    const { assert, done } = (await import('./lib/check')).checker('noise')
+    noiseChecks(assert, { update: process.argv.includes('--update') })
+    done()
   }
 }
