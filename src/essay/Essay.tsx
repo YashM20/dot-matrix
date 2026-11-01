@@ -37,14 +37,15 @@ const TOC: [string, string][] = [
   ['halftone', 'Halftone and time'], ['ir', 'Field IR'], ['surfaces', 'Five surfaces'], ['agents', 'Agents'], ['credits', 'Prior art'],
 ]
 
-export function Essay() {
+/**
+ * The essay, as a blog post: `src/blog/Blog.tsx` renders it inside the shared post shell (`<main>`, the site nav
+ * it passes in, the "More posts" list and the footer), the same shell as the markdown posts.
+ */
+export function Essay({ nav }: { nav: ReactNode }) {
   return (
-    <main className="essay">
+    <>
       <header className="hero">
-        <nav className="site-nav" aria-label="Site">
-          <span className="kicker"><i aria-hidden="true" /> DOT/480</span>
-          <span><a href="./">EXPLORE</a><a href="./?make=code">MAKE</a><a href="./?about">ABOUT</a></span>
-        </nav>
+        {nav}
         <DotTitle text="Ditherpunk for UI" level={1} max={10} smooth />
         <p className="lede">
           Notes from building a dot-matrix renderer for interfaces. It started as a hobby and kept growing. A field goes in and is sampled onto a grid.
@@ -285,12 +286,11 @@ export function Essay() {
           <li>Gabriel Lamé's superellipse (1818), and every designer who argued about squircles since.</li>
         </ul>
         <p className="outro">
-          That's the tour. The rest of the site has twenty-odd <a href="./">boards</a> of cards (try <a href="./departures/">Departures</a>,
-          {' '}<a href="./levels/">Levels</a> and <a href="./lock/">Lock</a>), a <a href="./?make=code">code</a> mode where you write your own fields and share them as links,
-          and a <a href="./?about">log</a> of what changed.
+          That's the tour. The rest of the site has twenty-odd <a href="/">boards</a> of cards (try <a href="/departures/">Departures</a>,
+          {' '}<a href="/levels/">Levels</a> and <a href="/lock/">Lock</a>), a <a href="/?make=code">code</a> mode where you write your own fields and share them as links,
+          and a <a href="/?about">log</a> of what changed. To build an engine like this yourself, the other <a href="/blog/">blog</a> posts walk through it with code you can copy.
         </p>
       </section>
-      <footer className="essay-foot">DOT/480 · FIELD → GRID SAMPLER → RENDERER · <span>NO GRADIENTS WERE HARMED</span><span><a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></footer>
-    </main>
+    </>
   )
 }

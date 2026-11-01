@@ -473,6 +473,7 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
   }
 
   .topbar .view-tabs,
+  .topbar-blog,
   .topbar .skin-switch,
   .topbar .theme-switch {
     display: none
@@ -937,6 +938,11 @@ html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
   .tools-grid .tool-share {
     grid-column: 1 / -1
   }
+}
+
+/* BLOG (on phones the header has no room for it): its own full row at the end of the tools */
+.tools-grid .tool-blog {
+  grid-column: 1 / -1
 }
 
 /* touch: press feedback instead of hover, and no hover colour left stuck after a tap */

@@ -1,5 +1,6 @@
 import { execFileSync } from 'node:child_process'
-import { existsSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
@@ -39,9 +40,55 @@ function mainThreadOnly(stubs: Record<string, string>): Plugin {
   }
 }
 
-// extra HTML entries ship as their own pages when present (the launch essay, docs/WEB-PLAN.md §1)
+/**
+ * The blog's build-time facts as `virtual:blog-meta` (src/blog/virtual.d.ts): prose words per post (reading time)
+ * and which hero images exist in public/og/blog/ with their alt text. The posts' text stays out of the index chunk.
+ */
+function blogMeta(): Plugin {
+  const ID = 'virtual:blog-meta', RID = '\0' + ID, DOCS = 'docs/blog', OG = 'public/og/blog', ESSAY = 'src/essay/Essay.tsx', ESSAY_SLUG = 'dot-matrix-essay'
+  const count = (s: string) => s.match(/[A-Za-z0-9][\w'’.-]*/g)?.length ?? 0
+  return {
+    name: 'blog-meta',
+    resolveId: id => (id === ID ? RID : null),
+    load(id) {
+      if (id !== RID) return null
+      const words: Record<string, number> = {}, heroes: Record<string, string> = {}
+      for (const f of existsSync(DOCS) ? readdirSync(DOCS) : []) {
+        if (!f.endsWith('.md') || f === 'README.md') continue
+        this.addWatchFile(join(DOCS, f))
+        words[f.slice(0, -3)] = count(readFileSync(join(DOCS, f), 'utf8').replace(/```[\s\S]*?```/g, '').replace(/<!--[\s\S]*?-->/g, ''))
+      }
+      // the essay's visible text: its JSX after the component starts, tags and `{…}` expressions removed
+      const tsx = readFileSync(ESSAY, 'utf8')
+      words[ESSAY_SLUG] = count(tsx.slice(tsx.indexOf('export function Essay')).replace(/<[^>]*>/g, ' ').replace(/\{[^{}]*\}/g, ' '))
+      const alt: Record<string, unknown> = existsSync(join(OG, 'alt.json')) ? JSON.parse(readFileSync(join(OG, 'alt.json'), 'utf8')) : {}
+      for (const f of existsSync(OG) ? readdirSync(OG) : []) {
+        const slug = /^(.+)-hero\.webp$/.exec(f)?.[1]
+        // alt.json is keyed by slug, `<slug>-hero` or the file name; a value is the text or `{ hero: text }`
+        const a: unknown = slug && (alt[slug] ?? alt[`${slug}-hero`] ?? alt[f])
+        if (slug) heroes[slug] = typeof a === 'string' ? a : typeof (a as { hero?: unknown })?.hero === 'string' ? (a as { hero: string }).hero : ''
+      }
+      return `export default ${JSON.stringify({ words, heroes })}`
+    },
+  }
+}
+
+/**
+ * Dev and preview: the blog's paths (`/blog/`, `/blog/<slug>/`) and the essay's old ones (`/essay`, `/essay/`,
+ * `/essay.html`) serve blog.html, as vercel.json does in production (there the essay's old paths redirect).
+ */
+function blogRoutes(): Plugin {
+  const rewrite = (req: { url?: string }, _res: unknown, next: () => void) => {
+    const [path, query] = (req.url ?? '').split(/\?(.*)/s)
+    if (/^\/blog(\/[^.]*)?$/.test(path) || /^\/essay(\/|\.html)?$/.test(path)) req.url = `/blog.html${query ? `?${query}` : ''}`
+    next()
+  }
+  return { name: 'blog-routes', configureServer: s => { s.middlewares.use(rewrite) }, configurePreviewServer: s => { s.middlewares.use(rewrite) } }
+}
+
+// extra HTML entries ship as their own pages when present (the blog, with the essay as a post: docs/WEB-PLAN.md §1)
 // privacy.html + terms.html: static legal pages, no JS (vercel.json rewrites /privacy and /terms to them)
-const pages = ['essay.html', 'privacy.html', 'terms.html'].filter(f => existsSync(f))
+const pages = ['blog.html', 'privacy.html', 'terms.html'].filter(f => existsSync(f))
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -49,6 +96,8 @@ export default defineConfig({
     tailwindcss(),
     react(),
     babel({ presets: [reactCompilerPreset()] }),
+    blogMeta(),
+    blogRoutes(),
     sitePostbuild(),
   ],
   // agent worktrees live under .claude/ — don't let their edits reload this checkout's dev server

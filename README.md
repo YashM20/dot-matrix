@@ -22,7 +22,7 @@ Every visual is `Layer[]` (a `Field(u,v) → [0,1]` plus a colour tone) → grid
   - **⌘K** opens a palette and **`** a dot shell;
   - the **DISPLAY ▾** menu re-renders everything as CRT, VFD, LED, e-ink, flip-disc or Nixie;
   - **THEME** picks light, dark or system and one of 7 accents, or any hue on a slider (the site generates a theme that stays legible); text is ≥ 12 px and ≥ 4.5:1 in every theme, and stronger when the OS asks for more contrast.
-- **Essay:** "Ditherpunk for UI" at `/essay.html`, a hands-on tour of how the dots are made.
+- **Blog:** `/blog/`. The essay "Ditherpunk for UI" (`/blog/dot-matrix-essay/`, a hands-on tour of how the dots are made) and three tutorials with live cards and code. Sources: `src/essay/`, `docs/blog/`, `src/blog/`.
 
 ## Layout of the repo
 | Path | What |

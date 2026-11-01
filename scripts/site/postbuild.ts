@@ -11,6 +11,10 @@
  *    (`dist/widget/<uid>/`, `dist/<uid>/`), all with `rel=canonical` → `/widget/<slug>/`, the widget's OG tags,
  *    `<meta name="dot480:widget">` (uid, slug, board: the app loads only that board's chunk) and schema.org
  *    JSON-LD. `dist/widgets.json` is the full derived index (`scripts/widgets/meta.ts`).
+ * 4. Blog pages (`src/blog/posts.ts`): `dist/blog/index.html` and `dist/blog/<slug>/index.html`, copies of
+ *    `dist/blog.html` with the post's title, description, canonical, OG/Twitter tags (`og:type` article) and
+ *    schema.org JSON-LD (BlogPosting; CollectionPage for the index). The social image is
+ *    `public/og/blog/<slug>-social.png` once it exists, else `/og/default.png`.
  *
  * Widget OG images are cached in `node_modules/.cache/dot480-og` (or `OG_CACHE`), keyed by the OG renderer's source and
  * the card's golden hashes: a cold run renders all of them (~2 min), a warm one copies.
@@ -26,6 +30,7 @@ import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from
 import { join } from 'node:path'
 import { ogImage } from '../og'
 import { boards } from '../../src/widgets'
+import { BLOG, heroImage, POSTS, postPath, socialImage } from '../../src/blog/posts'
 import { metaTags, pageMeta, widgetPageMeta, widgetTitle, type PageMeta } from '../../src/site/meta'
 import type { WidgetMeta } from '../../src/widgets/meta'
 import { widgetIndex } from '../widgets/meta'
@@ -70,10 +75,38 @@ function heroOf(id: string): string {
 
 const page = (dir: string, html: string) => { mkdirSync(join(DIST, dir), { recursive: true }); writeFileSync(join(DIST, dir, 'index.html'), html) }
 
+/** schema.org JSON-LD as a data block (not script: CSP-safe); `<` escaped so text can never close the element. */
+const jsonLd = (o: object) => `<script type="application/ld+json">${JSON.stringify(o).replace(/</g, '\\u003c')}</script>`
+
+/** The blog's crawler pages (step 4): every post and the index, from `dist/blog.html`. */
+export function blogPages() {
+  const file = join(DIST, 'blog.html')
+  if (!existsSync(file)) return
+  const html = readFileSync(file, 'utf8'), has = (path: string) => existsSync(join('public', path))
+  const social = (slug: string) => (has(socialImage(slug)) ? socialImage(slug) : '/og/default.png')
+  const author = { '@type': 'Organization', name: 'Dot/480', url: `${origin}/` }
+  const index: PageMeta = { title: BLOG.title, description: BLOG.dek, path: postPath(), image: social(BLOG.slug) }
+  const list = withMeta(html, index, [jsonLd({
+    '@context': 'https://schema.org', '@type': 'CollectionPage', name: BLOG.title, description: BLOG.dek, url: origin + index.path, image: origin + index.image,
+    hasPart: POSTS.map(p => ({ '@type': 'BlogPosting', headline: p.title, url: origin + postPath(p.slug), datePublished: p.date })),
+  })])
+  writeFileSync(file, list); page('blog', list)
+  for (const p of POSTS) {
+    const m: PageMeta = { title: `${p.title} · Dot/480 blog`, description: p.dek, path: postPath(p.slug), image: social(p.slug) }
+    const ld = {
+      '@context': 'https://schema.org', '@type': 'BlogPosting', headline: p.title, description: p.dek, datePublished: p.date, author, publisher: author,
+      image: [origin + m.image, ...(has(heroImage(p.slug)) ? [origin + heroImage(p.slug)] : [])], url: origin + m.path, mainEntityOfPage: origin + m.path,
+    }
+    page(join('blog', p.slug), withMeta(html, m, [`<meta property="article:published_time" content="${p.date}" />`, jsonLd(ld)]).replace('property="og:type" content="website"', 'property="og:type" content="article"'))
+  }
+  console.log(`site: blog index + ${POSTS.length} post pages`)
+}
+
 export function postbuild({ og = true } = {}) {
   const index = readFileSync(join(DIST, 'index.html'), 'utf8')
   writeFileSync(join(DIST, 'index.html'), withMeta(index))
   for (const b of boards) page(b.id, withMeta(index, b.id))
+  blogPages()
   console.log(`site: ${boards.length} board pages${origin ? ` (${origin})` : ' (relative URLs: set SITE_URL for absolute og:image)'}`)
   const t0 = performance.now(), widgets = widgetIndex()
   for (const w of widgets) {

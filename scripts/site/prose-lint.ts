@@ -5,7 +5,7 @@
  *
  *   npx tsx scripts/site/prose-lint.ts                     → the default set: the essay's JSX text (src/essay/Essay.tsx),
  *                                                            the visitor rows of src/changelog.ts, the legal pages
- *                                                            (privacy.html, terms.html) and docs/guides/*.md (if any)
+ *                                                            (privacy.html, terms.html) and docs/blog/*.md (if any)
  *   npx tsx scripts/site/prose-lint.ts src/essay/Essay.tsx → only the files given (.tsx JSX text, .ts string fields
  *                                                            text/summary/title, .html body blocks, .md paragraphs)
  *   npx tsx scripts/site/prose-lint.ts --warn-only         → print everything, always exit 0
@@ -251,10 +251,10 @@ function extract(path: string): Block[] {
 const args = process.argv.slice(2)
 const warnOnly = args.includes('--warn-only')
 const given = args.filter(a => !a.startsWith('--'))
-const guides = join(ROOT, 'docs/guides')
+const blog = join(ROOT, 'docs/blog')
 const files = given.length ? given.map(f => resolve(f)) : [
   'src/essay/Essay.tsx', 'src/changelog.ts', 'privacy.html', 'terms.html',
-  ...(existsSync(guides) ? readdirSync(guides).filter(f => f.endsWith('.md')).map(f => `docs/guides/${f}`) : []),
+  ...(existsSync(blog) ? readdirSync(blog).filter(f => f.endsWith('.md')).map(f => `docs/blog/${f}`) : []),
 ].map(f => join(ROOT, f))
 
 interface Finding { file: string; line: number; rule: string; severity: Severity; excerpt: string }

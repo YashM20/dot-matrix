@@ -71,9 +71,26 @@ body {
   justify-content: flex-start
 }
 
-/* brand left; the view tabs centred in the space before the right end (DISPLAY, LIVE, the tool dock) */
+/* brand left; the view tabs and BLOG centred in the space before the right end (DISPLAY, LIVE, the tool dock) */
 .topbar .view-tabs {
-  margin-inline: auto
+  margin-inline: auto 0
+}
+
+/* BLOG: a link to its own page, set like the view tabs beside it */
+.topbar-blog {
+  margin-inline-end: auto;
+  color: var(--mute);
+  letter-spacing: .13em;
+  text-decoration: none
+}
+
+.topbar-blog:hover,
+.topbar-blog:focus-visible {
+  color: var(--label)
+}
+
+.topbar-blog:active {
+  color: var(--value)
 }
 
 /* the tool dock's slot (the command layer portals the dock in); phones fold the dock into TOOLS */

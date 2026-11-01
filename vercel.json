@@ -3,7 +3,14 @@
   "framework": "vite",
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
+  "redirects": [
+    { "source": "/essay", "destination": "/blog/dot-matrix-essay/", "permanent": true },
+    { "source": "/essay/", "destination": "/blog/dot-matrix-essay/", "permanent": true },
+    { "source": "/essay.html", "destination": "/blog/dot-matrix-essay/", "permanent": true }
+  ],
   "rewrites": [
+    { "source": "/blog", "destination": "/blog/index.html" },
+    { "source": "/blog/:path*", "destination": "/blog.html" },
     { "source": "/privacy", "destination": "/privacy.html" },
     { "source": "/privacy/", "destination": "/privacy.html" },
     { "source": "/terms", "destination": "/terms.html" },

@@ -90,7 +90,10 @@ const SHOTS: Shot[] = [
   { name: 'about', path: '?about', ready: STATIC('.about-intro'), full: true },
   { name: 'make', path: '?make=tune', ready: EDITOR, editor: true },
   { name: 'widget-timer', path: 'widget/timer/', ready: `!document.querySelector('.wp[aria-busy], .view-loading') && !!document.querySelector('.wp canvas, .wp svg, [data-card-id] canvas, [data-card-id] svg')`, full: true },
-  { name: 'essay', path: 'essay.html', ready: `${STATIC('.hero .dot-title')} && !!document.querySelector('.hero canvas, .hero .dot-svg')`, full: true },
+  // the blog (blog.html; vite.config.ts serves it for /blog/ paths): the index, the essay as a post, a markdown post
+  { name: 'blog', path: 'blog/', ready: `${STATIC('.post-list .post-tile')} && !!document.querySelector('.hero canvas, .hero .dot-svg')`, full: true },
+  { name: 'essay', path: 'blog/dot-matrix-essay/', ready: `${STATIC('.hero .dot-title')} && !!document.querySelector('.hero canvas, .hero .dot-svg')`, full: true },
+  { name: 'post', path: 'blog/build-your-own-dot-engine/', ready: `${STATIC('.post .sec .dot-title')} && !!document.querySelector('.hero canvas, .hero .dot-svg')`, full: true },
   // the SPA's /privacy and /terms redirect to these without the query; Vercel rewrites to the same files
   { name: 'privacy', path: 'privacy.html', ready: STATIC('main.legal'), full: true },
   { name: 'terms', path: 'terms.html', ready: STATIC('main.legal'), full: true },
