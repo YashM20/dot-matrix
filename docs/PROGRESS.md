@@ -32,7 +32,7 @@
 | `ab02542b616c4c2e1` | **E6 phone polish**: long-press menu, snap cue, sheet detent memory, landscape side sheet, `visualViewport`, `navigator.share` | `docs/EDITOR-PLAN.md` §10 E6 | `src/components/editor/` | 4383/4384 |
 
 **Extra agents (2026-10-31, at the owner's request):**
-- `ab63b9e612f81370b`: **card size.** Restore 3 cards per row at 1440 as the default; the T3 grid in `1636241` made it 5. Add a CARD SIZE option (large / medium / compact) that persists and is set before first paint. Port 4393.
+- `ab63b9e612f81370b`: **card size, DONE (e2df574, built on main).** Opened as its own **PR #50** (`feat/card-size` → main; closes #13). Merge `feat/card-size` into `feat/round3` after the full suite. The original brief: Restore 3 cards per row at 1440 as the default; the T3 grid in `1636241` made it 5. Add a CARD SIZE option (large / medium / compact) that persists and is set before first paint. Port 4393.
 - `a3d94ebb8cce51597`: **GitHub issues.** It drafts labelled issues for all planned and open work into the scratch folder `dmdocs/issues/`. The coordinator reviews them for public-repo safety, then creates them with `gh`.
 
 **Other-provider children (2026-10-31, the owner's request; started with T3 `delegate_task` in their own worktrees; weaker models, so review before merging):**
@@ -110,6 +110,11 @@ The housekeeping list (done):
   3. `git worktree remove --force`.
   4. `git branch -D worktree-agent-<id>`.
 - **Merging an agent:** `git merge --no-ff`. The usual conflicts are additive unions: `manifest.ts` (board rows plus `density`, the group lists), `index.ts`, `ids.json`, `goldens/hashes.json` (merge the JSON with a script), `catalog.ts`, `meta.ts`, `blurbs.ts`, `verify.ts` blocks, and DESIGN.md tables. Then run `npx tsc -b` and the area checks.
+- **PR cadence (owner, 2026-10-31):** PR `feat/round3` → main at regular intervals, about every 3–4 merged agents.
+  - Before opening it, run the full suite (`dmdocs/full3.sh` through heavy.mjs with `HEAVY_TIMEOUT_MIN=150`; logs in `dmdocs/full-r3/`) and make sure it is green.
+  - Merge after CI and Vercel pass, then close the matching issues.
+  - While the suite runs, merge nothing into the main checkout.
+  - The first one covers E5, Q2, M2 and L3 (suite started about 19:45 on 2026-10-31).
 - **Full suite before a PR to main:** `bash C:/Users/integrated/AppData/Local/Temp/dmdocs/full2.sh` through heavy.mjs.
   - It runs the build first, then `pnpm check`, goldens, parity, size, theme, CSS tokens and WebGL.
   - It then starts previews on 4317 and 4318 and runs the mobile, light, editor, layout, theme-boot, picker, squares, life and materials probes.
