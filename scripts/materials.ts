@@ -783,8 +783,8 @@ async function workshopChecks(assert: Assert, opts: MaterialsOptions): Promise<v
   {
     const o = H.KNIT_OPTS, out = new Float64Array(3), b = new Float64Array(3)
     let periodic = true
-    // plain stockinette columns 0 … 7 (x + 6 stays out of the purl frame at column 8)
-    for (let y = 0; y < 64; y++) for (let x = 0; x < 42; x++) { knitAt(x, y, o, out); knitAt(x, y + 4, o, b); if (out[0] !== b[0]) periodic = false; knitAt(x + 6, y, o, b); if (out[0] !== b[0]) periodic = false }
+    // plain stockinette columns 0 … 6 (x + 6 stays out of the purl frame at column 7)
+    for (let y = 0; y < 64; y++) for (let x = 0; x < 36; x++) { knitAt(x, y, o, out); knitAt(x, y + 4, o, b); if (out[0] !== b[0]) periodic = false; knitAt(x + 6, y, o, b); if (out[0] !== b[0]) periodic = false }
     // one V: the two legs meet at the foot (the middle of the stitch is a crest on its bottom row, a gap on its top row)
     knitAt(2.5, 3, o, out); const foot = out[0]; knitAt(2.5, 0, o, out); const top = out[0]
     const s0 = H.knitState(H.knitProgress(0)), red = reds(byId('mat-knit'), 0)

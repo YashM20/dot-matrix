@@ -18,6 +18,7 @@ import { heightRaster, normalRaster, stackHeights, type HeightRaster, type Norma
 import { illuminate, lambert, type Light, type Vec3 } from '../../engine/light/shade'
 import { sdfBox } from '../../engine/light/sdf'
 import { fbm2 } from '../../engine/noise/gradient'
+import { stbn } from '../../engine/halftone/mask'
 import { createRaster, rasterWindow, type Raster } from '../../engine/raster/raster'
 import type { CellBounds, Layer } from '../../engine/types'
 import { lightSource } from '../../site/light'
@@ -162,7 +163,7 @@ function denimRow(g: DenimGeo, D: Float32Array, S: Float32Array, V: Float32Array
       if (g.wear[i]) t = Math.max(FAINT, t - 1)
       else if (t === IDLE && S[i] >= .6) t = VALUE
       V[i] = t === bandOf(b) ? b : BAND_MID[t]; Tn[i] = t
-    } else if (b * .7 >= .12) { V[i] = Math.min(.29, b * .7); Tn[i] = FAINT }
+    } else if (b * .7 >= .22 && stbn(c, row) < .35) { V[i] = Math.min(.29, b * .7); Tn[i] = FAINT } // the white weft: a sparse glint between the warp floats
   }
 }
 export const matDenim: WidgetPreset = {
@@ -257,7 +258,7 @@ export const matWood: WidgetPreset = {
 // across the lower half (its own edge, a step up), saddle stitching round the outline and along the pocket mouth:
 // each stitch slanted 30° (the saddle stitch's lay), idle thread in AO pits. Debossed HAND SEWN. No red (M §10.3: the
 // awl as a live action is an owner option and ships off).
-export const LEATHER = { cx: 72, cy: 78, hw: 64, hh: 62, r: 16, pocket: 84, inset: 6, slant: 30 * Math.PI / 180 }
+export const LEATHER = { cx: 72, cy: 79, hw: 58, hh: 56, r: 16, pocket: 84, inset: 6, slant: 30 * Math.PI / 180 }
 const outerSdf = (x: number, y: number) => {
   const qx = Math.abs(x - LEATHER.cx) - (LEATHER.hw - LEATHER.r), qy = Math.abs(y - LEATHER.cy) - (LEATHER.hh - LEATHER.r)
   const ax = qx > 0 ? qx : 0, ay = qy > 0 ? qy : 0
@@ -303,7 +304,7 @@ function leatherRow(H: Float32Array, M: Float32Array, r: number): void {
     if (pocketIn >= 0) h += .9 * roundEdge(Math.min(inset, pocketIn + .5), 2.5)
     H[i] = h
     // the creases (the Worley borders) are void, away from the burnished edge: the grain reads as pebbles
-    M[i] = inset > 4 && grain < .1 && Math.abs(pocketIn) > 2 ? 0 : 1
+    M[i] = inset > 4 && grain < .18 && Math.abs(pocketIn) > 2 ? 0 : 1
   }
 }
 const leatherScratch = scratch(2)

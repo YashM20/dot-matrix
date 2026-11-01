@@ -48,12 +48,12 @@ const tapped = (inp: StepInput, box: Box) => inp.kick || inp.pointers.some(p => 
 // and scrolled: each finished row pushes the swatch down one row over 0.4 s. The working loop (red) knits across the
 // top row one stitch per 0.4 s, alternating direction like flat knitting; it rests at the row's end, where the next
 // row starts.
-export const KNIT = { x0: 6, top: 22, bottom: 129, W: 6, H: 4, N: 22, needle: 18.5, stitch: .4 }
-export const KNIT_OPTS: KnitOptions = { stitch: [KNIT.W, KNIT.H], lean: .35, lift: 1.2, purl: [8, 13], cable: { col: 9, every: 8, cross: 3 } }
+export const KNIT = { x0: 12, top: 22, bottom: 125, W: 6, H: 4, N: 20, needle: 18.5, stitch: .4 }
+export const KNIT_OPTS: KnitOptions = { stitch: [KNIT.W, KNIT.H], lean: .35, lift: 1.2, purl: [7, 12], cable: { col: 8, every: 8, cross: 3 } }
 const PERIOD_ROWS = 16, TILE_H = PERIOD_ROWS * KNIT.H, PAD = 4, KG: GridConfig = { cols: KNIT.N * KNIT.W, rows: TILE_H + 2 * PAD }
 const KNIT_DUR = KNIT.N * KNIT.stitch, CYCLE = KNIT_DUR + KNIT.stitch
 const knitTile = once(() => {
-  const r = knitRelief(KG, [0, 0, KG.cols - 1, KG.rows - 1], { ...KNIT_OPTS, y0: -PAD, floor: .5 })
+  const r = knitRelief(KG, [0, 0, KG.cols - 1, KG.rows - 1], { ...KNIT_OPTS, y0: -PAD, floor: .7 })
   return { n: normalRaster(r.height), t: r.tangent, ao: ambientOcclusion(r.height, { radius: 1.5, strength: .5 }) }
 })
 export interface KnitState { rows: number; k: number; f: number; shift: number; dir: 1 | -1; x: number }
@@ -132,6 +132,8 @@ function knitCompose(st: KnitState, lit: { values: Float32Array; tones: Uint8Arr
   }
   for (let r = 14; r < KNIT.top; r++) for (let c = 3, i = r * COLS + 3, k = (r - 14) * COLS + 3; c <= 140; c++, i++, k++) if (needle.values[k] > 0) { V[i] = needle.values[k]; Tn[i] = needle.tones[k] }
 }
+/** The key of the frame now in `knitFrame`. */
+const knitComposed = { key: '' }
 const needleLit = lru<{ values: Float32Array; tones: Uint8Array }>(8)
 export const matKnit: WidgetPreset = {
   ...tile, id: 'mat-knit', name: 'Knit',
@@ -155,7 +157,9 @@ export const matKnit: WidgetPreset = {
       for (let r = 14; r < KNIT.top; r++) needleRow(out.values, out.tones, L, r)
       return out
     })
-    knitCompose(st, lit, needle)
+    // the frame only changes when a stitch is knitted or the swatch shifts a cell: compose it then (one-entry memo)
+    const composed = `${key}|${Math.round(KNIT.H * (st.rows + st.shift))}|${st.shift === 0 ? st.k : -1}|${st.dir}|${st.rows}`
+    if (composed !== knitComposed.key) { knitCompose(st, lit, needle); knitComposed.key = composed }
     const F = knitFrame(), x = st.x, y = KNIT.needle
     // the working loop: a small loop of thread round the needle, from the stitch just knitted
     const loop: Pt[] = [[x - 2, y - 2], [x - 2.4, y + .6], [x - 1, y + 2.8], [x + 1, y + 2.8], [x + 2.4, y + .6], [x + 2, y - 2], [x, y - 3]]
@@ -174,7 +178,7 @@ export const matKnit: WidgetPreset = {
 // the light climbs to idle, the far wall falls to void, and the ink sits on the floor of the impression in value. The
 // paper stays faint / mid. A tap is one more impression: the ink lifts and is laid again from the strokes' middle
 // out over 0.4 s, and the count goes up. No red: nothing on paper is live.
-export const PAPER = { box: [10, 18, 133, 136] as Box, r: 3, lines: [['DOT', 34], ['480', 62]] as [string, number][], k: 2.5, inkAt: 1.9 }
+export const PAPER = { box: [14, 20, 129, 134] as Box, r: 3, lines: [['DOT', 34], ['480', 62]] as [string, number][], k: 2.5, inkAt: 1.9 }
 const PCX = (PAPER.box[0] + PAPER.box[2]) / 2, PCY = (PAPER.box[1] + PAPER.box[3]) / 2, PHW = (PAPER.box[2] - PAPER.box[0]) / 2, PHH = (PAPER.box[3] - PAPER.box[1]) / 2
 /** Signed distance to the deckle edge (cells, < 0 on the sheet): a rounded box, the edge torn by fBm along it. */
 export function deckle(x: number, y: number): number {
@@ -219,6 +223,8 @@ function paperShadeRow(g: PaperGeo, D: Float32Array, V: Float32Array, Tn: Uint8A
     const b = Math.min(1, Math.max(0, D[i] - .1) * gain) * A[i]
     // paper is quiet (faint / mid); only a deboss wall turned to the light climbs to idle
     // the fibres' shadowed valleys are void (the paper's tooth)
+    // the paper's tooth: a quarter of the flat sheet is void (blue noise), its shadowed fibres too
+    if (F[i] === 0 && stbn(c, r, 5) < .25) continue
     const t = b < .17 ? -1 : b < .36 ? FAINT : F[i] > 0 && b >= .66 ? IDLE : MID
     if (t < 0) continue
     V[i] = t === IDLE ? b : Math.min(t === FAINT ? .29 : .6, b); Tn[i] = t
