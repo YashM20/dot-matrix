@@ -68,7 +68,17 @@ Until #52 is cleared, put no tixy expressions in the repo or in issues; titles a
 - **Release:** 0.12 notes #48; round merge #49.
 - **When merging:** close the issue (or tick its tasks) and drop the `status: in progress` label.
 
-**Done in round 3 and merged on `feat/round3`:** L3 pond polish (merged from 3e7ecaf; L3.1–L3.8):
+**Done in round 3 and merged on `feat/round3` (2026-11-01):**
+- **E6, editor phone polish** (from b7d066e):
+  - long-press menu, snap cue, sheet detent memory, landscape side sheet, `visualViewport`, `navigator.share`;
+  - editor-browser 174/175 (one E2 flake) and 81/81 on phone + landscape; first load Δ ≈ 0;
+  - open: long press on LAYERS rows and on the empty canvas.
+- **Q3, squares** (62e0c3b, from 7dc34e1):
+  - rotation, motifs, morphs, the field pack, and 7 cards; the board goes to 3 columns;
+  - goldens: 0 changed, 7 added; first load +0.09; the squares deep link is now **151.25 kB, over the 150 backstop**;
+  - fix option, the owner's call: split `portrait` out of mirror.ts. That brings the deep link to 145.28 but adds +0.03 to first load.
+
+L3 pond polish (merged from 3e7ecaf; L3.1–L3.8):
 - **Checks:** life 120/120 and all life-browser checks pass; goldens 0 changed, 0 added; every pond card's default frames are identical to L2.
 - **Sizes:** first load −0.01; worker initial +0.07.
 - **Core edit:** `DotCanvas`/`useDotField` interaction frames now carry `ctx.reducedMotion`. This turns on M's reduced-motion branch; the physics board still ignores the flag.
