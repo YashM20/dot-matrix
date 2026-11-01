@@ -48,6 +48,18 @@
   - Round-3 rows go in as "upcoming".
 - Both mark loose ends with `TODO(later):`. Find them with `rg "TODO\(later\)"` when improving their work.
 
+**Round 3 complete on feat/round3 (2026-11-01):** all of round 3 is merged: E5, E6, Q2, Q3, M2, M3, L3, X1, the 0.12 notes (#48) and the card size from main.
+- **Fixes made at merge:**
+  - squares blurbs shortened to 120 characters or fewer;
+  - the c10 probe check skips rect-lattice cards (#74);
+  - the X-ray probe applies the squares form hook (3015/3015);
+  - the editor CSS passes the token lint.
+- **Open:**
+  - workshop cold first frames: leather 57.7 ms and ice 47.7 ms, against 30 × load. Agent `adc20c67f3e33c6af` is fixing them, performance only.
+  - known timing flakes: mirror-camera, lens GPU fill (#28) and the materials frame.
+- **Full suite:** running detached. It is pid 8624 for heavy.mjs, logs go to `dmdocs/full-r3/`, and the summary lands in `summary.txt`. Merge nothing into the main checkout until it finishes.
+- **Then:** the PR feat/round3 → main (closes #14–#17, #29, #30, #48 and #49), with release 0.13.
+
 **GitHub organisation (2026-11-01):** 8 milestones and parent epics, with children attached as native sub-issues.
 
 | Milestone | Issues |
