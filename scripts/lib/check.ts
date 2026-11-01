@@ -1,11 +1,17 @@
 /**
  * One check reporter for verify and the area scripts (#75, docs/CHECKPOINTS.md "Test tiers").
- * A timing check (named with "≤ N ms" or "budget") that misses prints a warning and doesn't fail, unless
- * DOT_TIMING=strict: functionality gates every run, frame budgets come back at a later checkpoint.
+ * A timing check that misses prints a warning and doesn't fail, unless DOT_TIMING=strict: functionality gates
+ * every run, frame budgets come back at a later checkpoint.
  */
 const env = (globalThis as { process?: { env: Record<string, string | undefined> } }).process?.env ?? {}
 export const strictTiming = env.DOT_TIMING === 'strict'
-export const isTiming = (name: string) => /≤\s*[\d.]+\s*ms|\bbudget\b/i.test(name)
+/**
+ * A wall-clock check: a `≤ N ms` limit, or a `budget` measured in time (ms, × load, fastest of N runs). A step,
+ * flicker or size budget is a correctness check and always fails. Keep any correctness condition out of a timing
+ * check's assert (give it its own), so a miss there can't pass as a timing warning.
+ */
+export const isTiming = (name: string) =>
+  /≤\s*[\d.]+\s*ms\b/.test(name) || (/\bbudget\b/i.test(name) && /\d\s*ms\b|×\s*(interleaved )?load|\bfastest\b/i.test(name))
 
 export type Assert = (name: string, cond: boolean, detail?: string) => void
 

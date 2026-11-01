@@ -377,7 +377,8 @@ function causticChecks(assert: Assert): void {
   const tm = medianLoaded(() => { again.bounds = [0, 0, 71, 71]; causticSplat(wavy, again, {}) }, 11)
   const det = createRaster(G); det.bounds = [6, 6, 65, 65]; causticSplat(bump(.04), det, { depth: 6, gain: 3, ior: 1.33 })
   // the plan estimated 0.35 ms; measured ~0.9–1.0 ms ÷ load here (20.7k tent splats + two binomial passes), so the gate is 1 ms
-  assert('materials: caustics: deterministic; ≤ 1 ms for 72² × 4 photons (× load)', same(det.data, into.data) && tm.ms <= 1 * tm.load, fmtLoaded(tm, 3))
+  assert('materials: caustics: deterministic', same(det.data, into.data))
+  assert('materials: caustics: ≤ 1 ms for 72² × 4 photons (× load)', tm.ms <= 1 * tm.load, fmtLoaded(tm, 3))
 }
 
 /** Cards with no red in their pristine run (M §4.2: the pool's pebble only appears when one is dropped). */
@@ -450,7 +451,8 @@ async function boardChecks(assert: Assert, load: number, opts: MaterialsOptions,
     // a rebake is one-shot work: the best of 3 cache misses (minutes 32–34; contention only ever adds time), each with its own load
     const H = materialsHooks, rb = atClock(() => ['32', '33', '34'].map(mm => onceLoaded(() => H.engraving('12', mm, 2026))).reduce((a, b) => (b.ms / b.load < a.ms / a.load ? b : a)))
     const first = H.engraving('12', '34', 2026); H.engraving('12', '35', 2026); const keep = H.engraving('12', '34', 2026) === first; H.engraving('12', '36', 2026); H.engraving('12', '37', 2026)
-    assert('marble: rebake on a minute change ≤ 10 ms; LRU keeps 2', within(rb, 10) && keep && H.engraving('12', '34', 2026) !== first, fmtLoaded(rb))
+    assert('marble: the engraving LRU keeps 2', keep && H.engraving('12', '34', 2026) !== first)
+    assert('marble: rebake on a minute change ≤ 10 ms', within(rb, 10), fmtLoaded(rb))
     if (opts.bench) {
       console.log('  materials --bench (ms):  card            cold    warm   hover')
       for (const r of rows) console.log(`                           ${r.id.padEnd(14)} ${r.cold.ms.toFixed(1).padStart(6)} ${r.rest.ms.toFixed(2).padStart(7)} ${r.hover.ms.toFixed(2).padStart(7)}`)

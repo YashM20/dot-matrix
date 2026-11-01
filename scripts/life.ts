@@ -268,7 +268,8 @@ export async function lifeChecks(assert: Assert): Promise<void> {
     const calls1 = patternStats.fbmCalls
     for (let k = 0; k < 10000; k++) markingAt(ko[0], (k % 97) / 97, (k % 31) / 15.5 - 1)
     // the plan's 2 ms assumed ~.23 µs per fbm2 call; a 4-octave fbm2 measures ~.65 µs here, and the bake runs once per mount
-    assert('life/koi: 6 LUT bakes ≤ 10 ms × load (once per mount); markingAt never calls fbm2 (call counter)', bake <= 10 * load && patternStats.fbmCalls === calls1 && calls1 > calls0, `${bake.toFixed(2)} ms, ${calls1 - calls0} fbm2 calls in the bakes, 0 in 10k reads`)
+    assert('life/koi: the LUT bakes call fbm2, markingAt never does (call counter)', patternStats.fbmCalls === calls1 && calls1 > calls0, `${calls1 - calls0} fbm2 calls in the bakes, ${patternStats.fbmCalls - calls1} in 10k reads`)
+    assert('life/koi: 6 LUT bakes ≤ 10 ms × load (once per mount)', bake <= 10 * load, `${bake.toFixed(2)} ms`)
   }
 
   // ── the pond world ──────────────────────────────────────────────────────────────────────────────

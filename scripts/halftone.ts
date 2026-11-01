@@ -112,8 +112,10 @@ export function halftoneChecks(assert: Assert): { flicker: Record<string, number
   // scales by the load sampled between its frames (scripts/lib/load.ts), like every other frame budget ──
   const child = spawnSync(process.execPath, ['--import', 'tsx', 'scripts/halftone.ts', '--timing'], { encoding: 'utf8' })
   const [frameMs, buildMs, load] = (child.stdout.trim().split(/\s+/).map(Number) as [number, number, number])
+  // the run itself is a correctness check (a crash must fail); only its time is a timing check
+  assert('mirror-camera timing run: the fresh process exits cleanly', child.status === 0, child.status === 0 ? '' : child.stderr.slice(0, 200))
   assert('mirror-camera live frame at 144² (STBN stream step 2 + sample) ≤ 4 ms × load (median of 40, best of 3, fresh process)', child.status === 0 && frameMs <= 4 * load,
-    child.status === 0 ? `${frameMs.toFixed(2)} ms @ ${load.toFixed(2)} (halftone ${buildMs.toFixed(2)} ms)` : child.stderr.slice(0, 200))
+    child.status === 0 ? `${frameMs.toFixed(2)} ms @ ${load.toFixed(2)} (halftone ${buildMs.toFixed(2)} ms)` : 'no timing (the run failed)')
   return { flicker, frameMs }
 }
 
