@@ -1,24 +1,24 @@
 # Dots off the screen
 
-<!-- VISUAL: kind=card · what=b4rdznv2 · notice=the timer displays across browser canvas, LED matrix, e-ink and plotter -->
+<!-- VISUAL: kind=card · what=surface-browser · notice=the timer card rendered as circular dots on a 144x144 canvas -->
 
 For the foundation of fields, samplers and dot rendering, see [build-your-own-dot-engine.md](build-your-own-dot-engine.md).
 
-Most user interfaces are bound to the glowing glass of phone screens and desktop monitors. When an engineer attempts to bring an interface card onto a custom hardware project, the software stack often collapses. Web styling assumptions, anti-aliased subpixels, and RGB color palettes do not translate cleanly to an 800x480 e-ink panel, an electromechanical flip-disc sign, or an addressable LED matrix.
+Most interfaces are made for screens. When bringing an interface card to a physical panel, web styling, anti-aliased subpixels and RGB palettes do not translate directly to an 800×480 e-ink panel, an electromechanical flip-disc sign or an addressable LED matrix.
 
-This guide explains how to drive physical output devices from a single dot field. You will learn how device profiles resample graphics to physical dimensions, how to manage hardware constraints like 1-bit tone depth and refresh latency, how blue-noise and error diffusion preserve readability on e-ink, and how to convert dots into optimized pen-plotter toolpaths.
+This guide explains how to drive physical output devices from a single dot field by following one modest first build: a small 1-bit panel. You will see how device profiles resample graphics to physical dimensions, how to manage hardware limits like 1-bit tone depth and refresh latency, how blue-noise and error diffusion preserve readability on e-ink, and how to convert dots into pen-plotter toolpaths.
 
 ## One field, many devices
 
-<!-- VISUAL: kind=card · what=pbq54zfr · notice=partial refresh updates change dots while earlier frames leave ghost marks -->
+<!-- VISUAL: kind=card · what=surface-eink · notice=the timer card on e-ink with partial refreshes and ghosting -->
 
-Hardware displays vary widely in resolution, aspect ratio, and physical pitch:
-- A round LED display might offer 25x25 circular light nodes spaced at 1.5 millimetres.
-- An e-ink reader like the 7.5-inch TRMNL panel provides an 800x480 matrix of crisp square pixels at 0.2 millimetres.
-- A bus station flip-disc sign features a 28x14 grid of magnetic plastic discs spaced at 10 millimetres.
-- A mechanical pen plotter draws ink paths across an A6 paper sheet using a 48x48 dot grid.
+Hardware displays vary in resolution, aspect ratio and physical pitch:
+- A round LED display offers 25×25 circular light nodes spaced at 1.5 mm.
+- An e-ink reader like the 7.5-inch TRMNL panel provides an 800×480 matrix of square pixels at 0.2 mm.
+- A bus station flip-disc sign features a 28×14 grid of magnetic plastic discs spaced at 10 mm.
+- A mechanical pen plotter draws ink paths across an A6 paper sheet using a 48×48 dot grid.
 
-In Dot/480, cards avoid hardcoding target pixel grids. Instead, every target hardware panel is defined as a `DeviceProfile` in `src/engine/device/profile.ts`. A profile encapsulates physical dimensions, tone depth, dot geometry, and simulated physical dynamics:
+In Dot/480, cards avoid hardcoding target pixel grids. Instead, every target hardware panel is defined as a `DeviceProfile` in `src/engine/device/profile.ts`. A profile encapsulates physical dimensions, tone depth, dot geometry and simulated physical dynamics:
 
 ```typescript
 export const DEVICES = {
@@ -32,32 +32,32 @@ export const DEVICES = {
 
 Resampling a card onto a hardware profile is handled by `toDevice()` in `src/engine/device/toDevice.ts`. The algorithm performs an area-weighted splat. Each dot from the authored card is treated as a light emitter whose luminous energy spreads across the target device cells it covers.
 
-If a card author provided curated variant layouts for specific small dimensions (like `'25x25'`), `toDevice()` selects that curated variant directly. For larger or arbitrary dimensions, it resamples the authored field into device space automatically.
+If a card author provided curated variant layouts for specific small dimensions (like `'25x25'`), `toDevice()` selects that curated variant directly. For other dimensions, it resamples the authored field into device space automatically.
 
 ## Device limits and physical dynamics
 
-<!-- VISUAL: kind=card · what=j5s95f8j · notice=continuous grey values become discrete stipples on the 25x25 LED matrix -->
+<!-- VISUAL: kind=card · what=surface-glyph · notice=the timer card sampled onto a round 25x25 LED matrix -->
 
-Physical hardware introduces physical boundaries that do not exist in a browser canvas:
+Physical hardware introduces physical boundaries:
 
-1. **Monochrome bit depth.** Many e-ink panels and flip-disc boards support only 1 bit per pixel: a dot is either completely black or completely white. There are no native greys. Monochrome panels also lack red color filters. In `toDevice()`, the single Signal Red accent (`#FF3B30`) maps to full white brightness (1.0). In a monochrome interface, the accent represents the most energetic visual element on screen.
+1. **Monochrome bit depth.** Many e-ink panels and flip-disc boards support only 1 bit per pixel: a dot is on or off. There are no native greys. Monochrome panels also lack red color filters. In `toDevice()`, the single Signal Red accent (`#FF3B30`) maps to full white brightness (1.0). In a monochrome interface, the accent represents the most energetic visual element on screen.
 
-Hardware designers must also consider cell polarity. Certain panels, like reflective LCDs or electrophoretic ink, read as black pigment on light paper. Emissive LED panels produce bright light on dark backgrounds. In `src/components/editor/devices.ts`, profiles declare whether they operate in paper mode or emissive mode, inverting output bitmaps where appropriate.
-2. **Refresh latency and ghosting.** An e-ink display cannot refresh at 60 Hz. A partial refresh takes approximately 0.32 seconds (`partialS`). A full clearing flash takes 0.9 seconds (`fullS`). To prevent dark ghosting artifacts, firmware controllers trigger a full flashing cycle every 10 partial updates (`fullEvery: 10`). Software driving e-ink panels must throttle frame delivery to 1 Hz or trigger updates only on significant state changes.
-3. **Electromechanical inertia.** Flip-disc signs update column by column with a 20-millisecond delay between columns (`columnS: 0.02`). Each physical disc is a magnetic rotor with mass. When flipped, the disc oscillates around its axis with natural frequency $\omega = 60\text{ rad/s}$ and damping ratio $\zeta = 0.32$, creating a momentary flutter before snapping flat.
-4. **Optical bloom.** Bright LEDs encased beneath diffuse plastic lenses do not stop at cell borders. A lit diode leaks roughly 14% of its light into its eight neighboring cells (`bloom: 0.14`). Firmware must account for this point spread function, avoiding adjacent high-intensity clusters that wash out legibility.
+Profiles declare whether they operate in paper mode or emissive mode in `src/components/editor/devices.ts`. Reflective e-ink and plotters use ink on paper, whereas LED matrices use light on a dark ground.
+2. **Refresh latency and ghosting.** An e-ink display cannot refresh at 60 Hz. A partial refresh takes approximately 0.32 s (`partialS`). A full clearing flash takes 0.9 s (`fullS`). To prevent ghosting artifacts, firmware controllers trigger a full flashing cycle every 10 partial updates (`fullEvery: 10`). Pixels cleared on a partial refresh retain 30% ghost ink (`ghost: 0.3`), fading by 20% each partial (`ghostDecay: 0.8`).
+3. **Electromechanical inertia.** Flip-disc signs update column by column with a 20 ms delay between columns (`columnS: 0.02`). Each physical disc is a magnetic rotor with mass. When flipped, the disc oscillates around its axis with natural frequency $\omega = 60\text{ rad/s}$ and damping ratio $\zeta = 0.32$, creating a momentary flutter before settling flat.
+4. **Optical bloom.** Bright LEDs encased beneath diffuse plastic lenses do not stop at cell borders. A lit diode leaks roughly 14% of its light into its eight neighbouring cells (`bloom: 0.14`). Firmware must account for this point spread function, avoiding adjacent high-intensity clusters that wash out legibility.
 
 ## Dithering and halftone for 1-bit panels
 
-<!-- VISUAL: kind=card · what=tgayvr46 · notice=magnetic discs flip column by column with visible mechanical delay -->
+<!-- VISUAL: kind=card · what=surface-flipdisc · notice=the timer card on a 28x14 flip-disc panel flipping column by column -->
 
-Mapping a continuous 8-bit image to a 1-bit display using a simple 50% threshold produces harsh, broken graphics. Thin lines vanish, and soft gradients become solid monochrome cliffs.
+Mapping a continuous 8-bit image to a 1-bit display using a 50% threshold produces broken graphics. Thin lines vanish, and soft gradients become solid monochrome cliffs.
 
 To retain perceived tone gradations on 1-bit devices, Dot/480 applies blue-noise ordered dithering and error diffusion, implemented in `src/engine/halftone/mask.ts`.
 
-Blue-noise dithering distributes quantization errors into high spatial frequencies. Because human vision is least sensitive to high-frequency noise, the stippled dots appear to blend into smooth grey tones when viewed from normal reading distance. The dithering lookup compares incoming linear light against a spatio-temporal blue noise texture (`stbn`). If the field value exceeds the threshold at cell `(x % 64, y % 64)`, the pixel turns on.
+Blue-noise dithering distributes quantization errors into high spatial frequencies. Because human vision is least sensitive to high-frequency noise, the stippled dots blend into smooth grey tones when viewed from normal reading distance. The dithering lookup compares incoming linear light against a spatio-temporal blue noise texture (`stbn`). If the field value exceeds the threshold at cell `(x % 64, y % 64)`, the pixel turns on.
 
-For static e-ink dashboards, Floyd-Steinberg error diffusion offers an alternative approach. As the algorithm steps across the grid row by row, the rounding error between the continuous input value (e.g. 0.72) and the quantized output (1.0) distributes to neighboring unprocessed cells:
+For static e-ink dashboards, Floyd-Steinberg error diffusion offers an alternative approach. As the algorithm steps across the grid row by row, the rounding error between the continuous input value (e.g. 0.72) and the quantized output (1.0) distributes to neighbouring unprocessed cells:
 
 $$\text{Error} = \text{Input} - \text{Quantized}$$
 $$\text{Right: } \frac{7}{16} \cdot \text{Error}, \quad \text{Down-Left: } \frac{3}{16} \cdot \text{Error}, \quad \text{Down: } \frac{5}{16} \cdot \text{Error}, \quad \text{Down-Right: } \frac{1}{16} \cdot \text{Error}$$
@@ -66,43 +66,34 @@ This ensures that total light energy is conserved across every local patch of do
 
 ## Exporting images and plotter pen plans
 
-<!-- VISUAL: kind=card · what=jfm4e97e · notice=pen loops trace concentric circles with greedy path routing between dots -->
+<!-- VISUAL: kind=card · what=surface-plotter · notice=the timer card drawn as concentric pen loops by an A6 pen plotter -->
 
 Putting dots into the physical world requires exporting files formatted for downstream hardware tools:
 
-- **Per-device PNG images.** In `src/components/editor/Review.tsx` and `src/components/editor/devices.ts`, the editor exports a 1:1 pixel PNG for every configured profile. For the TRMNL panel, it outputs an uncompressed 800x480 1-bit PNG ready for HTTP deployment over Wi-Fi.
-- **Pen plotter SVG plans.** Drawing a dot matrix with an AxiDraw or Roland pen plotter requires translating dot coordinates into vector toolpaths. In `src/engine/device/plotter.ts`, each lit pixel at tone level $k$ is converted into $k$ concentric circular pen loops.
-
-Because mechanical pen travel between dots consumes significant time, the plotter exporter applies a greedy nearest-neighbor path optimization:
-
-1. Collect all active cells that require pen strokes.
-2. Start the pen at the home coordinate `(0, 0)`.
-3. Locate the nearest unvisited dot to the pen's current position.
-4. Draw concentric circular loops for that cell.
-5. Move directly to the next nearest dot without lifting the pen further than necessary.
-
-This path routing reduces total pen-up travel time by up to 60%, protecting delicate pen tips and accelerating print jobs.
+- **Per-device PNG images.** In `src/components/editor/Review.tsx` and `src/components/editor/devices.ts`, the editor exports a PNG for every configured profile. Each image scales by integer factors (`exportScale`) to roughly 480 px on the long side (never below 1×). For the TRMNL panel, it outputs an 800×480 PNG at 1× scale.
+- **Pen plotter SVG plans.** Drawing a dot matrix with a pen plotter requires translating dot coordinates into vector toolpaths. In `src/engine/device/plotter.ts`, each lit pixel at tone level $k$ is converted into $k$ concentric circular pen loops. Pixels are visited in greedy nearest-neighbour order from the origin `(0, 0)` to minimize pen-up travel.
+- **Microcontroller bytecode compilation.** The repository provides a compilation script in `targets/esp32/send.ts`. It compiles a Field IR program into bytecode and sends it to the ESP32 sketch (`targets/esp32/sketch/main.cpp`) over HTTP (`POST /program` with hex text) or a serial port as lines (`P <hex>\n`), with data keys sent as `POST /data?key=value` or `D <key> <value>\n`.
 
 ## Direction: physical computing and low-power screens
 
-<!-- VISUAL: kind=card · what=4ar5v8y4 · notice=device telemetry status updates once per minute on low-power display -->
+<!-- VISUAL: kind=card · what=device-overview · notice=device telemetry status on a ring with active alerts -->
 
 Decoupling dot fields from browser runtimes opens opportunities across physical computing:
 
-- **Ultra-low-power ambient dashboards.** An ESP32 microcontroller paired with an 800x480 e-ink panel can operate on a rechargeable lithium battery for months. The microcontroller wakes from deep sleep once every five minutes, fetches a 48 kB 1-bit bitmap over Wi-Fi, updates the display controller, and returns to sleep.
-- **Electromechanical office signage.** A 28x14 magnetic flip-disc sign mounted in a workplace lobby can display real-time CI/CD deployment statuses, live server health meters, or transit departure schedules. The mechanical click of flipping discs alerts onlookers to status changes without distracting glowing screens.
-- **Archival plotter prints.** Digital generative fields can be rendered directly onto heavy cotton paper with archival pigment pens. The discrete dot patterns reveal mechanical pen strokes, creating physical artifacts that celebrate digital constraints.
-- **Binary serial streaming.** For real-time LED arrays running at 30 Hz, text formats like JSON add excessive packet overhead. Packing 1-bit or 4-bit dot states into raw binary byte streams allows microcontrollers to receive frames across USB-serial or SPI buses without incurring parsing latency.
+- **Low-power ambient displays.** An ESP32 microcontroller paired with an e-ink panel can update periodically from deep sleep, drawing power only during display refresh cycles.
+- **Electromechanical office signage.** A 28×14 magnetic flip-disc sign mounted in a workplace lobby can display deployment statuses, server health meters or transit schedules. The mechanical click of flipping discs alerts onlookers without glowing screens.
+- **Archival plotter prints.** Digital generative fields can be rendered directly onto heavy paper with pigment pens. The discrete dot patterns reveal mechanical pen strokes, creating physical artifacts that reflect digital constraints.
+- **Binary serial streaming.** For real-time LED arrays running at 30 Hz, packing 1-bit dot states into raw byte arrays allows microcontrollers to receive frames across USB-serial or SPI buses without text parsing overhead.
 
 ## Recreating the hardware pipeline
 
 <!-- VISUAL: kind=steps · what=device-resample-pipeline · notice=card dots resample onto device grid and map to bit depths -->
 
-The following four self-contained snippets provide the essential tools for driving external hardware devices.
+The following four self-contained TypeScript snippets provide the pipeline for driving a small 1-bit panel and generating plotter paths.
 
 ### 1. Resampling a field to a custom grid
 
-Save this as `DeviceResampler.ts`. It samples a continuous field onto any arbitrary column and row configuration.
+Save this as `DeviceResampler.ts`. It samples a continuous field onto any column and row configuration.
 
 ```typescript
 export interface Field {
@@ -138,7 +129,6 @@ export function ditherFloydSteinberg(
   width: number,
   height: number
 ): Uint8Array {
-  // Copy to mutable buffer for error accumulation
   const buffer = new Float32Array(input)
   const output = new Uint8Array(width * height)
 
@@ -167,58 +157,31 @@ export function ditherFloydSteinberg(
 }
 ```
 
-### 3. ESP32 microcontroller LED matrix receiver
+### 3. Packing 1-bit pixels into row bytes
 
-Save this as `esp32_matrix.ino`. It receives uncompressed dot bytes over UDP and pushes them to a MAX7219 or WS2812 matrix.
+Save this as `Pack1Bit.ts`. It packs 1-bit pixel arrays into byte arrays (8 pixels per byte, MSB first) for transmission to small display controllers or LED shift registers.
 
-```cpp
-#include <WiFi.h>
-#include <WiFiUdp.h>
+```typescript
+export function pack1BitRows(pixels: Uint8Array, cols: number, rows: number): Uint8Array {
+  const rowBytes = Math.ceil(cols / 8)
+  const packed = new Uint8Array(rowBytes * rows)
 
-const char* ssid = "YOUR_WIFI_SSID";
-const char* password = "YOUR_WIFI_PASSWORD";
-
-WiFiUDP udp;
-const int localPort = 4800;
-const int MATRIX_WIDTH = 25;
-const int MATRIX_HEIGHT = 25;
-const int BUFFER_SIZE = MATRIX_WIDTH * MATRIX_HEIGHT;
-
-uint8_t frameBuffer[BUFFER_SIZE];
-
-void setup() {
-  Serial.begin(115200);
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(200);
-    Serial.print(".");
-  }
-  Serial.println("\nWiFi connected.");
-  udp.begin(localPort);
-  Serial.printf("Listening on UDP port %d\n", localPort);
-}
-
-void loop() {
-  int packetSize = udp.parsePacket();
-  if (packetSize >= BUFFER_SIZE) {
-    udp.read(frameBuffer, BUFFER_SIZE);
-
-    // Push bytes to LED shift registers
-    for (int y = 0; y < MATRIX_HEIGHT; y++) {
-      for (int x = 0; x < MATRIX_WIDTH; x++) {
-        uint8_t brightness = frameBuffer[y * MATRIX_WIDTH + x];
-        // Drive physical LED pin or WS2812 strip buffer here:
-        // setPixelBrightness(x, y, brightness);
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      if (pixels[r * cols + c]) {
+        const byteIndex = r * rowBytes + (c >> 3)
+        packed[byteIndex] |= 0x80 >> (c & 7)
       }
     }
-    // updateMatrixLeds();
   }
+
+  return packed
 }
 ```
 
 ### 4. Generating SVG pen plotter paths
 
-Save this as `PlotterExport.ts`. It turns a 2-bit dot grid into concentric vector toolpaths with greedy routing.
+Save this as `PlotterExport.ts`. It turns a 2-bit dot grid into concentric vector toolpaths with greedy nearest-neighbour routing.
 
 ```typescript
 export interface Point { x: number; y: number }
@@ -239,7 +202,7 @@ export class PlotterExport {
       }
     }
 
-    // Greedy nearest-neighbor tour
+    // Greedy nearest-neighbour tour
     const visited = new Uint8Array(todo.length)
     let curX = 0
     let curY = 0
@@ -285,4 +248,10 @@ export class PlotterExport {
 }
 ```
 
-These techniques decouple your interface from browser viewports. By mastering device profiles, 1-bit dithering, and hardware serialization, you can bring the dot-matrix aesthetic to any physical surface.
+### Try this
+
+Run `resampleToDeviceGrid` with a radial gradient field on a 24×24 grid, then pass the result through `ditherFloydSteinberg`. Print the output to your terminal as ASCII dots (`.` and `#`) to observe how the error diffusion redistributes tone energy without greys.
+
+### Next experiment
+
+Pipe the packed output of `pack1BitRows` to an SSD1306 OLED controller or an attached microcontroller over USB serial at 115,200 baud.

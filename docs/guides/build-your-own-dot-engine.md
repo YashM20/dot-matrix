@@ -1,35 +1,35 @@
 # Build your own dot engine
 
-<!-- VISUAL: kind=card · what=8vw39pnx · notice=clock digits and second markers align to dot coordinates without blur -->
+<!-- VISUAL: kind=card · what=home-clock · notice=clock digits and second markers align to dot coordinates without blur -->
 
-Most user interfaces draw text with anti-aliased vectors, shade buttons with gradients, and round panels with varying corner radii. A dot matrix strips those options away. Every shape on screen is a sample of a continuous field mapped onto a fixed grid of cells. Each cell contains a dot whose size and shape depend on mathematical rules.
+Most interfaces are made for screens with anti-aliased vectors, gradients and arbitrary corner radii. A dot matrix strips those choices away. Every shape on screen is a sample of a continuous field mapped onto a fixed grid of cells. Each cell contains a dot whose size and shape follow mathematical rules.
 
-This guide explains how to build a dot-matrix engine from scratch. You will learn how continuous scalar fields become discrete dot grids, how superellipses replace arbitrary shape presets, how to place typography without resampling blur, and how to choose between SVG and Canvas renderers.
+This guide explains how to build a dot-matrix engine from scratch by following one concrete build: an animated dot clock widget. You will see how continuous scalar fields become discrete dot grids, how Gabriel Lamé superellipses replace preset shapes, how to place typography without resampling blur, and how to choose between SVG and canvas output.
 
 ## The foundation idea
 
-<!-- VISUAL: kind=card · what=ysgr68jt · notice=the audio volume columns light up as discrete dots that track instantaneous sound levels -->
+<!-- VISUAL: kind=card · what=audio-levels · notice=speaker and microphone volume meters track levels across discrete dots -->
 
-The core pipeline has three distinct stages:
+The rendering pipeline has three stages:
 
-1. **Field.** A pure mathematical function `f(u, v, t) -> number` defined over the unit square `[0, 1] x [0, 1]`. The coordinates `u` and `v` run across the horizontal and vertical span of the surface. The parameter `t` is elapsed time in seconds. The function returns a single floating-point number between 0 and 1. A circle is a distance field to a centre point. A glyph is a lookup into a font bitmap. A waveform is an offset relative to an audio buffer.
-2. **Sampler.** A routine that steps across every cell of a regular grid with `cols` columns and `rows` rows. At each cell centre, the sampler queries the field for its value. It quantizes that continuous value into one of a few discrete steps. It assigns dot diameter, opacity, and tone.
-3. **Renderer.** A drawing layer that converts the sampled array of dots into visual pixels on a screen. Sparse and static graphics use SVG elements. Dynamic interfaces with thousands of moving dots use an HTML5 2D canvas buffer.
+1. **Field.** A pure mathematical function `f(u, v, t) -> number` defined on the unit square `[0, 1] × [0, 1]`. The coordinates `u` and `v` span the surface horizontally and vertically. The parameter `t` is elapsed time in seconds. The function returns a floating-point number between 0 and 1. A circle is a distance field to a centre point. A glyph is a lookup into a font bitmap.
+2. **Sampler.** A routine that steps across every cell of a regular grid with `cols` columns and `rows` rows. At each cell centre, the sampler queries the field for its value. It quantizes that continuous value into discrete steps, setting dot diameter, opacity and tone.
+3. **Renderer.** A drawing layer that converts the sampled array of dots into screen pixels. Sparse and static cards use SVG elements. Dynamic interfaces with moving dots use an HTML5 2D canvas buffer.
 
-This separation keeps the visual representation decoupled from display resolution. A single field definition can render onto a 24x24 low-resolution hardware panel or a 144x144 high-density retina card without rewriting rendering logic.
+This separation keeps visual logic independent of display resolution. A single field definition renders onto a 24×24 hardware matrix or a 144×144 canvas card without changing field formulas.
 
 In the Dot/480 codebase, this pipeline lives in three directories:
-- `src/engine/fields/` defines basic fields including shapes, bitmaps, waveforms, and distance functions.
-- `src/engine/sampler/gridSampler.ts` implements the sampling pass, jitter offsets, and step rounding.
+- `src/engine/fields/` defines basic fields including shapes, bitmaps, waveforms and distance functions.
+- `src/engine/sampler/gridSampler.ts` implements the sampling pass, jitter offsets and step rounding.
 - `src/engine/renderer/canvasRenderer.ts` and `src/engine/renderer/svgRenderer.ts` handle output.
 
 ## Quantization and the squircle
 
 <!-- VISUAL: kind=diagram · what=squircle-exponent-curve · notice=continuous roundness knob maps 0 to a circle and 1 to a sharp rounded square -->
 
-A continuous gradient displayed on an analog screen creates smooth transitions. When mapped to a dot matrix, continuous variations can look like noisy video dithering. To give the display a physical hardware character, the sampler quantizes continuous values into distinct levels.
+A continuous gradient displayed on an analog screen creates smooth transitions. When mapped to a dot matrix, continuous variations can look like noisy dithering. To give the display a physical hardware character, the sampler quantizes continuous values into distinct levels.
 
-In `src/engine/sampler/quantize.ts`, quantization is computed with a single line of arithmetic:
+In `src/engine/sampler/quantize.ts`, quantization is computed with this arithmetic:
 
 ```typescript
 export function quantize(value: number, steps: number): number {
@@ -39,29 +39,29 @@ export function quantize(value: number, steps: number): number {
 }
 ```
 
-When `steps` equals 5, any input value between 0.0 and 1.0 collapses onto one of five discrete plateaus: 0.0, 0.25, 0.5, 0.75, or 1.0. These steps translate directly to dot radii. A field value below 0.1 produces an empty cell. A field value of 0.6 maps to 0.5, creating a medium dot. A field value of 0.9 maps to 1.0, creating a full-size dot.
+When `steps` equals 5, any input value between 0.0 and 1.0 collapses onto one of five discrete levels: 0.0, 0.25, 0.5, 0.75 or 1.0. These steps translate directly to dot radii. A field value below 0.1 produces an empty cell. A field value of 0.6 maps to 0.5, creating a medium dot. A field value of 0.9 maps to 1.0, creating a full-size dot.
 
-The shape of each dot is governed by a superellipse, also known as Gabriel Lame's curve:
+The shape of each dot is governed by a superellipse, Gabriel Lamé's curve:
 
 $$|x|^n + |y|^n = 1$$
 
-The engine avoids presets such as circle, pill, or rounded rectangle. It uses a single continuous exponent:
+The engine avoids presets such as circle, pill or rounded rectangle. It uses a single continuous exponent:
 
 $$n = 2 + 30r^2$$
 
-Here, `r` is a roundness parameter ranging from 0 to 1. When `r = 0`, the exponent `n` equals 2, producing an exact geometric circle. When `r = 0.25`, the exponent evaluates to approximately 3.875, matching the classic squircle used in modern industrial design. When `r = 1.0`, the exponent reaches 32, which visually produces a sharp square with slight corner easing.
+Here, `r` is a roundness parameter from 0 to 1. When `r = 0`, the exponent `n` equals 2, producing a geometric circle. When `r = 0.25`, the exponent evaluates to approximately 3.875, matching the squircle used in hardware industrial design. When `r = 1.0`, the exponent reaches 32, which produces a square with slight corner easing.
 
-Squaring `r` concentrates slider resolution near the circular end of the spectrum, where the human eye is most sensitive to curvature changes. The exact path calculation in `src/engine/renderer/shapePath.ts` fits four cubic bezier curves for exponents up to 8. For exponents above 8, it transitions to a rounded square whose corner radius contracts as `n` grows.
+Squaring `r` concentrates slider resolution near the circular end of the scale, where the human eye is most sensitive to curvature changes. The path calculation in `src/engine/renderer/shapePath.ts` fits four cubic bezier curves for exponents up to 8. For exponents above 8, it transitions to a rounded square whose corner radius contracts as `n` grows.
 
 ## Lattices and integer text layout
 
-<!-- VISUAL: kind=card · what=p8xka5g4 · notice=train departure rows place 5x7 bitmap characters directly onto grid cells without anti-aliasing -->
+<!-- VISUAL: kind=card · what=departures · notice=train departure rows place 5x7 bitmap characters directly onto grid cells without anti-aliasing -->
 
-If you draw a large numeral by clustering dozens of tiny dots together, the number looks like a broken mosaic. Hardware displays avoid this by changing physical pitch. Large digits on train departure boards use large physical indicators spaced further apart.
+If you draw a large numeral by clustering small dots together, the number looks like a broken mosaic. Hardware displays solve this by changing physical pitch. Large digits on train departure boards use large physical indicators spaced further apart.
 
-Dot/480 adopts this principle through lattices. In `src/engine/layout.ts`, elements can be sampled on a coarser lattice multiplier. A lattice multiplier of 2 evaluates every second cell and scales dot diameter accordingly. The element feels monolithic because each dot is larger, keeping the visual rhythm unified.
+Dot/480 adopts this principle through lattices. In `src/engine/layout.ts`, elements can be sampled on a coarser lattice multiplier. A lattice multiplier of 2 evaluates every second cell and scales dot diameter to match. The element feels monolithic because each dot is larger, keeping the visual rhythm unified.
 
-Text requires special care. Traditional vector fonts rasterized with subpixel anti-aliasing look blurry when sampled onto a coarse grid. Dot/480 uses dedicated bitmap dot fonts stored as boolean bit arrays, defined in `src/engine/fields/bitmapFont.ts`. Standard Latin characters and digits use a 5x7 cell grid.
+Text requires special care. Traditional vector fonts rasterized with subpixel anti-aliasing look blurry when sampled onto a coarse grid. Dot/480 uses dedicated bitmap dot fonts stored as boolean bit arrays, defined in `src/engine/fields/bitmapFont.ts`. Standard Latin characters and digits use a 5×7 cell grid.
 
 To keep bitmap text crisp, every character must anchor to exact integer cell coordinates. Converting floating-point field coordinates to integer cell indices is handled by `toCell`:
 
@@ -69,31 +69,31 @@ To keep bitmap text crisp, every character must anchor to exact integer cell coo
 export const toCell = (u: number, n: number) => Math.round(u * (n - 1))
 ```
 
-Layout functions like `placeCells`, `textAt`, `rectCells`, and `hRule` operate entirely in cell space. When a digit is placed at column 12 and row 8, its font pixels land directly on cell centres. No fractional interpolation occurs.
+Layout functions like `placeCells`, `textAt`, `rectCells` and `hRule` operate in cell space. When a digit is placed at column 12 and row 8, its font pixels land directly on cell centres. No fractional interpolation occurs.
 
 ## Choosing a renderer and managing performance
 
-<!-- VISUAL: kind=card · what=dykmba98 · notice=the circular countdown ring animates smoothly at sixty frames per second -->
+<!-- VISUAL: kind=card · what=timer · notice=a countdown ring of dots that animates over time as seconds run out -->
 
 Dot/480 supports two primary rendering targets in `src/engine/renderer/`:
 
-1. **SVG Renderer (`svgRenderer.ts`).** Best for static or low-frequency cards with fewer than 2,000 dots. SVG outputs semantic `<circle>` or `<path>` elements inside an `<svg>` root. The output is resolution-independent, inspectable in browser developer tools, and directly copyable as vector artwork.
-2. **Canvas Renderer (`canvasRenderer.ts`).** Required for animated cards, interactive surfaces, and grids containing more than 2,000 dots. The canvas renderer draws directly into an HTML5 2D context using `arc` or precomputed `Path2D` objects.
+1. **SVG renderer (`svgRenderer.ts`).** Best for static or low-frequency cards with fewer than 2,000 dots. SVG outputs `<circle>` or `<path>` elements inside an `<svg>` root. The output is resolution-independent, inspectable in browser developer tools, and directly copyable as vector artwork.
+2. **Canvas renderer (`canvasRenderer.ts`).** Used for animated cards, interactive surfaces and grids containing more than 2,000 dots. The canvas renderer draws into an HTML5 2D context using `arc` or precomputed `Path2D` objects.
 
-A 60 frames per second budget provides 16.6 milliseconds per frame. A 144x144 card contains 20,736 dots. Evaluating a complex field and rendering 20,736 bezier paths on every animation frame can consume the entire frame budget.
+A 60 frames per second budget provides 16.6 ms per frame. A 144×144 card contains 20,736 dots. Evaluating a complex field and rendering 20,736 bezier paths on every animation frame can consume the entire frame budget.
 
-To maintain 60 frames per second, the engine enforces three performance rules:
+To maintain frame rates, the engine uses three performance rules:
 - **Spatial bounds skipping.** Fields declare cell bounding boxes `[c0, r0, c1, r1]` using `bounded()` in `src/engine/layout.ts`. The sampler loops only over active cells and skips surrounding empty space.
 - **Path pre-compilation.** For a given dot shape and quantized radius step, `Path2D` instances are cached. The renderer calls `ctx.fill(cachedPath)` with a translation matrix instead of recomputing geometry.
 - **Dirty rect blitting.** Unchanged background cells are preserved between frames, redrawing only dots whose underlying field values have changed.
 
 ## Color and accessibility
 
-<!-- VISUAL: kind=card · what=4ar5v8y4 · notice=a single red status dot marks the active device card against cool grey dots -->
+<!-- VISUAL: kind=card · what=device-overview · notice=one red status dot marks an alert on the ring against cool grey dots -->
 
-Color design in Dot/480 follows a strict discipline described in `DESIGN.md`. There is exactly one accent color across the entire system: Signal Red (`#FF3B30`), mapped to the token `dotActive`. It is reserved for active states, live recordings, warnings, and running progress indicators.
+Color design in Dot/480 follows the rules in `DESIGN.md`. There is exactly one accent color across the entire system: Signal Red (`#FF3B30`), mapped to the token `dotActive`. It is reserved for active states, live recordings, warnings and running progress indicators.
 
-Every other dot on the board is rendered in cool neutral greys on a near-black background (`#070809`):
+Every other dot on the board uses neutral greys on a dark background (`#070809`):
 - `dotIdle` (`#8A8F98`): Full brightness for static text and inactive values.
 - `dotMid` (`#5B5F66`): Intermediate field values and quiet progress tracks.
 - `dotFaint` (`#2E3033`): Subtle grid guides and inactive borders.
@@ -104,7 +104,7 @@ For accessibility, canvas elements carry `role="img"` with an `aria-label` descr
 
 ## Direction: widgets in dots
 
-<!-- VISUAL: kind=card · what=mkf3sd15 · notice=weather temperature curve plots across dotted grid columns with high and low markers -->
+<!-- VISUAL: kind=card · what=weather · notice=a cloud icon with high and low temperature readings on the dot grid -->
 
 Once the core pipeline is operational, interface widgets are assembled by combining fields:
 
@@ -117,11 +117,11 @@ Once the core pipeline is operational, interface widgets are assembled by combin
 
 <!-- VISUAL: kind=steps · what=minimal-engine-pipeline · notice=code snippets compile from raw field equation to canvas pixels -->
 
-The following four TypeScript snippets provide a complete, self-contained dot engine that you can copy directly into a project.
+The following four TypeScript snippets provide a complete dot engine and a working dot clock widget.
 
-### 1. The 40-line canvas dot renderer
+### 1. The canvas dot renderer
 
-Save this as `DotCanvas.ts`. It initializes a canvas, samples a field, and draws circular dots.
+Save this as `DotCanvas.ts`. It initializes a canvas, samples a field, and draws circular dots. It requires an HTML5 `<canvas>` element (or a compatible 2D context mock in headless tests).
 
 ```typescript
 export interface Field {
@@ -169,27 +169,48 @@ export class DotCanvas {
 }
 ```
 
-### 2. A continuous radial field
+### 2. A clock field with dial markers and moving hands
 
-This function produces an animated pulsating disc centered on the surface:
+Save this as `clockField.ts`. It computes a dial rim, 12 hour tick marks, hour and minute hands, and an active second marker at time `t`.
 
 ```typescript
-export function pulsatingDisc(cx = 0.5, cy = 0.5, baseRadius = 0.3): Field {
-  return (u: number, v: number, t: number) => {
-    const dx = u - cx
-    const dy = v - cy
-    const dist = Math.sqrt(dx * dx + dy * dy)
-    const currentRadius = baseRadius + 0.08 * Math.sin(t * 3)
-    const edgeSoftness = 0.06
-    const delta = (currentRadius - dist) / edgeSoftness
-    return Math.max(0, Math.min(1, delta))
+import type { Field } from './DotCanvas'
+
+export function clockField(now: Date = new Date()): Field {
+  const sec = now.getSeconds() + now.getMilliseconds() / 1000
+  const min = now.getMinutes() + sec / 60
+  const hr = (now.getHours() % 12) + min / 60
+
+  const hrAngle = (hr / 12) * Math.PI * 2 - Math.PI / 2
+  const minAngle = (min / 60) * Math.PI * 2 - Math.PI / 2
+  const secAngle = (sec / 60) * Math.PI * 2 - Math.PI / 2
+
+  return (u: number, v: number, _t: number) => {
+    const dx = u - 0.5
+    const dy = v - 0.5
+    const dist = Math.hypot(dx, dy)
+    const angle = Math.atan2(dy, dx)
+
+    const rim = Math.abs(dist - 0.42) < 0.03 ? 0.3 : 0
+    const tick = Math.abs(dist - 0.38) < 0.03 && Math.cos(angle * 12) > 0.92 ? 0.6 : 0
+
+    const hrDist = Math.hypot(dx - 0.11 * Math.cos(hrAngle), dy - 0.11 * Math.sin(hrAngle))
+    const hrHand = dist < 0.22 && hrDist < 0.12 ? 0.8 : 0
+
+    const minDist = Math.hypot(dx - 0.16 * Math.cos(minAngle), dy - 0.16 * Math.sin(minAngle))
+    const minHand = dist < 0.32 && minDist < 0.17 ? 0.8 : 0
+
+    const secDist = Math.hypot(dx - 0.42 * Math.cos(secAngle), dy - 0.42 * Math.sin(secAngle))
+    const secMarker = secDist < 0.04 ? 1.0 : 0
+
+    return Math.max(rim, tick, hrHand, minHand, secMarker)
   }
 }
 ```
 
-### 3. A sampler with superellipse squircle support
+### 3. A squircle dot path generator
 
-This sampler handles superellipse paths using the `n = 2 + 30r^2` formula:
+Save this as `drawSquircleDot.ts`. It draws dots using Gabriel Lamé's curve with the formula $n = 2 + 30r^2$. It requires a 2D rendering context.
 
 ```typescript
 export function drawSquircleDot(
@@ -209,7 +230,6 @@ export function drawSquircleDot(
     return
   }
 
-  // Four cubic bezier arcs approximating a superellipse
   const handle = (Math.pow(2, -1 / n) - 0.5) / 0.375
   const k = radius * handle
 
@@ -224,37 +244,40 @@ export function drawSquircleDot(
 }
 ```
 
-### 4. A dot-matrix progress meter widget
+### 4. The complete dot clock widget
 
-This widget creates an animated progress bar with a numeric percentage display:
+Save this as `DotClockWidget.ts`. It wraps the canvas engine and clock field into an interactive component.
 
 ```typescript
-export class DotProgressMeter {
+import { DotCanvas } from './DotCanvas'
+import { clockField } from './clockField'
+
+export class DotClockWidget {
   constructor(private engine: DotCanvas) {}
 
-  makeField(progress: number, label: string): Field {
-    return (u: number, v: number, t: number) => {
-      // Progress bar occupies vertical region 0.65 to 0.85
-      if (v >= 0.65 && v <= 0.85) {
-        const barLength = 0.8
-        const left = 0.1
-        if (u < left || u > left + barLength) return 0.05
-        const normX = (u - left) / barLength
-        if (normX <= progress) return 1.0
-        return 0.15
-      }
-
-      // Background ambient wave pattern
-      const wave = 0.1 * Math.sin(u * 12 + t * 2) * Math.cos(v * 8)
-      return Math.max(0, wave)
-    }
+  renderAt(date: Date, t = 0): void {
+    const field = clockField(date)
+    this.engine.render(field, t, 5, '#FF3B30')
   }
 
-  update(progress: number, t: number): void {
-    const field = this.makeField(progress, `${Math.round(progress * 100)}%`)
-    this.engine.render(field, t, 5, '#FF3B30')
+  start(fps = 30): () => void {
+    let frameId: number
+    const tick = () => {
+      const now = new Date()
+      const t = performance.now() / 1000
+      this.renderAt(now, t)
+      frameId = requestAnimationFrame(tick)
+    }
+    frameId = requestAnimationFrame(tick)
+    return () => cancelAnimationFrame(frameId)
   }
 }
 ```
 
-You now have a complete, working dot engine pipeline. The mathematical fields supply the shapes, the sampler standardizes them across regular cells, and the renderer puts physical-feeling light onto the screen.
+### Try this
+
+Change `steps = 5` in `DotCanvas.render` to `steps = 2`. The clock dial loses its intermediate grey levels, snapping into hard 1-bit on/off dots. Next, replace `ctx.arc` with `drawSquircleDot(ctx, cx, cy, rad, 0.25)` to turn the circular dots into squircle hardware tiles.
+
+### Next experiment
+
+Add a second concentric ring outside the 12 hour marks to display a 60-second progress sweep, or place digital 5×7 hour numbers directly on the dial using `toCell`.
