@@ -16,7 +16,7 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 export const releases: Release[] = [
   {
     version: '0.12', date: '2026-10-30', title: 'Materials, pond and squares',
-    summary: 'Three new boards — materials, a living koi pond, and joined square dots — plus on-canvas editing in MAKE, big card grids with selectable sizes, and faster background card loading.',
+    summary: 'Three new boards (materials, a living koi pond, and joined square dots), plus on-canvas editing in MAKE, big card grids with selectable sizes, and faster background card loading.',
     changes: [
       { kind: 'new', text: 'Materials board: a loom weaving cloth, a metal knob, a speaker grille, a clock carved in marble and a month of terrazzo chips, all made of dots and lit by one light. With TILT on, tipping your phone moves the light.' },
       { kind: 'new', text: 'Pond board: koi swim through rippling water drawn in tiny dot tiles. Tap or click to drop food, hold to lure them; leave it alone and the pond settles back into its loop.' },
