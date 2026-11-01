@@ -27,6 +27,8 @@ One checkpoint at a time. A checkpoint is a GitHub milestone with a fixed list o
 
 **At most 3 agents at once.** The box has 2 cores and one heavy lock, and more agents only queue: round 3 saw 5–8 jobs waiting 30–60 min each.
 
+**Frame budgets wait (owner, 2026-11-01): functionality first.** `pnpm verify` reports timing checks (`≤ N ms` and `budget`) as warnings. Only `DOT_TIMING=strict` enforces them, and they come back at a later checkpoint. Workshop speed work in progress is on branch `perf/workshop-cold-frames` (#27).
+
 **Two test tiers:**
 
 | Tier | When | What |
