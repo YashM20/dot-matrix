@@ -13,7 +13,9 @@
  *    a wrong hash blocks the script and leaves the attributes unset);
  *  - T6: a stored custom hue paints without a flash too (its `<style id="theme-custom">` exists when `<body>`
  *    starts, and the page's roles are the generator's for that hue), and `prefers-contrast: more` raises the text
- *    roles to the generated AAA values.
+ *    roles to the generated AAA values;
+ *  - CARD SIZE: a stored `dot480:cards` (none, m, s, junk) is `<html data-cards>` when `<body>` starts, and the
+ *    components board at 1440 has that size's columns (3 / 4 / 5) from the grid's first layout: no reflow on reload.
  * Needs a build: `npx vite build` (or `pnpm build`), then `npx tsx scripts/site/theme-boot.ts`. Chrome: $CHROME or the usual paths.
  */
 import { spawn } from 'node:child_process'
@@ -136,6 +138,29 @@ try {
     check(`${label}: CSP served, no violation (inline boot allowed by its hash)`, !!csp?.includes("script-src 'self' 'sha256-") && Array.isArray(v) && v.length === 0, (v ?? []).join(', '))
     await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: result.identifier })
   }
+  // CARD SIZE (src/site/cards.ts): a stored size is on <html> when <body> starts, and the board grid's first layout
+  // (measured in the observer, before anything paints) already has the size's columns: a reload never reflows
+  await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'dark' }] })
+  await cdp('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
+  for (const [stored, want, cols] of [[null, 'l', 3], ['m', 'm', 4], ['s', 's', 5], ['huge', 'l', 3]] as const) {
+    const { result } = await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
+      if (location.origin !== ${JSON.stringify(base)}) return
+      try { ${stored === null ? `localStorage.removeItem('dot480:cards')` : `localStorage.setItem('dot480:cards', ${JSON.stringify(stored)})`} } catch (e) {}
+      const tracks = g => getComputedStyle(g).gridTemplateColumns.split(' ').length
+      new MutationObserver((_, o) => {
+        if (document.body && window.__cardsAtBody === undefined) window.__cardsAtBody = document.documentElement.getAttribute('data-cards')
+        const g = document.querySelector('.board-grid')
+        if (g && g.children.length && window.__firstCols === undefined) { window.__firstCols = tracks(g); o.disconnect() }
+      }).observe(document, { childList: true, subtree: true })
+    })()` })
+    await cdp('Page.navigate', { url: base + '/components/' })
+    for (let i = 0; i < 100 && !(await js(`document.readyState === 'complete' && window.__firstCols !== undefined && !!document.querySelector('.board-grid canvas, .board-grid svg')`)); i++) await sleep(100)
+    await sleep(500)
+    const got = await js(`({ body: window.__cardsAtBody, first: window.__firstCols, now: getComputedStyle(document.querySelector('.board-grid')).gridTemplateColumns.split(' ').length, row: (() => { const ys = [...document.querySelectorAll('.board-grid > .dot-card')].map(c => Math.round(c.getBoundingClientRect().top)); return ys.filter(y => y === ys[0]).length })() })`) as { body: string | null; first: number; now: number; row: number } | undefined
+    check(`card size · stored ${stored ?? 'nothing'}: <html data-cards="${want}"> when <body> starts, and /components/ at 1440 has ${cols} columns from its first layout (no reflow)`, got?.body === want && got.first === cols && got.now === cols && got.row === cols, JSON.stringify(got))
+    await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: result.identifier })
+  }
+  await cdp('Emulation.clearDeviceMetricsOverride')
   // T6: prefers-contrast: more raises the text roles (themes.css @media block) on dark_signal and light_cobalt
   for (const [scheme, accent] of [['dark', 'signal'], ['light', 'cobalt']] as const) {
     await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }, { name: 'prefers-contrast', value: 'more' }] })

@@ -20,7 +20,7 @@ import { Sheet } from '../Sheet'
 import { SkinList } from '../skins/SkinList'
 import { onTiltChange, requestTilt, setTiltOn, tiltOn, tiltState } from '../../site/light'
 import { withTheme } from '../../site/theme/share'
-import { ThemeControls } from '../theme/ThemePicker'
+import { CardSizeControl, ThemeControls } from '../theme/ThemePicker'
 
 // the panels load on first use: first-load JS stays inside the site budget
 const Inspector = lazy(() => import('../xray/Inspector').then(m => ({ default: m.Inspector })))
@@ -77,7 +77,7 @@ function TiltButton({ onClose }: { onClose: () => void }) {
 
 /**
  * Phones: the dock's tools, then THEME (the header popover's controls: scheme, the accents as 44 px swatches, the
- * share-link opt-in) and DISPLAY, as one bottom sheet opened from the tab bar's TOOLS. A tool closes the sheet; a
+ * share-link opt-in) and DISPLAY (CARD SIZE, then the skins), as one bottom sheet opened from the tab bar's TOOLS. A tool closes the sheet; a
  * theme pick keeps it open (the wipe spreads from the tapped swatch, over the sheet too), so several can be tried.
  */
 function ToolsSheet({ api, xray, frozen, onClose, onPalette, onShell }: { api: CommandApi; xray: boolean; frozen: boolean; onClose: () => void; onPalette: () => void; onShell: () => void }) {
@@ -101,6 +101,7 @@ function ToolsSheet({ api, xray, frozen, onClose, onPalette, onShell }: { api: C
     <h3 className="tools-head">THEME</h3>
     <ThemeControls />
     <h3 className="tools-head">DISPLAY</h3>
+    <CardSizeControl />
     <SkinList />
   </Sheet>
 }
