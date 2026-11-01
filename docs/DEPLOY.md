@@ -39,7 +39,7 @@ The post-build step runs from the `site-postbuild` plugin in `vite.config.ts`. `
   - `X-Content-Type-Options: nosniff`;
   - `Referrer-Policy: strict-origin-when-cross-origin`;
   - `Permissions-Policy`: camera, microphone, geolocation and motion sensors allowed for `self` (the mirror board's camera prompt still appears); payment and bluetooth off.
-- CSP, on every path except `/lab/*` (a hand-written dev page with an inline script):
+- CSP, on every path except `/lab/motion-lab.html` (a hand-written dev page with an inline script). The Lab section at `/lab/` gets it like every other page:
   - `script-src 'self'`: no inline scripts and no eval. The IR `function` backend falls back to closures under this policy.
   - `worker-src 'self' blob:`: the sample worker.
   - `style-src 'self' 'unsafe-inline'`: React style attributes.

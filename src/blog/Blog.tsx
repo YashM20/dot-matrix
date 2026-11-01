@@ -7,6 +7,7 @@
 import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from 'react'
 import meta from 'virtual:blog-meta'
 import { DotTitle } from '../essay/ui/DotTitle'
+import { SiteFoot, SiteNav } from '../essay/ui/SiteNav'
 import { cardBody } from './LiveCard'
 import { BLOG, heroImage, POSTS, postFromPath, postPath, type PostInfo } from './posts'
 
@@ -14,17 +15,7 @@ const pad = (n: number) => String(n).padStart(2, '0')
 /** Reading time at about 220 words a minute (word counts from the build, `virtual:blog-meta`). */
 const minutes = (slug: string) => Math.max(1, Math.round((meta.words[slug] ?? 0) / 220))
 
-function SiteNav({ here }: { here?: 'blog' }) {
-  return (
-    <nav className="site-nav" aria-label="Site">
-      <span className="kicker"><i aria-hidden="true" /> DOT/480</span>
-      <span><a href="/">EXPLORE</a><a href="/?make">MAKE</a><a href="/blog/" aria-current={here === 'blog' ? 'page' : undefined}>BLOG</a><a href="/?about">ABOUT</a></span>
-    </nav>
-  )
-}
-const Foot = () => (
-  <footer className="essay-foot"><span>DOT/480 · BLOG</span><span>FIELD → GRID SAMPLER → RENDERER</span><span><a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></footer>
-)
+const Foot = () => <SiteFoot name="BLOG" />
 
 /** The post's meta line: where it sits in the blog, who it is for and how long it takes. */
 function PostLine({ post }: { post: PostInfo }) {

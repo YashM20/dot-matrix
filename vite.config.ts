@@ -81,6 +81,8 @@ function blogRoutes(): Plugin {
   const rewrite = (req: { url?: string }, _res: unknown, next: () => void) => {
     const [path, query] = (req.url ?? '').split(/\?(.*)/s)
     if (/^\/blog(\/[^.]*)?$/.test(path) || /^\/essay(\/|\.html)?$/.test(path)) req.url = `/blog.html${query ? `?${query}` : ''}`
+    // the lab's page (`/lab`, `/lab/`); its files (`/lab/motion-lab.html`) are served as they are
+    else if (/^\/lab\/?$/.test(path)) req.url = `/lab.html${query ? `?${query}` : ''}`
     next()
   }
   return { name: 'blog-routes', configureServer: s => { s.middlewares.use(rewrite) }, configurePreviewServer: s => { s.middlewares.use(rewrite) } }
@@ -88,7 +90,7 @@ function blogRoutes(): Plugin {
 
 // extra HTML entries ship as their own pages when present (the blog, with the essay as a post: docs/WEB-PLAN.md §1)
 // privacy.html + terms.html: static legal pages, no JS (vercel.json rewrites /privacy and /terms to them)
-const pages = ['blog.html', 'privacy.html', 'terms.html'].filter(f => existsSync(f))
+const pages = ['blog.html', 'lab.html', 'privacy.html', 'terms.html'].filter(f => existsSync(f))
 
 // https://vite.dev/config/
 export default defineConfig({

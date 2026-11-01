@@ -46,7 +46,7 @@ function SiteFooter({ onAbout }: { onAbout: () => void }) {
   return <footer className="bottom">
     <div className="live-band">{idle && <Suspense fallback={null}><LiveBand /></Suspense>}</div>
     <div className="bottom-row"><span>DOT/480 · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span><span>FIELD → GRID SAMPLER → RENDERER</span>
-      <span><a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · <a href="/blog/">BLOG</a> · <a href="?about" onClick={e => { e.preventDefault(); onAbout() }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></div>
+      <span><a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · <a href="/lab/">LAB</a> · <a href="/blog/">BLOG</a> · <a href="?about" onClick={e => { e.preventDefault(); onAbout() }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></div>
   </footer>
 }
 // MAKE is one editor (docs/EDITOR-PLAN.md): frames on an infinite canvas, layers, a contextual inspector.
@@ -237,7 +237,8 @@ export default function App() {
         ? <button type="button" className="topbar-place" aria-haspopup="dialog" aria-label={`Board: ${title}. All boards`} onClick={() => setBoards(true)}>{title}<span aria-hidden="true"> ▾</span></button>
         : <span className="topbar-place">{title}</span>}
       <Tabs className="view-tabs" label="Views" items={VIEWS} value={view} onPick={setView} />
-      {/* the blog is its own page (blog.html): a plain link beside the views */}
+      {/* the lab and the blog are their own pages (lab.html, blog.html): plain links beside the views */}
+      <a className="topbar-blog" href="/lab/">LAB</a>
       <a className="topbar-blog" href="/blog/">BLOG</a>
       <SkinSwitcher />
       <ThemeButton />
