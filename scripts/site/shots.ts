@@ -86,6 +86,7 @@ const SHOTS: Shot[] = [
   { name: 'squares', path: 'squares/', ready: BOARD, full: true },
   { name: 'materials', path: 'materials/', ready: BOARD, full: true },
   { name: 'mosaic', path: 'mosaic/', ready: BOARD, full: true },
+  { name: 'workshop', path: 'workshop/', ready: BOARD, full: true },
   { name: 'about', path: '?about', ready: STATIC('.about-intro'), full: true },
   { name: 'make', path: '?make=tune', ready: EDITOR, editor: true },
   { name: 'widget-timer', path: 'widget/timer/', ready: `!document.querySelector('.wp[aria-busy], .view-loading') && !!document.querySelector('.wp canvas, .wp svg, [data-card-id] canvas, [data-card-id] svg')`, full: true },

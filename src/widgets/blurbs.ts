@@ -32,6 +32,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   heal: 'Scratch the dots with your cursor and watch them grow back.',
   algorithms: 'Four niche algorithms drawing in dots: Voronoi stippling, a strange attractor, wave function collapse and frost growth.',
   materials: 'Stone, glass, metal, cloth and thread made of dots: relief, one light and a moving part.',
+  workshop: 'Knit, denim, paper, wood, leather, sand, ice, mercury and thread: nine more materials, three you can push around.',
   pond: 'A koi pond and other small ecosystems, drawn in glyph tiles. Tap to feed, hold to lure.',
   squares: 'Square cells, spaced, joined, turned and cut: Tetris pieces that fuse, a face in 1,201 quads, metaballs, an LCD, teletext, a line screen, Schotter, an L∞ Mondrian, pixel sorting, Truchet tiles, cross-stitch, beads and a dot-to-square morph.',
 }

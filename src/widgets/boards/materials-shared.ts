@@ -6,8 +6,8 @@
 import { rake } from '../../engine/matter/relief'
 import type { Light } from '../../engine/light/shade'
 import { hourOf } from '../../engine/light/material'
-import { sceneLight } from '../../engine/light/input'
-import { createRaster, sample, type Raster } from '../../engine/raster/raster'
+import { sceneLight, type SceneLightInput } from '../../engine/light/input'
+import { createRaster, rasterWindow, sample, type Raster } from '../../engine/raster/raster'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import type { Field, Layer, Tone } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetContext } from '../types'
@@ -38,16 +38,24 @@ export interface MatLightOptions {
   rake?: boolean
   /** Keep the torch on a pressed pointer too (a dragged knob keeps its light instead of jumping to the sun). */
   pressed?: boolean
+  /** The sky alone: tilt, else the sun, never the hovering pointer (the window's panes are lit from outside). */
+  sky?: boolean
+  /** Clamp a raked light to this elevation instead of 18° (sand grooves read at 22°). */
+  rakeHi?: number
 }
+/** What `matLight` last resolved (input and light), for the checks (M3.10: each card's light equals `sceneLight`). */
+export const lightTrace: { on: boolean; calls: { input: SceneLightInput; light: Light }[] } = { on: false, calls: [] }
 /**
  * The board light: a thin wrapper over `sceneLight` (M rule 8) that adds nothing to its order. It passes the pointer
- * while it hovers this card (mapped onto the normals' lattice), the card's torch, and `rake` when asked.
+ * while it hovers this card (mapped onto the normals' lattice), the card's torch, and `rake` when asked. No card
+ * decodes the hub keys itself: tilt reaches every lit card through here (M3.10).
  */
 export function matLight(ctx: WidgetContext, o: MatLightOptions = {}): Light {
-  const p = ctx.pointers?.find(q => q.inside && !q.up && (o.pressed || !q.down)), k = o.lattice ?? 1, [ox, oy] = o.origin ?? [0, 0]
+  const p = o.sky ? undefined : ctx.pointers?.find(q => q.inside && !q.up && (o.pressed || !q.down)), k = o.lattice ?? 1, [ox, oy] = o.origin ?? [0, 0]
   const pointer = p ? { x: (p.x + .5 - ox) / k - .5, y: (p.y + .5 - oy) / k - .5 } : null
-  const L = sceneLight({ pointer, data: ctx.data, hour: hourOf(new Date()), torch: o.torch })
-  return o.rake ? rake(L) : L
+  const input: SceneLightInput = { pointer, data: ctx.data, hour: hourOf(new Date()), torch: o.torch }, L = sceneLight(input)
+  if (lightTrace.on) lightTrace.calls.push({ input, light: L })
+  return o.rake ? rake(L, o.rakeHi) : L
 }
 
 /**
@@ -78,3 +86,34 @@ export const L15 = 1.5, LG15 = latticeGrid(TILE, L15)
 export const toCard15 = (j: number) => (j + .5) * L15 - .5
 /** Card cell → the 1.5-lattice cell it lies in, ⌊(c + ½) / 1.5⌋, tabled (the card is square: rows and columns alike). */
 export const cellToLattice15 = once(() => Int32Array.from({ length: Math.max(TILE.cols, TILE.rows) }, (_, c) => Math.floor((c + .5) / L15)))
+/** A card-cell mask down-sampled to the 1.5 lattice: a lattice cell is lit when ≥ 50% of the card cells in it are. */
+export function toLattice15(m: Raster): Raster {
+  const out = createRaster(LG15), cols = TILE.cols, [b0, b1, b2, b3] = rasterWindow(m)
+  // lattice cell j covers card rows ⌈1.5j − ½⌉ … < 1.5(j + 1) − ½: only cells over the mask's bounds can be lit
+  const ja = Math.max(0, Math.floor((b1 + .5) / L15) - 1), jb = Math.min(LG15.rows - 1, Math.ceil((b3 + .5) / L15))
+  const ia = Math.max(0, Math.floor((b0 + .5) / L15) - 1), ib = Math.min(LG15.cols - 1, Math.ceil((b2 + .5) / L15))
+  for (let j = ja; j <= jb; j++) for (let i = ia; i <= ib; i++) {
+    let lit = 0, all = 0
+    for (let r = Math.ceil(j * L15 - .5); r < (j + 1) * L15 - .5; r++) for (let c = Math.ceil(i * L15 - .5); c < (i + 1) * L15 - .5; c++) { all++; lit += m.data[r * cols + c] }
+    if (all && lit / all >= .5) out.data[j * LG15.cols + i] = 1
+  }
+  return out
+}
+
+/**
+ * A light as a cache key (M3.10): the hub's light is bucketed (64 azimuths × 8 elevations) and the sun is fixed for an
+ * hour, so a per-card cache keyed by this hits across frames; a moving torch (snap it with `snapTorch`) misses.
+ */
+export const lightKey = (L: Light) => (Array.isArray(L) ? (L as readonly number[]).map(x => x.toFixed(5)).join(',') : `${(L as { at: readonly number[] }).at.map(x => x.toFixed(3)).join(',')}|${(L as { falloff?: number }).falloff ?? 0}`)
+/** A small LRU (default 8 entries: a card's per-light shadings, M3.10). */
+export function lru<V>(size = 8): (key: string, make: () => V) => V {
+  const m = new Map<string, V>()
+  return (key, make) => {
+    const hit = m.get(key)
+    if (hit !== undefined) { m.delete(key); m.set(key, hit); return hit }
+    const v = make()
+    m.set(key, v)
+    if (m.size > size) m.delete(m.keys().next().value!)
+    return v
+  }
+}

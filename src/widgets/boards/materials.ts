@@ -30,7 +30,7 @@ import { hash01 } from '../../engine/math'
 import type { Field, Layer } from '../../engine/types'
 import { lightSource } from '../../site/light'
 import { TILE, layer, layoutFor, type WidgetPreset } from '../types'
-import { cap, cellToLattice15, cite, DEG, L15, LG15, LIGHT_DEFAULTS, matLight, mod, once, pad2, rasterLayer, scratch, T, TAU, tile, toCard15, valuedSites, type Box, type Pt } from './materials-shared'
+import { cap, cellToLattice15, cite, DEG, L15, LG15, LIGHT_DEFAULTS, matLight, mod, once, pad2, rasterLayer, scratch, T, TAU, tile, toCard15, toLattice15, valuedSites, type Box, type Pt } from './materials-shared'
 import { matLens, matWindow, glassHooks } from './materials-glass'
 import { matPool, matRust, poolHooks } from './materials-live'
 import { matPatch, matCandle, wearHooks } from './materials-wear'
@@ -431,19 +431,6 @@ export const roman = (n: number) => { let s = ''; for (const [v, r] of ROMAN) wh
 const HERO_ROW = 50, YEAR_ROW = 61
 /** The hero's lattice: 2 (smooth `00:00` is 58 dots wide, 116 cells: the plan's 2.5 would overrun the 132-cell plaque). */
 const HERO_K = 2
-/** A card-cell mask down-sampled to the 1.5 lattice: a lattice cell is lit when ≥ 50% of the card cells in it are. */
-function toLattice15(m: Raster): Raster {
-  const out = createRaster(LG15), cols = TILE.cols, [b0, b1, b2, b3] = rasterWindow(m)
-  // lattice cell j covers card rows ⌈1.5j − ½⌉ … < 1.5(j + 1) − ½: only cells over the mask's bounds can be lit
-  const ja = Math.max(0, Math.floor((b1 + .5) / L15) - 1), jb = Math.min(LG15.rows - 1, Math.ceil((b3 + .5) / L15))
-  const ia = Math.max(0, Math.floor((b0 + .5) / L15) - 1), ib = Math.min(LG15.cols - 1, Math.ceil((b2 + .5) / L15))
-  for (let j = ja; j <= jb; j++) for (let i = ia; i <= ib; i++) {
-    let lit = 0, all = 0
-    for (let r = Math.ceil(j * L15 - .5); r < (j + 1) * L15 - .5; r++) for (let c = Math.ceil(i * L15 - .5); c < (i + 1) * L15 - .5; c++) { all++; lit += m.data[r * cols + c] }
-    if (all && lit / all >= .5) out.data[j * LG15.cols + i] = 1
-  }
-  return out
-}
 export interface Engraving { key: string; n: NormalRaster; ao: Raster; hero: Raster; year: Raster; colon: Pt[]; clear: Uint8Array }
 const engravings = new Map<string, Engraving>()
 /** The engraving of one minute (LRU of 2): height, normals and AO of the plaque with `HH MM` and the year cut in. */

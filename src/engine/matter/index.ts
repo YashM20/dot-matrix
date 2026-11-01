@@ -14,3 +14,5 @@ export * from './surface'
 // M2
 export * from './glass'
 export * from './caustics'
+// M3 (the workshop board): `knit`, `wood`, `leather` and the step code `sand`, `mercury`, `thread` are imported by path, never
+// through this barrel: the materials board imports it, and its chunk would carry them (measured: +2 kB gz).
