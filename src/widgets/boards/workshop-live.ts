@@ -200,12 +200,15 @@ const paperGeo = once((): PaperGeo => {
   const cut = stackHeights(h, heightRaster(inset, { shape: 'smooth', width: 1.8, height: -1.5 }))
   return { n: normalRaster(cut), ao: ambientOcclusion(cut, { radius: 2, strength: .6 }), floor: inset.data.map(v => (v < 1 ? .5 - v : 0)), inset }
 })
+/** The fibres' noise along one row, every 4 columns (it changes slowly along x: 8 cells a unit), read linearly between. */
+const fibreRow = new Float64Array(64)
 function paperRow(H: Float32Array, M: Float32Array, r: number): void {
+  for (let k = 0, c = PBOX[0]; c <= PBOX[2] + 4; k++, c += 4) fibreRow[k] = Math.abs(noise2(c / 8, r / 1.8, 53))
   for (let c = PBOX[0], i = r * COLS + c; c <= PBOX[2]; c++, i++) {
     const d = deckle(c, r)
     if (d > 0) continue
     // cotton: the tooth (blue noise, a cell apart) and longer fibres (stretched noise), .4 cells; the deckle thins toward the torn edge
-    const fib = .6 * stbn(c, r, 3) + .4 * Math.abs(noise2(c / 8, r / 1.8, 53))
+    const f = (c - PBOX[0]) / 4, k = Math.floor(f), fib = .6 * stbn(c, r, 3) + .4 * (fibreRow[k] + (fibreRow[k + 1] - fibreRow[k]) * (f - k))
     H[i] = 1.2 * Math.min(1, -d / 2) + .4 * fib; M[i] = 1
   }
 }
