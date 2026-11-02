@@ -16,7 +16,7 @@ import { bucketLight, lightOfBucket } from '../../src/engine/light/input'
 import { dla } from '../../src/engine/algo/dla'
 import { voronoiBorder2 } from '../../src/engine/noise/voronoi'
 import { knitAt } from '../../src/engine/matter/knit'
-import { leatherAt } from '../../src/engine/matter/leather'
+import { leatherAt, leatherCells } from '../../src/engine/matter/leather'
 import { sandRelax, sandVolume, sandRake } from '../../src/engine/matter/sand'
 import { DET_PATHS, detLint } from '../lib/detLint'
 import { fmtLoaded, medianLoaded, onceLoaded, type Loaded } from '../lib/load'
@@ -166,6 +166,13 @@ export async function workshopChecks(assert: Assert, opts: MaterialsOptions): Pr
       if (h > .99 * .85) { top++; if (b > .25) topOff++ }
     }
     assert('leather: grain creases = voronoi borders (crease cells within ¾ cell of a Worley border; pebble tops off them)', crease > 500 && creaseOn === crease && topOff === top, `${crease} crease cells, ${top} tops`)
+    // the card's bake tables the Worley points: it must be leatherAt, bit for bit (other scales and seeds too)
+    let cells = 0, off = 0
+    for (const o of [{}, { scale: 2.1, seed: 5, vary: .3 }, { scale: 7.7, seed: -3 }]) {
+      const out = leatherCells(200, [3, 2, 150, 120], o)
+      for (let y = 2; y <= 120; y++) for (let x = 3; x <= 150; x++) { cells++; if (!Object.is(out[y * 200 + x], leatherAt(x, y, o))) off++ }
+    }
+    assert('leather: leatherCells ≡ leatherAt (the tabled Worley search, bit for bit)', cells > 50000 && off === 0, `${off} of ${cells} cells differ`)
   }
   // ── sand ──
   {

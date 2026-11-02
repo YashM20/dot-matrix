@@ -122,13 +122,17 @@ export function weaveRelief(dd: Drawdown, grid: GridConfig, o: WeaveReliefOption
     while (b < ends - 1 && up[j * ends + b + 1] === v) b++
     runWeft[2 * (j * ends + i)] = a; runWeft[2 * (j * ends + i) + 1] = b
   }
-  const profile = (f: number) => { const x = (f + .5) / (W - 1) * 2 - 1; return lift * Math.sqrt(Math.max(0, 1 - x * x)) }
-  for (let y = Math.max(0, y0); y <= Math.min(rows - 1, y1); y++) for (let x = Math.max(0, x0); x <= Math.min(cols - 1, x1); x++) {
+  // the thread's cross-profile, a value per cell across the crossing (a table, not a closure: a closure made per call
+  // loses its optimised code on the next call, and this bake's next call is a card's first frame)
+  const prof = new Float64Array(W)
+  for (let f = 0; f < W; f++) { const x = (f + .5) / (W - 1) * 2 - 1; prof[f] = lift * Math.sqrt(Math.max(0, 1 - x * x)) }
+  const ya = Math.max(0, y0), yb = Math.min(rows - 1, y1), xa = Math.max(0, x0), xb = Math.min(cols - 1, x1)
+  for (let y = ya; y <= yb; y++) for (let x = xa; x <= xb; x++) {
     const lx = x - x0, ly = y - y0, i = Math.floor(lx / W), j = Math.floor(ly / W), fx = lx - i * W, fy = ly - j * W, k = y * cols + x
     const woven = j < picks, warpUp = !woven || up[j * ends + i] === 1
     if (warpUp) {
       if (fx === W - 1) continue
-      let h = profile(fx)
+      let h = prof[fx]
       if (woven) {
         const a = runWarp[2 * (j * ends + i)], b = runWarp[2 * (j * ends + i) + 1]
         h += .45 * lift * Math.sin(Math.PI * (ly - a * W + .5) / ((b - a + 1) * W))
@@ -137,7 +141,7 @@ export function weaveRelief(dd: Drawdown, grid: GridConfig, o: WeaveReliefOption
     } else {
       if (fy === W - 1) continue
       const a = runWeft[2 * (j * ends + i)], b = runWeft[2 * (j * ends + i) + 1]
-      height.data[k] = profile(fy) + .45 * lift * Math.sin(Math.PI * (lx - a * W + .5) / ((b - a + 1) * W))
+      height.data[k] = prof[fy] + .45 * lift * Math.sin(Math.PI * (lx - a * W + .5) / ((b - a + 1) * W))
       height.mask[k] = 1; tangent.x[k] = 1
     }
   }
