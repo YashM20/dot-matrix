@@ -46,6 +46,7 @@ export const NOISE3_SCALE = 1 / 1.0363
 const SEED3 = 0x27d4eb2d
 const scratch3 = new Float64Array(3)
 
+// after Inigo Quilez, https://iquilezles.org/articles/gradientnoise/ (MIT)
 /**
  * noise3 plus its analytic ∂/∂x, ∂/∂y (the z derivative is not needed). Writes [n, dx, dy] into `out`, returns it.
  * No allocation. Trilinear blend of the 8 corner dot products with the quintic fade, written in the

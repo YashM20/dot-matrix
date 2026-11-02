@@ -1,0 +1,16 @@
+{
+ "about": "FNV-1a 32 of fixed input sweeps through the IQ5 noise additions (scripts/noise-iq.ts snapshotIq()). Identical under every JS engine; re-baseline with `npx tsx scripts/noise-iq.ts --update` only for an intended change.",
+ "hashes": {
+  "noised2": "bdac71cd",
+  "valueNoised2": "887cb139",
+  "fbmd2": "68b8f78a",
+  "fbmd2Value": "96a5bd27",
+  "erosionFbm2": "b29d8650",
+  "voronoiEdge2": "a8f380f2",
+  "smoothVoronoi2": "ea1a677b",
+  "smoothVoronoiPow2": "e49e98a4",
+  "voronoise2": "ea8c353b",
+  "fbmH2": "700eada6",
+  "warpFbm2": "d623a3ce"
+ }
+}

@@ -27,6 +27,13 @@ Ported articles:
 | [Domain repetition](https://iquilezles.org/articles/sdfrepetition/) | Grid repetition with the neighbour check, mirrored, limited, rotational and rectangular-perimeter repetition | `src/engine/sdf/repeat.ts` |
 | [Xor](https://iquilezles.org/articles/sdfxor/) | The exact xor | `src/engine/sdf/xor.ts` |
 | [Interior SDFs](https://iquilezles.org/articles/interiordistance/) | No code: its advice on inside distances, as a note | `src/engine/sdf/ops.ts` |
+| [Voronoi edges](https://iquilezles.org/articles/voronoilines/) | The two-pass exact distance to the cell border | `src/engine/noise/cells.ts`, `voronoi.ts` |
+| [Smooth Voronoi](https://iquilezles.org/articles/smoothvoronoi/) | The exponential and power-sum smooth Voronoi | `src/engine/noise/cells.ts` |
+| [Voronoise](https://iquilezles.org/articles/voronoise/) | The blend of cell noise, noise and Voronoi through u and v | `src/engine/noise/cells.ts` |
+| [Gradient noise derivatives](https://iquilezles.org/articles/gradientnoise/) | The 2D `noised`, value plus analytic derivatives (the 3D form was already in `noise3Grad`) | `src/engine/noise/derivatives.ts`, `gradient.ts` |
+| [Value noise derivatives](https://iquilezles.org/articles/morenoise/) | Value noise with derivatives, fBm with derivatives, the erosion fBm | `src/engine/noise/derivatives.ts` |
+| [Domain warping](https://iquilezles.org/articles/warp/) | The nested fBm warp with q and r exposed | `src/engine/noise/fractal.ts` |
+| [fBM](https://iquilezles.org/articles/fbm/) | The gain from the Hurst exponent, G = 2^−H, and the noise colours | `src/engine/noise/fractal.ts` |
 
 Credits the articles give, carried over:
 

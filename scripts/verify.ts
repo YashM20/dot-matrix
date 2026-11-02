@@ -108,6 +108,11 @@ ncaChecks(assert)
 algorithmsChecks(assert)
 // F0 noise slot) dmath, gradient noise, Voronoi, curl, the IR noise pack, the determinism lint (scripts/noise.ts)
 noiseChecks(assert)
+// IQ5 noise (#66): analytic derivatives, the cell border, smooth Voronoi, Voronoise, fBm by H, nested warp (scripts/noise-iq.ts)
+{
+  const { noiseIqChecks } = await import('./noise-iq')
+  noiseIqChecks(assert)
+}
 
 // editor (E1): MAKE editor document, paint encode, resize anchoring, hit tests, camera, gestures, entries, history; E2: selection sets, marquee, group resize, align / distribute, guides, groups, locks, clipboard, migration, undo per command; E3: sites handles, spec bounds, text carets, quick toggles, eyedropper, typing sessions (scripts/editor.ts)
 {
