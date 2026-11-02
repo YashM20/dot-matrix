@@ -214,9 +214,15 @@ async function desktop() {
 
     // ── animate: the timeline previews the frame at t
     await h.clickText('.ed-right [role=tab]', 'ANIMATE'); await sleep(300)
-    await h.setValue('.ed-transport input', .03); await sleep(400); const t0 = await h.lit(N)
-    await h.setValue('.ed-transport input', .9); await sleep(400); const t1 = await h.lit(N)
-    check('ANIMATE: scrubbing t redraws the frame (the enter track reveals it)', t0.sig !== t1.sig && t0.n < t1.n && (await h.text('.ed-t')).includes('0.90'), `t .03: ${t0.n}, t .9: ${t1.n}`)
+    // wait for the frame itself to be drawn at t (the render loop's `__editor.tl`) and the readout to follow, never
+    // a fixed sleep: idle work or a busy box can hold the next draw past any delay (#28)
+    const scrub = async (t: number) => {
+      await h.setValue('.ed-transport input', t)
+      const drawn = await p.waitFor(`window.__editor?.tl?.[${JSON.stringify(N)}] === ${t} && !!document.querySelector('.ed-t')?.textContent?.includes(${JSON.stringify(t.toFixed(2))})`, 15000)
+      return { drawn, ...await h.lit(N) }
+    }
+    const t0 = await scrub(.03), t1 = await scrub(.9)
+    check('ANIMATE: scrubbing t redraws the frame (the enter track reveals it)', t0.drawn && t1.drawn && t0.sig !== t1.sig && t0.n < t1.n, `t .03: ${t0.drawn ? t0.n : 'never drawn'}, t .9: ${t1.drawn ? t1.n : 'never drawn'}`)
 
     // ── export: the top bar's EXPORT opens the tab; PNG, SVG and an APNG clip land on disk
     await p.js(`[...document.querySelectorAll('.ed-top button')].find(b => b.textContent === 'EXPORT').click()`); await sleep(300)

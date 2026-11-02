@@ -2,7 +2,7 @@
 import { readFileSync } from 'node:fs'
 import { DRAFTS, lensOffset, fromDraft, rake, twill, weaveRelief } from '../../src/engine/matter'
 import { hourOf, lightDir, sunAt, torch, type Light, type Vec3 } from '../../src/engine/light'
-import { gpuTag, gpuValues, layerPass } from '../../src/engine/renderer/webgl/passes'
+import { gpuTag, gpuValues, layerPass, type GPUPass } from '../../src/engine/renderer/webgl/passes'
 import { worldAt, worldReset } from '../../src/engine/physics/world'
 import { simReset, simStep } from '../../src/engine/sim/sim'
 import { sceneLight } from '../../src/engine/light/input'
@@ -16,7 +16,7 @@ import * as M from '../../src/widgets/boards/materials'
 import { lightBoard } from '../../src/widgets/boards/light'
 import { LIGHT_DEFAULTS, matGrille, matKnob, matLight, matLoom, materialsBoard, materialsHooks, materialsSources, matTerrazzo } from '../../src/widgets/boards/materials'
 import { freezeWallClock } from '../lib/freeze'
-import { fmtLoaded, medianLoaded, onceLoaded, type Loaded } from '../lib/load'
+import { fmtLoaded, loadOf, medianLoaded, onceLoaded, spinMs, type Loaded } from '../lib/load'
 import { type Assert, same, DEG, type MaterialsOptions } from './util'
 
 /** Cards with no red in their pristine run (M §4.2: the pool's pebble only appears when one is dropped). */
@@ -221,21 +221,8 @@ function m2CardChecks(assert: Assert, frameOf: FrameFn): void {
     assert('lens: the second tick is the only active dot, refracted by the same offset as the scene', red.length === 1 && inLens && err < .1 && reds(lens, 0).length === 1, `p + offset(p) − tick = ${err.toFixed(3)} cells`)
     const ctx0: WidgetContext = { t: 0, data: { ...lens.defaults } }
     assert('lens: tx = ty = 0 → rimAngle −60° exactly', H.lensRim(ctx0, [100, 70]).angle === -60 * DEG && H.lensRim(ctx0, [100, 70]).power === 3 && Math.abs(H.lensRim({ t: 0, data: { ...lens.defaults, tx: 1 } }, [100, 70]).angle + 35 * DEG) < 1e-12)
-    const fill = medianLoaded(i => {
-      const q = layerPass(atClock(() => withChrome(lens)({ t: 5 + i / 12, data: { ...lens.defaults } })).find(l => gpuTag(l.field))!, TILE, lens.style, pitch)!
-      let s = 0
-      for (let r = 0; r < q.rows; r++) for (let k = 0; k < q.cols; k++) s += q.field((q.map[0] + k * q.map[1]) / q.den[0], (q.map[2] + r * q.map[3]) / q.den[1])
-      return s
-    }, 7)
-    // the same 83k reads of a constant field: the loop and call overhead every pass pays, whatever its field
-    const flat = gpuValues(() => .5, { density: 2 })
-    const bare = medianLoaded(i => {
-      const q = { ...layerPass(atClock(() => withChrome(lens)({ t: 5 + i / 12, data: { ...lens.defaults } })).find(l => gpuTag(l.field))!, TILE, lens.style, pitch)!, field: flat }
-      let s = 0
-      for (let r = 0; r < q.rows; r++) for (let k = 0; k < q.cols; k++) s += q.field((q.map[0] + k * q.map[1]) / q.den[0], (q.map[2] + r * q.map[3]) / q.den[1])
-      return s
-    }, 7)
-    assert('lens: GPU value fill ≤ 2 ms (the density-2 field over its pass beyond a constant field, × load)', fill.ms - bare.ms <= 2 * fill.load, `${fmtLoaded(fill)}; a constant field ${fmtLoaded(bare)}`)
+    const fill = lensFill(lens, pitch)
+    assert('lens: GPU value fill ≤ 2 ms (the density-2 field over its pass beyond a constant field, × load)', fill.ms <= 2 * fill.load, fill.detail)
   }
   // ── pool ──
   {
@@ -356,3 +343,33 @@ function m2CardChecks(assert: Assert, frameOf: FrameFn): void {
   }
 }
 
+
+/**
+ * The lens's GPU value fill (#28): the CPU time to compute the density-2 field's values for its pass (they are
+ * computed here and uploaded, so a GPU timer query has nothing to time), beyond the same 83k reads of a constant
+ * field (the loop and call overhead every pass pays). Each round builds both passes at a fresh t outside the timer,
+ * takes a load sample, then times the two fills back to back in alternating order; the gate reads the median of the
+ * per-round differences over 25 rounds after 5 warm ones. Two medians timed apart, with the pass build inside the
+ * timer, swung by more than the 2 ms gate.
+ */
+function lensFill(lens: WidgetPreset, pitch: number): { ms: number; load: number; detail: string } {
+  const passAt = (t: number) => layerPass(atClock(() => withChrome(lens)({ t, data: { ...lens.defaults } })).find(l => gpuTag(l.field))!, TILE, lens.style, pitch)!
+  const flat = gpuValues(() => .5, { density: 2 })
+  // two copies of the loop, so each `q.field` call site sees one kind of field
+  const fieldFill = (q: GPUPass) => { let s = 0; for (let r = 0; r < q.rows; r++) for (let k = 0; k < q.cols; k++) s += q.field((q.map[0] + k * q.map[1]) / q.den[0], (q.map[2] + r * q.map[3]) / q.den[1]); return s }
+  const flatFill = (q: GPUPass) => { let s = 0; for (let r = 0; r < q.rows; r++) for (let k = 0; k < q.cols; k++) s += q.field((q.map[0] + k * q.map[1]) / q.den[0], (q.map[2] + r * q.map[3]) / q.den[1]); return s }
+  const WARM = 5, N = 25, diff: number[] = [], field: number[] = [], bare: number[] = [], lf: number[] = []
+  let sink = 0
+  for (let i = 0; i < WARM + N; i++) {
+    const q = passAt(5 + i / 12), qb = { ...q, field: flat }
+    const spin = spinMs()
+    let a = 0, b = 0
+    const timeField = () => { const t0 = performance.now(); sink += fieldFill(q); a = performance.now() - t0 }
+    const timeFlat = () => { const t0 = performance.now(); sink += flatFill(qb); b = performance.now() - t0 }
+    if (i & 1) { timeFlat(); timeField() } else { timeField(); timeFlat() }
+    if (i < WARM) continue
+    lf.push(spin); field.push(a); bare.push(b); diff.push(a - b)
+  }
+  const med = (xs: number[]) => [...xs].sort((x, y) => x - y)[xs.length >> 1], ms = med(diff), load = loadOf(lf)
+  return { ms, load, detail: `${ms.toFixed(2)} ms @ ${load.toFixed(2)} → ${(ms / load).toFixed(2)} (median of ${N} paired rounds: field ${med(field).toFixed(2)} ms, constant ${med(bare).toFixed(2)} ms)${Number.isNaN(sink) ? ' NaN' : ''}` }
+}
