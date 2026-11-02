@@ -10,6 +10,8 @@ import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
+const { assert, done } = (await import('./lib/check')).checker('game-browser')
+
 const base = process.argv[2] ?? 'http://localhost:5203/'
 const out = join('.snapshots', 'c4')
 mkdirSync(out, { recursive: true })
@@ -37,8 +39,6 @@ const js = async (expression: string) => {
   if (r.result?.exceptionDetails) throw new Error(r.result.exceptionDetails.exception?.description ?? 'eval failed')
   return r.result?.result?.value
 }
-let failures = 0
-const check = (name: string, ok: boolean, detail = '') => { console.log(`${ok ? '✓' : '✗'} ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failures++ }
 const shot = async (name: string) => { const r = await cdp('Page.captureScreenshot', { format: 'png' }); writeFileSync(join(out, `${name}.png`), Buffer.from(r.result.data, 'base64')) }
 const waitFor = async (expr: string, ms = 8000) => { for (let i = 0; i < ms / 100; i++) { if (await js(expr).catch(() => false)) return true; await sleep(100) } return false }
 const KEYS: Record<string, [string, number]> = { ArrowRight: ['ArrowRight', 39], ArrowUp: ['ArrowUp', 38], ArrowLeft: ['ArrowLeft', 37], Space: [' ', 32], Enter: ['Enter', 13] }
@@ -54,14 +54,14 @@ try {
   await cdp('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
   await cdp('Page.navigate', { url: `${base}?board=levels` })
   const button = await waitFor(`!!document.querySelector('.hive-start')`, 30000)
-  check('the levels board shows the PRESS START button', button, logs.join(' | '))
+  assert('the levels board shows the PRESS START button', button, logs.join(' | '))
   await sleep(1500)
   await shot('00-board')
   await js(`document.querySelector('.hive-start').click()`)
   const opened = await waitFor(`!!window.__hive && !!document.querySelector('.hive-screen')`, 15000)
-  check('PRESS START opens play mode and the URL gets play=1', opened && /play=1/.test(await js('location.search')), await js('location.search'))
+  assert('PRESS START opens play mode and the URL gets play=1', opened && /play=1/.test(await js('location.search')), await js('location.search'))
   await sleep(600)
-  check('title screen draws in dots, with its one red cursor', (await lit()) > 500 && (await red()) > 0, `${await lit()} lit px, ${await red()} red px`)
+  assert('title screen draws in dots, with its one red cursor', (await lit()) > 500 && (await red()) > 0, `${await lit()} lit px, ${await red()} red px`)
   await shot('01-title')
   // real keys: Enter starts, the arrows walk the corridor, space fires
   await hold('Enter', 80)
@@ -71,7 +71,7 @@ try {
   await hold('ArrowUp', 900)
   await hold('Space', 120)
   const x1 = await js('window.__hive.game.c.x') as number
-  check('keyboard: Enter starts, ArrowUp walks the first-person corridor', (await stage()) === 'corridor' && x1 > x0 + .5, `x ${x0.toFixed(2)} → ${x1.toFixed(2)}`)
+  assert('keyboard: Enter starts, ArrowUp walks the first-person corridor', (await stage()) === 'corridor' && x1 > x0 + .5, `x ${x0.toFixed(2)} → ${x1.toFixed(2)}`)
   await sleep(300)
   await shot('02-corridor')
   // the deep link path, then the autopilot through every stage
@@ -79,7 +79,7 @@ try {
     const got = await js(`window.__hive.run('${s}', 30000)`)
     await js(`window.__hive.steps(${extra})`)
     await sleep(900) // let the stage dissolve / migration finish
-    check(`autopilot reaches ${s} and it draws`, got === s && (await lit()) > 200, `${await lit()} lit px`)
+    assert(`autopilot reaches ${s} and it draws`, got === s && (await lit()) > 200, `${await lit()} lit px`)
     await shot(name)
   }
   // juice: a hit flash and shake on the boss
@@ -90,11 +90,11 @@ try {
   await js(`window.dispatchEvent(new Event('blur'))`)
   await sleep(200)
   const f0 = await js('window.__hive.game.frame'); await sleep(400); const f1 = await js('window.__hive.game.frame')
-  check('blur pauses the sim', (await js('window.__hive.paused')) === true && f0 === f1, `frame ${f0} → ${f1}`)
+  assert('blur pauses the sim', (await js('window.__hive.paused')) === true && f0 === f1, `frame ${f0} → ${f1}`)
   await shot('08-paused')
   await hold('Enter', 80)
   await sleep(300)
-  check('Enter resumes', (await js('window.__hive.paused')) === false)
+  assert('Enter resumes', (await js('window.__hive.paused')) === false)
   // game over, initials, the table in localStorage
   await js(`(() => { const h = window.__hive; h.game.score = 23450; h.enter('over') })()`)
   await sleep(900)
@@ -108,22 +108,22 @@ try {
   await waitFor(`window.__hive.game.stage === 'scores'`, 3000)
   await sleep(800)
   const saved = await js(`JSON.parse(localStorage.getItem('dot480.hive.scores.v1') || '[]')`) as { name: string; score: number }[]
-  check('initials entry saves the table to localStorage', saved[0]?.score === 23450 && saved[0]?.name === 'CAA', JSON.stringify(saved[0]))
+  assert('initials entry saves the table to localStorage', saved[0]?.score === 23450 && saved[0]?.name === 'CAA', JSON.stringify(saved[0]))
   await shot('11-scores')
   // frame cost, measured in the page over the whole session
   const stats = await js('window.__hive.stats()') as { n: number; p50: number; p95: number; pitch: number }
-  check('frame (layers + sample + draw) p50 under 16 ms in Chrome', stats.p50 < 16, JSON.stringify(stats))
+  assert('frame (layers + sample + draw) p50 ≤ 16 ms in Chrome', stats.p50 < 16, JSON.stringify(stats))
   // Escape quits and drops the param
   await key('Enter', 'keyUp')
   await cdp('Input.dispatchKeyEvent', { type: 'keyDown', code: 'Escape', key: 'Escape', windowsVirtualKeyCode: 27 })
   await sleep(300)
-  check('Escape closes play mode', !(await js(`!!document.querySelector('.hive-play')`)) && !/play=1/.test(await js('location.search')))
+  assert('Escape closes play mode', !(await js(`!!document.querySelector('.hive-play')`)) && !/play=1/.test(await js('location.search')))
   // deep link straight into play mode + touch pad on a phone-sized screen
   await cdp('Emulation.setDeviceMetricsOverride', { width: 420, height: 860, deviceScaleFactor: 2, mobile: true })
   await cdp('Emulation.setTouchEmulationEnabled', { enabled: true })
   await cdp('Page.navigate', { url: `${base}?board=levels&play=1` })
   const deep = await waitFor(`!!window.__hive && !!document.querySelector('.hive-pad')`, 30000)
-  check('?board=levels&play=1 opens play mode; a coarse pointer gets the dot touch pad', deep, logs.join(' | '))
+  assert('?board=levels&play=1 opens play mode; a coarse pointer gets the dot touch pad', deep, logs.join(' | '))
   if (deep) {
     const r = await js(`(() => { const b = document.querySelector('.hive-pad').getBoundingClientRect(); return { x: b.left, y: b.top, w: b.width, h: b.height } })()`) as { x: number; y: number; w: number; h: number }
     const tap = async (cx: number, cy: number) => {
@@ -133,15 +133,14 @@ try {
     }
     await tap(60, 15) // START
     await waitFor(`window.__hive.game.stage === 'corridor'`, 3000)
-    check('touch: the START pad starts the game', (await stage()) === 'corridor', await stage())
+    assert('touch: the START pad starts the game', (await stage()) === 'corridor', await stage())
     await sleep(700)
     await shot('12-touch')
   }
-  check('no console errors or exceptions', logs.length === 0, logs.slice(0, 3).join(' | '))
+  assert('no console errors or exceptions', logs.length === 0, logs.slice(0, 3).join(' | '))
 } finally {
   ws.close(); proc.kill()
   await sleep(300)
   try { rmSync(profile, { recursive: true, force: true }) } catch { /* Chrome may still hold it */ }
 }
-console.log(failures ? `\n${failures} browser check(s) failed` : '\nAll C4 browser checks passed')
-process.exit(failures ? 1 : 0)
+done('All C4 browser checks passed')
