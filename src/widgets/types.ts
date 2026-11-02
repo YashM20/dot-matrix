@@ -11,6 +11,8 @@ export { bounded, combine, dim, place } from '../engine/layout'
 
 /** Frame context a preset's `layers()` receives — see `FrameContext` in the engine. */
 export type WidgetContext = FrameContext
+/** Authors of the work a card is based on (a port, a remix). `source` is a URL; `note` a short line on what changed. */
+export interface WidgetCredit { by: string[]; title: string; source: string; note?: string }
 export interface WidgetPreset {
   id: string
   name: string
@@ -46,6 +48,8 @@ export interface WidgetPreset {
   bleed?: boolean
   /** Live media the host feeds into `ctx.media` (app-level capture in `src/media/`, started only by a control). */
   media?: 'camera'
+  /** Who made the idea this card is built on: shown as a small `by …` line on the widget page (DESIGN.md "Credit line"). */
+  credit?: WidgetCredit
   layers(ctx: WidgetContext): Layer[]
 }
 
