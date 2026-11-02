@@ -30,6 +30,7 @@ import { fractalsBoard } from './boards/fractals'
 import { pondBoard, pondSources } from './boards/pond/index'
 import { materialsBoard, materialsSources } from './boards/materials'
 import { workshopBoard, workshopSources } from './boards/workshop'
+import { oldschoolBoard } from './boards/oldschool'
 import { boardIds, boardManifest, resolveBoardId, resolveCardId, type BoardContents, type BoardDef, type BoardId, type BoardMeta } from './manifest'
 import { registerPresets } from './registry'
 
@@ -70,6 +71,7 @@ const contents = {
   squares: { items: squaresBoard },
   fractals: { items: fractalsBoard },
   workshop: { items: workshopBoard, sources: workshopSources },
+  oldschool: { items: oldschoolBoard },
 } satisfies Record<BoardId, BoardContents>
 export const boards: BoardDef[] = boardManifest.map(({ load: _load, ...meta }: BoardMeta & { load: unknown }) => ({ ...meta, ...contents[meta.id as BoardId] }))
 export { boardIds }

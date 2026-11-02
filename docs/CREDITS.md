@@ -6,6 +6,18 @@
 
 The work a card is built on, grouped by source. Each card's page shows the same credit under its blurb.
 
+### [2D dynamic clouds](https://iquilezles.org/articles/dynclouds/)
+
+By Inigo Quilez.
+
+- Oldschool Sky (`os-sky`), board `/oldschool/`: technique
+
+### [Feedback effect](https://iquilezles.org/articles/feedbackfx/)
+
+By Inigo Quilez.
+
+- Oldschool Echo (`os-echo`), board `/oldschool/`: technique
+
 ### [Geometric orbit traps](https://iquilezles.org/articles/ftrapsgeometric/)
 
 By Inigo Quilez.
@@ -29,6 +41,15 @@ By Inigo Quilez.
 By Inigo Quilez, Mario Markus.
 
 - Fractals Lyapunov (`fr-lyapunov`), board `/fractals/`: technique
+
+### [Plane deformations](https://iquilezles.org/articles/deform/)
+
+By Inigo Quilez.
+
+- Oldschool Bloom (`os-bloom`), board `/oldschool/`: technique
+- Oldschool Floor (`os-floor`), board `/oldschool/`: technique
+- Oldschool Star (`os-star`), board `/oldschool/`: technique
+- Oldschool Tunnel (`os-tunnel`), board `/oldschool/`: technique
 
 ### [Popcorn images](https://iquilezles.org/articles/popcorns/)
 
@@ -82,3 +103,6 @@ Code ported into the engine, by article. What each port covers, and the credits 
 - [IFS fractals](https://iquilezles.org/articles/ifsfractals/)
 - [Lyapunov fractals](https://iquilezles.org/articles/lyapunovfractals/)
 - [Icon images](https://iquilezles.org/articles/iconimages/)
+- [Plane deformations](https://iquilezles.org/articles/deform/)
+- [2D dynamic clouds](https://iquilezles.org/articles/dynclouds/)
+- [Feedback effect](https://iquilezles.org/articles/feedbackfx/)
