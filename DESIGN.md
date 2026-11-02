@@ -445,6 +445,22 @@ A surface that wraps a rounded child with padding takes the child's radius plus 
 - AI/system message: left-aligned, `{colors.surfaceRaised}` fill, `{rounded.cardCorner}` at n=3 (slightly softer than standard cards).
 - Suggestion chip row: pill-shaped tappable rows beneath the greeting, same treatment as `{component.pill-button}` but full-width.
 
+**Credit line** (`credit` on a preset)
+- `credit?: { by: string[]; title: string; source: string; note?: string }` names the people whose work a card is built on (a port, a remix).
+- The widget page shows it under the blurb as one small line: `by A, B · <title>` with the title linking to `source`, then the note if there is one. `{colors.label}` text, the link in `{colors.value}`.
+- The board card does not show it yet (that would add to first load). X-ray and the inspector come later.
+
+### Tixy programs (`src/widgets/tixy.ts`)
+
+`tixy(program, opts?)` turns a typed `(t, i, x, y) => number | boolean` program into card layers. Import it by path; it is not in the engine barrel.
+- Lattice: 16 × 16 dots, `x` and `y` in 0..15, `i = y * 16 + x`. On a TILE card the lattice is 8 cells per dot, centred below the label row (`pitch` and `origin` move it).
+- `t` is the card clock in seconds (`ctx.t`), so goldens see their fixed t like any other card.
+- Coercion: `true` → 1, `false` and `NaN` → 0, then clamp to [-1, 1].
+- Two layers: `max(v, 0)` in the default (`value`) tone and `max(-v, 0)` in `{colors.dotActive}`. Values are quantized to `{grid.quantizeSteps}` (5) before the sampler sees them, so dot sizes step even under an unquantized style.
+- State: `opts.state` gives a card its own Float32Array (one float per cell, or `channels` floats), filled by `init` and advanced by `step` at a fixed `dt` on the engine's SimField. The state at t is a pure function of the step index, so t = 0 is the known initial state and any t replays.
+- Programs are compiled TypeScript. No string is ever evaluated: the site CSP has no `unsafe-eval`.
+- Checks: `npx tsx scripts/tixy.ts`. Test programs there are original; tixy.land expressions wait on #52.
+
 ### Grids & Charts
 
 **`heatmap-grid`**

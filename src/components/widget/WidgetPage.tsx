@@ -166,6 +166,7 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
         <p className="wp-eyebrow">{boardLabel(w.board)} · {String(i + 1).padStart(2, '0')}</p>
         <h1 id="wp-title"><span className="sr-only">{name}</span><DotName text={name} pitch={4} /></h1>
         <p className="wp-blurb">{meta.blurb}</p>
+        {preset.credit && <p className="wp-credit">by {preset.credit.by.join(', ')} · <a href={preset.credit.source} target="_blank" rel="noopener noreferrer">{preset.credit.title}</a>{preset.credit.note && <> · {preset.credit.note}</>}</p>}
         {chips.length > 0 && <ul className="wp-chips" aria-label="What it does">{chips.map(c => <li key={c}>{c}</li>)}</ul>}
         <dl className="wp-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </aside>
