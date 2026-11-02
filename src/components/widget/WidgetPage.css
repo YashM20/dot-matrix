@@ -98,8 +98,8 @@
 
 @media (pointer: coarse) {
   .pill-btn {
-    min-width: 44px;
-    min-height: 44px
+    min-width: var(--tap);
+    min-height: var(--tap)
   }
 }
 
@@ -124,7 +124,7 @@
 }
 
 .wp-count {
-  min-width: 44px;
+  min-width: var(--tap);
   color: var(--mute);
   font: 500 var(--fs-label-12) var(--mono);
   letter-spacing: .1em;
@@ -133,7 +133,7 @@
 
 .wp-bottom {
   position: fixed;
-  z-index: 40;
+  z-index: var(--z-pinned);
   left: 0;
   right: 0;
   bottom: calc(14px + env(safe-area-inset-bottom));
@@ -281,7 +281,7 @@
 /* ── more menu: a popover above the bar; a bottom sheet on phones ─────────────────── */
 .wp-more {
   position: fixed;
-  z-index: 41;
+  z-index: calc(var(--z-pinned) + 1);
   left: 0;
   right: 0;
   bottom: calc(72px + env(safe-area-inset-bottom));
@@ -363,7 +363,7 @@ body:has(.wp) .pal-toast {
 
   .wp-top {
     position: fixed;
-    z-index: 40;
+    z-index: var(--z-pinned);
     top: calc(var(--gap-group) + env(safe-area-inset-top));
     left: max(var(--frame-inset), env(safe-area-inset-left));
     right: max(var(--frame-inset), env(safe-area-inset-right))

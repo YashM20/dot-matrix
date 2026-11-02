@@ -5,7 +5,7 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  z-index: 60;
+  z-index: var(--z-app);
   width: min(328px, calc(100cqi - 24px));
   padding: var(--space-3);
   color: var(--label);
@@ -263,7 +263,7 @@
 
 .tools-sheet .theme-ctl .theme-seg button,
 .tools-sheet .theme-ctl .theme-share {
-  min-height: 44px
+  min-height: var(--tap)
 }
 
 .tools-sheet .theme-ctl .theme-swatches {
@@ -271,12 +271,12 @@
 }
 
 .tools-sheet .theme-ctl .theme-swatches button {
-  min-width: 44px;
-  min-height: 44px
+  min-width: var(--tap);
+  min-height: var(--tap)
 }
 
 .tools-sheet .theme-hue {
-  height: 44px
+  height: var(--tap)
 }
 
 .tools-sheet .theme-disc {

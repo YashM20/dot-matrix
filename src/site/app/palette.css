@@ -4,7 +4,7 @@
   position: fixed;
   right: 14px;
   bottom: 14px;
-  z-index: 35;
+  z-index: var(--z-dock);
   display: flex;
   gap: var(--space-1);
   padding: var(--space-1);
@@ -48,7 +48,7 @@
   left: 50%;
   bottom: 76px;
   transform: translateX(-50%);
-  z-index: 80;
+  z-index: var(--z-toast);
   pointer-events: none
 }
 
@@ -69,7 +69,7 @@
   position: fixed;
   left: 14px;
   bottom: 14px;
-  z-index: 35;
+  z-index: var(--z-dock);
   padding: var(--space-1) var(--space-2);
   background: color-mix(in srgb, var(--surface) 90%, transparent);
   border: 1px solid var(--line);
@@ -88,7 +88,7 @@
 .pal-boss {
   position: fixed;
   inset: 0;
-  z-index: 70;
+  z-index: var(--z-sheet);
   display: flex;
   justify-content: center;
   align-items: flex-start;

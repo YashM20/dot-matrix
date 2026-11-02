@@ -97,7 +97,7 @@
 
 .skin-list-clack {
   width: 100%;
-  min-height: 44px;
+  min-height: var(--tap);
   margin-top: var(--space-2);
   border: 1px dotted color-mix(in srgb, var(--tint) 20%, transparent);
   border-radius: var(--radius-pill);

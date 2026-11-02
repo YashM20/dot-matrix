@@ -93,8 +93,8 @@ em { color: var(--value) }
 .dot-card-body > * { width: 100% }
 .dot-svg { width: 100%; height: auto; display: block }
 .dot-svg svg { display: block; width: 100%; height: auto }
-.dot-a11y-root { --dot-target-min: 24px; --dot-hit-min: 24px; position: relative; width: 100%; -webkit-tap-highlight-color: transparent; user-select: none }
-@media (pointer: coarse) { .dot-a11y-root { --dot-hit-min: 44px } }
+.dot-a11y-root { --dot-target-min: var(--tap-min); --dot-hit-min: var(--tap-min); position: relative; width: 100%; -webkit-tap-highlight-color: transparent; user-select: none }
+@media (pointer: coarse) { .dot-a11y-root { --dot-hit-min: var(--tap) } }
 .dot-a11y { position: absolute; inset: 0; pointer-events: none }
 .dot-a11y > * { position: absolute; transform: translate(-50%, -50%) }
 .dot-a11y-hit { pointer-events: auto }

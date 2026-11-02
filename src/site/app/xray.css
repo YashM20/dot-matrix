@@ -11,7 +11,7 @@
 .xr-overlay {
   position: absolute;
   pointer-events: none;
-  z-index: 3;
+  z-index: var(--z-raise);
   font: 500 var(--fs-tag-9)/1.35 var(--mono);
   letter-spacing: .06em;
   text-align: left
@@ -90,7 +90,7 @@
   position: fixed;
   right: 14px;
   top: 72px;
-  z-index: 40;
+  z-index: var(--z-pinned);
   width: min(340px, calc(100cqi - 28px));
   max-height: calc(100vh - 150px);
   display: flex;
@@ -272,7 +272,7 @@
   left: 50%;
   bottom: 18px;
   transform: translateX(-50%);
-  z-index: 45;
+  z-index: calc(var(--z-pinned) + 5);
   display: flex;
   align-items: center;
   gap: var(--space-2);

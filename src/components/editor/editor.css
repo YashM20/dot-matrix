@@ -8,7 +8,7 @@
   --ed-bg: var(--bg);
   --ed-panel: var(--panel);
   --ed-sel: color-mix(in srgb, var(--red) 60%, transparent);
-  --ed-hit: 24px;
+  --ed-hit: var(--tap-min);
   position: relative;
   width: 100cqi;
   margin-left: calc(50% - 50cqi);
@@ -81,7 +81,7 @@
   position: absolute;
   top: calc(100% + 6px);
   right: 0;
-  z-index: 20;
+  z-index: var(--z-menu);
   display: grid;
   min-width: 190px;
   padding: var(--space-1)
@@ -220,7 +220,7 @@
 .ed-brush.erase { box-shadow: 0 0 0 1px color-mix(in srgb, var(--value) 50%, transparent); outline: 1px dashed color-mix(in srgb, var(--value) 50%, transparent) }
 .ed-note { position: absolute; left: 12px; bottom: 12px; margin: 0; max-width: min(520px, 70%); color: var(--label); font-size: var(--fs-label-12); pointer-events: none; text-shadow: 0 0 6px var(--shade) }
 .ed-note:empty { display: none }
-.ed-banner { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); display: flex; gap: var(--space-2); align-items: center; margin: 0; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); background: var(--surface); border: 1px solid color-mix(in srgb, var(--red) 50%, transparent); border-radius: var(--radius-ctl); color: var(--value); z-index: 5 }
+.ed-banner { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); display: flex; gap: var(--space-2); align-items: center; margin: 0; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); background: var(--surface); border: 1px solid color-mix(in srgb, var(--red) 50%, transparent); border-radius: var(--radius-ctl); color: var(--value); z-index: calc(var(--z-raise) + 2) }
 .ed-banner button { background: none; border: 0; width: 28px; height: 28px; color: var(--mute) }
 
 /* ── inspector ── */
@@ -303,7 +303,7 @@
 .ed-chips button[aria-checked="true"] { border-color: color-mix(in srgb, var(--value) 55%, transparent) }
 
 /* ── shortcuts dialog ── */
-.ed-modal { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: var(--space-4); background: color-mix(in srgb, var(--shade) 62%, transparent) }
+.ed-modal { position: fixed; inset: 0; z-index: var(--z-modal); display: grid; place-items: center; padding: var(--space-4); background: color-mix(in srgb, var(--shade) 62%, transparent) }
 .ed-modal-card { width: min(620px, 100%); max-height: 86dvh; overflow: auto; padding: var(--space-4) var(--space-5); background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-panel); box-shadow: var(--shadow-raised) }
 .ed-modal-card h2 { display: flex; justify-content: space-between; align-items: center; margin: 0 0 var(--space-2); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .16em; color: var(--value) }
 .ed-modal-card h3 { margin: var(--space-4) 0 var(--space-2); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .14em; color: var(--label) }
@@ -316,10 +316,10 @@
 html.ed-scroll-lock, html.ed-scroll-lock body { overflow: hidden; overscroll-behavior: none }
 html.ed-scroll-lock .pal-dock { display: none }
 .ed-root.is-phone {
-  --ed-hit: 44px;
+  --ed-hit: var(--tap);
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: var(--z-app);
   width: auto;
   height: 100vh;
   height: 100dvh; /* follows the iOS toolbar; the canvas is absolutely filled, so nothing jumps */
@@ -329,10 +329,10 @@ html.ed-scroll-lock .pal-dock { display: none }
   padding: env(safe-area-inset-top) env(safe-area-inset-right) 0 env(safe-area-inset-left)
 }
 .is-phone .ed-top { height: 52px; padding: 0 var(--space-1); gap: 0 }
-.is-phone .ed-ibtn, .is-phone .ed-tool { width: 44px; height: 44px; border-radius: var(--radius-panel) }
+.is-phone .ed-ibtn, .is-phone .ed-tool { width: var(--tap); height: var(--tap); border-radius: var(--radius-panel) }
 .is-phone .ed-docname { text-align: left; padding-left: var(--space-1) }
-.is-phone .ed-zoom { border: 0; height: 44px }
-.is-phone .ed-zoom-pct { height: 44px !important; min-width: 52px !important }
+.is-phone .ed-zoom { border: 0; height: var(--tap) }
+.is-phone .ed-zoom-pct { height: var(--tap) !important; min-width: 52px !important }
 .is-phone .ed-body { display: block; position: relative }
 .is-phone .ed-stage { position: absolute; inset: 0 }
 .ed-dock {
@@ -357,7 +357,7 @@ html.ed-scroll-lock .pal-dock { display: none }
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 70;
+  z-index: var(--z-sheet);
   display: flex;
   flex-direction: column;
   /* a sheet: the raised glass (one blur; the canvas under it is still) */
@@ -376,24 +376,24 @@ html.ed-scroll-lock .pal-dock { display: none }
 .ed-sheet-head { flex: none; display: flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-1) 0 var(--space-4); border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1 }
 .ed-sheet-head > b { flex: 1; font: 600 var(--fs-label-12) var(--mono); letter-spacing: .16em; color: var(--value) }
 .ed-tabs--sheet { flex: 1; border: 0; padding: 0 }
-.ed-tabs--sheet button { height: 44px }
+.ed-tabs--sheet button { height: var(--tap) }
 .ed-sheet-body { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; touch-action: pan-y }
 .ed-sheet-body .ed-pane, .ed-sheet-body .ed-insp { overflow: visible; padding-bottom: var(--space-5) }
-.is-phone .ed-row { min-height: 44px }
-.is-phone .ed-row-name, .is-phone .ed-twist, .is-phone .ed-eye { height: 44px }
-.is-phone .ed-eye, .is-phone .ed-twist { width: 44px }
-.is-phone .ed-grip { width: 32px; height: 44px; font-size: var(--fs-label-12) }
-.is-phone .ed-field input, .is-phone .ed-field select, .is-phone .ed-search { min-height: 44px; font-size: var(--fs-copy-16) }
-.is-phone .ed-row-btns button, .is-phone .ed-chips button, .is-phone .ed-grid2 > button, .is-phone .ed-play, .is-phone .ed-seg button, .is-phone .ed-agroup h3 button, .is-phone .ed-mini-list button, .is-phone .ed-link { min-height: 44px }
-.is-phone .ed-check { min-height: 44px }
+.is-phone .ed-row { min-height: var(--tap) }
+.is-phone .ed-row-name, .is-phone .ed-twist, .is-phone .ed-eye { height: var(--tap) }
+.is-phone .ed-eye, .is-phone .ed-twist { width: var(--tap) }
+.is-phone .ed-grip { width: 32px; height: var(--tap); font-size: var(--fs-label-12) }
+.is-phone .ed-field input, .is-phone .ed-field select, .is-phone .ed-search { min-height: var(--tap); font-size: var(--fs-copy-16) }
+.is-phone .ed-row-btns button, .is-phone .ed-chips button, .is-phone .ed-grid2 > button, .is-phone .ed-play, .is-phone .ed-seg button, .is-phone .ed-agroup h3 button, .is-phone .ed-mini-list button, .is-phone .ed-link { min-height: var(--tap) }
+.is-phone .ed-check { min-height: var(--tap) }
 .is-phone .ed-check input { width: 22px; height: 22px }
 .is-phone .ed-slider input { height: 36px }
 .is-phone .ed-flabel { height: 26px }
 .is-phone .ed-agrid { grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)) }
-.is-phone .ed-asset { min-height: 44px }
+.is-phone .ed-asset { min-height: var(--tap) }
 .is-phone .ed-modal-card { max-height: 92dvh }
 @media (pointer: coarse) {
-  .ed-root { --ed-hit: 44px }
+  .ed-root { --ed-hit: var(--tap) }
   /* tablets: every editor target is at least 40 px (phones get 44 from .is-phone) */
   .ed-tool, .ed-ibtn { width: 40px; height: 40px }
   .ed-textbtn, .ed-zoom > button, .ed-row-btns button, .ed-chips button, .ed-grid2 > button, .ed-play, .ed-seg button, .ed-menu button { min-height: 40px }
@@ -450,13 +450,13 @@ html.ed-scroll-lock .pal-dock { display: none }
   border-radius: var(--radius-card);
   max-width: calc(100% - var(--space-4))
 }
-.ed-selbar button { min-width: 44px; min-height: 44px; padding: 0 var(--space-2); background: none; border: 1px solid transparent; border-radius: var(--radius-panel); color: var(--label); font-size: var(--fs-label-12); letter-spacing: .08em }
+.ed-selbar button { min-width: var(--tap); min-height: var(--tap); padding: 0 var(--space-2); background: none; border: 1px solid transparent; border-radius: var(--radius-panel); color: var(--label); font-size: var(--fs-label-12); letter-spacing: .08em }
 .ed-selbar button:hover:not(:disabled), .ed-selbar button:focus-visible:not(:disabled) { border-color: var(--line); background: var(--raised) }
 .ed-selbar button:active:not(:disabled) { background: var(--wash-press) }
 .ed-selbar button.on { border-color: var(--ed-sel); background: var(--glow-wash); color: var(--value) }
 .ed-selbar .ed-danger { border-color: transparent !important }
 .is-phone .ed-note { bottom: calc(132px + env(safe-area-inset-bottom)) }
-.is-phone .ed-lock { width: 44px; height: 44px; opacity: 1 }
+.is-phone .ed-lock { width: var(--tap); height: var(--tap); opacity: 1 }
 .is-phone .ed-lock[aria-pressed="false"] { display: none }
 
 /* ── E3: editing on canvas ── */
@@ -491,7 +491,7 @@ html.ed-scroll-lock .pal-dock { display: none }
 .ed-qbar button:active:not(:disabled) { background: var(--wash-press) }
 .ed-qbar button[aria-pressed="true"] { border-color: var(--ed-sel); background: var(--glow-wash); color: var(--value) }
 .is-phone .ed-qbar { gap: 0; padding: var(--space-1) }
-.is-phone .ed-qbar button { min-width: 44px; height: 44px }
+.is-phone .ed-qbar button { min-width: var(--tap); height: var(--tap) }
 /* text typed in place: the input is invisible (the letters are the frame's dots); the caret sits in a glyph gap */
 .ed-intext {
   position: absolute;
@@ -546,7 +546,7 @@ html.ed-scroll-lock .pal-dock { display: none }
 .ed-bar canvas { display: block; width: 100%; height: auto }
 .ed-bar--big .ed-bar-scroll { overflow: auto; max-height: 60vh }
 .ed-bar--big canvas { width: auto; max-width: none }
-.is-phone .ed-link-url { min-height: 44px }
+.is-phone .ed-link-url { min-height: var(--tap) }
 
 /* ── E6: phone polish (the long-press menu, a phone on its side, the keyboard) ── */
 .ed-viewport { -webkit-touch-callout: none }
@@ -554,7 +554,7 @@ html.ed-scroll-lock .pal-dock { display: none }
    finger that opened it lifts (that lift never picks an item) */
 .ed-cmenu {
   position: absolute;
-  z-index: 8;
+  z-index: calc(var(--z-raise) + 5);
   display: grid;
   gap: var(--space-1);
   min-width: 232px;
@@ -569,7 +569,7 @@ html.ed-scroll-lock .pal-dock { display: none }
 .ed-cmenu.is-arming { pointer-events: none }
 .ed-cmenu-head { padding: var(--space-1) var(--space-2) 0; color: var(--label); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .12em; text-transform: uppercase; white-space: nowrap; overflow: hidden; text-overflow: ellipsis }
 .ed-cmenu-items { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-1) }
-.ed-cmenu-items button { min-height: 44px; padding: 0 var(--space-3); background: none; border: 1px solid var(--line); border-radius: var(--radius-panel); color: var(--value); font-size: var(--fs-label-12); font-weight: 600; letter-spacing: .1em; text-align: left }
+.ed-cmenu-items button { min-height: var(--tap); padding: 0 var(--space-3); background: none; border: 1px solid var(--line); border-radius: var(--radius-panel); color: var(--value); font-size: var(--fs-label-12); font-weight: 600; letter-spacing: .1em; text-align: left }
 .ed-cmenu-items button:hover:not(:disabled), .ed-cmenu-items button:focus-visible:not(:disabled) { border-color: var(--line-hover); background: var(--raised) }
 .ed-cmenu-items button:active:not(:disabled) { background: var(--wash-press) }
 .ed-cmenu-items [data-menu="duplicate"], .ed-cmenu-items [data-menu="delete"] { grid-column: 1 / -1 }
@@ -589,6 +589,6 @@ html.ed-scroll-lock .pal-dock { display: none }
   padding-right: env(safe-area-inset-right);
   transition: none
 }
-.ed-sheet--side .ed-sheet-head { min-height: 44px }
+.ed-sheet--side .ed-sheet-head { min-height: var(--tap) }
 /* the keyboard is open: the root fills what it leaves (top / height set from visualViewport) */
 .ed-root.is-phone.has-kb { bottom: auto; min-height: 0 }

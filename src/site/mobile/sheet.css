@@ -101,7 +101,7 @@ html:has(.sheet[open]) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  min-height: 44px;
+  min-height: var(--tap);
   padding: 0 var(--space-2) 0 var(--space-4);
   border-bottom: 1px solid var(--line);
   border-image: var(--hair-x) 1;
@@ -117,8 +117,8 @@ html:has(.sheet[open]) {
 }
 
 .sheet-done {
-  min-width: 44px;
-  min-height: 44px;
+  min-width: var(--tap);
+  min-height: var(--tap);
   padding: 0 var(--space-3);
   border: 0;
   border-radius: var(--radius-ctl);

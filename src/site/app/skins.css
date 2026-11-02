@@ -57,7 +57,7 @@
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
-  z-index: 60;
+  z-index: var(--z-app);
   display: grid;
   gap: var(--space-1);
   width: min(330px, calc(100cqi - 24px));

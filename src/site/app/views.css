@@ -108,7 +108,7 @@
   position: absolute;
   top: 3px;
   right: 14px;
-  z-index: 3;
+  z-index: var(--z-raise);
   display: flex;
   align-items: center;
   gap: var(--space-1);

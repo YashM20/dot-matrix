@@ -40,7 +40,7 @@
 /* the way out: DONE, grey like the rest of the bar, always shown while engaged */
 .dot-card-bar .dot-card-done {
   pointer-events: auto;
-  min-width: 44px;
+  min-width: var(--tap);
   min-height: 28px;
   color: var(--value);
   border-color: var(--line);
@@ -60,8 +60,8 @@
 
   /* the strip is an overlay: full 44 px targets, readable labels */
   .dot-card-bar.open .dot-card-acts button {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--tap);
+    min-height: var(--tap);
     font-size: var(--fs-label-10)
   }
 
@@ -81,8 +81,8 @@
     position: absolute;
     left: 50%;
     top: 50%;
-    width: 44px;
-    height: 44px;
+    width: var(--tap);
+    height: var(--tap);
     transform: translate(-50%, -50%)
   }
 
