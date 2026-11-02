@@ -2,7 +2,7 @@
 
 > Current (2026-10-31, Phases L1, L2, L3 and X1). Code: `src/engine/life/` (import from `src/engine/life`: it is deliberately not re-exported by the `src/engine` barrel, which first-load code imports), cards: `src/widgets/boards/pond/` (board `pond`, `/pond/`), checks: `scripts/life.ts` (run by `pnpm verify`; alone: `npx tsx scripts/life.ts`; `--snapshot` prints the determinism hashes). Plan and rationale: [`living-matter/L-pond.md`](living-matter/L-pond.md).
 
-A koi pond drawn the dot-matrix way, after daoho.dev's ASCII koi pond but with no daoho code or constants: wave-equation water, dot micro-glyph tiles, koi on follow-the-leader spines with Reynolds steering and published swim kinematics. Every scene is a physics `World` (`src/engine/physics/world.ts`): a pristine, seeded, looped run that goldens, thumbnails and reduced motion read, and a live fork on input that heals back 4 s after the last input.
+A koi pond drawn the dot-matrix way, after daoho.dev's ASCII koi pond but with no daoho code or constants: wave-equation water, dot micro-glyph tiles, koi on follow-the-leader spines with Reynolds steering and published swim kinematics. Every scene is a physics `World` (`src/engine/physics/world.ts`): a pristine, seeded, looped run that goldens, thumbnails and reduced motion read, and a live fork on input that heals back 4 s after the last input. The koi pond also waits until the food is gone and the loop seam is not near, then the koi swim back to their scripted places over 6 s (`pond/heal.ts`, #90).
 
 | Module | What | Source |
 |---|---|---|
@@ -11,7 +11,7 @@ A koi pond drawn the dot-matrix way, after daoho.dev's ASCII koi pond but with n
 | `chain.ts` | Spine with a joint limit, Verlet rope, FABRIK | argonaut (animal-proc-anim); Aristidou & Lasenby 2011 |
 | `body.ts` | Width profile LUT, swim wave, the body raster (body, fins, tail fan), koi marking LUTs, Strouhal beat | Videler 1993; Taylor, Nudds & Thomas 2003 |
 | `steer.ts` | seek / flee / arrive / wander / contain / separate / align, turn-capped `integrate`, C-start `startle` | Reynolds 1999; Eaton 1977, Domenici & Blake 1997 |
-| `pond.ts` | `createKoiPond(spec)` (the world) and `drawKoiPond` (state → tile raster); the code is in `pond/`: `layout` (spec, slots, constants), `world`, `koi` (steering, startles), `views`, and `paint` / `draw` / `type` (drawing) | — |
+| `pond.ts` | `createKoiPond(spec)` (the world) and `drawKoiPond` (state → tile raster); the code is in `pond/`: `layout` (spec, slots, constants), `world`, `koi` (steering, startles), `heal`, `views`, and `paint` / `draw` / `type` (drawing) | — |
 | `agents.ts` (L2) | Physarum (sense, rotate, move, deposit; 3×3 blur + decay; food and salt) and a two-pheromone ant colony | J. Jones, Artificial Life 16 (2010) |
 | `oscillators.ts` (L2) | Kuramoto step and order parameter; Mirollo–Strogatz pulse coupling with local kicks, absorption and synchronous rounds | Kuramoto 1975; Mirollo & Strogatz 1990 |
 | `grow.ts` (L2) | Space colonisation grown once as a history (birth iteration per node, pipe-model thickness); stochastic L-systems; a turtle that emits sites | Runions et al. 2005/2007; Prusinkiewicz & Lindenmayer 1990 |

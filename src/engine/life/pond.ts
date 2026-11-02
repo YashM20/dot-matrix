@@ -8,6 +8,7 @@
  * - `layout.ts`: the spec, the state layout (slot offsets) and the constants;
  * - `world.ts`: `createKoiPond`, the world's step (input, autopilot, pellets, wake, foam), init and blend;
  * - `koi.ts`: koi steering, burst and glide, startles and their contagion;
+ * - `heal.ts`: the heal back to the loop, in which the koi swim back to their scripted places (#90);
  * - `views.ts`: read-outs for cards, checks and probes;
  * - `paint.ts`, `draw.ts`, `type.ts`: drawing (shared helpers, the DOTS look, the TYPE look).
  * This file is the public surface; the slot indices stay inside `pond/`.

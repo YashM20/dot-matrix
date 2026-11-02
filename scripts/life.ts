@@ -29,6 +29,7 @@ import { fmtLoaded, medianLoaded } from './lib/load'
 import { lifeL2Checks } from './life-l2'
 import { lifeL3Checks } from './life-l3'
 import { lifeX1Checks } from './life-x1'
+import { lifeHealChecks } from './life-heal'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[s.length >> 1] }
@@ -471,12 +472,14 @@ export async function lifeChecks(assert: Assert): Promise<void> {
     const dropped = pelletViews(P, s).filter(p => p.state === 1).length
     for (let k = 0; k < 18; k++) s = at()
     const floating = pelletViews(P, s).filter(p => p.state === PEL_FLOATING && p.age < 1).length
-    for (let k = 0; k < 190; k++) s = at()
+    // the heal waits until the food is gone and the loop seam has passed (#90): allow up to a loop and a bit
+    const tTap = t
+    for (let k = 0; k < 30 * 60 && W.mode !== 'pristine'; k++) s = at()
     const healedMode = W.mode, liveKey = key(t)
     worldReset(W)
     const pristineKey = key(t), healed = healedMode === 'pristine' && liveKey === pristineKey
-    assert('pond-koi: a tap drops 5–7 pellets that land with ripples, startles koi within .7 L, and heals to pristine 6 s later (frame = pristine frame)',
-      dropped >= 5 && dropped <= 7 && floating === dropped && near.length > 0 && startled && healed, `${dropped} pellets, ${floating} floating after .6 s, ${near.length} koi near (${startled ? 'startled' : 'not startled'}), healed ${healedMode}`)
+    assert('pond-koi: a tap drops 5–7 pellets that land with ripples, startles koi within .7 L, and heals to pristine once the meal is over (frame = pristine frame)',
+      dropped >= 5 && dropped <= 7 && floating === dropped && near.length > 0 && startled && healed, `${dropped} pellets, ${floating} floating after .6 s, ${near.length} koi near (${startled ? 'startled' : 'not startled'}), healed ${healedMode} ${(t - tTap).toFixed(1)} s later`)
     // hold 1.2 s → lure, no pellets. How many koi reach the lure in 1.2 s depends on where they are when the hold
     // starts (0–5 over start times, on the L2 code as on L3), so the hold runs from 24 starts across the loop and is
     // compared with the pristine run at the same moments: more koi within 1 L, every koi closer on average. (Over these
@@ -516,6 +519,8 @@ export async function lifeChecks(assert: Assert): Promise<void> {
   await lifeL3Checks(assert, pond)
   // ── X1: pond depth (scripts/life-x1.ts) ──
   await lifeX1Checks(assert, pond)
+  // ── #90: the hand-off back to the loop after a feed (scripts/life-heal.ts) ──
+  await lifeHealChecks(assert, pond)
 
   // ── determinism across engines (Bun / JSC), when available ──
   {

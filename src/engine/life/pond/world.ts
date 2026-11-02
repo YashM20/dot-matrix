@@ -21,9 +21,12 @@ import {
   PS, SPS, TILT_DRIFT, TILT_K, type KoiPond, type KoiPondSpec,
 } from './layout'
 import { contagion, CRUISE, startleKoi, steerKoi, type KoiCtx } from './koi'
+import { createHealBlend } from './heal'
 
 /** The hover wake's depth by pointer speed: none below 10 cells/s, the L1 depth (.04) at 50, at most .06. */
 const wakeAmp = (speed: number) => -.04 * Math.min(1.5, (speed - 10) / 40)
+/** Seconds the heal back to the loop takes (#90: the koi swim back to their scripted places in it, see heal.ts). */
+const HEAL = 6
 
 export function createKoiPond(spec: KoiPondSpec): KoiPond {
   const { tiles, seed } = spec, K = spec.koi.length, lay = pondLayout(K, tiles), dt = POND_DT
@@ -58,6 +61,8 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
 
   // scratch (outside the state: the World contract)
   const foamTmp = new Float32Array(lay.fw * lay.fh)
+  // each koi head before the live step (the heal moves a head from there; the pristine run neither writes nor reads it)
+  const before = new Float32Array(2 * K)
   const toRx = (x: number) => (x - tiles.ox - 1.5) / tiles.pitch, toRy = (y: number) => (y - tiles.oy - 1.5) / tiles.pitch
   const ctx: KoiCtx = {
     spec, seed, K, lay, chains, bodies, ripple, toRx, toRy,
@@ -96,6 +101,7 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
 
   function step(s: Float32Array, n: number, inp: StepInput) {
     const ph = phaseSteps(n, start, len), t = n * dt, G = lay.G
+    if (inp.live >= 0) for (let i = 0; i < K; i++) { before[2 * i] = s[chains[i].X]; before[2 * i + 1] = s[chains[i].Y] }
     // ── input ──
     const p = inp.pointers[0]
     let ptrX = 0, ptrY = 0, ptrIn = false, ptrDown = false, ptrSpeed = 0
@@ -230,7 +236,7 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
    * The world's seam calls this after each of the loop's last steps with k = 1/(rem + 1), toward the fixed loop-start
    * state, while the koi keep swimming; at that k the motion reopens the gap every step and the koi land about a tile
    * off. Doubling k (capped at 1) makes the remaining gap telescope, the product of (rem - 1)/(rem + 1), to exactly 0
-   * at the last step. A heal (k = 1/healLeft) still ends on the pristine state.
+   * at the last step. (The heal has its own blend, heal.ts.)
    */
   function blend(x: Float32Array, y: Float32Array, k0: number) {
     const k = k0 >= .5 ? 1 : 2 * k0
@@ -248,12 +254,26 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
     for (const q of headsAt) { const hx = x[q], hy = x[q + 1], l = Math.sqrt(hx * hx + hy * hy); if (l > 1e-9) { x[q] = hx / l; x[q + 1] = hy / l } else { x[q] = 1; x[q + 1] = 0 } }
   }
 
+  /**
+   * Busy (#90): food falling or floating, or a koi going for a pellet (the heal waits until the meal is over); or a
+   * heal from step n would reach the loop's seam, where the pristine koi are pulled onto the loop start faster than a
+   * koi swims, so the healing koi could not keep up with them.
+   */
+  const seamSteps = Math.round(spec.seam / dt), healSteps = Math.round(HEAL / dt)
+  function busy(s: Float32Array, n: number): boolean {
+    if (phaseSteps(n - (len - seamSteps - healSteps), start, len) < seamSteps + healSteps) return true
+    for (let k = 0; k < PELLETS; k++) { const st = s[lay.PEL + PS * k + P_STATE]; if (st === PEL_FALLING || st === PEL_FLOATING) return true }
+    for (let i = 0; i < K; i++) if (s[KO(i) + K_FOOD] >= 0) return true
+    return false
+  }
+  const healBlend = createHealBlend(lay, chains, bodies.map(b => b.length), before, discrete, isPhase, headsAt)
+
   const world = createWorld({
     size: lay.size, dt, lead: spec.lead, period: spec.period, seam: spec.seam,
-    every: 120, maxCheckpoints: 16, maxSteps: 2400, idle: 4, heal: 2, maxLiveSteps: 4,
+    every: 120, maxCheckpoints: 16, maxSteps: 2400, idle: 4, heal: HEAL, maxLiveSteps: 4,
     // no gravity: the pond reads the input's (gx, gy) as the hub's tilt (tx, ty), exactly 0 at rest and in the pristine run
     gravity: [0, 0],
-    init, step, blend,
+    init, step, blend, busy, healBlend,
   })
   return { world, spec, ripple, chains, markings, bodyStyle: spec.bodyStyle ?? DEFAULT_BODY_STYLE, layout: lay, bank, shore, water, bodies }
 }

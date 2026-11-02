@@ -9,8 +9,9 @@
  * - **live**: the first frame with input (a pointer that moves or is down, tilted gravity, a kick) copies the
  *   pristine state and steps it forward with the input, at the same fixed dt. A slow frame never takes a bigger
  *   step: at most `maxLiveSteps` per frame, the rest of the time is dropped. Autopilot schedules keep reading
- *   the loop-folded step, so a live world keeps its rhythm. After `idle` seconds without input it `heal`s: each
- *   step blends onto the pristine state at the same step, and once there the world is pristine again.
+ *   the loop-folded step, so a live world keeps its rhythm. After `idle` seconds without input (and without the
+ *   optional `busy` hook saying the live state is mid-action) it `heal`s: each step blends onto the pristine state
+ *   at the same step (`healBlend`, else `blend`), and once there the world is pristine again.
  *   Time going backwards (remount, scrub) or a non-finite value drops back to pristine at once.
  *
  * Input is handed over per frame in the world's own units (the card maps card cells to world units); the runner
@@ -76,6 +77,14 @@ export interface WorldSpec {
   idle?: number
   /** Seconds the heal takes (default 1.5). */
   heal?: number
+  /**
+   * A heal now would cut something short (the pond: food in the water, a fish eating) or run into a stretch of the
+   * pristine run it can't follow (the pond: the loop's seam). `n` is the live state's loop-folded step. While this is
+   * true the heal does not start, and `idle` counts from the last busy step as from the last input. Optional.
+   */
+  busy?: (state: Float32Array, n: number) => boolean
+  /** Blend used by the heal (default `blend`): k = 1/(heal steps left), so the last step lands on the pristine state. */
+  healBlend?: (a: Float32Array, b: Float32Array, k: number) => void
   /** Most steps one live frame takes (default 8). */
   maxLiveSteps?: number
 }
@@ -89,8 +98,9 @@ export interface World {
   live: Float32Array
   /** Loop-folded step of the live state, and the board time it stands for. */
   liveN: number; liveT: number
-  /** Board time of the last frame with input. */
+  /** Board time of the last frame with input, and of the last frame the live state was `busy`. */
   lastInput: number
+  lastBusy: number
   /** Heal steps still to go. */
   healLeft: number
   /** Live steps since touched (cost accounting, `StepInput.live`). */
@@ -133,7 +143,7 @@ export function createWorld(spec: WorldSpec): World {
     },
   })
   return {
-    spec, sim, mode: 'pristine', live: new Float32Array(spec.size), liveN: 0, liveT: 0, lastInput: -Infinity, healLeft: 0,
+    spec, sim, mode: 'pristine', live: new Float32Array(spec.size), liveN: 0, liveT: 0, lastInput: -Infinity, lastBusy: -Infinity, healLeft: 0,
     liveSteps: 0, dropped: 0, resets: 0, prev: new Map(), prevKick: false, pool: [],
     input: { pointers: [], gx, gy, kick: false, live: 0, quiet: 0 },
   }
@@ -147,7 +157,7 @@ export function worldFold(w: World, n: number): number {
 
 /** Back to the pristine run (drops the live state). */
 export function worldReset(w: World): void {
-  w.mode = 'pristine'; w.healLeft = 0; w.liveSteps = 0; w.prev.clear(); w.prevKick = false; w.lastInput = -Infinity
+  w.mode = 'pristine'; w.healLeft = 0; w.liveSteps = 0; w.prev.clear(); w.prevKick = false; w.lastInput = -Infinity; w.lastBusy = -Infinity
 }
 
 /** Does this frame carry input that changes the world? (A still pointer that is not down does not.) */
@@ -207,7 +217,7 @@ export function worldAt(w: World, t: number, frame?: FrameInput): Float32Array {
       w.liveN = worldFold(w, w.liveN + 1)
       if (w.mode === 'heal') {
         const target = simAtStep(w.sim, w.liveN);
-        (w.spec.blend ?? lerpAll)(w.live, target, 1 / Math.max(1, w.healLeft))
+        (w.spec.healBlend ?? w.spec.blend ?? lerpAll)(w.live, target, 1 / Math.max(1, w.healLeft))
         if (--w.healLeft <= 0) { worldReset(w); return simView(w.sim, t) }
       }
     }
@@ -218,8 +228,10 @@ export function worldAt(w: World, t: number, frame?: FrameInput): Float32Array {
     for (const p of frame?.pointers ?? []) if (!w.prev.has(p.id)) w.prev.set(p.id, { x: p.x, y: p.y, down: false })
   }
   if (!finite(w.live)) { w.resets++; worldReset(w); return simView(w.sim, t) }
-  const idle = w.spec.idle ?? 3
-  if (w.mode === 'live' && t - w.lastInput > idle) { w.mode = 'heal'; w.healLeft = Math.max(1, Math.round((w.spec.heal ?? 1.5) / dt)) }
+  if (w.mode === 'live') {
+    if (w.spec.busy?.(w.live, w.liveN)) w.lastBusy = t
+    if (t - Math.max(w.lastInput, w.lastBusy) > (w.spec.idle ?? 3)) { w.mode = 'heal'; w.healLeft = Math.max(1, Math.round((w.spec.heal ?? 1.5) / dt)) }
+  }
   return w.live
 }
 
