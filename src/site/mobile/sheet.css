@@ -1,0 +1,246 @@
+/* Phone styles: the bottom sheet, its grab handle, the boards sheet and sheet rows */
+/* ── bottom sheet (one component, src/components/Sheet.tsx): a modal <dialog> that is a scroll-snap sheet ──
+   The dialog fills the screen and scrolls between two stops: the empty rest above the panel (closed) and the
+   panel's end (open). Dragging the panel or its list down past the top is the browser's own scroll; settling
+   on the closed stop closes it. The scrim follows that scroll (a scroll timeline). The panel is the raised
+   glass (src/site/app/raised.css); the dialog itself never blurs, so there is one blur. */
+html:has(.sheet[open]) {
+  overflow: hidden
+}
+
+.sheet {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-width: none;
+  max-height: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: var(--scrim);
+  color: var(--value);
+  text-align: left;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none
+}
+
+.sheet::-webkit-scrollbar {
+  display: none
+}
+
+.sheet[open] {
+  display: block
+}
+
+.sheet::backdrop {
+  background: transparent
+}
+
+@supports (animation-timeline: scroll()) {
+  .sheet {
+    background: transparent;
+    animation: sheet-scrim linear both;
+    animation-timeline: scroll(self)
+  }
+}
+
+@keyframes sheet-scrim {
+  to {
+    background-color: var(--scrim)
+  }
+}
+
+/* the closed stop: a tap here closes too */
+.sheet-rest {
+  height: 100%;
+  scroll-snap-align: start
+}
+
+.sheet-panel {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 600px;
+  max-height: min(86dvh, 760px);
+  margin: 0 auto;
+  padding: 0 0 env(safe-area-inset-bottom);
+  border-bottom: 0;
+  border-radius: var(--radius-card) var(--radius-card) 0 0;
+  overflow: hidden;
+  /* it arrives by scrolling up to this stop (Sheet.tsx), not by a transform: a transform would move the
+     panel's snap area and the dialog's scroll range */
+  scroll-snap-align: end
+}
+
+/* grab handle (one look): five dots, drawn like everything else */
+.sheet-grab i,
+.ed-sheet-grab i,
+.xr-panel .xr-grip::before {
+  width: 36px;
+  height: 4px;
+  border-radius: 0;
+  background: radial-gradient(circle, var(--line-hover) 1.6px, transparent 2px) -2px 0 / 8px 4px repeat-x
+}
+
+.sheet-grab {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-2) 0 var(--space-1)
+}
+
+/* the palette's handle drives its own drag (useSwipeDown) */
+.pal-grab {
+  touch-action: none
+}
+
+.sheet-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 44px;
+  padding: 0 var(--space-2) 0 var(--space-4);
+  border-bottom: 1px solid var(--line);
+  border-image: var(--hair-x) 1;
+  -webkit-user-select: none;
+  user-select: none
+}
+
+.sheet-head h2 {
+  margin: 0;
+  color: var(--label);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .18em
+}
+
+.sheet-done {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 var(--space-3);
+  border: 0;
+  border-radius: var(--radius-ctl);
+  background: none;
+  color: var(--value);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .14em;
+  cursor: pointer
+}
+
+.sheet-done:hover,
+.sheet-done:focus-visible {
+  background-color: var(--wash-hover)
+}
+
+.sheet-done:active {
+  background-color: var(--wash-press)
+}
+
+/* the list scrolls; at its top a downward drag carries on into the sheet (and closes it) */
+.sheet-body {
+  flex: 1;
+  min-height: 0;
+  padding: var(--space-1) var(--space-2) var(--space-4);
+  overflow-y: auto;
+  overscroll-behavior-y: auto
+}
+
+/* rows fill the sheet's width: their ring is drawn inside */
+.sheet button:focus-visible {
+  outline-offset: -2px
+}
+
+/* the boards sheet: every group, a row per board with its line; the current one carries the red dot */
+.board-sheet h3 {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-2);
+  margin: var(--space-4) var(--space-2) var(--space-1);
+  color: var(--mute);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .18em
+}
+
+.board-sheet h3 small {
+  font: 400 var(--fs-label-12) var(--mono);
+  letter-spacing: .02em
+}
+
+.board-sheet ul {
+  display: grid;
+  gap: var(--space-1);
+  margin: 0;
+  padding: 0;
+  list-style: none
+}
+
+.board-sheet li button,
+.skin-list button {
+  display: grid;
+  grid-template-columns: 6px 1fr;
+  align-items: center;
+  gap: var(--space-1) var(--space-3);
+  width: 100%;
+  min-height: 52px;
+  padding: var(--space-2) var(--space-2);
+  border: 0;
+  border-radius: var(--radius-ctl);
+  background: none;
+  color: var(--mute);
+  font: 400 var(--fs-label-12)/1.4 var(--mono);
+  letter-spacing: .02em;
+  text-align: left;
+  cursor: pointer
+}
+
+.board-sheet li button b,
+.skin-list button b {
+  color: var(--label);
+  font-weight: 600;
+  font-size: var(--fs-label-12);
+  letter-spacing: .14em
+}
+
+.board-sheet li button span {
+  grid-column: 2
+}
+
+.board-sheet li button i,
+.skin-list button i {
+  grid-row: 1;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--tint) 16%, transparent)
+}
+
+.board-sheet li button.selected,
+.skin-list button.selected {
+  color: var(--label);
+  background: radial-gradient(circle, color-mix(in srgb, var(--tint) 13%, transparent) .8px, transparent 1.1px) 0 0 / 4px 4px
+}
+
+.board-sheet li button.selected b,
+.skin-list button.selected b {
+  color: var(--value)
+}
+
+.board-sheet li button.selected i {
+  background: var(--red)
+}
+
+/* sheet rows (one look, the menu rows' look): a wash on hover, one step more on press, over the selected dots */
+.board-sheet li button:hover,
+.board-sheet li button:focus-visible,
+.skin-list button:hover,
+.skin-list button:focus-visible {
+  background-color: var(--wash-hover)
+}
+
+.board-sheet li button:active,
+.skin-list button:active {
+  background-color: var(--wash-press)
+}

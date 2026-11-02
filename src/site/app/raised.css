@@ -1,0 +1,239 @@
+/* App styles: the raised layer (menus, popovers, sheets, the palette) */
+/* ── raised layer (one look): menus, popovers, sheets, ⌘K ─────────────────────────────────────────────
+   Glass: translucent raised, one small blur, the raised shadow; it opens with no animation. Cards keep their
+   single hairline. Used by .skin-menu, .theme-pop, .ed-menu (editor), .wp-more (widget page), .pal, .sheet-panel. */
+.skin-menu,
+.theme-pop,
+.ed-menu,
+.wp-more,
+.pal,
+.sheet-panel {
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-raised);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur)
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .skin-menu,
+  .theme-pop,
+  .ed-menu,
+  .wp-more,
+  .pal,
+  .sheet-panel {
+    background: var(--raised)
+  }
+}
+
+/* menu rows (one look): a wash on hover, one step more on press */
+.skin-menu button,
+.ed-menu button,
+.wp-more button {
+  border-radius: var(--radius-ctl)
+}
+
+.pal {
+  width: min(620px, calc(100vw - 24px));
+  overflow: hidden;
+  text-align: left
+}
+
+.pal-field {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid var(--line);
+  border-image: var(--hair-x) 1
+}
+
+/* the field always holds focus while the palette is open: its dotted rule turns accent */
+.pal-field:focus-within {
+  border-image: repeating-linear-gradient(90deg, var(--red) 0 var(--hair-dot), transparent 0 var(--hair-pitch)) 1
+}
+
+.pal-prompt {
+  color: var(--red-text);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .12em
+}
+
+.pal-input {
+  flex: 1;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  box-shadow: none;
+  color: var(--value);
+  caret-color: var(--red);
+  font: 500 var(--fs-copy-14) var(--mono)
+}
+
+.pal-list {
+  list-style: none;
+  margin: 0;
+  padding: var(--space-2);
+  max-height: min(52vh, 420px);
+  overflow: auto
+}
+
+.pal-item {
+  display: grid;
+  grid-template-columns: 58px 1fr auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-2);
+  border-radius: var(--radius-ctl);
+  color: var(--label);
+  font: 500 var(--fs-label-12) var(--mono);
+  cursor: pointer
+}
+
+.pal-item[data-group] {
+  margin-top: var(--space-1)
+}
+
+/* the highlighted row (pointer or arrows, one at a time): in at once, out over --dur-out */
+.pal-item--sel {
+  background: var(--wash-press);
+  color: var(--value);
+  box-shadow: inset 2px 0 0 var(--red);
+  transition-duration: var(--dur-in)
+}
+
+.pal-group {
+  color: var(--mute);
+  font-size: var(--fs-label-12);
+  letter-spacing: .16em
+}
+
+.pal-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
+.pal-text mark {
+  background: none;
+  color: var(--red-text)
+}
+
+.pal-hint {
+  font: 500 var(--fs-label-12) var(--mono);
+  color: var(--mute);
+  letter-spacing: .1em
+}
+
+.pal-empty {
+  padding: var(--space-4);
+  color: var(--mute);
+  font: 500 var(--fs-label-12) var(--mono)
+}
+
+.pal-foot {
+  display: flex;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-4);
+  border-top: 1px solid var(--line);
+  border-image: var(--hair-x) 1;
+  color: var(--mute);
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .1em
+}
+
+.pal-shell {
+  position: fixed;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  z-index: 72;
+  width: min(1000px, 100vw);
+  padding: var(--space-4) var(--space-4) var(--space-2);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0 0 var(--radius-panel) var(--radius-panel);
+  box-shadow: var(--shadow-raised);
+  text-align: left
+}
+
+.pal-shell-screen {
+  position: relative
+}
+
+.pal-shell-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  border: 0;
+  cursor: text
+}
+
+.pal-shell-foot {
+  margin-top: var(--space-2);
+  color: var(--mute);
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .14em
+}
+
+.pal-boss {
+  align-items: center;
+  padding-top: 0;
+  background: color-mix(in srgb, var(--shade) 82%, transparent)
+}
+
+.pal-boss-card {
+  width: min(520px, calc(100vw - 24px));
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  text-align: center
+}
+
+.pal-boss-title {
+  margin: 0;
+  color: var(--red-text);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .2em
+}
+
+.pal-boss-flee {
+  align-self: center;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  color: var(--label);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .16em;
+  padding: var(--space-2) var(--space-4);
+  cursor: pointer
+}
+
+.pal-boss-flee:hover,
+.pal-boss-flee:focus-visible {
+  border-color: var(--line-hover);
+  color: var(--value)
+}
+
+.pal-boss-flee:active {
+  background-color: var(--wash-press);
+  color: var(--value)
+}
+
+@media(max-width:640px) {
+  .xr-time {
+    flex-wrap: wrap
+  }
+
+  .pal-item {
+    grid-template-columns: 1fr auto
+  }
+
+  .pal-group {
+    display: none
+  }
+}

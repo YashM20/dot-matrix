@@ -1,0 +1,451 @@
+/* Phone styles: portrait and short landscape */
+/* ── phones: portrait (≤ 760 px wide) and short landscape (a touch screen ≤ 500 px tall) ── */
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+  html {
+    overscroll-behavior-x: none
+  }
+
+  .shell {
+    min-height: 100dvh;
+    padding-top: 0;
+    padding-bottom: var(--tabbar-h)
+  }
+
+  /* chrome is not text: no selection, no callout on long press */
+  .topbar,
+  .tabbar,
+  .board-picker,
+  .next-board,
+  .bottom {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none
+  }
+
+  /* compact sticky top bar, edge to edge, under the status bar */
+  .topbar {
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    flex-wrap: nowrap;
+    gap: var(--space-2);
+    min-height: var(--app-top);
+    margin: 0 calc(-1 * var(--gutter));
+    padding: env(safe-area-inset-top) max(var(--space-1), env(safe-area-inset-right)) 0 max(var(--gutter), env(safe-area-inset-left));
+    background: color-mix(in srgb, var(--bg) 84%, transparent);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur)
+  }
+
+  /* MAKE pins its own canvas at the top: the bar scrolls away there */
+  .shell[data-view="MAKE"] .topbar {
+    position: relative
+  }
+
+  .topbar .view-tabs,
+  .topbar-blog,
+  .topbar .skin-switch,
+  .topbar .theme-switch {
+    display: none
+  }
+
+  .brand {
+    flex: none;
+    white-space: nowrap
+  }
+
+  .topbar .topbar-place {
+    display: block;
+    flex: 1;
+    min-width: 0;
+    min-height: 44px;
+    padding: 0 var(--space-2);
+    overflow: hidden;
+    color: var(--value);
+    font: 600 var(--fs-label-12)/44px var(--mono);
+    letter-spacing: .14em;
+    text-align: center;
+    text-overflow: ellipsis;
+    white-space: nowrap
+  }
+
+  .topbar-place span {
+    color: var(--mute)
+  }
+
+  /* LIVE DATA folds to its red dot (the words stay for screen readers) */
+  .live {
+    flex: none;
+    font-size: 0
+  }
+
+  .live i {
+    width: 6px;
+    height: 6px;
+    margin: 0
+  }
+
+  .topbar .topbar-search {
+    display: grid;
+    flex: none;
+    place-items: center;
+    width: 44px;
+    height: 44px;
+    color: var(--label)
+  }
+
+  .topbar-search .glyph {
+    width: 17px;
+    height: 17px
+  }
+
+  .topbar-search .glyph circle:not(.on) {
+    opacity: 0
+  }
+
+  /* the tab bar: four 58 px targets over the home indicator */
+  .tabbar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 50;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    border-top: 1px solid var(--line);
+    border-image: var(--hair-x) 1;
+    background: color-mix(in srgb, var(--panel) 90%, transparent);
+    -webkit-backdrop-filter: var(--glass-blur);
+    backdrop-filter: var(--glass-blur)
+  }
+
+  .tabbar button {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    min-height: 58px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--mute);
+    font: 600 var(--fs-label-12)/1 var(--mono);
+    letter-spacing: .14em;
+    cursor: pointer
+  }
+
+  .tabbar [aria-current="page"] {
+    color: var(--value)
+  }
+
+  .tabbar [aria-current="page"] .glyph .on {
+    fill: var(--red)
+  }
+
+  /* X-ray or the time machine is on */
+  .tabbar .busy::after {
+    content: '';
+    position: absolute;
+    top: 9px;
+    left: calc(50% + 11px);
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--red);
+    box-shadow: var(--glow-halo)
+  }
+
+  .tabbar button:focus-visible,
+  .topbar button:focus-visible,
+  .board-picker button:focus-visible,
+  .next-board:focus-visible {
+    outline-offset: -3px
+  }
+
+  /* the floating dock is folded into TOOLS; what stayed fixed sits clear of the tab bar */
+  .pal-dock {
+    display: none
+  }
+
+  .pal-toast {
+    bottom: calc(var(--tabbar-h) + 14px)
+  }
+
+  .pal-fps {
+    bottom: calc(var(--tabbar-h) + 10px)
+  }
+
+  .xr-time {
+    bottom: calc(var(--tabbar-h) + 10px)
+  }
+
+  .xr-time button {
+    min-height: 40px;
+    min-width: 40px
+  }
+
+
+  /* board picker: both rows are edge-to-edge strips that scroll sideways under the thumb */
+  .board-picker .board-groups,
+  .board-picker .board-tabs {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: var(--space-1);
+    margin: 0 calc(-1 * var(--gutter));
+    padding: 0 var(--gutter);
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scroll-padding-inline: var(--gutter);
+    scroll-snap-type: x proximity;
+    scrollbar-width: none
+  }
+
+  .board-picker .board-groups::-webkit-scrollbar,
+  .board-picker .board-tabs::-webkit-scrollbar {
+    display: none
+  }
+
+  .board-picker .board-groups button,
+  .board-picker .board-tabs button {
+    flex: none;
+    scroll-snap-align: start;
+    white-space: nowrap
+  }
+
+  /* group names: plain text tabs, 44 px tall */
+  .board-picker .board-groups button {
+    min-height: 44px;
+    padding: 0 var(--space-2);
+    border-bottom: 0;
+    font-size: var(--fs-label-12)
+  }
+
+  /* the open group: a 1 px rule under its word, not under its padding */
+  .board-picker .board-groups button.selected {
+    background: linear-gradient(var(--value), var(--value)) center bottom 9px / calc(100% - 18px) 1px no-repeat
+  }
+
+  .board-group-blurb {
+    display: none
+  }
+
+  /* pills are 36 px to the eye and 44 px to the finger: the border is the transparent hit pad */
+  .board-picker .board-groups .board-all,
+  .board-picker .board-tabs button {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
+    padding: 0 var(--space-3);
+    border: 4px solid transparent;
+    border-radius: var(--radius-pill);
+    background: none;
+    background-clip: padding-box;
+    box-shadow: inset 0 0 0 1px var(--line);
+    color: var(--mute);
+    font: 500 var(--fs-label-12) var(--mono);
+    letter-spacing: .12em
+  }
+
+  /* ALL leads the group strip and scrolls with it (it used to stick and cover the first group); the edge fades
+     below say there is more */
+  .board-picker .board-groups .board-all {
+    margin-right: var(--space-2);
+    color: var(--value);
+    font-weight: 600;
+    cursor: pointer
+  }
+
+  /* scroll edge fades (T3, §1c #8): a strip fades out at an edge only while there is more to scroll that way.
+     A scroll-driven animation moves the two fade lengths; a strip that fits has no timeline, so no fade */
+  @supports (animation-timeline: scroll()) {
+    .board-picker .board-groups,
+    .board-picker .board-tabs {
+      --fade: var(--space-6);
+      -webkit-mask-image: linear-gradient(90deg, transparent, var(--tint) var(--fade-l), var(--tint) calc(100% - var(--fade-r)), transparent);
+      mask-image: linear-gradient(90deg, transparent, var(--tint) var(--fade-l), var(--tint) calc(100% - var(--fade-r)), transparent);
+      animation: strip-fade linear both;
+      animation-timeline: scroll(self inline)
+    }
+  }
+
+  /* the open board: accent ring and wash (no halo: the strip clips it) */
+  .board-picker .board-tabs button.selected {
+    box-shadow: inset 0 0 0 1px var(--red);
+    background-color: var(--glow-wash);
+    color: var(--red-text)
+  }
+
+  /* the board's end: the next board in its group */
+  .next-board {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    min-height: 64px;
+    margin: var(--gap-action) 0 0;
+    padding: 0 var(--space-4);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-card);
+    background: var(--surface);
+    color: var(--value);
+    font: 600 var(--fs-label-12) var(--mono);
+    letter-spacing: .14em;
+    text-align: left;
+    cursor: pointer
+  }
+
+  .next-board:hover,
+  .next-board:focus-visible {
+    border-color: var(--line-hover)
+  }
+
+  .next-board:active {
+    background-color: color-mix(in srgb, var(--surface), var(--tint) 4%)
+  }
+
+  .next-board small {
+    color: var(--mute);
+    font-size: var(--fs-label-12)
+  }
+
+  .next-board b {
+    flex: 1;
+    font-weight: inherit
+  }
+
+  .next-board span {
+    color: var(--label);
+    font-size: var(--fs-copy-14)
+  }
+
+  /* the intent line is one line here (T3: intro + picker ≤ 120 px): the short sentence, the link, the close */
+  .intro-line {
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0 var(--space-3);
+    font-size: var(--fs-label-12)
+  }
+
+  .intro-line .intro-long {
+    display: none
+  }
+
+  .intro-line .intro-short {
+    display: block;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
+  }
+
+  /* the link and the close are full-size targets that overhang the line (negative margins), so the line stays
+   one text line tall; the close stays a 24 px ring to the eye */
+  .intro-line a {
+    flex: none;
+    padding-block: var(--space-3);
+    margin-block: calc(-1 * var(--space-3))
+  }
+
+  .intro-line button {
+    flex: none;
+    min-width: 44px;
+    min-height: 44px;
+    margin-block: calc(-1 * var(--space-4));
+    margin-right: calc(-1 * var(--space-2));
+    border: 10px solid transparent;
+    background-clip: padding-box;
+    box-shadow: inset 0 0 0 1px var(--line)
+  }
+
+  /* footer: stacked lines, links at 44 px */
+  .bottom-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-2);
+    line-height: 1.6;
+    text-align: left
+  }
+
+  .bottom a,
+  .about-view .log-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    padding-inline: var(--space-1)
+  }
+
+  /* ⌘K palette as a tall sheet: the field near the top (clear of the keyboard), results under it */
+  .pal-backdrop {
+    align-items: flex-end;
+    padding: 0
+  }
+
+  .pal {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    height: calc(100dvh - env(safe-area-inset-top) - 28px);
+    padding-bottom: env(safe-area-inset-bottom);
+    border-bottom: 0;
+    border-radius: var(--radius-card) var(--radius-card) 0 0;
+    /* ⌘K opens with no motion; the transition is only the drag snapping back */
+    transition: transform var(--dur-move) var(--ease)
+  }
+
+  .pal-grab {
+    display: flex
+  }
+
+  .pal-field {
+    padding: var(--space-1) var(--space-2) var(--space-1) var(--space-4)
+  }
+
+  .pal-prompt,
+  .pal-foot,
+  .pal-hint {
+    display: none
+  }
+
+  /* 16 px: iOS doesn't zoom the page into the field */
+  .pal-input {
+    min-height: 44px;
+    font-size: var(--fs-copy-16)
+  }
+
+  .pal-cancel {
+    display: block;
+    min-height: 44px;
+    padding: 0 var(--space-2);
+    border: 0;
+    background: none;
+    color: var(--label);
+    font: 600 var(--fs-label-12) var(--mono);
+    letter-spacing: .14em;
+    cursor: pointer
+  }
+
+  .pal-list {
+    flex: 1;
+    max-height: none;
+    overscroll-behavior: contain
+  }
+
+  .pal-item {
+    min-height: 48px;
+    font-size: var(--fs-label-12)
+  }
+
+  .pal-shell {
+    padding-top: calc(var(--space-4) + env(safe-area-inset-top))
+  }
+
+  .brand small {
+    display: none
+  }
+}

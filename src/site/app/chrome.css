@@ -1,0 +1,311 @@
+/* App styles (src/App.tsx imports these in order; the cascade depends on it): base, chrome states, the top bar, card chrome, the bottom bar */
+/* tokens: src/tokens.css (DESIGN.md); page base: src/index.css */
+* {
+  box-sizing: border-box
+}
+
+body {
+  background: var(--bg);
+  color: var(--value)
+}
+
+/* ── chrome states (DESIGN.md › Chrome states): rest, hover, press, focus, disabled ──────────────────────────────
+   The rest state carries the transition, so hover and press come in at once (--dur-in) and fade out over
+   --dur-out. Hover is a lightness lift (--wash-hover), press one step more (--wash-press), never a colour change;
+   the accent glow is for active, focus and live only. No layout shift: states change colour, never size. */
+:where(button, a, summary, [role="tab"], [role="option"], [role="menuitem"], [role="menuitemradio"], [role="radio"]) {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: var(--dur-out);
+  transition-timing-function: var(--ease)
+}
+
+:where(button, a, summary, [role="tab"], [role="option"], [role="menuitem"], [role="menuitemradio"], [role="radio"]):is(:hover, :active, :focus-visible) {
+  transition-duration: var(--dur-in) !important
+}
+
+:where(button):disabled {
+  cursor: default;
+  opacity: .4;
+  pointer-events: none
+}
+
+/* focus is the accent ring in every theme: a 1 px ring and its halo (in-card controls draw theirs in dots) */
+:focus-visible {
+  outline: 1px solid var(--red);
+  outline-offset: 2px;
+  box-shadow: var(--glow-halo)
+}
+
+.shell {
+  /* ── the frame (docs/LAYOUT-THEME-PLAN.md §3; DESIGN.md › Layout › Frame): one centred column, padding
+     included in --frame-max; everything inside shares its one left edge. Rhythm between blocks is only
+     --gap-group / --gap-action / --gap-section. */
+  width: 100%;
+  max-width: var(--frame-max);
+  margin-inline: auto;
+  padding: var(--gap-group) var(--frame-pad) 0
+}
+
+/* the frame's quiet panel edge: a dotted hairline down each side */
+@media (min-width: 768px) {
+  .shell {
+    background: var(--hair-y) left top / 1px 100% no-repeat, var(--hair-y) right top / 1px 100% no-repeat
+  }
+}
+
+.topbar,
+.bottom-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  color: var(--mute);
+  font: 500 var(--fs-label-12)/1 var(--mono);
+  letter-spacing: .14em
+}
+
+.topbar {
+  padding-bottom: var(--gap-group);
+  border-bottom: 1px solid var(--line);
+  border-image: var(--hair-x) 1;
+  flex-wrap: wrap;
+  gap: var(--gap-group);
+  justify-content: flex-start
+}
+
+/* brand left; the view tabs and BLOG centred in the space before the right end (DISPLAY, LIVE, the tool dock) */
+.topbar .view-tabs {
+  margin-inline: auto 0
+}
+
+/* BLOG: a link to its own page, set like the view tabs beside it */
+.topbar-blog {
+  margin-inline-end: auto;
+  color: var(--mute);
+  letter-spacing: .13em;
+  text-decoration: none
+}
+
+.topbar-blog:hover,
+.topbar-blog:focus-visible {
+  color: var(--label)
+}
+
+.topbar-blog:active {
+  color: var(--value)
+}
+
+/* the tool dock's slot (the command layer portals the dock in); phones fold the dock into TOOLS */
+.topbar-dock:empty {
+  display: none
+}
+
+.brand {
+  color: var(--value)
+}
+
+.brand i,
+.live i,
+:where(.dot-card) header i {
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  margin-right: var(--space-2);
+  border-radius: 50%;
+  background: var(--red)
+}
+
+.brand small {
+  color: var(--mute);
+  margin-left: var(--space-2)
+}
+
+.topbar .view-tabs {
+  display: flex;
+  gap: var(--space-5)
+}
+
+.topbar button {
+  font: inherit;
+  letter-spacing: .13em;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mute);
+  cursor: pointer
+}
+
+.topbar button:hover,
+.topbar button:focus-visible {
+  color: var(--label)
+}
+
+.topbar button:active,
+.topbar button.selected {
+  color: var(--value)
+}
+
+.live {
+  color: var(--red-text)
+}
+
+/* live: the accent dot with its halo */
+.live i {
+  width: 5px;
+  height: 5px;
+  box-shadow: var(--glow-halo)
+}
+
+:where(.dot-card) header {
+  margin: 0 0 var(--space-3);
+  color: var(--label);
+  font: 500 var(--fs-label-10) var(--mono);
+  letter-spacing: .16em
+}
+
+h1 {
+  font: 500 var(--fs-h1-hero)/.86 var(--mono);
+  letter-spacing: -.095em;
+  margin: 0;
+  color: var(--value)
+}
+
+h1 em {
+  font-style: normal;
+  color: var(--red-text)
+}
+
+label {
+  display: grid;
+  grid-template-columns: 62px 1fr 30px;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-5);
+  color: var(--label);
+  font: var(--fs-label-12) var(--mono);
+  letter-spacing: .1em
+}
+
+input {
+  accent-color: var(--red);
+  width: 100%
+}
+
+label b {
+  font-weight: 500;
+  color: var(--value)
+}
+
+/* the footer band: the live number, then the site line; a section away from the last board */
+.bottom {
+  display: grid;
+  gap: var(--gap-group);
+  margin-top: var(--gap-section);
+  padding: var(--gap-action) 0;
+  border-top: 1px solid var(--line);
+  border-image: var(--hair-x) 1
+}
+
+.bottom-row {
+  font-size: var(--fs-label-12)
+}
+
+.bottom b {
+  font-weight: 500;
+  color: var(--label)
+}
+
+.bottom a {
+  color: var(--label);
+  text-decoration: none
+}
+
+.bottom a:hover,
+.bottom a:focus-visible,
+.bottom a:active {
+  color: var(--value);
+  text-decoration: underline
+}
+
+@media(max-width:760px) {
+  .topbar .view-tabs {
+    gap: var(--space-1) var(--space-3);
+    flex-wrap: wrap
+  }
+
+  .brand small {
+    display: none
+  }
+
+  .bottom-row {
+    gap: var(--gap-group);
+    flex-wrap: wrap;
+    justify-content: center
+  }
+
+  .bottom-row span:nth-of-type(2) {
+    display: none
+  }
+}
+
+/* the one card container (DESIGN.md › Cards › dot-card); touch policy in src/components/touch.css */
+.dot-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  aspect-ratio: 1;
+  min-width: 0;
+  overflow: hidden;
+  padding: var(--spacing-cardPad);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  /* a single hairline plus a 1 px highlight on the top edge: a hint of glass, not a shadow stack */
+  box-shadow: var(--card-edge)
+}
+
+.dot-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: var(--space-2)
+}
+
+.dot-card-label {
+  color: var(--label);
+  font: 500 var(--fs-tag-9) var(--mono);
+  letter-spacing: .16em
+}
+
+.status-dot {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--red)
+}
+
+.dot-card--bleed {
+  padding: 0
+}
+
+.dot-card-body {
+  flex: 1;
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  min-width: 0;
+  overflow: hidden
+}
+
+.dot-svg {
+  width: 100%;
+  height: auto;
+  display: block
+}
+
+.dot-svg svg {
+  display: block;
+  image-rendering: pixelated;
+  width: 100%;
+  height: auto
+}

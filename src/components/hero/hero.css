@@ -1,5 +1,5 @@
 /* T2: the touchable hero and the live number band (src/components/hero/). Loaded with their lazy chunk; the
-   slot sizes and the caption style are first-load CSS in App.css (.hero, .fig-cap, .live-band). */
+   slot sizes and the caption style are first-load CSS in src/site/app/hero.css (.hero, .fig-cap, .live-band). */
 .hero-fig {
   margin: 0
 }

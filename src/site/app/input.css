@@ -1,0 +1,96 @@
+/* App styles: the accessibility overlay over interactive cards */
+/* ── P2 input layer: accessibility overlay over interactive cards (ControlOverlay.tsx) ── */
+.dot-a11y-root {
+  --dot-target-min: 24px;
+  --dot-hit-min: 24px;
+  position: relative;
+  width: 100%;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none
+}
+
+@media (pointer: coarse) {
+  .dot-a11y-root {
+    --dot-hit-min: 44px
+  }
+}
+
+.dot-a11y {
+  position: absolute;
+  inset: 0;
+  pointer-events: none
+}
+
+.dot-a11y > * {
+  position: absolute;
+  transform: translate(-50%, -50%)
+}
+
+/* hit pads: the only pointer targets; they exist to set touch-action. The page scrolls from every part of the
+   card, pads included: drag pads keep vertical pans (pan-y, `none` once a hold engaged the card; touch.css) */
+.dot-a11y-hit {
+  pointer-events: auto
+}
+
+.dot-a11y-hit--drag {
+  touch-action: pan-y;
+  cursor: grab
+}
+
+.dot-a11y-root:active .dot-a11y-hit--drag {
+  cursor: grabbing
+}
+
+.dot-a11y-hit--tap {
+  touch-action: manipulation;
+  cursor: pointer
+}
+
+/* real controls: transparent and pointer-blind (the card handles the pointer); the card draws focus itself
+   (marching dots from `ctx.focus`), so there is no CSS outline */
+.dot-a11y-ctl,
+.dot-a11y-group {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: transparent;
+  pointer-events: none
+}
+
+.dot-a11y-ctl {
+  appearance: none;
+  -webkit-appearance: none;
+  font: inherit;
+  outline: none;
+  box-shadow: none
+}
+
+.dot-a11y-group > .dot-a11y-ctl {
+  position: absolute;
+  transform: none
+}
+
+.dot-a11y-group > input.dot-a11y-ctl {
+  inset: 0;
+  width: 100%;
+  height: 100%
+}
+
+.dot-a11y-ctl::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 0;
+  height: 0
+}
+
+.dot-a11y-ctl::-moz-range-thumb {
+  width: 0;
+  height: 0;
+  border: 0;
+  background: transparent
+}
+
+.dot-a11y-ctl::-moz-range-track {
+  background: transparent
+}

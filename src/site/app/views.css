@@ -1,0 +1,207 @@
+/* App styles: EXPLORE / MAKE / ABOUT, the ABOUT bands and the card ladder */
+/* UX U3: EXPLORE / MAKE / ABOUT (docs/UX-PLAN.md §4.1); their focus is the global accent ring */
+.topbar .view-tabs button:focus-visible {
+  outline-offset: 4px
+}
+
+/* ABOUT: bands in the frame (intro, figure, shortcuts, changelog), on the frame's left edge */
+.about-view {
+  padding-top: var(--gap-action)
+}
+
+.about-intro {
+  text-align: left
+}
+
+.about-flavour {
+  margin: 0 0 var(--gap-group);
+  color: var(--mute);
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .16em
+}
+
+.about-lede {
+  max-width: var(--measure);
+  margin: var(--gap-group) 0 0;
+  color: var(--label);
+  font: 400 var(--fs-lead-18)/1.6 var(--sans);
+  text-wrap: pretty
+}
+
+.about-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2) var(--space-5);
+  margin: var(--gap-group) 0 0;
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .06em
+}
+
+.about-links a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
+  color: var(--value)
+}
+
+.about-cols {
+  display: grid;
+  max-width: calc(2 * var(--measure));
+  margin-top: var(--gap-action);
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: var(--gap-group) var(--gap-action)
+}
+
+.about-keys h3 {
+  margin: 0 0 var(--space-2);
+  color: var(--mute);
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .16em
+}
+
+.about-keys dl {
+  margin: 0
+}
+
+.about-keys dl > div {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  gap: var(--space-3);
+  padding: var(--space-1) 0;
+  border-top: 1px solid var(--line);
+  border-image: var(--hair-x) 1;
+  font: 400 var(--fs-label-12)/1.5 var(--mono)
+}
+
+.about-keys dt {
+  color: var(--value)
+}
+
+.about-keys kbd {
+  font: inherit;
+  overflow-wrap: anywhere
+}
+
+.about-keys dd {
+  margin: 0;
+  color: var(--label)
+}
+
+@media(max-width:760px) {
+
+  .about-keys dl > div {
+    grid-template-columns: 1fr
+  }
+}
+
+/* UX U2: card ladder (docs/UX-PLAN.md §5.2–5.3) */
+/* the hint verb: grey, never the accent (red keeps "live / active") */
+.dot-card-hint {
+  margin-left: var(--space-2);
+  color: var(--mute);
+  font: 600 var(--fs-tag-8) var(--mono);
+  letter-spacing: .16em
+}
+
+/* the bar sits in the card's top padding: hint (dot-drawn cards), action strip, ⋯ on touch */
+.dot-card-bar {
+  position: absolute;
+  top: 3px;
+  right: 14px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  min-height: 12px;
+  pointer-events: none
+}
+
+.dot-card-bar > .dot-card-hint {
+  margin: 0
+}
+
+.dot-card-acts {
+  position: absolute;
+  top: 0;
+  right: 0;
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  opacity: 0;
+  transition: opacity var(--dur-out)
+}
+
+/* the strip shows at once on hover or focus and fades out when the pointer leaves */
+.dot-card:hover .dot-card-acts,
+.dot-card:active .dot-card-acts,
+.dot-card:has(:focus-visible) .dot-card-acts,
+.dot-card-bar.open .dot-card-acts {
+  opacity: 1;
+  pointer-events: auto;
+  transition-duration: var(--dur-in)
+}
+
+.dot-card-bar button {
+  min-width: 24px;
+  min-height: 22px;
+  padding: var(--space-1) var(--space-2);
+  background: none;
+  border: 1px solid transparent;
+  border-radius: var(--radius-ctl);
+  color: var(--mute);
+  font: 600 var(--fs-tag-8) var(--mono);
+  letter-spacing: .12em;
+  cursor: pointer
+}
+
+.dot-card-bar button:hover,
+.dot-card-bar button:focus-visible,
+.dot-card-bar button[aria-pressed="true"],
+.dot-card-bar button[aria-expanded="true"] {
+  color: var(--value);
+  border-color: var(--line)
+}
+
+/* pressed feedback for the bar's HTML buttons (in-card controls press in dots) */
+.dot-card-bar button:active {
+  background: var(--raised);
+  color: var(--value)
+}
+
+/* the bar sits at the card's top edge, inside its clip: the ring is drawn inside */
+.dot-card-bar button:focus-visible {
+  outline-offset: -1px
+}
+
+.dot-card-acts button:first-child {
+  font-size: var(--fs-label-11);
+  letter-spacing: 0
+}
+
+.dot-card-more {
+  display: none;
+  pointer-events: auto
+}
+
+/* touch: nothing is hover-only; ⋯ opens the strip */
+@media (hover: none), (pointer: coarse) {
+  .dot-card-more {
+    display: inline-block;
+    min-width: 28px;
+    min-height: 28px;
+    font-size: var(--fs-label-12) !important;
+    background: color-mix(in srgb, var(--surface) 70%, transparent) !important
+  }
+
+  .dot-card-acts {
+    display: none;
+    right: 32px
+  }
+
+  .dot-card-bar.open .dot-card-acts {
+    display: flex
+  }
+}

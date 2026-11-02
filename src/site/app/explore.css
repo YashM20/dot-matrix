@@ -1,0 +1,188 @@
+/* App styles: the EXPLORE header, the intent line, the grouped board picker and the board blurb */
+/* EXPLORE header rhythm: bar → (action) intro → (group) picker → (group) board title → (group) grid.
+   Each block owns only its top margin, so the steps hold in block flow and in the phone's flex column. */
+.boards-view {
+  padding-top: var(--gap-action)
+}
+
+.boards-view::after {
+  content: '';
+  display: block;
+  clear: both
+}
+
+/* ── UX U1: intent line, grouped board picker, board blurb (docs/UX-PLAN.md §4.2, §5.1) ── */
+.intro-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  text-align: left;
+  gap: var(--space-2) var(--space-4);
+  /* the row: the measured text, then its link, then × (not at the frame's far edge) */
+  max-width: calc(var(--measure) + 2 * var(--space-10));
+  margin: 0;
+  color: var(--label);
+  font: 400 var(--fs-copy-14)/1.5 var(--sans);
+  text-wrap: pretty
+}
+
+/* the intro is a measured block, not a 166-character line; its link and × sit beside it */
+.intro-line > span:first-child {
+  max-width: var(--measure)
+}
+
+.intro-line b {
+  font-weight: 500;
+  color: var(--value)
+}
+
+.intro-line a {
+  color: var(--value);
+  white-space: nowrap
+}
+
+.intro-line button {
+  margin-left: auto;
+  padding: 0 var(--space-2);
+  min-width: 24px;
+  min-height: 24px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--mute);
+  font: 500 var(--fs-label-12) var(--mono);
+  cursor: pointer
+}
+
+.intro-line button:hover,
+.intro-line button:focus-visible {
+  border-color: var(--line-hover);
+  color: var(--value)
+}
+
+.intro-line button:active {
+  background-color: var(--wash-press);
+  color: var(--value)
+}
+
+.intro-line + .board-picker {
+  margin-top: var(--gap-group)
+}
+
+.board-groups {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2) var(--space-4);
+  margin-bottom: var(--space-2)
+}
+
+.board-groups button {
+  padding: var(--space-1) 0;
+  border: 0;
+  border-bottom: 1px solid transparent;
+  background: none;
+  color: var(--mute);
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .14em;
+  cursor: pointer
+}
+
+.board-groups button:hover,
+.board-groups button:focus-visible {
+  color: var(--label)
+}
+
+.board-groups button:active {
+  color: var(--value)
+}
+
+.board-groups button.selected {
+  color: var(--value);
+  border-bottom-color: var(--value)
+}
+
+.board-group-blurb {
+  color: var(--mute);
+  font: 400 var(--fs-copy-14) var(--sans)
+}
+
+.board-view .board-blurb {
+  min-height: 1.5em;
+  max-width: var(--measure);
+  margin: var(--space-2) 0 0;
+  color: var(--label);
+  font: 400 var(--fs-copy-14)/1.5 var(--sans);
+  text-wrap: pretty
+}
+
+@media(max-width:760px) {
+  .board-picker .board-groups,
+  .board-picker .board-tabs {
+    display: none
+  }
+
+}
+
+.board-tabs {
+  display: flex;
+  gap: var(--space-2);
+  flex-wrap: wrap
+}
+
+.board-tabs button {
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .1em;
+  padding: var(--space-2) var(--space-2);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--mute);
+  cursor: pointer;
+  text-transform: uppercase
+}
+
+.board-tabs button:hover,
+.board-tabs button:focus-visible {
+  border-color: var(--line-hover);
+  color: var(--value)
+}
+
+.board-tabs button:active {
+  background-color: var(--wash-press);
+  color: var(--value)
+}
+
+/* the open board: the accent at full strength, its wash and halo (the one glow) */
+.board-tabs button.selected {
+  border-color: var(--red);
+  background-color: var(--glow-wash);
+  color: var(--red-text);
+  box-shadow: var(--glow-halo)
+}
+
+/* the board name in the engine's dot type (DotName.tsx, T6), its subtitle a mono label on the name's baseline row */
+.board-view .board-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: var(--space-2) var(--space-4);
+  margin: 0;
+  color: var(--mute);
+  font: 500 var(--fs-label-12)/1 var(--mono);
+  letter-spacing: .12em
+}
+
+.dot-name {
+  display: block;
+  flex: none;
+  max-width: 100%
+}
+
+.board-title-sub {
+  padding-bottom: var(--space-1)
+}
+
+.board-view {
+  margin-top: var(--gap-group)
+}

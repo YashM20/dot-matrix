@@ -1,0 +1,79 @@
+/* App styles: staged makers */
+/* UX U4: staged makers (docs/UX-PLAN.md §5.4) */
+/* "More" folds (src/components/More.tsx): grey, never the accent; plain label first, engine term second */
+.more {
+  min-width: 0;
+  text-align: left
+}
+
+.more > summary {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-2) 0;
+  list-style: none;
+  cursor: pointer;
+  border-radius: var(--radius-ctl);
+  color: var(--label);
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  user-select: none
+}
+
+.more > summary::-webkit-details-marker {
+  display: none
+}
+
+.more > summary::before {
+  content: '';
+  flex: none;
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--mute);
+  transform: rotate(-90deg);
+  transition: transform var(--dur-out)
+}
+
+.more[open] > summary::before {
+  transform: none
+}
+
+.more > summary small {
+  color: var(--mute);
+  font: inherit;
+  letter-spacing: .04em;
+  text-transform: none
+}
+
+.more > summary:hover,
+.more > summary:hover small,
+.more > summary:focus-visible,
+.more > summary:focus-visible small,
+.more > summary:active,
+.more > summary:active small {
+  color: var(--value)
+}
+
+.more-body {
+  min-width: 0
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .more > summary::before {
+    transition: none
+  }
+}
+
+/* board <-> widget page (X1, X-advanced #18): the card's frame flies; its dots stay off the raster snapshots */
+::view-transition-group(dm-card) {
+  animation-duration: var(--dur-enter);
+  animation-timing-function: var(--ease)
+}
+
+.vt-fly canvas {
+  visibility: hidden
+}

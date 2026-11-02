@@ -152,7 +152,7 @@ export function XRayOverlay({ xr, preset, layers, data, grid, style, theme, anim
     const line = (x0: number, y0: number, x1: number, y1: number) => { g.moveTo(Math.round(x0) + .5, Math.round(y0) + .5); g.lineTo(Math.round(x1) + .5, Math.round(y1) + .5) }
     // card lattice: every cell when it is big enough, else every n-th; majors every 16 cells
     const step = cw >= 5 ? 1 : Math.ceil(5 / cw)
-    // the ink is the theme's --tint (`.xr-grid { color }` in App.css: white on dark, ink on paper, the card's own
+    // the ink is the theme's --tint (`.xr-grid { color }` in src/site/app/xray.css: white on dark, ink on paper, the card's own
     // scheme on a dark inset); each guide is that ink at an alpha
     const ink = getComputedStyle(canvas).color || '#fff', at = (a: number) => { g.strokeStyle = g.fillStyle = ink; g.globalAlpha = a }
     g.beginPath(); at(.07); g.lineWidth = 1

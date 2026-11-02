@@ -1,0 +1,97 @@
+/* App styles: the palette, shell and dock */
+/* ── C10 palette, shell, dock (.pal-*) ─────────────────────────────────────────────── */
+.pal-dock {
+  position: fixed;
+  right: 14px;
+  bottom: 14px;
+  z-index: 35;
+  display: flex;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl)
+}
+
+.pal-dock button {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: var(--radius-ctl);
+  color: var(--mute);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .12em;
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer
+}
+
+.pal-dock button:hover,
+.pal-dock button:focus-visible {
+  color: var(--value);
+  border-color: var(--line);
+  background-color: var(--wash-hover)
+}
+
+.pal-dock button:active {
+  color: var(--value);
+  background-color: var(--wash-press)
+}
+
+/* a tool that is on: the accent, its wash */
+.pal-dock button[aria-pressed="true"] {
+  color: var(--red-text);
+  border-color: color-mix(in srgb, var(--red) 50%, transparent);
+  background-color: var(--glow-wash)
+}
+
+.pal-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 76px;
+  transform: translateX(-50%);
+  z-index: 80;
+  pointer-events: none
+}
+
+.pal-toast span {
+  display: block;
+  padding: var(--space-2) var(--space-3);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  box-shadow: var(--shadow-raised);
+  color: var(--value);
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .08em;
+  white-space: nowrap
+}
+
+.pal-fps {
+  position: fixed;
+  left: 14px;
+  bottom: 14px;
+  z-index: 35;
+  padding: var(--space-1) var(--space-2);
+  background: color-mix(in srgb, var(--surface) 90%, transparent);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  color: var(--mute);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .12em
+}
+
+.pal-fps b {
+  color: var(--value)
+}
+
+/* the scrim only: the palette itself is the one blurred layer (no blur stacking) */
+.pal-backdrop,
+.pal-boss {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding-top: 12vh;
+  background: var(--scrim)
+}

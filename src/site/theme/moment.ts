@@ -3,7 +3,7 @@
  * choice lands as a halftone wipe that spreads from the pressed control, so dots near it turn first and the far
  * corner last (an Anime.js-style radial stagger, drawn as a dot lattice: solid inside, big → mid → small dots at
  * the front). It is a same-document view transition: the old page is a still, the new one is live under a CSS mask
- * (`html.theme-wipe::view-transition-new(root)` in App.css), so the cards re-sample once and show in that order.
+ * (`html.theme-wipe::view-transition-new(root)` in src/site/app/skins.css), so the cards re-sample once and show in that order.
  * Instant (no transition at all) under reduced motion (the OS setting or the palette's override, which wraps
  * `matchMedia`), without `document.startViewTransition`, or in a hidden tab. Not in first load: the picker, the
  * TOOLS sheet and the palette import it.
