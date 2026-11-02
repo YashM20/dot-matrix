@@ -33,6 +33,10 @@ export type ColorFor = (value: number, theme: ThemeTokens) => string
 const safe = (x: number) => (Number.isFinite(x) ? Math.max(0, Math.min(1, x)) : 0)
 /** u/v for a cell centre — the same mapping every generator and layout helper relies on. */
 export const cellU = (col: number, cols: number) => (cols === 1 ? 0.5 : col / (cols - 1))
+/** One cell in u (or v) on an `n`-wide grid: the footprint a `Field.footprint` field is called with. */
+const step = (n: number) => 1 / Math.max(1, n - 1)
+/** `f` as the sampler calls it: a `footprint` field gets the cell (du, dv) too; any other field is `f` itself, called with (u, v). */
+const withCell = (f: Field, du: number, dv: number): Field => (f.footprint ? (u, v) => f(u, v, du, dv) : f)
 
 /** The value a dot is drawn with — quantized for UI styles. Visibility and cover decisions use this, not the raw value. */
 const shown = (value: number, style: DotStyle) => (style.quantizeSteps ? quantize(value, style.quantizeSteps) : value)
@@ -95,9 +99,9 @@ export function latticeGrid(grid: GridConfig, lattice: number | [number, number]
 }
 
 export function sampleField(field: Field, grid: GridConfig, style: DotStyle, theme: ThemeTokens, colorForFn: ColorFor = colorFor): DotInstance[] {
-  const pitch = grid.pitch ?? theme.gridPx, out = sinkOf([], null, [], style, pitch)
+  const pitch = grid.pitch ?? theme.gridPx, out = sinkOf([], null, [], style, pitch), f = withCell(field, step(grid.cols), step(grid.rows))
   for (let row = 0; row < grid.rows; row++) for (let col = 0; col < grid.cols; col++) {
-    const value = safe(field(cellU(col, grid.cols), cellU(row, grid.rows)))
+    const value = safe(f(cellU(col, grid.cols), cellU(row, grid.rows)))
     out.fixed = colorForFn(value, theme)
     emit(out, value, 0, (col + .5) * pitch, (row + .5) * pitch, row * grid.cols + col, style)
   }
@@ -154,7 +158,7 @@ function composite(layers: Layer[], grid: GridConfig, win: Window = [0, 0, grid.
   const { cols, rows } = grid, [wc0, wr0] = win, width = Math.max(0, win[2] - wc0 + 1), n = width * Math.max(0, win[3] - wr0 + 1)
   const best = scratch.best(n), owner = scratch.owner(n), us = centres(cols), vs = centres(rows)
   for (let l = 0; l < layers.length; l++) {
-    const f = layers[l].field, [c0, r0, c1, r1] = windowOf(f, cols, rows)
+    const g = layers[l].field, f = withCell(g, step(cols), step(rows)), [c0, r0, c1, r1] = windowOf(g, cols, rows)
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       const value = safe(f(us[c], vs[r])), i = (r - wr0) * width + (c - wc0)
       if (value > 0 && value >= best[i]) { best[i] = value; owner[i] = l + 1 }
@@ -249,12 +253,16 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
   }
   // explicit sites: merge coincident sites, then emit and clear the card cells under each dot
   const sites = new Map<number | string, { x: number; y: number; k: number; value: number; tone?: Tone; form: number }>()
-  for (const layer of sited) for (const [x, y] of layer.sites!) {
-    if (!Number.isFinite(x) || !Number.isFinite(y)) continue
-    const u = x / Math.max(1, grid.cols - 1), v = y / Math.max(1, grid.rows - 1), value = safe(layer.field(u, v))
-    if (shown(value, style) <= 0) continue
-    const key = siteKey(x, y), prev = sites.get(key)
-    if (!prev || value >= prev.value) sites.set(key, { x, y, k: factor(layer.size ?? (layer.lattice as number)), value, tone: layer.toneOf ? layer.toneOf(value, u, v) : layer.tone, form: samplerExt.form ? samplerExt.form(layer, value, u, v) : NO_FORM })
+  for (const layer of sited) {
+    // a site dot's footprint is its size, k card cells
+    const k = factor(layer.size ?? (layer.lattice as number)), f = withCell(layer.field, k * step(grid.cols), k * step(grid.rows))
+    for (const [x, y] of layer.sites!) {
+      if (!Number.isFinite(x) || !Number.isFinite(y)) continue
+      const u = x / Math.max(1, grid.cols - 1), v = y / Math.max(1, grid.rows - 1), value = safe(f(u, v))
+      if (shown(value, style) <= 0) continue
+      const key = siteKey(x, y), prev = sites.get(key)
+      if (!prev || value >= prev.value) sites.set(key, { x, y, k, value, tone: layer.toneOf ? layer.toneOf(value, u, v) : layer.tone, form: samplerExt.form ? samplerExt.form(layer, value, u, v) : NO_FORM })
+    }
   }
   // the card cells a site dot hides follow its drawn shape (cover.ts): n from the style, or the site's own `shapeOf` form;
   // a diamond (rotation π/4, form bit 4) reaches √2 further along the axes

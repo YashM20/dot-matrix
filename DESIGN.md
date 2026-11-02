@@ -371,6 +371,7 @@ A surface that wraps a rounded child with padding takes the child's radius plus 
 - **Halftone photo grid:** default 48×48 to 96×96 cells depending on card size; below ~32 cells, detail recognizability drops sharply (see Caveats in the engineering plan).
 - **Icon SDF canvas:** icons rasterize at 4× target grid resolution before distance-transform, then downsample — keeps edges clean at any density.
 - **Status dot:** one site dot about 7 card dots across, top-right of the label row — drawn by `cardChrome()` for `live` TILE cards.
+- **Filtered fields (footprint):** a pattern finer than about two cells (stripes, checkers, fine noise) aliases when it is sampled once per dot, and it shimmers as it moves. A field can opt in to its footprint by setting `footprint` (`withFootprint` / `patternField` in `src/engine/filter`). The sampler then calls it as `f(u, v, du, dv)`, where `du` / `dv` is one cell of the grid it is sampled on: 1 / (cols − 1) on the card or on a layer's `lattice`, and a site dot's `size` in card cells. The field returns its mean over that cell: box or triangle-filtered checkers, `fcos`, the band-limited `ffbm2`, or `supersampled` as the generic fallback. Fields without the flag are called as `f(u, v)` and draw exactly as before. Prefer the triangle filter on animated boards. The GPU value pass (`gpuValues`) samples without a footprint.
 
 ## Components
 

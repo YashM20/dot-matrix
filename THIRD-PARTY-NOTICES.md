@@ -34,6 +34,11 @@ Ported articles:
 | [Value noise derivatives](https://iquilezles.org/articles/morenoise/) | Value noise with derivatives, fBm with derivatives, the erosion fBm | `src/engine/noise/derivatives.ts` |
 | [Domain warping](https://iquilezles.org/articles/warp/) | The nested fBm warp with q and r exposed | `src/engine/noise/fractal.ts` |
 | [fBM](https://iquilezles.org/articles/fbm/) | The gain from the Hurst exponent, G = 2^−H, and the noise colours | `src/engine/noise/fractal.ts` |
+| [Filterable procedurals](https://iquilezles.org/articles/filterableprocedurals/) | Box-filtered checkers, grid, squares, crosses and xor | `src/engine/filter/procedural.ts` |
+| [Band limiting](https://iquilezles.org/articles/bandlimiting/) | `fcos` (cos × sinc) and its smoothstep form, the faded noise and the band-limited fBm | `src/engine/filter/bandlimit.ts` |
+| [Checkers filtering](https://iquilezles.org/articles/checkerfiltering/) | The triangle signal and the box-filtered checkers | `src/engine/filter/checkers.ts` |
+| [Improved checkers filtering](https://iquilezles.org/articles/morecheckerfiltering/) | The square signal's second integral and the triangle-filtered checkers | `src/engine/filter/checkers.ts` |
+| [Filtering procedural textures](https://iquilezles.org/articles/filtering/) | Supersampling over the footprint | `src/engine/filter/supersample.ts` |
 
 Credits the articles give, carried over:
 
