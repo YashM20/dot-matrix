@@ -16,7 +16,7 @@ This file only holds things that would break the project if an agent guessed wro
 - Renderer choice (`svg` / `canvas` / `webgl`) is decided by dot count, animation and GPU-tagged layers, not by convenience — check the rules in `DESIGN.md` before hardcoding one.
 
 ## The site
-- Card pixels are pinned by `goldens/hashes.json`: UI/chrome work must keep `pnpm golden --check` matching. Regenerate goldens only for an intended card change.
+- Card pixels are pinned by `goldens/<board>.json` (one file per board): UI/chrome work must keep `pnpm golden --check` matching. Regenerate goldens only for an intended card change.
 - First-load JS stays ≤ 150 kB gz (`scripts/site/size.ts --check`, run in CI). New views and features load lazily.
 - First-load code never value-imports the `src/engine` barrel (one value import pulls every engine module into first load): import engine modules by path; type imports are fine. `size.ts --check` fails if the IR parser returns to first load.
 - Board ids are URLs (`/<board>/`). Rename what visitors see with `boardLabel`; keep old ids working with `boardAliases` (`src/widgets/manifest.ts`).

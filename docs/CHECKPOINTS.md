@@ -41,7 +41,8 @@ One checkpoint at a time. A checkpoint is a GitHub milestone with a fixed list o
 - One shared base build per checkpoint for size deltas (`dmdocs/base-cpN/`). Agents compare against it instead of building their own.
 - Agent reports stay under 300 words: SHA, check results, sizes, anything open.
 - No always-on watchdog. Run it only for long unattended runs, such as overnight.
-- Merging append-only registry files (`ids.json`, `goldens/hashes.json`, `catalog.ts`, `manifest.ts`, DESIGN tables) uses the union-merge helper (`dmdocs/merge-unions.py`), not hand edits.
+- Merging append-only registry files (`ids.json`, `catalog.ts`, `manifest.ts`, DESIGN tables) uses the union-merge helper (`dmdocs/merge-unions.py`), not hand edits.
+- Goldens are one file per board (`goldens/<board>.json`), so a board branch touches only its own file. When two branches change the same board's file, merge the code and rerun `pnpm golden`; don't merge the hashes by hand.
 
 ## Checkpoints
 

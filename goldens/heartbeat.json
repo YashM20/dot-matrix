@@ -1,0 +1,77 @@
+{
+ "about": "FNV-1a 32 of the sorted quantized dot list per preset on the heartbeat board (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
+ "presets": {
+  "hb-thinking": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "3de5ba3d",
+    "dots": 760
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "507a395a",
+    "dots": 819
+   }
+  },
+  "hb-tool-running": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "223218fa",
+    "dots": 624
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "a5d38770",
+    "dots": 612
+   }
+  },
+  "hb-awaiting-approval": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "f5c5d9db",
+    "dots": 777
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "95464ffc",
+    "dots": 759
+   }
+  },
+  "hb-error": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "0afaec55",
+    "dots": 558
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "8fd0a520",
+    "dots": 578
+   }
+  },
+  "hb-done": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "953f22b8",
+    "dots": 455
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "953f22b8",
+    "dots": 455
+   }
+  },
+  "hb-agent": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "98a5539a",
+    "dots": 923
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "c940e205",
+    "dots": 950
+   }
+  }
+ }
+}

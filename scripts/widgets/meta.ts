@@ -7,16 +7,16 @@
  *   npx tsx scripts/widgets/meta.ts            → print a summary
  *   npx tsx scripts/widgets/meta.ts <slug|uid> → print one widget's metadata
  */
-import { readFileSync } from 'node:fs'
 import { boards } from '../../src/widgets'
 import { cardAliases, resolveCardId } from '../../src/widgets/manifest'
 import { cardBlurbs, deriveWidgetMeta, type WidgetMeta } from '../../src/widgets/meta'
 import { dot480 } from '../../src/engine/theme/tokens'
 import { readIds, uidOf } from './ids'
+import { readGoldens } from '../lib/goldenFiles'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 
-const goldens = () => (JSON.parse(readFileSync('goldens/hashes.json', 'utf8')) as { presets: Record<string, Record<string, { hash: string }>> }).presets
+const goldens = () => readGoldens().presets
 
 export function widgetIndex(): WidgetMeta[] {
   const ids = readIds(), gold = goldens(), on = new Map<string, string[]>()

@@ -73,7 +73,7 @@ jobs:
           retention-days: 7
 
       # Fails on any drift of a preset's quantized dot list. Intentional visual changes:
-      # run `pnpm golden` locally and commit goldens/hashes.json with the change.
+      # run `pnpm golden` locally and commit the changed goldens/<board>.json files with it.
       - name: Golden hashes
         run: pnpm golden --check
 

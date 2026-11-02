@@ -56,7 +56,7 @@ export interface WidgetMeta {
   ir: boolean
   /** The renderer the app picks for it (DotCanvas rule: GPU layers → webgl; animated or > 2000 dots → canvas; else svg). */
   renderer: 'svg' | 'canvas' | 'webgl'
-  /** Its golden hash at t = 0 (`goldens/hashes.json`): changes exactly when its pixels do. */
+  /** Its golden hash at t = 0 (`goldens/<board>.json`): changes exactly when its pixels do. */
   version?: string
   /** Old slugs that still open it (`cardAliases`). */
   aliases: string[]

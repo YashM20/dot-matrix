@@ -1,0 +1,113 @@
+{
+ "about": "FNV-1a 32 of the sorted quantized dot list per preset on the workshop board (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
+ "presets": {
+  "mat-knit": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "46de7019",
+    "dots": 10525
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "0a6bfdbf",
+    "dots": 10219
+   }
+  },
+  "mat-denim": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "b063cdfa",
+    "dots": 10397
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "b063cdfa",
+    "dots": 10397
+   }
+  },
+  "mat-paper": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "e2561a7d",
+    "dots": 9989
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "e2561a7d",
+    "dots": 9989
+   }
+  },
+  "mat-wood": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "9a0ab41d",
+    "dots": 7217
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "9a0ab41d",
+    "dots": 7217
+   }
+  },
+  "mat-leather": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "bef24227",
+    "dots": 10225
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "bef24227",
+    "dots": 10225
+   }
+  },
+  "mat-sand": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "30a0e893",
+    "dots": 4496
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "30a0e893",
+    "dots": 4496
+   }
+  },
+  "mat-ice": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "ae7e182b",
+    "dots": 958
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "883731cc",
+    "dots": 992
+   }
+  },
+  "mat-mercury": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "e3773207",
+    "dots": 2410
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "e3773207",
+    "dots": 2410
+   }
+  },
+  "mat-thread": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "29db8355",
+    "dots": 1508
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "9f73499e",
+    "dots": 1504
+   }
+  }
+ }
+}

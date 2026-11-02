@@ -1,0 +1,31 @@
+{
+ "about": "FNV-1a 32 of the sorted quantized dot list per preset on the live board (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
+ "presets": {
+  "live-weather": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "66cb190a",
+    "dots": 1140
+   }
+  },
+  "live-now-playing": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "e495cfba",
+    "dots": 1468
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "e48239bd",
+    "dots": 1464
+   }
+  },
+  "live-contribs": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "68068ea9",
+    "dots": 1651
+   }
+  }
+ }
+}

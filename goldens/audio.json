@@ -1,0 +1,83 @@
+{
+ "about": "FNV-1a 32 of the sorted quantized dot list per preset on the audio board (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
+ "presets": {
+  "audio-levels": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "cc8093c4",
+    "dots": 526
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "da389bd8",
+    "dots": 526
+   }
+  },
+  "vibe-pad": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "edff296c",
+    "dots": 1836
+   }
+  },
+  "midi": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "472cbd4b",
+    "dots": 336
+   }
+  },
+  "recorder": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "f8e1837a",
+    "dots": 1624
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "0b632cf0",
+    "dots": 1624
+   }
+  },
+  "radio": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "002cc42b",
+    "dots": 899
+   }
+  },
+  "interpreter": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "b4d00c7c",
+    "dots": 760
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "b3c91488",
+    "dots": 760
+   }
+  },
+  "thermal-puppy": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "5edd9a62",
+    "dots": 20731
+   }
+  },
+  "level-03": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "061a6520",
+    "dots": 20013
+   }
+  },
+  "shopping": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "5d39ca39",
+    "dots": 1379
+   }
+  }
+ }
+}

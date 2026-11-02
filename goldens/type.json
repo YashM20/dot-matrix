@@ -1,0 +1,72 @@
+{
+ "about": "FNV-1a 32 of the sorted quantized dot list per preset on the type board (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
+ "presets": {
+  "type-axes": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "139d5b8a",
+    "dots": 1457
+   }
+  },
+  "type-morph": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "a53f131a",
+    "dots": 814
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "a53f131a",
+    "dots": 814
+   }
+  },
+  "type-marquee": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "63ede90a",
+    "dots": 1941
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "dc7b6002",
+    "dots": 1903
+   }
+  },
+  "type-kinetic": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "e5885b74",
+    "dots": 1350
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "3e0461d4",
+    "dots": 1763
+   }
+  },
+  "type-flight": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "d6e67e0d",
+    "dots": 645
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "d6e67e0d",
+    "dots": 645
+   }
+  },
+  "type-anything": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "3e7828e0",
+    "dots": 1053
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "3e7828e0",
+    "dots": 1053
+   }
+  }
+ }
+}
