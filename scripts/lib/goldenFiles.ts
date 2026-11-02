@@ -13,7 +13,7 @@ export const GOLDENS_DIR = 'goldens'
 /** Where the presets used to live in one file. Now only a generated, gitignored index for postbuild (`writeGoldenIndex`). */
 export const LEGACY_FILE = `${GOLDENS_DIR}/hashes.json`
 /** Files in goldens/ that are not board files: the legacy index and the IR / noise snapshots. No board may take these ids. */
-export const NOT_BOARDS = new Set(['hashes', 'ir-glsl', 'noise', 'noise-glsl'])
+export const NOT_BOARDS = new Set(['hashes', 'ir-glsl', 'noise', 'noise-glsl', 'noise-iq'])
 
 const about = (board: string) =>
   `FNV-1a 32 of the sorted quantized dot list per preset on the ${board} board (scripts/golden.ts). Re-baseline with \`pnpm golden\` when a change is intended.`
