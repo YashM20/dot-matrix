@@ -14,7 +14,8 @@
  * 4. Blog pages (`src/blog/posts.ts`): `dist/blog/index.html` and `dist/blog/<slug>/index.html`, copies of
  *    `dist/blog.html` with the post's title, description, canonical, OG/Twitter tags (`og:type` article) and
  *    schema.org JSON-LD (BlogPosting; CollectionPage for the index). The social image is
- *    `public/og/blog/<slug>-social.png` once it exists, else `/og/default.png`.
+ *    `public/og/blog/<slug>-social.png` (`pnpm og:blog`) once it exists, else `/og/default.png`; its alt text
+ *    (`og:image:alt`, `twitter:image:alt`) comes from `public/og/blog/alt.json`.
  * 5. The lab page (`src/lab/experiments.ts`): `dist/lab/index.html` from `dist/lab.html`, with its meta and JSON-LD.
  *
  * Widget OG images are cached in `node_modules/.cache/dot480-og` (or `OG_CACHE`), keyed by the OG renderer's source and
@@ -86,9 +87,16 @@ export function blogPages() {
   if (!existsSync(file)) return
   const html = readFileSync(file, 'utf8'), has = (path: string) => existsSync(join('public', path))
   const social = (slug: string) => (has(socialImage(slug)) ? socialImage(slug) : '/og/default.png')
+  // the social image's alt text, from the generator's alt.json (only when that image is the page's og:image)
+  const altFile = join('public', 'og', 'blog', 'alt.json')
+  const alts: Record<string, { social?: string }> = existsSync(altFile) ? JSON.parse(readFileSync(altFile, 'utf8')) : {}
+  const altTags = (slug: string) => {
+    const alt = has(socialImage(slug)) ? alts[slug]?.social : undefined
+    return alt ? [`<meta property="og:image:alt" content="${esc(alt)}" />`, `<meta name="twitter:image:alt" content="${esc(alt)}" />`] : []
+  }
   const author = { '@type': 'Organization', name: 'Dot/480', url: `${origin}/` }
   const index: PageMeta = { title: BLOG.title, description: BLOG.dek, path: postPath(), image: social(BLOG.slug) }
-  const list = withMeta(html, index, [jsonLd({
+  const list = withMeta(html, index, [...altTags(BLOG.slug), jsonLd({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: BLOG.title, description: BLOG.dek, url: origin + index.path, image: origin + index.image,
     hasPart: POSTS.map(p => ({ '@type': 'BlogPosting', headline: p.title, url: origin + postPath(p.slug), datePublished: p.date })),
   })])
@@ -99,7 +107,7 @@ export function blogPages() {
       '@context': 'https://schema.org', '@type': 'BlogPosting', headline: p.title, description: p.dek, datePublished: p.date, author, publisher: author,
       image: [origin + m.image, ...(has(heroImage(p.slug)) ? [origin + heroImage(p.slug)] : [])], url: origin + m.path, mainEntityOfPage: origin + m.path,
     }
-    page(join('blog', p.slug), withMeta(html, m, [`<meta property="article:published_time" content="${p.date}" />`, jsonLd(ld)]).replace('property="og:type" content="website"', 'property="og:type" content="article"'))
+    page(join('blog', p.slug), withMeta(html, m, [...altTags(p.slug), `<meta property="article:published_time" content="${p.date}" />`, jsonLd(ld)]).replace('property="og:type" content="website"', 'property="og:type" content="article"'))
   }
   console.log(`site: blog index + ${POSTS.length} post pages`)
 }

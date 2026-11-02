@@ -34,7 +34,7 @@ export const irRipple: WidgetPreset = {
 }
 
 // ── PLASMA ── four interfering sines, banded by the quantize ladder.
-const PLASMA_SRC = `// four interfering sines, folded into contour bands
+export const PLASMA_SRC = `// four interfering sines, folded into contour bands
 let x = u * 7; let y = v * 6;
 let s = sin(x + t) + sin(y * 1.3 - t * .7)
       + sin((x + y) * .7 + t * .5) + sin(length(x - 3.5, y - 3) * 1.8 - t);

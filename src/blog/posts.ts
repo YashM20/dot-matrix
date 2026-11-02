@@ -19,8 +19,8 @@ export const POSTS: readonly PostInfo[] = [
 ]
 /** The index page's own meta (title, description; its images are `public/og/blog/blog-*`). */
 export const BLOG = { slug: 'blog', title: 'Blog · Dot/480', dek: 'Long reads on how Dot/480 draws interfaces in dots: the essay and three tutorials with live cards and code you can copy.' }
-/** Images by convention (they may not exist yet): the hero at the top of a post and on the index, the social card. */
-export const heroImage = (slug: string): string => `/og/blog/${slug}-hero.webp`
+/** Images by convention (`scripts/og-blog.ts` draws them): the hero at the top of a post and on the index, the social card. */
+export const heroImage = (slug: string): string => `/og/blog/${slug}-hero.png`
 export const socialImage = (slug: string): string => `/og/blog/${slug}-social.png`
 
 /** The page path of a post, or of the index. */
