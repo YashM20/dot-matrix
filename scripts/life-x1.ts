@@ -229,7 +229,7 @@ export async function lifeX1Checks(assert: Assert, pond: () => Promise<typeof im
       g.localStorage = saved.localStorage; g.window = saved.window; g.location = saved.location
     }
     // only pondMemory.ts may touch storage on the pond's paths
-    const files = ['src/widgets/boards/pond', 'src/engine/life'].flatMap(d => readdirSync(d).map(f => join(d, f))).concat(['src/site/viewTransition.ts'])
+    const files = ['src/widgets/boards/pond', 'src/engine/life'].flatMap(d => readdirSync(d, { recursive: true, encoding: 'utf8' }).filter(f => /\.tsx?$/.test(f)).map(f => join(d, f))).concat(['src/site/viewTransition.ts'])
     const touches = files.filter(f => /localStorage|sessionStorage|indexedDB|document\.cookie/.test(readFileSync(f, 'utf8')))
     assert('pond memory: no pond card, engine or the transition code touches storage (only src/site/pondMemory.ts does)', !touches.length, touches.join(', '))
   }

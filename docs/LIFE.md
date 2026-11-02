@@ -11,7 +11,7 @@ A koi pond drawn the dot-matrix way, after daoho.dev's ASCII koi pond but with n
 | `chain.ts` | Spine with a joint limit, Verlet rope, FABRIK | argonaut (animal-proc-anim); Aristidou & Lasenby 2011 |
 | `body.ts` | Width profile LUT, swim wave, the body raster (body, fins, tail fan), koi marking LUTs, Strouhal beat | Videler 1993; Taylor, Nudds & Thomas 2003 |
 | `steer.ts` | seek / flee / arrive / wander / contain / separate / align, turn-capped `integrate`, C-start `startle` | Reynolds 1999; Eaton 1977, Domenici & Blake 1997 |
-| `pond.ts` | `createKoiPond(spec)` (the world) and `drawKoiPond` (state → tile raster) | — |
+| `pond.ts` | `createKoiPond(spec)` (the world) and `drawKoiPond` (state → tile raster); the code is in `pond/`: `layout` (spec, slots, constants), `world`, `koi` (steering, startles), `views`, and `paint` / `draw` / `type` (drawing) | — |
 | `agents.ts` (L2) | Physarum (sense, rotate, move, deposit; 3×3 blur + decay; food and salt) and a two-pheromone ant colony | J. Jones, Artificial Life 16 (2010) |
 | `oscillators.ts` (L2) | Kuramoto step and order parameter; Mirollo–Strogatz pulse coupling with local kicks, absorption and synchronous rounds | Kuramoto 1975; Mirollo & Strogatz 1990 |
 | `grow.ts` (L2) | Space colonisation grown once as a history (birth iteration per node, pipe-model thickness); stochastic L-systems; a turtle that emits sites | Runions et al. 2005/2007; Prusinkiewicz & Lindenmayer 1990 |
@@ -29,7 +29,7 @@ Everything a pond card draws is one **tile raster** (`TileRaster`): per card cel
 
 ## Body style (the L1.0 ruling)
 
-Two ways to fill a koi's interior were prototyped (one L = 56 koi on a still pond, both styles at 1× and 2×, a film and all four varieties, through the real draw path): **A** stamps each interior tile as a full micro-glyph (bright background pixels with a darker ramp glyph), **B** draws each interior tile as **one lattice-4 dot**, shaded by dot size, with glyph-matched edges, fins and tail. A body tile counts as interior at ≥ 60 % cover (the plan's 85 % left a 3-tile-wide koi mostly edge glyphs, so it read as a chain of beads). B is the default (`DEFAULT_BODY_STYLE = 'lattice'` in `pond.ts`; it satisfies "never clusters of small dots" as written and reads as one body). A is a one-line switch (`bodyStyle: 'glyph'` in the spec, or the constant), pending the owner's ruling.
+Two ways to fill a koi's interior were prototyped (one L = 56 koi on a still pond, both styles at 1× and 2×, a film and all four varieties, through the real draw path): **A** stamps each interior tile as a full micro-glyph (bright background pixels with a darker ramp glyph), **B** draws each interior tile as **one lattice-4 dot**, shaded by dot size, with glyph-matched edges, fins and tail. A body tile counts as interior at ≥ 60 % cover (the plan's 85 % left a 3-tile-wide koi mostly edge glyphs, so it read as a chain of beads). B is the default (`DEFAULT_BODY_STYLE = 'lattice'` in `pond/layout.ts`; it satisfies "never clusters of small dots" as written and reads as one body). A is a one-line switch (`bodyStyle: 'glyph'` in the spec, or the constant), pending the owner's ruling.
 
 ## The koi
 

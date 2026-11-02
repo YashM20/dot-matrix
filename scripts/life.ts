@@ -79,10 +79,11 @@ export async function lifeChecks(assert: Assert): Promise<void> {
     const barrel = readFileSync('src/engine/index.ts', 'utf8')
     assert('life: engine barrel does not re-export life', !/['"]\.\/life/.test(barrel))
     const { readdirSync } = await import('node:fs')
-    const files = readdirSync('src/engine/life').filter(f => f.endsWith('.ts'))
-    const bad = files.filter(f => /from ['"]\.\.\/algo/.test(readFileSync(`src/engine/life/${f}`, 'utf8')))
+    // the koi scene's modules sit one level down (life/pond/), so they reach noise as ../../noise
+    const files = [...readdirSync('src/engine/life').filter(f => f.endsWith('.ts')), ...readdirSync('src/engine/life/pond').filter(f => f.endsWith('.ts')).map(f => `pond/${f}`)]
+    const bad = files.filter(f => /from ['"](\.\.\/)+algo/.test(readFileSync(`src/engine/life/${f}`, 'utf8')))
     const viaNoise = files.filter(f => /\b(dsin|dcos|tsin|dpow|dexp|datan2)\b/.test(readFileSync(`src/engine/life/${f}`, 'utf8')))
-      .every(f => /from ['"]\.\.\/noise(\/dmath)?['"]/.test(readFileSync(`src/engine/life/${f}`, 'utf8')))
+      .every(f => /from ['"](\.\.\/)+noise(\/dmath)?['"]/.test(readFileSync(`src/engine/life/${f}`, 'utf8')))
     assert('life: imports dmath from ../noise, never ../algo', !bad.length && viaNoise, bad.join(', '))
     const { detLint } = await import('./lib/detLint')
     const res = detLint(['src/engine/life/'])
