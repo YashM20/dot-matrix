@@ -141,6 +141,7 @@ export function voronoiMode(x: number, y: number, seed: number, mode: number): n
   return o === 0 ? S[0] : o === 1 ? S[1] : o === 2 ? S[1] - S[0] : ihash(S[4], S[5], seed ^ ID_SALT) / 4294967296
 }
 
+// after Inigo Quilez, https://iquilezles.org/articles/voronoilines/ (MIT)
 /**
  * Exact distance to the nearest cell border (iq 2012, two passes, L2 only): lead moats and grout of even width.
  * Pass 1 finds the nearest feature point exactly; pass 2 takes, over the 5×5 cells around its cell, the distance

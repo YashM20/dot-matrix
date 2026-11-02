@@ -1,7 +1,9 @@
 /**
  * The shared noise toolkit (docs/living-matter/F0-foundation.md §2): deterministic scalar math (`dmath`, built on
  * `trig` and `hash`), gradient noise, fBm, turbulence, ridged noise and curl noise (`gradient`), legacy value noise
- * (`value`), and Worley / Voronoi noise (`voronoi`). The IR noise pack (`./ir`) is a separate side-effect import.
+ * (`value`), Worley / Voronoi noise (`voronoi`), and the IQ5 additions: noise with analytic derivatives (`derivatives`),
+ * the cell border, smooth Voronoi and Voronoise (`cells`), fBm by Hurst exponent and nested warping (`fractal`).
+ * The IR noise pack (`./ir`) is a separate side-effect import.
  * Not re-exported from `src/engine/index.ts`: first-load code imports that barrel and the bundler would pull
  * this into the first-load chunk (same rule as `src/engine/algo/index.ts`). Import `engine/noise` directly.
  *
@@ -17,3 +19,6 @@ export * from './dmath'
 export * from './gradient'
 export * from './value'
 export * from './voronoi'
+export * from './derivatives'
+export * from './cells'
+export * from './fractal'
