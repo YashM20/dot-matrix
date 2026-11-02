@@ -19,7 +19,8 @@
 * { box-sizing: border-box }
 html { background: var(--bg); scroll-behavior: smooth; -webkit-text-size-adjust: 100% }
 @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto } }
-body { margin: 0; background: var(--bg); color: var(--label); font: var(--fs-lead-18)/1.65 var(--sans); -webkit-font-smoothing: antialiased }
+/* body is the page's width container: 100cqi is the viewport without the scrollbar (.fig--wide) */
+body { margin: 0; container-type: inline-size; background: var(--bg); color: var(--label); font: var(--fs-lead-18)/1.65 var(--sans); -webkit-font-smoothing: antialiased }
 a { color: var(--value); text-decoration-color: color-mix(in srgb, var(--tint) 30%, transparent); text-underline-offset: 3px }
 a:hover, a:focus-visible, a:active { text-decoration-color: var(--value) }
 /* focus is the accent ring, as on the site (src/site/app/chrome.css) */
@@ -60,7 +61,7 @@ em { color: var(--value) }
 
 /* figures */
 .fig { margin: var(--gap-action) 0; counter-increment: fig }
-.fig--wide { width: min(var(--wide), calc(100vw - 40px)); margin-left: 50%; transform: translateX(-50%) }
+.fig--wide { width: min(var(--wide), calc(100cqi - 40px)); margin-left: 50%; transform: translateX(-50%) }
 .fig-body { background: var(--bg) }
 .fig-wait { min-height: inherit; border: 1px dashed var(--line); border-radius: var(--radius-card) }
 .fig figcaption { font-size: var(--fs-copy-14); line-height: 1.55; color: var(--mute); margin-top: var(--space-3); max-width: var(--measure) }
@@ -146,7 +147,7 @@ em { color: var(--value) }
   .cards--5 { grid-template-columns: 1fr 1fr }
   .cards--3 > :last-child:nth-child(odd), .cards--5 > :last-child:nth-child(odd) { grid-column: 1 / -1; max-width: calc(50% - 7px); justify-self: center; width: 100% }
   .ir { grid-template-columns: 1fr }
-  .fig--wide { width: calc(100vw - 32px) }
+  .fig--wide { width: calc(100cqi - 32px) }
   .dot-card { padding: var(--space-2); border-radius: var(--radius-panel) }
   .ctl { flex-basis: 100% }
 }

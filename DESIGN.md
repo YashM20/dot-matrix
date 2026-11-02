@@ -164,7 +164,7 @@ There is no substitute typeface — the bitmap dot-font *is* the typography syst
 |---|---|---|
 | `--frame-max` | 90rem (1440 px) | the frame (`.shell`), its side padding included |
 | `--frame-pad` | `clamp(16px, 3vw, 40px)` | the frame's side padding |
-| `--frame-inset` | `max(0, (100vw − --frame-max) / 2) + --frame-pad` | the frame's content edge from the viewport edge, for fixed or full-bleed things (the editor bar, the widget page's pinned pills) |
+| `--frame-inset` | `max(0, (100cqi − --frame-max) / 2) + --frame-pad` | the frame's content edge from the viewport edge, for fixed or full-bleed things (the editor bar, the widget page's pinned pills). `body` is an inline-size container, so `100cqi` is the page width without the scrollbar; full-bleed widths use it, never `100vw` (which counts the scrollbar and overflows) |
 | `--card-max` | `min(62svh, 520px)` | the widest (so, for square cards, the tallest) a board card gets; a wider column centres it |
 | `--card-min-hero` / `--card-min-standard` / `--card-min-dense` | 340 / 240 / 200 px | the narrowest card per board density before the grid drops a column (› Board grid) |
 | `--board-cols-max` | 3; 4 under `html[data-cards="m"]`; 99 (no cap) under `"s"` | the most columns a board shows at the visitor's CARD SIZE; a dense board shows one more (› Board grid) |
