@@ -9,6 +9,7 @@
     "verify": "tsx scripts/verify.ts",
     "snap": "tsx scripts/snap.ts",
     "golden": "tsx scripts/golden.ts",
+    "og:blog": "tsx scripts/og-blog.ts",
     "fidelity": "tsx scripts/fidelity.ts",
     "bench": "tsx scripts/bench.ts",
     "shots": "tsx scripts/site/shots.ts",

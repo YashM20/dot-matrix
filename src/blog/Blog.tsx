@@ -1,8 +1,8 @@
 /**
  * The blog (GitHub #77, #12): `/blog/` lists every post, `/blog/<slug>/` is one post. Every post uses the essay's
  * shell: its `<main className="essay">` measure, type and theme, the site nav, the post line, the hero image (when
- * `public/og/blog/<slug>-hero.webp` exists), "More posts" and the footer. The essay keeps its own TSX page and
- * figures (`src/essay/Essay.tsx`); the tutorials are markdown (`docs/blog/*.md`, `./Doc.tsx`).
+ * `public/og/blog/<slug>-hero.png` exists: `scripts/og-blog.ts` draws it), "More posts" and the footer. The essay keeps
+ * its own TSX page and figures (`src/essay/Essay.tsx`); the tutorials are markdown (`docs/blog/*.md`, `./Doc.tsx`).
  */
 import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from 'react'
 import meta from 'virtual:blog-meta'
@@ -26,11 +26,11 @@ function PostLine({ post }: { post: PostInfo }) {
     </p>
   )
 }
-/** The hero image, once it exists (until then the post opens on its title and first figure). */
-function Hero({ slug, className }: { slug: string; className: string }) {
-  const alt = meta.heroes[slug]
-  if (alt === undefined) return null
-  return <img className={className} src={heroImage(slug)} alt={alt} width={1600} height={900} decoding="async" />
+/** The page's hero image, once it exists (until then the post opens on its title and first figure). It is the top of the page, so it loads first. */
+function Hero({ slug }: { slug: string }) {
+  const h = meta.heroes[slug]
+  if (h === undefined) return null
+  return <img className="post-hero" src={heroImage(slug)} alt={h.alt} width={h.w} height={h.h} loading="eager" fetchPriority="high" decoding="async" />
 }
 
 /** Each post ends with the others. */
@@ -54,7 +54,7 @@ const EssayBody = lazy(() => import('../essay/Essay').then(m => ({ default: (({ 
 const DocBody = lazy(() => import('./Doc').then(m => ({ default: m.Doc as Body })))
 
 function PostPage({ post }: { post: PostInfo }) {
-  const top = <><SiteNav /><PostLine post={post} /><Hero slug={post.slug} className="post-hero" /></>
+  const top = <><SiteNav /><PostLine post={post} /><Hero slug={post.slug} /></>
   const Body = post.kind === 'essay' ? EssayBody : DocBody
   return (
     <main className="essay post">
@@ -70,7 +70,7 @@ function BlogIndex() {
     <main className="essay blog">
       <header className="hero">
         <SiteNav here="blog" />
-        <Hero slug={BLOG.slug} className="post-hero" />
+        <Hero slug={BLOG.slug} />
         <DotTitle text="Blog" level={1} max={10} smooth />
         <p className="lede">
           Long reads on how Dot/480 draws interfaces in dots. The essay is the tour of the whole engine. The three tutorials each
@@ -84,9 +84,7 @@ function BlogIndex() {
             <li key={p.slug} className="post-tile">
               {/* the thumbnail is a picture of the post: the tile is its link, so a live card takes no input */}
               <div className="post-thumb" inert>
-                {meta.heroes[p.slug] !== undefined
-                  ? <Hero slug={p.slug} className="post-thumb-img" />
-                  : <Suspense fallback={<div className="post-thumb-wait" />}><Thumb /></Suspense>}
+                <Suspense fallback={<div className="post-thumb-wait" />}><Thumb /></Suspense>
               </div>
               <div className="post-meta">
                 <span className="post-num">{pad(i + 1)}{p.reader && <> · FOR {p.reader.toUpperCase()}</>} · {minutes(p.slug)} MIN</span>

@@ -10,7 +10,7 @@
 .post-line { font: 500 var(--fs-label-12)/1.6 var(--mono); letter-spacing: .14em; color: var(--mute); margin: 0 0 var(--space-5) }
 .post-line a { color: var(--label); text-decoration: none }
 .post-line a:hover, .post-line a:focus-visible, .post-line a:active { color: var(--value) }
-.post-hero { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; border: 1px solid var(--line); border-radius: var(--radius-card); margin: 0 0 var(--space-6); background: var(--surface) }
+.post-hero { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius-card); margin: 0 0 var(--space-6); background: var(--surface) }
 .post-wait { min-height: 60vh }
 
 /* headings below a section's dot title */
@@ -57,7 +57,6 @@
 .post-thumb { min-width: 0; pointer-events: none }
 .post-thumb .stage--card { max-width: none }
 .post-thumb .dot-card { background: var(--bg) }
-.post-thumb-img { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius-panel) }
 .post-thumb-wait { aspect-ratio: 1; border: 1px dashed var(--line); border-radius: var(--radius-card) }
 .post-meta { min-width: 0 }
 .post-num { font: 500 var(--fs-label-12)/1.6 var(--mono); letter-spacing: .14em; color: var(--mute) }

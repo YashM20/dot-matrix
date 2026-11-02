@@ -52,7 +52,7 @@ function blogMeta(): Plugin {
     resolveId: id => (id === ID ? RID : null),
     load(id) {
       if (id !== RID) return null
-      const words: Record<string, number> = {}, heroes: Record<string, string> = {}
+      const words: Record<string, number> = {}, heroes: Record<string, { alt: string; w: number; h: number }> = {}
       for (const f of existsSync(DOCS) ? readdirSync(DOCS) : []) {
         if (!f.endsWith('.md') || f === 'README.md') continue
         this.addWatchFile(join(DOCS, f))
@@ -63,10 +63,16 @@ function blogMeta(): Plugin {
       words[ESSAY_SLUG] = count(tsx.slice(tsx.indexOf('export function Essay')).replace(/<[^>]*>/g, ' ').replace(/\{[^{}]*\}/g, ' '))
       const alt: Record<string, unknown> = existsSync(join(OG, 'alt.json')) ? JSON.parse(readFileSync(join(OG, 'alt.json'), 'utf8')) : {}
       for (const f of existsSync(OG) ? readdirSync(OG) : []) {
-        const slug = /^(.+)-hero\.webp$/.exec(f)?.[1]
+        const slug = /^(.+)-hero\.png$/.exec(f)?.[1]
+        if (!slug) continue
         // alt.json is keyed by slug, `<slug>-hero` or the file name; a value is the text or `{ hero: text }`
-        const a: unknown = slug && (alt[slug] ?? alt[`${slug}-hero`] ?? alt[f])
-        if (slug) heroes[slug] = typeof a === 'string' ? a : typeof (a as { hero?: unknown })?.hero === 'string' ? (a as { hero: string }).hero : ''
+        const a: unknown = alt[slug] ?? alt[`${slug}-hero`] ?? alt[f]
+        // width and height from the PNG header, so the page reserves the hero's box before it loads
+        const png = readFileSync(join(OG, f))
+        heroes[slug] = {
+          alt: typeof a === 'string' ? a : typeof (a as { hero?: unknown })?.hero === 'string' ? (a as { hero: string }).hero : '',
+          w: png.readUInt32BE(16), h: png.readUInt32BE(20),
+        }
       }
       return `export default ${JSON.stringify({ words, heroes })}`
     },

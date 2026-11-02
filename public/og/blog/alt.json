@@ -1,0 +1,22 @@
+{
+  "dot-matrix-essay": {
+    "hero": "A lit sphere drawn in grey dots, brighter at the top left, with a red dot where the light comes from. The title reads Ditherpunk for UI.",
+    "social": "Ditherpunk for UI in white dot type, next to a lit sphere drawn in grey dots and one red dot."
+  },
+  "build-your-own-dot-engine": {
+    "hero": "Three metaballs drawn in dots, two grey and one red, with the red one touching a grey one. The title reads Build your own dot engine.",
+    "social": "Build your own dot engine in white dot type, next to three metaballs drawn in dots, one of them red."
+  },
+  "a-tiny-language-for-dots": {
+    "hero": "Grey plasma bands drawn in dots from a short formula, behind the title A tiny language for dots and a red text cursor.",
+    "social": "A tiny language for dots in white dot type with a red cursor, over grey plasma bands drawn in dots."
+  },
+  "living-matter": {
+    "hero": "Rings of grey dots spread across water from three drops, with a red dot where the last drop fell. The title reads Living matter.",
+    "social": "Living matter in white dot type, next to rings of grey dots spreading from drops and one red dot."
+  },
+  "blog": {
+    "hero": "Patches of grey dots from a noise field on a dark board, with one red dot. The title reads Long reads in dots.",
+    "social": "The Dot/480 blog. Long reads in dots in white dot type, over patches of grey dots and one red dot."
+  }
+}

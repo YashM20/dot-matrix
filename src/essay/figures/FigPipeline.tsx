@@ -1,19 +1,11 @@
 import { useMemo, useState, type KeyboardEvent, type PointerEvent } from 'react'
-import type { DotStyle, Field, Layer } from '../../engine/types'
+import type { DotStyle, Layer } from '../../engine/types'
 import { DotCanvas } from '../../components/DotCanvas'
 import { useThemeTokens } from '../../site/theme/useTheme'
 import { Controls, Panel, Range } from '../ui/kit'
 import { figStyle } from '../ui/style'
+import { blobs } from './fields'
 
-/** Three metaballs; the reader holds the third. Pure in (u, v, x, y). */
-const blobs = (x: number, y: number): Field => (u, v) => {
-  // inverse-square falloffs summed, thresholded low enough that nearby blobs grow a neck between them
-  const a = .012 / ((u - .32) ** 2 + (v - .36) ** 2 + 1e-4)
-  const b = .009 / ((u - .64) ** 2 + (v - .66) ** 2 + 1e-4)
-  const c = .01 / ((u - x) ** 2 + (v - y) ** 2 + 1e-4)
-  const s = a + b + c
-  return s < .7 ? 0 : Math.min(1, (s - .7) / 2.3)
-}
 /** "The field": sampled so finely and unquantized that it reads as continuous. */
 const FINE: DotStyle = { shape: 'circle', sizeMin: 0, sizeMax: 1.25, opacityMode: 'fromValue', quantizeSteps: 0 }
 const FINE_GRID = { cols: 120, rows: 120, pitch: 2 }
