@@ -23,9 +23,9 @@
  * each card's cold / warm / hover frame.
  */
 import { readFileSync } from 'node:fs'
-import { ambientOcclusion, anisoSpec, bakeMatcap, basket, cardMask, contour, DRAFTS, insetDistance, fromDraft, heightFromField, herringbone, marble, matcap, matcapMatrix, plain, rake, satin, stitch, stitchHoles, studioMatcap, tangentLinear, tangentRadial, tangentSDF, terrazzo, toDraft, twill, weaveRelief, CHROME, type Drawdown } from '../src/engine/matter'
+import { ambientOcclusion, aoBlur, anisoSpec, bakeMatcap, basket, cardMask, contour, DRAFTS, insetDistance, fromDraft, heightFromField, herringbone, marble, matcap, matcapMatrix, plain, rake, satin, stitch, stitchHoles, studioMatcap, tangentLinear, tangentRadial, tangentSDF, terrazzo, toDraft, twill, weaveRelief, CHROME, type Drawdown } from '../src/engine/matter'
 import { heightRaster, lightDir, metal, normalRaster, sdfBox, sdfCircle, type Light, type Vec3 } from '../src/engine/light'
-import { createRaster, distanceRaster, rasterize } from '../src/engine/raster'
+import { blur, createRaster, distanceRaster, rasterize, rasterWindow } from '../src/engine/raster'
 import { latticeGrid } from '../src/engine/sampler/gridSampler'
 import type { GridConfig } from '../src/engine/types'
 import { materialsHooks } from '../src/widgets/boards/materials'
@@ -73,6 +73,14 @@ export async function materialsChecks(assert: Assert, opts: MaterialsOptions = {
     assert('materials: ao: horizon and blur agree in sign on 3 test reliefs (pit, groove, step)', agree)
     const fresh = () => ambientOcclusion(heightFromField(cells(G, (x, y) => Math.max(0, Math.sin(x / 3) * Math.cos(y / 4))), G, { scale: 2 }), { radius: 2.5 })
     assert('materials: ao: deterministic (two fresh bakes bit for bit)', same(fresh().data, fresh().data))
+    // the AO's own blur (no reflect on taps that stay on the grid) ≡ raster/ops blur, over windows that touch every edge
+    let blurs = 0, blurOff = 0
+    for (const [radius, win] of [[1.2, [0, 0, 63, 63]], [2, [3, 5, 40, 61]], [3, [-2, -2, 70, 70]], [.5, [30, 30, 33, 33]], [4.7, [0, 50, 63, 63]]] as const) {
+      const h = heightFromField(cells(G, (x, y) => Math.max(0, Math.sin(x / 2.3) * Math.cos(y / 3.1))), G, { scale: 2 })
+      const want = blur({ ...h, bounds: rasterWindow({ ...h, bounds: [...win] }) }, radius).data, got = aoBlur(h.data, G, rasterWindow({ ...h, bounds: [...win] }), radius)
+      blurs++; if (!same(want, got)) blurOff++
+    }
+    assert('materials: ao: aoBlur ≡ blur (raster/ops, gaussian), bit for bit', blurOff === 0, `${blurOff} of ${blurs} differ`)
     const L = lightDir(-35 * DEG, 44.8 * DEG), R = rake(L) as Vec3, az = (l: Vec3) => Math.atan2(l[0], -l[1]), el = (l: Vec3) => Math.atan2(l[2], Math.hypot(l[0], l[1]))
     const low = rake(lightDir(1, 2 * DEG)) as Vec3, pointIn: Light = { at: [1, 2, 3] }
     assert('materials: rake: azimuth kept, elevation clamped', Math.abs(az(R) - az(L)) < 1e-9 && Math.abs(el(R) - 18 * DEG) < 1e-9 && Math.abs(el(low) - 8 * DEG) < 1e-9 && rake(pointIn) === pointIn)

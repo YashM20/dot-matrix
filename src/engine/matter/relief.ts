@@ -79,6 +79,53 @@ export interface AOOptions {
   mode?: 'blur' | 'horizon'
 }
 
+/**
+ * `blur(r, radius)` (raster/ops.ts, gaussian) of `src` over `win`, bit for bit: the same kernel, the same scatter and
+ * the same order of additions into each cell, but a tap that stays on the grid skips `reflect` (its modulo per tap
+ * was most of an AO bake). Only the data is returned (the AO reads no bounds). Kept here, not in raster/ops.ts,
+ * which ships in first load. Checked against `blur` in scripts/materials.ts.
+ */
+export function aoBlur(src: Float32Array, grid: GridConfig, win: CellBounds, radius: number): Float32Array {
+  const { cols, rows } = grid, hk = radius > 0 ? Math.max(1, Math.ceil(radius)) : 0, k = new Float64Array(2 * hk + 1), s = radius / 2
+  if (hk === 0) k[0] = 1
+  else {
+    let sum = 0
+    for (let i = -hk; i <= hk; i++) sum += k[i + hk] = Math.exp(-(i * i) / (2 * s * s))
+    for (let i = 0; i < k.length; i++) k[i] /= sum
+  }
+  const c0 = Math.max(0, win[0]), r0 = Math.max(0, win[1]), c1 = Math.min(cols - 1, win[2]), r1 = Math.min(rows - 1, win[3])
+  const tmp = new Float32Array(cols * rows), dst = new Float32Array(cols * rows)
+  if (c0 > c1 || r0 > r1) return dst
+  for (let y = r0; y <= r1; y++) blurRow(src, tmp, k, hk, y * cols, c0, c1, cols)
+  const xa = Math.max(0, c0 - hk), xb = Math.min(cols - 1, c1 + hk)
+  for (let y = r0; y <= r1; y++) blurCol(tmp, dst, k, hk, y, xa, xb, cols, rows)
+  return dst
+}
+/** ops.ts's mirror (half-sample symmetric, repeating), for the taps that leave the grid. */
+function mirror(i: number, n: number): number {
+  if (n === 1) return 0
+  const p = 2 * n
+  i = ((i % p) + p) % p
+  return i < n ? i : p - 1 - i
+}
+function blurRow(src: Float32Array, tmp: Float32Array, k: Float64Array, hk: number, row: number, c0: number, c1: number, cols: number): void {
+  for (let x = c0; x <= c1; x++) {
+    const v = src[row + x]
+    if (v === 0) continue
+    if (x - hk >= 0 && x + hk < cols) for (let j = -hk, t = row + x - hk; j <= hk; j++, t++) tmp[t] += v * k[j + hk]
+    else for (let j = -hk; j <= hk; j++) tmp[row + mirror(x + j, cols)] += v * k[j + hk]
+  }
+}
+function blurCol(tmp: Float32Array, dst: Float32Array, k: Float64Array, hk: number, y: number, xa: number, xb: number, cols: number, rows: number): void {
+  const inside = y - hk >= 0 && y + hk < rows
+  for (let x = xa; x <= xb; x++) {
+    const v = tmp[y * cols + x]
+    if (v === 0) continue
+    if (inside) for (let j = -hk, t = (y - hk) * cols + x; j <= hk; j++, t += cols) dst[t] += v * k[j + hk]
+    else for (let j = -hk; j <= hk; j++) dst[mirror(y + j, rows) * cols + x] += v * k[j + hk]
+  }
+}
+
 const aos = new WeakMap<HeightRaster, Map<string, Raster>>()
 /**
  * Ambient occlusion of a height raster: 1 on open surfaces, down to 1 − strength in pits, grooves and at the
@@ -92,7 +139,7 @@ export function ambientOcclusion(h: HeightRaster, o: AOOptions = {}): Raster {
     A.fill(1)
     const pad = Math.ceil(R), [c0, r0, c1, r1] = rasterWindow(h, pad)
     if (mode === 'blur') {
-      const b = blur({ ...h, bounds: rasterWindow(h, pad) }, R).data, k = 1 / (.5 * R)
+      const b = aoBlur(H, h.grid, rasterWindow(h, pad), R), k = 1 / (.5 * R)
       for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
         const i = r * cols + c, occ = (b[i] - H[i]) * k
         if (occ > 0) A[i] = 1 - s * (occ < 1 ? occ : 1)

@@ -98,7 +98,8 @@ export function knitAt(x: number, y: number, o: KnitOptions = {}, out: Float64Ar
 export function knitRelief(grid: GridConfig, box: CellBounds, o: KnitOptions & { y0?: number; floor?: number } = {}): KnitRelief {
   const { cols, rows } = grid, n = cols * rows, h: HeightRaster = { ...createRaster(grid, 'card', box), mask: new Float32Array(n) }
   const tx = new Float32Array(n), ty = new Float32Array(n), out = new Float64Array(3), y0 = o.y0 ?? 0, floor = o.floor ?? .05
-  for (let r = Math.max(0, box[1]); r <= Math.min(rows - 1, box[3]); r++) for (let c = Math.max(0, box[0]); c <= Math.min(cols - 1, box[2]); c++) {
+  const ra = Math.max(0, box[1]), rb = Math.min(rows - 1, box[3]), ca = Math.max(0, box[0]), cb = Math.min(cols - 1, box[2])
+  for (let r = ra; r <= rb; r++) for (let c = ca; c <= cb; c++) {
     knitAt(c - box[0], r - box[1] + y0, o, out)
     const i = r * cols + c
     // below `floor` (cells) a cell is crevice: void between the loops
