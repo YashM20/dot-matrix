@@ -42,8 +42,8 @@ export const sigmoidS1Inv = (y: number) => y / (1 - Math.abs(y))
 export const sigmoidS1D = (x: number) => { const a = 1 + Math.abs(x); return 1 / (a * a) }
 
 // after Inigo Quilez, https://iquilezles.org/articles/sigmoids/ (MIT)
-/** S2: x/√(1 + x²). */
-export const sigmoidS2 = (x: number) => x / Math.sqrt(1 + x * x)
+/** S2: x/√(1 + x²), with hypot so x² can't overflow for large x. */
+export const sigmoidS2 = (x: number) => x / Math.hypot(1, x)
 // after Inigo Quilez, https://iquilezles.org/articles/sigmoids/ (MIT)
 export const sigmoidS2Inv = (y: number) => y / Math.sqrt(1 - y * y)
 // after Inigo Quilez, https://iquilezles.org/articles/sigmoids/ (MIT)
@@ -51,8 +51,13 @@ export const sigmoidS2Inv = (y: number) => y / Math.sqrt(1 - y * y)
 export const sigmoidS2D = (x: number) => { const a = 1 + x * x; return 1 / (a * Math.sqrt(a)) }
 
 // after Inigo Quilez, https://iquilezles.org/articles/sigmoids/ (MIT)
-/** S3: x/∛(1 + x²|x|). */
-export const sigmoidS3 = (x: number) => x / Math.cbrt(1 + x * x * Math.abs(x))
+/** S3: x/∛(1 + x²|x|). Past |x| = 1 it is written as sign(x)/∛(1 + |x|⁻³), so |x|³ can't overflow. */
+export const sigmoidS3 = (x: number) => {
+  const ax = Math.abs(x)
+  if (ax <= 1) return x / Math.cbrt(1 + x * x * ax)
+  const u = 1 / ax
+  return Math.sign(x) / Math.cbrt(1 + u * u * u)
+}
 // after Inigo Quilez, https://iquilezles.org/articles/sigmoids/ (MIT)
 export const sigmoidS3Inv = (y: number) => y / Math.cbrt(1 - y * y * Math.abs(y))
 // after Inigo Quilez, https://iquilezles.org/articles/sigmoids/ (MIT)
@@ -60,14 +65,14 @@ export const sigmoidS3Inv = (y: number) => y / Math.cbrt(1 - y * y * Math.abs(y)
 export const sigmoidS3D = (x: number) => { const a = 1 + x * x * Math.abs(x); return 1 / (a * Math.cbrt(a)) }
 
 // after Inigo Quilez, https://iquilezles.org/articles/sigmoids/ (MIT)
-/** T1: x/(1 + √(1 + x²)). Slope ½ at the origin. */
-export const sigmoidT1 = (x: number) => x / (1 + Math.sqrt(1 + x * x))
+/** T1: x/(1 + √(1 + x²)), with hypot so x² can't overflow. Slope ½ at the origin. */
+export const sigmoidT1 = (x: number) => x / (1 + Math.hypot(1, x))
 // after Inigo Quilez, https://iquilezles.org/articles/sigmoids/ (MIT)
 /** 2y/(1 − y²). */
 export const sigmoidT1Inv = (y: number) => 2 * y / (1 - y * y)
 // after Inigo Quilez, https://iquilezles.org/articles/sigmoids/ (MIT)
 /** 1/(√(1 + x²)·(1 + √(1 + x²))). */
-export const sigmoidT1D = (x: number) => { const s = Math.sqrt(1 + x * x); return 1 / (s * (1 + s)) }
+export const sigmoidT1D = (x: number) => { const s = Math.hypot(1, x); return 1 / (s * (1 + s)) }
 
 /** The six sigmoids by the article's names, for pickers and sweeps. */
 export const SIGMOIDS: Readonly<Record<string, Sigmoid>> = {

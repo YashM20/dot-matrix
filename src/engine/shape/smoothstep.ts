@@ -22,9 +22,15 @@ export function smoothstepCubic(x: number): number {
 }
 
 // after Inigo Quilez, https://iquilezles.org/articles/ismoothstep/ (MIT)
-/** Closed-form inverse of the cubic smoothstep (trigonometric Cardano root, simplified). */
+/**
+ * Closed-form inverse of the cubic smoothstep (trigonometric Cardano root, simplified). The article's
+ * 0.5 − sin(asin(1 − 2y)/3) loses all precision for tiny y (1 − 2y rounds to 1). With asin(1 − 2y) = π/2 − 2e,
+ * e = asin(√y), it equals sin²(e/3) + (√3/2)·sin(2e/3), a sum of two positive terms; the upper half uses the symmetry.
+ */
 export function smoothstepCubicInv(y: number): number {
-  return 0.5 - Math.sin(Math.asin(1 - 2 * y) / 3)
+  if (y > 0.5) return 1 - smoothstepCubicInv(1 - y)
+  const e = Math.asin(Math.sqrt(y)), s = Math.sin(e / 3)
+  return s * s + 0.5 * Math.sqrt(3) * Math.sin(2 * e / 3)
 }
 
 // after Inigo Quilez, https://iquilezles.org/articles/smoothsteps/ (MIT)
@@ -34,8 +40,9 @@ export function smoothstepQuartic(x: number): number {
 }
 
 // after Inigo Quilez, https://iquilezles.org/articles/smoothsteps/ (MIT)
+/** The article's sqrt(1 − sqrt(1 − y)), with 1 − sqrt(1 − y) written as y/(1 + sqrt(1 − y)) so tiny y keeps its precision. */
 export function smoothstepQuarticInv(y: number): number {
-  return Math.sqrt(1 - Math.sqrt(1 - y))
+  return Math.sqrt(y / (1 + Math.sqrt(1 - y)))
 }
 
 // after Inigo Quilez, https://iquilezles.org/articles/smoothsteps/ (MIT)
@@ -51,9 +58,13 @@ export function smoothstepQuadRational(x: number): number {
 }
 
 // after Inigo Quilez, https://iquilezles.org/articles/smoothsteps/ (MIT)
+/**
+ * The article's (y − sqrt(y(1 − y)))/(2y − 1), rewritten as the equal ratio √y/(√y + √(1 − y)): no 0/0 at ½ and no
+ * cancellation next to it.
+ */
 export function smoothstepQuadRationalInv(y: number): number {
-  if (y === 0.5) return 0.5 // the article's formula is 0/0 here; this is its limit
-  return (y - Math.sqrt(y * (1 - y))) / (2 * y - 1)
+  const a = Math.sqrt(y)
+  return a / (a + Math.sqrt(1 - y))
 }
 
 // after Inigo Quilez, https://iquilezles.org/articles/smoothsteps/ (MIT)
@@ -69,10 +80,12 @@ export function smoothstepCubicRationalInv(y: number): number {
 }
 
 // after Inigo Quilez, https://iquilezles.org/articles/smoothsteps/ (MIT)
-/** General rational xⁿ / (xⁿ + (1 − x)ⁿ). C(n−1); n = 2 and 3 are the quadratic and cubic rationals. */
+/**
+ * General rational xⁿ / (xⁿ + (1 − x)ⁿ). C(n−1); n = 2 and 3 are the quadratic and cubic rationals. Evaluated as
+ * 1/(1 + ((1 − x)/x)ⁿ), which is the same curve without both powers underflowing to 0/0 at large n.
+ */
 export function smoothstepRational(x: number, n: number): number {
-  const a = Math.pow(x, n)
-  return a / (a + Math.pow(1 - x, n))
+  return 1 / (1 + Math.pow((1 - x) / x, n))
 }
 
 // after Inigo Quilez, https://iquilezles.org/articles/smoothsteps/ (MIT)
@@ -104,14 +117,17 @@ export function smoothstepPiecewiseInv(y: number, n: number): number {
 }
 
 // after Inigo Quilez, https://iquilezles.org/articles/smoothsteps/ (MIT)
-/** Half a cosine period. C1. */
+/** Half a cosine period, 0.5 − 0.5·cos(πx), evaluated as the equal sin²(πx/2) so tiny x keeps its precision. C1. */
 export function smoothstepTrig(x: number): number {
-  return 0.5 - 0.5 * Math.cos(Math.PI * x)
+  const s = Math.sin(0.5 * Math.PI * x)
+  return s * s
 }
 
 // after Inigo Quilez, https://iquilezles.org/articles/smoothsteps/ (MIT)
+/** The article's acos(1 − 2y)/π, written as 2·asin(√y)/π (the same angle) so tiny y keeps its precision. */
 export function smoothstepTrigInv(y: number): number {
-  return Math.acos(1 - 2 * y) / Math.PI
+  if (y > 0.5) return 1 - smoothstepTrigInv(1 - y)
+  return 2 * Math.asin(Math.sqrt(y)) / Math.PI
 }
 
 /** The fixed-shape variants by name, for pickers and sweeps. */

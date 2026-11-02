@@ -971,4 +971,10 @@ shareChecks(assert)
   highlightChecks(assert)
 }
 
+// shaping pack (IQ3, #64): remaps, smoothsteps and sigmoids against references, inverses, derivatives (scripts/shape.ts)
+{
+  const { shapeChecks } = await import('./shape')
+  shapeChecks(assert)
+}
+
 done('All acceptance checks passed')

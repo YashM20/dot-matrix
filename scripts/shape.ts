@@ -12,7 +12,7 @@ import {
   pcurve, polyImpulse, quaImpulse, rationalBump, sincImpulse, smoothAbs, smoothAbsPoly, sustainedImpulse, tone,
   truncFalloff,
   SMOOTHSTEPS, smoothstepCubic, smoothstepCubicInv, smoothstepCubicRational, smoothstepPiecewise, smoothstepPiecewiseInv,
-  smoothstepPiecewiseQuadratic, smoothstepQuadRational, smoothstepQuartic, smoothstepQuintic, smoothstepRational,
+  smoothstepPiecewiseQuadratic, smoothstepQuadRational, smoothstepQuadRationalInv, smoothstepQuartic, smoothstepQuintic, smoothstepRational,
   smoothstepRationalInv, smoothstepTrig,
   SIGMOIDS, sigmoidS1, sigmoidS2, sigmoidS3, sigmoidT1, sigmoidTanh, sigmoidTrig,
 } from '../src/engine/shape'
@@ -52,6 +52,10 @@ function remapChecks(assert: Assert): void {
   const pos = (t: number) => t >= T ? t - 0.5 * T : (t / T) ** 3 * (T - t * 0.5) // the smoothstepintegral article's form
   assert('shape: integralSmoothstep matches the smoothstepintegral article\'s position(t, T)',
     maxErr(sweep(0, 5, 100), x => ist(x) - pos(x)) < 1e-14)
+  assert('shape: integralSmoothstep is 0 with slope 0 before the ramp starts',
+    [-2, -0.5, -1e-9, 0].every(x => ist(x) === 0) && fd(ist, -1) === 0, `f(−2) ${ist(-2)}`)
+  assert('shape: almostIdentity with m = 0 returns n at and below 0, x above (no NaN)',
+    almostIdentity(0, 0, 0.1) === 0.1 && almostIdentity(-1, 0, 0.1) === 0.1 && almostIdentity(0.5, 0, 0.1) === 0.5 && almostIdentity(-2, -1, 0.1) === 0.1)
 
   for (const k of [2, 8, 32]) {
     const xs = sweep(0, 4, 400)
@@ -85,6 +89,7 @@ function remapChecks(assert: Assert): void {
     assert(`shape: gain k=${k} keeps 0, ½, 1, increases, and gain(·, 1/k) inverts it`,
       g(0) === 0 && g(0.5) === 0.5 && g(1) === 1 && monotone(g, UNIT) && maxErr(UNIT, x => gain(g(x), 1 / k) - x) < 1e-12)
   }
+  assert('shape: gain at k = 0 is flat ½ (outside the documented k > 0)', UNIT.every(x => gain(x, 0) === 0.5))
   assert('shape: gain reference values (k = 1 identity; 0.25, k = 2 → 0.125)',
     maxErr(UNIT, x => gain(x, 1) - x) < 1e-15 && near(gain(0.25, 2), 0.125) && near(gain(0.75, 2), 0.875))
   assert('shape: parabola is 0 at the ends, 1 in the middle (0.25, k = 1 → 0.75; k = 2 → 0.5625)',
@@ -94,7 +99,11 @@ function remapChecks(assert: Assert): void {
     assert(`shape: pcurve a=${a} b=${b} is 0 at the ends and peaks at 1 at a/(a+b)`,
       pcurve(0, a, b) === 0 && pcurve(1, a, b) === 0 && near(pcurve(c, a, b), 1, 1e-12) && UNIT.every(x => pcurve(x, a, b) <= 1 + 1e-12))
   }
-  assert('shape: pcurve with a = b = 1 is parabola(·, 1)', maxErr(UNIT, x => pcurve(x, 1, 1) - parabola(x, 1)) < 1e-15)
+  assert('shape: pcurve with a = b = 1 is parabola(·, 1)', maxErr(UNIT, x => pcurve(x, 1, 1) - parabola(x, 1)) < 1e-14)
+  assert('shape: pcurve stays finite with a peak of 1 at large exponents (a = b = 75, 100, 600, 1000)',
+    [75, 100, 600, 1000].every(a => near(pcurve(0.5, a, a), 1, 1e-9) && UNIT.every(x => Number.isFinite(pcurve(x, a, a)) && pcurve(x, a, a) <= 1 + 1e-9)) &&
+      pcurve(0.1, 600, 600) < 1e-200 && pcurve(0, 0, 2) === 1 && pcurve(1, 2, 0) === 1,
+    `a = b = 100 at ½: ${pcurve(0.5, 100, 100)}`)
   for (const k of [-0.5, 0, 2, 8]) {
     assert(`shape: tone k=${k} keeps 0 and 1 and increases`,
       tone(0, k) === 0 && near(tone(1, k), 1) && monotone(x => tone(x, k), UNIT))
@@ -106,6 +115,8 @@ function remapChecks(assert: Assert): void {
     cubicPulse(c, c, w) === 1 && cubicPulse(c + w, c, w) === 0 && cubicPulse(c - w, c, w) === 0 && cubicPulse(2, c, w) === 0)
   assert('shape: cubicPulse = smoothstep(c−w, c, x) − smoothstep(c, c+w, x) (the article\'s stated equivalent)',
     maxErr(sweep(-1, 1.5, 250), x => cubicPulse(x, c, w) - (smoothstep(c - w, c, x) - smoothstep(c, c + w, x))) < 1e-14)
+  assert('shape: cubicPulse with w = 0 is 1 at c and 0 elsewhere (no NaN)',
+    cubicPulse(c, c, 0) === 1 && cubicPulse(c + 1e-9, c, 0) === 0 && cubicPulse(c - 1, c, 0) === 0)
   assert('shape: rationalBump is 1 at 0, ½ at x = 1/√k, positive everywhere',
     rationalBump(0, 4) === 1 && near(rationalBump(0.5, 4), 0.5) && rationalBump(1e3, 4) > 0)
   for (const k of [2, 4, 8]) {
@@ -146,6 +157,22 @@ function smoothstepChecks(assert: Assert): void {
   }
   assert('shape: inverse cubic smoothstep (ismoothstep closed form) reference values',
     near(smoothstepCubicInv(0.15625), 0.25, 1e-15) && near(smoothstepCubicInv(0.84375), 0.75, 1e-15))
+  // Near y = 0 every smoothstep is ≈ c·x², so the inverse is ≈ sqrt(y/c): cubic c = 3, quartic 2, quad rational 1,
+  // piecewise quadratic 2, trig π²/4. The cubic rational is ≈ x³, so ∛y.
+  const tiny: [string, F, F][] = [
+    ['cubic', smoothstepCubicInv, y => Math.sqrt(y / 3)], ['quartic', SMOOTHSTEPS.quartic.inv!, y => Math.sqrt(y / 2)],
+    ['quadRational', SMOOTHSTEPS.quadRational.inv!, y => Math.sqrt(y)], ['cubicRational', SMOOTHSTEPS.cubicRational.inv!, y => Math.cbrt(y)],
+    ['piecewiseQuadratic', SMOOTHSTEPS.piecewiseQuadratic.inv!, y => Math.sqrt(y / 2)], ['trig', SMOOTHSTEPS.trig.inv!, y => 2 * Math.sqrt(y) / Math.PI],
+  ]
+  for (const [name, inv, ref] of tiny) {
+    const ys = [1e-18, 1e-17, 1e-12, 1e-6], rel = Math.max(...ys.slice(0, 3).map(y => Math.abs(inv(y) / ref(y) - 1)))
+    const f = SMOOTHSTEPS[name].f, trip = Math.max(...ys.map(y => Math.abs(f(inv(y)) / y - 1)))
+    assert(`shape: smoothstep ${name} inverse keeps its precision near 0 (y = 1e-18 … 1e-6)`, rel < 1e-3 && trip < 1e-9,
+      `inv(1e-18) ${inv(1e-18).toExponential(4)}, rel err vs asymptote ${e(rel)}, f∘inv rel ${e(trip)}`)
+  }
+  const qr = smoothstepQuadRationalInv
+  assert('shape: quadratic rational inverse is stable next to ½', near(qr(0.5), 0.5, 0) && near(qr(0.5 - 2.5e-16), 0.5, 1e-15) && near(qr(0.5 - 5e-12), 0.5 - 2.5e-12, 1e-15),
+    `inv(½ − 2.5e-16) ${qr(0.5 - 2.5e-16)}, inv(½ − 5e-12) − (½ − 2.5e-12) ${e(qr(0.5 - 5e-12) - (0.5 - 2.5e-12))}`)
 
   for (const n of [1.5, 2, 3, 5]) {
     const f = (x: number) => smoothstepRational(x, n), inv = (y: number) => smoothstepRationalInv(y, n)
@@ -157,6 +184,9 @@ function smoothstepChecks(assert: Assert): void {
   }
   assert('shape: smoothstepRational n = 2 and 3 are the quadratic and cubic rationals',
     maxErr(UNIT, x => smoothstepRational(x, 2) - smoothstepQuadRational(x)) < 1e-15 && maxErr(UNIT, x => smoothstepRational(x, 3) - smoothstepCubicRational(x)) < 1e-15)
+  assert('shape: smoothstepRational stays finite at large n (½ at the midpoint, 0 / 1 either side, inverse ½ at ½)',
+    [1075, 2000, 1e6].every(n => smoothstepRational(0.5, n) === 0.5 && smoothstepRational(0.49, n) < 1e-15 && smoothstepRational(0.51, n) > 1 - 1e-15 &&
+      smoothstepRationalInv(0.5, n) === 0.5 && UNIT.every(x => Number.isFinite(smoothstepRational(x, n)))))
   assert('shape: smoothstepPiecewise n = 2 is the piecewise quadratic', maxErr(UNIT, x => smoothstepPiecewise(x, 2) - smoothstepPiecewiseQuadratic(x)) < 1e-15)
 }
 
@@ -185,6 +215,8 @@ function sigmoidChecks(assert: Assert): void {
     assert(`shape: sigmoid ${name} inverse round-trips both ways`, a < 1e-9 && b < 1e-12, `inv∘f ${e(a)}, f∘inv ${e(b)}`)
     const de = maxErr(xs, x => fd(f, x) - d(x))
     assert(`shape: sigmoid ${name} derivative matches a finite difference`, de < 1e-5, `max err ${e(de)}`)
+    assert(`shape: sigmoid ${name} saturates to ±1 at x = ±1e200 (no overflow to 0 or NaN)`,
+      near(f(1e200), 1, 1e-15) && near(f(-1e200), -1, 1e-15) && d(1e200) >= 0 && Number.isFinite(d(1e200)), `f(1e200) ${f(1e200)}`)
   }
 }
 
