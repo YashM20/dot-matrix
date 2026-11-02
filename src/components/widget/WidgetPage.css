@@ -138,7 +138,7 @@
   right: 0;
   bottom: calc(14px + env(safe-area-inset-bottom));
   width: max-content;
-  max-width: calc(100vw - 16px);
+  max-width: calc(100cqi - 16px);
   margin-inline: auto
 }
 

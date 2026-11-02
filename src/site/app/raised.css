@@ -35,7 +35,7 @@
 }
 
 .pal {
-  width: min(620px, calc(100vw - 24px));
+  width: min(620px, calc(100cqi - 24px));
   overflow: hidden;
   text-align: left
 }
@@ -149,7 +149,7 @@
   top: 0;
   transform: translateX(-50%);
   z-index: 72;
-  width: min(1000px, 100vw);
+  width: min(1000px, 100cqi);
   padding: var(--space-4) var(--space-4) var(--space-2);
   background: var(--bg);
   border: 1px solid var(--line);
@@ -187,7 +187,7 @@
 }
 
 .pal-boss-card {
-  width: min(520px, calc(100vw - 24px));
+  width: min(520px, calc(100cqi - 24px));
   display: flex;
   flex-direction: column;
   gap: var(--space-3);

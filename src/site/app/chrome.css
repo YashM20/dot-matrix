@@ -4,7 +4,9 @@
   box-sizing: border-box
 }
 
+/* body is the page's width container: 100cqi below it is the viewport without the scrollbar (full-bleed widths) */
 body {
+  container-type: inline-size;
   background: var(--bg);
   color: var(--value)
 }

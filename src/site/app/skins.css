@@ -60,7 +60,7 @@
   z-index: 60;
   display: grid;
   gap: var(--space-1);
-  width: min(330px, calc(100vw - 24px));
+  width: min(330px, calc(100cqi - 24px));
   padding: var(--space-1)
 }
 

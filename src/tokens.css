@@ -61,8 +61,9 @@
   /* ── layout ── */
   --frame-max: 90rem;                   /* 1440 px: the frame, padding included */
   --frame-pad: clamp(16px, 3vw, 40px);
-  /* the frame's content edge, from the viewport edge: for fixed and full-bleed things (editor bar, widget pills) */
-  --frame-inset: calc(max(0px, (100vw - var(--frame-max)) / 2) + var(--frame-pad));
+  /* the frame's content edge, from the viewport edge: for fixed and full-bleed things (editor bar, widget pills).
+     100cqi is the page's width without the scrollbar (body is the inline-size container); 100vw would count it */
+  --frame-inset: calc(max(0px, (100cqi - var(--frame-max)) / 2) + var(--frame-pad));
   --card-max: min(62svh, 520px);        /* a board never shows a card taller than ~62% of the screen */
   /* board density (BoardMeta.density): the narrowest a card gets before the grid drops a column. The grid
      queries in src/site/app/grid.css mirror these numbers: change both together (DESIGN.md › Board grid) */
