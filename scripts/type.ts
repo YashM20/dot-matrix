@@ -61,7 +61,8 @@ export function typeChecks(assert: Assert) {
 
   // determinism + speed: same input, same cells; a 4-letter TILE-size word samples quickly
   const T0 = performance.now(); for (let i = 0; i < 10; i++) ink(at({ weight: i / 10 })); const ms = (performance.now() - T0) / 10
-  assert('type field: deterministic, fast enough to re-set every frame', eq(cells(at({})), cells(at({}))) && ms < 40, `${ms.toFixed(2)} ms per 120×30 word`)
+  assert('type field: deterministic (same input, same cells)', eq(cells(at({})), cells(at({}))))
+  assert('type field: a 120×30 word re-sets ≤ 40 ms (fast enough for every frame)', ms < 40, `${ms.toFixed(2)} ms per 120×30 word`)
 
   // board: every card renders, only the marquee's live dot is red
   const board = boardById('type')!, reds: string[] = []

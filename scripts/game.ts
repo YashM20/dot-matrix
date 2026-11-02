@@ -83,7 +83,8 @@ export function gameChecks(assert: Assert, long = false): void {
   // the best frame per stage is the gate (other jobs on a loaded machine only ever add time); p25 / median reported
   const pct = (a: number[], p: number) => [...a].sort((x, y) => x - y)[Math.floor(a.length * p)], med = (a: number[]) => pct(a, .5)
   const worst = Math.max(...[...times.values()].map(a => pct(a, 0)))
-  assert('game: every visited stage renders through the sampler, best frame under one 60 Hz frame (16 ms; p25/median shown)', worst < 16 && red,
+  assert('game: every visited stage renders through the sampler, the title with its one red cursor', times.size > 0 && red, [...times.keys()].join(', '))
+  assert('game: best frame per stage renders ≤ 16 ms (one 60 Hz frame; p25/median shown)', worst < 16,
     [...times].map(([s, a]) => `${s} ${pct(a, 0).toFixed(1)}/${pct(a, .25).toFixed(1)}/${med(a).toFixed(1)} ms/${dots.get(s)} dots`).join(', '))
   if (long) console.log(`long run: ${run.game.stage}, score ${run.game.score}, lives ${run.game.lives}, queen hp ${run.game.q.hp}`)
 }
