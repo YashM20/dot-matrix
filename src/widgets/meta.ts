@@ -349,4 +349,10 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'sq-stitch': ['A cross-stitch sampler: the alphabet in X stitches inside a wave-function-collapse border, sewn one stitch at a time.', 'squares cross stitch motif sampler wfc animated'],
   'sq-beads': ['One bird sprite as ironed Perler beads and as LEGO studs, the split between the two toys sweeping across.', 'squares perler lego beads motif pixel animated'],
   'sq-morph': ['The LCD clock morphing from dots to squares of the same ink, then fusing into solid shapes, and back.', 'squares morph shape clock animated'],
+  'fr-julia': ['A Julia set as its c walks the edge of the Mandelbrot set, shown in the corner with c in red.', 'fractal julia mandelbrot smooth animated'],
+  'fr-trap': ['A Julia plane shaded by orbit traps: pearls from a point, threads from a line, one probe orbit drawn on top.', 'fractal orbit-trap julia animated'],
+  'fr-popcorn': ['Pickover popcorn: three thousand grains in one flow, seen through a round port, one grain riding its loop.', 'fractal popcorn density animated'],
+  'fr-flame': ['A chaos game of four twisted maps, 150k hops as a density, the current hop in red.', 'fractal ifs flame chaos-game animated'],
+  'fr-icon': ['An eight-fold symmetric icon drawn by one chaotic orbit, the orbit point in red.', 'fractal icon symmetry density animated'],
+  'fr-lyapunov': ['A Lyapunov field for the sequence AAABB: order in dots, chaos left dark, a probe reading its exponent.', 'fractal lyapunov logistic animated'],
 }

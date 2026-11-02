@@ -197,4 +197,10 @@ shareChecks(assert)
   filterChecks(assert)
 }
 
+// fractal pack and board (IQ7, #68): smooth count, orbit traps, density bakes pinned, Lyapunov, one red per card (scripts/fractal.ts)
+{
+  const { fractalChecks } = await import('./fractal')
+  fractalChecks(assert)
+}
+
 done('All acceptance checks passed')

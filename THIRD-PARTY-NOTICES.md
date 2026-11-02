@@ -39,6 +39,13 @@ Ported articles:
 | [Checkers filtering](https://iquilezles.org/articles/checkerfiltering/) | The triangle signal and the box-filtered checkers | `src/engine/filter/checkers.ts` |
 | [Improved checkers filtering](https://iquilezles.org/articles/morecheckerfiltering/) | The square signal's second integral and the triangle-filtered checkers | `src/engine/filter/checkers.ts` |
 | [Filtering procedural textures](https://iquilezles.org/articles/filtering/) | Supersampling over the footprint | `src/engine/filter/supersample.ts` |
+| [Smooth iteration count](https://iquilezles.org/articles/msetsmooth/) | The smooth escape count for z^d + c, Mandelbrot and Julia | `src/engine/fractal/escape.ts` |
+| [Geometric orbit traps](https://iquilezles.org/articles/ftrapsgeometric/) | Point and line orbit traps | `src/engine/fractal/traps.ts` |
+| [Procedural orbit traps](https://iquilezles.org/articles/ftrapsprocedural/) | A trap given as any function of z | `src/engine/fractal/traps.ts` |
+| [Popcorn images](https://iquilezles.org/articles/popcorns/) | Pickover's popcorn field, the article's cosine variant, the density render and the travel-distance render | `src/engine/fractal/popcorn.ts`, `density.ts` |
+| [IFS fractals](https://iquilezles.org/articles/ifsfractals/) | The chaos game with \|det\|-weighted picks, the twist and inversion variations, the address, the square-root density tone | `src/engine/fractal/ifs.ts`, `density.ts` |
+| [Lyapunov fractals](https://iquilezles.org/articles/lyapunovfractals/) | The exponent with one logarithm after the loop (folded when the product over- or underflows) | `src/engine/fractal/lyapunov.ts` |
+| [Icon images](https://iquilezles.org/articles/iconimages/) | The symmetric icon map, rendered as a density | `src/engine/fractal/icon.ts` |
 
 Credits the articles give, carried over:
 
@@ -48,6 +55,9 @@ Credits the articles give, carried over:
 - Smooth minimum: the optimised form of the quadratic smooth minimum is Media Molecule's (Dreams). The article also traces the circular-geometrical variant (not ported here) to the Mercury demogroup.
 - Domain repetition: mirroring every other cell is from Shadertoy user and demoscener Fizzer, and the rectangular-perimeter fold was improved by Shadertoy user timestamp.
 - Xor: the operator is from Shadertoy user jt (Jakob Thomsen), and the short argument for why it is exact is Boris The Brave's.
+- Popcorn images: the popcorn formulas are Clifford Pickover's.
+- Lyapunov fractals: the images are Mario Markus's; the name has stuck to them since.
+- Icon images: the formula comes from Michael Field and Martin Golubitsky's book *Symmetry in Chaos* (1992). We use the book's form, with |z|² and z̄ⁿ⁻¹, which the article quotes loosely.
 
 ```
 MIT License
