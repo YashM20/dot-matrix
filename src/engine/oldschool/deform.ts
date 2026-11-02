@@ -97,9 +97,9 @@ export const DEFORMATIONS = {
 } as const satisfies Record<string, Deformation>
 export type DeformationName = keyof typeof DEFORMATIONS
 
-/** x − ⌊x⌋: the texture's repeat (the article's `& 255` / `fmodf`, kept positive). Non-finite input → 0. */
+/** x − ⌊x⌋: the texture's repeat (the article's `& 255` / `fmodf`, kept positive). Non-finite input (a pole) → 0. */
 export function wrap01(x: number): number {
-  if (!(x > -1e15 && x < 1e15)) return 0
+  if (!Number.isFinite(x)) return 0
   return x - Math.floor(x)
 }
 

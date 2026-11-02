@@ -22,18 +22,25 @@ function sourceAt(n: number): [number, number] {
 }
 /** The article's spin; a narrower zoom than its .8 ± .3, so every copy is smaller than the last and the frame stays in view. */
 const zoom = (t: number) => .86 + .1 * dsin(.2 * t)
+/** The starting frame at texel (i, j): a thin line round the outside, a row of dashes inside it. */
+function frameAt(i: number, j: number): number {
+  const edge = Math.min(i, j, S - 1 - i, S - 1 - j), along = Math.max(i, j)
+  return edge < 3 ? .9 : edge >= 6 && edge < 9 && along % 8 < 5 ? .6 : 0
+}
+/** Visit the texels of the block at corner (x0, y0), wrapped: `f(index, i, j)`. */
+function eachTexel([x0, y0]: [number, number], size: number, f: (k: number, i: number, j: number) => void): void {
+  for (let j = Math.floor(y0); j < y0 + SRC; j++) for (let i = Math.floor(x0); i < x0 + SRC; i++) {
+    const r = ((j % size) + size) % size, c = ((i % size) + size) % size
+    f(r * size + c, c, r)
+  }
+}
 const echo = feedbackSim({
   size: S, border: BORDER, dt: DT, lead: 6, period: 42, every: 40, wrap: 'clear', fade: FADE, zoom,
-  init: tex => {
-    // the frame: a thin line round the outside, a row of dashes inside it
-    for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) {
-      const edge = Math.min(i, j, S - 1 - i, S - 1 - j), along = Math.max(i, j)
-      if (edge < 2 || (edge >= 6 && edge < 8 && along % 8 < 5)) tex[j * S + i] = edge < 2 ? .7 : .45
-    }
-  },
+  init: tex => { for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) tex[j * S + i] = frameAt(i, j) },
   source: (tex, size, n) => {
-    const [x0, y0] = sourceAt(n)
-    for (let j = Math.floor(y0); j < y0 + SRC; j++) for (let i = Math.floor(x0); i < x0 + SRC; i++) tex[(((j % size) + size) % size) * size + (((i % size) + size) % size)] = 1
+    // put back the frame under the block's last window, then draw the new one: the border holds one block, no trail
+    eachTexel(sourceAt(n - 1), size, (k, i, j) => { tex[k] = frameAt(i, j) })
+    eachTexel(sourceAt(n), size, k => { tex[k] = 1 })
   },
 })
 /** The card's sim, for tests (reset, replay). */
@@ -54,7 +61,7 @@ export const osEcho: WidgetPreset = {
       const ti = uv[0] * S, tj = uv[1] * S
       if (ti >= sx0 && ti < sx0 + SRC && tj >= sy0 && tj < sy0 + SRC) { ink.v = 1; ink.tone = ACTIVE; return }
       if (v < .06) return
-      ink.v = v; ink.tone = v > .62 ? VALUE : v > .3 ? IDLE : MID
+      ink.v = Math.min(1, v * 1.3); ink.tone = v > .55 ? VALUE : v > .25 ? IDLE : MID
     })
     return [
       caption(`FADE .${Math.round(FADE * 100)}`),

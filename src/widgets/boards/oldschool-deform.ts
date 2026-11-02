@@ -6,6 +6,7 @@
  */
 import { deformFloor, deformFlower, deformLUT, deformStar, deformTunnel, wrap01, type Deformation, type UV } from '../../engine/oldschool/deform'
 import { dsin, ihash } from '../../engine/noise/dmath'
+import { checkersTriangle } from '../../engine/filter/checkers'
 import { layer, type WidgetPreset } from '../types'
 import { ACTIVE, BODY_BOTTOM, BODY_TOP, CREDIT_DEFORM, FAINT, IDLE, MID, T, VALUE, caption, clamp01, dotCentre, footer, frac, pad, plate, plateGeom, tile, type Ink, type PlateGeom } from './oldschool-kit'
 
@@ -45,12 +46,13 @@ const PLATE = plateGeom(K)
 
 // ── 01 TUNNEL ── the off-axis tunnel (u = .3/(r + .5x) deep, v = 3a/π around) lined with staggered bricks. The camera
 // flies in at 1.6 depth units a second; every 1.5 units one brick pair is lit red and comes at you from the dark.
-const RINGS = 6, BRICKS = 4, SPEED = 1.6, RED_EVERY = 1.5
+const RINGS = 6, BRICKS = 4, SPEED = 1.6, RED_EVERY = 1.5, RED_PHASE = .5
 const tunnelTable = table(PLATE, deformTunnel, square, (_x, _y, u) => (u > 0 ? 1 / (1 + .3 * u * u) : 0))
 function tunnelInk(t: number): (x: number, y: number, ink: Ink, i: number) => void {
   const du = SPEED * t, dv = .04 * t, { uv, fog } = tunnelTable()
-  // the red brick's ring (unwrapped): each RED_EVERY depth units a new one appears at the far end
-  const redRing = (Math.floor(du / RED_EVERY) + 1) * RED_EVERY * RINGS, redCol = 2
+  // the red brick's ring (unwrapped): each RED_EVERY depth units a new one appears at the far end; the phase puts it
+  // near the viewer at the golden frame (t = 1.3, depth ≈ .42), where a brick is a dozen dots across
+  const redRing = (Math.floor((du + RED_PHASE) / RED_EVERY) + 1) * RED_EVERY * RINGS - RED_PHASE * RINGS, redCol = 2
   return (_x, _y, ink, i) => {
     let s = 0, red = 0, lit = 0
     for (let k = i * 4; k < i * 4 + 4; k++) {
@@ -146,19 +148,23 @@ export const osFloor: WidgetPreset = {
 
 // ── 06 STAR ── the three-armed star (u = .02y + .03 cos 3a / r): a fine checker spun out along three arms, scrolling
 // so the arms seem to turn. The centre, where the formula runs to infinity, fades to black, and so do the corners.
-const starTable = table(PLATE, deformStar, square, (px, py) => { const r = Math.sqrt(px * px + py * py); return clamp01(r * 4 - .15) * clamp01(1.6 - r) })
+const starTable = table(PLATE, deformStar, square, (px, py) => { const r = Math.sqrt(px * px + py * py); return clamp01(r * 4 - .15) * clamp01((1.05 - r) * 2.2) })
+/** Checker cells per unit of (u, v), and the dot's footprint in sample steps (samples sit one cell apart, a dot is K). */
+const STAR_N = 14
 function starInk(t: number): (x: number, y: number, ink: Ink, i: number) => void {
   const du = .9 * t, dv = -.35 * t, { uv, fog } = starTable()
   return (_x, _y, ink, i) => {
-    let s = 0, odd = 0
-    for (let k = i * 4; k < i * 4 + 4; k++) {
-      if (!fog[k]) continue
-      const cu = Math.floor(uv[2 * k] * 14 + du), cv = Math.floor(uv[2 * k + 1] * 14 + dv)
-      s += ((cu + cv) & 1) * fog[k]
-      odd += cu & 1
-    }
-    const v = s / 4
-    ink.v = v < .1 ? 0 : v; ink.tone = odd >= 2 ? (v > .5 ? VALUE : MID) : v > .5 ? IDLE : MID
+    const k = i * 4
+    if (!(fog[k] && fog[k + 1] && fog[k + 2] && fog[k + 3])) return
+    // the dot's centre and footprint from its four samples (the LUT's finite differences), in checker cells
+    const u0 = uv[2 * k], v0 = uv[2 * k + 1], u1 = uv[2 * k + 2], v1 = uv[2 * k + 3], u2 = uv[2 * k + 4], v2 = uv[2 * k + 5], u3 = uv[2 * k + 6], v3 = uv[2 * k + 7]
+    const cu = (u0 + u1 + u2 + u3) * .25 * STAR_N + du, cv = (v0 + v1 + v2 + v3) * .25 * STAR_N + dv
+    const xu = (u1 - u0 + u3 - u2) * .5 * K * STAR_N, xv = (v1 - v0 + v3 - v2) * .5 * K * STAR_N
+    const yu = (u2 - u0 + u3 - u1) * .5 * K * STAR_N, yv = (v2 - v0 + v3 - v1) * .5 * K * STAR_N
+    // triangle-filtered checkers (IQ4): a cell edge crossing the dot gives a part value, so the arms' edges taper
+    const c = checkersTriangle(cu, cv, xu, xv, yu, yv), f = (fog[k] + fog[k + 1] + fog[k + 2] + fog[k + 3]) * .25, v = c * f
+    ink.v = v < .12 ? 0 : v
+    ink.tone = (Math.floor(cu) & 1) ? (v > .55 ? VALUE : MID) : v > .55 ? IDLE : MID
   }
 }
 export const osStar: WidgetPreset = {

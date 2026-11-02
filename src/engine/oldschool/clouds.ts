@@ -49,6 +49,7 @@ export function cloudFbm(x: number, y: number, t: number, seed = 0, octaves: rea
  * threshold `a` is clear sky (0); `b` sets the sharpness (the closer to `a`, the harder the edge); above it is 1.
  */
 export function cloudCover(fbm: number, a: number, b: number): number {
+  if (!(b > a)) return fbm >= a ? 1 : 0 // b = a: a hard edge (the article's m would be infinite)
   const c = (fbm - a) / (b - a)
   return c < 0 ? 0 : c > 1 ? 1 : c
 }
@@ -65,7 +66,7 @@ export const CLOUD_RAY: readonly number[] = [.9, .6, .3, 0]
 export function cloudShade(cover: (k: number) => number, ray: readonly number[] = CLOUD_RAY): number {
   let s = 0
   for (let k = 0; k < ray.length; k++) { const d = cover(k) - ray[k]; if (d > 0) s += d }
-  return s / ray.length
+  return ray.length ? s / ray.length : 0
 }
 
 /** A cloud layer: the fbm octaves, the threshold and sharpness, and the noise seed. */

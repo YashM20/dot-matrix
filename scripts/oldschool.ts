@@ -48,7 +48,8 @@ function deformChecks(assert: Assert): void {
   let off = 0
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) {
     const [u, v] = at('tunnel', -1 + 2 * i / W, -1 + 2 * j / H), k = (j * W + i) * 2
-    if (Number.isFinite(u) ? Math.abs(lut[k] - Math.fround(u)) > 0 || Math.abs(lut[k + 1] - Math.fround(v)) > 0 : lut[k] === lut[k]) off++
+    // Object.is: a NaN where the formula is finite (or a number at a pole) counts as off
+    if (Number.isFinite(u) ? !Object.is(lut[k], Math.fround(u)) || !Object.is(lut[k + 1], Math.fround(v)) : !Object.is(lut[k], NaN)) off++
   }
   assert('oldschool: the look-up table is the formula at the article\'s pixel centres (x = −1 + 2i/w), poles as NaN', off === 0, `${off} of ${W * H} off`)
   const tex = (u: number, v: number) => u * 10 + v, r = deformRead(lut, 5, tex, .5, .25)
@@ -56,9 +57,11 @@ function deformChecks(assert: Assert): void {
 }
 
 function cloudChecks(assert: Assert): void {
-  // one octave drifts as a whole: fbm(x, y, t) = fbm(x + vel·t, y + vel·t, 0)
-  const one = [CLOUD_OCTAVES[1]], [vx, vy] = one[0].vel
-  const drift = [0, 1, 2, 3, 4].every(i => near(cloudFbm(.1 * i, .3, 2.5, 7, one), cloudFbm(.1 * i + vx * 2.5, .3 + vy * 2.5, 0, 7, one), 1e-12))
+  // each octave drifts as a whole: fbm(x, y, t) = fbm(x + vel·t, y + vel·t, 0), on both axes
+  const drift = CLOUD_OCTAVES.every(o => [0, 1, 2, 3, 4].every(i => {
+    const [vx, vy] = o.vel
+    return near(cloudFbm(.1 * i, .3, 2.5, 7, [o]), cloudFbm(.1 * i + vx * 2.5, .3 + vy * 2.5, 0, 7, [o]), 1e-12)
+  }))
   assert('oldschool: each cloud octave drifts at its own velocity', drift)
   const fs = Array.from({ length: 400 }, (_, i) => cloudFbm(i * .037, i * .011, 1.3, 5))
   const lo = Math.min(...fs), hi = Math.max(...fs)
@@ -85,11 +88,14 @@ function feedbackChecks(assert: Assert): void {
   assert('oldschool: the article\'s zoom is .8 + .3 sin .2t', near(feedbackZoom(0), .8) && near(feedbackZoom(Math.PI * 2.5), 1.1, 1e-6))
   const N = 16, B = 3, src = new Float32Array(N * N).fill(1), dst = new Float32Array(N * N)
   src[0] = .5
+  const flat = new Float32Array(N * N).fill(1), out = new Float32Array(N * N)
+  feedbackFrame(flat, out, N, B, .3, .8, .75)
   feedbackFrame(src, dst, N, B, .3, .8, .75)
   let inner = true, border = true
   for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
     const inside = i >= B && j >= B && i < N - B && j < N - B, v = dst[j * N + i]
-    if (inside && !near(v, .75, .2)) inner = false
+    if (inside && !(v > 0 && v <= .75)) inner = false
+    if (inside && out[j * N + i] !== .75) inner = false
     if (!inside && v !== src[j * N + i]) border = false
   }
   assert('oldschool: one frame fades the copy by .75 and leaves the border as it was', inner && border)
@@ -117,8 +123,15 @@ function boardChecks(assert: Assert): void {
   const key = (i: number, t: number) => JSON.stringify(dots(i, t))
   const same = oldschoolBoard.every((_, i) => { const a = key(i, 1.3); key(i, 7.9); return key(i, 1.3) === a })
   assert('oldschool: every card draws the same dots for the same t', same)
-  const reds = oldschoolBoard.map((_, i) => new Set(dots(i, 1.3).map(d => d.color).filter(c => c === dot480.dotActive)).size)
-  assert('oldschool: one accent colour on the board', reds.every(n => n <= 1), reds.join(' '))
+  // a red element is one group of red dots: dots link when their centres are within 16 px (the sun's bands, a brick
+  // pair across its mortar), so two separate red things count as 2
+  const groups = (pts: { x: number; y: number }[]) => {
+    const up = pts.map((_, i) => i), find = (i: number): number => (up[i] === i ? i : (up[i] = find(up[i])))
+    for (let a = 0; a < pts.length; a++) for (let b = a + 1; b < pts.length; b++) if ((pts[a].x - pts[b].x) ** 2 + (pts[a].y - pts[b].y) ** 2 <= 256) up[find(a)] = find(b)
+    return new Set(pts.map((_, i) => find(i))).size
+  }
+  const reds = oldschoolBoard.map((_, i) => groups(dots(i, 1.3).filter(d => d.color === dot480.dotActive)))
+  assert('oldschool: at most one red element per card, and only the accent red', reds.every(n => n <= 1), reds.join(' '))
   for (const [i, p] of oldschoolBoard.entries()) {
     let t = 30
     const { ms, load } = medianLoaded(() => dots(i, (t += 1 / 12)), 9)

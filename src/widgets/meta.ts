@@ -358,7 +358,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'os-tunnel': ['A brick tunnel from a 1999 plane deformation, flown through at speed; one red brick comes at you from the dark.', 'oldschool demo tunnel deformation animated'],
   'os-bloom': ['A five-petal flower tunnel whose outlines breathe in and out as the texture scrolls along its depth.', 'oldschool demo flower deformation animated'],
   'os-floor': ['A grid floor running to the horizon under a banded red sun, the plane drawn by u = x/|y|, v = 1/|y|.', 'oldschool demo floor perspective sun animated'],
-  'os-sky': ['Clouds whose octaves drift at their own speeds over a line of hills, lit by a short march toward the red sun.', 'oldschool demo clouds noise sky animated'],
-  'os-echo': ['A frame filming itself: each copy rotated, shrunk and faded inside the last, fed by a red block running round the border.', 'oldschool demo feedback spiral animated'],
+  'os-sky': ['Clouds whose octaves drift at their own speeds, lit on the side that faces a red sun.', 'oldschool demo clouds noise sky animated'],
+  'os-echo': ['A frame filming itself: each copy turned, shrunk and faded inside the last, fed by a red block on the border.', 'oldschool demo feedback spiral animated'],
   'os-star': ['A checker spun out along three arms by the star deformation, turning as it scrolls.', 'oldschool demo star deformation animated'],
 }
