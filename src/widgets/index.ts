@@ -26,6 +26,7 @@ import { scopeBoard, scopeShared } from './boards/scope'
 import { healBoard } from './boards/heal'
 import { algorithmsBoard } from './boards/algorithms'
 import { squaresBoard } from './boards/squares'
+import { fractalsBoard } from './boards/fractals'
 import { pondBoard, pondSources } from './boards/pond/index'
 import { materialsBoard, materialsSources } from './boards/materials'
 import { workshopBoard, workshopSources } from './boards/workshop'
@@ -67,6 +68,7 @@ const contents = {
   materials: { items: materialsBoard, sources: materialsSources },
   pond: { items: pondBoard, sources: pondSources },
   squares: { items: squaresBoard },
+  fractals: { items: fractalsBoard },
   workshop: { items: workshopBoard, sources: workshopSources },
 } satisfies Record<BoardId, BoardContents>
 export const boards: BoardDef[] = boardManifest.map(({ load: _load, ...meta }: BoardMeta & { load: unknown }) => ({ ...meta, ...contents[meta.id as BoardId] }))
