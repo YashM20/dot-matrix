@@ -26,7 +26,7 @@
   .topbar {
     position: sticky;
     top: 0;
-    z-index: 30;
+    z-index: var(--z-sticky);
     flex-wrap: nowrap;
     gap: var(--space-2);
     min-height: var(--app-top);
@@ -58,11 +58,11 @@
     display: block;
     flex: 1;
     min-width: 0;
-    min-height: 44px;
+    min-height: var(--tap);
     padding: 0 var(--space-2);
     overflow: hidden;
     color: var(--value);
-    font: 600 var(--fs-label-12)/44px var(--mono);
+    font: 600 var(--fs-label-12)/var(--tap) var(--mono);
     letter-spacing: .14em;
     text-align: center;
     text-overflow: ellipsis;
@@ -89,8 +89,8 @@
     display: grid;
     flex: none;
     place-items: center;
-    width: 44px;
-    height: 44px;
+    width: var(--tap);
+    height: var(--tap);
     color: var(--label)
   }
 
@@ -109,7 +109,7 @@
     right: 0;
     bottom: 0;
     left: 0;
-    z-index: 50;
+    z-index: var(--z-bar);
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
@@ -218,7 +218,7 @@
 
   /* group names: plain text tabs, 44 px tall */
   .board-picker .board-groups button {
-    min-height: 44px;
+    min-height: var(--tap);
     padding: 0 var(--space-2);
     border-bottom: 0;
     font-size: var(--fs-label-12)
@@ -238,7 +238,7 @@
   .board-picker .board-tabs button {
     display: inline-flex;
     align-items: center;
-    min-height: 44px;
+    min-height: var(--tap);
     padding: 0 var(--space-3);
     border: 4px solid transparent;
     border-radius: var(--radius-pill);
@@ -352,8 +352,8 @@
 
   .intro-line button {
     flex: none;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--tap);
+    min-height: var(--tap);
     margin-block: calc(-1 * var(--space-4));
     margin-right: calc(-1 * var(--space-2));
     border: 10px solid transparent;
@@ -375,8 +375,8 @@
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--tap);
+    min-height: var(--tap);
     padding-inline: var(--space-1)
   }
 
@@ -414,13 +414,13 @@
 
   /* 16 px: iOS doesn't zoom the page into the field */
   .pal-input {
-    min-height: 44px;
+    min-height: var(--tap);
     font-size: var(--fs-copy-16)
   }
 
   .pal-cancel {
     display: block;
-    min-height: 44px;
+    min-height: var(--tap);
     padding: 0 var(--space-2);
     border: 0;
     background: none;

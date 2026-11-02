@@ -148,7 +148,7 @@
   left: 50%;
   top: 0;
   transform: translateX(-50%);
-  z-index: 72;
+  z-index: calc(var(--z-sheet) + 2);
   width: min(1000px, 100cqi);
   padding: var(--space-4) var(--space-4) var(--space-2);
   background: var(--bg);

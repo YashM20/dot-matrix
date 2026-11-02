@@ -171,6 +171,28 @@ There is no substitute typeface — the bitmap dot-font *is* the typography syst
 | `--board-cols-min` | 1; 2 under `html[data-cards="s"]` | the fewest columns a board shows: COMPACT keeps 2 on a phone (› Board grid) |
 | `--measure` / `--measure-head` | 68ch / 42rem | longest line of body text / of a heading |
 | `--hair-dot` / `--hair-pitch` | 1 px / 4 px | dotted hairline: a 1 px dot every 4 px |
+| `--tap` / `--tap-min` | 44 px / 24 px | tap target on a coarse pointer / the WCAG 2.2 floor on a fine one. Every 44 px target size in CSS is `var(--tap)`; the fine-pointer hit floors (`--dot-hit-min`, `--ed-hit`) are `var(--tap-min)` |
+| `--app-top` | `52px + safe-area-inset-top`; `--tap + inset` in short landscape | phone: the sticky top bar's height |
+| `--tabbar-h` | `58px + safe-area-inset-bottom`; `--tap + inset` in short landscape | phone: the tab bar's height, home indicator included |
+| `--topbar-h` | 48 px | desktop: the header's height, for the sticky header (S1, `docs/POLISH-PLAN.md`); nothing reads it yet |
+| `--pillbar-h` | 46 px; 54 px on a coarse pointer | widget page: the pill bar (a 36 px pill, `--tap` on touch, in a 4 px padded, bordered capsule); nothing reads it yet (R5) |
+
+### Stacking (z-index)
+
+One scale in `src/tokens.css`. A layer one step over its neighbour is `calc(var(--z-x) + n)`; `scripts/site/css-tokens.ts` fails any other z-index except `auto`, `0` and `-1`.
+
+| Token | Value | Use |
+|---|---|---|
+| `--z-raise` | 3 | inside a component, over its canvas: card action bar, X-RAY overlay; the editor banner (+2) and context menu (+5) |
+| `--z-menu` | 20 | the editor's toolbar menus |
+| `--z-sticky` | 30 | phone: the sticky top bar |
+| `--z-dock` | 35 | the floating dock and the FPS meter |
+| `--z-pinned` | 40 | pinned page controls: widget page pills, X-RAY panel; the widget page's more menu (+1), the X-RAY timeline (+5) |
+| `--z-bar` | 50 | phone: the tab bar; the full-screen game sits level with it |
+| `--z-app` | 60 | the full-screen phone editor; header popovers (theme picker, skin menu) |
+| `--z-sheet` | 70 | sheets and their backdrop: editor sheet, palette backdrop, boss screen; the ⌘K palette (+2) |
+| `--z-toast` | 80 | toasts |
+| `--z-modal` | 90 | dialogs and tooltips; the tooltip's keycap (+1) |
 
 ### Frame and rhythm (T2, docs/LAYOUT-THEME-PLAN.md §3)
 - **One frame, one left edge.** Every page is one centred column (`.shell`: `--frame-max` wide with `--frame-pad` inside it), with a dotted hairline down each side from 768 px. The top bar, the intro, the board picker, the board title, the grid, ABOUT's bands, the widget page's top row and card, the footer band and the editor's first tool all start on its content edge (`scripts/site/layout.ts` checks ±1 px at six widths).
@@ -622,7 +644,7 @@ Unlike a typical responsive system that reflows layout, Dot/480's primary respon
 - **Board grid:** auto-fill per density, between the CARD SIZE bounds (› Board grid). Gutters (`{spacing.cardGap}`) hold constant, and cards stay square down to the single-column stack.
 - **Phone header (T3):** the intro is one line (a short sentence, the essay link and ×; the targets overhang the line), and the two picker strips sit under it: intro + picker ≤ 120 px. ALL leads the group strip and scrolls with it. Each strip fades at an edge only while there is more to scroll that way: a scroll-driven `mask-image`, `animation-timeline: scroll(self inline)`; a strip that fits has no timeline, so it has no fade.
 - **Wide widgets:** waveform, chat, and message-list cards span 2 columns at desktop/tablet, collapse to full-width single-column at mobile without changing internal dot density.
-- **Phone shell (≤ 760 px, `src/site/mobile/`):** the site chrome becomes an app shell. A compact sticky top bar names the place (on EXPLORE it opens the board sheet) and holds search; a bottom tab bar (EXPLORE / MAKE / ABOUT / TOOLS) sits over the home indicator; the board groups and boards are sideways thumb strips; the dock, the DISPLAY ▾ menu and the ⌘K palette become bottom sheets (grab handle, swipe down, backdrop, Escape). Every chrome target is ≥ 44 px; the accent marks only the active tab, board and live state. Layout vars `--app-top` and `--tabbar-h` (both include the safe-area insets) let fixed or pinned UI sit clear of the bars.
+- **Phone shell (≤ 760 px, `src/site/mobile/`):** the site chrome becomes an app shell. A compact sticky top bar names the place (on EXPLORE it opens the board sheet) and holds search; a bottom tab bar (EXPLORE / MAKE / ABOUT / TOOLS) sits over the home indicator; the board groups and boards are sideways thumb strips; the dock, the DISPLAY ▾ menu and the ⌘K palette become bottom sheets (grab handle, swipe down, backdrop, Escape). Every chrome target is ≥ 44 px (`--tap`); the accent marks only the active tab, board and live state. The layout tokens `--app-top` and `--tabbar-h` (both include the safe-area insets; › Layout tokens) let fixed or pinned UI sit clear of the bars.
 - **Renderer fallback:** below a device-performance threshold (detected via a quick canvas-fill-rate probe), all widgets fall back to Canvas rendering regardless of dot count, trading copy-paste-ability for guaranteed frame rate.
 
 ### Image Behavior

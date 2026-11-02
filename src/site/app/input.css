@@ -1,8 +1,8 @@
 /* App styles: the accessibility overlay over interactive cards */
 /* ── P2 input layer: accessibility overlay over interactive cards (ControlOverlay.tsx) ── */
 .dot-a11y-root {
-  --dot-target-min: 24px;
-  --dot-hit-min: 24px;
+  --dot-target-min: var(--tap-min);
+  --dot-hit-min: var(--tap-min);
   position: relative;
   width: 100%;
   -webkit-tap-highlight-color: transparent;
@@ -11,7 +11,7 @@
 
 @media (pointer: coarse) {
   .dot-a11y-root {
-    --dot-hit-min: 44px
+    --dot-hit-min: var(--tap)
   }
 }
 

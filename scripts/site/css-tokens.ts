@@ -1,6 +1,7 @@
 /**
  * CSS token lint (docs/LAYOUT-THEME-PLAN.md §1b "Consistency rules", §6). Every stylesheet under src/ uses token
- * names from src/tokens.css for colour, spacing, type size, radius and duration; raw literals live only there.
+ * names from src/tokens.css for colour, spacing, type size, radius, duration, stacking and tap size; raw literals live
+ * only there.
  *
  *   npx tsx scripts/site/css-tokens.ts             → list violations, exit 1 if any (or if an allowlist entry is stale)
  *   npx tsx scripts/site/css-tokens.ts --summary   → also print literal counts per category for every file
@@ -14,6 +15,9 @@
  *   type     px/rem in font-size and in the size slot of the `font` shorthand (line-height after `/` is not checked).
  *   radius   px/rem in border-*radius; % (circles, glass) is fine.
  *   duration non-zero s/ms in transition* and animation*.
+ *   z-index  anything but a --z-* token (`var(--z-sheet)`, or `calc(var(--z-sheet) + 2)` for a layer one step over
+ *            its neighbour), auto, 0 or -1.
+ *   tap      a raw 44px anywhere, custom properties included: tap sizes are var(--tap) (and var(--tap-min), 24 px).
  *
  * Consistency rules (docs/LAYOUT-THEME-PLAN.md §1b, §1c #15, §6; DESIGN.md › Chrome states):
  *   four-state  every selector with `:hover` has the same selector with `:active` and with `:focus-visible` (or
@@ -36,20 +40,26 @@ const ALLOW: { file: string; has: string; why: string }[] = [
   { file: 'src/site/app/skins.css', has: 'skin-nixie-flicker 5.3s', why: 'nixie flicker loop period: display physics' },
   { file: 'src/site/app/skins.css', has: 'animation-duration: 1ms', why: 'reduced motion: jump to the end state but still fire animationend' },
   { file: 'src/site/app/xray-tab.css', has: 'padding-bottom: min(42dvh, 400px)', why: 'room for the pinned canvas: mirrors its height cap, not rhythm' },
+  { file: 'src/site/app/skins.css', has: 'grid-template-columns: 4px 44px 1fr', why: 'the skin menu swatch column: a preview width, not a tap target' },
+  { file: 'src/components/editor/editor.css', has: 'grid-template-columns: 44px 1fr', why: 'the score list number column: a text width, not a tap target' },
 ]
 
-type Cat = 'colour' | 'spacing' | 'type' | 'radius' | 'duration'
+type Cat = 'colour' | 'spacing' | 'type' | 'radius' | 'duration' | 'z-index' | 'tap'
 const NAMED = /\b(white|black|red|green|blue|gray|grey|silver|orange|yellow|purple|pink|navy|teal|maroon|olive|lime|aqua|fuchsia)\b/i
 const COLOUR = /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|oklch|oklab|lab|lch|hwb|color)\(/i
 const LEN = /(?<![\w.-])-?\d*\.?\d+(px|rem)\b/g
 const SPACE = /^(margin|padding|gap$|row-gap$|column-gap$|scroll-margin|scroll-padding)/
+const Z_OK = /^(auto|0|-1|var\(--z-[\w-]+\)|calc\(var\(--z-[\w-]+\) [+-] \d+\))$/
+const TAP = /(?<![\w.-])44px\b/
 const COLOUR_PROPS = /^(--|color$|background|border|outline|box-shadow|text-shadow|fill$|stroke$|accent-color$|caret-color$|text-decoration|column-rule|mask|-webkit-mask|filter$|scrollbar-color$)/
 
 function check(prop: string, value: string): Cat[] {
   const out: Cat[] = []
   const v = value.replace(/url\([^)]*\)/g, '')
   if (COLOUR.test(v.replace(/color-mix\(/g, '')) || (COLOUR_PROPS.test(prop) && NAMED.test(v.replace(/var\([^)]*\)/g, '')))) out.push('colour')
+  if (TAP.test(v)) out.push('tap')
   if (prop.startsWith('--')) return out
+  if (prop === 'z-index' && !Z_OK.test(v.trim())) out.push('z-index')
   const lens = (s: string) => [...s.matchAll(LEN)].map(m => m[0]).filter(x => parseFloat(x) !== 0)
   if (SPACE.test(prop) && lens(v).some(x => !/^-?1px$/.test(x))) out.push('spacing')
   if (prop === 'font-size' && lens(v).length) out.push('type')
@@ -70,7 +80,7 @@ for (const file of files) {
   if (TOKEN_FILES.has(file)) continue
   // blank out comments but keep line numbers
   const src = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
-  const c = counts[file] = { colour: 0, spacing: 0, type: 0, radius: 0, duration: 0 }
+  const c = counts[file] = { colour: 0, spacing: 0, type: 0, radius: 0, duration: 0, 'z-index': 0, tap: 0 }
   for (const m of src.matchAll(/(^|[{;\s])([a-z-]+|--[\w-]+)\s*:\s*([^;{}]+?)\s*(?=[;}])/g)) {
     const [, , prop, value] = m
     const cats = check(prop, value)

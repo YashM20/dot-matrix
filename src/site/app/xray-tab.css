@@ -126,8 +126,8 @@
 
   /* touch targets in the sheet: × 44 px, tabs and actions 36 px */
   .xr-panel .xr-panel-head > button {
-    min-width: 44px;
-    min-height: 44px;
+    min-width: var(--tap);
+    min-height: var(--tap);
     font-size: var(--fs-copy-14)
   }
 

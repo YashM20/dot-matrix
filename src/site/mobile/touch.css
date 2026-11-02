@@ -8,13 +8,8 @@
   }
 }
 
-/* short landscape: a compact 44 px top bar and tab bar (glyph beside the word), clear of the notch */
+/* short landscape: a compact top bar and tab bar (glyph beside the word; their heights are in src/tokens.css), clear of the notch */
 @media (max-height: 500px) and (pointer: coarse) {
-  :root {
-    --app-top: calc(44px + env(safe-area-inset-top));
-    --tabbar-h: calc(44px + env(safe-area-inset-bottom))
-  }
-
   .shell {
     padding-inline: max(var(--frame-pad), env(safe-area-inset-left)) max(var(--frame-pad), env(safe-area-inset-right))
   }
@@ -22,7 +17,7 @@
   .tabbar button {
     flex-direction: row;
     gap: var(--space-2);
-    min-height: 44px
+    min-height: var(--tap)
   }
 
   .tabbar .glyph {

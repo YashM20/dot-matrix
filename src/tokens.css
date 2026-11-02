@@ -1,7 +1,7 @@
 /*
   Dot/480 design tokens: the one token block (docs/LAYOUT-THEME-PLAN.md §1b, §3; DESIGN.md tables).
   Loaded by src/index.css (the app) and src/essay/essay.css (essay + legal pages).
-  Every other stylesheet uses these names only: no raw colour, spacing, type, radius or duration
+  Every other stylesheet uses these names only: no raw colour, spacing, type, radius, duration, z-index or tap-size
   literals outside this file (scripts/site/css-tokens.ts).
 
   Colour: the roles below carry today's dark palette (dark_signal, the canonical theme; also the essay and
@@ -78,6 +78,28 @@
   --measure-head: 42rem;                /* headings */
   --hair-dot: 1px;                      /* dotted hairline: a 1 px dot ... */
   --hair-pitch: 4px;                    /* ... every 4 px */
+
+  /* ── tap targets: 44 px on coarse pointers, the WCAG 2.2 floor (24 px) on fine ones ── */
+  --tap: 44px;
+  --tap-min: 24px;
+
+  /* ── bar heights: fixed and sticky things sit clear of these ── */
+  --app-top: calc(52px + env(safe-area-inset-top));      /* phone: the sticky top bar */
+  --tabbar-h: calc(58px + env(safe-area-inset-bottom));  /* phone: the tab bar, with the home-indicator inset */
+  --topbar-h: 48px;                                      /* desktop: the header (POLISH-PLAN S1; no user yet) */
+  --pillbar-h: 46px;                                     /* widget page: a 36 px pill in a 4 px padded, bordered capsule (R5; no user yet) */
+
+  /* ── stacking: one scale for the whole page. A layer one step over its neighbour is calc(var(--z-x) + n) ── */
+  --z-raise: 3;     /* inside a component, over its canvas: card action bar, X-RAY overlay; editor banner +2, context menu +5 */
+  --z-menu: 20;     /* the editor's toolbar menus */
+  --z-sticky: 30;   /* phone: the sticky top bar */
+  --z-dock: 35;     /* the floating dock and the FPS meter */
+  --z-pinned: 40;   /* pinned page controls: widget page pills, X-RAY panel; more menu +1, X-RAY timeline +5 */
+  --z-bar: 50;      /* phone: the tab bar; the full-screen game sits level with it */
+  --z-app: 60;      /* the full-screen phone editor; header popovers (theme picker, skin menu) */
+  --z-sheet: 70;    /* sheets and their backdrop: editor sheet, palette backdrop, boss screen; the ⌘K palette +2 */
+  --z-toast: 80;
+  --z-modal: 90;    /* dialogs and tooltips (the tooltip's keycap +1) */
 
   /* ── radius: cards 12, controls 8, pills full ── */
   --radius-sm: 4px;       /* small marks: kbd, chips, swatches */
@@ -166,6 +188,21 @@
   :root, [data-scheme] {
     --glass: color-mix(in srgb, var(--raised) 92%, transparent);
     --glass-blur: blur(8px)
+  }
+}
+
+/* touch: the widget page's pills grow to --tap */
+@media (pointer: coarse) {
+  :root {
+    --pillbar-h: 54px
+  }
+}
+
+/* short landscape: a compact top bar and tab bar, one tap target tall, clear of the notch */
+@media (max-height: 500px) and (pointer: coarse) {
+  :root {
+    --app-top: calc(var(--tap) + env(safe-area-inset-top));
+    --tabbar-h: calc(var(--tap) + env(safe-area-inset-bottom))
   }
 }
 
