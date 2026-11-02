@@ -17,11 +17,17 @@ Ported articles:
 | [Distance to an ellipse](https://iquilezles.org/articles/ellipsedist/) | The Newton solver and its trig-free form | `src/engine/sdf/ellipse.ts` |
 | [Smooth rounded boxes](https://iquilezles.org/articles/roundedboxes/) | The circle, parabola, cosine and cubic corners | `src/engine/sdf/corners.ts` |
 | [2D SDFs in L∞](https://iquilezles.org/articles/distfunctions2dlinf/) | Box, circle, ellipse, parabola, segment, rounded box, rhombus, oriented box | `src/engine/sdf/linf.ts` |
+| [Useful little functions](https://iquilezles.org/articles/functions/) | The identities, impulses, unit remaps, bumps and steps | `src/engine/shape/remap.ts` |
+| [Smoothstep integral](https://iquilezles.org/articles/smoothstepintegral/) | The integral of smoothstep, an ease from rest into constant speed | `src/engine/shape/remap.ts` |
+| [Smoothstep functions](https://iquilezles.org/articles/smoothsteps/) | The smoothstep variants and their inverses | `src/engine/shape/smoothstep.ts` |
+| [Inverse smoothstep](https://iquilezles.org/articles/ismoothstep/) | The closed-form inverse of the cubic smoothstep | `src/engine/shape/smoothstep.ts` |
+| [Sigmoid functions](https://iquilezles.org/articles/sigmoids/) | The six sigmoids with their inverses and derivatives | `src/engine/shape/sigmoid.ts` |
 
 Credits the articles give, carried over:
 
 - Smooth rounded boxes: the parabolic corner was proposed by Shadertoy user wutzhuhn.
 - 2D SDFs in L∞: the `max(p, (p-r).yx)` trick is from Shadertoy user oneshade.
+- Useful little functions: the square-root smooth abs is from Shadertoy user omeometo, and the sinc impulse was suggested by Hubert-Jan.
 
 ```
 MIT License
