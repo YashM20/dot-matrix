@@ -1,0 +1,65 @@
+{
+ "about": "FNV-1a 32 of the sorted quantized dot list per preset on the physics board (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
+ "presets": {
+  "phys-splash": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "b5fc75d7",
+    "dots": 486
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "436dde72",
+    "dots": 509
+   }
+  },
+  "phys-ink": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "2434d3ff",
+    "dots": 339
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "a118b2d4",
+    "dots": 490
+   }
+  },
+  "phys-flag": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "4d1a69cd",
+    "dots": 462
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "f91b2768",
+    "dots": 462
+   }
+  },
+  "phys-jelly": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "f357c205",
+    "dots": 793
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "5bee2756",
+    "dots": 803
+   }
+  },
+  "phys-pit": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "0eee790b",
+    "dots": 124
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "4e25583e",
+    "dots": 124
+   }
+  }
+ }
+}

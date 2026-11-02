@@ -18,9 +18,11 @@ import { withChrome, type WidgetPreset } from '../src/widgets/types'
 import { freezeWallClock } from './lib/freeze'
 import { sampleCard, uniquePresets } from './lib/cards'
 import { CHANNELS, diffGoldens, dotKey, goldenRow, legacyKey, styleSig, type Goldens } from './lib/goldenKey'
+import { LEGACY_FILE, readGoldens } from './lib/goldenFiles'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
-const FILE = 'goldens/hashes.json'
+/** The one-file goldens the backfill rewrote (split per board since #76); only its git history is read here. */
+const FILE = LEGACY_FILE
 
 /** `git show <rev>:goldens/hashes.json` as presets, or undefined (no git, shallow history, no such rev). */
 function goldensAt(rev: string): Goldens | undefined {
@@ -81,14 +83,12 @@ export function goldenKeyChecks(assert: Assert): void {
     assert('golden key: join without joint throws', /no joint/.test(threw), threw)
 
     // the backfill: the commit that added `style` kept every hash/dots pair of its parent
-    const now: Goldens = JSON.parse(readFileSync(FILE, 'utf8')).presets, head = goldensAt('HEAD')
+    // (the one-file goldens is gone from HEAD, so the backfill commit is found in its history)
+    const now: Goldens = readGoldens().presets
     let before: Goldens | undefined, after: Goldens | undefined, where = ''
-    if (head && !hasStyle(head)) { before = head; after = now; where = 'HEAD → working tree' }
-    else if (head) {
-      const log = spawnSync('git', ['log', '--reverse', '--format=%H', '-S"style"', '--', FILE], { encoding: 'utf8' })
-      const c = log.status === 0 ? log.stdout.trim().split('\n')[0] : ''
-      if (c) { before = goldensAt(`${c}^`); after = goldensAt(c); where = `${c.slice(0, 7)}^ → ${c.slice(0, 7)}` }
-    }
+    const log = spawnSync('git', ['log', '--reverse', '--format=%H', '-S"style"', '--', FILE], { encoding: 'utf8' })
+    const c = log.status === 0 ? log.stdout.trim().split('\n')[0] : ''
+    if (c) { before = goldensAt(`${c}^`); after = goldensAt(c); where = `${c.slice(0, 7)}^ → ${c.slice(0, 7)}` }
     if (before && after) {
       const ids = Object.keys(before), same = ids.length === Object.keys(after).length && ids.every(id => id in after)
       const moved = ids.filter(id => after[id] && Object.keys({ ...before[id], ...after[id] }).some(t => before[id][t]?.hash !== after[id][t]?.hash || before[id][t]?.dots !== after[id][t]?.dots))

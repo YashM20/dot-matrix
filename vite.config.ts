@@ -17,6 +17,8 @@ function sitePostbuild(): Plugin {
     apply: 'build',
     closeBundle() {
       if (process.env.SITE_POSTBUILD === '0' || !existsSync('dist/index.html')) return
+      // postbuild keys its OG cache on goldens/hashes.json: a gitignored index of goldens/<board>.json (#76)
+      execFileSync(process.execPath, ['--import', 'tsx', 'scripts/lib/goldenFiles.ts', '--index'], { stdio: 'inherit' })
       execFileSync(process.execPath, ['--import', 'tsx', 'scripts/site/postbuild.ts'], { stdio: 'inherit' })
     },
   }

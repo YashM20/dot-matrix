@@ -391,11 +391,11 @@ Next, ranked (research notes in this session's roadmap): E1 delete the old MAKE 
 | `pnpm snap <ids> \| --board <id> \| --all` | PNG snapshots |
 | `pnpm snap --film <id> --t a:b:step` | Contact sheet + APNG |
 | `pnpm snap --bar <id>` | Candidate vs the liked cards: 1×, 3×, blur, silhouette |
-| `pnpm golden [--check]` | Golden dot-list hashes in `goldens/hashes.json` |
+| `pnpm golden [--check]` | Golden dot-list hashes in `goldens/<board>.json`, one file per board |
 | `pnpm fidelity [ids\|--all] [--json]` | Gates G1–G3, G5 + metrics |
 | `pnpm bench [--strict]` | Per-board mount and frame ms, SVG KB |
 
-4. **Intentional visual change?** Run `pnpm golden` and commit `goldens/hashes.json` with it. CI fails on unexplained drift.
+4. **Intentional visual change?** Run `pnpm golden` and commit the changed `goldens/<board>.json` files with it. CI fails on unexplained drift.
 5. Read `AGENTS.md` (invariants), then `MASTER-PLAN.md` §2–§4, then `STYLE-BIBLE.md`, then this file's **Next up**.
 6. Decisions still open (MASTER-PLAN §11). Until the user answers, work with the **recommended defaults**:
 

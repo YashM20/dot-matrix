@@ -17,6 +17,7 @@ import { TILE, layoutFor, tileStyle, type WidgetPreset } from '../src/widgets/ty
 import { freezeWallClock } from './lib/freeze'
 import { sampleCard, uniquePresets } from './lib/cards'
 import { hashDots } from './lib/goldenKey'
+import { readGoldens } from './lib/goldenFiles'
 import { schemaValidator } from './lib/jsonschema'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
@@ -150,7 +151,7 @@ export function specChecks(assert: Assert, opts: { writeExamples?: boolean } = {
     `${big.errors[0]?.message} | ${unk.errors[0]?.message} | ${bind.errors[0]?.message}`)
 
   // preset → spec → JSON → spec → preset, for every preset
-  const goldens = JSON.parse(readFileSync('goldens/hashes.json', 'utf8')).presets as Record<string, Record<string, { hash: string }>>
+  const goldens = readGoldens().presets
   const t0 = performance.now(), irIds = new Set(irBoard.map(p => p.id))
   let exported = 0, matched = 0, full = 0, fullMatched = 0, stable = 0, bytes = 0
   const kinds: Record<string, number> = {}, unsupported: string[] = [], mismatched: string[] = [], unstable: string[] = [], irOk: string[] = []

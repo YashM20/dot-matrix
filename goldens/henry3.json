@@ -1,0 +1,83 @@
+{
+ "about": "FNV-1a 32 of the sorted quantized dot list per preset on the henry3 board (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
+ "presets": {
+  "boarding-pass": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "bcf824ba",
+    "dots": 521
+   }
+  },
+  "sunburst": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "1b41b14d",
+    "dots": 191
+   }
+  },
+  "power-ring": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "b71c2b5f",
+    "dots": 289
+   }
+  },
+  "midnight-circuit": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "2a95ddc7",
+    "dots": 907
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "2242ed79",
+    "dots": 885
+   }
+  },
+  "silhouette": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "812b6027",
+    "dots": 20706
+   }
+  },
+  "inhale": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "7f726483",
+    "dots": 480
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "08bb23ba",
+    "dots": 491
+   }
+  },
+  "good-morning": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "803dbb9f",
+    "dots": 1861
+   }
+  },
+  "cardiology": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "56faeb55",
+    "dots": 639
+   }
+  },
+  "listening": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "a0d48f1c",
+    "dots": 649
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "c7c6577e",
+    "dots": 705
+   }
+  }
+ }
+}

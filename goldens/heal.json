@@ -1,0 +1,41 @@
+{
+ "about": "FNV-1a 32 of the sorted quantized dot list per preset on the heal board (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
+ "presets": {
+  "heal-mirror": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "2f900410",
+    "dots": 733
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "26df0727",
+    "dots": 727
+   }
+  },
+  "heal-xray": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "e042160b",
+    "dots": 1588
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "ff61c4a6",
+    "dots": 1476
+   }
+  },
+  "heal-persist": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "0dadc841",
+    "dots": 632
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "f042027a",
+    "dots": 681
+   }
+  }
+ }
+}

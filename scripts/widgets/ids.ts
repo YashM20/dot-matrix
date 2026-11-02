@@ -16,6 +16,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { boards } from '../../src/widgets'
 import { boardIds, cardAliases, resolveCardId } from '../../src/widgets/manifest'
 import { isReservedSegment, isSlug, isUid, makeUid, type CatalogRow } from '../../src/site/routes'
+import { readGoldens } from '../lib/goldenFiles'
 
 const IDS = 'src/widgets/ids.json', CATALOG = 'src/widgets/catalog.ts'
 type Assert = (name: string, cond: boolean, detail?: string) => void
@@ -90,9 +91,9 @@ export function idsChecks(check: Assert) {
   check('share: slugs are kebab-case, ≤ 32 chars and never uid-shaped', !badSlug.length, badSlug.join(', '))
   const badBoard = boardIds.filter(isReservedSegment)
   check('share: board ids avoid the uid pattern and reserved segments (widget, embed, r, og, @…)', !badBoard.length, badBoard.join(', '))
-  const golden = Object.keys((JSON.parse(readFileSync('goldens/hashes.json', 'utf8')) as { presets: Record<string, unknown> }).presets)
+  const golden = Object.keys(readGoldens().presets)
   const lost = golden.filter(id => !slugs.includes(resolveCardId(id)))
-  check('share: every golden id still resolves to a widget (presets + cardAliases)', !lost.length, lost.join(', '))
+  check('share: every golden id still resolves to a widget (presets + cardAliases)', golden.length > 0 && !lost.length, golden.length ? lost.join(', ') : 'no golden presets read from goldens/')
   const loops = Object.entries(cardAliases).filter(([from, to]) => from === to || !slugs.includes(to) || slugs.includes(from))
   check('share: cardAliases point old slugs at current widgets', !loops.length, loops.map(([a, b]) => `${a}→${b}`).join(', '))
 }

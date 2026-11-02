@@ -1,0 +1,78 @@
+{
+ "about": "FNV-1a 32 of the sorted quantized dot list per preset on the mosaic board (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
+ "presets": {
+  "thermal-monitor": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "e02b3790",
+    "dots": 6256
+   }
+  },
+  "ev-charge": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "918e955d",
+    "dots": 6059
+   }
+  },
+  "codex-usage": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "c338393f",
+    "dots": 2030
+   }
+  },
+  "fitness-rings": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "7f733e33",
+    "dots": 2326
+   }
+  },
+  "henry-sleep": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "01707341",
+    "dots": 3396
+   }
+  },
+  "mini-game": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "729f864f",
+    "dots": 803
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "9bb828af",
+    "dots": 803
+   }
+  },
+  "ai-assistant": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "32de78d2",
+    "dots": 3663
+   }
+  },
+  "vision-camera": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "09c728fa",
+    "dots": 13059
+   }
+  },
+  "deerflow-agent": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "cb7ccf31",
+    "dots": 1641
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "deddfc50",
+    "dots": 1643
+   }
+  }
+ }
+}
