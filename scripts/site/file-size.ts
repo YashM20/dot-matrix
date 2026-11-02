@@ -21,7 +21,6 @@ const ALLOW: Record<string, string> = {
   'src/App.css': '#76: split per area',
   'src/site/mobile.css': '#76: split per area',
   'scripts/editor-browser.ts': '#76: split per phase (editor is backlog)',
-  'src/engine/life/pond.ts': '#76: split world, koi, rendering',
 }
 
 const quiet = process.argv.includes('--quiet')

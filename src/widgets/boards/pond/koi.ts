@@ -4,7 +4,8 @@
  * Voronoi stones in density glyphs; koi swim by burst and glide on argonaut spines, their interiors as lattice-4
  * dots (style B, the L1.0 default) with glyph-matched edges; three lily pads drift over them. The one accent is the
  * koi's red markings. Tap to feed (pellets land with ripples, nearby koi startle), hold still to make them curious,
- * hold a press to lure them. Pristine and looped (48 s) until touched; heals back 4 s after the last input.
+ * hold a press to lure them. Pristine and looped (48 s) until touched; heals back 4 s after the last input,
+ * once the food is gone and the loop seam is not near (#90); the koi swim back to their places over 6 s.
  * X1 #5: the pond of the day (`day`: the koi's varieties, the pads, the weather) and the ageing pond (`age`, opt-in:
  * fry hatch every 10 days of visits and grow by von Bertalanffy); day 0, age 0 is the canonical pond the goldens pin.
  */

@@ -254,7 +254,8 @@ export async function lifeL3Checks(assert: Assert, pond: () => Promise<typeof im
     for (let i = 0; i < 45; i++) { t += 1 / 30; frame(koiCard, t, data(.3)) }
     const forked = W.mode === 'live'
     let heal = 0
-    for (; heal < 30 * 9 && W.mode !== 'pristine'; heal++) { t += 1 / 30; frame(koiCard, t, data(0)) }
+    // the heal waits for food in the water and for the loop seam to pass (#90), so allow up to a loop and a bit
+    for (; heal < 30 * 60 && W.mode !== 'pristine'; heal++) { t += 1 / 30; frame(koiCard, t, data(0)) }
     const healed = W.mode === 'pristine' && key(koiCard, t, data(0)) === key(koiCard, t)
     assert('pond-koi: tx = .3 forks the world live; it heals to pristine after the tilt returns to 0', forked && healed, `${forked ? 'live' : W.mode} while tilted, pristine ${(heal / 30).toFixed(1)} s after`)
     resetAll()
