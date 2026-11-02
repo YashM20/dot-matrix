@@ -39,7 +39,8 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      # tsc -b, oxlint, and the headless acceptance harness (src/engine/verify-acceptance.ts)
+      # tsc -b, oxlint, the file-size rule (scripts/site/file-size.ts: warn > 500 lines, fail > 800, #76)
+      # and the headless acceptance harness (scripts/verify.ts)
       - name: Check
         run: pnpm check
 
