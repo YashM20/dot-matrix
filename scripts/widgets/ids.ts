@@ -93,7 +93,7 @@ export function idsChecks(check: Assert) {
   check('share: board ids avoid the uid pattern and reserved segments (widget, embed, r, og, @…)', !badBoard.length, badBoard.join(', '))
   const golden = Object.keys(readGoldens().presets)
   const lost = golden.filter(id => !slugs.includes(resolveCardId(id)))
-  check('share: every golden id still resolves to a widget (presets + cardAliases)', !lost.length, lost.join(', '))
+  check('share: every golden id still resolves to a widget (presets + cardAliases)', golden.length > 0 && !lost.length, golden.length ? lost.join(', ') : 'no golden presets read from goldens/')
   const loops = Object.entries(cardAliases).filter(([from, to]) => from === to || !slugs.includes(to) || slugs.includes(from))
   check('share: cardAliases point old slugs at current widgets', !loops.length, loops.map(([a, b]) => `${a}→${b}`).join(', '))
 }
