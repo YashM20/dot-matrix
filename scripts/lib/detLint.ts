@@ -18,6 +18,7 @@ import { basename, dirname, join, relative } from 'node:path'
 export const DET_PATHS = [
   'src/engine/noise/', // F0: dmath, gradient, voronoi, the IR pack
   'src/engine/sdf/', // IQ1: the 2D SDF library (#62), so cards drawn with it hash the same in every engine
+  'src/engine/filter/', // IQ4: filtered fields (#65), same reason
   'src/engine/life/', // L: pond and ecosystem sims
   'src/engine/matter/sand', // M3: sand / erosion sim (M's bakes are not scanned)
   'src/engine/matter/mercury', // M2: mercury sim

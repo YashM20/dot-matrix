@@ -191,4 +191,10 @@ shareChecks(assert)
   sdfChecks(assert)
 }
 
+// filtered fields (IQ4 #65): the sampler's footprint, the shimmer gate, each filter against brute force (scripts/filter.ts)
+{
+  const { filterChecks } = await import('./filter')
+  filterChecks(assert)
+}
+
 done('All acceptance checks passed')

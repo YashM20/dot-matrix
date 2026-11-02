@@ -7,7 +7,7 @@
 ## Module Map
 ```
 src/engine/                       framework-free TypeScript + browser Canvas/SVG/WebGL2 APIs only; index.ts re-exports all (IR as `ir`)
-  types.ts                        Field (+ cell bounds, `from` provenance), GridConfig, DotStyle, ThemeTokens, DotInstance, Layer (tone | per-cell `toneOf`, lattice, origin, sites), Tone, CellBounds
+  types.ts                        Field (+ cell bounds, `from` provenance, opt-in `footprint`), GridConfig, DotStyle, ThemeTokens, DotInstance, Layer (tone | per-cell `toneOf`, lattice, origin, sites), Tone, CellBounds
   context.ts                      FrameContext (t, frame, data, grid, pointers, hover/pressed/focus, media), Pointer, Control, LayerSource
   math.ts                         engine-deterministic clamp, mix, len, smoothstep, hash01/hash32 (no Math.random, no sin-hash)
   clock.ts                        createMasterClock / sharedClock (one rAF loop, per-subscriber fps, t = frame / fps), quantizeTime
@@ -41,6 +41,7 @@ src/engine/                       framework-free TypeScript + browser Canvas/SVG
   physics/                        worlds (pristine SimField loop, live fork on input): createWorld/worldAt/worldStep; stable fluids, Verlet particles + spatial hash, PBD cloth + soft body
   algo/                           niche algorithms as dot sources (docs/ALGORITHMS.md; not in the index.ts barrel, import `engine/algo` so it stays off first load): stipple (weighted Voronoi / Lloyd → sites), attractorDensity (Clifford / de Jong log histogram, dsin/tsin, collapse guard), wfc (tiled WFC + backtracking, scrubbable history), dla (off-lattice DLA, arrival order)
   noise/                          deterministic toolkit of the living-matter tracks (docs/ALGORITHMS.md › Deterministic math and noise; not in the index.ts barrel, import `engine/noise`): dmath (dsin/tsin, datan2, dexp, dpow, ihash, rngFor; bit-identical in every engine), gradient (noise2/noise3/noise3Grad, fbm2/turb2/ridge2, curl2, valueNoise2), voronoi (voronoi2 F1/F2/id l2|l1|linf, voronoiBorder2); ir.ts = the lazy IR noise pack (side-effect import), glsl.ts its GLSL prelude
+  filter/                         filtered fields for coarse grids (IQ4 #65; not in the index.ts barrel, import by path): box-filtered checkers / grid / squares / crosses / xor (procedural.ts), box and triangle-filtered checkers (checkers.ts), fcos and the band-limited fbm ffbm2 (bandlimit.ts), per-dot supersampling (supersample.ts), withFootprint / patternField (field.ts). A field with `footprint` gets one cell (du, dv) from the sampler
   nca/                            neural cellular automata, CPU inference from Int8 weights: ncaModel, ncaRun timeline, ncaScratch, ncaField/ncaMapField
   scene/raycast.ts                castHall (analytic hall), castGrid (DDA maze), lamp, fog, seam, project — HIVE cards and game
   device/                         profiles (DEVICES, deviceProfile), toDevice (card → device frame + tone map), simulators: eink, flipdisc, led, plotter (pen plan, penPlanSVG)

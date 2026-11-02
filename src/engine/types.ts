@@ -5,8 +5,15 @@ export type CellBounds = [number, number, number, number]
  * (the only cells that can be non-zero) so the sampler can skip the rest of the grid.
  */
 export interface Field {
-  (u: number, v: number): number
+  /** `du` / `dv`: the cell size in u / v (the footprint), passed only to a field that sets `footprint`. */
+  (u: number, v: number, du?: number, dv?: number): number
   bounds?: CellBounds
+  /**
+   * Opt in to the footprint: the grid sampler then calls `f(u, v, du, dv)`, with `du` / `dv` one cell of the grid
+   * being sampled (1 / (cols − 1), 1 / (rows − 1); a site dot's is its `size` in card cells), so a fine pattern can
+   * filter itself instead of aliasing (`src/engine/filter`). Fields without it are called as `f(u, v)`.
+   */
+  footprint?: boolean
   /** The string a text helper (`textAt`) drew — metadata for `describe()`, never read by the sampler. */
   text?: string
   /** How a helper built this field (IR source, a named layout generator) — metadata for spec export (`src/spec`), never read by the sampler. */
