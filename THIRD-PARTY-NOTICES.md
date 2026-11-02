@@ -22,12 +22,20 @@ Ported articles:
 | [Smoothstep functions](https://iquilezles.org/articles/smoothsteps/) | The smoothstep variants and their inverses | `src/engine/shape/smoothstep.ts` |
 | [Inverse smoothstep](https://iquilezles.org/articles/ismoothstep/) | The closed-form inverse of the cubic smoothstep | `src/engine/shape/smoothstep.ts` |
 | [Sigmoid functions](https://iquilezles.org/articles/sigmoids/) | The six sigmoids with their inverses and derivatives | `src/engine/shape/sigmoid.ts` |
+| [Smooth minimum](https://iquilezles.org/articles/smin/) | The quadratic, cubic, quartic, circular, exponential and root smooth minimums, the mix-factor forms, the quadratic one with gradient | `src/engine/sdf/smin.ts` |
+| [3D distance functions](https://iquilezles.org/articles/distfunctions/) | Smooth union, subtraction and intersection | `src/engine/sdf/smin.ts` |
+| [Domain repetition](https://iquilezles.org/articles/sdfrepetition/) | Grid repetition with the neighbour check, mirrored, limited, rotational and rectangular-perimeter repetition | `src/engine/sdf/repeat.ts` |
+| [Xor](https://iquilezles.org/articles/sdfxor/) | The exact xor | `src/engine/sdf/xor.ts` |
+| [Interior SDFs](https://iquilezles.org/articles/interiordistance/) | No code: its advice on inside distances, as a note | `src/engine/sdf/ops.ts` |
 
 Credits the articles give, carried over:
 
 - Smooth rounded boxes: the parabolic corner was proposed by Shadertoy user wutzhuhn.
 - 2D SDFs in L∞: the `max(p, (p-r).yx)` trick is from Shadertoy user oneshade.
 - Useful little functions: the square-root smooth abs is from Shadertoy user omeometo, and the sinc impulse was suggested by Hubert-Jan.
+- Smooth minimum: the optimised form of the quadratic smooth minimum is Media Molecule's (Dreams). The article also traces the circular-geometrical variant (not ported here) to the Mercury demogroup.
+- Domain repetition: mirroring every other cell is from Shadertoy user and demoscener Fizzer, and the rectangular-perimeter fold was improved by Shadertoy user timestamp.
+- Xor: the operator is from Shadertoy user jt (Jakob Thomsen), and the short argument for why it is exact is Boris The Brave's.
 
 ```
 MIT License

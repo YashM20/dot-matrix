@@ -25,6 +25,8 @@ const sc = (a: number): [number, number] => [Math.sin(a), Math.cos(a)]
 const [s8, c8] = sc(.8)
 const SQUARE = [-1, -1, 1, -1, 1, 1, -1, 1]
 const ELL = [0, 0, 2, 0, 2, 1, 1, 1, 1, 2, 0, 2] // an L, concave corner at (1, 1)
+/** A disc radius per cell in [0.15, 0.42]: inside the cell and over its centre, as the 2 × 2 check needs. */
+export const cellR = (i: number, j: number) => .15 + .27 * (((Math.imul(i, 73856093) ^ Math.imul(j, 19349663)) >>> 0) % 1000) / 999
 
 export const CASES: Case[] = [
   // ── basic.ts
@@ -96,6 +98,28 @@ export const CASES: Case[] = [
   // ── ops.ts
   { name: 'opRound (box → rounded box)', f: S.opRound((x, y) => S.sdBox(x, y, 1.5, .5), .5), at: [[0, 0, -1], [2, 0, 0], [3, 0, 1], [1.5, .5, -.5]] },
   { name: 'opOnion (circle → ring)', f: S.opOnion((x, y) => S.sdCircle(x, y, 2), .25), at: [[2, 0, -.25], [0, 0, 1.75], [5, 0, 2.75]], inside: [[0, -2.1]] },
+  // ── smin.ts: two discs r = 1 at x = ±1.2 (a = b = 0.2 at the origin, so the blend gives 0.2 − k there)
+  ...(['sminQuad', 'sminCubic', 'sminQuartic', 'sminCircular', 'sminExp', 'sminRoot'] as const).map((n): Case => ({
+    name: `${n} (two discs)`, exact: false, f: (x, y) => S[n](S.sdCircle(x + 1.2, y, 1), S.sdCircle(x - 1.2, y, 1), .3),
+    at: [[0, 0, -.1], ...(n === 'sminExp' || n === 'sminRoot' ? [] : [[-3.2, 0, 1]] as [number, number, number][])], inside: [[-1.2, 0], [1.2, 0]], tol: 1e-12,
+  })),
+  { name: 'smoothSubtract (box − disc)', exact: false, f: (x, y) => S.smoothSubtract(S.sdBox(x, y, 2, 1), S.sdCircle(x - 2, y, .8), .1),
+    at: [[-3, 0, 1], [0, 0, -.975]], inside: [[-1, 0]], outside: [[2, 0]] },
+  { name: 'smoothIntersect (disc ∩ box)', exact: false, f: (x, y) => S.smoothIntersect(S.sdCircle(x, y, 1.5), S.sdBox(x, y, 1, 1), .1),
+    at: [[0, 0, -1], [3, 0, 2]], outside: [[1.2, 1.2]] },
+  // ── xor.ts: two discs r = 1 at x = ±0.6; the lens where they overlap is outside
+  { name: 'opXor (two discs)', f: (x, y) => S.opXor(S.sdCircle(x + .6, y, 1), S.sdCircle(x - .6, y, 1)),
+    at: [[0, 0, .4], [-1.6, 0, 0], [-1.1, 0, -.5], [3.6, 0, 2]] },
+  { name: 'opXor (box, disc)', f: (x, y) => S.opXor(S.sdBox(x, y, 1.5, .8), S.sdCircle(x - 1, y - .5, 1)), inside: [[-1, 0], [1.5, 1.2]], outside: [[1, .5], [4, 0]] },
+  // ── repeat.ts
+  { name: 'repGrid (discs)', f: (x, y) => S.repGrid(x, y, 1, 1, (lx, ly) => S.sdCircle(lx, ly, .3)), at: [[0, 0, -.3], [.5, 0, .2], [3.5, -2, .2], [.5, .5, Math.SQRT1_2 - .3]] },
+  { name: 'repGrid (radius per cell)', f: (x, y) => S.repGrid(x, y, 1.2, .9, (lx, ly, i, j) => S.sdCircle(lx, ly, cellR(i, j))), at: [[0, 0, -cellR(0, 0)], [2.4, -.9, -cellR(2, -1)]] },
+  { name: 'repMirror (off-centre disc)', f: (x, y) => S.repMirror(x, y, 1, 1, (lx, ly) => S.sdCircle(lx - .15, ly - .1, .25)), at: [[.15, .1, -.25], [.85, .1, -.25], [.5, .1, .1]] },
+  { name: 'repLimited (3 × 2 boxes, size per cell)', f: (x, y) => S.repLimited(x, y, 1, 1, 3, 2, (lx, ly, i, j) => S.sdBox(lx, ly, .2 + .1 * i, .2 + .1 * j)),
+    at: [[-1, -.5, -.2], [1, .5, -.3], [-3, -.5, 1.8], [3, .5, 1.6]] },
+  { name: 'repPolar (6 discs)', f: (x, y) => S.repPolar(x, y, 6, (lx, ly) => S.sdCircle(lx - 2, ly, .5)), at: [[2, 0, -.5], [0, 0, 1.5], [-2, 0, -.5], [1, R3, -.5], [4, 0, 1.5]], tol: 1e-6, slack: 1e-6 },
+  { name: 'repRect (4 × 3 discs)', f: (x, y) => S.repRect(x, y, 4, 3, 1, (lx, ly) => S.sdCircle(lx, ly, .3)),
+    at: [[1.5, 1, -.3], [-.5, -1, -.3], [-1.5, 0, -.3], [0, 0, Math.hypot(.5, 1) - .3], [4.5, 0, 2.7]] },
   // ── linf.ts
   { name: 'sdBoxLinf', linf: true, f: (x, y) => S.sdBoxLinf(x, y, 2, 1), at: [[0, 0, -1], [4, 0, 2], [3, 2, 1]] },
   { name: 'sdCircleLinf', linf: true, f: (x, y) => S.sdCircleLinf(x, y, 1), at: [[0, 0, -Math.SQRT1_2], [1, 0, 0], [3, 0, 2], [0, -3, 2]] },

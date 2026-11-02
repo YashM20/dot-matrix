@@ -1,6 +1,14 @@
 /**
  * Modifiers that work on any SDF: `opRound` inflates a shape by `r` (rounding its corners), `opOnion` hollows it
  * into a band of half-thickness `r`. The `sdg` forms carry the gradient through.
+ *
+ * Inside distances (after Inigo Quilez, https://iquilezles.org/articles/interiordistance/): min() of two shapes
+ * is right outside the union but wrong inside it, and max() (subtract, intersect) is off on both sides. Onion and
+ * inset bands read the inside, so over a union they come out lumpy or broken where the parts overlap. To keep them
+ * right: use one exact primitive for the whole outline where there is one (`sdCross`, `sdHorseshoe`, `sdArc`,
+ * `sdPie` instead of unions and cuts of boxes and discs); or trace the outline as one closed contour of segments,
+ * arcs and quadratic Béziers, each exact (`sdPolygon` does this for straight edges); or, when only the inside
+ * matters, model the negative space and flip the sign. `opXor` of two exact shapes stays exact on both sides.
  */
 import type { Out2 } from './util'
 

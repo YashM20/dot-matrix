@@ -180,4 +180,10 @@ shareChecks(assert)
   shapeChecks(assert)
 }
 
+// 2D SDF library and operators (IQ1 #62, IQ2 #63): primitives, gradients, smooth minimums, repetition, xor (scripts/sdf.ts)
+{
+  const { sdfChecks } = await import('./sdf')
+  sdfChecks(assert)
+}
+
 done('All acceptance checks passed')
