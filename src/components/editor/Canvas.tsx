@@ -26,7 +26,9 @@ import { commitTyping, placeCaret, startTyping } from './typing'
 import { useEditor, type Camera } from './store'
 
 /** Probe hooks (scripts/editor-browser.ts): draw stats, the selected frame id and every selected id. */
-declare global { interface Window { __editor?: { frames: number; drawn: number; maxMs: number; lastMs: number; sel?: string; layer?: string; picks?: string[]; cues?: number; cueLit?: number } } }
+/** Render stats for the browser probes. `tl`: the timeline t each frame last drew at while ANIMATE previews it, so a
+ *  probe can wait for the scrubbed frame itself instead of sleeping. */
+declare global { interface Window { __editor?: { frames: number; drawn: number; maxMs: number; lastMs: number; sel?: string; layer?: string; picks?: string[]; cues?: number; cueLit?: number; tl?: Record<string, number> } } }
 
 // ── render registry: one entry per mounted frame canvas ──────────────────────────────────────────
 interface Drawn { card: EditorFrame['card']; theme: string; k: number; state?: string; tl: boolean; t: number }
@@ -128,7 +130,7 @@ export function Canvas({ phone, landscape = false }: { phone: boolean; landscape
   useEffect(() => {
     let raf = 0, lastCam: Camera | undefined, lastVp = '', lastPublish = 0, lastTick = performance.now()
     const wall0 = performance.now(), still = reduced()
-    const stats: NonNullable<Window["__editor"]> = (window.__editor = { frames: 0, drawn: 0, maxMs: 0, lastMs: 0 })
+    const stats: NonNullable<Window["__editor"]> = (window.__editor = { frames: 0, drawn: 0, maxMs: 0, lastMs: 0, tl: {} })
     const step = (now: number) => {
       raf = requestAnimationFrame(step)
       const s = useEditor.getState(), d = s.h.present, c = s.cam, dpr = Math.min(2, window.devicePixelRatio || 1), dt = Math.min(.1, (now - lastTick) / 1000)
@@ -153,6 +155,7 @@ export function Canvas({ phone, landscape = false }: { phone: boolean; landscape
         budget += ms
         stats.lastMs = ms; stats.maxMs = Math.max(stats.maxMs, ms); stats.drawn++
         e.drawn = { card: f.card, theme: f.theme, k, state, tl, t }; e.dirty = false; e.last = now
+        if (tl) stats.tl![f.id] = t; else delete stats.tl![f.id]
       }
       stats.frames = d.frames.length; stats.sel = s.sel.frame; stats.layer = s.sel.layer; stats.picks = selIds(s.sel)
       const vpKey = `${s.vp.w}x${s.vp.h}x${dpr}`
