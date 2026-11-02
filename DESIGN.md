@@ -450,6 +450,7 @@ A surface that wraps a rounded child with padding takes the child's radius plus 
 - `credit?: { by: string[]; title: string; source: string; note?: string }` names the people whose work a card is built on (a port, a remix).
 - The widget page shows it under the blurb as one small line: `by A, B · <title>` with the title linking to `source`, then the note if there is one. `{colors.label}` text, the link in `{colors.value}`.
 - The board card does not show it yet (that would add to first load). X-ray and the inspector come later.
+- `docs/CREDITS.md` lists every credit grouped by source, then the code ports. It is generated: `npx tsx scripts/site/credits.ts` writes it and `--check` (in `pnpm check`) fails when it is stale. `loadCredits()` (`src/widgets/credits.ts`) returns the same grouped list for the site through the manifest's lazy loaders.
 
 ### Tixy programs (`src/widgets/tixy.ts`)
 
