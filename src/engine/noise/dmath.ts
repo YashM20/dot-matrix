@@ -78,8 +78,8 @@ const SQRT2 = Math.SQRT2
  * in every engine): x = m·2^e with m ∈ [1, 2), exactly what dividing by 2 until m < 2 would give, without the loop.
  */
 const F64 = new Float64Array(1), U32 = new Uint32Array(F64.buffer), HI = new Uint8Array(new Uint32Array([1]).buffer)[0] === 1 ? 1 : 0
-/** ln x for finite x > 0 (private: dpow's log). Exact split to m ∈ [√½, √2], then 2·atanh((m−1)/(m+1)) to s²¹. */
-function dlog(x: number): number {
+/** ln x for finite x > 0 (dpow's log; also the SDF exponential smooth minimum). Exact split to m ∈ [√½, √2], then 2·atanh((m−1)/(m+1)) to s²¹. */
+export function dlog(x: number): number {
   F64[0] = x
   let hi = U32[HI], e = (hi >>> 20) - 1023
   if (e === -1023) { F64[0] = x * 18446744073709551616; hi = U32[HI]; e = (hi >>> 20) - 1087 } // subnormal: × 2^64 first
@@ -95,7 +95,7 @@ function dlog(x: number): number {
  * x^y, bit-identical across engines.
  *  - Integer y with |y| ≤ 64: plain repeated multiplication x·x·…·x (same op order every call, so
  *    dpow(x, 2) === x * x and dpow(x, 3) === x * x * x; 1/x^|y| for y < 0).
- *  - Otherwise x > 0: dexp(y · dlog(x)), with a private dlog: mantissa/exponent split read from the IEEE bits (exact),
+ *  - Otherwise x > 0: dexp(y · dlog(x)), with dlog: mantissa/exponent split read from the IEEE bits (exact),
  *    m ∈ [√½, √2], ln m = 2·atanh(s), s = (m − 1)/(m + 1), odd series to s²¹ (|s| ≤ 0.1716, truncation < 1e-18).
  *  - Accuracy: relative error ≤ 1e-12 when |y·ln x| ≤ 50; ≤ 1e-9 over the whole normal range
  *    (both far inside X-advanced's < 1e-7 bar).

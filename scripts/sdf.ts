@@ -4,10 +4,12 @@
  * and on a lattice through the axes (that one catches GLSL `sign(0)` holes on a cell grid), and, for the exact
  * ones, |∇d| ≈ 1 off the medial axis (L1 norm for the L∞ set). Per `sdg*`: the gradient against a central
  * difference, unit length, and d against its plain counterpart. Plus the modifiers with gradients, the `sdfField`
- * adapter, the determinism lint on the module, and the `light/sdf.ts` helpers pinned bit for bit.
+ * adapter, the determinism lint on the module, and the `light/sdf.ts` helpers pinned bit for bit. Then the
+ * operator properties (smooth minimums, repetition, xor: scripts/sdf-ops.ts).
  * Called from verify.ts (`sdfChecks(assert)`); also runnable alone: `npx tsx scripts/sdf.ts`.
  */
 import { detLint } from './lib/detLint'
+import { sdfOpsChecks } from './sdf-ops'
 import type { Assert } from './lib/check'
 import { CASES, type Case, type Sd } from './sdf-cases'
 import * as L from '../src/engine/light/sdf'
@@ -176,6 +178,7 @@ export function sdfChecks(assert: Assert): void {
   const lint = detLint(['src/engine/sdf/'])
   assert('sdf determinism lint: no engine-specific Math.* in src/engine/sdf/', !lint.violations.length && lint.scanned.length > 0,
     lint.violations.length ? lint.violations.map(v => `${v.file}:${v.line} ${v.rule}`).join('; ') : `${lint.scanned.length} files`)
+  sdfOpsChecks(assert)
 }
 
 const self = process.argv[1]?.replace(/\\/g, '/')
