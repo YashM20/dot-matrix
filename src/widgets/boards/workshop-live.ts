@@ -21,7 +21,7 @@ import { dla, type Dla } from '../../engine/algo/dla'
 import { fbm2, noise2 } from '../../engine/noise/gradient'
 import { stbn } from '../../engine/halftone/mask'
 import { hash01 } from '../../engine/math'
-import { createRaster, type Raster } from '../../engine/raster/raster'
+import { createRaster, rasterWindow, type Raster } from '../../engine/raster/raster'
 import type { CellBounds, GridConfig, Layer } from '../../engine/types'
 import { TILE, layer, type WidgetContext, type WidgetPreset } from '../types'
 import { cite, LIGHT_DEFAULTS, lightKey, lru, matLight, once, pad2, scratch, snapTorch, T, tile, type Box, type Pt } from './materials-shared'
@@ -88,11 +88,10 @@ function knitTileRow(n: NormalRaster, A: Float32Array, D: Float32Array, S: Float
   for (let i = j * KG.cols, end = i + KG.cols; i < end; i++) {
     if (M[i] <= 0) continue
     const b = D[i] * A[i] * .82, s = S[i]
-    let t = bandOf(b)
-    if (t < 0) continue
-    if (s >= .6 && b >= .2) t = VALUE
-    else if (s >= .3 && t < IDLE && b >= .2) t++
-    V[i] = t === bandOf(b) ? b : BAND_MID[t]; Tn[i] = t
+    if (b < .06) continue
+    // bandOf inlined (first-frame code: one call less a cell)
+    const t0 = b < .3 ? FAINT : b < .62 ? MID : IDLE, t = s >= .6 && b >= .2 ? VALUE : s >= .3 && t0 < IDLE && b >= .2 ? t0 + 1 : t0
+    V[i] = t === t0 ? b : BAND_MID[t]; Tn[i] = t
   }
 }
 /** The frame: the swatch and the needle over it (columns 3 … 140: the needle reaches past the swatch on both sides). */
@@ -121,14 +120,12 @@ function knitCompose(st: KnitState, lit: { values: Float32Array; tones: Uint8Arr
     const y = r - KNIT.top - scroll, row = Math.floor(y / KNIT.H), tj = (((y % TILE_H) + TILE_H) % TILE_H) + PAD
     // rows newer than the current one are not knitted yet; the current one only behind the loop
     if (row < -st.rows) continue
+    // the knitted stitches of this row are one run of the tile row (left to right: stitches s0 … s1 − 1), copied whole
     const partial = row === -st.rows && st.shift === 0 && st.k < KNIT.N
-    for (let s = 0; s < KNIT.N; s++) {
-      if (partial && (st.dir === 1 ? s >= st.k : s < KNIT.N - st.k)) continue
-      for (let q = 0; q < KNIT.W; q++) {
-        const c = KNIT.x0 + s * KNIT.W + q, a = tj * KG.cols + s * KNIT.W + q, i = r * COLS + c
-        V[i] = lit.values[a]; Tn[i] = lit.tones[a]
-      }
-    }
+    const s0 = partial && st.dir !== 1 ? KNIT.N - st.k : 0, s1 = partial && st.dir === 1 ? st.k : KNIT.N
+    if (s1 <= s0) continue
+    const a = tj * KG.cols + s0 * KNIT.W, n = (s1 - s0) * KNIT.W, i = r * COLS + KNIT.x0 + s0 * KNIT.W
+    V.set(lit.values.subarray(a, a + n), i); Tn.set(lit.tones.subarray(a, a + n), i)
   }
   for (let r = 14; r < KNIT.top; r++) for (let c = 3, i = r * COLS + 3, k = (r - 14) * COLS + 3; c <= 140; c++, i++, k++) if (needle.values[k] > 0) { V[i] = needle.values[k]; Tn[i] = needle.tones[k] }
 }
@@ -149,7 +146,8 @@ export const matKnit: WidgetPreset = {
       lambert(g.n, TL, { ambient: .14, into: dif })
       anisoSpec(g.n, g.t, TL, { exponent: 20, into: spec })
       const out = { values: new Float32Array(KG.cols * KG.rows), tones: new Uint8Array(KG.cols * KG.rows) }
-      for (let j = 0; j < KG.rows; j++) knitTileRow(g.n, g.ao.data, dif.data, spec.data, out.values, out.tones, j)
+      // the tile's own rows (the pads above and below only feed its normals and AO: the swatch never reads them)
+      for (let j = PAD; j < PAD + TILE_H; j++) knitTileRow(g.n, g.ao.data, dif.data, spec.data, out.values, out.tones, j)
       return out
     })
     const needle = needleLit(key, () => {
@@ -189,48 +187,61 @@ export function deckle(x: number, y: number): number {
 }
 const PBOX: CellBounds = [PAPER.box[0] - 3, PAPER.box[1] - 3, PAPER.box[2] + 3, PAPER.box[3] + 3]
 /** `floor`: per cell, how deep into a stroke it lies (cells to the nearest unprinted cell; 0 off the letters). */
-interface PaperGeo { n: NormalRaster; ao: Raster; floor: Float32Array; inset: Raster }
+interface PaperGeo { n: NormalRaster; ao: Raster; floor: Float32Array; inset: Raster; win: CellBounds }
 const paperGeo = once((): PaperGeo => {
   const N = COLS * TILE.rows, h: HeightRaster = { ...createRaster(TILE, 'card', PBOX), mask: new Float32Array(N) }
   for (let r = PBOX[1]; r <= PBOX[3]; r++) paperRow(h.data, h.mask, r)
   const [a, b] = PAPER.lines.map(([w, row]) => cardMask(T.big(w, 72, row, { lattice: PAPER.k, smooth: true, align: 'center' }), TILE))
-  for (let i = 0; i < a.data.length; i++) a.data[i] = Math.max(a.data[i], b.data[i])
+  // both lines in one mask (b is 0 outside its window, and max(a, 0) = a); the letters' window, for the floor below
+  const [a0, a1, a2, a3] = rasterWindow(a), [b0, b1, b2, b3] = rasterWindow(b), win: CellBounds = [Math.min(a0, b0), Math.min(a1, b1), Math.max(a2, b2), Math.max(a3, b3)]
+  for (let r = b1; r <= b3; r++) for (let i = r * COLS + b0, end = r * COLS + b2; i <= end; i++) a.data[i] = Math.max(a.data[i], b.data[i])
   a.bounds = undefined
   const inset = insetDistance(a)
   const cut = stackHeights(h, heightRaster(inset, { shape: 'smooth', width: 1.8, height: -1.5 }))
-  return { n: normalRaster(cut), ao: ambientOcclusion(cut, { radius: 2, strength: .6 }), floor: inset.data.map(v => (v < 1 ? .5 - v : 0)), inset }
+  // the floor: .5 − inset on the letters (inset < 1 only there: it is 1 on every unlit cell), 0 elsewhere
+  const floor = new Float32Array(N), I = inset.data
+  for (let r = win[1]; r <= win[3]; r++) for (let i = r * COLS + win[0], end = r * COLS + win[2]; i <= end; i++) if (I[i] < 1) floor[i] = .5 - I[i]
+  return { n: normalRaster(cut), ao: ambientOcclusion(cut, { radius: 2, strength: .6 }), floor, inset, win }
 })
 /** The fibres' noise along one row, every 4 columns (it changes slowly along x: 8 cells a unit), read linearly between. */
 const fibreRow = new Float64Array(64)
+/**
+ * Row r of the sheet (the card's first frame runs this in code not yet optimised: few ops a cell). `deckle` inlined:
+ * its rounded box once a row and its abs / max / min as compares (the same values), the tear's noise only near the edge.
+ */
 function paperRow(H: Float32Array, M: Float32Array, r: number): void {
   for (let k = 0, c = PBOX[0]; c <= PBOX[2] + 4; k++, c += 4) fibreRow[k] = Math.abs(noise2(c / 8, r / 1.8, 53))
+  const R = PAPER.r, ex = PHW - R, dy = r - PCY, qy = (dy < 0 ? -dy : dy) - (PHH - R), ay = qy > 0 ? qy : 0, ay2 = ay * ay
   for (let c = PBOX[0], i = r * COLS + c; c <= PBOX[2]; c++, i++) {
-    const d = deckle(c, r)
+    const dx = c - PCX, qx = (dx < 0 ? -dx : dx) - ex, ax = qx > 0 ? qx : 0, m = qx > qy ? qx : qy, base = Math.sqrt(ax * ax + ay2) + (m < 0 ? m : 0) - R
+    const d = base > 2.5 || base < -2.5 ? base : base + 1.3 * fbm2(c / 3.2, r / 3.2, 3, 41) + .8 * fbm2(c / 11, r / 11, 2, 43)
     if (d > 0) continue
     // cotton: the tooth (blue noise, a cell apart) and longer fibres (stretched noise), .4 cells; the deckle thins toward the torn edge
-    const f = (c - PBOX[0]) / 4, k = Math.floor(f), fib = .6 * stbn(c, r, 3) + .4 * (fibreRow[k] + (fibreRow[k + 1] - fibreRow[k]) * (f - k))
-    H[i] = 1.2 * Math.min(1, -d / 2) + .4 * fib; M[i] = 1
+    const f = (c - PBOX[0]) / 4, k = Math.floor(f), fib = .6 * stbn(c, r, 3) + .4 * (fibreRow[k] + (fibreRow[k + 1] - fibreRow[k]) * (f - k)), e = -d / 2
+    H[i] = 1.2 * (e < 1 ? e : 1) + .4 * fib; M[i] = 1
   }
 }
 const paperScratch = scratch(1)
 const paperLit = lru<{ values: Float32Array; tones: Uint8Array; ink: Uint8Array; layer: Layer }>(8)
 /** The ink on the impression's floor: every inkable cell at least `reach` cells into its stroke. */
-function inkRows(V: Float32Array, Tn: Uint8Array, ink: Uint8Array, floor: Float32Array, reach: number): void {
-  for (let r = PBOX[1]; r <= PBOX[3]; r++) for (let c = PBOX[0], i = r * COLS + c; c <= PBOX[2]; c++, i++) if (ink[i] && floor[i] >= reach) { V[i] = .95; Tn[i] = VALUE }
+function inkRows(V: Float32Array, Tn: Uint8Array, ink: Uint8Array, g: PaperGeo, reach: number): void {
+  const floor = g.floor, [c0, r0, c1, r1] = g.win
+  const ra = Math.max(r0, PBOX[1]), rb = Math.min(r1, PBOX[3]), ca = Math.max(c0, PBOX[0]), cb = Math.min(c1, PBOX[2])
+  for (let r = ra; r <= rb; r++) for (let i = r * COLS + ca, end = r * COLS + cb; i <= end; i++) if (ink[i] && floor[i] >= reach) { V[i] = .95; Tn[i] = VALUE }
 }
 function paperShadeRow(g: PaperGeo, D: Float32Array, V: Float32Array, Tn: Uint8Array, ink: Uint8Array, gain: number, r: number): void {
-  const M = g.n.mask, A = g.ao.data, F = g.floor
+  const M = g.n.mask, A = g.ao.data, F = g.floor, inkAt = PAPER.inkAt
   for (let c = PBOX[0], i = r * COLS + c; c <= PBOX[2]; c++, i++) {
     if (M[i] <= 0) continue
-    if (F[i] >= PAPER.inkAt) { ink[i] = 1; continue } // the impression's floor: the ink's (drawn per frame)
-    const b = Math.min(1, Math.max(0, D[i] - .1) * gain) * A[i]
-    // paper is quiet (faint / mid); only a deboss wall turned to the light climbs to idle
-    // the fibres' shadowed valleys are void (the paper's tooth)
+    const f = F[i]
+    if (f >= inkAt) { ink[i] = 1; continue } // the impression's floor: the ink's (drawn per frame)
     // the paper's tooth: a quarter of the flat sheet is void (blue noise), its shadowed fibres too
-    if (F[i] === 0 && stbn(c, r, 5) < .25) continue
-    const t = b < .17 ? -1 : b < .36 ? FAINT : F[i] > 0 && b >= .66 ? IDLE : MID
-    if (t < 0) continue
-    V[i] = t === IDLE ? b : Math.min(t === FAINT ? .29 : .6, b); Tn[i] = t
+    if (f === 0 && stbn(c, r, 5) < .25) continue
+    // min(1, max(0, D − .1) · gain) · AO, as compares (the same values)
+    const e = D[i] - .1, y = (e > 0 ? e : 0) * gain, b = (y < 1 ? y : 1) * A[i]
+    // paper is quiet (faint / mid); only a deboss wall turned to the light climbs to idle
+    if (b < .17) continue
+    if (b < .36) { V[i] = b < .29 ? b : .29; Tn[i] = FAINT } else if (f > 0 && b >= .66) { V[i] = b; Tn[i] = IDLE } else { V[i] = b < .6 ? b : .6; Tn[i] = MID }
   }
 }
 /** The paper world: [0] seconds since the last impression (−1: none), [1] impressions made by hand. */
@@ -259,7 +270,7 @@ export const matPaper: WidgetPreset = {
       // the inked sheet for this light, kept: at rest (no impression running) a frame is this layer as is
       const full = { values: createRaster(TILE, 'card', PBOX), tones: out.tones.slice() }
       full.values.data.set(out.values)
-      inkRows(full.values.data, full.tones, out.ink, g.floor, 0)
+      inkRows(full.values.data, full.tones, out.ink, g, 0)
       return { ...out, layer: tonedLayer(full.values, full.tones) }
     })
     let surface = lit.layer
@@ -267,7 +278,7 @@ export const matPaper: WidgetPreset = {
       // the ink: value on the impression's floor (none while it lifts, then spreading out from the strokes' middle)
       const F = paperFrame()
       F.values.data.set(lit.values); F.tones.set(lit.tones)
-      inkRows(F.values.data, F.tones, lit.ink, paperGeo().floor, reach)
+      inkRows(F.values.data, F.tones, lit.ink, paperGeo(), reach)
       surface = tonedLayer(F.values, F.tones)
     }
     const count = 1 + Math.round(s[1])
@@ -356,7 +367,7 @@ export const matIce: WidgetPreset = {
       const th = (g.tx[i] * hx + g.ty[i] * hy) / hl, spark = (1 - th * th) ** 12, age = (k - i) / k
       groups[spark > .9 && age < .7 ? 'value' : age > .85 ? 'mid' : 'idle'].push([x, y])
     }
-    const out: Layer[] = [cite('WITTEN-SANDER 1981'), layer(T.dots(g.hoar.filter(([x, y]) => m2 === 0 || (x - s[0]) ** 2 + (y - s[1]) ** 2 >= m2), .8), 'faint')]
+    const out: Layer[] = [cite('WITTEN-SANDER 1981'), layer(T.dots(m2 === 0 ? g.hoar : g.hoar.filter(([x, y]) => (x - s[0]) ** 2 + (y - s[1]) ** 2 >= m2), .8), 'faint')]
     for (const tone of ['mid', 'idle', 'value'] as const) if (groups[tone].length) out.push(layer(T.dots(groups[tone], 1.3), tone))
     if (groups.active.length) out.push(layer(T.dots(groups.active, 1.45), 'active'))
     return out

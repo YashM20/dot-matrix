@@ -12,7 +12,7 @@
  */
 import { ambientOcclusion, cardMask, insetDistance, stitch, tangentSDF, tonedLayer, twill, weaveRelief, type TangentRaster } from '../../engine/matter'
 import { woodRings } from '../../engine/matter/wood'
-import { leatherAt } from '../../engine/matter/leather'
+import { leatherCells } from '../../engine/matter/leather'
 import { anisoSpec } from '../../engine/matter/aniso'
 import { heightRaster, normalRaster, stackHeights, type HeightRaster, type NormalRaster } from '../../engine/light/height'
 import { illuminate, lambert, type Light, type Vec3 } from '../../engine/light/shade'
@@ -47,8 +47,6 @@ const litSurface = (grid = TILE, box?: CellBounds, k?: number): Lit => {
 // A front pocket's opening (a 1-cell void curve) with a double topstitch in value, a copper rivet, and the selvedge
 // outseam: a 2-cell white `value` line, not red (M §10.2: the red redline is an owner option and ships off).
 export const DENIM = { box: [2, 12, 141, 141] as Box, crossing: 3, lift: 1, seam: 135, selvedge: [136, 137] as const, pocket: { cx: 132, cy: 12, a: 58, b: 56 }, rivet: { x: 77, y: 17, r: 3.2 } }
-/** The pocket curve's ellipse "radius" at a cell: 1 on the opening, > 1 outside the pocket. */
-const pocketRho = (c: number, r: number) => { const u = (c - DENIM.pocket.cx) / DENIM.pocket.a, v = (r - DENIM.pocket.cy) / DENIM.pocket.b; return Math.sqrt(u * u + v * v) }
 /** A polyline along the pocket's ellipse grown by `off` cells. */
 function pocketLine(off: number): Pt[] {
   const { cx, cy, a, b } = DENIM.pocket, out: Pt[] = []
@@ -73,15 +71,13 @@ function gridAt(g: NoiseGrid, c: number, r: number): number {
   const top = G[a] + (G[a + 1] - G[a]) * tx, bot = G[a + gw] + (G[a + gw + 1] - G[a + gw]) * tx
   return top + (bot - top) * ty
 }
-/** The faded patches: wear where the broad noise is high and the fine one breaks it up. */
-const fadeAt = (c: number, r: number, fine: NoiseGrid, broad: NoiseGrid) => (gridAt(broad, c, r) > .3 && gridAt(fine, c, r) > 0 ? 1 : 0)
 /** The whiskers, stamped along each stroke (a band of ± 2.4 · taper cells round its centre line, fBm-broken). */
 function whiskers(kind: Uint8Array, wear: Uint8Array, fine: NoiseGrid): void {
   for (let q = 0; q < WHISKERS.length; q++) {
     const x0 = WHISKERS[q][0], y0 = WHISKERS[q][1], len = WHISKERS[q][2]
-    for (let c = Math.ceil(x0); c <= Math.min(DENIM.seam - 1, x0 + len); c++) {
+    for (let c = Math.ceil(x0), c1 = Math.min(DENIM.seam - 1, x0 + len); c <= c1; c++) {
       const u = (c - x0) / len, y = y0 - .32 * (c - x0) + .0022 * (c - x0) * (c - x0), w = 2.4 * Math.sin(Math.PI * Math.min(1, u * 1.15))
-      for (let r = Math.max(DENIM.box[1], Math.floor(y - w)); r <= Math.min(DENIM.box[3], Math.ceil(y + w)); r++) {
+      for (let r = Math.max(DENIM.box[1], Math.floor(y - w)), r1 = Math.min(DENIM.box[3], Math.ceil(y + w)); r <= r1; r++) {
         const i = r * COLS + c
         if (Math.abs(r - y) < w && kind[i] === 0 && gridAt(fine, c, r) > -.25) wear[i] = 1
       }
@@ -101,29 +97,69 @@ const denimGeo = once((): DenimGeo => {
   }
   const [x0, y0, x1, y1] = DENIM.box, { x: rx, y: ry, r: rr } = DENIM.rivet
   const fine = noiseGrid(9, 9, 23), broad = noiseGrid(38, 30, 29, 6)
-  for (let row = y0; row <= y1; row++) denimKindRow(kind, wear, stitches.data, row, x0, x1, rx, ry, rr, fine, broad)
+  // what depends on the column alone, once a column: the pocket's u², each noise grid's column and fraction
+  const U2 = new Float64Array(COLS), BK = new Int32Array(COLS), BT = new Float64Array(COLS), FK = new Int32Array(COLS), FT = new Float64Array(COLS)
+  for (let c = 0; c < COLS; c++) {
+    const u = (c - DENIM.pocket.cx) / DENIM.pocket.a, bx = c / broad.step, fx = c / fine.step
+    U2[c] = u * u; BK[c] = Math.floor(bx); BT[c] = bx - Math.floor(bx); FK[c] = Math.floor(fx); FT[c] = fx - Math.floor(fx)
+  }
+  const at: DenimCols = { U2, BK, BT, FK, FT }
+  for (let row = y0; row <= y1; row++) denimKindRow(kind, wear, stitches.data, row, x0, x1, rx, ry, rr, fine, broad, at)
   whiskers(kind, wear, fine)
   return { n, t: r.tangent, warp: r.warp, wear, kind }
 })
-function denimKindRow(kind: Uint8Array, wear: Uint8Array, st: Float32Array, row: number, x0: number, x1: number, rx: number, ry: number, rr: number, fine: NoiseGrid, broad: NoiseGrid): void {
+/** The pocket opening's band, |ρ − 1| · min(a, b) < .6, as bounds on ρ² a little wider (a cell outside them is not on it). */
+const POCKET_Q = (() => { const d = 1.01 * .6 / Math.min(DENIM.pocket.a, DENIM.pocket.b); return [(1 - d) * (1 - d), (1 + d) * (1 + d)] as const })()
+/**
+ * Row `row` of the kinds and the fade (the bake of the card's first frame, so in code not yet optimised: few ops a
+ * cell; what only depends on the row is taken once a row). The pocket opening is where the ellipse "radius"
+ * ρ = √(u² + v²) (1 on the curve) has |ρ − 1| · min(a, b) < .6, its root taken only near the curve; the rivet's
+ * root only near the rivet. The faded patches: wear where the broad noise (`gridAt`, inline) is over .3 and the fine
+ * one over 0 breaks it up.
+ */
+interface DenimCols { U2: Float64Array; BK: Int32Array; BT: Float64Array; FK: Int32Array; FT: Float64Array }
+function denimKindRow(kind: Uint8Array, wear: Uint8Array, st: Float32Array, row: number, x0: number, x1: number, rx: number, ry: number, rr: number, fine: NoiseGrid, broad: NoiseGrid, at: DenimCols): void {
+  const seam = DENIM.seam, s0 = DENIM.selvedge[0], s1 = DENIM.selvedge[1], { cy: pcy, a: pa, b: pb } = DENIM.pocket, pm = Math.min(pa, pb), [qlo, qhi] = POCKET_Q
+  const dy = row - ry, dy2 = dy * dy, rivet = (dy < 0 ? -dy : dy) <= rr + 1, v = (row - pcy) / pb, v2 = v * v, { U2, BK, BT, FK, FT } = at
+  const FG = fine.G, fw = fine.gw, ffy = row / fine.step, fj = Math.floor(ffy), fty = ffy - fj
+  const BG = broad.G, bw = broad.gw, bfy = row / broad.step, bj = Math.floor(bfy), bty = bfy - bj
   for (let c = x0, i = row * COLS + c; c <= x1; c++, i++) {
-    const d = Math.sqrt((c - rx) * (c - rx) + (row - ry) * (row - ry))
-    if (d <= rr) { kind[i] = 5; continue }
-    if (d <= rr + 1) { kind[i] = 6; continue }
-    if (c >= DENIM.selvedge[0] && c <= DENIM.selvedge[1]) { kind[i] = 4; continue }
-    if (c === DENIM.seam || c === DENIM.selvedge[1] + 1) { kind[i] = 3; continue }
-    if (c < DENIM.seam && Math.abs(pocketRho(c, row) - 1) * Math.min(DENIM.pocket.a, DENIM.pocket.b) < .6) { kind[i] = 1; continue }
+    if (rivet) {
+      const dx = c - rx
+      if ((dx < 0 ? -dx : dx) <= rr + 1) {
+        const d = Math.sqrt(dx * dx + dy2)
+        if (d <= rr) { kind[i] = 5; continue }
+        if (d <= rr + 1) { kind[i] = 6; continue }
+      }
+    }
+    if (c >= s0 && c <= s1) { kind[i] = 4; continue }
+    if (c === seam || c === s1 + 1) { kind[i] = 3; continue }
+    if (c < seam) {
+      const q = U2[c] + v2
+      if (q > qlo && q < qhi && Math.abs(Math.sqrt(q) - 1) * pm < .6) { kind[i] = 1; continue }
+    }
     if (st[i]) { kind[i] = 2; continue }
-    if (c < DENIM.seam) wear[i] = fadeAt(c, row, fine, broad)
+    if (c < seam) {
+      // fadeAt: the broad grid over .3, then the fine one over 0 (gridAt, inline)
+      let tx = BT[c], a = bj * bw + BK[c]
+      let top = BG[a] + (BG[a + 1] - BG[a]) * tx, bot = BG[a + bw] + (BG[a + bw + 1] - BG[a + bw]) * tx
+      if (!(top + (bot - top) * bty > .3)) { wear[i] = 0; continue }
+      tx = FT[c]; a = fj * fw + FK[c]
+      top = FG[a] + (FG[a + 1] - FG[a]) * tx; bot = FG[a + fw] + (FG[a + fw + 1] - FG[a + fw]) * tx
+      wear[i] = top + (bot - top) * fty > 0 ? 1 : 0
+    }
   }
 }
-/** Mark the cells within `h` of segment (ax, ay)–(bx, by). */
-function stampSeg(D: Float32Array, ax: number, ay: number, bx: number, by: number, h: number): void {
-  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy
-  for (let y = Math.max(0, Math.floor(Math.min(ay, by) - h)); y <= Math.min(TILE.rows - 1, Math.ceil(Math.max(ay, by) + h)); y++) {
-    for (let x = Math.max(0, Math.floor(Math.min(ax, bx) - h)); x <= Math.min(COLS - 1, Math.ceil(Math.max(ax, bx) + h)); x++) {
+/** Mark the cells within `h` of segment (ax, ay)–(bx, by); each cell newly marked is pushed to `hit` (when given). */
+function stampSeg(D: Float32Array, ax: number, ay: number, bx: number, by: number, h: number, hit?: number[]): void {
+  // (bounds taken once, not in the loop tests: first-frame code, where every call counts)
+  const dx = bx - ax, dy = by - ay, l2 = dx * dx + dy * dy, h2 = h * h + 1e-9
+  const ya = Math.max(0, Math.floor(Math.min(ay, by) - h)), yb = Math.min(TILE.rows - 1, Math.ceil(Math.max(ay, by) + h))
+  const xa = Math.max(0, Math.floor(Math.min(ax, bx) - h)), xb = Math.min(COLS - 1, Math.ceil(Math.max(ax, bx) + h))
+  for (let y = ya; y <= yb; y++) {
+    for (let x = xa; x <= xb; x++) {
       const t = l2 > 0 ? Math.max(0, Math.min(1, ((x - ax) * dx + (y - ay) * dy) / l2)) : 0, ex = ax + dx * t - x, ey = ay + dy * t - y
-      if (ex * ex + ey * ey <= h * h + 1e-9) D[y * COLS + x] = 1
+      if (ex * ex + ey * ey <= h2) { const i = y * COLS + x; if (hit && !D[i]) hit.push(i); D[i] = 1 }
     }
   }
 }
@@ -143,9 +179,20 @@ function domeLight(dx: number, dy: number, r: number, L: Light, x: number, y: nu
 const denimScratch = scratch(2)
 const denimLit = lru<Lit>(8)
 function denimRow(g: DenimGeo, D: Float32Array, S: Float32Array, V: Float32Array, Tn: Uint8Array, L: Light, row: number): void {
-  const [x0, , x1] = DENIM.box, W = g.warp.data, M = g.n.mask, { x: rx, y: ry, r: rr } = DENIM.rivet
+  const [x0, , x1] = DENIM.box, W = g.warp.data, M = g.n.mask, K = g.kind, Wr = g.wear, { x: rx, y: ry, r: rr } = DENIM.rivet
   for (let c = x0, i = row * COLS + c; c <= x1; c++, i++) {
-    const k = g.kind[i]
+    const k = K[i]
+    if (k === 0) {
+      // cloth (most cells): bandOf inlined; a worn warp falls a band, an unworn idle warp in the sheen rises to value
+      if (M[i] <= 0) continue
+      const b = D[i]
+      if (W[i]) {
+        if (b < .06) continue
+        const t0 = b < .3 ? FAINT : b < .62 ? MID : IDLE, t = Wr[i] ? (t0 > FAINT ? t0 - 1 : FAINT) : t0 === IDLE && S[i] >= .6 ? VALUE : t0
+        V[i] = t === t0 ? b : BAND_MID[t]; Tn[i] = t
+      } else if (b * .7 >= .22 && stbn(c, row) < .35) { V[i] = Math.min(.29, b * .7); Tn[i] = FAINT } // the white weft: a sparse glint between the warp floats
+      continue
+    }
     if (k === 1 || k === 3 || k === 6) continue
     if (k === 4) { V[i] = 1; Tn[i] = VALUE; continue }
     if (k === 2) { V[i] = .9; Tn[i] = VALUE; continue }
@@ -153,17 +200,7 @@ function denimRow(g: DenimGeo, D: Float32Array, S: Float32Array, V: Float32Array
       // the copper rivet: a dome, Lambert bands, its mirror highlight in value
       const [d, h] = domeLight(c - rx, row - ry, rr, L, c, row)
       if (h > .97) { V[i] = 1; Tn[i] = VALUE } else { const b = .15 + .75 * d, t = bandOf(b); if (t >= 0) { V[i] = b; Tn[i] = t } }
-      continue
     }
-    if (M[i] <= 0) continue
-    const b = D[i]
-    if (W[i]) {
-      let t = bandOf(b)
-      if (t < 0) continue
-      if (g.wear[i]) t = Math.max(FAINT, t - 1)
-      else if (t === IDLE && S[i] >= .6) t = VALUE
-      V[i] = t === bandOf(b) ? b : BAND_MID[t]; Tn[i] = t
-    } else if (b * .7 >= .22 && stbn(c, row) < .35) { V[i] = Math.min(.29, b * .7); Tn[i] = FAINT } // the white weft: a sparse glint between the warp floats
   }
 }
 export const matDenim: WidgetPreset = {
@@ -195,9 +232,12 @@ const woodBase = once(() => {
   const rings = woodRings(LG15, { k: WOOD.k, pith: WOOD.pith, knots: WOOD.knots, box })
   const plank = heightRaster(PLANK_SDF, { shape: 'round', width: 2, height: 1.2 }, LG15)
   // the lacquered face follows the rings a little: latewood stands .2 proud of earlywood
-  const face: HeightRaster = { ...createRaster(LG15, 'card', plank.bounds), mask: plank.mask }
-  for (let i = 0; i < face.data.length; i++) if (plank.mask[i] > 0) face.data[i] = plank.data[i] + .2 * late(rings.ring.data[i])
-  return { rings, face, t: tangentSDF(rings.phase, LG15, 'along') }
+  // the latewood profile, once a cell (the face and every lighting read it): late(0) = 0 off the rings' box
+  const face: HeightRaster = { ...createRaster(LG15, 'card', plank.bounds), mask: plank.mask }, R = rings.ring.data, lateOf = new Float64Array(R.length)
+  for (let j = Math.max(0, box[1]); j <= Math.min(LG15.rows - 1, box[3]); j++) for (let i = j * LG15.cols + Math.max(0, box[0]), end = j * LG15.cols + Math.min(LG15.cols - 1, box[2]); i <= end; i++) lateOf[i] = late(R[i])
+  const [p0, p1, p2, p3] = rasterWindow(plank)
+  for (let j = p1; j <= p3; j++) for (let i = j * LG15.cols + p0, end = j * LG15.cols + p2; i <= end; i++) if (plank.mask[i] > 0) face.data[i] = plank.data[i] + .2 * lateOf[i]
+  return { rings, face, lateOf, t: tangentSDF(rings.phase, LG15, 'along') }
 })
 /** Latewood profile over a ring (0 earlywood … 1 latewood, a smooth 40% band). */
 const late = (f: number) => { const x = (f - .6) / .12; return x <= 0 ? 0 : x >= 1 ? (f > .94 ? Math.max(0, 1 - (f - .94) / .06) : 1) : x * x * (3 - 2 * x) }
@@ -219,17 +259,17 @@ export function woodCut(hh: string, mm: string): WoodCut {
 }
 const woodScratch = scratch(3, LG15)
 const woodLit = lru<Lit>(8)
-function woodRow(e: WoodCut, ring: Float32Array, fleck: Float32Array, D: Float32Array, P: Float32Array, K: Float32Array, V: Float32Array, Tn: Uint8Array, gain: number, j: number): void {
+/** Row j of the lit plank (first-frame code: `late` read from its table, bandOf and min / max inline; the same values). */
+function woodRow(e: WoodCut, lateOf: Float64Array, fleck: Float32Array, D: Float32Array, P: Float32Array, K: Float32Array, V: Float32Array, Tn: Uint8Array, gain: number, j: number): void {
   const M = e.n.mask, A = e.ao.data
   for (let i = j * LG15.cols, end = i + LG15.cols; i < end; i++) {
     if (M[i] < .5) continue
-    const fl = fleck[i], b = Math.min(1, Math.max(0, D[i] - .1) * gain) * (1 - .62 * late(ring[i])) * (fl === 2 ? .45 : fl === 1 ? 1.18 : 1) * A[i]
-    let t = bandOf(b)
-    if (t < 0) continue
+    const fl = fleck[i], x = D[i] - .1, y = (x > 0 ? x : 0) * gain, b = (y < 1 ? y : 1) * (1 - .62 * lateOf[i]) * (fl === 2 ? .45 : fl === 1 ? 1.18 : 1) * A[i]
+    if (b < .06) continue
+    const t0 = b < .3 ? FAINT : b < .62 ? MID : IDLE
     // the lacquer: the polish (Phong) in value, the chatoyance along the rings a step up
-    if (P[i] >= .7 && b >= .3) t = VALUE
-    else if (K[i] >= .8 && t < IDLE && b >= .3) t++
-    V[i] = t === bandOf(b) ? b : BAND_MID[t]; Tn[i] = t
+    const t = P[i] >= .7 && b >= .3 ? VALUE : K[i] >= .8 && t0 < IDLE && b >= .3 ? t0 + 1 : t0
+    V[i] = t === t0 ? b : BAND_MID[t]; Tn[i] = t
   }
 }
 export const matWood: WidgetPreset = {
@@ -245,7 +285,7 @@ export const matWood: WidgetPreset = {
       // the flat face reads at ~.6 whatever the (raked) light, as on the marble
       const Ld = Array.isArray(L) ? L as readonly number[] : [0, 0, 1], Lz = Ld[2] / (Math.hypot(Ld[0], Ld[1], Ld[2]) || 1), gain = .7 / (.9 * Math.max(.05, Lz))
       const [, r0, , r1] = e.n.bounds ?? [0, 0, 0, LG15.rows - 1]
-      for (let j = r0; j <= r1; j++) woodRow(e, b.rings.ring.data, b.rings.fleck.data, dif.data, spe.data, kk.data, out.values.data, out.tones, gain, j)
+      for (let j = r0; j <= r1; j++) woodRow(e, b.lateOf, b.rings.fleck.data, dif.data, spe.data, kk.data, out.values.data, out.tones, gain, j)
       return out
     })
     const on = ctx.reducedMotion || mod(ctx.t, 1) < .5
@@ -279,46 +319,66 @@ export const leatherStitches = once(() => {
 })
 const leatherGeo = once((): LeatherGeo => {
   const N = COLS * TILE.rows, h: HeightRaster = { ...createRaster(TILE, 'card', LBOX), mask: new Float32Array(N) }, thread = new Uint8Array(N), text = new Uint8Array(N)
-  for (let r = LBOX[1]; r <= LBOX[3]; r++) leatherRow(h.data, h.mask, r)
+  // the grain over the whole box at once (leatherAt's values, its Worley points tabled per lattice cell)
+  const G = leatherCells(COLS, LBOX)
+  for (let r = LBOX[1]; r <= LBOX[3]; r++) leatherRow(h.data, h.mask, G, r)
   // the saddle stitches: each chord turned 30° about its middle, a raised thread; its two holes are pits
-  const tm = createRaster(TILE), holes: Pt[] = []
+  const tm = createRaster(TILE), holes: Pt[] = [], stamped: number[] = [], co = Math.cos(LEATHER.slant), si = Math.sin(LEATHER.slant)
   for (const st of leatherStitches()) for (let k = 0; k < st.count; k++) {
     const ax = st.segs[4 * k], ay = st.segs[4 * k + 1], bx = st.segs[4 * k + 2], by = st.segs[4 * k + 3], mx = (ax + bx) / 2, my = (ay + by) / 2
-    const co = Math.cos(LEATHER.slant), si = Math.sin(LEATHER.slant), hx = (bx - ax) / 2, hy = (by - ay) / 2, rx = hx * co - hy * si, ry = hx * si + hy * co
-    stampSeg(tm.data, mx - rx, my - ry, mx + rx, my + ry, .7)
+    const hx = (bx - ax) / 2, hy = (by - ay) / 2, rx = hx * co - hy * si, ry = hx * si + hy * co
+    stampSeg(tm.data, mx - rx, my - ry, mx + rx, my + ry, .7, stamped)
     holes.push([mx - rx * 1.25, my - ry * 1.25], [mx + rx * 1.25, my + ry * 1.25])
   }
-  for (let i = 0; i < N; i++) if (tm.data[i] && h.mask[i]) { h.data[i] += .55; thread[i] = 1 }
+  for (const i of stamped) if (h.mask[i]) { h.data[i] += .55; thread[i] = 1 }
   for (const [x, y] of holes) { const c = Math.round(x), r = Math.round(y), i = r * COLS + c; if (h.mask[i] && !thread[i]) h.data[i] -= .7 }
   // HAND SEWN, debossed into the pocket: void letters in a shallow pit
   const deb = cardMask({ field: T.text('HAND SEWN', 72, 112, { align: 'center' }) }, TILE)
-  for (let i = 0; i < N; i++) if (deb.data[i] && h.mask[i]) { h.data[i] -= .5; text[i] = 1 }
+  const [d0, d1, d2, d3] = rasterWindow(deb)
+  for (let r = d1; r <= d3; r++) for (let i = r * COLS + d0, end = r * COLS + d2; i <= end; i++) if (deb.data[i] && h.mask[i]) { h.data[i] -= .5; text[i] = 1 }
   return { n: normalRaster(h), ao: ambientOcclusion(h, { radius: 1.2, strength: .6 }), thread, text }
 })
-function leatherRow(H: Float32Array, M: Float32Array, r: number): void {
+/**
+ * Row r of the wallet: height and mask. `outerSdf` inlined (its row half once a row, its abs / max / min as compares on
+ * integer cells: the same values); more than 4 cells in, the edge terms are flat (roundEdge = 1, the grain at full
+ * depth) and the pocket's is the row's own. The same values with a few ops a cell: this bake runs on the card's first
+ * frame, in code that has not been optimised yet, where every op and call counts.
+ */
+function leatherRow(H: Float32Array, M: Float32Array, G: Float64Array, r: number): void {
+  const { cx, cy, hw, hh, r: R, pocket } = LEATHER, ex = hw - R, qy = Math.abs(r - cy) - (hh - R), ay = qy > 0 ? qy : 0, ay2 = ay * ay
+  const pocketIn = r - pocket, crease = Math.abs(pocketIn) > 2
+  // the pocket's lift for a cell more than 4 in (min(inset, pocketIn + .5) is pocketIn + .5 there, or saturated)
+  const lift = pocketIn >= 0 ? .9 * roundEdge(Math.min(4, pocketIn + .5), 2.5) : 0
   for (let c = LBOX[0], i = r * COLS + c; c <= LBOX[2]; c++, i++) {
-    const s = outerSdf(c, r)
+    const dx = c - cx, qx = (dx < 0 ? -dx : dx) - ex, ax = qx > 0 ? qx : 0, m = qx > qy ? qx : qy, s = Math.sqrt(ax * ax + ay2) + (m < 0 ? m : 0) - R
     if (s > 0) continue
-    const inset = -s, pocketIn = r - LEATHER.pocket, grain = .42 * leatherAt(c, r) * Math.min(1, inset / 4)
+    const inset = -s
+    if (inset > 4) {
+      const grain = .42 * G[i]
+      H[i] = pocketIn >= 0 ? 1.1 + grain + lift : 1.1 + grain
+      // the creases (the Worley borders) are void, away from the burnished edge: the grain reads as pebbles
+      M[i] = grain < .18 && crease ? 0 : 1
+      continue
+    }
+    const grain = .42 * G[i] * Math.min(1, inset / 4)
     let h = 1.1 * roundEdge(inset, 3) + grain
     if (pocketIn >= 0) h += .9 * roundEdge(Math.min(inset, pocketIn + .5), 2.5)
     H[i] = h
-    // the creases (the Worley borders) are void, away from the burnished edge: the grain reads as pebbles
-    M[i] = inset > 4 && grain < .18 && Math.abs(pocketIn) > 2 ? 0 : 1
+    M[i] = 1
   }
 }
 const leatherScratch = scratch(2)
 const leatherLit = lru<Lit>(8)
 function leatherShadeRow(g: LeatherGeo, D: Float32Array, P: Float32Array, V: Float32Array, Tn: Uint8Array, r: number): void {
-  const M = g.n.mask, A = g.ao.data
+  const M = g.n.mask, A = g.ao.data, X = g.text, Th = g.thread
   for (let c = LBOX[0], i = r * COLS + c; c <= LBOX[2]; c++, i++) {
-    if (M[i] <= 0 || g.text[i]) continue
+    if (M[i] <= 0 || X[i]) continue
     const b = D[i] * A[i] * A[i]
-    if (g.thread[i]) { const t = P[i] >= .3 || b >= .5 ? VALUE : IDLE; V[i] = t === VALUE ? 1 : Math.max(.7, b); Tn[i] = t; continue }
-    let t = bandOf(b * .85)
-    if (t < 0) continue
-    if (P[i] >= .5 && t >= MID) t = Math.min(IDLE, t + 1) // the burnish: a step up where the sheen crosses
-    V[i] = t === bandOf(b * .85) ? b * .85 : BAND_MID[t]; Tn[i] = t
+    if (Th[i]) { const t = P[i] >= .3 || b >= .5 ? VALUE : IDLE; V[i] = t === VALUE ? 1 : Math.max(.7, b); Tn[i] = t; continue }
+    // bandOf inlined; the burnish: a step up (mid → idle) where the sheen crosses
+    const v = b * .85
+    if (v < .06) continue
+    if (v < .3) { V[i] = v; Tn[i] = FAINT } else if (v < .62 && !(P[i] >= .5)) { V[i] = v; Tn[i] = MID } else if (v < .62) { V[i] = BAND_MID[IDLE]; Tn[i] = IDLE } else { V[i] = v; Tn[i] = IDLE }
   }
 }
 export const matLeather: WidgetPreset = {
