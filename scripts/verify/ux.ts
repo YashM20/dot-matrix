@@ -2,7 +2,7 @@
 import { boardGroups, boardIds, boardLabel, groupOf } from '../../src/widgets/manifest'
 import { boardBlurbs } from '../../src/widgets/blurbs'
 import { boardFromPath } from '../../src/site/meta'
-import { PLACES, urlForView, viewFromUrl, type ViewState } from '../../src/site/views'
+import { PLACES, placeView, urlForView, viewFromUrl, type ViewState } from '../../src/site/views'
 import type { Assert } from '../lib/check'
 
 export function uxChecks(assert: Assert) {

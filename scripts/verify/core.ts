@@ -204,7 +204,7 @@ export function coreChecks(assert: Assert) {
   {
     const files: string[] = []
     const walk = (dir: string) => { for (const f of readdirSync(dir)) { const p = join(dir, f); if (statSync(p).isDirectory()) walk(p); else if (p.endsWith('.ts')) files.push(p) } }
-    walk(join(import.meta.dirname, '../src/engine'))
+    walk(join(import.meta.dirname, '../../src/engine'))
     const offenders = files.filter(f => {
       const code = readFileSync(f, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '')
       return /Math\.random\(|Date\.now\(|new Date\(|43758\.5453/.test(code)

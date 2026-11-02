@@ -371,9 +371,9 @@ export async function engineChecks(assert: Assert) {
 
   // P4-D) migration (Hilbert-rank shared-element pairing) + SDF morph
   {
-    const { migrate, migrationLayers, hilbertIndex, morph, signedDistance } = await import('../src/engine/migrate')
-    const { createRaster: mkRaster } = await import('../src/engine/raster')
-    const { glyphLongpress } = await import('../src/widgets/boards/glyph')
+    const { migrate, migrationLayers, hilbertIndex, morph, signedDistance } = await import('../../src/engine/migrate')
+    const { createRaster: mkRaster } = await import('../../src/engine/raster')
+    const { glyphLongpress } = await import('../../src/widgets/boards/glyph')
     type D = { x: number; y: number; r: number; opacity: number; color: string }
     const cloud = (n: number, seed: number, w = 576): D[] => Array.from({ length: n }, (_, i) => ({ x: hash01(i, seed) * w, y: hash01(i, seed + 1) * w, r: 1 + hash01(i, seed + 2), opacity: 1, color: i % 3 ? '#ffffff' : '#7a7a7a' }))
     const key = (d: { x: number; y: number }) => `${d.x.toFixed(3)},${d.y.toFixed(3)}`
