@@ -1,0 +1,55 @@
+/* Phone styles (src/App.tsx imports these in order, after the app styles; the cascade depends on it): the shell */
+/*
+  Phone shell (≤ 760 px): a compact sticky top bar with the place's name and search, a bottom tab bar
+  (EXPLORE / MAKE / ABOUT / TOOLS), thumb strips for the board groups and boards, and bottom sheets
+  (boards, tools + display, the ⌘K palette). Desktop keeps its layout: everything phone-only is hidden
+  above the breakpoint. Grey chrome; the one accent (--red = {colors.dotActive}) only marks "active".
+  Exposed for the views: --app-top (the sticky bar's height) and --tabbar-h (the tab bar's, with the
+  home-indicator inset), so pinned or fixed things can sit clear of them.
+*/
+:root {
+  --app-top: calc(52px + env(safe-area-inset-top));
+  --tabbar-h: calc(58px + env(safe-area-inset-bottom));
+  --gutter: calc((100vw - 100%) / 2);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent
+}
+
+/* no double-tap zoom delay on controls; pinch zoom stays (accessibility) */
+button,
+a,
+select,
+summary,
+label,
+input,
+[role="tab"] {
+  touch-action: manipulation
+}
+
+.tabbar,
+.topbar-place,
+.topbar-search,
+.next-board,
+.board-all,
+.pal-grab,
+.pal-cancel,
+.intro-short {
+  display: none
+}
+
+.glyph {
+  display: block;
+  width: 20px;
+  height: 20px;
+  overflow: visible
+}
+
+.glyph circle {
+  fill: currentColor;
+  opacity: .28
+}
+
+.glyph circle.on {
+  opacity: 1
+}

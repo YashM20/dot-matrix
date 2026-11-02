@@ -1,0 +1,116 @@
+/* App styles: the keycap and the tooltip */
+/* ── keycap (one component): a dotted edge on a dot-matrix fill, the key in mono ───────────────────── */
+.xr-time kbd,
+.pal kbd,
+.pal-shell kbd,
+.pal-boss kbd,
+[data-kbd]::before {
+  display: inline-block;
+  min-width: 2.2em;
+  padding: 0 var(--space-1);
+  border: 1px dotted var(--line-hover);
+  border-radius: var(--radius-sm);
+  background: radial-gradient(circle, var(--line-dot) .6px, transparent .9px) 0 0 / 3px 3px;
+  color: var(--label);
+  font: 600 var(--fs-tag-9)/1.5 var(--mono);
+  letter-spacing: .04em;
+  text-align: center;
+  text-transform: none
+}
+
+.pal-foot kbd + kbd {
+  margin-left: var(--space-1)
+}
+
+/* ── tooltip (one component): data-tip names the control, data-kbd its key ─────────────────────────────
+   One at a time (the hovered control only). In a group (the dock, a pill bar) the first waits --dur-tip,
+   the next ones show at once while the pointer stays in the group (a registered --tip-on that turns on
+   after the delay and off at once). Keyboard focus shows it without the wait. No motion. */
+@property --tip-on {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0
+}
+
+.pal-dock,
+.pill-bar {
+  --tip-on: 0;
+  transition: --tip-on 0s
+}
+
+.pal-dock:hover,
+.pill-bar:hover {
+  --tip-on: 1;
+  transition: --tip-on 0s var(--dur-tip)
+}
+
+.pal-dock:focus-within,
+.pill-bar:focus-within {
+  --tip-on: 1
+}
+
+/* pressing hides it; it comes back after the wait */
+.pal-dock:active,
+.pill-bar:active {
+  --tip-on: 0
+}
+
+[data-tip] {
+  position: relative
+}
+
+[data-tip]::after,
+[data-tip][data-kbd]::before {
+  position: absolute;
+  z-index: 90;
+  right: 0;
+  bottom: calc(100% + var(--space-2));
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none
+}
+
+[data-tip]::after {
+  content: attr(data-tip);
+  height: 24px;
+  padding: 0 var(--space-2);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  box-shadow: var(--shadow-raised);
+  color: var(--value);
+  font: 500 var(--fs-label-12)/22px var(--mono);
+  letter-spacing: .02em;
+  text-transform: none;
+  white-space: nowrap
+}
+
+/* the keycap sits inside the bubble's right end */
+[data-tip][data-kbd]::after {
+  padding-right: 4.2em
+}
+
+[data-tip][data-kbd]::before {
+  content: attr(data-kbd);
+  z-index: 91;
+  right: var(--space-2);
+  bottom: calc(100% + var(--space-2) + 4px);
+  height: 16px
+}
+
+[data-tip]:hover::after,
+[data-tip][data-kbd]:hover::before {
+  visibility: visible;
+  opacity: var(--tip-on)
+}
+
+[data-tip]:focus-visible::after,
+[data-tip][data-kbd]:focus-visible::before {
+  visibility: visible;
+  opacity: 1
+}
+
+[data-tip]:active::after,
+[data-tip][data-kbd]:active::before {
+  opacity: 0
+}

@@ -1,0 +1,85 @@
+/* App styles: the touchable hero (home only) */
+/* ── T2: the touchable hero (home only, docs/LAYOUT-THEME-PLAN.md §1c #2) ──────────────────────────────────
+   The slot is first-load CSS so the box is there before its lazy chunk (src/components/hero/) fills it: beside
+   the header on wide screens, after the board on narrower ones (scroll-first: the cards come first on a phone). */
+.home-hero {
+  width: min(100%, 420px);
+  margin: 0
+}
+
+.home-hero-slot {
+  aspect-ratio: 1;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface)
+}
+
+/* wide: a 216 px card with its legend beside it, floated right of the header (it is as tall as the header) */
+@media (min-width: 1280px) {
+  .home-hero {
+    float: right;
+    width: 428px;
+    margin: 0 0 var(--gap-group) var(--gap-action)
+  }
+
+  .home-hero-slot {
+    width: 216px
+  }
+}
+
+@media (max-width: 1279px) {
+  .boards-view {
+    display: flex;
+    flex-direction: column
+  }
+
+  .home-hero {
+    order: 1;
+    margin-top: var(--gap-section)
+  }
+}
+
+/* figure captions (Linear-style legends, §1c #14): one meta line, mono, under the figure */
+.fig-cap {
+  margin: var(--space-2) 0 0;
+  color: var(--mute);
+  font: 400 var(--fs-label-12)/1.5 var(--mono);
+  letter-spacing: .02em
+}
+
+.fig-cap b {
+  margin-right: var(--space-2);
+  color: var(--label);
+  font-weight: 500;
+  letter-spacing: .12em
+}
+
+/* the live number band (§1c #13): one engine stat in dot type, in the footer band */
+.live-band {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--gap-group) var(--space-5);
+  min-height: 40px
+}
+
+/* the tool dock in the top bar (desktop): it no longer floats over cards; tips open downwards */
+.topbar-dock .pal-dock {
+  position: static
+}
+
+.topbar-dock [data-tip]::after {
+  top: calc(100% + var(--space-2));
+  bottom: auto
+}
+
+.topbar-dock [data-tip][data-kbd]::before {
+  top: calc(100% + var(--space-2) + 4px);
+  bottom: auto
+}
+
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+  .topbar-dock {
+    display: none
+  }
+}

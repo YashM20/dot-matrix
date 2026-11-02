@@ -182,7 +182,7 @@ There is no substitute typeface — the bitmap dot-font *is* the typography syst
 - **Figure legends.** One mono meta line under a figure: `FIG 03 · <subject> · <grid> · <pitch>` (`.fig-cap`, and the essay's `figcaption[data-fig]`).
 
 ### Board grid (T3, docs/LAYOUT-THEME-PLAN.md §3)
-Boards declare intent, not columns. `BoardMeta.density` (`src/widgets/manifest.ts`) is `hero`, `standard` or `dense`; a board without one, new boards included, is `standard`. The grid (`.board-grid[data-density]`, `src/App.css`) is `repeat(auto-fill, minmax(--card-min, 1fr))`, so the column count follows the frame's width, held between the visitor's CARD SIZE bounds: at most `--board-cols-max` columns (one more on a dense board) and at least `--board-cols-min`. The track's minimum is `clamp(width of the cap's columns, --card-min, width of the floor's columns)`. `columns` in the manifest is the reference sheet's count: snapshots and the entry stagger use it, the site grid does not.
+Boards declare intent, not columns. `BoardMeta.density` (`src/widgets/manifest.ts`) is `hero`, `standard` or `dense`; a board without one, new boards included, is `standard`. The grid (`.board-grid[data-density]`, `src/site/app/grid.css`) is `repeat(auto-fill, minmax(--card-min, 1fr))`, so the column count follows the frame's width, held between the visitor's CARD SIZE bounds: at most `--board-cols-max` columns (one more on a dense board) and at least `--board-cols-min`. The track's minimum is `clamp(width of the cap's columns, --card-min, width of the floor's columns)`. `columns` in the manifest is the reference sheet's count: snapshots and the entry stagger use it, the site grid does not.
 
 | Density | `--card-min` | For | Boards |
 |---|---|---|---|
@@ -526,7 +526,7 @@ The HTML chrome (sheets, menus, pills, tabs) animates with these durations only 
 Allowlisted exceptions (effects, not chrome): the X-RAY flash (1.2 s), the nixie flicker loop (5.3 s), and the 1 ms reduced-motion end-state trick.
 
 ### Chrome states (CSS)
-Every HTML control in the chrome has the same four states plus disabled, from the same tokens (`src/App.css` › chrome states). `scripts/site/css-tokens.ts` checks that every `:hover` selector has its `:active` and `:focus-visible` twin, that `--glow*` appears only on active / focus / live selectors, that no `outline: none` lacks a replacement, and that nothing uses `transition: all`.
+Every HTML control in the chrome has the same four states plus disabled, from the same tokens (`src/site/app/chrome.css` › chrome states). `scripts/site/css-tokens.ts` checks that every `:hover` selector has its `:active` and `:focus-visible` twin, that `--glow*` appears only on active / focus / live selectors, that no `outline: none` lacks a replacement, and that nothing uses `transition: all`.
 
 | State | Look | Motion |
 |---|---|---|
@@ -621,7 +621,7 @@ Unlike a typical responsive system that reflows layout, Dot/480's primary respon
 - **Board grid:** auto-fill per density, between the CARD SIZE bounds (› Board grid). Gutters (`{spacing.cardGap}`) hold constant, and cards stay square down to the single-column stack.
 - **Phone header (T3):** the intro is one line (a short sentence, the essay link and ×; the targets overhang the line), and the two picker strips sit under it: intro + picker ≤ 120 px. ALL leads the group strip and scrolls with it. Each strip fades at an edge only while there is more to scroll that way: a scroll-driven `mask-image`, `animation-timeline: scroll(self inline)`; a strip that fits has no timeline, so it has no fade.
 - **Wide widgets:** waveform, chat, and message-list cards span 2 columns at desktop/tablet, collapse to full-width single-column at mobile without changing internal dot density.
-- **Phone shell (≤ 760 px, `src/site/mobile.css`):** the site chrome becomes an app shell. A compact sticky top bar names the place (on EXPLORE it opens the board sheet) and holds search; a bottom tab bar (EXPLORE / MAKE / ABOUT / TOOLS) sits over the home indicator; the board groups and boards are sideways thumb strips; the dock, the DISPLAY ▾ menu and the ⌘K palette become bottom sheets (grab handle, swipe down, backdrop, Escape). Every chrome target is ≥ 44 px; the accent marks only the active tab, board and live state. Layout vars `--app-top` and `--tabbar-h` (both include the safe-area insets) let fixed or pinned UI sit clear of the bars.
+- **Phone shell (≤ 760 px, `src/site/mobile/`):** the site chrome becomes an app shell. A compact sticky top bar names the place (on EXPLORE it opens the board sheet) and holds search; a bottom tab bar (EXPLORE / MAKE / ABOUT / TOOLS) sits over the home indicator; the board groups and boards are sideways thumb strips; the dock, the DISPLAY ▾ menu and the ⌘K palette become bottom sheets (grab handle, swipe down, backdrop, Escape). Every chrome target is ≥ 44 px; the accent marks only the active tab, board and live state. Layout vars `--app-top` and `--tabbar-h` (both include the safe-area insets) let fixed or pinned UI sit clear of the bars.
 - **Renderer fallback:** below a device-performance threshold (detected via a quick canvas-fill-rate probe), all widgets fall back to Canvas rendering regardless of dot count, trading copy-paste-ability for guaranteed frame rate.
 
 ### Image Behavior

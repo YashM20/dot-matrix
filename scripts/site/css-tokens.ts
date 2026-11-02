@@ -32,10 +32,10 @@ const ROOT = 'src'
 const TOKEN_FILES = new Set(['src/tokens.css', 'src/site/theme/themes.css'])
 /** Intentional exceptions: file + a substring of `prop: value`, with the reason. Keep it short. */
 const ALLOW: { file: string; has: string; why: string }[] = [
-  { file: 'src/App.css', has: 'xr-flash 1.2s', why: 'X-RAY outline flash: a one-shot effect, not chrome motion' },
-  { file: 'src/App.css', has: 'skin-nixie-flicker 5.3s', why: 'nixie flicker loop period: display physics' },
-  { file: 'src/App.css', has: 'animation-duration: 1ms', why: 'reduced motion: jump to the end state but still fire animationend' },
-  { file: 'src/App.css', has: 'padding-bottom: min(42dvh, 400px)', why: 'room for the pinned canvas: mirrors its height cap, not rhythm' },
+  { file: 'src/site/app/xray.css', has: 'xr-flash 1.2s', why: 'X-RAY outline flash: a one-shot effect, not chrome motion' },
+  { file: 'src/site/app/skins.css', has: 'skin-nixie-flicker 5.3s', why: 'nixie flicker loop period: display physics' },
+  { file: 'src/site/app/skins.css', has: 'animation-duration: 1ms', why: 'reduced motion: jump to the end state but still fire animationend' },
+  { file: 'src/site/app/xray-tab.css', has: 'padding-bottom: min(42dvh, 400px)', why: 'room for the pinned canvas: mirrors its height cap, not rhythm' },
 ]
 
 type Cat = 'colour' | 'spacing' | 'type' | 'radius' | 'duration'
@@ -92,10 +92,10 @@ console.log(`css tokens: ${violations} raw literal(s) in ${files.length - TOKEN_
 // ── consistency rules ────────────────────────────────────────────────────────────────────────────────────────────
 /** `outline: none` with a replacement elsewhere: file + selector substring, with the reason. */
 const OUTLINE_OK: { file: string; sel: string; why: string }[] = [
-  { file: 'src/App.css', sel: '.dot-a11y-ctl', why: 'in-card controls: the card draws focus as marching dots (DESIGN.md › Interaction)' },
+  { file: 'src/site/app/input.css', sel: '.dot-a11y-ctl', why: 'in-card controls: the card draws focus as marching dots (DESIGN.md › Interaction)' },
   { file: 'src/essay/essay.css', sel: '.dot-a11y-ctl', why: 'in-card controls: the card draws focus as marching dots' },
-  { file: 'src/App.css', sel: '.dw-code textarea', why: 'the editor box shows focus: .dw-editor:focus-within' },
-  { file: 'src/App.css', sel: '.pal-input', why: 'the field row shows focus: .pal-field:focus-within' },
+  { file: 'src/site/app/dots.css', sel: '.dw-code textarea', why: 'the editor box shows focus: .dw-editor:focus-within' },
+  { file: 'src/site/app/raised.css', sel: '.pal-input', why: 'the field row shows focus: .pal-field:focus-within' },
   { file: 'src/components/editor/editor.css', sel: '.ed-viewport', why: 'the canvas shows focus: .ed-viewport:focus-visible' },
   { file: 'src/components/editor/editor.css', sel: '.ed-field input:focus', why: 'fields show focus with the accent border' },
   { file: 'src/components/game/hive.css', sel: '.hive-screen', why: 'the full-screen game owns the screen; it has no other focus target' },

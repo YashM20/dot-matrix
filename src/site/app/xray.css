@@ -1,0 +1,331 @@
+/* App styles: X-ray */
+/* ── C10 X-ray (.xr-*) ─────────────────────────────────────────────────────────────── */
+.dot-card-body:has(> .xr-overlay) {
+  position: relative
+}
+
+.dot-card:has(.xr-overlay) {
+  border-color: color-mix(in srgb, var(--tint) 22%, transparent)
+}
+
+.xr-overlay {
+  position: absolute;
+  pointer-events: none;
+  z-index: 3;
+  font: 500 var(--fs-tag-9)/1.35 var(--mono);
+  letter-spacing: .06em;
+  text-align: left
+}
+
+/* the guide lines' ink: the canvas strokes in this colour at a few alphas (light on dark, ink on paper) */
+.xr-grid {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--tint)
+}
+
+.xr-hud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-1);
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  color: var(--label);
+  letter-spacing: .12em
+}
+
+.xr-hud b {
+  color: var(--red-text);
+  font-weight: 600
+}
+
+.xr-tip {
+  position: absolute;
+  transform: translate(12px, 12px);
+  min-width: 190px;
+  padding: var(--space-2) var(--space-2);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tint) 18%, transparent);
+  border-radius: var(--radius-ctl);
+  color: var(--value);
+  white-space: nowrap
+}
+
+.xr-tip--left {
+  transform: translate(calc(-100% - 12px), 12px)
+}
+
+.xr-tip--up {
+  transform: translate(12px, calc(-100% - 12px))
+}
+
+.xr-tip--left.xr-tip--up {
+  transform: translate(calc(-100% - 12px), calc(-100% - 12px))
+}
+
+.xr-tip b {
+  color: var(--tint)
+}
+
+.xr-tip-dim {
+  color: var(--mute)
+}
+
+.xr-flash {
+  animation: xr-flash 1.2s ease-out
+}
+
+@keyframes xr-flash {
+  0%, 30% { box-shadow: 0 0 0 2px var(--red) }
+  100% { box-shadow: 0 0 0 2px transparent }
+}
+
+.xr-panel {
+  position: fixed;
+  right: 14px;
+  top: 72px;
+  z-index: 40;
+  width: min(340px, calc(100vw - 28px));
+  max-height: calc(100vh - 150px);
+  display: flex;
+  flex-direction: column;
+  /* a raised panel, opaque: it sits over running cards, where a blur would be redrawn every frame */
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-raised);
+  color: var(--label);
+  font: 500 var(--fs-label-12)/1.45 var(--mono);
+  text-align: left;
+  overflow: hidden
+}
+
+.xr-panel--empty {
+  padding: var(--space-4);
+  gap: var(--space-2)
+}
+
+.xr-panel button {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  color: var(--label);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .12em;
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer
+}
+
+.xr-panel button:hover,
+.xr-panel button:focus-visible {
+  border-color: var(--line-hover);
+  color: var(--value)
+}
+
+.xr-panel button:active {
+  background-color: var(--wash-press);
+  color: var(--value)
+}
+
+.xr-panel button[aria-pressed="true"],
+.xr-tabs button.selected {
+  border-color: var(--red);
+  color: var(--red-text)
+}
+
+.xr-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4) var(--space-2)
+}
+
+.xr-panel-head b {
+  display: block;
+  color: var(--value);
+  letter-spacing: .14em
+}
+
+.xr-panel-head small {
+  color: var(--mute)
+}
+
+.xr-runtime {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-2)
+}
+
+.xr-runtime div {
+  background: var(--raised);
+  border-radius: var(--radius-ctl);
+  padding: var(--space-1) var(--space-2)
+}
+
+.xr-runtime dt {
+  color: var(--mute);
+  font-size: var(--fs-label-12);
+  letter-spacing: .14em
+}
+
+.xr-runtime dd {
+  margin: 0;
+  color: var(--value)
+}
+
+.xr-actions,
+.xr-tabs {
+  display: flex;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-2)
+}
+
+.xr-tabpanel {
+  flex: 1;
+  overflow: auto;
+  padding: 0 var(--space-4) var(--space-4);
+  min-height: 80px
+}
+
+.xr-layers {
+  list-style: none;
+  margin: 0;
+  padding: 0
+}
+
+.xr-layers li {
+  display: grid;
+  grid-template-columns: 22px 1fr auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--line);
+  border-image: var(--hair-x) 1
+}
+
+.xr-layers li.xr-off {
+  opacity: .42
+}
+
+.xr-layers small {
+  display: block;
+  color: var(--mute)
+}
+
+.xr-idx {
+  color: var(--mute)
+}
+
+.xr-lname {
+  color: var(--value);
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.xr-data {
+  width: 100%;
+  border-collapse: collapse
+}
+
+.xr-data th,
+.xr-data td {
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--line);
+  border-image: var(--hair-x) 1;
+  text-align: left;
+  font-weight: 500
+}
+
+.xr-data td {
+  text-align: right;
+  color: var(--value);
+  font-variant-numeric: tabular-nums
+}
+
+.xr-describe p {
+  margin: 0 0 var(--space-2);
+  color: var(--value)
+}
+
+.xr-note {
+  color: var(--mute) !important
+}
+
+.xr-spec {
+  margin: 0;
+  font: var(--fs-label-12)/1.35 var(--mono);
+  color: var(--label);
+  white-space: pre-wrap;
+  word-break: break-all
+}
+
+.xr-time {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 45;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: min(760px, calc(100vw - 28px));
+  padding: var(--space-2) var(--space-3);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--red) 50%, transparent);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-raised);
+  color: var(--label);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .12em
+}
+
+.xr-time-label {
+  color: var(--red-text);
+  white-space: nowrap
+}
+
+.xr-time input[type="range"] {
+  flex: 1;
+  accent-color: var(--red);
+  min-width: 80px
+}
+
+.xr-time button {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  color: var(--label);
+  font: inherit;
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer;
+  white-space: nowrap
+}
+
+.xr-time button:hover,
+.xr-time button:focus-visible {
+  border-color: var(--line-hover);
+  color: var(--value)
+}
+
+.xr-time button:active {
+  background-color: var(--wash-press);
+  color: var(--value)
+}
+
+.xr-time-t {
+  min-width: 82px;
+  color: var(--value);
+  font-variant-numeric: tabular-nums
+}
+
+.xr-time-go {
+  color: var(--value) !important
+}

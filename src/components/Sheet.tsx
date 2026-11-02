@@ -2,7 +2,7 @@ import { useEffect, useRef, type ReactNode } from 'react'
 
 /**
  * A bottom sheet (phones): a native modal `<dialog>`, so the page behind is inert (focus stays inside),
- * Escape closes it and focus returns to the opener. It is a scroll-snap sheet (src/site/mobile.css): the
+ * Escape closes it and focus returns to the opener. It is a scroll-snap sheet (src/site/mobile/sheet.css): the
  * dialog scrolls between two stops, "closed" (an empty screen above the panel) and "open" (the panel's
  * end), so dragging it down is the browser's own scroll, with no gesture code. It opens at the open stop; a
  * drag or flick that settles on the closed stop closes it, as do DONE, Escape and a tap above or beside the

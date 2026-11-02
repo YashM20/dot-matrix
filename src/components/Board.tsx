@@ -87,7 +87,7 @@ function LoadedBoard({ id, leaving }: { id: string; leaving: boolean }) {
       <p className="board-blurb">{blurb}</p>
       {/* C4: the levels board opens HIVE in play mode (the cards stay as attract-mode previews) */}
       {board.id === 'levels' && <HiveStart theme={theme} />}
-      {/* intent, not columns: App.css turns the density into an auto-fill grid (DESIGN.md › Board grid) */}
+      {/* intent, not columns: src/site/app/grid.css turns the density into an auto-fill grid (DESIGN.md › Board grid) */}
       <div className="board-grid" data-density={board.density ?? 'standard'}>
         {/* cards enter (and exit) on a diagonal stagger, each revealing its dots in Bayer order */}
         {/* sound (C5): on the instrument / scope boards the shared store drives src/audio and the cards get live analysis */}

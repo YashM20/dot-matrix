@@ -25,7 +25,7 @@
 }
 .ed-root button { font: inherit; color: inherit; cursor: pointer }
 .ed-root button:disabled { cursor: default; opacity: .4 }
-/* focus is the site's accent ring (App.css); dense rows keep it close */
+/* focus is the site's accent ring (src/site/app/chrome.css); dense rows keep it close */
 .ed-root :focus-visible { outline-offset: 1px }
 
 /* ── top bar ── */
@@ -85,7 +85,7 @@
   display: grid;
   min-width: 190px;
   padding: var(--space-1)
-  /* surface, edge, radius and blur: the shared raised layer (App.css) */
+  /* surface, edge, radius and blur: the shared raised layer (src/site/app/raised.css) */
 }
 .ed-menu button { display: flex; justify-content: space-between; gap: var(--space-3); text-align: left; padding: var(--space-2) var(--space-2); background: none; border: 0 }
 .ed-menu button:hover, .ed-menu button:focus-visible { background: var(--wash-hover) }
@@ -372,7 +372,7 @@ html.ed-scroll-lock .pal-dock { display: none }
 }
 .ed-sheet.dragging { transition: none }
 .ed-sheet-grab { flex: none; height: 24px; display: grid; place-items: center; touch-action: none; cursor: grab }
-/* .ed-sheet-grab i: the shared five-dot grab handle (src/site/mobile.css) */
+/* .ed-sheet-grab i: the shared five-dot grab handle (src/site/mobile/sheet.css) */
 .ed-sheet-head { flex: none; display: flex; align-items: center; gap: var(--space-1); padding: 0 var(--space-1) 0 var(--space-4); border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1 }
 .ed-sheet-head > b { flex: 1; font: 600 var(--fs-label-12) var(--mono); letter-spacing: .16em; color: var(--value) }
 .ed-tabs--sheet { flex: 1; border: 0; padding: 0 }

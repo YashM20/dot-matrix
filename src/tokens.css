@@ -65,7 +65,7 @@
   --frame-inset: calc(max(0px, (100vw - var(--frame-max)) / 2) + var(--frame-pad));
   --card-max: min(62svh, 520px);        /* a board never shows a card taller than ~62% of the screen */
   /* board density (BoardMeta.density): the narrowest a card gets before the grid drops a column. The grid
-     queries in App.css mirror these numbers: change both together (DESIGN.md › Board grid) */
+     queries in src/site/app/grid.css mirror these numbers: change both together (DESIGN.md › Board grid) */
   --card-min-hero: 340px;               /* showpieces: 3 columns in the frame, 2 on a tablet */
   --card-min-standard: 240px;           /* the default: up to 5 columns at 1440 (COMPACT), 2 on a tablet, 1 on a phone */
   --card-min-dense: 200px;              /* dashboards of small tiles: up to 6 columns (COMPACT) */

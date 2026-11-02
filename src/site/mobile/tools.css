@@ -1,0 +1,130 @@
+/* Phone styles: the tools sheet */
+/* the tools sheet: the dock's toggles as tiles, then the DISPLAY choice */
+.tools-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  -webkit-user-select: none;
+  user-select: none
+}
+
+.tools-grid button {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 72px;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  background: color-mix(in srgb, var(--tint) 3%, transparent);
+  color: var(--value);
+  text-align: left;
+  cursor: pointer
+}
+
+.tools-grid button:hover,
+.tools-grid button:focus-visible {
+  border-color: var(--line-hover);
+  background-color: var(--wash-hover)
+}
+
+.tools-grid button:active {
+  background-color: var(--wash-press)
+}
+
+.tools-grid button:first-child {
+  grid-column: 1 / -1;
+  min-height: 52px;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between
+}
+
+.tools-grid b {
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .16em
+}
+
+.tools-grid span {
+  color: var(--mute);
+  font: 400 var(--fs-label-12)/1.35 var(--mono);
+  letter-spacing: .02em
+}
+
+/* a tool that is on: the accent, its wash */
+.tools-grid [aria-pressed="true"] {
+  border-color: var(--red);
+  background-color: var(--glow-wash)
+}
+
+.tools-grid [aria-pressed="true"] b {
+  color: var(--red-text)
+}
+
+.tools-grid [aria-pressed="true"] b::after {
+  content: ' · ON'
+}
+
+.tools-head {
+  margin: var(--space-5) var(--space-2) var(--space-2);
+  color: var(--mute);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .18em
+}
+
+.skin-list {
+  display: grid;
+  gap: var(--space-1)
+}
+
+.skin-list button {
+  grid-template-columns: 6px 64px 1fr;
+  min-height: 48px
+}
+
+.skin-list button i {
+  grid-row: auto;
+  background: currentColor;
+  opacity: .4
+}
+
+.skin-list button.selected i {
+  opacity: 1
+}
+
+.skin-list-clack {
+  width: 100%;
+  min-height: 44px;
+  margin-top: var(--space-2);
+  border: 1px dotted color-mix(in srgb, var(--tint) 20%, transparent);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--mute);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .14em;
+  cursor: pointer
+}
+
+.skin-list-clack b {
+  color: var(--value);
+  font-weight: inherit
+}
+
+.skin-list-clack:hover,
+.skin-list-clack:focus-visible {
+  border-color: var(--line-hover);
+  color: var(--label)
+}
+
+.skin-list-clack:active {
+  background-color: var(--wash-press)
+}
+
+/* one blur at a time: while a sheet or the palette is up, the bars under its scrim stop blurring */
+html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important
+}

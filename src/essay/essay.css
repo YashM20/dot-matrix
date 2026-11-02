@@ -22,7 +22,7 @@ html { background: var(--bg); scroll-behavior: smooth; -webkit-text-size-adjust:
 body { margin: 0; background: var(--bg); color: var(--label); font: var(--fs-lead-18)/1.65 var(--sans); -webkit-font-smoothing: antialiased }
 a { color: var(--value); text-decoration-color: color-mix(in srgb, var(--tint) 30%, transparent); text-underline-offset: 3px }
 a:hover, a:focus-visible, a:active { text-decoration-color: var(--value) }
-/* focus is the accent ring, as on the site (src/App.css) */
+/* focus is the accent ring, as on the site (src/site/app/chrome.css) */
 :focus-visible { outline: 1px solid var(--red); outline-offset: 3px }
 code { font: .86em var(--mono); color: var(--value); background: var(--raised); padding: .08em .35em; border-radius: var(--radius-sm); white-space: nowrap }
 strong, b { color: var(--value); font-weight: 600 }

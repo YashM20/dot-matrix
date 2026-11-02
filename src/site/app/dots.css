@@ -1,0 +1,129 @@
+/* App styles: the DOTS tab (Field IR REPL, share link, remix graph) */
+/* ── DOTS tab (Dwitter for dots): Field IR REPL, share link, remix graph ── */
+
+.dw-editor {
+  display: grid;
+  grid-template-columns: 34px 1fr;
+  background: var(--well);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  overflow: hidden;
+  font: var(--fs-label-12)/18px var(--mono)
+}
+
+.dw-editor--error {
+  border-color: color-mix(in srgb, var(--red) 45%, transparent)
+}
+
+/* the code box is the focus target (its textarea draws no outline of its own) */
+.dw-editor:focus-within {
+  border-color: var(--red);
+  box-shadow: var(--glow-halo)
+}
+
+.dw-gutter {
+  padding: var(--space-2) 0;
+  overflow: hidden;
+  color: var(--mute);
+  text-align: right;
+  user-select: none;
+  max-height: 360px;
+  border-right: 1px solid var(--line);
+  border-image: var(--hair-y) 1
+}
+
+.dw-gutter span {
+  display: block;
+  padding-right: var(--space-2)
+}
+
+.dw-gutter .dw-gutter-err {
+  color: var(--red-text)
+}
+
+.dw-code {
+  position: relative;
+  min-width: 0
+}
+
+.dw-mirror,
+.dw-code textarea {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+  letter-spacing: 0;
+  tab-size: 2;
+  white-space: pre;
+  overflow: auto;
+  height: 360px;
+  width: 100%
+}
+
+.dw-mirror {
+  position: absolute;
+  inset: 0;
+  color: transparent;
+  pointer-events: none;
+  overflow: hidden
+}
+
+.dw-mirror mark {
+  color: transparent;
+  background: color-mix(in srgb, var(--red) 28%, transparent);
+  border-bottom: 2px solid var(--red)
+}
+
+.dw-code textarea {
+  position: relative;
+  display: block;
+  resize: none;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--value);
+  caret-color: var(--red);
+  box-shadow: none
+}
+
+.dw-error {
+  grid-column: 1 / -1;
+  text-align: left;
+  border: 0;
+  border-top: 1px solid var(--line);
+  border-image: var(--hair-x) 1;
+  background: color-mix(in srgb, var(--red) 8%, transparent);
+  color: var(--label);
+  font: var(--fs-label-12) var(--mono);
+  padding: var(--space-2) var(--space-3);
+  cursor: pointer
+}
+
+.dw-error:hover,
+.dw-error:focus-visible {
+  color: var(--value)
+}
+
+.dw-error:active {
+  background-color: color-mix(in srgb, var(--red) 14%, transparent)
+}
+
+.dw-error b,
+.dw-bad,
+.dw-warn b {
+  color: var(--red-text)
+}
+
+.dw-status {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  margin-top: var(--space-2);
+  color: var(--mute);
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .12em
+}
+
+.dw-status b {
+  color: var(--value)
+}

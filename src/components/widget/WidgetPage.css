@@ -85,7 +85,7 @@
   color: var(--value)
 }
 
-/* tooltips (App.css › tooltip): the top bar's open below, its first pill's from the left edge */
+/* tooltips (src/site/app/tips.css): the top bar's open below, its first pill's from the left edge */
 .wp-top [data-tip]::after {
   top: calc(100% + var(--space-2));
   bottom: auto
@@ -290,7 +290,7 @@
   display: flex;
   flex-direction: column;
   padding: var(--space-1)
-  /* surface, edge, radius and blur: the shared raised layer (App.css) */
+  /* surface, edge, radius and blur: the shared raised layer (src/site/app/raised.css) */
 }
 
 .wp-more button {
@@ -425,4 +425,4 @@ body:has(.wp) .pal-toast {
   }
 }
 
-/* motion: the shared chrome states in App.css (in at once, out over --dur-out; none under reduced motion) */
+/* motion: the shared chrome states in src/site/app/chrome.css (in at once, out over --dur-out; none under reduced motion) */

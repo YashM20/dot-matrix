@@ -5,7 +5,7 @@
 @import "./site/theme/themes.css";
 
 /*
-  Page base. Tokens live in src/tokens.css (DESIGN.md has the tables); component styles in App.css.
+  Page base. Tokens live in src/tokens.css (DESIGN.md has the tables); component styles in src/site/app/ and src/site/mobile/ (imported in order by App.tsx).
   Oxanium is the display face: its squared geometry is the closest real typeface to the bitmap dot-font.
 */
 
