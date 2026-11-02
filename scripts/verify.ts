@@ -203,4 +203,10 @@ shareChecks(assert)
   fractalChecks(assert)
 }
 
+// oldschool effects (IQ6 #67): deformations, dynamic clouds, feedback replay and the board (scripts/oldschool.ts)
+{
+  const { oldschoolChecks } = await import('./oldschool')
+  oldschoolChecks(assert)
+}
+
 done('All acceptance checks passed')

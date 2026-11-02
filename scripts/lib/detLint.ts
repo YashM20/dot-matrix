@@ -26,6 +26,7 @@ export const DET_PATHS = [
   'src/engine/squares/', // Q: masks, geometry, the tetris sim (Q1)
   'src/engine/algo/linfVoronoi', 'src/engine/algo/schotter', 'src/engine/algo/pixelSort', 'src/engine/algo/glitch', 'src/engine/algo/truchet', // Q3: the square field pack
   'src/engine/fractal/', // IQ7: escape-time, trap and density fractals (#68)
+  'src/engine/oldschool/', 'src/widgets/boards/oldschool', // IQ6: deformations, clouds, the feedback sim (#67) and the board drawn with them
 ] as const
 
 const BANNED = /\bMath\.(random|sin|cos|tan|asin|acos|atan|atan2|hypot|exp|expm1|log|log1p|log2|log10|pow|cbrt|sinh|cosh|tanh)(?![\w$])/

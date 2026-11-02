@@ -226,4 +226,10 @@ export const catalog: readonly CatalogRow[] = [
   ['fr-flame', 'h1x2bnpa', 'fractals'],
   ['fr-icon', 'y2kr798p', 'fractals'],
   ['fr-lyapunov', '4fqq6940', 'fractals'],
+  ['os-tunnel', 'x490y27j', 'oldschool'],
+  ['os-bloom', 'yxvs2859', 'oldschool'],
+  ['os-floor', 'c3zrc7wk', 'oldschool'],
+  ['os-sky', 'b2z6011q', 'oldschool'],
+  ['os-echo', '47fv6r6x', 'oldschool'],
+  ['os-star', '5fwje4zt', 'oldschool'],
 ]

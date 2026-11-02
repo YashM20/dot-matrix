@@ -46,6 +46,9 @@ Ported articles:
 | [IFS fractals](https://iquilezles.org/articles/ifsfractals/) | The chaos game with \|det\|-weighted picks, the twist and inversion variations, the address, the square-root density tone | `src/engine/fractal/ifs.ts`, `density.ts` |
 | [Lyapunov fractals](https://iquilezles.org/articles/lyapunovfractals/) | The exponent with one logarithm after the loop (folded when the product over- or underflows) | `src/engine/fractal/lyapunov.ts` |
 | [Icon images](https://iquilezles.org/articles/iconimages/) | The symmetric icon map, rendered as a density | `src/engine/fractal/icon.ts` |
+| [Plane deformations](https://iquilezles.org/articles/deform/) | The eight formula pairs and the worked example, the look-up table and the scrolled read | `src/engine/oldschool/deform.ts` |
+| [2D dynamic clouds](https://iquilezles.org/articles/dynclouds/) | Octaves drifting at their own speeds, the threshold and sharpness remap, the march toward the sun | `src/engine/oldschool/clouds.ts` |
+| [Feedback effect](https://iquilezles.org/articles/feedbackfx/) | The rotated and scaled quad, the faded copy into the centre, the untouched border | `src/engine/oldschool/feedback.ts` |
 
 Credits the articles give, carried over:
 
