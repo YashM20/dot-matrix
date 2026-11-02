@@ -6,7 +6,41 @@
 
 The work a card is built on, grouped by source. Each card's page shows the same credit under its blurb.
 
-No card carries a credit yet.
+### [Geometric orbit traps](https://iquilezles.org/articles/ftrapsgeometric/)
+
+By Inigo Quilez.
+
+- Fractals Trap (`fr-trap`), board `/fractals/`: technique
+
+### [Icon images](https://iquilezles.org/articles/iconimages/)
+
+By Inigo Quilez, Michael Field, Martin Golubitsky.
+
+- Fractals Icon (`fr-icon`), board `/fractals/`: technique
+
+### [IFS fractals](https://iquilezles.org/articles/ifsfractals/)
+
+By Inigo Quilez.
+
+- Fractals Flame (`fr-flame`), board `/fractals/`: technique
+
+### [Lyapunov fractals](https://iquilezles.org/articles/lyapunovfractals/)
+
+By Inigo Quilez, Mario Markus.
+
+- Fractals Lyapunov (`fr-lyapunov`), board `/fractals/`: technique
+
+### [Popcorn images](https://iquilezles.org/articles/popcorns/)
+
+By Inigo Quilez, Clifford Pickover.
+
+- Fractals Popcorn (`fr-popcorn`), board `/fractals/`: technique
+
+### [Smooth iteration count for generalized Mandelbrot sets](https://iquilezles.org/articles/msetsmooth/)
+
+By Inigo Quilez.
+
+- Fractals Julia (`fr-julia`), board `/fractals/`: technique
 
 ## Code ports
 
@@ -41,3 +75,10 @@ Code ported into the engine, by article. What each port covers, and the credits 
 - [Checkers filtering](https://iquilezles.org/articles/checkerfiltering/)
 - [Improved checkers filtering](https://iquilezles.org/articles/morecheckerfiltering/)
 - [Filtering procedural textures](https://iquilezles.org/articles/filtering/)
+- [Smooth iteration count](https://iquilezles.org/articles/msetsmooth/)
+- [Geometric orbit traps](https://iquilezles.org/articles/ftrapsgeometric/)
+- [Procedural orbit traps](https://iquilezles.org/articles/ftrapsprocedural/)
+- [Popcorn images](https://iquilezles.org/articles/popcorns/)
+- [IFS fractals](https://iquilezles.org/articles/ifsfractals/)
+- [Lyapunov fractals](https://iquilezles.org/articles/lyapunovfractals/)
+- [Icon images](https://iquilezles.org/articles/iconimages/)
