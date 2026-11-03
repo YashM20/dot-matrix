@@ -11,7 +11,8 @@
  *   LINES    a 36-line screen on rect cells, each line one stroke whose weight is the tone, over a solid-bar spectrum
  *
  * The Q3 pack sits in squaresPack.ts; the aperiodic floors (XQ: the hat, Ammann–Beenker) in squaresHat.ts and
- * squaresAmmann.ts; the arctic circle and the sandpile (X-advanced #2, #8) in squaresArctic.ts and squaresSandpile.ts.
+ * squaresAmmann.ts; the arctic circle and the sandpile (X-advanced #2, #8) in squaresArctic.ts and squaresSandpile.ts; the ASCII
+ * glyph tiles (Q3.10) in squaresAscii.ts.
  *
  * Chrome as on the algorithms board: the label top-left, the reference faint top-right, a footer rail with a
  * counter and one stat. t = 0 is a finished picture. One red per card, always the live thing.
@@ -34,6 +35,7 @@ import { sqHat } from './squaresHat'
 import { sqAmmann } from './squaresAmmann'
 import { sqArctic } from './squaresArctic'
 import { sqSandpile } from './squaresSandpile'
+import { sqAscii } from './squaresAscii'
 
 export { squareStyle }
 
@@ -438,6 +440,6 @@ export const sqLines: WidgetPreset = {
   },
 }
 
-export const squaresBoard = [sqTetris, sqQuads, sqBlob, sqGameboy, sqTeletext, sqLines, ...squaresPack, sqMorph, sqHat, sqAmmann, sqArctic, sqSandpile]
+export const squaresBoard = [sqTetris, sqQuads, sqBlob, sqGameboy, sqTeletext, sqLines, ...squaresPack, sqMorph, sqHat, sqAmmann, sqArctic, sqSandpile, sqAscii]
 /** The board's sims and sizes, for the checks (`scripts/squares.ts`). */
 export const squaresSources = { game, quadTree, ballsAt, blobFrame, B_OFF, B_LOOP, TETRIS: { w: TW, h: TH, k: TK, origin: T_ORIGIN }, BLOB: { k: BK, origin: B_ORIGIN, w: BW, h: BH }, QUADS: { size: Q_SIZE, k: QK, origin: Q_ORIGIN, splits: Q_SPLITS } }

@@ -15,6 +15,8 @@
 
 **Arctic circle and sandpile (part of #36):** `sq-arctic` (domino shuffling to order 29, the frozen edge red) and `sq-sandpile` (the 72 × 58 identity, Dhar's burn as the loop) on `/squares/`; engine in `src/engine/squares/{aztec,sandpile}.ts`, checks in `scripts/arctic.ts` (in verify). The rest of #36 stays open.
 
+**ASCII glyph tiles (part of #36, Q3.10):** `sq-ascii` on `/squares/`, a slow plasma typed onto a 24 × 14 screen of 5 × 7 font glyphs in square dots, ten glyphs ordered by ink, the cursor block red. Engine in `src/engine/squares/ascii.ts` (the alphabet through L's `defineAlphabet`, glyphTiles.ts unedited), checks in `scripts/ascii.ts` (in verify). Not covered by the #26 skin, which redraws existing boards.
+
 **Kintsugi and mud (part of #36, X-advanced #3):** `mat-kintsugi` (an impact-aligned break that stops at the rim or an older seam, the shards part and spring back, the seams fill from the impact out with the filling front red; three breaks a cycle; taps keep breaking the mended plate in memory and heal back after 6 s) and `mat-mud` (drying clay cracking into polygons by T-junctions, the opening crack red) on `/workshop/`; engine in `src/engine/matter/{kintsugi,mudcrack}.ts` (in the determinism lint), checks in `scripts/materials/kintsugi.ts` (`--only kintsugi`). No localStorage: persistence waits on #12.
 
 **Paper fold (part of #36, X-advanced #17):** `mat-fold` on `/workshop/`, a sheet folded crease by crease into a glider (four valleys and a mountain), then unfolded, on a 14.85 s loop; the moving crease is the red, facets lit by their fold history's normal. Engine in `src/engine/matter/fold.ts` (in the determinism lint), checks in `scripts/materials/fold.ts` (`--only fold`). No tap yet.

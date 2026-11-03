@@ -526,7 +526,7 @@ export function squaresChecks(assert: Assert): void {
     assert('squares: blob accent (≤ 1 joined red component per frame over t ∈ 0:20:0.5)', worstComp <= 1 && withNeck > 0, `max ${worstComp}, neck in ${withNeck}/41 frames`)
     // accents: one red element per card frame (the falling piece, the newest split's 4 quads, the neck, the colon)
     // (teletext: the red is the header's two seconds digits: every red dot sits in that 2-character box)
-    const PITCH: Record<string, number> = { 'sq-tetris': 6, 'sq-quads': 2, 'sq-blob': 3, 'sq-gameboy': 2, 'sq-teletext': 1, 'sq-lines': 1, 'sq-schotter': 5, 'sq-blocks': 3, 'sq-sort': 2, 'sq-truchet': 2, 'sq-stitch': 3, 'sq-beads': 6, 'sq-morph': 2, 'sq-hat': 1, 'sq-ammann': 1, 'sq-arctic': 2, 'sq-sandpile': 2 }
+    const PITCH: Record<string, number> = { 'sq-tetris': 6, 'sq-quads': 2, 'sq-blob': 3, 'sq-gameboy': 2, 'sq-teletext': 1, 'sq-lines': 1, 'sq-schotter': 5, 'sq-blocks': 3, 'sq-sort': 2, 'sq-truchet': 2, 'sq-stitch': 3, 'sq-beads': 6, 'sq-morph': 2, 'sq-hat': 1, 'sq-ammann': 1, 'sq-arctic': 2, 'sq-sandpile': 2, 'sq-ascii': 1 }
     // the truchet's live tile is one tile whose motif may cut its ink into up to 6 pieces (arcs, stubs, inverted corners)
     // the hat floor's red is the set of mirrored hats (the tiling's one exception, about 1 hat in 7.85): one piece each
     // the arctic red is the edge of the frozen corners (one ring, which can break where the edge touches the rim);
