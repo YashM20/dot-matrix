@@ -19,6 +19,12 @@ By Inigo Quilez.
 - Scenes Lathe (`sc-lathe`), board `/scenes/`: technique
 - Scenes Twist (`sc-twist`), board `/scenes/`: technique
 
+### [A local cellular model for snow crystal growth](https://webbox.lafayette.edu/~reiterc/mvp/sfn/sfn_pp.pdf)
+
+By Clifford A. Reiter.
+
+- Frost (`mat-frost`), board `/workshop/`: the automaton
+
 ### [Ammann–Beenker tiling, by de Bruijn’s multigrid](https://en.wikipedia.org/wiki/Ammann%E2%80%93Beenker_tiling)
 
 By Robert Ammann, Frans Beenker, Nicolaas Govert de Bruijn.
@@ -43,6 +49,12 @@ By Inigo Quilez.
 
 - Oldschool Echo (`os-echo`), board `/oldschool/`: technique
 
+### [Fractal Dimension of Dielectric Breakdown](https://doi.org/10.1103/PhysRevLett.52.1033)
+
+By Lutz Niemeyer, Luciano Pietronero, Hans J. Wiesmann.
+
+- Lichtenberg (`mat-lichtenberg`), board `/workshop/`: the model (grown the fast way of Kim, Sewall, Sud and Lin, 2007)
+
 ### [Geometric orbit traps](https://iquilezles.org/articles/ftrapsgeometric/)
 
 By Inigo Quilez.
@@ -60,6 +72,12 @@ By Inigo Quilez, Michael Field, Martin Golubitsky.
 By Inigo Quilez.
 
 - Fractals Flame (`fr-flame`), board `/fractals/`: technique
+
+### [Implementation of a method for hydraulic erosion](https://www.firespark.de/resources/downloads/implementation%20of%20a%20methode%20for%20hydraulic%20erosion.pdf)
+
+By Hans Theobald Beyer.
+
+- Erosion (`mat-erosion`), board `/workshop/`: the droplet model
 
 ### [Lyapunov fractals](https://iquilezles.org/articles/lyapunovfractals/)
 

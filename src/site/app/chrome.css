@@ -65,13 +65,40 @@ body {
   letter-spacing: .14em
 }
 
+/* the header is sticky and edge to edge (its content stays on the frame's edge), with the phone bar's glass. It
+   hides while the page scrolls down and comes back on any scroll up (owner decision 3, docs/POLISH-PLAN.md S1): a
+   scroll-state query on the root, no script. Where that query isn't supported the header just stays pinned. It
+   starts at the very top (the shell's top padding moves inside it), so nothing below it moves. */
 .topbar {
-  padding-bottom: var(--gap-group);
+  position: sticky;
+  top: 0;
+  z-index: var(--z-sticky);
+  margin: calc(-1 * var(--gap-group)) calc(-1 * var(--gutter)) 0;
+  padding: var(--gap-group) var(--gutter);
   border-bottom: 1px solid var(--line);
   border-image: var(--hair-x) 1;
+  background: color-mix(in srgb, var(--bg) 84%, transparent);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur);
+  transition: translate var(--dur-enter) var(--ease);
   flex-wrap: wrap;
   gap: var(--gap-group);
   justify-content: flex-start
+}
+
+html {
+  container-type: scroll-state;
+  scroll-padding-top: calc(var(--topbar-h) + var(--gap-group))
+}
+
+/* scrolling down: out of the way, unless focus is in it (Shift+Tab back into the header brings it back). Desktop
+   only: the phone bar (src/site/mobile/phone.css) stays pinned. */
+@media not ((max-width: 760px) or ((max-height: 500px) and (pointer: coarse))) {
+  @container scroll-state(scrolled: bottom) {
+    .topbar:not(:focus-within) {
+      translate: 0 -100%
+    }
+  }
 }
 
 /* brand left; the view tabs and BLOG centred in the space before the right end (DISPLAY, LIVE, the tool dock) */
@@ -211,6 +238,20 @@ label b {
   font-size: var(--fs-label-12)
 }
 
+/* one identity line (cut C10: the pipeline line said the left line again), and the links wrap as whole links into
+   balanced lines, so none is left alone on a line */
+.bottom-row > span:nth-of-type(2) {
+  display: none
+}
+
+.bottom-row > span:last-child {
+  text-wrap: balance
+}
+
+.bottom a {
+  white-space: nowrap
+}
+
 .bottom b {
   font-weight: 500;
   color: var(--label)
@@ -242,10 +283,6 @@ label b {
     gap: var(--gap-group);
     flex-wrap: wrap;
     justify-content: center
-  }
-
-  .bottom-row span:nth-of-type(2) {
-    display: none
   }
 }
 

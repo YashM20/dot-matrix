@@ -3,10 +3,25 @@
 @import '../essay/essay.css';
 
 .legal { padding-top: var(--space-6) }
-.legal-nav { display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; font: 500 var(--fs-label-12) var(--mono); letter-spacing: .16em; margin: 0 0 var(--gap-action) }
+/* the nav is sticky and edge to edge (its links stay on the column), with the app header's glass; it hides while the
+   page scrolls down and comes back on any scroll up (a scroll-state query, no script; unsupported: always pinned) */
+html { container-type: scroll-state; scroll-padding-top: calc(var(--tap) + var(--space-4)) }
+.legal-nav {
+  position: sticky; top: 0; z-index: var(--z-sticky);
+  display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;
+  margin: calc(-1 * var(--space-2)) calc((100% - 100cqi) / 2) var(--gap-action);
+  padding: var(--space-2) calc((100cqi - 100%) / 2);
+  border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1;
+  background: color-mix(in srgb, var(--bg) 84%, transparent); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
+  transition: translate var(--dur-enter) var(--ease);
+  font: 500 var(--fs-label-12) var(--mono); letter-spacing: .16em
+}
+@container scroll-state(scrolled: bottom) { .legal-nav:not(:focus-within) { translate: 0 -100% } }
 .legal-nav a { color: var(--mute); text-decoration: none; display: inline-block; padding: var(--space-2) 0 }
 .legal-nav a:hover, .legal-nav a:focus-visible, .legal-nav a:active, .legal-nav a[aria-current] { color: var(--value) }
 .legal-nav span { display: flex; gap: var(--space-4) }
+/* touch: every nav link is a --tap target */
+@media (pointer: coarse) { .legal-nav a { display: inline-flex; align-items: center; justify-content: center; min-width: var(--tap); min-height: var(--tap); padding-block: 0 } }
 .legal h1 { font: 600 var(--fs-h1-page)/1.1 var(--sans); color: var(--value); letter-spacing: -.01em; margin: 0 }
 .legal .hero { padding-bottom: var(--gap-action) }
 .legal .lede { margin: var(--gap-group) 0 0 }

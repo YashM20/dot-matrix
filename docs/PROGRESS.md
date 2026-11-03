@@ -19,6 +19,8 @@
 
 **IQ8 3D SDF scenes (#69):** `/scenes/` (lazy): `sc-lathe`, `sc-twist`, `sc-posts`, `sc-chain`, sphere-traced on the CPU at lattice 2 and capped at 12 fps; engine in `src/engine/sdf3d/` (primitives, operators, tracer, tetrahedron normals, soft shadows, fog, the outdoors rig, a buffer renderer), checks in `scripts/sdf3d.ts` (in verify). Frame budgets are warn-only (over 4 ms × load on a busy box). GPU tier (`gpuIR`) is a follow-up.
 
+**XM growth and wear (#21):** `mat-lichtenberg` (two-electrode dielectric breakdown, char lit through M1 relief), `mat-erosion` (droplet erosion through the day, checkpointed; each digit weathers since it last changed) and `mat-frost` (Reiter automaton on `hexSites`, one flake a day from a vetted table) on `/workshop/`; engine in `src/engine/matter/{lichtenberg,erosion,reiter}.ts` (in the determinism lint), checks in `scripts/materials.ts --only growth`. Frame budgets are warn-only: the plate's burn frames and the stone's new-minute frame run over 4 ms on a loaded box.
+
 **Next: CP2 · 0.14 · Foundations and fixes** (GitHub milestone). It waits for the owner to say go. Proposed order:
 1. #75 (test tiers: the timing switch in the area scripts, a shared base build) and #76 (the file-size rule; split the 6 files over 800 lines and `goldens/hashes.json` per board). These make the rest faster.
 2. IQ3 #64, IQ1 #62, IQ2 #63, IQ4 #65 (engine packs).

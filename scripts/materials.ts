@@ -17,6 +17,8 @@
  *  - workshop: M3's board (the board checks again, over the nine cards; gx / gy declared by the physics cards), the
  *              determinism lint scope, and one invariant per card (knit, denim, paper, wood, leather, sand, ice,
  *              mercury, thread), with the worlds' tap / drag / heal behaviour
+ *  - growth:   XM's Lichtenberg plate and erosion stone: resumable growth, the discharge, the tap; droplets in batches,
+ *              checkpointed replays, mass, legibility at 19:59 and 23:59, bake and frame costs
  *  - tilt:     M3.10 on both boards: the hub's buckets, no DeviceOrientation / data.light, gx / gy only in step inputs,
  *              tx = ty = 0 ≡ no tilt, and every card's light = sceneLight (pointer → lightSrc 1 → sun)
  * Timings are printed; budgets scale by a measured load factor so a busy box doesn't fail them. `--bench` prints
@@ -34,6 +36,7 @@ import { type Assert, same, DEG, loadFactor, cells, type MaterialsOptions } from
 import { glassChecks, causticChecks } from './materials/optics'
 import { atClock, boardChecks } from './materials/board'
 import { workshopChecks, tiltChecks } from './materials/workshop'
+import { growthChecks } from './materials/growth'
 
 export type { MaterialsOptions } from './materials/util'
 
@@ -285,6 +288,7 @@ export async function materialsChecks(assert: Assert, opts: MaterialsOptions = {
   if (run('caustics')) causticChecks(assert)
   if (run('board') || run('cards')) await boardChecks(assert, load, opts, run)
   if (run('workshop')) await workshopChecks(assert, opts)
+  if (run('growth')) await growthChecks(assert, opts)
   if (run('tilt')) tiltChecks(assert)
 }
 

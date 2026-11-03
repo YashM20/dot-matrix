@@ -1,6 +1,6 @@
 # X-ADVANCED: techniques beyond the Living Matter plan
 
-> Status: **research** (2026-10-27); **X1 built** (2026-10-31: #1, #5 and #18 shipped, #12's stateful half dropped; as built in `docs/LIFE.md` "X1"). The rest is not built. It extends `docs/LIVING-MATTER-PLAN.md` (the "plan" below) and does not repeat it.
+> Status: **research** (2026-10-27); **X1 built** (2026-10-31: #1, #5 and #18 shipped, #12's stateful half dropped; as built in `docs/LIFE.md` "X1"). **XM built** (2026-11-03: #10, #11 and #13 on `/workshop/`; the plate burns between two electrodes in an applied field, and each stone digit is recut when it changes, so it weathers from then). The rest is not built. It extends `docs/LIVING-MATTER-PLAN.md` (the "plan" below) and does not repeat it.
 > Scope: advanced, niche or recent techniques that push the three tracks (L living scenes, Q squares, M materials) and the site past the plan. Every pick was checked against the repo and the plan. Anything already built or already planned was dropped (see §6).
 > Invariants are the ones in `AGENTS.md`:
 > - Field → Sampler → Renderer;

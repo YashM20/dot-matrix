@@ -26,8 +26,6 @@ import { tabWalk } from '../lib/site-probe'
  * check a gate. Seeded from a run against `pnpm dev`.
  */
 const KNOWN: readonly string[] = [
-  // N6 (P1-A): /about and unknown paths open the home board at the URL they came with
-  'route:/about', 'route:/nope/',
   // N5 (P1-A): Forward to ABOUT lands near the top, not where it was left (Back restores both)
   'scroll:forward-about',
   // N4 (P1-A): Back with a sheet open leaves the view and keeps the sheet open
