@@ -2,7 +2,8 @@
  * Share-link opt-in (docs/LAYOUT-THEME-PLAN.md §4 Picker › Links): when the visitor turns it on (THEME popover,
  * TOOLS › THEME), the links the site copies or shares (⌘K "Copy deep link", TOOLS › SHARE, the card's LINK, the
  * widget page's LINK / SHORT / SHARE) carry `?theme=<scheme>_<accent>`: the theme they see, `system` resolved. A custom
- * hue lives in the sender's storage only, so its links carry the scheme alone (`?scheme=`).
+ * hue's links carry `?scheme=<scheme>&hue=<0-359>` (the recipient's store makes the same CSS from the hue), and a
+ * picked CONTRAST: MORE adds `&contrast=more` (the OS setting stays the recipient's own).
  * Off by default, so a plain link opens in the recipient's own theme. Persisted in localStorage `dot480:share-theme`.
  */
 import { getTheme } from './theme'
@@ -24,8 +25,9 @@ export function withTheme(url: string): string {
   if (!on) return url
   const u = new URL(url, location.href)
   const t = getTheme()
-  u.searchParams.delete('scheme'); u.searchParams.delete('accent'); u.searchParams.delete('theme')
-  if (t.accent === 'custom') u.searchParams.set('scheme', t.resolved)
+  for (const p of ['scheme', 'accent', 'theme', 'hue', 'contrast']) u.searchParams.delete(p)
+  if (t.accent === 'custom' && t.custom) { u.searchParams.set('scheme', t.resolved); u.searchParams.set('hue', String(t.custom.hue)) }
   else u.searchParams.set('theme', t.name)
+  if (t.contrast === 'more') u.searchParams.set('contrast', 'more')
   return u.toString()
 }

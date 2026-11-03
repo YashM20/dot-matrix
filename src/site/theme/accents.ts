@@ -17,7 +17,7 @@
  * this module lazily).
  */
 import { apca, distinctness, fromOklch, gamutClamp, oklch, rgba, wcag, type Oklch } from './color'
-import { ACCENTS, SCHEMES, type AccentChoice, type AccentId, type Scheme, type ThemeKey, type ThemeName } from './names'
+import { ACCENTS, moreSelector, SCHEMES, type AccentChoice, type AccentId, type Scheme, type ThemeKey, type ThemeName } from './names'
 
 /** The opaque neutral roles of one scheme (hex); the translucent ones derive from them. */
 export interface Neutrals {
@@ -270,13 +270,15 @@ export const decls = (r: Partial<Record<Role, string>>, keys: readonly Role[], i
 export const ALL_ROLES = [...NEUTRAL_ROLES, ...DOT_ROLES, ...ACCENT_ROLES] as const
 /**
  * The custom hue's theme CSS, both schemes (scoped like the presets: `[data-scheme][data-accent="custom"]`, so a dark
- * inset on a light page gets the dark one), with its `prefers-contrast: more` blocks. The store keeps it in
- * localStorage and the boot script puts it in a `<style>` before first paint (`boot.ts`).
+ * inset on a light page gets the dark one), with its `prefers-contrast: more` blocks and their CONTRAST: MORE copies
+ * (`moreSelector`). The store keeps it in localStorage and the boot script puts it in a `<style>` before first paint
+ * (`boot.ts`).
  */
 export function customCss(hue: number): string {
   return SCHEMES.map(s => {
     const t = generateHue(s, hue), sel = `[data-scheme="${s}"][data-accent="custom"]`
-    return `${sel}{${decls(t.roles, ALL_ROLES, '').join('')}}@media (prefers-contrast: more){${sel}{${decls(moreRoles(t), MORE_ROLES, '').join('')}}}`
+    const more = decls(moreRoles(t), MORE_ROLES, '').join('')
+    return `${sel}{${decls(t.roles, ALL_ROLES, '').join('')}}@media (prefers-contrast: more){${sel}{${more}}}${moreSelector(sel)}{${more}}`
   }).join('')
 }
 

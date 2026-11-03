@@ -7,6 +7,8 @@
  *  - an 8th, "custom" swatch (T6): it opens the hue slider, a range input over a track of 36 dots, each the
  *    generated accent of its hue on the shown scheme. The generator (`src/site/theme/custom.ts`) loads lazily on
  *    first use; any hue it gives passes the same contrast rules as the presets;
+ *  - CONTRAST: MORE, a switch for the raised roles of `prefers-contrast: more` (`setContrast`; the OS setting still
+ *    applies by itself, and while it does the switch shows ON · SYSTEM and can't be turned off);
  *  - the share-link opt-in (`src/site/theme/share.ts`).
  * Under them in the popover (and under TOOLS › DISPLAY on a phone), `CardSizeControl`: LARGE / MEDIUM / COMPACT.
  * Live preview (popover): hovering or focusing a swatch or a scheme re-scopes the popover itself
@@ -16,9 +18,9 @@
  */
 import { useEffect, useRef, useState, useSyncExternalStore, type FocusEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { ACCENTS, type AccentChoice, type AccentId, type Scheme, type SchemePref } from '../../site/theme/names'
-import { resolveScheme, setTheme } from '../../site/theme/theme'
+import { resolveScheme, setContrast, setTheme } from '../../site/theme/theme'
 import { useTheme } from '../../site/theme/useTheme'
-import { switchTheme } from '../../site/theme/moment'
+import { dropUrlParams, switchTheme } from '../../site/theme/moment'
 import { setShareTheme, shareTheme, subscribeShareTheme } from '../../site/theme/share'
 import { CARD_SIZE_LABELS, CARD_SIZE_LINES, CARD_SIZES, cardSize, setCardSize, subscribeCardSize, type CardSize } from '../../site/cards'
 import './picker.css'
@@ -142,6 +144,11 @@ export function ThemeControls({ shown, onPreview, focus = false }: { shown?: { s
     </div>
     {mod && (hueOpen || t.accent === 'custom') && <HueSlider scheme={view.scheme} mod={mod} />}
     <p className="theme-line">{line}</p>
+    {/* CONTRAST: MORE: on while the OS asks for it too (then the OS decides, and the switch says so) */}
+    <button type="button" className="theme-contrast" role="switch" aria-checked={t.more} aria-disabled={t.osMore || undefined}
+      onClick={() => { if (t.osMore) return; dropUrlParams(['contrast']); setContrast(t.contrast === 'more' ? 'system' : 'more') }}>
+      <span>Contrast: more</span><b>{t.osMore ? 'ON · SYSTEM' : t.more ? 'ON' : 'OFF'}</b>
+    </button>
     <button type="button" className="theme-share" role="switch" aria-checked={share} onClick={() => setShareTheme(!share)}>
       <span>Shared links keep my theme</span><b>{share ? 'ON' : 'OFF'}</b>
     </button>

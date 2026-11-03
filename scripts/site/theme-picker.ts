@@ -7,6 +7,9 @@
  *    the page through one view transition whose wipe starts at the pressed swatch, persists, and cleans up; the
  *    keyboard opens it on the current scheme, arrows pick, Escape returns focus;
  *  - the share-link opt-in: "Copy deep link" carries `?theme=` only when it is on;
+ *  - CONTRAST: MORE (issue #34): the switch sets `data-contrast`, gives the roles of the OS `prefers-contrast: more`
+ *    (and shows ON · SYSTEM, locked, under it), persists, rides in shared links; a custom hue's link carries
+ *    `?scheme=` + `?hue=` and opens as the same theme in a fresh profile;
  *  - ⌘K: "Theme: system / light / dark", "Accent: <name>" and "Accent: next" replace the raw theme ids;
  *  - URL params: `?theme=` / `?scheme=` + `?accent=` apply and aren't stored; a pick drops them from the URL;
  *  - reduced motion (the OS setting, and the palette's override): a pick is instant, with no view transition;
@@ -95,8 +98,8 @@ const tap = async (x: number, y: number) => { await cdp('Input.dispatchTouchEven
 // Enter carries its text, so a focused button activates as with a real key
 const key = (k: string, code: string, vk: number, modifiers = 0) => cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: k, code, windowsVirtualKeyCode: vk, modifiers, ...(k === 'Enter' ? { text: String.fromCharCode(13) } : {}) }).then(() => cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: k, code, windowsVirtualKeyCode: vk, modifiers }))
 const stored = () => js(`localStorage.getItem('dot480:theme')`) as Promise<string | null>
-const open = async (path: string, { os = 'dark', reduce = false, phone = false, keep = false } = {}) => {
-  await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: os }, { name: 'prefers-reduced-motion', value: reduce ? 'reduce' : 'no-preference' }] })
+const open = async (path: string, { os = 'dark', reduce = false, phone = false, keep = false, more = false } = {}) => {
+  await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: os }, { name: 'prefers-reduced-motion', value: reduce ? 'reduce' : 'no-preference' }, { name: 'prefers-contrast', value: more ? 'more' : 'no-preference' }] })
   await cdp('Emulation.setDeviceMetricsOverride', phone ? { width: 390, height: 844, deviceScaleFactor: 1, mobile: true } : { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false })
   await cdp('Emulation.setTouchEmulationEnabled', phone ? { enabled: true, maxTouchPoints: 5 } : { enabled: false })
   if (!keep) { await cdp('Page.navigate', { url: base + '/' }); await waitFor('document.readyState === "complete"'); await js(`localStorage.removeItem('dot480:theme'); localStorage.removeItem('dot480:share-theme'); localStorage.removeItem('dot480:cards'); localStorage.setItem('dot480:intro', 'off')`) }
@@ -265,6 +268,47 @@ try {
   await js(`document.querySelector('.theme-pop [data-accent=cobalt][role=option]').click()`)
   check('a preset pick leaves custom, and the stored hue stays for the custom swatch', await waitFor(`document.documentElement.dataset.accent === 'cobalt'`, 3000) && (await stored())?.includes('"hue":212') === true)
   await key('Escape', 'Escape', 27)
+
+  // ── CONTRAST: MORE and ?hue= links (issue #34) ──
+  const roles = () => js(`(() => { const c = getComputedStyle(document.documentElement); return ['--label', '--mute', '--dim', '--red-text', '--line', '--line-dot'].map(v => c.getPropertyValue(v).trim()).join(' ') })()`) as Promise<string>
+  await open('/', { keep: true, more: true })
+  const osRoles = await roles()
+  await click(btn.x, btn.y)
+  await waitFor('!!document.querySelector(".theme-pop .theme-contrast")', 3000)
+  check('contrast: under the OS prefers-contrast: more the switch shows ON · SYSTEM and is locked', await js(`(() => { const b = document.querySelector('.theme-pop .theme-contrast'); return b.getAttribute('role') === 'switch' && b.getAttribute('aria-checked') === 'true' && b.getAttribute('aria-disabled') === 'true' && b.textContent.includes('SYSTEM') })()`) === true)
+  await key('Escape', 'Escape', 27)
+  await js(`localStorage.setItem('dot480:share-theme', '1')`)
+  await open('/', { keep: true })
+  const plainRoles = await roles()
+  await click(btn.x, btn.y)
+  await waitFor('!!document.querySelector(".theme-pop .theme-contrast")', 3000)
+  check('contrast: off by default (aria-checked false, no data-contrast)', await js(`document.querySelector('.theme-pop .theme-contrast').getAttribute('aria-checked') === 'false' && !document.documentElement.dataset.contrast`) === true)
+  await js(`document.querySelector('.theme-pop .theme-contrast').click()`)
+  check('contrast: a click sets <html data-contrast="more"> and stores it with the theme', await waitFor(`document.documentElement.dataset.contrast === 'more' && (localStorage.getItem('dot480:theme') || '').includes('"contrast":"more"')`, 3000))
+  const moreRoles = await roles()
+  check('contrast: the switch gives the same roles and materials as the OS setting (dark_cobalt)', moreRoles === osRoles && moreRoles !== plainRoles, `${moreRoles} | os ${osRoles} | plain ${plainRoles}`)
+  await key('Escape', 'Escape', 27)
+  const conLink = await copyLink()
+  check('contrast: a shared link carries ?theme=dark_cobalt&contrast=more', !!conLink && new URL(conLink).searchParams.get('theme') === 'dark_cobalt' && new URL(conLink).searchParams.get('contrast') === 'more', String(conLink))
+  await open('/', { keep: true })
+  check('contrast: a reload keeps it', await waitFor(`document.documentElement.dataset.contrast === 'more'`, 3000) && await roles() === moreRoles)
+  await click(btn.x, btn.y)
+  await waitFor('!!document.querySelector(".theme-pop .theme-contrast")', 3000)
+  await js(`document.querySelector('.theme-pop .theme-contrast').click()`)
+  check('contrast: a second click turns it off', await waitFor(`!document.documentElement.dataset.contrast && !(localStorage.getItem('dot480:theme') || '').includes('"contrast":')`, 3000) && await roles() === plainRoles)
+  // a custom hue's link: ?scheme= + ?hue=, and a fresh profile opens the same theme
+  await js(`document.querySelector('.theme-pop .theme-custom').click()`)
+  await waitFor(`document.documentElement.dataset.accent === 'custom'`, 4000)
+  await key('Escape', 'Escape', 27)
+  const sent = await js(`getComputedStyle(document.documentElement).getPropertyValue('--red').trim() + ' ' + getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()`)
+  const hueLink = await copyLink()
+  check('hue: a custom theme\'s link carries ?scheme=dark&hue=212', !!hueLink && new URL(hueLink).searchParams.get('scheme') === 'dark' && new URL(hueLink).searchParams.get('hue') === '212' && !new URL(hueLink).searchParams.has('theme'), String(hueLink))
+  const u = new URL(hueLink!)
+  await open(`${u.pathname}${u.search}`)
+  const got = await waitFor(`document.documentElement.dataset.accent === 'custom'`, 6000) && await js(`getComputedStyle(document.documentElement).getPropertyValue('--red').trim() + ' ' + getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()`)
+  check('hue: the link opened in a fresh profile shows the same theme (accent and tinted bg), and stores nothing', got === sent && await stored() === null, `${got} vs ${sent}`)
+  await open('/?hue=junk&scheme=light')
+  check('hue: a junk ?hue= is ignored', await html('accent') === 'signal' && await html('scheme') === 'light')
 
   // ── CARD SIZE (src/site/cards.ts): a radio group under the theme; a pick reflows the grid, persists, survives a reload ──
   const firstRow = `(() => { const ys = [...document.querySelectorAll('.board-grid > .dot-card')].map(c => Math.round(c.getBoundingClientRect().top)); return ys.filter(y => y === ys[0]).length })()`
