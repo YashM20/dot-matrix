@@ -197,6 +197,12 @@ shareChecks(assert)
   kineticChecks(assert)
 }
 
+// dot charts kit (#132): scales land on exact cells, the readout picks the nearest point, empty and single-point data, transitions end on the target (scripts/charts.ts)
+{
+  const { chartsChecks } = await import('./charts')
+  chartsChecks(assert)
+}
+
 // blog syntax colouring (#84): code blocks round-trip, regex vs division, kinds (scripts/site/highlight.ts)
 {
   const { highlightChecks } = await import('./site/highlight')
