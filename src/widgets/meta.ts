@@ -378,4 +378,14 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'sc-twist': ['A six-point star column, extruded and twisted back and forth, with a red ring riding up and down it.', 'scenes 3d sdf twist extrusion shadow animated'],
   'sc-posts': ['A walk through a field of posts at sunrise; the fog thickens with distance and warms toward a low red sun.', 'scenes 3d sdf fog repetition shadow animated'],
   'sc-chain': ['Four links and a red bob swing in front of a wall; the shadow is sharp near the wall and soft further out.', 'scenes 3d sdf elongate soft-shadow animated'],
+  // dash: car and EV instruments, one car on the whole board
+  'dash-speed': ['A speedometer whose needle eases to its target. Drag the scale to set the speed.', 'dash car dial gauge speed control animated'],
+  'dash-power': ['Battery power in kW: drive to the right, regen to the left when the car brakes.', 'dash car ev dial gauge power regen animated'],
+  'dash-range': ['Range on an arc tied to the battery. Drag the arc to set the charge and watch the km follow.', 'dash car ev range arc battery control animated'],
+  'dash-gear': ['A P R N D gear selector. Tap a gear and the ring glides to it.', 'dash car gear selector segmented control animated'],
+  'dash-signals': ['Turn signals and hazards that flash on the shared clock, in step with the rest of the board.', 'dash car turn signal hazard toggle control animated'],
+  'dash-battery': ['A battery pack of dot cells. Plug it in to watch it charge, or brake to see regen.', 'dash car ev battery charging slider toggle animated'],
+  'dash-nav': ['A nav strip: the next turn, the distance to it and the street name in dot type.', 'dash car nav navigation map animated'],
+  'dash-road': ['The road ahead in perspective: lanes moving at your speed, a bend, a stop line, brake lights.', 'dash car road perspective lanes animated'],
+  'dash-drive': ['The loop that drives the board: pull away, cruise, signal, brake. Touch any control to take over.', 'dash car drive loop toggle control animated'],
 }
