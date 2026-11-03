@@ -378,4 +378,8 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'sc-twist': ['A six-point star column, extruded and twisted back and forth, with a red ring riding up and down it.', 'scenes 3d sdf twist extrusion shadow animated'],
   'sc-posts': ['A walk through a field of posts at sunrise; the fog thickens with distance and warms toward a low red sun.', 'scenes 3d sdf fog repetition shadow animated'],
   'sc-chain': ['Four links and a red bob swing in front of a wall; the shadow is sharp near the wall and soft further out.', 'scenes 3d sdf elongate soft-shadow animated'],
+  'face-calm': ['A calm face that follows your cursor with its eyes and winks when you tap it. Drowsy after dark.', 'face character eyes control animated'],
+  'face-curious': ['A curious face that tilts its head to watch you and looks surprised when you tap it.', 'face character eyes control animated'],
+  'face-sleepy': ['A sleepy face that yawns now and then and falls asleep at night. A tap wakes it with a jolt.', 'face character sleep control animated'],
+  'face-pip': ['Pip, the board\'s little bear mascot: big eyes that follow you, and a laugh when you tap it.', 'face character mascot control animated'],
 }

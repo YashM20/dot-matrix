@@ -249,4 +249,8 @@ export const catalog: readonly CatalogRow[] = [
   ['sc-twist', '4v5577ta', 'scenes'],
   ['sc-posts', 'nb9k1dqt', 'scenes'],
   ['sc-chain', 'krn12mve', 'scenes'],
+  ['face-calm', 'f0zd234n', 'faces'],
+  ['face-curious', '7vy41c10', 'faces'],
+  ['face-sleepy', '653xvzq2', 'faces'],
+  ['face-pip', 't3w5khed', 'faces'],
 ]
