@@ -54,6 +54,12 @@ By Inigo Quilez, Mario Markus.
 
 - Fractals Lyapunov (`fr-lyapunov`), board `/fractals/`: technique
 
+### [Particle Lenia and the energy-based formulation](https://google-research.github.io/self-organising-systems/particle-lenia/)
+
+By Alexander Mordvintsev, Eyvind Niklasson, Ettore Randazzo.
+
+- Pond Plankton (`pond-plankton`), board `/pond/`: technique
+
 ### [Plane deformations](https://iquilezles.org/articles/deform/)
 
 By Inigo Quilez.

@@ -336,6 +336,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'pond-murmur': ['A murmuration of 400 starlings, each watching its seven nearest; the falcon is you.', 'life boids flocking murmuration control animated'],
   'pond-terrarium': ['A creeper grows toward the sun as ants lay trails to crumbs; tap to drop a crumb.', 'life ants growth colonisation control animated'],
   'pond-marble': ['Suminagashi: the day\'s ink is combed by the koi swimming under it; tap to drop ink, drag to comb it.', 'life marbling ink suminagashi koi control animated'],
+  'pond-plankton': ['Every dot is a particle; clumps pull themselves into creatures (Particle Lenia). Tap one to burst it, watch it re-form.', 'life lenia particles creature control animated'],
   'sq-tetris': ['A Tetris game played by a greedy AI, each settled piece fused into one joined tetromino.', 'squares join tetris game animated'],
   'sq-quads': ['A portrait found by splitting the worst square into four until 1,201 squares remain (after Fogleman’s Quads).', 'squares join quadtree portrait animated'],
   'sq-blob': ['Four metaballs on a square lattice whose terraces fuse level by level; the red neck forms where two meet.', 'squares join metaballs animated'],
