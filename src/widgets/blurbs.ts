@@ -38,6 +38,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   fractals: 'Six fractals in dots: a Julia set walking the Mandelbrot map, orbit traps, popcorn, a chaos-game flame, an eight-fold icon and a Lyapunov field.',
   oldschool: 'Demo effects from the late 1990s: a brick tunnel, a flower, a floor to the horizon, drifting clouds and a screen filming itself.',
   scenes: 'Small 3D scenes traced onto big dots: a turned vase, a twisted column, a walk through a field of posts and a swinging chain.',
+  kinetic: 'One word in big dots, moved seven ways: flipped, melted, scrambled, waved, typed, pulled and blown apart. Tap a flap to change the word.',
 }
 
 export const groupBlurbs: Record<BoardGroupId, string> = {

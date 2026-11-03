@@ -378,4 +378,11 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'sc-twist': ['A six-point star column, extruded and twisted back and forth, with a red ring riding up and down it.', 'scenes 3d sdf twist extrusion shadow animated'],
   'sc-posts': ['A walk through a field of posts at sunrise; the fog thickens with distance and warms toward a low red sun.', 'scenes 3d sdf fog repetition shadow animated'],
   'sc-chain': ['Four links and a red bob swing in front of a wall; the shadow is sharp near the wall and soft further out.', 'scenes 3d sdf elongate soft-shadow animated'],
+  'kt-flap': ['Twelve split-flap modules flip round the drum to the word. Tap a flap to change the word on every card.', 'kinetic type split-flap editor interactive animated'],
+  'kt-melt': ['The word drips into a pool under itself and sets back into letters. The middle letter melts first, in red.', 'kinetic type melt drip animated'],
+  'kt-scramble': ['Random glyphs run through each letter and lock in from left to right. The next letter to lock is red.', 'kinetic type scramble decode animated'],
+  'kt-wave': ['A travelling wave bends the word column by column, on whole dots. The letter on the highest crest is red.', 'kinetic type wave sine animated'],
+  'kt-type': ['The line is backspaced away and typed again at an uneven pace, behind a red caret.', 'kinetic type typewriter caret animated'],
+  'kt-magnet': ['A red magnet crosses the word and pulls the dots near it. Hover or drag to hold the magnet yourself.', 'kinetic type magnet pointer interactive animated'],
+  'kt-shatter': ['The word blows apart into dust and flies home one letter at a time. The letters in flight are red.', 'kinetic type explode reform animated'],
 }

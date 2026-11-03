@@ -27,6 +27,8 @@
 
 **IQ8 3D SDF scenes (#69):** `/scenes/` (lazy): `sc-lathe`, `sc-twist`, `sc-posts`, `sc-chain`, sphere-traced on the CPU at lattice 2 and capped at 12 fps; engine in `src/engine/sdf3d/` (primitives, operators, tracer, tetrahedron normals, soft shadows, fog, the outdoors rig, a buffer renderer), checks in `scripts/sdf3d.ts` (in verify). Frame budgets are warn-only (over 4 ms × load on a busy box). GPU tier (`gpuIR`) is a follow-up.
 
+**Kinetic type (#129):** `/kinetic/` (lazy, KINETIC TYPE under PLAY), seven cards on one board-shared word, one effect each: `kt-flap`, `kt-melt`, `kt-scramble`, `kt-wave`, `kt-type`, `kt-magnet`, `kt-shatter`. The FLAP card's twelve modules edit the word (tap a module's top or bottom half, or the arrow keys) and write it to `?word=`, so a link opens on the same word. Engine in `src/engine/kinetic/` (pure functions of word and t, every pixel on whole lattice cells), checks in `scripts/kinetic.ts` (in verify, with the determinism lint on the folder). No changelog entry yet.
+
 **XM growth and wear (#21):** `mat-lichtenberg` (two-electrode dielectric breakdown, char lit through M1 relief), `mat-erosion` (droplet erosion through the day, checkpointed; each digit weathers since it last changed) and `mat-frost` (Reiter automaton on `hexSites`, one flake a day from a vetted table) on `/workshop/`; engine in `src/engine/matter/{lichtenberg,erosion,reiter}.ts` (in the determinism lint), checks in `scripts/materials.ts --only growth`. Frame budgets are warn-only: the plate's burn frames and the stone's new-minute frame run over 4 ms on a loaded box.
 
 **Next: CP2 · 0.14 · Foundations and fixes** (GitHub milestone). It waits for the owner to say go. Proposed order:
