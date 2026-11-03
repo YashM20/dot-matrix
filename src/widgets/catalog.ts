@@ -199,6 +199,7 @@ export const catalog: readonly CatalogRow[] = [
   ['pond-terrarium', '4cf9tvcy', 'pond'],
   ['pond-marble', '2x6cgw55', 'pond'],
   ['pond-plankton', 'd63h2m4r', 'pond'],
+  ['pond-turing', '1xtd4v7m', 'pond'],
   ['mat-knit', 'k8par51e', 'workshop'],
   ['mat-denim', '5ccpsd8c', 'workshop'],
   ['mat-paper', 'ev8dqt4a', 'workshop'],

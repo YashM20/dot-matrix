@@ -19,6 +19,8 @@
 
 **Paper fold (part of #36, X-advanced #17):** `mat-fold` on `/workshop/`, a sheet folded crease by crease into a glider (four valleys and a mountain), then unfolded, on a 14.85 s loop; the moving crease is the red, facets lit by their fold history's normal. Engine in `src/engine/matter/fold.ts` (in the determinism lint), checks in `scripts/materials/fold.ts` (`--only fold`). No tap yet.
 
+**Turing skin (part of #36, X-advanced #15):** `pond-turing` on `/pond/`, a fish whose Gray-Scott spots split as its body grows (Crampin, Gaffney and Maini's growing-domain equations on a fixed body grid), the splitting spot red, a tap scratches a spot off and the pattern regrows. One loop is one life, bit-equal at the wrap. Engine in `src/engine/life/{turingSkin,turing,turingView}.ts`, checks in `scripts/life-turing.ts` (from `scripts/life.ts`). The frame budget is warn-only.
+
 **Pond plankton (part of #36, X-advanced #4):** `pond-plankton` on `/pond/`, Particle Lenia creatures in a dish, one dot per particle, the Lenia density as a faint body, each creature's nucleus red. Engine in `src/engine/life/{lenia,match,plankton,planktonView}.ts` (a matched blend renumbers identical particles so the seam and the heal stay short), checks in `scripts/life-plankton.ts` (from `scripts/life.ts`). The frame budget is warn-only.
 
 **IQ8 3D SDF scenes (#69):** `/scenes/` (lazy): `sc-lathe`, `sc-twist`, `sc-posts`, `sc-chain`, sphere-traced on the CPU at lattice 2 and capped at 12 fps; engine in `src/engine/sdf3d/` (primitives, operators, tracer, tetrahedron normals, soft shadows, fog, the outdoors rig, a buffer renderer), checks in `scripts/sdf3d.ts` (in verify). Frame budgets are warn-only (over 4 ms × load on a busy box). GPU tier (`gpuIR`) is a follow-up.
