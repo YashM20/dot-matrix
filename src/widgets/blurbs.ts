@@ -40,6 +40,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   scenes: 'Small 3D scenes traced onto big dots: a turned vase, a twisted column, a walk through a field of posts and a swinging chain.',
   dash: 'A car dashboard that drives itself in a loop. Touch any control and the car is yours: gears, signals, speed, charge.',
   kinetic: 'One word in big dots, moved seven ways: flipped, melted, scrambled, waved, typed, pulled and blown apart. Tap a flap to change the word.',
+  faces: 'Four dot faces that watch your cursor, blink, react when you tap them and get sleepy at night.',
 }
 
 export const groupBlurbs: Record<BoardGroupId, string> = {

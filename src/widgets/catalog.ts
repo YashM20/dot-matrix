@@ -265,4 +265,8 @@ export const catalog: readonly CatalogRow[] = [
   ['kt-type', '746wdwjd', 'kinetic'],
   ['kt-magnet', '26tsf8pt', 'kinetic'],
   ['kt-shatter', 'qbv3dr6e', 'kinetic'],
+  ['face-calm', 'f0zd234n', 'faces'],
+  ['face-curious', '7vy41c10', 'faces'],
+  ['face-sleepy', '653xvzq2', 'faces'],
+  ['face-pip', 't3w5khed', 'faces'],
 ]

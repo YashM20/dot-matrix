@@ -71,6 +71,7 @@ export const boardManifest = [
   { id: 'scenes', title: 'SCENES / 3D DISTANCE FIELDS IN DOTS', columns: 2, density: 'standard', load: () => import('./boards/scenes').then(m => ({ items: m.scenesBoard })) },
   { id: 'dash', title: 'DASH — CAR AND EV INSTRUMENTS', columns: 3, density: 'standard', load: () => import('./boards/dash').then(m => ({ items: m.dashBoard, shared: m.dashShared })) },
   { id: 'kinetic', title: 'KINETIC / ONE WORD, SEVEN WAYS TO MOVE IT', columns: 3, density: 'standard', load: () => import('./boards/kinetic').then(m => ({ items: m.kineticBoard, shared: m.kineticShared })) },
+  { id: 'faces', title: 'FACES / DOTS THAT LOOK BACK', columns: 2, density: 'standard', load: () => import('./boards/faces').then(m => ({ items: m.facesBoard })) },
 ] as const satisfies readonly (BoardMeta & { load: () => Promise<BoardContents> })[]
 
 export type BoardId = typeof boardManifest[number]['id']
@@ -97,7 +98,7 @@ export const boardGroups = [
   { id: 'start', label: 'START HERE', boards: ['henry', 'mosaic', 'physics', 'heal', 'levels', 'instrument', 'cinema'] },
   { id: 'ui', label: 'INTERFACES', boards: ['henry', 'deerflow12', 'mosaic', 'henry3', 'metro', 'ride', 'audio', 'lock', 'components', 'surfaces', 'dash'] },
   { id: 'data', label: 'DATA', boards: ['live', 'departures', 'heartbeat'] },
-  { id: 'play', label: 'PLAY', boards: ['levels', 'physics', 'instrument', 'scope', 'mirror', 'heal', 'pond', 'workshop', 'kinetic'] },
+  { id: 'play', label: 'PLAY', boards: ['levels', 'physics', 'instrument', 'scope', 'mirror', 'heal', 'pond', 'workshop', 'kinetic', 'faces'] },
   { id: 'engine', label: 'ENGINE', boards: ['ir', 'sim', 'algorithms', 'squares', 'light', 'materials', 'gpu', 'type', 'cinema', 'fractals', 'oldschool', 'scenes'] },
 ] as const satisfies readonly { id: string; label: string; boards: readonly BoardId[] }[]
 export type BoardGroupId = typeof boardGroups[number]['id']

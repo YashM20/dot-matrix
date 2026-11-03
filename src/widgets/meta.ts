@@ -395,4 +395,8 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'kt-type': ['The line is backspaced away and typed again at an uneven pace, behind a red caret.', 'kinetic type typewriter caret animated'],
   'kt-magnet': ['A red magnet crosses the word and pulls the dots near it. Hover or drag to hold the magnet yourself.', 'kinetic type magnet pointer interactive animated'],
   'kt-shatter': ['The word blows apart into dust and flies home one letter at a time. The letters in flight are red.', 'kinetic type explode reform animated'],
+  'face-calm': ['A calm face that follows your cursor with its eyes and winks when you tap it. Drowsy after dark.', 'face character eyes control animated'],
+  'face-curious': ['A curious face that tilts its head to watch you and looks surprised when you tap it.', 'face character eyes control animated'],
+  'face-sleepy': ['A sleepy face that yawns now and then and falls asleep at night. A tap wakes it with a jolt.', 'face character sleep control animated'],
+  'face-pip': ['Pip, the board\'s little bear mascot: big eyes that follow you, and a laugh when you tap it.', 'face character mascot control animated'],
 }
