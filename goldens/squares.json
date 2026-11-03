@@ -180,6 +180,30 @@
     "hash": "f14df353",
     "dots": 14099
    }
+  },
+  "sq-arctic": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "467edfa1",
+    "dots": 2310
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "ad175945",
+    "dots": 2299
+   }
+  },
+  "sq-sandpile": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "beafeed2",
+    "dots": 4731
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "4b5c345a",
+    "dots": 4730
+   }
   }
  }
 }

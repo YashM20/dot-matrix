@@ -27,7 +27,7 @@ const args = process.argv.slice(2), swift = args.includes('--swiftshader'), back
 const OUT = '.snapshots/squares'
 mkdirSync(OUT, { recursive: true })
 const TOL = { pixelMean: 2, pixelOver16: 2.5, psnr: 32, crack: 3, crackSvg: 6, blend: 3 }
-const CARDS = ['sq-tetris', 'sq-quads', 'sq-blob', 'sq-gameboy', 'sq-teletext', 'sq-lines', 'sq-schotter', 'sq-blocks', 'sq-sort', 'sq-truchet', 'sq-stitch', 'sq-beads', 'sq-morph', 'sq-hat', 'sq-ammann']
+const CARDS = ['sq-tetris', 'sq-quads', 'sq-blob', 'sq-gameboy', 'sq-teletext', 'sq-lines', 'sq-schotter', 'sq-blocks', 'sq-sort', 'sq-truchet', 'sq-stitch', 'sq-beads', 'sq-morph', 'sq-hat', 'sq-ammann', 'sq-arctic', 'sq-sandpile']
 
 execFileSync('npx', ['esbuild', 'scripts/lib/squares-page.ts', '--bundle', '--format=iife', '--platform=browser', '--target=es2022', `--outfile=${OUT}/page.js`, '--log-level=warning'], { stdio: 'inherit', shell: true })
 const html = join(OUT, 'page.html')
