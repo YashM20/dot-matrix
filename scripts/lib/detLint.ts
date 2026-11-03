@@ -23,6 +23,7 @@ export const DET_PATHS = [
   'src/engine/matter/sand', // M3: sand / erosion sim (M's bakes are not scanned)
   'src/engine/matter/mercury', // M2: mercury sim
   'src/engine/matter/thread', // M3: the thread's step (over life/chain ropeStep)
+  'src/engine/matter/lichtenberg', 'src/engine/matter/erosion', 'src/engine/matter/reiter', // XM: dielectric breakdown growth, droplet erosion, snow crystals
   'src/engine/squares/', // Q: masks, geometry, the tetris sim (Q1)
   'src/engine/algo/linfVoronoi', 'src/engine/algo/schotter', 'src/engine/algo/pixelSort', 'src/engine/algo/glitch', 'src/engine/algo/truchet', // Q3: the square field pack
   'src/engine/algo/hex', 'src/engine/algo/hat', 'src/engine/algo/ammann', // XQ: the aperiodic floors (#20)

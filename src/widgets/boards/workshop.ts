@@ -26,6 +26,9 @@ import { TILE, layer, type WidgetPreset } from '../types'
 import { cite, L15, LG15, LIGHT_DEFAULTS, lightKey, lru, matLight, mod, once, pad2, scratch, snapTorch, T, tile, toCard15, toLattice15, type Box, type Pt } from './materials-shared'
 import { matKnit, matPaper, matIce, liveHooks } from './workshop-live'
 import { matSand, matMercury, matThread, physicsHooks } from './workshop-physics'
+import { matLichtenberg, plateHooks } from './workshop-plate'
+import { matErosion, stoneHooks } from './workshop-stone'
+import { matFrost, frostHooks } from './workshop-frost'
 
 const COLS = TILE.cols
 /** Tone indices of `tonedLayer` (SURFACE_TONES): faint, mid, idle, value. */
@@ -397,8 +400,8 @@ export const matLeather: WidgetPreset = {
 }
 
 /** M3: knit, denim, paper; wood, leather, sand; ice, mercury, thread (the plan's order, three a row). */
-export const workshopBoard = [matKnit, matDenim, matPaper, matWood, matLeather, matSand, matIce, matMercury, matThread]
+export const workshopBoard = [matKnit, matDenim, matPaper, matWood, matLeather, matSand, matIce, matMercury, matThread, matLichtenberg, matErosion, matFrost]
 /** Live data for the board: the light / tilt hub (F0), subscribed while the board is open. */
 export const workshopSources = [lightSource]
 /** The board's internals, for the checks (`scripts/materials.ts`). */
-export const workshopHooks = { DENIM, denimGeo, WOOD, woodBase, woodCut, LEATHER, leatherGeo, leatherStitches, outerSdf, toCard15, ...liveHooks, ...physicsHooks }
+export const workshopHooks = { DENIM, denimGeo, WOOD, woodBase, woodCut, LEATHER, leatherGeo, leatherStitches, outerSdf, toCard15, ...liveHooks, ...physicsHooks, ...plateHooks, ...stoneHooks, ...frostHooks }

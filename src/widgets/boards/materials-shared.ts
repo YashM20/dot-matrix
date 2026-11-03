@@ -117,3 +117,9 @@ export function lru<V>(size = 8): (key: string, make: () => V) => V {
     return v
   }
 }
+/** FNV-1a 32 over a typed array's bytes (`h` chains a second array on): the probes' cross-engine hash of a pristine run. */
+export function fnvBytes(a: ArrayBufferView, h = 0x811c9dc5): number {
+  const b = new Uint8Array(a.buffer, a.byteOffset, a.byteLength)
+  for (let i = 0; i < b.length; i++) h = Math.imul(h ^ b[i], 16777619) >>> 0
+  return h
+}

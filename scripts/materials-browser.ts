@@ -12,10 +12,16 @@
  *    ≥ 150 px with the world pristine; a tap acts (a stone, a bead, a flick); a 300 ms hold engages and a drag then
  *    carves, stirs or pulls without the page scrolling; a horizontal drag is claimed at once. Every other workshop
  *    card: a vertical swipe never changes data.
+ *  - the same page (XM, docs/living-matter/X-advanced.md #10, #11): the Lichtenberg plate's and the erosion stone's
+ *    pristine runs hash the same in Chrome as in Node (two figures, the stone at 09:41 and 23:59, two flakes); a tap on the plate
+ *    grounds it (a live figure); a vertical swipe on it leaves it pristine.
  * Skips with a notice when no Chrome is found; exits non-zero on any ✗. Closes Chrome and the preview server.
  *   npx tsx scripts/materials-browser.ts
  */
 import { findChrome, launch, serveDist, sleep, type Page } from './lib/cdp'
+import { figureHash } from '../src/widgets/boards/workshop-plate'
+import { stoneHash } from '../src/widgets/boards/workshop-stone'
+import { flakeHash } from '../src/widgets/boards/workshop-frost'
 
 const PORT = 4391, W = 375, H = 812
 /** The knob's geometry in card cells (src/widgets/boards/materials.ts: KNOB_CARD, KNOB_ARC). */
@@ -194,7 +200,7 @@ try {
   }
   {
     let same = true, detail = ''
-    for (const id of ['mat-knit', 'mat-denim', 'mat-paper', 'mat-wood', 'mat-leather', 'mat-ice']) {
+    for (const id of ['mat-knit', 'mat-denim', 'mat-paper', 'mat-wood', 'mat-leather', 'mat-ice', 'mat-erosion', 'mat-frost']) {
       await center(q, id)
       const d0 = await dataOf(q), [x, y] = await at(q, id, 72, 100)
       await q.touch(Array.from({ length: 14 }, (_, i) => [[x, y - i * 14]] as [number, number][]))
@@ -202,6 +208,23 @@ try {
       if (await dataOf(q) !== d0) { same = false; detail = id }
     }
     check('every workshop card (touch): a vertical swipe never changes data', same, detail)
+  }
+  // ── XM: the pristine runs, bit for bit across engines; the plate's tap ──
+  {
+    const ready = await q.waitFor('!!globalThis.__plate && !!globalThis.__stone && !!globalThis.__frost', 15000)
+    const node = [figureHash(0), figureHash(7), stoneHash(581), stoneHash(1439), flakeHash(2), flakeHash(9)]
+    const chrome = ready ? await q.js<number[]>('[__plate.hash(0), __plate.hash(7), __stone.hash(581), __stone.hash(1439), __frost.hash(2), __frost.hash(9)]') : []
+    check('XM: the Lichtenberg figures, the erosion stone and two snowflakes hash the same in Chrome and Node (pristine runs, bit for bit)', ready && chrome.join() === node.join(), `node ${node.map(h => h.toString(16)).join(' ')}, chrome ${chrome.map(h => h.toString(16)).join(' ')}`)
+    await center(q, 'mat-lichtenberg')
+    const [x, y] = await at(q, 'mat-lichtenberg', 72, 40)
+    await q.touch(Array.from({ length: 14 }, (_, i) => [[x, y + i * 14]] as [number, number][]))
+    await sleep(500)
+    const swiped = await q.js<string>('__plate.mode()')
+    await center(q, 'mat-lichtenberg')
+    const [tx, ty] = await at(q, 'mat-lichtenberg', 104, 44)
+    await q.tap(tx, ty); await sleep(400)
+    const taps = await q.js<number>('__plate.taps()')
+    check('mat-lichtenberg: a vertical swipe leaves the plate pristine; a tap grounds it (a live figure burns)', swiped === 'pristine' && taps >= 1, `after the swipe ${swiped}, taps ${taps}`)
   }
   check('workshop touch: no console errors', q.logs.length === 0, q.logs.slice(0, 3).join(' | '))
   await q.close(); page = null
