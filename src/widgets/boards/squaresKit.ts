@@ -40,6 +40,22 @@ export const thousands = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{
 export const mod = (x: number, m: number) => ((x % m) + m) % m
 
 /**
+ * A base-grid layer (card cells, no lattice) over the w × h box at `origin`, read per cell like `cells`: cheaper than
+ * a 1× lattice for a full-card floor (no cover pass). `group` and `rotation` are per cell too.
+ */
+export function cardCells(origin: Pt, w: number, h: number, value: (c: number, r: number) => number,
+  opts: { toneOf?: (c: number, r: number) => Tone | undefined; join?: JoinSpec | true; group?: (c: number, r: number) => number; rotation?: (c: number, r: number) => number } = {}): Layer {
+  const col = (u: number) => Math.round(u * N) - origin[0], row = (v: number) => Math.round(v * N) - origin[1]
+  const field: Field = (u, v) => { const c = col(u), r = row(v); return c < 0 || r < 0 || c >= w || r >= h ? 0 : value(c, r) }
+  field.bounds = [origin[0], origin[1], origin[0] + w - 1, origin[1] + h - 1]
+  const { toneOf, group, rotation } = opts
+  const join: JoinSpec | true | undefined = group ? { ...(opts.join === true || !opts.join ? {} : opts.join), group: (u, v) => group(col(u), row(v)) } : opts.join
+  return {
+    field, ...(toneOf ? { toneOf: (_: number, u: number, v: number) => toneOf(col(u), row(v)) } : {}), ...(join ? { join } : {}),
+    ...(rotation ? { rotation: (_: number, u: number, v: number) => rotation(col(u), row(v)) } : {}),
+  }
+}
+/**
  * A layer on a `k`× lattice (`[kx, ky]`: rect cells) at card cell `origin`, read per lattice cell: `value(c, r)` over
  * [0, w) × [0, h) (0 outside), optionally a tone, a join group per cell and a size axis. The field is bounded, so the
  * sampler only visits the box.

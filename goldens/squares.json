@@ -156,6 +156,30 @@
     "hash": "b9507ad7",
     "dots": 4840
    }
+  },
+  "sq-hat": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "f16c3d6d",
+    "dots": 13017
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "f16c3d6d",
+    "dots": 13017
+   }
+  },
+  "sq-ammann": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "c6a0ae71",
+    "dots": 13764
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "f14df353",
+    "dots": 14099
+   }
   }
  }
 }

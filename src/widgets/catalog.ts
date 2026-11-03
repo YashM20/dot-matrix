@@ -220,6 +220,8 @@ export const catalog: readonly CatalogRow[] = [
   ['sq-stitch', 'v2dr7g4m', 'squares'],
   ['sq-beads', 'c5pv0ygb', 'squares'],
   ['sq-morph', '4kgr5vej', 'squares'],
+  ['sq-hat', 'r25b4kkz', 'squares'],
+  ['sq-ammann', 'm6ssgkv3', 'squares'],
   ['fr-julia', '9v0makv6', 'fractals'],
   ['fr-trap', 'zjym2bf0', 'fractals'],
   ['fr-popcorn', 'wpq13zja', 'fractals'],

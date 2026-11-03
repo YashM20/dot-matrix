@@ -10,6 +10,9 @@
  *   TELETEXT a 24 × 16 page: sextant block graphics, contiguous (joined) and separated (spaced), on joined panels
  *   LINES    a 36-line screen on rect cells, each line one stroke whose weight is the tone, over a solid-bar spectrum
  *
+ * The Q3 pack sits in squaresPack.ts; the aperiodic floors (XQ: the hat, Ammann–Beenker) in squaresHat.ts and
+ * squaresAmmann.ts.
+ *
  * Chrome as on the algorithms board: the label top-left, the reference faint top-right, a footer rail with a
  * counter and one stat. t = 0 is a finished picture. One red per card, always the live thing.
  */
@@ -27,6 +30,8 @@ import { FOOT, T, cap, cells, cite, footer, mod, pad, squareStyle, thousands, ti
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { frontOf, squareMorph } from '../../engine/squares/morph'
 import { squaresPack } from './squaresPack'
+import { sqHat } from './squaresHat'
+import { sqAmmann } from './squaresAmmann'
 
 export { squareStyle }
 
@@ -431,6 +436,6 @@ export const sqLines: WidgetPreset = {
   },
 }
 
-export const squaresBoard = [sqTetris, sqQuads, sqBlob, sqGameboy, sqTeletext, sqLines, ...squaresPack, sqMorph]
+export const squaresBoard = [sqTetris, sqQuads, sqBlob, sqGameboy, sqTeletext, sqLines, ...squaresPack, sqMorph, sqHat, sqAmmann]
 /** The board's sims and sizes, for the checks (`scripts/squares.ts`). */
 export const squaresSources = { game, quadTree, ballsAt, blobFrame, B_OFF, B_LOOP, TETRIS: { w: TW, h: TH, k: TK, origin: T_ORIGIN }, BLOB: { k: BK, origin: B_ORIGIN, w: BW, h: BH }, QUADS: { size: Q_SIZE, k: QK, origin: Q_ORIGIN, splits: Q_SPLITS } }
