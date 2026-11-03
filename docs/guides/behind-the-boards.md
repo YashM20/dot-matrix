@@ -1,57 +1,61 @@
 # Behind the boards
 
-<!-- VISUAL: kind=card · what=pond-koi · notice=koi fish swimming through rippling water rendered in dot tiles with red markings -->
+<!-- VISUAL: kind=card · what=pond-koi · notice=koi swimming through rippling water drawn in dot tiles, with red markings -->
 
-Dot/480 contains dozens of live interactive boards. This guide takes you behind three of them: the living koi pond, the joined squares board, and the physical materials board. Each board uses the same engine pipeline: a live continuous field sampled onto a discrete matrix of dots.
+The site has more than thirty live boards. This guide goes behind three of them: the koi pond, the joined squares and the materials. They all use the same pipeline as every other card: a continuous field, sampled onto a fixed grid of dots.
 
 ## The living koi pond
 
-<!-- VISUAL: kind=card · what=pond-koi · notice=six koi circling a feeding spot while water ripples spread outward from their tails -->
+<!-- VISUAL: kind=card · what=pond-koi · notice=six koi circling a feeding spot while ripples spread from their tails -->
 
-Open `/pond/` to watch the koi pond card (`pond-koi`). Six koi swim across a 36 by 33 grid of dot tiles. Water ripples drift across the surface, and fish turn to chase food pellets or steer clear of the bank.
+Open `/pond/` to watch the koi pond card (`pond-koi`). Six koi swim across a grid of 36 by 33 dot tiles. Ripples drift across the surface, and the fish turn to chase food or steer clear of the bank.
 
-Each fish moves along a flexible spine of 20 linked nodes. The head calculates steering forces: wandering, avoiding the bank, giving space to other fish, and chasing food pellets. As the head glides forward, each following spine node pulls behind it within set angle limits. A swim wave flexes the spine from head to tail.
+Each fish moves along a spine of 20 linked nodes. The head does the steering: it wanders, keeps off the bank, gives other fish room, lines up with its neighbors, and goes after food. It also drifts over to a still pointer, and hurries toward a held press. Each node behind it follows, with every joint limited to a small bend. A swim wave runs down the spine from head to tail.
 
-The fish body uses two drawing systems at once. The body interior uses coarse lattice-4 dots sized to the width profile of the fish. The snout, fins, and tail use micro-glyph tiles matched to local edge angles. Skin patterns are baked from fractal noise into a lookup table. Signal Red acts as the single accent color on kohaku patches and tancho crowns.
+The body is drawn two ways at once. Tiles well inside the body get one coarse lattice-4 dot, sized by how much light that part of the fish catches. Tiles at the edge, such as the snout, fins and tail, get a micro-glyph that matches how the fish covers that tile. The skin patterns are baked once from fractal noise into a lookup table. Red, the board's one accent, marks the kohaku, sanke and showa patches and the tancho crown.
 
-Water ripples run on a two-plane wave equation. Every frame, each tile takes the average height of its four neighbors, subtracts its previous height, and multiplies by a damping factor of 0.984. Koi tail motions act as moving point sources on this ripple grid, creating natural V-shaped wakes.
+The water runs on a wave equation kept in two height grids. Every frame, each tile adds up its four neighbors, halves the sum, subtracts its own previous height and multiplies by a damping factor of 0.984. The tail of each koi pushes into the water as it swims, which leaves V-shaped wakes.
 
-Tap the pond card to drop 5 to 7 food pellets. Nearby koi spot the food, burst forward with quick head ripples, and gulp the pellets. When a koi eats, its head expands by one cell for 300 milliseconds. Flick your pointer fast across a koi to startle it. The fish curls 90 to 105 degrees in 4 frames, bolts away at high speed, and startles up to 3 nearby companions.
+Tap the pond to drop 5 to 7 food pellets. Nearby koi swim over and eat them, and a koi's head widens by one cell for 0.3 seconds as it eats. Flick your pointer fast across a koi to startle it. It curls 90 to 105 degrees in about 0.13 seconds and bolts. The scare spreads to nearby fish, up to three koi in all.
 
-The pond also checks your local time of day. Between 21:00 and 05:00, the scene enters night mode. Shore tiles drop one tone darker, water twinkle doubles from 3.5 to 7 percent, and the moon's reflection shows up as a column of dash glyphs wobbling across the waves.
+The pond also follows your local time. It is full night between 21:00 and 05:00, with a two-hour fade on either side. The shore drops one tone darker, the water's twinkle doubles, from 3.5% to 7%, and the moon's reflection shows up as a column of dash glyphs wobbling on the water.
 
 ## Joined squares and teletext
 
-<!-- VISUAL: kind=card · what=sq-tetris · notice=square dots joining seamlessly into solid tetromino blocks on a grid -->
+<!-- VISUAL: kind=card · what=sq-tetris · notice=square dots joining into solid tetromino blocks -->
 
-Open `/squares/` to see square dots that fuse into solid shapes. Look at the Tetris card (`sq-tetris`) and the quad tree portrait (`sq-quads`).
+Open `/squares/` to see square dots that fuse into solid shapes, as in the Tetris card (`sq-tetris`) and the quad tree portrait (`sq-quads`).
 
-A regular dot matrix leaves gaps between neighboring dots. On the squares board, each dot has a squircle exponent of 32 or higher, producing straight edges with tiny corner fillets. When two neighboring cells share the same layer and tone, the engine joins them into a single block.
+A normal dot matrix leaves gaps between neighboring dots. The squares board draws true squares instead. When two neighboring cells share the same group, tone and dot size, the engine joins them into one block.
 
-The engine checks each cell with a 12-bit join mask across 4 quadrants: northwest, northeast, southeast, and southwest. When horizontal or vertical neighbors touch, the cell expands past its normal border and fills the gutter. The outer corners keep their rounded shape, while inner junctions form sharp corners. In `sq-tetris`, falling pieces fuse into solid geometric blocks that stack and clear.
+Each cell carries a 12-bit join mask: 3 bits for each of its four corners (northwest, northeast, southeast and southwest). The 3 bits name the corner's shape, worked out from the cell's horizontal, vertical and diagonal neighbors on that side: a lone corner, an edge running across or down, a full fill, an inside corner, or a diagonal. Where cells join, the square grows out to close the gutter between them. On this board the outer corners stay sharp, and inside corners can get a small fillet when a card asks for one, as `sq-blob` does.
 
-<!-- VISUAL: kind=card · what=sq-teletext · notice=vintage terminal text and separated mosaic blocks on a 24x16 character grid -->
+<!-- VISUAL: kind=card · what=sq-teletext · notice=teletext text and mosaic blocks on a 24 × 16 character page, contiguous banner, separated weather map -->
 
-The squares board also hosts the teletext card (`sq-teletext`). This card recreates broadcast information pages.
+The squares board also has a teletext card (`sq-teletext`) that recreates a broadcast information page.
 
-Teletext uses a fixed grid of 24 rows and 16 columns of character cells. Each character cell spans 6 by 9 card dots. The card draws alphanumeric letters and separated mosaic graphics. Mosaic blocks split each cell into a 2 by 3 grid of small rectangles. In separated mode, gutters stay open between blocks, giving you authentic broadcast terminal graphics down to each individual dot.
+The page is 24 columns by 16 rows of character cells, smaller than a real 40 × 24 teletext page, so it fits the card. Each character cell spans 6 by 9 card cells. The card draws letters and mosaic graphics, and each mosaic cell splits into 2 by 3 blocks. The banner uses contiguous mosaics, so blocks fuse across characters. The weather map uses separated mosaics, where the gutter between blocks stays open.
 
 ## Physical materials and lighting
 
-<!-- VISUAL: kind=card · what=mat-loom · notice=woven fabric pattern with highlights moving across threads under a shifting light source -->
+<!-- VISUAL: kind=card · what=mat-loom · notice=cloth woven one pick at a time, with highlights on the threads moving as the light moves -->
 
-Open `/materials/` to see physical surfaces rendered in dots. Look at the weaving loom (`mat-loom`), the carved marble clock (`mat-marble`), and the magnifying lens (`mat-lens`).
+Open `/materials/` to see physical surfaces drawn in dots: the loom (`mat-loom`), the marble clock (`mat-marble`) and the lens (`mat-lens`).
 
-Every material card starts with a signed distance field. The engine converts distance values into a height map, then calculates surface normal vectors using central differences. A single light illuminates the entire board. The engine evaluates Lambertian diffuse reflection for the body and Phong specular reflection for surface shine.
+Each material card builds a height map, either from a distance field (the marble plaque) or from the pattern itself (the loom's weave), then works out surface normals with central differences. Each card has one light. While your pointer hovers a card it acts as a torch; otherwise the light follows your phone's tilt, and failing that the sun for your time of day. Diffuse shading is Lambert. The shine depends on the material: Phong on the marble, a thread sheen (Kajiya and Kay's hair model) on the loom, and Blinn on the pool's glints.
 
-To show glossy highlights on a monochrome display, the engine draws specular glints two quantize steps above the underlying dot tone. If you open the board on a mobile phone with tilt enabled, tipping your device updates the light vector in real time. The highlight glides across every card as your hands tilt the phone.
+On a one-color display a highlight has to be a bigger dot. On the loom and the marble, a glint is drawn one quantize step above the dot under it. On a phone that reports tilt, tipping it moves the light, and the highlights glide across the cards.
 
-<!-- VISUAL: kind=card · what=mat-marble · notice=deeply engraved Roman numerals in stone with soft bevel shadows and bright edge glints -->
+<!-- VISUAL: kind=card · what=mat-marble · notice=the time engraved in stone, one groove wall lit and one dark under the raked light -->
 
-Different materials use distinct dot rules:
+Each material has its own rules.
 
-The loom card (`mat-loom`) and fabric patch (`mat-patch`) represent woven cloth. Thread interlacing is simulated using a 4 by 4 Bayer dither pattern between neighboring dot sizes. This dither creates an alternating diagonal weave texture using pure math.
+The loom (`mat-loom`) weaves real patterns (twill, satin, herringbone, basket and plain), one pick at a time, with the draft drawn beside the cloth. The fabric patch (`mat-patch`) is twill with satin stitching. Both shade their threads with the sheen model, so light runs along the thread.
 
-The marble clock (`mat-marble`) simulates stone carving. Roman numerals are cut into a stone height map with a negative distance profile. Inset bevels create realistic cast shadows along top edges and bright highlight dots along bottom lips, giving the letters carved depth.
+The marble clock (`mat-marble`) cuts the time, hours and minutes, into a marble plaque as a V-shaped groove. The light rakes low across the stone, at 18 degrees or less, so one wall of each groove catches it and the other falls into shadow. The year sits below in Roman numerals, as hairline letters.
 
-The glass lens (`mat-lens`) and pool (`mat-pool`) simulate optical refraction. The engine evaluates Snell's law using a precalculated trigonometric lookup table. When light passes through the curved glass lens, the engine offsets background cell lookups by the surface normal in whole cell increments. The dial digits behind the lens appear magnified and distorted. In the caustic pool card (`mat-pool`), water waves focus light rays onto the floor tiles below, creating shifting caustic webs through fast photon splatting.
+The lens (`mat-lens`) and the pool (`mat-pool`) bend light. For the lens, Snell's law is worked out once into a 127-sample table of how far the light shifts across the bezel. Each frame, the lens looks up that shift and reads the clock face behind it from the moved spot, at finer than one cell, while every dot stays on its lattice. The digits behind the glass look magnified and bent. In the pool, the pond's ripple simulation focuses light onto the floor, and the engine splats photons to draw the shifting caustic webs.
+
+## More boards
+
+Newer cards keep adding to these three. The squares board now has aperiodic floors (`sq-hat`, `sq-ammann`), the arctic circle (`sq-arctic`) and a sandpile (`sq-sandpile`), the pond has plankton (`pond-plankton`), and `/scenes/` renders 3D distance fields in dots.

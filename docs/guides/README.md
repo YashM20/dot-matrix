@@ -1,9 +1,9 @@
 # Visitor guides
 
-These guides explain how to use Dot/480, how to write dot programs, and how the interactive boards work under the hood.
+Three guides for visitors: building a card in MAKE, writing Field IR programs, and how three of the boards work inside.
 
 ## Guides
 
-- [`make-your-first-card.md`](make-your-first-card.md): Build a card step by step in the MAKE editor, edit shapes on the canvas, type text in place, and share your card as a link on desktop or mobile.
-- [`field-ir-cookbook.md`](field-ir-cookbook.md): Seven recipes for Field IR programs in CODE mode, with explanations of coordinates, parameters, and dot visual outputs.
-- [`behind-the-boards.md`](behind-the-boards.md): How the living koi pond, joined squares, teletext, and physical materials boards simulate motion, geometry, and light using live fields.
+- [`make-your-first-card.md`](make-your-first-card.md): Build a card in the MAKE editor, edit it on the canvas, type text in place, and share it as a link, on a desktop or a phone.
+- [`field-ir-cookbook.md`](field-ir-cookbook.md): Seven Field IR recipes for code layers, with the inputs, the numbers worth changing, and what each one looks like in dots.
+- [`behind-the-boards.md`](behind-the-boards.md): How the koi pond, the joined squares (with teletext) and the materials boards handle motion, shape and light.
