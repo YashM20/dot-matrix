@@ -51,11 +51,17 @@ export interface Page {
   close: () => Promise<void>
 }
 
-export async function launch(width: number, height: number): Promise<Page> {
+export interface LaunchOptions {
+  /** Show real scrollbars (Chrome runs with `--hide-scrollbars` otherwise), so a `100vw` width that ignores the
+   * scrollbar's width overflows here as it does on Windows desktops. */
+  scrollbars?: boolean
+}
+
+export async function launch(width: number, height: number, opts: LaunchOptions = {}): Promise<Page> {
   const chrome = findChrome()
   if (!chrome) throw new Error('no Chrome found (set $CHROME)')
   const profile = mkdtempSync(join(tmpdir(), 'dot-probe-'))
-  const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--hide-scrollbars', `--window-size=${width},${height}`, 'about:blank'], { stdio: 'ignore' })
+  const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...(opts.scrollbars ? [] : ['--hide-scrollbars']), `--window-size=${width},${height}`, 'about:blank'], { stdio: 'ignore' })
   let port = ''
   for (let i = 0; i < 150 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
   if (!port) { proc.kill(); throw new Error('Chrome did not open a DevTools port') }

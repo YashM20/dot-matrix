@@ -5,14 +5,36 @@
  *  - lazy loading: which JS chunks the first load fetched, that hovering a board tab prefetches its chunk;
  *  - deep links: `/<board>/` and `?board=` open the board, the title and og tags follow, the address bar
  *    moves to `/<board>/`.
+ *  - phone chrome (docs/POLISH-PLAN.md §2 P0, ids `<check>:<page>`): `tap44`, every chrome target (nav, header and
+ *    footer links and buttons) on the essay, privacy and terms is ≥ 44 × 44 px; `tabbar`, the widget page has the
+ *    tab bar; `focus-clear`, after each Tab (real key events) on home, ABOUT, the widget page, the essay and privacy,
+ *    the focused element is clear of the pinned top bar and the tab bar (scripts/lib/site-probe.ts `tabWalk`).
+ * `KNOWN` lists today's failures: they print as known and don't fail the run (scripts/lib/check.ts `knownChecker`).
  * Needs a server for dist/: `pnpm build && npx vite preview --port 4317`, then
- * `npx tsx scripts/site/mobile.ts [baseUrl]`. Screenshots → `.snapshots/w0/`. Chrome: $CHROME or the usual paths.
+ * `npx tsx scripts/site/mobile.ts [baseUrl] [ids]`, where `ids` (comma-separated) runs only those boards, `tab:<view>`,
+ * `fps` or `chrome`. Screenshots → `.snapshots/w0/`. Chrome: $CHROME or the usual paths.
  */
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { boardIds } from '../../src/widgets/manifest'
+import { launch } from '../lib/cdp'
+import { knownChecker } from '../lib/check'
+import { tabWalk } from '../lib/site-probe'
+
+/**
+ * Today's failures (docs/POLISH-PLAN.md §2). Each P1–P3 task deletes its ids when its fix lands, which makes the
+ * check a gate. Seeded from a run against `pnpm dev`.
+ */
+const KNOWN: readonly string[] = [
+  // S5 (P1-B): focus lands under the tab bar (the card ⋯ buttons, NEXT BOARD)
+  'focus-clear:home',
+  // N3 (P1-B): the widget page has no tab bar
+  'tabbar:widget',
+  // N7, S2 (P1-C, P2-C): the essay's site nav and TOC, the legal nav and footers are under 44 px
+  'tap44:essay', 'tap44:privacy', 'tap44:terms',
+]
 
 const base = (process.argv[2] ?? 'http://localhost:4317/').replace(/\/?$/, '/')
 const only = process.argv[3]?.split(',')
@@ -45,8 +67,7 @@ const js = async (expression: string) => {
   return r.result?.result?.value
 }
 const waitFor = async (expr: string, ms = 15000) => { for (let i = 0; i < ms / 100; i++) { if (await js(expr).catch(() => false)) return true; await sleep(100) } return false }
-let failures = 0
-const check = (name: string, ok: boolean, detail = '') => { console.log(`${ok ? '✓' : '✗'} ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failures++ }
+const { check, done } = knownChecker(KNOWN, 'mobile')
 const shot = async (name: string) => {
   const h = Math.min(8000, Math.ceil(await js('document.documentElement.scrollHeight')))
   await cdp('Emulation.setDeviceMetricsOverride', { width: W, height: h, deviceScaleFactor: 1, mobile: true })
@@ -173,7 +194,7 @@ try {
 
   // the views other than EXPLORE (docs/UX-PLAN.md §4.1): the four MAKE modes and ABOUT, by their canonical query
   const items = only ?? [...boardIds, ...['make=tune', 'make=compose', 'make=code', 'make=draw', 'about'].map(t => `tab:${t}`)]
-  for (const id of items.filter(i => !i.startsWith('tab:') && i !== 'fps')) {
+  for (const id of items.filter(i => !i.startsWith('tab:') && i !== 'fps' && i !== 'chrome')) {
     logs = []
     await cdp('Page.navigate', { url: `${base}${id}/` })
     const ok = await waitFor(boardReady, 20000)
@@ -199,5 +220,50 @@ try {
   await sleep(300)
   try { rmSync(profile, { recursive: true, force: true }) } catch { /* Chrome may still hold files */ }
 }
-console.log(failures ? `${failures} check(s) failed` : 'all checks passed')
-process.exit(failures ? 1 : 0)
+if (!only || only.includes('chrome')) await phoneChrome()
+done()
+process.exit(0)
+
+/** The P0 phone chrome checks (docs/POLISH-PLAN.md §2), in a Chrome of their own (scripts/lib/cdp.ts). */
+async function phoneChrome() {
+  /** Chrome targets under 44 px on a phone: links and buttons in a nav, header or footer (prose links are exempt). */
+  const SMALL_CHROME = `(() => {
+    const out = []
+    for (const el of document.querySelectorAll(':is(nav, header, footer) :is(a[href], button)')) {
+      const s = getComputedStyle(el), r = el.getBoundingClientRect()
+      if (s.display === 'none' || s.visibility === 'hidden' || !r.width || !r.height || el.closest('.sr-only')) continue
+      if (Math.min(r.width, r.height) < 43.5) out.push('"' + el.textContent.trim().slice(0, 16) + '" ' + Math.round(r.width) + '×' + Math.round(r.height))
+    }
+    return out
+  })()`
+  const p = await launch(W, H)
+  try {
+    await p.cdp('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: true })
+    await p.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
+    const STATIC = (sel: string) => `!!document.querySelector('${sel}')`
+    const pages = [
+      { name: 'home', path: '', ready: `!!document.querySelector('.board-grid canvas, .board-grid svg')`, focus: true },
+      { name: 'about', path: '?about', ready: STATIC('.log-view'), focus: true },
+      { name: 'widget', path: 'widget/timer/', ready: `!!document.querySelector('.wp-stage canvas, .wp-stage svg')`, focus: true, tabbar: true },
+      { name: 'essay', path: 'blog/dot-matrix-essay/', ready: STATIC('.hero .dot-title'), focus: true, tap: true },
+      { name: 'privacy', path: 'privacy', ready: STATIC('main.legal'), focus: true, tap: true },
+      { name: 'terms', path: 'terms', ready: STATIC('main.legal'), tap: true },
+    ]
+    for (const pg of pages) {
+      console.log(`
+phone chrome: ${pg.name}`)
+      await p.cdp('Page.navigate', { url: base + pg.path })
+      if (!await p.waitFor(pg.ready, 20000)) { check(`ready:${pg.name}`, false); continue }
+      await p.js('document.fonts.ready.then(() => 1)'); await sleep(1500)
+      if (pg.tap) { const small = await p.js(SMALL_CHROME) as string[]; check(`tap44:${pg.name}`, !small.length, small.length ? `${small.length} under 44 px: ${small.slice(0, 8).join(' | ')}` : '') }
+      if (pg.tabbar) check(`tabbar:${pg.name}`, await p.js(`(() => { const t = document.querySelector('.tabbar'); return !!t && t.getBoundingClientRect().height > 0 })()`) as boolean)
+      if (pg.focus) {
+        await p.js('window.scrollTo(0, 0)')
+        const stops = await tabWalk(p, 80), under = stops.filter(s => s.under)
+        check(`focus-clear:${pg.name}`, stops.length > 0 && !under.length, `${stops.length} stops${under.length ? `; ${under.length} under a bar: ${under.slice(0, 5).map(s => `#${s.n} ${s.label} (${s.under}, y ${s.top})`).join(' | ')}` : ''}`)
+      }
+    }
+  } finally {
+    await p.close()
+  }
+}

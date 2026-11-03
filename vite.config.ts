@@ -1,6 +1,6 @@
 import { execFileSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
-import { join } from 'node:path'
+import { join, resolve } from 'node:path'
 import { fileURLToPath, URL } from 'node:url'
 import { defineConfig, type Plugin } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
@@ -57,7 +57,7 @@ function blogMeta(): Plugin {
       const words: Record<string, number> = {}, heroes: Record<string, { alt: string; w: number; h: number }> = {}
       for (const f of existsSync(DOCS) ? readdirSync(DOCS) : []) {
         if (!f.endsWith('.md') || f === 'README.md') continue
-        this.addWatchFile(join(DOCS, f))
+        this.addWatchFile(resolve(DOCS, f)) // absolute: a relative Windows path reached import analysis as an import
         words[f.slice(0, -3)] = count(readFileSync(join(DOCS, f), 'utf8').replace(/```[\s\S]*?```/g, '').replace(/<!--[\s\S]*?-->/g, ''))
       }
       // the essay's visible text: its JSX after the component starts, tags and `{…}` expressions removed
@@ -83,7 +83,8 @@ function blogMeta(): Plugin {
 
 /**
  * Dev and preview: the blog's paths (`/blog/`, `/blog/<slug>/`) and the essay's old ones (`/essay`, `/essay/`,
- * `/essay.html`) serve blog.html, as vercel.json does in production (there the essay's old paths redirect).
+ * `/essay.html`) serve blog.html, as vercel.json does in production (there the essay's old paths redirect), and
+ * `/privacy/` and `/terms/` serve their pages, so the probes (scripts/site/nav.ts) see what production serves.
  */
 function blogRoutes(): Plugin {
   const rewrite = (req: { url?: string }, _res: unknown, next: () => void) => {
@@ -91,6 +92,8 @@ function blogRoutes(): Plugin {
     if (/^\/blog(\/[^.]*)?$/.test(path) || /^\/essay(\/|\.html)?$/.test(path)) req.url = `/blog.html${query ? `?${query}` : ''}`
     // the lab's page (`/lab`, `/lab/`); its files (`/lab/motion-lab.html`) are served as they are
     else if (/^\/lab\/?$/.test(path)) req.url = `/lab.html${query ? `?${query}` : ''}`
+    // the legal pages with a trailing slash, as vercel.json rewrites them (without one, Vite finds the .html itself)
+    else if (/^\/(privacy|terms)\/$/.test(path)) req.url = `${path.slice(0, -1)}.html${query ? `?${query}` : ''}`
     next()
   }
   return { name: 'blog-routes', configureServer: s => { s.middlewares.use(rewrite) }, configurePreviewServer: s => { s.middlewares.use(rewrite) } }
