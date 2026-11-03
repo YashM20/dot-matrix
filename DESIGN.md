@@ -602,6 +602,7 @@ No state changes a size, so nothing shifts. On coarse pointers every chrome targ
   | `pond-terrarium` | 12 | the creeper and the ants are slow; the default rate, declared for the record |
   | `pond-marble` | 20 | koi comb the ink at ~11 cells/s, about half a cell a frame; 12 on a phone |
   | `pond-plankton` | 18 | the Lenia world steps at 90 Hz, so 5 steps a frame; a burst opens at ~20 cells/s; 12 on a phone |
+  | `pond-turing` | 18 | the hatchling swims in and the grown fish swims off at up to ~35 cells/s, about 2 cells a frame; the skin steps at 36 Hz, so 2 steps a frame; 12 on a phone |
   | `sc-lathe` | 12 | each frame sphere-traces the scene on the CPU; the sun moves slowly, so 12 is smooth and keeps the cost down; declared for the record |
   | `sc-twist` | 12 | the twist and the ring move slowly; capped at the default rate because every frame is sphere-traced on the CPU |
   | `sc-posts` | 12 | the walk is slow and foggy; capped at the default rate because every frame is sphere-traced on the CPU |

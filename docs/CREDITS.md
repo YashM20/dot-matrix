@@ -136,6 +136,12 @@ By Inigo Quilez.
 
 - Scenes Chain (`sc-chain`), board `/scenes/`: technique
 
+### [The chemical basis of morphogenesis (1952); reaction and diffusion on growing domains (1999)](https://doi.org/10.1006/bulm.1999.0131)
+
+By Alan Turing, Edmund Crampin, Eamonn Gaffney, Philip Maini.
+
+- Pond Turing (`pond-turing`), board `/pond/`: technique
+
 ## Code ports
 
 Code ported into the engine, by article. What each port covers, and the credits the articles give, are in [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md).
