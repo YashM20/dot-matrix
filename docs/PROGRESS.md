@@ -13,6 +13,8 @@
 
 **XQ aperiodic floors (#20):** `sq-hat` (hat metatile substitution, mirrored hats red) and `sq-ammann` (de Bruijn multigrid, zoom by 1 + √2) on `/squares/`; engine in `src/engine/algo/{hex,hat,ammann}.ts`, checks in `scripts/aperiodic.ts` (in verify). Frame budgets are warn-only: both cards draw ~13k dots.
 
+**Arctic circle and sandpile (part of #36):** `sq-arctic` (domino shuffling to order 29, the frozen edge red) and `sq-sandpile` (the 72 × 58 identity, Dhar's burn as the loop) on `/squares/`; engine in `src/engine/squares/{aztec,sandpile}.ts`, checks in `scripts/arctic.ts` (in verify). The rest of #36 stays open.
+
 **Next: CP2 · 0.14 · Foundations and fixes** (GitHub milestone). It waits for the owner to say go. Proposed order:
 1. #75 (test tiers: the timing switch in the area scripts, a shared base build) and #76 (the file-size rule; split the 6 files over 800 lines and `goldens/hashes.json` per board). These make the rest faster.
 2. IQ3 #64, IQ1 #62, IQ2 #63, IQ4 #65 (engine packs).
