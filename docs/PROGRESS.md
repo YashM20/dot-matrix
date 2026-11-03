@@ -11,6 +11,8 @@
 
 **Shipped:** CP1 (round 3) is on main as 0.13 (PR #78, `8a1a6fb`): E5, E6, Q2, Q3, M2, M3, L3, X1, the 0.12 and 0.13 release notes, the prose lint and the essay pass. The round-3 detail is in `CHANGELOG.md` 0.13 and the git history.
 
+**XQ aperiodic floors (#20):** `sq-hat` (hat metatile substitution, mirrored hats red) and `sq-ammann` (de Bruijn multigrid, zoom by 1 + √2) on `/squares/`; engine in `src/engine/algo/{hex,hat,ammann}.ts`, checks in `scripts/aperiodic.ts` (in verify). Frame budgets are warn-only: both cards draw ~13k dots.
+
 **Next: CP2 · 0.14 · Foundations and fixes** (GitHub milestone). It waits for the owner to say go. Proposed order:
 1. #75 (test tiers: the timing switch in the area scripts, a shared base build) and #76 (the file-size rule; split the 6 files over 800 lines and `goldens/hashes.json` per board). These make the rest faster.
 2. IQ3 #64, IQ1 #62, IQ2 #63, IQ4 #65 (engine packs).
