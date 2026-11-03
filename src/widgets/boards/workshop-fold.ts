@@ -20,7 +20,7 @@ const FAINT = 0, MID = 1, IDLE = 2, VALUE = 3
 const BAND_LOW = [.12, .3, .62, .95], BAND_TOP = [.28, .6, .9, 1]
 /**
  * The sheet (card cells: x0, y0, x1, y1), the loop's beats (seconds: a fold, the rest after it, the folded hold, an
- * unfold, the gap after it, the flat sheet) and the offset (t = 0 is halfway through the third fold).
+ * unfold, the gap after it, the flat sheet) and the offset (t = 0 is 60% through the third fold, the flap at about 117°).
  */
 export const FOLD = { sheet: [32, 15, 112, 128] as const, fold: 1.1, rest: .45, hold: 1.8, unfold: .7, gap: .12, flat: 1.2, offset: 3.76 }
 const [SX0, SY0, SX1, SY1] = FOLD.sheet
