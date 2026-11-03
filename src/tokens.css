@@ -86,13 +86,13 @@
   /* ── bar heights: fixed and sticky things sit clear of these ── */
   --app-top: calc(52px + env(safe-area-inset-top));      /* phone: the sticky top bar */
   --tabbar-h: calc(58px + env(safe-area-inset-bottom));  /* phone: the tab bar, with the home-indicator inset */
-  --topbar-h: 48px;                                      /* desktop: the header (POLISH-PLAN S1; no user yet) */
+  --topbar-h: 48px;                                      /* desktop: the sticky header (plus --gap-group: its scroll padding) */
   --pillbar-h: 46px;                                     /* widget page: a 36 px pill in a 4 px padded, bordered capsule (R5; no user yet) */
 
   /* ── stacking: one scale for the whole page. A layer one step over its neighbour is calc(var(--z-x) + n) ── */
   --z-raise: 3;     /* inside a component, over its canvas: card action bar, X-RAY overlay; editor banner +2, context menu +5 */
   --z-menu: 20;     /* the editor's toolbar menus */
-  --z-sticky: 30;   /* phone: the sticky top bar */
+  --z-sticky: 30;   /* the sticky header (desktop and phone) and the legal pages' nav */
   --z-dock: 35;     /* the floating dock and the FPS meter */
   --z-pinned: 40;   /* pinned page controls: widget page pills, X-RAY panel; more menu +1, X-RAY timeline +5 */
   --z-bar: 50;      /* phone: the tab bar; the full-screen game sits level with it */

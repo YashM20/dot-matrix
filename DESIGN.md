@@ -174,7 +174,7 @@ There is no substitute typeface — the bitmap dot-font *is* the typography syst
 | `--tap` / `--tap-min` | 44 px / 24 px | tap target on a coarse pointer / the WCAG 2.2 floor on a fine one. Every 44 px target size in CSS is `var(--tap)`; the fine-pointer hit floors (`--dot-hit-min`, `--ed-hit`) are `var(--tap-min)` |
 | `--app-top` | `52px + safe-area-inset-top`; `--tap + inset` in short landscape | phone: the sticky top bar's height |
 | `--tabbar-h` | `58px + safe-area-inset-bottom`; `--tap + inset` in short landscape | phone: the tab bar's height, home indicator included |
-| `--topbar-h` | 48 px | desktop: the header's height, for the sticky header (S1, `docs/POLISH-PLAN.md`); nothing reads it yet |
+| `--topbar-h` | 48 px | desktop: the sticky header's height; `html` scroll padding is this plus `--gap-group`, so a focused or scrolled-to target lands clear of it |
 | `--pillbar-h` | 46 px; 54 px on a coarse pointer | widget page: the pill bar (a 36 px pill, `--tap` on touch, in a 4 px padded, bordered capsule); nothing reads it yet (R5) |
 
 ### Stacking (z-index)
@@ -185,7 +185,7 @@ One scale in `src/tokens.css`. A layer one step over its neighbour is `calc(var(
 |---|---|---|
 | `--z-raise` | 3 | inside a component, over its canvas: card action bar, X-RAY overlay; the editor banner (+2) and context menu (+5) |
 | `--z-menu` | 20 | the editor's toolbar menus |
-| `--z-sticky` | 30 | phone: the sticky top bar |
+| `--z-sticky` | 30 | the sticky header (desktop and phone) and the legal pages' nav |
 | `--z-dock` | 35 | the floating dock and the FPS meter |
 | `--z-pinned` | 40 | pinned page controls: widget page pills, X-RAY panel; the widget page's more menu (+1), the X-RAY timeline (+5) |
 | `--z-bar` | 50 | phone: the tab bar; the full-screen game sits level with it |
@@ -200,7 +200,8 @@ One scale in `src/tokens.css`. A layer one step over its neighbour is `calc(var(
 - **Measure.** Prose keeps `--measure` (the intro line, the ABOUT lede, the changelog); the intro's link and close sit beside the measured text, not under it.
 - **Cards.** Board grids are density-driven and capped by the visitor's CARD SIZE (› Board grid): 3 big cards a row by default, a card is square and never taller than 62svh.
 - **Home hero.** The touchable card (`src/components/hero/`) floats right of the header from 1280 px (it is no taller than the header, so the grid does not move) and comes after the board below that: on a phone the cards come first.
-- **Footer band.** One band a section below the last block: the live number (dots drawn this visit, in dot type) over the site line. No dead strip under it: the tool dock lives in the top bar on desktop and in TOOLS on a phone.
+- **Header.** The top bar is sticky and edge to edge (its content stays on the frame's edge) with the glass background. On desktop it hides while the page scrolls down and comes back on any scroll up or when focus enters it: a `scroll-state(scrolled)` container query on the root, no script, so a browser without it keeps the bar pinned. The phone bar stays pinned. The legal pages' nav works the same way.
+- **Footer band.** One band a section below the last block: the live number (dots drawn this visit, in dot type) over the site line: one identity line and the links, which wrap as whole links into balanced lines. No dead strip under it: the tool dock lives in the top bar on desktop and in TOOLS on a phone.
 - **Figure legends.** One mono meta line under a figure: `FIG 03 · <subject> · <grid> · <pitch>` (`.fig-cap`, and the essay's `figcaption[data-fig]`).
 
 ### Board grid (T3, docs/LAYOUT-THEME-PLAN.md §3)
