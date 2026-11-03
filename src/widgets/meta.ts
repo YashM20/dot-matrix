@@ -399,4 +399,12 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'face-curious': ['A curious face that tilts its head to watch you and looks surprised when you tap it.', 'face character eyes control animated'],
   'face-sleepy': ['A sleepy face that yawns now and then and falls asleep at night. A tap wakes it with a jolt.', 'face character sleep control animated'],
   'face-pip': ['Pip, the board\'s little bear mascot: big eyes that follow you, and a laugh when you tap it.', 'face character mascot control animated'],
+  // charts: the dot charts kit, one card per chart type
+  'chart-bar': ['Orders per month as columns of big dots. Hover or tap a month to read it; switch years at the top.', 'chart bar data readout control animated'],
+  'chart-line': ['Site visits by the hour on a line of fine dots. The readout snaps to the nearest hour as you move.', 'chart line data readout control animated'],
+  'chart-area': ['Rooftop solar output over a day, sunny or cloudy, with the area under the line filled in dots.', 'chart area data readout control animated'],
+  'chart-donut': ['Storage use by kind on a ring of big dots. Point at a segment to see its share; it steps out in red.', 'chart donut pie data readout control animated'],
+  'chart-heatmap': ['Commits by weekday and hour, the dot size showing the count. Tap a cell to read it.', 'chart heatmap grid data readout control animated'],
+  'chart-spark': ['Three server gauges as sparklines, read together at the minute you pick.', 'chart sparkline data readout control animated'],
+  'chart-candle': ['Twenty trading days of a made-up stock as candles. Pick a day to see its close, high and low.', 'chart candlestick finance data readout control animated'],
 }
