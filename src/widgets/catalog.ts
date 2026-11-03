@@ -258,4 +258,11 @@ export const catalog: readonly CatalogRow[] = [
   ['dash-nav', '794p4be9', 'dash'],
   ['dash-road', 'cw165hnv', 'dash'],
   ['dash-drive', 'hbce0de6', 'dash'],
+  ['kt-flap', '061xx2pe', 'kinetic'],
+  ['kt-melt', 'ktf8mj2g', 'kinetic'],
+  ['kt-scramble', 'bap79c4j', 'kinetic'],
+  ['kt-wave', 'j7t9wxdz', 'kinetic'],
+  ['kt-type', '746wdwjd', 'kinetic'],
+  ['kt-magnet', '26tsf8pt', 'kinetic'],
+  ['kt-shatter', 'qbv3dr6e', 'kinetic'],
 ]

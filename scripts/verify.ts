@@ -191,6 +191,12 @@ shareChecks(assert)
   asciiChecks(assert)
 }
 
+// kinetic type (#129): the word validator and ?word=, each effect's loop wraps and ends on the word, the cards stay on their lattice (scripts/kinetic.ts)
+{
+  const { kineticChecks } = await import('./kinetic')
+  kineticChecks(assert)
+}
+
 // blog syntax colouring (#84): code blocks round-trip, regex vs division, kinds (scripts/site/highlight.ts)
 {
   const { highlightChecks } = await import('./site/highlight')

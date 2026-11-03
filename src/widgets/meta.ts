@@ -388,4 +388,11 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'dash-nav': ['A nav strip: the next turn, the distance to it and the street name in dot type.', 'dash car nav navigation map animated'],
   'dash-road': ['The road ahead in perspective: lanes moving at your speed, a bend, a stop line, brake lights.', 'dash car road perspective lanes animated'],
   'dash-drive': ['The loop that drives the board: pull away, cruise, signal, brake. Touch any control to take over.', 'dash car drive loop toggle control animated'],
+  'kt-flap': ['Twelve split-flap modules flip round the drum to the word. Tap a flap to change the word on every card.', 'kinetic type split-flap editor interactive animated'],
+  'kt-melt': ['The word drips into a pool under itself and sets back into letters. The middle letter melts first, in red.', 'kinetic type melt drip animated'],
+  'kt-scramble': ['Random glyphs run through each letter and lock in from left to right. The next letter to lock is red.', 'kinetic type scramble decode animated'],
+  'kt-wave': ['A travelling wave bends the word column by column, on whole dots. The letter on the highest crest is red.', 'kinetic type wave sine animated'],
+  'kt-type': ['The line is backspaced away and typed again at an uneven pace, behind a red caret.', 'kinetic type typewriter caret animated'],
+  'kt-magnet': ['A red magnet crosses the word and pulls the dots near it. Hover or drag to hold the magnet yourself.', 'kinetic type magnet pointer interactive animated'],
+  'kt-shatter': ['The word blows apart into dust and flies home one letter at a time. The letters in flight are red.', 'kinetic type explode reform animated'],
 }
