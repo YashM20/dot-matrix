@@ -96,6 +96,18 @@
     "hash": "d18e780c",
     "dots": 3583
    }
+  },
+  "pond-turing": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "3bd1b1f5",
+    "dots": 561
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "2760a411",
+    "dots": 563
+   }
   }
  }
 }

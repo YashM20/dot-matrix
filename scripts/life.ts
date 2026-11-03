@@ -31,6 +31,7 @@ import { lifeL3Checks } from './life-l3'
 import { lifeX1Checks } from './life-x1'
 import { lifeHealChecks } from './life-heal'
 import { lifePlanktonChecks, planktonSnapshot } from './life-plankton'
+import { lifeTuringChecks, turingSnapshot } from './life-turing'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[s.length >> 1] }
@@ -70,6 +71,7 @@ export async function lifeSnapshot(): Promise<Record<string, string>> {
   for (const n of [360, 1440, 1799]) out[`pond@${n}`] = fnv(simAtStep(sim, n))
   out.patterns = fnv(p.markings.flatMap(m => [...m]), false)
   Object.assign(out, await planktonSnapshot(pond))
+  Object.assign(out, await turingSnapshot(pond))
   return out
 }
 
@@ -525,6 +527,8 @@ export async function lifeChecks(assert: Assert): Promise<void> {
   await lifeHealChecks(assert, pond)
   // ── X-advanced #4: the plankton, Particle Lenia (scripts/life-plankton.ts) ──
   await lifePlanktonChecks(assert, pond)
+  // ── X-advanced #15: the Turing skin, reaction-diffusion on a growing body (scripts/life-turing.ts) ──
+  await lifeTuringChecks(assert, pond)
 
   // ── determinism across engines (Bun / JSC), when available ──
   {
@@ -538,7 +542,7 @@ export async function lifeChecks(assert: Assert): Promise<void> {
       if (!theirs) console.log(`  life: Bun/JSC snapshot skipped (bun failed: ${(r.stderr || r.error?.message || 'no output').trim().split('\n')[0]})`)
       else {
         const diff = Object.keys({ ...mine, ...theirs }).filter(k => mine[k] !== theirs![k])
-        assert('pond: pristine state hashes Bun/JSC ≡ Node/V8 (steps 360, 1440, 1799; the marking LUTs; the plankton)', !diff.length, diff.length ? `differ: ${diff.join(', ')}` : Object.entries(mine).map(([k, v]) => `${k} ${v}`).join(', '))
+        assert('pond: pristine state hashes Bun/JSC ≡ Node/V8 (steps 360, 1440, 1799; the marking LUTs; the plankton; the Turing skin)', !diff.length, diff.length ? `differ: ${diff.join(', ')}` : Object.entries(mine).map(([k, v]) => `${k} ${v}`).join(', '))
       }
     }
   }
