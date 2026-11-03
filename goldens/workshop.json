@@ -144,6 +144,30 @@
     "hash": "45f7a061",
     "dots": 1279
    }
+  },
+  "mat-kintsugi": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "cce3e14a",
+    "dots": 9158
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "6a461c29",
+    "dots": 9326
+   }
+  },
+  "mat-mud": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "05a57896",
+    "dots": 10008
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "a69bc4c9",
+    "dots": 9831
+   }
   }
  }
 }

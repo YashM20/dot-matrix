@@ -331,6 +331,8 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'mat-thread': ['A thread hanging from a spool: pull it out, flick it, tilt to swing it.', 'material textile thread physics control'],
   'mat-lichtenberg': ['A Lichtenberg figure burns across a maple plate between two electrodes; tap to burn one to your finger.', 'material wood electricity algorithm animated control'],
   'mat-frost': ['A frost window with one snowflake a day, grown cell by cell on a hex lattice.', 'material ice algorithm animated'],
+  'mat-kintsugi': ['A glazed plate that breaks where you tap it and mends along its cracks, one seam at a time.', 'material ceramic algorithm animated control'],
+  'mat-mud': ['A slab of wet clay dries and cracks into polygons, one crack at a time, until the rain comes.', 'material clay algorithm animated'],
   'mat-erosion': ['The time in sandstone, worn by rain all day; each digit has weathered since it last changed.', 'material stone water clock algorithm animated'],
   'pond-koi': ['Six koi in a pond of glyph tiles: tap to feed them, hold still to lure them.', 'life koi water creature control animated'],
   'pond-jelly': ['Three moon jellies pulse, coast and trail their tentacles; tap and they all pulse.', 'life jellyfish rope creature control animated'],

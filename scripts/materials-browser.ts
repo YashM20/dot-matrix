@@ -22,6 +22,8 @@ import { findChrome, launch, serveDist, sleep, type Page } from './lib/cdp'
 import { figureHash } from '../src/widgets/boards/workshop-plate'
 import { stoneHash } from '../src/widgets/boards/workshop-stone'
 import { flakeHash } from '../src/widgets/boards/workshop-frost'
+import { breakHash } from '../src/widgets/boards/workshop-kintsugi'
+import { mudHash } from '../src/widgets/boards/workshop-mud'
 
 const PORT = 4391, W = 375, H = 812
 /** The knob's geometry in card cells (src/widgets/boards/materials.ts: KNOB_CARD, KNOB_ARC). */
@@ -200,7 +202,7 @@ try {
   }
   {
     let same = true, detail = ''
-    for (const id of ['mat-knit', 'mat-denim', 'mat-paper', 'mat-wood', 'mat-leather', 'mat-ice', 'mat-erosion', 'mat-frost']) {
+    for (const id of ['mat-knit', 'mat-denim', 'mat-paper', 'mat-wood', 'mat-leather', 'mat-ice', 'mat-erosion', 'mat-frost', 'mat-mud']) {
       await center(q, id)
       const d0 = await dataOf(q), [x, y] = await at(q, id, 72, 100)
       await q.touch(Array.from({ length: 14 }, (_, i) => [[x, y - i * 14]] as [number, number][]))
@@ -225,6 +227,23 @@ try {
     await q.tap(tx, ty); await sleep(400)
     const taps = await q.js<number>('__plate.taps()')
     check('mat-lichtenberg: a vertical swipe leaves the plate pristine; a tap grounds it (a live figure burns)', swiped === 'pristine' && taps >= 1, `after the swipe ${swiped}, taps ${taps}`)
+  }
+  // ── the kintsugi plate and the mud: pristine breaks and cracks bit for bit; the plate's tap ──
+  {
+    const ready = await q.waitFor('!!globalThis.__kintsugi && !!globalThis.__mud', 15000)
+    const node = [breakHash(0, 0), breakHash(0, 2), breakHash(5, 1), mudHash(0), mudHash(3)]
+    const chrome = ready ? await q.js<number[]>('[__kintsugi.hash(0, 0), __kintsugi.hash(0, 2), __kintsugi.hash(5, 1), __mud.hash(0), __mud.hash(3)]') : []
+    check('kintsugi: three pristine breaks and two mud slabs hash the same in Chrome and Node (bit for bit)', ready && chrome.join() === node.join(), `node ${node.map(h => h.toString(16)).join(' ')}, chrome ${chrome.map(h => h.toString(16)).join(' ')}`)
+    await center(q, 'mat-kintsugi')
+    const [x, y] = await at(q, 'mat-kintsugi', 72, 30)
+    await q.touch(Array.from({ length: 14 }, (_, i) => [[x, y + i * 14]] as [number, number][]))
+    await sleep(500)
+    const swiped = await q.js<string>('__kintsugi.mode()')
+    await center(q, 'mat-kintsugi')
+    const [tx, ty] = await at(q, 'mat-kintsugi', 90, 60)
+    await q.tap(tx, ty); await sleep(400)
+    const taps = await q.js<number>('__kintsugi.taps()')
+    check('mat-kintsugi: a vertical swipe leaves the plate pristine; a tap breaks it (a live break)', swiped === 'pristine' && taps >= 1, `after the swipe ${swiped}, taps ${taps}`)
   }
   check('workshop touch: no console errors', q.logs.length === 0, q.logs.slice(0, 3).join(' | '))
   await q.close(); page = null
