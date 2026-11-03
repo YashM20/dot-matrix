@@ -204,6 +204,18 @@
     "hash": "4b5c345a",
     "dots": 4730
    }
+  },
+  "sq-ascii": {
+   "t=0": {
+    "style": "square:2.00",
+    "hash": "95813f4c",
+    "dots": 12290
+   },
+   "t=1.3": {
+    "style": "square:2.00",
+    "hash": "42431c93",
+    "dots": 12287
+   }
   }
  }
 }

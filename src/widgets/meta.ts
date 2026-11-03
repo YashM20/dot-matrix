@@ -359,6 +359,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'sq-ammann': ['Squares and 45° rhombi from four sets of lines. The floor zooms by 1 + √2 and every tile splits into smaller ones.', 'squares ammann beenker quasicrystal multigrid tiling animated'],
   'sq-arctic': ['Dominoes shuffled into a random diamond, one size at a time. The four corners freeze, and red marks where they stop.', 'squares arctic circle aztec diamond domino shuffling tiling animated'],
   'sq-sandpile': ['The sandpile identity in four shades. A grain lands on every edge, each cell topples once and the picture comes back.', 'squares sandpile abelian identity toppling four shades animated'],
+  'sq-ascii': ['A slow plasma typed as ASCII art: ten glyphs ordered by ink, each one made of square dots. The red block is the cursor.', 'squares ascii glyph tiles terminal text plasma animated'],
   'fr-julia': ['A Julia set as its c walks the edge of the Mandelbrot set, shown in the corner with c in red.', 'fractal julia mandelbrot smooth animated'],
   'fr-trap': ['A Julia plane shaded by orbit traps: pearls from a point, threads from a line, one probe orbit drawn on top.', 'fractal orbit-trap julia animated'],
   'fr-popcorn': ['Pickover popcorn: three thousand grains in one flow, seen through a round port, one grain riding its loop.', 'fractal popcorn density animated'],

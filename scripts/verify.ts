@@ -185,6 +185,12 @@ shareChecks(assert)
   arcticChecks(assert)
 }
 
+// ASCII glyph tiles (#36, Q3.10): the ramp rises in ink and is the 5 × 7 font, tiles hold ramp glyphs, the cursor writes one tile per step, the card (scripts/ascii.ts)
+{
+  const { asciiChecks } = await import('./ascii')
+  asciiChecks(assert)
+}
+
 // blog syntax colouring (#84): code blocks round-trip, regex vs division, kinds (scripts/site/highlight.ts)
 {
   const { highlightChecks } = await import('./site/highlight')

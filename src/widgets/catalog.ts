@@ -230,6 +230,7 @@ export const catalog: readonly CatalogRow[] = [
   ['sq-ammann', 'm6ssgkv3', 'squares'],
   ['sq-arctic', 'atrhj78h', 'squares'],
   ['sq-sandpile', 'xrf6n7dq', 'squares'],
+  ['sq-ascii', 'm52r2s29', 'squares'],
   ['fr-julia', '9v0makv6', 'fractals'],
   ['fr-trap', 'zjym2bf0', 'fractals'],
   ['fr-popcorn', 'wpq13zja', 'fractals'],
