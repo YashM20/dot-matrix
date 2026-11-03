@@ -221,4 +221,10 @@ shareChecks(assert)
   oldschoolChecks(assert)
 }
 
+// 3D SDF scenes (IQ8 #69): primitives, operators, tracer, normals, soft shadows, fog, the light rig and the board (scripts/sdf3d.ts)
+{
+  const { sdf3dChecks } = await import('./sdf3d')
+  sdf3dChecks(assert)
+}
+
 done('All acceptance checks passed')

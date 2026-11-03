@@ -37,6 +37,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   squares: 'Square cells, spaced, joined, turned and cut: Tetris pieces that fuse, a face in 1,201 quads, metaballs, an LCD, teletext, a line screen, Schotter, an L∞ Mondrian, pixel sorting, Truchet tiles, cross-stitch, beads, a dot-to-square morph, two floors that never repeat, an arctic circle and a sandpile.',
   fractals: 'Six fractals in dots: a Julia set walking the Mandelbrot map, orbit traps, popcorn, a chaos-game flame, an eight-fold icon and a Lyapunov field.',
   oldschool: 'Demo effects from the late 1990s: a brick tunnel, a flower, a floor to the horizon, drifting clouds and a screen filming itself.',
+  scenes: 'Small 3D scenes traced onto big dots: a turned vase, a twisted column, a walk through a field of posts and a swinging chain.',
 }
 
 export const groupBlurbs: Record<BoardGroupId, string> = {

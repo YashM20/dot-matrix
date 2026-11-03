@@ -1,0 +1,53 @@
+{
+ "about": "FNV-1a 32 of the sorted quantized dot list per preset on the scenes board (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
+ "presets": {
+  "sc-lathe": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "069e7b32",
+    "dots": 4684
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "70de66fd",
+    "dots": 4699
+   }
+  },
+  "sc-twist": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "21663a03",
+    "dots": 3280
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "e2748b4f",
+    "dots": 3275
+   }
+  },
+  "sc-posts": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "ec40211e",
+    "dots": 4660
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "13a88706",
+    "dots": 4610
+   }
+  },
+  "sc-chain": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "af8babdd",
+    "dots": 4628
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "76d5f822",
+    "dots": 4585
+   }
+  }
+ }
+}

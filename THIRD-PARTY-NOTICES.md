@@ -49,6 +49,11 @@ Ported articles:
 | [Plane deformations](https://iquilezles.org/articles/deform/) | The eight formula pairs and the worked example, the look-up table and the scrolled read | `src/engine/oldschool/deform.ts` |
 | [2D dynamic clouds](https://iquilezles.org/articles/dynclouds/) | Octaves drifting at their own speeds, the threshold and sharpness remap, the march toward the sun | `src/engine/oldschool/clouds.ts` |
 | [Feedback effect](https://iquilezles.org/articles/feedbackfx/) | The rotated and scaled quad, the faded copy into the centre, the untouched border | `src/engine/oldschool/feedback.ts` |
+| [3D distance functions](https://iquilezles.org/articles/distfunctions/) | Sphere, box, round box, box frame, torus, link, capsules, capped and rounded cylinders, plane, ellipsoid; union, subtraction, intersection, round, onion, both elongations, revolution, extrusion, twist, cheap bend, scale, mirror, limited repetition | `src/engine/sdf3d/prims.ts`, `ops.ts` |
+| [Numerical normals for SDFs](https://iquilezles.org/articles/normalsSDF/) | The tetrahedron normal, with h set to the dot's footprint | `src/engine/sdf3d/march.ts` |
+| [Soft shadows](https://iquilezles.org/articles/rmshadows/) | The k·h/t penumbra, Aaltonen's improvement, the inner-penumbra extension | `src/engine/sdf3d/march.ts` |
+| [Better fog](https://iquilezles.org/articles/fog/) | Distance fog, the sun-coloured fog, the split extinction and in-scattering, the height fog in closed form | `src/engine/sdf3d/light.ts` |
+| [Outdoors lighting](https://iquilezles.org/articles/outdoorslighting/) | The sun, sky and bounce lights with their colours, the coloured penumbra, the 1/2.2 gamma | `src/engine/sdf3d/light.ts` |
 
 Credits the articles give, carried over:
 
@@ -61,6 +66,9 @@ Credits the articles give, carried over:
 - Popcorn images: the popcorn formulas are Clifford Pickover's.
 - Lyapunov fractals: the images are Mario Markus's; the name has stuck to them since.
 - Icon images: the formula comes from Michael Field and Martin Golubitsky's book *Symmetry in Chaos* (1992). We use the book's form, with |z|² and z̄ⁿ⁻¹, which the article quotes loosely.
+- Numerical normals for SDFs: the article first saw the tetrahedron technique from Paulo Falcao (Pouet, around 2008) and later from Paul Malin (Shadertoy).
+- Soft shadows: the improvement is Sebastian Aaltonen's (his GDC presentation), and marching on through the shape for inner penumbras was explored by Shadertoy user nurof3n.
+- Better fog: the height falloff follows a trick of Crytek's.
 
 ```
 MIT License

@@ -68,6 +68,7 @@ export const boardManifest = [
   { id: 'squares', title: 'SQUARES — SPACED AND JOINED', columns: 3, density: 'hero', load: () => import('./boards/squares').then(m => ({ items: m.squaresBoard })) },
   { id: 'fractals', title: 'FRACTALS — ESCAPE, TRAP, DENSITY', columns: 3, density: 'standard', load: () => import('./boards/fractals').then(m => ({ items: m.fractalsBoard })) },
   { id: 'oldschool', title: 'OLDSCHOOL / TUNNELS, CLOUDS AND FEEDBACK', columns: 3, density: 'standard', load: () => import('./boards/oldschool').then(m => ({ items: m.oldschoolBoard })) },
+  { id: 'scenes', title: 'SCENES / 3D DISTANCE FIELDS IN DOTS', columns: 2, density: 'standard', load: () => import('./boards/scenes').then(m => ({ items: m.scenesBoard })) },
 ] as const satisfies readonly (BoardMeta & { load: () => Promise<BoardContents> })[]
 
 export type BoardId = typeof boardManifest[number]['id']
@@ -95,7 +96,7 @@ export const boardGroups = [
   { id: 'ui', label: 'INTERFACES', boards: ['henry', 'deerflow12', 'mosaic', 'henry3', 'metro', 'ride', 'audio', 'lock', 'components', 'surfaces'] },
   { id: 'data', label: 'DATA', boards: ['live', 'departures', 'heartbeat'] },
   { id: 'play', label: 'PLAY', boards: ['levels', 'physics', 'instrument', 'scope', 'mirror', 'heal', 'pond', 'workshop'] },
-  { id: 'engine', label: 'ENGINE', boards: ['ir', 'sim', 'algorithms', 'squares', 'light', 'materials', 'gpu', 'type', 'cinema', 'fractals', 'oldschool'] },
+  { id: 'engine', label: 'ENGINE', boards: ['ir', 'sim', 'algorithms', 'squares', 'light', 'materials', 'gpu', 'type', 'cinema', 'fractals', 'oldschool', 'scenes'] },
 ] as const satisfies readonly { id: string; label: string; boards: readonly BoardId[] }[]
 export type BoardGroupId = typeof boardGroups[number]['id']
 /** The group a board lives in (START HERE is a tour, not a home). */

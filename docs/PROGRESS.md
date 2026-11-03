@@ -15,6 +15,8 @@
 
 **Arctic circle and sandpile (part of #36):** `sq-arctic` (domino shuffling to order 29, the frozen edge red) and `sq-sandpile` (the 72 × 58 identity, Dhar's burn as the loop) on `/squares/`; engine in `src/engine/squares/{aztec,sandpile}.ts`, checks in `scripts/arctic.ts` (in verify). The rest of #36 stays open.
 
+**IQ8 3D SDF scenes (#69):** `/scenes/` (lazy): `sc-lathe`, `sc-twist`, `sc-posts`, `sc-chain`, sphere-traced on the CPU at lattice 2 and capped at 12 fps; engine in `src/engine/sdf3d/` (primitives, operators, tracer, tetrahedron normals, soft shadows, fog, the outdoors rig, a buffer renderer), checks in `scripts/sdf3d.ts` (in verify). Frame budgets are warn-only (over 4 ms × load on a busy box). GPU tier (`gpuIR`) is a follow-up.
+
 **Next: CP2 · 0.14 · Foundations and fixes** (GitHub milestone). It waits for the owner to say go. Proposed order:
 1. #75 (test tiers: the timing switch in the area scripts, a shared base build) and #76 (the file-size rule; split the 6 files over 800 lines and `goldens/hashes.json` per board). These make the rest faster.
 2. IQ3 #64, IQ1 #62, IQ2 #63, IQ4 #65 (engine packs).

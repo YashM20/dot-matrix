@@ -12,6 +12,13 @@ By Inigo Quilez.
 
 - Oldschool Sky (`os-sky`), board `/oldschool/`: technique
 
+### [3D distance functions](https://iquilezles.org/articles/distfunctions/)
+
+By Inigo Quilez.
+
+- Scenes Lathe (`sc-lathe`), board `/scenes/`: technique
+- Scenes Twist (`sc-twist`), board `/scenes/`: technique
+
 ### [Ammann–Beenker tiling, by de Bruijn’s multigrid](https://en.wikipedia.org/wiki/Ammann%E2%80%93Beenker_tiling)
 
 By Robert Ammann, Frans Beenker, Nicolaas Govert de Bruijn.
@@ -23,6 +30,12 @@ By Robert Ammann, Frans Beenker, Nicolaas Govert de Bruijn.
 By David Smith, Joseph Samuel Myers, Craig S. Kaplan, Chaim Goodman-Strauss.
 
 - Squares Hat (`sq-hat`), board `/squares/`: technique
+
+### [Better fog](https://iquilezles.org/articles/fog/)
+
+By Inigo Quilez.
+
+- Scenes Posts (`sc-posts`), board `/scenes/`: technique
 
 ### [Feedback effect](https://iquilezles.org/articles/feedbackfx/)
 
@@ -87,6 +100,12 @@ By Inigo Quilez.
 
 - Fractals Julia (`fr-julia`), board `/fractals/`: technique
 
+### [Soft shadows](https://iquilezles.org/articles/rmshadows/)
+
+By Inigo Quilez.
+
+- Scenes Chain (`sc-chain`), board `/scenes/`: technique
+
 ## Code ports
 
 Code ported into the engine, by article. What each port covers, and the credits the articles give, are in [THIRD-PARTY-NOTICES.md](../THIRD-PARTY-NOTICES.md).
@@ -130,3 +149,8 @@ Code ported into the engine, by article. What each port covers, and the credits 
 - [Plane deformations](https://iquilezles.org/articles/deform/)
 - [2D dynamic clouds](https://iquilezles.org/articles/dynclouds/)
 - [Feedback effect](https://iquilezles.org/articles/feedbackfx/)
+- [3D distance functions](https://iquilezles.org/articles/distfunctions/)
+- [Numerical normals for SDFs](https://iquilezles.org/articles/normalsSDF/)
+- [Soft shadows](https://iquilezles.org/articles/rmshadows/)
+- [Better fog](https://iquilezles.org/articles/fog/)
+- [Outdoors lighting](https://iquilezles.org/articles/outdoorslighting/)
