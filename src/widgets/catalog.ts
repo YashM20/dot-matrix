@@ -240,4 +240,8 @@ export const catalog: readonly CatalogRow[] = [
   ['os-sky', 'b2z6011q', 'oldschool'],
   ['os-echo', '47fv6r6x', 'oldschool'],
   ['os-star', '5fwje4zt', 'oldschool'],
+  ['sc-lathe', '6p0sbzp8', 'scenes'],
+  ['sc-twist', '4v5577ta', 'scenes'],
+  ['sc-posts', 'nb9k1dqt', 'scenes'],
+  ['sc-chain', 'krn12mve', 'scenes'],
 ]

@@ -369,4 +369,8 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'os-sky': ['Clouds whose octaves drift at their own speeds, lit on the side that faces a red sun.', 'oldschool demo clouds noise sky animated'],
   'os-echo': ['A frame filming itself: each copy turned, shrunk and faded inside the last, fed by a red block on the border.', 'oldschool demo feedback spiral animated'],
   'os-star': ['A checker spun out along three arms by the star deformation, turning as it scrolls.', 'oldschool demo star deformation animated'],
+  'sc-lathe': ['A vase turned from a 2D profile and hollowed with an onion, red inside, while the sun circles it.', 'scenes 3d sdf revolution onion shadow animated'],
+  'sc-twist': ['A six-point star column, extruded and twisted back and forth, with a red ring riding up and down it.', 'scenes 3d sdf twist extrusion shadow animated'],
+  'sc-posts': ['A walk through a field of posts at sunrise; the fog thickens with distance and warms toward a low red sun.', 'scenes 3d sdf fog repetition shadow animated'],
+  'sc-chain': ['Four links and a red bob swing in front of a wall; the shadow is sharp near the wall and soft further out.', 'scenes 3d sdf elongate soft-shadow animated'],
 }

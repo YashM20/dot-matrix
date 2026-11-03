@@ -17,6 +17,8 @@
 
 **Pond plankton (part of #36, X-advanced #4):** `pond-plankton` on `/pond/`, Particle Lenia creatures in a dish, one dot per particle, the Lenia density as a faint body, each creature's nucleus red. Engine in `src/engine/life/{lenia,match,plankton,planktonView}.ts` (a matched blend renumbers identical particles so the seam and the heal stay short), checks in `scripts/life-plankton.ts` (from `scripts/life.ts`). The frame budget is warn-only.
 
+**IQ8 3D SDF scenes (#69):** `/scenes/` (lazy): `sc-lathe`, `sc-twist`, `sc-posts`, `sc-chain`, sphere-traced on the CPU at lattice 2 and capped at 12 fps; engine in `src/engine/sdf3d/` (primitives, operators, tracer, tetrahedron normals, soft shadows, fog, the outdoors rig, a buffer renderer), checks in `scripts/sdf3d.ts` (in verify). Frame budgets are warn-only (over 4 ms × load on a busy box). GPU tier (`gpuIR`) is a follow-up.
+
 **XM growth and wear (#21):** `mat-lichtenberg` (two-electrode dielectric breakdown, char lit through M1 relief), `mat-erosion` (droplet erosion through the day, checkpointed; each digit weathers since it last changed) and `mat-frost` (Reiter automaton on `hexSites`, one flake a day from a vetted table) on `/workshop/`; engine in `src/engine/matter/{lichtenberg,erosion,reiter}.ts` (in the determinism lint), checks in `scripts/materials.ts --only growth`. Frame budgets are warn-only: the plate's burn frames and the stone's new-minute frame run over 4 ms on a loaded box.
 
 **Next: CP2 · 0.14 · Foundations and fixes** (GitHub milestone). It waits for the owner to say go. Proposed order:
