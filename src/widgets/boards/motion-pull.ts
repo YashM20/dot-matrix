@@ -55,11 +55,8 @@ export const pullCard = loopCard({
       const hint = phase === 'RELEASE' ? 'RELEASE' : phase === 'PULLING' ? 'PULL TO REFRESH' : phase === 'REFRESHING' ? 'REFRESHING' : ''
       if (hint) out.push(layer(T.text(hint, 72, cy + 12, { align: 'center' }), phase === 'RELEASE' ? 'value' : 'mid'))
     }
-    // the finger: a ring of fine sites that drags further than the list moves
-    if (lt >= PULL.start && lt < release + .1) {
-      const fy = Math.round(30 + span(lt, PULL.start, PULL.drag) * 60)
-      out.push(layer(T.dotRing(128, fy, 6, { spacing: 2.2, size: 1.2 }), 'idle'), layer(T.dots([[128, fy]], 2.4), 'idle'))
-    }
+    // the finger: a ring of fine sites holding the first row's avatar while it drags
+    if (lt >= PULL.start && lt < release + .1) out.push(layer(T.dotRing(13, y0 + 8, 9, { spacing: 2.2, size: 1.2 }), 'idle'))
     return out
   },
   foot: lt => { const p = phaseAt(lt, offsetAt(lt)); return [p, p === 'UPDATED' ? 'JUST NOW' : '2 MIN AGO'] },

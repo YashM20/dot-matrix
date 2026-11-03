@@ -26,14 +26,13 @@ const SHAPES: Pt[][] = [
   disc(20, 30, 11), block(40, 23, 60, 3.3), block(40, 36, 36, 3.3),
   block(PIC.x, PIC.y, PIC.w, PIC.h), block(6, 100, 132, 3.3), block(6, 111, 90, 3.3),
 ]
-/** The picture once loaded: a sun and two ridges, on the placeholder's own sites. */
+/** The picture once loaded: two ridges on the placeholder's own sites, and the sun as one big site. */
 const PICTURE = (() => {
-  const by: Record<'value' | 'idle' | 'mid', Pt[]> = { value: [], idle: [], mid: [] }
+  const by: Record<'idle' | 'mid', Pt[]> = { idle: [], mid: [] }
   for (const [x, y] of SHAPES[3]) {
     const far = 72 - 9 * Math.sin(x * .05 + 1) - 4 * Math.sin(x * .13), near = 82 - 5 * Math.sin(x * .07 + 2.5) - 3 * Math.sin(x * .19)
     if (y >= near) by.idle.push([x, y])
     else if (y >= far) by.mid.push([x, y])
-    else if (Math.hypot(x - 104, y - 62) <= 7.5) by.value.push([x, y])
   }
   return by
 })()
@@ -43,7 +42,7 @@ function content(i: number): Layer[] {
     case 0: return [layer(T.dotRing(20, 30, 11, { spacing: 2.6, size: 1.3 }), 'value'), layer(T.big('M', 20, 23, { lattice: 2, align: 'center' }), 'value')]
     case 1: return [layer(T.big('MIRA K', 40, 21, BODY), 'value'), layer(T.dots([[40 + 6 * 7.8 + 4, 25]], 5), 'active')]
     case 2: return [layer(T.text('2 MIN AGO', 40, 35), 'mid')]
-    case 3: return (Object.keys(PICTURE) as (keyof typeof PICTURE)[]).map(k => layer(T.dots(PICTURE[k], SK.size), k))
+    case 3: return [layer(T.dots([[104, 58]], 12), 'value'), layer(T.dots(PICTURE.mid, SK.size), 'mid'), layer(T.dots(PICTURE.idle, SK.size), 'idle')]
     case 4: return [layer(T.text('SUNRISE OVER THE RIDGE', 6, 99), 'idle')]
     default: return [layer(T.text('6:12 AM, 2 KM IN', 6, 110), 'mid')]
   }

@@ -12,7 +12,8 @@ import { BODY, CHECK, T, arcRing, cols, frac, inOut, loopCard, outCubic, outline
  * An arc that grows and shrinks as it turns (one stretch every 1.2 s), for 3.6 s. Then the arc runs all the
  * way round, the ring closes and a check draws on in the middle.
  */
-const SPIN = { cx: 72, cy: 58, r: 30, n: 20, cycle: 1.2, grow: 12, rot: 5, load: 3.6, close: .4, check: .35, period: 5.6 }
+const SPIN = { cx: 72, cy: 58, r: 30, n: 24, cycle: 1.2, grow: 14, rot: 6, load: 3.6, close: .4, check: .35, period: 5.6 }
+const ARC = { track: 2.2, arc: 4.4, head: 6.4 }
 /** Arc ends in site units at loop time `lt` (while loading). */
 function arcAt(lt: number): [number, number] {
   const c = Math.floor(lt / SPIN.cycle), f = frac(lt / SPIN.cycle), base = c * SPIN.grow + lt * SPIN.rot
@@ -25,13 +26,13 @@ export const spinnerCard = loopCard({
     const { cx, cy, r, n, load, close } = SPIN, out: Layer[] = []
     if (lt < load) {
       const [tail, head] = arcAt(lt)
-      out.push(...arcRing(cx, cy, r, n, tail, head))
+      out.push(...arcRing(cx, cy, r, n, tail, head, ARC))
       const dots = Math.floor(lt * 2.5) % 4
       out.push(layer(T.big(`LOADING${'.'.repeat(dots)}`, 34, 100, BODY), 'idle'))
     } else {
       // the arc's tail holds where it was; the head runs on round to it
       const [tail, head] = arcAt(load), p = outCubic(span(lt, load, close)), shut = p >= 1
-      out.push(...arcRing(cx, cy, r, n, tail, head + p * (tail + n - 1 - head), { headTone: shut ? 'value' : 'active', head: shut ? 3.4 : 5.4 }))
+      out.push(...arcRing(cx, cy, r, n, tail, head + p * (tail + n - 1 - head), { ...ARC, headTone: shut ? 'value' : 'active', head: shut ? ARC.arc : ARC.head }))
       const drawn = Math.round(span(lt, load + close, SPIN.check) * 7)
       if (drawn > 0) out.push(layer(spriteAt(cols(CHECK, drawn), checkCol, checkRow, 3), 'value'))
       out.push(layer(T.big('READY', cx, 100, { ...BODY, align: 'center' }), 'value'))

@@ -81,7 +81,7 @@ export const waitCard = loopCard({
     return [
       layer(T.big(done ? 'UP TO DATE' : 'CHECKING', 6, 34, BODY), 'value'),
       layer(T.text(done ? 'VERSION 4.8.0' : 'FOR UPDATES', 6, 50), 'idle'),
-      ...[...by].map(([tn, pts]) => layer(T.dots(pts, tn === 'faint' ? 1.4 : tn === 'active' ? 3.8 : 3), tn)),
+      ...[...by].map(([tn, pts]) => layer(T.dots(pts, tn === 'faint' ? 1.6 : tn === 'active' ? 3.8 : 3), tn)),
       layer(T.text(done ? 'LAST CHECK JUST NOW' : 'THIS CAN TAKE A MINUTE', 6, 92), 'mid'),
     ]
   },
