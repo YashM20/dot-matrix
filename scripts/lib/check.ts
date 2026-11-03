@@ -31,3 +31,31 @@ export function checker(label = '') {
   }
   return { assert, done }
 }
+
+/**
+ * Reported checks (docs/POLISH-PLAN.md §2 P0): every check has a short id (`sticky:home@1440:mid`). An id in `known`
+ * is a failure we already know about: it prints as known and doesn't fail the run. A known id that passes is listed
+ * at the end, so the fix that made it pass can delete it from the probe's list and turn the check into a gate. Any
+ * other failure fails the run. An id checked more than once fails if any of its runs fails.
+ */
+export function knownChecker(known: readonly string[], label = 'probe') {
+  const knownIds = new Set(known), failed = new Set<string>(), seen = new Set<string>()
+  let pass = 0, knownFail = 0, newFail = 0
+  const check = (id: string, ok: boolean, detail = '') => {
+    const d = detail ? ` — ${detail}` : ''
+    seen.add(id)
+    if (ok) { pass++; console.log(`✓ ${id}${d}`); return }
+    failed.add(id)
+    if (knownIds.has(id)) { knownFail++; console.log(`◦ ${id} (known)${d}`) }
+    else { newFail++; console.error(`✗ ${id}${d}`) }
+  }
+  /** Prints the counts and the known ids that pass now; exits 1 on a new failure. */
+  const done = () => {
+    const promote = known.filter(id => seen.has(id) && !failed.has(id)), unrun = known.filter(id => !seen.has(id))
+    console.log(`\n${label}: ${pass} passed, ${knownFail} known failure(s), ${newFail} new failure(s)`)
+    if (promote.length) console.log(`known ids that pass now (delete them from the list to gate them): ${promote.join(', ')}`)
+    if (unrun.length) console.log(`known ids not checked in this run: ${unrun.join(', ')}`)
+    if (newFail) (globalThis as { process?: { exit(code: number): void } }).process?.exit(1)
+  }
+  return { check, done }
+}
