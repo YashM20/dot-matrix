@@ -179,6 +179,12 @@ shareChecks(assert)
   aperiodicChecks(assert)
 }
 
+// arctic circle and sandpile (#36): domino shuffling covers the diamond, the circle, the sandpile identity, abelian toppling, the burn, the two cards (scripts/arctic.ts)
+{
+  const { arcticChecks } = await import('./arctic')
+  arcticChecks(assert)
+}
+
 // blog syntax colouring (#84): code blocks round-trip, regex vs division, kinds (scripts/site/highlight.ts)
 {
   const { highlightChecks } = await import('./site/highlight')
