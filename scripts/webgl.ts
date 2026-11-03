@@ -2,8 +2,8 @@
  * WebGL2 renderer checks in headless Chrome (CDP over Node's built-in WebSocket, no npm deps):
  *   1. GPU ≡ JS IR parity: the 20 `IR_TEST_FIELDS` × 3 envs over 48×48, GPU value readback vs `compileJS`; then the
  *      noise row, the IR noise pack's `IR_NOISE_FIELDS` (scripts/noise.ts) under its own gate (flips ≤ 0.5%).
- *   2. Pixel parity: presets drawn by canvas 2D vs WebGL2 (explicit dots), and the GPU board's passes at
- *      density 1 vs the CPU sample. PNGs (canvas / webgl / diff×4) in `.snapshots/p5a/`.
+ *   2. Pixel parity: presets drawn by canvas 2D vs WebGL2 (explicit dots), and the GPU layers' passes at
+ *      density 1 vs the CPU sample (the gpu board and `mat-lens`). PNGs (canvas / webgl / diff×4) in `.snapshots/p5a/`.
  *   3. Context loss + restore.
  *   4. Frame rate: 500k GPU IR dots, 100k CPU dots (value texture, instance buffer, canvas 2D).
  *
@@ -21,6 +21,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { IR_TEST_FIELDS } from './ir'
+import { checker } from './lib/check'
 import { IR_NOISE_FIELDS } from './noise'
 
 const args = process.argv.slice(2), swift = args.includes('--swiftshader'), backend = swift ? 'swiftshader' : 'gpu'
@@ -62,8 +63,7 @@ const run = async (expr: string) => {
   return r.result?.result?.value
 }
 const png = (name: string, dataUrl: string) => writeFileSync(join(OUT, name), Buffer.from(dataUrl.split(',')[1], 'base64'))
-let failures = 0
-const check = (name: string, ok: boolean, detail = '') => { console.log(`${ok ? '✓' : '✗'} ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failures++ }
+const { assert: check, done } = checker('webgl')
 const report: Record<string, unknown> = { backend }
 
 try {
@@ -148,7 +148,7 @@ try {
   }
   if (logs.length) console.log(logs.slice(0, 8).join('\n'))
 } catch (e) {
-  console.log(`✗ ${(e as Error).message}`); failures++
+  check((e as Error).message, false)
   if (logs.length) console.log(logs.slice(0, 8).join('\n'))
 } finally {
   writeFileSync(join(OUT, `report-${backend}.json`), JSON.stringify(report, null, 1))
@@ -156,5 +156,5 @@ try {
   await sleep(300)
   try { rmSync(profile, { recursive: true, force: true }) } catch { /* chrome still holds it */ }
 }
-console.log(failures ? `${failures} failed` : 'all webgl checks passed')
-process.exit(failures ? 1 : 0)
+done('all webgl checks passed')
+process.exit(0)
