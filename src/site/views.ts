@@ -43,7 +43,8 @@ export const placeView = (p: Place, mode: Mode = 'TUNE'): { view: View; mode: Mo
 export function viewFromUrl(search: string, pathname: string, mode: Mode = 'TUNE'): ViewState {
   const q = new URLSearchParams(search), tab = (q.get('tab') ?? '').toLowerCase(), b = resolveBoardId(q.get('board') ?? '')
   const make = (q.get('make') ?? '').toUpperCase(), legal = /^\/(privacy|terms)\/?$/.exec(pathname)?.[1] as ViewState['legal']
-  const place: Place = q.has('about') ? 'ABOUT' : isMode(make) ? make : q.has('make') ? 'MAKE' : placeFromName(tab) ?? (q.get('p') ? 'CODE' : 'EXPLORE')
+  // `/about` is ABOUT too (a guessed or typed link); it is written back as `?about`
+  const place: Place = q.has('about') || /^\/about\/?$/i.test(pathname) ? 'ABOUT' : isMode(make) ? make : q.has('make') ? 'MAKE' : placeFromName(tab) ?? (q.get('p') ? 'CODE' : 'EXPLORE')
   const board = boardIds.includes(b) ? b : tab === 'gallery' ? GALLERY_BOARD : boardFromPath(pathname) ?? boardIds[0]
   // a widget page needs a widget-shaped path or ?card=; a MAKE / ABOUT link that also carries ?card= opens that view
   const widget = place === 'EXPLORE' ? widgetRoute(pathname, search) : undefined
@@ -64,9 +65,9 @@ export function urlForView(v: Pick<ViewState, 'view' | 'mode' | 'board'>, search
   // the editor's default way in (TUNE) is plain `?make`
   const head = v.view === 'ABOUT' ? 'about' : v.view === 'MAKE' ? (v.mode === 'TUNE' ? 'make' : `make=${v.mode.toLowerCase()}`) : ''
   const query = [head, q.toString()].filter(Boolean).join('&')
-  // the first board keeps whatever non-board path served the page (`/`, `/index.html`)
-  // (a widget page's path is not one of those: leaving it goes to `/`)
-  const path = v.board === boardIds[0] && boardFromPath(pathname) === undefined ? (widgetRoute(pathname) ? '/' : pathname) : pageMeta(v.board).path
+  // the first board keeps `/` or `/index.html`; any other non-board path (a widget page's, `/about`, an unknown
+  // `/nope/` that fell back to the home board) is written back as `/`
+  const path = v.board === boardIds[0] && boardFromPath(pathname) === undefined ? (/^\/(index\.html)?$/.test(pathname) ? pathname : '/') : pageMeta(v.board).path
   return path + (query ? `?${query}` : '')
 }
 

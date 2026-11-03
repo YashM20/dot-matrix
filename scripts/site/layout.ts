@@ -48,23 +48,14 @@ import { coveredFooterLinks, FOOTER_WRAP, headerTopAfterScroll, scrollTo } from 
  * check a gate. Seeded from a run against `pnpm dev`.
  */
 const KNOWN: readonly string[] = [
-  // S1, S2, N3 (P1-B, P1-C): no header at mid or bottom scroll, even after scrolling up; the widget page has none
-  'sticky:home@1440:mid', 'sticky:home@1440:bottom', 'sticky:home@768:mid', 'sticky:home@768:bottom',
-  'sticky:about@1440:mid', 'sticky:about@1440:bottom', 'sticky:about@768:mid', 'sticky:about@768:bottom',
+  // S2, N3 (P1-B, P1-C): the essay's site nav sits inside the post's hero, so it scrolls away with it; the widget
+  // page has no header
   'sticky:essay@1440:mid', 'sticky:essay@1440:bottom', 'sticky:essay@768:mid', 'sticky:essay@768:bottom',
-  'sticky:privacy@1440:mid', 'sticky:privacy@1440:bottom', 'sticky:privacy@768:mid', 'sticky:privacy@768:bottom',
   'sticky:widget@1440:mid', 'sticky:widget@1440:bottom', 'sticky:widget@768:mid', 'sticky:widget@768:bottom',
   // S3 (P1-B): MAKE scrolls to show the footer under the editor
   'no-app-scroll:make@1920', 'no-app-scroll:make@1440', 'no-app-scroll:make@1280', 'no-app-scroll:make@1024', 'no-app-scroll:make@768',
-  // L5 (P1-B): TERMS alone on the footer's second line
-  'footer-wrap:home@1280', 'footer-wrap:components@1280', 'footer-wrap:lock@1280', 'footer-wrap:deerflow12@1280',
-  'footer-wrap:about@1280', 'footer-wrap:make@1280', 'footer-wrap:widget@1280',
-  'footer-wrap:home@320', 'footer-wrap:components@320', 'footer-wrap:lock@320', 'footer-wrap:deerflow12@320',
-  'footer-wrap:about@320', 'footer-wrap:widget@320',
   // L7 (P1-B): no whole card above the fold at 320 x 568
   'fold-one:home@320',
-  // L2 (P1-C): a nowrap `code` in privacy is wider than 320 px
-  'overflow:privacy@320',
 ]
 
 const args = process.argv.slice(2)

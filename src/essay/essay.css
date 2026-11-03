@@ -26,6 +26,8 @@ a:hover, a:focus-visible, a:active { text-decoration-color: var(--value) }
 /* focus is the accent ring, as on the site (src/site/app/chrome.css) */
 :focus-visible { outline: 1px solid var(--red); outline-offset: 3px }
 code { font: .86em var(--mono); color: var(--value); background: var(--raised); padding: .08em .35em; border-radius: var(--radius-sm); white-space: nowrap }
+/* prose code wraps on a narrow screen: a long host name or key can't push the page sideways */
+@media (max-width: 640px) { :is(p, li, dd) code { white-space: normal; overflow-wrap: anywhere } }
 strong, b { color: var(--value); font-weight: 600 }
 em { color: var(--value) }
 
@@ -157,3 +159,10 @@ em { color: var(--value) }
 .site-nav .kicker { margin: 0 }
 .site-nav a { font: 500 var(--fs-label-12) var(--mono); letter-spacing: .16em; color: var(--label); text-decoration: none; margin-left: var(--space-4) }
 .site-nav a:hover, .site-nav a:focus-visible, .site-nav a:active { color: var(--value) }
+
+/* touch: every chrome link (site nav, contents, post line, more posts, footer) is a --tap target; the post line
+   and more posts are the blog shell's (src/blog/blog.css), which builds on this file */
+@media (pointer: coarse) {
+  .site-nav a, .essay-foot a, .post-line a, .more-posts-all { display: inline-flex; align-items: center; justify-content: center; min-width: var(--tap); min-height: var(--tap) }
+  .toc a, .more-posts li a { display: flex; align-items: center; min-height: var(--tap) }
+}

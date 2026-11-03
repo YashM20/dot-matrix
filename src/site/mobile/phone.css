@@ -1,8 +1,10 @@
 /* Phone styles: portrait and short landscape */
 /* ── phones: portrait (≤ 760 px wide) and short landscape (a touch screen ≤ 500 px tall) ── */
 @media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+  /* focus and scrolled-to targets land clear of the top bar and the tab bar (S5) */
   html {
-    overscroll-behavior-x: none
+    overscroll-behavior-x: none;
+    scroll-padding: var(--app-top) 0 var(--tabbar-h)
   }
 
   .shell {
@@ -22,7 +24,7 @@
     -webkit-touch-callout: none
   }
 
-  /* compact sticky top bar, edge to edge, under the status bar */
+  /* compact sticky top bar, edge to edge, under the status bar; always pinned (only the desktop header hides) */
   .topbar {
     position: sticky;
     top: 0;
@@ -378,6 +380,17 @@
     min-width: var(--tap);
     min-height: var(--tap);
     padding-inline: var(--space-1)
+  }
+
+  /* the links as 44 px targets in balanced lines: the · between them drop out (font-size 0) for a space, so no line
+     starts or ends on a lone separator */
+  .bottom-row > span:last-child {
+    font-size: 0
+  }
+
+  .bottom-row > span:last-child a {
+    margin-inline-end: var(--space-3);
+    font-size: var(--fs-label-12)
   }
 
   /* ⌘K palette as a tall sheet: the field near the top (clear of the keyboard), results under it */

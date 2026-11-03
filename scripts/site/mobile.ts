@@ -28,12 +28,8 @@ import { tabWalk } from '../lib/site-probe'
  * check a gate. Seeded from a run against `pnpm dev`.
  */
 const KNOWN: readonly string[] = [
-  // S5 (P1-B): focus lands under the tab bar (the card ⋯ buttons, NEXT BOARD)
-  'focus-clear:home',
   // N3 (P1-B): the widget page has no tab bar
   'tabbar:widget',
-  // N7, S2 (P1-C, P2-C): the essay's site nav and TOC, the legal nav and footers are under 44 px
-  'tap44:essay', 'tap44:privacy', 'tap44:terms',
 ]
 
 const base = (process.argv[2] ?? 'http://localhost:4317/').replace(/\/?$/, '/')
