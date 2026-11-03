@@ -32,6 +32,7 @@ export const DET_PATHS = [
   'src/engine/fractal/', // IQ7: escape-time, trap and density fractals (#68)
   'src/engine/oldschool/', 'src/widgets/boards/oldschool', // IQ6: deformations, clouds, the feedback sim (#67) and the board drawn with them
   'src/engine/sdf3d/', 'src/widgets/boards/scenes', // IQ8: 3D SDFs, the tracer, shadows, fog and light (#69) and the scenes board
+  'src/engine/charts/', 'src/widgets/boards/charts', // #132: chart scales, marks, motion and readouts, and the charts board
 ] as const
 
 const BANNED = /\bMath\.(random|sin|cos|tan|asin|acos|atan|atan2|hypot|exp|expm1|log|log1p|log2|log10|pow|cbrt|sinh|cosh|tanh)(?![\w$])/
