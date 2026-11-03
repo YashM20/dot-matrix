@@ -31,6 +31,7 @@ import { matErosion, stoneHooks } from './workshop-stone'
 import { matFrost, frostHooks } from './workshop-frost'
 import { matKintsugi, kintsugiHooks } from './workshop-kintsugi'
 import { matMud, mudHooks } from './workshop-mud'
+import { matFold, foldHooks } from './workshop-fold'
 
 const COLS = TILE.cols
 /** Tone indices of `tonedLayer` (SURFACE_TONES): faint, mid, idle, value. */
@@ -402,8 +403,8 @@ export const matLeather: WidgetPreset = {
 }
 
 /** M3: knit, denim, paper; wood, leather, sand; ice, mercury, thread (the plan's order, three a row). */
-export const workshopBoard = [matKnit, matDenim, matPaper, matWood, matLeather, matSand, matIce, matMercury, matThread, matLichtenberg, matErosion, matFrost, matKintsugi, matMud]
+export const workshopBoard = [matKnit, matDenim, matPaper, matWood, matLeather, matSand, matIce, matMercury, matThread, matLichtenberg, matErosion, matFrost, matKintsugi, matMud, matFold]
 /** Live data for the board: the light / tilt hub (F0), subscribed while the board is open. */
 export const workshopSources = [lightSource]
 /** The board's internals, for the checks (`scripts/materials.ts`). */
-export const workshopHooks = { DENIM, denimGeo, WOOD, woodBase, woodCut, LEATHER, leatherGeo, leatherStitches, outerSdf, toCard15, ...liveHooks, ...physicsHooks, ...plateHooks, ...stoneHooks, ...frostHooks, ...kintsugiHooks, ...mudHooks }
+export const workshopHooks = { DENIM, denimGeo, WOOD, woodBase, woodCut, LEATHER, leatherGeo, leatherStitches, outerSdf, toCard15, ...liveHooks, ...physicsHooks, ...plateHooks, ...stoneHooks, ...frostHooks, ...kintsugiHooks, ...mudHooks, ...foldHooks }
