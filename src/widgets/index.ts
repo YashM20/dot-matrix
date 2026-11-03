@@ -34,6 +34,7 @@ import { oldschoolBoard } from './boards/oldschool'
 import { scenesBoard } from './boards/scenes'
 import { dashBoard, dashShared } from './boards/dash'
 import { kineticBoard, kineticShared } from './boards/kinetic'
+import { motionBoard } from './boards/motion'
 import { boardIds, boardManifest, resolveBoardId, resolveCardId, type BoardContents, type BoardDef, type BoardId, type BoardMeta } from './manifest'
 import { registerPresets } from './registry'
 
@@ -78,6 +79,7 @@ const contents = {
   scenes: { items: scenesBoard },
   dash: { items: dashBoard, shared: dashShared },
   kinetic: { items: kineticBoard, shared: kineticShared },
+  motion: { items: motionBoard },
 } satisfies Record<BoardId, BoardContents>
 export const boards: BoardDef[] = boardManifest.map(({ load: _load, ...meta }: BoardMeta & { load: unknown }) => ({ ...meta, ...contents[meta.id as BoardId] }))
 export { boardIds }

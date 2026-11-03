@@ -395,4 +395,16 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'kt-type': ['The line is backspaced away and typed again at an uneven pace, behind a red caret.', 'kinetic type typewriter caret animated'],
   'kt-magnet': ['A red magnet crosses the word and pulls the dots near it. Hover or drag to hold the magnet yourself.', 'kinetic type magnet pointer interactive animated'],
   'kt-shatter': ['The word blows apart into dust and flies home one letter at a time. The letters in flight are red.', 'kinetic type explode reform animated'],
+  // motion: micro-interactions, one loop per card
+  'mo-spinner': ['An arc that stretches as it spins, then closes into a ring with a check. Tap to replay.', 'motion loader spinner progress animated'],
+  'mo-bounce': ['Three big dots hop in a wave on gravity arcs, their shadows shrinking as they rise. Tap to replay.', 'motion loader bounce dots animated'],
+  'mo-scan': ['A light sweeps a bar of dot columns back and forth, finding one device a pass. Tap to replay.', 'motion loader scan bar animated'],
+  'mo-progress': ['An upload in sixteen block dots at an uneven pace. The block filling now is red. Tap to replay.', 'motion progress bar upload animated'],
+  'mo-wait': ['Two bars chase along a rail while an update check runs, then the rail fills. Tap to replay.', 'motion progress indeterminate bar animated'],
+  'mo-ring': ['A backup ring that fills with its percentage in the middle, then winds back. Tap to replay.', 'motion progress ring percent animated'],
+  'mo-skeleton': ['Placeholder dots shimmer three times, then each one gives way to the real post. Tap to replay.', 'motion skeleton shimmer loading animated'],
+  'mo-toast': ['Toasts rise in after SAVE: success, warning and a red error that shakes. Tap to replay.', 'motion toast notification error animated'],
+  'mo-pull': ['Pull a chat list down, let go, and a new chat arrives while the ring spins. Tap to replay.', 'motion pull refresh list gesture animated'],
+  'mo-typing': ['Three dots wave while the other side types, then the bubble stretches into the reply.', 'motion chat typing indicator animated'],
+  'mo-send': ['A reply typed and sent: it flies into a bubble, then goes sending, sent and read in red.', 'motion chat send read receipt animated'],
 }
