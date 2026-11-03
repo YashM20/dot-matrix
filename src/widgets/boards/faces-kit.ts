@@ -48,6 +48,8 @@ export interface Look {
   parallax: Pt
   /** Specular strength: a vinyl toy shines, skin barely. */
   gloss: number
+  /** Light that reaches the side turned away (default .3); higher evens the face out. */
+  ambient?: number
 }
 
 /** One frame of expression. Pairs are [left, right] eye. */
@@ -143,7 +145,7 @@ export function faceLayers(look: Look, pose: Pose, sites: Pt[]): Layer[] {
   const ln = Math.hypot(Lx, Ly, Lz); Lx /= ln; Ly /= ln; Lz /= ln
   let Hx = Lx, Hy = Ly, Hz = Lz + 1
   const hn = Math.hypot(Hx, Hy, Hz); Hx /= hn; Hy /= hn; Hz /= hn
-  const { eye: E, R, head } = look
+  const { eye: E, R, head } = look, amb = look.ambient ?? .3
   const eyes: Eye[] = [-1, 1].map((s, i) => {
     const rx = E.rx * pose.wide, ry = E.ry * pose.wide
     let cx = s * E.dx + fx, cy = E.y + fy
@@ -168,7 +170,7 @@ export function faceLayers(look: Look, pose: Pose, sites: Pt[]): Layer[] {
     let nx = gx * k, ny = gy * k
     const nl = Math.hypot(nx, ny, 1); nx /= nl; ny /= nl
     const nz = 1 / nl, lam = Math.max(0, nx * Lx + ny * Ly + nz * Lz), spec = Math.max(0, nx * Hx + ny * Hy + nz * Hz) ** 30
-    let skin = clamp(pose.light * (.3 + .7 * lam + look.gloss * spec) * inside(d - PITCH * .1)), lit = 0
+    let skin = clamp(pose.light * (amb + (1 - amb) * lam + look.gloss * spec) * inside(d - PITCH * .1)), lit = 0
     if (look.nose) { const n = Math.hypot((lx - fx + 1.5) / 1.4, ly - fy - look.nose.y) / look.nose.r; skin *= 1 - .4 * (1 - smoothstep(.3, 1, n)) }
     if (look.patches) for (const [px, py, pr, pk, w = 1] of look.patches) {
       const c = inside(Math.hypot(lx - fx * w - px, ly - fy * w - py) - pr)

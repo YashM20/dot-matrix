@@ -120,8 +120,8 @@ const pip: Character = {
     head: smooth(6, sdCircle(0, 6, 41), sdCircle(-30, -28, 14), sdCircle(30, -28, 14)), R: 36, cx: 71.5, cy: 78, skin: 'white',
     eye: { dx: 15, y: 3, rx: 6, ry: 7.5, pupil: 0, dot: true },
     mouth: { y: 21, half: 6, depth: 2.6, cat: true }, cheek: { dx: 25, y: 15, r: 6.5 }, parallax: [5, 4], gloss: .4,
-    // inner ears in shade (they stay with the outline), the nose a dark dot
-    patches: [[-30, -28, 7.5, .45, 0], [30, -28, 7.5, .45, 0], [0, 13.5, 2.8, 0]],
+    // an even light, so the lower face (and an open laugh) stays white; the nose a dark dot
+    ambient: .55, patches: [[0, 13.5, 2.8, 0]],
   },
   rest: { lid: 0, curve: 0, brow: [0, 0], slant: [0, 0], smile: .6, open: 0, mouthW: 1, mouthX: 0 },
   asleep: .8, turn: .8, tiltBy: .05, breath: [2.6, 1],
