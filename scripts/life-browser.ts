@@ -5,8 +5,9 @@
  *    the card's frame (layers + sample) at 4× CPU throttle ≤ 16 ms;
  *  - touch 375 × 812: a vertical swipe that starts on the card scrolls the page ≥ 150 px and the world stays
  *    pristine; a tap drops pellets; a 300 ms hold engages the card (lure) and the page does not scroll while engaged;
- *  - L2: each ecosystem card (jelly, slime, fireflies, murmur, terrarium) paints, a click forks its live world, and
- *    its frame at 4× CPU throttle is ≤ 16 ms (`__pondBoard`, src/widgets/boards/pond/index.ts);
+ *  - L2: each ecosystem card (jelly, slime, fireflies, murmur, terrarium, and X-advanced's plankton) paints, a click
+ *    forks its live world, and its frame at 4× CPU throttle is ≤ 16 ms (`__pondBoard`, src/widgets/boards/pond/index.ts);
+ *    the plankton's pristine state hash at step 2000 = Node's (scripts/life-plankton.ts);
  *  - L3.5, on all six cards at 375 and 390 px (touch, coarse pointer): each card draws at F0.10's phone tier
  *    (`cardFps(fps, 'phone')`, counted draws over 2 s), a vertical swipe that starts on it scrolls ≥ 150 px with its
  *    world pristine, a tap acts (the world forks live) and a 300 ms hold engages it;
@@ -24,7 +25,8 @@
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { findChrome, launch, serveDist, sleep, type Page } from './lib/cdp'
-import { lifeSnapshot } from './life'
+import { lifeSnapshot, pond as pondModule } from './life'
+import { planktonSnapshot } from './life-plankton'
 import { cardFps } from '../src/widgets/fps'
 
 const out = process.argv[2] ?? join('.snapshots', 'l1')
@@ -79,7 +81,7 @@ try {
     await page.cdp('Emulation.setCPUThrottlingRate', { rate: 1 })
     check('life-browser: pond-koi median card draw ≤ 16 ms at 4× throttle (best of 3 medians)', ms <= 16, `${ms.toFixed(2)} ms`)
     // ── L2 smoke: every ecosystem card paints, a click forks its live world, and it draws in budget at 4× throttle ──
-    for (const id of ['pond-jelly', 'pond-slime', 'pond-fireflies', 'pond-murmur', 'pond-terrarium']) {
+    for (const id of ['pond-jelly', 'pond-slime', 'pond-fireflies', 'pond-murmur', 'pond-terrarium', 'pond-plankton']) {
       const el = `document.querySelector('[data-card-id="${id}"]')`
       await page.js(`${el}?.scrollIntoView({ block: 'center' })`); await sleep(900)
       const painted = await page.waitFor(`!!globalThis.__pondBoard && !!${el}?.querySelector('canvas,svg')`, 15000)
@@ -94,6 +96,8 @@ try {
       check(`life-browser: ${id} median card draw ≤ 16 ms at 4× throttle (best of 2 medians)`, bms <= 16, `${bms.toFixed(2)} ms`)
     }
     await page.shot(join(out, 'pond-desktop-l2.png'))
+    const pNode = (await planktonSnapshot(pondModule))['plankton@2000'], pChrome = await page.js<string>('__pondBoard.planktonHash(2000)', 60_000)
+    check('life-browser: pond-plankton Chrome state hash at step 2000 = Node hash', pChrome === pNode, `${pChrome} vs ${pNode}`)
     await page.cdp('Page.navigate', { url: `${server.url}pond/?theme=light_signal` })
     await page.waitFor(`!!${card}?.querySelector('canvas,svg')`, READY_MS)
     await page.js(`${card}.scrollIntoView({ block: 'center' })`); await sleep(1500)

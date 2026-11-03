@@ -15,6 +15,8 @@
 
 **Arctic circle and sandpile (part of #36):** `sq-arctic` (domino shuffling to order 29, the frozen edge red) and `sq-sandpile` (the 72 × 58 identity, Dhar's burn as the loop) on `/squares/`; engine in `src/engine/squares/{aztec,sandpile}.ts`, checks in `scripts/arctic.ts` (in verify). The rest of #36 stays open.
 
+**Pond plankton (part of #36, X-advanced #4):** `pond-plankton` on `/pond/`, Particle Lenia creatures in a dish, one dot per particle, the Lenia density as a faint body, each creature's nucleus red. Engine in `src/engine/life/{lenia,match,plankton,planktonView}.ts` (a matched blend renumbers identical particles so the seam and the heal stay short), checks in `scripts/life-plankton.ts` (from `scripts/life.ts`). The frame budget is warn-only.
+
 **IQ8 3D SDF scenes (#69):** `/scenes/` (lazy): `sc-lathe`, `sc-twist`, `sc-posts`, `sc-chain`, sphere-traced on the CPU at lattice 2 and capped at 12 fps; engine in `src/engine/sdf3d/` (primitives, operators, tracer, tetrahedron normals, soft shadows, fog, the outdoors rig, a buffer renderer), checks in `scripts/sdf3d.ts` (in verify). Frame budgets are warn-only (over 4 ms × load on a busy box). GPU tier (`gpuIR`) is a follow-up.
 
 **Next: CP2 · 0.14 · Foundations and fixes** (GitHub milestone). It waits for the owner to say go. Proposed order:
