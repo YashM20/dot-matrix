@@ -192,7 +192,7 @@ export const matLichtenberg: WidgetPreset = {
   ...tile, id: 'mat-lichtenberg', name: 'Lichtenberg',
   credit: { by: ['Lutz Niemeyer', 'Luciano Pietronero', 'Hans J. Wiesmann'], title: 'Fractal Dimension of Dielectric Breakdown', source: 'https://doi.org/10.1103/PhysRevLett.52.1033', note: 'the model (grown the fast way of Kim, Sewall, Sud and Lin, 2007)' },
   defaults: { ...LIGHT_DEFAULTS, k: 0 },
-  controls: [{ key: 'k', kind: 'button', box: PLATE.box, label: 'Ground the plate here' }],
+  controls: [{ key: 'k', kind: 'button', box: [PLATE.box[0], PLATE.box[1], PLATE.box[2] - PLATE.box[0], PLATE.box[3] - PLATE.box[1]], label: 'Ground the plate here' }],
   layers: ctx => {
     if (IN_WORKER) throw new Error('mat-lichtenberg keeps its live state on the main thread')
     const s = worldAt(plateWorld(), ctx.t, tapInput(ctx)), live = plateWorld().mode !== 'pristine' ? s : null
