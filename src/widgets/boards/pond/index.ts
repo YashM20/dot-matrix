@@ -5,7 +5,7 @@
  * `lightSrc` 1 lights them by tilt), so the board lists `pondSources` in the manifest and the eager registry. Cards are main-thread only; the sampling worker's
  * build resolves this module to `./worker-stub.ts` (vite.config.ts `mainThreadOnly`), so `engine/life` never ships
  * in `sampleWorker-*.js`. X1: 07 MARBLE (suminagashi) and the day source (`day.ts`: `?day=`, the opt-in ageing pond).
- * X-advanced #4: 08 PLANKTON (Particle Lenia creatures as dot sites).
+ * X-advanced #4: 08 PLANKTON (Particle Lenia creatures as dot sites); #15: 09 TURING (a fish whose spots split as it grows).
  */
 import type { World } from '../../../engine/physics/world'
 import { lightSource } from '../../../site/light'
@@ -22,16 +22,17 @@ import { plankton, pondPlankton } from './plankton'
 import { murmur, pondMurmur } from './murmur'
 import { pondSlime, slime } from './slime'
 import { pondTerrarium, terrarium } from './terrarium'
+import { pondTuring, turing } from './turing'
 
-export const pondBoard: WidgetPreset[] = [pondKoi, pondJelly, pondSlime, pondFireflies, pondMurmur, pondTerrarium, pondMarble, pondPlankton]
+export const pondBoard: WidgetPreset[] = [pondKoi, pondJelly, pondSlime, pondFireflies, pondMurmur, pondTerrarium, pondMarble, pondPlankton, pondTuring]
 /** The board's live data: the light hub (L3.6; `pond-koi` declares its keys) and the day (X1 #5: `day`, `age`). */
 export const pondSources = [lightSource, pondDaySource]
 /** The board's worlds (tests reset them), in card order. The koi and the marble follow the day: their slots read the current ones. */
-export const pondWorlds: World[] = [koiPond.world, jelly.world, slime.world, fireflies.world, murmur.world, terrarium.world, marbleNow.world, plankton.world]
+export const pondWorlds: World[] = [koiPond.world, jelly.world, slime.world, fireflies.world, murmur.world, terrarium.world, marbleNow.world, plankton.world, turing.world]
 Object.defineProperty(pondWorlds, 0, { get: () => koiPond.world, enumerable: true })
 Object.defineProperty(pondWorlds, 6, { get: () => marbleNow.world, enumerable: true })
 /** Read-outs for tests and the browser probe. */
-export const pondProbe = { koi: koiProbe, jelly, slime, fireflies, murmur, terrarium, marble: marbleProbe, plankton }
+export const pondProbe = { koi: koiProbe, jelly, slime, fireflies, murmur, terrarium, marble: marbleProbe, plankton, turing }
 
 // the browser probe (scripts/life-browser.ts) sets __POND_PROBE__ before the page loads (see koi.ts)
 const probing = (globalThis as { __POND_PROBE__?: boolean }).__POND_PROBE__ || (typeof location !== 'undefined' && /[?&]probe=1(&|$)/.test(location.search))
@@ -49,6 +50,8 @@ if (probing) {
     day: () => pondDaySource.snapshot().data,
     /** The plankton's pristine state hash at step `n` (Node's: scripts/life-plankton.ts `planktonSnapshot`). */
     planktonHash: (n: number) => stateHash(simAtStep(plankton.world.sim, n)),
+    /** The Turing skin's pristine state hash at step `n` (Node's: scripts/life-turing.ts `turingSnapshot`). */
+    turingHash: (n: number) => stateHash(simAtStep(turing.world.sim, n)),
     /** Median ms of `layers` + sample for `frames` pristine frames of card `id` (a fresh t range: each frame steps the world). */
     bench: (id: string, frames = 24) => {
       const c = byId.get(id)
