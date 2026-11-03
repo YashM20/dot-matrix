@@ -41,6 +41,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   dash: 'A car dashboard that drives itself in a loop. Touch any control and the car is yours: gears, signals, speed, charge.',
   kinetic: 'One word in big dots, moved seven ways: flipped, melted, scrambled, waved, typed, pulled and blown apart. Tap a flap to change the word.',
   faces: 'Four dot faces that watch your cursor, blink, react when you tap them and get sleepy at night.',
+  motion: 'Small interface moments in dots: loaders, progress, skeletons, toasts, pull to refresh and chat. Tap a card to replay it.',
 }
 
 export const groupBlurbs: Record<BoardGroupId, string> = {

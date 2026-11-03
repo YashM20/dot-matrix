@@ -399,4 +399,16 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'face-curious': ['A curious face that tilts its head to watch you and looks surprised when you tap it.', 'face character eyes control animated'],
   'face-sleepy': ['A sleepy face that yawns now and then and falls asleep at night. A tap wakes it with a jolt.', 'face character sleep control animated'],
   'face-pip': ['Pip, the board\'s little bear mascot: big eyes that follow you, and a laugh when you tap it.', 'face character mascot control animated'],
+  // motion: micro-interactions, one loop per card
+  'mo-spinner': ['An arc that stretches as it spins, then closes into a ring with a check. Tap to replay.', 'motion loader spinner progress animated'],
+  'mo-bounce': ['Three big dots hop in a wave on gravity arcs, their shadows shrinking as they rise. Tap to replay.', 'motion loader bounce dots animated'],
+  'mo-scan': ['A light sweeps a bar of dot columns back and forth, finding one device a pass. Tap to replay.', 'motion loader scan bar animated'],
+  'mo-progress': ['An upload in sixteen block dots at an uneven pace. The block filling now is red. Tap to replay.', 'motion progress bar upload animated'],
+  'mo-wait': ['Two bars chase along a rail while an update check runs, then the rail fills. Tap to replay.', 'motion progress indeterminate bar animated'],
+  'mo-ring': ['A backup ring that fills with its percentage in the middle, then winds back. Tap to replay.', 'motion progress ring percent animated'],
+  'mo-skeleton': ['Placeholder dots shimmer three times, then each one gives way to the real post. Tap to replay.', 'motion skeleton shimmer loading animated'],
+  'mo-toast': ['Toasts rise in after SAVE: success, warning and a red error that shakes. Tap to replay.', 'motion toast notification error animated'],
+  'mo-pull': ['Pull a chat list down, let go, and a new chat arrives while the ring spins. Tap to replay.', 'motion pull refresh list gesture animated'],
+  'mo-typing': ['Three dots wave while the other side types, then the bubble stretches into the reply.', 'motion chat typing indicator animated'],
+  'mo-send': ['A reply typed and sent: it flies into a bubble, then goes sending, sent and read in red.', 'motion chat send read receipt animated'],
 }
