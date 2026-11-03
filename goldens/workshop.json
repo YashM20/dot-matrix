@@ -168,6 +168,18 @@
     "hash": "a69bc4c9",
     "dots": 9831
    }
+  },
+  "mat-fold": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "4a6d2657",
+    "dots": 6270
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "b52134f7",
+    "dots": 5411
+   }
   }
  }
 }

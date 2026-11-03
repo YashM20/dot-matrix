@@ -21,6 +21,9 @@
  *              checkpointed replays, mass, legibility at 19:59 and 23:59, bake and frame costs
  *  - kintsugi: the kintsugi plate: cracks connected and anchored, shards tile the piece, deterministic breaks, red only
  *              while a seam fills, the repair completes, a tap heals back to the loop, bake and frame costs
+ *  - fold:     the paper fold: area kept, facets placed by isometries, a turning fold keeps 3D distances and lands on the
+ *              next flat state, unfolding returns the exact sheet, unit normals, the loop wraps, red only on the moving
+ *              crease, the determinism lint, the frame cost
  *  - tilt:     M3.10 on both boards: the hub's buckets, no DeviceOrientation / data.light, gx / gy only in step inputs,
  *              tx = ty = 0 ≡ no tilt, and every card's light = sceneLight (pointer → lightSrc 1 → sun)
  * Timings are printed; budgets scale by a measured load factor so a busy box doesn't fail them. `--bench` prints
@@ -40,6 +43,7 @@ import { atClock, boardChecks } from './materials/board'
 import { workshopChecks, tiltChecks } from './materials/workshop'
 import { growthChecks } from './materials/growth'
 import { kintsugiChecks } from './materials/kintsugi'
+import { foldChecks } from './materials/fold'
 
 export type { MaterialsOptions } from './materials/util'
 
@@ -293,6 +297,7 @@ export async function materialsChecks(assert: Assert, opts: MaterialsOptions = {
   if (run('workshop')) await workshopChecks(assert, opts)
   if (run('growth')) await growthChecks(assert, opts)
   if (run('kintsugi')) await kintsugiChecks(assert, opts)
+  if (run('fold')) foldChecks(assert, opts)
   if (run('tilt')) tiltChecks(assert)
 }
 

@@ -37,7 +37,7 @@ export async function workshopChecks(assert: Assert, opts: MaterialsOptions): Pr
   // first frame is timed: its bakes and its own code's first run
   type Cards = WidgetPreset[]
   const copy = async (tag: string): Promise<Cards | null> => {
-    const stamp = `${tag}${Date.now()}`, files = ['workshop', 'workshop-live', 'workshop-physics', 'workshop-plate', 'workshop-stone', 'workshop-frost', 'workshop-kintsugi', 'workshop-kintsugi-shade']
+    const stamp = `${tag}${Date.now()}`, files = ['workshop', 'workshop-live', 'workshop-physics', 'workshop-plate', 'workshop-stone', 'workshop-frost', 'workshop-kintsugi', 'workshop-kintsugi-shade', 'workshop-fold']
     const mods = await Promise.all(files.map(f => import(`../../src/widgets/boards/${f}.ts?cold=${stamp}`).catch(() => null) as Promise<Record<string, unknown> | null>))
     if (mods.some(m => !m)) return null
     const cards = mods.flatMap(m => Object.values(m!).filter((v): v is WidgetPreset => !!v && typeof v === 'object' && 'layers' in v && 'id' in v))
@@ -65,7 +65,7 @@ export async function workshopChecks(assert: Assert, opts: MaterialsOptions): Pr
   assert('workshop board: quantized (every card style has quantizeSteps ≥ 2)', board.every(p => (p.style.quantizeSteps ?? 0) >= 2))
   const keys = ['lightSrc', 'lightAz', 'lightEl', 'tx', 'ty']
   assert('workshop board: every card declares lightSrc/lightAz/lightEl/tx/ty in defaults; sand, mercury and thread also gx/gy (0, 1)', board.every(p => keys.every(k => p.defaults && k in p.defaults) && (!WS_PHYSICS.has(p.id) || (p.defaults!.gx === 0 && p.defaults!.gy === 1))) && workshopSources.length === 1)
-  assert('workshop board: one row a card, three columns (WORKSHOP manifest title, play group): M3\'s nine, XM\'s plate, stone and frost, then the kintsugi plate and the mud', board.length === 14 && new Set(board.map(p => p.id)).size === 14)
+  assert('workshop board: one row a card, three columns (WORKSHOP manifest title, play group): M3\'s nine, XM\'s plate, stone and frost, then the kintsugi plate, the mud and the paper fold', board.length === 15 && new Set(board.map(p => p.id)).size === 15)
   // a red that is never a material: denim (no redline: §10.2), paper and leather (no awl: §10.3) never show it, whatever the input
   const neverRed = [...WS_NEVER_RED].every(id => [0, 1.3, 6].every(t => !atClock(() => wsFrame(byId(id), t, [POINTER(70, 70)], { k: 1 })).some(d => d.color === dot480.dotActive)))
   assert('workshop board: denim, paper and leather draw no red, hovered or pressed (the owner options stay off)', neverRed)
@@ -259,7 +259,7 @@ export function tiltChecks(assert: Assert): void {
     if (bucketLight(lightDirAt(a0 + 1 / 64 * 2 * Math.PI), prev).az === prev.az) sticky = false
   }
   assert('materials: tilt bucket changes only on a ≥ 1/64-turn change', sticky)
-  const files = ['materials', 'materials-shared', 'materials-glass', 'materials-live', 'materials-wear', 'workshop', 'workshop-live', 'workshop-physics', 'workshop-plate', 'workshop-stone', 'workshop-frost', 'workshop-kintsugi', 'workshop-kintsugi-shade']
+  const files = ['materials', 'materials-shared', 'materials-glass', 'materials-live', 'materials-wear', 'workshop', 'workshop-live', 'workshop-physics', 'workshop-plate', 'workshop-stone', 'workshop-frost', 'workshop-kintsugi', 'workshop-kintsugi-shade', 'workshop-fold']
   const src = Object.fromEntries(files.map(f => [f, readFileSync(new URL(`../../src/widgets/boards/${f}.ts`, import.meta.url), 'utf8')]))
   assert('materials: no card reads DeviceOrientation directly (both boards)', files.every(f => !/DeviceOrientation|deviceorientation/.test(src[f])))
   const gravity = files.filter(f => /data\.g[xy]\b|data\[['"]g[xy]['"]\]/.test(src[f]))

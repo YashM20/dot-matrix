@@ -333,6 +333,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'mat-frost': ['A frost window with one snowflake a day, grown cell by cell on a hex lattice.', 'material ice algorithm animated'],
   'mat-kintsugi': ['A glazed plate that breaks where you tap it and mends along its cracks, one seam at a time.', 'material ceramic algorithm animated control'],
   'mat-mud': ['A slab of wet clay dries and cracks into polygons, one crack at a time, until the rain comes.', 'material clay algorithm animated'],
+  'mat-fold': ['A sheet of paper folds crease by crease into a glider, then opens flat again.', 'material paper origami algorithm animated'],
   'mat-erosion': ['The time in sandstone, worn by rain all day; each digit has weathered since it last changed.', 'material stone water clock algorithm animated'],
   'pond-koi': ['Six koi in a pond of glyph tiles: tap to feed them, hold still to lure them.', 'life koi water creature control animated'],
   'pond-jelly': ['Three moon jellies pulse, coast and trail their tentacles; tap and they all pulse.', 'life jellyfish rope creature control animated'],
