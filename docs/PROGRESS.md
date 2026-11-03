@@ -16,7 +16,7 @@
 2. IQ3 #64, IQ1 #62, IQ2 #63, IQ4 #65 (engine packs).
 3. Tixy #53 (the adapter and card `credit`) and #54 (the `/tixy/` shell). Ports stay blocked on #52 (permission).
 4. #77 tutorials: merge branch `chore/dot-engine-deep-dives-v2` (four deep dives; snippets run; lint 0/0).
-5. Follow-ups: #74 (X-ray rect cells), #28 (flaky timing gates), #29 (`mat-lens` parity not yet measured), #31–#33 (editor), #27 (workshop cold frames; work in progress on branch `perf/workshop-cold-frames`; budgets come later).
+5. Follow-ups: #74 (X-ray rect cells), #28 (flaky timing gates), #29 done (`mat-lens` pass at density 1 vs the CPU sample in `scripts/webgl.ts`; HD 520, two runs: mean ≤ 0.20/255, ≤ 0.19% px > 16, PSNR 45.4 to 46.7 dB), #31–#33 (editor), #27 (workshop cold frames; work in progress on branch `perf/workshop-cold-frames`; budgets come later).
 
 **Waiting on the owner:**
 - #12 decisions, including the squares deep link (151 kB), the pond-marble koi, the OPEN action, the DOTS/TYPE default and taste passes.
