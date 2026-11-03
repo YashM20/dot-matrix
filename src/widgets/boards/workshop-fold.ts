@@ -1,9 +1,10 @@
 /**
  * WORKSHOP, the paper fold (docs/living-matter/X-advanced.md #17): a sheet folds step by step into a paper glider,
- * holds, and unfolds back to a flat sheet, on a loop. Five straight creases (`engine/matter/fold.ts`): the two top
- * corners and then the two new edges to the centre line, all valleys, and a mountain fold that tucks the tail behind.
+ * holds, and unfolds back to a flat sheet, on a loop. Five straight creases (`engine/matter/fold.ts`): a mountain
+ * fold that tucks the tail behind, then the two top corners and the two new edges to the centre line, all valleys
+ * (the edge folds cut through the tucked tail too, so the glider's outline is one clean triangle).
  * The crease being folded now is the card's one red. Every facet is lit by the board light through its fold
- * history's normal: a face turned to the light is brighter, the back of the sheet a band darker, a thin line where
+ * history's normal: a face turned to the light is brighter, the back of the sheet one band darker, a thin line where
  * two facets meet at a crease or an edge, and a slight shadow where an upper layer lies over a lower one.
  */
 import { creaseLine, foldAt, rasterFold, type Crease, type CreaseLine, type Posed } from '../../engine/matter/fold'
@@ -15,6 +16,8 @@ import { cite, DEG, LIGHT_DEFAULTS, matLight, mod, once, snapTorch, T, tile, typ
 
 const COLS = TILE.cols, ROWS = TILE.rows, N = COLS * ROWS
 const FAINT = 0, MID = 1, IDLE = 2, VALUE = 3
+/** Each band's value range (faint, mid, idle, value). */
+const BAND_LOW = [.12, .3, .62, .95], BAND_TOP = [.28, .6, .9, 1]
 /**
  * The sheet (card cells: x0, y0, x1, y1), the loop's beats (seconds: a fold, the rest after it, the folded hold, an
  * unfold, the gap after it, the flat sheet) and the offset (t = 0 is halfway through the third fold).
@@ -22,13 +25,13 @@ const FAINT = 0, MID = 1, IDLE = 2, VALUE = 3
 export const FOLD = { sheet: [32, 15, 112, 128] as const, fold: 1.1, rest: .45, hold: 1.8, unfold: .7, gap: .12, flat: 1.2, offset: 3.76 }
 const [SX0, SY0, SX1, SY1] = FOLD.sheet
 export const SHEET: readonly number[] = [SX0, SY0, SX1, SY0, SX1, SY1, SX0, SY1]
-/** The glider: the top corners to the centre line, the new edges to it again, then the tail tucked behind. */
+/** The glider: the tail tucked behind, then the top corners to the centre line and the new edges to it again. */
 export const CREASES: readonly Crease[] = [
+  { x: 72, y: 104, angle: 0, kind: 'mountain' },
   { x: 72, y: SY0, angle: 135 * DEG, kind: 'valley' },
   { x: 72, y: SY0, angle: 225 * DEG, kind: 'valley' },
   { x: 72, y: SY0, angle: 112.5 * DEG, kind: 'valley' },
   { x: 72, y: SY0, angle: 247.5 * DEG, kind: 'valley' },
-  { x: 72, y: 104, angle: 0, kind: 'mountain' },
 ]
 const STEPS = CREASES.length, FSTEP = FOLD.fold + FOLD.rest, USTEP = FOLD.unfold + FOLD.gap
 const FOLDING = STEPS * FSTEP, UNFOLDING = STEPS * USTEP
@@ -52,7 +55,7 @@ export function foldFrame(t: number): FoldFrame {
 /** The facets posed for a frame. */
 export const posedAt = (f: FoldFrame): Posed[] => foldAt(SHEET, CREASES, f.k, f.theta)
 
-/** A facet's brightness under one light: Lambert on its normal, gained so a flat face reads ~.85; the back face a band down. */
+/** A facet's brightness under one light, as if its front faced up: Lambert on its normal, gained so a flat face reads ~.85. */
 function facetLight(p: Posed, L: Light): number {
   let cx = 0, cy = 0
   for (let i = 0; i < p.pts.length; i += 2) { cx += p.pts[i]; cy += p.pts[i + 1] }
@@ -62,7 +65,7 @@ function facetLight(p: Posed, L: Light): number {
   const lx = v[0] * k, ly = v[1] * k, lz = v[2] * k, ndl = p.n[0] * lx + p.n[1] * ly + p.n[2] * lz
   // (a flat face reads the same under a low morning sun as at noon; a face turned to a low sun goes to value)
   const b = .85 * Math.max(0, ndl) / Math.max(.05, lz)
-  return Math.min(1, Math.max(.12, p.front ? b : .55 * b))
+  return Math.min(1, Math.max(.12, b))
 }
 /** Where a shadow is looked for: two cells toward the light (none with the light straight overhead). */
 function shadowStep(L: Light): [number, number] {
@@ -91,10 +94,13 @@ export function shadeFold(posed: readonly Posed[], L: Light, active: CreaseLine 
     if (active && Math.abs((x - active.x) * active.nx + (y - active.y) * active.ny) < .5) { red.push([x, y]); continue }
     const r = x < COLS - 1 ? top[i + 1] : -1, d = y < ROWS - 1 ? top[i + COLS] : -1
     if ((r >= 0 && r !== f && differs(f, r)) || (d >= 0 && d !== f && differs(f, d))) { V[i] = .2; tones[i] = FAINT; continue }
-    let b = bright[f]
+    // the back of the sheet: one band below its lit front, at the top of that band (full dots, so a folded flap reads)
+    const b = bright[f], t0 = b >= .95 ? VALUE : b >= .62 ? IDLE : b >= .3 ? MID : FAINT, t = posed[f].front ? t0 : Math.max(FAINT, t0 - 1)
+    let v = posed[f].front ? b : BAND_TOP[t]
+    // a slight shadow under an upper layer's edge: smaller dots, the same band
     const sx = x + ox, sy = y + oy, s = sx >= 0 && sx < COLS && sy >= 0 && sy < ROWS ? top[sy * COLS + sx] : -1
-    if (s >= 0 && posed[s].key >= posed[f].key + 1) b *= .6
-    V[i] = b; tones[i] = b >= .95 ? VALUE : b >= .62 ? IDLE : b >= .3 ? MID : FAINT
+    if (s >= 0 && posed[s].key >= posed[f].key + 1) v = Math.max(BAND_LOW[t], .7 * v)
+    V[i] = v; tones[i] = t
   }
   return { values, tones, red, top }
 }
