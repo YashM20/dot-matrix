@@ -23,6 +23,8 @@
 
 **Paper fold (part of #36, X-advanced #17):** `mat-fold` on `/workshop/`, a sheet folded crease by crease into a glider (four valleys and a mountain), then unfolded, on a 14.85 s loop; the moving crease is the red, facets lit by their fold history's normal. Engine in `src/engine/matter/fold.ts` (in the determinism lint), checks in `scripts/materials/fold.ts` (`--only fold`). No tap yet.
 
+**Dash board (#125):** `/dash/` (lazy, label CAR, in INTERFACES): nine cards (speed, power, range, gear, signals, battery, nav, road, drive) driven by one car in `src/widgets/boards/dash-drive.ts`, a 30 s lap on the shared clock that hands over on the first control edit (new `WidgetPreset.handover`, applied in `DotWidget`); board-shared keys, the components board's interaction helpers reused. Speed, power and road run at 24 fps.
+
 **Turing skin (part of #36, X-advanced #15):** `pond-turing` on `/pond/`, a fish whose Gray-Scott spots split as its body grows (Crampin, Gaffney and Maini's growing-domain equations on a fixed body grid), the splitting spot red, a tap scratches a spot off and the pattern regrows. One loop is one life, bit-equal at the wrap. Engine in `src/engine/life/{turingSkin,turing,turingView}.ts`, checks in `scripts/life-turing.ts` (from `scripts/life.ts`). The frame budget is warn-only.
 
 **Pond plankton (part of #36, X-advanced #4):** `pond-plankton` on `/pond/`, Particle Lenia creatures in a dish, one dot per particle, the Lenia density as a faint body, each creature's nucleus red. Engine in `src/engine/life/{lenia,match,plankton,planktonView}.ts` (a matched blend renumbers identical particles so the seam and the heal stay short), checks in `scripts/life-plankton.ts` (from `scripts/life.ts`). The frame budget is warn-only.

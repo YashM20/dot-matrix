@@ -38,6 +38,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   fractals: 'Six fractals in dots: a Julia set walking the Mandelbrot map, orbit traps, popcorn, a chaos-game flame, an eight-fold icon and a Lyapunov field.',
   oldschool: 'Demo effects from the late 1990s: a brick tunnel, a flower, a floor to the horizon, drifting clouds and a screen filming itself.',
   scenes: 'Small 3D scenes traced onto big dots: a turned vase, a twisted column, a walk through a field of posts and a swinging chain.',
+  dash: 'A car dashboard that drives itself in a loop. Touch any control and the car is yours: gears, signals, speed, charge.',
   faces: 'Four dot faces that watch your cursor, blink, react when you tap them and get sleepy at night.',
 }
 

@@ -576,6 +576,7 @@ No state changes a size, so nothing shifts. On coarse pointers every chrome targ
 - **Drag scrubs whole dot columns.** A horizontal drag moves a value one whole column (or lattice step) at a time, never a fractional position. Bars, sliders and playheads quantize to site columns, so the control always sits exactly on dots.
 - **Long-press is a radial-reveal progress.** Holding a control reveals a ring of sites clockwise from 12 o'clock around the press point; the action fires when the ring closes. Releasing early un-reveals it on the release spring.
 - **Hit pad** is invisible. Targets below 24 px (44 px on touch) grow their hit rectangle, not their dots.
+- **Hand-over.** A card with an idle demo loop names its on/off key in `handover` (`WidgetPreset`): the first control edit also sets that key to 0, so the visitor takes over on first touch. Shared on a board, one touch stops every card (the dash board's drive loop).
 - **Touch is scroll-first.** A vertical swipe over any card scrolls the page and leaves the card untouched. Taps act on lift. A drag control is taken by a horizontal drag or by `{interaction.holdEngage}`; a card you push around in every direction marks its control `gesture: 'surface'`. Details: docs/UX-PLAN.md › Touch policy.
 
 ## Do's and Don'ts
@@ -609,6 +610,9 @@ No state changes a size, so nothing shifts. On coarse pointers every chrome targ
   | `sc-chain` | 12 | a slow pendulum swing; capped at the default rate because every frame is sphere-traced on the CPU |
   | `mat-loom` | 40 | the shuttle runs 80 cells/s, 2 cells a frame at 40 (docs/living-matter/M-materials.md, STYLE-BIBLE ≤ 2 cells a frame); 20 on a phone, with a size-contrast trail |
   | `mat-pool` | 30 | the ripple steps at dt 1/30 (track L's tuning): one step a frame; 15 on a phone |
+  | `dash-speed` | 24 | the needle eases on a 0.12 s spring and sweeps up to 270° in a pull-away; at 12 it ticks; 12 on a phone |
+  | `dash-power` | 24 | the needle swings from regen to full power within a second; 12 on a phone |
+  | `dash-road` | 24 | near lane dashes pass at up to 17 m/s, about 3 rows a frame at 24; 12 on a phone |
   | `face-calm` | 24 | a blink lasts about .25 s, 6 frames at 24 and 3 at 12; the 90 ms saccades and the reactions need the extra frames; 12 on a phone |
   | `face-curious` | 24 | a blink lasts about .25 s, 6 frames at 24 and 3 at 12; the 90 ms saccades and the reactions need the extra frames; 12 on a phone |
   | `face-sleepy` | 24 | a blink lasts about .25 s, 6 frames at 24 and 3 at 12; the 90 ms saccades and the reactions need the extra frames; 12 on a phone |
