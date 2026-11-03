@@ -30,6 +30,7 @@ import { lifeL2Checks } from './life-l2'
 import { lifeL3Checks } from './life-l3'
 import { lifeX1Checks } from './life-x1'
 import { lifeHealChecks } from './life-heal'
+import { lifePlanktonChecks, planktonSnapshot } from './life-plankton'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[s.length >> 1] }
@@ -56,7 +57,7 @@ const rng = (seed: number) => () => { seed = (Math.imul(seed ^ (seed >>> 15), 0x
 /** Pinned bitmaps (life/glyph: alphabet FNV) and the STBN table (Node). Change only with a deliberate alphabet change. */
 const PINNED = { alphabets: 'ae706f45', stbn: 'bf3e091d' }
 
-async function pond() {
+export async function pond() {
   freezeWallClock()
   return import('../src/widgets/boards/pond/index')
 }
@@ -68,6 +69,7 @@ export async function lifeSnapshot(): Promise<Record<string, string>> {
   const out: Record<string, string> = {}
   for (const n of [360, 1440, 1799]) out[`pond@${n}`] = fnv(simAtStep(sim, n))
   out.patterns = fnv(p.markings.flatMap(m => [...m]), false)
+  Object.assign(out, await planktonSnapshot(pond))
   return out
 }
 
@@ -521,6 +523,8 @@ export async function lifeChecks(assert: Assert): Promise<void> {
   await lifeX1Checks(assert, pond)
   // ── #90: the hand-off back to the loop after a feed (scripts/life-heal.ts) ──
   await lifeHealChecks(assert, pond)
+  // ── X-advanced #4: the plankton, Particle Lenia (scripts/life-plankton.ts) ──
+  await lifePlanktonChecks(assert, pond)
 
   // ── determinism across engines (Bun / JSC), when available ──
   {
@@ -534,7 +538,7 @@ export async function lifeChecks(assert: Assert): Promise<void> {
       if (!theirs) console.log(`  life: Bun/JSC snapshot skipped (bun failed: ${(r.stderr || r.error?.message || 'no output').trim().split('\n')[0]})`)
       else {
         const diff = Object.keys({ ...mine, ...theirs }).filter(k => mine[k] !== theirs![k])
-        assert('pond: pristine state hashes Bun/JSC ≡ Node/V8 (steps 360, 1440, 1799; the marking LUTs)', !diff.length, diff.length ? `differ: ${diff.join(', ')}` : Object.entries(mine).map(([k, v]) => `${k} ${v}`).join(', '))
+        assert('pond: pristine state hashes Bun/JSC ≡ Node/V8 (steps 360, 1440, 1799; the marking LUTs; the plankton)', !diff.length, diff.length ? `differ: ${diff.join(', ')}` : Object.entries(mine).map(([k, v]) => `${k} ${v}`).join(', '))
       }
     }
   }
