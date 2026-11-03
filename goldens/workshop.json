@@ -108,6 +108,42 @@
     "hash": "9f73499e",
     "dots": 1504
    }
+  },
+  "mat-lichtenberg": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "aec59522",
+    "dots": 9698
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "dc61a351",
+    "dots": 9689
+   }
+  },
+  "mat-erosion": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "36d85ab5",
+    "dots": 6721
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "50dce3cf",
+    "dots": 6723
+   }
+  },
+  "mat-frost": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "d30a80f5",
+    "dots": 1243
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "45f7a061",
+    "dots": 1279
+   }
   }
  }
 }

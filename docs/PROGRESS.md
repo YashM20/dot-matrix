@@ -17,6 +17,8 @@
 
 **Pond plankton (part of #36, X-advanced #4):** `pond-plankton` on `/pond/`, Particle Lenia creatures in a dish, one dot per particle, the Lenia density as a faint body, each creature's nucleus red. Engine in `src/engine/life/{lenia,match,plankton,planktonView}.ts` (a matched blend renumbers identical particles so the seam and the heal stay short), checks in `scripts/life-plankton.ts` (from `scripts/life.ts`). The frame budget is warn-only.
 
+**XM growth and wear (#21):** `mat-lichtenberg` (two-electrode dielectric breakdown, char lit through M1 relief), `mat-erosion` (droplet erosion through the day, checkpointed; each digit weathers since it last changed) and `mat-frost` (Reiter automaton on `hexSites`, one flake a day from a vetted table) on `/workshop/`; engine in `src/engine/matter/{lichtenberg,erosion,reiter}.ts` (in the determinism lint), checks in `scripts/materials.ts --only growth`. Frame budgets are warn-only: the plate's burn frames and the stone's new-minute frame run over 4 ms on a loaded box.
+
 **Next: CP2 · 0.14 · Foundations and fixes** (GitHub milestone). It waits for the owner to say go. Proposed order:
 1. #75 (test tiers: the timing switch in the area scripts, a shared base build) and #76 (the file-size rule; split the 6 files over 800 lines and `goldens/hashes.json` per board). These make the rest faster.
 2. IQ3 #64, IQ1 #62, IQ2 #63, IQ4 #65 (engine packs).
