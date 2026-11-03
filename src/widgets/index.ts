@@ -36,6 +36,7 @@ import { dashBoard, dashShared } from './boards/dash'
 import { kineticBoard, kineticShared } from './boards/kinetic'
 import { facesBoard } from './boards/faces'
 import { chartsBoard } from './boards/charts'
+import { motionBoard } from './boards/motion'
 import { boardIds, boardManifest, resolveBoardId, resolveCardId, type BoardContents, type BoardDef, type BoardId, type BoardMeta } from './manifest'
 import { registerPresets } from './registry'
 
@@ -82,6 +83,7 @@ const contents = {
   kinetic: { items: kineticBoard, shared: kineticShared },
   faces: { items: facesBoard },
   charts: { items: chartsBoard },
+  motion: { items: motionBoard },
 } satisfies Record<BoardId, BoardContents>
 export const boards: BoardDef[] = boardManifest.map(({ load: _load, ...meta }: BoardMeta & { load: unknown }) => ({ ...meta, ...contents[meta.id as BoardId] }))
 export { boardIds }

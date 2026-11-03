@@ -35,6 +35,8 @@
 
 **Dot charts kit (#132):** `/charts/` (lazy, CHARTS under DATA), seven cards on made-up data: `chart-bar`, `chart-line`, `chart-area`, `chart-donut`, `chart-heatmap`, `chart-spark`, `chart-candle`. Each grows in, morphs between two data sets on a 14 s loop (the switch in the label row takes over), and reads out the nearest point on hover, tap or arrow keys; the picked point is the red. Engine in `src/engine/charts/` (scales, marks, motion, readouts, paint; by path, in the determinism lint), checks in `scripts/charts.ts` (in verify). No changelog entry yet.
 
+**Motion (#128):** `/motion/` (lazy, MICRO MOTION in INTERFACES): eleven looping micro-interaction cards (`mo-*`): spinner, bounce, scan, block progress, indeterminate, ring, skeleton, toast, pull-to-refresh, typing, send / sent / read. The whole card is a replay button (tap, click, Enter); reduced motion shows each loop's settled state. Kit in `src/widgets/boards/motion-kit.ts`. Six cards run at 24 fps. No changelog entry yet.
+
 **XM growth and wear (#21):** `mat-lichtenberg` (two-electrode dielectric breakdown, char lit through M1 relief), `mat-erosion` (droplet erosion through the day, checkpointed; each digit weathers since it last changed) and `mat-frost` (Reiter automaton on `hexSites`, one flake a day from a vetted table) on `/workshop/`; engine in `src/engine/matter/{lichtenberg,erosion,reiter}.ts` (in the determinism lint), checks in `scripts/materials.ts --only growth`. Frame budgets are warn-only: the plate's burn frames and the stone's new-minute frame run over 4 ms on a loaded box.
 
 **Next: CP2 · 0.14 · Foundations and fixes** (GitHub milestone). It waits for the owner to say go. Proposed order:
