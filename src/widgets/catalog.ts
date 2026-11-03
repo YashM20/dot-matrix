@@ -249,4 +249,13 @@ export const catalog: readonly CatalogRow[] = [
   ['sc-twist', '4v5577ta', 'scenes'],
   ['sc-posts', 'nb9k1dqt', 'scenes'],
   ['sc-chain', 'krn12mve', 'scenes'],
+  ['dash-speed', 'd2d97wcw', 'dash'],
+  ['dash-power', 'z2djz908', 'dash'],
+  ['dash-range', '4rsyew8p', 'dash'],
+  ['dash-gear', '1pnh588p', 'dash'],
+  ['dash-signals', 'ewcrak08', 'dash'],
+  ['dash-battery', '8rw8erfh', 'dash'],
+  ['dash-nav', '794p4be9', 'dash'],
+  ['dash-road', 'cw165hnv', 'dash'],
+  ['dash-drive', 'hbce0de6', 'dash'],
 ]

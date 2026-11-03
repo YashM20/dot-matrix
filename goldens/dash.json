@@ -1,0 +1,113 @@
+{
+ "about": "FNV-1a 32 of the sorted quantized dot list per preset on the dash board (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
+ "presets": {
+  "dash-speed": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "d1a2e240",
+    "dots": 604
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "5d234058",
+    "dots": 620
+   }
+  },
+  "dash-power": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "3c7ca69b",
+    "dots": 413
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "fd1c6932",
+    "dots": 541
+   }
+  },
+  "dash-range": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "8e67c52b",
+    "dots": 565
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "a2a85d02",
+    "dots": 597
+   }
+  },
+  "dash-gear": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "361c9fb4",
+    "dots": 573
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "801de2d0",
+    "dots": 578
+   }
+  },
+  "dash-signals": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "42e313e8",
+    "dots": 570
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "42e313e8",
+    "dots": 570
+   }
+  },
+  "dash-battery": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "2927862c",
+    "dots": 680
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "a07623f1",
+    "dots": 902
+   }
+  },
+  "dash-nav": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "cfff0f48",
+    "dots": 759
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "5be7fe15",
+    "dots": 750
+   }
+  },
+  "dash-road": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "6425bffc",
+    "dots": 335
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "4f8d7c20",
+    "dots": 334
+   }
+  },
+  "dash-drive": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "dadeafbb",
+    "dots": 1000
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "03d7070a",
+    "dots": 972
+   }
+  }
+ }
+}

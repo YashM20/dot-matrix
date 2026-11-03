@@ -91,8 +91,11 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme: the
   // C10 X-ray slot: identity (same layers, no override) unless this card is X-rayed with a layer soloed / muted
   const xr = useXRay(layers)
   const sharedKey = sharedKeys?.join(',') ?? ''
+  const handover = preset?.handover
   const onInput = useCallback((input: ControlPatch) => {
-    const patch = intercept(input)
+    let patch = intercept(input)
+    // an idle demo hands over on the first edit (`WidgetPreset.handover`): the edit also sets its key to 0
+    if (handover && !(handover in patch)) patch = { ...patch, [handover]: 0 }
     // split the patch: shared keys go to the board store, the rest stay on this card
     const keys = sharedKey ? new Set(sharedKey.split(',')) : null, mine: ControlPatch = {}, board: ControlPatch = {}
     let ownEdit = false, boardEdit = false
@@ -102,7 +105,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme: the
     }
     if (ownEdit) setLocal(prev => ({ ...prev, ...mine }))
     if (boardEdit) onShared!(board)
-  }, [sharedKey, onShared, intercept])
+  }, [sharedKey, onShared, intercept, handover])
   if (!preset || !layers) return null
   // the card's scheme: the page's, or a dark inset (a photo, the camera, an emissive skin) on a light page
   const scheme = cardScheme(preset, site.resolved, skin), inset = !themeProp && scheme !== site.resolved
