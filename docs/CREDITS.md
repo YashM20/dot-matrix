@@ -69,6 +69,18 @@ By Inigo Quilez, Clifford Pickover.
 
 - Fractals Popcorn (`fr-popcorn`), board `/fractals/`: technique
 
+### [Random domino tilings and the arctic circle theorem](https://arxiv.org/abs/math/9801068)
+
+By William Jockusch, James Propp, Peter Shor.
+
+- Squares Arctic (`sq-arctic`), board `/squares/`: technique; domino shuffling by Noam Elkies, Greg Kuperberg, Michael Larsen and James Propp (1992)
+
+### [Self-organized criticality: an explanation of the 1/f noise](https://doi.org/10.1103/PhysRevLett.59.381)
+
+By Per Bak, Chao Tang, Kurt Wiesenfeld.
+
+- Squares Sandpile (`sq-sandpile`), board `/squares/`: technique
+
 ### [Smooth iteration count for generalized Mandelbrot sets](https://iquilezles.org/articles/msetsmooth/)
 
 By Inigo Quilez.
