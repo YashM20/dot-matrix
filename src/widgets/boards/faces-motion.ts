@@ -111,9 +111,12 @@ const HOLD_MOUSE = .6, HOLD_TOUCH = 3, HEAL = .7
  */
 export function readInput(mem: Memory, ctx: WidgetContext, key: string): Input {
   const t = ctx.t, ps = ctx.pointers ?? []
+  // a stamp after t (the board clock moved back) counts as absent, so a newer press still lands; it is not wiped,
+  // so a still at t = 0 of the same card leaves the live card's memory alone
+  const seen = (s: number) => (s <= t + .1 ? s : -Infinity)
   let pressed = false
   for (const p of ps) {
-    if (p.tDown > 0 && p.tDown <= t + .1 && p.tDown > mem.tap) mem.tap = p.tDown
+    if (p.tDown > 0 && p.tDown <= t + .1 && p.tDown > seen(mem.tap)) mem.tap = p.tDown
     if (p.down) pressed = true
     if (p.up || p.inside || p.down) mem.look = { x: p.x, y: p.y, t, hold: p.up ? HOLD_TOUCH : HOLD_MOUSE }
   }
@@ -122,6 +125,6 @@ export function readInput(mem: Memory, ctx: WidgetContext, key: string): Input {
   mem.kickOn = kick
   const look = mem.look && mem.look.t <= t + .05 ? mem.look : undefined
   const w = look ? 1 - ease((t - look.t - look.hold) / HEAL) : 0
-  const tap = Math.max(mem.tap, mem.kick)
-  return { at: look && w > 0 ? [look.x, look.y] : undefined, w: look ? w : 0, tap: tap <= t + .1 ? tap : -Infinity, focus: ctx.focus === key }
+  const tap = Math.max(seen(mem.tap), seen(mem.kick))
+  return { at: look && w > 0 ? [look.x, look.y] : undefined, w: look ? w : 0, tap, focus: ctx.focus === key }
 }
