@@ -90,15 +90,18 @@ export const pondTuring: WidgetPreset = {
     finBox[0] = Math.max(0, Math.floor(pose.headX - 1.32 * bodyL)); finBox[2] = Math.min(143, Math.ceil(pose.headX))
     finBox[1] = Math.max(0, Math.floor(pose.midY - 1.5 * half)); finBox[3] = Math.min(143, Math.ceil(pose.midY + 1.4 * half))
     const n = spotCount(spots), motes: [number, number][] = []
-    for (const [x0, y0, sp] of MOTES) motes.push([((x0 - sp * ctx.t) % 150 + 150) % 150 - 3, y0 + 2 * dsin(.4 * ctx.t + x0)])
+    for (const [x0, y0, sp] of MOTES) motes.push([((x0 - sp * ctx.t) % 143 + 143) % 143, y0 + 2 * dsin(.4 * ctx.t + x0)])
     return [
       // the count, while any of the fish is in the pond
       caption(pose.headX < 0 || pose.headX - 1.3 * bodyL > 143 ? '' : n === 1 ? '1 SPOT' : `${n} SPOTS`),
       layer(T.dots(motes, .8), 'faint'),
       layer(fins, 'idle'),
       skinLayer,
-      layer(T.dotRing(eye[0], eye[1], er, { spacing: 1.5, size: .9 }), 'value'),
-      layer(T.dots([[eye[0] + .25 * er, eye[1]]], 1.2 + .5 * (pose.px / ADULT_PX)), 'value'),
+      // the eye, once it is in the pond (sites never leave the card)
+      ...(eye[0] - er >= 0 && eye[0] + er <= 143 ? [
+        layer(T.dotRing(eye[0], eye[1], er, { spacing: 1.5, size: .9 }), 'value'),
+        layer(T.dots([[eye[0] + .25 * er, eye[1]]], 1.2 + .5 * (pose.px / ADULT_PX)), 'value'),
+      ] : []),
     ]
   },
 }
