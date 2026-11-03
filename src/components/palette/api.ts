@@ -8,8 +8,8 @@ import { MODE_LINES, PLACES, isMode } from '../../site/views'
 import type { RendererOverride } from '../xray/store'
 import type { MotionSetting } from './reducedMotion'
 import { ACCENTS, type AccentId } from '../../site/theme/names'
-import { getTheme } from '../../site/theme/theme'
-import { switchTheme } from '../../site/theme/moment'
+import { getTheme, setContrast } from '../../site/theme/theme'
+import { dropUrlParams, switchTheme } from '../../site/theme/moment'
 import { setPondMemory } from '../../site/pondMemory'
 import { CARD_SIZE_LABELS, CARD_SIZE_LINES, CARD_SIZES, setCardSize } from '../../site/cards'
 import { POSTS, postPath } from '../../blog/posts'
@@ -88,6 +88,8 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   const SCHEME_WORDS = { system: 'auto os follow', light: 'paper day white', dark: 'night black' } as const
   for (const s of ['system', 'light', 'dark'] as const) act(`theme-${s}`, `Theme: ${s}${s === 'system' ? ' (follow the OS light / dark)' : ''}`, () => switchTheme({ scheme: s }), '', `theme scheme mode colour color ${SCHEME_WORDS[s]}`)
   for (const c of ACCENTS) act(`accent-${c}`, `Accent: ${c}`, () => switchTheme({ accent: c }), '', `accent theme colour color hue ${c}`)
+  act('contrast-more', 'Contrast: more (stronger text and lines)', () => { dropUrlParams(['contrast']); setContrast('more') }, '', 'contrast more high accessibility legible readable')
+  act('contrast-system', 'Contrast: follow the system', () => { dropUrlParams(['contrast']); setContrast('system') }, '', 'contrast normal default system os accessibility')
   // the ageing pond's memory (X1 #5): opt-in, a ~60-byte record of visits in this browser; off deletes it
   act('pond-memory-on', 'Pond memory: on (your koi age with your visits)', () => setPondMemory(true), '', 'pond koi age ageing visits storage remember memory')
   act('pond-memory-off', 'Pond memory: off (deletes the record)', () => setPondMemory(false), '', 'pond koi age ageing visits storage forget memory privacy')

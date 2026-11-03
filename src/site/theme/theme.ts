@@ -8,6 +8,11 @@
  *    presets), stored as its finished CSS (`css`, both schemes) next to its `hue`. `custom` resolves only while
  *    that CSS is stored; it lives in `<style id="theme-custom">` (the boot script writes it before first paint).
  *  - `system` follows `prefers-color-scheme` live (a `matchMedia` listener while on `system`).
+ *  - CONTRAST: MORE (`contrast: 'more'`, stored next to the theme, `?contrast=more` for a visit) puts
+ *    `data-contrast="more"` on `<html>`: the roles of `prefers-contrast: more`, which still applies on its own. The
+ *    boot script doesn't read it (it is inlined into every HTML entry), so the store sets it when the bundle runs.
+ *  - `?hue=` (a shared custom theme): the visit shows that hue, from the stored CSS when it is the same hue, else from
+ *    the lazy generator (`custom.ts`) once it loads; like every URL param it is not stored.
  *  - Writes `data-scheme` (resolved: `dark` / `light`) and `data-accent` on `<html>`, the same attributes the
  *    inline boot script (`boot.ts`) set before first paint, with `.no-transition` on `<html>` for the switch;
  *    the `color-scheme` meta, and the `theme-color` meta as the theme's exact `--bg` (the boot script can only
@@ -20,13 +25,17 @@
  */
 import type { ThemeTokens } from '../../engine/types'
 import { dot480 } from '../../engine/theme/tokens'
-import { DEFAULT_ACCENT, DEFAULT_SCHEME, isAccentChoice, isSchemePref, parseThemeName, themeName, type AccentChoice, type Scheme, type SchemePref, type ThemeKey } from './names'
+import { DEFAULT_ACCENT, DEFAULT_SCHEME, isAccent, isAccentChoice, isContrastPref, isSchemePref, moreSelector, parseHue, parseThemeName, themeName, type AccentChoice, type ContrastPref, type Scheme, type SchemePref, type ThemeKey } from './names'
 
 export const STORAGE_KEY = 'dot480:theme'
 /** The custom hue and its generated CSS (both schemes; `customCss()` in accents.ts). */
 export interface CustomHue { hue: number; css: string }
-export interface ThemePrefs { scheme: SchemePref; accent: AccentChoice; custom?: CustomHue }
-export interface ThemeState extends ThemePrefs { /** `scheme` with `system` resolved. */ resolved: Scheme; name: ThemeKey }
+export interface ThemePrefs { scheme: SchemePref; accent: AccentChoice; custom?: CustomHue; /** CONTRAST: MORE (absent: `system`). */ contrast?: ContrastPref }
+export interface ThemeState extends ThemePrefs {
+  /** `scheme` with `system` resolved. */ resolved: Scheme; name: ThemeKey
+  /** The OS asks for more contrast (`prefers-contrast: more`). */ osMore: boolean
+  /** More contrast is on: picked, or asked for by the OS. */ more: boolean
+}
 const CUSTOM_ID = 'theme-custom'
 /** `themeTokens()` per theme (declared before the module's first `customStyle`, which clears the custom entries). */
 const memo = new Map<ThemeKey, ThemeTokens>()
@@ -35,9 +44,9 @@ const memo = new Map<ThemeKey, ThemeTokens>()
  * The visitor's choice from the URL query and the stored JSON (pure; the boot script does the same, and
  * `scripts/site/theme.ts` runs both on the same inputs). `fromUrl` tells whether the URL decided a field.
  */
-export function resolvePrefs(search: string, stored: string | null): ThemePrefs & { fromUrl: boolean } {
+export function resolvePrefs(search: string, stored: string | null): ThemePrefs & { fromUrl: boolean; hue?: number } {
   const q = new URLSearchParams(search), t = parseThemeName(q.get('theme'))
-  let j: Partial<Record<'scheme' | 'accent' | 'hue' | 'css', unknown>> = {}
+  let j: Partial<Record<'scheme' | 'accent' | 'hue' | 'css' | 'contrast', unknown>> = {}
   try { j = (JSON.parse(stored ?? 'null') as typeof j) || {} } catch { /* corrupt entry: defaults */ }
   if (typeof j !== 'object') j = {}
   const sq = q.get('scheme'), aq = q.get('accent')
@@ -46,42 +55,53 @@ export function resolvePrefs(search: string, stored: string | null): ThemePrefs 
   const ok = (x: unknown): x is AccentChoice => isAccentChoice(x) && (x !== 'custom' || !!custom)
   const scheme = [sq, t?.[0], j.scheme].find(isSchemePref) ?? DEFAULT_SCHEME
   const accent = [aq, t?.[1], j.accent].find(ok) ?? DEFAULT_ACCENT
-  return { scheme, accent, ...(custom ? { custom } : {}), fromUrl: isSchemePref(sq) || isAccentChoice(aq) || !!t }
+  const contrast = [q.get('contrast'), j.contrast].find(isContrastPref) ?? 'system'
+  // ?hue= asks for that custom hue, unless the URL names a preset accent (the store applies it after boot)
+  const hue = isAccent(aq) || isAccent(t?.[1]) ? undefined : parseHue(q.get('hue'))
+  return { scheme, accent, ...(custom ? { custom } : {}), ...(contrast === 'more' ? { contrast } : {}), ...(hue === undefined ? {} : { hue }),
+    fromUrl: isSchemePref(sq) || isAccentChoice(aq) || !!t || isContrastPref(q.get('contrast')) || hue !== undefined }
 }
 export const resolveScheme = (pref: SchemePref, prefersLight: boolean): Scheme => (pref === 'system' ? (prefersLight ? 'light' : 'dark') : pref)
 
 const hasDom = typeof window !== 'undefined' && typeof document !== 'undefined'
 const LIGHT_QUERY = '(prefers-color-scheme: light)'
 const mq = hasDom && typeof matchMedia === 'function' ? matchMedia(LIGHT_QUERY) : undefined
+const mqMore = hasDom && typeof matchMedia === 'function' ? matchMedia('(prefers-contrast: more)') : undefined
 const readStored = (): string | null => { try { return localStorage.getItem(STORAGE_KEY) } catch { return null } }
 
 /** The prefs without the `fromUrl` flag. */
-const prefsOf = (r: ThemePrefs & { fromUrl: boolean }): ThemePrefs => ({ scheme: r.scheme, accent: r.accent, ...(r.custom ? { custom: r.custom } : {}) })
-let prefs: ThemePrefs = hasDom ? prefsOf(resolvePrefs(location.search, readStored())) : { scheme: DEFAULT_SCHEME, accent: DEFAULT_ACCENT }
+const prefsOf = (r: ThemePrefs): ThemePrefs => ({ scheme: r.scheme, accent: r.accent, ...(r.custom ? { custom: r.custom } : {}), ...(r.contrast === 'more' ? { contrast: r.contrast } : {}) })
+const first = hasDom ? resolvePrefs(location.search, readStored()) : undefined
+let prefs: ThemePrefs = first ? prefsOf(first) : { scheme: DEFAULT_SCHEME, accent: DEFAULT_ACCENT }
 let state: ThemeState = derive(prefs)
 const listeners = new Set<() => void>()
 
 function derive(p: ThemePrefs): ThemeState {
-  const resolved = resolveScheme(p.scheme, !!mq?.matches)
-  return { ...p, resolved, name: themeName(resolved, p.accent) }
+  const resolved = resolveScheme(p.scheme, !!mq?.matches), osMore = !!mqMore?.matches
+  return { ...p, resolved, name: themeName(resolved, p.accent), osMore, more: osMore || p.contrast === 'more' }
 }
 
+/** Custom CSS stored before CONTRAST: MORE has the `@media (prefers-contrast: more)` block only: add its toggle copy. */
+export const withMoreToggle = (css: string): string => css.includes('data-contrast')
+  ? css : css.replace(/@media \(prefers-contrast: more\)\{([^{}]+)\{([^{}]*)\}\}/g, (m, sel: string, d: string) => `${m}${moreSelector(sel)}{${d}}`)
 /** The custom hue's CSS in `<style id="theme-custom">` (the boot script made it when the stored accent is custom). */
-function customStyle(css: string | undefined): void {
-  if (!hasDom || css === undefined) return
+function customStyle(stored: string | undefined): void {
+  if (!hasDom || stored === undefined) return
+  const css = withMoreToggle(stored)
   let el = document.getElementById(CUSTOM_ID)
   if (!el) { el = Object.assign(document.createElement('style'), { id: CUSTOM_ID }); document.head.appendChild(el) }
   if (el.textContent !== css) { el.textContent = css; for (const k of memo.keys()) if (k.endsWith('_custom')) memo.delete(k) }
 }
 
-/** `<html data-scheme data-accent>`; `.no-transition` holds every CSS transition off for the frame of the swap. */
+/** `<html data-scheme data-accent data-contrast>`; `.no-transition` holds every CSS transition off for the frame of the swap. */
 function apply(s: ThemeState, animate = false): void {
   if (!hasDom) return
-  const root = document.documentElement
-  if (root.dataset.scheme === s.resolved && root.dataset.accent === s.accent) return
+  const root = document.documentElement, contrast = s.contrast === 'more' ? 'more' : undefined
+  if (root.dataset.scheme === s.resolved && root.dataset.accent === s.accent && root.dataset.contrast === contrast) return
   if (!animate) root.classList.add('no-transition')
   root.dataset.scheme = s.resolved
   root.dataset.accent = s.accent
+  if (contrast) root.dataset.contrast = contrast; else delete root.dataset.contrast
   metas(s)
   if (!animate) {
     void getComputedStyle(root).color // flush styles with transitions off
@@ -101,18 +121,27 @@ function update(next: ThemePrefs): void {
   const s = derive(next)
   prefs = next
   customStyle(next.custom?.css)
-  if (s.name === state.name && s.scheme === state.scheme && s.custom?.hue === state.custom?.hue) return
+  if (s.name === state.name && s.scheme === state.scheme && s.custom?.hue === state.custom?.hue && s.contrast === state.contrast && s.more === state.more) return
+  // the raised roles change the hairline the canvas readers take (`--line`): read every theme again
+  if (s.more !== state.more) memo.clear()
   state = s
   apply(state)
   for (const l of listeners) l()
 }
 
 mq?.addEventListener?.('change', () => { if (prefs.scheme === 'system') update({ ...prefs }) })
+mqMore?.addEventListener?.('change', () => update({ ...prefs }))
 // the boot script set the attributes already (this only repairs a page whose boot script was blocked); the exact
 // theme-color needs the CSS, which has loaded by the time the bundle runs
 if (prefs.accent === 'custom') customStyle(prefs.custom?.css)
 apply(state)
 if (hasDom) metas(state)
+// ?hue=: the shared custom hue for this visit (a pick before the generator arrives wins)
+if (first?.hue !== undefined) {
+  const h = first.hue, before = prefs
+  if (prefs.custom?.hue === h) update({ ...prefs, accent: 'custom' })
+  else void import('./custom').then(m => { if (prefs === before) update({ ...prefs, accent: 'custom', custom: m.customHue(h) }) }, () => { /* offline: the boot theme stays */ })
+}
 
 export const getTheme = (): ThemeState => state
 export function subscribeTheme(cb: () => void): () => void { listeners.add(cb); return () => { listeners.delete(cb) } }
@@ -124,13 +153,16 @@ export function subscribeTheme(cb: () => void): () => void { listeners.add(cb); 
 export function setTheme(next: Partial<ThemePrefs>): void {
   const custom = next.custom ?? prefs.custom
   const accent = isAccentChoice(next.accent) && (next.accent !== 'custom' || custom) ? next.accent : prefs.accent
-  const p: ThemePrefs = { scheme: isSchemePref(next.scheme) ? next.scheme : prefs.scheme, accent, ...(custom ? { custom } : {}) }
-  const stored = { scheme: p.scheme, accent: p.accent, ...(custom ? { hue: custom.hue, css: custom.css } : {}) }
+  const contrast = isContrastPref(next.contrast) ? next.contrast : prefs.contrast
+  const p: ThemePrefs = { scheme: isSchemePref(next.scheme) ? next.scheme : prefs.scheme, accent, ...(custom ? { custom } : {}), ...(contrast === 'more' ? { contrast } : {}) }
+  const stored = { scheme: p.scheme, accent: p.accent, ...(custom ? { hue: custom.hue, css: custom.css } : {}), ...(p.contrast ? { contrast: p.contrast } : {}) }
   try { localStorage.setItem(STORAGE_KEY, JSON.stringify(stored)) } catch { /* storage blocked */ }
   update(p)
 }
 export const setScheme = (scheme: SchemePref) => setTheme({ scheme })
 export const setAccent = (accent: AccentChoice) => setTheme({ accent })
+/** CONTRAST: MORE on (`more`) or off (`system`: the OS decides); persisted with the theme. */
+export const setContrast = (contrast: ContrastPref) => setTheme({ contrast })
 
 /** Engine token ← the CSS variable it is read from (scripts/site/theme.ts `ENGINE_VARS` checks themes.css declares them all). */
 const VARS: [keyof ThemeTokens, string][] = [['bg', '--bg'], ['surface', '--surface'], ['surfaceRaised', '--raised'], ['hairline', '--line'], ['dotIdle', '--dot-idle'], ['dotMid', '--dot-mid'], ['dotFaint', '--dot-faint'], ['value', '--value'], ['dotActive', '--red'], ['dotActiveDim', '--red-dim']]

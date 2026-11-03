@@ -30,3 +30,22 @@ export function parseThemeName(s: string | null | undefined): [SchemePref, Accen
   const [a, b] = (s ?? '').split('_')
   return isSchemePref(a) && isAccentChoice(b) ? [a, b] : undefined
 }
+
+/**
+ * CONTRAST (THEME and TOOLS › THEME): `more` puts `data-contrast="more"` on `<html>`, which takes the same raised
+ * roles as the OS `prefers-contrast: more`; `system` leaves it to the OS (which is honoured either way).
+ */
+export type ContrastPref = 'system' | 'more'
+export const isContrastPref = (s: unknown): s is ContrastPref => s === 'system' || s === 'more'
+/**
+ * A theme rule's selector under CONTRAST: MORE: `<html data-contrast="more">` and everything inside it, at the
+ * specificity of the rule itself (the scope goes in `:where()`), so the block written after the base rules wins as the
+ * `@media (prefers-contrast: more)` block does.
+ */
+export const moreSelector = (sel: string): string => sel.split(/,\s*/).map(s => s === ':where(:root)' ? ':where(:root[data-contrast="more"])' : `:where([data-contrast="more"], [data-contrast="more"] *)${s}`).join(', ')
+/** `?hue=` of a shared custom theme: a number of degrees (up to 4 digits, decimals rounded), wrapped into 0–359; else undefined. */
+export function parseHue(s: string | null | undefined): number | undefined {
+  const v = (s ?? '').trim()
+  if (!/^-?\d{1,4}(?:\.\d+)?$/.test(v)) return undefined
+  return ((Math.round(+v) % 360) + 360) % 360
+}

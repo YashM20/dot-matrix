@@ -203,7 +203,7 @@
   text-transform: uppercase
 }
 
-.theme-ctl .theme-share {
+.theme-ctl :is(.theme-share, .theme-contrast) {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -220,25 +220,35 @@
   cursor: pointer
 }
 
-.theme-ctl .theme-share:hover,
-.theme-ctl .theme-share:focus-visible {
+.theme-ctl :is(.theme-share, .theme-contrast):hover,
+.theme-ctl :is(.theme-share, .theme-contrast):focus-visible {
   border-color: var(--line-hover);
   color: var(--label)
 }
 
-.theme-ctl .theme-share:active {
+.theme-ctl :is(.theme-share, .theme-contrast):active {
   background-color: var(--wash-press);
   color: var(--value)
 }
 
-.theme-share b {
+:is(.theme-share, .theme-contrast) b {
   color: var(--mute);
   font-weight: 600;
   letter-spacing: .12em
 }
 
-.theme-ctl .theme-share[aria-checked="true"] b {
+.theme-ctl :is(.theme-share, .theme-contrast)[aria-checked="true"] b {
   color: var(--red-text)
+}
+
+/* CONTRAST: MORE while the OS asks for it: shown on, and the OS decides */
+.theme-ctl .theme-contrast[aria-disabled="true"] {
+  cursor: default
+}
+
+.theme-ctl .theme-contrast[aria-disabled="true"]:active {
+  background-color: transparent;
+  color: var(--mute)
 }
 
 /* CARD SIZE (CardSizeControl): under the theme in the popover, a dotted rule apart; in TOOLS › DISPLAY, above the skins */
@@ -262,7 +272,7 @@
 }
 
 .tools-sheet .theme-ctl .theme-seg button,
-.tools-sheet .theme-ctl .theme-share {
+.tools-sheet .theme-ctl :is(.theme-share, .theme-contrast) {
   min-height: var(--tap)
 }
 

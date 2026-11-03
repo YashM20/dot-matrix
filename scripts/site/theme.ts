@@ -30,7 +30,7 @@ import { join } from 'node:path'
 import { ACCENT_ROLES, ACCENT_SPECS, customCss, DARK, decls, DOT_ROLES, generateAll, generateHue, MORE, MORE_ROLES, moreRoles, NEUTRAL_ROLES, NEUTRALS, neutralRoles, PINS, type Role, type Theme } from '../../src/site/theme/accents'
 import { apca, CVD_DE, CVD_DL, distinctness, gamutMisses, hexToRgb, wcag } from '../../src/site/theme/color'
 import { BOOT_END, BOOT_SCRIPT, BOOT_START, bootTag } from '../../src/site/theme/boot'
-import { ACCENTS, SCHEMES, type Scheme } from '../../src/site/theme/names'
+import { ACCENTS, moreSelector, SCHEMES, type Scheme } from '../../src/site/theme/names'
 import type { ThemeTokens } from '../../src/engine/types'
 import { dot480 } from '../../src/engine/theme/tokens'
 
@@ -146,6 +146,12 @@ function emitCss(themes: Theme[]): string {
   out.push('@media (prefers-contrast: more) {')
   for (const t of themes) out.push(`  ${selOf(t)} {`, ...decls(moreRoles(t), MORE_ROLES, '    '), '  }')
   out.push('}')
+  // CONTRAST: MORE in the picker (`<html data-contrast="more">`): the same roles without the media query, at the same
+  // specificity (the scope sits in :where()), after the base rules
+  for (const t of themes) out.push(`${moreSelector(selOf(t))} {`, ...decls(moreRoles(t), MORE_ROLES, '  '), '}')
+  // and the chrome materials of src/tokens.css's prefers-contrast block, copied (this file loads after tokens.css)
+  const mat = /@media \(prefers-contrast: more\)\s*\{\s*:root, \[data-scheme\]\s*\{([^}]*)\}/.exec(readFileSync(FILES.tokens, 'utf8'))?.[1]
+  if (mat) out.push(':root[data-contrast="more"], [data-contrast="more"] [data-scheme] {', ...mat.split(';').map(d => d.trim()).filter(Boolean).map(d => `  ${d};`), '}')
   out.push(
     '::selection { background: var(--selection); }',
     '.no-transition, .no-transition *, .no-transition *::before, .no-transition *::after { transition: none !important; }', '',
@@ -297,10 +303,10 @@ export async function themeChecks(assert: Assert, { print = false } = {}): Promi
 
   // the boot script and the store resolve the same theme
   const { resolvePrefs, resolveScheme, themeTokens } = await import('../../src/site/theme/theme')
-  const searches = ['', '?scheme=light', '?scheme=dark', '?accent=vite', '?theme=light_cobalt', '?theme=system_amber', '?theme=bogus_cobalt', '?theme=light_bogus', '?theme=dark_vite&accent=cyan', '?scheme=system&theme=light_amber', '?scheme=nope&accent=nope', '?accent=custom', '?theme=light_custom']
+  const searches = ['', '?scheme=light', '?scheme=dark', '?accent=vite', '?theme=light_cobalt', '?theme=system_amber', '?theme=bogus_cobalt', '?theme=light_bogus', '?theme=dark_vite&accent=cyan', '?scheme=system&theme=light_amber', '?scheme=nope&accent=nope', '?accent=custom', '?theme=light_custom', '?scheme=light&hue=212', '?hue=40&contrast=more', '?contrast=more']
   const cssJ = JSON.stringify(customCss(212))
   const stored = [null, '{"scheme":"dark","accent":"vite"}', '{"scheme":"light"}', '{"accent":"magenta"}', '{"scheme":"system","accent":"phosphor"}', 'garbage', '"light_cobalt"', '{"accent":"custom"}', 'null', '5',
-    `{"scheme":"light","accent":"custom","hue":212,"css":${cssJ}}`, `{"accent":"cobalt","hue":212,"css":${cssJ}}`, '{"accent":"custom","hue":212,"css":5}']
+    `{"scheme":"light","accent":"custom","hue":212,"css":${cssJ}}`, `{"accent":"cobalt","hue":212,"css":${cssJ}}`, '{"accent":"custom","hue":212,"css":5}', '{"scheme":"light","accent":"amber","contrast":"more"}']
   const BG = { dark: NEUTRALS.dark.bg, light: NEUTRALS.light.bg }
   const mismatch: string[] = []
   for (const s of searches) for (const st of stored) for (const light of [false, true]) {
@@ -309,6 +315,18 @@ export async function themeChecks(assert: Assert, { print = false } = {}): Promi
     if (JSON.stringify(b) !== JSON.stringify(want)) mismatch.push(`${s || '(none)'} + ${st} + ${light ? 'light' : 'dark'} OS: boot ${JSON.stringify(b)} vs store ${JSON.stringify(want)}`)
   }
   assert(`theme: boot script ≡ store resolution (${searches.length * stored.length * 2} cases: URL, storage, OS scheme; attributes, the custom hue's <style>, color-scheme and theme-color metas)`, !mismatch.length, mismatch.slice(0, 3).join('; '))
+  // CONTRAST: MORE and ?hue= (issue #34): the store reads them after boot (the boot script is inlined in every HTML entry)
+  const hueCases: [string, number | undefined][] = [['?hue=212', 212], ['?scheme=dark&hue=7', 7], ['?hue=-30', 330], ['?hue=720', 0], ['?hue=359.6', 0], ['?hue=12.4', 12], ['?hue=abc', undefined], ['?hue=', undefined], ['?hue=1e3', undefined], ['?hue=99999', undefined], ['?hue=212&accent=cobalt', undefined], ['?theme=light_vite&hue=212', undefined], ['?accent=custom&hue=90', 90]]
+  const hueOff = hueCases.filter(([s, h]) => resolvePrefs(s, null).hue !== h).map(([s]) => s)
+  assert(`theme: ?hue= is a number of degrees wrapped into 0–359, junk ignored, a preset accent in the URL wins (${hueCases.length} cases)`, !hueOff.length, hueOff.join(', '))
+  const conCases: [string, string | null, boolean][] = [['', null, false], ['?contrast=more', null, true], ['?contrast=system', '{"contrast":"more"}', false], ['', '{"contrast":"more"}', true], ['?contrast=max', '{"contrast":"more"}', true], ['', '{"contrast":"high"}', false]]
+  const conOff = conCases.filter(([s, st, on]) => (resolvePrefs(s, st).contrast === 'more') !== on).map(([s, st]) => `${s || '(none)'} + ${st}`)
+  assert(`theme: CONTRAST: MORE from ?contrast= (visit) then the stored choice, else the system (${conCases.length} cases)`, !conOff.length, conOff.join(', '))
+  const { withMoreToggle } = await import('../../src/site/theme/theme')
+  const cssNow = customCss(212), cssOld = cssNow.replace(/:where\(\[data-contrast="more"\][^{]*\{[^}]*\}/g, '')
+  assert('theme: customCss() has a CONTRAST: MORE copy of each prefers-contrast block, and the store rebuilds it for CSS stored before the switch', SCHEMES.every(s => cssNow.includes(`${moreSelector(`[data-scheme="${s}"][data-accent="custom"]`)}{`)) && cssOld !== cssNow && withMoreToggle(cssOld) === cssNow && withMoreToggle(cssNow) === cssNow)
+  const themesCss = readFileSync(FILES.css, 'utf8')
+  assert('theme: themes.css has a CONTRAST: MORE block ([data-contrast="more"]) for all 14 themes and the chrome materials', themes.every(t => themesCss.includes(`:where([data-contrast="more"], [data-contrast="more"] *)[data-scheme="${t.scheme}"][data-accent="${t.accent}"]`)) && themesCss.includes(':root[data-contrast="more"], [data-contrast="more"] [data-scheme] {\n  --line-dot:'))
   assert('theme: defaults are system + signal; system follows the OS', runBoot('', null, false)['data-scheme'] === 'dark' && runBoot('', null, true)['data-scheme'] === 'light' && runBoot('', null, true)['data-accent'] === 'signal')
   const blocked = runBoot('', null, false, true)
   assert('theme: a blocked localStorage still boots (defaults)', blocked['data-scheme'] === 'dark' && blocked['data-accent'] === 'signal')

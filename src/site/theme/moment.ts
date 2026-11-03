@@ -13,7 +13,7 @@ import { isAccentChoice, isSchemePref, themeName } from './names'
 
 export type WipeOrigin = Element | { x: number; y: number } | null | undefined
 type VT = { finished: Promise<void> }
-const PARAMS = ['theme', 'scheme', 'accent']
+const PARAMS = ['theme', 'scheme', 'accent', 'hue']
 
 /** The centre of the pressed control (or a point); the middle of the screen when there is none. */
 function centre(o: WipeOrigin): { x: number; y: number } {
@@ -24,11 +24,14 @@ function centre(o: WipeOrigin): { x: number; y: number } {
   return { x: innerWidth / 2, y: innerHeight / 2 }
 }
 
-/** An explicit choice outranks the visit's `?theme=` / `?scheme=` / `?accent=`: drop them, so a reload keeps the choice. */
-function dropUrlParams(): void {
+/**
+ * An explicit choice outranks the visit's `?theme=` / `?scheme=` / `?accent=` / `?hue=` (for the contrast switch,
+ * `?contrast=`): drop them, so a reload keeps the choice.
+ */
+export function dropUrlParams(params: readonly string[] = PARAMS): void {
   const q = new URLSearchParams(location.search)
-  if (!PARAMS.some(p => q.has(p))) return
-  for (const p of PARAMS) q.delete(p)
+  if (!params.some(p => q.has(p))) return
+  for (const p of params) q.delete(p)
   const s = q.toString()
   history.replaceState(history.state, '', `${location.pathname}${s ? `?${s}` : ''}${location.hash}`)
 }
