@@ -349,6 +349,8 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'sq-stitch': ['A cross-stitch sampler: the alphabet in X stitches inside a wave-function-collapse border, sewn one stitch at a time.', 'squares cross stitch motif sampler wfc animated'],
   'sq-beads': ['One bird sprite as ironed Perler beads and as LEGO studs, the split between the two toys sweeping across.', 'squares perler lego beads motif pixel animated'],
   'sq-morph': ['The LCD clock morphing from dots to squares of the same ink, then fusing into solid shapes, and back.', 'squares morph shape clock animated'],
+  'sq-hat': ['The 2023 hat: one shape that tiles the floor and never repeats. The mirrored hats, about one in eight, are red.', 'squares hat aperiodic tiling einstein animated'],
+  'sq-ammann': ['Squares and 45° rhombi from four sets of lines. The floor zooms by 1 + √2 and every tile splits into smaller ones.', 'squares ammann beenker quasicrystal multigrid tiling animated'],
   'fr-julia': ['A Julia set as its c walks the edge of the Mandelbrot set, shown in the corner with c in red.', 'fractal julia mandelbrot smooth animated'],
   'fr-trap': ['A Julia plane shaded by orbit traps: pearls from a point, threads from a line, one probe orbit drawn on top.', 'fractal orbit-trap julia animated'],
   'fr-popcorn': ['Pickover popcorn: three thousand grains in one flow, seen through a round port, one grain riding its loop.', 'fractal popcorn density animated'],

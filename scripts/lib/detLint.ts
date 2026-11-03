@@ -25,6 +25,7 @@ export const DET_PATHS = [
   'src/engine/matter/thread', // M3: the thread's step (over life/chain ropeStep)
   'src/engine/squares/', // Q: masks, geometry, the tetris sim (Q1)
   'src/engine/algo/linfVoronoi', 'src/engine/algo/schotter', 'src/engine/algo/pixelSort', 'src/engine/algo/glitch', 'src/engine/algo/truchet', // Q3: the square field pack
+  'src/engine/algo/hex', 'src/engine/algo/hat', 'src/engine/algo/ammann', // XQ: the aperiodic floors (#20)
   'src/engine/fractal/', // IQ7: escape-time, trap and density fractals (#68)
   'src/engine/oldschool/', 'src/widgets/boards/oldschool', // IQ6: deformations, clouds, the feedback sim (#67) and the board drawn with them
 ] as const

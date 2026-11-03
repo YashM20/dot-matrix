@@ -173,6 +173,12 @@ shareChecks(assert)
   squaresChecks(assert)
 }
 
+// aperiodic floors (XQ #20): hex and kite grid, hat substitution over 3 levels, Ammann–Beenker multigrid, the two cards (scripts/aperiodic.ts)
+{
+  const { aperiodicChecks } = await import('./aperiodic')
+  aperiodicChecks(assert)
+}
+
 // blog syntax colouring (#84): code blocks round-trip, regex vs division, kinds (scripts/site/highlight.ts)
 {
   const { highlightChecks } = await import('./site/highlight')

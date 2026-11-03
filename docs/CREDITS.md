@@ -12,6 +12,18 @@ By Inigo Quilez.
 
 - Oldschool Sky (`os-sky`), board `/oldschool/`: technique
 
+### [Ammann–Beenker tiling, by de Bruijn’s multigrid](https://en.wikipedia.org/wiki/Ammann%E2%80%93Beenker_tiling)
+
+By Robert Ammann, Frans Beenker, Nicolaas Govert de Bruijn.
+
+- Squares Ammann (`sq-ammann`), board `/squares/`: technique
+
+### [An aperiodic monotile](https://arxiv.org/abs/2303.10798)
+
+By David Smith, Joseph Samuel Myers, Craig S. Kaplan, Chaim Goodman-Strauss.
+
+- Squares Hat (`sq-hat`), board `/squares/`: technique
+
 ### [Feedback effect](https://iquilezles.org/articles/feedbackfx/)
 
 By Inigo Quilez.
