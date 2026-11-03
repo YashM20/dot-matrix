@@ -613,6 +613,10 @@ No state changes a size, so nothing shifts. On coarse pointers every chrome targ
   | `dash-speed` | 24 | the needle eases on a 0.12 s spring and sweeps up to 270° in a pull-away; at 12 it ticks; 12 on a phone |
   | `dash-power` | 24 | the needle swings from regen to full power within a second; 12 on a phone |
   | `dash-road` | 24 | near lane dashes pass at up to 17 m/s, about 3 rows a frame at 24; 12 on a phone |
+  | `face-calm` | 24 | a blink lasts about .25 s, 6 frames at 24 and 3 at 12; the 90 ms saccades and the reactions need the extra frames; 12 on a phone |
+  | `face-curious` | 24 | a blink lasts about .25 s, 6 frames at 24 and 3 at 12; the 90 ms saccades and the reactions need the extra frames; 12 on a phone |
+  | `face-sleepy` | 24 | a blink lasts about .25 s, 6 frames at 24 and 3 at 12; the 90 ms saccades and the reactions need the extra frames; 12 on a phone |
+  | `face-pip` | 24 | a blink lasts about .25 s, 6 frames at 24 and 3 at 12; the 90 ms saccades and the reactions need the extra frames; 12 on a phone |
   | `mo-bounce` | 24 | the dots hop 26 cells in a quarter second; at 12 the arc reads as three jumps; 12 on a phone |
   | `mo-scan` | 24 | the head crosses 114 cells in 1.2 s, about 4 cells a frame at 24, so the trail stays connected; 12 on a phone |
   | `mo-wait` | 24 | the bars cross the rail in under a second; at 12 they skip sites; 12 on a phone |
