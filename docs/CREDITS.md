@@ -112,6 +112,12 @@ By William Jockusch, James Propp, Peter Shor.
 
 - Squares Arctic (`sq-arctic`), board `/squares/`: technique; domino shuffling by Noam Elkies, Greg Kuperberg, Michael Larsen and James Propp (1992)
 
+### [Real Time Dynamic Fracture with Volumetric Approximate Convex Decompositions](https://doi.org/10.1145/2461912.2461934)
+
+By Matthias Müller, Nuttapong Chentanez, Tae-Yong Kim.
+
+- Kintsugi (`mat-kintsugi`), board `/workshop/`: the impact-aligned shard pattern
+
 ### [Self-organized criticality: an explanation of the 1/f noise](https://doi.org/10.1103/PhysRevLett.59.381)
 
 By Per Bak, Chao Tang, Kurt Wiesenfeld.
