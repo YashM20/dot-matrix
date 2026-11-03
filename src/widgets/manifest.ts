@@ -69,6 +69,7 @@ export const boardManifest = [
   { id: 'fractals', title: 'FRACTALS — ESCAPE, TRAP, DENSITY', columns: 3, density: 'standard', load: () => import('./boards/fractals').then(m => ({ items: m.fractalsBoard })) },
   { id: 'oldschool', title: 'OLDSCHOOL / TUNNELS, CLOUDS AND FEEDBACK', columns: 3, density: 'standard', load: () => import('./boards/oldschool').then(m => ({ items: m.oldschoolBoard })) },
   { id: 'scenes', title: 'SCENES / 3D DISTANCE FIELDS IN DOTS', columns: 2, density: 'standard', load: () => import('./boards/scenes').then(m => ({ items: m.scenesBoard })) },
+  { id: 'dash', title: 'DASH — CAR AND EV INSTRUMENTS', columns: 3, density: 'standard', load: () => import('./boards/dash').then(m => ({ items: m.dashBoard, shared: m.dashShared })) },
   { id: 'kinetic', title: 'KINETIC / ONE WORD, SEVEN WAYS TO MOVE IT', columns: 3, density: 'standard', load: () => import('./boards/kinetic').then(m => ({ items: m.kineticBoard, shared: m.kineticShared })) },
 ] as const satisfies readonly (BoardMeta & { load: () => Promise<BoardContents> })[]
 
@@ -90,11 +91,11 @@ export const resolveCardId = (id: string): string => cardAliases[id] ?? (id.star
  * don't depend on them. Every board sits in exactly one group after START HERE, the curated tour
  * (`scripts/verify.ts` checks). One-line descriptions are in `./blurbs.ts`, lazy.
  */
-const LABELS: Partial<Record<BoardId, string>> = { henry: 'MICRO UI', deerflow12: 'DASHBOARD', henry3: 'PERSONAL', ir: 'PROGRAMS', sim: 'LIVING', gpu: '500K DOTS', kinetic: 'KINETIC TYPE' }
+const LABELS: Partial<Record<BoardId, string>> = { henry: 'MICRO UI', deerflow12: 'DASHBOARD', henry3: 'PERSONAL', ir: 'PROGRAMS', sim: 'LIVING', gpu: '500K DOTS', dash: 'CAR', kinetic: 'KINETIC TYPE' }
 export const boardLabel = (id: string): string => LABELS[id as BoardId] ?? id.toUpperCase()
 export const boardGroups = [
   { id: 'start', label: 'START HERE', boards: ['henry', 'mosaic', 'physics', 'heal', 'levels', 'instrument', 'cinema'] },
-  { id: 'ui', label: 'INTERFACES', boards: ['henry', 'deerflow12', 'mosaic', 'henry3', 'metro', 'ride', 'audio', 'lock', 'components', 'surfaces'] },
+  { id: 'ui', label: 'INTERFACES', boards: ['henry', 'deerflow12', 'mosaic', 'henry3', 'metro', 'ride', 'audio', 'lock', 'components', 'surfaces', 'dash'] },
   { id: 'data', label: 'DATA', boards: ['live', 'departures', 'heartbeat'] },
   { id: 'play', label: 'PLAY', boards: ['levels', 'physics', 'instrument', 'scope', 'mirror', 'heal', 'pond', 'workshop', 'kinetic'] },
   { id: 'engine', label: 'ENGINE', boards: ['ir', 'sim', 'algorithms', 'squares', 'light', 'materials', 'gpu', 'type', 'cinema', 'fractals', 'oldschool', 'scenes'] },

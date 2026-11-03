@@ -142,18 +142,18 @@ export const statusDotCard: WidgetPreset = {
 
 type Ctx = WidgetContext
 /** One quantize step down at quantizeSteps 5 (1 → .75). */
-const PRESS = .75
-interface UiState { hover: boolean; pressed: boolean; focus: boolean }
-const ui = (ctx: Ctx, key: string): UiState => ({ hover: ctx.hover === key, pressed: ctx.pressed === key, focus: ctx.focus === key })
+export const PRESS = .75
+export interface UiState { hover: boolean; pressed: boolean; focus: boolean }
+export const ui = (ctx: Ctx, key: string): UiState => ({ hover: ctx.hover === key, pressed: ctx.pressed === key, focus: ctx.focus === key })
 /** Site layer drawn at value `v` (press = PRESS). */
-const at = (lf: LatticeField, v: number): LatticeField => (v === 1 ? lf : { ...lf, field: () => v })
+export const at = (lf: LatticeField, v: number): LatticeField => (v === 1 ? lf : { ...lf, field: () => v })
 /** Text / lattice layer scaled by `v`. */
-const dimmed = (lf: LatticeField, v: number): LatticeField => (v === 1 ? lf : { ...lf, field: dim(lf.field, v) })
+export const dimmed = (lf: LatticeField, v: number): LatticeField => (v === 1 ? lf : { ...lf, field: dim(lf.field, v) })
 const int = (x: number, lo: number, hi: number) => Math.round(clamp(Number.isFinite(x) ? x : lo, lo, hi))
 const frac = (x: number) => x - Math.floor(x)
 
 /** Evenly spaced dot sites around a rounded rectangle (corner radius r; r = h/2 is a stadium, w = h = 2r a circle). */
-function rrect(x: number, y: number, w: number, h: number, r: number, spacing: number): Pt[] {
+export function rrect(x: number, y: number, w: number, h: number, r: number, spacing: number): Pt[] {
   r = Math.max(0, Math.min(r, w / 2, h / 2))
   const sw = w - 2 * r, sh = h - 2 * r, arc = (Math.PI / 2) * r, perimeter = 2 * sw + 2 * sh + 4 * arc
   const n = Math.max(8, Math.round(perimeter / spacing)), step = perimeter / n, pts: Pt[] = []
@@ -177,21 +177,21 @@ function rrect(x: number, y: number, w: number, h: number, r: number, spacing: n
   return pts
 }
 /** A control's outline grown by `d` cells, as sites `spacing` apart. */
-type Shape = (d: number, spacing: number) => Pt[]
-const rr = (x: number, y: number, w: number, h: number, r: number): Shape => (d, sp) => rrect(x - d, y - d, w + 2 * d, h + 2 * d, r + d, sp)
-const circle = (cx: number, cy: number, r: number): Shape => rr(cx - r, cy - r, 2 * r, 2 * r, r)
+export type Shape = (d: number, spacing: number) => Pt[]
+export const rr = (x: number, y: number, w: number, h: number, r: number): Shape => (d, sp) => rrect(x - d, y - d, w + 2 * d, h + 2 * d, r + d, sp)
+export const circle = (cx: number, cy: number, r: number): Shape => rr(cx - r, cy - r, 2 * r, 2 * r, r)
 
 /** Hover glow: two halo outlines fading outward. */
 const GLOW = [{ d: 2.6, v: .5 }, { d: 5.2, v: .25 }]
 /** Focus: `on` of every `period` sites lit, marching `rate` sites per second, `d` cells outside the control. */
 const FOCUS = { d: 7, spacing: 2.4, size: 1.3, on: 3, period: 5, rate: 10 }
-const glow = (shape: Shape): Layer[] => GLOW.map(g => layer(at(T.dots(shape(g.d, OUTLINE.spacing), OUTLINE.size), g.v), 'value'))
-const marching = (shape: Shape, t: number, d = FOCUS.d): Layer => {
+export const glow = (shape: Shape): Layer[] => GLOW.map(g => layer(at(T.dots(shape(g.d, OUTLINE.spacing), OUTLINE.size), g.v), 'value'))
+export const marching = (shape: Shape, t: number, d = FOCUS.d): Layer => {
   const ph = Math.floor(t * FOCUS.rate), P = FOCUS.period
   return layer(T.dots(shape(d, FOCUS.spacing).filter((_, i) => (((i - ph) % P) + P) % P < FOCUS.on), FOCUS.size), 'idle')
 }
 /** Hover glow around `hover`, marching focus ring around `focus` (defaults to the same outline). */
-const states = (s: UiState, t: number, hover: Shape, focus: Shape = hover, focusD = FOCUS.d): Layer[] =>
+export const states = (s: UiState, t: number, hover: Shape, focus: Shape = hover, focusD = FOCUS.d): Layer[] =>
   [...(s.hover ? glow(hover) : []), ...(s.focus ? [marching(focus, t, focusD)] : [])]
 /** Primary pointer (card cells), when the input layer provides one. */
 const ptr = (ctx: Ctx) => ctx.pointers?.find(q => !q.up)

@@ -40,6 +40,12 @@ export interface WidgetPreset {
   defaults?: Record<string, number>
   /** Data keys that glide to new values on a critically damped spring instead of dissolving (DotCanvas `springKeys`). */
   springKeys?: string[]
+  /**
+   * A data key that any control edit also sets to 0, unless the edit sets it itself: an idle demo loop that
+   * hands over to the visitor on first touch (the dash board's drive loop). When the key is board-shared,
+   * one touch on any card stops the loop on every card.
+   */
+  handover?: string
   /** `dots`: the card label and live dot are drawn by the engine inside the grid (TILE cards). */
   chrome?: 'dots'
   /** Label text drawn by `chrome: 'dots'` (defaults to `name`; '' = no label). */
