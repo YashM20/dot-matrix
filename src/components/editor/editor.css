@@ -613,5 +613,6 @@ html.ed-scroll-lock .pal-dock { display: none }
 .ed-confirm-btns button { min-height: var(--tap-min); padding: 0 var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-ctl); color: var(--label); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .1em }
 .ed-confirm-btns .ed-confirm-keep { border-color: color-mix(in srgb, var(--value) 55%, transparent); color: var(--value) }
 .ed-confirm-btns button:hover, .ed-confirm-btns button:focus-visible { border-color: var(--line-hover) }
+.ed-confirm-btns button:active { background: var(--wash-press) }
 .ed-confirm-btns button:focus-visible { outline: 1px solid var(--value); outline-offset: 2px }
 .is-phone .ed-confirm-btns button { min-height: var(--tap) }
