@@ -29,6 +29,7 @@ import { cardScheme } from '../../site/theme/polarity'
 import { DotWidget } from '../DotWidget'
 import { Pill, PillBar, PillButton } from './PillBar'
 import './WidgetPage.css'
+import { flag } from '../../site/flags'
 
 export interface WidgetPageProps {
   route: WidgetRoute
@@ -179,7 +180,7 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
       </Pill>
       <Pill className="wp-go">
         {share && <PillButton label="SHARE" glyph="↗" title="Share" onPointerDown={() => { sharePNG.current = png() }} onClick={act.share} />}
-        <PillButton label="REMIX" glyph="✎" title="Remix in MAKE" onClick={act.remix} />
+        {flag('make') && <PillButton label="REMIX" glyph="✎" title="Remix in MAKE" onClick={act.remix} />}
         <PillButton label="X-RAY" glyph="ⓘ" title="X-ray: how it works" onClick={act.xray} pressed={xray} className="wp-desk" />
         <PillButton label="MORE" glyph="⋯" title="More actions" onClick={() => setMore(m => !m)} expanded={more} className="wp-more-btn" />
       </Pill>

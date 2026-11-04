@@ -1,8 +1,11 @@
 import { useId } from 'react'
 import { releases, upcoming } from '../changelog'
+import { useFlag } from '../site/useFlag'
 
 export function Changelog() {
-  const titleId = useId()
+  const titleId = useId(), make = useFlag('make'), lab = useFlag('lab')
+  // links into MAKE or the lab show only while their flag is on
+  const shown = (href: string) => (make || !href.includes('make')) && (lab || !href.startsWith('/lab/'))
   return (
     <section className="log-view" aria-labelledby={titleId}>
       <h2 className="log-title" id={titleId}>MATRIX · CHANGELOG</h2>
@@ -16,7 +19,7 @@ export function Changelog() {
               <ul>
                 {r.changes.map((c, i) => <li key={i}><span className={`log-kind log-kind--${c.kind}`}>{c.kind}</span>{c.text}</li>)}
               </ul>
-              {r.link && <a className="log-link" href={r.link.href}>{r.link.label} →</a>}
+              {r.link && shown(r.link.href) && <a className="log-link" href={r.link.href}>{r.link.label} →</a>}
             </div>
           </li>
         ))}

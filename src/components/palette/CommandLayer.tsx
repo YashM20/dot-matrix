@@ -12,7 +12,7 @@ import { findPreset } from '../../widgets/manifest'
 import { DotWidget } from '../DotWidget'
 import { TimeMachine } from '../xray/TimeMachine'
 import { boardTime, freeze, hoveredCard, isXRay, onCardAction, resume, scrub, setXR, toast, toggleCard, toggleGlobal, useXR, xrState } from '../xray/store'
-import { placeFromName, placeView, urlForView, type Place } from '../../site/views'
+import { placeFromName, placeOpen, placeView, urlForView, type Place } from '../../site/views'
 import { widgetPath } from '../../site/routes'
 import { boardOfCard, type CommandApi } from './api'
 import { setReducedMotion } from './reducedMotion'
@@ -115,7 +115,7 @@ function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { 
       {/* the shell is a typed terminal: offered where there is a keyboard */}
       <button type="button" className="tool-shell" onClick={run(onShell)}><b>SHELL</b><span>Type field commands</span></button>
       {/* the lab and the blog are their own pages; on phones these are their way in, as the header links are on desktop */}
-      <button type="button" className="tool-lab" onClick={run(() => location.assign('/lab/'))}><b>LAB</b><span>Interactive pieces outside the boards</span></button>
+      {flag('lab') && <button type="button" className="tool-lab" onClick={run(() => location.assign('/lab/'))}><b>LAB</b><span>Interactive pieces outside the boards</span></button>}
       <button type="button" className="tool-blog" onClick={run(() => location.assign('/blog/'))}><b>BLOG</b><span>The essay and three tutorials</span></button>
     </div>
     <h3 className="tools-head">THEME</h3>
@@ -149,7 +149,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     get tab() { return view.current.tab },
     get board() { return view.current.board },
     openTab(t) {
-      const name = placeFromName(t) ? t : 'EXPLORE'
+      const p = placeFromName(t), name = p && placeOpen(p) ? t : 'EXPLORE'
       if (!setTab) return window.location.assign(urlOf(placeFromName(name)!))
       setTab(name)
     },
@@ -173,6 +173,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       window.setTimeout(find, 60)
     },
     async remix(cardId, data) {
+      if (!flag('make')) return
       const preset = await findPreset(cardId)
       if (!preset) return toast(`no card ${cardId}`)
       void import('../xray/remix').then(m => m.remixQuery(preset, data)).then(({ query, stub }) => {
@@ -185,6 +186,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       }, e => toast(`remix failed: ${(e as Error).message}`))
     },
     async studio(cardId) {
+      if (!flag('make')) return
       if (!(await findPreset(cardId))) return toast(`no card ${cardId}`)
       if (!setTab) return window.location.assign(urlOf('COMPOSE'))
       // lazy, like MAKE itself: the editor only loads when asked for; the card lands as a new frame
