@@ -11,8 +11,9 @@ import type { GridConfig } from '../types'
 import { compileJS, type CompileOptions, type IREnv, type IRProgram } from './compile'
 import { parse } from './parse'
 
-export { IR_FUNCTIONS, IR_LIMITS, IRError, deserialize, serialize, validate, type IRInfo, type Node as IRNode } from './ast'
+export { IR_COST, IR_FUNCTIONS, IR_LIMITS, IRError, nodeCost, deserialize, serialize, validate, type IRInfo, type Node as IRNode } from './ast'
 export { parse } from './parse'
+export { IR_CHECK_STEPS, IR_FRAME_MS, irGuard, type GuardState, type IRGuard } from './guard'
 export { compileJS, type CompileOptions, type IREnv, type IRProgram } from './compile'
 export { emitGLSL, emitJS } from './emit'
 export { reference, referenceField } from './reference'
@@ -30,6 +31,9 @@ export function irProgram(src: string, opts: CompileOptions = {}): IRProgram {
   }
   return p
 }
+
+/** Every source `irProgram` has compiled so far (the cost check lists the repo's programs with it). */
+export const irSources = (): string[] => [...new Set([...cache.keys()].map(k => k.slice(k.indexOf('\n') + 1)))]
 
 /**
  * IR inputs from a frame context: `t`, `data`, and the primary pointer mapped from card cells to

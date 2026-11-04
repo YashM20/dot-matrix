@@ -80,7 +80,8 @@ export function bytecodeChecks(assert: Assert, opts: { table?: boolean } = {}) {
   let tooBig = ''
   const heavy = `for i in 0..32 with s = 0 { s + for j in 0..32 with q = 0 { q + ${Array(30).fill('sin(u * j)').join(' + ')} } }`
   try { compileBytecode(parse(heavy)) } catch (e) { tooBig = (e as Error).message }
-  assert('bytecode: compile rejects programs over the device step budget', /steps per dot/.test(tooBig), tooBig || 'accepted')
+  // the IR cost cap (IR_LIMITS.cost, half of BC_MAX_STEPS) now stops it before the compiler's own step check
+  assert('bytecode: a program over the device step budget is rejected (by the IR cost cap first)', /too much work per dot|steps per dot/.test(tooBig), tooBig || 'accepted')
 }
 
 if (import.meta.url === pathToFileURL(process.argv[1] ?? '').href) {
