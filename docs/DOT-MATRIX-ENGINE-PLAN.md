@@ -63,7 +63,7 @@ src/workers/                      protocol.ts (handleSample), sampleWorker.ts (m
 src/App.tsx                       tabs BOARDS · GALLERY · WORKSPACE · STUDIO · LOG · DOTS · DRAW (essay.html is a separate entry)
 src/components/                   DotCanvas (renderer choice, clock, worker, transitions), DotWidget, Board, BoardPicker, useBlurbs, ControlOverlay (a11y), Changelog
   playground/                     WORKSPACE: WidgetGallery, ControlsPanel, DataEditor, ExportPanel, PhotoUpload, TransitionLab
-  palette/                        command layer: ⌘K Palette, dot Shell (backtick), shared command api, fuzzy, reduced-motion override
+  palette/                        command layer: ⌘K Palette, dot Shell (backtick: command table `shellHelp`, line editing `shellLine`, commands `shellRun`, screen `shellScreen`), shared command api, fuzzy, reduced-motion override
   xray/                           X-ray overlay + inspector, probe ("why this dot"), remix → DOTS, time machine
   skins/                          skin store + switcher, DisplaySurface → SkinOverlay (lazy) → engine display stage
   studio/                         STUDIO (Dot Studio): doc model, layers, inspector, timeline, state machine, scorecard/bar sheet, exports, device previews

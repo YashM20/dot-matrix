@@ -70,9 +70,10 @@
       <dl class="keys">
         <div><dt><code>dot480:live:…</code></dt><dd>The last weather, GitHub contributions and now-playing readings the Live board showed, one key per source, so it can start from them next time. They are ignored after 7 days.</dd></div>
       </dl>
-      <p>One key lives in <code>sessionStorage</code> instead, which your browser clears when you close the tab:</p>
+      <p>Two keys live in <code>sessionStorage</code> instead, which your browser clears when you close the tab:</p>
       <dl class="keys">
         <div><dt><code>dot480:tilt</code></dt><dd>You allowed tilt on this tab, so tilt-reactive cards don't ask again until you close it.</dd></div>
+        <div><dt><code>dot480:shell-history</code></dt><dd>The last 100 commands you typed in the dot shell on this tab, so ↑ finds them after you close and reopen it.</dd></div>
       </dl>
       <p>Open tabs of the site also talk to each other over a <code>BroadcastChannel</code> (so clocks and live cards stay
         in step); those messages never leave your browser and aren't stored.</p>

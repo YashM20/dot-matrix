@@ -201,6 +201,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       const done = () => toast('link copied')
       if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(done, () => toast(url))
       else toast(url)
+      return url
     },
     toggleXray(force) { if (flag('xray')) toggleGlobal(force) },
     freeze() { freeze(); toast(matchMedia('(pointer: coarse)').matches ? 'time machine: drag the scrubber, RESUME plays' : 'time machine: drag the scrubber, ← → step, space resumes') },

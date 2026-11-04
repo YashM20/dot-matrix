@@ -646,6 +646,7 @@ The HTML chrome has one component per job; a new control reuses one of these ins
 | **floating bar** | `.ed-selbar`, `.ed-qbar`: a `--surface` bar over the canvas (1 px `--line`, `--radius-card` / `--radius-ctl`), grey buttons, the accent edge and `--glow-wash` only on a pressed one | the editor's phone selection bar; the quick bar over a selected layer (tone, lattice, size, EDIT, INK, PICK) |
 | **tooltip** | `[data-tip]` (+ `[data-kbd]` for the keycap) inside a group (`.pal-dock`, `.pill-bar`) | the dock; the widget page pill bars |
 | **keycap** | `kbd` in `.pal`, `.pal-shell`, `.pal-boss`, `.xr-time`, and the tooltip keycap: a dotted edge on a dot-matrix fill | ⌘K footer and hints, the shell, the time machine |
+| **terminal** | `.pal-shell`: a dot-matrix screen (`textAt` rows on one grid, `tileStyle`) under its own text, a `role="log"` list (`.pal-shell-log`) and the line (`.pal-shell-input`), both transparent on the same 6 × 9 dot cell (`--d` = one dot), so output selects, copies and links while the dots stay what you see; tones: input `value`, output `idle`, notes `faint`, errors `mid`, prompt and cursor `active` | the dot shell (backtick) |
 
 **Tooltip rules.** One at a time (the hovered control). The first in a group waits `--dur-tip`; moving to a neighbour shows its tooltip at once, until the pointer leaves the group (a registered `--tip-on` custom property that switches on after the delay and off at once, no JS). Keyboard focus shows it without the wait; a press hides it. No motion.
 
