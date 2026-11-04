@@ -103,69 +103,61 @@
   letter-spacing: .16em
 }
 
-/* the bar sits in the card's top padding: hint (dot-drawn cards), action strip, ⋯ on touch */
+/* the bar sits in the card's top padding: hint (dot-drawn cards), DONE while engaged, and ⋯, the card's
+   actions (#181). Nothing in it is wider or taller than the padding, so it never sits on the drawing; the
+   menu opens only on demand */
 .dot-card-bar {
   position: absolute;
-  top: 3px;
-  right: 14px;
+  top: 2px;
+  right: 10px;
   z-index: var(--z-raise);
   display: flex;
   align-items: center;
   gap: var(--space-1);
-  min-height: 12px;
-  pointer-events: none
+  height: 12px
 }
 
 .dot-card-bar > .dot-card-hint {
   margin: 0
 }
 
-.dot-card-acts {
-  position: absolute;
-  top: 0;
-  right: 0;
-  display: flex;
-  gap: var(--space-1);
-  padding: var(--space-1);
-  background: color-mix(in srgb, var(--surface) 94%, transparent);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-ctl);
-  opacity: 0;
-  transition: opacity var(--dur-out)
-}
-
-/* the strip shows at once on hover or focus and fades out when the pointer leaves */
-.dot-card:hover .dot-card-acts,
-.dot-card:active .dot-card-acts,
-.dot-card:has(:focus-visible) .dot-card-acts,
-.dot-card-bar.open .dot-card-acts {
-  opacity: 1;
-  pointer-events: auto;
-  transition-duration: var(--dur-in)
-}
-
 .dot-card-bar button {
-  min-width: 24px;
-  min-height: 22px;
-  padding: var(--space-1) var(--space-2);
+  height: 12px;
+  padding: 0 var(--space-1);
   background: none;
   border: 1px solid transparent;
   border-radius: var(--radius-ctl);
   color: var(--mute);
-  font: 600 var(--fs-tag-8) var(--mono);
+  font: 600 var(--fs-tag-8)/1 var(--mono);
   letter-spacing: .12em;
   cursor: pointer
 }
 
+/* ⋯: a glyph in the padding at rest, a 24 × 24 hit area (an invisible margin; 44 on touch, touch.css) */
+.dot-card-more {
+  position: relative;
+  min-width: 20px;
+  font-size: var(--fs-label-12) !important;
+  letter-spacing: 0 !important
+}
+
+.dot-card-more::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 24px;
+  height: 24px;
+  transform: translate(-50%, -50%)
+}
+
 .dot-card-bar button:hover,
 .dot-card-bar button:focus-visible,
-.dot-card-bar button[aria-pressed="true"],
 .dot-card-bar button[aria-expanded="true"] {
   color: var(--value);
   border-color: var(--line)
 }
 
-/* pressed feedback for the bar's HTML buttons (in-card controls press in dots) */
 .dot-card-bar button:active {
   background: var(--raised);
   color: var(--value)
@@ -176,32 +168,64 @@
   outline-offset: -1px
 }
 
-.dot-card-acts button:first-child {
-  font-size: var(--fs-label-11);
-  letter-spacing: 0
+/* a bleed card has no padding: its ⋯ is a small chip in the corner, shown only on hover, on focus, while the
+   card is engaged or while its menu is open; at rest nothing sits on the drawing. It stays in the tab order. */
+.dot-card--bleed .dot-card-bar {
+  top: 6px;
+  right: 6px
 }
 
-.dot-card-more {
-  display: none;
-  pointer-events: auto
+.dot-card--bleed .dot-card-more {
+  height: 16px;
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  opacity: 0
 }
 
-/* touch: nothing is hover-only; ⋯ opens the strip */
-@media (hover: none), (pointer: coarse) {
-  .dot-card-more {
-    display: inline-block;
-    min-width: 28px;
-    min-height: 28px;
-    font-size: var(--fs-label-12) !important;
-    background: color-mix(in srgb, var(--surface) 70%, transparent) !important
-  }
+.dot-card--bleed:hover .dot-card-more,
+.dot-card--bleed:active .dot-card-more,
+.dot-card--bleed:focus-within .dot-card-more,
+.dot-card--bleed.dot-card--engaged .dot-card-more,
+.dot-card--bleed .dot-card-more[aria-expanded="true"] {
+  opacity: 1
+}
 
-  .dot-card-acts {
-    display: none;
-    right: 32px
-  }
+/* the menu: the raised layer (raised.css), under ⋯, inside the card. A board card is a size container (grid.css),
+   so 100cqi is the card's width: the menu never runs past the card's left edge or its bottom (a card is square),
+   and long rows wrap; on a small tile the list scrolls */
+.dot-card-menu {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  min-width: min(168px, calc(100cqi - 2 * var(--space-3)));
+  max-width: calc(100cqi - 2 * var(--space-3));
+  max-height: calc(100cqi - 4 * var(--space-3));
+  overflow-y: auto;
+  padding: var(--space-1)
+}
 
-  .dot-card-bar.open .dot-card-acts {
-    display: flex
-  }
+.dot-card-bar .dot-card-menu button {
+  height: auto;
+  min-height: 28px;
+  padding: 0 var(--space-3);
+  border: 0;
+  color: var(--value);
+  font: 500 var(--fs-label-11) var(--mono);
+  letter-spacing: .04em;
+  text-align: left
+}
+
+.dot-card-bar .dot-card-menu button:hover,
+.dot-card-bar .dot-card-menu button:focus-visible {
+  background: var(--wash-hover)
+}
+
+.dot-card-bar .dot-card-menu button:active {
+  background: var(--wash-press)
+}
+
+.dot-card-bar .dot-card-menu button[aria-checked="true"] {
+  color: var(--red-text)
 }

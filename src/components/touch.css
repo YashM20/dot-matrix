@@ -58,21 +58,20 @@
     font-size: var(--fs-tag-8)
   }
 
-  /* the strip is an overlay: full 44 px targets, readable labels */
-  .dot-card-bar.open .dot-card-acts button {
-    min-width: var(--tap);
+  /* menu rows: full 44 px targets */
+  .dot-card-bar .dot-card-menu button {
     min-height: var(--tap);
-    font-size: var(--fs-label-10)
+    font-size: var(--fs-label-12)
   }
 
-  .dot-card-bar.open .dot-card-acts button:first-child {
-    font-size: var(--fs-copy-14)
-  }
-
-  /* ⋯ and DONE stay small in the card's top padding, but their hit area is 44 × 44 (an invisible margin) */
-  .dot-card-bar .dot-card-more,
+  /* ⋯ and DONE stay small in the card's top padding, but their hit area is 44 × 44 (an invisible margin);
+     ⋯ is as wide as its hit area, so the two areas sit side by side and never overlap */
   .dot-card-bar .dot-card-done {
     position: relative
+  }
+
+  .dot-card-bar .dot-card-more {
+    min-width: var(--tap)
   }
 
   .dot-card-bar .dot-card-more::after,
@@ -87,14 +86,9 @@
   }
 
   /* a card that draws its own name in dots: the grey hint would sit on its dot text; on touch the
-     header hint is gone and only ⋯ (or DONE) stays, nearly transparent until pressed */
+     header hint is gone and only ⋯ (or DONE) stays */
   .dot-card-bar > .dot-card-hint {
     display: none
-  }
-
-  .dot-card--bleed .dot-card-bar .dot-card-more:not([aria-expanded="true"]) {
-    background: color-mix(in srgb, var(--surface) 45%, transparent) !important;
-    border-color: transparent
   }
 }
 
