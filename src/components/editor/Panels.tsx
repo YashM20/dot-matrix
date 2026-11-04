@@ -16,6 +16,7 @@ import { libraryList, paintLayer, type StudioCard, type StudioLayer } from '../s
 import { blankCard, drawingCard, editFrame, editLayer, frameById, groupOf, lockFrames, lockLayers, moveLayer, programCard, renameGroup, topDown, unitsOf, type EditorFrame, type LayerGroup } from './doc'
 import { layersSel, selFrames, selGroup, selLayers, toggleSel } from './select'
 import { useEditor } from './store'
+import { EditorBoundary } from './EditorBoundary'
 
 const KIND: Record<StudioLayer['kind'], string> = { ir: 'CODE', text: 'TEXT', sites: 'SITES', 'preset-layer': 'REF', spec: 'SPEC', paint: 'PAINT' }
 
@@ -114,7 +115,9 @@ function FrameRows({ f }: { f: EditorFrame }) {
   )
 }
 
-export function LayersPanel() {
+/** The layer tree inside the editor's recovery screen. */
+export const LayersPanel = () => <EditorBoundary area="layers"><LayerTree /></EditorBoundary>
+function LayerTree() {
   const frames = useEditor(s => s.h.present.frames)
   const top = [...frames].reverse()
   return (

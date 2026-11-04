@@ -475,6 +475,12 @@ export function shareable(f: EditorFrame, l: StudioLayer, known?: (hash: string)
 // ── validation, JSON, storage ──────────────────────────────────────────────
 export const MAX_FRAMES = 48
 /**
+ * A whole document's size (#143): pixels at 100 % (cols × rows × pitch²) over all frames. Every frame the editor
+ * makes stays under it: 48 frames at its own largest (512 × 512 dots at pitch 8) are 805 M; 48 at the per-frame
+ * cap (`CARD_LIMITS.framePx`) are 1.6 G. Dots are bounded already: 48 frames of at most 512 × 512.
+ */
+export const DOC_LIMITS = { px: 2 ** 30 } as const
+/**
  * Bring an older document up to `EDITOR_VERSION`. v1 → v2: frames gained the optional `locked`, `locks`
  * and `groups` (a v1 frame has none), so only the version changes. Anything else is returned as is.
  */
@@ -513,6 +519,8 @@ export function validateDoc(x: unknown): EditorDoc {
     if (!THEMES.includes(f.theme)) throw new Error(`editor document: frames[${i}].theme must be one of ${THEMES.join(', ')}`)
     try { validateCard(f.card) } catch (e) { throw new Error(`editor document: frames[${i}]: ${(e as Error).message}`) }
   })
+  const px = d.frames.reduce((n, f) => n + f.card.grid.cols * f.card.grid.rows * pitchOf(f.card) ** 2, 0)
+  if (px > DOC_LIMITS.px) throw new Error(`editor document: its frames cover ${px.toLocaleString('en-US')} px in all, more than ${DOC_LIMITS.px.toLocaleString('en-US')} (cols × rows × pitch²)`)
   const frames = d.frames.map((f, i) => validateExtras(f, `frames[${i}]`))
   return frames.every((f, i) => f === d.frames[i]) ? d : { ...d, frames }
 }
@@ -528,8 +536,11 @@ export const EDITOR_KEY = 'dot480.editor.v1'
 type KV = Pick<Storage, 'getItem' | 'setItem'>
 const kvOf = (): KV | undefined => { try { return globalThis.localStorage } catch { return undefined } }
 export function saveDoc(d: EditorDoc, kv = kvOf()): boolean { try { kv?.setItem(EDITOR_KEY, docToJSON(d)); return !!kv } catch { return false } }
-export function loadDoc(kv = kvOf()): EditorDoc | undefined {
-  const s = kv?.getItem(EDITOR_KEY)
-  if (!s) return undefined
-  try { return docFromJSON(s) } catch { return undefined }
+export const loadDoc = (kv = kvOf()): EditorDoc | undefined => loadSaved(kv).doc
+/** The autosaved document, or why it could not be opened (then the editor starts a fresh one; nothing throws). */
+export function loadSaved(kv = kvOf()): { doc?: EditorDoc; error?: string } {
+  let s: string | null | undefined
+  try { s = kv?.getItem(EDITOR_KEY) } catch { return {} }
+  if (!s) return {}
+  try { return { doc: docFromJSON(s) } } catch (e) { return { error: String((e as Error)?.message ?? e) } }
 }

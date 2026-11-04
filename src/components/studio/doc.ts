@@ -16,6 +16,7 @@ import { SHARE_GRIDS, type SharedProgram } from '../../lib/share'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { base64Bytes, BASE64, fromBase64, toBase64 } from '../../spec/codec'
 import { buildLayer, LAYER_KINDS, type LayerSpec } from '../../spec'
+import { bindingsIssue, controlsIssue, gridIssue, sitesIssue, specLayerIssue, textIssue } from './checks'
 import { layoutFor, tileStyle, TILE, widgetById, withChrome, type WidgetContext, type WidgetPreset } from '../../widgets'
 
 export const STUDIO_VERSION = 1
@@ -232,6 +233,16 @@ function blendFields(a: Field, b: Field, mode: Blend): Field {
   return f
 }
 
+/** Spec layers already through the spec layer validator → its reason, or '' (edits keep an unchanged layer's object). */
+const specChecked = new WeakMap<object, string>()
+/** Why a spec layer must not reach `buildLayer` (an edit in the inspector skips `validateCard`), or ''. */
+function checkedSpec(spec: LayerSpec, name: string): string {
+  if (!spec || typeof spec !== 'object') return `spec layer ${name}: not an object`
+  let issue = specChecked.get(spec)
+  if (issue === undefined) specChecked.set(spec, (issue = specLayerIssue(spec, 'spec') ?? ''))
+  return issue && `spec layer ${name}: ${issue}`
+}
+
 /** Compile a card once per document change; the returned `layers(ctx)` is cheap per frame. */
 export function compileCard(card: StudioCard, good: ProgramCache = new Map(), opts: CompileCardOptions = {}): CompiledCard {
   const errors = new Map<string, IRError>(), keys = new Set(Object.keys(card.data)), guard = opts.guard, guarded: string[] = []
@@ -246,6 +257,7 @@ export function compileCard(card: StudioCard, good: ProgramCache = new Map(), op
   const builders: { layer: StudioLayer; build: Builder }[] = []
   for (const l of stackOrder(card.layers)) {
     if (!l.visible) continue
+    if (l.kind === 'spec') { const issue = checkedSpec(l.spec, l.name); if (issue) { errors.set(l.id, new IRError(issue)); continue } }
     const tone = (t: Tone | undefined): Tone | undefined => (l.tone === 'preset' ? t : l.tone)
     if (l.kind === 'ir' || l.kind === 'sites') {
       const prog = compileIR(l.id, l.src || '1', errors, good)
@@ -351,9 +363,8 @@ export function validateCard(x: unknown): StudioCard {
   if (c.kind !== 'dot480.studio') throw new Error('studio card: not a Dot Studio document (kind)')
   num(c.v, 1, STUDIO_VERSION, 'v')
   str(c.id, 64, 'id'); str(c.name, 64, 'name')
-  if (!c.grid) throw new Error('studio card: grid missing')
-  num(c.grid.cols, 1, 512, 'grid.cols'); num(c.grid.rows, 1, 512, 'grid.rows')
-  if (c.grid.pitch !== undefined) num(c.grid.pitch, .25, 32, 'grid.pitch')
+  const bad = (issue: string | undefined) => { if (issue) throw new Error(`studio card: ${issue}`) }
+  bad(gridIssue(c.grid))
   if (!c.style || typeof c.style !== 'object') throw new Error('studio card: style missing')
   num(c.style.sizeMin, 0, 64, 'style.sizeMin'); num(c.style.sizeMax, 0, 64, 'style.sizeMax')
   if (!Array.isArray(c.layers) || c.layers.length > MAX_LAYERS) throw new Error(`studio card: layers must be an array of ≤ ${MAX_LAYERS}`)
@@ -368,9 +379,12 @@ export function validateCard(x: unknown): StudioCard {
     num(l.z, -1e6, 1e6, `${w}.z`)
     if (typeof l.visible !== 'boolean') throw new Error(`studio card: ${w}.visible must be a boolean`)
     if (l.kind === 'ir') { str(l.src, IR_LIMITS.source, `${w}.src`); num(l.lattice, 1, 16, `${w}.lattice`) }
-    if (l.kind === 'sites') { str(l.src, IR_LIMITS.source, `${w}.src`); num(l.size, .25, 16, `${w}.size`); oneOf(l.params?.shape, ['ring', 'line', 'disc'] as const, `${w}.params.shape`) }
-    if (l.kind === 'text') { str(l.params?.text, 64, `${w}.params.text`); num(l.params.col, -512, 512, `${w}.params.col`); num(l.params.row, -512, 512, `${w}.params.row`); num(l.lattice, 1, 16, `${w}.lattice`) }
-    if (l.kind === 'spec' && !(l.spec && typeof l.spec === 'object' && (LAYER_KINDS as readonly string[]).includes(l.spec.kind))) throw new Error(`studio card: ${w}.spec must be a card spec v1 layer`)
+    if (l.kind === 'sites') { str(l.src, IR_LIMITS.source, `${w}.src`); num(l.size, .25, 16, `${w}.size`); oneOf(l.params?.shape, ['ring', 'line', 'disc'] as const, `${w}.params.shape`); bad(sitesIssue(l, w)) }
+    if (l.kind === 'text') { str(l.params?.text, 64, `${w}.params.text`); num(l.params.col, -512, 512, `${w}.params.col`); num(l.params.row, -512, 512, `${w}.params.row`); num(l.lattice, 1, 16, `${w}.lattice`); bad(textIssue(l, w)) }
+    if (l.kind === 'spec') {
+      if (!(l.spec && typeof l.spec === 'object' && (LAYER_KINDS as readonly string[]).includes(l.spec.kind))) throw new Error(`studio card: ${w}.spec must be a card spec v1 layer`)
+      bad(specLayerIssue(l.spec, `${w}.spec`))
+    }
     if (l.kind === 'paint') {
       num(l.lattice, 1, 16, `${w}.lattice`); num(l.cols, 1, 512, `${w}.cols`); num(l.rows, 1, 512, `${w}.rows`)
       if (typeof l.cells !== 'string' || !BASE64.test(l.cells) || base64Bytes(l.cells) !== l.cols * l.rows) throw new Error(`studio card: ${w}.cells must be base64 of ${w}.cols × ${w}.rows bytes`)
@@ -378,8 +392,8 @@ export function validateCard(x: unknown): StudioCard {
     if (l.kind === 'preset-layer') { str(l.params?.preset, 64, `${w}.params.preset`); num(l.params.index, 0, 256, `${w}.params.index`) }
   })
   dataOf(c.data, 'data')
-  if (!Array.isArray(c.controls)) throw new Error('studio card: controls must be an array')
-  if (!Array.isArray(c.bindings)) throw new Error('studio card: bindings must be an array')
+  bad(controlsIssue(c.controls, c.grid))
+  bad(bindingsIssue(c.bindings))
   if (!Array.isArray(c.states) || !c.states.length) throw new Error('studio card: needs at least one state')
   c.states.forEach((s, i) => { str(s.name, 32, `states[${i}].name`); dataOf(s.data, `states[${i}].data`) })
   if (!Array.isArray(c.machine)) throw new Error('studio card: machine must be an array')

@@ -135,6 +135,11 @@ noiseChecks(assert)
   const { editorE6Checks } = await import('./editor')
   await editorE6Checks(assert)
 }
+// editor imports (#143): crafted links, files and saved documents refused with a reason or recovered from (scripts/editor-imports.ts)
+{
+  const { editorImportChecks } = await import('./editor-imports')
+  await editorImportChecks(assert)
+}
 
 // golden key (F0.5, F0.6, F0.10): dotKey + the style backfill, the square site cover, card fps (scripts/goldenkey.ts)
 import { goldenKeyChecks } from './goldenkey'

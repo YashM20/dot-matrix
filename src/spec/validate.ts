@@ -4,6 +4,8 @@
  * checks what a schema cannot: IR sources parse within the IR limits, the JSON size, asset byte
  * counts against their window, tone indices, `initial` / `springKeys` references, icon names.
  * Never evaluates anything. Errors carry JSON paths (`$.layers[2].src`).
+ * `validateSpecLayer` and `validateSpecControl` run the same rules on one layer or control outside a spec
+ * (the Studio / MAKE documents keep spec layers and controls of their own).
  */
 import { iconPaths } from '../engine/fields/iconSDF'
 import { IRError, parse, validate as validateIR } from '../engine/ir'
@@ -24,9 +26,16 @@ type O = Record<string, unknown>
 const isObj = (x: unknown): x is O => typeof x === 'object' && x !== null && !Array.isArray(x)
 const show = (x: unknown) => { const s = JSON.stringify(x); return s === undefined ? String(x) : s.length > 40 ? `${s.slice(0, 37)}...` : s }
 
-export function validateSpec(input: unknown): SpecResult {
+type Fail = (path: string, message: string) => false
+/** An error list and the `fail` that fills it (up to `MAX_ERRORS`). */
+function collector() {
   const errors: SpecIssue[] = []
-  const fail = (path: string, message: string) => { if (errors.length < MAX_ERRORS) errors.push({ path, message }); return false }
+  const fail: Fail = (path, message) => { if (errors.length < MAX_ERRORS) errors.push({ path, message }); return false }
+  return { errors, fail }
+}
+
+export function validateSpec(input: unknown): SpecResult {
+  const { errors, fail } = collector()
   let json = input
   if (typeof input === 'string') {
     if (input.length > SPEC_LIMITS.json) return { ok: false, errors: [{ path: '$', message: `spec is ${input.length} characters, more than ${SPEC_LIMITS.json}` }] }
@@ -36,7 +45,12 @@ export function validateSpec(input: unknown): SpecResult {
     try { size = JSON.stringify(input)?.length ?? 0 } catch { return { ok: false, errors: [{ path: '$', message: 'not serializable as JSON' }] } }
     if (size > SPEC_LIMITS.json) return { ok: false, errors: [{ path: '$', message: `spec is ${size} characters as JSON, more than ${SPEC_LIMITS.json}` }] }
   }
+  cardRules(json, fail, rules(fail))
+  return { ok: errors.length === 0, errors }
+}
 
+/** The spec rules, reporting to `fail`. Shared by `validateSpec` and the part checks at the end of this file. */
+function rules(fail: Fail) {
   // ── primitives ──
   const obj = (x: unknown, path: string, allowed: readonly string[], required: readonly string[] = []): x is O => {
     if (!isObj(x)) return fail(path, 'expected an object')
@@ -236,11 +250,13 @@ export function validateSpec(input: unknown): SpecResult {
     if ('ease' in x) oneOf(x.ease, `${path}.ease`, EASES)
     for (const k of ['duration', 'delay'] as const) if (k in x) num(x[k], `${path}.${k}`, { min: 0, max: 10_000 })
   }
+  return { obj, num, str, bool, oneOf, arr, dataMap, layer, control, transition }
+}
 
-  // ── the card ──
+/** The card itself (`$`): its top-level properties, on the shared rules. */
+function cardRules(s: unknown, fail: Fail, { obj, num, str, bool, oneOf, arr, dataMap, layer, control, transition }: ReturnType<typeof rules>) {
   const TOP = ['version', 'id', 'name', 'group', 'grid', 'style', 'theme', 'data', 'controls', 'layers', 'states', 'initial', 'transitions', 'springKeys', 'live', 'clock', 'burst', 'chrome', 'label', 'bleed', 'media']
-  const s = json
-  if (!obj(s, '$', TOP, ['version', 'id', 'name', 'grid', 'style', 'layers'])) return { ok: false, errors }
+  if (!obj(s, '$', TOP, ['version', 'id', 'name', 'grid', 'style', 'layers'])) return
   if ('version' in s && s.version !== 1) fail('$.version', `must be 1 (got ${show(s.version)}; run migrateSpec first)`)
   if ('id' in s) str(s.id, '$.id', { pattern: ID })
   if ('name' in s) str(s.name, '$.name', { min: 1, max: SPEC_LIMITS.text })
@@ -287,5 +303,35 @@ export function validateSpec(input: unknown): SpecResult {
   if ('chrome' in s) oneOf(s.chrome, '$.chrome', ['dots'])
   if ('label' in s) str(s.label, '$.label', { max: SPEC_LIMITS.text })
   if ('media' in s) oneOf(s.media, '$.media', ['camera'])
+}
+
+// ── parts on their own (a Studio / MAKE card holds spec layers and controls outside a spec) ──
+/** Cells a control's box may reach past the card's edges (a knob's ring, a hit pad at the rim). */
+export const BOX_SLACK = 8
+
+/** One spec layer on its own (a Studio or MAKE `spec` layer): the rules it meets inside a card. `path` starts the error paths. */
+export function validateSpecLayer(input: unknown, path = '$'): SpecResult {
+  let size = 0
+  try { size = JSON.stringify(input)?.length ?? 0 } catch { return { ok: false, errors: [{ path, message: 'not serializable as JSON' }] } }
+  if (size > SPEC_LIMITS.json) return { ok: false, errors: [{ path, message: `layer is ${size} characters as JSON, more than ${SPEC_LIMITS.json}` }] }
+  const { errors, fail } = collector()
+  rules(fail).layer(input, path)
+  return { ok: errors.length === 0, errors }
+}
+
+/**
+ * One control on its own (a Studio or MAKE card's controls): the spec rules, plus what drawing it needs that a
+ * schema cannot say: `min` below `max`, a box with no negative size and, given the card's grid, a box on the card
+ * (within `BOX_SLACK` cells of its edges).
+ */
+export function validateSpecControl(input: unknown, grid?: { cols: number; rows: number }, path = '$'): SpecResult {
+  const { errors, fail } = collector()
+  rules(fail).control(input, path)
+  if (!errors.length && isObj(input)) {
+    if (typeof input.min === 'number' && typeof input.max === 'number' && !(input.min < input.max)) fail(`${path}.max`, `must be more than min (${input.min})`)
+    const [x, y, w, h] = input.box as number[]
+    if (w < 0 || h < 0) fail(`${path}.box`, 'width and height must be ≥ 0')
+    else if (grid && (x < -BOX_SLACK || y < -BOX_SLACK || x + w > grid.cols + BOX_SLACK || y + h > grid.rows + BOX_SLACK)) fail(`${path}.box`, `must lie on the ${grid.cols} × ${grid.rows} card`)
+  }
   return { ok: errors.length === 0, errors }
 }

@@ -13,7 +13,9 @@ import type { ControlInput } from '../hooks/useControlInput'
  * these elements ignore the pointer, except the aria-hidden hit pads, which only set `touch-action`: tap pads
  * `manipulation`, drag pads `pan-y` (`none` once the card is engaged; touch.css), so a vertical swipe scrolls the page.
  */
-export function ControlOverlay({ controls, grid, data, input }: { controls: Control[]; grid: GridConfig; data: Record<string, number>; input: ControlInput }) {
+export function ControlOverlay({ controls: all, grid, data, input }: { controls: Control[]; grid: GridConfig; data: Record<string, number>; input: ControlInput }) {
+  // a card from a link or a file is checked before it gets here; these caps keep a bad one from allocating a flood of elements
+  const controls = all.length > MAX_CONTROLS ? all.slice(0, MAX_CONTROLS) : all
   const taps = controls.filter(c => c.kind === 'button' || c.kind === 'toggle')
   const [rove, setRove] = useState<string | undefined>(undefined)
   const stop = taps.some(c => c.key === rove) ? rove : taps[0]?.key
@@ -80,7 +82,7 @@ export function ControlOverlay({ controls, grid, data, input }: { controls: Cont
           {range(c, keyYOf(c), `${c.label} Y`, undefined, false)}
         </div>
       case 'segmented': {
-        const n = Math.max(1, c.options ?? 2), sel = Math.round(val(c.key, c)), vertical = c.orientation === 'vertical'
+        const n = optionCount(c), sel = Math.round(val(c.key, c)), vertical = c.orientation === 'vertical'
         const choose = (i: number, focus?: HTMLElement | null) => { input.set({ [c.key]: i }); focus?.focus() }
         return <div key={c.key} role="radiogroup" aria-label={c.label} className="dot-a11y-group" style={box}
           onKeyDown={e => {
@@ -114,6 +116,11 @@ export function ControlOverlay({ controls, grid, data, input }: { controls: Cont
     </div>
   )
 }
+
+/** The card spec's limits (`SPEC_LIMITS.controls`, `options` ≤ 64), kept here so first load does not import the spec. */
+const MAX_CONTROLS = 64, MAX_OPTIONS = 64
+/** A segmented control's option count, whole and in 1…64 whatever the document says. */
+const optionCount = (c: Pick<Control, 'options'>) => Math.min(MAX_OPTIONS, Math.max(1, Math.floor(Number(c.options ?? 2)) || 1))
 
 /** A cell box as percentages of the card, centred, at least the minimum target size. */
 function place([col, row, w, h]: Control['box'], grid: GridConfig, hit = false): CSSProperties {

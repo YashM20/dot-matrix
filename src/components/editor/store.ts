@@ -9,11 +9,11 @@
 import { create } from 'zustand'
 import { IR_FRAME_MS } from '../../engine/ir'
 import { userPrograms } from '../dwitter/program'
-import { commit, guardKey, historyOf, loadLocal, newId, redo, undo, type History, type StudioCard, type StudioLayer } from '../studio/doc'
+import { commit, guardKey, historyOf, loadLocal, newId, redo, undo, validateCard, type History, type StudioCard, type StudioLayer } from '../studio/doc'
 import type { SharedProgram } from '../../lib/share'
-import { addFrame, addLayer, boundsOf, frameById, frameSize, loadDoc, presetCard, programCard, programSource, saveDoc, seedDoc, topDown, type EditorDoc, type EditorFrame, type Sel } from './doc'
+import { addFrame, addLayer, boundsOf, EDITOR_KEY, frameById, frameSize, loadSaved, presetCard, programCard, programSource, saveDoc, seedDoc, topDown, type EditorDoc, type EditorFrame, type Sel } from './doc'
 import { clampZ, fitCam, zoomCam, type Camera } from './input'
-import { openLinkIn, recordLink, type LinkPayload } from './link'
+import { linkedFrames, openLinkIn, recordLink, type LinkPayload } from './link'
 import { framesSel, validSel } from './select'
 
 export type Tool = 'move' | 'hand' | 'frame' | 'draw' | 'text' | 'code'
@@ -23,6 +23,12 @@ export type RightTab = 'design' | 'animate' | 'code' | 'export'
 export type Sheet = 'layers' | 'assets' | 'inspector' | null
 export { ZOOM_MAX, ZOOM_MIN, type Camera } from './input'
 export interface Brush { size: number; value: number; erase: boolean }
+/**
+ * An import waiting for the visitor to keep it (#143): a `?make&d=` link or a `?p=` program, already decoded and
+ * checked. `summary` says what it holds; `confirm` opens it (and returns what `openLink` / `insertProgram` do).
+ * `already`: the document has it (a reload, Back), so `confirm` only re-selects and there is nothing to ask.
+ */
+export interface PendingImport<T> { kind: 'frame' | 'doc' | 'program'; name: string; frames: number; parent?: string; already: boolean; summary: string; confirm(): T }
 
 export interface EditorStore {
   h: History<EditorDoc>
@@ -96,6 +102,10 @@ export interface EditorStore {
    * into view; a link this document already opened re-selects its frames. Returns their ids, or why not.
    */
   openLink(p: LinkPayload): string[] | string
+  /** `openLink`, held until the visitor confirms. */
+  stageLink(p: LinkPayload): PendingImport<string[] | string>
+  /** `insertProgram`, held until the visitor confirms. */
+  stageProgram(p: SharedProgram): PendingImport<string>
 }
 
 let gestureBase: EditorDoc | undefined
@@ -106,15 +116,47 @@ let gestureBase: EditorDoc | undefined
  */
 const held = new Map<string, string>()
 const keysOf = (f: EditorFrame) => f.card.layers.flatMap(l => (l.kind === 'ir' ? [guardKey(f.card.grid, l.lattice, l.src || '1')] : []))
-/** The document as the autosave writes it: without the held frames whose program has not drawn in budget yet. */
+/**
+ * Frames that came in from a link, a shared program or a card file and have not drawn yet (#143). They were checked like any
+ * document, and they stay out of the autosave until the canvas draws each once (`drew`), so a frame that breaks
+ * the editor is never saved and a reload starts without it.
+ */
+const unseen = new Set<string>()
+/** Keep these frames out of the autosave until each has drawn once. */
+export function holdUntilDrawn(ids: string[]) { for (const id of ids) unseen.add(id) }
+/** The canvas drew this frame without an error: it may be saved now. */
+export function drew(id: string) { if (unseen.delete(id)) scheduleSave() }
+/** The document as the autosave writes it: without the held frames whose program has not drawn in budget yet, nor frames not drawn once. */
 export function saveable(d: EditorDoc): EditorDoc {
   for (const [id, key] of held) {
     const f = frameById(d, id)
     if (!f || userPrograms.state(key) === 'ok' || !keysOf(f).includes(key)) held.delete(id)
   }
-  return held.size ? { ...d, frames: d.frames.filter(f => !held.has(f.id)) } : d
+  for (const id of unseen) if (!frameById(d, id)) unseen.delete(id)
+  return held.size || unseen.size ? { ...d, frames: d.frames.filter(f => !held.has(f.id) && !unseen.has(f.id)) } : d
 }
-const first = (() => { const d = loadDoc(); if (d) return d; const studio = loadLocal(); return seedDoc(studio && studio.layers.length ? studio : undefined) })()
+/** The saved document, or a fresh one and why the saved one could not be opened. */
+const boot = (() => {
+  const { doc, error } = loadSaved()
+  if (doc) return { doc }
+  const studio = loadLocal()
+  return { doc: seedDoc(studio && studio.layers.length ? studio : undefined), error }
+})()
+const first = boot.doc
+type ResetKV = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>
+const localKV = (): ResetKV | undefined => { try { return globalThis.localStorage } catch { return undefined } }
+/** No autosave after `resetEditorDoc` (the page is about to reload). */
+let resetting = false
+/**
+ * The recovery screen's action (#143): replace the saved document with the first one a visitor sees (the seed,
+ * without the last Studio card, which may be what broke) and drop the pending save. The caller reloads the page.
+ */
+export function resetEditorDoc(kv: ResetKV | undefined = localKV()): boolean {
+  resetting = true
+  clearTimeout(saveTimer)
+  if (saveDoc(seedDoc(), kv)) return true
+  try { kv?.removeItem(EDITOR_KEY); return !!kv } catch { return false }
+}
 
 export const useEditor = create<EditorStore>((set, get) => ({
   h: historyOf(first),
@@ -126,7 +168,7 @@ export const useEditor = create<EditorStore>((set, get) => ({
   brush: { size: 2, value: 1, erase: false },
   play: { t: 1, playing: false },
   preview: {},
-  note: '', shortcuts: false, selectMode: false, picking: false, hasClip: (() => { try { return !!globalThis.localStorage?.getItem('dot480.editor.clip') } catch { return false } })(),
+  note: boot.error ? `The saved document could not be opened, so this is a new one (${boot.error.slice(0, 160)})` : '', shortcuts: false, selectMode: false, picking: false, hasClip: (() => { try { return !!globalThis.localStorage?.getItem('dot480.editor.clip') } catch { return false } })(),
   edit: (fn, tag) => set(s => ({ h: commit(s.h, fn(s.h.present), tag) })),
   begin: () => { gestureBase = get().h.present },
   live: fn => set(s => ({ h: { ...s.h, present: fn(s.h.present) } })),
@@ -160,7 +202,9 @@ export const useEditor = create<EditorStore>((set, get) => ({
   setLink: link => set({ link }),
   setMenu: menu => set({ menu }),
   insertCard: (card, o) => {
+    if (o?.source === 'file') validateCard(JSON.parse(JSON.stringify(card))) // a card from a file meets the document checks (throws with the reason)
     const { doc, frame } = addFrame(get().h.present, card, o)
+    if (o?.source === 'file') holdUntilDrawn([frame.id]) // a card from a file waits to draw once, like a link
     set(s => ({ h: commit(s.h, doc), sel: { frame: frame.id } }))
     reveal(frame.id)
     return frame.id
@@ -168,23 +212,42 @@ export const useEditor = create<EditorStore>((set, get) => ({
   insertPreset: id => {
     try { return get().insertCard(presetCard(id), { source: `preset:${id}` }) } catch (e) { get().setNote((e as Error).message); return undefined }
   },
-  insertProgram: p => {
-    const src = programSource(p), had = get().h.present.frames.find(f => f.source === src)
-    if (had) { const l = topDown(had.card).find(x => x.kind === 'ir'); set({ sel: { frame: had.id, layer: l?.id } }); reveal(had.id); return had.id }
-    const id = get().insertCard(programCard(p), { source: src })
-    const f = frameById(get().h.present, id)!, l = topDown(f.card)[0], key = keysOf(f)[0]
-    if (key && userPrograms.state(key) !== 'ok') held.set(id, key)
-    set({ sel: { frame: id, layer: l?.id } })
-    return id
+  insertProgram: p => get().stageProgram(p).confirm(),
+  stageProgram: p => {
+    const src = programSource(p), already = get().h.present.frames.some(f => f.source === src), name = programCard(p).name
+    return {
+      kind: 'program', name, frames: 1, ...(p.parent && { parent: p.parent }), already,
+      summary: already ? `program "${name}" is open already` : `Open program "${name}" from a link as a new frame${p.parent ? `, a remix of #${p.parent}` : ''}`,
+      confirm: () => {
+        const had = get().h.present.frames.find(f => f.source === src)
+        if (had) { const l = topDown(had.card).find(x => x.kind === 'ir'); set({ sel: { frame: had.id, layer: l?.id } }); reveal(had.id); return had.id }
+        const id = get().insertCard(programCard(p), { source: src })
+        const f = frameById(get().h.present, id)!, l = topDown(f.card)[0], key = keysOf(f)[0]
+        if (key && userPrograms.state(key) !== 'ok') held.set(id, key)
+        holdUntilDrawn([id])
+        set({ sel: { frame: id, layer: l?.id } })
+        return id
+      },
+    }
   },
   addLayerTo: (frame, l) => { get().edit(d => addLayer(d, frame, l)); set({ sel: { frame, layer: l.id } }) },
-  openLink: p => {
-    const r = openLinkIn(get().h.present, p, () => newId('f'))
-    if (typeof r === 'string') return r
-    set(s => ({ ...(r.opened && { h: commit(s.h, r.doc) }), sel: framesSel(r.ids) }))
-    recordLink(p)
-    if (r.ids.length === 1) reveal(r.ids[0]); else get().fit(r.ids)
-    return r.ids
+  openLink: p => get().stageLink(p).confirm(),
+  stageLink: p => {
+    const already = linkedFrames(get().h.present, p.id).length > 0, n = p.frames.length
+    const what = p.kind === 'frame' ? `frame "${p.name}"` : `${n} frame${n === 1 ? '' : 's'} of "${p.name}"`
+    return {
+      kind: p.kind, name: p.name, frames: n, ...(p.parent && { parent: p.parent }), already,
+      summary: already ? `${what} from this link is open already` : `Open ${what} from a link${p.parent ? `, a remix of #${p.parent}` : ''}`,
+      confirm: () => {
+        const r = openLinkIn(get().h.present, p, () => newId('f'))
+        if (typeof r === 'string') return r
+        if (r.opened) holdUntilDrawn(r.ids)
+        set(s => ({ ...(r.opened && { h: commit(s.h, r.doc) }), sel: framesSel(r.ids) }))
+        recordLink(p)
+        if (r.ids.length === 1) reveal(r.ids[0]); else get().fit(r.ids)
+        return r.ids
+      },
+    }
   },
 }))
 
@@ -223,7 +286,8 @@ export function revealAbove(cover: number, right = 0) {
 let saveTimer: ReturnType<typeof setTimeout> | undefined
 const scheduleSave = () => {
   clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => { if (!saveDoc(saveable(useEditor.getState().h.present))) useEditor.getState().setNote('browser storage is full: download the document as JSON') }, 500)
+  if (resetting) return
+  saveTimer = setTimeout(() => { if (!resetting && !saveDoc(saveable(useEditor.getState().h.present))) useEditor.getState().setNote('browser storage is full: download the document as JSON') }, 500)
 }
 useEditor.subscribe((s, prev) => { if (s.h.present !== prev.h.present) scheduleSave() })
 // a held program that drew in budget can be saved now; a paused one says why it stopped
