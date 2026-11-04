@@ -4,6 +4,7 @@
  * registers, into the IR core's existing tables (the zero-byte hook of F0-foundation §4: the core gains no registry
  * code, only emit.ts's one-line GLSL branch):
  *  - the name and arity (`IR_FUNCTIONS`, so the parser and validator accept the call),
+ *  - the cost weight (`IR_COST.fn`: a noise call is ~48 steps, fbm / turb 48 per octave, voronoi 192),
  *  - the JS implementation (`irMath`, used by both JS backends),
  *  - the oracle (`IR_REF`, the reference interpreter: the plain library function),
  *  - the GLSL prelude (`GLSL_HELPERS.noise`, emitted once per program that calls any of them) and a key per builtin.
@@ -17,7 +18,7 @@
  * | `turb(x, y, oct, seed)` | 4 | `turb2` |
  * | `voronoi(x, y, seed, mode)` | 4 | `voronoiMode`: mode = metric·4 + out; metric 0 l2, 1 l1, 2 linf; out 0 f1, 1 f2, 2 f2−f1, 3 id/2³² |
  */
-import { IR_FUNCTIONS, type PackFn } from '../ir/ast'
+import { IR_COST, IR_FUNCTIONS, type PackFn } from '../ir/ast'
 import { GLSL_HELPERS } from '../ir/emit'
 import { IR_REF } from '../ir/reference'
 import { irMath } from '../ir/runtime'
@@ -31,8 +32,15 @@ const PACK: Record<PackFn, [number, (...a: number[]) => number]> = {
   turb: [4, (x, y, o, s) => turb2(x, y, o, s)],
   voronoi: [4, (x, y, s, m) => voronoiMode(x, y, s, m)],
 }
+/** Octaves an fbm / turb call can run: a literal is floored and clamped to 1..8 like the builtin, anything else counts 8. */
+const octaves = (a: unknown) => { const o = a as { k?: string; v?: number }; return o?.k === 'num' && typeof o.v === 'number' ? Math.min(8, Math.max(1, Math.floor(o.v))) : 8 }
+const NOISE_STEPS = 48
+const COST: Record<PackFn, number | ((args: readonly unknown[]) => number)> = {
+  noise: NOISE_STEPS, fbm: args => NOISE_STEPS * octaves(args[2]), turb: args => NOISE_STEPS * octaves(args[2]), voronoi: 192,
+}
 for (const [name, [n, f]] of Object.entries(PACK) as [PackFn, [number, (...a: number[]) => number]][]) {
   ;(IR_FUNCTIONS as Record<string, number>)[name] = n
+  IR_COST.fn[name] = COST[name]
   irMath[name] = f
   IR_REF[name] = f
   GLSL_HELPERS[name] = name === 'noise' ? NOISE_GLSL : ''

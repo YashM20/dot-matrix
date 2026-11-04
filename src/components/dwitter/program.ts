@@ -3,7 +3,7 @@
  * plus its frame inputs into the card's layers — one Field IR layer on the chosen lattice, through
  * the normal Field → Grid Sampler → Renderer pipeline.
  */
-import { IRError, irProgram, type IREnv, type IRProgram } from '../../engine/ir'
+import { IRError, irGuard, irProgram, type IREnv, type IRProgram } from '../../engine/ir'
 import '../../engine/noise/ir' // IR noise pack: noise() fbm() turb() voronoi() in DOTS programs
 import type { Layer } from '../../engine/types'
 import { SHARE_GRIDS, type SharedProgram } from '../../lib/share'
@@ -12,6 +12,12 @@ import { tileStyle } from '../../widgets/types'
 export const DOTS_STYLE = tileStyle
 /** A `data.<key>` slider starts here (a missing key would read 0, which hides most `data`-driven programs). */
 export const DATA_DEFAULT = .5
+
+/**
+ * The guard every user program on the main thread runs under (MAKE frames, their thumbnails, programs from links):
+ * a time budget per frame, and a program that runs past it is paused (`src/engine/ir/guard.ts`).
+ */
+export const userPrograms = irGuard()
 
 export type Compiled = { program: IRProgram; error?: undefined } | { program?: undefined; error: IRError }
 /** Parse + compile (memoised in `irProgram`). Shared links go through here too: a bad program is an error, never run. */

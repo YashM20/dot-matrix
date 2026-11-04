@@ -10,16 +10,17 @@ import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { sampleLayers } from '../../engine/sampler/gridSampler'
 import { dot480 } from '../../engine/theme/tokens'
 import type { DotInstance, DotStyle, Field, Layer } from '../../engine/types'
+import { userPrograms } from '../dwitter/program'
 import { compileCard, type CompiledCard, type ProgramCache, type StudioCard } from '../studio/doc'
 import { sampleCard, stateData, timelineFrame, type FrameInput } from '../studio/playback'
 import { pitchOf, themeOf, type EditorFrame } from './doc'
 
 const good: ProgramCache = new Map()
 const memo = new WeakMap<StudioCard, CompiledCard>()
-/** One compile per card version; IR programs memoised, last good program kept per layer. */
+/** One compile per card version; IR programs memoised, last good program kept per layer, all under the user-program guard. */
 export function compiledOf(card: StudioCard): CompiledCard {
   let c = memo.get(card)
-  if (!c) memo.set(card, (c = compileCard(card, good)))
+  if (!c) memo.set(card, (c = compileCard(card, good, { guard: userPrograms })))
   return c
 }
 export const isAnimated = (card: StudioCard) => card.animated || compiledOf(card).usesT
@@ -47,6 +48,7 @@ export function drawFrame(canvas: HTMLCanvasElement, f: EditorFrame, k: number, 
   const a = performance.now()
   let dots: DotInstance[] = []
   try { dots = frameDots(f, o) } catch { /* a broken frame draws empty */ }
+  userPrograms.settle() // the frame is done: its programs that kept to the budget count as drawn
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.fillStyle = themeOf(f).surface
   ctx.fillRect(0, 0, cw, ch)
