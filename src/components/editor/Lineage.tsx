@@ -12,6 +12,7 @@ import { sampleLayers } from '../../engine/sampler/gridSampler'
 import { useThemeTokens } from '../../site/theme/useTheme'
 import { clearGallery, graphLayers, layoutGraph, loadGallery, nodeAt, type Entry } from '../dwitter/gallery'
 import { DOTS_STYLE, sandboxedThumbs, userRemote } from '../dwitter/program'
+import { ProgramLikes } from '../likes/slot'
 import type { EditorFrame } from './doc'
 import { lineage, linkSource, loadLinks } from './link'
 import { useEditor } from './store'
@@ -66,6 +67,7 @@ export function RemixGraph({ current, version = 0 }: { current?: string; version
     {chain.length > 1 && <p className="ed-lineage" aria-label="Remix lineage">{chain.map((e, i) => <span key={e.id}>{i ? ' ← ' : ''}<b>{e.name}</b> #{e.id}</span>)}</p>}
     {current && chain.length <= 1 && <p className="ed-hint">{chain.length ? 'An original: nothing above it here.' : 'Not shared yet: COPY LINK adds it to the graph, under the program it came from.'}</p>}
     <div className="ed-graph"><canvas ref={ref} onClick={pick} role="img" aria-label={`Remix graph: ${list.length} programs; click one to open it`} title="Open a program" style={{ aspectRatio: `${graph.grid.cols} / ${graph.grid.rows}` }} /></div>
+    <ProgramLikes entries={list.filter(e => e.seed || e.id === current)} />
     {own.length > 0 && <ul className="ed-mini-list ed-remixes">{own.map(e => <li key={e.id}><button type="button" aria-current={e.id === current || undefined} title={e.parent ? `remix of #${e.parent}` : 'original'} onClick={() => open(e)}>{e.name} <small>#{e.id}{e.parent ? ` ← #${e.parent}` : ''}</small></button></li>)}</ul>}
     {own.length > 0 && <div className="ed-row-btns"><button type="button" onClick={() => { clearGallery(); setCleared(n => n + 1) }}>CLEAR MY PROGRAMS</button></div>}
   </Section>

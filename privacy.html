@@ -31,11 +31,13 @@
 
       <h2>Who runs this</h2>
       <p>Matrix is a personal, non-commercial project by Yash Mahajan. The source code is public at
-        <a href="https://github.com/YashM20/dot-matrix">github.com/YashM20/dot-matrix</a>. There is no backend,
-        no database and nothing to sign in to: the site is a set of static files, and everything runs in your browser.</p>
+        <a href="https://github.com/YashM20/dot-matrix">github.com/YashM20/dot-matrix</a>. There is nothing to
+        sign in to: the site is a set of static files, and everything runs in your browser. The one exception is
+        <a href="#likes">likes</a>: when they are switched on and you like something, a small database keeps the like.</p>
 
       <h2>What the site collects</h2>
-      <p>Nothing personal. There are no cookies, no analytics or tracking scripts, no advertising, no fingerprinting
+      <p>Nothing personal. There are no cookies (unless you ask to be remembered when you <a href="#likes">like</a>
+        something), no analytics or tracking scripts, no advertising, no fingerprinting
         and no third-party fonts or CDNs (the typeface is served from this site). The page's Content Security Policy
         only allows connections to this site and to the APIs listed below.</p>
 
@@ -54,6 +56,7 @@
         <div><dt><code>dot480:clack</code>, <code>dot480:worker</code></dt><dd>Older copies of two of those switches. They are still read, and removed the next time you change the switch.</dd></div>
         <div><dt><code>dot480:intro</code></dt><dd>You closed the one-line intro above the boards.</dd></div>
         <div><dt><code>dot480:fold:…</code></dt><dd>Which "More" panels in MAKE you left open or closed, one key per panel.</dd></div>
+        <div><dt><code>dot480:likes</code></dt><dd>Only if you like something: your answer to "Remember this browser?", the last day a remembered browser checked in, and what you liked here, so your like shows at once. See <a href="#likes">Likes</a>.</dd></div>
         <div><dt><code>dot480:pond</code></dt><dd>Only if you turn on POND MEMORY: the day the pond was first made, the day of your last visit and a visit count, so the pond can age. Turning it off deletes it.</dd></div>
       </dl>
       <h3>Things you make</h3>
@@ -80,6 +83,32 @@
       <p><b>To clear it all:</b> remove this site's data in your browser settings (usually under site settings or
         "cookies and site data" for <code>matrix.reactopia.me</code>), or in developer tools under
         Application → Local storage and Session storage. In a private window it is gone when you close the window.</p>
+
+      <h2 id="likes">Likes</h2>
+      <p>Likes may not be switched on yet. When they are, widgets and gallery programs get a like button, and counts
+        are public. Nobody can see who liked what. If you like something:</p>
+      <ul>
+        <li><b>What is sent.</b> The widget's id, or the program itself so the server can check it and work out its
+          key. The program is not stored, only a hash of it.</li>
+        <li><b>Your network, hashed.</b> The server reads your IP address only to work out your network (the first three
+          parts of an IPv4 address, or the first four groups of an IPv6 address). It stores a keyed hash of that network,
+          never the address, and keeps it for up to 30 days to apply limits and stop spam.</li>
+        <li><b>Remember or just this once.</b> The first time, you're asked whether to remember this browser. If you
+          choose Remember, the server sets one cookie, <code>dot480_lk</code>, for one year. Scripts on the page can't
+          read it, and it is only sent to the likes API. It holds a random id, the day it was issued and how many days
+          you came back, signed so it can't be changed. It is used for likes and nothing else. If you choose Just this
+          once, or your browser sends Global Privacy Control, no cookie is set: your like counts a little less and is
+          tied to your network's hash for 30 days.</li>
+        <li><b>What is kept.</b> For each like: a keyed hash of the cookie's id (or of your network), the time and
+          whether it counts yet. An unliked like is kept as removed, so a mistake or abuse can be undone.</li>
+        <li><b>Forget this browser.</b> The control sits under the like button once you chose Remember. It removes every
+          like this browser made while remembered, recounts those items, and deletes the cookie and the
+          <code>dot480:likes</code> key. Likes made just this once can't be tied to you, and their record ends with the
+          30-day network hash.</li>
+        <li><b>Who handles it.</b> Likes are stored in <a href="https://upstash.com">Upstash</a> Redis
+          (set up through Vercel), which processes them for this site under its own privacy policy. To keep bots out, the like button loads Vercel BotID,
+          which runs a check in your browser and sends the result with the like.</li>
+      </ul>
 
       <h2>Camera, microphone and motion</h2>
       <p>Some cards can use your device's sensors. The camera and microphone are only requested after you press the
