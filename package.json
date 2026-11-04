@@ -19,7 +19,7 @@
     "shots": "tsx scripts/site/shots.ts",
     "lint": "oxlint",
     "preview": "vite preview",
-    "check": "tsc -b && oxlint && tsx scripts/site/file-size.ts && tsx scripts/site/credits.ts --check && tsx scripts/site/headers.ts && pnpm verify"
+    "check": "tsc -b && oxlint && tsx scripts/site/file-size.ts && tsx scripts/site/credits.ts --check && tsx scripts/site/headers.ts && tsx scripts/site/prose-lint.ts && pnpm verify"
   },
   "dependencies": {
     "@fontsource-variable/oxanium": "^5.3.0",

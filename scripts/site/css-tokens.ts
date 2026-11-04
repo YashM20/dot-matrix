@@ -39,7 +39,7 @@ const ALLOW: { file: string; has: string; why: string }[] = [
   { file: 'src/site/app/xray.css', has: 'xr-flash 1.2s', why: 'X-RAY outline flash: a one-shot effect, not chrome motion' },
   { file: 'src/site/app/skins.css', has: 'skin-nixie-flicker 5.3s', why: 'nixie flicker loop period: display physics' },
   { file: 'src/site/app/skins.css', has: 'animation-duration: 1ms', why: 'reduced motion: jump to the end state but still fire animationend' },
-  { file: 'src/site/app/xray-tab.css', has: 'padding-bottom: min(42dvh, 400px)', why: 'room for the pinned canvas: mirrors its height cap, not rhythm' },
+  { file: 'src/components/xray/inspector.css', has: 'padding-bottom: min(42dvh, 400px)', why: 'room for the pinned canvas: mirrors its height cap, not rhythm' },
   { file: 'src/site/app/skins.css', has: 'grid-template-columns: 4px 44px 1fr', why: 'the skin menu swatch column: a preview width, not a tap target' },
   { file: 'src/components/editor/editor.css', has: 'grid-template-columns: 44px 1fr', why: 'the score list number column: a text width, not a tap target' },
 ]

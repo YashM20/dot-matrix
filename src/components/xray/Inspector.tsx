@@ -11,8 +11,9 @@ import { presetToSpec } from '../../spec'
 import { GLOSSARY, GLOSSARY_TERMS, type GlossaryTerm } from '../glossary'
 import { fmt, layerKind, layerName, layerIR } from './probe'
 import { cardElement, muteLayer, probes, setXR, soloLayer, toggleCard, toggleGlobal, useXR, xrState, type CardProbe } from './store'
+import './inspector.css'
 
-/** At this width the inspector is a bottom sheet (src/site/app/xray-tab.css): a grip, swipe down to close, swipe up for more. */
+/** At this width the inspector is a bottom sheet (./inspector.css): a grip, swipe down to close, swipe up for more. */
 const SHEET = '(max-width: 760px)'
 const isSheet = () => typeof matchMedia === 'function' && matchMedia(SHEET).matches
 /** Touch screens: the X-ray copy says tap, not hover. */
