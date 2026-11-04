@@ -10,18 +10,18 @@
     <!-- theme-boot -->
     <script>(function(){try{var D=document,d=D.documentElement,q=new URLSearchParams(location.search),S=/^(system|dark|light)$/,A=/^(signal|amber|phosphor|cyan|cobalt|vite|magenta|custom)$/,t=(q.get('theme')||'').split('_'),j,s,a,c,m,f;if(!(S.test(t[0])&&A.test(t[1])))t=[];try{j=JSON.parse(localStorage.getItem('dot480:theme'))}catch(e){}j=j||{};c=typeof j.css=='string';f=function(l,r,o){return l.filter(function(x){return r.test(x)&&(x!='custom'||c)})[0]||o};s=f([q.get('scheme'),t[0],j.scheme],S,'system');a=f([q.get('accent'),t[1],j.accent],A,'signal');if(s=='system')s=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';d.dataset.scheme=s;d.dataset.accent=a;if(a=='custom')D.head.appendChild(m=D.createElement('style')).id='theme-custom',m.textContent=j.css;m=D.querySelector('meta[name=color-scheme]');if(m)m.content=s;m=D.querySelector('meta[name=theme-color]');if(m)m.content=s=='light'?'#F1F0EC':'#070809';d.dataset.cards=/^[ms]$/.test(m=localStorage.getItem('dot480:cards'))?m:'l'}catch(e){}})()</script>
     <!-- /theme-boot -->
-    <title>Terms of use · DOT/480</title>
-    <meta name="description" content="Terms of use for Dot/480, a personal, non-commercial dot-matrix UI project: provided as is, what you make stays yours." />
+    <title>Terms of use · MATRIX</title>
+    <meta name="description" content="Terms of use for Matrix, a personal, non-commercial dot-matrix UI project: provided as is, what you make stays yours." />
     <link rel="stylesheet" href="/src/legal/legal.css" />
   </head>
   <body>
     <main class="essay legal">
       <nav class="legal-nav" aria-label="Site">
-        <a href="/">← DOT/480</a>
+        <a href="/">← MATRIX</a>
         <span><a href="/privacy">PRIVACY</a><a href="/terms" aria-current="page">TERMS</a></span>
       </nav>
       <header class="hero">
-        <p class="kicker"><i aria-hidden="true"></i> DOT/480 · TERMS</p>
+        <p class="kicker"><i aria-hidden="true"></i> MATRIX · TERMS</p>
         <h1>Terms of use</h1>
         <p class="lede">Short version: this is a hobby project you're welcome to play with. It comes as is, without
           promises; be decent with it; what you make is yours.</p>
@@ -29,7 +29,7 @@
       </header>
 
       <h2>What this is</h2>
-      <p>Dot/480 is a personal, non-commercial website by Yash Mahajan: an experiment in drawing interfaces out of dots.
+      <p>Matrix is a personal, non-commercial website by Yash Mahajan: an experiment in drawing interfaces out of dots.
         There are no accounts, no payments and nothing to sign up for. By using the site you agree to these terms; if you
         don't, please don't use it.</p>
 
@@ -80,7 +80,7 @@
         <a href="https://github.com/YashM20/dot-matrix/issues">github.com/YashM20/dot-matrix/issues</a>.
         How data is handled is described in the <a href="/privacy">privacy policy</a>.</p>
 
-      <footer class="essay-foot">DOT/480 · TERMS · <span><a href="/privacy">PRIVACY</a> · <a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · <a href="/blog/">BLOG</a></span></footer>
+      <footer class="essay-foot">MATRIX · TERMS · <span><a href="/privacy">PRIVACY</a> · <a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · <a href="/blog/">BLOG</a></span></footer>
     </main>
   </body>
 </html>

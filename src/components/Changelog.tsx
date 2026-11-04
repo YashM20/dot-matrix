@@ -5,7 +5,7 @@ export function Changelog() {
   const titleId = useId()
   return (
     <section className="log-view" aria-labelledby={titleId}>
-      <h2 className="log-title" id={titleId}>DOT/480 — CHANGELOG</h2>
+      <h2 className="log-title" id={titleId}>MATRIX · CHANGELOG</h2>
       <ol className="log-list">
         {releases.map(r => (
           <li key={r.version} className="log-release">

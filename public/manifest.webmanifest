@@ -1,6 +1,6 @@
 {
-  "name": "DOT/480 — dot-matrix UI engine",
-  "short_name": "DOT/480",
+  "name": "MATRIX · dot-matrix UI engine",
+  "short_name": "MATRIX",
   "description": "Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid.",
   "id": "/",
   "start_url": "/",

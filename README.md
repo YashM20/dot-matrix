@@ -1,11 +1,11 @@
-# Dot/480: a field-based dot-matrix UI engine
+# Matrix: a field-based dot-matrix UI engine
 
-**Live:** https://dot-matrix1.vercel.app. This is a personal project: a website, not a package. Anyone curious is welcome to poke around.
+**Live:** https://matrix.reactopia.me (the engine inside is codenamed Dot/480). This is a personal project: a website, not a package. Anyone curious is welcome to poke around.
 
 Every visual is `Layer[]` (a `Field(u,v) → [0,1]` plus a colour tone) → grid sampler → SVG, Canvas or WebGL2. Nothing is hand-drawn: clocks, photos, games, light, fluids and type are all fields sampled onto a quantized dot grid, with one accent colour per board.
 
 ## What's on the site
-- **Boards:** 25 boards and 173 cards, grouped in the picker:
+- **Boards:** 30 boards and 217 cards, grouped in the picker:
   - **START HERE**, a short tour;
   - **INTERFACES**, UI kits;
   - **DATA**, live weather, transit and agent state;

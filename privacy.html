@@ -10,18 +10,18 @@
     <!-- theme-boot -->
     <script>(function(){try{var D=document,d=D.documentElement,q=new URLSearchParams(location.search),S=/^(system|dark|light)$/,A=/^(signal|amber|phosphor|cyan|cobalt|vite|magenta|custom)$/,t=(q.get('theme')||'').split('_'),j,s,a,c,m,f;if(!(S.test(t[0])&&A.test(t[1])))t=[];try{j=JSON.parse(localStorage.getItem('dot480:theme'))}catch(e){}j=j||{};c=typeof j.css=='string';f=function(l,r,o){return l.filter(function(x){return r.test(x)&&(x!='custom'||c)})[0]||o};s=f([q.get('scheme'),t[0],j.scheme],S,'system');a=f([q.get('accent'),t[1],j.accent],A,'signal');if(s=='system')s=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';d.dataset.scheme=s;d.dataset.accent=a;if(a=='custom')D.head.appendChild(m=D.createElement('style')).id='theme-custom',m.textContent=j.css;m=D.querySelector('meta[name=color-scheme]');if(m)m.content=s;m=D.querySelector('meta[name=theme-color]');if(m)m.content=s=='light'?'#F1F0EC':'#070809';d.dataset.cards=/^[ms]$/.test(m=localStorage.getItem('dot480:cards'))?m:'l'}catch(e){}})()</script>
     <!-- /theme-boot -->
-    <title>Privacy · DOT/480</title>
-    <meta name="description" content="What Dot/480 stores and sends: no accounts, no cookies, no analytics. A few settings in your browser, and three public APIs on the Live board." />
+    <title>Privacy · MATRIX</title>
+    <meta name="description" content="What Matrix stores and sends: no accounts, no cookies, no analytics. A few settings in your browser, and three public APIs on the Live board." />
     <link rel="stylesheet" href="/src/legal/legal.css" />
   </head>
   <body>
     <main class="essay legal">
       <nav class="legal-nav" aria-label="Site">
-        <a href="/">← DOT/480</a>
+        <a href="/">← MATRIX</a>
         <span><a href="/privacy" aria-current="page">PRIVACY</a><a href="/terms">TERMS</a></span>
       </nav>
       <header class="hero">
-        <p class="kicker"><i aria-hidden="true"></i> DOT/480 · PRIVACY</p>
+        <p class="kicker"><i aria-hidden="true"></i> MATRIX · PRIVACY</p>
         <h1>Privacy</h1>
         <p class="lede">Short version: this site has no accounts, no cookies, no analytics and no ads, and your camera, microphone and
           photos never leave your device. It keeps a few settings in your own browser, and the Live board fetches weather and
@@ -30,7 +30,7 @@
       </header>
 
       <h2>Who runs this</h2>
-      <p>Dot/480 is a personal, non-commercial project by Yash Mahajan. The source code is public at
+      <p>Matrix is a personal, non-commercial project by Yash Mahajan. The source code is public at
         <a href="https://github.com/YashM20/dot-matrix">github.com/YashM20/dot-matrix</a>. There is no backend,
         no database and nothing to sign in to: the site is a set of static files, and everything runs in your browser.</p>
 
@@ -56,7 +56,7 @@
       <p>Open tabs of the site also talk to each other over a <code>BroadcastChannel</code> (so clocks and live cards stay
         in step); those messages never leave your browser and aren't stored.</p>
       <p><b>To clear it all:</b> remove this site's data in your browser settings (usually under site settings or
-        "cookies and site data" for <code>dot-matrix1.vercel.app</code>), or in developer tools under
+        "cookies and site data" for <code>matrix.reactopia.me</code>), or in developer tools under
         Application → Local storage. In a private window it is gone when you close the window.</p>
 
       <h2>Camera, microphone and motion</h2>
@@ -122,7 +122,7 @@
       <p>Questions or concerns: open an issue at
         <a href="https://github.com/YashM20/dot-matrix/issues">github.com/YashM20/dot-matrix/issues</a>.</p>
 
-      <footer class="essay-foot">DOT/480 · PRIVACY · <span><a href="/terms">TERMS</a> · <a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · <a href="/blog/">BLOG</a></span></footer>
+      <footer class="essay-foot">MATRIX · PRIVACY · <span><a href="/terms">TERMS</a> · <a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · <a href="/blog/">BLOG</a></span></footer>
     </main>
   </body>
 </html>

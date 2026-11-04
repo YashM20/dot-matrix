@@ -73,7 +73,7 @@ function BlogIndex() {
         <Hero slug={BLOG.slug} />
         <DotTitle text="Blog" level={1} max={10} smooth />
         <p className="lede">
-          Long reads on how Dot/480 draws interfaces in dots. The essay is the tour of the whole engine. The three tutorials each
+          Long reads on how the Dot/480 engine draws interfaces in dots. The essay is the tour of the whole engine. The three tutorials each
           follow one small build from the first field to a working card, with code you can copy and run.
         </p>
       </header>
@@ -102,6 +102,6 @@ function BlogIndex() {
 
 export function Blog() {
   const post = postFromPath(location.pathname)
-  useEffect(() => { document.title = post ? `${post.title} · Dot/480 blog` : BLOG.title }, [post])
+  useEffect(() => { document.title = post ? `${post.title} · Matrix blog` : BLOG.title }, [post])
   return post ? <PostPage post={post} /> : <BlogIndex />
 }

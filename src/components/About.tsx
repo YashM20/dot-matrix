@@ -14,8 +14,8 @@ export function About() {
   return <>
     <section className="about-intro" aria-labelledby="about-title">
       <p className="about-flavour" aria-hidden="true">CONFIGURATION 01 · STATUS: NOMINAL</p>
-      <h2 id="about-title" className="log-title">DOT/480 — ABOUT</h2>
-      <p className="about-lede">DOT/480 is an interface engine where everything you see is dots. Every card is a field, a function that
+      <h2 id="about-title" className="log-title">MATRIX · ABOUT</h2>
+      <p className="about-lede">MATRIX runs on Dot/480, an interface engine where everything you see is dots. Every card is a field, a function that
         says how bright each point is; a sampler reads it onto a quantized grid of dots, and a renderer (SVG, Canvas or
         WebGL) draws them, live. EXPLORE has the boards; MAKE lets you tune a preset, compose a card from layers,
         write a field program or paint dots by hand.</p>

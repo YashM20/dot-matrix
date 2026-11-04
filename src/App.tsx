@@ -66,7 +66,7 @@ function SiteFooter({ onAbout }: { onAbout: () => void }) {
   const idle = useIdle()
   return <footer className="bottom">
     <div className="live-band">{idle && <Suspense fallback={null}><LiveBand /></Suspense>}</div>
-    <div className="bottom-row"><span>DOT/480 · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span><span>FIELD → GRID SAMPLER → RENDERER</span>
+    <div className="bottom-row"><span>MATRIX · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span><span>FIELD → GRID SAMPLER → RENDERER</span>
       <span><a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · <a href="/lab/">LAB</a> · <a href="/blog/">BLOG</a> · <a href="?about" onClick={e => { e.preventDefault(); onAbout() }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></div>
   </footer>
 }
@@ -251,8 +251,8 @@ export default function App() {
   </main>
   const title = view === 'MAKE' ? 'MAKE' : view === 'EXPLORE' ? boardLabel(board) : view
   return <main className="shell" data-view={view}>
-    <h1 className="sr-only">DOT/480 dot-matrix UI engine</h1>
-    <header className="topbar"><div className="brand"><i aria-hidden="true"/> DOT/480 <small>{view}</small></div>
+    <h1 className="sr-only">MATRIX dot-matrix UI engine</h1>
+    <header className="topbar"><div className="brand"><i aria-hidden="true"/> MATRIX <small>{view}</small></div>
       {/* phones: the place's name (on EXPLORE it opens every board) and search; the tab bar holds the views */}
       {view === 'EXPLORE'
         ? <button type="button" className="topbar-place" aria-haspopup="dialog" aria-label={`Board: ${title}. All boards`} onClick={() => setBoards(true)}>{title}<span aria-hidden="true"> ▾</span></button>
