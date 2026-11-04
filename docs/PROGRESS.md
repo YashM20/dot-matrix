@@ -55,16 +55,16 @@
 
 **Branches kept:** `perf/workshop-cold-frames`, `chore/dot-engine-deep-dives-v2`, and `feat/round3`, which is merged and can be deleted once CP2 starts from main.
 
-**Coordinator tools** (local, outside the repo):
-- `dmdocs/heavy.mjs`: the FIFO lock for builds and probes. Wait on process exit, never on monitor events.
-- `dmdocs/full3.sh`: the full suite. Launch it with Git Bash explicitly; a bare `bash` on this box is WSL and fails.
-- `dmdocs/merge-unions.py`: union merges of registry files.
-- `dmdocs/issues-org/*.mjs`: GitHub milestone and issue scripts.
+**Coordinator tools** (local scripts, outside the repo):
+- a FIFO lock for builds and probes, so only one heavy job runs at a time. Wait on process exit, never on monitor events.
+- the full-suite runner.
+- a union-merge script for registry files.
+- GitHub milestone and issue scripts.
 
-The worktree rules (junction-safe cleanup) are in `docs/CHECKPOINTS.md` and the memory notes.
+The worktree rules (junction-safe cleanup) are in `docs/CHECKPOINTS.md`.
 
 ## Status board (updated 2026-10-27)
-- [x] **E3 editor: editing on canvas** (branch `worktree-agent-a603245a37988c6ee`, on `feat/round2` 0741d3b; `docs/EDITOR-PLAN.md` §4.2, §8.3). Not merged.
+- [x] **E3 editor: editing on canvas** (on an agent worktree branch, based on `feat/round2` 0741d3b; `docs/EDITOR-PLAN.md` §4.2, §8.3). Not merged.
   - Sites handles: a ring's radius and sweep (the sweep snaps to the ring's own sites, so an arc ends on a dot of its track), a disc's radius, a line's ends; whole cells.
   - Spec layers: placed ones (sites, text, generators, IR fields with `bounds`) move in whole cells; an IR field's box is its declared bounds, resized by four corners; DESIGN · PLACE edits them and the spec JSON follows.
   - Text typed in place (double-click, Enter, a tap on the selected text, the Text tool): one invisible input, the letters are the frame's own dots through `textAt` / `T.big`, a caret drawn in the glyph gaps; one session = one undo step, Esc cancels, an emptied text goes. On a phone the text pans above the keyboard.
@@ -74,7 +74,7 @@ The worktree rules (junction-safe cleanup) are in `docs/CHECKPOINTS.md` and the 
   - Left for later: an arc start handle (START ° is in DESIGN), handles for generator params and raster windows, word selection on double-click, multi-line text.
 - **Queued next:** M1 materials, T5 theme picker, E3 editor, T6 type and contrast (T6 done, below). Then L2, Q2, M2, Q3, M3, L3 and X.
 - **Queued after round 2:** `docs/POLISH-PLAN.md`, the site polish. It starts with P0 probes, then P1 (broken: the essay route, sticky header, widget-page chrome, Back with sheets), P2 (ugly) and P3 (nits). Owner decisions are in its §3.
-- [x] **T6 type, contrast, more** (branch `worktree-agent-a5cf9c4ead82b0da0`, on `feat/round2` 4b60ecf; not merged; docs/LAYOUT-THEME-PLAN.md §5 T6):
+- [x] **T6 type, contrast, more** (on an agent worktree branch, based on `feat/round2` 4b60ecf; not merged; docs/LAYOUT-THEME-PLAN.md §5 T6):
   - **Contrast, no waivers:** `--mute` `#6E7278` → `#81858B`; `--dim` is a non-text glyph grey (`#65696F`, ≥ 3:1; the editor's 4 text uses moved to `--mute`); `dark_signal`'s `on-red` is generated (dark ink `#321A16`; white was 3.55:1); 21 `color: var(--red)` rules → `--red-text` (red fails 4.5:1 on paper), the X-ray HUD badge included. `theme.ts --check` gained: dot-idle as a text role, dim ≥ 3:1, a CSS scan that every `color:` is a text role, the contrast-more roles, and a sweep of all 360 custom hues × 2 schemes (gamut, text, dots, lines, colour-blind, tone order). No goldens moved (none is an engine token).
   - **`prefers-contrast: more`:** a generated `@media` block per theme in themes.css (label, mute, red-text ≥ 7:1, dim ≥ 4.5:1, hairline alpha ×2) and the materials in tokens.css (stronger dotted rules, opaque raised layers).
   - **Custom hue:** an 8th swatch in THEME and TOOLS › THEME opens a hue slider (native range over 36 generated dots). `src/site/theme/custom.ts` (lazy, 4.3 kB gz with the generator: the plan's ≈ 1 kB was the slider alone) runs `accents.ts` in the browser; `specForHue` interpolates C and L between neighbouring presets, and `pickSolid` now also searches ±.3 in L and lower chroma (needed for a few light pink-reds under protanopia; presets unchanged). The store keeps `{accent: "custom", hue, css}`; the boot script writes the CSS into `<style id="theme-custom">` before first paint (boot 900 → 960 B budget, 934 B). Custom share links carry `?scheme=` only.
@@ -82,10 +82,10 @@ The worktree rules (junction-safe cleanup) are in `docs/CHECKPOINTS.md` and the 
   - **Skins:** e-ink and flip-disc take a light card's paper and ink (`SkinOverlay` → `StageOptions.colors`; dark cards keep `STAGE_COLORS`); the footer's live number is a dark inset under an emissive skin on a light page.
   - **Checks:** `npx tsc -b` and oxlint clean on the changed files; `css-tokens.ts` 0 raw literals; `theme.ts --check` 30/30 on a fresh build; `theme-boot.ts` all passed (custom hue no-flash and contrast-more cases added); `theme-picker.ts` all passed (custom swatch, slider, reload, phone sheet added; 12 touch targets ≥ 44 px); `layout.ts` all passed with the new < 10% gate (chrome under 12 px: 0–1% on boards, 4% on MAKE, 0% elsewhere); `mobile.ts` all passed; goldens 187/187 unchanged.
   - **Size:** first-load JS 122.19 → 123.47 kB gz (+1.28: the dot names on the board heading, the custom-aware store and the stage tones); first-load CSS 17.08 → 17.53 kB gz (+0.45: the contrast-more blocks). Lazy: `custom` 4.3 kB gz.
-  - **Screenshots** for the owner's taste pass: `C:/Users/integrated/AppData/Local/Temp/dmdocs/t6shots/index.html` (dark_signal, light_signal, dark_vite, light_cobalt; 108 shots). The 4 phone `palette` shots are marked NOT READY by `shots.ts` (the sheet opens, but focus is not in its input on touch) though the captures look right.
+  - **Screenshots** for the owner's taste pass, in a local scratch folder (dark_signal, light_signal, dark_vite, light_cobalt; 108 shots). The 4 phone `palette` shots are marked NOT READY by `shots.ts` (the sheet opens, but focus is not in its input on touch) though the captures look right.
   - **Taste decisions for the owner:** accent text in `dark_signal` is now the generated `#FFA193` (salmon) instead of `#FF3B30` (which passes WCAG 4.72:1 on `raised` but only APCA Lc 40; a pin like `#FF6856`, 5.87:1, Lc 47, would keep it redder if the owner prefers and the APCA rule is relaxed); dark ink on the red fill; the dot-name size (pitch 3 board, pitch 4 card, dots 84% of the pitch); Oxanium for prose at 14 px; keycaps kept at 9 px.
   - **Left:** names in dot type on the About and essay headings (only board and card names now). Done since (issue #34): the CONTRAST: MORE switch in THEME, TOOLS › THEME and ⌘K, and `?hue=` links for custom themes. Follow-up: the boot script could set `data-contrast` before first paint (it means rewriting the boot script in every HTML entry and its CSP hash); until then the switch lands when the bundle runs, and the legal pages follow the OS only.
-- [x] **T5 picker and moment** (branch `worktree-agent-a70c72cff7bd3964e`, 1 commit, not merged; docs/LAYOUT-THEME-PLAN.md §4 Picker, §5 T5):
+- [x] **T5 picker and moment** (on an agent worktree branch, 1 commit, not merged; docs/LAYOUT-THEME-PLAN.md §4 Picker, §5 T5):
   - THEME next to DISPLAY ▾ (`src/components/theme/ThemeButton.tsx`, first load): 100 ms hover intent (it warms the chunk), click / ArrowDown pins it with focus inside; the popover (`ThemePicker.tsx` + `picker.css`, lazy) has SYSTEM / LIGHT / DARK, the 7 accents as 7×7 dot swatches (listbox, arrow roving), a tone ramp, and the share-link switch. Live preview: the popover re-scopes itself (`data-scheme` + `data-accent`) to the hovered or focused choice. Phones: TOOLS › THEME, the same controls at 44 px (the LIGHT / DARK tile is gone).
   - The switch moment (`src/site/theme/moment.ts`): a view transition with a halftone mask front from the pressed control (`mask-composite` fold of disc and dot layers, `--dur-wipe` 720 ms, `pointer-events: none` on the overlay). Instant under reduced motion (OS or the ⌘K override), without the API, or in a hidden tab. A pick drops `?theme=` / `?scheme=` / `?accent=` from the URL.
   - ⌘K (C1 of docs/POLISH-PLAN.md, approved): "Theme: system / light / dark", "Accent: <name>" ×7 and "Accent: next" replace the 15 raw rows.
@@ -172,7 +172,7 @@ The worktree rules (junction-safe cleanup) are in `docs/CHECKPOINTS.md` and the 
   - `webgl.ts`, `site/mobile.ts`, `light-browser.ts`, `editor-browser.ts`, `site/layout.ts`, `theme-boot.ts`.
   - The mobile and layout probes need a running `vite preview` (ports 4317 and 4318).
 - **Next, waiting for the owner:** Q1 squares, L1 pond and M1 materials (all unblocked by F0); T3 grids; T5 picker; E3.
-- [~] **M1 materials** (branch `worktree-agent-add27cae4d261d877`, docs/living-matter/M-materials.md §3). Not merged; it waits for its integration-queue slot (L1 → Q1 → M1).
+- [~] **M1 materials** (on an agent worktree branch, docs/living-matter/M-materials.md §3). Not merged; it waits for its integration-queue slot (L1 → Q1 → M1).
   - Engine (M1.1–M1.5): `src/engine/matter/` (not in the engine barrel) holds relief + AO (blur and horizon), `rake` and `cardMask`; Kajiya–Kay `anisoSpec` with four tangent builders; `matcap` (64² LUT, rotate / tilt, `studioMatcap` ≡ `metal().env` bit for bit); weave drawdowns, drafts and `weaveRelief`; stitches and `contour`; `marble` and `terrazzo`.
   - Board `/materials/` in ENGINE, lazy, `sources: [lightSource]`: `mat-loom` (fps 40), `mat-knob`, `mat-grille`, `mat-marble`, `mat-terrazzo`. Every card declares the light-hub keys. `matLight` is a thin wrapper over `sceneLight`.
   - **`activeDim`: no owner ruling**, so the plan's default applies: it is not part of the one accent and no M card uses it. The Loom's trail is size contrast inside its one `active` layer. This is checked.
@@ -591,12 +591,12 @@ Work the **Status board** list top to bottom: P1-A → P1-F, then P0-A → P0-C.
   - **Possibly stale package docs:** `packages/README.md` still describes `@dot480/core/spec` as card spec v0. Check this before relying on the package docs; the packages are unpublished.
   - **Hard-coded colours:** `src/engine/display/stage.ts` `STAGE_COLORS` hard-codes hex colours. The e-ink paper grey is deliberately not a token.
 - **Browser checks (2026-10-23, P2-F):** data springs (WORKSPACE sliders on timer, music, fitness) glide in the browser after the preview started passing `springKeys`. Transition Lab REPLAY / ENTER / EXIT / CHANGE, mask, duration and easing all redraw. The React warning "Cannot update a component (`Board`) while rendering `DotCanvas`" did not reproduce (instrument board, shared keys, every control); no console errors or warnings on the four boards. In an agent worktree, the WORKSPACE font 403s because `node_modules` is a junction outside Vite's `fs.allow`; that only happens in worktrees.
-- Agent worktrees live under `.claude/worktrees/` (gitignored, and ignored by the Vite watcher).
+- Agent worktrees live in a gitignored folder inside the checkout, which the Vite watcher also ignores.
 - Root `index.css` sets centred text. New views must set `text-align: left` (the LOG view does).
 - `pnpm snap` renders CJK as empty; icons render fine headlessly.
   - Agents keep claiming icons are empty. They are not: verify asserts every icon rasterizes.
 - Weakest cards: `henry-bear`, `silhouette`, `thermal-puppy`, `sunburst`, `vision-camera`, `ev-charge` (MASTER-PLAN §5).
 - Ports 5173/5174 may be held by old dev servers; use `pnpm dev --port 5180 --strictPort`.
-- Node/tsx start slowly on this machine (about 3 s), and `tsc -b` can take minutes while other jobs run. Use generous timeouts.
+- Node and tsx can take about 3 s to start, and `tsc -b` can take minutes while other jobs run. Use generous timeouts.
 - Overlapping dots of the same colour and opacity now render as a **union** (one path) in both SVG and canvas, instead of stacking alpha. This was intended (overlapping lattice dots read as one shape), but check it if a card relied on alpha build-up.
 - SVG export uses `<use href>` (SVG 2). Very old design tools may need `xlink:href`.

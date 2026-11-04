@@ -1,7 +1,7 @@
 # Changelog
 
 All notable engineering changes to Dot/480 are recorded here, newest first.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://dot-matrix1.vercel.app, deployed from `main`), not a published package: there are no tagged or npm releases, so entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://matrix.reactopia.me, deployed from `main`), not a published package: there are no tagged or npm releases, so entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
 
 ## 0.13 · 2026-11-01 · PR #78 (`feat/round3`), round 3: workshop, glass and water, squares Q2 and Q3, pond L3 and X1, editor E5 and E6
 Merged to `main` as `8a1a6fb` (PR #78). Plans and status: `docs/PROGRESS.md`, `docs/CHECKPOINTS.md` (CP1), `docs/living-matter/`, `docs/EDITOR-PLAN.md`.
@@ -263,7 +263,7 @@ Merged to `main` as `bc5fcaa` on 2026-10-24. At merge: 173 presets, `pnpm golden
 - **Perf (P0-A):** sampler windows, baked photo fields (`baked()`), static sample cache across board visits; mosaic mount 117–200 → about 30–33 ms (gate borderline).
 - P0-B: permanent bounds-vs-no-bounds check in verify §14 (all presets).
 - P0-C: site literals use `Layer.size` (`T.dots`, metro `afterlight`); verify lints for it.
-- Dev: the Vite watcher ignores `.claude` worktrees.
+- Dev: the Vite watcher ignores agent worktrees.
 
 ## 2026-10-14 → 10-19 · `fa47cd9`, `4abf78a`, PR #2 — motion tests, merge to main
 ### Added

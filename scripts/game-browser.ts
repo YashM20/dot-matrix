@@ -15,7 +15,7 @@ const { assert, done } = (await import('./lib/check')).checker('game-browser')
 const base = process.argv[2] ?? 'http://localhost:5203/'
 const out = join('.snapshots', 'c4')
 mkdirSync(out, { recursive: true })
-const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
+const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
 if (!chrome) { console.log('no Chrome found (set $CHROME): skipped'); process.exit(0) }
 const profile = mkdtempSync(join(tmpdir(), 'dot-c4-'))
 const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--window-size=1280,900', 'about:blank'], { stdio: 'ignore' })

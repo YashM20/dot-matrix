@@ -20,7 +20,7 @@ import { join } from 'node:path'
 const arg = (k: string, d: string) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d }
 const URL0 = arg('url', 'http://localhost:5205'), OUT = '.snapshots/c6'
 mkdirSync(OUT, { recursive: true })
-const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', '/usr/bin/google-chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
+const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
 if (!chrome) { console.log('no Chrome found (set $CHROME)'); process.exit(0) }
 const profile = mkdtempSync(join(tmpdir(), 'dot-c6-'))
 const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--window-size=1400,1000',

@@ -5,7 +5,7 @@ One checkpoint at a time. A checkpoint is a GitHub milestone with a fixed list o
 ## The cycle
 1. **Scope.** The milestone's issues are the whole job. A new idea or request that comes up mid-checkpoint becomes an issue in a later milestone, or in Backlog or ideation. It does not join the current one unless the owner says so.
 2. **Build.** At most 4 agents, each working only on issues in this milestone. Merge each one into the checkpoint branch as it finishes.
-3. **Gate.** The full suite is green on the checkpoint branch (`dmdocs/full3.sh`, run detached, summary in `dmdocs/full-r3/summary.txt`). Known timing flakes are listed and pass on CI.
+3. **Gate.** The full suite is green on the checkpoint branch (the coordinator's full-suite runner, run detached, with a summary file at the end). Known timing flakes are listed and pass on CI.
    - The gate also runs `npx tsx scripts/site/prose-lint.ts` (visitor prose, `docs/WRITING.md`): 0 errors before publish. It is not in CI.
 4. **Publish.**
    - Open a PR from the checkpoint branch to main. Wait for CI and Vercel to pass, then merge.
@@ -26,7 +26,7 @@ One checkpoint at a time. A checkpoint is a GitHub milestone with a fixed list o
 
 **Big, few checkpoints.** Batch related work into one milestone, and publish it about once per round, not per feature.
 
-**At most 3 agents at once.** The box has 2 cores and one heavy lock, and more agents only queue: round 3 saw 5–8 jobs waiting 30–60 min each.
+**At most 3 agents at once.** The machine has 2 cores and runs one heavy job at a time, so more agents only queue: round 3 saw 5–8 jobs waiting 30–60 min each.
 
 **Frame budgets wait (owner, 2026-11-01): functionality first.** `pnpm verify` and every area script (`npx tsx scripts/<area>.ts`) report wall-clock checks (a `≤ N ms` limit, or a `budget` measured in ms, × load or fastest-of-N) as warnings. Step, flicker and size budgets are correctness checks and always fail. Only `DOT_TIMING=strict` enforces them, and they come back at a later checkpoint. The rule lives in one place, `scripts/lib/check.ts`. Workshop speed work in progress is on branch `perf/workshop-cold-frames` (#27).
 
@@ -35,13 +35,13 @@ One checkpoint at a time. A checkpoint is a GitHub milestone with a fixed list o
 | Tier | When | What |
 |---|---|---|
 | Quick (agents) | while building | `npx tsc -b`, `npx oxlint <changed>`, the area script (timing only warns by default; `--quick` where it exists), `pnpm golden --check`, and size only if first-load imports changed. **No** browser probes, screenshots or timing runs. |
-| Gate (coordinator) | once per checkpoint, idle machine, no agents running | the full suite (`dmdocs/full3.sh`, `DOT_TIMING=strict` once budgets are back): timing budgets, every browser probe, size, theme, CSS and goldens, then CI. Screenshots are taken once here. |
+| Gate (coordinator) | once per checkpoint, idle machine, no agents running | the full suite (the full-suite runner, with `DOT_TIMING=strict` once budgets are back): timing budgets, every browser probe, size, theme, CSS and goldens, then CI. Screenshots are taken once here. |
 
 **Shared and lean:**
-- One shared base build per checkpoint for size deltas (`dmdocs/base-cpN/`). Agents compare against it instead of building their own.
+- One shared base build per checkpoint for size deltas (kept in a local scratch folder). Agents compare against it instead of building their own.
 - Agent reports stay under 300 words: SHA, check results, sizes, anything open.
 - No always-on watchdog. Run it only for long unattended runs, such as overnight.
-- Merging append-only registry files (`ids.json`, `catalog.ts`, `manifest.ts`, DESIGN tables) uses the union-merge helper (`dmdocs/merge-unions.py`), not hand edits.
+- Merging append-only registry files (`ids.json`, `catalog.ts`, `manifest.ts`, DESIGN tables) uses a local union-merge script, not hand edits.
 - Goldens are one file per board (`goldens/<board>.json`), so a board branch touches only its own file. When two branches change the same board's file, merge the code and rerun `pnpm golden`; don't merge the hashes by hand.
 
 ## Checkpoints

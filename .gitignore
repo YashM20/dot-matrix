@@ -32,3 +32,6 @@ goldens/hashes.json
 
 # local like/kill history (P6 authoring, record_verdict)
 .dot480/
+
+# local campaign drafts
+twitter-campaign/
