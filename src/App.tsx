@@ -10,6 +10,7 @@ import { boardIds, boardLabel, liveBoards, prefetchBoard } from './widgets/manif
 import { widgetPath, type WidgetRoute } from './site/routes'
 import { onLayerWake, requestLayer } from './site/layer'
 import { setPageMeta, syncUrl } from './site/meta'
+import { useFlag } from './site/useFlag'
 import { cardTransition } from './site/viewTransition'
 import { GALLERY_BOARD, VIEWS, placeFromName, placeView, sameView, urlForView, viewFromUrl, type Mode, type View } from './site/views'
 // the app's styles, then the phone styles over them: the order is the cascade, keep it
@@ -28,7 +29,6 @@ import './site/app/raised.css'
 import './site/app/tap.css'
 import './site/app/skins.css'
 import './site/app/views.css'
-import './site/app/xray-tab.css'
 import './site/app/makers.css'
 import './site/mobile/shell.css'
 import './site/mobile/sheet.css'
@@ -136,10 +136,11 @@ function Tabs<T extends string>({ label, items, value, onPick, className }: { la
 /** One line of intent above the boards (docs/UX-PLAN.md §5.1): dismissible, and it stays dismissed. */
 function IntroLine() {
   const [shown, setShown] = useState(() => { try { return localStorage.getItem('dot480:intro') !== 'off' } catch { return true } })
+  const xray = useFlag('xray')
   if (!shown) return null
   return <p className="intro-line">
     {/* phones show the short line (one text line, so intro + picker stay ≤ 120 px; src/site/mobile/) */}
-    <span className="intro-long">Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid. Touch the cards, switch the display, or press <b>X-RAY</b> to see how one works.</span>
+    <span className="intro-long">Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid. {xray ? <>Touch the cards, switch the display, or press <b>X-RAY</b> to see how one works.</> : 'Touch the cards or switch the display.'}</span>
     <span className="intro-short">Every card is a live dot field.</span>
     <a href="/blog/dot-matrix-essay/">Read the essay →</a>
     <button type="button" aria-label="Hide this note" onClick={() => { setShown(false); try { localStorage.setItem('dot480:intro', 'off') } catch { /* private mode */ } }}>×</button>

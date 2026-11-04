@@ -1,0 +1,336 @@
+/* X-ray: the inspector panel (.xr-panel), its SUMMARY tab and glossary words, and the phone bottom sheet. Loads
+   with Inspector's lazy chunk, after the app's styles, so the phone rules that used to sit in src/site/mobile/
+   come last here too */
+.xr-panel {
+  position: fixed;
+  right: 14px;
+  top: 72px;
+  z-index: var(--z-pinned);
+  width: min(340px, calc(100cqi - 28px));
+  max-height: calc(100vh - 150px);
+  display: flex;
+  flex-direction: column;
+  /* a raised panel, opaque: it sits over running cards, where a blur would be redrawn every frame */
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-panel);
+  box-shadow: var(--shadow-raised);
+  color: var(--label);
+  font: 500 var(--fs-label-12)/1.45 var(--mono);
+  text-align: left;
+  overflow: hidden
+}
+
+.xr-panel--empty {
+  padding: var(--space-4);
+  gap: var(--space-2)
+}
+
+.xr-panel button {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  color: var(--label);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .12em;
+  padding: var(--space-1) var(--space-2);
+  cursor: pointer
+}
+
+.xr-panel button:hover,
+.xr-panel button:focus-visible {
+  border-color: var(--line-hover);
+  color: var(--value)
+}
+
+.xr-panel button:active {
+  background-color: var(--wash-press);
+  color: var(--value)
+}
+
+.xr-panel button[aria-pressed="true"],
+.xr-tabs button.selected {
+  border-color: var(--red);
+  color: var(--red-text)
+}
+
+.xr-panel-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: var(--space-3) var(--space-4) var(--space-2)
+}
+
+.xr-panel-head b {
+  display: block;
+  color: var(--value);
+  letter-spacing: .14em
+}
+
+.xr-panel-head small {
+  color: var(--mute)
+}
+
+.xr-runtime {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0 var(--space-4) var(--space-2)
+}
+
+.xr-runtime div {
+  background: var(--raised);
+  border-radius: var(--radius-ctl);
+  padding: var(--space-1) var(--space-2)
+}
+
+.xr-runtime dt {
+  color: var(--mute);
+  font-size: var(--fs-label-12);
+  letter-spacing: .14em
+}
+
+.xr-runtime dd {
+  margin: 0;
+  color: var(--value)
+}
+
+.xr-actions,
+.xr-tabs {
+  display: flex;
+  gap: var(--space-2);
+  padding: 0 var(--space-4) var(--space-2)
+}
+
+.xr-tabpanel {
+  flex: 1;
+  overflow: auto;
+  padding: 0 var(--space-4) var(--space-4);
+  min-height: 80px
+}
+
+.xr-layers {
+  list-style: none;
+  margin: 0;
+  padding: 0
+}
+
+.xr-layers li {
+  display: grid;
+  grid-template-columns: 22px 1fr auto auto;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--line);
+  border-image: var(--hair-x) 1
+}
+
+.xr-layers li.xr-off {
+  opacity: .42
+}
+
+.xr-layers small {
+  display: block;
+  color: var(--mute)
+}
+
+.xr-idx {
+  color: var(--mute)
+}
+
+.xr-lname {
+  color: var(--value);
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.xr-data {
+  width: 100%;
+  border-collapse: collapse
+}
+
+.xr-data th,
+.xr-data td {
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--line);
+  border-image: var(--hair-x) 1;
+  text-align: left;
+  font-weight: 500
+}
+
+.xr-data td {
+  text-align: right;
+  color: var(--value);
+  font-variant-numeric: tabular-nums
+}
+
+.xr-describe p {
+  margin: 0 0 var(--space-2);
+  color: var(--value)
+}
+
+.xr-note {
+  color: var(--mute) !important
+}
+
+.xr-spec {
+  margin: 0;
+  font: var(--fs-label-12)/1.35 var(--mono);
+  color: var(--label);
+  white-space: pre-wrap;
+  word-break: break-all
+}
+
+/* ── the SUMMARY tab and glossary words ── */
+.xr-tabs {
+  flex-wrap: wrap
+}
+
+.xr-summary p,
+.xr-summary ul {
+  margin: 0 0 var(--space-2);
+  color: var(--value)
+}
+
+.xr-summary ul {
+  padding-left: var(--space-4)
+}
+
+.xr-summary code {
+  color: var(--label)
+}
+
+.xr-panel .xr-term {
+  padding: 0;
+  background: none;
+  border: 0;
+  border-bottom: 1px dotted var(--mute);
+  border-radius: 0;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  cursor: help
+}
+
+.xr-panel .xr-term[aria-expanded="true"] {
+  color: var(--value);
+  border-bottom-style: solid
+}
+
+.xr-summary .xr-words {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-3);
+  color: var(--label)
+}
+
+.xr-summary .xr-def {
+  padding: var(--space-2) var(--space-2);
+  background: var(--raised);
+  border-radius: var(--radius-ctl);
+  color: var(--label)
+}
+
+.xr-def b {
+  color: var(--value);
+  margin-right: var(--space-1)
+}
+
+.xr-panel .xr-grip {
+  display: none
+}
+
+/* small screens: the inspector is a bottom sheet, so it no longer covers the board picker. It opens at half
+   height (the card stays in view above it, Inspector.tsx scrolls it there), a grip / swipe up opens it full,
+   a swipe down steps it back and closes it */
+@media(max-width:760px) {
+  .xr-panel {
+    top: auto;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: min(42dvh, 400px);
+    max-height: calc(100dvh - 56px);
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+    overscroll-behavior: contain;
+    transition: height var(--dur-move) cubic-bezier(.2, 0, 0, 1), transform var(--dur-move) cubic-bezier(.2, 0, 0, 1)
+  }
+
+  .xr-panel--empty {
+    height: auto
+  }
+
+  .xr-panel--full {
+    height: calc(100dvh - 56px)
+  }
+
+  .xr-sheet-top {
+    touch-action: none;
+    cursor: grab
+  }
+
+  .xr-panel .xr-grip {
+    display: block;
+    width: 100%;
+    height: 18px;
+    padding: 0;
+    margin: 0;
+    border: 0;
+    background: none;
+    cursor: grab
+  }
+
+  .xr-panel .xr-grip::before {
+    content: "";
+    display: block;
+    margin: var(--space-2) auto 0
+  }
+
+  .xr-panel-head {
+    padding-top: var(--space-1)
+  }
+
+  .xr-tabpanel {
+    overscroll-behavior: contain
+  }
+
+  /* the last card can still scroll up above the open sheet */
+  body:has(.xr-panel:not(.xr-panel--empty)) {
+    padding-bottom: min(42dvh, 400px)
+  }
+
+  /* the tool dock (TIME, X-RAY) rides on top of the half sheet instead of under it */
+  body:has(.xr-panel:not(.xr-panel--empty):not(.xr-panel--full)) .pal-dock {
+    bottom: calc(min(42dvh, 400px) + 8px)
+  }
+
+  /* touch targets in the sheet: × 44 px, tabs and actions 36 px */
+  .xr-panel .xr-panel-head > button {
+    min-width: var(--tap);
+    min-height: var(--tap);
+    font-size: var(--fs-copy-14)
+  }
+
+  .xr-panel .xr-tabs button,
+  .xr-panel .xr-actions button {
+    min-height: 36px
+  }
+}
+
+@media(max-width:760px) and (prefers-reduced-motion: reduce) {
+  .xr-panel {
+    transition: none
+  }
+}
+
+/* portrait phones: the bottom sheet stands on the tab bar */
+@media (max-width: 760px) {
+  .xr-panel {
+    bottom: var(--tabbar-h);
+    max-height: min(55vh, calc(100dvh - var(--app-top) - var(--tabbar-h)));
+    padding-bottom: 0
+  }
+}

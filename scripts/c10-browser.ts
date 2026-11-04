@@ -5,8 +5,9 @@
  * t, open, Tab completion, history across reopening, Ctrl+C / Ctrl+U, did-you-mean, the output log, focus back),
  * remix in DOTS and the Konami boss. Screenshots in `.snapshots/c10/`. X-ray is behind the `xray` flag
  * (src/site/flags.ts, off by default), so every page opens with `?flags=xray`, except the `flagsoff` section, which
- * checks that with the flag off there is no X-ray control, X does nothing, the palette has no X-ray action and the
- * shell answers `xray` with "command not found".
+ * checks that with the flag off there is no X-ray control (dock, cards, widget page pill and menu), X does nothing, the
+ * palette has no X-ray action, the shell answers `xray` with "command not found", the intro line never names X-ray and
+ * the overlay and inspector styles never load.
  *   pnpm dev --port 5201 (or `vite build` + `vite preview`), then `npx tsx scripts/c10-browser.ts [baseUrl]`
  *   "OPEN IN CODE" lands in the editor's CODE inspector (`.dw-code textarea`); "OPEN IN COMPOSE" adds a frame.
  */
@@ -301,7 +302,22 @@ try {
   const said = await text('.pal-shell [aria-live]')
   check('flag off: the shell says xray: command not found', /xray: command not found/i.test(said) && (await count('.xr-overlay')) === 0, said.slice(-80))
   await key('Escape')
-
+  // the intro line and the styles: no X-ray words, and the overlay / inspector CSS (their lazy chunks) never loads
+  const xrStyles = `[...document.styleSheets].some(s => { try { return [...s.cssRules].some(r => /\\.xr-(overlay|panel)\\b/.test(r.cssText)) } catch { return false } })`
+  const intro = await text('.intro-line .intro-long')
+  check('flag off: the intro names no X-ray and no X-ray styles load', !!intro && !/x-ray/i.test(intro) && !(await js(xrStyles)), intro.slice(0, 120))
+  // the widget page: no X-RAY pill, no X-ray item in MORE
+  const slug = await js(`document.querySelector('.board-view [data-card-id]')?.dataset.cardId ?? ''`) as string
+  const wpXray = `[...document.querySelectorAll('.wp-bottom button, .wp-more [role=menuitem]')].some(b => /x-ray/i.test(b.textContent))`
+  const openMore = async () => { await js(`document.querySelector('.wp-more-btn').click()`); return waitFor(`!!document.querySelector('.wp-more [role=menuitem]')`, 2000) }
+  await open(`widget/${slug}/`, ''); await waitFor(`!!document.querySelector('.wp-more-btn')`, 8000)
+  check(`flag off: the widget page (${slug}) has no X-RAY pill or menu item`, await openMore() && !(await js(wpXray)) && !(await js(xrStyles)))
+  await shot('09-flagsoff-widget')
+  // and with ?flags=xray both come back
+  await open(`widget/${slug}/`); await waitFor(`!!document.querySelector('.wp-more-btn')`, 8000)
+  check('flag on: the widget page has its X-RAY pill and menu item', await openMore() && await js(`[...document.querySelectorAll('.wp-bottom button')].some(b => b.textContent.includes('X-RAY')) && [...document.querySelectorAll('.wp-more [role=menuitem]')].some(b => /x-ray/i.test(b.textContent))`))
+  await open('?board=henry'); await sleep(600)
+  check('flag on: the intro says press X-RAY', /X-RAY/.test(await text('.intro-line .intro-long')))
   }
   // ── Konami
   if (run('konami')) {

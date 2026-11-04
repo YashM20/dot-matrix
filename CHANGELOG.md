@@ -26,7 +26,7 @@ Plan: `docs/living-matter/L-pond.md` §L3; as built: `docs/LIFE.md` "L3".
 - The koi flick threshold is 200 cells/s (was 90, reached by ordinary mouse moves); the hover wake follows the pointer's speed.
 - Goldens: 0 changed (frames at rest equal the L2 frames bit for bit).
 
-## 0.12 — 2026-10-30 · PR #10 (`feat/round2`), PR #11 and PR #50 — round 2: materials, pond, squares, card size, editing on canvas, the worker trim, themed essay and legal pages
+## 0.12 · 2026-10-30 · PR #10 (`feat/round2`), PR #11 and PR #50, round 2: materials, pond, squares, card size, editing on canvas, the worker trim, themed essay and legal pages
 Merged to `main` as `2b4780e` (PR #10), `bcacd5a` (PR #11) and `238e68a` (PR #50). T5 and T6, also in PR #10, have their own entries below. Status: `docs/PROGRESS.md`; plans: `docs/LIVING-MATTER-PLAN.md`, `docs/living-matter/`, `docs/EDITOR-PLAN.md` §8.3, `docs/LAYOUT-THEME-PLAN.md` (T3).
 <!-- TODO(later): confirm whether T5 and T6 (PR #10) and Foundation round (PR #9) entries below should keep [Unreleased] tags or be grouped into release notes -->
 ### Added
@@ -49,12 +49,12 @@ Merged to `main` as `2b4780e` (PR #10), `bcacd5a` (PR #11) and `238e68a` (PR #50
 - The phone editor went blank (its scroll lock shared the lock button's class).
 - PR #11: the desktop editor re-measures its height when the site bar grows after mount (the lazy tool dock), so it no longer runs 11 px past the window.
 
-## [Unreleased] — 2026-10-29 · T6 type, contrast and the custom hue (round 2)
+## [Unreleased] · 2026-10-29 · T6 type, contrast and the custom hue (round 2)
 Plan: `docs/LAYOUT-THEME-PLAN.md` §1c #3 and #15, §4 Custom hue, §5 T6. Status: `docs/PROGRESS.md`.
 ### Added
 - **Custom hue** (`src/site/theme/custom.ts`, lazy): an 8th THEME swatch opens a hue slider over 36 generated dots. The browser runs the same generator as the presets; chroma and lightness come from the neighbouring presets and are clamped by the rules, so every hue (swept 0–359 × 2 schemes in `scripts/site/theme.ts`) passes them. The CSS is stored with the choice and replayed by the boot script (no flash).
 - **`prefers-contrast: more`:** per theme, label, mute and accent text at ≥ 7:1, the glyph grey at ≥ 4.5:1, hairlines twice as strong, opaque raised layers.
-- **Names in dot type** (`src/components/DotName.tsx`): board names and the widget page's card name are drawn by the engine through `textAt` and `DotCanvas`, wrapped to their box; the subtitle after "—" stays a mono label.
+- **Names in dot type** (`src/components/DotName.tsx`): board names and the widget page's card name are drawn by the engine through `textAt` and `DotCanvas`, wrapped to their box; the subtitle after the `—` stays a mono label.
 - Probes: the layout probe now fails a page with ≥ 10% of its chrome characters under 12 px; `theme-boot.ts` checks a stored custom hue paints before first paint and the contrast-more roles; `theme-picker.ts` checks the custom swatch and slider on desktop and in the phone sheet.
 ### Changed
 - **No contrast waivers:** `--mute` `#6E7278` → `#81858B` (≥ 4.5:1 on every surface), `--dim` is now a non-text glyph grey (`#65696F`, ≥ 3:1), `dark_signal`'s `on-red` is the red's dark ink (white was 3.55:1). Accent text is `--red-text` everywhere (21 rules used `--red`, which fails on paper); a check fails any `color:` that is not a text role. Goldens unchanged (none of these is an engine token).
@@ -62,7 +62,7 @@ Plan: `docs/LAYOUT-THEME-PLAN.md` §1c #3 and #15, §4 Custom hue, §5 T6. Statu
 - **Skins:** e-ink and flip-disc take a light card's paper and ink; the footer's live number is a dark inset under an emissive skin on a light page (it was dark ink on dark glass); the X-ray HUD figures use `--red-text`.
 - Boot script 900 → 960 B budget (the custom hue's style).
 
-## [Unreleased] — 2026-10-28 · T5 theme picker and the switch moment (round 2)
+## [Unreleased] · 2026-10-28 · T5 theme picker and the switch moment (round 2)
 Plan: `docs/LAYOUT-THEME-PLAN.md` §4 Picker, §5 T5. Status: `docs/PROGRESS.md`.
 ### Added
 - **THEME popover** next to DISPLAY ▾ (`src/components/theme/`): SYSTEM / LIGHT / DARK, the 7 accents as 7×7 dot swatches, a tone ramp and a live preview (the popover re-scopes itself to the hovered or focused theme). Opens on 100 ms of hover intent or a click; its content is a lazy chunk. Phones get the same controls in TOOLS › THEME (44 px targets).
@@ -72,7 +72,7 @@ Plan: `docs/LAYOUT-THEME-PLAN.md` §4 Picker, §5 T5. Status: `docs/PROGRESS.md`
 ### Changed
 - ⌘K: the 15 "Theme: dark_signal…" rows became "Theme: system / light / dark", "Accent: <name>" and "Accent: next". The TOOLS LIGHT / DARK tile is gone (TOOLS › THEME replaces it). An explicit pick drops `?theme=` / `?scheme=` / `?accent=` from the address bar.
 
-## [Unreleased] — 2026-10-28 · Foundation round: F0 engine foundation, T0–T4 layout and themes, E1–E2 editor (branch `feat/foundation`)
+## [Unreleased] · 2026-10-28 · Foundation round: F0 engine foundation, T0–T4 layout and themes, E1–E2 editor (branch `feat/foundation`)
 Plans: `docs/living-matter/F0-foundation.md`, `docs/LAYOUT-THEME-PLAN.md`, `docs/EDITOR-PLAN.md`. Status and checks: `docs/PROGRESS.md` › Foundation run.
 ### Added
 - **TILT on phones (F0.7–F0.8):** a TILT row in the TOOLS sheet asks for motion access once (iOS) and the physics board follows the phone: tip it and the PIT and INK cards fall that way; held upright they heal back onto their loop. `src/site/light.ts` (a lazy `Source`), `src/engine/light/input.ts`; vertical swipes still scroll, and Reduce Motion never starts tilt by itself.
@@ -90,7 +90,7 @@ Plans: `docs/living-matter/F0-foundation.md`, `docs/LAYOUT-THEME-PLAN.md`, `docs
 ### Tooling
 - CI runs the CSS token lint and re-runs `scripts/site/theme.ts --check` after the build (the `dist/index.html` boot-script check). `scripts/spec.ts` and `scripts/physics.ts` use the shared golden key helpers (`scripts/lib/goldenKey.ts`). `src/spec/validate.ts` loads the IR noise pack itself. The essay's sim figure leans the hourglass through the light hub.
 
-## [Unreleased] — 2026-10-27 · ALGORITHMS board (branch `feat/algorithms`)
+## [Unreleased] · 2026-10-27 · ALGORITHMS board (branch `feat/algorithms`)
 Doc: `docs/ALGORITHMS.md`.
 ### Added
 - `src/engine/algo/`: `stipple` (weighted Voronoi stippling, Secord 2002: Lloyd relaxation with a bucket ring search, then a Voronoi-neighbour walk; lazy, cached iterations), `attractorDensity` (Clifford / de Jong log-density histogram; deterministic `dsin` / table `tsin`; a collapse guard that nudges out of periodic windows), `wfc` (simple tiled Wave Function Collapse with AC-3, chronological backtracking, fresh seeds and a scrubbable option history), `dla` (off-lattice diffusion-limited aggregation with circle jumps, a near-distance map and bisected contacts).
@@ -98,7 +98,7 @@ Doc: `docs/ALGORITHMS.md`.
 - `scripts/algorithms.ts` (run by `pnpm verify`): determinism, invariants (stipples on the density, a consistent WFC tiling with a monotone history, non-overlapping DLA discs touching their parents, D in 1.6–1.85, no attractor collapse along the card path) and timing budgets scaled by a measured load factor.
 - Goldens: 4 new presets (`algo-*`, t = 0 and t = 1.3); the existing hashes are unchanged.
 
-## [Unreleased] — 2026-10-26 · UX U2–U4, U5 DISPLAY menu, cleanup (branch `feat/ux-u0-u1`)
+## [Unreleased] · 2026-10-26 · UX U2–U4, U5 DISPLAY menu, cleanup (branch `feat/ux-u0-u1`)
 Build log: `docs/UX-PLAN.md` §9. Built by parallel agents in worktrees, merged and fully checked once.
 ### Added
 - **U2:** card hint verbs; the card action strip ⓘ / REMIX / LINK / PNG (`DotWidget.tsx`, `xray/store.ts` `cardAction`, `src/export/still.ts`); X-ray SUMMARY tab and glossary (`src/components/glossary.ts`); X-ray as a bottom sheet at ≤ 760 px.
@@ -115,7 +115,7 @@ Build log: `docs/UX-PLAN.md` §9. Built by parallel agents in worktrees, merged 
 ### Fixed
 - `packages/README.md` described `@dot480/core/spec` as card spec v0.
 
-## [Unreleased] — 2026-10-24 · UX U0 + U1 (branch `feat/ux-u0-u1`)
+## [Unreleased] · 2026-10-24 · UX U0 + U1 (branch `feat/ux-u0-u1`)
 Plan: `docs/UX-PLAN.md` (low floor, high ceiling); the build log, with what, why, checks and pending items, is §9.
 ### Added
 - **App**
@@ -153,7 +153,7 @@ Plan: `docs/UX-PLAN.md` (low floor, high ceiling); the build log, with what, why
 - Status banners on finished or historical docs: MASTER-PLAN, ADVANCED-PLAN, MOTION-INTERACTION-DEPTH, ADVERSARIAL-REVIEW, VERIFICATION-16POINT, BLOCK-INVENTORY and HARNESS.
 - Stale code comments fixed: `ir/reference.ts` (GPU parity), `studio/adapter.ts` (spec v1), `mcp/src/author.ts`, and `site/meta.ts` (script paths).
 
-## 2026-10-24 · `43eb614` (PR #5) — Vercel only
+## 2026-10-24 · `43eb614` (PR #5): Vercel only
 ### Added
 - **Deploy:** `vercel.json` with the SPA rewrite, the security headers (CSP, `nosniff`, referrer and permissions policies) and caching that the Cloudflare files carried.
 - OG URLs fall back to `https://$VERCEL_PROJECT_PRODUCTION_URL` when `SITE_URL` is unset (`scripts/site/postbuild.ts`).
@@ -163,7 +163,7 @@ Plan: `docs/UX-PLAN.md` (low floor, high ceiling); the build log, with what, why
 ### Removed
 - The Cloudflare Pages setup: the wrangler deploy job in `.github/workflows/ci.yml`, `public/_headers` and `public/_redirects`.
 
-## 2026-10-23/24 · PR #4 (`feat/p1-complete`), part 3 — P5–P6 and the Web plan (W0, C2–C8, C10, lift)
+## 2026-10-23/24 · PR #4 (`feat/p1-complete`), part 3: P5–P6 and the Web plan (W0, C2–C8, C10, lift)
 Merged to `main` as `bc5fcaa` on 2026-10-24. At merge: 173 presets, `pnpm golden --check` matches all, first-load JS ≈ 149 kB gz.
 ### Added
 - **Engine (P5)**
@@ -216,7 +216,7 @@ Merged to `main` as `bc5fcaa` on 2026-10-24. At merge: 173 presets, `pnpm golden
 - The draining hourglass heap and the flag's perspective corner stay on the card (CI failed at hh:mm:00–01).
 - Mobile: view tabs and playground controls get 24 px targets; STUDIO timeline rows no longer overflow at 375 px.
 
-## 2026-10-22/23 · PR #4, part 2 — P2 interaction, P3 depth + Field IR, P4 living boards
+## 2026-10-22/23 · PR #4, part 2: P2 interaction, P3 depth + Field IR, P4 living boards
 ### Added
 - **Engine (P2)**
   - `Control` contract in `src/engine/context.ts`: cards declare `controls`; the input layer edits `data` and fills `hover`/`pressed`/`focus`.
@@ -248,7 +248,7 @@ Merged to `main` as `bc5fcaa` on 2026-10-24. At merge: 173 presets, `pnpm golden
 ### Fixed
 - P2-F browser and a11y pass: radiogroup focus follows a pointer pick; the WORKSPACE preview honours `springKeys`; cards are `<div>` instead of `<article role=…>`.
 
-## 2026-10-22 · PR #4, part 1 — P1 complete, P0 leftovers
+## 2026-10-22 · PR #4, part 1: P1 complete, P0 leftovers
 ### Added
 - **Engine:** `splitFlapCells` and a `burst` preset flag with `ctx.since` (live sampling for 1.2 s after the minute tick).
 - **Boards:** **Departures** flagship (`src/widgets/boards/departures.ts`): split-flap list, Swiss station clock, platform flip, countdown, line map, service status.
@@ -265,7 +265,7 @@ Merged to `main` as `bc5fcaa` on 2026-10-24. At merge: 173 presets, `pnpm golden
 - P0-C: site literals use `Layer.size` (`T.dots`, metro `afterlight`); verify lints for it.
 - Dev: the Vite watcher ignores agent worktrees.
 
-## 2026-10-14 → 10-19 · `fa47cd9`, `4abf78a`, PR #2 — motion tests, merge to main
+## 2026-10-14 → 10-19 · `fa47cd9`, `4abf78a`, PR #2: motion tests, merge to main
 ### Added
 - **Tooling:** verify §13, 20 checks on the motion primitives (masks, reveal, springs, easing, decode, split-flap).
 - **CI:** first green run on GitHub; Linux goldens match the Windows baselines.
@@ -320,7 +320,7 @@ Merged to `main` as `bc5fcaa` on 2026-10-24. At merge: 173 presets, `pnpm golden
 - **Perf:** thermal-monitor heat is computed once per cell, and apps icons are bounded.
 - A broken preset renders blank instead of crashing the board.
 
-## 2026-10-14 · `f748396`, `c8af647` — research, planning, changelog
+## 2026-10-14 · `f748396`, `c8af647`: research, planning, changelog
 ### Added
 - `docs/ADVANCED-PLAN.md`: full audit and roadmap. It covers:
   - a baseline benchmark (per-frame vs mount cost, SVG size);
@@ -346,10 +346,10 @@ Merged to `main` as `bc5fcaa` on 2026-10-24. At merge: 173 presets, `pnpm golden
   - **Architecture:** a `Raster` kind for neighbourhood ops; a `layers()`/`live()` static split; buffer-level keyed transitions with data springs; a 60 Hz master clock; hit-testing as data; a fixed-rate SimField; an integer hash.
   - **Field IR:** promoted to a core deliverable.
   - **Perception Lab:** a new track (DeviceProfile, HVS-SSIM, halftone ladder, display simulators).
-  - **Showcases:** sharper flagships (Departures, Instrument, Cinema, Levels, Glyph, Agent Heartbeat, Five Surfaces).
+  - **Flagships:** sharper hero boards (Departures, Instrument, Cinema, Levels, Glyph, Agent Heartbeat, Five Surfaces).
   - **Backlog and scope:** a lift backlog for the weakest cards; an explicit cut list.
 
-## 2026-10-13 · `d2bbb22` — rebuild all boards on the 144×144 TILE standard
+## 2026-10-13 · `d2bbb22`: rebuild all boards on the 144×144 TILE standard
 ### Added
 - **Engine:**
   - per-layer coarser `lattice` and `origin`, and explicit dot `sites`, so bigger elements use bigger dots instead of clusters;
@@ -375,7 +375,7 @@ Merged to `main` as `bc5fcaa` on 2026-10-24. At merge: 173 presets, `pnpm golden
 - The 40+ legacy single-file widgets in `src/widgets/*.ts` (replaced by the board files).
 - Unused shadcn UI components (`src/components/ui/*`), `ThemeProvider`, `components.json`, and template assets.
 
-## 2026-08-24 · `6c526fe` — verification script, Draw and Gallery tabs
+## 2026-08-24 · `6c526fe`: verification script, Draw and Gallery tabs
 ### Added
 - `pnpm verify` (`src/engine/verify-acceptance.ts`): engine acceptance tests.
 - A **Draw** tab: a grid drawing canvas, toolbar, reference image panel, Bresenham lines and field export (`src/components/draw/*`, `src/hooks/useDrawBoard.ts`, `src/lib/*`).
@@ -386,7 +386,7 @@ Merged to `main` as `bc5fcaa` on 2026-10-24. At merge: 173 presets, `pnpm golden
 - Refined the icon SDF, the halftone, polar, scatter and warped fields, and the sampler.
 - Updated `ADVERSARIAL-REVIEW.md` (final pass verdict) and `BLOCK-INVENTORY.md` (widget coverage).
 
-## 2026-08-22 · `278cf24` — Dot/480 engine, widgets and docs
+## 2026-08-22 · `278cf24`: Dot/480 engine, widgets and docs
 ### Added
 - **Engine** (`src/engine`, framework-free):
   - the `Field → Grid Sampler → Renderer` pipeline;
@@ -407,12 +407,12 @@ Merged to `main` as `bc5fcaa` on 2026-10-24. At merge: 173 presets, `pnpm golden
 - `AGENTS.md` clarifies the engine dependency rule.
 - `README.md` describes the architecture and usage.
 
-## 2026-08-22 · `0e5e97a` — Tailwind and import aliases
+## 2026-08-22 · `0e5e97a`: Tailwind and import aliases
 ### Added
 - Tailwind CSS v4 via `@tailwindcss/vite`.
 - `@/` path aliases in Vite and TypeScript.
 
-## 2026-08-22 · `8002c2d` — first commit
+## 2026-08-22 · `8002c2d`: first commit
 ### Added
 - Vite + React + TypeScript scaffold, oxlint config.
 - `AGENTS.md` (invariants) and `DESIGN.md` (tokens, colours, typography, components).
