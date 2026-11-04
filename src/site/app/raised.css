@@ -191,8 +191,7 @@
   overflow: hidden auto;
   overscroll-behavior: contain;
   scroll-snap-type: y mandatory;
-  scrollbar-width: none;
-  outline: 0
+  scrollbar-width: none
 }
 
 .pal-shell-log::-webkit-scrollbar {
