@@ -1,11 +1,11 @@
 /**
  * The single-widget page (docs/SHARE-PLAN.md §4): `/widget/<slug>/`, `/widget/<uid>/`, `/<uid>` and the old
  * `?card=` all land here (src/site/routes.ts). Lazy: the catalog, the metadata and the export helpers load with
- * it, never in the first load. The card is live and large, centred; its facts sit beside it (below on phones);
- * actions are iOS-style pills: a top bar (back to the board, previous / next) and a bottom bar (copy, share,
- * remix, X-ray, more), one capsule on phones above the home indicator.
+ * it, never in the first load. On a desktop the page is an app that fits the screen (#183): a top bar (back to the
+ * board, previous / next), the card on a stage that scales to fit, and a side panel with the name, the blurb, the
+ * grouped actions (export, share and remix, MORE) and the facts; the panel scrolls on its own. Phones stack it.
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { DotName } from '../DotName'
 import { dot480 } from '../../engine'
 import { boardIds, boardLabel, loadBoard, resolveCardId } from '../../widgets/manifest'
@@ -28,6 +28,7 @@ import { pick, useLiveData } from '../../data/useLiveData'
 import { cardScheme } from '../../site/theme/polarity'
 import { DotWidget } from '../DotWidget'
 import { Pill, PillBar, PillButton } from './PillBar'
+import { MoreMenu } from './MoreMenu'
 import './WidgetPage.css'
 
 export interface WidgetPageProps {
@@ -79,7 +80,6 @@ export function WidgetPage({ route, onOpen, onBoard }: WidgetPageProps) {
 function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & Omit<WidgetPageProps, 'route'>) {
   const live = useLiveData(sources), pond = w.board === 'pond'
   const stage = useRef<HTMLElement>(null)
-  const [more, setMore] = useState(false)
   const xray = useXR(s => s.global || s.on.size > 0)
   const i = items.findIndex(p => p.id === preset.id), prev = items[(i - 1 + items.length) % items.length], next = items[(i + 1) % items.length]
   const name = widgetTitle(preset.name), url = location.origin + widgetPath(w.slug, w.scope), short = location.origin + shortPath(w.uid)
@@ -127,17 +127,10 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [prev, next, onOpen])
-  useEffect(() => {
-    if (!more) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setMore(false) }
-    const onDown = (e: PointerEvent) => { if (!(e.target as Element).closest?.('.wp-more, .wp-more-btn')) setMore(false) }
-    window.addEventListener('keydown', onKey); window.addEventListener('pointerdown', onDown)
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('pointerdown', onDown) }
-  }, [more])
 
   const chips = [meta.hint, meta.animated && 'ANIMATED', meta.live && 'LIVE DATA', meta.media === 'camera' && 'CAMERA', meta.media === 'mic' && 'MICROPHONE', meta.clock && 'CLOCK'].filter((c): c is string => !!c)
   const facts: [string, ReactNode][] = [
-    ['Board', <a key="b" href={`/${w.board}/`} onClick={e => { if (e.button === 0 && !e.metaKey && !e.ctrlKey) { e.preventDefault(); onBoard(w.board, w.slug) } }}>{boardLabel(w.board)}</a>],
+    ['Board', <a key="b" className="wp-link" href={`/${w.board}/`} onClick={e => { if (e.button === 0 && !e.metaKey && !e.ctrlKey) { e.preventDefault(); onBoard(w.board, w.slug) } }}>{boardLabel(w.board)}</a>],
     ['Kind', meta.group],
     ['Grid', `${meta.grid.cols} × ${meta.grid.rows} dots · ${meta.grid.pitch} px pitch`],
     ['Dots lit', meta.dots.toLocaleString('en')],
@@ -157,42 +150,42 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
       </Pill>
     </PillBar>
     <div className="wp-main">
-      <figure className="wp-stage" ref={stage} style={{ maxWidth: preset.grid.cols * pitch + 32 }}>
+      {/* the stage is a size container: the card takes the most it can of it at its own aspect (#183) */}
+      <div className="wp-stagebox"><figure className="wp-stage" ref={stage} style={{ '--wp-max': `${preset.grid.cols * pitch + 32}px`, '--wp-ar': preset.grid.cols / preset.grid.rows } as CSSProperties}>
         <DotWidget type={preset.id} preset={preset} density={pitch} data={sources ? pick(live, preset.defaults) : undefined} />
         {/* the figure legend (docs/LAYOUT-THEME-PLAN.md §1c #14) */}
         <figcaption className="fig-cap"><b>FIG {String(i + 1).padStart(2, '0')}</b>{w.slug} · {meta.grid.cols} × {meta.grid.rows} dots · {meta.grid.pitch} px · {meta.renderer.toUpperCase()}</figcaption>
-      </figure>
-      <aside className="wp-rail">
+      </figure></div>
+      <aside className="wp-rail" aria-label="About this card">
         <p className="wp-eyebrow">{boardLabel(w.board)} · {String(i + 1).padStart(2, '0')}</p>
         <h1 id="wp-title"><span className="sr-only">{name}</span><DotName text={name} pitch={4} /></h1>
         <p className="wp-blurb">{meta.blurb}</p>
-        {preset.credit && <p className="wp-credit">by {preset.credit.by.join(', ')} · <a href={preset.credit.source} target="_blank" rel="noopener noreferrer">{preset.credit.title}</a>{preset.credit.note && <> · {preset.credit.note}</>}</p>}
+        {preset.credit && <p className="wp-credit">by {preset.credit.by.join(', ')} · <a className="wp-link" href={preset.credit.source} target="_blank" rel="noopener noreferrer">{preset.credit.title}</a>{preset.credit.note && <> · {preset.credit.note}</>}</p>}
+        {/* the actions, grouped by what they do: export, then share and remix, then the rest */}
+        <PillBar label="Card actions" className="wp-actions">
+          <Pill className="wp-copy">
+            <PillButton label="PNG" glyph="▣" title="Copy as PNG" onClick={act.png} />
+            <PillButton label="SVG" glyph="◇" title="Copy as SVG" onClick={act.svg} />
+            <PillButton label="LINK" glyph="⌁" title="Copy link" onClick={act.link} />
+          </Pill>
+          <Pill className="wp-go">
+            {share && <PillButton label="SHARE" glyph="↗" title="Share" onPointerDown={() => { sharePNG.current = png() }} onClick={act.share} />}
+            <PillButton label="REMIX" glyph="✎" title="Remix in MAKE" onClick={act.remix} />
+            <PillButton label="X-RAY" glyph="ⓘ" title="X-ray: how it works" onClick={act.xray} pressed={xray} className="wp-desk" />
+            <MoreMenu items={[
+              { label: 'Copy short link', note: shortPath(w.uid), run: act.short },
+              { label: 'Copy HTML', note: 'static SVG, no script', run: act.html },
+              { label: 'Download PNG', run: act.savePNG, group: true },
+              { label: 'Download SVG', run: act.saveSVG },
+              { label: 'X-ray: how it works', run: act.xray, group: true, className: 'wp-phone' },
+              { label: `Back to ${boardLabel(w.board)}`, run: () => onBoard(w.board, w.slug), group: true },
+            ]} />
+          </Pill>
+        </PillBar>
+        {/* tags describe the card: plain labels, not controls (#185) */}
         {chips.length > 0 && <ul className="wp-chips" aria-label="What it does">{chips.map(c => <li key={c}>{c}</li>)}</ul>}
         <dl className="wp-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </aside>
     </div>
-    <PillBar label="Card actions" className="wp-bottom">
-      <Pill className="wp-copy">
-        <PillButton label="PNG" glyph="▣" title="Copy as PNG" onClick={act.png} />
-        <PillButton label="SVG" glyph="◇" title="Copy as SVG" onClick={act.svg} className="wp-desk" />
-        <PillButton label="LINK" glyph="⌁" title="Copy link" onClick={act.link} className={share ? 'wp-desk' : ''} />
-      </Pill>
-      <Pill className="wp-go">
-        {share && <PillButton label="SHARE" glyph="↗" title="Share" onPointerDown={() => { sharePNG.current = png() }} onClick={act.share} />}
-        <PillButton label="REMIX" glyph="✎" title="Remix in MAKE" onClick={act.remix} />
-        <PillButton label="X-RAY" glyph="ⓘ" title="X-ray: how it works" onClick={act.xray} pressed={xray} className="wp-desk" />
-        <PillButton label="MORE" glyph="⋯" title="More actions" onClick={() => setMore(m => !m)} expanded={more} className="wp-more-btn" />
-      </Pill>
-    </PillBar>
-    {more && <div className="wp-more" role="menu" aria-label="More actions">
-      <button role="menuitem" type="button" className="wp-phone" onClick={() => { setMore(false); act.svg() }}>Copy SVG</button>
-      {share && <button role="menuitem" type="button" className="wp-phone" onClick={() => { setMore(false); act.link() }}>Copy link</button>}
-      <button role="menuitem" type="button" onClick={() => { setMore(false); act.short() }}>Copy short link <code>{shortPath(w.uid)}</code></button>
-      <button role="menuitem" type="button" onClick={() => { setMore(false); act.html() }}>Copy HTML <small>static SVG, no script</small></button>
-      <button role="menuitem" type="button" onClick={() => { setMore(false); act.savePNG() }}>Download PNG</button>
-      <button role="menuitem" type="button" onClick={() => { setMore(false); act.saveSVG() }}>Download SVG</button>
-      <button role="menuitem" type="button" className="wp-phone" onClick={() => { setMore(false); act.xray() }}>X-ray: how it works</button>
-      <button role="menuitem" type="button" onClick={() => { setMore(false); onBoard(w.board, w.slug) }}>Back to {boardLabel(w.board)}</button>
-    </div>}
   </section>
 }
