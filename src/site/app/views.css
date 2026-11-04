@@ -168,7 +168,8 @@
   outline-offset: -1px
 }
 
-/* a bleed card has no padding: its ⋯ is a small chip on a faint backdrop in the corner */
+/* a bleed card has no padding: its ⋯ is a small chip in the corner, shown only on hover, on focus, while the
+   card is engaged or while its menu is open; at rest nothing sits on the drawing. It stays in the tab order. */
 .dot-card--bleed .dot-card-bar {
   top: 6px;
   right: 6px
@@ -176,17 +177,32 @@
 
 .dot-card--bleed .dot-card-more {
   height: 16px;
-  background: color-mix(in srgb, var(--surface) 60%, transparent)
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+  opacity: 0
 }
 
-/* the menu: the raised layer (raised.css), under ⋯, inside the card */
+.dot-card--bleed:hover .dot-card-more,
+.dot-card--bleed:active .dot-card-more,
+.dot-card--bleed:focus-within .dot-card-more,
+.dot-card--bleed.dot-card--engaged .dot-card-more,
+.dot-card--bleed .dot-card-more[aria-expanded="true"] {
+  opacity: 1
+}
+
+/* the menu: the raised layer (raised.css), under ⋯, inside the card. A board card is a size container (grid.css),
+   so 100cqi is the card's width: the menu never runs past the card's left edge or its bottom (a card is square),
+   and long rows wrap; on a small tile the list scrolls */
 .dot-card-menu {
   position: absolute;
   top: calc(100% + var(--space-1));
   right: 0;
   display: flex;
   flex-direction: column;
-  min-width: 168px;
+  width: max-content;
+  min-width: min(168px, calc(100cqi - 2 * var(--space-3)));
+  max-width: calc(100cqi - 2 * var(--space-3));
+  max-height: calc(100cqi - 4 * var(--space-3));
+  overflow-y: auto;
   padding: var(--space-1)
 }
 
@@ -198,8 +214,7 @@
   color: var(--value);
   font: 500 var(--fs-label-11) var(--mono);
   letter-spacing: .04em;
-  text-align: left;
-  white-space: nowrap
+  text-align: left
 }
 
 .dot-card-bar .dot-card-menu button:hover,

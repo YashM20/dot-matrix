@@ -147,7 +147,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme: the
       </header>}
       <div ref={bar} className={`dot-card-bar${menu ? ' open' : ''}`}>
         {hint && preset.chrome === 'dots' && <small className="dot-card-hint" data-touch={touchHint} aria-hidden="true">{hint}</small>}
-        {letGo && <button type="button" className="dot-card-done" aria-label={`${preset.name}: let go of the card`} onClick={letGo}>DONE</button>}
+        {letGo && <button type="button" className="dot-card-done" aria-label={`${preset.name}: let go of the card`} onClick={() => { setMenu(false); letGo() }}>DONE</button>}
         {/* #181: one ⋯ in the card's top padding; its menu opens on demand, so nothing sits on the drawing at rest or on hover */}
         <button ref={more} type="button" className="dot-card-more" aria-label={`${preset.name}: card actions`} aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(m => !m)}>⋯</button>
         {menu && <div className="dot-card-menu" role="menu" aria-label={`${preset.name}: card actions`} onKeyDown={onMenuKey}>

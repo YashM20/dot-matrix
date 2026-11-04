@@ -64,9 +64,14 @@
     font-size: var(--fs-label-12)
   }
 
-  /* ⋯ and DONE stay small in the card's top padding, but their hit area is 44 × 44 (an invisible margin) */
+  /* ⋯ and DONE stay small in the card's top padding, but their hit area is 44 × 44 (an invisible margin);
+     ⋯ is as wide as its hit area, so the two areas sit side by side and never overlap */
   .dot-card-bar .dot-card-done {
     position: relative
+  }
+
+  .dot-card-bar .dot-card-more {
+    min-width: var(--tap)
   }
 
   .dot-card-bar .dot-card-more::after,
