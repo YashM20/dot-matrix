@@ -1,6 +1,6 @@
 import type { Control, ControlPatch, DotStyle, ThemeTokens } from '../engine'
 import { needsHold } from '../engine/interaction'
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { withChrome, type WidgetPreset } from '../widgets/types'
 import { registeredPreset } from '../widgets/registry'
 import { findPreset } from '../widgets/manifest'
@@ -9,8 +9,8 @@ import { DotCanvas, type DotCanvasProps } from './DotCanvas'
 import { useCamera, withMedia } from '../media/useCamera'
 import { HAND_KEY, useHandMode } from '../media/useHand'
 import { useXRay } from './xray/useXRay'
-import { XRayOverlay } from './xray/XRayOverlay'
 import { cardAction, type CardAction } from './xray/store'
+import { useFlag } from '../site/useFlag'
 import { useDisplaySkin } from './skins/store'
 import { useTheme } from '../site/theme/useTheme'
 import { themeTokens } from '../site/theme/theme'
@@ -26,6 +26,10 @@ function hintVerb(p: WidgetPreset, cs: Control[]) {
 /** The same hint on touch, where a drag that has to go up or down starts with a hold (a vertical swipe scrolls the page). */
 const touchVerb = (verb: string, cs: Control[]) => (verb === 'DRAG' && cs.some(needsHold) ? 'HOLD · DRAG' : undefined)
 const ACTS: [CardAction, string, string][] = [['how', 'ⓘ', 'How it works'], ['remix', 'REMIX', 'Remix this card'], ['open', 'OPEN', 'Open on its own page'], ['link', 'LINK', 'Copy a link to this card'], ['png', 'PNG', 'Download as PNG']]
+const ACTS_NO_XRAY = ACTS.filter(([a]) => a !== 'how')
+// X-ray's overlay and its probe are a lazy chunk behind the `xray` flag (src/site/flags.ts), off first load; a build
+// with VITE_FLAG_XRAY=kill leaves the chunk out (the test stays inline so the bundler sees a constant)
+const XRayOverlay = import.meta.env.VITE_FLAG_XRAY === 'kill' ? null : lazy(() => import('./xray/XRayOverlay').then(m => ({ default: m.XRayOverlay })))
 
 export interface DotWidgetProps {
   /** Preset id from `widgetPresets` (ignored when `preset` is given). */
@@ -89,7 +93,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme: the
   const hand = useHandMode(!!preset?.controls?.some(c => c.key === HAND_KEY)), { intercept } = hand
   const layers = useMemo(() => preset && (preset.media ? withMedia(withChrome(preset), camera.read) : withChrome(preset)), [preset, camera.read])
   // C10 X-ray slot: identity (same layers, no override) unless this card is X-rayed with a layer soloed / muted
-  const xr = useXRay(layers)
+  const xr = useXRay(layers), xray = useFlag('xray') && !!XRayOverlay
   const sharedKey = sharedKeys?.join(',') ?? ''
   const handover = preset?.handover
   const onInput = useCallback((input: ControlPatch) => {
@@ -134,14 +138,14 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme: the
       <div ref={bar} className={`dot-card-bar${menu ? ' open' : ''}`}>
         {hint && preset.chrome === 'dots' && <small className="dot-card-hint" data-touch={touchHint} aria-hidden="true">{hint}</small>}
         {letGo && <button type="button" className="dot-card-done" aria-label={`${preset.name}: let go of the card`} onClick={letGo}>DONE</button>}
-        <span className="dot-card-acts">{ACTS.map(([a, label, title]) => <button key={a} type="button" aria-label={title} title={title} aria-pressed={a === 'how' ? xr.on : undefined} onClick={act(a)}>{label}</button>)}</span>
+        <span className="dot-card-acts">{(xray ? ACTS : ACTS_NO_XRAY).map(([a, label, title]) => <button key={a} type="button" aria-label={title} title={title} aria-pressed={a === 'how' ? xr.on : undefined} onClick={act(a)}>{label}</button>)}</span>
         <button type="button" className="dot-card-more" aria-label={`${preset.name}: card actions`} aria-expanded={menu} onClick={() => setMenu(m => !m)}>⋯</button>
       </div>
       <div className="dot-card-body" role={interactive ? undefined : 'img'} aria-label={interactive ? undefined : name}>
         <DotCanvas layers={xr.layers} renderer={xr.renderer} onMode={xr.onMode} data={preset.media ? { ...merged, ...camera.data, ...hand.data } : { ...merged, ...hand.data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={fps} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
           controls={interactive ? controls : undefined} onInput={interactive ? onInput : undefined} onEngage={interactive ? onEngage : undefined} />
-        {xr.on && <XRayOverlay xr={xr} preset={preset} layers={layers} data={preset.media ? { ...merged, ...camera.data } : merged} grid={grid} style={style} theme={theme}
-          animated={!!(animated ?? preset.animated)} fps={fps} tick={tick} />}
+        {xr.on && xray && XRayOverlay && <Suspense fallback={null}><XRayOverlay xr={xr} preset={preset} layers={layers} data={preset.media ? { ...merged, ...camera.data } : merged} grid={grid} style={style} theme={theme}
+          animated={!!(animated ?? preset.animated)} fps={fps} tick={tick} /></Suspense>}
       </div>
     </div>
   )
