@@ -131,9 +131,11 @@ async function fpsRow() {
     await cdp('Emulation.setDeviceMetricsOverride', phone ? { width: W, height: H, deviceScaleFactor: 1, mobile: true } : { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
     await cdp('Emulation.setTouchEmulationEnabled', phone ? { enabled: true, maxTouchPoints: 5 } : { enabled: false })
     await cdp('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: 8 }) // only the pointer decides here
-    await cdp('Page.navigate', { url: `${base}${pick.board}/` })
+    // X-ray is behind its flag (off by default): the HUD needs it on
+    await cdp('Page.navigate', { url: `${base}${pick.board}/?flags=xray` })
     const card = `document.querySelector('[data-card-id="${id}"]')`
     if (!await waitFor(`!!${card}?.querySelector('canvas, svg')`, 20000)) return 'card did not render'
+    if (!await waitFor(`!!${card}.querySelector('button[aria-label="How it works"]')`, 5000)) return 'no ⓘ (xray flag off?)'
     await js(`${card}.querySelector('button[aria-label="How it works"]').click()`)
     const hud = `(${card}.textContent.match(/(\\d+)\\/(\\d+) FPS/) || [])[2]`
     return await waitFor(`!!${hud}`, 10000) ? Number(await js(hud)) : 'no X-ray fps HUD'

@@ -2,7 +2,10 @@
  * C10 (the explorable layer) in headless Chrome over CDP (Node's built-in WebSocket, no deps):
  * X-ray on three boards (hover tooltip, inspector, solo/mute, pixels unchanged once off), per-card X,
  * the time machine (T, scrub, Space), the ⌘K palette (search + open), the dot shell (help, ls, xray,
- * t, open), remix in DOTS and the Konami boss. Screenshots in `.snapshots/c10/`.
+ * t, open), remix in DOTS and the Konami boss. Screenshots in `.snapshots/c10/`. X-ray is behind the `xray` flag
+ * (src/site/flags.ts, off by default), so every page opens with `?flags=xray`, except the `flagsoff` section, which
+ * checks that with the flag off there is no X-ray control, X does nothing, the palette has no X-ray action and the
+ * shell answers `xray` with "command not found".
  *   pnpm dev --port 5201 (or `vite build` + `vite preview`), then `npx tsx scripts/c10-browser.ts [baseUrl]`
  *   "OPEN IN CODE" lands in the editor's CODE inspector (`.dw-code textarea`); "OPEN IN COMPOSE" adds a frame.
  */
@@ -63,7 +66,10 @@ const move = (x: number, y: number) => cdp('Input.dispatchMouseEvent', { type: '
 const cardPoint = (sel: string, fx = .5, fy = .5) => js(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); el.scrollIntoView({ block: 'center' }); const b = el.querySelector('.dot-card-body .skin-surface > :first-child').getBoundingClientRect(); return { x: b.left + b.width * ${fx}, y: b.top + b.height * ${fy} } })()`) as Promise<{ x: number; y: number }>
 /** Signature of a card's drawn pixels (canvas) or markup (svg). The first readback of a GPU canvas can differ in low bits: read twice. */
 const cardSig = (sel: string) => js(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); const c = el.querySelector('.dot-card-body canvas:not(.xr-grid)'); if (!c) return 'svg:' + (el.querySelector('.dot-svg')?.innerHTML.length ?? -1); const g = c.getContext('2d'); g.getImageData(0, 0, 1, 1); const d = g.getImageData(0, 0, c.width, c.height).data; let n = 0, s = 0; for (let i = 0; i < d.length; i += 4) if (d[i] + d[i+1] + d[i+2] > 60) { n++; s = (s * 31 + i + d[i]) % 1000003 } return n + ':' + s })()`) as Promise<string>
-const open = async (query: string) => { await cdp('Page.navigate', { url: `${base}${query}` }); return waitFor(`document.querySelectorAll('[data-xr-key]').length > 0`, 30000) }
+const open = async (query: string, flags = 'xray') => {
+  await cdp('Page.navigate', { url: `${base}${query}${flags ? `${query.includes('?') ? '&' : '?'}flags=${flags}` : ''}` })
+  return waitFor(`document.querySelectorAll('[data-xr-key]').length > 0`, 30000)
+}
 
 try {
   await cdp('Page.enable'); await cdp('Runtime.enable')
@@ -237,6 +243,25 @@ try {
   check('Open in compose adds the card to the editor as a frame (a layer stack)', studio)
   await sleep(800)
   await shot('07c-remix-studio')
+
+  }
+  // ── the xray flag off (the default): no control anywhere, X does nothing, no palette action, no shell command
+  if (run('flagsoff')) {
+  await open('?board=henry', ''); await sleep(1500)
+  const dock = await waitFor(`document.querySelectorAll('.pal-dock button').length > 0`, 8000)
+  check('flag off: no X-RAY in the dock and no ⓘ on any card', dock && await js(`![...document.querySelectorAll('.pal-dock button')].some(b => b.textContent === 'X-RAY') && !document.querySelector('button[aria-label="How it works"]')`))
+  const fp = await cardPoint('.board-view [data-xr-key]')
+  await move(fp.x, fp.y); await sleep(150)
+  await key('x'); await key('x', 8); await sleep(500)
+  check('flag off: X and ⇧X do nothing', (await count('.xr-overlay')) === 0 && (await count('.xr-panel')) === 0)
+  await key('k', 2); await waitFor(`document.activeElement?.getAttribute('role') === 'combobox'`, 4000); await typeText('xray every'); await sleep(300)
+  check('flag off: the palette has no X-ray action', !(await js(`[...document.querySelectorAll('.pal-item')].some(li => /x-ray/i.test(li.textContent))`)))
+  await key('Escape')
+  await key('`'); await waitFor(`document.activeElement?.classList.contains('pal-shell-input')`, 2000)
+  await typeText('xray'); await key('Enter'); await sleep(300)
+  const said = await text('.pal-shell [aria-live]')
+  check('flag off: the shell says xray: command not found', /xray: command not found/i.test(said) && (await count('.xr-overlay')) === 0, said.slice(-80))
+  await key('Escape')
 
   }
   // ── Konami
