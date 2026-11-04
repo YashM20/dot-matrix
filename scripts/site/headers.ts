@@ -4,6 +4,7 @@
  *    `/lab/motion-lab/x`, every HTML file in the repo and in a fresh `dist/`) gets the CSP and the hardening headers
  *    from the header blocks whose `source` matches it. No header block excludes paths with a negative lookahead;
  *  - the CSP: `frame-ancestors 'self'`, no inline or eval scripts, no WebSocket or localhost sources in `connect-src`;
+ *    `'unsafe-eval'` and `'wasm-unsafe-eval'` appear nowhere in vercel.json or a page's meta CSP (#158);
  *    exactly one block sets it (the theme probes serve that one);
  *  - Permissions-Policy turns off the features the site doesn't use;
  *  - every inline script in the HTML pages has its sha256 in `script-src` (the boot script's hash still matches), and
@@ -109,6 +110,17 @@ assert("headers: CSP frame-ancestors is 'self' (no framing by other sites)", JSO
 assert("headers: CSP script-src is 'self' plus hashes (no inline, eval, blob:, data: or wildcard)", script[0] === "'self'" && script.slice(1).every(s => /^'sha256-[A-Za-z0-9+/=]+'$/.test(s)), script.join(' '))
 assert("headers: CSP connect-src has no WebSocket or localhost source (only 'self' and https hosts)", connect.every(s => s === "'self'" || /^https:\/\/[a-z0-9.-]+$/.test(s)) && !connect.some(s => /localhost|127\.0\.0\.1/.test(s)), connect.join(' '))
 assert("headers: CSP object-src 'none', base-uri 'self', form-action 'self'", dir.get('object-src')?.join(' ') === "'none'" && dir.get('base-uri')?.join(' ') === "'self'" && dir.get('form-action')?.join(' ') === "'self'")
+
+// CSP drift (#158): no policy may let a page build code from strings, so `new Function` stays off in production and
+// Field IR runs on its closure tree. Checked over the whole of vercel.json (any header, any directive) and every
+// page's meta CSP, case-insensitive, quoted or not.
+const evalGrants = (text: string): string[] => [...new Set((text.match(/(?:wasm-)?unsafe-eval/gi) ?? []).map(s => s.toLowerCase()))]
+assert("headers: the eval guard catches 'unsafe-eval' and 'wasm-unsafe-eval' (test policies with each, in any directive)",
+  evalGrants("script-src 'self' 'unsafe-eval'").join() === 'unsafe-eval' && evalGrants("default-src 'self'; worker-src 'self' 'WASM-UNSAFE-EVAL'").join() === 'wasm-unsafe-eval'
+  && evalGrants("default-src 'self' 'unsafe-inline'").length === 0)
+const metaCSP = (f: string) => [...readFileSync(f, 'utf8').matchAll(/<meta\b[^>]*http-equiv\s*=\s*["']?content-security-policy[^>]*>/gi)].map(m => m[0]).join('\n')
+const evalIn = ([['vercel.json', evalGrants(readFileSync('vercel.json', 'utf8'))], ...[...sourcePages, ...distPages].map(f => [f, evalGrants(metaCSP(f))])] as [string, string[]][]).filter(([, g]) => g.length)
+assert("headers: no 'unsafe-eval' or 'wasm-unsafe-eval' anywhere in vercel.json or a page's meta CSP", !evalIn.length, evalIn.map(([f, g]) => `${f}: ${g}`).join('; '))
 
 // Permissions-Policy: unused features off, the ones the site uses kept for itself
 const pp = new Map((headersFor('/').get('permissions-policy')?.[0] ?? '').split(',').map(s => s.trim().split('=') as [string, string]))
