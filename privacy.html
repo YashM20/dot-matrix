@@ -26,7 +26,7 @@
         <p class="lede">Short version: this site has no accounts, no cookies, no analytics and no ads, and your camera, microphone and
           photos never leave your device. It keeps a few settings in your own browser, and the Live board fetches weather and
           GitHub data from three public APIs.</p>
-        <p class="stamp">LAST UPDATED 2026-10-27</p>
+        <p class="stamp">LAST UPDATED 2026-11-04</p>
       </header>
 
       <h2>Who runs this</h2>
@@ -40,24 +40,45 @@
         only allows connections to this site and to the APIs listed below.</p>
 
       <h2>What is stored on your device</h2>
-      <p>A few things are saved in your browser's <code>localStorage</code> for this site so they survive a reload.
-        They stay on your device, are never sent anywhere, and the site works without them.</p>
+      <p>Some settings and the things you make are saved in your browser's <code>localStorage</code> for this site, so
+        they survive a reload. Every key below stays on your device and is never sent anywhere. The site works without
+        any of them, and most are only written once you change a setting or make something.</p>
+      <h3>Settings</h3>
       <dl class="keys">
-        <div><dt><code>dot480:intro</code></dt><dd>You closed the one-line intro above the boards.</dd></div>
+        <div><dt><code>dot480:theme</code></dt><dd>The colour scheme and accent you picked, and the colours of a custom hue.</dd></div>
+        <div><dt><code>dot480:share-theme</code></dt><dd>Whether links you copy carry your theme.</dd></div>
+        <div><dt><code>dot480:cards</code></dt><dd>The card size you picked (large, medium or small).</dd></div>
         <div><dt><code>dot480:skin</code></dt><dd>The display skin you picked (OLED, CRT, e-ink and so on).</dd></div>
-        <div><dt><code>dot480:clack</code></dt><dd>Whether the flip-disc clack sound is on.</dd></div>
         <div><dt><code>dot480:pro</code></dt><dd>Pro mode is on.</dd></div>
+        <div><dt><code>dot480:flags</code></dt><dd>Feature switches you turned on or off in this browser, such as the flip-disc clack sound.</dd></div>
+        <div><dt><code>dot480:clack</code>, <code>dot480:worker</code></dt><dd>Older copies of two of those switches. They are still read, and removed the next time you change the switch.</dd></div>
+        <div><dt><code>dot480:intro</code></dt><dd>You closed the one-line intro above the boards.</dd></div>
         <div><dt><code>dot480:fold:…</code></dt><dd>Which "More" panels in MAKE you left open or closed, one key per panel.</dd></div>
+        <div><dt><code>dot480:pond</code></dt><dd>Only if you turn on POND MEMORY: the day the pond was first made, the day of your last visit and a visit count, so the pond can age. Turning it off deletes it.</dd></div>
+      </dl>
+      <h3>Things you make</h3>
+      <dl class="keys">
         <div><dt><code>dot480.dots.gallery</code></dt><dd>Up to 40 DOTS programs you ran or remixed in MAKE · CODE.</dd></div>
-        <div><dt><code>dot480.studio.v1</code>, <code>dot480.studio.library</code></dt><dd>The card you are composing in MAKE · COMPOSE, and the cards you saved there.</dd></div>
+        <div><dt><code>dot480.studio.v1</code>, <code>dot480.studio.library</code></dt><dd>The card you are composing in MAKE · COMPOSE, and up to 24 cards you saved there.</dd></div>
+        <div><dt><code>dot480.editor.v1</code></dt><dd>The drawing board's document, saved as you work.</dd></div>
+        <div><dt><code>dot480.editor.clip</code></dt><dd>The last frames or layers you copied in the drawing board, so you can paste them in another tab.</dd></div>
+        <div><dt><code>dot480.editor.links</code></dt><dd>The last 40 drawing board links you made or opened: their id, name, size and time, so the board can show where a remix came from.</dd></div>
+        <div><dt><code>dot480.editor.sheet</code></dt><dd>On phones, how tall you left each of the drawing board's bottom panels.</dd></div>
         <div><dt><code>dot480.hive.scores.v1</code></dt><dd>The game's high-score table: three-letter initials and scores.</dd></div>
-        <div><dt><code>dot480:live:…</code></dt><dd>The last weather, now-playing and GitHub readings the Live board received, so it can start from them next time (ignored after 7 days).</dd></div>
+      </dl>
+      <h3>Live data</h3>
+      <dl class="keys">
+        <div><dt><code>dot480:live:…</code></dt><dd>The last weather, GitHub contributions and now-playing readings the Live board showed, one key per source, so it can start from them next time. They are ignored after 7 days.</dd></div>
+      </dl>
+      <p>One key lives in <code>sessionStorage</code> instead, which your browser clears when you close the tab:</p>
+      <dl class="keys">
+        <div><dt><code>dot480:tilt</code></dt><dd>You allowed tilt on this tab, so tilt-reactive cards don't ask again until you close it.</dd></div>
       </dl>
       <p>Open tabs of the site also talk to each other over a <code>BroadcastChannel</code> (so clocks and live cards stay
         in step); those messages never leave your browser and aren't stored.</p>
       <p><b>To clear it all:</b> remove this site's data in your browser settings (usually under site settings or
         "cookies and site data" for <code>matrix.reactopia.me</code>), or in developer tools under
-        Application → Local storage. In a private window it is gone when you close the window.</p>
+        Application → Local storage and Session storage. In a private window it is gone when you close the window.</p>
 
       <h2>Camera, microphone and motion</h2>
       <p>Some cards can use your device's sensors. The camera and microphone are only requested after you press the
@@ -79,7 +100,7 @@
 
       <h2>Share links</h2>
       <p>When you share a DOTS program, the program itself is packed into the link (the <code>p=</code> part of the
-        address). Nothing is stored on a server: anyone with the link can read the program, it ends up in browser
+        address), and a drawing board link packs its frames the same way (the <code>d=</code> part). Nothing is stored on a server: anyone with the link can read the program, it ends up in browser
         history like any address, and the request for it appears in the hosting logs described below. Don't put
         anything private in a program you share. Copy buttons write to your clipboard only when you press them.</p>
 
@@ -95,7 +116,6 @@
           or the <code>gh</code> you put in the address.</li>
         <li><b>GitHub</b> (<code>api.github.com</code>) receives the same username, only if the service above fails, to
           read that user's public activity. See <a href="https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement">GitHub's privacy statement</a>.</li>
-        <li><b>A now-playing feed</b>, only if you add one yourself with <code>np=wss://…</code> in the address: your browser then connects to the address you chose.</li>
       </ul>
       <p>Links to other sites (GitHub, the essay's references) are ordinary links; once you follow one, that site's
         own policy applies. The site tells them only that you came from this site, not which page.</p>
