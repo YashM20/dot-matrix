@@ -8,7 +8,7 @@ import { SpecError, type CardSpec, type SpecIssue } from './types'
 import { validateSpec } from './validate'
 
 export * from './types'
-export { validateSpec, type SpecResult } from './validate'
+export { validateSpec, validateSpecControl, validateSpecLayer, type SpecResult } from './validate'
 export { specToPreset, buildLayer, layerGrid, formatNumber, specLayerOf, type BuildOptions, type SpecPreset } from './build'
 export { presetToSpec, exportPreset, bakeLayer, type ExportOptions, type ExportReport } from './export'
 export { migrateSpec, specVersion } from './migrate'

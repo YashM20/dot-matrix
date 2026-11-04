@@ -23,7 +23,8 @@ import { caretAt, dragSiteHandle, editableText, hasBounds, inkAt, inkStep, layer
 import { InText, LongPressMenu, QuickBar } from './OnCanvas'
 import { CUE_MS, LONG_PRESS_MS, snappedGuides } from './phone'
 import { commitTyping, placeCaret, startTyping } from './typing'
-import { useEditor, type Camera } from './store'
+import { drew, useEditor, type Camera } from './store'
+import { EditorBoundary } from './EditorBoundary'
 
 /** Probe hooks (scripts/editor-browser.ts): draw stats, the selected frame id and every selected id. */
 /** Render stats for the browser probes. `tl`: the timeline t each frame last drew at while ANIMATE previews it, so a
@@ -32,7 +33,7 @@ declare global { interface Window { __editor?: { frames: number; drawn: number; 
 
 // ── render registry: one entry per mounted frame canvas ──────────────────────────────────────────
 interface Drawn { card: EditorFrame['card']; theme: string; k: number; state?: string; tl: boolean; t: number }
-interface Entry { canvas: HTMLCanvasElement; drawn?: Drawn; dirty: boolean; last: number; pointer?: { x: number; y: number; down: boolean } }
+interface Entry { canvas: HTMLCanvasElement; drawn?: Drawn; dirty: boolean; last: number; pointer?: { x: number; y: number; down: boolean }; broke?: boolean }
 const entries = new Map<string, Entry>()
 export const markDirty = (id: string) => { const e = entries.get(id); if (e) e.dirty = true }
 /** The pointer (in card cells) for the frame under it, if that card reads `pointer`; every other frame loses it. */
@@ -43,6 +44,8 @@ function feedPointer(f: EditorFrame | undefined, wx: number, wy: number) {
 }
 const readsPointer = (f: EditorFrame) => f.card.layers.some(l => (l.kind === 'ir' || l.kind === 'sites') && l.src.includes('pointer'))
 const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
+/** A card that cannot compile counts as still: the draw below reports it once. */
+const animates = (c: EditorFrame['card']) => { try { return isAnimated(c) } catch { return false } }
 /** Bring frames to the top of the canvas, keeping their order. */
 const raiseFrames = (d: EditorDoc, ids: string[]): EditorDoc => {
   const up = d.frames.filter(f => ids.includes(f.id)), rest = d.frames.filter(f => !ids.includes(f.id))
@@ -84,7 +87,12 @@ type Op =
   /** A corner of a spec field's bounds (E3). */
   | { kind: 'bounds'; frame: string; l0: SpecLayer & { spec: Extract<SpecLayer['spec'], { kind: 'ir' }> }; handle: Handle; wx: number; wy: number }
 
-export function Canvas({ phone, landscape = false }: { phone: boolean; landscape?: boolean }) {
+/** The canvas inside the editor's recovery screen: a render crash shows RESET EDITOR DOCUMENT, not a blank page. */
+export function Canvas(props: { phone: boolean; landscape?: boolean }) {
+  return <EditorBoundary area="canvas"><CanvasView {...props} /></EditorBoundary>
+}
+
+function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: boolean }) {
   const vp = useRef<HTMLDivElement>(null), paste = useRef<HTMLCanvasElement>(null)
   const frames = useEditor(s => s.h.present.frames), cam = useEditor(s => s.cam), tool = useEditor(s => s.tool), sel = useEditor(s => s.sel)
   const brush = useEditor(s => s.brush), selectMode = useEditor(s => s.selectMode)
@@ -142,21 +150,25 @@ export function Canvas({ phone, landscape = false }: { phone: boolean; landscape
         if (now - lastPublish > 66) { lastPublish = now; useEditor.setState({ play: { t, playing: true } }) }
       }
       let budget = 0
-      for (const f of d.frames) {
+      for (const f of d.frames) try {
         const e = entries.get(f.id)
+        if (f.hidden) drew(f.id) // a hidden frame never draws: nothing to wait for
         if (!e || f.hidden) continue
         const { w, h } = frameSize(f), x0 = f.x * c.z + c.x, y0 = f.y * c.z + c.y
         if (x0 > s.vp.w || y0 > s.vp.h || x0 + w * c.z < 0 || y0 + h * c.z < 0) continue
-        const k = resolutionFor(c.z, dpr, w, h), tl = timeline && f.id === selFrame!.id, anim = !still && isAnimated(f.card)
+        const k = resolutionFor(c.z, dpr, w, h), tl = timeline && f.id === selFrame!.id, anim = !still && animates(f.card)
         const t = tl ? s.play.t : anim ? (now - wall0) / 1000 : 0, state = s.preview[f.id], p = e.drawn
         const due = e.dirty || !p || p.card !== f.card || p.theme !== f.theme || p.k !== k || p.state !== state || p.tl !== tl || (tl && p.t !== t) || (!tl && anim && now - e.last > 33)
         if (!due || budget > 24) continue // past ~24 ms this tick: the rest draw next frame
-        const ms = drawFrame(e.canvas, f, k, { timeline: tl, t, state, pointer: e.pointer })
+        let ms = 0, error: string | undefined
+        try { ({ ms, error } = drawFrame(e.canvas, f, k, { timeline: tl, t, state, pointer: e.pointer })) } catch (err) { error = String((err as Error)?.message ?? err) }
+        // a frame that breaks draws empty and says so once; one that drew may be autosaved (an import is held until then)
+        if (error === undefined) { e.broke = false; drew(f.id) } else if (!e.broke) { e.broke = true; s.setNote(`frame "${f.card.name}" could not be drawn: ${error.slice(0, 120)}`) }
         budget += ms
         stats.lastMs = ms; stats.maxMs = Math.max(stats.maxMs, ms); stats.drawn++
         e.drawn = { card: f.card, theme: f.theme, k, state, tl, t }; e.dirty = false; e.last = now
         if (tl) stats.tl![f.id] = t; else delete stats.tl![f.id]
-      }
+      } catch { /* a frame too broken to place is skipped; the recovery screen says what broke */ }
       stats.frames = d.frames.length; stats.sel = s.sel.frame; stats.layer = s.sel.layer; stats.picks = selIds(s.sel)
       const vpKey = `${s.vp.w}x${s.vp.h}x${dpr}`
       // the snap cue: lit while it lasts, fading (reduced motion: held), then drawn away once

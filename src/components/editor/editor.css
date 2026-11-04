@@ -592,3 +592,14 @@ html.ed-scroll-lock .pal-dock { display: none }
 .ed-sheet--side .ed-sheet-head { min-height: var(--tap) }
 /* the keyboard is open: the root fills what it leaves (top / height set from visualViewport) */
 .ed-root.is-phone.has-kb { bottom: auto; min-height: 0 }
+
+/* ── the recovery screen (EditorBoundary.tsx): fills the part of the editor that stopped ── */
+.ed-crash { position: relative; box-sizing: border-box; height: 100%; min-height: 160px; display: flex; flex-direction: column; justify-content: center; gap: var(--space-2); padding: var(--space-4); background: var(--ed-bg); color: var(--value); overflow: auto }
+.ed-stage > .ed-crash { position: absolute; inset: 0; z-index: calc(var(--z-raise) + 1) }
+.ed-crash b { color: var(--red-text); letter-spacing: .14em; font-weight: 600 }
+.ed-crash p { margin: 0; max-width: 56ch; color: var(--label) }
+.ed-crash code { color: var(--value); font: inherit; overflow-wrap: anywhere }
+.ed-crash-btns { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2) }
+.ed-crash-btns button { min-height: var(--tap-min); padding: 0 var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-ctl); color: var(--value); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .1em }
+.ed-crash-btns .ed-crash-reset { border-color: color-mix(in srgb, var(--red) 60%, transparent) }
+.ed-crash-btns button:focus-visible { outline: 1px solid var(--red); outline-offset: 2px }

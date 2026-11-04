@@ -8,6 +8,7 @@ import type { Control } from '../../engine/context'
 import type { DotStyle, GridConfig, Tone } from '../../engine/types'
 import { exportPreset, loadSpec, type CardSpec, type TransitionSpec } from '../../spec'
 import type { WidgetPreset } from '../../widgets'
+import { gridIssue } from './checks'
 import { cardPreset, compileCard, irLayer, newCard, newId, stackOrder, textLayer, type Motion, type StudioCard, type StudioLayer } from './doc'
 
 export interface CardAdapter<S> {
@@ -68,7 +69,8 @@ export const specV1: CardAdapter<CardSpec> = {
   fromSpec(input) {
     const res = loadSpec(input)
     if (!res.ok) throw new Error(`card spec: ${res.errors.slice(0, 3).map(e => `${e.path}: ${e.message}`).join('; ')}`)
-    const spec = res.spec, card = newCard(spec.name)
+    const spec = res.spec, card = newCard(spec.name), tooBig = gridIssue(spec.grid)
+    if (tooBig) throw new Error(`card spec: ${tooBig}`)
     card.grid = { ...spec.grid }
     card.style = { ...card.style, ...spec.style }
     card.data = { ...spec.data }

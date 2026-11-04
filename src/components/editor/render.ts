@@ -37,24 +37,24 @@ export function frameDots(f: EditorFrame, o: FrameDraw): DotInstance[] {
   if (o.timeline) return timelineFrame(inp, o.t)
   return sampleCard(inp, o.t, stateData(card, o.state ?? card.states[0]?.name ?? ''))
 }
-/** Draw a frame into `canvas` at `k` canvas px per world px. Returns the frame time in ms. */
-export function drawFrame(canvas: HTMLCanvasElement, f: EditorFrame, k: number, o: FrameDraw): number {
+/** Draw a frame into `canvas` at `k` canvas px per world px. Returns the frame time in ms, and why it drew empty if it broke. */
+export function drawFrame(canvas: HTMLCanvasElement, f: EditorFrame, k: number, o: FrameDraw): { ms: number; error?: string } {
   const ctx = canvas.getContext('2d')
-  if (!ctx) return 0
+  if (!ctx) return { ms: 0 }
   const pitch = pitchOf(f.card), W = f.card.grid.cols * pitch, H = f.card.grid.rows * pitch
   const cw = Math.max(1, Math.round(W * k)), ch = Math.max(1, Math.round(H * k))
   if (canvas.width !== cw) canvas.width = cw
   if (canvas.height !== ch) canvas.height = ch
   const a = performance.now()
-  let dots: DotInstance[] = []
-  try { dots = frameDots(f, o) } catch { /* a broken frame draws empty */ }
+  let dots: DotInstance[] = [], error: string | undefined
+  try { dots = frameDots(f, o) } catch (e) { error = String((e as Error)?.message ?? e) } // a broken frame draws empty
   userPrograms.settle() // the frame is done: its programs that kept to the budget count as drawn
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.fillStyle = themeOf(f).surface
   ctx.fillRect(0, 0, cw, ch)
   ctx.setTransform(cw / W, 0, 0, ch / H, 0, 0)
   renderCanvas(ctx, dots)
-  return performance.now() - a
+  return { ms: performance.now() - a, ...(error !== undefined && { error }) }
 }
 /** Canvas resolution for a zoom: power-of-two steps of zoom × devicePixelRatio, capped by a 4096 px edge. */
 export function resolutionFor(z: number, dpr: number, w: number, h: number): number {
