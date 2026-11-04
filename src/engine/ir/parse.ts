@@ -182,6 +182,7 @@ export function parse(src: string): Node {
     expect('..')
     const to = int()
     if (from < 0 || to <= from) fail('loop range must be 0 ≤ from < to', it)
+    if (to > IR_LIMITS.bound) fail(`loop bound ${to} is above ${IR_LIMITS.bound}`, it)
     if (to - from > IR_LIMITS.loop) fail(`loop runs ${to - from} times, more than ${IR_LIMITS.loop}`, it)
     keyword('with')
     const [acc, at] = bindName()

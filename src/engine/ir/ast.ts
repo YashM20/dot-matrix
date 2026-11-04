@@ -15,6 +15,8 @@ export const IR_LIMITS = {
   depth: 96,
   /** Iterations of one `for` (its `to - from`). */
   loop: 64,
+  /** Largest loop bound (`to`): keeps the loop index an exact integer in every backend (the device's u16). */
+  bound: 65535,
   /** Product of the iteration counts of nested `for`s: the worst-case body evaluations per dot. */
   work: 1024,
   /** Steps per dot under the cost model (`IR_COST`): half the device step budget (`BC_MAX_STEPS`, 65536). */
@@ -100,6 +102,9 @@ export const validName = (s: string) => IDENT.test(s) && !s.includes('__') && !s
 const BIN_OPS = new Set<string>(['+', '-', '*', '/', '%', '^', '<', '<=', '>', '>=', '==', '!='])
 const INPUTS = new Set<string>(['u', 'v', 't', 'pointer.x', 'pointer.y', 'pointer.down'])
 
+/** A value in an error message: JSON for what JSON can show, else its type; cut short. Never throws. */
+const show = (x: unknown): string => { let s: string; try { s = String(JSON.stringify(x)) } catch { s = typeof x } return s.length > 40 ? `${s.slice(0, 40)}…` : s }
+
 export interface IRInfo { nodes: number; depth: number; work: number; /** Steps per dot under `IR_COST`. */ cost: number; data: string[]; pointer: boolean; t: boolean }
 
 /**
@@ -120,27 +125,30 @@ export function validate(ast: unknown): IRInfo {
     if (typeof n !== 'object' || n === null || Array.isArray(n)) return fail('expected a node object', path)
     const o = n as Record<string, unknown>, d = depth + 1
     if (o.k !== 'call') charge(nodeCost(o as { k: string; op?: string }), work, path, loop)
-    const name = (key: string) => { const s = o[key]; if (typeof s !== 'string' || !validName(s) || IR_RESERVED.has(s)) fail(`invalid name ${JSON.stringify(s)}`, `${path}.${key}`); return s as string }
+    const name = (key: string) => { const s = o[key]; if (typeof s !== 'string' || !validName(s) || IR_RESERVED.has(s)) fail(`invalid name ${show(s)}`, `${path}.${key}`); return s as string }
     switch (o.k) {
       case 'num': if (typeof o.v !== 'number' || !Number.isFinite(o.v)) fail('number must be finite', `${path}.v`); return
-      case 'in': if (typeof o.name !== 'string' || !INPUTS.has(o.name)) fail(`unknown input ${JSON.stringify(o.name)}`, `${path}.name`); if (o.name === 't') usesT = true; else if (o.name !== 'u' && o.name !== 'v') pointer = true; return
-      case 'data': { const key = o.key; if (typeof key !== 'string' || !validName(key)) fail(`invalid data key ${JSON.stringify(key)}`, `${path}.key`); data.add(key as string); return }
+      case 'in': if (typeof o.name !== 'string' || !INPUTS.has(o.name)) fail(`unknown input ${show(o.name)}`, `${path}.name`); if (o.name === 't') usesT = true; else if (o.name !== 'u' && o.name !== 'v') pointer = true; return
+      case 'data': { const key = o.key; if (typeof key !== 'string' || !validName(key)) fail(`invalid data key ${show(key)}`, `${path}.key`); data.add(key as string); return }
       case 'ref': { const s = name('name'); if (!scope.has(s)) fail(`unknown identifier "${s}"`, `${path}.name`); return }
       case 'neg': return walk(o.a, scope, `${path}.a`, d, work, loop)
-      case 'bin': if (typeof o.op !== 'string' || !BIN_OPS.has(o.op)) fail(`unknown operator ${JSON.stringify(o.op)}`, `${path}.op`); walk(o.a, scope, `${path}.a`, d, work, loop); return walk(o.b, scope, `${path}.b`, d, work, loop)
+      case 'bin': if (typeof o.op !== 'string' || !BIN_OPS.has(o.op)) fail(`unknown operator ${show(o.op)}`, `${path}.op`); walk(o.a, scope, `${path}.a`, d, work, loop); return walk(o.b, scope, `${path}.b`, d, work, loop)
       case 'cond': walk(o.c, scope, `${path}.c`, d, work, loop); walk(o.a, scope, `${path}.a`, d, work, loop); return walk(o.b, scope, `${path}.b`, d, work, loop)
       case 'call': {
         const fn = o.fn, args = o.args
-        if (typeof fn !== 'string' || !isFn(fn)) return fail(`unknown function ${JSON.stringify(fn)}`, `${path}.fn`)
+        if (typeof fn !== 'string' || !isFn(fn)) return fail(`unknown function ${show(fn)}`, `${path}.fn`)
         if (!Array.isArray(args) || args.length !== (IR_FUNCTIONS as Record<string, number>)[fn]) return fail(`${fn}() takes ${(IR_FUNCTIONS as Record<string, number>)[fn]} argument(s)`, `${path}.args`)
         charge(nodeCost({ k: 'call', fn, args }), work, path, loop)
-        args.forEach((a, i) => walk(a, scope, `${path}.args[${i}]`, d, work, loop)); return
+        // by index, not forEach: a hole in a sparse array is a missing node, not a skipped one
+        for (let i = 0; i < args.length; i++) walk(args[i], scope, `${path}.args[${i}]`, d, work, loop)
+        return
       }
       case 'let': { const s = name('name'); walk(o.value, scope, `${path}.value`, d, work, loop); return walk(o.body, new Set(scope).add(s), `${path}.body`, d, work, loop) }
       case 'for': {
         const i = name('i'), acc = name('acc'), from = o.from, to = o.to
         if (i === acc) fail('loop index and accumulator need different names', `${path}.acc`)
         if (!Number.isInteger(from) || !Number.isInteger(to) || (from as number) < 0 || (to as number) <= (from as number)) fail('loop range must be integer literals 0 ≤ from < to', `${path}.from`)
+        if ((to as number) > IR_LIMITS.bound) fail(`loop bound ${to} is above ${IR_LIMITS.bound}`, `${path}.to`)
         const count = (to as number) - (from as number)
         if (count > IR_LIMITS.loop) fail(`loop runs ${count} times, more than ${IR_LIMITS.loop}`, `${path}.to`)
         const w = work * count
@@ -150,7 +158,7 @@ export function validate(ast: unknown): IRInfo {
         charge(IR_COST.iteration, w, path, loop || path)
         return walk(o.body, new Set(scope).add(i).add(acc), `${path}.body`, d, w, loop || path)
       }
-      default: return fail(`unknown node kind ${JSON.stringify(o.k)}`, `${path}.k`)
+      default: return fail(`unknown node kind ${show(o.k)}`, `${path}.k`)
     }
   }
   walk(ast, new Set(), '$', 0, 1)

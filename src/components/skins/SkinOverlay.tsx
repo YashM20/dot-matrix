@@ -13,6 +13,7 @@ import { createDisplayStage, type DisplayStage, type SkinName, type StageColors 
 import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { sharedClock } from '../../engine/clock'
 import type { DotInstance } from '../../engine/types'
+import { TEST_HOOKS } from '../../lib/testHooks'
 import { createClack, type Clack } from '../../media/clack'
 import { getClack, skinChangedAt, useDisplaySkin } from './store'
 
@@ -58,7 +59,7 @@ function record(skin: SkinName, kind: 'frame' | 'render', ms: number) {
   const p = perf[skin] ??= { skin, frame: [], render: [] }, a = p[kind]
   a.push(ms); if (a.length > 2000) a.shift()
 }
-if (typeof window !== 'undefined') (window as unknown as { __skinPerf: typeof perf }).__skinPerf = perf
+if (TEST_HOOKS && typeof window !== 'undefined') (window as unknown as { __skinPerf: typeof perf }).__skinPerf = perf
 
 // one clack voice for the page, capped so a whole board flipping is a rattle, not a roar
 let clack: Clack | null | undefined, clackWindow = 0, clackCount = 0

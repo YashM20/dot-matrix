@@ -1,9 +1,12 @@
 /**
  * Field IR → JS `Field`. The default backend is a closure tree (no `eval`, CSP-safe). `mode:
- * 'function'` emits straight-line JS and builds it with `new Function` for speed; if the page's
- * CSP forbids that, it falls back to the closure tree.
+ * 'function'` emits straight-line JS and builds it with `new Function` for speed, for registered card
+ * presets only (visitor programs compile with `compileUntrusted`, which can't ask for it). The body must
+ * pass the token allowlist (`allow.ts`) first; if it doesn't, or the page's CSP forbids `new Function`,
+ * the program falls back to the closure tree.
  */
 import type { Field } from '../types'
+import { allowedBody } from './allow'
 import { validate, type IRInfo, type Node } from './ast'
 import { emitJS } from './emit'
 import { irMath, smallPow } from './runtime'
@@ -91,9 +94,17 @@ function inputs(env: IREnv, data: string[], into: Float64Array) {
 }
 
 type Fn = (u: number, v: number, t: number, px: number, py: number, pd: number, D: Float64Array, M: typeof irMath) => number
+/**
+ * The `new Function` backend for an emitted body that reads `dataCount` data values. Null when the body breaks the
+ * token allowlist or the page's CSP forbids `new Function`; the caller then uses the closure tree.
+ */
+export function buildFunction(body: string, dataCount: number): Fn | null {
+  if (!allowedBody(body, dataCount)) return null
+  try { return new Function('u', 'v', 't', 'px', 'py', 'pd', 'D', 'M', `"use strict";\n${body}`) as Fn } catch { return null }
+}
 function tryFunction(ast: Node): { fn: Fn; data: string[] } | null {
-  const { body, data } = emitJS(ast)
-  try { return { fn: new Function('u', 'v', 't', 'px', 'py', 'pd', 'D', 'M', `"use strict";\n${body}`) as Fn, data } } catch { return null }
+  const { body, data } = emitJS(ast), fn = buildFunction(body, data.length)
+  return fn && { fn, data }
 }
 
 /** Compile a validated AST to a JS program; call it with the frame's inputs to get a `Field`. */
