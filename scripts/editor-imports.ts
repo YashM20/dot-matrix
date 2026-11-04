@@ -106,11 +106,13 @@ export async function editorImportChecks(assert: Assert) {
   assert('E5 confirm: staging a link says what it holds and changes nothing until confirmed', !pending.already && pending.kind === 'frame' && pending.frames === 1 && /^Open frame ".+" from a link/.test(pending.summary) && s().h.present === before, pending.summary)
   const ids = pending.confirm(), opened = Array.isArray(ids) ? ids : []
   const heldBack = opened.length === 1 && s().h.present.frames.some(f => f.id === opened[0]) && !saveable(s().h.present).frames.some(f => f.id === opened[0])
-  opened.forEach(drew)
-  const drawnOnly = opened.length === 1 && !saveable(s().h.present).frames.some(f => f.id === opened[0]) // its program has not kept to the budget yet (#142)
   const linked = s().h.present.frames.find(f => f.id === opened[0])
+  const linkKeys = (linked?.card.layers ?? []).flatMap(l => (l.kind === 'ir' ? [guardKey(linked!.card.grid, l.lattice, l.src || '1')] : []))
+  const ranBefore = linkKeys.every(k => userPrograms.state(k) === 'ok') // `pnpm verify` may have drawn this program in budget already
+  opened.forEach(drew)
+  const drawnOnly = opened.length === 1 && (ranBefore || !saveable(s().h.present).frames.some(f => f.id === opened[0])) // a program not in budget yet still holds it (#142)
   userPrograms.begin()
-  for (const l of linked?.card.layers ?? []) if (l.kind === 'ir') userPrograms.field(guardKey(linked!.card.grid, l.lattice, l.src || '1'), 1, () => 1)(.5, .5, 0, 0)
+  for (const k of linkKeys) userPrograms.field(k, 1, () => 1)(.5, .5, 0, 0)
   userPrograms.settle(); await new Promise(r => setTimeout(r, 0))
   const released = opened.length === 1 && saveable(s().h.present).frames.some(f => f.id === opened[0])
   assert('E5 confirm: a confirmed link is kept out of the autosave until it draws once and its programs kept to the frame budget; staged again it is open already', heldBack && drawnOnly && released && s().stageLink(pf).already, `${heldBack} ${drawnOnly} ${released}`)
@@ -188,7 +190,8 @@ export async function editorImportChecks(assert: Assert) {
   const slow = useEditor.getState().stageProgram(progOf('// gallery slow\n.5 + .5 * sin(v * 9.5 + t)')).confirm()
   let slowRecorded = 0
   whenDrawn(slow, () => slowRecorded++)
-  const busy = () => { const end = Date.now() + 60; while (Date.now() < end) { /* a frame past the budget */ } return 1 }
+  // performance.now (the guard's clock): `pnpm verify` pins Date. Capped, so a stubbed clock can't spin forever
+  const busy = () => { const end = performance.now() + 60; for (let i = 0; i < 5e8 && performance.now() < end; i++) { /* a frame past the budget */ } return 1 }
   userPrograms.begin(); const g = userPrograms.field(keyOf(slow), 1e6, busy); g(.5, .5, 0, 0); g(.5, .5, 0, 0); userPrograms.settle(); drew(slow); await tick()
   assert('#142 gallery: a program paused for running past the budget is never recorded in the gallery nor autosaved', userPrograms.state(keyOf(slow)) === 'paused' && slowRecorded === 0 && !autosaveDoc()!.frames.some(f => f.id === slow), `${userPrograms.state(keyOf(slow))} ${slowRecorded}`)
   useEditor.setState({ h: historyOf(seed), sel: {} })
