@@ -70,6 +70,12 @@ jobs:
       - name: Header checks on the build
         run: pnpm exec tsx scripts/site/headers.ts
 
+      # the SEO step's output (scripts/site/seo.ts): routing in vercel.json, sitemap and canonicals, crawlable roots, JSON-LD, 404
+      - name: SEO checks on the build
+        run: pnpm exec tsx scripts/site/seo-check.ts
+        env:
+          SITE_URL: ${{ vars.SITE_URL }}
+
       - name: Upload site
         uses: actions/upload-artifact@v4
         with:

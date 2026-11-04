@@ -8,7 +8,8 @@ import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
 
 /**
- * After a production build: OG images + per-board crawler pages (scripts/site/postbuild.ts, docs/DEPLOY.md).
+ * After a production build: OG images + per-board crawler pages (scripts/site/postbuild.ts), then the SEO step
+ * (scripts/site/seo.ts: crawlable roots, sitemap, robots, 404; docs/DEPLOY.md).
  * Runs in a child `node --import tsx` so the config process never loads every board. `SITE_POSTBUILD=0` skips it.
  */
 function sitePostbuild(): Plugin {
@@ -20,6 +21,8 @@ function sitePostbuild(): Plugin {
       // postbuild keys its OG cache on goldens/hashes.json: a gitignored index of goldens/<board>.json (#76)
       execFileSync(process.execPath, ['--import', 'tsx', 'scripts/lib/goldenFiles.ts', '--index'], { stdio: 'inherit' })
       execFileSync(process.execPath, ['--import', 'tsx', 'scripts/site/postbuild.ts'], { stdio: 'inherit' })
+      // then the SEO step over postbuild's pages: crawlable roots, JSON-LD, sitemap.xml, robots.txt, 404.html (issue #146)
+      execFileSync(process.execPath, ['--import', 'tsx', 'scripts/site/seo.ts'], { stdio: 'inherit' })
     },
   }
 }

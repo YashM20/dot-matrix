@@ -14,8 +14,11 @@ CI (`.github/workflows/ci.yml`) only checks and builds; it does not deploy. Host
 | `dist/blog/index.html`, `dist/blog/<slug>/index.html` | `scripts/site/postbuild.ts` | Copies of `blog.html` with each post's title, description, canonical, OG/Twitter tags (`og:type` article) and JSON-LD (BlogPosting, CollectionPage for the index). Images: `public/og/blog/<slug>-social.png`, else `/og/default.png`. |
 | `dist/<board>/index.html` | `scripts/site/postbuild.ts` | A copy of `index.html` with that board's `<title>`, description, canonical and OG/Twitter tags (`src/site/meta.ts`). Crawlers get the right preview for `/light/`. The app opens the board from the path. |
 | `dist/og/<board>.png`, `dist/og/default.png` | `scripts/site/postbuild.ts` → `scripts/og.ts` | 1200×630, one hero card per board (the first card without live media; override in `HERO`). |
+| Static roots, JSON-LD | `scripts/site/seo.ts` | Each board, widget, home, blog and lab page gets a plain block in its root `<div>`: an `<h1>`, the blurbs and links (board → every card's `/widget/<slug>/`, widget → its board, home → every board). Markdown posts carry their whole text. The block is visually hidden while the app loads and shown when scripts are off; `createRoot` replaces it on mount. Home gets `WebSite` JSON-LD, each board a `CollectionPage` with its cards as `hasPart`. |
+| `dist/sitemap.xml`, `dist/robots.txt` | `scripts/site/seo.ts` | One URL per canonical page: home, boards, widgets by slug, blog, posts, lab, privacy, terms. robots.txt allows everything and names the sitemap. Both need the absolute origin below; without one the sitemap stays root-relative and robots.txt names no sitemap. |
+| `dist/404.html` | `scripts/site/seo.ts` → `scripts/site/notfound.ts` | The dot 404 (drawn by the engine at build time, no script) with links home and to every board. Vercel serves it with status 404. |
 
-The post-build step runs from the `site-postbuild` plugin in `vite.config.ts`. `SITE_POSTBUILD=0` skips it. `npx tsx scripts/site/postbuild.ts --no-og` reruns only the pages.
+The post-build step runs from the `site-postbuild` plugin in `vite.config.ts`, and the SEO step right after it. `SITE_POSTBUILD=0` skips both. `npx tsx scripts/site/postbuild.ts --no-og` reruns only the pages; `npx tsx scripts/site/seo.ts` reruns the SEO step (its inserts sit between `<!-- seo -->` markers, so a rerun replaces them). `scripts/site/seo-check.ts` checks the result (CI runs it after the build).
 
 **Absolute OG URLs.** `og:url` and `og:image` are made absolute from an origin. Most link unfurlers (Slack, X, iMessage) need absolute image URLs. The origin is chosen in this order:
 1. `SITE_URL`, if set. Use this for a custom domain: set it in Vercel → Project → Settings → Environment Variables.
@@ -28,8 +31,14 @@ The post-build step runs from the `site-postbuild` plugin in `vite.config.ts`. `
 - The address bar follows every board and view, and each change is a history entry, so Back and Forward work. The URL forms live in the pure resolver `src/site/views.ts`; `syncUrl` in `src/site/meta.ts` writes them, and the first render only normalises the URL.
 - Old forms resolve through the alias table in `views.ts` (checked by verify): `?board=<id>` folds into the path, and `?tab=workspace|studio|dots|draw|log|gallery` map to the new views. `?card=<id>`, `?make=code&p=…`, `?skin=`, `?pro=1`, `?worker=0` and `?flags=` are kept.
 - Old ids resolve through `boardAliases` (`/glyph/` opens `/lock/`).
-- Links to the blog must be root-absolute (`/blog/`, `/blog/dot-matrix-essay/`): a relative link breaks under `/<board>/` paths. There is no sitemap yet.
-- SPA fallback: `vercel.json` rewrites any path to `/index.html`. Vercel serves real files first, so board pages (`dist/<board>/index.html`), assets and OG images are unaffected.
+- Links to the blog must be root-absolute (`/blog/`, `/blog/dot-matrix-essay/`): a relative link breaks under `/<board>/` paths.
+- Routing (`vercel.json`): redirects first, then real files, then rewrites, else `404.html` with status 404. Vercel reads a `source` exactly (case-sensitive, no optional trailing slash), so routes list both slash forms. Only the app's own route shapes fall back:
+  - `/<board>` (no slash) rewrites to `/<board>/index.html`; the board ids are listed in the rule, so **a new board adds its id there** (`seo-check.ts` fails until it does). `/<board>/` is a real file.
+  - `/about`, `/widget/<key>`, `/@<scope>/widget/<key>` and a uid-shaped `/<uid>` (each with or without the slash) rewrite to `/index.html`, so old slugs and unknown uids still reach the app's own resolver.
+  - `/blog/*` rewrites to `blog.html`; `/lab`, `/privacy`, `/terms` to their pages.
+  - Board aliases redirect (`/glyph/` → `/lock/`, permanent). A new alias in `boardAliases` adds its redirect.
+  - Anything else 404s: `/nope/`, `/light/extra`, a missing asset, the reserved segments with no route yet (`/w/`, `/embed/`, `/r/`, `/oembed/`). Give a new route its rewrite when it lands.
+  - `seo-check.ts` plays `vercel.json` against `dist/` for every shape above and checks the app opens the right view on the ones that fall back.
 
 ## Feature flags
 Release flags live in `src/site/flags.ts`, one registry entry each (`id`, `default`, `description`). Pro (`?pro=1`, `src/site/pro.ts`) is a visitor preference and stays out of it. A flag's value, each step overriding the one before:
