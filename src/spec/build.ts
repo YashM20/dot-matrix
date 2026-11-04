@@ -5,7 +5,7 @@
  * IR always compiles to the closure tree (`compileUntrusted`); nothing is `eval`ed or built with `new Function`.
  */
 import { textAt } from '../engine/layout'
-import { compileUntrusted, contextEnv } from '../engine/ir'
+import { compileUntrusted, contextEnv, type IREnv, type IRProgram } from '../engine/ir'
 import '../engine/noise/ir' // IR noise pack: noise() fbm() turb() voronoi() in spec IR
 import { hash01 } from '../engine/math'
 import { latticeGrid } from '../engine/sampler/gridSampler'
@@ -57,8 +57,12 @@ export function formatNumber(x: number, f: TextLayerSpec['format'] = {}): string
 /** A layer that never changes: built on first use, then the same `Layer` every frame. */
 const once = (make: () => Layer): Build => { let l: Layer | undefined; return () => (l ??= make()) }
 
+/** How an `ir` layer turns its program and frame inputs into a field; the editor passes one that samples in the IR sandbox worker. */
+export type ProgramField = (prog: IRProgram, src: string, env: IREnv) => Field
+const local: ProgramField = (prog, _src, env) => prog(env)
+
 /** One spec layer → a per-frame layer builder on `grid`. Shared by `specToPreset` and the export check in `presetToSpec`. */
-export function buildLayer(l: LayerSpec, grid: GridConfig): Build {
+export function buildLayer(l: LayerSpec, grid: GridConfig, program: ProgramField = local): Build {
   const tag = (field: Field) => { madeBy.set(field, l); return field }
   switch (l.kind) {
     case 'ir': {
@@ -66,7 +70,7 @@ export function buildLayer(l: LayerSpec, grid: GridConfig): Build {
       const rect: [number, number, number, number] = b ? [ox + b[0] * k, oy + b[1] * k, b[2] * k, b[3] * k] : [ox, oy, sub.cols * k, sub.rows * k]
       const M = layoutFor(sub), base = placement(l), toneOf = l.toneStops && toneStops(l.toneStops, sub, l.tone)
       return ctx => {
-        const f = prog(contextEnv(ctx, grid, rect))
+        const f = program(prog, l.src, contextEnv(ctx, grid, rect))
         return { ...base, field: tag(b ? M.place(f, b[0], b[1], b[2], b[3]) : f), ...(toneOf && { toneOf }) }
       }
     }

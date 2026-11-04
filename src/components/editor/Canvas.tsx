@@ -17,7 +17,7 @@ import { PAINT_LIVE, paintCells, paintLayer, type PaintLayer, type SitesLayer, t
 import { EXAMPLES } from '../dwitter/examples'
 import { addFrame, addLayer, blankCard, copyFrames, copyLayers, drawingCard, editFrame, editLayer, encodeCells, frameById, frameSize, hitFrame, hitLayer, layerOf, line, movable, newIRLayer, newTextLayer, nudgeLayer, paintCellAt, pitchOf, programCard, programSource, stamp, topDown, type EditorDoc, type EditorFrame } from './doc'
 import { dragCells, dragFramePos, draftFrame, pinchCam, PRESS_SLOP, resizeByHandle, type Handle } from './input'
-import { drawFrame, drawPaste, isAnimated, resolutionFor, type PasteCue } from './render'
+import { drawFrame, drawPaste, isAnimated, resolutionFor, whenLanded, type PasteCue } from './render'
 import { canResize, clickLayer, frameBox, framesBox, framesSel, inSel, layersSel, marqueeLayers, marqueeSel, normBox, resizeGroup, selCount, selFrames, selIds, selLayers, snapBox, toggleSel, type Box, type Gap, type Guide } from './select'
 import { caretAt, dragSiteHandle, editableText, hasBounds, inkAt, inkStep, layerBox, resizeSpecBounds, siteHandles, textGeo, type SiteHandle } from './direct'
 import { InText, LongPressMenu, QuickBar } from './OnCanvas'
@@ -37,6 +37,7 @@ interface Drawn { card: EditorFrame['card']; theme: string; k: number; state?: s
 interface Entry { canvas: HTMLCanvasElement; drawn?: Drawn; dirty: boolean; last: number; pointer?: { x: number; y: number; down: boolean }; broke?: boolean }
 const entries = new Map<string, Entry>()
 export const markDirty = (id: string) => { const e = entries.get(id); if (e) e.dirty = true }
+whenLanded(markDirty) // program values from the IR sandbox worker landed: draw the frame with them
 /** The pointer (in card cells) for the frame under it, if that card reads `pointer`; every other frame loses it. */
 function feedPointer(f: EditorFrame | undefined, wx: number, wy: number) {
   for (const [id, en] of entries) if (en.pointer && id !== f?.id) { en.pointer = undefined; en.dirty = true }
@@ -162,10 +163,10 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
         const t = tl ? s.play.t : anim ? (now - wall0) / 1000 : 0, state = s.preview[f.id], p = e.drawn
         const due = e.dirty || !p || p.card !== f.card || p.theme !== f.theme || p.k !== k || p.state !== state || p.tl !== tl || (tl && p.t !== t) || (!tl && anim && now - e.last > 33)
         if (!due || budget > 24) continue // past ~24 ms this tick: the rest draw next frame
-        let ms = 0, error: string | undefined
-        try { ({ ms, error } = drawFrame(e.canvas, f, k, { timeline: tl, t, state, pointer: e.pointer })) } catch (err) { error = String((err as Error)?.message ?? err) }
+        let ms = 0, error: string | undefined, pending: boolean | undefined
+        try { ({ ms, error, pending } = drawFrame(e.canvas, f, k, { timeline: tl, t, state, pointer: e.pointer })) } catch (err) { error = String((err as Error)?.message ?? err) }
         // a frame that breaks draws empty and says so once; one that drew may be autosaved (an import is held until then)
-        if (error === undefined) { e.broke = false; drew(f.id) } else if (!e.broke) { e.broke = true; s.setNote(`frame "${f.card.name}" could not be drawn: ${error.slice(0, 120)}`) }
+        if (error === undefined) { e.broke = false; if (!pending) drew(f.id) } else if (!e.broke) { e.broke = true; s.setNote(`frame "${f.card.name}" could not be drawn: ${error.slice(0, 120)}`) }
         budget += ms
         stats.lastMs = ms; stats.maxMs = Math.max(stats.maxMs, ms); stats.drawn++
         e.drawn = { card: f.card, theme: f.theme, k, state, tl, t }; e.dirty = false; e.last = now
