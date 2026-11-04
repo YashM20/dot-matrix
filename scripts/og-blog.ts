@@ -9,7 +9,7 @@
  *
  * Each image is three samplings onto one raster, like `scripts/og.ts`: the post's pattern (an existing field: the
  * essay's sphere and metaballs, the IR plasma, the ripple solver, fbm noise) on a coarse grid, the title in smooth
- * dot type on a fine grid, and "DOT/480 · BLOG" in small dot type. One `active` element per image is the accent.
+ * dot type on a fine grid, and "MATRIX · BLOG" in small dot type. One `active` element per image is the accent.
  * The pattern fades out around the text, so the title always reads. Same input, same bytes: no clock, no random.
  */
 import { mkdirSync, writeFileSync } from 'node:fs'
@@ -109,7 +109,7 @@ export const ART: Record<string, Art> = {
     title: 'Long reads in dots',
     alt: {
       hero: 'Patches of grey dots from a noise field on a dark board, with one red dot. The title reads Long reads in dots.',
-      social: 'The Dot/480 blog. Long reads in dots in white dot type, over patches of grey dots and one red dot.',
+      social: 'The Matrix blog. Long reads in dots in white dot type, over patches of grey dots and one red dot.',
     },
     layers: c => [
       { field: (u, v) => { const n = .5 + .5 * fbm2(u * c.f.w / 260, v * c.f.h / 260, 4, 7); return n < .42 ? 0 : (n - .42) * 2.4 }, tone: 'auto' },
@@ -157,7 +157,7 @@ export function blogImage(slug: string, f: Frame): Raster {
   const titleW = Math.max(...lines.map(l => textSize(l, { smooth: true })[0])) + (art.caret ? 12 : 0)
   // the tag: 5×7 glyphs, top left, on the sp grid
   const sg: GridConfig = { cols: Math.floor(f.w / f.sp), rows: Math.floor(f.h / f.sp), pitch: f.sp }
-  const tag = 'DOT/480 · BLOG', sm = Math.round(f.m / f.sp)
+  const tag = 'MATRIX · BLOG', sm = Math.round(f.m / f.sp)
   const keep: [number, number, number, number][] = [
     [m * f.tp, top * f.tp, (m + titleW) * f.tp, (top + lines.length * lineH - 5) * f.tp],
     [sm * f.sp, sm * f.sp, (sm + textSize(tag)[0]) * f.sp, (sm + 7) * f.sp],
