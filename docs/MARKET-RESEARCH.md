@@ -220,7 +220,7 @@ Recommendations:
 | Target | Why | Ask | Odds (judgement) |
 |---|---|---|---|
 | **TRMNL** | Same 800×480 1-bit target; pays creators [S12]; AI-agent plugin builder [S14] | Featured recipe; "design layer for plugins" co-post | High |
-| **Nothing Developer Programme** (GDKsupport@nothing.tech) | Glyph Toys plus Playground [S2][S5] | Written commercial permission; Playground feature | Medium |
+| **Nothing Developer Programme** (contact through their developer program) | Glyph Toys plus Playground [S2][S5] | Written commercial permission; Playground feature | Medium |
 | **Blueforcer / AWTRIX NG** and **Ulanzi** | A $46 device with a big Discord [S18][S20] | Showcase; commercial agreement if bundling [S19] | Medium |
 | **WLED / Tronbyt maintainers** | Open LED ecosystems [S17][S34] | Showcase in docs or app repos | Medium |
 | **MCP host directories** (Anthropic connectors, OpenAI apps, VS Code) | Distribution for the Heartbeat [S54][S55] | Listing after review | Medium (review gates) |

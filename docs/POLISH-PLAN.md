@@ -5,9 +5,9 @@
 
 ## 0. Evidence
 
-**Screenshots** (`scripts/site/shots.ts`, plus 768 px captures from the probe) are in `C:/Users/integrated/AppData/Local/Temp/dmdocs/polish/shots/`, named `<theme>-<page>-<width>.png`. The full set of 55 is in `../allshots/`.
+**Screenshots** (`scripts/site/shots.ts`, plus 768 px captures from the probe) were saved to a local scratch folder, named `<theme>-<page>-<width>.png`. The full set has 55.
 
-**Probe** (`C:/Users/integrated/AppData/Local/Temp/dmdocs/polish/probe.mts`, raw output in `probe-dark_signal.json`): 9 pages × 1440 / 768 / 390 / 320, `dark_signal`, plus `light_signal` at 1440 / 768 / 390. Real-input history test: `nav.mts`, output in `nav.json`. Results cited below as #n:
+**Probe** (a local script, `probe.mts`, raw output in `probe-dark_signal.json`): 9 pages × 1440 / 768 / 390 / 320, `dark_signal`, plus `light_signal` at 1440 / 768 / 390. Real-input history test: `nav.mts`, output in `nav.json`. Results cited below as #n:
 
 | # | Check | Result |
 |---|---|---|
@@ -21,7 +21,7 @@
 | 8 | Clipped text | `home@320`: the new short intro "Every card is a live dot field." is cut off with an ellipsis. Nothing else, apart from `sr-only` and the editor's doc name. |
 | 9 | Deep link and reload | Every route reloads to the same view. On `vite preview`: `/about`, `/essay/` and `/nope/` open the **home board** at the wrong URL. `/essay` works on preview only. `/widget/nope/` shows the widget page's empty state. |
 | 10 | Back / Forward (real mouse and touch) | (a) View history works: `/lock/ → ?about → ?make` steps back and forth correctly. (b) **Scroll is not restored:** back on `/lock/` (left at y 500) lands at y 23, and back on ABOUT (left at 1500) at y 23. (c) **Phone: Back with the boards sheet open leaves the view and keeps the sheet open** over ABOUT. The next tap then lands on the stale sheet: tapping TOOLS opened DEPARTURES. (d) Coming back from the essay restores the scroll position. The widget page's prev / next / back history is correct. |
-| 11 | Live site (`curl https://dot-matrix1.vercel.app/<path>`) | `/essay`, `/essay/`, `/about` and `/nope/` all serve the home board's title. `/privacy`, `/terms` and `/essay.html` are fine. |
+| 11 | Live site (`curl https://matrix.reactopia.me/<path>`) | `/essay`, `/essay/`, `/about` and `/nope/` all serve the home board's title. `/privacy`, `/terms` and `/essay.html` are fine. |
 | 12 | Chrome text under 12 px | 59% of chrome characters at 1440, 65% at 390. T6 owns this; it isn't re-planned here. |
 
 ## 1. Findings

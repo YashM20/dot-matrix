@@ -33,7 +33,7 @@ execFileSync('npx', ['esbuild', 'scripts/lib/squares-page.ts', '--bundle', '--fo
 const html = join(OUT, 'page.html')
 writeFileSync(html, `<!doctype html><html><head><meta charset="utf-8"></head><body style="margin:0;background:#000"><script>${readFileSync(join(OUT, 'page.js'), 'utf8').replace(/<\/script/gi, '<\\/script')}</script></body></html>`)
 
-const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
+const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
 if (!chrome) { console.log('no Chrome found (set $CHROME): skipped'); process.exit(0) }
 const profile = mkdtempSync(join(tmpdir(), 'dot-sq-'))
 const flags = ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--window-size=900,900', ...(swift ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : ['--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=d3d11']), 'about:blank']

@@ -5,7 +5,7 @@
 > **Revision 1:** vite.dev is a reference for *how a well-made product feels*, not a theme to copy. Everything below is our own dot-matrix design language. "Theme" now means **scheme × accent** (Tamagui-style): light, dark and system, crossed with an accent the visitor can change. Each accent is tuned per scheme so it works in both.
 > Sources (2026-10-27):
 > - a teardown of vite.dev's CSS and theme source;
-> - a measured audit of the live site (6 pages × 6 widths; screenshots in `D:\tmp\dot480-shots\layout-audit\`);
+> - a measured audit of the live site (6 pages × 6 widths; screenshots in a local scratch folder);
 > - a study of the theme architecture against our code;
 > - Tamagui's theme docs (`/docs/core/theme`, `/docs/guides/theme-builder`).
 >

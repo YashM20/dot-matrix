@@ -1,0 +1,27 @@
+name: Idea or feature
+description: A new card, board, tool or change you'd like to see.
+labels: ["ideation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is a personal site, so not every idea will land, but all of them get read.
+  - type: textarea
+    id: idea
+    attributes:
+      label: The idea
+      description: What you'd like to see, in a few sentences.
+    validations:
+      required: true
+  - type: textarea
+    id: why
+    attributes:
+      label: Why
+      description: What it would make better, or what you'd use it for.
+    validations:
+      required: true
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Links, sketches or screenshots of something close to what you mean.

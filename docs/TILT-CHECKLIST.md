@@ -4,7 +4,7 @@ Manual check for tilt-driven light and motion on `/pond/` and `/materials/`.
 
 ## Setup and permission
 
-- [ ] Open Safari on the iPhone and visit https://dot-matrix1.vercel.app/pond/.
+- [ ] Open Safari on the iPhone and visit https://matrix.reactopia.me/pond/.
 - [ ] Open **TOOLS** and tap **TILT**. On iOS, this tap is required to request motion access; allow it when Safari asks.
 - [ ] Confirm TILT reports as on. If access was previously denied, allow motion access in browser settings and try again.
 - [ ] Repeat on `/materials/`. Tilt does not start automatically; use the TILT control.

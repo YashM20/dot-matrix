@@ -36,3 +36,6 @@ goldens/hashes.json
 # local secrets and the Vercel CLI's project link
 .env*
 .vercel
+
+# local campaign drafts
+twitter-campaign/

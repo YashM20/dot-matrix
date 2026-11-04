@@ -68,6 +68,14 @@ By Inigo Quilez.
 
 - Fractals Trap (`fr-trap`), board `/fractals/`: technique
 
+### [Growing Neural Cellular Automata (Distill, 2020)](https://distill.pub/2020/growing-ca/)
+
+By Alexander Mordvintsev, Ettore Randazzo, Eyvind Niklasson, Michael Levin.
+
+- Heal Mirror (`heal-mirror`), board `/heal/`: technique
+- Heal Persist (`heal-persist`), board `/heal/`: technique
+- Heal X-Ray (`heal-xray`), board `/heal/`: technique
+
 ### [Icon images](https://iquilezles.org/articles/iconimages/)
 
 By Inigo Quilez, Michael Field, Martin Golubitsky.
@@ -148,6 +156,12 @@ By Inigo Quilez.
 By Alan Turing, Edmund Crampin, Eamonn Gaffney, Philip Maini.
 
 - Pond Turing (`pond-turing`), board `/pond/`: technique
+
+### [Weather data by Open-Meteo.com (CC BY 4.0)](https://open-meteo.com/)
+
+By Open-Meteo.
+
+- Weather (`live-weather`), board `/live/`: data
 
 ## Code ports
 

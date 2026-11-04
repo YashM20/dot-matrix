@@ -189,7 +189,7 @@ All of this lives in `src/export/clipboard.ts` (pure helpers plus one DOM wrappe
 | **Share** | `navigator.share({ files: [png], title, text: url })`. The URL goes in `text` too, because some targets drop `url` when files are attached (unverified). | Shown only when `navigator.canShare?.({ files: [probe] })`; the PNG promise starts on pointerdown | `share({ title, url })` → hidden (Firefox desktop) | PNG as above |
 | **Embed** | §5.1 | (none) | (none) | (none) |
 | **Download clip** | Existing `recordClip` (APNG / GIF / WebM / MP4) for the 103 animated cards | (none) | WebM via MediaRecorder (existing) | GIF ≈ 32 KB / 2 s |
-| **Add via shadcn** | Shows `npx shadcn@latest add https://dot-matrix1.vercel.app/r/<id>.json`, the `@dot480` registries snippet, and Open in v0 | `writeText` | (none) | (none) |
+| **Add via shadcn** | Shows `npx shadcn@latest add https://matrix.reactopia.me/r/<id>.json`, the `@dot480` registries snippet, and Open in v0 | `writeText` | (none) | (none) |
 
 **Rules:**
 - Live cards (14) copy what is on screen.
@@ -232,8 +232,8 @@ All of this lives in `src/export/clipboard.ts` (pure helpers plus one DOM wrappe
   - Postbuild copies `registry/r/` to `dist/r/` (with `registry.json` at `/r/registry.json`, which MCP and directories need).
   - `vercel.json` gives `/r/(.*)` the headers `Access-Control-Allow-Origin: *` and `Cache-Control: max-age=3600`.
 - **Hosting and namespace:**
-  - `https://dot-matrix1.vercel.app/r/<name>.json`;
-  - the docs snippet `"registries": { "@dot480": "https://dot-matrix1.vercel.app/r/{name}.json" }`, then `npx shadcn add @dot480/timer`;
+  - `https://matrix.reactopia.me/r/<name>.json`;
+  - the docs snippet `"registries": { "@dot480": "https://matrix.reactopia.me/r/{name}.json" }`, then `npx shadcn add @dot480/timer`;
   - Open in v0 works, because the items use no `cssVars`, `css` or namespaces in the URL form.
 - **Versioning:**
   - `meta.version` (the engine package version plus the card's golden hash) goes in every item;

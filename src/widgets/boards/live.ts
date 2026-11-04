@@ -105,6 +105,7 @@ const hourKeys = Array.from({ length: WX_HOURS }, (_, i) => `wxH${i}`)
 const BAR_X0 = 4, BAR_GAP = (139 - BAR_X0) / (WX_HOURS - 1), BAR_BASE = 88
 export const liveWeather: WidgetPreset = {
   id: 'live-weather', name: 'Weather', label: 'WEATHER', group: 'icon', ...tile,
+  credit: { by: ['Open-Meteo'], title: 'Weather data by Open-Meteo.com (CC BY 4.0)', source: 'https://open-meteo.com/', note: 'data' },
   defaults: sources.weather.fixture, springKeys: ['wxTemp', 'wxWind', 'wxHi', 'wxLo', ...hourKeys],
   layers: ({ data }) => {
     const day = data.wxDay !== 0, code = Math.round(data.wxCode), temp = Math.round(data.wxTemp), t = `${temp}`

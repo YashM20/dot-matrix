@@ -10,11 +10,16 @@ import { ncaAliveCount, ncaErase, ncaDamage, ncaSeed, ncaGrowth, ncaLift, ncaMap
 import type { Field, Layer } from '../../engine/types'
 import type { Control } from '../../engine/context'
 import { lizardNca } from '../../assets/nca/lizard'
-import { TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetCredit, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
 const model = ncaModel(lizardNca)
+/** The model and its training recipe (src/engine/nca/nca.ts); the weights are trained here by scripts/nca/train.ts. */
+const credit: WidgetCredit = {
+  by: ['Alexander Mordvintsev', 'Ettore Randazzo', 'Eyvind Niklasson', 'Michael Levin'], title: 'Growing Neural Cellular Automata (Distill, 2020)',
+  source: 'https://distill.pub/2020/growing-ca/', note: 'technique',
+}
 /** Board grid: the model was trained on a narrower crop; the seed sits at the same place relative to the centre. */
 const W = 32, H = model.h, DT = 1 / 30, SEED_X = model.seedAt[0] + ((W - model.w) >> 1)
 /** The lizard on a 4× lattice: 32 × 28 grid cells → 128 × 112 card cells, centred under the label. */
@@ -80,7 +85,7 @@ const heroRun = ncaRun({
 })
 const growth = new Float32Array(W * H)
 export const healMirror: WidgetPreset = {
-  id: 'heal-mirror', name: 'Heal Mirror', label: 'HEAL  SCRATCH ME', ...tile,
+  id: 'heal-mirror', name: 'Heal Mirror', label: 'HEAL  SCRATCH ME', ...tile, credit,
   controls: scratchPad('Scratch the lizard'), defaults: { sx: .5, sy: .5 },
   layers: ctx => {
     scratch(heroRun, ctx)
@@ -101,7 +106,7 @@ const xrayRun = ncaRun({
   script: (g, n) => { if (n === at(5)) ncaDamage(g, 16, 4.5, 5); else if (n === at(10)) reseed(g) },
 })
 export const healXray: WidgetPreset = {
-  id: 'heal-xray', name: 'Heal X-Ray', label: 'HEAL  HIDDEN STATE', ...tile,
+  id: 'heal-xray', name: 'Heal X-Ray', label: 'HEAL  HIDDEN STATE', ...tile, credit,
   layers: ctx => {
     const g = ncaRunAt(xrayRun, ctx.t), out: Layer[] = []
     XRAY.forEach((ch, k) => {
@@ -146,7 +151,7 @@ const persistRun = ncaRun({
   },
 })
 export const healPersist: WidgetPreset = {
-  id: 'heal-persist', name: 'Heal Persist', label: 'HEAL  PERSIST', ...tile,
+  id: 'heal-persist', name: 'Heal Persist', label: 'HEAL  PERSIST', ...tile, credit,
   controls: scratchPad('Scratch the lizard'), defaults: { sx: .5, sy: .5 },
   layers: ctx => {
     scratch(persistRun, ctx)
