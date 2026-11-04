@@ -16,45 +16,12 @@ import { createHash } from 'node:crypto'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { checker } from '../lib/check'
+import { sourceRegex } from '../lib/vercel-source'
 
 interface Block { source: string; headers: { key: string; value: string }[] }
 const vercel = JSON.parse(readFileSync('vercel.json', 'utf8')) as { headers: Block[] }
 const { assert, done } = checker('header')
 
-/**
- * A Vercel `source` (path-to-regexp syntax) as a RegExp: `(…)` groups are raw regex, `:name` is one segment,
- * `:name*` / `:name+` / `:name?` take their leading `/` with them. Case-insensitive, optional trailing slash.
- */
-export function sourceRegex(source: string): RegExp {
-  let re = '', i = 0
-  const group = () => {
-    let depth = 0, s = ''
-    for (; i < source.length; i++) {
-      const c = source[i]
-      if (c === '\\') { s += c + source[++i]; continue }
-      if (c === '(') depth++
-      if (c === ')') depth--
-      s += c
-      if (depth === 0) { i++; return s }
-    }
-    throw new Error(`unbalanced group in ${source}`)
-  }
-  while (i < source.length) {
-    const c = source[i]
-    if (c === '(') { re += group(); continue }
-    if (c === ':') {
-      const name = /^:\w+/.exec(source.slice(i))![0]; i += name.length
-      const pat = source[i] === '(' ? group() : '([^\\/]+?)'
-      const mod = /[*+?]/.test(source[i] ?? '') ? source[i++] : ''
-      if (mod && re.endsWith('\\/')) { re = re.slice(0, -2) + `(?:\\/${pat})${mod}`; continue }
-      re += pat + mod
-      continue
-    }
-    re += c.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&')
-    i++
-  }
-  return new RegExp(`^${re}\\/?$`, 'i')
-}
 
 // the matcher itself, on the shapes vercel.json uses (and the old exclusion, which must miss the deep path)
 const m = (s: string, p: string) => sourceRegex(s).test(p)

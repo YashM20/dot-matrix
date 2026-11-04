@@ -54,6 +54,7 @@ Release flags live in `src/site/flags.ts`, one registry entry each (`id`, `defau
 | `xray` | off | `VITE_FLAG_XRAY` | X-ray: the card's ⓘ overlay and the inspector, the dock button and TOOLS tile, X / ⇧X, the palette action, the shell's `xray`. |
 | `worker` | on | `VITE_FLAG_WORKER` | Sampling in the web worker. `?worker=0` still turns it off. |
 | `clack` | off | `VITE_FLAG_CLACK` | The flip-disc clack sound. `?clack=1` and the skin list's toggle still turn it on. |
+| `likes` | off | `VITE_FLAG_LIKES` | The like button on widget pages and gallery programs (#169). It stays hidden while the likes API answers 404, which it does until the store and its secrets are set (see Likes below). |
 
 **Per environment on Vercel.** Set the variables in Vercel → Project → Settings → Environment Variables and tick the environments each one applies to (Production, Preview, Development). They are read at build time, so a change needs a redeploy. For example, to keep X-ray off in production and on for PR previews, add `VITE_FLAG_XRAY=on` for Preview only. With no variable set, every environment uses the registry default. Local builds read `.env.local` or the shell: `VITE_FLAG_XRAY=kill pnpm build`.
 
@@ -102,3 +103,21 @@ The `check` job:
 - **Install command:** Vercel's default, which uses pnpm because `pnpm-lock.yaml` is present.
 
 Local check: `pnpm build && pnpm preview`, then open `http://localhost:4173/light/`. `vite preview` does not apply the `vercel.json` headers. To test those locally, run `npx vercel dev` (the Vercel CLI is not a dependency: npx fetches it).
+
+## Likes (`api/`, #169)
+Likes run as Vercel Functions in `api/` over a free Upstash Redis database. With the store or a secret missing, or `LIKES=off`, every likes route answers 404 and the button stays hidden, so local runs, CI and forks need nothing. The rules, the limits and the storage layout are in `api/_lib/` (start at `routes.ts`); `npx tsx scripts/likes/checks.ts` tests them on the in-memory store.
+
+The functions can't import `src/` directly (Vercel compiles each function with tsc and doesn't bundle it), so `api/_lib/gen/site.mjs` is a generated bundle of `src/lib/likes/site.ts`. After changing the IR parser, the share checks, the seed programs or the widget list, run `npx tsx scripts/likes/bundle.ts`; the likes checks fail while it is stale.
+
+**Setup, all on free plans:**
+1. Vercel → Storage → Upstash Redis, Free plan, region `us-east-1` (the functions run in `iad1`, set by `regions` in `vercel.json`). Connect it to the project for Production. That adds `KV_REST_API_URL` and `KV_REST_API_TOKEN`; the `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` names work too.
+2. Add for Production: `LIKE_COOKIE_KEY` and `LIKE_HASH_KEY` (each `openssl rand -base64 48`, at least 32 characters) and `CRON_SECRET` (`openssl rand -hex 24`). Rotating `LIKE_COOKIE_KEY` signs every visitor out of "remembered" at once. Never rotate `LIKE_HASH_KEY`: it would split every like from its voter.
+3. Firewall → add a rate-limit rule: request path starts with `/api/`, 30 requests per 60 seconds per IP, action deny. Requests the firewall denies don't count as function usage.
+4. BotID needs the project's OIDC token: Settings → Security → Secure backend access with OIDC federation, on.
+5. Turn the button on with `VITE_FLAG_LIKES=on` (a build-time flag, so redeploy).
+
+**Switches:** `LIKES=off` makes every route a 404 with no Redis call (flip it if function use climbs). `LIKE_BOTID=off` skips the BotID check if it turns away real visitors. `LIKE_LIMITS` overrides the limits as `name=value` pairs (`vd=40,site=1000,budget=15000`; names and defaults in `api/_lib/config.ts`). During an attack, turn on Attack Challenge Mode (Firewall, free on every plan).
+
+**Budget:** the free database allows 500K commands a month. The API spends at most 15,000 a day (`budget`) on writes and 16,000 (`hard`) on everything, counting every command inside a script as one. A like costs about 31 to 37 commands that way, so the budget pauses likes at about 400 a day, before the 1,000-a-day site cap. An uncached count read costs 4. Over budget, likes answer "likes paused" until midnight UTC. The daily job (`crons` in `vercel.json`, Hobby runs it once a day within the hour) releases held likes and keeps the free database from being archived.
+
+**Admin:** `scripts/likes/admin.ts` (export, flagged, restore, purge, revoke, recount) runs on your machine with `LIKES_ADMIN_URL` and `LIKES_ADMIN_TOKEN`, the database's REST URL and token from the Upstash console. Keep that token off Vercel.

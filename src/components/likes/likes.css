@@ -1,0 +1,211 @@
+/* Likes (#169): the button, its note, the remember sheet and the gallery list. Grey chrome; liked is an "on"
+   state, so it takes the accent wash like the X-RAY pill (DESIGN.md › Chrome states). */
+.lk {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2) var(--space-3);
+  margin: 0 0 var(--gap-group)
+}
+
+.lk--compact {
+  margin: 0;
+  flex-wrap: nowrap
+}
+
+.lk-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  background: none;
+  color: var(--label);
+  font: 600 var(--fs-label-12)/1 var(--mono);
+  letter-spacing: .14em;
+  cursor: pointer;
+  transition: color var(--dur-out) var(--ease), background-color var(--dur-out) var(--ease), border-color var(--dur-out) var(--ease);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation
+}
+
+.lk-btn:hover,
+.lk-btn:focus-visible {
+  background: var(--wash-hover);
+  border-color: var(--line-hover);
+  color: var(--value);
+  transition-duration: var(--dur-in)
+}
+
+.lk-btn:active {
+  background: var(--wash-press);
+  color: var(--value);
+  transition-duration: var(--dur-in)
+}
+
+.lk-btn[aria-pressed="true"] {
+  background: var(--glow-wash);
+  border-color: var(--red-line);
+  color: var(--value)
+}
+
+.lk-btn:disabled {
+  opacity: .4;
+  cursor: default
+}
+
+.lk-glyph {
+  font-size: var(--fs-copy-14);
+  line-height: 1
+}
+
+.lk-btn[aria-pressed="true"] .lk-glyph {
+  color: var(--red)
+}
+
+.lk-count {
+  color: var(--value);
+  font-variant-numeric: tabular-nums
+}
+
+.lk-note {
+  color: var(--mute);
+  font: 500 var(--fs-label-11)/1.4 var(--mono)
+}
+
+.lk-note:empty {
+  display: none
+}
+
+.lk-forget {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--mute);
+  font: 500 var(--fs-label-11)/1.4 var(--mono);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer
+}
+
+.lk-forget:hover,
+.lk-forget:focus-visible {
+  color: var(--value)
+}
+
+.lk-forget:active {
+  color: var(--label)
+}
+
+/* the remember sheet: centred on desktop, a bottom sheet on phones */
+.lk-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: var(--z-modal);
+  display: grid;
+  place-items: center;
+  padding: var(--space-4);
+  background: var(--scrim)
+}
+
+.lk-sheet {
+  width: min(420px, 100%);
+  padding: var(--space-6);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-panel);
+  background: var(--panel);
+  color: var(--label);
+  box-shadow: var(--shadow-raised)
+}
+
+.lk-sheet:focus-visible {
+  outline: 1px solid var(--red);
+  outline-offset: 2px
+}
+
+.lk-sheet h2 {
+  margin: 0 0 var(--space-3);
+  color: var(--value);
+  font: 600 var(--fs-copy-16)/1.35 var(--sans)
+}
+
+.lk-sheet p {
+  margin: 0 0 var(--space-5);
+  font: 400 var(--fs-copy-14)/1.5 var(--sans)
+}
+
+.lk-sheet a {
+  color: var(--value)
+}
+
+.lk-choices {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3)
+}
+
+.lk-choices button {
+  min-height: var(--tap);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-ctl);
+  background: var(--raised);
+  color: var(--value);
+  font: 600 var(--fs-label-12)/1 var(--mono);
+  letter-spacing: .1em;
+  cursor: pointer
+}
+
+.lk-choices button:hover,
+.lk-choices button:focus-visible {
+  background: var(--wash-hover);
+  border-color: var(--line-hover)
+}
+
+.lk-choices button:active {
+  background: var(--wash-press)
+}
+
+@media (max-width: 560px) {
+  .lk-scrim {
+    place-items: end stretch;
+    padding: 0
+  }
+
+  .lk-sheet {
+    width: 100%;
+    border-radius: var(--radius-panel) var(--radius-panel) 0 0;
+    padding-bottom: max(var(--space-6), env(safe-area-inset-bottom))
+  }
+}
+
+@media (pointer: coarse) {
+  .lk-btn {
+    min-height: var(--tap)
+  }
+}
+
+/* gallery programs */
+.lk-gallery ul {
+  display: grid;
+  gap: var(--space-2);
+  margin: var(--space-3) 0;
+  padding: 0;
+  list-style: none
+}
+
+.lk-gallery li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3)
+}
+
+.lk-name {
+  overflow: hidden;
+  color: var(--label);
+  font: 500 var(--fs-label-12)/1.4 var(--mono);
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
