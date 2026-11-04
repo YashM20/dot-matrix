@@ -34,6 +34,7 @@ import { Pill, PillBar, PillButton } from './PillBar'
 import { MoreMenu } from './MoreMenu'
 import { WidgetLike } from '../likes/slot'
 import './WidgetPage.css'
+import { flag } from '../../site/flags'
 
 export interface WidgetPageProps {
   route: WidgetRoute
@@ -178,7 +179,7 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
           </Pill>
           <Pill className="wp-go">
             {share && <PillButton label="SHARE" glyph="↗" title="Share" onPointerDown={() => { sharePNG.current = png() }} onClick={act.share} />}
-            <PillButton label="REMIX" glyph="✎" title="Remix in MAKE" onClick={act.remix} />
+            {flag('make') && <PillButton label="REMIX" glyph="✎" title="Remix in MAKE" onClick={act.remix} />}
             {xrayOn && <PillButton label="X-RAY" glyph="ⓘ" title="X-ray: how it works" onClick={act.xray} pressed={xray} className="wp-desk" />}
             <MoreMenu items={[
               { label: 'Copy short link', note: shortPath(w.uid), run: act.short },

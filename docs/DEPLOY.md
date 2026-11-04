@@ -60,6 +60,8 @@ Release flags live in `src/site/flags.ts`, one registry entry each (`id`, `defau
 | `clack` | off | `VITE_FLAG_CLACK` | The flip-disc clack sound. `?clack=1` and the skin list's toggle still turn it on. |
 | `analytics` | on | `VITE_FLAG_ANALYTICS` | PostHog analytics (opt-in): the consent banner, the TOOLS tile and the palette's two commands. Does nothing without `VITE_POSTHOG_PROJECT_TOKEN` (see Analytics below). `kill` leaves `posthog-js` and the banner out of the build. |
 | `likes` | off | `VITE_FLAG_LIKES` | The like button on widget pages and gallery programs (#169). It stays hidden while the likes API answers 404, which it does until the store and its secrets are set (see Likes below). |
+| `make` | off | `VITE_FLAG_MAKE` | MAKE, the editor: the MAKE tab (header and phone), the palette places and remix actions, the shell's `remix` and `studio`, the cards' and widget page's REMIX, and the MAKE links in About, the changelog and the essay. Off, a MAKE URL (`?make`, `?tab=studio`, …) opens the home board. |
+| `lab` | off | `VITE_FLAG_LAB` | The lab: its links in the header, footer, TOOLS, About, the changelog and the blog nav, and its sitemap entry (read at build time). Off, `/lab/` goes home, and the lab page says `noindex` either way. |
 
 **Per environment on Vercel.** Set the variables in Vercel → Project → Settings → Environment Variables and tick the environments each one applies to (Production, Preview, Development). They are read at build time, so a change needs a redeploy. For example, to keep X-ray off in production and on for PR previews, add `VITE_FLAG_XRAY=on` for Preview only. With no variable set, every environment uses the registry default. Local builds read `.env.local` or the shell: `VITE_FLAG_XRAY=kill pnpm build`.
 

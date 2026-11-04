@@ -22,6 +22,7 @@ import { POSTS, postPath } from '../../src/blog/posts'
 import { parse } from '../../src/blog/markdown'
 import { cardsOf, origin, readWidgets } from './seo'
 import { esc, STATIC_CLASS } from './seo-html'
+import { flag } from '../../src/site/flags'
 
 const DIST = 'dist'
 const { assert, done } = checker('seo')
@@ -92,7 +93,7 @@ assert('seo: the board rewrite in vercel.json lists every board id (add a new bo
 
 // ── sitemap + robots ──
 const xml = readFileSync(join(DIST, 'sitemap.xml'), 'utf8'), locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].replace(/&amp;/g, '&'))
-const expected = 1 + boardIds.length + widgets.length + 1 + POSTS.length + 3
+const expected = 1 + boardIds.length + widgets.length + 1 + POSTS.length + (flag('lab') ? 3 : 2)
 assert(`seo: sitemap.xml lists ${expected} URLs (home, boards, widgets, blog, posts, lab, privacy, terms), none twice`, locs.length === expected && new Set(locs).size === locs.length, `${locs.length} URLs`)
 const strayWidget = locs.filter(l => l.includes('/widget/') && !widgets.some(w => l === origin + w.url))
 assert('seo: the sitemap lists widgets by their canonical slug URL only (no uid or alias forms)', !strayWidget.length, strayWidget.slice(0, 3).join(', '))

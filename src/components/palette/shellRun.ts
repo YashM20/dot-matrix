@@ -7,7 +7,7 @@ import { describe } from '../../engine/describe'
 import { boardManifest, loadBoard } from '../../widgets/manifest'
 import { boardTime, probes, xrState } from '../xray/store'
 import { fuzzy } from './fuzzy'
-import { MODES, PLACES, VIEWS, placeFromName } from '../../site/views'
+import { MODES, PLACES, VIEWS, placeFromName, placeOpen } from '../../site/views'
 import { allBoards, paletteItems, type CommandApi } from './api'
 import { commandWords, findCommand, helpFor, shellHelp, shellKnows } from './shellHelp'
 import { nearest, type Sources } from './shellLine'
@@ -56,7 +56,7 @@ async function findCard(q: string, ctx: Ctx) {
   return best?.p
 }
 const findBoard = (q: string) => boardManifest.find(b => b.id === q) ?? boardManifest.find(b => b.id.startsWith(q)) ?? boardManifest.find(b => b.title.toLowerCase().includes(q))
-const placeWords = () => [...PLACES.map(p => p.toLowerCase()), 'make']
+const placeWords = () => [...PLACES.filter(placeOpen).map(p => p.toLowerCase()), ...(placeOpen('MAKE') ? ['make'] : [])]
 
 /** Completion's word sources (src/components/palette/shellLine.ts). */
 export const sources: Sources = {
@@ -114,12 +114,12 @@ export async function exec(raw: string, ctx: Ctx): Promise<void> {
       }
       const ids = boardManifest.map(b => (b.id === api.board ? `*${b.id}` : ` ${b.id}`)), per = Math.max(1, Math.floor(ctx.width / 15))
       for (let i = 0; i < ids.length; i += per) print(ids.slice(i, i + per).map(s => s.padEnd(15)).join('').trimEnd())
-      return print(dim(`${boardManifest.length} boards · ls <board> lists its cards · views: ${[...VIEWS, ...MODES].join(' ').toLowerCase()}`))
+      return print(dim(`${boardManifest.length} boards · ls <board> lists its cards · views: ${[...VIEWS, ...MODES].filter(placeOpen).join(' ').toLowerCase()}`))
     }
     case 'open': {
       if (!arg) return print(err(`${word}: where to? a board, a view or a card. try ls`))
       const place = placeFromName(arg) // a view or a MAKE mode, by its old tab name too (studio, dots, log…)
-      if (place) { api.openTab(arg); return print(`→ ${VIEWS.includes(place as never) ? place : `MAKE · ${place}`}`) }
+      if (place && placeOpen(place)) { api.openTab(arg); return print(`→ ${VIEWS.includes(place as never) ? place : `MAKE · ${place}`}`) }
       const b = findBoard(arg)
       if (b) { api.openBoard(b.id); return print(`→ ${b.id.toUpperCase()}`) }
       const card = await findCard(arg, ctx)

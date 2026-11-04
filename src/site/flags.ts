@@ -29,6 +29,8 @@ export const FLAGS = [
   { id: 'clack', default: false, description: 'The flip-disc clack sound', param: 'clack' },
   { id: 'analytics', default: true, description: 'PostHog analytics, opt-in (src/site/analytics.ts): the consent banner and the TOOLS and palette switches. Needs VITE_POSTHOG_PROJECT_TOKEN' },
   { id: 'likes', default: false, description: 'Likes (#169): the like button on widget pages and gallery programs; it also hides while the likes API answers 404' },
+  { id: 'make', default: false, description: 'MAKE, the editor: the view tab and phone tab, the palette and shell places, REMIX and studio actions, About and essay links. Off, a MAKE URL opens the home board' },
+  { id: 'lab', default: false, description: 'The lab page (/lab/): the header, footer, TOOLS, About, blog nav and sitemap links. Off, /lab/ goes home' },
 ] as const satisfies readonly FlagDef[]
 
 export type FlagId = (typeof FLAGS)[number]['id']
@@ -44,7 +46,9 @@ const word = (v: unknown): boolean | undefined =>
   v === true || v === '1' || v === 'on' || v === 'true' ? true : v === false || v === '0' || v === 'off' || v === 'false' ? false : undefined
 // Vite replaces `import.meta.env` with the build's env object; Node (verify, tsx) has none
 const ENV: Record<string, unknown> = import.meta.env ?? {}
-const buildValue = (id: FlagId): unknown => ENV[`VITE_FLAG_${id.toUpperCase()}`]
+// the build scripts (postbuild, seo) run in Node, where the build value is a plain environment variable
+const NODE_ENV: Record<string, unknown> = (globalThis as { process?: { env?: Record<string, unknown> } }).process?.env ?? {}
+const buildValue = (id: FlagId): unknown => ENV[`VITE_FLAG_${id.toUpperCase()}`] ?? NODE_ENV[`VITE_FLAG_${id.toUpperCase()}`]
 /** Killed at build time (`VITE_FLAG_<ID>=kill`): off for good, no override brings it back. */
 export const flagKilled = (id: FlagId): boolean => buildValue(id) === 'kill'
 

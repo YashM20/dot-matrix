@@ -8,7 +8,7 @@
  *    Markdown posts carry their whole text; the essay (a TSX page) carries its title and line.
  * 2. JSON-LD: `WebSite` on the home page, a `CollectionPage` per board with its cards as `hasPart`. Widget, blog and
  *    lab pages already have theirs from postbuild.
- * 3. `dist/sitemap.xml` (home, boards, canonical widget slugs, blog, lab, privacy, terms) and `dist/robots.txt`.
+ * 3. `dist/sitemap.xml` (home, boards, canonical widget slugs, blog, the lab while its flag is on, privacy, terms) and `dist/robots.txt`.
  * 4. A `rel=canonical` on the legal pages, which have none in their source.
  * 5. `dist/404.html` (`./notfound.ts`): what Vercel serves for a path no file or rewrite matches.
  *
@@ -25,6 +25,7 @@ import { boardBlurbs } from '../../src/widgets/blurbs'
 import { SITE_DESCRIPTION, SITE_NAME, widgetTitle } from '../../src/site/meta'
 import { POSTS, postPath } from '../../src/blog/posts'
 import { LAB } from '../../src/lab/experiments'
+import { flag } from '../../src/site/flags'
 import { blogIndexBody, boardBody, esc, homeBody, jsonLd, labBody, postBody, staticStyles, widgetBody, type WidgetRow } from './seo-html'
 import { notFoundPage } from './notfound'
 
@@ -43,7 +44,7 @@ export function sitemapEntries(widgets: readonly WidgetRow[]): SitemapEntry[] {
   return [
     { path: '/' }, ...boardIds.map(id => ({ path: `/${id}/` })), ...widgets.map(w => ({ path: w.url })),
     { path: postPath(), lastmod: POSTS.map(p => p.date).sort().at(-1) }, ...POSTS.map(p => ({ path: postPath(p.slug), lastmod: p.date })),
-    { path: LAB.path }, { path: '/privacy' }, { path: '/terms' },
+    ...(flag('lab') ? [{ path: LAB.path }] : []), { path: '/privacy' }, { path: '/terms' },
   ]
 }
 

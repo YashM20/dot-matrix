@@ -101,14 +101,17 @@ html {
   }
 }
 
-/* brand left; the view tabs and BLOG centred in the space before the right end (DISPLAY, LIVE, the tool dock) */
-.topbar .view-tabs {
-  margin-inline: auto 0
+/* brand left; the nav (view tabs, then BLOG) one group with even gaps, centred in the space before the right end
+   (DISPLAY, LIVE, the tool dock) */
+.topbar-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  margin-inline: auto
 }
 
 /* BLOG: a link to its own page, set like the view tabs beside it */
 .topbar-blog {
-  margin-inline-end: auto;
   color: var(--mute);
   letter-spacing: .13em;
   text-decoration: none
@@ -141,11 +144,6 @@ html {
   margin-right: var(--space-2);
   border-radius: 50%;
   background: var(--red)
-}
-
-.brand small {
-  color: var(--mute);
-  margin-left: var(--space-2)
 }
 
 .topbar .view-tabs {
@@ -273,10 +271,6 @@ label b {
   .topbar .view-tabs {
     gap: var(--space-1) var(--space-3);
     flex-wrap: wrap
-  }
-
-  .brand small {
-    display: none
   }
 
   .bottom-row {

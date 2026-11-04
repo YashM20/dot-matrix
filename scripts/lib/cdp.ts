@@ -3,7 +3,7 @@
  * page, evaluate, wait, screenshot, mouse / touch / key input, and collect uncaught errors. `serveDist`
  * runs `vite preview` on `dist/` for the length of a probe, so no server outlives it. Every CDP call has a
  * timeout (`CDP_TIMEOUT_MS`, default 120 s) and fails when the socket closes, so a hung or dead Chrome makes
- * a probe fail instead of waiting forever. Every page sets `__DOT_PROBE__` before it loads, so a production build
+ * a probe fail instead of waiting forever. Every page turns the `make` and `lab` flags on and sets `__DOT_PROBE__` before it loads, so a production build
  * (`serveDist`) exposes the test hooks the probes read (src/lib/testHooks.ts).
  */
 import { spawn, type ChildProcess } from 'node:child_process'
@@ -131,7 +131,10 @@ export async function launch(width: number, height: number, opts: LaunchOptions 
   const close = async () => { drop('page closed'); ws.close(); proc.kill(); await sleep(300); try { rmSync(profile, { recursive: true, force: true }) } catch { /* Chrome may still hold files */ } }
   await cdp('Page.enable'); await cdp('Runtime.enable')
   // the app's test-only globals (src/lib/testHooks.ts) exist in a production build only when a probe asks for them
-  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__DOT_PROBE__ = true' })
+  // MAKE and the lab are behind flags that are off by default (src/site/flags.ts); the probes test them, so each page
+  // starts with both on unless the probe saved its own choice (`setFlag`) or the URL turns one off (`?flags=-make`)
+  const flagsOn = `try{var k='dot480:flags',o=JSON.parse(localStorage.getItem(k)||'{}');if('make' in o&&'lab' in o)throw 0;if(!('make' in o))o.make=true;if(!('lab' in o))o.lab=true;localStorage.setItem(k,JSON.stringify(o))}catch(e){}`
+  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `globalThis.__DOT_PROBE__ = true;${flagsOn}` })
   const allowDownloads = async (dir: string) => {
     const r = await cdp('Browser.setDownloadBehavior', { behavior: 'allowAndName', downloadPath: dir, eventsEnabled: true })
     if (r.error) await cdp('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: dir })

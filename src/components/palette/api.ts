@@ -4,7 +4,7 @@
  */
 import { SKINS as SKIN_INFO, SKIN_NAMES } from '../../engine/display/names'
 import { boardIds, boardLabel, boardManifest, loadBoard, type BoardDef } from '../../widgets/manifest'
-import { MODE_LINES, PLACES, isMode } from '../../site/views'
+import { MODE_LINES, PLACES, isMode, placeOpen } from '../../site/views'
 import type { RendererOverride } from '../xray/store'
 import type { MotionSetting } from './reducedMotion'
 import { ACCENTS, type AccentId } from '../../site/theme/names'
@@ -77,8 +77,8 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   if (flag('xray')) act('xray', 'Toggle X-ray on every card', a => a.toggleXray(), '⇧X', 'xray inspect debug grid field layers')
   act('time', 'Time machine: freeze and scrub the board', a => a.freeze(), 'T', 'pause clock scrub time')
   act('resume', 'Time machine: resume the clock', a => a.resume(), 'SPACE', 'play unpause')
-  if (hoveredCard) act('remix-hover', `Open ${hoveredCard} in MAKE · CODE (remix)`, a => a.remix(hoveredCard), '', 'remix dots ir program')
-  if (hoveredCard) act('studio-hover', `Open ${hoveredCard} in MAKE · COMPOSE`, a => a.studio(hoveredCard), '', 'remix studio edit layers')
+  if (hoveredCard && flag('make')) act('remix-hover', `Open ${hoveredCard} in MAKE · CODE (remix)`, a => a.remix(hoveredCard), '', 'remix dots ir program')
+  if (hoveredCard && flag('make')) act('studio-hover', `Open ${hoveredCard} in MAKE · COMPOSE`, a => a.studio(hoveredCard), '', 'remix studio edit layers')
   act('link', 'Copy deep link to this view', a => a.copyLink(), '', 'share url clipboard')
   if (hoveredCard) act('link-card', `Copy deep link to ${hoveredCard}`, a => a.copyLink(hoveredCard), '', 'share url clipboard card')
   act('shell', 'Open the dot shell', a => a.openShell(), '`', 'terminal console cli')
@@ -106,7 +106,7 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   act('accent-next', 'Accent: next', () => switchTheme({ accent: ACCENTS[(ACCENTS.indexOf(getTheme().accent as AccentId) + 1) % ACCENTS.length] }), '', 'accent theme colour color hue next cycle')
   // CARD SIZE (src/site/cards.ts): the popover's and TOOLS' LARGE / MEDIUM / COMPACT
   for (const s of CARD_SIZES) act(`cards-${CARD_SIZE_LABELS[s].toLowerCase()}`, `Card size: ${CARD_SIZE_LABELS[s].toLowerCase()} (${CARD_SIZE_LINES[s]})`, () => setCardSize(s), '', `card size cards columns row grid bigger smaller zoom density ${CARD_SIZE_LABELS[s].toLowerCase()}`)
-  for (const p of PLACES) items.push({ id: `v:${p}`, group: 'View', text: isMode(p) ? `Go to MAKE · ${p}: ${MODE_LINES[p]}` : `Go to ${p}`, run: a => a.openTab(p), keywords: `${p.toLowerCase()} ${PLACE_WORDS[p]}`, boost: 30 })
+  for (const p of PLACES.filter(placeOpen)) items.push({ id: `v:${p}`, group: 'View', text: isMode(p) ? `Go to MAKE · ${p}: ${MODE_LINES[p]}` : `Go to ${p}`, run: a => a.openTab(p), keywords: `${p.toLowerCase()} ${PLACE_WORDS[p]}`, boost: 30 })
   // the blog is its own page (blog.html, src/blog): the index, then each post
   items.push({ id: 'v:blog', group: 'View', text: 'Blog', hint: `${POSTS.length} posts`, run: () => assign(postPath()), keywords: 'blog posts essay guides tutorials articles read learn how it works', boost: 30 })
   for (const p of POSTS) items.push({ id: `v:blog-${p.slug}`, group: 'View', text: `Blog: ${p.title}`, run: () => assign(postPath(p.slug)), keywords: `blog post ${p.kind === 'essay' ? 'essay ditherpunk how it works' : 'tutorial guide'} ${p.dek}`, boost: 25 })
