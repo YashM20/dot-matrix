@@ -164,7 +164,7 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
         const due = e.dirty || !p || p.card !== f.card || p.theme !== f.theme || p.k !== k || p.state !== state || p.tl !== tl || (tl && p.t !== t) || (!tl && anim && now - e.last > 33)
         if (!due || budget > 24) continue // past ~24 ms this tick: the rest draw next frame
         let ms = 0, error: string | undefined, pending: boolean | undefined
-        try { ({ ms, error, pending } = drawFrame(e.canvas, f, k, { timeline: tl, t, state, pointer: e.pointer })) } catch (err) { error = String((err as Error)?.message ?? err) }
+        try { ({ ms, error, pending } = drawFrame(e.canvas, f, k, { timeline: tl, t, state, pointer: e.pointer }, tl ? s.play.playing : anim)) } catch (err) { error = String((err as Error)?.message ?? err) }
         // a frame that breaks draws empty and says so once; one that drew may be autosaved (an import is held until then)
         if (error === undefined) { e.broke = false; if (!pending) drew(f.id) } else if (!e.broke) { e.broke = true; s.setNote(`frame "${f.card.name}" could not be drawn: ${error.slice(0, 120)}`) }
         budget += ms

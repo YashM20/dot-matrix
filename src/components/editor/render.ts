@@ -68,9 +68,11 @@ function sampleFrame(f: EditorFrame, o: FrameDraw, wake?: { on: boolean }) {
 /**
  * Draw a frame into `canvas` at `k` canvas px per world px. Returns the frame time in ms, why it drew empty if it broke,
  * and `pending` while its program values are on their way from the worker: the canvas then keeps the last complete
- * frame (an animation shows the newest frame whose values landed, one tick behind) and draws again once they land.
+ * frame (an animation shows the newest frame whose values landed, one tick behind) and `whenLanded` asks for a redraw
+ * once they land. `soon`: the caller draws this frame again shortly anyway (a running animation), so no redraw is asked
+ * for while an older complete frame stands in.
  */
-export function drawFrame(canvas: HTMLCanvasElement, f: EditorFrame, k: number, o: FrameDraw): { ms: number; error?: string; pending?: boolean } {
+export function drawFrame(canvas: HTMLCanvasElement, f: EditorFrame, k: number, o: FrameDraw, soon = false): { ms: number; error?: string; pending?: boolean } {
   const ctx = canvas.getContext('2d')
   if (!ctx) return { ms: 0 }
   const pitch = pitchOf(f.card), W = f.card.grid.cols * pitch, H = f.card.grid.rows * pitch
@@ -82,8 +84,8 @@ export function drawFrame(canvas: HTMLCanvasElement, f: EditorFrame, k: number, 
   const last = pending ? landed.get(f.id) : undefined
   if (last && last.card === f.card && last.o !== o) {
     const r = sampleFrame(f, last.o)
-    // the newest complete frame stands in; no extra draw when this one lands (an animation's next tick asks again)
-    if (!r.pending) { ({ dots, error } = r); pending = false; wake.on = false }
+    // the newest complete frame stands in; a still frame (a scrub or pointer that stopped) draws again when this one lands
+    if (!r.pending) { ({ dots, error } = r); pending = false; wake.on = !soon }
   }
   userPrograms.settle() // the frame is done: its programs that kept to the budget count as drawn
   // nothing complete to show: keep the canvas, unless it is blank (first draw, resized), then draw what there is
