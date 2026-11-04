@@ -62,7 +62,7 @@
 }
 
 .lk-btn[aria-pressed="true"] .lk-glyph {
-  color: var(--red)
+  color: var(--red-text)
 }
 
 .lk-count {

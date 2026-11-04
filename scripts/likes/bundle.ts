@@ -8,8 +8,8 @@
  *
  * Run it after changing the IR parser, the share checks, the seed programs or the widget list.
  */
-import { execSync } from 'node:child_process'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { join } from 'node:path'
 import { EXAMPLES } from '../../src/components/dwitter/examples'
 import { programKey } from '../../src/lib/likes/site'
@@ -27,9 +27,10 @@ export declare const SEED_KEYS: readonly string[]
 
 /** The bundle and its types as they should be. */
 export async function build(): Promise<{ js: string; dts: string }> {
-  // a constant command line (no input in it); esbuild comes with tsx
-  const js = execSync('npx --no-install esbuild src/lib/likes/site.ts --bundle --format=esm --platform=neutral --target=es2022 --legal-comments=none --log-level=warning',
-    { cwd: ROOT, encoding: 'utf8', maxBuffer: 16 << 20 })
+  // esbuild comes with tsx (pnpm doesn't link it at the top level, so resolve it from tsx)
+  const esbuild = createRequire(createRequire(join(ROOT, 'package.json')).resolve('tsx/package.json'))('esbuild') as typeof import('esbuild')
+  const out = await esbuild.build({ entryPoints: [join(ROOT, 'src/lib/likes/site.ts')], absWorkingDir: ROOT, bundle: true, format: 'esm', platform: 'neutral', target: 'es2022', legalComments: 'none', logLevel: 'warning', write: false })
+  const js = out.outputFiles[0].text
   const seeds = await Promise.all(EXAMPLES.map(e => programKey(e)))
   return { js: `${HEAD}${js.replace(/\r\n/g, '\n')}export const SEED_KEYS = ${JSON.stringify(seeds)};\n`, dts: DTS }
 }
