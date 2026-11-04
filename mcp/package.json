@@ -14,8 +14,8 @@
     "author:seeds": "tsx ../scripts/author/seeds.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/ext-apps": "^2.0.3",
-    "@modelcontextprotocol/server": "^2.3.1",
+    "@modelcontextprotocol/ext-apps": "^2.0.4",
+    "@modelcontextprotocol/server": "^2.4.0",
     "zod": "^4.2.0"
   },
   "devDependencies": {
