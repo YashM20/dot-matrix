@@ -9,13 +9,13 @@
 import { cellU } from '../engine/sampler/gridSampler'
 import type { Field, GridConfig, Layer, Tone } from '../engine/types'
 import { type WidgetContext, type WidgetPreset } from '../widgets/types'
-import { buildLayer, layerGrid, specLayerOf, type BuildOptions, type SpecPreset } from './build'
+import { buildLayer, layerGrid, specLayerOf, type SpecPreset } from './build'
 import { encodeSamples, toBase64 } from './codec'
 import { GENERATOR_PARAMS } from './generators'
 import { SpecError, type CardSpec, type JoinLayerSpec, type LayerKind, type LayerSpec, type RasterLayerSpec, type Window } from './types'
 import { validateSpec } from './validate'
 
-export interface ExportOptions extends BuildOptions {
+export interface ExportOptions {
   /** Export frame time (default 0) — what baked layers capture. */
   t?: number
   /** Data over the preset's defaults for the export frame. */
@@ -187,7 +187,7 @@ export function exportPreset(p: WidgetPreset, opts: ExportOptions = {}): ExportR
       probe.layers = [out]
       const v = validateSpec(probe)
       if (!v.ok) out = `invalid as spec: ${v.errors[0].path.replace('$.layers[0]', '')} ${v.errors[0].message}`
-      else if (!sameLayer(l, buildLayer(out, p.grid, opts)(ctx), p.grid)) out = `${out.kind} rebuild differs`
+      else if (!sameLayer(l, buildLayer(out, p.grid)(ctx), p.grid)) out = `${out.kind} rebuild differs`
     }
     if (typeof out === 'string') { baked.push({ index, reason: out }); out = bakeLayer(l, p.grid, opts.precision) }
     kinds[out.kind]++

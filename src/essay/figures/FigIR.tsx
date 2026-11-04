@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import type { Layer } from '../../engine/types'
 import type { Control } from '../../engine/context'
-import { contextEnv, IRError, irGuard, irProgram, type IRProgram } from '../../engine/ir'
+import { compileUntrusted, contextEnv, IRError, irGuard, type IRProgram } from '../../engine/ir'
 import { encodeShare, shareUrl, SHARE_GRIDS } from '../../lib/share'
 import { tileStyle, type WidgetContext } from '../../widgets/types'
 import { DotCanvas } from '../../components/DotCanvas'
@@ -23,7 +23,7 @@ const ignore = () => {}
 const guard = irGuard()
 
 function compile(src: string): { program?: IRProgram; error?: string } {
-  try { return { program: irProgram(src, { mode: 'function' }) } }
+  try { return { program: compileUntrusted(src) } }
   catch (e) { return { error: e instanceof IRError ? e.message : String(e) } }
 }
 
