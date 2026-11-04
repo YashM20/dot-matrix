@@ -311,7 +311,7 @@ export async function themeChecks(assert: Assert, { print = false } = {}): Promi
   const mismatch: string[] = []
   for (const s of searches) for (const st of stored) for (const light of [false, true]) {
     const b = runBoot(s, st, light), p = resolvePrefs(s, st), scheme = resolveScheme(p.scheme, light)
-    const want = { 'data-scheme': scheme, 'data-accent': p.accent, ...(p.accent === 'custom' ? { style: p.custom!.css } : {}), 'color-scheme': scheme, 'theme-color': BG[scheme] }
+    const want = { 'data-scheme': scheme, 'data-accent': p.accent, ...(p.accent === 'custom' ? { style: customCss(p.custom!.hue) } : {}), 'color-scheme': scheme, 'theme-color': BG[scheme] }
     if (JSON.stringify(b) !== JSON.stringify(want)) mismatch.push(`${s || '(none)'} + ${st} + ${light ? 'light' : 'dark'} OS: boot ${JSON.stringify(b)} vs store ${JSON.stringify(want)}`)
   }
   assert(`theme: boot script ≡ store resolution (${searches.length * stored.length * 2} cases: URL, storage, OS scheme; attributes, the custom hue's <style>, color-scheme and theme-color metas)`, !mismatch.length, mismatch.slice(0, 3).join('; '))
@@ -322,9 +322,28 @@ export async function themeChecks(assert: Assert, { print = false } = {}): Promi
   const conCases: [string, string | null, boolean][] = [['', null, false], ['?contrast=more', null, true], ['?contrast=system', '{"contrast":"more"}', false], ['', '{"contrast":"more"}', true], ['?contrast=max', '{"contrast":"more"}', true], ['', '{"contrast":"high"}', false]]
   const conOff = conCases.filter(([s, st, on]) => (resolvePrefs(s, st).contrast === 'more') !== on).map(([s, st]) => `${s || '(none)'} + ${st}`)
   assert(`theme: CONTRAST: MORE from ?contrast= (visit) then the stored choice, else the system (${conCases.length} cases)`, !conOff.length, conOff.join(', '))
-  const { withMoreToggle } = await import('../../src/site/theme/theme')
   const cssNow = customCss(212), cssOld = cssNow.replace(/:where\(\[data-contrast="more"\][^{]*\{[^}]*\}/g, '')
-  assert('theme: customCss() has a CONTRAST: MORE copy of each prefers-contrast block, and the store rebuilds it for CSS stored before the switch', SCHEMES.every(s => cssNow.includes(`${moreSelector(`[data-scheme="${s}"][data-accent="custom"]`)}{`)) && cssOld !== cssNow && withMoreToggle(cssOld) === cssNow && withMoreToggle(cssNow) === cssNow)
+  assert('theme: customCss() has a CONTRAST: MORE copy of each prefers-contrast block', SCHEMES.every(s => cssNow.includes(`${moreSelector(`[data-scheme="${s}"][data-accent="custom"]`)}{`)) && cssOld !== cssNow)
+  // #149: only the hue is read back from storage; the store makes its CSS again and stores that (cleanStored)
+  const { cleanStored, consoleSetTheme, getTheme, setTheme } = await import('../../src/site/theme/theme')
+  const EVIL = 'html{display:none!important}', entry = (o: object) => JSON.stringify(o)
+  const tampered = entry({ scheme: 'light', accent: 'custom', hue: 212, css: EVIL }), tp = resolvePrefs('', tampered), tc = cleanStored(tampered, customCss)
+  const tOk = tp.accent === 'custom' && JSON.stringify(tp.custom) === '{"hue":212}' && tc === entry({ scheme: 'light', accent: 'custom', hue: 212, css: cssNow })
+  assert('theme: a stored entry with arbitrary CSS loads as a clean hue theme (hue 212 kept, the CSS made again and stored back)', tOk, tOk ? '' : String(tc).slice(0, 100))
+  assert('theme: custom CSS stored before CONTRAST: MORE is replaced by the current generator output', cleanStored(entry({ scheme: 'dark', accent: 'custom', hue: 212, css: cssOld }), customCss) === entry({ scheme: 'dark', accent: 'custom', hue: 212, css: cssNow }))
+  const noHue = [entry({ accent: 'custom', css: EVIL }), entry({ accent: 'custom', hue: '212', css: EVIL }), entry({ accent: 'custom', hue: 1e21, css: EVIL })]
+  const noHueOff = noHue.filter(st => { const p = resolvePrefs('', st); return p.accent !== 'signal' || !!p.custom || cleanStored(st, customCss) !== entry({ scheme: 'system', accent: 'signal' }) })
+  assert(`theme: stored CSS with no valid hue is dropped: the default accent, nothing custom kept or stored (${noHue.length} cases)`, !noHueOff.length, noHueOff.join(', '))
+  const kept = [entry({ scheme: 'light', accent: 'custom', hue: 212, css: cssNow }), entry({ accent: 'vite' }), entry({ scheme: 'dark', accent: 'cobalt', hue: 40 }), null, 'garbage']
+  assert(`theme: an entry already clean (or with no CSS) is not rewritten (${kept.length} cases)`, kept.every(st => cleanStored(st, customCss) === null))
+  const before = getTheme()
+  consoleSetTheme({ css: EVIL }); consoleSetTheme({ custom: { hue: 5, css: EVIL } }); consoleSetTheme('light_cobalt')
+  const ignored = getTheme() === before
+  consoleSetTheme({ accent: 'custom', hue: 40, css: EVIL, custom: { hue: 5, css: EVIL } })
+  for (let i = 0; i < 50 && !getTheme().custom?.css; i++) await new Promise(r => setTimeout(r, 10))
+  const after = getTheme()
+  assert('theme: the console setTheme ignores CSS (a css field or a custom object changes nothing; a hue gets the generator\'s CSS)', ignored && after.accent === 'custom' && after.custom?.hue === 40 && after.custom.css === customCss(40), JSON.stringify({ ignored, accent: after.accent, hue: after.custom?.hue, generated: after.custom?.css === customCss(40) }))
+  setTheme({ scheme: 'system', accent: 'signal' })
   const themesCss = readFileSync(FILES.css, 'utf8')
   assert('theme: themes.css has a CONTRAST: MORE block ([data-contrast="more"]) for all 14 themes and the chrome materials', themes.every(t => themesCss.includes(`:where([data-contrast="more"], [data-contrast="more"] *)[data-scheme="${t.scheme}"][data-accent="${t.accent}"]`)) && themesCss.includes(':root[data-contrast="more"], [data-contrast="more"] [data-scheme] {\n  --line-dot:'))
   assert('theme: defaults are system + signal; system follows the OS', runBoot('', null, false)['data-scheme'] === 'dark' && runBoot('', null, true)['data-scheme'] === 'light' && runBoot('', null, true)['data-accent'] === 'signal')
