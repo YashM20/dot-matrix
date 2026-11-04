@@ -65,6 +65,11 @@ jobs:
       - name: Theme checks on the build
         run: pnpm exec tsx scripts/site/theme.ts --check
 
+      # `pnpm check` ran the header checks on the source pages; after the build they also cover every built page
+      # (each inline script's sha256 in the CSP, the CSP and hardening headers on every path)
+      - name: Header checks on the build
+        run: pnpm exec tsx scripts/site/headers.ts
+
       - name: Upload site
         uses: actions/upload-artifact@v4
         with:

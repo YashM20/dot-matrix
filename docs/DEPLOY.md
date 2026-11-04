@@ -35,19 +35,28 @@ The post-build step runs from the `site-postbuild` plugin in `vite.config.ts`. `
 - `/assets/*`: `Cache-Control: public, max-age=31536000, immutable`. File names are content hashes.
 - `/og/*`, `/images/*`: 1 day.
 - HTML uses Vercel's default (revalidate), so a deploy shows up at once.
-- On every path:
+- Every path gets one header block, `/(.*)`. There are no exclusions: a lookahead in a `source` drops the headers for every path it matches, including deep paths the SPA fallback serves (issue #141). The block sets:
+  - `Content-Security-Policy` (below);
+  - `X-Frame-Options: SAMEORIGIN`, for browsers that predate `frame-ancestors`;
+  - `Cross-Origin-Opener-Policy: same-origin`: a page this site opens, or one that opens it, gets no `window.opener` handle. Nothing here uses `window.opener` or a cross-origin popup, and outbound links already use `rel="noreferrer"`;
+  - `Strict-Transport-Security: max-age=63072000; includeSubDomains` (two years);
   - `X-Content-Type-Options: nosniff`;
   - `Referrer-Policy: strict-origin-when-cross-origin`;
-  - `Permissions-Policy`: camera, microphone, geolocation and motion sensors allowed for `self` (the mirror board's camera prompt still appears); payment and bluetooth off.
-- CSP, on every path except `/lab/motion-lab.html` (a hand-written dev page with an inline script). The Lab section at `/lab/` gets it like every other page:
-  - `script-src 'self'`: no inline scripts and no eval. The IR `function` backend falls back to closures under this policy.
-  - `worker-src 'self' blob:`: the sample worker.
+  - `Permissions-Policy`: camera, microphone, accelerometer and gyroscope allowed for `self` (the mirror board's camera, the audio cards, tilt), and `geolocation`, `payment`, `bluetooth`, `usb`, `serial`, `hid` and `display-capture` off.
+- The CSP covers the Lab too. `/lab/motion-lab.html` loads its script from `/lab/motion-lab.js`, so it needs no inline grant.
+  - `script-src 'self'` plus one sha256: the no-flash theme boot script (`src/site/theme/boot.ts`), inline in every HTML entry. `scripts/site/theme.ts --write` keeps the hash current. No other inline scripts and no eval. The IR `function` backend falls back to closures under this policy.
+  - `worker-src 'self' blob:`: the sample worker and the audio scheduler's timer worker.
   - `style-src 'self' 'unsafe-inline'`: React style attributes.
   - `img-src`/`media-src` allow `data:`, `blob:` and `mediastream:` (exports, camera).
-  - `connect-src`: the live board's APIs (Open-Meteo, GitHub, the contributions API), plus `wss:` and localhost `ws:` for the `?np=` now-playing socket.
+  - `connect-src`: `'self'` and the live board's APIs (Open-Meteo, GitHub, the contributions API). No WebSocket sources: the live board's now-playing card reads the page's Media Session by default, and a `?np=` socket URL is blocked in production until #147 decides its allowlist.
+  - `frame-ancestors 'self'`: only this site can frame its pages. An embed route would need its own header block with its own `frame-ancestors`.
+  - `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`.
   - WebCodecs and `getUserMedia` need no CSP grant.
   - **Add any new external API to `connect-src`**, or the fetch is blocked in production only.
-- No COOP/COEP: nothing uses `SharedArrayBuffer`, and COEP would block the cross-origin API responses. Add them only if a feature needs cross-origin isolation (for example threaded WASM).
+- Local tooling is unaffected: `vite` dev and `vite preview` don't apply `vercel.json`, so Vite's hot-reload socket keeps working. The theme probes (`scripts/site/theme-boot.ts`, `theme-picker.ts`) serve `dist/` with the CSP from `vercel.json` on `127.0.0.1`, and the page itself opens no socket. Under `npx vercel dev` the CSP applies and blocks the hot-reload socket, so reload by hand there.
+- `scripts/site/headers.ts` (in `pnpm check`, and again in CI after the build) reads `vercel.json` and fails if any page, board, widget, blog, legal or Lab path (a deep `/lab/motion-lab/x` included), or any HTML file in the repo or in `dist/`, would miss one of these headers. It also checks the CSP and Permissions-Policy values above, and that every inline script in the HTML pages has its sha256 in `script-src` with no stale hash left over.
+- No COEP: nothing uses `SharedArrayBuffer`, and COEP would block the cross-origin API responses. Add it only if a feature needs cross-origin isolation (for example threaded WASM).
+- No CSP reporting yet: it needs an endpoint to receive the reports.
 
 ## CI (`.github/workflows/ci.yml`)
 The `check` job:
