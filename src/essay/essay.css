@@ -157,6 +157,7 @@ em { color: var(--value) }
 /* site nav: the essay is the front door; the boards, DOTS and the log are one click away */
 .site-nav { display: flex; justify-content: space-between; align-items: center; gap: var(--space-3); margin: 0 0 var(--space-6) }
 .site-nav .kicker { margin: 0 }
+.site-nav a.kicker { margin: 0; color: var(--mute); letter-spacing: .18em }
 .site-nav a { font: 500 var(--fs-label-12) var(--mono); letter-spacing: .16em; color: var(--label); text-decoration: none; margin-left: var(--space-4) }
 .site-nav a:hover, .site-nav a:focus-visible, .site-nav a:active { color: var(--value) }
 

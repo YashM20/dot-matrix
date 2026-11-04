@@ -68,6 +68,10 @@ const eventNames = () => hits.flatMap(h => h.events).map(e => e.event)
 async function open(w: number, h: number, opts: { phone?: boolean; init?: string } = {}) {
   const p = await launch(w, h), urls: string[] = []
   await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'performance.setResourceTimingBufferSize(5000)' })
+  // PostHog drops events from bots, headless Chrome included (its user agent, client hints and navigator.webdriver):
+  // the probe passes as a desktop or phone Chrome
+  await p.cdp('Emulation.setUserAgentOverride', { userAgent: opts.phone ? 'Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Mobile Safari/537.36' : 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36' })
+  await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'Object.defineProperty(Navigator.prototype, "webdriver", { get: () => false }); Object.defineProperty(Navigator.prototype, "userAgentData", { get: () => undefined })' })
   if (opts.phone) {
     await p.cdp('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: true })
     await p.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
@@ -89,6 +93,8 @@ const chunkFetched = (urls: string[]) => urls.some(u => /\/assets\/posthog-/.tes
 const offOrigin = (urls: string[]) => urls.filter(u => !u.startsWith(BASE) && !u.startsWith('data:') && !u.startsWith('blob:'))
 const csp = (p: Page) => p.logs.filter(l => /Content Security Policy|Refused to/i.test(l))
 const settle = async (n: number) => { const end = Date.now() + 8000; while (Date.now() < end && pageviews().length < n) await sleep(150) }
+/** Enter as a keyboard press that activates a focused button (CDP needs the key's text for that). */
+const enter = async (p: Page) => { for (const type of ['keyDown', 'keyUp']) await p.cdp('Input.dispatchKeyEvent', { type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, ...(type === 'keyDown' && { text: '\r' }) }); await sleep(150) }
 const tapEl = async (p: Page, sel: string) => { const r = await p.js<{ x: number; y: number } | null>(`(() => { const e = [...document.querySelectorAll(${JSON.stringify(sel.split('|')[0])})].find(e => e.textContent.includes(${JSON.stringify(sel.split('|')[1] ?? '')})); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } })()`); if (r) await p.tap(r.x, r.y); return !!r }
 
 try {
@@ -105,10 +111,11 @@ try {
     assert('analytics browser: desktop: the banner shows once idle, two equal buttons (ALLOW, NO THANKS), neither focused', up && b.shown && b.eq && !b.focused && b.texts.join() === 'ALLOW,NO THANKS', JSON.stringify(b))
     assert('analytics browser: before Allow nothing is requested from /ingest, the posthog chunk is not fetched, nothing is stored', !hits.length && !chunkFetched(urls) && !(await phKeys(p)).length && (await stored(p)) === null, `${hits.length} hits, chunk ${chunkFetched(urls)}, keys ${await phKeys(p)}`)
     // Allow, by keyboard
-    await p.js('document.querySelector(".consent-actions button[data-on=\'1\']").focus(), 1')
-    await p.key('Enter', 'Enter', 13)
+    // Allow is the first button: Tab order and focus() agree
+    await p.js('document.querySelector(".consent-actions button").focus(), 1')
+    await enter(p)
     await settle(1)
-    assert('analytics browser: Allow (Enter) closes the banner, loads the chunk and sends a page view for /', !(await banner(p)).shown && chunkFetched(await requested()) && pageviews()[0] === '/' && (await stored(p)) === 'on', pageviews().join(' '))
+    assert('analytics browser: Allow (Enter) closes the banner, loads the chunk and sends a page view for /', !(await banner(p)).shown && chunkFetched(await requested()) && pageviews()[0] === '/' && (await stored(p)) === 'on', `stored ${await stored(p)}, banner ${(await banner(p)).shown}, chunk ${chunkFetched(await requested())}, hits ${hits.map(h => h.path).join(' ')}, views ${pageviews().join(' ')}`)
     // an in-app navigation through the palette
     await p.key('k', 'KeyK', 75, 2)
     await p.waitFor('!!document.querySelector(".pal-backdrop input")', 8000)
@@ -154,13 +161,14 @@ try {
     const off = await p.js<string>('document.querySelector(".tool-analytics").getAttribute("aria-pressed")')
     await tapEl(p, '.tool-analytics|ANALYTICS')
     await settle(1)
-    assert('analytics browser: TOOLS › ANALYTICS shows off, a tap turns it on and a page view arrives', off === 'false' && (await stored(p)) === 'on' && pageviews().length === 1, `${off} ${pageviews()}`)
+    assert('analytics browser: TOOLS › ANALYTICS shows off, a tap turns it on and a page view arrives', off === 'false' && (await stored(p)) === 'on' && pageviews().length === 1, `pressed ${off}, stored ${await stored(p)}, hits ${hits.length}, views ${pageviews()}`)
     await sleep(3500)
-    await tapEl(p, '.tabbar button|TOOLS'); await p.waitFor('!!document.querySelector(".tool-analytics")', 8000)
+    const reopened = await tapEl(p, '.tabbar button|TOOLS') && await p.waitFor('!!document.querySelector(".tool-analytics")', 8000)
+    const pressed = await p.js<string>('document.querySelector(".tool-analytics")?.getAttribute("aria-pressed")')
     await tapEl(p, '.tool-analytics|ANALYTICS'); await sleep(800)
     const n = hits.length
     await p.js('history.pushState(null, "", "/lock/"), dispatchEvent(new PopStateEvent("popstate")), 1'); await sleep(4000)
-    assert('analytics browser: tapping it again turns it off: PostHog\'s keys are deleted and a navigation sends nothing', (await stored(p)) === 'off' && !(await phKeys(p)).length && hits.length === n, `${hits.length - n} new, keys ${await phKeys(p)}`)
+    assert('analytics browser: tapping it again turns it off: PostHog\'s keys are deleted and a navigation sends nothing', (await stored(p)) === 'off' && !(await phKeys(p)).length && hits.length === n, `reopened ${reopened}, pressed ${pressed}, stored ${await stored(p)}, ${hits.length - n} new, keys ${await phKeys(p)}`)
     assert('analytics browser: phone: no CSP violation, no request off this origin', !csp(p).length && !offOrigin(await requested()).length, csp(p).slice(0, 2).join(' · '))
     await p.close()
   }

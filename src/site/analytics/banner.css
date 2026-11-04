@@ -81,6 +81,6 @@
   }
 
   .consent-actions button {
-    min-height: 44px
+    min-height: var(--tap)
   }
 }

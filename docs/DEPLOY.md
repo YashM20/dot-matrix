@@ -25,6 +25,10 @@ The post-build step runs from the `site-postbuild` plugin in `vite.config.ts`, a
 2. Otherwise `https://$VERCEL_PROJECT_PRODUCTION_URL`, which Vercel provides during its builds.
 3. Otherwise, as in local and CI builds, the tags stay root-relative.
 
+In the browser, the app rewrites these tags as you move between boards and widgets. There the origin is always the production domain (`SITE_URL` in `src/site/meta.ts`), never the address the page was opened on, so a preview or another alias never names itself as the canonical page. A build with a different home sets `VITE_SITE_URL=https://<host>` next to `SITE_URL`.
+
+**Other tags.** Every page carries `og:image:alt`, `twitter:image:alt` and `og:locale` (`en_US`). Board descriptions lead with the board's blurb (`src/widgets/blurbs.ts`). A widget page for a card that doesn't exist is marked `noindex`. There is no `twitter:site`: the site has no X account yet.
+
 ## Deep links
 - `/<board>/` (for example `/light/`) is the shareable form.
 - MAKE is `?make=<tune|compose|code|draw>` and ABOUT is `?about`, on the current board's path, for example `/light/?make=compose`.
@@ -51,7 +55,7 @@ Release flags live in `src/site/flags.ts`, one registry entry each (`id`, `defau
 
 | Flag | Default | Build variable | What it gates |
 |---|---|---|---|
-| `xray` | off | `VITE_FLAG_XRAY` | X-ray: the card's ⓘ overlay and the inspector, the dock button and TOOLS tile, X / ⇧X, the palette action, the shell's `xray`. |
+| `xray` | off | `VITE_FLAG_XRAY` | X-ray: the card's ⓘ overlay and the inspector (and their styles), the dock button and TOOLS tile, the widget page's X-RAY pill and menu item, the intro line's "press X-RAY", X / ⇧X, the palette action, the shell's `xray`. |
 | `worker` | on | `VITE_FLAG_WORKER` | Sampling in the web worker. `?worker=0` still turns it off. |
 | `clack` | off | `VITE_FLAG_CLACK` | The flip-disc clack sound. `?clack=1` and the skin list's toggle still turn it on. |
 | `analytics` | on | `VITE_FLAG_ANALYTICS` | PostHog analytics (opt-in): the consent banner, the TOOLS tile and the palette's two commands. Does nothing without `VITE_POSTHOG_PROJECT_TOKEN` (see Analytics below). `kill` leaves `posthog-js` and the banner out of the build. |
@@ -61,7 +65,7 @@ Release flags live in `src/site/flags.ts`, one registry entry each (`id`, `defau
 `pnpm verify` checks that every flag in the registry has a row in the table above.
 
 ## Analytics (PostHog, #151)
-- **The key.** `VITE_POSTHOG_PROJECT_TOKEN` (the project's public `phc_…` token), set in Vercel for **Production** only, then a redeploy. It is never committed. With no token (local builds, CI, forks, previews) the analytics code is left out of the build and the banner never shows.
+- **The key.** `VITE_POSTHOG_PROJECT_TOKEN` (the project's public `phc_…` token), set in Vercel for Production only, then a redeploy. It is never committed. With no token (local builds, CI, forks, previews) the analytics code is left out of the build and the banner never shows.
 - **Consent first.** Nothing loads, is sent or is stored until the visitor clicks Allow on the banner. Global Privacy Control or Do Not Track keep it off with no banner. The choice is `localStorage['dot480:analytics']` (`on` / `off`); TOOLS › ANALYTICS and the palette's "Analytics: on / off" change it. Off calls `opt_out_capturing()` and `reset()`, then deletes PostHog's keys.
 - **What loads.** `src/site/analytics.ts` is the only first-load part. After Allow, `posthog-js/dist/module.slim.no-external` loads as its own chunk: event capture only, with no remote scripts, toolbar, recording, surveys or `/flags` call.
 - **The proxy.** Events go to `/ingest` on this site. `vercel.json` rewrites `/ingest/static/*` to `us-assets.i.posthog.com` and `/ingest/*` to `us.i.posthog.com` (US cloud), first in the list, so the CSP's `connect-src` stays `'self'` plus the Live board's hosts.
