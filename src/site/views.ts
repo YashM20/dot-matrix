@@ -8,6 +8,7 @@
 import { boardIds, resolveBoardId } from '../widgets/manifest'
 import { boardFromPath, pageMeta } from './meta'
 import { widgetRoute, type WidgetRoute } from './routes'
+import { flag } from './flags'
 
 export const VIEWS = ['EXPLORE', 'MAKE', 'ABOUT'] as const
 export type View = typeof VIEWS[number]
@@ -35,6 +36,8 @@ export const placeFromName = (name: string): Place | undefined => TAB_ALIASES[na
 /** `widget`: the single-widget page (`/widget/<key>/`, `/<uid>`, the old `?card=`; src/site/routes.ts), shown over EXPLORE. */
 export interface ViewState { view: View; mode: Mode; board: string; card?: string; widget?: WidgetRoute; essay?: boolean; legal?: 'privacy' | 'terms' }
 export const isMode = (s: string): s is Mode => (MODES as readonly string[]).includes(s)
+/** False for MAKE and its modes while the `make` flag is off (src/site/flags.ts): nothing offers them then. */
+export const placeOpen = (p: Place): boolean => (p !== 'MAKE' && !isMode(p)) || flag('make')
 /** A place as view + mode (a mode means MAKE in it; any other place keeps `mode`). */
 export const placeView = (p: Place, mode: Mode = 'TUNE'): { view: View; mode: Mode } => isMode(p) ? { view: 'MAKE', mode: p } : { view: p, mode }
 

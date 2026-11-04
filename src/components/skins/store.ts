@@ -6,6 +6,7 @@
 import { useSyncExternalStore } from 'react'
 import { isSkinName, type SkinName } from '../../engine/display/names'
 import { flag, setFlag } from '../../site/flags'
+import { replaceUrl } from '../../site/safe-url'
 
 const KEY = 'dot480:skin'
 
@@ -38,7 +39,7 @@ export function setSkin(name: string): void {
   try {
     const url = new URL(window.location.href)
     if (name === 'oled') url.searchParams.delete('skin'); else url.searchParams.set('skin', name)
-    window.history.replaceState(window.history.state, '', url)
+    replaceUrl(url)
   } catch { /* no history (sandboxed frame) */ }
   emit()
 }

@@ -10,6 +10,7 @@
  * The scope is empty today (the site's own widgets); `/@acme/widget/timer/` names an org's widget later
  * without touching any existing link. Slugs are unique within a scope, uids everywhere.
  */
+import { safeDecode } from './safe-url'
 
 /** Lowercase Crockford base-32: no i, l, o, u, so a uid reads aloud and survives handwriting. */
 export const UID_ALPHABET = '0123456789abcdefghjkmnpqrstvwxyz'
@@ -48,8 +49,9 @@ export const WIDGET_ROUTES: readonly { pattern: string; via: WidgetRoute['via'];
 
 /** The widget a URL names, if any (path routes first, then the old `?card=`). */
 export function widgetRoute(pathname: string, search = ''): WidgetRoute | undefined {
-  let seg: string[]
-  try { seg = pathname.split('/').filter(Boolean).map(decodeURIComponent) } catch { return undefined }
+  const parts = pathname.split('/').filter(Boolean).map(safeDecode)
+  if (parts.some(p => p === undefined)) return undefined
+  const seg = parts as string[]
   const scope = seg[0]?.startsWith('@') ? seg.shift()!.slice(1).toLowerCase() : ''
   for (const r of WIDGET_ROUTES) {
     const key = r.match(seg)

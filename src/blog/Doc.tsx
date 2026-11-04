@@ -11,6 +11,7 @@ import { highlight } from './highlight'
 import { cardBody } from './LiveCard'
 import { inline, parse, tex, type Block, type Inline, type ListBlock, type VisualKind } from './markdown'
 import { POSTS, postPath, type PostInfo } from './posts'
+import { scrollToHash } from '../site/safe-url'
 
 const SOURCES = import.meta.glob<string>('../../docs/blog/*.md', { query: '?raw', import: 'default' })
 
@@ -124,7 +125,7 @@ function sections(blocks: Block[]): { title: string; intro: Block[]; secs: Secti
 function Page({ post, md, top }: { post: PostInfo; md: string; top: ReactNode }) {
   const { title, intro, secs } = sections(parse(md))
   // a deep link to a section: the text arrives after first paint, so scroll once it is in
-  useEffect(() => { if (location.hash) document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView() }, [])
+  useEffect(() => scrollToHash(), [])
   return (
     <>
       <header className="hero">

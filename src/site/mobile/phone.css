@@ -44,8 +44,7 @@
     position: relative
   }
 
-  .topbar .view-tabs,
-  .topbar-blog,
+  .topbar-nav,
   .topbar .skin-switch,
   .topbar .theme-switch {
     display: none
@@ -456,9 +455,5 @@
 
   .pal-shell {
     padding-top: calc(var(--space-4) + env(safe-area-inset-top))
-  }
-
-  .brand small {
-    display: none
   }
 }

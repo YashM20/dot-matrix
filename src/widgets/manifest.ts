@@ -36,7 +36,7 @@ export interface BoardDef extends BoardMeta, BoardContents {}
 
 /** Every reference board in public/images, in the order they appear there. */
 export const boardManifest = [
-  { id: 'henry', title: 'DOT / 480 — OLED MICRO INTERFACE SYSTEM', columns: 3, density: 'standard', load: () => import('./boards/henry').then(m => ({ items: m.henryBoard })) },
+  { id: 'henry', title: 'OLED MICRO INTERFACE SYSTEM', columns: 3, density: 'standard', load: () => import('./boards/henry').then(m => ({ items: m.henryBoard })) },
   { id: 'deerflow12', title: 'DEERFLOW AIoT DASHBOARD — 12', columns: 3, density: 'dense', load: () => import('./boards/deerflow12').then(m => ({ items: m.deerflow12Board })) },
   { id: 'mosaic', title: 'DEERFLOW MOSAIC — AIoT COMMAND CENTER', columns: 3, density: 'standard', load: () => import('./boards/mosaic').then(m => ({ items: m.mosaicBoard })) },
   { id: 'henry3', title: 'HENRY LI — 14A / 247W', columns: 3, density: 'standard', load: () => import('./boards/henry3').then(m => ({ items: m.henry3Board })) },
@@ -44,7 +44,7 @@ export const boardManifest = [
   { id: 'ride', title: 'RIDE / HENRY / SYSTEM', columns: 3, density: 'standard', load: () => import('./boards/ride').then(m => ({ items: m.rideBoard })) },
   { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, density: 'standard', load: () => import('./boards/audio').then(m => ({ items: m.audioBoard })) },
   { id: 'departures', title: 'DEPARTURES — LIVE TRANSIT BOARD', columns: 3, density: 'dense', load: () => import('./boards/departures').then(m => ({ items: m.departuresBoard })) },
-  { id: 'instrument', title: 'INSTRUMENT — DOT/480 DEVICE', columns: 3, density: 'standard', load: () => import('./boards/instrument').then(m => ({ items: m.instrumentBoard, shared: m.instrumentShared })) },
+  { id: 'instrument', title: 'INSTRUMENT DEVICE', columns: 3, density: 'standard', load: () => import('./boards/instrument').then(m => ({ items: m.instrumentBoard, shared: m.instrumentShared })) },
   { id: 'ir', title: 'FIELD IR — DOT PROGRAMS', columns: 3, density: 'hero', load: () => import('./boards/ir').then(m => ({ items: m.irBoard })) },
   { id: 'cinema', title: 'CINEMA — THE AFTERLIGHT CYCLE', columns: 3, density: 'standard', load: () => import('./boards/cinema').then(m => ({ items: m.cinemaBoard })) },
   { id: 'light', title: 'LIGHT — RASTER LIGHT STACK', columns: 3, density: 'standard', load: () => import('./boards/light').then(m => ({ items: m.lightBoard })) },
@@ -56,7 +56,7 @@ export const boardManifest = [
   { id: 'mirror', title: 'MIRROR — LIVE HALFTONE', columns: 3, density: 'hero', load: () => import('./boards/mirror').then(m => ({ items: m.mirrorBoard })) },
   { id: 'gpu', title: 'GPU — HALF A MILLION DOTS', columns: 2, density: 'hero', load: () => import('./boards/gpu').then(m => ({ items: m.gpuBoard })) },
   { id: 'surfaces', title: 'SURFACES — ONE FIELD, FIVE SURFACES', columns: 5, density: 'standard', load: () => import('./boards/surfaces').then(m => ({ items: m.surfacesBoard, sources: m.surfacesSources })) },
-  { id: 'components', title: 'DOT / 480 — PRIMITIVE COMPONENTS', columns: 5, density: 'standard', load: () => import('./boards/components').then(m => ({ items: m.componentsBoard })) },
+  { id: 'components', title: 'PRIMITIVE COMPONENTS', columns: 5, density: 'standard', load: () => import('./boards/components').then(m => ({ items: m.componentsBoard })) },
   { id: 'type', title: 'TYPE — VARIABLE DOT TYPE', columns: 3, density: 'standard', load: () => import('./boards/type').then(m => ({ items: m.typeBoard })) },
   { id: 'physics', title: 'PHYSICS — DOTS YOU CAN TOUCH', columns: 3, density: 'standard', load: () => import('./boards/physics').then(m => ({ items: m.physicsBoard, sources: m.physicsSources })) },
   { id: 'scope', title: 'SCOPE — THE INSTRUMENT, SEEN', columns: 3, density: 'hero', load: () => import('./boards/scope').then(m => ({ items: m.scopeBoard, shared: m.scopeShared })) },

@@ -12,8 +12,9 @@ import { findPreset } from '../../widgets/manifest'
 import { DotWidget } from '../DotWidget'
 import { TimeMachine } from '../xray/TimeMachine'
 import { boardTime, freeze, hoveredCard, isXRay, onCardAction, resume, scrub, setXR, toast, toggleCard, toggleGlobal, useXR, xrState } from '../xray/store'
-import { placeFromName, placeView, urlForView, type Place } from '../../site/views'
+import { placeFromName, placeOpen, placeView, urlForView, type Place } from '../../site/views'
 import { widgetPath } from '../../site/routes'
+import { assign, pushUrl } from '../../site/safe-url'
 import { boardOfCard, type CommandApi } from './api'
 import { setReducedMotion } from './reducedMotion'
 import { onLayerRequest } from '../../site/layer'
@@ -25,6 +26,9 @@ import { onPondMemory, pondMemoryOn, setPondMemory, withPondDay } from '../../si
 import { CardSizeControl, ThemeControls } from '../theme/ThemePicker'
 import { flag } from '../../site/flags'
 import { useFlag } from '../../site/useFlag'
+import { track } from '../../site/analytics'
+import { AnalyticsButton } from './analyticsUi'
+import { useTrackEvents } from './useTrackEvents'
 
 // the panels load on first use: first-load JS stays inside the site budget. X-ray's are left out of a build with
 // VITE_FLAG_XRAY=kill (the test stays inline at each import so the bundler sees a constant)
@@ -101,7 +105,7 @@ function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { 
   const run = (f: () => void) => () => { onClose(); f() }
   const share = () => {
     const url = withPondDay(withTheme(location.href), pond)
-    if (navigator.share) navigator.share({ title: document.title, url }).catch(() => {})
+    if (navigator.share) navigator.share({ title: document.title, url }).then(() => track('link_shared', { via: 'share' }), () => {})
     else api.copyLink()
   }
   return <Sheet label="TOOLS" onClose={onClose} className="tools-sheet">
@@ -111,12 +115,13 @@ function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { 
       <button type="button" aria-pressed={frozen} onClick={run(() => (frozen ? resume() : api.freeze()))}><b>TIME</b><span>Freeze and scrub the clock</span></button>
       <TiltButton onClose={onClose} />
       {pond && <PondMemoryButton onClose={onClose} />}
+      <AnalyticsButton onClose={onClose} />
       <button type="button" className="tool-share" onClick={run(share)}><b>SHARE</b><span>This page's link</span></button>
       {/* the shell is a typed terminal: offered where there is a keyboard */}
       <button type="button" className="tool-shell" onClick={run(onShell)}><b>SHELL</b><span>Type field commands</span></button>
       {/* the lab and the blog are their own pages; on phones these are their way in, as the header links are on desktop */}
-      <button type="button" className="tool-lab" onClick={run(() => location.assign('/lab/'))}><b>LAB</b><span>Interactive pieces outside the boards</span></button>
-      <button type="button" className="tool-blog" onClick={run(() => location.assign('/blog/'))}><b>BLOG</b><span>The essay and three tutorials</span></button>
+      {flag('lab') && <button type="button" className="tool-lab" onClick={run(() => assign('/lab/'))}><b>LAB</b><span>Interactive pieces outside the boards</span></button>}
+      <button type="button" className="tool-blog" onClick={run(() => assign('/blog/'))}><b>BLOG</b><span>The essay and three tutorials</span></button>
     </div>
     <h3 className="tools-head">THEME</h3>
     <ThemeControls />
@@ -132,6 +137,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
   const anyXray = useXR(s => s.global || s.on.size > 0), frozen = useXR(s => s.frozen), fpsHud = useXR(s => s.fpsHud), note = useXR(s => s.toast)
   const xray = useFlag('xray')
   const view = useRef({ tab, board }); view.current = { tab, board }
+  useTrackEvents(board)
 
   // the layer itself mounts once the page is idle: warm the palette / shell chunks now, so a ⌘K followed by
   // quick typing finds the input already there instead of dropping the first keystrokes into the page
@@ -142,15 +148,15 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     else if (xrState().global || xrState().on.size) toggleGlobal(false)
   }, [xray])
 
-  const go = useCallback((query: string) => { window.location.assign(`${location.pathname}${query}`) }, [])
+  const go = useCallback((query: string) => { assign(`${location.pathname}${query}`) }, [])
   // a place's canonical URL on this board (src/site/views.ts): reloads in single-card mode, links, remix
   const urlOf = useCallback((p: Place, search = location.search) => urlForView({ ...placeView(p), board: view.current.board }, search, location.pathname), [])
   const api: CommandApi = useMemo(() => ({
     get tab() { return view.current.tab },
     get board() { return view.current.board },
     openTab(t) {
-      const name = placeFromName(t) ? t : 'EXPLORE'
-      if (!setTab) return window.location.assign(urlOf(placeFromName(name)!))
+      const p = placeFromName(t), name = p && placeOpen(p) ? t : 'EXPLORE'
+      if (!setTab) return assign(urlOf(placeFromName(name)!))
       setTab(name)
     },
     openBoard(id) {
@@ -173,20 +179,22 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       window.setTimeout(find, 60)
     },
     async remix(cardId, data) {
+      if (!flag('make')) return
       const preset = await findPreset(cardId)
       if (!preset) return toast(`no card ${cardId}`)
       void import('../xray/remix').then(m => m.remixQuery(preset, data)).then(({ query, stub }) => {
         if (stub) toast(`${preset.name} is not Field IR yet: CODE opens a stub from describe()`)
         const q = new URLSearchParams(location.search); q.set('p', new URLSearchParams(query).get('p') ?? '')
         const url = urlOf('CODE', `?${q}`)
-        if (!setTab || view.current.tab === 'CODE') return window.location.assign(url)
-        history.pushState(null, '', url)
+        if (!setTab || view.current.tab === 'CODE') return assign(url)
+        pushUrl(url)
         setTab('CODE')
       }, e => toast(`remix failed: ${(e as Error).message}`))
     },
     async studio(cardId) {
+      if (!flag('make')) return
       if (!(await findPreset(cardId))) return toast(`no card ${cardId}`)
-      if (!setTab) return window.location.assign(urlOf('COMPOSE'))
+      if (!setTab) return assign(urlOf('COMPOSE'))
       // lazy, like MAKE itself: the editor only loads when asked for; the card lands as a new frame
       void import('../editor/store').then(({ useEditor }) => {
         if (!useEditor.getState().insertPreset(cardId)) return toast(`could not open ${cardId}`)
@@ -198,9 +206,10 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       const { tab: t, board: b } = view.current
       // a card's own page (canonical /widget/<slug>/, docs/SHARE-PLAN.md §3), or this view's canonical link (a CODE program keeps its ?p=)
       const url = withPondDay(withTheme(location.origin + (cardId ? widgetPath(cardId) : urlForView({ ...placeView(placeFromName(t) ?? 'EXPLORE'), board: b }, location.search, location.pathname))), cardId ? cardId.startsWith('pond-') : b === 'pond' && t === 'EXPLORE')
-      const done = () => toast('link copied')
+      const done = () => { toast('link copied'); track('link_copied', cardId ? { card: cardId } : { view: t }) }
       if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(done, () => toast(url))
       else toast(url)
+      return url
     },
     toggleXray(force) { if (flag('xray')) toggleGlobal(force) },
     freeze() { freeze(); toast(matchMedia('(pointer: coarse)').matches ? 'time machine: drag the scrubber, RESUME plays' : 'time machine: drag the scrubber, ← → step, space resumes') },
@@ -226,6 +235,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
 
   // U2 card action strip (DotWidget): ⓘ opens this card's X-ray, REMIX goes to MAKE · CODE (IR card) or MAKE · COMPOSE, LINK, PNG
   useEffect(() => onCardAction((action, { key, preset, data, layers, grid, style, theme, animated }) => {
+    track('card_action', { action, card: preset.id })
     if (action === 'how') {
       if (!flag('xray')) return
       const s = xrState()
@@ -238,7 +248,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       if (location.pathname === widgetPath(preset.id)) return
       const go = () => {
         const q = new URLSearchParams(location.search); q.delete('card')
-        history.pushState(null, '', widgetPath(preset.id) + (q.size ? `?${q}` : ''))
+        pushUrl(widgetPath(preset.id) + (q.size ? `?${q}` : ''))
         dispatchEvent(new PopStateEvent('popstate'))
       }
       return void import('../widget/WidgetPage').then(go, go)

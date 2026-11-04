@@ -27,7 +27,6 @@ function hintVerb(p: WidgetPreset, cs: Control[]) {
 const touchVerb = (verb: string, cs: Control[]) => (verb === 'DRAG' && cs.some(needsHold) ? 'HOLD · DRAG' : undefined)
 /** The ⋯ menu (#181): the widget page's wording (its MORE menu), OPEN first since only a card has it. */
 const ACTS: [CardAction, string][] = [['open', 'Open its page'], ['png', 'Download PNG'], ['link', 'Copy link'], ['remix', 'Remix in MAKE'], ['how', 'X-ray: how it works']]
-const ACTS_NO_XRAY = ACTS.filter(([a]) => a !== 'how')
 // X-ray's overlay and its probe are a lazy chunk behind the `xray` flag (src/site/flags.ts), off first load; a build
 // with VITE_FLAG_XRAY=kill leaves the chunk out (the test stays inline so the bundler sees a constant)
 const XRayOverlay = import.meta.env.VITE_FLAG_XRAY === 'kill' ? null : lazy(() => import('./xray/XRayOverlay').then(m => ({ default: m.XRayOverlay })))
@@ -95,7 +94,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme: the
   const hand = useHandMode(!!preset?.controls?.some(c => c.key === HAND_KEY)), { intercept } = hand
   const layers = useMemo(() => preset && (preset.media ? withMedia(withChrome(preset), camera.read) : withChrome(preset)), [preset, camera.read])
   // C10 X-ray slot: identity (same layers, no override) unless this card is X-rayed with a layer soloed / muted
-  const xr = useXRay(layers), xray = useFlag('xray') && !!XRayOverlay
+  const xr = useXRay(layers), xray = useFlag('xray') && !!XRayOverlay, make = useFlag('make')
   const sharedKey = sharedKeys?.join(',') ?? ''
   const handover = preset?.handover
   const onInput = useCallback((input: ControlPatch) => {
@@ -127,7 +126,8 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme: the
   const hint = interactive ? hintVerb(preset, controls!) : undefined, touchHint = hint && touchVerb(hint, controls!), name = preset.live ? `${preset.name} (live)` : preset.name
   // the live camera runs at 30; a card's own `fps` drops a tier on phones; no `fps` keeps DotCanvas's default
   const fps = camera.status === 'live' ? 30 : preset.fps !== undefined ? cardFps(preset.fps, fpsTier()) : undefined
-  const items = xray ? ACTS : ACTS_NO_XRAY
+  // X-ray only while its flag is on; REMIX opens MAKE, so only while the `make` flag is on
+  const items = ACTS.filter(([a]) => (a !== 'how' || xray) && (a !== 'remix' || make))
   const close = () => { setMenu(false); more.current?.focus() }
   // menu keys: arrows and Home / End move, Escape closes back to ⋯, Tab closes onto ⋯ and goes on from there (items are out of the tab order)
   const onMenuKey = (e: KeyboardEvent<HTMLDivElement>) => {

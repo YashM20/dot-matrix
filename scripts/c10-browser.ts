@@ -2,10 +2,12 @@
  * C10 (the explorable layer) in headless Chrome over CDP (Node's built-in WebSocket, no deps):
  * X-ray on three boards (hover tooltip, inspector, solo/mute, pixels unchanged once off), per-card X,
  * the time machine (T, scrub, Space), the ⌘K palette (search + open), the dot shell (help, ls, xray,
- * t, open), remix in DOTS and the Konami boss. Screenshots in `.snapshots/c10/`. X-ray is behind the `xray` flag
+ * t, open, Tab completion, history across reopening, Ctrl+C / Ctrl+U, did-you-mean, the output log, focus back),
+ * remix in DOTS and the Konami boss. Screenshots in `.snapshots/c10/`. X-ray is behind the `xray` flag
  * (src/site/flags.ts, off by default), so every page opens with `?flags=xray`, except the `flagsoff` section, which
- * checks that with the flag off there is no X-ray control, X does nothing, the palette has no X-ray action and the
- * shell answers `xray` with "command not found".
+ * checks that with the flag off there is no X-ray control (dock, cards, widget page pill and menu), X does nothing, the
+ * palette has no X-ray action, the shell answers `xray` with "command not found", the intro line never names X-ray and
+ * the overlay and inspector styles never load.
  *   pnpm dev --port 5201 (or `vite build` + `vite preview`), then `npx tsx scripts/c10-browser.ts [baseUrl]`
  *   "OPEN IN CODE" lands in the editor's CODE inspector (`.dw-code textarea`); "OPEN IN COMPOSE" adds a frame.
  */
@@ -50,7 +52,7 @@ const shot = async (name: string) => { const r = await cdp('Page.captureScreensh
 const waitFor = async (expr: string, ms = 8000) => { for (let i = 0; i < ms / 100; i++) { if (await js(expr).catch(() => false)) return true; await sleep(100) } return false }
 const count = (sel: string) => js(`document.querySelectorAll(${JSON.stringify(sel)}).length`) as Promise<number>
 const text = (sel: string) => js(`document.querySelector(${JSON.stringify(sel)})?.textContent ?? ''`) as Promise<string>
-const KEYS: Record<string, { code: string; vk: number }> = { ' ': { code: 'Space', vk: 32 }, Enter: { code: 'Enter', vk: 13 }, Escape: { code: 'Escape', vk: 27 }, '`': { code: 'Backquote', vk: 192 }, ArrowUp: { code: 'ArrowUp', vk: 38 }, ArrowDown: { code: 'ArrowDown', vk: 40 }, ArrowLeft: { code: 'ArrowLeft', vk: 37 }, ArrowRight: { code: 'ArrowRight', vk: 39 } }
+const KEYS: Record<string, { code: string; vk: number }> = { ' ': { code: 'Space', vk: 32 }, Enter: { code: 'Enter', vk: 13 }, Escape: { code: 'Escape', vk: 27 }, '`': { code: 'Backquote', vk: 192 }, ArrowUp: { code: 'ArrowUp', vk: 38 }, ArrowDown: { code: 'ArrowDown', vk: 40 }, ArrowLeft: { code: 'ArrowLeft', vk: 37 }, ArrowRight: { code: 'ArrowRight', vk: 39 }, Tab: { code: 'Tab', vk: 9 }, PageUp: { code: 'PageUp', vk: 33 } }
 /** A real key press (keyDown + keyUp). `mods`: 2 ctrl, 8 shift. */
 async function key(k: string, mods = 0, holdMs = 0) {
   const known = KEYS[k], ch = k.length === 1 ? k : ''
@@ -211,6 +213,44 @@ try {
   await shot('06b-shell-open')
   await key('Escape')
   check('Esc closes the shell', (await count('.pal-shell')) === 0)
+  // #152: help, Tab completion, Ctrl+U / Ctrl+C, did-you-mean, the output log, history across reopening, focus back
+  const val = () => js(`document.querySelector('.pal-shell-input')?.value ?? ''`) as Promise<string>
+  const log = () => text('.pal-shell [role=log]')
+  await js(`(() => { const b = document.querySelector('.pal-dock button[aria-label="Dot shell"]'); b.focus(); b.click() })()`)
+  await waitFor(`document.activeElement?.classList.contains('pal-shell-input')`, 2000)
+  await typeText('help'); await key('Enter'); await sleep(400)
+  check('shell help is the command table', /describe <card>/.test(await log()) && /theme <system\|light\|dark>/.test(await log()))
+  await shot('06c-shell-help')
+  await typeText('op'); await key('Tab'); await sleep(150)
+  const t1 = await val()
+  await typeText('lev'); await key('Tab')
+  const t2 = await waitFor(`document.querySelector('.pal-shell-input')?.value === 'open levels '`, 4000)
+  check('shell Tab completes a command, then a board', t1 === 'open ' && t2, `${t1} | ${await val()}`)
+  await key('u', 2)
+  check('shell Ctrl+U clears the line', (await val()) === '')
+  await typeText('s'); await key('Tab'); await sleep(300)
+  check('shell Tab lists the matches', /studio/.test(await log()) && (await val()) === 's')
+  await shot('06d-shell-complete')
+  await key('u', 2); await typeText('half typed'); await key('c', 2); await sleep(150)
+  check('shell Ctrl+C cancels the line', (await val()) === '' && /half typed\^C/.test(await log()), await val())
+  await typeText('opne metro'); await key('Enter'); await typeText('accent ambr'); await key('Enter'); await sleep(300)
+  check('shell errors print in the shell, with did-you-mean', /opne: command not found\. did you mean open\?/.test(await log()) && /did you mean amber\?/.test(await log()), (await log()).slice(-120))
+  await shot('06e-shell-didyoumean')
+  await typeText('link'); await key('Enter'); await sleep(300)
+  check('shell output is a log, a line per item, URLs as links', await js(`(() => { const l = document.querySelector('.pal-shell [role=log]'); return l.tagName === 'UL' && l.children.length > 20 && !!l.querySelector('a[href^="http"]') && getComputedStyle(l).userSelect !== 'none' })()`))
+  const st = await js(`document.querySelector('.pal-shell [role=log]').scrollTop`) as number
+  await key('PageUp'); await sleep(300)
+  check('shell PgUp scrolls back', (await js(`document.querySelector('.pal-shell [role=log]').scrollTop`) as number) < st)
+  await typeText('fps'); await key('Enter'); await sleep(150); await key('c', 2); await sleep(900)
+  check('shell Ctrl+C stops a running command', (await js(`document.querySelector('.pal-shell [role=log]').lastElementChild?.textContent`)) === '^C', await js(`document.querySelector('.pal-shell [role=log]').lastElementChild?.textContent`))
+  await typeText('dra'); await key('ArrowUp'); const up = await val(); await key('ArrowDown')
+  check('shell ↑ recalls history, ↓ brings the half-typed line back', up === 'fps' && (await val()) === 'dra', `${up} | ${await val()}`)
+  await key('Escape')
+  check('closing the shell puts focus back on what opened it', await js(`document.activeElement?.getAttribute('aria-label') === 'Dot shell'`))
+  await key('`'); await waitFor(`document.activeElement?.classList.contains('pal-shell-input')`, 2000)
+  await key('ArrowUp')
+  check('shell history survives reopening', (await val()) === 'fps', await val())
+  await key('Escape')
 
   }
   // ── remix in DOTS
@@ -262,7 +302,22 @@ try {
   const said = await text('.pal-shell [aria-live]')
   check('flag off: the shell says xray: command not found', /xray: command not found/i.test(said) && (await count('.xr-overlay')) === 0, said.slice(-80))
   await key('Escape')
-
+  // the intro line and the styles: no X-ray words, and the overlay / inspector CSS (their lazy chunks) never loads
+  const xrStyles = `[...document.styleSheets].some(s => { try { return [...s.cssRules].some(r => /\\.xr-(overlay|panel)\\b/.test(r.cssText)) } catch { return false } })`
+  const intro = await text('.intro-line .intro-long')
+  check('flag off: the intro names no X-ray and no X-ray styles load', !!intro && !/x-ray/i.test(intro) && !(await js(xrStyles)), intro.slice(0, 120))
+  // the widget page: no X-RAY pill, no X-ray item in MORE
+  const slug = await js(`document.querySelector('.board-view [data-card-id]')?.dataset.cardId ?? ''`) as string
+  const wpXray = `[...document.querySelectorAll('.wp-bottom button, .wp-more [role=menuitem]')].some(b => /x-ray/i.test(b.textContent))`
+  const openMore = async () => { await js(`document.querySelector('.wp-more-btn').click()`); return waitFor(`!!document.querySelector('.wp-more [role=menuitem]')`, 2000) }
+  await open(`widget/${slug}/`, ''); await waitFor(`!!document.querySelector('.wp-more-btn')`, 8000)
+  check(`flag off: the widget page (${slug}) has no X-RAY pill or menu item`, await openMore() && !(await js(wpXray)) && !(await js(xrStyles)))
+  await shot('09-flagsoff-widget')
+  // and with ?flags=xray both come back
+  await open(`widget/${slug}/`); await waitFor(`!!document.querySelector('.wp-more-btn')`, 8000)
+  check('flag on: the widget page has its X-RAY pill and menu item', await openMore() && await js(`[...document.querySelectorAll('.wp-bottom button')].some(b => b.textContent.includes('X-RAY')) && [...document.querySelectorAll('.wp-more [role=menuitem]')].some(b => /x-ray/i.test(b.textContent))`))
+  await open('?board=henry'); await sleep(600)
+  check('flag on: the intro says press X-RAY', /X-RAY/.test(await text('.intro-line .intro-long')))
   }
   // ── Konami
   if (run('konami')) {

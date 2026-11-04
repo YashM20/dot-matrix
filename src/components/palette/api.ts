@@ -4,7 +4,7 @@
  */
 import { SKINS as SKIN_INFO, SKIN_NAMES } from '../../engine/display/names'
 import { boardIds, boardLabel, boardManifest, loadBoard, type BoardDef } from '../../widgets/manifest'
-import { MODE_LINES, PLACES, isMode } from '../../site/views'
+import { MODE_LINES, PLACES, isMode, placeOpen } from '../../site/views'
 import type { RendererOverride } from '../xray/store'
 import type { MotionSetting } from './reducedMotion'
 import { ACCENTS, type AccentId } from '../../site/theme/names'
@@ -14,6 +14,9 @@ import { setPondMemory } from '../../site/pondMemory'
 import { CARD_SIZE_LABELS, CARD_SIZE_LINES, CARD_SIZES, setCardSize } from '../../site/cards'
 import { POSTS, postPath } from '../../blog/posts'
 import { flag } from '../../site/flags'
+import { assign } from '../../site/safe-url'
+import { analyticsState, setAnalytics } from '../../site/analytics/consent'
+import { toast } from '../xray/store'
 
 /** The display skins, from the engine's list (so the palette, shell and header can't drift apart). */
 export const SKINS = SKIN_NAMES
@@ -30,7 +33,8 @@ export interface CommandApi {
   remix(cardId: string, data?: Record<string, number>): void | Promise<void>
   /** Open the card in MAKE · COMPOSE as a layer stack (`importPreset`). */
   studio(cardId: string): void | Promise<void>
-  copyLink(cardId?: string): void
+  /** Copies the link and returns it. */
+  copyLink(cardId?: string): string
   toggleXray(force?: boolean): void
   freeze(): void
   resume(): void
@@ -73,8 +77,8 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   if (flag('xray')) act('xray', 'Toggle X-ray on every card', a => a.toggleXray(), '⇧X', 'xray inspect debug grid field layers')
   act('time', 'Time machine: freeze and scrub the board', a => a.freeze(), 'T', 'pause clock scrub time')
   act('resume', 'Time machine: resume the clock', a => a.resume(), 'SPACE', 'play unpause')
-  if (hoveredCard) act('remix-hover', `Open ${hoveredCard} in MAKE · CODE (remix)`, a => a.remix(hoveredCard), '', 'remix dots ir program')
-  if (hoveredCard) act('studio-hover', `Open ${hoveredCard} in MAKE · COMPOSE`, a => a.studio(hoveredCard), '', 'remix studio edit layers')
+  if (hoveredCard && flag('make')) act('remix-hover', `Open ${hoveredCard} in MAKE · CODE (remix)`, a => a.remix(hoveredCard), '', 'remix dots ir program')
+  if (hoveredCard && flag('make')) act('studio-hover', `Open ${hoveredCard} in MAKE · COMPOSE`, a => a.studio(hoveredCard), '', 'remix studio edit layers')
   act('link', 'Copy deep link to this view', a => a.copyLink(), '', 'share url clipboard')
   if (hoveredCard) act('link-card', `Copy deep link to ${hoveredCard}`, a => a.copyLink(hoveredCard), '', 'share url clipboard card')
   act('shell', 'Open the dot shell', a => a.openShell(), '`', 'terminal console cli')
@@ -94,13 +98,18 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   // the ageing pond's memory (X1 #5): opt-in, a ~60-byte record of visits in this browser; off deletes it
   act('pond-memory-on', 'Pond memory: on (your koi age with your visits)', () => setPondMemory(true), '', 'pond koi age ageing visits storage remember memory')
   act('pond-memory-off', 'Pond memory: off (deletes the record)', () => setPondMemory(false), '', 'pond koi age ageing visits storage forget memory privacy')
+  // analytics (#151): opt-in, anonymous; off deletes what PostHog stored here
+  if (analyticsState() !== 'unavailable') {
+    act('analytics-on', 'Analytics: on (anonymous page views, through PostHog)', () => toast(setAnalytics(true)), '', 'analytics posthog tracking consent privacy stats')
+    act('analytics-off', 'Analytics: off (nothing is sent)', () => toast(setAnalytics(false)), '', 'analytics posthog tracking consent privacy opt out')
+  }
   act('accent-next', 'Accent: next', () => switchTheme({ accent: ACCENTS[(ACCENTS.indexOf(getTheme().accent as AccentId) + 1) % ACCENTS.length] }), '', 'accent theme colour color hue next cycle')
   // CARD SIZE (src/site/cards.ts): the popover's and TOOLS' LARGE / MEDIUM / COMPACT
-  for (const s of CARD_SIZES) act(`cards-${s}`, `Card size: ${CARD_SIZE_LABELS[s].toLowerCase()} (${CARD_SIZE_LINES[s]})`, () => setCardSize(s), '', `card size cards columns row grid bigger smaller zoom density ${CARD_SIZE_LABELS[s].toLowerCase()}`)
-  for (const p of PLACES) items.push({ id: `v:${p}`, group: 'View', text: isMode(p) ? `Go to MAKE · ${p}: ${MODE_LINES[p]}` : `Go to ${p}`, run: a => a.openTab(p), keywords: `${p.toLowerCase()} ${PLACE_WORDS[p]}`, boost: 30 })
+  for (const s of CARD_SIZES) act(`cards-${CARD_SIZE_LABELS[s].toLowerCase()}`, `Card size: ${CARD_SIZE_LABELS[s].toLowerCase()} (${CARD_SIZE_LINES[s]})`, () => setCardSize(s), '', `card size cards columns row grid bigger smaller zoom density ${CARD_SIZE_LABELS[s].toLowerCase()}`)
+  for (const p of PLACES.filter(placeOpen)) items.push({ id: `v:${p}`, group: 'View', text: isMode(p) ? `Go to MAKE · ${p}: ${MODE_LINES[p]}` : `Go to ${p}`, run: a => a.openTab(p), keywords: `${p.toLowerCase()} ${PLACE_WORDS[p]}`, boost: 30 })
   // the blog is its own page (blog.html, src/blog): the index, then each post
-  items.push({ id: 'v:blog', group: 'View', text: 'Blog', hint: `${POSTS.length} posts`, run: () => location.assign(postPath()), keywords: 'blog posts essay guides tutorials articles read learn how it works', boost: 30 })
-  for (const p of POSTS) items.push({ id: `v:blog-${p.slug}`, group: 'View', text: `Blog: ${p.title}`, run: () => location.assign(postPath(p.slug)), keywords: `blog post ${p.kind === 'essay' ? 'essay ditherpunk how it works' : 'tutorial guide'} ${p.dek}`, boost: 25 })
+  items.push({ id: 'v:blog', group: 'View', text: 'Blog', hint: `${POSTS.length} posts`, run: () => assign(postPath()), keywords: 'blog posts essay guides tutorials articles read learn how it works', boost: 30 })
+  for (const p of POSTS) items.push({ id: `v:blog-${p.slug}`, group: 'View', text: `Blog: ${p.title}`, run: () => assign(postPath(p.slug)), keywords: `blog post ${p.kind === 'essay' ? 'essay ditherpunk how it works' : 'tutorial guide'} ${p.dek}`, boost: 25 })
   for (const m of boardManifest) {
     const b = boards.find(x => x.id === m.id)
     items.push({ id: `b:${m.id}`, group: 'Board', text: `${boardLabel(m.id)} — ${m.title}`, keywords: `${m.id} ${b?.items.map(p => p.name).join(' ') ?? ''}`, hint: b ? `${b.items.length} cards` : undefined, boost: 40, run: a => a.openBoard(m.id) })

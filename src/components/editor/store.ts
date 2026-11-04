@@ -11,7 +11,7 @@ import { IR_FRAME_MS } from '../../engine/ir'
 import { userPrograms } from '../dwitter/program'
 import { commit, guardKey, historyOf, loadLocal, newId, redo, undo, validateCard, type History, type StudioCard, type StudioLayer } from '../studio/doc'
 import type { SharedProgram } from '../../lib/share'
-import { addFrame, addLayer, boundsOf, EDITOR_KEY, frameById, frameSize, loadSaved, presetCard, programCard, programSource, saveDoc, seedDoc, topDown, type EditorDoc, type EditorFrame, type Sel } from './doc'
+import { addFrame, addLayer, boundsOf, EDITOR_KEY, frameById, frameSize, loadSaved, presetCard, programCard, programSource, saveChecked, saveDoc, seedDoc, topDown, type EditorDoc, type EditorFrame, type Sel } from './doc'
 import { clampZ, fitCam, zoomCam, type Camera } from './input'
 import { linkedFrames, openLinkIn, recordLink, type LinkPayload } from './link'
 import { framesSel, validSel } from './select'
@@ -96,6 +96,8 @@ export interface EditorStore {
   insertPreset(id: string): string | undefined
   /** A shared / example program: re-selects the frame it already made (a `?make=code&p=` reload), else adds one. */
   insertProgram(p: SharedProgram): string
+  /** A whole document from a file (checked already): replaces this one (one undo step), held from the autosave until each frame drew once. */
+  openDoc(d: EditorDoc): void
   addLayerTo(frame: string, l: StudioLayer): void
   /**
    * A frame / document link (E5): its frames come in as one block (one undo step), selected and brought
@@ -110,30 +112,61 @@ export interface EditorStore {
 
 let gestureBase: EditorDoc | undefined
 /**
- * Frames holding a program from a link, an example or the gallery, by frame id → the program's guard key. They stay
- * out of the autosave until the program has drawn one frame within the user-program budget, so a link to a program
- * too slow for this device is never saved and a reload does not bring it back. Editing the program releases the hold.
+ * Frames holding programs from a link, a file, an example or the gallery, by frame id → the guard keys of the programs
+ * in it that have not drawn a frame within the user-program budget yet (#142). They stay out of the autosave until
+ * each has, so a link to a program too slow for this device is never saved and a reload does not bring it back.
+ * Editing a program releases its hold.
  */
-const held = new Map<string, string>()
+const held = new Map<string, string[]>()
 const keysOf = (f: EditorFrame) => f.card.layers.flatMap(l => (l.kind === 'ir' ? [guardKey(f.card.grid, l.lattice, l.src || '1')] : []))
 /**
- * Frames that came in from a link, a shared program or a card file and have not drawn yet (#143). They were checked like any
+ * Frames that came in from a link, a shared program or a file and have not drawn yet (#143). They were checked like any
  * document, and they stay out of the autosave until the canvas draws each once (`drew`), so a frame that breaks
  * the editor is never saved and a reload starts without it.
  */
 const unseen = new Set<string>()
-/** Keep these frames out of the autosave until each has drawn once. */
-export function holdUntilDrawn(ids: string[]) { for (const id of ids) unseen.add(id) }
-/** The canvas drew this frame without an error: it may be saved now. */
-export function drew(id: string) { if (unseen.delete(id)) scheduleSave() }
-/** The document as the autosave writes it: without the held frames whose program has not drawn in budget yet, nor frames not drawn once. */
-export function saveable(d: EditorDoc): EditorDoc {
-  for (const [id, key] of held) {
-    const f = frameById(d, id)
-    if (!f || userPrograms.state(key) === 'ok' || !keysOf(f).includes(key)) held.delete(id)
+/** A whole document opened from a file: until each of its frames drew once, the autosave keeps the one saved before it. */
+let openedDoc: Set<string> | undefined
+/** What runs once a frame is out of both holds (the remix gallery records a shared program then). */
+const waiting = new Map<string, (() => void)[]>()
+const present = () => useEditor.getState().h.present
+/** Keep these frames (of `d`) out of the autosave until each has drawn once, and its programs drew within budget. */
+export function holdUntilDrawn(ids: string[], d: EditorDoc = present()) {
+  for (const id of ids) {
+    unseen.add(id)
+    const f = frameById(d, id), keys = f ? keysOf(f).filter(k => userPrograms.state(k) !== 'ok') : []
+    if (keys.length) held.set(id, keys)
+  }
+}
+/** Drop the holds that are done (the frame is gone, drew, or its programs kept to the budget) and run what waited on them. */
+function release(d: EditorDoc) {
+  for (const [id, keys] of held) {
+    const f = frameById(d, id), left = f ? keys.filter(k => userPrograms.state(k) !== 'ok' && keysOf(f).includes(k)) : []
+    if (left.length) held.set(id, left); else held.delete(id)
   }
   for (const id of unseen) if (!frameById(d, id)) unseen.delete(id)
+  if (openedDoc && ![...openedDoc].some(id => unseen.has(id))) openedDoc = undefined
+  for (const [id, fns] of waiting) {
+    if (!frameById(d, id)) waiting.delete(id)
+    else if (!held.has(id) && !unseen.has(id)) { waiting.delete(id); for (const fn of fns) fn() }
+  }
+}
+/** Run `fn` once frame `id` has drawn once and its programs drew within budget (now, if they have). Dropped if the frame goes. */
+export function whenDrawn(id: string, fn: () => void) {
+  waiting.set(id, [...(waiting.get(id) ?? []), fn])
+  release(present())
+}
+/** The canvas drew this frame without an error: it may be saved now. */
+export function drew(id: string) { if (unseen.delete(id)) { release(present()); scheduleSave() } }
+/** The document as the autosave writes it: without the held frames whose program has not drawn in budget yet, nor frames not drawn once. */
+export function saveable(d: EditorDoc): EditorDoc {
+  release(d)
   return held.size || unseen.size ? { ...d, frames: d.frames.filter(f => !held.has(f.id) && !unseen.has(f.id)) } : d
+}
+/** What the autosave would write now: `saveable`, or nothing while a document from a file has not drawn yet. */
+export function autosaveDoc(d: EditorDoc = present()): EditorDoc | undefined {
+  const out = saveable(d)
+  return openedDoc ? undefined : out
 }
 /** The saved document, or a fresh one and why the saved one could not be opened. */
 const boot = (() => {
@@ -204,7 +237,7 @@ export const useEditor = create<EditorStore>((set, get) => ({
   insertCard: (card, o) => {
     if (o?.source === 'file') validateCard(JSON.parse(JSON.stringify(card))) // a card from a file meets the document checks (throws with the reason)
     const { doc, frame } = addFrame(get().h.present, card, o)
-    if (o?.source === 'file') holdUntilDrawn([frame.id]) // a card from a file waits to draw once, like a link
+    if (o?.source === 'file') holdUntilDrawn([frame.id], doc) // a card from a file waits to draw once, like a link
     set(s => ({ h: commit(s.h, doc), sel: { frame: frame.id } }))
     reveal(frame.id)
     return frame.id
@@ -222,13 +255,17 @@ export const useEditor = create<EditorStore>((set, get) => ({
         const had = get().h.present.frames.find(f => f.source === src)
         if (had) { const l = topDown(had.card).find(x => x.kind === 'ir'); set({ sel: { frame: had.id, layer: l?.id } }); reveal(had.id); return had.id }
         const id = get().insertCard(programCard(p), { source: src })
-        const f = frameById(get().h.present, id)!, l = topDown(f.card)[0], key = keysOf(f)[0]
-        if (key && userPrograms.state(key) !== 'ok') held.set(id, key)
+        const f = frameById(get().h.present, id)!, l = topDown(f.card)[0]
         holdUntilDrawn([id])
         set({ sel: { frame: id, layer: l?.id } })
         return id
       },
     }
+  },
+  openDoc: d => {
+    holdUntilDrawn(d.frames.map(f => f.id), d)
+    openedDoc = new Set(d.frames.map(f => f.id))
+    set(s => ({ h: commit(s.h, d), sel: {}, menu: undefined }))
   },
   addLayerTo: (frame, l) => { get().edit(d => addLayer(d, frame, l)); set({ sel: { frame, layer: l.id } }) },
   openLink: p => get().stageLink(p).confirm(),
@@ -241,7 +278,7 @@ export const useEditor = create<EditorStore>((set, get) => ({
       confirm: () => {
         const r = openLinkIn(get().h.present, p, () => newId('f'))
         if (typeof r === 'string') return r
-        if (r.opened) holdUntilDrawn(r.ids)
+        if (r.opened) holdUntilDrawn(r.ids, r.doc)
         set(s => ({ ...(r.opened && { h: commit(s.h, r.doc) }), sel: framesSel(r.ids) }))
         recordLink(p)
         if (r.ids.length === 1) reveal(r.ids[0]); else get().fit(r.ids)
@@ -284,14 +321,24 @@ export function revealAbove(cover: number, right = 0) {
 
 // autosave (debounced)
 let saveTimer: ReturnType<typeof setTimeout> | undefined
+/** Why the last autosave was refused (the note says it once, not on every edit). */
+let refused = ''
 const scheduleSave = () => {
   clearTimeout(saveTimer)
   if (resetting) return
-  saveTimer = setTimeout(() => { if (!resetting && !saveDoc(saveable(useEditor.getState().h.present))) useEditor.getState().setNote('browser storage is full: download the document as JSON') }, 500)
+  saveTimer = setTimeout(() => {
+    if (resetting) return
+    const s = useEditor.getState(), d = autosaveDoc(s.h.present)
+    if (!d) return // a document from a file that has not drawn yet: the saved one stays
+    const r = saveChecked(d)
+    if (r === false) s.setNote('browser storage is full: download the document as JSON')
+    else if (typeof r === 'string' && r !== refused) s.setNote(`Not saved: this document would not open again (${r.slice(0, 160)}). Undo the last change, or download it as JSON.`)
+    refused = typeof r === 'string' ? r : ''
+  }, 500)
 }
 useEditor.subscribe((s, prev) => { if (s.h.present !== prev.h.present) scheduleSave() })
 // a held program that drew in budget can be saved now; a paused one says why it stopped
 userPrograms.watch((key, state) => {
-  if (state === 'ok' && [...held.values()].includes(key)) scheduleSave()
+  if (state === 'ok' && [...held.values()].some(keys => keys.includes(key))) { release(present()); scheduleSave() }
   if (state === 'paused') useEditor.getState().setNote(`A program is paused: one frame took longer than ${IR_FRAME_MS} ms to draw on this device. Edit its code or pick a larger lattice to try again.`)
 })

@@ -9,6 +9,7 @@ import { allBoards, paletteItems, type CommandApi, type PaletteItem } from './ap
 import type { BoardDef } from '../../widgets/manifest'
 import { useSwipeDown } from '../../hooks/useSwipeDown'
 import { flag } from '../../site/flags'
+import { track } from '../../site/analytics'
 
 function Highlight({ text, hits }: { text: string; hits: number[] }): ReactNode {
   if (!hits.length) return text
@@ -50,7 +51,7 @@ export function Palette({ api, hoveredCard, onClose }: { api: CommandApi; hovere
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { listRef.current?.querySelector(`[id="${CSS.escape(optionId(sel))}"]`)?.scrollIntoView({ block: 'nearest' }) }, [sel]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const run = (i: number) => { const r = results[i]; if (!r) return; onClose(); r.item.run(api) }
+  const run = (i: number) => { const r = results[i]; if (!r) return; onClose(); track('palette_command', { id: r.item.id }); r.item.run(api) }
   const onKey = (e: KeyboardEvent) => {
     const n = results.length
     if (e.key === 'ArrowDown') { e.preventDefault(); setIndex((sel + 1) % Math.max(1, n)) }

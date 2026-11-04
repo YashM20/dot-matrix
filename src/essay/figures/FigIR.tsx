@@ -7,6 +7,7 @@ import { tileStyle, type WidgetContext } from '../../widgets/types'
 import { DotCanvas } from '../../components/DotCanvas'
 import { useThemeTokens } from '../../site/theme/useTheme'
 import { Panel } from '../ui/kit'
+import { flag } from '../../site/flags'
 
 const START = `// sun: follows your pointer, rays turning
 let on = step(.001, pointer.x + pointer.y);
@@ -57,7 +58,7 @@ export default function FigIR() {
         <span id="ir-status" className={compiled.error || stopped ? 'ir-status ir-status--err' : 'ir-status'} role="status">
           {compiled.error ? `ERROR ${compiled.error}` : stopped ? 'PAUSED · TOO SLOW TO DRAW ON THIS DEVICE · EDIT TO TRY AGAIN' : `OK · ${info?.nodes ?? 0} NODES · LATTICE ${LATTICE}×`}
         </span>
-        <a className="ctl-link" href={href}>Open in MAKE · CODE →</a>
+        {flag('make') && <a className="ctl-link" href={href}>Open in MAKE · CODE →</a>}
       </label>
       <Panel label="THE PROGRAM, SAMPLED">
         <div className="stage stage--sq"><DotCanvas theme={theme} layers={layers} grid={GRID} style={tileStyle} animated controls={POINTER} onInput={ignore} change={false} /></div>

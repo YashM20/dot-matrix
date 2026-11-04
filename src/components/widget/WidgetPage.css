@@ -1,10 +1,51 @@
 /* SHARE S1: the single-widget page and its iOS-style pill bars (docs/SHARE-PLAN.md §4). Grey chrome only:
    the card keeps the one accent. Loaded with the lazy WidgetPage chunk. */
 
-/* the widget page is a band in the frame (docs/LAYOUT-THEME-PLAN.md §3 Pages): the shell's frame and left edge,
-   the footer band under it, and room at the bottom for the fixed action bar */
-.shell--widget {
-  padding-bottom: calc(var(--space-9) + env(safe-area-inset-bottom))
+/* the widget page is an app in the frame (#183): on a desktop the shell is exactly the viewport's height, the
+   page fills it (top bar, then the stage beside the side panel) and the footer is one slim line at the bottom.
+   Phones and short windows keep the document flow and scroll. */
+@media (min-width: 761px) and (min-height: 560px) {
+  .shell--widget {
+    display: flex;
+    flex-direction: column;
+    height: 100svh
+  }
+
+  .shell--widget > .wp {
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    min-height: 0
+  }
+
+  .shell--widget .live-band {
+    display: none
+  }
+
+  .shell--widget > .bottom {
+    margin-top: var(--gap-group);
+    padding: var(--gap-group) 0
+  }
+
+  .wp-main {
+    flex: 1 1 auto;
+    min-height: 0;
+    align-items: stretch
+  }
+
+  .wp-stagebox {
+    container-type: size
+  }
+
+  .wp-stage {
+    width: min(100cqw, var(--wp-max), (100cqh - var(--space-7)) * var(--wp-ar))
+  }
+
+  .wp-rail {
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain
+  }
 }
 
 /* ── pills ───────────────────────────────────────────────────────────────────────── */
@@ -85,13 +126,15 @@
   color: var(--value)
 }
 
-/* tooltips (src/site/app/tips.css): the top bar's open below, its first pill's from the left edge */
+/* tooltips (src/site/app/tips.css): the top bar's open below, its first pill's from the left edge; the panel's
+   first pill's from the left edge too, so the panel's scroll box doesn't clip them */
 .wp-top [data-tip]::after {
   top: calc(100% + var(--space-2));
   bottom: auto
 }
 
-.wp-top > .pill:first-child [data-tip]::after {
+.wp-top > .pill:first-child [data-tip]::after,
+.wp-actions > .pill:first-child [data-tip]::after {
   right: auto;
   left: 0
 }
@@ -131,28 +174,25 @@
   text-align: center
 }
 
-.wp-bottom {
-  position: fixed;
-  z-index: var(--z-pinned);
-  left: 0;
-  right: 0;
-  bottom: calc(14px + env(safe-area-inset-bottom));
-  width: max-content;
-  max-width: calc(100cqi - 16px);
-  margin-inline: auto
-}
-
 .wp-main {
   display: grid;
-  grid-template-columns: minmax(0, 648px) minmax(240px, 320px);
-  justify-content: start;
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 340px);
   align-items: start;
-  gap: var(--gap-action) var(--space-7);
-  margin-top: var(--gap-action)
+  gap: var(--gap-group) var(--space-6);
+  margin-top: var(--gap-group)
+}
+
+/* the stage: on a desktop a size container (above), where the card takes the most of it it can at its own aspect,
+   up to its native size; in the flow it is the column's width */
+.wp-stagebox {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 0
 }
 
 .wp-stage {
-  width: 100%;
+  width: min(100%, var(--wp-max));
   margin: 0
 }
 
@@ -163,6 +203,8 @@
 
 .wp-rail {
   min-width: 0;
+  /* room for the focus rings at the scroll box's edges */
+  padding: var(--space-1);
   color: var(--label);
   font: 500 var(--fs-label-12)/1.6 var(--mono);
   text-align: left
@@ -210,11 +252,28 @@
   font: 400 var(--fs-label-12)/1.5 var(--sans)
 }
 
-.wp-credit a {
+/* the inline link (DESIGN.md › Chrome components › link): marked at rest with a dotted underline, a solid one on
+   hover and press, the accent ring on keyboard focus */
+.wp-link {
   color: var(--value);
+  text-decoration: underline dotted var(--line-hover);
+  text-decoration-thickness: 1px;
   text-underline-offset: 3px
 }
 
+.wp-link:hover,
+.wp-link:active,
+.wp-link:focus-visible {
+  text-decoration: underline solid var(--value)
+}
+
+/* the panel's actions: export, then share and remix and MORE, wrapping as whole capsules */
+.wp-actions {
+  flex-wrap: wrap;
+  margin: 0 0 var(--space-4)
+}
+
+/* tags are labels, not controls (#185): no outline, no pill; a small dot leads each */
 .wp-chips {
   display: flex;
   flex-wrap: wrap;
@@ -225,12 +284,25 @@
 }
 
 .wp-chips li {
-  padding: var(--space-1) var(--space-2);
-  border: 1px solid color-mix(in srgb, var(--tint) 12%, transparent);
-  border-radius: var(--radius-pill);
-  color: var(--label);
-  font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .16em
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--mute);
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .16em;
+  cursor: default
+}
+
+.wp-chips li::before {
+  content: '';
+  width: var(--space-1);
+  height: var(--space-1);
+  border-radius: 50%;
+  background: var(--dot-mid)
+}
+
+.wp-chips li + li {
+  margin-left: var(--space-2)
 }
 
 .wp-facts {
@@ -261,11 +333,6 @@
   overflow-wrap: anywhere
 }
 
-.wp-facts a {
-  color: var(--value);
-  text-underline-offset: 3px
-}
-
 .wp-ids code + code {
   margin-left: var(--space-2);
   color: var(--label)
@@ -278,15 +345,14 @@
   font: 400 var(--fs-copy-14)/1.5 var(--sans)
 }
 
-/* ── more menu: a popover above the bar; a bottom sheet on phones ─────────────────── */
+/* ── more menu (MoreMenu.tsx): the raised layer, fixed under its button and kept in the viewport by script ── */
 .wp-more {
   position: fixed;
   z-index: calc(var(--z-pinned) + 1);
+  top: 0;
   left: 0;
-  right: 0;
-  bottom: calc(72px + env(safe-area-inset-bottom));
-  width: 280px;
-  margin-inline: auto;
+  width: 264px;
+  max-width: calc(100cqi - 16px);
   display: flex;
   flex-direction: column;
   padding: var(--space-1)
@@ -296,65 +362,67 @@
 .wp-more button {
   display: flex;
   align-items: baseline;
-  gap: var(--space-2);
-  min-height: 40px;
-  padding: 0 var(--space-4);
+  justify-content: space-between;
+  gap: var(--space-3);
+  min-height: 36px;
+  padding: 0 var(--space-3);
   background: none;
   border: 0;
-  color: var(--value);
+  color: var(--label);
   font: 500 var(--fs-label-12) var(--mono);
   letter-spacing: .06em;
   text-align: left;
+  text-transform: uppercase;
   cursor: pointer
 }
 
 .wp-more button:hover,
 .wp-more button:focus-visible {
-  background: var(--wash-hover)
+  background: var(--wash-hover);
+  color: var(--value)
 }
 
 .wp-more button:active {
-  background: var(--wash-press)
+  background: var(--wash-press);
+  color: var(--value)
 }
 
 .wp-more button:focus-visible {
   outline-offset: -2px
 }
 
-.wp-more small,
-.wp-more code {
+/* a new group: a dotted rule above it, as in the palette and the TOOLS sheet */
+.wp-more .wp-more-group {
+  margin-top: var(--space-1);
+  border-top: 1px solid var(--line);
+  border-image: var(--hair-x) 1
+}
+
+.wp-more small {
   color: var(--mute);
   font: inherit;
-  font-size: var(--fs-label-12)
+  text-transform: none
 }
 
 .wp-phone {
   display: none !important
 }
 
-/* the explore dock repeats X-RAY; below desktop width it would sit under the bottom bar */
+/* the explore dock repeats X-RAY; below desktop width it would sit over the panel */
 @media (max-width: 1100px) {
   body:has(.wp) .pal-dock {
     display: none
   }
 }
 
-body:has(.wp) .pal-toast {
-  bottom: calc(80px + env(safe-area-inset-bottom))
-}
-
-@media (max-width: 960px) {
+/* phones (and short windows below): the card, then the panel, in one scrolling column */
+@media (max-width: 760px) {
   .wp-main {
-    grid-template-columns: minmax(0, 648px)
-  }
-
-  .wp-rail {
-    width: 100%;
-    max-width: 648px
+    grid-template-columns: minmax(0, 1fr)
   }
 }
 
-/* phones: full-width card, one capsule at the bottom (thumb reach), the rest in a sheet */
+/* phones: a full-width card, the panel under it */
 @media (max-width: 760px) {
   /* the top pills stay pinned under the status bar (iOS-style); the page starts under them */
   .wp {
@@ -389,39 +457,8 @@ body:has(.wp) .pal-toast {
     display: flex !important
   }
 
-  .wp-bottom {
-    gap: 0;
-    padding: var(--space-1);
-    background: var(--glass);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-pill);
-    -webkit-backdrop-filter: var(--glass-blur);
-    backdrop-filter: var(--glass-blur)
-  }
-
-  .wp-bottom > .pill {
-    padding: 0;
-    background: none;
-    border: 0;
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none
-  }
-
-  .wp-bottom .pill-btn {
-    padding: 0 var(--space-3)
-  }
-
-  .wp-more {
-    position: fixed;
-    left: max(8px, env(safe-area-inset-left));
-    right: max(8px, env(safe-area-inset-right));
-    bottom: calc(78px + env(safe-area-inset-bottom));
-    width: auto
-  }
-
   .wp-more button {
-    min-height: 46px;
-    font-size: var(--fs-label-12)
+    min-height: var(--tap)
   }
 }
 
