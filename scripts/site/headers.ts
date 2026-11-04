@@ -6,6 +6,8 @@
  *  - the CSP: `frame-ancestors 'self'`, no inline or eval scripts, no WebSocket or localhost sources in `connect-src`;
  *    `'unsafe-eval'` and `'wasm-unsafe-eval'` appear nowhere in vercel.json or a page's meta CSP (#158);
  *    exactly one block sets it (the theme probes serve that one);
+ *  - Trusted Types (#149): `require-trusted-types-for 'script'`, `trusted-types` naming exactly the policies src/
+ *    creates, and those policies (src/lib/trusted.ts) pass the SVG renderer's output and same-origin script URLs only;
  *  - Permissions-Policy turns off the features the site doesn't use;
  *  - every inline script in the HTML pages has its sha256 in `script-src` (the boot script's hash still matches), and
  *    every hash in `script-src` belongs to one of them (no stale grant).
@@ -110,6 +112,25 @@ assert("headers: CSP frame-ancestors is 'self' (no framing by other sites)", JSO
 assert("headers: CSP script-src is 'self' plus hashes (no inline, eval, blob:, data: or wildcard)", script[0] === "'self'" && script.slice(1).every(s => /^'sha256-[A-Za-z0-9+/=]+'$/.test(s)), script.join(' '))
 assert("headers: CSP connect-src has no WebSocket or localhost source (only 'self' and https hosts)", connect.every(s => s === "'self'" || /^https:\/\/[a-z0-9.-]+$/.test(s)) && !connect.some(s => /localhost|127\.0\.0\.1/.test(s)), connect.join(' '))
 assert("headers: CSP object-src 'none', base-uri 'self', form-action 'self'", dir.get('object-src')?.join(' ') === "'none'" && dir.get('base-uri')?.join(' ') === "'self'" && dir.get('form-action')?.join(' ') === "'self'")
+
+// Trusted Types (#149): every sink takes only a policy's output, and the CSP names exactly the policies src/ makes
+const made = walk('src').filter(f => /\.tsx?$/.test(f)).flatMap(f => [...readFileSync(f, 'utf8').matchAll(/createPolicy\(\s*'([^']+)'/g)].map(m => m[1])).sort()
+assert("headers: CSP require-trusted-types-for 'script', and trusted-types names exactly the policies src/ creates (src/lib/trusted.ts), no 'allow-duplicates'",
+  dir.get('require-trusted-types-for')?.join(' ') === "'script'" && JSON.stringify([...(dir.get('trusted-types') ?? [])].sort()) === JSON.stringify(made) && made.length > 0, `${dir.get('trusted-types')?.join(' ')} vs ${made.join(' ')}`)
+const { checkSvg, sameOriginScript } = await import('../../src/lib/trusted')
+const { renderSVG } = await import('../../src/engine/renderer/svgRenderer')
+const dot = (shape: string, extra = {}) => ({ x: 4, y: 4, r: 1.5, shape, color: '#FF3B30', opacity: .5, ...extra })
+const svgs = [renderSVG([dot('circle'), dot('square'), dot('squircle', { roundness: .6 })] as never, 16, 8), renderSVG([], 4, 4)]
+assert('headers: the dot480-svg policy passes the SVG renderer\'s output as it is', svgs.every(s => checkSvg(s) === s))
+const svg0 = svgs[0], warn = console.warn
+console.warn = () => {}
+const badSvg = ['<img src=x onerror=alert(1)>', svg0.replace('<defs>', '<defs><script>alert(1)</script>'), svg0.replace('<defs>', '<foreignObject><div/></foreignObject><defs>'), svg0.replace('<g ', '<g onload="alert(1)" '),
+  svg0.replace(/href="#[^"]+"/, 'href="javascript:alert(1)"'), svg0.replace(/href="#[^"]+"/, 'href="https://x.example/a.svg#b"'), svg0.replace('<defs>', '<!-- x --><defs>'), '<p>' + svg0]
+const passedSvg = badSvg.filter(s => checkSvg(s) !== '')
+console.warn = warn
+assert(`headers: the dot480-svg policy refuses anything else (${badSvg.length} cases: other elements, handlers, script, foreignObject, outside links, comments)`, !passedSvg.length, passedSvg.map(s => s.slice(0, 50)).join(' | '))
+const urlOk = (u: string) => { try { sameOriginScript(u); return true } catch { return false } }
+assert('headers: the default policy refuses script URLs from other origins and schemes (no window here, so every absolute URL is foreign)', ['https://x.example/a.js', 'data:text/javascript,1', 'javascript:1', 'blob:https://x.example/1'].every(u => !urlOk(u)))
 
 // CSP drift (#158): no policy may let a page build code from strings, so `new Function` stays off in production and
 // Field IR runs on its closure tree. Checked over the whole of vercel.json (any header, any directive) and every

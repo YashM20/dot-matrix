@@ -14,8 +14,9 @@
  *  - T6: a stored custom hue paints without a flash too (its `<style id="theme-custom">` exists when `<body>`
  *    starts, and the page's roles are the generator's for that hue), and `prefers-contrast: more` raises the text
  *    roles to the generated AAA values;
- *  - #149: stored custom CSS that isn't the generator's is replaced once the bundle runs (on the page and in storage)
- *    by the stored hue's generated CSS, or dropped with the default accent when there is no valid hue;
+ *  - #149: stored custom CSS that fails the shape test (src/site/theme/customPattern.ts) is never painted, and the
+ *    store turns the custom hue back on with its generated CSS (page and storage); older or recoloured CSS of the right
+ *    shape boots and is replaced the same way; with no valid hue the CSS is dropped and the default accent stays;
  *  - CARD SIZE: a stored `dot480:cards` (none, m, s, junk) is `<html data-cards>` when `<body>` starts, and the
  *    components board at 1440 has that size's columns (3 / 4 / 5) from the grid's first layout: no reflow on reload.
  * Needs a build: `npx vite build` (or `pnpm build`), then `npx tsx scripts/site/theme-boot.ts`. Chrome: $CHROME or the usual paths.
@@ -177,10 +178,22 @@ try {
   // #149: the store never keeps stored custom CSS: the hue's CSS is made again, a copy with no valid hue goes
   await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] })
   const EVIL = 'html{display:none!important}'
-  const tampered: [string, string, string | null][] = [[JSON.stringify({ scheme: 'light', accent: 'custom', hue: HUE, css: EVIL }), 'custom', customCss(HUE)], [JSON.stringify({ scheme: 'light', accent: 'custom', css: EVIL }), 'signal', null]]
-  for (const [stored, accent, css] of tampered) {
+  // [stored, accent at first paint, accent once the bundle ran, the CSS then]: CSS that fails the shape test is never
+  // painted (customPattern.ts), and the store turns custom back on with the hue's CSS; the CSS stored before CONTRAST:
+  // MORE has the shape, boots custom, and is brought up to date; a shape-valid copy with the wrong colours is replaced
+  const before = customCss(HUE).replace(/:where\(\[data-contrast="more"\][^{]*\{[^}]*\}/g, ''), recoloured = customCss(HUE).replace(/#[0-9A-F]{6}/g, '#FF00FF')
+  const tampered: [string, string, string, string | null][] = [
+    [JSON.stringify({ scheme: 'light', accent: 'custom', hue: HUE, css: EVIL }), 'signal', 'custom', customCss(HUE)],
+    [JSON.stringify({ scheme: 'light', accent: 'custom', css: EVIL }), 'signal', 'signal', null],
+    [JSON.stringify({ scheme: 'light', accent: 'custom', hue: HUE, css: before }), 'custom', 'custom', customCss(HUE)],
+    [JSON.stringify({ scheme: 'light', accent: 'custom', hue: HUE, css: recoloured }), 'custom', 'custom', customCss(HUE)],
+  ]
+  for (const [stored, boot, accent, css] of tampered) {
     const { result } = await cdp('Page.addScriptToEvaluateOnNewDocument', { source: probe(stored) })
     await cdp('Page.navigate', { url: base + '/' })
+    for (let i = 0; i < 100 && !(await js('!!window.__atBody')); i++) await sleep(100)
+    const at = await js('window.__atBody') as { accent: string; custom: boolean } | undefined
+    check(`stored ${stored.slice(0, 70)}…: first paint is ${boot}${boot === 'custom' ? ' with the stored <style>' : ', nothing custom painted'}`, at?.accent === boot && at.custom === (boot === 'custom'), JSON.stringify(at))
     const clean = `(() => { const el = document.getElementById('theme-custom'), s = JSON.parse(localStorage.getItem('dot480:theme') || '{}')
       return document.documentElement.dataset.accent === ${JSON.stringify(accent)} && (el ? el.textContent : null) === ${JSON.stringify(css)} && (s.css ?? null) === ${JSON.stringify(css)} && getComputedStyle(document.documentElement).display !== 'none' })()`
     let ok = false

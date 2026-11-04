@@ -4,6 +4,8 @@
  * audio clock. Tempo comes from `bpm()` at each step, so a tempo change lands on the next step.
  * Framework-free and clock-injected (`now()` = AudioContext.currentTime in the app, a fake in tests).
  */
+// the Trusted Types policies (src/lib/trusted.ts): the timer worker's blob URL goes through the default policy
+import '../lib/trusted'
 export interface StepEvent { step: number; time: number; dur: number }
 export interface SchedulerOptions {
   now: () => number

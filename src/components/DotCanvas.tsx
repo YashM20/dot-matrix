@@ -7,6 +7,7 @@ import { remoteSampler } from '../workers/client'
 import { quantizeTime, sharedClock } from '../engine/clock'
 import { DataSprings, duration as motionDuration, ease, maskByName, revealDots, transitionDots, type MaskName } from '../engine/motion'
 import { renderSVG } from '../engine/renderer/svgRenderer'
+import { svgHtml } from '../lib/trusted'
 import { hasGPULayers, splitGPULayers, type GPUPass } from '../engine/renderer/webgl/passes'
 import { renderWebGL, webglReady } from '../engine/renderer/webgl/dotgl'
 import { migrate as migrateDots, type MigrateOptions, type Migration } from '../engine/migrate'
@@ -288,7 +289,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   const gpuCard = useMemo(() => { try { return !renderer && !!layers && hasGPULayers(layers({ t: 0, frame: 0, data: data ?? {}, grid })) && webglReady() } catch { return false } }, [layers, renderer]) // eslint-disable-line react-hooks/exhaustive-deps
   const webgl = renderer === 'webgl' || gpuCard, gpuFade = useRef(1)
   const mode: RenderMode = renderer && renderer !== 'webgl' ? renderer : (webgl || animated || live || transient || visible > CANVAS_THRESHOLD ? 'canvas' : 'svg')
-  const svg = useMemo(() => mode === 'svg' ? renderSVG(dots, width, height) : '', [mode, dots, width, height])
+  const svg = useMemo(() => mode === 'svg' ? svgHtml(renderSVG(dots, width, height)) : '', [mode, dots, width, height])
   // an SVG frame is drawn once per new dot list: it counts toward the dots this visit has drawn (src/site/stats.ts)
   useEffect(() => { if (svg) drawnStat.dots += visible }, [svg]) // eslint-disable-line react-hooks/exhaustive-deps
   const scale = useBackingScale(canvasRef, mode === 'canvas', width)
