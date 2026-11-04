@@ -30,7 +30,7 @@
 | Per-page meta and OG | `postbuild` writes `dist/<board>/index.html` with that board's meta, plus 26 OG PNGs (`ogImage(cardId)` already takes a **card** id). | `scripts/site/postbuild.ts`, `scripts/og.ts`, `src/site/meta.ts` |
 | Packages | `@dot480/core` (zero deps; `./card` `mountCard` is 20.2 kB gz), `@dot480/react` `<DotCard>`, and the `<dot-card>` element (the standalone build is 114.8 kB gz with every preset). None are published, and WEB-PLAN §1 dropped publishing. | `packages/*`, `packages/README.md` |
 | shadcn registry | 16 `registry:component` items (10 Components v2 cards plus 6 widgets). Each is a 6-line `<DotCard preset>` wrapper. They depend on **unpublished npm packages**, so `shadcn add` fails today. It isn't hosted. `--check` exists. | `registry/`, `packages/scripts/registry.ts` |
-| Headers | The SPA rewrite `/(.*)` → `index.html` (real files win). CSP `script-src 'self'` applies to everything except `lab/motion-lab.html`. There is no `frame-ancestors` and no `X-Frame-Options`, so the site can be framed anywhere today. | `vercel.json` |
+| Headers | The SPA rewrite `/(.*)` → `index.html` (real files win). One header block on `/(.*)` gives every path the CSP, with `frame-ancestors 'self'` and `X-Frame-Options: SAMEORIGIN` (#141), so only the site itself can frame a page today. | `vercel.json` |
 
 ## 2. Research findings
 
@@ -206,8 +206,8 @@ All of this lives in `src/export/clipboard.ts` (pure helpers plus one DOM wrappe
   - Budget: ≤ 40 kB gz plus the board chunk, checked by `size.ts --entry embed` (new flag).
 - **`vercel.json`:**
   - rewrite `/embed/(.*)` → `/embed.html`;
-  - exclude `embed/` from the main CSP rule's regex, and give `/embed/(.*)` its own CSP: the same directives plus **`frame-ancestors *`**;
-  - optionally add `frame-ancestors 'self'` to every other page (decision 2);
+  - give `/embed/(.*)` its own CSP: the same directives with **`frame-ancestors *`**, and no `X-Frame-Options`. Don't carve `embed/` out of the main block with a lookahead (that is the #141 hole). `scripts/site/headers.ts` allows one CSP per path today, so it needs an embed case first;
+  - every other page keeps `frame-ancestors 'self'` (decision 2);
   - verify with `curl -I` on a preview, rather than relying on header precedence.
 - **oEmbed:** postbuild writes `dist/oembed/<uid>.json` with `{ version: "1.0", type: "rich", html: <iframe>, width, height, title, provider_name: "DOT/480", provider_url, thumbnail_url: og image }`, and the card page links to it.
   - `maxwidth` / `maxheight` are ignored (static file). The iframe is responsive (`width:100%; aspect-ratio`).
