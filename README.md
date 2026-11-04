@@ -84,7 +84,7 @@ Cards are 144×144 dots. Text goes through `T.text` or `T.big` so glyphs land on
 - [AGENTS.md](AGENTS.md): notes for coding agents.
 
 ## Contributing
-See [CONTRIBUTING.md](CONTRIBUTING.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md) for how to set up, test and send a change, and [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for the code of conduct.
 
 ## Security
 To report a security problem, see [SECURITY.md](SECURITY.md).
