@@ -11,15 +11,20 @@
  *
  *   npx vite build && npx tsx scripts/site/a11y.ts            → serves dist/ on port 4327 for the run
  *   npx tsx scripts/site/a11y.ts https://matrix.reactopia.me/  → any running site (`pnpm dev`, preview, production)
- *   flags: --all, --modes dark,light,more-dark. Chrome: $CHROME or the usual paths. Not in CI yet.
+ *   flags: --all, --modes dark,light,more-dark, --routes home,post (by name), --shots <dir> (a PNG per route and
+ *   mode, the top of the page). Chrome: $CHROME or the usual paths. Not in CI yet.
  */
-import { readFileSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { boardIds } from '../../src/widgets/manifest'
 import { findChrome, launch, serveDist, sleep, type Page } from '../lib/cdp'
 import { knownChecker } from '../lib/check'
 
 /** Serious or critical findings listed on #187 with the issue that owns the fix. Delete an id when its fix lands. */
-const KNOWN: readonly string[] = []
+const KNOWN: readonly string[] = [
+  // #185 (links and chips): the widget page's card pill link is named by its tooltip, not by the text it shows
+  'axe:label-content-name-mismatch@widget',
+]
 
 const args = process.argv.slice(2)
 const flag = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined }
@@ -35,7 +40,7 @@ for (const m of MODES) if (!MEDIA[m]) { console.error(`unknown mode ${m} (use ${
 
 /** [name, path, what must be on the page before axe runs]. */
 const APP_READY = `!document.querySelector('.view-loading') && !!document.querySelector('.board-grid .dot-card')`
-const ROUTES: [string, string, string][] = [
+const ALL_ROUTES: [string, string, string][] = [
   ['home', '', APP_READY],
   ['mosaic', 'mosaic/', APP_READY],
   ['components', 'components/', APP_READY],
@@ -50,6 +55,11 @@ const ROUTES: [string, string, string][] = [
     ['404', '404.html', `!!document.querySelector('main')`] as [string, string, string],
   ] : []),
 ]
+
+const pick = flag('--routes')?.split(',')
+const ROUTES = pick ? ALL_ROUTES.filter(r => pick.includes(r[0])) : ALL_ROUTES
+const shots = flag('--shots')
+if (shots) mkdirSync(shots, { recursive: true })
 
 interface Finding { id: string; impact: string; help: string; nodes: { target: string; summary: string }[] }
 const AXE = readFileSync('node_modules/axe-core/axe.min.js', 'utf8')
@@ -68,6 +78,7 @@ async function audit(p: Page, base: string, mode: string, route: [string, string
   await sleep(1500) // entrance animations and lazy chunks settle
   if (!(await p.js<boolean>('typeof axe === "object"'))) await p.js(AXE)
   const found = await p.js<Finding[]>(RUN, 60000)
+  if (shots) await p.shot(join(shots, `${name}-${mode}.png`))
   return { ok, found, name }
 }
 

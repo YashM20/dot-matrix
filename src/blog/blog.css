@@ -8,7 +8,7 @@
 
 /* the post line: where the post sits, who it is for, how long it takes */
 .post-line { font: 500 var(--fs-label-12)/1.6 var(--mono); letter-spacing: .14em; color: var(--mute); margin: 0 0 var(--space-5) }
-.post-line a { color: var(--label); text-decoration: none }
+.post-line a { color: var(--label) }
 .post-line a:hover, .post-line a:focus-visible, .post-line a:active { color: var(--value) }
 .post-hero { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius-card); margin: 0 0 var(--space-6); background: var(--surface) }
 .post-wait { min-height: 60vh }
