@@ -3,7 +3,7 @@
  * plus its frame inputs into the card's layers — one Field IR layer on the chosen lattice, through
  * the normal Field → Grid Sampler → Renderer pipeline.
  */
-import { IRError, irGuard, irProgram, type IREnv, type IRProgram } from '../../engine/ir'
+import { compileUntrusted, IRError, irGuard, type IREnv, type IRProgram } from '../../engine/ir'
 import '../../engine/noise/ir' // IR noise pack: noise() fbm() turb() voronoi() in DOTS programs
 import type { Layer } from '../../engine/types'
 import { SHARE_GRIDS, type SharedProgram } from '../../lib/share'
@@ -20,9 +20,9 @@ export const DATA_DEFAULT = .5
 export const userPrograms = irGuard()
 
 export type Compiled = { program: IRProgram; error?: undefined } | { program?: undefined; error: IRError }
-/** Parse + compile (memoised in `irProgram`). Shared links go through here too: a bad program is an error, never run. */
+/** Parse + compile to the closure tree (`compileUntrusted`, memoised). Shared links go through here too: a bad program is an error, never run. */
 export function compileSource(src: string): Compiled {
-  try { return { program: irProgram(src, { mode: 'function' }) } }
+  try { return { program: compileUntrusted(src) } }
   catch (e) { return { error: e instanceof IRError ? e : new IRError(String((e as Error)?.message ?? e)) } }
 }
 

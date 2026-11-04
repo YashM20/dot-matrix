@@ -10,6 +10,7 @@ import { asClip, CLIP_KEY, clipFromJSON, clipOf, clipToJSON, pasteClip, type Cli
 import { arrangeFrames, arrangeLayers, framesSel, layersSel, selCount, selectAll, selFrames, selGroup, selLayers, type Align } from './select'
 import { useEditor } from './store'
 import { encodeShare, programHash, shareUrl, type SharedProgram } from '../../lib/share'
+import { TEST_HOOKS } from '../../lib/testHooks'
 import { loadGallery, recordProgram } from '../dwitter/gallery'
 import { encodeLink, linkPayload, linkUrl, loadLinks, recordLink, type LinkKind } from './link'
 
@@ -170,7 +171,7 @@ export function selectParent(d: EditorDoc = st().h.present) {
 // ── links (E5) ─────────────────────────────────────────────────────────────
 export interface MadeLink { url: string; kind: LinkKind | 'program'; id: string; parent?: string; chars: number; deflated: boolean }
 const made = (url: string, packed: string, kind: MadeLink['kind'], id: string, parent?: string): MadeLink => {
-  ;(globalThis as { __editorLink?: string }).__editorLink = url
+  if (TEST_HOOKS) (globalThis as { __editorLink?: string }).__editorLink = url
   return { url, kind, id, ...(parent && { parent }), chars: url.length, deflated: packed[0] === 'z' }
 }
 /** The program's parent as this browser's gallery knows it (a program shared again unchanged keeps its parent). */

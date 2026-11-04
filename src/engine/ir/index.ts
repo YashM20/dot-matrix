@@ -32,6 +32,15 @@ export function irProgram(src: string, opts: CompileOptions = {}): IRProgram {
   return p
 }
 
+/**
+ * Compile a program a visitor wrote or opened (MAKE · CODE, the studio, DOTS, links, the remix gallery, the essay's IR
+ * figure, card spec documents): always the closure tree, never `new Function`. It takes no `mode`, so code is only
+ * ever built from registered card sources (`scripts/ir-sandbox.ts` checks the callers).
+ */
+export function compileUntrusted(src: string, opts: { raw?: boolean } = {}): IRProgram {
+  return irProgram(src, { mode: 'closure', raw: opts.raw === true })
+}
+
 /** Every source `irProgram` has compiled so far (the cost check lists the repo's programs with it). */
 export const irSources = (): string[] => [...new Set([...cache.keys()].map(k => k.slice(k.indexOf('\n') + 1)))]
 

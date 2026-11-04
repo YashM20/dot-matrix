@@ -6,7 +6,7 @@
  * card is sampled through Field → Grid Sampler → Renderer like any preset. The document is plain JSON:
  * it saves to localStorage / a file as is, and `adapter.ts` maps it to spec v0 now and spec v1 later.
  */
-import { contextEnv, IRError, IR_LIMITS, irProgram, type IRGuard, type IRProgram } from '../../engine/ir'
+import { compileUntrusted, contextEnv, IRError, IR_LIMITS, type IRGuard, type IRProgram } from '../../engine/ir'
 import '../../engine/noise/ir' // IR noise pack: noise() fbm() turb() voronoi() in studio IR
 import { textAt } from '../../engine/layout'
 import type { Control } from '../../engine/context'
@@ -212,7 +212,7 @@ function pausedNote(grid: GridConfig): Layer {
 
 function compileIR(id: string, src: string, errors: Map<string, IRError>, good: ProgramCache): IRProgram | undefined {
   try {
-    const p = irProgram(src, { mode: 'function' })
+    const p = compileUntrusted(src)
     good.set(id, p)
     return p
   } catch (e) {
@@ -281,9 +281,9 @@ export function compileCard(card: StudioCard, good: ProgramCache = new Map(), op
       builders.push({ layer: l, build: () => built })
     } else if (l.kind === 'spec') {
       let build: ((ctx: WidgetContext) => Layer) | undefined
-      try { build = buildLayer(l.spec, card.grid, { irMode: 'function' }) } catch (e) { errors.set(l.id, new IRError(`spec layer: ${(e as Error).message}`)) }
+      try { build = buildLayer(l.spec, card.grid) } catch (e) { errors.set(l.id, new IRError(`spec layer: ${(e as Error).message}`)) }
       let cost = 0, key = ''
-      if ('src' in l.spec && typeof l.spec.src === 'string') { try { const p = irProgram(l.spec.src); p.info.data.forEach(k => keys.add(k)); usesT ||= p.info.t; cost = p.info.cost; key = guardKey(card.grid, 'spec', l.spec.src) } catch { /* reported by buildLayer */ } }
+      if ('src' in l.spec && typeof l.spec.src === 'string') { try { const p = compileUntrusted(l.spec.src); p.info.data.forEach(k => keys.add(k)); usesT ||= p.info.t; cost = p.info.cost; key = guardKey(card.grid, 'spec', l.spec.src) } catch { /* reported by buildLayer */ } }
       if (guard && key) guarded.push(key)
       if (build) builders.push({ layer: l, build: ctx => { const x = build(ctx), field = key ? guardIt(key, cost, () => x.field) : x.field; return field && { ...x, field, tone: tone(x.tone) } } })
     } else {

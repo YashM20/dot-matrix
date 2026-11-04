@@ -2,6 +2,7 @@
   "name": "dot-matrix-mcp",
   "private": true,
   "version": "0.1.0",
+  "license": "MIT",
   "description": "Dot/480 MCP App server: the Agent Heartbeat card as an inline ui://dot-card resource",
   "type": "module",
   "engines": { "node": ">=20" },

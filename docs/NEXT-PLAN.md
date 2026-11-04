@@ -152,7 +152,7 @@ D-1 to D-8 are MASTER-PLAN §11. D-9 onward are new, raised by this audit and by
 | **App hot files** | `DotCanvas.tsx` is 23 KB and holds every transient: enter, exit, dissolve, spring, migrate, live, the latency hook. `useControlInput.ts` is 15 KB | `src/components/` | Each new motion feature adds a branch; no unit tests |
 | **Barrel** | 30 `export *` lines, plus `export * as ir` | `src/engine/index.ts` | Accidental public API; tree-shaking (the MCP view bundle is 53 KB) |
 | **Line endings** | No `.gitattributes`; `core.autocrlf=true`; 175 files are LF in the index and CRLF in the working tree | `git ls-files --eol` | Whole-file churn when a tool rewrites a file; noisy merges between agents with different settings |
-| **Worktrees and branches** | 40 worktrees, 48 local branches (`worktree-agent-*`, `backup/tile-boards-pre-rewrite`) | `git worktree list` | Disk, confusion, a risk of basing new work on a stale branch |
+| **Worktrees and branches** | 40 worktrees, 48 local branches (auto-named agent worktree branches, `backup/tile-boards-pre-rewrite`) | `git worktree list` | Disk, confusion, a risk of basing new work on a stale branch |
 | **Docs drift** | `README.md`: "66 cards … seven reference boards" (it's 146 / 19). `docs/HARNESS.md`: `npm run build`, "~103 modules", `verify-acceptance.ts`. `ci.yml` comments name `src/engine/verify-acceptance.ts`. MASTER-PLAN §1 baseline "71 presets on 8 boards". ENGINE-PLAN renderer rule "re-sample at 12 fps" predates the master clock. DESIGN.md:284 says "one accent per card" while :202 says "red is spent once per board". `ADVERSARIAL-REVIEW.md`, `VERIFICATION-16POINT.md` and `BLOCK-INVENTORY.md` are from 2026-08. PROGRESS "Track L: 0" although the halftone ladder and STBN shipped in P4-F. PROGRESS "Next up" is from 2026-10-14. Phase 1 still lists Departures and the tab exit as unticked although the status board marks them done | files cited | Agents follow stale docs. AGENTS.md says the code and the two docs win, but the two docs disagree with each other |
 | **Two changelogs** | Root `CHANGELOG.md` and the public `src/changelog.ts` are maintained by hand | — | They drift, and both are merge hot spots |
 | **Test coverage** | No test runner. No fast-check properties (§7). No Playwright suite in the repo (P2-F used ad hoc CDP). `mcp/` tests are not in CI. Bench is report-only | `ci.yml` | Regressions in interaction, a11y and MCP are invisible |
@@ -165,7 +165,7 @@ D-1 to D-8 are MASTER-PLAN §11. D-9 onward are new, raised by this audit and by
 | # | Task | Done when |
 |---|---|---|
 | C1.1 | Merge the P5/P6 branches into `feat/p1-complete`, then open a PR to `main` and merge it | `main` contains P0–P6; one tag `v0.9.0` |
-| C1.2 | `git worktree prune`; remove merged worktrees; delete merged `worktree-agent-*` branches (keep `backup/*` as a tag, not a branch) | ≤ 3 worktrees, ≤ 5 branches |
+| C1.2 | `git worktree prune`; remove merged worktrees; delete merged agent worktree branches (keep `backup/*` as a tag, not a branch) | ≤ 3 worktrees, ≤ 5 branches |
 | C1.3 | `.gitattributes` (`* text=auto eol=lf`, binaries `-text`) plus one `git add --renormalize .` commit | `git ls-files --eol` shows `w/lf` everywhere after a fresh checkout |
 | C1.4 | Split verify: `scripts/verify/<module>.ts` (sampler, motion, interaction, raster, light, ir, sim, migrate, live, halftone, presets, lints) with a tiny runner. `pnpm verify` runs all; `pnpm verify sim` runs one | No file > 15 KB; same checks, same count, all green |
 | C1.5 | Shard goldens: `goldens/<board>.json`, plus `ir-glsl.json` | A board agent touches only its own golden file |
@@ -466,8 +466,8 @@ Lessons from this build. 23 merges into `feat/p1-complete`, and this very planni
 ### 6.4 Stalls and rate limits
 - **Concurrency:** ≤ 4–5 agents at once. More than that hit rate limits and stalled mid-task, which left half-finished worktrees.
 - **Checkpoint commits:** a WIP commit every meaningful step. The integrator can then salvage a stalled agent's branch instead of re-running it. Never use bare `git stash` (the stack is shared across worktrees).
-- **Time boxes:** each brief states a budget and a "stop and report" condition. A stalled agent is cancelled and resumed with `SendMessage`, not re-spawned from scratch.
-- **Slow tools on this machine:** `tsc -b` takes minutes under load, and `tsx` takes about 3 s to start. Briefs should say to use `pnpm verify <module>` and a scoped `tsc --noEmit -p tsconfig.app.json` while iterating, with the full `pnpm check` once before handoff.
+- **Time boxes:** each brief states a budget and a "stop and report" condition. A stalled agent is cancelled and resumed where it stopped, not re-run from scratch.
+- **Slow tools:** `tsc -b` takes minutes under load, and `tsx` takes about 3 s to start. Briefs should say to use `pnpm verify <module>` and a scoped `tsc --noEmit -p tsconfig.app.json` while iterating, with the full `pnpm check` once before handoff.
 - **Known false alarms to put in every brief:** "icons render empty" (they don't; verify asserts it), "CJK renders empty in snap" (it does, and that's known).
 
 ### 6.5 Review

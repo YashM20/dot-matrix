@@ -43,7 +43,7 @@ const server = createServer((req, res) => {
 await new Promise<void>(r => server.listen(PORT, '127.0.0.1', r))
 const base = `http://127.0.0.1:${PORT}`
 
-const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
+const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
 if (!chrome) { console.log('no Chrome found (set $CHROME): skipped'); server.close(); process.exit(0) }
 const profile = mkdtempSync(join(tmpdir(), 'dot-theme-picker-'))
 const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--window-size=1280,800', 'about:blank'], { stdio: 'ignore' })
@@ -300,6 +300,9 @@ try {
   await js(`document.querySelector('.theme-pop .theme-custom').click()`)
   await waitFor(`document.documentElement.dataset.accent === 'custom'`, 4000)
   await key('Escape', 'Escape', 27)
+  // the wipe's end puts the page back under the mouse (still on THEME), and hover intent reopens the popover: let it end
+  // before ⌘K, or the reopened popover closes the palette mid-command
+  await waitFor(`!document.documentElement.classList.contains('theme-wipe')`, 4000)
   const sent = await js(`getComputedStyle(document.documentElement).getPropertyValue('--red').trim() + ' ' + getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()`)
   const hueLink = await copyLink()
   check('hue: a custom theme\'s link carries ?scheme=dark&hue=212', !!hueLink && new URL(hueLink).searchParams.get('scheme') === 'dark' && new URL(hueLink).searchParams.get('hue') === '212' && !new URL(hueLink).searchParams.has('theme'), String(hueLink))

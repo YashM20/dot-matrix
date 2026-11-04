@@ -5,14 +5,17 @@
  * typed arrays.
  *
  * Test hook: if `globalThis.__dotTestCamera` is a function returning a `MediaStream` (or a promise of one; e.g. a canvas
- * `captureStream()`), it is used instead of `getUserMedia` — headless tests feed a synthetic video.
+ * `captureStream()`), it is used instead of `getUserMedia` — headless tests feed a synthetic video. Read only while
+ * test hooks are on (`TEST_HOOKS`: dev builds and probe runs), so a production page can't be handed a fake feed.
  */
+import { TEST_HOOKS } from '../lib/testHooks'
+
 let shared: Promise<MediaStream> | null = null, refs = 0, live: MediaStream | null = null
 
 type TestHook = { __dotTestCamera?: () => MediaStream | Promise<MediaStream> }
 
 async function open(): Promise<MediaStream> {
-  const hook = (globalThis as TestHook).__dotTestCamera
+  const hook = TEST_HOOKS ? (globalThis as TestHook).__dotTestCamera : undefined
   if (typeof hook === 'function') return hook()
   if (!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error('no camera API'), { name: 'NotSupportedError' })
   return navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false })

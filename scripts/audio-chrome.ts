@@ -21,7 +21,7 @@ import { join, resolve } from 'node:path'
 const root = resolve(import.meta.dirname, '..'), outDir = join(root, '.snapshots', 'c5')
 mkdirSync(join(outDir, 'rec'), { recursive: true })
 const url = process.env.URL ?? 'http://localhost:5202/'
-const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
+const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
 if (!chrome) { console.log('no Chrome found (set $CHROME): skipped'); process.exit(0) }
 
 const profile = mkdtempSync(join(tmpdir(), 'dot-c5-'))

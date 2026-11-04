@@ -326,7 +326,7 @@ The taste-session names (§7) were not decided, so U3 uses the plan's proposals.
 - **Taste session (§7):** the names, groups, landing board and front door.
 - `studio-browser` "scrub: the enter track…" failed intermittently: its fixed 250 ms wait raced idle scorecard work. `editor-browser` replaced that probe, and its ANIMATE scrub check now waits for the frame to be drawn at t (`window.__editor.tl`) instead of sleeping (#28).
 - Small tap targets left: the dock buttons are 23 px, the footer links 10 px tall, and COMPOSE's layer rows 22 px.
-- A dev server started inside `.claude/worktrees/` doesn't see edits (`vite.config.ts` ignores `.claude/**`), so restart it after every change.
+- A dev server started inside an agent worktree doesn't see edits (`vite.config.ts` ignores the worktree folder), so restart it after every change.
 - Next product plan: `docs/SHARE-PLAN.md` (widget metadata, slug + short uid links, widget page with pill action bars, copy/share/embed, shadcn registry).
 
 ## 10. Touch policy (cards on phones and tablets)

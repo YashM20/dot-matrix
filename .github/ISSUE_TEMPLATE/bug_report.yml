@@ -1,0 +1,45 @@
+name: Bug report
+description: Something on the site or in the engine looks or works wrong.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the report. For a security problem, please use private reporting instead (see SECURITY.md).
+  - type: input
+    id: url
+    attributes:
+      label: Page or card
+      description: The URL where you saw it, or the board and card name.
+      placeholder: https://matrix.reactopia.me/pond/
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened
+      description: What you saw, and what you expected to see instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the page
+        2. Tap the card
+        3. ...
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser and device
+      placeholder: Chrome 131 on Windows, Safari on iPhone 15
+    validations:
+      required: true
+  - type: textarea
+    id: extra
+    attributes:
+      label: Screenshots, console errors, anything else
+      description: A screenshot or a short recording helps a lot for visual bugs.
