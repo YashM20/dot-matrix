@@ -5,8 +5,9 @@
  */
 import { useSyncExternalStore } from 'react'
 import { isSkinName, type SkinName } from '../../engine/display/names'
+import { flag, setFlag } from '../../site/flags'
 
-const KEY = 'dot480:skin', CLACK_KEY = 'dot480:clack'
+const KEY = 'dot480:skin'
 
 function initialSkin(): SkinName {
   if (typeof window === 'undefined') return 'oled'
@@ -19,12 +20,8 @@ function initialSkin(): SkinName {
 let skin: SkinName = initialSkin()
 /** Seconds (performance clock) of the last switch: cards time their refresh from it. */
 let changedAt = 0
-// same rule as `clackEnabled()` in src/media/clack.ts, inlined so the switcher doesn't pull the audio module in
-const clackEnabled = (): boolean => {
-  if (typeof location === 'undefined') return false
-  try { return new URLSearchParams(location.search).get('clack') === '1' || localStorage.getItem('dot480:clack') === '1' } catch { return false }
-}
-let clack = clackEnabled()
+// the `clack` flag, as `clackEnabled()` in src/media/clack.ts reads it (the switcher doesn't pull the audio module in)
+let clack = flag('clack')
 const listeners = new Set<() => void>()
 const emit = () => { for (const l of listeners) l() }
 
@@ -47,10 +44,10 @@ export function setSkin(name: string): void {
 }
 
 export const getClack = (): boolean => clack
-/** Flip-disc clack on/off (muted by default; `?clack=1` or the switcher's toggle). */
+/** Flip-disc clack on/off (muted by default; `?clack=1`, `?flags=clack` or the switcher's toggle; saved as the `clack` flag). */
 export function setClack(on: boolean): void {
   clack = on
-  try { localStorage.setItem(CLACK_KEY, on ? '1' : '0') } catch { /* storage blocked */ }
+  setFlag('clack', on)
   emit()
 }
 

@@ -10,6 +10,7 @@ import { sampleLayers } from '../../engine/sampler/gridSampler'
 import type { DotStyle, GridConfig, Layer, ThemeTokens } from '../../engine'
 import type { WidgetContext, WidgetPreset } from '../../widgets/types'
 import { workerPresetId } from '../../workers/client'
+import { flag } from '../../site/flags'
 import { fmt, probeDot, type DotProbe } from './probe'
 import { probes, setXR, xrState, type CardProbe } from './store'
 import type { XRayHook } from './useXRay'
@@ -29,7 +30,7 @@ export interface XRayOverlayProps {
 }
 
 const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
-const workerOff = () => typeof Worker === 'undefined' || new URLSearchParams(location.search).get('worker') === '0'
+const workerOff = () => typeof Worker === 'undefined' || !flag('worker')
 
 export function XRayOverlay({ xr, preset, layers, data, grid, style, theme, animated, fps, tick = 0 }: XRayOverlayProps) {
   const rootRef = useRef<HTMLDivElement>(null), canvasRef = useRef<HTMLCanvasElement>(null)
