@@ -26,10 +26,29 @@ The post-build step runs from the `site-postbuild` plugin in `vite.config.ts`. `
 - `/<board>/` (for example `/light/`) is the shareable form.
 - MAKE is `?make=<tune|compose|code|draw>` and ABOUT is `?about`, on the current board's path, for example `/light/?make=compose`.
 - The address bar follows every board and view, and each change is a history entry, so Back and Forward work. The URL forms live in the pure resolver `src/site/views.ts`; `syncUrl` in `src/site/meta.ts` writes them, and the first render only normalises the URL.
-- Old forms resolve through the alias table in `views.ts` (checked by verify): `?board=<id>` folds into the path, and `?tab=workspace|studio|dots|draw|log|gallery` map to the new views. `?card=<id>`, `?make=code&p=…`, `?skin=`, `?pro=1` and `?worker=0` are kept.
+- Old forms resolve through the alias table in `views.ts` (checked by verify): `?board=<id>` folds into the path, and `?tab=workspace|studio|dots|draw|log|gallery` map to the new views. `?card=<id>`, `?make=code&p=…`, `?skin=`, `?pro=1`, `?worker=0` and `?flags=` are kept.
 - Old ids resolve through `boardAliases` (`/glyph/` opens `/lock/`).
 - Links to the blog must be root-absolute (`/blog/`, `/blog/dot-matrix-essay/`): a relative link breaks under `/<board>/` paths. There is no sitemap yet.
 - SPA fallback: `vercel.json` rewrites any path to `/index.html`. Vercel serves real files first, so board pages (`dist/<board>/index.html`), assets and OG images are unaffected.
+
+## Feature flags
+Release flags live in `src/site/flags.ts`, one registry entry each (`id`, `default`, `description`). Pro (`?pro=1`, `src/site/pro.ts`) is a visitor preference and stays out of it. A flag's value, each step overriding the one before:
+1. the registry default;
+2. the build value, `VITE_FLAG_<ID>`: `on` or `off` (`1` / `0` work too);
+3. the browser's saved overrides, `localStorage['dot480:flags']`;
+4. the URL, for that page load: `?flags=xray,-worker` turns `xray` on and `worker` off. `?flags=reset` clears the saved overrides.
+
+`VITE_FLAG_<ID>=kill` turns the feature off for good and leaves its lazy chunks out of the build. No saved or URL override brings it back. Use it when a feature should not ship at all, and `off` when it should stay testable with `?flags=<id>`.
+
+| Flag | Default | Build variable | What it gates |
+|---|---|---|---|
+| `xray` | off | `VITE_FLAG_XRAY` | X-ray: the card's ⓘ overlay and the inspector, the dock button and TOOLS tile, X / ⇧X, the palette action, the shell's `xray`. |
+| `worker` | on | `VITE_FLAG_WORKER` | Sampling in the web worker. `?worker=0` still turns it off. |
+| `clack` | off | `VITE_FLAG_CLACK` | The flip-disc clack sound. `?clack=1` and the skin list's toggle still turn it on. |
+
+**Per environment on Vercel.** Set the variables in Vercel → Project → Settings → Environment Variables and tick the environments each one applies to (Production, Preview, Development). They are read at build time, so a change needs a redeploy. For example, to keep X-ray off in production and on for PR previews, add `VITE_FLAG_XRAY=on` for Preview only. With no variable set, every environment uses the registry default. Local builds read `.env.local` or the shell: `VITE_FLAG_XRAY=kill pnpm build`.
+
+`pnpm verify` checks that every flag in the registry has a row in the table above.
 
 ## Headers (`vercel.json`)
 - `/assets/*`: `Cache-Control: public, max-age=31536000, immutable`. File names are content hashes.

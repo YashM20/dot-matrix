@@ -2,7 +2,8 @@
  * C10 command layer, mounted once by the App: global shortcuts (⌘K / Ctrl-K palette, ` dot shell,
  * X / ⇧X x-ray, hold T time machine, Space resume, ← → step, the Konami code), the palette, the
  * shell, the X-ray inspector, the time machine bar, a small dock with the same toggles, toasts, an
- * fps meter and the boss fight. Every shortcut ignores keys typed into inputs and editors.
+ * fps meter and the boss fight. Every shortcut ignores keys typed into inputs and editors. X-ray (the keys, the dock
+ * button, the TOOLS tile, the card's ⓘ and the inspector) only exists while the `xray` flag is on (src/site/flags.ts).
  */
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
@@ -22,9 +23,12 @@ import { onTiltChange, requestTilt, setTiltOn, tiltOn, tiltState } from '../../s
 import { withTheme } from '../../site/theme/share'
 import { onPondMemory, pondMemoryOn, setPondMemory, withPondDay } from '../../site/pondMemory'
 import { CardSizeControl, ThemeControls } from '../theme/ThemePicker'
+import { flag } from '../../site/flags'
+import { useFlag } from '../../site/useFlag'
 
-// the panels load on first use: first-load JS stays inside the site budget
-const Inspector = lazy(() => import('../xray/Inspector').then(m => ({ default: m.Inspector })))
+// the panels load on first use: first-load JS stays inside the site budget. X-ray's are left out of a build with
+// VITE_FLAG_XRAY=kill (the test stays inline at each import so the bundler sees a constant)
+const Inspector = import.meta.env.VITE_FLAG_XRAY === 'kill' ? null : lazy(() => import('../xray/Inspector').then(m => ({ default: m.Inspector })))
 const Palette = lazy(() => import('./Palette').then(m => ({ default: m.Palette })))
 const Shell = lazy(() => import('./Shell').then(m => ({ default: m.Shell })))
 
@@ -92,7 +96,7 @@ function PondMemoryButton({ onClose }: { onClose: () => void }) {
  * share-link opt-in) and DISPLAY (CARD SIZE, then the skins), as one bottom sheet opened from the tab bar's TOOLS. A tool closes the sheet; a
  * theme pick keeps it open (the wipe spreads from the tapped swatch, over the sheet too), so several can be tried.
  */
-function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { api: CommandApi; xray: boolean; frozen: boolean; pond: boolean; onClose: () => void; onPalette: () => void; onShell: () => void }) {
+function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { api: CommandApi; /** X-ray's state; absent while its flag is off (no tile). */ xray?: boolean; frozen: boolean; pond: boolean; onClose: () => void; onPalette: () => void; onShell: () => void }) {
   // each tool closes the sheet so its effect is in view; the toggles show their state when it reopens
   const run = (f: () => void) => () => { onClose(); f() }
   const share = () => {
@@ -103,7 +107,7 @@ function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { 
   return <Sheet label="TOOLS" onClose={onClose} className="tools-sheet">
     <div className="tools-grid">
       <button type="button" onClick={run(onPalette)}><b>SEARCH</b><span>Boards, cards and actions</span></button>
-      <button type="button" aria-pressed={xray} onClick={run(() => toggleGlobal())}><b>X-RAY</b><span>See how every card is built</span></button>
+      {xray !== undefined && <button type="button" aria-pressed={xray} onClick={run(() => toggleGlobal())}><b>X-RAY</b><span>See how every card is built</span></button>}
       <button type="button" aria-pressed={frozen} onClick={run(() => (frozen ? resume() : api.freeze()))}><b>TIME</b><span>Freeze and scrub the clock</span></button>
       <TiltButton onClose={onClose} />
       {pond && <PondMemoryButton onClose={onClose} />}
@@ -126,11 +130,17 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
   const [palette, setPalette] = useState(false), [shell, setShell] = useState(false), [boss, setBoss] = useState(false), [tools, setTools] = useState(false)
   const [hovered, setHovered] = useState<string | undefined>()
   const anyXray = useXR(s => s.global || s.on.size > 0), frozen = useXR(s => s.frozen), fpsHud = useXR(s => s.fpsHud), note = useXR(s => s.toast)
+  const xray = useFlag('xray')
   const view = useRef({ tab, board }); view.current = { tab, board }
 
   // the layer itself mounts once the page is idle: warm the palette / shell chunks now, so a ⌘K followed by
   // quick typing finds the input already there instead of dropping the first keystrokes into the page
   useEffect(() => { void import('./Palette'); void import('./Shell') }, [])
+  // X-ray on: warm the card overlay too, so the first X finds it loaded; X-ray switched off: nothing stays lit
+  useEffect(() => {
+    if (import.meta.env.VITE_FLAG_XRAY !== 'kill' && xray) void import('../xray/XRayOverlay')
+    else if (xrState().global || xrState().on.size) toggleGlobal(false)
+  }, [xray])
 
   const go = useCallback((query: string) => { window.location.assign(`${location.pathname}${query}`) }, [])
   // a place's canonical URL on this board (src/site/views.ts): reloads in single-card mode, links, remix
@@ -158,7 +168,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
         if (!el) { if (performance.now() - t0 < 3000) window.setTimeout(find, 80); return }
         el.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
         el.classList.add('xr-flash'); window.setTimeout(() => el.classList.remove('xr-flash'), 1400)
-        if (opts?.xray && el.dataset.xrKey && !xrState().on.has(el.dataset.xrKey)) toggleCard(el.dataset.xrKey)
+        if (opts?.xray && flag('xray') && el.dataset.xrKey && !xrState().on.has(el.dataset.xrKey)) toggleCard(el.dataset.xrKey)
       }
       window.setTimeout(find, 60)
     },
@@ -192,7 +202,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(done, () => toast(url))
       else toast(url)
     },
-    toggleXray(force) { toggleGlobal(force) },
+    toggleXray(force) { if (flag('xray')) toggleGlobal(force) },
     freeze() { freeze(); toast(matchMedia('(pointer: coarse)').matches ? 'time machine: drag the scrubber, RESUME plays' : 'time machine: drag the scrubber, ← → step, space resumes') },
     resume() { resume() },
     scrub(t) { scrub(t) },
@@ -217,6 +227,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
   // U2 card action strip (DotWidget): ⓘ opens this card's X-ray, REMIX goes to MAKE · CODE (IR card) or MAKE · COMPOSE, LINK, PNG
   useEffect(() => onCardAction((action, { key, preset, data, layers, grid, style, theme, animated }) => {
     if (action === 'how') {
+      if (!flag('xray')) return
       const s = xrState()
       return isXRay(s, key) && s.active === key ? toggleCard(key) : setXR({ on: s.global ? s.on : new Set(s.on).add(key), active: key })
     }
@@ -261,7 +272,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       const overlayOpen = document.querySelector('.pal-backdrop, .pal-shell, .pal-boss')
       if (k === '`' && !overlayOpen) { e.preventDefault(); setShell(true); return }
       if (overlayOpen) return
-      if (k === 'x' || k === 'X') {
+      if ((k === 'x' || k === 'X') && flag('xray')) {
         e.preventDefault()
         const el = hoveredCard()
         if (e.shiftKey || !el) toggleGlobal(); else toggleCard(el.dataset.xrKey!)
@@ -301,15 +312,15 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
   }, [boss])
 
   return <>
-    {anyXray && <Suspense fallback={null}><Inspector onRemix={(id, data) => api.remix(id, data)} onStudio={id => api.studio(id)} onCopyLink={id => api.copyLink(id)} /></Suspense>}
+    {xray && anyXray && Inspector && <Suspense fallback={null}><Inspector onRemix={(id, data) => api.remix(id, data)} onStudio={id => api.studio(id)} onCopyLink={id => api.copyLink(id)} /></Suspense>}
     <TimeMachine />
     {dockIn(<div className="pal-dock" role="toolbar" aria-label="Explore">
-      <button aria-pressed={anyXray} onClick={() => toggleGlobal()} data-tip="X-ray every card · ⇧X all" data-kbd="X" aria-keyshortcuts="X Shift+X">X-RAY</button>
+      {xray && <button aria-pressed={anyXray} onClick={() => toggleGlobal()} data-tip="X-ray every card · ⇧X all" data-kbd="X" aria-keyshortcuts="X Shift+X">X-RAY</button>}
       <button aria-pressed={frozen} onClick={() => (frozen ? resume() : api.freeze())} data-tip="Time machine · hold" data-kbd="T" aria-keyshortcuts="T">TIME</button>
       <button onClick={() => setPalette(true)} data-tip="Command palette" data-kbd="⌘K" aria-label="Command palette" aria-keyshortcuts="Meta+K Control+K">⌘K</button>
       <button onClick={() => setShell(true)} data-tip="Dot shell" data-kbd="`" aria-label="Dot shell" aria-keyshortcuts="`">&gt;_</button>
     </div>)}
-    {tools && <ToolsSheet api={api} xray={anyXray} frozen={frozen} pond={tab === 'EXPLORE' && board === 'pond'} onClose={() => setTools(false)} onPalette={() => setPalette(true)} onShell={() => setShell(true)} />}
+    {tools && <ToolsSheet api={api} xray={xray ? anyXray : undefined} frozen={frozen} pond={tab === 'EXPLORE' && board === 'pond'} onClose={() => setTools(false)} onPalette={() => setPalette(true)} onShell={() => setShell(true)} />}
     {fpsHud && <FpsHud />}
     <div className="pal-toast" role="status" aria-live="polite">{note && <span key={note.id}>{note.text}</span>}</div>
     {palette && <Suspense fallback={null}><Palette api={api} hoveredCard={hovered} onClose={() => setPalette(false)} /></Suspense>}

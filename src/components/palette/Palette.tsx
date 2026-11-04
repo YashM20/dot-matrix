@@ -8,6 +8,7 @@ import { rank } from './fuzzy'
 import { allBoards, paletteItems, type CommandApi, type PaletteItem } from './api'
 import type { BoardDef } from '../../widgets/manifest'
 import { useSwipeDown } from '../../hooks/useSwipeDown'
+import { flag } from '../../site/flags'
 
 function Highlight({ text, hits }: { text: string; hits: number[] }): ReactNode {
   if (!hits.length) return text
@@ -86,7 +87,7 @@ export function Palette({ api, hoveredCard, onClose }: { api: CommandApi; hovere
               {item.hint && <kbd className="pal-hint">{item.hint}</kbd>}
             </li>
           })}
-          {!results.length && <li className="pal-empty" role="option" aria-selected="false" aria-disabled="true">No match. Try a board (“levels”), a card (“queen”) or an action (“xray”).</li>}
+          {!results.length && <li className="pal-empty" role="option" aria-selected="false" aria-disabled="true">No match. Try a board (“levels”), a card (“queen”) or an action (“{flag('xray') ? 'xray' : 'skin'}”).</li>}
         </ul>
         <footer className="pal-foot" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>↵</kbd> run</span><span><kbd>ESC</kbd> close</span><span><kbd>`</kbd> dot shell</span></footer>
         <div className="sr-only" aria-live="polite">{results.length} results</div>
