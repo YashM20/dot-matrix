@@ -33,5 +33,9 @@ goldens/hashes.json
 # local like/kill history (P6 authoring, record_verdict)
 .dot480/
 
+# local secrets and the Vercel CLI's project link
+.env*
+.vercel
+
 # local campaign drafts
 twitter-campaign/

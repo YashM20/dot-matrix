@@ -24,6 +24,7 @@ import { InText, LongPressMenu, QuickBar } from './OnCanvas'
 import { CUE_MS, LONG_PRESS_MS, snappedGuides } from './phone'
 import { commitTyping, placeCaret, startTyping } from './typing'
 import { useEditor, type Camera } from './store'
+import { TEST_HOOKS } from '../../lib/testHooks'
 
 /** Probe hooks (scripts/editor-browser.ts): draw stats, the selected frame id and every selected id. */
 /** Render stats for the browser probes. `tl`: the timeline t each frame last drew at while ANIMATE previews it, so a
@@ -130,7 +131,8 @@ export function Canvas({ phone, landscape = false }: { phone: boolean; landscape
   useEffect(() => {
     let raf = 0, lastCam: Camera | undefined, lastVp = '', lastPublish = 0, lastTick = performance.now()
     const wall0 = performance.now(), still = reduced()
-    const stats: NonNullable<Window["__editor"]> = (window.__editor = { frames: 0, drawn: 0, maxMs: 0, lastMs: 0, tl: {} })
+    const stats: NonNullable<Window["__editor"]> = { frames: 0, drawn: 0, maxMs: 0, lastMs: 0, tl: {} }
+    if (TEST_HOOKS) window.__editor = stats
     const step = (now: number) => {
       raf = requestAnimationFrame(step)
       const s = useEditor.getState(), d = s.h.present, c = s.cam, dpr = Math.min(2, window.devicePixelRatio || 1), dt = Math.min(.1, (now - lastTick) / 1000)

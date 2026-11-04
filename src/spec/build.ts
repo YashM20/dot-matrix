@@ -1,11 +1,11 @@
 /**
  * `specToPreset(spec)` — a validated card spec as a `WidgetPreset`: every layer becomes an ordinary
  * `Layer` (field + tone on the card grid, a lattice or dot sites), so a spec card renders through the
- * same Field → Grid Sampler → Renderer pipeline as a TS card. IR compiles to the CSP-safe closure tree
- * unless `irMode: 'function'`; nothing is `eval`ed.
+ * same Field → Grid Sampler → Renderer pipeline as a TS card. A spec is a document anyone can write, so its
+ * IR always compiles to the closure tree (`compileUntrusted`); nothing is `eval`ed or built with `new Function`.
  */
 import { textAt } from '../engine/layout'
-import { contextEnv, irProgram } from '../engine/ir'
+import { compileUntrusted, contextEnv } from '../engine/ir'
 import '../engine/noise/ir' // IR noise pack: noise() fbm() turb() voronoi() in spec IR
 import { hash01 } from '../engine/math'
 import { latticeGrid } from '../engine/sampler/gridSampler'
@@ -15,10 +15,6 @@ import { decodeSamples, fromBase64 } from './codec'
 import { SpecError, type CardSpec, type JoinLayerSpec, type LayerSpec, type TextLayerSpec, type ToneStopSpec } from './types'
 import { validateSpec } from './validate'
 
-export interface BuildOptions {
-  /** IR backend: `closure` (default, CSP-safe) or `function` (`new Function`, falls back to closures under a strict CSP). */
-  irMode?: 'closure' | 'function'
-}
 /** A preset built from a spec; `spec` keeps what a `WidgetPreset` has no slot for (theme, states, transitions). */
 export type SpecPreset = WidgetPreset & { spec: CardSpec }
 type Build = (ctx: WidgetContext) => Layer
@@ -62,12 +58,11 @@ export function formatNumber(x: number, f: TextLayerSpec['format'] = {}): string
 const once = (make: () => Layer): Build => { let l: Layer | undefined; return () => (l ??= make()) }
 
 /** One spec layer → a per-frame layer builder on `grid`. Shared by `specToPreset` and the export check in `presetToSpec`. */
-export function buildLayer(l: LayerSpec, grid: GridConfig, opts: BuildOptions = {}): Build {
-  const mode = opts.irMode ?? 'closure'
+export function buildLayer(l: LayerSpec, grid: GridConfig): Build {
   const tag = (field: Field) => { madeBy.set(field, l); return field }
   switch (l.kind) {
     case 'ir': {
-      const sub = layerGrid(grid, l), k = l.lattice ?? 1, [ox, oy] = l.origin ?? [0, 0], b = l.bounds, prog = irProgram(l.src, { mode })
+      const sub = layerGrid(grid, l), k = l.lattice ?? 1, [ox, oy] = l.origin ?? [0, 0], b = l.bounds, prog = compileUntrusted(l.src)
       const rect: [number, number, number, number] = b ? [ox + b[0] * k, oy + b[1] * k, b[2] * k, b[3] * k] : [ox, oy, sub.cols * k, sub.rows * k]
       const M = layoutFor(sub), base = placement(l), toneOf = l.toneStops && toneStops(l.toneStops, sub, l.tone)
       return ctx => {
@@ -82,7 +77,7 @@ export function buildLayer(l: LayerSpec, grid: GridConfig, opts: BuildOptions = 
       if (l.smooth !== undefined) o.smooth = l.smooth
       const draw = (s: string) => ({ ...base, field: tag(textAt(sub, s, l.at[0], l.at[1], o)) })
       if (l.bind === undefined) return once(() => draw(l.text ?? ''))
-      const prog = irProgram(l.bind, { mode, raw: true }), k = l.lattice ?? 1, [ox, oy] = l.origin ?? [0, 0]
+      const prog = compileUntrusted(l.bind, { raw: true }), k = l.lattice ?? 1, [ox, oy] = l.origin ?? [0, 0]
       return ctx => draw(formatNumber(prog(contextEnv(ctx, grid, [ox, oy, sub.cols * k, sub.rows * k]))(0, 0), l.format))
     }
     case 'sites': {
@@ -102,7 +97,7 @@ export function buildLayer(l: LayerSpec, grid: GridConfig, opts: BuildOptions = 
       }
       const tones = l.tones, toneOf = tones && ((_: number, u: number, v: number) => tones[siteAt(u, v)] ?? undefined)
       if (l.bind !== undefined) {
-        const prog = irProgram(l.bind, { mode })
+        const prog = compileUntrusted(l.bind)
         return ctx => ({ ...base, field: tag(prog(contextEnv(ctx, grid))), ...(toneOf && { toneOf }) })
       }
       const valued = l.points.some(p => p.length === 3)
@@ -132,15 +127,15 @@ export function buildLayer(l: LayerSpec, grid: GridConfig, opts: BuildOptions = 
 /** Does any IR in the spec read `t`? (Then the card animates.) */
 function readsTime(spec: CardSpec): boolean {
   const src = (l: LayerSpec) => (l.kind === 'ir' ? l.src : l.kind === 'text' || l.kind === 'sites' ? l.bind : undefined)
-  return spec.layers.some(l => { const s = src(l); return s !== undefined && irProgram(s).info.t })
+  return spec.layers.some(l => { const s = src(l); return s !== undefined && compileUntrusted(s).info.t })
 }
 
 /** Validate `spec` (throws `SpecError` with paths) and build the preset. */
-export function specToPreset(input: unknown, opts: BuildOptions = {}): SpecPreset {
+export function specToPreset(input: unknown): SpecPreset {
   const result = validateSpec(input)
   if (!result.ok) throw new SpecError(result.errors)
   const spec = (typeof input === 'string' ? JSON.parse(input) : JSON.parse(JSON.stringify(input))) as CardSpec
-  const grid: GridConfig = { ...spec.grid }, builds = spec.layers.map(l => buildLayer(l, grid, opts)), states = spec.states ?? {}
+  const grid: GridConfig = { ...spec.grid }, builds = spec.layers.map(l => buildLayer(l, grid)), states = spec.states ?? {}
   const p: SpecPreset = {
     id: spec.id, name: spec.name, group: spec.group ?? 'composite', grid, style: { ...spec.style }, spec,
     layers: ctx => {

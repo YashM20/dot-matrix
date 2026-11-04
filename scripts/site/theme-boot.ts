@@ -14,6 +14,8 @@
  *  - T6: a stored custom hue paints without a flash too (its `<style id="theme-custom">` exists when `<body>`
  *    starts, and the page's roles are the generator's for that hue), and `prefers-contrast: more` raises the text
  *    roles to the generated AAA values;
+ *  - #149: stored custom CSS that isn't the generator's is replaced once the bundle runs (on the page and in storage)
+ *    by the stored hue's generated CSS, or dropped with the default accent when there is no valid hue;
  *  - CARD SIZE: a stored `dot480:cards` (none, m, s, junk) is `<html data-cards>` when `<body>` starts, and the
  *    components board at 1440 has that size's columns (3 / 4 / 5) from the grid's first layout: no reflow on reload.
  * Needs a build: `npx vite build` (or `pnpm build`), then `npx tsx scripts/site/theme-boot.ts`. Chrome: $CHROME or the usual paths.
@@ -170,6 +172,21 @@ try {
     const want = moreRoles(generate(scheme, accent))
     const got = await js(`(() => { const s = getComputedStyle(document.documentElement); return ['label', 'mute', 'dim', 'red-text'].map(k => s.getPropertyValue('--' + k).trim().toUpperCase()) })()`) as string[] | undefined
     check(`prefers-contrast: more on ${scheme}_${accent}: label / mute / dim / red-text are the AAA values`, JSON.stringify(got) === JSON.stringify([want.label, want.mute, want.dim, want['red-text']]), `${JSON.stringify(got)} vs ${JSON.stringify([want.label, want.mute, want.dim, want['red-text']])}`)
+    await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: result.identifier })
+  }
+  // #149: the store never keeps stored custom CSS: the hue's CSS is made again, a copy with no valid hue goes
+  await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] })
+  const EVIL = 'html{display:none!important}'
+  const tampered: [string, string, string | null][] = [[JSON.stringify({ scheme: 'light', accent: 'custom', hue: HUE, css: EVIL }), 'custom', customCss(HUE)], [JSON.stringify({ scheme: 'light', accent: 'custom', css: EVIL }), 'signal', null]]
+  for (const [stored, accent, css] of tampered) {
+    const { result } = await cdp('Page.addScriptToEvaluateOnNewDocument', { source: probe(stored) })
+    await cdp('Page.navigate', { url: base + '/' })
+    const clean = `(() => { const el = document.getElementById('theme-custom'), s = JSON.parse(localStorage.getItem('dot480:theme') || '{}')
+      return document.documentElement.dataset.accent === ${JSON.stringify(accent)} && (el ? el.textContent : null) === ${JSON.stringify(css)} && (s.css ?? null) === ${JSON.stringify(css)} && getComputedStyle(document.documentElement).display !== 'none' })()`
+    let ok = false
+    for (let i = 0; i < 100 && !(ok = await js(clean) === true); i++) await sleep(100)
+    const seen = await js(`JSON.stringify([document.documentElement.dataset.accent, document.getElementById('theme-custom')?.textContent?.slice(0, 40) ?? null, (localStorage.getItem('dot480:theme') || '').slice(0, 80)])`) as string | undefined
+    check(`stored custom CSS that isn't the generator's (${css ? `hue ${HUE}` : 'no hue'}): once the bundle runs, the page and storage have ${css ? `hue ${HUE}'s generated CSS` : 'no custom CSS and the default accent'}`, ok, seen)
     await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: result.identifier })
   }
   // the app's hand-off to the static pages (a server that falls back to the SPA) keeps the visit's theme params

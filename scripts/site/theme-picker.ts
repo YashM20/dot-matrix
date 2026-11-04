@@ -300,6 +300,9 @@ try {
   await js(`document.querySelector('.theme-pop .theme-custom').click()`)
   await waitFor(`document.documentElement.dataset.accent === 'custom'`, 4000)
   await key('Escape', 'Escape', 27)
+  // the wipe's end puts the page back under the mouse (still on THEME), and hover intent reopens the popover: let it end
+  // before ⌘K, or the reopened popover closes the palette mid-command
+  await waitFor(`!document.documentElement.classList.contains('theme-wipe')`, 4000)
   const sent = await js(`getComputedStyle(document.documentElement).getPropertyValue('--red').trim() + ' ' + getComputedStyle(document.documentElement).getPropertyValue('--bg').trim()`)
   const hueLink = await copyLink()
   check('hue: a custom theme\'s link carries ?scheme=dark&hue=212', !!hueLink && new URL(hueLink).searchParams.get('scheme') === 'dark' && new URL(hueLink).searchParams.get('hue') === '212' && !new URL(hueLink).searchParams.has('theme'), String(hueLink))

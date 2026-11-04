@@ -9,6 +9,7 @@
 import { useCallback, useEffect, useRef, useSyncExternalStore } from 'react'
 import type { ControlPatch } from '../engine/interaction/controls'
 import type { WidgetPreset } from '../widgets/types'
+import { TEST_HOOKS } from '../lib/testHooks'
 import { DEFAULT_PARAMS, audioEngine, type InstrumentParams, type MicState } from './engine'
 import { download, startRecording, type Recorder, type Recording } from './record'
 
@@ -33,9 +34,9 @@ const snapshot = (p: InstrumentParams): ControlPatch => ({
 // ── page-level state: survives a board switch between Instrument and Scope ──
 let holders = 0, releaseTimer = 0
 let recorder: Recorder | null = null
-/** Saved clips this page session (tests and the console read `window.dot480Audio`). */
+/** Saved clips this page session (the probes read them as `window.dot480Audio`, there while `TEST_HOOKS`). */
 const recordings: (Pick<Recording, 'kind' | 'mime' | 'seconds' | 'name'> & { size: number })[] = []
-if (typeof window !== 'undefined') (window as unknown as { dot480Audio?: unknown }).dot480Audio = { engine: audioEngine, recordings }
+if (TEST_HOOKS && typeof window !== 'undefined') (window as unknown as { dot480Audio?: unknown }).dot480Audio = { engine: audioEngine, recordings }
 let gestureHooked = false
 const hookGesture = () => {
   if (gestureHooked || typeof document === 'undefined') return

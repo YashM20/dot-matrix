@@ -11,6 +11,8 @@ import { bounded } from '../../src/engine/layout'
 import type { Field } from '../../src/engine/types'
 import { irChecks } from '../ir'
 import { irCostChecks } from '../ir-cost'
+import { irFuzzChecks } from '../ir-fuzz'
+import { irSandboxChecks } from '../ir-sandbox'
 import { TOUCH, beginDrag, classifyMove, dragValue, isTap, keyValue, needsHold, pick, releaseValue, settle, toLocal, touchIntent, type Control } from '../../src/engine/interaction'
 import { blur as rBlur, createRaster, cut as rCut, dilate as rDilate, distanceRaster, erode as rErode, moat as rMoat, outline as rOutline, rasterSum, rasterize, sample as rSample } from '../../src/engine/raster'
 import { bloom, heightRaster, illuminate, lambert, lightDir, normalRaster, phong, sdfBox, sdfCircle, stackHeights, torch, type HeightRaster } from '../../src/engine/light'
@@ -109,6 +111,9 @@ export async function engineChecks(assert: Assert) {
   irChecks(assert)
   // IR cost (#142): the static cost cap and the runtime guard for user programs (scripts/ir-cost.ts)
   irCostChecks(assert)
+  // IR sandbox (#158): seeded front-end fuzz, the emitted-JS allowlist, closures only for visitor programs (scripts/ir-fuzz.ts, scripts/ir-sandbox.ts)
+  irFuzzChecks(assert)
+  irSandboxChecks(assert)
   // 16) P3-A raster + light stack: rasterize/sample, blur, morphology, distance, height → normals → lambert/phong, bloom, torch perf
   {
     const G = { cols: 37, rows: 23 }, U = cellU
