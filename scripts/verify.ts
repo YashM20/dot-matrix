@@ -203,6 +203,12 @@ shareChecks(assert)
   chartsChecks(assert)
 }
 
+// watch faces (#126): moon phase on known new and full moons, sunrise before sunset all year, summer time, the tide model, the analog hands, one red per face (scripts/watch.ts)
+{
+  const { watchChecks } = await import('./watch')
+  watchChecks(assert)
+}
+
 // blog syntax colouring (#84): code blocks round-trip, regex vs division, kinds (scripts/site/highlight.ts)
 {
   const { highlightChecks } = await import('./site/highlight')
