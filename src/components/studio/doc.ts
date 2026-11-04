@@ -165,7 +165,7 @@ export function importPreset(id: string): StudioCard {
   card.reference = id
   card.animated = !!p.animated
   card.layers = layers.map((l, i): PresetLayer => ({
-    id: newId(), name: `${id} #${i}${l.field.text ? ` "${l.field.text}"` : l.sites ? ' sites' : l.lattice ? ` ${l.lattice}×` : ''}`,
+    id: newId(), name: `${id} #${i}${l.field.text ? ` "${l.field.text}"` : l.sites ? ' sites' : l.lattice ? ` ${l.lattice}×` : ''}`.slice(0, 64), // a long text layer's name
     kind: 'preset-layer', params: { preset: id, index: i }, tone: 'preset', z: i, blend: 'normal', visible: true,
   }))
   card.bindings = Object.entries(p.defaults ?? {}).slice(0, 8).map(([key, v]) => ({ key, kind: 'slider', min: Math.min(0, v), max: Math.max(1, v * 2 || 1), step: Number.isInteger(v) && Math.abs(v) > 1 ? 1 : .01 }))
@@ -339,13 +339,26 @@ export function cardPreset(card: StudioCard, compiled: CompiledCard = compileCar
 }
 
 // ── validation + JSON ──────────────────────────────────────────────────────
-const MAX_LAYERS = 24
+/**
+ * Layers a card may hold: its own (`MAX_LAYERS`), plus the read-only layers of a preset it references (#143). A preset
+ * frame gets one `preset-layer` per layer the preset draws (56 for the largest today), and they cost what the board
+ * itself costs (the preset is drawn once per frame for all of them), so they get their own, larger cap.
+ */
+export const MAX_LAYERS = 24, MAX_REF_LAYERS = 96
+/** Why these layers don't fit one card, or undefined. */
+export function layersIssue(layers: readonly { kind?: string }[]): string | undefined {
+  const refs = layers.filter(l => l?.kind === 'preset-layer').length, own = layers.length - refs
+  if (own > MAX_LAYERS) return `a card holds at most ${MAX_LAYERS} layers of its own (this one has ${own})`
+  if (refs > MAX_REF_LAYERS) return `a card holds at most ${MAX_REF_LAYERS} reference layers (this one has ${refs})`
+  return undefined
+}
 const num = (x: unknown, lo: number, hi: number, what: string) => { if (typeof x !== 'number' || !Number.isFinite(x) || x < lo || x > hi) throw new Error(`studio card: ${what} must be a number in ${lo}..${hi}`); return x }
 const str = (x: unknown, max: number, what: string) => { if (typeof x !== 'string' || x.length > max) throw new Error(`studio card: ${what} must be a string of ≤ ${max} chars`); return x }
 const oneOf = <T extends string>(x: unknown, list: readonly T[], what: string): T => { if (!list.includes(x as T)) throw new Error(`studio card: ${what} must be one of ${list.join(', ')}`); return x as T }
 const dataOf = (x: unknown, what: string) => {
   if (!x || typeof x !== 'object' || Array.isArray(x)) throw new Error(`studio card: ${what} must be an object of numbers`)
-  for (const [k, v] of Object.entries(x)) { str(k, 32, `${what} key`); num(v, -1e9, 1e9, `${what}.${k}`) }
+  // up to 1e12, like a binding's range: live cards keep text as 32-bit ids (`textId`), past 1e9
+  for (const [k, v] of Object.entries(x)) { str(k, 32, `${what} key`); num(v, -1e12, 1e12, `${what}.${k}`) }
   return x as Record<string, number>
 }
 const MASKS = Object.keys(masks) as MaskName[], EASES = Object.keys(ease) as EaseName[]
@@ -367,7 +380,8 @@ export function validateCard(x: unknown): StudioCard {
   bad(gridIssue(c.grid))
   if (!c.style || typeof c.style !== 'object') throw new Error('studio card: style missing')
   num(c.style.sizeMin, 0, 64, 'style.sizeMin'); num(c.style.sizeMax, 0, 64, 'style.sizeMax')
-  if (!Array.isArray(c.layers) || c.layers.length > MAX_LAYERS) throw new Error(`studio card: layers must be an array of ≤ ${MAX_LAYERS}`)
+  if (!Array.isArray(c.layers)) throw new Error('studio card: layers must be an array')
+  bad(layersIssue(c.layers))
   const ids = new Set<string>()
   c.layers.forEach((l, i) => {
     const w = `layers[${i}]`

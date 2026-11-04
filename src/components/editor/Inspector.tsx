@@ -107,7 +107,7 @@ function DocPanel() {
     try {
       const text = await fl.text(), x = JSON.parse(text) as { kind?: string }
       const { docFromJSON } = await import('./doc')
-      if (x.kind === 'dot480.editor') { const d = docFromJSON(text); edit(() => d); setNote(`opened ${fl.name}`); requestAnimationFrame(() => fit()) }
+      if (x.kind === 'dot480.editor') { useEditor.getState().openDoc(docFromJSON(text)); setNote(`opened ${fl.name}`); requestAnimationFrame(() => fit()) } // held from the autosave until it draws
       else {
         const { looksLikeSpec } = await import('../studio/adapter'), { cardFromJSON } = await import('../studio/doc')
         const card = looksLikeSpec(x) ? specV1.fromSpec(x as never) : cardFromJSON(text)

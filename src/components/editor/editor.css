@@ -603,3 +603,15 @@ html.ed-scroll-lock .pal-dock { display: none }
 .ed-crash-btns button { min-height: var(--tap-min); padding: 0 var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-ctl); color: var(--value); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .1em }
 .ed-crash-btns .ed-crash-reset { border-color: color-mix(in srgb, var(--red) 60%, transparent) }
 .ed-crash-btns button:focus-visible { outline: 1px solid var(--red); outline-offset: 2px }
+/* the whole editor's recovery screen (#143) stands in for the editor's height */
+.ed-crash[data-area="editor"] { min-height: min(560px, 80dvh) }
+/* a link waiting for KEEP (#143): over the canvas, where the banner sits */
+.ed-confirm { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); box-sizing: border-box; width: min(460px, calc(100% - 24px)); display: flex; flex-direction: column; gap: var(--space-2); padding: var(--space-3) var(--space-4); background: var(--raised); border: 1px solid var(--line); border-radius: var(--radius-panel); box-shadow: var(--shadow-raised); color: var(--value); z-index: calc(var(--z-raise) + 3) }
+.ed-confirm b { font: 600 var(--fs-label-12) var(--mono); letter-spacing: .16em }
+.ed-confirm p { margin: 0; overflow-wrap: anywhere }
+.ed-confirm-btns { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-1) }
+.ed-confirm-btns button { min-height: var(--tap-min); padding: 0 var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-ctl); color: var(--label); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .1em }
+.ed-confirm-btns .ed-confirm-keep { border-color: color-mix(in srgb, var(--value) 55%, transparent); color: var(--value) }
+.ed-confirm-btns button:hover, .ed-confirm-btns button:focus-visible { border-color: var(--line-hover) }
+.ed-confirm-btns button:focus-visible { outline: 1px solid var(--value); outline-offset: 2px }
+.is-phone .ed-confirm-btns button { min-height: var(--tap) }
