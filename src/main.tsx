@@ -5,9 +5,11 @@ import './index.css'
 import App from './App.tsx'
 import { DisplaySkinProvider } from './components/skins/DisplaySkinProvider'
 import { RootBoundary } from './site/RootBoundary'
+import { initAnalytics } from './site/analytics'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <RootBoundary page="app"><DisplaySkinProvider><App /></DisplaySkinProvider></RootBoundary>
   </StrictMode>,
 )
+initAnalytics()

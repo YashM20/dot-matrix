@@ -58,6 +58,7 @@ Release flags live in `src/site/flags.ts`, one registry entry each (`id`, `defau
 | `xray` | off | `VITE_FLAG_XRAY` | X-ray: the card's ⓘ overlay and the inspector (and their styles), the dock button and TOOLS tile, the widget page's X-RAY pill and menu item, the intro line's "press X-RAY", X / ⇧X, the palette action, the shell's `xray`. |
 | `worker` | on | `VITE_FLAG_WORKER` | Sampling in the web worker. `?worker=0` still turns it off. |
 | `clack` | off | `VITE_FLAG_CLACK` | The flip-disc clack sound. `?clack=1` and the skin list's toggle still turn it on. |
+| `analytics` | on | `VITE_FLAG_ANALYTICS` | PostHog analytics (opt-in): the consent banner, the TOOLS tile and the palette's two commands. Does nothing without `VITE_POSTHOG_PROJECT_TOKEN` (see Analytics below). `kill` leaves `posthog-js` and the banner out of the build. |
 | `likes` | off | `VITE_FLAG_LIKES` | The like button on widget pages and gallery programs (#169). It stays hidden while the likes API answers 404, which it does until the store and its secrets are set (see Likes below). |
 | `make` | off | `VITE_FLAG_MAKE` | MAKE, the editor: the MAKE tab (header and phone), the palette places and remix actions, the shell's `remix` and `studio`, the cards' and widget page's REMIX, and the MAKE links in About, the changelog and the essay. Off, a MAKE URL (`?make`, `?tab=studio`, …) opens the home board. |
 | `lab` | off | `VITE_FLAG_LAB` | The lab: its links in the header, footer, TOOLS, About, the changelog and the blog nav, and its sitemap entry (read at build time). Off, `/lab/` goes home, and the lab page says `noindex` either way. |
@@ -65,6 +66,14 @@ Release flags live in `src/site/flags.ts`, one registry entry each (`id`, `defau
 **Per environment on Vercel.** Set the variables in Vercel → Project → Settings → Environment Variables and tick the environments each one applies to (Production, Preview, Development). They are read at build time, so a change needs a redeploy. For example, to keep X-ray off in production and on for PR previews, add `VITE_FLAG_XRAY=on` for Preview only. With no variable set, every environment uses the registry default. Local builds read `.env.local` or the shell: `VITE_FLAG_XRAY=kill pnpm build`.
 
 `pnpm verify` checks that every flag in the registry has a row in the table above.
+
+## Analytics (PostHog, #151)
+- **The key.** `VITE_POSTHOG_PROJECT_TOKEN` (the project's public `phc_…` token), set in Vercel for Production only, then a redeploy. It is never committed. With no token (local builds, CI, forks, previews) the analytics code is left out of the build and the banner never shows.
+- **Consent first.** Nothing loads, is sent or is stored until the visitor clicks Allow on the banner. Global Privacy Control or Do Not Track keep it off with no banner. The choice is `localStorage['dot480:analytics']` (`on` / `off`); TOOLS › ANALYTICS and the palette's "Analytics: on / off" change it. Off calls `opt_out_capturing()` and `reset()`, then deletes PostHog's keys.
+- **What loads.** `src/site/analytics.ts` is the only first-load part. After Allow, `posthog-js/dist/module.slim.no-external` loads as its own chunk: event capture only, with no remote scripts, toolbar, recording, surveys or `/flags` call.
+- **The proxy.** Events go to `/ingest` on this site. `vercel.json` rewrites `/ingest/static/*` to `us-assets.i.posthog.com` and `/ingest/*` to `us.i.posthog.com` (US cloud), first in the list, so the CSP's `connect-src` stays `'self'` plus the Live board's hosts.
+- **What is sent.** One page view on load and one per navigation, with query strings cut to `board`, `tab`, `make`, `card` and `about` (so no `?p=` program, `?d=` drawing or `?flags`) and referrers cut to their origin. Events: `card_action`, `link_copied`, `link_shared`, `board_changed`, `palette_command`, `shell_command` (the command's name), `theme_changed`, `skin_changed`. Their properties are ids only (`src/site/analytics/sanitize.ts`). Anonymous: no `identify`, `person_profiles: 'identified_only'`.
+- `scripts/site/analytics.ts` (in `pnpm check`) runs the real modules and `posthog-js` against a fake browser and a mocked `/ingest`; `scripts/site/analytics-browser.ts` does the same in Chrome on a build made with a fake token.
 
 ## Headers (`vercel.json`)
 - `/assets/*`: `Cache-Control: public, max-age=31536000, immutable`. File names are content hashes.

@@ -15,6 +15,8 @@ import { CARD_SIZE_LABELS, CARD_SIZE_LINES, CARD_SIZES, setCardSize } from '../.
 import { POSTS, postPath } from '../../blog/posts'
 import { flag } from '../../site/flags'
 import { assign } from '../../site/safe-url'
+import { analyticsState, setAnalytics } from '../../site/analytics/consent'
+import { toast } from '../xray/store'
 
 /** The display skins, from the engine's list (so the palette, shell and header can't drift apart). */
 export const SKINS = SKIN_NAMES
@@ -96,6 +98,11 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   // the ageing pond's memory (X1 #5): opt-in, a ~60-byte record of visits in this browser; off deletes it
   act('pond-memory-on', 'Pond memory: on (your koi age with your visits)', () => setPondMemory(true), '', 'pond koi age ageing visits storage remember memory')
   act('pond-memory-off', 'Pond memory: off (deletes the record)', () => setPondMemory(false), '', 'pond koi age ageing visits storage forget memory privacy')
+  // analytics (#151): opt-in, anonymous; off deletes what PostHog stored here
+  if (analyticsState() !== 'unavailable') {
+    act('analytics-on', 'Analytics: on (anonymous page views, through PostHog)', () => toast(setAnalytics(true)), '', 'analytics posthog tracking consent privacy stats')
+    act('analytics-off', 'Analytics: off (nothing is sent)', () => toast(setAnalytics(false)), '', 'analytics posthog tracking consent privacy opt out')
+  }
   act('accent-next', 'Accent: next', () => switchTheme({ accent: ACCENTS[(ACCENTS.indexOf(getTheme().accent as AccentId) + 1) % ACCENTS.length] }), '', 'accent theme colour color hue next cycle')
   // CARD SIZE (src/site/cards.ts): the popover's and TOOLS' LARGE / MEDIUM / COMPACT
   for (const s of CARD_SIZES) act(`cards-${CARD_SIZE_LABELS[s].toLowerCase()}`, `Card size: ${CARD_SIZE_LABELS[s].toLowerCase()} (${CARD_SIZE_LINES[s]})`, () => setCardSize(s), '', `card size cards columns row grid bigger smaller zoom density ${CARD_SIZE_LABELS[s].toLowerCase()}`)

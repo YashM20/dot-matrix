@@ -13,6 +13,7 @@ import { commandWords, findCommand, helpFor, shellHelp, shellKnows } from './she
 import { nearest, type Sources } from './shellLine'
 import { SHELL_KEYS } from '../../site/shortcuts'
 import { flag } from '../../site/flags'
+import { track } from '../../site/analytics'
 
 export type Kind = 'in' | 'out' | 'dim' | 'err'
 export type Out = string | { kind: Kind; text: string }
@@ -76,6 +77,8 @@ export async function exec(raw: string, ctx: Ctx): Promise<void> {
   // a flagged command with its flag off (`xray` while X-ray is off) is unknown, like a typo
   // (and gets no suggestion: there is nothing to point at)
   if (!c) return print(err(`${word}: command not found.${(shellKnows(word) && maybe(nearest(word, commandWords()))) || ' type help'}`))
+  // analytics: the registry's name for the command, never what was typed
+  track('shell_command', { command: c.name })
   if (c.palette) {
     const words = sources.palette(c.palette)
     const pick = words.includes(arg) ? arg : c.name === 'skin' && arg === 'none' ? 'oled' : undefined

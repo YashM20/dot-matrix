@@ -29,7 +29,7 @@
  *    bottom and then up 160 px with the wheel, the header's top is in [0, 1] (scripts/lib/site-probe.ts);
  *  - `covered`: at the bottom of the page no footer link is under a fixed or sticky layer;
  *  - `footer-wrap`: no footer link alone on a line, or split over two;
- *  - `no-app-scroll` (MAKE, desktop): the page doesn't scroll (scrollHeight ≤ innerHeight).
+ *  - `no-app-scroll` (MAKE and the widget page, desktop): the page doesn't scroll (scrollHeight ≤ innerHeight).
  * `KNOWN` lists today's failures: they print as known and don't fail the run (scripts/lib/check.ts `knownChecker`).
  *
  * Needs a server: `npx vite build && npx vite preview --port 4318` (or `pnpm dev`), then
@@ -259,7 +259,7 @@ try {
       check(id('footer-wrap'), !wraps.length, wraps.join(', '))
       const covered = await coveredFooterLinks(page)
       check(id('covered'), !covered.length, covered.join(', '))
-      if (p.kind === 'make') {
+      if (p.kind === 'make' || (p.kind === 'widget' && !mobile && H >= 560)) {
         const s = await js(`[document.documentElement.scrollHeight, innerHeight]`) as [number, number]
         check(id('no-app-scroll'), s[0] <= s[1] + 1, `scrollHeight ${s[0]}, innerHeight ${s[1]}`)
       }
