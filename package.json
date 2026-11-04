@@ -17,6 +17,7 @@
     "fidelity": "tsx scripts/fidelity.ts",
     "bench": "tsx scripts/bench.ts",
     "shots": "tsx scripts/site/shots.ts",
+    "a11y": "tsx scripts/site/a11y.ts",
     "lint": "oxlint",
     "preview": "vite preview",
     "check": "tsc -b && oxlint && tsx scripts/site/file-size.ts && tsx scripts/site/credits.ts --check && tsx scripts/site/headers.ts && tsx scripts/site/prose-lint.ts && pnpm verify"
@@ -36,6 +37,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.4",
+    "axe-core": "^4.14.0",
     "babel-plugin-react-compiler": "^1.0.0",
     "oxlint": "^1.75.0",
     "tailwindcss": "^4.3.3",
