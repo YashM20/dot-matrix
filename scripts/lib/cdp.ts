@@ -56,6 +56,9 @@ export interface LaunchOptions {
   /** Show real scrollbars (Chrome runs with `--hide-scrollbars` otherwise), so a `100vw` width that ignores the
    * scrollbar's width overflows here as it does on Windows desktops. */
   scrollbars?: boolean
+  /** Set `__DOT_PROBE__` on every page, so a production build exposes its test hooks (default on). Off: the page runs
+   * as a visitor's would (scripts/site/csp-browser.ts checks no test global is left then). */
+  testHooks?: boolean
 }
 
 export async function launch(width: number, height: number, opts: LaunchOptions = {}): Promise<Page> {
@@ -131,7 +134,7 @@ export async function launch(width: number, height: number, opts: LaunchOptions 
   const close = async () => { drop('page closed'); ws.close(); proc.kill(); await sleep(300); try { rmSync(profile, { recursive: true, force: true }) } catch { /* Chrome may still hold files */ } }
   await cdp('Page.enable'); await cdp('Runtime.enable')
   // the app's test-only globals (src/lib/testHooks.ts) exist in a production build only when a probe asks for them
-  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__DOT_PROBE__ = true' })
+  if (opts.testHooks !== false) await cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__DOT_PROBE__ = true' })
   const allowDownloads = async (dir: string) => {
     const r = await cdp('Browser.setDownloadBehavior', { behavior: 'allowAndName', downloadPath: dir, eventsEnabled: true })
     if (r.error) await cdp('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: dir })

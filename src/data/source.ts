@@ -97,7 +97,7 @@ export interface Transport<P> { kind: 'poll' | 'push' | 'websocket' | 'media'; o
 export interface Snapshot { data: Data; status: SourceStatus; updatedAt: number | null; error: string | null; retryInMs: number | null }
 
 export interface SourceSpec<P> {
-  /** Stable id: the localStorage cache key and the BroadcastChannel / `dot480Live` push name. */
+  /** Stable id: the localStorage cache key and the BroadcastChannel / `dot480Live` (test hooks only) push name. */
   id: string
   transports: Transport<P>[]
   /** Payload → data keys. Pure: same payload (and `now`), same numbers. */

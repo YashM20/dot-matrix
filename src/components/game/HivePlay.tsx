@@ -4,9 +4,11 @@
  * Juice: whole-cell screen shake, dither-burst hit flashes, Bayer / IGN dissolves between stages
  * and a dot migration into the boss (all off under reduced motion). Pauses on blur; Escape quits.
  * Idle on the title for 20 s (or `&demo=1`) and the autopilot plays an attract demo.
- * Dev hook for the headless screenshots: `window.__hive`.
+ * Test hook for the headless probe and screenshots: `window.__hive`, only with the test hooks on
+ * (`src/lib/testHooks.ts`: dev builds, or a probe); the overlay itself reads its own ref.
  */
 import { useEffect, useRef, useState } from 'react'
+import { TEST_HOOKS } from '../../lib/testHooks'
 import type { DotInstance, ThemeTokens } from '../../engine/types'
 import { dot480 } from '../../engine/theme/tokens'
 import { toDots } from '../../engine/buffer/dotBuffer'
@@ -66,6 +68,8 @@ function padLayers(held: number) {
 
 interface Trans { t0: number; prev: DotInstance[]; mask: Mask | null; mig: Migration | null; target?: DotInstance[] }
 declare global { interface Window { __hive?: Record<string, unknown> } }
+/** The running game as the overlay's pointer handler sees it (`window.__hive` exposes the same object to probes). */
+interface Hive { readonly game: Game; paused: boolean }
 
 export default function HivePlay({ theme = dot480, onClose }: { theme?: ThemeTokens; onClose: () => void }) {
   const screen = useRef<HTMLCanvasElement>(null), pad = useRef<HTMLCanvasElement>(null)
@@ -74,6 +78,7 @@ export default function HivePlay({ theme = dot480, onClose }: { theme?: ThemeTok
   useEffect(() => { closeRef.current = onClose }, [onClose])
   /** Buttons held on the touch pad (written by the pad, read by the game every step). */
   const touchBits = useRef(0)
+  const hive = useRef<Hive | undefined>(undefined)
 
   useEffect(() => {
     const canvas = screen.current
@@ -150,7 +155,7 @@ export default function HivePlay({ theme = dot480, onClose }: { theme?: ThemeTok
     }
     const stop = startLoop({ step: doStep, draw, paused: () => paused })
     const pct = (p: number) => { const a = [...times].sort((x, y) => x - y); return +(a[Math.floor(a.length * p)] ?? 0).toFixed(2) }
-    window.__hive = {
+    const api = {
       get game() { return g },
       get demo() { return demo }, set demo(on: boolean) { demo = !!on },
       get paused() { return paused }, set paused(on: boolean) { paused = !!on; dirty = true },
@@ -160,12 +165,15 @@ export default function HivePlay({ theme = dot480, onClose }: { theme?: ThemeTok
       steps: (n: number) => { for (let i = 0; i < n; i++) step(g, autopilot(g)); dirty = true; return g.stage },
       stats: () => ({ n: times.length, p50: pct(.5), p95: pct(.95), pitch: s.pitch, dots: s.buf.n }),
     }
+    hive.current = api
+    if (TEST_HOOKS) window.__hive = api
     return () => {
       stop(); detach()
       window.removeEventListener('blur', pause); window.removeEventListener('resize', fit)
       document.removeEventListener('visibilitychange', onVis)
       document.body.style.overflow = prevOverflow
-      delete window.__hive
+      hive.current = undefined
+      if (TEST_HOOKS) delete window.__hive
     }
   }, [theme, touch])
 
@@ -201,7 +209,7 @@ export default function HivePlay({ theme = dot480, onClose }: { theme?: ThemeTok
 
   const onScreenPointer = (e: React.PointerEvent<HTMLCanvasElement>) => {
     if (e.pointerType === 'touch') { setTouch(true); return }
-    const h = window.__hive as { paused?: boolean; game?: Game } | undefined
+    const h = hive.current
     if (h?.paused) { h.paused = false; return }
     // optional mouse-look in the corridor
     if (h?.game?.stage === 'corridor' && !document.pointerLockElement) e.currentTarget.requestPointerLock?.()
