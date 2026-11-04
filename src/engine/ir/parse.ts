@@ -12,9 +12,10 @@
  *   atom     := NUMBER | NAME | NAME '(' args ')' | 'pointer' '.' ('x'|'y'|'down') | 'data' '.' NAME
  *             | '(' block ')' | 'for' NAME 'in' INT '..' INT 'with' NAME '=' expr '{' block '}'
  *
- * `//` starts a line comment. Every error is an `IRError` with the offending line:col.
+ * `//` starts a line comment. Every error is an `IRError` with the offending line:col. The cost model (`IR_COST`)
+ * is charged as nodes are built, so a program over `IR_LIMITS.cost` fails at its outermost loop (or where it went over).
  */
-import { IR_CONSTANTS, IR_FUNCTIONS, IR_LIMITS, IR_RESERVED, IRError, isFn, validName, validate, type BinOp, type FnName, type Node } from './ast'
+import { IR_CONSTANTS, IR_COST, IR_FUNCTIONS, IR_LIMITS, IR_RESERVED, IRError, costMessage, isFn, nodeCost, validName, validate, type BinOp, type FnName, type Node } from './ast'
 
 type Tok = { type: 'num'; v: number; pos: number } | { type: 'name'; v: string; pos: number } | { type: 'op'; v: string; pos: number } | { type: 'end'; v: ''; pos: number }
 const OPS = ['<=', '>=', '==', '!=', '..', '+', '-', '*', '/', '%', '^', '<', '>', '?', ':', '(', ')', ',', '.', ';', '{', '}', '=']
@@ -66,8 +67,8 @@ export function parse(src: string): Node {
   if (typeof src !== 'string') throw new IRError('source must be a string')
   if (src.length > IR_LIMITS.source) throw new IRError(`source is ${src.length} characters, more than ${IR_LIMITS.source}`, IR_LIMITS.source, ...where(src, IR_LIMITS.source))
   const toks = lex(src)
-  let p = 0, nodes = 0, depth = 0, work = 1
-  const scope: string[] = []
+  let p = 0, nodes = 0, depth = 0, work = 1, cost = 0
+  const scope: string[] = [], loops: Tok[] = []
   const peek = () => toks[p]
   const fail = (msg: string, tok: Tok = toks[p]): never => err(src, msg, tok.pos)
   const isOp = (v: string) => { const t = toks[p]; return t.type === 'op' && t.v === v }
@@ -75,7 +76,8 @@ export function parse(src: string): Node {
   const describe = (t: Tok) => (t.type === 'end' ? 'end of input' : `"${t.v}"`)
   const expect = (v: string) => { if (!isOp(v)) fail(`expected "${v}" but found ${describe(peek())}`); p++ }
   const keyword = (v: string) => { if (!isName(v)) fail(`expected "${v}" but found ${describe(peek())}`); p++ }
-  const node = <N extends Node>(n: N, at: Tok): N => { if (++nodes > IR_LIMITS.nodes) fail(`program has more than ${IR_LIMITS.nodes} nodes`, at); return n }
+  const charge = (steps: number, at: Tok) => { cost += steps * work; if (cost > IR_LIMITS.cost) fail(costMessage(work), loops[0] ?? at) }
+  const node = <N extends Node>(n: N, at: Tok): N => { if (++nodes > IR_LIMITS.nodes) fail(`program has more than ${IR_LIMITS.nodes} nodes`, at); charge(nodeCost(n), at); return n }
   const bindName = (): [string, Tok] => {
     const t = peek()
     if (t.type !== 'name') return fail(`expected a name but found ${describe(t)}`)
@@ -190,9 +192,10 @@ export function parse(src: string): Node {
     const outer = work
     work *= to - from
     if (work > IR_LIMITS.work) fail(`nested loops run ${work} times per dot, more than ${IR_LIMITS.work}`, it)
-    scope.push(i, acc)
+    scope.push(i, acc); loops.push(t)
+    charge(IR_COST.iteration, t)
     const body = nest(block)
-    scope.length -= 2
+    scope.length -= 2; loops.pop()
     work = outer
     expect('}')
     return node({ k: 'for', i, from, to, acc, init, body }, t)

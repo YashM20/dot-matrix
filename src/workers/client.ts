@@ -4,11 +4,13 @@
  * wins) and receives transferable double buffers (plus, when asked, the frame rasterized in the worker as an
  * `ImageBitmap`): the frame on screen (`front`) stays here, the one
  * before it is handed back to the worker for the next frame, so steady state allocates nothing.
- * Off with `?worker=0`, when `Worker` is missing, or after the worker fails; callers then sample locally.
+ * Off with the `worker` flag off (`?worker=0`, `?flags=-worker`, src/site/flags.ts), when `Worker` is missing, or after
+ * the worker fails; callers then sample locally.
  */
 import { dotBufferOver, type DotBuffer } from '../engine/buffer/dotBuffer'
 import type { DotStyle, GridConfig, ThemeTokens } from '../engine/types'
 import { workerIds } from '../widgets/registry'
+import { flag } from '../site/flags'
 import type { DropRequest, SampleReply, SampleRequest } from './protocol'
 
 let worker: Worker | null | undefined
@@ -21,7 +23,7 @@ function fail() {
 }
 function getWorker(): Worker | null {
   if (worker !== undefined) return worker
-  if (typeof Worker === 'undefined' || (typeof location !== 'undefined' && new URLSearchParams(location.search).get('worker') === '0')) return (worker = null)
+  if (typeof Worker === 'undefined' || !flag('worker')) return (worker = null)
   try {
     worker = new Worker(new URL('./sampleWorker.ts', import.meta.url), { type: 'module' })
     worker.addEventListener('message', (e: MessageEvent<SampleReply>) => cards.get(e.data.card)?.(e.data))

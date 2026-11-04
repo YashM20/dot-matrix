@@ -13,6 +13,7 @@ import { dropUrlParams, switchTheme } from '../../site/theme/moment'
 import { setPondMemory } from '../../site/pondMemory'
 import { CARD_SIZE_LABELS, CARD_SIZE_LINES, CARD_SIZES, setCardSize } from '../../site/cards'
 import { POSTS, postPath } from '../../blog/posts'
+import { flag } from '../../site/flags'
 
 /** The display skins, from the engine's list (so the palette, shell and header can't drift apart). */
 export const SKINS = SKIN_NAMES
@@ -69,7 +70,7 @@ export const boardOfCard = async (cardId: string) => (await allBoards()).find(b 
 export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): PaletteItem[] {
   const items: PaletteItem[] = []
   const act = (id: string, text: string, run: PaletteItem['run'], hint?: string, keywords?: string) => items.push({ id: `a:${id}`, group: 'Action', text, run, hint, keywords, boost: 20 })
-  act('xray', 'Toggle X-ray on every card', a => a.toggleXray(), '⇧X', 'xray inspect debug grid field layers')
+  if (flag('xray')) act('xray', 'Toggle X-ray on every card', a => a.toggleXray(), '⇧X', 'xray inspect debug grid field layers')
   act('time', 'Time machine: freeze and scrub the board', a => a.freeze(), 'T', 'pause clock scrub time')
   act('resume', 'Time machine: resume the clock', a => a.resume(), 'SPACE', 'play unpause')
   if (hoveredCard) act('remix-hover', `Open ${hoveredCard} in MAKE · CODE (remix)`, a => a.remix(hoveredCard), '', 'remix dots ir program')

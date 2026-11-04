@@ -6,7 +6,7 @@
  * card is sampled through Field → Grid Sampler → Renderer like any preset. The document is plain JSON:
  * it saves to localStorage / a file as is, and `adapter.ts` maps it to spec v0 now and spec v1 later.
  */
-import { contextEnv, IRError, IR_LIMITS, irProgram, type IRProgram } from '../../engine/ir'
+import { contextEnv, IRError, IR_LIMITS, irProgram, type IRGuard, type IRProgram } from '../../engine/ir'
 import '../../engine/noise/ir' // IR noise pack: noise() fbm() turb() voronoi() in studio IR
 import { textAt } from '../../engine/layout'
 import type { Control } from '../../engine/context'
@@ -193,6 +193,22 @@ export interface CompiledCard {
 }
 export type ProgramCache = Map<string, IRProgram>
 const ONE: Field = () => 1
+export interface CompileCardOptions {
+  /**
+   * Guard the card's programs (user content: MAKE, Studio): they share a time budget per frame, and a program
+   * that runs past it is paused and the card shows a note instead. Off for trusted cards, so their hot path is unchanged.
+   */
+  guard?: IRGuard
+}
+/** A program's guard key on a card: a new source, lattice or grid size gets a fresh try. */
+export const guardKey = (grid: GridConfig, where: number | string, src: string) => `${grid.cols}x${grid.rows}/${where}|${src}`
+const PAUSED_LINES = ['PROGRAM PAUSED', 'TOO SLOW TO DRAW', 'EDIT TO TRY AGAIN']
+/** The note a card draws over a paused program: three centred lines of card text. */
+function pausedNote(grid: GridConfig): Layer {
+  const top = Math.round(grid.rows / 2) - 14, mid = Math.floor(grid.cols / 2)
+  const [a, b, c] = PAUSED_LINES.map((s, i) => textAt(grid, s, mid, top + i * 10, { align: 'center' }))
+  return { field: (u, v) => Math.max(a(u, v), b(u, v), c(u, v)), tone: 'value' }
+}
 
 function compileIR(id: string, src: string, errors: Map<string, IRError>, good: ProgramCache): IRProgram | undefined {
   try {
@@ -217,9 +233,14 @@ function blendFields(a: Field, b: Field, mode: Blend): Field {
 }
 
 /** Compile a card once per document change; the returned `layers(ctx)` is cheap per frame. */
-export function compileCard(card: StudioCard, good: ProgramCache = new Map()): CompiledCard {
-  const errors = new Map<string, IRError>(), keys = new Set(Object.keys(card.data))
+export function compileCard(card: StudioCard, good: ProgramCache = new Map(), opts: CompileCardOptions = {}): CompiledCard {
+  const errors = new Map<string, IRError>(), keys = new Set(Object.keys(card.data)), guard = opts.guard, guarded: string[] = []
   let usesT = false
+  /** The field through the guard (when there is one); undefined while the program is paused. */
+  const guardIt = (key: string, cost: number, f: () => Field): Field | undefined => {
+    if (!guard) return f()
+    return guard.state(key) === 'paused' ? undefined : guard.field(key, cost, f())
+  }
   const L = layoutFor(card.grid)
   type Builder = (ctx: WidgetContext, presetFrames: Map<string, Layer[]>) => Layer | undefined
   const builders: { layer: StudioLayer; build: Builder }[] = []
@@ -229,14 +250,17 @@ export function compileCard(card: StudioCard, good: ProgramCache = new Map()): C
     if (l.kind === 'ir' || l.kind === 'sites') {
       const prog = compileIR(l.id, l.src || '1', errors, good)
       if (prog) { prog.info.data.forEach(k => keys.add(k)); usesT ||= prog.info.t }
+      const key = guardKey(card.grid, l.kind === 'ir' ? l.lattice : 'sites', l.src || '1')
       if (l.kind === 'ir') {
         const lattice = l.lattice > 1 ? l.lattice : undefined
-        builders.push({ layer: l, build: ctx => prog && { field: prog(contextEnv(ctx, card.grid)), tone: tone('auto'), ...(lattice && { lattice }) } })
+        if (guard) guarded.push(key)
+        builders.push({ layer: l, build: ctx => { const field = prog && guardIt(key, prog.info.cost, () => prog(contextEnv(ctx, card.grid))); return field && { field, tone: tone('auto'), ...(lattice && { lattice }) } } })
       } else {
         const { shape, cx, cy, r, x1, y1, spacing, start, sweep } = l.params
         const geo = shape === 'line' ? L.dotLine(cx, cy, x1, y1, { spacing, size: l.size }) : shape === 'disc' ? L.dotDisc(cx, cy, r, { spacing, size: l.size }) : L.dotRing(cx, cy, r, { spacing, size: l.size, start, sweep })
         const isOne = (l.src || '1').trim() === '1'
-        builders.push({ layer: l, build: ctx => prog && { ...geo, field: isOne ? ONE : prog(contextEnv(ctx, card.grid)), tone: tone('idle') } })
+        if (guard && !isOne) guarded.push(key)
+        builders.push({ layer: l, build: ctx => { const field = prog && (isOne ? ONE : guardIt(key, prog.info.cost, () => prog(contextEnv(ctx, card.grid)))); return field && { ...geo, field, tone: tone('idle') } } })
       }
     } else if (l.kind === 'text') {
       const { text, col, row, align, scale, smooth } = l.params
@@ -258,8 +282,10 @@ export function compileCard(card: StudioCard, good: ProgramCache = new Map()): C
     } else if (l.kind === 'spec') {
       let build: ((ctx: WidgetContext) => Layer) | undefined
       try { build = buildLayer(l.spec, card.grid, { irMode: 'function' }) } catch (e) { errors.set(l.id, new IRError(`spec layer: ${(e as Error).message}`)) }
-      if ('src' in l.spec && typeof l.spec.src === 'string') { try { const p = irProgram(l.spec.src); p.info.data.forEach(k => keys.add(k)); usesT ||= p.info.t } catch { /* reported by buildLayer */ } }
-      if (build) builders.push({ layer: l, build: ctx => { const x = build(ctx); return { ...x, tone: tone(x.tone) } } })
+      let cost = 0, key = ''
+      if ('src' in l.spec && typeof l.spec.src === 'string') { try { const p = irProgram(l.spec.src); p.info.data.forEach(k => keys.add(k)); usesT ||= p.info.t; cost = p.info.cost; key = guardKey(card.grid, 'spec', l.spec.src) } catch { /* reported by buildLayer */ } }
+      if (guard && key) guarded.push(key)
+      if (build) builders.push({ layer: l, build: ctx => { const x = build(ctx), field = key ? guardIt(key, cost, () => x.field) : x.field; return field && { ...x, field, tone: tone(x.tone) } } })
     } else {
       const p = widgetById(l.params.preset)
       if (!p) { errors.set(l.id, new IRError(`no preset "${l.params.preset}"`)); continue }
@@ -277,6 +303,7 @@ export function compileCard(card: StudioCard, good: ProgramCache = new Map()): C
   }
   const layers = (ctx: WidgetContext): Layer[] => {
     const out: Layer[] = [], frames = new Map<string, Layer[]>()
+    guard?.begin()
     for (const { layer, build } of builders) {
       const x = build(ctx, frames)
       if (!x) continue
@@ -284,6 +311,7 @@ export function compileCard(card: StudioCard, good: ProgramCache = new Map()): C
       if (layer.blend !== 'normal' && below) out[out.length - 1] = { ...below, field: blendFields(below.field, x.field, layer.blend) }
       else out.push(x)
     }
+    if (guard && guarded.some(k => guard.state(k) === 'paused')) out.push(pausedNote(card.grid))
     return out
   }
   return { layers, errors, keys: [...keys].sort(), usesT }

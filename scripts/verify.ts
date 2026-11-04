@@ -32,6 +32,7 @@ import { checker } from './lib/check'
 import { coreChecks } from './verify/core'
 import { engineChecks } from './verify/engine'
 import { uxChecks } from './verify/ux'
+import { flagChecks } from './verify/flags'
 
 // timing checks warn unless DOT_TIMING=strict (scripts/lib/check.ts, docs/CHECKPOINTS.md, #75)
 const { assert, done } = checker()
@@ -167,6 +168,8 @@ goldenKeyChecks(assert)
 
 // UX U1, U3) board picker groups, labels and old paths; views and canonical URLs (scripts/verify/ux.ts)
 uxChecks(assert)
+// FLAGS (#144, #145) every release flag documented; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
+flagChecks(assert)
 
 
 // SHARE S0) widget uids, metadata and URLs (docs/SHARE-PLAN.md §3, scripts/widgets/checks.ts)

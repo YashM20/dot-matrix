@@ -7,7 +7,9 @@
  * replace the present without a history entry, and `end` commits the whole gesture as one undo step.
  */
 import { create } from 'zustand'
-import { commit, historyOf, loadLocal, newId, redo, undo, type History, type StudioCard, type StudioLayer } from '../studio/doc'
+import { IR_FRAME_MS } from '../../engine/ir'
+import { userPrograms } from '../dwitter/program'
+import { commit, guardKey, historyOf, loadLocal, newId, redo, undo, type History, type StudioCard, type StudioLayer } from '../studio/doc'
 import type { SharedProgram } from '../../lib/share'
 import { addFrame, addLayer, boundsOf, frameById, frameSize, loadDoc, presetCard, programCard, programSource, saveDoc, seedDoc, topDown, type EditorDoc, type EditorFrame, type Sel } from './doc'
 import { clampZ, fitCam, zoomCam, type Camera } from './input'
@@ -97,6 +99,21 @@ export interface EditorStore {
 }
 
 let gestureBase: EditorDoc | undefined
+/**
+ * Frames holding a program from a link, an example or the gallery, by frame id → the program's guard key. They stay
+ * out of the autosave until the program has drawn one frame within the user-program budget, so a link to a program
+ * too slow for this device is never saved and a reload does not bring it back. Editing the program releases the hold.
+ */
+const held = new Map<string, string>()
+const keysOf = (f: EditorFrame) => f.card.layers.flatMap(l => (l.kind === 'ir' ? [guardKey(f.card.grid, l.lattice, l.src || '1')] : []))
+/** The document as the autosave writes it: without the held frames whose program has not drawn in budget yet. */
+export function saveable(d: EditorDoc): EditorDoc {
+  for (const [id, key] of held) {
+    const f = frameById(d, id)
+    if (!f || userPrograms.state(key) === 'ok' || !keysOf(f).includes(key)) held.delete(id)
+  }
+  return held.size ? { ...d, frames: d.frames.filter(f => !held.has(f.id)) } : d
+}
 const first = (() => { const d = loadDoc(); if (d) return d; const studio = loadLocal(); return seedDoc(studio && studio.layers.length ? studio : undefined) })()
 
 export const useEditor = create<EditorStore>((set, get) => ({
@@ -155,7 +172,8 @@ export const useEditor = create<EditorStore>((set, get) => ({
     const src = programSource(p), had = get().h.present.frames.find(f => f.source === src)
     if (had) { const l = topDown(had.card).find(x => x.kind === 'ir'); set({ sel: { frame: had.id, layer: l?.id } }); reveal(had.id); return had.id }
     const id = get().insertCard(programCard(p), { source: src })
-    const l = topDown(frameById(get().h.present, id)!.card)[0]
+    const f = frameById(get().h.present, id)!, l = topDown(f.card)[0], key = keysOf(f)[0]
+    if (key && userPrograms.state(key) !== 'ok') held.set(id, key)
     set({ sel: { frame: id, layer: l?.id } })
     return id
   },
@@ -203,8 +221,13 @@ export function revealAbove(cover: number, right = 0) {
 
 // autosave (debounced)
 let saveTimer: ReturnType<typeof setTimeout> | undefined
-useEditor.subscribe((s, prev) => {
-  if (s.h.present === prev.h.present) return
+const scheduleSave = () => {
   clearTimeout(saveTimer)
-  saveTimer = setTimeout(() => { if (!saveDoc(useEditor.getState().h.present)) useEditor.getState().setNote('browser storage is full: download the document as JSON') }, 500)
+  saveTimer = setTimeout(() => { if (!saveDoc(saveable(useEditor.getState().h.present))) useEditor.getState().setNote('browser storage is full: download the document as JSON') }, 500)
+}
+useEditor.subscribe((s, prev) => { if (s.h.present !== prev.h.present) scheduleSave() })
+// a held program that drew in budget can be saved now; a paused one says why it stopped
+userPrograms.watch((key, state) => {
+  if (state === 'ok' && [...held.values()].includes(key)) scheduleSave()
+  if (state === 'paused') useEditor.getState().setNote(`A program is paused: one frame took longer than ${IR_FRAME_MS} ms to draw on this device. Edit its code or pick a larger lattice to try again.`)
 })

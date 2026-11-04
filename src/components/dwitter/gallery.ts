@@ -2,6 +2,7 @@
  * The local remix gallery: programs you ran or remixed (localStorage), the 8 seeds, and the remix
  * graph drawn in dots — nodes are tiny thumbnails of each program, edges are dotted parent → child links.
  */
+import type { IRGuard } from '../../engine/ir'
 import type { GridConfig, Layer } from '../../engine/types'
 import { checkShared, programHash, type SharedProgram } from '../../lib/share'
 import { layoutFor } from '../../widgets/types'
@@ -74,15 +75,19 @@ export function layoutGraph(list: Entry[]): Graph {
 /** Thumbnail origin in lattice cells. */
 const origin = (n: GraphNode): [number, number] => [PAD + n.col * SLOT_W + 1, PAD + n.row * SLOT_H + 1]
 
-/** Graph → layers: all thumbnails in one 2× lattice layer, dotted remix edges, the current node framed in the accent. */
-export function graphLayers(g: Graph, current: string | undefined, t = 1.5): Layer[] {
+/**
+ * Graph → layers: all thumbnails in one 2× lattice layer, dotted remix edges, the current node framed in the accent.
+ * With a `guard`, the thumbnails share its frame budget and a program that runs past it draws an empty thumbnail.
+ */
+export function graphLayers(g: Graph, current: string | undefined, t = 1.5, guard?: IRGuard): Layer[] {
   const sub = { cols: Math.floor(g.grid.cols / K), rows: Math.floor(g.grid.rows / K) }
   const slots = new Map<number, (u: number, v: number) => number>()
+  guard?.begin()
   for (const n of g.nodes) {
-    const c = compileSource(n.entry.src)
-    if (!c.program) continue
-    const f = c.program({ t, data: dataFor(c.program.info.data, {}) }), [ox, oy] = origin(n)
-    slots.set(oy * sub.cols + ox, f)
+    const c = compileSource(n.entry.src), key = `thumb|${n.entry.src}`
+    if (!c.program || guard?.state(key) === 'paused') continue
+    const raw = c.program({ t, data: dataFor(c.program.info.data, {}) }), [ox, oy] = origin(n)
+    slots.set(oy * sub.cols + ox, guard ? guard.field(key, c.program.info.cost, raw) : raw)
   }
   const thumbs = (u: number, v: number) => {
     const x = Math.round(u * (sub.cols - 1)), y = Math.round(v * (sub.rows - 1))

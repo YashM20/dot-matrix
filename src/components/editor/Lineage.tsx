@@ -6,6 +6,7 @@
  * the selected frame came from, as far as this browser saw them.
  */
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
+import { irGuard } from '../../engine/ir/guard'
 import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { sampleLayers } from '../../engine/sampler/gridSampler'
 import { useThemeTokens } from '../../site/theme/useTheme'
@@ -17,6 +18,8 @@ import { useEditor } from './store'
 import { Section } from './ui'
 
 const graphStyle = { ...DOTS_STYLE, sizeMin: .15, sizeMax: .62 }
+/** The thumbnails' own time budget: a gallery program too slow for this device draws an empty slot. */
+const thumbs = irGuard()
 /**
  * localStorage reads keyed by a stamp the caller bumps after a write. The stamp is an input on purpose: the React
  * Compiler memoizes by what a callback reads, so a dependency the callback never reads would never refresh it.
@@ -38,7 +41,8 @@ export function RemixGraph({ current, version = 0 }: { current?: string; version
       if (!ctx) return
       c.width = Math.round(g.cols * g.pitch! * k); c.height = Math.round(g.rows * g.pitch! * k)
       ctx.setTransform(k, 0, 0, k, 0, 0); ctx.fillStyle = theme.surface; ctx.fillRect(0, 0, c.width, c.height)
-      renderCanvas(ctx, sampleLayers(graphLayers(graph, current), g, graphStyle, theme))
+      renderCanvas(ctx, sampleLayers(graphLayers(graph, current, undefined, thumbs), g, graphStyle, theme))
+      thumbs.settle()
       c.dataset.nodes = String(graph.nodes.length); c.dataset.cols = String(g.cols); c.dataset.rows = String(g.rows)
     }, 60)
     return () => clearTimeout(h)
