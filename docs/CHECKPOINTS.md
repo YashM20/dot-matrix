@@ -6,7 +6,7 @@ One checkpoint at a time. A checkpoint is a GitHub milestone with a fixed list o
 1. **Scope.** The milestone's issues are the whole job. A new idea or request that comes up mid-checkpoint becomes an issue in a later milestone, or in Backlog or ideation. It does not join the current one unless the owner says so.
 2. **Build.** At most 4 agents, each working only on issues in this milestone. Merge each one into the checkpoint branch as it finishes.
 3. **Gate.** The full suite is green on the checkpoint branch (the coordinator's full-suite runner, run detached, with a summary file at the end). Known timing flakes are listed and pass on CI.
-   - The gate also runs `npx tsx scripts/site/prose-lint.ts` (visitor prose, `docs/WRITING.md`): 0 errors before publish. It is not in CI.
+   - `pnpm check` (and so CI) runs `scripts/site/prose-lint.ts` on visitor prose (`docs/WRITING.md`): 0 errors before publish. Read its warnings at the gate.
 4. **Publish.**
    - Open a PR from the checkpoint branch to main. Wait for CI and Vercel to pass, then merge.
    - Turn the shipped `upcoming` rows into a released version in `src/changelog.ts` and `CHANGELOG.md`.
