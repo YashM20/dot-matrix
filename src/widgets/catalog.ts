@@ -287,4 +287,13 @@ export const catalog: readonly CatalogRow[] = [
   ['mo-pull', '4a974spv', 'motion'],
   ['mo-typing', '2d2am377', 'motion'],
   ['mo-send', '6z5z2r65', 'motion'],
+  ['watch-analog', 'k1bm7khp', 'watch'],
+  ['watch-digital', 'g3176hwt', 'watch'],
+  ['watch-complications', '0ftpw5z0', 'watch'],
+  ['watch-moon', 'nk424z3v', 'watch'],
+  ['watch-tide', 'gv74dz56', 'watch'],
+  ['watch-sun', '74cgb2wa', 'watch'],
+  ['watch-world', 'd81jrrs7', 'watch'],
+  ['watch-steps', 'qqfps0r9', 'watch'],
+  ['watch-faces', '8fs777n1', 'watch'],
 ]
