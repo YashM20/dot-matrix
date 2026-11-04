@@ -5,7 +5,9 @@ import '../essay/essay.css'
 import '../blog/blog.css'
 import { Lab } from './Lab'
 import { LAB } from './experiments'
+import { initAnalytics } from '../site/analytics'
 import { RootBoundary } from '../site/RootBoundary'
 
 document.title = LAB.title
 createRoot(document.getElementById('lab')!).render(<StrictMode><RootBoundary page="lab"><Lab /></RootBoundary></StrictMode>)
+initAnalytics()
