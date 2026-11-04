@@ -94,7 +94,7 @@ export function blogPages() {
     const alt = has(socialImage(slug)) ? alts[slug]?.social : undefined
     return alt ? [`<meta property="og:image:alt" content="${esc(alt)}" />`, `<meta name="twitter:image:alt" content="${esc(alt)}" />`] : []
   }
-  const author = { '@type': 'Organization', name: 'Dot/480', url: `${origin}/` }
+  const author = { '@type': 'Organization', name: 'Reactopia', url: 'https://reactopia.me/' }
   const index: PageMeta = { title: BLOG.title, description: BLOG.dek, path: postPath(), image: social(BLOG.slug) }
   const list = withMeta(html, index, [...altTags(BLOG.slug), jsonLd({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: BLOG.title, description: BLOG.dek, url: origin + index.path, image: origin + index.image,
@@ -102,7 +102,7 @@ export function blogPages() {
   })])
   writeFileSync(file, list); page('blog', list)
   for (const p of POSTS) {
-    const m: PageMeta = { title: `${p.title} · Dot/480 blog`, description: p.dek, path: postPath(p.slug), image: social(p.slug) }
+    const m: PageMeta = { title: `${p.title} · Matrix blog`, description: p.dek, path: postPath(p.slug), image: social(p.slug) }
     const ld = {
       '@context': 'https://schema.org', '@type': 'BlogPosting', headline: p.title, description: p.dek, datePublished: p.date, author, publisher: author,
       image: [origin + m.image, ...(has(heroImage(p.slug)) ? [origin + heroImage(p.slug)] : [])], url: origin + m.path, mainEntityOfPage: origin + m.path,

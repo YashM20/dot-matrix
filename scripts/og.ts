@@ -57,7 +57,7 @@ export function ogImage(cardId: string, { t = 1.3, data = {} as Record<string, n
   put(board?.title ?? 'DOT / 480', 2, 'value', 10)
   put(p.name, 1, 'mid', 0)
   const style: DotStyle = { shape: 'circle', sizeMin: 0, sizeMax: TP * 0.42, opacityMode: 'fromValue' }
-  const wordmark: Layer = { field: textAt(grid, 'DOT/480', 0, rows - 7), tone: 'idle' }
+  const wordmark: Layer = { field: textAt(grid, 'MATRIX', 0, rows - 7), tone: 'idle' }
   for (const d of sampleLayers([...layers, wordmark], grid, style, theme)) if (visible(d)) out.dot(M + d.x, M + d.y, d.r, 2, d.color, d.opacity)
   return out
 }

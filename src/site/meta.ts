@@ -7,8 +7,8 @@
 import { boardIds, boardLabel, boardMeta, resolveBoardId } from '../widgets/manifest'
 import { widgetPath } from './routes'
 
-export const SITE_NAME = 'DOT/480'
-export const SITE_TITLE = 'DOT/480 — a field-based dot-matrix UI engine'
+export const SITE_NAME = 'MATRIX'
+export const SITE_TITLE = 'MATRIX · a field-based dot-matrix UI engine'
 export const SITE_DESCRIPTION = 'Interfaces drawn entirely in dots: every card is a field, sampled onto a quantized dot grid and rendered live. Boards, a playground, a Field IR REPL and a drawing board.'
 
 export interface PageMeta { title: string; description: string; path: string; image: string }
@@ -25,7 +25,7 @@ export function pageMeta(boardId?: string): PageMeta {
   if (!b) return { title: SITE_TITLE, description: SITE_DESCRIPTION, path: '/', image: '/og/default.png' }
   return {
     title: `${b.title} · ${SITE_NAME}`,
-    description: `The ${b.id.toUpperCase()} board of DOT/480, a field-based dot-matrix UI engine: every card is a field sampled onto a quantized dot grid and rendered live.`,
+    description: `The ${b.id.toUpperCase()} board of MATRIX, a field-based dot-matrix UI engine: every card is a field sampled onto a quantized dot grid and rendered live.`,
     path: `/${b.id}/`,
     image: `/og/${b.id}.png`,
   }
@@ -41,7 +41,7 @@ export function widgetPageMeta(w: WidgetPageInfo): PageMeta {
   const name = widgetTitle(w.name)
   return {
     title: `${name} · ${SITE_NAME}`,
-    description: `${w.blurb ? `${w.blurb} ` : ''}A dot-matrix widget from the ${boardLabel(w.board)} board of DOT/480: a field sampled onto a quantized dot grid and rendered live.`,
+    description: `${w.blurb ? `${w.blurb} ` : ''}A dot-matrix widget from the ${boardLabel(w.board)} board of MATRIX: a field sampled onto a quantized dot grid and rendered live.`,
     path: widgetPath(w.slug, w.scope),
     image: `/og/widget/${w.uid}.png`,
   }

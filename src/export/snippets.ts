@@ -15,12 +15,12 @@ export function cardSVG(dots: DotInstance[], f: CardFrame, c: CardCredit): strin
   const pad = f.pad ?? 14, W = f.width + pad * 2, H = f.height + pad * 2, r = f.radius ?? 16
   const inner = renderSVG(dots, f.width, f.height).replace('<svg ', `<svg x="${pad}" y="${pad}" `)
   return `<!-- dot480 card ${c.slug} · ${c.url} -->\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(c.name)}">`
-    + `<title>${esc(c.name)} · DOT/480</title>`
+    + `<title>${esc(c.name)} · MATRIX</title>`
     + `<rect x=".5" y=".5" width="${W - 1}" height="${H - 1}" rx="${r}" fill="${esc(f.background)}"${f.border ? ` stroke="${esc(f.border)}"` : ''}/>${inner}</svg>\n`
 }
 
 /** Static HTML: the card SVG inline, linked to its page. No script, so it pastes into email, docs and CMS blocks. */
 export function cardHTML(svg: string, c: CardCredit): string {
   const body = svg.replace(/^<!--[^]*?-->\n/, '').trim()
-  return `<!-- dot480 card ${c.slug} -->\n<a href="${esc(c.url)}" title="${esc(c.name)} · DOT/480" style="display:inline-block;line-height:0">${body}</a>\n`
+  return `<!-- dot480 card ${c.slug} -->\n<a href="${esc(c.url)}" title="${esc(c.name)} · MATRIX" style="display:inline-block;line-height:0">${body}</a>\n`
 }

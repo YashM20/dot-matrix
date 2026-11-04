@@ -62,11 +62,11 @@ export function shareChecks(check: Assert) {
   const timerPreset = widgetById('timer')!, src = presetSource(timerPreset, dot480), credit = { name: 'Timer <3>', slug: 'timer', url: 'https://x/widget/timer/' }
   const svg = cardSVG(src.frame(0), { width: src.width, height: src.height, background: dot480.surface, border: dot480.hairline }, credit), html = cardHTML(svg, credit)
   check('share: card SVG export is one escaped, titled document on the card surface; HTML is a linked static SVG with no script',
-    svg.startsWith('<!-- dot480 card timer · https://x/widget/timer/ -->\n<svg ') && (svg.match(/<svg /g) ?? []).length === 2 && svg.includes('<title>Timer &lt;3&gt; · DOT/480</title>') && svg.includes(`fill="${dot480.surface}"`)
+    svg.startsWith('<!-- dot480 card timer · https://x/widget/timer/ -->\n<svg ') && (svg.match(/<svg /g) ?? []).length === 2 && svg.includes('<title>Timer &lt;3&gt; · MATRIX</title>') && svg.includes(`fill="${dot480.surface}"`)
     && html.includes('<a href="https://x/widget/timer/"') && !/<script/i.test(html) && !html.includes('-->\n<svg') && (html.match(/<svg /g) ?? []).length === 2,
     `${(svg.length / 1024).toFixed(1)} KB svg`)
   const timer = index.find(x => x.slug === 'timer')!, pm = widgetPageMeta(timer)
-  check('share: widget page meta: title, blurb description, canonical slug path, OG image by uid', pm.title === 'Timer · DOT/480' && pm.description.startsWith(timer.blurb) && pm.path === '/widget/timer/' && pm.image === `/og/widget/${timer.uid}.png`)
+  check('share: widget page meta: title, blurb description, canonical slug path, OG image by uid', pm.title === 'Timer · MATRIX' && pm.description.startsWith(timer.blurb) && pm.path === '/widget/timer/' && pm.image === `/og/widget/${timer.uid}.png`)
 }
 
 if (/[\\/]scripts[\\/]widgets[\\/]checks\.ts$/.test(process.argv[1] ?? '')) {

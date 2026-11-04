@@ -526,7 +526,7 @@ function LinkPanel() {
     {msg && <p className={msg.startsWith('no link') ? 'ed-bad' : 'ed-hint'} role="status">{msg}</p>}
     {last && <>
       {isPhone() && canShareLink(globalThis.navigator, { url: last.url, title: doc.name }) && <div className="ed-row-btns">
-        <button type="button" className="ed-primary" onClick={async () => { const o = await shareLink({ url: last.url, title: `${doc.name} · Dot/480` }, copyText); if (o !== 'cancelled') setMsg(o === 'shared' ? 'SHARED' : o === 'copied' ? 'COPIED' : 'READY: copy it below') }}>SHARE…</button>
+        <button type="button" className="ed-primary" onClick={async () => { const o = await shareLink({ url: last.url, title: `${doc.name} · Matrix` }, copyText); if (o !== 'cancelled') setMsg(o === 'shared' ? 'SHARED' : o === 'copied' ? 'COPIED' : 'READY: copy it below') }}>SHARE…</button>
       </div>}
       <input className="ed-link-url" readOnly value={last.url} aria-label="The last link made" onFocus={e => e.currentTarget.select()} />
       <output className="ed-url">{KIND_LABEL[last.kind]} LINK <b>{last.chars}</b> CHARS · {last.deflated ? 'DEFLATE' : 'PLAIN'} · #{last.id}{last.parent ? ` · REMIX OF #${last.parent}` : ''}</output>
