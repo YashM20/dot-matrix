@@ -8,6 +8,7 @@
  */
 import { boardIds, boardLabel, boardMeta, resolveBoardId } from '../widgets/manifest'
 import { widgetPath } from './routes'
+import { pushUrl, replaceUrl } from './safe-url'
 
 export const SITE_NAME = 'MATRIX'
 export const SITE_TITLE = 'MATRIX · a field-based dot-matrix UI engine'
@@ -127,5 +128,5 @@ export function setNoIndex(on: boolean) {
 export function syncUrl(pathAndQuery: string, push: boolean) {
   const next = pathAndQuery + location.hash
   if (next === location.pathname + location.search + location.hash) return
-  if (push) history.pushState(null, '', next); else history.replaceState(history.state, '', next)
+  if (push) pushUrl(next); else replaceUrl(next)
 }

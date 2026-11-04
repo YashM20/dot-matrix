@@ -14,6 +14,7 @@ import { TimeMachine } from '../xray/TimeMachine'
 import { boardTime, freeze, hoveredCard, isXRay, onCardAction, resume, scrub, setXR, toast, toggleCard, toggleGlobal, useXR, xrState } from '../xray/store'
 import { placeFromName, placeView, urlForView, type Place } from '../../site/views'
 import { widgetPath } from '../../site/routes'
+import { assign, pushUrl } from '../../site/safe-url'
 import { boardOfCard, type CommandApi } from './api'
 import { setReducedMotion } from './reducedMotion'
 import { onLayerRequest } from '../../site/layer'
@@ -119,8 +120,8 @@ function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { 
       {/* the shell is a typed terminal: offered where there is a keyboard */}
       <button type="button" className="tool-shell" onClick={run(onShell)}><b>SHELL</b><span>Type field commands</span></button>
       {/* the lab and the blog are their own pages; on phones these are their way in, as the header links are on desktop */}
-      <button type="button" className="tool-lab" onClick={run(() => location.assign('/lab/'))}><b>LAB</b><span>Interactive pieces outside the boards</span></button>
-      <button type="button" className="tool-blog" onClick={run(() => location.assign('/blog/'))}><b>BLOG</b><span>The essay and three tutorials</span></button>
+      <button type="button" className="tool-lab" onClick={run(() => assign('/lab/'))}><b>LAB</b><span>Interactive pieces outside the boards</span></button>
+      <button type="button" className="tool-blog" onClick={run(() => assign('/blog/'))}><b>BLOG</b><span>The essay and three tutorials</span></button>
     </div>
     <h3 className="tools-head">THEME</h3>
     <ThemeControls />
@@ -147,7 +148,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     else if (xrState().global || xrState().on.size) toggleGlobal(false)
   }, [xray])
 
-  const go = useCallback((query: string) => { window.location.assign(`${location.pathname}${query}`) }, [])
+  const go = useCallback((query: string) => { assign(`${location.pathname}${query}`) }, [])
   // a place's canonical URL on this board (src/site/views.ts): reloads in single-card mode, links, remix
   const urlOf = useCallback((p: Place, search = location.search) => urlForView({ ...placeView(p), board: view.current.board }, search, location.pathname), [])
   const api: CommandApi = useMemo(() => ({
@@ -155,7 +156,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     get board() { return view.current.board },
     openTab(t) {
       const name = placeFromName(t) ? t : 'EXPLORE'
-      if (!setTab) return window.location.assign(urlOf(placeFromName(name)!))
+      if (!setTab) return assign(urlOf(placeFromName(name)!))
       setTab(name)
     },
     openBoard(id) {
@@ -184,14 +185,14 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
         if (stub) toast(`${preset.name} is not Field IR yet: CODE opens a stub from describe()`)
         const q = new URLSearchParams(location.search); q.set('p', new URLSearchParams(query).get('p') ?? '')
         const url = urlOf('CODE', `?${q}`)
-        if (!setTab || view.current.tab === 'CODE') return window.location.assign(url)
-        history.pushState(null, '', url)
+        if (!setTab || view.current.tab === 'CODE') return assign(url)
+        pushUrl(url)
         setTab('CODE')
       }, e => toast(`remix failed: ${(e as Error).message}`))
     },
     async studio(cardId) {
       if (!(await findPreset(cardId))) return toast(`no card ${cardId}`)
-      if (!setTab) return window.location.assign(urlOf('COMPOSE'))
+      if (!setTab) return assign(urlOf('COMPOSE'))
       // lazy, like MAKE itself: the editor only loads when asked for; the card lands as a new frame
       void import('../editor/store').then(({ useEditor }) => {
         if (!useEditor.getState().insertPreset(cardId)) return toast(`could not open ${cardId}`)
@@ -245,7 +246,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       if (location.pathname === widgetPath(preset.id)) return
       const go = () => {
         const q = new URLSearchParams(location.search); q.delete('card')
-        history.pushState(null, '', widgetPath(preset.id) + (q.size ? `?${q}` : ''))
+        pushUrl(widgetPath(preset.id) + (q.size ? `?${q}` : ''))
         dispatchEvent(new PopStateEvent('popstate'))
       }
       return void import('../widget/WidgetPage').then(go, go)
