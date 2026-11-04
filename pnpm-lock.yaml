@@ -14,9 +14,12 @@ importers:
       '@fontsource-variable/oxanium':
         specifier: ^5.3.0
         version: 5.3.0
+      botid:
+        specifier: 1.5.12
+        version: 1.5.12(react@19.2.8)
       posthog-js:
         specifier: ^1.445.3
-        version: 1.445.3(@types/react@19.2.18)(react@19.2.8)
+        version: 1.445.4(@types/react@19.2.18)(react@19.2.8)
       react:
         specifier: ^19.2.8
         version: 19.2.8
@@ -694,6 +697,17 @@ packages:
     engines: {node: '>=6.0.0'}
     hasBin: true
 
+  botid@1.5.12:
+    resolution: {integrity: sha512-bUYGLDLbNOQJyTVfuBGzm1ADztJ/euV6XH9JgXZ9MG2CZvElgOycybVOsgHBjVwB4tFl77g7zs31kEvjYm2gAw==}
+    peerDependencies:
+      next: '*'
+      react: ^18.0.0 || ^19.0.0
+    peerDependenciesMeta:
+      next:
+        optional: true
+      react:
+        optional: true
+
   browserslist@4.28.8:
     resolution: {integrity: sha512-V2NpofLblG64mfOtSgDhOJESZEGogzDMBv/q+W6oc4LXWP/q75eOXoOaaOu1EOadB9U4Bwx/e0yzbvwKH8zalA==}
     engines: {node: ^6 || ^7 || ^8 || ^9 || ^10 || ^11 || ^12 || >=13.7}
@@ -970,8 +984,8 @@ packages:
     resolution: {integrity: sha512-YUbWYCgErwnMAVkjUnYa+KlMBzGpHwiIt/DE7f0G33AuX2LH9UcTk6KgWxd3zRU+pN3u/C+Xl3EnMLM4Hea7Sg==}
     engines: {node: ^10 || ^12 || >=14}
 
-  posthog-js@1.445.3:
-    resolution: {integrity: sha512-AuN+xbOq9hrARYfFHYa1ErhnLl7GuJfOwmW/O4sRHeKj2QLTT/J2/QQ4vQEjroWiF3arLSTMUns/2YxXafWO2A==}
+  posthog-js@1.445.4:
+    resolution: {integrity: sha512-+RhIUigXMW1V1aqEcZ1nkFsXHk/IgN5N280cp6nrYjPE0pInhqLT3Ve14WmEUPahdwElujpJyVYrALgvPKyMGw==}
     peerDependencies:
       '@types/react': '>=16.8.0'
       react: '>=16.8.0'
@@ -1574,6 +1588,10 @@ snapshots:
 
   baseline-browser-mapping@2.11.17: {}
 
+  botid@1.5.12(react@19.2.8):
+    optionalDependencies:
+      react: 19.2.8
+
   browserslist@4.28.8:
     dependencies:
       baseline-browser-mapping: 2.11.17
@@ -1805,7 +1823,7 @@ snapshots:
       picocolors: 1.1.1
       source-map-js: 1.2.2
 
-  posthog-js@1.445.3(@types/react@19.2.18)(react@19.2.8):
+  posthog-js@1.445.4(@types/react@19.2.18)(react@19.2.8):
     dependencies:
       '@posthog/browser-common': 0.10.5
       '@posthog/core': 1.63.1

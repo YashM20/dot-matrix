@@ -32,7 +32,8 @@ export interface CommandApi {
   remix(cardId: string, data?: Record<string, number>): void | Promise<void>
   /** Open the card in MAKE · COMPOSE as a layer stack (`importPreset`). */
   studio(cardId: string): void | Promise<void>
-  copyLink(cardId?: string): void
+  /** Copies the link and returns it. */
+  copyLink(cardId?: string): string
   toggleXray(force?: boolean): void
   freeze(): void
   resume(): void
@@ -103,7 +104,7 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   }
   act('accent-next', 'Accent: next', () => switchTheme({ accent: ACCENTS[(ACCENTS.indexOf(getTheme().accent as AccentId) + 1) % ACCENTS.length] }), '', 'accent theme colour color hue next cycle')
   // CARD SIZE (src/site/cards.ts): the popover's and TOOLS' LARGE / MEDIUM / COMPACT
-  for (const s of CARD_SIZES) act(`cards-${s}`, `Card size: ${CARD_SIZE_LABELS[s].toLowerCase()} (${CARD_SIZE_LINES[s]})`, () => setCardSize(s), '', `card size cards columns row grid bigger smaller zoom density ${CARD_SIZE_LABELS[s].toLowerCase()}`)
+  for (const s of CARD_SIZES) act(`cards-${CARD_SIZE_LABELS[s].toLowerCase()}`, `Card size: ${CARD_SIZE_LABELS[s].toLowerCase()} (${CARD_SIZE_LINES[s]})`, () => setCardSize(s), '', `card size cards columns row grid bigger smaller zoom density ${CARD_SIZE_LABELS[s].toLowerCase()}`)
   for (const p of PLACES) items.push({ id: `v:${p}`, group: 'View', text: isMode(p) ? `Go to MAKE · ${p}: ${MODE_LINES[p]}` : `Go to ${p}`, run: a => a.openTab(p), keywords: `${p.toLowerCase()} ${PLACE_WORDS[p]}`, boost: 30 })
   // the blog is its own page (blog.html, src/blog): the index, then each post
   items.push({ id: 'v:blog', group: 'View', text: 'Blog', hint: `${POSTS.length} posts`, run: () => location.assign(postPath()), keywords: 'blog posts essay guides tutorials articles read learn how it works', boost: 30 })

@@ -28,6 +28,7 @@ export const FLAGS = [
   { id: 'worker', default: true, description: 'Sample cards in a web worker; off samples on the main thread', param: 'worker' },
   { id: 'clack', default: false, description: 'The flip-disc clack sound', param: 'clack' },
   { id: 'analytics', default: true, description: 'PostHog analytics, opt-in (src/site/analytics.ts): the consent banner and the TOOLS and palette switches. Needs VITE_POSTHOG_PROJECT_TOKEN' },
+  { id: 'likes', default: false, description: 'Likes (#169): the like button on widget pages and gallery programs; it also hides while the likes API answers 404' },
 ] as const satisfies readonly FlagDef[]
 
 export type FlagId = (typeof FLAGS)[number]['id']

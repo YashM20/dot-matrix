@@ -2,7 +2,7 @@
  * ABOUT (UX U3, docs/UX-PLAN.md §4.1): what this is, the essay, shortcuts and URL params, and the visitor
  * changelog (the old LOG tab). A lazy chunk, like every view but EXPLORE.
  */
-import { SHORTCUTS, URL_PARAMS, type Shortcut } from '../site/shortcuts'
+import { SHELL_KEYS, SHORTCUTS, URL_PARAMS, type Shortcut } from '../site/shortcuts'
 import { Changelog } from './Changelog'
 
 const Keys = ({ title, rows }: { title: string; rows: readonly Shortcut[] }) => <div className="about-keys">
@@ -23,6 +23,7 @@ export function About() {
       <div className="about-cols" id="shortcuts">
         <Keys title="KEYBOARD" rows={SHORTCUTS} />
         <Keys title="URL" rows={URL_PARAMS} />
+        <Keys title="DOT SHELL (TYPE HELP)" rows={SHELL_KEYS} />
       </div>
     </section>
     <Changelog />
