@@ -11,7 +11,7 @@
     <script>(function(){try{var D=document,d=D.documentElement,q=new URLSearchParams(location.search),S=/^(system|dark|light)$/,A=/^(signal|amber|phosphor|cyan|cobalt|vite|magenta|custom)$/,t=(q.get('theme')||'').split('_'),R='\\[data-scheme="(dark|light)"\\]\\[data-accent="custom"\\]\\{(--[a-z-]+: (#[0-9A-F]{6}|(radial-gradient\\(closest-side, )?rgba\\((\\d{1,3}, ){3}[01](\\.\\d{1,3})?\\)(, transparent\\))?);)+\\}',j,s,a,c,m,f;if(!(S.test(t[0])&&A.test(t[1])))t=[];try{j=JSON.parse(localStorage.getItem('dot480:theme'))}catch(e){}j=j||{};c=typeof j.hue=='number'&&/^-?\d{1,4}(\.\d+)?$/.test(j.hue)&&typeof j.css=='string'&&j.css.length<=8192&&RegExp('^('+R+'|@media \\(prefers-contrast: more\\)\\{'+R+'\\}|:where\\(\\[data-contrast="more"\\], \\[data-contrast="more"\\] \\*\\)'+R+')+$').test(j.css);f=function(l,r,o){return l.filter(function(x){return r.test(x)&&(x!='custom'||c)})[0]||o};s=f([q.get('scheme'),t[0],j.scheme],S,'system');a=f([q.get('accent'),t[1],j.accent],A,'signal');if(s=='system')s=matchMedia('(prefers-color-scheme: light)').matches?'light':'dark';d.dataset.scheme=s;d.dataset.accent=a;if(a=='custom')D.head.appendChild(m=D.createElement('style')).id='theme-custom',m.textContent=j.css;m=D.querySelector('meta[name=color-scheme]');if(m)m.content=s;m=D.querySelector('meta[name=theme-color]');if(m)m.content=s=='light'?'#F1F0EC':'#070809';d.dataset.cards=/^[ms]$/.test(m=localStorage.getItem('dot480:cards'))?m:'l'}catch(e){}})()</script>
     <!-- /theme-boot -->
     <title>Privacy · MATRIX</title>
-    <meta name="description" content="What Matrix stores and sends: no accounts, no cookies, no analytics. A few settings in your browser, and three public APIs on the Live board." />
+    <meta name="description" content="What Matrix stores and sends: no accounts, no cookies unless you ask, and analytics only if you allow it. A few settings in your browser, and three public APIs on the Live board." />
     <link rel="stylesheet" href="/src/legal/legal.css" />
   </head>
   <body>
@@ -23,25 +23,53 @@
       <header class="hero">
         <p class="kicker"><i aria-hidden="true"></i> MATRIX · PRIVACY</p>
         <h1>Privacy</h1>
-        <p class="lede">Short version: this site has no accounts, no cookies, no analytics and no ads, and your camera, microphone and
-          photos never leave your device. It keeps a few settings in your own browser, and the Live board fetches weather and
-          GitHub data from three public APIs.</p>
+        <p class="lede">Short version: this site has no accounts and no ads, sets a cookie only if you ask it to remember a like, and only counts visits if you click
+          Allow. Your camera, microphone and photos never leave your device. It keeps a few settings in your own browser, and
+          the Live board fetches weather and GitHub data from three public APIs.</p>
         <p class="stamp">LAST UPDATED 2026-11-04</p>
       </header>
 
       <h2>Who runs this</h2>
       <p>Matrix is a personal, non-commercial project by Yash Mahajan. The source code is public at
-        <a href="https://github.com/YashM20/dot-matrix">github.com/YashM20/dot-matrix</a>. There is no backend,
-        no database and nothing to sign in to: the site is a set of static files, and everything runs in your browser.</p>
+        <a href="https://github.com/YashM20/dot-matrix">github.com/YashM20/dot-matrix</a>. There is nothing to
+        sign in to: the site is a set of static files, and everything runs in your browser. The one exception is
+        <a href="#likes">likes</a>: when they are switched on and you like something, a small database keeps the like.</p>
 
       <h2>What the site collects</h2>
-      <p>Nothing personal. There are no cookies, no analytics or tracking scripts, no advertising, no fingerprinting
-        and no third-party fonts or CDNs (the typeface is served from this site). The page's Content Security Policy
-        only allows connections to this site and to the APIs listed below.</p>
+      <p>Nothing personal. There are no cookies (unless you ask to be remembered when you <a href="#likes">like</a>
+        something), no advertising, no fingerprinting and no third-party fonts or CDNs (the
+        typeface is served from this site). Analytics is off unless you turn it on, as the next section explains. The
+        page's Content Security Policy only allows connections to this site and to the APIs listed below.</p>
+
+      <h2 id="analytics">Analytics</h2>
+      <p>The site can count visits with <a href="https://posthog.com">PostHog</a>, but only if you say yes. On your first
+        visit a small box in the corner asks. Until you click Allow, nothing is loaded, sent or stored for it.
+        No thanks keeps it off, and the box doesn't come back. If your browser sends Global Privacy Control or Do
+        Not Track, analytics stays off and the box never shows.</p>
+      <p>After you click Allow, the site sends:</p>
+      <ul>
+        <li><b>Page views:</b> the address of each page you open, cut down to its path and the board or card it shows.
+          Programs and drawings packed into a link (the <code>p=</code> and <code>d=</code> parts) and everything else
+          after the <code>?</code> are removed first.</li>
+        <li><b>A few actions, by name:</b> a card's buttons (such as LINK or PNG), copying or sharing a link, changing the
+          board, theme or display skin, and which palette or shell command ran. Only a command's name is sent, never what
+          you typed.</li>
+        <li><b>What any analytics tool sees:</b> your browser and system type, screen size, language, time zone and the
+          site you came from (just its domain). PostHog also receives your IP address with each request, as any server
+          does.</li>
+      </ul>
+      <p>There are no accounts, so the data isn't tied to a name or an email. PostHog gives your browser a random id so
+        visits from the same browser count together. The data is kept on PostHog's US cloud, under
+        <a href="https://posthog.com/privacy">PostHog's privacy policy</a>.</p>
+      <p>The requests go to <code>/ingest</code> on this site, and Vercel passes them on to PostHog. So the page never
+        connects to another domain for analytics, and no PostHog script is loaded from anywhere else.</p>
+      <p><b>To turn it off:</b> on a board page, open the command palette (⌘K or Ctrl+K) and pick "Analytics: off", or on
+        a phone switch off ANALYTICS in TOOLS. Sending stops at once, the random id is forgotten, and what PostHog stored
+        in your browser is deleted. Turning on Global Privacy Control or Do Not Track stops it too.</p>
 
       <h2>What is stored on your device</h2>
       <p>Some settings and the things you make are saved in your browser's <code>localStorage</code> for this site, so
-        they survive a reload. Every key below stays on your device and is never sent anywhere. The site works without
+        they survive a reload. Apart from PostHog's id (under Analytics below), every key stays on your device and is never sent anywhere. The site works without
         any of them, and most are only written once you change a setting or make something.</p>
       <h3>Settings</h3>
       <dl class="keys">
@@ -54,6 +82,8 @@
         <div><dt><code>dot480:clack</code>, <code>dot480:worker</code></dt><dd>Older copies of two of those switches. They are still read, and removed the next time you change the switch.</dd></div>
         <div><dt><code>dot480:intro</code></dt><dd>You closed the one-line intro above the boards.</dd></div>
         <div><dt><code>dot480:fold:…</code></dt><dd>Which "More" panels in MAKE you left open or closed, one key per panel.</dd></div>
+        <div><dt><code>dot480:likes</code></dt><dd>Only if you like something: your answer to "Remember this browser?", the last day a remembered browser checked in, and what you liked here, so your like shows at once. See <a href="#likes">Likes</a>.</dd></div>
+        <div><dt><code>dot480:analytics</code></dt><dd>Your answer to the analytics box: on or off. Never written if your browser sends Global Privacy Control or Do Not Track.</dd></div>
         <div><dt><code>dot480:pond</code></dt><dd>Only if you turn on POND MEMORY: the day the pond was first made, the day of your last visit and a visit count, so the pond can age. Turning it off deletes it.</dd></div>
       </dl>
       <h3>Things you make</h3>
@@ -70,15 +100,46 @@
       <dl class="keys">
         <div><dt><code>dot480:live:…</code></dt><dd>The last weather, GitHub contributions and now-playing readings the Live board showed, one key per source, so it can start from them next time. They are ignored after 7 days.</dd></div>
       </dl>
-      <p>One key lives in <code>sessionStorage</code> instead, which your browser clears when you close the tab:</p>
+      <h3>Analytics</h3>
+      <dl class="keys">
+        <div><dt><code>ph_…_posthog</code>, <code>__ph_opt_in_out_…</code></dt><dd>Only after you click Allow: PostHog's random id for this browser, the current visit and your opt-in. The id is sent with each event. Switching analytics off deletes them.</dd></div>
+      </dl>
+      <p>Two keys live in <code>sessionStorage</code> instead, which your browser clears when you close the tab:</p>
       <dl class="keys">
         <div><dt><code>dot480:tilt</code></dt><dd>You allowed tilt on this tab, so tilt-reactive cards don't ask again until you close it.</dd></div>
+        <div><dt><code>dot480:shell-history</code></dt><dd>The last 100 commands you typed in the dot shell on this tab, so ↑ finds them after you close and reopen it.</dd></div>
       </dl>
       <p>Open tabs of the site also talk to each other over a <code>BroadcastChannel</code> (so clocks and live cards stay
         in step); those messages never leave your browser and aren't stored.</p>
       <p><b>To clear it all:</b> remove this site's data in your browser settings (usually under site settings or
         "cookies and site data" for <code>matrix.reactopia.me</code>), or in developer tools under
         Application → Local storage and Session storage. In a private window it is gone when you close the window.</p>
+
+      <h2 id="likes">Likes</h2>
+      <p>Likes may not be switched on yet. When they are, widgets and gallery programs get a like button, and counts
+        are public. Nobody can see who liked what. If you like something:</p>
+      <ul>
+        <li><b>What is sent.</b> The widget's id, or the program itself so the server can check it and work out its
+          key. The program is not stored, only a hash of it.</li>
+        <li><b>Your network, hashed.</b> The server reads your IP address only to work out your network (the first three
+          parts of an IPv4 address, or the first four groups of an IPv6 address). It stores a keyed hash of that network,
+          never the address, and keeps it for up to 30 days to apply limits and stop spam.</li>
+        <li><b>Remember or just this once.</b> The first time, you're asked whether to remember this browser. If you
+          choose Remember, the server sets one cookie, <code>dot480_lk</code>, for one year. Scripts on the page can't
+          read it, and it is only sent to the likes API. It holds a random id, the day it was issued and how many days
+          you came back, signed so it can't be changed. It is used for likes and nothing else. If you choose Just this
+          once, or your browser sends Global Privacy Control, no cookie is set: your like counts a little less and is
+          tied to your network's hash for 30 days.</li>
+        <li><b>What is kept.</b> For each like: a keyed hash of the cookie's id (or of your network), the time and
+          whether it counts yet. An unliked like is kept as removed, so a mistake or abuse can be undone.</li>
+        <li><b>Forget this browser.</b> The control sits under the like button once you chose Remember. It removes every
+          like this browser made while remembered, recounts those items, and deletes the cookie and the
+          <code>dot480:likes</code> key. Likes made just this once can't be tied to you, and their record ends with the
+          30-day network hash.</li>
+        <li><b>Who handles it.</b> Likes are stored in <a href="https://upstash.com">Upstash</a> Redis
+          (set up through Vercel), which processes them for this site under its own privacy policy. To keep bots out, the like button loads Vercel BotID,
+          which runs a check in your browser and sends the result with the like.</li>
+      </ul>
 
       <h2>Camera, microphone and motion</h2>
       <p>Some cards can use your device's sensors. The camera and microphone are only requested after you press the
@@ -105,7 +166,7 @@
         anything private in a program you share. Copy buttons write to your clipboard only when you press them.</p>
 
       <h2>Third-party services</h2>
-      <p>Only the Live board talks to other services, only while it is on screen, and the requests come straight from
+      <p>Apart from analytics, which goes through this site's <code>/ingest</code> address and only after you allow it, only the Live board talks to other services, only while it is on screen, and the requests come straight from
         your browser. Like any website, each service sees your IP address and browser type when it is contacted.</p>
       <ul>
         <li><b>Open-Meteo</b> (<code>api.open-meteo.com</code>) receives the coordinates to forecast, rounded to two

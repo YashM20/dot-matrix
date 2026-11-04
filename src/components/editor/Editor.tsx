@@ -8,16 +8,15 @@
  * (`visualViewport`), and SHARE opens the system share sheet when there is one.
  */
 import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type PointerEvent } from 'react'
-import { decodeShare } from '../../lib/share'
-import { TEST_HOOKS } from '../../lib/testHooks'
 import type { Mode } from '../../site/views'
 import { librarySave } from '../studio/doc'
 import { Canvas } from './Canvas'
 import { arrangeSel, copyEverywhere, copySel, copyText, cutSel, deleteSel, duplicateSel, groupSel, hideSel, lockSel, nudgeSel, orderSel, paste, selectAllSel, selectParent, shareSel, ungroupSel } from './actions'
 import { CLIP_KEY } from './clip'
 import { frameById, groupOf, layerOf, topDown } from './doc'
-import { decodeLink, LINK_PARAM } from './link'
-import { loadGallery, recordProgram } from '../dwitter/gallery'
+import { TEST_HOOKS } from '../../lib/testHooks'
+import { EditorBoundary } from './EditorBoundary'
+import { ImportPrompt, useLinkImports } from './imports'
 import { editableText } from './direct'
 import { codeTarget, KEY_TOOL, MODE_ENTRY, paintTarget } from './input'
 import { InspectorBody, InspectorTabs } from './Inspector'
@@ -68,13 +67,17 @@ function useKeyboard(phone: boolean): KeyboardBox {
 }
 const editable = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))
 
-/** `?make=code&p=…` / `?make&d=…` already imported this page load (a re-render or re-entry must not import it twice). */
-let handledP = '', handledD = ''
+interface EditorProps { mode: Mode; onExit?: () => void }
+/** The editor inside its recovery screen (#143): a crash anywhere in it (top bar, panels, inspector) offers a reset. */
+export const Editor = (props: EditorProps) => <EditorBoundary area="editor"><EditorView {...props} /></EditorBoundary>
 
-export function Editor({ mode, onExit }: { mode: Mode; onExit?: () => void }) {
+function EditorView({ mode, onExit }: EditorProps) {
   const layout = useLayout(), phone = layout !== 'desktop', landscape = layout === 'landscape', kb = useKeyboard(phone)
   const sheet = useEditor(s => s.sheet), note = useEditor(s => s.note), shortcuts = useEditor(s => s.shortcuts)
   const [banner, setBanner] = useState('')
+  const prompt = useLinkImports(mode, setBanner) // `?p=` / `?make&d=` links wait for KEEP
+  // probes only: a render crash on demand, to check the recovery screen around the whole editor
+  if (TEST_HOOKS && (globalThis as { __editorCrash?: boolean }).__editorCrash) throw new Error('probe: the editor was asked to crash')
   const root = useRef<HTMLElement>(null)
   // desktop: fill the window below the site bar (the footer sits below the fold). Re-measured when the page
   // above changes height too: the site bar grows after mount (the lazily loaded tool dock is portaled into it),
@@ -98,27 +101,10 @@ export function Editor({ mode, onExit }: { mode: Mode; onExit?: () => void }) {
     s.setTool(entry.tool); s.setLeft(entry.left); s.setRight(entry.right)
     if (mode === 'DRAW') { const t = paintTarget(d, s.sel); if (t) s.select(t) }
     else if (mode === 'CODE') {
-      const p = new URLSearchParams(location.search).get('p')
-      if (p && p !== handledP) {
-        handledP = p
-        decodeShare(p).then(prog => { useEditor.getState().insertProgram(prog); recordProgram(loadGallery(), prog); setBanner('') }, (e: Error) => setBanner(`Could not open this link: ${e.message}`))
-      } else if (!p) { const t = codeTarget(d, s.sel); if (t) s.select(t) }
+      if (!new URLSearchParams(location.search).get('p')) { const t = codeTarget(d, s.sel); if (t) s.select(t) }
       if (phone) s.setSheet('inspector')
     }
   }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // a frame / document link (`?make&d=…`, E5): its frames come in once; a reload or Back re-selects them
-  useEffect(() => {
-    const d = new URLSearchParams(location.search).get(LINK_PARAM)
-    if (!d || d === handledD) return
-    handledD = d
-    decodeLink(d).then(link => {
-      const s = useEditor.getState(), r = s.openLink(link)
-      if (typeof r === 'string') { setBanner(`Could not open this link: ${r}`); return }
-      setBanner('')
-      s.setNote(`${link.kind === 'frame' ? 'frame' : `${link.frames.length} frame${link.frames.length === 1 ? '' : 's'}`} from a link: ${link.name}${link.parent ? ` · remix of #${link.parent}` : ''}`)
-    }, (e: Error) => setBanner(`Could not open this link: ${e.message}`))
-  }, [mode])
 
   // phone: the editor is the whole screen; the page underneath must not scroll or rubber-band
   useEffect(() => {
@@ -152,6 +138,7 @@ export function Editor({ mode, onExit }: { mode: Mode; onExit?: () => void }) {
         <div className="ed-stage">
           <Canvas phone={phone} landscape={landscape} />
           {banner && <p className="ed-banner" role="alert">{banner}<button type="button" aria-label="Dismiss" onClick={() => setBanner('')}>×</button></p>}
+          {prompt && <ImportPrompt prompt={prompt} />}
           <p className="ed-note" role="status" aria-live="polite">{note}</p>
           {phone && !sheet && <SelBar />}
           {phone && !sheet && <PhoneTools />}
@@ -373,7 +360,7 @@ function useShortcuts(phone: boolean) {
     const later = (fn: () => void) => { raised = false; setTimeout(() => { if (!raised) fn() }, 0) }
     const toSystem = (json?: string) => { if (json) void navigator.clipboard?.writeText(json).catch(() => { /* not allowed: this browser's copy still pastes */ }) }
     const onKey = (e: KeyboardEvent) => {
-      if (editable(e.target) || document.querySelector('.pal-backdrop, .pal-shell')) return
+      if (editable(e.target) || (e.target instanceof Element && e.target.closest('.ed-confirm')) || document.querySelector('.pal-backdrop, .pal-shell')) return
       const s = useEditor.getState(), d = s.h.present, mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase()
       const f = frameById(d, s.sel.frame), l = layerOf(d, s.sel)
       const used = () => { e.preventDefault(); e.stopImmediatePropagation() }

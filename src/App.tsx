@@ -10,6 +10,9 @@ import { boardIds, boardLabel, liveBoards, prefetchBoard } from './widgets/manif
 import { widgetPath, type WidgetRoute } from './site/routes'
 import { onLayerWake, requestLayer } from './site/layer'
 import { setPageMeta, syncUrl } from './site/meta'
+import { flag } from './site/flags'
+import { pushUrl, replace } from './site/safe-url'
+import { useFlag } from './site/useFlag'
 import { cardTransition } from './site/viewTransition'
 import { GALLERY_BOARD, VIEWS, placeFromName, placeView, sameView, urlForView, viewFromUrl, type Mode, type View } from './site/views'
 // the app's styles, then the phone styles over them: the order is the cascade, keep it
@@ -28,7 +31,6 @@ import './site/app/raised.css'
 import './site/app/tap.css'
 import './site/app/skins.css'
 import './site/app/views.css'
-import './site/app/xray-tab.css'
 import './site/app/makers.css'
 import './site/mobile/shell.css'
 import './site/mobile/sheet.css'
@@ -63,11 +65,11 @@ function Hero() {
 /** The footer band: the live number, then the site line (docs/LAYOUT-THEME-PLAN.md §1c #13). */
 function SiteFooter({ onAbout }: { onAbout: () => void }) {
   'use no memo'
-  const idle = useIdle()
+  const idle = useIdle(), lab = useFlag('lab')
   return <footer className="bottom">
     <div className="live-band">{idle && <Suspense fallback={null}><LiveBand /></Suspense>}</div>
     <div className="bottom-row"><span>MATRIX · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span><span>FIELD → GRID SAMPLER → RENDERER</span>
-      <span><a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · <a href="/lab/">LAB</a> · <a href="/blog/">BLOG</a> · <a href="?about" onClick={e => { e.preventDefault(); onAbout() }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></div>
+      <span><a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · {lab && <><a href="/lab/">LAB</a> · </>}<a href="/blog/">BLOG</a> · <a href="?about" onClick={e => { e.preventDefault(); onAbout() }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></div>
   </footer>
 }
 // MAKE is one editor (docs/EDITOR-PLAN.md): frames on an infinite canvas, layers, a contextual inspector.
@@ -118,7 +120,10 @@ function CommandLayer(props: CommandLayerProps) {
 // Deep links (all resolved in src/site/views.ts): `/<board>/` or ?board=<id> opens a board, ?make=<mode> a MAKE
 // mode (?make=code&p=<encoded> a shared Field IR program), ?about the about page, /widget/<slug|uid>/ (or /<uid>,
 // or the old ?card=<id>) one card on its own page; every old ?tab= still opens the view it became.
-const urlView = (mode?: Mode) => viewFromUrl(location.search, location.pathname, mode)
+// MAKE behind its flag (src/site/flags.ts): off, a MAKE URL opens the board it names (the home board for `?make`)
+const urlView = (mode?: Mode) => { const v = viewFromUrl(location.search, location.pathname, mode); return v.view === 'MAKE' && !flag('make') ? { ...v, view: 'EXPLORE' as const } : v }
+/** The views on offer: MAKE only while its flag is on. */
+const useViews = (): readonly View[] => useFlag('make') ? VIEWS : VIEWS.filter(v => v !== 'MAKE')
 // a prebuilt widget page names its board (postbuild's dot480:widget meta): fetch that chunk alongside the page's
 { const hint = document.querySelector<HTMLMetaElement>('meta[name="dot480:widget"]')?.dataset.board; if (hint && urlView().widget) prefetchBoard(hint) }
 /** A row of real tabs: arrow keys move between them, the selected one is the only tab stop. */
@@ -136,10 +141,11 @@ function Tabs<T extends string>({ label, items, value, onPick, className }: { la
 /** One line of intent above the boards (docs/UX-PLAN.md §5.1): dismissible, and it stays dismissed. */
 function IntroLine() {
   const [shown, setShown] = useState(() => { try { return localStorage.getItem('dot480:intro') !== 'off' } catch { return true } })
+  const xray = useFlag('xray')
   if (!shown) return null
   return <p className="intro-line">
     {/* phones show the short line (one text line, so intro + picker stay ≤ 120 px; src/site/mobile/) */}
-    <span className="intro-long">Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid. Touch the cards, switch the display, or press <b>X-RAY</b> to see how one works.</span>
+    <span className="intro-long">Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid. {xray ? <>Touch the cards, switch the display, or press <b>X-RAY</b> to see how one works.</> : 'Touch the cards or switch the display.'}</span>
     <span className="intro-short">Every card is a live dot field.</span>
     <a href="/blog/dot-matrix-essay/">Read the essay →</a>
     <button type="button" aria-label="Hide this note" onClick={() => { setShown(false); try { localStorage.setItem('dot480:intro', 'off') } catch { /* private mode */ } }}>×</button>
@@ -164,13 +170,13 @@ const toTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia('(pref
  * EXPLORE at the top it opens every board. TOOLS carries a dot while X-ray or the time machine is on.
  */
 function TabBar({ view, onView, onBoards }: { view: View; onView: (v: View) => void; onBoards: () => void }) {
-  const busy = useXR(s => s.global || s.on.size > 0 || s.frozen)
+  const busy = useXR(s => s.global || s.on.size > 0 || s.frozen), views = useViews()
   const pick = (v: View) => {
     if (v !== view) { window.scrollTo(0, 0); return onView(v) }
     if (v === 'EXPLORE' && window.scrollY < 8) onBoards(); else toTop()
   }
   return <nav className="tabbar" aria-label="Main">
-    {VIEWS.map(v => <button key={v} type="button" aria-current={view === v ? 'page' : undefined} onClick={() => pick(v)}><Glyph rows={GLYPHS[v]} /><span>{v}</span></button>)}
+    {views.map(v => <button key={v} type="button" aria-current={view === v ? 'page' : undefined} onClick={() => pick(v)}><Glyph rows={GLYPHS[v]} /><span>{v}</span></button>)}
     <button type="button" aria-haspopup="dialog" className={busy ? 'busy' : ''} onClick={() => requestLayer('tools')}><Glyph rows={GLYPHS.TOOLS} /><span>TOOLS</span></button>
   </nav>
 }
@@ -181,7 +187,7 @@ function TabBar({ view, onView, onBoards }: { view: View; onView: (v: View) => v
 const handoff = urlView()
 if (handoff.essay || handoff.legal) {
   const keep = location.search.match(/\b(theme|scheme|accent)=[^&]*/g)
-  location.replace(`${handoff.legal ? `/${handoff.legal}.html` : '/blog/dot-matrix-essay/'}${keep ? `?${keep.join('&')}` : ''}${location.hash}`)
+  replace(`${handoff.legal ? `/${handoff.legal}.html` : '/blog/dot-matrix-essay/'}${keep ? `?${keep.join('&')}` : ''}${location.hash}`)
 }
 
 export default function App() {
@@ -190,6 +196,14 @@ export default function App() {
   const [board, setBoard] = useState(() => urlView().board)
   const [widget, setWidget] = useState<WidgetRoute | undefined>(() => urlView().widget)
   const [boards, setBoards] = useState(false) // the phone board sheet
+  const views = useViews(), lab = useFlag('lab')
+  // MAKE is a tool, not a page to index
+  useEffect(() => {
+    let el = document.head.querySelector<HTMLMetaElement>('meta[name="robots"]')
+    if (view !== 'MAKE') { el?.remove(); return }
+    if (!el) { el = document.createElement('meta'); el.name = 'robots'; document.head.append(el) }
+    el.content = 'noindex'
+  }, [view])
   // per-view <title>, description and OG tags (crawlers get the same from the prebuilt dist/<board>/index.html),
   // and the address bar: moving to another view is a history entry; the first render, and a URL that already
   // names this view in an older form (a remix's ?tab=dots&p=…), are only normalised in place
@@ -218,17 +232,19 @@ export default function App() {
   const go = (name: string) => {
     const p = placeFromName(name)
     if (!p) return
+    const v = placeView(p, mode)
+    if (v.view === 'MAKE' && !flag('make')) return
     if (name.toLowerCase() === 'gallery') setBoard(GALLERY_BOARD)
-    const v = placeView(p, mode); setMode(v.mode); setView(v.view); setWidget(undefined)
+    setMode(v.mode); setView(v.view); setWidget(undefined)
   }
   // widget page ⇄ boards: each move is a history entry; back on a board, the card it came from is brought to the eye
   const openWidget = (slug: string) => {
     const q = new URLSearchParams(location.search); q.delete('card')
-    history.pushState(null, '', widgetPath(slug) + (q.size ? `?${q}` : ''))
+    pushUrl(widgetPath(slug) + (q.size ? `?${q}` : ''))
     setWidget({ key: slug, scope: '', via: 'path' })
   }
   const leaveWidget = (id: string, slug?: string) => {
-    history.pushState(null, '', urlForView({ view: 'EXPLORE', mode, board: id }, location.search, location.pathname))
+    pushUrl(urlForView({ view: 'EXPLORE', mode, board: id }, location.search, location.pathname))
     const apply = () => { setWidget(undefined); setView('EXPLORE'); setBoard(id) }
     if (!slug) return apply()
     cardTransition(slug, apply, flushSync, true)
@@ -252,15 +268,17 @@ export default function App() {
   const title = view === 'MAKE' ? 'MAKE' : view === 'EXPLORE' ? boardLabel(board) : view
   return <main className="shell" data-view={view}>
     <h1 className="sr-only">MATRIX dot-matrix UI engine</h1>
-    <header className="topbar"><div className="brand"><i aria-hidden="true"/> MATRIX <small>{view}</small></div>
+    <header className="topbar"><div className="brand"><i aria-hidden="true"/> MATRIX</div>
       {/* phones: the place's name (on EXPLORE it opens every board) and search; the tab bar holds the views */}
       {view === 'EXPLORE'
         ? <button type="button" className="topbar-place" aria-haspopup="dialog" aria-label={`Board: ${title}. All boards`} onClick={() => setBoards(true)}>{title}<span aria-hidden="true"> ▾</span></button>
         : <span className="topbar-place">{title}</span>}
-      <Tabs className="view-tabs" label="Views" items={VIEWS} value={view} onPick={setView} />
-      {/* the lab and the blog are their own pages (lab.html, blog.html): plain links beside the views */}
-      <a className="topbar-blog" href="/lab/">LAB</a>
-      <a className="topbar-blog" href="/blog/">BLOG</a>
+      {/* one evenly spaced group: the views, then the lab and the blog (their own pages: lab.html, blog.html) */}
+      <div className="topbar-nav">
+        <Tabs className="view-tabs" label="Views" items={views} value={view} onPick={setView} />
+        {lab && <a className="topbar-blog" href="/lab/">LAB</a>}
+        <a className="topbar-blog" href="/blog/">BLOG</a>
+      </div>
       <SkinSwitcher />
       <ThemeButton />
       {/* red means live: only while a board streams real data */}

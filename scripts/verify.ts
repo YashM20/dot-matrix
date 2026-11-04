@@ -175,6 +175,11 @@ goldenKeyChecks(assert)
 uxChecks(assert)
 // FLAGS (#144, #145) every release flag documented; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
 flagChecks(assert)
+// LIKES (#169) the likes API on the in-memory store: limits, holds, bursts, cookies, forget, budget, the function bundle (scripts/likes/checks.ts)
+{
+  const { likesChecks } = await import('./likes/checks')
+  await likesChecks(assert)
+}
 
 
 // SHARE S0) widget uids, metadata and URLs (docs/SHARE-PLAN.md §3, scripts/widgets/checks.ts)

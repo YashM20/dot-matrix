@@ -10,6 +10,7 @@
  */
 import { resolveScheme, getTheme, setTheme, type ThemePrefs } from './theme'
 import { isAccentChoice, isSchemePref, themeName } from './names'
+import { replaceUrl } from '../safe-url'
 
 export type WipeOrigin = Element | { x: number; y: number } | null | undefined
 type VT = { finished: Promise<void> }
@@ -33,7 +34,7 @@ export function dropUrlParams(params: readonly string[] = PARAMS): void {
   if (!params.some(p => q.has(p))) return
   for (const p of params) q.delete(p)
   const s = q.toString()
-  history.replaceState(history.state, '', `${location.pathname}${s ? `?${s}` : ''}${location.hash}`)
+  replaceUrl(`${location.pathname}${s ? `?${s}` : ''}${location.hash}`)
 }
 
 let seq = 0

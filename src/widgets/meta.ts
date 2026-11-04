@@ -322,7 +322,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'mat-candle': ['A wax candle clock that burns down over the day; the flame is red.', 'material wax clock animated'],
   'mat-knit': ['A knitted swatch with a rope cable, knitted a stitch at a time; tap to knit a row.', 'material textile knit animated control'],
   'mat-denim': ['Denim twill with whiskers, a topstitched pocket and a white selvedge.', 'material textile weave'],
-  'mat-paper': ['Cotton paper letterpressed with DOT/480; tap for another impression.', 'material paper type control'],
+  'mat-paper': ['Cotton paper with a letterpressed mark; tap for another impression.', 'material paper type control'],
   'mat-wood': ['The time carved into a lacquered board whose rings shimmer with the light.', 'material wood clock animated'],
   'mat-leather': ['A pebble-grain leather wallet corner, saddle-stitched by hand.', 'material leather textile'],
   'mat-sand': ['A Zen sand tray: drag to rake it, tap to set a stone.', 'material sand physics control'],

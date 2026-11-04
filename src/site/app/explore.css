@@ -26,7 +26,7 @@
   text-wrap: pretty
 }
 
-/* the intro is a measured block, not a 166-character line; its link and × sit beside it */
+/* the intro is a measured block, not a 166-character line; its link and × sit right after it */
 .intro-line > span:first-child {
   max-width: var(--measure)
 }
@@ -42,7 +42,6 @@
 }
 
 .intro-line button {
-  margin-left: auto;
   padding: 0 var(--space-2);
   min-width: 24px;
   min-height: 24px;

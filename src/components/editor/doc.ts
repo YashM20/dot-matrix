@@ -536,6 +536,16 @@ export const EDITOR_KEY = 'dot480.editor.v1'
 type KV = Pick<Storage, 'getItem' | 'setItem'>
 const kvOf = (): KV | undefined => { try { return globalThis.localStorage } catch { return undefined } }
 export function saveDoc(d: EditorDoc, kv = kvOf()): boolean { try { kv?.setItem(EDITOR_KEY, docToJSON(d)); return !!kv } catch { return false } }
+/**
+ * The autosave: writes the document only if it opens again (#143), so an edit the checks would refuse on the next
+ * visit can't replace a saved document that works. Returns true when saved, false when storage refused it, or why
+ * the document would not open.
+ */
+export function saveChecked(d: EditorDoc, kv = kvOf()): boolean | string {
+  const json = docToJSON(d)
+  try { docFromJSON(json) } catch (e) { return String((e as Error)?.message ?? e).replace(/^editor document: /, '') }
+  try { kv?.setItem(EDITOR_KEY, json); return !!kv } catch { return false }
+}
 export const loadDoc = (kv = kvOf()): EditorDoc | undefined => loadSaved(kv).doc
 /** The autosaved document, or why it could not be opened (then the editor starts a fresh one; nothing throws). */
 export function loadSaved(kv = kvOf()): { doc?: EditorDoc; error?: string } {

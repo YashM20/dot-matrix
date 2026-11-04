@@ -5,7 +5,8 @@
  * a widget page, the editor, the blog and an essay with SVG figures, the Lab and the legal pages. Checks:
  *  - no `securitypolicyviolation` on any page, Trusted Types included (Field IR's `new Function` attempt is the one
  *    expected refusal: the CSP has no 'unsafe-eval', so it falls back to its closure tree; counted, not failed);
- *  - Trusted Types are enforced: a plain string into `innerHTML` and a foreign worker URL are refused, and a
+ *  - Trusted Types catch (refuse when enforced, report while report-only) a plain string into `innerHTML` and a foreign
+ *    worker URL, and a
  *    same-origin blob worker (the audio clock's) is allowed;
  *  - the sample worker started through the `default` policy, and the essay's SVG figures drew through `dot480-svg`;
  *  - no test-only global (`dot480Live`, `__hive`, `__editorShared`, `__editorLink`, …) exists after any page, and the
@@ -27,13 +28,16 @@ const vercel = JSON.parse(readFileSync('vercel.json', 'utf8')) as { headers: { h
 const STRICT_STYLE = process.argv.includes('--strict-style')
 const CSP0 = vercel.headers.flatMap(h => h.headers).find(h => h.key === 'Content-Security-Policy')!.value
 const CSP = STRICT_STYLE ? CSP0.replace(/(style-src[^;]*?) 'unsafe-inline'/, '$1') : CSP0
+/** Trusted Types ship report-only first (#149); the walk checks the same either way. */
+const CSP_RO = vercel.headers.flatMap(h => h.headers).find(h => h.key === 'Content-Security-Policy-Report-Only')?.value
+const ENFORCED = CSP.includes('require-trusted-types-for')
 const REWRITES = new Map((vercel.rewrites ?? []).filter(r => !r.source.includes('(')).map(r => [r.source, r.destination]))
 const TYPES: Record<string, string> = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.json': 'application/json', '.webmanifest': 'application/manifest+json', '.woff2': 'font/woff2', '.wasm': 'application/wasm' }
 const server = createServer((req, res) => {
   const url = (req.url ?? '/').split('?')[0]
   let file = join(DIST, normalize(decodeURIComponent(REWRITES.get(url) ?? url)).replace(/^([\\/])+/, ''))
   if (!existsSync(file) || statSync(file).isDirectory()) file = existsSync(join(file, 'index.html')) ? join(file, 'index.html') : join(DIST, 'index.html')
-  res.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream', 'Content-Security-Policy': CSP, 'Cache-Control': 'no-store' })
+  res.writeHead(200, { 'Content-Type': TYPES[extname(file)] ?? 'application/octet-stream', 'Content-Security-Policy': CSP, ...(CSP_RO ? { 'Content-Security-Policy-Report-Only': CSP_RO } : {}), 'Cache-Control': 'no-store' })
   res.end(readFileSync(file))
 })
 await new Promise<void>(r => server.listen(0, '127.0.0.1', r))
@@ -90,12 +94,15 @@ try {
   // enforcement itself, on the app: a plain string is refused at the HTML and script-URL sinks; our own blob is fine
   await p.cdp('Page.navigate', { url: base + '/' })
   await p.waitFor('document.readyState === "complete"', 20000)
-  const tt = await p.js<{ on: boolean; html: string; foreign: string; blob: string }>(`(() => {
-    const t = f => { try { f(); return 'allowed' } catch (e) { return 'refused' } }
-    return { on: typeof trustedTypes !== 'undefined', html: t(() => { document.createElement('div').innerHTML = '<b>x</b>' }),
-      foreign: t(() => new Worker('https://x.example/a.js')),
-      blob: t(() => new Worker(URL.createObjectURL(new Blob(['close()'], { type: 'text/javascript' })))) } })()`)
-  check('Trusted Types enforced: innerHTML with a plain string and a foreign worker URL are refused, a same-origin blob worker is allowed', tt.on && tt.html === 'refused' && tt.foreign === 'refused' && tt.blob === 'allowed', JSON.stringify(tt))
+  // each sink: 'refused' (threw), 'reported' (ran, but a Trusted Types violation fired: the report-only header) or 'allowed'
+  const tt = await p.js<{ on: boolean; html: string; foreign: string; blob: string }>(`(async () => {
+    const tt = () => window.__violations.filter(v => v.startsWith('require-trusted-types-for') || v.startsWith('trusted-types')).length
+    const t = async f => { const n = tt(); let r = 'allowed'; try { f() } catch (e) { r = 'refused' } await new Promise(r => setTimeout(r, 100)); return r === 'allowed' && tt() > n ? 'reported' : r }
+    return { on: typeof trustedTypes !== 'undefined', html: await t(() => { document.createElement('div').innerHTML = '<b>x</b>' }),
+      foreign: await t(() => new Worker('https://x.example/a.js')),
+      blob: await t(() => new Worker(URL.createObjectURL(new Blob(['close()'], { type: 'text/javascript' })))) } })()`)
+  const caught = (r: string) => r === (ENFORCED ? 'refused' : 'reported') || r === 'refused'
+  check(`Trusted Types ${ENFORCED ? 'enforced' : 'report-only'}: innerHTML with a plain string and a foreign worker URL are ${ENFORCED ? 'refused' : 'reported'}, a same-origin blob worker is allowed with no report`, tt.on && caught(tt.html) && caught(tt.foreign) && tt.blob === 'allowed', JSON.stringify(tt))
 } finally {
   await p.close(); server.close()
 }

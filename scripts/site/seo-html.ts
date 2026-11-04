@@ -10,6 +10,7 @@ import { SITE_DESCRIPTION, SITE_NAME, widgetTitle } from '../../src/site/meta'
 import { BLOG, POSTS, postPath, type PostInfo } from '../../src/blog/posts'
 import { EXPERIMENTS, LAB, experimentPath } from '../../src/lab/experiments'
 import { inline, parse, tex, type Block, type Inline, type ListBlock } from '../../src/blog/markdown'
+import { flag } from '../../src/site/flags'
 
 /** The fields of a `dist/widgets.json` row this step reads. */
 export interface WidgetRow { slug: string; uid: string; name: string; blurb: string; board: string; boards: string[]; tags: string[]; url: string }
@@ -37,7 +38,7 @@ export function homeBody(): string {
   const groups = boardGroups.filter(g => g.id !== 'start').map(g => `<h2>${esc(g.label)}</h2><p>${esc(groupBlurbs[g.id])}</p><ul>${g.boards
     .map(id => `<li>${boardLink(id)}: ${esc(boardBlurbs[id])}</li>`).join('')}</ul>`).join('')
   const more = [
-    `<li><a href="${postPath()}">Blog</a>: ${esc(BLOG.dek)}</li>`, `<li><a href="${LAB.path}">Lab</a>: ${esc(LAB.dek)}</li>`,
+    `<li><a href="${postPath()}">Blog</a>: ${esc(BLOG.dek)}</li>`, ...(flag('lab') ? [`<li><a href="${LAB.path}">Lab</a>: ${esc(LAB.dek)}</li>`] : []),
     '<li><a href="/privacy">Privacy</a></li>', '<li><a href="/terms">Terms</a></li>',
   ].join('')
   return wrap(`<h1>${SITE_NAME}</h1><p>${esc(SITE_DESCRIPTION)}</p>${groups}<h2>More</h2><ul>${more}</ul>`)

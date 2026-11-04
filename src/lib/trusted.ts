@@ -1,16 +1,19 @@
 /**
- * Trusted Types (#149). The CSP in vercel.json has `require-trusted-types-for 'script'` and
- * `trusted-types dot480-svg default`, so a supporting browser refuses a plain string at every HTML, script and
- * script-URL sink. The site has two kinds of sink, and this module holds the only two policies:
+ * Trusted Types (#149). vercel.json sends `require-trusted-types-for 'script'` and
+ * `trusted-types dot480-svg default` in a Content-Security-Policy-Report-Only header for now: a supporting browser
+ * reports a plain string at every HTML, script and script-URL sink. Moved into the enforced CSP, it refuses them. The site has two kinds of sink, and this module holds the only two policies:
  *  - HTML: the SVG renderer's markup, set by React's `dangerouslySetInnerHTML` in DotCanvas → `svgHtml()` (policy
  *    `dot480-svg`). It passes only an `<svg>` built from the renderer's own elements, with no event-handler
  *    attribute and no link but a local `#id`; anything else becomes an empty string (the card shows nothing, and a
  *    warning says why).
- *  - script URLs: `new Worker(...)` (the sample worker, from Vite's `new URL(..., import.meta.url)`, and the audio
- *    clock's blob) → the `default` policy, which passes this origin's own files and blobs only. It has no
+ *  - script URLs: `new Worker(...)` (the sample worker and the Field IR sandbox worker, from Vite's
+ *    `new URL(..., import.meta.url)`, and the audio clock's blob) → the `default` policy, which passes this origin's
+ *    own files and blobs only. It has no
  *    `createHTML` and no `createScript`, so any other string at a sink is refused, and `new Function` (already off
  *    under the CSP: Field IR falls back to its closure tree) stays off.
- * Import this module before the first worker starts (workers/client.ts and audio/scheduler.ts do). Browsers without
+ * Every page entry (`src/main.tsx`, `src/blog/main.tsx`, `src/lab/main.tsx`) imports this module second, so the
+ * policies exist before any worker starts; workers/client.ts and audio/scheduler.ts import it too. HTML is built with
+ * DOM calls everywhere else (the analytics banner included). Browsers without
  * Trusted Types skip it all: `svgHtml` hands the string back, and the CSP directives are ignored.
  * `scripts/site/csp-browser.ts` serves the build with the production CSP and checks no page trips it.
  */

@@ -289,7 +289,9 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   const gpuCard = useMemo(() => { try { return !renderer && !!layers && hasGPULayers(layers({ t: 0, frame: 0, data: data ?? {}, grid })) && webglReady() } catch { return false } }, [layers, renderer]) // eslint-disable-line react-hooks/exhaustive-deps
   const webgl = renderer === 'webgl' || gpuCard, gpuFade = useRef(1)
   const mode: RenderMode = renderer && renderer !== 'webgl' ? renderer : (webgl || animated || live || transient || visible > CANVAS_THRESHOLD ? 'canvas' : 'svg')
-  const svg = useMemo(() => mode === 'svg' ? svgHtml(renderSVG(dots, width, height)) : '', [mode, dots, width, height])
+  const markup = useMemo(() => mode === 'svg' ? renderSVG(dots, width, height) : '', [mode, dots, width, height])
+  // wrapped per markup string: a TrustedHTML is an object, and React sets innerHTML again (a new <svg>) for a new one
+  const svg = useMemo(() => markup && svgHtml(markup), [markup])
   // an SVG frame is drawn once per new dot list: it counts toward the dots this visit has drawn (src/site/stats.ts)
   useEffect(() => { if (svg) drawnStat.dots += visible }, [svg]) // eslint-disable-line react-hooks/exhaustive-deps
   const scale = useBackingScale(canvasRef, mode === 'canvas', width)

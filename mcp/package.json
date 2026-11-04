@@ -15,15 +15,15 @@
     "author:seeds": "tsx ../scripts/author/seeds.ts"
   },
   "dependencies": {
-    "@modelcontextprotocol/ext-apps": "^2.0.3",
-    "@modelcontextprotocol/server": "^2.3.1",
+    "@modelcontextprotocol/ext-apps": "^2.0.4",
+    "@modelcontextprotocol/server": "^2.4.0",
     "zod": "^4.2.0"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3",
+    "@types/node": "^26.6.6",
     "esbuild": "^0.28.2",
     "tsx": "^4.20.0",
-    "typescript": "~6.0.2"
+    "typescript": "~7.0.2"
   },
   "pnpm": { "onlyBuiltDependencies": ["esbuild"] }
 }

@@ -7,6 +7,7 @@ import { DotTitle } from '../essay/ui/DotTitle'
 import { Figure } from '../essay/ui/Lazy'
 import { SiteFoot, SiteNav } from '../essay/ui/SiteNav'
 import { EXPERIMENTS } from './experiments'
+import { scrollToHash } from '../site/safe-url'
 
 /** Each piece's figure, keyed by slug: its chunk, the box it holds before it mounts, and its caption. */
 const FIGS: Record<string, { body: ComponentType; minHeight: number; caption: ReactNode }> = {
@@ -21,7 +22,7 @@ const pad = (n: number) => String(n).padStart(2, '0')
 
 export function Lab() {
   // a link to one piece (`/lab/#pipeline`): the sections exist on first render, the figure mounts once it is near
-  useEffect(() => { if (location.hash) document.getElementById(decodeURIComponent(location.hash.slice(1)))?.scrollIntoView() }, [])
+  useEffect(() => scrollToHash(), [])
   return (
     <main className="essay lab">
       <header className="hero">

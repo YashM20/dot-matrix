@@ -1,6 +1,7 @@
 import { lazy, type ReactNode } from 'react'
 import { DotTitle } from './ui/DotTitle'
 import { Figure } from './ui/Lazy'
+import { flag } from '../site/flags'
 
 // one chunk per figure, fetched when the figure scrolls near the viewport (module-level: stable identities)
 const fig = {
@@ -287,7 +288,7 @@ export function Essay({ nav }: { nav: ReactNode }) {
         </ul>
         <p className="outro">
           That's the tour. The rest of the site has twenty-odd <a href="/">boards</a> of cards (try <a href="/departures/">Departures</a>,
-          {' '}<a href="/levels/">Levels</a> and <a href="/lock/">Lock</a>), a <a href="/?make=code">code</a> mode where you write your own fields and share them as links,
+          {' '}<a href="/levels/">Levels</a> and <a href="/lock/">Lock</a>), {flag('make') && <>a <a href="/?make=code">code</a> mode where you write your own fields and share them as links,{' '}</>}
           and a <a href="/?about">log</a> of what changed. To build an engine like this yourself, the other <a href="/blog/">blog</a> posts walk through it with code you can copy.
         </p>
       </section>
