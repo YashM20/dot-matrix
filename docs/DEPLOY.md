@@ -25,6 +25,10 @@ The post-build step runs from the `site-postbuild` plugin in `vite.config.ts`, a
 2. Otherwise `https://$VERCEL_PROJECT_PRODUCTION_URL`, which Vercel provides during its builds.
 3. Otherwise, as in local and CI builds, the tags stay root-relative.
 
+In the browser, the app rewrites these tags as you move between boards and widgets. There the origin is always the production domain (`SITE_URL` in `src/site/meta.ts`), never the address the page was opened on, so a preview or another alias never names itself as the canonical page. A build with a different home sets `VITE_SITE_URL=https://<host>` next to `SITE_URL`.
+
+**Other tags.** Every page carries `og:image:alt`, `twitter:image:alt` and `og:locale` (`en_US`). Board descriptions lead with the board's blurb (`src/widgets/blurbs.ts`). A widget page for a card that doesn't exist is marked `noindex`. There is no `twitter:site`: the site has no X account yet.
+
 ## Deep links
 - `/<board>/` (for example `/light/`) is the shareable form.
 - MAKE is `?make=<tune|compose|code|draw>` and ABOUT is `?about`, on the current board's path, for example `/light/?make=compose`.
@@ -51,7 +55,7 @@ Release flags live in `src/site/flags.ts`, one registry entry each (`id`, `defau
 
 | Flag | Default | Build variable | What it gates |
 |---|---|---|---|
-| `xray` | off | `VITE_FLAG_XRAY` | X-ray: the card's ⓘ overlay and the inspector, the dock button and TOOLS tile, X / ⇧X, the palette action, the shell's `xray`. |
+| `xray` | off | `VITE_FLAG_XRAY` | X-ray: the card's ⓘ overlay and the inspector (and their styles), the dock button and TOOLS tile, the widget page's X-RAY pill and menu item, the intro line's "press X-RAY", X / ⇧X, the palette action, the shell's `xray`. |
 | `worker` | on | `VITE_FLAG_WORKER` | Sampling in the web worker. `?worker=0` still turns it off. |
 | `clack` | off | `VITE_FLAG_CLACK` | The flip-disc clack sound. `?clack=1` and the skin list's toggle still turn it on. |
 | `likes` | off | `VITE_FLAG_LIKES` | The like button on widget pages and gallery programs (#169). It stays hidden while the likes API answers 404, which it does until the store and its secrets are set (see Likes below). |

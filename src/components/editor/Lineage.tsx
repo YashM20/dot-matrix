@@ -11,7 +11,7 @@ import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { sampleLayers } from '../../engine/sampler/gridSampler'
 import { useThemeTokens } from '../../site/theme/useTheme'
 import { clearGallery, graphLayers, layoutGraph, loadGallery, nodeAt, type Entry } from '../dwitter/gallery'
-import { DOTS_STYLE } from '../dwitter/program'
+import { DOTS_STYLE, sandboxedThumbs, userRemote } from '../dwitter/program'
 import { ProgramLikes } from '../likes/slot'
 import type { EditorFrame } from './doc'
 import { lineage, linkSource, loadLinks } from './link'
@@ -21,6 +21,8 @@ import { Section } from './ui'
 const graphStyle = { ...DOTS_STYLE, sizeMin: .15, sizeMax: .62 }
 /** The thumbnails' own time budget: a gallery program too slow for this device draws an empty slot. */
 const thumbs = irGuard()
+/** The same budget, with the programs sampled in the IR sandbox worker while it runs. */
+const remoteThumbs = sandboxedThumbs(thumbs, userRemote)
 /**
  * localStorage reads keyed by a stamp the caller bumps after a write. The stamp is an input on purpose: the React
  * Compiler memoizes by what a callback reads, so a dependency the callback never reads would never refresh it.
@@ -33,21 +35,26 @@ export function RemixGraph({ current, version = 0 }: { current?: string; version
   const [cleared, setCleared] = useState(0)
   const list = useMemo(() => galleryAt(version + cleared), [version, cleared])
   const graph = useMemo(() => layoutGraph(list), [list])
-  const theme = useThemeTokens(), ref = useRef<HTMLCanvasElement>(null)
+  const theme = useThemeTokens(), ref = useRef<HTMLCanvasElement>(null), [landed, setLanded] = useState(0)
   useEffect(() => {
     const c = ref.current
     if (!c) return
+    let gone = false
     const h = setTimeout(() => {
       const ctx = c.getContext('2d'), g = graph.grid, k = Math.min(2, window.devicePixelRatio || 1)
       if (!ctx) return
       c.width = Math.round(g.cols * g.pitch! * k); c.height = Math.round(g.rows * g.pitch! * k)
       ctx.setTransform(k, 0, 0, k, 0, 0); ctx.fillStyle = theme.surface; ctx.fillRect(0, 0, c.width, c.height)
-      renderCanvas(ctx, sampleLayers(graphLayers(graph, current, undefined, thumbs), g, graphStyle, theme))
+      userRemote.begin()
+      renderCanvas(ctx, sampleLayers(graphLayers(graph, current, undefined, remoteThumbs), g, graphStyle, theme))
       thumbs.settle()
+      // thumbnails whose values were still in the worker drew empty: draw again once they land
+      const done = userRemote.flush(() => { if (!gone) setLanded(n => n + 1) })
+      c.dataset.pending = done ? '' : '1'
       c.dataset.nodes = String(graph.nodes.length); c.dataset.cols = String(g.cols); c.dataset.rows = String(g.rows)
-    }, 60)
-    return () => clearTimeout(h)
-  }, [graph, current, theme])
+    }, landed ? 0 : 60)
+    return () => { gone = true; clearTimeout(h) }
+  }, [graph, current, theme, landed])
   const open = (e: Entry) => { useEditor.getState().insertProgram(e) }
   const pick = (e: MouseEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect(), n = nodeAt(graph, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)

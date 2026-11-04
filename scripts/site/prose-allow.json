@@ -1,0 +1,4 @@
+{
+  "_": "Quoted third-party text that scripts/site/prose-lint.ts skips (credits, licence lines, quoted titles). One entry skips one rule in the blocks of one file that contain `text`. Add `why`. An entry that matches nothing fails the lint, so delete it when the quote goes.",
+  "allow": []
+}
