@@ -34,7 +34,7 @@ import { DEFAULT_ACCENT, DEFAULT_SCHEME, isAccent, isAccentChoice, isContrastPre
 export const STORAGE_KEY = 'dot480:theme'
 /**
  * The custom hue and its theme CSS (both schemes; `customCss()` in accents.ts). `css` only ever comes from the generator
- * (`customHue()` in custom.ts), never from storage or the console; it is missing until the generator has run.
+ * (`customHue()` in custom.ts), never from storage or a caller; it is missing until the generator has loaded.
  */
 export interface CustomHue { hue: number; css?: string }
 export interface ThemePrefs { scheme: SchemePref; accent: AccentChoice; custom?: CustomHue; /** CONTRAST: MORE (absent: `system`). */ contrast?: ContrastPref }
@@ -45,9 +45,14 @@ export interface ThemeState extends ThemePrefs {
 }
 const CUSTOM_ID = 'theme-custom'
 type CustomMod = typeof import('./custom')
-/** The custom hue's generator, once loaded (lazy: the first load carries no colour maths). */
-let gen: CustomMod | undefined
-const loadCustom = (): Promise<CustomMod> => import('./custom').then(m => (gen = m))
+/**
+ * The custom hue's generator, once `custom.ts` has loaded (lazy: the first load carries no colour maths). It hands
+ * itself over when it loads, whoever imports it first (the picker, or the store), so `setTheme` can make a hue's CSS
+ * at once.
+ */
+let make: ((hue: number) => Required<CustomHue>) | undefined
+export const provideCustom = (f: (hue: number) => Required<CustomHue>): void => { make = f }
+const loadCustom = (): Promise<CustomMod> => import('./custom')
 /** `themeTokens()` per theme (declared before the module's first `customStyle`, which clears the custom entries). */
 const memo = new Map<ThemeKey, ThemeTokens>()
 
@@ -194,19 +199,24 @@ export function subscribeTheme(cb: () => void): () => void { listeners.add(cb); 
 
 /**
  * Switch scheme and/or accent (unknown values ignored) and persist the choice. `custom` needs a hue (given here, or
- * stored from an earlier pick); its CSS is the generator's (`customHue()`), made here when the hue comes without it.
- * A picked preset keeps the stored custom hue, so the custom swatch remembers it.
+ * stored from an earlier pick). Only the hue is taken from the caller: its CSS is always the generator's, made here
+ * (a `css` handed over is ignored). A picked preset keeps the stored custom hue, so the custom swatch remembers it.
  */
 export function setTheme(next: Partial<ThemePrefs>): void {
   picks++
-  const given = next.custom ?? prefs.custom, custom = given && !given.css && gen ? gen.customHue(given.hue) : given
+  const nh = typeof next.custom?.hue === 'number' ? parseHue(String(next.custom.hue)) : undefined, h = nh ?? prefs.custom?.hue
+  // the store's own CSS (the generator's) when the hue stays; else made now, or once the generator has loaded
+  const custom: CustomHue | undefined = h === undefined ? undefined : prefs.custom?.hue === h && prefs.custom.css ? prefs.custom : make ? make(h) : { hue: h }
   const accent = isAccentChoice(next.accent) && (next.accent !== 'custom' || custom) ? next.accent : prefs.accent
   const contrast = isContrastPref(next.contrast) ? next.contrast : prefs.contrast
   const p: ThemePrefs = { scheme: isSchemePref(next.scheme) ? next.scheme : prefs.scheme, accent, ...(custom ? { custom } : {}), ...(contrast === 'more' ? { contrast } : {}) }
-  writeStored(serialize(p))
+  // the custom accent is stored only with its CSS: the boot script and the next load need both, or they fall back
+  // to the default accent for good
+  const pending = !!custom && !custom.css
+  if (!pending || p.accent !== 'custom') writeStored(serialize(p))
   update(p)
-  // the generator hasn't loaded yet: the hue gets its CSS (and is stored with it, for the boot script) when it does
-  if (custom && !custom.css) { const h = custom.hue; void loadCustom().then(m => { if (prefs.custom?.hue === h && fill(m)) writeStored(serialize(prefs)) }, () => { /* offline */ }) }
+  // the generator hasn't loaded yet: the hue gets its CSS, and is stored with it, when it does
+  if (pending) void loadCustom().then(m => { if (prefs.custom?.hue === h && fill(m)) writeStored(serialize(prefs)) }, () => { /* offline */ })
 }
 export const setScheme = (scheme: SchemePref) => setTheme({ scheme })
 export const setAccent = (accent: AccentChoice) => setTheme({ accent })
@@ -250,7 +260,7 @@ export function consoleSetTheme(next?: unknown): void {
   const hue = typeof n.hue === 'number' ? parseHue(String(n.hue)) : undefined
   const p: Partial<ThemePrefs> = {
     ...(isSchemePref(n.scheme) ? { scheme: n.scheme } : {}), ...(isAccentChoice(n.accent) ? { accent: n.accent } : {}), ...(isContrastPref(n.contrast) ? { contrast: n.contrast } : {}),
-    ...(hue === undefined ? {} : { custom: prefs.custom?.hue === hue ? prefs.custom : { hue } }),
+    ...(hue === undefined ? {} : { custom: { hue } }),
   }
   if (Object.keys(p).length) setTheme(p)
 }

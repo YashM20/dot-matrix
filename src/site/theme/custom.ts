@@ -8,13 +8,15 @@
  */
 import { customCss, generateHue } from './accents'
 import type { Scheme } from './names'
-import type { CustomHue } from './theme'
+import { provideCustom, type CustomHue } from './theme'
 
 /** Dots on the hue track: one every 10°. */
 export const TRACK_STEPS = 36
 export const normHue = (h: number): number => ((Math.round(h) % 360) + 360) % 360
 /** The custom accent for a hue: its hue and the theme CSS of both schemes (`setTheme({ accent: 'custom', custom })`). */
 export const customHue = (hue: number): Required<CustomHue> => { const h = normHue(hue); return { hue: h, css: customCss(h) } }
+// the store makes every custom hue's CSS with this from now on (`setTheme` never takes CSS from a caller)
+provideCustom(customHue)
 /** The hue a preset is built on, to start the slider where the visitor already is. */
 export { ACCENT_SPECS } from './accents'
 

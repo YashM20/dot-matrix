@@ -343,6 +343,11 @@ export async function themeChecks(assert: Assert, { print = false } = {}): Promi
   for (let i = 0; i < 50 && !getTheme().custom?.css; i++) await new Promise(r => setTimeout(r, 10))
   const after = getTheme()
   assert('theme: the console setTheme ignores CSS (a css field or a custom object changes nothing; a hue gets the generator\'s CSS)', ignored && after.accent === 'custom' && after.custom?.hue === 40 && after.custom.css === customCss(40), JSON.stringify({ ignored, accent: after.accent, hue: after.custom?.hue, generated: after.custom?.css === customCss(40) }))
+  // the exported setTheme too: a caller's custom gives its hue only, and the generator (loaded by now) makes the CSS at once
+  await import('../../src/site/theme/custom')
+  setTheme({ accent: 'custom', custom: { hue: 77, css: EVIL } })
+  const direct = getTheme()
+  assert("theme: setTheme takes only the hue from a caller's custom (a css string handed over is replaced by the generator's at once)", direct.accent === 'custom' && direct.custom?.hue === 77 && direct.custom.css === customCss(77), JSON.stringify({ accent: direct.accent, hue: direct.custom?.hue, generated: direct.custom?.css === customCss(77) }))
   setTheme({ scheme: 'system', accent: 'signal' })
   const themesCss = readFileSync(FILES.css, 'utf8')
   assert('theme: themes.css has a CONTRAST: MORE block ([data-contrast="more"]) for all 14 themes and the chrome materials', themes.every(t => themesCss.includes(`:where([data-contrast="more"], [data-contrast="more"] *)[data-scheme="${t.scheme}"][data-accent="${t.accent}"]`)) && themesCss.includes(':root[data-contrast="more"], [data-contrast="more"] [data-scheme] {\n  --line-dot:'))
