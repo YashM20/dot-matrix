@@ -3,7 +3,7 @@
  * `?card=` all land here (src/site/routes.ts). Lazy: the catalog, the metadata and the export helpers load with
  * it, never in the first load. The card is live and large, centred; its facts sit beside it (below on phones);
  * actions are iOS-style pills: a top bar (back to the board, previous / next) and a bottom bar (copy, share,
- * remix, X-ray, more), one capsule on phones above the home indicator.
+ * remix, X-ray when its flag is on, more), one capsule on phones above the home indicator. A missing widget is noindex.
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { DotName } from '../DotName'
@@ -13,7 +13,8 @@ import { catalog } from '../../widgets/catalog'
 import { deriveWidgetMeta, type WidgetMeta } from '../../widgets/meta'
 import { withChrome, type WidgetPreset } from '../../widgets/types'
 import { canonicalWidgetUrl, resolveWidget, shortPath, widgetPath, type ResolvedWidget, type WidgetRoute } from '../../site/routes'
-import { setPageMeta, widgetPageMeta, widgetTitle } from '../../site/meta'
+import { setNoIndex, setPageMeta, widgetPageMeta, widgetTitle } from '../../site/meta'
+import { useFlag } from '../../site/useFlag'
 import { presetSource } from '../../export/source'
 import { stillPNG } from '../../export/still'
 import { cardHTML, cardSVG } from '../../export/snippets'
@@ -67,6 +68,8 @@ export function WidgetPage({ route, onOpen, onBoard }: WidgetPageProps) {
     return () => { live = false }
   }, [w])
   const state: State = !w ? { status: 'missing' } : result?.slug === w.slug ? result.state : { status: 'loading' }
+  const missing = state.status === 'missing'
+  useEffect(() => { if (!missing) return; setNoIndex(true); return () => setNoIndex(false) }, [missing])
 
   if (state.status === 'loading') return <section className="wp" aria-busy="true"><div className="wp-loading" /></section>
   if (state.status === 'missing') return <section className="wp wp--missing">
@@ -80,6 +83,7 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
   const live = useLiveData(sources), pond = w.board === 'pond'
   const stage = useRef<HTMLElement>(null)
   const [more, setMore] = useState(false)
+  const xrayOn = useFlag('xray')
   const xray = useXR(s => s.global || s.on.size > 0)
   const i = items.findIndex(p => p.id === preset.id), prev = items[(i - 1 + items.length) % items.length], next = items[(i + 1) % items.length]
   const name = widgetTitle(preset.name), url = location.origin + widgetPath(w.slug, w.scope), short = location.origin + shortPath(w.uid)
@@ -180,7 +184,7 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
       <Pill className="wp-go">
         {share && <PillButton label="SHARE" glyph="↗" title="Share" onPointerDown={() => { sharePNG.current = png() }} onClick={act.share} />}
         <PillButton label="REMIX" glyph="✎" title="Remix in MAKE" onClick={act.remix} />
-        <PillButton label="X-RAY" glyph="ⓘ" title="X-ray: how it works" onClick={act.xray} pressed={xray} className="wp-desk" />
+        {xrayOn && <PillButton label="X-RAY" glyph="ⓘ" title="X-ray: how it works" onClick={act.xray} pressed={xray} className="wp-desk" />}
         <PillButton label="MORE" glyph="⋯" title="More actions" onClick={() => setMore(m => !m)} expanded={more} className="wp-more-btn" />
       </Pill>
     </PillBar>
@@ -191,7 +195,7 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
       <button role="menuitem" type="button" onClick={() => { setMore(false); act.html() }}>Copy HTML <small>static SVG, no script</small></button>
       <button role="menuitem" type="button" onClick={() => { setMore(false); act.savePNG() }}>Download PNG</button>
       <button role="menuitem" type="button" onClick={() => { setMore(false); act.saveSVG() }}>Download SVG</button>
-      <button role="menuitem" type="button" className="wp-phone" onClick={() => { setMore(false); act.xray() }}>X-ray: how it works</button>
+      {xrayOn && <button role="menuitem" type="button" className="wp-phone" onClick={() => { setMore(false); act.xray() }}>X-ray: how it works</button>}
       <button role="menuitem" type="button" onClick={() => { setMore(false); onBoard(w.board, w.slug) }}>Back to {boardLabel(w.board)}</button>
     </div>}
   </section>

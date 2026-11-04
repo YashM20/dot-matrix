@@ -35,6 +35,7 @@ import { boards } from '../../src/widgets'
 import { BLOG, heroImage, POSTS, postPath, socialImage } from '../../src/blog/posts'
 import { EXPERIMENTS, LAB, experimentPath } from '../../src/lab/experiments'
 import { metaTags, pageMeta, widgetPageMeta, widgetTitle, type PageMeta } from '../../src/site/meta'
+import { boardBlurbs } from '../../src/widgets/blurbs'
 import type { WidgetMeta } from '../../src/widgets/meta'
 import { widgetIndex } from '../widgets/meta'
 
@@ -48,7 +49,7 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/"/g, '&quot;').repl
 
 /** `html` with its `<!-- meta -->…<!-- /meta -->` block and `<title>` set for a board id (default page when undefined) or any `PageMeta`. */
 export function withMeta(html: string, page?: string | PageMeta, extra: string[] = []): string {
-  const m = typeof page === 'object' ? page : pageMeta(page)
+  const m = typeof page === 'object' ? page : pageMeta(page, boardBlurbs)
   const tags = metaTags(m, origin).map(([attr, key, content]) => `<meta ${attr}="${key}" content="${esc(content)}" />`)
   tags.push(`<link rel="canonical" href="${esc(origin + m.path)}" />`, ...extra)
   const block = `<!-- meta -->\n    ${tags.join('\n    ')}\n    <!-- /meta -->`
@@ -87,27 +88,25 @@ export function blogPages() {
   if (!existsSync(file)) return
   const html = readFileSync(file, 'utf8'), has = (path: string) => existsSync(join('public', path))
   const social = (slug: string) => (has(socialImage(slug)) ? socialImage(slug) : '/og/default.png')
-  // the social image's alt text, from the generator's alt.json (only when that image is the page's og:image)
+  // the social image's alt text, from the generator's alt.json (only when that image is the page's og:image; else
+  // metaTags' default alt, which describes /og/default.png)
   const altFile = join('public', 'og', 'blog', 'alt.json')
   const alts: Record<string, { social?: string }> = existsSync(altFile) ? JSON.parse(readFileSync(altFile, 'utf8')) : {}
-  const altTags = (slug: string) => {
-    const alt = has(socialImage(slug)) ? alts[slug]?.social : undefined
-    return alt ? [`<meta property="og:image:alt" content="${esc(alt)}" />`, `<meta name="twitter:image:alt" content="${esc(alt)}" />`] : []
-  }
+  const imageAlt = (slug: string) => (has(socialImage(slug)) ? alts[slug]?.social : undefined)
   const author = { '@type': 'Organization', name: 'Reactopia', url: 'https://reactopia.me/' }
-  const index: PageMeta = { title: BLOG.title, description: BLOG.dek, path: postPath(), image: social(BLOG.slug) }
-  const list = withMeta(html, index, [...altTags(BLOG.slug), jsonLd({
+  const index: PageMeta = { title: BLOG.title, description: BLOG.dek, path: postPath(), image: social(BLOG.slug), imageAlt: imageAlt(BLOG.slug) }
+  const list = withMeta(html, index, [jsonLd({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: BLOG.title, description: BLOG.dek, url: origin + index.path, image: origin + index.image,
     hasPart: POSTS.map(p => ({ '@type': 'BlogPosting', headline: p.title, url: origin + postPath(p.slug), datePublished: p.date })),
   })])
   writeFileSync(file, list); page('blog', list)
   for (const p of POSTS) {
-    const m: PageMeta = { title: `${p.title} · Matrix blog`, description: p.dek, path: postPath(p.slug), image: social(p.slug) }
+    const m: PageMeta = { title: `${p.title} · Matrix blog`, description: p.dek, path: postPath(p.slug), image: social(p.slug), imageAlt: imageAlt(p.slug) }
     const ld = {
       '@context': 'https://schema.org', '@type': 'BlogPosting', headline: p.title, description: p.dek, datePublished: p.date, author, publisher: author,
       image: [origin + m.image, ...(has(heroImage(p.slug)) ? [origin + heroImage(p.slug)] : [])], url: origin + m.path, mainEntityOfPage: origin + m.path,
     }
-    page(join('blog', p.slug), withMeta(html, m, [...altTags(p.slug), `<meta property="article:published_time" content="${p.date}" />`, jsonLd(ld)]).replace('property="og:type" content="website"', 'property="og:type" content="article"'))
+    page(join('blog', p.slug), withMeta(html, m, [`<meta property="article:published_time" content="${p.date}" />`, jsonLd(ld)]).replace('property="og:type" content="website"', 'property="og:type" content="article"'))
   }
   console.log(`site: blog index + ${POSTS.length} post pages`)
 }
