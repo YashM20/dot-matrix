@@ -1,8 +1,8 @@
 /**
- * Every keyboard shortcut and URL parameter, in one list (ABOUT shows it; the U5 `?` sheet and the shell's
- * `help` are meant to read it too, docs/UX-PLAN.md §5.5). Keys live in `components/palette/CommandLayer.tsx`,
+ * Every keyboard shortcut and URL parameter, in one list (ABOUT shows it, the dot shell's `help keys` reads
+ * `SHELL_KEYS`; the U5 `?` sheet is meant to read it too, docs/UX-PLAN.md §5.5). Keys live in `components/palette/CommandLayer.tsx`,
  * URL views in `./views.ts`, release flags in `./flags.ts` (the X rows only show while the `xray` flag is on).
- * Lazy: only ABOUT imports it.
+ * Lazy: only ABOUT and the dot shell import it.
  */
 import { flag } from './flags'
 
@@ -16,6 +16,17 @@ export const SHORTCUTS: readonly Shortcut[] = [
   { keys: '← →', does: 'while frozen: step a frame (⇧ for a second)' },
   { keys: 'Space', does: 'while frozen: resume the clock' },
   { keys: '↑↑↓↓←→←→BA', does: 'you know' },
+]
+
+/** Keys inside the dot shell (its footer and `help keys` read these; its commands are in `help`). */
+export const SHELL_KEYS: readonly Shortcut[] = [
+  { keys: 'Tab', does: 'complete a command, board, view, card or word' },
+  { keys: '↑ ↓', does: 'history (kept for this tab); the line you were typing comes back' },
+  { keys: 'Ctrl-C', does: 'cancel the line, or stop the running command (copies when text is selected)' },
+  { keys: 'Ctrl-U', does: 'clear the line before the cursor' },
+  { keys: 'Ctrl-L', does: 'clear the screen' },
+  { keys: 'PgUp PgDn', does: 'scroll back through the output' },
+  { keys: 'Esc', does: 'close the shell' },
 ]
 
 export const URL_PARAMS: readonly Shortcut[] = [

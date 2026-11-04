@@ -7,6 +7,7 @@ import type { ThemeTokens } from '../../engine/types'
 import { dot480 } from '../../engine/theme/tokens'
 import { layer, layoutFor, tileStyle } from '../../widgets/types'
 import { paint, sampleInto, surfaceFor } from './dots'
+import { replaceUrl } from '../../site/safe-url'
 import './hive.css'
 
 const HivePlay = lazy(() => import('./HivePlay'))
@@ -21,7 +22,7 @@ const wantsPlay = () => new URLSearchParams(window.location.search).get('play') 
 function setPlayParam(on: boolean) {
   const url = new URL(window.location.href)
   if (on) url.searchParams.set('play', '1'); else url.searchParams.delete('play')
-  window.history.replaceState(null, '', url)
+  replaceUrl(url, null)
 }
 
 export function HiveStart({ theme = dot480 }: { theme?: ThemeTokens }) {

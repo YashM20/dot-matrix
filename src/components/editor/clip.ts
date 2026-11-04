@@ -6,7 +6,7 @@
  * frame, card, layer and group a new id and moves the copies until none sits exactly on what is there.
  */
 import type { DotStyle, GridConfig } from '../../engine/types'
-import { newId, normalizeZ, stackOrder, validateCard, type StudioLayer } from '../studio/doc'
+import { layersIssue, newId, normalizeZ, stackOrder, validateCard, type StudioLayer } from '../studio/doc'
 import { addFrame, blankCard, cloneFrame, editFrame, frameById, MAX_FRAMES, movable, nudgeLayer, THEMES, tidyGroups, topDown, validateDoc, type EditorDoc, type EditorFrame, type LayerGroup, type Sel, type ThemeName } from './doc'
 import { framesSel, layersSel, selFrames, selLayers } from './select'
 
@@ -23,7 +23,6 @@ export interface Clip {
   src?: { frame: string; grid: GridConfig; style: DotStyle; theme: ThemeName }
 }
 export const CLIP_KEY = 'dot480.editor.clip'
-const MAX_CARD_LAYERS = 24
 
 /** The selection as a clip (deep copies), or undefined when nothing is selected. */
 export function clipOf(d: EditorDoc, s: Sel): Clip | undefined {
@@ -92,7 +91,8 @@ export function pasteClip(d: EditorDoc, clip: Clip, s: Sel): { doc: EditorDoc; s
     const r = addFrame(d, card, { theme: clip.src!.theme, source: 'paste' })
     doc = r.doc; target = r.frame
   }
-  if (target.card.layers.length + clip.layers.length > MAX_CARD_LAYERS) return `a frame holds at most ${MAX_CARD_LAYERS} layers`
+  const full = layersIssue([...target.card.layers, ...clip.layers])
+  if (full) return full.replace('a card', 'a frame')
   const there = target.card.layers
   let k = 0
   while (k < 64 && clip.layers.some(l => movable(l) && there.some(t => samePlace(t, nudgeLayer(l, k * 2, k * 2))))) k++

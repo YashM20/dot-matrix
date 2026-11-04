@@ -24,9 +24,10 @@ export interface FlagDef {
 }
 
 export const FLAGS = [
-  { id: 'xray', default: false, description: 'X-ray: the per-card ⓘ overlay and inspector, the dock button and TOOLS tile, the X keys, the palette action and the shell command' },
+  { id: 'xray', default: false, description: 'X-ray: the per-card ⓘ overlay and inspector, the dock button and TOOLS tile, the widget page pill and menu item, the intro line, the X keys, the palette action and the shell command' },
   { id: 'worker', default: true, description: 'Sample cards in a web worker; off samples on the main thread', param: 'worker' },
   { id: 'clack', default: false, description: 'The flip-disc clack sound', param: 'clack' },
+  { id: 'likes', default: false, description: 'Likes (#169): the like button on widget pages and gallery programs; it also hides while the likes API answers 404' },
 ] as const satisfies readonly FlagDef[]
 
 export type FlagId = (typeof FLAGS)[number]['id']
