@@ -1,110 +1,44 @@
 /**
  * Prose lint: catches AI-writing tells in visitor prose (docs/WRITING.md; GitHub #77). Sources: Wikipedia's
  * "Signs of AI writing" plus the owner's banned sentence shapes. Only prose is read, never code, so a word like
- * "robust" in a comment is fine.
+ * "robust" in a comment, a code span or a fenced block is fine. The rules live in scripts/site/prose-rules.ts.
  *
- *   npx tsx scripts/site/prose-lint.ts                     → the default set: the essay's JSX text (src/essay/Essay.tsx),
- *                                                            the visitor rows of src/changelog.ts, the legal pages
- *                                                            (privacy.html, terms.html) and docs/blog/*.md (if any)
- *   npx tsx scripts/site/prose-lint.ts src/essay/Essay.tsx → only the files given (.tsx JSX text, .ts string fields
- *                                                            text/summary/title, .html body blocks, .md paragraphs)
+ *   npx tsx scripts/site/prose-lint.ts                     → the default set (DEFAULT_FILES below): the essay, blog
+ *                                                            posts and guides, both changelogs, the legal pages,
+ *                                                            README, CONTRIBUTING, board blurbs, About and post deks
+ *   npx tsx scripts/site/prose-lint.ts src/essay/Essay.tsx → only the files given (.tsx JSX text, .ts string fields,
+ *                                                            .html body blocks, .md paragraphs)
  *   npx tsx scripts/site/prose-lint.ts --warn-only         → print everything, always exit 0
  *
- * Output: `file:line  rule  "excerpt"`, then a count. Exit 1 on any `error` (high-confidence tells: banned words,
- * stock phrases, em dashes, contrast frames, set-up reveals); `warn` rules are density checks (triplets, hedging,
- * bold in running prose, quote mixing, Title Case headings) and never fail the run. The rules are the RULES table.
- * Not in CI yet; it runs at the checkpoint gate (docs/CHECKPOINTS.md).
+ * Output: `file:line  rule  "excerpt"` and a `fix:` hint under it, then a count. Exit 1 on any `error` (banned words,
+ * stock phrases, em dashes, contrast frames, set-up reveals); `warn` rules (rhetorical questions, cliché openers,
+ * "From X to Y", moral closers, density checks) never fail the run. Runs in `pnpm check`.
+ *
+ * Quoted third-party text (credits, licence lines) goes in scripts/site/prose-allow.json: an entry skips one rule
+ * in blocks of one file that contain its snippet. An entry that no longer matches anything is an error, so the
+ * list can't go stale.
  */
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join, relative, resolve } from 'node:path'
 import ts from 'typescript'
-
-type Severity = 'error' | 'warn'
-type Kind = 'prose' | 'heading'
-/** One block of visitor text (a paragraph, list item, caption or heading), whitespace-collapsed, with a source map. */
-interface Block { file: string; src: string; kind: Kind; text: string; map: number[]; bold: [number, number][] }
-interface Hit { at: number; len: number }
-interface Rule {
-  id: string
-  severity: Severity
-  why: string
-  /** regex rules run on every block (headings too); `check` rules on prose blocks only, unless `on` says so */
-  re?: RegExp
-  check?: (b: Block) => Hit[]
-  on?: Kind
-}
+import { all, FILE_RULES, RULES, type Block, type Hit, type Kind, type Severity } from './prose-rules'
 
 const ROOT = join(import.meta.dirname, '../..')
-const words = (s: string) => s.match(/[A-Za-z][\w'’-]*/g)?.length ?? 0
-const all = (re: RegExp, s: string) => [...s.matchAll(new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g'))]
-const S = '(?:^|[.!?:] )' // sentence start
-
-// ---- rules ----------------------------------------------------------------------------------------------------
-const VOCAB = [
-  'delve[sd]?', 'delving', 'tapestry', 'testament', 'intricate(?:ly)?', 'intricacies', 'pivotal', 'seamless(?:ly)?', 'robust(?:ly|ness)?',
-  'leverag(?:e|es|ed|ing)', 'elevat(?:e|es|ed|ing)', 'unlock(?:s|ed|ing)?', 'realms?', 'vibrant', 'showcas(?:e|es|ed|ing)',
-  'underscor(?:e|es|ed|ing)', 'boasts?', 'boasting', 'nestled', 'crucial(?:ly)?', 'foster(?:s|ed|ing)?', 'embark(?:s|ed|ing)?',
-  'journey', 'meticulous(?:ly)?', 'bolster(?:s|ed|ing)?', 'garner(?:s|ed|ing)?', 'interplay', 'multifaceted', 'groundbreaking',
-  'renowned', 'game-?changer', 'cutting-edge', 'ever-evolving', 'synerg(?:y|ies)', 'holistic', 'paradigm', 'empower(?:s|ed|ing)?',
-  'unparalleled', 'transformative', 'harmonious(?:ly)?', 'captivating', 'breathtaking', 'indelible', 'enduring legacy',
+const mdIn = (dir: string) => existsSync(join(ROOT, dir)) ? readdirSync(join(ROOT, dir)).filter(f => f.endsWith('.md')).map(f => `${dir}/${f}`) : []
+const DEFAULT_FILES = [
+  'src/essay/Essay.tsx', 'src/changelog.ts', 'src/components/About.tsx', 'src/widgets/blurbs.ts', 'src/blog/posts.ts',
+  'privacy.html', 'terms.html', 'README.md', 'CONTRIBUTING.md', 'CHANGELOG.md', ...mdIn('docs/blog'), ...mdIn('docs/guides'),
 ]
-
-const RULES: Rule[] = [
-  // vocabulary and stock phrases
-  { id: 'ai-vocab', severity: 'error', why: 'a word AI text overuses; say the plain thing',
-    re: new RegExp(`\\b(?:${VOCAB.join('|')})\\b|\\b(?<!in )landscapes?\\b(?! mode| orientation)`, 'i') },
-  { id: 'stock-phrase', severity: 'error', why: 'a stock phrase that carries no information',
-    re: /\b(?:let'?s dive in|dive (?:in|into)|deep dive|in today'?s|fast-paced|in conclusion|it'?s worth noting|worth noting that|it should be noted|plays? an? (?:crucial|key|pivotal|vital|important|central) role|stands as an?|serves as an?|whether you'?re|a reminder that|in the heart of|at the end of the day|the world of|look no further|unleash(?:es|ed)?|rich history|a wide (?:range|array|variety) of|diverse array|when it comes to|in the realm of|navigat(?:e|ing) the)\b/i },
-  { id: 'filler-opener', severity: 'error', why: 'a transition that pads; start with the point',
-    re: new RegExp(`${S}(?:Moreover|Furthermore|Additionally|Ultimately|In summary|In short|Overall|All in all|In essence|Notably|Importantly),`) },
-  // punctuation
-  { id: 'em-dash', severity: 'error', why: 'no em dashes; use a period, comma, colon or parentheses', re: /—| -- / },
-  { id: 'en-dash', severity: 'error', why: 'the en dash is only for number ranges (2–4, 12–120)', re: /(?<!\d)–|–(?![\dA-Za-z])/ },
-  { id: 'emoji', severity: 'error', why: 'no emoji in prose', re: /(?![©®™↔↕])\p{Extended_Pictographic}/u },
-  // contrast frames
-  { id: 'its-not-x-its-y', severity: 'error', why: 'contrast frame ("it\'s not X, it\'s Y"); say what it is',
-    re: /\b(?:it'?s|it is|this is|that'?s|that is) not\b[^.!?]{1,60}?[,;:] ?(?:it'?s|it is|but|this is|that'?s)\b/i },
-  { id: 'not-just', severity: 'error', why: 'contrast frame ("not just X, but Y")', re: /\bnot (?:just|only|merely|simply)\b/i },
-  { id: 'isnt-x-its-y', severity: 'error', why: 'contrast frame ("X isn\'t Y. It\'s Z."); state Z',
-    re: /\b(?:isn'?t|is not|aren'?t|are not|wasn'?t|was not)\b[^.!?;]{1,80}(?:\. (?:it'?s|it is|it was|this is|that'?s|that is|they'?re|they are)\b(?! not)|; (?:it|this|that|they) (?!(?:does|is|are|was|do)n'?t\b|(?:does|is|are|do) not\b)\w+)/i },
-  { id: 'not-x-but-y', severity: 'error', why: 'contrast frame ("not X but Y"); state Y', re: /\b(?:not|isn'?t|aren'?t)\b [^.,;:!?]{1,40} but (?!also\b)/i },
-  { id: 'not-about', severity: 'error', why: 'contrast frame ("X isn\'t about Y")', re: /\b(?:isn'?t|is not|aren'?t|are not|wasn'?t|not) (?:really |just )?about\b/i },
-  { id: 'less-x-more-y', severity: 'error', why: 'contrast frame ("less X, more Y")', re: /\bless [\w-]+(?: [\w-]+)?[,.;] (?:and )?more\b/i },
-  { id: 'not-because', severity: 'error', why: 'contrast frame ("not because X, but because Y")', re: /\bnot because\b[^.!?]{0,120}\bbut because\b/i },
-  { id: 'rather-than-reveal', severity: 'error', why: 'contrast frame opening on "Rather than"', re: new RegExp(`${S}Rather than\\b`) },
-  // AI sentence shapes
-  { id: 'no-no-just', severity: 'error', why: 'fragment triplet ("No X. No Y. Just Z.")',
-    re: /\bno [^.!?,;]{1,40}[.,] no [^.!?,;]{1,40}[.,] (?:just|only)\b/i },
-  { id: 'setup-reveal', severity: 'error', why: 'set-up then reveal ("Here\'s why:", "The catch?"); just say it',
-    re: new RegExp(`${S}(?:Here(?:'s| is) (?:the \\w+|why|how|what|where)\\b|(?:And |But |So )?The (?:catch|result|kicker|twist|upshot|takeaway|answer|secret|trick|problem|best part|bottom line)[?:])`) },
-  { id: 'rhetorical-q', severity: 'error', why: 'a question answered in the next sentence; make the statement', re: /[A-Za-z][^.!?]{2,120}\? (?=[A-Z])/ },
-  { id: 'from-x-to-y', severity: 'error', why: '"From X to Y," as a list opener', re: new RegExp(`${S}From [^,.!?]{1,50} to [^,.!?]{1,50},`) },
-  { id: 'x-meets-y', severity: 'error', why: '"X meets Y"', re: /\b\w+ meets (?!the |a |an |its |every |all |our |your |this |that |\d)\w+/i },
-  { id: 'cliche-opener', severity: 'error', why: '"It turns out", "Think of it as", "Imagine …"',
-    re: new RegExp(`\\bit turns out\\b|\\bthink of (?:it|this|them) (?:as|like)\\b|${S}Imagine\\b`, 'i') },
-  { id: 'moral-close', severity: 'error', why: 'a one-line moral ("And that\'s the point.")',
-    re: /\b(?:that'?s|this is|that is|it is|it'?s|which is) (?:the (?:whole )?(?:point|magic|beauty|secret|key|idea)|what matters)\b|(?:^|[.!?] )And that'?s [^.!?]{1,40}[.!]$/i },
-  // density and format (warn)
-  { id: 'comma-not', severity: 'warn', why: '", not Y" tail; often a softer contrast frame', re: /, not (?:a |an |the |per )?\w+/ },
-  { id: 'triplets', severity: 'warn', why: '3+ "X, Y and Z" lists in one paragraph; not everything comes in threes',
-    check: b => { const m = all(/\b[\w'-]+(?: [\w'-]+)?, [\w'-]+(?: [\w'-]+){0,2},? (?:and|or) [\w'-]+/, b.text); return m.length >= 3 ? [{ at: m[2].index!, len: m[2][0].length }] : [] } },
-  { id: 'hedging', severity: 'warn', why: 'hedge words pile up (3+ in a paragraph); commit or cut',
-    check: b => { const m = all(/\b(?:may|might|potentially|perhaps|possibly|arguably|somewhat|seemingly|generally|typically)\b/i, b.text); return m.length >= 3 || (m.length >= 2 && words(b.text) < 40) ? [{ at: m.at(-1)!.index!, len: m.at(-1)![0].length }] : [] } },
-  { id: 'bold-in-prose', severity: 'warn', why: 'bold inside running prose; keep bold for a run-in lead',
-    check: b => b.bold.filter(([s], i) => i > 0 || b.text.slice(0, s).trim() !== '').map(([s, e]) => ({ at: s, len: e - s })) },
-  { id: 'title-case', severity: 'warn', why: 'Title Case heading; use sentence case', on: 'heading',
-    check: b => { const w = b.text.match(/[A-Za-z][\w'-]*/g) ?? []; const big = w.slice(1).filter(x => !/^(?:a|an|the|and|or|of|in|on|to|for|with|at|by|vs)$/i.test(x) && x !== x.toUpperCase()); return big.length >= 2 && big.every(x => /^[A-Z]/.test(x)) ? [{ at: 0, len: b.text.length }] : [] } },
-]
-const FILE_RULES: { id: string; severity: Severity; why: string; check: (bs: Block[]) => [Block, Hit][] }[] = [
-  { id: 'quote-mix', severity: 'warn', why: 'straight and curly quotes mixed in one file; pick one',
-    check: bs => {
-      const curly = bs.flatMap(b => all(/[‘’“”]/, b.text).map(m => [b, { at: m.index!, len: 1 }] as [Block, Hit]))
-      const straight = bs.flatMap(b => all(/['"]/, b.text).map(m => [b, { at: m.index!, len: 1 }] as [Block, Hit]))
-      return curly.length && straight.length ? (curly.length <= straight.length ? curly : straight) : []
-    } },
-]
+/** .ts files where every string value in an object literal is visitor text (the blurb tables) */
+const ALL_STRINGS = new Set(['src/widgets/blurbs.ts'])
+/** in other .ts files, only these keys hold visitor text (changelog rows, post deks) */
+const TEXT_KEYS = new Set(['text', 'summary', 'title', 'dek'])
 
 // ---- extraction: every block keeps a map from its collapsed text back to source offsets --------------------------
+/** markup is masked with MASK, which is dropped from the text (unlike whitespace), so offsets stay 1:1 with the source */
+const MASK = '\u0000'
+const blankRange = (a: string[], s: number, e: number, fill = '') => { for (let i = s; i < e; i++) a[i] = MASK; for (let i = 0; i < fill.length && s + i < e; i++) a[s + i] = fill[i] }
+
 function block(file: string, src: string, kind: Kind, start: number, masked: string, boldRaw: [number, number][] = []): Block | null {
   let text = ''
   const map: number[] = []
@@ -119,9 +53,6 @@ function block(file: string, src: string, kind: Kind, start: number, masked: str
   const at = (raw: number) => { const k = map.findIndex(o => o >= start + raw); return k < 0 ? text.length : k }
   return { file, src, kind, text, map, bold: boldRaw.map(([s, e]) => [at(s), at(e)]) }
 }
-/** markup is masked with MASK, which is dropped from the text (unlike whitespace), so offsets stay 1:1 with the source */
-const MASK = '\u0000'
-const blankRange = (a: string[], s: number, e: number, fill = '') => { for (let i = s; i < e; i++) a[i] = MASK; for (let i = 0; i < fill.length && s + i < e; i++) a[s + i] = fill[i] }
 
 const BLOCK_TAGS = new Set(['p', 'li', 'dd', 'dt', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'figcaption', 'blockquote', 'Moment'])
 const CODE_TAGS = new Set(['C', 'code', 'pre', 'kbd'])
@@ -162,12 +93,13 @@ function fromTsx(file: string, src: string): Block[] {
   return out
 }
 
-/** .ts: string literals under the visitor-facing keys (changelog rows). Comments and other code are skipped. */
+/** .ts: string literals under the visitor-facing keys, or every property string in an ALL_STRINGS file. Comments and other code are skipped. */
 function fromTs(file: string, src: string): Block[] {
   const sf = ts.createSourceFile(file, src, ts.ScriptTarget.Latest, true)
   const out: Block[] = []
+  const every = ALL_STRINGS.has(file)
   const walk = (n: ts.Node): void => {
-    if (ts.isPropertyAssignment(n) && ['text', 'summary', 'title'].includes(n.name.getText(sf)) && ts.isStringLiteralLike(n.initializer)) {
+    if (ts.isPropertyAssignment(n) && ts.isStringLiteralLike(n.initializer) && (every || TEXT_KEYS.has(n.name.getText(sf)))) {
       const b = block(file, src, n.name.getText(sf) === 'title' ? 'heading' : 'prose', n.initializer.getStart(sf) + 1, n.initializer.text)
       if (b) out.push(b)
     }
@@ -214,7 +146,6 @@ function fromHtml(file: string, src: string): Block[] {
 
 function fromMd(file: string, src: string): Block[] {
   const out: Block[] = []
-  const lines = src.split('\n')
   let off = 0, fence = false, cur: { start: number; end: number } | null = null
   const flush = (kind: Kind = 'prose') => {
     if (!cur) return
@@ -223,7 +154,7 @@ function fromMd(file: string, src: string): Block[] {
     if (b) out.push(b)
     cur = null
   }
-  for (const line of lines) {
+  for (const line of src.split('\n')) {
     const end = off + line.length
     if (/^\s*(```|~~~)/.test(line)) { flush(); fence = !fence }
     else if (fence) { /* code */ }
@@ -240,43 +171,61 @@ function fromMd(file: string, src: string): Block[] {
 
 function extract(path: string): Block[] {
   const src = readFileSync(path, 'utf8').replace(/\r\n/g, '\n')
-  const file = relative(ROOT, path).replace(/\\/g, '/')
+  const inRepo = !relative(ROOT, path).startsWith('..')
+  const file = relative(inRepo ? ROOT : process.cwd(), path).replace(/\\/g, '/')
   if (path.endsWith('.tsx')) return fromTsx(file, src)
   if (path.endsWith('.ts')) return fromTs(file, src)
   if (/\.html?$/.test(path)) return fromHtml(file, src)
   return fromMd(file, src)
 }
 
+// ---- allowlist ------------------------------------------------------------------------------------------------
+interface Allow { file: string; rule: string; text: string; why: string; used?: boolean }
+const ALLOW_PATH = join(ROOT, 'scripts/site/prose-allow.json')
+const allow: Allow[] = existsSync(ALLOW_PATH) ? (JSON.parse(readFileSync(ALLOW_PATH, 'utf8')) as { allow: Allow[] }).allow : []
+const allowed = (b: Block, rule: string) => {
+  const a = allow.find(x => x.file === b.file && x.rule === rule && b.text.includes(x.text))
+  if (a) a.used = true
+  return !!a
+}
+
 // ---- run ------------------------------------------------------------------------------------------------------
 const args = process.argv.slice(2)
 const warnOnly = args.includes('--warn-only')
 const given = args.filter(a => !a.startsWith('--'))
-const blog = join(ROOT, 'docs/blog')
-const files = given.length ? given.map(f => resolve(f)) : [
-  'src/essay/Essay.tsx', 'src/changelog.ts', 'privacy.html', 'terms.html',
-  ...(existsSync(blog) ? readdirSync(blog).filter(f => f.endsWith('.md')).map(f => `docs/blog/${f}`) : []),
-].map(f => join(ROOT, f))
+const files = given.length ? given.map(f => resolve(f)) : DEFAULT_FILES.map(f => join(ROOT, f))
 
-interface Finding { file: string; line: number; rule: string; severity: Severity; excerpt: string }
+interface Finding { file: string; line: number; rule: string; severity: Severity; hint: string; excerpt: string }
 const findings: Finding[] = []
 const lineOf = (src: string, off: number) => src.slice(0, off).split('\n').length
-const report = (b: Block, h: Hit, rule: string, severity: Severity) => {
+const report = (b: Block, h: Hit, r: { id: string; severity: Severity; hint: string }) => {
+  if (allowed(b, r.id)) return
   const a = Math.max(0, h.at - 20), e = Math.min(b.text.length, h.at + Math.max(h.len, 1) + 20)
   const excerpt = (a > 0 ? '…' : '') + b.text.slice(a, e) + (e < b.text.length ? '…' : '')
-  findings.push({ file: b.file, line: lineOf(b.src, b.map[Math.min(h.at, b.map.length - 1)]), rule, severity, excerpt })
+  findings.push({ file: b.file, line: lineOf(b.src, b.map[Math.min(h.at, b.map.length - 1)]), rule: r.id, severity: r.severity, hint: r.hint, excerpt })
 }
 for (const f of files) {
   if (!existsSync(f)) { console.error(`prose-lint: no such file ${f}`); process.exit(2) }
   const blocks = extract(f)
-  for (const b of blocks) for (const r of RULES) {
-    if (r.re) for (const m of all(r.re, b.text)) report(b, { at: m.index!, len: m[0].length }, r.id, r.severity)
-    if (r.check && b.kind === (r.on ?? 'prose')) for (const h of r.check(b)) report(b, h, r.id, r.severity)
+  for (const b of blocks) {
+    const plain = b.text.replace(/[‘’]/g, "'") // same length, so offsets still match b.text
+    for (const r of RULES) {
+      if (r.re) for (const m of all(r.re, plain)) report(b, { at: m.index!, len: m[0].length }, r)
+      if (r.check && (r.on === 'all' || b.kind === (r.on ?? 'prose'))) for (const h of r.check(b)) report(b, h, r)
+    }
   }
-  for (const r of FILE_RULES) for (const [b, h] of r.check(blocks)) report(b, h, r.id, r.severity)
+  for (const r of FILE_RULES) for (const [b, h] of r.check(blocks)) report(b, h, r)
+}
+// a stale entry only counts on a full run, where every file it could name was read
+if (!given.length) for (const a of allow.filter(x => !x.used)) {
+  findings.push({ file: 'scripts/site/prose-allow.json', line: 1, rule: 'stale-allow', severity: 'error', hint: 'this entry matches nothing now; delete it', excerpt: `${a.file} · ${a.rule} · ${a.text}` })
 }
 
 findings.sort((a, b) => a.file.localeCompare(b.file) || a.line - b.line)
-for (const x of findings) console.log(`${x.file}:${x.line}  ${x.severity === 'error' ? x.rule : `${x.rule} (warn)`}  "${x.excerpt}"`)
+for (const x of findings) {
+  console.log(`${x.file}:${x.line}  ${x.severity === 'error' ? x.rule : `${x.rule} (warn)`}  "${x.excerpt}"`)
+  console.log(`    fix: ${x.hint}`)
+}
 const errors = findings.filter(x => x.severity === 'error').length
 console.log(`prose-lint: ${files.length} file(s), ${RULES.length + FILE_RULES.length} rules, ${errors} error(s), ${findings.length - errors} warning(s)`)
 process.exit(errors && !warnOnly ? 1 : 0)
