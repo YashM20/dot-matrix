@@ -74,6 +74,7 @@ export const boardManifest = [
   { id: 'faces', title: 'FACES / DOTS THAT LOOK BACK', columns: 2, density: 'standard', load: () => import('./boards/faces').then(m => ({ items: m.facesBoard })) },
   { id: 'charts', title: 'CHARTS / A DOT CHARTS KIT', columns: 3, density: 'standard', load: () => import('./boards/charts').then(m => ({ items: m.chartsBoard })) },
   { id: 'motion', title: 'MOTION / LOADERS, PROGRESS, TOASTS AND REPLIES', columns: 3, density: 'standard', load: () => import('./boards/motion').then(m => ({ items: m.motionBoard })) },
+  { id: 'watch', title: 'WATCH / EIGHT SMARTWATCH FACES', columns: 3, density: 'standard', load: () => import('./boards/watch').then(m => ({ items: m.watchBoard })) },
 ] as const satisfies readonly (BoardMeta & { load: () => Promise<BoardContents> })[]
 
 export type BoardId = typeof boardManifest[number]['id']
@@ -94,11 +95,11 @@ export const resolveCardId = (id: string): string => cardAliases[id] ?? (id.star
  * don't depend on them. Every board sits in exactly one group after START HERE, the curated tour
  * (`scripts/verify.ts` checks). One-line descriptions are in `./blurbs.ts`, lazy.
  */
-const LABELS: Partial<Record<BoardId, string>> = { henry: 'MICRO UI', deerflow12: 'DASHBOARD', henry3: 'PERSONAL', ir: 'PROGRAMS', sim: 'LIVING', gpu: '500K DOTS', dash: 'CAR', kinetic: 'KINETIC TYPE', motion: 'MICRO MOTION', charts: 'CHARTS' }
+const LABELS: Partial<Record<BoardId, string>> = { henry: 'MICRO UI', deerflow12: 'DASHBOARD', henry3: 'PERSONAL', ir: 'PROGRAMS', sim: 'LIVING', gpu: '500K DOTS', dash: 'CAR', kinetic: 'KINETIC TYPE', motion: 'MICRO MOTION', charts: 'CHARTS', watch: 'WATCH FACES' }
 export const boardLabel = (id: string): string => LABELS[id as BoardId] ?? id.toUpperCase()
 export const boardGroups = [
   { id: 'start', label: 'START HERE', boards: ['henry', 'mosaic', 'physics', 'heal', 'levels', 'instrument', 'cinema'] },
-  { id: 'ui', label: 'INTERFACES', boards: ['henry', 'deerflow12', 'mosaic', 'henry3', 'metro', 'ride', 'audio', 'lock', 'components', 'surfaces', 'dash', 'motion'] },
+  { id: 'ui', label: 'INTERFACES', boards: ['henry', 'deerflow12', 'mosaic', 'henry3', 'metro', 'ride', 'audio', 'lock', 'components', 'surfaces', 'dash', 'motion', 'watch'] },
   { id: 'data', label: 'DATA', boards: ['live', 'departures', 'heartbeat', 'charts'] },
   { id: 'play', label: 'PLAY', boards: ['levels', 'physics', 'instrument', 'scope', 'mirror', 'heal', 'pond', 'workshop', 'kinetic', 'faces'] },
   { id: 'engine', label: 'ENGINE', boards: ['ir', 'sim', 'algorithms', 'squares', 'light', 'materials', 'gpu', 'type', 'cinema', 'fractals', 'oldschool', 'scenes'] },
