@@ -1,0 +1,10 @@
+/* ── the page's recovery screen (RootBoundary.tsx): the editor's .ed-crash (editor.css), page-sized ──
+   Every entry point loads tokens.css and themes.css (index.css, essay.css) before this, so the roles are there. */
+.root-crash { box-sizing: border-box; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; gap: var(--space-2); width: min(560px, calc(100% - 40px)); margin: 0 auto; padding: var(--space-4) 0; color: var(--value); font: var(--fs-label-12)/1.6 var(--mono) }
+.root-crash b { color: var(--red-text); letter-spacing: .14em; font-weight: 600 }
+.root-crash p { margin: 0; color: var(--label); font-size: var(--fs-copy-14) }
+.root-crash code { color: var(--value); font: inherit; background: none; padding: 0; white-space: normal; overflow-wrap: anywhere }
+.root-crash-btns { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2) }
+.root-crash-btns :is(button, a) { display: inline-flex; align-items: center; min-height: var(--tap); padding: 0 var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-ctl); color: var(--value); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .1em; text-decoration: none; cursor: pointer }
+.root-crash-btns button { border-color: color-mix(in srgb, var(--red) 60%, transparent) }
+.root-crash-btns :is(button, a):focus-visible { outline: 1px solid var(--red); outline-offset: 2px }

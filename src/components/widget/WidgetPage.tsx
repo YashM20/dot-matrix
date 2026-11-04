@@ -14,6 +14,7 @@ import { deriveWidgetMeta, type WidgetMeta } from '../../widgets/meta'
 import { withChrome, type WidgetPreset } from '../../widgets/types'
 import { canonicalWidgetUrl, resolveWidget, shortPath, widgetPath, type ResolvedWidget, type WidgetRoute } from '../../site/routes'
 import { setNoIndex, setPageMeta, widgetPageMeta, widgetTitle } from '../../site/meta'
+import { replaceUrl } from '../../site/safe-url'
 import { useFlag } from '../../site/useFlag'
 import { presetSource } from '../../export/source'
 import { stillPNG } from '../../export/still'
@@ -63,7 +64,7 @@ export function WidgetPage({ route, onOpen, onBoard }: WidgetPageProps) {
       setResult({ slug: w.slug, state: { status: 'ok', w, preset, items, meta, sources: sources?.length ? sources : undefined } })
       // the address bar shows the canonical slug URL (uid, old slug and ?card= forms are normalised in place)
       const want = canonicalWidgetUrl(w, location.search) + location.hash
-      if (want !== location.pathname + location.search + location.hash) history.replaceState(history.state, '', want)
+      if (want !== location.pathname + location.search + location.hash) replaceUrl(want)
       setPageMeta(widgetPageMeta(meta))
     }, () => { if (live) setResult({ slug: w.slug, state: { status: 'missing' } }) })
     return () => { live = false }

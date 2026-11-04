@@ -14,6 +14,7 @@ import { setPondMemory } from '../../site/pondMemory'
 import { CARD_SIZE_LABELS, CARD_SIZE_LINES, CARD_SIZES, setCardSize } from '../../site/cards'
 import { POSTS, postPath } from '../../blog/posts'
 import { flag } from '../../site/flags'
+import { assign } from '../../site/safe-url'
 
 /** The display skins, from the engine's list (so the palette, shell and header can't drift apart). */
 export const SKINS = SKIN_NAMES
@@ -100,8 +101,8 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   for (const s of CARD_SIZES) act(`cards-${CARD_SIZE_LABELS[s].toLowerCase()}`, `Card size: ${CARD_SIZE_LABELS[s].toLowerCase()} (${CARD_SIZE_LINES[s]})`, () => setCardSize(s), '', `card size cards columns row grid bigger smaller zoom density ${CARD_SIZE_LABELS[s].toLowerCase()}`)
   for (const p of PLACES) items.push({ id: `v:${p}`, group: 'View', text: isMode(p) ? `Go to MAKE · ${p}: ${MODE_LINES[p]}` : `Go to ${p}`, run: a => a.openTab(p), keywords: `${p.toLowerCase()} ${PLACE_WORDS[p]}`, boost: 30 })
   // the blog is its own page (blog.html, src/blog): the index, then each post
-  items.push({ id: 'v:blog', group: 'View', text: 'Blog', hint: `${POSTS.length} posts`, run: () => location.assign(postPath()), keywords: 'blog posts essay guides tutorials articles read learn how it works', boost: 30 })
-  for (const p of POSTS) items.push({ id: `v:blog-${p.slug}`, group: 'View', text: `Blog: ${p.title}`, run: () => location.assign(postPath(p.slug)), keywords: `blog post ${p.kind === 'essay' ? 'essay ditherpunk how it works' : 'tutorial guide'} ${p.dek}`, boost: 25 })
+  items.push({ id: 'v:blog', group: 'View', text: 'Blog', hint: `${POSTS.length} posts`, run: () => assign(postPath()), keywords: 'blog posts essay guides tutorials articles read learn how it works', boost: 30 })
+  for (const p of POSTS) items.push({ id: `v:blog-${p.slug}`, group: 'View', text: `Blog: ${p.title}`, run: () => assign(postPath(p.slug)), keywords: `blog post ${p.kind === 'essay' ? 'essay ditherpunk how it works' : 'tutorial guide'} ${p.dek}`, boost: 25 })
   for (const m of boardManifest) {
     const b = boards.find(x => x.id === m.id)
     items.push({ id: `b:${m.id}`, group: 'Board', text: `${boardLabel(m.id)} — ${m.title}`, keywords: `${m.id} ${b?.items.map(p => p.name).join(' ') ?? ''}`, hint: b ? `${b.items.length} cards` : undefined, boost: 40, run: a => a.openBoard(m.id) })
