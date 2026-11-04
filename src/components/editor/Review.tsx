@@ -8,8 +8,9 @@
  * Both are recomputed when the main thread is idle, after the frame stops changing.
  */
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { saveAs } from 'file-saver'
 import type { DeviceFrame } from '../../engine/device'
+import { download } from '../../export/clipboard'
+import { TEST_HOOKS } from '../../lib/testHooks'
 import { cardPreset } from '../studio/doc'
 import { deviceFile, deviceFrames, devicePixels, exportScale, plotterPlan } from './devices'
 import type { EditorFrame } from './doc'
@@ -52,11 +53,11 @@ export function Devices({ f, t }: { f: EditorFrame; t: number }) {
       for (const fr of full) {
         const c = document.createElement('canvas'); paint(c, fr, exportScale(fr))
         const blob = await new Promise<Blob | null>(r => c.toBlob(r, 'image/png'))
-        if (blob) { saveAs(blob, deviceFile(name, fr)); files.push(`${fr.profile.id} ${fr.cols}×${fr.rows}`) }
+        if (blob) { download(blob, deviceFile(name, fr)); files.push(`${fr.profile.id} ${fr.cols}×${fr.rows}`) }
       }
       const plan = full.map(plotterPlan).find(Boolean)
-      if (plan) { saveAs(new Blob([plan], { type: 'image/svg+xml' }), `${name}-plotter-device.svg`); files.push('plotter pen plan SVG') }
-      ;(window as { __editorDevices?: string[] }).__editorDevices = files
+      if (plan) { download(new Blob([plan], { type: 'image/svg+xml' }), `${name}-plotter-device.svg`); files.push('plotter pen plan SVG') }
+      if (TEST_HOOKS) (window as { __editorDevices?: string[] }).__editorDevices = files
       setStatus(`${files.length} files: ${files.join(' · ')}`)
     } catch (e) { setStatus(`failed: ${(e as Error).message}`) } finally { setBusy(false) }
   }
