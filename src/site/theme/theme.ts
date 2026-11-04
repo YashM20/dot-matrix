@@ -9,7 +9,9 @@
  *    made again from the hue when the bundle runs, so a tampered entry can give nothing but a valid hue. The entry
  *    still carries that CSS (`css`) because the boot script paints from it before first paint; the store rewrites a
  *    stored copy that isn't the generator's, and drops one with no valid hue (`cleanStored`). As in the boot script,
- *    `custom` as the accent also needs a stored CSS string, so both pick the same accent.
+ *    `custom` as the accent also needs a stored CSS string that passes the strict shape test (`customPattern.ts`,
+ *    #149), so both pick the same accent. One that fails (tampered) is never painted; once the generator loads, the
+ *    store stores the hue's CSS and turns the custom accent back on, so an old entry migrates on its first visit.
  *  - `system` follows `prefers-color-scheme` live (a `matchMedia` listener while on `system`).
  *  - CONTRAST: MORE (`contrast: 'more'`, stored next to the theme, `?contrast=more` for a visit) puts
  *    `data-contrast="more"` on `<html>`: the roles of `prefers-contrast: more`, which still applies on its own. The
@@ -29,6 +31,7 @@
  */
 import type { ThemeTokens } from '../../engine/types'
 import { dot480 } from '../../engine/theme/tokens'
+import { isCustomCss } from './customPattern'
 import { DEFAULT_ACCENT, DEFAULT_SCHEME, isAccent, isAccentChoice, isContrastPref, isSchemePref, parseHue, parseThemeName, themeName, type AccentChoice, type ContrastPref, type Scheme, type SchemePref, type ThemeKey } from './names'
 
 export const STORAGE_KEY = 'dot480:theme'
@@ -64,10 +67,11 @@ export function resolvePrefs(search: string, stored: string | null): ThemePrefs 
   const q = new URLSearchParams(search), t = parseThemeName(q.get('theme')), j = storedObject(stored)
   const sq = q.get('scheme'), aq = q.get('accent')
   // the custom hue: a valid stored `hue` (the stored CSS is never read back). `custom` as the accent also needs a stored
-  // CSS string, which the boot script paints from (a link's ?accent=custom without one falls through to the next source)
+  // CSS string of the generator's shape (`isCustomCss`), which the boot script paints from (a link's ?accent=custom
+  // without one falls through to the next source)
   const sh = typeof j.hue === 'number' ? parseHue(String(j.hue)) : undefined
   const custom: CustomHue | undefined = sh === undefined ? undefined : { hue: sh }
-  const ok = (x: unknown): x is AccentChoice => isAccentChoice(x) && (x !== 'custom' || (!!custom && typeof j.css === 'string'))
+  const ok = (x: unknown): x is AccentChoice => isAccentChoice(x) && (x !== 'custom' || (!!custom && isCustomCss(j.css)))
   const scheme = [sq, t?.[0], j.scheme].find(isSchemePref) ?? DEFAULT_SCHEME
   const accent = [aq, t?.[1], j.accent].find(ok) ?? DEFAULT_ACCENT
   const contrast = [q.get('contrast'), j.contrast].find(isContrastPref) ?? 'system'
@@ -89,8 +93,12 @@ const serialize = (p: ThemePrefs): string => JSON.stringify({ scheme: p.scheme, 
  * check feeds it tampered entries).
  */
 export function cleanStored(stored: string | null, css: (hue: number) => string): string | null {
-  if (!('css' in storedObject(stored))) return null
-  const p = prefsOf(resolvePrefs('', stored)), next = serialize(p.custom ? { ...p, custom: { hue: p.custom.hue, css: css(p.custom.hue) } } : p)
+  const j = storedObject(stored)
+  if (!('css' in j)) return null
+  // resolved as if the generator's CSS were stored: a stored custom accent whose CSS failed the shape test stays custom
+  const h = typeof j.hue === 'number' ? parseHue(String(j.hue)) : undefined
+  const fixed = JSON.stringify(h === undefined ? { ...j, css: undefined } : { ...j, css: css(h) })
+  const p = prefsOf(resolvePrefs('', fixed)), next = serialize(p.custom ? { ...p, custom: { hue: p.custom.hue, css: css(p.custom.hue) } } : p)
   return next === stored ? null : next
 }
 
@@ -188,8 +196,12 @@ if (hasDom) {
     const clean = cleanStored(raw, x => m.customHue(x).css)
     // unless a pick stored something else meanwhile
     if (clean !== null && readStored() === raw) writeStored(clean)
+    // a stored custom theme the boot script couldn't paint (its CSS failed the shape test): custom again, as the
+    // repaired entry resolves, unless the URL names another accent or a pick came first
+    const again = clean === null ? undefined : resolvePrefs(location.search, clean)
     // ?hue=: the shared custom hue for this visit (a pick before the generator arrives wins)
     if (h !== undefined && !picks) update({ ...prefs, accent: 'custom', custom: m.customHue(h) })
+    else if (!picks && again?.accent === 'custom' && prefs.accent !== 'custom' && again.custom) update({ ...prefs, accent: 'custom', custom: m.customHue(again.custom.hue) })
     else fill(m)
   }, () => { /* offline: the boot theme stays */ })
 }
