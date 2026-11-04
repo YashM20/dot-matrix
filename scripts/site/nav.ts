@@ -43,7 +43,7 @@ const uid = (JSON.parse(readFileSync('src/widgets/ids.json', 'utf8')) as Record<
 
 /**
  * What the page shows, or '' while it loads: `EXPLORE:<board>`, `MAKE`, `ABOUT`, `widget:<slug>`, `widget-missing`,
- * `post` (a blog post: the URL says which), `privacy`, `terms`.
+ * `post` (a blog post: the URL says which), `privacy`, `terms`, `lab`, `crashed` (the root error boundary).
  */
 const VIEW = `(() => {
   const shell = document.querySelector('main.shell')
@@ -58,6 +58,8 @@ const VIEW = `(() => {
   }
   if (document.querySelector('main.legal')) return /terms/i.test(document.title) ? 'terms' : 'privacy'
   if (document.querySelector('main.essay.post .hero')) return 'post'
+  if (document.querySelector('main.essay.lab')) return 'lab'
+  if (document.querySelector('.root-crash')) return 'crashed'
   return ''
 })()`
 const here = (p: Page) => p.js<string>('location.pathname + location.search')
@@ -88,6 +90,11 @@ const ROUTES: [string, string, string][] = [
   [uid, 'widget:timer', '/widget/timer/'],
   ['?card=timer', 'widget:timer', '/widget/timer/'],
   ['nope/', `EXPLORE:${HOME}`, '/'],
+  // #148: a `//host` path stays on the site, a bad escape in the hash doesn't blank the page
+  ['/lock/', 'EXPLORE:lock', '/lock/'],
+  ['/evil.example/', `EXPLORE:${HOME}`, '/'],
+  ['blog/dot-matrix-essay/#%E0', 'post', ESSAY],
+  ['lab/#%E0', 'lab', '/lab/'],
 ]
 
 async function routes(p: Page) {

@@ -7,6 +7,10 @@
  * throws while rendering (the recovery screen and its reset). Also: a link waits to be confirmed (`stageLink`)
  * and stays out of the autosave until it draws once, the accessibility overlay caps what it allocates, and no
  * preset's grid, controls or bindings are refused (no false refusals).
+ * Then the follow-ups: a frame of every preset opens again after a reload (reference layers have their own cap), the
+ * autosave refuses a document that would not open again, a document or card from a file waits to draw before it is
+ * saved, a `?p=` program reaches the remix gallery only once it drew within the frame budget (#142), and the link
+ * prompt says what the link holds with KEEP and DISMISS.
  * `pnpm verify` runs them through `editorImportChecks()`; run alone with `npx tsx scripts/editor-imports.ts`.
  */
 import * as React from 'react'
@@ -14,12 +18,16 @@ import { createElement, type ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { ControlOverlay } from '../src/components/ControlOverlay'
 import { EditorBoundary, RESET_LABEL } from '../src/components/editor/EditorBoundary'
-import { blankCard, EDITOR_KEY, loadDoc, loadSaved, MAX_FRAMES, seedDoc, validateDoc, type EditorDoc, type EditorFrame } from '../src/components/editor/doc'
+import { clipOf, pasteClip } from '../src/components/editor/clip'
+import { addFrame, blankCard, docToJSON, EDITOR_KEY, loadDoc, loadSaved, MAX_FRAMES, newIRLayer, presetCard, saveChecked, seedDoc, validateDoc, type EditorDoc, type EditorFrame } from '../src/components/editor/doc'
+import { ImportPrompt } from '../src/components/editor/imports'
 import { decodeLink, linkPayload } from '../src/components/editor/link'
-import { drew, resetEditorDoc, saveable, useEditor } from '../src/components/editor/store'
+import { autosaveDoc, drew, resetEditorDoc, saveable, useEditor, whenDrawn } from '../src/components/editor/store'
 import { bindingsIssue, controlsIssue, gridIssue } from '../src/components/studio/checks'
-import { compileCard, historyOf, importPreset, newCard, type StudioCard, type StudioLayer } from '../src/components/studio/doc'
+import { compileCard, guardKey, historyOf, importPreset, layersIssue, MAX_LAYERS, MAX_REF_LAYERS, newCard, type StudioCard, type StudioLayer } from '../src/components/studio/doc'
 import { EXAMPLES } from '../src/components/dwitter/examples'
+import { userPrograms } from '../src/components/dwitter/program'
+import type { SharedProgram } from '../src/lib/share'
 import { widgetPresets } from '../src/widgets'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
@@ -98,9 +106,16 @@ export async function editorImportChecks(assert: Assert) {
   assert('E5 confirm: staging a link says what it holds and changes nothing until confirmed', !pending.already && pending.kind === 'frame' && pending.frames === 1 && /^Open frame ".+" from a link/.test(pending.summary) && s().h.present === before, pending.summary)
   const ids = pending.confirm(), opened = Array.isArray(ids) ? ids : []
   const heldBack = opened.length === 1 && s().h.present.frames.some(f => f.id === opened[0]) && !saveable(s().h.present).frames.some(f => f.id === opened[0])
+  const linked = s().h.present.frames.find(f => f.id === opened[0])
+  const linkKeys = (linked?.card.layers ?? []).flatMap(l => (l.kind === 'ir' ? [guardKey(linked!.card.grid, l.lattice, l.src || '1')] : []))
+  const ranBefore = linkKeys.every(k => userPrograms.state(k) === 'ok') // `pnpm verify` may have drawn this program in budget already
   opened.forEach(drew)
+  const drawnOnly = opened.length === 1 && (ranBefore || !saveable(s().h.present).frames.some(f => f.id === opened[0])) // a program not in budget yet still holds it (#142)
+  userPrograms.begin()
+  for (const k of linkKeys) userPrograms.field(k, 1, () => 1)(.5, .5, 0, 0)
+  userPrograms.settle(); await new Promise(r => setTimeout(r, 0))
   const released = opened.length === 1 && saveable(s().h.present).frames.some(f => f.id === opened[0])
-  assert('E5 confirm: a confirmed link is kept out of the autosave until it draws once; staged again it is open already', heldBack && released && s().stageLink(pf).already, `${heldBack} ${released}`)
+  assert('E5 confirm: a confirmed link is kept out of the autosave until it draws once and its programs kept to the frame budget; staged again it is open already', heldBack && drawnOnly && released && s().stageLink(pf).already, `${heldBack} ${drawnOnly} ${released}`)
   const prog = s().stageProgram(EXAMPLES[1] ?? EXAMPLES[0]), n0 = s().h.present.frames.length
   const pid = prog.confirm()
   assert('E5 confirm: a shared program is staged the same way and held from the autosave once inserted', /^Open program ".+" from a link/.test(prog.summary) && s().h.present.frames.length === n0 + 1 && !saveable(s().h.present).frames.some(f => f.id === pid), prog.summary)
@@ -124,6 +139,66 @@ export async function editorImportChecks(assert: Assert) {
     if (why || b) fails.push(`${p.id}: ${why ?? b}`)
   }
   assert(`E5 corrupt: the seed document passes, and so do the grids, controls and bindings of all ${widgetPresets.length} presets (no false refusals)`, !fails.length && thrown(() => validateDoc(JSON.parse(JSON.stringify(seed)))) === '', fails.slice(0, 4).join(' | '))
+
+  // ── #143: every preset opens again after a reload as a reference frame (more than 24 layers, live text ids, long text)
+  const refFails: string[] = []
+  for (const p of widgetPresets) {
+    let card: StudioCard
+    try { card = presetCard(p.id) } catch { continue } // a control with a drag map: not offered as a frame
+    const why = thrown(() => validateDoc(JSON.parse(docToJSON(addFrame(seed, card, { source: `preset:${p.id}` }).doc))))
+    if (why) refFails.push(`${p.id} (${card.layers.length} layers): ${why}`)
+  }
+  assert('#143 reference: a frame of every preset (vision-camera has 56 layers, live cards keep text ids past 1e9) opens again after a reload', !refFails.length, refFails.slice(0, 4).join(' | '))
+  const refs = (n: number) => Array.from({ length: n }, () => ({ kind: 'preset-layer' })), own = (n: number) => Array.from({ length: n }, () => ({ kind: 'ir' }))
+  const counts = [layersIssue([...own(MAX_LAYERS), ...refs(MAX_REF_LAYERS)]), layersIssue(own(MAX_LAYERS + 1)), layersIssue(refs(MAX_REF_LAYERS + 1))]
+  assert(`#143 reference: a card holds ${MAX_LAYERS} layers of its own plus ${MAX_REF_LAYERS} reference layers, and one more of either is refused`, counts[0] === undefined && /at most 24 layers of its own \(this one has 25\)/.test(counts[1] ?? '') && /at most 96 reference layers/.test(counts[2] ?? ''), counts.join(' | '))
+  const vc = addFrame(seed, presetCard('vision-camera')), irOf = (f: EditorFrame) => f.card.layers.find(l => l.kind === 'ir')!
+  const clip = clipOf(vc.doc, { frame: code.id, layer: irOf(code).id }), into = clip && pasteClip(vc.doc, clip, { frame: vc.frame.id })
+  const full = addFrame(seed, { ...blankCard(), layers: Array.from({ length: MAX_LAYERS }, (_, i) => newIRLayer(i)) }), over = clip && pasteClip(full.doc, clip, { frame: full.frame.id })
+  assert('#143 reference: a layer pastes into a 56-layer reference frame; a frame with 24 layers of its own refuses one more, with the reason', !!into && typeof into !== 'string' && /a frame holds at most 24 layers of its own/.test(String(over)), `${typeof into === 'string' ? into : 'pasted'} | ${typeof over === 'string' ? over : 'pasted'}`)
+
+  // ── #143: the autosave only writes what opens again; a document from a file waits to draw before it replaces the saved one
+  const kvS = memKV(), good = JSON.stringify(seed)
+  kvS.setItem(EDITOR_KEY, good)
+  const tooMany = { ...full.doc, frames: full.doc.frames.map(f => (f.id === full.frame.id ? { ...f, card: { ...f.card, layers: [...f.card.layers, newIRLayer(99)] } } : f)) }
+  const refusedSave = saveChecked(tooMany, kvS), keptSave = kvS.m.get(EDITOR_KEY) === good, okSave = saveChecked(seed, kvS)
+  assert('#143 save: an edit the checks would refuse on reload is not autosaved (the saved document stays, the reason comes back)', typeof refusedSave === 'string' && /at most 24 layers of its own/.test(refusedSave) && keptSave && okSave === true, String(refusedSave))
+  useEditor.setState({ h: historyOf(seed), sel: {} })
+  const fileDoc: EditorDoc = { ...seed, name: 'from a file', frames: seed.frames.map((f, i) => ({ ...f, id: `file${i}` })) }
+  useEditor.getState().openDoc(fileDoc)
+  const heldDoc = autosaveDoc() === undefined && useEditor.getState().h.present === fileDoc
+  fileDoc.frames.slice(0, -1).forEach(f => drew(f.id))
+  const stillHeld = autosaveDoc() === undefined
+  drew(fileDoc.frames[fileDoc.frames.length - 1].id)
+  const freed = autosaveDoc()
+  assert('#143 file: a document opened from a file replaces this one, but the autosave keeps the saved one until each of its frames drew once', heldDoc && stillHeld && !!freed && freed.frames.length > 0 && freed.frames.every(f => fileDoc.frames.some(x => x.id === f.id)), `${heldDoc} ${stillHeld} ${freed?.frames.length}`)
+  const cardFile = useEditor.getState().insertCard(blankCard(), { source: 'file' }), cardHeld = !autosaveDoc()!.frames.some(f => f.id === cardFile)
+  drew(cardFile)
+  assert('#143 file: a card from a file is held from the autosave until it draws once', cardHeld && autosaveDoc()!.frames.some(f => f.id === cardFile))
+
+  // ── #142: a ?p= program goes into the remix gallery (and the autosave) only once it drew one frame within budget
+  const tick = () => new Promise(r => setTimeout(r, 0))
+  const progOf = (src: string): SharedProgram => ({ src, grid: 'square', lattice: 2, tone: 'auto' })
+  const keyOf = (id: string) => { const f = useEditor.getState().h.present.frames.find(x => x.id === id)!, l = irOf(f) as StudioLayer & { src: string; lattice: number }; return guardKey(f.card.grid, l.lattice, l.src) }
+  const fast = useEditor.getState().stageProgram(progOf('// gallery hold\n.5 + .5 * sin(u * 7.25 - t)')).confirm()
+  let recorded = 0
+  whenDrawn(fast, () => recorded++)
+  drew(fast); await tick()
+  const afterDraw = recorded, savedEarly = autosaveDoc()!.frames.some(f => f.id === fast)
+  userPrograms.begin(); userPrograms.field(keyOf(fast), 1, () => 1)(.5, .5, 0, 0); userPrograms.settle(); await tick()
+  assert('#142 gallery: a kept program is recorded and autosaved only after it drew once and kept to the frame budget', afterDraw === 0 && !savedEarly && recorded === 1 && autosaveDoc()!.frames.some(f => f.id === fast), `${afterDraw} ${savedEarly} ${recorded}`)
+  const slow = useEditor.getState().stageProgram(progOf('// gallery slow\n.5 + .5 * sin(v * 9.5 + t)')).confirm()
+  let slowRecorded = 0
+  whenDrawn(slow, () => slowRecorded++)
+  // performance.now (the guard's clock): `pnpm verify` pins Date. Capped, so a stubbed clock can't spin forever
+  const busy = () => { const end = performance.now() + 60; for (let i = 0; i < 5e8 && performance.now() < end; i++) { /* a frame past the budget */ } return 1 }
+  userPrograms.begin(); const g = userPrograms.field(keyOf(slow), 1e6, busy); g(.5, .5, 0, 0); g(.5, .5, 0, 0); userPrograms.settle(); drew(slow); await tick()
+  assert('#142 gallery: a program paused for running past the budget is never recorded in the gallery nor autosaved', userPrograms.state(keyOf(slow)) === 'paused' && slowRecorded === 0 && !autosaveDoc()!.frames.some(f => f.id === slow), `${userPrograms.state(keyOf(slow))} ${slowRecorded}`)
+  useEditor.setState({ h: historyOf(seed), sel: {} })
+
+  // ── #143: the link prompt (KEEP / DISMISS, an alert dialog naming what the link holds)
+  const ask = renderToStaticMarkup(createElement(ImportPrompt, { prompt: { id: 1, summary: 'Open frame "level 03" from a link', keep() {}, dismiss() {} } }))
+  assert('#143 confirm: the link prompt is an alert dialog that says what the link holds, with KEEP and DISMISS buttons', /role="alertdialog"/.test(ask) && /aria-describedby="ed-confirm-d"/.test(ask) && ask.includes('Open frame &quot;level 03&quot; from a link.') && />KEEP</.test(ask) && />DISMISS</.test(ask), ask.slice(0, 200))
 
   // ── a document that throws while rendering: the recovery screen, and its reset (last: it stops this process's autosave)
   const screen = new EditorBoundary({ area: 'canvas' })

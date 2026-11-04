@@ -24,9 +24,10 @@ export interface FlagDef {
 }
 
 export const FLAGS = [
-  { id: 'xray', default: false, description: 'X-ray: the per-card ⓘ overlay and inspector, the dock button and TOOLS tile, the X keys, the palette action and the shell command' },
+  { id: 'xray', default: false, description: 'X-ray: the per-card ⓘ overlay and inspector, the dock button and TOOLS tile, the widget page pill and menu item, the intro line, the X keys, the palette action and the shell command' },
   { id: 'worker', default: true, description: 'Sample cards in a web worker; off samples on the main thread', param: 'worker' },
   { id: 'clack', default: false, description: 'The flip-disc clack sound', param: 'clack' },
+  { id: 'likes', default: false, description: 'Likes (#169): the like button on widget pages and gallery programs; it also hides while the likes API answers 404' },
   { id: 'make', default: false, description: 'MAKE, the editor: the view tab and phone tab, the palette and shell places, REMIX and studio actions, About and essay links. Off, a MAKE URL opens the home board' },
   { id: 'lab', default: false, description: 'The lab page (/lab/): the header, footer, TOOLS, About, blog nav and sitemap links. Off, /lab/ goes home' },
 ] as const satisfies readonly FlagDef[]

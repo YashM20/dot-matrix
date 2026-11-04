@@ -11,7 +11,8 @@ import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { sampleLayers } from '../../engine/sampler/gridSampler'
 import { useThemeTokens } from '../../site/theme/useTheme'
 import { clearGallery, graphLayers, layoutGraph, loadGallery, nodeAt, type Entry } from '../dwitter/gallery'
-import { DOTS_STYLE } from '../dwitter/program'
+import { DOTS_STYLE, sandboxedThumbs, userRemote } from '../dwitter/program'
+import { ProgramLikes } from '../likes/slot'
 import type { EditorFrame } from './doc'
 import { lineage, linkSource, loadLinks } from './link'
 import { useEditor } from './store'
@@ -20,6 +21,8 @@ import { Section } from './ui'
 const graphStyle = { ...DOTS_STYLE, sizeMin: .15, sizeMax: .62 }
 /** The thumbnails' own time budget: a gallery program too slow for this device draws an empty slot. */
 const thumbs = irGuard()
+/** The same budget, with the programs sampled in the IR sandbox worker while it runs. */
+const remoteThumbs = sandboxedThumbs(thumbs, userRemote)
 /**
  * localStorage reads keyed by a stamp the caller bumps after a write. The stamp is an input on purpose: the React
  * Compiler memoizes by what a callback reads, so a dependency the callback never reads would never refresh it.
@@ -32,21 +35,26 @@ export function RemixGraph({ current, version = 0 }: { current?: string; version
   const [cleared, setCleared] = useState(0)
   const list = useMemo(() => galleryAt(version + cleared), [version, cleared])
   const graph = useMemo(() => layoutGraph(list), [list])
-  const theme = useThemeTokens(), ref = useRef<HTMLCanvasElement>(null)
+  const theme = useThemeTokens(), ref = useRef<HTMLCanvasElement>(null), [landed, setLanded] = useState(0)
   useEffect(() => {
     const c = ref.current
     if (!c) return
+    let gone = false
     const h = setTimeout(() => {
       const ctx = c.getContext('2d'), g = graph.grid, k = Math.min(2, window.devicePixelRatio || 1)
       if (!ctx) return
       c.width = Math.round(g.cols * g.pitch! * k); c.height = Math.round(g.rows * g.pitch! * k)
       ctx.setTransform(k, 0, 0, k, 0, 0); ctx.fillStyle = theme.surface; ctx.fillRect(0, 0, c.width, c.height)
-      renderCanvas(ctx, sampleLayers(graphLayers(graph, current, undefined, thumbs), g, graphStyle, theme))
+      userRemote.begin()
+      renderCanvas(ctx, sampleLayers(graphLayers(graph, current, undefined, remoteThumbs), g, graphStyle, theme))
       thumbs.settle()
+      // thumbnails whose values were still in the worker drew empty: draw again once they land
+      const done = userRemote.flush(() => { if (!gone) setLanded(n => n + 1) })
+      c.dataset.pending = done ? '' : '1'
       c.dataset.nodes = String(graph.nodes.length); c.dataset.cols = String(g.cols); c.dataset.rows = String(g.rows)
-    }, 60)
-    return () => clearTimeout(h)
-  }, [graph, current, theme])
+    }, landed ? 0 : 60)
+    return () => { gone = true; clearTimeout(h) }
+  }, [graph, current, theme, landed])
   const open = (e: Entry) => { useEditor.getState().insertProgram(e) }
   const pick = (e: MouseEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect(), n = nodeAt(graph, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)
@@ -59,6 +67,7 @@ export function RemixGraph({ current, version = 0 }: { current?: string; version
     {chain.length > 1 && <p className="ed-lineage" aria-label="Remix lineage">{chain.map((e, i) => <span key={e.id}>{i ? ' ← ' : ''}<b>{e.name}</b> #{e.id}</span>)}</p>}
     {current && chain.length <= 1 && <p className="ed-hint">{chain.length ? 'An original: nothing above it here.' : 'Not shared yet: COPY LINK adds it to the graph, under the program it came from.'}</p>}
     <div className="ed-graph"><canvas ref={ref} onClick={pick} role="img" aria-label={`Remix graph: ${list.length} programs; click one to open it`} title="Open a program" style={{ aspectRatio: `${graph.grid.cols} / ${graph.grid.rows}` }} /></div>
+    <ProgramLikes entries={list.filter(e => e.seed || e.id === current)} />
     {own.length > 0 && <ul className="ed-mini-list ed-remixes">{own.map(e => <li key={e.id}><button type="button" aria-current={e.id === current || undefined} title={e.parent ? `remix of #${e.parent}` : 'original'} onClick={() => open(e)}>{e.name} <small>#{e.id}{e.parent ? ` ← #${e.parent}` : ''}</small></button></li>)}</ul>}
     {own.length > 0 && <div className="ed-row-btns"><button type="button" onClick={() => { clearGallery(); setCleared(n => n + 1) }}>CLEAR MY PROGRAMS</button></div>}
   </Section>

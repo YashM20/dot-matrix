@@ -31,6 +31,11 @@ export interface IRGuard {
   state(key: string): GuardState
   /** Clear a pause, so the program gets another try. */
   resume(key: string): void
+  /**
+   * A frame of program `key` ran somewhere else (the sandbox worker, `sandbox/remote.ts`): `ok` marks a new program
+   * drawn, `paused` holds it like a frame that ran out of time here. Watchers hear it only when the state changes.
+   */
+  report(key: string, state: 'ok' | 'paused'): void
   /** Called (after the frame, not inside it) when a program becomes `ok` or `paused`. Returns an unsubscribe. */
   watch(fn: (key: string, state: GuardState) => void): () => void
 }
@@ -69,6 +74,7 @@ export function irGuard(ms = IR_FRAME_MS, now: () => number = () => performance.
     },
     state: key => states.get(key) ?? 'new',
     resume: key => { if (states.get(key) === 'paused') states.delete(key) },
+    report(key, s) { if (s === 'paused' ? states.get(key) !== 'paused' : !states.has(key)) emit(key, s) },
     watch: fn => { fns.add(fn); return () => { fns.delete(fn) } },
   }
 }

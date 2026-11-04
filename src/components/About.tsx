@@ -2,7 +2,7 @@
  * ABOUT (UX U3, docs/UX-PLAN.md §4.1): what this is, the essay, shortcuts and URL params, and the visitor
  * changelog (the old LOG tab). A lazy chunk, like every view but EXPLORE.
  */
-import { SHORTCUTS, URL_PARAMS, type Shortcut } from '../site/shortcuts'
+import { SHELL_KEYS, SHORTCUTS, URL_PARAMS, type Shortcut } from '../site/shortcuts'
 import { Changelog } from './Changelog'
 import { useFlag } from '../site/useFlag'
 
@@ -24,6 +24,7 @@ export function About() {
       <div className="about-cols" id="shortcuts">
         <Keys title="KEYBOARD" rows={SHORTCUTS} />
         <Keys title="URL" rows={make ? URL_PARAMS : URL_PARAMS.filter(r => !r.keys.startsWith('?make'))} />
+        <Keys title="DOT SHELL (TYPE HELP)" rows={SHELL_KEYS} />
       </div>
     </section>
     <Changelog />

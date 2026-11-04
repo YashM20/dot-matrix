@@ -95,7 +95,15 @@ function helpers(p: Page) {
   }
   /** Leave time for the debounced autosave before the next navigation. */
   const go = async (url: string, ready = `!!document.querySelector('.ed-frame')`) => { await sleep(700); await p.cdp('Page.navigate', { url }); const ok = await p.waitFor(ready, 30000); await sleep(600); return ok }
-  return { rect, frameRect, lit, sel, frameIds, tool, tab, sizeOf, text, clickText, setValue, setLabeled, typeIR, blur, uncovered, layerRows, downloaded, fresh, go }
+  /** A link that adds something (#143): the editor asks first. Waits for the prompt (optionally shot), presses KEEP, then waits for `ready`. */
+  const keep = async (url: string, ready = `!!document.querySelector('.ed-frame')`, shot?: string) => {
+    await sleep(700); await p.cdp('Page.navigate', { url })
+    const asked = await p.waitFor(`!!document.querySelector('.ed-confirm .ed-confirm-keep')`, 30000)
+    if (shot) await p.shot(shot)
+    await p.js(`document.querySelector('.ed-confirm .ed-confirm-keep')?.click()`)
+    const ok = await p.waitFor(ready, 30000); await sleep(600); return asked && ok
+  }
+  return { rect, frameRect, lit, sel, frameIds, tool, tab, sizeOf, text, clickText, setValue, setLabeled, typeIR, blur, uncovered, layerRows, downloaded, fresh, go, keep }
 }
 const near = (a: number, b: number, tol = 1.5) => Math.abs(a - b) <= tol
 const mid = (r: Rect) => [r.x + r.w / 2, r.y + r.h / 2] as const
@@ -259,7 +267,7 @@ async function desktop() {
     const link = await p.js<string>(`window.__editorLink ?? ''`)
     check('COPY LINK makes a compact ?make=code&p=z… link', /\?make=code&p=z[A-Za-z0-9_-]+$/.test(link) && link.length < 400, `${link.length} chars`)
     const n0 = (await h.frameIds()).length
-    check('opening the link shows the same program', await h.go(link, `document.querySelector('.ed-insp .dw-code textarea')?.value === ${JSON.stringify(PROGRAM)}`))
+    check('opening the link asks first, then KEEP shows the same program', await h.keep(link, `document.querySelector('.ed-insp .dw-code textarea')?.value === ${JSON.stringify(PROGRAM)}`))
     const n1 = (await h.frameIds()).length
     await h.go(link, `!!document.querySelector('.ed-insp .dw-code textarea')`); await sleep(600)
     check('opening the same link again re-selects its frame instead of adding a copy', (await h.frameIds()).length === n1 && n1 <= n0 + 1, `${n0} → ${n1} → ${(await h.frameIds()).length}`)
@@ -295,7 +303,7 @@ async function desktop() {
     await p.cdp('Page.navigate', { url: `${base}?tab=dots&p=zNotARealLink` })
     check('a corrupt link shows an error banner', await p.waitFor(`/Could not open/.test(document.querySelector('.ed-banner')?.textContent ?? '')`, 30000), await h.text('.ed-banner'))
     const bad = await encodeShare({ src: 'let x = u * ;\nx', grid: 'square', lattice: 2, tone: 'auto' })
-    await h.go(`${base}?tab=dots&p=${bad}`, `!!document.querySelector('.dw-error')`); await sleep(600)
+    await h.keep(`${base}?tab=dots&p=${bad}`, `!!document.querySelector('.dw-error')`); await sleep(600)
     check('an invalid shared program shows its IR error and is not run', /^1:\d+/.test(await h.text('.dw-error')) && (await h.lit()).n === 0, await h.text('.dw-error'))
     await p.shot(join(out, 'desktop-04-links.png'))
     await desktopFit(p)
@@ -868,8 +876,14 @@ async function desktopE5(p: Page, h: Helpers) {
   const link = await p.js<string>(`window.__editorLink`), info = await h.text('.ed-insp .ed-url'), id = /#([0-9a-f]{8})/.exec(info)?.[1] ?? ''
   check('E5: FRAME LINK makes a deflated ?make&d=… link under the cap, shown with its length and id', linkRe.test(link) && link.length < 12000 && /FRAME LINK \d+ CHARS · DEFLATE · #[0-9a-f]{8}/.test(info) && await p.js(`document.querySelector('.ed-insp .ed-link-url').value`) === link, `${link.length} chars; ${info}`)
 
+  // #143: the link asks first. Nothing is added while it waits, KEEP has the focus, Esc dismisses (nothing added)
+  await sleep(700); await p.cdp('Page.navigate', { url: link })
+  const asked = await p.waitFor(`!!document.querySelector('.ed-confirm')`, 30000); await sleep(600)
+  const prompt = await h.text('.ed-confirm'), waiting = await count(), focused = await p.js<boolean>(`document.activeElement?.classList.contains('ed-confirm-keep') ?? false`)
+  await p.key('Escape', 'Escape', 27); await sleep(400)
+  check('#143: a frame link asks first (what it holds, KEEP focused); nothing is added while it waits, and Esc dismisses it', asked && /OPEN THIS LINK\?/.test(prompt) && /Open frame ".+" from a link/.test(prompt) && focused && waiting === n0 && !(await p.js(`!!document.querySelector('.ed-confirm')`)) && await count() === n0, `${prompt}; ${waiting} frames; focus ${focused}`)
   // open it: one new frame, selected, drawn; a reload and Back keep it to one
-  const opened = await h.go(link, `document.querySelectorAll('.ed-frame').length === ${n0 + 1} && !!window.__editor?.sel`)
+  const opened = await h.keep(link, `document.querySelectorAll('.ed-frame').length === ${n0 + 1} && !!window.__editor?.sel`, join(out, 'desktop-e5-confirm.png'))
   const ids1 = await h.frameIds(), got = ids1.find(x => x !== f0 && x === (ids1[ids1.length - 1]))!
   check('E5: opening the frame link adds the frame once, selects it and draws it', opened && await sel() === got && (await h.lit(got)).n > 500, `${n0} → ${ids1.length}; sel ${await sel()}`)
   await sleep(700); await p.cdp('Page.reload')
@@ -899,7 +913,7 @@ async function desktopE5(p: Page, h: Helpers) {
   const docLink = await p.js<string>(`window.__editorLink`), note = await h.text('.ed-note')
   check('E5: SHARE with nothing selected copies a link of the whole document', !(await sel()) && linkRe.test(docLink) && /whole document/.test(note), `${docLink.length} chars; ${note}`)
   await sleep(700); await p.js(`localStorage.removeItem('dot480.editor.v1')`)
-  const docOpened = await h.go(docLink, `document.querySelectorAll('.ed-frame').length >= ${3 + nDoc}`)
+  const docOpened = await h.keep(docLink, `document.querySelectorAll('.ed-frame').length >= ${3 + nDoc}`)
   check('E5: the document link opens every frame (beside the starter canvas of a fresh visit)', docOpened, `${await count()} frames, want ${3 + nDoc}`)
 
   // the review folds: every device, exported; the scorecard and the bar sheet
@@ -938,6 +952,15 @@ async function desktopE5(p: Page, h: Helpers) {
   await p.mouse('mouseMoved', g.x + g.w * (64 / cols), g.y + g.h * (22 / rows), 0); await p.mouse('mousePressed', g.x + g.w * (64 / cols), g.y + g.h * (22 / rows)); await p.mouse('mouseReleased', g.x + g.w * (64 / cols), g.y + g.h * (22 / rows)); await p.waitFor(`document.querySelectorAll('.ed-frame').length === ${n1 + 1}`, 15000)
   check('E5: a click on a node in the remix graph opens that program as a frame', await count() === n1 + 1, `${n1} → ${await count()}`)
   await p.shot(join(out, 'desktop-e5-remix.png'))
+
+  // #143: a render crash anywhere in the editor shows the recovery screen; RESET EDITOR DOCUMENT reloads a fresh document
+  await p.js(`window.__editorCrash = true`); await p.key('?', 'Slash', 191)
+  const crashed = await p.waitFor(`!!document.querySelector('.ed-crash[data-area="editor"]')`, 10000)
+  const screen = await h.text('.ed-crash[data-area="editor"]')
+  await p.shot(join(out, 'desktop-e5-recovery.png'))
+  await p.js(`[...document.querySelectorAll('.ed-crash[data-area="editor"] button')].find(b => b.textContent === 'RESET EDITOR DOCUMENT')?.click()`)
+  const back = await p.waitFor(`document.querySelectorAll('.ed-frame').length === 3 && !document.querySelector('.ed-crash')`, 60000)
+  check('#143: a crash in the editor shows the recovery screen (not a blank page); RESET EDITOR DOCUMENT brings back the starter canvas', crashed && /THE EDITOR STOPPED · EDITOR/.test(screen) && /probe: the editor was asked to crash/.test(screen) && back, screen.slice(0, 160))
 }
 
 async function phoneE5(p: Page, h: Helpers, tapEl: (s: string) => Promise<void>) {
@@ -951,7 +974,7 @@ async function phoneE5(p: Page, h: Helpers, tapEl: (s: string) => Promise<void>)
   const link = await p.js<string>(`window.__editorLink ?? ''`)
   check('phone E5: SHARE on the selected frame makes a frame link', ok && linkRe.test(link), `${link.length} chars`)
   if (await p.js(`!!document.querySelector('.ed-sheet')`)) await tapEl('.ed-sheet-head [aria-label="Close"]')
-  const opened = await h.go(link, `document.querySelectorAll('.ed-frame').length === ${n0 + 1} && !!window.__editor?.sel`)
+  const opened = await h.keep(link, `document.querySelectorAll('.ed-frame').length === ${n0 + 1} && !!window.__editor?.sel`, join(out, 'phone-e5-confirm.png'))
   const got = (await h.frameIds())[n0]
   check('phone E5: the link opens on the phone: one new frame, selected and drawn, no horizontal overflow', opened && await p.js(`window.__editor?.sel`) === got && (await h.lit(got)).n > 100 && await p.js(`document.documentElement.scrollWidth <= 390`))
   await sleep(700); await p.cdp('Page.reload')
