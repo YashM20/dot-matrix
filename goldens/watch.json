@@ -1,0 +1,88 @@
+{
+ "about": "FNV-1a 32 of the sorted quantized dot list per preset on the watch board (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
+ "presets": {
+  "watch-analog": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "a7f0cb48",
+    "dots": 608
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "a7f0cb48",
+    "dots": 608
+   }
+  },
+  "watch-digital": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "432e02a6",
+    "dots": 687
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "432e02a6",
+    "dots": 687
+   }
+  },
+  "watch-complications": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "025f2968",
+    "dots": 1249
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "3dd9028a",
+    "dots": 1249
+   }
+  },
+  "watch-moon": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "2c5a4181",
+    "dots": 814
+   }
+  },
+  "watch-tide": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "b3eef45e",
+    "dots": 872
+   }
+  },
+  "watch-sun": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "27f7b690",
+    "dots": 839
+   }
+  },
+  "watch-world": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "6b388f78",
+    "dots": 1321
+   }
+  },
+  "watch-steps": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "7fb57366",
+    "dots": 870
+   }
+  },
+  "watch-faces": {
+   "t=0": {
+    "style": "squircle:2.00",
+    "hash": "4bc4b0ad",
+    "dots": 616
+   },
+   "t=1.3": {
+    "style": "squircle:2.00",
+    "hash": "4bc4b0ad",
+    "dots": 616
+   }
+  }
+ }
+}

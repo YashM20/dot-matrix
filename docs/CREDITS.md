@@ -37,6 +37,13 @@ By David Smith, Joseph Samuel Myers, Craig S. Kaplan, Chaim Goodman-Strauss.
 
 - Squares Hat (`sq-hat`), board `/squares/`: technique
 
+### [Astronomical Algorithms](https://en.wikipedia.org/wiki/Astronomical_Algorithms)
+
+By Jean Meeus.
+
+- Moon (`watch-moon`), board `/watch/`: moon phase from the series of chapters 47 and 48
+- Sun (`watch-sun`), board `/watch/`: sunrise and sunset from the solar position, as in the NOAA solar calculator
+
 ### [Better fog](https://iquilezles.org/articles/fog/)
 
 By Inigo Quilez.
