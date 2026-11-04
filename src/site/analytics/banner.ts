@@ -9,10 +9,14 @@ export function showBanner(choose: (on: boolean) => void): () => void {
   const box = document.createElement('section'), space = document.createElement('div')
   box.className = 'consent'
   box.setAttribute('aria-label', 'Analytics')
-  box.innerHTML = '<p class="consent-head">ANALYTICS</p>'
-    + '<p class="consent-text">With your OK, this site counts page views and the buttons you press, through PostHog. '
-    + 'It never sends what you type, and it sets no cookies. <a href="/privacy">More on the privacy page</a>.</p>'
-    + '<div class="consent-actions"><button type="button" data-on="1">ALLOW</button><button type="button" data-on="0">NO THANKS</button></div>'
+  // built node by node: the CSP's Trusted Types refuse a plain string in innerHTML (src/lib/trusted.ts)
+  const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLElementTagNameMap[K]>, ...kids: (Node | string)[]) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e }
+  const button = (on: string, text: string) => { const b = el('button', { type: 'button' }, text); b.dataset.on = on; return b }
+  box.append(
+    el('p', { className: 'consent-head' }, 'ANALYTICS'),
+    el('p', { className: 'consent-text' }, 'With your OK, this site counts page views and the buttons you press, through PostHog. '
+      + 'It never sends what you type, and it sets no cookies. ', el('a', { href: '/privacy' }, 'More on the privacy page'), '.'),
+    el('div', { className: 'consent-actions' }, button('1', 'ALLOW'), button('0', 'NO THANKS')))
   space.className = 'consent-space'
   space.setAttribute('aria-hidden', 'true')
   const fit = () => { space.style.height = `${box.offsetHeight + 16}px` }

@@ -1,4 +1,5 @@
 import './site/clean-address' // first: `//path` → `/path` before anything reads the address (#148)
+import './lib/trusted' // the Trusted Types policies (#149), before any worker starts
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'

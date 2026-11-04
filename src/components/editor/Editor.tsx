@@ -169,7 +169,7 @@ function ToolButton({ t, phone }: { t: typeof TOOLS[number]; phone: boolean }) {
 }
 
 const LINK_WHAT = { program: 'this program', frame: 'this frame', doc: 'these frames' } as const
-/** The probe's view of the last SHARE: what the share sheet, the clipboard or EXPORT · LINK did with it. */
+/** The probe's view of the last SHARE (test hooks only): what the share sheet, the clipboard or EXPORT · LINK did with it. */
 declare global { interface Window { __editorShared?: ShareOutcome } }
 /**
  * SHARE (E5): a selected code layer → its program link; selected frames → a frame link (one) or a link of
@@ -185,7 +185,7 @@ async function share() {
     s.setLink(m)
     const name = m.kind === 'program' ? 'a dot program' : m.kind === 'frame' ? (frameById(s.h.present, s.sel.frame)?.card.name ?? 'a frame') : s.h.present.name
     const out: ShareOutcome = isPhone() ? await shareLink({ url: m.url, title: `${name} · Matrix`, text: `Open ${what} in the Matrix editor` }, copyText) : (await copyText(m.url)) ? 'copied' : 'manual'
-    window.__editorShared = out
+    if (TEST_HOOKS) window.__editorShared = out
     if (out === 'shared') s.setNote(`Link shared (${m.chars} chars): it opens ${what} in the editor`)
     else if (out === 'copied') s.setNote(`Link copied (${m.chars} chars): it opens ${what} in the editor`)
     else if (out === 'manual') { toExport(); s.setNote('Link ready: copy it from EXPORT · LINK') }

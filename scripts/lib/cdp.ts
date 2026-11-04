@@ -56,6 +56,9 @@ export interface LaunchOptions {
   /** Show real scrollbars (Chrome runs with `--hide-scrollbars` otherwise), so a `100vw` width that ignores the
    * scrollbar's width overflows here as it does on Windows desktops. */
   scrollbars?: boolean
+  /** Set `__DOT_PROBE__` on every page, so a production build exposes its test hooks (default on). Off: the page runs
+   * as a visitor's would (scripts/site/csp-browser.ts checks no test global is left then). */
+  testHooks?: boolean
 }
 
 export async function launch(width: number, height: number, opts: LaunchOptions = {}): Promise<Page> {
@@ -134,7 +137,8 @@ export async function launch(width: number, height: number, opts: LaunchOptions 
   // MAKE and the lab are behind flags that are off by default (src/site/flags.ts); the probes test them, so each page
   // starts with both on unless the probe saved its own choice (`setFlag`) or the URL turns one off (`?flags=-make`)
   const flagsOn = `try{var k='dot480:flags',o=JSON.parse(localStorage.getItem(k)||'{}');if('make' in o&&'lab' in o)throw 0;if(!('make' in o))o.make=true;if(!('lab' in o))o.lab=true;localStorage.setItem(k,JSON.stringify(o))}catch(e){}`
-  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `globalThis.__DOT_PROBE__ = true;${flagsOn}` })
+  // `testHooks: false` opens the page as a visitor's: no probe flag (the MAKE and lab flags still on)
+  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `${opts.testHooks !== false ? 'globalThis.__DOT_PROBE__ = true;' : ''}${flagsOn}` })
   const allowDownloads = async (dir: string) => {
     const r = await cdp('Browser.setDownloadBehavior', { behavior: 'allowAndName', downloadPath: dir, eventsEnabled: true })
     if (r.error) await cdp('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: dir })

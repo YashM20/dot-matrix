@@ -334,7 +334,7 @@ function stop() {
 /**
  * The hub as a board `Source`. Fixture (what goldens and snapshots see):
  * `{ lightSrc: 0, lightAz: 0, lightEl: 7, gx: 0, gy: 1, tx: 0, ty: 0, tilt: 0 }`. `push({ beta, gamma, angle? })`
- * feeds one orientation sample by hand (devtools / `window.dot480Live.light`).
+ * feeds one orientation sample by hand (devtools in a dev build / `window.dot480Live.light`).
  */
 export const lightSource: Source<{ beta: number; gamma: number; angle?: number }> = {
   id: 'light',

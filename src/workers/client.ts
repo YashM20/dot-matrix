@@ -11,6 +11,8 @@ import { dotBufferOver, type DotBuffer } from '../engine/buffer/dotBuffer'
 import type { DotStyle, GridConfig, ThemeTokens } from '../engine/types'
 import { workerIds } from '../widgets/registry'
 import { flag } from '../site/flags'
+// the Trusted Types policies, before the worker starts (its script URL goes through the default policy)
+import '../lib/trusted'
 import type { DropRequest, SampleReply, SampleRequest } from './protocol'
 
 let worker: Worker | null | undefined
