@@ -13,6 +13,7 @@
  * stored. The camera is only requested from `handMode.set(true)` (a user's tap), released when switched off
  * or the tab is hidden. Browser only, framework-free; React reads it through `useSyncExternalStore`.
  */
+import { TEST_HOOKS } from '../lib/testHooks'
 import { acquireCamera, releaseCamera } from '../media/stream'
 import { createHandTracker, type HandObservation, type HandTracker } from './tracker'
 
@@ -31,7 +32,7 @@ export interface HandModeState {
   /** Pinched (pointer down). */
   down: boolean
 }
-/** Per-frame debug / test hook: `globalThis.__dotHandLog(obs, ms, t)` after every tracked frame. */
+/** Per-frame debug / test hook: `globalThis.__dotHandLog(obs, ms, t)` after every tracked frame (only while `TEST_HOOKS`). */
 type LogHook = { __dotHandLog?: (obs: HandObservation, ms: number, t: number) => void }
 
 let state: HandModeState = { on: false, status: 'idle', present: false, down: false }
@@ -152,7 +153,7 @@ function frame(now: number, presented?: number) {
   const a = performance.now(), px = ctx.getImageData(0, 0, W, H).data
   const o = (tracker ??= createHandTracker(W, H)).push(px, now / 1000)
   apply(o)
-  ;(globalThis as LogHook).__dotHandLog?.(o, performance.now() - a, now)
+  if (TEST_HOOKS) (globalThis as LogHook).__dotHandLog?.(o, performance.now() - a, now)
 }
 
 async function start() {
