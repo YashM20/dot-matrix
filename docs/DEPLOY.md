@@ -67,7 +67,7 @@ Release flags live in `src/site/flags.ts`, one registry entry each (`id`, `defau
   - `worker-src 'self' blob:`: the sample worker and the audio scheduler's timer worker.
   - `style-src 'self' 'unsafe-inline'`: React style attributes.
   - `img-src`/`media-src` allow `data:`, `blob:` and `mediastream:` (exports, camera).
-  - `connect-src`: `'self'` and the live board's APIs (Open-Meteo, GitHub, the contributions API). No WebSocket sources: the live board's now-playing card reads the page's Media Session by default, and a `?np=` socket URL is blocked in production until #147 decides its allowlist.
+  - `connect-src`: `'self'` and the live board's APIs (Open-Meteo, GitHub, the contributions API). No WebSocket sources: the live board's now-playing card reads the page's Media Session and same-origin pushes, and no URL parameter can name a host (#147 removed `?np=`).
   - `frame-ancestors 'self'`: only this site can frame its pages. An embed route would need its own header block with its own `frame-ancestors`.
   - `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`.
   - WebCodecs and `getUserMedia` need no CSP grant.

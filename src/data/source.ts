@@ -12,7 +12,7 @@
  *   numbers (and the strings behind text ids), nothing else.
  * Plain TypeScript, no framework; `env` is injectable so tests drive time, fetch and storage.
  */
-import { textId, textOf } from './text'
+import { sanitize, textId, textOf } from './text'
 
 export type Data = Record<string, number>
 export type SourceStatus = 'live' | 'cached' | 'offline'
@@ -88,8 +88,8 @@ export function backoff(attempt: number, random: number, { baseMs = 5_000, maxMs
 export interface Link<P> {
   env: SourceEnv
   emit(payload: P): void
-  /** A failed attempt; `retryInMs` is when the transport will try again (for the record). */
-  fail(error: unknown, retryInMs: number): void
+  /** A failed attempt; `retryInMs` is when the transport will try again (for the record), null = it won't. */
+  fail(error: unknown, retryInMs: number | null): void
 }
 export interface Connection { close(): void; pause?(): void; resume?(): void }
 export interface Transport<P> { kind: 'poll' | 'push' | 'websocket' | 'media'; open(link: Link<P>): Connection }
@@ -126,6 +126,8 @@ export interface Source<P = unknown> {
 }
 
 const CACHE_PREFIX = 'dot480:live:'
+/** Longest cached string (the contributions grid is 7 · 53 = 371 levels). */
+const CACHE_TEXT_MAX = 512
 interface CacheEntry { v: 1; at: number; data: Data; text?: Record<string, string> }
 
 export function createSource<P>(spec: SourceSpec<P>, envArg?: SourceEnv | (() => SourceEnv)): Source<P> {
@@ -148,11 +150,12 @@ export function createSource<P>(spec: SourceSpec<P>, envArg?: SourceEnv | (() =>
     try {
       const raw = e.storage?.getItem(CACHE_PREFIX + id)
       if (!raw) return
-      const c = JSON.parse(raw) as CacheEntry
-      if (c.v !== 1 || e.now() - c.at > (spec.cacheMaxAgeMs ?? 7 * 86_400_000)) return
-      for (const k of spec.textKeys ?? []) if (c.text?.[k] !== undefined) textId(c.text[k], true)
+      const c = JSON.parse(raw) as Partial<CacheEntry> | null
+      if (c?.v !== 1 || typeof c.at !== 'number' || !(e.now() - c.at <= (spec.cacheMaxAgeMs ?? 7 * 86_400_000)) || typeof c.data !== 'object' || !c.data) return
+      // only strings this code could have written: short, and already what the font draws
+      for (const k of spec.textKeys ?? []) { const t = c.text?.[k]; if (typeof t === 'string' && t.length <= CACHE_TEXT_MAX && sanitize(t) === t) textId(t, true) }
       const data: Data = { ...fixture }
-      for (const k of keys) if (typeof c.data[k] === 'number') data[k] = c.data[k]
+      for (const k of keys) { const v = c.data[k]; if (typeof v === 'number' && Number.isFinite(v)) data[k] = v }
       snap = { ...snap, data: withStatus(data, 'cached'), status: 'cached', updatedAt: c.at }
     } catch { /* corrupt cache: start from the fixture */ }
   }

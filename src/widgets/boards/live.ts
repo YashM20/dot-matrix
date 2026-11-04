@@ -6,10 +6,12 @@
  * dissolve. The footer says where the frame came from: LIVE, CACHED (last good value) or OFFLINE
  * (the fixture). The board spends its one red on today's contribution dot and the playhead knob.
  *
- * Config (URL params, read once): `?board=live&lat=51.51&lon=-0.13&place=London&gh=<user>&np=wss://…`
+ * Config (URL params, read once, checked by `parseLiveConfig`): `?board=live&lat=51.51&lon=-0.13&place=London&gh=<user>`.
+ * No parameter names a host: now playing reads this page's Media Session and same-origin pushes.
  */
 import { hash01 } from '../../engine/math'
 import type { Layer, Tone } from '../../engine/types'
+import { parseLiveConfig } from '../../data/parse'
 import { statusName } from '../../data/source'
 import { contribSource, GH_WEEKS, nowPlayingSource, weatherSource, WX_HOURS } from '../../data/sources'
 import { fit, textOf } from '../../data/text'
@@ -21,12 +23,11 @@ type Pt = [number, number]
 const tile = { chrome: 'dots', grid: TILE, style: tileStyle } as const
 
 // ── config + sources ────────────────────────────────────────────────────────
-const params = new URLSearchParams((globalThis as { location?: { search: string } }).location?.search ?? '')
-const num = (k: string, d: number) => { const v = Number(params.get(k)); return params.has(k) && Number.isFinite(v) ? v : d }
-export const liveConfig = { lat: num('lat', 35.68), lon: num('lon', 139.69), place: params.get('place') ?? 'Tokyo', user: params.get('gh') ?? 'YashM20', np: params.get('np') ?? undefined }
+const search = (globalThis as { location?: { search: string } }).location?.search ?? ''
+export const liveConfig = parseLiveConfig(search, { lat: 35.68, lon: 139.69, place: 'Tokyo', user: 'YashM20' })
 const sources = {
   weather: weatherSource({ lat: liveConfig.lat, lon: liveConfig.lon, place: liveConfig.place }),
-  nowPlaying: nowPlayingSource({ url: liveConfig.np, mediaSession: true }),
+  nowPlaying: nowPlayingSource({ mediaSession: true }),
   contribs: contribSource({ user: liveConfig.user }),
 }
 export const liveSources = [sources.weather, sources.nowPlaying, sources.contribs]

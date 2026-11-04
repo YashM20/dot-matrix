@@ -45,6 +45,11 @@ await engineChecks(assert)
 
 // 13) live data (P4-E): fixtures, backoff, caching, pause, transports — fake env, no network
 await liveChecks(assert)
+// live board inputs (#147): URL config, malformed and oversized API payloads, bad socket URLs, the cache (scripts/live-inputs.ts)
+{
+  const { liveInputChecks } = await import('./live-inputs')
+  await liveInputChecks(assert)
+}
 // P4-F) halftone ladder + STBN temporal stability + live camera card timing (scripts/halftone.ts)
 halftoneChecks(assert)
 // C6) hand tracker on the synthetic camera: pointer error, pinch, cost, no ghost from a still face (scripts/vision.ts)
