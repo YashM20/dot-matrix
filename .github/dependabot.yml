@@ -1,0 +1,21 @@
+# Weekly update PRs for the npm packages (the site's pnpm-lock.yaml and the MCP server's in mcp/) and the CI actions (pinned to commit SHAs in ci.yml).
+# Minor and patch bumps come grouped in one PR per ecosystem; a major bump gets its own PR.
+version: 2
+updates:
+  - package-ecosystem: npm
+    directories: ["/", "/mcp"]
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 3
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 2
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
