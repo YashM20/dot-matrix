@@ -1,0 +1,78 @@
+/* X-ray: the per-card overlay (.xr-overlay, its grid, HUD and tips). Loads with XRayOverlay's lazy chunk, so it ships
+   only when the xray flag (src/site/flags.ts) is on and a card is X-rayed */
+.dot-card-body:has(> .xr-overlay) {
+  position: relative
+}
+
+.dot-card:has(.xr-overlay) {
+  border-color: color-mix(in srgb, var(--tint) 22%, transparent)
+}
+
+.xr-overlay {
+  position: absolute;
+  pointer-events: none;
+  z-index: var(--z-raise);
+  font: 500 var(--fs-tag-9)/1.35 var(--mono);
+  letter-spacing: .06em;
+  text-align: left
+}
+
+/* the guide lines' ink: the canvas strokes in this colour at a few alphas (light on dark, ink on paper) */
+.xr-grid {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  color: var(--tint)
+}
+
+.xr-hud {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-2);
+  padding: var(--space-1) var(--space-1);
+  background: color-mix(in srgb, var(--panel) 78%, transparent);
+  color: var(--label);
+  letter-spacing: .12em
+}
+
+.xr-hud b {
+  color: var(--red-text);
+  font-weight: 600
+}
+
+.xr-tip {
+  position: absolute;
+  transform: translate(12px, 12px);
+  min-width: 190px;
+  padding: var(--space-2) var(--space-2);
+  background: color-mix(in srgb, var(--panel) 94%, transparent);
+  border: 1px solid color-mix(in srgb, var(--tint) 18%, transparent);
+  border-radius: var(--radius-ctl);
+  color: var(--value);
+  white-space: nowrap
+}
+
+.xr-tip--left {
+  transform: translate(calc(-100% - 12px), 12px)
+}
+
+.xr-tip--up {
+  transform: translate(12px, calc(-100% - 12px))
+}
+
+.xr-tip--left.xr-tip--up {
+  transform: translate(calc(-100% - 12px), calc(-100% - 12px))
+}
+
+.xr-tip b {
+  color: var(--tint)
+}
+
+.xr-tip-dim {
+  color: var(--mute)
+}

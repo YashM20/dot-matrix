@@ -1,13 +1,4 @@
-/* Phone styles: the X-ray sheet on portrait, short landscape bars, touch, standalone and reduced motion, the strips' edge fades */
-/* portrait: the X-ray bottom sheet (src/site/app/xray-tab.css) stands on the tab bar */
-@media (max-width: 760px) {
-  .xr-panel {
-    bottom: var(--tabbar-h);
-    max-height: min(55vh, calc(100dvh - var(--app-top) - var(--tabbar-h)));
-    padding-bottom: 0
-  }
-}
-
+/* Phone styles: short landscape bars, touch, standalone and reduced motion, the strips' edge fades */
 /* short landscape: a compact top bar and tab bar (glyph beside the word; their heights are in src/tokens.css), clear of the notch */
 @media (max-height: 500px) and (pointer: coarse) {
   .shell {

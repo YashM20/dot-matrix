@@ -160,17 +160,69 @@
 }
 
 .pal-shell-screen {
-  position: relative
+  position: relative;
+  container-type: inline-size;
+  /* one dot of the screen's grid (--cols wide), resolved in the children against this container */
+  --d: calc(100cqi / var(--cols))
+}
+
+/* the output (role="log") and the line, as real text on the screen's cell grid: transparent, so the dots show,
+   but selectable, copyable and linkable; scrolling it scrolls the dots. One character = 6 dots, one row = 9 */
+.pal-shell-log,
+.pal-shell-input {
+  position: absolute;
+  margin: 0;
+  border: 0;
+  color: transparent;
+  background: none;
+  font: 400 calc(var(--d) * 8) / calc(var(--d) * 9) var(--mono);
+  letter-spacing: calc(var(--d) * 6 - 1ch);
+  white-space: pre;
+  cursor: text
+}
+
+.pal-shell-log {
+  top: calc(var(--d) * 3);
+  left: calc(var(--d) * 3);
+  width: calc(var(--d) * 6 * var(--chars));
+  height: calc(var(--d) * 9 * var(--lines));
+  padding: 0;
+  list-style: none;
+  overflow: hidden auto;
+  overscroll-behavior: contain;
+  scroll-snap-type: y mandatory;
+  scrollbar-width: none
+}
+
+.pal-shell-log::-webkit-scrollbar {
+  display: none
+}
+
+.pal-shell-row {
+  display: block;
+  height: calc(var(--d) * 9);
+  overflow: hidden;
+  scroll-snap-align: start
+}
+
+.pal-shell-log ::selection {
+  background: var(--selection);
+  color: transparent
+}
+
+.pal-shell-log a {
+  color: transparent;
+  text-decoration: underline dotted var(--mute);
+  text-underline-offset: calc(var(--d) * 1.5)
 }
 
 .pal-shell-input {
-  position: absolute;
-  inset: 0;
+  top: calc(var(--d) * (3 + 9 * var(--lines)));
+  left: 0;
   width: 100%;
-  height: 100%;
-  opacity: 0;
-  border: 0;
-  cursor: text
+  height: calc(var(--d) * 9);
+  padding: 0 0 0 calc(var(--d) * 15);
+  opacity: 0
 }
 
 .pal-shell-foot {

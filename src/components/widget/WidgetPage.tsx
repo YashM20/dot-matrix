@@ -3,7 +3,8 @@
  * `?card=` all land here (src/site/routes.ts). Lazy: the catalog, the metadata and the export helpers load with
  * it, never in the first load. On a desktop the page is an app that fits the screen (#183): a top bar (back to the
  * board, previous / next), the card on a stage that scales to fit, and a side panel with the name, the blurb, the
- * grouped actions (export, share and remix, MORE) and the facts; the panel scrolls on its own. Phones stack it.
+ * grouped actions (export, share and remix, MORE), the like button and the facts; the panel scrolls on its own.
+ * Phones stack it. X-RAY shows only while its flag is on. A missing widget is noindex.
  */
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { DotName } from '../DotName'
@@ -13,7 +14,9 @@ import { catalog } from '../../widgets/catalog'
 import { deriveWidgetMeta, type WidgetMeta } from '../../widgets/meta'
 import { withChrome, type WidgetPreset } from '../../widgets/types'
 import { canonicalWidgetUrl, resolveWidget, shortPath, widgetPath, type ResolvedWidget, type WidgetRoute } from '../../site/routes'
-import { setPageMeta, widgetPageMeta, widgetTitle } from '../../site/meta'
+import { setNoIndex, setPageMeta, widgetPageMeta, widgetTitle } from '../../site/meta'
+import { replaceUrl } from '../../site/safe-url'
+import { useFlag } from '../../site/useFlag'
 import { presetSource } from '../../export/source'
 import { stillPNG } from '../../export/still'
 import { cardHTML, cardSVG } from '../../export/snippets'
@@ -29,6 +32,7 @@ import { cardScheme } from '../../site/theme/polarity'
 import { DotWidget } from '../DotWidget'
 import { Pill, PillBar, PillButton } from './PillBar'
 import { MoreMenu } from './MoreMenu'
+import { WidgetLike } from '../likes/slot'
 import './WidgetPage.css'
 
 export interface WidgetPageProps {
@@ -62,12 +66,14 @@ export function WidgetPage({ route, onOpen, onBoard }: WidgetPageProps) {
       setResult({ slug: w.slug, state: { status: 'ok', w, preset, items, meta, sources: sources?.length ? sources : undefined } })
       // the address bar shows the canonical slug URL (uid, old slug and ?card= forms are normalised in place)
       const want = canonicalWidgetUrl(w, location.search) + location.hash
-      if (want !== location.pathname + location.search + location.hash) history.replaceState(history.state, '', want)
+      if (want !== location.pathname + location.search + location.hash) replaceUrl(want)
       setPageMeta(widgetPageMeta(meta))
     }, () => { if (live) setResult({ slug: w.slug, state: { status: 'missing' } }) })
     return () => { live = false }
   }, [w])
   const state: State = !w ? { status: 'missing' } : result?.slug === w.slug ? result.state : { status: 'loading' }
+  const missing = state.status === 'missing'
+  useEffect(() => { if (!missing) return; setNoIndex(true); return () => setNoIndex(false) }, [missing])
 
   if (state.status === 'loading') return <section className="wp" aria-busy="true"><div className="wp-loading" /></section>
   if (state.status === 'missing') return <section className="wp wp--missing">
@@ -80,6 +86,7 @@ export function WidgetPage({ route, onOpen, onBoard }: WidgetPageProps) {
 function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & Omit<WidgetPageProps, 'route'>) {
   const live = useLiveData(sources), pond = w.board === 'pond'
   const stage = useRef<HTMLElement>(null)
+  const xrayOn = useFlag('xray')
   const xray = useXR(s => s.global || s.on.size > 0)
   const i = items.findIndex(p => p.id === preset.id), prev = items[(i - 1 + items.length) % items.length], next = items[(i + 1) % items.length]
   const name = widgetTitle(preset.name), url = location.origin + widgetPath(w.slug, w.scope), short = location.origin + shortPath(w.uid)
@@ -160,6 +167,7 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
         <p className="wp-eyebrow">{boardLabel(w.board)} · {String(i + 1).padStart(2, '0')}</p>
         <h1 id="wp-title"><span className="sr-only">{name}</span><DotName text={name} pitch={4} /></h1>
         <p className="wp-blurb">{meta.blurb}</p>
+        <WidgetLike uid={w.uid} name={name} />
         {preset.credit && <p className="wp-credit">by {preset.credit.by.join(', ')} · <a className="wp-link" href={preset.credit.source} target="_blank" rel="noopener noreferrer">{preset.credit.title}</a>{preset.credit.note && <> · {preset.credit.note}</>}</p>}
         {/* the actions, grouped by what they do: export, then share and remix, then the rest */}
         <PillBar label="Card actions" className="wp-actions">
@@ -171,13 +179,13 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
           <Pill className="wp-go">
             {share && <PillButton label="SHARE" glyph="↗" title="Share" onPointerDown={() => { sharePNG.current = png() }} onClick={act.share} />}
             <PillButton label="REMIX" glyph="✎" title="Remix in MAKE" onClick={act.remix} />
-            <PillButton label="X-RAY" glyph="ⓘ" title="X-ray: how it works" onClick={act.xray} pressed={xray} className="wp-desk" />
+            {xrayOn && <PillButton label="X-RAY" glyph="ⓘ" title="X-ray: how it works" onClick={act.xray} pressed={xray} className="wp-desk" />}
             <MoreMenu items={[
               { label: 'Copy short link', note: shortPath(w.uid), run: act.short },
               { label: 'Copy HTML', note: 'static SVG, no script', run: act.html },
               { label: 'Download PNG', run: act.savePNG, group: true },
               { label: 'Download SVG', run: act.saveSVG },
-              { label: 'X-ray: how it works', run: act.xray, group: true, className: 'wp-phone' },
+              ...(xrayOn ? [{ label: 'X-ray: how it works', run: act.xray, group: true, className: 'wp-phone' }] : []),
               { label: `Back to ${boardLabel(w.board)}`, run: () => onBoard(w.board, w.slug), group: true },
             ]} />
           </Pill>

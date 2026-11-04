@@ -14,6 +14,7 @@
 import type { Field, Layer, Tone } from '../../engine/types'
 import { DEFAULT_WORD, GH, SLOTS, fromSlots, slotKey, slotsOf, wordData, wordParam, wordWidth, type Cell, type Frame } from '../../engine/kinetic/word'
 import { TILE, layer, layoutFor, tileStyle, type WidgetContext } from '../types'
+import { replaceUrl } from '../../site/safe-url'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -41,7 +42,7 @@ export function keepWord(data: Record<string, number>): void {
   try {
     const url = new URL(location.href)
     if (word === DEFAULT_WORD) url.searchParams.delete('word'); else url.searchParams.set('word', word)
-    history.replaceState(history.state, '', url)
+    replaceUrl(url)
   } catch { /* no history API (a sandboxed frame): the word still works, it just isn't in the link */ }
 }
 /** The loop time a card draws: 0 (the settled word) under reduced motion. */

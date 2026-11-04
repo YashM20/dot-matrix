@@ -10,17 +10,26 @@ import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { sampleLayers } from '../../engine/sampler/gridSampler'
 import { dot480 } from '../../engine/theme/tokens'
 import type { DotInstance, DotStyle, Field, Layer } from '../../engine/types'
-import { userPrograms } from '../dwitter/program'
+import { userPrograms, userRemote } from '../dwitter/program'
 import { compileCard, type CompiledCard, type ProgramCache, type StudioCard } from '../studio/doc'
 import { sampleCard, stateData, timelineFrame, type FrameInput } from '../studio/playback'
 import { pitchOf, themeOf, type EditorFrame } from './doc'
 
 const good: ProgramCache = new Map()
-const memo = new WeakMap<StudioCard, CompiledCard>()
-/** One compile per card version; IR programs memoised, last good program kept per layer, all under the user-program guard. */
+const memo = new WeakMap<StudioCard, CompiledCard>(), liveMemo = new WeakMap<StudioCard, CompiledCard>()
+/**
+ * One compile per card version; IR programs memoised, last good program kept per layer, all under the user-program guard.
+ * This one samples on the main thread, for the callers that need a frame at once (export, device preview, thumbnails).
+ */
 export function compiledOf(card: StudioCard): CompiledCard {
   let c = memo.get(card)
   if (!c) memo.set(card, (c = compileCard(card, good, { guard: userPrograms })))
+  return c
+}
+/** The canvas's compile: its programs sample in the IR sandbox worker while it runs (`drawFrame`). */
+function liveOf(card: StudioCard): CompiledCard {
+  let c = liveMemo.get(card)
+  if (!c) liveMemo.set(card, (c = compileCard(card, good, { guard: userPrograms, remote: userRemote })))
   return c
 }
 export const isAnimated = (card: StudioCard) => card.animated || compiledOf(card).usesT
@@ -32,29 +41,62 @@ export interface FrameDraw {
   state?: string
   pointer?: { x: number; y: number; down: boolean }
 }
-export function frameDots(f: EditorFrame, o: FrameDraw): DotInstance[] {
-  const card = f.card, inp: FrameInput = { card, compiled: compiledOf(card), theme: themeOf(f), pointer: o.pointer }
+/** A frame's dots, sampled at once on the main thread; `live`: with the canvas's compile (between `userRemote.begin` / `flush`). */
+export function frameDots(f: EditorFrame, o: FrameDraw, live = false): DotInstance[] {
+  const card = f.card, inp: FrameInput = { card, compiled: live ? liveOf(card) : compiledOf(card), theme: themeOf(f), pointer: o.pointer }
   if (o.timeline) return timelineFrame(inp, o.t)
   return sampleCard(inp, o.t, stateData(card, o.state ?? card.states[0]?.name ?? ''))
 }
-/** Draw a frame into `canvas` at `k` canvas px per world px. Returns the frame time in ms, and why it drew empty if it broke. */
-export function drawFrame(canvas: HTMLCanvasElement, f: EditorFrame, k: number, o: FrameDraw): { ms: number; error?: string } {
+// ── the IR sandbox: a frame's programs sample in a worker, so their values land a moment after the frame asks ──
+/** Per editor frame: the last draw whose program values came back from the worker (a frame drawn at it is complete). */
+const landed = new Map<string, { card: StudioCard; o: FrameDraw }>()
+const painted = new WeakSet<HTMLCanvasElement>()
+let onLanded: (id: string) => void = () => {}
+/** `fn(frame id)` runs when a frame waits on program values that just landed: the canvas should draw it again. */
+export function whenLanded(fn: (id: string) => void) { onLanded = fn }
+
+/** A frame's dots, with its programs' values from the worker; `pending`: some were missing (asked for, they read 0). */
+function sampleFrame(f: EditorFrame, o: FrameDraw, wake?: { on: boolean }) {
+  let dots: DotInstance[] = [], error: string | undefined
+  userRemote.begin()
+  try { dots = frameDots(f, o, true) } catch (e) { error = String((e as Error)?.message ?? e) } // a broken frame draws empty
+  // a stand-in frame (no `wake`) only asks whether it is complete
+  const card = f.card, pending = !userRemote.flush(() => { landed.set(f.id, { card, o }); if (wake?.on) onLanded(f.id) }, !!wake)
+  return { dots, error, pending }
+}
+
+/**
+ * Draw a frame into `canvas` at `k` canvas px per world px. Returns the frame time in ms, why it drew empty if it broke,
+ * and `pending` while its program values are on their way from the worker: the canvas then keeps the last complete
+ * frame (an animation shows the newest frame whose values landed, one tick behind) and `whenLanded` asks for a redraw
+ * once they land. `soon`: the caller draws this frame again shortly anyway (a running animation), so no redraw is asked
+ * for while an older complete frame stands in.
+ */
+export function drawFrame(canvas: HTMLCanvasElement, f: EditorFrame, k: number, o: FrameDraw, soon = false): { ms: number; error?: string; pending?: boolean } {
   const ctx = canvas.getContext('2d')
   if (!ctx) return { ms: 0 }
   const pitch = pitchOf(f.card), W = f.card.grid.cols * pitch, H = f.card.grid.rows * pitch
-  const cw = Math.max(1, Math.round(W * k)), ch = Math.max(1, Math.round(H * k))
+  const cw = Math.max(1, Math.round(W * k)), ch = Math.max(1, Math.round(H * k)), cleared = canvas.width !== cw || canvas.height !== ch
   if (canvas.width !== cw) canvas.width = cw
   if (canvas.height !== ch) canvas.height = ch
-  const a = performance.now()
-  let dots: DotInstance[] = [], error: string | undefined
-  try { dots = frameDots(f, o) } catch (e) { error = String((e as Error)?.message ?? e) } // a broken frame draws empty
+  const a = performance.now(), wake = { on: true }
+  let { dots, error, pending } = sampleFrame(f, o, wake)
+  const last = pending ? landed.get(f.id) : undefined
+  if (last && last.card === f.card && last.o !== o) {
+    const r = sampleFrame(f, last.o)
+    // the newest complete frame stands in; a still frame (a scrub or pointer that stopped) draws again when this one lands
+    if (!r.pending) { ({ dots, error } = r); pending = false; wake.on = !soon }
+  }
   userPrograms.settle() // the frame is done: its programs that kept to the budget count as drawn
+  // nothing complete to show: keep the canvas, unless it is blank (first draw, resized), then draw what there is
+  if (pending && painted.has(canvas) && !cleared) return { ms: performance.now() - a, pending }
+  painted.add(canvas)
   ctx.setTransform(1, 0, 0, 1, 0, 0)
   ctx.fillStyle = themeOf(f).surface
   ctx.fillRect(0, 0, cw, ch)
   ctx.setTransform(cw / W, 0, 0, ch / H, 0, 0)
   renderCanvas(ctx, dots)
-  return { ms: performance.now() - a, ...(error !== undefined && { error }) }
+  return { ms: performance.now() - a, ...(error !== undefined && { error }), ...(pending && { pending }) }
 }
 /** Canvas resolution for a zoom: power-of-two steps of zoom × devicePixelRatio, capped by a 4096 px edge. */
 export function resolutionFor(z: number, dpr: number, w: number, h: number): number {

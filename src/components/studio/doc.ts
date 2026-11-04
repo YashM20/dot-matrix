@@ -6,7 +6,8 @@
  * card is sampled through Field → Grid Sampler → Renderer like any preset. The document is plain JSON:
  * it saves to localStorage / a file as is, and `adapter.ts` maps it to spec v0 now and spec v1 later.
  */
-import { compileUntrusted, contextEnv, IRError, IR_LIMITS, type IRGuard, type IRProgram } from '../../engine/ir'
+import { compileUntrusted, contextEnv, IRError, IR_LIMITS, type IREnv, type IRGuard, type IRProgram } from '../../engine/ir'
+import type { IRRemote } from '../../engine/ir/sandbox/remote'
 import '../../engine/noise/ir' // IR noise pack: noise() fbm() turb() voronoi() in studio IR
 import { textAt } from '../../engine/layout'
 import type { Control } from '../../engine/context'
@@ -165,7 +166,7 @@ export function importPreset(id: string): StudioCard {
   card.reference = id
   card.animated = !!p.animated
   card.layers = layers.map((l, i): PresetLayer => ({
-    id: newId(), name: `${id} #${i}${l.field.text ? ` "${l.field.text}"` : l.sites ? ' sites' : l.lattice ? ` ${l.lattice}×` : ''}`,
+    id: newId(), name: `${id} #${i}${l.field.text ? ` "${l.field.text}"` : l.sites ? ' sites' : l.lattice ? ` ${l.lattice}×` : ''}`.slice(0, 64), // a long text layer's name
     kind: 'preset-layer', params: { preset: id, index: i }, tone: 'preset', z: i, blend: 'normal', visible: true,
   }))
   card.bindings = Object.entries(p.defaults ?? {}).slice(0, 8).map(([key, v]) => ({ key, kind: 'slider', min: Math.min(0, v), max: Math.max(1, v * 2 || 1), step: Number.isInteger(v) && Math.abs(v) > 1 ? 1 : .01 }))
@@ -200,6 +201,11 @@ export interface CompileCardOptions {
    * that runs past it is paused and the card shows a note instead. Off for trusted cards, so their hot path is unchanged.
    */
   guard?: IRGuard
+  /**
+   * Sample the guarded programs in the IR sandbox worker while it is `active` (the editor): the guard then only
+   * holds their state, and the worker's own guard and the page's watchdog stop slow ones. Needs `guard`.
+   */
+  remote?: IRRemote
 }
 /** A program's guard key on a card: a new source, lattice or grid size gets a fresh try. */
 export const guardKey = (grid: GridConfig, where: number | string, src: string) => `${grid.cols}x${grid.rows}/${where}|${src}`
@@ -248,10 +254,14 @@ export function compileCard(card: StudioCard, good: ProgramCache = new Map(), op
   const errors = new Map<string, IRError>(), keys = new Set(Object.keys(card.data)), guard = opts.guard, guarded: string[] = []
   let usesT = false
   /** The field through the guard (when there is one); undefined while the program is paused. */
-  const guardIt = (key: string, cost: number, f: () => Field): Field | undefined => {
+  const remote = guard && opts.remote
+  const guardIt = (key: string, cost: number, f: () => Field, sandboxed?: () => Field): Field | undefined => {
     if (!guard) return f()
-    return guard.state(key) === 'paused' ? undefined : guard.field(key, cost, f())
+    if (guard.state(key) === 'paused') return undefined
+    return sandboxed && remote?.active ? sandboxed() : guard.field(key, cost, f())
   }
+  /** A program's field from the sandbox worker (reported to the guard under `key`). */
+  const inWorker = (key: string, prog: IRProgram, src: string, env: IREnv) => remote!.field(prog, src, key, env, guard)
   const L = layoutFor(card.grid)
   type Builder = (ctx: WidgetContext, presetFrames: Map<string, Layer[]>) => Layer | undefined
   const builders: { layer: StudioLayer; build: Builder }[] = []
@@ -266,13 +276,13 @@ export function compileCard(card: StudioCard, good: ProgramCache = new Map(), op
       if (l.kind === 'ir') {
         const lattice = l.lattice > 1 ? l.lattice : undefined
         if (guard) guarded.push(key)
-        builders.push({ layer: l, build: ctx => { const field = prog && guardIt(key, prog.info.cost, () => prog(contextEnv(ctx, card.grid))); return field && { field, tone: tone('auto'), ...(lattice && { lattice }) } } })
+        builders.push({ layer: l, build: ctx => { const env = () => contextEnv(ctx, card.grid), field = prog && guardIt(key, prog.info.cost, () => prog(env()), () => inWorker(key, prog, l.src || '1', env())); return field && { field, tone: tone('auto'), ...(lattice && { lattice }) } } })
       } else {
         const { shape, cx, cy, r, x1, y1, spacing, start, sweep } = l.params
         const geo = shape === 'line' ? L.dotLine(cx, cy, x1, y1, { spacing, size: l.size }) : shape === 'disc' ? L.dotDisc(cx, cy, r, { spacing, size: l.size }) : L.dotRing(cx, cy, r, { spacing, size: l.size, start, sweep })
         const isOne = (l.src || '1').trim() === '1'
         if (guard && !isOne) guarded.push(key)
-        builders.push({ layer: l, build: ctx => { const field = prog && (isOne ? ONE : guardIt(key, prog.info.cost, () => prog(contextEnv(ctx, card.grid)))); return field && { ...geo, field, tone: tone('idle') } } })
+        builders.push({ layer: l, build: ctx => { const env = () => contextEnv(ctx, card.grid), field = prog && (isOne ? ONE : guardIt(key, prog.info.cost, () => prog(env()), () => inWorker(key, prog, l.src || '1', env()))); return field && { ...geo, field, tone: tone('idle') } } })
       }
     } else if (l.kind === 'text') {
       const { text, col, row, align, scale, smooth } = l.params
@@ -293,11 +303,13 @@ export function compileCard(card: StudioCard, good: ProgramCache = new Map(), op
       builders.push({ layer: l, build: () => built })
     } else if (l.kind === 'spec') {
       let build: ((ctx: WidgetContext) => Layer) | undefined
-      try { build = buildLayer(l.spec, card.grid) } catch (e) { errors.set(l.id, new IRError(`spec layer: ${(e as Error).message}`)) }
       let cost = 0, key = ''
       if ('src' in l.spec && typeof l.spec.src === 'string') { try { const p = compileUntrusted(l.spec.src); p.info.data.forEach(k => keys.add(k)); usesT ||= p.info.t; cost = p.info.cost; key = guardKey(card.grid, 'spec', l.spec.src) } catch { /* reported by buildLayer */ } }
+      // an `ir` spec layer's program samples in the sandbox worker too (its key decided before the frame: `remote.active` holds for the frame)
+      const k = key, sandboxed = !!k && l.spec.kind === 'ir'
+      try { build = buildLayer(l.spec, card.grid, sandboxed ? (prog, src, env) => (remote?.active ? inWorker(k, prog, src, env) : prog(env)) : undefined) } catch (e) { errors.set(l.id, new IRError(`spec layer: ${(e as Error).message}`)) }
       if (guard && key) guarded.push(key)
-      if (build) builders.push({ layer: l, build: ctx => { const x = build(ctx), field = key ? guardIt(key, cost, () => x.field) : x.field; return field && { ...x, field, tone: tone(x.tone) } } })
+      if (build) builders.push({ layer: l, build: ctx => { const x = build(ctx), field = key ? guardIt(key, cost, () => x.field, sandboxed ? () => x.field : undefined) : x.field; return field && { ...x, field, tone: tone(x.tone) } } })
     } else {
       const p = widgetById(l.params.preset)
       if (!p) { errors.set(l.id, new IRError(`no preset "${l.params.preset}"`)); continue }
@@ -339,13 +351,26 @@ export function cardPreset(card: StudioCard, compiled: CompiledCard = compileCar
 }
 
 // ── validation + JSON ──────────────────────────────────────────────────────
-const MAX_LAYERS = 24
+/**
+ * Layers a card may hold: its own (`MAX_LAYERS`), plus the read-only layers of a preset it references (#143). A preset
+ * frame gets one `preset-layer` per layer the preset draws (56 for the largest today), and they cost what the board
+ * itself costs (the preset is drawn once per frame for all of them), so they get their own, larger cap.
+ */
+export const MAX_LAYERS = 24, MAX_REF_LAYERS = 96
+/** Why these layers don't fit one card, or undefined. */
+export function layersIssue(layers: readonly { kind?: string }[]): string | undefined {
+  const refs = layers.filter(l => l?.kind === 'preset-layer').length, own = layers.length - refs
+  if (own > MAX_LAYERS) return `a card holds at most ${MAX_LAYERS} layers of its own (this one has ${own})`
+  if (refs > MAX_REF_LAYERS) return `a card holds at most ${MAX_REF_LAYERS} reference layers (this one has ${refs})`
+  return undefined
+}
 const num = (x: unknown, lo: number, hi: number, what: string) => { if (typeof x !== 'number' || !Number.isFinite(x) || x < lo || x > hi) throw new Error(`studio card: ${what} must be a number in ${lo}..${hi}`); return x }
 const str = (x: unknown, max: number, what: string) => { if (typeof x !== 'string' || x.length > max) throw new Error(`studio card: ${what} must be a string of ≤ ${max} chars`); return x }
 const oneOf = <T extends string>(x: unknown, list: readonly T[], what: string): T => { if (!list.includes(x as T)) throw new Error(`studio card: ${what} must be one of ${list.join(', ')}`); return x as T }
 const dataOf = (x: unknown, what: string) => {
   if (!x || typeof x !== 'object' || Array.isArray(x)) throw new Error(`studio card: ${what} must be an object of numbers`)
-  for (const [k, v] of Object.entries(x)) { str(k, 32, `${what} key`); num(v, -1e9, 1e9, `${what}.${k}`) }
+  // up to 1e12, like a binding's range: live cards keep text as 32-bit ids (`textId`), past 1e9
+  for (const [k, v] of Object.entries(x)) { str(k, 32, `${what} key`); num(v, -1e12, 1e12, `${what}.${k}`) }
   return x as Record<string, number>
 }
 const MASKS = Object.keys(masks) as MaskName[], EASES = Object.keys(ease) as EaseName[]
@@ -367,7 +392,8 @@ export function validateCard(x: unknown): StudioCard {
   bad(gridIssue(c.grid))
   if (!c.style || typeof c.style !== 'object') throw new Error('studio card: style missing')
   num(c.style.sizeMin, 0, 64, 'style.sizeMin'); num(c.style.sizeMax, 0, 64, 'style.sizeMax')
-  if (!Array.isArray(c.layers) || c.layers.length > MAX_LAYERS) throw new Error(`studio card: layers must be an array of ≤ ${MAX_LAYERS}`)
+  if (!Array.isArray(c.layers)) throw new Error('studio card: layers must be an array')
+  bad(layersIssue(c.layers))
   const ids = new Set<string>()
   c.layers.forEach((l, i) => {
     const w = `layers[${i}]`
