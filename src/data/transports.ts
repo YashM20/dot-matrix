@@ -8,11 +8,12 @@
  * - `broadcast(name)`: webhook-style push. Any same-origin tab, worker or devtools can
  *   `new BroadcastChannel('dot480:<name>').postMessage(payload)`; `Source.push` is the in-page entry.
  *   (A real webhook can't reach a browser: relay it through a websocket or SSE bridge.)
- * - `websocket(url)`: one JSON payload per message; reconnects on backoff; closed while hidden.
+ * - `websocket(url)`: one JSON payload per message; reconnects on backoff; closed while hidden. A URL
+ *   that isn't `ws:`/`wss:` or that the browser refuses (bad syntax, blocked) fails once, no retry.
  * - `mediaSession()`: reads this page's own `navigator.mediaSession` (browsers never expose other
  *   apps' playback), for pages that play their own media.
  */
-import { backoff, HttpError, type BackoffOptions, type SourceEnv, type Transport } from './source'
+import { backoff, HttpError, type BackoffOptions, type SocketLike, type SourceEnv, type Transport } from './source'
 
 export function poll<P>(request: (env: SourceEnv) => Promise<P>, intervalMs: number, opts: BackoffOptions = {}): Transport<P> {
   return {
@@ -73,11 +74,20 @@ export function websocket<P>(url: string, parse: (data: unknown) => P = d => JSO
     open(link) {
       const env = link.env, WS = env.WebSocket
       if (!WS) return { close() {} }
-      let socket: InstanceType<typeof WS> | null = null, timer: unknown = null, attempt = 0, paused = false, closed = false
+      let socket: SocketLike | null = null, timer: unknown = null, attempt = 0, paused = false, closed = false
+      /** The socket, or null after reporting why it can't open (a bad URL never throws out of here). */
+      const open = (): SocketLike | null => {
+        try {
+          const { protocol } = new URL(url)
+          if (protocol !== 'ws:' && protocol !== 'wss:') throw new Error(`not a socket URL (${protocol})`)
+          return new WS(url)
+        } catch (err) { link.fail(err, null); return null }
+      }
       const connect = () => {
         timer = null
         if (paused || closed) return
-        const s = socket = new WS(url)
+        const s = socket = open()
+        if (!s) return
         s.onopen = () => { attempt = 0 }
         s.onmessage = e => { try { link.emit(parse(e.data)) } catch (err) { link.fail(err, 0) } }
         s.onerror = () => {}

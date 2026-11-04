@@ -18,7 +18,7 @@ import { withChrome } from '../src/widgets'
 type Assert = (name: string, cond: boolean, detail?: string) => void
 
 /** Manual clock + timers, in-memory storage, scripted fetch responses, controllable visibility. */
-function fakeEnv(responses: (() => FetchResponse | Error)[] = []) {
+export function fakeEnv(responses: (() => FetchResponse | Error)[] = []) {
   let now = 1_000_000, seq = 0, hidden = false
   const timers = new Map<number, { at: number; fn: () => void }>(), store = new Map<string, string>(), visibility = new Set<() => void>()
   const calls: { url: string; at: number }[] = [], sockets: FakeSocket[] = []
@@ -53,7 +53,7 @@ function fakeEnv(responses: (() => FetchResponse | Error)[] = []) {
   const setHidden = (h: boolean) => { hidden = h; for (const cb of visibility) cb() }
   return { env, advance, calls, store, sockets, setHidden, pending: () => timers.size }
 }
-const ok = (body: unknown): FetchResponse => ({ ok: true, status: 200, headers: { get: () => null }, json: async () => body })
+export const ok = (body: unknown): FetchResponse => ({ ok: true, status: 200, headers: { get: () => null }, json: async () => body })
 const limited = (resetS: number): FetchResponse => ({ ok: false, status: 403, headers: { get: (h: string) => (h === 'x-ratelimit-remaining' ? '0' : h === 'x-ratelimit-reset' ? String(resetS) : null) }, json: async () => ({}) })
 
 export async function liveChecks(assert: Assert) {

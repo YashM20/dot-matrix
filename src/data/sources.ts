@@ -1,10 +1,13 @@
 /**
  * The three live sources of the `live` board. Each has a pure `map*` (payload → data keys) and a
  * deterministic fixture built by running that same map over a fixed fixture payload, so the
- * offline frame, snapshots and goldens exercise the real mapping.
+ * offline frame, snapshots and goldens exercise the real mapping. Every payload passes its
+ * `parse*` shape check (`./parse`) first: on the fetch, so a bad response is a failed request,
+ * and again in `map`, which also covers pushed payloads.
  */
 import { hash01 } from '../engine/math'
 import { createSource, fetchJson, HttpError, type Data, type Source, type SourceEnv, type Transport } from './source'
+import { parseContribApi, parseContribs, parseGhEvents, parseNowPlaying, parseOpenMeteo } from './parse'
 import { textId } from './text'
 import { broadcast, mediaSession, poll, websocket } from './transports'
 
@@ -23,7 +26,8 @@ export const weatherUrl = ({ lat, lon }: Pick<WeatherOptions, 'lat' | 'lon'>) =>
 export function mapWeather(p: OpenMeteo, place: string): Data {
   const c = p.current, hours = p.hourly?.temperature_2m ?? [], out: Data = {
     wxPlace: textId(place), wxTemp: c.temperature_2m, wxCode: c.weather_code, wxWind: c.wind_speed_10m, wxDay: c.is_day ?? 1,
-    wxHi: p.daily?.temperature_2m_max[0] ?? Math.max(c.temperature_2m, ...hours), wxLo: p.daily?.temperature_2m_min[0] ?? Math.min(c.temperature_2m, ...hours),
+    wxHi: p.daily?.temperature_2m_max[0] ?? hours.reduce((a, b) => Math.max(a, b), c.temperature_2m),
+    wxLo: p.daily?.temperature_2m_min[0] ?? hours.reduce((a, b) => Math.min(a, b), c.temperature_2m),
   }
   for (let i = 0; i < WX_HOURS; i++) out[`wxH${i}`] = hours[i] ?? hours[hours.length - 1] ?? c.temperature_2m
   return out
@@ -38,8 +42,8 @@ export function weatherSource(o: WeatherOptions, env?: SourceEnv | (() => Source
   return createSource({
     id: 'weather', statusKey: 'wxStatus', textKeys: ['wxPlace'], staleMs: 3 * (o.intervalMs ?? 10 * 60_000),
     fixture: mapWeather(WEATHER_FIXTURE, 'TOKYO'),
-    map: p => mapWeather(p, o.place),
-    transports: [poll(e => fetchJson<OpenMeteo>(e, url), o.intervalMs ?? 10 * 60_000), broadcast('weather')],
+    map: p => mapWeather(parseOpenMeteo(p), o.place),
+    transports: [poll(async e => parseOpenMeteo(await fetchJson<unknown>(e, url)), o.intervalMs ?? 10 * 60_000), broadcast('weather')],
   }, env)
 }
 
@@ -75,7 +79,7 @@ export function mapContribs(p: Contribs, now: number): Data {
   for (let i = n - 1; i >= 0 && (counts[i] > 0 || (i === n - 1)); i--) if (counts[i] > 0) streak++
   return {
     ghUser: textId(p.user), ghGrid: textId(levels.join(''), true), ghDow: dow,
-    ghTotal: counts.reduce((a, b) => a + b, 0), ghToday: counts[n - 1], ghStreak: streak, ghBest: Math.max(0, ...counts),
+    ghTotal: counts.reduce((a, b) => a + b, 0), ghToday: counts[n - 1], ghStreak: streak, ghBest: counts.reduce((a, b) => Math.max(a, b), 0),
     ghYear: today.getFullYear(), ghMonth: today.getMonth(), ghDay: today.getDate(),
   }
 }
@@ -92,16 +96,14 @@ export function contribFixture(user = 'dot480'): Contribs {
   }
   return { user, days }
 }
-interface GhEvent { type: string; created_at: string; payload?: { size?: number } }
 /** Proxy first (a full year); on failure the public events API (90 days, 60 req/h unauthenticated). */
 export async function fetchContribs(env: SourceEnv, user: string): Promise<Contribs> {
   const u = encodeURIComponent(user)
   try {
-    const p = await fetchJson<{ contributions: ContribDay[] }>(env, `https://github-contributions-api.jogruber.de/v4/${u}?y=last`)
-    return { user, days: p.contributions }
+    return { user, days: parseContribApi(await fetchJson<unknown>(env, `https://github-contributions-api.jogruber.de/v4/${u}?y=last`)) }
   } catch (err) {
     if (err instanceof HttpError && err.status === 404) throw err
-    const events = await fetchJson<GhEvent[]>(env, `https://api.github.com/users/${u}/events/public?per_page=100`, { Accept: 'application/vnd.github+json' })
+    const events = parseGhEvents(await fetchJson<unknown>(env, `https://api.github.com/users/${u}/events/public?per_page=100`, { Accept: 'application/vnd.github+json' }))
     const counts = new Map<string, number>()
     for (const e of events) { const k = iso(new Date(e.created_at)); counts.set(k, (counts.get(k) ?? 0) + (e.type === 'PushEvent' ? Math.max(1, e.payload?.size ?? 1) : 1)) }
     return { user, days: [...counts].map(([date, count]) => ({ date, count })) }
@@ -112,7 +114,7 @@ export function contribSource(o: ContribOptions, env?: SourceEnv | (() => Source
   return createSource({
     id: `contribs:${o.user}`, statusKey: 'ghStatus', textKeys: ['ghUser', 'ghGrid'], staleMs: 3 * (o.intervalMs ?? 30 * 60_000),
     fixture: mapContribs(contribFixture(), CONTRIB_FIXTURE_NOW),
-    map: mapContribs,
+    map: (p, now) => mapContribs(parseContribs(p), now),
     transports: [poll(e => fetchContribs(e, o.user), o.intervalMs ?? 30 * 60_000, { baseMs: 30_000, maxMs: 60 * 60_000 }), broadcast(`contribs:${o.user}`)],
   }, env)
 }
@@ -128,13 +130,14 @@ export function mapNowPlaying(p: NowPlaying): Data {
   }
 }
 export const NOW_PLAYING_FIXTURE: NowPlaying = { title: 'Low Tide Signal', artist: 'Field Recordings', album: 'Dot / 480', position: 102, duration: 238, playing: true }
+/** `url`: a socket feed, for code callers only (no URL parameter sets it; production's CSP allows no socket hosts). */
 export interface NowPlayingOptions { channel?: string; url?: string; mediaSession?: boolean }
 export function nowPlayingSource(o: NowPlayingOptions = {}, env?: SourceEnv | (() => SourceEnv)): Source<NowPlaying> {
   const channel = o.channel ?? 'now-playing'
   return createSource<NowPlaying>({
     id: channel, statusKey: 'npStatus', textKeys: ['npTitle', 'npArtist', 'npAlbum'], staleMs: 5 * 60_000,
     fixture: mapNowPlaying(NOW_PLAYING_FIXTURE),
-    map: mapNowPlaying,
+    map: p => mapNowPlaying(parseNowPlaying(p)),
     transports: [
       broadcast(channel),
       ...(o.url ? [websocket<NowPlaying>(o.url)] : []),
