@@ -25,6 +25,9 @@ import { onPondMemory, pondMemoryOn, setPondMemory, withPondDay } from '../../si
 import { CardSizeControl, ThemeControls } from '../theme/ThemePicker'
 import { flag } from '../../site/flags'
 import { useFlag } from '../../site/useFlag'
+import { track } from '../../site/analytics'
+import { AnalyticsButton } from './analyticsUi'
+import { useTrackEvents } from './useTrackEvents'
 
 // the panels load on first use: first-load JS stays inside the site budget. X-ray's are left out of a build with
 // VITE_FLAG_XRAY=kill (the test stays inline at each import so the bundler sees a constant)
@@ -101,7 +104,7 @@ function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { 
   const run = (f: () => void) => () => { onClose(); f() }
   const share = () => {
     const url = withPondDay(withTheme(location.href), pond)
-    if (navigator.share) navigator.share({ title: document.title, url }).catch(() => {})
+    if (navigator.share) navigator.share({ title: document.title, url }).then(() => track('link_shared', { via: 'share' }), () => {})
     else api.copyLink()
   }
   return <Sheet label="TOOLS" onClose={onClose} className="tools-sheet">
@@ -111,6 +114,7 @@ function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { 
       <button type="button" aria-pressed={frozen} onClick={run(() => (frozen ? resume() : api.freeze()))}><b>TIME</b><span>Freeze and scrub the clock</span></button>
       <TiltButton onClose={onClose} />
       {pond && <PondMemoryButton onClose={onClose} />}
+      <AnalyticsButton onClose={onClose} />
       <button type="button" className="tool-share" onClick={run(share)}><b>SHARE</b><span>This page's link</span></button>
       {/* the shell is a typed terminal: offered where there is a keyboard */}
       <button type="button" className="tool-shell" onClick={run(onShell)}><b>SHELL</b><span>Type field commands</span></button>
@@ -132,6 +136,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
   const anyXray = useXR(s => s.global || s.on.size > 0), frozen = useXR(s => s.frozen), fpsHud = useXR(s => s.fpsHud), note = useXR(s => s.toast)
   const xray = useFlag('xray')
   const view = useRef({ tab, board }); view.current = { tab, board }
+  useTrackEvents(board)
 
   // the layer itself mounts once the page is idle: warm the palette / shell chunks now, so a ⌘K followed by
   // quick typing finds the input already there instead of dropping the first keystrokes into the page
@@ -198,7 +203,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       const { tab: t, board: b } = view.current
       // a card's own page (canonical /widget/<slug>/, docs/SHARE-PLAN.md §3), or this view's canonical link (a CODE program keeps its ?p=)
       const url = withPondDay(withTheme(location.origin + (cardId ? widgetPath(cardId) : urlForView({ ...placeView(placeFromName(t) ?? 'EXPLORE'), board: b }, location.search, location.pathname))), cardId ? cardId.startsWith('pond-') : b === 'pond' && t === 'EXPLORE')
-      const done = () => toast('link copied')
+      const done = () => { toast('link copied'); track('link_copied', cardId ? { card: cardId } : { view: t }) }
       if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(done, () => toast(url))
       else toast(url)
     },
@@ -226,6 +231,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
 
   // U2 card action strip (DotWidget): ⓘ opens this card's X-ray, REMIX goes to MAKE · CODE (IR card) or MAKE · COMPOSE, LINK, PNG
   useEffect(() => onCardAction((action, { key, preset, data, layers, grid, style, theme, animated }) => {
+    track('card_action', { action, card: preset.id })
     if (action === 'how') {
       if (!flag('xray')) return
       const s = xrState()

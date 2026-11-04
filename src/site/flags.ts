@@ -27,6 +27,7 @@ export const FLAGS = [
   { id: 'xray', default: false, description: 'X-ray: the per-card ⓘ overlay and inspector, the dock button and TOOLS tile, the X keys, the palette action and the shell command' },
   { id: 'worker', default: true, description: 'Sample cards in a web worker; off samples on the main thread', param: 'worker' },
   { id: 'clack', default: false, description: 'The flip-disc clack sound', param: 'clack' },
+  { id: 'analytics', default: true, description: 'PostHog analytics, opt-in (src/site/analytics.ts): the consent banner and the TOOLS and palette switches. Needs VITE_POSTHOG_PROJECT_TOKEN' },
 ] as const satisfies readonly FlagDef[]
 
 export type FlagId = (typeof FLAGS)[number]['id']

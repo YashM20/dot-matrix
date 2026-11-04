@@ -1,0 +1,86 @@
+/* The analytics consent banner (src/site/analytics/banner.ts): a raised panel in the bottom left corner, the toast's
+   surface. Two equal buttons: neither carries the accent, so neither reads as the default. */
+.consent {
+  position: fixed;
+  left: var(--space-4);
+  bottom: var(--space-4);
+  z-index: var(--z-dock);
+  box-sizing: border-box;
+  width: min(360px, calc(100vw - 2 * var(--space-4)));
+  padding: var(--space-3) var(--space-4) var(--space-4);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  box-shadow: var(--shadow-raised);
+  color: var(--label);
+  font: 400 var(--fs-label-12)/1.5 var(--mono)
+}
+
+.consent p {
+  margin: 0 0 var(--space-2)
+}
+
+.consent-head {
+  color: var(--value);
+  font-weight: 600;
+  letter-spacing: .16em
+}
+
+.consent-text a {
+  color: var(--value)
+}
+
+.consent-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-2);
+  margin-top: var(--space-3)
+}
+
+.consent-actions button {
+  min-height: 40px;
+  border: 1px solid var(--line-hover);
+  border-radius: var(--radius-ctl);
+  background: transparent;
+  color: var(--value);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .12em;
+  cursor: pointer
+}
+
+.consent-actions button:hover,
+.consent-actions button:focus-visible {
+  background-color: var(--wash-hover)
+}
+
+.consent-actions button:focus-visible {
+  outline: 2px solid var(--value);
+  outline-offset: 2px
+}
+
+.consent-actions button:active {
+  background-color: var(--wash-press)
+}
+
+/* the end of the page grows by the banner's height (set inline), so the last card scrolls clear of it */
+.consent-space {
+  flex: none
+}
+
+/* phones: full width, above the tab bar where the page has one; 44 px targets */
+@media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
+  .consent {
+    left: var(--space-2);
+    right: var(--space-2);
+    bottom: var(--space-2);
+    width: auto
+  }
+
+  body:has(.tabbar) .consent {
+    bottom: calc(var(--tabbar-h) + var(--space-2))
+  }
+
+  .consent-actions button {
+    min-height: 44px
+  }
+}
