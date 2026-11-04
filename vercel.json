@@ -26,6 +26,22 @@
       "source": "/(.*)",
       "headers": [
         {
+          "key": "Content-Security-Policy",
+          "value": "default-src 'self'; script-src 'self' 'sha256-qDJJIM9uPFPBH4eKb0yeT3r6ybQHPSenej1xZhxFAp0='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; font-src 'self' data:; connect-src 'self' https://api.open-meteo.com https://api.github.com https://github-contributions-api.jogruber.de; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'self'"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "SAMEORIGIN"
+        },
+        {
+          "key": "Cross-Origin-Opener-Policy",
+          "value": "same-origin"
+        },
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains"
+        },
+        {
           "key": "X-Content-Type-Options",
           "value": "nosniff"
         },
@@ -35,16 +51,7 @@
         },
         {
           "key": "Permissions-Policy",
-          "value": "camera=(self), microphone=(self), geolocation=(self), accelerometer=(self), gyroscope=(self), payment=(), bluetooth=()"
-        }
-      ]
-    },
-    {
-      "source": "/((?!lab/motion-lab).*)",
-      "headers": [
-        {
-          "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' 'sha256-qDJJIM9uPFPBH4eKb0yeT3r6ybQHPSenej1xZhxFAp0='; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob: mediastream:; font-src 'self' data:; connect-src 'self' https://api.open-meteo.com https://api.github.com https://github-contributions-api.jogruber.de wss: ws://localhost:* ws://127.0.0.1:*; object-src 'none'; base-uri 'self'; form-action 'self'"
+          "value": "camera=(self), microphone=(self), accelerometer=(self), gyroscope=(self), geolocation=(), payment=(), bluetooth=(), usb=(), serial=(), hid=(), display-capture=()"
         }
       ]
     },
