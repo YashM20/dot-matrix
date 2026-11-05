@@ -4,10 +4,12 @@
 > Update this file in the same commit as the work. Active plans: `docs/WEB-PLAN.md` (what the site does) and `docs/UX-PLAN.md` (how visitors find it); every doc and its status: `docs/README.md`. Original phase plan: `docs/MASTER-PLAN.md` (v2). Research: `docs/MOTION-INTERACTION-DEPTH.md`, `docs/ADVANCED-PLAN.md`. Taste: `docs/STYLE-BIBLE.md`.
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
-## Live run state: resume here (updated 2026-11-01)
+## Live run state: resume here (updated 2026-11-05)
 > The coordinator keeps this block short and current. Read it first after any interruption or compaction.
 >
 > **Process: [`docs/CHECKPOINTS.md`](CHECKPOINTS.md).** One checkpoint at a time: scope, build, gate, publish, breather, then the owner picks the next one. Speed rules: at most 3 agents, agents run quick checks only, and the full suite runs once at the gate (or CI, if the owner skips it).
+
+**CP4 and CP5 so far (2026-11-04 to 11-06):** release flags come from the build value or `localStorage['dot480:flags']` only, never the URL (#200). MAKE, LAB and X-ray are off by default; likes (#169, #176) and opt-in PostHog analytics (#171) are on. CI runs as parallel jobs behind the required `check + build` gate in about 2.5 minutes (#199). The SEO checkup fixes (#198, #204) and the `/browse/` page (#182, #205) are on main. Trusted Types stays Report-Only, because the BotID challenge script writes a plain string to `srcdoc`. Open: the TETRIS rename (#188, needs a name), the a11y follow-ups (#187) and the MAKE layout (#186). The full hill climb (#189) waits for the owner.
 
 **Shipped:** CP1 (round 3) is on main as 0.13 (PR #78, `8a1a6fb`): E5, E6, Q2, Q3, M2, M3, L3, X1, the 0.12 and 0.13 release notes, the prose lint and the essay pass. The round-3 detail is in `CHANGELOG.md` 0.13 and the git history.
 
