@@ -111,7 +111,7 @@ em { color: var(--value) }
 .ctl { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: var(--space-3); font: var(--fs-label-12) var(--mono); color: var(--label); flex: 1 1 280px }
 .ctl--choice { grid-template-columns: 1fr; gap: var(--space-2); flex-basis: 100% }
 .ctl-label { letter-spacing: .06em; color: var(--mute); text-transform: uppercase; font: 500 var(--fs-label-12) var(--mono) }
-.ctl-out { color: var(--value); min-width: 4.5em; text-align: right; font-variant-numeric: tabular-nums }
+.ctl output { color: var(--value); min-width: 4.5em; text-align: right; font-variant-numeric: tabular-nums }
 .ctl input[type=range] { width: 100%; accent-color: var(--label); height: 28px; background: transparent }
 .ctl-buttons { display: flex; flex-wrap: wrap; gap: var(--space-2) }
 .ctl-buttons button, .ctl-toggle { font: var(--fs-label-12) var(--mono); letter-spacing: .04em; color: var(--label); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-pill); padding: var(--space-2) var(--space-4); cursor: pointer; min-height: 34px }

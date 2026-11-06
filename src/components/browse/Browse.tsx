@@ -72,7 +72,8 @@ export function Browse({ onBoard, onOpen, cardPath }: BrowseProps) {
   return <section className="browse" aria-labelledby={titleId}>
     <BoardTitle title="BROWSE" id={titleId} />
     <p className="board-blurb">All {ROWS.length} cards from every board in one place. Filter by board or tag, or search by name, then open a card or the board it lives on.</p>
-    <search className="browse-tools" aria-label="Filter the cards">
+    {/* role="search" too: browsers before <search> (Chrome and Firefox 118, Safari 17) still get the landmark */}
+    <search className="browse-tools" role="search" aria-label="Filter the cards">
       <label className="browse-field browse-field--q"><span>SEARCH</span>
         <input ref={search} type="search" value={typed} maxLength={60} placeholder="clock, ring, game…" autoComplete="off" spellCheck={false}
           aria-describedby={countId} onChange={e => setTyped(cleanQuery(e.target.value))} />

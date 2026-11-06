@@ -286,14 +286,13 @@ export default function App() {
     <SkipLink />
     <main id="main" tabIndex={-1}>
       <Suspense fallback={<section className="view-loading" aria-busy="true" />}><WidgetPage route={widget} onOpen={openWidget} onBoard={leaveWidget} /></Suspense>
+      <CommandLayer tab="EXPLORE" board={board} setTab={go} setBoard={pickBoard} />
     </main>
-    <CommandLayer tab="EXPLORE" board={board} setTab={go} setBoard={pickBoard} />
     <SiteFooter onAbout={() => { setWidget(undefined); setView('ABOUT') }} />
   </div>
   const title = view === 'MAKE' ? 'MAKE' : view === 'EXPLORE' ? boardLabel(board) : view
   return <div className="shell" data-view={view}>
     <SkipLink />
-    <h1 className="sr-only">MATRIX dot-matrix UI engine</h1>
     <header className="topbar"><a className="brand" href="/" aria-label="MATRIX home"><i className="mark" aria-hidden="true" />MATRIX</a>
       {/* phones: the place's name (on EXPLORE it opens every board) and search; the tab bar holds the views */}
       {view === 'EXPLORE'
@@ -313,6 +312,7 @@ export default function App() {
       <div className="topbar-dock"><DockGhost /></div>
       <button type="button" className="topbar-search" aria-label="Search boards, cards and actions" aria-haspopup="dialog" onClick={() => requestLayer('palette')}><Glyph rows={GLYPHS.SEARCH} /></button></header>
     <main id="main" tabIndex={-1}>
+    <h1 className="sr-only">MATRIX dot-matrix UI engine</h1>
     <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
     {shownPlace === 'EXPLORE' ? (
       <section className="boards-view" role="tabpanel" aria-labelledby="tab-EXPLORE">
@@ -337,9 +337,9 @@ export default function App() {
       </section>
     )}
     </Suspense>
-    </main>
     {/* C10: ⌘K palette, dot shell, X-ray inspector, time machine; `tab` is the place (a view or a MAKE mode) */}
     <CommandLayer tab={place} board={board} setTab={go} setBoard={setBoard} />
+    </main>
     {boards && <Suspense fallback={null}><BoardSheet board={board} onClose={() => setBoards(false)} onPick={id => { window.scrollTo(0, 0); setView('EXPLORE'); setBoard(id) }} /></Suspense>}
     <TabBar view={view} onView={setView} onBoards={() => setBoards(true)} />
     <SiteFooter onAbout={() => setView('ABOUT')} /></div>

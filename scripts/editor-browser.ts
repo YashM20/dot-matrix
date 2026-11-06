@@ -273,7 +273,7 @@ async function desktop() {
     check('opening the same link again re-selects its frame instead of adding a copy', (await h.frameIds()).length === n1 && n1 <= n0 + 1, `${n0} → ${n1} → ${(await h.frameIds()).length}`)
     await h.clickText('.ed-left [role=tab]', 'ASSETS'); await sleep(300)
     await h.clickText('.ed-agroup[aria-label="Programs"] .ed-asset', 'rain'); await sleep(1200)
-    const sliders = await p.js<string[]>(`[...document.querySelectorAll('.ed-insp .ed-slider > span')].map(s => s.firstChild.textContent)`)
+    const sliders = await p.js<string[]>(`[...document.querySelectorAll('.ed-insp .ed-slider > label')].map(s => s.firstChild.textContent)`)
     const d0 = await h.lit(); await h.setValue('.ed-insp .ed-slider input', 1); await sleep(600); const d1 = await h.lit()
     check('data.* sliders are generated for the keys a program reads, and move the frame', sliders.join() === 'data.density' && d1.n !== d0.n, `${sliders.join()}; ${d0.n} → ${d1.n}`)
     await h.clickText('.ed-agroup[aria-label="Start"] .ed-asset', 'Drawing'); await sleep(600) // a paint frame for ?make=draw below

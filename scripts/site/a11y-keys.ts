@@ -80,7 +80,7 @@ try {
     check(`theme popover: Escape closes, focus back on THEME:${mode}`, !(await p.js<boolean>(`!!document.querySelector('.theme-pop')`)) && await p.js<boolean>(`!!document.activeElement?.matches('.theme-menu-btn')`), await active(p))
 
     await press(p, 'k', 2) // Ctrl
-    await p.waitFor(`!!document.querySelector('.pal [role=combobox]') && document.activeElement?.matches('.pal-input')`, 8000)
+    await p.waitFor(`!!document.querySelector('.pal [role=combobox]') && document.activeElement?.matches('.pal-input')`, 20000) // the first ⌘K loads the command layer's chunks
     check(`palette: Ctrl-K opens with focus in the field:${mode}`, await p.js<boolean>(`!!document.activeElement?.matches('.pal-input')`), await active(p))
     await press(p, 'Escape')
     await sleep(200)
