@@ -12,7 +12,7 @@
  * E6: a long press (touch, Move) on a frame or layer opens the long-press menu; a drag that snaps to a
  * guide lights the pasteboard's dots along it for a moment (the snap cue, in the accent).
  */
-import { memo, useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react'
+import { memo, useCallback, useEffect, useEffectEvent, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react'
 import { PAINT_LIVE, paintCells, paintLayer, type PaintLayer, type SitesLayer, type SpecLayer, type StudioLayer } from '../studio/doc'
 import { EXAMPLES } from '../dwitter/examples'
 import { addFrame, addLayer, blankCard, copyFrames, copyLayers, drawingCard, editFrame, editLayer, encodeCells, frameById, frameSize, hitFrame, hitLayer, layerOf, line, movable, newIRLayer, newTextLayer, nudgeLayer, paintCellAt, pitchOf, programCard, programSource, stamp, topDown, type EditorDoc, type EditorFrame } from './doc'
@@ -112,7 +112,8 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
   const engaged = useRef<Guide[] | undefined>(undefined)
   const cue = useRef<{ guides: Guide[]; t0: number; accent?: string } | undefined>(undefined)
 
-  // viewport size → store (fit / reveal), and the first fit
+  // viewport size → store (fit / reveal), and the first fit (for the layout at that moment)
+  const firstFit = useEffectEvent(() => { const s = useEditor.getState(), first = s.h.present.frames.find(f => !f.hidden); if (s.sel.frame) s.fit([s.sel.frame], 1.5); else if (phone && first) s.fit([first.id], 1.25); else s.fit([], 1.25) })
   useEffect(() => {
     const el = vp.current
     if (!el) return
@@ -120,7 +121,7 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
     const ro = new ResizeObserver(() => {
       const r = el.getBoundingClientRect()
       useEditor.getState().setVp(r.width, r.height); pasteDirty.current = true
-      if (!fitted && r.width > 0) { fitted = true; const s = useEditor.getState(), first = s.h.present.frames.find(f => !f.hidden); if (s.sel.frame) s.fit([s.sel.frame], 1.5); else if (phone && first) s.fit([first.id], 1.25); else s.fit([], 1.25) }
+      if (!fitted && r.width > 0) { fitted = true; firstFit() }
     })
     ro.observe(el)
     return () => ro.disconnect()

@@ -6,6 +6,10 @@ export default {
     // the same check as oxlint's `react/only-export-components`, which `.oxlintrc.json` already runs (with
     // `allowConstantExport`): keep one copy so each finding counts once
     'react-doctor/only-export-components': 'off',
+    // `includes`/`find` in a loop (#209): every flagged array is a handful of layers, frames, locks, tags or
+    // history lines, walked on a click or a key, never per frame, per dot or per pointer move. A Set or Map there
+    // costs more than the scan it saves, so fixes go where a profile shows a hot path instead
+    'react-doctor/js-set-map-lookups': 'off',
   },
   ignore: {
     files: [
@@ -64,6 +68,23 @@ export default {
           'src/hooks/useSwipeDown.ts',
         ],
         rules: ['react-doctor/effect-needs-cleanup'],
+      },
+      {
+        // a card spec is a JSON format: the round trip is the point (it drops functions, undefined and non-finite
+        // numbers the way a saved file would, where `structuredClone` throws on a function and keeps the rest), and
+        // it runs once per card build or export, not per frame
+        files: ['src/spec/build.ts', 'src/spec/export.ts'],
+        rules: ['react-doctor/no-json-parse-stringify-clone'],
+      },
+      {
+        // `Num` takes `Number()` only after it checks for an empty input and a non-finite result
+        files: ['src/components/editor/ui.tsx'],
+        rules: ['react-doctor/no-unguarded-numeric-input-parse'],
+      },
+      {
+        // `Rename` mounts for one rename: its `value` prop is the starting text, edited locally until Enter or Escape
+        files: ['src/components/editor/Panels.tsx'],
+        rules: ['react-doctor/no-derived-useState'],
       },
       {
         // static, stateless lists that never reorder (parsed blog spans, changelog lines, snap guides, shell

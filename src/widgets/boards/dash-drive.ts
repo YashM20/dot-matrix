@@ -91,7 +91,7 @@ export const DASH_PERIOD = 12
 const ROLL = (Math.round(D_LAP / DASH_PERIOD) * DASH_PERIOD) / D_LAP
 /** The lap's phases, by start time (the DRIVE card's timeline ticks). */
 export const PHASES: [number, string][] = [[0, 'PARKED'], [1.4, 'SHIFT'], [2, 'PULL AWAY'], [7, 'CRUISE'], [10, 'SIGNAL'], [16.6, 'CRUISE'], [22, 'BRAKE'], [26.4, 'PARK'], [27.2, 'HAZARDS']]
-export const phaseAt = (tau: number) => [...PHASES].reverse().find(([t0]) => tau >= t0)![1]
+export const phaseAt = (tau: number) => ([...PHASES].reverse().find(([t0]) => tau >= t0) ?? PHASES[0])[1]
 
 /** Battery power (kW, negative = into the battery) for a 2.1 t car: inertia, drag and rolling resistance; regen caps at 60 kW. */
 export function kwOf(kmh: number, accel: number): number {
