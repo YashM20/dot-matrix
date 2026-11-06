@@ -12,7 +12,7 @@
  * `KNOWN` lists today's failures: they print as known and don't fail the run (scripts/lib/check.ts `knownChecker`).
  * Needs a server for dist/: `pnpm build && npx vite preview --port 4317`, then
  * `npx tsx scripts/site/mobile.ts [baseUrl] [ids]`, where `ids` (comma-separated) runs only those boards, `tab:<view>`,
- * `fps` or `chrome`. Screenshots → `.snapshots/w0/`. Chrome: $CHROME or the usual paths.
+ * `fps`, `chrome` or `first-load` (the lazy-loading and deep-link checks). Screenshots → `.snapshots/w0/`. Chrome: $CHROME or the usual paths.
  */
 import { spawn } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -157,7 +157,7 @@ try {
   await cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
   const boardReady = `!!document.querySelector('.board-grid canvas, .board-grid svg')`
 
-  if (!only) {
+  if (!only || only.includes('first-load')) {
     // first load: entry + static imports + the default board only
     await cdp('Page.navigate', { url: base })
     check('home opens the first board', await waitFor(boardReady))

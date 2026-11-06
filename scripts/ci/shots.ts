@@ -4,7 +4,7 @@
  *
  *   npx tsx scripts/ci/shots.ts --list "/browse/@1280,/@390@light,/widget/timer/@1280@light_cobalt" [--out <dir>]
  *
- * Each item is `route@width[@theme]`. Widths up to 600 are a phone (844 px tall, touch), wider ones a desktop
+ * Each item is `route@width[@theme]`; the route's leading slash is optional (`browse/@1280`, `@390` for home). Widths up to 600 are a phone (844 px tall, touch), wider ones a desktop
  * (900 px tall). Theme is `dark`, `light` or a full `<scheme>_<accent>` name (src/site/theme/names.ts); default
  * `dark_signal`. Reduced motion is emulated so nothing is caught mid-animation. Files: `<route>-<width>-<theme>.png`
  * in `--out` (default `.snapshots/ci-shots/`). Exit 1 when a page never got ready, 2 on a bad item.
@@ -21,7 +21,8 @@ const items = (opt('--list') ?? '').split(',').map(s => s.trim()).filter(Boolean
 
 type Item = { route: string; width: number; scheme: string; accent: string; file: string }
 const parse = (s: string): Item | string => {
-  const [route, w, theme = 'dark'] = s.split('@')
+  // the leading slash is optional: Git Bash on Windows rewrites a leading `/` into a Windows path
+  const [r, w, theme = 'dark'] = s.split('@'), route = r.startsWith('/') ? r : `/${r}`
   if (!/^\/[\w\-./?=&%]*$/.test(route) || route.includes('..')) return `bad route in "${s}"`
   const width = Number(w)
   if (!Number.isInteger(width) || width < 240 || width > 3840) return `bad width in "${s}" (240 to 3840)`

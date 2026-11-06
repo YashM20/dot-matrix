@@ -21,7 +21,7 @@
   gh run download <id> -n probe-captures-3 -D <dir>           # a shard's own .snapshots/, to see a failure
   gh run view <id> --log-failed                               # the failing probe's output
   ```
-  `probes=all` runs every probe, `probes=none` only the screenshots; an empty `shots` skips the screenshot job.
+  `probes=all` runs every probe, `probes=none` only the screenshots; an empty `shots` skips the screenshot job. In Git Bash on Windows, prefix the command with `MSYS_NO_PATHCONV=1` (or drop the leading `/` of each route): Git Bash rewrites `/browse/` into a Windows path.
 
 ## The first harness (historical, 2026-08)
 > The commands below are outdated (npm, module counts). Use the section above.

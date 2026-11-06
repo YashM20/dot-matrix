@@ -10,17 +10,18 @@
  *
  * Needs `dist/` (vite build) and Chrome ($CHROME or the usual paths). Exit 1 when a probe fails, 2 on a bad name.
  * Writes a timing table to $GITHUB_STEP_SUMMARY when it is set. Rebalance shards by those timings: no shard should
- * outlast mobile or materials, which run alone. Split a long probe by its own filters (editor `--only`,
+ * outlast materials, which runs alone. Split a long probe by its own filters (editor `--only`,
  * layout `--widths`).
  */
 import { spawn, spawnSync } from 'node:child_process'
 import { appendFileSync } from 'node:fs'
 import { delimiter, resolve as absolute } from 'node:path'
 import { serveDist } from '../lib/cdp'
+import { boardIds } from '../../src/widgets/manifest'
 
 const BASE = 'http://localhost:4317/'
 /** `$BASE` in an argument becomes the preview's URL; `$HOST` the same without the trailing slash. */
-const PROBES: { name: string; shard: number; args: string[]; env?: Record<string, string> }[] = [
+const PROBES: { name: string; shard: number; args: string[]; env?: Record<string, string>; timeoutMin?: number }[] = [
   { name: 'editor', shard: 1, args: ['scripts/editor-browser.ts', '--only', 'desktop'] },
   { name: 'editor-phone', shard: 2, args: ['scripts/editor-browser.ts', '--only', 'phone,landscape'] },
   { name: 'c10', shard: 2, args: ['scripts/c10-browser.ts', '$BASE'] },
@@ -28,7 +29,9 @@ const PROBES: { name: string; shard: number; args: string[]; env?: Record<string
   { name: 'chunks', shard: 3, args: ['scripts/site/chunks-browser.ts'] },
   { name: 'layout-narrow', shard: 4, args: ['scripts/site/layout.ts', '$BASE', '--widths', '1024,768,390,320'] },
   { name: 'browse', shard: 4, args: ['scripts/site/browse-browser.ts'] },
-  { name: 'mobile', shard: 5, args: ['scripts/site/mobile.ts', '$BASE'] },
+  // mobile.ts in two halves: its MAKE tabs take up to a minute each on a runner
+  { name: 'mobile', shard: 5, args: ['scripts/site/mobile.ts', '$BASE', 'first-load,fps,chrome,tab:make=tune,tab:make=compose,tab:make=code,tab:make=draw,tab:about'] },
+  { name: 'mobile-boards', shard: 13, args: ['scripts/site/mobile.ts', '$BASE', boardIds.join(',')] },
   { name: 'materials', shard: 6, args: ['scripts/materials-browser.ts'] },
   { name: 'audio', shard: 7, args: ['scripts/audio-chrome.ts'], env: { URL: '$BASE' } },
   { name: 'theme-boot', shard: 7, args: ['scripts/site/theme-boot.ts'] },
@@ -39,7 +42,8 @@ const PROBES: { name: string; shard: number; args: string[]; env?: Record<string
   { name: 'essay', shard: 9, args: ['scripts/essay-browser.ts', '$BASE'] },
   { name: 'csp', shard: 10, args: ['scripts/site/csp-browser.ts'] },
   { name: 'a11y', shard: 10, args: ['scripts/site/a11y.ts'] },
-  { name: 'life', shard: 11, args: ['scripts/life-browser.ts'] },
+  // life finishes in about a minute, or hangs
+  { name: 'life', shard: 11, args: ['scripts/life-browser.ts'], timeoutMin: 3 },
   { name: 'c6', shard: 12, args: ['scripts/c6-browser.ts', '--url', '$HOST'] },
   { name: 'analytics', shard: 12, args: ['scripts/site/analytics-browser.ts'] },
   // a runner has no GPU and webgl.ts launches its own Chrome: its `--swiftshader` turns WebGL2 on (squares passes as is)
@@ -49,8 +53,8 @@ const PROBES: { name: string; shard: number; args: string[]; env?: Record<string
   { name: 'likes', shard: 12, args: ['scripts/likes-browser.ts'] },
   { name: 'theme-picker', shard: 12, args: ['scripts/site/theme-picker.ts'] },
 ]
-/** A hung probe fails here instead of holding its shard to the job timeout (mobile and materials take 4 to 5 minutes). */
-const TIMEOUT_MS = 7 * 60_000
+/** A hung probe fails here instead of holding its shard to the job timeout (materials takes 4 to 5 minutes). */
+const TIMEOUT_MIN = 6
 
 const argv = process.argv.slice(2)
 const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : undefined }
@@ -76,7 +80,8 @@ const run = (p: (typeof PROBES)[number]) => new Promise<number | null>(resolve =
   // pnpm keeps the bins of indirect deps (esbuild, which webgl.ts and squares-browser.ts call) in a hidden folder
   const env = { ...process.env, PATH: `${absolute('node_modules/.pnpm/node_modules/.bin')}${delimiter}${process.env.PATH}`, ...Object.fromEntries(Object.entries(p.env ?? {}).map(([k, v]) => [k, sub(v)])) }
   const child = spawn(tsx, p.args.map(sub), { stdio: 'inherit', env, shell: process.platform === 'win32' })
-  const timer = setTimeout(() => { console.log(`${p.name}: timed out after ${TIMEOUT_MS / 60_000} min`); child.kill('SIGKILL') }, TIMEOUT_MS)
+  const min = p.timeoutMin ?? TIMEOUT_MIN
+  const timer = setTimeout(() => { console.log(`${p.name}: timed out after ${min} min`); child.kill('SIGKILL') }, min * 60_000)
   child.on('exit', code => { clearTimeout(timer); resolve(code) })
 })
 
