@@ -24,6 +24,14 @@ import type { Control, FrameContext } from '../engine/context'
 import type { DotInstance, DotStyle, GridConfig, ThemeTokens } from '../engine/types'
 import { withChrome, type WidgetPreset } from './types'
 
+/**
+ * What a host needs next to `mountCard`. The registry's components import only from here: the shadcn CLI resolves
+ * `@/` imports by file name, and `types` is two files (engine and widgets).
+ */
+export type { DotStyle, Field, Layer, ThemeTokens, Tone } from '../engine/types'
+export { baseStyle, type WidgetPreset } from './types'
+export { dot480 } from '../engine/theme/tokens'
+
 export type RendererChoice = 'auto' | 'svg' | 'canvas'
 export interface CardOptions {
   preset: WidgetPreset

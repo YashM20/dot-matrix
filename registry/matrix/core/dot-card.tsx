@@ -5,10 +5,7 @@
  * (animated or dense), handles pointer and keyboard controls, and honours reduced motion.
  */
 import { useEffect, useRef, type CSSProperties } from 'react'
-import { dot480 } from '@/lib/matrix/engine/theme/tokens'
-import type { ThemeTokens } from '@/lib/matrix/engine/types'
-import { mountCard, type CardHandle, type CardOptions, type RendererChoice } from '@/lib/matrix/widgets/mount'
-import type { WidgetPreset } from '@/lib/matrix/widgets/types'
+import { dot480, mountCard, type CardHandle, type CardOptions, type RendererChoice, type ThemeTokens, type WidgetPreset } from '@/lib/matrix/widgets/mount'
 
 export type { RendererChoice, ThemeTokens, WidgetPreset }
 

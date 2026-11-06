@@ -9,7 +9,8 @@
  *    `registryDependencies` are full URLs on this registry (or the shared `utils` of the reactopia registry);
  *  - lib files are the `src/` files themselves (byte for byte), and nothing imports a package other than React.
  *
- *   pnpm registry:check   → exit 1 on a failure
+ *   pnpm registry:check                → builds into a temp folder; exit 1 on a failure
+ *   pnpm registry:check --dir dist/r   → checks a build `pnpm registry:build` already wrote (CI)
  * The full install test (throwaway Vite app, typecheck, build) is scripts/registry/install-test.ts.
  */
 import { execFileSync } from 'node:child_process'
@@ -35,12 +36,16 @@ const parsed = registrySchema.safeParse(index)
 assert('registry.json passes the shadcn registry schema', parsed.success, parsed.success ? '' : parsed.error.message)
 assert('registry name and homepage', index.name === 'matrix' && index.homepage === 'https://matrix.reactopia.me')
 
-const out = mkdtempSync(join(tmpdir(), 'matrix-registry-'))
+const dirArg = process.argv.indexOf('--dir'), given = dirArg > 0 ? process.argv[dirArg + 1] : undefined
+const out = given ?? mkdtempSync(join(tmpdir(), 'matrix-registry-'))
 try {
-  node([SHADCN, 'build', 'registry.json', '-o', out])
+  if (!given) node([SHADCN, 'build', 'registry.json', '-o', out])
   const built = readdirSync(out).filter(f => f.endsWith('.json') && f !== 'registry.json')
   assert('shadcn build writes one JSON per item plus the index', built.length === index.items.length && readdirSync(out).includes('registry.json'), `${built.length} / ${index.items.length}`)
   const bad: string[] = []
+  // The CLI rewrites an `@/` import to an installed file with the same name, so a component may only import a unique one.
+  const names = new Map<string, number>()
+  for (const it of index.items) for (const fl of it.files) { const b = String(fl.target).split('/').pop()!.replace(/\.tsx?$/, ''); names.set(b, (names.get(b) ?? 0) + 1) }
   for (const name of built) {
     const item = JSON.parse(readFileSync(join(out, name), 'utf8'))
     const r = registryItemSchema.safeParse(item)
@@ -60,6 +65,7 @@ try {
       for (const m of String(f.content).matchAll(/from\s+['"]([^'"./][^'"]*)['"]/g)) {
         const spec = m[1]
         if (!spec.startsWith('@/lib/matrix/') && !spec.startsWith('@/components/matrix/') && !ALLOWED_PACKAGES.has(spec)) at(`${f.path} imports ${spec}`)
+        if (spec.startsWith('@/') && names.get(spec.split('/').pop()!) !== 1) at(`${f.path} imports ${spec}: that file name is not unique in the registry, the CLI may point it at another file`)
       }
       for (const m of String(f.content).matchAll(/className=\{?[`'"]([^`'"]*)/g)) for (const cls of m[1].split(/\s+/)) if (cls && !cls.startsWith('$') && !cls.startsWith('matrix-')) at(`class ${cls}`)
     }
@@ -67,6 +73,6 @@ try {
   assert('every built item passes the shadcn item schema and the no-conflict rules', bad.length === 0, bad.slice(0, 12).join('\n  '))
 } catch (e) {
   assert('shadcn build', false, String((e as { stderr?: string }).stderr ?? e).trim())
-} finally { rmSync(out, { recursive: true, force: true }) }
+} finally { if (!given) rmSync(out, { recursive: true, force: true }) }
 
 done(`registry ok: ${index.items.length} items`)

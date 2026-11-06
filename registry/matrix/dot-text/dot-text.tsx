@@ -6,8 +6,7 @@
 import { useMemo } from 'react'
 import { MatrixDotCard, type MatrixDotCardProps } from '@/components/matrix/dot-card'
 import { textAt, textSize } from '@/lib/matrix/engine/layout'
-import type { Field, Layer, Tone } from '@/lib/matrix/engine/types'
-import { baseStyle, type WidgetPreset } from '@/lib/matrix/widgets/types'
+import { baseStyle, type Field, type Layer, type Tone, type WidgetPreset } from '@/lib/matrix/widgets/mount'
 
 export interface MatrixDotTextProps extends Omit<MatrixDotCardProps, 'preset' | 'data' | 'animated'> {
   text: string

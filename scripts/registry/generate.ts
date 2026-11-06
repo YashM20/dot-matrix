@@ -143,7 +143,52 @@ const dotText: Item = {
   categories: ['dot-matrix', 'text'],
 }
 
-const items: Item[] = [core, ...boardItems, ...cardItems, dotText]
+// The site's mark (src/site/brand/mark.svg, also the source of the favicon and header mark) as a standalone
+// component: its circles and colours, classes renamed to `matrix-logo-*`, each colour overridable by a `--matrix-logo-*` variable.
+const MARK = 'src/site/brand/mark.svg', markSvg = readFileSync(join(ROOT, MARK), 'utf8')
+const markDots = [...markSvg.matchAll(/<circle class="(\w+)" cx="([\d.]+)" cy="([\d.]+)" r="([\d.]+)"\/>/g)].map(([, tone, x, y, r]) => `['${tone}', ${x}, ${y}, ${r}]`)
+const markStyle = /<style>(.*)<\/style>/.exec(markSvg)?.[1]
+if (!markDots.length || !markStyle) throw new Error(`registry: cannot read the mark in ${MARK}`)
+const logoCss = markStyle.replace(/\.(\w+)\{fill:(#[0-9A-Fa-f]{6})\}/g, (_, tone: string, hex: string) => `.matrix-logo-${tone}{fill:var(--matrix-logo-${tone},${hex})}`)
+write(join(ROOT, 'registry/matrix/logo/matrix-logo.tsx'), `/**
+ * The MATRIX mark: the M of the 5×7 dot font folded onto a 5×5 grid, the one accent at its centre. Generated from
+ * the site's ${MARK} by scripts/registry/generate.ts. It follows the light or dark colour scheme; set
+ * \`--matrix-logo-on\`, \`--matrix-logo-off\` or \`--matrix-logo-accent\` to recolour it.
+ */
+import type { SVGProps } from 'react'
+
+const DOTS: [tone: string, cx: number, cy: number, r: number][] = [
+${Array.from({ length: Math.ceil(markDots.length / 5) }, (_, i) => `  ${markDots.slice(i * 5, i * 5 + 5).join(', ')},`).join('\n')}
+]
+const CSS = '${logoCss}'
+
+export interface MatrixLogoProps extends Omit<SVGProps<SVGSVGElement>, 'children'> {
+  /** Width and height in px. Default 16 (the dots land on whole pixels at 16, 32, 48…). */
+  size?: number
+  /** Accessible name. Default "MATRIX"; pass \`''\` when a visible label sits next to it. */
+  title?: string
+}
+
+export function MatrixLogo({ size = 16, title = 'MATRIX', className, ...svg }: MatrixLogoProps) {
+  return (
+    <svg
+      viewBox="0 0 16 16" width={size} height={size} role={title ? 'img' : undefined} aria-label={title || undefined} aria-hidden={title ? undefined : true}
+      className={className ? \`matrix-logo \${className}\` : 'matrix-logo'} {...svg}
+    >
+      <style>{CSS}</style>
+      {DOTS.map(([tone, cx, cy, r]) => <circle key={\`\${cx},\${cy}\`} className={\`matrix-logo-\${tone}\`} cx={cx} cy={cy} r={r} />)}
+    </svg>
+  )
+}
+`)
+const logo: Item = {
+  name: 'matrix-logo', type: 'registry:component', title: 'Logo (MATRIX)',
+  description: 'The MATRIX mark as <MatrixLogo size={32} />: an inline SVG of 25 dots with the one red accent, light and dark aware, recoloured through --matrix-logo-* variables. No dependencies.',
+  files: [{ path: 'registry/matrix/logo/matrix-logo.tsx', type: 'registry:component', target: 'components/matrix/matrix-logo.tsx' }],
+  categories: ['dot-matrix', 'brand'],
+}
+
+const items: Item[] = [core, ...boardItems, ...cardItems, dotText, logo]
 const registry = {
   $schema: 'https://ui.shadcn.com/schema/registry.json',
   name: 'matrix', homepage: 'https://matrix.reactopia.me',

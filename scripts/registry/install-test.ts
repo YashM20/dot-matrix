@@ -69,7 +69,7 @@ const APP_FILES: Record<string, string> = {
       target: 'ES2022', lib: ['ES2022', 'DOM', 'DOM.Iterable'], module: 'ESNext', types: ['vite/client'], skipLibCheck: true,
       moduleResolution: 'bundler', allowImportingTsExtensions: true, verbatimModuleSyntax: true, moduleDetection: 'force', noEmit: true, jsx: 'react-jsx',
       strict: true, noUnusedLocals: true, noUnusedParameters: true, erasableSyntaxOnly: true, noFallthroughCasesInSwitch: true, noUncheckedSideEffectImports: true,
-      baseUrl: '.', paths: { '@/*': ['./src/*'] },
+      paths: { '@/*': ['./src/*'] },
     },
     include: ['src'],
   }, null, 2),
@@ -121,16 +121,19 @@ try {
   assert('nothing else in the app changed (no css, no utils, no package.json edits)', changed.length === 0, changed.join(', '))
   assert('core runtime, boards and every card installed', ['src/lib/matrix/widgets/mount.ts', 'src/components/matrix/dot-card.tsx', 'src/lib/matrix/widgets/boards/henry.ts', 'src/lib/matrix/widgets/boards/heartbeat.ts', ...wanted.map(n => `src/components/matrix/${n}.tsx`)].every(f => after.includes(f)))
 
-  const comps = wanted.filter(n => n !== 'matrix-dot-text' && n !== 'matrix-home-clock')
+  const comps = wanted.filter(n => !['matrix-dot-text', 'matrix-home-clock', 'matrix-logo'].includes(n))
+  const cardCount = wanted.length - 1 // all but the logo
   const pascal = (n: string) => 'Matrix' + n.replace(/^matrix-(ui-)?/, '').split('-').map(w => w[0].toUpperCase() + w.slice(1)).join('')
   writeFileSync(join(app, 'src/App.tsx'), `import { MatrixDotText } from '@/components/matrix/matrix-dot-text'
 import { MatrixHomeClock } from '@/components/matrix/matrix-home-clock'
+import { MatrixLogo } from '@/components/matrix/matrix-logo'
 ${comps.map(n => `import { ${pascal(n)} } from '@/components/matrix/${n}'`).join('\n')}
 
 const cell = { width: 216 }
 export default function App() {
   return (
     <main style={{ padding: 24, display: 'grid', gap: 24 }}>
+      <MatrixLogo size={48} />
       <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
         <MatrixHomeClock style={{ width: 360 }} />
         <MatrixDotText text="MATRIX" weight="bold" pitch={6} />
@@ -159,10 +162,10 @@ export default function App() {
     const a = web.address(), page = await launch(1280, 1100, { testHooks: false })
     try {
       await page.cdp('Page.navigate', { url: `http://127.0.0.1:${typeof a === 'object' && a ? a.port : 0}/` })
-      await page.waitFor(`document.querySelectorAll('.matrix-card svg, .matrix-card canvas').length >= ${wanted.length}`, 15000)
+      await page.waitFor(`document.querySelectorAll('.matrix-card svg, .matrix-card canvas').length >= ${cardCount}`, 15000)
       await sleep(1500)
       const cards = await page.js<number>(`document.querySelectorAll('.matrix-card').length`)
-      assert('every component mounts in the browser with no page error', cards === wanted.length && page.logs.length === 0, `${cards} cards; ${page.logs.slice(0, 3).join(' | ')}`)
+      assert('every component mounts in the browser with no page error', cards === cardCount && page.logs.length === 0, `${cards} cards; ${page.logs.slice(0, 3).join(' | ')}`)
       await page.shot(shot)
       console.log(`shot: ${shot}`)
     } finally { await page.close(); web.close() }

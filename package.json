@@ -9,7 +9,10 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && vite build && pnpm registry:build",
+    "registry:build": "tsx scripts/registry/generate.ts && shadcn build registry.json -o dist/r",
+    "registry:check": "tsx scripts/registry/check.ts",
+    "registry:test": "tsx scripts/registry/install-test.ts",
     "verify": "tsx scripts/verify.ts",
     "snap": "tsx scripts/snap.ts",
     "golden": "tsx scripts/golden.ts",

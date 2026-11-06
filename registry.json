@@ -795,6 +795,23 @@
         "dot-matrix",
         "text"
       ]
+    },
+    {
+      "name": "matrix-logo",
+      "type": "registry:component",
+      "title": "Logo (MATRIX)",
+      "description": "The MATRIX mark as <MatrixLogo size={32} />: an inline SVG of 25 dots with the one red accent, light and dark aware, recoloured through --matrix-logo-* variables. No dependencies.",
+      "files": [
+        {
+          "path": "registry/matrix/logo/matrix-logo.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-logo.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "brand"
+      ]
     }
   ]
 }

@@ -82,7 +82,7 @@ src/site/meta.ts                  per-board title / description / OG tags (runti
 src/lib/                          photoDotify (upload → dither), share (IR short links), drawGrid, bresenham, exportField
 ── repo level ──
 packages/                         @dot480/core, react, element (entries re-export src/; unpublished); scripts: build, registry (shadcn), smoke
-registry/                         shadcn registry: registry.json, card wrappers (dot480/), built items (r/)
+registry/                         shadcn registry sources (matrix/); registry.json at the root, built to dist/r/
 mcp/                              MCP server (MCP Apps): set_agent_state, describe_board, render/score/refine_card, record_verdict, push_to_device
 targets/                          device pushers, Node built-ins only: wled, awtrix, trmnl, tronbyt, glyph-toy, esp32 (dotvm.c = IR bytecode VM)
 schema/, examples/specs/, goldens/  card.v1 JSON Schema, example specs, golden hashes (`<board>.json` per board, ir-glsl.json, noise*.json)
