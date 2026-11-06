@@ -11,9 +11,9 @@
  */
 import type { Layer, Tone } from '../../engine/types'
 import { TAU, TILE, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
-import { OUTLINE, PRESS, marching, rr, rrect, ui } from './components'
+import { OUTLINE, PRESS, marching, rr, rrect, ui } from './components-kit'
 
-export { PRESS, at, circle, dimmed, rr, rrect } from './components'
+export { PRESS, at, circle, dimmed, rr, rrect } from './components-kit'
 export const T = layoutFor(TILE)
 export type Pt = [number, number]
 /** Knobs, status dots and loader dots are true circles, like the components board. */

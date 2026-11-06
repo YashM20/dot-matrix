@@ -1,14 +1,14 @@
 /**
  * The single-widget page (docs/SHARE-PLAN.md §4): `/widget/<slug>/`, `/widget/<uid>/`, `/<uid>` and the old
  * `?card=` all land here (src/site/routes.ts). Lazy: the catalog, the metadata and the export helpers load with
- * it, never in the first load. On a desktop the page is an app that fits the screen (#183): a top bar (back to the
+ * it, never in the first load; the page loads only its own board, and the export code on the first export (#214). On a desktop the page is an app that fits the screen (#183): a top bar (back to the
  * board, previous / next), the card on a stage that scales to fit, and a side panel with the name, the blurb, the
  * grouped actions (export, share and remix, MORE), the like button and the facts; the panel scrolls on its own.
  * Phones stack it. X-RAY shows only while its flag is on. A missing widget is noindex.
  */
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { DotName } from '../DotName'
-import { dot480 } from '../../engine'
+import { dot480 } from '../../engine/theme/tokens'
 import { boardIds, boardLabel, loadBoard, resolveCardId } from '../../widgets/manifest'
 import { catalog } from '../../widgets/catalog'
 import { deriveWidgetMeta, type WidgetMeta } from '../../widgets/meta'
@@ -17,9 +17,6 @@ import { canonicalWidgetUrl, resolveWidget, shortPath, widgetPath, type Resolved
 import { setNoIndex, setPageMeta, widgetPageMeta, widgetTitle } from '../../site/meta'
 import { replaceUrl } from '../../site/safe-url'
 import { useFlag } from '../../site/useFlag'
-import { presetSource } from '../../export/source'
-import { stillPNG } from '../../export/still'
-import { cardHTML, cardSVG } from '../../export/snippets'
 import { canShare, copyPNG, copySVG, copyText, download, shareCard, type Outcome } from '../../export/clipboard'
 import { boardTime, cardAction, toast, useXR } from '../xray/store'
 import { getSkin } from '../skins/store'
@@ -49,6 +46,9 @@ type Loaded = { w: ResolvedWidget; preset: WidgetPreset; items: WidgetPreset[]; 
 /** Board sources a widget page subscribes to as well (X1): the pond's day (`?day=`, the opt-in age) and the light hub. */
 const PAGE_SOURCES = new Set(['pond-day', 'light'])
 type State = { status: 'loading' } | { status: 'missing' } | { status: 'failed' } | ({ status: 'ok' } & Loaded)
+
+/** The export code (PNG, SVG, HTML), loaded on the first export. */
+const exporter = () => import('./cardExport')
 
 const said: Record<Outcome, string> = { copied: 'copied', downloaded: 'saved (copy isn’t available here)', shared: 'shared', cancelled: '', failed: 'failed' }
 
@@ -98,13 +98,12 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
   const pitch = (preset.grid.pitch ?? dot480.gridPx) * 2
   // exports are what the visitor sees: the card's theme at the moment of export (the site theme, or its dark inset)
   const theme = () => { const s = getTheme(); return themeTokens(cardScheme(preset, s.resolved, getSkin()), s.accent) }
-  const source = () => presetSource(preset, theme())
   const t = () => (preset.animated ? boardTime() : 0)
-  const png = () => stillPNG(source(), t())
-  const svg = () => {
-    const src = source(), th = theme()
-    return cardSVG(src.frame(t()), { width: src.width, height: src.height, background: th.surface, border: th.hairline, radius: th.cornerRadiusCard }, { name, slug: w.slug, url })
-  }
+  // theme and time are read in the click; the export code loads after it (the clipboard takes the pending result)
+  const png = () => { const th = theme(), at = t(); return exporter().then(x => x.cardPNG(preset, th, at)) }
+  const info = { name, slug: w.slug, url }
+  const svg = () => { const th = theme(), at = t(); return exporter().then(x => x.cardSVGText(preset, th, at, info)) }
+  const html = () => { const th = theme(), at = t(); return exporter().then(x => x.cardHTMLText(preset, th, at, info)) }
   const report = (what: string) => (o: Outcome) => { if (said[o]) toast(`${what} ${said[o]}`) }
   const actionArgs = () => {
     const key = stage.current?.querySelector<HTMLElement>('[data-xr-key]')?.dataset.xrKey ?? ''
@@ -114,30 +113,31 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
   const act = {
     png: () => void copyPNG(png(), `${w.slug}.png`).then(report('PNG')),
     svg: () => void copySVG(svg(), `${w.slug}.svg`).then(report('SVG')),
-    html: () => void copyText(cardHTML(svg(), { name, slug: w.slug, url })).then(report('HTML')),
+    html: () => void copyText(html()).then(report('HTML')),
     // the share-link opt-in (THEME popover) adds the visitor's ?theme=
     link: () => { const u = withPondDay(withTheme(url), pond); void copyText(u).then(o => toast(o === 'copied' ? 'link copied' : u)) },
     short: () => { const u = withPondDay(withTheme(short), pond); void copyText(u).then(o => toast(o === 'copied' ? `short link copied: ${shortPath(w.uid)}` : u)) },
     savePNG: () => void png().then(b => { download(b, `${w.slug}.png`); toast(`${w.slug}.png saved`) }, () => toast('PNG failed')),
-    saveSVG: () => { download(new Blob([svg()], { type: 'image/svg+xml' }), `${w.slug}.svg`); toast(`${w.slug}.svg saved`) },
+    saveSVG: () => void svg().then(s => { download(new Blob([s], { type: 'image/svg+xml' }), `${w.slug}.svg`); toast(`${w.slug}.svg saved`) }, () => toast('SVG failed')),
     share: () => { const p = sharePNG.current ?? png(); sharePNG.current = undefined; void shareCard({ title: `${name} · MATRIX`, url: withPondDay(withTheme(url), pond), png: p, file: `${w.slug}.png` }).then(report('card')) },
     remix: () => cardAction('remix', actionArgs()),
     xray: () => cardAction('how', actionArgs()),
   }
 
-  // ← → walk the board (not while typing, scrubbing the frozen clock, or inside the card's own controls)
+  // ← → walk the board (not while typing, scrubbing the frozen clock, or inside the card's own controls); one
+  // listener for the page's life, reading the current neighbours
+  const onKey = useEffectEvent((e: KeyboardEvent) => {
+    if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
+    const el = e.target as HTMLElement | null
+    if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.closest('.dot-card, [role="toolbar"], .pal-backdrop, .tm-bar'))) return
+    if (document.querySelector('.pal-backdrop, .pal-shell')) return
+    e.preventDefault()
+    onOpen((e.key === 'ArrowLeft' ? prev : next).id)
+  })
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || e.shiftKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return
-      const el = e.target as HTMLElement | null
-      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName) || el.closest('.dot-card, [role="toolbar"], .pal-backdrop, .tm-bar'))) return
-      if (document.querySelector('.pal-backdrop, .pal-shell')) return
-      e.preventDefault()
-      onOpen((e.key === 'ArrowLeft' ? prev : next).id)
-    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [prev, next, onOpen])
+  }, [])
 
   const chips = [meta.hint, meta.animated && 'ANIMATED', meta.live && 'LIVE DATA', meta.media === 'camera' && 'CAMERA', meta.media === 'mic' && 'MICROPHONE', meta.clock && 'CLOCK'].filter((c): c is string => !!c)
   const facts: [string, ReactNode][] = [

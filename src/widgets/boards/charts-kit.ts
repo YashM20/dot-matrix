@@ -13,7 +13,7 @@ import { LOOP, settle, loopPhase } from '../../engine/charts/motion'
 import { chartLayers } from '../../engine/charts/paint'
 import type { Chart, Label } from '../../engine/charts/marks'
 import { TILE, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
-import { marching, rr, ui } from './components'
+import { marching, rr, ui } from './components-kit'
 
 export const T = layoutFor(TILE)
 /** Big sites and readout dots are true circles (n = 2), like the components board. */

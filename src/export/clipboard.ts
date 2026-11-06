@@ -1,7 +1,7 @@
 /**
  * Clipboard, download and share helpers for the widget page (docs/SHARE-PLAN.md §5). Every write runs
  * **inside the click**: Safari rejects `clipboard.write` after an `await`, so binary items are handed over as
- * a `Promise<Blob>` (Chrome accepts the same). Each helper resolves to how it ended, so the caller can say so.
+ * a `Promise<Blob>` (Chrome accepts the same), and text that is still being built goes the same way. Each helper resolves to how it ended, so the caller can say so.
  */
 export type Outcome = 'copied' | 'downloaded' | 'shared' | 'cancelled' | 'failed'
 
@@ -20,8 +20,15 @@ export function download(blob: Blob, name: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1500)
 }
 
-export async function copyText(text: string): Promise<Outcome> {
-  try { await navigator.clipboard.writeText(text); return 'copied' } catch { return 'failed' }
+/** Text now, or text still being built (a lazy export): a pending one goes over as a `ClipboardItem` promise. */
+export type Text = string | Promise<string>
+const blobOf = (text: Text, type: string) => Promise.resolve(text).then(t => new Blob([t], { type }))
+
+export async function copyText(text: Text): Promise<Outcome> {
+  if (typeof text !== 'string' && canCopy('text/plain')) {
+    try { await navigator.clipboard.write([new ClipboardItem({ 'text/plain': blobOf(text, 'text/plain') })]); return 'copied' } catch { /* refused: try plain text */ }
+  }
+  try { await navigator.clipboard.writeText(await text); return 'copied' } catch { return 'failed' }
 }
 
 /** A PNG on the clipboard where `ClipboardItem` works, else (or if the write is refused) downloaded as `name`. */
@@ -33,16 +40,15 @@ export async function copyPNG(png: Promise<Blob>, name: string): Promise<Outcome
 }
 
 /** SVG markup as text (pastes as vectors into design tools), plus `image/svg+xml` where the browser takes it. */
-export async function copySVG(svg: string, name: string): Promise<Outcome> {
+export async function copySVG(svg: Text, name: string): Promise<Outcome> {
   if (canCopy('image/svg+xml')) {
     try {
-      await navigator.clipboard.write([new ClipboardItem({ 'text/plain': new Blob([svg], { type: 'text/plain' }), 'image/svg+xml': new Blob([svg], { type: 'image/svg+xml' }) })])
+      await navigator.clipboard.write([new ClipboardItem({ 'text/plain': blobOf(svg, 'text/plain'), 'image/svg+xml': blobOf(svg, 'image/svg+xml') })])
       return 'copied'
     } catch { /* fall through to text */ }
   }
   if ((await copyText(svg)) === 'copied') return 'copied'
-  download(new Blob([svg], { type: 'image/svg+xml' }), name)
-  return 'downloaded'
+  try { download(await blobOf(svg, 'image/svg+xml'), name); return 'downloaded' } catch { return 'failed' }
 }
 
 /** The Web Share sheet is there (phones, Safari, Chrome desktop 128+; not Firefox desktop). */

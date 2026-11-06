@@ -38,8 +38,11 @@ export function MoreMenu({ items }: { items: readonly MoreItem[] }) {
       m.style.left = `${Math.max(EDGE, left)}px`; m.style.top = `${Math.max(EDGE, Math.min(top, innerHeight - h - EDGE))}px`
     }
     place()
-    window.addEventListener('resize', place); window.addEventListener('scroll', place, true)
-    return () => { window.removeEventListener('resize', place); window.removeEventListener('scroll', place, true) }
+    // scroll and resize fire many times a frame: place once per frame
+    let raf = 0
+    const queue = () => { if (!raf) raf = requestAnimationFrame(() => { raf = 0; place() }) }
+    window.addEventListener('resize', queue); window.addEventListener('scroll', queue, true)
+    return () => { cancelAnimationFrame(raf); window.removeEventListener('resize', queue); window.removeEventListener('scroll', queue, true) }
   }, [open])
   useEffect(() => {
     if (!open) return
