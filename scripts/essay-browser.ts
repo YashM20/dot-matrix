@@ -117,8 +117,11 @@ try {
       await clickText('#fig-accent', 'Add a second accent'); await sleep(700)
       const after = await sliderFills(), added = after.filter(f => !before.includes(f))
       const rgb = (h: string) => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16))
-      const second = added.some(h => /^#[0-9a-f]{6}$/.test(h) && (([r, , b]) => b > r + 60 || r > b + 60)(rgb(h)))
-      return { ok: second, detail: `${before.join('/')} → ${after.join('/')}` }
+      const blueOf = (h: string) => /^#[0-9a-f]{6}$/.test(h) && (([r, , b]) => b > r + 60)(rgb(h)), redOf = (h: string) => /^#[0-9a-f]{6}$/.test(h) && (([r, , b]) => r > b + 60)(rgb(h))
+      // FigAccent: the second hue is blue, or the signal red when the page's accent is blue already (cyan, cobalt, vite)
+      const accent = await js('document.documentElement.dataset.accent') as string, blueAccent = ['cyan', 'cobalt', 'vite'].includes(accent)
+      const second = blueAccent ? added.some(redOf) && before.some(blueOf) : added.some(blueOf)
+      return { ok: second, detail: `accent ${accent}: ${before.join('/')} → ${after.join('/')}` }
     },
     masks: () => changed('masks', () => clickText('#fig-masks', 'radial'), 350),
     // animating = the figure keeps drawing (canvas draw calls, worker bitmaps included); pixel signatures can sit

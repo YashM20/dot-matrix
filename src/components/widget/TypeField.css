@@ -20,7 +20,18 @@
   border-radius: var(--radius-ctl);
   color: var(--value);
   font: 500 var(--fs-label-12) var(--mono);
-  letter-spacing: .02em
+  letter-spacing: .02em;
+  transition: border-color var(--dur-out) var(--ease)
+}
+
+/* the chrome's control states (DESIGN.md): a wash on hover, one step more on press, over the raised fill */
+.wp-type input:hover {
+  background-image: linear-gradient(var(--wash-hover), var(--wash-hover));
+  border-color: var(--line-hover)
+}
+
+.wp-type input:active {
+  background-image: linear-gradient(var(--wash-press), var(--wash-press))
 }
 
 .wp-type input::placeholder {

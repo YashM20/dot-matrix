@@ -40,8 +40,9 @@ export function ControlOverlay({ controls: all, grid, data, input }: { controls:
     let visible = true
     try { visible = e.currentTarget.matches(':focus-visible') } catch { /* old browsers: treat as visible */ }
     if (taps.some(c => c.key === key)) setRove(key)
+    // only a grouped range is a group's stop (a button in the same group keeps the taps' roving stop)
     const g = controls.find(c => c.key === key)?.group
-    if (g && groupRove[g] !== key) setGroupRove(r => ({ ...r, [g]: key }))
+    if (g && groupRove[g] !== key && members(g).some(m => m.key === key)) setGroupRove(r => ({ ...r, [g]: key }))
     input.focus(key, visible)
   }
   const onBlur = () => input.focus(undefined, false)
@@ -70,8 +71,10 @@ export function ControlOverlay({ controls: all, grid, data, input }: { controls:
     const vertical = c.orientation === 'vertical' || c.kind === 'knob'
     const d = vertical ? (e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0) : (e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0)
     const m = members(c.group!), i = m.findIndex(x => x.key === c.key)
-    if (!d || i < 0 || m.length < 2) return false
+    if (!d || i < 0) return false
+    // the arrow across the axis belongs to the group, even with one member: it never changes the value
     e.preventDefault()
+    if (m.length < 2) return true
     const next = m[(i + d + m.length) % m.length]
     setGroupRove(r => ({ ...r, [c.group!]: next.key }))
     e.currentTarget.parentElement?.querySelector<HTMLElement>(`[data-dot-focus="${CSS.escape(next.key)}"]`)?.focus()

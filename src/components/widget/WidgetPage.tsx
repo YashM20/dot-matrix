@@ -105,14 +105,16 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
   const theme = () => { const s = getTheme(); return themeTokens(cardScheme(preset, s.resolved, getSkin()), s.accent) }
   const t = () => (preset.animated ? boardTime() : 0)
   // theme and time are read in the click; the export code loads after it (the clipboard takes the pending result)
-  const png = () => { const th = theme(), at = t(); return exporter().then(x => x.cardPNG(preset, th, at)) }
+  // the data the card shows now (live values, typed words), so exports and REMIX match the stage
+  const cardData = sources || typed ? { ...(sources ? pick(live, preset.defaults) : {}), ...typed } : undefined
+  const png = () => { const th = theme(), at = t(), d = cardData; return exporter().then(x => x.cardPNG(preset, th, at, d)) }
   const info = { name, slug: w.slug, url }
-  const svg = () => { const th = theme(), at = t(); return exporter().then(x => x.cardSVGText(preset, th, at, info)) }
-  const html = () => { const th = theme(), at = t(); return exporter().then(x => x.cardHTMLText(preset, th, at, info)) }
+  const svg = () => { const th = theme(), at = t(), d = cardData; return exporter().then(x => x.cardSVGText(preset, th, at, info, d)) }
+  const html = () => { const th = theme(), at = t(), d = cardData; return exporter().then(x => x.cardHTMLText(preset, th, at, info, d)) }
   const report = (what: string) => (o: Outcome) => { if (said[o]) toast(`${what} ${said[o]}`) }
   const actionArgs = () => {
     const key = stage.current?.querySelector<HTMLElement>('[data-xr-key]')?.dataset.xrKey ?? ''
-    return { key, preset, data: { ...preset.defaults }, layers: withChrome(preset), grid: preset.grid, style: preset.style, theme: theme(), animated: !!preset.animated }
+    return { key, preset, data: { ...preset.defaults, ...cardData }, layers: withChrome(preset), grid: preset.grid, style: preset.style, theme: theme(), animated: !!preset.animated }
   }
   const sharePNG = useRef<Promise<Blob> | undefined>(undefined)
   const act = {
@@ -171,7 +173,7 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
     <div className="wp-main">
       {/* the stage is a size container: the card takes the most it can of it at its own aspect (#183) */}
       <div className="wp-stagebox"><figure className="wp-stage" ref={stage} style={{ '--wp-max': `${preset.grid.cols * pitch + 32}px`, '--wp-ar': preset.grid.cols / preset.grid.rows } as CSSProperties}>
-        <DotWidget type={preset.id} preset={preset} density={pitch} data={sources || typed ? { ...(sources ? pick(live, preset.defaults) : {}), ...typed } : undefined} />
+        <DotWidget type={preset.id} preset={preset} density={pitch} data={cardData} />
         {/* the figure legend (docs/LAYOUT-THEME-PLAN.md §1c #14) */}
         <figcaption className="fig-cap"><b>FIG {String(i + 1).padStart(2, '0')}</b>{w.slug} · {meta.grid.cols} × {meta.grid.rows} dots · {meta.grid.pitch} px · {meta.renderer.toUpperCase()}</figcaption>
       </figure></div>

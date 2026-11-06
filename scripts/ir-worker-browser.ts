@@ -36,13 +36,14 @@ const lit = (p: Page) => p.js<number>(`(() => { const c = document.querySelector
 const maxGap = (p: Page, ms = 2000) => p.js<number>(`new Promise(r => { let last = performance.now(), max = 0; const id = setInterval(() => { const n = performance.now(); max = Math.max(max, n - last); last = n }, 10); setTimeout(() => { clearInterval(id); r(Math.round(max)) }, ${ms}) })`)
 /** Main-thread draw time of the animated frame: the mean of `__editor.lastMs` over `ms`, read every 50 ms. */
 const frameMs = (p: Page, ms = 3000) => p.js<number>(`new Promise(r => { const xs = []; const id = setInterval(() => { const e = window.__editor; if (e && e.drawn) xs.push(e.lastMs) }, 50); setTimeout(() => { clearInterval(id); r(xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : -1) }, ${ms}) })`)
-async function open(p: Page, src: string) {
+/** Open a program link; `asks` = it is new to this document, so the editor asks first (a re-open only re-selects). */
+async function open(p: Page, src: string, asks = true) {
   const link = await encodeShare({ src, grid: 'square', lattice: 1, tone: 'auto' })
   await p.cdp('Page.navigate', { url: `${base}?make=code&p=${link}` })
   // a link that adds a program asks first (#143): press KEEP. One this document already holds just re-selects it.
   const ready = `!!document.querySelector('.ed-insp .dw-code textarea') && !!window.__editor?.drawn`, keep = `document.querySelector('.ed-confirm .ed-confirm-keep')`
-  // the editor itself is ready before the link decodes, so wait for the prompt (it never comes for a re-select)
-  if (await p.waitFor(`!!${keep}`, 10000)) await p.js(`${keep}.click()`)
+  // the editor itself is ready before the link decodes, so a new link waits for its prompt (the full 30 s)
+  if (asks && await p.waitFor(`!!${keep}`, 30000)) await p.js(`${keep}.click()`)
   return p.waitFor(`!${keep} && (${ready})`, 30000)
 }
 const HOSTILE = '// slow: 64 × 64 sines a dot\nfor i in 0..64 with a = 0 { a + (for j in 0..64 with b = 0 { b + sin(u * i + v * j + t) }) } / 4096'
@@ -58,7 +59,7 @@ try {
     const withWorker = await frameMs(p)
     await p.shot(join(out, 'code-worker.png'))
     await p.setFlags({ worker: false })
-    await open(p, plasma)
+    await open(p, plasma, false)
     const b0 = (await stats(p))?.batches ?? 0
     await sleep(500)
     const mainOnly = await frameMs(p)

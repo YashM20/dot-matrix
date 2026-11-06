@@ -168,7 +168,8 @@ const AT = { lattice: K, origin: [0, 0] as [number, number] }
 function boardLight(ctx: WidgetContext): Light {
   const p = ctx.pointers?.find(q => q.inside && !q.up)
   if (p) return torch(toLat(p.x), toLat(p.y), 34, 150)
-  if (ctx.focus === 'lx') return torch(ctx.data.lx * (LG.cols - 1), (1 - ctx.data.ly) * (LG.rows - 1), 34, 150)
+  // the keyboard's 0..1 values span the control's box, as the pointer's do (y up)
+  if (ctx.focus === 'lx') { const [bx, by, bw, bh] = TORCH.box; return torch(toLat(bx + ctx.data.lx * bw), toLat(by + (1 - ctx.data.ly) * bh), 34, 150) }
   return boardSun()
 }
 const caption = (s: string) => layer(T.big(s, 72, 126, { lattice: 1, align: 'center' }), 'mid')

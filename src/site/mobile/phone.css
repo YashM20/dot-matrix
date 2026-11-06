@@ -140,6 +140,24 @@
     cursor: pointer
   }
 
+  /* a label never runs into its neighbour: it stays inside its own column (enlarged text, five tabs at 320 px) and
+     ends in an ellipsis if it still doesn't fit; the button's name is the whole word */
+  .tabbar button {
+    min-width: 0
+  }
+
+  .tabbar button span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
+  }
+
+  /* five tabs (MAKE on): tighter tracking, so the words fit their narrower columns at the default size */
+  .tabbar:has(> button:nth-child(5)) button {
+    letter-spacing: .06em
+  }
+
   .tabbar [aria-current="page"] {
     color: var(--value)
   }

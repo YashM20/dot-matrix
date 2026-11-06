@@ -233,8 +233,10 @@ try {
   for (const tab of tabs) {
     logs = []
     await cdp('Page.navigate', { url: `${base}?${tab}` })
-    // the view's chunk has loaded once the Suspense placeholder is gone and the view (in <main>) has content
-    check(`tab ${tab}: loads`, await waitFor(`!document.querySelector('.view-loading') && document.querySelector('#main > :is(section, div)')?.getBoundingClientRect().height > 100`, 30000))
+    // the view's chunk has loaded once the Suspense placeholder is gone and the asked-for view has content (with MAKE
+    // off, a MAKE URL opens the home board, which must not count)
+    const view = tab.startsWith('make') ? '.make-view' : '.about-view'
+    check(`tab ${tab}: loads`, await waitFor(`!document.querySelector('.view-loading') && document.querySelector('#main > ${view}')?.getBoundingClientRect().height > 100`, 30000))
     await sleep(2500)
     await audit(`tab ${tab}`)
     if (logs.length) check(`tab ${tab}: no console errors`, false, logs.slice(0, 3).join(' | '))

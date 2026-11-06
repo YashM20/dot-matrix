@@ -100,10 +100,13 @@ try {
       check(`life-browser: ${id} median card draw ≤ 16 ms at 4× throttle (best of 2 medians)`, bms <= 16, `${bms.toFixed(2)} ms`)
     }
     await page.shot(join(out, 'pond-desktop-l2.png'))
+    at('desktop: plankton hash')
     const pNode = (await planktonSnapshot(pondModule))['plankton@2000'], pChrome = await page.js<string>('__pondBoard.planktonHash(2000)', 60_000)
     check('life-browser: pond-plankton Chrome state hash at step 2000 = Node hash', pChrome === pNode, `${pChrome} vs ${pNode}`)
+    at('desktop: turing hash')
     const tNode = (await turingSnapshot(pondModule))['turing@1200'], tChrome = await page.js<string>('__pondBoard.turingHash(1200)', 60_000)
     check('life-browser: pond-turing Chrome state hash at step 1200 = Node hash', tChrome === tNode, `${tChrome} vs ${tNode}`)
+    at('desktop: light theme')
     await page.cdp('Page.navigate', { url: `${server.url}pond/?theme=light_signal` })
     await page.waitFor(`!!${card}?.querySelector('canvas,svg')`, READY_MS)
     await page.js(`${card}.scrollIntoView({ block: 'center' })`); await sleep(1500)

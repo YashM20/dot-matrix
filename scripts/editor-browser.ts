@@ -271,9 +271,13 @@ async function desktop() {
     const n1 = (await h.frameIds()).length
     // a kept link frame is saved only once it drew within the program budget (#142): wait for that save, as a
     // visitor's reload would come after it (a slow runner can take longer than the autosave's 500 ms)
-    await p.waitFor(`(JSON.parse(localStorage.getItem('dot480.editor.v1') ?? '{}').frames?.length ?? -1) === ${n1}`, 15000)
-    await h.go(link, `!!document.querySelector('.ed-insp .dw-code textarea')`); await sleep(600)
-    check('opening the same link again re-selects its frame instead of adding a copy', (await h.frameIds()).length === n1 && n1 <= n0 + 1, `${n0} → ${n1} → ${(await h.frameIds()).length}`)
+    const saved = await p.waitFor(`(JSON.parse(localStorage.getItem('dot480.editor.v1') ?? '{}').frames?.length ?? -1) === ${n1}`, 15000)
+    check('the kept link frame is autosaved (once it drew within budget)', saved, `${n1} frames on screen`)
+    // without the save a reload drops the frame by design (#142), so the re-open check would test nothing
+    if (saved) {
+      await h.go(link, `!!document.querySelector('.ed-insp .dw-code textarea')`); await sleep(600)
+      check('opening the same link again re-selects its frame instead of adding a copy', (await h.frameIds()).length === n1 && n1 <= n0 + 1, `${n0} → ${n1} → ${(await h.frameIds()).length}`)
+    }
     await h.clickText('.ed-left [role=tab]', 'ASSETS'); await sleep(300)
     await h.clickText('.ed-agroup[aria-label="Programs"] .ed-asset', 'rain'); await sleep(1200)
     const sliders = await p.js<string[]>(`[...document.querySelectorAll('.ed-insp .ed-slider > label')].map(s => s.firstChild.textContent)`)
