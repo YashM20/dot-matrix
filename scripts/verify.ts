@@ -173,8 +173,8 @@ goldenKeyChecks(assert)
 
 // UX U1, U3) board picker groups, labels and old paths; views and canonical URLs (scripts/verify/ux.ts)
 uxChecks(assert)
-// FLAGS (#144, #145) every release flag documented; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
-flagChecks(assert)
+// FLAGS (#144, #145) every release flag documented; the URL sets none; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
+await flagChecks(assert)
 // LIKES (#169) the likes API on the in-memory store: limits, holds, bursts, cookies, forget, budget, the function bundle (scripts/likes/checks.ts)
 {
   const { likesChecks } = await import('./likes/checks')

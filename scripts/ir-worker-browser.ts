@@ -1,7 +1,7 @@
 /**
  * The IR sandbox worker in headless Chrome (#158), on MAKE · CODE with programs opened from `?p=` links:
  *  - a typical program (plasma) draws through the worker: batches go out, nothing is terminated, the frame lights up;
- *    its main-thread frame time is measured with the worker and with `?worker=0` (printed, and kept sane);
+ *    its main-thread frame time is measured with the worker and with the `worker` flag off (printed, and kept sane);
  *  - a hostile slow program: the worker's guard pauses it, the editor says so, and the page keeps its timers on time;
  *  - the same program with the watchdog shortened (`__dotIrWatchdogMs`, test builds only): the page terminates the
  *    worker, pauses the program with the same note, and stays responsive; the next program gets a fresh worker.
@@ -33,9 +33,9 @@ const lit = (p: Page) => p.js<number>(`(() => { const c = document.querySelector
 const maxGap = (p: Page, ms = 2000) => p.js<number>(`new Promise(r => { let last = performance.now(), max = 0; const id = setInterval(() => { const n = performance.now(); max = Math.max(max, n - last); last = n }, 10); setTimeout(() => { clearInterval(id); r(Math.round(max)) }, ${ms}) })`)
 /** Main-thread draw time of the animated frame: the mean of `__editor.lastMs` over `ms`, read every 50 ms. */
 const frameMs = (p: Page, ms = 3000) => p.js<number>(`new Promise(r => { const xs = []; const id = setInterval(() => { const e = window.__editor; if (e && e.drawn) xs.push(e.lastMs) }, 50); setTimeout(() => { clearInterval(id); r(xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : -1) }, ${ms}) })`)
-async function open(p: Page, src: string, extra = '') {
+async function open(p: Page, src: string) {
   const link = await encodeShare({ src, grid: 'square', lattice: 1, tone: 'auto' })
-  await p.cdp('Page.navigate', { url: `${base}?make=code&p=${link}${extra}` })
+  await p.cdp('Page.navigate', { url: `${base}?make=code&p=${link}` })
   return p.waitFor(`!!document.querySelector('.ed-insp .dw-code textarea') && !!window.__editor?.drawn`, 30000)
 }
 const HOSTILE = '// slow: 64 × 64 sines a dot\nfor i in 0..64 with a = 0 { a + (for j in 0..64 with b = 0 { b + sin(u * i + v * j + t) }) } / 4096'
@@ -50,11 +50,12 @@ try {
     await sleep(500)
     const withWorker = await frameMs(p)
     await p.shot(join(out, 'code-worker.png'))
-    await open(p, plasma, '&worker=0')
+    await p.setFlags({ worker: false })
+    await open(p, plasma)
     const b0 = (await stats(p))?.batches ?? 0
     await sleep(500)
     const mainOnly = await frameMs(p)
-    check('?worker=0 samples on the main thread (no batches)', ((await stats(p))?.batches ?? 0) === b0 && (await lit(p)) > 500)
+    check('the worker flag off samples on the main thread (no batches)', ((await stats(p))?.batches ?? 0) === b0 && (await lit(p)) > 500)
     console.log(`  plasma frame time on the main thread: ${withWorker.toFixed(2)} ms with the worker, ${mainOnly.toFixed(2)} ms without`)
     check('the worker does not make the common case slower (main-thread frame time with the worker ≤ without)', withWorker > 0 && withWorker <= mainOnly * 1.1 + .5, `${withWorker.toFixed(2)} vs ${mainOnly.toFixed(2)} ms`)
     check('no page errors', !p.logs.length, p.logs.slice(0, 3).join(' | '))

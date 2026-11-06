@@ -3,8 +3,15 @@
  * page, evaluate, wait, screenshot, mouse / touch / key input, and collect uncaught errors. `serveDist`
  * runs `vite preview` on `dist/` for the length of a probe, so no server outlives it. Every CDP call has a
  * timeout (`CDP_TIMEOUT_MS`, default 120 s) and fails when the socket closes, so a hung or dead Chrome makes
- * a probe fail instead of waiting forever. Every page turns the `make` and `lab` flags on and sets `__DOT_PROBE__` before it loads, so a production build
+ * a probe fail instead of waiting forever. Every page sets `__DOT_PROBE__` before it loads, so a production build
  * (`serveDist`) exposes the test hooks the probes read (src/lib/testHooks.ts).
+ *
+ * Release flags (src/site/flags.ts) come from localStorage only; the URL never sets one. `launch(w, h, { flags })`
+ * seeds `localStorage['dot480:flags']` before any page script runs, on every page: `make` and `lab` are on unless
+ * `flags` says otherwise, e.g. `launch(1440, 900, { flags: { xray: true, likes: false } })`. A seed only fills a flag
+ * the page hasn't saved yet, so a probe's own `setFlag`, or `page.setFlags`, wins. To change flags mid-probe, call
+ * `await page.setFlags({ likes: true })` on a page of the site's origin, then navigate. `null` drops an override,
+ * but a flag in the launch seed comes back on the next page: turn a seeded flag off with `false`.
  */
 import { spawn, type ChildProcess } from 'node:child_process'
 import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -49,8 +56,13 @@ export interface Page {
   touch: (path: [number, number][][]) => Promise<void>
   tap: (x: number, y: number) => Promise<void>
   key: (key: string, code: string, vk: number, modifiers?: number) => Promise<void>
+  /** Saves flag overrides in this origin's localStorage (`null` drops one); they apply from the next page load. */
+  setFlags: (flags: Flags) => Promise<void>
   close: () => Promise<void>
 }
+
+/** Release flag overrides by id (src/site/flags.ts): `true` on, `false` off, `null` drops a saved one. */
+export type Flags = Record<string, boolean | null>
 
 export interface LaunchOptions {
   /** Show real scrollbars (Chrome runs with `--hide-scrollbars` otherwise), so a `100vw` width that ignores the
@@ -59,6 +71,8 @@ export interface LaunchOptions {
   /** Set `__DOT_PROBE__` on every page, so a production build exposes its test hooks (default on). Off: the page runs
    * as a visitor's would (scripts/site/csp-browser.ts checks no test global is left then). */
   testHooks?: boolean
+  /** Flags to seed on every page, over the probe defaults `{ make: true, lab: true }` (see the header). */
+  flags?: Flags
 }
 
 export async function launch(width: number, height: number, opts: LaunchOptions = {}): Promise<Page> {
@@ -135,13 +149,17 @@ export async function launch(width: number, height: number, opts: LaunchOptions 
   await cdp('Page.enable'); await cdp('Runtime.enable')
   // the app's test-only globals (src/lib/testHooks.ts) exist in a production build only when a probe asks for them
   // MAKE and the lab are behind flags that are off by default (src/site/flags.ts); the probes test them, so each page
-  // starts with both on unless the probe saved its own choice (`setFlag`) or the URL turns one off (`?flags=-make`)
-  const flagsOn = `try{var k='dot480:flags',o=JSON.parse(localStorage.getItem(k)||'{}');if('make' in o&&'lab' in o)throw 0;if(!('make' in o))o.make=true;if(!('lab' in o))o.lab=true;localStorage.setItem(k,JSON.stringify(o))}catch(e){}`
-  // `testHooks: false` opens the page as a visitor's: no probe flag (the MAKE and lab flags still on)
+  // starts with both on. Seeds fill only flags the page hasn't saved, so the probe's own choice (`setFlag`) wins.
+  const seed = JSON.stringify(Object.fromEntries(Object.entries({ make: true, lab: true, ...opts.flags }).filter(([, v]) => v !== null)))
+  const flagsOn = `try{var k='dot480:flags',o=JSON.parse(localStorage.getItem(k)||'{}'),s=${seed};for(var f in s)if(!(f in o))o[f]=s[f];localStorage.setItem(k,JSON.stringify(o))}catch(e){}`
+  // `testHooks: false` opens the page as a visitor's: no probe flag (the seeded flags still apply)
   await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `${opts.testHooks !== false ? 'globalThis.__DOT_PROBE__ = true;' : ''}${flagsOn}` })
+  const setFlags = async (flags: Flags) => {
+    await js(`(() => { const k = 'dot480:flags', o = JSON.parse(localStorage.getItem(k) || '{}'), s = ${JSON.stringify(flags)}; for (const f in s) { if (s[f] === null) delete o[f]; else o[f] = s[f] } localStorage.setItem(k, JSON.stringify(o)); return 1 })()`)
+  }
   const allowDownloads = async (dir: string) => {
     const r = await cdp('Browser.setDownloadBehavior', { behavior: 'allowAndName', downloadPath: dir, eventsEnabled: true })
     if (r.error) await cdp('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: dir })
   }
-  return { cdp, js, waitFor, logs, downloads, allowDownloads, shot, mouse, drag, touch, tap, key, close } as Page
+  return { cdp, js, waitFor, logs, downloads, allowDownloads, shot, mouse, drag, touch, tap, key, setFlags, close } as Page
 }

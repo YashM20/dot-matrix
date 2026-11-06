@@ -45,7 +45,7 @@ export function setSkin(name: string): void {
 }
 
 export const getClack = (): boolean => clack
-/** Flip-disc clack on/off (muted by default; `?clack=1`, `?flags=clack` or the switcher's toggle; saved as the `clack` flag). */
+/** Flip-disc clack on/off (muted by default; the switcher's toggle, saved as the `clack` flag). */
 export function setClack(on: boolean): void {
   clack = on
   setFlag('clack', on)

@@ -23,7 +23,7 @@ export const DATA_DEFAULT = .5
 export const userPrograms = irGuard()
 /**
  * The IR sandbox worker the editor samples user programs in (`src/engine/ir/sandbox`): a frame that doesn't come back
- * in time gets the worker terminated. Off with the `worker` flag (`?worker=0`) or without module workers: then they
+ * in time gets the worker terminated. Off with the `worker` flag off or without module workers: then they
  * run on the main thread under `userPrograms` alone.
  */
 export const userRemote = irRemote({ enabled: () => flag('worker'), watchdogMs: probeWatchdog() })

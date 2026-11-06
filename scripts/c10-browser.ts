@@ -4,7 +4,8 @@
  * the time machine (T, scrub, Space), the ⌘K palette (search + open), the dot shell (help, ls, xray,
  * t, open, Tab completion, history across reopening, Ctrl+C / Ctrl+U, did-you-mean, the output log, focus back),
  * remix in DOTS and the Konami boss. Screenshots in `.snapshots/c10/`. X-ray is behind the `xray` flag
- * (src/site/flags.ts, off by default), so every page opens with `?flags=xray`, except the `flagsoff` section, which
+ * (src/site/flags.ts, off by default; flags come from localStorage, never the URL), so every page opens with `xray`
+ * saved on, except the `flagsoff` section, which
  * checks that with the flag off there is no X-ray control (dock, cards, widget page pill and menu), X does nothing, the
  * palette has no X-ray action, the shell answers `xray` with "command not found", the intro line never names X-ray and
  * the overlay and inspector styles never load.
@@ -68,8 +69,13 @@ const move = (x: number, y: number) => cdp('Input.dispatchMouseEvent', { type: '
 const cardPoint = (sel: string, fx = .5, fy = .5) => js(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); el.scrollIntoView({ block: 'center' }); const b = el.querySelector('.dot-card-body .skin-surface > :first-child').getBoundingClientRect(); return { x: b.left + b.width * ${fx}, y: b.top + b.height * ${fy} } })()`) as Promise<{ x: number; y: number }>
 /** Signature of a card's drawn pixels (canvas) or markup (svg). The first readback of a GPU canvas can differ in low bits: read twice. */
 const cardSig = (sel: string) => js(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); const c = el.querySelector('.dot-card-body canvas:not(.xr-grid)'); if (!c) return 'svg:' + (el.querySelector('.dot-svg')?.innerHTML.length ?? -1); const g = c.getContext('2d'); g.getImageData(0, 0, 1, 1); const d = g.getImageData(0, 0, c.width, c.height).data; let n = 0, s = 0; for (let i = 0; i < d.length; i += 4) if (d[i] + d[i+1] + d[i+2] > 60) { n++; s = (s * 31 + i + d[i]) % 1000003 } return n + ':' + s })()`) as Promise<string>
+let flagScript = ''
+/** Opens `query` with exactly `flags` saved (`xray,-worker`: `id` on, `-id` off, '' none) before any page script runs. */
 const open = async (query: string, flags = 'xray') => {
-  await cdp('Page.navigate', { url: `${base}${query}${flags ? `${query.includes('?') ? '&' : '?'}flags=${flags}` : ''}` })
+  if (flagScript) await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: flagScript })
+  const saved = Object.fromEntries(flags.split(',').filter(Boolean).map(t => t.startsWith('-') ? [t.slice(1), false] : [t, true]))
+  flagScript = (await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `try{localStorage.setItem('dot480:flags',${JSON.stringify(JSON.stringify(saved))})}catch(e){}` })).result.identifier
+  await cdp('Page.navigate', { url: `${base}${query}` })
   return waitFor(`document.querySelectorAll('[data-xr-key]').length > 0`, 30000)
 }
 
@@ -148,7 +154,7 @@ try {
   // ── time machine
   if (run('time')) {
   // main-thread sampling: a seek redraws in the same animation frame (a loaded worker can answer seconds late)
-  await open('?board=levels&worker=0'); await sleep(1500)
+  await open('?board=levels', 'xray,-worker'); await sleep(1500)
   await key('t', 0, 200)
   check('T freezes the clock and shows the time machine', await waitFor(`!!document.querySelector('.xr-time')`, 2000))
   await js(`(() => { const el = document.querySelector('.xr-time input[type=range]'); Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set.call(el, 5); el.dispatchEvent(new Event('input', { bubbles: true })) })()`)
@@ -314,7 +320,7 @@ try {
   await open(`widget/${slug}/`, ''); await waitFor(`!!document.querySelector('.wp-more-btn')`, 8000)
   check(`flag off: the widget page (${slug}) has no X-RAY pill or menu item`, await openMore() && !(await js(wpXray)) && !(await js(xrStyles)))
   await shot('09-flagsoff-widget')
-  // and with ?flags=xray both come back
+  // and with the xray flag on both come back
   await open(`widget/${slug}/`); await waitFor(`!!document.querySelector('.wp-more-btn')`, 8000)
   check('flag on: the widget page has its X-RAY pill and menu item', await openMore() && await js(`[...document.querySelectorAll('.wp-bottom button')].some(b => b.textContent.includes('X-RAY')) && [...document.querySelectorAll('.wp-more [role=menuitem]')].some(b => /x-ray/i.test(b.textContent))`))
   await open('?board=henry'); await sleep(600)

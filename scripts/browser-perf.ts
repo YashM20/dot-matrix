@@ -3,7 +3,7 @@
  *
  *   npx tsx scripts/browser-perf.ts [--url http://localhost:5196] [--boards mosaic,cinema] [--secs 5] [--runs 3]
  *
- * Per board and mode (worker on / `?worker=0`), fresh tab each run:
+ * Per board and mode (worker on / the `worker` flag off, saved in localStorage), fresh tab each run:
  *   mount   main-thread sampling + canvas drawing in the first 2.5 s after navigation (CPU profile, inclusive
  *           time of sampleLayers* / renderCanvas*: the board's first frames incl. the staggered entrance)
  *   frame   after the entrance: main-thread busy time (everything but idle) per 12 fps tick over `--secs`,
@@ -62,6 +62,12 @@ function analyse(p: { nodes: Node[]; samples: number[]; timeDeltas: number[] }) 
   })
   return { busy, sample, draw, self }
 }
+// release flags come from localStorage only (src/site/flags.ts): each page load gets the worker flag for its mode
+let flagScript = ''
+const setWorker = async (on: boolean) => {
+  if (flagScript) await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: flagScript })
+  flagScript = (await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `try{localStorage.setItem('dot480:flags','{"worker":${on}}')}catch(e){}` })).result.identifier
+}
 const med = (a: number[]) => [...a].sort((x, y) => x - y)[a.length >> 1]
 
 await cdp('Profiler.enable'); await cdp('Runtime.enable'); await cdp('Page.enable')
@@ -75,7 +81,8 @@ try {
       await cdp('Page.navigate', { url: 'about:blank' }); await sleep(300)
       workers = 0
       await cdp('Profiler.start')
-      await cdp('Page.navigate', { url: `${URL0}/?board=${board}${mode === 'main' ? '&worker=0' : ''}` })
+      await setWorker(mode !== 'main')
+      await cdp('Page.navigate', { url: `${URL0}/?board=${board}` })
       await sleep(2500)
       const m = analyse((await cdp('Profiler.stop')).result.profile)
       ms.push(m.sample); md.push(m.draw)
