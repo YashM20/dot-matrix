@@ -46,8 +46,10 @@ function sampleSource(field: Field | undefined, layers: ((ctx: WidgetContext) =>
   try {
     if (!layers) return sampleField(field!, g, s, theme)
     const sample = () => sampleLayers(layers({ t, data: JSON.parse(dataKey), grid: g, ...extra }), g, s, theme)
-    // interaction frames (hover / press / focus / pointers) are transient: never cache them
-    return !extra && isStatic(layers) ? cached(`${idOf(layers)}|${idOf(theme)}|${JSON.stringify([g, s, t])}|${dataKey}`, sample) : sample()
+    // interaction frames (hover / press / focus / pointers) are transient: never cache them. A still under reduced
+    // motion with no input is as fixed as any other still, under its own key
+    const rest = !extra || (extra.reducedMotion === true && Object.keys(extra).length === 1)
+    return rest && isStatic(layers) ? cached(`${idOf(layers)}|${idOf(theme)}|${JSON.stringify([g, s, t])}|${dataKey}${extra ? '|still' : ''}`, sample) : sample()
   } catch (error) { console.error('useDotField: sampling failed', error); return [] }
 }
 

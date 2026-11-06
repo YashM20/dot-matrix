@@ -22,7 +22,7 @@ const BOLT = ['...###', '..###.', '.###..', '######', '..###.', '.###..', '.##..
 export const batteryCard = card('dash-battery', 'Battery', {
   springKeys: ['drive', 'speed', 'gear'],
   controls: [
-    { key: 'soc', kind: 'slider', box: [PACK.x, PACK.y, PACK.w, PACK.h], step: 1 / PACK.n, label: 'Battery charge' },
+    { key: 'soc', kind: 'slider', box: [PACK.x, PACK.y, PACK.w, PACK.h], step: 1 / PACK.n, label: 'Battery charge', valueText: v => `${Math.round(v * 100)}% charge` },
     { key: 'plug', kind: 'toggle', box: [PLUG.x, PLUG.y, PLUG.w, PLUG.h], label: 'Plug in' },
   ],
   layers: ctx => {

@@ -39,6 +39,7 @@ export interface WidgetMeta {
   animated: boolean
   /** Reads the wall clock (re-sampled each minute). */
   clock: boolean
+  /** Shows real data from a feed (`liveData`; the red header dot alone doesn't count). */
   live: boolean
   interactive: boolean
   /** Control kinds, each once (`slider`, `toggle`, …). */
@@ -96,7 +97,7 @@ export function deriveWidgetMeta(p: WidgetPreset, facts: WidgetFacts, theme: The
     blurb, tags, keywords: [...new Set([...tags, ...text])],
     url: widgetPath(p.id, scope), short: shortPath(facts.uid),
     grid: { cols: p.grid.cols, rows: p.grid.rows, pitch },
-    animated, clock: !!p.clock, live: !!p.live, interactive: controls.length > 0,
+    animated, clock: !!p.clock, live: !!p.liveData, interactive: controls.length > 0,
     controls: [...new Set(controls.map(c => c.kind))], ...(controls.length && { hint: hintVerb(p, controls) }), ...(media && { media }),
     dots, layerCount: layers.length, layers: kinds, ir: kinds.includes('ir'),
     renderer: hasGPULayers(layers) ? 'webgl' : animated || dots > 2000 ? 'canvas' : 'svg',
@@ -109,7 +110,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   // henry: the OLED micro UI
   'home-clock': ['A home screen: the time on split-flap dots, the date and the battery.', 'clock time home'],
   'music': ['Now playing, with the album art as a halftone photo and a progress bar.', 'music audio photo'],
-  'timer': ['A countdown on a ring of dots that empties as time runs out.', 'timer time ring'],
+  'timer': ['A timer: the time left in big digits inside a ring of dots.', 'timer time ring'],
   'weather': ['Tokyo weather: a cloud icon, the high and the low.', 'weather icon'],
   'fitness': ['Daily move goal as a ring, with the week underneath.', 'fitness health ring'],
   'messages': ['Two chat messages with avatars, the newest one arriving.', 'messages chat phone'],
@@ -143,7 +144,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'boarding-pass': ['A boarding pass: seat 14A, San Francisco to London.', 'travel flight ticket'],
   'sunburst': ['Day 3 of 7 as a sunburst of rays.', 'progress ring calendar'],
   'power-ring': ['Power draw, 247 W, on a ring of dots.', 'power energy ring'],
-  'midnight-circuit': ['A night at the desk: a circuit-like trace of focus over time.', 'focus chart animated'],
+  'midnight-circuit': ['A track playing late at night: its waveform, the playhead and the time.', 'focus chart animated'],
   'silhouette': ['A portrait silhouette in halftone dots.', 'photo portrait halftone'],
   'inhale': ['A breathing guide: the ring grows as you breathe in and shrinks as you breathe out.', 'breathing health animated'],
   'good-morning': ['A morning greeting with how long you slept.', 'morning sleep greeting'],
@@ -154,13 +155,13 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'oxygen': ['Indoor oxygen level on a dial.', 'air sensor gauge'],
   'home-quiet': ['Home in quiet mode, drawn as a house icon.', 'home icon'],
   'final-lap': ['A race lap trace with the final lap marked.', 'race sport chart'],
-  'newswire': ['Headlines scrolling on a news ticker.', 'news text live'],
-  'deerflow-stars': ['A field of scattered stars around the DeerFlow name.', 'stars scatter brand'],
-  'cody': ['A small robot mascot, Cody.', 'mascot icon character'],
+  'newswire': ['A news card with one headline in big type.', 'news text live'],
+  'deerflow-stars': ['80K stars, drawn as a pair of antlers.', 'stars scatter brand'],
+  'cody': ['Cody the reindeer, who wants coffee.', 'mascot icon character'],
   'tatooine': ['A binary sunset over the desert, in halftone.', 'photo film sunset'],
   'afterlight': ['A film poster: “A film by Henry Li”.', 'photo film poster'],
   // ride: a phone-like system
-  'ride': ['A ride on its way: arrival in minutes and the battery.', 'ride transit phone'],
+  'ride': ['Speed and power draw on a ride.', 'ride transit phone'],
   'henry-bear': ['A bear mascot saying it is listening.', 'mascot icon assistant'],
   'design-review': ['A calendar card: design review on Thursday the 20th.', 'calendar event phone'],
   'memo': ['A voice memo: “Ship the idea”.', 'memo notes phone'],
@@ -171,10 +172,10 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'apps': ['A home screen grid of app icons.', 'apps icon phone'],
   // audio
   'audio-levels': ['Speaker and microphone levels on round meters.', 'audio meter animated'],
-  'vibe-pad': ['A pad of dots for picking a mood.', 'audio pad music'],
-  'midi': ['A MIDI controller: keys and knobs in dots.', 'midi music audio'],
-  'recorder': ['A tape recorder with spinning reels.', 'audio recorder animated'],
-  'radio': ['A radio dial with a tuning ring.', 'radio audio ring'],
+  'vibe-pad': ['A 4 × 4 pad of command icons: play, undo, the terminal, code.', 'audio pad music'],
+  'midi': ['A MIDI controller: the chord, eight step dots and three faders.', 'midi music audio'],
+  'recorder': ['A voice recorder: the time, the waveform and the line it caught.', 'audio recorder animated'],
+  'radio': ['A two-way radio on channel 07, standing by.', 'radio audio ring'],
   'interpreter': ['A live interpreter: speech in, translated text out.', 'ai voice translate live'],
   'thermal-puppy': ['A puppy seen by a thermal camera, 38.6°.', 'thermal photo animal'],
   'level-03': ['A game level drawn in scattered dots.', 'game level scatter'],
@@ -195,13 +196,13 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'inst-xy': ['An XY pad: drag the dot to bend two sounds at once.', 'synth pad music control'],
   'inst-transport': ['Play, tempo and sound on/off for the synth.', 'synth tempo music control'],
   'inst-sequencer': ['A sixteen-step sequencer: tap steps to program the beat.', 'synth sequencer music control'],
-  'inst-crank': ['A crank you turn to count ticks.', 'crank control music'],
+  'inst-crank': ['Turn the crank to scrub through the loop. It counts the ticks.', 'crank control music'],
   // ir: Field IR programs
   'ir-ripple': ['Ripples written as a tiny Field IR program.', 'ir program animated'],
   'ir-plasma': ['A plasma written as a Field IR program.', 'ir program animated'],
   'ir-dial': ['A dial written in Field IR, driven by one data value you can drag.', 'ir program dial control'],
   // cinema: the Afterlight cycle
-  'cinema-last-call': ['Noir: a bar that never closed, in animated halftone.', 'film noir animated photo'],
+  'cinema-last-call': ['Noir in animated halftone: a man in a fedora and one cigarette ember.', 'film noir animated photo'],
   'cinema-signal': ['Sci-fi: someone answered the signal.', 'film scifi animated photo'],
   'cinema-sundown': ['Western: the last light in the west.', 'film western animated photo'],
   'cinema-upstairs': ['Horror: someone left the light on upstairs.', 'film horror animated photo'],
@@ -212,7 +213,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'cinema-encore': ['Musical: one more song under the spotlight.', 'film musical animated photo'],
   // light: the raster light stack
   'light-torch': ['Drag a torch across a relief and watch the dots light up.', 'light torch control'],
-  'light-orb': ['A glowing orb lighting the dots around it.', 'light orb animated'],
+  'light-orb': ['A gloss ball lit by the sun of the current hour, with its shadow under it.', 'light orb animated'],
   'light-on-air': ['An ON AIR studio sign, glowing.', 'light sign animated'],
   'light-matte': ['A matte surface lit by a moving light (Lambert shading).', 'light material animated'],
   'light-gloss': ['A glossy surface with a sharp highlight.', 'light material animated'],
@@ -239,7 +240,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'hb-agent': ['All five agent states in one card. Tap through them.', 'ai agent status control'],
   // sim: living fields
   'sim-rd': ['Reaction-diffusion: spots and stripes growing on their own.', 'sim pattern animated'],
-  'sim-sand': ['Falling sand piling up grain by grain.', 'sim sand animated'],
+  'sim-sand': ['An hourglass of falling sand. Red marks the grains in the air.', 'sim sand animated'],
   'sim-life': ['Conway’s Game of Life, generation by generation.', 'sim life animated'],
   // lock: lock screens
   'lock-hourglass': ['An hourglass whose sand runs down.', 'lock time animated'],
@@ -247,18 +248,18 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'lock-notify': ['A lock screen with two new notifications.', 'lock notifications animated'],
   'lock-idle': ['An idle lock screen of drifting dots.', 'lock idle animated'],
   // live: real data
-  'live-weather': ['Your local weather right now and later today, from Open-Meteo.', 'weather live data'],
+  'live-weather': ['The weather now and later today from Open-Meteo, for Tokyo or the place in the link.', 'weather live data'],
   'live-now-playing': ['A now-playing feed with a progress bar.', 'music live data'],
   'live-contribs': ['GitHub contributions for the last year, with your streak.', 'github live data'],
   // mirror: camera halftone
   'mirror-camera': ['Your camera as halftone dots. Video stays on your device.', 'camera halftone live'],
-  'mirror-ladder': ['The halftone ladder: ordered, structured and noisy dithering side by side.', 'halftone dither photo'],
+  'mirror-ladder': ['The halftone ladder: ordered and structured dithering side by side.', 'halftone dither photo'],
   'mirror-shadow': ['Your shadow as a puppet of dots. Video stays on your device.', 'camera shadow live'],
   'mirror-conduct': ['Hand mode: wave or pinch in front of the camera to drive the cards.', 'camera hand control'],
   // gpu: half a million dots
   'gpu-plasma': ['A plasma of half a million dots, evaluated on the GPU.', 'gpu plasma animated'],
   'gpu-starfield': ['A starfield flying past, on the GPU.', 'gpu stars animated'],
-  'gpu-moire': ['Moiré interference patterns on the GPU.', 'gpu pattern animated'],
+  'gpu-moire': ['Moire interference patterns on the GPU.', 'gpu pattern animated'],
   // surfaces: one field, five surfaces
   'surface-browser': ['The shared field as a browser draws it: 144 × 144 dots.', 'surface display animated'],
   'surface-glyph': ['The same field on a 25 × 25 glyph matrix.', 'surface display animated'],
@@ -310,7 +311,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'algo-aggregate': ['Frost grown one grain at a time by diffusion-limited aggregation.', 'algorithm dla fractal animated'],
   // materials: woven, spun, carved, poured (docs/living-matter/M-materials.md)
   'mat-loom': ['A loom weaving twill live, with its draft shown as dots.', 'material weave textile animated control'],
-  'mat-knob': ['A spun-aluminium knob whose highlight follows the light.', 'material metal knob control'],
+  'mat-knob': ['A spun-aluminium knob: drag round it to set the volume. The highlight follows the light.', 'material metal knob control'],
   'mat-grille': ['A perforated speaker grille lit from behind by the beat.', 'material metal audio animated'],
   'mat-marble': ['The time engraved in marble, read by raking light.', 'material stone clock animated'],
   'mat-terrazzo': ['A month of terrazzo chips; today is the red one.', 'material stone calendar'],
@@ -404,7 +405,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'chart-line': ['Site visits by the hour on a line of fine dots. The readout snaps to the nearest hour as you move.', 'chart line data readout control animated'],
   'chart-area': ['Rooftop solar output over a day, sunny or cloudy, with the area under the line filled in dots.', 'chart area data readout control animated'],
   'chart-donut': ['Storage use by kind on a ring of big dots. Point at a segment to see its share; it steps out in red.', 'chart donut pie data readout control animated'],
-  'chart-heatmap': ['Commits by weekday and hour, the dot size showing the count. Tap a cell to read it.', 'chart heatmap grid data readout control animated'],
+  'chart-heatmap': ['Commits by weekday and hour, the square size showing the count. Drag or tap a cell to read it.', 'chart heatmap grid data readout control animated'],
   'chart-spark': ['Three server gauges as sparklines, read together at the minute you pick.', 'chart sparkline data readout control animated'],
   'chart-candle': ['Twenty trading days of a made-up stock as candles. Pick a day to see its close, high and low.', 'chart candlestick finance data readout control animated'],
   // motion: micro-interactions, one loop per card

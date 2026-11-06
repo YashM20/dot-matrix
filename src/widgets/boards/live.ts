@@ -104,8 +104,8 @@ const deg = (x: number) => `${Math.round(x)}°`
 const hourKeys = Array.from({ length: WX_HOURS }, (_, i) => `wxH${i}`)
 const BAR_X0 = 4, BAR_GAP = (139 - BAR_X0) / (WX_HOURS - 1), BAR_BASE = 88
 export const liveWeather: WidgetPreset = {
-  id: 'live-weather', name: 'Weather', label: 'WEATHER', group: 'icon', ...tile,
-  credit: { by: ['Open-Meteo'], title: 'Weather data by Open-Meteo.com (CC BY 4.0)', source: 'https://open-meteo.com/', note: 'data' },
+  id: 'live-weather', name: 'Weather', label: 'WEATHER', group: 'icon', liveData: true, ...tile,
+  credit: { by: ['Open-Meteo'], title: 'Weather data by Open-Meteo.com (CC BY 4.0)', source: 'https://open-meteo.com/' },
   defaults: sources.weather.fixture, springKeys: ['wxTemp', 'wxWind', 'wxHi', 'wxLo', ...hourKeys],
   layers: ({ data }) => {
     const day = data.wxDay !== 0, code = Math.round(data.wxCode), temp = Math.round(data.wxTemp), t = `${temp}`
@@ -178,7 +178,7 @@ const eqLevels = (t: number, seed: number) => {
 }
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 export const liveNowPlaying: WidgetPreset = {
-  id: 'live-now-playing', name: 'Now Playing', label: 'NOW PLAYING', group: 'photo', ...tile, animated: true,
+  id: 'live-now-playing', name: 'Now Playing', label: 'NOW PLAYING', group: 'photo', liveData: true, ...tile, animated: true,
   defaults: sources.nowPlaying.fixture, springKeys: ['npPos'],
   layers: ({ data, t }) => {
     const playing = data.npPlay !== 0, title = textOf(data.npTitle, 'NOTHING PLAYING'), dur = data.npDur, pos = Math.max(0, Math.min(1, data.npPos))
@@ -207,7 +207,7 @@ const G = { x: 2.3, y: 70, sp: 2.68 }
 const LEVEL: [number, Tone][] = [[1.15, 'faint'], [1.75, 'mid'], [2, 'idle'], [2.25, 'value'], [2.5, 'value']]
 const MONTHS = 'JFMAMJJASOND'
 export const liveContribs: WidgetPreset = {
-  id: 'live-contribs', name: 'Contributions', label: 'CONTRIBUTIONS', group: 'scatter', ...tile,
+  id: 'live-contribs', name: 'Contributions', label: 'CONTRIBUTIONS', group: 'scatter', liveData: true, ...tile,
   credit: { by: ['grubersjoe'], title: 'github-contributions-api', source: 'https://github.com/grubersjoe/github-contributions-api', note: 'data, with the GitHub API as the fallback' },
   defaults: sources.contribs.fixture, springKeys: ['ghTotal', 'ghStreak', 'ghToday', 'ghBest'],
   layers: ({ data }) => {
