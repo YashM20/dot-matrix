@@ -16,7 +16,7 @@ const chatter = (n: number, t: number, seed: number, floor = .2) => Array.from({
 })
 
 export const boardingPass: WidgetPreset = {
-  id: 'boarding-pass', name: 'Henry Li', group: 'text', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'boarding-pass', name: 'Boarding Pass', label: 'Henry Li', group: 'text', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     layer(T.big('14A', 0, 38, { lattice: 3.7, smooth: true })),
     layer(T.big('SFO — LHR', 0, 101, BODY), 'idle'),
@@ -62,7 +62,7 @@ export const powerRing: WidgetPreset = {
 }
 
 export const midnightCircuit: WidgetPreset = {
-  id: 'midnight-circuit', name: "Henry's Desk", group: 'chart', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
+  id: 'midnight-circuit', name: 'Midnight Circuit', label: "Henry's Desk", group: 'chart', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
   defaults: { played: 0.47 },
   layers: ({ t, data }) => {
     const bars = T.dotBars(chatter(48, t * 0.6, 5), 1, 77, { gap: 3, pitch: 2.2, height: 22, size: 1.5, mirror: true })
@@ -150,7 +150,7 @@ const SKYLINE = toneRamp((u, v) => halftone(u * 143, v * 143), [
   { at: .7, tone: 'value', value: dotSize },
 ])
 export const afterSilhouette: WidgetPreset = {
-  id: 'silhouette', name: 'Henry', label: '', group: 'photo', chrome: 'dots', bleed: true, grid: TILE,
+  id: 'silhouette', name: 'Silhouette', label: '', group: 'photo', chrome: 'dots', bleed: true, grid: TILE,
   // halftone: every dot fully lit, luminance carried by dot size and tone
   style: { ...tileStyle, sizeMin: 0, sizeMax: 1.2, quantizeSteps: 0, opacityMode: 'constant' },
   layers: () => [
@@ -206,7 +206,7 @@ export const cardiology: WidgetPreset = {
 }
 
 export const listening: WidgetPreset = {
-  id: 'listening', name: 'DeerFlow', group: 'chart', chrome: 'dots', live: true, animated: true, grid: TILE, style: tileStyle,
+  id: 'listening', name: 'Listening', label: 'DeerFlow', group: 'chart', chrome: 'dots', live: true, animated: true, grid: TILE, style: tileStyle,
   layers: ({ t }) => {
     return [
       layer(T.dotBars(chatter(36, t * 1.5, 8, .15).map(v => Math.min(1, v * 1.25)), 1, 68, { gap: 4, pitch: 2.5, height: 30, size: 1.6, mirror: true }), 'idle'),

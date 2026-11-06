@@ -123,7 +123,7 @@ try {
   await p.js(`document.querySelector('.lk-btn').focus(); 1`)
   const focused = await p.js<boolean>(`document.activeElement === document.querySelector('.lk-btn')`)
   // a real Enter: a keyDown without its text is a raw key, which never activates a focused button
-  await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '' })
+  await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' })
   await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 })
   const again = await p.waitFor(`!!document.querySelector('.lk-sheet')`, 3000)
   await p.key('Escape', 'Escape', 27)

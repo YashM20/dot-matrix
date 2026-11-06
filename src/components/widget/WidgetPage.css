@@ -253,6 +253,11 @@
   font: 400 var(--fs-label-12)/1.5 var(--sans)
 }
 
+/* the concept credit of the seven boards that rebuild the ESP-Mosaico sheets (ConceptCredit), under the card's own */
+.wp-rail .concept-credit {
+  margin: calc(-1 * var(--space-2)) 0 var(--space-4)
+}
+
 /* the inline link (DESIGN.md › Chrome components › link): marked at rest with a dotted underline, a solid one on
    hover and press, the accent ring on keyboard focus */
 .wp-link {
@@ -413,6 +418,17 @@
 @media (max-width: 1100px) {
   body:has(.wp) .pal-dock {
     display: none
+  }
+}
+
+/* wider, the page has no top bar to hold it: it takes its own row at the end of the page, right-aligned, instead of
+   floating over the footer's links */
+@media (min-width: 1101px) {
+  .shell--widget .pal-dock {
+    position: static;
+    flex: none;
+    width: fit-content;
+    margin: var(--space-2) 0 0 auto
   }
 }
 

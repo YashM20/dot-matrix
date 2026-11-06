@@ -20,8 +20,10 @@ export interface WidgetPreset {
   id: string
   name: string
   group: 'text' | 'polar' | 'icon' | 'photo' | 'chart' | 'scatter' | 'composite'
-  /** Shows the status dot in the card header. */
+  /** Shows the red status dot in the card header. A look only: it says nothing about the data (see `liveData`). */
   live?: boolean
+  /** Shows real data from a feed (the live board): the LIVE DATA chip and "(live)" in the card's name. */
+  liveData?: boolean
   /** Re-sampled on a timer with a running `t`. */
   animated?: boolean
   /**
@@ -86,6 +88,8 @@ export const tileStyle: DotStyle = { ...baseStyle, sizeMin: .2, sizeMax: .95, co
 export type LatticeField = Omit<Layer, 'tone'>
 type Pt = [number, number]
 const one: Field = () => 1
+/** A field of ones that carries the words its sites spell (`Field.text`); `one` is shared, so it never carries any. */
+const said = (text: string): Field => { const f: Field = () => 1; f.text = text; return f }
 export interface SiteOptions {
   /** Distance between dot centres, in card cells. */
   spacing?: number
@@ -292,8 +296,8 @@ export function layoutFor(grid: GridConfig) {
       })
       return { field: one, sites, size }
     },
-    /** Arbitrary dot sites. */
-    dots: (points: Pt[], size = 1.8): LatticeField => ({ field: one, sites: points, size }),
+    /** Arbitrary dot sites. `text`: the words they spell (glyphs drawn as sites), for `describe()` and screen readers. */
+    dots: (points: Pt[], size = 1.8, text?: string): LatticeField => ({ field: text ? said(text) : one, sites: points, size }),
     /** Layout helpers for a coarser lattice anchored at card cell (col,row); wrap results with `.at()`. */
     lattice: (k: number, col = 0, row = 0) => {
       const sub = latticeGrid(grid, k, [col, row])

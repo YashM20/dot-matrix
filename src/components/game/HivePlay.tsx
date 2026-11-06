@@ -18,8 +18,6 @@ import { migrate, type Migration } from '../../engine/migrate'
 import { layer, layoutFor } from '../../widgets/types'
 import { BTN } from '../../game/buttons'
 import { GameInput } from '../../game/input'
-// its overlay styles: the game also opens from a levels card's widget page, without HiveStart
-import './hive.css'
 import { startLoop } from '../../game/loop'
 import { gameLayers, gameStyle, shakeOffset } from '../../game/render'
 import { enter, newGame, step, type Game, type Stage } from '../../game/sim'

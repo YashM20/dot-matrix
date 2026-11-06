@@ -6,10 +6,10 @@
  * grouped actions (export, share and remix, MORE), the like button and the facts; the panel scrolls on its own.
  * Phones stack it. X-RAY shows only while its flag is on. A missing widget is noindex.
  */
-import { lazy, Suspense, useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { DotName } from '../DotName'
 import { dot480 } from '../../engine/theme/tokens'
-import { boardIds, boardLabel, loadBoard, resolveCardId } from '../../widgets/manifest'
+import { boardIds, boardLabel, loadBoard, resolveCardId, type BoardId } from '../../widgets/manifest'
 import { catalog } from '../../widgets/catalog'
 import { deriveWidgetMeta, type WidgetMeta } from '../../widgets/meta'
 import { creditsOf, withChrome, type WidgetPreset } from '../../widgets/types'
@@ -27,6 +27,8 @@ import type { Source } from '../../data/source'
 import { pick, useLiveData } from '../../data/useLiveData'
 import { cardScheme } from '../../site/theme/polarity'
 import { DotWidget } from '../DotWidget'
+import { ConceptCredit } from '../ConceptCredit'
+import { useBlurbs } from '../useBlurbs'
 import { LoadFailed } from '../LoadBoundary'
 import { Pill, PillBar, PillButton } from './PillBar'
 import { MoreMenu } from './MoreMenu'
@@ -47,9 +49,6 @@ type Loaded = { w: ResolvedWidget; preset: WidgetPreset; items: WidgetPreset[]; 
 /** Board sources a widget page subscribes to as well (X1): the pond's day (`?day=`, the opt-in age) and the light hub. */
 const PAGE_SOURCES = new Set(['pond-day', 'light'])
 type State = { status: 'loading' } | { status: 'missing' } | { status: 'failed' } | ({ status: 'ok' } & Loaded)
-
-/** HIVE, for the levels board's cards (their title card says PUSH START): loads when PLAY is pressed. */
-const HivePlay = lazy(() => import('../game/HivePlay'))
 
 /** The export code (PNG, SVG, HTML), loaded on the first export. */
 const exporter = () => import('./cardExport')
@@ -95,7 +94,6 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
   const live = useLiveData(sources), pond = w.board === 'pond'
   // a card that sets words (`typing`): the field's text, as card data
   const [typed, setTyped] = useState<Record<string, number>>()
-  const [hive, setHive] = useState(false), hiveCard = w.board === 'levels'
   const stage = useRef<HTMLElement>(null)
   const xrayOn = useFlag('xray')
   const xray = useXR(s => s.global || s.on.size > 0)
@@ -146,7 +144,10 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const chips = [meta.hint, meta.animated && 'ANIMATED', meta.live && 'LIVE DATA', meta.media === 'camera' && 'CAMERA', meta.media === 'mic' && 'MICROPHONE', meta.clock && 'CLOCK'].filter((c): c is string => !!c)
+  // a camera card's hint is CAMERA too: each chip once
+  const chips = [...new Set([meta.hint, meta.animated && 'ANIMATED', meta.live && 'LIVE DATA', meta.media === 'camera' && 'CAMERA', meta.media === 'mic' && 'MICROPHONE', meta.clock && 'CLOCK'].filter((c): c is string => !!c))]
+  // the concept credit the board heading shows, here too: shared links land on this page
+  const blurbs = useBlurbs(), concept = blurbs?.conceptCredit.boards.includes(w.board as BoardId) ? blurbs.conceptCredit : undefined
   const facts: [string, ReactNode][] = [
     ['Board', <a key="b" className="wp-link" href={`/${w.board}/`} onClick={e => { if (e.button === 0 && !e.metaKey && !e.ctrlKey) { e.preventDefault(); onBoard(w.board, w.slug) } }}>{boardLabel(w.board)}</a>],
     ['Kind', meta.group],
@@ -181,15 +182,17 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
         {preset.typing && <TypeField typing={preset.typing} onText={setTyped} />}
         <WidgetLike uid={w.uid} name={name} />
         {creditsOf(preset).map(c => <p key={c.source} className="wp-credit">by {c.by.join(', ')} · <a className="wp-link" href={c.source} target="_blank" rel="noopener noreferrer">{c.title}</a>{c.note && <> · {c.note}</>}</p>)}
+        {concept && <ConceptCredit credit={concept} card />}
         {/* the actions, grouped by what they do: export, then share and remix, then the rest */}
         <PillBar label="Card actions" className="wp-actions">
-          {hiveCard && <Pill><PillButton label="PLAY" glyph="▶" title="Play HIVE" onClick={() => setHive(true)} /></Pill>}
           <Pill className="wp-copy">
             <PillButton label="PNG" glyph="▣" title="Copy as PNG" onClick={act.png} />
             <PillButton label="SVG" glyph="◇" title="Copy as SVG" onClick={act.svg} />
             <PillButton label="LINK" glyph="⌁" title="Copy link" onClick={act.link} />
           </Pill>
           <Pill className="wp-go">
+            {/* the levels board's cards are HIVE's screens: the game opens on its board (HiveStart reads ?play=1) */}
+            {w.board === 'levels' && <PillButton label="PLAY" glyph="▸" title="Play HIVE" href="/levels/?play=1" />}
             {share && <PillButton label="SHARE" glyph="↗" title="Share" onPointerDown={() => { sharePNG.current = png() }} onClick={act.share} />}
             {flag('make') && <PillButton label="REMIX" glyph="✎" title="Remix in MAKE" onClick={act.remix} />}
             {xrayOn && <PillButton label="X-RAY" glyph="ⓘ" title="X-ray: how it works" onClick={act.xray} pressed={xray} className="wp-desk" />}
@@ -208,6 +211,5 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
         <dl className="wp-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </aside>
     </div>
-    {hive && <Suspense fallback={null}><HivePlay theme={themeTokens(getTheme().resolved, getTheme().accent)} onClose={() => setHive(false)} /></Suspense>}
   </section>
 }

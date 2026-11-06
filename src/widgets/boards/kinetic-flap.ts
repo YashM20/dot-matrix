@@ -28,6 +28,7 @@ const EDIT_FLIP = .03
 const controls: Control[] = Array.from({ length: SLOTS }, (_, m): Control => ({
   key: slotKey(m), kind: 'stepper', orientation: 'vertical', min: 0, max: DRUM.length, step: 1, wrap: true,
   box: [colOf(m) - 1, BOX.top, ADV * K, BOX.h], label: `Flap ${m + 1}`, group: 'flaps',
+  valueText: v => { const ch = DRUM[((Math.round(v) % DRUM.length) + DRUM.length) % DRUM.length]; return !ch || ch === ' ' ? 'blank' : ch },
 }))
 
 // Edits in flight: when a module's value changes on an interaction frame, it flips from what it showed. Kept per

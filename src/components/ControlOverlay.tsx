@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef, useState, type CSSProperties, type FocusEvent, type KeyboardEvent } from 'react'
 import { HIT_PAD, controlRange, keyValue, keyYOf, settle, touchIntent } from '../engine/interaction'
+import { controlValueText } from '../engine/describe'
 import type { Control, GridConfig } from '../engine'
 import type { ControlInput } from '../hooks/useControlInput'
 
@@ -82,6 +83,7 @@ export function ControlOverlay({ controls: all, grid, data, input }: { controls:
     const tabIndex = c.group && c.kind !== 'xy' ? (c.key === groupStop(c.group) ? 0 : -1) : undefined
     return <input key={key} type="range" className="dot-a11y-ctl" style={style} aria-label={label} data-dot-focus={focusAttr ? c.key : undefined} tabIndex={tabIndex}
       min={bounded ? min : -1e9} max={bounded ? max : 1e9} step={step > 0 && bounded ? step : 'any'} value={v} aria-valuenow={v}
+      aria-valuetext={controlValueText(c, data, key)}
       aria-orientation={c.orientation === 'vertical' || c.kind === 'knob' ? 'vertical' : undefined}
       onChange={e => input.set({ [key]: settle(c, Number(e.currentTarget.value)) })}
       onKeyDown={rangeKeys(c, key)} onFocus={onFocus(c.key)} onBlur={onBlur} />
