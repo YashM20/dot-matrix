@@ -1,72 +1,100 @@
-# Dot/480 CI: typecheck + lint + acceptance harness (`pnpm check`) and a production build.
-# MASTER-PLAN §4 P0.6 / §6: golden hashes and perf budgets join here once their scripts land.
+# Dot/480 CI. Independent jobs run in parallel; the "check + build" job is the gate the main ruleset requires,
+# so keep its name. It passes only when every job it needs passed. Together they run what one serial job ran
+# before (#197): `pnpm check`, the CSS token lint, the build and its site checks, the goldens, plus the MCP package (#193).
 name: CI
 
 on:
+  # PR branches run once, on pull_request; push runs only for main (it used to run twice per PR push)
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
 
+# a new push to a PR cancels its stale run; runs on main queue instead, so every merge gets a full result
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 jobs:
-  check:
-    name: check + build
+  # `pnpm check` is `pnpm check:static && pnpm verify`: the two halves run as parallel jobs
+  static:
+    name: typecheck + lint
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 10
     steps:
-      - name: Checkout
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
 
-      # package.json has no "packageManager" field, so pin pnpm 10 here
-      # (pnpm-lock.yaml is lockfileVersion 9.0, which pnpm 9 and 10 both read).
-      # If "packageManager" is added later, delete `version:` - action-setup fails when both are set and disagree.
-      - name: Setup pnpm
-        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          version: 10
-
-      - name: Setup Node
-        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: 22
-          cache: pnpm
-
-      - name: Install
-        run: pnpm install --frozen-lockfile
-
-      # tsc -b, oxlint, the file-size rule (scripts/site/file-size.ts: warn > 500 lines, fail > 800, #76)
-      # and the headless acceptance harness (scripts/verify.ts)
-      - name: Check
-        run: pnpm check
+      # tsc -b, oxlint, file size (warn > 500 lines, fail > 800, #76), credits, headers and URLs on the source pages,
+      # the prose lint and the analytics checks: `pnpm check` minus `pnpm verify`, so the two can't drift apart
+      - name: Check (static)
+        run: pnpm check:static
 
       # every stylesheet under src/ uses tokens from src/tokens.css; no raw colour/spacing/type/radius/duration literals
       - name: CSS token lint
         run: pnpm exec tsx scripts/site/css-tokens.ts
 
-      # also writes dist/og/*.png and dist/<board>/index.html (vite.config.ts → scripts/site/postbuild.ts);
+  # the headless acceptance harness (scripts/verify.ts), the slowest part of `pnpm check`
+  verify:
+    name: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
+      - name: Verify
+        run: pnpm verify
+
+  build:
+    name: build + site checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
+      # Widget OG images take ~0.7 s each to render (~50 s for all of them). postbuild.ts names each cached file by
+      # the OG renderer's source and the card's golden hashes, so a stale file never matches: restoring an older
+      # cache is safe and only the changed cards re-render.
+      - name: Restore OG image cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules/.cache/dot480-og
+          key: og-${{ hashFiles('goldens/**', 'scripts/og.ts', 'scripts/lib/raster.ts', 'scripts/lib/cards.ts', 'scripts/lib/stats.ts', 'src/engine/sampler/gridSampler.ts') }}
+          restore-keys: og-
+
+      # `pnpm build` is `tsc -b && vite build`; the typecheck job already ran tsc -b.
+      # Also writes dist/og/*.png and dist/<board>/index.html (vite.config.ts → scripts/site/postbuild.ts);
       # SITE_URL (repo variable, e.g. your Vercel production URL) makes og:image / og:url absolute
       - name: Build
-        run: pnpm build
+        run: pnpm exec vite build
         env:
           SITE_URL: ${{ vars.SITE_URL }}
+
+      # keep only the images this build used, so the saved cache doesn't grow with every renderer change
+      - name: Prune OG image cache
+        run: |
+          [ -d dist/og/widget ] || exit 0
+          for f in node_modules/.cache/dot480-og/*.png; do
+            [ -e "$f" ] || continue
+            b=$(basename "$f" .png)
+            cmp -s "$f" "dist/og/widget/${b%-*}.png" || rm "$f"
+          done
 
       # first-load JS ≤ 150 kB gz (docs/WEB-PLAN.md §1)
       - name: Bundle budget
         run: pnpm exec tsx scripts/site/size.ts --check
 
-      # `pnpm check` (verify → themeChecks) already ran the theme checks, but before the build: with no dist/ it
-      # skips the "dist/index.html kept the boot script byte for byte" check (the CSP hash in vercel.json).
-      # Re-run after the build so that one is gated too.
+      # verify → themeChecks ran without dist/, so it skipped the "dist/index.html kept the boot script byte for
+      # byte" check (the CSP hash in vercel.json). Run the theme checks on the build so that one is gated too.
       - name: Theme checks on the build
         run: pnpm exec tsx scripts/site/theme.ts --check
 
-      # `pnpm check` ran the header checks on the source pages; after the build they also cover every built page
-      # (each inline script's sha256 in the CSP, the CSP and hardening headers on every path)
+      # each inline script's sha256 in the CSP, the CSP and hardening headers on every built path
       - name: Header checks on the build
         run: pnpm exec tsx scripts/site/headers.ts
 
@@ -88,8 +116,52 @@ jobs:
       - name: Golden hashes
         run: pnpm golden --check
 
-      # Report-only: shared CI runners are too noisy to gate on timings yet (MASTER-PLAN §6).
-      # Switch to `pnpm bench --strict` once budgets are met on a stable runner.
+  # the MCP package has its own lockfile and imports site code (#193)
+  mcp:
+    name: mcp
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+        with:
+          dir: mcp
+
+      - name: Typecheck
+        working-directory: mcp
+        run: pnpm typecheck
+
+      # builds the card view, then the server, author and headless (Chrome) tests
+      - name: Test
+        working-directory: mcp
+        run: pnpm test
+
+  # Report-only: shared CI runners are too noisy to gate on timings yet (MASTER-PLAN §6), so it runs on main only
+  # and isn't part of the gate. Switch to `pnpm bench --strict` once budgets are met on a stable runner.
+  bench:
+    name: perf report
+    if: github.event_name != 'pull_request'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
       - name: Perf report
         run: pnpm bench
-        continue-on-error: true
+
+  # The required status check. Don't rename it: the main ruleset requires "check + build" by name.
+  gate:
+    name: check + build
+    if: always()
+    needs: [static, verify, build, mcp]
+    runs-on: ubuntu-latest
+    timeout-minutes: 2
+    steps:
+      - name: Every job passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "results: $RESULTS"
+          for r in $RESULTS; do [ "$r" = success ] || exit 1; done
