@@ -1,7 +1,7 @@
 /**
  * Flip-disc clack (app side only, muted by default): a short filtered noise tick per column write,
  * louder the more discs flip in it. Fed by `FlipSim.events(t0, t1)` from `src/engine/device`.
- * Enabled by the `clack` flag (src/site/flags.ts: `?clack=1`, `?flags=clack` or the switcher's toggle); the
+ * Enabled by the `clack` flag (src/site/flags.ts: the switcher's toggle); the
  * AudioContext only starts after a user gesture, as browsers require.
  */
 import { flag } from '../site/flags'

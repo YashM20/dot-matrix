@@ -33,7 +33,7 @@ In the browser, the app rewrites these tags as you move between boards and widge
 - `/<board>/` (for example `/light/`) is the shareable form.
 - MAKE is `?make=<tune|compose|code|draw>` and ABOUT is `?about`, on the current board's path, for example `/light/?make=compose`.
 - The address bar follows every board and view, and each change is a history entry, so Back and Forward work. The URL forms live in the pure resolver `src/site/views.ts`; `syncUrl` in `src/site/meta.ts` writes them, and the first render only normalises the URL.
-- Old forms resolve through the alias table in `views.ts` (checked by verify): `?board=<id>` folds into the path, and `?tab=workspace|studio|dots|draw|log|gallery` map to the new views. `?card=<id>`, `?make=code&p=…`, `?skin=`, `?pro=1`, `?worker=0` and `?flags=` are kept.
+- Old forms resolve through the alias table in `views.ts` (checked by verify): `?board=<id>` folds into the path, and `?tab=workspace|studio|dots|draw|log|gallery` map to the new views. `?card=<id>`, `?make=code&p=…`, `?skin=` and `?pro=1` are kept. `?flags=`, `?worker=` and `?clack=` no longer do anything: flags are never set from the URL.
 - Old ids resolve through `boardAliases` (`/glyph/` opens `/lock/`).
 - Links to the blog must be root-absolute (`/blog/`, `/blog/dot-matrix-essay/`): a relative link breaks under `/<board>/` paths.
 - Routing (`vercel.json`): redirects first, then real files, then rewrites, else `404.html` with status 404. Vercel reads a `source` exactly (case-sensitive, no optional trailing slash), so routes list both slash forms. Only the app's own route shapes fall back:
@@ -48,18 +48,27 @@ In the browser, the app rewrites these tags as you move between boards and widge
 Release flags live in `src/site/flags.ts`, one registry entry each (`id`, `default`, `description`). Pro (`?pro=1`, `src/site/pro.ts`) is a visitor preference and stays out of it. A flag's value, each step overriding the one before:
 1. the registry default;
 2. the build value, `VITE_FLAG_<ID>`: `on` or `off` (`1` / `0` work too);
-3. the browser's saved overrides, `localStorage['dot480:flags']`;
-4. the URL, for that page load: `?flags=xray,-worker` turns `xray` on and `worker` off. `?flags=reset` clears the saved overrides.
+3. the browser's saved overrides, `localStorage['dot480:flags']`.
 
-`VITE_FLAG_<ID>=kill` turns the feature off for good and leaves its lazy chunks out of the build. No saved or URL override brings it back. Use it when a feature should not ship at all, and `off` when it should stay testable with `?flags=<id>`.
+The URL never sets a flag, so a visitor can't turn a feature on by editing a link.
+
+**Try a flag in one browser.** Open the site or a preview, open the DevTools console (F12), and run:
+
+```js
+localStorage.setItem('dot480:flags', JSON.stringify({ xray: true }))
+```
+
+Reload. The object can hold several flags, `{ xray: true, worker: false }`, and only this browser on this domain sees them. `localStorage.removeItem('dot480:flags')` and a reload go back to the build's values. There is no flag UI on the site.
+
+`VITE_FLAG_<ID>=kill` turns the feature off for good and leaves its lazy chunks out of the build. No saved override brings it back. Use it when a feature should not ship at all, and `off` when it should stay testable from the console.
 
 | Flag | Default | Build variable | What it gates |
 |---|---|---|---|
 | `xray` | off | `VITE_FLAG_XRAY` | X-ray: the card's ⓘ overlay and the inspector (and their styles), the dock button and TOOLS tile, the widget page's X-RAY pill and menu item, the intro line's "press X-RAY", X / ⇧X, the palette action, the shell's `xray`. |
-| `worker` | on | `VITE_FLAG_WORKER` | Sampling in the web worker. `?worker=0` still turns it off. |
-| `clack` | off | `VITE_FLAG_CLACK` | The flip-disc clack sound. `?clack=1` and the skin list's toggle still turn it on. |
+| `worker` | on | `VITE_FLAG_WORKER` | Sampling in the web worker. |
+| `clack` | off | `VITE_FLAG_CLACK` | The flip-disc clack sound. The skin list's toggle turns it on. |
 | `analytics` | on | `VITE_FLAG_ANALYTICS` | PostHog analytics (opt-in): the consent banner, the TOOLS tile and the palette's two commands. Does nothing without `VITE_POSTHOG_PROJECT_TOKEN` (see Analytics below). `kill` leaves `posthog-js` and the banner out of the build. |
-| `likes` | off | `VITE_FLAG_LIKES` | The like button on widget pages and gallery programs (#169). It stays hidden while the likes API answers 404, which it does until the store and its secrets are set (see Likes below). |
+| `likes` | on | `VITE_FLAG_LIKES` | The like button on widget pages and gallery programs (#169). It stays hidden while the likes API answers 404, which it does until the store and its secrets are set (see Likes below). `vite dev` and `vite preview` answer every `/api/` path with 404, so local runs show no button. |
 | `make` | off | `VITE_FLAG_MAKE` | MAKE, the editor: the MAKE tab (header and phone), the palette places and remix actions, the shell's `remix` and `studio`, the cards' and widget page's REMIX, and the MAKE links in About, the changelog and the essay. Off, a MAKE URL (`?make`, `?tab=studio`, …) opens the home board. |
 | `lab` | off | `VITE_FLAG_LAB` | The lab: its links in the header, footer, TOOLS, About, the changelog and the blog nav, and its sitemap entry (read at build time). Off, `/lab/` goes home, and the lab page says `noindex` either way. |
 

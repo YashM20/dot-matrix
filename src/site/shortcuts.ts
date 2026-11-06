@@ -36,8 +36,5 @@ export const URL_PARAMS: readonly Shortcut[] = [
   { keys: '?about', does: 'this page' },
   { keys: '/widget/<id>/', does: 'one card on its own page (also /<short id>)' },
   { keys: '?skin=crt|vfd|led|eink|flipdisc|nixie|lcd|grout', does: 'display skin' },
-  { keys: '?flags=xray,-worker', does: 'feature flags for this page: a name turns one on, -name turns it off, reset clears saved ones' },
-  { keys: '?worker=0', does: 'sample on the main thread (the worker flag)' },
-  { keys: '?clack=1', does: 'flip-disc clack sound (the clack flag)' },
   { keys: '?tab=…, ?board=…', does: 'old links: still open the view they named' },
 ]
