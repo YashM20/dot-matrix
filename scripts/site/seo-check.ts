@@ -77,6 +77,8 @@ const CASES: [path: string, want: string, view?: (v: ReturnType<typeof viewFromU
   ['/lab', 'lab/index.html'], ['/lab/', 'lab/index.html'], ['/lab/motion-lab.html', 'lab/motion-lab.html'],
   ['/privacy', 'privacy.html'], ['/privacy/', 'privacy.html'], ['/terms', 'terms.html'], ['/terms/', 'terms.html'],
   ['/sitemap.xml', 'sitemap.xml'], ['/robots.txt', 'robots.txt'], ['/404.html', '404.html'], ['/widgets.json', 'widgets.json'], ['/og/default.png', 'og/default.png'], ['/favicon.svg', 'favicon.svg'], ['/favicon.ico', 'favicon.ico'],
+  // the shadcn registry, when the build wrote it (`pnpm registry:build`): static JSON, no SPA fallback
+  ...(existsSync(join(DIST, 'r/matrix-core.json')) ? [['/r/registry.json', 'r/registry.json'], ['/r/matrix-core.json', 'r/matrix-core.json'], ['/r/matrix-nope.json', '404']] as [string, string][] : []),
   ...['/nope', '/nope/', '/no/such/page', '/light/extra', '/widget/', '/widget/a/b', '/assets/missing.js', '/og/missing.png', '/sketches', '/lab/motion-lab/x', '/embed/x'].map(p => [p, '404'] as [string, string]),
 ]
 for (const exact of [true, false]) {

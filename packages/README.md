@@ -33,7 +33,6 @@ Enter / Space via `keyValue`); reduced motion = one still frame, no entrance, sp
 ```sh
 npx tsx packages/scripts/build.ts              # vite library mode (ESM) + tsc --emitDeclarationOnly + size report
 npx tsx packages/scripts/element-headless.ts   # headless Chrome over CDP: demo.html renders, input, reduced motion
-npx tsx packages/scripts/registry.ts [--check] # shadcn registry → registry/
 npm pack ./packages/core --pack-destination .snapshots/p6b
 ```
 `.d.ts` relative specifiers get `.js` / `/index.js` added after emit, so types resolve under `bundler`, `node16` and
@@ -55,13 +54,12 @@ Install smoke: `packages/scripts/smoke.mjs` (copy next to an `npm i ./dot480-*.t
 Bundlers tree-shake `@dot480/core` (`sideEffects: false`), so a single import costs far less than the entry total.
 
 ## shadcn registry
-`registry/registry.json` (schema `https://ui.shadcn.com/schema/registry.json`) lists the 10 Components v2 cards and 6 widgets
-as `registry:component` items, each a 6-line `<DotCard preset=…>` wrapper (`registry/dot480/<id>/<id>.tsx`, npm deps
-`@dot480/react` + `@dot480/core`). `registry/r/<id>.json` are the built items with file `content` inlined, servable as-is:
-`npx shadcn add https://<host>/r/ui-knob.json`.
+The registry no longer goes through these packages. It ships the same `src/` files as source (`matrix-core` and one item per
+board and card, under `lib/matrix/` and `components/matrix/`), so installing an item needs nothing from npm. See
+[docs/REGISTRY.md](../docs/REGISTRY.md). The card runtime both use is `src/widgets/mount.ts` (`@dot480/core/card` re-exports it).
 
 ## Not done yet
-- Not published to npm; the registry has no host yet.
+- Not published to npm.
 - `@dot480/core/spec` (and `<DotCard spec>` / `<dot-card src>`) still takes the minimal package spec
   `{ grid, style?, layers: [{ ir, tone?, lattice? }], defaults?, controls?, animated? }` via `presetFromSpec`. Card spec v1 has
   landed in `src/spec` (`loadSpec`, `validateSpec`, `specToPreset`, `presetToSpec`, `migrateSpec`; `schema/card.v1.schema.json`,

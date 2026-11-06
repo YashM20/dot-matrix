@@ -27,6 +27,7 @@ Which doc to read for what, and how current each one is (checked 2026-11-06, dur
 | [`guides/`](guides/README.md) | Visitor guides (#77): make your first card, a Field IR cookbook, behind the boards. Checked against the code 2026-11-03; not published as pages yet. |
 | [`WRITING.md`](WRITING.md) | Voice for visitor text (essay, LOG, legal pages, guides): plain words, real numbers, the AI-writing tells to avoid, and the visual each section needs. Checked by `scripts/site/prose-lint.ts`. |
 | [`DEPLOY.md`](DEPLOY.md) | Vercel deploy, build outputs, routes, feature flags, analytics, likes, headers (CSP, Trusted Types in Report-Only) and the CI jobs |
+| [`REGISTRY.md`](REGISTRY.md) | Current. The MATRIX shadcn registry: the two-registry `components.json`, install commands, items, how it is built and checked |
 | [`MCP-APP.md`](MCP-APP.md) | The MCP app (agent heartbeat) and the authoring tools, for personal use |
 | [`IQ-PLAN.md`](IQ-PLAN.md) | IQ1 to IQ8 built (0.14 and 0.15); the ideation section is open |
 | [`TIXY-PLAN.md`](TIXY-PLAN.md) | The tixy adapter and credits built (0.14); the `/tixy/` board and the ports are planned, blocked on permission (#52) |
