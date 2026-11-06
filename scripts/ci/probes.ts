@@ -53,8 +53,8 @@ const PROBES: { name: string; shard: number; args: string[]; env?: Record<string
   { name: 'likes', shard: 12, args: ['scripts/likes-browser.ts'] },
   { name: 'theme-picker', shard: 12, args: ['scripts/site/theme-picker.ts'] },
 ]
-/** A hung probe fails here instead of holding its shard to the job timeout (materials takes 4 to 5 minutes). */
-const TIMEOUT_MIN = 6
+/** A hung probe fails here instead of holding its shard to the job timeout (materials takes 4.5 minutes when it does finish). */
+const TIMEOUT_MIN = 5
 
 const argv = process.argv.slice(2)
 const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : undefined }

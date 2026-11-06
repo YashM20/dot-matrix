@@ -193,7 +193,7 @@ try {
 
   // the views other than EXPLORE (docs/UX-PLAN.md §4.1): the four MAKE modes and ABOUT, by their canonical query
   const items = only ?? [...boardIds, ...['make=tune', 'make=compose', 'make=code', 'make=draw', 'about'].map(t => `tab:${t}`)]
-  for (const id of items.filter(i => !i.startsWith('tab:') && i !== 'fps' && i !== 'chrome')) {
+  for (const id of items.filter(i => !i.startsWith('tab:') && !['fps', 'chrome', 'first-load'].includes(i))) {
     logs = []
     await cdp('Page.navigate', { url: `${base}${id}/` })
     const ok = await waitFor(boardReady, 20000)
