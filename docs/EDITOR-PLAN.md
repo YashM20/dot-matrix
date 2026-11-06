@@ -6,6 +6,8 @@
 > their screens. Their URLs still work and open the editor on the matching tool. What the editor still uses
 > from the old code is listed in §7.3.
 >
+> **Since then (2026-11-06):** E5 and E6 shipped in 0.13 (PR #78), and the editor's imports were hardened in 0.16 (#143: links ask first, documents are validated, visitor programs run in a sandbox worker). MAKE is behind the `make` flag, off by default since #192, so visitors don't see it; `docs/DEPLOY.md` › Feature flags says how to turn it on in one browser. The MAKE layout is #186 (CP5, open). E4 and E7 are still planned.
+>
 > **Why:** the owner's verdict on the four-tab MAKE: "changing layout/workspace and draw tabs isn't the proper
 > way — make it a full Figma-like editor, not the current experience." It must also work natively on a phone.
 

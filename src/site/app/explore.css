@@ -115,6 +115,30 @@
   text-wrap: pretty
 }
 
+/* the concept credit (ConceptCredit.tsx): a quiet line under the blurb, its links marked like the inline link
+   (DESIGN.md › Chrome components › link) */
+.concept-credit {
+  max-width: var(--measure);
+  margin: var(--space-2) 0 0;
+  color: var(--mute);
+  font: 400 var(--fs-label-12)/1.5 var(--sans);
+  text-wrap: pretty
+}
+
+.concept-credit a {
+  color: var(--label);
+  text-decoration: underline dotted var(--line-hover);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px
+}
+
+.concept-credit a:hover,
+.concept-credit a:active,
+.concept-credit a:focus-visible {
+  color: var(--value);
+  text-decoration: underline solid var(--value)
+}
+
 @media(max-width:760px) {
   .board-picker .board-groups,
   .board-picker .board-tabs {

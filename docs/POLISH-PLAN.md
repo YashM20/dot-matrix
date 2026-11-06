@@ -1,6 +1,6 @@
 # POLISH-PLAN: refine, fix and patch the site
 
-> **Status (2026-10-28):** planned, queued after round 2. Audited on `feat/round2` at `7737a20` (T3 grids and the essay / legal / X-ray theming included). Nothing here is built yet.
+> **Status (2026-10-28):** planned, queued after round 2. Audited on `feat/round2` at `7737a20` (T3 grids and the essay / legal / X-ray theming included). Since then (2026-11-06): P0 (the probes, #37, PR #113) and its CSS fixes (PR #119), the P3-A token sweep (#45, PR #110) and the P2-A width fix (PR #106, #42 still open) are built. The other P1 to P3 issues are open in Backlog; the CP5 hill climb (#189) covers the current UI polish.
 > **Asked for (owner):** "refine the product, fix issues and patch things": spacing, padding, overlap, out-of-bounds, text wrapping; layout; navigation; sticky header and footer; options that don't help anyone; and a direct way to reach the essay. Already planned items are referenced, not re-planned: `docs/LAYOUT-THEME-PLAN.md` (T3 grids, T5 picker, T6 type and contrast) and `docs/UX-PLAN.md` (U5, U6, §7 taste session).
 
 ## 0. Evidence

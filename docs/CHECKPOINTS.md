@@ -48,7 +48,9 @@ One checkpoint at a time. A checkpoint is a GitHub milestone with a fixed list o
 
 | # | Milestone | Ships | Status |
 |---|---|---|---|
-| CP1 | `CP1 · 0.13 · Round 3 to main` | Round 3: editor share and phone polish, squares Q2–Q3, glass and water, workshop, pond polish and depth, 0.12 release notes | **in progress**: the last steps are the workshop cold-frame fix, the full suite and the PR |
-| CP2 | `CP2 · 0.14 · Foundations and fixes` | IQ1–IQ4 (2D SDFs, operators, shaping, filtered fields), the tixy adapter, card credits and an empty `/tixy/` board (#53, #54), the quick/gate test tiers (#75), the file-size rule and splits (#76), flaky timing gates (#28), X-ray rect cells (#74), and the editor follow-ups (#31–#33) | next (proposed) |
-| CP3 | `CP3 · 0.15 · Polish and new boards` | the polish pass (#37–#47), the IQ card sets (#66–#68), tixy ports if permission arrives (#55–#58) | after CP2 (proposed) |
+| CP1 | `CP1 · 0.13 · Round 3 to main` | Round 3: editor share and phone polish, squares Q2–Q3, glass and water, workshop, pond polish and depth, 0.12 release notes | **published** 2026-11-01 (PR #78); milestone closed |
+| CP2 | `CP2 · 0.14 · Foundations and fixes` | IQ1–IQ4 (2D SDFs, operators, shaping, filtered fields), the tixy adapter and card credits (#53), the quick/gate test tiers (#75), the `mat-lens` parity entry (#29), the koi feed fix (#90); also the blog, the lab, goldens per board and the file-size rule | **merged** to main by 2026-11-03 (`CHANGELOG.md` 0.14); all issues closed, milestone still open. #28, #74, #76 and #54 moved to Backlog |
+| CP3 | `CP3 · 0.15 · Kits and new boards` | the car dash, faces, kinetic type, micro motion, charts and watch faces (#125–#129, #132), the IQ card sets (#66–#68), the P0 probes and token sweep (#37, #45) | **merged** to main 2026-11-02 to 11-04 (`CHANGELOG.md` 0.15); all issues closed, milestone still open |
+| CP4 | `CP4 · 0.16 · Flags, SEO, analytics, shell and security` | feature flags and X-ray off (#144, #145), SEO (#146), analytics (#151), the shell (#152), likes phase 1 (#169), security fixes (#141–#143, #147–#150, #158) | **merged** to main 2026-11-04 (`CHANGELOG.md` 0.16); open: #169 (likes) |
+| CP5 | `CP5 · 0.17 · UI hill climb` | UI polish before new features (#178–#188, tracking #189), plus CI (#190, #193, #197), flags from localStorage only and the SEO checkup (#198) | **in progress**; open: #186, #187, #188 |
 | later | Next phases (E4, E7, X) · Backlog | picked at a breather | waiting |

@@ -277,6 +277,7 @@ export function Essay({ nav }: { nav: ReactNode }) {
         <DotTitle text="Prior art" num="14" id="credits-h" />
         <p>Every piece here existed before. Dot/480 puts them in one pipeline.</p>
         <ul className="credits">
+          <li>Henry Li's ESP-Mosaico concept screens for a 480 × 480 OLED device, posted on X in August 2026 (<A href="https://x.com/henry19840301/status/2090273665669874050">first post</A>, <A href="https://x.com/henry19840301/status/2090454612126146948">second post</A>): where this project started. The first seven boards rebuild his sheets, and the 480 in Dot/480 is his screen.</li>
           <li><A href="https://surma.dev/things/ditherpunk/">Ditherpunk</A>, Surma (2021): the essay that made dithering popular, and the reason this one exists. Its title is borrowed with thanks.</li>
           <li><A href="https://worrydream.com/ExplorableExplanations/">Explorable Explanations</A>, Bret Victor: the idea that a reader should be able to touch the argument.</li>
           <li><A href="https://www.dwitter.net/">Dwitter</A> and <A href="https://tixy.land/">Tixy</A> (Martin Kleppe): tiny programs as art, where the limit is the fun part.</li>

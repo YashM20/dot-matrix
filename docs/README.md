@@ -1,6 +1,6 @@
 # Docs index
 
-Which doc to read for what, and how current each one is (checked 2026-10-29, after round 2: `main` at `bcacd5a`, PR #10 and #11). Files stay where they are, because code comments cite them by path.
+Which doc to read for what, and how current each one is (checked 2026-11-06, during CP5: `main` at `ed5cca1`, PR #206). Files stay where they are, because code comments cite them by path.
 
 **Start here:** `AGENTS.md` (invariants that must not break) → `DESIGN.md` (tokens, components, interaction) → `docs/PROGRESS.md` (what's done and what's next).
 
@@ -10,25 +10,29 @@ Which doc to read for what, and how current each one is (checked 2026-10-29, aft
 | [`../AGENTS.md`](../AGENTS.md) | Non-negotiables: Field → Sampler → Renderer, one accent per board, quantized dots, a framework-free engine with no new deps |
 | [`../DESIGN.md`](../DESIGN.md) | Design tokens, typography, components, interaction grammar, responsive rules, display skins, devices |
 | [`../README.md`](../README.md) | What the site is, repo layout, scripts, deep links, writing a card |
-| [`../CHANGELOG.md`](../CHANGELOG.md) | Engineering history by date and PR. The visitor-facing notes are `src/changelog.ts` (LOG tab). |
+| [`../CHANGELOG.md`](../CHANGELOG.md) | Engineering history: one entry per checkpoint from 0.14 on, with its PRs. The visitor-facing notes are `src/changelog.ts` (LOG tab), which stops at 0.13 for now. |
 | [`PROGRESS.md`](PROGRESS.md) | **Source of truth** for what is done, in progress, skipped and next, plus the "Resume here" notes for the next session |
 | [`CHECKPOINTS.md`](CHECKPOINTS.md) | **How work moves**: one checkpoint (GitHub milestone `CPn`) at a time. Build, gate, publish to main, then a breather (clean up, docs, issues) before the next |
-| [`WEB-PLAN.md`](WEB-PLAN.md) | The active product plan: a personal website, with tracks C1–C10 |
-| [`UX-PLAN.md`](UX-PLAN.md) | The active UX plan: low floor, high ceiling. Phases U0–U6 plus the build log (§9). U0–U4 and the U5 DISPLAY slice are built and merged (PR #6); the rest of U5, and U6, are planned. |
+| [`WEB-PLAN.md`](WEB-PLAN.md) | The active product plan: a personal website, with tracks C1–C10. C1 and C9 not started; MAKE, the Lab and X-ray are behind flags (off by default) |
+| [`UX-PLAN.md`](UX-PLAN.md) | The active UX plan: low floor, high ceiling. Phases U0–U6 plus the build log (§9). U0–U4 and the U5 DISPLAY slice are built and merged (PR #6); the rest of U5, and U6, are planned. Since #192 and #205 the visible top level is EXPLORE, BROWSE and ABOUT; MAKE and the Lab are behind flags. |
 | [`SHARE-PLAN.md`](SHARE-PLAN.md) | S0–S1 and the S2 copy helpers built (2026-10-26) and merged (PR #7); the rest of S2, and S3–S5, planned: metadata, a slug and a short permanent id per widget, a page at `/widget/<slug or id>/`, copy as PNG / SVG / HTML, share and embed, iOS-style pill action bars, the shadcn registry. Phases S0–S5 and the open decisions. |
 | [`LAYOUT-THEME-PLAN.md`](LAYOUT-THEME-PLAN.md) | T0–T6 built and merged (T0–T4 in the foundation round, PR #9; T3, T5 and T6 in round 2, PR #10). Planned 2026-10-27: our own dot-matrix design language (principles taken from vite.dev, not its look), layout and spacing fixes, and Tamagui-style themes: scheme (system / dark / light) × a changeable accent (7 presets incl. vite purple + custom hue, neutrals tinted toward it) that works in both; ideas from award-winning product sites. Phases T0–T6. |
-| [`POLISH-PLAN.md`](POLISH-PLAN.md) | Planned (2026-10-28), not started; queued after round 2 (C1, the ⌘K theme rows, shipped with T5): an audit of the site (probe at 4 widths, screenshots) with findings on navigation (a direct `/essay/` route and a place for it in the header, footer, home and ⌘K), sticky header and footer, overflow, spacing tokens, wrapping and options to cut; phases P0 (probes) to P3, with file ownership per task and owner decisions. |
-| [`LIVING-MATTER-PLAN.md`](LIVING-MATTER-PLAN.md) | F0 done (PR #9); L1 pond, Q1 squares and M1 materials built and merged in round 2 (PR #10); L2, Q2 and M2 in progress (round 3). Planned 2026-10-27: a living koi pond and ecosystems in glyph tiles (after daoho.dev), spaced and joined squares, physical-material cards (stone, glass, metal, fabric, thread). Overview, schedule, first-load ledger and owner decisions; the step-by-step track plans are in `living-matter/` (F0 foundation: done; L pond, Q squares, M materials: phase 1 built, each doc's status line lists its deviations; X advanced: planned). |
-| [`EDITOR-PLAN.md`](EDITOR-PLAN.md) | The one MAKE editor (`src/components/editor/`): research, the document model, desktop and phone layouts, phases E0–E6. E0–E3 built and merged (E3 in round 2, PR #10); E5 (share) in progress (round 3); E4 and E6 planned. |
+| [`POLISH-PLAN.md`](POLISH-PLAN.md) | Partly built: P0 (probes and fixes) and the P3-A token sweep are done; the other P1 to P3 issues are open in Backlog, and the CP5 hill climb (#189) covers the current UI polish. Planned 2026-10-28, queued after round 2 (C1, the ⌘K theme rows, shipped with T5): an audit of the site (probe at 4 widths, screenshots) with findings on navigation (a direct `/essay/` route and a place for it in the header, footer, home and ⌘K), sticky header and footer, overflow, spacing tokens, wrapping and options to cut; phases P0 (probes) to P3, with file ownership per task and owner decisions. |
+| [`LIVING-MATTER-PLAN.md`](LIVING-MATTER-PLAN.md) | F0 done (PR #9); L1 pond, Q1 squares and M1 materials built and merged in round 2 (PR #10); L2, L3, Q2, Q3, M2, M3 and X1 shipped in round 3 (0.13), and several X advanced cards in 0.15; L4 and the rest of #36 are planned. Planned 2026-10-27: a living koi pond and ecosystems in glyph tiles (after daoho.dev), spaced and joined squares, physical-material cards (stone, glass, metal, fabric, thread). Overview, schedule, first-load ledger and owner decisions; the step-by-step track plans are in `living-matter/` (F0 foundation: done; L pond, Q squares, M materials: phase 1 built, each doc's status line lists its deviations; X advanced: planned). |
+| [`EDITOR-PLAN.md`](EDITOR-PLAN.md) | The one MAKE editor (`src/components/editor/`): research, the document model, desktop and phone layouts, phases E0–E6. E0–E3 built and merged (E3 in round 2, PR #10); E5 and E6 shipped in round 3 (0.13). MAKE is behind the `make` flag, off by default; its layout is #186 (CP5). E4 and E7 are planned. |
 | [`DOT-MATRIX-ENGINE-PLAN.md`](DOT-MATRIX-ENGINE-PLAN.md) | Architecture: module map, pipeline, lattices and sites, subsystems |
 | [`ALGORITHMS.md`](ALGORITHMS.md) | The niche algorithms (`src/engine/algo`, the `algorithms` board): weighted Voronoi stippling, strange-attractor density, Wave Function Collapse, DLA. Papers, pipeline mapping, parameters, cost. |
 | [`LIFE.md`](LIFE.md) | Current for L1, L2 and L3. Living scenes (`src/engine/life`, the `pond` board): wave-equation water, dot micro-glyph tiles, koi spines, bodies and steering, the koi pond world. Modules, the body-style ruling, parameters and deviations from the L plan, checks. |
 | [`STYLE-BIBLE.md`](STYLE-BIBLE.md) | Taste: what makes a card good, taken from the four liked cards |
 | [`guides/`](guides/README.md) | Visitor guides (#77): make your first card, a Field IR cookbook, behind the boards. Checked against the code 2026-11-03; not published as pages yet. |
 | [`WRITING.md`](WRITING.md) | Voice for visitor text (essay, LOG, legal pages, guides): plain words, real numbers, the AI-writing tells to avoid, and the visual each section needs. Checked by `scripts/site/prose-lint.ts`. |
-| [`DEPLOY.md`](DEPLOY.md) | Vercel deploy, build outputs, headers, CSP, CI |
+| [`DEPLOY.md`](DEPLOY.md) | Vercel deploy, build outputs, routes, feature flags, analytics, likes, headers (CSP, Trusted Types in Report-Only) and the CI jobs |
+| [`REGISTRY.md`](REGISTRY.md) | Current. The MATRIX shadcn registry: the two-registry `components.json`, install commands, items, how it is built and checked |
 | [`MCP-APP.md`](MCP-APP.md) | The MCP app (agent heartbeat) and the authoring tools, for personal use |
-| [`CREDITS.md`](CREDITS.md) | Generated by `scripts/site/credits.ts`: every card's credit grouped by source, and the code ports. Don't edit it by hand. |
+| [`IQ-PLAN.md`](IQ-PLAN.md) | IQ1 to IQ8 built (0.14 and 0.15); the ideation section is open |
+| [`TIXY-PLAN.md`](TIXY-PLAN.md) | The tixy adapter and credits built (0.14); the `/tixy/` board and the ports are planned, blocked on permission (#52) |
+| [`HARNESS.md`](HARNESS.md) | The test harness today: test tiers, `pnpm check`, the CI jobs and the browser probes. The August manual checklist below it is historical. |
+| [`CREDITS.md`](CREDITS.md) | Generated by `scripts/site/credits.ts`: the concept credit (Henry Li's ESP-Mosaico screens, where the project started), every card's credit grouped by source, and the code ports. Don't edit it by hand. |
 
 ## Reference: finished or superseded plans, still useful context
 | Doc | Status |
@@ -45,7 +49,6 @@ Which doc to read for what, and how current each one is (checked 2026-10-29, aft
 | [`ADVERSARIAL-REVIEW.md`](ADVERSARIAL-REVIEW.md) | Review of the first build (2026-08-22) |
 | [`VERIFICATION-16POINT.md`](VERIFICATION-16POINT.md) | 16-point verification of that review's fixes (2026-08-22) |
 | [`BLOCK-INVENTORY.md`](BLOCK-INVENTORY.md) | Inventory of every widget type in the 7 original reference boards |
-| [`HARNESS.md`](HARNESS.md) | The first visual-equivalence harness. Its commands are outdated: use `pnpm check`, `pnpm golden --check`, `pnpm snap` and `pnpm fidelity` (README › Scripts). |
 
 The original specs are in `public/docs/` (`PRD.md`, `STEP-1-HANDOFF.md`, `STEP-2-HANDOFF.md`).
 

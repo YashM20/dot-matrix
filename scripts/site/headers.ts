@@ -45,7 +45,7 @@ const urlOf = (f: string) => '/' + relative(f.startsWith('dist') ? 'dist' : f.st
 const PATHS = [...new Set([
   '/', '/index.html', '/light/', '/light', '/lock/', '/components/', '/widget/clock/', '/?make=compose', '/about',
   '/blog', '/blog/', '/blog/dot-matrix-essay/', '/essay', '/privacy', '/privacy/', '/terms', '/lab', '/lab/',
-  '/lab/motion-lab.html', '/lab/motion-lab', '/lab/motion-lab/', '/lab/motion-lab/x', '/lab/motion-labx/y', '/no/such/page',
+  '/lab/motion-lab.html', '/lab/motion-lab', '/lab/motion-lab/', '/lab/motion-lab/x', '/lab/motion-labx/y', '/no/such/page', '/r/matrix-core.json',
   ...[...sourcePages, ...distPages].map(urlOf),
 ])]
 
@@ -70,6 +70,10 @@ const REQUIRED: [string, (v: string) => boolean][] = [
 ]
 const gaps = PATHS.flatMap(p => { const h = headersFor(p); return REQUIRED.filter(([k, ok]) => h.get(k)?.length !== 1 || !ok(h.get(k)![0])).map(([k]) => `${p}: ${k}`) })
 assert(`headers: all ${PATHS.length} paths (pages, boards, a widget, blog, legal, Lab, /lab/motion-lab/x, every HTML file) get the CSP, X-Frame-Options, COOP, HSTS, nosniff, Referrer-Policy and Permissions-Policy once each`, !gaps.length, gaps.slice(0, 8).join('; '))
+
+// the shadcn registry (docs/REGISTRY.md): JSON the CLI fetches, cached for an hour, kept out of search results
+const reg = headersFor('/r/matrix-core.json')
+assert('headers: /r/*.json (the shadcn registry) gets a short Cache-Control and X-Robots-Tag noindex', /max-age=\d+/.test(reg.get('cache-control')?.join() ?? '') && !/immutable/.test(reg.get('cache-control')?.join() ?? '') && reg.get('x-robots-tag')?.join() === 'noindex', JSON.stringify([...reg.entries()].filter(([k]) => k === 'cache-control' || k === 'x-robots-tag')))
 
 // the CSP's directives
 const csp = cspBlocks[0]?.headers.find(h => h.key.toLowerCase() === 'content-security-policy')?.value ?? ''

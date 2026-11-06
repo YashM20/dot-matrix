@@ -5,6 +5,8 @@
 import { SHELL_KEYS, SHORTCUTS, URL_PARAMS, type Shortcut } from '../site/shortcuts'
 import { Changelog } from './Changelog'
 import { useFlag } from '../site/useFlag'
+import { useBlurbs } from './useBlurbs'
+import { ConceptCredit } from './ConceptCredit'
 
 const Keys = ({ title, rows }: { title: string; rows: readonly Shortcut[] }) => <div className="about-keys">
   <h3>{title}</h3>
@@ -12,7 +14,7 @@ const Keys = ({ title, rows }: { title: string; rows: readonly Shortcut[] }) => 
 </div>
 
 export function About() {
-  const make = useFlag('make'), lab = useFlag('lab')
+  const make = useFlag('make'), lab = useFlag('lab'), credit = useBlurbs()?.conceptCredit
   return <>
     <section className="about-intro" aria-labelledby="about-title">
       <p className="about-flavour" aria-hidden="true">CONFIGURATION 01 · STATUS: NOMINAL</p>
@@ -21,6 +23,11 @@ export function About() {
         says how bright each point is; a sampler reads it onto a quantized grid of dots, and a renderer (SVG, Canvas or
         WebGL) draws them, live. {make ? 'EXPLORE has the boards; MAKE lets you tune a preset, compose a card from layers, write a field program or paint dots by hand.' : 'EXPLORE has the boards.'}</p>
       <p className="about-links"><a href="/blog/dot-matrix-essay/">How it works: the essay →</a>{lab && <a href="/lab/">Lab: interactive pieces →</a>}<a href="/blog/">Blog: all posts →</a><a href="https://github.com/YashM20/dot-matrix">Source →</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></p>
+      <div className="about-credits" id="credits">
+        <h3>CREDITS</h3>
+        {credit && <ConceptCredit credit={credit} full />}
+        <p className="concept-credit">Cards built on someone else's work name it on their own page. The full list is in <a href="https://github.com/YashM20/dot-matrix/blob/main/docs/CREDITS.md" target="_blank" rel="noopener">CREDITS.md</a>.</p>
+      </div>
       <div className="about-cols" id="shortcuts">
         <Keys title="KEYBOARD" rows={SHORTCUTS} />
         <Keys title="URL" rows={make ? URL_PARAMS : URL_PARAMS.filter(r => !r.keys.startsWith('?make'))} />
