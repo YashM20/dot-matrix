@@ -81,7 +81,6 @@ export const scChain: WidgetPreset = {
       fog: { b: .05, base: [.002, .0025, .003], sun: [.12, .1, .08] }, gain: [1.8, 2.2, 1.8], exposure: 1.6,
     }))
     return [
-      caption('Q=P-CLAMP(P,-H,H)'),
       plate.layer,
       ...footer(`SWING ${swing < 0 ? '-' : '+'}${pad(Math.abs(swing) * 180 / Math.PI, 2)}`, `${LINKS} LINKS`),
     ]

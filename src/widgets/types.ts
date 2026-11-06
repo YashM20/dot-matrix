@@ -58,6 +58,11 @@ export interface WidgetPreset {
   /** Live media the host feeds into `ctx.media` (app-level capture in `src/media/`, started only by a control). */
   media?: 'camera'
   /**
+   * `dark`: the card stays a dark inset on a light page, like a photo (src/site/theme/polarity.ts). For cards whose
+   * light is the picture (lit spheres, emissive glass, halftone portraits, night scenes) and that print as negatives on paper.
+   */
+  inset?: 'dark'
+  /**
    * Who made the work this card is built on: one credit, or a list when it builds on several. Each shows as a small
    * `by …` line on the widget page (DESIGN.md "Credit line"). Read it through `creditsOf`.
    */

@@ -166,7 +166,7 @@ export const matKnit: WidgetPreset = {
       cite('STOCKINETTE · CABLE'),
       tonedLayer(F.values, F.tones),
       layer(T.dots(loop, 1.1), 'active'),
-      layer(T.text(`ROW ${pad2((st.rows % 99) + 1)}`, 143, 134, { align: 'right' }), 'faint'),
+      layer(T.text(`ROW ${pad2((st.rows % 99) + 1)}`, 143, 134, { align: 'right' }), 'mid'),
     ]
   },
 }
@@ -287,7 +287,7 @@ export const matPaper: WidgetPreset = {
       cite('LETTERPRESS'),
       surface,
       layer(T.text(`NO. ${String(count).padStart(4, '0')}`, 72, 102, { align: 'center' }), 'mid'),
-      layer(T.text('COTTON 300 GSM', 72, 114, { align: 'center' }), 'faint'),
+      layer(T.text('COTTON 300 GSM', 72, 114, { align: 'center' }), 'mid'),
     ]
   },
 }

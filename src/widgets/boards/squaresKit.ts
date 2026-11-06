@@ -20,7 +20,7 @@ export const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: squ
 
 export const cap = (s: string, col: number, row: number, align?: 'left' | 'center' | 'right') => T.big(s, col, row, { lattice: .72, align })
 /** Top-right: the work the card is after. */
-export const cite = (s: string) => layer(cap(s, 143, 1, 'right'), 'faint')
+export const cite = (s: string) => layer(cap(s, 143, 1, 'right'), 'mid')
 export const FOOT = 137, RAIL_Y = 132
 /** Footer: a faint dotted rail filled in `mid` to `k`, an optional live (red) knob, a counter left and one stat right. */
 export function footer(k: number, left: string, right: string, live = false): Layer[] {
@@ -32,7 +32,7 @@ export function footer(k: number, left: string, right: string, live = false): La
     layer(T.dots(rest, .9), 'faint'), layer(T.dots(done, 1.1), 'mid'),
     ...(knob ? [layer(T.dots([knob], 2.2), 'active')] : []),
     layer(T.text(left, 0, FOOT), 'idle'),
-    layer(T.text(right, 143, FOOT, { align: 'right' }), 'faint'),
+    layer(T.text(right, 143, FOOT, { align: 'right' }), 'mid'),
   ]
 }
 export const pad = (n: number, w: number) => String(Math.max(0, Math.round(n))).padStart(w, '0')

@@ -1,7 +1,7 @@
 /**
  * The pond board's card shell (docs/living-matter/L-pond.md §2 "Card shell"): every pond card is a TILE card with
  * dot chrome, refuses the sampling worker (its live state lives on the main thread, as on the physics board), has
- * one touch surface below the label, and maps pointers into its scene's units. A faint caption sits top-right.
+ * one touch surface below the label, and maps pointers into its scene's units. A `mid` caption sits top-right.
  */
 import { framePointers, type FrameInput } from '../../../engine/physics/world'
 import type { Control } from '../../../engine/context'
@@ -37,8 +37,8 @@ export function frameOf(ctx: WidgetContext, key: string, map: Map2 = ident, tilt
   return f
 }
 
-/** Caption tier (0.72 lattice), faint, top-right: as on the algorithms and mosaic boards. */
-export const caption = (s: string): Layer => layer(T.big(s, 143, 1, { lattice: .72, align: 'right' }), 'faint')
+/** Caption tier (0.72 lattice), `mid`, top-right: as on the algorithms and mosaic boards. */
+export const caption = (s: string): Layer => layer(T.big(s, 143, 1, { lattice: .72, align: 'right' }), 'mid')
 
 /** Local hour (fractional) of the wall clock (frozen at 09:41 in goldens). */
 export const hourNow = () => { const d = new Date(); return d.getHours() + d.getMinutes() / 60 }

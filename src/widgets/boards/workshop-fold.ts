@@ -117,8 +117,8 @@ export const matFold: WidgetPreset = {
       cite('STRAIGHT CREASES'),
       tonedLayer(out.values, out.tones),
       ...(out.red.length ? [layer(T.dots(out.red, 1), 'active')] : []),
-      layer(T.text(n ? `CREASE ${n} OF ${STEPS}` : 'A SHEET', 6, 135), 'faint'),
-      layer(T.text(kind, 138, 135, { align: 'right' }), 'faint'),
+      layer(T.text(n ? `CREASE ${n} OF ${STEPS}` : 'A SHEET', 6, 135), 'mid'),
+      layer(T.text(kind, 138, 135, { align: 'right' }), 'mid'),
     ]
   },
 }

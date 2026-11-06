@@ -193,8 +193,8 @@ export const matErosion: WidgetPreset = {
       tonedLayer(lit.values, lit.tones, L15),
       ...(d.length ? [layer(T.dots(d, .8), 'value')] : []),
       layer(T.dots(lit.dots, 1.6), 'active'),
-      layer(T.text(`${(m * RAIN.perMinute).toLocaleString('en-US')} DROPS`, 6, 135), 'faint'),
-      layer(T.text('SANDSTONE', 138, 135, { align: 'right' }), 'faint'),
+      layer(T.text(`${(m * RAIN.perMinute).toLocaleString('en-US')} DROPS`, 6, 135), 'mid'),
+      layer(T.text('SANDSTONE', 138, 135, { align: 'right' }), 'mid'),
     ]
   },
 }

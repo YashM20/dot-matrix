@@ -56,7 +56,7 @@ export const sqSchotter: WidgetPreset = {
       siteLayer(rings.map(p => [p.x, p.y] as Pt), 1, .5, 'faint'),
       siteLayer(flat, S_K, .75, 'mid'), siteLayer(turned, S_K, .75, 'idle', Math.PI / 4),
       siteLayer([at(red.x, red.y)], S_K, .75, 'active', red.rot),
-      layer(T.text('MOLNAR', 105, 104, { align: 'center' }), 'faint'),
+      layer(T.text('MOLNAR', 105, 104, { align: 'center' }), 'mid'),
       ...footer(k, `ROWS ${S_ROWS}`, `DISORDER ${k.toFixed(2)}`),
     ]
   },
@@ -82,7 +82,7 @@ export const sqBlocks: WidgetPreset = {
       cells(V_K, V_ORIGIN, V_W, V_H, (c, r) => (id(c, r) === n - 1 ? 0 : V_LEVEL[V_TONES[id(c, r)]]), { toneOf: (c, r) => V_TONES[id(c, r)], group: id, join: true }),
       cells(V_K, V_ORIGIN, V_W, V_H, (c, r) => (id(c, r) === n - 1 ? 1 : 0), { tone: 'active', group: id, join: { accent: true } }),
       layer(T.text(`REGIONS ${pad(n, 2)}`, 0, FOOT), 'idle'),
-      layer(T.text(metric === 'linf' ? 'CHEBYSHEV' : 'MANHATTAN', 143, FOOT, { align: 'right' }), 'faint'),
+      layer(T.text(metric === 'linf' ? 'CHEBYSHEV' : 'MANHATTAN', 143, FOOT, { align: 'right' }), 'mid'),
     ]
   },
 }
@@ -123,7 +123,7 @@ export const sqSort: WidgetPreset = {
       { ...grey, field: blockGlitch(grey.field, { seed: 5, step: burst, blocks: 6, maxShift: 9, cols: P_SUB.cols, rows: P_SUB.rows }), toneOf: (v: number) => sortTone(v) },
       cells(P_K, P_ORIGIN, P_W, P_H, (c, r) => (inLive(c, r) ? Math.max(.5, at(c, r)) : 0), { tone: 'active', join: { accent: true } }),
       layer(T.text(`ROW ${pad(Math.min(line + 1, P_H), 2)}/${P_H}`, 0, FOOT), 'idle'),
-      layer(T.text(burst >= 0 ? 'GLITCH' : `RUN ${pad(live?.length ?? 0, 2)}`, 143, FOOT, { align: 'right' }), 'faint'),
+      layer(T.text(burst >= 0 ? 'GLITCH' : `RUN ${pad(live?.length ?? 0, 2)}`, 143, FOOT, { align: 'right' }), 'mid'),
     ]
   },
 }
@@ -216,7 +216,7 @@ export const sqStitch: WidgetPreset = {
       thread(1), thread(2), thread(3),
       { ...cells(X_K, X_ORIGIN, X_W, X_H, (c, r) => (ch.order[at(c, r)] === live ? 1 : 0), { tone: 'active' }), motif: 'stitch' },
       layer(T.text(`STITCH ${pad(sewn, 3)}/${ch.count}`, 0, FOOT), 'idle'),
-      layer(T.text('3 THREADS', 143, FOOT, { align: 'right' }), 'faint'),
+      layer(T.text('3 THREADS', 143, FOOT, { align: 'right' }), 'mid'),
     ]
   },
 }

@@ -5,7 +5,7 @@
  * Function Collapse ties a knot one lowest-entropy tile at a time, and diffusion-limited aggregation
  * grows frost from one grain.
  *
- * Chrome: the label top-left, the reference (author, year) top-right as a faint caption, and the sim-board
+ * Chrome: the label top-left, the reference (author, year) top-right as a `mid` caption, and the sim-board
  * footer (a dotted rail for the loop, a step counter left, one stat right). Each card loops and its t = 0
  * frame is a finished picture, so goldens, thumbnails and reduced motion show the result, not a blank start.
  * One red on the board, always *live*: the rail knob while Lloyd relaxes, the tile just observed, the
@@ -25,7 +25,7 @@ const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle,
 /** Caption tier (0.72 lattice), as on the mosaic board. */
 const cap = (s: string, col: number, row: number, align?: 'left' | 'center' | 'right') => T.big(s, col, row, { lattice: .72, align })
 /** Top-right: the paper the card is built on. */
-const cite = (s: string) => layer(cap(s, 143, 1, 'right'), 'faint')
+const cite = (s: string) => layer(cap(s, 143, 1, 'right'), 'mid')
 const FOOT = 134, RAIL_Y = 129
 /** Footer: a faint dotted rail filled in `mid` to `k` (0..1), an optional live (red) knob at the fill point, a counter left and one stat right. */
 function footer(k: number, left: string, right: string, live = false): Layer[] {
@@ -37,7 +37,7 @@ function footer(k: number, left: string, right: string, live = false): Layer[] {
     layer(T.dots(rest, .9), 'faint'), layer(T.dots(done, 1.1), 'mid'),
     ...(knob ? [layer(T.dots([knob], 2.2), 'active')] : []),
     layer(T.text(left, 0, FOOT), 'idle'),
-    layer(T.text(right, 143, FOOT, { align: 'right' }), 'faint'),
+    layer(T.text(right, 143, FOOT, { align: 'right' }), 'mid'),
   ]
 }
 const pad = (n: number, w: number) => String(Math.max(0, Math.round(n))).padStart(w, '0')

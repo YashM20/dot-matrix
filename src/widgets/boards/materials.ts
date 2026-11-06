@@ -160,7 +160,7 @@ export const matLoom: WidgetPreset = {
       layer(T.dots(empty, .9), 'faint'), layer(T.dots(set, .9), 'mid'), ...(current.length ? [layer(T.dots(current, .9), 'idle')] : []),
       layer(valuedSites(shuttle, 2.6), 'active'),
       layer(T.text(name, 0, 134), 'idle'),
-      layer(T.text(`PICK ${pad2(n)}/${LOOM.picks}`, 143, 134, { align: 'right' }), 'faint'),
+      layer(T.text(`PICK ${pad2(n)}/${LOOM.picks}`, 143, 134, { align: 'right' }), 'mid'),
     ]
   },
 }
@@ -213,7 +213,7 @@ export function knobSpec(L: Light): Raster {
   return out
 }
 export const matKnob: WidgetPreset = {
-  ...tile, id: 'mat-knob', name: 'Knob',
+  ...tile, id: 'mat-knob', name: 'Knob', inset: 'dark',
   credit: KAJIYA_KAY,
   defaults: { ...LIGHT_DEFAULTS, v: .72 },
   springKeys: ['v'],
@@ -417,7 +417,7 @@ export const matGrille: WidgetPreset = {
       plate,
       layer(T.dots(groups.idle, 2.2), 'idle'), layer(T.dots(groups.value, 2.2), 'value'), layer(T.dots(groups.mid, 2.2), 'mid'),
       ...(groups.active.length ? [layer(T.dots(groups.active, 2.2), 'active')] : []),
-      layer(T.text('120 BPM', 0, 134), 'mid'), layer(T.text('L+R', 143, 134, { align: 'right' }), 'faint'),
+      layer(T.text('120 BPM', 0, 134), 'mid'), layer(T.text('L+R', 143, 134, { align: 'right' }), 'mid'),
     ]
   },
 }
@@ -628,9 +628,10 @@ export const matTerrazzo: WidgetPreset = {
     const out: Layer[] = [
       cite('POISSON DISC'),
       layer(cap(`${MONTHS[m.month]} ${m.year}`, 0, 14), 'mid'),
-      layer(T.big(pad2(shown + 1), 140, 12, { lattice: 2.5, smooth: true, align: 'right' }), shown === today ? 'value' : 'mid'),
-      layer(cap(weekday, 0, 22), shown === today ? 'faint' : 'mid'),
-      ...WEEK.map((w, i) => layer(cap(w, colX(i), 44, 'center'), 'faint')),
+      // lattice 2: the date ends at row 40, clear of the weekday letters at row 44
+      layer(T.big(pad2(shown + 1), 140, 12, { lattice: 2, smooth: true, align: 'right' }), shown === today ? 'value' : 'mid'),
+      layer(cap(weekday, 0, 22), shown === today ? 'mid' : 'idle'),
+      ...WEEK.map((w, i) => layer(cap(w, colX(i), 44, 'center'), 'mid')),
       { field: agg(.75), sites: m.aggregate.a, size: 1.6, tone: 'mid' }, { field: agg(.75), sites: m.aggregate.b, size: 1.15, tone: 'faint' }, { field: agg(.75), sites: m.aggregate.c, size: .85, tone: 'faint' },
       surfaceLayer([[future, 'mid'], [past, 'idle'], [polished, 'value']], L15),
     ]

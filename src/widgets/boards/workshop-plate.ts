@@ -210,8 +210,8 @@ export const matLichtenberg: WidgetPreset = {
       tonedLayer(lit.values, lit.tones),
       layer(T.dots(st.body, 1), 'idle'), layer(T.dots(st.lit, 1), 'value'),
       ...(front.length ? [layer(T.dots(front, b.arc ? 1.2 : 1), 'active')] : []),
-      layer(T.text(`${f.count} CELLS`, 6, 135), 'faint'),
-      layer(T.text(`ETA ${PLATE.eta}`, 138, 135, { align: 'right' }), 'faint'),
+      layer(T.text(`${f.count} CELLS`, 6, 135), 'mid'),
+      layer(T.text(`ETA ${PLATE.eta}`, 138, 135, { align: 'right' }), 'mid'),
     ]
   },
 }
