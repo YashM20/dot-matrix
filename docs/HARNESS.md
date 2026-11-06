@@ -12,7 +12,7 @@
 - **On a pull request** that touches `src/`, `scripts/`, `public/`, `index.html` or `vite.config.ts`, it runs every probe and captures a default set: home, `/browse/` and `/widget/timer/` at 1280 and 390, in both schemes.
 - **The table** of probes and shards is `scripts/ci/probes.ts` (`--list` prints it). Add a new probe there. Each shard's run prints a timing table in the job summary; move probes between shards when one shard runs long.
 - **Screenshots** are `route@width[@theme]` items for `scripts/ci/shots.ts`: widths up to 600 are a phone; theme is `dark`, `light` or a full name like `light_cobalt`.
-- **On demand** (the workflow has to be on `main` first), for agents. `gh run watch` is not allowed: list the runs and check back.
+- **On demand**, for agents. `gh run watch` is not allowed: list the runs and check back.
   ```bash
   git push
   gh workflow run probes --ref <branch> -f probes=browse -f shots=/browse/@1280,/@390@light
