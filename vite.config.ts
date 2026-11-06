@@ -102,6 +102,19 @@ function blogRoutes(): Plugin {
   return { name: 'blog-routes', configureServer: s => { s.middlewares.use(rewrite) }, configurePreviewServer: s => { s.middlewares.use(rewrite) } }
 }
 
+/**
+ * Dev and preview have no API functions: `/api/*` answers 404, as production does with likes not set up, instead of
+ * the SPA's index.html. The like button (on by default) then stays hidden in local runs and the probes.
+ */
+function noApi(): Plugin {
+  const answer = (req: { url?: string }, res: { statusCode: number; end: () => void }, next: () => void) => {
+    if (!/^\/api(\/|\?|$)/.test(req.url ?? '')) { next(); return }
+    res.statusCode = 404
+    res.end()
+  }
+  return { name: 'no-api', configureServer: s => { s.middlewares.use(answer) }, configurePreviewServer: s => { s.middlewares.use(answer) } }
+}
+
 // extra HTML entries ship as their own pages when present (the blog, with the essay as a post: docs/WEB-PLAN.md §1)
 // privacy.html + terms.html: static legal pages, no JS (vercel.json rewrites /privacy and /terms to them)
 const pages = ['blog.html', 'lab.html', 'privacy.html', 'terms.html'].filter(f => existsSync(f))
@@ -114,6 +127,7 @@ export default defineConfig({
     babel({ presets: [reactCompilerPreset()] }),
     blogMeta(),
     blogRoutes(),
+    noApi(),
     sitePostbuild(),
   ],
   // agent worktrees live under .claude/ — don't let their edits reload this checkout's dev server

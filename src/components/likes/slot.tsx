@@ -1,5 +1,5 @@
 /**
- * Where pages mount likes (#169): behind the `likes` flag (off by default), loaded lazily so neither the button
+ * Where pages mount likes (#169): behind the `likes` flag (on by default; hidden while the API answers 404), loaded lazily so neither the button
  * nor BotID is in any first load. `VITE_FLAG_LIKES=kill` leaves the chunks out of the build.
  */
 import { lazy, Suspense } from 'react'
