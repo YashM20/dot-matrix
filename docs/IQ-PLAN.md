@@ -1,6 +1,6 @@
 # IQ-PLAN: techniques from Inigo Quilez's articles
 
-Status: **planned.** Tracked in GitHub issues labelled `area: iq`:
+Status (2026-11-06): **IQ1 to IQ8 built.** IQ1 to IQ4 shipped in 0.14 (CP2) and IQ5 to IQ8 in 0.15 (CP3): `src/engine/sdf/`, `src/engine/shape`, the filtered fields, the noise upgrades, `/oldschool/`, `/fractals/` and `/scenes/` (see `CHANGELOG.md`). The tracking issue #61 and the ideation section below are still open. Tracked in GitHub issues labelled `area: iq`:
 
 | Issue | Covers |
 |---|---|

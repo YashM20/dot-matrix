@@ -1,6 +1,6 @@
 # TIXY-PLAN: the tixy.land gallery as a Dot/480 board
 
-Status: **planned. Ports are blocked until permission comes through (T1).**
+Status (2026-11-06): **T2 built, the rest planned. Ports are blocked until permission comes through (T1, #52).** The `tixy()` adapter and the card `credit` field shipped in 0.14 (#53, PR #92), and `docs/CREDITS.md` is generated from the credits (PR #109). The `/tixy/` board (T3, #54) is in Backlog.
 
 Tracking: GitHub issues labelled `area: tixy`:
 - #51: tracking issue;

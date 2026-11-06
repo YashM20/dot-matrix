@@ -53,3 +53,19 @@ export const groupBlurbs: Record<BoardGroupId, string> = {
   play: 'Touch it, play it, hear it.',
   engine: 'Engine demos: programs, light, simulation, half a million dots.',
 }
+
+/**
+ * Where the project started: Henry Li's ESP-Mosaico concept screens for a 480 × 480 OLED device, posted on X on
+ * 20 Aug 2026. The first seven boards rebuild his reference sheets (`public/images/`, docs/BLOCK-INVENTORY.md), and
+ * the "480" in Dot/480 is his device's size. ABOUT, the essay and docs/CREDITS.md carry the same credit.
+ */
+export const conceptCredit = {
+  by: 'Henry Li',
+  handle: '@henry19840301',
+  profile: 'https://x.com/henry19840301',
+  posts: [
+    'https://x.com/henry19840301/status/2090273665669874050',
+    'https://x.com/henry19840301/status/2090454612126146948',
+  ],
+  boards: ['henry', 'deerflow12', 'mosaic', 'henry3', 'metro', 'ride', 'audio'] as readonly BoardId[],
+} as const

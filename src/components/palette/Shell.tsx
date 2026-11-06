@@ -39,7 +39,8 @@ export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }
   const inputRef = useRef<HTMLInputElement>(null), logRef = useRef<HTMLUListElement>(null), rootRef = useRef<HTMLDivElement>(null)
   const history = useRef<string[]>([]), hcur = useRef(-1), draft = useRef('')
   const queue = useRef<string[]>([]), running = useRef<AbortController | null>(null), quietUntil = useRef(0)
-  const pendingCaret = useRef<number | null>(null), live = useRef({ input, caret }); live.current = { input, caret }
+  const pendingCaret = useRef<number | null>(null), live = useRef({ input, caret })
+  useLayoutEffect(() => { live.current = { input, caret } })
 
   const print = (...ls: Out[]) => setLines(prev => [...prev, ...ls.map(l => {
     const o = typeof l === 'string' ? { kind: 'out' as const, text: l } : l

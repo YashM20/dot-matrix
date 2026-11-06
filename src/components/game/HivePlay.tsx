@@ -217,7 +217,7 @@ export default function HivePlay({ theme = dot480, onClose }: { theme?: ThemeTok
   return (
     // a held thumb on the touch pad is a held button, never a context menu
     <div className="hive-play" role="dialog" aria-modal="true" aria-label="HIVE, playable. Arrows or WASD move, Space fires or jumps, Enter starts, Escape quits." onContextMenu={e => e.preventDefault()}>
-      <canvas ref={screen} className="hive-screen" tabIndex={0} aria-hidden="true" onPointerDown={onScreenPointer} />
+      <canvas ref={screen} className="hive-screen" tabIndex={0} role="img" aria-label="Game screen" onPointerDown={onScreenPointer} />
       {touch && <canvas ref={pad} className="hive-pad" aria-hidden="true" />}
       <div className="hive-bar">
         <span>ARROWS / WASD · SPACE · SHIFT · ENTER · Q/E STRAFE · CLICK = MOUSE-LOOK</span>

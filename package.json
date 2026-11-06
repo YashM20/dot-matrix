@@ -18,6 +18,7 @@
     "bench": "tsx scripts/bench.ts",
     "shots": "tsx scripts/site/shots.ts",
     "a11y": "tsx scripts/site/a11y.ts",
+    "react-doctor": "pnpm dlx react-doctor@0.9.22 . --yes",
     "lint": "oxlint",
     "preview": "vite preview",
     "check": "pnpm check:static && pnpm verify",

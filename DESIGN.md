@@ -403,6 +403,13 @@ A surface that wraps a rounded child with padding takes the child's radius plus 
 
 > **Interactive states.** Hover, press, focus, drag and long-press follow the grammar and tokens in [Interaction](#interaction); the variants below cover Default, Active/Selected and Disabled.
 
+### Brand mark
+
+**`mark`** (`src/site/brand/mark.svg`, the one source)
+- The M of the dot font on a 5 × 5 grid of `{rounded.circle}` dots at pitch 3 in a 16-unit box; the M's centre vertex is the accent. Radii are quantized steps 2 / 4 / 5 of 5: off dots `{colors.dotFaint}`, the M `{colors.value}`, the accent `{colors.dotActive}`.
+- Header and site nav: 16 px (`--space-4`) beside the MATRIX wordmark, `--space-2` apart, in theme roles (`--dot-faint`, `--value`, `--red`), so it follows every scheme and accent. Drawn by CSS (`mark.css`), with no image request.
+- Icons: `favicon.svg` follows the browser's light or dark scheme; the ICO, app and touch icons put the mark at 2/3 size on a `{colors.bg}` tile. `scripts/site/favicon.ts` writes them all and `--check` keeps them in step.
+
 ### Buttons & Controls
 
 **`toggle-switch`**
