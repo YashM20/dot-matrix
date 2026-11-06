@@ -1,0 +1,800 @@
+{
+  "$schema": "https://ui.shadcn.com/schema/registry.json",
+  "name": "matrix",
+  "homepage": "https://matrix.reactopia.me",
+  "items": [
+    {
+      "name": "matrix-core",
+      "type": "registry:lib",
+      "title": "MATRIX core",
+      "description": "The MATRIX dot-matrix engine subset and card runtime (Field → Grid Sampler → Renderer), plus the <MatrixDotCard> React host. Every MATRIX item installs on it.",
+      "files": [
+        {
+          "path": "src/engine/buffer/dotBuffer.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/buffer/dotBuffer.ts"
+        },
+        {
+          "path": "src/engine/clock.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/clock.ts"
+        },
+        {
+          "path": "src/engine/context.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/context.ts"
+        },
+        {
+          "path": "src/engine/describe.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/describe.ts"
+        },
+        {
+          "path": "src/engine/fields/bitmapFont.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/fields/bitmapFont.ts"
+        },
+        {
+          "path": "src/engine/fields/cjkFallback.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/fields/cjkFallback.ts"
+        },
+        {
+          "path": "src/engine/fields/iconSDF.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/fields/iconSDF.ts"
+        },
+        {
+          "path": "src/engine/fields/svgPath.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/fields/svgPath.ts"
+        },
+        {
+          "path": "src/engine/interaction/controls.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/interaction/controls.ts"
+        },
+        {
+          "path": "src/engine/layout.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/layout.ts"
+        },
+        {
+          "path": "src/engine/math.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/math.ts"
+        },
+        {
+          "path": "src/engine/motion/easing.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/motion/easing.ts"
+        },
+        {
+          "path": "src/engine/motion/masks.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/motion/masks.ts"
+        },
+        {
+          "path": "src/engine/motion/reveal.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/motion/reveal.ts"
+        },
+        {
+          "path": "src/engine/motion/spring.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/motion/spring.ts"
+        },
+        {
+          "path": "src/engine/raster/raster.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/raster/raster.ts"
+        },
+        {
+          "path": "src/engine/renderer/canvasRenderer.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/renderer/canvasRenderer.ts"
+        },
+        {
+          "path": "src/engine/renderer/ext.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/renderer/ext.ts"
+        },
+        {
+          "path": "src/engine/renderer/shapePath.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/renderer/shapePath.ts"
+        },
+        {
+          "path": "src/engine/renderer/svgRenderer.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/renderer/svgRenderer.ts"
+        },
+        {
+          "path": "src/engine/sampler/cover.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/sampler/cover.ts"
+        },
+        {
+          "path": "src/engine/sampler/ext.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/sampler/ext.ts"
+        },
+        {
+          "path": "src/engine/sampler/gridSampler.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/sampler/gridSampler.ts"
+        },
+        {
+          "path": "src/engine/sampler/jitter.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/sampler/jitter.ts"
+        },
+        {
+          "path": "src/engine/sampler/quantize.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/sampler/quantize.ts"
+        },
+        {
+          "path": "src/engine/theme/tokens.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/theme/tokens.ts"
+        },
+        {
+          "path": "src/engine/types.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/types.ts"
+        },
+        {
+          "path": "src/widgets/mount.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/widgets/mount.ts"
+        },
+        {
+          "path": "src/widgets/types.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/widgets/types.ts"
+        },
+        {
+          "path": "registry/matrix/core/dot-card.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/dot-card.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix"
+      ]
+    },
+    {
+      "name": "matrix-board-henry",
+      "type": "registry:lib",
+      "title": "MATRIX board: henry",
+      "description": "Card presets of the MATRIX \"henry\" board, for the matrix-* card components.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/engine/motion/text.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/engine/motion/text.ts"
+        },
+        {
+          "path": "src/widgets/boards/henry.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/widgets/boards/henry.ts"
+        }
+      ],
+      "categories": [
+        "dot-matrix"
+      ]
+    },
+    {
+      "name": "matrix-board-components",
+      "type": "registry:lib",
+      "title": "MATRIX board: components",
+      "description": "Card presets of the MATRIX \"components\" board, for the matrix-* card components.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/widgets/boards/components.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/widgets/boards/components.ts"
+        }
+      ],
+      "categories": [
+        "dot-matrix"
+      ]
+    },
+    {
+      "name": "matrix-board-audio",
+      "type": "registry:lib",
+      "title": "MATRIX board: audio",
+      "description": "Card presets of the MATRIX \"audio\" board, for the matrix-* card components.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json"
+      ],
+      "files": [
+        {
+          "path": "src/widgets/boards/audio.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/widgets/boards/audio.ts"
+        }
+      ],
+      "categories": [
+        "dot-matrix"
+      ]
+    },
+    {
+      "name": "matrix-board-heartbeat",
+      "type": "registry:lib",
+      "title": "MATRIX board: heartbeat",
+      "description": "Card presets of the MATRIX \"heartbeat\" board, for the matrix-* card components.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-components.json"
+      ],
+      "files": [
+        {
+          "path": "src/widgets/boards/heartbeat.ts",
+          "type": "registry:lib",
+          "target": "lib/matrix/widgets/boards/heartbeat.ts"
+        }
+      ],
+      "categories": [
+        "dot-matrix"
+      ]
+    },
+    {
+      "name": "matrix-timer",
+      "type": "registry:component",
+      "title": "Timer (MATRIX)",
+      "description": "MATRIX dot-matrix card `timer` as <MatrixTimer>, static (SVG under 2000 dots). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-henry.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-timer.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-timer.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "widgets"
+      ],
+      "meta": {
+        "card": "timer",
+        "board": "henry",
+        "controls": [],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-home-clock",
+      "type": "registry:component",
+      "title": "Home (MATRIX)",
+      "description": "MATRIX dot-matrix card `home-clock` as <MatrixHomeClock>, static (SVG under 2000 dots). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-henry.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-home-clock.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-home-clock.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "widgets"
+      ],
+      "meta": {
+        "card": "home-clock",
+        "board": "henry",
+        "controls": [],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-weather",
+      "type": "registry:component",
+      "title": "Weather (MATRIX)",
+      "description": "MATRIX dot-matrix card `weather` as <MatrixWeather>, animated (Canvas). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-henry.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-weather.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-weather.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "widgets"
+      ],
+      "meta": {
+        "card": "weather",
+        "board": "henry",
+        "controls": [],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-music",
+      "type": "registry:component",
+      "title": "Music (MATRIX)",
+      "description": "MATRIX dot-matrix card `music` as <MatrixMusic>, static (SVG under 2000 dots). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-henry.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-music.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-music.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "widgets"
+      ],
+      "meta": {
+        "card": "music",
+        "board": "henry",
+        "controls": [],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-ui-segmented",
+      "type": "registry:component",
+      "title": "Segmented (MATRIX)",
+      "description": "MATRIX dot-matrix card `ui-segmented` as <MatrixSegmented>, static (SVG under 2000 dots). Controls: Fan speed (segmented). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-components.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-ui-segmented.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-ui-segmented.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components"
+      ],
+      "meta": {
+        "card": "ui-segmented",
+        "board": "components",
+        "controls": [
+          "seg"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-ui-stepped-slider",
+      "type": "registry:component",
+      "title": "Stepped Slider (MATRIX)",
+      "description": "MATRIX dot-matrix card `ui-stepped-slider` as <MatrixSteppedSlider>, static (SVG under 2000 dots). Controls: Level (slider). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-components.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-ui-stepped-slider.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-ui-stepped-slider.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components"
+      ],
+      "meta": {
+        "card": "ui-stepped-slider",
+        "board": "components",
+        "controls": [
+          "step"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-ui-knob",
+      "type": "registry:component",
+      "title": "Knob (MATRIX)",
+      "description": "MATRIX dot-matrix card `ui-knob` as <MatrixKnob>, static (SVG under 2000 dots). Controls: Gain (knob). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-components.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-ui-knob.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-ui-knob.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components"
+      ],
+      "meta": {
+        "card": "ui-knob",
+        "board": "components",
+        "controls": [
+          "gain"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-ui-stepper",
+      "type": "registry:component",
+      "title": "Stepper (MATRIX)",
+      "description": "MATRIX dot-matrix card `ui-stepper` as <MatrixStepper>, static (SVG under 2000 dots). Controls: Guests (stepper). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-components.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-ui-stepper.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-ui-stepper.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components"
+      ],
+      "meta": {
+        "card": "ui-stepper",
+        "board": "components",
+        "controls": [
+          "guests"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-ui-check",
+      "type": "registry:component",
+      "title": "Checkbox (MATRIX)",
+      "description": "MATRIX dot-matrix card `ui-check` as <MatrixCheck>, static (SVG under 2000 dots). Controls: Notify (toggle), Period (segmented). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-components.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-ui-check.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-ui-check.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components"
+      ],
+      "meta": {
+        "card": "ui-check",
+        "board": "components",
+        "controls": [
+          "notify",
+          "period"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-ui-tabs",
+      "type": "registry:component",
+      "title": "Tabs (MATRIX)",
+      "description": "MATRIX dot-matrix card `ui-tabs` as <MatrixTabs>, static (SVG under 2000 dots). Controls: Range (segmented). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-components.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-ui-tabs.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-ui-tabs.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components"
+      ],
+      "meta": {
+        "card": "ui-tabs",
+        "board": "components",
+        "controls": [
+          "tab"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-ui-progress",
+      "type": "registry:component",
+      "title": "Progress (MATRIX)",
+      "description": "MATRIX dot-matrix card `ui-progress` as <MatrixProgress>, static (SVG under 2000 dots). Controls: Sync progress (slider). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-components.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-ui-progress.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-ui-progress.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components"
+      ],
+      "meta": {
+        "card": "ui-progress",
+        "board": "components",
+        "controls": [
+          "progress"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-ui-loaders",
+      "type": "registry:component",
+      "title": "Loaders (MATRIX)",
+      "description": "MATRIX dot-matrix card `ui-loaders` as <MatrixLoaders>, animated (Canvas). Controls: Loading (toggle). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-components.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-ui-loaders.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-ui-loaders.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components"
+      ],
+      "meta": {
+        "card": "ui-loaders",
+        "board": "components",
+        "controls": [
+          "run"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-ui-keypad",
+      "type": "registry:component",
+      "title": "Keypad (MATRIX)",
+      "description": "MATRIX dot-matrix card `ui-keypad` as <MatrixKeypad>, animated (Canvas). Controls: 1 (button), 2 (button), 3 (button), 4 (button), 5 (button), 6 (button), 7 (button), 8 (button), 9 (button), Star (button), 0 (button), Hash (button). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-components.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-ui-keypad.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-ui-keypad.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components"
+      ],
+      "meta": {
+        "card": "ui-keypad",
+        "board": "components",
+        "controls": [
+          "k1",
+          "k2",
+          "k3",
+          "k4",
+          "k5",
+          "k6",
+          "k7",
+          "k8",
+          "k9",
+          "kstar",
+          "k0",
+          "khash"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-ui-text-field",
+      "type": "registry:component",
+      "title": "Text Field (MATRIX)",
+      "description": "MATRIX dot-matrix card `ui-text-field` as <MatrixTextField>, animated (Canvas). Controls: Callsign (stepper). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-components.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-ui-text-field.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-ui-text-field.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "components"
+      ],
+      "meta": {
+        "card": "ui-text-field",
+        "board": "components",
+        "controls": [
+          "len"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-audio-levels",
+      "type": "registry:component",
+      "title": "Audio (MATRIX)",
+      "description": "MATRIX dot-matrix card `audio-levels` as <MatrixAudioLevels>, animated (Canvas). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-audio.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-audio-levels.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-audio-levels.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "widgets"
+      ],
+      "meta": {
+        "card": "audio-levels",
+        "board": "audio",
+        "controls": [],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-hb-agent",
+      "type": "registry:component",
+      "title": "AGENT (MATRIX)",
+      "description": "MATRIX dot-matrix card `hb-agent` as <MatrixHbAgent>, animated (Canvas). Controls: Agent state (segmented). Props: data, theme, renderer, pitch, onInput.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json",
+        "https://matrix.reactopia.me/r/matrix-board-heartbeat.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/cards/matrix-hb-agent.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-hb-agent.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "widgets"
+      ],
+      "meta": {
+        "card": "hb-agent",
+        "board": "heartbeat",
+        "controls": [
+          "state"
+        ],
+        "grid": {
+          "cols": 144,
+          "rows": 144,
+          "pitch": 2.25
+        }
+      }
+    },
+    {
+      "name": "matrix-dot-text",
+      "type": "registry:component",
+      "title": "Dot text (MATRIX)",
+      "description": "Text drawn on a dot grid with the MATRIX bitmap font: <MatrixDotText text=\"12:45\" />. Regular 5×7 or bold two-dot strokes, light or accent tone.",
+      "registryDependencies": [
+        "https://matrix.reactopia.me/r/matrix-core.json"
+      ],
+      "files": [
+        {
+          "path": "registry/matrix/dot-text/dot-text.tsx",
+          "type": "registry:component",
+          "target": "components/matrix/matrix-dot-text.tsx"
+        }
+      ],
+      "categories": [
+        "dot-matrix",
+        "text"
+      ]
+    }
+  ]
+}
