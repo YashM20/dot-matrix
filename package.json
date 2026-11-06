@@ -20,7 +20,8 @@
     "a11y": "tsx scripts/site/a11y.ts",
     "lint": "oxlint",
     "preview": "vite preview",
-    "check": "tsc -b && oxlint && tsx scripts/site/file-size.ts && tsx scripts/site/credits.ts --check && tsx scripts/site/headers.ts && tsx scripts/site/urls.ts && tsx scripts/site/prose-lint.ts && tsx scripts/site/analytics.ts && pnpm verify"
+    "check": "pnpm check:static && pnpm verify",
+    "check:static": "tsc -b && oxlint && tsx scripts/site/file-size.ts && tsx scripts/site/credits.ts --check && tsx scripts/site/headers.ts && tsx scripts/site/urls.ts && tsx scripts/site/prose-lint.ts && tsx scripts/site/analytics.ts"
   },
   "dependencies": {
     "@fontsource-variable/oxanium": "^5.3.0",

@@ -70,10 +70,13 @@ const cardPoint = (sel: string, fx = .5, fy = .5) => js(`(() => { const el = doc
 /** Signature of a card's drawn pixels (canvas) or markup (svg). The first readback of a GPU canvas can differ in low bits: read twice. */
 const cardSig = (sel: string) => js(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); const c = el.querySelector('.dot-card-body canvas:not(.xr-grid)'); if (!c) return 'svg:' + (el.querySelector('.dot-svg')?.innerHTML.length ?? -1); const g = c.getContext('2d'); g.getImageData(0, 0, 1, 1); const d = g.getImageData(0, 0, c.width, c.height).data; let n = 0, s = 0; for (let i = 0; i < d.length; i += 4) if (d[i] + d[i+1] + d[i+2] > 60) { n++; s = (s * 31 + i + d[i]) % 1000003 } return n + ':' + s })()`) as Promise<string>
 let flagScript = ''
-/** Opens `query` with exactly `flags` saved (`xray,-worker`: `id` on, `-id` off, '' none) before any page script runs. */
+/**
+ * Opens `query` with `flags` saved (`xray,-worker`: `id` on, `-id` off, '' none) before any page script runs. `make` and
+ * `lab` are on unless `flags` turns them off, as in `launch()` (scripts/lib/cdp.ts): remix, compose and `studio` need `make`.
+ */
 const open = async (query: string, flags = 'xray') => {
   if (flagScript) await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: flagScript })
-  const saved = Object.fromEntries(flags.split(',').filter(Boolean).map(t => t.startsWith('-') ? [t.slice(1), false] : [t, true]))
+  const saved = Object.fromEntries(['make', 'lab', ...flags.split(',')].filter(Boolean).map(t => t.startsWith('-') ? [t.slice(1), false] : [t, true]))
   flagScript = (await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `try{localStorage.setItem('dot480:flags',${JSON.stringify(JSON.stringify(saved))})}catch(e){}` })).result.identifier
   await cdp('Page.navigate', { url: `${base}${query}` })
   return waitFor(`document.querySelectorAll('[data-xr-key]').length > 0`, 30000)
@@ -146,7 +149,9 @@ try {
   const p = await cardPoint('.board-view [data-xr-key]:nth-child(2)')
   await move(p.x, p.y); await sleep(150)
   await key('x')
-  check('X on a hovered card x-rays only that card', (await count('.xr-overlay')) === 1 && (await count('.board-view [data-xr-key]:nth-child(2) .xr-overlay')) === 1)
+  // the overlay is a lazy chunk on a fresh page: wait for it
+  await waitFor(`document.querySelectorAll('.xr-overlay').length > 0`, 4000)
+  check('X on a hovered card x-rays only that card', (await count('.xr-overlay')) === 1 && (await count('.board-view [data-xr-key]:nth-child(2) .xr-overlay')) === 1, `${await count('.xr-overlay')} overlays`)
   await key('x')
   check('X again turns it off', (await count('.xr-overlay')) === 0)
 
@@ -229,8 +234,9 @@ try {
   await shot('06c-shell-help')
   await typeText('op'); await key('Tab'); await sleep(150)
   const t1 = await val()
-  await typeText('lev'); await key('Tab')
-  const t2 = await waitFor(`document.querySelector('.pal-shell-input')?.value === 'open levels '`, 4000)
+  // `metr` names one place (`lev` would stop at `level`: the levels board and the level-03 card share it)
+  await typeText('metr'); await key('Tab')
+  const t2 = await waitFor(`document.querySelector('.pal-shell-input')?.value === 'open metro '`, 4000)
   check('shell Tab completes a command, then a board', t1 === 'open ' && t2, `${t1} | ${await val()}`)
   await key('u', 2)
   check('shell Ctrl+U clears the line', (await val()) === '')
@@ -261,11 +267,14 @@ try {
   }
   // ── remix in DOTS
   if (run('remix')) {
+  // MAKE asks before it adds a frame from a link (#143): press KEEP, as a visitor would
+  const keepLink = async () => { if (await waitFor(`!!document.querySelector('.ed-confirm .ed-confirm-keep')`, 15000)) { await js(`document.querySelector('.ed-confirm .ed-confirm-keep').click()`); await sleep(300) } }
   await open('?board=ir'); await sleep(1500)
   await key('x', 8); await sleep(300)
   const ip = await cardPoint('.board-view [data-xr-key]')
   await move(ip.x, ip.y); await sleep(400)
   await js(`[...document.querySelectorAll('.xr-panel button')].find(b => b.textContent === 'OPEN IN CODE').click()`)
+  await keepLink()
   const dots = await waitFor(`!!document.querySelector('.dw-code textarea') && document.querySelector('.dw-code textarea').value.length > 10`, 15000)
   const src = await js(`document.querySelector('.dw-code textarea')?.value ?? ''`) as string
   check('remix an IR card opens DOTS with its program', dots && !/remix of/.test(src), src.slice(0, 60).replace(/\n/g, ' '))
@@ -275,6 +284,7 @@ try {
   const hp = await cardPoint('.board-view [data-xr-key]')
   await move(hp.x, hp.y); await sleep(400)
   await js(`[...document.querySelectorAll('.xr-panel button')].find(b => b.textContent === 'OPEN IN CODE').click()`)
+  await keepLink()
   await waitFor(`(document.querySelector('.dw-code textarea')?.value ?? '').includes('remix of')`, 8000)
   const stub = await js(`document.querySelector('.dw-code textarea')?.value ?? ''`) as string
   const stubErr = await text('.dw-status')
@@ -308,20 +318,21 @@ try {
   const said = await text('.pal-shell [aria-live]')
   check('flag off: the shell says xray: command not found', /xray: command not found/i.test(said) && (await count('.xr-overlay')) === 0, said.slice(-80))
   await key('Escape')
-  // the intro line and the styles: no X-ray words, and the overlay / inspector CSS (their lazy chunks) never loads
-  const xrStyles = `[...document.styleSheets].some(s => { try { return [...s.cssRules].some(r => /\\.xr-(overlay|panel)\\b/.test(r.cssText)) } catch { return false } })`
+  // the intro line and the styles: no X-ray words, and the overlay / inspector CSS (their lazy chunks) never loads.
+  // Match selectors only src/components/xray/{overlay,inspector}.css define: first-load tap.css and sheet.css name .xr-panel too
+  const xrStyles = `[...document.styleSheets].some(s => { try { return [...s.cssRules].some(r => /\\.xr-(overlay|hud|tip|summary|layers|tabs)\\b/.test(r.cssText)) } catch { return false } })`
   const intro = await text('.intro-line .intro-long')
   check('flag off: the intro names no X-ray and no X-ray styles load', !!intro && !/x-ray/i.test(intro) && !(await js(xrStyles)), intro.slice(0, 120))
   // the widget page: no X-RAY pill, no X-ray item in MORE
   const slug = await js(`document.querySelector('.board-view [data-card-id]')?.dataset.cardId ?? ''`) as string
-  const wpXray = `[...document.querySelectorAll('.wp-bottom button, .wp-more [role=menuitem]')].some(b => /x-ray/i.test(b.textContent))`
+  const wpXray = `[...document.querySelectorAll('.wp-actions button, .wp-more [role=menuitem]')].some(b => /x-ray/i.test(b.textContent))`
   const openMore = async () => { await js(`document.querySelector('.wp-more-btn').click()`); return waitFor(`!!document.querySelector('.wp-more [role=menuitem]')`, 2000) }
   await open(`widget/${slug}/`, ''); await waitFor(`!!document.querySelector('.wp-more-btn')`, 8000)
   check(`flag off: the widget page (${slug}) has no X-RAY pill or menu item`, await openMore() && !(await js(wpXray)) && !(await js(xrStyles)))
   await shot('09-flagsoff-widget')
   // and with the xray flag on both come back
   await open(`widget/${slug}/`); await waitFor(`!!document.querySelector('.wp-more-btn')`, 8000)
-  check('flag on: the widget page has its X-RAY pill and menu item', await openMore() && await js(`[...document.querySelectorAll('.wp-bottom button')].some(b => b.textContent.includes('X-RAY')) && [...document.querySelectorAll('.wp-more [role=menuitem]')].some(b => /x-ray/i.test(b.textContent))`))
+  check('flag on: the widget page has its X-RAY pill and menu item', await openMore() && await js(`[...document.querySelectorAll('.wp-actions button')].some(b => b.textContent.includes('X-RAY')) && [...document.querySelectorAll('.wp-more [role=menuitem]')].some(b => /x-ray/i.test(b.textContent))`))
   await open('?board=henry'); await sleep(600)
   check('flag on: the intro says press X-RAY', /X-RAY/.test(await text('.intro-line .intro-long')))
   }
