@@ -6,7 +6,7 @@
  * quantization (AGENTS.md). Nothing leaves the page: the file is decoded into a 96 × 96 canvas and dropped.
  * Lazy: mounted by App once the page is idle, never in the first load.
  */
-import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type PointerEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type DragEvent, type PointerEvent } from 'react'
 import { DotCanvas } from '../DotCanvas'
 import { createRaster } from '../../engine/raster'
 import { halftone } from '../../engine/halftone'
@@ -100,21 +100,20 @@ export function HeroCard() {
     const dots = [dotsOf(luma)]
     return () => dots
   }, [image, aim])
-  const onMove = (e: PointerEvent<HTMLDivElement>) => {
+  const onMove = (e: PointerEvent<HTMLButtonElement>) => {
     if (e.pointerType !== 'mouse') return
     const r = e.currentTarget.getBoundingClientRect(), x = ((e.clientX - r.left) / r.width) * 2 - 1, y = ((e.clientY - r.top) / r.height) * 2 - 1
     cancelAnimationFrame(raf.current)
     raf.current = requestAnimationFrame(() => setAim([Math.round(x * 12) / 12, Math.round(y * 12) / 12]))
   }
-  const onDrop = (e: DragEvent<HTMLDivElement>) => { e.preventDefault(); setOver(false); const f = e.dataTransfer.files[0]; void open(f, f?.name.replace(/\.[^.]+$/, '').slice(0, 24) || 'image') }
-  const onDrag = (e: DragEvent<HTMLDivElement>) => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); setOver(true) } }
-  const onKey = (e: KeyboardEvent<HTMLDivElement>) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); file.current?.click() } }
+  const onDrop = (e: DragEvent<HTMLButtonElement>) => { e.preventDefault(); setOver(false); const f = e.dataTransfer.files[0]; void open(f, f?.name.replace(/\.[^.]+$/, '').slice(0, 24) || 'image') }
+  const onDrag = (e: DragEvent<HTMLButtonElement>) => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); setOver(true) } }
   return <figure className="hero-fig">
-    <div className="dot-card dot-card--bleed hero-card" data-scheme="dark" data-accent={accent} data-engaged={over || undefined} role="button" tabIndex={0}
+    <button type="button" className="dot-card dot-card--bleed hero-card" data-scheme="dark" data-accent={accent} data-engaged={over || undefined}
       aria-label="Your image as dots: drop or paste an image, or press Enter to pick one" aria-describedby="hero-note"
-      onClick={() => file.current?.click()} onKeyDown={onKey} onPointerMove={onMove} onDragOver={onDrag} onDragEnter={onDrag} onDragLeave={() => setOver(false)} onDrop={onDrop}>
+      onClick={() => file.current?.click()} onPointerMove={onMove} onDragOver={onDrag} onDragEnter={onDrag} onDragLeave={() => setOver(false)} onDrop={onDrop}>
       <DotCanvas layers={layers} grid={GRID} style={STYLE} theme={theme} change={false} enter={{ delay: 0, mask: 'bayer' }} />
-    </div>
+    </button>
     <figcaption className="fig-cap"><b>FIG 00</b>{image ? image.name.toUpperCase() : 'YOUR IMAGE'} · {GRID.cols} × {GRID.rows} · HALFTONE STEP 2</figcaption>
     <p className="hero-note" id="hero-note">Drop or paste an image, or <button type="button" onClick={() => file.current?.click()}>pick one</button>{image && <> · <button type="button" onClick={() => { setImage(null); setNote('Back to the sphere.') }}>clear</button></>}. It stays on this device: nothing is uploaded.</p>
     <p className="sr-only" role="status" aria-live="polite">{note}</p>

@@ -72,7 +72,7 @@ export function Browse({ onBoard, onOpen, cardPath }: BrowseProps) {
   return <section className="browse" aria-labelledby={titleId}>
     <BoardTitle title="BROWSE" id={titleId} />
     <p className="board-blurb">All {ROWS.length} cards from every board in one place. Filter by board or tag, or search by name, then open a card or the board it lives on.</p>
-    <div className="browse-tools" role="search" aria-label="Filter the cards">
+    <search className="browse-tools" aria-label="Filter the cards">
       <label className="browse-field browse-field--q"><span>SEARCH</span>
         <input ref={search} type="search" value={typed} maxLength={60} placeholder="clock, ring, game…" autoComplete="off" spellCheck={false}
           aria-describedby={countId} onChange={e => setTyped(cleanQuery(e.target.value))} />
@@ -93,7 +93,7 @@ export function Browse({ onBoard, onOpen, cardPath }: BrowseProps) {
       </label>
       <button type="button" className="browse-clear" onClick={clear} disabled={!any}>CLEAR</button>
       <p className="browse-count" id={countId} role="status">{rows.length === ROWS.length ? `${rows.length} cards` : `${rows.length} of ${ROWS.length} cards`}</p>
-    </div>
+    </search>
     {rows.length
       ? <ul className="browse-grid" aria-labelledby={titleId}>
         {rows.map(r => <li key={r.slug} className="browse-item" data-slot={r.slug} ref={slot(r.slug)}>

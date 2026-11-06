@@ -177,13 +177,14 @@ export function CardSizeControl() {
   </div>
 }
 
-/** The header popover: the controls in a raised layer that takes the previewed theme. */
+/** The header popover: the controls in a raised layer that takes the previewed theme. A non-modal `<dialog open>`:
+ * ThemeButton closes it on Escape, a press outside or focus leaving, and sends focus back to the button. */
 export function ThemePopover({ id, focus }: { id: string; focus: boolean }) {
   const t = useTheme()
   const [p, setP] = useState<ThemePreview>({})
   const shown = { scheme: p.scheme ?? t.resolved, accent: p.accent ?? t.accent }
-  return <div id={id} className="theme-pop" role="dialog" aria-label="Theme and card size" data-scheme={shown.scheme} data-accent={shown.accent}>
+  return <dialog open id={id} className="theme-pop" aria-label="Theme and card size" data-scheme={shown.scheme} data-accent={shown.accent}>
     <ThemeControls shown={shown} onPreview={setP} focus={focus} />
     <CardSizeControl />
-  </div>
+  </dialog>
 }

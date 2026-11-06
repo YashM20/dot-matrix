@@ -26,6 +26,7 @@ import { revealAbove, useEditor, type Tool } from './store'
 import { selCount, selFrames, selLayers, type Align } from './select'
 import { keepTypingInView, startTyping } from './typing'
 import { DotIcon, type IconName } from './ui'
+import { Modal } from '../Modal'
 import './editor.css'
 
 const TOOLS: { id: Tool; icon: IconName; key: string; label: string; phone: boolean }[] = [
@@ -288,7 +289,7 @@ function Sheet({ onClose, side, vh: visible }: { onClose: () => void; side: bool
   const [shown, setShown] = useState(panel)
   if (shown !== panel) { setShown(panel); const r = rememberedDetent(panel); if (r !== undefined) setDetentNow(r) }
   const [drag, setDrag] = useState<number | null>(null)
-  const start = useRef<{ y: number; h: number } | null>(null), ref = useRef<HTMLDivElement>(null)
+  const start = useRef<{ y: number; h: number } | null>(null), ref = useRef<HTMLElement>(null)
   const vh = visible ?? (typeof window === 'undefined' ? 800 : (window.visualViewport?.height ?? window.innerHeight))
   const h = drag ?? DETENTS[detent] * vh
   const selFrame = useEditor(s => s.sel.frame)
@@ -318,7 +319,7 @@ function Sheet({ onClose, side, vh: visible }: { onClose: () => void; side: bool
   else if (sheet === 'assets') body = <AssetsPanel onInserted={onClose} />
   else body = <InspectorBody />
   return (
-    <div ref={ref} className={`ed-sheet${side ? ' ed-sheet--side' : ''}${drag !== null ? ' dragging' : ''}`} role="dialog" aria-modal="false" aria-label={title ?? 'Inspector'} data-detent={side ? undefined : detent} style={side ? undefined : { height: h }}>
+    <section ref={ref} className={`ed-sheet${side ? ' ed-sheet--side' : ''}${drag !== null ? ' dragging' : ''}`} aria-label={title ?? 'Inspector'} data-detent={side ? undefined : detent} style={side ? undefined : { height: h }}>
       {!side && <div className="ed-sheet-grab" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
         role="slider" aria-label="Sheet height: drag, or tap to step" aria-valuemin={0} aria-valuemax={2} aria-valuenow={detent} tabIndex={0}
         onKeyDown={e => { if (e.key === 'ArrowUp') setDetent(Math.min(2, detent + 1)); else if (e.key === 'ArrowDown') { if (detent === 0) onClose(); else setDetent(detent - 1) } }}><i /></div>}
@@ -327,7 +328,7 @@ function Sheet({ onClose, side, vh: visible }: { onClose: () => void; side: bool
         <button type="button" className="ed-ibtn" aria-label="Close" onClick={onClose}>×</button>
       </div>
       <div className="ed-sheet-body">{body}</div>
-    </div>
+    </section>
   )
 }
 
@@ -438,12 +439,12 @@ function useShortcuts(phone: boolean) {
 }
 
 function Shortcuts({ onClose }: { onClose: () => void }) {
-  return <div className="ed-modal" role="dialog" aria-modal="true" aria-label="Editor shortcuts" onPointerDown={e => { if (e.target === e.currentTarget) onClose() }}>
+  return <Modal className="ed-modal" aria-labelledby="ed-keys-title" onClose={onClose}>
     <div className="ed-modal-card">
-      <h2>SHORTCUTS <button type="button" className="ed-ibtn" aria-label="Close" autoFocus onClick={onClose}>×</button></h2>
+      <h2><span id="ed-keys-title">SHORTCUTS</span> <button type="button" className="ed-ibtn" aria-label="Close" data-autofocus onClick={onClose}>×</button></h2>
       <dl className="ed-keys">{EDITOR_KEYS.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       <h3>TOUCH</h3>
       <dl className="ed-keys"><div><dt>one finger</dt><dd>use the tool · drag empty canvas to pan · tap to select</dd></div><div><dt>two fingers</dt><dd>pinch to zoom · drag to pan</dd></div><div><dt>tap a selected text layer</dt><dd>type into it on the canvas · DONE or return finishes</dd></div><div><dt>quick bar · handles</dt><dd>over the selected layer: tone, lattice, size, EDIT, INK, PICK · drag a handle for the radius, sweep, ends or bounds</dd></div><div><dt>SELECT (bar above the tools)</dt><dd>taps add to the selection · one finger on empty canvas draws a marquee · DUP, GROUP, COPY, PASTE, DEL act on it</dd></div><div><dt>long press a frame or layer</dt><dd>its menu: duplicate, forward, backward, to front, to back, delete (a layer brings its quick bar)</dd></div><div><dt>sheet handle</dt><dd>drag or tap to resize, drag down to close; each panel opens where you left it</dd></div></dl>
     </div>
-  </div>
+  </Modal>
 }

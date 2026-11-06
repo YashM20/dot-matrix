@@ -6,8 +6,9 @@ export function Range({ label, value, min, max, step = 1, onChange, format, name
   return (
     <label className="ctl">
       <span className="ctl-label">{label}</span>
-      <input type="range" name={name} min={min} max={max} step={step} value={value} onChange={e => onChange(+e.target.value)} />
-      <output>{format ? format(value) : value}</output>
+      <input type="range" name={name} min={min} max={max} step={step} value={value} aria-valuetext={format ? format(value) : undefined} onChange={e => onChange(+e.target.value)} />
+      {/* the value, shown: the slider itself announces it (aria-valuetext), so a label holds one control */}
+      <span className="ctl-out" aria-hidden="true">{format ? format(value) : value}</span>
     </label>
   )
 }

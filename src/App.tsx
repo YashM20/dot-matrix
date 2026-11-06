@@ -64,6 +64,11 @@ function Hero() {
   'use no memo'
   return <div className="home-hero">{useIdle() ? <Suspense fallback={slot}><HeroCard /></Suspense> : slot}</div>
 }
+/** The first stop on the page (#187): past the header to the view. Focus moves, the address stays as it is. */
+function SkipLink() {
+  'use no memo'
+  return <a className="skip-link" href="#main" onClick={e => { e.preventDefault(); document.getElementById('main')?.focus() }}>SKIP TO CONTENT</a>
+}
 /** The footer band: the live number, then the site line (docs/LAYOUT-THEME-PLAN.md §1c #13). */
 function SiteFooter({ onAbout }: { onAbout: () => void }) {
   'use no memo'
@@ -277,13 +282,17 @@ export default function App() {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const [shown, leaving] = useExitSwap(`${place}|${board}`, s => reduced || !s.startsWith('EXPLORE|') ? 0 : VIEW_EXIT_MS)
   const [shownPlace, shownBoard] = shown.split('|') as [string, string]
-  if (widget) return <main className="shell shell--widget">
-    <Suspense fallback={<section className="view-loading" aria-busy="true" />}><WidgetPage route={widget} onOpen={openWidget} onBoard={leaveWidget} /></Suspense>
+  if (widget) return <div className="shell shell--widget">
+    <SkipLink />
+    <main id="main" tabIndex={-1}>
+      <Suspense fallback={<section className="view-loading" aria-busy="true" />}><WidgetPage route={widget} onOpen={openWidget} onBoard={leaveWidget} /></Suspense>
+    </main>
     <CommandLayer tab="EXPLORE" board={board} setTab={go} setBoard={pickBoard} />
     <SiteFooter onAbout={() => { setWidget(undefined); setView('ABOUT') }} />
-  </main>
+  </div>
   const title = view === 'MAKE' ? 'MAKE' : view === 'EXPLORE' ? boardLabel(board) : view
-  return <main className="shell" data-view={view}>
+  return <div className="shell" data-view={view}>
+    <SkipLink />
     <h1 className="sr-only">MATRIX dot-matrix UI engine</h1>
     <header className="topbar"><a className="brand" href="/" aria-label="MATRIX home"><i className="mark" aria-hidden="true" />MATRIX</a>
       {/* phones: the place's name (on EXPLORE it opens every board) and search; the tab bar holds the views */}
@@ -303,6 +312,7 @@ export default function App() {
       {/* the tool dock (CommandLayer portals it here on desktop) */}
       <div className="topbar-dock"><DockGhost /></div>
       <button type="button" className="topbar-search" aria-label="Search boards, cards and actions" aria-haspopup="dialog" onClick={() => requestLayer('palette')}><Glyph rows={GLYPHS.SEARCH} /></button></header>
+    <main id="main" tabIndex={-1}>
     <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
     {shownPlace === 'EXPLORE' ? (
       <section className="boards-view" role="tabpanel" aria-labelledby="tab-EXPLORE">
@@ -327,9 +337,10 @@ export default function App() {
       </section>
     )}
     </Suspense>
+    </main>
     {/* C10: ⌘K palette, dot shell, X-ray inspector, time machine; `tab` is the place (a view or a MAKE mode) */}
     <CommandLayer tab={place} board={board} setTab={go} setBoard={setBoard} />
     {boards && <Suspense fallback={null}><BoardSheet board={board} onClose={() => setBoards(false)} onPick={id => { window.scrollTo(0, 0); setView('EXPLORE'); setBoard(id) }} /></Suspense>}
     <TabBar view={view} onView={setView} onBoards={() => setBoards(true)} />
-    <SiteFooter onAbout={() => setView('ABOUT')} /></main>
+    <SiteFooter onAbout={() => setView('ABOUT')} /></div>
 }

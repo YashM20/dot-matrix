@@ -60,12 +60,15 @@ export function useLinkImports(mode: Mode, onError: (why: string) => void): Link
   return queue[0]
 }
 
-/** The question over the canvas. KEEP has focus; Esc dismisses. The editor's own keys leave it alone. */
+/**
+ * The question over the canvas: a non-modal `<dialog open>` (the canvas stays usable). KEEP has focus; Esc dismisses.
+ * The editor's own keys leave it alone.
+ */
 export function ImportPrompt({ prompt }: { prompt: LinkPrompt }) {
   const keep = useRef<HTMLButtonElement>(null)
   useEffect(() => { keep.current?.focus({ preventScroll: true }) }, [prompt.id])
   return (
-    <div className="ed-confirm" role="alertdialog" aria-modal="false" aria-labelledby="ed-confirm-t" aria-describedby="ed-confirm-d"
+    <dialog open className="ed-confirm" role="alertdialog" aria-labelledby="ed-confirm-t" aria-describedby="ed-confirm-d"
       onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); prompt.dismiss() } }}>
       <b id="ed-confirm-t">OPEN THIS LINK?</b>
       <p id="ed-confirm-d">{prompt.summary}.</p>
@@ -74,6 +77,6 @@ export function ImportPrompt({ prompt }: { prompt: LinkPrompt }) {
         <button ref={keep} type="button" className="ed-confirm-keep" onClick={prompt.keep}>KEEP</button>
         <button type="button" onClick={prompt.dismiss}>DISMISS</button>
       </div>
-    </div>
+    </dialog>
   )
 }

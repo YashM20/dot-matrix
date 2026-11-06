@@ -90,7 +90,7 @@ export function Pick<T extends string | number>({ label, value, options, onChang
 }
 export function Slider({ label, hint, value, onChange, min, max, step, fmt = v => v.toFixed(2) }: { label: string; hint?: string; value: number; onChange: (v: number) => void; min: number; max: number; step: number; fmt?: (v: number) => string }) {
   return <label className="ed-slider"><span>{label}{hint && <small>{hint}</small>}</span>
-    <input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))} /><output>{fmt(value)}</output></label>
+    <input type="range" min={min} max={max} step={step} value={value} aria-valuetext={fmt(value)} onChange={e => onChange(Number(e.target.value))} /><span className="ed-out" aria-hidden="true">{fmt(value)}</span></label>
 }
 export function Text({ label, value, onChange, max = 64, upper }: { label: string; value: string; onChange: (v: string) => void; max?: number; upper?: boolean }) {
   return <label className="ed-field ed-wide"><span>{label}</span><input value={value} maxLength={max} autoCapitalize={upper ? 'characters' : 'off'} spellCheck={false} onChange={e => onChange(upper ? e.target.value.toUpperCase() : e.target.value)} /></label>

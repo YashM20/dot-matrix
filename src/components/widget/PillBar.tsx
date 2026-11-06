@@ -23,7 +23,7 @@ export function PillBar({ label, className = '', children }: { label: string; cl
 export const Pill = ({ children, className = '' }: { children: ReactNode; className?: string }) => <div className={`pill ${className}`}>{children}</div>
 
 export interface PillButtonProps {
-  /** Short visible label; `title` is the full name (tooltip and accessible name). */
+  /** Short visible label; `title` is the full name (the tooltip, and the accessible name after the label). */
   label: ReactNode
   title: string
   glyph?: string
@@ -38,7 +38,10 @@ export interface PillButtonProps {
 }
 export function PillButton({ label, title, glyph, kbd, onClick, onPointerDown, pressed, expanded, className = '', href }: PillButtonProps) {
   const inner = <>{glyph && <span className="pill-glyph" aria-hidden="true">{glyph}</span>}<span className="pill-label">{label}</span></>
+  // the name holds the words it shows (WCAG 2.5.3: a voice user says what they see): the label leads unless the title has it
+  const words = (t: string) => ` ${t.toLowerCase().replace(/[^\p{L}\p{N}-]+/gu, ' ').trim()} `
+  const name = typeof label !== 'string' || words(title).includes(words(label)) ? title : `${label}, ${title}`
   // `data-tip` is the bar's grouped tooltip (src/site/app/tips.css), in place of the native `title`
-  if (href) return <a className={`pill-btn ${className}`} href={href} data-tip={title} data-kbd={kbd} aria-label={title} onClick={e => { if (onClick && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) { e.preventDefault(); onClick() } }}>{inner}</a>
-  return <button type="button" className={`pill-btn ${className}`} data-tip={title} data-kbd={kbd} aria-label={title} aria-pressed={pressed} aria-expanded={expanded} onClick={onClick} onPointerDown={onPointerDown}>{inner}</button>
+  if (href) return <a className={`pill-btn ${className}`} href={href} data-tip={title} data-kbd={kbd} aria-label={name} onClick={e => { if (onClick && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) { e.preventDefault(); onClick() } }}>{inner}</a>
+  return <button type="button" className={`pill-btn ${className}`} data-tip={title} data-kbd={kbd} aria-label={name} aria-pressed={pressed} aria-expanded={expanded} onClick={onClick} onPointerDown={onPointerDown}>{inner}</button>
 }

@@ -250,7 +250,7 @@
 .ed-check input { accent-color: var(--dot-idle); width: 14px; height: 14px }
 .ed-slider { display: grid; grid-template-columns: 1fr auto; gap: var(--space-1) var(--space-2); align-items: center; color: var(--mute); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .12em }
 .ed-slider small { margin-left: var(--space-2); color: var(--mute); font-weight: 500; letter-spacing: .04em; text-transform: none }
-.ed-slider output { color: var(--value); font: 500 var(--fs-label-12) var(--mono); font-variant-numeric: tabular-nums }
+.ed-slider .ed-out { color: var(--value); font: 500 var(--fs-label-12) var(--mono); font-variant-numeric: tabular-nums }
 .ed-slider input { grid-column: 1 / -1; width: 100%; height: 22px; accent-color: var(--dot-idle); margin: 0 }
 .ed-seg { display: flex; border: 1px solid var(--line); border-radius: var(--radius-pill); padding: var(--space-1); gap: var(--space-1) }
 .ed-seg button { flex: 1; min-height: 26px; background: none; border: 0; border-radius: var(--radius-pill); color: var(--mute); font-size: var(--fs-label-12); letter-spacing: .1em }
