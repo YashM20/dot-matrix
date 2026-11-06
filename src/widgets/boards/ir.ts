@@ -7,6 +7,7 @@ import { TINY_PROGRAMS } from '../creditSources'
 import type { Control } from '../../engine/context'
 import { irProgram, type IRProgram } from '../../engine/ir'
 import { TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { circle, states, ui } from './components-kit'
 
 const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle } as const
@@ -71,6 +72,8 @@ export const irDial: WidgetPreset = {
       layer(T.big(String(Math.round((ctx.data.value ?? 0) * 100)), C, 46, { lattice: 3, smooth: true, align: 'center' })),
       layer(T.text('DATA.VALUE', C, 96, { align: 'center' }), 'idle'),
       footer(DIAL_SRC, dial),
+      // the overlay hides the browser's outline, so the card draws hover and focus itself
+      ...states(ui(ctx, 'value'), ctx.t, circle(C, C, R)),
     ]
   },
 }

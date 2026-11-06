@@ -19,6 +19,10 @@ export function ControlOverlay({ controls: all, grid, data, input }: { controls:
   const taps = controls.filter(c => c.kind === 'button' || c.kind === 'toggle')
   const [rove, setRove] = useState<string | undefined>(undefined)
   const stop = taps.some(c => c.key === rove) ? rove : taps[0]?.key
+  // grouped ranges: one tab stop per group, the last one focused (or the first)
+  const [groupRove, setGroupRove] = useState<Record<string, string>>({})
+  const members = (g: string) => controls.filter(c => c.group === g && c.kind !== 'button' && c.kind !== 'toggle' && c.kind !== 'segmented' && c.kind !== 'xy')
+  const groupStop = (g: string) => { const m = members(g); return m.some(c => c.key === groupRove[g]) ? groupRove[g] : m[0]?.key }
   // a pointer pick in a radiogroup moves the checked option (and the roving tab stop) away from the focused one:
   // focus follows the selection, without turning on the focus ring
   const root = useRef<HTMLDivElement>(null)
@@ -35,6 +39,8 @@ export function ControlOverlay({ controls: all, grid, data, input }: { controls:
     let visible = true
     try { visible = e.currentTarget.matches(':focus-visible') } catch { /* old browsers: treat as visible */ }
     if (taps.some(c => c.key === key)) setRove(key)
+    const g = controls.find(c => c.key === key)?.group
+    if (g && groupRove[g] !== key) setGroupRove(r => ({ ...r, [g]: key }))
     input.focus(key, visible)
   }
   const onBlur = () => input.focus(undefined, false)
@@ -51,15 +57,30 @@ export function ControlOverlay({ controls: all, grid, data, input }: { controls:
   /** Ranges: our own key mapping (quantized, unbounded cranks), so every axis behaves the same. */
   const rangeKeys = (c: Control, key: string) => (e: KeyboardEvent<HTMLInputElement>) => {
     input.focus(c.key, true)
+    if (c.group && groupMove(c, e)) return
     const v = keyValue(c, input.value(key), e.key)
     if (v === null) return
     e.preventDefault()
     input.set({ [key]: v })
   }
 
+  /** A grouped range: the arrows across its axis move focus to the next or previous member. True when handled. */
+  const groupMove = (c: Control, e: KeyboardEvent<HTMLInputElement>) => {
+    const vertical = c.orientation === 'vertical' || c.kind === 'knob'
+    const d = vertical ? (e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0) : (e.key === 'ArrowDown' ? 1 : e.key === 'ArrowUp' ? -1 : 0)
+    const m = members(c.group!), i = m.findIndex(x => x.key === c.key)
+    if (!d || i < 0 || m.length < 2) return false
+    e.preventDefault()
+    const next = m[(i + d + m.length) % m.length]
+    setGroupRove(r => ({ ...r, [c.group!]: next.key }))
+    e.currentTarget.parentElement?.querySelector<HTMLElement>(`[data-dot-focus="${CSS.escape(next.key)}"]`)?.focus()
+    return true
+  }
+
   const range = (c: Control, key: string, label: string, style?: CSSProperties, focusAttr = true) => {
     const { min, max, step } = controlRange(c), v = val(key, c), bounded = Number.isFinite(min) && Number.isFinite(max)
-    return <input key={key} type="range" className="dot-a11y-ctl" style={style} aria-label={label} data-dot-focus={focusAttr ? c.key : undefined}
+    const tabIndex = c.group && c.kind !== 'xy' ? (c.key === groupStop(c.group) ? 0 : -1) : undefined
+    return <input key={key} type="range" className="dot-a11y-ctl" style={style} aria-label={label} data-dot-focus={focusAttr ? c.key : undefined} tabIndex={tabIndex}
       min={bounded ? min : -1e9} max={bounded ? max : 1e9} step={step > 0 && bounded ? step : 'any'} value={v} aria-valuenow={v}
       aria-orientation={c.orientation === 'vertical' || c.kind === 'knob' ? 'vertical' : undefined}
       onChange={e => input.set({ [key]: settle(c, Number(e.currentTarget.value)) })}

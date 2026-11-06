@@ -1498,6 +1498,9 @@
     "wrap": {
      "type": "boolean"
     },
+    "group": {
+     "$ref": "#/$defs/key"
+    },
     "label": {
      "type": "string",
      "minLength": 1,

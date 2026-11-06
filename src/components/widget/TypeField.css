@@ -1,0 +1,38 @@
+/* `typing` cards (TypeField.tsx): the words the card sets, under the blurb */
+.wp-type {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--space-3);
+  margin: 0 0 var(--space-4);
+  color: var(--mute);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .12em
+}
+
+.wp-type input {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  color: var(--value);
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .02em
+}
+
+.wp-type input::placeholder {
+  color: var(--mute)
+}
+
+/* the accent border is the focus ring (the halo comes from the global :focus-visible) */
+.wp-type input:focus-visible {
+  border-color: var(--red)
+}
+
+.wp-type small {
+  font: inherit;
+  letter-spacing: .04em
+}

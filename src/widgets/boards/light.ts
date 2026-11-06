@@ -7,6 +7,7 @@
  */
 import { blur, createRaster, outline, rasterize, sample, type Raster } from '../../engine/raster'
 import { bloom, emissive, fabric, glass, heightRaster, hourOf, illuminate, lambert, matte, metal, normalRaster, phong, sdfBox, sdfCircle, sdfRing, sdfSubtract, sdfUnion, stackHeights, sunAt, torch, type Light, type Vec3 } from '../../engine/light'
+import type { Control } from '../../engine/context'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { smoothstep } from '../../engine/math'
 import type { Field, Layer, Tone } from '../../engine/types'
@@ -160,14 +161,25 @@ const BALL = { cx: 35.75, cy: 36.5, r: 22 }
 const BALL_SDF = sdfCircle(LG, BALL.cx, BALL.cy, BALL.r)
 const BALL_N = normalRaster(heightRaster(BALL_SDF, { width: BALL.r }, LG))
 const AT = { lattice: K, origin: [0, 0] as [number, number] }
-/** The board light: the pointer as a torch over this card, else the sun of the current hour. */
+/**
+ * The board light: the pointer as a torch over this card (or the torch control while it has keyboard
+ * focus), else the sun of the current hour.
+ */
 function boardLight(ctx: WidgetContext): Light {
   const p = ctx.pointers?.find(q => q.inside && !q.up)
-  return p ? torch(toLat(p.x), toLat(p.y), 34, 150) : boardSun()
+  if (p) return torch(toLat(p.x), toLat(p.y), 34, 150)
+  if (ctx.focus === 'lx') return torch(ctx.data.lx * (LG.cols - 1), (1 - ctx.data.ly) * (LG.rows - 1), 34, 150)
+  return boardSun()
 }
 const caption = (s: string) => layer(T.big(s, 72, 126, { lattice: 1, align: 'center' }), 'mid')
-function materialCard(id: string, name: string, note: string, body: (ctx: WidgetContext) => Layer[]): WidgetPreset {
-  return { id, name, group: 'composite', chrome: 'dots', animated: true, grid: TILE, style: tileStyle, layers: ctx => [...body(ctx), caption(note)] }
+/** The torch: a control over the ball, so the pointer reaches the card (the host only tracks pointers on cards with controls). */
+const TORCH: Control = { key: 'lx', keyY: 'ly', kind: 'xy', box: [16, 16, 112, 104], label: 'Torch position' }
+function materialCard(id: string, name: string, note: string, body: (ctx: WidgetContext) => Layer[], lit = true): WidgetPreset {
+  return {
+    id, name, group: 'composite', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
+    ...(lit ? { defaults: { lx: .3, ly: .7 }, controls: [TORCH] } : {}),
+    layers: ctx => [...body(ctx), caption(note)],
+  }
 }
 /** What the glass ball stands in front of: vertical rules on the lattice, a band across the card. */
 const RULES: Field = (u, v) => { const c = Math.round(u * (LG.cols - 1)), r = Math.round(v * (LG.rows - 1)); return r >= 12 && r <= 61 && c >= 4 && c <= 67 && c % 4 === 0 ? .5 : 0 }
@@ -225,7 +237,7 @@ function velvet(light: Light): Layer[] {
 export const lightMatte = materialCard('light-matte', 'Matte', 'LAMBERT', ctx => matte(BALL_N, boardLight(ctx), AT))
 export const lightGloss = materialCard('light-gloss', 'Gloss', '+2 STEPS', ctx => lacquer(boardLight(ctx)))
 export const lightGlass = materialCard('light-glass', 'Glass', 'REFRACT', ctx => glass(BALL_N, boardLight(ctx), RULES, AT).layers)
-export const lightEmissive = materialCard('light-emissive', 'Emissive', 'BLOOM', () => emissive(BALL_LIGHT, { ...AT, radius: 4.5, lift: .7, coreTone: 'value', haloBands: [[.1, .45, 'faint'], [.45, 2, 'mid']] }).layers)
+export const lightEmissive = materialCard('light-emissive', 'Emissive', 'BLOOM', () => emissive(BALL_LIGHT, { ...AT, radius: 4.5, lift: .7, coreTone: 'value', haloBands: [[.1, .45, 'faint'], [.45, 2, 'mid']] }).layers, false)
 export const lightMetal = materialCard('light-metal', 'Metal', 'ENVIRONMENT', ctx => metal(BALL_N, boardLight(ctx), AT).layers)
 export const lightFabric = materialCard('light-fabric', 'Fabric', 'BAYER 4', ctx => velvet(boardLight(ctx)))
 

@@ -6,7 +6,7 @@
  * grouped actions (export, share and remix, MORE), the like button and the facts; the panel scrolls on its own.
  * Phones stack it. X-RAY shows only while its flag is on. A missing widget is noindex.
  */
-import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
+import { lazy, Suspense, useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { DotName } from '../DotName'
 import { dot480 } from '../../engine/theme/tokens'
 import { boardIds, boardLabel, loadBoard, resolveCardId } from '../../widgets/manifest'
@@ -31,6 +31,7 @@ import { LoadFailed } from '../LoadBoundary'
 import { Pill, PillBar, PillButton } from './PillBar'
 import { MoreMenu } from './MoreMenu'
 import { WidgetLike } from '../likes/slot'
+import { TypeField } from './TypeField'
 import './WidgetPage.css'
 import { flag } from '../../site/flags'
 
@@ -46,6 +47,9 @@ type Loaded = { w: ResolvedWidget; preset: WidgetPreset; items: WidgetPreset[]; 
 /** Board sources a widget page subscribes to as well (X1): the pond's day (`?day=`, the opt-in age) and the light hub. */
 const PAGE_SOURCES = new Set(['pond-day', 'light'])
 type State = { status: 'loading' } | { status: 'missing' } | { status: 'failed' } | ({ status: 'ok' } & Loaded)
+
+/** HIVE, for the levels board's cards (their title card says PUSH START): loads when PLAY is pressed. */
+const HivePlay = lazy(() => import('../game/HivePlay'))
 
 /** The export code (PNG, SVG, HTML), loaded on the first export. */
 const exporter = () => import('./cardExport')
@@ -89,6 +93,9 @@ export function WidgetPage({ route, onOpen, onBoard }: WidgetPageProps) {
 
 function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & Omit<WidgetPageProps, 'route'>) {
   const live = useLiveData(sources), pond = w.board === 'pond'
+  // a card that sets words (`typing`): the field's text, as card data
+  const [typed, setTyped] = useState<Record<string, number>>()
+  const [hive, setHive] = useState(false), hiveCard = w.board === 'levels'
   const stage = useRef<HTMLElement>(null)
   const xrayOn = useFlag('xray')
   const xray = useXR(s => s.global || s.on.size > 0)
@@ -163,7 +170,7 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
     <div className="wp-main">
       {/* the stage is a size container: the card takes the most it can of it at its own aspect (#183) */}
       <div className="wp-stagebox"><figure className="wp-stage" ref={stage} style={{ '--wp-max': `${preset.grid.cols * pitch + 32}px`, '--wp-ar': preset.grid.cols / preset.grid.rows } as CSSProperties}>
-        <DotWidget type={preset.id} preset={preset} density={pitch} data={sources ? pick(live, preset.defaults) : undefined} />
+        <DotWidget type={preset.id} preset={preset} density={pitch} data={sources || typed ? { ...(sources ? pick(live, preset.defaults) : {}), ...typed } : undefined} />
         {/* the figure legend (docs/LAYOUT-THEME-PLAN.md §1c #14) */}
         <figcaption className="fig-cap"><b>FIG {String(i + 1).padStart(2, '0')}</b>{w.slug} · {meta.grid.cols} × {meta.grid.rows} dots · {meta.grid.pitch} px · {meta.renderer.toUpperCase()}</figcaption>
       </figure></div>
@@ -171,10 +178,12 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
         <p className="wp-eyebrow">{boardLabel(w.board)} · {String(i + 1).padStart(2, '0')}</p>
         <h1 id="wp-title"><span className="sr-only">{name}</span><DotName text={name} pitch={4} /></h1>
         <p className="wp-blurb">{meta.blurb}</p>
+        {preset.typing && <TypeField typing={preset.typing} onText={setTyped} />}
         <WidgetLike uid={w.uid} name={name} />
         {creditsOf(preset).map(c => <p key={c.source} className="wp-credit">by {c.by.join(', ')} · <a className="wp-link" href={c.source} target="_blank" rel="noopener noreferrer">{c.title}</a>{c.note && <> · {c.note}</>}</p>)}
         {/* the actions, grouped by what they do: export, then share and remix, then the rest */}
         <PillBar label="Card actions" className="wp-actions">
+          {hiveCard && <Pill><PillButton label="PLAY" glyph="▶" title="Play HIVE" onClick={() => setHive(true)} /></Pill>}
           <Pill className="wp-copy">
             <PillButton label="PNG" glyph="▣" title="Copy as PNG" onClick={act.png} />
             <PillButton label="SVG" glyph="◇" title="Copy as SVG" onClick={act.svg} />
@@ -199,5 +208,6 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
         <dl className="wp-facts">{facts.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}</dl>
       </aside>
     </div>
+    {hive && <Suspense fallback={null}><HivePlay theme={themeTokens(getTheme().resolved, getTheme().accent)} onClose={() => setHive(false)} /></Suspense>}
   </section>
 }

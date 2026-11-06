@@ -6,7 +6,7 @@
  * of faint dots, so a blank module still reads as a module.
  *
  * Each module is a vertical stepper: tap its top half for the next character, the bottom half for the one before
- * (arrow keys on a focused module; Home blanks it). The modules are board-shared data, so every card on the
+ * (Up and Down on a focused module, Left and Right to the next one, one tab stop for the row; Home blanks it). The modules are board-shared data, so every card on the
  * board takes the new word at once, and this card writes it to `?word=` (`keepWord`). While a module is hovered
  * or focused the loop rests on the word, and an edited module flips to its new character on its own.
  */
@@ -27,7 +27,7 @@ const EDIT_FLIP = .03
 
 const controls: Control[] = Array.from({ length: SLOTS }, (_, m): Control => ({
   key: slotKey(m), kind: 'stepper', orientation: 'vertical', min: 0, max: DRUM.length, step: 1, wrap: true,
-  box: [colOf(m) - 1, BOX.top, ADV * K, BOX.h], label: `Flap ${m + 1}`,
+  box: [colOf(m) - 1, BOX.top, ADV * K, BOX.h], label: `Flap ${m + 1}`, group: 'flaps',
 }))
 
 // Edits in flight: when a module's value changes on an interaction frame, it flips from what it showed. Kept per
