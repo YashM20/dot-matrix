@@ -1,0 +1,36 @@
+/* The MATRIX mark in the header and the site nav (<i class="mark" aria-hidden="true">). Generated from
+   src/site/brand/mark.svg by scripts/site/favicon.ts: do not edit. 16 px, four units of the 4 px grid; the dots
+   sit at pitch 3 on whole pixels, so they stay crisp at 1x and 2x. */
+.mark {
+  display: inline-block;
+  flex: none;
+  width: var(--space-4);
+  height: var(--space-4);
+  background:
+    radial-gradient(circle at 2px 2px, var(--value) 0.75px, transparent 1.25px),
+    radial-gradient(circle at 5px 2px, var(--dot-faint) 0.25px, transparent 0.75px),
+    radial-gradient(circle at 8px 2px, var(--dot-faint) 0.25px, transparent 0.75px),
+    radial-gradient(circle at 11px 2px, var(--dot-faint) 0.25px, transparent 0.75px),
+    radial-gradient(circle at 14px 2px, var(--value) 0.75px, transparent 1.25px),
+    radial-gradient(circle at 2px 5px, var(--value) 0.75px, transparent 1.25px),
+    radial-gradient(circle at 5px 5px, var(--value) 0.75px, transparent 1.25px),
+    radial-gradient(circle at 8px 5px, var(--dot-faint) 0.25px, transparent 0.75px),
+    radial-gradient(circle at 11px 5px, var(--value) 0.75px, transparent 1.25px),
+    radial-gradient(circle at 14px 5px, var(--value) 0.75px, transparent 1.25px),
+    radial-gradient(circle at 2px 8px, var(--value) 0.75px, transparent 1.25px),
+    radial-gradient(circle at 5px 8px, var(--dot-faint) 0.25px, transparent 0.75px),
+    radial-gradient(circle at 8px 8px, var(--red) 1px, transparent 1.5px),
+    radial-gradient(circle at 11px 8px, var(--dot-faint) 0.25px, transparent 0.75px),
+    radial-gradient(circle at 14px 8px, var(--value) 0.75px, transparent 1.25px),
+    radial-gradient(circle at 2px 11px, var(--value) 0.75px, transparent 1.25px),
+    radial-gradient(circle at 5px 11px, var(--dot-faint) 0.25px, transparent 0.75px),
+    radial-gradient(circle at 8px 11px, var(--dot-faint) 0.25px, transparent 0.75px),
+    radial-gradient(circle at 11px 11px, var(--dot-faint) 0.25px, transparent 0.75px),
+    radial-gradient(circle at 14px 11px, var(--value) 0.75px, transparent 1.25px),
+    radial-gradient(circle at 2px 14px, var(--value) 0.75px, transparent 1.25px),
+    radial-gradient(circle at 5px 14px, var(--dot-faint) 0.25px, transparent 0.75px),
+    radial-gradient(circle at 8px 14px, var(--dot-faint) 0.25px, transparent 0.75px),
+    radial-gradient(circle at 11px 14px, var(--dot-faint) 0.25px, transparent 0.75px),
+    radial-gradient(circle at 14px 14px, var(--value) 0.75px, transparent 1.25px);
+  background-repeat: no-repeat
+}

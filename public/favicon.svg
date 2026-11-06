@@ -1,1 +1,31 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><rect width="512" height="512" rx="112.64" fill="#070809"/><circle cx="168.0" cy="124.0" r="6.07" fill="#4A4E54"/><circle cx="212.0" cy="124.0" r="6.07" fill="#4A4E54"/><circle cx="256.0" cy="124.0" r="6.07" fill="#4A4E54"/><circle cx="300.0" cy="124.0" r="6.07" fill="#4A4E54"/><circle cx="344.0" cy="124.0" r="6.07" fill="#4A4E54"/><circle cx="124.0" cy="168.0" r="6.07" fill="#4A4E54"/><circle cx="168.0" cy="168.0" r="6.07" fill="#4A4E54"/><circle cx="212.0" cy="168.0" r="11.13" fill="#9A9EA4"/><circle cx="256.0" cy="168.0" r="11.13" fill="#9A9EA4"/><circle cx="300.0" cy="168.0" r="11.13" fill="#9A9EA4"/><circle cx="344.0" cy="168.0" r="6.07" fill="#4A4E54"/><circle cx="388.0" cy="168.0" r="6.07" fill="#4A4E54"/><circle cx="124.0" cy="212.0" r="6.07" fill="#4A4E54"/><circle cx="168.0" cy="212.0" r="11.13" fill="#9A9EA4"/><circle cx="212.0" cy="212.0" r="15.79" fill="#F2F3F5"/><circle cx="256.0" cy="212.0" r="15.79" fill="#F2F3F5"/><circle cx="300.0" cy="212.0" r="15.79" fill="#F2F3F5"/><circle cx="344.0" cy="212.0" r="11.13" fill="#9A9EA4"/><circle cx="388.0" cy="212.0" r="6.07" fill="#4A4E54"/><circle cx="124.0" cy="256.0" r="6.07" fill="#4A4E54"/><circle cx="168.0" cy="256.0" r="11.13" fill="#9A9EA4"/><circle cx="212.0" cy="256.0" r="15.79" fill="#F2F3F5"/><circle cx="256.0" cy="256.0" r="20.24" fill="#FF3B30"/><circle cx="300.0" cy="256.0" r="15.79" fill="#F2F3F5"/><circle cx="344.0" cy="256.0" r="11.13" fill="#9A9EA4"/><circle cx="388.0" cy="256.0" r="6.07" fill="#4A4E54"/><circle cx="124.0" cy="300.0" r="6.07" fill="#4A4E54"/><circle cx="168.0" cy="300.0" r="11.13" fill="#9A9EA4"/><circle cx="212.0" cy="300.0" r="15.79" fill="#F2F3F5"/><circle cx="256.0" cy="300.0" r="15.79" fill="#F2F3F5"/><circle cx="300.0" cy="300.0" r="15.79" fill="#F2F3F5"/><circle cx="344.0" cy="300.0" r="11.13" fill="#9A9EA4"/><circle cx="388.0" cy="300.0" r="6.07" fill="#4A4E54"/><circle cx="124.0" cy="344.0" r="6.07" fill="#4A4E54"/><circle cx="168.0" cy="344.0" r="6.07" fill="#4A4E54"/><circle cx="212.0" cy="344.0" r="11.13" fill="#9A9EA4"/><circle cx="256.0" cy="344.0" r="11.13" fill="#9A9EA4"/><circle cx="300.0" cy="344.0" r="11.13" fill="#9A9EA4"/><circle cx="344.0" cy="344.0" r="6.07" fill="#4A4E54"/><circle cx="388.0" cy="344.0" r="6.07" fill="#4A4E54"/><circle cx="168.0" cy="388.0" r="6.07" fill="#4A4E54"/><circle cx="212.0" cy="388.0" r="6.07" fill="#4A4E54"/><circle cx="256.0" cy="388.0" r="6.07" fill="#4A4E54"/><circle cx="300.0" cy="388.0" r="6.07" fill="#4A4E54"/><circle cx="344.0" cy="388.0" r="6.07" fill="#4A4E54"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" width="16" height="16">
+  <!-- The MATRIX mark: the M of the 5x7 dot font folded onto a 5x5 grid, the accent at its centre vertex. Dots sit at
+       pitch 3 with centres 2 + 3i, so they land whole at 16 and 32 px. Radii are the quantized steps 2 / 4 / 5 of 5
+       (off / on / accent). The source of the favicon, the app icons and the header mark (mark.css): scripts/site/favicon.ts. -->
+  <style>.on{fill:#F2F3F5}.off{fill:#2E3033}.accent{fill:#FF3B30}@media (prefers-color-scheme:light){.on{fill:#1B1B19}.off{fill:#D1D1CF}.accent{fill:#E43226}}</style>
+  <circle class="on" cx="2" cy="2" r="1"/>
+  <circle class="off" cx="5" cy="2" r="0.5"/>
+  <circle class="off" cx="8" cy="2" r="0.5"/>
+  <circle class="off" cx="11" cy="2" r="0.5"/>
+  <circle class="on" cx="14" cy="2" r="1"/>
+  <circle class="on" cx="2" cy="5" r="1"/>
+  <circle class="on" cx="5" cy="5" r="1"/>
+  <circle class="off" cx="8" cy="5" r="0.5"/>
+  <circle class="on" cx="11" cy="5" r="1"/>
+  <circle class="on" cx="14" cy="5" r="1"/>
+  <circle class="on" cx="2" cy="8" r="1"/>
+  <circle class="off" cx="5" cy="8" r="0.5"/>
+  <circle class="accent" cx="8" cy="8" r="1.25"/>
+  <circle class="off" cx="11" cy="8" r="0.5"/>
+  <circle class="on" cx="14" cy="8" r="1"/>
+  <circle class="on" cx="2" cy="11" r="1"/>
+  <circle class="off" cx="5" cy="11" r="0.5"/>
+  <circle class="off" cx="8" cy="11" r="0.5"/>
+  <circle class="off" cx="11" cy="11" r="0.5"/>
+  <circle class="on" cx="14" cy="11" r="1"/>
+  <circle class="on" cx="2" cy="14" r="1"/>
+  <circle class="off" cx="5" cy="14" r="0.5"/>
+  <circle class="off" cx="8" cy="14" r="0.5"/>
+  <circle class="off" cx="11" cy="14" r="0.5"/>
+  <circle class="on" cx="14" cy="14" r="1"/>
+</svg>
