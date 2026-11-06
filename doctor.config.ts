@@ -1,6 +1,6 @@
 // React Doctor (`pnpm doctor`): https://react.doctor/docs/configuration/config-files
 // Plain object on purpose: react-doctor runs through a pinned `pnpm dlx`, so it isn't installed and its types
-// aren't importable here. Every ignore says why. Findings still worth doing are tracked in a GitHub issue.
+// aren't importable here. Every ignore says why. Findings still worth doing: #207, #208, #209.
 export default {
   rules: {
     // the same check as oxlint's `react/only-export-components`, which `.oxlintrc.json` already runs (with
