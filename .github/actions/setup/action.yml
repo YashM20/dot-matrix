@@ -1,0 +1,30 @@
+# Shared by every CI job: pnpm 10, Node 22 with the pnpm store cache, and a frozen install.
+# Run actions/checkout first (a local action lives in the checkout).
+name: Setup
+description: pnpm, Node with the pnpm store cache, and pnpm install --frozen-lockfile
+inputs:
+  dir:
+    description: Folder to install in (its pnpm-lock.yaml also keys the store cache)
+    default: .
+runs:
+  using: composite
+  steps:
+    # package.json has no "packageManager" field, so pin pnpm 10 here
+    # (pnpm-lock.yaml is lockfileVersion 9.0, which pnpm 9 and 10 both read).
+    # If "packageManager" is added later, delete `version:`: action-setup fails when both are set and disagree.
+    - name: Setup pnpm
+      uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+      with:
+        version: 10
+
+    - name: Setup Node
+      uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      with:
+        node-version: 22
+        cache: pnpm
+        cache-dependency-path: ${{ inputs.dir }}/pnpm-lock.yaml
+
+    - name: Install
+      shell: bash
+      working-directory: ${{ inputs.dir }}
+      run: pnpm install --frozen-lockfile
