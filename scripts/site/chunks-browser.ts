@@ -46,7 +46,9 @@ try {
   for (const [where, path, failed] of [
     ['browse', 'browse/?in=motion', `document.querySelectorAll('.browse-item > .load-failed').length > 0`],
     ['board', 'motion/', `!!document.querySelector('.board-view .load-failed')`],
-    ['card page', `widget/${motionCard}/`, `!!document.querySelector('.wp .load-failed')`],
+    // the card page's own chunk imports every board (export/source → the eager registry), so a missing board chunk
+    // fails the page chunk and RootBoundary shows; with the page chunk loaded first, the page's own error state does
+    ['card page', `widget/${motionCard}/`, `!!document.querySelector('.wp .load-failed, .root-crash')`],
   ] as const) {
     const p = await launch(1280, 900, { flags: { make: false, lab: false }, testHooks: false })
     try {
