@@ -9,7 +9,7 @@ import { useXR } from './components/xray/store'
 import { boardIds, boardLabel, liveBoards, prefetchBoard } from './widgets/manifest'
 import { widgetPath, type WidgetRoute } from './site/routes'
 import { onLayerWake, requestLayer } from './site/layer'
-import { setPageMeta, syncUrl } from './site/meta'
+import { boardFromPath, setPageMeta, syncUrl } from './site/meta'
 import { flag } from './site/flags'
 import { pushUrl, replace } from './site/safe-url'
 import { useFlag } from './site/useFlag'
@@ -210,9 +210,10 @@ export default function App() {
   const first = useRef(true)
   useEffect(() => {
     if (widget) return // the widget page keeps its own URL and meta
-    setPageMeta(view === 'EXPLORE' ? board : undefined)
-    const want = { view, mode, board }
-    syncUrl(urlForView(want, location.search, location.pathname), !first.current && !sameView(urlView(mode), want))
+    const want = { view, mode, board }, url = urlForView(want, location.search, location.pathname)
+    // the home page (`/`, which shows the first board) keeps the site's own title and canonical; a board path gets the board's
+    setPageMeta(view === 'EXPLORE' && boardFromPath(url.split('?')[0]) ? board : undefined)
+    syncUrl(url, !first.current && !sameView(urlView(mode), want))
     first.current = false
   }, [view, mode, board, widget])
   // board ⇄ widget page (Back / Forward, a card's OPEN) as a view transition: the card's frame flies (X1, #18)

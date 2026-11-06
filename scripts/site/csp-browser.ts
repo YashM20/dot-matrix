@@ -2,9 +2,10 @@
  * The production CSP in a real browser, as a visitor gets it (#149). Serves `dist/` in-process with the CSP header
  * and page rewrites from `vercel.json`, opens Chrome WITHOUT the probe flag (`launch(..., { testHooks: false })`, so
  * src/lib/testHooks.ts is off as on a normal visit), and walks the app, boards (workers, Field IR, GPU, live data),
- * a widget page, the editor, the blog and an essay with SVG figures, the Lab and the legal pages. Checks:
- *  - no `securitypolicyviolation` on any page, Trusted Types included (Field IR's `new Function` attempt is the one
- *    expected refusal: the CSP has no 'unsafe-eval', so it falls back to its closure tree; counted, not failed);
+ * a widget page, the editor, the blog and an essay with SVG figures, the Lab and the legal pages, plus every board and
+ * the about view. Checks:
+ *  - no `securitypolicyviolation` on any page, Trusted Types included. Field IR never tries `new Function` in a
+ *    browser (#198), so an eval refusal is a failure like any other;
  *  - Trusted Types catch (refuse when enforced, report while report-only) a plain string into `innerHTML` and a foreign
  *    worker URL, and a
  *    same-origin blob worker (the audio clock's) is allowed;
@@ -20,6 +21,7 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import { createServer } from 'node:http'
 import { extname, join, normalize } from 'node:path'
 import { customCss } from '../../src/site/theme/accents'
+import { boardIds } from '../../src/widgets/manifest'
 import { launch, sleep } from '../lib/cdp'
 
 const DIST = 'dist'
@@ -46,7 +48,7 @@ const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`
 let failures = 0
 const check = (name: string, ok: boolean, detail = '') => { console.log(`${ok ? '✓' : '✗'} ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failures++ }
 
-const PAGES = ['/', '/light/', '/components/', '/audio/', '/ir/', '/gpu/', '/live/', '/pond/', '/workshop/', '/widget/clock/', '/?make=compose',
+const PAGES = ['/', '/about', ...boardIds.map(b => `/${b}/`), '/widget/clock/', '/?make=compose',
   '/blog/', '/blog/dot-matrix-essay/', '/lab/', '/lab/motion-lab.html', '/privacy', '/terms']
 /** Test-only globals a visitor must never get (src/lib/testHooks.ts and the boards' `?probe=1` hooks). */
 const TEST_GLOBALS = ['dot480Live', 'dot480Audio', '__hive', '__editor', '__editorShared', '__editorLink', '__editorClip', '__editorDevices', '__skinPerf', '__dotLatency', '__dotTestCamera', '__dotHandLog',
@@ -62,11 +64,9 @@ const RECORD = `(() => {
   window.Worker = function (u, o) { const w = new W(u, o); window.__workers.push(String(u)); return w }
   window.Worker.prototype = W.prototype
 })()`
-/** Field IR's `new Function` attempt, refused by design (no 'unsafe-eval'; the closure tree takes over). */
-const evalTry = (v: string) => /^script-src(-elem)? eval\b/.test(v) || /^require-trusted-types-for trusted-types-sink (Function|eval)\b/.test(v)
 
 const p = await launch(1280, 900, { testHooks: false })
-const evalSeen: string[] = [], styleSeen = new Set<string>()
+const styleSeen = new Set<string>()
 let sampleWorker = false
 try {
   await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: RECORD })
@@ -82,8 +82,7 @@ try {
       svg: [...document.querySelectorAll('.dot-svg svg')].filter(s => s.querySelector('use')).length })`)
     const styled = (v: string) => STRICT_STYLE && /^style-src/.test(v)
     for (const v of got.v.filter(styled)) styleSeen.add(`${page}: ${v}`)
-    const bad = got.v.filter(v => !evalTry(v) && !styled(v)), tt = p.logs.filter(l => /trusted ?types|TrustedHTML|TrustedScript/i.test(l))
-    evalSeen.push(...got.v.filter(evalTry).map(v => `${page}: ${v}`))
+    const bad = got.v.filter(v => !styled(v)), tt = p.logs.filter(l => /trusted ?types|TrustedHTML|TrustedScript/i.test(l))
     if (got.w.some(u => /sampleWorker/.test(u))) sampleWorker = true
     const legal = /^\/(privacy|terms)$|motion-lab/.test(page)
     check(`${page}: no CSP or Trusted Types violation, no Trusted Types error`, !bad.length && !tt.length, [...bad, ...tt].slice(0, 3).join(' | '))
@@ -106,7 +105,6 @@ try {
 } finally {
   await p.close(); server.close()
 }
-console.log(`  Field IR new Function attempts refused by the CSP (expected, closure tree used): ${evalSeen.length}${evalSeen.length ? ` (${evalSeen.slice(0, 2).join('; ')})` : ''}`)
 if (STRICT_STYLE) console.log(`  style-src without 'unsafe-inline' would block ${styleSeen.size} thing(s):${[...styleSeen].map(s => `
     ${s}`).join('')}`)
 console.log(failures ? `${failures} check(s) failed` : 'all checks passed')

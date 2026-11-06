@@ -2,10 +2,22 @@
  * The analytics consent banner (#151): plain DOM, so the app, the blog and the lab share it, in its own lazy chunk
  * with its CSS. Two equal buttons, neither focused or highlighted. It sits in the bottom corner, and a spacer of
  * its height at the end of the page lets every card scroll clear of it. It shows until the visitor picks.
+ * The CSS comes as a string and is adopted as a constructed sheet when the banner first shows: a plain CSS import
+ * landed in the shared analytics chunk's stylesheet, a render-blocking `<link>` on every page (#198).
  */
-import './banner.css'
+import css from './banner.css?inline'
+
+let styled = false
+function adoptStyles() {
+  if (styled || !('adoptedStyleSheets' in document)) return
+  styled = true
+  const sheet = new CSSStyleSheet()
+  sheet.replaceSync(css)
+  document.adoptedStyleSheets = [...document.adoptedStyleSheets, sheet]
+}
 
 export function showBanner(choose: (on: boolean) => void): () => void {
+  adoptStyles()
   const box = document.createElement('section'), space = document.createElement('div')
   box.className = 'consent'
   box.setAttribute('aria-label', 'Analytics')

@@ -11,7 +11,7 @@ const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle } as const
 /** Footer baseline: program size, so the card says what it is made of. */
 const FOOT = 134
-/** `mode: 'function'` is faster and falls back to the CSP-safe closure tree on its own. */
+/** `mode: 'function'` is faster in Node (scripts, parity tests); browsers always get the CSP-safe closure tree. */
 const program = (src: string): IRProgram => irProgram(src, { mode: 'function' })
 const footer = (src: string, p: IRProgram) => layer(T.text(`${new TextEncoder().encode(src).length} B  ${p.info.nodes} NODES`, 0, FOOT), 'idle')
 const env = (ctx: WidgetContext) => ({ t: ctx.t, data: ctx.data })

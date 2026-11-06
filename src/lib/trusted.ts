@@ -9,8 +9,8 @@
  *  - script URLs: `new Worker(...)` (the sample worker and the Field IR sandbox worker, from Vite's
  *    `new URL(..., import.meta.url)`, and the audio clock's blob) → the `default` policy, which passes this origin's
  *    own files and blobs only. It has no
- *    `createHTML` and no `createScript`, so any other string at a sink is refused, and `new Function` (already off
- *    under the CSP: Field IR falls back to its closure tree) stays off.
+ *    `createHTML` and no `createScript`, so any other string at a sink is refused, and `new Function` stays off
+ *    (Field IR never tries it in a browser; it uses its closure tree).
  * Every page entry (`src/main.tsx`, `src/blog/main.tsx`, `src/lab/main.tsx`) imports this module second, so the
  * policies exist before any worker starts; workers/client.ts and audio/scheduler.ts import it too. HTML is built with
  * DOM calls everywhere else (the analytics banner included). Browsers without

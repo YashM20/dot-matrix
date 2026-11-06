@@ -102,6 +102,6 @@ function BlogIndex() {
 
 export function Blog() {
   const post = postFromPath(location.pathname)
-  useEffect(() => { document.title = post ? `${post.title} · Matrix blog` : BLOG.title }, [post])
+  useEffect(() => { document.title = post ? `${post.title} · MATRIX blog` : BLOG.title }, [post])
   return post ? <PostPage post={post} /> : <BlogIndex />
 }

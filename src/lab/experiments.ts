@@ -11,5 +11,5 @@ export const EXPERIMENTS: readonly Experiment[] = [
   { slug: 'pipeline', title: 'Field to dots', dek: 'One field drawn twice: so fine it looks smooth, and as the dots a card uses. Drag the blob and change the pitch.', date: '2026-11-01' },
 ]
 /** The index page's own meta. */
-export const LAB = { title: 'Lab · Matrix', dek: 'Interactive pieces that sit outside the boards: take a part of the engine and play with it.', path: '/lab/' }
+export const LAB = { title: 'Lab · MATRIX', dek: 'Interactive pieces that sit outside the boards: take a part of the engine and play with it.', path: '/lab/' }
 export const experimentPath = (slug: string): string => `/lab/#${slug}`

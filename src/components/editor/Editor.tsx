@@ -184,7 +184,7 @@ async function share() {
     const m = await shareSel(), what = m.kind === 'doc' && !s.sel.frame ? 'the whole document' : LINK_WHAT[m.kind]
     s.setLink(m)
     const name = m.kind === 'program' ? 'a dot program' : m.kind === 'frame' ? (frameById(s.h.present, s.sel.frame)?.card.name ?? 'a frame') : s.h.present.name
-    const out: ShareOutcome = isPhone() ? await shareLink({ url: m.url, title: `${name} · Matrix`, text: `Open ${what} in the Matrix editor` }, copyText) : (await copyText(m.url)) ? 'copied' : 'manual'
+    const out: ShareOutcome = isPhone() ? await shareLink({ url: m.url, title: `${name} · MATRIX`, text: `Open ${what} in the Matrix editor` }, copyText) : (await copyText(m.url)) ? 'copied' : 'manual'
     if (TEST_HOOKS) window.__editorShared = out
     if (out === 'shared') s.setNote(`Link shared (${m.chars} chars): it opens ${what} in the editor`)
     else if (out === 'copied') s.setNote(`Link copied (${m.chars} chars): it opens ${what} in the editor`)
