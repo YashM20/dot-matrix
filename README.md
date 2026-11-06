@@ -37,7 +37,11 @@ Other useful scripts:
 pnpm build                   # production build into dist/ (plus OG images and per-board pages)
 pnpm golden --check          # every card still matches its pinned pixels in goldens/
 pnpm snap --board components # a headless PNG of a board (or card ids) into .snapshots/
+pnpm react-doctor            # React Doctor: a score and React findings (pinned version, settings in doctor.config.ts)
 ```
+
+`pnpm react-doctor` sends its findings (rule, file and line, no source) to react.doctor for the score. Add `--no-telemetry`
+to keep a run local. CI runs it as a report next to the gate; it never fails the build.
 
 ## How the engine works
 Every card is a list of fields. A field is a function that says how bright each point is.
