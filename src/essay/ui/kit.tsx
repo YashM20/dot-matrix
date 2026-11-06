@@ -1,14 +1,16 @@
-import type { ReactNode } from 'react'
+import { useId, type ReactNode } from 'react'
 
 export function Range({ label, value, min, max, step = 1, onChange, format, name }: {
   label: string; value: number; min: number; max: number; step?: number; onChange: (v: number) => void; format?: (v: number) => string; name?: string
 }) {
+  // the label holds only its text (one control per label); the <output> reads the shown value as a polite live region
+  const id = useId()
   return (
-    <label className="ctl">
-      <span className="ctl-label">{label}</span>
-      <input type="range" name={name} min={min} max={max} step={step} value={value} onChange={e => onChange(+e.target.value)} />
-      <output>{format ? format(value) : value}</output>
-    </label>
+    <div className="ctl">
+      <label className="ctl-label" htmlFor={id}>{label}</label>
+      <input id={id} type="range" name={name} min={min} max={max} step={step} value={value} onChange={e => onChange(+e.target.value)} />
+      <output htmlFor={id}>{format ? format(value) : value}</output>
+    </div>
   )
 }
 

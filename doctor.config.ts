@@ -52,6 +52,17 @@ export default {
         rules: ['react-doctor/no-loading-flag-reset-outside-finally', 'react-doctor/no-floating-then-in-jsx-handler'],
       },
       {
+        // a press on the scrim (the modal <dialog> itself, or the palette's backdrop) closes it: a pointer shortcut,
+        // since Escape closes each of them as well (#208)
+        files: ['src/components/Sheet.tsx', 'src/components/Modal.tsx', 'src/components/palette/Palette.tsx'],
+        rules: ['react-doctor/no-noninteractive-element-interactions', 'react-doctor/no-static-element-interactions'],
+      },
+      {
+        // a click on a remix-graph node is the pointer's shortcut: every node is also a button in the list under it
+        files: ['src/components/editor/Lineage.tsx'],
+        rules: ['react-doctor/click-events-have-key-events'],
+      },
+      {
         // the dock ghost is `inert` as well as `aria-hidden`, so none of its buttons can take focus (#198)
         files: ['src/App.tsx'],
         rules: ['react-doctor/no-focusable-content-in-aria-hidden'],

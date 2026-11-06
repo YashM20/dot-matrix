@@ -3,7 +3,7 @@
  * and drawn by the Canvas renderer, so even the toolbar is made of dots. Inputs are plain HTML with
  * labels (44 px targets on touch, editor.css).
  */
-import { useEffect, useMemo, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, type ReactNode } from 'react'
 import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { sampleLayers } from '../../engine/sampler/gridSampler'
 import { useThemeTokens } from '../../site/theme/useTheme'
@@ -90,8 +90,11 @@ export function Pick<T extends string | number>({ label, value, options, onChang
 }
 const fixed2 = (v: number) => v.toFixed(2)
 export function Slider({ label, hint, value, onChange, min, max, step, fmt = fixed2 }: { label: string; hint?: string; value: number; onChange: (v: number) => void; min: number; max: number; step: number; fmt?: (v: number) => string }) {
-  return <label className="ed-slider"><span>{label}{hint && <small>{hint}</small>}</span>
-    <input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))} /><output>{fmt(value)}</output></label>
+  // the label holds only its text (one control per label); the slider announces its own exact value, and the
+  // <output> (a polite live region) reads the formatted one, also when RESET or another control moves it
+  const id = useId()
+  return <div className="ed-slider"><label htmlFor={id}>{label}{hint && <small>{hint}</small>}</label>
+    <input id={id} type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))} /><output htmlFor={id}>{fmt(value)}</output></div>
 }
 export function Text({ label, value, onChange, max = 64, upper }: { label: string; value: string; onChange: (v: string) => void; max?: number; upper?: boolean }) {
   return <label className="ed-field ed-wide"><span>{label}</span><input value={value} maxLength={max} autoCapitalize={upper ? 'characters' : 'off'} spellCheck={false} onChange={e => onChange(upper ? e.target.value.toUpperCase() : e.target.value)} /></label>

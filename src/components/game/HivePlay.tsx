@@ -26,6 +26,7 @@ import { loadScores, saveScores } from '../../game/scores'
 import { sound } from '../../game/sound'
 import { GAME } from '../../game/world'
 import { paint, sampleInto, surfaceFor, type Surface } from './dots'
+import { Modal } from '../Modal'
 
 const G = layoutFor(GAME)
 /** Stage dissolves: which mask carries you into each stage. */
@@ -224,13 +225,13 @@ export default function HivePlay({ theme = dot480, onClose }: { theme?: ThemeTok
   }
   return (
     // a held thumb on the touch pad is a held button, never a context menu
-    <div className="hive-play" role="dialog" aria-modal="true" aria-label="HIVE, playable. Arrows or WASD move, Space fires or jumps, Enter starts, Escape quits." onContextMenu={e => e.preventDefault()}>
-      <canvas ref={screen} className="hive-screen" tabIndex={0} role="img" aria-label="Game screen" onPointerDown={onScreenPointer} />
+    <Modal className="hive-play" aria-label="HIVE, playable. Arrows or WASD move, Space fires or jumps, Enter starts, Escape quits." scrim={false} onClose={onClose} onContextMenu={e => e.preventDefault()}>
+      <canvas ref={screen} className="hive-screen" tabIndex={0} data-autofocus role="img" aria-label="Game screen" onPointerDown={onScreenPointer} />
       {touch && <canvas ref={pad} className="hive-pad" aria-hidden="true" />}
       <div className="hive-bar">
         <span>ARROWS / WASD · SPACE · SHIFT · ENTER · Q/E STRAFE · CLICK = MOUSE-LOOK</span>
         <button type="button" onClick={() => { if (document.pointerLockElement) document.exitPointerLock(); onClose() }}>ESC  QUIT</button>
       </div>
-    </div>
+    </Modal>
   )
 }

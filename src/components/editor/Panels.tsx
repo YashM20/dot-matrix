@@ -22,9 +22,12 @@ import { attempt } from './attempt'
 
 const KIND: Record<StudioLayer['kind'], string> = { ir: 'CODE', text: 'TEXT', sites: 'SITES', 'preset-layer': 'REF', spec: 'SPEC', paint: 'PAINT' }
 
+/** The rename field takes focus when it opens (F2 or a double-click asked for it), its text selected. */
 function Rename({ value, onDone }: { value: string; onDone: (v?: string) => void }) {
   const [v, setV] = useState(value)
-  return <input className="ed-rename" autoFocus value={v} maxLength={64} aria-label="Rename" onChange={e => setV(e.target.value)} onFocus={e => e.currentTarget.select()}
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => { ref.current?.focus() }, [])
+  return <input ref={ref} className="ed-rename" value={v} maxLength={64} aria-label="Rename" onChange={e => setV(e.target.value)} onFocus={e => e.currentTarget.select()}
     onKeyDown={e => { e.stopPropagation(); if (e.key === 'Enter') onDone(v.trim() || value); else if (e.key === 'Escape') onDone() }} onBlur={() => onDone(v.trim() || value)} />
 }
 
@@ -72,7 +75,7 @@ function FrameRows({ f }: { f: EditorFrame }) {
     const on = picks.includes(l.id), dragging = drag?.id === l.id, locked = !!f.locks?.includes(l.id)
     return (
       <li key={l.id} data-index={i} className={`ed-row ed-row--layer${child ? ' ed-row--child' : ''}${on ? ' on' : ''}${l.visible ? '' : ' off'}${dragging ? ' drag' : ''}${drag && drag.to === i && !dragging ? ' drop' : ''}`}>
-        <span className="ed-grip" role="button" tabIndex={-1} aria-label={`Drag to reorder ${l.name}`} onPointerDown={e => onGrip(e, l.id, i)} onPointerMove={onGripMove} onPointerUp={onGripUp} onPointerCancel={() => setDrag(null)}>⋮⋮</span>
+        <span className="ed-grip" aria-hidden="true" title="Drag to reorder (keys: Alt+↑/↓ on the name)" onPointerDown={e => onGrip(e, l.id, i)} onPointerMove={onGripMove} onPointerUp={onGripUp} onPointerCancel={() => setDrag(null)}>⋮⋮</span>
         {renaming === l.id ? <Rename value={l.name} onDone={v => { setRenaming(null); if (v) edit(d => editLayer(d, { frame: f.id, layer: l.id }, x => ({ ...x, name: v }))) }} />
           : <button type="button" className="ed-row-name" aria-pressed={on} title="Select (⇧ adds) · double-click or F2 renames · Alt+↑/↓ reorders" onClick={e => pick(e, l.id)} onDoubleClick={() => setRenaming(l.id)} onKeyDown={e => onKey(e, l.id, i)}>
             <b>{KIND[l.kind]}</b>{l.name}{errors.has(l.id) && <i className="ed-err" title={errors.get(l.id)!.message}>ERR</i>}{l.blend !== 'normal' && <small>{l.blend}</small>}</button>}

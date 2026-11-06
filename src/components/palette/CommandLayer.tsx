@@ -20,6 +20,7 @@ import { boardOfCard, type CommandApi } from './api'
 import { setReducedMotion } from './reducedMotion'
 import { onLayerRequest } from '../../site/layer'
 import { Sheet } from '../Sheet'
+import { Modal } from '../Modal'
 import { SkinList } from '../skins/SkinList'
 import { onTiltChange, requestTilt, setTiltOn, tiltOn, tiltState } from '../../site/light'
 import { withTheme } from '../../site/theme/share'
@@ -281,6 +282,9 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
   useEffect(() => {
     let konami = 0, tHeld = false, tX: number | null = null, tBase = 0
     const onKey = (e: KeyboardEvent) => {
+      // a modal dialog (the HIVE game, the boss card, the likes question) owns the keyboard: no board shortcut,
+      // palette or Konami code reaches past it (the palette would open behind it, under the inert page)
+      if (document.querySelector('dialog:modal')) { konami = 0; return }
       const k = e.key
       konami = k.toLowerCase() === KONAMI[konami].toLowerCase() ? konami + 1 : k === KONAMI[0] ? 1 : 0
       if (konami === KONAMI.length) { konami = 0; api.boss(); return }
@@ -321,13 +325,6 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onUp); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerover', onHover) }
   }, [api])
 
-  useEffect(() => {
-    if (!boss) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setBoss(false) }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [boss])
-
   return <>
     {xray && anyXray && Inspector && <Suspense fallback={null}><Inspector onRemix={(id, data) => api.remix(id, data)} onStudio={id => api.studio(id)} onCopyLink={id => api.copyLink(id)} /></Suspense>}
     <TimeMachine />
@@ -342,12 +339,12 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     <div className="pal-toast" role="status" aria-live="polite">{note && <span key={note.id}>{note.text}</span>}</div>
     {palette && <Suspense fallback={null}><Palette api={api} hoveredCard={hovered} onClose={() => setPalette(false)} /></Suspense>}
     {shell && <Suspense fallback={null}><Shell api={api} onClose={() => setShell(false)} /></Suspense>}
-    {boss && <div className="pal-boss" role="dialog" aria-modal="true" aria-label="Boss fight: Level 07, the queen" onMouseDown={e => { if (e.target === e.currentTarget) setBoss(false) }}>
+    {boss && <Modal className="pal-boss" aria-label="Boss fight: Level 07, the queen" onClose={() => setBoss(false)}>
       <div className="pal-boss-card">
         <p className="pal-boss-title">↑↑↓↓←→←→BA · LEVEL 07 · THE QUEEN</p>
         <DotWidget type="lv-queen" enter={{ delay: 0, mask: 'radial', duration: 900 }} />
-        <button className="pal-boss-flee" autoFocus onClick={() => setBoss(false)}>FLEE <kbd>ESC</kbd></button>
+        <button type="button" className="pal-boss-flee" data-autofocus onClick={() => setBoss(false)}>FLEE <kbd>ESC</kbd></button>
       </div>
-    </div>}
+    </Modal>}
   </>
 }

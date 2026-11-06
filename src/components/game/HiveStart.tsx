@@ -45,9 +45,11 @@ export function HiveStart({ theme = dot480 }: { theme?: ThemeTokens }) {
   const start = useCallback(() => { setPlayParam(true); setOpen(true) }, [])
   const close = useCallback(() => { setPlayParam(false); setOpen(false) }, [])
   return <>
-    <button type="button" className="hive-start" onClick={start} aria-label="Press start: play HIVE">
+    {/* named by the words it shows (the canvas says PRESS START) */}
+    <button type="button" className="hive-start" onClick={start}>
       <canvas ref={ref} aria-hidden="true" />
-      <span className="hive-start-sub" aria-hidden="true">PLAY HIVE — KEYBOARD, GAMEPAD OR TOUCH</span>
+      <span className="sr-only">Press start: </span>
+      <span className="hive-start-sub">PLAY HIVE — KEYBOARD, GAMEPAD OR TOUCH</span>
     </button>
     {open && <Suspense fallback={null}><HivePlay theme={theme} onClose={close} /></Suspense>}
   </>

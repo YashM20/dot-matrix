@@ -5,7 +5,7 @@
  * `KNOWN` holds the serious and critical findings already listed on #187 with an owner issue: they print as known
  * and don't fail the run (scripts/lib/check.ts `knownChecker`). A summary table closes the run.
  *
- * Routes: home, two boards, a widget page, a blog post, the essay and the privacy page (`--all` adds every board,
+ * Routes: home, two boards, a widget page, browse, about, a blog post, the essay and the privacy page (`--all` adds every board,
  * the blog index, the terms page and the 404 page). Modes: the default dark theme and light (`--modes` takes any of
  * dark, light, more-dark, more-light; `more` is `prefers-contrast: more`).
  *
@@ -21,10 +21,7 @@ import { findChrome, launch, serveDist, sleep, type Page } from '../lib/cdp'
 import { knownChecker } from '../lib/check'
 
 /** Serious or critical findings listed on #187 with the issue that owns the fix. Delete an id when its fix lands. */
-const KNOWN: readonly string[] = [
-  // #185 (links and chips): the widget page's card pill link is named by its tooltip, not by the text it shows
-  'axe:label-content-name-mismatch@widget',
-]
+const KNOWN: readonly string[] = []
 
 const args = process.argv.slice(2)
 const flag = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined }
@@ -45,6 +42,8 @@ const ALL_ROUTES: [string, string, string][] = [
   ['mosaic', 'mosaic/', APP_READY],
   ['components', 'components/', APP_READY],
   ['widget', 'widget/timer/', `!!document.querySelector('.shell--widget .wp-ids, .shell--widget .wp-missing')`],
+  ['browse', 'browse/', `!document.querySelector('.view-loading') && !!document.querySelector('.browse-grid .dot-card')`],
+  ['about', '?about', `!document.querySelector('.view-loading') && !!document.querySelector('.about-view')`],
   ['post', 'blog/build-your-own-dot-engine/', `!!document.querySelector('main.essay.post .hero') && !document.querySelector('.post-wait')`],
   ['essay', 'blog/dot-matrix-essay/', `!!document.querySelector('main.essay.post .hero') && !document.querySelector('.post-wait')`],
   ['privacy', 'privacy', `!!document.querySelector('main.legal')`],

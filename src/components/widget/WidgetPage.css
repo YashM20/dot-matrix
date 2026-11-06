@@ -11,7 +11,8 @@
     height: 100svh
   }
 
-  .shell--widget > .wp {
+  .shell--widget > main,
+  .shell--widget > main > .wp {
     display: flex;
     flex: 1 1 auto;
     flex-direction: column;

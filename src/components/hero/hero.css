@@ -27,7 +27,9 @@
 }
 
 /* scroll first (docs/UX-PLAN.md §10): a tap opens the picker on lift, a swipe scrolls the page */
+/* a <button> (the keyboard's way to pick an image): as wide as the figure, like the div it was */
 .hero-card {
+  width: 100%;
   cursor: pointer;
   touch-action: manipulation;
   -webkit-user-select: none;

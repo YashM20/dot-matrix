@@ -2,7 +2,8 @@
  * Remix lineage in CODE (E5). Programs: the old RemixGraph (deleted in round 2, restored from f9bafb2) — the
  * eight examples and the programs this browser shared or opened, drawn in dots: each node a thumbnail of
  * the program, dotted edges from a program to its remixes, the current one framed in the accent. A click
- * on a node opens it as a frame (or selects the frame it made). Frames: the chain of frame / document links
+ * on a node opens it as a frame (or selects the frame it made); the list under the graph holds every node as a
+ * button, the keyboard's way in (#208). Frames: the chain of frame / document links
  * the selected frame came from, as far as this browser saw them.
  */
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from 'react'
@@ -66,9 +67,10 @@ export function RemixGraph({ current, version = 0 }: { current?: string; version
   return <Section title="REMIX" aside={`${list.length} programs · ${own.length} yours`}>
     {chain.length > 1 && <p className="ed-lineage" aria-label="Remix lineage">{chain.map((e, i) => <span key={e.id}>{i ? ' ← ' : ''}<b>{e.name}</b> #{e.id}</span>)}</p>}
     {current && chain.length <= 1 && <p className="ed-hint">{chain.length ? 'An original: nothing above it here.' : 'Not shared yet: COPY LINK adds it to the graph, under the program it came from.'}</p>}
-    <div className="ed-graph"><canvas ref={ref} onClick={pick} role="img" aria-label={`Remix graph: ${list.length} programs; click one to open it`} title="Open a program" style={{ aspectRatio: `${graph.grid.cols} / ${graph.grid.rows}` }} /></div>
+    {/* a click on a node is the pointer's shortcut: every node is also a button in the list under the graph */}
+    <div className="ed-graph"><canvas ref={ref} onClick={pick} role="img" aria-label={`Remix graph: ${list.length} programs; each one is also in the list below`} title="Open a program" style={{ aspectRatio: `${graph.grid.cols} / ${graph.grid.rows}` }} /></div>
     <ProgramLikes entries={list.filter(e => e.seed || e.id === current)} />
-    {own.length > 0 && <ul className="ed-mini-list ed-remixes">{own.map(e => <li key={e.id}><button type="button" aria-current={e.id === current || undefined} title={e.parent ? `remix of #${e.parent}` : 'original'} onClick={() => open(e)}>{e.name} <small>#{e.id}{e.parent ? ` ← #${e.parent}` : ''}</small></button></li>)}</ul>}
+    <ul className="ed-mini-list ed-remixes" aria-label="Programs">{list.map(e => <li key={e.id}><button type="button" aria-current={e.id === current || undefined} title={e.seed ? 'example' : e.parent ? `remix of #${e.parent}` : 'original'} onClick={() => open(e)}>{e.name} <small>{e.seed ? 'example' : `#${e.id}${e.parent ? ` ← #${e.parent}` : ''}`}</small></button></li>)}</ul>
     {own.length > 0 && <div className="ed-row-btns"><button type="button" onClick={() => { clearGallery(); setCleared(n => n + 1) }}>CLEAR MY PROGRAMS</button></div>}
   </Section>
 }

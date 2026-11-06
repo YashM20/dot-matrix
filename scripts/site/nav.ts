@@ -46,7 +46,7 @@ const uid = (JSON.parse(readFileSync('src/widgets/ids.json', 'utf8')) as Record<
  * `post` (a blog post: the URL says which), `privacy`, `terms`, `lab`, `crashed` (the root error boundary).
  */
 const VIEW = `(() => {
-  const shell = document.querySelector('main.shell')
+  const shell = document.querySelector('.shell')
   if (shell) {
     if (document.querySelector('.view-loading')) return ''
     if (shell.classList.contains('shell--widget')) return document.querySelector('.wp-missing') ? 'widget-missing' : document.querySelector('.wp-ids code')?.textContent.trim().replace(/^/, 'widget:') ?? ''
