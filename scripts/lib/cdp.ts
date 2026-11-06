@@ -56,6 +56,8 @@ export interface Page {
   touch: (path: [number, number][][]) => Promise<void>
   tap: (x: number, y: number) => Promise<void>
   key: (key: string, code: string, vk: number, modifiers?: number) => Promise<void>
+  /** Calls `fn` with the params of every CDP event named `method` (enable its domain first, e.g. `Fetch.enable`). */
+  on: (method: string, fn: (params: any) => void) => void
   /** Saves flag overrides in this origin's localStorage (`null` drops one); they apply from the next page load. */
   setFlags: (flags: Flags) => Promise<void>
   close: () => Promise<void>
@@ -97,8 +99,11 @@ export async function launch(width: number, height: number, opts: LaunchOptions 
   ws.addEventListener('error', () => drop('CDP socket error'))
   proc.on('exit', () => drop('Chrome exited'))
   const downloads: { name: string; bytes: number }[] = [], names = new Map<string, string>()
+  const listeners = new Map<string, ((params: any) => void)[]>()
+  const on = (method: string, fn: (params: any) => void) => { listeners.set(method, [...listeners.get(method) ?? [], fn]) }
   ws.addEventListener('message', e => {
     const m = JSON.parse(String(e.data))
+    if (m.method) for (const fn of listeners.get(m.method) ?? []) fn(m.params)
     if (m.id && calls.has(m.id)) { calls.get(m.id)!.done(m); calls.delete(m.id) }
     if (m.method === 'Runtime.exceptionThrown') logs.push(`exception: ${m.params.exceptionDetails?.exception?.description ?? m.params.exceptionDetails?.text}`)
     if (m.method === 'Runtime.consoleAPICalled' && m.params.type === 'error') logs.push(`console.error: ${m.params.args.map((a: any) => a.value ?? a.description).join(' ')}`)
@@ -161,5 +166,5 @@ export async function launch(width: number, height: number, opts: LaunchOptions 
     const r = await cdp('Browser.setDownloadBehavior', { behavior: 'allowAndName', downloadPath: dir, eventsEnabled: true })
     if (r.error) await cdp('Page.setDownloadBehavior', { behavior: 'allow', downloadPath: dir })
   }
-  return { cdp, js, waitFor, logs, downloads, allowDownloads, shot, mouse, drag, touch, tap, key, setFlags, close } as Page
+  return { cdp, js, waitFor, logs, downloads, allowDownloads, shot, mouse, drag, touch, tap, key, on, setFlags, close } as Page
 }
