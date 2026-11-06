@@ -1,5 +1,6 @@
 import type { Control, ControlPatch, DotStyle, ThemeTokens } from '../engine'
 import { needsHold } from '../engine/interaction'
+import { describe } from '../engine/describe'
 import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { withChrome, type WidgetPreset } from '../widgets/types'
 import { registeredPreset } from '../widgets/registry'
@@ -78,6 +79,24 @@ function usePreset(type: string, presetProp: WidgetPreset | undefined): WidgetPr
   return presetProp ?? registeredPreset(type) ?? found
 }
 
+/**
+ * The card's accessible name: its name, then the words drawn on it (`describe().label`), so a screen reader hears
+ * "Timer: 12:48" and not just "Timer". Worked out when the page is idle, off the first paint; until then (and for a card
+ * that draws no words) it is the name. Described as a reduced-motion still, so a card with a live world never starts one.
+ */
+function useCardLabel(preset: WidgetPreset | undefined, data: Record<string, number>): string | undefined {
+  const dataKey = JSON.stringify(data)
+  const [said, setSaid] = useState<{ preset: WidgetPreset; label: string }>()
+  useEffect(() => {
+    if (!preset) return
+    const run = () => setSaid({ preset, label: describe(preset, { data: JSON.parse(dataKey) as Record<string, number>, reducedMotion: true }).label })
+    if (typeof requestIdleCallback === 'function') { const id = requestIdleCallback(run, { timeout: 2000 }); return () => cancelIdleCallback(id) }
+    const id = window.setTimeout(run, 200)
+    return () => window.clearTimeout(id)
+  }, [preset, dataKey])
+  return said && said.preset === preset ? said.label : undefined
+}
+
 export function DotWidget({ type, density, dotShape, roundness, size, theme: themeProp, animated, data, tick, preset: presetProp, enter, exit, shared, sharedKeys, onShared }: DotWidgetProps) {
   const preset = usePreset(type, presetProp)
   const site = useTheme(), skin = useDisplaySkin()
@@ -102,6 +121,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme: the
   const camera = useCamera(preset?.media === 'camera', !!merged.cam, preset?.grid)
   // HAND mode (C6): a card with a `hand` toggle drives the page-wide hand pointer
   const hand = useHandMode(!!preset?.controls?.some(c => c.key === HAND_KEY)), { intercept } = hand
+  const spoken = useCardLabel(preset, merged)
   const layers = useMemo(() => preset && (preset.media ? withMedia(withChrome(preset), camera.read) : withChrome(preset)), [preset, camera.read])
   // C10 X-ray slot: identity (same layers, no override) unless this card is X-rayed with a layer soloed / muted
   const xr = useXRay(layers), xray = useFlag('xray') && !!XRayOverlay, make = useFlag('make')
@@ -133,7 +153,9 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme: the
   // working unscaled; boxes that fall outside the smaller grid are dropped
   const controls = preset.controls?.filter(({ box: [c, r, bw, bh] }) => c < grid.cols && r < grid.rows && c + bw > 0 && r + bh > 0)
   const interactive = !!controls?.length
-  const hint = interactive ? hintVerb(preset, controls!) : undefined, touchHint = hint && touchVerb(hint, controls!), name = preset.live ? `${preset.name} (live)` : preset.name
+  const hint = interactive ? hintVerb(preset, controls!) : undefined, touchHint = hint && touchVerb(hint, controls!), name = preset.liveData ? `${preset.name} (live)` : preset.name
+  // a still card's picture carries the words on it; an interactive card has no picture role, so its group does
+  const label = spoken ?? name
   // the live camera runs at 30; a card's own `fps` drops a tier on phones; no `fps` keeps DotCanvas's default
   const fps = camera.status === 'live' ? 30 : preset.fps !== undefined ? cardFps(preset.fps, fpsTier()) : undefined
   // X-ray only while its flag is on; REMIX opens MAKE, so only while the `make` flag is on
@@ -149,7 +171,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme: the
   return (
     // a group (it holds the action strip); a static card's body is one dot-matrix picture (role="img"), an
     // interactive card's body holds its accessibility overlay (real controls)
-    <div className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}${letGo ? ' dot-card--engaged' : ''}`} role="group" data-xr-key={xr.key} data-card-id={preset.id} aria-label={name}
+    <div className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}${letGo ? ' dot-card--engaged' : ''}`} role="group" data-xr-key={xr.key} data-card-id={preset.id} aria-label={interactive ? label : name}
       {...(inset ? { 'data-scheme': scheme, 'data-accent': site.accent } : {})}>
       {preset.chrome !== 'dots' && <header className="dot-card-head" aria-hidden="true">
         <span className="dot-card-label">{preset.name.toUpperCase()}{hint && <small className="dot-card-hint" data-touch={touchHint}>{hint}</small>}</span>
@@ -166,7 +188,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme: the
             : <button key={a} type="button" tabIndex={-1} role="menuitem" onClick={act(a)}>{label}</button>)}
         </div>}
       </div>
-      <div className="dot-card-body" role={interactive ? undefined : 'img'} aria-label={interactive ? undefined : name}>
+      <div className="dot-card-body" role={interactive ? undefined : 'img'} aria-label={interactive ? undefined : label}>
         <DotCanvas layers={xr.layers} renderer={xr.renderer} onMode={xr.onMode} data={preset.media ? { ...merged, ...camera.data, ...hand.data } : { ...merged, ...hand.data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={fps} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
           controls={interactive ? controls : undefined} onInput={interactive ? onInput : undefined} onEngage={interactive ? onEngage : undefined} />
         {xr.on && xray && XRayOverlay && <Suspense fallback={null}><XRayOverlay xr={xr} preset={preset} layers={layers} data={preset.media ? { ...merged, ...camera.data } : merged} grid={grid} style={style} theme={theme}

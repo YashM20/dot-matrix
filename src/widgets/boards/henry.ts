@@ -47,7 +47,7 @@ export function dotText(str: string, x: number, y: number, o: { px: number; py?:
     g.forEach((row, r) => [...row].forEach((b, c) => { if (b === '#') sites.push([cx + c * px, y + r * py]) }))
     cx += (g[0].length + gap) * px
   }
-  return T.dots(sites, size)
+  return T.dots(sites, size, str)
 }
 /**
  * Split-flap text as dot sites: like `dotText`, but a column mid-flip shows the new top half and
@@ -75,7 +75,7 @@ export function flapText(cells: FlapCell[], x: number, y: number, o: { px: numbe
     }))
     cx += (b[0].length + gap) * px
   }
-  return [T.dots(faces, size), T.dots(flap, size)]
+  return [T.dots(faces, size, cells.map(c => c.to).join('')), T.dots(flap, size)]
 }
 const side = (ax: number, ay: number, bx: number, by: number, x: number, y: number) => (bx - ax) * (y - ay) - (by - ay) * (x - ax)
 const segDist = (ax: number, ay: number, bx: number, by: number, x: number, y: number) => {

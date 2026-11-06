@@ -86,7 +86,7 @@ const heroRun = ncaRun({
 const growth = new Float32Array(W * H)
 export const healMirror: WidgetPreset = {
   id: 'heal-mirror', name: 'Heal Mirror', label: 'HEAL  SCRATCH ME', ...tile, credit,
-  controls: scratchPad('Scratch the lizard'), defaults: { sx: .5, sy: .5 },
+  controls: scratchPad('Scratch the lizard with the pointer or the arrow keys'), defaults: { sx: .5, sy: .5 },
   layers: ctx => {
     scratch(heroRun, ctx)
     const g = ncaRunAt(heroRun, ctx.t), front = ncaGrowth(heroRun, growth)
@@ -152,7 +152,7 @@ const persistRun = ncaRun({
 })
 export const healPersist: WidgetPreset = {
   id: 'heal-persist', name: 'Heal Persist', label: 'HEAL  PERSIST', ...tile, credit,
-  controls: scratchPad('Scratch the lizard'), defaults: { sx: .5, sy: .5 },
+  controls: scratchPad('Scratch the lizard with the pointer or the arrow keys'), defaults: { sx: .5, sy: .5 },
   layers: ctx => {
     scratch(persistRun, ctx)
     const g = ncaRunAt(persistRun, ctx.t), s = ncaPhase(persistRun, ctx.t) * 16 + 2.5

@@ -69,7 +69,7 @@ export const boardManifest = [
   { id: 'fractals', title: 'FRACTALS: ESCAPE, TRAP, DENSITY', columns: 3, density: 'standard', load: () => import('./boards/fractals').then(m => ({ items: m.fractalsBoard })) },
   { id: 'oldschool', title: 'OLDSCHOOL: TUNNELS, CLOUDS AND FEEDBACK', columns: 3, density: 'standard', load: () => import('./boards/oldschool').then(m => ({ items: m.oldschoolBoard })) },
   { id: 'scenes', title: 'SCENES: 3D DISTANCE FIELDS IN DOTS', columns: 2, density: 'standard', load: () => import('./boards/scenes').then(m => ({ items: m.scenesBoard })) },
-  { id: 'dash', title: 'DASH: CAR AND EV INSTRUMENTS', columns: 3, density: 'standard', load: () => import('./boards/dash').then(m => ({ items: m.dashBoard, shared: m.dashShared })) },
+  { id: 'dash', title: 'CAR: DASH AND EV INSTRUMENTS', columns: 3, density: 'standard', load: () => import('./boards/dash').then(m => ({ items: m.dashBoard, shared: m.dashShared })) },
   { id: 'kinetic', title: 'KINETIC: ONE WORD, SEVEN WAYS TO MOVE IT', columns: 3, density: 'standard', load: () => import('./boards/kinetic').then(m => ({ items: m.kineticBoard, shared: m.kineticShared })) },
   { id: 'faces', title: 'FACES: DOTS THAT LOOK BACK', columns: 2, density: 'standard', load: () => import('./boards/faces').then(m => ({ items: m.facesBoard })) },
   { id: 'charts', title: 'CHARTS: A DOT CHARTS KIT', columns: 3, density: 'standard', load: () => import('./boards/charts').then(m => ({ items: m.chartsBoard })) },

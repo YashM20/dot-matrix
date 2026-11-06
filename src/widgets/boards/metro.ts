@@ -53,18 +53,21 @@ function bitsFor(ch: string, font: Font): Bits {
   const cols = WIDE.has(ch) ? [2, 2, 1, 2, 2] : ch === 'H' ? [2, 1, 2, 1, 2] : [2, 1, 1, 1, 2]
   return squeeze(glyph(ch, { smooth: true }), cols, font === 'narrowShort' ? [2, 1, 2, 1, 2, 1, 2] : [2, 2, 2, 2, 2, 2, 2])
 }
-interface TextDots { font: Font; px: number; py?: number; size: number; gap?: number; align?: 'left' | 'center' }
-/** Text as dot sites: first dot centre at card cell (x, y), `px`/`py` cells between dots, `gap` empty dots between glyphs. */
+interface TextDots { font: Font; px: number; py?: number; size: number; gap?: number; align?: 'left' | 'center'; zeroAsO?: boolean }
+/**
+ * Text as dot sites: first dot centre at card cell (x, y), `px`/`py` cells between dots, `gap` empty dots between glyphs.
+ * `zeroAsO` draws each 0 with the O glyph (the reference zero has no slash); the text it reads out keeps the digit.
+ */
 function textDots(str: string, x: number, y: number, o: TextDots): LatticeField {
   const py = o.py ?? o.px, gap = o.gap ?? (o.font === '5x7' || o.font.startsWith('narrow') ? 1 : 2)
-  const glyphs = [...str].map(ch => bitsFor(ch, o.font)), width = glyphs.reduce((w, g) => w + (g[0]?.length ?? 0) + gap, -gap)
+  const glyphs = [...(o.zeroAsO ? O(str) : str)].map(ch => bitsFor(ch, o.font)), width = glyphs.reduce((w, g) => w + (g[0]?.length ?? 0) + gap, -gap)
   let cx = o.align === 'center' ? x - ((width - 1) * o.px) / 2 : x
   const sites: Pt[] = []
   for (const g of glyphs) {
     g.forEach((row, r) => row.forEach((on, c) => { if (on) sites.push([cx + c * o.px, y + r * py]) }))
     cx += ((g[0]?.length ?? 0) + gap) * o.px
   }
-  return T.dots(sites, o.size)
+  return T.dots(sites, o.size, str)
 }
 /** Pixel-art rows → dot sites (`on` picks which characters light up). */
 function spriteDots(rows: string[], x: number, y: number, px: number, py: number, size: number, on = '#'): LatticeField {
@@ -81,7 +84,7 @@ const O = (s: string) => s.replace(/0/g, 'O')
 export const metro: WidgetPreset = {
   id: 'metro', name: 'Metro', group: 'text', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
-    layer(textDots(O('02'), 29.6, 23.6, { font: 'bold', px: 2.5, py: 2.6, gap: 4, size: 2.75 })),
+    layer(textDots('02', 29.6, 23.6, { zeroAsO: true, font: 'bold', px: 2.5, py: 2.6, gap: 4, size: 2.75 })),
     layer(T.big('MIN', 54.1, 87.3, { lattice: 2.05 })),
     // line map: origin ring → track → you-are-here → climb → destination ring
     layer(T.dotRing(12.7, 134.8, 4.5, { spacing: 2.8, size: 2.3 })),
@@ -117,7 +120,7 @@ export const oxygen: WidgetPreset = {
 }
 
 export const homeQuiet: WidgetPreset = {
-  id: 'home-quiet', name: 'Home', group: 'icon', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'home-quiet', name: 'Home Quiet', label: 'Home', group: 'icon', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => {
     // floor plan: two rooms on the left (door gap in the shared right wall), one on the right (door on its left)
     const X = [12.7, 58.6], R = [83.5, 132.1], Y = (i: number) => 72.2 + i * 3.415
@@ -145,7 +148,7 @@ export const finalLap: WidgetPreset = {
     layer(T.dots(LAP, 2.5)),
     layer(T.dots([[108.3, 73.6]], 8.5), 'active'),
     layer(T.dots(seg(11.6, 128.6, 20.6, 128.6, 6), 1.5)),
-    layer(textDots(O('0.8 SEC'), 25.7, 123.1, { font: '5x7', px: 1.8, py: 1.88, size: 2.1 })),
+    layer(textDots('0.8 SEC', 25.7, 123.1, { zeroAsO: true, font: '5x7', px: 1.8, py: 1.88, size: 2.1 })),
   ],
 }
 
@@ -165,11 +168,11 @@ export const newswire: WidgetPreset = {
 const ANTLERS: Pt[] = [[3.4, 30], [5.5, 35.9], [6.8, 41.4], [11, 46.8], [11, 60.3], [13.9, 32.9], [13.9, 38.4], [13.9, 43.9], [14.3, 27.4], [14.3, 51.5], [14.8, 64.6], [16.9, 22.4], [19.4, 54.9], [19.8, 19], [20.3, 64.6], [25.3, 57.4], [27.4, 40.9], [27.4, 46.4], [27.4, 63.7], [29.5, 35.9], [30, 51.9], [32.1, 54], [32.5, 60.3], [34.6, 66.7], [35.4, 27.4], [35.4, 30.4], [39.7, 68.8], [45.1, 55.3], [45.1, 59.9], [45.1, 71.3], [46, 49.4], [48.1, 66.2], [48.9, 42.6], [50.6, 73.8], [53.6, 70.9],
   [90.7, 70.9], [94.9, 41.4], [95.4, 67.1], [96.2, 73.4], [97.9, 32.9], [98.7, 46], [99.2, 62.4], [101.3, 51.5], [101.3, 57], [101.3, 70.9], [106.8, 69.2], [111, 67.5], [112.7, 49.4], [114.3, 64.6], [115.2, 54.4], [116, 60.3], [117.7, 22.4], [119.8, 59.9], [121.5, 65], [121.9, 28.3], [122.4, 16.5], [124.5, 30.4], [124.9, 54.9], [127, 65], [128.7, 49.4], [130, 32.9], [130, 37.1], [130.8, 43.9], [132.9, 62.4], [135.9, 27.4], [136.3, 39.7], [136.3, 57.4], [138.4, 16.5], [141.4, 35], [143, 27.4], [138.2, 6.1]]
 export const deerflowStars: WidgetPreset = {
-  id: 'deerflow-stars', name: 'DeerFlow', group: 'scatter', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'deerflow-stars', name: 'Stars', label: 'DeerFlow', group: 'scatter', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     layer(T.dots(ANTLERS, 2.6), 'idle'),
     layer(T.dots([[110.4, 38.8]], 5), 'active'),
-    layer(textDots(O('80K'), 24.9, 80.6, { font: 'smooth', px: 2.76, py: 2.98, size: 2.8 })),
+    layer(textDots('80K', 24.9, 80.6, { zeroAsO: true, font: 'smooth', px: 2.76, py: 2.98, size: 2.8 })),
     layer(textDots('STARS', 38, 128.1, { font: '5x7', px: 2.34, py: 2.13, size: 2.3 })),
   ],
 }

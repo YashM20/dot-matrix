@@ -158,7 +158,7 @@ const DET = { x0: 12, x1: 132, y: 100, n: 8, sub: 4, knob: 18, gap: 10 }
 export const steppedSliderCard: WidgetPreset = {
   id: 'ui-stepped-slider', name: 'Stepped Slider', group: 'composite', chrome: 'dots', grid: TILE, style,
   defaults: { step: .625 },
-  controls: [{ key: 'step', kind: 'slider', step: 1 / DET.n, box: [DET.x0 - 8, DET.y - 12, DET.x1 - DET.x0 + 16, 24], label: 'Level' }],
+  controls: [{ key: 'step', kind: 'slider', step: 1 / DET.n, box: [DET.x0 - 8, DET.y - 12, DET.x1 - DET.x0 + 16, 24], label: 'Level', valueText: v => String(Math.round(v * DET.n)) }],
   layers: ctx => {
     const s = ui(ctx, 'step'), k = int(ctx.data.step * DET.n, 0, DET.n), pitch = (DET.x1 - DET.x0) / (DET.n * DET.sub), kx = DET.x0 + k * DET.sub * pitch
     const fine: Pt[][] = [[], []], det: Pt[][] = [[], []]
@@ -204,7 +204,7 @@ const STEPPER = { y: 70, r: 17, xs: [22, 122] as const, min: 0, max: 20 }
 export const stepperCard: WidgetPreset = {
   id: 'ui-stepper', name: 'Stepper', group: 'composite', chrome: 'dots', grid: TILE, style,
   defaults: { guests: 12 },
-  controls: [{ key: 'guests', kind: 'stepper', min: STEPPER.min, max: STEPPER.max, step: 1, box: [2, STEPPER.y - 20, 140, 40], label: 'Guests' }],
+  controls: [{ key: 'guests', kind: 'stepper', min: STEPPER.min, max: STEPPER.max, step: 1, box: [2, STEPPER.y - 20, 140, 40], label: 'Guests', valueText: v => `${Math.round(v)} guests` }],
   layers: ctx => {
     const { y, r, min, max } = STEPPER, s = ui(ctx, 'guests'), n = int(ctx.data.guests, min, max)
     // with a pointer, only the half under it reacts; without one (keyboard, snapshots) both do
@@ -401,7 +401,7 @@ const FIELD = { x: 6, y: 56, w: 132, h: 34, r: 8, pad: 10, text: 'DOT/480 NODE',
 export const textFieldCard: WidgetPreset = {
   id: 'ui-text-field', name: 'Text Field', group: 'composite', chrome: 'dots', grid: TILE, style, animated: true,
   defaults: { len: 7 },
-  controls: [{ key: 'len', kind: 'stepper', min: 0, max: FIELD.text.length, step: 1, box: [FIELD.x, FIELD.y, FIELD.w, FIELD.h], label: 'Callsign' }],
+  controls: [{ key: 'len', kind: 'stepper', min: 0, max: FIELD.text.length, step: 1, box: [FIELD.x, FIELD.y, FIELD.w, FIELD.h], label: 'Callsign', valueText: v => FIELD.text.slice(0, Math.round(v)) || 'empty' }],
   layers: ctx => {
     const s = ui(ctx, 'len'), len = int(ctx.data.len, 0, FIELD.text.length), cy = FIELD.y + FIELD.h / 2, tx = FIELD.x + FIELD.pad
     const box = rr(FIELD.x, FIELD.y, FIELD.w, FIELD.h, FIELD.r), cx = tx + len * 6 * BODY.lattice + 1
