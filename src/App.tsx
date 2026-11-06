@@ -17,6 +17,7 @@ import { useFlag } from './site/useFlag'
 import { cardTransition } from './site/viewTransition'
 import { GALLERY_BOARD, VIEWS, placeFromName, placeView, sameView, urlForView, viewFromUrl, type Mode, type View } from './site/views'
 // the app's styles, then the phone styles over them: the order is the cascade, keep it
+import './site/brand/mark.css'
 import './site/app/chrome.css'
 import './site/app/explore.css'
 import './site/app/grid.css'
@@ -284,7 +285,7 @@ export default function App() {
   const title = view === 'MAKE' ? 'MAKE' : view === 'EXPLORE' ? boardLabel(board) : view
   return <main className="shell" data-view={view}>
     <h1 className="sr-only">MATRIX dot-matrix UI engine</h1>
-    <header className="topbar"><div className="brand"><i aria-hidden="true"/> MATRIX</div>
+    <header className="topbar"><a className="brand" href="/" aria-label="MATRIX home"><i className="mark" aria-hidden="true" />MATRIX</a>
       {/* phones: the place's name (on EXPLORE it opens every board) and search; the tab bar holds the views */}
       {view === 'EXPLORE'
         ? <button type="button" className="topbar-place" aria-haspopup="dialog" aria-label={`Board: ${title}. All boards`} onClick={() => setBoards(true)}>{title}<span aria-hidden="true"> ▾</span></button>

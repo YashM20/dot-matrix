@@ -135,6 +135,12 @@
   background: var(--surface)
 }
 
+/* a slot whose board chunk failed to load (LoadBoundary.tsx) */
+.browse-ghost.load-failed {
+  box-sizing: border-box;
+  padding: var(--space-4)
+}
+
 .browse-cap {
   display: flex;
   justify-content: space-between;

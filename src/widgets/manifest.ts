@@ -111,19 +111,31 @@ export const groupOf = (id: string): BoardGroupId => boardGroups.find(g => g.id 
 export const liveBoards: readonly string[] = ['live', 'surfaces'] satisfies BoardId[]
 
 const loaded = new Map<string, Promise<BoardDef>>()
+/** Waits between tries of a board chunk: a network blip heals, a chunk gone with an old deploy fails in about 2 s. */
+const RETRY_MS = [500, 1500]
+/** A failed board stays failed this long, so a re-render (React's `use()`, the next worker frame) fetches nothing. */
+export const FAILED_HOLD_MS = 30_000
+const pause = (ms: number) => new Promise(r => setTimeout(r, ms))
+async function tryLoad(load: () => Promise<BoardContents>): Promise<BoardContents> {
+  for (let i = 0; ; i++) {
+    try { return await load() } catch (e) { if (i >= RETRY_MS.length) throw e; await pause(RETRY_MS[i]) }
+  }
+}
 /**
  * The board's definition, loading its chunk on first call (an unknown id loads the first board).
- * Returns the same promise for the same id, so React's `use()` can suspend on it.
+ * Returns the same promise for the same id, so React's `use()` can suspend on it. A failed fetch is tried three
+ * times in all, then the rejection is kept for `FAILED_HOLD_MS` (the card or board shows its error state); an
+ * open after that tries again. Dropping it at once would hand `use()` a fresh import on every render, an endless
+ * loop of requests for a chunk that a new deploy removed.
  */
 export function loadBoard(id: string): Promise<BoardDef> {
   const entry = boardManifest.find(b => b.id === id) ?? boardManifest[0]
   let p = loaded.get(entry.id)
   if (!p) {
     const { load, ...meta } = entry
-    p = load().then((contents: BoardContents) => { registerPresets(contents.items); return { ...meta, ...contents } })
-    // a failed chunk fetch (offline, new deploy) must not stick: the next open retries
-    p.catch(() => loaded.delete(entry.id))
-    loaded.set(entry.id, p)
+    const q: Promise<BoardDef> = tryLoad(load).then((contents: BoardContents) => { registerPresets(contents.items); return { ...meta, ...contents } })
+    q.catch(() => setTimeout(() => { if (loaded.get(entry.id) === q) loaded.delete(entry.id) }, FAILED_HOLD_MS))
+    loaded.set(entry.id, p = q)
   }
   return p
 }
