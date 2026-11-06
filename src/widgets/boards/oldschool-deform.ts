@@ -75,9 +75,8 @@ function tunnelInk(t: number): (x: number, y: number, ink: Ink, i: number) => vo
 export const osTunnel: WidgetPreset = {
   id: 'os-tunnel', name: 'Oldschool Tunnel', label: 'TUNNEL', ...tile, credit: CREDIT_DEFORM,
   layers: ctx => [
-    caption('U=.3/(R+.5X)'),
     layer(plate(K, tunnelInk(ctx.t))),
-    ...footer(`RING ${pad(SPEED * ctx.t * RINGS, 4)}`, 'V=3A/PI'),
+    ...footer(`RING ${pad(SPEED * ctx.t * RINGS, 4)}`),
   ],
 }
 
@@ -102,9 +101,8 @@ function bloomInk(t: number): (x: number, y: number, ink: Ink, i: number) => voi
 export const osBloom: WidgetPreset = {
   id: 'os-bloom', name: 'Oldschool Bloom', label: 'BLOOM', ...tile, credit: CREDIT_DEFORM,
   layers: ctx => [
-    caption('U=1/(R+.5+.5SIN5A)'),
     layer(plate(K, bloomInk(ctx.t))),
-    ...footer('5 PETALS', 'V=3A/PI'),
+    ...footer('5 PETALS'),
   ],
 }
 
@@ -170,8 +168,7 @@ function starInk(t: number): (x: number, y: number, ink: Ink, i: number) => void
 export const osStar: WidgetPreset = {
   id: 'os-star', name: 'Oldschool Star', label: 'STAR', ...tile, credit: CREDIT_DEFORM,
   layers: ctx => [
-    caption('U=.02Y+.03COS3A/R'),
     layer(plate(K, starInk(ctx.t))),
-    ...footer('', 'V=.02X+.03SIN3A/R'),
+    ...footer('3 ARMS'),
   ],
 }

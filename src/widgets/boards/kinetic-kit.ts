@@ -127,7 +127,7 @@ export function footer(k: number, left: string, right: string): Layer[] {
   return [
     layer(T.dots(rest, .9), 'faint'), layer(T.dots(done, 1.1), 'mid'),
     layer(T.text(left, 0, FOOT), 'idle'),
-    layer(T.text(right, TILE.cols - 1, FOOT, { align: 'right' }), 'faint'),
+    layer(T.text(right, TILE.cols - 1, FOOT, { align: 'right' }), 'mid'),
   ]
 }
 export { T }

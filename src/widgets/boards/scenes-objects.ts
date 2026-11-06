@@ -39,7 +39,6 @@ export const scLathe: WidgetPreset = {
       shadow: { w: .08, maxt: 6 },
     }))
     return [
-      caption('SD2(|P.XZ|,P.Y)'),
       plate.layer,
       ...footer(`SUN ${pad(deg(az), 3)}`, `ONION .0${WALL * 100}`),
     ]

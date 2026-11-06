@@ -26,8 +26,8 @@ export const LIGHT_DEFAULTS = { lightSrc: 0, lightAz: 0, lightEl: 7, tx: 0, ty: 
 export const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
 /** Caption tier (0.72 lattice), as on the algorithms board. */
 export const cap = (s: string, col: number, row: number, align?: 'left' | 'center' | 'right') => T.big(s, col, row, { lattice: .72, align })
-/** Top-right: what the card is built on, faint. */
-export const cite = (s: string) => layer(cap(s, 143, 1, 'right'), 'faint')
+/** Top-right: what the card is built on, in `mid` (`faint` is too dim for text). */
+export const cite = (s: string) => layer(cap(s, 143, 1, 'right'), 'mid')
 
 export interface MatLightOptions {
   /** The normals' lattice (card cells per dot) and its origin, to map the pointer (default: card pitch). */
