@@ -76,6 +76,7 @@ export default {
           'react-hooks-js/set-state-in-effect',
           'react-doctor/no-prop-callback-in-effect',
           'react-doctor/no-pass-live-state-to-parent',
+          'react-doctor/no-pass-data-to-parent',
         ],
       },
       {
