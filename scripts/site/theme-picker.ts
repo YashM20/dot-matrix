@@ -106,7 +106,7 @@ const open = async (path: string, { os = 'dark', reduce = false, phone = false, 
   await cdp('Page.navigate', { url: base + path })
   await waitFor('document.readyState === "complete"')
   // the command layer (dock, sheets, ⌘K) mounts once the page is idle
-  await waitFor(phone ? '!!document.querySelector(".tabbar")' : '!!document.querySelector(".pal-dock") && !!document.querySelector(".theme-menu-btn")', 10000)
+  await waitFor(phone ? '!!document.querySelector(".tabbar")' : '!!document.querySelector(".pal-dock:not(.dock-ghost)") && !!document.querySelector(".theme-menu-btn")', 10000)
   await move(5, 790)
 }
 /** A viewport capture to look at: `.snapshots/t5/<name>.png`. */

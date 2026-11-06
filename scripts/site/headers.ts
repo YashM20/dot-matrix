@@ -6,8 +6,9 @@
  *  - the CSP: `frame-ancestors 'self'`, no inline or eval scripts, no WebSocket or localhost sources in `connect-src`;
  *    `'unsafe-eval'` and `'wasm-unsafe-eval'` appear nowhere in vercel.json or a page's meta CSP (#158);
  *    exactly one block sets it (the theme probes serve that one);
- *  - Trusted Types (#149, report-only for now): `require-trusted-types-for 'script'`, `trusted-types` naming exactly the policies src/
- *    creates, and those policies (src/lib/trusted.ts) pass the SVG renderer's output and same-origin script URLs only;
+ *  - Trusted Types (#149, enforced since #198): the enforced CSP has `require-trusted-types-for 'script'` and `trusted-types`
+ *    naming exactly the policies src/ creates, and no block sends a Report-Only CSP; those policies (src/lib/trusted.ts)
+ *    pass the SVG renderer's output and same-origin script URLs only;
  *  - Permissions-Policy turns off the features the site doesn't use;
  *  - every inline script in the HTML pages has its sha256 in `script-src` (the boot script's hash still matches), and
  *    every hash in `script-src` belongs to one of them (no stale grant).
@@ -80,13 +81,13 @@ assert("headers: CSP script-src is 'self' plus hashes (no inline, eval, blob:, d
 assert("headers: CSP connect-src has no WebSocket or localhost source (only 'self' and https hosts)", connect.every(s => s === "'self'" || /^https:\/\/[a-z0-9.-]+$/.test(s)) && !connect.some(s => /localhost|127\.0\.0\.1/.test(s)), connect.join(' '))
 assert("headers: CSP object-src 'none', base-uri 'self', form-action 'self'", dir.get('object-src')?.join(' ') === "'none'" && dir.get('base-uri')?.join(' ') === "'self'" && dir.get('form-action')?.join(' ') === "'self'")
 
-// Trusted Types (#149): every sink takes only a policy's output, and a policy header names exactly the policies src/
-// makes. They ship report-only first (Content-Security-Policy-Report-Only); moving them into the enforced CSP passes too
-const ro = cspBlocks[0]?.headers.find(h => h.key.toLowerCase() === 'content-security-policy-report-only')?.value ?? ''
-const ttDir = new Map([...dir, ...ro.split(';').map(d => d.trim().split(/\s+/)).filter(d => d[0]).map(([k, ...v]) => [k, v] as [string, string[]])])
+// Trusted Types (#149): every sink takes only a policy's output, and the enforced CSP names exactly the policies src/
+// makes. They shipped report-only first; since #198 they are enforced, and a Report-Only CSP coming back fails here
+const reportOnly = vercel.headers.filter(b => b.headers.some(h => h.key.toLowerCase() === 'content-security-policy-report-only')).map(b => b.source)
+assert('headers: Trusted Types are enforced: no header block sends Content-Security-Policy-Report-Only', !reportOnly.length, reportOnly.join(', '))
 const made = walk('src').filter(f => /\.tsx?$/.test(f)).flatMap(f => [...readFileSync(f, 'utf8').matchAll(/createPolicy\(\s*'([^']+)'/g)].map(m => m[1])).sort()
-assert(`headers: require-trusted-types-for 'script' (${dir.has('require-trusted-types-for') ? 'enforced' : 'report-only'}), and trusted-types names exactly the policies src/ creates (src/lib/trusted.ts), no 'allow-duplicates'`,
-  ttDir.get('require-trusted-types-for')?.join(' ') === "'script'" && JSON.stringify([...(ttDir.get('trusted-types') ?? [])].sort()) === JSON.stringify(made) && made.length > 0, `${ttDir.get('trusted-types')?.join(' ')} vs ${made.join(' ')}`)
+assert(`headers: the enforced CSP has require-trusted-types-for 'script', and trusted-types names exactly the policies src/ creates (src/lib/trusted.ts), no 'allow-duplicates'`,
+  dir.get('require-trusted-types-for')?.join(' ') === "'script'" && JSON.stringify([...(dir.get('trusted-types') ?? [])].sort()) === JSON.stringify(made) && made.length > 0, `${dir.get('trusted-types')?.join(' ')} vs ${made.join(' ')}`)
 const { checkSvg, sameOriginScript } = await import('../../src/lib/trusted')
 const { renderSVG } = await import('../../src/engine/renderer/svgRenderer')
 const dot = (shape: string, extra = {}) => ({ x: 4, y: 4, r: 1.5, shape, color: '#FF3B30', opacity: .5, ...extra })

@@ -1,7 +1,7 @@
 /**
- * Trusted Types (#149). vercel.json sends `require-trusted-types-for 'script'` and
- * `trusted-types dot480-svg default` in a Content-Security-Policy-Report-Only header for now: a supporting browser
- * reports a plain string at every HTML, script and script-URL sink. Moved into the enforced CSP, it refuses them. The site has two kinds of sink, and this module holds the only two policies:
+ * Trusted Types (#149). vercel.json's enforced Content-Security-Policy has `require-trusted-types-for 'script'` and
+ * `trusted-types dot480-svg default` (report-only until #198): a supporting browser refuses a plain string at every
+ * HTML, script and script-URL sink. The site has two kinds of sink, and this module holds the only two policies:
  *  - HTML: the SVG renderer's markup, set by React's `dangerouslySetInnerHTML` in DotCanvas → `svgHtml()` (policy
  *    `dot480-svg`). It passes only an `<svg>` built from the renderer's own elements, with no event-handler
  *    attribute and no link but a local `#id`; anything else becomes an empty string (the card shows nothing, and a

@@ -30,7 +30,7 @@ const vercel = JSON.parse(readFileSync('vercel.json', 'utf8')) as { headers: { h
 const STRICT_STYLE = process.argv.includes('--strict-style')
 const CSP0 = vercel.headers.flatMap(h => h.headers).find(h => h.key === 'Content-Security-Policy')!.value
 const CSP = STRICT_STYLE ? CSP0.replace(/(style-src[^;]*?) 'unsafe-inline'/, '$1') : CSP0
-/** Trusted Types ship report-only first (#149); the walk checks the same either way. */
+/** Trusted Types are enforced in the CSP since #198; a Report-Only header, if one comes back, is served too. */
 const CSP_RO = vercel.headers.flatMap(h => h.headers).find(h => h.key === 'Content-Security-Policy-Report-Only')?.value
 const ENFORCED = CSP.includes('require-trusted-types-for')
 const REWRITES = new Map((vercel.rewrites ?? []).filter(r => !r.source.includes('(')).map(r => [r.source, r.destination]))
