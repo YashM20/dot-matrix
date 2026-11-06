@@ -67,7 +67,7 @@ jobs:
           key: og-${{ hashFiles('goldens/**', 'scripts/og.ts', 'scripts/lib/raster.ts', 'scripts/lib/cards.ts', 'scripts/lib/stats.ts', 'src/engine/sampler/gridSampler.ts') }}
           restore-keys: og-
 
-      # `pnpm build` is `tsc -b && vite build`; the typecheck job already ran tsc -b.
+      # `pnpm build` is `tsc -b && vite build && pnpm registry:build`; the typecheck job already ran tsc -b, the registry step is below.
       # Also writes dist/og/*.png and dist/<board>/index.html (vite.config.ts → scripts/site/postbuild.ts);
       # SITE_URL (repo variable, e.g. your Vercel production URL) makes og:image / og:url absolute
       - name: Build
@@ -84,6 +84,11 @@ jobs:
             b=$(basename "$f" .png)
             cmp -s "$f" "dist/og/widget/${b%-*}.png" || rm "$f"
           done
+
+      # the shadcn registry (docs/REGISTRY.md) into dist/r, as `pnpm build` does on Vercel, then its cheap checks:
+      # registry.json up to date, the shadcn schemas, matrix- prefixes. The install test stays local (pnpm registry:test).
+      - name: Registry
+        run: pnpm registry:build && pnpm registry:check --dir dist/r
 
       # first-load JS ≤ 150 kB gz (docs/WEB-PLAN.md §1)
       - name: Bundle budget
