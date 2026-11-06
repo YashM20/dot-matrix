@@ -3,12 +3,14 @@
  *  - a missing board chunk (the motion board's, answered 404 as after a new deploy) costs a handful of requests at
  *    most on BROWSE, the board and a card page: the page reloads once (src/site/stale-deploy.ts), the loader tries
  *    each chunk three times, then the card or board shows its error state (src/components/LoadBoundary.tsx);
+ *  - a card page fetches one board chunk, its own (#214), and its SVG download still works (the export code loads then);
  *  - the SURFACES and LOCK boards draw dots on every card and keep the main thread free (no long frame gaps).
  * `--shots <dir>` saves the PR screenshots there.
  *
  * Needs a build: `npx vite build`, then `npx tsx scripts/site/chunks-browser.ts [--shots <dir>]` (it serves dist/).
  */
-import { mkdirSync, readdirSync } from 'node:fs'
+import { mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { launch, serveDist, sleep, type Page } from '../lib/cdp'
 import { checker } from '../lib/check'
@@ -24,6 +26,10 @@ const MAX_TRIES = 8
 const chunk = readdirSync('dist/assets').find(f => /^motion-[\w-]+\.js$/.test(f))
 if (!chunk) throw new Error('no motion board chunk in dist/assets: run `npx vite build` first')
 const motionCard = catalog.find(r => r[2] === 'motion')![0]
+/** Every board chunk: the ones the manifest chunk loads with `import()`. */
+const manifestChunk = readdirSync('dist/assets').find(f => /^manifest-[\w-]+\.js$/.test(f))!
+const boardChunks = new Set([...readFileSync(join('dist/assets', manifestChunk), 'utf8').matchAll(/import\([`"']\.\/([^`"']+\.js)[`"']\)/g)].map(m => m[1]))
+if (!boardChunks.has(chunk)) throw new Error(`${chunk} is not one of the manifest's board chunks`)
 
 /** Count of requests for the motion chunk, each answered 404. */
 async function breakChunk(p: Page): Promise<{ n: number }> {
@@ -46,9 +52,8 @@ try {
   for (const [where, path, failed] of [
     ['browse', 'browse/?in=motion', `document.querySelectorAll('.browse-item > .load-failed').length > 0`],
     ['board', 'motion/', `!!document.querySelector('.board-view .load-failed')`],
-    // the card page's own chunk imports every board (export/source → the eager registry), so a missing board chunk
-    // fails the page chunk and RootBoundary shows; with the page chunk loaded first, the page's own error state does
-    ['card page', `widget/${motionCard}/`, `!!document.querySelector('.wp .load-failed, .root-crash')`],
+    // the card page loads only its own board (#214), so its own error state shows, never the RootBoundary
+    ['card page', `widget/${motionCard}/`, `!!document.querySelector('.wp .load-failed')`],
   ] as const) {
     const p = await launch(1280, 900, { flags: { make: false, lab: false }, testHooks: false })
     try {
@@ -66,6 +71,31 @@ try {
         await shot(p, 'browse-missing-chunk')
       }
     } finally { await p.close() }
+  }
+
+  // ── a card page fetches its own board chunk and no other (#214) ──
+  {
+    const p = await launch(1280, 900, { flags: { make: false, lab: false }, testHooks: false })
+    const out = mkdtempSync(join(tmpdir(), 'chunks-'))
+    try {
+      await quiet(p, base)
+      await p.allowDownloads(out)
+      await p.cdp('Page.navigate', { url: `${base}widget/${motionCard}/` })
+      assert('card page: the card mounts', await p.waitFor(`!!document.querySelector('.wp-stage canvas')`, 20000))
+      await sleep(1500)
+      const fetched = () => p.js<string[]>(`performance.getEntriesByType('resource').map(e => e.name.split('/').pop())`)
+      const boards = (await fetched()).filter(f => boardChunks.has(f))
+      assert('card page: one board chunk, its own', boards.length === 1 && boards[0] === chunk, boards.join(' '))
+      // Download SVG (MORE menu): the export code loads on use and the file arrives
+      await p.js(`document.querySelector('.wp-more-btn').click(), 1`)
+      await p.waitFor(`!!document.querySelector('.wp-more [role="menuitem"]')`, 5000)
+      await p.js(`[...document.querySelectorAll('.wp-more [role="menuitem"]')].find(b => b.textContent.startsWith('Download SVG')).click(), 1`)
+      const t0 = Date.now()
+      while (!p.downloads.length && Date.now() - t0 < 10000) await sleep(200)
+      assert('card page: Download SVG saves the card', p.downloads.some(d => d.name.endsWith('.svg') && d.bytes > 500), JSON.stringify(p.downloads))
+      assert('card page: still one board chunk after the export', (await fetched()).filter(f => boardChunks.has(f)).length === 1)
+      assert('card page: no page errors', !p.logs.length, p.logs.slice(0, 3).join(' | '))
+    } finally { await p.close(); rmSync(out, { recursive: true, force: true }) }
   }
 
   // ── SURFACES and LOCK draw dots and keep the page responsive ──

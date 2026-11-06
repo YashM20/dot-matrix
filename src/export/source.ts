@@ -1,7 +1,7 @@
 /** Clip sources: a widget preset (or any layer function) on its own grid and style → `ClipSource`. */
 import type { DotStyle, GridConfig, Layer, ThemeTokens } from '../engine/types'
 import { sampleLayers } from '../engine/sampler/gridSampler'
-import { withChrome, type WidgetContext, type WidgetPreset } from '../widgets'
+import { withChrome, type WidgetContext, type WidgetPreset } from '../widgets/types'
 import type { ClipSource } from './record'
 
 /** Every colour token a theme can put on a dot (the GIF palette's tones). */
