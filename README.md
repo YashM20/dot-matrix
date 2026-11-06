@@ -4,7 +4,7 @@ A website where every interface is drawn in dots: clocks, dashboards, games, pho
 
 **Live:** https://matrix.reactopia.me
 
-This is a personal project. It's a website to look at and play with, not a package you install.
+This is a personal project: a website to look at and play with. Some of its cards also install into other React projects (see [Use MATRIX components](#use-matrix-components)).
 
 **Credit:** the project started from Henry Li's (`@henry19840301`) ESP-Mosaico concept screens for a 480 × 480 OLED device, posted on X on 20 Aug 2026 ([first post](https://x.com/henry19840301/status/2090273665669874050), [second post](https://x.com/henry19840301/status/2090454612126146948)). The first seven boards rebuild his sheets, and the 480 in Dot/480 comes from his device. Every other credit is in [docs/CREDITS.md](docs/CREDITS.md).
 
@@ -67,7 +67,8 @@ Old links keep working: renamed boards resolve through `boardAliases` in `src/wi
 | `src/site/`, `src/data/`, `src/blog/`, `src/essay/` | Page meta and URLs, themes, live data sources, the blog and the essay |
 | `api/` | Vercel Functions for likes (`docs/DEPLOY.md` › Likes) |
 | `scripts/` | Checks, goldens, snapshots, the size budget, the post-build step and the headless browser probes |
-| `packages/`, `registry/`, `mcp/`, `targets/` | Kept but not published: the core, element and React packages, a shadcn registry, an MCP app and device senders |
+| `registry.json`, `registry/` | The shadcn registry served at `/r/`: card components for other React projects ([docs/REGISTRY.md](docs/REGISTRY.md)) |
+| `packages/`, `mcp/`, `targets/` | Kept but not published: the core, element and React packages, an MCP app and device senders |
 
 ## Writing a card
 ```ts
@@ -85,6 +86,13 @@ export const myTimer: WidgetPreset = {
 }
 ```
 Cards are 144×144 dots. Text goes through `T.text` or `T.big` so glyphs land on whole dots, bigger elements use a coarser `lattice`, and `'active'` is the one accent colour, used for one element per card. To add a board, add it to `src/widgets/manifest.ts` and `src/widgets/index.ts` and give it a description in `src/widgets/blurbs.ts`.
+
+## Use MATRIX components
+The cards install into any React project with the shadcn CLI, next to the reactopia registry with no name or file clashes:
+```sh
+npx shadcn@latest add https://matrix.reactopia.me/r/matrix-home-clock.json
+```
+See [docs/REGISTRY.md](docs/REGISTRY.md) for the `components.json` setup, every item and the props.
 
 ## Docs
 - [DESIGN.md](DESIGN.md): tokens, colours, type and components.
