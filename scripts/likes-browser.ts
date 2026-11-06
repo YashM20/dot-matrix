@@ -120,10 +120,15 @@ try {
   await shot('like-forgotten')
   // the keyboard: Enter opens the sheet again (the choice was forgotten), Escape cancels without a like
   const before = (await calls()).filter(c => c.path === '/api/like').length
-  await p.js(`document.querySelector('.lk-btn').focus(); 1`); await p.key('Enter', 'Enter', 13)
+  await p.js(`document.querySelector('.lk-btn').focus(); 1`)
+  const focused = await p.js<boolean>(`document.activeElement === document.querySelector('.lk-btn')`)
+  // a real Enter: a keyDown without its text is a raw key, which never activates a focused button
+  await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '' })
+  await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 })
   const again = await p.waitFor(`!!document.querySelector('.lk-sheet')`, 3000)
   await p.key('Escape', 'Escape', 27)
-  assert('likes-browser: from the keyboard, Enter asks again and Escape cancels without a like', again && !(await p.js('!!document.querySelector(".lk-sheet")')) && (await calls()).filter(c => c.path === '/api/like').length === before)
+  const left = await p.js<boolean>('!!document.querySelector(".lk-sheet")'), likes = (await calls()).filter(c => c.path === '/api/like').length
+  assert('likes-browser: from the keyboard, Enter asks again and Escape cancels without a like', again && !left && likes === before, `focused ${focused}, sheet ${again}, still open ${left}, likes ${before} → ${likes}`)
 
   // paused: the API is down
   await go(`${widget}?lkmock=paused`, `!!document.querySelector('.lk-btn')`)

@@ -110,12 +110,15 @@ try {
     quantize: () => changed('quantize', () => setRange('#fig-quantize input[name=steps]', 2)),
     lattice: () => changed('lattice', () => clickText('#fig-lattice', 'Lattice')),
     accent: async () => {
-      const fills = () => js(`[...document.querySelectorAll('#fig-accent .dot-card')].map(c => c.dataset.card + ':' + ([...c.querySelectorAll('g[fill]')].map(g => g.getAttribute('fill')).join('/') || (c.querySelector('canvas') ? 'canvas' : '?'))).join(' ')`)
-      const before = await fills()
-      const r = await changed('accent', () => clickText('#fig-accent', 'Add a second accent'))
-      r.detail += `; ${before} → ${await fills()}; switch ${await js(`document.querySelector('#fig-accent [role=switch]')?.getAttribute('aria-checked')`)}`
-      const blue = await js(`(() => { let n = 0; for (const c of document.querySelectorAll('#fig-accent canvas')) { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let i = 0; i < d.length; i += 4) if (d[i+2] > 180 && d[i] < 90) n++ } for (const s of document.querySelectorAll('#fig-accent .dot-svg')) n += (s.innerHTML.match(/#2F7BFF/gi) || []).length; return n })()`)
-      return { ok: r.ok && blue > 0, detail: `${r.detail}; ${blue} blue px/dots` }
+      // the slider card's dot colours (its SVG groups): the switch must bring in a hue the board had not got, and it
+      // must be blue (or the signal red on a blue accent: the figure's caption says which)
+      const sliderFills = () => js(`[...document.querySelectorAll('#fig-accent .dot-card[data-card="ui-slider"] g[fill]')].map(g => g.getAttribute('fill').toLowerCase())`) as Promise<string[]>
+      const before = await sliderFills()
+      await clickText('#fig-accent', 'Add a second accent'); await sleep(700)
+      const after = await sliderFills(), added = after.filter(f => !before.includes(f))
+      const rgb = (h: string) => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16))
+      const second = added.some(h => /^#[0-9a-f]{6}$/.test(h) && (([r, , b]) => b > r + 60 || r > b + 60)(rgb(h)))
+      return { ok: second, detail: `${before.join('/')} → ${after.join('/')}` }
     },
     masks: () => changed('masks', () => clickText('#fig-masks', 'radial'), 350),
     // animating = the figure keeps drawing (canvas draw calls, worker bitmaps included); pixel signatures can sit

@@ -26,7 +26,10 @@ let failures = 0
 const check = (name: string, ok: boolean, detail = '') => { console.log(`${ok ? '✓' : '✗'} ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failures++ }
 type Stats = { batches: number; kills: number; crashes: number; lastMs: number; failed: boolean }
 const stats = (p: Page) => p.js<Stats | null>('window.__irSandbox ? { ...window.__irSandbox } : null')
-const note = (p: Page) => p.js<string>(`document.querySelector('.ed-note')?.textContent ?? ''`)
+/** Every note the editor showed (a note clears itself after a few seconds), recorded from the page's start. */
+const NOTES = `window.__notes = []; new MutationObserver(() => { const n = document.querySelector('.ed-note')?.textContent; if (n && window.__notes.at(-1) !== n) window.__notes.push(n) }).observe(document, { subtree: true, childList: true, characterData: true })`
+const note = (p: Page) => p.js<string>(`(window.__notes ?? []).join(' | ')`)
+const start = async (p: Page) => { await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: NOTES }); return p }
 /** Lit pixels on the selected frame's canvas. */
 const lit = (p: Page) => p.js<number>(`(() => { const c = document.querySelector('.ed-frame[data-frame="' + window.__editor?.sel + '"]'); if (!c) return -1; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] + d[i+1] + d[i+2] > 90) n++; return n })()`)
 /** The longest gap between 10 ms timer ticks over `ms`: how long the page's main thread was blocked. */
@@ -47,7 +50,7 @@ const HOSTILE = '// slow: 64 × 64 sines a dot\nfor i in 0..64 with a = 0 { a + 
 try {
   // ── a typical program through the worker, and its frame time both ways
   {
-    const p = await launch(1440, 900)
+    const p = await start(await launch(1440, 900))
     const plasma = EXAMPLES.find(e => e.name === 'plasma')!.src
     check('CODE opens a ?p= program', await open(p, plasma))
     check('the program samples in the worker: batches go out, nothing is terminated, the frame lights up', await p.waitFor(`(window.__irSandbox?.batches ?? 0) > 5`, 15000) && (await stats(p))!.kills === 0 && (await lit(p)) > 500, JSON.stringify(await stats(p)))
@@ -67,21 +70,21 @@ try {
   }
   // ── a hostile slow program: the worker's guard pauses it
   {
-    const p = await launch(1440, 900)
+    const p = await start(await launch(1440, 900))
     check('a hostile slow program opens', await open(p, HOSTILE))
     const gap = await maxGap(p)
-    check('the worker\'s guard pauses it and the editor says so', await p.waitFor(`/A program is paused/.test(document.querySelector('.ed-note')?.textContent ?? '')`, 15000), await note(p))
+    check('the worker\'s guard pauses it and the editor says so', await p.waitFor(`(window.__notes ?? []).some(n => /A program is paused/.test(n))`, 15000), await note(p))
     check('the page stays responsive while it runs (timer gaps ≤ 120 ms)', gap <= 120, `${gap} ms`)
     check('no page errors', !p.logs.length, p.logs.slice(0, 3).join(' | '))
     await p.close()
   }
   // ── the same with the watchdog shortened below the guard: the page terminates the worker
   {
-    const p = await launch(1440, 900)
+    const p = await start(await launch(1440, 900))
     await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__dotIrWatchdogMs = 15' })
     check('a hostile slow program opens (watchdog 15 ms)', await open(p, HOSTILE))
     const gap = await maxGap(p)
-    check('the watchdog terminates the worker and pauses the program with the same note', await p.waitFor(`(window.__irSandbox?.kills ?? 0) >= 1 && /A program is paused/.test(document.querySelector('.ed-note')?.textContent ?? '')`, 15000), `${JSON.stringify(await stats(p))}; ${await note(p)}`)
+    check('the watchdog terminates the worker and pauses the program with the same note', await p.waitFor(`(window.__irSandbox?.kills ?? 0) >= 1 && (window.__notes ?? []).some(n => /A program is paused/.test(n))`, 15000), `${JSON.stringify(await stats(p))}; ${await note(p)}`)
     check('the page stays responsive while the worker is stopped (timer gaps ≤ 120 ms)', gap <= 120, `${gap} ms`)
     await sleep(800)
     await p.shot(join(out, 'code-paused.png'))
