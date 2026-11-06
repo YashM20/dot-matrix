@@ -487,7 +487,7 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
       const grid = dragFramePos(o.box0[0], o.box0[1], wx - o.wx, wy - o.wy, e.shiftKey)
       let dx = grid.x - o.box0[0], dy = grid.y - o.box0[1]
       if (!(e.ctrlKey || e.metaKey)) {
-        const others = d.frames.filter(f => !f.hidden && !o.ids.includes(f.id)).map(frameBox)
+        const moving = new Set(o.ids), others = d.frames.filter(f => !f.hidden && !moving.has(f.id)).map(frameBox) // per pointer move
         const sn = snapBox(raw, others, SNAP_PX / s.cam.z)
         if (sn.dx || sn.guides.some(g => g.axis === 'x')) dx = raw[0] - o.box0[0] + sn.dx
         if (sn.dy || sn.guides.some(g => g.axis === 'y')) dy = raw[1] - o.box0[1] + sn.dy
@@ -603,7 +603,8 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
     const f = hover.frame ? frameById(doc, hover.frame) : selFrame, l = selLayer?.kind === 'paint' ? selLayer : f && topDown(f.card).find(x => x.kind === 'paint')
     return (f ? pitchOf(f.card) * (l && 'lattice' in l ? l.lattice : 1) : 4) * cam.z
   })()
-  const picked = selFrames(sel).map(id => frameById(doc, id)).filter((f): f is EditorFrame => !!f && !f.hidden), many = picked.length > 1
+  const selFr = selFrames(sel), selSet = new Set(selFr) // the overlay re-renders per pointer move
+  const picked = selFr.map(id => frameById(doc, id)).filter((f): f is EditorFrame => !!f && !f.hidden), many = picked.length > 1
   const groupBox = many ? framesBox(doc, picked.map(f => f.id)) : undefined
   const resizable = !many && selFrame && !selLayer && !selFrame.card.reference && !selFrame.locked
   const pickedLayers = selFrame && sel.layer ? selLayers(sel).map(id => selFrame.card.layers.find(l => l.id === id)).filter((l): l is StudioLayer => !!l) : []
@@ -624,11 +625,11 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
       </div>
       <div className="ed-overlay">
         {frames.filter(f => !f.hidden).map(f => {
-          const b = box(f), on = selFrames(sel).includes(f.id) || sel.frame === f.id
+          const b = box(f), on = selSet.has(f.id) || sel.frame === f.id
           return <button key={f.id} type="button" tabIndex={-1} data-frame-label={f.id} className={`ed-flabel${on ? ' on' : ''}${f.locked ? ' locked' : ''}`} style={{ left: b.left, top: (b.top as number) - 22, maxWidth: Math.max(48, b.width as number) }}
             onClick={e => { if (e.detail === 0) useEditor.getState().select({ frame: f.id }) /* keyboard / script: pointer clicks select on press and release */ }}>{f.card.name}<small>{f.card.grid.cols}×{f.card.grid.rows}</small>{f.locked && <i className="ed-flock">LOCKED</i>}</button>
         })}
-        {hoverFrame && !(selFrames(sel).includes(hoverFrame.id) && !hoverLayer) && <div className="ed-hover" style={box(hoverFrame, hoverLayer && layerBox(hoverFrame, hoverLayer))} />}
+        {hoverFrame && !(selSet.has(hoverFrame.id) && !hoverLayer) && <div className="ed-hover" style={box(hoverFrame, hoverLayer && layerBox(hoverFrame, hoverLayer))} />}
         {selFrame && !selFrame.hidden && !many && <div className={`ed-sel${selLayer ? ' ed-sel--parent' : ''}`} style={box(selFrame)}>
           {resizable && handles(false, selFrame.id)}
         </div>}
