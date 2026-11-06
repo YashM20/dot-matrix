@@ -39,7 +39,7 @@ em { color: var(--value) }
 /* hero */
 .hero { padding: var(--space-5) 0 var(--gap-action); border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1; margin-bottom: var(--space-5) }
 .kicker { font: 500 var(--fs-label-12) var(--mono); letter-spacing: .18em; color: var(--mute); display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--gap-action) }
-.kicker i { width: 6px; height: 6px; border-radius: 50%; background: var(--red); display: inline-block }
+.kicker i:not(.mark) { width: 6px; height: 6px; border-radius: 50%; background: var(--red); display: inline-block }
 .lede { font-size: var(--fs-title-20); line-height: 1.55; color: var(--value); margin: var(--gap-action) 0 }
 .toc ol { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: var(--gap-action) }
 .toc li { break-inside: avoid; margin: 0 0 var(--space-1) }

@@ -126,11 +126,15 @@ html {
   color: var(--value)
 }
 
+/* the home link: the mark (src/site/brand/mark.css, generated) and the wordmark */
 .brand {
-  color: var(--value)
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--value);
+  text-decoration: none
 }
 
-.brand i,
 .live i,
 :where(.dot-card) header i {
   display: inline-block;

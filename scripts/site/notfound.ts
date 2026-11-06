@@ -53,6 +53,7 @@ export function notFoundPage(): string {
     <meta name="color-scheme" content="dark light" />
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
     <title>Not found · ${SITE_NAME}</title>
     <style>${css}</style>
   </head>
