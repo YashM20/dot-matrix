@@ -4,7 +4,9 @@
  * runs `vite preview` on `dist/` for the length of a probe, so no server outlives it. Every CDP call has a
  * timeout (`CDP_TIMEOUT_MS`, default 120 s) and fails when the socket closes, so a hung or dead Chrome makes
  * a probe fail instead of waiting forever. Every page sets `__DOT_PROBE__` before it loads, so a production build
- * (`serveDist`) exposes the test hooks the probes read (src/lib/testHooks.ts).
+ * (`serveDist`) exposes the test hooks the probes read (src/lib/testHooks.ts). Chrome comes from `$CHROME` or the
+ * usual Windows, Linux and macOS paths; `$CHROME_FLAGS` (space-separated) adds switches, e.g.
+ * `--enable-unsafe-swiftshader` for WebGL on a CI runner without a GPU (.github/workflows/probes.yml).
  *
  * Release flags (src/site/flags.ts) come from localStorage only; the URL never sets one. `launch(w, h, { flags })`
  * seeds `localStorage['dot480:flags']` before any page script runs, on every page: `make` and `lab` are on unless
@@ -19,7 +21,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 export const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
-export const findChrome = () => [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
+export const findChrome = () => [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
 
 /** `vite preview` of `dist/` on `port` (build first); resolves once it answers. */
 export async function serveDist(port: number): Promise<{ url: string; stop: () => void }> {
@@ -81,9 +83,10 @@ export async function launch(width: number, height: number, opts: LaunchOptions 
   const chrome = findChrome()
   if (!chrome) throw new Error('no Chrome found (set $CHROME)')
   const profile = mkdtempSync(join(tmpdir(), 'dot-probe-'))
-  const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...(opts.scrollbars ? [] : ['--hide-scrollbars']), `--window-size=${width},${height}`, 'about:blank'], { stdio: 'ignore' })
+  const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...(opts.scrollbars ? [] : ['--hide-scrollbars']), `--window-size=${width},${height}`, ...(process.env.CHROME_FLAGS?.split(' ').filter(Boolean) ?? []), 'about:blank'], { stdio: 'ignore' })
   let port = ''
-  for (let i = 0; i < 150 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
+  // a cold Chrome on a shared CI runner can take well over 10 s to open its DevTools port
+  for (let i = 0; i < 300 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
   if (!port) { proc.kill(); throw new Error('Chrome did not open a DevTools port') }
   const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json() as { type: string; webSocketDebuggerUrl: string }[]
   const ws = new WebSocket(targets.find(t => t.type === 'page')!.webSocketDebuggerUrl)
