@@ -1,9 +1,10 @@
 /**
  * Likes in headless Chrome (#169), against `vite preview` of `dist/` with the likes API mocked in the page (no
- * store, no secrets). With `?flags=likes`: the button renders beside the card without moving it, the first like asks
- * "Remember this browser?" (focus on the sheet, no answer pre-selected), Remember checks in and likes (BotID tags the
- * requests), and the button shows each state: counting soon, already liked, limit reached, likes paused, forgotten.
- * Without the flag, or with the API answering 404, there is no button and no BotID. Gallery programs get buttons too.
+ * store, no secrets). With the `likes` flag on (its default): the button renders beside the card without moving it,
+ * the first like asks "Remember this browser?" (focus on the sheet, no answer pre-selected), Remember checks in and
+ * likes (BotID tags the requests), and the button shows each state: counting soon, already liked, limit reached, likes
+ * paused, forgotten. With the flag off (seeded through `launch`, then turned on with `setFlags`), or with the API
+ * answering 404, there is no button and no BotID. Gallery programs get buttons too.
  * BotID's challenge is stubbed the way `botid/client/core` reads it (`window.V_C` and its script tag), since its
  * Vercel edge route doesn't exist locally.
  *
@@ -47,7 +48,7 @@ const MOCK = `(() => {
 })()`
 
 const server = await serveDist(4327)
-const p: Page = await launch(1280, 900)
+const p: Page = await launch(1280, 900, { flags: { likes: false } })
 try {
   await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: MOCK })
   const go = async (path: string, ready: string, ms = 30000) => { await p.cdp('Page.navigate', { url: server.url.replace(/\/$/, '') + path }); return p.waitFor(ready, ms) }
@@ -71,13 +72,14 @@ try {
   assert('likes-browser: flag off: no like button, no API call and no BotID script', !(await p.js('!!document.querySelector(".lk")')) && (await calls()).length === 0 && !(await p.js('!!window.KPSDK || [...document.scripts].some(s => s.src.includes("/a-4-a/c.js") && s.type !== "text/plain")')))
 
   // API off (404): the flag alone shows nothing
-  await go(`${widget}?flags=likes&lkmock=off`, `window.__lk.calls.length > 0`)
+  await p.setFlags({ likes: true })
+  await go(`${widget}?lkmock=off`, `window.__lk.calls.length > 0`)
   await sleep(1200)
   assert('likes-browser: flag on, API answering 404: the button stays hidden', !(await p.js('!!document.querySelector(".lk-btn")')))
 
   // on: the button beside the card, the card where it was
   await p.js(`localStorage.removeItem('dot480:likes'); 1`)
-  const shown = await go(`${widget}?flags=likes&lkmock=ok`, `!!document.querySelector('.lk-btn')`)
+  const shown = await go(`${widget}?lkmock=ok`, `!!document.querySelector('.lk-btn')`)
   await sleep(600)
   const withLikes = await rect(stage), text = await p.js<string>(`document.querySelector('.lk-btn').textContent`)
   assert('likes-browser: the like button renders with the count, outside the card, and the card does not move', shown && /12/.test(text) && (await pressed()) === 'false' && JSON.stringify(withLikes) === JSON.stringify(plain)
@@ -123,13 +125,13 @@ try {
   assert('likes-browser: from the keyboard, Enter asks again and Escape cancels without a like', again && !(await p.js('!!document.querySelector(".lk-sheet")')) && (await calls()).filter(c => c.path === '/api/like').length === before)
 
   // paused: the API is down
-  await go(`${widget}?flags=likes&lkmock=paused`, `!!document.querySelector('.lk-btn')`)
+  await go(`${widget}?lkmock=paused`, `!!document.querySelector('.lk-btn')`)
   await sleep(300)
   assert('likes-browser: with the API down the button is disabled and says "Likes paused."', await p.js<boolean>(`document.querySelector('.lk-btn').disabled`) && (await note()) === 'Likes paused.')
   await shot('like-paused')
 
   // gallery programs in MAKE · CODE
-  const gallery = await go(`/?make=code&flags=likes&lkmock=ok`, `document.querySelectorAll('.lk-gallery .lk-btn').length >= 8`, 40000)
+  const gallery = await go(`/?make=code&lkmock=ok`, `document.querySelectorAll('.lk-gallery .lk-btn').length >= 8`, 40000)
   await p.js(`document.querySelector('.lk-gallery').scrollIntoView({ block: 'center' }); 1`); await sleep(500)
   const reads = (await calls()).filter(c => c.path.startsWith('/api/likes/p/'))
   assert('likes-browser: gallery programs get like buttons (the 8 seeds), each read by its 64-hex key', gallery && reads.length >= 8 && reads.every(c => /^\/api\/likes\/p\/[0-9a-f]{64}$/.test(c.path)) && /3/.test(await p.js<string>(`document.querySelector('.lk-gallery .lk-btn').textContent`)))

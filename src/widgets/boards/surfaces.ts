@@ -238,7 +238,7 @@ export const surfacePlotter: WidgetPreset = {
 /**
  * `clockOffset` for every card: board time = master clock + offset, the same in every tab (see
  * `createClockSync`). Re-emitted when a peer with an earlier epoch is heard, on visibility changes and
- * every 2 s if it drifted > 20 ms. With `?clack=1` the flip-disc's column writes also tick.
+ * every 2 s if it drifted > 20 ms. With the `clack` flag on the flip-disc's column writes also tick.
  */
 export const clockSource: Source<number> = createSource<number>({
   id: 'surfaces-clock', fixture: { clockOffset: 0 }, statusKey: 'clockSync', cacheMaxAgeMs: 0,

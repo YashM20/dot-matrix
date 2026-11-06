@@ -1,15 +1,16 @@
 /**
- * Release flags (#144): features turned on or off per environment without a code change, with a URL override for
- * testing on previews. Modelled on `./pro.ts`; Pro stays there, since it is a visitor's preference and these are
- * release switches. Plain module, no React: shaped for `useSyncExternalStore(subscribeFlags, () => flag(id))`
- * (`./useFlag.ts`). Safe in Node and in the sample worker (no storage or URL there: build value, then default).
+ * Release flags (#144): features turned on or off per environment without a code change. Modelled on `./pro.ts`; Pro
+ * stays there, since it is a visitor's preference and these are release switches. Plain module, no React: shaped for
+ * `useSyncExternalStore(subscribeFlags, () => flag(id))` (`./useFlag.ts`). Safe in Node and in the sample worker (no
+ * storage there: build value, then default).
  *
  * A flag's value, each step overriding the one before:
  * 1. the registry default below;
  * 2. the build value `VITE_FLAG_<ID>`: `on` or `off` (also `1` / `0`), set per Vercel environment (docs/DEPLOY.md);
- * 3. this browser's saved overrides, `localStorage['dot480:flags']` (`setFlag`);
- * 4. the URL, for this page load only: `?flags=xray,-worker` turns `xray` on and `worker` off, and `?flags=reset`
- *    clears the saved overrides. A flag with a `param` also takes its older `?<param>=1|0` and `dot480:<param>` key.
+ * 3. this browser's saved overrides, `localStorage['dot480:flags']` (`setFlag`, or by hand in DevTools on a preview).
+ *    A flag with a `param` also reads its older `dot480:<param>` key.
+ *
+ * The URL never sets a flag: visitors can't turn on a feature by editing a link.
  *
  * `VITE_FLAG_<ID>=kill` is stronger: the flag is off whatever the overrides say, and the feature's lazy chunks are
  * left out of the build. That needs the test inline where the chunk is imported, so the bundler sees a constant:
@@ -19,7 +20,7 @@ export interface FlagDef {
   id: string
   default: boolean
   description: string
-  /** An older URL param (and `dot480:<param>` storage key) that still sets this flag: `1` / `on`, `0` / `off`. */
+  /** The flag's older storage key, `dot480:<param>`, still read: `1` / `on`, `0` / `off`. */
   param?: string
 }
 
@@ -28,7 +29,7 @@ export const FLAGS = [
   { id: 'worker', default: true, description: 'Sample cards in a web worker; off samples on the main thread', param: 'worker' },
   { id: 'clack', default: false, description: 'The flip-disc clack sound', param: 'clack' },
   { id: 'analytics', default: true, description: 'PostHog analytics, opt-in (src/site/analytics.ts): the consent banner and the TOOLS and palette switches. Needs VITE_POSTHOG_PROJECT_TOKEN' },
-  { id: 'likes', default: false, description: 'Likes (#169): the like button on widget pages and gallery programs; it also hides while the likes API answers 404' },
+  { id: 'likes', default: true, description: 'Likes (#169): the like button on widget pages and gallery programs; it also hides while the likes API answers 404' },
   { id: 'make', default: false, description: 'MAKE, the editor: the view tab and phone tab, the palette and shell places, REMIX and studio actions, About and essay links. Off, a MAKE URL opens the home board' },
   { id: 'lab', default: false, description: 'The lab page (/lab/): the header, footer, TOOLS, About, blog nav and sitemap links. Off, /lab/ goes home' },
 ] as const satisfies readonly FlagDef[]
@@ -70,28 +71,11 @@ function saved(): Partial<Values> {
 }
 const save = (o: Partial<Values>) => write(KEY, Object.keys(o).length ? JSON.stringify(o) : null)
 
-function fromUrl(): { set: Partial<Values>; reset: boolean } {
-  const set: Partial<Values> = {}
-  if (!browser || typeof location === 'undefined') return { set, reset: false }
-  const q = new URLSearchParams(location.search)
-  for (const f of FLAGS) { const p = paramOf(f.id), v = p ? word(q.get(p)) : undefined; if (v !== undefined) set[f.id] = v }
-  let reset = false
-  for (const raw of (q.get('flags') ?? '').split(',')) {
-    const t = raw.trim().toLowerCase(), off = t.startsWith('-'), id = off ? t.slice(1) : t
-    if (t === 'reset') reset = true
-    else if (isId(id)) set[id] = !off
-  }
-  return { set, reset }
-}
-
-const url = fromUrl()
-if (url.reset) { save({}); for (const f of FLAGS) { const p = paramOf(f.id); if (p) write(`dot480:${p}`, null) } }
-
 function resolve(): Values {
   const s = saved(), out = {} as Values
   for (const { id, default: d } of FLAGS) {
     const p = paramOf(id)
-    out[id] = flagKilled(id) ? false : url.set[id] ?? s[id] ?? (p ? word(read(`dot480:${p}`)) : undefined) ?? word(buildValue(id)) ?? d
+    out[id] = flagKilled(id) ? false : s[id] ?? (p ? word(read(`dot480:${p}`)) : undefined) ?? word(buildValue(id)) ?? d
   }
   return out
 }
@@ -103,8 +87,7 @@ const notify = () => listeners.forEach(l => l())
 export const flag = (id: FlagId): boolean => values[id]
 
 /**
- * Saves an override for this browser (`null` drops it) and notifies subscribers. Like `setPro`, it wins over the URL
- * for the rest of this page load. A killed flag stays off.
+ * Saves an override for this browser (`null` drops it) and notifies subscribers. A killed flag stays off.
  */
 export function setFlag(id: FlagId, on: boolean | null) {
   const s = saved()

@@ -4,7 +4,7 @@
  * wins) and receives transferable double buffers (plus, when asked, the frame rasterized in the worker as an
  * `ImageBitmap`): the frame on screen (`front`) stays here, the one
  * before it is handed back to the worker for the next frame, so steady state allocates nothing.
- * Off with the `worker` flag off (`?worker=0`, `?flags=-worker`, src/site/flags.ts), when `Worker` is missing, or after
+ * Off with the `worker` flag off (src/site/flags.ts), when `Worker` is missing, or after
  * the worker fails; callers then sample locally.
  */
 import { dotBufferOver, type DotBuffer } from '../engine/buffer/dotBuffer'

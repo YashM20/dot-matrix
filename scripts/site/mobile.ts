@@ -125,14 +125,15 @@ async function fpsRow() {
     await cdp('Fetch.fulfillRequest', { requestId, responseCode: responseStatusCode, responseHeaders: headers, body: Buffer.from(body.replace(lit, m => `${m},fps:30`)).toString('base64') })
   }
   ws.addEventListener('message', onPaused)
+  // X-ray is behind its flag (off by default, set through localStorage only): the HUD needs it on
+  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `try{var k='dot480:flags',o=JSON.parse(localStorage.getItem(k)||'{}');o.xray=true;localStorage.setItem(k,JSON.stringify(o))}catch(e){}` })
   await cdp('Network.enable'); await cdp('Network.setCacheDisabled', { cacheDisabled: true })
   await cdp('Fetch.enable', { patterns: [{ urlPattern: '*/assets/*.js', requestStage: 'Response' }] })
   const subscribed = async (phone: boolean) => {
     await cdp('Emulation.setDeviceMetricsOverride', phone ? { width: W, height: H, deviceScaleFactor: 1, mobile: true } : { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
     await cdp('Emulation.setTouchEmulationEnabled', phone ? { enabled: true, maxTouchPoints: 5 } : { enabled: false })
     await cdp('Emulation.setHardwareConcurrencyOverride', { hardwareConcurrency: 8 }) // only the pointer decides here
-    // X-ray is behind its flag (off by default): the HUD needs it on
-    await cdp('Page.navigate', { url: `${base}${pick.board}/?flags=xray` })
+    await cdp('Page.navigate', { url: `${base}${pick.board}/` })
     const card = `document.querySelector('[data-card-id="${id}"]')`
     if (!await waitFor(`!!${card}?.querySelector('canvas, svg')`, 20000)) return 'card did not render'
     if (!await waitFor(`!!${card}.querySelector('button[aria-label="How it works"]')`, 5000)) return 'no ⓘ (xray flag off?)'
