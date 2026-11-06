@@ -12,7 +12,7 @@ import { flag } from '../site/flags'
 import { replace } from '../site/safe-url'
 
 document.title = LAB.title
-// the lab is behind its flag (src/site/flags.ts): off, a visit goes home (`?flags=lab` brings it back)
+// the lab is behind its flag (src/site/flags.ts): off, a visit goes home
 if (!flag('lab')) replace('/')
 else {
   createRoot(document.getElementById('lab')!).render(<StrictMode><RootBoundary page="lab"><Lab /></RootBoundary></StrictMode>)

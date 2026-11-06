@@ -4,7 +4,7 @@
  *
  * Off until the visitor clicks Allow. The choice is `localStorage['dot480:analytics']`: `on` or `off`; anything
  * else counts as no choice. Global Privacy Control or Do Not Track keep it off, with no banner. So do the
- * `analytics` flag (`?flags=-analytics`) and a build with no project token.
+ * `analytics` flag off and a build with no project token.
  */
 import { flag } from '../flags'
 import { setSink } from '../analytics'
