@@ -8,7 +8,7 @@ It sits next to the reactopia registry (`https://yash.reactopia.me/r/<name>.json
 - every item name starts with `matrix-`;
 - files install under `lib/matrix/` and `components/matrix/` only, never over `lib/utils.ts` or `components/ui/`;
 - no item ships `cn` or `utils`, adds npm packages, or edits your CSS, Tailwind config or theme;
-- the only CSS classes are `matrix-*`, and the only CSS variables are `--matrix-*`. Tailwind is optional.
+- the only CSS classes are `matrix-*`, and the only CSS variables are `--matrix-*` (`--matrix-card-pad`, `--matrix-logo-*`). Tailwind is optional.
 
 ## Set up both registries
 Add the namespaces to your `components.json`:
@@ -54,7 +54,7 @@ export function Panel() {
 
 Every card takes the same props: `data` (merged over the card's defaults), `theme`, `renderer` (`auto`, `svg` or
 `canvas`), `pitch` (dot spacing in px), `animated`, `reducedMotion`, `enter`, `onInput`, `className` and `style`. A card
-fills the width you give it and keeps its aspect ratio. Interactive cards take pointer and keyboard input: Tab moves
+fills the width you give it and keeps its aspect ratio, on a dark rounded tile padded by `--matrix-card-pad` (16px by default). Interactive cards take pointer and keyboard input: Tab moves
 between controls, the arrow keys change a value. Under reduced motion a card shows one still frame.
 
 The components are client components (`'use client'`), so they work in the Next.js App Router as well as in Vite.

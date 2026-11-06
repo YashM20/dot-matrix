@@ -2,7 +2,8 @@
 /**
  * MATRIX card host for React: a thin wrapper over the framework-free card runtime (`lib/matrix/widgets/mount`).
  * The runtime samples the preset's fields onto its dot grid and draws SVG (static, under 2000 dots) or Canvas
- * (animated or dense), handles pointer and keyboard controls, and honours reduced motion.
+ * (animated or dense), handles pointer and keyboard controls, and honours reduced motion. The card is padded by
+ * `--matrix-card-pad` (default 16px; none for edge-to-edge photo cards) and fills the width you give it.
  */
 import { useEffect, useRef, type CSSProperties } from 'react'
 import { dot480, mountCard, type CardHandle, type CardOptions, type RendererChoice, type ThemeTokens, type WidgetPreset } from '@/lib/matrix/widgets/mount'
@@ -49,7 +50,10 @@ export function MatrixDotCard({ preset, data, theme, renderer, pitch, animated, 
     <div
       ref={ref}
       className={className ? `matrix-card ${className}` : 'matrix-card'}
-      style={{ position: 'relative', background: t.bg, borderRadius: t.cornerRadiusCard, overflow: 'hidden', ...style }}
+      style={{
+        position: 'relative', boxSizing: 'border-box', background: t.bg, borderRadius: t.cornerRadiusCard, overflow: 'hidden',
+        padding: preset.bleed ? 0 : 'var(--matrix-card-pad, 16px)', ...style,
+      }}
     />
   )
 }

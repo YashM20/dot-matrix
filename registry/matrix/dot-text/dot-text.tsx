@@ -22,7 +22,7 @@ export interface MatrixDotTextProps extends Omit<MatrixDotCardProps, 'preset' | 
 
 const UNLIT: Field = () => 0.2
 
-export function MatrixDotText({ text, weight = 'regular', tone = 'value', pad = 1, unlit = true, pitch = 4, ...card }: MatrixDotTextProps) {
+export function MatrixDotText({ text, weight = 'regular', tone = 'value', pad = 1, unlit = true, pitch = 4, style, ...card }: MatrixDotTextProps) {
   const preset = useMemo<WidgetPreset>(() => {
     const smooth = weight === 'bold', [w, h] = textSize(text, { smooth })
     const grid = { cols: w + 2 * pad, rows: h + 2 * pad, pitch }
@@ -30,5 +30,6 @@ export function MatrixDotText({ text, weight = 'regular', tone = 'value', pad = 
     const layers: Layer[] = unlit ? [{ field: UNLIT, tone: 'faint' }, { field: glyphs, tone }] : [{ field: glyphs, tone }]
     return { id: 'matrix-dot-text', name: text, group: 'text', grid, style: baseStyle, layers: () => layers }
   }, [text, weight, tone, pad, unlit, pitch])
-  return <MatrixDotCard preset={preset} pitch={pitch} enter={false} {...card} />
+  // `pad` cells already frame the text, so the card itself has no padding
+  return <MatrixDotCard preset={preset} pitch={pitch} enter={false} style={{ padding: 0, ...style }} {...card} />
 }
