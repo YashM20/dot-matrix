@@ -8,7 +8,7 @@
  *    Markdown posts carry their whole text; the essay (a TSX page) carries its title and line.
  * 2. JSON-LD: `WebSite` on the home page, a `CollectionPage` per board with its cards as `hasPart`. Widget, blog and
  *    lab pages already have theirs from postbuild.
- * 3. `dist/sitemap.xml` (home, boards, canonical widget slugs, blog, the lab while its flag is on, privacy, terms) and `dist/robots.txt`.
+ * 3. `dist/sitemap.xml` (home, boards, BROWSE, canonical widget slugs, blog, the lab while its flag is on, privacy, terms) and `dist/robots.txt`.
  * 4. A `rel=canonical` on the legal pages, which have none in their source.
  * 5. `dist/404.html` (`./notfound.ts`): what Vercel serves for a path no file or rewrite matches.
  *
@@ -26,7 +26,8 @@ import { SITE_DESCRIPTION, SITE_NAME, widgetTitle } from '../../src/site/meta'
 import { POSTS, postPath } from '../../src/blog/posts'
 import { LAB } from '../../src/lab/experiments'
 import { flag } from '../../src/site/flags'
-import { blogIndexBody, boardBody, esc, homeBody, jsonLd, labBody, postBody, staticStyles, widgetBody, type WidgetRow } from './seo-html'
+import { BROWSE_PATH } from '../../src/site/browse'
+import { blogIndexBody, boardBody, browseBody, esc, homeBody, jsonLd, labBody, postBody, staticStyles, widgetBody, type WidgetRow } from './seo-html'
 import { notFoundPage } from './notfound'
 
 const DIST = 'dist'
@@ -42,7 +43,7 @@ export interface SitemapEntry { path: string; lastmod?: string }
 /** Every page the sitemap lists, by path: one per canonical URL. */
 export function sitemapEntries(widgets: readonly WidgetRow[]): SitemapEntry[] {
   return [
-    { path: '/' }, ...boardIds.map(id => ({ path: `/${id}/` })), ...widgets.map(w => ({ path: w.url })),
+    { path: '/' }, ...boardIds.map(id => ({ path: `/${id}/` })), { path: BROWSE_PATH }, ...widgets.map(w => ({ path: w.url })),
     { path: postPath(), lastmod: POSTS.map(p => p.date).sort().at(-1) }, ...POSTS.map(p => ({ path: postPath(p.slug), lastmod: p.date })),
     ...(flag('lab') ? [{ path: LAB.path }] : []), { path: '/privacy' }, { path: '/terms' },
   ]
@@ -93,6 +94,7 @@ export function seo() {
 
   fill('index.html', 'root', homeBody(), [jsonLd(homeLd())])
   for (const id of boardIds) { const cards = cardsOf(id, widgets); fill(join(id, 'index.html'), 'root', boardBody(id, cards), [jsonLd(boardLd(id, cards))]) }
+  fill(join('browse', 'index.html'), 'root', browseBody(widgets))
   for (const w of widgets) for (const dir of [join('widget', w.slug), join('widget', w.uid), w.uid]) fill(join(dir, 'index.html'), 'root', widgetBody(w))
   // blog.html is what `/blog/<anything>` falls back to: it carries the index, like postbuild's copy
   for (const file of ['blog.html', join('blog', 'index.html')]) fill(file, 'blog', blogIndexBody())

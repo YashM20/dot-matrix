@@ -1,8 +1,10 @@
-/** UX checks for `pnpm verify` (scripts/verify.ts): the board picker (U1) and the EXPLORE / MAKE / ABOUT views (U3). */
+/** UX checks for `pnpm verify` (scripts/verify.ts): the board picker (U1), the EXPLORE / BROWSE / MAKE / ABOUT views (U3) and BROWSE's filters (#182). */
 import { boardGroups, boardIds, boardLabel, groupOf } from '../../src/widgets/manifest'
 import { boardBlurbs } from '../../src/widgets/blurbs'
-import { boardFromPath } from '../../src/site/meta'
+import { SITE_NAME, boardFromPath } from '../../src/site/meta'
+import { BROWSE_META } from '../../src/site/browse'
 import { PLACES, placeView, urlForView, viewFromUrl, type ViewState } from '../../src/site/views'
+import { matches, readFilters, writeFilters, ROWS, MAX_QUERY } from '../../src/components/browse/data'
 import type { Assert } from '../lib/check'
 
 export function uxChecks(assert: Assert) {
@@ -32,6 +34,7 @@ export function uxChecks(assert: Assert) {
       ['/?skin=crt', 'EXPLORE', null, first], ['/?worker=0&tab=draw', 'MAKE', 'DRAW', first], ['/?board=nope', 'EXPLORE', null, first],
       ['/?make=compose', 'MAKE', 'COMPOSE', first], ['/?make=CODE&p=zAbC', 'MAKE', 'CODE', first], ['/?make', 'MAKE', 'TUNE', first], ['/?about', 'ABOUT', null, first],
       ['/about', 'ABOUT', null, first], ['/about/', 'ABOUT', null, first], ['/nope/', 'EXPLORE', null, first],
+      ['/browse/', 'BROWSE', null, first], ['/browse', 'BROWSE', null, first], ['/browse/?in=metro&tag=clock&q=x', 'BROWSE', null, first], ['/?tab=browse', 'BROWSE', null, first],
     ]
     const bad = old.filter(([u, v, m, b]) => !is(at(u), v, m, b)).map(([u]) => `${u} → ${JSON.stringify(at(u))}`)
     assert('ux: every old URL (?tab=… any case, ?board=, /<board>/, aliases, ?p=) opens the view it became', !bad.length, bad.join('; '))
@@ -48,10 +51,27 @@ export function uxChecks(assert: Assert) {
       ['/?tab=log', { view: 'ABOUT', mode: 'TUNE', board: first }, '/?about'], ['/metro/?about&skin=vfd', { view: 'EXPLORE', mode: 'TUNE', board: 'metro' }, '/metro/?skin=vfd'],
       ['/about', { view: 'ABOUT', mode: 'TUNE', board: first }, '/?about'], ['/nope/?skin=crt', { view: 'EXPLORE', mode: 'TUNE', board: first }, '/?skin=crt'],
       ['/index.html', { view: 'EXPLORE', mode: 'TUNE', board: first }, '/index.html'],
+      ['/browse/?in=metro&tag=clock&skin=crt', { view: 'BROWSE', mode: 'TUNE', board: first }, '/browse/?in=metro&tag=clock&skin=crt'],
+      ['/browse/?in=metro&tag=clock&q=x&skin=crt', { view: 'EXPLORE', mode: 'TUNE', board: 'metro' }, '/metro/?skin=crt'],
     ]
     const off = want.filter(([u, v, w]) => canon(u, v) !== w).map(([u, v, w]) => `${u} → ${canon(u, v)} (want ${w})`)
     assert('ux: views write their canonical URL (board path, ?make (the editor) / ?make=<mode>, ?about; ?skin/?worker/?p kept, old params folded)', !off.length, off.join('; '))
-    const trips = PLACES.flatMap(p => [first, 'light'].map(board => ({ ...placeView(p), board }))).filter(v => { const u = new URL(urlForView(v, '?skin=crt', '/'), 'https://x'); return !is(viewFromUrl(u.search, u.pathname), v.view, v.view === 'MAKE' ? v.mode : null, v.board) })
+    // BROWSE has one URL for every board (`/browse/`): it opens on the first board's state
+    const trips = PLACES.flatMap(p => [first, 'light'].map(board => ({ ...placeView(p), board }))).filter(v => { const u = new URL(urlForView(v, '?skin=crt', '/'), 'https://x'); return !is(viewFromUrl(u.search, u.pathname), v.view, v.view === 'MAKE' ? v.mode : null, v.view === 'BROWSE' ? first : v.board) })
     assert('ux: every view and MAKE mode round-trips through its canonical URL', !trips.length, trips.map(v => `${v.view}/${v.mode}/${v.board}`).join(', '))
+  }
+
+  // BROWSE (#182): the filter query is hostile input; unknown boards and tags drop, aliases resolve, the words are capped and cleaned
+  {
+    const f = readFilters('?in=glyph&tag=CLOCK&q=%20ring%00%0A%20game%20')
+    assert('ux: browse reads ?in= (aliases too), ?tag= (any case) and ?q= (control characters stripped)', f.board === 'lock' && f.tag === 'clock' && f.q === 'ring game', JSON.stringify(f))
+    const bad = readFilters(`?in=nope&tag=%3Cscript%3E&q=${'x'.repeat(500)}&in=metro`)
+    assert('ux: browse drops an unknown board or tag and caps the search', bad.board === '' && bad.tag === '' && bad.q.length === MAX_QUERY, JSON.stringify(bad).slice(0, 80))
+    assert('ux: browse survives a malformed query', readFilters('?q=%E0%A4%A&in=%zz').board === '')
+    assert('ux: browse writes its filters and keeps other params', writeFilters({ board: 'metro', tag: '', q: 'a b' }, '?skin=crt&tag=old') === '?skin=crt&in=metro&q=a+b')
+    const all = ROWS.filter(r => matches(r, { board: '', tag: '', q: '' })).length, clocks = ROWS.filter(r => matches(r, { board: '', tag: 'clock', q: '' }))
+    assert('ux: browse lists every widget once, and a tag filter keeps only cards with that tag', all === ROWS.length && new Set(ROWS.map(r => r.slug)).size === ROWS.length && clocks.length > 0 && clocks.every(r => r.tags.includes('clock')), `${all} cards, ${clocks.length} clocks`)
+    assert('ux: the browse title ends with the site name', BROWSE_META.title.endsWith(` · ${SITE_NAME}`), BROWSE_META.title)
+    assert('ux: browse search finds a card by its name', ROWS.some(r => r.slug === 'home-clock' && matches(r, { board: '', tag: '', q: 'HOME' })))
   }
 }

@@ -35,7 +35,7 @@ export function cardMotion(i: number, columns: number, count: number, leaving: b
 }
 
 /** Minute counter aligned to the wall clock, so clock cards flip exactly on :00. */
-function useMinuteTick(): number {
+export function useMinuteTick(): number {
   const [tick, setTick] = useState(0)
   useEffect(() => {
     let timer = 0
