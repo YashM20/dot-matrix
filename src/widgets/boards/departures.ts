@@ -86,8 +86,8 @@ export const platform: WidgetPreset = {
   id: 'platform', name: 'Platform', group: 'text', ...live,
   credit: SPLIT_FLAP,
   layers: ({ t }) => {
-    // the 08:42 moves between platforms 4 and 7; the number drums round to its new value
-    const { k, tau } = cycle(t, PLATFORM_PERIOD), plat = k % 2 ? '7' : '4', was = k % 2 ? '4' : '7'
+    // the 08:42 moves between platforms 3 (as on the departures card) and 5; the number drums round to its new value
+    const { k, tau } = cycle(t, PLATFORM_PERIOD), plat = k % 2 ? '5' : '3', was = k % 2 ? '3' : '5'
     const changed = k % 2 === 1
     return [
       ...flapDigits(was, plat, k === 0 ? -1 : tau, 54.5, 25, { px: 7, size: 6.4 }).map((f, i) => layer(f, i ? 'mid' : 'value')),
@@ -126,12 +126,13 @@ const HOP = 4.5, DWELL = 1.4, TRACK_Y = 82
 const stopX = (i: number) => 12 + i * 24
 export const lineMap: WidgetPreset = {
   id: 'line-map', name: 'Line 3', group: 'chart', ...live,
-  layers: ({ t }) => {
+  layers: ({ t, reducedMotion }) => {
     // the train dwells at each stop, then glides to the next (eased), looping the line
     const hops = STOPS.length - 1, { k, tau } = cycle(t, HOP), from = k % hops, to = from + 1
     const p = tau < DWELL ? 0 : ease.emphasized(Math.min(1, (tau - DWELL) / (HOP - DWELL)))
     const x = stopX(from) + (stopX(to) - stopX(from)) * p
-    const name = decodeText(STOPS[from], STOPS[to], tau, { stagger: .05, lead: .15 })
+    // the first stop opens on the settled name (the still and the first paint), later ones decode into it
+    const name = k === 0 || reducedMotion ? STOPS[to] : decodeText(STOPS[from], STOPS[to], tau, { stagger: .05, lead: .15 })
     const track = T.dotLine(stopX(0), TRACK_Y, stopX(hops), TRACK_Y, { spacing: 3, size: 1.6 })
     const passed = (track.sites ?? []).filter(([sx]) => sx <= x), ahead = (track.sites ?? []).filter(([sx]) => sx > x)
     return [

@@ -458,7 +458,8 @@ export const toastCard: WidgetPreset = {
   controls: [{ key: 'dismissed', kind: 'toggle', box: [TOAST.bx - 12, TOAST.top + TOAST.h / 2 - 12, 24, 24], label: 'Dismiss notification' }],
   layers: ctx => {
     const s = ui(ctx, 'dismissed'), gone = clamp(ctx.data.dismissed), v = s.pressed ? PRESS : 1
-    const age = ctx.t % TOAST.period, e = 1 - (1 - clamp(age / TOAST.reveal)) ** 3
+    // reduced motion: the newest toast fully in, its rail still full
+    const age = ctx.reducedMotion ? TOAST.reveal : ctx.t % TOAST.period, e = 1 - (1 - clamp(age / TOAST.reveal)) ** 3
     const slot2 = TOAST.top + TOAST.h + TOAST.gap
     const toast = (text: string, x: number, y: number, a: number, close: boolean): Layer[] => {
       if (a <= .02) return []

@@ -19,6 +19,8 @@ export const plankton: Plankton = createPlankton({
   period: 48, seam: 3, stir: 7,
 })
 const raster = createDensityRaster(73, 73, 2)
+/** The reduced-motion still: 6 s into the pristine run, the three creatures formed and gliding (t = 0 is loose clumps). */
+export const PLANKTON_STILL_T = 6
 const D2 = (PLANKTON_DISH.r - 1) ** 2
 const bodyField: Field = (u, v) => {
   const x = u * 143, y = v * 143, dx = x - PLANKTON_DISH.x, dy = y - PLANKTON_DISH.y
@@ -34,7 +36,7 @@ export const pondPlankton: WidgetPreset = {
   credit: { by: ['Alexander Mordvintsev', 'Eyvind Niklasson', 'Ettore Randazzo'], title: 'Particle Lenia and the energy-based formulation', source: 'https://google-research.github.io/self-organising-systems/particle-lenia/', note: 'technique' },
   layers: ctx => {
     mainThread()
-    const s = worldAt(plankton.world, ctx.t, frameOf(ctx, 'plankton', planktonUnits)), { n, X, Y } = plankton.layout
+    const s = worldAt(plankton.world, ctx.reducedMotion ? PLANKTON_STILL_T : ctx.t, frameOf(ctx, 'plankton', planktonUnits)), { n, X, Y } = plankton.layout
     planktonDensity(plankton, s, raster)
     const creatures = planktonCreatures(plankton, s), nuclei = new Set(creatures.map(c => c.nucleus))
     const dots: [number, number][] = [], loose: [number, number][] = [], red: [number, number][] = []

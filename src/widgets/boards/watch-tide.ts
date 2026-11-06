@@ -1,7 +1,7 @@
 /**
  * The tide clock and the world clock. The tide is a five-constituent harmonic model (src/engine/astro/tide.ts), an
- * illustration that the card's label says is one: the hand turns once a tide, high water at 12, the water fills the
- * dial to the current level and the hand's red tip marks it. The world clock lists five places; tap a row (or use
+ * illustration that the card's blurb says is one: the hand turns once a tide, high water at 12 (the big tick; the next
+ * turn's line names HIGH or LOW), the water fills the dial to the current level and the hand's red tip marks it. The world clock lists five places; tap a row (or use
  * the arrow keys) to put it in the hero, where the red dot follows it.
  */
 import { CITIES, DAY, partsOf, zoneWall } from '../../engine/astro/calendar'
@@ -24,7 +24,7 @@ const WATER: Pt[] = (() => {
 /** The next turn's line sits below the hub, or above it while the hand points down. */
 const NEXT = { below: 88, above: 54, k: 1.2 }
 export const tideFace = face('watch-tide', 'Tide', 'round', {
-  group: 'chart', label: 'TIDE  ILLUSTRATION',
+  group: 'chart', label: 'TIDE',
   layers: () => {
     const now = wallNow(), c = tideClock(now.utc), a = c.angle
     const next = `${c.next.high ? 'HIGH' : 'LOW'} ${clockOf(c.next.at + now.offset * 60_000)}`, status = c.rising ? 'RISING' : 'FALLING'
@@ -35,19 +35,19 @@ export const tideFace = face('watch-tide', 'Tide', 'round', {
     const wet = WATER.filter(([x, y]) => y >= surface(x))
     const top = new Map<number, number>()
     for (const [x, y] of wet) top.set(x, Math.min(top.get(x) ?? Infinity, y))
-    const ty = Math.cos(a) < 0 ? NEXT.above : NEXT.below, high = CY - TIDE.r + 7, low = CY + TIDE.r - 14
-    const boxes = [textBox(next, CX, ty, NEXT.k), textBox(status, CX, ty + 12), textBox('HIGH', CX, high), textBox('LOW', CX, low)]
+    const ty = Math.cos(a) < 0 ? NEXT.above : NEXT.below, low = CY + TIDE.r - 14
+    const boxes = [textBox(next, CX, ty, NEXT.k), textBox(status, CX, ty + 12), textBox('LOW', CX, low)]
     const keep = (pts: Pt[]) => knock(T.dots(pts.filter(offHand), 1.6), boxes)
     return [
       layer(keep(wet.filter(([x, y]) => y > top.get(x)!)), 'faint'),
       layer(keep(wet.filter(([x, y]) => y === top.get(x))), 'mid'),
       layer(T.dots(TICKS.filter(t => !t.big).map(t => t.p), 1.8), 'mid'),
       layer(T.dots(TICKS.filter(t => t.big).map(t => t.p), 3), 'idle'),
-      layer(T.text('HIGH', CX, high, { align: 'center' }), 'mid'),
       layer(T.text('LOW', CX, low, { align: 'center' }), 'mid'),
       layer(T.big(next, CX, ty, { lattice: NEXT.k, align: 'center' }), 'value'),
       layer(T.text(status, CX, ty + 12, { align: 'center' }), 'idle'),
-      layer(T.dots(ray(a, -6, TIDE.hand, 3), 2.4), 'value'),
+      // the hand starts at the hub: a tail behind it would cross the status line above the hub
+      layer(T.dots(ray(a, 0, TIDE.hand, 3), 2.4), 'value'),
       layer(T.dots([polar(TIDE.tip, a)], 5), 'active'),
       layer(T.dots([[CX, CY]], 4.4), 'value'),
     ]
@@ -55,7 +55,7 @@ export const tideFace = face('watch-tide', 'Tide', 'round', {
 })
 
 // ── WORLD ─────────────────────────────────────────────────────────────────────
-const ROW = { top: 62, h: 14, k: 1.3, mark: 24, code: 29, sun: 64, diff: 69, time: 120 }
+const ROW = { top: 62, h: 14, k: 1.3, mark: 24, code: 29, sun: 63, diff: 67, time: 121 }
 const PLACES = [{ code: 'HERE', name: 'LOCAL' }, ...CITIES]
 const rowTop = (i: number) => ROW.top + i * ROW.h
 export const worldFace = face('watch-world', 'World', 'squircle', {

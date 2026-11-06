@@ -35,7 +35,7 @@ const MOON = { cx: 72, cy: 56, r: 21, spacing: 3.3, size: 2.8, ring: 31 }
 /** The lunation ring: 30 sites, new moon at 12, full moon at 6. */
 const LUNATION: Pt[] = Array.from({ length: 30 }, (_, i) => polar(MOON.ring, (i / 30) * TAU, MOON.cx, MOON.cy))
 export const moonFace = face('watch-moon', 'Moon', 'round', {
-  group: 'polar', credit: { ...MEEUS, note: 'moon phase from the series of chapters 47 and 48' },
+  group: 'polar', inset: 'dark', credit: { ...MEEUS, note: 'moon phase from the series of chapters 47 and 48' },
   layers: () => {
     const now = wallNow(), m = moonPhase(now.utc), today = Math.round(m.phase * 30) % 30
     const disc = moonSites(MOON.cx, MOON.cy, MOON.r, MOON.spacing, m.phase)
@@ -53,7 +53,7 @@ export const moonFace = face('watch-moon', 'Moon', 'round', {
       layer(T.dots([LUNATION[today]], 4.6), 'active'),
       layer(T.text(phaseName(m.phase), CX, 92, { align: 'center' }), 'idle'),
       layer(T.big(`${Math.round(m.illumination * 100)}%`, CX, 103, { lattice: 1.6, align: 'center' }), 'value'),
-      layer(T.text(`${toFull ? 'FULL' : 'NEW'} ${sameDay ? 'TODAY' : DAYS[nd.dow]}`, CX, 119, { align: 'center' }), 'mid'),
+      layer(T.text(`${toFull ? 'FULL' : 'NEW'} ${sameDay ? 'TODAY' : `ON ${DAYS[nd.dow]}`}`, CX, 119, { align: 'center' }), 'mid'),
     ]
   },
 })

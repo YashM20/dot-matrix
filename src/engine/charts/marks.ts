@@ -68,14 +68,19 @@ export function valueAxis(scale: Scale, ticks: readonly number[], plot: Plot, fm
   }
 }
 
-/** Category names under the data: every `every`th, plus the picked one in `value` (its close neighbours give way). */
-export function categoryLabels(xs: readonly number[], names: readonly string[], row: number, pick: number, every = 1): Label[] {
+/**
+ * Category names under the data: every `every`th, plus the picked one in `value` (its close neighbours give way).
+ * Each name is centred on its x but kept whole inside cells 0..`cols` − 1 (default: a 144-cell TILE card), so the
+ * first and last names shift inward instead of being cut at the card edge.
+ */
+export function categoryLabels(xs: readonly number[], names: readonly string[], row: number, pick: number, every = 1, cols = 144): Label[] {
   const n = Math.min(xs.length, names.length), w = (s: string) => textSize(s)[0]
   const out: Label[] = []
   for (let i = 0; i < n; i++) {
     if (i !== pick && i % every) continue
-    if (i !== pick && pick >= 0 && pick < n && Math.abs(xs[i] - xs[pick]) < (w(names[i]) + w(names[pick])) / 2 + 2) continue
-    out.push({ text: names[i], col: Math.round(xs[i]), row, tone: i === pick ? 'value' : AXIS.label, align: 'center' })
+    if (i !== pick && pick >= 0 && pick < n && Math.abs(xs[i] - xs[pick]) < (w(names[i]) + w(names[pick])) / 2 + 4) continue
+    const half = w(names[i]) / 2, col = Math.min(Math.max(Math.round(xs[i]), Math.ceil(half)), Math.floor(cols - half))
+    out.push({ text: names[i], col, row, tone: i === pick ? 'value' : AXIS.label, align: 'center' })
   }
   return out
 }

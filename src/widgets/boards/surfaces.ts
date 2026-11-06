@@ -100,7 +100,7 @@ export const timerSpec: DeviceSpec = {
 const frameAt = (profile: DeviceProfile) => (k: number) => toDevice(timerSpec, profile, { ctx: { t: k / (profile.refresh || 1), data: {} } })
 
 /** Chrome shared by the device cards: the device grid, right-aligned in the label row. */
-const spec = (s: string): Layer => layer(T.text(s, 143, 0, { align: 'right' }), 'faint')
+const spec = (s: string): Layer => layer(T.text(s, 143, 0, { align: 'right' }), 'mid')
 /** The device housing: a dotted faint outline (sites every 2 cells). */
 const bezel = (x0: number, y0: number, x1: number, y1: number): Layer => {
   const sites: Pt[] = []
@@ -169,9 +169,10 @@ export const surfaceEink: WidgetPreset = {
       spec('800X480'),
       bezel(EX - 3, EY - 3, EX + cols + 2, EY + rows + 2),
       panel,
+      // the status has its row to itself: PARTIAL 01/10 and FULL REFRESH are too wide to share it (#215)
       layer(T.text(status, EX - 3, 118), view.phase === 'full' ? 'value' : 'idle'),
-      layer(T.text(`GHOST ${String(Math.min(999, ghosts)).padStart(3, '0')} PX`, 143 - 2, 118, { align: 'right' }), 'faint'),
-      layer(T.text('1-BIT BLUE NOISE', EX - 3, 130), 'faint'),
+      layer(T.text('1-BIT', EX - 3, 130), 'mid'),
+      layer(T.text(`GHOST ${String(Math.min(999, ghosts)).padStart(3, '0')} PX`, 143 - 2, 130, { align: 'right' }), 'mid'),
     ]
   },
 }
@@ -196,8 +197,8 @@ export const surfaceFlipdisc: WidgetPreset = {
       bezel(FX - 4, FY - 4, FX + 27 * FP + 4, FY + 13 * FP + 4),
       ...bands(discs),
       layer(T.text(view.moving ? `SCAN COL ${String(col + 1).padStart(2, '0')}` : 'HOLD', 0, 118), view.moving ? 'value' : 'idle'),
-      layer(T.text(`${String(flips).padStart(3, '0')} FLIPS`, 143 - 2, 118, { align: 'right' }), 'faint'),
-      layer(T.text('CLACK MUTED', 0, 130), 'faint'),
+      layer(T.text(`${String(flips).padStart(3, '0')} FLIPS`, 143 - 2, 118, { align: 'right' }), 'mid'),
+      layer(T.text('CLACK MUTED', 0, 130), 'mid'),
     ]
   },
 }
@@ -213,7 +214,8 @@ const planOf = (sheet: number) => {
 export const surfacePlotter: WidgetPreset = {
   id: 'surface-plotter', name: 'Surface Plotter', label: '05  PLOTTER', ...tile, defaults: { clockOffset: 0 },
   layers: ctx => {
-    const bt = boardTime(ctx), sheet = Math.floor(bt / SHEET_S), plan = planOf(sheet), tau = bt - sheet * SHEET_S, st = plotAt(plan, tau)
+    // reduced motion shows the finished sheet, not the pen part way through it
+    const bt = boardTime(ctx), sheet = Math.floor(bt / SHEET_S), plan = planOf(sheet), tau = ctx.reducedMotion ? Infinity : bt - sheet * SHEET_S, st = plotAt(plan, tau)
     const at = (x: number, y: number): Pt => [PX + (x - .5) * PP, PY + (y - .5) * PP]
     const marks: { at: Pt; tone: Tone; size: number }[] = []
     plan.strokes.forEach((s, i) => {
@@ -231,7 +233,7 @@ export const surfacePlotter: WidgetPreset = {
       ...(next && !st.down ? [layer(T.dotLine(hx, hy, ...at(next.col + .5, next.row + .5), { spacing: 2, size: .7 }), 'mid')] : []),
       layer(T.dotRing(hx, hy, 2.6, { spacing: 1.4, size: .7 }), 'idle'),
       layer(T.text(`SHEET ${String(sheet + 1).padStart(2, '0')}`, PX - 1.25, 134), 'idle'),
-      layer(T.text(`${String(pct).padStart(3, ' ')}%`, 143 - 2, 134, { align: 'right' }), pct >= 100 ? 'value' : 'faint'),
+      layer(T.text(`${String(pct).padStart(3, ' ')}%`, 143 - 2, 134, { align: 'right' }), pct >= 100 ? 'value' : 'mid'),
     ]
   },
 }
