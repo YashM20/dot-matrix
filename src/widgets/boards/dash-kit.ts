@@ -7,7 +7,7 @@ import type { Layer, Tone } from '../../engine/types'
 import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 import { DASH_DEFAULTS } from './dash-drive'
 
-export { PRESS, at, circle, dimmed, glow, marching, rr, states, ui } from './components'
+export { PRESS, at, circle, dimmed, glow, marching, rr, states, ui } from './components-kit'
 export const T = layoutFor(TILE)
 export type Pt = [number, number]
 /** Knobs and status dots are true circles, like the components board. */
