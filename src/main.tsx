@@ -1,5 +1,6 @@
 import './site/clean-address' // first: `//path` → `/path` before anything reads the address (#148)
 import './lib/trusted' // the Trusted Types policies (#149), before any worker starts
+import './site/stale-deploy' // a chunk gone with an old deploy reloads the page once
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'

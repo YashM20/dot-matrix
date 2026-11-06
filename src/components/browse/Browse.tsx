@@ -9,6 +9,7 @@ import { Suspense, use, useEffect, useId, useMemo, useRef, useState, type MouseE
 import { DotWidget } from '../DotWidget'
 import { BoardTitle } from '../DotName'
 import { useMinuteTick } from '../Board'
+import { LoadBoundary, LoadFailed } from '../LoadBoundary'
 import { boardGroups, boardLabel, loadBoard, prefetchBoard } from '../../widgets/manifest'
 import { replaceUrl } from '../../site/safe-url'
 import { BROWSE_PATH } from '../../site/browse'
@@ -35,6 +36,8 @@ const onBrowse = () => /^\/browse\/?$/i.test(location.pathname)
 const BOARD_GROUPS = boardGroups.filter(g => g.id !== 'start')
 
 const Ghost = () => <div className="dot-card browse-ghost" aria-hidden="true" />
+/** A slot whose board chunk failed (after the loader's retries): the card's square with the error state. */
+const Failed = () => <LoadFailed what="This card" className="dot-card browse-ghost" />
 
 /** One card, once its board chunk has landed (the slot suspends until then). */
 function Card({ row, tick }: { row: Row; tick: number }) {
@@ -94,7 +97,7 @@ export function Browse({ onBoard, onOpen, cardPath }: BrowseProps) {
     {rows.length
       ? <ul className="browse-grid" aria-labelledby={titleId}>
         {rows.map(r => <li key={r.slug} className="browse-item" data-slot={r.slug} ref={slot(r.slug)}>
-          {mounted.has(r.slug) ? <Suspense fallback={<Ghost />}><Card row={r} tick={tick} /></Suspense> : <Ghost />}
+          {mounted.has(r.slug) ? <LoadBoundary fallback={<Failed />}><Suspense fallback={<Ghost />}><Card row={r} tick={tick} /></Suspense></LoadBoundary> : <Ghost />}
           <p className="browse-cap">
             <a href={cardPath(r.slug)} onClick={e => go(e, () => onOpen(r.slug))}>{r.name}<span className="sr-only">: open its page</span></a>
             <a href={`/${r.board}/`} className="browse-board" onClick={e => go(e, () => onBoard(r.board))} onPointerEnter={() => prefetchBoard(r.board)}>

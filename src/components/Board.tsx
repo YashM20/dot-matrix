@@ -10,6 +10,7 @@ import type { DotCanvasProps } from './DotCanvas'
 import { pick, useLiveData } from '../data/useLiveData'
 import { HiveStart } from './game/HiveStart'
 import { useBlurbs } from './useBlurbs'
+import { LoadBoundary, LoadFailed } from './LoadBoundary'
 
 // sound (C5) is its own chunk: only the instrument / scope boards fetch the audio engine
 const loadAudio = () => import('../audio/AudioCards')
@@ -59,9 +60,12 @@ function seedShared(board: BoardDef): ControlPatch {
 /** A board by id: its chunk loads on first open (`widgets/manifest`); the title holds the place meanwhile. */
 export function Board({ id, leaving = false }: { id: string; leaving?: boolean }) {
   if (AUDIO_BOARDS.has(id)) void loadAudio() // fetched alongside the board chunk, not after it
-  return <Suspense fallback={<section className="board-view" aria-busy="true"><BoardTitle title={boardMeta(id)?.title ?? ''} /></section>}>
-    <LoadedBoard id={id} leaving={leaving} />
-  </Suspense>
+  const title = <BoardTitle title={boardMeta(id)?.title ?? ''} />
+  return <LoadBoundary fallback={<section className="board-view">{title}<LoadFailed what="This board" /></section>}>
+    <Suspense fallback={<section className="board-view" aria-busy="true">{title}</section>}>
+      <LoadedBoard id={id} leaving={leaving} />
+    </Suspense>
+  </LoadBoundary>
 }
 
 function LoadedBoard({ id, leaving }: { id: string; leaving: boolean }) {

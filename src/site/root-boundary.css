@@ -8,3 +8,9 @@
 .root-crash-btns :is(button, a) { display: inline-flex; align-items: center; min-height: var(--tap); padding: 0 var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-ctl); color: var(--value); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .1em; text-decoration: none; cursor: pointer }
 .root-crash-btns button { border-color: color-mix(in srgb, var(--red) 60%, transparent) }
 .root-crash-btns :is(button, a):focus-visible { outline: 1px solid var(--red); outline-offset: 2px }
+
+/* ── a chunk that failed to load (LoadBoundary.tsx): one board or one BROWSE card, the rest of the page stays ── */
+.load-failed { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-2); color: var(--label); font: var(--fs-copy-14)/1.5 var(--sans) }
+.load-failed p { margin: 0 }
+.load-failed button { min-height: var(--tap); padding: 0 var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-ctl); color: var(--value); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .1em; cursor: pointer }
+.load-failed button:focus-visible { outline: 1px solid var(--red); outline-offset: 2px }
