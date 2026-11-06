@@ -28,6 +28,9 @@ function useScreenSize() {
   return size
 }
 
+/** The ref's value, then one more. A module function: the compiler can't reorder `ref.current++` in an object literal. */
+const bump = (r: { current: number }) => r.current++
+
 export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }) {
   const { chars, lines: LINES } = useScreenSize()
   const grid = useMemo(() => gridFor(chars, LINES), [chars, LINES])
@@ -44,9 +47,9 @@ export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }
 
   const print = (...ls: Out[]) => setLines(prev => [...prev, ...ls.map(l => {
     const o = typeof l === 'string' ? { kind: 'out' as const, text: l } : l
-    return { id: nextId.current++, kind: o.kind, text: o.text.slice(0, TEXT_MAX) }
+    return { id: bump(nextId), kind: o.kind, text: o.text.slice(0, TEXT_MAX) }
   })].slice(-OUT_MAX))
-  const setLine = (text: string, at = text.length) => { setInput(text); pendingCaret.current = at }
+  const setLine = (text: string, at?: number) => { setInput(text); pendingCaret.current = at ?? text.length }
   useLayoutEffect(() => {
     const el = inputRef.current, at = pendingCaret.current
     if (!el || at === null) return
@@ -78,7 +81,10 @@ export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }
   // one command at a time, in the order typed; Ctrl+C aborts the running one and drops the queue
   async function pump() {
     if (running.current) return
-    for (let raw = queue.current.shift(); raw !== undefined; raw = queue.current.shift()) {
+    // a fresh `raw` per command (the handlers below close over it)
+    while (true) {
+      const raw = queue.current.shift()
+      if (raw === undefined) break
       const ac = new AbortController(); running.current = ac
       print({ kind: 'in', text: raw })
       const word = raw.trim().split(/\s+/)[0], slow = window.setTimeout(() => { if (!ac.signal.aborted) setBusy(raw.trim()) }, 120)

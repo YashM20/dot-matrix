@@ -2,7 +2,9 @@ import { useEffect, useRef, useState } from 'react'
 import { boardGroups, boardLabel, groupOf, prefetchBoard, type BoardGroupId } from '../widgets/manifest'
 import { useBlurbs } from './useBlurbs'
 
-const inGroup = (g: BoardGroupId, id: string) => (boardGroups.find(x => x.id === g)!.boards as readonly string[]).includes(id)
+/** A group by id (every `BoardGroupId` names one; the fallback only satisfies the type). */
+const groupById = (g: BoardGroupId) => boardGroups.find(x => x.id === g) ?? boardGroups[0]
+const inGroup = (g: BoardGroupId, id: string) => (groupById(g).boards as readonly string[]).includes(id)
 const homeGroup = (id: string): BoardGroupId => inGroup('start', id) ? 'start' : groupOf(id)
 const smooth = (): ScrollBehavior => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 
@@ -20,7 +22,7 @@ export function BoardPicker({ board, onPick, onAll }: { board: string; onPick: (
   }
   const setGroup = (g: BoardGroupId) => setView({ board, group: g })
   const b = useBlurbs()
-  const open = boardGroups.find(g => g.id === group)!
+  const open = groupById(group)
   const root = useRef<HTMLDivElement>(null)
   // phones: bring the selected group and board into the strips (a no-op where the rows wrap)
   useEffect(() => {
@@ -45,7 +47,7 @@ export function BoardPicker({ board, onPick, onAll }: { board: string; onPick: (
 
 /** The end of a board (phones): the next one in its group, so a thumb never has to go back up. */
 export function NextBoard({ board, onPick }: { board: string; onPick: (id: string) => void }) {
-  const list = boardGroups.find(g => g.id === homeGroup(board))!.boards as readonly string[]
+  const list = groupById(homeGroup(board)).boards as readonly string[]
   const next = list[(list.indexOf(board) + 1) % list.length]
   return <button type="button" className="next-board" onPointerEnter={() => prefetchBoard(next)} onFocus={() => prefetchBoard(next)}
     onClick={() => { window.scrollTo({ top: 0, behavior: smooth() }); onPick(next) }}>

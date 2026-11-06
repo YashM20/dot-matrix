@@ -16,7 +16,7 @@ import { DOTS_STYLE, sandboxedThumbs, userRemote } from '../dwitter/program'
 import { ProgramLikes } from '../likes/slot'
 import type { EditorFrame } from './doc'
 import { lineage, linkSource, loadLinks } from './link'
-import { useEditor } from './store'
+import { getEditor } from './store'
 import { Section } from './ui'
 
 const graphStyle = { ...DOTS_STYLE, sizeMin: .15, sizeMax: .62 }
@@ -56,7 +56,7 @@ export function RemixGraph({ current, version = 0 }: { current?: string; version
     }, landed ? 0 : 60)
     return () => { gone = true; clearTimeout(h) }
   }, [graph, current, theme, landed])
-  const open = (e: Entry) => { useEditor.getState().insertProgram(e) }
+  const open = (e: Entry) => { getEditor().insertProgram(e) }
   const pick = (e: MouseEvent<HTMLCanvasElement>) => {
     const r = e.currentTarget.getBoundingClientRect(), n = nodeAt(graph, (e.clientX - r.left) / r.width, (e.clientY - r.top) / r.height)
     if (n) open(n.entry)

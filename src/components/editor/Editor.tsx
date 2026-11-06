@@ -22,7 +22,7 @@ import { codeTarget, KEY_TOOL, MODE_ENTRY, paintTarget } from './input'
 import { InspectorBody, InspectorTabs } from './Inspector'
 import { AssetsPanel, LayersPanel } from './Panels'
 import { DETENTS, detentFor, isPhone, keyboardBox, LANDSCAPE_QUERY, panelOf, PHONE_QUERY, rememberDetent, rememberedDetent, shareLink, type Layout, type ShareOutcome } from './phone'
-import { revealAbove, useEditor, type Tool } from './store'
+import { getEditor, revealAbove, useEditor, type Tool } from './store'
 import { selCount, selFrames, selLayers, type Align } from './select'
 import { keepTypingInView, startTyping } from './typing'
 import { DotIcon, type IconName } from './ui'
@@ -46,6 +46,7 @@ const subscribeMQ = (cb: () => void) => {
 const layoutNow = (): Layout => (!matchMedia(PHONE_QUERY).matches ? 'desktop' : matchMedia(LANDSCAPE_QUERY).matches ? 'landscape' : 'portrait')
 const useLayout = () => useSyncExternalStore(subscribeMQ, layoutNow, (): Layout => 'desktop')
 type KeyboardBox = ReturnType<typeof keyboardBox>
+const sameBox = (a: KeyboardBox, b: KeyboardBox) => a?.top === b?.top && a?.height === b?.height
 /**
  * Phone: the part of the screen an on-screen keyboard leaves (`visualViewport`), or undefined when none is
  * open. The editor then fills just that part, so the sheet sits on the keyboard and the canvas above it.
@@ -58,7 +59,7 @@ function useKeyboard(phone: boolean): KeyboardBox {
     let raf = 0
     const on = () => {
       cancelAnimationFrame(raf)
-      raf = requestAnimationFrame(() => { const b = keyboardBox(window.innerHeight, vv); setBox(p => (p?.top === b?.top && p?.height === b?.height ? p : b)) })
+      raf = requestAnimationFrame(() => { const b = keyboardBox(window.innerHeight, vv); setBox(p => (sameBox(p, b) ? p : b)) })
     }
     on()
     vv.addEventListener('resize', on); vv.addEventListener('scroll', on)
@@ -98,7 +99,7 @@ function EditorView({ mode, onExit }: EditorProps) {
 
   // the old MAKE modes are ways in: each picks a tool and the panels it used to be
   useEffect(() => {
-    const s = useEditor.getState(), d = s.h.present, entry = MODE_ENTRY[mode]
+    const s = getEditor(), d = s.h.present, entry = MODE_ENTRY[mode]
     s.setTool(entry.tool); s.setLeft(entry.left); s.setRight(entry.right)
     if (mode === 'DRAW') { const t = paintTarget(d, s.sel); if (t) s.select(t) }
     else if (mode === 'CODE') {
@@ -114,7 +115,7 @@ function EditorView({ mode, onExit }: EditorProps) {
     return () => document.documentElement.classList.remove('ed-scroll-lock')
   }, [phone])
 
-  useEffect(() => { if (!note) return; const h = setTimeout(() => useEditor.getState().setNote(''), 4200); return () => clearTimeout(h) }, [note])
+  useEffect(() => { if (!note) return; const h = setTimeout(() => getEditor().setNote(''), 4200); return () => clearTimeout(h) }, [note])
   useShortcuts(phone)
 
   // the keyboard opened or closed: once the canvas has its new size, the text being typed and the field
@@ -146,8 +147,8 @@ function EditorView({ mode, onExit }: EditorProps) {
         </div>
         {!phone && <aside className="ed-right" aria-label="Inspector"><InspectorTabs /><InspectorBody /></aside>}
       </div>
-      {phone && sheet && <Sheet key={sheet} side={landscape} vh={kb?.height} onClose={() => useEditor.getState().setSheet(null)} />}
-      {shortcuts && <Shortcuts onClose={() => useEditor.getState().setShortcuts(false)} />}
+      {phone && sheet && <Sheet key={sheet} side={landscape} vh={kb?.height} onClose={() => getEditor().setSheet(null)} />}
+      {shortcuts && <Shortcuts onClose={() => getEditor().setShortcuts(false)} />}
     </section>
   )
 }
@@ -166,7 +167,7 @@ function LeftPanel() {
 function ToolButton({ t, phone }: { t: typeof TOOLS[number]; phone: boolean }) {
   const tool = useEditor(s => s.tool), on = tool === t.id
   return <button type="button" className={`ed-tool${on ? ' on' : ''}`} aria-pressed={on} aria-label={`${t.label} (${t.key})`} title={`${t.label} · ${t.key}`}
-    onClick={() => useEditor.getState().setTool(t.id)}><DotIcon name={t.icon} tone={on ? 'active' : 'value'} px={phone ? 3 : 2.6} />{!phone && <kbd>{t.key}</kbd>}</button>
+    onClick={() => getEditor().setTool(t.id)}><DotIcon name={t.icon} tone={on ? 'active' : 'value'} px={phone ? 3 : 2.6} />{!phone && <kbd>{t.key}</kbd>}</button>
 }
 
 const LINK_WHAT = { program: 'this program', frame: 'this frame', doc: 'these frames' } as const
@@ -180,7 +181,7 @@ declare global { interface Window { __editorShared?: ShareOutcome } }
  * EXPORT with the reason (DOWNLOAD JSON still works).
  */
 async function share() {
-  const s = useEditor.getState(), toExport = () => { s.setRight('export'); if (s.sheet !== null || isPhone()) s.setSheet('inspector') }
+  const s = getEditor(), toExport = () => { s.setRight('export'); if (s.sheet !== null || isPhone()) s.setSheet('inspector') }
   try {
     const m = await shareSel(), what = m.kind === 'doc' && !s.sel.frame ? 'the whole document' : LINK_WHAT[m.kind]
     s.setLink(m)
@@ -200,7 +201,7 @@ async function share() {
 function Zoom({ phone }: { phone: boolean }) {
   const z = useEditor(s => s.cam.z), vp = useEditor(s => s.vp), sel = useEditor(s => s.sel)
   const [open, setOpen] = useState(false)
-  const s = useEditor.getState(), at = (k: number) => { s.zoomAt(k, vp.w / 2, vp.h / 2); setOpen(false) }
+  const s = getEditor(), at = (k: number) => { s.zoomAt(k, vp.w / 2, vp.h / 2); setOpen(false) }
   return <div className="ed-zoom">
     {!phone && <button type="button" aria-label="Zoom out (−)" onClick={() => s.zoomAt(z / 1.25, vp.w / 2, vp.h / 2)}>−</button>}
     <button type="button" className="ed-zoom-pct" aria-haspopup="menu" aria-expanded={open} aria-label={`Zoom ${Math.round(z * 100)} %`} onClick={() => setOpen(!open)}>{Math.round(z * 100)}%</button>
@@ -215,7 +216,7 @@ function Zoom({ phone }: { phone: boolean }) {
 
 function TopBar({ phone, onExit }: { phone: boolean; onExit?: () => void }) {
   const canUndo = useEditor(s => s.h.past.length > 0), canRedo = useEditor(s => s.h.future.length > 0), name = useEditor(s => s.h.present.name)
-  const { undo, redo } = useEditor.getState()
+  const { undo, redo } = getEditor()
   if (phone) return (
     <header className="ed-top" role="toolbar" aria-label="Editor">
       {onExit && <button type="button" className="ed-ibtn" aria-label="Leave the editor" onClick={onExit}><DotIcon name="back" px={3} /></button>}
@@ -224,7 +225,7 @@ function TopBar({ phone, onExit }: { phone: boolean; onExit?: () => void }) {
       <button type="button" className="ed-ibtn" aria-label="Redo" disabled={!canRedo} onClick={redo}><DotIcon name="redo" px={3} tone={canRedo ? 'value' : 'faint'} /></button>
       <Zoom phone />
       <button type="button" className="ed-ibtn" aria-label="Share or export" onClick={share}><DotIcon name="share" px={3} /></button>
-      <button type="button" className="ed-ibtn" aria-label="Insert from assets" onClick={() => useEditor.getState().setSheet('assets')}><DotIcon name="plus" px={3} /></button>
+      <button type="button" className="ed-ibtn" aria-label="Insert from assets" onClick={() => getEditor().setSheet('assets')}><DotIcon name="plus" px={3} /></button>
     </header>
   )
   return (
@@ -235,16 +236,16 @@ function TopBar({ phone, onExit }: { phone: boolean; onExit?: () => void }) {
         <button type="button" className="ed-ibtn" aria-label="Redo (Ctrl+Shift+Z)" title="Redo · Ctrl+Shift+Z" disabled={!canRedo} onClick={redo}><DotIcon name="redo" tone={canRedo ? 'value' : 'faint'} /></button>
       </div>
       <span className="ed-docname" title="Document name (DESIGN tab with nothing selected)">{name}</span>
-      <button type="button" className="ed-textbtn" onClick={() => useEditor.getState().setShortcuts(true)} aria-label="Keyboard shortcuts (?)">?</button>
+      <button type="button" className="ed-textbtn" onClick={() => getEditor().setShortcuts(true)} aria-label="Keyboard shortcuts (?)">?</button>
       <Zoom phone={false} />
       <button type="button" className="ed-textbtn" onClick={share}>SHARE</button>
-      <button type="button" className="ed-textbtn ed-primary" onClick={() => useEditor.getState().setRight('export')}>EXPORT</button>
+      <button type="button" className="ed-textbtn ed-primary" onClick={() => getEditor().setRight('export')}>EXPORT</button>
     </header>
   )
 }
 
 function PhoneTools() {
-  const { setSheet } = useEditor.getState()
+  const { setSheet } = getEditor()
   return <nav className="ed-dock" aria-label="Tools">
     <button type="button" className="ed-tool" aria-label="Layers" onClick={() => setSheet('layers')}><DotIcon name="layers" px={3} /></button>
     <span className="ed-dock-sep" aria-hidden="true" />
@@ -263,7 +264,7 @@ function SelBar() {
   const sel = useEditor(s => s.sel), mode = useEditor(s => s.selectMode), doc = useEditor(s => s.h.present), clip = useEditor(s => s.hasClip)
   const n = selCount(sel), f = frameById(doc, sel.frame), grouped = !!sel.layer && selLayers(sel).some(id => groupOf(f, id))
   return <div className="ed-selbar" role="toolbar" aria-label={`Selection: ${n} selected`}>
-    <button type="button" className={mode ? 'on' : ''} aria-pressed={mode} aria-label="Select mode: taps add to the selection, a drag on empty canvas draws a marquee" onClick={() => useEditor.getState().setSelectMode(!mode)}>SELECT</button>
+    <button type="button" className={mode ? 'on' : ''} aria-pressed={mode} aria-label="Select mode: taps add to the selection, a drag on empty canvas draws a marquee" onClick={() => getEditor().setSelectMode(!mode)}>SELECT</button>
     <button type="button" aria-label="Select all" disabled={!doc.frames.length} onClick={selectAllSel}>ALL</button>
     <button type="button" aria-label="Duplicate the selection" disabled={!n} onClick={duplicateSel}>DUP</button>
     {grouped ? <button type="button" aria-label="Ungroup" onClick={ungroupSel}>UNGRP</button> : <button type="button" aria-label="Group the selected layers" disabled={!sel.layer} onClick={groupSel}>GROUP</button>}
@@ -362,7 +363,7 @@ function useShortcuts(phone: boolean) {
     const toSystem = (json?: string) => { if (json) void navigator.clipboard?.writeText(json).catch(() => { /* not allowed: this browser's copy still pastes */ }) }
     const onKey = (e: KeyboardEvent) => {
       if (editable(e.target) || (e.target instanceof Element && e.target.closest('.ed-confirm')) || document.querySelector('.pal-backdrop, .pal-shell')) return
-      const s = useEditor.getState(), d = s.h.present, mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase()
+      const s = getEditor(), d = s.h.present, mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase()
       const f = frameById(d, s.sel.frame), l = layerOf(d, s.sel)
       const used = () => { e.preventDefault(); e.stopImmediatePropagation() }
       if (mod) {
@@ -430,7 +431,7 @@ function useShortcuts(phone: boolean) {
     }
     // capture: the editor's letters (T text, …) must not also reach the board's global keys (hold T = time machine)
     // a copy in another tab of this browser offers PASTE here too
-    const onStorage = (e: StorageEvent) => { if (e.key === CLIP_KEY) useEditor.getState().setHasClip(!!e.newValue) }
+    const onStorage = (e: StorageEvent) => { if (e.key === CLIP_KEY) getEditor().setHasClip(!!e.newValue) }
     window.addEventListener('storage', onStorage)
     window.addEventListener('keydown', onKey, true)
     for (const t of ['copy', 'cut', 'paste'] as const) document.addEventListener(t, onClip)

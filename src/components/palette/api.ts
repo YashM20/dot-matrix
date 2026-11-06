@@ -110,8 +110,9 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   // the blog is its own page (blog.html, src/blog): the index, then each post
   items.push({ id: 'v:blog', group: 'View', text: 'Blog', hint: `${POSTS.length} posts`, run: () => assign(postPath()), keywords: 'blog posts essay guides tutorials articles read learn how it works', boost: 30 })
   for (const p of POSTS) items.push({ id: `v:blog-${p.slug}`, group: 'View', text: `Blog: ${p.title}`, run: () => assign(postPath(p.slug)), keywords: `blog post ${p.kind === 'essay' ? 'essay ditherpunk how it works' : 'tutorial guide'} ${p.dek}`, boost: 25 })
+  const boardOf = new Map(boards.map(b => [b.id, b]))
   for (const m of boardManifest) {
-    const b = boards.find(x => x.id === m.id)
+    const b = boardOf.get(m.id)
     items.push({ id: `b:${m.id}`, group: 'Board', text: `${boardLabel(m.id)} · ${m.title}`, keywords: `${m.id} ${b?.items.map(p => p.name).join(' ') ?? ''}`, hint: b ? `${b.items.length} cards` : undefined, boost: 40, run: a => a.openBoard(m.id) })
   }
   const seen = new Set<string>()

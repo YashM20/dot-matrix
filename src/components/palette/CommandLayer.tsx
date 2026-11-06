@@ -60,7 +60,7 @@ function FpsHud() {
   const [fps, setFps] = useState(0)
   useEffect(() => {
     let n = 0, t0 = performance.now(), raf = 0
-    const step = (now: number) => { n++; if (now - t0 >= 500) { setFps(Math.round((n * 1000) / (now - t0))); n = 0; t0 = now } raf = requestAnimationFrame(step) }
+    const step = (now: number) => { n += 1; if (now - t0 >= 500) { setFps(Math.round((n * 1000) / (now - t0))); n = 0; t0 = now } raf = requestAnimationFrame(step) }
     raf = requestAnimationFrame(step)
     return () => cancelAnimationFrame(raf)
   }, [])
@@ -134,6 +134,9 @@ function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { 
 }
 
 export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps) {
+  // left to React as is (#207): the command API uses getters, `this` and lazy import()s, which the React Compiler
+  // can't compile yet, and this layer renders only when a palette, shell or X-ray switch changes
+  'use no memo'
   const [palette, setPalette] = useState(false), [shell, setShell] = useState(false), [boss, setBoss] = useState(false), [tools, setTools] = useState(false)
   const [hovered, setHovered] = useState<string | undefined>()
   const anyXray = useXR(s => s.global || s.on.size > 0), frozen = useXR(s => s.frozen), fpsHud = useXR(s => s.fpsHud), note = useXR(s => s.toast)

@@ -287,6 +287,13 @@ export const useEditor = create<EditorStore>((set, get) => ({
     }
   },
 }))
+/**
+ * The store outside React: actions and one-off reads in handlers and effects. Not named like a hook, so the
+ * React Compiler doesn't take a component that calls it for one passing a hook around. In a component's render,
+ * take only actions from it: they never change, and the compiler may keep a render's call for the next one.
+ */
+export const getEditor = () => useEditor.getState()
+export const setEditor = (patch: Partial<EditorStore>) => useEditor.setState(patch)
 
 /** Bring a frame into view if it is (mostly) off screen; zooms out if it does not fit. */
 export function reveal(id: string) {

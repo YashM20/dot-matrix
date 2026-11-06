@@ -8,7 +8,7 @@ import type { Layer } from '../../engine/types'
 import { MINUTE, partsOf, type WallParts } from '../../engine/astro/calendar'
 import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
-export { PRESS, at, circle, rr, states, ui } from './components'
+export { PRESS, at, circle, rr, states, ui } from './components-kit'
 export const T = layoutFor(TILE)
 export type Pt = [number, number]
 /** Round dots (n = 2), like the components and dash boards. */

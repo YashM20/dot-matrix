@@ -8,7 +8,7 @@
 import type { Field, Layer, Tone } from '../../engine/types'
 import { clamp, hash01, smoothstep } from '../../engine/math'
 import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
-import { OUTLINE, stadium } from './components'
+import { OUTLINE, stadium } from './components-kit'
 
 const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: { ...tileStyle, cornerRoundness: 0 } } as const

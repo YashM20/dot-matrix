@@ -43,7 +43,8 @@ export function useHandMode(enabled: boolean): HandFeed {
   const data = useMemo(() => (enabled ? { [HAND_KEY]: s.on ? 1 : 0, handState: s.on ? STATE[s.status] : 0, handSeen: s.present ? 1 : 0 } : NONE), [enabled, s.on, s.status, s.present])
   const intercept = useCallback((patch: ControlPatch): ControlPatch => {
     if (!enabled || !(HAND_KEY in patch)) return patch
-    const { [HAND_KEY]: v, ...rest } = patch
+    const rest = { ...patch }, v = rest[HAND_KEY]
+    delete rest[HAND_KEY]
     handMode.set(v >= .5)
     return rest
   }, [enabled])

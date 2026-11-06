@@ -25,7 +25,7 @@ function useMinuteTick(on: boolean): number {
  * Theme as on the boards (DESIGN.md › Theme readers): the page's, or a dark inset on a light page
  * (`data-scheme="dark"` + the page's accent, dark tokens) for photos, the camera, or a figure that asks.
  */
-export function Card({ preset, data, theme: themeProp, dark, shared, sharedKeys, onShared, onData, className }: {
+export function Card({ preset, data, theme: themeProp, dark, shared, sharedKeys, onShared, className }: {
   preset: WidgetPreset
   data?: ControlPatch
   /** Fixed tokens (a figure's own off-system theme); default: the site theme. */
@@ -35,8 +35,6 @@ export function Card({ preset, data, theme: themeProp, dark, shared, sharedKeys,
   shared?: ControlPatch
   sharedKeys?: readonly string[]
   onShared?: (patch: ControlPatch) => void
-  /** Called with the card's merged data after each control edit (figures read the card's state). */
-  onData?: (data: ControlPatch) => void
   className?: string
 }) {
   const [local, setLocal] = useState<ControlPatch>({})
@@ -50,7 +48,6 @@ export function Card({ preset, data, theme: themeProp, dark, shared, sharedKeys,
     if (Object.keys(mine).length) setLocal(prev => ({ ...prev, ...mine }))
     if (Object.keys(board).length) onShared!(board)
   }, [keys, onShared])
-  useEffect(() => { onData?.(local) }, [local, onData])
   const interactive = !!preset.controls?.length
   // `cardScheme()` (src/site/theme/polarity.ts) for the essay's OLED-only cards, inlined: importing it here would
   // make it a module shared with the app's first load and split it into a chunk of its own (+0.16 kB gz)

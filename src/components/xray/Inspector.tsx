@@ -67,6 +67,15 @@ function useSheetDrag(onClose: () => void) {
 
 const plural = (n: number, w: string) => `${n.toLocaleString('en-US')} ${w}${n === 1 ? '' : 's'}`
 /** SUMMARY: what the card is made of, how many dots, what the controls change; glossary words are buttons. */
+/** The probed card's layers at its last sampled time; none if its layers throw. Outside the component for the compiler's sake (try/catch). */
+function layersOf(probe: CardProbe): Layer[] {
+  try { return probe.layers({ t: probe.stats.t, frame: 0, data: probe.data, grid: probe.grid }) } catch { return [] }
+}
+
+function specText(preset: CardProbe['preset']): string {
+  try { return JSON.stringify(presetToSpec(preset), null, 1) } catch (e) { return `// presetToSpec failed: ${(e as Error).message}` }
+}
+
 function Summary({ probe, layers, d }: { probe: CardProbe; layers: Layer[]; d: CardDescription }) {
   const [word, setWord] = useState<GlossaryTerm | null>(null)
   const term = (k: GlossaryTerm, label: string = k): ReactNode => <button type="button" className="xr-term" title={GLOSSARY[k]} aria-expanded={word === k} onClick={() => setWord(w => (w === k ? null : k))}>{label}</button>
@@ -107,12 +116,9 @@ export function Inspector({ onRemix, onStudio, onCopyLink }: { onRemix: (cardId:
     if (r.bottom > sheetTop && r.top > 64) window.scrollBy({ top: Math.min(r.top - 64, r.bottom - sheetTop), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
   }, [active])
   const probe = active ? probes.get(active) : undefined
-  const presetId = probe?.preset.id
-  const layers = useMemo(() => { try { return probe ? probe.layers({ t: probe.stats.t, frame: 0, data: probe.data, grid: probe.grid }) : [] } catch { return [] } }, [probe, probe?.stats.t, probe?.data]) // eslint-disable-line react-hooks/exhaustive-deps
-  const spec = useMemo(() => {
-    if (tab !== 'spec' || !probe) return ''
-    try { return JSON.stringify(presetToSpec(probe.preset), null, 1) } catch (e) { return `// presetToSpec failed: ${(e as Error).message}` }
-  }, [tab, presetId]) // eslint-disable-line react-hooks/exhaustive-deps
+  const layers = useMemo(() => (probe ? layersOf(probe) : []), [probe, probe?.stats.t, probe?.data]) // eslint-disable-line react-hooks/exhaustive-deps
+  const preset = probe?.preset
+  const spec = useMemo(() => (tab === 'spec' && preset ? specText(preset) : ''), [tab, preset])
   if (!anyOn) return null
   if (!probe) return <aside className="xr-panel xr-panel--empty" aria-label="X-ray inspector"><p>{noHover() ? 'Tap' : 'Hover'} an X-ray card to inspect it.</p><button onClick={() => toggleGlobal(false)}>X-RAY OFF</button></aside>
   const d = describe(probe.preset, { t: probe.stats.t, data: probe.data })

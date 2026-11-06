@@ -12,7 +12,7 @@
  * E6: a long press (touch, Move) on a frame or layer opens the long-press menu; a drag that snaps to a
  * guide lights the pasteboard's dots along it for a moment (the snap cue, in the accent).
  */
-import { memo, useCallback, useEffect, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react'
+import { memo, useCallback, useEffect, useEffectEvent, useRef, useState, type CSSProperties, type PointerEvent as RPointerEvent } from 'react'
 import { PAINT_LIVE, paintCells, paintLayer, type PaintLayer, type SitesLayer, type SpecLayer, type StudioLayer } from '../studio/doc'
 import { EXAMPLES } from '../dwitter/examples'
 import { addFrame, addLayer, blankCard, copyFrames, copyLayers, drawingCard, editFrame, editLayer, encodeCells, frameById, frameSize, hitFrame, hitLayer, layerOf, line, movable, newIRLayer, newTextLayer, nudgeLayer, paintCellAt, pitchOf, programCard, programSource, stamp, topDown, type EditorDoc, type EditorFrame } from './doc'
@@ -23,7 +23,7 @@ import { caretAt, dragSiteHandle, editableText, hasBounds, inkAt, inkStep, layer
 import { InText, LongPressMenu, QuickBar } from './OnCanvas'
 import { CUE_MS, LONG_PRESS_MS, snappedGuides } from './phone'
 import { commitTyping, placeCaret, startTyping } from './typing'
-import { drew, useEditor, type Camera } from './store'
+import { setEditor, getEditor, drew, useEditor, type Camera } from './store'
 import { EditorBoundary } from './EditorBoundary'
 import { TEST_HOOKS } from '../../lib/testHooks'
 
@@ -90,6 +90,16 @@ type Op =
   | { kind: 'bounds'; frame: string; l0: SpecLayer & { spec: Extract<SpecLayer['spec'], { kind: 'ir' }> }; handle: Handle; wx: number; wy: number }
 
 /** The canvas inside the editor's recovery screen: a render crash shows RESET EDITOR DOCUMENT, not a blank page. */
+const sameHover = (h: { frame?: string; layer?: string } | undefined, frame?: string, layer?: string) => h?.frame === frame && h?.layer === layer
+/** `fn()`, or `fallback` when it throws. Outside the component: the compiler can't yet lower the render loop's try/catch. */
+function guarded<T>(fn: () => T, fallback: T): T {
+  try { return fn() } catch { return fallback }
+}
+/** Draw one frame; a throw becomes its `error` (it draws empty and says so). */
+function tryDraw(...args: Parameters<typeof drawFrame>): { ms: number; error?: string; pending?: boolean } {
+  try { return drawFrame(...args) } catch (err) { return { ms: 0, error: String((err as Error)?.message ?? err) } }
+}
+
 export function Canvas(props: { phone: boolean; landscape?: boolean }) {
   return <EditorBoundary area="canvas"><CanvasView {...props} /></EditorBoundary>
 }
@@ -112,15 +122,16 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
   const engaged = useRef<Guide[] | undefined>(undefined)
   const cue = useRef<{ guides: Guide[]; t0: number; accent?: string } | undefined>(undefined)
 
-  // viewport size → store (fit / reveal), and the first fit
+  // viewport size → store (fit / reveal), and the first fit (for the layout at that moment)
+  const firstFit = useEffectEvent(() => { const s = getEditor(), first = s.h.present.frames.find(f => !f.hidden); if (s.sel.frame) s.fit([s.sel.frame], 1.5); else if (phone && first) s.fit([first.id], 1.25); else s.fit([], 1.25) })
   useEffect(() => {
     const el = vp.current
     if (!el) return
     let fitted = false
     const ro = new ResizeObserver(() => {
       const r = el.getBoundingClientRect()
-      useEditor.getState().setVp(r.width, r.height); pasteDirty.current = true
-      if (!fitted && r.width > 0) { fitted = true; const s = useEditor.getState(), first = s.h.present.frames.find(f => !f.hidden); if (s.sel.frame) s.fit([s.sel.frame], 1.5); else if (phone && first) s.fit([first.id], 1.25); else s.fit([], 1.25) }
+      getEditor().setVp(r.width, r.height); pasteDirty.current = true
+      if (!fitted && r.width > 0) { fitted = true; firstFit() }
     })
     ro.observe(el)
     return () => ro.disconnect()
@@ -144,34 +155,34 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
     if (TEST_HOOKS) window.__editor = stats
     const step = (now: number) => {
       raf = requestAnimationFrame(step)
-      const s = useEditor.getState(), d = s.h.present, c = s.cam, dpr = Math.min(2, window.devicePixelRatio || 1), dt = Math.min(.1, (now - lastTick) / 1000)
+      const s = getEditor(), d = s.h.present, c = s.cam, dpr = Math.min(2, window.devicePixelRatio || 1), dt = Math.min(.1, (now - lastTick) / 1000)
       lastTick = now
       const selFrame = frameById(d, s.sel.frame), timeline = !!selFrame && s.right === 'animate' && (!phone || s.sheet === 'inspector')
       if (timeline && s.play.playing) {
         const t = (s.play.t + dt) % selFrame!.card.timeline.length
         s.play.t = t
-        if (now - lastPublish > 66) { lastPublish = now; useEditor.setState({ play: { t, playing: true } }) }
+        if (now - lastPublish > 66) { lastPublish = now; setEditor({ play: { t, playing: true } }) }
       }
+      // each frame through `guarded` (a module function): the compiler can't yet lower this loop's try/catch in place
       let budget = 0
-      for (const f of d.frames) try {
+      for (const f of d.frames) budget += guarded(() => {
         const e = entries.get(f.id)
         if (f.hidden) drew(f.id) // a hidden frame never draws: nothing to wait for
-        if (!e || f.hidden) continue
+        if (!e || f.hidden) return 0
         const { w, h } = frameSize(f), x0 = f.x * c.z + c.x, y0 = f.y * c.z + c.y
-        if (x0 > s.vp.w || y0 > s.vp.h || x0 + w * c.z < 0 || y0 + h * c.z < 0) continue
+        if (x0 > s.vp.w || y0 > s.vp.h || x0 + w * c.z < 0 || y0 + h * c.z < 0) return 0
         const k = resolutionFor(c.z, dpr, w, h), tl = timeline && f.id === selFrame!.id, anim = !still && animates(f.card)
         const t = tl ? s.play.t : anim ? (now - wall0) / 1000 : 0, state = s.preview[f.id], p = e.drawn
         const due = e.dirty || !p || p.card !== f.card || p.theme !== f.theme || p.k !== k || p.state !== state || p.tl !== tl || (tl && p.t !== t) || (!tl && anim && now - e.last > 33)
-        if (!due || budget > 24) continue // past ~24 ms this tick: the rest draw next frame
-        let ms = 0, error: string | undefined, pending: boolean | undefined
-        try { ({ ms, error, pending } = drawFrame(e.canvas, f, k, { timeline: tl, t, state, pointer: e.pointer }, tl ? s.play.playing : anim)) } catch (err) { error = String((err as Error)?.message ?? err) }
+        if (!due || budget > 24) return 0 // past ~24 ms this tick: the rest draw next frame
+        const { ms, error, pending } = tryDraw(e.canvas, f, k, { timeline: tl, t, state, pointer: e.pointer }, tl ? s.play.playing : anim)
         // a frame that breaks draws empty and says so once; one that drew may be autosaved (an import is held until then)
         if (error === undefined) { e.broke = false; if (!pending) drew(f.id) } else if (!e.broke) { e.broke = true; s.setNote(`frame "${f.card.name}" could not be drawn: ${error.slice(0, 120)}`) }
-        budget += ms
         stats.lastMs = ms; stats.maxMs = Math.max(stats.maxMs, ms); stats.drawn++
         e.drawn = { card: f.card, theme: f.theme, k, state, tl, t }; e.dirty = false; e.last = now
         if (tl) stats.tl![f.id] = t; else delete stats.tl![f.id]
-      } catch { /* a frame too broken to place is skipped; the recovery screen says what broke */ }
+        return ms
+      }, 0) // a frame too broken to place is skipped; the recovery screen says what broke
       stats.frames = d.frames.length; stats.sel = s.sel.frame; stats.layer = s.sel.layer; stats.picks = selIds(s.sel)
       const vpKey = `${s.vp.w}x${s.vp.h}x${dpr}`
       // the snap cue: lit while it lasts, fading (reduced motion: held), then drawn away once
@@ -199,7 +210,7 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
     if (!el) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      const r = el.getBoundingClientRect(), s = useEditor.getState(), k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? r.height : 1
+      const r = el.getBoundingClientRect(), s = getEditor(), k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? r.height : 1
       if (e.ctrlKey || e.metaKey) s.zoomAt(s.cam.z * Math.exp(-e.deltaY * k * .0045), e.clientX - r.left, e.clientY - r.top)
       else { const dx = e.shiftKey && !e.deltaX ? e.deltaY : e.deltaX, dy = e.shiftKey && !e.deltaX ? 0 : e.deltaY; s.setCam({ ...s.cam, x: s.cam.x - dx * k, y: s.cam.y - dy * k }) }
     }
@@ -208,11 +219,11 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
   }, [])
 
   const local = (e: { clientX: number; clientY: number }) => { const r = vp.current!.getBoundingClientRect(); return { sx: e.clientX - r.left, sy: e.clientY - r.top } }
-  const world = (sx: number, sy: number) => { const c = useEditor.getState().cam; return { wx: (sx - c.x) / c.z, wy: (sy - c.y) / c.z } }
+  const world = (sx: number, sy: number) => { const c = getEditor().cam; return { wx: (sx - c.x) / c.z, wy: (sy - c.y) / c.z } }
 
   /** End whatever the pointer was doing; `commit` false abandons it. */
   const finish = useCallback((commitIt: boolean) => {
-    const o = op.current, s = useEditor.getState()
+    const o = op.current, s = getEditor()
     op.current = undefined
     setSnaps(undefined); engaged.current = undefined
     if (!o) return
@@ -235,7 +246,7 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
   }, [])
 
   const startStroke = (wx: number, wy: number, erase: boolean) => {
-    const s = useEditor.getState()
+    const s = getEditor()
     let f = hitFrame(s.h.present, wx, wy)
     if (f?.locked) { s.setNote(`${f.card.name} is locked (Ctrl+⇧L unlocks it)`); return }
     s.begin()
@@ -261,7 +272,7 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
   const strokeTo = (wx: number, wy: number) => {
     const o = op.current
     if (o?.kind !== 'stroke') return
-    const s = useEditor.getState(), f = frameById(s.h.present, o.frame), l = f?.card.layers.find(x => x.id === o.layer)
+    const s = getEditor(), f = frameById(s.h.present, o.frame), l = f?.card.layers.find(x => x.id === o.layer)
     if (!f || l?.kind !== 'paint') return
     const [c, r] = paintCellAt(f, l, wx - f.x, wy - f.y)
     const pts = o.last ? line(o.last[0], o.last[1], c, r) : [[c, r] as [number, number]]
@@ -273,7 +284,7 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
 
   /** The eyedropper: the ink of the painted dot under the pointer becomes the brush's (one of its .2 steps). */
   const pickInk = (wx: number, wy: number) => {
-    const s = useEditor.getState(), f = hitFrame(s.h.present, wx, wy)
+    const s = getEditor(), f = hitFrame(s.h.present, wx, wy)
     s.setPicking(false)
     const hit = f && inkAt(f, wx - f.x, wy - f.y, s.sel.frame === f.id ? s.sel.layer : undefined)
     if (!f || !hit) { s.setNote('no paint there: the eyedropper takes the ink of a painted dot'); return }
@@ -285,23 +296,23 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
 
   /** Start moving frames (Alt: copies of them, made in place first; the whole gesture is one undo step). */
   const dragFrames = (ids: string[], wx: number, wy: number, alt: boolean) => {
-    const s = useEditor.getState()
+    const s = getEditor()
     ids = ids.filter(id => !frameById(s.h.present, id)?.locked)
     if (!ids.length) { op.current = undefined; return }
     s.begin()
     if (alt) { const r = copyFrames(s.h.present, ids, 0, 0); s.live(() => r.doc); ids = r.ids; s.select(framesSel(ids)) }
     else s.live(d => raiseFrames(d, ids))
-    const d = useEditor.getState().h.present, box0 = framesBox(d, ids)!
+    const d = getEditor().h.present, box0 = framesBox(d, ids)!
     // guides it already sits on are not a snap: the cue is for the ones a drag reaches
     engaged.current = snapBox(box0, d.frames.filter(f => !f.hidden && !ids.includes(f.id)).map(frameBox), 0).guides
     op.current = { kind: 'drag-frames', ids, wx, wy, at0: new Map(d.frames.filter(f => ids.includes(f.id)).map(f => [f.id, { x: f.x, y: f.y }])), box0 }
   }
   /** Start moving text / sites layers of a frame in whole cells (Alt: copies). */
   const dragLayers = (frame: string, ids: string[], wx: number, wy: number, alt: boolean) => {
-    const s = useEditor.getState()
+    const s = getEditor()
     s.begin()
     if (alt) { const r = copyLayers(s.h.present, frame, ids); s.live(() => r.doc); ids = r.ids; s.select(layersSel(frame, ids)) }
-    const f = frameById(useEditor.getState().h.present, frame)!
+    const f = frameById(getEditor().h.present, frame)!
     op.current = { kind: 'drag-layers', frame, wx, wy, base: f.card.layers.filter(l => ids.includes(l.id)) }
   }
 
@@ -316,25 +327,25 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
     hold.current = undefined
     if (op.current !== o || pointers.current.size !== 1) return
     op.current = undefined
-    const s = useEditor.getState(), f = frameById(s.h.present, o.frame)
+    const s = getEditor(), f = frameById(s.h.present, o.frame)
     if (!f) return
     const hit = o.layer ? { frame: f.id, layer: o.layer } : { frame: f.id }
     if (!inSel(s.sel, hit)) s.select(o.layer ? clickLayer(f, o.layer, s.sel) : hit)
-    useEditor.getState().setMenu({ x: o.sx, y: o.sy, armed: false })
+    getEditor().setMenu({ x: o.sx, y: o.sy, armed: false })
   }
   const holdFor = (o: Op | undefined, touch: boolean) => {
     clearTimeout(hold.current); hold.current = undefined
     // decided on the next frame: moves queued behind a busy main thread are handled first, and a finger that moved never opens it
-    if (touch && o?.kind === 'press' && useEditor.getState().tool === 'move') hold.current = setTimeout(() => requestAnimationFrame(() => longPress(o)), LONG_PRESS_MS)
+    if (touch && o?.kind === 'press' && getEditor().tool === 'move') hold.current = setTimeout(() => requestAnimationFrame(() => longPress(o)), LONG_PRESS_MS)
   }
   /** The finger that opened the menu lifted: its items take taps from now on (the lift itself never picks one). */
-  const arm = () => { const m = useEditor.getState().menu; if (m && !m.armed) setTimeout(() => { const n = useEditor.getState().menu; if (n === m) useEditor.getState().setMenu({ ...m, armed: true }) }, 60) }
+  const arm = () => { const m = getEditor().menu; if (m && !m.armed) setTimeout(() => { const n = getEditor().menu; if (n === m) getEditor().setMenu({ ...m, armed: true }) }, 60) }
 
   const onDown = (e: RPointerEvent<HTMLDivElement>) => {
     const el = vp.current!
     // the quick bar's and the menu's buttons are buttons: no canvas gesture, no capture (their click must land)
     if ((e.target as HTMLElement).closest('.ed-qbar, .ed-cmenu')) return
-    const { sx, sy } = local(e), { wx, wy } = world(sx, sy), s = useEditor.getState()
+    const { sx, sy } = local(e), { wx, wy } = world(sx, sy), s = getEditor()
     // a touch must not fire the compatibility mousedown: it would blur the text being typed in place
     if (e.pointerType === 'touch') e.preventDefault()
     // the long-press menu is open: a press anywhere else only closes it
@@ -420,7 +431,7 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
   }
 
   const onMove = (e: RPointerEvent<HTMLDivElement>) => {
-    const { sx, sy } = local(e), { wx, wy } = world(sx, sy), s = useEditor.getState()
+    const { sx, sy } = local(e), { wx, wy } = world(sx, sy), s = getEditor()
     const pt = pointers.current.get(e.pointerId)
     if (pt) { pt.x = sx; pt.y = sy }
     const o = op.current
@@ -431,7 +442,8 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
       const f = hitFrame(s.h.present, wx, wy, s.tool === 'move')
       const l = f && s.tool === 'move' ? hitLayer(f, wx - f.x, wy - f.y) : undefined
       feedPointer(f && readsPointer(f) ? f : undefined, wx, wy)
-      setHover(h => (h?.frame === f?.id && h?.layer === l?.id && s.tool !== 'draw' ? h : { frame: f?.id, layer: l?.id, sx, sy }))
+      const frame = f?.id, layer = l?.id, keep = s.tool !== 'draw'
+      setHover(h => (keep && sameHover(h, frame, layer) ? h : { frame, layer, sx, sy }))
       return
     }
     if (o.kind === 'pinch') {
@@ -486,7 +498,7 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
       const grid = dragFramePos(o.box0[0], o.box0[1], wx - o.wx, wy - o.wy, e.shiftKey)
       let dx = grid.x - o.box0[0], dy = grid.y - o.box0[1]
       if (!(e.ctrlKey || e.metaKey)) {
-        const others = d.frames.filter(f => !f.hidden && !o.ids.includes(f.id)).map(frameBox)
+        const moving = new Set(o.ids), others = d.frames.filter(f => !f.hidden && !moving.has(f.id)).map(frameBox) // per pointer move
         const sn = snapBox(raw, others, SNAP_PX / s.cam.z)
         if (sn.dx || sn.guides.some(g => g.axis === 'x')) dx = raw[0] - o.box0[0] + sn.dx
         if (sn.dy || sn.guides.some(g => g.axis === 'y')) dy = raw[1] - o.box0[1] + sn.dy
@@ -527,7 +539,7 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
     pointers.current.delete(e.pointerId)
     clearTimeout(hold.current); hold.current = undefined
     arm()
-    const o = op.current, s = useEditor.getState()
+    const o = op.current, s = getEditor()
     if (o?.kind === 'pinch') { if (pointers.current.size < 2) op.current = undefined; return }
     if (!o) return
     if (o.kind === 'press') {
@@ -578,7 +590,7 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
   }
   /** A double-click on a text layer types into it on the canvas (all of its text selected). */
   const onDouble = (e: { clientX: number; clientY: number }) => {
-    const s = useEditor.getState()
+    const s = getEditor()
     if (s.tool !== 'move' || s.typing) return
     const { sx, sy } = local(e), { wx, wy } = world(sx, sy), f = hitFrame(s.h.present, wx, wy, true)
     const l = f && !f.locked ? hitLayer(f, wx - f.x, wy - f.y) : undefined
@@ -602,7 +614,8 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
     const f = hover.frame ? frameById(doc, hover.frame) : selFrame, l = selLayer?.kind === 'paint' ? selLayer : f && topDown(f.card).find(x => x.kind === 'paint')
     return (f ? pitchOf(f.card) * (l && 'lattice' in l ? l.lattice : 1) : 4) * cam.z
   })()
-  const picked = selFrames(sel).map(id => frameById(doc, id)).filter((f): f is EditorFrame => !!f && !f.hidden), many = picked.length > 1
+  const selFr = selFrames(sel), selSet = new Set(selFr) // the overlay re-renders per pointer move
+  const picked = selFr.map(id => frameById(doc, id)).filter((f): f is EditorFrame => !!f && !f.hidden), many = picked.length > 1
   const groupBox = many ? framesBox(doc, picked.map(f => f.id)) : undefined
   const resizable = !many && selFrame && !selLayer && !selFrame.card.reference && !selFrame.locked
   const pickedLayers = selFrame && sel.layer ? selLayers(sel).map(id => selFrame.card.layers.find(l => l.id === id)).filter((l): l is StudioLayer => !!l) : []
@@ -623,11 +636,11 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
       </div>
       <div className="ed-overlay">
         {frames.filter(f => !f.hidden).map(f => {
-          const b = box(f), on = selFrames(sel).includes(f.id) || sel.frame === f.id
+          const b = box(f), on = selSet.has(f.id) || sel.frame === f.id
           return <button key={f.id} type="button" tabIndex={-1} data-frame-label={f.id} className={`ed-flabel${on ? ' on' : ''}${f.locked ? ' locked' : ''}`} style={{ left: b.left, top: (b.top as number) - 22, maxWidth: Math.max(48, b.width as number) }}
-            onClick={e => { if (e.detail === 0) useEditor.getState().select({ frame: f.id }) /* keyboard / script: pointer clicks select on press and release */ }}>{f.card.name}<small>{f.card.grid.cols}×{f.card.grid.rows}</small>{f.locked && <i className="ed-flock">LOCKED</i>}</button>
+            onClick={e => { if (e.detail === 0) getEditor().select({ frame: f.id }) /* keyboard / script: pointer clicks select on press and release */ }}>{f.card.name}<small>{f.card.grid.cols}×{f.card.grid.rows}</small>{f.locked && <i className="ed-flock">LOCKED</i>}</button>
         })}
-        {hoverFrame && !(selFrames(sel).includes(hoverFrame.id) && !hoverLayer) && <div className="ed-hover" style={box(hoverFrame, hoverLayer && layerBox(hoverFrame, hoverLayer))} />}
+        {hoverFrame && !(selSet.has(hoverFrame.id) && !hoverLayer) && <div className="ed-hover" style={box(hoverFrame, hoverLayer && layerBox(hoverFrame, hoverLayer))} />}
         {selFrame && !selFrame.hidden && !many && <div className={`ed-sel${selLayer ? ' ed-sel--parent' : ''}`} style={box(selFrame)}>
           {resizable && handles(false, selFrame.id)}
         </div>}

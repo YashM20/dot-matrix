@@ -1,11 +1,15 @@
 // React Doctor (`pnpm react-doctor`): https://react.doctor/docs/configuration/config-files
 // Plain object on purpose: react-doctor runs through a pinned `pnpm dlx`, so it isn't installed and its types
-// aren't importable here. Every ignore says why. Findings still worth doing: #207, #208, #209.
+// aren't importable here. Every ignore says why. Findings still worth doing: #208, #209.
 export default {
   rules: {
     // the same check as oxlint's `react/only-export-components`, which `.oxlintrc.json` already runs (with
     // `allowConstantExport`): keep one copy so each finding counts once
     'react-doctor/only-export-components': 'off',
+    // `includes`/`find` in a loop (#209): the two that ran per pointer move (the editor canvas's drag snap and frame
+    // labels) use a Set now. The rest walk a handful of layers, frames, locks, tags or history lines on a click or a
+    // key, never per frame or per dot, where a Set costs more than the scan it saves. New hot paths get a profile
+    'react-doctor/js-set-map-lookups': 'off',
   },
   ignore: {
     files: [
@@ -76,6 +80,42 @@ export default {
           'src/hooks/useSwipeDown.ts',
         ],
         rules: ['react-doctor/effect-needs-cleanup'],
+      },
+      {
+        // DotCanvas starts its transients (entrance, dissolve, burst, spring, exit, migrate) in layout effects: each one
+        // starts from the frame on screen, held in a ref that render may not read, and a `key` would remount the card
+        // and lose that frame. The clock callbacks end them; `onMode` reports to the X-ray, which keeps it in a ref (#207)
+        files: ['src/components/DotCanvas.tsx'],
+        rules: [
+          'react-doctor/no-adjust-state-on-prop-change',
+          'react-hooks-js/set-state-in-effect',
+          'react-doctor/no-prop-callback-in-effect',
+          'react-doctor/no-pass-live-state-to-parent',
+          'react-doctor/no-pass-data-to-parent',
+        ],
+      },
+      {
+        // the command layer is `'use no memo'` (#207): its command API uses getters, `this` and lazy import()s, which
+        // the React Compiler can't compile yet, and it renders only when a palette, shell or X-ray switch changes
+        files: ['src/components/palette/CommandLayer.tsx'],
+        rules: ['react-hooks-js/todo'],
+      },
+      {
+        // a card spec is a JSON format: the round trip is the point (it drops functions, undefined and non-finite
+        // numbers the way a saved file would, where `structuredClone` throws on a function and keeps the rest), and
+        // it runs once per card build or export, not per frame
+        files: ['src/spec/build.ts', 'src/spec/export.ts'],
+        rules: ['react-doctor/no-json-parse-stringify-clone'],
+      },
+      {
+        // `Num` takes `Number()` only after it checks for an empty input and a non-finite result
+        files: ['src/components/editor/ui.tsx'],
+        rules: ['react-doctor/no-unguarded-numeric-input-parse'],
+      },
+      {
+        // `Rename` mounts for one rename: its `value` prop is the starting text, edited locally until Enter or Escape
+        files: ['src/components/editor/Panels.tsx'],
+        rules: ['react-doctor/no-derived-useState'],
       },
       {
         // static, stateless lists that never reorder (parsed blog spans, changelog lines, snap guides, shell

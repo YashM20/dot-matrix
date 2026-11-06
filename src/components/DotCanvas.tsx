@@ -150,6 +150,11 @@ function sameFrame(a: DotInstance[], b: DotInstance[]): boolean {
   return true
 }
 
+/** Does the card's first frame carry GPU passes, and can this browser draw them? (A throwing frame: no.) */
+function gpuLayers(layers: (ctx: WidgetContext) => Layer[], data: Record<string, number>, grid: WidgetContext['grid']): boolean {
+  try { return hasGPULayers(layers({ t: 0, frame: 0, data, grid })) && webglReady() } catch { return false }
+}
+
 /** Short-lived animation drawn over the sampled frame: the entrance, a change dissolve from the previous frame, or the exit (held blank at the end). */
 type Transient =
   | { kind: 'enter'; t0: number | null }
@@ -170,10 +175,9 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   // live = drawn imperatively from the master clock (no React render per frame; the clock itself pauses
   // while the page is hidden). Otherwise the card is one sampled frame: t=0 for animated cards under
   // reduced motion or off-screen, `tick` for wall-clock cards.
-  const input = useControlInput(controls, grid, data ?? {}, onInput)
+  // the hook tells `onEngage` when a hold grabs the card and when it lets go, from the events that do it
+  const input = useControlInput(controls, grid, data ?? {}, onInput, onEngage)
   const interactive = !!controls?.length && !!layers
-  const touchEngaged = input.engaged, disengage = input.disengage
-  useEffect(() => { onEngage?.(touchEngaged ? disengage : null) }, [touchEngaged, disengage, onEngage])
   // engaged: a control is hovered, pressed or focused, so even a static card runs on the clock (glow, press
   // ripple and the marching focus ring read `t`); under reduced motion it stays a re-sampled still frame
   const engaged = interactive && !reducedMotion && !!(input.ix?.hover || input.ix?.pressed || input.ix?.focus || input.ix?.pointers?.some(p => p.up))
@@ -199,6 +203,9 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   const width = grid.cols * pitch, height = grid.rows * pitch
 
   // the ref drives frames; the `transient` state only keeps the canvas renderer mounted while one runs
+  // Transients start in layout effects on purpose (#207): each one starts from the frame on screen (`shownRef`) and
+  // hands the clock a ref, and neither may be read or written during render. A `key` would remount the card and
+  // drop that frame. The clock callbacks end them (`applyTransient`), like any subscription would.
   const transientRef = useRef<Transient | null>(enterSpec ? { kind: 'enter', t0: null } : null)
   const [transient, setTransient] = useState<Transient['kind'] | null>(enterSpec ? 'enter' : null)
   const shownRef = useRef<DotInstance[]>(dots), firstRef = useRef(true)
@@ -222,7 +229,8 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     if (!springKey) return
     const all = JSON.parse(dataKey) as Record<string, number>, target: Record<string, number> = {}
     for (const k of springKey.split(',')) if (typeof all[k] === 'number') target[k] = all[k]
-    const goal = JSON.stringify(target), springs = springsRef.current ??= new DataSprings(SPRING_HALFLIFE)
+    if (!springsRef.current) springsRef.current = new DataSprings(SPRING_HALFLIFE)
+    const goal = JSON.stringify(target), springs = springsRef.current
     const moved = springGoalRef.current !== '' && springGoalRef.current !== goal
     springGoalRef.current = goal
     const now = sharedClock().time()
@@ -286,7 +294,8 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   const visible = useMemo(() => { let n = 0; for (const d of dots) if (d.opacity > 0 && d.r > 0) n++; return n }, [dots])
   // transients animate on canvas; a sparse card hands back to SVG when they finish
   // WebGL2 (P5): forced, or picked for a card whose layers carry GPU passes (`gpuIR` / `gpuValues`); it draws on the canvas surface
-  const gpuCard = useMemo(() => { try { return !renderer && !!layers && hasGPULayers(layers({ t: 0, frame: 0, data: data ?? {}, grid })) && webglReady() } catch { return false } }, [layers, renderer]) // eslint-disable-line react-hooks/exhaustive-deps
+  // keyed on the data's values (dataKey), not its object, which most owners rebuild on every render
+  const gpuCard = useMemo(() => !renderer && !!layers && gpuLayers(layers, JSON.parse(dataKey) as Record<string, number>, { cols: grid.cols, rows: grid.rows, pitch: grid.pitch, aspect: grid.aspect }), [layers, renderer, dataKey, grid.cols, grid.rows, grid.pitch, grid.aspect])
   const webgl = renderer === 'webgl' || gpuCard, gpuFade = useRef(1)
   const mode: RenderMode = renderer && renderer !== 'webgl' ? renderer : (webgl || animated || live || transient || visible > CANVAS_THRESHOLD ? 'canvas' : 'svg')
   const markup = useMemo(() => mode === 'svg' ? renderSVG(dots, width, height) : '', [mode, dots, width, height])
@@ -295,6 +304,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   // an SVG frame is drawn once per new dot list: it counts toward the dots this visit has drawn (src/site/stats.ts)
   useEffect(() => { if (svg) drawnStat.dots += visible }, [svg]) // eslint-disable-line react-hooks/exhaustive-deps
   const scale = useBackingScale(canvasRef, mode === 'canvas', width)
+  // tells the X-ray which renderer drew the card; it keeps that in a ref, so the report costs the owner no render
   useEffect(() => { onMode?.(webgl && mode === 'canvas' ? 'webgl' : mode) }, [mode, webgl, onMode])
 
   const prepare = (canvas: HTMLCanvasElement) => {
