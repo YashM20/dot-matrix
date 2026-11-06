@@ -12,10 +12,11 @@ CI (`.github/workflows/ci.yml`) only checks and builds; it does not deploy. Host
 | `dist/index.html`, `dist/assets/*` | `vite build` | Hashed chunks: one per board (`src/widgets/manifest.ts`), one per non-board view, plus the sample worker. |
 | `dist/blog.html` | `vite build` (second entry) | The blog (`src/blog/`): the index and every post, the "Ditherpunk for UI" essay included. `vercel.json` rewrites `/blog/*` to it and redirects `/essay`, `/essay/` and `/essay.html` to `/blog/dot-matrix-essay/`. |
 | `dist/blog/index.html`, `dist/blog/<slug>/index.html` | `scripts/site/postbuild.ts` | Copies of `blog.html` with each post's title, description, canonical, OG/Twitter tags (`og:type` article) and JSON-LD (BlogPosting, CollectionPage for the index). Images: `public/og/blog/<slug>-social.png`, else `/og/default.png`. |
+| `dist/browse/index.html` | `scripts/site/postbuild.ts`, `scripts/site/seo.ts` | A copy of `index.html` with the BROWSE title, description and canonical (`src/site/browse.ts`), plus a crawlable block that links every card. |
 | `dist/<board>/index.html` | `scripts/site/postbuild.ts` | A copy of `index.html` with that board's `<title>`, description, canonical and OG/Twitter tags (`src/site/meta.ts`). Crawlers get the right preview for `/light/`. The app opens the board from the path. |
 | `dist/og/<board>.png`, `dist/og/default.png` | `scripts/site/postbuild.ts` → `scripts/og.ts` | 1200×630, one hero card per board (the first card without live media; override in `HERO`). |
 | Static roots, JSON-LD | `scripts/site/seo.ts` | Each board, widget, home, blog and lab page gets a plain block in its root `<div>`: an `<h1>`, the blurbs and links (board → every card's `/widget/<slug>/`, widget → its board, home → every board). Markdown posts carry their whole text. The block is visually hidden while the app loads and shown when scripts are off; `createRoot` replaces it on mount. Home gets `WebSite` JSON-LD, each board a `CollectionPage` with its cards as `hasPart`. |
-| `dist/sitemap.xml`, `dist/robots.txt` | `scripts/site/seo.ts` | One URL per canonical page: home, boards, widgets by slug, blog, posts, lab, privacy, terms. robots.txt allows everything and names the sitemap. Both need the absolute origin below; without one the sitemap stays root-relative and robots.txt names no sitemap. |
+| `dist/sitemap.xml`, `dist/robots.txt` | `scripts/site/seo.ts` | One URL per canonical page: home, boards, browse, widgets by slug, blog, posts, lab (only while the `lab` flag is on at build time), privacy, terms. robots.txt allows everything and names the sitemap. Both need the absolute origin below; without one the sitemap stays root-relative and robots.txt names no sitemap. |
 | `dist/404.html` | `scripts/site/seo.ts` → `scripts/site/notfound.ts` | The dot 404 (drawn by the engine at build time, no script) with links home and to every board. Vercel serves it with status 404. |
 
 The post-build step runs from the `site-postbuild` plugin in `vite.config.ts`, and the SEO step right after it. `SITE_POSTBUILD=0` skips both. `npx tsx scripts/site/postbuild.ts --no-og` reruns only the pages; `npx tsx scripts/site/seo.ts` reruns the SEO step (its inserts sit between `<!-- seo -->` markers, so a rerun replaces them). `scripts/site/seo-check.ts` checks the result (CI runs it after the build).
@@ -31,7 +32,8 @@ In the browser, the app rewrites these tags as you move between boards and widge
 
 ## Deep links
 - `/<board>/` (for example `/light/`) is the shareable form.
-- MAKE is `?make=<tune|compose|code|draw>` and ABOUT is `?about`, on the current board's path, for example `/light/?make=compose`.
+- ABOUT is `?about` on the current board's path. MAKE is `?make=<tune|compose|code|draw>` (for example `/light/?make=compose`) only while the `make` flag is on; with it off, a MAKE URL opens the home board.
+- BROWSE is `/browse/`, with optional filters `?in=<board>`, `?tag=<tag>` and `?q=<words>`. The filters are checked against real boards and tags and capped, and other views drop them.
 - The address bar follows every board and view, and each change is a history entry, so Back and Forward work. The URL forms live in the pure resolver `src/site/views.ts`; `syncUrl` in `src/site/meta.ts` writes them, and the first render only normalises the URL.
 - Old forms resolve through the alias table in `views.ts` (checked by verify): `?board=<id>` folds into the path, and `?tab=workspace|studio|dots|draw|log|gallery` map to the new views. `?card=<id>`, `?make=code&p=…`, `?skin=` and `?pro=1` are kept. `?flags=`, `?worker=` and `?clack=` no longer do anything: flags are never set from the URL.
 - Old ids resolve through `boardAliases` (`/glyph/` opens `/lock/`).
@@ -39,6 +41,7 @@ In the browser, the app rewrites these tags as you move between boards and widge
 - Routing (`vercel.json`): redirects first, then real files, then rewrites, else `404.html` with status 404. Vercel reads a `source` exactly (case-sensitive, no optional trailing slash), so routes list both slash forms. Only the app's own route shapes fall back:
   - `/<board>` (no slash) rewrites to `/<board>/index.html`; the board ids are listed in the rule, so **a new board adds its id there** (`seo-check.ts` fails until it does). `/<board>/` is a real file.
   - `/about`, `/widget/<key>`, `/@<scope>/widget/<key>` and a uid-shaped `/<uid>` (each with or without the slash) rewrite to `/index.html`, so old slugs and unknown uids still reach the app's own resolver.
+  - `/browse` rewrites to `/browse/index.html`; `/browse/` is a real file.
   - `/blog/*` rewrites to `blog.html`; `/lab`, `/privacy`, `/terms` to their pages.
   - Board aliases redirect (`/glyph/` → `/lock/`, permanent). A new alias in `boardAliases` adds its redirect.
   - Anything else 404s: `/nope/`, `/light/extra`, a missing asset, the reserved segments with no route yet (`/w/`, `/embed/`, `/r/`, `/oembed/`). Give a new route its rewrite when it lands.
@@ -97,8 +100,8 @@ Reload. The object can hold several flags, `{ xray: true, worker: false }`, and 
   - `Referrer-Policy: strict-origin-when-cross-origin`;
   - `Permissions-Policy`: camera, microphone, accelerometer and gyroscope allowed for `self` (the mirror board's camera, the audio cards, tilt), and `geolocation`, `payment`, `bluetooth`, `usb`, `serial`, `hid` and `display-capture` off.
 - The CSP covers the Lab too. `/lab/motion-lab.html` loads its script from `/lab/motion-lab.js`, so it needs no inline grant.
-  - `script-src 'self'` plus one sha256: the no-flash theme boot script (`src/site/theme/boot.ts`), inline in every HTML entry. `scripts/site/theme.ts --write` keeps the hash current. No other inline scripts and no eval. The IR `function` backend falls back to closures under this policy.
-  - `worker-src 'self' blob:`: the sample worker and the audio scheduler's timer worker.
+  - `script-src 'self'` plus one sha256: the no-flash theme boot script (`src/site/theme/boot.ts`), inline in every HTML entry. `scripts/site/theme.ts --write` keeps the hash current. No other inline scripts and no eval. Field IR builds code with `new Function` only in Node (scripts and parity tests); in the browser it runs the closure tree, so pages make no eval attempt (#204).
+  - `worker-src 'self' blob:`: the sample worker, the Field IR sandbox worker and the audio scheduler's timer worker.
   - `style-src 'self' 'unsafe-inline'`: React style attributes.
   - `img-src`/`media-src` allow `data:`, `blob:` and `mediastream:` (exports, camera).
   - `connect-src`: `'self'` and the live board's APIs (Open-Meteo, GitHub, the contributions API). No WebSocket sources: the live board's now-playing card reads the page's Media Session and same-origin pushes, and no URL parameter can name a host (#147 removed `?np=`).
@@ -106,10 +109,11 @@ Reload. The object can hold several flags, `{ xray: true, worker: false }`, and 
   - `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`.
   - WebCodecs and `getUserMedia` need no CSP grant.
   - **Add any new external API to `connect-src`**, or the fetch is blocked in production only.
+- `Content-Security-Policy-Report-Only` carries Trusted Types: `require-trusted-types-for 'script'; trusted-types dot480-svg default`. The two policies live in `src/lib/trusted.ts`: `dot480-svg` for the SVG renderer's markup, `default` for `new Worker(...)` on this origin's files and blobs. Our pages run clean with it enforced. It stays Report-Only because BotID's challenge script, which Vercel serves and loads with the like button, writes a plain string to an iframe's `srcdoc`; enforced, that write would fail and could break every like. Once BotID stops doing that, moving the two directives into the enforced CSP is a one-line change in `vercel.json`, and `headers.ts` already accepts it there.
 - Local tooling is unaffected: `vite` dev and `vite preview` don't apply `vercel.json`, so Vite's hot-reload socket keeps working. The theme probes (`scripts/site/theme-boot.ts`, `theme-picker.ts`) serve `dist/` with the CSP from `vercel.json` on `127.0.0.1`, and the page itself opens no socket. Under `npx vercel dev` the CSP applies and blocks the hot-reload socket, so reload by hand there.
-- `scripts/site/headers.ts` (in `pnpm check`, and again in CI after the build) reads `vercel.json` and fails if any page, board, widget, blog, legal or Lab path (a deep `/lab/motion-lab/x` included), or any HTML file in the repo or in `dist/`, would miss one of these headers. It also checks the CSP and Permissions-Policy values above, and that every inline script in the HTML pages has its sha256 in `script-src` with no stale hash left over.
+- `scripts/site/headers.ts` (in `pnpm check`, and again in CI after the build) reads `vercel.json` and fails if any page, board, widget, blog, legal or Lab path (a deep `/lab/motion-lab/x` included), or any HTML file in the repo or in `dist/`, would miss one of these headers. It also checks the CSP and Permissions-Policy values above, that the Trusted Types directives name exactly the policies `src/` creates, and that every inline script in the HTML pages has its sha256 in `script-src` with no stale hash left over.
 - No COEP: nothing uses `SharedArrayBuffer`, and COEP would block the cross-origin API responses. Add it only if a feature needs cross-origin isolation (for example threaded WASM).
-- No CSP reporting yet: it needs an endpoint to receive the reports.
+- No CSP report endpoint: Report-Only violations show only in the browser console. `scripts/site/csp-browser.ts` serves the build with these headers, walks the pages as a visitor would, and fails on any CSP or Trusted Types violation.
 
 ## CI (`.github/workflows/ci.yml`)
 CI runs once per push: on `pull_request` for PRs (a new push cancels the old run) and on `push` for `main`. These jobs run in parallel:
@@ -139,7 +143,7 @@ The functions can't import `src/` directly (Vercel compiles each function with t
 2. Add for Production: `LIKE_COOKIE_KEY` and `LIKE_HASH_KEY` (each `openssl rand -base64 48`, at least 32 characters) and `CRON_SECRET` (`openssl rand -hex 24`). Rotating `LIKE_COOKIE_KEY` signs every visitor out of "remembered" at once. Never rotate `LIKE_HASH_KEY`: it would split every like from its voter.
 3. Firewall → add a rate-limit rule: request path starts with `/api/`, 30 requests per 60 seconds per IP, action deny. Requests the firewall denies don't count as function usage.
 4. BotID needs the project's OIDC token: Settings → Security → Secure backend access with OIDC federation, on.
-5. Turn the button on with `VITE_FLAG_LIKES=on` (a build-time flag, so redeploy).
+5. Nothing to turn on: the `likes` flag is on by default (#200), and the button shows once the API stops answering 404. `VITE_FLAG_LIKES=off` hides it (a build-time flag, so redeploy).
 
 **Switches:** `LIKES=off` makes every route a 404 with no Redis call (flip it if function use climbs). `LIKE_BOTID=off` skips the BotID check if it turns away real visitors. `LIKE_LIMITS` overrides the limits as `name=value` pairs (`vd=40,site=1000,budget=15000`; names and defaults in `api/_lib/config.ts`). During an attack, turn on Attack Challenge Mode (Firewall, free on every plan).
 

@@ -1,7 +1,90 @@
 # Changelog
 
 All notable engineering changes to Dot/480 are recorded here, newest first.
-Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://matrix.reactopia.me, deployed from `main`), not a published package: there are no tagged or npm releases, so entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
+Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://matrix.reactopia.me, deployed from `main`), not a published package: there are no tagged or npm releases. From 0.14 on, an entry is one checkpoint (a GitHub milestone, see `docs/CHECKPOINTS.md`) and names its PRs; older entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
+
+## [Unreleased] · 0.17 · 2026-11-04 to 2026-11-06 · CP5, UI hill climb (in progress)
+Milestone `CP5 · 0.17 · UI hill climb` (tracking issue #189), merged to `main` PR by PR. Still open: #186 (MAKE layout), #187 (the full accessibility walk), #188 (rename the falling-blocks card). Status: `docs/PROGRESS.md`.
+### Added
+- **Browse** (`/browse/`, lazy; #182, PR #205): every card from every board in one windowed grid, filtered by board, tag and name, with the filters in the URL (`?in=`, `?tag=`, `?q=`). The header, the palette and the shell (`open browse`) reach it, and it has its own meta and a sitemap entry. Probe: `scripts/site/browse-browser.ts`.
+- **Accessibility probe** (#187, PR #195): `pnpm a11y` (`scripts/site/a11y.ts`) runs axe-core on each route and fails on serious or critical findings. Run by hand; not in CI yet.
+- **Credit to Henry Li** (`@henry19840301` on X): his ESP-Mosaico concept screens for a 480 × 480 OLED device, posted on 20 Aug 2026, are where the project started. The credit, with links to both posts, is in ABOUT › CREDITS, the essay's Prior art list, the README, and a new opening section of `docs/CREDITS.md` (from `conceptCredit` in `src/widgets/blurbs.ts`, through `scripts/site/credits.ts`). The seven boards that rebuild his sheets (henry, deerflow12, mosaic, henry3, metro, ride, audio) show a credit line under their blurb. Goldens: 0 changed.
+- **`/favicon.ico`** (#198, PR #204): 16, 32 and 48 px, drawn from the app icon by `scripts/site/favicon.ts` (`--check` in `pnpm check`). `public/favicon.svg` uses the dot icon.
+### Changed
+- **Flags** (PR #200): a release flag comes from the registry default, then `VITE_FLAG_<ID>`, then `localStorage['dot480:flags']`. The URL never sets one: `?flags=`, `?worker=` and `?clack=` do nothing. `likes` is on by default and stays hidden while the likes API answers 404. Probes seed flags with `launch(w, h, { flags })`.
+- **MAKE and LAB behind flags** (#178, PR #192): `make` and `lab`, both off by default. Off, they leave the header, tab bar, footer, TOOLS, palette, shell, card actions and sitemap; a MAKE URL or `/lab/` opens the home board.
+- **Header and titles** (#179, #180, PR #192, PR #204): the view tabs and BLOG sit in one group; board titles read `NAME: subtitle`, with no DOT/480 and no em dashes, the name in dot type.
+- **Widget page** (#183 to #185, PR #191): above 760 × 560 it fits the screen with no page scroll, the card scaled to fit and a side panel; MORE is a real menu button; links and tags look clickable.
+- **Card actions** (#181, PR #194): the hover strip that covered the drawing is gone. Each card has one ⋯ menu in its top padding.
+- **CI** (#197, #193, PR #199): four parallel jobs (typecheck + lint, verify, build + site checks, mcp) behind the required `check + build` gate, about 2.5 minutes from push to green. One run per push. `pnpm check` is `pnpm check:static && pnpm verify`. The perf report runs on `main` only.
+- **Dependencies** (PR #201, #202, #203): `pnpm/action-setup` 6.1.1, `actions/checkout` 7.0.1, and ten minor and patch updates.
+- **Docs**: the live run state in `docs/PROGRESS.md` for CP4 and CP5 (PR #206). Then this file's 0.14 to 0.17 entries, and a sweep of the README, the doc index, `AGENTS.md`, `DEPLOY.md`, `HARNESS.md`, `CHECKPOINTS.md` and the plan status lines for flags, likes, MAKE and LAB, browse and CI.
+### Fixed
+- **SEO checkup** (#198, PR #204): `/` keeps its own title and canonical; Field IR builds code with `new Function` only in Node, so pages make no eval attempt; the tool dock holds its place from first paint (CLS 0.304 → 0.012 at 1280 px); each page links one stylesheet.
+- **X-ray probe** (#190, PR #199): `scripts/c10-browser.ts` passes on a production build with the flag off and on. The `mcp/` package type-checks again (#193).
+- **Accessibility quick fixes** (PR #195): the ⌘K dock button's name includes the text it shows, and the blog post line's BLOG link keeps its underline.
+
+## 0.16 · 2026-11-04 · CP4, flags, SEO, analytics, shell and security (PRs #153 to #177, #196)
+Milestone `CP4 · 0.16 · Flags, SEO, analytics, shell and security`, merged to `main` PR by PR. Open: #169 (likes; phase 1 shipped).
+### Added
+- **Feature flags** (#144, #145, PR #154, PR #173): `src/site/flags.ts`, a typed registry with build values and `kill`, which leaves a feature's chunks out of the build. X-ray is behind `xray`, off by default.
+- **SEO** (#146, PR #157, PR #173): `scripts/site/seo.ts` writes `sitemap.xml`, `robots.txt`, crawlable text on board, widget, blog and home pages, JSON-LD, and a dot 404 page served with status 404. `seo-check.ts` checks the build and plays the `vercel.json` routes against `dist/`.
+- **Analytics** (#151, PR #171): opt-in PostHog. Nothing loads before Allow; GPC and Do Not Track keep it off; events go through the `/ingest` proxy and carry ids only.
+- **Likes, phase 1** (#169, PR #176): Vercel Functions in `api/` over Upstash Redis, weighted and capped, with BotID. A like button on widget pages and gallery programs, shipped off.
+- **Shell** (#152, PR #174): one command table drives `help`, Tab completion and did-you-mean.
+- **Brand** (PR #168): the public name is MATRIX. The legal pages follow the MIT license, and the README is written for visitors.
+- **Repo** (PR #166): MIT `LICENSE`, community files, `THIRD-PARTY-NOTICES.md`, a pinned Node version, and docs scrubbed of local paths.
+- **Prose lint in `pnpm check`** (#77, PR #170): `scripts/site/prose-lint.ts` (rules in `prose-rules.ts`) over visitor text, the README and the changelogs; the voice guide `docs/WRITING.md`.
+### Security
+- **Headers** (#141, PR #153): one header block for every path (the old one skipped `/lab/motion-lab/*`), `frame-ancestors 'self'`, `X-Frame-Options`, COOP and HSTS; no socket sources in `connect-src`.
+- **Field IR cost** (#142, PR #155, PR #177): a static cost cap per dot and a frame budget that pauses slow programs.
+- **Field IR front end** (#158, PR #160, PR #175): a seeded fuzz check in verify, an allowlist for emitted code, closures only for visitor programs, and a sandbox worker the page terminates after 250 ms.
+- **Live board** (#147, PR #156): its URL config and API parsing are locked down; `?np=` is gone.
+- **Editor imports** (#143, PR #167, PR #177): documents are validated and grids capped, a bad saved document recovers, and program and document links ask OPEN THIS LINK? first.
+- **Navigation** (#148, PR #172): every URL write goes through `src/site/safe-url.ts`, `//path` addresses are cleaned at startup, bad escapes no longer throw, and error boundaries catch render errors.
+- **Repo and themes** (#150, #149, PR #159, PR #196): CI actions pinned to SHAs, `.env*` ignored, custom themes stored as a hue, the boot script paints only stored CSS that passes a strict shape test, and test globals are off in production.
+- **Trusted Types** (PR #196): two policies (`dot480-svg`, `default`) in `src/lib/trusted.ts`, sent as `Content-Security-Policy-Report-Only`. `scripts/site/csp-browser.ts` walks the pages and fails on any violation.
+### Changed
+- **Dependencies** (PR #161 to #165): `actions/upload-artifact` 7.0.2, `pnpm/action-setup` 6.1.0, two minor updates, and TypeScript 7.0.2 and `@types/node` 26.6.6 in `mcp/`.
+
+## 0.15 · 2026-11-04 · CP3, kits and new boards (PRs #102 to #140)
+Milestone `CP3 · 0.15 · Kits and new boards`: all 11 issues closed. The same days also landed parts of #36 (Backlog, still open) and #20, #21, #34 and #69.
+### Added
+- **Car dash** (`/dash/`; #125, PR #135): nine cards driven by one 30 s lap that hands over on the first control edit.
+- **Faces** (`/faces/`; #127, PR #136): four lit halftone heads whose eyes follow the pointer.
+- **Kinetic type** (`/kinetic/`; #129, PR #137): seven effects on one shared word, kept in `?word=`.
+- **Micro motion** (`/motion/`; #128, PR #138): eleven looping micro-interactions; a tap replays.
+- **Charts** (`/charts/`; #132, PR #139): seven dot charts that grow in, morph and read out the nearest point.
+- **Watch faces** (`/watch/`; #126, PR #140): eight faces, with moon phase and sun times computed on the device.
+- **IQ boards** (#66 to #69, PR #102, #107, #108, #118): noise upgrades, `/oldschool/` effects, `/fractals/`, and `/scenes/` (3D SDF scenes sphere-traced on the CPU).
+- **Squares** (#20, #36, PR #112, #114, #123): `sq-hat` and `sq-ammann` aperiodic floors, `sq-arctic`, `sq-sandpile` and `sq-ascii`.
+- **Pond** (#36, PR #115, #122): `pond-plankton` (Particle Lenia) and `pond-turing` (Turing skin).
+- **Workshop** (#21, #36, PR #116, #121, #124, #134): `mat-lichtenberg`, `mat-erosion`, `mat-frost`, `mat-kintsugi`, `mat-mud` and `mat-fold`.
+- **Theme** (#34, PR #117): a CONTRAST: MORE switch and `?hue=` share links.
+- **Probes** (#37, PR #113): P0 probes for layout, sticky bars, navigation and focus.
+- **Guides** (#77, PR #120): three visitor guides in `docs/guides/`.
+### Changed
+- **Tokens** (#45, PR #110): a z-index scale, tap sizes and bar heights.
+### Fixed
+- **Site chrome** (PR #119): a sticky desktop header that hides on scroll down, the footer wrap and overflow found by the P0 probes.
+
+## 0.14 · 2026-11-03 · CP2, foundations and fixes (PRs #79 to #111)
+Milestone `CP2 · 0.14 · Foundations and fixes`: all 8 issues closed.
+### Added
+- **Engine packs** (#62 to #65, PR #89, #91, #96, #105): IQ1 2D SDFs (`src/engine/sdf`), IQ2 smooth minimums, domain repetition and xor, IQ3 shaping and easing (`src/engine/shape`), IQ4 filtered fields for coarse grids.
+- **Tixy** (#53, PR #92): the `tixy()` adapter and a card `credit` field. `docs/CREDITS.md` is generated by `scripts/site/credits.ts` and checked in `pnpm check` (PR #109).
+- **Blog** (`/blog/`; PR #80, #81, #82, #85, #99): the essay (now `/blog/dot-matrix-essay/`; old essay URLs redirect) and three deep dives, code highlighting, and hero and social images drawn by the engine.
+- **Lab** (`/lab/`; #86, PR #87): interactive pieces off the board grid, starting with Field to dots.
+- **Checks** (#75, #28, #29, PR #83, #88, #94, #95, #104, #111): one reporter, wall-clock checks warn unless `DOT_TIMING=strict`, steadier timing gates, and a `mat-lens` WebGL parity entry.
+- **File-size rule** (#76, PR #93): `scripts/site/file-size.ts` in `pnpm check`, with an allowlist for the current overages.
+### Changed
+- **Goldens** (#76, PR #101): one file per board, `goldens/<board>.json`.
+- **Splits** (#76, PR #93, #97, #98): `verify.ts`, `materials.ts`, `pond.ts`, `App.css` and `mobile.css`.
+- **Workshop** (#27, PR #100): cheaper cold first frames, same pixels.
+- **Release notes** (PR #79): 0.13 in the LOG and this file.
+### Fixed
+- **Pond** (#90, PR #97): koi no longer snap back after a feed.
+- **Full-bleed widths** (#42, PR #106): `100cqi` replaces `100vw`, so scrollbars no longer push the editor, bars and figures past the page edge.
 
 ## 0.13 · 2026-11-01 · PR #78 (`feat/round3`), round 3: workshop, glass and water, squares Q2 and Q3, pond L3 and X1, editor E5 and E6
 Merged to `main` as `8a1a6fb` (PR #78). Plans and status: `docs/PROGRESS.md`, `docs/CHECKPOINTS.md` (CP1), `docs/living-matter/`, `docs/EDITOR-PLAN.md`.

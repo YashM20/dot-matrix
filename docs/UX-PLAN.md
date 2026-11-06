@@ -1,6 +1,6 @@
 # UX-PLAN: low floor, high ceiling
 
-> **Status (2026-10-26; merged the same day in PR #6):** U0–U4 are built and on `main`, with the DISPLAY ▾ slice of U5. U4 is built too. The build log is §9: what changed, why, the files, how it was checked, and what's pending. It sits alongside `docs/WEB-PLAN.md` (what the site does) and `docs/SHARE-PLAN.md` (per-card pages, export and the shadcn registry, planned).
+> **Status (2026-10-26; merged the same day in PR #6):** U0–U4 are built and on `main`, with the DISPLAY ▾ slice of U5. U4 is built too. The build log is §9: what changed, why, the files, how it was checked, and what's pending. **Since then (2026-11-06):** MAKE is behind the `make` flag and the Lab behind `lab`, both off by default (#192), so the top level visitors see is EXPLORE, BROWSE (`/browse/`, #205) and ABOUT, plus the blog. X-ray is behind `xray`, also off (#154); the card actions moved from the hover strip into one ⋯ menu (#194). Flags are never read from the URL (#200). §4.1, §5.2 and §5.4 describe MAKE and the X-ray as visible; that holds only with those flags on. It sits alongside `docs/WEB-PLAN.md` (what the site does) and `docs/SHARE-PLAN.md` (per-card pages, export and the shadcn registry, planned).
 > **Goal (from the user):** the layouts and UI are too complicated and confusing. Anyone should be able to land, explore and dive in, and power users should still get everything. Nothing may break.
 
 ## 1. Research, short

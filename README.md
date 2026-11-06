@@ -6,14 +6,16 @@ A website where every interface is drawn in dots: clocks, dashboards, games, pho
 
 This is a personal project. It's a website to look at and play with, not a package you install.
 
+**Credit:** the project started from Henry Li's (`@henry19840301`) ESP-Mosaico concept screens for a 480 × 480 OLED device, posted on X on 20 Aug 2026 ([first post](https://x.com/henry19840301/status/2090273665669874050), [second post](https://x.com/henry19840301/status/2090454612126146948)). The first seven boards rebuild his sheets, and the 480 in Dot/480 comes from his device. Every other credit is in [docs/CREDITS.md](docs/CREDITS.md).
+
 | | |
 |---|---|
 | ![The components board: buttons, sliders, knobs and tabs drawn in dots](docs/readme/components.png) | ![The dash board: car and EV instruments drawn in dots](docs/readme/dash.png) |
 | ![The watch board: smartwatch faces drawn in dots](docs/readme/watch.png) | ![The pond board: koi and ripples in glyph tiles](docs/readme/pond.png) |
 
 ## What you can do there
-- **Browse about 40 boards** of cards: UI kits, car instruments, watch faces, live weather and GitHub data, charts, physics toys, a synth, a game, camera halftone, simulations and GPU light.
-- **Make your own** in MAKE: tune a preset and export it, compose a card from layers, write a small field program and share it as a link, or paint dots by hand.
+- **Look through over 40 boards** of cards: UI kits, car instruments, watch faces, live weather and GitHub data, charts, physics toys, a synth, a game, camera halftone, simulations and GPU light.
+- **See every card at once** on `/browse/`, filtered by board, tag or name.
 - **Change the look** of everything at once: light or dark, seven accents or any hue, and display skins like CRT, VFD, LED, e-ink, flip-disc and Nixie.
 - **Save any card** as PNG or SVG, copy a link to it, or open it on its own page.
 - **Read how it works** in the blog: the essay "Ditherpunk for UI" and three tutorials with live cards and code.
@@ -26,6 +28,8 @@ pnpm install
 pnpm dev        # dev server at http://localhost:5173
 pnpm check      # typecheck, lint and the acceptance checks
 ```
+
+MAKE (the card editor), the Lab and X-ray are behind release flags and off by default. To turn them on in one browser, run `localStorage.setItem('dot480:flags', JSON.stringify({ make: true, lab: true, xray: true }))` in the DevTools console and reload. Flags are never read from the URL. The flag table is in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 Other useful scripts:
 
@@ -43,7 +47,8 @@ The engine (codename Dot/480) is plain TypeScript with no framework and no depen
 ## Links into the site
 - `/<board>/` opens a board, for example `/light/` or `/components/`.
 - `/widget/<card>/` opens one card on its own page.
-- `?make=tune|compose|code|draw` opens MAKE in that mode, and `?about` opens ABOUT.
+- `/browse/` shows every card; `?in=<board>`, `?tag=<tag>` and `?q=<words>` filter it.
+- `?about` opens ABOUT.
 - `?skin=crt` picks a display skin, and `?pro=1` opens every fold.
 - `?theme=light_cobalt` (or `?scheme=` and `?accent=`) shows a theme for the visit without saving it.
 
@@ -54,8 +59,9 @@ Old links keep working: renamed boards resolve through `boardAliases` in `src/wi
 |---|---|
 | `src/engine/` | The engine: fields, sampler, renderers, layout, motion, Field IR, light, simulations, halftone, display skins. No framework, no dependencies. |
 | `src/widgets/` | The cards (`boards/<board>.ts`), the board manifest and the card descriptions |
-| `src/components/` | The React app: boards, the picker, MAKE (tune, compose, code, draw), the palette and the skins |
+| `src/components/` | The React app: boards, browse, the picker, the MAKE editor, the palette, the shell and the skins |
 | `src/site/`, `src/data/`, `src/blog/`, `src/essay/` | Page meta and URLs, themes, live data sources, the blog and the essay |
+| `api/` | Vercel Functions for likes (`docs/DEPLOY.md` › Likes) |
 | `scripts/` | Checks, goldens, snapshots, the size budget, the post-build step and the headless browser probes |
 | `packages/`, `registry/`, `mcp/`, `targets/` | Kept but not published: the core, element and React packages, a shadcn registry, an MCP app and device senders |
 

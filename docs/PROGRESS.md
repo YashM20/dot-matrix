@@ -4,14 +4,34 @@
 > Update this file in the same commit as the work. Active plans: `docs/WEB-PLAN.md` (what the site does) and `docs/UX-PLAN.md` (how visitors find it); every doc and its status: `docs/README.md`. Original phase plan: `docs/MASTER-PLAN.md` (v2). Research: `docs/MOTION-INTERACTION-DEPTH.md`, `docs/ADVANCED-PLAN.md`. Taste: `docs/STYLE-BIBLE.md`.
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
-## Live run state: resume here (updated 2026-11-05)
+## Live run state: resume here (updated 2026-11-06)
 > The coordinator keeps this block short and current. Read it first after any interruption or compaction.
 >
 > **Process: [`docs/CHECKPOINTS.md`](CHECKPOINTS.md).** One checkpoint at a time: scope, build, gate, publish, breather, then the owner picks the next one. Speed rules: at most 3 agents, agents run quick checks only, and the full suite runs once at the gate (or CI, if the owner skips it).
 
-**CP4 and CP5 so far (2026-11-04 to 11-06):** release flags come from the build value or `localStorage['dot480:flags']` only, never the URL (#200). MAKE, LAB and X-ray are off by default; likes (#169, #176) and opt-in PostHog analytics (#171) are on. CI runs as parallel jobs behind the required `check + build` gate in about 2.5 minutes (#199). The SEO checkup fixes (#198, #204) and the `/browse/` page (#182, #205) are on main. Trusted Types stays Report-Only, because the BotID challenge script writes a plain string to `srcdoc`. Open: the TETRIS rename (#188, needs a name), the a11y follow-ups (#187) and the MAKE layout (#186). The full hill climb (#189) waits for the owner.
+**Now: CP5 · 0.17 · UI hill climb** (tracking #189). Merged: the widget page's app layout and MORE menu (#191), MAKE and LAB behind flags with the header and title fixes (#192), the card ⋯ menu (#194), the axe probe (#195), parallel CI (#199), flags from the build or `localStorage['dot480:flags']` only (#200), the SEO checkup fixes (#198, #204) and the `/browse/` page (#182, #205). Open: #186 (MAKE layout), #187 (the full accessibility walk), #188 (the TETRIS rename, needs a name). The rest of the hill climb waits for the owner.
 
-**Shipped:** CP1 (round 3) is on main as 0.13 (PR #78, `8a1a6fb`): E5, E6, Q2, Q3, M2, M3, L3, X1, the 0.12 and 0.13 release notes, the prose lint and the essay pass. The round-3 detail is in `CHANGELOG.md` 0.13 and the git history.
+**Defaults on main:** MAKE, LAB and X-ray are off; likes (#169, #176) and opt-in PostHog analytics (#171) are on. The like button stays hidden while the likes API answers 404, and analytics needs `VITE_POSTHOG_PROJECT_TOKEN`. Trusted Types stays Report-Only, because the BotID challenge script writes a plain string to `srcdoc`. CI runs four parallel jobs behind the required `check + build` gate in about 2.5 minutes.
+
+**Shipped:** CP1 to CP4 are on main as 0.13 (round 3), 0.14 (foundations and fixes), 0.15 (kits and new boards) and 0.16 (flags, SEO, analytics, shell and security); what each holds is in `CHANGELOG.md`. The CP2 to CP4 milestones are still open on GitHub, with every issue closed except #169 (likes; phase 1 shipped). Closing them and adding 0.14 to 0.16 to the LOG (`src/changelog.ts`, which stops at 0.13) are the publish steps left.
+
+**Waiting on the owner:**
+- #12 decisions.
+- #52 tixy permission (it blocks the ports).
+- A name for the falling-blocks card (#188), and the go for the rest of the hill climb (#189).
+
+**Local branches kept:** `perf/workshop-cold-frames` (#27, still open; #100 merged part of it), `chore/dot-engine-deep-dives-v2` (merged as #80) and `feat/round3` (merged as #78). The remote has only `main`.
+
+**Coordinator tools** (local scripts, outside the repo):
+- a FIFO lock for builds and probes, so only one heavy job runs at a time. Wait on process exit, never on monitor events.
+- the full-suite runner.
+- a union-merge script for registry files.
+- GitHub milestone and issue scripts.
+
+The worktree rules (junction-safe cleanup) are in `docs/CHECKPOINTS.md`.
+
+## CP3 build notes (moved out of the run state on 2026-11-06)
+How the CP3 cards and the #36 additions were built. The release summary is `CHANGELOG.md` 0.15.
 
 **XQ aperiodic floors (#20):** `sq-hat` (hat metatile substitution, mirrored hats red) and `sq-ammann` (de Bruijn multigrid, zoom by 1 + √2) on `/squares/`; engine in `src/engine/algo/{hex,hat,ammann}.ts`, checks in `scripts/aperiodic.ts` (in verify). Frame budgets are warn-only: both cards draw ~13k dots.
 
@@ -23,7 +43,7 @@
 
 **Dot faces (#127):** `/faces/` (lazy): `face-calm`, `face-curious`, `face-sleepy`, `face-pip`, lit halftone heads on dot sites (the afterlight face's technique). Eyes follow the pointer or the last tap, seeded blinks, a tap reaction that settles (wink, surprise, jolt and yawn, laugh), the mood follows the local hour; the blush is the red. Code in `src/widgets/boards/faces{,-kit,-motion}.ts`.
 
-**Watch faces (#126):** `/watch/` (lazy, label WATCH FACES, in INTERFACES): eight faces in round or squircle cases, `watch-analog`, `watch-digital`, `watch-complications`, `watch-moon`, `watch-tide` (a five-constituent harmonic model, labelled as an illustration), `watch-sun` (London), `watch-world`, `watch-steps`, plus `watch-faces`, one watch that steps through all eight on tap, swipe or arrow keys. Time from the device clock (frozen in goldens, `getTimezoneOffset` pinned to 0 there); moon phase and sun times computed on the device after Meeus in `src/engine/astro/` (in the determinism lint), checks in `scripts/watch.ts` (in verify). Wallpaper export waits for #133. No changelog entry yet.
+**Watch faces (#126):** `/watch/` (lazy, label WATCH FACES, in INTERFACES): eight faces in round or squircle cases, `watch-analog`, `watch-digital`, `watch-complications`, `watch-moon`, `watch-tide` (a five-constituent harmonic model, labelled as an illustration), `watch-sun` (London), `watch-world`, `watch-steps`, plus `watch-faces`, one watch that steps through all eight on tap, swipe or arrow keys. Time from the device clock (frozen in goldens, `getTimezoneOffset` pinned to 0 there); moon phase and sun times computed on the device after Meeus in `src/engine/astro/` (in the determinism lint), checks in `scripts/watch.ts` (in verify). Wallpaper export waits for #133.
 
 **Paper fold (part of #36, X-advanced #17):** `mat-fold` on `/workshop/`, a sheet folded crease by crease into a glider (four valleys and a mountain), then unfolded, on a 14.85 s loop; the moving crease is the red, facets lit by their fold history's normal. Engine in `src/engine/matter/fold.ts` (in the determinism lint), checks in `scripts/materials/fold.ts` (`--only fold`). No tap yet.
 
@@ -35,37 +55,18 @@
 
 **IQ8 3D SDF scenes (#69):** `/scenes/` (lazy): `sc-lathe`, `sc-twist`, `sc-posts`, `sc-chain`, sphere-traced on the CPU at lattice 2 and capped at 12 fps; engine in `src/engine/sdf3d/` (primitives, operators, tracer, tetrahedron normals, soft shadows, fog, the outdoors rig, a buffer renderer), checks in `scripts/sdf3d.ts` (in verify). Frame budgets are warn-only (over 4 ms × load on a busy box). GPU tier (`gpuIR`) is a follow-up.
 
-**Kinetic type (#129):** `/kinetic/` (lazy, KINETIC TYPE under PLAY), seven cards on one board-shared word, one effect each: `kt-flap`, `kt-melt`, `kt-scramble`, `kt-wave`, `kt-type`, `kt-magnet`, `kt-shatter`. The FLAP card's twelve modules edit the word (tap a module's top or bottom half, or the arrow keys) and write it to `?word=`, so a link opens on the same word. Engine in `src/engine/kinetic/` (pure functions of word and t, every pixel on whole lattice cells), checks in `scripts/kinetic.ts` (in verify, with the determinism lint on the folder). No changelog entry yet.
+**Kinetic type (#129):** `/kinetic/` (lazy, KINETIC TYPE under PLAY), seven cards on one board-shared word, one effect each: `kt-flap`, `kt-melt`, `kt-scramble`, `kt-wave`, `kt-type`, `kt-magnet`, `kt-shatter`. The FLAP card's twelve modules edit the word (tap a module's top or bottom half, or the arrow keys) and write it to `?word=`, so a link opens on the same word. Engine in `src/engine/kinetic/` (pure functions of word and t, every pixel on whole lattice cells), checks in `scripts/kinetic.ts` (in verify, with the determinism lint on the folder).
 
-**Dot charts kit (#132):** `/charts/` (lazy, CHARTS under DATA), seven cards on made-up data: `chart-bar`, `chart-line`, `chart-area`, `chart-donut`, `chart-heatmap`, `chart-spark`, `chart-candle`. Each grows in, morphs between two data sets on a 14 s loop (the switch in the label row takes over), and reads out the nearest point on hover, tap or arrow keys; the picked point is the red. Engine in `src/engine/charts/` (scales, marks, motion, readouts, paint; by path, in the determinism lint), checks in `scripts/charts.ts` (in verify). No changelog entry yet.
+**Dot charts kit (#132):** `/charts/` (lazy, CHARTS under DATA), seven cards on made-up data: `chart-bar`, `chart-line`, `chart-area`, `chart-donut`, `chart-heatmap`, `chart-spark`, `chart-candle`. Each grows in, morphs between two data sets on a 14 s loop (the switch in the label row takes over), and reads out the nearest point on hover, tap or arrow keys; the picked point is the red. Engine in `src/engine/charts/` (scales, marks, motion, readouts, paint; by path, in the determinism lint), checks in `scripts/charts.ts` (in verify).
 
-**Motion (#128):** `/motion/` (lazy, MICRO MOTION in INTERFACES): eleven looping micro-interaction cards (`mo-*`): spinner, bounce, scan, block progress, indeterminate, ring, skeleton, toast, pull-to-refresh, typing, send / sent / read. The whole card is a replay button (tap, click, Enter); reduced motion shows each loop's settled state. Kit in `src/widgets/boards/motion-kit.ts`. Six cards run at 24 fps. No changelog entry yet.
+**Motion (#128):** `/motion/` (lazy, MICRO MOTION in INTERFACES): eleven looping micro-interaction cards (`mo-*`): spinner, bounce, scan, block progress, indeterminate, ring, skeleton, toast, pull-to-refresh, typing, send / sent / read. The whole card is a replay button (tap, click, Enter); reduced motion shows each loop's settled state. Kit in `src/widgets/boards/motion-kit.ts`. Six cards run at 24 fps.
 
 **XM growth and wear (#21):** `mat-lichtenberg` (two-electrode dielectric breakdown, char lit through M1 relief), `mat-erosion` (droplet erosion through the day, checkpointed; each digit weathers since it last changed) and `mat-frost` (Reiter automaton on `hexSites`, one flake a day from a vetted table) on `/workshop/`; engine in `src/engine/matter/{lichtenberg,erosion,reiter}.ts` (in the determinism lint), checks in `scripts/materials.ts --only growth`. Frame budgets are warn-only: the plate's burn frames and the stone's new-minute frame run over 4 ms on a loaded box.
 
-**Next: CP2 · 0.14 · Foundations and fixes** (GitHub milestone). It waits for the owner to say go. Proposed order:
-1. #75 (test tiers: the timing switch in the area scripts, a shared base build) and #76 (the file-size rule; split the 6 files over 800 lines and `goldens/hashes.json` per board). These make the rest faster.
-2. IQ3 #64, IQ1 #62, IQ2 #63, IQ4 #65 (engine packs).
-3. Tixy #53 (the adapter and card `credit`) and #54 (the `/tixy/` shell). Ports stay blocked on #52 (permission).
-4. #77 tutorials: merge branch `chore/dot-engine-deep-dives-v2` (four deep dives; snippets run; lint 0/0).
-5. Follow-ups: #74 (X-ray rect cells), #28 (flaky timing gates), #29 done (`mat-lens` pass at density 1 vs the CPU sample in `scripts/webgl.ts`; HD 520, two runs: mean ≤ 0.20/255, ≤ 0.19% px > 16, PSNR 45.4 to 46.7 dB), #31–#33 (editor), #27 (workshop cold frames; work in progress on branch `perf/workshop-cold-frames`; budgets come later).
 
-**Waiting on the owner:**
-- #12 decisions, including the squares deep link (151 kB), the pond-marble koi, the OPEN action, the DOTS/TYPE default and taste passes.
-- #52 tixy permission (the draft request is in the issue).
-- The CP3 scope.
-
-**Branches kept:** `perf/workshop-cold-frames`, `chore/dot-engine-deep-dives-v2`, and `feat/round3`, which is merged and can be deleted once CP2 starts from main.
-
-**Coordinator tools** (local scripts, outside the repo):
-- a FIFO lock for builds and probes, so only one heavy job runs at a time. Wait on process exit, never on monitor events.
-- the full-suite runner.
-- a union-merge script for registry files.
-- GitHub milestone and issue scripts.
-
-The worktree rules (junction-safe cleanup) are in `docs/CHECKPOINTS.md`.
-
-## Status board (updated 2026-10-27)
+## Status board (updated 2026-11-06)
+- **Checkpoints:** CP1 (0.13), CP2 (0.14), CP3 (0.15) and CP4 (0.16) are merged to `main`; CP5 (0.17, UI hill climb) is in progress. What each shipped: `CHANGELOG.md`. What is open: the live run state above.
+- Everything below is the round-1 and round-2 log, kept as written. Its "not merged" and "queued" notes predate PR #10 (round 2) and PR #78 (round 3), which merged that work.
 - [x] **E3 editor: editing on canvas** (on an agent worktree branch, based on `feat/round2` 0741d3b; `docs/EDITOR-PLAN.md` §4.2, §8.3). Not merged.
   - Sites handles: a ring's radius and sweep (the sweep snaps to the ring's own sites, so an arc ends on a dot of its track), a disc's radius, a line's ends; whole cells.
   - Spec layers: placed ones (sites, text, generators, IR fields with `bounds`) move in whole cells; an IR field's box is its declared bounds, resized by four corners; DESIGN · PLACE edits them and the spec JSON follows.
@@ -413,9 +414,9 @@ Next, ranked (research notes in this session's roadmap): E1 delete the old MAKE 
 
 ## How to resume (read first)
 1. `pnpm i`, then `pnpm dev`.
-   - Tabs: BOARDS, GALLERY, WORKSPACE, LOG and DRAW.
-   - Deep links: `?board=<id>`, `?card=<id>`, `?tab=log`.
-2. Checks: `pnpm check` (tsc + oxlint + `scripts/verify.ts`), `pnpm golden --check`, `pnpm build`. CI runs all three, plus a perf report (`.github/workflows/ci.yml`).
+   - Views: EXPLORE (the boards), BROWSE, ABOUT and the blog. MAKE and LAB are behind the `make` and `lab` flags, off by default (`docs/DEPLOY.md` › Feature flags).
+   - Deep links: `/<board>/`, `/widget/<card>/`, `/browse/`, `?about`. Old forms like `?board=<id>` and `?tab=log` still resolve.
+2. Checks: `pnpm check` (`pnpm check:static`, then `pnpm verify`), `pnpm golden --check`, `pnpm build`. CI runs them as parallel jobs behind the `check + build` gate, plus the size, theme, header and SEO checks on the build (`docs/DEPLOY.md` › CI).
 3. Tooling (all write to the gitignored `.snapshots/`):
 
 | Command | Output |
@@ -575,6 +576,8 @@ Plan reference: MASTER-PLAN §4 P1. **Flagship: Departures.**
 - [ ] P1 exit gates.
 
 ## Next up (in order)
+> **Historical (2026-10-14).** The current next step is in the live run state at the top of this file.
+>
 > **User feedback (2026-10-14, end of session): priorities were wrong.** Too much tooling and docs, not enough visible work.
 > Focus next on what the user sees, in this order:
 > 1. Board-to-board transition: old board exits (`revealDots` exit, staggered), then the new one enters.

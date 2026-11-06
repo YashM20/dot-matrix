@@ -12,6 +12,8 @@
 > - **Open:** the essay as the front door (C10). UX-PLAN §7 proposes keeping a board as the front door, with the intent line linking to the essay.
 > - **How visitors find all this:** `docs/UX-PLAN.md`. U0 and U1 are built.
 > - **Per-item detail:** `docs/PROGRESS.md` › Web plan.
+>
+> **Since then (2026-11-06):** the site is public as MATRIX. MAKE, the Lab and X-ray are behind release flags, all three off by default (#154, #192); likes are on (#200). Flags come from the build or this browser's `localStorage`, never the URL (`docs/DEPLOY.md` › Feature flags). `/browse/` lists every card in one filtered grid (#205). Where this doc says "remix anything" or sends visitors to MAKE, that path is hidden while `make` is off. C1 and C9 are still not started.
 
 ## 0. Principles
 - **The site is the product.** Every idea is judged by one question: would someone on HN keep clicking for ten minutes?
