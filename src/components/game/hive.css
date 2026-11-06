@@ -1,5 +1,7 @@
 .hive-start {
   display: inline-flex;
+  flex-wrap: wrap; /* on a narrow phone the line drops under the screen instead of pushing the page wide */
+  max-width: 100%;
   align-items: center;
   gap: var(--space-4);
   margin: 0 0 var(--space-4);

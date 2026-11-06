@@ -52,7 +52,8 @@ export async function coveredFooterLinks(p: Page): Promise<string[]> {
         const hit = document.elementFromPoint(x, y)
         if (!hit || a.contains(hit)) continue
         const layer = pinned(hit)
-        if (layer && !layer.contains(a)) { out.push(name + ' under ' + label(layer)); break }
+        // the numbers say why: the link's box, the layer's top, how far the page scrolled of how far it can
+        if (layer && !layer.contains(a)) { const se = document.scrollingElement || document.documentElement; out.push(name + ' under ' + label(layer) + ' (link ' + Math.round(r.top) + '..' + Math.round(r.bottom) + ', layer top ' + Math.round(layer.getBoundingClientRect().top) + ', scroll ' + Math.round(scrollY) + '/' + (se.scrollHeight - innerHeight) + ', inner ' + innerHeight + ')'); break }
       }
     }
     return out
@@ -101,9 +102,11 @@ export async function tabWalk(p: Page, max: number, untilFooter = false): Promis
       const top = [...document.querySelectorAll('${HEADER}')].find(e => vis(e) && pinned(e) && Math.abs(e.getBoundingClientRect().top) <= 1)
       const tab = [...document.querySelectorAll('${TABBAR}')].find(e => vis(e) && pinned(e))
       let under = ''
+      // under = the bar overlaps it and is painted over it (a skip link drawn above the top bar is clear)
+      const over = bar => { const y = Math.min(innerHeight - 1, Math.max(0, (r.top + r.bottom) / 2)), x = Math.min(innerWidth - 1, Math.max(0, (r.left + r.right) / 2)), hit = document.elementFromPoint(x, y); return !!hit && bar.contains(hit) && !a.contains(hit) }
       if (r.height >= 2 && !(top && top.contains(a)) && !(tab && tab.contains(a))) {
-        if (top && r.top < top.getBoundingClientRect().bottom - 1 && r.bottom > 0) under = 'top bar'
-        else if (tab && r.bottom > tab.getBoundingClientRect().top + 1 && r.top < innerHeight) under = 'tab bar'
+        if (top && r.top < top.getBoundingClientRect().bottom - 1 && r.bottom > 0 && over(top)) under = 'top bar'
+        else if (tab && r.bottom > tab.getBoundingClientRect().top + 1 && r.top < innerHeight && over(tab)) under = 'tab bar at ' + Math.round(tab.getBoundingClientRect().top) + ', bottom ' + Math.round(r.bottom)
       }
       return { label: label(a), y: Math.round(r.top + scrollY), top: Math.round(r.top), h: Math.round(r.height), pinned: !!pinned(a), footer: !!a.closest('footer'), under }
     })()`)

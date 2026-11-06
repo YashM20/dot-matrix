@@ -269,6 +269,9 @@ async function desktop() {
     const n0 = (await h.frameIds()).length
     check('opening the link asks first, then KEEP shows the same program', await h.keep(link, `document.querySelector('.ed-insp .dw-code textarea')?.value === ${JSON.stringify(PROGRAM)}`))
     const n1 = (await h.frameIds()).length
+    // a kept link frame is saved only once it drew within the program budget (#142): wait for that save, as a
+    // visitor's reload would come after it (a slow runner can take longer than the autosave's 500 ms)
+    await p.waitFor(`(JSON.parse(localStorage.getItem('dot480.editor.v1') ?? '{}').frames?.length ?? -1) === ${n1}`, 15000)
     await h.go(link, `!!document.querySelector('.ed-insp .dw-code textarea')`); await sleep(600)
     check('opening the same link again re-selects its frame instead of adding a copy', (await h.frameIds()).length === n1 && n1 <= n0 + 1, `${n0} → ${n1} → ${(await h.frameIds()).length}`)
     await h.clickText('.ed-left [role=tab]', 'ASSETS'); await sleep(300)
@@ -960,6 +963,9 @@ async function desktopE5(p: Page, h: Helpers) {
   await p.shot(join(out, 'desktop-e5-recovery.png'))
   await p.js(`[...document.querySelectorAll('.ed-crash[data-area="editor"] button')].find(b => b.textContent === 'RESET EDITOR DOCUMENT')?.click()`)
   const back = await p.waitFor(`document.querySelectorAll('.ed-frame').length === 3 && !document.querySelector('.ed-crash')`, 60000)
+  // the crash was asked for: React and the boundary log it, which the "no console errors" check must not count
+  const askedCrash = (l: string) => /the editor was asked to crash/.test(l)
+  p.logs.splice(0, p.logs.length, ...p.logs.filter(l => !askedCrash(l)))
   check('#143: a crash in the editor shows the recovery screen (not a blank page); RESET EDITOR DOCUMENT brings back the starter canvas', crashed && /THE EDITOR STOPPED · EDITOR/.test(screen) && /probe: the editor was asked to crash/.test(screen) && back, screen.slice(0, 160))
 }
 

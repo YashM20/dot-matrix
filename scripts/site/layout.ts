@@ -134,15 +134,16 @@ const MEASURE = (kind: string, H: number) => `(() => {
   const edges = ${JSON.stringify(kind)} === 'board' ? { topbar: q('.topbar .brand'), intro: q('.intro-line'), picker: firstBtn, title: q('.board-title'), grid: q('.board-grid'), footer: q('.bottom-row') }
     : ${JSON.stringify(kind)} === 'about' ? { topbar: q('.topbar .brand'), about: q('.about-flavour'), keys: q('.about-cols'), log: q('.log-view'), footer: q('.bottom-row') }
     : ${JSON.stringify(kind)} === 'make' ? { topbar: q('.topbar .brand'), tools: q('.ed-top > :first-child') }
-    : ${JSON.stringify(kind)} === 'widget' ? { top: q('.wp-top > .pill'), card: q('.wp-stage'), footer: q('.bottom-row') } : {}
+    : ${JSON.stringify(kind)} === 'widget' ? { top: q('.wp-top > .pill'), card: q('.wp-stagebox'), footer: q('.bottom-row') } : {}
   const left = {}
   for (const [k, el] of Object.entries(edges)) if (el) left[k] = Math.round(R(el).left * 10) / 10
   // vertical rhythm: each block's top against the lowest bottom above it
   const blocks = ${JSON.stringify(kind)} === 'board'
-    ? [['topbar', q('.topbar')], ['hero', q('.home-hero')], ['intro', q('.intro-line')], ['picker', q('.board-picker')], ['header', q('.board-title'), q('.board-blurb')], ['grid', q('.board-grid')], ['next', q('.next-board')], ['footer', q('.bottom')]]
+    ? [['topbar', q('.topbar')], ['hero', q('.home-hero')], ['intro', q('.intro-line')], ['picker', q('.board-picker')], ['header', q('.board-title'), q('.board-view .concept-credit') || q('.board-blurb')], ['grid', q('.board-grid')], ['next', q('.next-board')], ['footer', q('.bottom')]]
     : ${JSON.stringify(kind)} === 'about' ? [['topbar', q('.topbar')], ['about', q('.about-intro')], ['log', q('.log-view')], ['footer', q('.bottom')]]
     : ${JSON.stringify(kind)} === 'widget' ? [['top', q('.wp-top')], ['main', q('.wp-main')], ['footer', q('.bottom')]] : []
-  // a block is one element, or [top element, bottom element] (the board header: title, then blurb)
+  // a block is one element, or [top element, bottom element] (the board header: title, then blurb, then the concept
+  // credit on the boards that rebuild someone's screens)
   const placed = blocks.filter(([, el]) => el && getComputedStyle(el).position !== 'fixed').map(([n, el, end]) => ({ n, top: R(el).top + y0, bottom: R(end || el).bottom + y0, float: getComputedStyle(el).float !== 'none' })).sort((a, b) => a.top - b.top)
   const gaps = []
   for (let i = 1; i < placed.length; i++) {

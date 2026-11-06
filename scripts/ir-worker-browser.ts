@@ -36,7 +36,11 @@ const frameMs = (p: Page, ms = 3000) => p.js<number>(`new Promise(r => { const x
 async function open(p: Page, src: string) {
   const link = await encodeShare({ src, grid: 'square', lattice: 1, tone: 'auto' })
   await p.cdp('Page.navigate', { url: `${base}?make=code&p=${link}` })
-  return p.waitFor(`!!document.querySelector('.ed-insp .dw-code textarea') && !!window.__editor?.drawn`, 30000)
+  // a link that adds a program asks first (#143): press KEEP. One this document already holds just re-selects it.
+  const ready = `!!document.querySelector('.ed-insp .dw-code textarea') && !!window.__editor?.drawn`, keep = `document.querySelector('.ed-confirm .ed-confirm-keep')`
+  // the editor itself is ready before the link decodes, so wait for the prompt (it never comes for a re-select)
+  if (await p.waitFor(`!!${keep}`, 10000)) await p.js(`${keep}.click()`)
+  return p.waitFor(`!${keep} && (${ready})`, 30000)
 }
 const HOSTILE = '// slow: 64 × 64 sines a dot\nfor i in 0..64 with a = 0 { a + (for j in 0..64 with b = 0 { b + sin(u * i + v * j + t) }) } / 4096'
 

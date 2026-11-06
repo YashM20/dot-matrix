@@ -49,8 +49,9 @@ const SIG = `window.__sig = sel => { const f = document.querySelector(sel); if (
   for (const s of f.querySelectorAll('.dot-svg')) { const h = s.innerHTML; n += (h.match(/<path|<circle|<rect/g) || []).length; for (let i = 0; i < h.length; i += 5) sig = (sig * 31 + h.charCodeAt(i)) % 1000003 }
   return { n, sig } }`
 const sig = (id: string) => js(`window.__sig('#fig-${id}')`) as Promise<{ n: number; sig: number }>
-const mounted = () => js(`[...document.querySelectorAll('[data-fig]')].filter(f => f.dataset.mounted === '1').map(f => f.dataset.fig)`) as Promise<string[]>
-const figIds = () => js(`[...document.querySelectorAll('[data-fig]')].map(f => f.dataset.fig)`) as Promise<string[]>
+// the figure's caption carries `data-fig` too (its FIG legend, essay.css): count the figures only
+const mounted = () => js(`[...document.querySelectorAll('figure[data-fig]')].filter(f => f.dataset.mounted === '1').map(f => f.dataset.fig)`) as Promise<string[]>
+const figIds = () => js(`[...document.querySelectorAll('figure[data-fig]')].map(f => f.dataset.fig)`) as Promise<string[]>
 /** Scroll a figure to the middle of the viewport, wait for its chunk and its first frame. */
 const reach = async (id: string) => {
   await js(`document.querySelector('#fig-${id}').scrollIntoView({ block: 'center' })`)
@@ -87,6 +88,9 @@ async function open(width: number, height: number, mobile: boolean, reduced = fa
 
 try {
   await cdp('Page.enable'); await cdp('Runtime.enable'); await cdp('Log.enable')
+  // MAKE is behind a release flag that is off by default (src/site/flags.ts); the IR figure's MAKE link shows with it,
+  // so seed it the way scripts/lib/cdp.ts `launch()` does
+  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `try{var k='dot480:flags',o=JSON.parse(localStorage.getItem(k)||'{}');if(!('make' in o))o.make=true;localStorage.setItem(k,JSON.stringify(o))}catch(e){}` })
 
   const only = process.env.ESSAY_ONLY ?? ''
   const ids = ['resolution', 'pipeline', 'quantize', 'lattice', 'accent', 'masks', 'departures', 'instrument', 'light', 'sim', 'flicker', 'mirror', 'ir', 'surfaces', 'agents']
@@ -106,7 +110,10 @@ try {
     quantize: () => changed('quantize', () => setRange('#fig-quantize input[name=steps]', 2)),
     lattice: () => changed('lattice', () => clickText('#fig-lattice', 'Lattice')),
     accent: async () => {
+      const fills = () => js(`[...document.querySelectorAll('#fig-accent .dot-card')].map(c => c.dataset.card + ':' + ([...c.querySelectorAll('g[fill]')].map(g => g.getAttribute('fill')).join('/') || (c.querySelector('canvas') ? 'canvas' : '?'))).join(' ')`)
+      const before = await fills()
       const r = await changed('accent', () => clickText('#fig-accent', 'Add a second accent'))
+      r.detail += `; ${before} → ${await fills()}; switch ${await js(`document.querySelector('#fig-accent [role=switch]')?.getAttribute('aria-checked')`)}`
       const blue = await js(`(() => { let n = 0; for (const c of document.querySelectorAll('#fig-accent canvas')) { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let i = 0; i < d.length; i += 4) if (d[i+2] > 180 && d[i] < 90) n++ } for (const s of document.querySelectorAll('#fig-accent .dot-svg')) n += (s.innerHTML.match(/#2F7BFF/gi) || []).length; return n })()`)
       return { ok: r.ok && blue > 0, detail: `${r.detail}; ${blue} blue px/dots` }
     },

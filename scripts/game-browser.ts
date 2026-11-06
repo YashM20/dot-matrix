@@ -51,8 +51,10 @@ const stage = () => js('window.__hive?.game?.stage') as Promise<string>
 
 try {
   await cdp('Page.enable'); await cdp('Runtime.enable')
+  // the game's test hooks (`window.__hive`) exist only when a probe asks before the page loads (src/lib/testHooks.ts)
+  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__DOT_PROBE__ = true' })
   await cdp('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
-  await cdp('Page.navigate', { url: `${base}?board=levels` })
+  await cdp('Page.navigate', { url: `${base}levels/` })
   const button = await waitFor(`!!document.querySelector('.hive-start')`, 30000)
   assert('the levels board shows the PRESS START button', button, logs.join(' | '))
   await sleep(1500)

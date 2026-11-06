@@ -25,7 +25,8 @@ const MOCK = `(() => {
   const q = new URLSearchParams(location.search), st = { mode: q.get('lkmock') || 'ok', liked: {}, calls: [] }
   window.__lk = st
   window.V_C = [{ b: 1, v: 'probe', e: '', d: 0 }]
-  document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('script'); s.type = 'text/plain'; s.src = '/149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3/a-4-a/c.js?i=0&v=3&h=' + location.host; document.head.appendChild(s) })
+  // the challenge script's tag, at the exact src BotID builds (URLSearchParams encodes the port's colon), so it skips the load
+  document.addEventListener('DOMContentLoaded', () => { const s = document.createElement('script'), u = new URL('/149e9513-01fa-4fb0-aad4-566afd725d1b/2d206a39-8ed7-437e-a3be-862e0f06eea3/a-4-a/c.js', location.origin); u.searchParams.set('i', '0'); u.searchParams.set('v', '3'); u.searchParams.set('h', location.host); s.type = 'text/plain'; s.src = u.pathname + u.search; document.head.appendChild(s) })
   const real = window.fetch.bind(window)
   const reply = (status, body) => new Response(JSON.stringify(body), { status, headers: { 'content-type': 'application/json' } })
   window.fetch = async (input, init = {}) => {

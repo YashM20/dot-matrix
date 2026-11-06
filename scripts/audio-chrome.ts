@@ -65,8 +65,9 @@ try {
   await cdp('Page.enable'); await cdp('Runtime.enable')
   await cdp('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: join(outDir, 'rec') })
   // keep the last blob handed to a download link, so the recording can be decoded in the page
-  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `{ const o = URL.createObjectURL; URL.createObjectURL = b => { window.__lastBlob = b; return o.call(URL, b) } }` })
-  await cdp('Page.navigate', { url: `${url}?board=instrument` })
+  // `window.dot480Audio` is a test hook: it exists only when a probe asks before the page loads (src/lib/testHooks.ts)
+  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `globalThis.__DOT_PROBE__ = true; { const o = URL.createObjectURL; URL.createObjectURL = b => { window.__lastBlob = b; return o.call(URL, b) } }` })
+  await cdp('Page.navigate', { url: `${url}instrument/` })
   const loaded = await until(`!!document.querySelector('[aria-label="Sound"]') && !!window.dot480Audio`, 180000)
   check('instrument board loads', loaded, loaded ? '' : JSON.stringify(await evaluate(`({ title: document.querySelector('.board-title')?.textContent, text: document.body.innerText.slice(0, 200), audio: typeof window.dot480Audio })`)))
   if (!loaded) await shot('load-failure')
