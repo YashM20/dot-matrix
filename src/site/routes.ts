@@ -34,7 +34,7 @@ export function makeUid(random: (bytes: Uint8Array) => Uint8Array, taken: Readon
 }
 
 /** First path segments that are never a board id (pages, files, future routes); `@…` is kept for scopes. */
-export const RESERVED_SEGMENTS: readonly string[] = ['widget', 'w', 'embed', 'r', 'og', 'oembed', 'assets', 'images', 'lab', 'docs', 'privacy', 'terms', 'essay', 'blog']
+export const RESERVED_SEGMENTS: readonly string[] = ['widget', 'w', 'embed', 'r', 'og', 'oembed', 'assets', 'images', 'lab', 'docs', 'privacy', 'terms', 'essay', 'blog', 'browse']
 export const isReservedSegment = (s: string): boolean => s.startsWith('@') || RESERVED_SEGMENTS.includes(s) || isUid(s)
 
 /** A widget page request, before lookup: `key` is a slug, an old slug or a uid; `scope` is '' for the site's own. */

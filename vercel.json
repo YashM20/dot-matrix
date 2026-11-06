@@ -23,6 +23,7 @@
     { "source": "/terms", "destination": "/terms.html" },
     { "source": "/terms/", "destination": "/terms.html" },
     { "source": "/:board(henry|deerflow12|mosaic|henry3|metro|ride|audio|departures|instrument|ir|cinema|light|levels|heartbeat|sim|lock|live|mirror|gpu|surfaces|components|type|physics|scope|heal|algorithms|materials|pond|workshop|squares|fractals|oldschool|scenes|dash|kinetic|faces|charts|motion|watch)", "destination": "/:board/index.html" },
+    { "source": "/browse", "destination": "/browse/index.html" },
     { "source": "/about", "destination": "/index.html" },
     { "source": "/about/", "destination": "/index.html" },
     { "source": "/widget/:key", "destination": "/index.html" },

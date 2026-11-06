@@ -1,16 +1,17 @@
 /**
- * The site's three views and MAKE's four modes, and their URLs (docs/UX-PLAN.md §4.1). Pure and DOM-free,
+ * The site's four views and MAKE's four modes, and their URLs (docs/UX-PLAN.md §4.1). Pure and DOM-free,
  * so `scripts/verify.ts` checks every old link in Node. Canonical: EXPLORE is the board path (`/light/`; the
- * first board keeps `/`), MAKE is `?make` (the editor; `=compose|code|draw` open it on that tool, a DOTS program keeps `&p=`, a frame or document link
- * `&d=`), ABOUT is
- * `?about`. Old links resolve through `TAB_ALIASES`, `?board=`, `boardAliases` and a bare `?p=`.
+ * first board keeps `/`), BROWSE is `/browse/` (its filters ride along as `?in=&tag=&q=`, #182), MAKE is `?make`
+ * (the editor; `=compose|code|draw` open it on that tool, a DOTS program keeps `&p=`, a frame or document link
+ * `&d=`), ABOUT is `?about`. Old links resolve through `TAB_ALIASES`, `?board=`, `boardAliases` and a bare `?p=`.
  */
 import { boardIds, resolveBoardId } from '../widgets/manifest'
 import { boardFromPath, pageMeta } from './meta'
 import { widgetRoute, type WidgetRoute } from './routes'
 import { flag } from './flags'
+import { BROWSE_PARAMS, BROWSE_PATH } from './browse'
 
-export const VIEWS = ['EXPLORE', 'MAKE', 'ABOUT'] as const
+export const VIEWS = ['EXPLORE', 'BROWSE', 'MAKE', 'ABOUT'] as const
 export type View = typeof VIEWS[number]
 export const MODES = ['TUNE', 'COMPOSE', 'CODE', 'DRAW'] as const
 export type Mode = typeof MODES[number]
@@ -21,12 +22,12 @@ export type Mode = typeof MODES[number]
 export const MODE_LINES: Record<Mode, string> = { TUNE: 'the editor: presets and their look', COMPOSE: 'the editor: layers and animation', CODE: 'the editor: write a field program', DRAW: 'the editor: paint dots' }
 /** A view, or a MAKE mode (which means MAKE in that mode): what the palette, shell and command layer navigate to. */
 export type Place = View | Mode
-export const PLACES = ['EXPLORE', ...MODES, 'ABOUT'] as const
+export const PLACES = ['EXPLORE', 'BROWSE', ...MODES, 'ABOUT'] as const
 
 /** Every name a view has had: the old `?tab=` values (GALLERY was the henry board, LOG the changelog). */
 export const TAB_ALIASES: Readonly<Record<string, Place>> = {
   boards: 'EXPLORE', gallery: 'EXPLORE', workspace: 'TUNE', studio: 'COMPOSE', dots: 'CODE', draw: 'DRAW', log: 'ABOUT',
-  explore: 'EXPLORE', make: 'MAKE', about: 'ABOUT', tune: 'TUNE', compose: 'COMPOSE', code: 'CODE',
+  explore: 'EXPLORE', browse: 'BROWSE', make: 'MAKE', about: 'ABOUT', tune: 'TUNE', compose: 'COMPOSE', code: 'CODE',
 }
 /** The board GALLERY repeated. */
 export const GALLERY_BOARD = 'henry'
@@ -47,7 +48,7 @@ export function viewFromUrl(search: string, pathname: string, mode: Mode = 'TUNE
   const q = new URLSearchParams(search), tab = (q.get('tab') ?? '').toLowerCase(), b = resolveBoardId(q.get('board') ?? '')
   const make = (q.get('make') ?? '').toUpperCase(), legal = /^\/(privacy|terms)\/?$/.exec(pathname)?.[1] as ViewState['legal']
   // `/about` is ABOUT too (a guessed or typed link); it is written back as `?about`
-  const place: Place = q.has('about') || /^\/about\/?$/i.test(pathname) ? 'ABOUT' : isMode(make) ? make : q.has('make') ? 'MAKE' : placeFromName(tab) ?? (q.get('p') ? 'CODE' : 'EXPLORE')
+  const place: Place = q.has('about') || /^\/about\/?$/i.test(pathname) ? 'ABOUT' : /^\/browse\/?$/i.test(pathname) ? 'BROWSE' : isMode(make) ? make : q.has('make') ? 'MAKE' : placeFromName(tab) ?? (q.get('p') ? 'CODE' : 'EXPLORE')
   const board = boardIds.includes(b) ? b : tab === 'gallery' ? GALLERY_BOARD : boardFromPath(pathname) ?? boardIds[0]
   // a widget page needs a widget-shaped path or ?card=; a MAKE / ABOUT link that also carries ?card= opens that view
   const widget = place === 'EXPLORE' ? widgetRoute(pathname, search) : undefined
@@ -62,6 +63,7 @@ export function viewFromUrl(search: string, pathname: string, mode: Mode = 'TUNE
 export function urlForView(v: Pick<ViewState, 'view' | 'mode' | 'board'>, search: string, pathname: string): string {
   const q = new URLSearchParams(search)
   for (const k of ['tab', 'board', 'make', 'about', 'card']) q.delete(k)
+  if (v.view !== 'BROWSE') for (const k of BROWSE_PARAMS) q.delete(k) // the filters are BROWSE's alone
   if (v.view !== 'MAKE' || v.mode !== 'CODE') q.delete('p')
   if (v.view !== 'MAKE') q.delete('d') // a frame / document link (`?make&d=`, the editor's E5) is MAKE's alone
   if (v.view !== 'EXPLORE' || v.board !== 'pond') q.delete('day') // the pond's day (X1), the pond's alone
@@ -69,6 +71,7 @@ export function urlForView(v: Pick<ViewState, 'view' | 'mode' | 'board'>, search
   // the editor's default way in (TUNE) is plain `?make`
   const head = v.view === 'ABOUT' ? 'about' : v.view === 'MAKE' ? (v.mode === 'TUNE' ? 'make' : `make=${v.mode.toLowerCase()}`) : ''
   const query = [head, q.toString()].filter(Boolean).join('&')
+  if (v.view === 'BROWSE') return BROWSE_PATH + (query ? `?${query}` : '')
   // the first board keeps `/` or `/index.html`; any other non-board path (a widget page's, `/about`, an unknown
   // `/nope/` that fell back to the home board) is written back as `/`
   const path = v.board === boardIds[0] && boardFromPath(pathname) === undefined ? (/^\/(index\.html)?$/.test(pathname) ? pathname : '/') : pageMeta(v.board).path

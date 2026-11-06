@@ -1,0 +1,209 @@
+/* BROWSE (#182): the filter row, then the card grid. Loaded with the view's chunk. The grid's columns follow the
+   board grid's rule (src/site/app/grid.css: auto-fill between the CARD SIZE bounds, --card-min-standard), but each
+   cell is a slot: the square card (or its placeholder) over a caption with the card's and its board's links. */
+.browse {
+  margin-top: var(--gap-group)
+}
+
+.browse .board-blurb {
+  max-width: var(--measure);
+  margin: var(--space-2) 0 0;
+  color: var(--label);
+  font: 400 var(--fs-copy-14)/1.5 var(--sans);
+  text-wrap: pretty
+}
+
+/* ── filters ── */
+.browse-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--space-3) var(--space-4);
+  margin-top: var(--gap-group)
+}
+
+.browse-field {
+  display: grid;
+  gap: var(--space-1);
+  min-width: 0;
+  color: var(--mute);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .12em
+}
+
+.browse-field--q {
+  flex: 1 1 240px;
+  max-width: 360px
+}
+
+.browse-field input,
+.browse-field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  color: var(--value);
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .02em
+}
+
+.browse-field select {
+  max-width: 220px
+}
+
+.browse-field input::placeholder {
+  color: var(--mute)
+}
+
+/* the accent border is the focus ring (the halo comes from the global :focus-visible) */
+.browse-field input:focus-visible,
+.browse-field select:focus-visible {
+  border-color: var(--red)
+}
+
+.browse-clear {
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  color: var(--label);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .12em;
+  cursor: pointer
+}
+
+.browse-clear:hover,
+.browse-clear:focus-visible {
+  background: var(--wash-hover);
+  color: var(--value)
+}
+
+.browse-clear:active {
+  background: var(--wash-press);
+  color: var(--value)
+}
+
+.browse-count {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--label);
+  font: 500 var(--fs-label-11) var(--mono);
+  letter-spacing: .12em;
+  font-variant-numeric: tabular-nums
+}
+
+/* ── the grid of slots ── */
+.browse-grid {
+  --card-min: var(--card-min-standard);
+  --cols: var(--board-cols-max);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(clamp(
+    (100% - (var(--cols) - 1) * var(--spacing-cardGap)) / var(--cols) - .5px,
+    var(--card-min),
+    (100% - (var(--board-cols-min) - 1) * var(--spacing-cardGap)) / var(--board-cols-min) - .5px), 1fr));
+  gap: var(--spacing-cardGap);
+  margin: var(--space-4) 0 0;
+  padding: 0;
+  list-style: none
+}
+
+.browse-item {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  width: 100%;
+  min-width: 0;
+  max-width: var(--card-max);
+  justify-self: center;
+  container: card / inline-size
+}
+
+.browse-item > .dot-card {
+  width: 100%
+}
+
+/* a slot whose card isn't mounted: the card's own square and frame, empty */
+.browse-ghost {
+  background: var(--surface)
+}
+
+.browse-cap {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin: 0;
+  min-width: 0;
+  font: 500 var(--fs-label-11) var(--mono);
+  letter-spacing: .08em
+}
+
+.browse-cap a {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--value);
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap
+}
+
+.browse-cap a.browse-board {
+  flex-shrink: 0;
+  color: var(--mute);
+  letter-spacing: .12em
+}
+
+.browse-cap a:hover,
+.browse-cap a:active,
+.browse-cap a:focus-visible {
+  color: var(--value);
+  text-decoration: underline;
+  text-underline-offset: 3px
+}
+
+.browse-empty {
+  display: grid;
+  justify-items: start;
+  gap: var(--space-3);
+  margin-top: var(--gap-group);
+  color: var(--label);
+  font: 400 var(--fs-copy-14)/1.5 var(--sans)
+}
+
+.browse-empty p {
+  margin: 0
+}
+
+/* touch: tap-sized fields, buttons and caption links */
+@media (pointer: coarse) {
+  .browse-field input,
+  .browse-field select,
+  .browse-clear {
+    min-height: var(--tap)
+  }
+
+  .browse-cap a {
+    display: inline-flex;
+    align-items: center;
+    min-height: var(--tap-min)
+  }
+}
+
+@media (max-width: 600px) {
+  .browse-field--q {
+    flex-basis: 100%;
+    max-width: none
+  }
+
+  .browse-field:not(.browse-field--q) {
+    flex: 1 1 0
+  }
+
+  .browse-field select {
+    max-width: none
+  }
+}

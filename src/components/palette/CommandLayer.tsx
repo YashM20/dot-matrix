@@ -14,6 +14,7 @@ import { TimeMachine } from '../xray/TimeMachine'
 import { boardTime, freeze, hoveredCard, isXRay, onCardAction, resume, scrub, setXR, toast, toggleCard, toggleGlobal, useXR, xrState } from '../xray/store'
 import { placeFromName, placeOpen, placeView, urlForView, type Place } from '../../site/views'
 import { widgetPath } from '../../site/routes'
+import { BROWSE_PARAMS } from '../../site/browse'
 import { assign, pushUrl } from '../../site/safe-url'
 import { boardOfCard, type CommandApi } from './api'
 import { setReducedMotion } from './reducedMotion'
@@ -248,6 +249,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       if (location.pathname === widgetPath(preset.id)) return
       const go = () => {
         const q = new URLSearchParams(location.search); q.delete('card')
+        for (const k of BROWSE_PARAMS) q.delete(k) // BROWSE's filters stay on BROWSE
         pushUrl(widgetPath(preset.id) + (q.size ? `?${q}` : ''))
         dispatchEvent(new PopStateEvent('popstate'))
       }

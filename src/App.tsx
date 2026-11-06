@@ -12,6 +12,7 @@ import { onLayerWake, requestLayer } from './site/layer'
 import { setPageMeta, syncUrl } from './site/meta'
 import { flag } from './site/flags'
 import { pushUrl, replace } from './site/safe-url'
+import { BROWSE_META, BROWSE_PARAMS } from './site/browse'
 import { useFlag } from './site/useFlag'
 import { cardTransition } from './site/viewTransition'
 import { GALLERY_BOARD, VIEWS, placeFromName, placeView, sameView, urlForView, viewFromUrl, type Mode, type View } from './site/views'
@@ -75,6 +76,8 @@ function SiteFooter({ onAbout }: { onAbout: () => void }) {
 // MAKE is one editor (docs/EDITOR-PLAN.md): frames on an infinite canvas, layers, a contextual inspector.
 // The old modes (TUNE / COMPOSE / CODE / DRAW) are ways into it. Lazy: no other view loads the editor.
 const Editor = lazy(() => import('./components/editor/Editor').then(m => ({ default: m.Editor })))
+// BROWSE (#182): every card in one filtered, windowed grid; its data, styles and filters load with it
+const Browse = lazy(() => import('./components/browse/Browse').then(m => ({ default: m.Browse })))
 // the single-widget page (docs/SHARE-PLAN.md §4): /widget/<slug|uid>/, /<uid>, ?card=; lazy like the views
 const WidgetPage = lazy(() => import('./components/widget/WidgetPage').then(m => ({ default: m.WidgetPage })))
 // the phone board sheet: its own chunk, fetched on the first tap (or once the command layer has mounted)
@@ -157,6 +160,7 @@ function Glyph({ rows }: { rows: string }) {
 }
 const GLYPHS: Record<View | 'TOOLS' | 'SEARCH', string> = {
   EXPLORE: '11011 11011 00000 11011 11011',
+  BROWSE: '10101 00000 10101 00000 10101',
   MAKE: '00100 00100 11111 00100 00100',
   ABOUT: '00100 00000 00100 00100 00100',
   TOOLS: '10001 01010 00100 01010 10001',
@@ -210,7 +214,7 @@ export default function App() {
   const first = useRef(true)
   useEffect(() => {
     if (widget) return // the widget page keeps its own URL and meta
-    setPageMeta(view === 'EXPLORE' ? board : undefined)
+    setPageMeta(view === 'BROWSE' ? BROWSE_META : view === 'EXPLORE' ? board : undefined)
     const want = { view, mode, board }
     syncUrl(urlForView(want, location.search, location.pathname), !first.current && !sameView(urlView(mode), want))
     first.current = false
@@ -240,6 +244,7 @@ export default function App() {
   // widget page ⇄ boards: each move is a history entry; back on a board, the card it came from is brought to the eye
   const openWidget = (slug: string) => {
     const q = new URLSearchParams(location.search); q.delete('card')
+    for (const k of BROWSE_PARAMS) q.delete(k)
     pushUrl(widgetPath(slug) + (q.size ? `?${q}` : ''))
     setWidget({ key: slug, scope: '', via: 'path' })
   }
@@ -294,6 +299,10 @@ export default function App() {
         <BoardPicker board={board} onPick={setBoard} onAll={() => setBoards(true)} />
         <Board key={shownBoard} id={shownBoard} leaving={leaving} />
         <NextBoard board={board} onPick={setBoard} />
+      </section>
+    ) : shownPlace === 'BROWSE' ? (
+      <section className="browse-view" role="tabpanel" aria-labelledby="tab-BROWSE">
+        <Browse onOpen={openWidget} onBoard={id => { window.scrollTo(0, 0); pickBoard(id); setView('EXPLORE') }} />
       </section>
     ) : shownPlace === 'ABOUT' ? (
       <section className="about-view" role="tabpanel" aria-labelledby="tab-ABOUT"><About /></section>
