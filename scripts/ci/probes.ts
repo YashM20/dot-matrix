@@ -9,8 +9,9 @@
  *   npx tsx scripts/ci/probes.ts --list                               print the table
  *
  * Needs `dist/` (vite build) and Chrome ($CHROME or the usual paths). Exit 1 when a probe fails, 2 on a bad name.
- * Writes a timing table to $GITHUB_STEP_SUMMARY when it is set. Rebalance shards by those timings: a shard should
- * take at most about 4.5 minutes (mobile and materials alone take that long). Split a long probe by its own filters (editor `--only`, layout `--widths`).
+ * Writes a timing table to $GITHUB_STEP_SUMMARY when it is set. Rebalance shards by those timings: no shard should
+ * outlast mobile or materials, which run alone. Split a long probe by its own filters (editor `--only`,
+ * layout `--widths`).
  */
 import { spawn, spawnSync } from 'node:child_process'
 import { appendFileSync } from 'node:fs'
@@ -41,15 +42,15 @@ const PROBES: { name: string; shard: number; args: string[]; env?: Record<string
   { name: 'life', shard: 11, args: ['scripts/life-browser.ts'] },
   { name: 'c6', shard: 12, args: ['scripts/c6-browser.ts', '--url', '$HOST'] },
   { name: 'analytics', shard: 12, args: ['scripts/site/analytics-browser.ts'] },
-  // a runner has no GPU: these two launch their own Chrome, so they take the software path by their own flag
+  // a runner has no GPU and webgl.ts launches its own Chrome: its `--swiftshader` turns WebGL2 on (squares passes as is)
   { name: 'webgl', shard: 12, args: ['scripts/webgl.ts', '--no-perf', '--swiftshader'] },
-  { name: 'squares', shard: 12, args: ['scripts/squares-browser.ts', '--swiftshader'] },
+  { name: 'squares', shard: 12, args: ['scripts/squares-browser.ts'] },
   { name: 'skins', shard: 12, args: ['scripts/skins-browser.ts', '--fidelity'] },
   { name: 'likes', shard: 12, args: ['scripts/likes-browser.ts'] },
   { name: 'theme-picker', shard: 12, args: ['scripts/site/theme-picker.ts'] },
 ]
-/** A hung probe fails at this point instead of holding its shard past the workflow's ~6 minutes. */
-const TIMEOUT_MS = 5 * 60_000
+/** A hung probe fails here instead of holding its shard to the job timeout (mobile and materials take 4 to 5 minutes). */
+const TIMEOUT_MS = 7 * 60_000
 
 const argv = process.argv.slice(2)
 const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : undefined }
