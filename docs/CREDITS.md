@@ -163,15 +163,15 @@ By Islam El-Ashi.
 
 By Henry Li.
 
-- CLOSER (`cinema-closer`), board `/cinema/`: grown from his Afterlight face
-- ENCORE (`cinema-encore`), board `/cinema/`: grown from his Afterlight face
-- EXIT 14 (`cinema-exit-14`), board `/cinema/`: grown from his Afterlight face
-- KEEPER (`cinema-keeper`), board `/cinema/`: grown from his Afterlight face
-- LAST CALL (`cinema-last-call`), board `/cinema/`: grown from his Afterlight face
-- SIGNAL (`cinema-signal`), board `/cinema/`: grown from his Afterlight face
-- SUNDOWN (`cinema-sundown`), board `/cinema/`: grown from his Afterlight face
-- UPSTAIRS (`cinema-upstairs`), board `/cinema/`: grown from his Afterlight face
-- WITNESS (`cinema-witness`), board `/cinema/`: grown from his Afterlight face
+- Closer (`cinema-closer`), board `/cinema/`: grown from his Afterlight face
+- Encore (`cinema-encore`), board `/cinema/`: grown from his Afterlight face
+- Exit 14 (`cinema-exit-14`), board `/cinema/`: grown from his Afterlight face
+- Keeper (`cinema-keeper`), board `/cinema/`: grown from his Afterlight face
+- Last Call (`cinema-last-call`), board `/cinema/`: grown from his Afterlight face
+- Signal (`cinema-signal`), board `/cinema/`: grown from his Afterlight face
+- Sundown (`cinema-sundown`), board `/cinema/`: grown from his Afterlight face
+- Upstairs (`cinema-upstairs`), board `/cinema/`: grown from his Afterlight face
+- Witness (`cinema-witness`), board `/cinema/`: grown from his Afterlight face
 - Calm (`face-calm`), board `/faces/`: grown from his Afterlight face
 - Curious (`face-curious`), board `/faces/`: grown from his Afterlight face
 - Pip (`face-pip`), board `/faces/`: grown from his Afterlight face
