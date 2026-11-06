@@ -151,7 +151,7 @@ jobs:
       - name: Perf report
         run: pnpm bench
 
-  # Report-only React Doctor scan (`pnpm doctor`, settings in doctor.config.ts). It runs beside the other jobs and
+  # Report-only React Doctor scan (`pnpm react-doctor`, settings in doctor.config.ts). It runs beside the other jobs and
   # isn't part of the gate: `--blocking none` keeps its exit code 0 and `continue-on-error` covers a tool failure.
   # No install: the pinned `pnpm dlx` fetches react-doctor on its own and the scan only reads source and package.json.
   doctor:
@@ -171,7 +171,7 @@ jobs:
           node-version: 22
 
       - name: React Doctor
-        run: pnpm doctor --verbose --blocking none --max-duration 300
+        run: pnpm run react-doctor --verbose --blocking none --max-duration 300
 
   # The required status check. Don't rename it: the main ruleset requires "check + build" by name.
   gate:
