@@ -3,10 +3,10 @@
  * `src/main.tsx`, the blog `src/blog/main.tsx`, the Lab `src/lab/main.tsx`). A render error anywhere below shows a
  * short recovery screen with RELOAD and a link home instead of a blank page. Parts with their own boundary (the
  * editor's `EditorBoundary`) catch first; this one only sees what nothing else caught.
- * Styles: `.root-crash` in root-boundary.css, matched to the editor's `.ed-crash`.
+ * Styles: `.root-crash` in root-boundary.css, matched to the editor's `.ed-crash`; each page's stylesheet
+ * `@import`s it (src/index.css, src/blog/blog.css), so it never rides in a shared chunk's extra stylesheet.
  */
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import './root-boundary.css'
 
 export interface RootBoundaryProps {
   children?: ReactNode

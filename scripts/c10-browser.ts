@@ -304,8 +304,8 @@ try {
   // ── the xray flag off (the default): no control anywhere, X does nothing, no palette action, no shell command
   if (run('flagsoff')) {
   await open('?board=henry', ''); await sleep(1500)
-  const dock = await waitFor(`document.querySelectorAll('.pal-dock button').length > 0`, 8000)
-  check('flag off: no X-RAY in the dock and no ⓘ on any card', dock && await js(`![...document.querySelectorAll('.pal-dock button')].some(b => b.textContent === 'X-RAY') && !document.querySelector('button[aria-label="How it works"]')`))
+  const dock = await waitFor(`document.querySelectorAll('.pal-dock:not(.dock-ghost) button').length > 0`, 8000)
+  check('flag off: no X-RAY in the dock and no ⓘ on any card', dock && await js(`![...document.querySelectorAll('.pal-dock:not(.dock-ghost) button')].some(b => b.textContent === 'X-RAY') && !document.querySelector('button[aria-label="How it works"]')`))
   const fp = await cardPoint('.board-view [data-xr-key]')
   await move(fp.x, fp.y); await sleep(150)
   await key('x'); await key('x', 8); await sleep(500)

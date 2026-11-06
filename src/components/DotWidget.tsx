@@ -15,7 +15,7 @@ import { useDisplaySkin } from './skins/store'
 import { useTheme } from '../site/theme/useTheme'
 import { themeTokens } from '../site/theme/theme'
 import { cardScheme } from '../site/theme/polarity'
-import './touch.css'
+// card touch policy: ./touch.css, pulled into each page's stylesheet by src/index.css and src/blog/blog.css (#198)
 
 /** U2 header hint: what a visitor can do to the card, read off its controls (grey, never the accent). */
 function hintVerb(p: WidgetPreset, cs: Control[]) {

@@ -68,6 +68,15 @@
   position: static
 }
 
+/* its stand-in until the real dock arrives: it holds the dock's room, unseen, then steps out (App.tsx DockGhost) */
+.dock-ghost {
+  visibility: hidden
+}
+
+.dock-ghost:not(:only-child) {
+  display: none
+}
+
 .topbar-dock [data-tip]::after {
   top: calc(100% + var(--space-2));
   bottom: auto

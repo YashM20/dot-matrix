@@ -103,7 +103,7 @@ export function blogPages() {
   })])
   writeFileSync(file, list); page('blog', list)
   for (const p of POSTS) {
-    const m: PageMeta = { title: `${p.title} · Matrix blog`, description: p.dek, path: postPath(p.slug), image: social(p.slug), imageAlt: imageAlt(p.slug) }
+    const m: PageMeta = { title: `${p.title} · MATRIX blog`, description: p.dek, path: postPath(p.slug), image: social(p.slug), imageAlt: imageAlt(p.slug) }
     const ld = {
       '@context': 'https://schema.org', '@type': 'BlogPosting', headline: p.title, description: p.dek, datePublished: p.date, author, publisher: author,
       image: [origin + m.image, ...(has(heroImage(p.slug)) ? [origin + heroImage(p.slug)] : [])], url: origin + m.path, mainEntityOfPage: origin + m.path,

@@ -9,7 +9,7 @@ import { useXR } from './components/xray/store'
 import { boardIds, boardLabel, liveBoards, prefetchBoard } from './widgets/manifest'
 import { widgetPath, type WidgetRoute } from './site/routes'
 import { onLayerWake, requestLayer } from './site/layer'
-import { setPageMeta, syncUrl } from './site/meta'
+import { boardFromPath, setPageMeta, syncUrl } from './site/meta'
 import { flag } from './site/flags'
 import { pushUrl, replace } from './site/safe-url'
 import { BROWSE_META, BROWSE_PARAMS } from './site/browse'
@@ -141,6 +141,16 @@ function Tabs<T extends string>({ label, items, value, onPick, className }: { la
   return <div className={className} role="tablist" aria-label={label}>{items.map((t, i) => <button key={t} type="button" role="tab" id={`tab-${t}`} aria-selected={value === t} tabIndex={value === t ? 0 : -1} className={value === t ? 'selected' : ''} onClick={() => onPick(t)} onKeyDown={e => onKey(e, i)}>{t}</button>)}</div>
 }
 
+/**
+ * The tool dock's place in the top bar, held from first paint: a hidden, inert copy with the same buttons, so the real
+ * dock (CommandLayer portals it in once the page is idle) takes the room it left and the bar doesn't jump (#198).
+ */
+function DockGhost() {
+  'use no memo'
+  const xray = useFlag('xray')
+  return <div className="pal-dock dock-ghost" aria-hidden="true" inert>{xray && <button type="button">X-RAY</button>}<button type="button">TIME</button><button type="button">⌘K</button><button type="button">&gt;_</button></div>
+}
+
 /** One line of intent above the boards (docs/UX-PLAN.md §5.1): dismissible, and it stays dismissed. */
 function IntroLine() {
   const [shown, setShown] = useState(() => { try { return localStorage.getItem('dot480:intro') !== 'off' } catch { return true } })
@@ -214,9 +224,10 @@ export default function App() {
   const first = useRef(true)
   useEffect(() => {
     if (widget) return // the widget page keeps its own URL and meta
-    setPageMeta(view === 'BROWSE' ? BROWSE_META : view === 'EXPLORE' ? board : undefined)
-    const want = { view, mode, board }
-    syncUrl(urlForView(want, location.search, location.pathname), !first.current && !sameView(urlView(mode), want))
+    const want = { view, mode, board }, url = urlForView(want, location.search, location.pathname)
+    // the home page (`/`, which shows the first board) keeps the site's own title and canonical; a board path gets the board's
+    setPageMeta(view === 'BROWSE' ? BROWSE_META : view === 'EXPLORE' && boardFromPath(url.split('?')[0]) ? board : undefined)
+    syncUrl(url, !first.current && !sameView(urlView(mode), want))
     first.current = false
   }, [view, mode, board, widget])
   // board ⇄ widget page (Back / Forward, a card's OPEN) as a view transition: the card's frame flies (X1, #18)
@@ -289,7 +300,7 @@ export default function App() {
       {/* red means live: only while a board streams real data */}
       {view === 'EXPLORE' && liveBoards.includes(board) && <div className="live"><i aria-hidden="true"/> LIVE DATA</div>}
       {/* the tool dock (CommandLayer portals it here on desktop) */}
-      <div className="topbar-dock" />
+      <div className="topbar-dock"><DockGhost /></div>
       <button type="button" className="topbar-search" aria-label="Search boards, cards and actions" aria-haspopup="dialog" onClick={() => requestLayer('palette')}><Glyph rows={GLYPHS.SEARCH} /></button></header>
     <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
     {shownPlace === 'EXPLORE' ? (

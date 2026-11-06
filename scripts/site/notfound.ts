@@ -51,6 +51,7 @@ export function notFoundPage(): string {
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex" />
     <meta name="color-scheme" content="dark light" />
+    <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>Not found · ${SITE_NAME}</title>
     <style>${css}</style>

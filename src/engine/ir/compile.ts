@@ -2,8 +2,9 @@
  * Field IR → JS `Field`. The default backend is a closure tree (no `eval`, CSP-safe). `mode:
  * 'function'` emits straight-line JS and builds it with `new Function` for speed, for registered card
  * presets only (visitor programs compile with `compileUntrusted`, which can't ask for it). The body must
- * pass the token allowlist (`allow.ts`) first; if it doesn't, or the page's CSP forbids `new Function`,
- * the program falls back to the closure tree.
+ * pass the token allowlist (`allow.ts`) first; if it doesn't, the program falls back to the closure tree.
+ * Browsers (pages and workers) always get the closure tree: the site's CSP has no 'unsafe-eval', and even a refused
+ * attempt logs a CSP violation and a Trusted Types report (#198). Only Node (the scripts and parity tests) builds code.
  */
 import type { Field } from '../types'
 import { allowedBody } from './allow'
@@ -93,13 +94,16 @@ function inputs(env: IREnv, data: string[], into: Float64Array) {
   data.forEach((key, i) => { const x = own(env.data, key) ? env.data![key] : 0; into[INPUTS + i] = typeof x === 'number' ? x : 0 })
 }
 
+/** Code may be built only outside a browser: no `document` (a page) and no `WorkerGlobalScope` (a worker). */
+const CAN_EVAL = typeof document === 'undefined' && typeof (globalThis as { WorkerGlobalScope?: unknown }).WorkerGlobalScope === 'undefined'
+
 type Fn = (u: number, v: number, t: number, px: number, py: number, pd: number, D: Float64Array, M: typeof irMath) => number
 /**
  * The `new Function` backend for an emitted body that reads `dataCount` data values. Null when the body breaks the
- * token allowlist or the page's CSP forbids `new Function`; the caller then uses the closure tree.
+ * token allowlist or it runs in a browser (`CAN_EVAL`); the caller then uses the closure tree.
  */
 export function buildFunction(body: string, dataCount: number): Fn | null {
-  if (!allowedBody(body, dataCount)) return null
+  if (!CAN_EVAL || !allowedBody(body, dataCount)) return null
   try { return new Function('u', 'v', 't', 'px', 'py', 'pd', 'D', 'M', `"use strict";\n${body}`) as Fn } catch { return null }
 }
 function tryFunction(ast: Node): { fn: Fn; data: string[] } | null {

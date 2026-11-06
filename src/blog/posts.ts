@@ -18,7 +18,7 @@ export const POSTS: readonly PostInfo[] = [
   { slug: 'living-matter', title: 'Living matter', dek: 'Make ripples, swimming koi and lit materials that run for hours.', reader: 'Generative artists', thumb: 'pond-koi', kind: 'md', date: '2026-11-01' },
 ]
 /** The index page's own meta (title, description; its images are `public/og/blog/blog-*`). */
-export const BLOG = { slug: 'blog', title: 'Blog · Matrix', dek: 'Long reads on how the Dot/480 engine draws interfaces in dots: the essay and three tutorials with live cards and code you can copy.' }
+export const BLOG = { slug: 'blog', title: 'Blog · MATRIX', dek: 'Long reads on how the Dot/480 engine draws interfaces in dots: the essay and three tutorials with live cards and code you can copy.' }
 /** Images by convention (`scripts/og-blog.ts` draws them): the hero at the top of a post and on the index, the social card. */
 export const heroImage = (slug: string): string => `/og/blog/${slug}-hero.png`
 export const socialImage = (slug: string): string => `/og/blog/${slug}-social.png`

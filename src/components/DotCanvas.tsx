@@ -21,8 +21,8 @@ import { drawn as drawnStat } from '../site/stats'
 import { useControlInput } from '../hooks/useControlInput'
 import { ControlOverlay } from './ControlOverlay'
 import { DisplaySurface } from './skins/DisplaySurface'
-// card touch policy (pan-y drag pads, engaged state): every interactive surface needs it, the essay's figures too
-import './touch.css'
+// card touch policy (pan-y drag pads, engaged state): every interactive surface needs it, the essay's figures too;
+// ./touch.css is pulled into each page's stylesheet by src/index.css and src/blog/blog.css (#198)
 import { shapeExt } from '../engine/renderer/ext'
 
 // the squares WebGL join hook (src/engine/squares/gl.ts): its own chunk, fetched by DotGL on the first join frame.

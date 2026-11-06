@@ -126,11 +126,6 @@ html {
   color: var(--value)
 }
 
-/* the tool dock's slot (the command layer portals the dock in); phones fold the dock into TOOLS */
-.topbar-dock:empty {
-  display: none
-}
-
 .brand {
   color: var(--value)
 }
