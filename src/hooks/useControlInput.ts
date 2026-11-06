@@ -89,6 +89,11 @@ export interface ControlInput {
   focus(key: string | undefined, visible: boolean): void
 }
 
+/** Capture the pointer on the card root (outside the hook: the compiler can't lower a try/catch with an optional call). */
+function capture(el: HTMLElement, id: number) {
+  try { el.setPointerCapture?.(id) } catch { /* pointer already gone (synthetic events) */ }
+}
+
 /**
  * The app side of the input layer: pointer / touch / keyboard → `data` patches (via `onInput`) and
  * `hover` / `pressed` / `focus` / `pointers` for the frame context. Everything is batched to one
@@ -99,13 +104,13 @@ export interface ControlInput {
  * touch is a candidate the card does not see until it is a still tap (acts on lift), a horizontal drag on
  * a drag control, or a hold; only a claimed touch captures the pointer and blocks the page's scroll.
  */
-export function useControlInput(controls: Control[] | undefined, grid: GridConfig, data: Record<string, number>, onInput?: (patch: ControlPatch) => void): ControlInput {
+export function useControlInput(controls: Control[] | undefined, grid: GridConfig, data: Record<string, number>, onInput?: (patch: ControlPatch) => void, onEngage?: (exit: (() => void) | null) => void): ControlInput {
   const [ix, setIx] = useState<InteractionContext | undefined>(undefined)
   const ixRef = useRef<InteractionContext | undefined>(undefined)
   const inputAt = useRef(-Infinity)
   const liveSub = useRef<ClockSubscriber | null>(null)
-  const dataRef = useRef(data), onInputRef = useRef(onInput), controlsRef = useRef(controls), gridRef = useRef(grid)
-  useLayoutEffect(() => { dataRef.current = data; onInputRef.current = onInput; controlsRef.current = controls; gridRef.current = grid })
+  const dataRef = useRef(data), onInputRef = useRef(onInput), onEngageRef = useRef(onEngage), controlsRef = useRef(controls), gridRef = useRef(grid)
+  useLayoutEffect(() => { dataRef.current = data; onInputRef.current = onInput; onEngageRef.current = onEngage; controlsRef.current = controls; gridRef.current = grid })
 
   const pointers = useRef(new Map<number, Pointer>()), stamps = useRef(new Map<number, number>())
   const drags = useRef(new Map<number, Drag>())
@@ -190,6 +195,7 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
     if (!engagedRef.current) return
     engagedRef.current = false
     setEngaged(false)
+    onEngageRef.current?.(null)
   }, [])
   const bumpIdle = () => {
     window.clearTimeout(idleTimer.current)
@@ -198,7 +204,8 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
     wait()
   }
   const engage = () => {
-    if (!engagedRef.current) { engagedRef.current = true; setEngaged(true) }
+    // the owner hears about it here, in the same event, instead of from an effect after the commit
+    if (!engagedRef.current) { engagedRef.current = true; setEngaged(true); onEngageRef.current?.(disengage) }
     bumpIdle()
   }
   useEffect(() => {
@@ -246,10 +253,10 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
    * Press a control: the pointer goes down on it, the drag starts and the value answers. `claim` (mouse, pen and
    * claimed touches) captures the pointer; a touch claim also blocks the page's scroll while it lasts.
    */
-  const grab = (e: Ev, c: Control, claim: boolean, tDown = sharedClock().time()) => {
-    const p = track(e, { down: true, up: false, tDown })
+  const grab = (e: Ev, c: Control, claim: boolean, at?: number) => {
+    const p = track(e, { down: true, up: false, tDown: at ?? sharedClock().time() })
     if (claim) {
-      try { e.root.setPointerCapture?.(e.pointerId) } catch { /* pointer already gone (synthetic events) */ }
+      capture(e.root, e.pointerId)
       if (e.pointerType === 'touch') claimed.current.add(e.pointerId)
     }
     const target = e.root.querySelector<HTMLElement>(`[data-dot-focus="${CSS.escape(c.key)}"]`)

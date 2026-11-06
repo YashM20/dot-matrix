@@ -21,6 +21,10 @@ const PITCH = 4, ROWS = 9
 const STYLE = { ...baseStyle, sizeMin: .3, sizeMax: .95, cornerRoundness: .25 }
 const EVERY_MS = 250
 
+// module functions: the React Compiler 1.0 hits an internal error on these method calls inside the component
+const grouped = (n: number) => n.toLocaleString('en')
+const colsFor = (text: string) => Math.ceil(textSize(text)[0]) + 1
+
 export function LiveBand() {
   const [count, setCount] = useState(drawn.dots)
   // the band sits on the page, not in a card, so it takes the site theme's dot tones (ink on paper in light); under an
@@ -45,8 +49,8 @@ export function LiveBand() {
     document.addEventListener('visibilitychange', sync)
     return () => { io.disconnect(); document.removeEventListener('visibilitychange', sync); stop() }
   }, [])
-  const text = count.toLocaleString('en')
-  const cols = Math.ceil(textSize(text)[0]) + 1
+  const text = grouped(count)
+  const cols = colsFor(text)
   const grid = useMemo<GridConfig>(() => ({ cols, rows: ROWS, pitch: PITCH }), [cols])
   const layers = useMemo(() => { const l = [layer(textAt(grid, text, 0, 1), 'value')]; return () => l }, [grid, text])
   useLayoutEffect(() => { mark.current = drawn.dots }, [text])

@@ -60,17 +60,27 @@ export interface DotWidgetProps {
   onShared?: (patch: ControlPatch) => void
 }
 
-export function DotWidget({ type, density, dotShape, roundness, size, theme: themeProp, animated, data, tick, preset: presetProp, enter, exit, shared, sharedKeys, onShared }: DotWidgetProps) {
-  // by id: a preset of a board loaded so far, else the boards are loaded (lazy chunks) and searched
+/**
+ * The card's preset. By id: a preset of a board loaded so far, else the boards are loaded (lazy chunks) and searched.
+ * A hook so the React Compiler reads the result as fixed for the render (a plain lookup call could be mutated later,
+ * which stops it compiling the card).
+ */
+function usePreset(type: string, presetProp: WidgetPreset | undefined): WidgetPreset | undefined {
+  // not memoized: the registry fills as board chunks load, so the lookup must run on every render
+  'use no memo'
   const [found, setFound] = useState<WidgetPreset>()
-  const site = useTheme(), skin = useDisplaySkin()
-  const preset = presetProp ?? registeredPreset(type) ?? found
   useEffect(() => {
     if (presetProp || registeredPreset(type)) return
     let live = true
     findPreset(type).then(p => { if (live) setFound(p) }, () => {})
     return () => { live = false }
   }, [presetProp, type])
+  return presetProp ?? registeredPreset(type) ?? found
+}
+
+export function DotWidget({ type, density, dotShape, roundness, size, theme: themeProp, animated, data, tick, preset: presetProp, enter, exit, shared, sharedKeys, onShared }: DotWidgetProps) {
+  const preset = usePreset(type, presetProp)
+  const site = useTheme(), skin = useDisplaySkin()
   // interactive data (P2): input patches merged over the defaults and the `data` prop
   const [local, setLocal] = useState<ControlPatch>({})
   const [menu, setMenu] = useState(false)

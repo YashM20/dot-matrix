@@ -6,6 +6,7 @@
 import { memo, useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from 'react'
 import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { sampleLayers } from '../../engine/sampler/gridSampler'
+import type { ThemeTokens } from '../../engine/types'
 import { useThemeTokens } from '../../site/theme/useTheme'
 import { dotifyUpload } from '../../lib/photoDotify'
 import { SHARE_GRIDS } from '../../lib/share'
@@ -15,8 +16,9 @@ import { compiledOf } from './render'
 import { libraryList, paintLayer, type StudioCard, type StudioLayer } from '../studio/doc'
 import { blankCard, drawingCard, editFrame, editLayer, frameById, groupOf, lockFrames, lockLayers, moveLayer, programCard, renameGroup, topDown, unitsOf, type EditorFrame, type LayerGroup } from './doc'
 import { layersSel, selFrames, selGroup, selLayers, toggleSel } from './select'
-import { useEditor } from './store'
+import { getEditor, useEditor } from './store'
 import { EditorBoundary } from './EditorBoundary'
+import { attempt } from './attempt'
 
 const KIND: Record<StudioLayer['kind'], string> = { ir: 'CODE', text: 'TEXT', sites: 'SITES', 'preset-layer': 'REF', spec: 'SPEC', paint: 'PAINT' }
 
@@ -27,24 +29,25 @@ function Rename({ value, onDone }: { value: string; onDone: (v?: string) => void
 }
 
 /** ⇧ / ⌘ / Ctrl-click, or any tap in the phone's SELECT mode, adds to the selection instead of replacing it. */
-const adds = (e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => e.shiftKey || e.metaKey || e.ctrlKey || useEditor.getState().selectMode
+const adds = (e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }) => e.shiftKey || e.metaKey || e.ctrlKey || getEditor().selectMode
 
 function FrameRows({ f }: { f: EditorFrame }) {
-  const sel = useEditor(s => s.sel), { select, edit } = useEditor.getState()
+  const sel = useEditor(s => s.sel), { select, edit } = getEditor()
   const [open, setOpen] = useState(true)
   const [shut, setShut] = useState<Record<string, boolean>>({})
   const [renaming, setRenaming] = useState<string | null>(null)
   const [drag, setDrag] = useState<{ id: string; to: number } | null>(null)
   const list = useRef<HTMLOListElement>(null)
   const layers = topDown(f.card), errors = compiledOf(f.card).errors
-  const picks = sel.frame === f.id ? selLayers(sel) : [], whole = selGroup(useEditor.getState().h.present, sel)
+  // a subscription, not a store read in render: the compiler would keep a stale one
+  const picks = sel.frame === f.id ? selLayers(sel) : [], whole = useEditor(s => selGroup(s.h.present, s.sel)?.id)
   const isOpen = open || sel.frame === f.id && !!sel.layer
   const pick = (e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean } | undefined, layer?: string) => {
-    const s = useEditor.getState().sel, hit = layer ? { frame: f.id, layer } : { frame: f.id }
+    const s = getEditor().sel, hit = layer ? { frame: f.id, layer } : { frame: f.id }
     select(e && adds(e) ? toggleSel(s, hit) : hit)
   }
   const pickGroup = (e: { shiftKey: boolean; metaKey: boolean; ctrlKey: boolean }, g: LayerGroup) => {
-    const s = useEditor.getState().sel
+    const s = getEditor().sel
     select(adds(e) && s.frame === f.id && s.layer ? layersSel(f.id, [...selLayers(s), ...g.layers]) : layersSel(f.id, g.layers))
   }
   const indexAt = (y: number) => {
@@ -93,7 +96,7 @@ function FrameRows({ f }: { f: EditorFrame }) {
         {unitsOf(f).map(u => {
           const g = groupOf(f, u[0])
           if (!g) return row(byId.get(u[0])!, index.get(u[0])!, false)
-          const members = u.map(id => byId.get(id)!), gOn = whole?.id === g.id, inside = !gOn && picks.some(id => g.layers.includes(id))
+          const members = u.map(id => byId.get(id)!), gOn = whole === g.id, inside = !gOn && picks.some(id => g.layers.includes(id))
           const gOpen = !shut[g.id] || inside, shown = members.some(l => l.visible), locked = g.layers.every(id => f.locks?.includes(id))
           return (
             <li key={g.id} className="ed-tree-group">
@@ -145,6 +148,17 @@ function queueThumb(fn: () => void): () => void {
   if (!thumbTick) thumbTick = requestAnimationFrame(run)
   return () => { const i = thumbQueue.indexOf(fn); if (i >= 0) thumbQueue.splice(i, 1) }
 }
+function drawThumb(c: HTMLCanvasElement, make: ThumbMake, theme: ThemeTokens) {
+  const ctx = c.getContext('2d')
+  if (!ctx) return
+  try {
+    const { layers, grid, style } = make(), W = 112, pitch = W / Math.max(grid.cols, grid.rows), k = Math.min(2, window.devicePixelRatio || 1), p0 = grid.pitch ?? 4
+    c.width = Math.round(grid.cols * pitch * k); c.height = Math.round(grid.rows * pitch * k)
+    ctx.fillStyle = theme.surface; ctx.fillRect(0, 0, c.width, c.height)
+    ctx.setTransform(k, 0, 0, k, 0, 0)
+    renderCanvas(ctx, sampleLayers(layers, { ...grid, pitch }, { ...style, sizeMin: style.sizeMin * pitch / p0, sizeMax: style.sizeMax * pitch / p0 }, theme))
+  } catch { /* a thumbnail never breaks the panel */ }
+}
 /** A preset / program / card thumbnail: sampled once on a coarse pitch, when it scrolls into view. */
 const Thumb = memo(function Thumb({ make, label }: { make: () => { layers: ReturnType<WidgetPreset['layers']>; grid: WidgetPreset['grid']; style: WidgetPreset['style'] }; label: string }) {
   const ref = useRef<HTMLCanvasElement>(null)
@@ -153,17 +167,7 @@ const Thumb = memo(function Thumb({ make, label }: { make: () => { layers: Retur
   useEffect(() => {
     const c = ref.current
     if (!c) return
-    const draw = () => {
-      const ctx = c.getContext('2d')
-      if (!ctx) return
-      try {
-        const { layers, grid, style } = make(), W = 112, pitch = W / Math.max(grid.cols, grid.rows), k = Math.min(2, window.devicePixelRatio || 1), p0 = grid.pitch ?? 4
-        c.width = Math.round(grid.cols * pitch * k); c.height = Math.round(grid.rows * pitch * k)
-        ctx.fillStyle = theme.surface; ctx.fillRect(0, 0, c.width, c.height)
-        ctx.setTransform(k, 0, 0, k, 0, 0)
-        renderCanvas(ctx, sampleLayers(layers, { ...grid, pitch }, { ...style, sizeMin: style.sizeMin * pitch / p0, sizeMax: style.sizeMax * pitch / p0 }, theme))
-      } catch { /* a thumbnail never breaks the panel */ }
-    }
+    const draw = () => drawThumb(c, make, theme)
     let cancel: (() => void) | undefined
     const io = new IntersectionObserver(es => { if (es.some(x => x.isIntersecting)) { io.disconnect(); cancel = queueThumb(draw) } }, { rootMargin: '120px' })
     io.observe(c)
@@ -189,7 +193,7 @@ export function AssetsPanel({ onInserted }: { onInserted?: () => void }) {
   const [busy, setBusy] = useState(false)
   const photo = useRef<HTMLInputElement>(null)
   const saved = useMemo(() => libraryList(), [])
-  const s = useEditor.getState()
+  const s = getEditor()
   const done = () => onInserted?.()
   const needle = q.trim().toLowerCase()
   const hit = (...xs: string[]) => !needle || xs.some(x => x.toLowerCase().includes(needle))
@@ -202,7 +206,7 @@ export function AssetsPanel({ onInserted }: { onInserted?: () => void }) {
   const onPhoto = async (file?: File) => {
     if (!file || !file.type.startsWith('image/')) return
     setBusy(true)
-    try {
+    await attempt(async () => {
       const card = drawingCard(96, 96, 3.5, 1)
       card.name = file.name.replace(/\.[^.]+$/, '').slice(0, 40).toLowerCase() || 'photo'
       const field = await dotifyUpload(file, card.grid, 'bayer')
@@ -211,7 +215,7 @@ export function AssetsPanel({ onInserted }: { onInserted?: () => void }) {
       card.layers = [paintLayer(card.grid, { name: 'photo (dithered)', tone: 'auto', cells })]
       card.style = { ...card.style, quantizeSteps: undefined } // photos skip quantization (DESIGN.md)
       s.insertCard(card, { source: 'photo' }); done()
-    } catch (e) { s.setNote(`photo failed: ${(e as Error).message}`) } finally { setBusy(false) }
+    }, e => s.setNote(`photo failed: ${e.message}`), () => setBusy(false))
   }
   return (
     <div className="ed-pane ed-assets" aria-label="Assets">
@@ -221,7 +225,7 @@ export function AssetsPanel({ onInserted }: { onInserted?: () => void }) {
         <ul className="ed-agrid">
           <Asset name="Blank tile" sub="144×144" thumb={startThumbs.tile} onPick={() => { s.insertCard(blankCard(TILE, 'tile'), { source: 'blank' }); done() }} />
           <Asset name="Blank wide" sub="216×108" thumb={startThumbs.wide} onPick={() => { s.insertCard(blankCard(SHARE_GRIDS.wide, 'wide'), { source: 'blank' }); done() }} />
-          <Asset name="Drawing" sub="80×80 · paint" thumb={startThumbs.draw} onPick={() => { const id = s.insertCard(drawingCard(), { source: 'draw' }); const f = frameById(useEditor.getState().h.present, id); s.select({ frame: id, layer: f?.card.layers[0]?.id }); s.setTool('draw'); done() }} />
+          <Asset name="Drawing" sub="80×80 · paint" thumb={startThumbs.draw} onPick={() => { const id = s.insertCard(drawingCard(), { source: 'draw' }); const f = frameById(getEditor().h.present, id); s.select({ frame: id, layer: f?.card.layers[0]?.id }); s.setTool('draw'); done() }} />
           <li><button type="button" className="ed-asset ed-asset--photo" disabled={busy} onClick={() => photo.current?.click()} title="A photo, dithered into a paint layer (stays on this device)"><span className="ed-thumb ed-thumb--photo" aria-hidden="true">{busy ? '…' : 'IMG'}</span><span>{busy ? 'Dithering…' : 'Photo'}</span><small>bayer · local</small></button>
             <input ref={photo} type="file" accept="image/*" hidden aria-label="Photo to dither into dots" onChange={e => { void onPhoto(e.target.files?.[0]); e.target.value = '' }} /></li>
           <Asset name="Card 80×74" sub="legacy" thumb={startThumbs.card} onPick={() => { s.insertCard(blankCard({ ...CARD, pitch: 4 }, 'card'), { source: 'blank' }); done() }} />

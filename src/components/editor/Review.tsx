@@ -16,6 +16,7 @@ import { deviceFile, deviceFrames, devicePixels, exportScale, plotterPlan } from
 import type { EditorFrame } from './doc'
 import { slug } from './exporters'
 import { drawBarSheet, scoreCard, type Score } from './quality'
+import { attempt } from './attempt'
 import { compiledOf } from './render'
 
 /** Run when the main thread is idle (setTimeout where requestIdleCallback is missing, e.g. Safari). */
@@ -48,7 +49,7 @@ export function Devices({ f, t }: { f: EditorFrame; t: number }) {
   useEffect(() => { frames.forEach(fr => { const c = refs.current.get(fr.profile.id); if (c) paint(c, fr) }) }, [frames])
   const exportAll = async () => {
     setBusy(true); setStatus('')
-    try {
+    await attempt(async () => {
       const name = slug(f.card.name), full = deviceFrames(f, t, false), files: string[] = []
       for (const fr of full) {
         const c = document.createElement('canvas'); paint(c, fr, exportScale(fr))
@@ -59,7 +60,7 @@ export function Devices({ f, t }: { f: EditorFrame; t: number }) {
       if (plan) { download(new Blob([plan], { type: 'image/svg+xml' }), `${name}-plotter-device.svg`); files.push('plotter pen plan SVG') }
       if (TEST_HOOKS) (window as { __editorDevices?: string[] }).__editorDevices = files
       setStatus(`${files.length} files: ${files.join(' · ')}`)
-    } catch (e) { setStatus(`failed: ${(e as Error).message}`) } finally { setBusy(false) }
+    }, e => setStatus(`failed: ${e.message}`), () => setBusy(false))
   }
   return <div className="ed-devices-wrap">
     <div className="ed-devices">{frames.map(fr => (

@@ -179,7 +179,7 @@ export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, wid
       queueMicrotask(() => { const src = wrapOf(overlayRef, wrapRef)?.firstElementChild; if (live && src instanceof HTMLCanvasElement && src.width) runner.feed(src) })
       return () => { live = false }
     }
-    const c = runner.scratch ??= document.createElement('canvas')
+    const c = runner.scratch = runner.scratch ?? document.createElement('canvas')
     if (c.width !== W || c.height !== H) { c.width = W; c.height = H }
     const x = c.getContext('2d')
     if (!x) return

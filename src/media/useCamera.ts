@@ -21,6 +21,30 @@ export interface CameraFeed {
 }
 
 /**
+ * Silhouette / motion over a camera's luma: a background model fed once per new camera frame, read through
+ * getters (outside the hook: the React Compiler can't compile getters in an object literal).
+ */
+function visionOf(cam: NonNullable<ReturnType<typeof createCamera>>, cols: number, rows: number) {
+  const n = cols * rows, sil = createSilhouette(n), bounds = cam.raster.bounds
+  let fed = -1, first = 0
+  // the first half second re-learns the room every frame (auto-exposure is still settling)
+  const feed = () => {
+    if (fed === cam.frame) return
+    if (fed < 0 || cam.frame < fed) first = cam.frame
+    if (cam.frame - first < 15) sil.reset()
+    fed = cam.frame; sil.push(cam.raster.data)
+  }
+  const silhouette: Raster = { grid: cam.raster.grid, space: 'card', data: sil.fg, bounds }
+  const motion: Raster = { grid: cam.raster.grid, space: 'card', data: sil.motion, bounds }
+  const media = {
+    camera: cam.raster,
+    get silhouette() { feed(); return silhouette },
+    get motion() { feed(); return motion },
+  }
+  return { media, reset: () => { fed = -1 } }
+}
+
+/**
  * Camera for a card that declares `media: 'camera'`. Nothing is requested until `on` turns true (a
  * control the user pressed), so the permission prompt only ever follows a user action. The stream stops
  * when `on` turns false, the card unmounts or the tab is hidden, and resumes when the tab is shown again.
@@ -40,26 +64,7 @@ export function useCamera(enabled: boolean, on: boolean, grid: GridConfig | unde
     return () => { document.removeEventListener('visibilitychange', sync); cam.stop() }
   }, [cam, on])
   // silhouette / motion: a background model over the card's own luma, fed once per new camera frame
-  const vision = useMemo(() => {
-    if (!cam) return null
-    const n = cols * rows, sil = createSilhouette(n), bounds = cam.raster.bounds
-    let fed = -1, first = 0
-    // the first half second re-learns the room every frame (auto-exposure is still settling)
-    const feed = () => {
-      if (fed === cam.frame) return
-      if (fed < 0 || cam.frame < fed) first = cam.frame
-      if (cam.frame - first < 15) sil.reset()
-      fed = cam.frame; sil.push(cam.raster.data)
-    }
-    const silhouette: Raster = { grid: cam.raster.grid, space: 'card', data: sil.fg, bounds }
-    const motion: Raster = { grid: cam.raster.grid, space: 'card', data: sil.motion, bounds }
-    const media = {
-      camera: cam.raster,
-      get silhouette() { feed(); return silhouette },
-      get motion() { feed(); return motion },
-    }
-    return { media, reset: () => { fed = -1 } }
-  }, [cam, cols, rows])
+  const vision = useMemo(() => (cam ? visionOf(cam, cols, rows) : null), [cam, cols, rows])
   useEffect(() => { if (on) vision?.reset() }, [on, vision])
   const read = useCallback(() => {
     if (!cam || cam.status !== 'live') return undefined

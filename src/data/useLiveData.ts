@@ -15,7 +15,7 @@ export function useLiveData(sources: readonly Source[] | undefined): Data {
   useEffect(() => {
     if (!sources?.length) return
     const g = globalThis as { dot480Live?: Record<string, (payload: unknown) => void> }
-    const hooks = TEST_HOOKS ? (g.dot480Live ??= {}) : undefined
+    const hooks = TEST_HOOKS ? (g.dot480Live = g.dot480Live ?? {}) : undefined
     if (hooks) for (const s of sources) hooks[s.id] = p => s.push(p)
     const offs = sources.map(s => s.subscribe(() => setData(merged(sources))))
     return () => { offs.forEach(off => off()); if (hooks) for (const s of sources) delete hooks[s.id] }

@@ -10,7 +10,7 @@ import type { PaintLayer, SitesLayer, StudioLayer } from '../studio/doc'
 import { editLayer, pitchOf, type EditorFrame } from './doc'
 import { editableText, inkStep, latticeOf, nextRung, stepLattice, stepSize, stepTone, textGeo, tonesFor, type FBox } from './direct'
 import { LATTICES, SITE_SIZES } from '../studio/doc'
-import { useEditor, type Camera } from './store'
+import { getEditor, useEditor, type Camera } from './store'
 import { menuItems, runMenu, selTitle } from './actions'
 import { bindTypingInput, cancelTyping, commitTyping, startTyping, typeText } from './typing'
 
@@ -30,7 +30,7 @@ export function QuickBar({ f, l, box, phone, landscape = false, vp, inline = fal
   const ref = useRef<HTMLDivElement>(null)
   const [pos, setPos] = useState<CSSProperties>({ visibility: 'hidden' })
   const typing = useEditor(s => s.typing?.layer === l.id), brush = useEditor(s => s.brush), picking = useEditor(s => s.picking)
-  const { edit } = useEditor.getState(), at = { frame: f.id, layer: l.id }
+  const { edit } = getEditor(), at = { frame: f.id, layer: l.id }
   const set = (fn: (x: StudioLayer) => StudioLayer) => edit(d => editLayer(d, at, fn))
   const k = latticeOf(l)
   // place it: centred over the box, above it (below if it would leave the canvas), inside the viewport
@@ -66,7 +66,7 @@ export function QuickBar({ f, l, box, phone, landscape = false, vp, inline = fal
   </div>
 }
 function PaintQ({ l }: { l: PaintLayer }) {
-  const brush = useEditor(s => s.brush), picking = useEditor(s => s.picking), { setBrush, setPicking, setNote } = useEditor.getState()
+  const brush = useEditor(s => s.brush), picking = useEditor(s => s.picking), { setBrush, setPicking, setNote } = getEditor()
   return <>
     <span className="ed-qbar-step" role="group" aria-label={`Ink ${brush.value.toFixed(1)}`}>
       <Q q="ink-" label="Lighter ink" disabled={brush.value <= .2} onClick={() => setBrush({ value: inkStep(brush.value - .2), erase: false })}>−</Q>
@@ -124,14 +124,14 @@ export function LongPressMenu({ at, vp, f, l, phone }: { at: { x: number; y: num
     if (y < pad) y = at.y + finger + 8 <= vp.h - h - pad ? at.y + finger + 8 : Math.max(pad, Math.min(vp.h - h - pad, y))
     setPos({ left: Math.max(pad, Math.min(vp.w - w - pad, at.x - w / 2)), top: y })
   }, [at.x, at.y, vp.w, vp.h, withBar])
-  const items = menuItems(doc, sel), close = () => useEditor.getState().setMenu(undefined)
+  const items = menuItems(doc, sel), close = () => getEditor().setMenu(undefined)
   return <div ref={ref} className={`ed-cmenu${at.armed ? '' : ' is-arming'}`} role="menu" aria-label={`Selection: ${selTitle(doc, sel)}`} style={pos}
     onKeyDown={e => { if (e.key === 'Escape') { e.preventDefault(); close() } }}>
     <b className="ed-cmenu-head">{selTitle(doc, sel)}</b>
     {f && l && <QuickBar f={f} l={l} box={[0, 0, 0, 0]} phone={phone} vp={vp} inline />}
     <div className="ed-cmenu-items">
       {items.map(it => <button key={it.id} type="button" role="menuitem" data-menu={it.id} className={it.danger ? 'ed-danger' : undefined} disabled={it.disabled}
-        onPointerDown={e => e.preventDefault()} onClick={() => { if (!useEditor.getState().menu?.armed) return; close(); runMenu(it.id) }}>{it.label}</button>)}
+        onPointerDown={e => e.preventDefault()} onClick={() => { if (!getEditor().menu?.armed) return; close(); runMenu(it.id) }}>{it.label}</button>)}
     </div>
   </div>
 }

@@ -25,7 +25,8 @@ import { LinkLineage, RemixGraph } from './Lineage'
 import { exporters, recordFrame } from './exporters'
 import { ALIGNS, selCount, selFrames, selGroup, selIds, type Align } from './select'
 import { compiledOf } from './render'
-import { useEditor, type RightTab } from './store'
+import { getEditor, useEditor, type RightTab } from './store'
+import { attempt } from './attempt'
 import { MiniDots, Num, Pick, Section, Seg, Slider, Text, useCurve, useMask } from './ui'
 
 // EXPORT's review folds load with the fold, not with the editor (device simulators, the fidelity scorecard)
@@ -40,7 +41,7 @@ const THEME_LABEL: Record<ThemeName, string> = { dot480: 'DOT/480', deerflowMosa
 function useTarget() {
   const doc = useEditor(s => s.h.present), sel = useEditor(s => s.sel)
   const f = frameById(doc, sel.frame), l = layerOf(doc, sel)
-  const { edit } = useEditor.getState()
+  const { edit } = getEditor()
   const card = (fn: (c: StudioCard) => StudioCard, tag?: string) => f && edit(d => editCard(d, f.id, fn), tag)
   const layer = (fn: (l: StudioLayer) => StudioLayer, tag?: string) => f && l && edit(d => editLayer(d, { frame: f.id, layer: l.id }, fn), tag ?? `layer:${l.id}`)
   return { doc, sel, f, l, card, layer }
@@ -69,7 +70,7 @@ function Design() {
 const ALIGN_LABEL: Record<Align, string> = { left: 'LEFT', hcenter: 'CENTRE', right: 'RIGHT', top: 'TOP', vcenter: 'MIDDLE', bottom: 'BOTTOM' }
 /** Many frames, many layers of a frame, or a group: align / distribute, group, and the edits of many. */
 function ManyPanel({ f }: { f: EditorFrame }) {
-  const { doc, sel } = useTarget(), { edit, select } = useEditor.getState()
+  const { doc, sel } = useTarget(), { edit, select } = getEditor()
   const layers = !!sel.layer, ids = selIds(sel), g = selGroup(doc, sel), grouped = layers && ids.some(id => groupOf(f, id))
   const name = (id: string) => (layers ? f.card.layers.find(l => l.id === id)?.name : frameById(doc, id)?.card.name) ?? id
   const locked = layers ? ids.every(id => f.locks?.includes(id)) : ids.every(id => frameById(doc, id)?.locked)
@@ -100,21 +101,23 @@ function ManyPanel({ f }: { f: EditorFrame }) {
   </>
 }
 
-function DocPanel() {
-  const doc = useEditor(s => s.h.present), { edit, setNote, fit, setShortcuts } = useEditor.getState()
-  const file = useRef<HTMLInputElement>(null)
-  const open = async (fl: File) => {
-    try {
-      const text = await fl.text(), x = JSON.parse(text) as { kind?: string }
-      const { docFromJSON } = await import('./doc')
-      if (x.kind === 'dot480.editor') { useEditor.getState().openDoc(docFromJSON(text)); setNote(`opened ${fl.name}`); requestAnimationFrame(() => fit()) } // held from the autosave until it draws
-      else {
-        const { looksLikeSpec } = await import('../studio/adapter'), { cardFromJSON } = await import('../studio/doc')
-        const card = looksLikeSpec(x) ? specV1.fromSpec(x as never) : cardFromJSON(text)
-        useEditor.getState().insertCard(card, { source: 'file' }); setNote(`added ${fl.name} as a frame`)
-      }
-    } catch (e) { setNote(`could not open ${fl.name}: ${(e as Error).message}`) }
+/** Open a picked file: an editor document replaces the canvas, a card spec or card JSON becomes a frame. */
+async function openFile(fl: File) {
+  const { setNote, fit } = getEditor()
+  const text = await fl.text(), x = JSON.parse(text) as { kind?: string }
+  const { docFromJSON } = await import('./doc')
+  if (x.kind === 'dot480.editor') { getEditor().openDoc(docFromJSON(text)); setNote(`opened ${fl.name}`); requestAnimationFrame(() => fit()) } // held from the autosave until it draws
+  else {
+    const { looksLikeSpec } = await import('../studio/adapter'), { cardFromJSON } = await import('../studio/doc')
+    const card = looksLikeSpec(x) ? specV1.fromSpec(x as never) : cardFromJSON(text)
+    getEditor().insertCard(card, { source: 'file' }); setNote(`added ${fl.name} as a frame`)
   }
+}
+
+function DocPanel() {
+  const doc = useEditor(s => s.h.present), { edit, setNote, fit, setShortcuts } = getEditor()
+  const file = useRef<HTMLInputElement>(null)
+  const open = (fl: File) => attempt(() => openFile(fl), e => setNote(`could not open ${fl.name}: ${e.message}`))
   return <>
     <Section title="DOCUMENT" aside={`${doc.frames.length} frames`}>
       <div className="ed-grid2"><Text label="NAME" value={doc.name} onChange={name => edit(d => ({ ...d, name }), 'doc:name')} /></div>
@@ -128,7 +131,7 @@ function DocPanel() {
       <div className="ed-row-btns">
         <button type="button" onClick={() => exporters.doc(doc)}>DOWNLOAD JSON</button>
         <button type="button" onClick={() => file.current?.click()}>OPEN FILE</button>
-        <button type="button" onClick={() => { edit(() => seedDoc()); useEditor.getState().select({}); requestAnimationFrame(() => fit()) }} title="Replace the canvas with the starter frames (undoable)">RESET CANVAS</button>
+        <button type="button" onClick={() => { edit(() => seedDoc()); getEditor().select({}); requestAnimationFrame(() => fit()) }} title="Replace the canvas with the starter frames (undoable)">RESET CANVAS</button>
       </div>
       <input ref={file} type="file" accept=".json,application/json" hidden aria-label="Open an editor document, Studio card or card spec JSON" onChange={e => { const x = e.target.files?.[0]; if (x) void open(x); e.target.value = '' }} />
       <p className="ed-hint">Opens an editor document, or adds a Studio card / card spec v1 file as a frame. The canvas autosaves in this browser.</p>
@@ -137,7 +140,7 @@ function DocPanel() {
 }
 
 function FramePanel({ f }: { f: EditorFrame }) {
-  const { card } = useTarget(), { edit, select, fit, setRight } = useEditor.getState()
+  const { card } = useTarget(), { edit, select, fit, setRight } = getEditor()
   const c = f.card, st = c.style, pitch = c.grid.pitch ?? 4
   const gridName = (Object.keys(GRIDS) as GridName[]).find(k => GRIDS[k].cols === c.grid.cols && GRIDS[k].rows === c.grid.rows)
   const setStyle = (p: Partial<typeof st>, tag: string) => card(x => ({ ...x, style: { ...x.style, ...p } }), tag)
@@ -156,7 +159,7 @@ function FramePanel({ f }: { f: EditorFrame }) {
         <Num label="ROWS" value={c.grid.rows} min={8} max={512} disabled={!!c.reference} onChange={rows => card(x => ({ ...x, grid: { ...x.grid, rows } }), 'frame:rows')} />
       </div>
       {c.reference && <p className="ed-hint">A reference frame draws its preset live, layer by layer. Tone, blend, order and visibility are yours; to edit its fields and text, make it editable.</p>}
-      {ref && <div className="ed-row-btns"><button type="button" onClick={() => { try { card(() => ({ ...presetAsSpecCard(ref), name: c.name })); select({ frame: f.id }) } catch (e) { useEditor.getState().setNote((e as Error).message) } }}>MAKE EDITABLE</button></div>}
+      {ref && <div className="ed-row-btns"><button type="button" onClick={() => { try { card(() => ({ ...presetAsSpecCard(ref), name: c.name })); select({ frame: f.id }) } catch (e) { getEditor().setNote((e as Error).message) } }}>MAKE EDITABLE</button></div>}
     </Section>
     <Section title="DOTS" aside={`pitch ${pitch}px`}>
       <Slider label="ROUNDNESS" hint={`n = ${squircleExponent(st.cornerRoundness ?? 0).toFixed(1)}`} value={st.cornerRoundness ?? 0} min={0} max={1} step={.02} onChange={cornerRoundness => setStyle({ cornerRoundness }, 'st:round')} />
@@ -180,15 +183,15 @@ function FramePanel({ f }: { f: EditorFrame }) {
     <Section title="LAYERS" aside={`${c.layers.length}`}>
       <ul className="ed-mini-list">{topDown(c).map(x => <li key={x.id}><button type="button" onClick={() => select({ frame: f.id, layer: x.id })}>{x.name}</button></li>)}</ul>
       <div className="ed-row-btns">
-        <button type="button" onClick={() => { useEditor.getState().addLayerTo(f.id, newIRLayer(c.layers.length + 1)); setRight('code') }}>+ CODE LAYER</button>
-        <button type="button" onClick={() => useEditor.getState().setTool('text')}>+ TEXT (T)</button>
-        <button type="button" onClick={() => useEditor.getState().setTool('draw')}>+ PAINT (B)</button>
+        <button type="button" onClick={() => { getEditor().addLayerTo(f.id, newIRLayer(c.layers.length + 1)); setRight('code') }}>+ CODE LAYER</button>
+        <button type="button" onClick={() => getEditor().setTool('text')}>+ TEXT (T)</button>
+        <button type="button" onClick={() => getEditor().setTool('draw')}>+ PAINT (B)</button>
       </div>
     </Section>
     <Section title="ARRANGE">
       <div className="ed-row-btns">
         <button type="button" onClick={() => fit([f.id], 4)}>ZOOM TO</button>
-        <button type="button" onClick={() => { const r = duplicateFrame(useEditor.getState().h.present, f.id); edit(() => r.doc); if (r.id) select({ frame: r.id }) }}>DUPLICATE</button>
+        <button type="button" onClick={() => { const r = duplicateFrame(getEditor().h.present, f.id); edit(() => r.doc); if (r.id) select({ frame: r.id }) }}>DUPLICATE</button>
         <button type="button" onClick={copyEverywhere}>COPY</button>
         <button type="button" onClick={() => edit(d => editFrame(d, f.id, x => ({ ...x, hidden: !x.hidden })))}>{f.hidden ? 'SHOW' : 'HIDE'}</button>
         <button type="button" aria-pressed={!!f.locked} onClick={lockSel}>{f.locked ? 'UNLOCK' : 'LOCK'}</button>
@@ -202,7 +205,7 @@ const rescale = (c: StudioCard, pitch: number) => { const k = pitch / (c.grid.pi
 
 const KIND_NAME: Record<StudioLayer['kind'], string> = { ir: 'CODE', text: 'TEXT', sites: 'SITES', 'preset-layer': 'REFERENCE', spec: 'SPEC', paint: 'PAINT' }
 function LayerPanel({ f, l }: { f: EditorFrame; l: StudioLayer }) {
-  const { layer } = useTarget(), { edit, select, setRight } = useEditor.getState()
+  const { layer } = useTarget(), { edit, select, setRight } = getEditor()
   const sel = { frame: f.id, layer: l.id }, ro = l.kind === 'preset-layer', idx = topDown(f.card).findIndex(x => x.id === l.id)
   const err = compiledOf(f.card).errors.get(l.id)
   return <>
@@ -226,7 +229,7 @@ function LayerPanel({ f, l }: { f: EditorFrame; l: StudioLayer }) {
       <div className="ed-row-btns">
         <button type="button" disabled={idx <= 0} onClick={() => edit(d => moveLayer(d, sel, idx - 1))} aria-label="Bring forward">FORWARD ↑</button>
         <button type="button" disabled={idx >= f.card.layers.length - 1} onClick={() => edit(d => moveLayer(d, sel, idx + 1))} aria-label="Send backward">BACK ↓</button>
-        <button type="button" onClick={() => { const r = duplicateLayer(useEditor.getState().h.present, sel); edit(() => r.doc); if (r.id) select({ frame: f.id, layer: r.id }) }}>DUPLICATE</button>
+        <button type="button" onClick={() => { const r = duplicateLayer(getEditor().h.present, sel); edit(() => r.doc); if (r.id) select({ frame: f.id, layer: r.id }) }}>DUPLICATE</button>
         {groupOf(f, l.id) ? <button type="button" onClick={ungroupSel}>UNGROUP</button> : <button type="button" onClick={groupSel}>GROUP</button>}
         <button type="button" onClick={copyEverywhere}>COPY</button>
         <button type="button" aria-pressed={!!f.locks?.includes(l.id)} onClick={lockSel}>{f.locks?.includes(l.id) ? 'UNLOCK' : 'LOCK'}</button>
@@ -238,7 +241,7 @@ function LayerPanel({ f, l }: { f: EditorFrame; l: StudioLayer }) {
 
 function TextFields({ l }: { l: TextLayer }) {
   const { layer } = useTarget()
-  const set = (p: Partial<TextLayer['params']>, tag = `text:${l.id}`) => layer(x => ({ ...x, params: { ...(x as TextLayer).params, ...p } }) as StudioLayer, tag)
+  const set = (p: Partial<TextLayer['params']>, tag?: string) => layer(x => ({ ...x, params: { ...(x as TextLayer).params, ...p } }) as StudioLayer, tag ?? `text:${l.id}`)
   return <Section title="TEXT" aside="drag it · double-click (tap when selected) to type on the canvas">
     <div className="ed-grid2">
       <label className="ed-field ed-wide"><span>TEXT</span><input data-focus="text" value={l.params.text} maxLength={64} autoCapitalize="characters" spellCheck={false} onChange={e => set({ text: e.target.value.toUpperCase() })} /></label>
@@ -267,7 +270,7 @@ function SiteFields({ l }: { l: SitesLayer }) {
   </Section>
 }
 function PaintFields({ f, l }: { f: EditorFrame; l: PaintLayer }) {
-  const { layer } = useTarget(), brush = useEditor(s => s.brush), picking = useEditor(s => s.picking), { setBrush, setTool, setNote, setPicking } = useEditor.getState(), tool = useEditor(s => s.tool)
+  const { layer } = useTarget(), brush = useEditor(s => s.brush), picking = useEditor(s => s.picking), { setBrush, setTool, setNote, setPicking } = getEditor(), tool = useEditor(s => s.tool)
   const [busy, setBusy] = useState(false)
   const file = useRef<HTMLInputElement>(null)
   const lit = paintCells(l).reduce((n, v) => n + (v > 0 ? 1 : 0), 0)
@@ -275,12 +278,12 @@ function PaintFields({ f, l }: { f: EditorFrame; l: PaintLayer }) {
   const trace = async (fl?: File) => {
     if (!fl || !fl.type.startsWith('image/')) return
     setBusy(true)
-    try {
+    await attempt(async () => {
       const field = await dotifyUpload(fl, { cols: l.cols, rows: l.rows }, 'bayer')
       const m = Array.from({ length: l.rows }, (_, r) => Array.from({ length: l.cols }, (_, c) => field(l.cols === 1 ? .5 : c / (l.cols - 1), l.rows === 1 ? .5 : r / (l.rows - 1))))
       layer(x => ({ ...x, cells: cellsFromMatrix(x as PaintLayer, m) }) as StudioLayer)
       setNote(`traced ${fl.name} into ${l.name}`)
-    } catch (e) { setNote(`trace failed: ${(e as Error).message}`) } finally { setBusy(false) }
+    }, e => setNote(`trace failed: ${e.message}`), () => setBusy(false))
   }
   return <Section title="BRUSH" aside={`${l.cols}×${l.rows} · ${lit} lit`}>
     <div className="ed-row-btns">
@@ -299,12 +302,20 @@ function PaintFields({ f, l }: { f: EditorFrame; l: PaintLayer }) {
     <p className="ed-hint">Paints whole cells of the {l.lattice}× lattice in {f.card.name}. Right-drag erases; PICK INK (or Alt-click) takes the ink of a painted dot. Two fingers pan and zoom.</p>
   </Section>
 }
+/** The SPEC JSON box's text as a spec; throws with the reason it isn't one. */
+function parseSpec(text: string) {
+  const spec = JSON.parse(text)
+  if (!spec?.kind) throw new Error('needs a "kind"')
+  return spec
+}
+
 function SpecFields({ f, l }: { f: EditorFrame; l: Extract<StudioLayer, { kind: 'spec' }> }) {
   const { layer } = useTarget()
   const [text, setText] = useState(() => JSON.stringify(l.spec, null, 1)), [err, setErr] = useState('')
-  // a change made elsewhere (a drag, the bounds handles, the quick bar, undo) rewrites the JSON; typing here does not
-  const mine = useRef(l.spec)
-  useEffect(() => { if (l.spec !== mine.current) { mine.current = l.spec; setText(JSON.stringify(l.spec, null, 1)); setErr('') } }, [l.spec])
+  // a change made elsewhere (a drag, the bounds handles, the quick bar, undo) rewrites the JSON; typing here does not.
+  // `mine` is the spec the box last showed or wrote; a different one is adopted during render, before it paints
+  const [mine, setMine] = useState(l.spec)
+  if (l.spec !== mine) { setMine(l.spec); setText(JSON.stringify(l.spec, null, 1)); setErr('') }
   const big = text.length > 20000, s = l.spec
   const setSpec = (spec: typeof s, tag: string) => layer(x => ({ ...x, spec }) as StudioLayer, `${tag}:${l.id}`)
   const ir = s.kind === 'ir' ? s : undefined, b = ir ? specBounds(f, ir) : undefined
@@ -321,7 +332,7 @@ function SpecFields({ f, l }: { f: EditorFrame; l: Extract<StudioLayer, { kind: 
     </Section>}
     <Section title="SPEC JSON" aside={l.spec.kind}>
       <textarea className="ed-json" aria-label="Spec layer JSON" spellCheck={false} rows={8} readOnly={big} value={big ? text.slice(0, 20000) : text}
-        onChange={e => { const v = e.target.value; setText(v); try { const spec = JSON.parse(v); if (!spec?.kind) throw new Error('needs a "kind"'); mine.current = spec; layer(x => ({ ...x, spec }) as StudioLayer, `spec:${l.id}`); setErr('') } catch (er) { setErr((er as Error).message) } }} />
+        onChange={e => { const v = e.target.value; setText(v); try { const spec = parseSpec(v); setMine(spec); layer(x => ({ ...x, spec }) as StudioLayer, `spec:${l.id}`); setErr('') } catch (er) { setErr((er as Error).message) } }} />
       {err && <p className="ed-bad" role="alert">JSON: {err}</p>}
     </Section>
   </>
@@ -345,7 +356,7 @@ function Track({ f, track, motion, t0, t1 }: { f: EditorFrame; track: Track; mot
   </div>
 }
 function Animate() {
-  const { f, card } = useTarget(), play = useEditor(s => s.play), preview = useEditor(s => s.preview), { setPlay, setPreview } = useEditor.getState()
+  const { f, card } = useTarget(), play = useEditor(s => s.play), preview = useEditor(s => s.preview), { setPlay, setPreview } = getEditor()
   if (!f) return <p className="ed-hint">Select a frame to animate it: enter, change and exit tracks with the engine's masks and eases, and the states it moves between.</p>
   const c = f.card, L = c.timeline.length, cur = preview[f.id] ?? c.states[0]?.name
   const state = c.states.find(s => s.name === cur) ?? c.states[0]
@@ -376,15 +387,15 @@ function Animate() {
 
 // ── CODE ───────────────────────────────────────────────────────────────────
 function Code() {
-  const { f, l } = useTarget(), { setRight, select } = useEditor.getState()
+  const { f, l } = useTarget(), { setRight, select } = getEditor()
   if (f && l && (l.kind === 'ir' || l.kind === 'sites')) return <CodeLayer key={l.id} f={f} l={l} />
   if (!f) return <><p className="ed-hint">Select a code layer, or tap a frame with the code tool (<b>C</b>) to add one. A new code frame starts from an example.</p>
-    <div className="ed-row-btns"><button type="button" onClick={() => { useEditor.getState().insertProgram(EXAMPLES[0]) }}>NEW CODE FRAME</button></div><RemixGraph /></>
+    <div className="ed-row-btns"><button type="button" onClick={() => { getEditor().insertProgram(EXAMPLES[0]) }}>NEW CODE FRAME</button></div><RemixGraph /></>
   const code = topDown(f.card).filter(x => x.kind === 'ir' || x.kind === 'sites')
   return <>
     <Section title="CODE LAYERS" aside={f.card.name}>
       {code.length ? <ul className="ed-mini-list">{code.map(x => <li key={x.id}><button type="button" onClick={() => select({ frame: f.id, layer: x.id })}>{x.name}</button></li>)}</ul> : <p className="ed-hint">This frame has no code layer.</p>}
-      <div className="ed-row-btns"><button type="button" onClick={() => { useEditor.getState().addLayerTo(f.id, newIRLayer(f.card.layers.length + 1)); setRight('code') }}>+ CODE LAYER</button></div>
+      <div className="ed-row-btns"><button type="button" onClick={() => { getEditor().addLayerTo(f.id, newIRLayer(f.card.layers.length + 1)); setRight('code') }}>+ CODE LAYER</button></div>
     </Section>
     <SpecPeek f={f} />
     <LinkLineage f={f} />
@@ -399,18 +410,21 @@ function SpecPeek({ f }: { f: EditorFrame }) {
 function CodeLayer({ f, l }: { f: EditorFrame; l: IRLayer | SitesLayer }) {
   const { layer, card } = useTarget()
   const compiled = compiledOf(f.card), err = compiled.errors.get(l.id)
-  const [link, setLink] = useState(''), [copied, setCopied] = useState(false), [version, setVersion] = useState(0)
+  const [made, setMade] = useState<{ key: string; url: string } | null>(null), [copied, setCopied] = useState(false), [version, setVersion] = useState(0)
   const share = shareable(f, l, knownParent)
+  const shareKey = typeof share === 'string' ? share : `${share.src}|${share.grid}|${share.lattice}|${share.tone}|${share.parent}`
+  // the link shows only for the program it was encoded from, so nothing has to clear it when the program changes
+  const link = typeof share !== 'string' && !err && made?.key === shareKey ? made.url : ''
   useEffect(() => {
-    if (typeof share === 'string' || err) { setLink(''); return }
+    if (typeof share === 'string' || err) return
     let gone = false
-    const h = setTimeout(() => { encodeShare(share).then(enc => { if (!gone) setLink(enc) }, () => { if (!gone) setLink('') }) }, 250)
+    const h = setTimeout(() => { encodeShare(share).then(url => { if (!gone) setMade({ key: shareKey, url }) }, () => { if (!gone) setMade(null) }) }, 250)
     return () => { gone = true; clearTimeout(h) }
-  }, [typeof share === 'string' ? share : `${share.src}|${share.grid}|${share.lattice}|${share.tone}|${share.parent}`, !!err, version]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [shareKey, !!err, version]) // eslint-disable-line react-hooks/exhaustive-deps
   const copy = async () => {
     if (!link || typeof share === 'string') return
     const m = await programLink(share) // records it in the remix gallery, under its parent
-    useEditor.getState().setLink(m); setVersion(v => v + 1) // the graph shows it now, whatever the clipboard does
+    getEditor().setLink(m); setVersion(v => v + 1) // the graph shows it now, whatever the clipboard does
     await copyText(m.url) // clipboard closed: the link is shown below
     setCopied(true); setTimeout(() => setCopied(false), 1400)
   }
@@ -448,12 +462,13 @@ function Export() {
   const abort = useRef<AbortController | null>(null)
   if (!f) return <><LinkPanel /><p className="ed-hint">Select a frame (or a layer in it) to export it as PNG, SVG, HTML, a clip of its timeline, a plotter SVG, a card spec, every device, or to check its quality.</p></>
   const T = Math.min(t, f.card.timeline.length)
-  const run = async (fn: () => unknown) => { try { const r = await fn(); setStatus(typeof r === 'string' ? r : 'saved') } catch (e) { setStatus(`failed: ${(e as Error).message}`) } }
-  const record = async () => {
-    abort.current = new AbortController(); setProgress(0); setStatus('')
-    try { setStatus(await recordFrame(f, { format, fps, scale, signal: abort.current.signal, onProgress: setProgress })) }
-    catch (e) { setStatus(e instanceof DOMException && e.name === 'AbortError' ? 'cancelled' : `failed: ${(e as Error).message}`) }
-    finally { setProgress(null); abort.current = null }
+  const run = (fn: () => unknown) => attempt(async () => { const r = await fn(); setStatus(typeof r === 'string' ? r : 'saved') }, e => setStatus(`failed: ${e.message}`))
+  const record = () => {
+    const signal = (abort.current = new AbortController()).signal
+    setProgress(0); setStatus('')
+    return attempt(async () => setStatus(await recordFrame(f, { format, fps, scale, signal, onProgress: setProgress })),
+      e => setStatus(e instanceof DOMException && e.name === 'AbortError' ? 'cancelled' : `failed: ${e.message}`),
+      () => { setProgress(null); abort.current = null })
   }
   return <>
     <Section title="IMAGE" aside={`${f.card.name} · t ${T.toFixed(2)}`}>
@@ -510,13 +525,13 @@ function LinkPanel() {
   const doc = useEditor(s => s.h.present), sel = useEditor(s => s.sel), last = useEditor(s => s.link)
   const [busy, setBusy] = useState(false), [msg, setMsg] = useState('')
   const ids = sel.frame ? (sel.layer ? [sel.frame] : selFrames(sel)) : []
-  const make = async (which: string[]) => {
+  const make = (which: string[]) => {
     setBusy(true); setMsg('')
-    try {
+    return attempt(async () => {
       const m = await framesLink(which)
-      useEditor.getState().setLink(m)
+      getEditor().setLink(m)
       setMsg(await copyText(m.url) ? 'COPIED' : 'READY: copy it below')
-    } catch (e) { setMsg(`no link: ${(e as Error).message}. DOWNLOAD JSON (DESIGN with nothing selected) keeps it all.`) } finally { setBusy(false) }
+    }, e => setMsg(`no link: ${e.message}. DOWNLOAD JSON (DESIGN with nothing selected) keeps it all.`), () => setBusy(false))
   }
   return <Section title="LINK" aside="?make&d=… · nothing uploaded">
     <div className="ed-row-btns">

@@ -88,7 +88,8 @@ export function Pick<T extends string | number>({ label, value, options, onChang
     {!options.includes(value) && <option value={String(value)}>{fmt(value)}</option>}
     {options.map(o => <option key={String(o)} value={String(o)}>{fmt(o)}</option>)}</select></label>
 }
-export function Slider({ label, hint, value, onChange, min, max, step, fmt = v => v.toFixed(2) }: { label: string; hint?: string; value: number; onChange: (v: number) => void; min: number; max: number; step: number; fmt?: (v: number) => string }) {
+const fixed2 = (v: number) => v.toFixed(2)
+export function Slider({ label, hint, value, onChange, min, max, step, fmt = fixed2 }: { label: string; hint?: string; value: number; onChange: (v: number) => void; min: number; max: number; step: number; fmt?: (v: number) => string }) {
   return <label className="ed-slider"><span>{label}{hint && <small>{hint}</small>}</span>
     <input type="range" min={min} max={max} step={step} value={value} onChange={e => onChange(Number(e.target.value))} /><output>{fmt(value)}</output></label>
 }

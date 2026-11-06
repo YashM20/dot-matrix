@@ -25,7 +25,7 @@ export function Figure({ id, body: Body, caption, wide, minHeight = 320 }: {
     io.observe(el)
     return () => io.disconnect()
   }, [near])
-  useEffect(() => { if (near) (window.essayMounted ??= []).push(id) }, [near, id])
+  useEffect(() => { if (near) (window.essayMounted = window.essayMounted ?? []).push(id) }, [near, id])
   return (
     <figure ref={ref} id={`fig-${id}`} className={`fig${wide ? ' fig--wide' : ''}`} data-fig={id} data-mounted={near ? '1' : '0'}>
       <div className="fig-body" style={near ? undefined : { minHeight }}>
