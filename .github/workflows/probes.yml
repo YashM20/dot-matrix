@@ -1,0 +1,127 @@
+# Browser probes and screenshots on GitHub's runners instead of a laptop (docs/HARNESS.md › Probes in CI).
+# One job builds the site, then the probe shards (scripts/ci/probes.ts) and the screenshot job use that dist/.
+# Report-only for now: this workflow is not part of the `check + build` gate in ci.yml.
+name: probes
+
+on:
+  pull_request:
+    paths:
+      - 'src/**'
+      - 'scripts/**'
+      - 'index.html'
+      - 'vite.config.ts'
+      - 'public/**'
+      - '.github/workflows/probes.yml'
+  workflow_dispatch:
+    inputs:
+      probes:
+        description: 'Comma list of probe names (scripts/ci/probes.ts --list), all, or none'
+        default: all
+      shots:
+        description: 'Comma list of route@width[@theme] screenshots, e.g. /browse/@1280,/@390@light'
+        default: ''
+
+permissions:
+  contents: read
+
+# a new push to a PR cancels its stale run; dispatched runs queue, so two asks on one branch both finish
+concurrency:
+  group: probes-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # Chrome on a runner has no GPU: let WebGL fall back to the software rasterizer, as it does on a laptop
+  CHROME_FLAGS: --enable-unsafe-swiftshader
+  PROBES: ${{ github.event_name == 'workflow_dispatch' && inputs.probes || 'all' }}
+  SHOTS: ${{ github.event_name == 'workflow_dispatch' && inputs.shots || '/@1280,/@390@light,/browse/@1280,/browse/@390@light,/widget/timer/@1280@light,/widget/timer/@390' }}
+
+jobs:
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    outputs:
+      shards: ${{ steps.matrix.outputs.shards }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
+      # which shards have work, from the probes input (a bad name fails here, before any shard starts)
+      - name: Shards
+        id: matrix
+        run: echo "shards=$(pnpm exec tsx scripts/ci/probes.ts --matrix --only "$PROBES")" >> "$GITHUB_OUTPUT"
+
+      # the same OG cache as ci.yml, so the postbuild re-renders only changed cards
+      - name: Restore OG image cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules/.cache/dot480-og
+          key: og-${{ hashFiles('goldens/**', 'scripts/og.ts', 'scripts/lib/raster.ts', 'scripts/lib/cards.ts', 'scripts/lib/stats.ts', 'src/engine/sampler/gridSampler.ts') }}
+          restore-keys: og-
+
+      - name: Build
+        run: pnpm exec vite build
+
+      - name: Upload dist
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: dist
+          path: dist
+          retention-days: 1
+
+  probes:
+    name: probes ${{ matrix.shard }}
+    needs: build
+    if: needs.build.outputs.shards != '[]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ${{ fromJson(needs.build.outputs.shards) }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist
+
+      - name: Probes
+        run: pnpm exec tsx scripts/ci/probes.ts --shard ${{ matrix.shard }} --only "$PROBES"
+
+      # the probes' own captures, to look at when one fails
+      - name: Upload probe captures
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: probe-captures-${{ matrix.shard }}
+          path: .snapshots
+          retention-days: 3
+          if-no-files-found: ignore
+
+  shots:
+    name: screenshots
+    needs: build
+    if: github.event_name == 'pull_request' || inputs.shots != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: dist
+          path: dist
+
+      - name: Screenshots
+        run: pnpm exec tsx scripts/ci/shots.ts --list "$SHOTS" --out shots
+
+      - name: Upload screenshots
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: screenshots
+          path: shots
+          retention-days: 7
+          if-no-files-found: ignore
