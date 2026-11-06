@@ -18,7 +18,14 @@ const union = (fields: Field[]): CellBounds | undefined => {
   const bs = fields.map(f => f.bounds!)
   return [Math.min(...bs.map(b => b[0])), Math.min(...bs.map(b => b[1])), Math.max(...bs.map(b => b[2])), Math.max(...bs.map(b => b[3]))]
 }
-export const combine = (...fields: Field[]): Field => { const f: Field = (u, v) => { let m = 0; for (const g of fields) { const x = g(u, v); if (x > m) m = x } return m }; f.bounds = union(fields); return f }
+/** The max of `fields`; the words any of them drew (`Field.text`) carry over, joined, for `describe()`. */
+export const combine = (...fields: Field[]): Field => {
+  const f: Field = (u, v) => { let m = 0; for (const g of fields) { const x = g(u, v); if (x > m) m = x } return m }
+  f.bounds = union(fields)
+  const text = fields.map(g => g.text?.trim()).filter(Boolean).join(' ')
+  if (text) f.text = text
+  return f
+}
 export const dim = (field: Field, factor: number): Field => { const f: Field = (u, v) => field(u, v) * factor; f.bounds = field.bounds; return f }
 /** Place a field into a fractional box (legacy helper, resamples). */
 export const place = (field: Field, x: number, y: number, w: number, h: number): Field => (u, v) => (u < x || u > x + w || v < y || v > y + h) ? 0 : field((u - x) / w, (v - y) / h)

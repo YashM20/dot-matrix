@@ -144,7 +144,8 @@ function poster(s: Spec): WidgetPreset {
     if (s.live) for (let r = 0; r < NY; r++) for (let c = 0; c < NX; c++) if (yOf(r) >= Y0 && yOf(r) <= Y1 && s.live.where(xOf(c), yOf(r))) liveCells.push(r * NX + c)
   }
   return {
-    id: s.id, name: s.title, label: '', group: 'photo', chrome: 'dots', animated: true, grid: TILE,
+    // the widget page title and the accessible name: "Last Call", not the poster's capitals
+    id: s.id, name: s.title.toLowerCase().replace(/(^|\s)\S/g, ch => ch.toUpperCase()), label: '', group: 'photo', chrome: 'dots', animated: true, grid: TILE,
     credit: HENRY_AFTERLIGHT,
     style: { ...tileStyle, sizeMin: 0, sizeMax: 1.05, quantizeSteps: 0 },
     layers: ({ t }) => {

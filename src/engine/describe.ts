@@ -15,7 +15,8 @@ export interface Describable {
   group?: string
   grid: GridConfig
   animated?: boolean
-  live?: boolean
+  /** Shows real data from a feed (not the red header dot, which is `live`). */
+  liveData?: boolean
   clock?: boolean
   controls?: Control[]
   defaults?: Record<string, number>
@@ -42,22 +43,38 @@ export interface CardDescription {
   controls: ControlDescription[]
   /** Strings drawn on the card, in layer order (duplicates removed). */
   text: string[]
-  /** One paragraph for an agent or a screen reader. */
+  /** One paragraph for an agent or a log: id, group, state, text and controls. */
   summary: string
+  /** The accessible name of the card's picture: its name, then the words drawn on it (no ids, no controls). */
+  label: string
 }
 export interface BoardDescription { id: string; title: string; cards: CardDescription[]; summary: string }
 
 const num = (x: number) => (Number.isInteger(x) ? String(x) : String(+x.toFixed(3)))
 
-/** A control's value in words. */
-export function controlValueText(c: Control, data: Record<string, number>): string {
-  const min = c.min ?? 0, max = c.max ?? (c.kind === 'segmented' ? Math.max(0, (c.options ?? 1) - 1) : 1)
-  const v = Number.isFinite(data[c.key]) ? data[c.key] : min
+/**
+ * A control's value in words: the card's own `valueText` when it has one, else a percentage of the range, the option
+ * name, on / off. `key` reads one axis of an xy pad (`aria-valuetext` per axis); without it an xy pad reads "x, y".
+ */
+export function controlValueText(c: Control, data: Record<string, number>, key?: string): string {
+  const min = c.min ?? 0, max = c.max ?? (c.kind === 'segmented' ? Math.max(0, (c.options ?? 1) - 1) : 1), k = key ?? c.key
+  const v = Number.isFinite(data[k]) ? data[k] : min
+  if (c.valueText) {
+    const said = (ak: string) => {
+      try {
+        const s = c.valueText!(Number.isFinite(data[ak]) ? data[ak] : min, data, ak)
+        return typeof s === 'string' && s.trim() ? s.trim().slice(0, 120) : ''
+      } catch { return '' } // a card that cannot word this value falls back to the default
+    }
+    const s = c.kind === 'xy' && key === undefined && c.keyY ? [said(c.key), said(c.keyY)].filter(Boolean).join(', ') : said(k)
+    if (s) return s
+  }
   switch (c.kind) {
     case 'segmented': { const i = Math.round(v); return c.optionLabels?.[i] ?? String(i + 1) }
     case 'toggle': return v >= .5 ? 'on' : 'off'
     case 'button': return v >= .5 ? 'pressed' : 'released'
-    case 'xy': return `${num(v)}, ${num(Number.isFinite(data[c.keyY ?? '']) ? data[c.keyY!] : 0)}`
+    case 'xy': if (key === undefined) return `${num(v)}, ${num(Number.isFinite(data[c.keyY ?? '']) ? data[c.keyY!] : 0)}`
+      return max > min ? `${Math.round(((v - min) / (max - min)) * 100)}%` : num(v)
     case 'stepper': case 'crank': return num(v)
     default: return max > min ? `${Math.round(((v - min) / (max - min)) * 100)}%` : num(v)
   }
@@ -79,14 +96,31 @@ export function describe(preset: Describable, ctx: Partial<FrameContext> = {}): 
   let layers: Layer[] = []
   try { layers = preset.layers(frame) } catch { /* a card that cannot draw this context still gets a description */ }
   for (const l of layers) { const s = l.field.text?.trim(); if (s && !text.includes(s)) text.push(s) }
-  const pick = controls.find(c => c.kind === 'segmented') ?? controls.find(c => c.kind === 'toggle')
+  // one toggle can stand for the card's state; with several (chips, a step sequencer) the first says nothing about it
+  const toggles = controls.filter(c => c.kind === 'toggle')
+  const pick = controls.find(c => c.kind === 'segmented') ?? (toggles.length === 1 ? toggles[0] : undefined)
   const state = ctx.state ?? (pick ? pick.valueText : preset.animated ? 'animated' : 'static')
-  const parts = [`${preset.name} (${preset.id}${preset.group ? `, ${preset.group}` : ''}${preset.live ? ', live' : ''}): ${state}.`]
+  const parts = [`${preset.name} (${preset.id}${preset.group ? `, ${preset.group}` : ''}${preset.liveData ? ', live' : ''}): ${state}.`]
   if (text.length) parts.push(`Shows ${text.map(s => `"${s}"`).join(', ')}.`)
   if (controls.length) parts.push(`Controls: ${controls.map(c => `${c.label} = ${c.valueText} (${c.kind})`).join('; ')}.`)
   const ui = (['hover', 'pressed', 'focus'] as const).filter(k => ctx[k]).map(k => `${k} ${ctx[k]}`)
   if (ui.length) parts.push(`Input: ${ui.join(', ')}.`)
-  return { id: preset.id, name: preset.name, state, data, controls, text, summary: parts.join(' ') }
+  return { id: preset.id, name: preset.name, state, data, controls, text, summary: parts.join(' '), label: spokenLabel(preset, text) }
+}
+
+/** Longest accessible name the site reads out; a card that prints a lot (a news list) stops at a whole string. */
+const LABEL_MAX = 240
+/** Name, then the drawn strings, minus the label row that only repeats the name. */
+function spokenLabel(preset: Describable, text: string[]): string {
+  const name = `${preset.name}${preset.liveData ? ' (live)' : ''}`, own = new Set([preset.name, preset.label ?? ''].map(s => s.replace(/\s+/g, ' ').trim().toUpperCase()))
+  let out = name, first = true
+  for (const s of text) {
+    if (own.has(s.replace(/\s+/g, ' ').trim().toUpperCase())) continue
+    const next = `${out}${first ? ': ' : ', '}${s}`
+    if (next.length > LABEL_MAX) break
+    out = next; first = false
+  }
+  return out
 }
 
 /** Describe every card on a board (cards listed once per id, board order). */

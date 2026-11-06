@@ -9,7 +9,7 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { DotName } from '../DotName'
 import { dot480 } from '../../engine/theme/tokens'
-import { boardIds, boardLabel, loadBoard, resolveCardId } from '../../widgets/manifest'
+import { boardIds, boardLabel, loadBoard, resolveCardId, type BoardId } from '../../widgets/manifest'
 import { catalog } from '../../widgets/catalog'
 import { deriveWidgetMeta, type WidgetMeta } from '../../widgets/meta'
 import { creditsOf, withChrome, type WidgetPreset } from '../../widgets/types'
@@ -27,6 +27,8 @@ import type { Source } from '../../data/source'
 import { pick, useLiveData } from '../../data/useLiveData'
 import { cardScheme } from '../../site/theme/polarity'
 import { DotWidget } from '../DotWidget'
+import { ConceptCredit } from '../ConceptCredit'
+import { useBlurbs } from '../useBlurbs'
 import { LoadFailed } from '../LoadBoundary'
 import { Pill, PillBar, PillButton } from './PillBar'
 import { MoreMenu } from './MoreMenu'
@@ -139,7 +141,10 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
     return () => window.removeEventListener('keydown', onKey)
   }, [])
 
-  const chips = [meta.hint, meta.animated && 'ANIMATED', meta.live && 'LIVE DATA', meta.media === 'camera' && 'CAMERA', meta.media === 'mic' && 'MICROPHONE', meta.clock && 'CLOCK'].filter((c): c is string => !!c)
+  // a camera card's hint is CAMERA too: each chip once
+  const chips = [...new Set([meta.hint, meta.animated && 'ANIMATED', meta.live && 'LIVE DATA', meta.media === 'camera' && 'CAMERA', meta.media === 'mic' && 'MICROPHONE', meta.clock && 'CLOCK'].filter((c): c is string => !!c))]
+  // the concept credit the board heading shows, here too: shared links land on this page
+  const blurbs = useBlurbs(), concept = blurbs?.conceptCredit.boards.includes(w.board as BoardId) ? blurbs.conceptCredit : undefined
   const facts: [string, ReactNode][] = [
     ['Board', <a key="b" className="wp-link" href={`/${w.board}/`} onClick={e => { if (e.button === 0 && !e.metaKey && !e.ctrlKey) { e.preventDefault(); onBoard(w.board, w.slug) } }}>{boardLabel(w.board)}</a>],
     ['Kind', meta.group],
@@ -173,6 +178,7 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
         <p className="wp-blurb">{meta.blurb}</p>
         <WidgetLike uid={w.uid} name={name} />
         {creditsOf(preset).map(c => <p key={c.source} className="wp-credit">by {c.by.join(', ')} · <a className="wp-link" href={c.source} target="_blank" rel="noopener noreferrer">{c.title}</a>{c.note && <> · {c.note}</>}</p>)}
+        {concept && <ConceptCredit credit={concept} card />}
         {/* the actions, grouped by what they do: export, then share and remix, then the rest */}
         <PillBar label="Card actions" className="wp-actions">
           <Pill className="wp-copy">
@@ -181,6 +187,8 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
             <PillButton label="LINK" glyph="⌁" title="Copy link" onClick={act.link} />
           </Pill>
           <Pill className="wp-go">
+            {/* the levels board's cards are HIVE's screens: the game opens on its board (HiveStart reads ?play=1) */}
+            {w.board === 'levels' && <PillButton label="PLAY" glyph="▸" title="Play HIVE" href="/levels/?play=1" />}
             {share && <PillButton label="SHARE" glyph="↗" title="Share" onPointerDown={() => { sharePNG.current = png() }} onClick={act.share} />}
             {flag('make') && <PillButton label="REMIX" glyph="✎" title="Remix in MAKE" onClick={act.remix} />}
             {xrayOn && <PillButton label="X-RAY" glyph="ⓘ" title="X-ray: how it works" onClick={act.xray} pressed={xray} className="wp-desk" />}

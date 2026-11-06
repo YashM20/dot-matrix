@@ -73,8 +73,9 @@ function faceRows(str: string, { gap = 2, space = 4, rows = 14 }: Omit<FaceOptio
 /** Display text in the condensed face on a `lattice`-cell grid, box top-left (or top-centre) at (col,row). */
 function face(str: string, col: number, row: number, opts: FaceOptions): LatticeField {
   const rows = faceRows(str, opts), w = rows[0].length * opts.lattice
-  const g = T.lattice(opts.lattice, opts.align === 'center' ? col - w / 2 : col, row)
-  return g.at(g.sprite(rows, 0, 0))
+  const g = T.lattice(opts.lattice, opts.align === 'center' ? col - w / 2 : col, row), f = g.sprite(rows, 0, 0)
+  f.text = str // the words, for describe() and screen readers
+  return g.at(f)
 }
 
 // ── pixel-art icons on the card pitch ───────────────────────────────────────

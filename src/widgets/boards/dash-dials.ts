@@ -13,7 +13,7 @@ const SPD: Dial = { cx: 72, cy: 78, r: 52, start: (TAU * 5) / 8, sweep: (TAU * 3
 const dialBox = (d: Dial): [number, number, number, number] => [d.cx - d.r - 6, d.cy - d.r - 6, 2 * d.r + 12, 2 * d.r + 12]
 export const speedCard = card('dash-speed', 'Speed', {
   fps: 24, springKeys: ['drive', 'speed', 'gear'],
-  controls: [{ key: 'speed', kind: 'knob', box: dialBox(SPD), step: 1 / 32, map: dialMap(SPD), label: 'Speed' }],
+  controls: [{ key: 'speed', kind: 'knob', box: dialBox(SPD), step: 1 / 32, map: dialMap(SPD), label: 'Speed', valueText: v => `${Math.round(v * VMAX)} km/h` }],
   layers: ctx => {
     const d = dashOf(ctx), s = ui(ctx, 'speed'), f = d.kmh / VMAX, [left, right] = indicators(ctx, d), g = Math.round(d.gear)
     return [
@@ -65,7 +65,7 @@ const THICK = { spacing: 4.4, size: 2.1 }
 const HOME_KM = 42
 export const rangeCard = card('dash-range', 'Range', {
   springKeys: ['drive', 'speed', 'gear', 'soc'],
-  controls: [{ key: 'soc', kind: 'knob', box: dialBox(RNG), step: 1 / 100, map: dialMap(RNG), label: 'Battery charge' }],
+  controls: [{ key: 'soc', kind: 'knob', box: dialBox(RNG), step: 1 / 100, map: dialMap(RNG), label: 'Battery charge', valueText: v => `${Math.round(v * 100)}% charge` }],
   layers: ctx => {
     const d = dashOf(ctx), s = ui(ctx, 'soc'), km = Math.round(rangeKm(d.soc, d.kmh)), home = HOME_KM / rangeKm(1, d.kmh)
     const arc = (sweep: number, size: number) => T.dotRing(RNG.cx, RNG.cy, RNG.r, { ...THICK, start: RNG.start, sweep, size })
