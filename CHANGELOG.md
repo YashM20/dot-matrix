@@ -17,6 +17,7 @@ Milestone `CP5 · 0.17 · UI hill climb` (tracking issue #189), merged to `main`
 - **Widget page** (#183 to #185, PR #191): above 760 × 560 it fits the screen with no page scroll, the card scaled to fit and a side panel; MORE is a real menu button; links and tags look clickable.
 - **Card actions** (#181, PR #194): the hover strip that covered the drawing is gone. Each card has one ⋯ menu in its top padding.
 - **CI** (#197, #193, PR #199): four parallel jobs (typecheck + lint, verify, build + site checks, mcp) behind the required `check + build` gate, about 2.5 minutes from push to green. One run per push. `pnpm check` is `pnpm check:static && pnpm verify`. The perf report runs on `main` only.
+- **React Doctor** (PR #210): `pnpm react-doctor` and a report-only CI job outside the gate, with settings in `doctor.config.ts`.
 - **Dependencies** (PR #201, #202, #203): `pnpm/action-setup` 6.1.1, `actions/checkout` 7.0.1, and ten minor and patch updates.
 - **Docs**: the live run state in `docs/PROGRESS.md` for CP4 and CP5 (PR #206). Then this file's 0.14 to 0.17 entries, and a sweep of the README, the doc index, `AGENTS.md`, `DEPLOY.md`, `HARNESS.md`, `CHECKPOINTS.md` and the plan status lines for flags, likes, MAKE and LAB, browse and CI.
 ### Fixed
