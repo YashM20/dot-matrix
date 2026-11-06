@@ -4,6 +4,7 @@
  * loop (`lead` + `period`), so a card is a pure function of `ctx.t` and costs the same at t = 1 s or 3600 s.
  * One red on the board: the grains falling *right now* in the hourglass (live).
  */
+import { GRAY_SCOTT } from '../creditSources'
 import { fallingSand, grayScott, life, lifeStamp, SAND, SAND_B, simMapField, simPhase, simStep, simView, WALL, type Sim } from '../../engine/sim'
 import type { Field, Layer } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
@@ -51,6 +52,7 @@ function rdBand(t: number, band: 0 | 1 | 2, fade: number): Field {
 }
 export const simRd: WidgetPreset = {
   id: 'sim-rd', name: 'Sim Reaction-Diffusion', label: 'SIM  REACTION', ...tile, animated: true,
+  credit: GRAY_SCOTT,
   layers: ctx => {
     const t = ctx.t, k = simPhase(rd, t), fade = 1 - smooth(.9, 1, k)
     return [
@@ -122,6 +124,7 @@ const lifeSim = life({
 })
 export const simLife: WidgetPreset = {
   id: 'sim-life', name: 'Sim Life', label: 'SIM  LIFE', ...tile, animated: true,
+  credit: { by: ['John Horton Conway', 'Martin Gardner'], title: 'Mathematical Games: the game of Life (Scientific American, 1970)', source: 'https://www.scientificamerican.com/article/mathematical-games-1970-10', note: 'the rules; the glider gun is Bill Gosper’s' },
   layers: ctx => {
     const t = ctx.t, g = simView(lifeSim, t)
     let pop = 0

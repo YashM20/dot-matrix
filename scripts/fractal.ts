@@ -21,7 +21,7 @@ import {
 import { detLint } from './lib/detLint'
 import { sampleLayers } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
-import { withChrome, type WidgetPreset } from '../src/widgets'
+import { creditsOf, withChrome, type WidgetPreset } from '../src/widgets'
 import { fractalsBoard } from '../src/widgets/boards/fractals'
 
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[s.length >> 1] }
@@ -182,7 +182,7 @@ export function fractalChecks(assert: Assert): void {
   assert('fractals board: every card is a pure function of t (same t, same dots, any order)', fractalsBoard.every(p => [0, 1.3, 7.7, 3600, 1.3].every(t => key(p, t) === key(p, t))))
   const reds = fractalsBoard.map(p => [0, 1.3, 9.25].map(t => frame(p, t).filter(d => d.color === dot480.dotActive).length))
   assert('fractals board: one red dot per card (the live element) at t = 0, 1.3 and 9.25', reds.every(r => r.every(n => n === 1)), fractalsBoard.map((p, i) => `${p.id} ${reds[i].join('/')}`).join(', '))
-  assert('fractals board: every card carries a credit naming Inigo Quilez and an iquilezles.org article', fractalsBoard.every(p => p.credit?.by[0] === 'Inigo Quilez' && p.credit.source.startsWith('https://iquilezles.org/articles/')))
+  assert('fractals board: every card carries a credit naming Inigo Quilez and an iquilezles.org article', fractalsBoard.every(p => { const c = creditsOf(p)[0]; return c?.by[0] === 'Inigo Quilez' && c.source.startsWith('https://iquilezles.org/articles/') }))
   const warm = (p: WidgetPreset) => { for (let i = 0; i < 4; i++) frame(p, i / 12); return median(Array.from({ length: 13 }, (_, i) => time(() => frame(p, 5.5 + i / 12))[0])) }
   const rows = fractalsBoard.map(p => [p.id, warm(p)] as const)
   assert('fractals board: a frame (layers + sample) of each card in ≤ 4 ms (median, warm; × load)', rows.every(([, ms]) => ms <= 4 * load),

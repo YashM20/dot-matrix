@@ -11,6 +11,7 @@
  * Main thread only (the worlds live here): the sampling worker's build resolves this module to
  * `workshop-live-worker-stub.ts` (vite.config.ts `mainThreadOnly`).
  */
+import { DLA } from '../creditSources'
 import { ambientOcclusion, cardMask, insetDistance, tonedLayer } from '../../engine/matter'
 import { knitRelief, type KnitOptions } from '../../engine/matter/knit'
 import { anisoSpec } from '../../engine/matter/aniso'
@@ -348,6 +349,7 @@ const iceWorld = once((): World => createWorld({
 }))
 export const matIce: WidgetPreset = {
   ...tile, id: 'mat-ice', name: 'Ice',
+  credit: DLA,
   defaults: { ...LIGHT_DEFAULTS, k: 0 },
   controls: [{ key: 'k', kind: 'button', box: [0, 12, 144, 132], label: 'Breathe on the glass' }],
   layers: ctx => {

@@ -7,6 +7,7 @@
  * Titles sit on the same lattice, knocked out of the scene, and decode in on each reel; the whole
  * lattice breathes with a quantized projector flicker.
  */
+import { HENRY_AFTERLIGHT } from '../creditSources'
 import { clamp, hash01, len } from '../../engine/math'
 import { decodeText } from '../../engine/motion/text'
 import { textAt } from '../../engine/layout'
@@ -144,6 +145,7 @@ function poster(s: Spec): WidgetPreset {
   }
   return {
     id: s.id, name: s.title, label: '', group: 'photo', chrome: 'dots', animated: true, grid: TILE,
+    credit: HENRY_AFTERLIGHT,
     style: { ...tileStyle, sizeMin: 0, sizeMax: 1.05, quantizeSteps: 0 },
     layers: ({ t }) => {
       if (!scene) prep()

@@ -6,6 +6,7 @@
  * pure function of the board clock `t`, the wall clock (hourglass) or the pointer's press time.
  * The board's only red is the notify badge.
  */
+import { GRAY_SCOTT } from '../creditSources'
 import { hash01 } from '../../engine/math'
 import { ease } from '../../engine/motion'
 import { grayScott, simAt } from '../../engine/sim'
@@ -267,6 +268,7 @@ const LEAD = 1, LOOP = 11, RATE = .06
 const BANDS = [{ at: .3, size: 1.9, tone: 'value' }, { at: .24, size: 1.6, tone: 'idle' }, { at: .17, size: 1.2, tone: 'mid' }, { at: .1, size: .8, tone: 'faint' }] as const
 export const glyphIdle: WidgetPreset = {
   id: 'lock-idle', name: 'Idle', label: '04  IDLE', group: 'scatter', ...tile,
+  credit: GRAY_SCOTT,
   layers: ({ t }) => {
     const ph = (((t * RATE + 5.5) % LOOP) + LOOP) % LOOP, g = simAt(rd, LEAD + ph)
     const fade = clamp01(2 * Math.min(ph, LOOP - ph)) // dims in over the first half sim-second, out over the last

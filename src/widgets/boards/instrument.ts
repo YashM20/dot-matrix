@@ -16,6 +16,7 @@
  * in `ctx.media.audio` (the meter reads real levels) and `t` on the audio clock; without it (node,
  * goldens, sound off) every card renders exactly as before.
  */
+import { TEENAGE_ENGINEERING } from '../creditSources'
 import type { Control } from '../../engine/context'
 import type { Tone } from '../../engine/types'
 import { audioOf, meterSegment } from '../../audio/frame'
@@ -83,6 +84,7 @@ function knob(spec: KnobSpec): WidgetPreset {
   const controls: Control[] = [{ key: spec.key, kind: 'knob', box: [cx - r, cy - r, 2 * r, 2 * r], min: 0, max: 1, step: 1 / STEPS, label: spec.name }]
   return {
     id: spec.id, name: spec.name, label: `${spec.index}  ${spec.name.toUpperCase()}`, ...device,
+    credit: TEENAGE_ENGINEERING,
     defaults: { [spec.key]: spec.detent / STEPS }, controls,
     layers: ctx => {
       const k = Math.round(clamp01(ctx.data[spec.key] ?? 0) * STEPS), f = feel(ctx, spec.key)
@@ -147,6 +149,7 @@ const peakOf = (t: number, side: number, song: Song) => {
 }
 export const meter: WidgetPreset = {
   id: 'inst-level', name: 'Level', label: '03  LEVEL', ...device,
+  credit: TEENAGE_ENGINEERING,
   defaults: { gain: .8 },
   controls: [{ key: 'gain', kind: 'slider', orientation: 'vertical', box: [36, 20, 72, 100], min: 0, max: 1, step: 1 / 20, label: 'Output gain' }],
   layers: ctx => {
@@ -184,6 +187,7 @@ const toPad = ([x, y]: [number, number]): Pt => [XY.x + x * XY.s, XY.y + (1 - y)
 const SURFACE: Pt[] = Array.from({ length: 121 }, (_, i) => [XY.x + (i % 11) * XY.grid, XY.y + Math.floor(i / 11) * XY.grid])
 export const xyPad: WidgetPreset = {
   id: 'inst-xy', name: 'XY Pad', label: '06  XY PAD', ...device,
+  credit: TEENAGE_ENGINEERING,
   defaults: { x: .38, y: .58 },
   controls: [{ key: 'x', keyY: 'y', kind: 'xy', box: [XY.x, XY.y, XY.s, XY.s], min: 0, max: 1, label: 'Filter XY pad' }],
   layers: ctx => {
@@ -218,6 +222,7 @@ const SOUND_BOX: [number, number, number, number] = [30, 123, 84, 14]
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 export const transport: WidgetPreset = {
   id: 'inst-transport', name: 'Transport', label: '07  TRANSPORT', ...device,
+  credit: TEENAGE_ENGINEERING,
   defaults: { bpm: BPM, mode: 0, sound: 0 },
   controls: [
     { key: 'bpm', kind: 'stepper', orientation: 'vertical', box: BPM_BOX, min: 40, max: 240, step: 1, label: 'Tempo' },
@@ -263,6 +268,7 @@ const SEQ = { x0: 33, y0: 28, pitch: 26, on: 13, off: 4.4 }
 const stepPos = (i: number): Pt => [SEQ.x0 + (i % 4) * SEQ.pitch, SEQ.y0 + Math.floor(i / 4) * SEQ.pitch]
 export const sequencer: WidgetPreset = {
   id: 'inst-sequencer', name: 'Sequencer', label: '08  SEQUENCER', ...device,
+  credit: TEENAGE_ENGINEERING,
   defaults: { bpm: BPM, ...Object.fromEntries(PATTERN.map((on, i) => [stepKey(i), on])) },
   controls: PATTERN.map((_, i): Control => {
     const [x, y] = stepPos(i)
@@ -293,6 +299,7 @@ const CRANK = { cx: 72, cy: 60, wheel: 28, tickR: 37, handle: 15, ticks: 24 }
 const TICKS = Array.from({ length: CRANK.ticks }, (_, i) => polar(CRANK.cx, CRANK.cy, CRANK.tickR, (i / CRANK.ticks) * TAU))
 export const crank: WidgetPreset = {
   id: 'inst-crank', name: 'Crank', label: '09  CRANK', ...device,
+  credit: TEENAGE_ENGINEERING,
   defaults: { crank: 16 + 5 / 24 },
   controls: [{ key: 'crank', kind: 'crank', box: [CRANK.cx - CRANK.tickR, CRANK.cy - CRANK.tickR, 2 * CRANK.tickR, 2 * CRANK.tickR], min: 0, max: 416, step: 1 / 24, label: 'Crank' }],
   layers: ctx => {

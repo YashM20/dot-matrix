@@ -16,6 +16,7 @@
  * - The light is `sceneLight` (src/engine/light/input.ts) through `matLight`: the hovering pointer as a torch, else the
  *   tilt hub (`lightSrc` 1), else the sun of the hour. Every card declares the hub keys in `defaults`.
  */
+import { KAJIYA_KAY } from '../creditSources'
 import { ambientOcclusion, anisoSpec, cardMask, DRAFTS, fromDraft, marble, surfaceLayer, tangentLinear, tangentRadial, terrazzo, tonedLayer, weaveRelief, type Draft, type Drawdown, type TangentRaster } from '../../engine/matter'
 import { heightFromField } from '../../engine/matter/relief'
 import { heightRaster, normalRaster, stackHeights, type HeightRaster, type NormalRaster } from '../../engine/light/height'
@@ -213,6 +214,7 @@ export function knobSpec(L: Light): Raster {
 }
 export const matKnob: WidgetPreset = {
   ...tile, id: 'mat-knob', name: 'Knob',
+  credit: KAJIYA_KAY,
   defaults: { ...LIGHT_DEFAULTS, v: .72 },
   springKeys: ['v'],
   controls: [{ key: 'v', kind: 'knob', box: [KNOB_CARD.x - 60, KNOB_CARD.y - 60, 120, 120], map: knobDial, label: 'Volume' }],
@@ -489,6 +491,7 @@ export function marbleLit(e: Engraving, L: Light): { body: Raster; polish: Raste
 }
 export const matMarble: WidgetPreset = {
   ...tile, id: 'mat-marble', name: 'Marble', clock: true,
+  credit: { by: ['Ken Perlin'], title: 'An image synthesizer (1985)', source: 'https://doi.org/10.1145/325165.325247', note: 'the turbulence-sine marble' },
   defaults: { ...LIGHT_DEFAULTS },
   layers: ctx => {
     const now = new Date(), e = engraving(pad2(now.getHours()), pad2(now.getMinutes()), now.getFullYear())

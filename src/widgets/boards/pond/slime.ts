@@ -20,6 +20,7 @@ const raster = createTileRaster({ cols: 144, rows: 144 }, SLIME_TILES)
 
 export const pondSlime: WidgetPreset = {
   id: 'pond-slime', name: 'Pond Slime', label: '03  SLIME', ...tile, fps: 15, controls: touch('slime', 'Add or remove food'),
+  credit: { by: ['Jeff Jones'], title: 'Characteristics of pattern formation and evolution in approximations of Physarum transport networks (2010)', source: 'https://doi.org/10.1162/artl.2010.16.2.16202', note: 'the agent model' },
   layers: ctx => {
     mainThread()
     const s = worldAt(slime.world, ctx.t, frameOf(ctx, 'slime'))

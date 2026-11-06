@@ -11,6 +11,7 @@
  * this module to `materials-live-worker-stub.ts` (vite.config.ts `mainThreadOnly`), so the ripple, the world and the
  * rust bakes never ship there.
  */
+import { ELIAS_WATER } from '../creditSources'
 import { createRipple, rippleGrad, rippleSplat, rippleStep } from '../../engine/life/ripple'
 import { causticSplat } from '../../engine/matter/caustics'
 import { tonedLayer } from '../../engine/matter/surface'
@@ -170,6 +171,10 @@ function leanOf(L: Light): [number, number] {
 }
 export const matPool: WidgetPreset = {
   ...tile, id: 'mat-pool', name: 'Pool', fps: 30,
+  credit: [
+    { by: ['Evan Wallace'], title: 'Rendering realtime caustics in WebGL', source: 'https://medium.com/@evanwallace/rendering-realtime-caustics-in-webgl-2a99a29a0b2c', note: 'the area-ratio caustics' },
+    ELIAS_WATER,
+  ],
   defaults: { ...LIGHT_DEFAULTS, k: 0 },
   controls: [{ key: 'k', kind: 'button', box: [latX(BASIN.i0) - 1, latX(BASIN.j0) - 1, latX(BASIN.i1) - latX(BASIN.i0) + 2, latX(BASIN.j1) - latX(BASIN.j0) + 2], label: 'Drop a pebble' }],
   layers: ctx => {

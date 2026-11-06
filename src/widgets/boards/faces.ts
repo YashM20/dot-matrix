@@ -8,6 +8,7 @@
  * '{"data":{"hour":23}}'`). Reduced motion: no tracking, no reactions, slow blinks only.
  * The blush is the board's one red: it shows only while a face reacts to you.
  */
+import { HENRY_AFTERLIGHT } from '../creditSources'
 import type { Layer } from '../../engine/types'
 import type { Control } from '../../engine/context'
 import { clamp, mix } from '../../engine/math'
@@ -202,6 +203,7 @@ function preset(c: Character): WidgetPreset {
   const mem = memory()
   return {
     id: c.id, name: c.name, group: 'composite', chrome: 'dots', grid: TILE, style: FACE_STYLE, animated: true, fps: 24,
+    credit: HENRY_AFTERLIGHT,
     defaults: { [KEY]: 0 }, controls: poke(c.name),
     layers: ctx => draw(c, mem, ctx),
   }

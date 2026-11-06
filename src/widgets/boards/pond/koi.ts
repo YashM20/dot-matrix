@@ -9,6 +9,7 @@
  * X1 #5: the pond of the day (`day`: the koi's varieties, the pads, the weather) and the ageing pond (`age`, opt-in:
  * fry hatch every 10 days of visits and grow by von Bertalanffy); day 0, age 0 is the canonical pond the goldens pin.
  */
+import { ELIAS_WATER } from '../../creditSources'
 import { createKoiPond, createTileRaster, drawKoiPond, KOI_TYPE_TILES, koiView, pelletViews, pondGlobals, tileLayers, type KoiDrawOpts, type KoiPond, type KoiPondSpec, type TileGrid } from '../../../engine/life'
 import { sceneLight } from '../../../engine/light/input'
 import { dexp, ihash } from '../../../engine/noise/dmath'
@@ -119,6 +120,12 @@ function koiLight(ctx: WidgetContext, hour: number): KoiDrawOpts['light'] {
 
 export const pondKoi: WidgetPreset = {
   id: 'pond-koi', name: 'Pond Koi', label: '01  KOI', ...tile, fps: 30,
+  credit: [
+    { by: ['Dao Ho'], title: 'daoho.dev koi pond', source: 'https://www.daoho.dev/', note: 'the pond this board is after; none of its code' },
+    { by: ['argonautcode'], title: 'animal-proc-anim', source: 'https://github.com/argonautcode/animal-proc-anim', note: 'the follow-the-leader spine' },
+    { by: ['Craig W. Reynolds'], title: 'Steering behaviors for autonomous characters (1999)', source: 'https://www.red3d.com/cwr/steer/gdc99/', note: 'how the koi steer' },
+    ELIAS_WATER,
+  ],
   defaults: { glyphs: 0, ...KOI_LIGHT_KEYS, day: 0, age: 0 },
   controls: [
     ...touch('koi', 'Feed the koi'),

@@ -15,6 +15,7 @@ const raster = createTileRaster({ cols: 144, rows: 144 }, FLY_TILES)
 
 export const pondFireflies: WidgetPreset = {
   id: 'pond-fireflies', name: 'Pond Fireflies', label: '04  FIREFLIES', ...tile, fps: 20, controls: touch('flies', 'Set off a flash'),
+  credit: { by: ['Renato E. Mirollo', 'Steven H. Strogatz'], title: 'Synchronization of pulse-coupled biological oscillators (1990)', source: 'https://doi.org/10.1137/0150098', note: 'the flash coupling' },
   layers: ctx => {
     mainThread()
     const s = worldAt(fireflies.world, ctx.t, frameOf(ctx, 'flies'))

@@ -14,6 +14,7 @@
  * Interactive cards must keep their state where the input is: they refuse the sampling worker (one
  * console warning per card), so the app samples them on the main thread.
  */
+import { PBD, STABLE_FLUIDS } from '../creditSources'
 import {
   clothInit, clothNearest, clothNormals, clothSize, clothStep, createCloth, createFluid, createParticles, createSoft, createWorld, fluidSize, fluidSplat, fluidStep,
   framePointers, nearestParticle, P_DYNAMIC, P_OFF, P_STATIC, particlesSize, particlesStep, setParticle, softFrame, softInit, softNearest, softSize, softStep,
@@ -210,6 +211,7 @@ const inkWorld = createWorld({ size: fluidSize(fluid), dt: I_DT, lead: 3, period
 const inkTone = (v: number): Tone => (v >= .86 ? 'value' : v >= .68 ? 'idle' : v >= .48 ? 'mid' : 'faint')
 export const physicsInk: WidgetPreset = {
   id: 'phys-ink', name: 'Physics Ink', label: '02  INK', ...tile, controls: touch('ink', 'Stir the ink'), defaults: { ...TILT },
+  credit: STABLE_FLUIDS,
   layers: ctx => {
     mainThread()
     const s = worldAt(inkWorld, ctx.t, frameOf(ctx, 'ink', toTank)), tau = ((worldStep(inkWorld, ctx.t) % I_LEN) * I_DT), D = fluid.D
@@ -272,6 +274,7 @@ const LIGHT = (() => { const v = [-.75, -.35, .55], l = Math.hypot(...v); return
 const FOCAL = 170
 export const physicsFlag: WidgetPreset = {
   id: 'phys-flag', name: 'Physics Flag', label: '03  FLAG', ...tile, controls: touch('flag', 'Grab the flag'), defaults: { ...TILT },
+  credit: PBD,
   layers: ctx => {
     mainThread()
     const s = worldAt(flagWorld, ctx.t, frameOf(ctx, 'flag'))
@@ -370,6 +373,7 @@ const jellyField: Field = (u, v) => jVal[Math.round(v * (JR - 1)) * JC + Math.ro
 const jellyToneOf = (_: number, u: number, v: number): Tone => J_TONES[jTone[Math.round(v * (JR - 1)) * JC + Math.round(u * (JC - 1))]]
 export const physicsJelly: WidgetPreset = {
   id: 'phys-jelly', name: 'Physics Jelly', label: '04  JELLY', ...tile, controls: touch('jelly', 'Poke the jelly'), defaults: { ...TILT },
+  credit: PBD,
   layers: ctx => {
     mainThread()
     const s = worldAt(jellyWorld, ctx.t, frameOf(ctx, 'jelly')), [x0, x1] = jellyRaster(s, ctx.t)

@@ -18,6 +18,7 @@ const raster = createTileRaster({ cols: 144, rows: 144 }, JELLY_TILES)
 
 export const pondJelly: WidgetPreset = {
   id: 'pond-jelly', name: 'Pond Jelly', label: '02  JELLY', ...tile, fps: 20, controls: touch('jelly', 'Make them pulse'),
+  credit: { by: ['Yoshiki Kuramoto'], title: 'Kuramoto model', source: 'https://en.wikipedia.org/wiki/Kuramoto_model', note: 'how the pulses drift into step' },
   layers: ctx => {
     mainThread()
     const s = worldAt(jelly.world, ctx.t, frameOf(ctx, 'jelly'))

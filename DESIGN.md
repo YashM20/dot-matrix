@@ -480,8 +480,9 @@ A surface that wraps a rounded child with padding takes the child's radius plus 
 - Suggestion chip row: pill-shaped tappable rows beneath the greeting, same treatment as `{component.pill-button}` but full-width.
 
 **Credit line** (`credit` on a preset)
-- `credit?: { by: string[]; title: string; source: string; note?: string }` names the people whose work a card is built on (a port, a remix).
-- The widget page shows it under the blurb as one small line: `by A, B · <title>` with the title linking to `source`, then the note if there is one. `{colors.label}` text, the link in `{colors.value}`.
+- `credit?: { by: string[]; title: string; source: string; note?: string }` names the people whose work a card is built on (a port, a remix, a published model, a data source). A card built on several gives a list of them; read it through `creditsOf(preset)`. One card never credits the same `source` twice.
+- Credit what the card is about: the paper, artwork or game its idea comes from. A generic building block (plain noise, a dither matrix) stays in its engine module's source comment and in `THIRD-PARTY-NOTICES.md`.
+- The widget page shows each credit under the blurb as one small line: `by A, B · <title>` with the title linking to `source`, then the note if there is one. `{colors.label}` text, the link in `{colors.value}`.
 - The board card does not show it yet (that would add to first load). X-ray and the inspector come later.
 - `docs/CREDITS.md` lists every credit grouped by source, then the code ports. It is generated: `npx tsx scripts/site/credits.ts` writes it and `--check` (in `pnpm check`) fails when it is stale. `loadCredits()` (`src/widgets/credits.ts`) returns the same grouped list for the site through the manifest's lazy loaders.
 

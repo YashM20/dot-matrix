@@ -14,6 +14,7 @@ import { boards } from '../../src/widgets'
 import { creditEntries, creditProblems, groupCredits, loadCredits, type CreditEntry, type CreditGroup } from '../../src/widgets/credits'
 import { checker } from '../lib/check'
 import { conceptCredit as cc } from '../../src/widgets/blurbs'
+import { creditsOf, TILE, tileStyle, type WidgetPreset } from '../../src/widgets/types'
 
 /** The opening section: where the project started. */
 const concept = (): string[] => [
@@ -104,6 +105,8 @@ const fake: CreditEntry[] = [
   { board: 'fractals', card: 'frac-a', name: 'Frac A', credit: { by: ['oneshade', 'Inigo Quilez'], title: 'Zoom!', source: S1, note: 'remixed' } },
   { board: 'alpha', card: 'frac-a', name: 'Frac A', credit: { by: ['oneshade', 'Inigo Quilez'], title: 'Zoom', source: S1 } },
 ]
+/** A bare preset for the list-of-credits check. */
+const presetStub: WidgetPreset = { id: 'two', name: 'Two', group: 'composite', grid: TILE, style: tileStyle, layers: () => [] }
 const fg = groupCredits(fake)
 assert('credits: grouping puts every card of a source in one group, a card on two boards once per board',
   fg.length === 2 && fg[1].source === S1 && fg[1].cards.length === 3 && fg[0].cards.length === 1, fg.map(g => `${g.title}: ${g.cards.length}`).join(', '))
@@ -117,13 +120,17 @@ const fakeMd = render(fg, [])
 assert("credits: each card's authors show when its source's cards credit different people, and a note follows",
   fakeMd.includes('- Frac A (`frac-a`), board `/fractals/`, by oneshade, Inigo Quilez: remixed\n') && fakeMd.includes('- Old B (`old-b`), board `/oldschool/`, by Inigo Quilez\n')
   && fakeMd.includes('- Frac C (`frac-c`), board `/fractals/`\n'))
-assert('credits: the problem check flags http, bare and malformed sources and an empty by',
+const two: WidgetPreset = { ...presetStub, credit: [fake[0].credit, fake[1].credit] }
+const twoEntries = creditEntries([{ id: 'alpha', items: [two, { ...presetStub, id: 'none' }] }])
+assert('credits: a card with a list of credits gives one entry per credit, a card with none gives none',
+  twoEntries.length === 2 && twoEntries.every(e => e.card === 'two') && same(twoEntries.map(e => e.credit.source), [S1, S2]) && creditsOf({}).length === 0)
+assert('credits: the problem check flags http, bare and malformed sources, an empty by and a source credited twice on one card',
   creditProblems([
     { ...fake[0], credit: { ...fake[0].credit, source: 'http://example.com/' } },
     { ...fake[0], credit: { ...fake[0].credit, source: 'example.com/x' } },
     { ...fake[0], credit: { ...fake[0].credit, by: [] } },
-    { ...fake[0], credit: { ...fake[0].credit, by: ['Ada', ' '] } },
-  ]).length === 4 && !creditProblems(fake).length)
+    { ...fake[0], board: 'beta', credit: { ...fake[0].credit, by: ['Ada', ' '] } },
+  ]).length === 4 && creditProblems([fake[0], fake[0]]).length === 1 && !creditProblems(fake).length)
 
 // The real presets.
 const entries = creditEntries(boards)

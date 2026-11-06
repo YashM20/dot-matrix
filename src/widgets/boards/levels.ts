@@ -9,6 +9,7 @@
  * The ray-plane hall caster lives in the engine (`src/engine/scene`, shared with the playable game in
  * `src/game/`); the isometric box tracer is local.
  */
+import { HENRY_LEVEL } from '../creditSources'
 import { clamp, hash01, smoothstep } from '../../engine/math'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { HALL_CEIL, HALL_FLOOR, castHall, fog, lamp, project, seam, type Hall } from '../../engine/scene'
@@ -109,6 +110,7 @@ const flames = (t: number) => torches(t * .8, t).flatMap(({ p }): V3[] => {
 })
 export const lvCorridor: WidgetPreset = {
   id: 'lv-corridor', name: 'Level 01', ...scene, animated: true,
+  credit: HENRY_LEVEL,
   layers: ({ t }) => {
     const blink = t % 5 > 3.1 && t % 5 < 3.3
     return [
@@ -205,6 +207,7 @@ const motes = (t: number): V3[] => Array.from({ length: 9 }, (_, n) => {
 })
 export const lvVault: WidgetPreset = {
   id: 'lv-vault', name: 'Level 02', ...scene, animated: true,
+  credit: HENRY_LEVEL,
   layers: ({ t }) => {
     const bob = Math.floor(t * 1.6) % 2
     return [
@@ -278,6 +281,7 @@ const runner = (t: number): LatticeField => {
 }
 export const lvSurface: WidgetPreset = {
   id: 'lv-surface', name: 'Level 04', ...scene, animated: true,
+  credit: HENRY_LEVEL,
   layers: ({ t }) => [
     layer(valued(SKY_STARS, .9), 'value'),
     layer(backdrop(t), 'value'),
@@ -345,6 +349,7 @@ const warren = (t: number): LatticeField => {
 }
 export const lvWarren: WidgetPreset = {
   id: 'lv-warren', name: 'Level 05', ...scene, animated: true,
+  credit: HENRY_LEVEL,
   layers: ({ t }) => {
     const [px, py] = mazePos(t).at
     // one site a size up from the wall dots, centred on the player's lattice cell
@@ -376,6 +381,7 @@ const warpSites = (t: number) => {
 }
 export const lvVoid: WidgetPreset = {
   id: 'lv-void', name: 'Level 06', ...scene, animated: true,
+  credit: HENRY_LEVEL,
   layers: ({ t }) => {
     const [near, mid, far] = warpSites(t)
     return [
@@ -409,6 +415,7 @@ const queenEye = (look: number, ox: number, oy: number) => onLattice(QK, ox, oy,
 const SHIP_K = 1.3
 export const lvQueen: WidgetPreset = {
   id: 'lv-queen', name: 'Level 07', ...scene, animated: true,
+  credit: HENRY_LEVEL,
   layers: ({ t }) => {
     const ox = 30 + Math.round(3 * Math.sin(t * .7)), oy = 20 + Math.round(2 * Math.sin(t * 1.4)), mid = ox + (QW * QK) / 2
     const shipX = 72 + Math.round(30 * Math.sin(t * .9)), look = shipX < mid - 12 ? -1 : shipX > mid + 12 ? 1 : 0
@@ -448,6 +455,7 @@ const hiveMoon = cells((x, y) => {
 export const CURSOR = ['#...', '##..', '###.', '####', '###.', '##..', '#...']
 export const lvTitle: WidgetPreset = {
   id: 'lv-title', name: 'Hive', ...scene, animated: true,
+  credit: HENRY_LEVEL,
   layers: ({ t }) => {
     const on = t % 1.2 < .8
     return [
@@ -465,6 +473,7 @@ const OVER_FLOOR: Hall = { vx: 72, vy: 92, f: 46, floor: 1, far: 14 }
 const OVER_MOAT = (x: number, y: number) => (x > 22 && x < 122 && y > 99 && y < 129) || (x > 32 && x < 112 && y > 130)
 export const lvOver: WidgetPreset = {
   id: 'lv-over', name: 'Game Over', ...scene, animated: true,
+  credit: HENRY_LEVEL,
   layers: ({ t }) => {
     const n = 9 - (Math.floor(t) % 10)
     return [
@@ -484,6 +493,7 @@ export const TABLE: [string, string, string][] = [['2ND', 'ZAP', '10450'], ['3RD
 const ROW_TONE = ['value', 'active', 'idle', 'mid', 'faint'] as const
 export const lvScores: WidgetPreset = {
   id: 'lv-scores', name: 'High Scores', group: 'text', chrome: 'dots', label: '', bleed: true, animated: true, grid: TILE, style: tileStyle,
+  credit: HENRY_LEVEL,
   layers: ({ t }) => {
     const tau = t % 6, typed = tau < 4 ? 3 : Math.floor((tau - 4) / .5), cursorOn = typed < 3 && tau % .5 < .3
     const RL = 1.3, row = (i: number) => 70 + i * 14

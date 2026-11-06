@@ -10,6 +10,7 @@
  * board takes the new word at once, and this card writes it to `?word=` (`keepWord`). While a module is hovered
  * or focused the loop rests on the word, and an edited module flips to its new character on its own.
  */
+import { SPLIT_FLAP } from '../creditSources'
 import type { Control } from '../../engine/context'
 import { ADV, DRUM, GH, GW, SLOTS, fromSlots, slotKey, slotText, slotsOf, type Cell } from '../../engine/kinetic/word'
 import { FLAP, flapAt, flapFrame, flapSteps, type FlapState } from '../../engine/kinetic/glyphs'
@@ -51,6 +52,7 @@ const moduleOf = (key: string | undefined) => (key && /^w\d+$/.test(key) ? +key.
 
 export const ktFlap: WidgetPreset = {
   id: 'kt-flap', name: 'Split-Flap', label: '01  FLAP', ...tile, defaults: WORD, controls,
+  credit: SPLIT_FLAP,
   layers: ctx => {
     keepWord(ctx.data)
     const slots = slotsOf(ctx.data), word = fromSlots(slots), hot = moduleOf(ctx.focus ?? ctx.pressed ?? ctx.hover)

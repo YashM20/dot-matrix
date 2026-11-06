@@ -3,6 +3,7 @@
  * `irProgram` and sampled through the normal Layer pipeline (lattice / sites like any other card).
  * The same sources emit GLSL via `emitGLSL` (the GPU path, P5).
  */
+import { TINY_PROGRAMS } from '../creditSources'
 import type { Control } from '../../engine/context'
 import { irProgram, type IRProgram } from '../../engine/ir'
 import { TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
@@ -26,6 +27,7 @@ const ripple = program(RIPPLE_SRC)
 const RIPPLE_GRID = T.lattice(3, 0, 12)
 export const irRipple: WidgetPreset = {
   id: 'ir-ripple', name: 'IR Ripple', label: 'IR  RIPPLE', ...tile, animated: true,
+  credit: TINY_PROGRAMS,
   layers: ctx => [
     layer(RIPPLE_GRID.at(RIPPLE_GRID.place(ripple(env(ctx)), 0, 0, 48, 40)), 'auto'),
     layer(T.dots([[71.5, 71.5]], 3), 'active'),
@@ -43,6 +45,7 @@ const plasma = program(PLASMA_SRC)
 const PLASMA_GRID = T.lattice(2, 0, 12)
 export const irPlasma: WidgetPreset = {
   id: 'ir-plasma', name: 'IR Plasma', label: 'IR  PLASMA', ...tile, animated: true,
+  credit: TINY_PROGRAMS,
   layers: ctx => [
     layer(PLASMA_GRID.at(PLASMA_GRID.place(plasma(env(ctx)), 0, 0, 72, 59)), 'auto'),
     footer(PLASMA_SRC, plasma),
@@ -58,6 +61,7 @@ const C = 71.5, R = 50
 const dialControls: Control[] = [{ key: 'value', kind: 'knob', box: [C - R, C - R, 2 * R, 2 * R], min: 0, max: 1, step: .01, label: 'Value' }]
 export const irDial: WidgetPreset = {
   id: 'ir-dial', name: 'IR Dial', label: 'IR  DIAL', ...tile,
+  credit: TINY_PROGRAMS,
   defaults: { value: .62 }, controls: dialControls,
   layers: ctx => {
     const ring = T.dotRing(C, C, R, { spacing: 4.6, size: 2 })

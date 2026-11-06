@@ -17,7 +17,7 @@ import { feedbackFrame, feedbackQuad, feedbackSim, feedbackZoom, sampleTexture }
 import { simAt, simAtStep, simReset } from '../src/engine/sim/sim'
 import { sampleLayers } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
-import { withChrome } from '../src/widgets/types'
+import { creditsOf, withChrome } from '../src/widgets/types'
 import { oldschoolBoard } from '../src/widgets/boards/oldschool'
 
 const near = (a: number, b: number, eps = 1e-6) => Math.abs(a - b) <= eps
@@ -118,7 +118,7 @@ function feedbackChecks(assert: Assert): void {
 function boardChecks(assert: Assert): void {
   const ids = oldschoolBoard.map(p => p.id)
   assert('oldschool: the board has 4 to 6 cards, each crediting its article', ids.length >= 4 && ids.length <= 6 &&
-    oldschoolBoard.every(p => p.credit?.by.includes('Inigo Quilez') && /^https:\/\/iquilezles\.org\/articles\/(deform|dynclouds|feedbackfx)\/$/.test(p.credit.source)), ids.join(' '))
+    oldschoolBoard.every(p => { const c = creditsOf(p)[0]; return c?.by.includes('Inigo Quilez') && /^https:\/\/iquilezles\.org\/articles\/(deform|dynclouds|feedbackfx)\/$/.test(c.source) }), ids.join(' '))
   const dots = (i: number, t: number) => { const p = oldschoolBoard[i]; return sampleLayers(withChrome(p)({ t, data: {} }), p.grid, p.style, dot480) }
   const key = (i: number, t: number) => JSON.stringify(dots(i, t))
   const same = oldschoolBoard.every((_, i) => { const a = key(i, 1.3); key(i, 7.9); return key(i, 1.3) === a })

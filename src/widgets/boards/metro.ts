@@ -229,6 +229,7 @@ const WALKER: Pt[] = [[77, 91.3], [79.3, 91.3], [77, 93.7], [79.3, 93.7], [75, 9
   ...[110.2, 112.5, 114.8, 117.4, 119.8].flatMap(y => [[77, y], [79.3, y]] as Pt[])]
 export const tatooine: WidgetPreset = {
   id: 'tatooine', name: 'Tatooine', group: 'photo', chrome: 'dots', grid: TILE, style: tileStyle,
+  credit: { by: ['George Lucas'], title: 'Star Wars (1977)', source: 'https://en.wikipedia.org/wiki/Tatooine', note: 'the binary sunset over Tatooine' },
   layers: () => [
     layer(sun(46, 57.4, 36.5)), layer(sun(121.3, 69.5, 22)),
     layer(T.dotLine(0, HORIZON, 143, HORIZON, { spacing: 2.53, size: 1.45 }), 'idle'),

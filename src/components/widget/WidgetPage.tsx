@@ -12,7 +12,7 @@ import { dot480 } from '../../engine/theme/tokens'
 import { boardIds, boardLabel, loadBoard, resolveCardId } from '../../widgets/manifest'
 import { catalog } from '../../widgets/catalog'
 import { deriveWidgetMeta, type WidgetMeta } from '../../widgets/meta'
-import { withChrome, type WidgetPreset } from '../../widgets/types'
+import { creditsOf, withChrome, type WidgetPreset } from '../../widgets/types'
 import { canonicalWidgetUrl, resolveWidget, shortPath, widgetPath, type ResolvedWidget, type WidgetRoute } from '../../site/routes'
 import { setNoIndex, setPageMeta, widgetPageMeta, widgetTitle } from '../../site/meta'
 import { replaceUrl } from '../../site/safe-url'
@@ -172,7 +172,7 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
         <h1 id="wp-title"><span className="sr-only">{name}</span><DotName text={name} pitch={4} /></h1>
         <p className="wp-blurb">{meta.blurb}</p>
         <WidgetLike uid={w.uid} name={name} />
-        {preset.credit && <p className="wp-credit">by {preset.credit.by.join(', ')} · <a className="wp-link" href={preset.credit.source} target="_blank" rel="noopener noreferrer">{preset.credit.title}</a>{preset.credit.note && <> · {preset.credit.note}</>}</p>}
+        {creditsOf(preset).map(c => <p key={c.source} className="wp-credit">by {c.by.join(', ')} · <a className="wp-link" href={c.source} target="_blank" rel="noopener noreferrer">{c.title}</a>{c.note && <> · {c.note}</>}</p>)}
         {/* the actions, grouped by what they do: export, then share and remix, then the rest */}
         <PillBar label="Card actions" className="wp-actions">
           <Pill className="wp-copy">
