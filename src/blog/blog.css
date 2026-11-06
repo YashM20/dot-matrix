@@ -1,6 +1,10 @@
 /* The blog (src/blog): the essay's page (src/essay/essay.css: tokens, themes, measure, type, figures) plus what
    the posts add. Every value is a token (scripts/site/css-tokens.ts). */
 
+/* the card touch policy and the recovery screen, inlined so the page has one stylesheet (src/index.css does the same) */
+@import "../components/touch.css";
+@import "../site/root-boundary.css";
+
 /* the site nav wraps on a phone instead of running off the edge */
 .site-nav { flex-wrap: wrap; row-gap: var(--space-2) }
 .site-nav > span:last-child { display: flex; flex-wrap: wrap; row-gap: var(--space-2) }
