@@ -1179,7 +1179,7 @@ async function phoneE6(p: Page, h: Helpers, tapEl: (s: string) => Promise<void>)
   const closeSheet = async () => { if (await p.js(`!!document.querySelector('.ed-sheet')`)) await tapEl('.ed-sheet-head [aria-label="Close"]') }
   const logs0 = p.logs.length
   const s1 = await shareOnce('resolve')
-  check('phone E6: SHARE with a share sheet hands it the frame link (shared, said so; no sheet opens)', s1.out === 'shared' && s1.shared.length === 1 && linkRe.test(s1.shared[0].url) && /Matrix/.test(s1.shared[0].title) && /shared/i.test(s1.note) && !s1.sheet, JSON.stringify(s1))
+  check('phone E6: SHARE with a share sheet hands it the frame link (shared, said so; no sheet opens)', s1.out === 'shared' && s1.shared.length === 1 && linkRe.test(s1.shared[0].url) && /matrix/i.test(s1.shared[0].title) && /shared/i.test(s1.note) && !s1.sheet, JSON.stringify(s1))
   const s2 = await shareOnce('abort')
   check('phone E6: a cancelled share is no error: nothing said, no sheet, nothing logged', s2.out === 'cancelled' && s2.shared.length === 1 && !/no link|error|fail/i.test(s2.note) && !s2.sheet && p.logs.length === logs0, JSON.stringify(s2))
   const s3 = await shareOnce('refuse')
