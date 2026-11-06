@@ -164,6 +164,8 @@ try {
     assert('analytics browser: TOOLS › ANALYTICS shows off, a tap turns it on and a page view arrives', off === 'false' && (await stored(p)) === 'on' && pageviews().length === 1, `pressed ${off}, stored ${await stored(p)}, hits ${hits.length}, views ${pageviews()}`)
     await sleep(3500)
     const reopened = await tapEl(p, '.tabbar button|TOOLS') && await p.waitFor('!!document.querySelector(".tool-analytics")', 8000)
+    // as the first time: the sheet slides in, so let it land and bring the tile into view before the tap
+    await p.js('document.querySelector(".tool-analytics").scrollIntoView({ block: "center" }), 1'); await sleep(400)
     const pressed = await p.js<string>('document.querySelector(".tool-analytics")?.getAttribute("aria-pressed")')
     await tapEl(p, '.tool-analytics|ANALYTICS'); await sleep(800)
     const n = hits.length

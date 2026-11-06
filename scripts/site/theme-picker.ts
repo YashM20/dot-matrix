@@ -147,9 +147,11 @@ try {
   await move(light.x, light.y); await sleep(60)
   check('live preview: hovering LIGHT shows the popover on paper', await js(`document.querySelector('.theme-pop').dataset.scheme`) === 'light' && await html('scheme') === 'dark')
   await move(cobalt.x, cobalt.y); await sleep(30)
+  // the hovered accent's line above the swatches can wrap differently, moving the row: measure where it is now
+  const at = (await centreOf('.theme-pop [data-accent="cobalt"][role=option]'))!
   const before = await vts()
   await js('window.__hold = true')
-  await click(cobalt.x, cobalt.y)
+  await click(at.x, at.y)
   // the wipe held at 25% and 55% (its animation paused), to look at (.snapshots/t5/wipe-*.png)
   await waitFor(`document.getAnimations().some(a => a.animationName === 'theme-wipe')`, 2000)
   await holdWipe('wipe-accent')
@@ -159,7 +161,7 @@ try {
   const vt = await js('window.__vt.at(-1)') as { x: number; y: number; wipe: boolean } | undefined
   await waitFor('!!window.__vt.at(-1)?.ran', 2000)
   check('the transition runs the theme-wipe mask animation (not skipped)', await js('window.__vt.at(-1)?.ran') === 'wipe', String(await js('window.__vt.at(-1)?.ran')))
-  check('one view transition, its wipe starting at the pressed swatch', (await vts()) === before + 1 && !!vt?.wipe && Math.abs(vt.x - cobalt.x) <= 2 && Math.abs(vt.y - cobalt.y) <= 2, JSON.stringify({ vt, cobalt }))
+  check('one view transition, its wipe starting at the pressed swatch', (await vts()) === before + 1 && !!vt?.wipe && Math.abs(vt.x - at.x) <= 2 && Math.abs(vt.y - at.y) <= 2, JSON.stringify({ vt, at }))
   check('the pick is stored', (await stored())?.includes('"cobalt"') === true, String(await stored()))
   check('the wipe cleans up (class and origin vars gone)', await waitFor(`!document.documentElement.classList.contains('theme-wipe') && !document.documentElement.style.getPropertyValue('--wipe-x')`, 4000))
   await move(btn.x + 400, 600)

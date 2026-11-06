@@ -183,6 +183,7 @@ export const DEFAULT_TEXT = 'TYPE ANYTHING'
 export const typeAnythingCard: WidgetPreset = {
   id: 'type-anything', name: 'Type Anything', label: '06  TYPE ANYTHING', group: 'text', ...tile, animated: true,
   defaults: { text: 0 },
+  typing: { key: 'text', label: 'Your words', placeholder: 'Type here', max: 40 },
   layers: ({ t, data }) => {
     const text = (textOf(data.text, DEFAULT_TEXT).trim() || DEFAULT_TEXT).toUpperCase()
     if (!shown || t < shown.since) shown = { text, prev: text, since: t }

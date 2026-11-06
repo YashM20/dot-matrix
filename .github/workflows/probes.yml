@@ -97,6 +97,8 @@ jobs:
         with:
           name: probe-captures-${{ matrix.shard }}
           path: .snapshots
+          # .snapshots is a dot folder: upload-artifact skips hidden files unless asked
+          include-hidden-files: true
           retention-days: 3
           if-no-files-found: ignore
 

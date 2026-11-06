@@ -269,8 +269,15 @@ async function desktop() {
     const n0 = (await h.frameIds()).length
     check('opening the link asks first, then KEEP shows the same program', await h.keep(link, `document.querySelector('.ed-insp .dw-code textarea')?.value === ${JSON.stringify(PROGRAM)}`))
     const n1 = (await h.frameIds()).length
-    await h.go(link, `!!document.querySelector('.ed-insp .dw-code textarea')`); await sleep(600)
-    check('opening the same link again re-selects its frame instead of adding a copy', (await h.frameIds()).length === n1 && n1 <= n0 + 1, `${n0} → ${n1} → ${(await h.frameIds()).length}`)
+    // a kept link frame is saved only once it drew within the program budget (#142): wait for that save, as a
+    // visitor's reload would come after it (a slow runner can take longer than the autosave's 500 ms)
+    const saved = await p.waitFor(`(JSON.parse(localStorage.getItem('dot480.editor.v1') ?? '{}').frames?.length ?? -1) === ${n1}`, 15000)
+    check('the kept link frame is autosaved (once it drew within budget)', saved, `${n1} frames on screen`)
+    // without the save a reload drops the frame by design (#142), so the re-open check would test nothing
+    if (saved) {
+      await h.go(link, `!!document.querySelector('.ed-insp .dw-code textarea')`); await sleep(600)
+      check('opening the same link again re-selects its frame instead of adding a copy', (await h.frameIds()).length === n1 && n1 <= n0 + 1, `${n0} → ${n1} → ${(await h.frameIds()).length}`)
+    }
     await h.clickText('.ed-left [role=tab]', 'ASSETS'); await sleep(300)
     await h.clickText('.ed-agroup[aria-label="Programs"] .ed-asset', 'rain'); await sleep(1200)
     const sliders = await p.js<string[]>(`[...document.querySelectorAll('.ed-insp .ed-slider > label')].map(s => s.firstChild.textContent)`)
@@ -960,6 +967,9 @@ async function desktopE5(p: Page, h: Helpers) {
   await p.shot(join(out, 'desktop-e5-recovery.png'))
   await p.js(`[...document.querySelectorAll('.ed-crash[data-area="editor"] button')].find(b => b.textContent === 'RESET EDITOR DOCUMENT')?.click()`)
   const back = await p.waitFor(`document.querySelectorAll('.ed-frame').length === 3 && !document.querySelector('.ed-crash')`, 60000)
+  // the crash was asked for: React and the boundary log it, which the "no console errors" check must not count
+  const askedCrash = (l: string) => /the editor was asked to crash/.test(l)
+  p.logs.splice(0, p.logs.length, ...p.logs.filter(l => !askedCrash(l)))
   check('#143: a crash in the editor shows the recovery screen (not a blank page); RESET EDITOR DOCUMENT brings back the starter canvas', crashed && /THE EDITOR STOPPED · EDITOR/.test(screen) && /probe: the editor was asked to crash/.test(screen) && back, screen.slice(0, 160))
 }
 
@@ -1173,7 +1183,7 @@ async function phoneE6(p: Page, h: Helpers, tapEl: (s: string) => Promise<void>)
   const closeSheet = async () => { if (await p.js(`!!document.querySelector('.ed-sheet')`)) await tapEl('.ed-sheet-head [aria-label="Close"]') }
   const logs0 = p.logs.length
   const s1 = await shareOnce('resolve')
-  check('phone E6: SHARE with a share sheet hands it the frame link (shared, said so; no sheet opens)', s1.out === 'shared' && s1.shared.length === 1 && linkRe.test(s1.shared[0].url) && /Matrix/.test(s1.shared[0].title) && /shared/i.test(s1.note) && !s1.sheet, JSON.stringify(s1))
+  check('phone E6: SHARE with a share sheet hands it the frame link (shared, said so; no sheet opens)', s1.out === 'shared' && s1.shared.length === 1 && linkRe.test(s1.shared[0].url) && /matrix/i.test(s1.shared[0].title) && /shared/i.test(s1.note) && !s1.sheet, JSON.stringify(s1))
   const s2 = await shareOnce('abort')
   check('phone E6: a cancelled share is no error: nothing said, no sheet, nothing logged', s2.out === 'cancelled' && s2.shared.length === 1 && !/no link|error|fail/i.test(s2.note) && !s2.sheet && p.logs.length === logs0, JSON.stringify(s2))
   const s3 = await shareOnce('refuse')

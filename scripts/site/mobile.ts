@@ -15,7 +15,7 @@
  * `fps`, `chrome` or `first-load` (the lazy-loading and deep-link checks). Screenshots → `.snapshots/w0/`. Chrome: $CHROME or the usual paths.
  */
 import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { boardIds } from '../../src/widgets/manifest'
@@ -93,6 +93,24 @@ const AUDIT = `(() => {
   return { scrollW: Math.max(doc.scrollWidth, document.body.scrollWidth), wide: wide.slice(0, 6), wideN: wide.length, small: small.slice(0, 6), smallN: small.length }
 })()`
 type Audit = { scrollW: number; wide: string[]; wideN: number; small: string[]; smallN: number }
+
+/**
+ * The chunks `seeds` load with them: their static imports (`import … from "./x.js"`, `import "./x.js"`, `export … from`),
+ * followed through dist/assets. A dynamic `import("./x.js")` is not followed. Empty without a dist/ (a dev server).
+ */
+function staticClosure(seeds: string[]): Set<string> {
+  const dir = join('dist', 'assets'), out = new Set<string>()
+  if (!existsSync(dir)) return out
+  const files = new Set(readdirSync(dir)), todo = seeds.filter(f => files.has(f))
+  const STATIC_IMPORT = /(?:^|[;\s}])(?:import|export)\s*(?:[^'"();]*?from\s*)?["']\.\/([^"']+\.js)["']/g
+  while (todo.length) {
+    const f = todo.pop()!
+    if (out.has(f)) continue
+    out.add(f)
+    for (const m of readFileSync(join(dir, f), 'utf8').matchAll(STATIC_IMPORT)) if (files.has(m[1]) && !out.has(m[1])) todo.push(m[1])
+  }
+  return out
+}
 const audit = async (name: string) => {
   const a = await js(AUDIT) as Audit
   check(`${name}: no horizontal overflow at ${W}px`, a.scrollW <= W + 1 && a.wideN === 0, a.scrollW > W + 1 || a.wideN ? `scrollWidth ${a.scrollW}; ${a.wideN} wide: ${a.wide.join(' | ')}` : '')
@@ -136,8 +154,11 @@ async function fpsRow() {
     await cdp('Page.navigate', { url: `${base}${pick.board}/` })
     const card = `document.querySelector('[data-card-id="${id}"]')`
     if (!await waitFor(`!!${card}?.querySelector('canvas, svg')`, 20000)) return 'card did not render'
-    if (!await waitFor(`!!${card}.querySelector('button[aria-label="How it works"]')`, 5000)) return 'no ⓘ (xray flag off?)'
-    await js(`${card}.querySelector('button[aria-label="How it works"]').click()`)
+    // X-ray lives in the card's ⋯ menu (#181)
+    await js(`${card}.querySelector('.dot-card-more')?.click()`)
+    const how = `[...${card}.querySelectorAll('.dot-card-menu [role^="menuitem"]')].find(b => /X-ray/.test(b.textContent))`
+    if (!await waitFor(`!!${how}`, 5000)) return 'no X-ray item in the ⋯ menu (xray flag off?)'
+    await js(`${how}.click()`)
     const hud = `(${card}.textContent.match(/(\\d+)\\/(\\d+) FPS/) || [])[2]`
     return await waitFor(`!!${hud}`, 10000) ? Number(await js(hud)) : 'no X-ray fps HUD'
   }
@@ -168,8 +189,11 @@ try {
     // and the phone sheets it warms (the board sheet, the sheet itself, the display list); the home's hero card and
     // live number band (T2: the `home` chunk and the halftone it draws with), mounted once the page is idle; and the
     // home board itself (`henry`), which loads like every other board since T4b took the widget registry off first load
+    // A deferred chunk brings its own static imports (shared chunks named after a module: `text`, `ops`, `posts`, …),
+    // so those count too when dist/ is here to read them from
     const deferred = /^(sampleWorker|blurbs|CommandLayer|Palette|Shell|fuzzy|describe|BoardSheet|Sheet|SkinList|useSwipeDown|home|halftone|mask|henry)-/
-    const extra = first.filter(f => !preload.has(f) && !deferred.test(f))
+    const allowed = staticClosure([...preload, ...first.filter(f => deferred.test(f))])
+    const extra = first.filter(f => !preload.has(f) && !deferred.test(f) && !allowed.has(f))
     check('first load fetches only the entry and its static imports', extra.length === 0, `${first.length} JS files${extra.length ? `; lazy: ${extra.join(', ')}` : ''}`)
     await js(`document.querySelector('.board-tabs [data-board="${boardIds[2]}"]').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))`)
     await js(`document.querySelector('.board-tabs [data-board="${boardIds[2]}"]').dispatchEvent(new PointerEvent('pointerenter'))`)
@@ -203,11 +227,16 @@ try {
     if (logs.length) check(`${id}: no console errors`, false, logs.slice(0, 3).join(' | '))
     await shot(`board-${id}`)
   }
-  for (const tab of items.filter(i => i.startsWith('tab:')).map(i => i.slice(4))) {
+  const tabs = items.filter(i => i.startsWith('tab:')).map(i => i.slice(4))
+  // MAKE is behind a release flag, off by default (src/site/flags.ts): with it off a MAKE URL opens the home board
+  if (tabs.length) await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `try{var k='dot480:flags',o=JSON.parse(localStorage.getItem(k)||'{}');if(!('make' in o))o.make=true;localStorage.setItem(k,JSON.stringify(o))}catch(e){}` })
+  for (const tab of tabs) {
     logs = []
     await cdp('Page.navigate', { url: `${base}?${tab}` })
-    // the view's chunk has loaded once the Suspense placeholder is gone and the view has content
-    check(`tab ${tab}: loads`, await waitFor(`!document.querySelector('.view-loading') && document.querySelector('.shell > :is(section, div)')?.getBoundingClientRect().height > 100`, 30000))
+    // the view's chunk has loaded once the Suspense placeholder is gone and the asked-for view has content (with MAKE
+    // off, a MAKE URL opens the home board, which must not count)
+    const view = tab.startsWith('make') ? '.make-view' : '.about-view'
+    check(`tab ${tab}: loads`, await waitFor(`!document.querySelector('.view-loading') && document.querySelector('#main > ${view}')?.getBoundingClientRect().height > 100`, 30000))
     await sleep(2500)
     await audit(`tab ${tab}`)
     if (logs.length) check(`tab ${tab}: no console errors`, false, logs.slice(0, 3).join(' | '))

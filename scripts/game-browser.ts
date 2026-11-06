@@ -51,8 +51,10 @@ const stage = () => js('window.__hive?.game?.stage') as Promise<string>
 
 try {
   await cdp('Page.enable'); await cdp('Runtime.enable')
+  // the game's test hooks (`window.__hive`) exist only when a probe asks before the page loads (src/lib/testHooks.ts)
+  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__DOT_PROBE__ = true' })
   await cdp('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
-  await cdp('Page.navigate', { url: `${base}?board=levels` })
+  await cdp('Page.navigate', { url: new URL('levels/', base.replace(/\/?$/, '/')).href })
   const button = await waitFor(`!!document.querySelector('.hive-start')`, 30000)
   assert('the levels board shows the PRESS START button', button, logs.join(' | '))
   await sleep(1500)
@@ -118,6 +120,11 @@ try {
   await cdp('Input.dispatchKeyEvent', { type: 'keyDown', code: 'Escape', key: 'Escape', windowsVirtualKeyCode: 27 })
   await sleep(300)
   assert('Escape closes play mode', !(await js(`!!document.querySelector('.hive-play')`)) && !/play=1/.test(await js('location.search')))
+  // the widget page's PLAY links to the board's path with ?play=1: it opens play mode straight away
+  await cdp('Page.navigate', { url: new URL('levels/?play=1', base.replace(/\/?$/, '/')).href })
+  assert('/levels/?play=1 opens play mode', await waitFor(`!!window.__hive && !!document.querySelector('.hive-screen')`, 30000), logs.join(' | '))
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', code: 'Escape', key: 'Escape', windowsVirtualKeyCode: 27 })
+  await sleep(300)
   // deep link straight into play mode + touch pad on a phone-sized screen
   await cdp('Emulation.setDeviceMetricsOverride', { width: 420, height: 860, deviceScaleFactor: 2, mobile: true })
   await cdp('Emulation.setTouchEmulationEnabled', { enabled: true })

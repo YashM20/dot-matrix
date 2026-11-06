@@ -51,6 +51,11 @@ export interface WidgetPreset {
    * one touch on any card stops the loop on every card.
    */
   handover?: string
+  /**
+   * A card that sets words: the widget page shows a text field whose words go to `data[key]` as a `textId`
+   * (src/data/text.ts). `max` caps the characters (default 40).
+   */
+  typing?: { key: string; label: string; placeholder?: string; max?: number }
   /** `dots`: the card label and live dot are drawn by the engine inside the grid (TILE cards). */
   chrome?: 'dots'
   /** Label text drawn by `chrome: 'dots'` (defaults to `name`; '' = no label). */

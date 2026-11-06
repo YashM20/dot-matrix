@@ -30,24 +30,35 @@ const toggle = (top: number, on: boolean) => {
 }
 export const toggleCard: WidgetPreset = {
   id: 'ui-toggle', name: 'Toggle', group: 'composite', chrome: 'dots', grid: TILE, style,
-  defaults: { on: 1 },
-  controls: [{ key: 'on', kind: 'toggle', box: [TRACK.x, 28, TRACK.w, TRACK.h], label: 'Toggle' }],
-  // the top switch follows `on`; the bottom one always shows the opposite state
+  defaults: { on: 1, on2: 0 },
+  controls: [
+    { key: 'on', kind: 'toggle', box: [TRACK.x, 28, TRACK.w, TRACK.h], label: 'Toggle' },
+    { key: 'on2', kind: 'toggle', box: [TRACK.x, 86, TRACK.w, TRACK.h], label: 'Second toggle' },
+  ],
+  // two switches, each on its own key; they start in opposite states
   layers: ctx => [
-    ...toggle(28, ctx.data.on >= .5), ...toggle(86, ctx.data.on < .5),
+    ...toggle(28, ctx.data.on >= .5), ...toggle(86, (ctx.data.on2 ?? 0) >= .5),
     ...states(ui(ctx, 'on'), ctx.t, rr(TRACK.x, 28, TRACK.w, TRACK.h, TRACK.h / 2)),
+    ...states(ui(ctx, 'on2'), ctx.t, rr(TRACK.x, 86, TRACK.w, TRACK.h, TRACK.h / 2)),
   ],
 }
 
 // ── PILL ────────────────────────────────────────────────────────────────────
 const PILL = { x: 6, w: 132, h: 34 }
-const pill = (top: number, text: string, tone: Tone, textTone: Tone) => [
-  layer(outline(PILL.x, top, PILL.w, PILL.h), tone),
-  layer(T.big(text, 72, top + PILL.h / 2 - 4.2, { ...BODY, align: 'center' }), textTone),
+const pill = (top: number, text: string, tone: Tone, textTone: Tone, v = 1) => [
+  layer(at(outline(PILL.x, top, PILL.w, PILL.h), v), tone),
+  layer(dimmed(T.big(text, 72, top + PILL.h / 2 - 4.2, { ...BODY, align: 'center' }), v), textTone),
 ]
+const PILLS = [{ key: 'action', top: 34, text: 'ACTION', tone: 'value', textTone: 'idle', label: 'Action' }, { key: 'destroy', top: 88, text: 'DESTRUCTIVE', tone: 'active', textTone: 'active', label: 'Destructive' }] as const
 export const pillCard: WidgetPreset = {
   id: 'ui-pill', name: 'Pill', group: 'composite', chrome: 'dots', grid: TILE, style,
-  layers: () => [...pill(34, 'ACTION', 'value', 'idle'), ...pill(88, 'DESTRUCTIVE', 'active', 'active')],
+  defaults: { action: 0, destroy: 0 },
+  controls: PILLS.map((p): Control => ({ key: p.key, kind: 'button', box: [PILL.x, p.top, PILL.w, PILL.h], label: p.label })),
+  // press drops the pill one quantize step; hover glows, focus marches round it
+  layers: ctx => PILLS.flatMap(p => {
+    const s = ui(ctx, p.key)
+    return [...pill(p.top, p.text, p.tone, p.textTone, s.pressed ? PRESS : 1), ...states(s, ctx.t, rr(PILL.x, p.top, PILL.w, PILL.h, PILL.h / 2), rr(PILL.x, p.top, PILL.w, PILL.h, PILL.h / 2), 4)]
+  }),
 }
 
 // ── SLIDER ──────────────────────────────────────────────────────────────────
@@ -92,15 +103,27 @@ const heart = (cx: number, cy: number, s = .58, spacing = 1.2): Pt[] => {
   }
   return sites
 }
+/** The heart filled: the same curve at shrinking scales, so the fill stays on dot sites. */
+const heartFill = (cx: number, cy: number): Pt[] => [.46, .34, .22, .1].flatMap(s => heart(cx, cy, s, 1.6))
 export const iconButtonCard: WidgetPreset = {
   id: 'ui-icon-button', name: 'Icon Button', group: 'icon', chrome: 'dots', grid: TILE, style,
-  layers: () => {
-    const [a, b, c] = BTN.xs, y = BTN.y
+  defaults: { add: 0, like: 0, more: 0 },
+  controls: [
+    { key: 'add', kind: 'button', box: [BTN.xs[0] - BTN.r, BTN.y - BTN.r, 2 * BTN.r, 2 * BTN.r], label: 'Add' },
+    { key: 'like', kind: 'toggle', box: [BTN.xs[1] - BTN.r, BTN.y - BTN.r, 2 * BTN.r, 2 * BTN.r], label: 'Like' },
+    { key: 'more', kind: 'button', box: [BTN.xs[2] - BTN.r, BTN.y - BTN.r, 2 * BTN.r, 2 * BTN.r], label: 'More' },
+  ],
+  // press drops a button one quantize step; the heart is a toggle that fills when on
+  layers: ctx => {
+    const [a, b, c] = BTN.xs, y = BTN.y, liked = (ctx.data.like ?? 0) >= .5
+    const v = (key: string) => (ui(ctx, key).pressed ? PRESS : 1)
     return [
-      ...BTN.xs.map(x => layer(T.dotRing(x, y, BTN.r, { spacing: 2.6, size: 1.3 }), 'value')),
-      layer(T.hrule(a - 8, y, 17)), layer(T.vrule(a, y - 8, 17)),
-      layer(T.dots(heart(b, y), 1.1)),
-      layer(T.dots([[c - 6, y], [c, y], [c + 6, y]], 3.4)),
+      ...BTN.xs.map((x, i) => layer(at(T.dotRing(x, y, BTN.r, { spacing: 2.6, size: 1.3 }), v(['add', 'like', 'more'][i])), 'value')),
+      layer(T.hrule(a - 8, y, 17, 1, v('add'))), layer(T.vrule(a, y - 8, 17, 1, v('add'))),
+      layer(at(T.dots(heart(b, y), 1.1), v('like'))),
+      ...(liked ? [layer(at(T.dots(heartFill(b, y), 1.1), v('like')))] : []),
+      layer(at(T.dots([[c - 6, y], [c, y], [c + 6, y]], 3.4), v('more'))),
+      ...(['add', 'like', 'more'] as const).flatMap((k, i) => states(ui(ctx, k), ctx.t, circle(BTN.xs[i], y, BTN.r), circle(BTN.xs[i], y, BTN.r), 3)),
     ]
   },
 }

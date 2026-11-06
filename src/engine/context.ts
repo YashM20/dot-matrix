@@ -51,6 +51,12 @@ export interface Control {
    * tap target. Grabbed like a drag control: a horizontal drag or a press-and-hold (`interaction/gesture.ts`).
    */
   gesture?: 'surface'
+  /**
+   * Ranges (slider, stepper, knob, crank) with the same `group` share one tab stop, like a row of buttons:
+   * the arrows across the control's axis move between them (Left / Right for vertical ones), the arrows
+   * along it change the value. E.g. a row of split-flap modules.
+   */
+  group?: string
   /** Accessible name, e.g. "Volume". */
   label: string
   /**

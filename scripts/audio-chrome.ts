@@ -13,7 +13,7 @@
  *
  *   npx tsx scripts/audio-chrome.ts
  */
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
@@ -65,8 +65,14 @@ try {
   await cdp('Page.enable'); await cdp('Runtime.enable')
   await cdp('Browser.setDownloadBehavior', { behavior: 'allow', downloadPath: join(outDir, 'rec') })
   // keep the last blob handed to a download link, so the recording can be decoded in the page
-  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `{ const o = URL.createObjectURL; URL.createObjectURL = b => { window.__lastBlob = b; return o.call(URL, b) } }` })
-  await cdp('Page.navigate', { url: `${url}?board=instrument` })
+  // `window.dot480Audio` is a test hook: it exists only when a probe asks before the page loads (src/lib/testHooks.ts)
+  // the frame decoder (src/audio/frame.ts) bundled for the page: a built site has no /src/ to import from. esbuild ships
+  // with the toolchain but is not a direct dependency: call its binary, as webgl.ts does
+  const frame = execFileSync('npx', ['esbuild', 'src/audio/frame.ts', '--bundle', '--format=iife', '--global-name=__dotAudioFrame', '--platform=browser', '--target=es2022', '--log-level=warning'], { encoding: 'utf8', shell: true })
+  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `${frame}
+globalThis.__DOT_PROBE__ = true; { const o = URL.createObjectURL; URL.createObjectURL = b => { window.__lastBlob = b; return o.call(URL, b) } }` })
+  // the board by query (the app moves it to /instrument/): a path would read a deploy prefix as the board
+  await cdp('Page.navigate', { url: new URL('?board=instrument', url).href })
   const loaded = await until(`!!document.querySelector('[aria-label="Sound"]') && !!window.dot480Audio`, 180000)
   check('instrument board loads', loaded, loaded ? '' : JSON.stringify(await evaluate(`({ title: document.querySelector('.board-title')?.textContent, text: document.body.innerText.slice(0, 200), audio: typeof window.dot480Audio })`)))
   if (!loaded) await shot('load-failure')
@@ -113,7 +119,7 @@ try {
   await evaluate(`(() => { const e = ${E}; e.setParams({ steps: [1,0,0,0,1,0,1,0,1,0,0,1,0,0,1,0].map(Boolean), attack: 5/24, release: 16/24 }); e.g.send.gain.value = .22 })()`)
   await sleep(800)
   const level = await evaluate(`(async () => {
-    const { decodeFrame } = await import('/src/audio/frame.ts')
+    const { decodeFrame } = window.__dotAudioFrame
     const e = ${E}, out = []
     for (let i = 0; i < 20; i++) { const m = e.media(); const f = decodeFrame(m.audio); out.push(Math.max(...f.level)); await new Promise(r => setTimeout(r, 50)) }
     const t0 = e.transportTime(), c0 = e.ac.currentTime
@@ -154,7 +160,7 @@ try {
   // ── STOP → silence ──
   check('STOP clicked', await click('Stop'))
   await sleep(1200)
-  const quiet = await evaluate(`(async () => { const { decodeFrame } = await import('/src/audio/frame.ts'); const f = decodeFrame(${E}.media().audio); return { lv: Math.max(...f.level), playing: ${E}.playing } })()`)
+  const quiet = await evaluate(`(async () => { const { decodeFrame } = window.__dotAudioFrame; const f = decodeFrame(${E}.media().audio); return { lv: Math.max(...f.level), playing: ${E}.playing } })()`)
   check('STOP: scheduler stopped, output silent', !quiet.playing && quiet.lv < -50, `${quiet.lv.toFixed(1)} dBFS`)
   await click('Play')
   check('PLAY resumes', await until(`${E}.playing`, 3000))
@@ -168,7 +174,7 @@ try {
   await click('Listen to the microphone')
   check('mic goes live (fake capture device)', await until(`${E}.micState === 'live'`, 8000), await evaluate(`${E}.micState`))
   await sleep(1500)
-  const mic = await evaluate(`(async () => { const { decodeFrame } = await import('/src/audio/frame.ts'); const m = ${E}.media(); return m.mic ? Math.max(...decodeFrame(m.mic).level) : null })()`)
+  const mic = await evaluate(`(async () => { const { decodeFrame } = window.__dotAudioFrame; const m = ${E}.media(); return m.mic ? Math.max(...decodeFrame(m.mic).level) : null })()`)
   check('mic analyser non-silent', mic !== null && mic > -50, `${mic?.toFixed(1)} dBFS`)
   await shot('scope-mic')
   await click('Listen to the microphone')

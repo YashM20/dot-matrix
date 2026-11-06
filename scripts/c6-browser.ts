@@ -5,14 +5,14 @@
  *
  * The page's camera is a synthetic video: `__dotTestCamera` (src/media/stream.ts) returns a canvas
  * `captureStream()` drawing `synthFrame` (src/vision/synthetic.ts) — a hand moving over a still scene.
- *  1. ?board=mirror: start the SHADOW card's camera and HAND mode on CONDUCT with real (CDP) mouse clicks,
+ *  1. /mirror/: start the SHADOW card's camera and HAND mode on CONDUCT with real (CDP) mouse clicks,
  *     track ~10 s of the scripted path: pointer error vs the drawn palm centre (best latency shift and at 0),
  *     pinch agreement, tracker fps and ms per frame.
  *  2. Switch to the INSTRUMENT board by mouse, steer the synthetic hand (closed loop on the on-screen cursor)
  *     onto the first knob, pinch, drag up, release: the knob's value must change (hand = a pointer for any card).
  * Screenshots → .snapshots/c6/. Needs the dev server running.
  */
-import { spawn } from 'node:child_process'
+import { execFileSync, spawn } from 'node:child_process'
 import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
@@ -49,11 +49,17 @@ const shot = async (name: string) => { const { result } = await cdp('Page.captur
 type Rect = { x: number; y: number; w: number; h: number }
 const rectOf = (sel: string) => evaluate<Rect | null>(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height } })()`)
 
-// the synthetic camera + logs, installed before any app code runs
+// the synthetic hand (src/vision/synthetic.ts) bundled for the page: a built site has no /src/ to import from.
+// esbuild ships with the toolchain (tsx, vite) but is not a direct dependency: call its binary, as webgl.ts does
+const SYNTH = execFileSync('npx', ['esbuild', 'src/vision/synthetic.ts', '--bundle', '--format=iife', '--global-name=__dotSynth', '--platform=browser', '--target=es2022', '--log-level=warning'], { encoding: 'utf8', shell: true })
+// the synthetic camera + logs, installed before any app code runs; the camera and hand-log hooks are test hooks,
+// on only when a probe asks before the page loads (src/lib/testHooks.ts)
 const INIT = `
+globalThis.__DOT_PROBE__ = true;
+${SYNTH}
 window.__c6 = { truth: [], obs: [], steer: null };
 window.__dotTestCamera = async () => {
-  const m = await import('/src/vision/synthetic.ts');
+  const m = window.__dotSynth;
   const W = 160, H = 120, c = document.createElement('canvas'); c.width = W; c.height = H;
   const g = c.getContext('2d'), img = g.createImageData(W, H), t0 = performance.now();
   let f = 0;
@@ -75,7 +81,7 @@ await cdp('Page.addScriptToEvaluateOnNewDocument', { source: INIT })
 const report: Record<string, unknown> = {}
 let ok = true
 try {
-  await cdp('Page.navigate', { url: `${URL0}/?board=mirror` })
+  await cdp('Page.navigate', { url: `${URL0}/mirror/` })
   for (let i = 0; i < 60 && !(await rectOf('.dot-card[aria-label="Conduct"]')); i++) await sleep(500)
   await sleep(2500)
   // shadow (row 1, right) and conduct (row 2) both in view

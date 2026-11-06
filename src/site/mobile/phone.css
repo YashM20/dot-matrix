@@ -104,7 +104,7 @@
     opacity: 0
   }
 
-  /* the tab bar: four 58 px targets over the home indicator */
+  /* the tab bar: one row of 58 px targets over the home indicator */
   .tabbar {
     position: fixed;
     right: 0;
@@ -112,7 +112,9 @@
     left: 0;
     z-index: var(--z-bar);
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    /* one row whatever the tab count (four, five with MAKE on): a second row would double the bar past --tabbar-h */
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(0, 1fr);
     padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     border-top: 1px solid var(--line);
     border-image: var(--hair-x) 1;
@@ -136,6 +138,24 @@
     font: 600 var(--fs-label-12)/1 var(--mono);
     letter-spacing: .14em;
     cursor: pointer
+  }
+
+  /* a label never runs into its neighbour: it stays inside its own column (enlarged text, five tabs at 320 px) and
+     ends in an ellipsis if it still doesn't fit; the button's name is the whole word */
+  .tabbar button {
+    min-width: 0
+  }
+
+  .tabbar button span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap
+  }
+
+  /* five tabs (MAKE on): tighter tracking, so the words fit their narrower columns at the default size */
+  .tabbar:has(> button:nth-child(5)) button {
+    letter-spacing: .06em
   }
 
   .tabbar [aria-current="page"] {

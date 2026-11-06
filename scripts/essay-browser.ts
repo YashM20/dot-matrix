@@ -49,8 +49,9 @@ const SIG = `window.__sig = sel => { const f = document.querySelector(sel); if (
   for (const s of f.querySelectorAll('.dot-svg')) { const h = s.innerHTML; n += (h.match(/<path|<circle|<rect/g) || []).length; for (let i = 0; i < h.length; i += 5) sig = (sig * 31 + h.charCodeAt(i)) % 1000003 }
   return { n, sig } }`
 const sig = (id: string) => js(`window.__sig('#fig-${id}')`) as Promise<{ n: number; sig: number }>
-const mounted = () => js(`[...document.querySelectorAll('[data-fig]')].filter(f => f.dataset.mounted === '1').map(f => f.dataset.fig)`) as Promise<string[]>
-const figIds = () => js(`[...document.querySelectorAll('[data-fig]')].map(f => f.dataset.fig)`) as Promise<string[]>
+// the figure's caption carries `data-fig` too (its FIG legend, essay.css): count the figures only
+const mounted = () => js(`[...document.querySelectorAll('figure[data-fig]')].filter(f => f.dataset.mounted === '1').map(f => f.dataset.fig)`) as Promise<string[]>
+const figIds = () => js(`[...document.querySelectorAll('figure[data-fig]')].map(f => f.dataset.fig)`) as Promise<string[]>
 /** Scroll a figure to the middle of the viewport, wait for its chunk and its first frame. */
 const reach = async (id: string) => {
   await js(`document.querySelector('#fig-${id}').scrollIntoView({ block: 'center' })`)
@@ -87,6 +88,9 @@ async function open(width: number, height: number, mobile: boolean, reduced = fa
 
 try {
   await cdp('Page.enable'); await cdp('Runtime.enable'); await cdp('Log.enable')
+  // MAKE is behind a release flag that is off by default (src/site/flags.ts); the IR figure's MAKE link shows with it,
+  // so seed it the way scripts/lib/cdp.ts `launch()` does
+  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `try{var k='dot480:flags',o=JSON.parse(localStorage.getItem(k)||'{}');if(!('make' in o))o.make=true;localStorage.setItem(k,JSON.stringify(o))}catch(e){}` })
 
   const only = process.env.ESSAY_ONLY ?? ''
   const ids = ['resolution', 'pipeline', 'quantize', 'lattice', 'accent', 'masks', 'departures', 'instrument', 'light', 'sim', 'flicker', 'mirror', 'ir', 'surfaces', 'agents']
@@ -106,9 +110,18 @@ try {
     quantize: () => changed('quantize', () => setRange('#fig-quantize input[name=steps]', 2)),
     lattice: () => changed('lattice', () => clickText('#fig-lattice', 'Lattice')),
     accent: async () => {
-      const r = await changed('accent', () => clickText('#fig-accent', 'Add a second accent'))
-      const blue = await js(`(() => { let n = 0; for (const c of document.querySelectorAll('#fig-accent canvas')) { const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; for (let i = 0; i < d.length; i += 4) if (d[i+2] > 180 && d[i] < 90) n++ } for (const s of document.querySelectorAll('#fig-accent .dot-svg')) n += (s.innerHTML.match(/#2F7BFF/gi) || []).length; return n })()`)
-      return { ok: r.ok && blue > 0, detail: `${r.detail}; ${blue} blue px/dots` }
+      // the slider card's dot colours (its SVG groups): the switch must bring in a hue the board had not got, and it
+      // must be blue (or the signal red on a blue accent: the figure's caption says which)
+      const sliderFills = () => js(`[...document.querySelectorAll('#fig-accent .dot-card[data-card="ui-slider"] g[fill]')].map(g => g.getAttribute('fill').toLowerCase())`) as Promise<string[]>
+      const before = await sliderFills()
+      await clickText('#fig-accent', 'Add a second accent'); await sleep(700)
+      const after = await sliderFills(), added = after.filter(f => !before.includes(f))
+      const rgb = (h: string) => [1, 3, 5].map(k => parseInt(h.slice(k, k + 2), 16))
+      const blueOf = (h: string) => /^#[0-9a-f]{6}$/.test(h) && (([r, , b]) => b > r + 60)(rgb(h)), redOf = (h: string) => /^#[0-9a-f]{6}$/.test(h) && (([r, , b]) => r > b + 60)(rgb(h))
+      // FigAccent: the second hue is blue, or the signal red when the page's accent is blue already (cyan, cobalt, vite)
+      const accent = await js('document.documentElement.dataset.accent') as string, blueAccent = ['cyan', 'cobalt', 'vite'].includes(accent)
+      const second = blueAccent ? added.some(redOf) && before.some(blueOf) : added.some(blueOf)
+      return { ok: second, detail: `accent ${accent}: ${before.join('/')} → ${after.join('/')}` }
     },
     masks: () => changed('masks', () => clickText('#fig-masks', 'radial'), 350),
     // animating = the figure keeps drawing (canvas draw calls, worker bitmaps included); pixel signatures can sit
