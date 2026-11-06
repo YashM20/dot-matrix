@@ -185,3 +185,9 @@
 .board-view {
   margin-top: var(--gap-group)
 }
+
+/* a board whose chunk is still loading holds a screen of room, so the footer starts below the fold and doesn't jump
+   down when the cards land (layout shift, #198) */
+.board-view[aria-busy='true'] {
+  min-height: 100svh
+}

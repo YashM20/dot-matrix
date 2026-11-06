@@ -21,7 +21,7 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "check": "pnpm check:static && pnpm verify",
-    "check:static": "tsc -b && oxlint && tsx scripts/site/file-size.ts && tsx scripts/site/credits.ts --check && tsx scripts/site/headers.ts && tsx scripts/site/urls.ts && tsx scripts/site/prose-lint.ts && tsx scripts/site/analytics.ts"
+    "check:static": "tsc -b && oxlint && tsx scripts/site/file-size.ts && tsx scripts/site/credits.ts --check && tsx scripts/site/favicon.ts --check && tsx scripts/site/headers.ts && tsx scripts/site/urls.ts && tsx scripts/site/prose-lint.ts && tsx scripts/site/analytics.ts"
   },
   "dependencies": {
     "@fontsource-variable/oxanium": "^5.3.0",

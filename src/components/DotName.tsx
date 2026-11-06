@@ -29,8 +29,8 @@ function wrap(text: string, max: number): string[] {
   return lines.length ? lines : ['']
 }
 
-/** A board title is `NAME — what it is`: the name goes in dot type, the rest stays text beside it. */
-const splitTitle = (title: string): [string, string] => { const i = title.indexOf(' — '); return i < 0 ? [title, ''] : [title.slice(0, i), title.slice(i + 3)] }
+/** A board title is `NAME: what it is`: the name goes in dot type, the rest stays text beside it. */
+const splitTitle = (title: string): [string, string] => { const i = title.indexOf(': '); return i < 0 ? [title, ''] : [title.slice(0, i), title.slice(i + 2)] }
 
 /** The board heading: the name in dot type (its text for screen readers), the subtitle as a mono label. */
 export function BoardTitle({ title, id }: { title: string; id?: string }) {

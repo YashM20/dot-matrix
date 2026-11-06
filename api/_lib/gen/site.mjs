@@ -808,6 +808,9 @@ function parse(src) {
   return ast;
 }
 
+// src/engine/ir/compile.ts
+var CAN_EVAL = typeof document === "undefined" && typeof globalThis.WorkerGlobalScope === "undefined";
+
 // src/engine/ir/bytecode.ts
 var BC_MAX_STEPS = 1 << 16;
 var OP = {

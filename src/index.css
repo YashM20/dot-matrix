@@ -3,6 +3,10 @@
 @import "./tokens.css";
 /* the theme roles per [data-scheme] × [data-accent]: after tokens.css (same specificity, the later wins) */
 @import "./site/theme/themes.css";
+/* shared with the blog and the lab (src/blog/blog.css imports them too): inlined here, so no shared chunk carries a
+   second render-blocking stylesheet (#198) */
+@import "./components/touch.css";
+@import "./site/root-boundary.css";
 
 /*
   Page base. Tokens live in src/tokens.css (DESIGN.md has the tables); component styles in src/site/app/ and src/site/mobile/ (imported in order by App.tsx).

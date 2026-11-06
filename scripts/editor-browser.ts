@@ -341,7 +341,7 @@ async function desktopFit(p: Page) {
   for (const [W, H] of [[1440, 900], [1280, 720], [1920, 1080]] as const) {
     await p.cdp('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: false })
     await p.cdp('Page.navigate', { url: `${base}?make&pro=1` })
-    const ok = await p.waitFor(`!!document.querySelector('.ed-root .ed-frame') && !!document.querySelector('.topbar-dock .pal-dock')`, 60000)
+    const ok = await p.waitFor(`!!document.querySelector('.ed-root .ed-frame') && !!document.querySelector('.topbar-dock .pal-dock:not(.dock-ghost)')`, 60000)
     const m = ok ? await p.js<Fit>(FIT_SETTLE) : undefined
     // the late dock, made deterministic: the bar grows 11 px after the editor has measured
     const g = m ? await p.js<Fit>(`(() => { const bar = document.querySelector('.topbar'); bar.style.minHeight = (bar.getBoundingClientRect().height + 11) + 'px' })(), ${FIT_SETTLE}`) : undefined
