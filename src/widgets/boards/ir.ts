@@ -7,6 +7,7 @@ import { TINY_PROGRAMS } from '../creditSources'
 import type { Control } from '../../engine/context'
 import { irProgram, type IRProgram } from '../../engine/ir'
 import { TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { circle, states, ui } from './components-kit'
 
 const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle } as const
@@ -66,11 +67,13 @@ export const irDial: WidgetPreset = {
   layers: ctx => {
     const ring = T.dotRing(C, C, R, { spacing: 4.6, size: 2 })
     return [
-      layer(ring, 'faint'),
+      layer(ring, 'mid'),
       layer({ ...ring, field: dial(env(ctx)) }, 'active'),
       layer(T.big(String(Math.round((ctx.data.value ?? 0) * 100)), C, 46, { lattice: 3, smooth: true, align: 'center' })),
-      layer(T.text('DATA.VALUE', C, 96, { align: 'center' }), 'idle'),
+      layer(T.text('% FULL', C, 96, { align: 'center' }), 'idle'),
       footer(DIAL_SRC, dial),
+      // the knob draws its own hover glow and focus ring (the CSS outline is off on card controls)
+      ...states(ui(ctx, 'value'), ctx.t, circle(C, C, R + 2)),
     ]
   },
 }

@@ -16,25 +16,25 @@
   "chart-line": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "5b42ef88",
-    "dots": 970
+    "hash": "0f68bb42",
+    "dots": 975
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "5b42ef88",
-    "dots": 970
+    "hash": "0f68bb42",
+    "dots": 975
    }
   },
   "chart-area": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "ce3f3801",
-    "dots": 1361
+    "hash": "1155d919",
+    "dots": 1366
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "ce3f3801",
-    "dots": 1361
+    "hash": "1155d919",
+    "dots": 1366
    }
   },
   "chart-donut": {

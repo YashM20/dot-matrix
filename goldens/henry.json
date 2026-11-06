@@ -25,13 +25,13 @@
   "weather": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "fe03c7b4",
-    "dots": 496
+    "hash": "d0ff5070",
+    "dots": 495
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "fe03c7b4",
-    "dots": 496
+    "hash": "d0ff5070",
+    "dots": 495
    }
   },
   "fitness": {

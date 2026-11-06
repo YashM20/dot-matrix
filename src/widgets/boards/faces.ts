@@ -202,7 +202,7 @@ const FACE_STYLE = { ...tileStyle, sizeMin: .1, sizeMax: 1 }
 function preset(c: Character): WidgetPreset {
   const mem = memory()
   return {
-    id: c.id, name: c.name, group: 'composite', chrome: 'dots', grid: TILE, style: FACE_STYLE, animated: true, fps: 24,
+    id: c.id, name: c.name, group: 'composite', inset: 'dark', chrome: 'dots', grid: TILE, style: FACE_STYLE, animated: true, fps: 24,
     credit: HENRY_AFTERLIGHT,
     defaults: { [KEY]: 0 }, controls: poke(c.name),
     layers: ctx => draw(c, mem, ctx),

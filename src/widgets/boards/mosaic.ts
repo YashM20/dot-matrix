@@ -224,7 +224,7 @@ const CAR = toneRamp(cells(car, [0, 48, N, 97]), [
   { at: .34, tone: 'idle', value: carDot }, { at: .62, tone: 'value', value: carDot },
 ])
 export const evCharge: WidgetPreset = {
-  id: 'ev-charge', name: '02 EV Charge', label: '02  EV CHARGE', group: 'icon', chrome: 'dots', grid: TILE, style: photoStyle,
+  id: 'ev-charge', name: '02 EV Charge', label: '02  EV CHARGE', group: 'icon', inset: 'dark', chrome: 'dots', grid: TILE, style: photoStyle,
   defaults: { charge: 0.78 },
   layers: ({ data }) => {
     const pct = String(Math.round(data.charge * 100)), w = T.size(pct)[0] * 3
@@ -482,7 +482,7 @@ const brackets = ([x0, y0, x1, y1]: Box, arm = 4) => [
   T.hrule(x0, y1, arm), T.vrule(x0, y1 - arm + 1, arm), T.hrule(x1 - arm + 1, y1, arm), T.vrule(x1, y1 - arm + 1, arm),
 ]
 export const visionCamera: WidgetPreset = {
-  id: 'vision-camera', name: '08 Vision Camera', label: '08  VISION CAMERA', group: 'composite', chrome: 'dots', grid: TILE, style: photoStyle,
+  id: 'vision-camera', name: '08 Vision Camera', label: '08  VISION CAMERA', group: 'composite', inset: 'dark', chrome: 'dots', grid: TILE, style: photoStyle,
   layers: () => [
     num('08'), ...menuGlyph,
     ...DESK,

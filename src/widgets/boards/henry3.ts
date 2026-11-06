@@ -19,7 +19,7 @@ export const boardingPass: WidgetPreset = {
   id: 'boarding-pass', name: 'Boarding Pass', label: 'Henry Li', group: 'text', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     layer(T.big('14A', 0, 38, { lattice: 3.7, smooth: true })),
-    layer(T.big('SFO — LHR', 0, 101, BODY), 'idle'),
+    layer(T.big('SFO - LHR', 0, 101, BODY), 'idle'),
     layer(T.dots([[4, 132]], 9), 'active'), layer(T.big('BOARDING', 14, 127.5, BODY), 'idle'),
   ],
 }

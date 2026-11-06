@@ -8,6 +8,11 @@ import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { TAU, TILE, bounded, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
+/** The same dots, with `text` (what `describe()` reads) set to what the glyphs mean. */
+const saying = (f: LatticeField, text: string): LatticeField => {
+  const g = f.field
+  return { ...f, field: Object.assign((u: number, v: number) => g(u, v), g, { text }) }
+}
 const TALL: [number, number] = [1, 9 / 7]
 type Pt = [number, number]
 
@@ -133,8 +138,8 @@ export const designReview: WidgetPreset = {
     const now = RULE_X[10]
     const rule = (y: number): Pt[] => RULE_X.filter(x => x !== now).map(x => [x, y])
     return [
-      // letter O, not zero: the font's 0 is slashed, the reference's isn't
-      layer(T.big('THU 2O', 8, 10, { lattice: 1.8, smooth: true, scale: [1, 1.25] })),
+      // drawn with a letter O (the font's 0 is slashed, the reference's isn't), read as the number 20
+      layer(saying(T.big('THU 2O', 8, 10, { lattice: 1.8, smooth: true, scale: [1, 1.25] }), 'THU 20')),
       layer(T.dots([...rule(66.6), ...rule(118.3)], 3.3), 'idle'),
       layer(T.dots([...range(58.8, 3.88, 7), ...range(99.3, 3.74, 8)].map(y => [now, y]), 3), 'active'),
       layer(T.dots([[6.8, 91.9], [129.3, 92], [134.3, 92]], 3.4)), layer(T.dots([[125.1, 92]], 2.4)),

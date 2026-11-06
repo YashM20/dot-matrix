@@ -240,11 +240,12 @@ export async function lifeL3Checks(assert: Assert, pond: () => Promise<typeof im
     const bad: string[] = []
     for (const p of pondBoard) {
       const ctrl = p.controls?.[0]?.key ?? ''
-      const still = key(p, 9)
+      // the still is the reduced-motion frame with no input (fireflies and plankton show a chosen settled time there)
+      const still = key(p, 9, { reducedMotion: true })
       const moved = key(p, 9, { reducedMotion: true, pointers: [{ id: 1, x: 72, y: 80, down: true, inside: true, tDown: 0, tUp: 0, vx: 0, vy: 0, pressure: 0 }], data: { ...p.defaults, [ctrl]: 1 } })
       if (moved !== still || world(p.id).mode !== 'pristine') bad.push(p.id)
     }
-    assert('pond: under reduced motion a press and a kick reach no world (all six: frame = pristine frame, world pristine)', !bad.length, bad.join(', '))
+    assert('pond: under reduced motion a press and a kick reach no world (all six: frame = the still with no input, world pristine)', !bad.length, bad.join(', '))
   }
 
   // ── L3.6 tilt and light ──
