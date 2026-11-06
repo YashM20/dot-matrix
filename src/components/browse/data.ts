@@ -1,6 +1,6 @@
 /**
  * BROWSE's data (#182): one row per widget from the generated catalog (`[slug, uid, board]`) and names
- * (`src/widgets/names.ts`), with the tags from `cardBlurbs`. No board chunk is needed to list, filter or search;
+ * (`src/widgets/names.ts`: name and tags). No board chunk is needed to list, filter or search;
  * a card's chunk loads only when its slot comes near the screen. The filters live in the URL query
  * (`?in=<board>&tag=<tag>&q=<words>`, `BROWSE_PARAMS`), and the query is hostile input: a board must be a real
  * id (aliases resolve), a tag must be one the cards carry, the words are stripped of control characters and capped.
@@ -8,7 +8,6 @@
  */
 import { catalog } from '../../widgets/catalog'
 import { cardNames } from '../../widgets/names'
-import { cardBlurbs } from '../../widgets/meta'
 import { boardIds, boardLabel, resolveBoardId } from '../../widgets/manifest'
 
 export interface Row { slug: string; board: string; name: string; tags: readonly string[]; /** Lowercase search text: name, slug words, tags, board. */ hay: string }
@@ -20,10 +19,10 @@ export const MAX_QUERY = 60
 /** A tag shows in the TAG menu when at least this many cards carry it (rarer ones are still found by search). */
 const TAG_MIN = 3
 
-const fold = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[̀-ͯ]/g, '')
+const fold = (s: string) => s.toLowerCase().normalize('NFKD').replace(/\p{M}/gu, '')
 
 export const ROWS: readonly Row[] = catalog.map(([slug, , board]) => {
-  const name = cardNames[slug] ?? slug, tags = (cardBlurbs[slug]?.[1] ?? '').split(/\s+/).filter(Boolean)
+  const [name, tagText] = cardNames[slug] ?? [slug, ''], tags = tagText.split(/\s+/).filter(Boolean)
   return { slug, board, name, tags, hay: fold(`${name} ${slug.replace(/-/g, ' ')} ${tags.join(' ')} ${board} ${boardLabel(board)}`) }
 })
 

@@ -22,10 +22,10 @@ const args = process.argv.slice(2), shots = args.includes('--shots') ? args[args
 if (shots) mkdirSync(shots, { recursive: true })
 const ALL = catalog.length
 
-/** The page as a visitor's: MAKE and the lab flags saved off before the app reads them. */
-async function visitor(p: Page, base: string) {
+/** The intro note hidden, so the shots show the page itself (MAKE and the lab are off through `launch`'s flags). */
+async function quiet(p: Page, base: string) {
   await p.cdp('Page.navigate', { url: `${base}robots.txt` }); await sleep(300)
-  await p.js(`localStorage.setItem('dot480:flags', JSON.stringify({ make: false, lab: false })), localStorage.setItem('dot480:intro', 'off'), 1`)
+  await p.js(`localStorage.setItem('dot480:intro', 'off'), 1`)
 }
 const open = async (p: Page, url: string) => { await p.cdp('Page.navigate', { url }); return p.waitFor(`!!document.querySelector('.browse-count')`, 30000) }
 const count = (p: Page) => p.js<string>(`document.querySelector('.browse-count')?.textContent ?? ''`)
@@ -33,9 +33,9 @@ const mountedCards = (p: Page) => p.js<number>(`document.querySelectorAll('.brow
 const shot = async (p: Page, name: string) => { if (shots) await p.shot(join(shots, `${name}.png`)) }
 
 const { url: base, stop } = await serveDist(4327)
-const p = await launch(1280, 900)
+const p = await launch(1280, 900, { flags: { make: false, lab: false }, testHooks: false })
 try {
-  await visitor(p, base)
+  await quiet(p, base)
   assert('browse: /browse/ opens the view', await open(p, `${base}browse/`))
   await p.waitFor(`document.querySelectorAll('.browse-item > .dot-card:not(.browse-ghost)').length > 2`, 20000); await sleep(1500)
   const head = await p.js<{ tabs: string[]; title: string; canonical: string; lab: boolean }>(`({ tabs: [...document.querySelectorAll('.view-tabs [role=tab]')].map(t => t.textContent), title: document.title,
@@ -50,7 +50,7 @@ try {
   await p.js(`document.querySelector('.topbar').scrollIntoView(), 1`); await shot(p, 'header-1280')
   // a scroll to the bottom: the top cards leave, the bottom ones come, the total stays bounded
   const t0 = Date.now()
-  for (let y = 0; y < 40; y++) { await p.js(`window.scrollBy(0, innerHeight * 1.2), 1`); await sleep(60) }
+  for (let y = 0; y < 80 && await p.js<boolean>('innerHeight + scrollY < document.documentElement.scrollHeight - 4'); y++) { await p.js(`window.scrollBy(0, innerHeight * 1.2), 1`); await sleep(60) }
   await sleep(1500)
   const after = await p.js<{ first: boolean; last: boolean; n: number }>(`(() => { const s = [...document.querySelectorAll('.browse-item')]; const card = li => !!li.querySelector('.dot-card:not(.browse-ghost)'); return { first: card(s[0]), last: card(s.at(-1)), n: s.filter(card).length } })()`)
   assert('browse: after scrolling to the bottom the first card is unmounted, the last one mounted, and the count stays small', !after.first && after.last && after.n <= 30, `${JSON.stringify(after)} in ${Date.now() - t0} ms`)
@@ -73,7 +73,7 @@ try {
   await p.cdp('Input.insertText', { text: 'ring' }); await sleep(700)
   const typed = await p.js<{ url: string; live: string | null; role: string | null; n: string }>(`({ url: location.search, role: document.querySelector('.browse-count').getAttribute('role'), live: document.querySelector('.browse-count').getAttribute('aria-live'), n: document.querySelector('.browse-count').textContent })`)
   assert('browse: search writes ?q= and the count is a polite status', /q=ring/.test(typed.url) && typed.role === 'status' && / of /.test(typed.n), JSON.stringify(typed))
-  const labels = await p.js<string[]>(`[...document.querySelectorAll('.browse-tools input, .browse-tools select')].map(e => e.labels?.[0]?.textContent.trim().split(/\\s/)[0] ?? '')`)
+  const labels = await p.js<string[]>(`[...document.querySelectorAll('.browse-tools input, .browse-tools select')].map(e => e.labels?.[0]?.querySelector('span')?.textContent ?? '')`)
   assert('browse: search, board and tag are labelled', labels.join(',') === 'SEARCH,BOARD,TAG', labels.join(','))
   await p.key('Tab', 'Tab', 9); const f1 = await p.js<string>(`document.activeElement.closest('label')?.textContent.slice(0, 5) ?? document.activeElement.tagName`)
   await p.key('Tab', 'Tab', 9); const f2 = await p.js<string>(`document.activeElement.closest('label')?.textContent.slice(0, 3) ?? document.activeElement.tagName`)
@@ -98,6 +98,10 @@ try {
     await p.cdp('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile: w < 600 })
     await open(p, `${base}browse/?theme=${theme}&tag=ring`); await sleep(900)
     if (await p.js<boolean>('document.documentElement.scrollWidth > innerWidth + 1')) over.push(`${theme}@${w}`)
+    if (theme === 'dark_signal') {
+      const widths = await p.js<number[]>(`[...document.querySelectorAll('.browse-field input, .browse-field select')].map(e => Math.round(e.getBoundingClientRect().width))`)
+      assert(`browse: search, board and tag fields are usable at ${w} (≥ 100 px wide)`, widths.length === 3 && widths.every(x => x >= 100), widths.join(', '))
+    }
     if (theme === 'dark_signal' && w === 390) {
       const bar = await p.js<string[]>(`[...document.querySelectorAll('.tabbar button')].map(b => b.textContent.trim())`)
       assert('browse: the phone tab bar offers BROWSE and no MAKE', bar.includes('BROWSE') && !bar.includes('MAKE'), bar.join(' '))

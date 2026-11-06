@@ -22,10 +22,14 @@
   margin-top: var(--gap-group)
 }
 
+/* the site's label is a three-column row with a top margin (chrome.css): here, the name, then its field */
 .browse-field {
   display: grid;
-  gap: var(--space-1);
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-3);
   min-width: 0;
+  margin: 0;
   color: var(--mute);
   font: 600 var(--fs-label-12) var(--mono);
   letter-spacing: .12em
@@ -193,7 +197,13 @@
   }
 }
 
+/* phones: the search on its own row, BOARD and TAG side by side, each name above its field */
 @media (max-width: 600px) {
+  .browse-field {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-1)
+  }
+
   .browse-field--q {
     flex-basis: 100%;
     max-width: none

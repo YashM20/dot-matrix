@@ -10,7 +10,6 @@ import { DotWidget } from '../DotWidget'
 import { BoardTitle } from '../DotName'
 import { useMinuteTick } from '../Board'
 import { boardGroups, boardLabel, loadBoard, prefetchBoard } from '../../widgets/manifest'
-import { widgetPath } from '../../site/routes'
 import { replaceUrl } from '../../site/safe-url'
 import { BROWSE_PATH } from '../../site/browse'
 import { ROWS, TAG_OPTIONS, boardCount, cleanQuery, matches, readFilters, tagCountOf, writeFilters, type Filters, type Row } from './data'
@@ -22,6 +21,9 @@ export interface BrowseProps {
   onBoard: (id: string) => void
   /** Open a card's own page (in place, a history entry). */
   onOpen: (slug: string) => void
+  /** A card page's path (`widgetPath`, src/site/routes.ts): passed in, so this chunk doesn't import the routes module
+   * (sharing it would split it out of the first-load entry into a chunk of its own). */
+  cardPath: (slug: string) => string
 }
 
 /** Search settles this long after the last key before the grid, the URL and the count follow. */
@@ -40,7 +42,7 @@ function Card({ row, tick }: { row: Row; tick: number }) {
   return preset ? <DotWidget type={preset.id} preset={preset} tick={preset.clock ? tick : undefined} enter={ENTER} /> : <Ghost />
 }
 
-export function Browse({ onBoard, onOpen }: BrowseProps) {
+export function Browse({ onBoard, onOpen, cardPath }: BrowseProps) {
   const [f, setF] = useState<Filters>(() => readFilters(location.search))
   const [typed, setTyped] = useState(f.q)
   const search = useRef<HTMLInputElement>(null)
@@ -94,7 +96,7 @@ export function Browse({ onBoard, onOpen }: BrowseProps) {
         {rows.map(r => <li key={r.slug} className="browse-item" data-slot={r.slug} ref={slot(r.slug)}>
           {mounted.has(r.slug) ? <Suspense fallback={<Ghost />}><Card row={r} tick={tick} /></Suspense> : <Ghost />}
           <p className="browse-cap">
-            <a href={widgetPath(r.slug)} onClick={e => go(e, () => onOpen(r.slug))}>{r.name}<span className="sr-only">: open its page</span></a>
+            <a href={cardPath(r.slug)} onClick={e => go(e, () => onOpen(r.slug))}>{r.name}<span className="sr-only">: open its page</span></a>
             <a href={`/${r.board}/`} className="browse-board" onClick={e => go(e, () => onBoard(r.board))} onPointerEnter={() => prefetchBoard(r.board)}>
               <span className="sr-only">On the board </span>{boardLabel(r.board)}</a>
           </p>

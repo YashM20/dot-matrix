@@ -302,7 +302,7 @@ export default function App() {
       </section>
     ) : shownPlace === 'BROWSE' ? (
       <section className="browse-view" role="tabpanel" aria-labelledby="tab-BROWSE">
-        <Browse onOpen={openWidget} onBoard={id => { window.scrollTo(0, 0); pickBoard(id); setView('EXPLORE') }} />
+        <Browse onOpen={openWidget} cardPath={widgetPath} onBoard={id => { window.scrollTo(0, 0); pickBoard(id); setView('EXPLORE') }} />
       </section>
     ) : shownPlace === 'ABOUT' ? (
       <section className="about-view" role="tabpanel" aria-labelledby="tab-ABOUT"><About /></section>
