@@ -6,7 +6,7 @@
  * Styles: `.ed-crash` in editor.css.
  */
 import { Component, type ErrorInfo, type ReactNode } from 'react'
-import { resetEditorDoc, useEditor } from './store'
+import { getEditor, resetEditorDoc } from './store'
 
 export interface BoundaryProps {
   children?: ReactNode
@@ -26,7 +26,7 @@ export class EditorBoundary extends Component<BoundaryProps, State> {
   componentDidCatch(error: unknown, info: ErrorInfo) { console.error(`editor (${this.props.area ?? 'content'}) stopped:`, error, info.componentStack) }
   private reset = () => { resetEditorDoc(); (this.props.onReset ?? (() => location.reload()))() }
   private retry = () => this.setState({ error: undefined })
-  private undo = () => { useEditor.getState().undo(); this.retry() }
+  private undo = () => { getEditor().undo(); this.retry() }
   render() {
     const { error } = this.state
     if (!error) return this.props.children

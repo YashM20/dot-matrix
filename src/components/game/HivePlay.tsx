@@ -7,7 +7,7 @@
  * Test hook for the headless probe and screenshots: `window.__hive`, only with the test hooks on
  * (`src/lib/testHooks.ts`: dev builds, or a probe); the overlay itself reads its own ref.
  */
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type RefObject } from 'react'
 import { TEST_HOOKS } from '../../lib/testHooks'
 import type { DotInstance, ThemeTokens } from '../../engine/types'
 import { dot480 } from '../../engine/theme/tokens'
@@ -68,6 +68,105 @@ function padLayers(held: number) {
 
 interface Trans { t0: number; prev: DotInstance[]; mask: Mask | null; mig: Migration | null; target?: DotInstance[] }
 declare global { interface Window { __hive?: Record<string, unknown> } }
+/**
+ * The game on `canvas`: loop, input, resize and the test hooks. Returns the cleanup. Outside the component
+ * because its test API uses getters, which the React Compiler can't compile inside a component yet.
+ */
+function runHive(canvas: HTMLCanvasElement, theme: ThemeTokens, touch: boolean, closeRef: RefObject<() => void>, touchBits: RefObject<number>, hive: RefObject<Hive | undefined>): () => void {
+  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const input = new GameInput(), params = new URLSearchParams(window.location.search)
+  let g: Game = newGame(loadScores()), demo = params.get('demo') === '1', idle = 0, paused = false, dirty = true
+  let lastStage = g.stage, trans: Trans | null = null, s: Surface, style = gameStyle(4)
+  const times: number[] = []
+  const fit = () => {
+    const padH = touch ? 190 : 0, avail = window.innerHeight - 70 - padH
+    const pitch = Math.max(1.5, Math.min(8, Math.floor(Math.min((window.innerWidth * .96) / GAME.cols, avail / GAME.rows) * 4) / 4))
+    s = surfaceFor(canvas, GAME.cols, GAME.rows, pitch); style = gameStyle(pitch); dirty = true
+  }
+  fit()
+  const detach = input.attach(window, () => { if (document.pointerLockElement) document.exitPointerLock(); closeRef.current() })
+  const pause = () => { paused = true; dirty = true }
+  const onVis = () => { if (document.hidden) pause() }
+  window.addEventListener('blur', pause)
+  window.addEventListener('resize', fit)
+  document.addEventListener('visibilitychange', onVis)
+  const prevOverflow = document.body.style.overflow
+  document.body.style.overflow = 'hidden'
+  canvas.focus()
+
+  const doStep = () => {
+    input.touch = touchBits.current
+    let inp = input.read()
+    if (demo) {
+      if (inp.b) { demo = false; g = newGame(loadScores()); lastStage = g.stage }
+      else inp = autopilot(g)
+    } else if (g.stage === 'title') {
+      idle = inp.b ? 0 : idle + 1
+      if (idle > 20 * 60) { demo = true; idle = 0; g = newGame(loadScores()) }
+    }
+    step(g, inp)
+    if (!demo) { sound(g.events); if (g.events.includes('save')) saveScores(g.table) }
+    dirty = true
+  }
+  const draw = () => {
+    const now = performance.now()
+    if (paused) {
+      input.touch = touchBits.current
+      const b = input.read().b
+      if (b & (BTN.start | BTN.a)) { paused = false; input.keys = 0; dirty = true }
+    }
+    if (!dirty && !trans) return
+    dirty = false
+    const layers = gameLayers(g, { reduced, paused })
+    if (demo && !paused) layers.push(layer(G.big('DEMO  PRESS ANY KEY', GAME.cols / 2, 136, { lattice: .72, align: 'center' }), 'idle'))
+    if (g.stage !== lastStage) {
+      if (!reduced && s.buf.n) {
+        const prev = toDots(s.buf)
+        if (g.stage === 'queen') {
+          sampleInto(s, layers, style, theme)
+          const target = toDots(s.buf)
+          trans = { t0: now, prev, mask: null, mig: migrate(prev, target, { stagger: .35, arc: .25 }), target }
+        } else trans = { t0: now, prev, mask: INTO[g.stage] ?? masks.bayer, mig: null }
+      }
+      lastStage = g.stage
+    }
+    sampleInto(s, layers, style, theme)
+    if (trans) {
+      const p = (now - trans.t0) / (trans.mig ? MIGRATE_MS : DISSOLVE_MS)
+      if (p >= 1) trans = null
+      else {
+        const dots = trans.mig ? trans.mig.dots(p) : transitionDots(trans.prev, toDots(s.buf), { p, mask: trans.mask!, cols: GAME.cols, rows: GAME.rows, pitch: s.pitch, edge: .06 })
+        paint(s, theme, [0, 0], ctx => renderCanvas(ctx, dots))
+      }
+    }
+    if (!trans) paint(s, theme, shakeOffset(g, reduced))
+    times.push(performance.now() - now)
+    if (times.length > 600) times.shift()
+  }
+  const stop = startLoop({ step: doStep, draw, paused: () => paused })
+  const pct = (p: number) => { const a = [...times].sort((x, y) => x - y); return +(a[Math.floor(a.length * p)] ?? 0).toFixed(2) }
+  const api = {
+    get game() { return g },
+    get demo() { return demo }, set demo(on: boolean) { demo = !!on },
+    get paused() { return paused }, set paused(on: boolean) { paused = !!on; dirty = true },
+    enter: (stage: Stage) => { enter(g, stage); dirty = true },
+    /** Fast-forward with the autopilot until `until` is entered (or `max` steps); returns the stage. */
+    run: (until: Stage, max = 20000) => { for (let i = 0; i < max && g.stage !== until; i++) { step(g, autopilot(g)) } dirty = true; return g.stage },
+    steps: (n: number) => { for (let i = 0; i < n; i++) step(g, autopilot(g)); dirty = true; return g.stage },
+    stats: () => ({ n: times.length, p50: pct(.5), p95: pct(.95), pitch: s.pitch, dots: s.buf.n }),
+  }
+  hive.current = api
+  if (TEST_HOOKS) window.__hive = api
+  return () => {
+    stop(); detach()
+    window.removeEventListener('blur', pause); window.removeEventListener('resize', fit)
+    document.removeEventListener('visibilitychange', onVis)
+    document.body.style.overflow = prevOverflow
+    hive.current = undefined
+    if (TEST_HOOKS) delete window.__hive
+  }
+}
+
 /** The running game as the overlay's pointer handler sees it (`window.__hive` exposes the same object to probes). */
 interface Hive { readonly game: Game; paused: boolean }
 
@@ -83,98 +182,7 @@ export default function HivePlay({ theme = dot480, onClose }: { theme?: ThemeTok
   useEffect(() => {
     const canvas = screen.current
     if (!canvas) return
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-    const input = new GameInput(), params = new URLSearchParams(window.location.search)
-    let g: Game = newGame(loadScores()), demo = params.get('demo') === '1', idle = 0, paused = false, dirty = true
-    let lastStage = g.stage, trans: Trans | null = null, s: Surface, style = gameStyle(4)
-    const times: number[] = []
-    const fit = () => {
-      const padH = touch ? 190 : 0, avail = window.innerHeight - 70 - padH
-      const pitch = Math.max(1.5, Math.min(8, Math.floor(Math.min((window.innerWidth * .96) / GAME.cols, avail / GAME.rows) * 4) / 4))
-      s = surfaceFor(canvas, GAME.cols, GAME.rows, pitch); style = gameStyle(pitch); dirty = true
-    }
-    fit()
-    const detach = input.attach(window, () => { if (document.pointerLockElement) document.exitPointerLock(); closeRef.current() })
-    const pause = () => { paused = true; dirty = true }
-    const onVis = () => { if (document.hidden) pause() }
-    window.addEventListener('blur', pause)
-    window.addEventListener('resize', fit)
-    document.addEventListener('visibilitychange', onVis)
-    const prevOverflow = document.body.style.overflow
-    document.body.style.overflow = 'hidden'
-    canvas.focus()
-
-    const doStep = () => {
-      input.touch = touchBits.current
-      let inp = input.read()
-      if (demo) {
-        if (inp.b) { demo = false; g = newGame(loadScores()); lastStage = g.stage }
-        else inp = autopilot(g)
-      } else if (g.stage === 'title') {
-        idle = inp.b ? 0 : idle + 1
-        if (idle > 20 * 60) { demo = true; idle = 0; g = newGame(loadScores()) }
-      }
-      step(g, inp)
-      if (!demo) { sound(g.events); if (g.events.includes('save')) saveScores(g.table) }
-      dirty = true
-    }
-    const draw = () => {
-      const now = performance.now()
-      if (paused) {
-        input.touch = touchBits.current
-        const b = input.read().b
-        if (b & (BTN.start | BTN.a)) { paused = false; input.keys = 0; dirty = true }
-      }
-      if (!dirty && !trans) return
-      dirty = false
-      const layers = gameLayers(g, { reduced, paused })
-      if (demo && !paused) layers.push(layer(G.big('DEMO  PRESS ANY KEY', GAME.cols / 2, 136, { lattice: .72, align: 'center' }), 'idle'))
-      if (g.stage !== lastStage) {
-        if (!reduced && s.buf.n) {
-          const prev = toDots(s.buf)
-          if (g.stage === 'queen') {
-            sampleInto(s, layers, style, theme)
-            const target = toDots(s.buf)
-            trans = { t0: now, prev, mask: null, mig: migrate(prev, target, { stagger: .35, arc: .25 }), target }
-          } else trans = { t0: now, prev, mask: INTO[g.stage] ?? masks.bayer, mig: null }
-        }
-        lastStage = g.stage
-      }
-      sampleInto(s, layers, style, theme)
-      if (trans) {
-        const p = (now - trans.t0) / (trans.mig ? MIGRATE_MS : DISSOLVE_MS)
-        if (p >= 1) trans = null
-        else {
-          const dots = trans.mig ? trans.mig.dots(p) : transitionDots(trans.prev, toDots(s.buf), { p, mask: trans.mask!, cols: GAME.cols, rows: GAME.rows, pitch: s.pitch, edge: .06 })
-          paint(s, theme, [0, 0], ctx => renderCanvas(ctx, dots))
-        }
-      }
-      if (!trans) paint(s, theme, shakeOffset(g, reduced))
-      times.push(performance.now() - now)
-      if (times.length > 600) times.shift()
-    }
-    const stop = startLoop({ step: doStep, draw, paused: () => paused })
-    const pct = (p: number) => { const a = [...times].sort((x, y) => x - y); return +(a[Math.floor(a.length * p)] ?? 0).toFixed(2) }
-    const api = {
-      get game() { return g },
-      get demo() { return demo }, set demo(on: boolean) { demo = !!on },
-      get paused() { return paused }, set paused(on: boolean) { paused = !!on; dirty = true },
-      enter: (stage: Stage) => { enter(g, stage); dirty = true },
-      /** Fast-forward with the autopilot until `until` is entered (or `max` steps); returns the stage. */
-      run: (until: Stage, max = 20000) => { for (let i = 0; i < max && g.stage !== until; i++) { step(g, autopilot(g)) } dirty = true; return g.stage },
-      steps: (n: number) => { for (let i = 0; i < n; i++) step(g, autopilot(g)); dirty = true; return g.stage },
-      stats: () => ({ n: times.length, p50: pct(.5), p95: pct(.95), pitch: s.pitch, dots: s.buf.n }),
-    }
-    hive.current = api
-    if (TEST_HOOKS) window.__hive = api
-    return () => {
-      stop(); detach()
-      window.removeEventListener('blur', pause); window.removeEventListener('resize', fit)
-      document.removeEventListener('visibilitychange', onVis)
-      document.body.style.overflow = prevOverflow
-      hive.current = undefined
-      if (TEST_HOOKS) delete window.__hive
-    }
+    return runHive(canvas, theme, touch, closeRef, touchBits, hive)
   }, [theme, touch])
 
   // the touch pad: pointer positions in pad cells → buttons, redrawn when they change

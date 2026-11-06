@@ -1,6 +1,6 @@
 // React Doctor (`pnpm react-doctor`): https://react.doctor/docs/configuration/config-files
 // Plain object on purpose: react-doctor runs through a pinned `pnpm dlx`, so it isn't installed and its types
-// aren't importable here. Every ignore says why. Findings still worth doing: #207, #208, #209.
+// aren't importable here. Every ignore says why. Findings still worth doing: #208, #209.
 export default {
   rules: {
     // the same check as oxlint's `react/only-export-components`, which `.oxlintrc.json` already runs (with
@@ -64,6 +64,24 @@ export default {
           'src/hooks/useSwipeDown.ts',
         ],
         rules: ['react-doctor/effect-needs-cleanup'],
+      },
+      {
+        // DotCanvas starts its transients (entrance, dissolve, burst, spring, exit, migrate) in layout effects: each one
+        // starts from the frame on screen, held in a ref that render may not read, and a `key` would remount the card
+        // and lose that frame. The clock callbacks end them; `onMode` reports to the X-ray, which keeps it in a ref (#207)
+        files: ['src/components/DotCanvas.tsx'],
+        rules: [
+          'react-doctor/no-adjust-state-on-prop-change',
+          'react-hooks-js/set-state-in-effect',
+          'react-doctor/no-prop-callback-in-effect',
+          'react-doctor/no-pass-live-state-to-parent',
+        ],
+      },
+      {
+        // the command layer is `'use no memo'` (#207): its command API uses getters, `this` and lazy import()s, which
+        // the React Compiler can't compile yet, and it renders only when a palette, shell or X-ray switch changes
+        files: ['src/components/palette/CommandLayer.tsx'],
+        rules: ['react-hooks-js/todo'],
       },
       {
         // static, stateless lists that never reorder (parsed blog spans, changelog lines, snap guides, shell

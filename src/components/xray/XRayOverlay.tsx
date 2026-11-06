@@ -7,7 +7,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { quantizeTime, sharedClock } from '../../engine/clock'
 import { sampleLayers } from '../../engine/sampler/gridSampler'
-import type { DotStyle, GridConfig, Layer, ThemeTokens } from '../../engine'
+import type { DotInstance, DotStyle, GridConfig, Layer, ThemeTokens } from '../../engine'
 import type { WidgetContext, WidgetPreset } from '../../widgets/types'
 import { workerPresetId } from '../../workers/client'
 import './overlay.css'
@@ -32,6 +32,13 @@ export interface XRayOverlayProps {
 
 const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 const workerOff = () => typeof Worker === 'undefined' || !flag('worker')
+
+/** Visible dots in a sampled frame; 0 if sampling throws. Outside the component for the compiler's sake (try/catch). */
+function litDots(sample: () => DotInstance[]): number {
+  let n = 0
+  try { for (const d of sample()) if (d.opacity > 0 && d.r > 0) n++ } catch { /* keep 0 */ }
+  return n
+}
 
 export function XRayOverlay({ xr, preset, layers, data, grid, style, theme, animated, fps, tick = 0 }: XRayOverlayProps) {
   const rootRef = useRef<HTMLDivElement>(null), canvasRef = useRef<HTMLCanvasElement>(null)
@@ -119,12 +126,11 @@ export function XRayOverlay({ xr, preset, layers, data, grid, style, theme, anim
   const dataKey = JSON.stringify(data)
   useEffect(() => {
     let frames = 0, last = performance.now(), measured = 0
-    const off = cardFps ? sharedClock().subscribe({ fps: cardFps, onFrame: () => { frames++ } }) : () => {}
+    const off = cardFps ? sharedClock().subscribe({ fps: cardFps, onFrame: () => { frames += 1 } }) : () => {}
     const sample = () => {
       const c = live.current, t = nowT(), now = performance.now()
       if (now - last >= 900) { measured = cardFps ? Math.round((frames * 1000) / (now - last)) : 0; frames = 0; last = now }
-      let dots = 0
-      try { for (const d of sampleLayers(frameLayers(t).filter((_, i) => !c.skip(i)), c.grid, c.style, theme)) if (d.opacity > 0 && d.r > 0) dots++ } catch { /* keep 0 */ }
+      const dots = litDots(() => sampleLayers(frameLayers(t).filter((_, i) => !c.skip(i)), c.grid, c.style, theme))
       const mode = xr.mode(), worker = workerOn()
       setStats(s => (s.dots === dots && s.fps === measured && s.t === t && s.mode === mode && s.worker === worker ? s : { fps: measured, dots, t, mode, worker }))
     }

@@ -40,6 +40,17 @@ const NONE: DotInstance[] = []
  * `enabled: false` skips sampling entirely (cards whose entrance has not started yet).
  * `ix` adds hover / pressed / focus / pointers to the layers' context (omitted at rest).
  */
+/** One frame of the source. A module function, so the React Compiler can compile the hook around its try/catch. */
+function sampleSource(field: Field | undefined, layers: ((ctx: WidgetContext) => Layer[]) | undefined, g: GridConfig, s: DotStyle, theme: ThemeTokens, t: number, dataKey: string, extra: InteractionContext | undefined): DotInstance[] {
+  // a broken preset renders blank instead of taking the whole board down
+  try {
+    if (!layers) return sampleField(field!, g, s, theme)
+    const sample = () => sampleLayers(layers({ t, data: JSON.parse(dataKey), grid: g, ...extra }), g, s, theme)
+    // interaction frames (hover / press / focus / pointers) are transient: never cache them
+    return !extra && isStatic(layers) ? cached(`${idOf(layers)}|${idOf(theme)}|${JSON.stringify([g, s, t])}|${dataKey}`, sample) : sample()
+  } catch (error) { console.error('useDotField: sampling failed', error); return [] }
+}
+
 export function useDotField(source: DotSource, grid: GridConfig, style: DotStyle, theme: ThemeTokens, t = 0, data: Record<string, number> = {}, enabled = true, ix?: InteractionContext): DotInstance[] {
   const { cols, rows, pitch } = grid
   const { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, gap } = style
@@ -51,12 +62,6 @@ export function useDotField(source: DotSource, grid: GridConfig, style: DotStyle
     if (!enabled) return NONE
     const g = { cols, rows, pitch }, s = { shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, gap }
     const extra = ixKey ? JSON.parse(ixKey) as InteractionContext : undefined
-    // a broken preset renders blank instead of taking the whole board down
-    try {
-      if (!layers) return sampleField(field!, g, s, theme)
-      const sample = () => sampleLayers(layers({ t, data: JSON.parse(dataKey), grid: g, ...extra }), g, s, theme)
-      // interaction frames (hover / press / focus / pointers) are transient: never cache them
-      return !extra && isStatic(layers) ? cached(`${idOf(layers)}|${idOf(theme)}|${JSON.stringify([g, s, t])}|${dataKey}`, sample) : sample()
-    } catch (error) { console.error('useDotField: sampling failed', error); return [] }
+    return sampleSource(field, layers, g, s, theme, t, dataKey, extra)
   }, [field, layers, cols, rows, pitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, gap, theme, t, dataKey, enabled, ixKey])
 }

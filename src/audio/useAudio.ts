@@ -33,6 +33,8 @@ const snapshot = (p: InstrumentParams): ControlPatch => ({
 
 // ── page-level state: survives a board switch between Instrument and Scope ──
 let holders = 0, releaseTimer = 0
+// the count changes through functions: the React Compiler can't compile a hook that writes a module variable in place
+const hold = () => { holders++ }, unhold = () => --holders
 let recorder: Recorder | null = null
 /** Saved clips this page session (the probes read them as `window.dot480Audio`, there while `TEST_HOOKS`). */
 const recordings: (Pick<Recording, 'kind' | 'mime' | 'seconds' | 'name'> & { size: number })[] = []
@@ -90,7 +92,7 @@ export function useAudio(boardId: string, shared: ControlPatch, onShared: (patch
   // hold the engine while mounted; a short grace period lets Instrument → Scope keep the music going
   useEffect(() => {
     if (!role) return
-    holders++; clearTimeout(releaseTimer); hookGesture()
+    hold(); clearTimeout(releaseTimer); hookGesture()
     if (role === 'instrument' && eng.sound) { skip.current = true; onShared(snapshot(eng.params)) }
     const off = eng.subscribe(() => {
       const code = MIC_CODE[eng.micState]
@@ -99,7 +101,7 @@ export function useAudio(boardId: string, shared: ControlPatch, onShared: (patch
     return () => {
       off()
       if (role === 'scope') void eng.setMic(false)
-      if (--holders > 0) return
+      if (unhold() > 0) return
       releaseTimer = window.setTimeout(() => {
         if (holders > 0) return
         void stopRecording(); void eng.setSound(false); void eng.setMic(false)
