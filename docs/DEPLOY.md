@@ -103,13 +103,14 @@ Release flags live in `src/site/flags.ts`, one registry entry each (`id`, `defau
 - No CSP reporting yet: it needs an endpoint to receive the reports.
 
 ## CI (`.github/workflows/ci.yml`)
-The `check` job:
-1. runs typecheck, lint and verify;
-2. builds;
-3. runs `golden --check`;
-4. checks the bundle budget (`scripts/site/size.ts --check`: first-load JS ≤ 150 kB gz);
-5. uploads `dist/` as the `site` artifact;
-6. reports perf (report-only).
+CI runs once per push: on `pull_request` for PRs (a new push cancels the old run) and on `push` for `main`. These jobs run in parallel:
+1. **typecheck + lint:** `pnpm check:static` (tsc, oxlint, file size, credits, headers, URLs, prose lint, analytics) and the CSS token lint;
+2. **verify:** `pnpm verify`. With the job above, that is all of `pnpm check`;
+3. **build + site checks:** `vite build` (the widget OG images come from a cache keyed by their renderer and the goldens), the bundle budget (`scripts/site/size.ts --check`: first-load JS ≤ 150 kB gz), the theme, header and SEO checks on `dist/`, the `site` artifact upload and `golden --check`;
+4. **mcp:** `pnpm typecheck` and `pnpm test` in `mcp/`;
+5. **perf report:** `pnpm bench`, on `main` only and report-only.
+
+The `check + build` job passes when jobs 1 to 4 pass. The `main` ruleset requires it by that name, so don't rename it.
 
 ## Vercel project settings
 - **Framework:** Vite.

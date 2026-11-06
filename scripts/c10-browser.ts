@@ -302,8 +302,9 @@ try {
   const said = await text('.pal-shell [aria-live]')
   check('flag off: the shell says xray: command not found', /xray: command not found/i.test(said) && (await count('.xr-overlay')) === 0, said.slice(-80))
   await key('Escape')
-  // the intro line and the styles: no X-ray words, and the overlay / inspector CSS (their lazy chunks) never loads
-  const xrStyles = `[...document.styleSheets].some(s => { try { return [...s.cssRules].some(r => /\\.xr-(overlay|panel)\\b/.test(r.cssText)) } catch { return false } })`
+  // the intro line and the styles: no X-ray words, and the overlay / inspector CSS (their lazy chunks) never loads.
+  // Match selectors only src/components/xray/{overlay,inspector}.css define: first-load tap.css and sheet.css name .xr-panel too
+  const xrStyles = `[...document.styleSheets].some(s => { try { return [...s.cssRules].some(r => /\\.xr-(overlay|hud|tip|summary|layers|tabs)\\b/.test(r.cssText)) } catch { return false } })`
   const intro = await text('.intro-line .intro-long')
   check('flag off: the intro names no X-ray and no X-ray styles load', !!intro && !/x-ray/i.test(intro) && !(await js(xrStyles)), intro.slice(0, 120))
   // the widget page: no X-RAY pill, no X-ray item in MORE
