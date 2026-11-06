@@ -53,6 +53,12 @@ export interface Control {
   gesture?: 'surface'
   /** Accessible name, e.g. "Volume". */
   label: string
+  /**
+   * The value as the card shows it ("62 km/h", "1.5K Hz"), for `aria-valuetext` and `describe()`. `key` is the axis
+   * being read (`keyY` for an xy pad's vertical axis). Default: a percentage of the range, the option name, on / off.
+   * Code, not spec data.
+   */
+  valueText?: (value: number, data: Record<string, number>, key: string) => string
 }
 
 /**

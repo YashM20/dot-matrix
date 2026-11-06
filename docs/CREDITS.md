@@ -308,6 +308,20 @@ By Christopher Carlson.
 
 - Squares Truchet (`sq-truchet`), board `/squares/`: technique
 
+### [OP-1 and pocket operator industrial design](https://teenage.engineering/)
+
+By Teenage Engineering.
+
+- Attack (`inst-attack`), board `/instrument/`: the device style the board follows
+- Crank (`inst-crank`), board `/instrument/`: the device style the board follows
+- Cutoff (`inst-cutoff`), board `/instrument/`: the device style the board follows
+- Level (`inst-level`), board `/instrument/`: the device style the board follows
+- Release (`inst-release`), board `/instrument/`: the device style the board follows
+- Resonance (`inst-resonance`), board `/instrument/`: the device style the board follows
+- Sequencer (`inst-sequencer`), board `/instrument/`: the device style the board follows
+- Transport (`inst-transport`), board `/instrument/`: the device style the board follows
+- XY Pad (`inst-xy`), board `/instrument/`: the device style the board follows
+
 ### [Particle Lenia and the energy-based formulation](https://google-research.github.io/self-organising-systems/particle-lenia/)
 
 By Alexander Mordvintsev, Eyvind Niklasson, Ettore Randazzo.
@@ -436,20 +450,6 @@ By Renato E. Mirollo, Steven H. Strogatz.
 
 - Pond Fireflies (`pond-fireflies`), board `/pond/`: the flash coupling
 
-### [Teenage Engineering](https://teenage.engineering/)
-
-By Teenage Engineering.
-
-- Attack (`inst-attack`), board `/instrument/`: the device style the board follows
-- Crank (`inst-crank`), board `/instrument/`: the device style the board follows
-- Cutoff (`inst-cutoff`), board `/instrument/`: the device style the board follows
-- Level (`inst-level`), board `/instrument/`: the device style the board follows
-- Release (`inst-release`), board `/instrument/`: the device style the board follows
-- Resonance (`inst-resonance`), board `/instrument/`: the device style the board follows
-- Sequencer (`inst-sequencer`), board `/instrument/`: the device style the board follows
-- Transport (`inst-transport`), board `/instrument/`: the device style the board follows
-- XY Pad (`inst-xy`), board `/instrument/`: the device style the board follows
-
 ### [Teletext](https://en.wikipedia.org/wiki/Teletext)
 
 By John Adams.
@@ -505,7 +505,7 @@ By Maxim Gumin.
 
 By Open-Meteo.
 
-- Weather (`live-weather`), board `/live/`: data
+- Weather (`live-weather`), board `/live/`
 
 ### [Weighted Voronoi stippling (2002)](https://doi.org/10.1145/508530.508537)
 

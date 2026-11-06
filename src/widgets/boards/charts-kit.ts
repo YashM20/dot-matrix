@@ -58,7 +58,7 @@ export function chartCard(c: ChartCardSpec): WidgetPreset {
   const sw = switchOf(c.sets)
   const controls: Control[] = [
     { key: 'set', kind: 'segmented', options: 2, optionLabels: c.sets, box: sw.box, label: 'Data set' },
-    { key: 'pick', kind: 'slider', min: 0, max: Math.max(0, c.n - 1), step: 1, box: c.box, map: c.map, label: 'Readout' },
+    { key: 'pick', kind: 'slider', min: 0, max: Math.max(0, c.n - 1), step: 1, box: c.box, map: c.map, label: 'Readout', valueText: v => `point ${Math.round(v) + 1} of ${c.n}` },
   ]
   return {
     id: c.id, name: c.name, label: c.label, group: 'chart', chrome: 'dots', grid: TILE, style: c.style ?? style, animated: true,

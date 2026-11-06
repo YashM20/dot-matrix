@@ -49,7 +49,7 @@ export function HiveStart({ theme = dot480 }: { theme?: ThemeTokens }) {
     <button type="button" className="hive-start" onClick={start}>
       <canvas ref={ref} aria-hidden="true" />
       <span className="sr-only">Press start: </span>
-      <span className="hive-start-sub">PLAY HIVE — KEYBOARD, GAMEPAD OR TOUCH</span>
+      <span className="hive-start-sub">PLAY HIVE · KEYBOARD, GAMEPAD OR TOUCH</span>
     </button>
     {open && <Suspense fallback={null}><HivePlay theme={theme} onClose={close} /></Suspense>}
   </>

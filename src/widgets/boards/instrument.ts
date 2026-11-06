@@ -78,10 +78,13 @@ const hz = (v: number): [string, string] => {
   return [f < 1000 ? `${Math.round(f)}` : f < 10000 ? `${(f / 1000).toFixed(1)}K` : `${Math.round(f / 1000)}K`, 'HZ']
 }
 const time = (v: number): [string, string] => { const ms = 5000 ** v; return ms < 1000 ? [`${Math.round(ms)}`, 'MS'] : [(ms / 1000).toFixed(1), 'SEC'] }
+/** A knob's reading as a screen reader should say it: "1.5 kHz", "120 ms", "2.4 seconds", "33%". */
+const spoken = ([n, unit]: [string, string]) => unit === '%' ? `${n}%` : unit === 'HZ' ? (n.endsWith('K') ? `${n.slice(0, -1)} kHz` : `${n} Hz`) : unit === 'MS' ? `${n} ms` : `${n} seconds`
 function knob(spec: KnobSpec): WidgetPreset {
   const { cx, cy, r, body, tip, start, sweep } = KNOB
   const scale = Array.from({ length: KNOB.detents }, (_, i) => polar(cx, cy, r, start + (i / STEPS) * sweep))
-  const controls: Control[] = [{ key: spec.key, kind: 'knob', box: [cx - r, cy - r, 2 * r, 2 * r], min: 0, max: 1, step: 1 / STEPS, label: spec.name }]
+  const controls: Control[] = [{ key: spec.key, kind: 'knob', box: [cx - r, cy - r, 2 * r, 2 * r], min: 0, max: 1, step: 1 / STEPS, label: spec.name,
+    valueText: v => spoken(spec.read(Math.round(clamp01(v) * STEPS) / STEPS)) }]
   return {
     id: spec.id, name: spec.name, label: `${spec.index}  ${spec.name.toUpperCase()}`, ...device,
     credit: TEENAGE_ENGINEERING,
@@ -225,7 +228,7 @@ export const transport: WidgetPreset = {
   credit: TEENAGE_ENGINEERING,
   defaults: { bpm: BPM, mode: 0, sound: 0 },
   controls: [
-    { key: 'bpm', kind: 'stepper', orientation: 'vertical', box: BPM_BOX, min: 40, max: 240, step: 1, label: 'Tempo' },
+    { key: 'bpm', kind: 'stepper', orientation: 'vertical', box: BPM_BOX, min: 40, max: 240, step: 1, label: 'Tempo', valueText: v => `${Math.round(v)} BPM` },
     { key: 'mode', kind: 'segmented', box: [SEG.x, SEG.y, SEG.w, SEG.h], options: 3, optionLabels: ['Record', 'Play', 'Stop'], label: 'Transport' },
     { key: 'sound', kind: 'toggle', box: SOUND_BOX, label: 'Sound' },
   ],
@@ -301,7 +304,7 @@ export const crank: WidgetPreset = {
   id: 'inst-crank', name: 'Crank', label: '09  CRANK', ...device,
   credit: TEENAGE_ENGINEERING,
   defaults: { crank: 16 + 5 / 24 },
-  controls: [{ key: 'crank', kind: 'crank', box: [CRANK.cx - CRANK.tickR, CRANK.cy - CRANK.tickR, 2 * CRANK.tickR, 2 * CRANK.tickR], min: 0, max: 416, step: 1 / 24, label: 'Crank' }],
+  controls: [{ key: 'crank', kind: 'crank', box: [CRANK.cx - CRANK.tickR, CRANK.cy - CRANK.tickR, 2 * CRANK.tickR, 2 * CRANK.tickR], min: 0, max: 416, step: 1 / 24, label: 'Crank', valueText: v => `${Math.round(v * CRANK.ticks)} ticks` }],
   layers: ctx => {
     const { cx, cy, wheel } = CRANK, f = feel(ctx, 'crank'), ticks = Math.round((ctx.data.crank ?? 0) * CRANK.ticks)
     const at = ((ticks % CRANK.ticks) + CRANK.ticks) % CRANK.ticks, a = (at / CRANK.ticks) * TAU, handle = polar(cx, cy, wheel, a)

@@ -31,7 +31,7 @@ export const ELIAS_WATER: WidgetCredit = {
   note: 'the ripple scheme',
 }
 export const SPLIT_FLAP: WidgetCredit = { by: ['Solari di Udine'], title: 'Split-flap display', source: 'https://en.wikipedia.org/wiki/Split-flap_display', note: 'the flap boards this mimics' }
-export const TEENAGE_ENGINEERING: WidgetCredit = { by: ['Teenage Engineering'], title: 'Teenage Engineering', source: 'https://teenage.engineering/', note: 'the device style the board follows' }
+export const TEENAGE_ENGINEERING: WidgetCredit = { by: ['Teenage Engineering'], title: 'OP-1 and pocket operator industrial design', source: 'https://teenage.engineering/', note: 'the device style the board follows' }
 /** The two code-golf sites the Field IR cards (and MAKE · CODE) take their idea from. The programs are our own. */
 export const TINY_PROGRAMS: readonly WidgetCredit[] = [
   { by: ['Martin Kleppe'], title: 'tixy.land', source: 'https://tixy.land/', note: 'one small program drives the whole card; this program is our own' },
