@@ -51,7 +51,7 @@ export function Card({ preset, data, theme: themeProp, dark, shared, sharedKeys,
   const interactive = !!preset.controls?.length
   // `cardScheme()` (src/site/theme/polarity.ts) for the essay's OLED-only cards, inlined: importing it here would
   // make it a module shared with the app's first load and split it into a chunk of its own (+0.16 kB gz)
-  const site = useTheme(), inset = site.resolved === 'light' && (dark || preset.group === 'photo' || preset.media === 'camera')
+  const site = useTheme(), inset = site.resolved === 'light' && (dark || preset.group === 'photo' || preset.media === 'camera' || preset.inset === 'dark')
   const scheme = inset ? 'dark' : site.resolved
   const theme = themeProp ?? themeTokens(scheme, site.accent)
   return (

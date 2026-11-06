@@ -152,12 +152,17 @@ const cameraControl: Control = { key: 'cam', kind: 'toggle', box: [0, 0, 144, 14
 
 /** Live: REC + the board's one red dot, top right. */
 const REC = [layer(T.text('REC', 128, 1, { align: 'right' }), 'idle'), layer(T.dots([[138.5, 4]], 2.6), 'active')]
-const TEST = layer(T.text('TEST', 143, 1, { align: 'right' }), 'mid')
+/**
+ * The label of a bleed card (no padding): drawn one cell in from the top and left edges, on REC's row, instead of
+ * the chrome label at (0, 0), which would sit on the card's edge.
+ */
+const insetLabel = (s: string) => layer(T.text(s, 1, 1), 'idle')
+const MIRROR_LABEL = insetLabel('MIRROR'), LADDER_LABEL = insetLabel('LADDER')
 const prompts = new Map<string, Layer>()
 const promptLayer = (s: string) => { let l = prompts.get(s); if (!l) prompts.set(s, (l = layer(T.text(s, 72, 130, { align: 'center' }), 'value'))); return l }
 
 export const mirrorCamera: WidgetPreset = {
-  id: 'mirror-camera', name: 'Mirror', group: 'photo', chrome: 'dots', bleed: true, animated: true, media: 'camera', grid: TILE, style: photoStyle,
+  id: 'mirror-camera', name: 'Mirror', label: '', group: 'photo', chrome: 'dots', bleed: true, animated: true, media: 'camera', grid: TILE, style: photoStyle,
   credit: { by: ['Robert Ulichney'], title: 'The void-and-cluster method for dither array generation (1993)', source: 'https://doi.org/10.1117/12.152707', note: 'the blue-noise thresholds' },
   defaults: { cam: 0, camState: 0 },
   controls: [cameraControl],
@@ -169,7 +174,7 @@ export const mirrorCamera: WidgetPreset = {
       if (!s) streams.set(cam, (s = halftoneStream({ ...STEP2 })))
       return [
         dotsLayer(s.push(cam, frame ?? Math.round(t * 30)), [[0, 0, N, TOP - 1]]),
-        ...REC,
+        MIRROR_LABEL, ...REC,
       ]
     }
     // test portrait: blinks for ~0.2 s every 4.5 s; the prompt pulses (on 0.8 s of each 1.2 s)
@@ -178,8 +183,8 @@ export const mirrorCamera: WidgetPreset = {
     const showPrompt = state !== CAM.idle || t % 1.2 < .8
     const plate: Box = [Math.round(72 - pw / 2) - 4, 126, Math.round(72 + pw / 2) + 3, 140]
     return [
-      dotsLayer(blink ? stillShut() : stillOpen(), [plate, [108, 0, 143, 10]]),
-      TEST,
+      dotsLayer(blink ? stillShut() : stillOpen(), [plate]),
+      MIRROR_LABEL,
       ...(showPrompt ? [promptLayer(prompt)] : []),
     ]
   },
@@ -193,13 +198,13 @@ const ladderLeft = lazy(() => halftone(portraitRaster(1, zoom(34.5), NOISE, [0, 
 const ladderRight = lazy(() => halftone(portraitRaster(1, zoom(108.5), NOISE, [N - PANEL.w + 1, PANEL.top, N, PANEL.bottom]), STEP2))
 
 export const mirrorLadder: WidgetPreset = {
-  id: 'mirror-ladder', name: 'Ladder', group: 'photo', chrome: 'dots', bleed: true, grid: TILE, style: photoStyle,
+  id: 'mirror-ladder', name: 'Ladder', label: '', group: 'photo', chrome: 'dots', bleed: true, grid: TILE, style: photoStyle,
   credit: { by: ['Robert Ulichney'], title: 'The void-and-cluster method for dither array generation (1993)', source: 'https://doi.org/10.1117/12.152707', note: 'the blue-noise thresholds' },
   layers: () => [
     dotsLayer(ladderLeft()), dotsLayer(ladderRight()),
     layer(T.big('1', 0, 122, { lattice: 2 }), 'value'), layer(T.text('ORDERED', 14, 129), 'idle'),
     layer(T.big('2', 74, 122, { lattice: 2 }), 'value'), layer(T.text('STRUCTURE', 88, 129), 'idle'),
-    layer(T.text('+NOISE', 143, 1, { align: 'right' }), 'mid'),
+    LADDER_LABEL,
   ],
 }
 
@@ -284,7 +289,7 @@ export const mirrorShadow: WidgetPreset = {
     if (live) return [wall, layer(T.text('LIVE', 128, 1, { align: 'right' }), 'idle'), layer(T.dots([[138.5, 4]], 2.6), 'active')]
     const prompt = state === CAM.starting ? 'ALLOW CAMERA' : state === CAM.denied ? 'NO CAMERA' : 'TAP FOR YOUR SHADOW'
     const showPrompt = state !== CAM.idle || t % 1.2 < .8
-    return [wall, TEST, ...(showPrompt ? [cta(prompt)] : []), PRIVACY]
+    return [wall, ...(showPrompt ? [cta(prompt)] : []), PRIVACY]
   },
 }
 

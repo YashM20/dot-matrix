@@ -209,7 +209,7 @@ export const matPool: WidgetPreset = {
       tonedLayer(S.values, S.tones, K2),
       ...(landed.length ? [layer(valuedSites(landed, 2.4), 'mid')] : []),
       ...(sinking.length ? [layer(valuedSites(sinking, 2.4), 'active')] : []),
-      layer(T.text('TAP TO DROP', 143, 134, { align: 'right' }), 'faint'),
+      layer(T.text('TAP TO DROP', 143, 134, { align: 'right' }), 'mid'),
     ]
   },
 }

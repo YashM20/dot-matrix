@@ -40,15 +40,15 @@
   "watch-moon": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "2c5a4181",
-    "dots": 814
+    "hash": "d3231c1a",
+    "dots": 847
    }
   },
   "watch-tide": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "b3eef45e",
-    "dots": 872
+    "hash": "bde3de63",
+    "dots": 643
    }
   },
   "watch-sun": {
@@ -61,7 +61,7 @@
   "watch-world": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "6b388f78",
+    "hash": "935bd051",
     "dots": 1321
    }
   },

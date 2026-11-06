@@ -67,13 +67,13 @@ export const irDial: WidgetPreset = {
   layers: ctx => {
     const ring = T.dotRing(C, C, R, { spacing: 4.6, size: 2 })
     return [
-      layer(ring, 'faint'),
+      layer(ring, 'mid'),
       layer({ ...ring, field: dial(env(ctx)) }, 'active'),
       layer(T.big(String(Math.round((ctx.data.value ?? 0) * 100)), C, 46, { lattice: 3, smooth: true, align: 'center' })),
-      layer(T.text('DATA.VALUE', C, 96, { align: 'center' }), 'idle'),
+      layer(T.text('% FULL', C, 96, { align: 'center' }), 'idle'),
       footer(DIAL_SRC, dial),
-      // the overlay hides the browser's outline, so the card draws hover and focus itself
-      ...states(ui(ctx, 'value'), ctx.t, circle(C, C, R)),
+      // the knob draws its own hover glow and focus ring (the CSS outline is off on card controls)
+      ...states(ui(ctx, 'value'), ctx.t, circle(C, C, R + 2)),
     ]
   },
 }

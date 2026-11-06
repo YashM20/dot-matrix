@@ -204,8 +204,8 @@ export const matKintsugi: WidgetPreset = {
       cite('MULLER 2013'),
       tonedLayer(out.values, out.tones),
       ...(out.red.length ? [layer(T.dots(out.red, 1), 'active')] : []),
-      layer(T.text(`${close > .5 ? 1 : pieces} ${pieces === 1 || close > .5 ? 'PIECE' : 'PIECES'}`, 6, 135), 'faint'),
-      layer(T.text(close > 0 ? 'NEW GLAZE' : word, 138, 135, { align: 'right' }), 'faint'),
+      layer(T.text(`${close > .5 ? 1 : pieces} ${pieces === 1 || close > .5 ? 'PIECE' : 'PIECES'}`, 6, 135), 'mid'),
+      layer(T.text(close > 0 ? 'NEW GLAZE' : word, 138, 135, { align: 'right' }), 'mid'),
     ]
   },
 }

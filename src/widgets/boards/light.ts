@@ -3,7 +3,7 @@
  * Geometry is a signed distance → cached height + normal rasters; per frame only the light moves
  * (`lambert` / `phong`, one dot product per lattice dot). The lit surface sits on a 2× lattice so the
  * relief reads as big dots, and its tone is split into bands (faint → mid → idle, `value` for the
- * gloss), never one grey ramp. Red only on the ON AIR sign (emissive = live).
+ * gloss), never one grey ramp. Red only on the ON AIR sign (emissive = live). Every card stays a dark inset on a light page (`inset: 'dark'`).
  */
 import { blur, createRaster, outline, rasterize, sample, type Raster } from '../../engine/raster'
 import { bloom, emissive, fabric, glass, heightRaster, hourOf, illuminate, lambert, matte, metal, normalRaster, phong, sdfBox, sdfCircle, sdfRing, sdfSubtract, sdfUnion, stackHeights, sunAt, torch, type Light, type Vec3 } from '../../engine/light'
@@ -65,7 +65,7 @@ function torchLight(ctx: WidgetContext): { light: Light; at: [number, number] } 
 }
 const TORCH_BANDS: [number, number, Tone][] = [[.08, .4, 'faint'], [.4, .8, 'mid'], [.8, 2, 'idle']]
 export const lightTorch: WidgetPreset = {
-  id: 'light-torch', name: 'Torch', group: 'composite', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
+  id: 'light-torch', name: 'Torch', group: 'composite', inset: 'dark', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
   defaults: { lx: .3, ly: .7 },
   controls: [{ key: 'lx', keyY: 'ly', kind: 'xy', box: [16, 18, 112, 112], label: 'Torch position' }],
   layers: ctx => {
@@ -106,7 +106,7 @@ function contactShadow(L: readonly [number, number, number]): Field {
 const shadows = new Map<number, Field>()
 const blurred = (r: Raster) => { const b = blur(r, 2.5); for (let i = 0; i < b.data.length; i++) b.data[i] = Math.min(1, b.data[i] * 1.5); return b }
 export const lightOrb: WidgetPreset = {
-  id: 'light-orb', name: 'Orb', group: 'composite', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
+  id: 'light-orb', name: 'Orb', group: 'composite', inset: 'dark', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
   layers: () => {
     const L = boardSun(), diffuse = lambert(SPHERE, L, { ambient: .16 }), specular = phong(SPHERE, L, [0, 0, 1], 60)
     const shadow = contactShadow(L), floor: Field = (u, v) => floorDots(u, v) * (1 - shadow(u, v)) * (1 - BODY_MASK(u, v))
@@ -145,7 +145,7 @@ const frame = (() => {
   return T.dots(pts, 1.5)
 })()
 export const lightOnAir: WidgetPreset = {
-  id: 'light-on-air', name: 'On Air', group: 'composite', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
+  id: 'light-on-air', name: 'On Air', group: 'composite', inset: 'dark', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
   layers: ({ t }) => [
     layer(frame, 'mid'),
     layer(SIGN_LAT.at(dim(GLOW, .78 + .14 * Math.sin(t * 1.7))), 'activeDim'),
@@ -177,7 +177,7 @@ const caption = (s: string) => layer(T.big(s, 72, 126, { lattice: 1, align: 'cen
 const TORCH: Control = { key: 'lx', keyY: 'ly', kind: 'xy', box: [16, 16, 112, 104], label: 'Torch position' }
 function materialCard(id: string, name: string, note: string, body: (ctx: WidgetContext) => Layer[], lit = true): WidgetPreset {
   return {
-    id, name, group: 'composite', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
+    id, name, group: 'composite', inset: 'dark', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
     ...(lit ? { defaults: { lx: .3, ly: .7 }, controls: [TORCH] } : {}),
     layers: ctx => [...body(ctx), caption(note)],
   }

@@ -112,8 +112,8 @@ export const matMud: WidgetPreset = {
       cite('T-JUNCTIONS'),
       tonedLayer(out.values, out.tones),
       ...(out.red.length ? [layer(T.dots(out.red, 1), 'active')] : []),
-      layer(T.text(`${k} CRACKS`, 6, 135), 'faint'),
-      layer(T.text(f.phase === 'drying' ? 'DRYING' : f.phase === 'dry' ? 'DRY' : 'RAIN', 138, 135, { align: 'right' }), 'faint'),
+      layer(T.text(`${k} CRACKS`, 6, 135), 'mid'),
+      layer(T.text(f.phase === 'drying' ? 'DRYING' : f.phase === 'dry' ? 'DRY' : 'RAIN', 138, 135, { align: 'right' }), 'mid'),
     ]
   },
 }

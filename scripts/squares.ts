@@ -534,7 +534,8 @@ export function squaresChecks(assert: Assert): void {
     const ALLOW: Record<string, number> = { 'sq-gameboy': 2, 'sq-truchet': 6, 'sq-hat': hatFloor().shownMirrored, 'sq-arctic': 8, 'sq-sandpile': 48 }
     const reds = squaresBoard.map(p => [p.id, [0, 1.3, 5.7].map(t => { const r = sampleCard(p, t).filter(x => x.color === dot480.dotActive); return p.id === 'sq-teletext' ? (r.length && r.every(d => d.x > 132 * 2.25 && d.y < 9 * 2.25) ? 1 : 99) : components(r, PITCH[p.id] * 2.25) })] as const)
     assert('squares: one accent per card (the red is one live element: ≤ 1 connected piece; 2 for the LCD colon dots; the teletext seconds digits)', reds.every(([id, n]) => n.every(x => x <= (ALLOW[id] ?? 1))), reds.map(([id, n]) => `${id} ${n.join('/')}`).join(', '))
-    // ink: ≤ 1.15 × the median of the liked reference cards (level-03, afterlight, mosaic, components)
+    // ink: ≤ 1.2 × the inkiest liked reference card (level-03, afterlight, mosaic, components); 1.2 since the tag and footer
+    // stat moved from faint to mid (#225: faint text can't be read), which lifts every card's ink a little
     // (deviation from Q-squares §2.5: the median of the liked cards is dominated by the sparse components board, so the
     // gate is the inkiest liked full-frame card, the afterlight face; the median ratio is printed alongside)
     const refs = [widgetById('level-03')!, widgetById('afterlight')!, ...boards.find(b => b.id === 'mosaic')!.items, ...boards.find(b => b.id === 'components')!.items]
@@ -544,7 +545,7 @@ export function squaresChecks(assert: Assert): void {
     let refInks: number[], inks: (readonly [string, number])[]
     try { refInks = refs.map(p => inkOf(p)); inks = squaresBoard.map(p => [p.id, inkOf(p)] as const) } finally { globalThis.Date = RealDate }
     const refMedian = median(refInks), refMax = Math.max(...refInks)
-    assert('squares: ink (snap raster, px 1: each card ≤ 1.15 × the inkiest liked reference card)', inks.every(([, x]) => x <= 1.15 * refMax),
+    assert('squares: ink (snap raster, px 1: each card ≤ 1.2 × the inkiest liked reference card)', inks.every(([, x]) => x <= 1.2 * refMax),
       `liked max ${refMax.toFixed(4)}, median ${refMedian.toFixed(4)}; ` + inks.map(([id, x]) => `${id} ${x.toFixed(4)} (${(x / refMax).toFixed(2)}× max, ${(x / refMedian).toFixed(2)}× median)`).join(', '))
 
     // performance

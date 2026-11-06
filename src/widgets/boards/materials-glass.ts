@@ -400,7 +400,7 @@ function frameRow(kind: Uint8Array, D: Float32Array, row: number): void {
   for (let c = WIN_BOX[0], i = row * COLS + c; c <= WIN_BOX[2]; c++, i++) if (kind[i] === 1) D[i] = lancetSdf(c, row) < -WIN.frame / 2 ? .42 : .24
 }
 export const matWindow: WidgetPreset = {
-  ...tile, id: 'mat-window', name: 'Window', clock: true,
+  ...tile, id: 'mat-window', name: 'Window', clock: true, inset: 'dark',
   defaults: { ...LIGHT_DEFAULTS, k: 0 },
   controls: [{ key: 'k', kind: 'button', box: [WIN.x0, 14, WIN.x1 - WIN.x0, WIN.bottom - 14], label: 'Light a pane' }],
   layers: ctx => {

@@ -74,7 +74,7 @@ export const typeMorphCard: WidgetPreset = {
       MOR.layer(typeMorph(a, b, k, { ...MOR_OPTS, sweep: .45 })),
       layer(T.text(`${a} > ${b}`, 72, 104, { align: 'center' }), 'idle'),
       layer(T.dots(rail.slice(0, lit + 1), 1.6), 'value'),
-      layer(T.dots(rail.slice(lit + 1), 1.2), 'faint'),
+      layer(T.dots(rail.slice(lit + 1), 1.2), 'mid'),
       layer(T.text(`SDF ${k.toFixed(2)}`, 72, 128, { align: 'center' }), 'mid'),
     ]
   },
@@ -82,10 +82,10 @@ export const typeMorphCard: WidgetPreset = {
 
 // ── 03 MARQUEE ──────────────────────────────────────────────────────────────
 // An LED panel: a 3× lattice of unlit LEDs, a hinted message scrolling through it in quarter-LED
-// steps (part-lit LEDs carry the sub-cell motion), and a 1× ticker running the other way below.
+// steps (part-lit LEDs carry the sub-cell motion), and a still caption below.
 // The live dot (chrome) is the board's red: ON AIR.
 const LED = frame(3, 24), LED_ROWS = 23, LED_COLS = LED.grid.cols
-const LED_MSG = 'DOT/480 — FIELD-BASED DOT MATRIX', LED_MSG2 = 'NOW BOARDING  GATE 480  ON TIME', TICK_MSG = 'SUB-CELL SCROLL · 1/4 LED PER STEP · SAME T, SAME FRAME'
+const LED_MSG = 'DOT/480 · FIELD-BASED DOT MATRIX', LED_MSG2 = 'NOW BOARDING  GATE 480  ON TIME'
 const ledPanel = LED.layer(Object.assign((_u: number, v: number) => (v * (LED.grid.rows - 1) < LED_ROWS - .5 ? .22 : 0), { bounds: [0, 0, LED_COLS - 1, LED_ROWS - 1] as [number, number, number, number] }), 'faint')
 export const typeMarqueeCard: WidgetPreset = {
   id: 'type-marquee', name: 'Marquee', label: '03  MARQUEE', group: 'text', ...tile, animated: true, live: true,
@@ -94,7 +94,7 @@ export const typeMarqueeCard: WidgetPreset = {
     LED.layer(marqueeField(LED_MSG, t, { grid: LED.grid, row: 1, size: 9, weight: .62, roundness: .55, speed: 7, sub: 4, gap: 12, from: 0, to: LED_COLS - 1 })),
     LED.layer(marqueeField(LED_MSG2, t + 2.3, { grid: LED.grid, row: 13, size: 9, weight: .62, roundness: .55, speed: 4.5, sub: 4, gap: 12, from: 0, to: LED_COLS - 1 }), 'idle'),
     layer(T.hrule(4, 101, 136, 2), 'faint'),
-    layer(marqueeField(TICK_MSG, t, { grid: TILE, row: 107, size: 7, weight: .45, speed: -10, sub: 4, gap: 18, from: 4, to: 139 }), 'mid'),
+    layer(T.text('SUB-CELL SCROLL', 72, 107, { align: 'center' }), 'mid'),
     layer(T.hrule(4, 119, 136, 2), 'faint'),
     layer(T.text('7 LED/S', 4, 131), 'mid'),
     layer(T.text('1/4 STEP', 139, 131, { align: 'right' }), 'mid'),
@@ -110,14 +110,14 @@ export const typeKineticCard: WidgetPreset = {
   layers: ({ t }) => [
     KIN1.layer(typeField('WAVE', centred(KIN1, 2, { size: 15, roundness: .8, glyph: glyphs(waveGlyphs(t, { amp: 2, period: 1.8, phase: .14 }), weightWave(t, { min: .25, max: .9, period: 1.8, spread: .14 })) }))),
     KIN2.layer(typeField('BOUNCE', centred(KIN2, 3, { size: 11, weight: .55, glyph: bounceGlyphs(t, { height: 3, period: 1.2, stagger: .1, weight: .55 }) })), 'idle'),
-    layer(typeField('BREATHE', { grid: TILE, col: 71.5, row: 106, size: 13, align: 'center', hint: false, weight: breathe(t, { min: .3, max: .9, period: 3.2 }) }), 'mid'),
+    layer(typeField('BREATHE', { grid: TILE, col: 71.5, row: 106, size: 13, align: 'center', hint: false, weight: breathe(t, { min: .3, max: .9, period: 3.2, phase: .5 }) }), 'mid'),
   ],
 }
 
 // ── 05 FLIGHT ───────────────────────────────────────────────────────────────
 // Word to word by dot migration: every lit dot of one word flies (Hilbert-rank pairs, a staggered
 // sweep, bowed paths) to a dot of the next. The count is the number of dots in flight.
-const FLIGHT = ['HELLO', 'WORLD', 'DOT 480'], F_HOLD = 1.4, F_FLY = 1.3, F_CYCLE = F_HOLD + F_FLY
+const FLIGHT = ['HELLO', 'WORLD', 'DOTS'], F_HOLD = 1.4, F_FLY = 1.3, F_CYCLE = F_HOLD + F_FLY
 const FLY = frame(2.5, 40), FLY_OPTS = { ...centred(FLY, 0, { size: 13, weight: .5, roundness: .75 }) }
 export const typeFlightCard: WidgetPreset = {
   id: 'type-flight', name: 'Flight', label: '05  FLIGHT', group: 'text', ...tile, animated: true,

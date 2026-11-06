@@ -91,8 +91,8 @@ export const matFrost: WidgetPreset = {
       layer(T.dots(hoar(), .9), 'faint'),
       ...(['mid', 'idle', 'value'] as const).filter(t => g[t].length).map(t => layer(T.dots(g[t], t === 'mid' ? 1.3 : 1.5), t)),
       ...(g.active.length ? [layer(T.dots(g.active, 1.5), 'active')] : []),
-      layer(T.text(`${date} ${pad2(now.getDate())}`, 6, 135), 'faint'),
-      layer(T.text(`FLAKE ${pad2(k + 1)}/${FLAKES.length}`, 138, 135, { align: 'right' }), 'faint'),
+      layer(T.text(`${date} ${pad2(now.getDate())}`, 6, 135), 'mid'),
+      layer(T.text(`FLAKE ${pad2(k + 1)}/${FLAKES.length}`, 138, 135, { align: 'right' }), 'mid'),
     ]
   },
 }

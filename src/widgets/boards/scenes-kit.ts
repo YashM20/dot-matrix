@@ -80,13 +80,13 @@ export function scenePlate(K: number, scene: (rows: number) => Scene, paint: (f:
   }
 }
 
-/** Footer: a faint line of text left, one right (card row FOOT). */
+/** Footer: a counter left (idle) and one stat right (mid) (card row FOOT). */
 export const footer = (left: string, right: string): Layer[] => [
   layer(T.text(left, 0, FOOT), 'idle'),
-  layer(T.text(right, 143, FOOT, { align: 'right' }), 'faint'),
+  layer(T.text(right, 143, FOOT, { align: 'right' }), 'mid'),
 ]
-/** Caption tier (0.72 lattice), faint, top-right. */
-export const caption = (s: string): Layer => layer(T.big(s, 143, 1, { lattice: .72, align: 'right' }), 'faint')
+/** Caption tier (0.72 lattice), `mid`, top-right. Plain words only, never a formula. */
+export const caption = (s: string): Layer => layer(T.big(s, 143, 1, { lattice: .72, align: 'right' }), 'mid')
 
 export const pad = (n: number, w: number) => String(Math.max(0, Math.floor(n))).padStart(w, '0').slice(-w)
 /** Seconds → a looped phase in [0, 1). */

@@ -31,15 +31,16 @@ const fnvStr = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length
 /**
  * The L2 frames (FNV of the sampled dot list, data {}, frozen 09:41), taken on the L2 code before any L3 edit: koi at
  * t 0, 1.3, 2.9, 4.4, 5.9 (before the loop's first feed at 6 s, the first moment L3.1's feeding can differ), the
- * others at 0, 1.3, 7.7, 21.2, 33.3. Frames at rest must stay these (L3 gate; goldens unchanged).
+ * others at 0, 1.3, 7.7, 21.2, 33.3. Frames at rest must stay these (L3 gate; goldens unchanged). Re-pinned once in CP6
+ * when the top-right caption moved from faint to mid (#225); nothing else in the frames changed.
  */
 const L2_FRAMES: Record<string, string[]> = {
-  'pond-koi': ['35f856bc', 'e38c1082', 'a3a9658e', '0f0d8417', 'de271316'],
-  'pond-jelly': ['bf60d3f3', 'c9f3be3e', 'a118e398', '870d8b79', '66bb3263'],
-  'pond-slime': ['c6ac7099', 'd608a496', 'ff62c644', 'a7f70385', 'a62ed30f'],
-  'pond-fireflies': ['35749df8', '04a558dd', 'b838eda2', 'f2d3cd6c', '469d5a70'],
-  'pond-murmur': ['e1640663', '135d364c', '8953debb', 'b88857e4', 'aa6eced8'],
-  'pond-terrarium': ['4d43b58b', '2c7e53c7', '017e01e0', 'e3ab60e3', 'f18b738f'],
+  'pond-koi': ['99016858', '124afdbe', '7230560a', 'd52d7cab', '1a91d1da'],
+  'pond-jelly': ['5c67815f', 'f73dbada', '671b9924', 'cc2cdec5', '9cfcb267'],
+  'pond-slime': ['0fa966f5', '32d115aa', 'c1c42e58', 'cd77dd11', 'edb2977b'],
+  'pond-fireflies': ['9c9194e0', '7e090b01', 'a6eadba6', '7dfbbcb8', '62802260'],
+  'pond-murmur': ['35fcc8db', 'ac43458c', '19347cfb', '15cc6724', '90ef7998'],
+  'pond-terrarium': ['df7b73f7', 'fae15b53', '89fbf58c', '4f9eba27', '26e70213'],
 }
 /** `rippleStep`'s output, pinned: FNV of a 600-step run on the pond mask with a splat every 50 steps (the L1.2 code). */
 const RIPPLE_600 = '6045c3bb'
@@ -239,11 +240,12 @@ export async function lifeL3Checks(assert: Assert, pond: () => Promise<typeof im
     const bad: string[] = []
     for (const p of pondBoard) {
       const ctrl = p.controls?.[0]?.key ?? ''
-      const still = key(p, 9)
+      // the still is the reduced-motion frame with no input (fireflies and plankton show a chosen settled time there)
+      const still = key(p, 9, { reducedMotion: true })
       const moved = key(p, 9, { reducedMotion: true, pointers: [{ id: 1, x: 72, y: 80, down: true, inside: true, tDown: 0, tUp: 0, vx: 0, vy: 0, pressure: 0 }], data: { ...p.defaults, [ctrl]: 1 } })
       if (moved !== still || world(p.id).mode !== 'pristine') bad.push(p.id)
     }
-    assert('pond: under reduced motion a press and a kick reach no world (all six: frame = pristine frame, world pristine)', !bad.length, bad.join(', '))
+    assert('pond: under reduced motion a press and a kick reach no world (all six: frame = the still with no input, world pristine)', !bad.length, bad.join(', '))
   }
 
   // ── L3.6 tilt and light ──

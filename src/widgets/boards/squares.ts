@@ -92,9 +92,9 @@ export const sqTetris: WidgetPreset = {
       // well walls and floor at the card pitch
       layer(T.vrule(4, 14, 110), 'faint'), layer(T.vrule(67, 14, 110), 'faint'), layer(T.hrule(4, 123, 64), 'faint'),
       floor, rubble, stack, bars, ...layers,
-      layer(T.text('NEXT', 78, 16), 'faint'), preview,
-      layer(T.text('SCORE', 78, 52), 'faint'), layer(T.big(pad(score, 6), 78, 62, { lattice: 1.5 }), 'value'),
-      layer(T.text('LINES', 78, 84), 'faint'), layer(T.big(pad(lines, 3), 78, 94, { lattice: 2 }), 'idle'),
+      layer(T.text('NEXT', 78, 16), 'mid'), preview,
+      layer(T.text('SCORE', 78, 52), 'mid'), layer(T.big(pad(score, 6), 78, 62, { lattice: 1.5 }), 'value'),
+      layer(T.text('LINES', 78, 84), 'mid'), layer(T.big(pad(lines, 3), 78, 94, { lattice: 2 }), 'idle'),
       ...footer(p / loop, `PIECE ${pad(k + 1, 3)}`, `LEVEL ${pad(Math.floor(lines / 10), 2)}`),
     ]
   },
@@ -151,7 +151,7 @@ function quadTree(): Quads {
 }
 const Q_TONES: Tone[] = ['faint', 'faint', 'mid', 'idle']
 export const sqQuads: WidgetPreset = {
-  id: 'sq-quads', name: 'Squares Quads', label: 'QUADS', ...tile,
+  id: 'sq-quads', name: 'Squares Quads', label: 'QUADS', ...tile, inset: 'dark',
   credit: { by: ['Michael Fogleman'], title: 'Quads', source: 'https://www.michaelfogleman.com/projects/quads/', note: 'split the worst quad, again and again' },
   layers: ctx => {
     const q = quadTree(), p = mod(ctx.t + Q_OFF, Q_LOOP), grow = clamp(p / Q_GROW), k = Math.max(1, Math.round(q.splits * grow * grow)), live = grow < 1
@@ -173,7 +173,7 @@ export const sqQuads: WidgetPreset = {
       cells(QK, Q_ORIGIN, side, side, (c, r) => (at(c, r) >= 0 && !newest.has(at(c, r)) ? 1 : 0), { toneOf: (c, r) => Q_TONES[band(q.mean[at(c, r)])], group, join: true }),
       cells(QK, Q_ORIGIN, side, side, (c, r) => (newest.has(at(c, r)) ? 1 : 0), { tone: 'active', group, join: { accent: true } }),
       layer(T.text(`SQUARES ${thousands(1 + 3 * k).padStart(5, " ")}`, 0, FOOT), "idle"),
-      layer(T.text(`RMS ${(err / (Q_SIZE * Q_SIZE)).toFixed(3).slice(1)}`, 143, FOOT, { align: 'right' }), 'faint'),
+      layer(T.text(`RMS ${(err / (Q_SIZE * Q_SIZE)).toFixed(3).slice(1)}`, 143, FOOT, { align: 'right' }), 'mid'),
     ]
   },
 }
@@ -353,7 +353,7 @@ export const sqMorph: WidgetPreset = {
     // only the front row can light: bound the red layer's window to it
     red.field.bounds = front < 0 ? [0, 0, -1, -1] : [0, front, LW - 1, front]
     // the red row is always mid-turn (never joined): only its shape follows the front
-    return [layer(cap(`SHAPE ${pad(k * 100, 3)}%`, 143, 1, 'right'), 'faint'), ...squareMorph([lcd], k, opts), ...squareMorph([red], k, { width: M_WIDTH })]
+    return [layer(cap(`SHAPE ${pad(k * 100, 3)}%`, 143, 1, 'right'), 'mid'), ...squareMorph([lcd], k, opts), ...squareMorph([red], k, { width: M_WIDTH })]
   },
 }
 
@@ -427,7 +427,7 @@ const lineValue = (c: number, r: number, t: number) => {
   return x < 0 || x >= LN_W ? 0 : L[r * LN_W + x]
 }
 export const sqLines: WidgetPreset = {
-  id: 'sq-lines', name: 'Squares Lines', label: 'LINES', ...tile,
+  id: 'sq-lines', name: 'Squares Lines', label: 'LINES', ...tile, inset: 'dark',
   credit: { by: ['Georg Meisenbach'], title: 'Halftone', source: 'https://en.wikipedia.org/wiki/Halftone', note: 'the line screen of his 1882 patent' },
   layers: ctx => {
     const t = ctx.t, scan = Math.floor(mod(t * 3 + 14, LN_LINES))
@@ -444,7 +444,7 @@ export const sqLines: WidgetPreset = {
       cells([3, 1], SP_ORIGIN, SP_BARS, SP_H, (b, r) => (b !== peak && bar(b, r) ? .75 : 0), { tone: 'mid', join: true, sizeAxis: 'x' }),
       cells([3, 1], SP_ORIGIN, SP_BARS, SP_H, (b, r) => (b === peak && bar(b, r) ? .75 : 0), { tone: 'active', join: { accent: true }, sizeAxis: 'x' }),
       layer(T.text(`LINE ${pad(scan + 1, 2)}/${LN_LINES}`, 0, FOOT), 'idle'),
-      layer(T.text(`PEAK ${pad(peak + 1, 2)}`, 143, FOOT, { align: 'right' }), 'faint'),
+      layer(T.text(`PEAK ${pad(peak + 1, 2)}`, 143, FOOT, { align: 'right' }), 'mid'),
     ]
   },
 }

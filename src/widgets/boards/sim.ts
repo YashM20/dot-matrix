@@ -24,7 +24,7 @@ function footer(sim: Sim, t: number, left: string, right: string): Layer[] {
   return [
     layer(T.dots(rest, .9), 'faint'), layer(T.dots(done, 1.1), 'mid'),
     layer(T.text(`${left} ${String(simStep(sim, t)).padStart(4, '0')}`, 0, FOOT), 'idle'),
-    layer(T.text(right, 143, FOOT, { align: 'right' }), 'faint'),
+    layer(T.text(right, 143, FOOT, { align: 'right' }), 'mid'),
   ]
 }
 const pad4 = (n: number) => String(Math.min(9999, n)).padStart(4, '0')

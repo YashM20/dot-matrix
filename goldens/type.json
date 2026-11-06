@@ -11,37 +11,37 @@
   "type-morph": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "a53f131a",
+    "hash": "5d23dc2a",
     "dots": 814
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "a53f131a",
+    "hash": "5d23dc2a",
     "dots": 814
    }
   },
   "type-marquee": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "63ede90a",
-    "dots": 1941
+    "hash": "513470a0",
+    "dots": 1755
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "dc7b6002",
-    "dots": 1903
+    "hash": "62123653",
+    "dots": 1755
    }
   },
   "type-kinetic": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "e5885b74",
-    "dots": 1350
+    "hash": "ff73ed01",
+    "dots": 1697
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "3e0461d4",
-    "dots": 1763
+    "hash": "8078b5c2",
+    "dots": 1488
    }
   },
   "type-flight": {

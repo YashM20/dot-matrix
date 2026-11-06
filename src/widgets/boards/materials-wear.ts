@@ -202,7 +202,7 @@ function flameInto(F: Float32Array, t: number, fx: number, tip: number, base: nu
 }
 const candleScratch = once(() => ({ wax: createRaster(LG15), flame: createRaster(LG15) }))
 export const matCandle: WidgetPreset = {
-  ...tile, id: 'mat-candle', name: 'Candle', clock: true,
+  ...tile, id: 'mat-candle', name: 'Candle', clock: true, inset: 'dark',
   defaults: { ...LIGHT_DEFAULTS },
   layers: ctx => {
     const now = new Date(), hour = hourOf(now), top = candleTop(hour), S = candleScratch(), drips = candleDrips()
@@ -216,10 +216,10 @@ export const matCandle: WidgetPreset = {
     flameInto(S.flame.data, ctx.reducedMotion ? 0 : ctx.t, fx, top - 17, base)
     const fj = Math.max(0, Math.floor((top - 22) / L15)), fi = Math.floor((fx - 8) / L15)
     S.flame.bounds = [fi, fj, fi + Math.ceil(16 / L15), Math.min(LG15.rows - 1, fj + Math.ceil(24 / L15))]
-    const marks = [6, 12, 18].filter(h => h > hour).map(h => layer(cap(String(h), CANDLE.x1 + 4, CANDLE.full + CANDLE.perHour * h - 2), 'faint'))
+    const marks = [6, 12, 18].filter(h => h > hour).map(h => layer(cap(String(h), CANDLE.x1 + 4, CANDLE.full + CANDLE.perHour * h - 2), 'mid'))
     return [
       cite('WAX · SUBSURFACE'),
-      layer(T.text(`${pad2(now.getHours())}:${pad2(now.getMinutes())}`, 0, 134), 'faint'),
+      layer(T.text(`${pad2(now.getHours())}:${pad2(now.getMinutes())}`, 0, 134), 'mid'),
       ...marks,
       surfaceLayer([[S.wax, [[.06, .3, 'faint'], [.3, .62, 'mid'], [.62, .86, 'idle'], [.86, 2, 'value']]]], L15),
       layer(T.dots([[fx, top - 1.5]], 1), 'mid'),

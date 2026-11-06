@@ -225,7 +225,7 @@ const cloudSites: Pt[] = [
   ...Array.from({ length: 10 }, (_, k): Pt => [91 + 4 + k * SP, BASE]),
 ].map(([x, y]): Pt => [x, BASE - (BASE - y) * LIFT]) // the sheet's cloud is taller than round lobes
 /** Cities the card cycles through (same-length strings so the decode never reflows). */
-const CITIES = [['TOKYO', '24', 'M 26° / L 18°'], ['OSAKA', '22', 'M 25° / L 17°'], ['KYOTO', '21', 'M 24° / L 16°']]
+const CITIES = [['TOKYO', '24', 'H 26° / L 18°'], ['OSAKA', '22', 'H 25° / L 17°'], ['KYOTO', '21', 'H 24° / L 16°']]
 const CITY_S = 6
 /** City `k` of the cycle at time `t`, decoding in from the previous one (t < CITY_S = the static Tokyo frame). */
 const weatherAt = (t: number) => {
