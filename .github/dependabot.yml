@@ -12,7 +12,8 @@ updates:
         update-types: [minor, patch]
 
   - package-ecosystem: github-actions
-    directory: "/"
+    # the workflows, plus the local setup action they share (pinned to commit SHAs too)
+    directories: ["/", "/.github/actions/setup"]
     schedule:
       interval: weekly
     open-pull-requests-limit: 2
