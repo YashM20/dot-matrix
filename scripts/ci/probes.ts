@@ -10,7 +10,7 @@
  *
  * Needs `dist/` (vite build) and Chrome ($CHROME or the usual paths). Exit 1 when a probe fails, 2 on a bad name.
  * Writes a timing table to $GITHUB_STEP_SUMMARY when it is set. Rebalance shards by those timings: a shard should
- * take about 4 minutes. Split a long probe by its own filters (editor `--only`, layout `--widths`).
+ * take at most about 4.5 minutes (mobile and materials alone take that long). Split a long probe by its own filters (editor `--only`, layout `--widths`).
  */
 import { spawn, spawnSync } from 'node:child_process'
 import { appendFileSync } from 'node:fs'
@@ -38,16 +38,18 @@ const PROBES: { name: string; shard: number; args: string[]; env?: Record<string
   { name: 'essay', shard: 9, args: ['scripts/essay-browser.ts', '$BASE'] },
   { name: 'csp', shard: 10, args: ['scripts/site/csp-browser.ts'] },
   { name: 'a11y', shard: 10, args: ['scripts/site/a11y.ts'] },
-  { name: 'c6', shard: 11, args: ['scripts/c6-browser.ts', '--url', '$HOST'] },
   { name: 'life', shard: 11, args: ['scripts/life-browser.ts'] },
-  { name: 'analytics', shard: 11, args: ['scripts/site/analytics-browser.ts'] },
-  { name: 'webgl', shard: 12, args: ['scripts/webgl.ts', '--no-perf'] },
-  { name: 'squares', shard: 12, args: ['scripts/squares-browser.ts'] },
+  { name: 'c6', shard: 12, args: ['scripts/c6-browser.ts', '--url', '$HOST'] },
+  { name: 'analytics', shard: 12, args: ['scripts/site/analytics-browser.ts'] },
+  // a runner has no GPU: these two launch their own Chrome, so they take the software path by their own flag
+  { name: 'webgl', shard: 12, args: ['scripts/webgl.ts', '--no-perf', '--swiftshader'] },
+  { name: 'squares', shard: 12, args: ['scripts/squares-browser.ts', '--swiftshader'] },
   { name: 'skins', shard: 12, args: ['scripts/skins-browser.ts', '--fidelity'] },
   { name: 'likes', shard: 12, args: ['scripts/likes-browser.ts'] },
   { name: 'theme-picker', shard: 12, args: ['scripts/site/theme-picker.ts'] },
 ]
-const TIMEOUT_MS = 8 * 60_000
+/** A hung probe fails at this point instead of holding its shard past the workflow's ~6 minutes. */
+const TIMEOUT_MS = 5 * 60_000
 
 const argv = process.argv.slice(2)
 const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : undefined }
