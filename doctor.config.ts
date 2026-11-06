@@ -6,9 +6,9 @@ export default {
     // the same check as oxlint's `react/only-export-components`, which `.oxlintrc.json` already runs (with
     // `allowConstantExport`): keep one copy so each finding counts once
     'react-doctor/only-export-components': 'off',
-    // `includes`/`find` in a loop (#209): every flagged array is a handful of layers, frames, locks, tags or
-    // history lines, walked on a click or a key, never per frame, per dot or per pointer move. A Set or Map there
-    // costs more than the scan it saves, so fixes go where a profile shows a hot path instead
+    // `includes`/`find` in a loop (#209): the two that ran per pointer move (the editor canvas's drag snap and frame
+    // labels) use a Set now. The rest walk a handful of layers, frames, locks, tags or history lines on a click or a
+    // key, never per frame or per dot, where a Set costs more than the scan it saves. New hot paths get a profile
     'react-doctor/js-set-map-lookups': 'off',
   },
   ignore: {
