@@ -30,6 +30,7 @@ import type { Source } from '../../data/source'
 import { pick, useLiveData } from '../../data/useLiveData'
 import { cardScheme } from '../../site/theme/polarity'
 import { DotWidget } from '../DotWidget'
+import { LoadFailed } from '../LoadBoundary'
 import { Pill, PillBar, PillButton } from './PillBar'
 import { MoreMenu } from './MoreMenu'
 import { WidgetLike } from '../likes/slot'
@@ -47,7 +48,7 @@ export interface WidgetPageProps {
 type Loaded = { w: ResolvedWidget; preset: WidgetPreset; items: WidgetPreset[]; meta: WidgetMeta; sources?: readonly Source[] }
 /** Board sources a widget page subscribes to as well (X1): the pond's day (`?day=`, the opt-in age) and the light hub. */
 const PAGE_SOURCES = new Set(['pond-day', 'light'])
-type State = { status: 'loading' } | { status: 'missing' } | ({ status: 'ok' } & Loaded)
+type State = { status: 'loading' } | { status: 'missing' } | { status: 'failed' } | ({ status: 'ok' } & Loaded)
 
 const said: Record<Outcome, string> = { copied: 'copied', downloaded: 'saved (copy isn’t available here)', shared: 'shared', cancelled: '', failed: 'failed' }
 
@@ -69,7 +70,7 @@ export function WidgetPage({ route, onOpen, onBoard }: WidgetPageProps) {
       const want = canonicalWidgetUrl(w, location.search) + location.hash
       if (want !== location.pathname + location.search + location.hash) replaceUrl(want)
       setPageMeta(widgetPageMeta(meta))
-    }, () => { if (live) setResult({ slug: w.slug, state: { status: 'missing' } }) })
+    }, () => { if (live) setResult({ slug: w.slug, state: { status: 'failed' } }) }) // the chunk didn't load (after the loader's retries)
     return () => { live = false }
   }, [w])
   const state: State = !w ? { status: 'missing' } : result?.slug === w.slug ? result.state : { status: 'loading' }
@@ -77,9 +78,11 @@ export function WidgetPage({ route, onOpen, onBoard }: WidgetPageProps) {
   useEffect(() => { if (!missing) return; setNoIndex(true); return () => setNoIndex(false) }, [missing])
 
   if (state.status === 'loading') return <section className="wp" aria-busy="true"><div className="wp-loading" /></section>
-  if (state.status === 'missing') return <section className="wp wp--missing">
+  if (state.status === 'missing' || state.status === 'failed') return <section className="wp wp--missing">
     <PillBar label="Navigation" className="wp-top"><Pill><PillButton label="BOARDS" glyph="‹" title="Back to the boards" href="/" onClick={() => onBoard(boardIds[0])} /></Pill></PillBar>
-    <div className="wp-missing"><h1>No widget “{route.key}”</h1><p>It may have been renamed or removed. Every card is on one of the boards.</p></div>
+    {state.status === 'failed'
+      ? <div className="wp-missing"><LoadFailed what="This card" /></div>
+      : <div className="wp-missing"><h1>No widget “{route.key}”</h1><p>It may have been renamed or removed. Every card is on one of the boards.</p></div>}
   </section>
   return <Loaded key={state.w.slug} {...state} onOpen={onOpen} onBoard={onBoard} />
 }

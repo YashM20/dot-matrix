@@ -46,7 +46,7 @@ try {
   for (const [where, path, failed] of [
     ['browse', 'browse/?in=motion', `document.querySelectorAll('.browse-item > .load-failed').length > 0`],
     ['board', 'motion/', `!!document.querySelector('.board-view .load-failed')`],
-    ['card page', `widget/${motionCard}/`, `!!document.querySelector('.wp--missing, .load-failed, .root-crash')`],
+    ['card page', `widget/${motionCard}/`, `!!document.querySelector('.wp .load-failed')`],
   ] as const) {
     const p = await launch(1280, 900, { flags: { make: false, lab: false }, testHooks: false })
     try {
