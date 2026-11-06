@@ -5,7 +5,7 @@
  * fps meter and the boss fight. Every shortcut ignores keys typed into inputs and editors. X-ray (the keys, the dock
  * button, the TOOLS tile, the card's ⓘ and the inspector) only exists while the `xray` flag is on (src/site/flags.ts).
  */
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { getSkin, setSkin as setDisplaySkin } from '../skins/store'
 import { findPreset } from '../../widgets/manifest'
@@ -137,7 +137,9 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
   const [hovered, setHovered] = useState<string | undefined>()
   const anyXray = useXR(s => s.global || s.on.size > 0), frozen = useXR(s => s.frozen), fpsHud = useXR(s => s.fpsHud), note = useXR(s => s.toast)
   const xray = useFlag('xray')
-  const view = useRef({ tab, board }); view.current = { tab, board }
+  // the latest view for the command API and handlers, written after commit (never during render)
+  const view = useRef({ tab, board })
+  useLayoutEffect(() => { view.current = { tab, board } })
   useTrackEvents(board)
 
   // the layer itself mounts once the page is idle: warm the palette / shell chunks now, so a ⌘K followed by

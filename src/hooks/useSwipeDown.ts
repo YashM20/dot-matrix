@@ -15,7 +15,7 @@ export function useSwipeDown(ref: RefObject<HTMLElement | null>, onClose: () => 
   useEffect(() => {
     const el = ref.current
     if (!el) return
-    let y0 = 0, t0 = 0, dy = 0, armed = false, moving = false
+    let y0 = 0, t0 = 0, dy = 0, armed = false, moving = false, timer = 0
     const scroller = (t: EventTarget | null) => (t as Element | null)?.closest?.<HTMLElement>('[data-sheet-scroll]')
     const start = (e: TouchEvent) => {
       if (e.touches.length !== 1) { armed = false; return }
@@ -37,13 +37,13 @@ export function useSwipeDown(ref: RefObject<HTMLElement | null>, onClose: () => 
       armed = moving = false
       const v = dy / Math.max(1, performance.now() - t0)
       el.style.transition = reduced() ? 'none' : ''
-      if (dy > DISMISS_PX || v > DISMISS_V) { el.style.transform = `translateY(100%)`; window.setTimeout(() => close.current(), reduced() ? 0 : 160) }
+      if (dy > DISMISS_PX || v > DISMISS_V) { el.style.transform = `translateY(100%)`; timer = window.setTimeout(() => close.current(), reduced() ? 0 : 160) }
       else el.style.transform = ''
     }
     el.addEventListener('touchstart', start, { passive: true })
     el.addEventListener('touchmove', move, { passive: false })
     el.addEventListener('touchend', end)
     el.addEventListener('touchcancel', end)
-    return () => { el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', end) }
+    return () => { window.clearTimeout(timer); el.removeEventListener('touchstart', start); el.removeEventListener('touchmove', move); el.removeEventListener('touchend', end); el.removeEventListener('touchcancel', end) }
   }, [ref])
 }

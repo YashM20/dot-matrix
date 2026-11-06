@@ -28,7 +28,7 @@ export default function FigPipeline() {
     if (d) { e.preventDefault(); setAt(([x, y]) => [clamp(x + d[0]), clamp(y + d[1])]) }
   }
   const surface = (child: React.ReactNode, label: string) => (
-    <div className="stage stage--sq stage--drag" role="slider" tabIndex={0} aria-label={label} aria-valuetext={`x ${at[0].toFixed(2)}, y ${at[1].toFixed(2)}`}
+    <div className="stage stage--sq stage--drag" role="slider" tabIndex={0} aria-label={label} aria-valuemin={0} aria-valuemax={1} aria-valuenow={+at[0].toFixed(2)} aria-valuetext={`x ${at[0].toFixed(2)}, y ${at[1].toFixed(2)}`}
       onPointerDown={e => { e.currentTarget.setPointerCapture(e.pointerId); move(e) }} onPointerMove={move} onKeyDown={key}>{child}</div>
   )
   return (
