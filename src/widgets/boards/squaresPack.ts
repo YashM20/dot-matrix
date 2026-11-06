@@ -38,6 +38,10 @@ const S_COLS = 12, S_ROWS = 22, S_K = 5, S_ORIGIN: Pt = [6, 12], S_LOOP = 18
 export const schotterK = (t: number) => .5 + .5 * tsin((2 * Math.PI * t) / S_LOOP + Math.PI / 2)
 export const sqSchotter: WidgetPreset = {
   id: 'sq-schotter', name: 'Squares Schotter', label: 'SCHOTTER', ...tile,
+  credit: [
+    { by: ['Georg Nees'], title: 'Schotter (1968)', source: 'https://collections.vam.ac.uk/item/O221321/schotter-print-nees-georg/', note: 'the composition' },
+    { by: ['Vera Molnár'], title: 'Vera Molnár', source: 'https://en.wikipedia.org/wiki/Vera_Moln%C3%A1r', note: 'the nested square rings beside it' },
+  ],
   layers: ctx => {
     const k = schotterK(ctx.t), sq = schotter({ cols: S_COLS, rows: S_ROWS, seed: 7, k })
     const at = (x: number, y: number): Pt => [S_ORIGIN[0] + x * S_K - .5, S_ORIGIN[1] + y * S_K - .5]
@@ -68,6 +72,7 @@ const V_LEVEL: Record<string, number> = { faint: .25, mid: .25, idle: .5 }
 const V_TONES: Tone[] = ['faint', 'mid', 'faint', 'idle', 'mid', 'faint', 'idle', 'mid', 'faint', 'idle', 'mid', 'faint', 'mid', 'idle']
 export const sqBlocks: WidgetPreset = {
   id: 'sq-blocks', name: 'Squares Blocks', label: 'BLOCKS', ...tile,
+  credit: { by: ['Piet Mondrian'], title: 'Composition with Red, Blue and Yellow (1930)', source: 'https://en.wikipedia.org/wiki/Composition_with_Red,_Blue_and_Yellow', note: 'the look the blocks are after' },
   layers: ctx => {
     const t = ctx.t + V_OFF, half = V_LOOP / 2, metric: BlockMetric = Math.floor(t / half) & 1 ? 'l1' : 'linf', p = mod(t, half) / half
     const n = Math.min(V_SEEDS, V_FIRST + Math.floor(p * (V_SEEDS - V_FIRST + 1)))
@@ -103,6 +108,7 @@ function sortFrame(): SortState {
 const sortTone = (v: number): Tone => (v > .62 ? 'idle' : v > .4 ? 'mid' : 'faint')
 export const sqSort: WidgetPreset = {
   id: 'sq-sort', name: 'Squares Sort', label: 'SORT', ...tile,
+  credit: { by: ['Kim Asendorf'], title: 'ASDFPixelSort (2010)', source: 'https://github.com/kimasendorf/ASDFPixelSort', note: 'the pixel sorting idea; none of its code' },
   layers: ctx => {
     const s = sortFrame(), t = ctx.t, p = mod(t + P_OFF, P_LOOP) / P_LOOP, line = Math.min(P_H - 1, Math.floor(p * 1.15 * P_H))
     // the run being sorted: the longest run of the current line (a line without one points at the next that has one)
@@ -142,6 +148,7 @@ function truchetFrame(ts: TruchetTile[], placed: number): { placed: number; ink:
 const tiles = () => (truchet ??= truchetTiles({ seed: 6, cols: R_COLS, rows: R_ROWS, size: R_SIZE, split: [.85, .5] }))
 export const sqTruchet: WidgetPreset = {
   id: 'sq-truchet', name: 'Squares Truchet', label: 'TRUCHET', ...tile,
+  credit: { by: ['Christopher Carlson'], title: 'Multi-scale Truchet patterns (2018)', source: 'https://archive.bridgesmathart.org/2018/bridges2018-39.html', note: 'technique' },
   layers: ctx => {
     const ts = tiles(), p = mod(ctx.t + R_OFF, R_LOOP), placed = Math.max(1, Math.min(ts.length, Math.ceil((p / R_REVEAL) * ts.length))), live = placed - 1
     const { ink, owner } = truchetFrame(ts, placed)

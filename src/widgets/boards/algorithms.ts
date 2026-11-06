@@ -11,6 +11,7 @@
  * One red on the board, always *live*: the rail knob while Lloyd relaxes, the tile just observed, the
  * grains sticking right now. The attractor has no red: it has no "now".
  */
+import { DLA } from '../creditSources'
 import { attractorDensity, dla, stipple, wfc, type WfcTile } from '../../engine/algo'
 import { clamp, hash01, len, smoothstep } from '../../engine/math'
 import type { Field, Layer, Tone } from '../../engine/types'
@@ -141,6 +142,7 @@ const ST_P = 14, ST_HOLD = 4, ST_SCATTER = .9
 const posBuf = new Float32Array(STIPPLES * 2)
 export const algoStipple: WidgetPreset = {
   id: 'algo-stipple', name: 'Algorithms Stipple', label: 'STIPPLE', ...tile,
+  credit: { by: ['Adrian Secord'], title: 'Weighted Voronoi stippling (2002)', source: 'https://doi.org/10.1145/508530.508537', note: 'technique' },
   layers: ctx => {
     const s = moonStipple(), p = ((ctx.t % ST_P) + ST_P) % ST_P
     let k: number, live = false
@@ -212,6 +214,7 @@ const atLayer = (t: number): Layer => {
 }
 export const algoAttractor: WidgetPreset = {
   id: 'algo-attractor', name: 'Algorithms Attractor', label: 'ATTRACTOR', ...tile,
+  credit: { by: ['Clifford Pickover', 'Paul Bourke'], title: 'Clifford attractors', source: 'https://paulbourke.net/fractals/clifford/', note: 'the map' },
   layers: ctx => {
     const t = ctx.t
     atDensity(t)
@@ -271,6 +274,7 @@ const solve = (seed: number) => {
 }
 export const algoCollapse: WidgetPreset = {
   id: 'algo-collapse', name: 'Algorithms Collapse', label: 'COLLAPSE', ...tile,
+  credit: { by: ['Maxim Gumin'], title: 'WaveFunctionCollapse (2016)', source: 'https://github.com/mxgmn/WaveFunctionCollapse', note: 'the simple tiled model; backtracking as in Isaac Karth and Adam M. Smith (2017)' },
   layers: ctx => {
     const tt = ctx.t + KN_OFF, loop = Math.floor(tt / KN_P), p = tt - loop * KN_P, r = solve(1 + (((loop % 64) + 64) % 64))
     const steps = r.observed.length
@@ -317,6 +321,7 @@ function dimension(d: ReturnType<typeof dla>, k: number): number {
 }
 export const algoAggregate: WidgetPreset = {
   id: 'algo-aggregate', name: 'Algorithms Aggregate', label: 'AGGREGATE', ...tile,
+  credit: DLA,
   layers: ctx => {
     const d = aggregate(), tt = ctx.t + AG_OFF, p = ((tt % AG_P) + AG_P) % AG_P
     const grow = clamp(p / AG_GROW), fade = p > AG_P - .8 ? (p - AG_P + .8) / .8 : 0

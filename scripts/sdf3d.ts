@@ -22,7 +22,7 @@ import { fogAmount, gamma, heightFog, outdoorLight, SKY_RGB, SUN_RGB } from '../
 import { mulberry32 } from '../src/engine/sampler/jitter'
 import { sampleLayers } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
-import { withChrome } from '../src/widgets/types'
+import { creditsOf, withChrome } from '../src/widgets/types'
 import { scenesBoard } from '../src/widgets/boards/scenes'
 
 const near = (a: number, b: number, eps = 1e-9) => Math.abs(a - b) <= eps
@@ -150,7 +150,7 @@ function boardChecks(assert: Assert): void {
     det.violations.map(v => `${v.file}:${v.line} ${v.rule}`).join('; ') || `${det.scanned.length} files`)
   const ids = scenesBoard.map(p => p.id)
   assert('sdf3d: the scenes board has four cards, each crediting an article', ids.length === 4 &&
-    scenesBoard.every(p => p.credit?.by.includes('Inigo Quilez') && /^https:\/\/iquilezles\.org\/articles\/[a-zA-Z0-9]+\/$/.test(p.credit.source)), ids.join(' '))
+    scenesBoard.every(p => { const c = creditsOf(p)[0]; return c?.by.includes('Inigo Quilez') && /^https:\/\/iquilezles\.org\/articles\/[a-zA-Z0-9]+\/$/.test(c.source) }), ids.join(' '))
   const dots = (i: number, t: number) => { const p = scenesBoard[i]; return sampleLayers(withChrome(p)({ t, data: {} }), p.grid, p.style, dot480) }
   const key = (i: number, t: number) => JSON.stringify(dots(i, t))
   assert('sdf3d: every card draws the same dots for the same t', scenesBoard.every((_, i) => { const a = key(i, 1.3); key(i, 7.9); return key(i, 1.3) === a }))

@@ -236,6 +236,7 @@ const heroTone = (_val: number, u: number, v: number): Tone => {
 }
 export const matLens: WidgetPreset = {
   ...tile, id: 'mat-lens', name: 'Lens', clock: true,
+  credit: { by: ['kube.io'], title: 'Liquid Glass in the browser: refraction with CSS and SVG', source: 'https://kube.io/blog/liquid-glass-css-svg/', note: 'the bezel refraction, rebuilt from the method' },
   defaults: { ...LIGHT_DEFAULTS, lx: .6944, ly: .5606 },
   springKeys: ['lx', 'ly'],
   controls: [{ key: 'lx', keyY: 'ly', kind: 'xy', box: LENS_BOX, label: 'Move the lens' }],

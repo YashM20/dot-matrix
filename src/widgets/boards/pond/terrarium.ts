@@ -29,6 +29,7 @@ export const creeperNow = (hour: number) => creeperFor(terrarium, Math.floor(hou
 
 export const pondTerrarium: WidgetPreset = {
   id: 'pond-terrarium', name: 'Pond Terrarium', label: '06  TERRARIUM', ...tile, fps: 12, controls: touch('terra', 'Drop a crumb'),
+  credit: { by: ['Adam Runions', 'Brendan Lane', 'Przemyslaw Prusinkiewicz'], title: 'Modeling trees with a space colonization algorithm (2007)', source: 'https://algorithmicbotany.org/papers/colonization.egwnp2007.html', note: 'how the creeper grows' },
   layers: ctx => {
     mainThread()
     const s = worldAt(terrarium.world, ctx.t, frameOf(ctx, 'terra')), hour = hourNow()

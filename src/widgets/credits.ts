@@ -3,7 +3,7 @@
  * and later the ABOUT page. `groupCredits` is pure; `loadCredits` walks the manifest's lazy loaders, so it fetches
  * every board chunk when called and nothing at import. Import this module by path, from lazy code only.
  */
-import type { WidgetCredit, WidgetPreset } from './types'
+import { creditsOf, type WidgetCredit, type WidgetPreset } from './types'
 import { boardManifest, loadBoard } from './manifest'
 
 /** One credited card: where it sits and what it credits. */
@@ -20,9 +20,9 @@ export interface CreditGroup {
 const cmp = (a: string, b: string) => (a < b ? -1 : a > b ? 1 : 0)
 const lower = (s: string) => s.toLowerCase()
 
-/** The credited cards of `boards`, one entry per board a card sits on. */
+/** The credited cards of `boards`: one entry per credit, per board a card sits on. */
 export function creditEntries(boards: readonly { id: string; items: readonly WidgetPreset[] }[]): CreditEntry[] {
-  return boards.flatMap(b => b.items.filter(p => p.credit).map(p => ({ board: b.id, card: p.id, name: p.name, credit: p.credit! })))
+  return boards.flatMap(b => b.items.flatMap(p => creditsOf(p).map(credit => ({ board: b.id, card: p.id, name: p.name, credit }))))
 }
 
 /**
@@ -59,11 +59,16 @@ function rankAuthors(lists: string[][]): string[] {
   return [...n].sort((a, b) => b[1].count - a[1].count || a[1].first - b[1].first).map(([a]) => a)
 }
 
-/** What is wrong with the entries' credits: a `source` that isn't an https URL, an empty `by` or author, an empty title. */
+/**
+ * What is wrong with the entries' credits: a `source` that isn't an https URL, an empty `by` or author, an empty
+ * title, or one card crediting the same source twice.
+ */
 export function creditProblems(entries: readonly CreditEntry[]): string[] {
-  const out: string[] = []
+  const out: string[] = [], seen = new Set<string>()
   for (const e of entries) {
     const at = `${e.board}/${e.card}`
+    if (seen.has(`${at} ${e.credit.source}`)) out.push(`${at}: credits ${e.credit.source} twice`)
+    seen.add(`${at} ${e.credit.source}`)
     let url: URL | undefined
     try { url = new URL(e.credit.source) } catch { /* reported below */ }
     if (url?.protocol !== 'https:') out.push(`${at}: source "${e.credit.source}" is not an https URL`)

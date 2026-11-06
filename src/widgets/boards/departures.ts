@@ -6,6 +6,7 @@
  * Everything is a pure function of the board clock `t` (and the wall clock for the station clock),
  * so goldens stay deterministic. One accent (the live red) marks what is happening *now*.
  */
+import { SPLIT_FLAP } from '../creditSources'
 import { decodeText, ease, splitFlapCells, splitFlapText, underdampedSpring } from '../../engine/motion'
 import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 import { dotText, flapText } from './henry'
@@ -35,6 +36,7 @@ const ROWS = 4, ROW_PERIOD = 7, L = 1.3
 const rowText = (k: number, i: number) => { const [time, dest, plat] = TRAINS[(k + i) % TRAINS.length]; return `${time} ${dest.padEnd(9)} ${plat}` }
 export const departures: WidgetPreset = {
   id: 'departures', name: 'Departures', group: 'text', ...live,
+  credit: SPLIT_FLAP,
   layers: ({ t }) => {
     // every 7 s the top train leaves: the rows flap to their new text, cascading down the board
     const { k, tau } = cycle(t, ROW_PERIOD), col = (c: number) => 6 + c * 6 * L
@@ -58,6 +60,7 @@ export const departures: WidgetPreset = {
 const C: Pt = [72, 79], R = 56
 export const stationClock: WidgetPreset = {
   id: 'station-clock', name: 'Station', group: 'polar', ...live,
+  credit: { by: ['Hans Hilfiker'], title: 'Swiss railway clock (1944)', source: 'https://en.wikipedia.org/wiki/Swiss_railway_clock', note: 'the face, and the red second hand that waits at 12' },
   layers: () => {
     const now = new Date(), s = now.getSeconds() + now.getMilliseconds() / 1000
     const m = now.getMinutes(), h = now.getHours() % 12
@@ -81,6 +84,7 @@ export const stationClock: WidgetPreset = {
 const PLATFORM_PERIOD = 8
 export const platform: WidgetPreset = {
   id: 'platform', name: 'Platform', group: 'text', ...live,
+  credit: SPLIT_FLAP,
   layers: ({ t }) => {
     // the 08:42 moves between platforms 4 and 7; the number drums round to its new value
     const { k, tau } = cycle(t, PLATFORM_PERIOD), plat = k % 2 ? '7' : '4', was = k % 2 ? '4' : '7'

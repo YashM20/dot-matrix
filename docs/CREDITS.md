@@ -25,6 +25,13 @@ By Inigo Quilez.
 
 - Oldschool Sky (`os-sky`), board `/oldschool/`: technique
 
+### [2D water](https://web.archive.org/web/2016/http://freespace.virgin.net/hugo.elias/graphics/x_water.htm)
+
+By Hugo Elias.
+
+- Pool (`mat-pool`), board `/materials/`: the ripple scheme
+- Pond Koi (`pond-koi`), board `/pond/`: the ripple scheme
+
 ### [3D distance functions](https://iquilezles.org/articles/distfunctions/)
 
 By Inigo Quilez.
@@ -32,11 +39,23 @@ By Inigo Quilez.
 - Scenes Lathe (`sc-lathe`), board `/scenes/`: technique
 - Scenes Twist (`sc-twist`), board `/scenes/`: technique
 
+### [A generalization of algebraic surface drawing (1982)](https://doi.org/10.1145/357306.357310)
+
+By James F. Blinn.
+
+- Squares Blob (`sq-blob`), board `/squares/`: the blobby model behind metaballs
+
 ### [A local cellular model for snow crystal growth](https://webbox.lafayette.edu/~reiterc/mvp/sfn/sfn_pp.pdf)
 
 By Clifford A. Reiter.
 
 - Frost (`mat-frost`), board `/workshop/`: the automaton
+
+### [A reaction-diffusion wave on the skin of the marine angelfish Pomacanthus (1995)](https://doi.org/10.1038/376765a0)
+
+By Shigeru Kondo, Rihito Asai.
+
+- Pond Turing (`pond-turing`), board `/pond/`: spots that multiply as the fish grows
 
 ### [Ammann–Beenker tiling, by de Bruijn’s multigrid](https://en.wikipedia.org/wiki/Ammann%E2%80%93Beenker_tiling)
 
@@ -49,6 +68,24 @@ By Robert Ammann, Frans Beenker, Nicolaas Govert de Bruijn.
 By David Smith, Joseph Samuel Myers, Craig S. Kaplan, Chaim Goodman-Strauss.
 
 - Squares Hat (`sq-hat`), board `/squares/`: technique
+
+### [An image synthesizer (1985)](https://doi.org/10.1145/325165.325247)
+
+By Ken Perlin.
+
+- Marble (`mat-marble`), board `/materials/`: the turbulence-sine marble
+
+### [animal-proc-anim](https://github.com/argonautcode/animal-proc-anim)
+
+By argonautcode.
+
+- Pond Koi (`pond-koi`), board `/pond/`: the follow-the-leader spine
+
+### [ASDFPixelSort (2010)](https://github.com/kimasendorf/ASDFPixelSort)
+
+By Kim Asendorf.
+
+- Squares Sort (`sq-sort`), board `/squares/`: the pixel sorting idea; none of its code
 
 ### [Astronomical Algorithms](https://en.wikipedia.org/wiki/Astronomical_Algorithms)
 
@@ -63,6 +100,92 @@ By Inigo Quilez.
 
 - Scenes Posts (`sc-posts`), board `/scenes/`: technique
 
+### [Boids (1987)](https://www.red3d.com/cwr/boids/)
+
+By Craig W. Reynolds.
+
+- Pond Murmur (`pond-murmur`), board `/pond/`: the flock
+
+### [Characteristics of pattern formation and evolution in approximations of Physarum transport networks (2010)](https://doi.org/10.1162/artl.2010.16.2.16202)
+
+By Jeff Jones.
+
+- Pond Slime (`pond-slime`), board `/pond/`: the agent model
+
+### [Clifford attractors](https://paulbourke.net/fractals/clifford/)
+
+By Clifford Pickover, Paul Bourke.
+
+- Algorithms Attractor (`algo-attractor`), board `/algorithms/`: the map
+
+### [Complex patterns in a simple system (1993)](https://doi.org/10.1126/science.261.5118.189)
+
+By John E. Pearson, Peter Gray, Stephen K. Scott.
+
+- Idle (`lock-idle`), board `/lock/`: the Gray-Scott model and its pattern map
+- Pond Turing (`pond-turing`), board `/pond/`: the Gray-Scott model and its pattern map
+- Sim Reaction-Diffusion (`sim-rd`), board `/sim/`: the Gray-Scott model and its pattern map
+
+### [Composition with Red, Blue and Yellow (1930)](https://en.wikipedia.org/wiki/Composition_with_Red,_Blue_and_Yellow)
+
+By Piet Mondrian.
+
+- Squares Blocks (`sq-blocks`), board `/squares/`: the look the blocks are after
+
+### [daoho.dev koi pond](https://www.daoho.dev/)
+
+By Dao Ho.
+
+- Pond Koi (`pond-koi`), board `/pond/`: the pond this board is after; none of its code
+
+### [Diffusion-limited aggregation, a kinetic critical phenomenon (1981)](https://doi.org/10.1103/PhysRevLett.47.1400)
+
+By Thomas A. Witten, Leonard M. Sander.
+
+- Algorithms Aggregate (`algo-aggregate`), board `/algorithms/`: the growth model
+- Ice (`mat-ice`), board `/workshop/`: the growth model
+
+### [Dwitter](https://www.dwitter.net/)
+
+By lionleaf.
+
+- IR Dial (`ir-dial`), board `/ir/`: demos in 140 characters
+- IR Plasma (`ir-plasma`), board `/ir/`: demos in 140 characters
+- IR Ripple (`ir-ripple`), board `/ir/`: demos in 140 characters
+
+### [El-Tetris, an improvement on Pierre Dellacherie’s algorithm (2011)](https://imake.ninja/el-tetris-an-improvement-on-pierre-dellacheries-algorithm/)
+
+By Islam El-Ashi.
+
+- Squares Tetris (`sq-tetris`), board `/squares/`: the weights the player uses
+
+### [ESP-Mosaico concept screens](https://x.com/henry19840301/status/2090273665669874050)
+
+By Henry Li.
+
+- CLOSER (`cinema-closer`), board `/cinema/`: grown from his Afterlight face
+- ENCORE (`cinema-encore`), board `/cinema/`: grown from his Afterlight face
+- EXIT 14 (`cinema-exit-14`), board `/cinema/`: grown from his Afterlight face
+- KEEPER (`cinema-keeper`), board `/cinema/`: grown from his Afterlight face
+- LAST CALL (`cinema-last-call`), board `/cinema/`: grown from his Afterlight face
+- SIGNAL (`cinema-signal`), board `/cinema/`: grown from his Afterlight face
+- SUNDOWN (`cinema-sundown`), board `/cinema/`: grown from his Afterlight face
+- UPSTAIRS (`cinema-upstairs`), board `/cinema/`: grown from his Afterlight face
+- WITNESS (`cinema-witness`), board `/cinema/`: grown from his Afterlight face
+- Calm (`face-calm`), board `/faces/`: grown from his Afterlight face
+- Curious (`face-curious`), board `/faces/`: grown from his Afterlight face
+- Pip (`face-pip`), board `/faces/`: grown from his Afterlight face
+- Sleepy (`face-sleepy`), board `/faces/`: grown from his Afterlight face
+- Level 01 (`lv-corridor`), board `/levels/`: grown from his LEVEL 03 screen
+- Game Over (`lv-over`), board `/levels/`: grown from his LEVEL 03 screen
+- Level 07 (`lv-queen`), board `/levels/`: grown from his LEVEL 03 screen
+- High Scores (`lv-scores`), board `/levels/`: grown from his LEVEL 03 screen
+- Level 04 (`lv-surface`), board `/levels/`: grown from his LEVEL 03 screen
+- Hive (`lv-title`), board `/levels/`: grown from his LEVEL 03 screen
+- Level 02 (`lv-vault`), board `/levels/`: grown from his LEVEL 03 screen
+- Level 06 (`lv-void`), board `/levels/`: grown from his LEVEL 03 screen
+- Level 05 (`lv-warren`), board `/levels/`: grown from his LEVEL 03 screen
+
 ### [Feedback effect](https://iquilezles.org/articles/feedbackfx/)
 
 By Inigo Quilez.
@@ -75,11 +198,29 @@ By Lutz Niemeyer, Luciano Pietronero, Hans J. Wiesmann.
 
 - Lichtenberg (`mat-lichtenberg`), board `/workshop/`: the model (grown the fast way of Kim, Sewall, Sud and Lin, 2007)
 
+### [Game Boy (DMG-01, 1989)](https://en.wikipedia.org/wiki/Game_Boy)
+
+By Nintendo R&D1.
+
+- Squares LCD (`sq-gameboy`), board `/squares/`: the four-shade LCD this mimics
+
 ### [Geometric orbit traps](https://iquilezles.org/articles/ftrapsgeometric/)
 
 By Inigo Quilez.
 
 - Fractals Trap (`fr-trap`), board `/fractals/`: technique
+
+### [github-contributions-api](https://github.com/grubersjoe/github-contributions-api)
+
+By grubersjoe.
+
+- Contributions (`live-contribs`), board `/live/`: data, with the GitHub API as the fallback
+
+### [Glyph Matrix Developer Kit](https://github.com/Nothing-Developer-Programme/GlyphMatrix-Developer-Kit)
+
+By Nothing.
+
+- Surface Glyph Matrix (`surface-glyph`), board `/surfaces/`: the 25 × 25 round LED matrix this simulates
 
 ### [Growing Neural Cellular Automata (Distill, 2020)](https://distill.pub/2020/growing-ca/)
 
@@ -88,6 +229,18 @@ By Alexander Mordvintsev, Ettore Randazzo, Eyvind Niklasson, Michael Levin.
 - Heal Mirror (`heal-mirror`), board `/heal/`: technique
 - Heal Persist (`heal-persist`), board `/heal/`: technique
 - Heal X-Ray (`heal-xray`), board `/heal/`: technique
+
+### [Halftone](https://en.wikipedia.org/wiki/Halftone)
+
+By Georg Meisenbach.
+
+- Squares Lines (`sq-lines`), board `/squares/`: the line screen of his 1882 patent
+
+### [Hierarchical crack pattern as formed by successive domain divisions (2005)](https://doi.org/10.1103/PhysRevE.71.046214)
+
+By Steffen Bohn, Ludovic Pauchard, Yves Couder.
+
+- Mud (`mat-mud`), board `/workshop/`: the order the cracks form in
 
 ### [Icon images](https://iquilezles.org/articles/iconimages/)
 
@@ -107,11 +260,53 @@ By Hans Theobald Beyer.
 
 - Erosion (`mat-erosion`), board `/workshop/`: the droplet model
 
+### [Interaction ruling animal collective behavior depends on topological rather than metric distance (2008)](https://doi.org/10.1073/pnas.0711437105)
+
+By Michele Ballerini, Andrea Cavagna, Irene Giardina.
+
+- Pond Murmur (`pond-murmur`), board `/pond/`: seven nearest neighbours, from a team of twelve; the alarm wave after Procaccini and others (2011)
+
+### [Kuramoto model](https://en.wikipedia.org/wiki/Kuramoto_model)
+
+By Yoshiki Kuramoto.
+
+- Pond Jelly (`pond-jelly`), board `/pond/`: how the pulses drift into step
+
+### [Liquid Glass in the browser: refraction with CSS and SVG](https://kube.io/blog/liquid-glass-css-svg/)
+
+By kube.io.
+
+- Lens (`mat-lens`), board `/materials/`: the bezel refraction, rebuilt from the method
+
 ### [Lyapunov fractals](https://iquilezles.org/articles/lyapunovfractals/)
 
 By Inigo Quilez, Mario Markus.
 
 - Fractals Lyapunov (`fr-lyapunov`), board `/fractals/`: technique
+
+### [Mathematical Games: the game of Life (Scientific American, 1970)](https://www.scientificamerican.com/article/mathematical-games-1970-10)
+
+By John Horton Conway, Martin Gardner.
+
+- Sim Life (`sim-life`), board `/sim/`: the rules; the glider gun is Bill Gosper’s
+
+### [Mathematical marbling (2012)](https://doi.org/10.1109/MCG.2011.51)
+
+By Shufang Lu, Aubrey Jaffer, Xiaogang Jin, Hanli Zhao, Xiaoyang Mao.
+
+- Pond Marble (`pond-marble`), board `/pond/`: the closed-form drops and tines
+
+### [Modeling trees with a space colonization algorithm (2007)](https://algorithmicbotany.org/papers/colonization.egwnp2007.html)
+
+By Adam Runions, Brendan Lane, Przemyslaw Prusinkiewicz.
+
+- Pond Terrarium (`pond-terrarium`), board `/pond/`: how the creeper grows
+
+### [Multi-scale Truchet patterns (2018)](https://archive.bridgesmathart.org/2018/bridges2018-39.html)
+
+By Christopher Carlson.
+
+- Squares Truchet (`sq-truchet`), board `/squares/`: technique
 
 ### [Particle Lenia and the energy-based formulation](https://google-research.github.io/self-organising-systems/particle-lenia/)
 
@@ -134,6 +329,19 @@ By Inigo Quilez, Clifford Pickover.
 
 - Fractals Popcorn (`fr-popcorn`), board `/fractals/`: technique
 
+### [Position based dynamics (2007)](https://doi.org/10.1016/j.jvcir.2007.01.005)
+
+By Matthias Müller, Bruno Heidelberger, Marcus Hennix, John Ratcliff.
+
+- Physics Flag (`phys-flag`), board `/physics/`: the solver
+- Physics Jelly (`phys-jelly`), board `/physics/`: the solver
+
+### [Quads](https://www.michaelfogleman.com/projects/quads/)
+
+By Michael Fogleman.
+
+- Squares Quads (`sq-quads`), board `/squares/`: split the worst quad, again and again
+
 ### [Random domino tilings and the arctic circle theorem](https://arxiv.org/abs/math/9801068)
 
 By William Jockusch, James Propp, Peter Shor.
@@ -145,6 +353,25 @@ By William Jockusch, James Propp, Peter Shor.
 By Matthias Müller, Nuttapong Chentanez, Tae-Yong Kim.
 
 - Kintsugi (`mat-kintsugi`), board `/workshop/`: the impact-aligned shard pattern
+
+### [Rendering fur with three dimensional textures (1989)](https://doi.org/10.1145/74334.74361)
+
+By James T. Kajiya, Timothy L. Kay.
+
+- Knob (`mat-knob`), board `/materials/`: the sheen along the fibres
+- Patch (`mat-patch`), board `/materials/`: the sheen along the fibres
+
+### [Rendering realtime caustics in WebGL](https://medium.com/@evanwallace/rendering-realtime-caustics-in-webgl-2a99a29a0b2c)
+
+By Evan Wallace.
+
+- Pool (`mat-pool`), board `/materials/`: the area-ratio caustics
+
+### [Schotter (1968)](https://collections.vam.ac.uk/item/O221321/schotter-print-nees-georg/)
+
+By Georg Nees.
+
+- Squares Schotter (`sq-schotter`), board `/squares/`: the composition
 
 ### [Self-organized criticality: an explanation of the 1/f noise](https://doi.org/10.1103/PhysRevLett.59.381)
 
@@ -164,17 +391,127 @@ By Inigo Quilez.
 
 - Scenes Chain (`sc-chain`), board `/scenes/`: technique
 
+### [Space Invaders (1978)](https://en.wikipedia.org/wiki/Space_Invaders)
+
+By Tomohiro Nishikado, Taito.
+
+- 06 Mini Game (`mini-game`), board `/mosaic/`: the invader sprite
+
+### [Split-flap display](https://en.wikipedia.org/wiki/Split-flap_display)
+
+By Solari di Udine.
+
+- Departures (`departures`), board `/departures/`: the flap boards this mimics
+- Platform (`platform`), board `/departures/`: the flap boards this mimics
+- Split-Flap (`kt-flap`), board `/kinetic/`: the flap boards this mimics
+
+### [Stable fluids (1999)](https://doi.org/10.1145/311535.311548)
+
+By Jos Stam.
+
+- Physics Ink (`phys-ink`), board `/physics/`: the fluid solver
+- Mercury (`mat-mercury`), board `/workshop/`: the fluid solver
+
+### [Star Wars (1977)](https://en.wikipedia.org/wiki/Tatooine)
+
+By George Lucas.
+
+- Tatooine (`tatooine`), board `/metro/`: the binary sunset over Tatooine
+
+### [Steering behaviors for autonomous characters (1999)](https://www.red3d.com/cwr/steer/gdc99/)
+
+By Craig W. Reynolds.
+
+- Pond Koi (`pond-koi`), board `/pond/`: how the koi steer
+
+### [Swiss railway clock (1944)](https://en.wikipedia.org/wiki/Swiss_railway_clock)
+
+By Hans Hilfiker.
+
+- Station (`station-clock`), board `/departures/`: the face, and the red second hand that waits at 12
+
+### [Synchronization of pulse-coupled biological oscillators (1990)](https://doi.org/10.1137/0150098)
+
+By Renato E. Mirollo, Steven H. Strogatz.
+
+- Pond Fireflies (`pond-fireflies`), board `/pond/`: the flash coupling
+
+### [Teenage Engineering](https://teenage.engineering/)
+
+By Teenage Engineering.
+
+- Attack (`inst-attack`), board `/instrument/`: the device style the board follows
+- Crank (`inst-crank`), board `/instrument/`: the device style the board follows
+- Cutoff (`inst-cutoff`), board `/instrument/`: the device style the board follows
+- Level (`inst-level`), board `/instrument/`: the device style the board follows
+- Release (`inst-release`), board `/instrument/`: the device style the board follows
+- Resonance (`inst-resonance`), board `/instrument/`: the device style the board follows
+- Sequencer (`inst-sequencer`), board `/instrument/`: the device style the board follows
+- Transport (`inst-transport`), board `/instrument/`: the device style the board follows
+- XY Pad (`inst-xy`), board `/instrument/`: the device style the board follows
+
+### [Teletext](https://en.wikipedia.org/wiki/Teletext)
+
+By John Adams.
+
+- Squares Teletext (`sq-teletext`), board `/squares/`: the page format and its block graphics
+
+### [Tetris (1984)](https://en.wikipedia.org/wiki/Tetris)
+
+By Alexey Pajitnov.
+
+- Squares Tetris (`sq-tetris`), board `/squares/`: the game
+
 ### [The chemical basis of morphogenesis (1952); reaction and diffusion on growing domains (1999)](https://doi.org/10.1006/bulm.1999.0131)
 
 By Alan Turing, Edmund Crampin, Eamonn Gaffney, Philip Maini.
 
 - Pond Turing (`pond-turing`), board `/pond/`: technique
 
+### [The void-and-cluster method for dither array generation (1993)](https://doi.org/10.1117/12.152707)
+
+By Robert Ulichney.
+
+- Mirror (`mirror-camera`), board `/mirror/`: the blue-noise thresholds
+- Ladder (`mirror-ladder`), board `/mirror/`: the blue-noise thresholds
+
+### [tixy.land](https://tixy.land/)
+
+By Martin Kleppe.
+
+- IR Dial (`ir-dial`), board `/ir/`: one small program drives the whole card; this program is our own
+- IR Plasma (`ir-plasma`), board `/ir/`: one small program drives the whole card; this program is our own
+- IR Ripple (`ir-ripple`), board `/ir/`: one small program drives the whole card; this program is our own
+
+### [TRMNL](https://trmnl.com/)
+
+By TRMNL.
+
+- Surface E-ink (`surface-eink`), board `/surfaces/`: the 7.5 inch e-ink panel this simulates
+
+### [Vera Molnár](https://en.wikipedia.org/wiki/Vera_Moln%C3%A1r)
+
+By Vera Molnár.
+
+- Squares Schotter (`sq-schotter`), board `/squares/`: the nested square rings beside it
+
+### [WaveFunctionCollapse (2016)](https://github.com/mxgmn/WaveFunctionCollapse)
+
+By Maxim Gumin.
+
+- Algorithms Collapse (`algo-collapse`), board `/algorithms/`: the simple tiled model; backtracking as in Isaac Karth and Adam M. Smith (2017)
+
 ### [Weather data by Open-Meteo.com (CC BY 4.0)](https://open-meteo.com/)
 
 By Open-Meteo.
 
 - Weather (`live-weather`), board `/live/`: data
+
+### [Weighted Voronoi stippling (2002)](https://doi.org/10.1145/508530.508537)
+
+By Adrian Secord.
+
+- Algorithms Stipple (`algo-stipple`), board `/algorithms/`: technique
 
 ## Code ports
 

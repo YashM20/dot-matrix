@@ -38,6 +38,7 @@ const raster = createTileRaster(MARBLE_SPEC.card, MARBLE_TILES)
 
 export const pondMarble: WidgetPreset = {
   id: 'pond-marble', name: 'Pond Marble', label: '07  MARBLE', ...tile, fps: 20,
+  credit: { by: ['Shufang Lu', 'Aubrey Jaffer', 'Xiaogang Jin', 'Hanli Zhao', 'Xiaoyang Mao'], title: 'Mathematical marbling (2012)', source: 'https://doi.org/10.1109/MCG.2011.51', note: 'the closed-form drops and tines' },
   defaults: { day: 0, age: 0 },
   controls: touch('marble', 'Drop ink'),
   layers: ctx => {

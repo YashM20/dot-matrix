@@ -130,6 +130,7 @@ export const surfaceBrowser: WidgetPreset = {
 const GLYPH = DEVICES['glyph-matrix-25'], GP = 5.2, GX = 72 - 12 * GP, GY = 76 - 12 * GP
 export const surfaceGlyph: WidgetPreset = {
   id: 'surface-glyph', name: 'Surface Glyph Matrix', label: '02  GLYPH MATRIX', ...tile, defaults: { clockOffset: 0 },
+  credit: { by: ['Nothing'], title: 'Glyph Matrix Developer Kit', source: 'https://github.com/Nothing-Developer-Programme/GlyphMatrix-Developer-Kit', note: 'the 25 × 25 round LED matrix this simulates' },
   layers: ctx => {
     const f = toDevice(timerSpec, GLYPH, { ctx: { t: boardTime(ctx), data: {} } }), { lit, halo } = ledGlow(f, GLYPH.physics)
     const leds: { at: Pt; tone: Tone; size: number }[] = []
@@ -152,6 +153,7 @@ const EINK = previewProfile(DEVICES['trmnl-800x480'], 1 / 6), EX = 5, EY = 24
 const eink = createEinkSim(frameAt(EINK), DEVICES['trmnl-800x480'].physics, EINK.refresh)
 export const surfaceEink: WidgetPreset = {
   id: 'surface-eink', name: 'Surface E-ink', label: '03  E-INK', ...tile, defaults: { clockOffset: 0 },
+  credit: { by: ['TRMNL'], title: 'TRMNL', source: 'https://trmnl.com/', note: 'the 7.5 inch e-ink panel this simulates' },
   layers: ctx => {
     const bt = boardTime(ctx), view = eink.at(bt), { cols, rows } = EINK, ink = view.ink
     const px = (c: number, r: number) => { const x = c - EX, y = r - EY; return x < 0 || y < 0 || x >= cols || y >= rows ? -1 : ink[y * cols + x] }

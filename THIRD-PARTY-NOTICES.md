@@ -108,6 +108,25 @@ No code from these is copied. We read the work and wrote our own version, and th
   Automata](https://distill.pub/2020/growing-ca/)** (Distill, 2020): the model (perception by Sobel filters, a small
   per-cell network, stochastic updates, alive masking) and the regenerating training recipe. Used by `src/engine/nca/`
   and `scripts/nca/`; the lizard's weights are trained by our own script. The heal board's cards carry the credit.
+- **Dao Ho, [daoho.dev](https://www.daoho.dev/)** (no licence): the ASCII koi pond the pond board is after. We read
+  how it works and used none of its code or constants. The `pond-koi` card carries the credit.
+- **Maxim Gumin, [WaveFunctionCollapse](https://github.com/mxgmn/WaveFunctionCollapse)** (MIT): the simple tiled
+  model. Used by `src/engine/algo/wfc.ts`.
+- **Michael Fogleman, [Quads](https://www.michaelfogleman.com/projects/quads/)** (no licence): split the quad with
+  the most error, again and again. Used by the `sq-quads` card.
+- **Kim Asendorf, [ASDFPixelSort](https://github.com/kimasendorf/ASDFPixelSort)** (no licence): sorting runs of
+  pixels between two thresholds. Used by `src/engine/algo/pixelSort.ts`.
+- **Islam El-Ashi, [El-Tetris](https://imake.ninja/el-tetris-an-improvement-on-pierre-dellacheries-algorithm/)**: the
+  six features and their weights, which `src/engine/squares/tetris.ts` uses as published.
+- **kube.io, [Liquid Glass in the browser](https://kube.io/blog/liquid-glass-css-svg/)**: the bezel refraction
+  through a Snell look-up table. Used by `src/engine/matter/glass.ts`.
+- **Evan Wallace, [Rendering realtime caustics in WebGL](https://medium.com/@evanwallace/rendering-realtime-caustics-in-webgl-2a99a29a0b2c)**:
+  caustics from the ratio of a light patch's area before and after refraction. Used by `src/engine/matter/caustics.ts`.
+- **Hugo Elias, [2D water](https://web.archive.org/web/2016/http://freespace.virgin.net/hugo.elias/graphics/x_water.htm)**:
+  the two-buffer ripple scheme. Used by `src/engine/life/ripple.ts`.
+
+The cards built on these, and on the papers and artworks the engine follows, name them on their own page. The full
+list is in [docs/CREDITS.md](docs/CREDITS.md).
 
 ## Oxanium
 

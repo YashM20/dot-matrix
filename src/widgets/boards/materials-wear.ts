@@ -3,6 +3,7 @@
  * being sewn (`mat-patch`) and a wax candle clock that burns down over the day (`mat-candle`, after X-advanced #14:
  * wrap diffuse + transmission through thin wax, drips as track L's Verlet ropes, `engine/life/chain.ts`).
  */
+import { KAJIYA_KAY } from '../creditSources'
 import { anisoSpec, stitch, surfaceLayer, type Stitches, type TangentRaster } from '../../engine/matter'
 import { createRope, ropeInit, ropeStep } from '../../engine/life/chain'
 import { normalRaster, type HeightRaster, type NormalRaster } from '../../engine/light/height'
@@ -92,6 +93,7 @@ const patchScratch = scratch(5)
 let satinKey = ''
 export const matPatch: WidgetPreset = {
   ...tile, id: 'mat-patch', name: 'Patch',
+  credit: KAJIYA_KAY,
   defaults: { ...LIGHT_DEFAULTS, turn: 0 },
   controls: [{ key: 'turn', kind: 'toggle', box: [PBOX[0], PBOX[1], PBOX[2] - PBOX[0], PBOX[3] - PBOX[1]], label: 'Turn the patch in the light' }],
   layers: ctx => {

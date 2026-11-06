@@ -350,6 +350,7 @@ const STARS: Pt[] = Array.from({ length: 34 }, (_, i) => [Math.round(hash01(i, 2
 const SPARKS: Pt[] = [[82, 41], [76, 47], [91, 47], [75, 57], [92, 57], [79, 62], [88, 62], [83.5, 65]]
 export const miniGame: WidgetPreset = {
   id: 'mini-game', name: '06 Mini Game', label: '06  MINI GAME', group: 'scatter', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
+  credit: { by: ['Tomohiro Nishikado', 'Taito'], title: 'Space Invaders (1978)', source: 'https://en.wikipedia.org/wiki/Space_Invaders', note: 'the invader sprite' },
   layers: ({ t }) => {
     const sway = Math.round(Math.sin(t * 1.2) * 2), shot = (t * 18) % 22
     const invader = (x: number, y: number) => { const L = T.lattice(1.25, x + sway, y); return L.at(L.sprite(INVADER, 0, 0)) }

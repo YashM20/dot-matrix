@@ -1,6 +1,6 @@
 /**
  * A deterministic Tetris game (the `sq-tetris` card, Q-squares §2.6): a seeded 7-bag and a greedy one-piece
- * placement AI with the El-Tetris weights (Islam 2009), hard drops only. The whole history is computed once:
+ * placement AI with the El-Tetris weights (Islam El-Ashi, 2011), hard drops only. The whole history is computed once:
  * the board after every placement (and before its line clear), the pieces, lines and score, and a greedy
  * colouring of the pieces so that no two pieces that ever touch share a join group.
  *

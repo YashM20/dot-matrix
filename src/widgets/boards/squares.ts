@@ -55,6 +55,10 @@ const PIECE = .5, DROP = .7, FLASH = 2 / 12, T_OFF = 96.2
 const KIND_TONE: Tone[] = ['idle', 'mid', 'idle', 'mid', 'idle', 'mid', 'value']
 export const sqTetris: WidgetPreset = {
   id: 'sq-tetris', name: 'Squares Tetris', label: 'TETRIS', ...tile,
+  credit: [
+    { by: ['Alexey Pajitnov'], title: 'Tetris (1984)', source: 'https://en.wikipedia.org/wiki/Tetris', note: 'the game' },
+    { by: ['Islam El-Ashi'], title: 'El-Tetris, an improvement on Pierre Dellacherie’s algorithm (2011)', source: 'https://imake.ninja/el-tetris-an-improvement-on-pierre-dellacheries-algorithm/', note: 'the weights the player uses' },
+  ],
   layers: ctx => {
     const g = game(), wh = TW * TH, loop = g.count * PIECE, p = mod(ctx.t + T_OFF, loop), k = Math.min(g.count - 1, Math.floor(p / PIECE)), into = p - k * PIECE
     const prev = k > 0 ? g.placements[k - 1] : undefined, flash = !!prev?.cleared.length && into < FLASH
@@ -148,6 +152,7 @@ function quadTree(): Quads {
 const Q_TONES: Tone[] = ['faint', 'faint', 'mid', 'idle']
 export const sqQuads: WidgetPreset = {
   id: 'sq-quads', name: 'Squares Quads', label: 'QUADS', ...tile,
+  credit: { by: ['Michael Fogleman'], title: 'Quads', source: 'https://www.michaelfogleman.com/projects/quads/', note: 'split the worst quad, again and again' },
   layers: ctx => {
     const q = quadTree(), p = mod(ctx.t + Q_OFF, Q_LOOP), grow = clamp(p / Q_GROW), k = Math.max(1, Math.round(q.splits * grow * grow)), live = grow < 1
     const side = Q_SIZE / QK, id = new Int16Array(side * side).fill(-1)
@@ -240,6 +245,7 @@ function blobFrame(at: Pt[]): { val: Float32Array; neck: Uint8Array; necks: numb
 }
 export const sqBlob: WidgetPreset = {
   id: 'sq-blob', name: 'Squares Blob', label: 'BLOB', ...tile,
+  credit: { by: ['James F. Blinn'], title: 'A generalization of algebraic surface drawing (1982)', source: 'https://doi.org/10.1145/357306.357310', note: 'the blobby model behind metaballs' },
   layers: ctx => {
     const t = ctx.t + B_OFF, at = ballsAt(t)
     const { val, neck, necks, gap } = blobFrame(at)
@@ -312,6 +318,7 @@ function lcdWithColon(t: number): Uint8Array {
 }
 export const sqGameboy: WidgetPreset = {
   id: 'sq-gameboy', name: 'Squares LCD', label: 'LCD', ...tile, clock: true,
+  credit: { by: ['Nintendo R&D1'], title: 'Game Boy (DMG-01, 1989)', source: 'https://en.wikipedia.org/wiki/Game_Boy', note: 'the four-shade LCD this mimics' },
   layers: ctx => {
     const { px, colon, dots } = lcdFrame(ctx.t)
     return [
@@ -369,6 +376,7 @@ let ttCache: { key: string; layers: Layer[] } | undefined
 const sext = (c: number, r: number, on: (x: number, y: number) => boolean) => { let b = 0; for (let i = 0; i < 6; i++) if (on(c * 2 + (i & 1), r * 3 + (i >> 1))) b |= 1 << i; return b }
 export const sqTeletext: WidgetPreset = {
   id: 'sq-teletext', name: 'Squares Teletext', label: 'TELETEXT', ...tile, clock: true,
+  credit: { by: ['John Adams'], title: 'Teletext', source: 'https://en.wikipedia.org/wiki/Teletext', note: 'the page format and its block graphics' },
   layers: ctx => {
     // the page changes with the clock's second, the subtitle and the rain front (half a sub-cell at a time): one cached build
     const t = ctx.t, now = new Date(), front = Math.floor(mod(t * 1.5 + 10, 34) * 2) / 2 - 8, sub = Math.floor(mod(t, 4 * TT_SUBS.length) / 4)
@@ -420,6 +428,7 @@ const lineValue = (c: number, r: number, t: number) => {
 }
 export const sqLines: WidgetPreset = {
   id: 'sq-lines', name: 'Squares Lines', label: 'LINES', ...tile,
+  credit: { by: ['Georg Meisenbach'], title: 'Halftone', source: 'https://en.wikipedia.org/wiki/Halftone', note: 'the line screen of his 1882 patent' },
   layers: ctx => {
     const t = ctx.t, scan = Math.floor(mod(t * 3 + 14, LN_LINES))
     const lines = cells(LN_K, LN_ORIGIN, LN_W, LN_LINES, (c, r) => lineValue(c, r, t), { tone: 'idle', join: true, sizeAxis: 'y' })

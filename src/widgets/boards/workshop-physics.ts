@@ -14,6 +14,7 @@
  *
  * Main thread only: the sampling worker's build resolves this module to `workshop-physics-worker-stub.ts`.
  */
+import { STABLE_FLUIDS } from '../creditSources'
 import { createSand, sandCarve, sandGarden, sandRake, sandRelax, sandSize, sandVolume, type Sand } from '../../engine/matter/sand'
 import { createMercury, mercuryInit, mercuryMass, mercuryStep, BEAD, type Mercury } from '../../engine/matter/mercury'
 import { createThread, threadInit, threadStep, threadStrain, type Thread } from '../../engine/matter/thread'
@@ -290,6 +291,7 @@ function mercShade(s: Float32Array, L: Light, tilt: [number, number]): void {
 }
 export const matMercury: WidgetPreset = {
   ...tile, id: 'mat-mercury', name: 'Mercury',
+  credit: STABLE_FLUIDS,
   defaults: { ...PHYS_DEFAULTS },
   controls: surface('Stir the mercury'),
   layers: ctx => {

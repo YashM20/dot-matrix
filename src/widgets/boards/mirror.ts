@@ -158,6 +158,7 @@ const promptLayer = (s: string) => { let l = prompts.get(s); if (!l) prompts.set
 
 export const mirrorCamera: WidgetPreset = {
   id: 'mirror-camera', name: 'Mirror', group: 'photo', chrome: 'dots', bleed: true, animated: true, media: 'camera', grid: TILE, style: photoStyle,
+  credit: { by: ['Robert Ulichney'], title: 'The void-and-cluster method for dither array generation (1993)', source: 'https://doi.org/10.1117/12.152707', note: 'the blue-noise thresholds' },
   defaults: { cam: 0, camState: 0 },
   controls: [cameraControl],
   layers: ({ t, data, media, frame }) => {
@@ -193,6 +194,7 @@ const ladderRight = lazy(() => halftone(portraitRaster(1, zoom(108.5), NOISE, [N
 
 export const mirrorLadder: WidgetPreset = {
   id: 'mirror-ladder', name: 'Ladder', group: 'photo', chrome: 'dots', bleed: true, grid: TILE, style: photoStyle,
+  credit: { by: ['Robert Ulichney'], title: 'The void-and-cluster method for dither array generation (1993)', source: 'https://doi.org/10.1117/12.152707', note: 'the blue-noise thresholds' },
   layers: () => [
     dotsLayer(ladderLeft()), dotsLayer(ladderRight()),
     layer(T.big('1', 0, 122, { lattice: 2 }), 'value'), layer(T.text('ORDERED', 14, 129), 'idle'),

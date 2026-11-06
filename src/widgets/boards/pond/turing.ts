@@ -6,6 +6,7 @@
  * pitch. The spot that is splitting right now is the accent. Tap the body to scratch a patch clean; the spots around
  * it split into the gap.
  */
+import { GRAY_SCOTT } from '../../creditSources'
 import { ADULT_PX, bodyHalf, bodyMid, createTuring, growth, lifeOf, onBody, SKIN_NX, SKIN_NY, toBody, turingPose, turingUnits, type Pose, type Turing } from '../../../engine/life/turing'
 import { skinV, spotCount, SPOT_V, turingSpots, type SpotMap } from '../../../engine/life/turingView'
 import { datan2, dcos, dpow, dsin } from '../../../engine/noise/dmath'
@@ -77,7 +78,11 @@ const MOTES = Array.from({ length: 16 }, (_, i) => [(i * 89.3) % 144, 18 + ((i *
 
 export const pondTuring: WidgetPreset = {
   id: 'pond-turing', name: 'Pond Turing', label: '09  TURING', ...tile, fps: 18, controls: touch('turing', 'Scratch the skin'),
-  credit: { by: ['Alan Turing', 'Edmund Crampin', 'Eamonn Gaffney', 'Philip Maini'], title: 'The chemical basis of morphogenesis (1952); reaction and diffusion on growing domains (1999)', source: 'https://doi.org/10.1006/bulm.1999.0131', note: 'technique' },
+  credit: [
+    { by: ['Alan Turing', 'Edmund Crampin', 'Eamonn Gaffney', 'Philip Maini'], title: 'The chemical basis of morphogenesis (1952); reaction and diffusion on growing domains (1999)', source: 'https://doi.org/10.1006/bulm.1999.0131', note: 'technique' },
+    GRAY_SCOTT,
+    { by: ['Shigeru Kondo', 'Rihito Asai'], title: 'A reaction-diffusion wave on the skin of the marine angelfish Pomacanthus (1995)', source: 'https://doi.org/10.1038/376765a0', note: 'spots that multiply as the fish grows' },
+  ],
   layers: ctx => {
     mainThread()
     state = worldAt(turing.world, ctx.t, frameOf(ctx, 'turing', turingUnits))

@@ -13,6 +13,9 @@ export { bounded, combine, dim, place } from '../engine/layout'
 export type WidgetContext = FrameContext
 /** Authors of the work a card is based on (a port, a remix). `source` is a URL; `note` a short line on what changed. */
 export interface WidgetCredit { by: string[]; title: string; source: string; note?: string }
+/** A preset's credits as a list (empty when it has none). */
+export const creditsOf = (p: { credit?: WidgetCredit | readonly WidgetCredit[] }): readonly WidgetCredit[] =>
+  !p.credit ? [] : 'source' in p.credit ? [p.credit] : p.credit
 export interface WidgetPreset {
   id: string
   name: string
@@ -54,8 +57,11 @@ export interface WidgetPreset {
   bleed?: boolean
   /** Live media the host feeds into `ctx.media` (app-level capture in `src/media/`, started only by a control). */
   media?: 'camera'
-  /** Who made the idea this card is built on: shown as a small `by …` line on the widget page (DESIGN.md "Credit line"). */
-  credit?: WidgetCredit
+  /**
+   * Who made the work this card is built on: one credit, or a list when it builds on several. Each shows as a small
+   * `by …` line on the widget page (DESIGN.md "Credit line"). Read it through `creditsOf`.
+   */
+  credit?: WidgetCredit | readonly WidgetCredit[]
   layers(ctx: WidgetContext): Layer[]
 }
 

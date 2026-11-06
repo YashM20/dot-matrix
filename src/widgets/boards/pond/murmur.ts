@@ -15,6 +15,10 @@ const raster = createTileRaster({ cols: 144, rows: 144 }, MURMUR_TILES)
 
 export const pondMurmur: WidgetPreset = {
   id: 'pond-murmur', name: 'Pond Murmur', label: '05  MURMUR', ...tile, fps: 24, controls: touch('murmur', 'Swoop'),
+  credit: [
+    { by: ['Craig W. Reynolds'], title: 'Boids (1987)', source: 'https://www.red3d.com/cwr/boids/', note: 'the flock' },
+    { by: ['Michele Ballerini', 'Andrea Cavagna', 'Irene Giardina'], title: 'Interaction ruling animal collective behavior depends on topological rather than metric distance (2008)', source: 'https://doi.org/10.1073/pnas.0711437105', note: 'seven nearest neighbours, from a team of twelve; the alarm wave after Procaccini and others (2011)' },
+  ],
   layers: ctx => {
     mainThread()
     const s = worldAt(murmur.world, ctx.t, frameOf(ctx, 'murmur'))

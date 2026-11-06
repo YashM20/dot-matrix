@@ -208,6 +208,7 @@ const LEVEL: [number, Tone][] = [[1.15, 'faint'], [1.75, 'mid'], [2, 'idle'], [2
 const MONTHS = 'JFMAMJJASOND'
 export const liveContribs: WidgetPreset = {
   id: 'live-contribs', name: 'Contributions', label: 'CONTRIBUTIONS', group: 'scatter', ...tile,
+  credit: { by: ['grubersjoe'], title: 'github-contributions-api', source: 'https://github.com/grubersjoe/github-contributions-api', note: 'data, with the GitHub API as the fallback' },
   defaults: sources.contribs.fixture, springKeys: ['ghTotal', 'ghStreak', 'ghToday', 'ghBest'],
   layers: ({ data }) => {
     const grid = textOf(data.ghGrid), n = grid.length, total = `${Math.round(data.ghTotal)}`

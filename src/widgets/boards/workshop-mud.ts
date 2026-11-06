@@ -102,6 +102,7 @@ function shade(m: Mud, r: Relief, l: { D: Float32Array; P: Float32Array }, L: Li
 
 export const matMud: WidgetPreset = {
   ...tile, id: 'mat-mud', name: 'Mud',
+  credit: { by: ['Steffen Bohn', 'Ludovic Pauchard', 'Yves Couder'], title: 'Hierarchical crack pattern as formed by successive domain divisions (2005)', source: 'https://doi.org/10.1103/PhysRevE.71.046214', note: 'the order the cracks form in' },
   defaults: { ...LIGHT_DEFAULTS },
   layers: ctx => {
     const f = mudAt(ctx.reducedMotion ? 0 : ctx.t), m = mudOf(f.c), k = whole(m, f.open)
