@@ -5,14 +5,16 @@
  * `KNOWN` holds the serious and critical findings already listed on #187 with an owner issue: they print as known
  * and don't fail the run (scripts/lib/check.ts `knownChecker`). A summary table closes the run.
  *
- * Routes: home, two boards, a widget page, browse, about, a blog post, the essay and the privacy page (`--all` adds every board,
- * the blog index, the terms page and the 404 page). Modes: the default dark theme and light (`--modes` takes any of
+ * Routes: home, three boards (mirror for the ⋯ target size), a widget page, browse, about, a blog post, the essay and the
+ * privacy page (`--all` adds every board, the blog index, the terms page and the 404 page). On the blog and legal pages
+ * it also checks the shell (#187): SKIP TO CONTENT is the first stop and points at `<main>`, and the site nav and
+ * footer sit outside `<main>`. Modes: the default dark theme and light (`--modes` takes any of
  * dark, light, more-dark, more-light; `more` is `prefers-contrast: more`).
  *
  *   npx vite build && npx tsx scripts/site/a11y.ts            → serves dist/ on port 4327 for the run
  *   npx tsx scripts/site/a11y.ts https://matrix.reactopia.me/  → any running site (`pnpm dev`, preview, production)
- *   flags: --all, --modes dark,light,more-dark, --routes home,post (by name), --shots <dir> (a PNG per route and
- *   mode, the top of the page). Chrome: $CHROME or the usual paths. Not in CI yet.
+ *   flags: --all, --modes dark,light,more-dark, --routes home,post (by name), --width 390 (default 1440; up to 600 is a
+ *   phone: 844 tall, touch, so the 44 px touch targets apply), --shots <dir> (a PNG per route and mode, the top of the page). Chrome: $CHROME or the usual paths. Not in CI yet.
  */
 import { mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
@@ -27,6 +29,8 @@ const args = process.argv.slice(2)
 const flag = (name: string) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : undefined }
 const all = args.includes('--all')
 const MODES = (flag('--modes') ?? 'dark,light').split(',')
+const WIDTH = Number(flag('--width') ?? 1440), PHONE = WIDTH <= 600, HEIGHT = PHONE ? 844 : 900
+if (!Number.isInteger(WIDTH) || WIDTH < 240 || WIDTH > 3840) { console.error('--width takes 240 to 3840'); process.exit(2) }
 const MEDIA: Record<string, [string, string][]> = {
   dark: [['prefers-color-scheme', 'dark']],
   light: [['prefers-color-scheme', 'light']],
@@ -41,16 +45,17 @@ const ALL_ROUTES: [string, string, string][] = [
   ['home', '', APP_READY],
   ['mosaic', 'mosaic/', APP_READY],
   ['components', 'components/', APP_READY],
+  ['mirror', 'mirror/', APP_READY],
   ['widget', 'widget/timer/', `!!document.querySelector('.shell--widget .wp-ids, .shell--widget .wp-missing')`],
   ['browse', 'browse/', `!document.querySelector('.view-loading') && !!document.querySelector('.browse-grid .dot-card')`],
   ['about', '?about', `!document.querySelector('.view-loading') && !!document.querySelector('.about-view')`],
-  ['post', 'blog/build-your-own-dot-engine/', `!!document.querySelector('main.essay.post .hero') && !document.querySelector('.post-wait')`],
-  ['essay', 'blog/dot-matrix-essay/', `!!document.querySelector('main.essay.post .hero') && !document.querySelector('.post-wait')`],
-  ['privacy', 'privacy', `!!document.querySelector('main.legal')`],
+  ['post', 'blog/build-your-own-dot-engine/', `!!document.querySelector('.essay.post > main .hero') && !document.querySelector('.post-wait')`],
+  ['essay', 'blog/dot-matrix-essay/', `!!document.querySelector('.essay.post > main .hero') && !document.querySelector('.post-wait')`],
+  ['privacy', 'privacy', `!!document.querySelector('.legal > main')`],
   ...(all ? [
-    ...boardIds.filter(id => id !== boardIds[0] && id !== 'mosaic' && id !== 'components').map(id => [id, `${id}/`, APP_READY] as [string, string, string]),
-    ['blog', 'blog/', `!!document.querySelector('main.essay.blog')`] as [string, string, string],
-    ['terms', 'terms', `!!document.querySelector('main.legal')`] as [string, string, string],
+    ...boardIds.filter(id => id !== boardIds[0] && id !== 'mosaic' && id !== 'components' && id !== 'mirror').map(id => [id, `${id}/`, APP_READY] as [string, string, string]),
+    ['blog', 'blog/', `!!document.querySelector('.essay.blog > main')`] as [string, string, string],
+    ['terms', 'terms', `!!document.querySelector('.legal > main')`] as [string, string, string],
     ['404', '404.html', `!!document.querySelector('main')`] as [string, string, string],
   ] : []),
 ]
@@ -78,8 +83,22 @@ async function audit(p: Page, base: string, mode: string, route: [string, string
   if (!(await p.js<boolean>('typeof axe === "object"'))) await p.js(AXE)
   const found = await p.js<Finding[]>(RUN, 60000)
   if (shots) await p.shot(join(shots, `${name}-${mode}.png`))
-  return { ok, found, name }
+  const shell = SHELL.includes(name) ? await p.js<string>(SHELL_CHECK) : ''
+  return { ok, found, name, shell }
 }
+
+/** The pages outside the app (#187): the blog, its posts and the legal pages. */
+const SHELL = ['post', 'essay', 'privacy', 'blog', 'terms']
+/** '' when the page's first focusable is SKIP TO CONTENT pointing at its `<main>` and the site nav and footer sit outside it. */
+const SHELL_CHECK = `(() => {
+  const first = document.querySelector('a[href], button, input, select, textarea, [tabindex]:not([tabindex="-1"])')
+  const main = document.getElementById('main'), out = []
+  if (!first?.matches('a.skip-link[href="#main"]')) out.push('first stop: ' + (first?.outerHTML.slice(0, 60) ?? 'none'))
+  if (main?.tagName !== 'MAIN') out.push('#main is not the <main>')
+  if (!document.querySelector('nav[aria-label="Site"]') || document.querySelector('main nav[aria-label="Site"]')) out.push('site nav inside <main> or missing')
+  if (!document.querySelector('footer.essay-foot') || document.querySelector('main footer')) out.push('footer inside <main> or missing')
+  return out.join('; ')
+})()`
 
 if (!findChrome()) { console.log('no Chrome found (set $CHROME): skipped'); process.exit(0) }
 const given = args.find(a => /^https?:/.test(a))
@@ -89,15 +108,17 @@ const { check, done } = knownChecker(KNOWN, 'a11y')
 /** rule → impact, help, and where it showed up (route@mode and the first targets). */
 const table = new Map<string, { impact: string; help: string; where: Set<string>; nodes: number; targets: Set<string> }>()
 const minor: string[] = []
-const p = await launch(1440, 900)
+const p = await launch(WIDTH, HEIGHT)
 try {
-  await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
+  await p.cdp('Emulation.setDeviceMetricsOverride', { width: WIDTH, height: HEIGHT, deviceScaleFactor: 1, mobile: PHONE })
+  if (PHONE) await p.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
   await p.cdp('Page.setBypassCSP', { enabled: true }) // the production CSP has no grant for the injected axe script
   for (const mode of MODES) {
     console.log(`\n${mode}`)
     for (const route of ROUTES) {
-      const { ok, found, name } = await audit(p, base, mode, route)
+      const { ok, found, name, shell } = await audit(p, base, mode, route)
       if (!ok) check(`ready@${name}`, false, `${mode}: the page did not finish loading in 30 s (audited anyway)`)
+      if (SHELL.includes(name)) check(`skip link and landmarks@${name}:${mode}`, !shell, shell || 'skip link first, nav and footer outside <main>')
       const bad = found.filter(f => f.impact === 'serious' || f.impact === 'critical')
       for (const f of found) {
         const row = table.get(f.id) ?? { impact: f.impact, help: f.help, where: new Set(), nodes: 0, targets: new Set() }
@@ -119,6 +140,6 @@ console.log('\nsummary (rule · impact · pages · nodes · first targets)')
 const rank = { critical: 0, serious: 1, moderate: 2, minor: 3 } as Record<string, number>
 for (const [id, r] of [...table].sort((a, b) => rank[a[1].impact] - rank[b[1].impact] || b[1].where.size - a[1].where.size))
   console.log(`  ${id} · ${r.impact} · ${r.where.size} · ${r.nodes} · ${[...r.targets].slice(0, 3).join(' , ')}\n      ${r.help}; on ${[...r.where].join(' ')}`)
-console.log(`\n${ROUTES.length} routes × ${MODES.length} modes (${MODES.join(', ')}) at ${base}`)
+console.log(`\n${ROUTES.length} routes × ${MODES.length} modes (${MODES.join(', ')}) at ${WIDTH} px, ${base}`)
 done()
 process.exit(0)

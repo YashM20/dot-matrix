@@ -23,15 +23,17 @@ const RIPPLE_SRC = `// rings leave the centre and fade at the rim
 let x = (u - .5) * 1.08; let y = v - .5;
 let d = length(x, y);
 let w = .5 + .5 * sin(d * 30 - t * 5);
-w * smoothstep(.6, .04, d)`
+d < .026 ? 0 : w * smoothstep(.6, .04, d)`
 const ripple = program(RIPPLE_SRC)
 const RIPPLE_GRID = T.lattice(3, 0, 12)
 export const irRipple: WidgetPreset = {
   id: 'ir-ripple', name: 'IR Ripple', label: 'IR  RIPPLE', ...tile, animated: true,
   credit: TINY_PROGRAMS,
+  // the red centre sits between four lattice sites (the ripple's own centre); the program leaves those four dark
+  // (d < .026), so the red never lands half over a grey dot
   layers: ctx => [
     layer(RIPPLE_GRID.at(RIPPLE_GRID.place(ripple(env(ctx)), 0, 0, 48, 40)), 'auto'),
-    layer(T.dots([[71.5, 71.5]], 3), 'active'),
+    layer(T.dots([[71.5, 71.5]], 3.6), 'active'),
     footer(RIPPLE_SRC, ripple),
   ],
 }
