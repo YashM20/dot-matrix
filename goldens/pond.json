@@ -64,13 +64,13 @@
   "pond-terrarium": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "ed0628d8",
-    "dots": 2764
+    "hash": "78a47a06",
+    "dots": 2754
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "f504d0f5",
-    "dots": 2788
+    "hash": "5a715683",
+    "dots": 2780
    }
   },
   "pond-marble": {
@@ -88,13 +88,13 @@
   "pond-plankton": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "fe614255",
-    "dots": 3403
+    "hash": "af06298c",
+    "dots": 3376
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "6b0dbb48",
-    "dots": 3583
+    "hash": "d2960408",
+    "dots": 3584
    }
   },
   "pond-turing": {

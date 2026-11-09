@@ -127,17 +127,17 @@ const pillSites = (() => {
   return { red, white }
 })()
 const NODES = [12, 51, 90, 129], NODE_Y = 101
-/** A done step: a red disc of big dots with the check drawn on the same sites in white, inside a fine ring. */
-const CHECK: Pt[] = [[-4, 0], [-2, 2], [4, -4]]
+/** A done step: a red disc of big dots, a white check of finer dots in a clear band through it, inside a fine ring. */
+const CHECK: Pt[] = [[-4.2, 0], [-1.5, 2.7], [4.2, -3]]
 const doneNode = (x: number) => {
-  const box = [x - 7.4, NODE_Y - 7.4, x + 7.4, NODE_Y + 7.4] as const
-  const check = (px: number, py: number) => CHECK.slice(1).some(([bx, by], i) => {
-    const [ax, ay] = CHECK[i], dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((px - x - ax) * dx + (py - NODE_Y - ay) * dy) / (dx * dx + dy * dy)))
-    return Math.hypot(px - x - ax - t * dx, py - NODE_Y - ay - t * dy) < .5
+  const pts = CHECK.map(([dx, dy]): Pt => [x + dx, NODE_Y + dy])
+  const near = (px: number, py: number) => pts.slice(1).some(([bx, by], i) => {
+    const [ax, ay] = pts[i], dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
+    return Math.hypot(px - ax - t * dx, py - ay - t * dy) < 1.9
   })
   return [
-    layer(T.fillOn(2, (px, py) => Math.hypot(px - x, py - NODE_Y) <= 6.8, box), 'active'),
-    layer(T.fillOn(2, check, box)), layer(T.dotRing(x, NODE_Y, 8.6, { spacing: 1.7, size: 1.1 })),
+    layer(T.fillOn(2, (px, py) => Math.hypot(px - x, py - NODE_Y) <= 6.8 && !near(px, py), [x - 7.4, NODE_Y - 7.4, x + 7.4, NODE_Y + 7.4]), 'active'),
+    layer(T.dotPath(pts, 1.6, 1.25)), layer(T.dotRing(x, NODE_Y, 8.6, { spacing: 1.7, size: 1.1 })),
   ]
 }
 export const pharmaTrack: WidgetPreset = {

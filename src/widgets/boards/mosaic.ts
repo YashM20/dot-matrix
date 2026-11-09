@@ -284,13 +284,13 @@ export const fitnessRings: WidgetPreset = {
     ]
     return [
       num('04'), ...menuGlyph,
-      ...ring(33, 2.4, 2.9, data.move, 'active'), ...ring(23.5, 2.4, 2.9, data.exercise, 'active'), ...ring(13.5, 1.9, 1.7, data.stand, 'value'),
+      ...ring(33, 3.6, 2.85, data.move, 'active'), ...ring(23.5, 3.6, 2.85, data.exercise, 'active'), ...ring(13.5, 2.2, 1.7, data.stand, 'value'),
       layer(T.sprite(FLAME, 73, 26), 'active'), layer(T.big('1,234', 86, 27, { lattice: 1.15 })), layer(cap('CAL', 125, 31), 'idle'),
       layer(T.sprite(SHOE, 72, 51), 'idle'), layer(T.big('8,935', 86, 50, { lattice: 1.15 })), layer(cap('MOVE', 125, 54), 'idle'),
       layer(T.sprite(DUMBBELL, 72, 74), 'idle'), layer(T.big('62', 86, 73, { lattice: 1.15 })), layer(cap('TRAIN', 104, 77), 'idle'),
       // the trend line with a dim red wash fading out below it
       layer(TREND_WASH, 'active'),
-      layer(dotPath(TREND, 1.1, 1.35), 'active'),
+      layer(dotPath(TREND, 1.7, 1.35), 'active'),
       layer(T.hrule(0, 129, 144, 2), 'faint'),
       ...['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => layer(T.text(d, 2 + i * 22.2, 136, { align: 'center' }), i === 6 ? 'active' : 'idle')),
     ]

@@ -4,12 +4,12 @@
   "algo-stipple": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "90a28050",
+    "hash": "f6647f06",
     "dots": 3006
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "90a28050",
+    "hash": "f6647f06",
     "dots": 3006
    }
   },
@@ -40,12 +40,12 @@
   "algo-aggregate": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "3e0b3d82",
+    "hash": "c9d60d38",
     "dots": 1653
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "f4d7de3e",
+    "hash": "822b2c7b",
     "dots": 1703
    }
   }

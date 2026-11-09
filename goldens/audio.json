@@ -16,15 +16,15 @@
   "vibe-pad": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "edff296c",
-    "dots": 1836
+    "hash": "18110f5e",
+    "dots": 1065
    }
   },
   "midi": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "472cbd4b",
-    "dots": 336
+    "hash": "51f9b0ae",
+    "dots": 330
    }
   },
   "recorder": {
@@ -61,7 +61,7 @@
   "thermal-puppy": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "5edd9a62",
+    "hash": "2038b2b2",
     "dots": 20731
    }
   },

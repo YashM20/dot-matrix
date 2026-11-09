@@ -34,15 +34,12 @@ function banded(f: Field, bands = BANDS, cut = same): Layer[] {
   })
 }
 /**
- * Gloss on a lit surface: the diffuse bands, then the specular in `value`. The specular's bright core (cells at 80% of its peak or
- * more) is one dot sized to that area, with the lattice dots under it cleared; the rest of the gloss stays on the
- * lattice, two quantize steps (+.5) above the diffuse dot under it.
+ * Gloss on a lit surface: the diffuse bands, then the specular highlight as one `value` dot at its peak, sized to the
+ * cells at half the peak or more, with the lattice dots under it cleared. No cluster of small bright dots round it.
  */
 function gloss(diffuse: Field, specular: Field, from: number, bands = BANDS): Layer[] {
-  const { dot, cut } = T.peak(K, [0, 0], specular, { from })
-  const g: Field = (u, v) => { const s = specular(u, v); return s < from ? 0 : Math.min(1, diffuse(u, v) + .5 * smoothstep(from, .7, s)) }
-  g.bounds = specular.bounds
-  return [...banded(diffuse, bands, cut), layer(LAT.at(cut(g)), 'value'), ...(dot ? [layer(dot, 'value')] : [])]
+  const { dot, cut } = T.peak(K, [0, 0], specular, { from, top: .5 })
+  return [...banded(diffuse, bands, cut), ...(dot ? [layer(dot, 'value')] : [])]
 }
 
 // ── TORCH ───────────────────────────────────────────────────────────────────
@@ -208,7 +205,7 @@ function ballCells(fn: (nx: number, ny: number, nz: number) => number): Field {
 const GLOSS_BODY: [number, number, Tone][] = [[.06, .26, 'faint'], [.26, .5, 'mid'], [.5, 2, 'idle']]
 /**
  * Black lacquer: a dark Lambert body (void on the shadow side, never past idle), the window's
- * highlight as a hard two-step `value` spot (its core one dot) held out toward the lit limb (the highlight's light is the
+ * highlight as a hard two-step spot (one `value` dot in an `idle` ring) held out toward the lit limb (the highlight's light is the
  * board light dropped to a low 20°, so it never sits at the centre), and the floor's reflection as a thin
  * `mid` crescent on the shadow-side rim: the three reads that make a ball look lacquered.
  */
@@ -228,9 +225,11 @@ function lacquer(light: Light): Layer[] {
   rimOnly.bounds = body.bounds
   const lit: Field = (u, v) => { const x = body(u, v); return x === .4 ? 0 : x }
   lit.bounds = body.bounds
-  // the spot's hard core is one dot; its .75 ring stays on the lattice round it
+  // the spot's hard core is one white dot; the rest of the spot steps down to an idle ring round it
   const { dot, cut } = T.peak(K, [0, 0], spec, { from: .5 })
-  return [...banded(lit, GLOSS_BODY), layer(LAT.at(rimOnly), 'mid'), layer(LAT.at(cut(spec)), 'value'), ...(dot ? [layer(dot, 'value')] : [])]
+  const halo: Field = (u, v) => (spec(u, v) > 0 ? .7 : 0)
+  halo.bounds = spec.bounds
+  return [...banded(lit, GLOSS_BODY), layer(LAT.at(rimOnly), 'mid'), layer(LAT.at(cut(halo)), 'idle'), ...(dot ? [layer(dot, 'value')] : [])]
 }
 /** Fabric's shadow side keeps its weave: a higher floor of light, the Bayer dither to one size step. */
 const FABRIC_AMBIENT = .34
