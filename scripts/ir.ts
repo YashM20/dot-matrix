@@ -1,4 +1,5 @@
 /**
+ * (scratch edit for the affected-probes test; not for merge)
  * Field IR v0 checks: parser errors and limits, JSON round trip, JS backends ≡ the GLSL-semantics
  * reference interpreter on 20 test fields over a 48×48 grid, and a hash snapshot of the emitted
  * GLSL so codegen drift is caught. Real GPU parity (WebGL2 readback) is pending P5.

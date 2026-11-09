@@ -1,4 +1,5 @@
 /**
+ * (scratch edit for the affected-probes test; not for merge)
  * BROWSE probe (#182) in headless Chrome over CDP (scripts/lib/cdp.ts), as a visitor sees it (MAKE and the lab off):
  *  - the header and the phone tab bar offer BROWSE, and MAKE / LAB stay hidden;
  *  - `/browse/` lists every card, mounts only the cards near the screen, and unmounts the top ones after a scroll to
