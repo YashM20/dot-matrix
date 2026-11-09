@@ -5,6 +5,10 @@
 name: goldens
 
 on:
+  # TEMP: registers the workflow before it is on main; removed before merge
+  push:
+    branches: [chore/ci-affected-probes]
+    paths: ['.github/workflows/goldens.yml']
   workflow_dispatch:
     inputs:
       branch:
@@ -14,7 +18,7 @@ on:
 permissions: {}
 
 concurrency:
-  group: goldens-${{ inputs.branch }}
+  group: goldens-${{ inputs.branch || github.ref_name }}
 
 jobs:
   regenerate:
@@ -27,7 +31,7 @@ jobs:
       contents: write
       actions: write
     env:
-      BRANCH: ${{ inputs.branch }}
+      BRANCH: ${{ inputs.branch || github.ref_name }}
     steps:
       - name: Refuse main
         run: |
@@ -36,7 +40,7 @@ jobs:
 
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
-          ref: ${{ inputs.branch }}
+          ref: ${{ inputs.branch || github.ref_name }}
 
       # the ref must be a branch here (a tag or a SHA would check out too)
       - name: Check the branch
