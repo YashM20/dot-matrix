@@ -4,61 +4,61 @@
   "chart-bar": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "88fb105a",
-    "dots": 1060
+    "hash": "0f718411",
+    "dots": 1056
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "88fb105a",
-    "dots": 1060
+    "hash": "0f718411",
+    "dots": 1056
    }
   },
   "chart-line": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "0f68bb42",
-    "dots": 975
+    "hash": "ba24fc53",
+    "dots": 978
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "0f68bb42",
-    "dots": 975
+    "hash": "ba24fc53",
+    "dots": 978
    }
   },
   "chart-area": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "1155d919",
+    "hash": "e4260794",
     "dots": 1366
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "1155d919",
+    "hash": "e4260794",
     "dots": 1366
    }
   },
   "chart-donut": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "c0421a8e",
-    "dots": 690
+    "hash": "d40a0258",
+    "dots": 696
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "c0421a8e",
-    "dots": 690
+    "hash": "d40a0258",
+    "dots": 696
    }
   },
   "chart-heatmap": {
    "t=0": {
     "style": "squircle:32.00",
-    "hash": "94c30fe2",
-    "dots": 1104
+    "hash": "fd528b1a",
+    "dots": 1089
    },
    "t=1.3": {
     "style": "squircle:32.00",
-    "hash": "94c30fe2",
-    "dots": 1104
+    "hash": "fd528b1a",
+    "dots": 1089
    }
   },
   "chart-spark": {
@@ -76,13 +76,13 @@
   "chart-candle": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "21b2e3f0",
-    "dots": 1021
+    "hash": "a8ad2034",
+    "dots": 1005
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "21b2e3f0",
-    "dots": 1021
+    "hash": "a8ad2034",
+    "dots": 1005
    }
   }
  }
