@@ -63,7 +63,8 @@
   text-wrap: pretty
 }
 
-/* the legend breaks between its parts, never inside one ("96 ×" / "96"), and a line never ends on a "·" */
+/* the legend and the note break between their parts, never inside one ("96 ×" / "96", "pick one" / "."), and a
+   legend line never ends on a "·" */
 .fig-unit {
   white-space: nowrap
 }
