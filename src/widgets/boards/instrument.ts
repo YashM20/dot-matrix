@@ -200,7 +200,8 @@ export const xyPad: WidgetPreset = {
     const moat = (p: Pt) => Math.hypot(p[0] - live[0], p[1] - live[1]) > 8
     return [
       layer(spots(SURFACE.filter(moat), 1.4), f.hover ? 'mid' : 'faint'),
-      ...trail.map((p, k) => layer(spots([p], 6.4 - k * .6, k < 2 ? .75 : k < 5 ? .5 : .25), 'value')),
+      // a trail dot that would touch the puck is left out: the red sits in clear air
+      ...trail.map((p, k) => layer(spots(Math.hypot(p[0] - live[0], p[1] - live[1]) > .42 * (10 + 6.4 - k * .6) + .6 ? [p] : [], 6.4 - k * .6, k < 2 ? .75 : k < 5 ? .5 : .25), 'value')),
       // edge markers: where the live dot projects onto the pad's rulers
       layer(spots([[live[0], XY.y - 6], [live[0], XY.y + XY.s + 6], [XY.x - 6, live[1]], [XY.x + XY.s + 6, live[1]]], 3), 'idle'),
       layer(spots([live], 10, f.v), 'active'),
@@ -299,6 +300,8 @@ export const sequencer: WidgetPreset = {
 // A wheel with a handle on its rim and 24 detent ticks per turn; `crank` is accumulated turns
 // (the input layer integrates atan2 deltas), the counter shows total ticks.
 const CRANK = { cx: 72, cy: 60, wheel: 28, tickR: 37, handle: 15, ticks: 24 }
+/** The arm's first and last dot radius: 1.5 cells of air from the hub dot (size 8) and from the handle (size 15). */
+const ARM = [.42 * 8 + .42 * 2.6 + 1.5, CRANK.wheel - .42 * CRANK.handle - .42 * 2.6 - 1.5]
 const TICKS = Array.from({ length: CRANK.ticks }, (_, i) => polar(CRANK.cx, CRANK.cy, CRANK.tickR, (i / CRANK.ticks) * TAU))
 export const crank: WidgetPreset = {
   id: 'inst-crank', name: 'Crank', label: '09  CRANK', ...device,
@@ -311,8 +314,9 @@ export const crank: WidgetPreset = {
     return [
       layer(spots(TICKS.slice(1), 2.2), 'mid'),
       layer(spots(TICKS.slice(0, 1), 3.4), 'idle'),
-      layer(spots(circle(cx, cy, wheel, 3.3), 1.5), 'mid'),
-      layer(T.dotLine(cx + 7 * Math.sin(a), cy - 7 * Math.cos(a), handle[0] - 10 * Math.sin(a), handle[1] + 10 * Math.cos(a), { spacing: 3.6, size: 2.6 }), 'mid'),
+      // the wheel's ring clears the handle; the arm runs from the hub's rim to the handle's with the same gap at each end
+      layer(T.knockout(spots(circle(cx, cy, wheel, 3.3), 1.5), [handle], .42 * (CRANK.handle + 1.5) + .8), 'mid'),
+      layer(T.dotLine(...polar(cx, cy, ARM[0], a), ...polar(cx, cy, ARM[1], a), { spacing: (ARM[1] - ARM[0]) / 3, size: 2.6 }), 'mid'),
       layer(spots([[cx, cy]], 8)),
       ...(f.hover ? [glow(circle(handle[0], handle[1], 10.5, 2.4))] : []),
       layer(spots([handle], CRANK.handle, f.v)),

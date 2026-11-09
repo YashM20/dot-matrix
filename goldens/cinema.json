@@ -4,13 +4,13 @@
   "cinema-last-call": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "b05676fb",
-    "dots": 1433
+    "hash": "89532d2d",
+    "dots": 1429
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "5b493825",
-    "dots": 1433
+    "hash": "6493a29f",
+    "dots": 1429
    }
   },
   "cinema-signal": {
@@ -28,13 +28,13 @@
   "cinema-sundown": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "84040c0c",
-    "dots": 1265
+    "hash": "e01ed06b",
+    "dots": 1174
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "c882da40",
-    "dots": 1265
+    "hash": "60401e92",
+    "dots": 1174
    }
   },
   "cinema-upstairs": {
@@ -52,61 +52,61 @@
   "cinema-closer": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "6de35fd6",
-    "dots": 1448
+    "hash": "0ae19cea",
+    "dots": 1438
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "be64c110",
-    "dots": 1448
+    "hash": "4e25293b",
+    "dots": 1438
    }
   },
   "cinema-witness": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "4874bc30",
-    "dots": 2668
+    "hash": "99d747d8",
+    "dots": 2665
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "9aacdb08",
-    "dots": 2668
+    "hash": "2028323f",
+    "dots": 2665
    }
   },
   "cinema-exit-14": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "2a907291",
-    "dots": 871
+    "hash": "8c407424",
+    "dots": 839
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "35a43452",
-    "dots": 896
+    "hash": "7f387288",
+    "dots": 864
    }
   },
   "cinema-keeper": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "9a888ab7",
-    "dots": 1282
+    "hash": "3de65a67",
+    "dots": 1272
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "cdae3a00",
-    "dots": 1282
+    "hash": "d78ab15a",
+    "dots": 1272
    }
   },
   "cinema-encore": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "2cfce458",
-    "dots": 1939
+    "hash": "b4dadd87",
+    "dots": 1929
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "2492b7b3",
-    "dots": 1929
+    "hash": "46f18733",
+    "dots": 1919
    }
   }
  }

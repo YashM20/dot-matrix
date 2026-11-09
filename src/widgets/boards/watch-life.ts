@@ -50,14 +50,16 @@ export const stepsFace = face('watch-steps', 'Steps', 'squircle', {
   group: 'chart',
   layers: () => {
     const now = wallNow(), hours = hourlySteps(now), total = hours.reduce((s, x) => s + x, 0), f = Math.min(1, total / STEP_GOAL)
-    const ring = (sweep: number, size: number) => T.dotRing(RING.cx, RING.cy, RING.r, { spacing: RING.spacing, size, sweep })
+    // the ring leaves out the sites under the red head, so no grey or white dot shows half under it
+    const head = polar(RING.r, f * TAU, RING.cx, RING.cy)
+    const ring = (sweep: number, size: number) => T.knockout(T.dotRing(RING.cx, RING.cy, RING.r, { spacing: RING.spacing, size, sweep }), [head], 3.4)
     const most = Math.max(1, ...hours), x0 = CX - 11.5 * BARS.gap
     const col = (h: number): Pt[] => Array.from({ length: 1 + Math.round((hours[h] / most) * BARS.dots) }, (_, j): Pt => [x0 + h * BARS.gap, BARS.base - j * BARS.pitch])
     const span = (pick: (h: number) => boolean) => hours.map((_, h) => h).filter(pick).flatMap(col)
     return [
       layer(ring(TAU, RING.size), 'faint'),
       ...(f > .005 ? [layer(ring(f * TAU - 1e-6, 2.6), 'value')] : []),
-      layer(T.dots([polar(RING.r, f * TAU, RING.cx, RING.cy)], 6), 'active'),
+      layer(T.dots([head], 6), 'active'),
       layer(T.text('STEPS', CX, 46, { align: 'center' }), 'idle'),
       layer(T.big(String(total), CX, 56, { lattice: total >= 10000 ? 1.3 : 1.5, smooth: true, face: 'fine', align: 'center' }), 'value'),
       layer(T.text(`OF ${STEP_GOAL}`, CX, 82, { align: 'center' }), 'mid'),

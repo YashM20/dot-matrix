@@ -5,7 +5,9 @@
  *  - Counts load once per page view: one cached read for every widget, one per program.
  *  - `localStorage['dot480:likes']` keeps the remember choice ("r" / "o"), the last day a remembered browser
  *    checked in, and the items liked here (so a like shows at once). The voter cookie itself is HttpOnly and set by
- *    the server; this module never sees it.
+ *    the server; this module never sees it. Every change is a read-modify-write of what is stored now (`updateLocal`),
+ *    and a `storage` event from another tab drops the cached copy, so two tabs never write over each other's likes
+ *    (docs/STATE-MACHINES.md A5).
  *  - BotID loads on first use (`ensureBot`), not in the first load.
  */
 import type { SharedProgram } from '../../lib/share'
@@ -89,6 +91,17 @@ export function setLocal(next: Local | null) {
   listeners.forEach(l => l())
 }
 export const subscribeLocal = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l) } }
+/** Change the record as it is stored now, not as this tab last read it (another tab may have liked or forgotten since). */
+export function updateLocal(f: (l: Local) => Local | null) {
+  cache = undefined
+  setLocal(f(local()))
+}
+// another tab liked, unliked, chose or forgot: read the record again and re-render
+if (typeof window !== 'undefined') window.addEventListener('storage', e => {
+  if (e.key !== KEY && e.key !== null) return
+  cache = undefined
+  listeners.forEach(l => l())
+})
 
 /** Global Privacy Control: skip the sheet, every like is "just this once". */
 export const gpc = () => (navigator as Navigator & { globalPrivacyControl?: boolean }).globalPrivacyControl === true
@@ -98,7 +111,7 @@ export const today = () => Math.floor(Date.now() / 864e5)
 export function dailyVisit() {
   const l = local()
   if (l.c !== 'r' || l.d === today()) return
-  setLocal({ ...l, d: today() })
+  updateLocal(x => ({ ...x, d: today() }))
   void ensureBot().then(sendVisit)
 }
 

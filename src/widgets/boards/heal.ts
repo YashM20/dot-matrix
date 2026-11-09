@@ -62,9 +62,10 @@ function scratch(run: NcaRun, ctx: WidgetContext) {
 
 /** Body in `value`, the darker spine spots and eyes in `mid`; dot size = alpha (the growing rim is small). */
 function body(g: NcaGrid, skip?: Float32Array): Layer[] {
+  // a cell under .3 alive is not drawn: those are the stray specks just outside the lizard's outline
   const alpha = (lo: number, hi: number) => ncaMapField(g, (c, i, x, y) => {
     const a = c[i], tone = c[i + 1]
-    if (a <= .1 || tone < lo || tone >= hi || (skip && skip[y * W + x] > .3)) return 0
+    if (a < .3 || tone < lo || tone >= hi || (skip && skip[y * W + x] > .3)) return 0
     return a > 1 ? 1 : a
   })
   return [layer(on(alpha(-Infinity, .75)), 'mid'), layer(on(alpha(.75, Infinity)), 'value')]

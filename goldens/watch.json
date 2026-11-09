@@ -4,84 +4,84 @@
   "watch-analog": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "ef95a243",
-    "dots": 496
+    "hash": "7959f3cd",
+    "dots": 466
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "ef95a243",
-    "dots": 496
+    "hash": "7959f3cd",
+    "dots": 466
    }
   },
   "watch-digital": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "6a387466",
-    "dots": 413
+    "hash": "b11c53c9",
+    "dots": 555
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "6a387466",
-    "dots": 413
+    "hash": "b11c53c9",
+    "dots": 555
    }
   },
   "watch-complications": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "2ae75291",
-    "dots": 969
+    "hash": "de67b341",
+    "dots": 1117
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "f30bb05f",
-    "dots": 969
+    "hash": "eba6168b",
+    "dots": 1117
    }
   },
   "watch-moon": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "97c920ba",
-    "dots": 727
+    "hash": "6c4d7c1b",
+    "dots": 720
    }
   },
   "watch-tide": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "3bc2ba66",
-    "dots": 531
+    "hash": "eb23a3a5",
+    "dots": 524
    }
   },
   "watch-sun": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "92742f85",
-    "dots": 727
+    "hash": "b1ac342a",
+    "dots": 720
    }
   },
   "watch-world": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "10a3d899",
-    "dots": 1041
+    "hash": "75eefaea",
+    "dots": 1189
    }
   },
   "watch-steps": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "c8ddaa03",
-    "dots": 601
+    "hash": "41131a6d",
+    "dots": 737
    }
   },
   "watch-faces": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "1332a538",
-    "dots": 504
+    "hash": "20e95b56",
+    "dots": 474
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "1332a538",
-    "dots": 504
+    "hash": "20e95b56",
+    "dots": 474
    }
   }
  }

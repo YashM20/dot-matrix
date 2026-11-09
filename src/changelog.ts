@@ -215,7 +215,7 @@ export const releases: Release[] = [
 ]
 
 export const upcoming: Upcoming[] = [
-  { phase: 'U5', title: 'Everything for power users', status: 'next', text: 'A ? sheet with every shortcut and link option, and a pro mode that opens every panel.' },
-  { phase: 'S1', title: 'A page for every card', status: 'planned', text: 'Each card gets its own short link (/widget/<id>/) and page, with copy as PNG, SVG or HTML, share and embed.' },
+  { phase: 'CP6 HERO', title: 'Sharper numbers', status: 'next', text: 'Three hero number faces for big readouts, with the dots on a diagonal spaced as evenly as on a straight stroke.' },
+  { phase: 'CP6 REVIEW', title: 'Every card checked dot by dot', status: 'next', text: 'Every card had a dot-level review. Its fixes land card by card: even gaps between dots, cleaner fills and captions you can read.' },
   { phase: 'C1', title: 'A million dots', status: 'planned', text: 'Fields evaluated on the GPU with WebGPU: a full-screen field that follows the cursor, and a zoom from one card into a million dots.' },
 ]

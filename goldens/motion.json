@@ -52,12 +52,12 @@
   "mo-wait": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "77eeafb5",
+    "hash": "4285d3cc",
     "dots": 1042
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "6bf4a128",
+    "hash": "9309cd9d",
     "dots": 1029
    }
   },
@@ -124,12 +124,12 @@
   "mo-send": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "3c6b0b80",
-    "dots": 643
+    "hash": "935d48b6",
+    "dots": 642
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "6e6fd98f",
+    "hash": "ca892a93",
     "dots": 608
    }
   }

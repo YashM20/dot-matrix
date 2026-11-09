@@ -16,8 +16,8 @@
   "vibe-pad": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "47461f50",
-    "dots": 1055
+    "hash": "841e4da8",
+    "dots": 1072
    }
   },
   "midi": {
@@ -49,13 +49,13 @@
   "interpreter": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "c4157c56",
-    "dots": 760
+    "hash": "8429e68b",
+    "dots": 720
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "913199a6",
-    "dots": 760
+    "hash": "cc4ec1e7",
+    "dots": 720
    }
   },
   "thermal-puppy": {

@@ -394,8 +394,8 @@ export const sqTeletext: WidgetPreset = {
     const ink = (x: number, y: number) => { const gx = x - bx, gy = y - by, k = Math.floor(gx / 6); return gx >= 0 && gy >= 0 && gy < 7 && k < word.length && gx % 6 < 5 && !!glyph(word[k])[gy]?.[gx % 6] }
     for (let r = 1; r <= 3; r++) for (let c = 0; c < TT_COLS; c++) page[r][c] = { sextant: sext(c, r - 1, ink), fg: 'value', bg: 'faint' }
     put(' SQUARE CELLS SINCE 1974', 0, 4, 'idle')
-    // a contiguous rule: the bottom sub-row of every cell, one joined line
-    for (let c = 0; c < TT_COLS; c++) page[5][c] = { sextant: 48, fg: 'mid' }
+    // a contiguous rule: the middle sub-row of every cell, one joined line with a clear sub-row above and below
+    for (let c = 0; c < TT_COLS; c++) page[5][c] = { sextant: 12, fg: 'mid' }
     // index (left) and the weather map (right, separated graphics): land mid, a rain band (idle) drifting east
     TT_INDEX.forEach(([name, n], i) => { put(name, 0, 6 + i, 'idle'); put(n, 8, 6 + i, 'value') })
     for (let r = 0; r < 7; r++) for (let c = 0; c < 11; c++) {
@@ -408,7 +408,7 @@ export const sqTeletext: WidgetPreset = {
     put(` ${TT_SUBS[sub].padEnd(22)} `, 0, 14, 'value', 'faint')
     // fastext: four links in four greys
     put('NEWS', 0, 15, 'value'); put('SPORT', 6, 15, 'idle'); put('TV', 13, 15, 'mid'); put('INDEX', 19, 15, 'faint')
-    const layers = teletextLayers(page, { grid: TILE, cols: TT_COLS, rows: TT_ROWS, origin: [0, 0], cell: TT_CELL, mode: 'contiguous', baseline: 0 })
+    const layers = teletextLayers(page, { grid: TILE, cols: TT_COLS, rows: TT_ROWS, origin: [0, 0], cell: TT_CELL, mode: 'contiguous', baseline: 0, moat: true })
     ttCache = { key, layers }
     return layers
   },

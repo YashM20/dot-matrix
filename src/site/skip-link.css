@@ -1,0 +1,31 @@
+/* SKIP TO CONTENT (src/site/SkipLink.tsx; static in privacy.html and terms.html): the page's first stop, out of
+   sight until it has focus. It lands on `#main`, the page's <main>; the site nav and footer sit outside it (#187) */
+.skip-link {
+  position: fixed;
+  top: var(--space-2);
+  left: var(--space-2);
+  z-index: var(--z-modal);
+  padding: var(--space-2) var(--space-3);
+  background: var(--raised);
+  color: var(--value);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  font: 600 var(--fs-label-12)/1 var(--mono);
+  letter-spacing: .14em;
+  text-decoration: none
+}
+
+.skip-link:not(:focus) {
+  clip-path: inset(50%);
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  white-space: nowrap
+}
+
+/* the view the skip link lands on takes focus only to start the Tab order there: no ring around the page */
+#main:focus {
+  outline: none;
+  box-shadow: none
+}

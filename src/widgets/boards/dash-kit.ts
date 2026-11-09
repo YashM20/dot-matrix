@@ -78,6 +78,8 @@ export const SIGNAL_ARROW = [
   '..##.......',
   '...#.......',
 ]
+/** The indicator arrow at small size (7 × 5), for a coarser lattice than the full one. */
+export const SMALL_ARROW = ['..#....', '.######', '#######', '.######', '..#....']
 /** Nav manoeuvres (10 × 10): turn left (mirror for right), straight on, arrive. */
 export const TURN_LEFT = [
   '...#......',

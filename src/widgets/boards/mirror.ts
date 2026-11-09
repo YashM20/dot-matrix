@@ -341,7 +341,9 @@ export const mirrorConduct: WidgetPreset = {
         if (p.down) { const k = .8 * Math.exp(-r2 / (2 * 20 * 20)); x -= dx * k; y -= dy * k }
         else { const push = (10 + Math.min(10, p.speed / 30)) * Math.exp(-r2 / (2 * 16 * 16)); x += dx / r * push; y += dy / r * push }
       }
-      x = clamp(x, 1, 142); y = clamp(y, FIELD.y0 - 6, FIELD.y1 + 4)
+      // a dot pushed up toward the WAVE / PINCH line drops out instead of piling up under it: two clear rows stay
+      if (y < FIELD.y0 - 4) continue
+      x = clamp(x, 1, 142); y = Math.min(y, FIELD.y1 + 4)
       ;(Math.abs(x - x0) + Math.abs(y - y0) > 3 ? stirred : calm).push([x, y])
     }
     const on = data.hand >= .5, hs = data.handState ?? 0

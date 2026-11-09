@@ -4,37 +4,37 @@
   "dash-speed": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "fb6c0d7b",
-    "dots": 525
+    "hash": "5d6ba6ee",
+    "dots": 570
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "21a1b6b4",
-    "dots": 532
+    "hash": "c0f722ad",
+    "dots": 587
    }
   },
   "dash-power": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "16be45a6",
-    "dots": 384
+    "hash": "26ecc893",
+    "dots": 411
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "393de735",
-    "dots": 438
+    "hash": "7a96fa28",
+    "dots": 540
    }
   },
   "dash-range": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "0d22870c",
-    "dots": 444
+    "hash": "6c5fb50f",
+    "dots": 557
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "e32b20b8",
-    "dots": 457
+    "hash": "0a5e9cee",
+    "dots": 589
    }
   },
   "dash-gear": {
@@ -64,36 +64,36 @@
   "dash-battery": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "1dc4b547",
-    "dots": 605
+    "hash": "62b3e1af",
+    "dots": 672
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "a4609178",
-    "dots": 827
+    "hash": "b9bcf4b8",
+    "dots": 894
    }
   },
   "dash-nav": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "c6ed229d",
-    "dots": 753
+    "hash": "cfff0f48",
+    "dots": 759
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "11ac8978",
-    "dots": 739
+    "hash": "5be7fe15",
+    "dots": 750
    }
   },
   "dash-road": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "6425bffc",
+    "hash": "535fcd80",
     "dots": 335
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "4f8d7c20",
+    "hash": "1c613c9c",
     "dots": 334
    }
   },
@@ -105,8 +105,8 @@
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "03d7070a",
-    "dots": 972
+    "hash": "7e44b006",
+    "dots": 965
    }
   }
  }

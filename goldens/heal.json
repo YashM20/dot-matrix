@@ -4,13 +4,13 @@
   "heal-mirror": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "30abb319",
-    "dots": 725
+    "hash": "5b3fac2d",
+    "dots": 716
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "4292e5d0",
-    "dots": 719
+    "hash": "f8994722",
+    "dots": 703
    }
   },
   "heal-xray": {
@@ -28,13 +28,13 @@
   "heal-persist": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "8fd236ec",
-    "dots": 624
+    "hash": "0030c486",
+    "dots": 613
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "c91b0405",
-    "dots": 673
+    "hash": "5fa4b70c",
+    "dots": 627
    }
   }
  }

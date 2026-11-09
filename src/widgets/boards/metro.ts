@@ -51,7 +51,16 @@ function bitsFor(ch: string, font: Font): Bits {
   if (font === 'smooth') return CUT[ch] ? scale2x(CUT[ch]) : glyph(ch, { smooth: true })
   if (font === 'bold') { let b = bold.get(ch); if (!b) { b = scale3x(glyph(ch)); bold.set(ch, b) } return b }
   const cols = WIDE.has(ch) ? [2, 2, 1, 2, 2] : ch === 'H' ? [2, 1, 2, 1, 2] : [2, 1, 1, 1, 2]
-  return squeeze(glyph(ch, { smooth: true }), cols, font === 'narrowShort' ? [2, 1, 2, 1, 2, 1, 2] : [2, 2, 2, 2, 2, 2, 2])
+  if (font === 'narrowShort') return squeeze(glyph(ch, { smooth: true }), cols, [2, 1, 2, 1, 2, 1, 2])
+  return trim(squeeze(glyph(ch, { smooth: true }), cols, [2, 2, 2, 2, 2, 2, 2]))
+}
+/** Drop blank columns at both edges, so a narrow I sits one glyph gap from its neighbours like every other letter. */
+function trim(bits: Bits): Bits {
+  const used = (c: number) => bits.some(r => r[c]), w = bits[0]?.length ?? 0
+  let a = 0, b = w - 1
+  while (a < b && !used(a)) a++
+  while (b > a && !used(b)) b--
+  return a === 0 && b === w - 1 ? bits : bits.map(r => r.slice(a, b + 1))
 }
 interface TextDots { font: Font; px: number; py?: number; size: number; gap?: number; align?: 'left' | 'center'; zeroAsO?: boolean }
 /**
@@ -147,8 +156,8 @@ export const finalLap: WidgetPreset = {
     layer(textDots('2', 52.7, 22.8, { font: 'smooth', px: 2.85, py: 3.35, size: 2.9 })),
     layer(T.dots(LAP, 2.5)),
     layer(T.dots([[108.3, 73.6]], 8.5), 'active'),
-    layer(T.dots(seg(11.6, 128.6, 20.6, 128.6, 6), 1.5)),
-    layer(textDots('0.8 SEC', 25.7, 123.1, { zeroAsO: true, font: '5x7', px: 1.8, py: 1.88, size: 2.1 })),
+    // the minus is a glyph of the same font, so it shares the digits' dot size and pitch
+    layer(textDots('-0.8 SEC', 25.7 - 6 * 1.8, 123.1, { zeroAsO: true, font: '5x7', px: 1.8, py: 1.88, size: 2.1 })),
   ],
 }
 
@@ -170,7 +179,8 @@ const ANTLERS: Pt[] = [[3.4, 30], [5.5, 35.9], [6.8, 41.4], [11, 46.8], [11, 60.
 export const deerflowStars: WidgetPreset = {
   id: 'deerflow-stars', name: 'Stars', label: 'DeerFlow', group: 'scatter', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
-    layer(T.dots(ANTLERS, 2.6), 'idle'),
+    // a spray dot within 3 cells of one kept before it goes, so no two antler dots nearly touch
+    layer(T.dots(ANTLERS, 2.6, undefined, 3.05), 'idle'),
     layer(T.dots([[110.4, 38.8]], 5), 'active'),
     layer(textDots('80K', 24.9, 80.6, { zeroAsO: true, font: 'smooth', px: 2.76, py: 2.98, size: 2.8 })),
     layer(textDots('STARS', 38, 128.1, { font: '5x7', px: 2.34, py: 2.13, size: 2.3 })),
@@ -223,10 +233,13 @@ export const cody: WidgetPreset = {
 }
 
 const HORIZON = 81.4
+// the suns stop a full row above the horizon, so the two never run as a doubled line
 const sun = (cx: number, cy: number, r: number): LatticeField => {
   const disc = T.dotDisc(cx, cy, r, { spacing: 2.52, size: 1.65 })
-  return { ...disc, sites: disc.sites!.filter(([, y]) => y < HORIZON - 1.5) }
+  return { ...disc, sites: disc.sites!.filter(([, y]) => y < HORIZON - 3) }
 }
+// on a horizon site (53 × 2.53), so the gap is the same on both sides once the sites under it go
+const MARKER: Pt = [53 * 2.53, HORIZON]
 const WALKER: Pt[] = [[77, 91.3], [79.3, 91.3], [77, 93.7], [79.3, 93.7], [75, 98.5], [77, 98.5], [79, 98.5], [81, 98.5],
   ...[100.7, 103.1, 105.4, 107.7].flatMap(y => [[73.7, y], [77, y], [79.3, y], [82.6, y]] as Pt[]),
   ...[110.2, 112.5, 114.8, 117.4, 119.8].flatMap(y => [[77, y], [79.3, y]] as Pt[])]
@@ -235,8 +248,8 @@ export const tatooine: WidgetPreset = {
   credit: { by: ['George Lucas'], title: 'Star Wars (1977)', source: 'https://en.wikipedia.org/wiki/Tatooine', note: 'the binary sunset over Tatooine' },
   layers: () => [
     layer(sun(46, 57.4, 36.5)), layer(sun(121.3, 69.5, 22)),
-    layer(T.dotLine(0, HORIZON, 143, HORIZON, { spacing: 2.53, size: 1.45 }), 'idle'),
-    layer(T.dots([[133.8, HORIZON]], 5.2), 'active'),
+    layer(T.knockout(T.dotLine(0, HORIZON, 143, HORIZON, { spacing: 2.53, size: 1.45 }), [MARKER], 3.6), 'idle'),
+    layer(T.dots([MARKER], 5.2), 'active'),
     layer(T.dots(WALKER, 1.75)),
     layer(T.big('BINARY SUNSET', 27.25, 131.35, { lattice: 1.3 }), 'idle'),
   ],
