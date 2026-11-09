@@ -56,9 +56,9 @@ const VIEW = `(() => {
     if (v === 'ABOUT') return document.querySelector('.log-view') ? 'ABOUT' : ''
     return ''
   }
-  if (document.querySelector('main.legal')) return /terms/i.test(document.title) ? 'terms' : 'privacy'
-  if (document.querySelector('main.essay.post .hero')) return 'post'
-  if (document.querySelector('main.essay.lab')) return 'lab'
+  if (document.querySelector('.legal > main')) return /terms/i.test(document.title) ? 'terms' : 'privacy'
+  if (document.querySelector('.essay.post > main .hero')) return 'post'
+  if (document.querySelector('.essay.lab > main')) return 'lab'
   if (document.querySelector('.root-crash')) return 'crashed'
   return ''
 })()`

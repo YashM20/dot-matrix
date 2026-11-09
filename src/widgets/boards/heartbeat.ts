@@ -80,7 +80,8 @@ const density = (bs: Ball[], p: HeartbeatParams, s: Stage, x: number, y: number)
   if (p.check < 1) for (const b of bs) f += (b.r * b.r) / ((x - b.x) ** 2 + (y - b.y) ** 2 + 1e-3)
   if (p.check <= 0) return f
   const lx = (x - s.cx) / s.scale, ly = (y - s.cy) / s.scale, d = Math.min(segDist(lx, ly, CHECK[0], CHECK[1]), segDist(lx, ly, CHECK[1], CHECK[2]))
-  return f * (1 - p.check) + p.check * (4.6 / (d + .4)) ** 2
+  // the stroke edge (d = 3.2) falls between the lattice's diagonal rows (0, 2.1, 4.2 cells off the arm's axis), so no row sits half lit
+  return f * (1 - p.check) + p.check * (3.6 / (d + .4)) ** 2
 }
 /** The organism as a lattice-3 layer: soft edge, mid body, highlight up-left (void → mid → highlight). */
 const organism = (p: HeartbeatParams, t: number, s: Stage, tone: Tone): Layer => {
@@ -106,7 +107,8 @@ const organism = (p: HeartbeatParams, t: number, s: Stage, tone: Tone): Layer =>
     if (!body) return 0
     // key light from the upper left: the lit side of the dense interior is highlight, the rest mid
     const lx = bs[0].x + lightX * reach - x, ly = bs[0].y + lightY * reach - y
-    let lit = smoothstep(1.1, 2.2, S) * (p.check + (1 - p.check) * Math.exp(-(lx * lx + ly * ly) / (2 * (.5 * reach) ** 2)))
+    // the check is lit flat: one tone across the stroke, no mid-tone fringe along its edges or at its tips
+    let lit = p.check + (1 - p.check) * smoothstep(1.1, 2.2, S) * Math.exp(-(lx * lx + ly * ly) / (2 * (.5 * reach) ** 2))
     if (p.bud > 0) {
       // budding: each lobe is its own sphere under an up-left key light (normal off the ball that owns the dot)
       let best = 0, b = bs[0]
