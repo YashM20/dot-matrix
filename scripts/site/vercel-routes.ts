@@ -41,8 +41,9 @@ export const fileAt = (dist: string, path: string): string | undefined => {
 }
 
 export type Outcome = { file: string; rewritten: boolean } | { redirect: string; permanent: boolean } | { status: 404 }
-/** What Vercel does with a request path: redirect, serve a file (maybe through a rewrite), or 404. */
-export function route(v: VercelConfig, dist: string, path: string, exact = true): Outcome {
+/** What Vercel does with a request path: redirect, serve a file (maybe through a rewrite), or 404. A query is ignored. */
+export function route(v: VercelConfig, dist: string, url: string, exact = true): Outcome {
+  const path = url.split('?')[0]
   const match = (r: Rule) => { const { re, keys } = compile(r.source, exact), m = re.exec(path); return m && r.destination.replace(/:(\w+)/g, (_, k: string) => m[keys.indexOf(k) + 1] ?? '') }
   for (const r of v.redirects ?? []) { const to = match(r); if (to) return { redirect: to, permanent: r.permanent !== false } }
   const direct = fileAt(dist, path)

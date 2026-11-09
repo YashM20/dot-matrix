@@ -21,7 +21,8 @@ const TYPES: Record<string, string> = {
 createServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost'), path = decodeURIComponent(url.pathname)
   const o = route(vercel, DIST, path), headers = headersFor(vercel, path)
-  if ('redirect' in o) { res.writeHead(o.permanent ? 308 : 307, { ...headers, Location: o.redirect + url.search }); res.end(); return }
+  // Vercel keeps the request's query on a redirect, merged into the destination's
+  if ('redirect' in o) { res.writeHead(o.permanent ? 308 : 307, { ...headers, Location: o.redirect + (url.search ? (o.redirect.includes('?') ? '&' : '?') + url.search.slice(1) : '') }); res.end(); return }
   const file = 'file' in o ? o.file : '404.html', status = 'file' in o ? 200 : 404
   try {
     const body = readFileSync(join(DIST, file))

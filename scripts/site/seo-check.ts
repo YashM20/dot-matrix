@@ -38,7 +38,7 @@ const route = (path: string, exact: boolean) => routeIn(vercel, DIST, path, exac
 const widgets = readWidgets(), sample = widgets[0], lock = widgets.find(w => w.slug.startsWith('lock-'))
 /** [path, what it must serve: a file, `→ <to>` for a redirect, or 404]; `view` checks the app opens it. */
 const CASES: [path: string, want: string, view?: (v: ReturnType<typeof viewFromUrl>) => boolean][] = [
-  ['/', 'index.html'], ['/index.html', 'index.html'], ['/browse', 'browse/index.html', v => v.view === 'BROWSE'], ['/browse/', 'browse/index.html', v => v.view === 'BROWSE'], ['/about', 'index.html', v => v.view === 'ABOUT'], ['/about/', 'index.html', v => v.view === 'ABOUT'],
+  ['/', 'index.html'], ['/index.html', 'index.html'], ['/browse', 'browse/index.html', v => v.view === 'BROWSE'], ['/browse/', 'browse/index.html', v => v.view === 'BROWSE'], ['/about', '→ /?about'], ['/about/', '→ /?about'], ['/?about', 'index.html', v => v.view === 'ABOUT'],
   ...boardIds.flatMap(id => [[`/${id}/`, `${id}/index.html`], [`/${id}`, `${id}/index.html`]] as [string, string][]),
   ...Object.entries(boardAliases).flatMap(([a, to]) => [[`/${a}`, `→ /${to}/`], [`/${a}/`, `→ /${to}/`]] as [string, string][]),
   ...widgets.flatMap(w => [[w.url, `widget/${w.slug}/index.html`], [`/widget/${w.uid}/`, `widget/${w.uid}/index.html`], [`/${w.uid}/`, `${w.uid}/index.html`]] as [string, string][]),
@@ -59,7 +59,7 @@ for (const exact of [true, false]) {
   const bad = CASES.flatMap(([path, want, view]) => {
     const o = route(path, exact), got = show(o)
     if (got !== want) return [`${path}: ${got}, want ${want}`]
-    if (view && 'file' in o && !view(viewFromUrl('', path))) return [`${path}: the app does not open the expected view`]
+    if (view && 'file' in o && !view(viewFromUrl(path.includes('?') ? path.slice(path.indexOf('?')) : '', path.split('?')[0]))) return [`${path}: the app does not open the expected view`]
     // one hop: a redirect lands on a page, never on another redirect
     if ('redirect' in o && !('file' in route(o.redirect, true))) return [`${path}: redirect chain via ${o.redirect} (${show(route(o.redirect, true))})`]
     return []
