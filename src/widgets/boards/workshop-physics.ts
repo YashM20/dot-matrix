@@ -313,7 +313,7 @@ export const matMercury: WidgetPreset = {
     } else mercShade(s, L, tilt)
     const beads: Pt[] = []
     for (let q = 0; q < mercury.beads; q++) { const o = mercury.B + BEAD * q; if (s[o + 5] > 0) beads.push(mercCard(s[o], s[o + 1])) }
-    return [cite('MATCAP · STAM 1999'), F.layer, ...(beads.length ? [layer(T.dots(beads, 2.2), 'active')] : [])]
+    return [cite('STAM 1999'), F.layer, ...(beads.length ? [layer(T.dots(beads, 2.2), 'active')] : [])]
   },
 }
 

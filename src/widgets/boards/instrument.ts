@@ -173,7 +173,7 @@ export const meter: WidgetPreset = {
     const g = y(Math.round(clamp01(ctx.data.gain ?? .8) * (n - 1)))
     return [
       ...out,
-      ...[[12, '0'], [9, '6'], [6, '12'], [3, '24'], [0, '48']].map(([i, s]) => layer(T.big(String(s), 72, y(+i) - 2.5, { lattice: .72, align: 'center' }), 'mid')),
+      ...[[12, '0'], [9, '6'], [6, '12'], [3, '24'], [0, '48']].map(([i, s]) => layer(T.text(String(s), 72, Math.round(y(+i) - 3), { align: 'center' }), 'mid')),
       layer(spots([[xs[0] - 8, g], [xs[1] + 8, g]], 3), 'mid'),
       ...(f.focus ? [focusRing(rect(38, 20, 68, 100, 3), ctx.t)] : []),
     ]

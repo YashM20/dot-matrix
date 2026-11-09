@@ -31,7 +31,7 @@ import { hash01 } from '../../engine/math'
 import type { Field, Layer } from '../../engine/types'
 import { lightSource } from '../../site/light'
 import { TILE, layer, layoutFor, type WidgetPreset } from '../types'
-import { cap, cellToLattice15, cite, DEG, L15, LG15, LIGHT_DEFAULTS, matLight, mod, once, pad2, rasterLayer, scratch, T, TAU, tile, toCard15, toLattice15, valuedSites, type Box, type Pt } from './materials-shared'
+import { cellToLattice15, cite, DEG, L15, LG15, LIGHT_DEFAULTS, matLight, mod, once, pad2, rasterLayer, scratch, T, TAU, tile, toCard15, toLattice15, valuedSites, type Box, type Pt } from './materials-shared'
 import { matLens, matWindow, glassHooks } from './materials-glass'
 import { matPool, matRust, poolHooks } from './materials-live'
 import { matPatch, matCandle, wearHooks } from './materials-wear'
@@ -439,7 +439,7 @@ const engravings = new Map<string, Engraving>()
 export function engraving(hh: string, mm: string, year: number): Engraving {
   const key = `${hh}:${mm}|${year}`, hit = engravings.get(key)
   if (hit) { engravings.delete(key); engravings.set(key, hit); return hit }
-  const opts = { lattice: HERO_K, smooth: true, align: 'center' as const }
+  const opts = { lattice: HERO_K, smooth: true, mask: true, align: 'center' as const }
   const full = cardMask(T.big(`${hh}:${mm}`, 72, HERO_ROW, opts), TILE), cut = cardMask(T.big(`${hh} ${mm}`, 72, HERO_ROW, opts), TILE)
   // the colon's two dots: what the full string lights and the spaced one doesn't, split top / bottom
   const pts: Pt[] = [], [f0, f1, f2, f3] = rasterWindow(full)
@@ -627,11 +627,11 @@ export const matTerrazzo: WidgetPreset = {
     const shown = preview >= 0 && preview !== today ? preview : today, weekday = WEEKDAY[(shown + m.offset) % 7]
     const out: Layer[] = [
       cite('POISSON DISC'),
-      layer(cap(`${MONTHS[m.month]} ${m.year}`, 0, 14), 'mid'),
+      layer(T.text(`${MONTHS[m.month]} ${m.year}`, 0, 14), 'mid'),
       // lattice 2: the date ends at row 40, clear of the weekday letters at row 44
       layer(T.big(pad2(shown + 1), 140, 12, { lattice: 2, smooth: true, align: 'right' }), shown === today ? 'value' : 'mid'),
-      layer(cap(weekday, 0, 22), shown === today ? 'mid' : 'idle'),
-      ...WEEK.map((w, i) => layer(cap(w, colX(i), 44, 'center'), 'mid')),
+      layer(T.text(weekday, 0, 22), shown === today ? 'mid' : 'idle'),
+      ...WEEK.map((w, i) => layer(T.text(w, colX(i), 44, { align: 'center' }), 'mid')),
       { field: agg(.75), sites: m.aggregate.a, size: 1.6, tone: 'mid' }, { field: agg(.75), sites: m.aggregate.b, size: 1.15, tone: 'faint' }, { field: agg(.75), sites: m.aggregate.c, size: .85, tone: 'faint' },
       surfaceLayer([[future, 'mid'], [past, 'idle'], [polished, 'value']], L15),
     ]
