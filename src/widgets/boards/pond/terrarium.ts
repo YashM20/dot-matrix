@@ -36,10 +36,10 @@ export const pondTerrarium: WidgetPreset = {
     drawTerrarium(terrarium, s, creeperNow(hour), ctx.t, raster, terraLamp(terrarium, s), nightness(hour))
     const ants = antViews(terrarium, s), crumbs = crumbViews(terrarium, s).filter(c => c.bites >= 1)
     const out: Layer[] = [caption(timeOfDay(hour)), ...tileLayers(raster)]
-    if (crumbs.length) out.push(layer(T.dots(crumbs.map(c => [c.x, c.y]), 2.2), 'value'))
-    out.push(layer(T.dots(ants.map(a => [a.x, a.y]), 1), 'idle'))
+    if (crumbs.length) out.push(layer(T.dots(crumbs.map(c => [c.x, c.y]), 2.2, undefined, 0), 'value'))
+    out.push(layer(T.dots(ants.map(a => [a.x, a.y]), 1, undefined, 0), 'idle')) // a simulation: ants may crowd
     const loads = ants.filter(a => a.carrying).map(a => [a.x, a.y - 1.5] as [number, number])
-    if (loads.length) out.push(layer(T.dots(loads, .8), 'value'))
+    if (loads.length) out.push(layer(T.dots(loads, .8, undefined, 0), 'value'))
     return out
   },
 }

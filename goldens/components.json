@@ -25,14 +25,14 @@
   "ui-icon-button": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "368aff15",
-    "dots": 384
+    "hash": "80e1f80c",
+    "dots": 383
    }
   },
   "ui-status-dot": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "6d3c61cb",
+    "hash": "b7fff5cf",
     "dots": 169
    }
   },

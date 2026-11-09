@@ -88,13 +88,13 @@
   "pond-plankton": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "a1bd7b20",
-    "dots": 3403
+    "hash": "a9d64a67",
+    "dots": 3376
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "633e9099",
-    "dots": 3583
+    "hash": "5c672023",
+    "dots": 3584
    }
   },
   "pond-turing": {
