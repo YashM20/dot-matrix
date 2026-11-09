@@ -11,7 +11,9 @@
     { "source": "/essay/", "destination": "/blog/dot-matrix-essay/", "permanent": true },
     { "source": "/essay.html", "destination": "/blog/dot-matrix-essay/", "permanent": true },
     { "source": "/glyph", "destination": "/lock/", "permanent": true },
-    { "source": "/glyph/", "destination": "/lock/", "permanent": true }
+    { "source": "/glyph/", "destination": "/lock/", "permanent": true },
+    { "source": "/widget/glyph-:rest", "destination": "/widget/lock-:rest/", "permanent": true },
+    { "source": "/widget/glyph-:rest/", "destination": "/widget/lock-:rest/", "permanent": true }
   ],
   "rewrites": [
     { "source": "/ingest/static/:path*", "destination": "https://us-assets.i.posthog.com/static/:path*" },

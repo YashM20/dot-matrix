@@ -8,7 +8,9 @@
  *    `SITE_URL` / `VERCEL_PROJECT_PRODUCTION_URL` is set), and robots.txt names it;
  *  - the crawlable roots: a board page has its h1, blurb and a link to every card; widget pages link their board; the
  *    home page links every board; markdown posts carry their headings; nothing is hidden with `display:none`;
- *  - JSON-LD: every block in every built page parses, no page repeats a type, home has `WebSite`, a board `CollectionPage`.
+ *  - JSON-LD: every block in every built page parses, no page repeats a type, home has `WebSite`, a board `CollectionPage`;
+ *  - heads: every sitemap page has its own title and description, one h1, and OG / Twitter images that are built
+ *    1200×630 PNGs; redirects take one hop; no HTML comment holds `--` (the W3C checker flags it).
  *
  *   npx tsx scripts/site/seo-check.ts   → exit 1 on a failure
  */
@@ -41,7 +43,8 @@ const CASES: [path: string, want: string, view?: (v: ReturnType<typeof viewFromU
   ...Object.entries(boardAliases).flatMap(([a, to]) => [[`/${a}`, `→ /${to}/`], [`/${a}/`, `→ /${to}/`]] as [string, string][]),
   ...widgets.flatMap(w => [[w.url, `widget/${w.slug}/index.html`], [`/widget/${w.uid}/`, `widget/${w.uid}/index.html`], [`/${w.uid}/`, `${w.uid}/index.html`]] as [string, string][]),
   [`/widget/${sample.slug}`, 'index.html', v => v.widget?.key === sample.slug], [`/${sample.uid}`, 'index.html', v => v.widget?.key === sample.uid],
-  ...(lock ? [[`/widget/glyph-${lock.slug.slice(5)}/`, 'index.html', v => v.widget?.key === `glyph-${lock.slug.slice(5)}`]] as typeof CASES : []),
+  // the glyph board became lock: its old card links redirect in one hop to the card's canonical page
+  ...(lock ? [`/widget/glyph-${lock.slug.slice(5)}/`, `/widget/glyph-${lock.slug.slice(5)}`].map(p => [p, `→ /widget/${lock.slug}/`]) as typeof CASES : []),
   ['/ab12cd34', 'index.html', v => v.widget?.key === 'ab12cd34'], ['/@acme/widget/timer/', 'index.html', v => v.widget?.scope === 'acme'],
   ['/blog', 'blog/index.html'], ['/blog/', 'blog/index.html'], ...POSTS.map(p => [postPath(p.slug), `blog/${p.slug}/index.html`] as [string, string]),
   ['/essay', '→ /blog/dot-matrix-essay/'], ['/essay/', '→ /blog/dot-matrix-essay/'], ['/essay.html', '→ /blog/dot-matrix-essay/'],
@@ -57,6 +60,8 @@ for (const exact of [true, false]) {
     const o = route(path, exact), got = show(o)
     if (got !== want) return [`${path}: ${got}, want ${want}`]
     if (view && 'file' in o && !view(viewFromUrl('', path))) return [`${path}: the app does not open the expected view`]
+    // one hop: a redirect lands on a page, never on another redirect
+    if ('redirect' in o && !('file' in route(o.redirect, true))) return [`${path}: redirect chain via ${o.redirect} (${show(route(o.redirect, true))})`]
     return []
   })
   assert(`seo: vercel.json routes all ${CASES.length} cases as expected, reading sources ${exact ? 'exactly (as Vercel does)' : 'loosely (any case, optional trailing slash)'}`, !bad.length, bad.slice(0, 6).join('; '))
@@ -76,6 +81,29 @@ const badLoc = locs.flatMap(l => { const o = route(l.slice(origin.length), true)
 assert('seo: every sitemap URL is served by a built page whose canonical is that URL', !badLoc.length, badLoc.slice(0, 6).join('; '))
 const robots = readFileSync(join(DIST, 'robots.txt'), 'utf8')
 assert('seo: robots.txt allows crawling' + (origin ? ' and names the absolute sitemap URL' : ''), /^User-agent: \*$/m.test(robots) && !/^Disallow: \/$/m.test(robots) && (!origin || robots.includes(`Sitemap: ${origin}/sitemap.xml`)), robots.replace(/\n/g, ' | '))
+
+// ── every sitemap page's head: a title and description no other page has, one h1, OG and Twitter image tags
+// naming a built 1200×630 PNG ──
+const titles = new Map<string, string[]>(), descs = new Map<string, string[]>(), headBad: string[] = [], pngs = new Map<string, string>()
+const pngSize = (f: string) => { const b = readFileSync(f); return b.toString('latin1', 1, 4) === 'PNG' ? `${b.readUInt32BE(16)}x${b.readUInt32BE(20)}` : 'not a PNG' }
+for (const l of locs) {
+  const o = route(l.slice(origin.length), true)
+  if (!('file' in o)) continue
+  const html = readFileSync(join(DIST, o.file), 'utf8'), attr = (re: RegExp) => re.exec(html)?.[1]?.replace(/&amp;/g, '&')
+  const title = attr(/<title>([^<]*)<\/title>/) ?? '', desc = attr(/<meta name="description" content="([^"]*)"/) ?? ''
+  titles.set(title, [...(titles.get(title) ?? []), l]); descs.set(desc, [...(descs.get(desc) ?? []), l])
+  const h1 = (html.match(/<h1[\s>]/g) ?? []).length
+  if (!title || !desc || h1 !== 1) headBad.push(`${l}: ${!title ? 'no title ' : ''}${!desc ? 'no description ' : ''}${h1} h1`)
+  const img = attr(/<meta property="og:image" content="([^"]+)"/), tw = attr(/<meta name="twitter:image" content="([^"]+)"/)
+  if (!img || img !== tw || !/<meta name="twitter:card" content="summary_large_image"/.test(html)) { headBad.push(`${l}: og:image ${img}, twitter:image ${tw}`); continue }
+  const file = join(DIST, img.slice(origin.length)), size = pngs.get(file) ?? (existsSync(file) ? pngSize(file) : 'missing')
+  pngs.set(file, size)
+  if (!img.startsWith(`${origin}/`) || size !== '1200x630') headBad.push(`${l}: og:image ${img} is ${size}`)
+}
+const twice = (m: Map<string, string[]>) => [...m].filter(([, v]) => v.length > 1).map(([k, v]) => `"${k.slice(0, 60)}" on ${v.slice(0, 3).join(', ')}`)
+assert(`seo: all ${locs.length} sitemap pages have a title, a description and one h1, and OG and Twitter images that are built 1200×630 PNGs`, !headBad.length, headBad.slice(0, 6).join('; '))
+assert('seo: no two sitemap pages share a title', !twice(titles).length, twice(titles).slice(0, 4).join('; '))
+assert('seo: no two sitemap pages share a description', !twice(descs).length, twice(descs).slice(0, 4).join('; '))
 
 // ── crawlable roots ──
 const read = (f: string) => readFileSync(join(DIST, f), 'utf8')
@@ -102,7 +130,7 @@ assert('seo: the blog and lab indexes carry their static block', ['blog.html', '
 
 // ── every built page: JSON-LD parses, no type twice, no display:none on the static block ──
 const walk = (d: string): string[] => readdirSync(d).flatMap(n => { const p = join(d, n); return statSync(p).isDirectory() ? walk(p) : p.endsWith('.html') ? [p] : [] })
-const ldBad: string[] = [], hidden: string[] = []
+const ldBad: string[] = [], hidden: string[] = [], dashes: string[] = []
 for (const f of walk(DIST)) {
   const html = readFileSync(f, 'utf8'), types: string[] = []
   for (const [, body] of html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)) {
@@ -110,9 +138,12 @@ for (const f of walk(DIST)) {
   }
   if (new Set(types).size !== types.length) ldBad.push(`${f}: ${types.join(' + ')}`)
   if (new RegExp(`\\.${STATIC_CLASS}\\{[^}]*display:\\s*none`).test(html)) hidden.push(f)
+  // `--` inside a comment is valid HTML, but the W3C checker flags it (the page no longer maps to XML)
+  if ([...html.matchAll(/<!--([\s\S]*?)-->/g)].some(m => m[1].includes('--'))) dashes.push(f)
 }
 assert('seo: every JSON-LD block in every built page parses, and no page repeats a type', !ldBad.length, ldBad.slice(0, 6).join('; '))
 assert('seo: no page hides its static block with display:none', !hidden.length, hidden.slice(0, 3).join(', '))
+assert('seo: no HTML comment in a built page holds a double hyphen', !dashes.length, dashes.slice(0, 3).join(', '))
 const lds = (f: string) => [...read(f).matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(m => JSON.parse(m[1]))
 assert('seo: the home page has WebSite JSON-LD', lds('index.html').some(o => o['@type'] === 'WebSite'))
 const ldGaps = boardIds.filter(id => lds(`${id}/index.html`).find(o => o['@type'] === 'CollectionPage')?.hasPart?.length !== cardsOf(id, widgets).length)

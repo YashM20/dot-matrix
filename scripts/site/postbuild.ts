@@ -37,6 +37,7 @@ import { BLOG, heroImage, POSTS, postPath, socialImage } from '../../src/blog/po
 import { EXPERIMENTS, LAB, experimentPath } from '../../src/lab/experiments'
 import { metaTags, pageMeta, widgetPageMeta, widgetTitle, type PageMeta } from '../../src/site/meta'
 import { boardBlurbs } from '../../src/widgets/blurbs'
+import { boardLabel } from '../../src/widgets/manifest'
 import { BROWSE_META } from '../../src/site/browse'
 import type { WidgetMeta } from '../../src/widgets/meta'
 import { widgetIndex } from '../widgets/meta'
@@ -63,7 +64,7 @@ export function withMeta(html: string, page?: string | PageMeta, extra: string[]
 export function widgetHead(w: WidgetMeta, m: PageMeta): string[] {
   const ld = {
     '@context': 'https://schema.org', '@type': 'CreativeWork', name: widgetTitle(w.name), description: w.blurb, identifier: w.uid,
-    url: origin + m.path, image: origin + m.image, keywords: w.tags.join(', '), isPartOf: { '@type': 'Collection', name: `${w.board} board`, url: `${origin}/${w.board}/` },
+    url: origin + m.path, image: origin + m.image, keywords: w.tags.join(', '), isPartOf: { '@type': 'Collection', name: `${boardLabel(w.board)} board`, url: `${origin}/${w.board}/` },
     ...(w.version && { version: w.version }),
   }
   return [
