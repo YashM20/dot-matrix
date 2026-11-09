@@ -147,12 +147,12 @@
 }
 
 /* 24 px centred on the 12 px bar would start 4 px above the card: `top` moves it down to the card's edge, and the
-   bottom padding keeps the glyph centred on the chip */
+   padding keeps the glyph where it sat on the 12 px chip (one line box down from the chip's top border) */
 .dot-card-bar .dot-card-more {
   isolation: isolate;
   top: var(--space-1);
   height: 24px;
-  padding: 0 var(--space-1) var(--space-2);
+  padding: 1px var(--space-1) calc(var(--space-2) - 1px);
   background: none;
   border: 0;
   font-size: var(--fs-label-12);
@@ -221,7 +221,7 @@
 
 .dot-card--bleed .dot-card-bar .dot-card-more {
   top: 0;
-  padding-bottom: 0;
+  padding-block: 0;
   opacity: 0
 }
 
