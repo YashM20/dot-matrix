@@ -4,13 +4,13 @@
   "ir-ripple": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "2d931bbd",
-    "dots": 1087
+    "hash": "4d960f30",
+    "dots": 1097
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "59db0add",
-    "dots": 1059
+    "hash": "b5ca3614",
+    "dots": 1069
    }
   },
   "ir-plasma": {
