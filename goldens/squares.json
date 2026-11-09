@@ -40,12 +40,12 @@
   "sq-gameboy": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "a9183def",
+    "hash": "f7b00f9b",
     "dots": 4797
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "91c18397",
+    "hash": "8b0fed4f",
     "dots": 4797
    }
   },
@@ -148,12 +148,12 @@
   "sq-morph": {
    "t=0": {
     "style": "circle:2.00",
-    "hash": "a8076a13",
+    "hash": "86016692",
     "dots": 4838
    },
    "t=1.3": {
     "style": "circle:2.00",
-    "hash": "e9d972e7",
+    "hash": "067d510c",
     "dots": 4840
    }
   },
