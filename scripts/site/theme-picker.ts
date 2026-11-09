@@ -332,11 +332,11 @@ try {
   const compact = (await centreOf(`${cardsSel} [role=radio]:nth-child(3)`))!
   // the card and its DotCanvas root: an SVG card swaps its <svg> for each new dot list, and the enter transient draws on a
   // canvas before handing back to SVG, so the drawing element itself changes without any re-mount
-  const card0 = `[document.querySelector('.board-grid > .dot-card'), document.querySelector('.board-grid > .dot-card .dot-a11y-root')]`
+  const card0 = `(c => [c, c?.querySelector('.dot-a11y-root')])(document.querySelector('.board-grid > .dot-card:has(.dot-a11y-root)'))`
   await js(`window.__card0 = ${card0}`)
   await click(compact.x, compact.y)
   check('card size: a click on COMPACT sets data-cards="s", stores it and reflows to 4 a row at 1280', await waitFor(`document.documentElement.dataset.cards === 's' && localStorage.getItem('dot480:cards') === 's' && ${firstRow} === 4`, 3000), String(await js(firstRow)))
-  check('card size: nothing re-mounts (the first card keeps its element and its DotCanvas root)', await js(`(() => { const [c, r] = window.__card0, [c1, r1] = ${card0}; return !!c && !!r && c.isConnected && r.isConnected && c1 === c && r1 === r })()`) === true)
+  check('card size: nothing re-mounts (the first interactive card keeps its element and its DotCanvas root)', await js(`(() => { const [c, r] = window.__card0, [c1, r1] = ${card0}; return !!c && !!r && c.isConnected && r.isConnected && c1 === c && r1 === r })()`) === true)
   check('card size: the popover stays open', await js('!!document.querySelector(".theme-pop")') === true)
   await js(`document.querySelector('${cardsSel} [aria-checked=true]').focus()`)
   await key('ArrowLeft', 'ArrowLeft', 37)
