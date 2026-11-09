@@ -9,7 +9,7 @@
 import { useEffect, useEffectEvent, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react'
 import { DotName } from '../DotName'
 import { dot480 } from '../../engine/theme/tokens'
-import { boardIds, boardLabel, loadBoard, resolveCardId, type BoardId } from '../../widgets/manifest'
+import { boardIds, boardLabel, loadBoard, resolveCardId } from '../../widgets/manifest'
 import { catalog } from '../../widgets/catalog'
 import { deriveWidgetMeta, type WidgetMeta } from '../../widgets/meta'
 import { creditsOf, withChrome, type WidgetPreset } from '../../widgets/types'
@@ -148,8 +148,8 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
 
   // a camera card's hint is CAMERA too: each chip once
   const chips = [...new Set([meta.hint, meta.animated && 'ANIMATED', meta.live && 'LIVE DATA', meta.media === 'camera' && 'CAMERA', meta.media === 'mic' && 'MICROPHONE', meta.clock && 'CLOCK'].filter((c): c is string => !!c))]
-  // the concept credit the board heading shows, here too: shared links land on this page
-  const blurbs = useBlurbs(), concept = blurbs?.conceptCredit.boards.includes(w.board as BoardId) ? blurbs.conceptCredit : undefined
+  // the concept credit lives on each card's page (the board view shows none): the card's own `concept`, else its board's default
+  const blurbs = useBlurbs(), concept = blurbs?.hasConcept(w.board, preset) ? blurbs.conceptCredit : undefined
   const facts: [string, ReactNode][] = [
     ['Board', <a key="b" className="wp-link" href={`/${w.board}/`} onClick={e => { if (e.button === 0 && !e.metaKey && !e.ctrlKey) { e.preventDefault(); onBoard(w.board, w.slug) } }}>{boardLabel(w.board)}</a>],
     ['Kind', meta.group],
@@ -184,7 +184,7 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
         {preset.typing && <TypeField typing={preset.typing} onText={setTyped} />}
         <WidgetLike uid={w.uid} name={name} />
         {creditsOf(preset).map(c => <p key={c.source} className="wp-credit">by {c.by.join(', ')} · <a className="wp-link" href={c.source} target="_blank" rel="noopener noreferrer">{c.title}</a>{c.note && <> · {c.note}</>}</p>)}
-        {concept && <ConceptCredit credit={concept} card />}
+        {concept && <ConceptCredit credit={concept} />}
         {/* the actions, grouped by what they do: export, then share and remix, then the rest */}
         <PillBar label="Card actions" className="wp-actions">
           <Pill className="wp-copy">
