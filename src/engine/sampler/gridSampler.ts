@@ -65,9 +65,9 @@ const NO_JOIN = 0xFFFF, NO_FORM = 15
 /**
  * One dot. `scale` = the lattice factor (kx on a rect lattice); `ky` > 0 makes it a rect cell (squares Q2): its half
  * height and `aspect` come from the squares hook (`samplerExt.rect`); `axis` 'x' / 'y' (a bar / line) is solid.
+ * `value` is the shown one (`shown`): every caller has it already, for its visibility test.
  */
 function emit(out: Sink, value: number, tone: number, x: number, y: number, seed: number, style: DotStyle, scale = 1, join = NO_JOIN, form = NO_FORM, ky = 0, axis?: 'x' | 'y'): void {
-  value = shown(value, style)
   const eased = style.sizeCurve ? style.sizeCurve(value) : value
   let jx = x, jy = y
   // same arithmetic as `applyJitter`, without the tuple
@@ -103,7 +103,7 @@ export function sampleField(field: Field, grid: GridConfig, style: DotStyle, the
   for (let row = 0; row < grid.rows; row++) for (let col = 0; col < grid.cols; col++) {
     const value = safe(f(cellU(col, grid.cols), cellU(row, grid.rows)))
     out.fixed = colorForFn(value, theme)
-    emit(out, value, 0, (col + .5) * pitch, (row + .5) * pitch, row * grid.cols + col, style)
+    emit(out, shown(value, style), 0, (col + .5) * pitch, (row + .5) * pitch, row * grid.cols + col, style)
   }
   return out.dots!
 }
@@ -276,12 +276,14 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
     for (let row = wr0; row <= wr1; row++) for (let col = wc0; col <= wc1; col++) {
       const j = (row - wr0) * width + (col - wc0), value = best[j]
       // a dot that quantizes to nothing is not drawn, so it must not punch a hole in the card either
-      if (value <= 0 || shown(value, style) <= 0) continue
-      emit(dots, value, J ? J.tone[j] : toneIndex(toneOf(group, owner[j], value, us[col], vs[row]), value), (ox + (col + .5) * k) * pitch, (oy + (row + .5) * ky) * pitch, 1e6 + row * sub.cols + col, style, k,
+      const sv = value > 0 ? shown(value, style) : 0
+      if (sv <= 0) continue
+      emit(dots, sv, J ? J.tone[j] : toneIndex(toneOf(group, owner[j], value, us[col], vs[row]), value), (ox + (col + .5) * k) * pitch, (oy + (row + .5) * ky) * pitch, 1e6 + row * sub.cols + col, style, k,
         J ? J.join[j] : NO_JOIN, J ? J.form[j] : NO_FORM, rect, axis)
       // card cells whose centre falls inside this lattice cell (per axis on a rect lattice)
       const c0 = Math.ceil(ox + col * k - .5), c1 = Math.ceil(ox + (col + 1) * k - .5), r0 = Math.ceil(oy + row * ky - .5), r1 = Math.ceil(oy + (row + 1) * ky - .5)
-      for (let r = Math.max(0, r0); r < Math.min(grid.rows, r1); r++) for (let c = Math.max(0, c0); c < Math.min(grid.cols, c1); c++) covered![r * grid.cols + c] = 1
+      const ra = Math.max(0, r0), rb = Math.min(grid.rows, r1), ca = Math.max(0, c0), cb = Math.min(grid.cols, c1), cols = grid.cols
+      for (let r = ra; r < rb; r++) for (let c = ca; c < cb; c++) covered![r * cols + c] = 1
     }
   }
   // explicit sites: merge coincident sites (a later one wins ties), then emit and clear the card cells under each dot
@@ -311,7 +313,7 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
   const n = coverExponent(style.shape, style.cornerRoundness)
   for (let s = 0; s < (S ? S.n : 0); s++) {
     const x = S!.x[s], y = S!.y[s], k = S!.k[s], value = S!.value[s], tone = S!.tone[s], form = S!.form[s]
-    emit(dots, value, toneIndex(tone, value), (x + .5) * pitch, (y + .5) * pitch, seed++, style, k, NO_JOIN, form)
+    emit(dots, shown(value, style), toneIndex(tone, value), (x + .5) * pitch, (y + .5) * pitch, seed++, style, k, NO_JOIN, form)
     const reach = k / 2 + .25, f = form & 15, nf = f === NO_FORM ? n : coverExponent('squircle', f / 8), rot = (form & 16) * Math.PI / 64, box = rot ? reach * Math.SQRT2 : reach
     for (let r = Math.max(0, Math.ceil(y - box)); r <= Math.min(grid.rows - 1, Math.floor(y + box)); r++)
       for (let c = Math.max(0, Math.ceil(x - box)); c <= Math.min(grid.cols - 1, Math.floor(x + box)); c++)
@@ -322,8 +324,10 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
   for (let row = 0; row < grid.rows; row++) for (let col = 0; col < grid.cols; col++) {
     const i = row * grid.cols + col, value = best[i]
     // empty cells are invisible unless the style draws every dot (constant opacity); 0 always shows as 0
-    if (covered?.[i] || ((value <= 0 || shown(value, style) <= 0) && !background)) continue
-    emit(dots, value, J ? J.tone[i] : toneIndex(toneOf(base, owner[i], value, us[col], vs[row]), value), (col + .5) * pitch, (row + .5) * pitch, i, style, 1,
+    if (covered?.[i]) continue
+    const sv = shown(value, style)
+    if ((value <= 0 || sv <= 0) && !background) continue
+    emit(dots, sv, J ? J.tone[i] : toneIndex(toneOf(base, owner[i], value, us[col], vs[row]), value), (col + .5) * pitch, (row + .5) * pitch, i, style, 1,
       J ? J.join[i] : NO_JOIN, J ? J.form[i] : NO_FORM)
   }
 }
