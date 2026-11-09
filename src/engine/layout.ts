@@ -101,8 +101,10 @@ export function bigText(grid: GridConfig, str: string, col: number, row: number,
     const kx = opts.lattice * sx, ky = opts.lattice * sy, bits = heroRows(hero, str), w = bits[0].length * kx
     const left = opts.align === 'center' ? col - w / 2 : opts.align === 'right' ? col - w : col
     if (kx === ky) {
-      const field = spriteAt(latticeGrid(grid, kx, [left, row]), bits, 0, 0)
+      // tagged as a sprite so a spec export (src/spec) rebuilds the same bitmap on the same lattice
+      const sub = latticeGrid(grid, kx, [left, row]), field = spriteAt(sub, bits, 0, 0)
       field.text = str
+      field.from = { gen: 'sprite', grid: sub, args: [bits, 0, 0] }
       return { field, lattice: kx, origin: [left, row] }
     }
     const field: Field = () => 1, sites: [number, number][] = []
