@@ -15,6 +15,48 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 
 export const releases: Release[] = [
   {
+    version: '0.16', date: '2026-11-04', title: 'Safer, easier to find, and a shell that helps',
+    summary: 'A security pass over every page, pages that search engines can read, analytics that ask first, and a command shell that completes what you type.',
+    changes: [
+      { kind: 'new', text: 'Search engines can read every board, card and post: each page has its own title and a short text, and a missing page shows a dot 404.' },
+      { kind: 'new', text: 'Analytics are opt-in. Nothing loads until you press Allow, and Global Privacy Control or Do Not Track keeps them off.' },
+      { kind: 'new', text: 'The >_ shell completes commands with Tab, lists them with help, and suggests the command you meant after a typo.' },
+      { kind: 'new', text: 'The site has a name, MATRIX, and its code is MIT licensed.' },
+      { kind: 'improved', text: 'Card programs run under a time limit, so a slow one pauses instead of freezing the page.' },
+      { kind: 'improved', text: 'Stricter security headers on every page, and links and saved themes are checked before the site uses them.' },
+      { kind: 'improved', text: 'X-ray is off for now.' },
+    ],
+  },
+  {
+    version: '0.15', date: '2026-11-04', title: 'Dash, faces, type and watches',
+    summary: 'Six new boards (a car dash, lit faces, kinetic type, micro motion, dot charts and watch faces), plus fractals, 3D scenes and new cards on squares, pond and workshop.',
+    changes: [
+      { kind: 'new', text: 'CAR: nine dash and EV cards driven by one 30 second lap, until you turn a control yourself.' },
+      { kind: 'new', text: 'FACES: four lit halftone heads whose eyes follow your pointer.' },
+      { kind: 'new', text: 'KINETIC: seven effects on one shared word. Change the word on the flap card and the link keeps it.' },
+      { kind: 'new', text: 'MOTION: eleven looping loaders, toasts and replies. Tap one to play it again.' },
+      { kind: 'new', text: 'CHARTS: seven dot charts that grow in, morph between datasets and read out the point nearest your pointer.' },
+      { kind: 'new', text: 'WATCH: eight smartwatch faces, with the moon phase and sun times worked out on your device.' },
+      { kind: 'new', text: 'OLDSCHOOL demo effects, FRACTALS, and SCENES: 3D shapes traced into dots.' },
+      { kind: 'new', text: 'New cards: aperiodic hat and Ammann floors, a sandpile and ASCII art on squares, plankton and Turing skin in the pond, and lightning, erosion, frost, kintsugi, mud and folded paper in the workshop.' },
+      { kind: 'improved', text: 'CONTRAST: MORE in THEME raises text and line contrast, and a custom theme can be shared as a link.' },
+      { kind: 'fixed', text: 'The desktop header hides as you scroll down, and the footer no longer spills past the page on narrow screens.' },
+    ],
+  },
+  {
+    version: '0.14', date: '2026-11-03', title: 'A blog, and steadier boards',
+    summary: 'A blog with the dot-matrix essay and three deep dives, credits for the work cards build on, and fixes for the pond and for wide layouts.',
+    changes: [
+      { kind: 'new', text: 'BLOG: the essay on how the engine works and three deep dives, with pictures drawn by the engine. Old essay links still work.' },
+      { kind: 'new', text: 'A card built on someone else’s work names them on its page.' },
+      { kind: 'improved', text: 'New engine shapes, smooth blends and easing curves, drawn crisp on coarse grids.' },
+      { kind: 'improved', text: 'Workshop cards draw their first frame sooner.' },
+      { kind: 'fixed', text: 'Koi no longer snap back to their loop after you feed them.' },
+      { kind: 'fixed', text: 'Scrollbars no longer push bars and figures past the edge of the page.' },
+    ],
+    link: { href: '/blog/', label: 'READ THE BLOG' },
+  },
+  {
     version: '0.13', date: '2026-11-01', title: 'A workshop, glass and a pond with a memory',
     summary: 'A Workshop board of nine materials, glass and water on the materials board, more squares, a pond that reacts and remembers, sharing and phone editing in MAKE, fourteen themes, and a faster first load.',
     changes: [
