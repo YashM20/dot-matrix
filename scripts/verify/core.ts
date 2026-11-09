@@ -179,24 +179,25 @@ export function coreChecks(assert: Assert) {
     assert('clock does not advance while paused and never resets', clock.time() > .09 && clock.time() < .1, clock.time().toFixed(3))
     unsub()
 
-    // turn-taking: above STAGGER.min board cards they draw on alternate frames at the current t (after the first, forced
-    // draw); a small board, a card without an order, a card the visitor is using and an invalidated card draw every frame
+    // turn-taking: above STAGGER.min board cards the odd ranks run half a frame behind. On a 60 Hz loop every card keeps
+    // its rate and its quantized, rising t, but no animation frame draws more than half the turn-taking cards; a small
+    // board, an unordered card and a card the visitor is using draw on time
     const turnsOf = (n: number, busy = -1) => {
       let now = 0
       const q: ((time: number) => void)[] = [], c = createMasterClock({ now: () => now, raf: cb => { q.push(cb); return q.length }, caf: () => {} })
-      const log: { order: number; t: number }[][] = Array.from({ length: n + 1 }, () => [])
-      const subs = Array.from({ length: n }, (_, i) => ({ fps: 30, order: i, staggerable: () => i !== busy, onFrame: (t: number) => log[i].push({ order: i, t }) }))
-      subs.forEach(sb => c.subscribe(sb)); c.subscribe({ fps: 30, onFrame: t => log[n].push({ order: -1, t }) })
-      for (let k = 0; k < 30; k++) { now += 1000 / 30; q.shift()?.(now) }
-      c.invalidate(subs[1]); now += 1; q.shift()?.(now)
-      return log.map(l => l.map(e => e.t))
+      const ts: number[][] = Array.from({ length: n + 1 }, () => []), perTick: number[] = []
+      let drawn = 0
+      const subs = Array.from({ length: n + 1 }, (_, i) => i < n ? { fps: 12, order: i, staggerable: () => i !== busy, onFrame: (t: number) => { ts[i].push(t); if (i !== busy) drawn++ } } : { fps: 12, onFrame: (t: number) => ts[i].push(t) })
+      subs.forEach(sb => c.subscribe(sb)); q.shift()?.(now)
+      for (let k = 0; k < 120; k++) { drawn = 0; now += 1000 / 60; q.shift()?.(now); perTick.push(drawn) }
+      return { ts, perTick }
     }
     const big = turnsOf(STAGGER.min + 2, 3), small = turnsOf(STAGGER.min)
-    const halved = big.slice(0, -1).every((ts, i) => i === 3 || (ts.length >= 15 && ts.length <= 18 && ts.every((t, j) => j <= 1 || t - ts[j - 1] > 1 / 30 + 1e-9 || i === 1)))
-    const sameT = big.flat().every(t => Math.abs(t * 30 - Math.round(t * 30)) < 1e-6)
-    assert('clock: a board of more than STAGGER.min live cards takes turns (half rate, current t); a small board, an unordered card and a busy card draw every frame',
-      halved && sameT && big[3].length === 30 && big[big.length - 1].length === 30 && small.every((ts, i) => ts.length === (i === 1 ? 31 : 30)) && big[1].length === big[4].length + 1,
-      big.map(ts => ts.length).join('/') + ' | ' + small.map(ts => ts.length).join('/'))
+    const rising = (l: number[]) => l.every((t, j) => j === 0 || t > l[j - 1]) && l.every(t => Math.abs(t * 12 - Math.round(t * 12)) < 1e-6)
+    const rate = (r: ReturnType<typeof turnsOf>) => r.ts.every(l => l.length >= 23 && l.length <= 26 && rising(l))
+    assert('clock: above STAGGER.min live board cards take turns (every card at its rate and quantized t, half of them per animation frame); a small board draws together',
+      rate(big) && rate(small) && Math.max(...big.perTick) <= Math.ceil((STAGGER.min + 1) / 2) && Math.max(...small.perTick) === STAGGER.min,
+      `frames ${big.ts.map(l => l.length).join('/')}; most per animation frame ${Math.max(...big.perTick)} of ${STAGGER.min + 1}, small board ${Math.max(...small.perTick)}`)
 
     const qStyle = { shape: 'circle' as const, sizeMin: 0, sizeMax: 1, quantizeSteps: 5 }
     const holes = sampleLayers([{ field: () => 1, tone: 'faint' }, { field: () => .1, tone: 'idle', lattice: 2 }], { cols: 8, rows: 8, pitch: 2 }, qStyle, dot480)

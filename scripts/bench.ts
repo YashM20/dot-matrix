@@ -15,12 +15,17 @@
  * and a classic 15 px scrollbar leave a 1188 px grid, so square 285 px cards (under --card-max = min(62svh, 520px))
  * on a 301 px row pitch. The live band is 800 + 2 × 64 = 928 px, and 928 + 285 > 4 × 301, so it can touch 5 rows:
  * 20 cards. (With an overlay scrollbar it is 4 rows, 16 cards; COMPACT, an opt-in, fits 25.)
+ * Turn-taking (src/engine/clock.ts `STAGGER`): when a window holds more than STAGGER.min live CPU cards, they split by
+ * board order into two interleaved groups and the second runs half a frame period behind, so on a 60 Hz display the
+ * groups draw on different animation frames. A card above 30 fps (half of 60 Hz) draws on most frames whatever its
+ * phase, so it counts in both. The window's frame is the heavier group plus the other group's cards above 30 fps.
  * A GPU card (every animated layer GPU-tagged, so WebGL2 draws it; its CPU layers are static) is GPU work: it leaves
  * the frame and worst-live checks, and its CPU-fallback time (no WebGL2) has its own column so a regression still shows.
  * Per board, budgets:
  *   mount       Σ t=0 build+sample of every card (first frame)                                 ≤ 30 ms
- *   frame       worst Σ per-frame time over any N consecutive animated CPU cards (board order)    ≤ 8 ms
- *   all         Σ per-frame time of every animated CPU card (reference only, no budget)
+ *   frame       worst per-frame time over any N consecutive animated CPU cards (board order),
+ *               with turn-taking (above)                                                         ≤ 8 ms
+ *   all         Σ per-frame time of every animated CPU card, no turn-taking (reference only, no budget)
  *   worst live  slowest animated CPU card per frame                                              ≤ 4 ms (hero)
  *   gpu fb      Σ CPU-fallback per-frame time of the GPU cards (reference only, no budget)
  *   SVG         Σ renderSVG bytes of the cards the app draws as SVG                               < 0.5 MB
@@ -35,6 +40,7 @@ import { boards, withChrome, type WidgetPreset } from '../src/widgets'
 import { median, pitchOf, theme, uniquePresets, visible } from './lib/cards'
 import { freezeWallClock } from './lib/freeze'
 import { simReset } from '../src/engine/sim'
+import { STAGGER } from '../src/engine/clock'
 import { hasGPULayers, splitGPULayers } from '../src/engine/renderer/webgl/passes'
 import { simBoard, simBoardSims } from '../src/widgets/boards/sim'
 
@@ -46,7 +52,7 @@ const BUDGET = { mountMs: 30, frameMs: 8, liveMs: 4, svgBytes: 0.5 * 1024 * 1024
 /** Cards a 1280 × 800 viewport holds on the busiest board layout (header): the board frame window. */
 const VIEWPORT_CARDS = 20
 
-interface Row { id: string; animated: boolean; gpu: boolean; layers: number; dots: number; visible: number; renderer: 'svg' | 'canvas'; mountMs: number; buildMs: number; sampleMs: number; frameMs: number; svgBytes: number }
+interface Row { id: string; animated: boolean; gpu: boolean; fps: number; layers: number; dots: number; visible: number; renderer: 'svg' | 'canvas'; mountMs: number; buildMs: number; sampleMs: number; frameMs: number; svgBytes: number }
 function benchCard(p: WidgetPreset): Row {
   const lf = withChrome(p), data = { ...p.defaults }
   const run = (t: number) => { const a = performance.now(); const L = lf({ t, data }); const b = performance.now(); const d = sampleLayers(L, p.grid, p.style, theme); return { build: b - a, sample: performance.now() - b, L, d } }
@@ -59,7 +65,7 @@ function benchCard(p: WidgetPreset): Row {
   const gpu = !!p.animated && hasGPULayers(L) && cpuKey(1 / 12) === cpuKey(1.3)
   const renderer = p.animated || vis > CANVAS_THRESHOLD ? 'canvas' : 'svg'
   return {
-    id: p.id, animated: !!p.animated, gpu, layers: L.length, dots: d.length, visible: vis, renderer,
+    id: p.id, animated: !!p.animated, gpu, fps: p.fps ?? 12, layers: L.length, dots: d.length, visible: vis, renderer,
     mountMs: median(mount.map(r => r.build + r.sample)), buildMs: median(mount.map(r => r.build)), sampleMs: median(mount.map(r => r.sample)),
     frameMs: frames.length ? median(frames.map(r => r.build + r.sample)) : 0,
     svgBytes: Buffer.byteLength(renderSVG(d, p.grid.cols * pitch, p.grid.rows * pitch)),
@@ -79,11 +85,17 @@ if (showCards > 0) {
 }
 
 interface BoardRow { id: string; cards: number; animated: number; mountMs: number; frameMs: number; allMs: number; gpuMs: number; worstLive: string; worstLiveMs: number; svgCards: number; svgBytes: number; svgAllBytes: number; over: string[] }
+/** One viewport's frame with turn-taking (the clock's rule): the heavier group, plus the other group's cards above 30 fps. */
+function windowFrame(w: Row[]): number {
+  if (w.length <= STAGGER.min) return w.reduce((s, r) => s + r.frameMs, 0)
+  const tick = (g: number) => w.reduce((s, r, i) => s + ((i & 1) === g || r.fps > 30 ? r.frameMs : 0), 0)
+  return Math.max(tick(0), tick(1))
+}
 const boardRows: BoardRow[] = boards.map(b => {
   const rs = b.items.map(p => rows.get(p.id)!), an = rs.filter(r => r.animated && !r.gpu), svg = rs.filter(r => r.renderer === 'svg')
   // the busiest viewport: the worst sum over any VIEWPORT_CARDS consecutive animated CPU cards
   let frameMs = 0
-  for (let i = 0; i <= Math.max(0, an.length - VIEWPORT_CARDS); i++) frameMs = Math.max(frameMs, an.slice(i, i + VIEWPORT_CARDS).reduce((s, r) => s + r.frameMs, 0))
+  for (let i = 0; i <= Math.max(0, an.length - VIEWPORT_CARDS); i++) frameMs = Math.max(frameMs, windowFrame(an.slice(i, i + VIEWPORT_CARDS)))
   const worst = an.reduce<Row | undefined>((w, r) => (!w || r.frameMs > w.frameMs ? r : w), undefined)
   const row: BoardRow = {
     id: b.id, cards: rs.length, animated: rs.filter(r => r.animated).length,
@@ -98,7 +110,7 @@ const boardRows: BoardRow[] = boards.map(b => {
   if (row.svgBytes >= BUDGET.svgBytes) row.over.push('svg')
   return row
 })
-console.log(`Boards — budgets: mount ≤ ${BUDGET.mountMs} ms, frame (worst ${VIEWPORT_CARDS} consecutive live CPU cards) ≤ ${BUDGET.frameMs} ms, worst live ≤ ${BUDGET.liveMs} ms, SVG < ${kb(BUDGET.svgBytes)} KB; all and gpu fb are reference only`)
+console.log(`Boards — budgets: mount ≤ ${BUDGET.mountMs} ms, frame (worst ${VIEWPORT_CARDS} consecutive live CPU cards, taking turns above ${STAGGER.min}) ≤ ${BUDGET.frameMs} ms, worst live ≤ ${BUDGET.liveMs} ms, SVG < ${kb(BUDGET.svgBytes)} KB; all and gpu fb are reference only`)
 console.log(`${pad('board', 11)} ${lpad('cards', 5)} ${lpad('anim', 4)} ${lpad('mount ms', 9)} ${lpad('frame ms', 9)} ${lpad('all ms', 8)} ${lpad('gpu fb', 7)} ${pad('worst live (ms)', 26)} ${lpad('svg cards', 9)} ${lpad('SVG KB', 7)} ${lpad('all-SVG KB', 10)}  over`)
 for (const r of boardRows) console.log(`${pad(r.id, 11)} ${lpad(r.cards, 5)} ${lpad(r.animated, 4)} ${lpad(f(r.mountMs), 9)} ${lpad(f(r.frameMs), 9)} ${lpad(f(r.allMs), 8)} ${lpad(r.gpuMs ? f(r.gpuMs) : '-', 7)} ${pad(r.animated ? `${r.worstLive} (${f(r.worstLiveMs)})` : '-', 26)} ${lpad(r.svgCards, 9)} ${lpad(kb(r.svgBytes), 7)} ${lpad(kb(r.svgAllBytes), 10)}  ${r.over.join(',') || 'ok'}`)
 
