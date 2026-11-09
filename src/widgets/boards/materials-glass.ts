@@ -161,12 +161,15 @@ function screenMemo(key: string): { memo: Float32Array; fresh: boolean } {
   memoKey = key; memoBuf.fill(NaN)
   return { memo: memoBuf, fresh: true }
 }
-/** Where a point (cells) sits in the memo: a card cell centre, a GPU point at density 2, or −1 (computed fresh). */
+/**
+ * Where a point (cells) sits in the memo: a card cell centre, a GPU point at density 2, or −1 (computed fresh). The two
+ * tests can't both pass (a centre is a half step off the fine grid), so the GPU points, read 4× as often, go first.
+ */
 function memoIndex(x: number, y: number): number {
-  const c = Math.round(x), r = Math.round(y)
-  if (Math.abs(x - c) < 1e-6 && Math.abs(y - r) < 1e-6) return c >= 0 && r >= 0 && c < COLS && r < TILE.rows ? r * COLS + c : -1
   const fx = 2 * x + .5, fy = 2 * y + .5, c2 = Math.round(fx), r2 = Math.round(fy)
-  return Math.abs(fx - c2) < 1e-6 && Math.abs(fy - r2) < 1e-6 && c2 >= 0 && r2 >= 0 && c2 < FINE && r2 < FINE ? COLS * TILE.rows + r2 * FINE + c2 : -1
+  if (Math.abs(fx - c2) < 1e-6 && Math.abs(fy - r2) < 1e-6) return c2 >= 0 && r2 >= 0 && c2 < FINE && r2 < FINE ? COLS * TILE.rows + r2 * FINE + c2 : -1
+  const c = Math.round(x), r = Math.round(y)
+  return Math.abs(x - c) < 1e-6 && Math.abs(y - r) < 1e-6 && c >= 0 && r >= 0 && c < COLS && r < TILE.rows ? r * COLS + c : -1
 }
 const VALUE_IN = .875, MID_LO = .625
 /**

@@ -40,6 +40,8 @@ const PROBES: { name: string; shard: number; args: string[]; env?: Record<string
   { name: 'game', shard: 8, args: ['scripts/game-browser.ts', '$BASE'] },
   { name: 'nav', shard: 9, args: ['scripts/site/nav.ts', '$BASE'] },
   { name: 'essay', shard: 9, args: ['scripts/essay-browser.ts', '$BASE'] },
+  // the #28 timing gates, 10 runs each on an idle runner (Node only: no page, no Chrome)
+  { name: 'gates', shard: 9, args: ['scripts/gates.ts', '--runs', '10'] },
   { name: 'csp', shard: 10, args: ['scripts/site/csp-browser.ts'] },
   { name: 'a11y', shard: 10, args: ['scripts/site/a11y.ts'] },
   // life finishes in about a minute, or hangs
