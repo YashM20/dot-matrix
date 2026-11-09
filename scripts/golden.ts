@@ -1,4 +1,5 @@
 /**
+ * (scratch edit for the affected-probes test; not for merge)
  * Golden hashes of every preset's quantized dot list, one file per board: `goldens/<board>.json`
  * (scripts/lib/goldenFiles.ts). A preset lives in the file of the first board that lists it.
  *
