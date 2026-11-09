@@ -5,8 +5,8 @@
  */
 import { framePointers, type FrameInput } from '../../../engine/physics/world'
 import type { Control } from '../../../engine/context'
-import type { Layer } from '../../../engine/types'
-import { TILE, layer, layoutFor, tileStyle, type WidgetContext } from '../../types'
+import { TILE, layoutFor, tileStyle, type WidgetContext } from '../../types'
+import { caption } from '../../captions'
 
 export const T = layoutFor(TILE)
 export const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
@@ -37,8 +37,8 @@ export function frameOf(ctx: WidgetContext, key: string, map: Map2 = ident, tilt
   return f
 }
 
-/** Caption tier (0.72 lattice), `mid`, top-right: as on the algorithms and mosaic boards. */
-export const caption = (s: string): Layer => layer(T.big(s, 143, 1, { lattice: .72, align: 'right' }), 'mid')
+/** Top-right caption (`captions.ts`). */
+export { caption }
 
 /** Local hour (fractional) of the wall clock (frozen at 09:41 in goldens). */
 export const hourNow = () => { const d = new Date(); return d.getHours() + d.getMinutes() / 60 }
