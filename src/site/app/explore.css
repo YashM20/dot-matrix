@@ -31,14 +31,17 @@
   max-width: var(--measure)
 }
 
-/* the home's first readable line, so it is the lead: what the site is in the brightest ink, the how-to after it in
-   the label grey (phones show the short line instead, src/site/mobile/phone.css) */
+/* the home's first readable line is the lead: what the site is, on a line of its own in the lead size and the
+   brightest ink; the how-to, the essay link and × share the row under it (phones show the short line instead,
+   src/site/mobile/phone.css). `contents` makes the lead and the how-to rows of the intro's own flex wrap. */
 .intro-long {
-  font-size: var(--fs-lead-18)
+  display: contents
 }
 
 .intro-lead {
-  color: var(--value)
+  flex-basis: 100%;
+  color: var(--value);
+  font-size: var(--fs-lead-18)
 }
 
 .intro-line b {

@@ -164,7 +164,7 @@ function IntroLine() {
   if (!shown) return null
   return <p className="intro-line">
     {/* phones show the short line (one text line, so intro + picker stay ≤ 120 px; src/site/mobile/) */}
-    <span className="intro-long"><span className="intro-lead">Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid.</span> {xray ? <>Touch the cards, switch the display, or press <b>X-RAY</b> to see how one works.</> : 'Touch the cards or switch the display.'}</span>
+    <span className="intro-long"><span className="intro-lead">Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid.</span> <span>{xray ? <>Touch the cards, switch the display, or press <b>X-RAY</b> to see how one works.</> : 'Touch the cards or switch the display.'}</span></span>
     <span className="intro-short">Every card is a live dot field.</span>
     <a href="/blog/dot-matrix-essay/">Read the essay →</a>
     <button type="button" aria-label="Hide this note" onClick={() => { setShown(false); try { localStorage.setItem('dot480:intro', 'off') } catch { /* private mode */ } }}>×</button>
