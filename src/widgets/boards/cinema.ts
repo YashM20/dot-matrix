@@ -133,12 +133,18 @@ interface Spec {
   live?: { where: (x: number, y: number) => boolean; f: (x: number, y: number, t: number) => number }
 }
 function poster(s: Spec): WidgetPreset {
-  let scene: Float32Array | undefined, red: Float32Array | undefined, liveCells: number[] | undefined
+  let scene: Float32Array | undefined, red: Float32Array | undefined, moat: Uint8Array | undefined, liveCells: number[] | undefined
   const prep = () => {
     scene = bake(s.scene)
     // the red mark is a light source: hard, read at the dot centre only (no partial red dots)
     red = new Float32Array(NX * NY)
     for (let r = 0; r < NY; r++) for (let c = 0; c < NX; c++) red[r * NX + c] = s.red(xOf(c), yOf(r)) > .5 ? 1 : 0
+    // the red gets the title's moat: no scene dot under it or within one lattice dot of it, so red never touches grey
+    moat = new Uint8Array(NX * NY)
+    for (let r = 0; r < NY; r++) for (let c = 0; c < NX; c++) {
+      if (!red[r * NX + c]) continue
+      for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const rr = r + j, cc = c + i; if (rr >= 0 && cc >= 0 && rr < NY && cc < NX) moat[rr * NX + cc] = 1 }
+    }
     liveCells = []
     if (s.live) for (let r = 0; r < NY; r++) for (let c = 0; c < NX; c++) if (yOf(r) >= Y0 && yOf(r) <= Y1 && s.live.where(xOf(c), yOf(r))) liveCells.push(r * NX + c)
   }
@@ -149,7 +155,7 @@ function poster(s: Spec): WidgetPreset {
     style: { ...tileStyle, sizeMin: 0, sizeMax: 1.05, quantizeSteps: 0 },
     layers: ({ t }) => {
       if (!scene) prep()
-      const base = scene!, mark = red!, title = textAt(SUB, reelTitle(s.title, t, s.n), s.at[0], s.at[1]), cut = knockout(title)
+      const base = scene!, mark = red!, ring = moat!, title = textAt(SUB, reelTitle(s.title, t, s.n), s.at[0], s.at[1]), cut = knockout(title)
       const g = flicker(t, s.n), rg = s.pulse ? s.pulse(t) : 1
       let moving: Float32Array | undefined
       if (s.live && liveCells!.length) {
@@ -163,7 +169,7 @@ function poster(s: Spec): WidgetPreset {
           moving[i] = tone(v / 9)
         }
       }
-      const sceneField: Field = (u, v) => { const i = at(u, v); return cut[i] ? 0 : Math.max(base[i], moving?.[i] ?? 0) * g }
+      const sceneField: Field = (u, v) => { const i = at(u, v); return cut[i] || ring[i] ? 0 : Math.max(base[i], moving?.[i] ?? 0) * g }
       const redField: Field = (u, v) => { const i = at(u, v); return cut[i] ? 0 : mark[i] * rg }
       return [
         layer(T.text('AFTERLIGHT', 0, 0), 'idle'),
