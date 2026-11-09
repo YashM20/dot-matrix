@@ -19,7 +19,7 @@
  "layers": [
   {
    "kind": "ir",
-   "src": "// rings leave the centre and fade at the rim\nlet x = (u - .5) * 1.08; let y = v - .5;\nlet d = length(x, y);\nlet w = .5 + .5 * sin(d * 30 - t * 5);\nw * smoothstep(.6, .04, d)",
+   "src": "// rings leave the centre and fade at the rim\nlet x = (u - .5) * 1.08; let y = v - .5;\nlet d = length(x, y);\nlet w = .5 + .5 * sin(d * 30 - t * 5);\nd < .026 ? 0 : w * smoothstep(.6, .04, d)",
    "tone": "auto",
    "lattice": 3,
    "origin": [
@@ -41,13 +41,13 @@
      71.5
     ]
    ],
-   "size": 3,
+   "size": 3.6,
    "tone": "active"
   },
   {
    "kind": "text",
    "tone": "idle",
-   "text": "174 B  33 NODES",
+   "text": "189 B  38 NODES",
    "at": [
     0,
     134
