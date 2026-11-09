@@ -64,7 +64,7 @@ const glyphs = new Map<string, { h: Float32Array; m: Raster; box: CellBounds }>(
 function glyph(ch: string, i: number) {
   const key = `${ch}|${i}`, hit = glyphs.get(key)
   if (hit) return hit
-  const m = toLattice15(cardMask(T.big(ch, slotX(i), STONE.row, { lattice: STONE.k, smooth: true }), TILE))
+  const m = toLattice15(cardMask(T.big(ch, slotX(i), STONE.row, { lattice: STONE.k, smooth: true, mask: true }), TILE))
   const hr = heightRaster(insetDistance(m), { shape: 'round', width: 1.4, height: STONE.relief })
   const g = { h: Float32Array.from(hr.data, (v, j) => (hr.mask[j] > 0 ? v : 0)), m, box: slotBox(i) }
   glyphs.set(key, g)
@@ -121,7 +121,7 @@ export function stoneReset(): void { checkpoints.clear(); last = null }
 /** Lattice cells under the red minute digit (cleared on the stone) and its dots (card cells). */
 function minuteDigit(s: string) {
   // the glyph's lattice dots (smooth: 10 × 14), each lit where its k × k card cells are
-  const lf = T.big(s[4], slotX(4), STONE.row, { lattice: STONE.k, smooth: true }), dots: Pt[] = [], m = cardMask(lf, TILE), [ox, oy] = lf.origin!, k = STONE.k
+  const lf = T.big(s[4], slotX(4), STONE.row, { lattice: STONE.k, smooth: true, mask: true }), dots: Pt[] = [], m = cardMask(lf, TILE), [ox, oy] = lf.origin!, k = STONE.k
   for (let ly = 0; ly < 14; ly++) for (let lx = 0; lx < 10; lx++) {
     const cx = ox + (lx + .5) * k - .5, cy = oy + (ly + .5) * k - .5
     if (m.data[Math.round(cy) * TILE.cols + Math.round(cx)]) dots.push([cx, cy])

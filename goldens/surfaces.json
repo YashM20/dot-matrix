@@ -4,12 +4,12 @@
   "surface-browser": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "05abb4dd",
+    "hash": "69a0109d",
     "dots": 473
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "2734ad79",
+    "hash": "1bd58b6d",
     "dots": 483
    }
   },
@@ -28,13 +28,13 @@
   "surface-eink": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "98a881f6",
-    "dots": 1300
+    "hash": "5fabfa56",
+    "dots": 1271
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "a8937030",
-    "dots": 10966
+    "hash": "148ccd92",
+    "dots": 10995
    }
   },
   "surface-flipdisc": {
@@ -52,13 +52,13 @@
   "surface-plotter": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "9f3150c7",
-    "dots": 719
+    "hash": "89d738b8",
+    "dots": 700
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "6dde57e5",
-    "dots": 711
+    "hash": "7e5eb2a8",
+    "dots": 686
    }
   }
  }

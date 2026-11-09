@@ -20,7 +20,7 @@ import type { Layer } from '../../../engine/types'
 import { simAtStep } from '../../../engine/sim/sim'
 import { sampleLayers } from '../../../engine/sampler/gridSampler'
 import { dot480 } from '../../../engine/theme/tokens'
-import { layer, type WidgetContext, type WidgetPreset } from '../../types'
+import type { WidgetContext, WidgetPreset } from '../../types'
 import { caption, frameOf, hourNow, mainThread, T, tile, timeOfDay, touch } from './shared'
 
 /** Tiles: 36 × 33 at pitch 4 from card row 11 (a glyph is 3 dots + a 1-cell gutter). The ripple grid is the tile grid. */
@@ -95,18 +95,18 @@ const typeRaster = createTileRaster(KOI_SPEC.card, KOI_TYPE_TILES)
 export const KOI_LIGHT_KEYS = { lightSrc: 0, lightAz: 0, lightEl: 7, tx: 0, ty: 0 } as const
 /** The glyph style switch in the label row (L3.4): DOTS (the default) or TYPE. */
 export const GLYPH_STYLES = ['DOTS', 'TYPE'] as const
-const SWITCH = { x: 104, w: 40, h: 9, lattice: .72 } as const
+const SWITCH = { x: 94, w: 50, h: 8 } as const
 /**
  * The label row's right side: the time of day; while the switch is hovered, focused or pressed, or TYPE is on, the
- * switch itself (DOTS · TYPE, the chosen one in `value`). Default frames show the caption only (goldens unchanged).
+ * switch itself (DOTS · TYPE, the chosen one in `value`, the other in `mid`). Default frames show the caption only.
  */
 function labelRow(ctx: WidgetContext, sel: number, hour: number): Layer[] {
   const k = 'glyphs', shown = sel === 1 || ctx.hover === k || ctx.focus === k || ctx.pressed === k
   if (!shown) return [caption(timeOfDay(hour))]
-  const o = { lattice: SWITCH.lattice, align: 'right' as const }, wType = T.size('TYPE', {})[0] * SWITCH.lattice, gap = 3
+  const wType = T.size('TYPE')[0], gap = 3
   return [
-    layer(T.big('TYPE', 143, 1, o), sel === 1 ? 'value' : 'faint'),
-    layer(T.big('DOTS', 143 - wType - gap, 1, o), sel === 0 ? 'value' : 'faint'),
+    caption('TYPE', 143, 0, 'right', sel === 1 ? 'value' : 'mid'),
+    caption('DOTS', 143 - wType - gap, 0, 'right', sel === 0 ? 'value' : 'mid'),
   ]
 }
 /** The koi light this frame: tilt light by bucket when the hub says so (`lightSrc` 1), else the fixed L1 light. */

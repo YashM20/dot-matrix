@@ -1,5 +1,6 @@
-import type { CellBounds, Field, GridConfig } from './types'
-import { glyphMetrics, textField, textWidth, type TextOptions } from './fields/bitmapFont'
+import type { CellBounds, Field, GridConfig, Layer } from './types'
+import { glyph, glyphMetrics, textField, textWidth, type TextOptions } from './fields/bitmapFont'
+import { latticeGrid } from './sampler/gridSampler'
 
 /**
  * Cell-space layout. Every helper here takes integer dot coordinates on a known grid, so
@@ -56,6 +57,41 @@ export function textSize(str: string, opts: TextOptions = {}): [number, number] 
   return [textWidth(str, opts) * sx, glyphMetrics(opts).h * sy]
 }
 export const scaleOf = (opts: TextOptions): [number, number] => Array.isArray(opts.scale) ? opts.scale : [opts.scale ?? 1, opts.scale ?? 1]
+
+export interface BigTextOptions extends TextOptions {
+  lattice: number
+  align?: 'left' | 'center' | 'right'
+  /** The glyphs are a shape (a relief or engraving mask), never drawn as dots: `smooth` keeps Scale2x at any lattice. */
+  mask?: boolean
+  /**
+   * A smaller part of one smooth value (a decimal, a unit drawn as part of the number): `smooth` keeps Scale2x below
+   * `SMOOTH_MIN_LATTICE`, so the whole value reads in one style.
+   */
+  keepSmooth?: boolean
+}
+/** `smooth` (Scale2x) text needs a lattice of this many card cells or more: below it the two-dot strokes read as a cluster. */
+export const SMOOTH_MIN_LATTICE = 2.5
+/**
+ * Hero text on its own lattice: `lattice` card cells per font pixel, anchored at card cell (col,row); `align` moves the
+ * anchor to the text's centre or right edge. Every font pixel is one dot:
+ * - `smooth` below `SMOOTH_MIN_LATTICE` draws the plain 5×7 glyph at twice the lattice (same size, one-dot strokes);
+ * - `scale` multiplies the lattice instead of drawing blocks of dots. A non-uniform scale gives columns `kx` and rows
+ *   `ky` apart, drawn as round dot sites (sized by the narrower pitch), so the dots stay round.
+ */
+export function bigText(grid: GridConfig, str: string, col: number, row: number, opts: BigTextOptions): Omit<Layer, 'tone'> {
+  const [sx, sy] = scaleOf(opts), plain = !!opts.smooth && !opts.mask && !opts.keepSmooth && opts.lattice < SMOOTH_MIN_LATTICE
+  const k = plain ? opts.lattice * 2 : opts.lattice, face: TextOptions = { smooth: !!opts.smooth && !plain }
+  const kx = k * sx, ky = k * sy, w = textWidth(str, face) * kx
+  const left = opts.align === 'center' ? col - w / 2 : opts.align === 'right' ? col - w : col
+  if (kx === ky) return { field: textAt(latticeGrid(grid, kx, [left, row]), str, 0, 0, face), lattice: kx, origin: [left, row] }
+  const m = glyphMetrics(face), sites: [number, number][] = []
+  ;[...str].forEach((ch, i) => glyph(ch, face).forEach((bits, y) => bits.forEach((on, x) => {
+    if (on) sites.push([left + (i * m.advance + x + .5) * kx - .5, row + (y + .5) * ky - .5])
+  })))
+  const field: Field = () => 1
+  field.text = str
+  return { field, sites, size: Math.min(kx, ky) }
+}
 
 /** Single dot at a cell. */
 export const dotAt = (grid: GridConfig, col: number, row: number, value = 1): Field => own((u, v) => (toCell(u, grid.cols) === col && toCell(v, grid.rows) === row ? value : 0), col, row, col, row)
@@ -122,4 +158,98 @@ export function polylineCells(grid: GridConfig, points: [number, number][], ever
   }
   const xs = points.map(p => p[0]), ys = points.map(p => p[1])
   return own((u, v) => (cells.has(toCell(u, grid.cols) + toCell(v, grid.rows) * 4096) ? value : 0), Math.min(...xs) - 1, Math.min(...ys) - 1, Math.max(...xs) + 1, Math.max(...ys) + 1)
+}
+
+// ── outlines, separators, knockouts and stacks as dot sites (card cells) ───────────────────────────────
+type P2 = [number, number]
+const TAU = Math.PI * 2
+/** Evenly spaced dot sites around a stadium (pill) outline, top-left corner at (x,y). */
+export function stadium(x: number, y: number, w: number, h: number, spacing: number): P2[] {
+  const r = h / 2, straight = Math.max(0, w - h), perimeter = 2 * straight + TAU * r
+  const n = Math.max(8, Math.round(perimeter / spacing)), step = perimeter / n, pts: P2[] = []
+  const lx = x + r, rx = x + r + straight, cy = y + r
+  for (let i = 0; i < n; i++) {
+    let d = i * step
+    if (d < straight) { pts.push([lx + d, y]); continue }                                 // top edge →
+    d -= straight
+    if (d < Math.PI * r) { const a = d / r; pts.push([rx + r * Math.sin(a), cy - r * Math.cos(a)]); continue } // right cap
+    d -= Math.PI * r
+    if (d < straight) { pts.push([rx - d, y + h]); continue }                              // bottom edge ←
+    d -= straight
+    const a = d / r; pts.push([lx - r * Math.sin(a), cy + r * Math.cos(a)])                 // left cap
+  }
+  return pts
+}
+/** Evenly spaced dot sites around a rounded rectangle (corner radius r; r = h/2 is a stadium, w = h = 2r a circle). */
+export function rrect(x: number, y: number, w: number, h: number, r: number, spacing: number): P2[] {
+  r = Math.max(0, Math.min(r, w / 2, h / 2))
+  const sw = w - 2 * r, sh = h - 2 * r, arc = (Math.PI / 2) * r, perimeter = 2 * sw + 2 * sh + 4 * arc
+  const n = Math.max(8, Math.round(perimeter / spacing)), step = perimeter / n, pts: P2[] = []
+  for (let i = 0; i < n; i++) {
+    let d = i * step, a = 0
+    if (d < sw) { pts.push([x + r + d, y]); continue }                                       // top →
+    d -= sw
+    if (d < arc) { a = d / r; pts.push([x + w - r + r * Math.sin(a), y + r - r * Math.cos(a)]); continue }
+    d -= arc
+    if (d < sh) { pts.push([x + w, y + r + d]); continue }                                   // right ↓
+    d -= sh
+    if (d < arc) { a = d / r; pts.push([x + w - r + r * Math.cos(a), y + h - r + r * Math.sin(a)]); continue }
+    d -= arc
+    if (d < sw) { pts.push([x + w - r - d, y + h]); continue }                               // bottom ←
+    d -= sw
+    if (d < arc) { a = d / r; pts.push([x + r - r * Math.sin(a), y + h - r + r * Math.cos(a)]); continue }
+    d -= arc
+    if (d < sh || r === 0) { pts.push([x, y + h - r - d]); continue }                        // left ↑
+    d -= sh; a = d / r; pts.push([x + r - r * Math.cos(a), y + r - r * Math.sin(a)])
+  }
+  return pts
+}
+/**
+ * `n` stacked rows of height `rowH` inside one rounded outline at (x, y), w wide: the outline once, and one
+ * separator between neighbours (never two parallel borders). `rows[i]` holds the sites that bound row i: its part
+ * of the outline and the separators above and below it, so one row can take another tone. A separator belongs to
+ * both rows it divides. Separator sites keep a full `spacing` clear of the outline's sides.
+ */
+export function stackedRows(x: number, y: number, w: number, rowH: number, n: number, r: number, spacing: number): { all: P2[]; rows: P2[][] } {
+  const h = rowH * n, outline = rrect(x, y, w, h, r, spacing), rows: P2[][] = Array.from({ length: n }, () => [])
+  const rowOf = (py: number) => Math.max(0, Math.min(n - 1, Math.floor((py - y) / rowH)))
+  for (const p of outline) rows[rowOf(p[1])].push(p)
+  const span = w - 2 * spacing, m = Math.max(1, Math.round(span / spacing)), seps: P2[] = []
+  for (let k = 1; k < n; k++) {
+    const sy = y + k * rowH
+    for (let i = 0; i <= m; i++) { const p: P2 = [x + spacing + (span * i) / m, sy]; seps.push(p); rows[k - 1].push(p); rows[k].push(p) }
+  }
+  return { all: [...outline, ...seps], rows }
+}
+/** The sites of `track` farther than `r` cells from every site of `over`: a marker, needle or knot sits in clear air. */
+export const knockSites = (track: readonly P2[], over: readonly P2[], r: number): P2[] =>
+  track.filter(([x, y]) => over.every(([ox, oy]) => Math.hypot(x - ox, y - oy) > r))
+/** The sites outside every box [x0, y0, x1, y1] grown by `pad` (text read over a fill of sites). */
+export const knockBoxes = (sites: readonly P2[], boxes: readonly [number, number, number, number][], pad = 1.5): P2[] =>
+  sites.filter(([x, y]) => !boxes.some(([x0, y0, x1, y1]) => x >= x0 - pad && x <= x1 + pad && y >= y0 - pad && y <= y1 + pad))
+/** The site of a `lattice` (anchored at `origin`) nearest card point `p`: a marker snapped onto the dots under it. */
+export const snapToLattice = ([x, y]: P2, lattice: number, [ox, oy]: P2 = [0, 0]): P2 =>
+  [ox + (Math.round((x + .5 - ox) / lattice - .5) + .5) * lattice - .5, oy + (Math.round((y + .5 - oy) / lattice - .5) + .5) * lattice - .5]
+/**
+ * `field` with a hole of radius `r` card cells round each centre, sampled on `grid` or on its `lattice` (anchored at
+ * `origin`): what a marker cuts in the layer it sits on, so no dot of that layer hides half under it.
+ */
+export function cutAround(grid: GridConfig, field: Field, centres: readonly P2[], r: number, lattice = 1, origin: P2 = [0, 0]): Field {
+  const sub = lattice === 1 && !origin[0] && !origin[1] ? grid : latticeGrid(grid, lattice, origin), [ox, oy] = origin
+  const sx = Math.max(1, sub.cols - 1), sy = Math.max(1, sub.rows - 1), r2 = r * r
+  const f: Field = (u, v) => {
+    const x = ox + (u * sx + .5) * lattice - .5, y = oy + (v * sy + .5) * lattice - .5
+    for (const [cx, cy] of centres) if ((x - cx) ** 2 + (y - cy) ** 2 <= r2) return 0
+    return field(u, v)
+  }
+  if (field.bounds) f.bounds = field.bounds
+  if (field.text) f.text = field.text
+  return f
+}
+/** Row tops for a stack of elements `heights` cells tall from `top`, with at least `gap` empty rows between neighbours. */
+export function stack(top: number, heights: readonly number[], gap = 1): number[] {
+  const out: number[] = []
+  let y = top
+  for (const h of heights) { out.push(y); y += h + gap }
+  return out
 }

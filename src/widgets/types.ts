@@ -1,6 +1,6 @@
 import type { DotStyle, Field, GridConfig, Layer, Tone } from '../engine/types'
 import type { Control, FrameContext } from '../engine/context'
-import { barsAt, centeredBarsAt, discCells, dotAt, hRule, placeCells, polylineCells, rectCells, ringCells, spriteAt, textAt, textSize, vRule } from '../engine/layout'
+import { type BigTextOptions, barsAt, bigText, centeredBarsAt, cutAround, discCells, dotAt, hRule, knockBoxes, knockSites, placeCells, polylineCells, rectCells, ringCells, rrect, snapToLattice, spriteAt, stackedRows, stadium, textAt, textSize, vRule } from '../engine/layout'
 import { cellU, latticeGrid } from '../engine/sampler/gridSampler'
 import { isStable, stableLayers } from '../engine/sampler/repeat'
 import { cachedIconField, iconPaths } from '../engine/fields/iconSDF'
@@ -8,7 +8,8 @@ import { cjkTextField } from '../engine/fields/cjkFallback'
 import type { TextOptions } from '../engine/fields/bitmapFont'
 import { combine } from '../engine/layout'
 import { hash01 } from '../engine/math'
-export { bounded, combine, dim, place } from '../engine/layout'
+import { GAP, capSize, dotTri, fillOn, minGap, peakOn, trace } from './sites'
+export { bounded, combine, dim, place, stack } from '../engine/layout'
 
 /** Frame context a preset's `layers()` receives — see `FrameContext` in the engine. */
 export type WidgetContext = FrameContext
@@ -99,7 +100,7 @@ const said = (text: string): Field => { const f: Field = () => 1; f.text = text;
 export interface SiteOptions {
   /** Distance between dot centres, in card cells. */
   spacing?: number
-  /** Dot size relative to a card dot (1 = card dot, 2 ≈ hero dot). */
+  /** Dot size relative to a card dot (1 = card dot, 2 ≈ hero dot). Capped at 0.8 of `spacing`, so dots never touch. */
   size?: number
 }
 export const layer = (src: Field | LatticeField, tone: Tone = 'value'): Layer => (typeof src === 'function' ? { field: src, tone } : { ...src, tone })
@@ -265,22 +266,20 @@ export function layoutFor(grid: GridConfig) {
     icon: tag('icon', (name: keyof typeof iconPaths, col: number, row: number, size: number, opts: { fill?: boolean; stroke?: number } = {}) => placeCells(grid, cachedIconField(name, iconPaths[name], 64, opts), col, row, size, size)),
     cjk: tag('cjk', (text: string, col: number, row: number, cell: number) => placeCells(grid, cjkTextField(text), col, row, cell * [...text].length, cell)),
     /**
-     * Hero text on its own lattice: `lattice` card cells per dot, anchored at card cell (col,row).
-     * `smooth` gives the 2-dot-stroke display weight. Width in card cells = size(...)[0] * lattice.
+     * Hero text on its own lattice: `lattice` card cells per dot, anchored at card cell (col,row). Width in card cells
+     * = size(...)[0] * lattice. `smooth` is the 2-dot-stroke display weight from a lattice of 2.5 up; below that it
+     * draws the plain glyph at twice the lattice, and `scale` multiplies the lattice (`bigText`, engine/layout).
      */
-    big: (str: string, col: number, row: number, opts: TextOptions & { lattice: number; align?: 'left' | 'center' | 'right' }): LatticeField => {
-      const w = textSize(str, opts)[0] * opts.lattice
-      const left = opts.align === 'center' ? col - w / 2 : opts.align === 'right' ? col - w : col
-      return { field: textAt(latticeGrid(grid, opts.lattice, [left, row]), str, 0, 0, { scale: opts.scale, smooth: opts.smooth }), lattice: opts.lattice, origin: [left, row] }
-    },
+    big: (str: string, col: number, row: number, opts: BigTextOptions): LatticeField => bigText(grid, str, col, row, opts),
     /**
      * Evenly spaced dots on a circle (radius in cells), optionally an arc: `start` clockwise from
      * 12 o'clock, `sweep` radians. Sites are fixed by `spacing`, so an arc lands exactly on its
      * full-ring track's dots — draw the track, then the arc on top in another tone.
      */
     dotRing: (cx: number, cy: number, r: number, opts: SiteOptions & { start?: number; sweep?: number } = {}): LatticeField => {
-      const { spacing = 4.5, size = 1.8, start = 0, sweep = TAU } = opts
-      const n = Math.max(3, Math.round((TAU * r) / spacing)), sites: Pt[] = []
+      const { spacing = 4.5, start = 0, sweep = TAU } = opts
+      // the cap uses the chord between neighbours: the site count rounds, so the real spacing differs a little
+      const n = Math.max(3, Math.round((TAU * r) / spacing)), size = capSize(opts.size ?? 1.8, 2 * r * Math.sin(Math.PI / n) || spacing), sites: Pt[] = []
       for (let i = 0; i < n; i++) {
         const a = (i / n) * TAU, rel = (((a - start) % TAU) + TAU) % TAU
         if (rel <= sweep + 1e-9) sites.push([cx + r * Math.sin(a), cy - r * Math.cos(a)])
@@ -289,13 +288,13 @@ export function layoutFor(grid: GridConfig) {
     },
     /** Evenly spaced dots from (x0,y0) to (x1,y1), first dot `from` cells along. */
     dotLine: (x0: number, y0: number, x1: number, y1: number, opts: SiteOptions & { from?: number } = {}): LatticeField => {
-      const { spacing = 4.5, size = 1.8, from = 0 } = opts, len = Math.hypot(x1 - x0, y1 - y0), sites: Pt[] = []
+      const { spacing = 4.5, from = 0 } = opts, size = capSize(opts.size ?? 1.8, spacing), len = Math.hypot(x1 - x0, y1 - y0), sites: Pt[] = []
       for (let d = from; d <= len + 1e-9; d += spacing) sites.push([x0 + ((x1 - x0) * d) / (len || 1), y0 + ((y1 - y0) * d) / (len || 1)])
       return { field: one, sites, size }
     },
     /** Square-packed dots filling a disc. */
     dotDisc: (cx: number, cy: number, r: number, opts: SiteOptions = {}): LatticeField => {
-      const { spacing = 4.5, size = 1.8 } = opts, n = Math.floor(r / spacing), sites: Pt[] = []
+      const { spacing = 4.5 } = opts, size = capSize(opts.size ?? 1.8, spacing), n = Math.floor(r / spacing), sites: Pt[] = []
       for (let j = -n; j <= n; j++) for (let i = -n; i <= n; i++) if (Math.hypot(i, j) * spacing <= r + 1e-9) sites.push([cx + i * spacing, cy + j * spacing])
       return { field: one, sites, size }
     },
@@ -311,8 +310,56 @@ export function layoutFor(grid: GridConfig) {
       })
       return { field: one, sites, size }
     },
-    /** Arbitrary dot sites. `text`: the words they spell (glyphs drawn as sites), for `describe()` and screen readers. */
-    dots: (points: Pt[], size = 1.8, text?: string): LatticeField => ({ field: text ? said(text) : one, sites: points, size }),
+    /** Rounded-rectangle outline as evenly spaced sites (default: the components board's outline, 3.3 apart, size 1.5). */
+    rrect: (x: number, y: number, w: number, h: number, r: number, { spacing = 3.3, size = 1.5 }: SiteOptions = {}): LatticeField => ({ field: one, sites: rrect(x, y, w, h, r, spacing), size }),
+    /** Stadium (pill) outline as evenly spaced sites. */
+    stadium: (x: number, y: number, w: number, h: number, { spacing = 3.3, size = 1.5 }: SiteOptions = {}): LatticeField => ({ field: one, sites: stadium(x, y, w, h, spacing), size }),
+    /**
+     * `n` stacked rows in one rounded outline with one separator between neighbours (`stackedRows`). Returns
+     * `[rest, picked]`: row `pick`'s outline and separators as their own layer (empty when `pick` is unset).
+     */
+    rows: (x: number, y: number, w: number, rowH: number, n: number, o: SiteOptions & { r?: number; pick?: number } = {}): [LatticeField, LatticeField] => {
+      const { spacing = 3.3, size = 1.5, r = 4, pick = -1 } = o, { all, rows } = stackedRows(x, y, w, rowH, n, r, spacing), mine = new Set(rows[pick] ?? [])
+      return [{ field: one, sites: all.filter(p => !mine.has(p)), size }, { field: one, sites: [...mine], size }]
+    },
+    /** `track` without the sites within `r` cells of `over` (sites or a site layer): a marker sits in clear air. */
+    knockout: (track: LatticeField, over: LatticeField | Pt[], r: number): LatticeField =>
+      ({ ...track, sites: knockSites(track.sites ?? [], Array.isArray(over) ? over : over.sites ?? [], r) }),
+    /** `lf` without the sites inside any box [x0, y0, x1, y1] grown by `pad`, so text reads over a fill. */
+    knock: (lf: LatticeField, boxes: [number, number, number, number][], pad = 1.5): LatticeField => ({ ...lf, sites: lf.sites && knockBoxes(lf.sites, boxes, pad) }),
+    /**
+     * A marker dot at `pt` and `cut`, which clears the dots of the layer it sits on within `gap` cells of its rim: no
+     * grey dot shows half under the accent. `cut` takes that layer's field (on the same `lattice` / `origin`). The
+     * marker snaps to the cell or lattice site under it, unless `snap` is false (a centre between sites).
+     */
+    marker: (pt: Pt, size: number, o: { lattice?: number; origin?: Pt; gap?: number; snap?: boolean } = {}) => {
+      const { lattice = 1, origin = [0, 0] as Pt, gap = 1, snap = true } = o, at = snap ? snapToLattice(pt, lattice, origin) : pt
+      return { at, dot: { field: one, sites: [at], size } as LatticeField, cut: (f: Field) => cutAround(grid, f, [at], size / 2 + gap, lattice, origin) }
+    },
+    /**
+     * Arbitrary dot sites. `text`: the words they spell (glyphs drawn as sites), for `describe()` and screen readers.
+     * A point closer than `gap` cells (default 0.8 × size) to one kept before it is dropped, so sites that land on
+     * top of each other draw one dot; `gap: 0` keeps every point (photo and simulation layers that want overlap).
+     */
+    dots: (points: Pt[], size = 1.8, text?: string, gap = GAP * size): LatticeField => ({ field: text ? said(text) : one, sites: minGap(points, gap), size }),
+    /** Dots along a polyline `spacing` cells apart by arc length (joins between arcs stay even); size capped at 0.8 of the spacing. */
+    dotPath: (points: Pt[], spacing: number, size = 1.8, closed = false): LatticeField => {
+      const s = capSize(size, spacing)
+      return { field: one, sites: minGap(trace(points, spacing, closed), GAP * s), size: s }
+    },
+    /**
+     * A filled shape (button, knob, node, transport glyph) as a few big dots `k` cells apart instead of the card's fine
+     * grid, on a lattice centred on `box` [x0, y0, x1, y1] (card cells). k = 2 up to about 16 cells across, 3 above.
+     * Fills with the same `k` and `box` share their sites (a glyph in another tone on a button). See src/widgets/sites.ts.
+     */
+    fillOn,
+    /** A filled triangle (play, prev, next) as hex-packed dots: tip at (x, y), `n` dots on the base, optional bar behind it. */
+    dotTri,
+    /**
+     * A highlight's bright core as one dot: `field` sampled on the `k` lattice at `origin`, its cells at `top` of the peak
+     * or more become one site (`dot`) sized to their area; `cut(f)` clears the lattice dots of `f` under it.
+     */
+    peak: (k: number, origin: Pt, field: Field, opts?: Parameters<typeof peakOn>[4]) => peakOn(grid, k, origin, field, opts),
     /** Layout helpers for a coarser lattice anchored at card cell (col,row); wrap results with `.at()`. */
     lattice: (k: number, col = 0, row = 0) => {
       const sub = latticeGrid(grid, k, [col, row])

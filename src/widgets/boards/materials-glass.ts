@@ -28,7 +28,7 @@ export const LENS = { hw: 30, hh: 20, radius: 20, bezel: 12, thickness: 6, base:
 /** The xy control's box (the card below the label): lx 0..1 left → right, ly 0..1 bottom → top. */
 const LENS_BOX: Box = [0, 12, 144, 132]
 const DIAL = { cx: 72, cy: 78, r: 58 }
-const HERO = { k: 1.5, row: 68 }
+const HERO = { k: 3, row: 68 }
 /** The lens centre (card cells) for the card's data, kept inside the card below the label. */
 export function lensCentre(data: Record<string, number>): Pt {
   const x = LENS_BOX[0] + (data.lx ?? .6944) * LENS_BOX[2], y = LENS_BOX[1] + LENS_BOX[3] - (data.ly ?? .5606) * LENS_BOX[3]
@@ -71,16 +71,16 @@ const heroes = new Map<string, Hero>()
 export function lensHero(hh: string, mm: string): Hero {
   const key = `${hh}:${mm}`, hit = heroes.get(key)
   if (hit) return hit
-  const big = T.big(key, DIAL.cx, HERO.row - 10.5, { lattice: HERO.k, smooth: true, align: 'center' }), [ox, oy] = big.origin!
+  const big = T.big(key, DIAL.cx, HERO.row - 10.5, { lattice: HERO.k, align: 'center' }), [ox, oy] = big.origin!
   const g = latticeGrid(TILE, HERO.k, [ox, oy]), lc = g.cols, lr = g.rows, bits = new Float32Array(lc * lr), near = new Uint8Array(COLS * TILE.rows)
   const b = big.field.bounds ?? [0, 0, lc - 1, lr - 1], i0 = Math.max(0, Math.floor(b[0])), j0 = Math.max(0, Math.floor(b[1])), i1 = Math.min(lc - 1, Math.ceil(b[2])), j1 = Math.min(lr - 1, Math.ceil(b[3]))
   for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
     const v = big.field(i / (lc - 1), j / (lr - 1))
     if (!(v > 0)) continue
     bits[j * lc + i] = v
-    // the floor stays clear within 2 cells of a lit glyph dot (its own 1.5-cell footprint and a moat)
+    // the floor stays clear within 3 cells of a lit glyph dot (its own 3-cell footprint and a moat)
     const x = ox + (i + .5) * HERO.k - .5, y = oy + (j + .5) * HERO.k - .5
-    for (let r = Math.max(0, Math.floor(y - 2)); r <= Math.min(H1, Math.ceil(y + 2)); r++) for (let c = Math.max(0, Math.floor(x - 2)); c <= Math.min(W1, Math.ceil(x + 2)); c++) near[r * COLS + c] = 1
+    for (let r = Math.max(0, Math.floor(y - 3)); r <= Math.min(H1, Math.ceil(y + 3)); r++) for (let c = Math.max(0, Math.floor(x - 3)); c <= Math.min(W1, Math.ceil(x + 3)); c++) near[r * COLS + c] = 1
   }
   const h: Hero = { key, lc, lr, ox, oy, bits, near, box: [i0, j0, i1, j1] }
   heroes.set(key, h)
@@ -226,7 +226,7 @@ screenField.bounds = [0, 12, W1, H1]
 /** The screen as the board's one GPU layer: density 2 on WebGL2; this same field at card pitch on Canvas and in goldens. */
 const screenGPU = gpuValues(screenField, { density: 2 })
 const screenTone = (val: number, u: number, v: number): Tone => (val >= VALUE_IN ? (LF!.lens.inside(u, v) ? 'value' : 'idle') : val >= MID_LO ? 'mid' : 'faint')
-/** The hero on its 1.5 lattice: each dot reads the glyph bitmap at its refracted point (bilinear: the strokes warp). */
+/** The hero on its 3-cell lattice: each dot reads the glyph bitmap at its refracted point (bilinear: the strokes warp). */
 const heroField: Field = (u, v) => {
   const { lc, lr, ox, oy, bits } = LF!.hero, d = lensD
   const i = u * (lc - 1), j = v * (lr - 1), x = ox + (i + .5) * HERO.k - .5, y = oy + (j + .5) * HERO.k - .5

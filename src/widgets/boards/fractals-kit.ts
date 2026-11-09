@@ -6,22 +6,18 @@
 import { clamp } from '../../engine/math'
 import type { Field, Layer, Tone } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetCredit } from '../types'
+import { caption, footer as footerText } from '../captions'
 
 export const T = layoutFor(TILE)
 export type Pt = [number, number]
 export const N = TILE.cols - 1
 export const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
 
-/** Caption tier (0.72 lattice), as on the mosaic and algorithms boards. */
-export const cap = (s: string, col: number, row: number, align?: 'left' | 'center' | 'right') => T.big(s, col, row, { lattice: .72, align })
 /** Top-right: the person or idea the card is built on, in `mid`. */
-export const cite = (s: string) => layer(cap(s, 143, 1, 'right'), 'mid')
+export const cite = (s: string) => caption(s)
 export const FOOT = 134
 /** Footer: a counter left (idle) and one stat right (mid). */
-export const footer = (left: string, right: string): Layer[] => [
-  layer(T.text(left, 0, FOOT), 'idle'),
-  layer(T.text(right, 143, FOOT, { align: 'right' }), 'mid'),
-]
+export const footer = (left: string, right: string): Layer[] => footerText(left, right, FOOT)
 /** The credit every card on the board carries (docs/IQ-PLAN.md "Licence and credit"). */
 export const credit = (slug: string, title: string, others: string[] = []): WidgetCredit =>
   ({ by: ['Inigo Quilez', ...others], title, source: `https://iquilezles.org/articles/${slug}/`, note: 'technique' })
@@ -55,6 +51,15 @@ export function gridLayer(vals: ArrayLike<number>, w: number, h: number, c0: num
   const field: Field = (u, v) => { const i = at(u, v); return i < 0 ? 0 : value[i] }
   field.bounds = [c0, r0, c0 + w - 1, r0 + h - 1]
   return { field, toneOf: (_, u, v) => { const i = at(u, v); return i < 0 || band[i] < 0 ? undefined : bands[band[i]].tone } }
+}
+
+/**
+ * A red probe on a grid layer (`T.marker`): the dot snapped to the cell under it, and the grid cut in a ring of
+ * clear air round it, so no band dot shows half under the red. Returns [cut grid, probe].
+ */
+export const probe = (grid: Layer, pt: Pt, size = 2.6): [Layer, Layer] => {
+  const m = T.marker(pt, size)
+  return [{ ...grid, field: m.cut(grid.field) }, layer(m.dot, 'active')]
 }
 
 /** Four quantized density bands (dot value .25 / .5 / .75 / 1): faint wisps, mid body, idle, white cores. */

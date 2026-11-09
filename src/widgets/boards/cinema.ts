@@ -132,7 +132,6 @@ interface Spec {
   /** Scene parts that move: `where` marks lattice cells re-evaluated every frame with `f(x, y, t)`. */
   live?: { where: (x: number, y: number) => boolean; f: (x: number, y: number, t: number) => number }
 }
-const CAP = 1.05
 function poster(s: Spec): WidgetPreset {
   let scene: Float32Array | undefined, red: Float32Array | undefined, liveCells: number[] | undefined
   const prep = () => {
@@ -167,13 +166,13 @@ function poster(s: Spec): WidgetPreset {
       const sceneField: Field = (u, v) => { const i = at(u, v); return cut[i] ? 0 : Math.max(base[i], moving?.[i] ?? 0) * g }
       const redField: Field = (u, v) => { const i = at(u, v); return cut[i] ? 0 : mark[i] * rg }
       return [
-        layer(T.big('AFTERLIGHT', 0, 0, { lattice: CAP }), 'idle'),
-        layer(T.big(s.genre, 143.5, 0, { lattice: CAP, align: 'right' }), 'mid'),
+        layer(T.text('AFTERLIGHT', 0, 0), 'idle'),
+        layer(T.text(s.genre, 143, 0, { align: 'right' }), 'mid'),
         onLattice(sceneField, 'value'),
         onLattice(redField, 'active'),
         onLattice(title, 'value'),
-        layer(T.big(s.tag, 0, 136, { lattice: CAP }), 'idle'),
-        layer(T.big(String(s.n).padStart(2, '0'), 143.5, 136, { lattice: CAP, align: 'right' }), 'mid'),
+        layer(T.text(s.tag, 0, 136), 'idle'),
+        layer(T.text(String(s.n).padStart(2, '0'), 143, 136, { align: 'right' }), 'mid'),
       ]
     },
   }

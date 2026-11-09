@@ -4,73 +4,73 @@
   "fr-julia": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "3919a4d4",
-    "dots": 7425
+    "hash": "72e7668f",
+    "dots": 7411
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "44e80796",
-    "dots": 7557
+    "hash": "56bfd2e1",
+    "dots": 7544
    }
   },
   "fr-trap": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "d9f46ca9",
-    "dots": 6315
+    "hash": "0ad9be32",
+    "dots": 6303
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "76734278",
-    "dots": 6289
+    "hash": "53e467b5",
+    "dots": 6275
    }
   },
   "fr-popcorn": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "aaf995ee",
-    "dots": 9171
+    "hash": "00fde6fe",
+    "dots": 9158
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "254a28cb",
-    "dots": 9179
+    "hash": "2755874e",
+    "dots": 9162
    }
   },
   "fr-flame": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "71e56c27",
-    "dots": 8749
+    "hash": "ccf6908c",
+    "dots": 8735
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "e7da3f29",
-    "dots": 8744
+    "hash": "b20e6bd6",
+    "dots": 8735
    }
   },
   "fr-icon": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "46771e11",
-    "dots": 7586
+    "hash": "25bb9365",
+    "dots": 7576
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "4e631412",
-    "dots": 7589
+    "hash": "43d32ce0",
+    "dots": 7575
    }
   },
   "fr-lyapunov": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "1f3d5e46",
-    "dots": 8481
+    "hash": "9f248d09",
+    "dots": 8478
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "49719ad9",
-    "dots": 8489
+    "hash": "85e1be66",
+    "dots": 8488
    }
   }
  }

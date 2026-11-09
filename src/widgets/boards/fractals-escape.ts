@@ -6,7 +6,7 @@
 import { INSIDE, cardioid, escapeTime, orbitPoints, orbitTraps, trapHit, trapLine } from '../../engine/fractal'
 import { dcos, dsin, TAU } from '../../engine/noise/dmath'
 import { layer, type WidgetPreset } from '../types'
-import { T, cite, credit, footer, gridLayer, phase, signed, tile, toCell, toPlane, type Band, type Pt } from './fractals-kit'
+import { T, cite, credit, footer, gridLayer, phase, probe, signed, tile, toCell, toPlane, type Band, type Pt } from './fractals-kit'
 
 // ── 01 JULIA ─ c on the cardioid's edge ───────────────────────────────────────────────────────────────
 // Thesis: "Every point of the map is a whole picture." The big field is the Julia set of c, drawn by the smooth
@@ -64,8 +64,7 @@ export const frJulia: WidgetPreset = {
     return [
       cite('SMOOTH COUNT'),
       gridLayer(juliaGrid(ctx.t), JW, JH, 0, JR, J_BANDS, jAt),
-      gridLayer(mandelGrid(), MW, MH, MC, MR, M_BANDS),
-      layer(T.dots([mCell(cx, cy)], 2.6), 'active'),
+      ...probe(gridLayer(mandelGrid(), MW, MH, MC, MR, M_BANDS), mCell(cx, cy)),
       ...footer(`C ${signed(cx, 2)}${signed(cy, 2)}I`, ''),
     ]
   },
@@ -111,11 +110,12 @@ export const frTrap: WidgetPreset = {
     const pts: Pt[] = [tCell(zx, zy)]
     for (let i = 0; i < k; i++) if (i + 1 !== hit.at) pts.push(tCell(orbitBuf[2 * i], orbitBuf[2 * i + 1]))
     const shown = pts.filter(p => p[0] >= 0 && p[0] <= 143 && p[1] >= TR && p[1] < TR + TH)
+    const [grid, mark] = hit.at ? probe(gridLayer(trapGrid(), TW, TH, 0, TR, T_BANDS), tCell(hit.ax, hit.ay)) : [gridLayer(trapGrid(), TW, TH, 0, TR, T_BANDS)]
     return [
       cite('POINT + LINE'),
-      gridLayer(trapGrid(), TW, TH, 0, TR, T_BANDS),
-      layer(T.dots(shown, 1.1), 'idle'),
-      ...(hit.at ? [layer(T.dots([tCell(hit.ax, hit.ay)], 2.6), 'active')] : []),
+      grid,
+      layer(mark ? T.knockout(T.dots(shown, 1.1), mark.sites ?? [], 3) : T.dots(shown, 1.1), 'idle'),
+      ...(mark ? [mark] : []),
       ...footer(`TRAP ${hit.point.toFixed(3)}`, `Z${String(hit.at).padStart(2, '0')} OF ${String(k).padStart(2, '0')}`),
     ]
   },
