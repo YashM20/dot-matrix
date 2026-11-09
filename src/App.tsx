@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { Board, VIEW_EXIT_MS } from './components/Board'
+import { LoadBoundary, LoadFailed } from './components/LoadBoundary'
 import { BoardPicker, NextBoard } from './components/BoardPicker'
 import { SkinSwitcher } from './components/skins/SkinSwitcher'
 import { ThemeButton } from './components/theme/ThemeButton'
@@ -59,18 +60,21 @@ const useIdle = () => {
   }, [])
   return idle
 }
+// a lazy part whose chunk fails (offline, or a second deploy inside the stale-deploy gap) shows `fallback` in its place,
+// so the page around it keeps working (docs/STATE-MACHINES.md A2); a whole view says so and offers RELOAD
+const viewFailed = <section className="view-loading"><LoadFailed what="This view" /></section>
 // static markup: 'use no memo' keeps the compiler's memo slots (first-load bytes) out of these two
 const slot = <div className="home-hero-slot" />
 function Hero() {
   'use no memo'
-  return <div className="home-hero">{useIdle() ? <Suspense fallback={slot}><HeroCard /></Suspense> : slot}</div>
+  return <div className="home-hero">{useIdle() ? <LoadBoundary fallback={slot}><Suspense fallback={slot}><HeroCard /></Suspense></LoadBoundary> : slot}</div>
 }
 /** The footer band: the live number, then the site line (docs/LAYOUT-THEME-PLAN.md §1c #13). */
 function SiteFooter({ onAbout }: { onAbout: () => void }) {
   'use no memo'
   const idle = useIdle(), lab = useFlag('lab')
   return <footer className="bottom">
-    <div className="live-band">{idle && <Suspense fallback={null}><LiveBand /></Suspense>}</div>
+    <div className="live-band">{idle && <LoadBoundary fallback={null}><Suspense fallback={null}><LiveBand /></Suspense></LoadBoundary>}</div>
     <div className="bottom-row"><span>MATRIX · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span><span>FIELD → GRID SAMPLER → RENDERER</span>
       <span><a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · {lab && <><a href="/lab/">LAB</a> · </>}<a href="/blog/">BLOG</a> · <a href="?about" onClick={e => { e.preventDefault(); onAbout() }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></div>
   </footer>
@@ -120,7 +124,7 @@ function CommandLayer(props: CommandLayerProps) {
     return () => { window.removeEventListener('keydown', onKey); unwake() }
   }, [ready])
   useEffect(() => { if (ready) void loadBoardSheet() }, [ready])
-  return ready ? <Suspense fallback={null}><CommandLayerLazy {...props} /><ReplayKey ev={pending} /></Suspense> : null
+  return ready ? <LoadBoundary fallback={null}><Suspense fallback={null}><CommandLayerLazy {...props} /><ReplayKey ev={pending} /></Suspense></LoadBoundary> : null
 }
 // Deep links (all resolved in src/site/views.ts): `/<board>/` or ?board=<id> opens a board, ?make=<mode> a MAKE
 // mode (?make=code&p=<encoded> a shared Field IR program), ?about the about page, /widget/<slug|uid>/ (or /<uid>,
@@ -281,7 +285,7 @@ export default function App() {
   if (widget) return <div className="shell shell--widget">
     <SkipLink />
     <main id="main" tabIndex={-1}>
-      <Suspense fallback={<section className="view-loading" aria-busy="true" />}><WidgetPage route={widget} onOpen={openWidget} onBoard={leaveWidget} /></Suspense>
+      <LoadBoundary key={widget.key} fallback={viewFailed}><Suspense fallback={<section className="view-loading" aria-busy="true" />}><WidgetPage route={widget} onOpen={openWidget} onBoard={leaveWidget} /></Suspense></LoadBoundary>
       <CommandLayer tab="EXPLORE" board={board} setTab={go} setBoard={pickBoard} />
     </main>
     <SiteFooter onAbout={() => { setWidget(undefined); setView('ABOUT') }} />
@@ -309,6 +313,7 @@ export default function App() {
       <button type="button" className="topbar-search" aria-label="Search boards, cards and actions" aria-haspopup="dialog" onClick={() => requestLayer('palette')}><Glyph rows={GLYPHS.SEARCH} /></button></header>
     <main id="main" tabIndex={-1}>
     <h1 className="sr-only">MATRIX dot-matrix UI engine</h1>
+    <LoadBoundary key={shownPlace} fallback={viewFailed}>
     <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
     {shownPlace === 'EXPLORE' ? (
       <section className="boards-view" role="tabpanel" aria-labelledby="tab-EXPLORE">
@@ -333,10 +338,11 @@ export default function App() {
       </section>
     )}
     </Suspense>
+    </LoadBoundary>
     {/* C10: ⌘K palette, dot shell, X-ray inspector, time machine; `tab` is the place (a view or a MAKE mode) */}
     <CommandLayer tab={place} board={board} setTab={go} setBoard={setBoard} />
     </main>
-    {boards && <Suspense fallback={null}><BoardSheet board={board} onClose={() => setBoards(false)} onPick={id => { window.scrollTo(0, 0); setView('EXPLORE'); setBoard(id) }} /></Suspense>}
+    {boards && <LoadBoundary fallback={null}><Suspense fallback={null}><BoardSheet board={board} onClose={() => setBoards(false)} onPick={id => { window.scrollTo(0, 0); setView('EXPLORE'); setBoard(id) }} /></Suspense></LoadBoundary>}
     <TabBar view={view} onView={setView} onBoards={() => setBoards(true)} />
     <SiteFooter onAbout={() => setView('ABOUT')} /></div>
 }
