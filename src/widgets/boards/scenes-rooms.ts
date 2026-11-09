@@ -59,7 +59,7 @@ export const scChain: WidgetPreset = {
       return out
     }
     const q: V3 = new Float64Array(3)
-    // the chain and the bob read the point in chain space, `q` (localQ fills it)
+    // the chain and the bob read the point in chain space, `q` (`local` fills it)
     const chainQ = () => {
       // the links near this height only (each link is one PITCH long), the bob below the last
       const i = Math.min(LINKS - 1, Math.max(0, Math.floor(-q[1] / PITCH)))

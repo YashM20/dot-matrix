@@ -159,7 +159,16 @@ function composite(layers: Layer[], grid: GridConfig, win: Window = [0, 0, grid.
   const { cols, rows } = grid, [wc0, wr0] = win, width = Math.max(0, win[2] - wc0 + 1), n = width * Math.max(0, win[3] - wr0 + 1)
   const best = scratch.best(n), owner = scratch.owner(n), us = centres(cols), vs = centres(rows)
   for (let l = 0; l < layers.length; l++) {
-    const g = layers[l].field, f = withCell(g, step(cols), step(rows)), [c0, r0, c1, r1] = windowOf(g, cols, rows)
+    const g = layers[l].field, f = withCell(g, step(cols), step(rows)), [c0, r0, c1, r1] = windowOf(g, cols, rows), cells = g.cells
+    // a raster on this very grid (`Field.cells`): read its cells, the values the field would return
+    if (cells && cells.cols === cols && cells.rows === rows) {
+      const D = cells.data, M = cells.mask
+      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+        const k = r * cols + c, value = safe(M && M[k] < 0 ? 0 : D[k]), i = (r - wr0) * width + (c - wc0)
+        if (value > 0 && value >= best[i]) { best[i] = value; owner[i] = l + 1 }
+      }
+      continue
+    }
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       const value = safe(f(us[c], vs[r])), i = (r - wr0) * width + (c - wc0)
       if (value > 0 && value >= best[i]) { best[i] = value; owner[i] = l + 1 }
