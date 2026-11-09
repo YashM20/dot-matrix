@@ -386,7 +386,8 @@ export const aiAssistant: WidgetPreset = {
     ...SUGGESTIONS.flatMap((s, i) => {
       const y = 47 + i * 18.5, cy = Math.round(y + 8)
       return [
-        layer(frame(0, Math.round(y), 144, 17, 7), 'faint'),
+        // a cell in at the top and bottom, so neighbouring pills keep 5 empty rows and never read as a doubled line
+        layer(frame(0, Math.round(y) + 1, 144, 15, 7), 'faint'),
         ...pillIcon(i, cy).map(f => layer(f, 'idle')),
         layer(cap(s, 15, cy - 2.5), 'value'), layer(cap('>', 137, cy - 2.5), 'idle'),
       ]
