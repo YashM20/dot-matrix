@@ -75,7 +75,7 @@ function SiteFooter({ onAbout }: { onAbout: () => void }) {
   const idle = useIdle(), lab = useFlag('lab')
   return <footer className="bottom">
     <div className="live-band">{idle && <Suspense fallback={null}><LiveBand /></Suspense>}</div>
-    <div className="bottom-row"><span>MATRIX · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span><span>FIELD → GRID SAMPLER → RENDERER</span>
+    <div className="bottom-row"><span>MATRIX · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span>
       <span><a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · {lab && <><a href="/lab/">LAB</a> · </>}<a href="/blog/">BLOG</a> · <a href="?about" onClick={e => { e.preventDefault(); onAbout() }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></div>
   </footer>
 }
