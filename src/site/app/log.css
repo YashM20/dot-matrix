@@ -88,6 +88,7 @@
   /* eight mono letters with their tracking, the padding and the border: IMPROVED's own width */
   min-width: calc(8ch + 8 * .12em + 2 * var(--space-2) + 2px);
   padding: var(--space-1) var(--space-2);
+  text-align: center;
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
   font: 500 var(--fs-label-12) var(--mono);
@@ -180,5 +181,10 @@
   .log-body li {
     grid-template-columns: 1fr;
     gap: var(--space-1)
+  }
+
+  /* stacked above its text, a tag needs no common width */
+  .log-kind {
+    min-width: 0
   }
 }
