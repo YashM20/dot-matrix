@@ -107,7 +107,7 @@ Cards are `TILE` rasters: **144×144 dots at 2.25px** (`src/widgets/types.ts`), 
 Legacy `CARD` (80×74 @ 4px) cards still render, with whole-dot `scale` text (`L.text(..., { scale: [2, 3] })`) and the CSS card header; new cards should be TILE.
 
 ### Dot type (variable stroke font, C8)
-A second, opt-in face for display and kinetic type: `src/engine/type` (`typeField` / `typeLayers` / `typeFrame`). Glyphs (A–Z, 0–9, punctuation) are hand-authored **centrelines** in a 10-unit cap box; the outline is the signed distance to them, so one field gives every size and four axes: `weight` (stroke 0.7–3.1 units), `width` (×0.6–1.4), `roundness` (curves and stroke ends are superellipses, n = 2 + 10(1 − r)²: 1 round, 0 squarish) and `slant` (shear). Upright static text is **hinted**: cap line, baseline, stems and arc boxes snap to the lattice and strokes round to whole dots. Moving or slanted text is unhinted, and its edge dots take part values that the sampler quantizes. Spacing is proportional, with kerning from side profiles (AV, LT, TA tuck in). Big type sits on a coarser `lattice` through `typeFrame`, like `T.big`. Kinetic helpers: `typeMorph` (SDF blend, letter-by-letter `sweep`), `typeMigration` (dot flight word to word), `marqueeField` (offset in 1/`sub` cell steps), `waveGlyphs` / `bounceGlyphs` / `weightWave` / `breathe`. CJK and emoji go through an offscreen-canvas luma raster **in the browser only**. Node and goldens skip them. The 5×7 bitmap font stays the label/body face, and `textAt` output is unchanged. Board: `?board=type`.
+A second, opt-in face for display and kinetic type: `src/engine/type` (`typeField` / `typeLayers` / `typeFrame`). Glyphs (A–Z, 0–9, punctuation) are hand-authored **centrelines** in a 10-unit cap box; the outline is the signed distance to them, so one field gives every size and four axes: `weight` (stroke 0.7–3.1 units), `width` (×0.6–1.4), `roundness` (curves and stroke ends are superellipses, n = 2 + 10(1 − r)²: 1 round, 0 squarish) and `slant` (shear). Upright static text is **hinted**: cap line, baseline, stems and arc boxes snap to the lattice, strokes round to whole dots, and its field rounds every edge dot to 0 or 1 at one half, so curves and counters carry no grey specks. Moving or slanted text is unhinted, and its edge dots take part values that the sampler quantizes. Spacing is proportional, with kerning from side profiles (AV, LT, TA tuck in). Big type sits on a coarser `lattice` through `typeFrame`, like `T.big`. Kinetic helpers: `typeMorph` (SDF blend, letter-by-letter `sweep`), `typeMigration` (dot flight word to word), `marqueeField` (offset in 1/`sub` cell steps), `waveGlyphs` / `bounceGlyphs` / `weightWave` / `breathe`. CJK and emoji go through an offscreen-canvas luma raster **in the browser only**. Node and goldens skip them. The 5×7 bitmap font stays the label/body face, and `textAt` output is unchanged. Board: `?board=type`.
 
 ### Principles
 Every size in the hierarchy is a strict multiple of the base grid unit — there is no arbitrary in-between size. Weight is simulated by dot density, not a bold-font variant: a "heavier" numeral is achieved by widening `{grid.pitch}` or increasing `{dotStyle.sizeMax}` for that glyph's field, never by swapping a font file. This keeps every text role rendering through the exact same `Field → Sampler → Renderer` pipeline as every icon, chart, and photo in the system.
@@ -353,6 +353,21 @@ Fixture (goldens, snapshots, no sensor): `{ lightSrc: 0, lightAz: 0, lightEl: 7,
 
 Individual dot shape is controlled by one continuous parameter (the superellipse exponent) rather than a discrete shape enum — sliding from `{rounded.sharp}` to `{rounded.circle}` smoothly passes through every intermediate "squircle" state. Card container corners are the chrome radius `{rounded.cardCorner}` (`--radius-card`, 12 px) so card chrome and dot chrome always read as the same geometric family.
 
+### Outlines, rows and markers (dot sites)
+Outlines, separators and markers are evenly spaced **sites**, never a signed-distance band on the card pitch (a band is two cells wide at 45° and doubles where two shapes meet). The helpers live in `src/engine/layout.ts` and on `layoutFor` (`T`):
+
+| Helper | Draws | Rule |
+|---|---|---|
+| `T.rrect(x, y, w, h, r, { spacing, size })` / `rrect()` | Rounded-rectangle outline, sites evenly spaced round the curve | Default 3.3 / 1.5 (the components board's outline); fine frames use 2.2 / 1.05. Keep a cell clear of the card edge |
+| `T.stadium(x, y, w, h, …)` / `stadium()` | Pill outline | Toggles, chips, pills |
+| `T.rows(x, y, w, rowH, n, { r, pick, … })` / `stackedRows()` | `n` stacked rows in one outline with **one** separator between neighbours | Returns `[rest, picked]`: row `pick`'s borders as their own layer (the selected row in `active`). Never stack per-row outlines one cell apart |
+| `T.knockout(track, over, r)` / `knockSites()` | `track` without the sites within `r` of `over` | A needle, knot, playhead or marker over a dotted track sits in clear air |
+| `T.knock(lf, boxes, pad)` / `knockBoxes()` | Sites outside text boxes | Text over a site fill |
+| `T.marker(pt, size, { lattice, origin, gap, snap })` | `{ at, dot, cut }`: a marker site snapped to the cell or lattice site under it, and `cut(field)`, which clears that layer within `size / 2 + gap` of it | An accent dot on a sampled field: no grey dot shows half under the red. `snap: false` for a centre between sites |
+| `stack(top, heights, gap = 1)` | Row tops with at least `gap` empty rows between neighbours | Bands, rules and captions stacked under each other |
+
+A knob, button or node is one big site (`T.dots([c], size)`), as on `ui-toggle`; a pill is `T.stadium` plus that knob. `pnpm verify` reports site layers whose dots touch (`scripts/touching.ts`, warn only): two dots of one layer closer than the sum of their radii fuse into a bar at zoom.
+
 ### Square cells (squares, `src/engine/squares`)
 Square dots can keep a gutter and fuse with their equal neighbours into one shape (docs/living-matter/Q-squares.md). A joined cell is four quarter tiles chosen from its eight neighbours (47 masks); cells join only with the same tone, join group and quantized level.
 
@@ -367,6 +382,8 @@ Square dots can keep a gutter and fuse with their equal neighbours into one shap
 | `{join.seam}` | 0 | Seam left inside joined blobs, fraction of the pitch |
 | `Layer.rotation` (Q3) | unset (0) | Radians, per layer or `(value, u, v) => θ`; snapped to π/4 and, by the square's 90° symmetry, stored as 0 or π/4 (`DotInstance.rot`, a diamond). Rotated dots never join; a rotated site hides cells through `hides(…, rot)` |
 | `Layer.motif` (Q3) | unset | A cut in the cell's own colour: `bead` (round hole, radius .4 s), `stud` (ring at .6 s, width .14 s), `stitch` (the cell as an X, arms .4 s across the axis). Roundness stays on the exponent; motif dots never join |
+
+**Exception: `sq-gameboy`.** The LCD card keeps its clock as 3 × 3 blocks of LCD pixels, the way a Game Boy (DMG-01) screen draws big digits. It is the one card where a big element is a cluster of small cells, on purpose: the card emulates that screen. Its date, walker and clouds stay single LCD pixels, with one empty LCD row between the date and the sky.
 
 Ink: a square holds 4/π the ink of a circle of the same r, and a joined interior cell is P², so joined fills go one grey band lower (`idle`, not `value`; `value` stays for type and small marks). `squareStyle` (src/widgets/boards/squares.ts) is `square`, sizes .25–1.125, gap .16, five levels. A `shapeOf` dot keeps the frame style's ink: its half side scales by √(A(n_style) / A(n)) (A the drawn area), so a dot ↔ square morph (`squareMorph`, src/engine/squares/morph.ts) holds its tone until the passed cells join.
 

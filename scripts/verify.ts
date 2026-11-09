@@ -269,4 +269,10 @@ shareChecks(assert)
   sdf3dChecks(assert)
 }
 
+// touching dots in site layers (#225, macro review): a report, never a failure (scripts/touching.ts)
+{
+  const { touchingReport } = await import('./touching')
+  touchingReport()
+}
+
 done('All acceptance checks passed')

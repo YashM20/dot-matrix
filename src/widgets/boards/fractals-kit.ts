@@ -57,6 +57,15 @@ export function gridLayer(vals: ArrayLike<number>, w: number, h: number, c0: num
   return { field, toneOf: (_, u, v) => { const i = at(u, v); return i < 0 || band[i] < 0 ? undefined : bands[band[i]].tone } }
 }
 
+/**
+ * A red probe on a grid layer (`T.marker`): the dot snapped to the cell under it, and the grid cut in a ring of
+ * clear air round it, so no band dot shows half under the red. Returns [cut grid, probe].
+ */
+export const probe = (grid: Layer, pt: Pt, size = 2.6): [Layer, Layer] => {
+  const m = T.marker(pt, size)
+  return [{ ...grid, field: m.cut(grid.field) }, layer(m.dot, 'active')]
+}
+
 /** Four quantized density bands (dot value .25 / .5 / .75 / 1): faint wisps, mid body, idle, white cores. */
 export const densityBands = (a: number, b: number, c: number, d: number): Band[] => [
   { at: a, tone: 'faint', v: .25 }, { at: b, tone: 'mid', v: .5 }, { at: c, tone: 'idle', v: .75 }, { at: d, tone: 'value', v: 1 },

@@ -17,7 +17,7 @@ export const speedCard = card('dash-speed', 'Speed', {
   layers: ctx => {
     const d = dashOf(ctx), s = ui(ctx, 'speed'), f = d.kmh / VMAX, [left, right] = indicators(ctx, d), g = Math.round(d.gear)
     return [
-      ...dialArc(SPD, 0, f),
+      ...dialArc(SPD, 0, f, 'value', f),
       layer(dialTicks(SPD, Array.from({ length: 9 }, (_, i) => i / 8)), 'idle'),
       ...dialLabels(SPD, [[0, '0'], [.5, '80'], [1, '160']]),
       layer(needle(SPD, f, s.pressed ? PRESS : 1), 'active'),
@@ -42,7 +42,7 @@ export const powerCard = card('dash-power', 'Power', {
     const d = dashOf(ctx), kw = Math.round(d.kw), f = kwF(d.kw), zero = kwF(0)
     const word = d.charging && d.kmh < 1 ? 'CHARGING' : kw < 0 ? 'REGEN' : kw > 0 ? 'POWER' : 'READY'
     return [
-      ...dialArc(PWR, zero, f),
+      ...dialArc(PWR, zero, f, 'value', f),
       layer(dialTicks(PWR, [-60, -30, 50, 100, 150].map(kwF)), 'idle'),
       layer(T.dots([polar(PWR.cx, PWR.cy, PWR.r - 6, angleOf(PWR, zero))], 3.6), 'value'),
       // the scale's ends, outside the ring so the needle never covers them

@@ -25,7 +25,7 @@ import { tsin } from '../../engine/noise/trig'
 import { glyph } from '../../engine/fields/bitmapFont'
 import { clamp, hash01 } from '../../engine/math'
 import type { DotStyle, Layer, Tone } from '../../engine/types'
-import { TILE, layer, type WidgetPreset } from '../types'
+import { TILE, layer, stack, type WidgetPreset } from '../types'
 import { portrait } from './mirror'
 import { FOOT, T, cap, cells, cite, footer, mod, pad, squareStyle, thousands, tile, type Pt } from './squaresKit'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
@@ -276,11 +276,13 @@ const WALKER = [[
   '......##........', '.....#.#........', '.....#..#.......', '................',
 ]]
 const SHADE: Tone[] = ['faint', 'faint', 'mid', 'idle', 'value']
+/** LCD rows: the date (7 px) from row 27, then the sky with one empty row between (clouds are 2 px tall). */
+const [LCD_DATE, LCD_SKY] = stack(27, [7, 2])
 /** The LCD's shade per pixel (0 unlit … 4 value) at t, the colon's phase and its pixels (shared with sq-morph). */
 function lcdFrame(t: number): { px: Uint8Array; colon: boolean; dots: Set<number> } {
   const px = new Uint8Array(LW * LH), set = (x: number, y: number, s: number) => { if (x >= 0 && y >= 0 && x < LW && y < LH) px[y * LW + x] = s }
   // sky: two clouds drifting left (mid)
-  for (const [cx, cy, w, speed] of [[20, 37, 9, 1.5], [58, 35, 7, 1]]) {
+  for (const [cx, cy, w, speed] of [[20, Math.max(37, LCD_SKY + 1), 9, 1.5], [58, Math.max(35, LCD_SKY + 1), 7, 1]]) {
     const x0 = Math.round(mod(cx - t * speed, LW + 20) - 10)
     for (let x = 0; x < w; x++) { set(x0 + x, cy, 2); if (x > 1 && x < w - 2) set(x0 + x, cy - 1, 2) }
   }
@@ -305,7 +307,7 @@ function lcdFrame(t: number): { px: Uint8Array; colon: boolean; dots: Set<number
   digit(hh[0], 1); digit(hh[1], 18); digit(mm[0], 38); digit(mm[1], 55)
   // the date under the clock (1×, idle)
   const date = `${DAYS[now.getDay()]} ${String(now.getDate()).padStart(2, '0')} ${MONTHS[now.getMonth()]}`, dx0 = Math.round((LW - date.length * 6 + 1) / 2)
-  ;[...date].forEach((ch, k) => glyph(ch).forEach((row, gy) => row.forEach((on, gx) => { if (on) set(dx0 + k * 6 + gx, 27 + gy, 2) })))
+  ;[...date].forEach((ch, k) => glyph(ch).forEach((row, gy) => row.forEach((on, gx) => { if (on) set(dx0 + k * 6 + gx, LCD_DATE + gy, 2) })))
   const colon = (Math.floor(t) & 1) === 0
   const dots = new Set([[34, 9], [35, 9], [34, 10], [35, 10], [34, 17], [35, 17], [34, 18], [35, 18]].map(([x, y]) => y * LW + x))
   return { px, colon, dots }

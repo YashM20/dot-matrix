@@ -1,13 +1,13 @@
 import type { DotStyle, Field, GridConfig, Layer, Tone } from '../engine/types'
 import type { Control, FrameContext } from '../engine/context'
-import { barsAt, centeredBarsAt, discCells, dotAt, hRule, placeCells, polylineCells, rectCells, ringCells, spriteAt, textAt, textSize, vRule } from '../engine/layout'
+import { barsAt, centeredBarsAt, cutAround, discCells, dotAt, hRule, knockBoxes, knockSites, placeCells, polylineCells, rectCells, ringCells, rrect, snapToLattice, spriteAt, stackedRows, stadium, textAt, textSize, vRule } from '../engine/layout'
 import { cellU, latticeGrid } from '../engine/sampler/gridSampler'
 import { cachedIconField, iconPaths } from '../engine/fields/iconSDF'
 import { cjkTextField } from '../engine/fields/cjkFallback'
 import type { TextOptions } from '../engine/fields/bitmapFont'
 import { combine } from '../engine/layout'
 import { hash01 } from '../engine/math'
-export { bounded, combine, dim, place } from '../engine/layout'
+export { bounded, combine, dim, place, stack } from '../engine/layout'
 
 /** Frame context a preset's `layers()` receives — see `FrameContext` in the engine. */
 export type WidgetContext = FrameContext
@@ -300,6 +300,32 @@ export function layoutFor(grid: GridConfig) {
         for (let j = mirror ? -n : 0; j <= n; j++) sites.push([x, base - j * pitch])
       })
       return { field: one, sites, size }
+    },
+    /** Rounded-rectangle outline as evenly spaced sites (default: the components board's outline, 3.3 apart, size 1.5). */
+    rrect: (x: number, y: number, w: number, h: number, r: number, { spacing = 3.3, size = 1.5 }: SiteOptions = {}): LatticeField => ({ field: one, sites: rrect(x, y, w, h, r, spacing), size }),
+    /** Stadium (pill) outline as evenly spaced sites. */
+    stadium: (x: number, y: number, w: number, h: number, { spacing = 3.3, size = 1.5 }: SiteOptions = {}): LatticeField => ({ field: one, sites: stadium(x, y, w, h, spacing), size }),
+    /**
+     * `n` stacked rows in one rounded outline with one separator between neighbours (`stackedRows`). Returns
+     * `[rest, picked]`: row `pick`'s outline and separators as their own layer (empty when `pick` is unset).
+     */
+    rows: (x: number, y: number, w: number, rowH: number, n: number, o: SiteOptions & { r?: number; pick?: number } = {}): [LatticeField, LatticeField] => {
+      const { spacing = 3.3, size = 1.5, r = 4, pick = -1 } = o, { all, rows } = stackedRows(x, y, w, rowH, n, r, spacing), mine = new Set(rows[pick] ?? [])
+      return [{ field: one, sites: all.filter(p => !mine.has(p)), size }, { field: one, sites: [...mine], size }]
+    },
+    /** `track` without the sites within `r` cells of `over` (sites or a site layer): a marker sits in clear air. */
+    knockout: (track: LatticeField, over: LatticeField | Pt[], r: number): LatticeField =>
+      ({ ...track, sites: knockSites(track.sites ?? [], Array.isArray(over) ? over : over.sites ?? [], r) }),
+    /** `lf` without the sites inside any box [x0, y0, x1, y1] grown by `pad`, so text reads over a fill. */
+    knock: (lf: LatticeField, boxes: [number, number, number, number][], pad = 1.5): LatticeField => ({ ...lf, sites: lf.sites && knockBoxes(lf.sites, boxes, pad) }),
+    /**
+     * A marker dot at `pt` and `cut`, which clears the dots of the layer it sits on within `gap` cells of its rim: no
+     * grey dot shows half under the accent. `cut` takes that layer's field (on the same `lattice` / `origin`). The
+     * marker snaps to the cell or lattice site under it, unless `snap` is false (a centre between sites).
+     */
+    marker: (pt: Pt, size: number, o: { lattice?: number; origin?: Pt; gap?: number; snap?: boolean } = {}) => {
+      const { lattice = 1, origin = [0, 0] as Pt, gap = 1, snap = true } = o, at = snap ? snapToLattice(pt, lattice, origin) : pt
+      return { at, dot: { field: one, sites: [at], size } as LatticeField, cut: (f: Field) => cutAround(grid, f, [at], size / 2 + gap, lattice, origin) }
     },
     /** Arbitrary dot sites. `text`: the words they spell (glyphs drawn as sites), for `describe()` and screen readers. */
     dots: (points: Pt[], size = 1.8, text?: string): LatticeField => ({ field: text ? said(text) : one, sites: points, size }),
