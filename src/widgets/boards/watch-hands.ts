@@ -42,7 +42,7 @@ export const analogFace = face('watch-analog', 'Analog', 'round', {
 // ── DIGITAL ───────────────────────────────────────────────────────────────────
 /** 60 second marks round the squircle, just inside the screen's edge; the quarters a little bigger. */
 const SECONDS = squircleSites(SQ.a - SQ.inset, SQ.b - SQ.inset, { count: 60 })
-const BIG = { lattice: 3.5, smooth: true, align: 'center' } as const
+const BIG = { lattice: 3.5, smooth: true, face: 'fine', align: 'center' } as const
 export const digitalFace = face('watch-digital', 'Digital', 'squircle', {
   group: 'text', animated: true,
   layers: () => {

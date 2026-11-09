@@ -10,7 +10,7 @@ import type { Chart, Label, Mark } from './marks'
 export function labelLayer(l: Label, grid: GridConfig): Layer {
   const k = l.lattice ?? 1
   if (k === 1 && !l.smooth) return { field: textAt(grid, l.text, l.col, l.row, { align: l.align }), tone: l.tone }
-  return { ...bigText(grid, l.text, l.col, l.row, { lattice: k, smooth: l.smooth, align: l.align }), tone: l.tone }
+  return { ...bigText(grid, l.text, l.col, l.row, { lattice: k, smooth: l.smooth, align: l.align, face: l.face }), tone: l.tone }
 }
 
 export function markLayer(m: Mark): Layer {

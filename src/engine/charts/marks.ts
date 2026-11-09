@@ -4,7 +4,8 @@
  * Geometry only: `paint.ts` turns it into `Layer[]`. Sizes are relative to a card dot, like `Layer.size`.
  */
 import type { Tone } from '../types'
-import { textSize } from '../layout'
+import { bigTextSize, textSize } from '../layout'
+import type { HeroFace } from '../fields/heroFaces'
 import type { Scale } from './scale'
 
 export type Pt = [number, number]
@@ -14,8 +15,9 @@ export interface Label {
   align?: 'left' | 'center' | 'right'
   /** Card cells per font pixel (default 1: card dots). */
   lattice?: number
-  /** 10×14 Scale2x glyphs (the hero weight). */
+  /** The hero weight: numerals in the stroke face (`twin` unless `face` says), other text in 10×14 Scale2x glyphs. */
   smooth?: boolean
+  face?: HeroFace
 }
 export interface Chart { marks: Mark[]; labels: Label[]; /** Cell of each data point, in data order. */ anchors: Pt[]; /** Picked data index, -1 for none. */ pick: number }
 /** The plot rectangle in card cells: data runs x0 → x1, values base (bottom) → top. */
@@ -87,7 +89,7 @@ export function categoryLabels(xs: readonly number[], names: readonly string[], 
 
 /** Lattice of the readout's hero number: 2 cells per pixel, 10×14 smooth glyphs (28 cells tall). */
 export const HERO = { lattice: 2, smooth: true, h: 28 }
-export const heroWidth = (s: string) => textSize(s, { smooth: true })[0] * HERO.lattice
+export const heroWidth = (s: string) => bigTextSize(s, HERO)[0]
 /** The readout: the picked value as the hero at (col, row), up to three short lines stacked beside it. */
 export function readout(hero: string, lines: readonly { text: string; tone: Tone }[], col = 0, row = 14): Label[] {
   const x = col + heroWidth(hero) + 6

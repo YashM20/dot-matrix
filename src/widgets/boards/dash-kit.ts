@@ -61,7 +61,7 @@ const needleSites = (d: Dial, f: number): Pt[] => { const a = angleOf(d, f); ret
 export const needle = (d: Dial, f: number, v = 1): LatticeField => ({ field: () => v, sites: needleSites(d, f), size: NEEDLE.size })
 
 /** Hero number on a 2× smooth lattice, centred (10×14 glyphs → 20×28 cells). */
-export const hero = (s: string, cx: number, top: number, lattice = 2) => T.big(s, cx, top, { lattice, smooth: true, align: 'center' })
+export const hero = (s: string, cx: number, top: number, lattice = 2) => T.big(s, cx, top, { lattice, smooth: true, face: 'fine', align: 'center' })
 
 // ── sprites ─────────────────────────────────────────────────────────────────
 /** A sprite on its own coarse lattice, top-left at card cell (col,row). */

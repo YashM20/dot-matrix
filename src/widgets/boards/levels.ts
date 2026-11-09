@@ -501,7 +501,7 @@ export const lvScores: WidgetPreset = {
     return [
       title('HIGH SCORES'),
       layer(T.text('1ST ACE', 14, 21), 'idle'),
-      layer(T.big('12800', 72, 30, { lattice: 2, smooth: true, align: 'center' })),
+      layer(T.big('12800', 72, 30, { lattice: 2, smooth: true, face: 'condensed', align: 'center' })),
       layer(T.hrule(14, 62, 116, 2), 'faint'),
       ...TABLE.flatMap(([rank, name, pts], i) => {
         const shown = i === 1 ? name.slice(0, typed) : name
