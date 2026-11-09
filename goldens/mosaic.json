@@ -11,15 +11,15 @@
   "ev-charge": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "d0dea85f",
-    "dots": 6055
+    "hash": "57ea2cee",
+    "dots": 6042
    }
   },
   "codex-usage": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "c338393f",
-    "dots": 2030
+    "hash": "56d2c58e",
+    "dots": 1627
    }
   },
   "fitness-rings": {

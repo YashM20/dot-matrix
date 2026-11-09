@@ -25,22 +25,22 @@
   "final-lap": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "22f5ff19",
-    "dots": 366
+    "hash": "4ad477b1",
+    "dots": 364
    }
   },
   "newswire": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "e4223b67",
+    "hash": "1e0d032c",
     "dots": 940
    }
   },
   "deerflow-stars": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "7d7d783b",
-    "dots": 496
+    "hash": "715b0be1",
+    "dots": 494
    }
   },
   "cody": {
@@ -53,8 +53,8 @@
   "tatooine": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "30006f6e",
-    "dots": 1155
+    "hash": "16d7ca27",
+    "dots": 1137
    }
   },
   "afterlight": {
