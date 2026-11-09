@@ -57,8 +57,7 @@ export const typingCard = loopCard({
  */
 const SEND = { type: .2, typed: 1.2, press: 1.6, fly: 1.8, flight: .4, sent: 3, read: 4.4, period: 7.2 }
 const MSG = 'AT 8, OK?', FIELD = { x: 6, y: 104, w: 102, h: 22 }, BTN = { cx: 126, cy: 115, r: 11 }
-/** The send arrow on a 2.4 lattice: a pitch close to the button ring's, so the button reads as one pitch. */
-const ARROW = ['..#..', '.###.', '#.#.#', '..#..', '..#..']
+const ARROW = ['...#...', '..###..', '.#.#.#.', '...#...', '...#...', '...#...', '...#...']
 const OUT = { x: 138 - bodyW(MSG) - 2 * BUBBLE.pad, y: 46 }
 type SendState = 'DRAFT' | 'TYPING' | 'SENDING' | 'SENT' | 'READ'
 const sendState = (lt: number): SendState =>
@@ -73,7 +72,7 @@ export const sendCard = loopCard({
       ...bubble('DINNER?', 6, 18, 'mid', 'idle'),
       layer(outline(FIELD.x, FIELD.y, FIELD.w, FIELD.h, BUBBLE.r), 'mid'),
       layer(at(T.dotRing(BTN.cx, BTN.cy, BTN.r, { spacing: 2.6, size: 1.3 }), pv), n > 0 && inField ? 'value' : 'mid'),
-      layer(dimmed(spriteAt(ARROW, BTN.cx + .5 - 6, BTN.cy + .5 - 6, 2.4), pv), n > 0 && inField ? 'value' : 'mid'),
+      layer(dimmed(spriteAt(ARROW, BTN.cx + .5 - 5.6, BTN.cy + .5 - 5.6, 1.6), pv), n > 0 && inField ? 'value' : 'mid'),
     ]
     if (inField) {
       if (n > 0) out.push(layer(T.big(MSG.slice(0, n), tx, ty, BODY), 'value'))
