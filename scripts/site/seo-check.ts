@@ -151,6 +151,8 @@ assert('seo: every board page has a CollectionPage with its cards as hasPart', !
 
 // ── 404 ──
 const nf = existsSync(join(DIST, '404.html')) ? read('404.html') : ''
-assert('seo: dist/404.html is a noindex page with the dot 404 as its h1, links home and to the boards, and no script', nf.includes('content="noindex"') && nf.includes('<h1><svg') && nf.includes('href="/"') && boardIds.every(id => nf.includes(`href="/${id}/"`)) && !/<script/i.test(nf))
+// the h1 holds text, not only the drawing (the W3C checker calls an svg-only heading empty)
+const nfH1 = /<h1>([\s\S]*?)<\/h1>/.exec(nf)?.[1] ?? '', nfH1Text = nfH1.replace(/<svg[\s\S]*?<\/svg>/g, '').replace(/<[^>]+>/g, '').trim()
+assert('seo: dist/404.html is a noindex page with the dot 404 and a text h1, links home and to the boards, and no script', nf.includes('content="noindex"') && nfH1.startsWith('<svg') && !!nfH1Text && nf.includes('href="/"') && boardIds.every(id => nf.includes(`href="/${id}/"`)) && !/<script/i.test(nf))
 
 done('all seo checks passed')
