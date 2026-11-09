@@ -45,9 +45,9 @@ const PROBES: { name: string; shard: number; args: string[]; env?: Record<string
   { name: 'gates', shard: 9, args: ['scripts/gates.ts', '--runs', '10'] },
   { name: 'csp', shard: 10, args: ['scripts/site/csp-browser.ts'] },
   { name: 'a11y', shard: 10, args: ['scripts/site/a11y.ts'] },
-  // life finishes in about a minute, or hangs
+  // life finishes in about two minutes (the koi heal waits for their meal, up to ~40 s), or hangs
   // its own watchdog fires first, so the log names the step it hung in
-  { name: 'life', shard: 11, args: ['scripts/life-browser.ts'], timeoutMin: 3, env: { LIFE_BROWSER_TIMEOUT_S: '165' } },
+  { name: 'life', shard: 11, args: ['scripts/life-browser.ts'], timeoutMin: 5, env: { LIFE_BROWSER_TIMEOUT_S: '270' } },
   { name: 'c6', shard: 12, args: ['scripts/c6-browser.ts', '--url', '$HOST'] },
   { name: 'analytics', shard: 12, args: ['scripts/site/analytics-browser.ts'] },
   // a runner has no GPU and webgl.ts launches its own Chrome: its `--swiftshader` turns WebGL2 on (squares passes as is)

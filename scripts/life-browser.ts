@@ -228,13 +228,16 @@ try {
       const p = await open(1280, 900)
       await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: `globalThis.__POND_PROBE__ = true; globalThis.__vt = { n: 0, named: [], hidden: [] };
         ${mode === 'none' ? 'delete Document.prototype.startViewTransition; delete document.startViewTransition;' : `
-        const o = Document.prototype.startViewTransition
-        if (o) Document.prototype.startViewTransition = function (cb) {
-          __vt.n++
-          const seen = () => { for (const e of document.querySelectorAll('[data-card-id]')) if (e.style.viewTransitionName) { __vt.named.push(e.closest('.wp') ? 'page' : 'board'); const c = e.querySelector('canvas'); if (c) __vt.hidden.push(getComputedStyle(c).visibility) } }
-          seen()
-          return o.call(this, async () => { await cb(); seen() })
-        }`}` })
+        // in its own scope: other scripts injected into the page share the global one (a second top-level const throws)
+        ;(() => {
+          const o = Document.prototype.startViewTransition
+          if (o) Document.prototype.startViewTransition = function (cb) {
+            __vt.n++
+            const seen = () => { for (const e of document.querySelectorAll('[data-card-id]')) if (e.style.viewTransitionName) { __vt.named.push(e.closest('.wp') ? 'page' : 'board'); const c = e.querySelector('canvas'); if (c) __vt.hidden.push(getComputedStyle(c).visibility) } }
+            seen()
+            return o.call(this, async () => { await cb(); seen() })
+          }
+        })()`}` })
       if (mode === 'reduce') await p.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })
       await p.cdp('Page.navigate', { url: `${server.url}pond/?probe=1` })
       const ready = await p.waitFor(`!!globalThis.__pondBoard && !!${mcard}?.querySelector('canvas,svg')`, READY_MS)
