@@ -67,5 +67,10 @@ export const conceptCredit = {
     'https://x.com/henry19840301/status/2090273665669874050',
     'https://x.com/henry19840301/status/2090454612126146948',
   ],
+  /** The boards whose cards rebuild his sheets: the default for each card on them (a card's `concept` overrides it). */
   boards: ['henry', 'deerflow12', 'mosaic', 'henry3', 'metro', 'ride', 'audio'] as readonly BoardId[],
 } as const
+
+/** Whether a card on `board` carries the concept credit on its widget page: its own `concept`, else the board's default. */
+export const hasConcept = (board: string, card: { concept?: boolean }): boolean =>
+  card.concept ?? (conceptCredit.boards as readonly string[]).includes(board)
