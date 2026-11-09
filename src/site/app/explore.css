@@ -223,6 +223,14 @@
   margin-top: var(--gap-group)
 }
 
+/* desktop: an action step between the picker and the board it opened, so the board's name, blurb and cards read as
+   the content and the picker as the way to it (phones keep the group step: the first card stays high) */
+@media not ((max-width: 760px) or ((max-height: 500px) and (pointer: coarse))) {
+  .board-picker + .board-view {
+    margin-top: var(--gap-action)
+  }
+}
+
 /* a board whose chunk is still loading holds a screen of room, so the footer starts below the fold and doesn't jump
    down when the cards land (layout shift, #198) */
 .board-view[aria-busy='true'] {
