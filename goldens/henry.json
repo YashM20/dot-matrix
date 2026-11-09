@@ -44,13 +44,13 @@
   "messages": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "fb02c34f",
-    "dots": 1943
+    "hash": "414b042f",
+    "dots": 1525
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "fb02c34f",
-    "dots": 1943
+    "hash": "414b042f",
+    "dots": 1525
    }
   },
   "camera": {
@@ -63,8 +63,8 @@
   "settings": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "3c0fe08c",
-    "dots": 2637
+    "hash": "71d078e7",
+    "dots": 1472
    }
   },
   "system": {

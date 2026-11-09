@@ -4,25 +4,25 @@
   "dash-speed": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "858fea34",
-    "dots": 497
+    "hash": "663b984a",
+    "dots": 495
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "6727f429",
-    "dots": 502
+    "hash": "8a7e15f6",
+    "dots": 501
    }
   },
   "dash-power": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "6ab092eb",
-    "dots": 376
+    "hash": "8516e043",
+    "dots": 374
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "7b010296",
-    "dots": 406
+    "hash": "15bae748",
+    "dots": 405
    }
   },
   "dash-range": {
