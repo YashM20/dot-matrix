@@ -10,7 +10,8 @@ import { theme, visible } from '../lib/stats'
 import type { Assert } from '../lib/check'
 
 /** Cards with no touching dots anywhere, at three times (moving parts included). */
-const CLEAR = ['cinema-exit-14', 'cinema-sundown', 'cinema-keeper', 'heal-mirror', 'mat-knob', 'mirror-conduct']
+const CLEAR = ['line-map', 'service', 'departures', 'ir-ripple', 'chart-bar', 'chart-line', 'chart-area', 'chart-candle', 'hb-done', 'sim-sand', 'live-contribs',
+  'cinema-exit-14', 'cinema-sundown', 'cinema-keeper', 'heal-mirror', 'mat-knob', 'mirror-conduct']
 const CINEMA = ['cinema-last-call', 'cinema-signal', 'cinema-sundown', 'cinema-upstairs', 'cinema-closer', 'cinema-witness', 'cinema-exit-14', 'cinema-keeper', 'cinema-encore']
 const dotsAt = (p: WidgetPreset, t: number): DotInstance[] => sampleLayers(withChrome(p)({ t, data: { ...p.defaults } }), p.grid, p.style, theme)
 
@@ -30,5 +31,10 @@ export function cardChecks(assert: Assert) {
       if (red.some(r => rest.some(d => Math.hypot(d.x - r.x, d.y - r.y) < 4 * pitch))) near.push(id)
     }
     assert('cards: every cinema poster keeps a moat round its red', !near.length, near.join(', '))
+  }
+  // sim-sand: the falling stream is grains (red only on the leading grain of each run), not a red bar
+  {
+    const p = widgetById('sim-sand')!, red = dotsAt(p, 1.3).filter(d => d.color === theme.dotActive && d.opacity > 0)
+    assert('cards: sim-sand draws at most 3 red grains (one per falling column)', red.length > 0 && red.length <= 3, `${red.length} red dots`)
   }
 }

@@ -4,37 +4,37 @@
   "chart-bar": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "88fb105a",
-    "dots": 1060
+    "hash": "7b83418c",
+    "dots": 1105
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "88fb105a",
-    "dots": 1060
+    "hash": "7b83418c",
+    "dots": 1105
    }
   },
   "chart-line": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "0f68bb42",
-    "dots": 975
+    "hash": "5d70be7b",
+    "dots": 971
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "0f68bb42",
-    "dots": 975
+    "hash": "5d70be7b",
+    "dots": 971
    }
   },
   "chart-area": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "1155d919",
-    "dots": 1366
+    "hash": "5c9ce1fa",
+    "dots": 1256
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "1155d919",
-    "dots": 1366
+    "hash": "5c9ce1fa",
+    "dots": 1256
    }
   },
   "chart-donut": {
@@ -64,25 +64,25 @@
   "chart-spark": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "5c4c9a5e",
-    "dots": 871
+    "hash": "b274f1d6",
+    "dots": 870
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "5c4c9a5e",
-    "dots": 871
+    "hash": "b274f1d6",
+    "dots": 870
    }
   },
   "chart-candle": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "21b2e3f0",
-    "dots": 1021
+    "hash": "5135c5a4",
+    "dots": 1018
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "21b2e3f0",
-    "dots": 1021
+    "hash": "5135c5a4",
+    "dots": 1018
    }
   }
  }

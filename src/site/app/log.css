@@ -71,9 +71,11 @@
   gap: var(--space-2)
 }
 
+/* the tag column fits the longest tag, IMPROVED: every chip has its width (.log-kind), so the text after each one
+   starts on one line and keeps the same gap */
 .log-body li {
   display: grid;
-  grid-template-columns: 76px 1fr;
+  grid-template-columns: max-content 1fr;
   gap: var(--space-2);
   color: var(--label);
   font-size: var(--fs-label-12);
@@ -83,7 +85,10 @@
 .log-kind {
   align-self: start;
   justify-self: start;
+  /* eight mono letters with their tracking, the padding and the border: IMPROVED's own width */
+  min-width: calc(8ch + 8 * .12em + 2 * var(--space-2) + 2px);
   padding: var(--space-1) var(--space-2);
+  text-align: center;
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
   font: 500 var(--fs-label-12) var(--mono);
@@ -176,5 +181,10 @@
   .log-body li {
     grid-template-columns: 1fr;
     gap: var(--space-1)
+  }
+
+  /* stacked above its text, a tag needs no common width */
+  .log-kind {
+    min-width: 0
   }
 }

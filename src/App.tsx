@@ -14,6 +14,7 @@ import { flag } from './site/flags'
 import { pushUrl, replace } from './site/safe-url'
 import { BROWSE_META, BROWSE_PARAMS } from './site/browse'
 import { useFlag } from './site/useFlag'
+import { SkipLink } from './site/SkipLink'
 import { cardTransition } from './site/viewTransition'
 import { GALLERY_BOARD, VIEWS, placeFromName, placeView, sameView, urlForView, viewFromUrl, type Mode, type View } from './site/views'
 // the app's styles, then the phone styles over them: the order is the cascade, keep it
@@ -63,11 +64,6 @@ const slot = <div className="home-hero-slot" />
 function Hero() {
   'use no memo'
   return <div className="home-hero">{useIdle() ? <Suspense fallback={slot}><HeroCard /></Suspense> : slot}</div>
-}
-/** The first stop on the page (#187): past the header to the view. Focus moves, the address stays as it is. */
-function SkipLink() {
-  'use no memo'
-  return <a className="skip-link" href="#main" onClick={e => { e.preventDefault(); document.getElementById('main')?.focus() }}>SKIP TO CONTENT</a>
 }
 /** The footer band: the live number, then the site line (docs/LAYOUT-THEME-PLAN.md §1c #13). */
 function SiteFooter({ onAbout }: { onAbout: () => void }) {

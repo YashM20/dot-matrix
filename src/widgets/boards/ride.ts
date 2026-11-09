@@ -141,8 +141,10 @@ export const designReview: WidgetPreset = {
       // drawn with a letter O (the font's 0 is slashed, the reference's isn't), read as the number 20
       layer(saying(T.big('THU 2O', 8, 10, { lattice: 1.8, smooth: true, scale: [1, 1.25] }), 'THU 20')),
       layer(T.dots([...rule(66.6), ...rule(118.3)], 3.3), 'idle'),
-      layer(T.dots([...range(58.8, 3.88, 7), ...range(99.3, 3.74, 8)].map(y => [now, y]), 3), 'active'),
-      layer(T.dots([[6.8, 91.9], [129.3, 92], [134.3, 92]], 3.4)), layer(T.dots([[125.1, 92]], 2.4)),
+      // the now-line stops a clear step above and below the text row, so it never runs into the N
+      layer(T.dots([...range(58.8, 3.88, 6), ...range(103.04, 3.74, 7)].map(y => [now, y]), 3), 'active'),
+      // the end bullets share one size, the trailing three evenly spaced
+      layer(T.dots([[6.8, 91.9], [124.3, 92], [129.3, 92], [134.3, 92]], 3.4)),
       layer(T.big('DESIGN REVIEW', 12, 85, { lattice: 1.4, scale: TALL })),
     ]
   },
@@ -187,13 +189,16 @@ const HUB: Pt = [71.6, 64.6]
 const NODES: Pt[] = [[71.7, 18.6], [122.5, 32], [123.7, 86.5], [89.5, 111.1], [53.9, 111.1], [19.8, 86.6], [20.5, 32.1]]
 const link = ([x, y]: Pt) => {
   const d = Math.hypot(HUB[0] - x, HUB[1] - y), ux = (HUB[0] - x) / d, uy = (HUB[1] - y) / d
-  return T.dotLine(x + ux * 11, y + uy * 11, HUB[0] - ux * 21, HUB[1] - uy * 21, { spacing: 3.3, size: 1.9 })
+  // spokes stop 2 cells clear of the face's box, so none ends on its outline
+  return T.knock(T.dotLine(x + ux * 9, y + uy * 9, HUB[0] - ux * 21, HUB[1] - uy * 21, { spacing: 3.3, size: 1.9 }), [FACE_BOX], 3)
 }
+const FACE_BOX: [number, number, number, number] = [53, 48.8, 53 + 16 * 2.2, 48.8 + 15 * 2.2]
 export const wiki: WidgetPreset = {
   id: 'wiki', name: "Henry's Wiki", group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     ...NODES.map(n => layer(link(n), 'idle')),
-    ...NODES.map((n, i) => layer(T.dotDisc(n[0], n[1], 7.6, { spacing: 2.2, size: 2.1 }), i === 1 ? 'active' : 'idle')),
+    // each note is one big dot instead of a disc of small ones
+    ...NODES.map((n, i) => layer(T.dots([n], 12), i === 1 ? 'active' : 'idle')),
     layer(spriteOn(FACE, 2.2, 53, 48.8)),
     layer(T.big('WHY NOW?', 72, 125, { lattice: 1.2, smooth: true, align: 'center' })),
   ],
