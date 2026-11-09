@@ -421,14 +421,24 @@
   }
 }
 
-/* wider, the page has no top bar to hold it: it takes its own row at the end of the page, right-aligned, instead of
-   floating over the footer's links */
+/* wider, the page has no top bar to hold it: it sits in the middle of the top pill row, at the pills' height, so it
+   covers none of the footer's links and takes no row of its own (the card keeps that height) */
 @media (min-width: 1101px) {
+  .shell--widget {
+    position: relative
+  }
+
+  /* its tips open below, like the top bar's (src/site/app/hero.css) */
   .shell--widget .pal-dock {
-    position: static;
-    flex: none;
-    width: fit-content;
-    margin: var(--space-2) 0 0 auto
+    position: absolute;
+    inset: var(--gap-group) auto auto 50%;
+    translate: -50% 0;
+    border-radius: var(--radius-pill)
+  }
+
+  .shell--widget .pal-dock button {
+    min-height: 36px;
+    border-radius: var(--radius-pill)
   }
 }
 
