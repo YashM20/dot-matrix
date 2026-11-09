@@ -93,6 +93,44 @@ function Summary({ probe, layers, d }: { probe: CardProbe; layers: Layer[]; d: C
   </div>
 }
 
+/** What drew the card: renderer (and the worker), frame rate, dots, grid, t and size steps. */
+function RuntimeFacts({ probe, mode, worker }: { probe: CardProbe; mode: string; worker: boolean }) {
+  return <dl className="xr-runtime">
+    <div><dt>RENDERER</dt><dd>{mode}{worker ? ' + worker' : ''}</dd></div>
+    <div><dt>FPS</dt><dd>{probe.animated && probe.fps ? `${probe.stats.fps} / ${probe.fps}` : 'static'}</dd></div>
+    <div><dt>DOTS</dt><dd>{probe.stats.dots.toLocaleString('en-US')}</dd></div>
+    <div><dt>GRID</dt><dd>{probe.grid.cols}×{probe.grid.rows} @{probe.grid.pitch ?? probe.theme.gridPx}px</dd></div>
+    <div><dt>T</dt><dd>{probe.stats.t.toFixed(2)}s</dd></div>
+    <div><dt>STEPS</dt><dd>{probe.style.quantizeSteps ?? '—'}</dd></div>
+  </dl>
+}
+
+/** LAYERS: each layer with its kind, tone and bounds, and its SOLO / MUTE switches (a layer's index is its identity here). */
+function LayersTab({ probe, layers, solo, muted }: { probe: CardProbe; layers: Layer[]; solo: number | undefined; muted: readonly number[] | undefined }) {
+  return <ol className="xr-layers">
+    {layers.map((l, i) => {
+      const off = solo !== undefined ? solo !== i : !!muted?.includes(i)
+      return <li key={i} className={off ? 'xr-off' : ''}>
+        <span className="xr-idx">{String(i).padStart(2, '0')}</span>
+        <span className="xr-lname" title={layerIR(l) ?? undefined}>{layerName(l)}<small>{layerKind(l)} · {l.toneOf ? 'multi-tone' : l.tone ?? 'auto'}{l.field.bounds ? ` · [${l.field.bounds.map(b => Math.round(b)).join(',')}]` : ''}</small></span>
+        <button aria-pressed={solo === i} aria-label={`Solo layer ${i}`} onClick={() => soloLayer(probe.key, i)}>S</button>
+        <button aria-pressed={!!muted?.includes(i)} aria-label={`Mute layer ${i}`} onClick={() => muteLayer(probe.key, i)}>M</button>
+      </li>
+    })}
+  </ol>
+}
+
+/** DATA: the card's data keys and values now. */
+function DataTab({ data }: { data: Record<string, number> }) {
+  const keys = Object.keys(data).sort()
+  return keys.length ? <table className="xr-data"><tbody>{keys.map(k => <tr key={k}><th>{k}</th><td>{Number.isInteger(data[k]) ? data[k] : fmt(data[k], 3)}</td></tr>)}</tbody></table> : <p className="xr-note">No data keys: this card is pure in t.</p>
+}
+
+/** DESCRIBE: the card in words, and the text drawn on it. */
+function DescribeTab({ d }: { d: CardDescription }) {
+  return <div className="xr-describe"><p>{d.summary}</p>{d.text.length > 0 && <p className="xr-note">text: {d.text.map(s => `"${s}"`).join(' ')}</p>}</div>
+}
+
 export function Inspector({ onRemix, onStudio, onCopyLink }: { onRemix: (cardId: string, data: Record<string, number>) => void; onStudio: (cardId: string) => void; onCopyLink: (cardId?: string) => void }) {
   const active = useXR(s => s.active)
   const anyOn = useXR(s => s.global || s.on.size > 0)
@@ -122,8 +160,6 @@ export function Inspector({ onRemix, onStudio, onCopyLink }: { onRemix: (cardId:
   if (!anyOn) return null
   if (!probe) return <aside className="xr-panel xr-panel--empty" aria-label="X-ray inspector"><p>{noHover() ? 'Tap' : 'Hover'} an X-ray card to inspect it.</p><button onClick={() => toggleGlobal(false)}>X-RAY OFF</button></aside>
   const d = describe(probe.preset, { t: probe.stats.t, data: probe.data })
-  const keys = Object.keys(probe.data).sort()
-  const mode = probe.mode(), worker = probe.worker()
   return (
     <aside className={`xr-panel${sheet.full ? ' xr-panel--full' : ''}`} style={sheet.style} aria-label={`X-ray inspector: ${probe.preset.name}`}>
       <div className="xr-sheet-top" {...sheet.grip}>
@@ -133,14 +169,7 @@ export function Inspector({ onRemix, onStudio, onCopyLink }: { onRemix: (cardId:
           <button aria-label="Close inspector" onClick={() => (isSheet() ? dismiss(active) : setXR({ active: null }))}>×</button>
         </header>
       </div>
-      <dl className="xr-runtime">
-        <div><dt>RENDERER</dt><dd>{mode}{worker ? ' + worker' : ''}</dd></div>
-        <div><dt>FPS</dt><dd>{probe.animated && probe.fps ? `${probe.stats.fps} / ${probe.fps}` : 'static'}</dd></div>
-        <div><dt>DOTS</dt><dd>{probe.stats.dots.toLocaleString('en-US')}</dd></div>
-        <div><dt>GRID</dt><dd>{probe.grid.cols}×{probe.grid.rows} @{probe.grid.pitch ?? probe.theme.gridPx}px</dd></div>
-        <div><dt>T</dt><dd>{probe.stats.t.toFixed(2)}s</dd></div>
-        <div><dt>STEPS</dt><dd>{probe.style.quantizeSteps ?? '—'}</dd></div>
-      </dl>
+      <RuntimeFacts probe={probe} mode={probe.mode()} worker={probe.worker()} />
       <div className="xr-actions">
         <button onClick={() => onRemix(probe.preset.id, probe.data)}>OPEN IN CODE</button>
         <button onClick={() => onStudio(probe.preset.id)}>OPEN IN COMPOSE</button>
@@ -151,19 +180,9 @@ export function Inspector({ onRemix, onStudio, onCopyLink }: { onRemix: (cardId:
       </div>
       <div className="xr-tabpanel" role="tabpanel">
         {tab === 'summary' && <Summary probe={probe} layers={layers} d={d} />}
-        {tab === 'layers' && <ol className="xr-layers">
-          {layers.map((l, i) => {
-            const off = solo !== undefined ? solo !== i : !!muted?.includes(i)
-            return <li key={i} className={off ? 'xr-off' : ''}>
-              <span className="xr-idx">{String(i).padStart(2, '0')}</span>
-              <span className="xr-lname" title={layerIR(l) ?? undefined}>{layerName(l)}<small>{layerKind(l)} · {l.toneOf ? 'multi-tone' : l.tone ?? 'auto'}{l.field.bounds ? ` · [${l.field.bounds.map(b => Math.round(b)).join(',')}]` : ''}</small></span>
-              <button aria-pressed={solo === i} aria-label={`Solo layer ${i}`} onClick={() => soloLayer(probe.key, i)}>S</button>
-              <button aria-pressed={!!muted?.includes(i)} aria-label={`Mute layer ${i}`} onClick={() => muteLayer(probe.key, i)}>M</button>
-            </li>
-          })}
-        </ol>}
-        {tab === 'data' && (keys.length ? <table className="xr-data"><tbody>{keys.map(k => <tr key={k}><th>{k}</th><td>{Number.isInteger(probe.data[k]) ? probe.data[k] : fmt(probe.data[k], 3)}</td></tr>)}</tbody></table> : <p className="xr-note">No data keys: this card is pure in t.</p>)}
-        {tab === 'describe' && <div className="xr-describe"><p>{d.summary}</p>{d.text.length > 0 && <p className="xr-note">text: {d.text.map(s => `"${s}"`).join(' ')}</p>}</div>}
+        {tab === 'layers' && <LayersTab probe={probe} layers={layers} solo={solo} muted={muted} />}
+        {tab === 'data' && <DataTab data={probe.data} />}
+        {tab === 'describe' && <DescribeTab d={d} />}
         {tab === 'spec' && <pre className="xr-spec">{spec}</pre>}
       </div>
     </aside>

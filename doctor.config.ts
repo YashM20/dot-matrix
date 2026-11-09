@@ -123,7 +123,7 @@ export default {
         files: [
           'src/blog/Doc.tsx',
           'src/components/Changelog.tsx',
-          'src/components/editor/Canvas.tsx',
+          'src/components/editor/CanvasOverlay.tsx',
           'src/components/palette/Shell.tsx',
           'src/components/xray/Inspector.tsx',
         ],

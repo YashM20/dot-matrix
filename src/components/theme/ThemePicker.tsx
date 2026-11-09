@@ -78,8 +78,23 @@ function ToneRamp() {
   </svg>
 }
 
-export function ThemeControls({ shown, onPreview, focus = false }: { shown?: { scheme: Scheme; accent: AccentChoice }; onPreview?: (p: ThemePreview) => void; focus?: boolean }) {
+/** The two switch rows under the swatches: CONTRAST: MORE, and whether shared links carry this theme. */
+function ThemeSwitches() {
   const t = useTheme(), share = useSyncExternalStore(subscribeShareTheme, shareTheme, () => false)
+  return <>
+    {/* CONTRAST: MORE: on while the OS asks for it too (then the OS decides, and the switch says so) */}
+    <button type="button" className="theme-contrast" role="switch" aria-checked={t.more} aria-disabled={t.osMore || undefined}
+      onClick={() => { if (t.osMore) return; dropUrlParams(['contrast']); setContrast(t.contrast === 'more' ? 'system' : 'more') }}>
+      <span>Contrast: more</span><b>{t.osMore ? 'ON · SYSTEM' : t.more ? 'ON' : 'OFF'}</b>
+    </button>
+    <button type="button" className="theme-share" role="switch" aria-checked={share} onClick={() => setShareTheme(!share)}>
+      <span>Shared links keep my theme</span><b>{share ? 'ON' : 'OFF'}</b>
+    </button>
+  </>
+}
+
+export function ThemeControls({ shown, onPreview, focus = false }: { shown?: { scheme: Scheme; accent: AccentChoice }; onPreview?: (p: ThemePreview) => void; focus?: boolean }) {
+  const t = useTheme()
   const view = shown ?? { scheme: t.resolved, accent: t.accent }
   const seg = useRef<HTMLDivElement>(null)
   // the custom hue: the generator loads on first use (hover warms it), the slider shows while custom is picked
@@ -144,14 +159,7 @@ export function ThemeControls({ shown, onPreview, focus = false }: { shown?: { s
     </div>
     {mod && (hueOpen || t.accent === 'custom') && <HueSlider scheme={view.scheme} mod={mod} />}
     <p className="theme-line">{line}</p>
-    {/* CONTRAST: MORE: on while the OS asks for it too (then the OS decides, and the switch says so) */}
-    <button type="button" className="theme-contrast" role="switch" aria-checked={t.more} aria-disabled={t.osMore || undefined}
-      onClick={() => { if (t.osMore) return; dropUrlParams(['contrast']); setContrast(t.contrast === 'more' ? 'system' : 'more') }}>
-      <span>Contrast: more</span><b>{t.osMore ? 'ON · SYSTEM' : t.more ? 'ON' : 'OFF'}</b>
-    </button>
-    <button type="button" className="theme-share" role="switch" aria-checked={share} onClick={() => setShareTheme(!share)}>
-      <span>Shared links keep my theme</span><b>{share ? 'ON' : 'OFF'}</b>
-    </button>
+    <ThemeSwitches />
   </div>
 }
 

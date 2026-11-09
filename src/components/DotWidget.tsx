@@ -1,7 +1,7 @@
 import type { Control, ControlPatch, DotStyle, ThemeTokens } from '../engine'
 import { needsHold } from '../engine/interaction'
 import { describe } from '../engine/describe'
-import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react'
 import { withChrome, type WidgetPreset } from '../widgets/types'
 import { registeredPreset } from '../widgets/registry'
 import { findPreset } from '../widgets/manifest'
@@ -11,10 +11,12 @@ import { useCamera, withMedia } from '../media/useCamera'
 import { HAND_KEY, useHandMode } from '../media/useHand'
 import { useXRay } from './xray/useXRay'
 import { cardAction, type CardAction } from './xray/store'
+import { DotWidgetBar } from './DotWidgetBar'
 import { useFlag } from '../site/useFlag'
 import { useDisplaySkin } from './skins/store'
 import { useTheme } from '../site/theme/useTheme'
 import { themeTokens } from '../site/theme/theme'
+import type { Scheme } from '../site/theme/names'
 import { cardScheme } from '../site/theme/polarity'
 // card touch policy: ./touch.css, pulled into each page's stylesheet by src/index.css and src/blog/blog.css (#198)
 
@@ -26,8 +28,6 @@ function hintVerb(p: WidgetPreset, cs: Control[]) {
 }
 /** The same hint on touch, where a drag that has to go up or down starts with a hold (a vertical swipe scrolls the page). */
 const touchVerb = (verb: string, cs: Control[]) => (verb === 'DRAG' && cs.some(needsHold) ? 'HOLD · DRAG' : undefined)
-/** The ⋯ menu (#181): the widget page's wording (its MORE menu), OPEN first since only a card has it. */
-const ACTS: [CardAction, string][] = [['open', 'Open its page'], ['png', 'Download PNG'], ['link', 'Copy link'], ['remix', 'Remix in MAKE'], ['how', 'X-ray: how it works']]
 // X-ray's overlay and its probe are a lazy chunk behind the `xray` flag (src/site/flags.ts), off first load; a build
 // with VITE_FLAG_XRAY=kill leaves the chunk out (the test stays inline so the bundler sees a constant)
 const XRayOverlay = import.meta.env.VITE_FLAG_XRAY === 'kill' ? null : lazy(() => import('./xray/XRayOverlay').then(m => ({ default: m.XRayOverlay })))
@@ -99,41 +99,47 @@ function useCardLabel(preset: WidgetPreset | undefined, data: Record<string, num
   return said && said.preset === preset ? said.label : undefined
 }
 
-export function DotWidget({ type, density, dotShape, roundness, size, theme: themeProp, animated, data, tick, preset: presetProp, enter, exit, boardOrder, shared, sharedKeys, onShared }: DotWidgetProps) {
-  const preset = usePreset(type, presetProp)
-  const site = useTheme(), skin = useDisplaySkin()
-  // interactive data (P2): input patches merged over the defaults and the `data` prop
+interface LookOptions extends Pick<DotWidgetProps, 'density' | 'dotShape' | 'roundness' | 'size'> {
+  /** The `theme` prop: when set, the card takes it as is (no inset). */
+  theme?: ThemeTokens
+  page: Scheme
+  accent: Parameters<typeof themeTokens>[1]
+  skin: Parameters<typeof cardScheme>[2]
+  cameraLive: boolean
+}
+/** How a card draws at this size and theme: its scheme, tokens, grid and dot style, the controls that fit, its hint and fps. */
+function cardLook(preset: WidgetPreset, o: LookOptions) {
+  // the card's scheme: the page's, or a dark inset (a photo, the camera, an emissive skin) on a light page
+  const scheme = cardScheme(preset, o.page, o.skin), inset = !o.theme && scheme !== o.page
+  const theme = o.theme ?? themeTokens(scheme, o.accent)
+  const native = preset.grid.pitch ?? theme.gridPx, pitch = o.density ?? native, k = pitch / native
+  // radii are px tuned for the preset's own pitch — scale them with density so dots keep their proportion
+  const style: DotStyle = { ...preset.style, sizeMin: preset.style.sizeMin * k, sizeMax: preset.style.sizeMax * k, shape: o.dotShape ?? preset.style.shape, cornerRoundness: o.roundness ?? preset.style.cornerRoundness }
+  const grid = o.size ? { pitch, cols: Math.max(4, Math.round(o.size.w / pitch)), rows: Math.max(4, Math.round(o.size.h / pitch)) } : { ...preset.grid, pitch }
+  // control boxes are in cell space, like the layers: a `size` override only re-grids the canvas, so they keep
+  // working unscaled; boxes that fall outside the smaller grid are dropped
+  const fit = preset.controls?.filter(({ box: [c, r, bw, bh] }) => c < grid.cols && r < grid.rows && c + bw > 0 && r + bh > 0)
+  const controls = fit?.length ? fit : undefined
+  const hint = controls ? hintVerb(preset, controls) : undefined
+  // the live camera runs at 30; a card's own `fps` drops a tier on phones; no `fps` keeps DotCanvas's default
+  const fps = o.cameraLive ? 30 : preset.fps !== undefined ? cardFps(preset.fps, fpsTier()) : undefined
+  return { scheme, inset, theme, style, grid, controls, hint, touchHint: hint && controls && touchVerb(hint, controls), fps }
+}
+
+/**
+ * The card's own data (P2): input patches merged over the preset's defaults, the `data` prop and the board's shared data.
+ * An edit to a shared key goes to the board store (`onShared`), the rest stay on this card; an idle demo hands over on
+ * the first edit (`WidgetPreset.handover`), which also sets its key to 0. `intercept`: the hand pointer's say first.
+ */
+function useCardData(preset: WidgetPreset | undefined, data: DotWidgetProps['data'], shared: ControlPatch | undefined, sharedKeys: string[] | undefined,
+  onShared: DotWidgetProps['onShared'], intercept: (input: ControlPatch) => ControlPatch) {
   const [local, setLocal] = useState<ControlPatch>({})
-  const [menu, setMenu] = useState(false)
-  // touch engagement (a hold grabbed the card): the way out, shown as DONE in the bar
-  const [letGo, setLetGo] = useState<(() => void) | null>(null)
-  const onEngage = useCallback((exit: (() => void) | null) => setLetGo(() => exit), [])
-  // the ⋯ menu closes on a tap anywhere else, like a native menu; its keys are on the menu (onMenuKey)
-  const bar = useRef<HTMLDivElement>(null), more = useRef<HTMLButtonElement>(null)
-  useEffect(() => {
-    if (!menu) return
-    const away = (e: PointerEvent) => { if (!bar.current?.contains(e.target as Node)) setMenu(false) }
-    document.addEventListener('pointerdown', away, true)
-    // the first item takes focus, so arrows, Enter and Escape work at once
-    bar.current?.querySelector<HTMLElement>('[role^="menuitem"]')?.focus()
-    return () => document.removeEventListener('pointerdown', away, true)
-  }, [menu])
-  // live media (P4): a camera card's feed starts only once its own control turned `cam` on
   const merged = { ...preset?.defaults, ...data, ...shared, ...local }
-  const camera = useCamera(preset?.media === 'camera', !!merged.cam, preset?.grid)
-  // HAND mode (C6): a card with a `hand` toggle drives the page-wide hand pointer
-  const hand = useHandMode(!!preset?.controls?.some(c => c.key === HAND_KEY)), { intercept } = hand
-  const spoken = useCardLabel(preset, merged)
-  const layers = useMemo(() => preset && (preset.media ? withMedia(withChrome(preset), camera.read) : withChrome(preset)), [preset, camera.read])
-  // C10 X-ray slot: identity (same layers, no override) unless this card is X-rayed with a layer soloed / muted
-  const xr = useXRay(layers), xray = useFlag('xray') && !!XRayOverlay, make = useFlag('make')
   const sharedKey = sharedKeys?.join(',') ?? ''
   const handover = preset?.handover
   const onInput = useCallback((input: ControlPatch) => {
     let patch = intercept(input)
-    // an idle demo hands over on the first edit (`WidgetPreset.handover`): the edit also sets its key to 0
     if (handover && !(handover in patch)) patch = { ...patch, [handover]: 0 }
-    // split the patch: shared keys go to the board store, the rest stay on this card
     const keys = sharedKey ? new Set(sharedKey.split(',')) : null, mine: ControlPatch = {}, board: ControlPatch = {}
     let ownEdit = false, boardEdit = false
     for (const k in patch) {
@@ -143,56 +149,49 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme: the
     if (ownEdit) setLocal(prev => ({ ...prev, ...mine }))
     if (boardEdit) onShared!(board)
   }, [sharedKey, onShared, intercept, handover])
+  return { merged, onInput }
+}
+
+/** The card's name strip over the drawing (not on a dots-only card): its name, the hint verb, and the live dot. */
+function CardHead({ preset, hint, touchHint }: { preset: WidgetPreset; hint?: string; touchHint?: string }) {
+  return <header className="dot-card-head" aria-hidden="true">
+    <span className="dot-card-label">{preset.name.toUpperCase()}{hint && <small className="dot-card-hint" data-touch={touchHint}>{hint}</small>}</span>
+    {preset.live && <i className="status-dot" />}
+  </header>
+}
+
+export function DotWidget({ type, density, dotShape, roundness, size, theme: themeProp, animated, data, tick, preset: presetProp, enter, exit, boardOrder, shared, sharedKeys, onShared }: DotWidgetProps) {
+  const preset = usePreset(type, presetProp)
+  const site = useTheme(), skin = useDisplaySkin()
+  // touch engagement (a hold grabbed the card): the way out, shown as DONE in the bar
+  const [letGo, setLetGo] = useState<(() => void) | null>(null)
+  const onEngage = useCallback((exit: (() => void) | null) => setLetGo(() => exit), [])
+  // HAND mode (C6): a card with a `hand` toggle drives the page-wide hand pointer
+  const hand = useHandMode(!!preset?.controls?.some(c => c.key === HAND_KEY))
+  const { merged, onInput } = useCardData(preset, data, shared, sharedKeys, onShared, hand.intercept)
+  // live media (P4): a camera card's feed starts only once its own control turned `cam` on
+  const camera = useCamera(preset?.media === 'camera', !!merged.cam, preset?.grid)
+  const spoken = useCardLabel(preset, merged)
+  const layers = useMemo(() => preset && (preset.media ? withMedia(withChrome(preset), camera.read) : withChrome(preset)), [preset, camera.read])
+  // C10 X-ray slot: identity (same layers, no override) unless this card is X-rayed with a layer soloed / muted
+  const xr = useXRay(layers), xray = useFlag('xray') && !!XRayOverlay, make = useFlag('make')
   if (!preset || !layers) return null
-  // the card's scheme: the page's, or a dark inset (a photo, the camera, an emissive skin) on a light page
-  const scheme = cardScheme(preset, site.resolved, skin), inset = !themeProp && scheme !== site.resolved
-  const theme = themeProp ?? themeTokens(scheme, site.accent)
-  const native = preset.grid.pitch ?? theme.gridPx, pitch = density ?? native, k = pitch / native
-  // radii are px tuned for the preset's own pitch — scale them with density so dots keep their proportion
-  const style: DotStyle = { ...preset.style, sizeMin: preset.style.sizeMin * k, sizeMax: preset.style.sizeMax * k, shape: dotShape ?? preset.style.shape, cornerRoundness: roundness ?? preset.style.cornerRoundness }
-  const grid = size ? { pitch, cols: Math.max(4, Math.round(size.w / pitch)), rows: Math.max(4, Math.round(size.h / pitch)) } : { ...preset.grid, pitch }
-  // control boxes are in cell space, like the layers: a `size` override only re-grids the canvas, so they keep
-  // working unscaled; boxes that fall outside the smaller grid are dropped
-  const controls = preset.controls?.filter(({ box: [c, r, bw, bh] }) => c < grid.cols && r < grid.rows && c + bw > 0 && r + bh > 0)
-  const interactive = !!controls?.length
-  const hint = interactive ? hintVerb(preset, controls!) : undefined, touchHint = hint && touchVerb(hint, controls!), name = preset.liveData ? `${preset.name} (live)` : preset.name
+  const { scheme, inset, theme, style, grid, controls, hint, touchHint, fps } = cardLook(preset, { theme: themeProp, page: site.resolved, accent: site.accent, skin, density, dotShape, roundness, size, cameraLive: camera.status === 'live' })
+  const interactive = !!controls, name = preset.liveData ? `${preset.name} (live)` : preset.name
   // a still card's picture carries the words on it; an interactive card has no picture role, so its group does
   const label = spoken ?? name
-  // the live camera runs at 30; a card's own `fps` drops a tier on phones; no `fps` keeps DotCanvas's default
-  const fps = camera.status === 'live' ? 30 : preset.fps !== undefined ? cardFps(preset.fps, fpsTier()) : undefined
-  // X-ray only while its flag is on; REMIX opens MAKE, so only while the `make` flag is on
-  const items = ACTS.filter(([a]) => (a !== 'how' || xray) && (a !== 'remix' || make))
-  const close = () => { setMenu(false); more.current?.focus() }
-  // menu keys: arrows and Home / End move, Escape closes back to ⋯, Tab closes onto ⋯ and goes on from there (items are out of the tab order)
-  const onMenuKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    const all = [...e.currentTarget.querySelectorAll<HTMLElement>('[role^="menuitem"]')], i = all.indexOf(document.activeElement as HTMLElement)
-    const to = e.key === 'ArrowDown' ? i + 1 : e.key === 'ArrowUp' ? i - 1 : e.key === 'Home' ? 0 : e.key === 'End' ? all.length - 1 : null
-    if (to !== null) { e.preventDefault(); all[(to + all.length) % all.length]?.focus() } else if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); close() } else if (e.key === 'Tab') close()
-  }
-  const act = (a: CardAction) => () => { close(); cardAction(a, { key: xr.key, preset, data: merged, layers, grid, style, theme, animated: !!(animated ?? preset.animated) }) }
+  const onAct = (a: CardAction) => cardAction(a, { key: xr.key, preset, data: merged, layers, grid, style, theme, animated: !!(animated ?? preset.animated) })
   return (
     // a group (it holds the action strip); a static card's body is one dot-matrix picture (role="img"), an
     // interactive card's body holds its accessibility overlay (real controls)
     <div className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}${letGo ? ' dot-card--engaged' : ''}`} role="group" data-xr-key={xr.key} data-card-id={preset.id} aria-label={interactive ? label : name}
       {...(inset ? { 'data-scheme': scheme, 'data-accent': site.accent } : {})}>
-      {preset.chrome !== 'dots' && <header className="dot-card-head" aria-hidden="true">
-        <span className="dot-card-label">{preset.name.toUpperCase()}{hint && <small className="dot-card-hint" data-touch={touchHint}>{hint}</small>}</span>
-        {preset.live && <i className="status-dot" />}
-      </header>}
-      <div ref={bar} className={`dot-card-bar${menu ? ' open' : ''}`}>
-        {hint && preset.chrome === 'dots' && <small className="dot-card-hint" data-touch={touchHint} aria-hidden="true">{hint}</small>}
-        {letGo && <button type="button" className="dot-card-done" aria-label={`${preset.name}: let go of the card`} onClick={() => { setMenu(false); letGo() }}>DONE</button>}
-        {/* #181: one ⋯ in the card's top padding; its menu opens on demand, so nothing sits on the drawing at rest or on hover */}
-        <button ref={more} type="button" className="dot-card-more" aria-label={`${preset.name}: card actions`} aria-haspopup="menu" aria-expanded={menu} onClick={() => setMenu(m => !m)}>⋯</button>
-        {menu && <div className="dot-card-menu" role="menu" aria-label={`${preset.name}: card actions`} onKeyDown={onMenuKey}>
-          {items.map(([a, label]) => a === 'how'
-            ? <button key={a} type="button" tabIndex={-1} role="menuitemcheckbox" aria-checked={xr.on} onClick={act(a)}>{label}</button>
-            : <button key={a} type="button" tabIndex={-1} role="menuitem" onClick={act(a)}>{label}</button>)}
-        </div>}
-      </div>
+      {preset.chrome !== 'dots' && <CardHead preset={preset} hint={hint} touchHint={touchHint} />}
+      {/* #181: one ⋯ in the card's top padding */}
+      <DotWidgetBar name={preset.name} hint={preset.chrome === 'dots' ? hint : undefined} touchHint={touchHint} letGo={letGo} xrOn={xr.on} xray={xray} make={make} onAct={onAct} />
       <div className="dot-card-body" role={interactive ? undefined : 'img'} aria-label={interactive ? undefined : label}>
         <DotCanvas layers={xr.layers} renderer={xr.renderer} onMode={xr.onMode} data={preset.media ? { ...merged, ...camera.data, ...hand.data } : { ...merged, ...hand.data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={fps} tick={tick} boardOrder={boardOrder} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
-          controls={interactive ? controls : undefined} onInput={interactive ? onInput : undefined} onEngage={interactive ? onEngage : undefined} />
+          controls={controls} onInput={interactive ? onInput : undefined} onEngage={interactive ? onEngage : undefined} />
         {xr.on && xray && XRayOverlay && <Suspense fallback={null}><XRayOverlay xr={xr} preset={preset} layers={layers} data={preset.media ? { ...merged, ...camera.data } : merged} grid={grid} style={style} theme={theme}
           animated={!!(animated ?? preset.animated)} fps={fps} tick={tick} /></Suspense>}
       </div>
