@@ -120,7 +120,7 @@ Reload. The object can hold several flags, `{ xray: true, worker: false }`, and 
 CI runs once per push: on `pull_request` for PRs (a new push cancels the old run) and on `push` for `main`. These jobs run in parallel:
 1. **typecheck + lint:** `pnpm check:static` (tsc, oxlint, file size, credits, headers, URLs, prose lint, analytics) and the CSS token lint;
 2. **verify:** `pnpm verify`. With the job above, that is all of `pnpm check`;
-3. **build + site checks:** `vite build` (the widget OG images come from a cache keyed by their renderer and the goldens), the bundle budget (`scripts/site/size.ts --check`: first-load JS ≤ 150 kB gz), the theme, header and SEO checks on `dist/`, the `site` artifact upload and `golden --check`;
+3. **build + site checks:** `vite build` (the widget OG images come from a cache keyed by their renderer and the goldens), the bundle budget (`scripts/site/size.ts --check`: first-load JS ≤ 150 kB gz), the theme, header, SEO and page-speed checks on `dist/` (`scripts/site/perf-check.ts`: one render-blocking stylesheet per page, fonts, cache headers, image sizes, the blog hero preload, the lazy view placeholder), the `site` artifact upload and `golden --check`;
 4. **mcp:** `pnpm typecheck` and `pnpm test` in `mcp/`;
 5. **perf report:** `pnpm bench`, on `main` only and report-only;
 6. **react doctor (report):** `pnpm react-doctor` (settings in `doctor.config.ts`, #210), report-only and outside the gate.

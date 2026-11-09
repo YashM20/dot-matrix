@@ -13,7 +13,7 @@
  * Lighthouse runs through `pnpm dlx` at a pinned version: it is a CI tool, not a dependency.
  */
 import { spawnSync } from 'node:child_process'
-import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { findChrome, serveDist } from '../lib/cdp'
 
@@ -47,9 +47,11 @@ try {
     const url = new URL(route.replace(/^\//, ''), base).href
     const args = ['dlx', LIGHTHOUSE, url, '--quiet', '--output=json', `--output-path=${file}`, '--only-categories=performance,accessibility',
       '--chrome-flags=--headless=new --no-sandbox --disable-gpu', '--max-wait-for-load=45000', ...(form === 'desktop' ? ['--preset=desktop'] : [])]
-    const r = spawnSync('pnpm', args, { stdio: ['ignore', 'ignore', 'inherit'], env: { ...process.env, CHROME_PATH: chrome }, shell: process.platform === 'win32', timeout: 180_000 })
-    if (r.status !== 0 || !existsSync(file)) { rows.push(`| ${route} | ${form} | failed | | | | | |`); continue }
-    const lhr = JSON.parse(readFileSync(file, 'utf8')) as Report
+    const run = () => { rmSync(file, { force: true }); const r = spawnSync('pnpm', args, { stdio: ['ignore', 'ignore', 'inherit'], env: { ...process.env, CHROME_PATH: chrome }, shell: process.platform === 'win32', timeout: 180_000 }); return r.status === 0 && existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) as Report : undefined }
+    // one retry: a run on a shared runner now and then loses its trace (NO_NAVSTART)
+    let lhr = run()
+    if (!lhr || lhr.runtimeError) lhr = run()
+    if (!lhr) { rows.push(`| ${route} | ${form} | failed | | | | | |`); continue }
     if (lhr.runtimeError) { rows.push(`| ${route} | ${form} | ${lhr.runtimeError.message.slice(0, 60)} | | | | | |`); continue }
     ran++
     const a = lhr.audits, c = lhr.categories
