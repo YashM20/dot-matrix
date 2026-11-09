@@ -4,12 +4,12 @@
   "ir-ripple": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "7d25eeb9",
+    "hash": "b21e5199",
     "dots": 1091
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "7cd10071",
+    "hash": "c7754b31",
     "dots": 1063
    }
   },
@@ -28,7 +28,7 @@
   "ir-dial": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "a4c2e0c8",
+    "hash": "b64a6768",
     "dots": 533
    }
   }

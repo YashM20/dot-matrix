@@ -16,21 +16,21 @@
   "codex-tokens": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "4b1e2c1e",
+    "hash": "fb5212e6",
     "dots": 734
    }
   },
   "device-overview": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "58a122fe",
+    "hash": "a6c8325c",
     "dots": 1011
    }
   },
   "tesla-status": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "8afa5e32",
+    "hash": "0356d0b2",
     "dots": 892
    }
   },
@@ -44,7 +44,7 @@
   "medical-monitor": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "b85109bb",
+    "hash": "b0d55381",
     "dots": 1004
    }
   },
@@ -65,43 +65,43 @@
   "retail-analytics": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "f7909b13",
+    "hash": "b63826f3",
     "dots": 706
    }
   },
   "entertainment": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "feebfd6d",
+    "hash": "1623de7f",
     "dots": 803
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "5994dbe2",
+    "hash": "869498c4",
     "dots": 803
    }
   },
   "game-zone": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "3d7b375b",
+    "hash": "4585af54",
     "dots": 678
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "a6fc4957",
+    "hash": "63c89ed0",
     "dots": 678
    }
   },
   "vision-ai": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "d00feae5",
+    "hash": "445c42d3",
     "dots": 773
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "d00feae5",
+    "hash": "445c42d3",
     "dots": 773
    }
   }

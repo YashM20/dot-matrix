@@ -4,14 +4,14 @@
   "thermal-monitor": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "e02b3790",
+    "hash": "7988d440",
     "dots": 6256
    }
   },
   "ev-charge": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "918e955d",
+    "hash": "e756ed24",
     "dots": 6059
    }
   },
@@ -25,7 +25,7 @@
   "fitness-rings": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "7f733e33",
+    "hash": "c1bc57ed",
     "dots": 2326
    }
   },
@@ -58,7 +58,7 @@
   "vision-camera": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "09c728fa",
+    "hash": "d36e2455",
     "dots": 13059
    }
   },

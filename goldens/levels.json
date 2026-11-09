@@ -4,24 +4,24 @@
   "lv-title": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "9e88255a",
+    "hash": "55c93de2",
     "dots": 2828
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "e33e69c8",
+    "hash": "848250d0",
     "dots": 2706
    }
   },
   "lv-corridor": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "92f1faec",
+    "hash": "2ae2399c",
     "dots": 20674
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "4c7e5537",
+    "hash": "37aa8c37",
     "dots": 20675
    }
   },
@@ -52,36 +52,36 @@
   "lv-warren": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "6c8cbb68",
+    "hash": "ffdfd9fa",
     "dots": 831
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "54d76ffc",
+    "hash": "6695f988",
     "dots": 844
    }
   },
   "lv-void": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "bff3df6e",
+    "hash": "cb81990f",
     "dots": 850
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "4a742ede",
+    "hash": "a4410b03",
     "dots": 821
    }
   },
   "lv-queen": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "bf838999",
+    "hash": "72d96a3c",
     "dots": 515
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "8f2ffe66",
+    "hash": "d54061d9",
     "dots": 515
    }
   },
