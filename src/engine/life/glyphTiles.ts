@@ -13,7 +13,7 @@
  * API frozen at L1.3; L owns it. Q adds alphabets through `defineAlphabet` only (alphabets are frozen once built).
  */
 import { stbn } from '../halftone/mask'
-import { glyph as fontGlyph } from '../fields/bitmapFont'
+import { RAMP_GLYPHS, glyph as fontGlyph } from '../fields/bitmapFont'
 import type { Field, GridConfig, Layer, Tone } from '../types'
 
 /** Tone palette of every L raster: index → tone (-1 = empty). Index 4 waits for the owner's activeDim ruling (D2). */
@@ -100,8 +100,9 @@ const RAMP4_ORDER = Array.from({ length: 17 }, (_, n) => `b${n}`)
 /** 17 density levels under the 4×4 Bayer matrix. */
 export const RAMP4 = defineAlphabet('RAMP4', 4, 4, Object.fromEntries(Array.from({ length: 17 }, (_, n) => [`b${n}`, rampRows(BAYER4, 4, n)])), RAMP4_ORDER)
 
-/** Three glyphs defined here so `bitmapFont` (and every golden that uses it) stays untouched. */
+/** Glyphs defined here so `bitmapFont` (and every golden that uses it) stays untouched; `%` and `*` are its dense ramp forms. */
 const FONT_LOCAL: Record<string, string[]> = {
+  ...RAMP_GLYPHS,
   '|': ['00100', '00100', '00100', '00100', '00100', '00100', '00100'],
   '~': ['00000', '00000', '01000', '10101', '00010', '00000', '00000'],
   o: ['00000', '00000', '01110', '10001', '10001', '01110', '00000'],

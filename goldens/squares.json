@@ -4,48 +4,48 @@
   "sq-tetris": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "6c32034f",
+    "hash": "072b3b11",
     "dots": 1348
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "1c9341d6",
+    "hash": "d571dd40",
     "dots": 1348
    }
   },
   "sq-quads": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "39867e19",
+    "hash": "1b94c177",
     "dots": 4637
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "39867e19",
+    "hash": "1b94c177",
     "dots": 4637
    }
   },
   "sq-blob": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "08f62e88",
+    "hash": "a7c83ffc",
     "dots": 2094
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "cd429f99",
+    "hash": "12778a43",
     "dots": 2083
    }
   },
   "sq-gameboy": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "a9183def",
+    "hash": "ca06b75c",
     "dots": 4797
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "91c18397",
+    "hash": "22b014a0",
     "dots": 4797
    }
   },
@@ -64,156 +64,156 @@
   "sq-lines": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "3b02c2cc",
+    "hash": "5427ec79",
     "dots": 3342
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "6a8ad119",
+    "hash": "82166482",
     "dots": 3376
    }
   },
   "sq-schotter": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "5b123c26",
+    "hash": "5c299fe7",
     "dots": 1371
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "b9eba40c",
+    "hash": "c802dca5",
     "dots": 1375
    }
   },
   "sq-blocks": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "e442afc2",
+    "hash": "18476c7c",
     "dots": 2480
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "bf5155ec",
+    "hash": "6bc57f6a",
     "dots": 2481
    }
   },
   "sq-sort": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "9028a3c8",
+    "hash": "dc3c3353",
     "dots": 2646
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "a316ac32",
+    "hash": "bb3ca017",
     "dots": 2543
    }
   },
   "sq-truchet": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "925e62cd",
+    "hash": "2f9cbbba",
     "dots": 3990
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "925e62cd",
+    "hash": "2f9cbbba",
     "dots": 3990
    }
   },
   "sq-stitch": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "ffe20919",
+    "hash": "1cf94ea7",
     "dots": 1118
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "7fe72dc6",
+    "hash": "f194ad6e",
     "dots": 1119
    }
   },
   "sq-beads": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "a7b2aed1",
+    "hash": "f2a170a8",
     "dots": 778
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "7586470d",
+    "hash": "1d1d0284",
     "dots": 778
    }
   },
   "sq-morph": {
    "t=0": {
     "style": "circle:2.00",
-    "hash": "a8076a13",
-    "dots": 4838
+    "hash": "e9b84ad2",
+    "dots": 4830
    },
    "t=1.3": {
     "style": "circle:2.00",
-    "hash": "e9d972e7",
-    "dots": 4840
+    "hash": "1ecb1ba4",
+    "dots": 4832
    }
   },
   "sq-hat": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "ab2ba11d",
+    "hash": "32d4bfef",
     "dots": 13017
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "ab2ba11d",
+    "hash": "32d4bfef",
     "dots": 13017
    }
   },
   "sq-ammann": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "52242435",
+    "hash": "9a4df236",
     "dots": 13764
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "a1227087",
+    "hash": "2c816290",
     "dots": 14099
    }
   },
   "sq-arctic": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "dbab4131",
-    "dots": 2310
+    "hash": "0152550d",
+    "dots": 2302
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "422c82dd",
-    "dots": 2299
+    "hash": "d4b85d63",
+    "dots": 2291
    }
   },
   "sq-sandpile": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "ffac2b56",
+    "hash": "ba3ef2dd",
     "dots": 4731
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "e38cc2d2",
+    "hash": "beeac4b5",
     "dots": 4730
    }
   },
   "sq-ascii": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "1ffe46d8",
+    "hash": "334f1bac",
     "dots": 12290
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "98945af7",
+    "hash": "389c5c17",
     "dots": 12287
    }
   }

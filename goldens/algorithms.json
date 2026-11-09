@@ -4,49 +4,49 @@
   "algo-stipple": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "90a28050",
+    "hash": "7c67dd24",
     "dots": 3006
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "90a28050",
+    "hash": "7c67dd24",
     "dots": 3006
    }
   },
   "algo-attractor": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "695e733f",
+    "hash": "61427f01",
     "dots": 4923
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "3adb1fbc",
+    "hash": "aa505c8a",
     "dots": 4860
    }
   },
   "algo-collapse": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "ef1ee45c",
+    "hash": "bda9d130",
     "dots": 1179
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "ef1ee45c",
+    "hash": "bda9d130",
     "dots": 1179
    }
   },
   "algo-aggregate": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "3e0b3d82",
-    "dots": 1653
+    "hash": "76e02afd",
+    "dots": 1595
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "f4d7de3e",
-    "dots": 1703
+    "hash": "56f275fb",
+    "dots": 1645
    }
   }
  }
