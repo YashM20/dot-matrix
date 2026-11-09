@@ -126,7 +126,9 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
     short: () => { const u = withPondDay(withTheme(short), pond); void copyText(u).then(o => toast(o === 'copied' ? `short link copied: ${shortPath(w.uid)}` : u)) },
     savePNG: () => void png().then(b => { download(b, `${w.slug}.png`); toast(`${w.slug}.png saved`) }, () => toast('PNG failed')),
     saveSVG: () => void svg().then(s => { download(new Blob([s], { type: 'image/svg+xml' }), `${w.slug}.svg`); toast(`${w.slug}.svg saved`) }, () => toast('SVG failed')),
-    share: () => { const p = sharePNG.current ?? png(); sharePNG.current = undefined; void shareCard({ title: `${name} · MATRIX`, url: withPondDay(withTheme(url), pond), png: p, file: `${w.slug}.png` }).then(report('card')) },
+    // the PNG made on the press is this click's only: a keyboard click (detail 0) after a press that ended off the
+    // button would otherwise share an old one, in the theme and at the time of that press (docs/STATE-MACHINES.md A9.1)
+    share: (e?: { detail: number }) => { const p = (e?.detail ? sharePNG.current : undefined) ?? png(); sharePNG.current = undefined; void shareCard({ title: `${name} · MATRIX`, url: withPondDay(withTheme(url), pond), png: p, file: `${w.slug}.png` }).then(report('card')) },
     remix: () => cardAction('remix', actionArgs()),
     xray: () => cardAction('how', actionArgs()),
   }

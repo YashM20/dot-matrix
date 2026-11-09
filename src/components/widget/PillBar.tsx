@@ -30,7 +30,8 @@ export interface PillButtonProps {
   glyph?: string
   /** The key that does the same, shown as a keycap in the tooltip. */
   kbd?: string
-  onClick?: () => void
+  /** `detail` is the click count: 0 for a click from the keyboard. */
+  onClick?: (e?: { detail: number }) => void
   onPointerDown?: () => void
   pressed?: boolean
   expanded?: boolean
