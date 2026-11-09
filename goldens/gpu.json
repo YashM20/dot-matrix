@@ -16,12 +16,12 @@
   "gpu-starfield": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "769f1933",
+    "hash": "735da6f5",
     "dots": 1992
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "65ce6ee0",
+    "hash": "cf3fe4ea",
     "dots": 2418
    }
   },

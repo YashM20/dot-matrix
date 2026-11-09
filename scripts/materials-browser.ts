@@ -44,13 +44,45 @@ const arcPoint = (v: number): [number, number] => { const a = KNOB.start + v * K
 const knobV = (p: Page) => p.js<number>(`+${card('mat-knob')}.querySelector('input[aria-label="Volume"]').getAttribute('aria-valuenow')`)
 /** Every material card's control values (a11y inputs and switches), as one string. */
 const dataOf = (p: Page) => p.js<string>(`[...document.querySelectorAll('[data-card-id^="mat-"]')].map(c => c.dataset.cardId + ':' + [...c.querySelectorAll('[aria-valuenow], [aria-checked]')].map(e => e.getAttribute('aria-valuenow') ?? e.getAttribute('aria-checked')).join(',')).join('|')`)
-const center = async (p: Page, id: string) => { await p.js(`${card(id)}.scrollIntoView({ block: 'center' })`); await sleep(400) }
-const engagedOf = (p: Page, id: string) => p.js<boolean>(`!!document.querySelector('[data-card-id="${id}"].dot-card--engaged, [data-card-id="${id}"] .dot-card--engaged') || ${card(id)}.classList.contains('dot-card--engaged')`)
+/**
+ * The page's pointer and scroll events, newest last (`evlog()` reads them for a failed check). A swipe ends in a fling
+ * that keeps scrolling, and the card drops a finger that lands within 120 ms of a scroll (it stops the fling).
+ */
+const EVLOG = `(() => { if (window.__evlog) return; const l = window.__evlog = [], at = () => Math.round(performance.now()) + ' f' + window.__frames
+  window.__frames = 0; const tick = () => { window.__frames++; requestAnimationFrame(tick) }; requestAnimationFrame(tick)
+  const where = e => e.target?.closest?.('[data-card-id]')?.dataset.cardId ?? e.target?.nodeName
+  for (const t of ['pointerdown', 'pointerup', 'pointercancel']) addEventListener(t, e => l.push(t.slice(7) + ' ' + at() + ' ' + where(e)), { capture: true })
+  const what = e => e.target?.nodeName + '.' + String(e.target?.className?.baseVal ?? e.target?.className ?? '').split(' ')[0]
+  for (const t of ['gotpointercapture', 'lostpointercapture', 'click']) addEventListener(t, e => l.push(t.replace('pointercapture', 'cap') + ' ' + at() + ' ' + what(e)), { capture: true })
+  addEventListener('scroll', () => { window.__lastScroll = performance.now(); const e = l.at(-1); if (e?.[0] === 'scroll') e[2] = at(); else l.push(['scroll', at(), at()]) }, { capture: true, passive: true })
+})()`
+const evlog = (p: Page) => p.js<string>(`'now ' + Math.round(performance.now()) + ' f' + window.__frames + ': ' + (window.__evlog ?? []).slice(-10).map(e => Array.isArray(e) ? 'scroll ' + e[1] + '..' + e[2] : e).join(', ')`)
+/** Records each change of a workshop world's mode, with the frame count, for `ms` (read with `modes()`). */
+const watchModes = (p: Page, id: string, ms = 1500) => p.js(`(() => { const l = window.__modes = []; let last = ''; const end = performance.now() + ${ms}
+  const f = () => { const m = String(globalThis.__workshop?.mode('${id}')); if (m !== last) { l.push(m + ' f' + window.__frames); last = m } if (performance.now() < end) requestAnimationFrame(f) }; f() })()`)
+const modes = (p: Page) => p.js<string>(`'modes ' + (window.__modes ?? []).join(' > ')`)
+/** The card in the middle of the view, once the page has stopped scrolling (a fling from the last swipe included). */
+const center = async (p: Page, id: string) => {
+  await p.js(EVLOG)
+  await p.js(`${card(id)}.scrollIntoView({ block: 'center' })`)
+  await sleep(400)
+  await p.waitFor(`performance.now() - (window.__lastScroll ?? 0) > 250`, 4000)
+  await p.js(`${card(id)}.scrollIntoView({ block: 'center' })`)
+  await sleep(200)
+}
+/**
+ * Whether a held finger engaged the card, polled for up to 3 s while it stays down: on a busy runner the 300 ms hold
+ * timer and the commit that marks the card run late.
+ */
+const engagedOf = (p: Page, id: string) => p.waitFor(`!!document.querySelector('[data-card-id="${id}"].dot-card--engaged, [data-card-id="${id}"] .dot-card--engaged')`, 3000)
 const engaged = (p: Page) => engagedOf(p, 'mat-knob')
 /** The lens's centre as its data (lx 0..1 left → right, ly 0..1 bottom → top over card rows 12–143). */
 const lensXY = (p: Page) => p.js<[number, number]>(`['X', 'Y'].map(a => +${card('mat-lens')}.querySelector('input[aria-label="Move the lens ' + a + '"]').getAttribute('aria-valuenow'))`)
 const lensData = (cx: number, cy: number): [number, number] => [cx / 144, (144 - cy) / 132]
 const ready = `!!document.querySelector('[data-card-id="mat-knob"] canvas, [data-card-id="mat-knob"] svg') && !!document.querySelector('[data-card-id="mat-knob"] input[aria-label="Volume"]')`
+/** The page's frame rate over 2 s, printed: a tap or a short drag on a live card needs a few of its frames. */
+const fps = async (p: Page, where: string) => console.log(`  ${where}: ${(await p.js<number>(`new Promise(done => { let n = 0; const t0 = performance.now()
+  const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else done(n / ((performance.now() - t0) / 1000)) }; requestAnimationFrame(f) })`)).toFixed(1)} frames/s, WebGL2 ${await p.js<boolean>(`!!document.createElement('canvas').getContext('webgl2')`) ? 'on' : 'off'}`)
 const touchPt = (x: number, y: number) => [{ x, y, id: 0, radiusX: 2, radiusY: 2, force: 1 }]
 
 try {
@@ -62,6 +94,7 @@ try {
   await p.cdp('Page.navigate', { url: `${server.url}materials/` })
   check('touch: the board opens with the knob', await p.waitFor(ready, 30000))
   await sleep(1500)
+  await fps(p, 'materials (touch)')
 
   await center(p, 'mat-knob')
   {
@@ -109,7 +142,8 @@ try {
     const [x, y] = await at(p, 'mat-lens', 44, 96)
     await p.tap(x, y); await sleep(700)
     const d = await lensXY(p), want = lensData(44, 96)
-    check('mat-lens: a tap moves the lens there', Math.abs(d[0] - want[0]) <= .03 && Math.abs(d[1] - want[1]) <= .03, `lens ${d.map(v => v.toFixed(3))}, want ${want.map(v => v.toFixed(3))}`)
+    const ok = Math.abs(d[0] - want[0]) <= .03 && Math.abs(d[1] - want[1]) <= .03
+    check('mat-lens: a tap moves the lens there', ok, `lens ${d.map(v => v.toFixed(3))}, want ${want.map(v => v.toFixed(3))}${ok ? '' : `; ${await evlog(p)}`}`)
   }
   {
     const [x0, y0] = await at(p, 'mat-lens', 44, 96), s0 = await p.js<number>('scrollY')
@@ -120,7 +154,7 @@ try {
     for (let i = 1; i <= 20; i++) { const [x, y] = await at(p, 'mat-lens', 44 + i, 96 - 2 * i); await p.cdp('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: touchPt(x, y) }); await sleep(20) }
     await p.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await sleep(600)
     const d = await lensXY(p), s1 = await p.js<number>('scrollY'), want = lensData(64, 56)
-    check('mat-lens: a 300 ms hold engages and a drag in any direction then moves it; the page never scrolls while engaged', on && Math.abs(d[0] - want[0]) <= .04 && Math.abs(d[1] - want[1]) <= .04 && Math.abs(s1 - s0) < 1, `engaged ${on}, lens ${d.map(v => v.toFixed(3))}, want ${want.map(v => v.toFixed(3))}, scroll Δ ${(s1 - s0).toFixed(0)} px`)
+    check('mat-lens: a 300 ms hold engages and a drag in any direction then moves it; the page never scrolls while engaged', on && Math.abs(d[0] - want[0]) <= .04 && Math.abs(d[1] - want[1]) <= .04 && Math.abs(s1 - s0) < 1, `engaged ${on}, lens ${d.map(v => v.toFixed(3))}, want ${want.map(v => v.toFixed(3))}, scroll Δ ${(s1 - s0).toFixed(0)} px${on ? '' : `; ${await evlog(p)}`}`)
   }
   {
     const [x0, y0] = await at(p, 'mat-lens', 60, 80), s0 = await p.js<number>('scrollY'), d0 = await lensXY(p)
@@ -151,6 +185,7 @@ try {
   await q.cdp('Page.navigate', { url: `${server.url}workshop/?probe=1` })
   check('touch: /workshop/ opens with the sand', await q.waitFor(`!!globalThis.__workshop && !!${card('mat-sand')}?.querySelector('canvas, svg')`, 30000))
   await sleep(1500)
+  await center(q, 'mat-sand'); await fps(q, 'workshop (touch, the sand in view)')
   const ws = <T,>(expr: string) => q.js<T>(`globalThis.__workshop.${expr}`)
   /** What each card's tap, hold-drag and horizontal drag should change, read from its world. */
   const SPECS: { id: string; tap: [number, number]; tapDid: string; tapName: string; drag: (i: number) => [number, number]; dragDid: string; dragName: string }[] = [
@@ -177,12 +212,15 @@ try {
     await center(q, s.id)
     {
       const [x, y] = await at(q, s.id, ...s.tap)
+      await watchModes(q, s.id)
       await q.tap(x, y); await sleep(250)
       const did = await ws<number>(s.tapDid)
-      check(`${s.id}: a tap ${s.tapName}`, did > (s.id === 'mat-thread' ? 1 : 0), `${s.tapDid} = ${did.toFixed(2)}`)
+      const ok = did > (s.id === 'mat-thread' ? 1 : 0)
+      check(`${s.id}: a tap ${s.tapName}`, ok, `${s.tapDid} = ${did.toFixed(2)}${ok ? '' : `; ${await evlog(q)}; ${await modes(q)}`}`)
     }
     {
       const [x0, y0] = await at(q, s.id, ...s.drag(0)), s0 = await q.js<number>('scrollY'), before = await ws<number>(s.dragDid)
+      await watchModes(q, s.id, 8000)
       await q.cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: touchPt(x0, y0) })
       await sleep(450)
       const on = await engagedOf(q, s.id)
@@ -197,7 +235,8 @@ try {
       await q.touch(Array.from({ length: 14 }, (_, i) => [[x0 + i * 6, y0]] as [number, number][]))
       await sleep(300)
       const after = await ws<number>(s.id === 'mat-thread' ? 'swing()' : s.dragDid), s1 = await q.js<number>('scrollY')
-      check(`${s.id}: a horizontal drag is claimed at once without a hold`, after !== before && Math.abs(s1 - s0) < 1, `${before.toFixed(2)} → ${after.toFixed(2)}, scroll Δ ${(s1 - s0).toFixed(0)} px`)
+      const ok = after !== before && Math.abs(s1 - s0) < 1
+      check(`${s.id}: a horizontal drag is claimed at once without a hold`, ok, `${before.toFixed(2)} → ${after.toFixed(2)}, scroll Δ ${(s1 - s0).toFixed(0)} px${ok ? '' : `; ${await ws<string>(`state('${s.id}')`)}; since the hold ${await modes(q)}; ${await evlog(q)}`}`)
     }
   }
   {
@@ -226,7 +265,7 @@ try {
     const [tx, ty] = await at(q, 'mat-lichtenberg', 104, 44)
     await q.tap(tx, ty); await sleep(400)
     const taps = await q.js<number>('__plate.taps()')
-    check('mat-lichtenberg: a vertical swipe leaves the plate pristine; a tap grounds it (a live figure burns)', swiped === 'pristine' && taps >= 1, `after the swipe ${swiped}, taps ${taps}`)
+    check('mat-lichtenberg: a vertical swipe leaves the plate pristine; a tap grounds it (a live figure burns)', swiped === 'pristine' && taps >= 1, `after the swipe ${swiped}, taps ${taps}${taps >= 1 ? '' : `; ${await evlog(q)}`}`)
   }
   // ── the kintsugi plate and the mud: pristine breaks and cracks bit for bit; the plate's tap ──
   {
@@ -243,7 +282,7 @@ try {
     const [tx, ty] = await at(q, 'mat-kintsugi', 90, 60)
     await q.tap(tx, ty); await sleep(400)
     const taps = await q.js<number>('__kintsugi.taps()')
-    check('mat-kintsugi: a vertical swipe leaves the plate pristine; a tap breaks it (a live break)', swiped === 'pristine' && taps >= 1, `after the swipe ${swiped}, taps ${taps}`)
+    check('mat-kintsugi: a vertical swipe leaves the plate pristine; a tap breaks it (a live break)', swiped === 'pristine' && taps >= 1, `after the swipe ${swiped}, taps ${taps}${taps >= 1 ? '' : `; ${await evlog(q)}`}`)
   }
   check('workshop touch: no console errors', q.logs.length === 0, q.logs.slice(0, 3).join(' | '))
   await q.close(); page = null

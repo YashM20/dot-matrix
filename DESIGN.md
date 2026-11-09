@@ -361,6 +361,8 @@ Fixture (goldens, snapshots, no sensor): `{ lightSrc: 0, lightAz: 0, lightEl: 7,
 | `{rounded.soft}` | 0.12 | 2.4 | Slightly softened dots for photo halftones |
 | `{rounded.circle}` | 0 | 2 (true circle) | Status dots, avatar circles, radial-ring markers, PIN dots |
 
+**Big dots ease toward a circle.** The exponent is the card's for any dot up to a pitch in radius. A bigger dot (a knob, a ball, a status dot, a hero on a lattice of 3 or more) draws with n' = 2 + (n − 2) / (r / P), r its radius and P the card pitch, so its flat sides fade as it grows and it reads round. One rule, `easedRoundness()` in `shapePath.ts`: the sampler stamps it on each dot, and the buffer renderer and `toDots` apply it per dot. Joined square cells and `shape: 'square'` keep their shape. There is no per-layer shape preset.
+
 Individual dot shape is controlled by one continuous parameter (the superellipse exponent) rather than a discrete shape enum — sliding from `{rounded.sharp}` to `{rounded.circle}` smoothly passes through every intermediate "squircle" state. Card container corners are the chrome radius `{rounded.cardCorner}` (`--radius-card`, 12 px) so card chrome and dot chrome always read as the same geometric family.
 
 ### Outlines, rows and markers (dot sites)

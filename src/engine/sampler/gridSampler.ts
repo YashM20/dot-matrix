@@ -2,6 +2,7 @@ import type { DotInstance, DotStyle, Field, GridConfig, JointGeom, Layer, ThemeT
 import { mulberry32 } from './jitter'
 import { quantize } from './quantize'
 import { coverExponent, hides, squareLike } from './cover'
+import { easedRoundness } from '../renderer/shapePath'
 import { samplerExt, type JoinFrame } from './ext'
 import { keepDots, keepInto, repeatDots, repeatInto } from './repeat'
 import { acquireDotBuffer, paletteOf, pushDot, toneIndex, type DotBuffer } from '../buffer/dotBuffer'
@@ -86,7 +87,9 @@ function emit(out: Sink, value: number, tone: number, x: number, y: number, seed
     if (ext) samplerExt.push?.(out.buf, out.buf.n - 1, join, form, aspect)
     return
   }
-  const d: DotInstance = { x: jx, y: jy, r, opacity, color: out.fixed ?? out.palette[tone], shape: out.shape, roundness: out.roundness }
+  // a squircle dot bigger than a pitch eases toward a circle (`easedRoundness`)
+  const roundness = out.shape === 'squircle' && out.roundness && r > out.pitch && join === NO_JOIN ? easedRoundness(out.roundness, r, out.pitch) : out.roundness
+  const d: DotInstance = { x: jx, y: jy, r, opacity, color: out.fixed ?? out.palette[tone], shape: out.shape, roundness }
   if (ext) samplerExt.stamp?.(d, join, form, out.joints, aspect)
   out.dots!.push(d)
 }
@@ -206,7 +209,7 @@ export function sampleLayers(layers: Layer[], grid: GridConfig, style: DotStyle,
  * (float32-rounded). Shape, roundness and palette are stamped from `style` / `theme`.
  */
 export function sampleLayersInto(layers: Layer[], grid: GridConfig, style: DotStyle, theme: ThemeTokens, buf: DotBuffer = acquireDotBuffer(grid.cols * grid.rows)): DotBuffer {
-  buf.n = 0; buf.palette = paletteOf(theme); buf.shape = style.shape; buf.roundness = style.cornerRoundness; buf.joints = undefined
+  buf.n = 0; buf.palette = paletteOf(theme); buf.shape = style.shape; buf.roundness = style.cornerRoundness; buf.pitch = grid.pitch ?? theme.gridPx; buf.joints = undefined
   // a buffer that carried squares channels before: back to "plain dot, frame style" for every slot
   if (buf.join) { buf.join.fill(NO_JOIN); buf.form!.fill(NO_FORM); buf.aspect!.fill(0) }
   if (repeatInto(layers, grid, style, theme, buf)) return buf
@@ -330,7 +333,9 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
   for (let s = 0; s < (S ? S.n : 0); s++) {
     const x = S!.x[s], y = S!.y[s], k = S!.k[s], value = S!.value[s], tone = S!.tone[s], form = S!.form[s]
     emit(dots, shown(value, style), toneIndex(tone, value), (x + .5) * pitch, (y + .5) * pitch, seed++, style, k, NO_JOIN, form)
-    const reach = k / 2 + .25, f = form & 15, nf = f === NO_FORM ? n : coverExponent('squircle', f / 8), rot = (form & 16) * Math.PI / 64, box = rot ? reach * Math.SQRT2 : reach
+    // the cover follows the drawn shape, a big squircle site eased toward a circle like its dot
+    const big = style.shape === 'squircle' && style.cornerRoundness && style.sizeMax * k > pitch
+    const reach = k / 2 + .25, f = form & 15, nf = f !== NO_FORM ? coverExponent('squircle', f / 8) : big ? coverExponent('squircle', easedRoundness(style.cornerRoundness!, style.sizeMax * k, pitch)) : n, rot = (form & 16) * Math.PI / 64, box = rot ? reach * Math.SQRT2 : reach
     for (let r = Math.max(0, Math.ceil(y - box)); r <= Math.min(grid.rows - 1, Math.floor(y + box)); r++)
       for (let c = Math.max(0, Math.ceil(x - box)); c <= Math.min(grid.cols - 1, Math.floor(x + box)); c++)
         if (hides(c - x, r - y, reach, nf, rot)) covered![r * grid.cols + c] = 1

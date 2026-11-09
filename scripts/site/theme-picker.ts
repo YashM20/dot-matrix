@@ -49,7 +49,7 @@ const profile = mkdtempSync(join(tmpdir(), 'dot-theme-picker-'))
 const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--window-size=1280,800', 'about:blank'], { stdio: 'ignore' })
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 let port = ''
-for (let i = 0; i < 150 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
+for (let i = 0; i < 300 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
 const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json() as { type: string; webSocketDebuggerUrl: string }[]
 const ws = new WebSocket(targets.find(t => t.type === 'page')!.webSocketDebuggerUrl)
 await new Promise(r => ws.addEventListener('open', r, { once: true }))
@@ -93,6 +93,8 @@ await cdp('Page.enable'); await cdp('Runtime.enable')
 const html = (k: 'scheme' | 'accent') => js(`document.documentElement.dataset.${k}`) as Promise<string>
 const centreOf = async (sel: string) => js(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) return null; el.scrollIntoView({ block: 'nearest' }); const r = el.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width, h: r.height } })()`) as Promise<{ x: number; y: number; w: number; h: number } | null>
 const move = (x: number, y: number) => cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, pointerType: 'mouse' })
+/** The mouse along a straight line in 12 moves, 16 ms apart. */
+const glide = async (x0: number, y0: number, x1: number, y1: number) => { for (let i = 1; i <= 12; i++) { await move(x0 + (x1 - x0) * i / 12, y0 + (y1 - y0) * i / 12); await sleep(16) } }
 const click = async (x: number, y: number) => { await move(x, y); await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x, y, button: 'left', clickCount: 1 }); await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x, y, button: 'left', clickCount: 1 }) }
 const tap = async (x: number, y: number) => { await cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x, y }] }); await sleep(30); await cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }) }
 // Enter carries its text, so a focused button activates as with a real key
@@ -164,7 +166,9 @@ try {
   check('one view transition, its wipe starting at the pressed swatch', (await vts()) === before + 1 && !!vt?.wipe && Math.abs(vt.x - at.x) <= 2 && Math.abs(vt.y - at.y) <= 2, JSON.stringify({ vt, at }))
   check('the pick is stored', (await stored())?.includes('"cobalt"') === true, String(await stored()))
   check('the wipe cleans up (class and origin vars gone)', await waitFor(`!document.documentElement.classList.contains('theme-wipe') && !document.documentElement.style.getPropertyValue('--wipe-x')`, 4000))
-  await move(btn.x + 400, 600)
+  // glide out the way a mouse does (a hop of hundreds of px skips the boundary events), to a point inside the viewport:
+  // past the right edge the mouse has left the page, and Chrome may send nothing at all
+  await glide(at.x, at.y, 120, 700)
   check('hover-opened popover closes once the mouse leaves', await waitFor('!document.querySelector(".theme-pop")', 2000))
 
   // ── keyboard ──
@@ -326,10 +330,13 @@ try {
   const group = await js(`(() => { const g = document.querySelector(${JSON.stringify(cardsSel)}); const r = [...g.querySelectorAll('[role=radio]')]; return { label: g.getAttribute('aria-label'), names: r.map(b => b.getAttribute('aria-label')), checked: r.map(b => b.getAttribute('aria-checked')), tab: r.map(b => b.tabIndex) } })()`) as { label: string; names: string[]; checked: string[]; tab: number[] }
   check('card size: a labelled radio group of three named radios, LARGE checked and the only tab stop', group.label === 'Card size' && group.names.length === 3 && group.names.every(n => /^(large|medium|compact): /.test(n)) && group.checked.join() === 'true,false,false' && group.tab.join() === '0,-1,-1', JSON.stringify(group))
   const compact = (await centreOf(`${cardsSel} [role=radio]:nth-child(3)`))!
-  await js(`window.__card0 = document.querySelector('.board-grid > .dot-card canvas, .board-grid > .dot-card svg')`)
+  // the card and its DotCanvas root: an SVG card swaps its <svg> for each new dot list, and the enter transient draws on a
+  // canvas before handing back to SVG, so the drawing element itself changes without any re-mount
+  const card0 = `(c => [c, c?.querySelector('.dot-a11y-root')])(document.querySelector('.board-grid > .dot-card:has(.dot-a11y-root)'))`
+  await js(`window.__card0 = ${card0}`)
   await click(compact.x, compact.y)
   check('card size: a click on COMPACT sets data-cards="s", stores it and reflows to 4 a row at 1280', await waitFor(`document.documentElement.dataset.cards === 's' && localStorage.getItem('dot480:cards') === 's' && ${firstRow} === 4`, 3000), String(await js(firstRow)))
-  check('card size: nothing re-mounts (the first card keeps its drawing surface)', await js(`!!window.__card0 && window.__card0.isConnected && document.querySelector('.board-grid > .dot-card canvas, .board-grid > .dot-card svg') === window.__card0`) === true)
+  check('card size: nothing re-mounts (the first interactive card keeps its element and its DotCanvas root)', await js(`(() => { const [c, r] = window.__card0, [c1, r1] = ${card0}; return !!c && !!r && c.isConnected && r.isConnected && c1 === c && r1 === r })()`) === true)
   check('card size: the popover stays open', await js('!!document.querySelector(".theme-pop")') === true)
   await js(`document.querySelector('${cardsSel} [aria-checked=true]').focus()`)
   await key('ArrowLeft', 'ArrowLeft', 37)

@@ -41,8 +41,9 @@ export function goldenKeyChecks(assert: Assert): void {
     // A dot keys as legacyKey + its channel suffixes. Every dot of a card without join / shapeOf layers (the 177 pre-F0
     // cards and every plain card since) must carry no suffix, so no existing hash can move; dots of cards that opt in
     // (squares: `join`, `shapeOf`, rect cells, Q3 `rotation` / `motif`) carry exactly their channels after the unchanged legacy prefix.
+    // A squircle dot bigger than a pitch carries its eased roundness (`easedRoundness`, #225) as a shape suffix, and only that.
     const presets = uniquePresets()
-    let dots = 0, suffixed = 0
+    let dots = 0, suffixed = 0, eased = 0
     const off: string[] = [], opted = new Set<string>()
     const optsIn = (p: WidgetPreset, t: number) => withChrome(p)({ t, data: { ...p.defaults } }).some(l => l.join !== undefined || l.shapeOf !== undefined || typeof l.lattice === 'object' || l.sizeAxis !== undefined || l.rotation !== undefined || l.motif !== undefined)
     for (const p of presets) for (const t of [0, 1.3]) {
@@ -52,11 +53,12 @@ export function goldenKeyChecks(assert: Assert): void {
         const k = dotKey(d, p.style), L = legacyKey(d)
         if (k === L) continue
         if (canSuffix && k.startsWith(L)) { suffixed++; opted.add(p.id); continue }
+        if (k === `${L},s${d.shape}:${(d.roundness ?? 0).toFixed(3)}` && d.shape === 'squircle' && d.r > (p.grid.pitch ?? dot480.gridPx)) { eased++; continue }
         off.push(`${p.id} t=${t}: ${k}`); break
       }
     }
-    assert(`golden key: dotKey ≡ legacyKey on every dot of all ${presets.length} presets at t=0 and t=1.3, except the channel suffixes of join / shapeOf / rect-cell / rotation / motif cards`, !off.length && presets.length >= 177,
-      off.length ? off.slice(0, 4).join('; ') : `${dots} dots; ${suffixed} suffixed on ${[...opted].join(', ') || 'none'}`)
+    assert(`golden key: dotKey ≡ legacyKey on every dot of all ${presets.length} presets at t=0 and t=1.3, except the channel suffixes of join / shapeOf / rect-cell / rotation / motif cards and the eased roundness of dots bigger than a pitch`, !off.length && presets.length >= 177,
+      off.length ? off.slice(0, 4).join('; ') : `${dots} dots; ${suffixed} suffixed on ${[...opted].join(', ') || 'none'}; ${eased} eased big dots`)
 
     const base: DotStyle = { shape: 'squircle', sizeMin: .2, sizeMax: .95, cornerRoundness: .1 }
     const d0: DotInstance = { x: 1.5, y: 2.25, r: .5, opacity: .6, color: '#fff', shape: 'squircle', roundness: .1 }
