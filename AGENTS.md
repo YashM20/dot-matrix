@@ -27,6 +27,8 @@ This file only holds things that would break the project if an agent guessed wro
 ## Testing: run what the change touches
 - While iterating, test the module, not the world: `npx tsc -b`, `npx oxlint <changed files>`, the area's own script (`npx tsx scripts/<area>.ts`, see its header), `pnpm golden --check` only if card pixels could move, `scripts/site/size.ts --check` (after `vite build`) only if first-load imports changed, and only the browser probe for the area you touched.
 - Run the full suite (`pnpm check`, `pnpm golden --check`, size, the browser probes) only before a push or merge of bulk/cross-cutting work, or after a core change (sampler, renderers, layout, fields, `widgets/types`, manifest). It is slow; don't rerun it per edit.
+- What to add: one check per bug you fix, so it can't come back. No tests-per-line target. Use a Node check (`scripts/verify/`, the area's script) whenever the browser isn't needed; add a browser probe only for real input, layout or rendering behaviour, and map it in `scripts/ci/affected.ts`.
+- CI does the heavy work: PR pushes run only the affected probes (label a PR `full-probes` for all), and `gh workflow run goldens -f branch=<branch>` regenerates goldens on a runner (`docs/HARNESS.md`).
 
 ## Before changing a generator or token
 1. Check if it's already covered by an existing `Field` function — new generators should be rare.
