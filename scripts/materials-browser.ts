@@ -52,9 +52,15 @@ const EVLOG = `(() => { if (window.__evlog) return; const l = window.__evlog = [
   window.__frames = 0; const tick = () => { window.__frames++; requestAnimationFrame(tick) }; requestAnimationFrame(tick)
   const where = e => e.target?.closest?.('[data-card-id]')?.dataset.cardId ?? e.target?.nodeName
   for (const t of ['pointerdown', 'pointerup', 'pointercancel']) addEventListener(t, e => l.push(t.slice(7) + ' ' + at() + ' ' + where(e)), { capture: true })
+  const what = e => e.target?.nodeName + '.' + String(e.target?.className?.baseVal ?? e.target?.className ?? '').split(' ')[0]
+  for (const t of ['gotpointercapture', 'lostpointercapture', 'click']) addEventListener(t, e => l.push(t.replace('pointercapture', 'cap') + ' ' + at() + ' ' + what(e)), { capture: true })
   addEventListener('scroll', () => { window.__lastScroll = performance.now(); const e = l.at(-1); if (e?.[0] === 'scroll') e[2] = at(); else l.push(['scroll', at(), at()]) }, { capture: true, passive: true })
 })()`
 const evlog = (p: Page) => p.js<string>(`'now ' + Math.round(performance.now()) + ' f' + window.__frames + ': ' + (window.__evlog ?? []).slice(-10).map(e => Array.isArray(e) ? 'scroll ' + e[1] + '..' + e[2] : e).join(', ')`)
+/** Records each change of a workshop world's mode, with the frame count, for 1.5 s (read with `modes()`). */
+const watchModes = (p: Page, id: string) => p.js(`(() => { const l = window.__modes = []; let last = ''; const end = performance.now() + 1500
+  const f = () => { const m = String(globalThis.__workshop?.mode('${id}')); if (m !== last) { l.push(m + ' f' + window.__frames); last = m } if (performance.now() < end) requestAnimationFrame(f) }; f() })()`)
+const modes = (p: Page) => p.js<string>(`'modes ' + (window.__modes ?? []).join(' > ')`)
 /** The card in the middle of the view, once the page has stopped scrolling (a fling from the last swipe included). */
 const center = async (p: Page, id: string) => {
   await p.js(EVLOG)
@@ -202,10 +208,11 @@ try {
     await center(q, s.id)
     {
       const [x, y] = await at(q, s.id, ...s.tap)
+      await watchModes(q, s.id)
       await q.tap(x, y); await sleep(250)
       const did = await ws<number>(s.tapDid)
       const ok = did > (s.id === 'mat-thread' ? 1 : 0)
-      check(`${s.id}: a tap ${s.tapName}`, ok, `${s.tapDid} = ${did.toFixed(2)}${ok ? '' : `; ${await evlog(q)}`}`)
+      check(`${s.id}: a tap ${s.tapName}`, ok, `${s.tapDid} = ${did.toFixed(2)}${ok ? '' : `; ${await evlog(q)}; ${await modes(q)}`}`)
     }
     {
       const [x0, y0] = await at(q, s.id, ...s.drag(0)), s0 = await q.js<number>('scrollY'), before = await ws<number>(s.dragDid)
