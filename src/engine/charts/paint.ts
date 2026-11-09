@@ -1,7 +1,7 @@
 /**
  * Chart marks to layers (#132): sites become site layers (one field value per mark, quantized by the sampler), labels
  * go through `textAt`: on the card grid for 5×7 text, on their own lattice for bigger type (`bigText`, the `T.big`
- * rule: `lattice` card cells per font pixel; `smooth` below a lattice of 2.5 draws the plain glyph at twice the lattice).
+ * rule: `lattice` card cells per font pixel; `smooth` below a lattice of 1.5 draws the plain glyph at twice the lattice).
  */
 import type { GridConfig, Layer } from '../types'
 import { bigText, textAt } from '../layout'

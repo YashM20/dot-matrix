@@ -267,7 +267,7 @@ export function layoutFor(grid: GridConfig) {
     cjk: tag('cjk', (text: string, col: number, row: number, cell: number) => placeCells(grid, cjkTextField(text), col, row, cell * [...text].length, cell)),
     /**
      * Hero text on its own lattice: `lattice` card cells per dot, anchored at card cell (col,row). Width in card cells
-     * = size(...)[0] * lattice. `smooth` is the 2-dot-stroke display weight from a lattice of 2.5 up; below that it
+     * = size(...)[0] * lattice. `smooth` is the 2-dot-stroke display weight from a lattice of 1.5 up; below that it
      * draws the plain glyph at twice the lattice, and `scale` multiplies the lattice (`bigText`, engine/layout).
      */
     big: (str: string, col: number, row: number, opts: BigTextOptions): LatticeField => bigText(grid, str, col, row, opts),
