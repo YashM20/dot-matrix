@@ -45,6 +45,7 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
   ['src/components/game/**', ['game']], ['src/game/**', ['game']],
   ['src/audio/**', ['audio']],
   ['src/media/**', ['c6']], ['src/vision/**', ['c6']],
+  ['src/components/ControlOverlay*', ['input']],
   ['src/essay/**', ['essay', 'csp', 'a11y-phone']], ['src/blog/**', ['essay', 'csp', 'a11y-phone']], ['docs/blog/**', ['essay', 'csp']],
   ['src/site/analytics*', ['analytics', 'csp']], ['src/site/analytics/**', ['analytics', 'csp']],
   ['src/site/light.ts', ['light']],

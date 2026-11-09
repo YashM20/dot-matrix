@@ -72,7 +72,8 @@ window.__dotTestCamera = async () => {
     setTimeout(draw, 16);
   };
   draw();
-  return c.captureStream(30);
+  const s = c.captureStream(30); window.__c6.streams = [...(window.__c6.streams || []), s];
+  return s;
 };
 window.__dotHandLog = (o, ms) => window.__c6.obs.push([performance.now(), o.present ? 1 : 0, o.x, o.y, o.pinch ? 1 : 0, ms]);
 `
@@ -161,6 +162,18 @@ try {
   Object.assign(report, { instrumentTrackerFps: +((o1[0] - o0[0]) / dt2).toFixed(1), instrumentVideoFps: +((o1[2] - o0[2]) / dt2).toFixed(1), knob: knob.key, reachSteps: reach, knobBefore: knob.v, knobAfter: after })
   console.log('knob', JSON.stringify(report))
   ok = after !== knob.v && (report.trackerFps as number) >= 25 && (report.errBest as number) <= 4
+
+  // 3) B7-3 (docs/STATE-MACHINES.md): the camera goes away while HAND mode is on (unplugged, permission revoked). The
+  // browser ends its tracks on its own: `stop()` sets readyState to ended, the event is what a real unplug fires
+  const hudOf = () => evaluate<string>("document.querySelector('.hand-hud-text')?.textContent ?? ''")
+  const wasLive = /PINCH TO PRESS/.test(await hudOf())
+  await evaluate("(window.__c6.streams || []).forEach(s => s.getTracks().forEach(t => { t.stop(); t.dispatchEvent(new Event('ended')) })), 1")
+  let hudNow = ''
+  for (let i = 0; i < 30 && !/NO CAMERA/.test(hudNow = await hudOf()); i++) await sleep(100)
+  const ended = wasLive && /NO CAMERA/.test(hudNow)
+  report.handTrackEnded = { wasLive, hud: hudNow }
+  console.log(`${ended ? '✓' : '✗'} HAND mode: a camera track that ends on its own leaves live and says NO CAMERA (B7-3) — ${JSON.stringify(report.handTrackEnded)}`)
+  ok &&= ended
 } catch (e) { console.error(e); ok = false }
 finally {
   if (logs.size) console.log('page warnings / errors:\n ' + [...logs].join('\n '))

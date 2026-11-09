@@ -222,6 +222,12 @@
 .ed-note:empty { display: none }
 .ed-banner { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); display: flex; gap: var(--space-2); align-items: center; margin: 0; padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4); background: var(--surface); border: 1px solid color-mix(in srgb, var(--red) 50%, transparent); border-radius: var(--radius-ctl); color: var(--value); z-index: calc(var(--z-raise) + 2) }
 .ed-banner button { background: none; border: 0; width: 28px; height: 28px; color: var(--mute) }
+/* another tab saved the document (otherTab.ts): a neutral note, never the accent; under the banner when both show */
+.ed-other { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); display: flex; gap: var(--space-2); align-items: center; max-width: calc(100% - 24px); padding: var(--space-1) var(--space-1) var(--space-1) var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-ctl); color: var(--value); font-size: var(--fs-label-12); z-index: calc(var(--z-raise) + 2) }
+.ed-other:empty { display: none }
+.ed-banner ~ .ed-other { top: 56px }
+.ed-other button { min-height: 28px; padding: 0 var(--space-2); background: none; border: 1px solid transparent; border-radius: var(--radius-ctl); color: var(--label) }
+.ed-other button:hover, .ed-other button:focus-visible { color: var(--value); border-color: var(--line); background: var(--raised) }
 
 /* ── inspector ── */
 .ed-sec { padding: var(--space-3) var(--space-4) var(--space-4); border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1; display: grid; gap: var(--space-2); min-width: 0 }

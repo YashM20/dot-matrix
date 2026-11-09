@@ -141,6 +141,11 @@ noiseChecks(assert)
   const { editorImportChecks } = await import('./editor-imports')
   await editorImportChecks(assert)
 }
+// editor two tabs (B6-3): another tab's save shows a note with RELOAD and KEEP MINE (scripts/editor-tabs.ts)
+{
+  const { editorTabChecks } = await import('./editor-tabs')
+  editorTabChecks(assert)
+}
 
 // golden key (F0.5, F0.6, F0.10): dotKey + the style backfill, the square site cover, card fps (scripts/goldenkey.ts)
 import { goldenKeyChecks } from './goldenkey'
