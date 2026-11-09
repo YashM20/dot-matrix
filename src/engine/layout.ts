@@ -1,6 +1,6 @@
 import type { CellBounds, Field, GridConfig, Layer } from './types'
 import { glyph, glyphMetrics, textField, textWidth, type TextOptions } from './fields/bitmapFont'
-import { HERO_H, heroCovers, heroDots, heroWidth, type HeroFace } from './fields/heroFaces'
+import { HERO_H, heroCovers, heroRows, heroWidth, type HeroFace } from './fields/heroFaces'
 import { latticeGrid } from './sampler/gridSampler'
 
 /**
@@ -65,8 +65,8 @@ export interface BigTextOptions extends TextOptions {
   /** The glyphs are a shape (a relief or engraving mask), never drawn as dots: `smooth` keeps Scale2x at any lattice. */
   mask?: boolean
   /**
-   * The stroke face for hero numerals (`fields/heroFaces`): `twin` (default), `fine` or `condensed`. It draws `smooth`
-   * text made only of digits, `. : % - +` and spaces as evenly spaced dot sites; anything else keeps the bitmap.
+   * The face for hero numerals (`fields/heroFaces`): `twin` (default), `fine` or `condensed`. It draws `smooth` text
+   * made only of digits, `. : % - +` and spaces; anything else keeps the Scale2x glyphs.
    */
   face?: HeroFace
 }
@@ -78,12 +78,12 @@ export const SMOOTH_MIN_LATTICE = 1.5
 /**
  * Hero text on its own lattice: `lattice` card cells per font pixel, anchored at card cell (col,row); `align` moves the
  * anchor to the text's centre or right edge. Every font pixel is one dot:
- * - `smooth` numerals take a stroke face (`face`): dot sites spaced evenly along each stroke, 14 dots tall;
+ * - `smooth` numerals take a hero face (`face`), 14 dots tall;
  * - `smooth` below `SMOOTH_MIN_LATTICE` draws the plain 5×7 glyph at twice the lattice (same size, one-dot strokes);
  * - `scale` multiplies the lattice instead of drawing blocks of dots. A non-uniform scale gives columns `kx` and rows
  *   `ky` apart, drawn as round dot sites (sized by the narrower pitch), so the dots stay round.
  */
-/** The stroke face `bigText` sets `str` in, or undefined when it draws bitmap glyphs (a mask, plain or not all numerals). */
+/** The hero face `bigText` sets `str` in, or undefined when it draws font glyphs (a mask, plain text or not all numerals). */
 export function heroFaceOf(str: string, opts: BigTextOptions): HeroFace | undefined {
   if (!opts.smooth || opts.mask || opts.lattice < SMOOTH_MIN_LATTICE) return undefined
   const face = opts.face ?? 'twin'
@@ -98,11 +98,17 @@ export function bigTextSize(str: string, opts: BigTextOptions): [number, number]
 export function bigText(grid: GridConfig, str: string, col: number, row: number, opts: BigTextOptions): Omit<Layer, 'tone'> {
   const [sx, sy] = scaleOf(opts), hero = heroFaceOf(str, opts)
   if (hero) {
-    const kx = opts.lattice * sx, ky = opts.lattice * sy, w = heroWidth(hero, str) * kx
+    const kx = opts.lattice * sx, ky = opts.lattice * sy, bits = heroRows(hero, str), w = bits[0].length * kx
     const left = opts.align === 'center' ? col - w / 2 : opts.align === 'right' ? col - w : col
-    const field: Field = () => 1
+    if (kx === ky) {
+      const field = spriteAt(latticeGrid(grid, kx, [left, row]), bits, 0, 0)
+      field.text = str
+      return { field, lattice: kx, origin: [left, row] }
+    }
+    const field: Field = () => 1, sites: [number, number][] = []
     field.text = str
-    return { field, sites: heroDots(hero, str).map(([x, y]) => [left + (x + .5) * kx - .5, row + (y + .5) * ky - .5]), size: Math.min(kx, ky) }
+    bits.forEach((line, y) => [...line].forEach((c, x) => { if (c === '#') sites.push([left + (x + .5) * kx - .5, row + (y + .5) * ky - .5]) }))
+    return { field, sites, size: Math.min(kx, ky) }
   }
   const plain = !!opts.smooth && !opts.mask && opts.lattice < SMOOTH_MIN_LATTICE
   const k = plain ? opts.lattice * 2 : opts.lattice, face: TextOptions = { smooth: !!opts.smooth && !plain }

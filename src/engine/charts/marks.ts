@@ -15,7 +15,7 @@ export interface Label {
   align?: 'left' | 'center' | 'right'
   /** Card cells per font pixel (default 1: card dots). */
   lattice?: number
-  /** The hero weight: numerals in the stroke face (`twin` unless `face` says), other text in 10×14 Scale2x glyphs. */
+  /** The hero weight: numerals in a hero face (`twin` unless `face` says), other text in 10×14 Scale2x glyphs. */
   smooth?: boolean
   face?: HeroFace
 }

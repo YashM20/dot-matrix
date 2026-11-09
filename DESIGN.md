@@ -99,20 +99,20 @@ Cards are `TILE` rasters: **144×144 dots at 2.25px** (`src/widgets/types.ts`), 
 | `{typography.label}` | chrome / `T.text`, `caption()`, `footer()` | 1 | 5×7 (advance 6 cells ≈ 4% of card) | Card label, captions, footers, units, grid ticks |
 | `{typography.body}` | `T.big(s, col, row, { lattice: 1.25–1.3 })` | 1.25–1.3 | 5×7 | Sub-lines ("SFO — LHR", "03 AHEAD", "LISTENING") |
 | `{typography.value}` | `T.big(..., { lattice: 1.6–2 })` | 1.6–2 | 5×7 | Stat values, units beside heroes ("H", "M", "W") |
-| `{typography.hero}` | `T.big(..., { lattice: 2.5–3, smooth: true })` | 2.5–3 | numerals: stroke face, 14 dots tall; letters: 10×14 Scale2x | Clock/stat heroes ("7H 42M", "247", "A-07") |
-| `{typography.display}` | `T.big(..., { lattice: 3.5–4, smooth: true })` | 3.5–4 | numerals: stroke face; letters: 10×14 Scale2x | One-word posters ("14A") |
+| `{typography.hero}` | `T.big(..., { lattice: 2.5–3, smooth: true })` | 2.5–3 | numerals: hero face, 14 dots tall; letters: 10×14 Scale2x | Clock/stat heroes ("7H 42M", "247", "A-07") |
+| `{typography.display}` | `T.big(..., { lattice: 3.5–4, smooth: true })` | 3.5–4 | numerals: hero face; letters: 10×14 Scale2x | One-word posters ("14A") |
 
 `smooth` upsamples a glyph 2× with Scale2x: strokes two dots thick, diagonals stepping one dot — the reference numeral weight.
 
-**Hero faces** (`src/engine/fields/heroFaces.ts`, `face` on `T.big`). `smooth` text made only of digits, `. : % - +` and spaces is drawn as strokes, and dots sit at one even spacing along each stroke: straight runs land on the lattice, and a 45° run keeps its dots one dot apart instead of √2. Digits are tabular. Three faces:
+**Hero faces** (`src/engine/fields/heroFaces.ts`, `face` on `T.big`). `smooth` text made only of digits, `. : % - +` and spaces is drawn from hand-drawn bitmaps, one pixel per lattice dot, in place of the Scale2x upscale. Each face keeps one stroke weight and cuts corners on a 45°. A slant is three dots per row in a two-dot face and one in `fine`. Digits are tabular. Three faces:
 
 | Face | Stroke | Digit box | Boards |
 |---|---|---|---|
-| `twin` (default) | 2 dots, corners cut on a 45° | 10×14 | charts, components, henry3, ir, materials, ride and every card that sets no face |
-| `fine` | 1 dot, corners cut by one dot | 8×14 | dash, watch, motion |
+| `twin` (default) | 2 dots, corners cut by two dots | 10×14 | charts, components, henry3, ir, materials, ride, dash-nav and every card that sets no face |
+| `fine` | 1 dot, corners cut by one dot | 8×14 | dash except dash-nav, watch, motion |
 | `condensed` | 2 dots, flat sides | 8×14 | levels and the HIVE game page |
 
-A hero read as a field (a card mask, the lens) passes `mask: true` and keeps the bitmap.
+A hero read as a field (a card mask, the lens) passes `mask: true` and keeps the Scale2x glyphs.
 
 Text rules (`bigText` in `src/engine/layout.ts`, behind `T.big` and the chart labels):
 - **No caption tier below lattice 1.** Captions and footers land on card cells, never between them. The old 0.72 caption tier is gone (exceptions below). A caption that does not fit at lattice 1 gets shorter words; the full credit lives on the widget page.

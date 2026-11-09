@@ -25,7 +25,7 @@ export const navCard = card('dash-nav', 'Nav', {
     const eta = d.kmh > 1 ? `IN ${clockText(toGo / (d.kmh / 3.6))}` : '--:--'
     return [
       layer(spriteAt(SPRITES[arrow], 6, 20, 4.5), 'value'),
-      layer(T.big(num, 60, 22, { lattice: 1.8, smooth: true, face: 'fine' }), 'value'),
+      layer(T.big(num, 60, 22, { lattice: 1.8, smooth: true }), 'value'),
       layer(T.big(unit, 60 + w + 3, 22 + 25.2 - 11.2, { lattice: 1.6 }), 'idle'),
       layer(T.text(action, 6, 74), 'idle'),
       layer(T.big(street, 6, 86, { lattice: 1.6 }), 'value'),
