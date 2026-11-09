@@ -100,16 +100,16 @@ const SWITCH = { x: 93, w: 51, h: 8 } as const
 const UNDER = { row: 9, step: 2, on: 3, period: 5, rate: 10 } as const
 /**
  * The label row's right side: the switch, always drawn so a phone can see what to tap (#269): DOTS · TYPE, the
- * chosen one in `value` and the other in `idle` at rest, so the style that is on reads without a hover. Hover,
- * focus or a press drops the other one to `mid`; hover puts a dotted line under the chosen one and keyboard focus
- * makes the line march (it holds still under reduced motion).
+ * chosen one in `value` and the other in `mid`, so the style that is on reads without a hover in both schemes. Hover
+ * puts a dotted line under the chosen one and keyboard focus makes the line march (it holds still under reduced
+ * motion).
  */
 function labelRow(ctx: WidgetContext, sel: number): Layer[] {
   const k = 'glyphs', w = T.size('TYPE')[0], gap = 5, right = 143
-  const focus = ctx.focus === k, hover = ctx.hover === k, off = focus || hover || ctx.pressed === k ? 'mid' : 'idle'
+  const focus = ctx.focus === k, hover = ctx.hover === k
   const row: Layer[] = [
-    caption('TYPE', right, 0, 'right', sel === 1 ? 'value' : off),
-    caption('DOTS', right - w - gap, 0, 'right', sel === 0 ? 'value' : off),
+    caption('TYPE', right, 0, 'right', sel === 1 ? 'value' : 'mid'),
+    caption('DOTS', right - w - gap, 0, 'right', sel === 0 ? 'value' : 'mid'),
   ]
   if (!focus && !hover) return row
   const x0 = sel === 1 ? right - w + 1 : right - 2 * w - gap + 1, pts: [number, number][] = []
