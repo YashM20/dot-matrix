@@ -109,7 +109,7 @@ const READY: Record<string, string> = {
   make: `!!document.querySelector('.ed-top')`,
   widget: `!!document.querySelector('.wp-stage canvas, .wp-stage svg')`,
   essay: `!!document.querySelector('.hero .dot-title') && !!document.querySelector('.hero canvas, .hero .dot-svg')`,
-  legal: `!!document.querySelector('main.legal')`,
+  legal: `!!document.querySelector('.legal > main')`,
 }
 
 /** How long a page may take to get ready: a dev server on a busy machine can take half a minute for a cold page. */
