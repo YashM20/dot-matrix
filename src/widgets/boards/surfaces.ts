@@ -71,7 +71,8 @@ export const timerSpec: DeviceSpec = {
       layer(T.dotRing(72, 78, 60, { ...ring, sweep: TAU * timerAt(bt).remaining - 1e-6 }), 'active'),
       layer(dotText(clockText(bt), 72, 62, { px: 2.9, py: 3.4, size: 3.2, align: 'center' })),
       layer(T.dotRing(72, 119, 14.5, { spacing: 1.8, size: .75 }), 'idle'),
-      layer(T.dots([[69.5, 116.5], [74.5, 116.5], [69.5, 121.5], [74.5, 121.5]], 3.4), 'idle'),
+      // stop: a full 5 × 5 square of big dots, as on the MICRO UI timer
+      layer(T.fillOn(2, () => true, [67.5, 114.5, 76.5, 123.5]), 'idle'),
     ]
   },
   variants: {

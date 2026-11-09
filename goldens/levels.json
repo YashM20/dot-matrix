@@ -88,25 +88,25 @@
   "lv-over": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "94764c1f",
-    "dots": 1523
+    "hash": "df9edbc4",
+    "dots": 1974
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "a29fdf07",
-    "dots": 1527
+    "hash": "20610f1a",
+    "dots": 1978
    }
   },
   "lv-scores": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "44bb796e",
-    "dots": 1242
+    "hash": "568618a5",
+    "dots": 1521
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "44bb796e",
-    "dots": 1242
+    "hash": "568618a5",
+    "dots": 1521
    }
   }
  }

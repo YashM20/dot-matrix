@@ -79,6 +79,8 @@ export function sample(raster: Raster, mode: 'nearest' | 'bilinear' = 'nearest')
       return top + (bottom - top) * fy
     }
   if (raster.bounds) { const [c0, r0, c1, r1] = raster.bounds; f.bounds = [c0, r0, c1, r1] }
+  // nearest at a cell centre of the raster's own grid is that cell: the sampler may read `d` directly there
+  if (mode === 'nearest') f.cells = { data: d, cols, rows }
   return f
 }
 

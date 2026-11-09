@@ -4,21 +4,25 @@
 > Update this file in the same commit as the work. Active plans: `docs/WEB-PLAN.md` (what the site does) and `docs/UX-PLAN.md` (how visitors find it); every doc and its status: `docs/README.md`. Original phase plan: `docs/MASTER-PLAN.md` (v2). Research: `docs/MOTION-INTERACTION-DEPTH.md`, `docs/ADVANCED-PLAN.md`. Taste: `docs/STYLE-BIBLE.md`.
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
-## Live run state: resume here (updated 2026-11-06)
+## Live run state: resume here (updated 2026-11-09)
 > The coordinator keeps this block short and current. Read it first after any interruption or compaction.
 >
 > **Process: [`docs/CHECKPOINTS.md`](CHECKPOINTS.md).** One checkpoint at a time: scope, build, gate, publish, breather, then the owner picks the next one. Speed rules: at most 3 agents, agents run quick checks only, and the full suite runs once at the gate (or CI, if the owner skips it).
 
-**Now: CP5 · 0.17 · UI hill climb** (tracking #189). Merged: the widget page's app layout and MORE menu (#191), MAKE and LAB behind flags with the header and title fixes (#192), the card ⋯ menu (#194), the axe probe (#195), parallel CI (#199), flags from the build or `localStorage['dot480:flags']` only (#200), the SEO checkup fixes (#198, #204), the `/browse/` page (#182, #205), React Doctor as a report (#210), bounded board chunk retries with one reload after a deploy (#211), the dot-grid M brand mark (#212), and the changelog, docs sweep and Henry Li credit (#213). Open: #186 (MAKE layout), #187 (the full accessibility walk), #188 (the TETRIS rename, needs a name). The rest of the hill climb waits for the owner.
+**Now: CP6 · 0.18 · Stabilise** (milestone 12; reviews on #225, wave 2 handoff on #269). No new features. Wave 1 is merged: site accessibility and copy (#265), card interactions and probe fixes (#266), card drawings and text (#267, #268). Wave 2 is merged: runtime bugs (#273, #274), the text helpers `caption()` and `footer()` (#275), spacing and fills in `src/widgets/sites.ts` (#279), shapes and layering (#276), big dots easing round (#277), frame budgets with board turn-taking and rest-frame reuse (#278, #280, #282), hero numbers back on the smooth face (#285), affected-only CI probes and goldens on a runner (#281), and the testing policy in `AGENTS.md` (#284). What each changed: `CHANGELOG.md` 0.18. Wave 3 is running: MICRO UI toggles and stop buttons (`chore/stop-square`), and maintenance (dependencies in #287, this docs and LOG update).
 
-**Defaults on main:** MAKE, LAB and X-ray are off; likes (#169, #176) and opt-in PostHog analytics (#171) are on. The like button stays hidden while the likes API answers 404, and analytics needs `VITE_POSTHOG_PROJECT_TOKEN`. Trusted Types stays Report-Only, because the BotID challenge script writes a plain string to `srcdoc`. CI runs four parallel jobs behind the required `check + build` gate in about 2.5 minutes.
+**Open in CP6:** #221 (card audit; removals on hold until the owner picks them), #225 (per-widget tracking), #269 (wave 2 handoff and its Later list), #187 (the full accessibility walk), #188 (rename the falling-blocks card), and the board issues #226 to #264. Probe failures that show on `main` are listed in #224.
 
-**Shipped:** CP1 to CP4 are on main as 0.13 (round 3), 0.14 (foundations and fixes), 0.15 (kits and new boards) and 0.16 (flags, SEO, analytics, shell and security); what each holds is in `CHANGELOG.md`. The CP2 to CP4 milestones are still open on GitHub, with every issue closed except #169 (likes; phase 1 shipped). Closing them and adding 0.14 to 0.16 to the LOG (`src/changelog.ts`, which stops at 0.13) are the publish steps left.
+**Defaults on main:** MAKE, LAB and X-ray are off; likes (#169, #176) and opt-in PostHog analytics (#171) are on. The like button stays hidden while the likes API answers 404, and analytics needs `VITE_POSTHOG_PROJECT_TOKEN`. Trusted Types stays Report-Only, because the BotID challenge script writes a plain string to `srcdoc`. CI runs four parallel jobs behind the required `check + build` gate; PR pushes also run the affected browser probes (`docs/HARNESS.md`).
+
+**Shipped:** CP1 to CP4 are on main as 0.13 (round 3), 0.14 (foundations and fixes), 0.15 (kits and new boards) and 0.16 (flags, SEO, analytics, shell and security); what each holds is in `CHANGELOG.md`, and the LOG (`src/changelog.ts`) has 0.14 to 0.16 for visitors. The CP2 and CP3 milestones are closed. CP4 stays open for #169 (likes; phase 1 shipped). CP5 (0.17) stays open for its tracking issue #189; its last issues moved to CP6 (#187, #188) and the Backlog (#186).
 
 **Waiting on the owner:**
+- #221: which cards to remove or merge.
 - #12 decisions.
 - #52 tixy permission (it blocks the ports).
-- A name for the falling-blocks card (#188), and the go for the rest of the hill climb (#189).
+- A name for the falling-blocks card (#188).
+- Dependabot: merge #270 and #271 (setup-node 7.1, safe as they are) and #287 (supersedes #272). The `deepmerge` alert has no fix upstream; it is dev-only, through `shadcn`.
 
 **Local branches kept:** `perf/workshop-cold-frames` (#27, still open; #100 merged part of it), `chore/dot-engine-deep-dives-v2` (merged as #80) and `feat/round3` (merged as #78). The remote has only `main`.
 
@@ -64,8 +68,8 @@ How the CP3 cards and the #36 additions were built. The release summary is `CHAN
 **XM growth and wear (#21):** `mat-lichtenberg` (two-electrode dielectric breakdown, char lit through M1 relief), `mat-erosion` (droplet erosion through the day, checkpointed; each digit weathers since it last changed) and `mat-frost` (Reiter automaton on `hexSites`, one flake a day from a vetted table) on `/workshop/`; engine in `src/engine/matter/{lichtenberg,erosion,reiter}.ts` (in the determinism lint), checks in `scripts/materials.ts --only growth`. Frame budgets are warn-only: the plate's burn frames and the stone's new-minute frame run over 4 ms on a loaded box.
 
 
-## Status board (updated 2026-11-06)
-- **Checkpoints:** CP1 (0.13), CP2 (0.14), CP3 (0.15) and CP4 (0.16) are merged to `main`; CP5 (0.17, UI hill climb) is in progress. What each shipped: `CHANGELOG.md`. What is open: the live run state above.
+## Status board (updated 2026-11-09)
+- **Checkpoints:** CP1 (0.13), CP2 (0.14), CP3 (0.15) and CP4 (0.16) are merged to `main`; CP5 (0.17, UI hill climb) is merged apart from its tracking issue; CP6 (0.18, stabilise) is in progress. What each shipped: `CHANGELOG.md`. What is open: the live run state above.
 - Everything below is the round-1 and round-2 log, kept as written. Its "not merged" and "queued" notes predate PR #10 (round 2) and PR #78 (round 3), which merged that work.
 - [x] **E3 editor: editing on canvas** (on an agent worktree branch, based on `feat/round2` 0741d3b; `docs/EDITOR-PLAN.md` §4.2, §8.3). Not merged.
   - Sites handles: a ring's radius and sweep (the sweep snaps to the ring's own sites, so an arc ends on a dot of its track), a disc's radius, a line's ends; whole cells.
