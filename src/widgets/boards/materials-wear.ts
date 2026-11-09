@@ -12,9 +12,9 @@ import { hourOf } from '../../engine/light/material'
 import { curl2 } from '../../engine/noise/gradient'
 import { twill } from '../../engine/matter/weave'
 import { createRaster, sample, type Raster } from '../../engine/raster/raster'
-import type { CellBounds } from '../../engine/types'
+import type { CellBounds, Layer } from '../../engine/types'
 import { TILE, layer, type WidgetPreset } from '../types'
-import { L15, LG15, LIGHT_DEFAULTS, T, cap, cite, matLight, mod, once, pad2, scratch, snapTorch, tile, toCard15, valuedSites, type Pt } from './materials-shared'
+import { L15, LG15, LIGHT_DEFAULTS, T, cap, cite, lightId, matLight, own, mod, once, pad2, scratch, snapTorch, tile, toCard15, valuedSites, type Pt } from './materials-shared'
 
 const COLS = TILE.cols
 
@@ -200,7 +200,7 @@ function flameInto(F: Float32Array, t: number, fx: number, tip: number, base: nu
     }
   }
 }
-const candleScratch = once(() => ({ wax: createRaster(LG15), flame: createRaster(LG15) }))
+const candleScratch = once(() => ({ wax: createRaster(LG15), flame: createRaster(LG15), waxKey: '', waxLayer: undefined as Layer | undefined }))
 export const matCandle: WidgetPreset = {
   ...tile, id: 'mat-candle', name: 'Candle', clock: true, inset: 'dark',
   defaults: { ...LIGHT_DEFAULTS },
@@ -211,8 +211,14 @@ export const matCandle: WidgetPreset = {
     // the torch arrives in lattice cells (matLight maps it): back to card cells for the wax
     const torchCard: Vec3 | null = torchAt ? [toCard15(torchAt[0]), toCard15(torchAt[1]), torchAt[2]] : null
     const fx = CANDLE.cx, base = top - 2.5, fy = top - 7
-    S.wax.data.fill(0); S.flame.data.fill(0)
-    for (let j = 0; j < LG15.rows; j++) waxRow(S.wax.data, j, top, hour, dir, torchCard, fx, fy, drips)
+    S.flame.data.fill(0)
+    // the wax only changes with the hour and the light: its surface is shaded once per pair, the flame every frame
+    const waxKey = `${hour}|${lightId(L)}`
+    if (waxKey !== S.waxKey || !S.waxLayer) {
+      S.wax.data.fill(0)
+      for (let j = 0; j < LG15.rows; j++) waxRow(S.wax.data, j, top, hour, dir, torchCard, fx, fy, drips)
+      S.waxKey = waxKey; S.waxLayer = surfaceLayer([[own(S.wax), [[.06, .3, 'faint'], [.3, .62, 'mid'], [.62, .86, 'idle'], [.86, 2, 'value']]]], L15)
+    }
     flameInto(S.flame.data, ctx.reducedMotion ? 0 : ctx.t, fx, top - 17, base)
     const fj = Math.max(0, Math.floor((top - 22) / L15)), fi = Math.floor((fx - 8) / L15)
     S.flame.bounds = [fi, fj, fi + Math.ceil(16 / L15), Math.min(LG15.rows - 1, fj + Math.ceil(24 / L15))]
@@ -221,7 +227,7 @@ export const matCandle: WidgetPreset = {
       cite('WAX · SUBSURFACE'),
       layer(T.text(`${pad2(now.getHours())}:${pad2(now.getMinutes())}`, 0, 134), 'mid'),
       ...marks,
-      surfaceLayer([[S.wax, [[.06, .3, 'faint'], [.3, .62, 'mid'], [.62, .86, 'idle'], [.86, 2, 'value']]]], L15),
+      S.waxLayer,
       layer(T.dots([[fx, top - 1.5]], 1), 'mid'),
       { field: sample(S.flame), tone: 'active', lattice: L15, origin: [0, 0] },
     ]

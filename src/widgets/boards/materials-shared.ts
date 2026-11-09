@@ -9,6 +9,7 @@ import { hourOf } from '../../engine/light/material'
 import { sceneLight, type SceneLightInput } from '../../engine/light/input'
 import { createRaster, rasterWindow, sample, type Raster } from '../../engine/raster/raster'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
+export { frameMemo } from '../../engine/sampler/repeat'
 import type { Field, Layer, Tone } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetContext } from '../types'
 
@@ -67,6 +68,10 @@ export function snapTorch(L: Light, q: number): Light {
   const p = L as { at: readonly [number, number, number]; falloff?: number }
   return { ...p, at: [Math.round(p.at[0] / q) * q, Math.round(p.at[1] / q) * q, p.at[2]] }
 }
+/** A light as an exact frame-memo key: every digit (a light that moved at all draws again). */
+export const lightId = (L: Light) => JSON.stringify(L)
+/** A copy of a scratch raster, for a frame `frameMemo` hands out again (the next frame that changes rewrites the scratch). */
+export const own = (r: Raster): Raster => ({ ...r, data: r.data.slice(), bounds: r.bounds && [r.bounds[0], r.bounds[1], r.bounds[2], r.bounds[3]] })
 /** Scratch rasters per card, allocated on first use and reused every frame. */
 export function scratch(n: number, grid = TILE): () => Raster[] { return once(() => Array.from({ length: n }, () => createRaster(grid))) }
 /** A raster's values as a layer (nearest), on a lattice or card pitch. */

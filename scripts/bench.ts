@@ -6,7 +6,8 @@
  *   pnpm bench --cards 0       # how many slowest cards to list (default 15, `all` for every card)
  *   RUNS=30 pnpm bench         # timing runs per card (median; default 15)
  *
- * Per card: layers() build + sampleLayers time (median over RUNS; animated cards over t = i/12),
+ * Per card: layers() build + sampleLayers time (median over RUNS; animated cards over t = i/12). Mount runs start
+ * with no repeated frame kept (`forgetFrames`); frame runs keep them, as the app does (a card at rest repeats its frame),
  * visible dots, renderer by the app's rule (animated or > 2000 visible → canvas, else SVG), SVG bytes.
  * Per board, budgets:
  *   mount       Σ t=0 build+sample of every card (first frame)                ≤ 30 ms
@@ -24,6 +25,7 @@ import { boards, withChrome, type WidgetPreset } from '../src/widgets'
 import { median, pitchOf, theme, uniquePresets, visible } from './lib/cards'
 import { freezeWallClock } from './lib/freeze'
 import { simReset } from '../src/engine/sim'
+import { forgetFrames } from '../src/engine/sampler/repeat'
 import { simBoard, simBoardSims } from '../src/widgets/boards/sim'
 
 freezeWallClock()
@@ -37,7 +39,8 @@ function benchCard(p: WidgetPreset): Row {
   const lf = withChrome(p), data = { ...p.defaults }
   const run = (t: number) => { const a = performance.now(); const L = lf({ t, data }); const b = performance.now(); const d = sampleLayers(L, p.grid, p.style, theme); return { build: b - a, sample: performance.now() - b, L, d } }
   for (let i = 0; i < 3; i++) run(i / 12) // warm-up
-  const mount = Array.from({ length: RUNS }, () => run(0))
+  // a mount is a first frame: no repeated frame kept from the run before (src/engine/sampler/repeat.ts)
+  const mount = Array.from({ length: RUNS }, () => { forgetFrames(); return run(0) })
   const frames = p.animated ? Array.from({ length: RUNS }, (_, i) => run((i + 1) / 12)) : []
   const { L, d } = mount[0], vis = d.filter(visible).length, pitch = pitchOf(p)
   const renderer = p.animated || vis > CANVAS_THRESHOLD ? 'canvas' : 'svg'

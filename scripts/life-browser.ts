@@ -40,10 +40,11 @@ const pages = new Set<Page>()
 const open = async (w: number, h: number) => { const p = await launch(w, h); pages.add(p); return p }
 const closeAll = async () => { for (const p of pages) await p.close().catch(() => {}); pages.clear(); server.stop() }
 const limit = (Number(process.env.LIFE_BROWSER_TIMEOUT_S) || 1200) * 1000
-const t0 = Date.now()
+// performance.now(): the Node hashes below freeze `Date` (freezeWallClock), which would stop this clock
+const t0 = performance.now()
 let step = 'start'
 /** Name the step the watchdog would report, with the time it started. */
-const at = (name: string) => { step = `${name} (from ${((Date.now() - t0) / 1000).toFixed(0)} s)` }
+const at = (name: string) => { step = `${name} (from ${((performance.now() - t0) / 1000).toFixed(0)} s)` }
 const watchdog = setTimeout(() => {
   console.log(`✗ life-browser: the probe ran over ${limit / 1000} s (stuck in: ${step}); killing Chrome and the preview server`)
   void closeAll().finally(() => process.exit(1))
