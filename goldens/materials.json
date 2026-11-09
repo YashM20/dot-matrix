@@ -52,13 +52,13 @@
   "mat-terrazzo": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "b2f87a08",
-    "dots": 2664
+    "hash": "0f40db60",
+    "dots": 2668
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "b2f87a08",
-    "dots": 2664
+    "hash": "0f40db60",
+    "dots": 2668
    }
   },
   "mat-lens": {
