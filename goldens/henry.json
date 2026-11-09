@@ -18,8 +18,8 @@
   "timer": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "73487e07",
-    "dots": 354
+    "hash": "32d395a7",
+    "dots": 358
    }
   },
   "weather": {
@@ -63,8 +63,8 @@
   "settings": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "dd3d3e52",
-    "dots": 1472
+    "hash": "1f37cf31",
+    "dots": 1460
    }
   },
   "system": {
