@@ -99,18 +99,16 @@ function affected(files: string[]): { probes: string[] | typeof ALL; why: string
   return { probes: PROBES.map(p => p.name).filter(n => picked.has(n)), why }
 }
 
-{
-  const argv = process.argv.slice(2)
-  const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : undefined }
-  const base = opt('--base'), list = opt('--files')
-  if (!base && list === undefined) { console.error('usage: affected.ts --base <ref> | --files a,b'); process.exit(2) }
-  const files = base
-    ? execFileSync('git', ['diff', '--name-only', '--no-renames', `${base}...HEAD`], { encoding: 'utf8' }).split('\n').filter(Boolean)
-    : list!.split(',').map(s => s.trim()).filter(Boolean)
-  const { probes, why } = affected(files)
-  const out = probes === ALL ? ALL : probes.join(',')
-  const report = [`${files.length} changed file(s); probes: ${out}`, ...why]
-  console.error(report.join('\n'))
-  if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Affected probes\n\n${report.map(l => `- ${l}`).join('\n')}\n\n`)
-  console.log(out)
-}
+const argv = process.argv.slice(2)
+const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : undefined }
+const base = opt('--base'), list = opt('--files')
+if (!base && list === undefined) { console.error('usage: affected.ts --base <ref> | --files a,b'); process.exit(2) }
+const files = base
+  ? execFileSync('git', ['diff', '--name-only', '--no-renames', `${base}...HEAD`], { encoding: 'utf8' }).split('\n').filter(Boolean)
+  : list!.split(',').map(s => s.trim()).filter(Boolean)
+const { probes, why } = affected(files)
+const out = probes === ALL ? ALL : probes.join(',')
+const report = [`${files.length} changed file(s); probes: ${out}`, ...why]
+console.error(report.join('\n'))
+if (process.env.GITHUB_STEP_SUMMARY) appendFileSync(process.env.GITHUB_STEP_SUMMARY, `### Affected probes\n\n${report.map(l => `- ${l}`).join('\n')}\n\n`)
+console.log(out)
