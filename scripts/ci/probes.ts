@@ -32,7 +32,8 @@ const PROBES: { name: string; shard: number; args: string[]; env?: Record<string
   // mobile.ts in two halves: its MAKE tabs take up to a minute each on a runner
   { name: 'mobile', shard: 5, args: ['scripts/site/mobile.ts', '$BASE', 'first-load,fps,chrome,tab:make=tune,tab:make=compose,tab:make=code,tab:make=draw,tab:about'] },
   { name: 'mobile-boards', shard: 13, args: ['scripts/site/mobile.ts', '$BASE', boardIds.join(',')] },
-  { name: 'materials', shard: 6, args: ['scripts/materials-browser.ts'] },
+  // the mat-lens checks alone take minutes on a runner (its frames are slow there): materials gets 8 minutes
+  { name: 'materials', shard: 6, args: ['scripts/materials-browser.ts'], timeoutMin: 8 },
   { name: 'audio', shard: 7, args: ['scripts/audio-chrome.ts'], env: { URL: '$BASE' } },
   { name: 'theme-boot', shard: 7, args: ['scripts/site/theme-boot.ts'] },
   { name: 'light', shard: 7, args: ['scripts/light-browser.ts'] },
@@ -54,7 +55,7 @@ const PROBES: { name: string; shard: number; args: string[]; env?: Record<string
   { name: 'likes', shard: 12, args: ['scripts/likes-browser.ts'] },
   { name: 'theme-picker', shard: 12, args: ['scripts/site/theme-picker.ts'] },
 ]
-/** A hung probe fails here instead of holding its shard to the job timeout (materials takes 4.5 minutes when it does finish). */
+/** A hung probe fails here instead of holding its shard to the job timeout (15 minutes). */
 const TIMEOUT_MIN = 5
 
 const argv = process.argv.slice(2)

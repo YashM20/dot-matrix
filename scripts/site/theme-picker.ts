@@ -49,7 +49,7 @@ const profile = mkdtempSync(join(tmpdir(), 'dot-theme-picker-'))
 const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--window-size=1280,800', 'about:blank'], { stdio: 'ignore' })
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 let port = ''
-for (let i = 0; i < 150 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
+for (let i = 0; i < 300 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
 const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json() as { type: string; webSocketDebuggerUrl: string }[]
 const ws = new WebSocket(targets.find(t => t.type === 'page')!.webSocketDebuggerUrl)
 await new Promise(r => ws.addEventListener('open', r, { once: true }))

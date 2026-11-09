@@ -22,6 +22,13 @@ const copy = (e: ReactPointerEvent<HTMLElement>): Ev => ({ pointerId: e.pointerI
 /** A touch that has not shown yet that it is meant for the card (`engine/interaction/gesture.ts`): no value, no pointer, no capture. */
 interface Candidate { down: Ev; last: Ev; key: string | null; intent: TouchIntent | 'none'; tClock: number; shown: boolean; timer: number }
 
+/**
+ * A live card reads a press from its frames: a tap stays down until the card has drawn this many frames since it,
+ * so a world that steps per frame sees it even when frames come slower than `TOUCH.tapPress` (a busy phone)...
+ */
+const TAP_FRAMES = 3
+/** ...but never longer than this (ms): a card that stopped drawing still lets go. */
+const TAP_WAIT_MS = 1000
 /** A touch that lands this soon (ms) after the page scrolled is stopping a fling, not touching the card. */
 const FLING_MS = 120
 /** `performance.now()` of the page's last scroll (any scroller), from one passive capture listener for every card. */
@@ -318,19 +325,29 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
       const hold = (late: boolean) => {
         // a late timer means the main thread was busy: moves may still be queued, so let them in first (once)
         if (!late && performance.now() - cand.down.timeStamp > TOUCH.hold + 60) { cand.timer = window.setTimeout(() => hold(true), 30); return }
-        // held still: grab it (any direction from here on) and engage the card
-        drop(cand); grab(cand.last, c, true, cand.tClock); engage(); haptic()
+        seize(cand, c)
       }
       cand.timer = window.setTimeout(() => hold(false), TOUCH.hold)
     }
     candidates.current.set(e.pointerId, cand)
+  }
+  /** Held still: grab the control (any direction from here on) and engage the card. */
+  const seize = (cand: Candidate, c: Control) => { drop(cand); grab(cand.last, c, true, cand.tClock); engage(); haptic() }
+  /** Let go of a replayed press after `TOUCH.tapPress`, and on a live card not before it drew `TAP_FRAMES` frames since. */
+  const release = (e: Ev) => {
+    const n = draws.current, t0 = performance.now()
+    const done = () => {
+      if (liveSub.current && draws.current < n + TAP_FRAMES && performance.now() - t0 < TAP_WAIT_MS) { taps.current.set(e.pointerId, window.setTimeout(done, 16)); return }
+      taps.current.delete(e.pointerId); finish(e, false)
+    }
+    taps.current.set(e.pointerId, window.setTimeout(done, TOUCH.tapPress))
   }
   /** A real tap: replay it as a short press where the finger landed (so toggles, options, steppers and sliders act on lift). */
   const tap = (cand: Candidate) => {
     const e = cand.down, c = control(cand.key)
     if (c) grab(e, c, false, cand.tClock)
     else { track(e, { down: true, up: false, tDown: cand.tClock }); schedule() }
-    taps.current.set(e.pointerId, window.setTimeout(() => { taps.current.delete(e.pointerId); finish(e, false) }, TOUCH.tapPress))
+    release(e)
   }
 
   const handlers: ControlInput['handlers'] = {
@@ -379,8 +396,12 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
       note(r)
       const e = copy(r), cand = candidates.current.get(e.pointerId)
       if (cand) {
+        const c = control(cand.key), dist = Math.hypot(e.clientX - cand.down.clientX, e.clientY - cand.down.clientY), ms = e.timeStamp - cand.down.timeStamp
+        // still past the hold time on a drag control: the hold was due before this lift, but a busy main thread ran
+        // the lift first. Do what the hold would have done, then let go
+        if (c && cand.intent === 'drag' && dist <= TOUCH.slop && ms >= TOUCH.hold) { seize(cand, c); release(e); return }
         drop(cand)
-        if (isTap(control(cand.key), Math.hypot(e.clientX - cand.down.clientX, e.clientY - cand.down.clientY), e.timeStamp - cand.down.timeStamp)) tap(cand)
+        if (isTap(c, dist, ms)) tap(cand)
         return
       }
       if (taps.current.has(e.pointerId)) return

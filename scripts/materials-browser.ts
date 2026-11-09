@@ -63,7 +63,11 @@ const center = async (p: Page, id: string) => {
   await p.js(`${card(id)}.scrollIntoView({ block: 'center' })`)
   await sleep(200)
 }
-const engagedOf = (p: Page, id: string) => p.js<boolean>(`!!document.querySelector('[data-card-id="${id}"].dot-card--engaged, [data-card-id="${id}"] .dot-card--engaged') || ${card(id)}.classList.contains('dot-card--engaged')`)
+/**
+ * Whether a held finger engaged the card, polled for up to 3 s while it stays down: on a busy runner the 300 ms hold
+ * timer and the commit that marks the card run late.
+ */
+const engagedOf = (p: Page, id: string) => p.waitFor(`!!document.querySelector('[data-card-id="${id}"].dot-card--engaged, [data-card-id="${id}"] .dot-card--engaged')`, 3000)
 const engaged = (p: Page) => engagedOf(p, 'mat-knob')
 /** The lens's centre as its data (lx 0..1 left → right, ly 0..1 bottom → top over card rows 12–143). */
 const lensXY = (p: Page) => p.js<[number, number]>(`['X', 'Y'].map(a => +${card('mat-lens')}.querySelector('input[aria-label="Move the lens ' + a + '"]').getAttribute('aria-valuenow'))`)
