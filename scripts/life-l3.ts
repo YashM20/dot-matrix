@@ -38,7 +38,7 @@ const fnvStr = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length
  * frames changed.
  */
 const L2_FRAMES: Record<string, string[]> = {
-  'pond-koi': ['319f1031', 'f2660419', '6e4224a1', '52bd170c', '3d72470f'],
+  'pond-koi': ['285c7bd4', '46908484', '67f30dc2', '51fad6f3', 'afe42f8c'],
   'pond-jelly': ['ab366d7c', '60c52111', 'cc4380bf', '894c0c34', '7ed619a0'],
   'pond-slime': ['0f69b10d', 'ae470b32', '7d5d4160', 'a334b32e', 'bfedb193'],
   'pond-fireflies': ['c9e73652', 'e9e9cd82', '18ad1d40', 'ce3fd4f2', '85c3abda'],

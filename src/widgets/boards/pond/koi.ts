@@ -95,7 +95,7 @@ const typeRaster = createTileRaster(KOI_SPEC.card, KOI_TYPE_TILES)
 export const KOI_LIGHT_KEYS = { lightSrc: 0, lightAz: 0, lightEl: 7, tx: 0, ty: 0 } as const
 /** The glyph style switch in the label row (L3.4): DOTS (the default) or TYPE. */
 export const GLYPH_STYLES = ['DOTS', 'TYPE'] as const
-const SWITCH = { x: 94, w: 50, h: 8 } as const
+const SWITCH = { x: 93, w: 51, h: 8 } as const
 /** The switch's underline: card dots on row 9 (the label is rows 0 to 6, the tiles start on row 11), every other cell. */
 const UNDER = { row: 9, step: 2, on: 3, period: 5, rate: 10 } as const
 /**
@@ -104,7 +104,7 @@ const UNDER = { row: 9, step: 2, on: 3, period: 5, rate: 10 } as const
  * hover puts a dotted line under it and keyboard focus makes the line march (it holds still under reduced motion).
  */
 function labelRow(ctx: WidgetContext, sel: number): Layer[] {
-  const k = 'glyphs', w = T.size('TYPE')[0], gap = 3, right = 143
+  const k = 'glyphs', w = T.size('TYPE')[0], gap = 5, right = 143
   const focus = ctx.focus === k, hover = ctx.hover === k, on = focus || hover || ctx.pressed === k ? 'value' : 'idle'
   const row: Layer[] = [
     caption('TYPE', right, 0, 'right', sel === 1 ? on : 'mid'),
