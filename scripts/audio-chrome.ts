@@ -29,7 +29,9 @@ const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--us
   '--window-size=1400,1300', '--autoplay-policy=no-user-gesture-required', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', ...(process.env.CHROME_FLAGS?.split(' ').filter(Boolean) ?? []), 'about:blank'], { stdio: 'ignore' })
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 let port = ''
+// a cold Chrome on a shared CI runner can take well over 10 s to open its DevTools port
 for (let i = 0; i < 300 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
+if (!port) { proc.kill(); throw new Error('Chrome did not open a DevTools port in 30 s') }
 const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json() as { type: string; webSocketDebuggerUrl: string }[]
 const ws = new WebSocket(targets.find(t => t.type === 'page')!.webSocketDebuggerUrl)
 await new Promise(r => ws.addEventListener('open', r, { once: true }))

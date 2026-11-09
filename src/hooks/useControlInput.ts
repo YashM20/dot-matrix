@@ -28,7 +28,7 @@ interface Candidate { down: Ev; last: Ev; key: string | null; intent: TouchInten
  */
 const TAP_FRAMES = 3
 /** ...but never longer than this (ms): a card that stopped drawing still lets go. */
-const TAP_WAIT_MS = 1000
+const TAP_WAIT_MS = 500
 /** A touch that lands this soon (ms) after the page scrolled is stopping a fling, not touching the card. */
 const FLING_MS = 120
 /** `performance.now()` of the page's last scroll (any scroller), from one passive capture listener for every card. */
