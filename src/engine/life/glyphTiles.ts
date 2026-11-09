@@ -55,9 +55,13 @@ export function defineAlphabet(name: string, w: number, h: number, glyphs: Recor
   return Object.freeze({ name, w, h, glyphs: Object.freeze(list) as Glyph[], desc, ramp: Object.freeze(order) as Glyph[] })
 }
 
-/** A glyph by its name (throws on a typo: alphabets are fixed). */
+/** Each alphabet's glyphs by name, the first of a name as `find` gives it (built on first use; alphabets are frozen). */
+const byName = new WeakMap<Alphabet, Map<string, Glyph>>()
+/** A glyph by its name (throws on a typo: alphabets are fixed). Called per tile per frame, so a lookup, not a scan. */
 export function glyphOf(a: Alphabet, ch: string): Glyph {
-  const g = a.glyphs.find(x => x.ch === ch)
+  let m = byName.get(a)
+  if (!m) { m = new Map(); for (const x of a.glyphs) if (!m.has(x.ch)) m.set(x.ch, x); byName.set(a, m) }
+  const g = m.get(ch)
   if (!g) throw new Error(`alphabet ${a.name} has no glyph '${ch}'`)
   return g
 }
@@ -276,6 +280,8 @@ export function tileLayers(r: TileRaster, opts: { split?: boolean; tones?: reado
         return value[i]
       }
     field.bounds = [c0, r0, c1, r1]
+    // on the card grid the plain field is the value array, masked by the tones (inside its bounds: cellOf is the cell)
+    if (only === undefined && !allow) field.cells = { data: value, cols: cardW, rows: cardH, mask: tone }
     return only !== undefined ? { field, tone: LIFE_TONES[only] } : { field, toneOf: (_v, u, v) => { const i = cellOf(u, v); return i < 0 ? undefined : toneName(r.tone[i]) } }
   }
   const out: Layer[] = opts.split ? LIFE_TONES.map((_, k) => make(k)) : [make()]

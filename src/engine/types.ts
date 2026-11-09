@@ -14,12 +14,21 @@ export interface Field {
    * filter itself instead of aliasing (`src/engine/filter`). Fields without it are called as `f(u, v)`.
    */
   footprint?: boolean
+  /**
+   * A speed hint, never a different value: on a `cols` × `rows` grid the field's value at cell (c, r) is
+   * `data[r * cols + c]` (0 where `mask` is negative), as a raster read at its own cell centres gives. The grid
+   * sampler then reads the array on that grid instead of calling the field per cell (`sample`, `tileLayers`).
+   */
+  cells?: FieldCells
   /** The string a text helper (`textAt`) drew — metadata for `describe()`, never read by the sampler. */
   text?: string
   /** How a helper built this field (IR source, a named layout generator) — metadata for spec export (`src/spec`), never read by the sampler. */
   from?: FieldOrigin
 }
 /** Provenance of a field: compiled from Field IR `src`, or made by layout generator `gen` on `grid` with JSON-able `args` (`place` also keeps its `inner` field). */
+/** See `Field.cells`: live arrays (the field reads the same ones). */
+export interface FieldCells { data: ArrayLike<number>; cols: number; rows: number; mask?: ArrayLike<number> }
+
 export type FieldOrigin =
   | { ir: string; raw?: boolean }
   | { gen: string; grid: GridConfig; args: unknown[]; inner?: Field }

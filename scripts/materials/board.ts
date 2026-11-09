@@ -16,7 +16,7 @@ import * as M from '../../src/widgets/boards/materials'
 import { lightBoard } from '../../src/widgets/boards/light'
 import { LIGHT_DEFAULTS, matGrille, matKnob, matLight, matLoom, materialsBoard, materialsHooks, materialsSources, matTerrazzo } from '../../src/widgets/boards/materials'
 import { freezeWallClock } from '../lib/freeze'
-import { fmtLoaded, loadOf, medianLoaded, onceLoaded, spinMs, type Loaded } from '../lib/load'
+import { fmtLoaded, loadOf, medianLoaded, onceLoaded, spin as refLoop, spinMs, type Loaded } from '../lib/load'
 import { type Assert, same, DEG, type MaterialsOptions } from './util'
 
 /** Cards with no red in their pristine run (M §4.2: the pool's pebble only appears when one is dropped). */
@@ -352,7 +352,7 @@ function m2CardChecks(assert: Assert, frameOf: FrameFn): void {
  * per-round differences over 25 rounds after 5 warm ones. Two medians timed apart, with the pass build inside the
  * timer, swung by more than the 2 ms gate.
  */
-function lensFill(lens: WidgetPreset, pitch: number): { ms: number; load: number; detail: string } {
+export function lensFill(lens: WidgetPreset, pitch: number, slow = false): { ms: number; load: number; detail: string } {
   const passAt = (t: number) => layerPass(atClock(() => withChrome(lens)({ t, data: { ...lens.defaults } })).find(l => gpuTag(l.field))!, TILE, lens.style, pitch)!
   const flat = gpuValues(() => .5, { density: 2 })
   // two copies of the loop, so each `q.field` call site sees one kind of field
@@ -364,7 +364,8 @@ function lensFill(lens: WidgetPreset, pitch: number): { ms: number; load: number
     const q = passAt(5 + i / 12), qb = { ...q, field: flat }
     const spin = spinMs()
     let a = 0, b = 0
-    const timeField = () => { const t0 = performance.now(); sink += fieldFill(q); a = performance.now() - t0 }
+    // `slow` (scripts/gates.ts --slow): two reference loops inside the timer, 2.4 ms × load, so the gate must fail
+    const timeField = () => { const t0 = performance.now(); sink += fieldFill(q); if (slow) sink += refLoop() + refLoop(); a = performance.now() - t0 }
     const timeFlat = () => { const t0 = performance.now(); sink += flatFill(qb); b = performance.now() - t0 }
     if (i & 1) { timeFlat(); timeField() } else { timeField(); timeFlat() }
     if (i < WARM) continue

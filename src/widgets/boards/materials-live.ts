@@ -27,7 +27,7 @@ import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { hash01 } from '../../engine/math'
 import type { Light, Vec3 } from '../../engine/light/shade'
 import { TILE, layer, type WidgetContext, type WidgetPreset } from '../types'
-import { LIGHT_DEFAULTS, cite, matLight, once, snapTorch, T, tile, valuedSites } from './materials-shared'
+import { LIGHT_DEFAULTS, cite, frameMemo, lightId, matLight, once, own, snapTorch, T, tile, valuedSites } from './materials-shared'
 
 // The sampling worker would run its own (pristine) copy of the world and snap back when the pointer leaves.
 const IN_WORKER = typeof (globalThis as { WorkerGlobalScope?: unknown }).WorkerGlobalScope !== 'undefined'
@@ -409,19 +409,24 @@ export const matRust: WidgetPreset = {
     if (IN_WORKER) throw new Error('mat-rust keeps its live state on the main thread')
     const s = worldAt(rustWorld, ctx.t, ctx.reducedMotion ? undefined : { pointers: framePointers(ctx.pointers, (x, y) => [x, y]), kick: (ctx.data.k ?? 0) >= .5 })
     const show = rustShown(s, new Date()), engraved = show.count === show.days, p = rustPlate(engraved ? String(show.days) : '')
-    const sh = shadedPlate(p, snapTorch(matLight(ctx, { torch: { height: 40, falloff: 170 } }), 3)), S = rustScratch(), theta = rustThreshold(p, rustCover(show.creep))
-    S.values.data.fill(0); S.tones.fill(0)
-    // the front as sites on whole cells (a few hundred at most): no scan of the plate for a thin line
-    const front: [number, number, number][] = []
-    for (let r = PLATE.y0; r <= PLATE.y1; r++) rustFrameRow(p, sh, theta, S.values.data, S.tones, front, r)
-    S.values.bounds = PLATE_BOX
-    return [
-      cite('DAYS · RUST'),
-      tonedLayer(S.values, S.tones),
-      ...(engraved ? [] : [layer(T.big(String(show.count), 72, COUNT_ROW, { lattice: 2.5, smooth: true, align: 'center' }), 'idle')]),
-      ...(front.length ? [layer(valuedSites(front, 1), 'active')] : []),
-    ]
+    const L = snapTorch(matLight(ctx, { torch: { height: 40, falloff: 170 } }), 3), theta = rustThreshold(p, rustCover(show.creep))
+    // the rust creeps by the minute: between those frames (and at rest under the same light) the frame repeats
+    return rustMemo(`${p.key}|${lightId(L)}|${theta}|${engraved}|${show.count}`, () => {
+      const sh = shadedPlate(p, L), S = rustScratch()
+      S.values.data.fill(0); S.tones.fill(0)
+      // the front as sites on whole cells (a few hundred at most): no scan of the plate for a thin line
+      const front: [number, number, number][] = []
+      for (let r = PLATE.y0; r <= PLATE.y1; r++) rustFrameRow(p, sh, theta, S.values.data, S.tones, front, r)
+      S.values.bounds = PLATE_BOX
+      return [
+        cite('DAYS · RUST'),
+        tonedLayer(own(S.values), S.tones.slice()),
+        ...(engraved ? [] : [layer(T.big(String(show.count), 72, COUNT_ROW, { lattice: 2.5, smooth: true, align: 'center' }), 'idle')]),
+        ...(front.length ? [layer(valuedSites(front, 1), 'active')] : []),
+      ]
+    })
   },
 }
+const rustMemo = frameMemo()
 
 export const poolHooks = { RIPPLE, BASIN, WATER, PEBBLES, SINK, DRIPS, poolWorld, poolMemory, ripple, mask, rustWorld, rustPlate, rustThreshold, rustCover, rustShown, daysSince, FRONT, plateSdf }

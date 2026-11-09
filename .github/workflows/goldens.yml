@@ -1,0 +1,73 @@
+# Regenerates goldens/<board>.json on a runner and commits them to a branch, so nobody runs `pnpm golden` on a laptop
+# (docs/HARNESS.md › Goldens in CI):  gh workflow run goldens -f branch=<branch>
+# Commits only when a golden changed. Refuses main and anything that is not a branch of this repo.
+# A push made with the workflow token starts no pull_request run, so it dispatches CI on the branch for the gate.
+name: goldens
+
+on:
+  workflow_dispatch:
+    inputs:
+      branch:
+        description: 'Branch to regenerate the goldens on (not main)'
+        required: true
+
+permissions: {}
+
+concurrency:
+  group: goldens-${{ inputs.branch }}
+
+jobs:
+  regenerate:
+    name: regenerate goldens
+    # a fork's copy of this workflow does nothing
+    if: ${{ !github.event.repository.fork }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      actions: write
+    env:
+      BRANCH: ${{ inputs.branch }}
+    steps:
+      - name: Refuse main
+        run: |
+          case "$BRANCH" in main|refs/*|-*) echo "::error::refusing '$BRANCH': give a work branch, not main"; exit 1;; esac
+          git check-ref-format --branch "$BRANCH" > /dev/null || { echo "::error::'$BRANCH' is not a branch name"; exit 1; }
+
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ inputs.branch }}
+
+      # the ref must be a branch here (a tag or a SHA would check out too)
+      - name: Check the branch
+        run: git ls-remote --exit-code --heads origin "refs/heads/$BRANCH" > /dev/null || { echo "::error::no branch '$BRANCH' in $GITHUB_REPOSITORY"; exit 1; }
+
+      - uses: ./.github/actions/setup
+
+      - name: Regenerate
+        run: pnpm golden
+
+      - name: Commit the changed goldens
+        id: commit
+        run: |
+          git add -A goldens
+          if git diff --cached --quiet; then
+            echo "Goldens already match: nothing to commit." | tee -a "$GITHUB_STEP_SUMMARY"
+            echo "pushed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git diff --cached --stat | tee -a "$GITHUB_STEP_SUMMARY"
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -q -m 'Regenerate goldens'
+          git push origin "HEAD:refs/heads/$BRANCH"
+          echo "pushed=true" >> "$GITHUB_OUTPUT"
+
+      # the push above starts no workflow (a workflow token's pushes never do); a dispatch does, so the new head gets
+      # its `check + build` result. The probes need no rerun: a golden file changes no page.
+      - name: Run CI on the new head
+        if: steps.commit.outputs.pushed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run ci.yml --repo "$GITHUB_REPOSITORY" --ref "$BRANCH"
