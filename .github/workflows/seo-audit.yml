@@ -87,10 +87,11 @@ jobs:
 
       - name: lychee (links on every sitemap page)
         run: |
-          curl -sSL "https://github.com/lycheeverse/lychee/releases/download/lychee-$LYCHEE/lychee-x86_64-unknown-linux-gnu.tar.gz" | tar xz
+          curl -sSL "https://github.com/lycheeverse/lychee/releases/download/lychee-$LYCHEE/lychee-x86_64-unknown-linux-gnu.tar.gz" | (mkdir -p lychee-bin && tar xz -C lychee-bin)
+          LYCHEE_BIN=$(find lychee-bin -type f -name lychee | head -1)
           grep -o '<loc>[^<]*' dist/sitemap.xml | sed "s#<loc>$ORIGIN#$LOCAL#" > pages.txt
-          printf '%s\n' "$LOCAL/about" "$LOCAL/no-such-page" >> pages.txt
-          ./lychee --no-progress --format json --output seo-audit/lychee.json --max-concurrency 16 --max-retries 2 --timeout 20 \
+          printf '%s\n' "$LOCAL/?about" "$LOCAL/404.html" >> pages.txt
+          "$LYCHEE_BIN" --no-progress --format json --output seo-audit/lychee.json --max-concurrency 16 --max-retries 2 --timeout 20 \
             --remap "^$ORIGIN $LOCAL" --accept '200..=299,429' \
             --exclude '^https?://(www\.)?(x|twitter|linkedin)\.com' --exclude "^$LOCAL/ingest" \
             $(cat pages.txt) || true
