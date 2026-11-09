@@ -4,6 +4,7 @@
   "buildCommand": "pnpm build",
   "outputDirectory": "dist",
   "regions": ["iad1"],
+  "git": { "deploymentEnabled": { "**": false, "main": true } },
   "crons": [{ "path": "/api/likes/cron", "schedule": "17 4 * * *" }],
   "redirects": [
     { "source": "/essay", "destination": "/blog/dot-matrix-essay/", "permanent": true },

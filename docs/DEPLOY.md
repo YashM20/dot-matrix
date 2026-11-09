@@ -2,7 +2,8 @@
 
 The site is a static build: `pnpm build` → `dist/`. It is hosted on **Vercel**, connected to the GitHub repo:
 - every push to `main` deploys production;
-- every pull request gets a preview deployment, linked from the PR.
+- other branches don't deploy (`git.deploymentEnabled` in `vercel.json`), so PR pushes spend none of the Hobby plan's 100 deploys a day;
+- a PR gets a preview only with the `preview` label: `.github/workflows/preview.yml` deploys it when the label is added and on each push after, and comments the URL. It needs the repo secrets `VERCEL_TOKEN` (vercel.com/account/tokens), `VERCEL_ORG_ID` and `VERCEL_PROJECT_ID` (Project → Settings → General, or `.vercel/project.json` after `vercel link`).
 
 CI (`.github/workflows/ci.yml`) only checks and builds; it does not deploy. Host config lives in `vercel.json`.
 
