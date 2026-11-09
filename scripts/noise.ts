@@ -21,7 +21,7 @@ import { compileBytecode, compileJS, deserialize, emitGLSL, IRError, parse, refe
 import '../src/engine/noise/ir' // the IR noise pack (F0.4)
 import { NOISE_GLSL } from '../src/engine/noise/glsl'
 import { DET_PATHS, detLint } from './lib/detLint'
-import { fmtLoaded, medianLoaded } from './lib/load'
+import { fmtLoaded, medianLoaded, spin } from './lib/load'
 import { hash01, hash32 } from '../src/engine/math'
 import { curl2, datan2, dexp, dpow, dsin, fbm2, ihash, noise2, noise3, noise3Grad, octaveSeed, ridge2, rngFor, tsin, turb2, valueNoise2, voronoi2, voronoiBorder2, type Metric, type VoronoiOut } from '../src/engine/noise'
 
@@ -138,6 +138,21 @@ const IR_NOISE_ENVS: IREnv[] = [
   { t: 7.77, data: { value: -1.4, k: 3 }, pointer: { x: 1.2, y: -.4 } },
 ]
 const fnv1a = (str: string) => { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0 } return h.toString(16).padStart(8, '0') }
+
+/**
+ * Voronoi (#28): the median of 21 warm runs of a 144² voronoi2 per metric, each after its own load sample
+ * (lib/load.ts), so one lucky or unlucky run can't decide it and the factor sees the same contention as the runs.
+ * The gate: ≤ 3.5 ms × load each. `slow` (scripts/gates.ts --slow) adds three reference loops (3.6 ms × load) per run.
+ */
+export function voronoiBudget(slow = false): { ok: boolean; detail: string } {
+  const G = 144, out = { f1: 0, f2: 0, id: 0, x: 0, y: 0 }
+  const vor = (['l2', 'l1', 'linf'] as const).map(m => {
+    const f = () => { let s = 0; for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) s += voronoi2(c * 8 / G, r * 8 / G, 1, m, out).f1; if (slow) s += spin() + spin() + spin(); return s }
+    for (let k = 0; k < 5; k++) f()
+    return medianLoaded(f, 21)
+  })
+  return { ok: vor.every(t => t.ms <= 3.5 * t.load), detail: vor.map(t => `${fmtLoaded(t)} → ${(t.ms / t.load).toFixed(2)}`).join(' / ') }
+}
 
 export function noiseChecks(assert: Assert, opts: { update?: boolean } = {}): void {
   const load0 = loadFactor()
@@ -491,15 +506,8 @@ export function noiseChecks(assert: Assert, opts: { update?: boolean } = {}): vo
     const fl = timed(() => { let s = 0; for (let r = 0; r < g; r++) for (let c = 0; c < g; c++) s += fbm2(c * 6 / g, r * 6 / g, 4, 1); return s }, 15)
     assert('noise: budget noise2 144² ≤ 1.2 ms, fbm2 4 oct 144² ≤ 4.5 ms, fbm2 4 oct 48² ≤ 0.8 ms (fastest warm run, × interleaved load)', ok(n2, 1.2) && ok(fb, 4.5) && ok(fl, .8),
       `noise2 ${fmt(n2)}, fbm2 ${fmt(fb)}, fbm2 48² ${fmt(fl)}`)
-    const out = { f1: 0, f2: 0, id: 0, x: 0, y: 0 }
-    // Voronoi (#28): the median of 21 warm runs, each after its own load sample (lib/load.ts), so one lucky or
-    // unlucky run can't decide it and the factor sees the same contention as the runs
-    const vor = (['l2', 'l1', 'linf'] as const).map(m => {
-      const f = () => { let s = 0; for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) s += voronoi2(c * 8 / G, r * 8 / G, 1, m, out).f1; return s }
-      for (let k = 0; k < 5; k++) f()
-      return medianLoaded(f, 21)
-    })
-    assert('noise: budget voronoi2 l2 / l1 / linf 144² ≤ 3.5 ms each (median of 21 warm runs, × interleaved load)', vor.every(t => t.ms <= 3.5 * t.load), vor.map(t => `${fmtLoaded(t)} → ${(t.ms / t.load).toFixed(2)}`).join(' / '))
+    const vor = voronoiBudget()
+    assert('noise: budget voronoi2 l2 / l1 / linf 144² ≤ 3.5 ms each (median of 21 warm runs, × interleaved load)', vor.ok, vor.detail)
     const r = lcg(35), px = Float64Array.from({ length: 1000 }, () => r() * 40), py = Float64Array.from({ length: 1000 }, () => r() * 40), v: [number, number] = [0, 0]
     const cu = timed(() => { let s = 0; for (let i = 0; i < 1000; i++) s += curl2(px[i], py[i], 2.5, 3, v)[0]; return s }, 21)
     assert('noise: budget curl2 2 oct, 1000 points ≤ 0.3 ms (fastest warm run, × interleaved load)', ok(cu, .3), fmt(cu))

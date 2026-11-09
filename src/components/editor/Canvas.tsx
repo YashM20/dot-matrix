@@ -96,7 +96,7 @@ function guarded<T>(fn: () => T, fallback: T): T {
   try { return fn() } catch { return fallback }
 }
 /** Draw one frame; a throw becomes its `error` (it draws empty and says so). */
-function tryDraw(...args: Parameters<typeof drawFrame>): { ms: number; error?: string; pending?: boolean } {
+function tryDraw(...args: Parameters<typeof drawFrame>): ReturnType<typeof drawFrame> {
   try { return drawFrame(...args) } catch (err) { return { ms: 0, error: String((err as Error)?.message ?? err) } }
 }
 
@@ -175,12 +175,14 @@ function CanvasView({ phone, landscape = false }: { phone: boolean; landscape?: 
         const t = tl ? s.play.t : anim ? (now - wall0) / 1000 : 0, state = s.preview[f.id], p = e.drawn
         const due = e.dirty || !p || p.card !== f.card || p.theme !== f.theme || p.k !== k || p.state !== state || p.tl !== tl || (tl && p.t !== t) || (!tl && anim && now - e.last > 33)
         if (!due || budget > 24) return 0 // past ~24 ms this tick: the rest draw next frame
-        const { ms, error, pending } = tryDraw(e.canvas, f, k, { timeline: tl, t, state, pointer: e.pointer }, tl ? s.play.playing : anim)
+        const { ms, error, pending, stale } = tryDraw(e.canvas, f, k, { timeline: tl, t, state, pointer: e.pointer }, tl ? s.play.playing : anim)
         // a frame that breaks draws empty and says so once; one that drew may be autosaved (an import is held until then)
         if (error === undefined) { e.broke = false; if (!pending) drew(f.id) } else if (!e.broke) { e.broke = true; s.setNote(`frame "${f.card.name}" could not be drawn: ${error.slice(0, 120)}`) }
         stats.lastMs = ms; stats.maxMs = Math.max(stats.maxMs, ms); stats.drawn++
         e.drawn = { card: f.card, theme: f.theme, k, state, tl, t }; e.dirty = false; e.last = now
-        if (tl) stats.tl![f.id] = t; else delete stats.tl![f.id]
+        // the probes' "drawn at t": only once the canvas shows t, not while its program values are on the way (the
+        // last frame kept, or an older complete one standing in); their landing draws it again (#28)
+        if (!tl) delete stats.tl![f.id]; else if (!pending && !stale) stats.tl![f.id] = t
         return ms
       }, 0) // a frame too broken to place is skipped; the recovery screen says what broke
       stats.frames = d.frames.length; stats.sel = s.sel.frame; stats.layer = s.sel.layer; stats.picks = selIds(s.sel)

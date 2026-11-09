@@ -4,6 +4,7 @@ import { quantize } from './quantize'
 import { coverExponent, hides, squareLike } from './cover'
 import { easedRoundness } from '../renderer/shapePath'
 import { samplerExt, type JoinFrame } from './ext'
+import { keepDots, keepInto, repeatDots, repeatInto } from './repeat'
 import { acquireDotBuffer, paletteOf, pushDot, toneIndex, type DotBuffer } from '../buffer/dotBuffer'
 /**
  * Canonical tone mapping — single source of truth for dot color by value.
@@ -161,7 +162,16 @@ function composite(layers: Layer[], grid: GridConfig, win: Window = [0, 0, grid.
   const { cols, rows } = grid, [wc0, wr0] = win, width = Math.max(0, win[2] - wc0 + 1), n = width * Math.max(0, win[3] - wr0 + 1)
   const best = scratch.best(n), owner = scratch.owner(n), us = centres(cols), vs = centres(rows)
   for (let l = 0; l < layers.length; l++) {
-    const g = layers[l].field, f = withCell(g, step(cols), step(rows)), [c0, r0, c1, r1] = windowOf(g, cols, rows)
+    const g = layers[l].field, f = withCell(g, step(cols), step(rows)), [c0, r0, c1, r1] = windowOf(g, cols, rows), cells = g.cells
+    // a raster on this very grid (`Field.cells`): read its cells, the values the field would return
+    if (cells && cells.cols === cols && cells.rows === rows) {
+      const D = cells.data, M = cells.mask
+      for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
+        const k = r * cols + c, value = safe(M && M[k] < 0 ? 0 : D[k]), i = (r - wr0) * width + (c - wc0)
+        if (value > 0 && value >= best[i]) { best[i] = value; owner[i] = l + 1 }
+      }
+      continue
+    }
     for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) {
       const value = safe(f(us[c], vs[r])), i = (r - wr0) * width + (c - wc0)
       if (value > 0 && value >= best[i]) { best[i] = value; owner[i] = l + 1 }
@@ -183,9 +193,13 @@ const toneOf = (layers: Layer[], owner: number, value: number, u: number, v: num
  * cells under a lit lattice dot are left empty so the two pitches never overlap.
  */
 export function sampleLayers(layers: Layer[], grid: GridConfig, style: DotStyle, theme: ThemeTokens): DotInstance[] {
+  // a card frame that did not change (repeat.ts): the dots it drew last time
+  const again = repeatDots(layers, grid, style, theme)
+  if (again) return again
   const out = sinkOf([], null, paletteOf(theme), style, grid.pitch ?? theme.gridPx)
   scratch.enter()
   try { sampleLayersOnce(out, layers, grid, style, theme) } finally { scratch.leave() }
+  keepDots(layers, grid, style, theme, out.dots!)
   return out.dots!
 }
 
@@ -198,8 +212,10 @@ export function sampleLayersInto(layers: Layer[], grid: GridConfig, style: DotSt
   buf.n = 0; buf.palette = paletteOf(theme); buf.shape = style.shape; buf.roundness = style.cornerRoundness; buf.pitch = grid.pitch ?? theme.gridPx; buf.joints = undefined
   // a buffer that carried squares channels before: back to "plain dot, frame style" for every slot
   if (buf.join) { buf.join.fill(NO_JOIN); buf.form!.fill(NO_FORM); buf.aspect!.fill(0) }
+  if (repeatInto(layers, grid, style, theme, buf)) return buf
   scratch.enter()
   try { sampleLayersOnce(sinkOf(null, buf, buf.palette, style, grid.pitch ?? theme.gridPx), layers, grid, style, theme) } finally { scratch.leave() }
+  keepInto(layers, grid, style, theme, buf)
   return buf
 }
 

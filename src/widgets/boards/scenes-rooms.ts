@@ -59,8 +59,8 @@ export const scChain: WidgetPreset = {
       return out
     }
     const q: V3 = new Float64Array(3)
-    const chain = (x: number, y: number, z: number) => {
-      local(x, y, z, q)
+    // the chain and the bob read the point in chain space, `q` (`local` fills it)
+    const chainQ = () => {
       // the links near this height only (each link is one PITCH long), the bob below the last
       const i = Math.min(LINKS - 1, Math.max(0, Math.floor(-q[1] / PITCH)))
       let d = 1e9
@@ -70,9 +70,12 @@ export const scChain: WidgetPreset = {
       }
       return d
     }
-    const bob = (x: number, y: number, z: number) => { local(x, y, z, q); return sdSphere(q[0], q[1] - (BOB - PIVOT), q[2], .26) }
+    const bobQ = () => sdSphere(q[0], q[1] - (BOB - PIVOT), q[2], .26)
+    const chain = (x: number, y: number, z: number) => { local(x, y, z, q); return chainQ() }
+    const bob = (x: number, y: number, z: number) => { local(x, y, z, q); return bobQ() }
     const bracket = (x: number, y: number, z: number) => sdBox(x, y - PIVOT - .1, z - .47, .14, .07, .49)
-    const sd = (x: number, y: number, z: number) => Math.min(chain(x, y, z), bob(x, y, z), bracket(x, y, z))
+    // one turn into chain space per read, for the chain and the bob alike
+    const sd = (x: number, y: number, z: number) => { local(x, y, z, q); return Math.min(chainQ(), bobQ(), bracket(x, y, z)) }
     const plate = scenePlate(K, (r): Scene => ({
       sd, box: [-1.4, 0, -.6, 1.4, PIVOT + .2, WALL_Z], planes: [GROUND, [0, 0, -1, WALL_Z]],
       cam: camera([0, 1.6, -4.3], [.15, 1.55, 0], 2.15, r), sun: CHAIN_SUN, tmax: 14, steps: 110,

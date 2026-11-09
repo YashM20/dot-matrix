@@ -72,7 +72,7 @@ function sampleFrame(f: EditorFrame, o: FrameDraw, wake?: { on: boolean }) {
  * once they land. `soon`: the caller draws this frame again shortly anyway (a running animation), so no redraw is asked
  * for while an older complete frame stands in.
  */
-export function drawFrame(canvas: HTMLCanvasElement, f: EditorFrame, k: number, o: FrameDraw, soon = false): { ms: number; error?: string; pending?: boolean } {
+export function drawFrame(canvas: HTMLCanvasElement, f: EditorFrame, k: number, o: FrameDraw, soon = false): { ms: number; error?: string; pending?: boolean; stale?: boolean } {
   const ctx = canvas.getContext('2d')
   if (!ctx) return { ms: 0 }
   const pitch = pitchOf(f.card), W = f.card.grid.cols * pitch, H = f.card.grid.rows * pitch
@@ -80,12 +80,13 @@ export function drawFrame(canvas: HTMLCanvasElement, f: EditorFrame, k: number, 
   if (canvas.width !== cw) canvas.width = cw
   if (canvas.height !== ch) canvas.height = ch
   const a = performance.now(), wake = { on: true }
-  let { dots, error, pending } = sampleFrame(f, o, wake)
+  let { dots, error, pending } = sampleFrame(f, o, wake), stale = false
   const last = pending ? landed.get(f.id) : undefined
   if (last && last.card === f.card && last.o !== o) {
     const r = sampleFrame(f, last.o)
-    // the newest complete frame stands in; a still frame (a scrub or pointer that stopped) draws again when this one lands
-    if (!r.pending) { ({ dots, error } = r); pending = false; wake.on = !soon }
+    // the newest complete frame stands in (`stale`: not this one); a still frame (a scrub or pointer that stopped) draws
+    // again when this one lands
+    if (!r.pending) { ({ dots, error } = r); pending = false; stale = true; wake.on = !soon }
   }
   userPrograms.settle() // the frame is done: its programs that kept to the budget count as drawn
   // nothing complete to show: keep the canvas, unless it is blank (first draw, resized), then draw what there is
@@ -96,7 +97,7 @@ export function drawFrame(canvas: HTMLCanvasElement, f: EditorFrame, k: number, 
   ctx.fillRect(0, 0, cw, ch)
   ctx.setTransform(cw / W, 0, 0, ch / H, 0, 0)
   renderCanvas(ctx, dots)
-  return { ms: performance.now() - a, ...(error !== undefined && { error }), ...(pending && { pending }) }
+  return { ms: performance.now() - a, ...(error !== undefined && { error }), ...(pending && { pending }), ...(stale && { stale }) }
 }
 /** Canvas resolution for a zoom: power-of-two steps of zoom × devicePixelRatio, capped by a 4096 px edge. */
 export function resolutionFor(z: number, dpr: number, w: number, h: number): number {

@@ -125,12 +125,13 @@ export async function launch(width: number, height: number, opts: LaunchOptions 
     if (r.result?.exceptionDetails) throw new Error(r.result.exceptionDetails.exception?.description ?? 'eval failed')
     return r.result?.result?.value as T
   }
-  // wall-clock bound: each poll may take at most what is left (≥ 1 s), so a busy page can't stretch the wait
+  // wall-clock bound: each poll may take at most what is left (≥ 1 s), so a busy page can't stretch the wait. On
+  // performance.now(): a probe that froze `Date` for its Node-side checks (freezeWallClock) would otherwise wait forever
   const waitFor = async (expr: string, ms = 8000) => {
-    const end = Date.now() + ms
+    const end = performance.now() + ms
     for (;;) {
-      if (await js(expr, Math.max(1000, end - Date.now())).catch(() => false)) return true
-      if (closed || Date.now() >= end) return false
+      if (await js(expr, Math.max(1000, end - performance.now())).catch(() => false)) return true
+      if (closed || performance.now() >= end) return false
       await sleep(100)
     }
   }

@@ -15,7 +15,7 @@ import { createRaster, sample } from '../../engine/raster/raster'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import type { Field, Tone } from '../../engine/types'
 import { TILE, layer, type WidgetContext, type WidgetPreset } from '../types'
-import { DEG, L15, LG15, LIGHT_DEFAULTS, T, cite, matLight, once, pad2, toCard15, valuedSites, tile, type Box, type Pt } from './materials-shared'
+import { DEG, L15, LG15, LIGHT_DEFAULTS, T, cite, frameMemo, lightId, matLight, own, once, pad2, toCard15, valuedSites, tile, type Box, type Pt } from './materials-shared'
 import { surfaceLayer, tonedLayer } from '../../engine/matter/surface'
 
 const COLS = TILE.cols, W1 = TILE.cols - 1, H1 = TILE.rows - 1
@@ -161,12 +161,15 @@ function screenMemo(key: string): { memo: Float32Array; fresh: boolean } {
   memoKey = key; memoBuf.fill(NaN)
   return { memo: memoBuf, fresh: true }
 }
-/** Where a point (cells) sits in the memo: a card cell centre, a GPU point at density 2, or −1 (computed fresh). */
+/**
+ * Where a point (cells) sits in the memo: a card cell centre, a GPU point at density 2, or −1 (computed fresh). The two
+ * tests can't both pass (a centre is a half step off the fine grid), so the GPU points, read 4× as often, go first.
+ */
 function memoIndex(x: number, y: number): number {
-  const c = Math.round(x), r = Math.round(y)
-  if (Math.abs(x - c) < 1e-6 && Math.abs(y - r) < 1e-6) return c >= 0 && r >= 0 && c < COLS && r < TILE.rows ? r * COLS + c : -1
   const fx = 2 * x + .5, fy = 2 * y + .5, c2 = Math.round(fx), r2 = Math.round(fy)
-  return Math.abs(fx - c2) < 1e-6 && Math.abs(fy - r2) < 1e-6 && c2 >= 0 && r2 >= 0 && c2 < FINE && r2 < FINE ? COLS * TILE.rows + r2 * FINE + c2 : -1
+  if (Math.abs(fx - c2) < 1e-6 && Math.abs(fy - r2) < 1e-6) return c2 >= 0 && r2 >= 0 && c2 < FINE && r2 < FINE ? COLS * TILE.rows + r2 * FINE + c2 : -1
+  const c = Math.round(x), r = Math.round(y)
+  return Math.abs(x - c) < 1e-6 && Math.abs(y - r) < 1e-6 && c >= 0 && r >= 0 && c < COLS && r < TILE.rows ? r * COLS + c : -1
 }
 const VALUE_IN = .875, MID_LO = .625
 /**
@@ -243,26 +246,31 @@ export const matLens: WidgetPreset = {
   layers: ctx => {
     const now = new Date(), c = lensCentre(ctx.data), rim = lensRim(ctx, c), hero = lensHero(pad2(now.getHours()), pad2(now.getMinutes()))
     const o: LiquidGlassOptions = { cx: c[0], cy: c[1], hw: LENS.hw, hh: LENS.hh, radius: LENS.radius, bezel: LENS.bezel, lut: lensLUT(), magnify: LENS.magnify, frost: LENS.frost, rimAngle: rim.angle, rimPower: rim.power }
-    const ticks = dialTicks().data, off = lensOffset(o)
-    // the live second, refracted by the same offset as the scene (the scene's own tick there is cleared under it)
-    const s = now.getSeconds(), a = s * 6 * DEG, q: Pt = [Math.round(DIAL.cx + DIAL.r * Math.sin(a)), Math.round(DIAL.cy - DIAL.r * Math.cos(a))], sec = apparent(off, q)
-    const lens = liquidGlass((u, v) => behindAt(ticks, hero.near, u * W1, v * H1), TILE, o)
-    const m = screenMemo(`${c[0]},${c[1]},${rim.angle},${rim.power},${s},${hero.key}`)
-    LF = { c, sec, hero, scene: lensScene(hero, ticks), ticks, off, lens, memo: m.memo }
-    // a new screen: fill its card-pitch values row by row here (a tight loop compiles at once), so the sampler's reads
-    // are lookups even on the first frame
-    if (m.fresh) for (let r = 12; r < TILE.rows; r++) screenRow(m.memo, r)
-    // the lens can pull the hero out to its own outline: the layer covers the glyphs' box and the lens's
-    const { lc, lr, ox, oy, box } = hero, toLat = (x: number) => (x + .5 - ox) / HERO.k - .5, toLatY = (y: number) => (y + .5 - oy) / HERO.k - .5
-    heroField.bounds = [Math.max(0, Math.min(box[0], Math.floor(toLat(c[0] - LENS.hw)))), Math.max(0, Math.min(box[1], Math.floor(toLatY(c[1] - LENS.hh)))), Math.min(lc - 1, Math.max(box[2], Math.ceil(toLat(c[0] + LENS.hw)))), Math.min(lr - 1, Math.max(box[3], Math.ceil(toLatY(c[1] + LENS.hh))))]
-    return [
-      cite('SNELL · N 1.5'),
-      { field: screenGPU, toneOf: screenTone },
-      { field: heroField, lattice: HERO.k, origin: [ox, oy], toneOf: heroTone },
-      layer(valuedSites([[sec[0], sec[1], 1]], 1.6), 'active'),
-    ]
+    const s = now.getSeconds(), key = `${c[0]},${c[1]},${rim.angle},${rim.power},${s},${hero.key}`
+    // the same lens, rim light, second and minute: the frame repeats (the screen memo below is keyed alike)
+    return lensMemo(key, () => {
+      const ticks = dialTicks().data, off = lensOffset(o)
+      // the live second, refracted by the same offset as the scene (the scene's own tick there is cleared under it)
+      const a = s * 6 * DEG, q: Pt = [Math.round(DIAL.cx + DIAL.r * Math.sin(a)), Math.round(DIAL.cy - DIAL.r * Math.cos(a))], sec = apparent(off, q)
+      const lens = liquidGlass((u, v) => behindAt(ticks, hero.near, u * W1, v * H1), TILE, o)
+      const m = screenMemo(key)
+      LF = { c, sec, hero, scene: lensScene(hero, ticks), ticks, off, lens, memo: m.memo }
+      // a new screen: fill its card-pitch values row by row here (a tight loop compiles at once), so the sampler's reads
+      // are lookups even on the first frame
+      if (m.fresh) for (let r = 12; r < TILE.rows; r++) screenRow(m.memo, r)
+      // the lens can pull the hero out to its own outline: the layer covers the glyphs' box and the lens's
+      const { lc, lr, ox, oy, box } = hero, toLat = (x: number) => (x + .5 - ox) / HERO.k - .5, toLatY = (y: number) => (y + .5 - oy) / HERO.k - .5
+      heroField.bounds = [Math.max(0, Math.min(box[0], Math.floor(toLat(c[0] - LENS.hw)))), Math.max(0, Math.min(box[1], Math.floor(toLatY(c[1] - LENS.hh)))), Math.min(lc - 1, Math.max(box[2], Math.ceil(toLat(c[0] + LENS.hw)))), Math.min(lr - 1, Math.max(box[3], Math.ceil(toLatY(c[1] + LENS.hh))))]
+      return [
+        cite('SNELL · N 1.5'),
+        { field: screenGPU, toneOf: screenTone },
+        { field: heroField, lattice: HERO.k, origin: [ox, oy], toneOf: heroTone },
+        layer(valuedSites([[sec[0], sec[1], 1]], 1.6), 'active'),
+      ]
+    })
   },
 }
+const lensMemo = frameMemo()
 
 // ── 08 WINDOW ─ a lancet with a rose; the pane of this hour burns red ───────────────────────────────────
 // Lead came on card pitch (Voronoi borders: F0 voronoi2 in the lancet, 19 custom sites in the rose), panes on the 1.5
@@ -409,19 +417,24 @@ export const matWindow: WidgetPreset = {
     const lateral = Array.isArray(sky) ? .15 * (sky as Vec3)[0] : 0
     const ptr = ctx.pointers?.find(q => q.inside && !q.up), lamp: Pt | null = ptr && !ptr.down ? [ptr.x, ptr.y] : null
     const pressed = ptr && ptr.down && (ctx.data.k ?? 0) >= .5 ? g.pane[Math.round(ptr.y) * COLS + Math.round(ptr.x)] ?? -1 : -1
-    s.panes.data.fill(0); s.tones.fill(0); s.petal.data.fill(0); s.glints.data.fill(0)
-    const [i0, j0, i1, j1] = g.latBox, petal = hourPetal(now.getHours())
-    for (let j = j0; j <= j1; j++) paneRow(g, s.panes.data, s.tones, s.petal.data, j, i0, i1, gain, lateral, lamp, petal, pressed, night)
-    s.panes.bounds = s.petal.bounds = g.latBox
-    cameGlints(g, matLight(ctx, { torch: { height: 30, falloff: 160 } }), s.glints.data)
-    s.glints.bounds = WIN_BOX
-    return [
-      cite('ROSE · LANCET'),
-      surfaceLayer([[frameRaster(), [[.06, .3, 'faint'], [.3, 2, 'mid']]], [s.glints, 'mid']]),
-      tonedLayer(s.panes, s.tones, L15),
-      { field: sample(s.petal), tone: 'active', lattice: L15, origin: [0, 0] },
-    ]
+    const torch = matLight(ctx, { torch: { height: 30, falloff: 160 } })
+    // the frame repeats while the hour, the sky, the lamp, the pressed pane and the torch hold
+    return windowMemo(`${hour}|${now.getHours()}|${lightId(sky)}|${lamp}|${pressed}|${lightId(torch)}`, () => {
+      s.panes.data.fill(0); s.tones.fill(0); s.petal.data.fill(0); s.glints.data.fill(0)
+      const [i0, j0, i1, j1] = g.latBox, petal = hourPetal(now.getHours())
+      for (let j = j0; j <= j1; j++) paneRow(g, s.panes.data, s.tones, s.petal.data, j, i0, i1, gain, lateral, lamp, petal, pressed, night)
+      s.panes.bounds = s.petal.bounds = g.latBox
+      cameGlints(g, torch, s.glints.data)
+      s.glints.bounds = WIN_BOX
+      return [
+        cite('ROSE · LANCET'),
+        surfaceLayer([[own(frameRaster()), [[.06, .3, 'faint'], [.3, 2, 'mid']]], [own(s.glints), 'mid']]),
+        tonedLayer(own(s.panes), s.tones.slice(), L15),
+        { field: sample(own(s.petal)), tone: 'active', lattice: L15, origin: [0, 0] },
+      ]
+    })
   },
 }
+const windowMemo = frameMemo()
 
 export const glassHooks = { LENS, lensCentre, lensRim, lensHero, lensLUT, apparent, windowGeometry, hourPetal, skyGain, lancetSdf, ROSE_SITES }
