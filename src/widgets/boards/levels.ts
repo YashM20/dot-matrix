@@ -12,7 +12,7 @@
 import { HENRY_LEVEL } from '../creditSources'
 import { clamp, hash01, smoothstep } from '../../engine/math'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
-import { HALL_CEIL, HALL_FLOOR, castHall, fog, lamp, project, seam, type Hall } from '../../engine/scene'
+import { HALL_CEIL, HALL_FLOOR, castHall, fog, hallCells, lamp, project, seam, type Hall } from '../../engine/scene'
 import type { Field } from '../../engine/types'
 import { TILE, baked, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 import { SHIP } from '../sprites'
@@ -77,10 +77,12 @@ const torches = (s: number, t: number) => {
   }
   return out
 }
+/** HALL1's hits and fog per card cell: the walk only shifts `zw`, so a frame only re-lights them. */
+const HALL1_AT = hallCells(HALL1, TILE.cols, TILE.rows, 1.2)
 const hall1 = (t: number): Field => {
   const s = t * .8, lights = torches(s, t)
   return cells((px, py) => {
-    const h = cast(HALL1, px, py)
+    const at = HALL1_AT.at(px, py), h = at < 0 ? cast(HALL1, px, py) : HALL1_AT.hit[at]
     if (!h) return 0
     const zw = h.z + s
     let alb: number
@@ -97,9 +99,9 @@ const hall1 = (t: number): Field => {
       alb = .55 + .35 * hash01(course * 31 + Math.floor(along), h.s)
     }
     let light = .06
-    for (const l of lights) light += lamp(h, l.p, 1.7, l.i)
+    for (let k = 0; k < lights.length; k++) light += lamp(h, lights[k].p, 1.7, lights[k].i)
     // the HUD strip stays dim so the label and score read over the ceiling
-    return Math.min(.95, alb * light * fog(h.z, HALL1.far, 1.2)) * (py < 13 ? .35 : 1)
+    return Math.min(.95, alb * light * (at < 0 ? fog(h.z, HALL1.far, 1.2) : HALL1_AT.fog[at])) * (py < 13 ? .35 : 1)
   })
 }
 const flames = (t: number) => torches(t * .8, t).flatMap(({ p }): V3[] => {
