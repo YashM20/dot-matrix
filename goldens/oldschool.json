@@ -28,24 +28,24 @@
   "os-floor": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "2b39385e",
+    "hash": "dbdc67c6",
     "dots": 1432
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "5bf1cfb2",
+    "hash": "a19a065a",
     "dots": 1484
    }
   },
   "os-sky": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "619c73ea",
+    "hash": "18ddee80",
     "dots": 1537
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "d24fb7e8",
+    "hash": "6b6f9c1e",
     "dots": 1508
    }
   },

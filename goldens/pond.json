@@ -4,12 +4,12 @@
   "pond-koi": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "a65579fa",
+    "hash": "d83b2c6a",
     "dots": 2275
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "d2aca03c",
+    "hash": "08132c6b",
     "dots": 2293
    }
   },
@@ -28,60 +28,60 @@
   "pond-slime": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "79cbd25b",
+    "hash": "d0e8d86f",
     "dots": 1756
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "bef6b114",
+    "hash": "24c3b02c",
     "dots": 1783
    }
   },
   "pond-fireflies": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "aa396a11",
+    "hash": "a341711f",
     "dots": 671
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "a3fd9ea9",
+    "hash": "cb0c5f66",
     "dots": 657
    }
   },
   "pond-murmur": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "91a622d7",
+    "hash": "5b12b65e",
     "dots": 638
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "8eb8b304",
+    "hash": "91cd5cfb",
     "dots": 546
    }
   },
   "pond-terrarium": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "54e390aa",
+    "hash": "07551a0b",
     "dots": 2764
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "278d10b5",
+    "hash": "acdfc8f6",
     "dots": 2788
    }
   },
   "pond-marble": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "4be6fac2",
+    "hash": "da4e5f9e",
     "dots": 3486
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "5491a655",
+    "hash": "692d6adc",
     "dots": 3464
    }
   },

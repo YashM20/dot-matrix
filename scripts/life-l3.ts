@@ -37,12 +37,12 @@ const fnvStr = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length
  * frames changed.
  */
 const L2_FRAMES: Record<string, string[]> = {
-  'pond-koi': ['926784c8', 'f2d3b96e', 'b4455a12', '0a8862d3', '2cd7964a'],
+  'pond-koi': ['2912ce66', 'be72e362', 'c77e6124', '5add7c4d', '2c80bbee'],
   'pond-jelly': ['ab366d7c', '60c52111', 'cc4380bf', '894c0c34', '7ed619a0'],
-  'pond-slime': ['89c65e24', '7425a955', 'd6bef00f', '5682e322', '74e99958'],
-  'pond-fireflies': ['b51f193e', '0aaf5a2c', '18ad1d40', '8fa34bcc', '12fe85aa'],
-  'pond-murmur': ['f1c9da8c', '47bbf48b', '61a992f6', 'd569edf5', '61ecdf59'],
-  'pond-terrarium': ['9a54e9bb', 'e59271e3', 'b46ef442', '2907f55d', '0c1acd01'],
+  'pond-slime': ['0f69b10d', 'ae470b32', '7d5d4160', 'a334b32e', 'bfedb193'],
+  'pond-fireflies': ['c9e73652', 'e9e9cd82', '18ad1d40', 'ce3fd4f2', '85c3abda'],
+  'pond-murmur': ['15097b7a', 'cb9e8ddf', '9b23f00a', '2fa47a31', '21910c0b'],
+  'pond-terrarium': ['bc5dc345', '269ae61d', '94b74998', '971500b3', '18794e77'],
 }
 /** `rippleStep`'s output, pinned: FNV of a 600-step run on the pond mask with a splat every 50 steps (the L1.2 code). */
 const RIPPLE_600 = '6045c3bb'

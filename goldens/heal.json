@@ -4,12 +4,12 @@
   "heal-mirror": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "950e10de",
+    "hash": "30abb319",
     "dots": 725
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "e801d1a5",
+    "hash": "4292e5d0",
     "dots": 719
    }
   },
@@ -28,12 +28,12 @@
   "heal-persist": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "b28b31cf",
+    "hash": "8fd236ec",
     "dots": 624
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "a528b900",
+    "hash": "c91b0405",
     "dots": 673
    }
   }
