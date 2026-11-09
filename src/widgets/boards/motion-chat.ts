@@ -77,7 +77,7 @@ export const sendCard = loopCard({
     if (inField) {
       if (n > 0) out.push(layer(T.big(MSG.slice(0, n), tx, ty, BODY), 'value'))
       else out.push(layer(T.text('MESSAGE', tx, ty + 1), 'faint'))
-      if (frac(lt / .9) < .55) { const cx = tx + n * 6 * BODY.lattice + 1; out.push(layer(T.dotLine(cx, ty - 1, cx, ty + 10, { spacing: 2.2, size: 1.4 }), 'value')) }
+      if (frac(lt / .9) < .55) { const cx = tx + n * 6 * BODY.lattice + 2; out.push(layer(T.dotLine(cx, ty - 1, cx, ty + 10, { spacing: 2.2, size: 1.4 }), 'value')) }
       return out
     }
     // the words fly from the field into the bubble, which draws in as they land
