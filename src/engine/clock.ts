@@ -11,13 +11,28 @@
  * - `invalidate(sub)` forces a draw on the next animation frame regardless of the subscriber's
  *   fps (input feedback must not wait for the next 12 fps tick).
  *
+ * - Turn-taking (`STAGGER`): while two or more board cards run (more than STAGGER.min), they take turns. By board order they split
+ *   into two interleaved groups; the second draws each of its frames half a frame period later (its clock runs
+ *   half a frame behind). Every card keeps its rate and draws the same quantized `t` values, but the two groups
+ *   land on different animation frames (12 fps cards on a 60 Hz display: 2–3 frames apart), so one animation
+ *   frame redraws about half the cards. A card opts in with `order` and can opt out frame by frame with
+ *   `staggerable()` (the visitor is using it). A card taking turns never steps back: after a group change it holds
+ *   its frame. Every other subscriber draws whenever its frame index changes, either way (a scrub, a seek).
+ *
  * Framework-free: works with any `requestAnimationFrame`-like scheduler and time source.
  */
 export interface ClockSubscriber {
   fps: number
   /** Called with card-quantized time; `frame` is that subscriber's frame index. */
   onFrame(t: number, frame: number): void
+  /** The card's position on its board: it may take turns with the other board cards (see `STAGGER`). */
+  order?: number
+  /** False while the card must draw every frame (the visitor is using it). Read each animation frame. */
+  staggerable?(): boolean
 }
+/** Turn-taking kicks in above `min` eligible board cards: any two take turns (no card loses rate, so no board is too small). */
+export const STAGGER = { min: 1 } as const
+const eligible = (sub: ClockSubscriber) => sub.order !== undefined && (sub.staggerable?.() ?? true)
 export interface ClockOptions {
   now?: () => number
   raf?: (cb: (time: number) => void) => number
@@ -51,14 +66,20 @@ export function createMasterClock(opts: ClockOptions = {}): MasterClock {
   const now = opts.now ?? (() => performance.now())
   const raf = opts.raf ?? (cb => requestAnimationFrame(cb))
   const caf = opts.caf ?? (id => cancelAnimationFrame(id))
-  const subs = new Map<ClockSubscriber, { frame: number; dirty: boolean }>()
+  const subs = new Map<ClockSubscriber, { frame: number; dirty: boolean; group: number }>()
+  const turns: ClockSubscriber[] = []
   let elapsed = 0, last = 0, handle = 0, running = false, paused = false
 
   const T = () => elapsed + (running ? (now() - last) / 1000 : 0)
   function frame(time: number) {
+    // the cards taking turns this frame, in board order: odd ranks run half a frame behind (−1 or 0: on time)
+    turns.length = 0
+    for (const [sub, state] of subs) { state.group = -1; if (eligible(sub)) turns.push(sub) }
+    if (turns.length > STAGGER.min) { turns.sort((a, b) => a.order! - b.order!); turns.forEach((sub, i) => { subs.get(sub)!.group = i & 1 }) }
     for (const [sub, state] of subs) {
-      const { t, frame } = quantizeTime(time, sub.fps)
-      if (frame === state.frame && !state.dirty) continue
+      const { t, frame } = quantizeTime(state.group === 1 ? Math.max(0, time - .5 / sub.fps) : time, sub.fps)
+      // only a card taking turns holds its frame across a group change; any other draws on every change, backward too
+      if ((state.group >= 0 ? frame <= state.frame : frame === state.frame) && !state.dirty) continue
       state.frame = frame; state.dirty = false
       sub.onFrame(t, frame)
     }
@@ -83,7 +104,7 @@ export function createMasterClock(opts: ClockOptions = {}): MasterClock {
   }
   return {
     subscribe(sub) {
-      subs.set(sub, { frame: -1, dirty: true })
+      subs.set(sub, { frame: -1, dirty: true, group: -1 })
       start()
       return () => { subs.delete(sub); if (!subs.size) stop() }
     },

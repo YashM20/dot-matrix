@@ -52,6 +52,8 @@ export interface DotWidgetProps {
   enter?: DotCanvasProps['enter']
   /** Exit (see `DotCanvas.exit`). */
   exit?: DotCanvasProps['exit']
+  /** The card's position on a board (see `DotCanvas.boardOrder`); unset off boards, so a single card never takes turns. */
+  boardOrder?: number
   /**
    * Board-level shared data (`BoardDef.shared`): merged over the defaults and `data`; control edits to
    * `sharedKeys` go to `onShared` (the board store) instead of this card's own state.
@@ -97,7 +99,7 @@ function useCardLabel(preset: WidgetPreset | undefined, data: Record<string, num
   return said && said.preset === preset ? said.label : undefined
 }
 
-export function DotWidget({ type, density, dotShape, roundness, size, theme: themeProp, animated, data, tick, preset: presetProp, enter, exit, shared, sharedKeys, onShared }: DotWidgetProps) {
+export function DotWidget({ type, density, dotShape, roundness, size, theme: themeProp, animated, data, tick, preset: presetProp, enter, exit, boardOrder, shared, sharedKeys, onShared }: DotWidgetProps) {
   const preset = usePreset(type, presetProp)
   const site = useTheme(), skin = useDisplaySkin()
   // interactive data (P2): input patches merged over the defaults and the `data` prop
@@ -189,7 +191,7 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme: the
         </div>}
       </div>
       <div className="dot-card-body" role={interactive ? undefined : 'img'} aria-label={interactive ? undefined : label}>
-        <DotCanvas layers={xr.layers} renderer={xr.renderer} onMode={xr.onMode} data={preset.media ? { ...merged, ...camera.data, ...hand.data } : { ...merged, ...hand.data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={fps} tick={tick} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
+        <DotCanvas layers={xr.layers} renderer={xr.renderer} onMode={xr.onMode} data={preset.media ? { ...merged, ...camera.data, ...hand.data } : { ...merged, ...hand.data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={fps} tick={tick} boardOrder={boardOrder} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
           controls={interactive ? controls : undefined} onInput={interactive ? onInput : undefined} onEngage={interactive ? onEngage : undefined} />
         {xr.on && xray && XRayOverlay && <Suspense fallback={null}><XRayOverlay xr={xr} preset={preset} layers={layers} data={preset.media ? { ...merged, ...camera.data } : merged} grid={grid} style={style} theme={theme}
           animated={!!(animated ?? preset.animated)} fps={fps} tick={tick} /></Suspense>}

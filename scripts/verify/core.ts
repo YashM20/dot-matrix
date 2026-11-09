@@ -179,6 +179,42 @@ export function coreChecks(assert: Assert) {
     assert('clock does not advance while paused and never resets', clock.time() > .09 && clock.time() < .1, clock.time().toFixed(3))
     unsub()
 
+    // turn-taking: from 2 live board cards (more than STAGGER.min) the odd ranks run half a frame behind. On a 60 Hz loop
+    // every card keeps its rate and its quantized, rising t, and no animation frame draws more than half of them; a lone
+    // board card and a card the visitor is using draw on the same animation frames as an unordered card
+    const turnsOf = (n: number, busy = -1) => {
+      let now = 0, tick = 0
+      const q: ((time: number) => void)[] = [], c = createMasterClock({ now: () => now, raf: cb => { q.push(cb); return q.length }, caf: () => {} })
+      const ts: number[][] = Array.from({ length: n + 1 }, () => []), at: number[][] = Array.from({ length: n + 1 }, () => []), perTick: number[] = []
+      let drawn = 0
+      const on = (i: number) => (t: number) => { ts[i].push(t); at[i].push(tick); if (i < n && i !== busy) drawn++ }
+      const subs = Array.from({ length: n + 1 }, (_, i) => i < n ? { fps: 12, order: i, staggerable: () => i !== busy, onFrame: on(i) } : { fps: 12, onFrame: on(i) })
+      subs.forEach(sb => c.subscribe(sb)); q.shift()?.(now)
+      for (tick = 1; tick <= 120; tick++) { drawn = 0; now += 1000 / 60; q.shift()?.(now); perTick.push(drawn) }
+      return { ts, perTick, onTime: (i: number) => at[i].join() === at[n].join() }
+    }
+    const big = turnsOf(8, 3), pair = turnsOf(2), lone = turnsOf(1), pairBusy = turnsOf(2, 1)
+    const rising = (l: number[]) => l.every((t, j) => j === 0 || t > l[j - 1]) && l.every(t => Math.abs(t * 12 - Math.round(t * 12)) < 1e-6)
+    const rate = (r: ReturnType<typeof turnsOf>) => r.ts.every(l => l.length >= 23 && l.length <= 26 && rising(l))
+    assert('clock: 2 or more live board cards take turns (every card at its rate and quantized t, half of them per animation frame); a lone card and a busy card draw on time',
+      [big, pair, lone, pairBusy].every(rate) && Math.max(...big.perTick) <= 4 && Math.max(...pair.perTick) === 1 && pair.onTime(0) && !pair.onTime(1)
+        && big.onTime(3) && lone.onTime(0) && pairBusy.onTime(0) && pairBusy.onTime(1),
+      `frames ${big.ts.map(l => l.length).join('/')}; most per animation frame ${Math.max(...big.perTick)} of 7, a pair ${Math.max(...pair.perTick)} of 2`)
+    // a card off a board redraws at once when time goes back: a seek (the X-ray scrubber) and a clock whose time source steps back
+    {
+      let now = 1000
+      const q: ((time: number) => void)[] = [], c = createMasterClock({ now: () => now, raf: cb => { q.push(cb); return q.length }, caf: () => {} })
+      const seen: number[] = [], tick = (ms: number) => { now += ms; q.shift()?.(now) }
+      c.subscribe({ fps: 12, onFrame: t => seen.push(t) })
+      for (let k = 0; k < 60; k++) tick(1000 / 60)
+      c.seek(.2); tick(1000 / 60)
+      const afterSeek = seen[seen.length - 1]
+      now -= 100; tick(0)
+      const afterStepBack = seen[seen.length - 1]
+      assert('clock: a card off a board redraws at the earlier t at once after a backward seek or a time source that steps back',
+        Math.abs(afterSeek - 2 / 12) < 1e-9 && afterStepBack >= 0 && afterStepBack < afterSeek, `seek → ${afterSeek.toFixed(3)}, step back → ${afterStepBack.toFixed(3)}`)
+    }
+
     const qStyle = { shape: 'circle' as const, sizeMin: 0, sizeMax: 1, quantizeSteps: 5 }
     const holes = sampleLayers([{ field: () => 1, tone: 'faint' }, { field: () => .1, tone: 'idle', lattice: 2 }], { cols: 8, rows: 8, pitch: 2 }, qStyle, dot480)
     assert('a lattice dot that quantizes to 0 does not punch a hole', holes.filter(d => d.color === dot480.dotFaint).length === 64 && !holes.some(d => d.color === dot480.dotIdle))

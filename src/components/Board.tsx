@@ -84,7 +84,7 @@ function LoadedBoard({ id, leaving }: { id: string; leaving: boolean }) {
   const live = useLiveData(board.sources)
   const blurbs = useBlurbs(), blurb = blurbs?.boardBlurbs[board.id as BoardId]
   const credit = blurbs?.conceptCredit.boards.includes(board.id as BoardId) ? blurbs.conceptCredit : undefined
-  const cards = (map: (p: WidgetPreset) => WidgetPreset) => board.items.map((preset, i) => <DotWidget key={preset.id} type={preset.id} preset={map(preset)} tick={preset.clock ? tick : undefined}
+  const cards = (map: (p: WidgetPreset) => WidgetPreset) => board.items.map((preset, i) => <DotWidget key={preset.id} type={preset.id} preset={map(preset)} tick={preset.clock ? tick : undefined} boardOrder={i}
     data={board.sources ? pick(live, preset.defaults) : undefined}
     {...(sharing ? { shared, sharedKeys: board.shared, onShared } : {})} {...cardMotion(i, board.columns, board.items.length, leaving)} />)
   return (
