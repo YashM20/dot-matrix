@@ -4,15 +4,15 @@
   "thermal-monitor": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "e02b3790",
+    "hash": "0c932f34",
     "dots": 6256
    }
   },
   "ev-charge": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "9b482635",
-    "dots": 6051
+    "hash": "96654752",
+    "dots": 6055
    }
   },
   "codex-usage": {
@@ -25,34 +25,34 @@
   "fitness-rings": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "7f733e33",
-    "dots": 2326
+    "hash": "93698342",
+    "dots": 2223
    }
   },
   "henry-sleep": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "01707341",
-    "dots": 3396
+    "hash": "7fdb60d7",
+    "dots": 1925
    }
   },
   "mini-game": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "729f864f",
+    "hash": "beb1ec2d",
     "dots": 803
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "9bb828af",
+    "hash": "b439058d",
     "dots": 803
    }
   },
   "ai-assistant": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "32de78d2",
-    "dots": 3663
+    "hash": "2c846d6a",
+    "dots": 3439
    }
   },
   "vision-camera": {
@@ -65,12 +65,12 @@
   "deerflow-agent": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "94745d42",
+    "hash": "f61b0259",
     "dots": 1617
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "ca955cef",
+    "hash": "0ad43280",
     "dots": 1619
    }
   }
