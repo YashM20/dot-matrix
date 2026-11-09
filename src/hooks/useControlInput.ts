@@ -11,6 +11,11 @@ import { HAND_POINTER_ID } from '../vision/pointerId'
 const KEY_PRESS_MS = 140
 /** How long a released touch pointer lingers in `pointers[]` (ms), so tDown-based ripples (0.5 s) finish. */
 const LINGER_MS = 520
+/**
+ * A replayed tap on a live card stays down until the card drew it this many times (a world steps a press on its
+ * second frame), for at most `TAP_DRAWN_MAX_MS`: on a slow device one frame can outlast the whole press.
+ */
+const TAP_DRAWS = 3, TAP_DRAWN_MAX_MS = 500
 /** A long-press context menu this soon (ms) after a touch on the card is swallowed. */
 const CONTEXT_MENU_MS = 1500
 
@@ -330,7 +335,12 @@ export function useControlInput(controls: Control[] | undefined, grid: GridConfi
     const e = cand.down, c = control(cand.key)
     if (c) grab(e, c, false, cand.tClock)
     else { track(e, { down: true, up: false, tDown: cand.tClock }); schedule() }
-    taps.current.set(e.pointerId, window.setTimeout(() => { taps.current.delete(e.pointerId); finish(e, false) }, TOUCH.tapPress))
+    const from = draws.current, until = performance.now() + TAP_DRAWN_MAX_MS
+    const lift = () => {
+      if (liveSub.current && draws.current - from < TAP_DRAWS && performance.now() < until) { taps.current.set(e.pointerId, window.setTimeout(lift, 16)); return }
+      taps.current.delete(e.pointerId); finish(e, false)
+    }
+    taps.current.set(e.pointerId, window.setTimeout(lift, TOUCH.tapPress))
   }
 
   const handlers: ControlInput['handlers'] = {
