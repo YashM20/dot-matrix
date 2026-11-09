@@ -3,9 +3,10 @@
  * card's view (set, intro, pick), a value axis of faint gridlines with its numbers on the right, category names under
  * the plot and the readout over it. The picked bar, point or candle is red.
  */
-import { areaChart, barChart, candleChart, lineChart, type Candle } from '../../engine/charts/cartesian'
+import { areaChart, barChart, candleChart, lineAt, lineChart, type Candle } from '../../engine/charts/cartesian'
 import { categoryLabels, fmt, readout, valueAxis, type Plot } from '../../engine/charts/marks'
 import { grow, tween } from '../../engine/charts/motion'
+import { knockSites } from '../../engine/layout'
 import { nearestIndex } from '../../engine/charts/readout'
 import { bands, linear, niceDomain, spread } from '../../engine/charts/scale'
 import { MONTHS, ORDERS, SESSIONS, SOLAR, STOCK, SUN_HOURS, VISITS, HOURS } from './charts-data'
@@ -26,7 +27,10 @@ export const barCard = chartCard({
   box: PLOT_BOX, map: x => nearestIndex(BAR_XS, x),
   draw: v => {
     const vs = grow(tween(ORDERS[0], ORDERS[1], v.set), v.intro).map(Math.round)
-    const c = barChart(vs, v.pick, { plot: PLOT, scale: BAR_SCALE, xs: BAR_XS, size: 3.2 }), axis = valueAxis(BAR_SCALE, BAR_AXIS.ticks, PLOT, x => fmt(x), { avoid: BAR_XS, gap: 2.5 })
+    const c = barChart(vs, v.pick, { plot: PLOT, scale: BAR_SCALE, xs: BAR_XS, size: 3.2 }), axis = valueAxis(BAR_SCALE, BAR_AXIS.ticks, PLOT, x => fmt(x))
+    // a gridline keeps its one spacing and loses only the dots a bar stands on (above a bar's top it runs through)
+    const bars = c.marks.flatMap(m => m.sites)
+    axis.marks[0].sites = knockSites(axis.marks[0].sites, bars, 2.1)
     return {
       marks: [...axis.marks, ...c.marks],
       labels: [
@@ -49,6 +53,8 @@ export const lineCard = chartCard({
     const vs = grow(tween(VISITS[0], VISITS[1], v.set), v.intro, 0, .5).map(Math.round)
     const c = lineChart(vs, v.pick, { scale: LINE_SCALE, xs: LINE_XS, spacing: 2.2, size: 1.5, pickSize: 6, moat: 4, guide: PLOT.base })
     const axis = valueAxis(LINE_SCALE, LINE_AXIS.ticks.filter((_, i) => i % 2 === 0), PLOT, x => fmt(x))
+    // where the line crosses a gridline, the gridline's dots give way to the line's
+    axis.marks[0].sites = knockSites(axis.marks[0].sites, c.marks.flatMap(m => m.sites), 1.6)
     return {
       marks: [...axis.marks, ...c.marks],
       labels: [
@@ -72,6 +78,8 @@ export const areaCard = chartCard({
     const vs = grow(tween(SOLAR[0], SOLAR[1], v.set), v.intro, 0, .5).map(x => Math.round(x * 10) / 10)
     const c = areaChart(vs, v.pick, { plot: AREA_PLOT, scale: AREA_SCALE, xs: AREA_XS, spacing: 2.2, size: 1.6, knot: 2.6, pickSize: 6, moat: 4, guide: PLOT.base, fill: 3, fillSize: 1.3, band: 9 })
     const axis = valueAxis(AREA_SCALE, AREA_AXIS.ticks, PLOT, x => fmt(x))
+    // gridlines run behind the area: under the line the fill's own rows stand in for them, so the two never interleave
+    axis.marks[0].sites = axis.marks[0].sites.filter(([x, y]) => !(y > lineAt(c.anchors, x) - 1.5))
     return {
       marks: [...axis.marks, ...c.marks],
       labels: [

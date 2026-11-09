@@ -67,14 +67,18 @@ export const stationClock: WidgetPreset = {
     const jump = underdampedSpring(-1, 0, 0, 2.2, .32, s).x // minutes behind the target, springing to 0
     const minute = ((m + jump) / 60) * TAU, hour = ((h + (m + jump) / 60) / 12) * TAU, second = (Math.min(s, 58.5) / 58.5) * TAU
     const [cx, cy] = C, ticks: Pt[] = [], hours: Pt[] = []
-    for (let i = 0; i < 60; i++) (i % 5 ? ticks.push(...ray(cx, cy, (i / 60) * TAU, R, R, 1)) : hours.push(...ray(cx, cy, (i / 60) * TAU, R - 8, R, 2.6)))
+    for (let i = 0; i < 60; i++) (i % 5 ? ticks.push(...ray(cx, cy, (i / 60) * TAU, R, R, 1)) : hours.push(...ray(cx, cy, (i / 60) * TAU, R - 8, R, 4)))
+    // every dot at most 0.8 of its spacing, so the hands and hour bars read as rows of dots; the red second hand,
+    // its disc and the hub clear the white hand dots under them, so red never sits on white
+    const sec = [...ray(cx, cy, second + Math.PI, 3.4, 13, 2.2), ...ray(cx, cy, second, 3.4, 33, 2.2)], disc = ray(cx, cy, second, 38, 38, 1)
+    const hand = (pts: Pt[], size: number) => T.knockout(T.knockout(T.knockout(T.dots(pts, size), [C], 4.2), disc, 5.6), sec, 2.8)
     return [
       layer(T.dots(ticks, 1.6), 'mid'),
       layer(T.dots(hours, 3)),
-      layer(T.dots(ray(cx, cy, hour, -7.2, 32.4, 3.6), 4)),
-      layer(T.dots(ray(cx, cy, minute, -9.6, 48, 3.2), 3.3)),
-      layer(T.dots(ray(cx, cy, second + Math.PI, 0, 13, 2.2), 1.7), 'active'), layer(T.dots(ray(cx, cy, second, 0, 34, 2.2), 1.7), 'active'),
-      layer(T.dots(ray(cx, cy, second, 38, 38, 1), 8.5), 'active'),
+      layer(hand(ray(cx, cy, hour, -7.2, 32.4, 4.4), 3.5)),
+      layer(hand(ray(cx, cy, minute, -9.6, 48, 3.6), 2.8)),
+      layer(T.dots(sec, 1.7), 'active'),
+      layer(T.dots(disc, 8.5), 'active'),
       layer(T.dots([C], 4.2), 'active'),
     ]
   },
@@ -133,13 +137,16 @@ export const lineMap: WidgetPreset = {
     const x = stopX(from) + (stopX(to) - stopX(from)) * p
     // the first stop opens on the settled name (the still and the first paint), later ones decode into it
     const name = k === 0 || reducedMotion ? STOPS[to] : decodeText(STOPS[from], STOPS[to], tau, { stagger: .05, lead: .15 })
-    const track = T.dotLine(stopX(0), TRACK_Y, stopX(hops), TRACK_Y, { spacing: 3, size: 1.6 })
-    const passed = (track.sites ?? []).filter(([sx]) => sx <= x), ahead = (track.sites ?? []).filter(([sx]) => sx > x)
+    // the track stops short of each station ring, so no track dot touches a ring dot
+    const track = T.knockout(T.dotLine(stopX(0), TRACK_Y, stopX(hops), TRACK_Y, { spacing: 3, size: 1.6 }), STOPS.map((_, i): Pt => [stopX(i), TRACK_Y]), 5)
+    // the train clears the track dots under it as it glides
+    const free = (track.sites ?? []).filter(([sx]) => Math.abs(sx - x) > 4.4)
+    const passed = free.filter(([sx]) => sx <= x), ahead = free.filter(([sx]) => sx > x)
     return [
       layer(T.text('NEXT', 8, 22), 'idle'),
       layer(T.big(name, 8, 34, { lattice: 1.5 })),
       layer(T.dots(ahead, 1.6), 'idle'), layer(T.dots(passed, 1.9)),
-      ...STOPS.map((_, i) => layer(T.dotRing(stopX(i), TRACK_Y, 4.2, { spacing: 2.6, size: 1.9 }), stopX(i) <= x + .5 ? 'value' : 'mid')),
+      ...STOPS.map((_, i) => layer(T.knockout(T.dotRing(stopX(i), TRACK_Y, 4.2, { spacing: 2.6, size: 1.9 }), [[x, TRACK_Y]], 4), stopX(i) <= x + .5 ? 'value' : 'mid')),
       ...ABBR.map((a, i) => layer(T.text(a, stopX(i), i % 2 ? 66 : 94, { align: 'center' }), 'idle')),
       layer(T.dots([[x, TRACK_Y]], 7.5), 'active'),
       layer(T.text(p > 0 ? 'DEPARTED' : 'AT PLATFORM', 8, 124), 'mid'),
@@ -163,7 +170,7 @@ export const service: WidgetPreset = {
       const y = 28 + i * 28, ok = now[i] === 'ON TIME', text = k === 0 ? now[i] : decodeText(before[i], now[i], tau - i * .12)
       return [
         layer(T.dotRing(14, y + 3, 8, { spacing: 2.9, size: 1.7 }), ok ? 'idle' : 'value'),
-        layer(T.big(String(i + 1), 14, y, { lattice: 1, align: 'center' })),
+        layer(T.big(String(i + 1), 14.5, y, { lattice: 1, align: 'center' })),
         layer(T.big(text, 30, y - 1, { lattice: 1.15 }), ok ? 'mid' : 'value'),
         ...(!ok && blink(t + i * .3, 1.4) ? [layer(T.dots([[134, y + 3]], 4.5), 'active')] : []),
       ]

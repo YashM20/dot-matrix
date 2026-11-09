@@ -37,11 +37,21 @@ export function lineChart(values: readonly number[], pick: number, s: LineSpec):
   const n = Math.min(values.length, s.xs.length), hot = pickIndex(pick, n)
   if (!n) return emptyChart()
   const anchors = Array.from({ length: n }, (_, i): Pt => [s.xs[i], s.scale.cell(values[i])]), p = hot >= 0 ? anchors[hot] : undefined
-  const marks: Mark[] = [{ sites: clear(along(anchors, s.spacing), p, s.moat), size: s.size, tone: s.tone ?? 'value' }]
-  if (s.knot) marks.push({ sites: clear(anchors.filter((_, i) => i !== hot), p, s.moat), size: s.knot, tone: s.tone ?? 'value' })
+  const knots = s.knot ? clear(anchors.filter((_, i) => i !== hot), p, s.moat) : []
+  // line sites give way round each knot (a gap of half a cell to its rim), so a knot never merges with a line dot
+  const r = s.knot ? .42 * (s.knot + s.size) + .5 : 0, line = clear(spaced(along(anchors, s.spacing), s.spacing * .6), p, s.moat).filter(q => knots.every(k => (q[0] - k[0]) ** 2 + (q[1] - k[1]) ** 2 >= r * r))
+  const marks: Mark[] = [{ sites: line, size: s.size, tone: s.tone ?? 'value' }]
+  if (s.knot) marks.push({ sites: knots, size: s.knot, tone: s.tone ?? 'value' })
   if (p && s.guide !== undefined && Math.abs(s.guide - p[1]) > s.moat + 2) marks.push({ sites: column(p[0], p[1] + Math.sign(s.guide - p[1]) * (s.moat + 1), s.guide, 2.5), size: 1, tone: 'mid' })
   if (p) marks.push({ sites: [p], size: s.pickSize, tone: 'active' })
   return { marks, labels: [], anchors, pick: hot }
+}
+
+/** `pts` in order, without a site closer than `d` to the last one kept: at a sharp peak the two sites either side of the turn don't touch. */
+function spaced(pts: Pt[], d: number): Pt[] {
+  const out: Pt[] = []
+  for (const q of pts) { const l = out[out.length - 1]; if (!l || (q[0] - l[0]) ** 2 + (q[1] - l[1]) ** 2 >= d * d) out.push(q) }
+  return out
 }
 
 /** Row of the line through `anchors` at column x (linear between points), or NaN outside them. */
@@ -69,7 +79,10 @@ export function areaChart(values: readonly number[], pick: number, s: AreaSpec):
     if (!Number.isFinite(top) || (p && s.guide !== undefined && Math.abs(x - p[0]) < s.fill * .75)) continue
     for (let y = s.plot.base; y > top + s.fill * .6; y -= s.fill) (y - top < s.band ? near : deep).push([x, y])
   }
-  chart.marks.unshift({ sites: clear(deep, p, s.moat), size: s.fillSize, tone: 'faint' }, { sites: clear(near, p, s.moat), size: s.fillSize, tone: 'mid' })
+  // on a steep stretch a fill site can sit closer to the line than a row: it gives way to the line's dots
+  const lineSites = chart.marks.flatMap(m => m.tone === 'active' ? [] : m.sites), r2 = (.42 * (s.fillSize + s.size) + .4) ** 2
+  const off = (pts: Pt[]) => clear(pts, p, s.moat).filter(q => lineSites.every(l => (q[0] - l[0]) ** 2 + (q[1] - l[1]) ** 2 >= r2))
+  chart.marks.unshift({ sites: off(deep), size: s.fillSize, tone: 'faint' }, { sites: off(near), size: s.fillSize, tone: 'mid' })
   return chart
 }
 
@@ -89,7 +102,7 @@ export function candleChart(data: readonly Candle[], pick: number, s: CandleSpec
     const d = data[i], x = s.xs[i], c = s.scale.cell(d.c), o = s.scale.cell(d.o), hi = s.scale.cell(d.h), lo = s.scale.cell(d.l)
     const top = Math.min(o, c), bot = Math.max(o, c), g = groups[i === hot ? 'hot' : d.c >= d.o ? 'up' : 'down'], gap = s.body.pitch * .8
     anchors.push([x, c])
-    g.body.push(...column(x, top, bot, s.body.pitch))
+    g.body.push(...column(x, top, bot, s.body.pitch, true))
     if (top - Math.min(hi, lo) > gap) g.wick.push(...column(x, Math.min(hi, lo), top - gap, s.wick.pitch))
     if (Math.max(hi, lo) - bot > gap) g.wick.push(...column(x, bot + gap, Math.max(hi, lo), s.wick.pitch))
   }
