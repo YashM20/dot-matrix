@@ -1,10 +1,23 @@
 # Browser probes and screenshots on GitHub's runners instead of a laptop (docs/HARNESS.md › Probes in CI).
-# One job builds the site, then the probe shards (scripts/ci/probes.ts) and the screenshot job use that dist/.
+# One job picks the probes and builds the site; the probe shards (scripts/ci/probes.ts) and the screenshot job use
+# that dist/. A PR push runs the probes its changes reach (scripts/ci/affected.ts) plus a smoke set; a push to main,
+# a dispatch with `probes=all` and a PR labelled `full-probes` run every probe.
 # Report-only for now: this workflow is not part of the `check + build` gate in ci.yml.
 name: probes
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'scripts/**'
+      - 'index.html'
+      - 'vite.config.ts'
+      - 'public/**'
+      - '.github/workflows/probes.yml'
   pull_request:
+    # labeled: adding `full-probes` starts a run with every probe; any other label skips (the build job's `if`)
+    types: [opened, synchronize, reopened, labeled]
     paths:
       - 'src/**'
       - 'scripts/**'
@@ -24,32 +37,56 @@ on:
 permissions:
   contents: read
 
-# a new push to a PR cancels its stale run; dispatched runs queue, so two asks on one branch both finish
+# a new push to a PR cancels its stale run; dispatched runs and main queue, so every ask finishes.
+# A label event gets its own group, so labelling a PR never cancels the run of its last push.
 concurrency:
-  group: probes-${{ github.event_name }}-${{ github.ref }}
+  group: probes-${{ github.event_name }}-${{ github.ref }}${{ github.event.action == 'labeled' && format('-label-{0}', github.event.label.name) || '' }}
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 env:
   # Chrome on a runner has no GPU: let WebGL fall back to the software rasterizer, as it does on a laptop
   CHROME_FLAGS: --enable-unsafe-swiftshader
-  PROBES: ${{ github.event_name == 'workflow_dispatch' && inputs.probes || 'all' }}
   SHOTS: ${{ github.event_name == 'workflow_dispatch' && inputs.shots || '/@1280,/@390@light,/browse/@1280,/browse/@390@light,/widget/timer/@1280@light,/widget/timer/@390' }}
 
 jobs:
   build:
     name: build
+    if: github.event.action != 'labeled' || github.event.label.name == 'full-probes'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     outputs:
+      probes: ${{ steps.pick.outputs.probes }}
       shards: ${{ steps.matrix.outputs.shards }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          # a PR checks out its merge commit: HEAD^1 is the base, so the diff is the PR's own change
+          fetch-depth: ${{ github.event_name == 'pull_request' && 2 || 1 }}
       - uses: ./.github/actions/setup
 
-      # which shards have work, from the probes input (a bad name fails here, before any shard starts)
+      # which probes run, and why: printed here and in the run summary
+      - name: Pick probes
+        id: pick
+        env:
+          EVENT: ${{ github.event_name }}
+          ASKED: ${{ inputs.probes }}
+          FULL_LABEL: ${{ contains(github.event.pull_request.labels.*.name, 'full-probes') }}
+        run: |
+          if [ "$EVENT" = workflow_dispatch ]; then probes="$ASKED"; why="asked for: $ASKED"
+          elif [ "$EVENT" = push ]; then probes=all; why="push to main: every probe"
+          elif [ "$FULL_LABEL" = true ]; then probes=all; why="the PR has the full-probes label: every probe"
+          else probes=$(pnpm exec tsx scripts/ci/affected.ts --base HEAD^1); why="the probes this PR's changes reach (above)"
+          fi
+          echo "probes: $probes ($why)"
+          echo "**Probes:** $probes ($why)" >> "$GITHUB_STEP_SUMMARY"
+          echo "probes=$probes" >> "$GITHUB_OUTPUT"
+
+      # which shards have work (a bad name fails here, before any shard starts)
       - name: Shards
         id: matrix
-        run: echo "shards=$(pnpm exec tsx scripts/ci/probes.ts --matrix --only "$PROBES")" >> "$GITHUB_OUTPUT"
+        env:
+          PROBES: ${{ steps.pick.outputs.probes }}
+        run: echo "shards=$(pnpm exec tsx scripts/ci/probes.ts --matrix --only "$PROBES")" | tee -a "$GITHUB_OUTPUT"
 
       # the same OG cache as ci.yml, so the postbuild re-renders only changed cards
       - name: Restore OG image cache
@@ -88,6 +125,8 @@ jobs:
           path: dist
 
       - name: Probes
+        env:
+          PROBES: ${{ needs.build.outputs.probes }}
         run: pnpm exec tsx scripts/ci/probes.ts --shard ${{ matrix.shard }} --only "$PROBES"
 
       # the probes' own captures, to look at when one fails
