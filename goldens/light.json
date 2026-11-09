@@ -4,25 +4,25 @@
   "light-torch": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "488a4b54",
-    "dots": 1988
+    "hash": "b84f093c",
+    "dots": 1981
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "b20296ea",
-    "dots": 1962
+    "hash": "ba01ad9a",
+    "dots": 1965
    }
   },
   "light-orb": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "c57051d3",
-    "dots": 1876
+    "hash": "a4b860bd",
+    "dots": 1867
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "c57051d3",
-    "dots": 1876
+    "hash": "a4b860bd",
+    "dots": 1867
    }
   },
   "light-on-air": {
@@ -52,12 +52,12 @@
   "light-gloss": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "9810bbf2",
+    "hash": "0bfda446",
     "dots": 1358
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "9810bbf2",
+    "hash": "0bfda446",
     "dots": 1358
    }
   },
