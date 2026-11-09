@@ -9,7 +9,7 @@
  * Shading helpers: `lamp` (Lambert × soft inverse-square point light), `fog` (depth falloff),
  * `seam` (mortar lines never thinner than ~one cell) and `project` (world → screen cells).
  */
-import { clamp } from '../math'
+import { clamp, hypot3 } from '../math'
 
 import type { Vec3 } from '../light/shade'
 
@@ -31,10 +31,29 @@ export function castHall(h: Hall, px: number, py: number): HallHit | null {
   return s < 0 ? null : { s, x: dx * z, y: dy * z, z, fp: z / h.f, fz: (z * z) / (h.f * d) }
 }
 
+/** A hall's hit and fog per screen cell: `at(px, py)` gives the cell's index into `hit` / `fog` (−1 off the grid). */
+export interface HallCells { hit: (HallHit | null)[]; fog: Float64Array; at(px: number, py: number): number }
+/**
+ * `castHall` and `fog` kept per screen cell of a cols × rows grid. A hall stands still in camera space (a walk only
+ * shifts the world along z), so a frame only re-lights: a cell is cast again only when asked for another exact (px, py).
+ */
+export function hallCells(h: Hall, cols: number, rows: number, fogK = 1.3): HallCells {
+  const n = cols * rows, xs = new Float64Array(n).fill(NaN), ys = new Float64Array(n), hit: (HallHit | null)[] = [], fz = new Float64Array(n)
+  const at = (px: number, py: number) => {
+    const c = Math.round(px), r = Math.round(py)
+    if (!(c >= 0 && r >= 0 && c < cols && r < rows)) return -1
+    const i = r * cols + c
+    if (xs[i] !== px || ys[i] !== py) { const hh = castHall(h, px, py); xs[i] = px; ys[i] = py; hit[i] = hh; fz[i] = hh ? fog(hh.z, h.far, fogK) : 0 }
+    return i
+  }
+  return { hit, fog: fz, at }
+}
+
 /** Lambert × soft inverse-square falloff from a point light at `l` (radius `r`, intensity `i`) on a surface with normal `n`. */
-export function lampAt(px: number, py: number, pz: number, [nx, ny, nz]: Vec3, [lx, ly, lz]: Vec3, r: number, i: number): number {
-  const ax = lx - px, ay = ly - py, az = lz - pz, d = Math.hypot(ax, ay, az) || 1e-6
-  return (i * Math.max(0, (ax * nx + ay * ny + az * nz) / d)) / (1 + (d / r) ** 2)
+export function lampAt(px: number, py: number, pz: number, n: Vec3, l: Vec3, r: number, i: number): number {
+  // hypot3 ≡ Math.hypot and q · q ≡ q ** 2 bit for bit (V8); index reads instead of destructuring: a hot per-cell path
+  const ax = l[0] - px, ay = l[1] - py, az = l[2] - pz, d = hypot3(ax, ay, az) || 1e-6, q = d / r
+  return (i * Math.max(0, (ax * n[0] + ay * n[1] + az * n[2]) / d)) / (1 + q * q)
 }
 /** `lampAt` for a hall hit. */
 export const lamp = (h: HallHit, l: Vec3, r: number, i: number) => lampAt(h.x, h.y, h.z, HALL_NORMAL[h.s], l, r, i)
