@@ -9,11 +9,22 @@
  * Per card: layers() build + sampleLayers time (median over RUNS; animated cards over t = i/12). Mount runs start
  * with no repeated frame kept (`forgetFrames`); frame runs keep them, as the app does (a card at rest repeats its frame),
  * visible dots, renderer by the app's rule (animated or > 2000 visible → canvas, else SVG), SVG bytes.
+ * The frame budgets count what the app runs. DotCanvas pauses a card outside the viewport (IntersectionObserver,
+ * 64 px root margin), so a board frame is the cards on screen together, not the whole board. N (VIEWPORT_CARDS) = 20
+ * is the most a 1280 × 800 viewport holds, from src/site/app/grid.css and src/tokens.css at the default CARD SIZE
+ * (LARGE) on the busiest layout, a dense board (4 columns, gap 16): frame pad clamp(16px, 3vw, 40px) = 38.4 px a side
+ * and a classic 15 px scrollbar leave a 1188 px grid, so square 285 px cards (under --card-max = min(62svh, 520px))
+ * on a 301 px row pitch. The live band is 800 + 2 × 64 = 928 px, and 928 + 285 > 4 × 301, so it can touch 5 rows:
+ * 20 cards. (With an overlay scrollbar it is 4 rows, 16 cards; COMPACT, an opt-in, fits 25.)
+ * A GPU card (every animated layer GPU-tagged, so WebGL2 draws it; its CPU layers are static) is GPU work: it leaves
+ * the frame and worst-live checks, and its CPU-fallback time (no WebGL2) has its own column so a regression still shows.
  * Per board, budgets:
- *   mount       Σ t=0 build+sample of every card (first frame)                ≤ 30 ms
- *   frame       Σ animated-card per-frame time (board frame, 30 fps tier)       ≤ 8 ms
- *   worst live  slowest animated card per frame                                ≤ 4 ms (hero)
- *   SVG         Σ renderSVG bytes of the cards the app draws as SVG              < 0.5 MB
+ *   mount       Σ t=0 build+sample of every card (first frame)                                 ≤ 30 ms
+ *   frame       worst Σ per-frame time over any N consecutive animated CPU cards (board order)    ≤ 8 ms
+ *   all         Σ per-frame time of every animated CPU card (reference only, no budget)
+ *   worst live  slowest animated CPU card per frame                                              ≤ 4 ms (hero)
+ *   gpu fb      Σ CPU-fallback per-frame time of the GPU cards (reference only, no budget)
+ *   SVG         Σ renderSVG bytes of the cards the app draws as SVG                               < 0.5 MB
  * Sim board cold start (`--sim-t 1,60,3600`, default those): every sim's checkpoints dropped, the board mounted
  * at t, then the median frame over the next RUNS frames (t + i/30). The warm-up above hides replay cost, this does not.
  * Writes .snapshots/bench.json.
@@ -26,6 +37,7 @@ import { median, pitchOf, theme, uniquePresets, visible } from './lib/cards'
 import { freezeWallClock } from './lib/freeze'
 import { simReset } from '../src/engine/sim'
 import { forgetFrames } from '../src/engine/sampler/repeat'
+import { hasGPULayers, splitGPULayers } from '../src/engine/renderer/webgl/passes'
 import { simBoard, simBoardSims } from '../src/widgets/boards/sim'
 
 freezeWallClock()
@@ -33,8 +45,10 @@ const args = process.argv.slice(2), strict = args.includes('--strict')
 const ci = args.indexOf('--cards'), showCards = ci >= 0 ? (args[ci + 1] === 'all' ? Infinity : +args[ci + 1]) : 15
 const RUNS = +(process.env.RUNS ?? 15), CANVAS_THRESHOLD = 2000
 const BUDGET = { mountMs: 30, frameMs: 8, liveMs: 4, svgBytes: 0.5 * 1024 * 1024 }
+/** Cards a 1280 × 800 viewport holds on the busiest board layout (header): the board frame window. */
+const VIEWPORT_CARDS = 20
 
-interface Row { id: string; animated: boolean; layers: number; dots: number; visible: number; renderer: 'svg' | 'canvas'; mountMs: number; buildMs: number; sampleMs: number; frameMs: number; svgBytes: number }
+interface Row { id: string; animated: boolean; gpu: boolean; layers: number; dots: number; visible: number; renderer: 'svg' | 'canvas'; mountMs: number; buildMs: number; sampleMs: number; frameMs: number; svgBytes: number }
 function benchCard(p: WidgetPreset): Row {
   const lf = withChrome(p), data = { ...p.defaults }
   const run = (t: number) => { const a = performance.now(); const L = lf({ t, data }); const b = performance.now(); const d = sampleLayers(L, p.grid, p.style, theme); return { build: b - a, sample: performance.now() - b, L, d } }
@@ -43,9 +57,12 @@ function benchCard(p: WidgetPreset): Row {
   const mount = Array.from({ length: RUNS }, () => { forgetFrames(); return run(0) })
   const frames = p.animated ? Array.from({ length: RUNS }, (_, i) => run((i + 1) / 12)) : []
   const { L, d } = mount[0], vis = d.filter(visible).length, pitch = pitchOf(p)
+  // a GPU card: GPU-tagged layers, and the CPU rest draws the same dots at two times (static), as DotCanvas splits them
+  const cpuKey = (t: number) => { const { cpu } = splitGPULayers(lf({ t, data }), p.grid, p.style, p.grid.pitch ?? theme.gridPx); return JSON.stringify(sampleLayers(cpu, p.grid, p.style, theme)) }
+  const gpu = !!p.animated && hasGPULayers(L) && cpuKey(1 / 12) === cpuKey(1.3)
   const renderer = p.animated || vis > CANVAS_THRESHOLD ? 'canvas' : 'svg'
   return {
-    id: p.id, animated: !!p.animated, layers: L.length, dots: d.length, visible: vis, renderer,
+    id: p.id, animated: !!p.animated, gpu, layers: L.length, dots: d.length, visible: vis, renderer,
     mountMs: median(mount.map(r => r.build + r.sample)), buildMs: median(mount.map(r => r.build)), sampleMs: median(mount.map(r => r.sample)),
     frameMs: frames.length ? median(frames.map(r => r.build + r.sample)) : 0,
     svgBytes: Buffer.byteLength(renderSVG(d, p.grid.cols * pitch, p.grid.rows * pitch)),
@@ -60,17 +77,21 @@ const sorted = [...rows.values()].sort((a, b) => Math.max(b.mountMs, b.frameMs) 
 if (showCards > 0) {
   console.log(`Cards (slowest ${Math.min(showCards, sorted.length)} of ${sorted.length}, median of ${RUNS})`)
   console.log(`${pad('card', 18)} ${pad('anim', 4)} ${lpad('layers', 6)} ${lpad('visible', 7)} ${pad('rend', 6)} ${lpad('build', 7)} ${lpad('sample', 7)} ${lpad('mount', 7)} ${lpad('frame', 7)} ${lpad('svgKB', 6)}`)
-  for (const r of sorted.slice(0, showCards)) console.log(`${pad(r.id, 18)} ${pad(r.animated ? 'Y' : '', 4)} ${lpad(r.layers, 6)} ${lpad(r.visible, 7)} ${pad(r.renderer, 6)} ${lpad(f(r.buildMs), 7)} ${lpad(f(r.sampleMs), 7)} ${lpad(f(r.mountMs), 7)} ${lpad(r.animated ? f(r.frameMs) : '-', 7)} ${lpad(r.renderer === 'svg' ? kb(r.svgBytes) : '-', 6)}`)
+  for (const r of sorted.slice(0, showCards)) console.log(`${pad(r.id, 18)} ${pad(r.gpu ? 'GPU' : r.animated ? 'Y' : '', 4)} ${lpad(r.layers, 6)} ${lpad(r.visible, 7)} ${pad(r.renderer, 6)} ${lpad(f(r.buildMs), 7)} ${lpad(f(r.sampleMs), 7)} ${lpad(f(r.mountMs), 7)} ${lpad(r.animated ? f(r.frameMs) : '-', 7)} ${lpad(r.renderer === 'svg' ? kb(r.svgBytes) : '-', 6)}`)
   console.log('')
 }
 
-interface BoardRow { id: string; cards: number; animated: number; mountMs: number; frameMs: number; worstLive: string; worstLiveMs: number; svgCards: number; svgBytes: number; svgAllBytes: number; over: string[] }
+interface BoardRow { id: string; cards: number; animated: number; mountMs: number; frameMs: number; allMs: number; gpuMs: number; worstLive: string; worstLiveMs: number; svgCards: number; svgBytes: number; svgAllBytes: number; over: string[] }
 const boardRows: BoardRow[] = boards.map(b => {
-  const rs = b.items.map(p => rows.get(p.id)!), an = rs.filter(r => r.animated), svg = rs.filter(r => r.renderer === 'svg')
+  const rs = b.items.map(p => rows.get(p.id)!), an = rs.filter(r => r.animated && !r.gpu), svg = rs.filter(r => r.renderer === 'svg')
+  // the busiest viewport: the worst sum over any VIEWPORT_CARDS consecutive animated CPU cards
+  let frameMs = 0
+  for (let i = 0; i <= Math.max(0, an.length - VIEWPORT_CARDS); i++) frameMs = Math.max(frameMs, an.slice(i, i + VIEWPORT_CARDS).reduce((s, r) => s + r.frameMs, 0))
   const worst = an.reduce<Row | undefined>((w, r) => (!w || r.frameMs > w.frameMs ? r : w), undefined)
   const row: BoardRow = {
-    id: b.id, cards: rs.length, animated: an.length,
-    mountMs: rs.reduce((s, r) => s + r.mountMs, 0), frameMs: an.reduce((s, r) => s + r.frameMs, 0),
+    id: b.id, cards: rs.length, animated: rs.filter(r => r.animated).length,
+    mountMs: rs.reduce((s, r) => s + r.mountMs, 0), frameMs, allMs: an.reduce((s, r) => s + r.frameMs, 0),
+    gpuMs: rs.filter(r => r.gpu).reduce((s, r) => s + r.frameMs, 0),
     worstLive: worst?.id ?? '-', worstLiveMs: worst?.frameMs ?? 0,
     svgCards: svg.length, svgBytes: svg.reduce((s, r) => s + r.svgBytes, 0), svgAllBytes: rs.reduce((s, r) => s + r.svgBytes, 0), over: [],
   }
@@ -80,9 +101,9 @@ const boardRows: BoardRow[] = boards.map(b => {
   if (row.svgBytes >= BUDGET.svgBytes) row.over.push('svg')
   return row
 })
-console.log(`Boards — budgets: mount ≤ ${BUDGET.mountMs} ms, frame ≤ ${BUDGET.frameMs} ms, worst live ≤ ${BUDGET.liveMs} ms, SVG < ${kb(BUDGET.svgBytes)} KB`)
-console.log(`${pad('board', 11)} ${lpad('cards', 5)} ${lpad('anim', 4)} ${lpad('mount ms', 9)} ${lpad('frame ms', 9)} ${pad('worst live (ms)', 26)} ${lpad('svg cards', 9)} ${lpad('SVG KB', 7)} ${lpad('all-SVG KB', 10)}  over`)
-for (const r of boardRows) console.log(`${pad(r.id, 11)} ${lpad(r.cards, 5)} ${lpad(r.animated, 4)} ${lpad(f(r.mountMs), 9)} ${lpad(f(r.frameMs), 9)} ${pad(r.animated ? `${r.worstLive} (${f(r.worstLiveMs)})` : '-', 26)} ${lpad(r.svgCards, 9)} ${lpad(kb(r.svgBytes), 7)} ${lpad(kb(r.svgAllBytes), 10)}  ${r.over.join(',') || 'ok'}`)
+console.log(`Boards — budgets: mount ≤ ${BUDGET.mountMs} ms, frame (worst ${VIEWPORT_CARDS} consecutive live CPU cards) ≤ ${BUDGET.frameMs} ms, worst live ≤ ${BUDGET.liveMs} ms, SVG < ${kb(BUDGET.svgBytes)} KB; all and gpu fb are reference only`)
+console.log(`${pad('board', 11)} ${lpad('cards', 5)} ${lpad('anim', 4)} ${lpad('mount ms', 9)} ${lpad('frame ms', 9)} ${lpad('all ms', 8)} ${lpad('gpu fb', 7)} ${pad('worst live (ms)', 26)} ${lpad('svg cards', 9)} ${lpad('SVG KB', 7)} ${lpad('all-SVG KB', 10)}  over`)
+for (const r of boardRows) console.log(`${pad(r.id, 11)} ${lpad(r.cards, 5)} ${lpad(r.animated, 4)} ${lpad(f(r.mountMs), 9)} ${lpad(f(r.frameMs), 9)} ${lpad(f(r.allMs), 8)} ${lpad(r.gpuMs ? f(r.gpuMs) : '-', 7)} ${pad(r.animated ? `${r.worstLive} (${f(r.worstLiveMs)})` : '-', 26)} ${lpad(r.svgCards, 9)} ${lpad(kb(r.svgBytes), 7)} ${lpad(kb(r.svgAllBytes), 10)}  ${r.over.join(',') || 'ok'}`)
 
 const si = args.indexOf('--sim-t'), simTs = (si >= 0 ? args[si + 1] : '1,60,3600').split(',').map(Number)
 const simRows = simTs.map(T => {
