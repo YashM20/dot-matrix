@@ -36,7 +36,7 @@ export interface BoardDef extends BoardMeta, BoardContents {}
 
 /** Every reference board in public/images, in the order they appear there. */
 export const boardManifest = [
-  { id: 'henry', title: 'OLED MICRO INTERFACE SYSTEM', columns: 3, density: 'standard', load: () => import('./boards/henry').then(m => ({ items: m.henryBoard })) },
+  { id: 'henry', title: 'MICRO UI', columns: 3, density: 'standard', load: () => import('./boards/henry').then(m => ({ items: m.henryBoard })) },
   { id: 'deerflow12', title: 'DEERFLOW AIoT DASHBOARD: 12', columns: 3, density: 'dense', load: () => import('./boards/deerflow12').then(m => ({ items: m.deerflow12Board })) },
   { id: 'mosaic', title: 'DEERFLOW MOSAIC: AIoT COMMAND CENTER', columns: 3, density: 'standard', load: () => import('./boards/mosaic').then(m => ({ items: m.mosaicBoard })) },
   { id: 'henry3', title: 'HENRY LI: 14A / 247W', columns: 3, density: 'standard', load: () => import('./boards/henry3').then(m => ({ items: m.henry3Board })) },
