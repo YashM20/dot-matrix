@@ -63,6 +63,11 @@ export interface BigTextOptions extends TextOptions {
   align?: 'left' | 'center' | 'right'
   /** The glyphs are a shape (a relief or engraving mask), never drawn as dots: `smooth` keeps Scale2x at any lattice. */
   mask?: boolean
+  /**
+   * A smaller part of one smooth value (a decimal, a unit drawn as part of the number): `smooth` keeps Scale2x below
+   * `SMOOTH_MIN_LATTICE`, so the whole value reads in one style.
+   */
+  keepSmooth?: boolean
 }
 /** `smooth` (Scale2x) text needs a lattice of this many card cells or more: below it the two-dot strokes read as a cluster. */
 export const SMOOTH_MIN_LATTICE = 2.5
@@ -74,7 +79,7 @@ export const SMOOTH_MIN_LATTICE = 2.5
  *   `ky` apart, drawn as round dot sites (sized by the narrower pitch), so the dots stay round.
  */
 export function bigText(grid: GridConfig, str: string, col: number, row: number, opts: BigTextOptions): Omit<Layer, 'tone'> {
-  const [sx, sy] = scaleOf(opts), plain = !!opts.smooth && !opts.mask && opts.lattice < SMOOTH_MIN_LATTICE
+  const [sx, sy] = scaleOf(opts), plain = !!opts.smooth && !opts.mask && !opts.keepSmooth && opts.lattice < SMOOTH_MIN_LATTICE
   const k = plain ? opts.lattice * 2 : opts.lattice, face: TextOptions = { smooth: !!opts.smooth && !plain }
   const kx = k * sx, ky = k * sy, w = textWidth(str, face) * kx
   const left = opts.align === 'center' ? col - w / 2 : opts.align === 'right' ? col - w : col
