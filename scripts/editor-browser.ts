@@ -114,6 +114,8 @@ async function desktop() {
   const p = await launch(1440, 900), h = helpers(p)
   try {
     await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
+    // every note the editor shows (each clears itself after a few seconds), so a failed autosave check can say why
+    await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: `window.__notes = []; new MutationObserver(() => { const n = document.querySelector('.ed-note')?.textContent; if (n && window.__notes.at(-1) !== n) window.__notes.push(n) }).observe(document, { subtree: true, childList: true, characterData: true })` })
     await p.allowDownloads(out)
     await p.cdp('Browser.grantPermissions', { permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'], origin: new URL(base).origin }).catch(() => null)
     const opened = await h.fresh(`${base}?make&pro=1`)
@@ -272,7 +274,8 @@ async function desktop() {
     // a kept link frame is saved only once it drew within the program budget (#142): wait for that save, as a
     // visitor's reload would come after it (a slow runner can take longer than the autosave's 500 ms)
     const saved = await p.waitFor(`(JSON.parse(localStorage.getItem('dot480.editor.v1') ?? '{}').frames?.length ?? -1) === ${n1}`, 15000)
-    check('the kept link frame is autosaved (once it drew within budget)', saved, `${n1} frames on screen`)
+    const notes = saved ? '' : await p.js<string>(`(window.__notes ?? []).join(' | ')`)
+    check('the kept link frame is autosaved (once it drew within budget)', saved, `${n1} frames on screen${notes && `; notes: ${notes}`}`)
     // without the save a reload drops the frame by design (#142), so the re-open check would test nothing
     if (saved) {
       await h.go(link, `!!document.querySelector('.ed-insp .dw-code textarea')`); await sleep(600)

@@ -40,13 +40,13 @@
   "mo-progress": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "9bcc6722",
-    "dots": 1012
+    "hash": "d723dcbe",
+    "dots": 1004
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "07e0f207",
-    "dots": 1047
+    "hash": "eb0fc3b0",
+    "dots": 1039
    }
   },
   "mo-wait": {
@@ -64,13 +64,13 @@
   "mo-ring": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "8e08e2ec",
-    "dots": 700
+    "hash": "9eafc9d2",
+    "dots": 627
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "f41bc13b",
-    "dots": 739
+    "hash": "a14c16ce",
+    "dots": 646
    }
   },
   "mo-skeleton": {

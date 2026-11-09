@@ -114,7 +114,7 @@ export const matFold: WidgetPreset = {
     const out = shadeFold(posedAt(f), L, f.active >= 0 ? creaseLine(CREASES[f.active]) : null)
     const n = f.active >= 0 ? f.active + 1 : f.k, kind = f.active >= 0 && f.phase === 'fold' ? CREASES[f.active].kind.toUpperCase() : WORDS[f.phase]
     return [
-      cite('STRAIGHT CREASES'),
+      cite('STRAIGHT FOLD'),
       tonedLayer(out.values, out.tones),
       ...(out.red.length ? [layer(T.dots(out.red, 1), 'active')] : []),
       layer(T.text(n ? `CREASE ${n} OF ${STEPS}` : 'A SHEET', 6, 135), 'mid'),

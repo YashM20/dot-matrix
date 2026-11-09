@@ -10,7 +10,8 @@ import { sceneLight, type SceneLightInput } from '../../engine/light/input'
 import { createRaster, rasterWindow, sample, type Raster } from '../../engine/raster/raster'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import type { Field, Layer, Tone } from '../../engine/types'
-import { TILE, layer, layoutFor, tileStyle, type WidgetContext } from '../types'
+import { TILE, layoutFor, tileStyle, type WidgetContext } from '../types'
+import { caption } from '../captions'
 
 export const T = layoutFor(TILE)
 export type Pt = [number, number]
@@ -24,10 +25,8 @@ export const once = <V>(make: () => V) => { let v: V | undefined; return () => (
 /** The light hub's fixture values (F0): every card declares them, or `Board.tsx` never passes them in. */
 export const LIGHT_DEFAULTS = { lightSrc: 0, lightAz: 0, lightEl: 7, tx: 0, ty: 0 } as const
 export const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
-/** Caption tier (0.72 lattice), as on the algorithms board. */
-export const cap = (s: string, col: number, row: number, align?: 'left' | 'center' | 'right') => T.big(s, col, row, { lattice: .72, align })
 /** Top-right: what the card is built on, in `mid` (`faint` is too dim for text). */
-export const cite = (s: string) => layer(cap(s, 143, 1, 'right'), 'mid')
+export const cite = (s: string) => caption(s)
 
 export interface MatLightOptions {
   /** The normals' lattice (card cells per dot) and its origin, to map the pointer (default: card pitch). */

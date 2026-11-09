@@ -53,7 +53,8 @@ export const ride: WidgetPreset = {
       layer(T.dots(ringSites(cx, cy, r, n, track), 3.9), 'idle'),
       layer(T.dots(ringSites(cx, cy, r, n, i => i >= 8 && i < 8 + red && track(i)), 4.3), 'active'),
       layer(T.big('32', 24, 47.5, { lattice: 2.7, smooth: true })),
-      layer(T.big('.', 81, 60, { lattice: 2, smooth: true })), layer(T.big('4', 98, 60, { lattice: 2, smooth: true })),
+      // the decimal is part of the smooth 32: it keeps the smooth face below lattice 2.5
+      layer(T.big('.', 81, 60, { lattice: 2, smooth: true, keepSmooth: true })), layer(T.big('4', 98, 60, { lattice: 2, smooth: true, keepSmooth: true })),
       layer(soft(T.big('KM/H', 72, 98, { lattice: 1.5, align: 'center' }))),
       layer(T.big('247', 42, 126, { lattice: 1.05, smooth: true })), layer(T.big('W', 87, 126, { lattice: 1.05, smooth: true })),
     ]
@@ -215,13 +216,13 @@ export const systemMenu: WidgetPreset = {
 }
 
 // ── Last Password: dotted dial, red marker at 12, masked password ───────────
-const PW_DOT: Pt[] = [[1, 0], [2, 0], [0, 1], [1, 1], [2, 1], [3, 1], [0, 2], [1, 2], [2, 2], [3, 2], [1, 3], [2, 3]]
 export const lastPassword: WidgetPreset = {
   id: 'last-password', name: 'Last Password', group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     layer(T.dots(ringSites(70.6, 66.1, 50, 58, i => i >= 2 && i <= 56), 3.1), 'idle'),
     layer(T.dots([[70.6, 16.1]], 7.6), 'active'),
-    layer(T.dots(range(32.4, 10.37, 8).flatMap(cx => PW_DOT.map(([i, j]): Pt => [cx + (i - 1.5) * 1.95, 64.7 + (j - 1.5) * 1.95])), 2.2)),
+    // the masked password: one big dot per character
+    layer(T.dots(range(32.4, 10.37, 8).map((cx): Pt => [cx, 64.7]), 8)),
     layer(T.big('24 ITEMS', 71.5, 125, { lattice: 1.6, align: 'center' }), 'idle'),
   ],
 }

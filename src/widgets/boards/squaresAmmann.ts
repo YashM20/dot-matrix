@@ -43,6 +43,8 @@ export interface AbFrame {
 }
 const big = new Int32Array(W * H), bigDepth = new Float32Array(W * H), fine = new Int32Array(W * H), fineDepth = new Float32Array(W * H), keep = new Uint8Array(W * H)
 const CODE = [1, 2, 3, 4, 3, 4]
+/** Each frame cell's card cell as a site, built once and shared by every frame (the sampler only reads sites). */
+const CELLS: Pt[] = Array.from({ length: W * H }, (_, i) => [ORIGIN[0] + i % W, ORIGIN[1] + Math.floor(i / W)])
 let last: { p: number; f: AbFrame } | undefined
 /** The frame at phase p ∈ [0, 1): big tiles at zoom δ^p, split where the front (p · REACH) has passed their centre. */
 export function abFrame(p: number): AbFrame {
@@ -72,7 +74,7 @@ export function abFrame(p: number): AbFrame {
     // edge neighbours among axis squares differ by one line number, so parity splits them; small tiles + 2
     group[i] = ((T.nj + T.nk) & 1) + (s ? 2 : 0)
     if (!(seen[t] & bit)) { seen[t] |= bit; shown++ }
-    if (k >= 3) (red ? redSites : k === 3 ? mid : faint).push([ORIGIN[0] + i % W, ORIGIN[1] + Math.floor(i / W)])
+    if (k >= 3) (red ? redSites : k === 3 ? mid : faint).push(CELLS[i])
   }
   const f: AbFrame = { code, tile: owner, group, zoom, front, shown, red: next >= 0, mid, faint, redSites }
   last = { p, f }

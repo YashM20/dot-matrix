@@ -13,6 +13,7 @@ import type { Layer } from '../../engine/types'
 import type { Control } from '../../engine/context'
 import { clamp, mix } from '../../engine/math'
 import { TAU, TILE, dim, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { caption } from '../captions'
 import { faceLayers, restPose, sdBlob, sdCircle, sitesFor, smooth, type Look, type Pose, type Pt } from './faces-kit'
 import {
   NO_INPUT, awakeAt, blinkAt, dayWord, ease, gazeAt, hourOf, makeBlinks, makeGazes, memory, pulse, readInput,
@@ -188,7 +189,7 @@ function draw(c: Character, mem: Memory, ctx: WidgetContext): Layer[] {
   return [
     ...faceLayers(c.look, p, sitesOf(c)),
     ...(c.zz && asleep ? zzz(c, t, still) : []),
-    layer(T.big(word, 143, 1, { lattice: .72, align: 'right' }), 'mid'),
+    caption(word),
   ]
 }
 

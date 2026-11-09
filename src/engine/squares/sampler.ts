@@ -50,6 +50,8 @@ export function joinPass(a: JoinArgs): JoinFrame {
   const axes = layers.map(l => (l.sizeAxis === 'y' ? 1 : l.sizeAxis === 'x' ? 2 : 0))
   // imported bindings read once (module-interop getters are not free per cell)
   const K = key, T = tone, S = slot, q = Math.max(1, steps - 1), ti = toneIndex, ACTIVE = TONE.active, DIM = TONE.activeDim
+  // most cells of a window hold 0 (no layer lit them): their tone is one constant
+  const EMPTY = ti(undefined, 0)
   // per layer, resolved once: the spec's fields, and whether tone and group vary per cell
   const n0 = layers.length, at = new Float64Array(n0), accent = new Uint8Array(n0), groupFn: (((u: number, v: number) => number) | null)[] = [], group0 = new Int32Array(n0)
   for (let l = 0; l < n0; l++) {
@@ -63,7 +65,7 @@ export function joinPass(a: JoinArgs): JoinFrame {
   for (let r = r0; r <= r1; r++) for (let c = c0, i = (r - r0) * width; c <= c1; c++, i++) {
     const v = best[i], o = owner[i]
     K[i] = 0; F[i] = 15
-    if (!o || (covered !== null && covered[i])) { T[i] = ti(undefined, v); continue }
+    if (!o || (covered !== null && covered[i])) { T[i] = v === 0 ? EMPTY : ti(undefined, v); continue }
     const l = o - 1, L = layers[l]
     if (L.shapeOf || L.rotation || L.motif) F[i] = formOf(L, v, us[c], vs[r])
     let t: number

@@ -27,7 +27,7 @@ import { clamp, hash01 } from '../../engine/math'
 import type { DotStyle, Layer, Tone } from '../../engine/types'
 import { TILE, layer, stack, type WidgetPreset } from '../types'
 import { portrait } from './mirror'
-import { FOOT, T, cap, cells, cite, footer, mod, pad, squareStyle, thousands, tile, type Pt } from './squaresKit'
+import { FOOT, T, cells, cite, footer, mod, pad, squareStyle, thousands, tile, type Pt } from './squaresKit'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { frontOf, squareMorph } from '../../engine/squares/morph'
 import { squaresPack } from './squaresPack'
@@ -355,7 +355,7 @@ export const sqMorph: WidgetPreset = {
     // only the front row can light: bound the red layer's window to it
     red.field.bounds = front < 0 ? [0, 0, -1, -1] : [0, front, LW - 1, front]
     // the red row is always mid-turn (never joined): only its shape follows the front
-    return [layer(cap(`SHAPE ${pad(k * 100, 3)}%`, 143, 1, 'right'), 'mid'), ...squareMorph([lcd], k, opts), ...squareMorph([red], k, { width: M_WIDTH })]
+    return [cite(`SHAPE ${pad(k * 100, 3)}%`), ...squareMorph([lcd], k, opts), ...squareMorph([red], k, { width: M_WIDTH })]
   },
 }
 

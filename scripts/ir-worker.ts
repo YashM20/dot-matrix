@@ -176,6 +176,13 @@ export async function irWorkerChecks(assert: Assert) {
   const sp = new Float64Array(2 * 4096).map((_, i) => (i % 97) / 97)
   const res = evaluateBatch({ kind: 'eval', id: 1, items: [{ slot: 'a', src: slow, pv: 0, n: 4096, points: sp, env: { t: 0 } }, { slot: 'b', src: 'u', pv: 0, n: 1, points: new Float64Array(2), env: {} }] }, pointStore(), () => {}, () => (clock += 5))
   assert('ir worker guard: the worker pauses a program past the frame budget and asks for the rest of its batch again', res[0].status === 'paused' && res[1].status === 'skip', res.map(r => r.status).join(','))
+  // a batch holds several frames' programs (and the remix graph's thumbnails): each gets its own budget, so a cheap
+  // one queued behind another that used most of its budget still draws; past one budget the rest are asked again.
+  // `u` reads the clock once per 4096 dots, so each item below reads it 7 times after its first dot: 35 ms at 5 ms a read.
+  let at = 0
+  const n7 = 7 * 4096 + 1, p7 = new Float64Array(2 * n7), cheap = (slot: string) => ({ slot, src: 'u', pv: 0, n: n7, points: p7, env: {} })
+  const own = evaluateBatch({ kind: 'eval', id: 2, items: [cheap('c'), cheap('d'), cheap('e')] }, pointStore(), () => {}, () => (at += 5))
+  assert('ir worker guard: each program in a batch has its own frame budget (a cheap one behind a busy one is not paused), and a batch past one budget asks for the rest again', own.map(r => r.status).join() === 'ok,ok,skip', own.map(r => r.status).join(','))
 
   // ── frame time (informational): the main thread's share of one frame ──
   const ex = importDots(EXAMPLES[1]), lcx = local(ex, irGuard(1e9)), { remote: fr } = fakeRemote(() => 'ok'), rcx = compileCard(ex, new Map(), { guard: irGuard(1e9), remote: fr })

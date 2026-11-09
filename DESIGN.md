@@ -96,13 +96,23 @@ Cards are `TILE` rasters: **144×144 dots at 2.25px** (`src/widgets/types.ts`), 
 
 | Token | Helper | Lattice | Glyph | Use |
 |---|---|---|---|---|
-| `{typography.label}` | chrome / `T.text` | 1 | 5×7 (advance 6 cells ≈ 4% of card) | Card label, captions, units, grid ticks |
+| `{typography.label}` | chrome / `T.text`, `caption()`, `footer()` | 1 | 5×7 (advance 6 cells ≈ 4% of card) | Card label, captions, footers, units, grid ticks |
 | `{typography.body}` | `T.big(s, col, row, { lattice: 1.25–1.3 })` | 1.25–1.3 | 5×7 | Sub-lines ("SFO — LHR", "03 AHEAD", "LISTENING") |
 | `{typography.value}` | `T.big(..., { lattice: 1.6–2 })` | 1.6–2 | 5×7 | Stat values, units beside heroes ("H", "M", "W") |
 | `{typography.hero}` | `T.big(..., { lattice: 2.5–3, smooth: true })` | 2.5–3 | 10×14 Scale2x | Clock/stat heroes ("7H 42M", "247", "A-07") |
 | `{typography.display}` | `T.big(..., { lattice: 3.5–4, smooth: true })` | 3.5–4 | 10×14 Scale2x | One-word posters ("14A") |
 
-`smooth` upsamples a glyph 2× with Scale2x: strokes two dots thick, diagonals stepping one dot — the reference numeral weight. Rings, arcs, rays and dot sliders use **dot sites** (`T.dotRing` / `T.dotLine` / `T.dotDisc` / `T.dotBars` / `T.dots`): evenly spaced dots along the curve, never square-grid rasters. A red marker or status dot is a single site dot (`T.dots([[x, y]], 7–9)`).
+`smooth` upsamples a glyph 2× with Scale2x: strokes two dots thick, diagonals stepping one dot — the reference numeral weight.
+
+Text rules (`bigText` in `src/engine/layout.ts`, behind `T.big` and the chart labels):
+- **No caption tier below lattice 1.** Captions and footers land on card cells, never between them. The old 0.72 caption tier is gone (exceptions below). A caption that does not fit at lattice 1 gets shorter words; the full credit lives on the widget page.
+- **`caption(s)` and `footer(left, right, row)`** (`src/widgets/captions.ts`) are the one caption and footer every TILE kit uses. The caption sits top-right on the label's row (row 0) in `{colors.dotMid}`. The footer puts a counter left in `idle` and one stat right in `mid`.
+- **`smooth` needs a lattice of 2.5 or more** (`SMOOTH_MIN_LATTICE`). Below that, `T.big` draws the plain 5×7 glyph at twice the lattice: the same size with one-dot strokes and a quarter of the dots. The charts readout hero is the plain glyph on lattice 4. A glyph used as a relief or engraving mask (`mask: true`) keeps Scale2x, since it is carved, not drawn as dots. A smaller part of one smooth value, like the decimal in ride's `32.4`, keeps Scale2x too (`keepSmooth: true`): one value reads in one style. A unit or `%` drawn plain beside a smooth number is a separate label and stays plain.
+- **`scale` multiplies the lattice**, so one font pixel is always one dot. A non-uniform scale (`[1, 1.4]`, tall poster type) spaces columns and rows apart on their own pitch and draws round dot sites sized by the narrower pitch.
+
+**Exception: the mosaic board.** Its cards keep the 0.72 caption tier (`CAP` in `mosaic.ts`) as their second type size, as on the reference sheets it is built from. At lattice 1 those labels collide on most of its cards, so moving it off the tier is a relayout of its own (#269, Later). The HIVE game page (`src/game/render.ts`) keeps its 0.72 instruction captions for now too, since they need shorter copy first.
+
+Rings, arcs, rays and dot sliders use **dot sites** (`T.dotRing` / `T.dotLine` / `T.dotDisc` / `T.dotBars` / `T.dots`): evenly spaced dots along the curve, never square-grid rasters. A red marker or status dot is a single site dot (`T.dots([[x, y]], 7–9)`).
 
 Legacy `CARD` (80×74 @ 4px) cards still render, with whole-dot `scale` text (`L.text(..., { scale: [2, 3] })`) and the CSS card header; new cards should be TILE.
 
@@ -331,7 +341,7 @@ Fixture (goldens, snapshots, no sensor): `{ lightSrc: 0, lightAz: 0, lightEl: 7,
 - **Precedence** (`sceneLight`): a pointer inside the card (torch) → tilt (`lightSrc` 1) → the sun of the hour.
 - **Opt-in:** a card declares every key it reads in `defaults`, with the fixture values (undeclared keys never arrive), and its board lists `sources: [lightSource]` both in the manifest entry's `load()` and in the eager registry (`src/widgets/index.ts`). The physics board is the first consumer.
 - **The pond (`pond-koi`, L3):** declares `lightSrc`, `lightAz`, `lightEl`, `tx`, `ty` (`pondSources`). Tilt is water, not gravity: `(tx, ty)` tips the pond's wave field (`rippleTilt`), so the water piles up downhill and sloshes, pellets drift downhill and lily pads 3 cells per unit; any tilt forks the live world, rest is the pristine loop. `lightSrc` 1 shades the koi by the tilt light; otherwise a fixed light, never the clock's sun, so default frames don't move with the hour. The pond reads the hour only for day and night (render-only: night from 21:00 to 05:00, dithered ramps at dusk and dawn; the koi's red never changes).
-- **Glyph style switch (`pond-koi`, `glyphs`):** a two-stop segmented control in the label row (`[104, 0, 40, 9]`): DOTS (0, default) draws 3×3 dot micro-glyphs on 4-cell tiles with lattice-4 dots for koi interiors; TYPE (1) draws the same scene in 5×7 font glyphs on 6×8 tiles, with no lattice dots. The switch shows (DOTS · TYPE, the chosen one in `value`, the other `faint`) while hovered, focused or pressed, or while TYPE is on; otherwise that corner keeps the faint time-of-day caption.
+- **Glyph style switch (`pond-koi`, `glyphs`):** a two-stop segmented control in the label row (`[94, 0, 50, 8]`): DOTS (0, default) draws 3×3 dot micro-glyphs on 4-cell tiles with lattice-4 dots for koi interiors; TYPE (1) draws the same scene in 5×7 font glyphs on 6×8 tiles, with no lattice dots. The switch shows (DOTS · TYPE, the chosen one in `value`, the other `mid`) while hovered, focused or pressed, or while TYPE is on; otherwise that corner keeps the time-of-day caption.
 - **The day and the age (X1, `pond-koi` and `pond-marble`, the board's `pondDaySource`):** `day` = days since 2025-10-27 of the pond's date (a link's `?day=YYYY-MM-DD`, else the local date; rolls over at midnight), `age` = days of visits − 1 from the opt-in pond memory (0 while it is off). Fixture `{ day: 0, age: 0 }`: day 0 is the canonical pond the goldens pin. A day re-seeds the koi (varieties, pads, paths) and the marble's ink, and sets the weather (`calm`, `wind` ×3 drift, `rain` 2.5 drops/s), smooth from day to day; age hatches a fry every 10 days of visits (≤ 3, von Bertalanffy growth to 34 cells). Pond links (⌘K copy, the card's LINK, TOOLS › SHARE, the widget page's LINK / SHORT / SHARE) carry `?day=`; the app drops it off other boards.
 - **Pond memory (X1, opt-in):** TOOLS › POND MEMORY on `/pond/` (and ⌘K "Pond memory: on / off"). Off by default and nothing is stored until it is turned on; on writes one record, localStorage `dot480:pond` = `{ v, born, last, visits }` (≈ 60 B), counted once a day after idle; off deletes it. Only `src/site/pondMemory.ts` touches it.
 - **Calm by default:** a still phone emits nothing; at most 15 updates/s (4 under reduced motion); listeners only while a consumer board is mounted and the tab is visible.
@@ -366,7 +376,7 @@ Outlines, separators and markers are evenly spaced **sites**, never a signed-dis
 | `T.marker(pt, size, { lattice, origin, gap, snap })` | `{ at, dot, cut }`: a marker site snapped to the cell or lattice site under it, and `cut(field)`, which clears that layer within `size / 2 + gap` of it | An accent dot on a sampled field: no grey dot shows half under the red. `snap: false` for a centre between sites |
 | `stack(top, heights, gap = 1)` | Row tops with at least `gap` empty rows between neighbours | Bands, rules and captions stacked under each other |
 
-A knob, button or node is one big site (`T.dots([c], size)`), as on `ui-toggle`; a pill is `T.stadium` plus that knob. `pnpm verify` reports site layers whose dots touch (`scripts/touching.ts`, warn only): two dots of one layer closer than the sum of their radii fuse into a bar at zoom.
+A knob or status dot is one big site (`T.dots([c], size)`), as on `ui-toggle`; an outlined pill is `T.stadium`, and a filled button or pill is `T.fillOn` (see the sites table below). `pnpm verify` reports site layers whose dots touch (`scripts/touching.ts`, warn only): two dots of one layer closer than the sum of their radii fuse into a bar at zoom.
 
 ### Square cells (squares, `src/engine/squares`)
 Square dots can keep a gutter and fuse with their equal neighbours into one shape (docs/living-matter/Q-squares.md). A joined cell is four quarter tiles chosen from its eight neighbours (47 masks); cells join only with the same tone, join group and quantized level.
@@ -415,6 +425,20 @@ A surface that wraps a rounded child with padding takes the child's radius plus 
 - **Icon SDF canvas:** icons rasterize at 4× target grid resolution before distance-transform, then downsample — keeps edges clean at any density.
 - **Status dot:** one site dot about 7 card dots across, top-right of the label row — drawn by `cardChrome()` for `live` TILE cards.
 - **Filtered fields (footprint):** a pattern finer than about two cells (stripes, checkers, fine noise) aliases when it is sampled once per dot, and it shimmers as it moves. A field can opt in to its footprint by setting `footprint` (`withFootprint` / `patternField` in `src/engine/filter`). The sampler then calls it as `f(u, v, du, dv)`, where `du` / `dv` is one cell of the grid it is sampled on: 1 / (cols − 1) on the card or on a layer's `lattice`, and a site dot's `size` in card cells. The field returns its mean over that cell: box or triangle-filtered checkers, `fcos`, the band-limited `ffbm2`, or `supersampled` as the generic fallback. Fields without the flag are called as `f(u, v)` and draw exactly as before. Prefer the triangle filter on animated boards. The GPU value pass (`gpuValues`) samples without a footprint.
+
+### Dot spacing and fills (`src/widgets/sites.ts`)
+Two dots in one layer never touch. A site dot of `size` s is about 0.84·s card cells across at full value, so the helpers keep s at most 0.8 of the distance between centres (`GAP`), which always leaves a gap.
+
+| Helper (`layoutFor`) | Rule |
+|---|---|
+| `T.dots(points, size, text?, gap)` | Drops a point closer than `gap` cells (default 0.8 × size) to one kept before it, so joined arcs and stacked corners draw one dot. `gap: 0` keeps every point, for photo and simulation layers that size their own dots. |
+| `T.dotLine`, `T.dotRing`, `T.dotDisc` | `size` is capped at 0.8 of the spacing (a ring uses the chord between its sites). |
+| `T.dotPath(points, spacing, size, closed?)` | Resamples a polyline by arc length, so the spacing carries across vertices and the joins between arcs stay even. Same size cap. Replaces the per-board `dotPath` and `trace` copies. |
+| `T.fillOn(k, inside, box, size?)` | A filled shape (button, node, stop square, toggle pill, legend block) as a few big dots `k` cells apart, on a lattice centred on `box`. `k` = 2 up to about 16 cells across, 3 above. Two fills with the same `k` and `box` share sites, and the later layer wins, so a glyph on a button (the send arrow, the done check) is its own fill in another tone. Never fill a big shape on the card's fine grid (`T.rect`, `T.disc`, overlapping fine sites). |
+| `T.dotTri(x, y, n, { k, dir, bar })` | A play, prev or next triangle as hex-packed dots `k` apart: tip at (x, y), `n` dots on the base, every neighbour exactly `k` away. `bar` adds the skip bar beyond the tip. |
+| `T.peak(k, origin, field, { from, top })` | A highlight's bright core as one dot: the cells of `field` on the `k` lattice at `top` (default 0.8) of its peak or more become one site sized to their area, and `cut(f)` clears the lattice dots under it. The light board's `gloss` draws its specular as this one `value` dot over the diffuse bands, and the lacquer spot as one dot in an `idle` ring: never a cluster of small bright dots. |
+
+A knob, a single status dot or a masked password character is one site (`T.dots([c], size)`), never a cluster. Site layers whose points come from a simulation or a stipple size each dot to its nearest neighbour (`nearest()`, algorithms `siteLayers`): 0.8 of that distance, in 0.15 steps, so dense areas get smaller dots instead of touching ones.
 
 ## Components
 

@@ -8,6 +8,7 @@ import { GRAY_SCOTT } from '../creditSources'
 import { fallingSand, grayScott, life, lifeStamp, SAND, SAND_B, simMapField, simPhase, simStep, simView, WALL, type Sim } from '../../engine/sim'
 import type { Field, Layer } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
+import { footer as footerText } from '../captions'
 
 const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle } as const
@@ -23,8 +24,7 @@ function footer(sim: Sim, t: number, left: string, right: string): Layer[] {
   for (let c = RAIL.x0; c <= RAIL.x1; c += 3) (c - RAIL.x0 <= (RAIL.x1 - RAIL.x0) * k ? done : rest).push([c, RAIL.y])
   return [
     layer(T.dots(rest, .9), 'faint'), layer(T.dots(done, 1.1), 'mid'),
-    layer(T.text(`${left} ${String(simStep(sim, t)).padStart(4, '0')}`, 0, FOOT), 'idle'),
-    layer(T.text(right, 143, FOOT, { align: 'right' }), 'mid'),
+    ...footerText(`${left} ${String(simStep(sim, t)).padStart(4, '0')}`, right, FOOT),
   ]
 }
 const pad4 = (n: number) => String(Math.min(9999, n)).padStart(4, '0')
