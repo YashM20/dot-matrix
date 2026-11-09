@@ -33,6 +33,13 @@ gh workflow run goldens -f branch=<branch>
 ```
 The `goldens` workflow runs `pnpm golden` on that branch and commits the changed files back as `Regenerate goldens`, only when one changed. It refuses `main` and does nothing in a fork. A push made by the workflow starts no pull_request run, so the workflow dispatches CI on the branch to give the new head its `check + build` result. Merge the new commit before you push again: `git pull` on the branch.
 
+## SEO audit
+An on-demand audit with free tools, on a runner (`.github/workflows/seo-audit.yml`):
+```bash
+gh workflow run seo-audit --ref <branch> [-f live=true]
+```
+It builds the branch and serves `dist/` with `vercel.json`'s redirects, rewrites, headers and 404 page (`scripts/site/serve.ts`, so a broken link gets a real 404 instead of the home page). Then it runs Lighthouse (SEO, best practices, accessibility) on a set of routes at mobile and desktop, the W3C Nu checker on the built pages, and lychee on every link of every sitemap page. `live=true` adds Lighthouse on the production site. The run summary has the tables (`scripts/site/seo-audit.ts`) and the raw reports are the `seo-audit` artifact. It is a report, not a gate: `scripts/site/seo-check.ts` in CI holds the fixes in place.
+
 ## The first harness (historical, 2026-08)
 > The commands below are outdated (npm, module counts). Use the section above.
 
