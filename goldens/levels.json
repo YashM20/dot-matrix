@@ -4,13 +4,13 @@
   "lv-title": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "55c93de2",
-    "dots": 2828
+    "hash": "90ee646e",
+    "dots": 2818
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "848250d0",
-    "dots": 2706
+    "hash": "267187d0",
+    "dots": 2696
    }
   },
   "lv-corridor": {
@@ -76,13 +76,13 @@
   "lv-queen": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "de7c8d31",
-    "dots": 515
+    "hash": "7dd957e4",
+    "dots": 490
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "ac99e4de",
-    "dots": 515
+    "hash": "98887cb1",
+    "dots": 490
    }
   },
   "lv-over": {

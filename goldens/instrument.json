@@ -64,13 +64,13 @@
   "inst-xy": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "718d608a",
-    "dots": 319
+    "hash": "d2239665",
+    "dots": 318
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "28cca7fe",
-    "dots": 318
+    "hash": "a2b43735",
+    "dots": 316
    }
   },
   "inst-transport": {
@@ -100,13 +100,13 @@
   "inst-crank": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "352fb284",
-    "dots": 329
+    "hash": "fb0bf212",
+    "dots": 324
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "352fb284",
-    "dots": 329
+    "hash": "fb0bf212",
+    "dots": 324
    }
   }
  }

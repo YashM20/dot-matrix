@@ -76,13 +76,13 @@
   "light-emissive": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "56bb494e",
-    "dots": 2254
+    "hash": "67c9522a",
+    "dots": 2241
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "56bb494e",
-    "dots": 2254
+    "hash": "67c9522a",
+    "dots": 2241
    }
   },
   "light-metal": {
