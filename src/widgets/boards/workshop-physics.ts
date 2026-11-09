@@ -40,6 +40,14 @@ const DT = 1 / 30
 const PHYS_DEFAULTS = { ...LIGHT_DEFAULTS, gx: 0, gy: 1, k: 0 }
 /** The whole card below the label is a drag surface (horizontal drag or hold on touch; a still tap acts). */
 const surface = (label: string): Control[] => [{ key: 'k', kind: 'button', gesture: 'surface', box: [0, 10, 144, 134], label }]
+/** Probe mode (`?probe=1`): the last time each live world fell back to pristine, with the time and the caller. */
+const fellBack: Record<string, string> = {}
+function tracedAt(id: string, w: World, t: number, f: FrameInput | undefined): Float32Array {
+  if (!probing) return worldAt(w, t, f)
+  const was = w.mode, liveT = w.liveT, s = worldAt(w, t, f)
+  if (was !== 'pristine' && w.mode === 'pristine') fellBack[id] = `${was} → pristine at t ${t.toFixed(3)} (live t ${liveT.toFixed(3)}), pointers ${f?.pointers?.length ?? 'none'}; ${new Error().stack?.split('\n').slice(2, 10).map(l => l.trim()).join(' < ')}`
+  return s
+}
 /** This frame's input in world units: pointers, the hub's gravity, Enter / Space as a kick. Reduced motion: none. */
 function physInput(ctx: WidgetContext, map: (x: number, y: number) => [number, number]): FrameInput | undefined {
   if (ctx.reducedMotion) return undefined
@@ -171,7 +179,7 @@ export const matSand: WidgetPreset = {
   controls: surface('Rake the sand'),
   layers: ctx => {
     mainThread('mat-sand')
-    const w = sandWorld(), s = worldAt(w, ctx.t, physInput(ctx, (x, y) => [sandX(x), sandY(y)]))
+    const w = sandWorld(), s = tracedAt('mat-sand', w, ctx.t, physInput(ctx, (x, y) => [sandX(x), sandY(y)]))
     const L = snapTorch(matLight(ctx, { lattice: K2, origin: [SAND.i0 * K2, SAND.j0 * K2], torch: { height: 24, falloff: 140 }, rake: true, rakeHi: 22 * DEG }), 2)
     const F = sandFrame()
     if (w.mode === 'pristine') {
@@ -296,7 +304,7 @@ export const matMercury: WidgetPreset = {
   controls: surface('Stir the mercury'),
   layers: ctx => {
     mainThread('mat-mercury')
-    const w = mercuryWorld(), s = worldAt(w, ctx.t, physInput(ctx, (x, y) => [mercX(x), mercY(y)]))
+    const w = mercuryWorld(), s = tracedAt('mat-mercury', w, ctx.t, physInput(ctx, (x, y) => [mercX(x), mercY(y)]))
     const L = snapTorch(matLight(ctx, { lattice: K2, torch: { height: 40, falloff: 200 } }), 2), tilt: [number, number] = [ctx.data.tx ?? 0, ctx.data.ty ?? 0]
     const F = mercFrame()
     if (w.mode === 'pristine') {
@@ -421,7 +429,7 @@ export const matThread: WidgetPreset = {
   controls: surface('Pull the thread'),
   layers: ctx => {
     mainThread('mat-thread')
-    const s = worldAt(threadWorld(), ctx.t, physInput(ctx, (x, y) => [x, y]))
+    const s = tracedAt('mat-thread', threadWorld(), ctx.t, physInput(ctx, (x, y) => [x, y]))
     const L = snapTorch(matLight(ctx, { torch: { height: 30, falloff: 150 } }), 3), F = threadFrame(), V = F.values.data, Tn = F.tones, HP = F.hp
     const paid = s[thread.S] - thread.length, phase = Math.round(paid * 4) / 4, pulled = s[thread.S + 1] > .5
     const sp = spoolLit(`${lightKey(L)}|${phase}`, () => spoolBake(L, phase))
@@ -448,7 +456,7 @@ if (probing) {
   ;(globalThis as { __workshop?: unknown }).__workshop = {
     mode: (id: string) => worlds[id]?.().mode,
     /** The world's mode, its NaN resets and its dropped steps, as one line for a failed check. */
-    state: (id: string) => { const w = worlds[id]?.(); return w ? `${w.mode}, resets ${w.resets}, dropped ${w.dropped}, live steps ${w.liveSteps}` : 'none' },
+    state: (id: string) => { const w = worlds[id]?.(); return w ? `${w.mode}, resets ${w.resets}, dropped ${w.dropped}, live steps ${w.liveSteps}; last fell back: ${fellBack[id] ?? 'never'}` : 'none' },
     /** Dropped stones on the sand now. */
     stones: () => { const w = sandWorld(); if (w.mode === 'pristine') return 0; let k = 0; for (let q = 0; q < SAND.slots; q++) if (w.live[S_ST + 3 * q + 2] > 0) k++; return k },
     /** Sand cells moved by more than .05 from the garden. */
