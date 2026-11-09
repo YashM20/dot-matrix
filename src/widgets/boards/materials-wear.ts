@@ -14,7 +14,7 @@ import { twill } from '../../engine/matter/weave'
 import { createRaster, sample, type Raster } from '../../engine/raster/raster'
 import type { CellBounds } from '../../engine/types'
 import { TILE, layer, type WidgetPreset } from '../types'
-import { L15, LG15, LIGHT_DEFAULTS, T, cap, cite, matLight, mod, once, pad2, scratch, snapTorch, tile, toCard15, valuedSites, type Pt } from './materials-shared'
+import { L15, LG15, LIGHT_DEFAULTS, T, cite, matLight, mod, once, pad2, scratch, snapTorch, tile, toCard15, valuedSites, type Pt } from './materials-shared'
 
 const COLS = TILE.cols
 
@@ -216,7 +216,7 @@ export const matCandle: WidgetPreset = {
     flameInto(S.flame.data, ctx.reducedMotion ? 0 : ctx.t, fx, top - 17, base)
     const fj = Math.max(0, Math.floor((top - 22) / L15)), fi = Math.floor((fx - 8) / L15)
     S.flame.bounds = [fi, fj, fi + Math.ceil(16 / L15), Math.min(LG15.rows - 1, fj + Math.ceil(24 / L15))]
-    const marks = [6, 12, 18].filter(h => h > hour).map(h => layer(cap(String(h), CANDLE.x1 + 4, CANDLE.full + CANDLE.perHour * h - 2), 'mid'))
+    const marks = [6, 12, 18].filter(h => h > hour).map(h => layer(T.text(String(h), CANDLE.x1 + 4, Math.round(CANDLE.full + CANDLE.perHour * h - 3)), 'mid'))
     return [
       cite('WAX · SUBSURFACE'),
       layer(T.text(`${pad2(now.getHours())}:${pad2(now.getMinutes())}`, 0, 134), 'mid'),

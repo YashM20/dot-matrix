@@ -7,7 +7,8 @@ import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { lookAt, type Camera, type V3 } from '../../engine/sdf3d/march'
 import { renderScene, SKY, SUN, type Frame, type Scene } from '../../engine/sdf3d/render'
 import type { Layer, Tone } from '../../engine/types'
-import { TILE, layer, layoutFor, tileStyle, type WidgetCredit } from '../types'
+import { TILE, layoutFor, tileStyle, type WidgetCredit } from '../types'
+import { caption, footer as footerText } from '../captions'
 
 export const T = layoutFor(TILE)
 /** CPU at card pitch, 12 frames a second: a scene is a few hundred thousand distance reads a frame. */
@@ -80,13 +81,10 @@ export function scenePlate(K: number, scene: (rows: number) => Scene, paint: (f:
   }
 }
 
-/** Footer: a counter left (idle) and one stat right (mid) (card row FOOT). */
-export const footer = (left: string, right: string): Layer[] => [
-  layer(T.text(left, 0, FOOT), 'idle'),
-  layer(T.text(right, 143, FOOT, { align: 'right' }), 'mid'),
-]
-/** Caption tier (0.72 lattice), `mid`, top-right. Plain words only, never a formula. */
-export const caption = (s: string): Layer => layer(T.big(s, 143, 1, { lattice: .72, align: 'right' }), 'mid')
+/** Footer: a counter left, an optional stat right in `mid` (card row FOOT). A card that only has a formula to say leaves the right out. */
+export const footer = (left: string, right = ''): Layer[] => footerText(left, right, FOOT)
+/** Top-right caption (`captions.ts`). Plain words only, never a formula. */
+export { caption }
 
 export const pad = (n: number, w: number) => String(Math.max(0, Math.floor(n))).padStart(w, '0').slice(-w)
 /** Seconds → a looped phase in [0, 1). */

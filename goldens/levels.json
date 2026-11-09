@@ -64,49 +64,49 @@
   "lv-void": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "bff3df6e",
+    "hash": "efd8dec0",
     "dots": 850
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "4a742ede",
+    "hash": "ba4db64a",
     "dots": 821
    }
   },
   "lv-queen": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "bf838999",
+    "hash": "35895c22",
     "dots": 515
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "8f2ffe66",
+    "hash": "43355b15",
     "dots": 515
    }
   },
   "lv-over": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "3984adf5",
-    "dots": 2032
+    "hash": "184cf0b8",
+    "dots": 1523
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "4de03439",
-    "dots": 2041
+    "hash": "065434e7",
+    "dots": 1527
    }
   },
   "lv-scores": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "1e1dfe51",
-    "dots": 1521
+    "hash": "caf47ecd",
+    "dots": 1242
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "1e1dfe51",
-    "dots": 1521
+    "hash": "caf47ecd",
+    "dots": 1242
    }
   }
  }

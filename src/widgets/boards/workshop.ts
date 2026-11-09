@@ -253,7 +253,7 @@ const woodCuts = lru<WoodCut>(2)
 export function woodCut(hh: string, mm: string): WoodCut {
   const key = `${hh}:${mm}`
   return woodCuts(key, () => {
-    const opts = { lattice: WOOD.heroK, smooth: true, align: 'center' as const }
+    const opts = { lattice: WOOD.heroK, smooth: true, mask: true, align: 'center' as const }
     const full = cardMask(T.big(`${hh}:${mm}`, 72, WOOD.heroRow, opts), TILE), cut = cardMask(T.big(`${hh} ${mm}`, 72, WOOD.heroRow, opts), TILE)
     const pts: Pt[] = [], [f0, f1, f2, f3] = rasterWindow(full)
     for (let r = f1; r <= f3; r++) for (let c = f0; c <= f2; c++) if (full.data[r * COLS + c] && !cut.data[r * COLS + c]) pts.push([c, r])
