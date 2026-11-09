@@ -85,6 +85,16 @@
     transform: translate(-50%, -50%)
   }
 
+  /* ⋯ is a 24 px box from the card's top edge with its chip 2 px down (views.css): centre the 44 px area on the chip
+     (a bleed card's chip sits on the box's centre) */
+  .dot-card-bar .dot-card-more::after {
+    top: 8px
+  }
+
+  .dot-card--bleed .dot-card-bar .dot-card-more::after {
+    top: 50%
+  }
+
   /* a card that draws its own name in dots: the grey hint would sit on its dot text; on touch the
      header hint is gone and only ⋯ (or DONE) stays */
   .dot-card-bar > .dot-card-hint {

@@ -88,7 +88,7 @@ export const specV1: CardAdapter<CardSpec> = {
     }
     const t = spec.transitions, mo = (x: TransitionSpec | false | undefined, d: Motion): Motion => (x ? { mask: x.mask, ease: x.ease ?? d.ease, ms: x.duration ?? d.ms } : d)
     card.transitions = { enter: mo(t?.enter, card.transitions.enter), change: mo(t?.change, card.transitions.change), exit: mo(t?.exit, card.transitions.exit) }
-    card.animated = spec.layers.some(l => l.kind === 'ir' && /t/.test(l.src))
+    card.animated = spec.layers.some(l => l.kind === 'ir' && /\bt\b/.test(l.src))
     return card
   },
 }
