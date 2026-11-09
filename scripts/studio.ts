@@ -73,6 +73,9 @@ export function studioChecks(assert: Assert) {
   const { spec } = specV1.toSpec(c), again = specV1.fromSpec(JSON.parse(JSON.stringify(spec)))
   const s1 = sig(sampleCard({ card: c, compiled: compileCard(c), theme: dot480 }, 0, c.data)), s2 = sig(sampleCard({ card: again, compiled: compileCard(again), theme: dot480 }, 0, again.data))
   assert('studio: card spec v1 out and back draws the same frame (states + transitions kept)', s1 === s2 && again.states.length === 2 && again.transitions.enter.mask === c.transitions.enter.mask, `${spec.layers.map(l => l.kind).join(',')}`)
+  // spec v1 import flags a card animated only when an IR layer reads `t` as a whole word (raw control bytes once broke the word-boundary regex)
+  const anim = (src: string) => { const k = newCard('t'); k.layers = normalizeZ([irLayer(src, { name: 'a' })]); return specV1.fromSpec(JSON.parse(JSON.stringify(specV1.toSpec(k).spec))).animated }
+  assert('studio: spec v1 import marks a card animated only when an IR layer uses t', anim('.5 + .5 * sin(u * 18 - t * 3)') && !anim('smoothstep(.42, .1, length(u - .5, v - .55))'))
   const ref = presetAsSpecCard(widgetById('afterlight')!)
   assert('studio: a preset imports as an editable spec v1 stack', ref.layers.length > 0 && lit(sampleCard({ card: ref, compiled: compileCard(ref), theme: dot480 }, 0, ref.data)) > 100, ref.layers.map(l => l.kind).join(','))
   const v0 = specV0.toSpec(c)
