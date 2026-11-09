@@ -7,7 +7,6 @@
 import { glyph } from '../../engine/fields/bitmapFont'
 import { hash01 } from '../../engine/math'
 import { decodeText, splitFlapCells, type FlapCell } from '../../engine/motion/text'
-import type { Field } from '../../engine/types'
 import { TAU, TILE, bounded, combine, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
@@ -83,18 +82,6 @@ const segDist = (ax: number, ay: number, bx: number, by: number, x: number, y: n
   return Math.hypot(x - ax - t * (bx - ax), y - ay - t * (by - ay))
 }
 const cellOf = (u: number) => Math.round(u * 143)
-/** Rounded rectangle on the card pitch: outline (default) or filled, optional circular hole. */
-function roundRect(c0: number, r0: number, w: number, h: number, rad: number, o: { fill?: boolean; hole?: [number, number, number] } = {}): Field {
-  const cx = c0 + (w - 1) / 2, cy = r0 + (h - 1) / 2, hw = (w - 1) / 2, hh = (h - 1) / 2
-  const f: Field = (u, v) => {
-    const x = cellOf(u), y = cellOf(v)
-    const qx = Math.abs(x - cx) - (hw - rad), qy = Math.abs(y - cy) - (hh - rad)
-    const d = Math.hypot(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - rad
-    if (o.hole && Math.hypot(x - o.hole[0], y - o.hole[1]) <= o.hole[2]) return 0
-    return o.fill ? (d <= 0.5 ? 1 : 0) : (d <= 0.5 && d > -0.5 ? 1 : 0)
-  }
-  return bounded(f, c0, r0, c0 + w - 1, r0 + h - 1)
-}
 /** Icon strokes as fine dot sites (about one card pitch apart), so curves stay round at icon size. */
 const STROKE = 1.05
 const linePts = (x: number, y: number, pts: Pt[]): Pt[] => pts.slice(1).flatMap(([bx, by], i) => {
@@ -109,11 +96,6 @@ const icon = (...parts: Pt[][]) => {
   const out: Pt[] = []
   for (const p of parts.flat()) if (!out.some(q => Math.hypot(q[0] - p[0], q[1] - p[1]) < .7)) out.push(p)
   return T.dots(out, .85)
-}
-/** Stadium (pill) test, optional round hole. */
-const inPill = (x0: number, y0: number, w: number, h: number, hole?: [number, number, number]) => (x: number, y: number) => {
-  const r = h / 2, cy = y0 + r, cx = Math.max(x0 + r, Math.min(x0 + w - r, x))
-  return Math.hypot(x - cx, y - cy) <= r && !(hole && Math.hypot(x - hole[0], y - hole[1]) <= hole[2])
 }
 
 const MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
@@ -198,7 +180,8 @@ export const timer: WidgetPreset = {
       layer(T.dotRing(72, 76, 60, { ...ring, sweep: TAU * data.progress }), 'active'),
       layer(dotText('12:48', 72, 60, { px: 2.9, py: 3.4, size: 3.2, align: 'center' })),
       layer(T.dotRing(72, 117, 14.5, { spacing: 1.8, size: .75 })),
-      layer(T.fillOn(2, (x, y) => Math.hypot(Math.max(0, Math.abs(x - 72) - 3), Math.max(0, Math.abs(y - 117) - 3)) <= 1.4, [67.5, 112.5, 76.5, 121.5]), 'active'),
+      // stop: a full 5 × 5 square of big dots, corners kept, so it reads as stop and not as a round record button
+      layer(T.fillOn(2, () => true, [67.5, 112.5, 76.5, 121.5]), 'active'),
     ]
   },
 }
@@ -344,19 +327,28 @@ const settingIcon = (g: Glyph, x: number, y: number) => {
 type Right = 'on' | 'chevron' | 'toggle-on' | 'toggle-off'
 /** Five rows in one rounded outline, one separator between neighbours, inset a cell so no corner meets the card edge. */
 const ROWS = { x: 1, top: 15, w: 141, h: 24, n: 5, r: 5, spacing: 2.2, size: 1.05 }
+/**
+ * One toggle, two states: the same stadium outline at the row borders' pitch and the same knob dot. Off: outline and
+ * knob in `idle`, knob at the left. On: knob at the right in `value`, the track behind it filled with big `mid` dots on
+ * the outline's pitch, cleared one dot round the knob so it stands apart.
+ */
+const SWITCH = { x: 117, w: 22, h: 12, knob: 8, k: 2.2 }
+const toggle = (on: boolean, mid: number) => {
+  const { x, w, h, knob, k } = SWITCH, r = h / 2, y = mid - r, kx = on ? x + w - r : x + r
+  const reach = (knob * .84) / 2 + k, core = r - 2.4
+  const fill = T.fillOn(k, (px, py) => Math.hypot(px - Math.max(x + r, Math.min(x + w - r, px)), py - mid) <= core && Math.hypot(px - kx, py - mid) > reach, [x + 1, y + 1, x + w - 1, y + h - 1])
+  return [
+    layer(T.stadium(x, y, w, h, { spacing: ROWS.spacing, size: ROWS.size }), 'idle'),
+    ...(on ? [layer(fill, 'mid')] : []),
+    layer(T.dots([[kx, mid]], knob), on ? 'value' : 'idle'),
+  ]
+}
 const settingRow = (i: number, g: Glyph, label: string, right: Right, selected = false) => {
   const top = ROWS.top + i * ROWS.h, tone = selected ? 'active' : 'idle', mid = top + 12
   const out = [layer(settingIcon(g, 5, top + 6.5), selected ? 'active' : 'value'), layer(T.text(label, 27, top + 9), tone)]
   if (right === 'on') out.push(layer(T.text('ON', 130, top + 9, { align: 'right' }), 'idle'))
   if (right === 'on' || right === 'chevron') out.push(layer(T.sprite(['#...', '.#..', '..#.', '...#', '..#.', '.#..', '#...'], 135, top + 9), selected ? 'active' : 'idle'))
-  if (right.startsWith('toggle')) {
-    // on: a pill of big dots with a dark knob hole at the right; off: a bright outline with one big knob dot at the left
-    const on = right === 'toggle-on', x0 = 120, w = 17, h = 10
-    out.push(on
-      ? layer(T.fillOn(2, inPill(x0, mid - h / 2, w, h, [x0 + w - h / 2, mid, 3.4]), [x0, mid - h / 2, x0 + w, mid + h / 2]))
-      : layer(roundRect(x0, mid - h / 2, w + 1, h + 1, h / 2)))
-    if (!on) out.push(layer(T.dots([[x0 + h / 2, mid]], 8.4)))
-  }
+  if (right.startsWith('toggle')) out.push(...toggle(right === 'toggle-on', mid))
   return out
 }
 const SELECTED = 2

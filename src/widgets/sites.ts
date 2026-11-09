@@ -87,6 +87,7 @@ export type Inside = (x: number, y: number) => boolean
  * centre (card cells) of a square lattice centred on `box` [x0, y0, x1, y1]. Use k = 2 for shapes up to about 16 cells
  * across and k = 3 above that. Two fills with the same `k` and `box` put their dots on the same sites, and the later
  * layer wins a shared site, so a glyph on a button is its own fill in another tone. `size` defaults to 0.8 × k.
+ * Nothing is trimmed: a stop square is `() => true`, a full N × N grid with its corners, so it never reads as round.
  */
 export function fillOn(k: number, inside: Inside, box: readonly [number, number, number, number], size = GAP * k): LatticeField {
   const [x0, y0, x1, y1] = box, cx = (x0 + x1) / 2, cy = (y0 + y1) / 2

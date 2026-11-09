@@ -31,7 +31,7 @@ import { hash01 } from '../../engine/math'
 import type { Field, Layer } from '../../engine/types'
 import { lightSource } from '../../site/light'
 import { TILE, layer, layoutFor, type WidgetPreset } from '../types'
-import { cellToLattice15, cite, DEG, L15, LG15, LIGHT_DEFAULTS, matLight, mod, once, pad2, rasterLayer, scratch, T, TAU, tile, toCard15, toLattice15, valuedSites, type Box, type Pt } from './materials-shared'
+import { cellToLattice15, cite, DEG, frameMemo, lightId, own, L15, LG15, LIGHT_DEFAULTS, matLight, mod, once, pad2, rasterLayer, scratch, T, TAU, tile, toCard15, toLattice15, valuedSites, type Box, type Pt } from './materials-shared'
 import { matLens, matWindow, glassHooks } from './materials-glass'
 import { matPool, matRust, poolHooks } from './materials-live'
 import { matPatch, matCandle, wearHooks } from './materials-wear'
@@ -219,38 +219,43 @@ export const matKnob: WidgetPreset = {
   springKeys: ['v'],
   controls: [{ key: 'v', kind: 'knob', box: [KNOB_CARD.x - 60, KNOB_CARD.y - 60, 120, 120], map: knobDial, label: 'Volume' }],
   layers: ctx => {
-    const v = Math.max(0, Math.min(1, ctx.data.v ?? .72)), g = knobGeometry(), [dif, spec, body, rim, core] = knobScratch()
-    const L = matLight(ctx, { lattice: L15, torch: { height: 40, falloff: 150 }, pressed: true })
-    lambert(g.n, L, { ambient: .12, into: dif })
-    anisoSpec(g.n, g.t, L, { exponent: 80, into: spec })
-    body.data.fill(0); rim.data.fill(0); core.data.fill(0)
-    const a = arcAngle(v), dx = KNOB_CARD.x + 29 * Math.sin(a), dy = KNOB_CARD.y - 29 * Math.cos(a), step = .25
-    const [c0, r0, c1, r1] = g.n.bounds ?? [0, 0, LG15.cols - 1, LG15.rows - 1], cols = LG15.cols
-    const K = g.n.mask, D = dif.data, S = spec.data, B = body.data, R = rim.data, C = core.data, ring = g.ring
-    for (let r = r0; r <= r1; r++) {
-      const ry = toCard15(r) - dy, nearRow = Math.abs(ry) < 2.6
-      for (let c = c0, i = r * cols + c0; c <= c1; c++, i++) {
-        if (K[i] < .5) continue
-        if (nearRow) { const rx = toCard15(c) - dx; if (Math.abs(rx) < 2.6 && Math.hypot(rx, ry) < 2.6) continue } // the dimple's pit
-        // the body is capped at mid (× .62: 1 − 2 steps); the bowtie is +1 step (idle) at .25, +2 (value) at .55
-        const b = D[i] * .62, p = S[i]
-        if (p >= .55 && b >= .06) C[i] = Math.min(1, b + 2 * step)
-        else if (p >= .25 && b >= .06) R[i] = Math.min(1, b + step)
-        else B[i] = ring[i] ? b * .62 : b // lathe rings: a band lower on every other 2-dot ring
-      }
-    }
-    body.bounds = rim.bounds = core.bounds = g.n.bounds
-    const on = Math.round(v * KNOB_ARC.n), sites = arcSites(), k = knurl()
-    return [
-      cite('KAJIYA-KAY 1989'),
-      surfaceLayer([[body, MATTE_BANDS], [rim, 'idle'], [core, 'value']], L15),
-      layer(T.dots(k.a, .9), 'mid'), layer(T.dots(k.b, .9), 'faint'),
-      layer(T.dots([[dx, dy]], 2.2), 'faint'),
-      layer(T.dots(sites.slice(on), 1.2), 'faint'),
-      ...(on > 0 ? [layer(T.dots(sites.slice(0, on), 1.4), 'active')] : []),
-      layer(T.big(`VOL ${pad2(Math.round(v * 100))}`, 72, 132, { lattice: 1.3, align: 'center' }), 'idle'),
-    ]
+    const v = Math.max(0, Math.min(1, ctx.data.v ?? .72)), L = matLight(ctx, { lattice: L15, torch: { height: 40, falloff: 150 }, pressed: true })
+    // at rest (no drag, the same light) the frame repeats: the knob is drawn again only when v or the light moves
+    return knobMemo(`${v}|${lightId(L)}`, () => knobLayers(v, L))
   },
+}
+const knobMemo = frameMemo()
+function knobLayers(v: number, L: Light): Layer[] {
+  const g = knobGeometry(), [dif, spec, body, rim, core] = knobScratch()
+  lambert(g.n, L, { ambient: .12, into: dif })
+  anisoSpec(g.n, g.t, L, { exponent: 80, into: spec })
+  body.data.fill(0); rim.data.fill(0); core.data.fill(0)
+  const a = arcAngle(v), dx = KNOB_CARD.x + 29 * Math.sin(a), dy = KNOB_CARD.y - 29 * Math.cos(a), step = .25
+  const [c0, r0, c1, r1] = g.n.bounds ?? [0, 0, LG15.cols - 1, LG15.rows - 1], cols = LG15.cols
+  const K = g.n.mask, D = dif.data, S = spec.data, B = body.data, R = rim.data, C = core.data, ring = g.ring
+  for (let r = r0; r <= r1; r++) {
+    const ry = toCard15(r) - dy, nearRow = Math.abs(ry) < 2.6
+    for (let c = c0, i = r * cols + c0; c <= c1; c++, i++) {
+      if (K[i] < .5) continue
+      if (nearRow) { const rx = toCard15(c) - dx; if (Math.abs(rx) < 2.6 && Math.hypot(rx, ry) < 2.6) continue } // the dimple's pit
+      // the body is capped at mid (× .62: 1 − 2 steps); the bowtie is +1 step (idle) at .25, +2 (value) at .55
+      const b = D[i] * .62, p = S[i]
+      if (p >= .55 && b >= .06) C[i] = Math.min(1, b + 2 * step)
+      else if (p >= .25 && b >= .06) R[i] = Math.min(1, b + step)
+      else B[i] = ring[i] ? b * .62 : b // lathe rings: a band lower on every other 2-dot ring
+    }
+  }
+  body.bounds = rim.bounds = core.bounds = g.n.bounds
+  const on = Math.round(v * KNOB_ARC.n), sites = arcSites(), k = knurl()
+  return [
+    cite('KAJIYA-KAY 1989'),
+    surfaceLayer([[own(body), MATTE_BANDS], [own(rim), 'idle'], [own(core), 'value']], L15),
+    layer(T.dots(k.a, .9), 'mid'), layer(T.dots(k.b, .9), 'faint'),
+    layer(T.dots([[dx, dy]], 2.2), 'faint'),
+    layer(T.dots(sites.slice(on), 1.2), 'faint'),
+    ...(on > 0 ? [layer(T.dots(sites.slice(0, on), 1.4), 'active')] : []),
+    layer(T.big(`VOL ${pad2(Math.round(v * 100))}`, 72, 132, { lattice: 1.3, align: 'center' }), 'idle'),
+  ]
 }
 
 // ── 03 GRILLE ─ a perforated metal grille, lit from behind by the music ───────────────────────────────
@@ -495,15 +500,19 @@ export const matMarble: WidgetPreset = {
   defaults: { ...LIGHT_DEFAULTS },
   layers: ctx => {
     const now = new Date(), e = engraving(pad2(now.getHours()), pad2(now.getMinutes()), now.getFullYear())
-    const { body, polish } = marbleLit(e, matLight(ctx, { lattice: L15, torch: { height: 14, falloff: 120 }, rake: true }))
-    const on = ctx.reducedMotion || mod(ctx.t, 1) < .5
-    return [
-      cite('PERLIN 1985'),
-      surfaceLayer([[body, MATTE_BANDS], [polish, 'value']], L15),
-      ...(on && e.colon.length ? [layer(T.dots(e.colon, 2), 'active')] : []),
-    ]
+    const L = matLight(ctx, { lattice: L15, torch: { height: 14, falloff: 120 }, rake: true }), on = ctx.reducedMotion || mod(ctx.t, 1) < .5
+    // the frame repeats between the colon's blinks while the light holds still
+    return marbleMemo(`${e.key}|${lightId(L)}|${on}`, () => {
+      const { body, polish } = marbleLit(e, L)
+      return [
+        cite('PERLIN 1985'),
+        surfaceLayer([[own(body), MATTE_BANDS], [own(polish), 'value']], L15),
+        ...(on && e.colon.length ? [layer(T.dots(e.colon, 2), 'active')] : []),
+      ]
+    })
   },
 }
+const marbleMemo = frameMemo()
 
 // ── 05 TERRAZZO ─ the month, set in stone: each day a chip, today's chip red ─────────────────────────────
 // A pillowed slab on the 1.5 lattice; one irregular chip per day (superellipse, rotated, noise-warped edge), past days
@@ -614,30 +623,37 @@ export const matTerrazzo: WidgetPreset = {
   controls: [{ key: 'px', keyY: 'py', kind: 'xy', box: TZ_BOX, label: 'Preview a day' }],
   layers: ctx => {
     const now = new Date(), m = monthOf(now.getFullYear(), now.getMonth()), today = now.getDate() - 1
-    const L = matLight(ctx, { lattice: L15, torch: { height: 30, falloff: 140 } }), [spec, past, polished, future, now1] = tzScratch()
-    phong(m.pillow, L, [0, 0, 1], 40, { into: spec })
+    const L = matLight(ctx, { lattice: L15, torch: { height: 30, falloff: 140 } })
     // preview: the hovering pointer, else the tapped point (the xy control), else today
     const p = ctx.pointers?.find(q => q.inside && !q.up && !q.down)
     const tapped = chipAt(m, TZ_BOX[0] + (ctx.data.px ?? 0) * TZ_BOX[2], TZ_BOX[1] + TZ_BOX[3] - (ctx.data.py ?? 1) * TZ_BOX[3])
     const hovered = p ? chipAt(m, p.x, p.y) : -1, preview = hovered >= 0 ? hovered : tapped
-    for (const r of [past, polished, future, now1]) { r.data.fill(0); r.bounds = m.pillow.bounds }
-    for (let r = 0; r < LG15.rows; r++) chipTones(m.chip, today, spec.data, past.data, polished.data, future.data, now1.data, r * LG15.cols, (r + 1) * LG15.cols - 1)
-    const sheen = sample(spec), N = TILE.cols - 1
-    const agg = (lift: number): Field => (u, v) => (sheen(((u * N + .5) / L15 - .5) / (LG15.cols - 1), ((v * N + .5) / L15 - .5) / (LG15.rows - 1)) > .3 ? 1 : lift)
-    const shown = preview >= 0 && preview !== today ? preview : today, weekday = WEEKDAY[(shown + m.offset) % 7]
-    const out: Layer[] = [
-      cite('POISSON DISC'),
-      layer(T.text(`${MONTHS[m.month]} ${m.year}`, 0, 14), 'mid'),
-      // lattice 2: the date ends at row 40, clear of the weekday letters at row 44
-      layer(T.big(pad2(shown + 1), 140, 12, { lattice: 2, smooth: true, align: 'right' }), shown === today ? 'value' : 'mid'),
-      layer(T.text(weekday, 0, 22), shown === today ? 'mid' : 'idle'),
-      ...WEEK.map((w, i) => layer(T.text(w, colX(i), 44, { align: 'center' }), 'mid')),
-      { field: agg(.75), sites: m.aggregate.a, size: 1.6, tone: 'mid' }, { field: agg(.75), sites: m.aggregate.b, size: 1.15, tone: 'faint' }, { field: agg(.75), sites: m.aggregate.c, size: .85, tone: 'faint' },
-      surfaceLayer([[future, 'mid'], [past, 'idle'], [polished, 'value']], L15),
-    ]
-    if (today >= 0 && today < m.days) out.push(rasterLayer(now1, 'active', L15))
-    return out
+    // the month at rest repeats its frame: drawn again for a new day, light or previewed chip
+    return tzMemo(`${m.year}-${m.month}|${today}|${preview}|${lightId(L)}`, () => terrazzoLayers(m, today, preview, L))
   },
+}
+const tzMemo = frameMemo()
+function terrazzoLayers(m: Month, today: number, preview: number, L: Light): Layer[] {
+  const [spec0, past0, polished0, future0, now10] = tzScratch()
+  phong(m.pillow, L, [0, 0, 1], 40, { into: spec0 })
+  for (const r of [past0, polished0, future0, now10]) { r.data.fill(0); r.bounds = m.pillow.bounds }
+  for (let r = 0; r < LG15.rows; r++) chipTones(m.chip, today, spec0.data, past0.data, polished0.data, future0.data, now10.data, r * LG15.cols, (r + 1) * LG15.cols - 1)
+  const [spec, past, polished, future, now1] = [spec0, past0, polished0, future0, now10].map(own)
+  const sheen = sample(spec), N = TILE.cols - 1
+  const agg = (lift: number): Field => (u, v) => (sheen(((u * N + .5) / L15 - .5) / (LG15.cols - 1), ((v * N + .5) / L15 - .5) / (LG15.rows - 1)) > .3 ? 1 : lift)
+  const shown = preview >= 0 && preview !== today ? preview : today, weekday = WEEKDAY[(shown + m.offset) % 7]
+  const out: Layer[] = [
+    cite('POISSON DISC'),
+    layer(T.text(`${MONTHS[m.month]} ${m.year}`, 0, 14), 'mid'),
+    // lattice 2: the date ends at row 40, clear of the weekday letters at row 44
+    layer(T.big(pad2(shown + 1), 140, 12, { lattice: 2, smooth: true, align: 'right' }), shown === today ? 'value' : 'mid'),
+    layer(T.text(weekday, 0, 22), shown === today ? 'mid' : 'idle'),
+    ...WEEK.map((w, i) => layer(T.text(w, colX(i), 44, { align: 'center' }), 'mid')),
+    { field: agg(.75), sites: m.aggregate.a, size: 1.6, tone: 'mid' }, { field: agg(.75), sites: m.aggregate.b, size: 1.15, tone: 'faint' }, { field: agg(.75), sites: m.aggregate.c, size: .85, tone: 'faint' },
+    surfaceLayer([[future, 'mid'], [past, 'idle'], [polished, 'value']], L15),
+  ]
+  if (today >= 0 && today < m.days) out.push(rasterLayer(now1, 'active', L15))
+  return out
 }
 
 /** M1 (loom … terrazzo), then M2: glass and water (lens, pool, window), then wear (patch, rust, candle). */

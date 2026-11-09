@@ -2,6 +2,7 @@ import type { DotStyle, Field, GridConfig, Layer, Tone } from '../engine/types'
 import type { Control, FrameContext } from '../engine/context'
 import { type BigTextOptions, barsAt, bigText, centeredBarsAt, cutAround, discCells, dotAt, hRule, knockBoxes, knockSites, placeCells, polylineCells, rectCells, ringCells, rrect, snapToLattice, spriteAt, stackedRows, stadium, textAt, textSize, vRule } from '../engine/layout'
 import { cellU, latticeGrid } from '../engine/sampler/gridSampler'
+import { isStable, stableLayers } from '../engine/sampler/repeat'
 import { cachedIconField, iconPaths } from '../engine/fields/iconSDF'
 import { cjkTextField } from '../engine/fields/cjkFallback'
 import type { TextOptions } from '../engine/fields/bitmapFont'
@@ -221,7 +222,16 @@ const chromed = new WeakMap<WidgetPreset, WidgetPreset['layers']>()
 export const withChrome = (p: WidgetPreset): WidgetPreset['layers'] => {
   if (p.chrome !== 'dots') return p.layers
   let f = chromed.get(p)
-  if (!f) chromed.set(p, (f = (ctx: WidgetContext) => [...cardChrome(p), ...p.layers(ctx)]))
+  if (!f) {
+    // a card frame that repeats (`frameMemo`) keeps repeating with its label in front: the same array while the card's is
+    let own: Layer[] | undefined, out: Layer[] = []
+    chromed.set(p, (f = (ctx: WidgetContext) => {
+      const next = p.layers(ctx)
+      if (next === own && isStable(next)) return out
+      own = next; out = [...cardChrome(p), ...next]
+      return isStable(next) ? stableLayers(out) : out
+    }))
+  }
   return f
 }
 
@@ -257,7 +267,7 @@ export function layoutFor(grid: GridConfig) {
     cjk: tag('cjk', (text: string, col: number, row: number, cell: number) => placeCells(grid, cjkTextField(text), col, row, cell * [...text].length, cell)),
     /**
      * Hero text on its own lattice: `lattice` card cells per dot, anchored at card cell (col,row). Width in card cells
-     * = size(...)[0] * lattice. `smooth` is the 2-dot-stroke display weight from a lattice of 2.5 up; below that it
+     * = size(...)[0] * lattice. `smooth` is the 2-dot-stroke display weight from a lattice of 1.5 up; below that it
      * draws the plain glyph at twice the lattice, and `scale` multiplies the lattice (`bigText`, engine/layout).
      */
     big: (str: string, col: number, row: number, opts: BigTextOptions): LatticeField => bigText(grid, str, col, row, opts),

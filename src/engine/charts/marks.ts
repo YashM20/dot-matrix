@@ -92,21 +92,21 @@ export function categoryLabels(xs: readonly number[], names: readonly string[], 
   return out
 }
 
-/** Lattice of the readout's hero number: the plain 5×7 glyph at 4 cells per pixel (28 cells tall, one-dot strokes). */
-export const HERO = { lattice: 4, h: 28 }
-export const heroWidth = (s: string) => textSize(s)[0] * HERO.lattice
+/** Lattice of the readout's hero number: 2 cells per pixel, 10×14 smooth glyphs (28 cells tall). */
+export const HERO = { lattice: 2, smooth: true, h: 28 }
+export const heroWidth = (s: string) => textSize(s, { smooth: true })[0] * HERO.lattice
 /** The readout: the picked value as the hero at (col, row), up to three short lines stacked beside it. */
 export function readout(hero: string, lines: readonly { text: string; tone: Tone }[], col = 0, row = 14): Label[] {
   const x = col + heroWidth(hero) + 6
   return [
-    { text: hero, col, row, tone: 'value', lattice: HERO.lattice },
+    { text: hero, col, row, tone: 'value', lattice: HERO.lattice, smooth: true },
     ...lines.slice(0, 3).map((l, i): Label => ({ text: l.text, col: x, row: row + 1 + i * 10, tone: l.tone })),
   ]
 }
 /** The readout centred on (cx, cy): the hero, one line under it (a donut's hole). */
 export function centreReadout(hero: string, line: { text: string; tone: Tone }, cx: number, cy: number): Label[] {
   return [
-    { text: hero, col: cx, row: cy - 19, tone: 'value', lattice: HERO.lattice, align: 'center' },
+    { text: hero, col: cx, row: cy - 19, tone: 'value', lattice: HERO.lattice, smooth: true, align: 'center' },
     { text: line.text, col: cx, row: cy + 13, tone: line.tone, align: 'center' },
   ]
 }

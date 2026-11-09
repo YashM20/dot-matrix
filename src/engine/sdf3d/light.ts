@@ -57,7 +57,9 @@ export const SUN_RGB: readonly number[] = [1.64, 1.27, .99]
 export const SKY_RGB: readonly number[] = [.16, .20, .28]
 export const BOUNCE_RGB: readonly number[] = [.40, .28, .20]
 /** The penumbra colour powers: shadow edges turn warm. */
-const PEN = [1, 1.2, 1.5]
+const PEN = [1, 1.2, 1.5], UNIT: V3 = [1, 1, 1]
+const penOf = [1, 1, 1]
+let penSha = NaN
 
 // after Inigo Quilez, https://iquilezles.org/articles/outdoorslighting/ (MIT)
 /**
@@ -66,13 +68,15 @@ const PEN = [1, 1.2, 1.5]
  * times `occ`) and the bounce (the sun's horizontal direction negated, times `occ`). Writes linear light into
  * `out`; multiply by an albedo near 0.2, fog, then `gamma`. `gain` scales the three lights (sun, sky, bounce).
  */
-export function outdoorLight(n: V3, sun: V3, sha: number, occ: number, out: V3, gain: V3 = [1, 1, 1]): V3 {
+export function outdoorLight(n: V3, sun: V3, sha: number, occ: number, out: V3, gain: V3 = UNIT): V3 {
   const dif = clamp01(n[0] * sun[0] + n[1] * sun[1] + n[2] * sun[2])
   const sky = clamp01(.5 + .5 * n[1])
   const bl = Math.sqrt(sun[0] * sun[0] + sun[2] * sun[2]) || 1
   const ind = clamp01((-n[0] * sun[0] - n[2] * sun[2]) / bl)
+  // the penumbra powers, again for the same shadow value (a lit floor is sha = 1 dot after dot)
+  if (sha !== penSha) { penSha = sha; for (let i = 0; i < 3; i++) penOf[i] = PEN[i] === 1 ? sha : dpow(Math.max(sha, 0), PEN[i]) }
   for (let i = 0; i < 3; i++) {
-    const pen = PEN[i] === 1 ? sha : dpow(Math.max(sha, 0), PEN[i])
+    const pen = penOf[i]
     out[i] = gain[0] * dif * SUN_RGB[i] * pen + gain[1] * sky * SKY_RGB[i] * occ + gain[2] * ind * BOUNCE_RGB[i] * occ
   }
   return out

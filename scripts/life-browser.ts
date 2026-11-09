@@ -1,7 +1,7 @@
 /**
  * Browser probe for the pond board (docs/living-matter/L-pond.md L1.9 / L1.10), headless Chrome over CDP:
- *  - desktop 1280: `/pond/?probe=1` paints `pond-koi`; hovering it forks the live world, a click drops pellets, 7 s
- *    idle heals back to pristine; Chrome's pristine state hash at step 1440 = Node's (scripts/life.ts --snapshot);
+ *  - desktop 1280: `/pond/?probe=1` paints `pond-koi`; hovering it forks the live world, a click drops pellets, and once
+ *    the food is gone idle heals back to pristine; Chrome's pristine state hash at step 1440 = Node's (scripts/life.ts --snapshot);
  *    the card's frame (layers + sample) at 4× CPU throttle ≤ 16 ms;
  *  - touch 375 × 812: a vertical swipe that starts on the card scrolls the page ≥ 150 px and the world stays
  *    pristine; a tap drops pellets; a 300 ms hold engages the card (lure) and the page does not scroll while engaged;
@@ -40,10 +40,11 @@ const pages = new Set<Page>()
 const open = async (w: number, h: number) => { const p = await launch(w, h); pages.add(p); return p }
 const closeAll = async () => { for (const p of pages) await p.close().catch(() => {}); pages.clear(); server.stop() }
 const limit = (Number(process.env.LIFE_BROWSER_TIMEOUT_S) || 1200) * 1000
-const t0 = Date.now()
+// performance.now(): the Node hashes below freeze `Date` (freezeWallClock), which would stop this clock
+const t0 = performance.now()
 let step = 'start'
 /** Name the step the watchdog would report, with the time it started. */
-const at = (name: string) => { step = `${name} (from ${((Date.now() - t0) / 1000).toFixed(0)} s)` }
+const at = (name: string) => { step = `${name} (from ${((performance.now() - t0) / 1000).toFixed(0)} s)` }
 const watchdog = setTimeout(() => {
   console.log(`✗ life-browser: the probe ran over ${limit / 1000} s (stuck in: ${step}); killing Chrome and the preview server`)
   void closeAll().finally(() => process.exit(1))
@@ -75,7 +76,9 @@ try {
     await page.shot(join(out, 'pond-desktop-fed.png'))
     await page.mouse('mouseMoved', 5, 5, 0)
     at('desktop: idle heals')
-    check('life-browser: 7 s idle heals back to pristine', await page.waitFor(`__pond.mode() === 'pristine'`, 9000), await page.js('__pond.mode()'))
+    // the heal waits for the meal (#90): a pellet floats up to 14 s, then 4 s idle, up to 9 s clear of the loop seam, a 6 s heal
+    const fed = await page.waitFor(`__pond.pellets() === 0`, 20000)
+    check('life-browser: once the food is gone, idle heals back to pristine', fed && await page.waitFor(`__pond.mode() === 'pristine'`, 22000), `${await page.js('__pond.pellets()')} pellets, ${await page.js('__pond.mode()')}`)
     at('desktop: bench at 4× throttle')
     await page.cdp('Emulation.setCPUThrottlingRate', { rate: 4 })
     // bounded: a starved box at 4× throttle must fail this check, not hang the run
@@ -225,26 +228,33 @@ try {
       const p = await open(1280, 900)
       await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: `globalThis.__POND_PROBE__ = true; globalThis.__vt = { n: 0, named: [], hidden: [] };
         ${mode === 'none' ? 'delete Document.prototype.startViewTransition; delete document.startViewTransition;' : `
-        const o = Document.prototype.startViewTransition
-        if (o) Document.prototype.startViewTransition = function (cb) {
-          __vt.n++
-          const seen = () => { for (const e of document.querySelectorAll('[data-card-id]')) if (e.style.viewTransitionName) { __vt.named.push(e.closest('.wp') ? 'page' : 'board'); const c = e.querySelector('canvas'); if (c) __vt.hidden.push(getComputedStyle(c).visibility) } }
-          seen()
-          return o.call(this, async () => { await cb(); seen() })
-        }`}` })
+        // in its own scope: other scripts injected into the page share the global one (a second top-level const throws)
+        ;(() => {
+          const o = Document.prototype.startViewTransition
+          if (o) Document.prototype.startViewTransition = function (cb) {
+            __vt.n++
+            const seen = () => { for (const e of document.querySelectorAll('[data-card-id]')) if (e.style.viewTransitionName) { __vt.named.push(e.closest('.wp') ? 'page' : 'board'); const c = e.querySelector('canvas'); if (c) __vt.hidden.push(getComputedStyle(c).visibility) } }
+            seen()
+            return o.call(this, async () => { await cb(); seen() })
+          }
+        })()`}` })
       if (mode === 'reduce') await p.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })
       await p.cdp('Page.navigate', { url: `${server.url}pond/?probe=1` })
       const ready = await p.waitFor(`!!globalThis.__pondBoard && !!${mcard}?.querySelector('canvas,svg')`, READY_MS)
       await p.js(`${mcard}.scrollIntoView({ block: 'center' })`); await sleep(800)
-      await p.js(`${mcard}.querySelector('button[aria-label="Open on its own page"]').click()`)
+      // OPEN sits in the card's ⋯ menu (#181): open the menu, then its first item
+      await p.js(`${mcard}.querySelector('button[aria-haspopup="menu"]').click()`)
+      await p.waitFor(`!!${mcard}.querySelector('[role="menu"] [role="menuitem"]')`, 5000)
+      await p.js(`[...${mcard}.querySelectorAll('[role="menu"] [role="menuitem"]')].find(b => b.textContent === 'Open its page').click()`)
       const opened = await p.waitFor(`location.pathname === '/widget/pond-marble/' && !!document.querySelector('.wp [data-card-id="pond-marble"] canvas')`, 20000)
       await sleep(900)
       if (mode === 'vt') await p.shot(join(out, 'x1-vt-widget.png'))
-      const n1 = await p.js<number>('__vt.n')
+      // read safely: a missing hook fails the check with where the page went, not the whole run
+      const n1 = await p.js<number>('globalThis.__vt?.n ?? -1')
       await p.js('history.back()')
       const back = await p.waitFor(`location.pathname === '/pond/' && !!${mcard}?.querySelector('canvas')`, 20000)
       await sleep(900)
-      const vt = await p.js<{ n: number; named: string[]; hidden: string[] }>('__vt')
+      const vt = await p.js<{ n: number; named: string[]; hidden: string[]; lost?: string }>(`globalThis.__vt ?? { n: -1, named: [], hidden: [], lost: location.href + ' after ' + performance.getEntriesByType('navigation').length + ' load(s), probe ' + !!globalThis.__POND_PROBE__ }`)
       const clean = await p.js<boolean>(`![...document.querySelectorAll('[data-card-id]')].some(e => e.style.viewTransitionName || e.classList.contains('vt-fly'))`)
       const errs = p.logs.filter(l => !/main thread/.test(l))
       await p.close(); pages.delete(p)

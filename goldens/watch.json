@@ -28,13 +28,13 @@
   "watch-complications": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "c0f264cf",
-    "dots": 913
+    "hash": "0d752608",
+    "dots": 1124
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "b2acbf71",
-    "dots": 913
+    "hash": "3d9e52da",
+    "dots": 1124
    }
   },
   "watch-moon": {
@@ -61,15 +61,15 @@
   "watch-world": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "7f4ac437",
-    "dots": 985
+    "hash": "073e58b9",
+    "dots": 1196
    }
   },
   "watch-steps": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "d8ecf1a3",
-    "dots": 549
+    "hash": "10bb3cbc",
+    "dots": 745
    }
   },
   "watch-faces": {

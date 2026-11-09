@@ -64,13 +64,13 @@
   "mo-ring": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "9eafc9d2",
-    "dots": 627
+    "hash": "635ae41c",
+    "dots": 692
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "a14c16ce",
-    "dots": 646
+    "hash": "2f27c08a",
+    "dots": 731
    }
   },
   "mo-skeleton": {
