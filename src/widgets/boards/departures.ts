@@ -67,16 +67,15 @@ export const stationClock: WidgetPreset = {
     const jump = underdampedSpring(-1, 0, 0, 2.2, .32, s).x // minutes behind the target, springing to 0
     const minute = ((m + jump) / 60) * TAU, hour = ((h + (m + jump) / 60) / 12) * TAU, second = (Math.min(s, 58.5) / 58.5) * TAU
     const [cx, cy] = C, ticks: Pt[] = [], hours: Pt[] = []
-    for (let i = 0; i < 60; i++) (i % 5 ? ticks.push(...ray(cx, cy, (i / 60) * TAU, R, R, 1)) : hours.push(...ray(cx, cy, (i / 60) * TAU, R - 8, R, 4)))
-    // every dot at most 0.8 of its spacing, so the hands and hour bars read as rows of dots; the red second hand,
-    // its disc and the hub clear the white hand dots under them, so red never sits on white
+    for (let i = 0; i < 60; i++) (i % 5 ? ticks.push(...ray(cx, cy, (i / 60) * TAU, R, R, 1)) : hours.push(...ray(cx, cy, (i / 60) * TAU, R - 8, R, 2.6)))
+    // the red second hand, its disc and the hub clear the white hand dots under them, so red never sits on white
     const sec = [...ray(cx, cy, second + Math.PI, 3.4, 13, 2.2), ...ray(cx, cy, second, 3.4, 33, 2.2)], disc = ray(cx, cy, second, 38, 38, 1)
     const hand = (pts: Pt[], size: number) => T.knockout(T.knockout(T.knockout(T.dots(pts, size), [C], 4.2), disc, 5.6), sec, 2.8)
     return [
       layer(T.dots(ticks, 1.6), 'mid'),
       layer(T.dots(hours, 3)),
-      layer(hand(ray(cx, cy, hour, -7.2, 32.4, 4.4), 3.5)),
-      layer(hand(ray(cx, cy, minute, -9.6, 48, 3.6), 2.8)),
+      layer(hand(ray(cx, cy, hour, -7.2, 32.4, 3.6), 4)),
+      layer(hand(ray(cx, cy, minute, -9.6, 48, 3.2), 3.3)),
       layer(T.dots(sec, 1.7), 'active'),
       layer(T.dots(disc, 8.5), 'active'),
       layer(T.dots([C], 4.2), 'active'),

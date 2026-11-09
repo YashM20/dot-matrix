@@ -9,7 +9,8 @@ import { theme } from '../lib/stats'
 import type { Assert } from '../lib/check'
 
 /** Cards with no touching dots anywhere, at three times (moving parts included). */
-const CLEAR = ['line-map', 'service', 'departures', 'ir-ripple', 'chart-bar', 'chart-line', 'chart-area', 'chart-candle', 'hb-done', 'sim-sand', 'live-contribs']
+const CLEAR = ['line-map', 'service', 'departures', 'ir-ripple', 'chart-bar', 'chart-line', 'chart-area', 'chart-candle', 'hb-done', 'sim-sand', 'live-contribs',
+  'lv-title', 'lv-queen', 'sq-teletext', 'phys-jelly', 'phys-splash', 'light-emissive', 'inst-crank', 'inst-xy', 'mo-wait', 'mo-send', 'scope-mic', 'scope-wave']
 
 export function cardChecks(assert: Assert) {
   for (const id of CLEAR) {
