@@ -16,25 +16,25 @@
   "watch-digital": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "b11c53c9",
-    "dots": 555
+    "hash": "fd6d69c5",
+    "dots": 406
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "b11c53c9",
-    "dots": 555
+    "hash": "fd6d69c5",
+    "dots": 406
    }
   },
   "watch-complications": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "de67b341",
-    "dots": 1117
+    "hash": "d1c2ca4c",
+    "dots": 962
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "eba6168b",
-    "dots": 1117
+    "hash": "576e8952",
+    "dots": 962
    }
   },
   "watch-moon": {
@@ -61,15 +61,15 @@
   "watch-world": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "75eefaea",
-    "dots": 1189
+    "hash": "9b9c8ea6",
+    "dots": 1034
    }
   },
   "watch-steps": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "41131a6d",
-    "dots": 737
+    "hash": "0901a654",
+    "dots": 593
    }
   },
   "watch-faces": {
