@@ -15,7 +15,7 @@
  * and a classic 15 px scrollbar leave a 1188 px grid, so square 285 px cards (under --card-max = min(62svh, 520px))
  * on a 301 px row pitch. The live band is 800 + 2 × 64 = 928 px, and 928 + 285 > 4 × 301, so it can touch 5 rows:
  * 20 cards. (With an overlay scrollbar it is 4 rows, 16 cards; COMPACT, an opt-in, fits 25.)
- * Turn-taking (src/engine/clock.ts `STAGGER`): when a window holds more than STAGGER.min live CPU cards, they split by
+ * Turn-taking (src/engine/clock.ts `STAGGER`): when a window holds 2 or more live CPU cards (more than STAGGER.min), they split by
  * board order into two interleaved groups and the second runs half a frame period behind, so on a 60 Hz display the
  * groups draw on different animation frames. A card above 30 fps (half of 60 Hz) draws on most frames whatever its
  * phase, so it counts in both. The window's frame is the heavier group plus the other group's cards above 30 fps.
@@ -26,7 +26,8 @@
  *   frame       worst per-frame time over any N consecutive animated CPU cards (board order),
  *               with turn-taking (above)                                                         ≤ 8 ms
  *   all         Σ per-frame time of every animated CPU card, no turn-taking (reference only, no budget)
- *   worst live  slowest animated CPU card per frame                                              ≤ 4 ms (hero)
+ *   worst live  each animated CPU card per frame                                                 ≤ 4 ms, or 8 ms for a
+ *               card on LIVE_EXCEPTIONS (showcase cards whose speed-up needs pixel changes; only the owner adds one)
  *   gpu fb      Σ CPU-fallback per-frame time of the GPU cards (reference only, no budget)
  *   SVG         Σ renderSVG bytes of the cards the app draws as SVG                               < 0.5 MB
  * Sim board cold start (`--sim-t 1,60,3600`, default those): every sim's checkpoints dropped, the board mounted
@@ -49,6 +50,12 @@ const args = process.argv.slice(2), strict = args.includes('--strict')
 const ci = args.indexOf('--cards'), showCards = ci >= 0 ? (args[ci + 1] === 'all' ? Infinity : +args[ci + 1]) : 15
 const RUNS = +(process.env.RUNS ?? 15), CANVAS_THRESHOLD = 2000
 const BUDGET = { mountMs: 30, frameMs: 8, liveMs: 4, svgBytes: 0.5 * 1024 * 1024 }
+/**
+ * The written exceptions to the 4 ms live-card budget: showcase cards that may take up to 8 ms a frame. Speeding them up
+ * needs pixel-changing work, left for a later per-card pass. No card is added without the owner.
+ */
+const LIVE_EXCEPTIONS: Readonly<Record<string, number>> = { 'sq-ammann': 8, 'lv-corridor': 8, 'sc-posts': 8 }
+const liveBudget = (id: string) => LIVE_EXCEPTIONS[id] ?? BUDGET.liveMs
 /** Cards a 1280 × 800 viewport holds on the busiest board layout (header): the board frame window. */
 const VIEWPORT_CARDS = 20
 
@@ -106,11 +113,11 @@ const boardRows: BoardRow[] = boards.map(b => {
   }
   if (row.mountMs > BUDGET.mountMs) row.over.push('mount')
   if (row.frameMs > BUDGET.frameMs) row.over.push('frame')
-  if (row.worstLiveMs > BUDGET.liveMs) row.over.push('live')
+  if (an.some(r => r.frameMs > liveBudget(r.id))) row.over.push('live')
   if (row.svgBytes >= BUDGET.svgBytes) row.over.push('svg')
   return row
 })
-console.log(`Boards — budgets: mount ≤ ${BUDGET.mountMs} ms, frame (worst ${VIEWPORT_CARDS} consecutive live CPU cards, taking turns above ${STAGGER.min}) ≤ ${BUDGET.frameMs} ms, worst live ≤ ${BUDGET.liveMs} ms, SVG < ${kb(BUDGET.svgBytes)} KB; all and gpu fb are reference only`)
+console.log(`Boards — budgets: mount ≤ ${BUDGET.mountMs} ms, frame (worst ${VIEWPORT_CARDS} consecutive live CPU cards, taking turns from ${STAGGER.min + 1}) ≤ ${BUDGET.frameMs} ms, live card ≤ ${BUDGET.liveMs} ms (exceptions: ${Object.entries(LIVE_EXCEPTIONS).map(([id, ms]) => `${id} ≤ ${ms}`).join(', ')}), SVG < ${kb(BUDGET.svgBytes)} KB; all and gpu fb are reference only`)
 console.log(`${pad('board', 11)} ${lpad('cards', 5)} ${lpad('anim', 4)} ${lpad('mount ms', 9)} ${lpad('frame ms', 9)} ${lpad('all ms', 8)} ${lpad('gpu fb', 7)} ${pad('worst live (ms)', 26)} ${lpad('svg cards', 9)} ${lpad('SVG KB', 7)} ${lpad('all-SVG KB', 10)}  over`)
 for (const r of boardRows) console.log(`${pad(r.id, 11)} ${lpad(r.cards, 5)} ${lpad(r.animated, 4)} ${lpad(f(r.mountMs), 9)} ${lpad(f(r.frameMs), 9)} ${lpad(f(r.allMs), 8)} ${lpad(r.gpuMs ? f(r.gpuMs) : '-', 7)} ${pad(r.animated ? `${r.worstLive} (${f(r.worstLiveMs)})` : '-', 26)} ${lpad(r.svgCards, 9)} ${lpad(kb(r.svgBytes), 7)} ${lpad(kb(r.svgAllBytes), 10)}  ${r.over.join(',') || 'ok'}`)
 

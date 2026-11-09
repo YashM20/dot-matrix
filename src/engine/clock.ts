@@ -11,12 +11,13 @@
  * - `invalidate(sub)` forces a draw on the next animation frame regardless of the subscriber's
  *   fps (input feedback must not wait for the next 12 fps tick).
  *
- * - Turn-taking (`STAGGER`): while more than STAGGER.min board cards run, they take turns. By board order they split
+ * - Turn-taking (`STAGGER`): while two or more board cards run (more than STAGGER.min), they take turns. By board order they split
  *   into two interleaved groups; the second draws each of its frames half a frame period later (its clock runs
  *   half a frame behind). Every card keeps its rate and draws the same quantized `t` values, but the two groups
  *   land on different animation frames (12 fps cards on a 60 Hz display: 2–3 frames apart), so one animation
  *   frame redraws about half the cards. A card opts in with `order` and can opt out frame by frame with
- *   `staggerable()` (the visitor is using it). A card never steps back: after a group change it holds its frame.
+ *   `staggerable()` (the visitor is using it). A card taking turns never steps back: after a group change it holds
+ *   its frame. Every other subscriber draws whenever its frame index changes, either way (a scrub, a seek).
  *
  * Framework-free: works with any `requestAnimationFrame`-like scheduler and time source.
  */
@@ -29,8 +30,8 @@ export interface ClockSubscriber {
   /** False while the card must draw every frame (the visitor is using it). Read each animation frame. */
   staggerable?(): boolean
 }
-/** Turn-taking kicks in above `min` eligible board cards, so a small board never staggers. */
-export const STAGGER = { min: 6 } as const
+/** Turn-taking kicks in above `min` eligible board cards: any two take turns (no card loses rate, so no board is too small). */
+export const STAGGER = { min: 1 } as const
 const eligible = (sub: ClockSubscriber) => sub.order !== undefined && (sub.staggerable?.() ?? true)
 export interface ClockOptions {
   now?: () => number
@@ -77,7 +78,8 @@ export function createMasterClock(opts: ClockOptions = {}): MasterClock {
     if (turns.length > STAGGER.min) { turns.sort((a, b) => a.order! - b.order!); turns.forEach((sub, i) => { subs.get(sub)!.group = i & 1 }) }
     for (const [sub, state] of subs) {
       const { t, frame } = quantizeTime(state.group === 1 ? Math.max(0, time - .5 / sub.fps) : time, sub.fps)
-      if (frame <= state.frame && !state.dirty) continue
+      // only a card taking turns holds its frame across a group change; any other draws on every change, backward too
+      if ((state.group >= 0 ? frame <= state.frame : frame === state.frame) && !state.dirty) continue
       state.frame = frame; state.dirty = false
       sub.onFrame(t, frame)
     }
