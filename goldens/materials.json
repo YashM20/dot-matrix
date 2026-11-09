@@ -52,25 +52,25 @@
   "mat-terrazzo": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "e56c99b5",
-    "dots": 2580
+    "hash": "82456fa8",
+    "dots": 2679
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "e56c99b5",
-    "dots": 2580
+    "hash": "82456fa8",
+    "dots": 2679
    }
   },
   "mat-lens": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "44549b70",
-    "dots": 3910
+    "hash": "c8e0f42f",
+    "dots": 4144
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "44549b70",
-    "dots": 3910
+    "hash": "c8e0f42f",
+    "dots": 4144
    }
   },
   "mat-pool": {

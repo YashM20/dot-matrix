@@ -57,7 +57,7 @@ export interface TextOptions {
   /**
    * Display weight: each glyph is upscaled 2× with Scale2x, so strokes are two dots thick and
    * diagonals/curves step one dot at a time (the reference hero numerals). Glyphs become 10×14.
-   * Hero text (`bigText`) only keeps it from a lattice of 2.5 up; below that it draws the plain glyph at twice the lattice.
+   * Hero text (`bigText`) only keeps it from a lattice of 1.5 up; below that it draws the plain glyph at twice the lattice.
    */
   smooth?: boolean
 }
