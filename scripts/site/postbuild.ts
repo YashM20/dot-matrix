@@ -147,12 +147,14 @@ export function postbuild({ og = true } = {}) {
   const jobs: [file: string, card: string][] = [['default', heroOf(boards[0].id)], ...boards.map(b => [b.id, heroOf(b.id)] as [string, string])]
   for (const [file, card] of jobs) writeFileSync(join(DIST, 'og', `${file}.png`), ogImage(card).png())
   const t2 = performance.now()
-  // ~0.7 s per image: cached by the renderer's source + the card's golden hashes, so only changed cards re-render
+  // ~0.7 s per image: cached by the renderer's source, the card's golden hashes and the board title the image draws
+  // (as scripts/og.ts finds it), so only changed cards re-render and a renamed board never keeps its old title
   const cache = process.env.OG_CACHE || join('node_modules', '.cache', 'dot480-og'), golden = goldenOf(), salt = createHash('sha1').update(OG_SOURCES.map(f => readFileSync(f)).join('\0')).digest('hex')
   mkdirSync(cache, { recursive: true })
   let fresh = 0
   for (const w of widgets) {
-    const key = createHash('sha1').update(`${salt}|${w.slug}|${JSON.stringify(golden[w.slug] ?? null)}`).digest('hex').slice(0, 16), hit = join(cache, `${w.uid}-${key}.png`)
+    const title = boards.find(b => b.items.some(i => i.id === w.slug))?.title ?? ''
+    const key = createHash('sha1').update(`${salt}|${w.slug}|${title}|${JSON.stringify(golden[w.slug] ?? null)}`).digest('hex').slice(0, 16), hit = join(cache, `${w.uid}-${key}.png`)
     if (!existsSync(hit)) { writeFileSync(hit, ogImage(w.slug).png()); fresh++ }
     copyFileSync(hit, join(DIST, 'og', 'widget', `${w.uid}.png`))
   }
