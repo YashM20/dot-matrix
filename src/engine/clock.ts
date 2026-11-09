@@ -32,6 +32,8 @@ export interface ClockSubscriber {
 }
 /** Turn-taking kicks in above `min` eligible board cards: any two take turns (no card loses rate, so no board is too small). */
 export const STAGGER = { min: 1 } as const
+/** A subscriber's frame state; the turn pass ranks these directly, so a card that unsubscribes mid-frame can't leave a dangling lookup. */
+type Slot = { sub: ClockSubscriber; frame: number; dirty: boolean; group: number }
 const eligible = (sub: ClockSubscriber) => sub.order !== undefined && (sub.staggerable?.() ?? true)
 export interface ClockOptions {
   now?: () => number
@@ -66,16 +68,16 @@ export function createMasterClock(opts: ClockOptions = {}): MasterClock {
   const now = opts.now ?? (() => performance.now())
   const raf = opts.raf ?? (cb => requestAnimationFrame(cb))
   const caf = opts.caf ?? (id => cancelAnimationFrame(id))
-  const subs = new Map<ClockSubscriber, { frame: number; dirty: boolean; group: number }>()
-  const turns: ClockSubscriber[] = []
+  const subs = new Map<ClockSubscriber, Slot>()
+  const turns: Slot[] = [] // reused every frame: the slots of the cards taking turns
   let elapsed = 0, last = 0, handle = 0, running = false, paused = false
 
   const T = () => elapsed + (running ? (now() - last) / 1000 : 0)
   function frame(time: number) {
     // the cards taking turns this frame, in board order: odd ranks run half a frame behind (−1 or 0: on time)
     turns.length = 0
-    for (const [sub, state] of subs) { state.group = -1; if (eligible(sub)) turns.push(sub) }
-    if (turns.length > STAGGER.min) { turns.sort((a, b) => a.order! - b.order!); turns.forEach((sub, i) => { subs.get(sub)!.group = i & 1 }) }
+    for (const slot of subs.values()) { slot.group = -1; if (eligible(slot.sub)) turns.push(slot) }
+    if (turns.length > STAGGER.min) { turns.sort((a, b) => (a.sub.order ?? 0) - (b.sub.order ?? 0)); turns.forEach((slot, i) => { slot.group = i & 1 }) }
     for (const [sub, state] of subs) {
       const { t, frame } = quantizeTime(state.group === 1 ? Math.max(0, time - .5 / sub.fps) : time, sub.fps)
       // only a card taking turns holds its frame across a group change; any other draws on every change, backward too
@@ -104,7 +106,7 @@ export function createMasterClock(opts: ClockOptions = {}): MasterClock {
   }
   return {
     subscribe(sub) {
-      subs.set(sub, { frame: -1, dirty: true, group: -1 })
+      subs.set(sub, { sub, frame: -1, dirty: true, group: -1 })
       start()
       return () => { subs.delete(sub); if (!subs.size) stop() }
     },
