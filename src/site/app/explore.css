@@ -31,6 +31,19 @@
   max-width: var(--measure)
 }
 
+/* the home's first readable line is the lead: what the site is, on a line of its own in the lead size and the
+   brightest ink; the how-to, the essay link and × share the row under it (phones show the short line instead,
+   src/site/mobile/phone.css). `contents` makes the lead and the how-to rows of the intro's own flex wrap. */
+.intro-long {
+  display: contents
+}
+
+.intro-lead {
+  flex-basis: 100%;
+  color: var(--value);
+  font-size: var(--fs-lead-18)
+}
+
 .intro-line b {
   font-weight: 500;
   color: var(--value)
@@ -208,6 +221,14 @@
 
 .board-view {
   margin-top: var(--gap-group)
+}
+
+/* desktop: an action step between the picker and the board it opened, so the board's name, blurb and cards read as
+   the content and the picker as the way to it (phones keep the group step: the first card stays high) */
+@media not ((max-width: 760px) or ((max-height: 500px) and (pointer: coarse))) {
+  .board-picker + .board-view {
+    margin-top: var(--gap-action)
+  }
 }
 
 /* a board whose chunk is still loading holds a screen of room, so the footer starts below the fold and doesn't jump

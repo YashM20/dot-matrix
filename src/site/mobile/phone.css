@@ -74,13 +74,13 @@
     color: var(--mute)
   }
 
-  /* LIVE DATA folds to its red dot (the words stay for screen readers) */
-  .live {
+  /* LIVE DATA folds to its red dot (the words stay for screen readers); the footer's LIVE label keeps its word */
+  .topbar .live {
     flex: none;
     font-size: 0
   }
 
-  .live i {
+  .topbar .live i {
     width: 6px;
     height: 6px;
     margin: 0

@@ -252,12 +252,8 @@ label b {
   font-size: var(--fs-label-12)
 }
 
-/* one identity line (cut C10: the pipeline line said the left line again), and the links wrap as whole links into
-   balanced lines, so none is left alone on a line */
-.bottom-row > span:nth-of-type(2) {
-  display: none
-}
-
+/* one identity line (cut C10: the pipeline line said the left line again, so it is gone from the markup), and the
+   links wrap as whole links into balanced lines, so none is left alone on a line */
 .bottom-row > span:last-child {
   text-wrap: balance
 }
