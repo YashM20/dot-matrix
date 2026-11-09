@@ -45,7 +45,7 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
   ['src/components/game/**', ['game']], ['src/game/**', ['game']],
   ['src/audio/**', ['audio']],
   ['src/media/**', ['c6']], ['src/vision/**', ['c6']],
-  ['src/essay/**', ['essay', 'csp']], ['src/blog/**', ['essay', 'csp']], ['docs/blog/**', ['essay', 'csp']],
+  ['src/essay/**', ['essay', 'csp', 'a11y-phone']], ['src/blog/**', ['essay', 'csp', 'a11y-phone']], ['docs/blog/**', ['essay', 'csp']],
   ['src/site/analytics*', ['analytics', 'csp']], ['src/site/analytics/**', ['analytics', 'csp']],
   ['src/site/light.ts', ['light']],
   ['src/site/stale-deploy.ts', ['chunks']], ['src/components/LoadBoundary.tsx', ['chunks']],
@@ -54,7 +54,9 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
   ['src/components/widget/**', ['layout', 'layout-narrow', 'nav', 'mobile', 'csp']],
   ['src/components/hero/**', ['layout', 'layout-narrow', 'mobile']],
   ['src/components/About.tsx', ['layout', 'layout-narrow', 'mobile']],
-  ['src/lab/**', ['csp']], ['src/legal/**', ['layout', 'csp']], ['src/data/**', ['csp', 'mobile-boards']],
+  ['src/lab/**', ['csp']], ['src/legal/**', ['layout', 'csp', 'a11y-phone']],
+  ['privacy.html', ['layout', 'csp', 'a11y-phone']], ['terms.html', ['layout', 'csp', 'a11y-phone']],
+  ['src/site/SkipLink.tsx', ['nav', 'a11y-phone']], ['src/site/skip-link.css', ['nav', 'a11y-phone']], ['src/data/**', ['csp', 'mobile-boards']],
 
   // boards: every board's card at 375 px and under the CSP, plus the board's own probe
   ['src/widgets/boards/**', ['mobile-boards', 'csp']],

@@ -38,37 +38,6 @@ body {
   box-shadow: var(--glow-halo)
 }
 
-/* SKIP TO CONTENT (App.tsx): the page's first stop, out of sight until it has focus */
-.skip-link {
-  position: fixed;
-  top: var(--space-2);
-  left: var(--space-2);
-  z-index: var(--z-modal);
-  padding: var(--space-2) var(--space-3);
-  background: var(--raised);
-  color: var(--value);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-ctl);
-  font: 600 var(--fs-label-12)/1 var(--mono);
-  letter-spacing: .14em;
-  text-decoration: none
-}
-
-.skip-link:not(:focus) {
-  clip-path: inset(50%);
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  overflow: hidden;
-  white-space: nowrap
-}
-
-/* the view the skip link lands on takes focus only to start the Tab order there: no ring around the page */
-#main:focus {
-  outline: none;
-  box-shadow: none
-}
-
 /* a <dialog> (src/components/Modal.tsx, Sheet.tsx, the theme popover) takes its whole look from its own class: drop
    the UA box (centring inset, fit-content size, size caps, Canvas colours). No specificity, so any class wins. */
 :where(dialog) {

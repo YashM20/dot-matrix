@@ -31,6 +31,8 @@ export const PROBES: Probe[] = [
   { name: 'essay', shard: 9, secs: 95, args: ['scripts/essay-browser.ts', '$BASE'] },
   { name: 'csp', shard: 10, secs: 150, args: ['scripts/site/csp-browser.ts'] },
   { name: 'a11y', shard: 10, secs: 45, args: ['scripts/site/a11y.ts'] },
+  // the same axe run at phone width (#187): touch emulation, so the 44 px targets apply
+  { name: 'a11y-phone', shard: 11, secs: 50, args: ['scripts/site/a11y.ts', '--width', '390'] },
   // life finishes in about a minute, or hangs
   // its own watchdog fires first, so the log names the step it hung in
   { name: 'life', shard: 11, secs: 170, args: ['scripts/life-browser.ts'], timeoutMin: 3, env: { LIFE_BROWSER_TIMEOUT_S: '165' } },

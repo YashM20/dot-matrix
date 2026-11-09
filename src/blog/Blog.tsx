@@ -1,6 +1,6 @@
 /**
  * The blog (GitHub #77, #12): `/blog/` lists every post, `/blog/<slug>/` is one post. Every post uses the essay's
- * shell: its `<main className="essay">` measure, type and theme, the site nav, the post line, the hero image (when
+ * shell: its `.essay` measure, type and theme, the site nav, the post line, the hero image (when
  * `public/og/blog/<slug>-hero.png` exists: `scripts/og-blog.ts` draws it), "More posts" and the footer. The essay keeps
  * its own TSX page and figures (`src/essay/Essay.tsx`); the tutorials are markdown (`docs/blog/*.md`, `./Doc.tsx`).
  */
@@ -8,6 +8,7 @@ import { lazy, Suspense, useEffect, type ComponentType, type ReactNode } from 'r
 import meta from 'virtual:blog-meta'
 import { DotTitle } from '../essay/ui/DotTitle'
 import { SiteFoot, SiteNav } from '../essay/ui/SiteNav'
+import { SkipLink } from '../site/SkipLink'
 import { cardBody } from './LiveCard'
 import { BLOG, heroImage, POSTS, postFromPath, postPath, type PostInfo } from './posts'
 
@@ -53,23 +54,36 @@ type Body = ComponentType<{ post: PostInfo; top: ReactNode }>
 const EssayBody = lazy(() => import('../essay/Essay').then(m => ({ default: (({ top }) => <m.Essay nav={top} />) as Body })))
 const DocBody = lazy(() => import('./Doc').then(m => ({ default: m.Doc as Body })))
 
+/**
+ * Every blog page: SKIP TO CONTENT, the site nav, the page in `<main>`, the footer. The nav and footer sit outside
+ * `<main>`, as in the app, so they count as landmarks and the skip link passes the nav (#187).
+ */
+function Shell({ kind, here, children }: { kind: 'post' | 'blog'; here?: 'blog'; children: ReactNode }) {
+  return (
+    <div className={`essay ${kind}`}>
+      <SkipLink />
+      <SiteNav here={here} />
+      <main id="main" tabIndex={-1}>{children}</main>
+      <Foot />
+    </div>
+  )
+}
+
 function PostPage({ post }: { post: PostInfo }) {
-  const top = <><SiteNav /><PostLine post={post} /><Hero slug={post.slug} /></>
+  const top = <><PostLine post={post} /><Hero slug={post.slug} /></>
   const Body = post.kind === 'essay' ? EssayBody : DocBody
   return (
-    <main className="essay post">
+    <Shell kind="post">
       <Suspense fallback={<header className="hero">{top}<div className="post-wait" aria-busy="true" /></header>}><Body post={post} top={top} /></Suspense>
       <MorePosts current={post} />
-      <Foot />
-    </main>
+    </Shell>
   )
 }
 
 function BlogIndex() {
   return (
-    <main className="essay blog">
+    <Shell kind="blog" here="blog">
       <header className="hero">
-        <SiteNav here="blog" />
         <Hero slug={BLOG.slug} />
         <DotTitle text="Blog" level={1} max={10} smooth />
         <p className="lede">
@@ -95,8 +109,7 @@ function BlogIndex() {
           )
         })}
       </ol>
-      <Foot />
-    </main>
+    </Shell>
   )
 }
 

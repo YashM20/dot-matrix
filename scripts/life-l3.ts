@@ -33,11 +33,12 @@ const fnvStr = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length
  * t 0, 1.3, 2.9, 4.4, 5.9 (before the loop's first feed at 6 s, the first moment L3.1's feeding can differ), the
  * others at 0, 1.3, 7.7, 21.2, 33.3. Frames at rest must stay these (L3 gate; goldens unchanged). Re-pinned in CP6
  * when the top-right caption moved from faint to mid, and again when it moved from the 0.72 lattice to the card grid
- * (#225), and when big dots began to ease toward a circle (each dot's roundness is in the hash); nothing else in the
+ * (#225), and when big dots began to ease toward a circle (each dot's roundness is in the hash), and for pond-koi when
+ * its DOTS/TYPE switch took the time-of-day caption's place at rest (#269, so a phone can see it); nothing else in the
  * frames changed.
  */
 const L2_FRAMES: Record<string, string[]> = {
-  'pond-koi': ['2912ce66', 'be72e362', 'c77e6124', '5add7c4d', '2c80bbee'],
+  'pond-koi': ['319f1031', 'f2660419', '6e4224a1', '52bd170c', '3d72470f'],
   'pond-jelly': ['ab366d7c', '60c52111', 'cc4380bf', '894c0c34', '7ed619a0'],
   'pond-slime': ['0f69b10d', 'ae470b32', '7d5d4160', 'a334b32e', 'bfedb193'],
   'pond-fireflies': ['c9e73652', 'e9e9cd82', '18ad1d40', 'ce3fd4f2', '85c3abda'],
@@ -232,8 +233,16 @@ export async function lifeL3Checks(assert: Assert, pond: () => Promise<typeof im
     for (let i = 0; i < 6; i++) frame(koiCard, 5 + i / 30, typeData)
     const fr = medianLoaded(i => frame(koiCard, 5.3 + i / 30, typeData), 15)
     assert('pond-koi: TYPE frame (step + layers + sample) ≤ 4 ms median warm × load', fr.ms <= 4 * fr.load, fmtLoaded(fr))
-    const hover = key(koiCard, 0, { hover: 'glyphs' }) !== key(koiCard, 0)
-    assert('pond-koi: the DOTS/TYPE switch shows on hover (the label row), and the default frame shows the caption only', hover && fnvStr(key(koiCard, 0, { data: { ...koiCard.defaults } })) === L2_FRAMES['pond-koi'][0])
+    // the switch is drawn at rest (#269: a phone has no hover); hover underlines the chosen option, focus marches it
+    const rest = frame(koiCard, 0), under = (f: typeof rest) => f.filter(d => d.y > 8 * 2.25 && d.y < 10 * 2.25 && d.x > 93 * 2.25).length
+    const hover = frame(koiCard, 0, { hover: 'glyphs' }), focus = [0, .1].map(t => frame(koiCard, t, { focus: 'glyphs' }))
+    const still = [0, .1].map(t => frame(koiCard, t, { focus: 'glyphs', reducedMotion: true }))
+    const words = rest.filter(d => d.y < 7 * 2.25 && d.x > 93 * 2.25).length
+    const marches = JSON.stringify(focus[0].filter(d => d.y > 8 * 2.25 && d.y < 10 * 2.25)) !== JSON.stringify(focus[1].filter(d => d.y > 8 * 2.25 && d.y < 10 * 2.25))
+    const holds = under(still[0]) === under(still[1]) && JSON.stringify(still[0].filter(d => d.y > 8 * 2.25 && d.y < 10 * 2.25)) === JSON.stringify(still[1].filter(d => d.y > 8 * 2.25 && d.y < 10 * 2.25))
+    assert('pond-koi: the DOTS/TYPE switch is drawn at rest (the label row), hover underlines it, focus marches (still under reduced motion), and the default frame is the pinned one',
+      words > 20 && under(rest) === 0 && under(hover) > 0 && marches && holds && fnvStr(key(koiCard, 0, { data: { ...koiCard.defaults } })) === L2_FRAMES['pond-koi'][0],
+      `${words} switch dots, underline ${under(rest)} / ${under(hover)}, marches ${marches}, still ${holds}`)
   }
 
   // ── L3.5 reduced motion: no input reaches a world ──
