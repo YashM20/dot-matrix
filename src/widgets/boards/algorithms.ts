@@ -333,7 +333,7 @@ export const algoAggregate: WidgetPreset = {
     }
     const dim = dimension(d, k)
     return [
-      cite('WITTEN-SANDER 1981'),
+      cite('WITTEN SANDER'),
       ...siteLayers(groups, 1.05, ['faint', 'mid', 'idle', 'value', 'active']),
       ...footer(k / d.count, `N ${thousands(k).padStart(5, ' ')}`, dim > 0 ? `D ${dim.toFixed(2)}` : 'D -.--'),
     ]

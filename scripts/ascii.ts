@@ -7,7 +7,7 @@
  * Timings are warnings unless DOT_TIMING=strict (scripts/lib/check.ts).
  */
 import { ASCII57, ASCII_RAMP, ASCII_SCREEN, asciiCount, asciiFrame, asciiLoop, asciiPeriod, asciiTiles } from '../src/engine/squares/ascii'
-import { glyph } from '../src/engine/fields/bitmapFont'
+import { RAMP_GLYPHS, glyph } from '../src/engine/fields/bitmapFont'
 import { installSquares } from '../src/engine/squares'
 import { sampleLayersInto } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
@@ -32,10 +32,10 @@ export function asciiChecks(assert: Assert): void {
     let off = 0
     for (const g of ramp) {
       if (g.ch === '@') continue
-      const f = glyph(g.ch)
+      const ramp = RAMP_GLYPHS[g.ch as keyof typeof RAMP_GLYPHS], f = ramp ? ramp.map(r => [...r].map(b => b === '1')) : glyph(g.ch)
       for (let y = 0; y < ASCII57.h; y++) for (let x = 0; x < ASCII57.w; x++) if ((f[y][x] ? 1 : 0) !== g.bits[y * ASCII57.w + x]) off++
     }
-    assert('ascii: font glyphs (every ramp glyph but @ is the 5 × 7 font bitmap, pixel for pixel)', off === 0, `${off} pixels off`)
+    assert('ascii: font glyphs (every ramp glyph but @ is the 5 × 7 font bitmap, or its dense ramp form for % and *, pixel for pixel)', off === 0, `${off} pixels off`)
     const det = detLint(['src/engine/squares/ascii'])
     assert('det: no engine-specific Math in the ASCII screen (in the determinism lint)', !det.violations.length && det.scanned.length === 1, det.violations.map(x => `${x.file}:${x.line} ${x.rule}`).join('; ') || `${det.scanned.length} files`)
   }

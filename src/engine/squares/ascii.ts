@@ -14,14 +14,17 @@
  * whole number of times per loop, so the screen after the last write of a loop is the one the first write follows.
  * Deterministic (inside the determinism lint): `tsin`, sqrt and integer counts only.
  */
-import { glyph } from '../fields/bitmapFont'
+import { RAMP_GLYPHS, glyph } from '../fields/bitmapFont'
 import { defineAlphabet, type Alphabet } from '../life/glyphTiles'
 import { TAU, tsin } from '../noise/trig'
 
 /** Light to dark, in the font's ink order. */
 export const ASCII_RAMP = ' .:-+=%*#@'
-/** Glyphs the font lacks (5 × 7, '#' = lit). `@` has 21 pixels, one more than `#`. */
-const LOCAL: Record<string, string> = { '@': '.###./#...#/#.###/#.#.#/#.###/#..../.####' }
+/** Glyphs the font lacks (5 × 7, '#' = lit). `@` has 21 pixels, one more than `#`; `%` and `*` are the font's dense ramp forms. */
+const LOCAL: Record<string, string> = {
+  '@': '.###./#...#/#.###/#.#.#/#.###/#..../.####',
+  ...Object.fromEntries(Object.entries(RAMP_GLYPHS).map(([c, g]) => [c, g.map(r => r.replace(/1/g, '#').replace(/0/g, '.')).join('/')])),
+}
 const source = (ch: string) => LOCAL[ch] ?? glyph(ch).map(r => r.map(b => (b ? '#' : '.')).join('')).join('/')
 /** The ten ramp glyphs as 5 × 7 bitmaps; `ramp` is the density order. */
 export const ASCII57: Alphabet = defineAlphabet('ASCII57', 5, 7, Object.fromEntries([...ASCII_RAMP].map(c => [c, source(c)])), [...ASCII_RAMP])

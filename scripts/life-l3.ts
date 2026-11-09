@@ -31,16 +31,17 @@ const fnvStr = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length
 /**
  * The L2 frames (FNV of the sampled dot list, data {}, frozen 09:41), taken on the L2 code before any L3 edit: koi at
  * t 0, 1.3, 2.9, 4.4, 5.9 (before the loop's first feed at 6 s, the first moment L3.1's feeding can differ), the
- * others at 0, 1.3, 7.7, 21.2, 33.3. Frames at rest must stay these (L3 gate; goldens unchanged). Re-pinned once in CP6
- * when the top-right caption moved from faint to mid (#225); nothing else in the frames changed.
+ * others at 0, 1.3, 7.7, 21.2, 33.3. Frames at rest must stay these (L3 gate; goldens unchanged). Re-pinned in CP6
+ * when the top-right caption moved from faint to mid, and again when it moved from the 0.72 lattice to the card grid
+ * (#225); nothing else in the frames changed.
  */
 const L2_FRAMES: Record<string, string[]> = {
-  'pond-koi': ['99016858', '124afdbe', '7230560a', 'd52d7cab', '1a91d1da'],
-  'pond-jelly': ['5c67815f', 'f73dbada', '671b9924', 'cc2cdec5', '9cfcb267'],
-  'pond-slime': ['0fa966f5', '32d115aa', 'c1c42e58', 'cd77dd11', 'edb2977b'],
-  'pond-fireflies': ['9c9194e0', '7e090b01', 'a6eadba6', '7dfbbcb8', '62802260'],
-  'pond-murmur': ['35fcc8db', 'ac43458c', '19347cfb', '15cc6724', '90ef7998'],
-  'pond-terrarium': ['df7b73f7', 'fae15b53', '89fbf58c', '4f9eba27', '26e70213'],
+  'pond-koi': ['926784c8', 'f2d3b96e', 'b4455a12', '0a8862d3', '2cd7964a'],
+  'pond-jelly': ['ab366d7c', '60c52111', 'cc4380bf', '894c0c34', '7ed619a0'],
+  'pond-slime': ['89c65e24', '7425a955', 'd6bef00f', '5682e322', '74e99958'],
+  'pond-fireflies': ['b51f193e', '0aaf5a2c', '18ad1d40', '8fa34bcc', '12fe85aa'],
+  'pond-murmur': ['f1c9da8c', '47bbf48b', '61a992f6', 'd569edf5', '61ecdf59'],
+  'pond-terrarium': ['9a54e9bb', 'e59271e3', 'b46ef442', '2907f55d', '0c1acd01'],
 }
 /** `rippleStep`'s output, pinned: FNV of a 600-step run on the pond mask with a splat every 50 steps (the L1.2 code). */
 const RIPPLE_600 = '6045c3bb'
