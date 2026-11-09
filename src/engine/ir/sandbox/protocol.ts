@@ -99,21 +99,26 @@ export function pointStore(cap = 256): PointStore {
 }
 
 /**
- * Run a batch: one frame. The programs share one `IR_FRAME_MS` budget (the same guard the page uses); the one
- * that runs past it is `paused` and the rest of the batch is `skip`. `onStart(i)` is told before item `i` runs.
+ * Run a batch. A batch holds the programs of several editor frames and thumbnails, so each program gets its own
+ * `IR_FRAME_MS` budget (the same guard the page gives each card): one that runs past it is `paused`, and a cheap
+ * program is never paused for the slow ones before it. Once the batch has run past one budget, or a program was
+ * paused, the rest are `skip` (asked again in the next batch), so a batch stays near two budgets, well inside the
+ * page's watchdog. `onStart(i)` is told before item `i` runs.
  */
-export function evaluateBatch(b: EvalBatch, store: PointStore, onStart: (index: number) => void = () => {}, now?: () => number): ItemResult[] {
-  const guard = irGuard(IR_FRAME_MS, now), results: ItemResult[] = []
+export function evaluateBatch(b: EvalBatch, store: PointStore, onStart: (index: number) => void = () => {}, now: () => number = () => performance.now()): ItemResult[] {
+  const results: ItemResult[] = [], t0 = now()
   let tripped = false
-  guard.begin()
   b.items.forEach((it, index) => {
-    if (tripped) { results.push({ status: 'skip' }); return }
+    // keep new points even for a skipped item: the page counts them as sent
     if (it.points) store.set(it.slot, it.pv, it.points)
+    if (tripped || (index > 0 && now() - t0 > IR_FRAME_MS)) { results.push({ status: 'skip' }); return }
     const P = it.points ?? store.get(it.slot, it.pv)
     if (!P || P.length !== 2 * it.n) { results.push({ status: 'points' }); return }
     let program
     try { program = compileUntrusted(it.src) } catch { results.push({ status: 'error' }); return }
     onStart(index)
+    const guard = irGuard(IR_FRAME_MS, now)
+    guard.begin()
     const f = guard.field(it.slot, program.info.cost, program(it.env)), values = new Float64Array(it.n)
     for (let i = 0; i < it.n; i++) values[i] = f(P[2 * i], P[2 * i + 1], 0, 0)
     if (guard.state(it.slot) === 'paused') { tripped = true; results.push({ status: 'paused' }) }
