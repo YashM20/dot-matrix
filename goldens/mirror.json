@@ -35,12 +35,12 @@
   "mirror-conduct": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "c3c3f386",
+    "hash": "31cff3c4",
     "dots": 1438
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "ff36f87e",
+    "hash": "c25aa1fd",
     "dots": 1437
    }
   }

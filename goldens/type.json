@@ -23,13 +23,13 @@
   "type-marquee": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "ecc54159",
-    "dots": 1755
+    "hash": "2e7800ad",
+    "dots": 1891
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "626d61b9",
-    "dots": 1755
+    "hash": "05613da9",
+    "dots": 1891
    }
   },
   "type-kinetic": {
