@@ -1,7 +1,7 @@
 /**
  * Browser probe for the pond board (docs/living-matter/L-pond.md L1.9 / L1.10), headless Chrome over CDP:
- *  - desktop 1280: `/pond/?probe=1` paints `pond-koi`; hovering it forks the live world, a click drops pellets, 7 s
- *    idle heals back to pristine; Chrome's pristine state hash at step 1440 = Node's (scripts/life.ts --snapshot);
+ *  - desktop 1280: `/pond/?probe=1` paints `pond-koi`; hovering it forks the live world, a click drops pellets, and once
+ *    the food is gone idle heals back to pristine; Chrome's pristine state hash at step 1440 = Node's (scripts/life.ts --snapshot);
  *    the card's frame (layers + sample) at 4× CPU throttle ≤ 16 ms;
  *  - touch 375 × 812: a vertical swipe that starts on the card scrolls the page ≥ 150 px and the world stays
  *    pristine; a tap drops pellets; a 300 ms hold engages the card (lure) and the page does not scroll while engaged;
@@ -76,7 +76,9 @@ try {
     await page.shot(join(out, 'pond-desktop-fed.png'))
     await page.mouse('mouseMoved', 5, 5, 0)
     at('desktop: idle heals')
-    check('life-browser: 7 s idle heals back to pristine', await page.waitFor(`__pond.mode() === 'pristine'`, 9000), await page.js('__pond.mode()'))
+    // the heal waits for the meal (#90): a pellet floats up to 14 s, then 4 s idle, up to 9 s clear of the loop seam, a 6 s heal
+    const fed = await page.waitFor(`__pond.pellets() === 0`, 20000)
+    check('life-browser: once the food is gone, idle heals back to pristine', fed && await page.waitFor(`__pond.mode() === 'pristine'`, 22000), `${await page.js('__pond.pellets()')} pellets, ${await page.js('__pond.mode()')}`)
     at('desktop: bench at 4× throttle')
     await page.cdp('Emulation.setCPUThrottlingRate', { rate: 4 })
     // bounded: a starved box at 4× throttle must fail this check, not hang the run
@@ -244,11 +246,12 @@ try {
       const opened = await p.waitFor(`location.pathname === '/widget/pond-marble/' && !!document.querySelector('.wp [data-card-id="pond-marble"] canvas')`, 20000)
       await sleep(900)
       if (mode === 'vt') await p.shot(join(out, 'x1-vt-widget.png'))
-      const n1 = await p.js<number>('__vt.n')
+      // read safely: a missing hook fails the check with where the page went, not the whole run
+      const n1 = await p.js<number>('globalThis.__vt?.n ?? -1')
       await p.js('history.back()')
       const back = await p.waitFor(`location.pathname === '/pond/' && !!${mcard}?.querySelector('canvas')`, 20000)
       await sleep(900)
-      const vt = await p.js<{ n: number; named: string[]; hidden: string[] }>('__vt')
+      const vt = await p.js<{ n: number; named: string[]; hidden: string[]; lost?: string }>(`globalThis.__vt ?? { n: -1, named: [], hidden: [], lost: location.href + ' after ' + performance.getEntriesByType('navigation').length + ' load(s), probe ' + !!globalThis.__POND_PROBE__ }`)
       const clean = await p.js<boolean>(`![...document.querySelectorAll('[data-card-id]')].some(e => e.style.viewTransitionName || e.classList.contains('vt-fly'))`)
       const errs = p.logs.filter(l => !/main thread/.test(l))
       await p.close(); pages.delete(p)
