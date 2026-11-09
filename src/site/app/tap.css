@@ -1,7 +1,10 @@
 /* App styles: tap targets and touch padding */
 /* ── W0 mobile pass (375 px, scripts/site/mobile.ts): tap targets at least 24 px (WCAG 2.5.8), touch padding ── */
+/* a lazy view's placeholder holds a full screen, so the footer first paints below the fold and the view's arrival
+   moves nothing on screen (CLS; it was 60vh, and the footer jumped on /browse/, /about and widget pages) */
 .view-loading {
-  min-height: 60vh
+  min-height: 100vh;
+  min-height: 100svh
 }
 
 @media(max-width:760px) {

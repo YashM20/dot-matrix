@@ -97,19 +97,23 @@ export function blogPages() {
   const alts: Record<string, { social?: string }> = existsSync(altFile) ? JSON.parse(readFileSync(altFile, 'utf8')) : {}
   const imageAlt = (slug: string) => (has(socialImage(slug)) ? alts[slug]?.social : undefined)
   const author = { '@type': 'Organization', name: 'Reactopia', url: 'https://reactopia.me/' }
+  // the hero is the page's LCP image, but React draws it: name it in the HTML so the browser fetches it with the CSS
+  // (Lighthouse "LCP request discovery"; scripts/site/perf-check.ts keeps it)
+  const preload = (slug: string) => (has(heroImage(slug)) ? [`<link rel="preload" as="image" href="${heroImage(slug)}" fetchpriority="high" />`] : [])
   const index: PageMeta = { title: BLOG.title, description: BLOG.dek, path: postPath(), image: social(BLOG.slug), imageAlt: imageAlt(BLOG.slug) }
-  const list = withMeta(html, index, [jsonLd({
+  const listLd = jsonLd({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: BLOG.title, description: BLOG.dek, url: origin + index.path, image: origin + index.image,
     hasPart: POSTS.map(p => ({ '@type': 'BlogPosting', headline: p.title, url: origin + postPath(p.slug), datePublished: p.date })),
-  })])
-  writeFileSync(file, list); page('blog', list)
+  })
+  // blog.html is the fallback for any /blog/ path (vercel.json), so only the index's own page preloads the index's hero
+  writeFileSync(file, withMeta(html, index, [listLd])); page('blog', withMeta(html, index, [...preload(BLOG.slug), listLd]))
   for (const p of POSTS) {
     const m: PageMeta = { title: `${p.title} · MATRIX blog`, description: p.dek, path: postPath(p.slug), image: social(p.slug), imageAlt: imageAlt(p.slug) }
     const ld = {
       '@context': 'https://schema.org', '@type': 'BlogPosting', headline: p.title, description: p.dek, datePublished: p.date, author, publisher: author,
       image: [origin + m.image, ...(has(heroImage(p.slug)) ? [origin + heroImage(p.slug)] : [])], url: origin + m.path, mainEntityOfPage: origin + m.path,
     }
-    page(join('blog', p.slug), withMeta(html, m, [`<meta property="article:published_time" content="${p.date}" />`, jsonLd(ld)]).replace('property="og:type" content="website"', 'property="og:type" content="article"'))
+    page(join('blog', p.slug), withMeta(html, m, [`<meta property="article:published_time" content="${p.date}" />`, ...preload(p.slug), jsonLd(ld)]).replace('property="og:type" content="website"', 'property="og:type" content="article"'))
   }
   console.log(`site: blog index + ${POSTS.length} post pages`)
 }
