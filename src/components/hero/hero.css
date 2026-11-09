@@ -59,7 +59,13 @@
 .hero-note {
   margin: var(--space-1) 0 0;
   color: var(--mute);
-  font: 400 var(--fs-label-12)/1.5 var(--mono)
+  font: 400 var(--fs-label-12)/1.5 var(--mono);
+  text-wrap: pretty
+}
+
+/* the legend breaks between its parts, never inside one ("96 ×" / "96") */
+.fig-unit {
+  white-space: nowrap
 }
 
 .hero-note button {

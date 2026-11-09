@@ -14,11 +14,11 @@
   background: var(--surface)
 }
 
-/* wide: a 216 px card with its legend beside it, floated right of the header (it is as tall as the header) */
+/* wide: a 216 px card with its legend beside it (240 px, so a legend part never breaks), floated right of the header (it is as tall as the header) */
 @media (min-width: 1280px) {
   .home-hero {
     float: right;
-    width: 428px;
+    width: 468px;
     margin: 0 0 var(--gap-group) var(--gap-action)
   }
 

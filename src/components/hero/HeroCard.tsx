@@ -114,7 +114,7 @@ export function HeroCard() {
       onClick={() => file.current?.click()} onPointerMove={onMove} onDragOver={onDrag} onDragEnter={onDrag} onDragLeave={() => setOver(false)} onDrop={onDrop}>
       <DotCanvas layers={layers} grid={GRID} style={STYLE} theme={theme} change={false} enter={{ delay: 0, mask: 'bayer' }} />
     </button>
-    <figcaption className="fig-cap"><b>FIG 00</b>{image ? image.name.toUpperCase() : 'YOUR IMAGE'} · {GRID.cols} × {GRID.rows} · HALFTONE STEP 2</figcaption>
+    <figcaption className="fig-cap"><b>FIG 00</b>{image ? image.name.toUpperCase() : 'YOUR IMAGE'} · <span className="fig-unit">{GRID.cols} × {GRID.rows}</span> · <span className="fig-unit">HALFTONE STEP 2</span></figcaption>
     <p className="hero-note" id="hero-note">Drop or paste an image, or <button type="button" onClick={() => file.current?.click()}>pick one</button>{image && <> · <button type="button" onClick={() => { setImage(null); setNote('Back to the sphere.') }}>clear</button></>}. It stays on this device: nothing is uploaded.</p>
     <p className="sr-only" role="status" aria-live="polite">{note}</p>
     <input ref={file} type="file" accept="image/*" hidden onChange={e => { const f = e.target.files?.[0]; void open(f, f?.name.replace(/\.[^.]+$/, '').slice(0, 24) || 'image'); e.target.value = '' }} />
