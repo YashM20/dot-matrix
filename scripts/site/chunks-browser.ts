@@ -73,6 +73,36 @@ try {
     } finally { await p.close() }
   }
 
+  // ── a view's own chunk fails where the page can't reload (docs/STATE-MACHINES.md A2): the reload gap is used up, or
+  // the browser is offline. The view shows its error state; the page around it (header, footer) stays, no crash screen ──
+  const browseChunk = readdirSync('dist/assets').find(f => /^Browse-[\w-]+\.js$/.test(f))
+  assert('missing view chunk: the BROWSE view has its own chunk', !!browseChunk)
+  if (browseChunk) for (const how of ['gap used', 'offline'] as const) {
+    const p = await launch(1280, 900, { flags: { make: false, lab: false }, testHooks: false })
+    try {
+      await quiet(p, base)
+      const viewFailed = `!!document.querySelector('main .load-failed') && !document.querySelector('.root-crash') && !!document.querySelector('.topbar')`
+      if (how === 'gap used') {
+        await p.js(`(sessionStorage.setItem('dot480:stale-reload', String(Date.now())), 1)`)
+        const hits = { n: 0 }
+        p.on('Fetch.requestPaused', e => { hits.n++; void p.cdp('Fetch.fulfillRequest', { requestId: e.requestId, responseCode: 404, body: Buffer.from('gone').toString('base64') }).catch(() => {}) })
+        await p.cdp('Fetch.enable', { patterns: [{ urlPattern: `*/assets/${browseChunk}*` }] })
+        await p.cdp('Page.navigate', { url: `${base}browse/` })
+      } else {
+        await p.cdp('Page.navigate', { url: base })
+        await p.waitFor(`!!document.querySelector('.board-grid canvas')`, 20000)
+        await sleep(2500) // the idle parts (hero, live band, command layer) load while online
+        await p.cdp('Network.enable')
+        await p.cdp('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 })
+        await p.js(`(document.getElementById('tab-BROWSE').click(), 1)`)
+      }
+      const shown = await p.waitFor(viewFailed, 20000)
+      assert(`missing view chunk, ${how}: BROWSE shows its error state inside the page (header kept, no crash screen)`, shown)
+      if (how === 'offline') assert('missing view chunk, offline: the page did not reload, and the reload stamp is unused', await p.js<boolean>(`!sessionStorage.getItem('dot480:stale-reload')`))
+      if (how === 'gap used') await shot(p, 'browse-view-chunk-failed')
+    } finally { await p.close() }
+  }
+
   // ── a card page fetches its own board chunk and no other (#214) ──
   {
     const p = await launch(1280, 900, { flags: { make: false, lab: false }, testHooks: false })

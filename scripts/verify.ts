@@ -175,6 +175,11 @@ goldenKeyChecks(assert)
 uxChecks(assert)
 // FLAGS (#144, #145) every release flag documented; the URL sets none; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
 await flagChecks(assert)
+// APP STATE (docs/STATE-MACHINES.md A): stale-deploy offline reload, the likes record across tabs (scripts/verify/appstate.ts)
+{
+  const { appStateChecks } = await import('./verify/appstate')
+  await appStateChecks(assert)
+}
 // LIKES (#169) the likes API on the in-memory store: limits, holds, bursts, cookies, forget, budget, the function bundle (scripts/likes/checks.ts)
 {
   const { likesChecks } = await import('./likes/checks')
