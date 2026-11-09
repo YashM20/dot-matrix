@@ -13,7 +13,7 @@
  *   npx tsx scripts/site/seo-check.ts   → exit 1 on a failure
  */
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { join } from 'node:path'
 import { checker } from '../lib/check'
 import { boardAliases, boardIds, boardManifest } from '../../src/widgets/manifest'
 import { boardBlurbs } from '../../src/widgets/blurbs'
@@ -23,44 +23,15 @@ import { parse } from '../../src/blog/markdown'
 import { cardsOf, origin, readWidgets } from './seo'
 import { esc, STATIC_CLASS } from './seo-html'
 import { flag } from '../../src/site/flags'
+import { readVercel, route as routeIn, show } from './vercel-routes'
 
 const DIST = 'dist'
 const { assert, done } = checker('seo')
 if (!existsSync(join(DIST, 'sitemap.xml'))) { assert('seo: dist/sitemap.xml exists (run the build first)', false); done() }
 
-// ── routing: vercel.json against dist/ ──
-interface Rule { source: string; destination: string }
-const vercel = JSON.parse(readFileSync('vercel.json', 'utf8')) as { redirects: Rule[]; rewrites: Rule[] }
-/** A `source` as a RegExp and its param names. `exact`: Vercel's own reading (case-sensitive, no optional slash). */
-function compile(source: string, exact: boolean): { re: RegExp; keys: string[] } {
-  const keys: string[] = []
-  let re = '', i = 0
-  const group = () => { let depth = 0, s = ''; for (; i < source.length; i++) { const c = source[i]; if (c === '(') depth++; if (c === ')') depth--; s += c; if (!depth) { i++; return s } } throw new Error(`unbalanced ${source}`) }
-  while (i < source.length) {
-    const c = source[i]
-    if (c === ':') {
-      const name = /^:(\w+)/.exec(source.slice(i))![1]; i += name.length + 1
-      const pat = source[i] === '(' ? group().slice(1, -1) : '[^/]+?', mod = /[*+?]/.test(source[i] ?? '') ? source[i++] : ''
-      keys.push(name)
-      if (mod && re.endsWith('\\/')) { re = re.slice(0, -2) + `(?:\\/(${pat}(?:\\/${pat})*))${mod === '+' ? '' : '?'}`; continue }
-      re += `(${pat})`; continue
-    }
-    if (c === '(') { keys.push(String(keys.length)); re += group(); continue }
-    re += c.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&'); i++
-  }
-  return { re: new RegExp(`^${re}${exact ? '' : '\\/?'}$`, exact ? '' : 'i'), keys }
-}
-const isFile = (p: string) => { const f = join(DIST, p.endsWith('/') ? p + 'index.html' : p); return existsSync(f) && statSync(f).isFile() ? relative(DIST, f).replace(/\\/g, '/') : undefined }
-type Outcome = { file: string; rewritten: boolean } | { redirect: string } | { status: 404 }
-function route(path: string, exact: boolean): Outcome {
-  const match = (r: Rule) => { const { re, keys } = compile(r.source, exact), m = re.exec(path); return m && r.destination.replace(/:(\w+)/g, (_, k: string) => m[keys.indexOf(k) + 1] ?? '') }
-  for (const r of vercel.redirects ?? []) { const to = match(r); if (to) return { redirect: to } }
-  const direct = isFile(path)
-  if (direct) return { file: direct, rewritten: false }
-  for (const r of vercel.rewrites ?? []) { const to = match(r); if (to) { const f = isFile(to); return f ? { file: f, rewritten: true } : { status: 404 } } }
-  return { status: 404 }
-}
-const show = (o: Outcome) => ('file' in o ? o.file : 'redirect' in o ? `→ ${o.redirect}` : '404')
+// ── routing: vercel.json against dist/ (./vercel-routes.ts) ──
+const vercel = readVercel()
+const route = (path: string, exact: boolean) => routeIn(vercel, DIST, path, exact)
 
 const widgets = readWidgets(), sample = widgets[0], lock = widgets.find(w => w.slug.startsWith('lock-'))
 /** [path, what it must serve: a file, `→ <to>` for a redirect, or 404]; `view` checks the app opens it. */
