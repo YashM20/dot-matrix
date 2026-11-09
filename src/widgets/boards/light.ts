@@ -25,18 +25,24 @@ const BODY = { lattice: 1.3 }
  * lit side climbs to idle. Values outside a band are 0 there (the bands never overlap).
  */
 const BANDS: [number, number, Tone][] = [[.06, .3, 'faint'], [.3, .62, 'mid'], [.62, 2, 'idle']]
-function banded(f: Field, bands = BANDS): Layer[] {
+const same = (f: Field) => f
+function banded(f: Field, bands = BANDS, cut = same): Layer[] {
   return bands.map(([lo, hi, tone]) => {
     const g: Field = (u, v) => { const x = f(u, v); return x >= lo && x < hi ? x : 0 }
     g.bounds = f.bounds
-    return layer(LAT.at(g), tone)
+    return layer(LAT.at(cut(g)), tone)
   })
 }
-/** Gloss: the specular highlight drawn two quantize steps (+.5) above the diffuse dot under it, in `value`. */
-function gloss(diffuse: Field, specular: Field, from = .12): Layer {
+/**
+ * Gloss on a lit surface: the diffuse bands, then the specular in `value`. The specular's bright core (cells at 80% of its peak or
+ * more) is one dot sized to that area, with the lattice dots under it cleared; the rest of the gloss stays on the
+ * lattice, two quantize steps (+.5) above the diffuse dot under it.
+ */
+function gloss(diffuse: Field, specular: Field, from: number, bands = BANDS): Layer[] {
+  const { dot, cut } = T.peak(K, [0, 0], specular, { from })
   const g: Field = (u, v) => { const s = specular(u, v); return s < from ? 0 : Math.min(1, diffuse(u, v) + .5 * smoothstep(from, .7, s)) }
   g.bounds = specular.bounds
-  return layer(LAT.at(g), 'value')
+  return [...banded(diffuse, bands, cut), layer(LAT.at(cut(g)), 'value'), ...(dot ? [layer(dot, 'value')] : [])]
 }
 
 // ── TORCH ───────────────────────────────────────────────────────────────────
@@ -71,7 +77,7 @@ export const lightTorch: WidgetPreset = {
   layers: ctx => {
     const { light } = torchLight(ctx), { diffuse, specular } = illuminate(BUTTON, light, { ambient: .04, shininess: 24 })
     // the flat face sits in the mid band; only slopes turned to the torch climb to idle, the far ones fall to faint
-    return [layer(LAT.at(RIM), 'mid'), ...banded(diffuse, TORCH_BANDS), gloss(diffuse, specular, .35)]
+    return [layer(LAT.at(RIM), 'mid'), ...gloss(diffuse, specular, .35, TORCH_BANDS)]
   },
 }
 
@@ -111,7 +117,7 @@ export const lightOrb: WidgetPreset = {
     const L = boardSun(), diffuse = lambert(SPHERE, L, { ambient: .16 }), specular = phong(SPHERE, L, [0, 0, 1], 60)
     const shadow = contactShadow(L), floor: Field = (u, v) => floorDots(u, v) * (1 - shadow(u, v)) * (1 - BODY_MASK(u, v))
     floor.bounds = floorDots.bounds
-    return [layer(LAT.at(floor), 'mid'), ...banded(diffuse), gloss(diffuse, specular, .3)]
+    return [layer(LAT.at(floor), 'mid'), ...gloss(diffuse, specular, .3)]
   },
 }
 
@@ -202,7 +208,7 @@ function ballCells(fn: (nx: number, ny: number, nz: number) => number): Field {
 const GLOSS_BODY: [number, number, Tone][] = [[.06, .26, 'faint'], [.26, .5, 'mid'], [.5, 2, 'idle']]
 /**
  * Black lacquer: a dark Lambert body (void on the shadow side, never past idle), the window's
- * highlight as a hard two-step `value` spot held out toward the lit limb (the highlight's light is the
+ * highlight as a hard two-step `value` spot (its core one dot) held out toward the lit limb (the highlight's light is the
  * board light dropped to a low 20°, so it never sits at the centre), and the floor's reflection as a thin
  * `mid` crescent on the shadow-side rim: the three reads that make a ball look lacquered.
  */
@@ -222,7 +228,9 @@ function lacquer(light: Light): Layer[] {
   rimOnly.bounds = body.bounds
   const lit: Field = (u, v) => { const x = body(u, v); return x === .4 ? 0 : x }
   lit.bounds = body.bounds
-  return [...banded(lit, GLOSS_BODY), layer(LAT.at(rimOnly), 'mid'), layer(LAT.at(spec), 'value')]
+  // the spot's hard core is one dot; its .75 ring stays on the lattice round it
+  const { dot, cut } = T.peak(K, [0, 0], spec, { from: .5 })
+  return [...banded(lit, GLOSS_BODY), layer(LAT.at(rimOnly), 'mid'), layer(LAT.at(cut(spec)), 'value'), ...(dot ? [layer(dot, 'value')] : [])]
 }
 /** Fabric's shadow side keeps its weave: a higher floor of light, the Bayer dither to one size step. */
 const FABRIC_AMBIENT = .34

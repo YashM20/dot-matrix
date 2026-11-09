@@ -110,17 +110,6 @@ const icon = (...parts: Pt[][]) => {
   for (const p of parts.flat()) if (!out.some(q => Math.hypot(q[0] - p[0], q[1] - p[1]) < .7)) out.push(p)
   return T.dots(out, .85)
 }
-/** A solid shape (stop square, toggle pill, transport triangles): overlapping fine dot sites, so it reads as one flat fill. */
-function solid(inside: (x: number, y: number) => boolean, x0: number, y0: number, x1: number, y1: number, step = .75): LatticeField {
-  const sites: Pt[] = []
-  for (let y = y0; y <= y1 + 1e-9; y += step) for (let x = x0; x <= x1 + 1e-9; x += step) if (inside(x, y)) sites.push([x, y])
-  return T.dots(sites, 1.05)
-}
-const inTri = (a: Pt, b: Pt, c: Pt) => (x: number, y: number) => {
-  const s = [side(...a, ...b, x, y), side(...b, ...c, x, y), side(...c, ...a, x, y)]
-  return s.every(v => v >= -1e-9) || s.every(v => v <= 1e-9)
-}
-const tri = (a: Pt, b: Pt, c: Pt) => solid(inTri(a, b, c), Math.min(a[0], b[0], c[0]), Math.min(a[1], b[1], c[1]), Math.max(a[0], b[0], c[0]), Math.max(a[1], b[1], c[1]))
 /** Stadium (pill) test, optional round hole. */
 const inPill = (x0: number, y0: number, w: number, h: number, hole?: [number, number, number]) => (x: number, y: number) => {
   const r = h / 2, cy = y0 + r, cx = Math.max(x0 + r, Math.min(x0 + w - r, x))
@@ -175,10 +164,12 @@ const cover = bounded((u: number, v: number) => {
 }, DISC[0] - DISC[2], DISC[1] - DISC[2], DISC[0] + DISC[2], DISC[1] + DISC[2])
 
 const ridge = combine(...[[64, 90, 105, 52], [80, 58, 104, 69]].map(([ax, ay, bx, by]) => bounded((u: number, v: number) => (segDist(ax, ay, bx, by, cellOf(u), cellOf(v)) < .6 ? 1 : 0), ax, Math.min(ay, by), bx, Math.max(ay, by))))
-/** Transport glyphs as flat fills: bar + two arrowheads (prev), mirrored for next. */
-const transport = (x: number, dir: 1 | -1) => {
-  const X = (dx: number) => x + dir * dx, top = 123, bot = 131.5, mid = 127.25, b0 = Math.min(X(0), X(1.5)), b1 = Math.max(X(0), X(1.5))
-  return [solid(() => true, b0, top, b1, bot), tri([X(7.5), top], [X(7.5), bot], [X(2), mid]), tri([X(14), top], [X(14), bot], [X(8.5), mid])]
+/** Transport glyphs as hex-packed dots: bar + two arrowheads (prev), mirrored for next. */
+const TRANSPORT = { k: 2, n: 5, y: 127.25 }
+const transport = (bar: number, dir: 1 | -1): LatticeField => {
+  const { k, n, y } = TRANSPORT, d = dir > 0 ? 'left' : 'right', run = ((n - 1) * k * Math.sqrt(3)) / 2, tip = bar + dir * k
+  const a = T.dotTri(tip, y, n, { k, dir: d, bar: true }), b = T.dotTri(tip + dir * (run + k), y, n, { k, dir: d })
+  return { ...a, sites: [...a.sites!, ...b.sites!] }
 }
 export const music: WidgetPreset = {
   id: 'music', name: '02 Music', group: 'photo', ...tile,
@@ -188,7 +179,7 @@ export const music: WidgetPreset = {
     return [
       layer(cover), layer(ridge),
       layer(T.big('DAYLIGHT', 71.5, 100, { lattice: 1.4, align: 'center' })),
-      ...transport(8.8, 1).map(f => layer(f)), layer(tri([67, 121.5], [67, 133], [76, 127.25])), ...transport(134.2, -1).map(f => layer(f)),
+      layer(transport(9.5, 1)), layer(T.dotTri(76, 127.25, 6, { k: 2.2 })), layer(transport(133.5, -1)),
       layer(T.dotLine(2, 141, knob - 3, 141, { spacing: 1.65, size: .9 })),
       layer(T.dotLine(141, 141, knob + 3, 141, { spacing: 1.65, size: .7 }), 'mid'),
       layer(T.dots([[knob, 141]], 5), 'active'),
@@ -207,7 +198,7 @@ export const timer: WidgetPreset = {
       layer(T.dotRing(72, 76, 60, { ...ring, sweep: TAU * data.progress }), 'active'),
       layer(dotText('12:48', 72, 60, { px: 2.9, py: 3.4, size: 3.2, align: 'center' })),
       layer(T.dotRing(72, 117, 14.5, { spacing: 1.8, size: .75 })),
-      layer(solid((x, y) => Math.hypot(Math.max(0, Math.abs(x - 72) - 3), Math.max(0, Math.abs(y - 117) - 3)) <= 1.4, 67.5, 112.5, 76.5, 121.5), 'active'),
+      layer(T.fillOn(2, (x, y) => Math.hypot(Math.max(0, Math.abs(x - 72) - 3), Math.max(0, Math.abs(y - 117) - 3)) <= 1.4, [67.5, 112.5, 76.5, 121.5]), 'active'),
     ]
   },
 }
@@ -358,12 +349,12 @@ const settingRow = (i: number, g: Glyph, label: string, right: Right, selected =
   if (right === 'on') out.push(layer(T.text('ON', 130, top + 8, { align: 'right' }), 'idle'))
   if (right === 'on' || right === 'chevron') out.push(layer(T.sprite(['#...', '.#..', '..#.', '...#', '..#.', '.#..', '#...'], 135, top + 8), selected ? 'active' : 'idle'))
   if (right.startsWith('toggle')) {
-    // on: a solid pill with a dark knob hole at the right; off: a bright outline with a full-height knob at the left
+    // on: a pill of big dots with a dark knob hole at the right; off: a bright outline with one big knob dot at the left
     const on = right === 'toggle-on', x0 = 120, w = 17, h = 10
     out.push(on
-      ? layer(solid(inPill(x0, mid - h / 2, w, h, [x0 + w - h / 2, mid, 3.4]), x0, mid - h / 2, x0 + w, mid + h / 2))
+      ? layer(T.fillOn(2, inPill(x0, mid - h / 2, w, h, [x0 + w - h / 2, mid, 3.4]), [x0, mid - h / 2, x0 + w, mid + h / 2]))
       : layer(roundRect(x0, mid - h / 2, w + 1, h + 1, h / 2)))
-    if (!on) out.push(layer(solid((x, y) => Math.hypot(x - (x0 + h / 2), y - mid) <= h / 2, x0, mid - h / 2, x0 + h, mid + h / 2)))
+    if (!on) out.push(layer(T.dots([[x0 + h / 2, mid]], 8.4)))
   }
   return out
 }

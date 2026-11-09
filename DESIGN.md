@@ -399,6 +399,20 @@ A surface that wraps a rounded child with padding takes the child's radius plus 
 - **Status dot:** one site dot about 7 card dots across, top-right of the label row — drawn by `cardChrome()` for `live` TILE cards.
 - **Filtered fields (footprint):** a pattern finer than about two cells (stripes, checkers, fine noise) aliases when it is sampled once per dot, and it shimmers as it moves. A field can opt in to its footprint by setting `footprint` (`withFootprint` / `patternField` in `src/engine/filter`). The sampler then calls it as `f(u, v, du, dv)`, where `du` / `dv` is one cell of the grid it is sampled on: 1 / (cols − 1) on the card or on a layer's `lattice`, and a site dot's `size` in card cells. The field returns its mean over that cell: box or triangle-filtered checkers, `fcos`, the band-limited `ffbm2`, or `supersampled` as the generic fallback. Fields without the flag are called as `f(u, v)` and draw exactly as before. Prefer the triangle filter on animated boards. The GPU value pass (`gpuValues`) samples without a footprint.
 
+### Dot spacing and fills (`src/widgets/sites.ts`)
+Two dots in one layer never touch. A site dot of `size` s is about 0.84·s card cells across at full value, so the helpers keep s at most 0.8 of the distance between centres (`GAP`), which always leaves a gap.
+
+| Helper (`layoutFor`) | Rule |
+|---|---|
+| `T.dots(points, size, text?, gap)` | Drops a point closer than `gap` cells (default 0.8 × size) to one kept before it, so joined arcs and stacked corners draw one dot. `gap: 0` keeps every point, for photo and simulation layers that size their own dots. |
+| `T.dotLine`, `T.dotRing`, `T.dotDisc` | `size` is capped at 0.8 of the spacing (a ring uses the chord between its sites). |
+| `T.dotPath(points, spacing, size, closed?)` | Resamples a polyline by arc length, so the spacing carries across vertices and the joins between arcs stay even. Same size cap. Replaces the per-board `dotPath` and `trace` copies. |
+| `T.fillOn(k, inside, box, size?)` | A filled shape (button, node, stop square, toggle pill, legend block) as a few big dots `k` cells apart, on a lattice centred on `box`. `k` = 2 up to about 16 cells across, 3 above. Two fills with the same `k` and `box` share sites, and the later layer wins, so a glyph on a button (the send arrow, the done check) is its own fill in another tone. Never fill a big shape on the card's fine grid (`T.rect`, `T.disc`, overlapping fine sites). |
+| `T.dotTri(x, y, n, { k, dir, bar })` | A play, prev or next triangle as hex-packed dots `k` apart: tip at (x, y), `n` dots on the base, every neighbour exactly `k` away. `bar` adds the skip bar beyond the tip. |
+| `T.peak(k, origin, field, { from, top })` | A highlight's bright core as one dot: the cells of `field` on the `k` lattice at `top` (default 0.8) of its peak or more become one site sized to their area, and `cut(f)` clears the lattice dots under it. The lower gloss band stays on the lattice. Used by `gloss` and the lacquer spot on the light board. |
+
+A knob, a single status dot or a masked password character is one site (`T.dots([c], size)`), never a cluster. Site layers whose points come from a simulation or a stipple size each dot to its nearest neighbour (`nearest()`, algorithms `siteLayers`): 0.8 of that distance, in 0.15 steps, so dense areas get smaller dots instead of touching ones.
+
 ## Components
 
 > **Interactive states.** Hover, press, focus, drag and long-press follow the grammar and tokens in [Interaction](#interaction); the variants below cover Default, Active/Selected and Disabled.

@@ -80,37 +80,45 @@ function face(str: string, col: number, row: number, opts: FaceOptions): Lattice
 
 // ── pixel-art icons on the card pitch ───────────────────────────────────────
 interface Pen { line(points: Pt[], t?: number): void; ring(cx: number, cy: number, r: number): void; fill(test: (x: number, y: number) => boolean): void }
-function art(w: number, h: number, draw: (pen: Pen) => void): string[] {
-  const g = Array.from({ length: h }, () => new Array<string>(w).fill('.'))
-  const set = (x: number, y: number) => { if (x >= 0 && y >= 0 && x < w && y < h) g[y][x] = '#' }
+/**
+ * Pixel art drawn with a pen in `w × h` design units. `s` < 1 rasterises it at that scale (s = .5: a 16-unit icon as 8 big
+ * dots on a 2-cell lattice), so lines stay one dot thick (`t` scales with it) and fills become a few big dots.
+ */
+function art(w: number, h: number, draw: (pen: Pen) => void, s = 1): string[] {
+  const gw = Math.ceil(w * s), gh = Math.ceil(h * s), g = Array.from({ length: gh }, () => new Array<string>(gw).fill('.'))
+  const set = (x: number, y: number) => { if (x >= 0 && y >= 0 && x < gw && y < gh) g[y][x] = '#' }
+  /** Design units → raster cells (centre of a design pixel). */
+  const at = (v: number) => (v + .5) * s - .5
   draw({
     line: (points, t = 1) => points.slice(1).forEach(([x1, y1], i) => {
-      const [x0, y0] = points[i], n = Math.max(1, Math.round(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))))
-      for (let s = 0; s <= n; s++) for (let a = 0; a < t; a++) for (let b = 0; b < t; b++) set(Math.round(x0 + ((x1 - x0) * s) / n) + a, Math.round(y0 + ((y1 - y0) * s) / n) + b)
+      const [x0, y0] = points[i].map(at), [ex, ey] = [at(x1), at(y1)], n = Math.max(1, Math.round(Math.max(Math.abs(ex - x0), Math.abs(ey - y0)))), th = Math.max(1, Math.round(t * s))
+      for (let k = 0; k <= n; k++) for (let a = 0; a < th; a++) for (let b = 0; b < th; b++) set(Math.round(x0 + ((ex - x0) * k) / n) + a, Math.round(y0 + ((ey - y0) * k) / n) + b)
     }),
-    ring: (cx, cy, r) => { for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (Math.abs(Math.hypot(x - cx, y - cy) - r) < .5) set(x, y) },
-    fill: test => { for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (test(x, y)) set(x, y) },
+    ring: (cx, cy, r) => { for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) if (Math.abs(Math.hypot(x - at(cx), y - at(cy)) - r * s) < .5) set(x, y) },
+    fill: test => { for (let y = 0; y < gh; y++) for (let x = 0; x < gw; x++) if (test((x + .5) / s - .5, (y + .5) / s - .5)) set(x, y) },
   })
   return g.map(r => r.join(''))
 }
 const flipX = (rows: string[]) => rows.map(r => [...r].reverse().join(''))
-const UNDO = art(16, 16, p => { p.line([[5, 1], [2, 4], [5, 7]], 2); p.line([[2, 4], [10, 4]], 2); p.line([[10, 4], [12, 6], [12, 10], [10, 12], [5, 12]], 2) })
-const ARROW_UP = art(16, 16, p => { p.line([[7, 1], [7, 14]], 2); p.line([[2, 6], [7, 1]], 2); p.line([[12, 6], [7, 1]], 2) })
+/** The pad icons: 16-unit art on a 2-cell lattice (8 big dots across). */
+const ICON_S = .5
+const UNDO = art(16, 16, p => { p.line([[5, 1], [2, 4], [5, 7]], 2); p.line([[2, 4], [10, 4]], 2); p.line([[10, 4], [12, 6], [12, 10], [10, 12], [5, 12]], 2) }, ICON_S)
+const ARROW_UP = art(16, 16, p => { p.line([[7, 1], [7, 14]], 2); p.line([[2, 6], [7, 1]], 2); p.line([[12, 6], [7, 1]], 2) }, ICON_S)
 /** 16×16 icon art (code is 18 wide), centred in its pad. */
 const ICONS: Record<string, string[]> = {
-  play: art(16, 16, p => p.fill((x, y) => y >= 1 && y <= 14 && x >= 3 && x - 3 <= (6.5 - Math.abs(y - 7.5)) * 1.6)),
-  stop: art(16, 16, p => p.fill((x, y) => x >= 2 && x <= 13 && y >= 2 && y <= 13)),
+  play: art(16, 16, p => p.fill((x, y) => y >= 1 && y <= 14 && x >= 3 && x - 3 <= (6.5 - Math.abs(y - 7.5)) * 1.6), ICON_S),
+  stop: art(16, 16, p => p.fill((x, y) => x >= 2 && x <= 13 && y >= 2 && y <= 13), ICON_S),
   undo: UNDO, redo: flipX(UNDO),
-  node: art(16, 16, p => { p.ring(10, 2.5, 2.2); p.ring(3, 13, 2.2); p.ring(12, 13, 2.2); p.line([[10, 5], [10, 8], [12, 11]]); p.line([[10, 8], [6, 8], [4, 9], [3, 11]]) }),
-  terminal: art(16, 16, p => { p.line([[1, 3], [5, 7], [1, 11]], 2); p.line([[8, 12], [14, 12]], 2) }),
-  mic: art(16, 16, p => { p.fill((x, y) => x >= 5 && x <= 10 && y <= 9 && !((y === 0 || y === 9) && (x === 5 || x === 10))); p.line([[2, 6], [2, 9], [4, 12], [11, 12], [13, 9], [13, 6]]); p.line([[7, 12], [7, 14]], 2); p.line([[4, 15], [11, 15]]) }),
-  globe: art(15, 15, p => { p.ring(7, 7, 7); p.fill((x, y) => Math.hypot(x - 7, y - 7) < 7 && (x === 7 || y === 3 || y === 7 || y === 11 || Math.abs(Math.abs(x - 7) - 4 * Math.sqrt(1 - ((y - 7) / 7) ** 2)) < .5)) }),
-  list: art(16, 16, p => [3, 8, 13].forEach(y => { p.line([[0, y], [1, y]]); p.line([[4, y], [14, y]]) })),
-  code: art(18, 16, p => { p.line([[4, 3], [1, 7], [4, 11]], 2); p.line([[13, 3], [16, 7], [13, 11]], 2); p.line([[10, 0], [7, 13]], 2) }),
-  check: art(16, 16, p => p.line([[1, 8], [5, 12], [13, 4]], 2)),
-  cross: art(16, 16, p => { p.line([[2, 2], [12, 12]], 2); p.line([[12, 2], [2, 12]], 2) }),
-  gear: art(16, 16, p => { p.ring(7.5, 7.5, 5); for (let i = 0; i < 8; i++) { const a = deg(i * 45), x = Math.round(7 + Math.sin(a) * 6), y = Math.round(7 - Math.cos(a) * 6); p.line([[x, y], [x, y]], 2) } }),
-  target: art(16, 16, p => { p.line([[7, 0], [7, 15]]); p.line([[0, 7], [15, 7]]); p.ring(7, 7, 2.3) }),
+  node: art(16, 16, p => { p.ring(10, 2.5, 2.2); p.ring(3, 13, 2.2); p.ring(12, 13, 2.2); p.line([[10, 5], [10, 8], [12, 11]]); p.line([[10, 8], [6, 8], [4, 9], [3, 11]]) }, ICON_S),
+  terminal: art(16, 16, p => { p.line([[1, 3], [5, 7], [1, 11]], 2); p.line([[8, 12], [14, 12]], 2) }, ICON_S),
+  mic: art(16, 16, p => { p.fill((x, y) => x >= 5 && x <= 10 && y <= 9 && !((y === 0 || y === 9) && (x === 5 || x === 10))); p.line([[2, 6], [2, 9], [4, 12], [11, 12], [13, 9], [13, 6]]); p.line([[7, 12], [7, 14]], 2); p.line([[4, 15], [11, 15]]) }, ICON_S),
+  globe: art(15, 15, p => { p.ring(7, 7, 7); p.fill((x, y) => Math.hypot(x - 7, y - 7) < 7 && (Math.abs(x - 7) <= .5 || [3, 7, 11].some(r => Math.abs(y - r) <= .5) || Math.abs(Math.abs(x - 7) - 4 * Math.sqrt(1 - ((y - 7) / 7) ** 2)) < .6)) }, ICON_S),
+  list: art(16, 16, p => [3, 8, 13].forEach(y => { p.line([[0, y], [1, y]]); p.line([[4, y], [14, y]]) }), ICON_S),
+  code: art(18, 16, p => { p.line([[4, 3], [1, 7], [4, 11]], 2); p.line([[13, 3], [16, 7], [13, 11]], 2); p.line([[10, 0], [7, 13]], 2) }, ICON_S),
+  check: art(16, 16, p => p.line([[1, 8], [5, 12], [13, 4]], 2), ICON_S),
+  cross: art(16, 16, p => { p.line([[2, 2], [12, 12]], 2); p.line([[12, 2], [2, 12]], 2) }, ICON_S),
+  gear: art(16, 16, p => { p.ring(7.5, 7.5, 5); for (let i = 0; i < 8; i++) { const a = deg(i * 45), x = Math.round(7 + Math.sin(a) * 6), y = Math.round(7 - Math.cos(a) * 6); p.line([[x, y], [x, y]], 2) } }, ICON_S),
+  target: art(16, 16, p => { p.line([[7, 0], [7, 15]]); p.line([[0, 7], [15, 7]]); p.ring(7, 7, 2.3) }, ICON_S),
   arrowUp: ARROW_UP, arrowDown: [...ARROW_UP].reverse(),
 }
 
@@ -176,10 +184,11 @@ export const vibePad: WidgetPreset = {
   id: 'vibe-pad', name: 'Vibe Pad', group: 'icon', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => PAD.flatMap((name, i) => {
     const x = PAD_X[i % 4], y = PAD_Y[Math.floor(i / 4)], hot = name === 'check', icon = ICONS[name]
-    const sprite = T.sprite(icon, Math.round(x + PAD_S / 2 - icon[0].length / 2 + .5), Math.round(y + PAD_S / 2 - icon.length / 2 + .5))
+    const g = T.lattice(1 / ICON_S, x + PAD_S / 2 - icon[0].length / ICON_S / 2, y + PAD_S / 2 - icon.length / ICON_S / 2), art = g.sprite(icon, 0, 0)
+    const sprite = g.at(hot ? art : dim(art, .8))
     return [
       layer(T.dots(dotBox(x, y, PAD_S), 1.6), hot ? 'value' : 'idle'),
-      layer(hot ? sprite : dim(sprite, .8), 'value'),
+      layer(sprite, 'value'),
       ...(hot ? [layer(T.dots([[x + 21, y + 5]], 4.2), 'active')] : []),
     ]
   }),
@@ -194,8 +203,8 @@ export const midi: WidgetPreset = {
     ...FADERS.flatMap(([c, knob]) => [
       layer(T.dotLine(c, 90, c, knob - 3, { spacing: 3.5, size: 1.9 }), 'idle'),
       layer(T.dotLine(c, 138, c, knob + 3, { spacing: 3.5, size: 1.9 }), 'idle'),
-      // the fader cap: overlapping big dots read as one rounded white bar
-      layer(T.dots([-3.4, -1.7, 0, 1.7, 3.4].map(d => [c + d, knob] as Pt), 3.3)),
+      // the fader cap: a row of three big white dots, a gap between each
+      layer(T.dots([-3.4, 0, 3.4].map(d => [c + d, knob] as Pt), 3)),
     ]),
   ],
 }

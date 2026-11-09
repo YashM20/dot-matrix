@@ -46,17 +46,8 @@ const segDist = (x: number, y: number, [ax, ay]: Pt, [bx, by]: Pt) => {
   return len(x - ax - t * dx, y - ay - t * dy)
 }
 
-/** Evenly spaced dot sites along a polyline (spacing carried across corners). */
-const dotPath = (pts: Pt[], spacing: number, size: number): LatticeField => {
-  const sites: Pt[] = []; let carry = 0
-  for (let i = 0; i < pts.length - 1; i++) {
-    const [x0, y0] = pts[i], [x1, y1] = pts[i + 1], len = Math.hypot(x1 - x0, y1 - y0)
-    let d = carry
-    for (; d <= len + 1e-9; d += spacing) sites.push([x0 + ((x1 - x0) * d) / len, y0 + ((y1 - y0) * d) / len])
-    carry = d - len
-  }
-  return T.dots(sites, size)
-}
+/** Evenly spaced dot sites along a polyline (spacing carried across corners, size capped so dots never touch). */
+const dotPath = (pts: Pt[], spacing: number, size: number): LatticeField => T.dotPath(pts, spacing, size)
 /** One-dot outline of a rounded rectangle on the card pitch (pills, stat panels). */
 const frame = (x: number, y: number, w: number, h: number, r: number): Field => {
   const mx = x + (w - 1) / 2, my = y + (h - 1) / 2, hw = (w - 1) / 2 - r, hh = (h - 1) / 2 - r
@@ -311,18 +302,21 @@ export const fitnessRings: WidgetPreset = {
 const REM: Pt[] = [[5, 15], [39, 52], [73, 78], [121, 126]]
 const CORE: Pt[] = [[0, 5], [16, 44], [53, 58], [63, 72], [78, 86], [88, 94], [95, 101], [106, 122], [127, 135], [136, 144]]
 const DEEP: Pt[] = [[15, 25], [58, 63], [83, 88], [101, 106]]
-const band = (spans: Pt[], row: number, h: number) => spans.map(([a, b]) => T.rect(a, row, b - a, h))
+/** One stage band: each block a fill of big dots on a 2-cell lattice, one lattice for the whole band so blocks line up. */
+const band = (spans: Pt[], row: number, h: number) => T.fillOn(2, (x, y) => y >= row && y < row + h - .5 && spans.some(([a, b]) => x >= a && x < b), [0, row, 143, row + h - 1])
+/** A legend key: one dot. */
+const key = (col: number) => T.dots([[col + 1.5, 47.5]], 4.2)
 const STATS = [['DEEP', '1:46'], ['CORE', '4:35'], ['REM', '1:32'], ['AWAKE', '0:14']]
 export const henrySleep: WidgetPreset = {
   id: 'henry-sleep', name: '05 Henry Sleep', label: '05  HENRY SLEEP', group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     num('05'), ...menuGlyph,
     layer(T.big('8:07', 0, 22, { lattice: 2 })), layer(cap('HR', 48, 31), 'idle'),
-    layer(T.rect(0, 46, 4, 4), 'active'), layer(cap('DEEP', 7, 45.5), 'idle'),
-    layer(T.rect(40, 46, 4, 4), 'value'), layer(cap('CORE', 47, 45.5), 'idle'),
-    layer(T.rect(78, 46, 4, 4), 'mid'), layer(cap('REM', 85, 45.5), 'idle'),
+    layer(key(0), 'active'), layer(cap('DEEP', 7, 45.5), 'idle'),
+    layer(key(40), 'value'), layer(cap('CORE', 47, 45.5), 'idle'),
+    layer(key(78), 'mid'), layer(cap('REM', 85, 45.5), 'idle'),
     layer(T.hrule(113, 48, 6), 'value'), layer(cap('AWAKE', 143.5, 45.5, 'right'), 'idle'),
-    ...band(REM, 65, 11).map(f => layer(f, 'mid')), ...band(CORE, 77, 12).map(f => layer(f, 'value')), ...band(DEEP, 89, 11).map(f => layer(f, 'active')),
+    layer(band(REM, 65, 11), 'mid'), layer(band(CORE, 77, 12), 'value'), layer(band(DEEP, 89, 11), 'active'),
     layer(cap('23:41', 0, 104), 'idle'), layer(cap('07:48', 143.5, 104, 'right'), 'idle'),
     layer(frame(0, 115, 144, 29, 4), 'faint'),
     ...STATS.flatMap(([k, v], i) => [
@@ -377,6 +371,7 @@ const pillIcon = (kind: number, cy: number): Field[] => {
   if (kind === 3) return [ring, T.dot(7, cy - 1), T.dot(6, cy), T.dot(8, cy), T.dot(7, cy + 1)]
   return [ring, T.dot(7, cy)]
 }
+const SEND: Pt = [133, 133], SEND_BOX = [124, 124, 142, 142] as const
 const SUGGESTIONS = ['SUMMARIZE MY DAY', 'CHECK MY CALENDAR', 'ANALYZE MY WORKOUT', 'DRAFT PROJECT UPDATE']
 export const aiAssistant: WidgetPreset = {
   id: 'ai-assistant', name: '07 AI Assistant', label: '07  AI ASSISTANT', group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle,
@@ -394,8 +389,9 @@ export const aiAssistant: WidgetPreset = {
     }),
     layer(frame(0, 123, 144, 21, 9), 'faint'),
     layer(cap('ASK ANYTHING...', 5, 131), 'mid'),
-    layer(T.disc(133, 133, 9.5), 'active'),
-    layer(T.vrule(133, 128, 11), 'value'), layer(T.line([[129, 132], [133, 128], [137, 132]]), 'value'),
+    // the send button: a red disc of big dots, the up arrow drawn on the same sites in white
+    layer(T.fillOn(2, (x, y) => Math.hypot(x - SEND[0], y - SEND[1]) <= 8.6, SEND_BOX), 'active'),
+    layer(T.fillOn(2, (x, y) => (Math.abs(x - SEND[0]) < .1 && Math.abs(y - SEND[1]) <= 4.1) || (y - SEND[1] + 4 - Math.abs(x - SEND[0]) > -.1 && y - SEND[1] + 4 - Math.abs(x - SEND[0]) < .1 && Math.abs(x - SEND[0]) <= 4.1), SEND_BOX)),
   ],
 }
 
