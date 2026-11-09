@@ -73,10 +73,11 @@ export const roadCard = card('dash-road', 'Road', {
     const body = rr(CAR.x, CAR.y, CAR.w, CAR.h, CAR.r), ty = CAR.y + 15
     out.push(
       layer(T.dots(body(0, 2.6), 1.4), 'value'),
-      layer(T.dotLine(CAR.x + 7, CAR.y + 5, CAR.x + CAR.w - 7, CAR.y + 5, { spacing: 2.6, size: 1.4 }), 'mid'),
+      // the window edge sits 8 cells down, with air above it, so it never doubles the roof outline
+      layer(T.dotLine(CAR.x + 7, CAR.y + 8, CAR.x + CAR.w - 7, CAR.y + 8, { spacing: 2.6, size: 1.4 }), 'mid'),
       layer(T.dots([[CAR.x + 7, ty], [CAR.x + CAR.w - 7, ty]], 5), d.brake ? 'active' : 'idle'),
-      ...(left ? [layer(T.dots([[CAR.x - 4, ty]], 3), 'value')] : []),
-      ...(right ? [layer(T.dots([[CAR.x + CAR.w + 4, ty]], 3), 'value')] : []),
+      ...(left ? [layer(T.dots([[CAR.x - 6, ty]], 3), 'value')] : []),
+      ...(right ? [layer(T.dots([[CAR.x + CAR.w + 6, ty]], 3), 'value')] : []),
       layer(T.text(`${Math.round(d.kmh)} KM/H`, 138, 14, { align: 'right' }), 'mid'),
     )
     return out
@@ -110,7 +111,8 @@ export const driveCard = card('dash-drive', 'Drive', {
       layer(T.text(on ? `0:${String(Math.floor(d.lap)).padStart(2, '0')}` : 'LAP', 6, 74), 'mid'),
       layer(T.text(`0:${LAP}`, 138, 74, { align: 'right' }), 'mid'),
       layer(T.big((d.dist / 1000).toFixed(2), 6, 86, BODY), 'value'), layer(T.text('KM', 6, 100), 'idle'),
-      layer(T.big(use, 76, 86, BODY), 'value'), layer(T.text('KWH/100 KM', 76, 100), 'idle'),
+      // no reading: three separate dots on the glyph row, not a minus pair of touching small dots
+      layer(use === '--' ? T.dots([78, 81.5, 85].map((x): Pt => [x, 90]), 1.6) : T.big(use, 76, 86, BODY), 'value'), layer(T.text('KWH/100 KM', 76, 100), 'idle'),
       layer(at(T.dots(track(0, LINE.spacing), LINE.size), pv), on ? 'value' : 'mid'),
       layer(at(T.dots([knob], 18), pv), on ? 'value' : 'mid'),
       layer(T.big('AUTO', 70, SW.y + r - 4.5, BODY), on ? 'value' : 'mid'),

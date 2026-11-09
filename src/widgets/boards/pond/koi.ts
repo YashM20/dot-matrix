@@ -20,8 +20,8 @@ import type { Layer } from '../../../engine/types'
 import { simAtStep } from '../../../engine/sim/sim'
 import { sampleLayers } from '../../../engine/sampler/gridSampler'
 import { dot480 } from '../../../engine/theme/tokens'
-import type { WidgetContext, WidgetPreset } from '../../types'
-import { caption, frameOf, hourNow, mainThread, T, tile, timeOfDay, touch } from './shared'
+import { layer, type WidgetContext, type WidgetPreset } from '../../types'
+import { caption, frameOf, hourNow, mainThread, T, tile, touch } from './shared'
 
 /** Tiles: 36 × 33 at pitch 4 from card row 11 (a glyph is 3 dots + a 1-cell gutter). The ripple grid is the tile grid. */
 export const KOI_TILES: TileGrid = { cols: 36, rows: 33, pitch: 4, ox: 0, oy: 11 }
@@ -95,19 +95,28 @@ const typeRaster = createTileRaster(KOI_SPEC.card, KOI_TYPE_TILES)
 export const KOI_LIGHT_KEYS = { lightSrc: 0, lightAz: 0, lightEl: 7, tx: 0, ty: 0 } as const
 /** The glyph style switch in the label row (L3.4): DOTS (the default) or TYPE. */
 export const GLYPH_STYLES = ['DOTS', 'TYPE'] as const
-const SWITCH = { x: 94, w: 50, h: 8 } as const
+const SWITCH = { x: 93, w: 51, h: 8 } as const
+/** The switch's underline: card dots on row 9 (the label is rows 0 to 6, the tiles start on row 11), every other cell. */
+const UNDER = { row: 9, step: 2, on: 3, period: 5, rate: 10 } as const
 /**
- * The label row's right side: the time of day; while the switch is hovered, focused or pressed, or TYPE is on, the
- * switch itself (DOTS · TYPE, the chosen one in `value`, the other in `mid`). Default frames show the caption only.
+ * The label row's right side: the switch, always drawn so a phone can see what to tap (#269): DOTS · TYPE, the
+ * chosen one in the label's `idle`, the other in `mid`. Hover, focus or a press lifts the chosen one to `value`;
+ * hover puts a dotted line under it and keyboard focus makes the line march (it holds still under reduced motion).
  */
-function labelRow(ctx: WidgetContext, sel: number, hour: number): Layer[] {
-  const k = 'glyphs', shown = sel === 1 || ctx.hover === k || ctx.focus === k || ctx.pressed === k
-  if (!shown) return [caption(timeOfDay(hour))]
-  const wType = T.size('TYPE')[0], gap = 3
-  return [
-    caption('TYPE', 143, 0, 'right', sel === 1 ? 'value' : 'mid'),
-    caption('DOTS', 143 - wType - gap, 0, 'right', sel === 0 ? 'value' : 'mid'),
+function labelRow(ctx: WidgetContext, sel: number): Layer[] {
+  const k = 'glyphs', w = T.size('TYPE')[0], gap = 5, right = 143
+  const focus = ctx.focus === k, hover = ctx.hover === k, on = focus || hover || ctx.pressed === k ? 'value' : 'idle'
+  const row: Layer[] = [
+    caption('TYPE', right, 0, 'right', sel === 1 ? on : 'mid'),
+    caption('DOTS', right - w - gap, 0, 'right', sel === 0 ? on : 'mid'),
   ]
+  if (!focus && !hover) return row
+  const x0 = sel === 1 ? right - w + 1 : right - 2 * w - gap + 1, pts: [number, number][] = []
+  const ph = focus && !ctx.reducedMotion ? Math.floor(ctx.t * UNDER.rate) : 0
+  for (let i = 0, x = x0; x < x0 + w; i++, x += UNDER.step) {
+    if (!focus || (((i - ph) % UNDER.period) + UNDER.period) % UNDER.period < UNDER.on) pts.push([x, UNDER.row])
+  }
+  return [...row, layer(T.dots(pts, 1), focus ? 'value' : 'mid')]
 }
 /** The koi light this frame: tilt light by bucket when the hub says so (`lightSrc` 1), else the fixed L1 light. */
 function koiLight(ctx: WidgetContext, hour: number): KoiDrawOpts['light'] {
@@ -137,7 +146,7 @@ export const pondKoi: WidgetPreset = {
     const s = worldAt(pond.world, ctx.t, frameOf(ctx, 'koi', undefined, true)), hour = hourNow(), sel = ctx.data.glyphs === 1 ? 1 : 0
     const tx = ctx.data.tx ?? 0, ty = ctx.data.ty ?? 0, r = sel ? typeRaster : raster
     drawKoiPond(pond, s, ctx.t, hour, r, { light: koiLight(ctx, hour), tilt: tx || ty ? [tx, ty] : undefined })
-    return [...labelRow(ctx, sel, hour), ...tileLayers(r)]
+    return [...labelRow(ctx, sel), ...tileLayers(r)]
   },
 }
 

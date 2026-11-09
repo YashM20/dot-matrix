@@ -274,8 +274,8 @@ async function phoneChrome() {
       { name: 'about', path: '?about', ready: STATIC('.log-view'), focus: true },
       { name: 'widget', path: 'widget/timer/', ready: `!!document.querySelector('.wp-stage canvas, .wp-stage svg')`, focus: true, tabbar: true },
       { name: 'essay', path: 'blog/dot-matrix-essay/', ready: STATIC('.hero .dot-title'), focus: true, tap: true },
-      { name: 'privacy', path: 'privacy', ready: STATIC('main.legal'), focus: true, tap: true },
-      { name: 'terms', path: 'terms', ready: STATIC('main.legal'), tap: true },
+      { name: 'privacy', path: 'privacy', ready: STATIC('.legal > main'), focus: true, tap: true },
+      { name: 'terms', path: 'terms', ready: STATIC('.legal > main'), tap: true },
     ]
     for (const pg of pages) {
       console.log(`

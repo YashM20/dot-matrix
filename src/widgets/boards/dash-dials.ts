@@ -5,7 +5,7 @@
  */
 import { TAU, layer } from '../types'
 import { GEARS, KW_MAX, KW_MIN, VMAX, dashOf, indicators, rangeKm } from './dash-drive'
-import { PRESS, SIGNAL_ARROW, T, angleOf, card, circle, dialArc, dialLabels, dialMap, dialTicks, hero, mirror, needle, polar, spriteAt, spriteW, states, ui, type Dial } from './dash-kit'
+import { PRESS, SMALL_ARROW, T, angleOf, card, circle, dialArc, dialLabels, dialMap, dialTicks, hero, mirror, needle, polar, spriteAt, spriteW, states, ui, type Dial } from './dash-kit'
 
 // ── SPEED ───────────────────────────────────────────────────────────────────
 /** 270° dial, 0–160 km/h. Dragging or tapping the scale sets the speed; the needle eases there (spring key). */
@@ -25,8 +25,9 @@ export const speedCard = card('dash-speed', 'Speed', {
       layer(T.text('KM/H', SPD.cx, 92, { align: 'center' }), 'mid'),
       // the gear strip under the dial and the indicators in its corners, as on a real cluster
       ...GEARS.map((ch, i) => layer(T.text(ch, Math.round(SPD.cx + (i - 1.5) * 9), 118, { align: 'center' }), i === g ? 'value' : 'faint')),
-      layer(spriteAt(SIGNAL_ARROW, 6, 126, 1.4), left ? 'value' : 'faint'),
-      layer(spriteAt(mirror(SIGNAL_ARROW), 138 - spriteW(SIGNAL_ARROW) * 1.4, 126, 1.4), right ? 'value' : 'faint'),
+      // small arrows on a 2.2 lattice: a few bigger dots instead of a dense 1.4 sprite beside the dial
+      layer(spriteAt(SMALL_ARROW, 6, 126, 2.2), left ? 'value' : 'faint'),
+      layer(spriteAt(mirror(SMALL_ARROW), 138 - spriteW(SMALL_ARROW) * 2.2, 126, 2.2), right ? 'value' : 'faint'),
       ...states(s, ctx.t, circle(SPD.cx, SPD.cy, SPD.r + 4), circle(SPD.cx, SPD.cy, SPD.r + 4), 4),
     ]
   },

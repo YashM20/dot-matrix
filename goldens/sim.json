@@ -16,12 +16,12 @@
   "sim-sand": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "2aba048c",
+    "hash": "f230f6d0",
     "dots": 1251
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "ac1900c7",
+    "hash": "e30e459a",
     "dots": 1245
    }
   },

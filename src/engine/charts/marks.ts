@@ -42,8 +42,15 @@ export function along(pts: readonly Pt[], spacing: number): Pt[] {
   return out
 }
 
-/** Sites from y0 to y1 on column x, ends included, about `pitch` apart (one site when they meet). */
-export function column(x: number, y0: number, y1: number, pitch: number): Pt[] {
+/**
+ * Sites from y0 to y1 on column x, ends included, about `pitch` apart (one site when they meet). `apart`: exactly
+ * `pitch` apart, centred in the span (a short column of big dots gets fewer sites instead of touching ones).
+ */
+export function column(x: number, y0: number, y1: number, pitch: number, apart = false): Pt[] {
+  if (apart) {
+    const k = Math.floor(Math.abs(y1 - y0) / pitch + 1e-9), mid = (y0 + y1) / 2, dir = y1 >= y0 ? 1 : -1
+    return Array.from({ length: k + 1 }, (_, i): Pt => [x, mid + dir * (i - k / 2) * pitch])
+  }
   const n = Math.round(Math.abs(y1 - y0) / pitch)
   if (n === 0) return [[x, (y0 + y1) / 2]]
   return Array.from({ length: n + 1 }, (_, k): Pt => [x, k === n ? y1 : y0 + ((y1 - y0) * k) / n])

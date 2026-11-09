@@ -39,8 +39,8 @@ const TOC: [string, string][] = [
 ]
 
 /**
- * The essay, as a blog post: `src/blog/Blog.tsx` renders it inside the shared post shell (`<main>`, the site nav
- * it passes in, the "More posts" list and the footer), the same shell as the markdown posts.
+ * The essay, as a blog post: `src/blog/Blog.tsx` renders it inside the shared post shell (the site nav, `<main>`,
+ * the post line and hero it passes in as `nav`, the "More posts" list and the footer), the same shell as the markdown posts.
  */
 export function Essay({ nav }: { nav: ReactNode }) {
   return (
