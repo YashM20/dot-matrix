@@ -29,11 +29,16 @@ const RIPPLE_GRID = T.lattice(3, 0, 12)
 export const irRipple: WidgetPreset = {
   id: 'ir-ripple', name: 'IR Ripple', label: 'IR  RIPPLE', ...tile, animated: true,
   credit: TINY_PROGRAMS,
-  layers: ctx => [
-    layer(RIPPLE_GRID.at(RIPPLE_GRID.place(ripple(env(ctx)), 0, 0, 48, 40)), 'auto'),
-    layer(T.dots([[71.5, 71.5]], 3), 'active'),
-    footer(RIPPLE_SRC, ripple),
-  ],
+  layers: ctx => {
+    // the red centre sits between four lattice sites (the ripple's own centre) and clears all four, so it never
+    // lands half over a grey dot
+    const centre = T.marker([71.5, 71.5], 3.6, { lattice: 3, origin: [0, 12], snap: false })
+    return [
+      layer(RIPPLE_GRID.at(centre.cut(RIPPLE_GRID.place(ripple(env(ctx)), 0, 0, 48, 40))), 'auto'),
+      layer(centre.dot, 'active'),
+      footer(RIPPLE_SRC, ripple),
+    ]
+  },
 }
 
 // ── PLASMA ── four interfering sines, banded by the quantize ladder.

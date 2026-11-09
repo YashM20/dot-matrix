@@ -85,6 +85,8 @@ const grain = (g: Float32Array, i: number) => g[i] === SAND || g[i] === SAND_B
 /** The live stream: a grain below the neck, in the neck's columns, with no pile beside it (cells ±2 empty). */
 const falling = (g: Float32Array, i: number, x: number, y: number) =>
   y > NECK && Math.abs(x - CX) <= 1 && grain(g, i) && !grain(g, i - 2 - (x - CX)) && !grain(g, i + 2 - (x - CX))
+/** The lowest grain of a falling run (nothing falling right under it): the only grain drawn red, so the stream reads as grains. */
+const leading = (g: Float32Array, i: number, x: number, y: number) => falling(g, i, x, y) && !(y + 1 < H && falling(g, i + N, x, y + 1))
 export const simSand: WidgetPreset = {
   id: 'sim-sand', name: 'Sim Falling Sand', label: 'SIM  SAND', ...tile, animated: true,
   layers: ctx => {
@@ -95,7 +97,8 @@ export const simSand: WidgetPreset = {
       layer(on(simMapField(sand, t, (g, i) => g[i] === WALL ? 1 : 0)), 'faint'),
       layer(on(simMapField(sand, t, (g, i, x, y) => g[i] === SAND && !(top > 0 && falling(g, i, x, y)) ? 1 : 0)), 'value'),
       layer(on(simMapField(sand, t, (g, i, x, y) => g[i] === SAND_B && !(top > 0 && falling(g, i, x, y)) ? .8 : 0)), 'mid'),
-      layer(on(simMapField(sand, t, (g, i, x, y) => (top > 0 && falling(g, i, x, y)) ? 1 : 0)), 'active'),
+      layer(on(simMapField(sand, t, (g, i, x, y) => (top > 0 && falling(g, i, x, y) && !leading(g, i, x, y)) ? .55 : 0)), 'idle'),
+      layer(on(simMapField(sand, t, (g, i, x, y) => (top > 0 && leading(g, i, x, y)) ? 1 : 0)), 'active'),
       ...footer(sand, t, 'STEP', `TOP ${pad4(top)}/${GRAINS}`),
     ]
   },

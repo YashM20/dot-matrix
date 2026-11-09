@@ -16,6 +16,7 @@ import { statusName } from '../../data/source'
 import { contribSource, GH_WEEKS, nowPlayingSource, weatherSource, WX_HOURS } from '../../data/sources'
 import { fit, textOf } from '../../data/text'
 import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
+import { capSize } from '../sites'
 import { dotText } from './henry'
 
 const T = layoutFor(TILE)
@@ -37,7 +38,7 @@ const FOOT = 136
 function footer(code: number | undefined, origin: string): Layer[] {
   const s = statusName(code), y = FOOT + 3
   const mark = s === 'offline'
-    ? layer(T.dotRing(3.5, y, 2.4, { spacing: (TAU * 2.4) / 6, size: .8 }), 'mid')
+    ? layer(T.dotRing(3.5, y, 2.4, { spacing: (TAU * 2.4) / 8, size: .8 }), 'mid')
     : layer(T.dots([[3.5, y]], 3.4), s === 'live' ? 'value' : 'mid')
   return [
     layer(T.dotLine(1, 131.5, 142, 131.5, { spacing: 2.25, size: .6 }), 'faint'),
@@ -90,7 +91,10 @@ function weatherIcon(icon: Icon): Layer[] {
   if (icon === 'fog') return [0, 1, 2, 3].map(i => layer(T.dotLine(cx - 22 + (i % 2) * 5, cy - 12 + i * 7.5, cx + 20 + (i % 2) * 5, cy - 12 + i * 7.5, { spacing: 3.5, size: 2.2 }), i % 2 ? 'mid' : 'value'))
   if (icon === 'partly') {
     const c = cloudShape(cx + 6, cy + 7, .9), [core, rays] = sunPts(cx - 13, cy - 8, 8.5), keep = ([x, y]: Pt) => !c.inside(x, y)
-    return [layer(T.dots(core.filter(keep), 2.8), 'idle'), layer(T.dots(rays.filter(keep), 2.2), 'mid'), layer(T.dots(c.pts, 2.7))]
+    // the cloud cuts whole rays (both dots) and whole runs of the ring: no lone ring dot is left between cuts
+    const ring = core.map(keep), n = ring.length, arc = core.filter((_, i) => ring[i] && (ring[(i + 1) % n] || ring[(i + n - 1) % n]))
+    const beams = rays.filter((_, i) => keep(rays[i & ~1]) && keep(rays[i | 1]))
+    return [layer(T.dots(arc, 2.8), 'idle'), layer(T.dots(beams, 2.2), 'mid'), layer(T.dots(c.pts, 2.7))]
   }
   const up = icon === 'cloud' ? 0 : -7, c = cloudShape(cx, cy + up)
   const out = [layer(T.dots(c.pts, 2.7))]
@@ -113,7 +117,7 @@ export const liveWeather: WidgetPreset = {
     const lo = Math.min(...hours), hi = Math.max(...hours), span = Math.max(2, hi - lo)
     const bar = (h: number) => .12 + .88 * ((h - lo) / span)
     return [
-      layer(T.big(fit(textOf(data.wxPlace, 'TOKYO'), 14), 1.5, 14, { lattice: 1.35 }), 'idle'),
+      layer(T.big(fit(textOf(data.wxPlace, 'TOKYO'), 14), 0, 14, { lattice: 1.35 }), 'idle'),
       layer(dotText(t, 2.5, 30, { px: 3, py: 4.3, size: 3.1 })), layer(T.dotRing(tw + 9.5, 34, 3.6, { spacing: (TAU * 3.6) / 8, size: 2.4 })),
       ...weatherIcon(iconOf(code, day)),
       // next 12 hours: one dot column per hour, now in full tone
@@ -203,8 +207,11 @@ export const liveNowPlaying: WidgetPreset = {
 
 // ── 03 CONTRIBUTIONS ────────────────────────────────────────────────────────
 const G = { x: 2.3, y: 70, sp: 2.68 }
-/** Size + tone per contribution level: level 0 still reads as the calendar's grid at board size, 1 a clear step up. */
-const LEVEL: [number, Tone][] = [[1.15, 'faint'], [1.75, 'mid'], [2, 'idle'], [2.25, 'value'], [2.5, 'value']]
+/**
+ * Size + tone per contribution level: level 0 still reads as the calendar's grid at board size, 1 a clear step up.
+ * Sizes stop at 0.8 of the cell spacing (`capSize`), so a busy week stays a column of dots: 2 and 3 differ in tone.
+ */
+const LEVEL: [number, Tone][] = [[1.15, 'faint'], [1.6, 'mid'], [1.85, 'idle'], [1.85, 'value'], [capSize(2.5, G.sp), 'value']]
 const MONTHS = 'JFMAMJJASOND'
 export const liveContribs: WidgetPreset = {
   id: 'live-contribs', name: 'Contributions', label: 'CONTRIBUTIONS', group: 'scatter', liveData: true, ...tile,
@@ -224,7 +231,7 @@ export const liveContribs: WidgetPreset = {
     }
     const stat = (label: string, value: string, x: number): Layer[] => [layer(T.text(label, x, 104), 'mid'), layer(T.big(value, x, 114, { lattice: 1.35 }))]
     return [
-      layer(T.big(fit(textOf(data.ghUser, 'GITHUB'), 15), 1.5, 14, { lattice: 1.35 }), 'idle'),
+      layer(T.big(fit(textOf(data.ghUser, 'GITHUB'), 15), 0, 14, { lattice: 1.35 }), 'idle'),
       layer(dotText(total, 2.5, 30, { px: 3, py: 4.3, size: 3.1 })),
       layer(T.text('IN THE', 143, 46, { align: 'right' }), 'idle'), layer(T.text('LAST YEAR', 143, 54, { align: 'right' }), 'idle'),
       ...byLevel.map((pts, l) => layer(T.dots(pts, LEVEL[l][0]), LEVEL[l][1])),
