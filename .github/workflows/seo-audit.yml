@@ -12,9 +12,6 @@ on:
         description: Also run Lighthouse on the production site
         type: boolean
         default: false
-  # the audit's own branch while it is open (before and after its fixes); remove before merge
-  push:
-    branches: [chore/seo-audit-1]
 
 permissions:
   contents: read
@@ -61,7 +58,7 @@ jobs:
 
       - name: Lighthouse
         env:
-          LIVE: ${{ github.event_name == 'push' || inputs.live }}
+          LIVE: ${{ inputs.live }}
         run: |
           mkdir -p seo-audit/lh
           export CHROME_PATH=$(command -v google-chrome || command -v chromium)
