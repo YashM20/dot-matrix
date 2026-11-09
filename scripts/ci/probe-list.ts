@@ -20,7 +20,8 @@ export const PROBES: Probe[] = [
   // mobile.ts in two halves: its MAKE tabs take up to a minute each on a runner
   { name: 'mobile', shard: 5, secs: 65, args: ['scripts/site/mobile.ts', '$BASE', 'first-load,fps,chrome,tab:make=tune,tab:make=compose,tab:make=code,tab:make=draw,tab:about'] },
   { name: 'mobile-boards', shard: 13, secs: 210, args: ['scripts/site/mobile.ts', '$BASE', boardIds.join(',')] },
-  { name: 'materials', shard: 6, secs: 270, args: ['scripts/materials-browser.ts'] },
+  // the mat-lens checks alone take minutes on a runner (its frames are slow there): materials gets 8 minutes
+  { name: 'materials', shard: 6, secs: 360, args: ['scripts/materials-browser.ts'], timeoutMin: 8 },
   { name: 'audio', shard: 7, secs: 35, args: ['scripts/audio-chrome.ts'], env: { URL: '$BASE' } },
   { name: 'theme-boot', shard: 7, secs: 10, args: ['scripts/site/theme-boot.ts'] },
   { name: 'light', shard: 7, secs: 25, args: ['scripts/light-browser.ts'] },

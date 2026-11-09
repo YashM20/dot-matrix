@@ -12,7 +12,8 @@
  *   the loop-folded step, so a live world keeps its rhythm. After `idle` seconds without input (and without the
  *   optional `busy` hook saying the live state is mid-action) it `heal`s: each step blends onto the pristine state
  *   at the same step (`healBlend`, else `blend`), and once there the world is pristine again.
- *   Time going backwards (remount, scrub) or a non-finite value drops back to pristine at once.
+ *   A non-finite time, or a touch at a time before the live run (remount, scrub), drops back to pristine at once. A
+ *   read before the live run with no input (a still, a description at t 0) shows the pristine run and keeps the live state.
  *
  * Input is handed over per frame in the world's own units (the card maps card cells to world units); the runner
  * interpolates each pointer across the steps of a frame and derives its velocity from the motion, so strokes
@@ -192,7 +193,13 @@ export function worldAt(w: World, t: number, frame?: FrameInput): Float32Array {
     w.liveN = simStep(w.sim, t); w.liveT = t; w.mode = 'live'; w.liveSteps = 0
     // the touching frame's pointers become the interpolation start, so the first step sees their motion
   }
-  if (t < w.liveT - .25 || !Number.isFinite(t)) { worldReset(w); return simView(w.sim, t) }
+  if (!Number.isFinite(t)) { worldReset(w); return simView(w.sim, t) }
+  if (t < w.liveT - .25) {
+    // a still read from before the live run (no input: the card's text described at t 0, a reduced-motion frame)
+    // shows the pristine run there and leaves the live state alone; a touch back there starts over
+    if (!touch) return simView(w.sim, t)
+    worldReset(w); return simView(w.sim, t)
+  }
   const { dt } = w.spec, maxLive = w.spec.maxLiveSteps ?? 8
   let steps = Math.floor((t - w.liveT) / dt + 1e-9)
   if (steps > maxLive) { w.dropped += steps - maxLive; w.liveT = t - maxLive * dt; steps = maxLive }

@@ -22,7 +22,7 @@ import { serveDist } from '../lib/cdp'
 import { packShards, PROBES } from './probe-list'
 
 const BASE = 'http://localhost:4317/'
-/** A hung probe fails here instead of holding its shard to the job timeout (materials takes 4.5 minutes when it does finish). */
+/** A hung probe fails here instead of holding its shard to the job timeout (15 minutes). */
 const TIMEOUT_MIN = 5
 
 const argv = process.argv.slice(2)
