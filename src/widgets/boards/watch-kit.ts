@@ -65,8 +65,8 @@ export const textBox = (s: string, cx: number, top: number, k = 1): [number, num
 }
 
 // ── the case ──────────────────────────────────────────────────────────────────
-/** The crown on the right of the case: two columns of small dots. */
-const crown = (x0: number): Layer => layer(T.dots([2.5, 5].flatMap(dx => [71, 74, 77, 80, 83].map((y): Pt => [x0 + dx, y])), 1.5), 'mid')
+/** The crown on the right of the case: one column of three dots with a gap (was a 2 × 5 block of small dots). */
+const crown = (x0: number): Layer => layer(T.dots([73.5, 77, 80.5].map((y): Pt => [x0 + 3.75, y]), 2), 'mid')
 /** One rim per case, the bezel line: a second faint edge 3 cells outside it read as a doubled border at zoom. */
 const CASES: Record<FrameKind, Layer[]> = {
   round: [layer(T.dotRing(CX, CY, ROUND.bezel, LINE), 'mid'), crown(CX + ROUND.edge)],

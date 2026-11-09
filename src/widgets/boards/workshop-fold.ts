@@ -91,7 +91,10 @@ export function shadeFold(posed: readonly Posed[], L: Light, active: CreaseLine 
   for (let y = y0; y <= y1; y++) for (let x = x0, i = y * COLS + x; x <= x1; x++, i++) {
     const f = top[i]
     if (f < 0) continue
-    if (active && Math.abs((x - active.x) * active.nx + (y - active.y) * active.ny) < .5) { red.push([x, y]); continue }
+    const dc = active ? Math.abs((x - active.x) * active.nx + (y - active.y) * active.ny) : Infinity
+    if (dc < .5) { red.push([x, y]); continue }
+    // the paper leaves a cell of air either side of the live crease, so no grey dot touches a red one
+    if (dc < 1.5) continue
     const r = x < COLS - 1 ? top[i + 1] : -1, d = y < ROWS - 1 ? top[i + COLS] : -1
     if ((r >= 0 && r !== f && differs(f, r)) || (d >= 0 && d !== f && differs(f, d))) { V[i] = .2; tones[i] = FAINT; continue }
     // the back of the sheet: one band below its lit front, at the top of that band (full dots, so a folded flap reads)
