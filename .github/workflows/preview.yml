@@ -1,0 +1,72 @@
+# Vercel previews on demand (docs/DEPLOY.md). vercel.json turns off Vercel's git deploys for every branch but main,
+# so a PR push makes no deployment and spends none of the Hobby plan's daily deploys. A PR labelled `preview` gets
+# one here: adding the label deploys its head, and every later push while the label stays deploys again.
+# Vercel builds it from the uploaded source with the project's Preview settings and env, as its git deploys did.
+# Needs the repo secrets VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID. Fork PRs never run it.
+name: preview
+
+on:
+  pull_request:
+    types: [labeled, synchronize, reopened]
+
+permissions:
+  contents: read
+
+# a new push cancels the stale deploy of the same PR
+concurrency:
+  group: preview-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: vercel preview
+    # no `preview` label: the job is skipped and nothing runs
+    if: >-
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      (github.event.action == 'labeled' && github.event.label.name == 'preview' ||
+       github.event.action != 'labeled' && contains(github.event.pull_request.labels.*.name, 'preview'))
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - name: Check secrets
+        run: |
+          for s in VERCEL_TOKEN VERCEL_ORG_ID VERCEL_PROJECT_ID; do
+            if [ -z "${!s}" ]; then echo "::error::The repo secret $s is missing (docs/DEPLOY.md)"; exit 1; fi
+          done
+
+      # the PR's head commit, the same tree Vercel's git preview used to build
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+          persist-credentials: false
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+        with:
+          version: 10
+
+      # the CLI reads VERCEL_TOKEN, VERCEL_ORG_ID and VERCEL_PROJECT_ID from the env; the target is preview
+      - name: Deploy
+        id: deploy
+        run: |
+          url=$(pnpm dlx vercel@65.12.1 deploy --yes)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Preview: $url" >> "$GITHUB_STEP_SUMMARY"
+
+      # one comment per PR, updated on each deploy
+      - name: Comment the URL
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR: ${{ github.event.pull_request.number }}
+          URL: ${{ steps.deploy.outputs.url }}
+          SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          gh pr comment "$PR" --repo "$GITHUB_REPOSITORY" --edit-last --create-if-none \
+            --body "Vercel preview for ${SHA:0:7}: $URL"
