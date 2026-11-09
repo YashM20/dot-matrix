@@ -389,7 +389,7 @@ function winLayers(g: Game): Layer[] {
     layer(scene, 'value'),
     layer(T.big('HIVE', W / 2, 18, { lattice: 2, smooth: true, align: 'center' })),
     layer(T.big('CLEARED', W / 2, 50, { lattice: 2, smooth: true, align: 'center' })),
-    layer(T.big(scoreText(g.score), W / 2, 104, { lattice: 1.6, smooth: true, align: 'center' }), 'value'),
+    layer(T.big(scoreText(g.score), W / 2, 104, { lattice: 1.6, smooth: true, face: 'condensed', align: 'center' }), 'value'),
     ...(blink(g, 72, 48) && g.sf > 60 ? [caption('PRESS START', W / 2, 134, 'idle')] : []),
     title('LEVEL 04'), score(g),
   ]
@@ -398,7 +398,7 @@ function entryLayers(g: Game): Layer[] {
   const e = g.e, L = 2.5, adv = 6 * L, x0 = W / 2 - (3 * adv) / 2
   const out: Layer[] = [
     title('NEW HIGH SCORE'),
-    layer(T.big(scoreText(g.score), W / 2, 22, { lattice: 2, smooth: true, align: 'center' })),
+    layer(T.big(scoreText(g.score), W / 2, 22, { lattice: 2, smooth: true, face: 'condensed', align: 'center' })),
     layer(T.hrule(30, 58, W - 60, 2), 'faint'),
   ]
   e.letters.forEach((li, i) => out.push(layer(T.big(LETTERS[li], x0 + i * adv + adv / 2, 70, { lattice: L, align: 'center' }), i === e.pos ? 'active' : i < e.pos ? 'value' : 'mid')))
@@ -413,7 +413,7 @@ function scoresLayers(g: Game): Layer[] {
   const out: Layer[] = [
     title('HIGH SCORES'),
     layer(T.big(`1ST ${top?.name ?? '---'}`, 24, 17, { lattice: CAP }), g.mine === 0 ? 'active' : 'idle'),
-    layer(T.big(scoreText(top?.score ?? 0), W / 2, 25, { lattice: 2, smooth: true, align: 'center' })),
+    layer(T.big(scoreText(top?.score ?? 0), W / 2, 25, { lattice: 2, smooth: true, face: 'condensed', align: 'center' })),
     layer(T.hrule(24, 55, W - 48, 2), 'faint'),
   ]
   g.table.slice(1).forEach((r, k) => {

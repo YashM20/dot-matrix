@@ -66,7 +66,7 @@ export const worldFace = face('watch-world', 'World', 'squircle', {
     const walls = [now.local, ...CITIES.map(z => zoneWall(z, now.utc))], here = Math.floor(now.local / DAY)
     const hero = partsOf(walls[sel]), pv = s.pressed ? PRESS : 1
     return [
-      layer(T.big(clockOf(walls[sel]), CX, 26, { lattice: 1.5, smooth: true, align: 'center' }), 'value'),
+      layer(T.big(clockOf(walls[sel]), CX, 26, { lattice: 1.5, smooth: true, face: 'fine', align: 'center' }), 'value'),
       layer(T.text(`${PLACES[sel].name} ${DAYS[hero.dow]} ${pad2(hero.day)}`, CX, 51, { align: 'center' }), 'idle'),
       ...walls.flatMap((w, i) => {
         const p = partsOf(w), y = rowTop(i), on = i === sel, diff = Math.floor(w / DAY) - here, day = p.hour >= 6 && p.hour < 18

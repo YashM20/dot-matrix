@@ -46,8 +46,8 @@
   "ui-stepped-slider": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "fe615a0c",
-    "dots": 352
+    "hash": "3ddb4b3e",
+    "dots": 354
    }
   },
   "ui-knob": {
@@ -81,8 +81,8 @@
   "ui-progress": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "5006d0fa",
-    "dots": 463
+    "hash": "f5ea08b0",
+    "dots": 470
    }
   },
   "ui-loaders": {
