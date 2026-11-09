@@ -132,9 +132,9 @@ The page chrome around the cards (topbar, pickers, editor, sheets, essay) is rea
 | `--fs-label-10` | 10 px | the card header only |
 | `--fs-label-11` | 11 px | the card's action row only |
 | `--fs-label-12` | 12 px | **the chrome minimum**: labels, tabs, buttons, menus, the editor, sheets, meta (uppercase mono, +.06em) |
-| `--fs-copy-14` | 14 px | short prose in the display face: the intro, board and group blurbs, changelog summaries |
+| `--fs-copy-14` | 14 px | short prose in the display face: the intro's link, board and group blurbs, changelog summaries |
 | `--fs-copy-16` | 16 px | body copy; phone form fields (no iOS focus zoom) |
-| `--fs-lead-18` | 18 px | the page's inherited size; essay prose |
+| `--fs-lead-18` | 18 px | the page's inherited size; essay prose; the home intro (desktop) |
 | `--fs-title-20` / `-24` / `-28` | 20 / 24 / 28 px | titles (28: the widget page) |
 | `--fs-h1-page` | `clamp(30px, 6vw, 44px)` | legal page title |
 | `--fs-h1-hero` | `clamp(38px, 5vw, 72px)` | hero heading |

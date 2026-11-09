@@ -14,11 +14,11 @@
   background: var(--surface)
 }
 
-/* wide: a 216 px card with its legend beside it, floated right of the header (it is as tall as the header) */
+/* wide: a 216 px card with its legend beside it (240 px, so a legend part never breaks), floated right of the header (it is as tall as the header) */
 @media (min-width: 1280px) {
   .home-hero {
     float: right;
-    width: 428px;
+    width: 468px;
     margin: 0 0 var(--gap-group) var(--gap-action)
   }
 
@@ -63,9 +63,17 @@
   min-height: 40px
 }
 
-/* the tool dock in the top bar (desktop): it no longer floats over cards; tips open downwards */
+/* the tool dock in the top bar (desktop): it no longer floats over cards; tips open downwards. In the bar it drops
+   its frame: three quiet tools set like the nav, each with its own hover edge, not the heaviest box in the header */
 .topbar-dock .pal-dock {
-  position: static
+  position: static;
+  padding: 0;
+  border: 0;
+  background: none
+}
+
+.topbar-dock .pal-dock button {
+  font-weight: 500
 }
 
 /* its stand-in until the real dock arrives: it holds the dock's room, unseen, then steps out (App.tsx DockGhost) */
