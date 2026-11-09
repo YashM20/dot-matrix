@@ -117,7 +117,7 @@ jobs:
           retention-days: 7
 
       # Fails on any drift of a preset's quantized dot list. Intentional visual changes:
-      # run `pnpm golden` locally and commit the changed goldens/<board>.json files with it.
+      # `gh workflow run goldens -f branch=<branch>` regenerates and commits them (docs/HARNESS.md › Goldens in CI).
       - name: Golden hashes
         run: pnpm golden --check
 

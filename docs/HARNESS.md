@@ -9,8 +9,10 @@
 
 ## Probes in CI
 `.github/workflows/probes.yml` runs the browser probes and screenshots on GitHub's runners, so nobody queues for the laptop. One job builds `dist/`; the probe shards and the screenshot job reuse it. It is a report: it is not part of the `check + build` gate.
-- **On a pull request** that touches `src/`, `scripts/`, `public/`, `index.html` or `vite.config.ts`, it runs every probe and captures a default set: home, `/browse/` and `/widget/timer/` at 1280 and 390, in both schemes.
-- **The table** of probes and shards is `scripts/ci/probes.ts` (`--list` prints it). Add a new probe there. Each shard's run prints a timing table in the job summary; move probes between shards when one shard runs long.
+- **On a pull request** that touches `src/`, `scripts/`, `public/`, `index.html` or `vite.config.ts`, it runs the probes the PR's changes reach, plus the smoke set (`chunks`, `a11y`, `theme-boot`), and captures a default set of screenshots: home, `/browse/` and `/widget/timer/` at 1280 and 390, in both schemes. The build job log and the run summary list the picked probes and the file behind each.
+- **Which probes:** `scripts/ci/affected.ts` maps path globs to probes for `git diff --name-only <base>...HEAD`. A probe's own script picks that probe. Shared code (`src/engine/`, `src/hooks/`, `src/widgets/types*` and `manifest*`, `DotCanvas`, `DotWidget`, `scripts/lib/`, `scripts/ci/`, `vite.config.ts`, `index.html`, `package.json`, the lockfile, this workflow) runs every probe, and so does any path with no row. Try a table change with `pnpm exec tsx scripts/ci/affected.ts --files <path,path>`.
+- **Every probe** runs on a push to `main`, on a dispatch with `probes=all`, and on a PR with the `full-probes` label (adding the label starts the run).
+- **The table** of probes is `scripts/ci/probe-list.ts` (`scripts/ci/probes.ts --list` prints it). Add a new probe there, with its usual seconds, and give it a row in `affected.ts`. A full run uses each probe's `shard`; each shard's run prints a timing table in the job summary, so move probes between shards when one runs long. A partial run packs the picked probes into as few shards as their seconds allow: three short probes share one runner.
 - **Screenshots** are `route@width[@theme]` items for `scripts/ci/shots.ts`: widths up to 600 are a phone; theme is `dark`, `light` or a full name like `light_cobalt`.
 - **On demand**, for agents. `gh run watch` is not allowed: list the runs and check back.
   ```bash
@@ -22,6 +24,13 @@
   gh run view <id> --log-failed                               # the failing probe's output
   ```
   `probes=all` runs every probe, `probes=none` only the screenshots; an empty `shots` skips the screenshot job. In Git Bash on Windows, prefix the command with `MSYS_NO_PATHCONV=1` (or drop the leading `/` of each route): Git Bash rewrites `/browse/` into a Windows path.
+
+## Goldens in CI
+Regenerate `goldens/<board>.json` on a runner instead of a laptop, after an intended card change:
+```bash
+gh workflow run goldens -f branch=<branch>
+```
+The `goldens` workflow runs `pnpm golden` on that branch and commits the changed files back as `Regenerate goldens`, only when one changed. It refuses `main` and does nothing in a fork. A push made by the workflow starts no pull_request run, so the workflow dispatches CI on the branch to give the new head its `check + build` result. Merge the new commit before you push again: `git pull` on the branch.
 
 ## The first harness (historical, 2026-08)
 > The commands below are outdated (npm, module counts). Use the section above.
