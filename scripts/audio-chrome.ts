@@ -173,9 +173,12 @@ globalThis.__DOT_PROBE__ = true; { const o = URL.createObjectURL; URL.createObje
   await shot('scope-synth')
   await click('Listen to the microphone')
   check('mic goes live (fake capture device)', await until(`${E}.micState === 'live'`, 8000), await evaluate(`${E}.micState`))
-  await sleep(1500)
-  const mic = await evaluate(`(async () => { const { decodeFrame } = window.__dotAudioFrame; const m = ${E}.media(); return m.mic ? Math.max(...decodeFrame(m.mic).level) : null })()`)
-  check('mic analyser non-silent', mic !== null && mic > -50, `${mic?.toFixed(1)} dBFS`)
+  // Chrome's fake capture device is mostly silence with a short beep about twice a second, so one
+  // frame usually reads the floor: take the loudest of many frames over 2 s
+  const mic = await evaluate(`new Promise(done => { const { decodeFrame } = window.__dotAudioFrame, end = performance.now() + 2000; let best = null
+    const tick = () => { const m = ${E}.media(); if (m?.mic) best = Math.max(best ?? -Infinity, ...decodeFrame(m.mic).level); if (performance.now() < end) setTimeout(tick, 4); else done(best) }
+    tick() })`)
+  check('mic analyser non-silent', mic !== null && mic > -50, `loudest frame over 2 s ${mic?.toFixed(1)} dBFS`)
   await shot('scope-mic')
   await click('Listen to the microphone')
   check('mic off releases the device', await until(`${E}.micState === 'idle'`, 3000))

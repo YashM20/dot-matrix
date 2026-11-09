@@ -82,26 +82,26 @@ const report: Record<string, unknown> = {}
 let ok = true
 try {
   await cdp('Page.navigate', { url: `${URL0}/mirror/` })
-  for (let i = 0; i < 60 && !(await rectOf('.dot-card[aria-label="Conduct"]')); i++) await sleep(500)
+  for (let i = 0; i < 60 && !(await rectOf('.dot-card[data-card-id="mirror-conduct"]')); i++) await sleep(500)
   await sleep(2500)
   // shadow (row 1, right) and conduct (row 2) both in view
-  await evaluate(`window.scrollTo(0, document.querySelector('.dot-card[aria-label="Shadow"]').getBoundingClientRect().top + scrollY - 20)`)
+  await evaluate(`window.scrollTo(0, document.querySelector('.dot-card[data-card-id="mirror-shadow"]').getBoundingClientRect().top + scrollY - 20)`)
   await sleep(300)
-  const shadow =await rectOf('.dot-card[aria-label="Shadow"]'), conduct = await rectOf('.dot-card[aria-label="Conduct"]')
+  const shadow =await rectOf('.dot-card[data-card-id="mirror-shadow"]'), conduct = await rectOf('.dot-card[data-card-id="mirror-conduct"]')
   if (!shadow || !conduct) throw new Error(`mirror board cards not found: ${await evaluate<string>("[...document.querySelectorAll('.dot-card')].map(e => e.getAttribute('aria-label')).join(',') + ' ' + document.body.innerText.slice(0, 200)")}`)
   await click(shadow.x + shadow.w / 2, shadow.y + shadow.h / 2)
   await sleep(400)
   // the conduct card's bottom plate (the HAND toggle) into view
-  await evaluate(`window.scrollBy(0, document.querySelector('.dot-card[aria-label="Conduct"]').getBoundingClientRect().bottom - innerHeight + 12)`)
+  await evaluate(`window.scrollBy(0, document.querySelector('.dot-card[data-card-id="mirror-conduct"]').getBoundingClientRect().bottom - innerHeight + 12)`)
   await sleep(300)
-  const cd = (await rectOf('.dot-card[aria-label="Conduct"]'))!
+  const cd = (await rectOf('.dot-card[data-card-id="mirror-conduct"]'))!
   await click(cd.x + cd.w / 2, cd.y + cd.h * .93)
   // 5 s on the (heavy: three live camera cards) mirror board, then the tracking run on the instrument board
   await sleep(5000); await shot('mirror-board-hand')
   const m0 = await evaluate<number[][]>('window.__c6.obs'), mirrorFps = m0.length > 30 ? (m0.length - 31) / ((m0[m0.length - 1][0] - m0[30][0]) / 1000) : 0
   report.mirrorBoardTrackerFps = +mirrorFps.toFixed(1)
   await evaluate('window.scrollTo(0, 0)'); await sleep(300)
-  const tab = await evaluate<Rect | null>(`(() => { const b = [...document.querySelectorAll('.board-tabs button')].find(b => b.textContent === 'INSTRUMENT'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height } })()`)
+  const tab = await evaluate<Rect | null>(`(() => { const b = document.querySelector('.board-tabs button[data-board="instrument"]'); if (!b) return null; const r = b.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height } })()`)
   if (!tab) throw new Error('INSTRUMENT tab not found')
   await click(tab.x + tab.w / 2, tab.y + tab.h / 2)
   await sleep(2000)

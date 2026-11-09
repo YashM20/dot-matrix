@@ -44,7 +44,25 @@ const arcPoint = (v: number): [number, number] => { const a = KNOB.start + v * K
 const knobV = (p: Page) => p.js<number>(`+${card('mat-knob')}.querySelector('input[aria-label="Volume"]').getAttribute('aria-valuenow')`)
 /** Every material card's control values (a11y inputs and switches), as one string. */
 const dataOf = (p: Page) => p.js<string>(`[...document.querySelectorAll('[data-card-id^="mat-"]')].map(c => c.dataset.cardId + ':' + [...c.querySelectorAll('[aria-valuenow], [aria-checked]')].map(e => e.getAttribute('aria-valuenow') ?? e.getAttribute('aria-checked')).join(',')).join('|')`)
-const center = async (p: Page, id: string) => { await p.js(`${card(id)}.scrollIntoView({ block: 'center' })`); await sleep(400) }
+/**
+ * The page's pointer and scroll events, newest last (`evlog()` reads them for a failed check). A swipe ends in a fling
+ * that keeps scrolling, and the card drops a finger that lands within 120 ms of a scroll (it stops the fling).
+ */
+const EVLOG = `(() => { if (window.__evlog) return; const l = window.__evlog = [], at = () => Math.round(performance.now())
+  const where = e => e.target?.closest?.('[data-card-id]')?.dataset.cardId ?? e.target?.nodeName
+  for (const t of ['pointerdown', 'pointerup', 'pointercancel']) addEventListener(t, e => l.push(t.slice(7) + ' ' + at() + ' ' + where(e)), { capture: true })
+  addEventListener('scroll', () => { window.__lastScroll = performance.now(); const e = l.at(-1); if (e?.[0] === 'scroll') e[2] = at(); else l.push(['scroll', at(), at()]) }, { capture: true, passive: true })
+})()`
+const evlog = (p: Page) => p.js<string>(`'now ' + Math.round(performance.now()) + ': ' + (window.__evlog ?? []).slice(-10).map(e => Array.isArray(e) ? 'scroll ' + e[1] + '..' + e[2] : e).join(', ')`)
+/** The card in the middle of the view, once the page has stopped scrolling (a fling from the last swipe included). */
+const center = async (p: Page, id: string) => {
+  await p.js(EVLOG)
+  await p.js(`${card(id)}.scrollIntoView({ block: 'center' })`)
+  await sleep(400)
+  await p.waitFor(`performance.now() - (window.__lastScroll ?? 0) > 250`, 4000)
+  await p.js(`${card(id)}.scrollIntoView({ block: 'center' })`)
+  await sleep(200)
+}
 const engagedOf = (p: Page, id: string) => p.js<boolean>(`!!document.querySelector('[data-card-id="${id}"].dot-card--engaged, [data-card-id="${id}"] .dot-card--engaged') || ${card(id)}.classList.contains('dot-card--engaged')`)
 const engaged = (p: Page) => engagedOf(p, 'mat-knob')
 /** The lens's centre as its data (lx 0..1 left → right, ly 0..1 bottom → top over card rows 12–143). */
@@ -109,7 +127,8 @@ try {
     const [x, y] = await at(p, 'mat-lens', 44, 96)
     await p.tap(x, y); await sleep(700)
     const d = await lensXY(p), want = lensData(44, 96)
-    check('mat-lens: a tap moves the lens there', Math.abs(d[0] - want[0]) <= .03 && Math.abs(d[1] - want[1]) <= .03, `lens ${d.map(v => v.toFixed(3))}, want ${want.map(v => v.toFixed(3))}`)
+    const ok = Math.abs(d[0] - want[0]) <= .03 && Math.abs(d[1] - want[1]) <= .03
+    check('mat-lens: a tap moves the lens there', ok, `lens ${d.map(v => v.toFixed(3))}, want ${want.map(v => v.toFixed(3))}${ok ? '' : `; ${await evlog(p)}`}`)
   }
   {
     const [x0, y0] = await at(p, 'mat-lens', 44, 96), s0 = await p.js<number>('scrollY')
@@ -120,7 +139,7 @@ try {
     for (let i = 1; i <= 20; i++) { const [x, y] = await at(p, 'mat-lens', 44 + i, 96 - 2 * i); await p.cdp('Input.dispatchTouchEvent', { type: 'touchMove', touchPoints: touchPt(x, y) }); await sleep(20) }
     await p.cdp('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] }); await sleep(600)
     const d = await lensXY(p), s1 = await p.js<number>('scrollY'), want = lensData(64, 56)
-    check('mat-lens: a 300 ms hold engages and a drag in any direction then moves it; the page never scrolls while engaged', on && Math.abs(d[0] - want[0]) <= .04 && Math.abs(d[1] - want[1]) <= .04 && Math.abs(s1 - s0) < 1, `engaged ${on}, lens ${d.map(v => v.toFixed(3))}, want ${want.map(v => v.toFixed(3))}, scroll Δ ${(s1 - s0).toFixed(0)} px`)
+    check('mat-lens: a 300 ms hold engages and a drag in any direction then moves it; the page never scrolls while engaged', on && Math.abs(d[0] - want[0]) <= .04 && Math.abs(d[1] - want[1]) <= .04 && Math.abs(s1 - s0) < 1, `engaged ${on}, lens ${d.map(v => v.toFixed(3))}, want ${want.map(v => v.toFixed(3))}, scroll Δ ${(s1 - s0).toFixed(0)} px${on ? '' : `; ${await evlog(p)}`}`)
   }
   {
     const [x0, y0] = await at(p, 'mat-lens', 60, 80), s0 = await p.js<number>('scrollY'), d0 = await lensXY(p)
@@ -179,7 +198,8 @@ try {
       const [x, y] = await at(q, s.id, ...s.tap)
       await q.tap(x, y); await sleep(250)
       const did = await ws<number>(s.tapDid)
-      check(`${s.id}: a tap ${s.tapName}`, did > (s.id === 'mat-thread' ? 1 : 0), `${s.tapDid} = ${did.toFixed(2)}`)
+      const ok = did > (s.id === 'mat-thread' ? 1 : 0)
+      check(`${s.id}: a tap ${s.tapName}`, ok, `${s.tapDid} = ${did.toFixed(2)}${ok ? '' : `; ${await evlog(q)}`}`)
     }
     {
       const [x0, y0] = await at(q, s.id, ...s.drag(0)), s0 = await q.js<number>('scrollY'), before = await ws<number>(s.dragDid)
@@ -226,7 +246,7 @@ try {
     const [tx, ty] = await at(q, 'mat-lichtenberg', 104, 44)
     await q.tap(tx, ty); await sleep(400)
     const taps = await q.js<number>('__plate.taps()')
-    check('mat-lichtenberg: a vertical swipe leaves the plate pristine; a tap grounds it (a live figure burns)', swiped === 'pristine' && taps >= 1, `after the swipe ${swiped}, taps ${taps}`)
+    check('mat-lichtenberg: a vertical swipe leaves the plate pristine; a tap grounds it (a live figure burns)', swiped === 'pristine' && taps >= 1, `after the swipe ${swiped}, taps ${taps}${taps >= 1 ? '' : `; ${await evlog(q)}`}`)
   }
   // ── the kintsugi plate and the mud: pristine breaks and cracks bit for bit; the plate's tap ──
   {
@@ -243,7 +263,7 @@ try {
     const [tx, ty] = await at(q, 'mat-kintsugi', 90, 60)
     await q.tap(tx, ty); await sleep(400)
     const taps = await q.js<number>('__kintsugi.taps()')
-    check('mat-kintsugi: a vertical swipe leaves the plate pristine; a tap breaks it (a live break)', swiped === 'pristine' && taps >= 1, `after the swipe ${swiped}, taps ${taps}`)
+    check('mat-kintsugi: a vertical swipe leaves the plate pristine; a tap breaks it (a live break)', swiped === 'pristine' && taps >= 1, `after the swipe ${swiped}, taps ${taps}${taps >= 1 ? '' : `; ${await evlog(q)}`}`)
   }
   check('workshop touch: no console errors', q.logs.length === 0, q.logs.slice(0, 3).join(' | '))
   await q.close(); page = null
