@@ -34,7 +34,8 @@ const codeError = (p: Page) => p.js<string>(`document.querySelector('.dw-error')
 const compiles = async (p: Page) => !(await codeError(p))
 const start = async (p: Page) => { await p.cdp('Page.addScriptToEvaluateOnNewDocument', { source: NOTES }); return p }
 /** Lit pixels on the selected frame's canvas. */
-const lit = (p: Page) => p.js<number>(`(() => { const c = document.querySelector('.ed-frame[data-frame="' + window.__editor?.sel + '"]'); if (!c) return -1; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] + d[i+1] + d[i+2] > 90) n++; return n })()`)
+const LIT = `(() => { const c = document.querySelector('.ed-frame[data-frame="' + window.__editor?.sel + '"]'); if (!c) return -1; const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data; let n = 0; for (let i = 0; i < d.length; i += 4) if (d[i] + d[i+1] + d[i+2] > 90) n++; return n })()`
+const lit = (p: Page) => p.js<number>(LIT)
 /** The longest gap between 10 ms timer ticks over `ms`: how long the page's main thread was blocked. */
 const maxGap = (p: Page, ms = 2000) => p.js<number>(`new Promise(r => { let last = performance.now(), max = 0; const id = setInterval(() => { const n = performance.now(); max = Math.max(max, n - last); last = n }, 10); setTimeout(() => { clearInterval(id); r(Math.round(max)) }, ${ms}) })`)
 /** Main-thread draw time of the animated frame: the mean of `__editor.lastMs` over `ms`, read every 50 ms. */
@@ -65,7 +66,9 @@ try {
     const p = await start(await launch(1440, 900))
     const plasma = EXAMPLES.find(e => e.name === 'plasma')!.src
     check('CODE opens a ?p= program', await open(p, plasma))
-    check('the program samples in the worker: batches go out, nothing is terminated, the frame lights up', await p.waitFor(`(window.__irSandbox?.batches ?? 0) > 5`, 15000) && (await stats(p))!.kills === 0 && (await lit(p)) > 500, JSON.stringify(await stats(p)))
+    // the first batch runs cold (it can take a whole frame budget), so wait for the values to land and draw
+    const lights = await p.waitFor(`(window.__irSandbox?.batches ?? 0) > 5 && ${LIT} > 500`, 15000)
+    check('the program samples in the worker: batches go out, nothing is terminated, the frame lights up', lights && (await stats(p))!.kills === 0, `${JSON.stringify(await stats(p))}, ${await lit(p)} lit px`)
     await sleep(500)
     const withWorker = await frameMs(p)
     await p.shot(join(out, 'code-worker.png'))
