@@ -21,9 +21,14 @@ async function open(): Promise<MediaStream> {
   return navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } }, audio: false })
 }
 
+/** Every track ended on its own: the camera was unplugged or its permission revoked. */
+export const streamEnded = (s: MediaStream) => s.getTracks().every(t => t.readyState === 'ended')
+
 /** Take a reference on the shared camera stream (the permission prompt, the first time). Pair with `releaseCamera`. */
 export async function acquireCamera(): Promise<MediaStream> {
   refs++
+  // a dead stream is never handed out again: its holders keep their references, this one opens a fresh stream
+  if (live && streamEnded(live)) { live = null; shared = null }
   shared ??= open().then(s => {
     live = s
     // everyone let go while the prompt was open
