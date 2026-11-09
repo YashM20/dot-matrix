@@ -52,13 +52,13 @@
   "surface-plotter": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "a6df20f4",
-    "dots": 708
+    "hash": "89d738b8",
+    "dots": 700
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "785d1198",
-    "dots": 694
+    "hash": "7e5eb2a8",
+    "dots": 686
    }
   }
  }

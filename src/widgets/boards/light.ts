@@ -124,7 +124,8 @@ export const lightOrb: WidgetPreset = {
 const SIGN = { k: 1.6, text: 'ON AIR', y: 52 }
 const SIGN_LAT = T.lattice(SIGN.k, 0, 0), SG = latticeGrid(TILE, SIGN.k)
 const SIGN_W = T.size(SIGN.text, { smooth: true })[0], SIGN_X = Math.round((SG.cols - SIGN_W) / 2), SIGN_Y = Math.round(SIGN.y / SIGN.k)
-const letters = SIGN_LAT.text(SIGN.text, SIGN_X, SIGN_Y, { smooth: true })
+// the bloom's mask is the plain glyph at 2×2 per pixel; the letters themselves are that glyph on a lattice twice as coarse
+const letters = SIGN_LAT.text(SIGN.text, SIGN_X, SIGN_Y, { scale: 2 }), LETTERS = T.big(SIGN.text, SIGN_X * SIGN.k, SIGN_Y * SIGN.k, { lattice: SIGN.k * 2 })
 const GLOW_R = bloom(rasterize(letters, SG), 4.5, { strength: 1, gap: 1 })
 // a lamp's halo falls off slower than a gaussian: lift the tail so the outer dots still read
 for (let i = 0; i < GLOW_R.data.length; i++) GLOW_R.data[i] = GLOW_R.data[i] ** .7
@@ -152,7 +153,7 @@ export const lightOnAir: WidgetPreset = {
   layers: ({ t }) => [
     layer(frame, 'mid'),
     layer(SIGN_LAT.at(dim(GLOW, .78 + .14 * Math.sin(t * 1.7))), 'activeDim'),
-    layer(SIGN_LAT.at(letters), 'active'),
+    layer(LETTERS, 'active'),
     layer(T.big('STUDIO 2', 72, 116, { ...BODY, align: 'center' }), 'idle'),
   ],
 }

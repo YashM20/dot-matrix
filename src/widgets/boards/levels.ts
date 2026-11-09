@@ -12,7 +12,7 @@
 import { HENRY_LEVEL } from '../creditSources'
 import { clamp, hash01, smoothstep } from '../../engine/math'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
-import { HALL_CEIL, HALL_FLOOR, castHall, fog, lamp, project, seam, type Hall } from '../../engine/scene'
+import { HALL_CEIL, HALL_FLOOR, castHall, fog, hallCells, lamp, project, seam, type Hall } from '../../engine/scene'
 import type { Field } from '../../engine/types'
 import { TILE, baked, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 import { SHIP } from '../sprites'
@@ -59,7 +59,6 @@ const sprite = (rows: string[], k: number, x: number, y: number): LatticeField =
 const LABEL = .92
 const title = (s: string) => layer(T.big(s, 5, 5, { lattice: LABEL }), 'idle')
 const score = (s: string) => layer(T.big(s, 139, 5, { lattice: LABEL, align: 'right' }), 'idle')
-const CAP = .72
 
 // ── ray-plane hall: the engine's scene3d (`src/engine/scene`) ─────────────────────────────────
 const FLOOR = HALL_FLOOR, CEIL = HALL_CEIL
@@ -77,10 +76,12 @@ const torches = (s: number, t: number) => {
   }
   return out
 }
+/** HALL1's hits and fog per card cell: the walk only shifts `zw`, so a frame only re-lights them. */
+const HALL1_AT = hallCells(HALL1, TILE.cols, TILE.rows, 1.2)
 const hall1 = (t: number): Field => {
   const s = t * .8, lights = torches(s, t)
   return cells((px, py) => {
-    const h = cast(HALL1, px, py)
+    const at = HALL1_AT.at(px, py), h = at < 0 ? cast(HALL1, px, py) : HALL1_AT.hit[at]
     if (!h) return 0
     const zw = h.z + s
     let alb: number
@@ -97,9 +98,9 @@ const hall1 = (t: number): Field => {
       alb = .55 + .35 * hash01(course * 31 + Math.floor(along), h.s)
     }
     let light = .06
-    for (const l of lights) light += lamp(h, l.p, 1.7, l.i)
+    for (let k = 0; k < lights.length; k++) light += lamp(h, lights[k].p, 1.7, lights[k].i)
     // the HUD strip stays dim so the label and score read over the ceiling
-    return Math.min(.95, alb * light * fog(h.z, HALL1.far, 1.2)) * (py < 13 ? .35 : 1)
+    return Math.min(.95, alb * light * (at < 0 ? fog(h.z, HALL1.far, 1.2) : HALL1_AT.fog[at])) * (py < 13 ? .35 : 1)
   })
 }
 const flames = (t: number) => torches(t * .8, t).flatMap(({ p }): V3[] => {
@@ -388,7 +389,7 @@ export const lvVoid: WidgetPreset = {
       layer(valued(far, .8), 'value'), layer(valued(mid, 1.1), 'value'), layer(valued(near, 1.5), 'value'),
       layer({ ...T.dotRing(WARP.cx, WARP.cy, 7, { spacing: 2.3, size: .9 }), field: () => .35 }, 'value'),
       layer(T.dots([[WARP.cx, WARP.cy]], 4.5), 'active'),
-      layer(T.big('HIVE 0.4 LY', 72, 134, { lattice: CAP, align: 'center' }), 'idle'),
+      layer(T.text('HIVE 0.4 LY', 72, 134, { align: 'center' }), 'idle'),
       title('LEVEL 06'), score('06600'),
     ]
   },
@@ -427,9 +428,9 @@ export const lvQueen: WidgetPreset = {
       layer(queenBody(open, ox, oy), 'value'), layer(queenEye(look, ox, oy), 'active'),
       layer(T.dots(shots, 1.5), 'value'),
       layer(sprite(SHIP, SHIP_K, shipX - 5.85, 116), 'value'),
-      layer(T.big('QUEEN', 5, 134, { lattice: CAP }), 'idle'),
-      layer(T.dots(Array.from({ length: hp }, (_, n) => [32 + n * 5.5, 136.5] as Pt), 2), 'value'),
-      layer(T.dots(Array.from({ length: HP - hp }, (_, n) => [32 + (n + hp) * 5.5, 136.5] as Pt), 2), 'faint'),
+      layer(T.text('QUEEN', 5, 134), 'idle'),
+      layer(T.dots(Array.from({ length: hp }, (_, n) => [38 + n * 5.25, 137] as Pt), 2), 'value'),
+      layer(T.dots(Array.from({ length: HP - hp }, (_, n) => [38 + (n + hp) * 5.25, 137] as Pt), 2), 'faint'),
       title('LEVEL 07'), score('08420'),
     ]
   },
@@ -482,7 +483,7 @@ export const lvOver: WidgetPreset = {
       layer(T.big('OVER', 72, 54, { lattice: 2, smooth: true, align: 'center' })),
       layer(T.big('CONTINUE?', 28, 108, { lattice: 1 }), 'idle'),
       layer(T.big(String(n), 116, 103, { lattice: 1.3, smooth: true, align: 'right' }), 'active'),
-      layer(T.big('SCORE 08420', 72, 134, { lattice: CAP, align: 'center' }), 'mid'),
+      layer(T.text('SCORE 08420', 72, 134, { align: 'center' }), 'mid'),
       title('LEVEL 07'),
     ]
   },
@@ -499,7 +500,7 @@ export const lvScores: WidgetPreset = {
     const RL = 1.3, row = (i: number) => 70 + i * 14
     return [
       title('HIGH SCORES'),
-      layer(T.big('1ST ACE', 14, 21, { lattice: CAP }), 'idle'),
+      layer(T.text('1ST ACE', 14, 21), 'idle'),
       layer(T.big('12800', 72, 30, { lattice: 2, smooth: true, align: 'center' })),
       layer(T.hrule(14, 62, 116, 2), 'faint'),
       ...TABLE.flatMap(([rank, name, pts], i) => {

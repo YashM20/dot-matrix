@@ -1,6 +1,6 @@
 import type { DotStyle, Field, GridConfig, Layer, Tone } from '../engine/types'
 import type { Control, FrameContext } from '../engine/context'
-import { barsAt, centeredBarsAt, discCells, dotAt, hRule, placeCells, polylineCells, rectCells, ringCells, spriteAt, textAt, textSize, vRule } from '../engine/layout'
+import { type BigTextOptions, barsAt, bigText, centeredBarsAt, discCells, dotAt, hRule, placeCells, polylineCells, rectCells, ringCells, spriteAt, textAt, textSize, vRule } from '../engine/layout'
 import { cellU, latticeGrid } from '../engine/sampler/gridSampler'
 import { cachedIconField, iconPaths } from '../engine/fields/iconSDF'
 import { cjkTextField } from '../engine/fields/cjkFallback'
@@ -256,14 +256,11 @@ export function layoutFor(grid: GridConfig) {
     icon: tag('icon', (name: keyof typeof iconPaths, col: number, row: number, size: number, opts: { fill?: boolean; stroke?: number } = {}) => placeCells(grid, cachedIconField(name, iconPaths[name], 64, opts), col, row, size, size)),
     cjk: tag('cjk', (text: string, col: number, row: number, cell: number) => placeCells(grid, cjkTextField(text), col, row, cell * [...text].length, cell)),
     /**
-     * Hero text on its own lattice: `lattice` card cells per dot, anchored at card cell (col,row).
-     * `smooth` gives the 2-dot-stroke display weight. Width in card cells = size(...)[0] * lattice.
+     * Hero text on its own lattice: `lattice` card cells per dot, anchored at card cell (col,row). Width in card cells
+     * = size(...)[0] * lattice. `smooth` is the 2-dot-stroke display weight from a lattice of 2.5 up; below that it
+     * draws the plain glyph at twice the lattice, and `scale` multiplies the lattice (`bigText`, engine/layout).
      */
-    big: (str: string, col: number, row: number, opts: TextOptions & { lattice: number; align?: 'left' | 'center' | 'right' }): LatticeField => {
-      const w = textSize(str, opts)[0] * opts.lattice
-      const left = opts.align === 'center' ? col - w / 2 : opts.align === 'right' ? col - w : col
-      return { field: textAt(latticeGrid(grid, opts.lattice, [left, row]), str, 0, 0, { scale: opts.scale, smooth: opts.smooth }), lattice: opts.lattice, origin: [left, row] }
-    },
+    big: (str: string, col: number, row: number, opts: BigTextOptions): LatticeField => bigText(grid, str, col, row, opts),
     /**
      * Evenly spaced dots on a circle (radius in cells), optionally an arc: `start` clockwise from
      * 12 o'clock, `sweep` radians. Sites are fixed by `spacing`, so an arc lands exactly on its

@@ -7,6 +7,7 @@ import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { clamp } from '../../engine/math'
 import type { DotStyle, Field, JoinSpec, Layer, Tone } from '../../engine/types'
 import { TILE, layer, layoutFor } from '../types'
+import { caption, footer as footerText } from '../captions'
 
 export const T = layoutFor(TILE)
 export type Pt = [number, number]
@@ -18,9 +19,8 @@ export const N = TILE.cols - 1
 export const squareStyle: DotStyle = { shape: 'square', sizeMin: .25, sizeMax: 1.125, gap: .16, quantizeSteps: 5, opacityMode: 'fromValue' }
 export const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: squareStyle, animated: true } as const
 
-export const cap = (s: string, col: number, row: number, align?: 'left' | 'center' | 'right') => T.big(s, col, row, { lattice: .72, align })
 /** Top-right: the work the card is after. */
-export const cite = (s: string) => layer(cap(s, 143, 1, 'right'), 'mid')
+export const cite = (s: string) => caption(s)
 export const FOOT = 137, RAIL_Y = 132
 /** Footer: a faint dotted rail filled in `mid` to `k`, an optional live (red) knob, a counter left and one stat right. */
 export function footer(k: number, left: string, right: string, live = false): Layer[] {
@@ -31,8 +31,7 @@ export function footer(k: number, left: string, right: string, live = false): La
   return [
     layer(T.dots(rest, .9), 'faint'), layer(T.dots(done, 1.1), 'mid'),
     ...(knob ? [layer(T.dots([knob], 2.2), 'active')] : []),
-    layer(T.text(left, 0, FOOT), 'idle'),
-    layer(T.text(right, 143, FOOT, { align: 'right' }), 'mid'),
+    ...footerText(left, right, FOOT),
   ]
 }
 export const pad = (n: number, w: number) => String(Math.max(0, Math.round(n))).padStart(w, '0')

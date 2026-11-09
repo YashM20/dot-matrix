@@ -139,7 +139,7 @@ export const homeClock: WidgetPreset = {
       layer(faces),
       ...(flap ? [layer(flap, 'mid')] : []),
       layer(T.big(dateNow(), 4, 86, SMALL), 'idle'),
-      layer(T.text(`${Math.round(data.battery * 100)}%`, 4, 124, { smooth: true })),
+      layer(T.big(`${Math.round(data.battery * 100)}%`, 4, 124, { lattice: 2 })),
       layer(T.dots(gauge.slice(lit), 3.3), 'mid'),
       layer(T.dots(gauge.slice(0, lit), 3.3)),
     ]

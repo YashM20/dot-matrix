@@ -1,5 +1,6 @@
-import type { CellBounds, Field, GridConfig } from './types'
-import { glyphMetrics, textField, textWidth, type TextOptions } from './fields/bitmapFont'
+import type { CellBounds, Field, GridConfig, Layer } from './types'
+import { glyph, glyphMetrics, textField, textWidth, type TextOptions } from './fields/bitmapFont'
+import { latticeGrid } from './sampler/gridSampler'
 
 /**
  * Cell-space layout. Every helper here takes integer dot coordinates on a known grid, so
@@ -56,6 +57,41 @@ export function textSize(str: string, opts: TextOptions = {}): [number, number] 
   return [textWidth(str, opts) * sx, glyphMetrics(opts).h * sy]
 }
 export const scaleOf = (opts: TextOptions): [number, number] => Array.isArray(opts.scale) ? opts.scale : [opts.scale ?? 1, opts.scale ?? 1]
+
+export interface BigTextOptions extends TextOptions {
+  lattice: number
+  align?: 'left' | 'center' | 'right'
+  /** The glyphs are a shape (a relief or engraving mask), never drawn as dots: `smooth` keeps Scale2x at any lattice. */
+  mask?: boolean
+  /**
+   * A smaller part of one smooth value (a decimal, a unit drawn as part of the number): `smooth` keeps Scale2x below
+   * `SMOOTH_MIN_LATTICE`, so the whole value reads in one style.
+   */
+  keepSmooth?: boolean
+}
+/** `smooth` (Scale2x) text needs a lattice of this many card cells or more: below it the two-dot strokes read as a cluster. */
+export const SMOOTH_MIN_LATTICE = 2.5
+/**
+ * Hero text on its own lattice: `lattice` card cells per font pixel, anchored at card cell (col,row); `align` moves the
+ * anchor to the text's centre or right edge. Every font pixel is one dot:
+ * - `smooth` below `SMOOTH_MIN_LATTICE` draws the plain 5×7 glyph at twice the lattice (same size, one-dot strokes);
+ * - `scale` multiplies the lattice instead of drawing blocks of dots. A non-uniform scale gives columns `kx` and rows
+ *   `ky` apart, drawn as round dot sites (sized by the narrower pitch), so the dots stay round.
+ */
+export function bigText(grid: GridConfig, str: string, col: number, row: number, opts: BigTextOptions): Omit<Layer, 'tone'> {
+  const [sx, sy] = scaleOf(opts), plain = !!opts.smooth && !opts.mask && !opts.keepSmooth && opts.lattice < SMOOTH_MIN_LATTICE
+  const k = plain ? opts.lattice * 2 : opts.lattice, face: TextOptions = { smooth: !!opts.smooth && !plain }
+  const kx = k * sx, ky = k * sy, w = textWidth(str, face) * kx
+  const left = opts.align === 'center' ? col - w / 2 : opts.align === 'right' ? col - w : col
+  if (kx === ky) return { field: textAt(latticeGrid(grid, kx, [left, row]), str, 0, 0, face), lattice: kx, origin: [left, row] }
+  const m = glyphMetrics(face), sites: [number, number][] = []
+  ;[...str].forEach((ch, i) => glyph(ch, face).forEach((bits, y) => bits.forEach((on, x) => {
+    if (on) sites.push([left + (i * m.advance + x + .5) * kx - .5, row + (y + .5) * ky - .5])
+  })))
+  const field: Field = () => 1
+  field.text = str
+  return { field, sites, size: Math.min(kx, ky) }
+}
 
 /** Single dot at a cell. */
 export const dotAt = (grid: GridConfig, col: number, row: number, value = 1): Field => own((u, v) => (toCell(u, grid.cols) === col && toCell(v, grid.rows) === row ? value : 0), col, row, col, row)

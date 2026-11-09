@@ -4,55 +4,55 @@
   "agent-status": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "ad7c23f1",
-    "dots": 867
+    "hash": "f57ff33b",
+    "dots": 859
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "b74b30ab",
-    "dots": 867
+    "hash": "5930f9f5",
+    "dots": 859
    }
   },
   "codex-tokens": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "4b1e2c1e",
-    "dots": 734
+    "hash": "4f647247",
+    "dots": 726
    }
   },
   "device-overview": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "58a122fe",
-    "dots": 1011
+    "hash": "53fddfd0",
+    "dots": 995
    }
   },
   "tesla-status": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "8afa5e32",
-    "dots": 892
+    "hash": "17a3a89d",
+    "dots": 884
    }
   },
   "pharma-track": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "93089076",
-    "dots": 1276
+    "hash": "6e82c0e5",
+    "dots": 1268
    }
   },
   "medical-monitor": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "a0d9c79d",
-    "dots": 990
+    "hash": "a3edb6a0",
+    "dots": 982
    }
   },
   "bio-sensor": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "99daf59a",
-    "dots": 645
+    "hash": "86ea537f",
+    "dots": 637
    }
   },
   "word-play": {
@@ -65,8 +65,8 @@
   "retail-analytics": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "559779bd",
-    "dots": 706
+    "hash": "6bb8f1b0",
+    "dots": 698
    }
   },
   "entertainment": {
@@ -96,13 +96,13 @@
   "vision-ai": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "d00feae5",
-    "dots": 773
+    "hash": "f919979c",
+    "dots": 765
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "d00feae5",
-    "dots": 773
+    "hash": "f919979c",
+    "dots": 765
    }
   }
  }

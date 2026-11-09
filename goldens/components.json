@@ -81,8 +81,8 @@
   "ui-progress": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "08ade18b",
-    "dots": 471
+    "hash": "5006d0fa",
+    "dots": 463
    }
   },
   "ui-loaders": {
@@ -100,13 +100,13 @@
   "ui-keypad": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "54eae425",
-    "dots": 282
+    "hash": "266576c1",
+    "dots": 276
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "54eae425",
-    "dots": 282
+    "hash": "266576c1",
+    "dots": 276
    }
   },
   "ui-text-field": {

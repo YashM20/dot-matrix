@@ -4,8 +4,8 @@
   "home-clock": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "00577b8a",
-    "dots": 482
+    "hash": "7f4c649d",
+    "dots": 329
    }
   },
   "music": {
@@ -37,8 +37,8 @@
   "fitness": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "f89466c6",
-    "dots": 514
+    "hash": "a77c55c5",
+    "dots": 506
    }
   },
   "messages": {
@@ -70,8 +70,8 @@
   "system": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "90b63d72",
-    "dots": 634
+    "hash": "65f917a4",
+    "dots": 626
    }
   }
  }

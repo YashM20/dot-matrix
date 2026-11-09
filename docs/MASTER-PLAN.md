@@ -601,8 +601,8 @@ Multitouch via `pointers[]`. Sound is a Track R spike, not a gate.
 ## 6. Budgets (CI-enforced)
 | Budget | Value |
 |---|---|
-| Board frame p95 (incl. enter, 30 fps tier) | ≤ 8 ms |
-| Live card sample + render | ≤ 2 ms typical, ≤ 4 ms hero |
+| Board frame p95 (incl. enter, 30 fps tier), over the cards one viewport shows together: the worst run of 20 consecutive live CPU cards (`scripts/bench.ts` header) | ≤ 8 ms |
+| Live card sample + render (CPU cards; a card whose animated layers are all GPU-tagged is GPU work) | ≤ 2 ms typical, ≤ 4 ms hero |
 | Input → next draw | ≤ 1 frame (p95) |
 | Board mount (progressive) | ≤ 30 ms to first frame |
 | GC pauses during a 10 s loop | none > 4 ms |

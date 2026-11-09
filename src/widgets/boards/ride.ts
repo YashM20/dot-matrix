@@ -53,7 +53,8 @@ export const ride: WidgetPreset = {
       layer(T.dots(ringSites(cx, cy, r, n, track), 3.9), 'idle'),
       layer(T.dots(ringSites(cx, cy, r, n, i => i >= 8 && i < 8 + red && track(i)), 4.3), 'active'),
       layer(T.big('32', 24, 47.5, { lattice: 2.7, smooth: true })),
-      layer(T.big('.', 81, 60, { lattice: 2, smooth: true })), layer(T.big('4', 98, 60, { lattice: 2, smooth: true })),
+      // the decimal is part of the smooth 32: it keeps the smooth face below lattice 2.5
+      layer(T.big('.', 81, 60, { lattice: 2, smooth: true, keepSmooth: true })), layer(T.big('4', 98, 60, { lattice: 2, smooth: true, keepSmooth: true })),
       layer(soft(T.big('KM/H', 72, 98, { lattice: 1.5, align: 'center' }))),
       layer(T.big('247', 42, 126, { lattice: 1.05, smooth: true })), layer(T.big('W', 87, 126, { lattice: 1.05, smooth: true })),
     ]

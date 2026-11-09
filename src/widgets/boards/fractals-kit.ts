@@ -5,23 +5,19 @@
  */
 import { clamp } from '../../engine/math'
 import type { Field, Layer, Tone } from '../../engine/types'
-import { TILE, layer, layoutFor, tileStyle, type WidgetCredit } from '../types'
+import { TILE, layoutFor, tileStyle, type WidgetCredit } from '../types'
+import { caption, footer as footerText } from '../captions'
 
 export const T = layoutFor(TILE)
 export type Pt = [number, number]
 export const N = TILE.cols - 1
 export const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
 
-/** Caption tier (0.72 lattice), as on the mosaic and algorithms boards. */
-export const cap = (s: string, col: number, row: number, align?: 'left' | 'center' | 'right') => T.big(s, col, row, { lattice: .72, align })
 /** Top-right: the person or idea the card is built on, in `mid`. */
-export const cite = (s: string) => layer(cap(s, 143, 1, 'right'), 'mid')
+export const cite = (s: string) => caption(s)
 export const FOOT = 134
 /** Footer: a counter left (idle) and one stat right (mid). */
-export const footer = (left: string, right: string): Layer[] => [
-  layer(T.text(left, 0, FOOT), 'idle'),
-  layer(T.text(right, 143, FOOT, { align: 'right' }), 'mid'),
-]
+export const footer = (left: string, right: string): Layer[] => footerText(left, right, FOOT)
 /** The credit every card on the board carries (docs/IQ-PLAN.md "Licence and credit"). */
 export const credit = (slug: string, title: string, others: string[] = []): WidgetCredit =>
   ({ by: ['Inigo Quilez', ...others], title, source: `https://iquilezles.org/articles/${slug}/`, note: 'technique' })
