@@ -6,7 +6,7 @@
 import { chaosGame, chaosWalker, densityTone, fitWindow, iconDensity, iconRadius, iconStep, lyapunov, lyapunovSequence, popcornDensity, popcornPath, type Affine, type IconParams, type PopcornParams, type Variation } from '../../engine/fractal'
 import { dcos, dsin, TAU } from '../../engine/noise/dmath'
 import { layer, type WidgetPreset } from '../types'
-import { T, cite, credit, densityBands, footer, gridLayer, phase, signed, thousands, tile, toCell, toPlane, type Band, type Pt } from './fractals-kit'
+import { T, cite, credit, densityBands, footer, gridLayer, phase, probe, signed, thousands, tile, toCell, toPlane, type Band, type Pt } from './fractals-kit'
 
 /** Every density picture fills the same window: the full card width, rows 12 to 123. */
 const W = 144, H = 112, R0 = 12
@@ -39,11 +39,12 @@ export const frPopcorn: WidgetPreset = {
   layers: ctx => {
     const { tone, path } = popBake(), k = Math.floor(ctx.t * 8), at = (i: number): Pt => { const j = ((i % POP_LOOP) + POP_LOOP) % POP_LOOP; return popCell(path[2 * j], path[2 * j + 1]) }
     const trail: Pt[] = [1, 2, 3, 4].map(d => at(k - d)).filter(inPort), head = at(k)
+    const [grid, mark] = inPort(head) ? probe(gridLayer(tone, W, H, 0, R0, POP_BANDS), head) : [gridLayer(tone, W, H, 0, R0, POP_BANDS)]
     return [
       cite('PICKOVER'),
-      gridLayer(tone, W, H, 0, R0, POP_BANDS),
-      layer(T.dots(trail, 1.2), 'value'),
-      ...(inPort(head) ? [layer(T.dots([head], 2.6), 'active')] : []),
+      grid,
+      layer(mark ? T.knockout(T.dots(trail, 1.2), mark.sites ?? [], 3) : T.dots(trail, 1.2), 'value'),
+      ...(mark ? [mark] : []),
       ...footer(`H ${POP.h.toFixed(2)}`, `${thousands(POP_ORBITS * POP_STEPS / 1000)}K STEPS`),
     ]
   },
@@ -83,11 +84,12 @@ export const frFlame: WidgetPreset = {
     const now = cell(f.xs[i], f.ys[i]), prev = cell(f.xs[j], f.ys[j])
     let addr = ''
     for (let d = 0; d < 6; d++) addr += f.ks[(i - d + FL_HOPS) % FL_HOPS]
+    const [flGrid, flProbe] = probe(gridLayer(f.tone, W, H, 0, R0, FL_BANDS), now)
     return [
       cite('CHAOS GAME'),
-      gridLayer(f.tone, W, H, 0, R0, FL_BANDS),
-      layer(T.dotLine(prev[0], prev[1], now[0], now[1], { spacing: 3, size: .8, from: 3 }), 'idle'),
-      layer(T.dots([now], 2.6), 'active'),
+      flGrid,
+      layer(T.knockout(T.dotLine(prev[0], prev[1], now[0], now[1], { spacing: 3, size: .8, from: 3 }), flProbe.sites ?? [], 3), 'idle'),
+      flProbe,
       ...footer(`ADDR ${addr}`, `${FL_STEPS / 1000}K HOPS`),
     ]
   },
@@ -115,11 +117,12 @@ export const frIcon: WidgetPreset = {
   layers: ctx => {
     const c = iconBake(), cell = toCell(c.win, W, H, 0, R0), n = Math.floor(ctx.t * 3), i = ((n % IC_HOPS) + IC_HOPS) % IC_HOPS
     const at = (k: number) => { const m = ((k % IC_HOPS) + IC_HOPS) % IC_HOPS; return cell(c.pts[2 * m], c.pts[2 * m + 1]) }
+    const [icGrid, icProbe] = probe(gridLayer(c.tone, W, H, 0, R0, IC_BANDS), at(i))
     return [
       cite('FIELD-GOLUBITSKY'),
-      gridLayer(c.tone, W, H, 0, R0, IC_BANDS),
-      layer(T.dots([at(i - 1), at(i - 2)].filter(inWin), 1.3), 'value'),
-      layer(T.dots([at(i)], 2.6), 'active'),
+      icGrid,
+      layer(T.knockout(T.dots([at(i - 1), at(i - 2)].filter(inWin), 1.3), icProbe.sites ?? [], 3), 'value'),
+      icProbe,
       ...footer(`${ICON.n}-FOLD`, `${IC_STEPS / 1000}K STEPS`),
     ]
   },
@@ -157,8 +160,7 @@ export const frLyapunov: WidgetPreset = {
     const [a, b] = probeAB(ctx.t), l = lyapunov(a, b, SEQ_V, LY_OPTS)
     return [
       cite('MARKUS'),
-      gridLayer(lyBake(), LY_W, H, LY_C0, R0, LY_BANDS),
-      layer(T.dots([lyCell(a, b)], 2.6), 'active'),
+      ...probe(gridLayer(lyBake(), LY_W, H, LY_C0, R0, LY_BANDS), lyCell(a, b)),
       ...footer(`L ${Number.isFinite(l) ? signed(l, 2) : '-INF'}`, SEQ),
     ]
   },

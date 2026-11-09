@@ -77,12 +77,14 @@
   display: none
 }
 
-.topbar-dock [data-tip]::after {
+.topbar-dock [data-tip]::after,
+.shell--widget .pal-dock [data-tip]::after {
   top: calc(100% + var(--space-2));
   bottom: auto
 }
 
-.topbar-dock [data-tip][data-kbd]::before {
+.topbar-dock [data-tip][data-kbd]::before,
+.shell--widget .pal-dock [data-tip][data-kbd]::before {
   top: calc(100% + var(--space-2) + 4px);
   bottom: auto
 }

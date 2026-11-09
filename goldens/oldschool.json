@@ -28,37 +28,37 @@
   "os-floor": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "10cffb94",
+    "hash": "2b39385e",
     "dots": 1432
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "d2a12e00",
+    "hash": "5bf1cfb2",
     "dots": 1484
    }
   },
   "os-sky": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "e0d8e6db",
-    "dots": 1545
+    "hash": "619c73ea",
+    "dots": 1537
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "e221703f",
-    "dots": 1516
+    "hash": "d24fb7e8",
+    "dots": 1508
    }
   },
   "os-echo": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "77968a23",
-    "dots": 1186
+    "hash": "5671c6a2",
+    "dots": 1178
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "c5bb20d9",
-    "dots": 1210
+    "hash": "e6fd6ee2",
+    "dots": 1202
    }
   },
   "os-star": {

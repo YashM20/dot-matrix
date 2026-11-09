@@ -4,7 +4,8 @@
  */
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import type { Layer, Tone } from '../../engine/types'
-import { TILE, layer, layoutFor, tileStyle, type WidgetCredit } from '../types'
+import { TILE, layoutFor, tileStyle, type WidgetCredit } from '../types'
+import { caption, footer as footerText } from '../captions'
 
 export const T = layoutFor(TILE)
 export const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
@@ -61,12 +62,9 @@ export function plate(K: number, paint: (x: number, y: number, ink: Ink, i: numb
 }
 
 /** Footer: a counter left, an optional stat right in `mid` (card row FOOT). A card that only has a formula to say leaves the right out. */
-export const footer = (left: string, right = ''): Layer[] => [
-  layer(T.text(left, 0, FOOT), 'idle'),
-  ...(right ? [layer(T.text(right, 143, FOOT, { align: 'right' }), 'mid')] : []),
-]
-/** Caption tier (0.72 lattice), `mid`, top-right, as on the pond and algorithms boards. Plain words only, never a formula. */
-export const caption = (s: string): Layer => layer(T.big(s, 143, 1, { lattice: .72, align: 'right' }), 'mid')
+export const footer = (left: string, right = ''): Layer[] => footerText(left, right, FOOT)
+/** Top-right caption (`captions.ts`). Plain words only, never a formula. */
+export { caption }
 
 export const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x)
 export const frac = (x: number) => x - Math.floor(x)

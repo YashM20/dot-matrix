@@ -112,7 +112,7 @@ export async function workshopChecks(assert: Assert, opts: MaterialsOptions): Pr
     const dd = twill(3, 4, 1)
     let up = 0; for (let r = 0; r < 8; r++) for (let c = 0; c < 8; c++) if (dd(c, r)) up++
     const dots = atClock(() => wsFrame(byId('mat-denim'), 0)), pitch = TILE.pitch!
-    const selv = dots.filter(d => Math.abs(d.x / pitch - .5 - H.DENIM.selvedge[0]) < 1e-6 || Math.abs(d.x / pitch - .5 - H.DENIM.selvedge[1]) < 1e-6)
+    const selv = dots.filter(d => d.y / pitch - .5 >= H.DENIM.box[1] && (Math.abs(d.x / pitch - .5 - H.DENIM.selvedge[0]) < 1e-6 || Math.abs(d.x / pitch - .5 - H.DENIM.selvedge[1]) < 1e-6))
     assert('denim: 3/1 twill warp fraction .75; the selvedge is value, with no active dot', up / 64 === .75 && selv.length > 200 && selv.every(d => d.color === dot480.value) && !dots.some(d => d.color === dot480.dotActive), `${selv.length} selvedge dots`)
   }
   // ── paper ──

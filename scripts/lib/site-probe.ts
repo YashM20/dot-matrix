@@ -103,11 +103,13 @@ export async function tabWalk(p: Page, max: number, untilFooter = false): Promis
       const tab = [...document.querySelectorAll('${TABBAR}')].find(e => vis(e) && pinned(e))
       let under = ''
       // under = the bar is painted over some of it: points across the band where the two overlap (a skip link drawn
-      // above the top bar is clear)
+      // above the top bar is clear). The side points sit in from the rounded corners: a corner's outside isn't the
+      // element's, so the bar under it would be hit there even when the element is drawn above it
       const over = bar => {
         const b = bar.getBoundingClientRect(), y0 = Math.max(r.top, b.top, 0), y1 = Math.min(r.bottom, b.bottom, innerHeight - 1)
         if (y1 <= y0) return false
-        const xs = [r.left + 2, (r.left + r.right) / 2, r.right - 2].map(x => Math.min(innerWidth - 1, Math.max(0, x)))
+        const inset = Math.max(2, Math.min(parseFloat(getComputedStyle(a).borderTopLeftRadius) || 0, r.width / 2, r.height / 2))
+        const xs = [r.left + inset, (r.left + r.right) / 2, r.right - inset].map(x => Math.min(innerWidth - 1, Math.max(0, x)))
         return [(y0 + y1) / 2, y0 + 1, y1 - 1].some(y => xs.some(x => { const hit = document.elementFromPoint(x, y); return !!hit && bar.contains(hit) && !a.contains(hit) }))
       }
       if (r.height >= 2 && !(top && top.contains(a)) && !(tab && tab.contains(a))) {

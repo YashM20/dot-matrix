@@ -66,9 +66,9 @@ const NO_JOIN = 0xFFFF, NO_FORM = 15
 /**
  * One dot. `scale` = the lattice factor (kx on a rect lattice); `ky` > 0 makes it a rect cell (squares Q2): its half
  * height and `aspect` come from the squares hook (`samplerExt.rect`); `axis` 'x' / 'y' (a bar / line) is solid.
+ * `value` is the shown one (`shown`): every caller has it already, for its visibility test.
  */
 function emit(out: Sink, value: number, tone: number, x: number, y: number, seed: number, style: DotStyle, scale = 1, join = NO_JOIN, form = NO_FORM, ky = 0, axis?: 'x' | 'y'): void {
-  value = shown(value, style)
   const eased = style.sizeCurve ? style.sizeCurve(value) : value
   let jx = x, jy = y
   // same arithmetic as `applyJitter`, without the tuple
@@ -106,7 +106,7 @@ export function sampleField(field: Field, grid: GridConfig, style: DotStyle, the
   for (let row = 0; row < grid.rows; row++) for (let col = 0; col < grid.cols; col++) {
     const value = safe(f(cellU(col, grid.cols), cellU(row, grid.rows)))
     out.fixed = colorForFn(value, theme)
-    emit(out, value, 0, (col + .5) * pitch, (row + .5) * pitch, row * grid.cols + col, style)
+    emit(out, shown(value, style), 0, (col + .5) * pitch, (row + .5) * pitch, row * grid.cols + col, style)
   }
   return out.dots!
 }
@@ -144,7 +144,7 @@ const centres = (n: number): Float64Array => {
 const scratch = (() => {
   let depth = 0, best = new Float32Array(0), owner = new Uint32Array(0), covered = new Uint8Array(0)
   return {
-    enter() { depth++ }, leave() { depth-- },
+    enter() { depth++ }, leave() { depth-- }, top: () => depth === 1,
     best(n: number) { if (depth !== 1) return new Float32Array(n); if (best.length < n) best = new Float32Array(n); const a = best.subarray(0, n); a.fill(0); return a },
     owner(n: number) { if (depth !== 1) return new Uint32Array(n); if (owner.length < n) owner = new Uint32Array(n); const a = owner.subarray(0, n); a.fill(0); return a },
     covered(n: number) { if (depth !== 1) return new Uint8Array(n); if (covered.length < n) covered = new Uint8Array(n); const a = covered.subarray(0, n); a.fill(0); return a },
@@ -212,13 +212,46 @@ function hundredths(x: number): number {
   return x < 0 ? -n - 1 : n
 }
 const KEY_SPAN = 2 ** 26
+
 /**
- * Sites merge when their positions agree to 2 dp, i.e. when `${x.toFixed(2)},${y.toFixed(2)}` matches.
- * This returns a number with exactly that equality (no string per site); far-off sites fall back to the string.
+ * The merged sites of one frame, in first-seen order. Sites merge when their positions agree to 2 dp, i.e. when
+ * `${x.toFixed(2)},${y.toFixed(2)}` matches: the (hundredths(x), hundredths(y)) pair has exactly that equality and
+ * goes in an open-addressing table (no string, no object per site); far-off sites fall back to the string in `far`.
+ * A merge overwrites the site's slot, so the order is a Map's insertion order.
  */
-function siteKey(x: number, y: number): number | string {
+interface SiteTable {
+  n: number; mask: number
+  /** hash slot → site index + 1 (0 = empty); the site's key pair */
+  slot: Int32Array; kx: Int32Array; ky: Int32Array
+  x: Float64Array; y: Float64Array; k: Float64Array; value: Float64Array; form: Int32Array; tone: (Tone | undefined)[]
+  far: Map<string, number> | null
+}
+function siteTable(cap: number, into?: SiteTable): SiteTable {
+  let size = 16
+  while (size < cap * 2) size *= 2
+  if (into && into.slot.length >= size && into.x.length >= cap) {
+    into.slot.fill(0, 0, size); into.n = 0; into.mask = size - 1; into.far = null; into.tone.length = 0
+    return into
+  }
+  return { n: 0, mask: size - 1, slot: new Int32Array(size), kx: new Int32Array(cap), ky: new Int32Array(cap),
+    x: new Float64Array(cap), y: new Float64Array(cap), k: new Float64Array(cap), value: new Float64Array(cap), form: new Int32Array(cap), tone: [], far: null }
+}
+let pooledSites: SiteTable | undefined
+/** Index of the site at (x, y) in `s`, or −1 (`add`: −1 − the index of a new slot). */
+function siteIndex(s: SiteTable, x: number, y: number): number {
   const kx = hundredths(x), ky = hundredths(y)
-  return Math.abs(kx) < KEY_SPAN && Math.abs(ky) < KEY_SPAN ? kx * (2 * KEY_SPAN) + ky : `${x.toFixed(2)},${y.toFixed(2)}`
+  if (Math.abs(kx) >= KEY_SPAN || Math.abs(ky) >= KEY_SPAN) {
+    const key = `${x.toFixed(2)},${y.toFixed(2)}`, far = (s.far ??= new Map()), at = far.get(key)
+    if (at !== undefined) return at
+    far.set(key, s.n)
+    return -1 - s.n++
+  }
+  let h = (Math.imul(kx, 0x9e3779b1) ^ Math.imul(ky, 0x85ebca77)) >>> 0
+  for (h = (h ^ (h >>> 15)) & s.mask; ; h = (h + 1) & s.mask) {
+    const at = s.slot[h] - 1
+    if (at < 0) { s.slot[h] = s.n + 1; s.kx[s.n] = kx; s.ky[s.n] = ky; return -1 - s.n++ }
+    if (s.kx[at] === kx && s.ky[at] === ky) return at
+  }
 }
 
 function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: DotStyle, theme: ThemeTokens): void {
@@ -246,33 +279,44 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
     for (let row = wr0; row <= wr1; row++) for (let col = wc0; col <= wc1; col++) {
       const j = (row - wr0) * width + (col - wc0), value = best[j]
       // a dot that quantizes to nothing is not drawn, so it must not punch a hole in the card either
-      if (value <= 0 || shown(value, style) <= 0) continue
-      emit(dots, value, J ? J.tone[j] : toneIndex(toneOf(group, owner[j], value, us[col], vs[row]), value), (ox + (col + .5) * k) * pitch, (oy + (row + .5) * ky) * pitch, 1e6 + row * sub.cols + col, style, k,
+      const sv = value > 0 ? shown(value, style) : 0
+      if (sv <= 0) continue
+      emit(dots, sv, J ? J.tone[j] : toneIndex(toneOf(group, owner[j], value, us[col], vs[row]), value), (ox + (col + .5) * k) * pitch, (oy + (row + .5) * ky) * pitch, 1e6 + row * sub.cols + col, style, k,
         J ? J.join[j] : NO_JOIN, J ? J.form[j] : NO_FORM, rect, axis)
       // card cells whose centre falls inside this lattice cell (per axis on a rect lattice)
       const c0 = Math.ceil(ox + col * k - .5), c1 = Math.ceil(ox + (col + 1) * k - .5), r0 = Math.ceil(oy + row * ky - .5), r1 = Math.ceil(oy + (row + 1) * ky - .5)
-      for (let r = Math.max(0, r0); r < Math.min(grid.rows, r1); r++) for (let c = Math.max(0, c0); c < Math.min(grid.cols, c1); c++) covered![r * grid.cols + c] = 1
+      const ra = Math.max(0, r0), rb = Math.min(grid.rows, r1), ca = Math.max(0, c0), cb = Math.min(grid.cols, c1), cols = grid.cols
+      for (let r = ra; r < rb; r++) for (let c = ca; c < cb; c++) covered![r * cols + c] = 1
     }
   }
-  // explicit sites: merge coincident sites, then emit and clear the card cells under each dot
-  const sites = new Map<number | string, { x: number; y: number; k: number; value: number; tone?: Tone; form: number }>()
+  // explicit sites: merge coincident sites (a later one wins ties), then emit and clear the card cells under each dot
+  let count = 0
+  for (const layer of sited) count += layer.sites!.length
+  // the outermost call reuses one table (a field that samples gets its own)
+  const S = count ? (scratch.top() ? (pooledSites = siteTable(count, pooledSites)) : siteTable(count)) : null
   for (const layer of sited) {
     // a site dot's footprint is its size, k card cells
-    const k = factor(layer.size ?? (layer.lattice as number)), f = withCell(layer.field, k * step(grid.cols), k * step(grid.rows))
-    for (const [x, y] of layer.sites!) {
+    const k = factor(layer.size ?? (layer.lattice as number)), f = withCell(layer.field, k * step(grid.cols), k * step(grid.rows)), list = layer.sites!
+    for (let s = 0; s < list.length; s++) {
+      const x = list[s][0], y = list[s][1]
       if (!Number.isFinite(x) || !Number.isFinite(y)) continue
       const u = x / Math.max(1, grid.cols - 1), v = y / Math.max(1, grid.rows - 1), value = safe(f(u, v))
       if (shown(value, style) <= 0) continue
-      const key = siteKey(x, y), prev = sites.get(key)
-      if (!prev || value >= prev.value) sites.set(key, { x, y, k, value, tone: layer.toneOf ? layer.toneOf(value, u, v) : layer.tone, form: samplerExt.form ? samplerExt.form(layer, value, u, v) : NO_FORM })
+      let at = siteIndex(S!, x, y)
+      if (at < 0) at = -1 - at
+      else if (!(value >= S!.value[at])) continue
+      S!.x[at] = x; S!.y[at] = y; S!.k[at] = k; S!.value[at] = value
+      S!.tone[at] = layer.toneOf ? layer.toneOf(value, u, v) : layer.tone
+      S!.form[at] = samplerExt.form ? samplerExt.form(layer, value, u, v) : NO_FORM
     }
   }
   // the card cells a site dot hides follow its drawn shape (cover.ts): n from the style, or the site's own `shapeOf` form;
   // a diamond (rotation π/4, form bit 4) reaches √2 further along the axes
   let seed = 2e6
   const n = coverExponent(style.shape, style.cornerRoundness)
-  for (const { x, y, k, value, tone, form } of sites.values()) {
-    emit(dots, value, toneIndex(tone, value), (x + .5) * pitch, (y + .5) * pitch, seed++, style, k, NO_JOIN, form)
+  for (let s = 0; s < (S ? S.n : 0); s++) {
+    const x = S!.x[s], y = S!.y[s], k = S!.k[s], value = S!.value[s], tone = S!.tone[s], form = S!.form[s]
+    emit(dots, shown(value, style), toneIndex(tone, value), (x + .5) * pitch, (y + .5) * pitch, seed++, style, k, NO_JOIN, form)
     // the cover follows the drawn shape, a big squircle site eased toward a circle like its dot
     const big = style.shape === 'squircle' && style.cornerRoundness && style.sizeMax * k > pitch
     const reach = k / 2 + .25, f = form & 15, nf = f !== NO_FORM ? coverExponent('squircle', f / 8) : big ? coverExponent('squircle', easedRoundness(style.cornerRoundness!, style.sizeMax * k, pitch)) : n, rot = (form & 16) * Math.PI / 64, box = rot ? reach * Math.SQRT2 : reach
@@ -285,8 +329,10 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
   for (let row = 0; row < grid.rows; row++) for (let col = 0; col < grid.cols; col++) {
     const i = row * grid.cols + col, value = best[i]
     // empty cells are invisible unless the style draws every dot (constant opacity); 0 always shows as 0
-    if (covered?.[i] || ((value <= 0 || shown(value, style) <= 0) && !background)) continue
-    emit(dots, value, J ? J.tone[i] : toneIndex(toneOf(base, owner[i], value, us[col], vs[row]), value), (col + .5) * pitch, (row + .5) * pitch, i, style, 1,
+    if (covered?.[i]) continue
+    const sv = shown(value, style)
+    if ((value <= 0 || sv <= 0) && !background) continue
+    emit(dots, sv, J ? J.tone[i] : toneIndex(toneOf(base, owner[i], value, us[col], vs[row]), value), (col + .5) * pitch, (row + .5) * pitch, i, style, 1,
       J ? J.join[i] : NO_JOIN, J ? J.form[i] : NO_FORM)
   }
 }

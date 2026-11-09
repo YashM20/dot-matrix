@@ -4,7 +4,6 @@
  * 1.8–3, and every outline (car, cube, leaf, rings, chart) as evenly spaced dot sites.
  */
 import { hash01 } from '../../engine/math'
-import type { Field } from '../../engine/types'
 import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
@@ -12,24 +11,10 @@ type Pt = [number, number]
 const VALUE = { lattice: 1.6 }
 const deg = (d: number) => (d / 360) * TAU
 
-/** Evenly spaced points along a polyline (spacing carried across vertices, so corners don't bunch up). */
-function trace(pts: Pt[], spacing: number, closed = false): Pt[] {
-  const p = closed ? [...pts, pts[0]] : pts, out: Pt[] = [p[0]]
-  let carry = 0
-  for (let i = 0; i < p.length - 1; i++) {
-    const [x0, y0] = p[i], [x1, y1] = p[i + 1], len = Math.hypot(x1 - x0, y1 - y0)
-    if (!len) continue
-    let d = spacing - carry
-    for (; d <= len + 1e-9; d += spacing) out.push([x0 + ((x1 - x0) * d) / len, y0 + ((y1 - y0) * d) / len])
-    carry = len - (d - spacing)
-  }
-  if (closed && out.length > 2 && Math.hypot(out[0][0] - out[out.length - 1][0], out[0][1] - out[out.length - 1][1]) < spacing / 2) out.pop()
-  return out
-}
 /** Points on an elliptical arc, angles clockwise from 12 o'clock. */
 const arc = (cx: number, cy: number, rx: number, ry: number, a0: number, a1: number, n = 24): Pt[] =>
   Array.from({ length: n + 1 }, (_, i) => { const a = a0 + ((a1 - a0) * i) / n; return [cx + rx * Math.sin(a), cy - ry * Math.cos(a)] })
-const path = (pts: Pt[], spacing: number, size: number, closed = false) => T.dots(trace(pts, spacing, closed), size)
+const path = (pts: Pt[], spacing: number, size: number, closed = false) => T.dotPath(pts, spacing, size, closed)
 /** Capsule (pill-button) outline from (x0,y0) to (x1,y1). */
 const pillOutline = (x0: number, y0: number, x1: number, y1: number, spacing = 2, size = 1) => {
   const r = (y1 - y0) / 2, cy = y0 + r
@@ -40,9 +25,6 @@ const ringSlots = (cx: number, cy: number, r: number, n: number, phase = 0, size
   T.dots(Array.from({ length: n }, (_, i) => { const a = ((i + phase) / n) * TAU; return [cx + r * Math.sin(a), cy - r * Math.cos(a)] as Pt }), size)
 /** A 1-bit sprite on its own lattice (pixel-art drawn in bigger dots). */
 const sprite = (rows: string[], col: number, row: number, k: number) => { const g = T.lattice(k, col, row); return g.at(g.sprite(rows, 0, 0)) }
-/** Filled triangle on the card pitch pointing left or right inside a w×h cell box. */
-const triangle = (col: number, row: number, w: number, h: number, dir: 'left' | 'right'): Field =>
-  T.place((u, v) => (Math.abs(v - .5) <= .5 * (dir === 'right' ? 1 - u : u) + .02 ? 1 : 0), col, row, w, h)
 const stat = (label: string, value: string, col: number, row: number, lattice = VALUE.lattice) =>
   [layer(T.text(label, col, row), 'idle'), layer(T.big(value, col, row + 11, { lattice }))]
 
@@ -145,10 +127,19 @@ const pillSites = (() => {
   return { red, white }
 })()
 const NODES = [12, 51, 90, 129], NODE_Y = 101
-const doneNode = (x: number) => [
-  layer(T.disc(x, NODE_Y, 7.4), 'active'), layer(T.dotRing(x, NODE_Y, 8.6, { spacing: 1.7, size: 1.1 })),
-  layer(path([[x - 4, NODE_Y + .3], [x - 1.2, NODE_Y + 3.1], [x + 4.2, NODE_Y - 2.6]], 1.25, 1.5)),
-]
+/** A done step: a red disc of big dots, a white check of finer dots in a clear band through it, inside a fine ring. */
+const CHECK: Pt[] = [[-4.2, 0], [-1.5, 2.7], [4.2, -3]]
+const doneNode = (x: number) => {
+  const pts = CHECK.map(([dx, dy]): Pt => [x + dx, NODE_Y + dy])
+  const near = (px: number, py: number) => pts.slice(1).some(([bx, by], i) => {
+    const [ax, ay] = pts[i], dx = bx - ax, dy = by - ay, t = Math.max(0, Math.min(1, ((px - ax) * dx + (py - ay) * dy) / (dx * dx + dy * dy)))
+    return Math.hypot(px - ax - t * dx, py - ay - t * dy) < 1.9
+  })
+  return [
+    layer(T.fillOn(2, (px, py) => Math.hypot(px - x, py - NODE_Y) <= 6.8 && !near(px, py), [x - 7.4, NODE_Y - 7.4, x + 7.4, NODE_Y + 7.4]), 'active'),
+    layer(T.dotPath(pts, 1.6, 1.25)), layer(T.dotRing(x, NODE_Y, 8.6, { spacing: 1.7, size: 1.1 })),
+  ]
+}
 export const pharmaTrack: WidgetPreset = {
   id: 'pharma-track', name: '05 Pharma Track', group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
@@ -248,9 +239,9 @@ export const entertainment: WidgetPreset = {
     layer(T.sprite(SPEAKER, 133, 0)),
     ...GROOVES.map(([r, n, tone, size], i) => layer(ringSlots(VINYL[0], VINYL[1], r * (1 + .025 * Math.sin(t * 1.6 - i * .7)), n, i * .5 + t * .15 * (i % 2 ? 1 : -1), size), tone)),
     layer(T.dots([VINYL], 5), 'active'),
-    layer(T.vrule(25, 121, 11), 'value'), layer(triangle(27, 121, 8, 11, 'left'), 'value'),
-    layer(T.dotRing(69, 126.5, 14.5, { spacing: 1.2, size: 1.1 }), 'active'), layer(triangle(66, 121, 9, 11, 'right'), 'active'),
-    layer(triangle(105, 121, 8, 11, 'right'), 'value'), layer(T.vrule(113, 121, 11), 'value'),
+    layer(T.dotTri(27.2, 126, 5, { dir: 'left', bar: true }), 'value'),
+    layer(T.dotRing(69, 126, 14.5, { spacing: 1.2, size: 1.1 }), 'active'), layer(T.dotTri(74, 126, 5), 'active'),
+    layer(T.dotTri(110.8, 126, 5, { bar: true }), 'value'),
   ],
 }
 

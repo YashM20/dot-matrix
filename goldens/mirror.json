@@ -16,7 +16,7 @@
   "mirror-ladder": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "c7aa54bf",
+    "hash": "ce4fcdd3",
     "dots": 10963
    }
   },
@@ -35,13 +35,13 @@
   "mirror-conduct": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "c3c3f386",
+    "hash": "2d491756",
     "dots": 1438
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "9b303c2f",
-    "dots": 1438
+    "hash": "560dbece",
+    "dots": 1437
    }
   }
  }

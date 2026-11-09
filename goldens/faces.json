@@ -4,48 +4,48 @@
   "face-calm": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "2aebb680",
+    "hash": "34507f1b",
     "dots": 1133
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "c984bede",
+    "hash": "0cee2ed7",
     "dots": 1136
    }
   },
   "face-curious": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "d9991867",
+    "hash": "3e58a8ac",
     "dots": 1105
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "5ff0b264",
+    "hash": "9e993239",
     "dots": 1112
    }
   },
   "face-sleepy": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "c6394d9b",
+    "hash": "5580c62d",
     "dots": 1254
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "3455c57b",
+    "hash": "47121e8a",
     "dots": 1241
    }
   },
   "face-pip": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "c8c1a632",
+    "hash": "4db7b4a9",
     "dots": 1045
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "f25e3a0b",
+    "hash": "167dbfb3",
     "dots": 1045
    }
   }

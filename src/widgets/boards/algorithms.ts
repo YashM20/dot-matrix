@@ -16,16 +16,16 @@ import { attractorDensity, dla, stipple, wfc, type WfcTile } from '../../engine/
 import { clamp, hash01, len, smoothstep } from '../../engine/math'
 import type { Field, Layer, Tone } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
+import { caption, footer as footerText } from '../captions'
+import { GAP, nearest } from '../sites'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
 const N = TILE.cols - 1
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
 
-/** Caption tier (0.72 lattice), as on the mosaic board. */
-const cap = (s: string, col: number, row: number, align?: 'left' | 'center' | 'right') => T.big(s, col, row, { lattice: .72, align })
 /** Top-right: the paper the card is built on. */
-const cite = (s: string) => layer(cap(s, 143, 1, 'right'), 'mid')
+const cite = (s: string) => caption(s)
 const FOOT = 134, RAIL_Y = 129
 /** Footer: a faint dotted rail filled in `mid` to `k` (0..1), an optional live (red) knob at the fill point, a counter left and one stat right. */
 function footer(k: number, left: string, right: string, live = false): Layer[] {
@@ -36,15 +36,29 @@ function footer(k: number, left: string, right: string, live = false): Layer[] {
   return [
     layer(T.dots(rest, .9), 'faint'), layer(T.dots(done, 1.1), 'mid'),
     ...(knob ? [layer(T.dots([knob], 2.2), 'active')] : []),
-    layer(T.text(left, 0, FOOT), 'idle'),
-    layer(T.text(right, 143, FOOT, { align: 'right' }), 'mid'),
+    ...footerText(left, right, FOOT),
   ]
 }
 const pad = (n: number, w: number) => String(Math.max(0, Math.round(n))).padStart(w, '0')
 const thousands = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-/** Group sites by tone into one site layer each (`size` per layer). */
-function siteLayers(groups: Partial<Record<Tone, Pt[]>>, size: number, order: Tone[]): Layer[] {
-  return order.filter(t => groups[t]?.length).map(t => layer(T.dots(groups[t]!, size), t))
+/**
+ * Group sites by tone into site layers (`size` for all, or per tone). Each site shrinks to 0.8 of the distance to its
+ * nearest neighbour (any tone), in steps of `FIT_STEP`, so dense areas get smaller dots instead of touching ones.
+ */
+const FIT_STEP = .15
+function siteLayers(groups: Partial<Record<Tone, Pt[]>>, size: number | Partial<Record<Tone, number>>, order: Tone[]): Layer[] {
+  const tones = order.filter(t => groups[t]?.length), sizeOf = (t: Tone) => (typeof size === 'number' ? size : size[t] ?? 1)
+  const near = nearest(tones.flatMap(t => groups[t]!), Math.max(...tones.map(sizeOf)) / GAP), out: Layer[] = []
+  let i = 0
+  for (const t of tones) {
+    const base = sizeOf(t), bySize = new Map<number, Pt[]>()
+    for (const p of groups[t]!) {
+      const fit = GAP * near[i++], s = fit >= base ? base : Math.max(FIT_STEP, Math.floor(fit / FIT_STEP + 1e-9) * FIT_STEP)
+      const b = bySize.get(s); if (b) b.push(p); else bySize.set(s, [p])
+    }
+    for (const [s, pts] of [...bySize].sort((a, b) => b[0] - a[0])) out.push(layer(T.dots(pts, +s.toFixed(3), undefined, 0), t))
+  }
+  return out
 }
 /** A field written in card cells, zero outside `box` and bounded by it. */
 const cells = (f: (x: number, y: number) => number, box: [number, number, number, number]): Field => {
@@ -162,7 +176,7 @@ export const algoStipple: WidgetPreset = {
     return [
       cite('SECORD 2002'),
       layer(T.dots(DARK_LIMB, .8), 'faint'),
-      ...siteLayers({ mid: groups.mid }, .8, ['mid']), ...siteLayers({ idle: groups.idle }, .95, ['idle']), ...siteLayers({ value: groups.value }, 1.1, ['value']),
+      ...siteLayers(groups, { mid: .8, idle: .95, value: 1.1 }, ['mid', 'idle', 'value']),
       ...footer(k / LLOYD, `LLOYD ${pad(k, 2)}/${LLOYD}`, `${thousands(STIPPLES)} DOTS`, live),
     ]
   },
@@ -335,7 +349,7 @@ export const algoAggregate: WidgetPreset = {
     }
     const dim = dimension(d, k)
     return [
-      cite('WITTEN-SANDER 1981'),
+      cite('WITTEN SANDER'),
       ...siteLayers(groups, 1.05, ['faint', 'mid', 'idle', 'value', 'active']),
       ...footer(k / d.count, `N ${thousands(k).padStart(5, ' ')}`, dim > 0 ? `D ${dim.toFixed(2)}` : 'D -.--'),
     ]

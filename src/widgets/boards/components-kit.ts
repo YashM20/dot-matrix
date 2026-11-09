@@ -4,28 +4,14 @@
  * that uses them loads this and not the whole components board (#214).
  */
 import type { Layer } from '../../engine/types'
-import { TAU, TILE, dim, layer, layoutFor, type LatticeField, type WidgetContext } from '../types'
+import { rrect } from '../../engine/layout'
+import { TILE, dim, layer, layoutFor, type LatticeField, type WidgetContext } from '../types'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
 
-/** Evenly spaced dot sites around a stadium (pill) outline, top-left corner at (x,y). */
-export function stadium(x: number, y: number, w: number, h: number, spacing: number): Pt[] {
-  const r = h / 2, straight = Math.max(0, w - h), perimeter = 2 * straight + TAU * r
-  const n = Math.max(8, Math.round(perimeter / spacing)), step = perimeter / n, pts: Pt[] = []
-  const lx = x + r, rx = x + r + straight, cy = y + r
-  for (let i = 0; i < n; i++) {
-    let d = i * step
-    if (d < straight) { pts.push([lx + d, y]); continue }                                 // top edge →
-    d -= straight
-    if (d < Math.PI * r) { const a = d / r; pts.push([rx + r * Math.sin(a), cy - r * Math.cos(a)]); continue } // right cap
-    d -= Math.PI * r
-    if (d < straight) { pts.push([rx - d, y + h]); continue }                              // bottom edge ←
-    d -= straight
-    const a = d / r; pts.push([lx - r * Math.sin(a), cy + r * Math.cos(a)])                 // left cap
-  }
-  return pts
-}
+/** The outline sites now live in the engine's layout (`src/engine/layout.ts`); re-exported for the boards that borrow them. */
+export { rrect, stadium } from '../../engine/layout'
 export const OUTLINE = { spacing: 3.3, size: 1.5 }
 
 // ── interaction states (COMPONENTS v2: see components.ts) ──
@@ -39,30 +25,6 @@ export const at = (lf: LatticeField, v: number): LatticeField => (v === 1 ? lf :
 /** Text / lattice layer scaled by `v`. */
 export const dimmed = (lf: LatticeField, v: number): LatticeField => (v === 1 ? lf : { ...lf, field: dim(lf.field, v) })
 
-/** Evenly spaced dot sites around a rounded rectangle (corner radius r; r = h/2 is a stadium, w = h = 2r a circle). */
-export function rrect(x: number, y: number, w: number, h: number, r: number, spacing: number): Pt[] {
-  r = Math.max(0, Math.min(r, w / 2, h / 2))
-  const sw = w - 2 * r, sh = h - 2 * r, arc = (Math.PI / 2) * r, perimeter = 2 * sw + 2 * sh + 4 * arc
-  const n = Math.max(8, Math.round(perimeter / spacing)), step = perimeter / n, pts: Pt[] = []
-  for (let i = 0; i < n; i++) {
-    let d = i * step, a = 0
-    if (d < sw) { pts.push([x + r + d, y]); continue }                                       // top →
-    d -= sw
-    if (d < arc) { a = d / r; pts.push([x + w - r + r * Math.sin(a), y + r - r * Math.cos(a)]); continue }
-    d -= arc
-    if (d < sh) { pts.push([x + w, y + r + d]); continue }                                   // right ↓
-    d -= sh
-    if (d < arc) { a = d / r; pts.push([x + w - r + r * Math.cos(a), y + h - r + r * Math.sin(a)]); continue }
-    d -= arc
-    if (d < sw) { pts.push([x + w - r - d, y + h]); continue }                               // bottom ←
-    d -= sw
-    if (d < arc) { a = d / r; pts.push([x + r - r * Math.sin(a), y + h - r + r * Math.cos(a)]); continue }
-    d -= arc
-    if (d < sh || r === 0) { pts.push([x, y + h - r - d]); continue }                        // left ↑
-    d -= sh; a = d / r; pts.push([x + r - r * Math.cos(a), y + r - r * Math.sin(a)])
-  }
-  return pts
-}
 /** A control's outline grown by `d` cells, as sites `spacing` apart. */
 export type Shape = (d: number, spacing: number) => Pt[]
 export const rr = (x: number, y: number, w: number, h: number, r: number): Shape => (d, sp) => rrect(x - d, y - d, w + 2 * d, h + 2 * d, r + d, sp)

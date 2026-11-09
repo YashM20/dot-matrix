@@ -4,108 +4,108 @@
   "pond-koi": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "fded7324",
+    "hash": "a65579fa",
     "dots": 2275
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "256f7719",
+    "hash": "d2aca03c",
     "dots": 2293
    }
   },
   "pond-jelly": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "e5a9445e",
+    "hash": "9b5f5e7a",
     "dots": 791
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "0a5a2393",
+    "hash": "bfd6ee4d",
     "dots": 795
    }
   },
   "pond-slime": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "dd298d59",
+    "hash": "79cbd25b",
     "dots": 1756
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "c32295b0",
+    "hash": "bef6b114",
     "dots": 1783
    }
   },
   "pond-fireflies": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "4257c1e0",
-    "dots": 679
+    "hash": "aa396a11",
+    "dots": 671
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "8e078eef",
-    "dots": 665
+    "hash": "a3fd9ea9",
+    "dots": 657
    }
   },
   "pond-murmur": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "ee77f694",
+    "hash": "91a622d7",
     "dots": 638
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "73074867",
+    "hash": "8eb8b304",
     "dots": 546
    }
   },
   "pond-terrarium": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "83356745",
+    "hash": "54e390aa",
     "dots": 2764
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "175b8d52",
+    "hash": "278d10b5",
     "dots": 2788
    }
   },
   "pond-marble": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "2e784b44",
+    "hash": "4be6fac2",
     "dots": 3486
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "acda0458",
+    "hash": "5491a655",
     "dots": 3464
    }
   },
   "pond-plankton": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "fe614255",
-    "dots": 3403
+    "hash": "a9d64a67",
+    "dots": 3376
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "6b0dbb48",
-    "dots": 3583
+    "hash": "5c672023",
+    "dots": 3584
    }
   },
   "pond-turing": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "d2214637",
+    "hash": "632b33d7",
     "dots": 561
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "6189d639",
+    "hash": "6ab9f139",
     "dots": 563
    }
   }

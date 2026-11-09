@@ -4,132 +4,132 @@
   "mat-loom": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "7607a4cc",
+    "hash": "79c7e1be",
     "dots": 8146
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "d338288b",
+    "hash": "5f70e06d",
     "dots": 3448
    }
   },
   "mat-knob": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "584fbed4",
+    "hash": "03f522df",
     "dots": 2362
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "584fbed4",
+    "hash": "03f522df",
     "dots": 2362
    }
   },
   "mat-grille": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "641ba4fa",
+    "hash": "33969a3d",
     "dots": 7199
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "09977027",
+    "hash": "7d08f29a",
     "dots": 7181
    }
   },
   "mat-marble": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "b3c95b3a",
+    "hash": "2ec6e7d1",
     "dots": 5924
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "b3c95b3a",
+    "hash": "2ec6e7d1",
     "dots": 5924
    }
   },
   "mat-terrazzo": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "6ab66d77",
-    "dots": 2682
+    "hash": "fbe4ade0",
+    "dots": 2580
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "6ab66d77",
-    "dots": 2682
+    "hash": "fbe4ade0",
+    "dots": 2580
    }
   },
   "mat-lens": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "c0236103",
-    "dots": 4144
+    "hash": "468c9b0d",
+    "dots": 3910
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "c0236103",
-    "dots": 4144
+    "hash": "468c9b0d",
+    "dots": 3910
    }
   },
   "mat-pool": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "fca18952",
+    "hash": "cdb70196",
     "dots": 4255
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "626f3a0f",
+    "hash": "8b0f1f81",
     "dots": 4256
    }
   },
   "mat-window": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "4230953c",
+    "hash": "649abb1f",
     "dots": 3543
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "4230953c",
+    "hash": "649abb1f",
     "dots": 3543
    }
   },
   "mat-patch": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "86fdab34",
+    "hash": "34b0446f",
     "dots": 6939
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "5b1ebda0",
+    "hash": "3e3cc0df",
     "dots": 6881
    }
   },
   "mat-rust": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "70c2a4e6",
+    "hash": "f346074a",
     "dots": 10744
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "70c2a4e6",
+    "hash": "f346074a",
     "dots": 10744
    }
   },
   "mat-candle": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "ce9fa4bd",
+    "hash": "939fa8fb",
     "dots": 1666
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "60d5ae29",
+    "hash": "958d5eeb",
     "dots": 1664
    }
   }

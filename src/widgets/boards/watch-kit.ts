@@ -6,7 +6,7 @@
 import { hash01 } from '../../engine/math'
 import type { Layer } from '../../engine/types'
 import { MINUTE, partsOf, type WallParts } from '../../engine/astro/calendar'
-import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
+import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
 
 export { PRESS, at, circle, rr, states, ui } from './components-kit'
 export const T = layoutFor(TILE)
@@ -16,7 +16,7 @@ export const style = { ...tileStyle, cornerRoundness: 0 }
 /** Centre of every face. */
 export const CX = 72, CY = 77
 export type FrameKind = 'round' | 'squircle'
-/** Round case: outer edge, bezel line and the screen the face is clipped to (radii in cells). */
+/** Round case: outer edge (where the crown sits), bezel line and the screen the face is clipped to (radii in cells). */
 export const ROUND = { edge: 64, bezel: 61, screen: 57 }
 /** Squircle case: half width and height of the bezel line, superellipse exponent, screen inset. */
 export const SQ = { a: 57, b: 62, n: 5, inset: 4 }
@@ -56,9 +56,8 @@ const inSquircle = (x: number, y: number, a: number, b: number) => (Math.abs(x -
 export const onScreen = (kind: FrameKind, x: number, y: number, inset = 0) => kind === 'round'
   ? Math.hypot(x - CX, y - CY) <= ROUND.screen - inset
   : inSquircle(x, y, SQ.a - SQ.inset - inset, SQ.b - SQ.inset - inset)
-/** Drop the sites inside any of the boxes [x0, y0, x1, y1] (grown by `pad`), so text reads over a fill. */
-export const knock = (lf: LatticeField, boxes: [number, number, number, number][], pad = 1.5): LatticeField =>
-  ({ ...lf, sites: lf.sites?.filter(([x, y]) => !boxes.some(([x0, y0, x1, y1]) => x >= x0 - pad && x <= x1 + pad && y >= y0 - pad && y <= y1 + pad)) })
+/** Drop the sites inside any of the boxes [x0, y0, x1, y1] (grown by `pad`), so text reads over a fill (`T.knock`). */
+export const knock = T.knock
 /** The box a centred `T.big` / `T.text` line covers: [x0, y0, x1, y1]. */
 export const textBox = (s: string, cx: number, top: number, k = 1): [number, number, number, number] => {
   const [w, h] = T.size(s)
@@ -68,17 +67,10 @@ export const textBox = (s: string, cx: number, top: number, k = 1): [number, num
 // ── the case ──────────────────────────────────────────────────────────────────
 /** The crown on the right of the case: two columns of small dots. */
 const crown = (x0: number): Layer => layer(T.dots([2.5, 5].flatMap(dx => [71, 74, 77, 80, 83].map((y): Pt => [x0 + dx, y])), 1.5), 'mid')
+/** One rim per case, the bezel line: a second faint edge 3 cells outside it read as a doubled border at zoom. */
 const CASES: Record<FrameKind, Layer[]> = {
-  round: [
-    layer(T.dotRing(CX, CY, ROUND.edge, { spacing: 3.6, size: 1.3 }), 'faint'),
-    layer(T.dotRing(CX, CY, ROUND.bezel, LINE), 'mid'),
-    crown(CX + ROUND.edge),
-  ],
-  squircle: [
-    layer(T.dots(squircleSites(SQ.a + 3, SQ.b + 3, { spacing: 3.6 }), 1.3), 'faint'),
-    layer(T.dots(squircleSites(SQ.a, SQ.b, { spacing: LINE.spacing }), LINE.size), 'mid'),
-    crown(CX + SQ.a + 3),
-  ],
+  round: [layer(T.dotRing(CX, CY, ROUND.bezel, LINE), 'mid'), crown(CX + ROUND.edge)],
+  squircle: [layer(T.dots(squircleSites(SQ.a, SQ.b, { spacing: LINE.spacing }), LINE.size), 'mid'), crown(CX + SQ.a + 3)],
 }
 export const caseOf = (kind: FrameKind): Layer[] => CASES[kind]
 const KINDS = new Map<string, FrameKind>()
