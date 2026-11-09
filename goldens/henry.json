@@ -4,73 +4,73 @@
   "home-clock": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "7f4c649d",
+    "hash": "10f98e02",
     "dots": 329
    }
   },
   "music": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "7bb9735c",
+    "hash": "301895ae",
     "dots": 2054
    }
   },
   "timer": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "41eff9af",
+    "hash": "73487e07",
     "dots": 354
    }
   },
   "weather": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "b5869c79",
+    "hash": "d68d8889",
     "dots": 490
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "b5869c79",
+    "hash": "d68d8889",
     "dots": 490
    }
   },
   "fitness": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "a77c55c5",
+    "hash": "e89f02c6",
     "dots": 506
    }
   },
   "messages": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "414b042f",
+    "hash": "974e3bb3",
     "dots": 1525
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "414b042f",
+    "hash": "974e3bb3",
     "dots": 1525
    }
   },
   "camera": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "26a3c2fd",
+    "hash": "497f9e34",
     "dots": 672
    }
   },
   "settings": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "71d078e7",
+    "hash": "dd3d3e52",
     "dots": 1472
    }
   },
   "system": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "65f917a4",
+    "hash": "eccdc91c",
     "dots": 626
    }
   }

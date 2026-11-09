@@ -26,7 +26,7 @@ export interface SampleRequest {
 /** The card unmounted: free its worker-side canvas. */
 export interface DropRequest { kind: 'drop'; card: number }
 export type SampleReply =
-  | { kind: 'frame'; card: number; seq: number; t: number; n: number; capacity: number; bytes: ArrayBuffer; palette: readonly string[]; shape?: DotStyle['shape']; roundness?: number; bitmap?: ImageBitmap; ext?: ArrayBuffer; joints?: JointGeom[] }
+  | { kind: 'frame'; card: number; seq: number; t: number; n: number; capacity: number; bytes: ArrayBuffer; palette: readonly string[]; shape?: DotStyle['shape']; roundness?: number; pitch?: number; bitmap?: ImageBitmap; ext?: ArrayBuffer; joints?: JointGeom[] }
   | { kind: 'error'; card: number; seq: number; message: string }
 
 /** Sample one frame of a registered preset; the reply's `bytes` must be transferred. */
@@ -37,7 +37,7 @@ export function handleSample(req: SampleRequest): SampleReply {
     const { grid, style, theme } = req
     const buf = req.bytes && req.bytes.byteLength && req.capacity ? dotBufferOver(req.capacity, req.bytes, [], req.ext) : createDotBuffer(grid.cols * grid.rows)
     sampleLayersInto(withChrome(p)({ t: req.t, frame: req.frame, data: req.data, grid }), grid, style, theme, buf)
-    return { kind: 'frame', card: req.card, seq: req.seq, t: req.t, n: buf.n, capacity: buf.capacity, bytes: buf.bytes, palette: buf.palette, shape: buf.shape, roundness: buf.roundness, ext: buf.ext, joints: buf.joints }
+    return { kind: 'frame', card: req.card, seq: req.seq, t: req.t, n: buf.n, capacity: buf.capacity, bytes: buf.bytes, palette: buf.palette, shape: buf.shape, roundness: buf.roundness, pitch: buf.pitch, ext: buf.ext, joints: buf.joints }
   } catch (error) {
     return { kind: 'error', card: req.card, seq: req.seq, message: error instanceof Error ? error.message : String(error) }
   }

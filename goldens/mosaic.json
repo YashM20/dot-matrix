@@ -11,7 +11,7 @@
   "ev-charge": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "96654752",
+    "hash": "d0dea85f",
     "dots": 6055
    }
   },
@@ -25,14 +25,14 @@
   "fitness-rings": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "93698342",
+    "hash": "f6780f4c",
     "dots": 2223
    }
   },
   "henry-sleep": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "116bdbd3",
+    "hash": "0ce4e042",
     "dots": 1746
    }
   },
@@ -58,7 +58,7 @@
   "vision-camera": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "84df7ac2",
+    "hash": "66c3c06d",
     "dots": 13051
    }
   },

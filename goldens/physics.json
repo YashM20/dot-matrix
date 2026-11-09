@@ -16,24 +16,24 @@
   "phys-ink": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "2434d3ff",
+    "hash": "9031990f",
     "dots": 339
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "a118b2d4",
+    "hash": "6224622d",
     "dots": 490
    }
   },
   "phys-flag": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "4d1a69cd",
+    "hash": "6f4e6770",
     "dots": 462
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "f91b2768",
+    "hash": "8786da93",
     "dots": 462
    }
   },
@@ -52,12 +52,12 @@
   "phys-pit": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "0eee790b",
+    "hash": "ac57b86a",
     "dots": 124
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "4e25583e",
+    "hash": "1ffa12b5",
     "dots": 124
    }
   }

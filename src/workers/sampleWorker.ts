@@ -48,7 +48,7 @@ function answer(req: SampleRequest, raster: boolean) {
     const ctx = canvas.getContext('2d')
     if (ctx) {
       const buf = dotBufferOver(reply.capacity, reply.bytes, reply.palette, reply.ext)
-      buf.n = reply.n; buf.shape = reply.shape; buf.roundness = reply.roundness; buf.joints = reply.joints
+      buf.n = reply.n; buf.shape = reply.shape; buf.roundness = reply.roundness; buf.pitch = reply.pitch; buf.joints = reply.joints
       ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.clearRect(0, 0, w, h); ctx.setTransform(scale, 0, 0, scale, 0, 0)
       renderCanvasBuffer(ctx, buf)
       reply.bitmap = canvas.transferToImageBitmap()

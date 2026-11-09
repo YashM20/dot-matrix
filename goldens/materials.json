@@ -4,12 +4,12 @@
   "mat-loom": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "79c7e1be",
+    "hash": "18ede576",
     "dots": 8146
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "5f70e06d",
+    "hash": "72836d85",
     "dots": 3448
    }
   },
@@ -52,24 +52,24 @@
   "mat-terrazzo": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "fbe4ade0",
+    "hash": "e56c99b5",
     "dots": 2580
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "fbe4ade0",
+    "hash": "e56c99b5",
     "dots": 2580
    }
   },
   "mat-lens": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "468c9b0d",
+    "hash": "44549b70",
     "dots": 3910
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "468c9b0d",
+    "hash": "44549b70",
     "dots": 3910
    }
   },

@@ -52,12 +52,12 @@
   "chart-heatmap": {
    "t=0": {
     "style": "squircle:32.00",
-    "hash": "296f2068",
+    "hash": "5785dadb",
     "dots": 1005
    },
    "t=1.3": {
     "style": "squircle:32.00",
-    "hash": "296f2068",
+    "hash": "5785dadb",
     "dots": 1005
    }
   },

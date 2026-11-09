@@ -4,31 +4,31 @@
   "type-axes": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "36c708a3",
+    "hash": "ef087579",
     "dots": 1346
    }
   },
   "type-morph": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "edfe22a6",
+    "hash": "629920ff",
     "dots": 773
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "edfe22a6",
+    "hash": "629920ff",
     "dots": 773
    }
   },
   "type-marquee": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "513470a0",
+    "hash": "ecc54159",
     "dots": 1755
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "62123653",
+    "hash": "626d61b9",
     "dots": 1755
    }
   },
@@ -47,12 +47,12 @@
   "type-flight": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "2e54ccd5",
+    "hash": "25cfb2e9",
     "dots": 636
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "2e54ccd5",
+    "hash": "25cfb2e9",
     "dots": 636
    }
   },

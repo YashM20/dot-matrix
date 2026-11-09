@@ -64,7 +64,7 @@ export function remoteSampler(layers: object, onFrame: (buf: DotBuffer, t: numbe
     if (reply.kind === 'error') { failed = true; console.warn('sample worker:', reply.message); return }
     if (disposed) { reply.bitmap?.close(); return }
     const buf = dotBufferOver(reply.capacity, reply.bytes, reply.palette, reply.ext)
-    buf.n = reply.n; buf.shape = reply.shape; buf.roundness = reply.roundness; buf.joints = reply.joints
+    buf.n = reply.n; buf.shape = reply.shape; buf.roundness = reply.roundness; buf.pitch = reply.pitch; buf.joints = reply.joints
     spare = front; front = buf
     if (pending) { const next = pending; pending = null; send(next) }
     onFrame(buf, reply.t, reply.bitmap)
