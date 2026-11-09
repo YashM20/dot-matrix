@@ -4,8 +4,8 @@
   "thermal-monitor": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "0c932f34",
-    "dots": 6256
+    "hash": "866cbbf5",
+    "dots": 6036
    }
   },
   "ev-charge": {
@@ -32,8 +32,8 @@
   "henry-sleep": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "7fdb60d7",
-    "dots": 1925
+    "hash": "116bdbd3",
+    "dots": 1746
    }
   },
   "mini-game": {
@@ -51,8 +51,8 @@
   "ai-assistant": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "2c846d6a",
-    "dots": 3439
+    "hash": "235cc528",
+    "dots": 2618
    }
   },
   "vision-camera": {

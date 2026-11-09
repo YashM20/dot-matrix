@@ -4,20 +4,20 @@
   "type-axes": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "139d5b8a",
-    "dots": 1457
+    "hash": "36c708a3",
+    "dots": 1346
    }
   },
   "type-morph": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "5d23dc2a",
-    "dots": 814
+    "hash": "edfe22a6",
+    "dots": 773
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "5d23dc2a",
-    "dots": 814
+    "hash": "edfe22a6",
+    "dots": 773
    }
   },
   "type-marquee": {
@@ -35,37 +35,37 @@
   "type-kinetic": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "ff73ed01",
-    "dots": 1697
+    "hash": "92e3c8e6",
+    "dots": 1581
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "8078b5c2",
-    "dots": 1488
+    "hash": "afbcd527",
+    "dots": 1356
    }
   },
   "type-flight": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "d6e67e0d",
-    "dots": 645
+    "hash": "2e54ccd5",
+    "dots": 636
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "d6e67e0d",
-    "dots": 645
+    "hash": "2e54ccd5",
+    "dots": 636
    }
   },
   "type-anything": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "3e7828e0",
-    "dots": 1053
+    "hash": "1b54a2e9",
+    "dots": 991
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "3e7828e0",
-    "dots": 1053
+    "hash": "1b54a2e9",
+    "dots": 991
    }
   }
  }

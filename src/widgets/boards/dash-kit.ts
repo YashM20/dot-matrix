@@ -36,12 +36,16 @@ export const dialMap = (d: Dial) => (x: number, y: number, v: number): number =>
   const rel = mod(Math.atan2(dx, -dy) - d.start, TAU)
   return rel <= d.sweep ? rel / d.sweep : rel - d.sweep < TAU - rel ? 1 : 0
 }
-/** The dial's dotted track, and the stretch from fraction `f0` to `f1` lit on the same sites. */
-export function dialArc(d: Dial, f0: number, f1: number, tone: Tone = 'value'): Layer[] {
+/**
+ * The dial's dotted track, and the stretch from fraction `f0` to `f1` lit on the same sites. With `needleAt`, the
+ * track sites under the needle at that fraction are knocked out, so it sits in clear air.
+ */
+export function dialArc(d: Dial, f0: number, f1: number, tone: Tone = 'value', needleAt?: number): Layer[] {
   const lo = Math.min(f0, f1), hi = Math.max(f0, f1), ring = { spacing: LINE.spacing, size: LINE.size }
+  const clear = (lf: LatticeField) => (needleAt === undefined ? lf : T.knockout(lf, needleSites(d, needleAt), NEEDLE.clear))
   return [
-    layer(T.dotRing(d.cx, d.cy, d.r, { ...ring, start: d.start, sweep: d.sweep }), 'mid'),
-    ...(hi - lo > 1e-3 ? [layer(T.dotRing(d.cx, d.cy, d.r, { ...ring, start: angleOf(d, lo), sweep: (hi - lo) * d.sweep, size: 2.2 }), tone)] : []),
+    layer(clear(T.dotRing(d.cx, d.cy, d.r, { ...ring, start: d.start, sweep: d.sweep })), 'mid'),
+    ...(hi - lo > 1e-3 ? [layer(clear(T.dotRing(d.cx, d.cy, d.r, { ...ring, start: angleOf(d, lo), sweep: (hi - lo) * d.sweep, size: 2.2 })), tone)] : []),
   ]
 }
 /** Tick sites just inside the track at fractions `fs`. */
@@ -51,11 +55,10 @@ export const dialLabels = (d: Dial, marks: [number, string][], inset = 15): Laye
   const [x, y] = polar(d.cx, d.cy, d.r - inset, angleOf(d, f))
   return layer(T.text(s, Math.round(x), Math.round(y - 3), { align: 'center' }), 'idle')
 })
-/** The needle: a short run of big sites across the track at fraction `f`. */
-export const needle = (d: Dial, f: number, v = 1): LatticeField => {
-  const a = angleOf(d, f), pts = [-13, -9, -5, -1, 3].map(k => polar(d.cx, d.cy, d.r + k, a))
-  return { field: () => v, sites: pts, size: 2.6 }
-}
+/** The needle: a short run of big sites across the track at fraction `f`; `clear` = the track's knockout radius round each. */
+const NEEDLE = { size: 2.6, clear: 3.2 }
+const needleSites = (d: Dial, f: number): Pt[] => { const a = angleOf(d, f); return [-13, -9, -5, -1, 3].map(k => polar(d.cx, d.cy, d.r + k, a)) }
+export const needle = (d: Dial, f: number, v = 1): LatticeField => ({ field: () => v, sites: needleSites(d, f), size: NEEDLE.size })
 
 /** Hero number on a 2× smooth lattice, centred (10×14 glyphs → 20×28 cells). */
 export const hero = (s: string, cx: number, top: number, lattice = 2) => T.big(s, cx, top, { lattice, smooth: true, align: 'center' })

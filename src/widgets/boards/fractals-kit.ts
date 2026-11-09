@@ -5,7 +5,7 @@
  */
 import { clamp } from '../../engine/math'
 import type { Field, Layer, Tone } from '../../engine/types'
-import { TILE, layoutFor, tileStyle, type WidgetCredit } from '../types'
+import { TILE, layer, layoutFor, tileStyle, type WidgetCredit } from '../types'
 import { caption, footer as footerText } from '../captions'
 
 export const T = layoutFor(TILE)
@@ -51,6 +51,15 @@ export function gridLayer(vals: ArrayLike<number>, w: number, h: number, c0: num
   const field: Field = (u, v) => { const i = at(u, v); return i < 0 ? 0 : value[i] }
   field.bounds = [c0, r0, c0 + w - 1, r0 + h - 1]
   return { field, toneOf: (_, u, v) => { const i = at(u, v); return i < 0 || band[i] < 0 ? undefined : bands[band[i]].tone } }
+}
+
+/**
+ * A red probe on a grid layer (`T.marker`): the dot snapped to the cell under it, and the grid cut in a ring of
+ * clear air round it, so no band dot shows half under the red. Returns [cut grid, probe].
+ */
+export const probe = (grid: Layer, pt: Pt, size = 2.6): [Layer, Layer] => {
+  const m = T.marker(pt, size)
+  return [{ ...grid, field: m.cut(grid.field) }, layer(m.dot, 'active')]
 }
 
 /** Four quantized density bands (dot value .25 / .5 / .75 / 1): faint wisps, mid body, idle, white cores. */

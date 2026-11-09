@@ -266,7 +266,7 @@ export const fitness: WidgetPreset = {
 
 // ── 06 MESSAGES ─────────────────────────────────────────────────────────────
 const bubble = (top: number, initial: string, name: string, time: string, l1: string, l2: string, cursor?: 0 | 1) => [
-  layer(roundRect(1, top, 142, 55, 6), 'mid'),
+  layer(T.rrect(1, top, 141, 54, 6, { spacing: 2.2, size: 1.05 }), 'mid'),
   layer(T.dotRing(16, top + 27, 11.5, { spacing: 1.6, size: .7 }), 'idle'),
   layer(T.big(initial, 16, top + 22, { lattice: 1.4, align: 'center' })),
   layer(T.text(name, 35, top + 11)), layer(T.text(time, 137, top + 11, { align: 'right' }), 'idle'),
@@ -342,12 +342,13 @@ const settingIcon = (g: Glyph, x: number, y: number) => {
   }
 }
 type Right = 'on' | 'chevron' | 'toggle-on' | 'toggle-off'
-const ROW_H = 24
+/** Five rows in one rounded outline, one separator between neighbours, inset a cell so no corner meets the card edge. */
+const ROWS = { x: 1, top: 15, w: 141, h: 24, n: 5, r: 5, spacing: 2.2, size: 1.05 }
 const settingRow = (i: number, g: Glyph, label: string, right: Right, selected = false) => {
-  const top = 15 + i * ROW_H, tone = selected ? 'active' : 'idle', mid = top + 11
-  const out = [layer(roundRect(0, top, 144, ROW_H - 1, 4), selected ? 'active' : 'mid'), layer(settingIcon(g, 5, top + 5.5), selected ? 'active' : 'value'), layer(T.text(label, 27, top + 8), tone)]
-  if (right === 'on') out.push(layer(T.text('ON', 130, top + 8, { align: 'right' }), 'idle'))
-  if (right === 'on' || right === 'chevron') out.push(layer(T.sprite(['#...', '.#..', '..#.', '...#', '..#.', '.#..', '#...'], 135, top + 8), selected ? 'active' : 'idle'))
+  const top = ROWS.top + i * ROWS.h, tone = selected ? 'active' : 'idle', mid = top + 12
+  const out = [layer(settingIcon(g, 5, top + 6.5), selected ? 'active' : 'value'), layer(T.text(label, 27, top + 9), tone)]
+  if (right === 'on') out.push(layer(T.text('ON', 130, top + 9, { align: 'right' }), 'idle'))
+  if (right === 'on' || right === 'chevron') out.push(layer(T.sprite(['#...', '.#..', '..#.', '...#', '..#.', '.#..', '#...'], 135, top + 9), selected ? 'active' : 'idle'))
   if (right.startsWith('toggle')) {
     // on: a pill of big dots with a dark knob hole at the right; off: a bright outline with one big knob dot at the left
     const on = right === 'toggle-on', x0 = 120, w = 17, h = 10
@@ -358,12 +359,15 @@ const settingRow = (i: number, g: Glyph, label: string, right: Right, selected =
   }
   return out
 }
+const SELECTED = 2
+const [rowLines, pickedLines] = T.rows(ROWS.x, ROWS.top, ROWS.w, ROWS.h, ROWS.n, { ...ROWS, pick: SELECTED })
 export const settings: WidgetPreset = {
   id: 'settings', name: '08 Settings', group: 'icon', ...tile,
   layers: () => [
+    layer(rowLines, 'mid'), layer(pickedLines, 'active'),
     ...settingRow(0, 'wifi', 'WI-FI', 'on'),
     ...settingRow(1, 'bluetooth', 'BLUETOOTH', 'toggle-off'),
-    ...settingRow(2, 'sun', 'BRIGHTNESS', 'chevron', true),
+    ...settingRow(SELECTED, 'sun', 'BRIGHTNESS', 'chevron', true),
     ...settingRow(3, 'sound', 'SOUND', 'toggle-on'),
     ...settingRow(4, 'info', 'ABOUT', 'chevron'),
   ],

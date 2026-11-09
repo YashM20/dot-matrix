@@ -48,15 +48,14 @@ const segDist = (x: number, y: number, [ax, ay]: Pt, [bx, by]: Pt) => {
 
 /** Evenly spaced dot sites along a polyline (spacing carried across corners, size capped so dots never touch). */
 const dotPath = (pts: Pt[], spacing: number, size: number): LatticeField => T.dotPath(pts, spacing, size)
-/** One-dot outline of a rounded rectangle on the card pitch (pills, stat panels). */
-const frame = (x: number, y: number, w: number, h: number, r: number): Field => {
-  const mx = x + (w - 1) / 2, my = y + (h - 1) / 2, hw = (w - 1) / 2 - r, hh = (h - 1) / 2 - r
-  return cells((c, rr) => {
-    c = Math.round(c); rr = Math.round(rr)
-    const qx = Math.abs(c - mx) - hw, qy = Math.abs(rr - my) - hh
-    const sd = len(Math.max(qx, 0), Math.max(qy, 0)) + Math.min(Math.max(qx, qy), 0) - r
-    return sd <= 0 && sd > -1 ? 1 : 0
-  }, [x, y, x + w - 1, y + h - 1])
+/**
+ * Rounded outline (pills, stat panels) as evenly spaced fine sites over the cell box [x, x + w - 1] × [y, y + h - 1],
+ * kept a cell inside the card so no corner meets the edge.
+ */
+const FRAME = { spacing: 2.2, size: 1.05 }
+const frame = (x: number, y: number, w: number, h: number, r: number): LatticeField => {
+  const x0 = Math.max(1, x), x1 = Math.min(x + w - 1, N - 1)
+  return T.rrect(x0, y, x1 - x0, h - 1, r, FRAME)
 }
 /**
  * Caption tier: the 5×7 font on a 0.72 lattice (glyph ≈ 5 cells tall, advance ≈ 4.3 cells). The
@@ -382,7 +381,8 @@ export const aiAssistant: WidgetPreset = {
     ...SUGGESTIONS.flatMap((s, i) => {
       const y = 47 + i * 18.5, cy = Math.round(y + 8)
       return [
-        layer(frame(0, Math.round(y), 144, 17, 7), 'faint'),
+        // a cell in at the top and bottom, so neighbouring pills keep 5 empty rows and never read as a doubled line
+        layer(frame(0, Math.round(y) + 1, 144, 15, 7), 'faint'),
         ...pillIcon(i, cy).map(f => layer(f, 'idle')),
         layer(cap(s, 15, cy - 2.5), 'value'), layer(cap('>', 137, cy - 2.5), 'idle'),
       ]

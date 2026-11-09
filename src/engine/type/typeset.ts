@@ -82,6 +82,8 @@ export interface TypeLayout {
   /** Superellipse / cap exponent of the roundness axis. */
   n: number
   hard: boolean
+  /** Laid out hinted (cap line, baseline and stems on whole cells): its static field rounds edge dots to 0 or 1. */
+  hint: boolean
   /** Characters neither the stroke font nor a canvas could draw. */
   skipped: number
 }
@@ -154,7 +156,7 @@ export function typeLayout(text: string, opts: TypeOptions): TypeLayout {
   })
   const ink: CellBounds = [inkLeft0 + shift, row, inkRight0 + shift, row + size - 1]
   const bounds: CellBounds = glyphs.length ? [Math.floor(b0), Math.floor(b1), Math.ceil(b2), Math.ceil(b3)] : [0, 0, -1, -1]
-  return { text, glyphs, ink, bounds, thickness: T, scale: sy, n, hard: opts.edge === 'hard', skipped }
+  return { text, glyphs, ink, bounds, thickness: T, scale: sy, n, hard: opts.edge === 'hard', hint, skipped }
 }
 /** Ink width of `text` in cells (what `align` centres). */
 export const typeWidth = (text: string, opts: TypeOptions): number => { const l = typeLayout(text, { ...opts, col: 0, align: 'left', glyph: undefined }); return l.ink[2] - l.ink[0] + 1 }
@@ -204,8 +206,12 @@ function strokeDistance(g: PlacedGlyph, x: number, y: number, p: number, stopBel
   return best
 }
 
-/** Coverage of a layout at cell coordinates (x, y) of its grid (fractional allowed). */
-export function typeAt(l: TypeLayout, x: number, y: number): number {
+/**
+ * Coverage of a layout at cell coordinates (x, y) of its grid (fractional allowed). `crisp` rounds each stroke's
+ * edge coverage to 0 or 1 at one half (hinted static text: no part-value specks along curves and in counters);
+ * moving text leaves it off, so part-cell offsets light the straddled dots at part values.
+ */
+export function typeAt(l: TypeLayout, x: number, y: number, crisp = false): number {
   let m = 0
   for (const g of l.glyphs) {
     const b = g.box
@@ -215,6 +221,7 @@ export function typeAt(l: TypeLayout, x: number, y: number): number {
     else {
       const d = strokeDistance(g, x, y, l.n, g.h - .5), cut = Math.min(y - g.top, g.bottom - y)
       v = l.hard ? (d <= g.h + 1e-9 && cut >= -1e-9 ? 1 : 0) : clamp01(Math.min(g.h - d, cut) + .5)
+      if (crisp) v = v >= .5 ? 1 : 0
     }
     v *= g.value
     if (v > m) { m = v; if (m >= 1) break }
@@ -222,10 +229,10 @@ export function typeAt(l: TypeLayout, x: number, y: number): number {
   return m
 }
 
-/** A layout as a field on its grid, with `bounds`. */
+/** A layout as a field on its grid, with `bounds`. A hinted layout samples crisp (edge dots 0 or 1). */
 export function layoutField(l: TypeLayout, grid: GridConfig): Field {
-  const cx = Math.max(1, grid.cols - 1), cy = Math.max(1, grid.rows - 1)
-  const f: Field = (u, v) => typeAt(l, u * cx, v * cy)
+  const cx = Math.max(1, grid.cols - 1), cy = Math.max(1, grid.rows - 1), crisp = l.hint
+  const f: Field = (u, v) => typeAt(l, u * cx, v * cy, crisp)
   f.bounds = l.bounds
   f.text = l.text
   return f
