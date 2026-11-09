@@ -18,7 +18,7 @@ import { combine, hRule, ringCells, textAt, toCell } from '../../src/engine/layo
 import { dot480 } from '../../src/engine/theme/tokens'
 import { widgetPresets, withChrome } from '../../src/widgets'
 import { hash01, hash32 } from '../../src/engine/math'
-import { createMasterClock, quantizeTime } from '../../src/engine/clock'
+import { STAGGER, createMasterClock, quantizeTime } from '../../src/engine/clock'
 import { renderSVG } from '../../src/engine/renderer/svgRenderer'
 import { bounded } from '../../src/engine/layout'
 import { catmullRomField } from '../../src/engine/fields/splineField'
@@ -178,6 +178,25 @@ export function coreChecks(assert: Assert) {
     clock.pause(); clockNow += 5000; clock.resume(); step(1)
     assert('clock does not advance while paused and never resets', clock.time() > .09 && clock.time() < .1, clock.time().toFixed(3))
     unsub()
+
+    // turn-taking: above STAGGER.min board cards they draw on alternate frames at the current t (after the first, forced
+    // draw); a small board, a card without an order, a card the visitor is using and an invalidated card draw every frame
+    const turnsOf = (n: number, busy = -1) => {
+      let now = 0
+      const q: ((time: number) => void)[] = [], c = createMasterClock({ now: () => now, raf: cb => { q.push(cb); return q.length }, caf: () => {} })
+      const log: { order: number; t: number }[][] = Array.from({ length: n + 1 }, () => [])
+      const subs = Array.from({ length: n }, (_, i) => ({ fps: 30, order: i, staggerable: () => i !== busy, onFrame: (t: number) => log[i].push({ order: i, t }) }))
+      subs.forEach(sb => c.subscribe(sb)); c.subscribe({ fps: 30, onFrame: t => log[n].push({ order: -1, t }) })
+      for (let k = 0; k < 30; k++) { now += 1000 / 30; q.shift()?.(now) }
+      c.invalidate(subs[1]); now += 1; q.shift()?.(now)
+      return log.map(l => l.map(e => e.t))
+    }
+    const big = turnsOf(STAGGER.min + 2, 3), small = turnsOf(STAGGER.min)
+    const halved = big.slice(0, -1).every((ts, i) => i === 3 || (ts.length >= 15 && ts.length <= 18 && ts.every((t, j) => j <= 1 || t - ts[j - 1] > 1 / 30 + 1e-9 || i === 1)))
+    const sameT = big.flat().every(t => Math.abs(t * 30 - Math.round(t * 30)) < 1e-6)
+    assert('clock: a board of more than STAGGER.min live cards takes turns (half rate, current t); a small board, an unordered card and a busy card draw every frame',
+      halved && sameT && big[3].length === 30 && big[big.length - 1].length === 30 && small.every((ts, i) => ts.length === (i === 1 ? 31 : 30)) && big[1].length === big[4].length + 1,
+      big.map(ts => ts.length).join('/') + ' | ' + small.map(ts => ts.length).join('/'))
 
     const qStyle = { shape: 'circle' as const, sizeMin: 0, sizeMax: 1, quantizeSteps: 5 }
     const holes = sampleLayers([{ field: () => 1, tone: 'faint' }, { field: () => .1, tone: 'idle', lattice: 2 }], { cols: 8, rows: 8, pitch: 2 }, qStyle, dot480)

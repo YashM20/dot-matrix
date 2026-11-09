@@ -43,6 +43,11 @@ export interface DotCanvasProps {
   fps?: number
   /** Bump to re-sample a static source (e.g. a clock on the minute). */
   tick?: number
+  /**
+   * The card's position on a board. A live board card with one may take turns with the other board cards on screen
+   * (the master clock's `STAGGER`), except while a transient runs, the visitor is using it, or WebGL2 draws it.
+   */
+  boardOrder?: number
   /** Seconds of live re-sampling after each `tick` bump, with `ctx.since` set (instead of the change dissolve). */
   burst?: number
   renderer?: RenderMode
@@ -165,7 +170,7 @@ type Transient =
   | { kind: 'migrate'; t0: number | null; m: Migration; delay: number; duration: number; back: boolean; out: DotInstance[] }
 
 /** Field → Grid Sampler → Renderer. Picks SVG for sparse static output, Canvas above ~2000 dots or when animated. */
-export function DotCanvas({ field, layers, data, grid, style, theme = dot480, animated, fps, tick = 0, burst, renderer, enter, exit, migrate, change = 'ign', springKeys, onMode, className, controls, onInput, onEngage }: DotCanvasProps) {
+export function DotCanvas({ field, layers, data, grid, style, theme = dot480, animated, fps, tick = 0, boardOrder, burst, renderer, enter, exit, migrate, change = 'ign', springKeys, onMode, className, controls, onInput, onEngage }: DotCanvasProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const svgRef = useRef<HTMLDivElement>(null)
   const reducedMotion = usePrefersReducedMotion()
@@ -426,6 +431,8 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     }
     const sub = {
       fps: fps ?? (motion ? 12 : 30),
+      order: boardOrder,
+      staggerable: () => !webgl && !transientRef.current && !engagedNow(),
       onFrame(t: number, frame: number, sync = false) {
         try { frameAt(t, frame, sync) }
         catch (error) {
@@ -446,7 +453,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     }
     const off = sharedClock().subscribe(sub), unbind = bindLive(sub)
     return () => { off(); unbind(); remote?.dispose(); releaseDotBuffer(local) }
-  }, [live, ready, mode, webgl, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, gap, theme, dataKey, springKey, fps, motion, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [live, ready, mode, webgl, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, gap, theme, dataKey, springKey, fps, motion, width, height, scale, boardOrder]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // C7 display skins: post-raster stage around the surface (src/components/skins/); OLED = no-op wrapper
   const surface = <DisplaySurface mode={mode} dots={dots} running={live || !!transient} fps={transient ? 30 : fps ?? (motion ? 12 : 30)} cols={grid.cols} rows={grid.rows} width={width} height={height} accent={theme.dotActive} tones={{ surface: theme.surface, value: theme.value ?? theme.dotIdle, dotFaint: theme.dotFaint ?? theme.dotIdle }}>{mode === 'canvas'
