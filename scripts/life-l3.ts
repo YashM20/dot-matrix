@@ -34,11 +34,12 @@ const fnvStr = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length
  * others at 0, 1.3, 7.7, 21.2, 33.3. Frames at rest must stay these (L3 gate; goldens unchanged). Re-pinned in CP6
  * when the top-right caption moved from faint to mid, and again when it moved from the 0.72 lattice to the card grid
  * (#225), and when big dots began to ease toward a circle (each dot's roundness is in the hash), and for pond-koi when
- * its DOTS/TYPE switch took the time-of-day caption's place at rest (#269, so a phone can see it); nothing else in the
+ * its DOTS/TYPE switch took the time-of-day caption's place at rest (#269, so a phone can see it) and its chosen
+ * word went to `value` at rest; nothing else in the
  * frames changed.
  */
 const L2_FRAMES: Record<string, string[]> = {
-  'pond-koi': ['285c7bd4', '46908484', '67f30dc2', '51fad6f3', 'afe42f8c'],
+  'pond-koi': ['92bbce18', 'c72c5ea8', 'ebe8fb26', '8bd789df', '4d840dc0'],
   'pond-jelly': ['ab366d7c', '60c52111', 'cc4380bf', '894c0c34', '7ed619a0'],
   'pond-slime': ['0f69b10d', 'ae470b32', '7d5d4160', 'a334b32e', 'bfedb193'],
   'pond-fireflies': ['c9e73652', 'e9e9cd82', '18ad1d40', 'ce3fd4f2', '85c3abda'],
@@ -243,6 +244,11 @@ export async function lifeL3Checks(assert: Assert, pond: () => Promise<typeof im
     assert('pond-koi: the DOTS/TYPE switch is drawn at rest (the label row), hover underlines it, focus marches (still under reduced motion), and the default frame is the pinned one',
       words > 20 && under(rest) === 0 && under(hover) > 0 && marches && holds && fnvStr(key(koiCard, 0, { data: { ...koiCard.defaults } })) === L2_FRAMES['pond-koi'][0],
       `${words} switch dots, underline ${under(rest)} / ${under(hover)}, marches ${marches}, still ${holds}`)
+    // at rest the style that is on reads without a hover: the chosen word in `value`, the other in `idle`
+    const tones = (f: typeof rest) => ['DOTS', 'TYPE'].map(w => [...new Set(f.filter(d => d.y < 7 * 2.25 && d.x > 92 * 2.25 && (w === 'DOTS') === (d.x < 118 * 2.25)).map(d => d.color))].join('/'))
+    const dotsOn = tones(rest), typeOn = tones(frame(koiCard, 0, { data: { ...koiCard.defaults, glyphs: 1 } }))
+    assert('pond-koi: at rest the chosen style is in value and the other in idle (DOTS on and TYPE on)',
+      dotsOn.join() === `${dot480.value},${dot480.dotIdle}` && typeOn.join() === `${dot480.dotIdle},${dot480.value}`, `DOTS on ${dotsOn.join(' · ')}, TYPE on ${typeOn.join(' · ')}`)
   }
 
   // ── L3.5 reduced motion: no input reaches a world ──
