@@ -32,10 +32,8 @@ const PROBES: { name: string; shard: number; args: string[]; env?: Record<string
   // mobile.ts in two halves: its MAKE tabs take up to a minute each on a runner
   { name: 'mobile', shard: 5, args: ['scripts/site/mobile.ts', '$BASE', 'first-load,fps,chrome,tab:make=tune,tab:make=compose,tab:make=code,tab:make=draw,tab:about'] },
   { name: 'mobile-boards', shard: 13, args: ['scripts/site/mobile.ts', '$BASE', boardIds.join(',')] },
-  // touch policy, not WebGL: without the runner's SwiftShader flag the lens card draws on canvas, as it does in a Chrome
-  // with no GPU. With it, the lens's WebGL pass in software takes the page to about 2 frames a second and stalls input.
-  // Eight minutes: a slow runner still takes minutes over the lens checks
-  { name: 'materials', shard: 6, args: ['scripts/materials-browser.ts'], env: { CHROME_FLAGS: '' }, timeoutMin: 8 },
+  // the mat-lens checks alone take minutes on a runner (its frames are slow there): materials gets 8 minutes
+  { name: 'materials', shard: 6, args: ['scripts/materials-browser.ts'], timeoutMin: 8 },
   { name: 'audio', shard: 7, args: ['scripts/audio-chrome.ts'], env: { URL: '$BASE' } },
   { name: 'theme-boot', shard: 7, args: ['scripts/site/theme-boot.ts'] },
   { name: 'light', shard: 7, args: ['scripts/light-browser.ts'] },

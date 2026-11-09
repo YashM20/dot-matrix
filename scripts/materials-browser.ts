@@ -57,8 +57,8 @@ const EVLOG = `(() => { if (window.__evlog) return; const l = window.__evlog = [
   addEventListener('scroll', () => { window.__lastScroll = performance.now(); const e = l.at(-1); if (e?.[0] === 'scroll') e[2] = at(); else l.push(['scroll', at(), at()]) }, { capture: true, passive: true })
 })()`
 const evlog = (p: Page) => p.js<string>(`'now ' + Math.round(performance.now()) + ' f' + window.__frames + ': ' + (window.__evlog ?? []).slice(-10).map(e => Array.isArray(e) ? 'scroll ' + e[1] + '..' + e[2] : e).join(', ')`)
-/** Records each change of a workshop world's mode, with the frame count, for 1.5 s (read with `modes()`). */
-const watchModes = (p: Page, id: string) => p.js(`(() => { const l = window.__modes = []; let last = ''; const end = performance.now() + 1500
+/** Records each change of a workshop world's mode, with the frame count, for `ms` (read with `modes()`). */
+const watchModes = (p: Page, id: string, ms = 1500) => p.js(`(() => { const l = window.__modes = []; let last = ''; const end = performance.now() + ${ms}
   const f = () => { const m = String(globalThis.__workshop?.mode('${id}')); if (m !== last) { l.push(m + ' f' + window.__frames); last = m } if (performance.now() < end) requestAnimationFrame(f) }; f() })()`)
 const modes = (p: Page) => p.js<string>(`'modes ' + (window.__modes ?? []).join(' > ')`)
 /** The card in the middle of the view, once the page has stopped scrolling (a fling from the last swipe included). */
@@ -220,6 +220,7 @@ try {
     }
     {
       const [x0, y0] = await at(q, s.id, ...s.drag(0)), s0 = await q.js<number>('scrollY'), before = await ws<number>(s.dragDid)
+      await watchModes(q, s.id, 8000)
       await q.cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: touchPt(x0, y0) })
       await sleep(450)
       const on = await engagedOf(q, s.id)
@@ -234,7 +235,8 @@ try {
       await q.touch(Array.from({ length: 14 }, (_, i) => [[x0 + i * 6, y0]] as [number, number][]))
       await sleep(300)
       const after = await ws<number>(s.id === 'mat-thread' ? 'swing()' : s.dragDid), s1 = await q.js<number>('scrollY')
-      check(`${s.id}: a horizontal drag is claimed at once without a hold`, after !== before && Math.abs(s1 - s0) < 1, `${before.toFixed(2)} → ${after.toFixed(2)}, scroll Δ ${(s1 - s0).toFixed(0)} px`)
+      const ok = after !== before && Math.abs(s1 - s0) < 1
+      check(`${s.id}: a horizontal drag is claimed at once without a hold`, ok, `${before.toFixed(2)} → ${after.toFixed(2)}, scroll Δ ${(s1 - s0).toFixed(0)} px${ok ? '' : `; ${await ws<string>(`state('${s.id}')`)}; since the hold ${await modes(q)}; ${await evlog(q)}`}`)
     }
   }
   {

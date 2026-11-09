@@ -447,6 +447,8 @@ if (probing) {
   const worlds: Record<string, () => World> = { 'mat-sand': sandWorld, 'mat-mercury': mercuryWorld, 'mat-thread': threadWorld }
   ;(globalThis as { __workshop?: unknown }).__workshop = {
     mode: (id: string) => worlds[id]?.().mode,
+    /** The world's mode, its NaN resets and its dropped steps, as one line for a failed check. */
+    state: (id: string) => { const w = worlds[id]?.(); return w ? `${w.mode}, resets ${w.resets}, dropped ${w.dropped}, live steps ${w.liveSteps}` : 'none' },
     /** Dropped stones on the sand now. */
     stones: () => { const w = sandWorld(); if (w.mode === 'pristine') return 0; let k = 0; for (let q = 0; q < SAND.slots; q++) if (w.live[S_ST + 3 * q + 2] > 0) k++; return k },
     /** Sand cells moved by more than .05 from the garden. */
