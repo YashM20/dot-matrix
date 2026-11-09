@@ -29,7 +29,7 @@ export const releases: Release[] = [
   },
   {
     version: '0.15', date: '2026-11-04', title: 'Dash, faces, type and watches',
-    summary: 'Six new boards (a car dash, lit faces, kinetic type, micro motion, dot charts and watch faces), plus fractals, 3D scenes and new cards on squares, pond and workshop.',
+    summary: 'Six new boards (a car dash, lit faces, kinetic type, micro motion, dot charts and watch faces), plus fractals and 3D scenes, and new cards on older boards.',
     changes: [
       { kind: 'new', text: 'CAR: nine dash and EV cards driven by one 30 second lap, until you turn a control yourself.' },
       { kind: 'new', text: 'FACES: four lit halftone heads whose eyes follow your pointer.' },
@@ -38,7 +38,7 @@ export const releases: Release[] = [
       { kind: 'new', text: 'CHARTS: seven dot charts that grow in, morph between datasets and read out the point nearest your pointer.' },
       { kind: 'new', text: 'WATCH: eight smartwatch faces, with the moon phase and sun times worked out on your device.' },
       { kind: 'new', text: 'OLDSCHOOL demo effects, FRACTALS, and SCENES: 3D shapes traced into dots.' },
-      { kind: 'new', text: 'New cards: aperiodic hat and Ammann floors, a sandpile and ASCII art on squares, plankton and Turing skin in the pond, and lightning, erosion, frost, kintsugi, mud and folded paper in the workshop.' },
+      { kind: 'new', text: 'New cards: aperiodic hat and Ammann floors, a sandpile and ASCII art on squares, plankton and Turing skin in the pond, and six new workshop materials, from lightning to folded paper.' },
       { kind: 'improved', text: 'CONTRAST: MORE in THEME raises text and line contrast, and a custom theme can be shared as a link.' },
       { kind: 'fixed', text: 'The desktop header hides as you scroll down, and the footer no longer spills past the page on narrow screens.' },
     ],
