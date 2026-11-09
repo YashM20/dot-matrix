@@ -73,8 +73,9 @@ const tag = (x: number, y: number, text: string) => [layer(T.box(x, y, tagW(text
 const num = (n: string) => layer(T.text(n, 0, 0), 'active')
 /** The ⁘ menu glyph: two columns of three dots with two small dots between the rows. */
 const menuGlyph = [layer(T.dots([[137, .5], [142, .5], [137, 3.5], [142, 3.5], [137, 6.5], [142, 6.5]], 1.35), 'idle'), layer(T.dots([[139.5, 2], [139.5, 5]], 1), 'idle')]
-const BOLT = ['...###', '..###.', '.###..', '######', '..###.', '.###..', '.##...', '##....', '#.....']
-const boltGlyph = [layer(T.sprite(BOLT, 137, 0), 'idle')]
+// the bolt as sites 1.5 apart, so its dots read like the menu glyph's instead of a fine-grid cluster
+const BOLT = ['..##', '.##.', '####', '.##.', '##..', '#...']
+const boltGlyph = [layer(T.dots(BOLT.flatMap((r, j) => [...r].flatMap((c, i): Pt[] => c === '#' ? [[137.5 + i * 1.5, .5 + j * 1.5]] : [])), 1.2), 'idle')]
 const waveGlyph = [layer(T.dots([[131, 3]], 1.3), 'idle'), layer(T.dotLine(134, 1.5, 134, 4.5, { spacing: 1, size: 1.1 }), 'idle'), layer(T.dotLine(137, 0, 137, 6, { spacing: 1, size: 1.1 }), 'idle'), layer(T.dotLine(140, 1.5, 140, 4.5, { spacing: 1, size: 1.1 }), 'idle'), layer(T.dots([[143, 3]], 1.3), 'idle')]
 
 // ── 01 thermal monitor ──────────────────────────────────────────────────────────────────────────
@@ -188,7 +189,7 @@ const car = (x: number, y: number) => {
   // rounded profile h(d): the surface turns away from us over BEVEL cells, so the normal tilts out at the edge
   const t = clamp(d / BEVEL), s = Math.min(4, (1 - t) / Math.sqrt(Math.max(.06, 1 - (1 - t) ** 2))), z = BEVEL * Math.sqrt(1 - (1 - t) ** 2)
   // the side panel bulges: tilted up above the shoulder crease, tucking under toward the sill
-  const crease = 76 - (x * 6) / 143, bulge = y < crease ? -.75 * clamp((crease - y) / 5) : .9 * clamp((y - crease) / (SILL - crease)) ** 1.5
+  const crease = 76 - (x * 6) / 143, bulge = y < crease ? -.4 * clamp((crease - y) / 5) : .9 * clamp((y - crease) / (SILL - crease)) ** 1.5
   const glass = x > 49 && x < 140 && y < 64.5
   const nx = -s * gx, ny = -s * gy + bulge, [diffuse, spec] = lampLight(x, y, z, nx, ny, 1, glass ? 60 : 18)
   // a dim sky fill from straight above keeps the whole roofline readable into the dark
@@ -241,12 +242,12 @@ export const evCharge: WidgetPreset = {
 // 16 buckets over the day: total tokens (grey) with the consumed share in red on top of it.
 const TOTAL = [.2, .14, .28, .14, .33, .44, .5, .22, .26, .54, .17, .33, .76, .43, .21, .43]
 const USED = [0, 0, 0, 0, .09, .28, .28, .22, .19, .27, .17, .17, .25, .43, .21, .43]
-const CHART = { x0: 72, gap: 3.8, base: 119, height: 76, size: 1.4, pitch: 1.5 }
+const CHART = { x0: 72, gap: 3.8, base: 119, height: 76, pitch: 1.5 }
 export const codexUsage: WidgetPreset = {
   id: 'codex-usage', name: '03 Codex Usage', label: '03  CODEX USAGE', group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => {
-    // each bar is two dot columns wide, like the reference's chunky bars
-    const bars = (v: number[]) => [0, CHART.pitch].map(dx => T.dotBars(v, CHART.x0 + dx, CHART.base, { gap: CHART.gap, pitch: CHART.pitch, height: CHART.height, size: CHART.size }))
+    // each bar is one column of big dots with a gap between them (two fine columns read as a solid block)
+    const bars = (v: number[]) => [T.dotBars(v, CHART.x0 + CHART.pitch / 2, CHART.base, { gap: CHART.gap, pitch: 2.6, height: CHART.height, size: 2.1 })]
     return [
       num('03'), ...menuGlyph,
       layer(cap('HENRY / CODEX', 0, 27), 'active'),

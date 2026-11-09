@@ -78,34 +78,22 @@ function face(str: string, col: number, row: number, opts: FaceOptions): Lattice
   return g.at(f)
 }
 
-// ── pixel-art icons on the card pitch ───────────────────────────────────────
-interface Pen { line(points: Pt[], t?: number): void; ring(cx: number, cy: number, r: number): void; fill(test: (x: number, y: number) => boolean): void }
-function art(w: number, h: number, draw: (pen: Pen) => void): string[] {
-  const g = Array.from({ length: h }, () => new Array<string>(w).fill('.'))
-  const set = (x: number, y: number) => { if (x >= 0 && y >= 0 && x < w && y < h) g[y][x] = '#' }
-  draw({
-    line: (points, t = 1) => points.slice(1).forEach(([x1, y1], i) => {
-      const [x0, y0] = points[i], n = Math.max(1, Math.round(Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0))))
-      for (let s = 0; s <= n; s++) for (let a = 0; a < t; a++) for (let b = 0; b < t; b++) set(Math.round(x0 + ((x1 - x0) * s) / n) + a, Math.round(y0 + ((y1 - y0) * s) / n) + b)
-    }),
-    ring: (cx, cy, r) => { for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (Math.abs(Math.hypot(x - cx, y - cy) - r) < .5) set(x, y) },
-    fill: test => { for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (test(x, y)) set(x, y) },
-  })
-  return g.map(r => r.join(''))
-}
 const flipX = (rows: string[]) => rows.map(r => [...r].reverse().join(''))
 /** The pad icons: hand-drawn bitmaps on a 2-cell lattice (big dots, one-dot strokes, fills of a few dots), centred in their pad. */
 const ICON_K = 2
-const UNDO = ['..#.....', '.#......', '#######.', '.#.....#', '..#....#', '.......#', '..######']
+// undo: a filled head on a shaft that curves round and back; redo is its mirror
+const UNDO = ['..#......', '.##......', '########.', '.##.....#', '..#.....#', '........#', '.......#.', '..#####..']
 const ARROW_UP = ['...#...', '..###..', '.#.#.#.', '#..#..#', '...#...', '...#...', '...#...', '...#...']
 const ICONS: Record<string, string[]> = {
   play: ['#...', '##..', '###.', '####', '###.', '##..', '#...'],
   stop: ['######', '######', '######', '######', '######', '######'],
   undo: UNDO, redo: flipX(UNDO),
-  node: ['..###..', '..#.#..', '..###..', '...#...', '..#.#..', '###.###', '#.#.#.#', '###.###'],
+  // branch: a trunk between two round nodes, a third node curving into it
+  node: ['.#....#.', '###..###', '.#....#.', '.#....#.', '.#...#..', '.#..#...', '.#.#....', '###.....', '.#......'],
   terminal: ['#.......', '.#......', '..#.....', '...#....', '..#.....', '.#......', '#...####'],
   mic: ['..###..', '..###..', '#.###.#', '#.###.#', '.#...#.', '..###..', '...#...', '.#####.'],
-  globe: ['..###..', '.#.#.#.', '#..#..#', '#######', '#..#..#', '.#.#.#.', '..###..'],
+  // globe: a round rim, the equator and one curved meridian
+  globe: ['...###...', '.##.#.##.', '#..#.#..#', '#..#.#..#', '#########', '#..#.#..#', '#..#.#..#', '.##.#.##.', '...###...'],
   list: ['#.######', '........', '........', '#.######', '........', '........', '#.######'],
   code: ['.....#...', '.....#...', '.#..#..#.', '#...#...#', '.#..#..#.', '...#.....', '...#.....'],
   check: ['.......#', '......#.', '.....#..', '#...#...', '.#.#....', '..#.....'],
@@ -214,7 +202,8 @@ export const recorder: WidgetPreset = {
       layer(tint(dotWave(bars, x(0), 91, 5.15, 2.5, 2.3), .8), 'value'),
       layer(dotWave([bars[head]], x(head), 91, 0, 2.5, 2.3), 'value'),
       layer(T.dots([[x(head), 101.5]], 5.5), 'active'),
-      layer(face('BUILD THE SMALLER ONE.', 72.5, 125, { lattice: .7, align: 'center', rows: 16 })),
+      // plain 5×7, one dot per glyph pixel: the condensed face below lattice 1 drew two-dot rails
+      layer(T.big('BUILD THE SMALLER ONE.', 72, 127, { lattice: 1.05, align: 'center' })),
     ]
   },
 }
@@ -223,10 +212,12 @@ export const radio: WidgetPreset = {
   id: 'radio', name: 'Radio', group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     layer(face('CH 07', 76.5, 12.5, { lattice: 1.95, align: 'center', space: 8 })),
-    layer(T.dotRing(75, 84, 36, { spacing: 5.4, size: 3.6 }), 'idle'),
+    // the ring leaves out the site under the red marker
+    layer(T.knockout(T.dotRing(75, 84, 36, { spacing: 5.4, size: 3.6 }), [[75, 48]], 3), 'idle'),
     layer(T.dots([[75, 48]], 7), 'active'),
-    layer(face('HOLD', 75, 78.5, { lattice: 1.08, align: 'center' })),
-    layer(face('READY', 76, 128.5, { lattice: .95, align: 'center' })),
+    // plain 5×7 on a 2-cell lattice: one bigger dot per glyph pixel instead of two-dot rails of small dots
+    layer(T.big('HOLD', 75, 77, { lattice: 2, align: 'center' })),
+    layer(T.big('READY', 76, 128, { lattice: 1.9, align: 'center' })),
   ],
 }
 
@@ -239,7 +230,8 @@ export const interpreter: WidgetPreset = {
       layer(face('EN', 8.5, 16.5, { lattice: 2.3 })), layer(face('ZH', 91, 16.5, { lattice: 2.3, gap: 3 })),
       layer(T.dots(ARROW, 2)),
       layer(tint(dotWave(said, 3, 65.5, 5.1, 2.2, 2.1), .82), 'value'),
-      layer(T.hrule(0, 82, 144, 3), 'idle'), layer(T.hrule(1, 82, 143, 3), 'idle'),
+      // one divider at half the waveform pitch, its dots under every other bar
+      layer(T.dotLine(.45, 82, 143, 82, { spacing: 2.55, size: 1.2 }), 'idle'),
       layer(dotWave(heard, 3, 98, 5.1, 2.2, 2.1), 'value'),
       layer(T.cjk('开始吧', 32, 119, 23)),
     ]
@@ -372,11 +364,13 @@ export const level03: WidgetPreset = {
   },
 }
 
-const CHECK_MARK = art(12, 10, p => p.line([[0, 4], [4, 8], [10, 1]], 2))
+/** The done check: one row of dots along the stroke at the ring's pitch, instead of a two-cell stroke on the card grid. */
+const check = (row: number) => T.dotPath([[18.5, row + .5], [22, row + 4], [29, row - 3.5]], 2.4, 1.9)
 const item = (row: number, text: string, state: 'done' | 'current' | 'todo') => [
   layer(tint(T.dotRing(23.5, row, 9.5, { spacing: 2.4, size: 1.9 }), .72), 'value'),
-  ...(state === 'done' ? [layer(T.sprite(CHECK_MARK, 18, Math.round(row - 5)))] : state === 'current' ? [layer(T.dots([[23.5, row]], 6.5), 'active')] : []),
-  layer(face(text, 47.5, row - 6, { lattice: .93 })),
+  ...(state === 'done' ? [layer(check(row))] : state === 'current' ? [layer(T.dots([[23.5, row]], 6.5), 'active')] : []),
+  // plain 5×7 on a 1.8 lattice, one dot per glyph pixel
+  layer(T.big(text, 47.5, row - 6, { lattice: 1.8 })),
 ]
 export const shopping: WidgetPreset = {
   id: 'shopping', name: 'Shopping', group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle,

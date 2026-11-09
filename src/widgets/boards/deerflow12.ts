@@ -187,7 +187,8 @@ export const bioSensor: WidgetPreset = {
       layer(T.dotRing(BIO[0], BIO[1], 33, inner), 'idle'),
       layer(T.dotRing(BIO[0], BIO[1], 33, { ...inner, start: deg(62), sweep: deg(190) })),
       layer(T.dotRing(BIO[0], BIO[1], 33, { ...inner, start: 0, sweep: TAU * data.moisture }), 'active'),
-      layer(path(LEAF.outline, 2, 1.35, true)), layer(path(LEAF.rib, 2.6, 1.1), 'idle'), layer(path(LEAF.stem, 2, 1.35)),
+      // the rib under the outline; outline and stem as one site set with a 1.7-cell gap, so the sharp tip and the stem join keep one dot each
+      layer(path(LEAF.rib, 2.6, 1.1), 'idle'), layer(T.dots([...path(LEAF.outline, 2, 1.35, true).sites ?? [], ...path(LEAF.stem, 2, 1.35).sites ?? []], 1.35, undefined, 1.7)),
       layer(T.text('MOISTURE', 0, 110), 'idle'), layer(T.big('64%', 0, 121, { lattice: 1.6 })),
       layer(T.text('LIGHT', 106, 110), 'idle'), layer(T.big('420', 106, 121, { lattice: 1.6 })), layer(T.text('LUX', 106, 135), 'idle'),
     ]
@@ -218,11 +219,12 @@ export const retailAnalytics: WidgetPreset = {
   id: 'retail-analytics', name: '09 Retail Analytics', group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
   defaults: { peak: 56 },
   layers: ({ data }) => {
-    const pts = SALES.map(([x, y], i) => [x, i === PEAK ? 77 - data.peak * .36 : y] as Pt), [px, py] = pts[PEAK]
+    const pts = SALES.map(([x, y], i) => [x, i === PEAK ? 77 - data.peak * .36 : y] as Pt), [px, py] = pts[PEAK], knots = T.dots(SALES_KNOTS.map(i => pts[i]), 2.2)
     return [
       layer(T.big('1.28K', 0, 18, { lattice: 2 })), layer(T.text('LIVE', 140, 24, { align: 'right' }), 'active'),
       layer(T.text('VISITORS', 0, 44), 'idle'),
-      layer(path(pts, 3.3, 1.5)), layer(T.dots(SALES_KNOTS.map(i => pts[i]), 2.2)),
+      // the line clears the knots and the peak ring, so no knot or ring dot sits on a line dot
+      layer(T.knockout(T.knockout(path(pts, 3.3, 1.5), knots, 2.9), [[px, py]], 6.4)), layer(knots),
       layer(T.dotRing(px, py, 4.6, { spacing: 1, size: 1.1 }), 'active'), layer(T.dots([[px, py]], 3.6), 'active'),
       layer(T.text('SALES', 4, 126), 'idle'), layer(T.big('+$23%', 143, 123, { ...VALUE, align: 'right' }), 'active'),
     ]
