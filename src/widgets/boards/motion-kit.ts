@@ -41,7 +41,7 @@ export const spriteAt = (rows: string[], col: number, row: number, k: number): L
 /** The first `n` columns of a sprite (a mark drawing on from left to right). */
 export const cols = (rows: string[], n: number) => rows.map(r => [...r].map((ch, i) => (i < n ? ch : '.')).join(''))
 /** Hero number on a smooth lattice (10×14 glyphs per character), left-aligned. */
-export const hero = (s: string, x: number, top: number, lattice = 2.5) => T.big(s, x, top, { lattice, smooth: true })
+export const hero = (s: string, x: number, top: number, lattice = 2.5) => T.big(s, x, top, { lattice, smooth: true, face: 'fine' })
 /** Width in cells of hero text on `lattice`. */
 export const heroW = (s: string, lattice = 2.5) => ([...s].length * 12 - 2) * lattice
 
