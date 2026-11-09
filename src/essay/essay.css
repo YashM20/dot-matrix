@@ -4,6 +4,7 @@
    attributes before first paint (scripts/site/theme.ts --write); without it the page is dark_signal. */
 @import '../tokens.css';
 @import '../site/theme/themes.css';
+@import '../site/skip-link.css';
 
 /* the essay's own voice: system prose face, a wider mono stack, a fixed prose measure (color-scheme: themes.css) */
 :root {
@@ -160,6 +161,9 @@ em { color: var(--value) }
 .site-nav a.kicker { margin: 0; color: var(--mute); letter-spacing: .18em }
 .site-nav a { font: 500 var(--fs-label-12) var(--mono); letter-spacing: .16em; color: var(--label); text-decoration: none; margin-left: var(--space-4) }
 .site-nav a:hover, .site-nav a:focus-visible, .site-nav a:active { color: var(--value) }
+/* the nav sits outside <main>, above the page's hero (#187): it takes the hero's top padding, so nothing moves */
+.essay > .site-nav { padding-top: var(--space-5) }
+.essay > .site-nav + main > .hero:first-child { padding-top: 0 }
 
 /* touch: every chrome link (site nav, contents, post line, more posts, footer) is a --tap target; the post line
    and more posts are the blog shell's (src/blog/blog.css), which builds on this file */

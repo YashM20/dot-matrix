@@ -7,7 +7,7 @@
  */
 import type { CellBounds, GridConfig } from '../engine/types'
 import { createRaster, type Raster } from '../engine/raster'
-import { acquireCamera, releaseCamera } from './stream'
+import { acquireCamera, releaseCamera, streamEnded } from './stream'
 
 export type CameraStatus = 'idle' | 'starting' | 'live' | 'denied' | 'error'
 export interface CameraCapture {
@@ -78,6 +78,13 @@ export function createCamera(grid: GridConfig, box: CellBounds = [0, 0, grid.col
       if (status !== 'denied' && status !== 'error') set('idle')
     },
     grab() {
+      // the device went away (unplugged, permission revoked): not live any more, so the card says so and a tap asks again.
+      // Heard after this frame: a grab can run while React renders the card
+      if (status === 'live' && stream && streamEnded(stream)) {
+        stream = null; releaseCamera(); video?.pause(); if (video) video.srcObject = null
+        status = 'error'; queueMicrotask(() => { if (status === 'error') opts.onStatus?.('error') })
+        return false
+      }
       if (status !== 'live' || !video || video.readyState < 2 || video.currentTime === lastTime) return false
       const g = surface(), vw = video.videoWidth, vh = video.videoHeight
       if (!g || !vw || !vh) return false

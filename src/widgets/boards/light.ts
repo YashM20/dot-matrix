@@ -246,7 +246,13 @@ function velvet(light: Light): Layer[] {
 export const lightMatte = materialCard('light-matte', 'Matte', 'LAMBERT', ctx => matte(BALL_N, boardLight(ctx), AT))
 export const lightGloss = materialCard('light-gloss', 'Gloss', '+2 STEPS', ctx => lacquer(boardLight(ctx)))
 export const lightGlass = materialCard('light-glass', 'Glass', 'REFRACT', ctx => glass(BALL_N, boardLight(ctx), RULES, AT).layers)
-export const lightEmissive = materialCard('light-emissive', 'Emissive', 'BLOOM', () => emissive(BALL_LIGHT, { ...AT, radius: 4.5, lift: .7, coreTone: 'value', haloBands: [[.1, .45, 'faint'], [.45, 2, 'mid']] }).layers, false)
+/** The halo stops at lattice row 61 (card row 122.5): a clear moat above the caption at row 126. */
+const aboveCaption = (l: Layer): Layer => {
+  const f = l.field, g: Field = (u, v) => (Math.round(v * (LG.rows - 1)) > 61 ? 0 : f(u, v))
+  g.bounds = f.bounds
+  return { ...l, field: g }
+}
+export const lightEmissive = materialCard('light-emissive', 'Emissive', 'BLOOM', () => emissive(BALL_LIGHT, { ...AT, radius: 4.5, lift: .7, coreTone: 'value', haloBands: [[.1, .45, 'faint'], [.45, 2, 'mid']] }).layers.map(aboveCaption), false)
 export const lightMetal = materialCard('light-metal', 'Metal', 'ENVIRONMENT', ctx => metal(BALL_N, boardLight(ctx), AT).layers)
 export const lightFabric = materialCard('light-fabric', 'Fabric', 'BAYER 4', ctx => velvet(boardLight(ctx)))
 

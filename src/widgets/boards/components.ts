@@ -8,7 +8,7 @@
 import type { Control } from '../../engine/context'
 import { clamp } from '../../engine/math'
 import type { Layer, Tone } from '../../engine/types'
-import { TAU, TILE, dim, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { TAU, TILE, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
 import { OUTLINE, PRESS, at, circle, dimmed, glow, marching, rr, rrect, stadium, states, ui } from './components-kit'
 // the primitives live in components-kit.ts; other boards import them from there
 export { OUTLINE, PRESS, at, circle, dimmed, glow, marching, rr, rrect, stadium, states, ui, type Shape, type UiState } from './components-kit'
@@ -104,7 +104,12 @@ const heart = (cx: number, cy: number, s = .58, spacing = 1.2): Pt[] => {
   return sites
 }
 /** The heart filled: the same curve at shrinking scales, so the fill stays on dot sites. */
-const heartFill = (cx: number, cy: number): Pt[] => [.46, .34, .22, .1].flatMap(s => heart(cx, cy, s, 1.6))
+const heartFill = (cx: number, cy: number): Pt[] => [.46, .34, .22, .1].flatMap(s => heart(cx, cy, s, 2))
+/** Plus (or minus) arms `half` cells long as sites at the button ring's pitch and size, not fine card-pitch rules. */
+const cross = (cx: number, cy: number, half: number, vertical = true): LatticeField => {
+  const n = Math.round(half / 2.6), arm = Array.from({ length: 2 * n + 1 }, (_, i) => (i - n) * 2.6)
+  return T.dots([...arm.map((d): Pt => [cx + d, cy]), ...(vertical ? arm.map((d): Pt => [cx, cy + d]) : [])], 1.3)
+}
 export const iconButtonCard: WidgetPreset = {
   id: 'ui-icon-button', name: 'Icon Button', group: 'icon', chrome: 'dots', grid: TILE, style,
   defaults: { add: 0, like: 0, more: 0 },
@@ -119,9 +124,9 @@ export const iconButtonCard: WidgetPreset = {
     const v = (key: string) => (ui(ctx, key).pressed ? PRESS : 1)
     return [
       ...BTN.xs.map((x, i) => layer(at(T.dotRing(x, y, BTN.r, { spacing: 2.6, size: 1.3 }), v(['add', 'like', 'more'][i])), 'value')),
-      layer(T.hrule(a - 8, y, 17, 1, v('add'))), layer(T.vrule(a, y - 8, 17, 1, v('add'))),
-      layer(at(T.dots(heart(b, y), 1.1), v('like'))),
-      ...(liked ? [layer(at(T.dots(heartFill(b, y), 1.1), v('like')))] : []),
+      layer(at(cross(a, y, 7.8), v('add'))),
+      layer(at(T.dots(heart(b, y, .58, 2), 1.2), v('like'))),
+      ...(liked ? [layer(at(T.dots(heartFill(b, y), 1.2), v('like')))] : []),
       layer(at(T.dots([[c - 6, y], [c, y], [c + 6, y]], 3.4), v('more'))),
       ...(['add', 'like', 'more'] as const).flatMap((k, i) => states(ui(ctx, k), ctx.t, circle(BTN.xs[i], y, BTN.r), circle(BTN.xs[i], y, BTN.r), 3)),
     ]
@@ -236,8 +241,7 @@ export const stepperCard: WidgetPreset = {
       const x = STEPPER.xs[i], tone: Tone = (i ? n >= max : n <= min) ? 'mid' : 'value', v = s.pressed && over(i) ? PRESS : 1
       return [
         layer(at(T.dotRing(x, y, r, { spacing: 2.6, size: 1.3 }), v), tone),
-        layer(dim(T.hrule(x - 7, y, 15), v), tone),
-        ...(i ? [layer(dim(T.vrule(x, y - 7, 15), v), tone)] : []),
+        layer(at(cross(x, y, 7.8, i === 1), v), tone),
         ...(s.hover && over(i) ? glow(circle(x, y, r)) : []),
       ]
     }
@@ -427,7 +431,8 @@ export const textFieldCard: WidgetPreset = {
   controls: [{ key: 'len', kind: 'stepper', min: 0, max: FIELD.text.length, step: 1, box: [FIELD.x, FIELD.y, FIELD.w, FIELD.h], label: 'Callsign', valueText: v => FIELD.text.slice(0, Math.round(v)) || 'empty' }],
   layers: ctx => {
     const s = ui(ctx, 'len'), len = int(ctx.data.len, 0, FIELD.text.length), cy = FIELD.y + FIELD.h / 2, tx = FIELD.x + FIELD.pad
-    const box = rr(FIELD.x, FIELD.y, FIELD.w, FIELD.h, FIELD.r), cx = tx + len * 6 * BODY.lattice + 1
+    // the caret sits two cells past the last glyph column, so it never touches it
+    const box = rr(FIELD.x, FIELD.y, FIELD.w, FIELD.h, FIELD.r), cx = tx + len * 6 * BODY.lattice + 2
     const caret = frac(ctx.t / FIELD.blink) < .5
     return [
       layer(T.text('CALLSIGN', FIELD.x + 2, FIELD.y - 14), 'idle'),

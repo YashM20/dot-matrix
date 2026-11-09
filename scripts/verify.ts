@@ -33,6 +33,7 @@ import { coreChecks } from './verify/core'
 import { engineChecks } from './verify/engine'
 import { uxChecks } from './verify/ux'
 import { flagChecks } from './verify/flags'
+import { cardChecks } from './verify/cards'
 
 // timing checks warn unless DOT_TIMING=strict (scripts/lib/check.ts, docs/CHECKPOINTS.md, #75)
 const { assert, done } = checker()
@@ -54,6 +55,11 @@ await liveChecks(assert)
 halftoneChecks(assert)
 // C6) hand tracker on the synthetic camera: pointer error, pinch, cost, no ghost from a still face (scripts/vision.ts)
 visionChecks(assert)
+// media: the shared camera stream and a camera card when the device goes away (scripts/media.ts)
+{
+  const { mediaChecks } = await import('./media')
+  await mediaChecks(assert)
+}
 // P5-C) device profiles, toDevice, display simulators, cross-tab clock sync (scripts/device.ts)
 deviceChecks(assert)
 // P5-D) export: APNG / GIF encoders, WebM / MP4 muxers, plotter SVG (scripts/export.ts)
@@ -173,6 +179,8 @@ goldenKeyChecks(assert)
 
 // UX U1, U3) board picker groups, labels and old paths; views and canonical URLs (scripts/verify/ux.ts)
 uxChecks(assert)
+// CP6 wave 3) cards fixed at dot level keep every dot clear of its neighbours (scripts/verify/cards.ts)
+cardChecks(assert)
 // FLAGS (#144, #145) every release flag documented; the URL sets none; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
 await flagChecks(assert)
 // LIKES (#169) the likes API on the in-memory store: limits, holds, bursts, cookies, forget, budget, the function bundle (scripts/likes/checks.ts)

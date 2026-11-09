@@ -8,6 +8,7 @@ import { Figure } from '../essay/ui/Lazy'
 import { SiteFoot, SiteNav } from '../essay/ui/SiteNav'
 import { EXPERIMENTS } from './experiments'
 import { scrollToHash } from '../site/safe-url'
+import { SkipLink } from '../site/SkipLink'
 
 /** Each piece's figure, keyed by slug: its chunk, the box it holds before it mounts, and its caption. */
 const FIGS: Record<string, { body: ComponentType; minHeight: number; caption: ReactNode }> = {
@@ -24,29 +25,33 @@ export function Lab() {
   // a link to one piece (`/lab/#pipeline`): the sections exist on first render, the figure mounts once it is near
   useEffect(() => scrollToHash(), [])
   return (
-    <main className="essay lab">
-      <header className="hero">
-        <SiteNav here="lab" />
-        <DotTitle text="Lab" level={1} max={10} smooth />
-        <p className="lede">
-          Interactive pieces that sit outside the boards. Each one takes a single part of the engine and lets you play with
-          it. More are on the way, and some will draw with things other than dots.
-        </p>
-        <nav className="toc" aria-label="Pieces">
-          <ol>{EXPERIMENTS.map((x, k) => <li key={x.slug}><a href={`#${x.slug}`}><span>{pad(k + 1)}</span>{x.title}</a></li>)}</ol>
-        </nav>
-      </header>
-      {EXPERIMENTS.map((x, k) => {
-        const f = FIGS[x.slug]
-        return (
-          <section key={x.slug} className="sec" id={x.slug} aria-labelledby={`${x.slug}-h`}>
-            <DotTitle text={x.title} num={pad(k + 1)} id={`${x.slug}-h`} />
-            <p>{x.dek}</p>
-            {f && <Figure id={x.slug} body={f.body} minHeight={f.minHeight} caption={f.caption} wide />}
-          </section>
-        )
-      })}
+    // the nav and footer sit outside <main>, after SKIP TO CONTENT, as on the blog (#187)
+    <div className="essay lab">
+      <SkipLink />
+      <SiteNav here="lab" />
+      <main id="main" tabIndex={-1}>
+        <header className="hero">
+          <DotTitle text="Lab" level={1} max={10} smooth />
+          <p className="lede">
+            Interactive pieces that sit outside the boards. Each one takes a single part of the engine and lets you play with
+            it. More are on the way, and some will draw with things other than dots.
+          </p>
+          <nav className="toc" aria-label="Pieces">
+            <ol>{EXPERIMENTS.map((x, k) => <li key={x.slug}><a href={`#${x.slug}`}><span>{pad(k + 1)}</span>{x.title}</a></li>)}</ol>
+          </nav>
+        </header>
+        {EXPERIMENTS.map((x, k) => {
+          const f = FIGS[x.slug]
+          return (
+            <section key={x.slug} className="sec" id={x.slug} aria-labelledby={`${x.slug}-h`}>
+              <DotTitle text={x.title} num={pad(k + 1)} id={`${x.slug}-h`} />
+              <p>{x.dek}</p>
+              {f && <Figure id={x.slug} body={f.body} minHeight={f.minHeight} caption={f.caption} wide />}
+            </section>
+          )
+        })}
+      </main>
       <SiteFoot name="LAB" />
-    </main>
+    </div>
   )
 }

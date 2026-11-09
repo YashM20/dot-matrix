@@ -95,8 +95,8 @@ const SHOTS: Shot[] = [
   { name: 'essay', path: 'blog/dot-matrix-essay/', ready: `${STATIC('.hero .dot-title')} && !!document.querySelector('.hero canvas, .hero .dot-svg')`, full: true },
   { name: 'post', path: 'blog/build-your-own-dot-engine/', ready: `${STATIC('.post .sec .dot-title')} && !!document.querySelector('.hero canvas, .hero .dot-svg')`, full: true },
   // the SPA's /privacy and /terms redirect to these without the query; Vercel rewrites to the same files
-  { name: 'privacy', path: 'privacy.html', ready: STATIC('main.legal'), full: true },
-  { name: 'terms', path: 'terms.html', ready: STATIC('main.legal'), full: true },
+  { name: 'privacy', path: 'privacy.html', ready: STATIC('.legal > main'), full: true },
+  { name: 'terms', path: 'terms.html', ready: STATIC('.legal > main'), full: true },
   // ── states
   {
     name: 'palette', path: '', ready: HOME,

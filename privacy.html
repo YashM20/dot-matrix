@@ -17,11 +17,14 @@
     <link rel="stylesheet" href="/src/legal/legal.css" />
   </head>
   <body>
-    <main class="essay legal">
+    <a class="skip-link" href="#main">SKIP TO CONTENT</a>
+    <!-- the nav and footer sit outside the main element, so they count as landmarks and the skip link passes the nav (#187) -->
+    <div class="essay legal">
       <nav class="legal-nav" aria-label="Site">
         <a href="/">← MATRIX</a>
         <span><a href="/privacy" aria-current="page">PRIVACY</a><a href="/terms">TERMS</a></span>
       </nav>
+      <main id="main" tabindex="-1">
       <header class="hero">
         <p class="kicker"><i aria-hidden="true"></i> MATRIX · PRIVACY</p>
         <h1>Privacy</h1>
@@ -205,7 +208,8 @@
       <p>Questions or concerns: open an issue at
         <a href="https://github.com/YashM20/dot-matrix/issues">github.com/YashM20/dot-matrix/issues</a>.</p>
 
+      </main>
       <footer class="essay-foot">MATRIX · PRIVACY · <span><a href="/terms">TERMS</a> · <a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · <a href="/blog/">BLOG</a></span></footer>
-    </main>
+    </div>
   </body>
 </html>

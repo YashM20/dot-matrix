@@ -4,27 +4,27 @@
   "live-weather": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "cbd7e323",
-    "dots": 1135
+    "hash": "d3f275c9",
+    "dots": 1137
    }
   },
   "live-now-playing": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "491ee7d0",
-    "dots": 1468
+    "hash": "a211796e",
+    "dots": 1470
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "e78cb98b",
-    "dots": 1464
+    "hash": "11196de1",
+    "dots": 1466
    }
   },
   "live-contribs": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "100e7f3e",
-    "dots": 1651
+    "hash": "c683e8f4",
+    "dots": 1653
    }
   }
  }
