@@ -217,10 +217,12 @@ function pausedNote(grid: GridConfig): Layer {
   return { field: (u, v) => Math.max(a(u, v), b(u, v), c(u, v)), tone: 'value' }
 }
 
+/** The source each kept program was compiled from: a layer mid-edit runs its last good program, and the IR worker must get that one's source. */
+const sourceOf = new WeakMap<IRProgram, string>()
 function compileIR(id: string, src: string, errors: Map<string, IRError>, good: ProgramCache): IRProgram | undefined {
   try {
     const p = compileUntrusted(src)
-    good.set(id, p)
+    good.set(id, p); sourceOf.set(p, src)
     return p
   } catch (e) {
     errors.set(id, e instanceof IRError ? e : new IRError(String((e as Error)?.message ?? e)))
@@ -276,13 +278,13 @@ export function compileCard(card: StudioCard, good: ProgramCache = new Map(), op
       if (l.kind === 'ir') {
         const lattice = l.lattice > 1 ? l.lattice : undefined
         if (guard) guarded.push(key)
-        builders.push({ layer: l, build: ctx => { const env = () => contextEnv(ctx, card.grid), field = prog && guardIt(key, prog.info.cost, () => prog(env()), () => inWorker(key, prog, l.src || '1', env())); return field && { field, tone: tone('auto'), ...(lattice && { lattice }) } } })
+        builders.push({ layer: l, build: ctx => { const env = () => contextEnv(ctx, card.grid), field = prog && guardIt(key, prog.info.cost, () => prog(env()), () => inWorker(key, prog, sourceOf.get(prog) ?? (l.src || '1'), env())); return field && { field, tone: tone('auto'), ...(lattice && { lattice }) } } })
       } else {
         const { shape, cx, cy, r, x1, y1, spacing, start, sweep } = l.params
         const geo = shape === 'line' ? L.dotLine(cx, cy, x1, y1, { spacing, size: l.size }) : shape === 'disc' ? L.dotDisc(cx, cy, r, { spacing, size: l.size }) : L.dotRing(cx, cy, r, { spacing, size: l.size, start, sweep })
         const isOne = (l.src || '1').trim() === '1'
         if (guard && !isOne) guarded.push(key)
-        builders.push({ layer: l, build: ctx => { const env = () => contextEnv(ctx, card.grid), field = prog && (isOne ? ONE : guardIt(key, prog.info.cost, () => prog(env()), () => inWorker(key, prog, l.src || '1', env()))); return field && { ...geo, field, tone: tone('idle') } } })
+        builders.push({ layer: l, build: ctx => { const env = () => contextEnv(ctx, card.grid), field = prog && (isOne ? ONE : guardIt(key, prog.info.cost, () => prog(env()), () => inWorker(key, prog, sourceOf.get(prog) ?? (l.src || '1'), env()))); return field && { ...geo, field, tone: tone('idle') } } })
       }
     } else if (l.kind === 'text') {
       const { text, col, row, align, scale, smooth } = l.params

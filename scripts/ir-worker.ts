@@ -184,6 +184,18 @@ export async function irWorkerChecks(assert: Assert) {
   const own = evaluateBatch({ kind: 'eval', id: 2, items: [cheap('c'), cheap('d'), cheap('e')] }, pointStore(), () => {}, () => (at += 5))
   assert('ir worker guard: each program in a batch has its own frame budget (a cheap one behind a busy one is not paused), and a batch past one budget asks for the rest again', own.map(r => r.status).join() === 'ok,ok,skip', own.map(r => r.status).join(','))
 
+  // ── mid-edit: a source that no longer compiles keeps the last good program (docs/STATE-MACHINES.md B5) ──
+  // the main thread draws the last good program; the worker must get that program's source, never the broken one
+  // (it can't compile it, reports `error`, and the card showed PROGRAM PAUSED for a typo)
+  const typed = importDots(EXAMPLES[1]), goodL = new Map(), goodR = new Map(), lg = irGuard(1e9), rg = irGuard(1e9), { remote: er } = fakeRemote(() => 'ok')
+  compileCard(typed, goodL, { guard: lg }); compileCard(typed, goodR, { guard: rg, remote: er })
+  const broken: StudioCard = { ...typed, layers: typed.layers.map(l => (l.kind === 'ir' ? { ...l, src: `${l.src} +` } : l)) }
+  const bl = compileCard(broken, goodL, { guard: lg }), br = compileCard(broken, goodR, { guard: rg, remote: er })
+  const wantB = draw(broken, bl, ENVS[1]), { out: gotB } = await settled(er, () => draw(broken, br, ENVS[1]))
+  const brokenKey = (() => { const l = broken.layers.find((x): x is IRLayer => x.kind === 'ir')!; return guardKey(broken.grid, l.lattice, l.src) })()
+  assert('ir worker: a program mid-edit (its source no longer compiles) draws the last good program through the worker too, not the paused note', bl.errors.size > 0 && same(wantB, gotB) && rg.state(brokenKey) !== 'paused',
+    `errors ${bl.errors.size}, ${gotB.length} vs ${wantB.length} dots, state ${rg.state(brokenKey)}`)
+
   // ── frame time (informational): the main thread's share of one frame ──
   const ex = importDots(EXAMPLES[1]), lcx = local(ex, irGuard(1e9)), { remote: fr } = fakeRemote(() => 'ok'), rcx = compileCard(ex, new Map(), { guard: irGuard(1e9), remote: fr })
   await settled(fr, () => draw(ex, rcx, ENVS[1]))
