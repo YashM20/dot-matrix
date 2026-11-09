@@ -29,13 +29,15 @@ export const PROBES: Probe[] = [
   { name: 'game', shard: 8, secs: 20, args: ['scripts/game-browser.ts', '$BASE'] },
   { name: 'nav', shard: 9, secs: 160, args: ['scripts/site/nav.ts', '$BASE'] },
   { name: 'essay', shard: 9, secs: 95, args: ['scripts/essay-browser.ts', '$BASE'] },
+  // the #28 timing gates, 10 runs each on an idle runner (Node only: no page, no Chrome)
+  { name: 'gates', shard: 9, secs: 15, args: ['scripts/gates.ts', '--runs', '10'] },
   { name: 'csp', shard: 10, secs: 150, args: ['scripts/site/csp-browser.ts'] },
   { name: 'a11y', shard: 10, secs: 45, args: ['scripts/site/a11y.ts'] },
   // the same axe run at phone width (#187): touch emulation, so the 44 px targets apply
-  { name: 'a11y-phone', shard: 11, secs: 50, args: ['scripts/site/a11y.ts', '--width', '390'] },
-  // life finishes in about a minute, or hangs
+  { name: 'a11y-phone', shard: 12, secs: 50, args: ['scripts/site/a11y.ts', '--width', '390'] },
+  // life finishes in about two minutes (the koi heal waits for their meal, up to ~40 s), or hangs
   // its own watchdog fires first, so the log names the step it hung in
-  { name: 'life', shard: 11, secs: 170, args: ['scripts/life-browser.ts'], timeoutMin: 3, env: { LIFE_BROWSER_TIMEOUT_S: '165' } },
+  { name: 'life', shard: 11, secs: 205, args: ['scripts/life-browser.ts'], timeoutMin: 5, env: { LIFE_BROWSER_TIMEOUT_S: '270' } },
   { name: 'c6', shard: 12, secs: 15, args: ['scripts/c6-browser.ts', '--url', '$HOST'] },
   { name: 'analytics', shard: 12, secs: 60, args: ['scripts/site/analytics-browser.ts'] },
   // a runner has no GPU and webgl.ts launches its own Chrome: its `--swiftshader` turns WebGL2 on (squares passes as is)

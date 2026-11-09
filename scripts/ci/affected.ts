@@ -60,7 +60,7 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
 
   // boards: every board's card at 375 px and under the CSP, plus the board's own probe
   ['src/widgets/boards/**', ['mobile-boards', 'csp']],
-  ['src/widgets/boards/materials*', ['materials']], ['src/widgets/boards/workshop*', ['materials']],
+  ['src/widgets/boards/materials*', ['materials', 'gates']], ['src/widgets/boards/workshop*', ['materials']],
   ['src/widgets/boards/pond/**', ['life']], ['src/widgets/boards/physics*', ['light']],
   ['src/widgets/boards/squares*', ['squares']], ['src/widgets/boards/gpu.ts', ['webgl']],
   ['src/widgets/boards/levels.ts', ['game', 'c10']], ['src/widgets/boards/instrument.ts', ['audio']],
@@ -70,7 +70,7 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
   ['src/widgets/boards/henry*', ['c10']], ['src/widgets/boards/ir.ts', ['c10', 'webgl']], ['src/widgets/boards/metro.ts', ['c10']],
 
   // scripts a probe imports (beside its own script, which picks it already)
-  ['scripts/life*.ts', ['life']], ['scripts/ir.ts', ['webgl']], ['scripts/noise.ts', ['webgl']],
+  ['scripts/life*.ts', ['life']], ['scripts/ir.ts', ['webgl']], ['scripts/noise.ts', ['webgl', 'gates']], ['scripts/materials/**', ['gates']],
 
   // nothing a probe loads
   ['docs/**', []], ['*.md', []], ['goldens/**', []], ['mcp/**', []], ['.github/**', []], ['public/images/**', []],

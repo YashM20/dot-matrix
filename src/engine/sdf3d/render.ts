@@ -75,39 +75,66 @@ function slab(lo: number, hi: number, o: number, d: number, out: number[]): bool
 }
 
 /**
- * Render `scene` at w × h dots into `frame` (reused when its size matches). Screen x spans ±w/h·`aspect`
- * (`aspect` = a dot's width over its height, 1 for round lattice dots), screen y ±1.
+ * The per-ray work that only the camera, the sun, the fog, the exposure and the planes decide: each dot's ray, its
+ * sun-coloured fog (× exposure), the nearest plane in front of the eye, and the sky's luma (on first need). A scene
+ * whose camera holds still reuses it every frame (a few recent ones are kept): the same numbers, computed once.
  */
-export function renderScene(scene: Scene, w: number, h: number, frame?: Frame, aspect = 1): Frame {
-  const n = w * h
-  const f: Frame = frame && frame.w === w && frame.h === h ? frame : { w, h, lum: new Float32Array(n), mat: new Uint8Array(n), t: new Float32Array(n) }
-  const { sd, cam, sun, tmax, fog } = scene, steps = scene.steps ?? 96, scale = scene.stepScale ?? 1, planes = scene.planes ?? []
-  const box: Box = scene.box ?? [-Infinity, -Infinity, -Infinity, Infinity, Infinity, Infinity]
-  const albedo = scene.albedo ?? (() => .2), exposure = scene.exposure ?? 1, occD = scene.occ ?? 0
-  const sw = scene.shadow.w, smax = scene.shadow.maxt, ssteps = scene.shadow.steps ?? 32
-  const all: Sd3 = planes.length ? (x, y, z) => { let d = sd(x, y, z); for (const p of planes) d = Math.min(d, p[0] * x + p[1] * y + p[2] * z + p[3]); return d } : sd
-  const rd: V3 = new Float64Array(3), nor: V3 = new Float64Array(3), lin: V3 = new Float64Array(3), fc: V3 = new Float64Array(3), span = [0, 0]
-  const half = w / h * aspect
+interface Rays { key: string; rd: Float64Array; fc: Float64Array; t: Float64Array; hit: Int16Array; sky: Float64Array }
+const raysKept: Rays[] = []
+function raysFor(scene: Scene, w: number, h: number, aspect: number): Rays {
+  const { cam, sun, fog, tmax } = scene, planes = scene.planes ?? [], exposure = scene.exposure ?? 1
+  const key = [w, h, aspect, cam.ox, cam.oy, cam.oz, cam.ux, cam.uy, cam.uz, cam.vx, cam.vy, cam.vz, cam.wx, cam.wy, cam.wz, cam.fl, sun[0], sun[1], sun[2],
+    fog.base[0], fog.base[1], fog.base[2], fog.sun[0], fog.sun[1], fog.sun[2], exposure, tmax, ...planes.flat()].join(',')
+  const hit = raysKept.findIndex(r => r.key === key)
+  if (hit >= 0) { const r = raysKept[hit]; if (hit) { raysKept.splice(hit, 1); raysKept.unshift(r) } return r }
+  const n = w * h, r: Rays = { key, rd: new Float64Array(3 * n), fc: new Float64Array(3 * n), t: new Float64Array(n), hit: new Int16Array(n), sky: new Float64Array(n).fill(NaN) }
+  const rd: V3 = new Float64Array(3), fc: V3 = new Float64Array(3), half = w / h * aspect
   for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
     const k = j * w + i, sx = (2 * (i + .5) / w - 1) * half, sy = 1 - 2 * (j + .5) / h
     cameraRay(cam, sx, sy, rd)
     sunFogColor(rd, sun, fog.base, fog.sun, fc)
     for (let c = 0; c < 3; c++) fc[c] *= exposure
     // the nearest plane in front of the eye
-    let t = tmax, hit = -2
+    let t = tmax, hp = -2
     for (let q = 0; q < planes.length; q++) {
       const p = planes[q], dn = p[0] * rd[0] + p[1] * rd[1] + p[2] * rd[2]
       if (dn >= 0) continue
       const tp = -(p[0] * cam.ox + p[1] * cam.oy + p[2] * cam.oz + p[3]) / dn
-      if (tp > 0 && tp < t) { t = tp; hit = q }
+      if (tp > 0 && tp < t) { t = tp; hp = q }
     }
+    r.rd.set(rd, 3 * k); r.fc.set(fc, 3 * k); r.t[k] = t; r.hit[k] = hp
+  }
+  raysKept.unshift(r)
+  if (raysKept.length > 4) raysKept.pop()
+  return r
+}
+
+/**
+ * Render `scene` at w × h dots into `frame` (reused when its size matches). Screen x spans ±w/h·`aspect`
+ * (`aspect` = a dot's width over its height, 1 for round lattice dots), screen y ±1.
+ */
+export function renderScene(scene: Scene, w: number, h: number, frame?: Frame, aspect = 1): Frame {
+  const n = w * h
+  const f: Frame = frame && frame.w === w && frame.h === h ? frame : { w, h, lum: new Float32Array(n), mat: new Uint8Array(n), t: new Float32Array(n) }
+  const { sd, cam, sun, fog } = scene, steps = scene.steps ?? 96, scale = scene.stepScale ?? 1, planes = scene.planes ?? []
+  const box: Box = scene.box ?? [-Infinity, -Infinity, -Infinity, Infinity, Infinity, Infinity]
+  const albedo = scene.albedo ?? (() => .2), exposure = scene.exposure ?? 1, occD = scene.occ ?? 0
+  const sw = scene.shadow.w, smax = scene.shadow.maxt, ssteps = scene.shadow.steps ?? 32
+  const all: Sd3 = planes.length ? (x, y, z) => { let d = sd(x, y, z); for (const p of planes) d = Math.min(d, p[0] * x + p[1] * y + p[2] * z + p[3]); return d } : sd
+  const rd: V3 = new Float64Array(3), nor: V3 = new Float64Array(3), lin: V3 = new Float64Array(3), fc: V3 = new Float64Array(3), span = [0, 0]
+  const rays = raysFor(scene, w, h, aspect)
+  for (let k = 0; k < n; k++) {
+    // this dot's ray, its fog colour and the nearest plane in front of the eye (raysFor)
+    rd[0] = rays.rd[3 * k]; rd[1] = rays.rd[3 * k + 1]; rd[2] = rays.rd[3 * k + 2]
+    fc[0] = rays.fc[3 * k]; fc[1] = rays.fc[3 * k + 1]; fc[2] = rays.fc[3 * k + 2]
+    let t = rays.t[k], hit = rays.hit[k]
     // the objects, across the box and short of that plane; the stop test is .4 of the footprint
     if (rayBox(box, cam.ox, cam.oy, cam.oz, rd[0], rd[1], rd[2], span) && span[0] < t) {
       const to = sphereTrace(sd, cam.ox, cam.oy, cam.oz, rd[0], rd[1], rd[2], Math.max(.01, span[0]), Math.min(t, span[1]), cam.cell * .4, steps, scale)
       if (to > 0) { t = to; hit = -1 }
     }
     if (hit === -2) {
-      f.lum[k] = gamma(luma(fc)); f.t[k] = Infinity
+      f.lum[k] = rays.sky[k] === rays.sky[k] ? rays.sky[k] : (rays.sky[k] = gamma(luma(fc))); f.t[k] = Infinity
       f.mat[k] = scene.sunDisc !== undefined && rd[0] * sun[0] + rd[1] * sun[1] + rd[2] * sun[2] > scene.sunDisc ? SUN : SKY
       continue
     }
