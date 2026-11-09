@@ -31,6 +31,16 @@
   max-width: var(--measure)
 }
 
+/* the home's first readable line, so it is the lead: what the site is in the brightest ink, the how-to after it in
+   the label grey (phones show the short line instead, src/site/mobile/phone.css) */
+.intro-long {
+  font-size: var(--fs-lead-18)
+}
+
+.intro-lead {
+  color: var(--value)
+}
+
 .intro-line b {
   font-weight: 500;
   color: var(--value)
