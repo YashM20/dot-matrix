@@ -7,7 +7,8 @@
  *  - caching: hashed `/assets/` are immutable, the icons, OG images and blog images get a cache lifetime;
  *  - images: OG images are 1200 × 630 PNGs under 300 kB, every `<img>` in a built page has width, height and alt;
  *  - LCP and CLS: each blog page preloads its hero (the LCP image, drawn by React), and a lazy view's placeholder
- *    holds a full screen, so the footer never paints in the first screen and then jumps.
+ *    holds a full screen (and so does a widget page while its card loads), so the footer never paints in the first
+ *    screen and then jumps.
  *
  *   npx tsx scripts/site/perf-check.ts [--dist <dir>]   → exit 1 on a failure (CI runs it after the build)
  */
@@ -72,9 +73,14 @@ const noPreload = blogPages.filter(p => {
   return heroes.includes(hero) && !new RegExp(`<link rel="preload" as="image" href="/og/blog/${hero}" fetchpriority="high"`).test(head(readFileSync(p, 'utf8')))
 })
 assert('perf: every blog page preloads its hero image (the LCP image)', blogPages.length > 0 && !noPreload.length, noPreload.map(rel).join(', ') || `${blogPages.length} pages`)
+// blog.html answers any other /blog/ path (vercel.json): a hero preload there would fetch an image the page never shows
+assert('perf: the blog fallback page (blog.html) preloads no image', !/<link rel="preload" as="image"/.test(readFileSync(join(DIST, 'blog.html'), 'utf8')))
 // a lazy view's placeholder holds a full screen, so the footer first paints below the fold (CLS on /browse/, /about
 // and the widget pages came from a 60vh placeholder)
 const loading = /\.view-loading\{([^}]*)\}/.exec(css)?.[1] ?? ''
 assert('perf: the lazy view placeholder is at least a screen tall (no footer jump)', /min-height:100s?vh/.test(loading), loading || 'no .view-loading rule')
+// the same for a widget page while its card's board loads (its own chunk's stylesheet)
+const lazyCss = files.filter(f => /^assets\/[^/]+\.css$/.test(rel(f))).map(f => readFileSync(f, 'utf8')).join('\n')
+assert('perf: a loading widget page is at least a screen tall (no footer jump on phones)', /\.wp\[aria-busy=("?)true\1\]\{[^}]*min-height:100s?vh/.test(lazyCss))
 
 done('perf checks passed')

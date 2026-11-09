@@ -100,11 +100,12 @@ export function blogPages() {
   // (Lighthouse "LCP request discovery"; scripts/site/perf-check.ts keeps it)
   const preload = (slug: string) => (has(heroImage(slug)) ? [`<link rel="preload" as="image" href="${heroImage(slug)}" fetchpriority="high" />`] : [])
   const index: PageMeta = { title: BLOG.title, description: BLOG.dek, path: postPath(), image: social(BLOG.slug), imageAlt: imageAlt(BLOG.slug) }
-  const list = withMeta(html, index, [...preload(BLOG.slug), jsonLd({
+  const listLd = jsonLd({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: BLOG.title, description: BLOG.dek, url: origin + index.path, image: origin + index.image,
     hasPart: POSTS.map(p => ({ '@type': 'BlogPosting', headline: p.title, url: origin + postPath(p.slug), datePublished: p.date })),
-  })])
-  writeFileSync(file, list); page('blog', list)
+  })
+  // blog.html is the fallback for any /blog/ path (vercel.json), so only the index's own page preloads the index's hero
+  writeFileSync(file, withMeta(html, index, [listLd])); page('blog', withMeta(html, index, [...preload(BLOG.slug), listLd]))
   for (const p of POSTS) {
     const m: PageMeta = { title: `${p.title} · MATRIX blog`, description: p.dek, path: postPath(p.slug), image: social(p.slug), imageAlt: imageAlt(p.slug) }
     const ld = {
