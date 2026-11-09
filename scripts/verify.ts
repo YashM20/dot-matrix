@@ -55,6 +55,11 @@ await liveChecks(assert)
 halftoneChecks(assert)
 // C6) hand tracker on the synthetic camera: pointer error, pinch, cost, no ghost from a still face (scripts/vision.ts)
 visionChecks(assert)
+// media: the shared camera stream and a camera card when the device goes away (scripts/media.ts)
+{
+  const { mediaChecks } = await import('./media')
+  await mediaChecks(assert)
+}
 // P5-C) device profiles, toDevice, display simulators, cross-tab clock sync (scripts/device.ts)
 deviceChecks(assert)
 // P5-D) export: APNG / GIF encoders, WebM / MP4 muxers, plotter SVG (scripts/export.ts)
