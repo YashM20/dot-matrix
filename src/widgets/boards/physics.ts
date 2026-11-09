@@ -27,6 +27,7 @@ import type { Control } from '../../engine/context'
 import type { DotInstance, Field, Layer, Tone } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
 import { lightSource } from '../../site/light'
+import { minGap } from '../sites'
 
 const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
@@ -177,15 +178,20 @@ export const physicsSplash: WidgetPreset = {
         const vx = (x - s[sp.PX + i]) / S_DT, vy = (y - s[sp.PY + i]) / S_DT, v = Math.hypot(vx, vy)
         // afterglow, not smear: one faint ghost a frame behind a fast dot
         if (v > 60) sites.push({ x: x - vx * .03, y: y - vy * .03, size: SL * .6, tone: 'faint' })
-        sites.push({ x, y, size: SL, tone: v > 35 + 55 * hash01(i, 5) ? 'active' : 'mid' })
+        sites.push({ x, y, size: SL, tone: 'mid', value: v })
       }
     }
+    // the red goes to the three fastest loose dots (the splash's leading edge), the rest stay mid
+    const loose = sites.filter(q => q.tone === 'mid' && q.value !== undefined).sort((a, b) => b.value! - a.value!)
+    loose.forEach((q, j) => { if (j < 3 && q.value! > 35) q.tone = 'active'; q.value = undefined })
     if (s[G_MIG] >= 0) {
       const { m } = migrationOf(s), f = m.frame(clamp(since(n, s[G_MIG]) / MIG_STEPS, 0, 1))
       for (let k = 0; k < m.count; k++) { const w = k * MIGRATE_STRIDE; sites.push({ x: f[w], y: f[w + 1], size: SL, tone: f[w + 4] > .5 ? 'value' : 'mid' }) }
     }
     const word = s[G_MIG] >= 0 && s[G_FULL] ? s[G_TARGET] : s[G_WORD]
-    return [layer(T.text(SPLASH_CAPTION[word], 72, 34, { align: 'center' }), 'idle'), ...siteLayers(sites)]
+    // no two particles closer than the gap (the word's home dots are kept first)
+    const pts = sites.map((q): Pt => [q.x, q.y]), kept = new Set(minGap(pts, SL))
+    return [layer(T.text(SPLASH_CAPTION[word], 72, 34, { align: 'center' }), 'idle'), ...siteLayers(sites.filter((_, i) => kept.has(pts[i])))]
   },
 }
 
@@ -289,7 +295,8 @@ export const physicsFlag: WidgetPreset = {
       sites.push({ x, y, size: (PRINT[p] ? 2.6 : 2.1) * k * (.6 + .5 * shade), tone })
     }
     return [
-      layer(T.dotLine(FX0 - 8, FY0, FX0 + (FC - 1) * FSP + 8, FY0, { spacing: 2.4, size: 1 }), 'faint'),
+      // the rail stops short of each ring, so no rail dot touches a ring
+      layer(T.knockout(T.dotLine(FX0 - 8, FY0, FX0 + (FC - 1) * FSP + 8, FY0, { spacing: 2.4, size: 1 }), rings, 2.2), 'faint'),
       ...siteLayers(sites),
       layer(T.dots(rings, 2.6), 'idle'),
     ]
@@ -326,12 +333,14 @@ const jellyWorld = createWorld({
   size: J_GRAB + 2, dt: J_DT, lead: .3, period: J_PERIOD, seam: .8, every: 30, maxSteps: 900, maxLiveSteps: 6,
   init: s => { softInit(soft, s, 72, J_REST); s[J_GRAB] = -1 }, step: jellyStep, blend: blendHead(J_GRAB),
 })
-// raster on a 2-cell lattice under the label: value + tone per lattice cell, rebuilt per frame
-const JL = 2, JOY = 12, JC = 72, JR = 66
+// raster on a 3-cell lattice under the label (the rim on the same pitch): value + tone per lattice cell, rebuilt per frame
+const JL = 3, JOY = 12, JC = 48, JR = 44
+/** The eye shine as one dot: the centroid of the cells it covers this frame, and how many. */
+const shine = { x: 0, y: 0, n: 0 }
 const jVal = new Float32Array(JC * JR), jTone = new Int8Array(JC * JR), jIn = new Uint8Array(JC * JR), xs = new Float64Array(64)
 const J_TONES: Tone[] = ['faint', 'mid', 'idle', 'value']
 function jellyRaster(s: Float32Array, t: number): [number, number] {
-  jVal.fill(0); jIn.fill(0)
+  jVal.fill(0); jIn.fill(0); shine.x = shine.y = shine.n = 0
   const { n, X, Y } = soft, f = softFrame(soft, s), cs = Math.cos(f.angle), sn = Math.sin(f.angle)
   let y0 = Infinity, y1 = -Infinity, x0 = Infinity, x1 = -Infinity
   for (let i = 0; i < n; i++) { y0 = Math.min(y0, s[Y + i]); y1 = Math.max(y1, s[Y + i]); x0 = Math.min(x0, s[X + i]); x1 = Math.max(x1, s[X + i]) }
@@ -355,16 +364,23 @@ function jellyRaster(s: Float32Array, t: number): [number, number] {
         jIn[i] = 1
         if ((ex / .11) ** 2 + ey * ey < 1) continue
         const hl = ((lx + .42) / .2) ** 2 + ((ly + .5) / .13) ** 2
+        // the shine is one dot drawn over the body (below), at the centroid of the cells it would light
+        if (hl < 1) { shine.x += x; shine.y += y; shine.n++ }
         let tone = 1, v = clamp(.62 - .3 * ly, .35, .95)
-        if (hl < 1) { tone = 3; v = 1 } else if (ly > .5) { tone = 0; v = .7 }
+        if (ly > .5) { tone = 0; v = .7 }
         jVal[i] = v; jTone[i] = tone
       }
     }
   }
+  // the body cells under the shine dot stay empty, so no lattice dot hides half under it
+  if (shine.n) {
+    const sx = shine.x / shine.n, sy = shine.y / shine.n
+    for (let r = r0; r <= r1; r++) for (let c = 0; c < JC; c++) if (Math.hypot((c + .5) * JL - .5 - sx, JOY + (r + .5) * JL - .5 - sy) < 3.2) jVal[r * JC + c] = 0
+  }
   // the rim: body cells with a 4-neighbour outside the body (one lattice cell ≈ 2 card cells, a soft glassy edge)
   for (let r = r0; r <= r1; r++) for (let c = 0; c < JC; c++) {
     const i = r * JC + c
-    if (!jIn[i] || !jVal[i] || jTone[i] === 3) continue
+    if (!jIn[i] || !jVal[i]) continue
     if (c === 0 || c === JC - 1 || r === 0 || r === JR - 1 || !jIn[i - 1] || !jIn[i + 1] || !jIn[i - JC] || !jIn[i + JC]) { jTone[i] = 2; jVal[i] = .9 }
   }
   return [x0, x1]
@@ -386,6 +402,7 @@ export const physicsJelly: WidgetPreset = {
     return [
       { field: jellyField, lattice: JL, origin: [0, JOY], toneOf: jellyToneOf },
       layer(T.dots(floor, .9), 'faint'), layer(T.dots(contact, 1.3), 'mid'),
+      ...(shine.n ? [layer(T.dots([[shine.x / shine.n, shine.y / shine.n]], 4.2), 'value')] : []),
     ]
   },
 }

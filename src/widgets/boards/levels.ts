@@ -15,7 +15,6 @@ import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { HALL_CEIL, HALL_FLOOR, castHall, fog, hallCells, lamp, project, seam, type Hall } from '../../engine/scene'
 import type { Field } from '../../engine/types'
 import { TILE, baked, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
-import { SHIP } from '../sprites'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -413,7 +412,8 @@ const queenBody = (open: boolean, ox: number, oy: number) => onLattice(QK, ox, o
 })
 /** The eye, with a void pupil that follows the player's ship. */
 const queenEye = (look: number, ox: number, oy: number) => onLattice(QK, ox, oy, (c, r) => (QUEEN[r]?.[c] === 'E' && !(r === EYE[1] && c === EYE[0] + look) ? 1 : 0))
-const SHIP_K = 1.3
+/** The player's ship on twice the card pitch (a coarser lattice than the 1.3 sprite, so it holds up beside the boss). */
+const SHIP_K = 2.6, SHIP_COARSE = ['..#..', '.###.', '#####', '#.#.#']
 export const lvQueen: WidgetPreset = {
   id: 'lv-queen', name: 'Level 07', ...scene, animated: true,
   credit: HENRY_LEVEL,
@@ -427,7 +427,7 @@ export const lvQueen: WidgetPreset = {
     return [
       layer(queenBody(open, ox, oy), 'value'), layer(queenEye(look, ox, oy), 'active'),
       layer(T.dots(shots, 1.5), 'value'),
-      layer(sprite(SHIP, SHIP_K, shipX - 5.85, 116), 'value'),
+      layer(sprite(SHIP_COARSE, SHIP_K, shipX - 6.5, 116), 'value'),
       layer(T.text('QUEEN', 5, 134), 'idle'),
       layer(T.dots(Array.from({ length: hp }, (_, n) => [38 + n * 5.25, 137] as Pt), 2), 'value'),
       layer(T.dots(Array.from({ length: HP - hp }, (_, n) => [38 + (n + hp) * 5.25, 137] as Pt), 2), 'faint'),
@@ -463,7 +463,7 @@ export const lvTitle: WidgetPreset = {
       layer(gridFloor(TITLE_FLOOR, t * 1.2, .7), 'value'), layer(hiveMoon, 'value'),
       layer(T.big('HIVE', 72, 22, { lattice: 2.5, smooth: true, align: 'center' })),
       ...(on ? [layer(T.big('PUSH START', 76, 62, { lattice: 1, align: 'center' }))] : []),
-      layer(sprite(CURSOR, 1, 38, 62), 'active'),
+      layer(T.dotTri(42, 65, 3, { k: 3 }), 'active'),
       title('1UP'), score('HI 12800'),
     ]
   },
