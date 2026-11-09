@@ -78,7 +78,7 @@ const lensData = (cx: number, cy: number): [number, number] => [cx / 144, (144 -
 const ready = `!!document.querySelector('[data-card-id="mat-knob"] canvas, [data-card-id="mat-knob"] svg') && !!document.querySelector('[data-card-id="mat-knob"] input[aria-label="Volume"]')`
 /** The page's frame rate over 2 s, printed: a tap or a short drag on a live card needs a few of its frames. */
 const fps = async (p: Page, where: string) => console.log(`  ${where}: ${(await p.js<number>(`new Promise(done => { let n = 0; const t0 = performance.now()
-  const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else done(n / ((performance.now() - t0) / 1000)) }; requestAnimationFrame(f) })`)).toFixed(1)} frames/s`)
+  const f = () => { n++; if (performance.now() - t0 < 2000) requestAnimationFrame(f); else done(n / ((performance.now() - t0) / 1000)) }; requestAnimationFrame(f) })`)).toFixed(1)} frames/s, WebGL2 ${await p.js<boolean>(`!!document.createElement('canvas').getContext('webgl2')`) ? 'on' : 'off'}`)
 const touchPt = (x: number, y: number) => [{ x, y, id: 0, radiusX: 2, radiusY: 2, force: 1 }]
 
 try {
