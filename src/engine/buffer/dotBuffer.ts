@@ -1,5 +1,6 @@
 import type { DotInstance, DotStyle, JointGeom, ThemeTokens, Tone } from '../types'
 import { samplerExt } from '../sampler/ext'
+import { easedRoundness } from '../renderer/shapePath'
 
 /**
  * Struct-of-arrays dot list (MASTER-PLAN §3.10): the sampler writes dots here without allocating an
@@ -18,6 +19,8 @@ export interface DotBuffer {
   palette: readonly string[]
   shape?: DotStyle['shape']
   roundness?: number
+  /** Card pitch (px) the frame was sampled at: a squircle dot bigger than it eases toward a circle (`easedRoundness`). */
+  pitch?: number
   /**
    * Optional per-dot channels (squares), all views into `ext` (7 B/dot), allocated by the first `samplerExt.push` (src/engine/squares/buffer.ts); absent
    * on classic frames. `aspect` (Q2) Float32 at byte 0; `join` Uint16 at 4c (bits 0–11 mask, 12–15 joint slot,
@@ -83,8 +86,11 @@ export function pushDot(buf: DotBuffer, x: number, y: number, r: number, opacity
 
 /** Adapter for SVG, export, motion and other `DotInstance[]` consumers (values are float32-rounded). */
 export function toDots(buf: DotBuffer): DotInstance[] {
-  const out: DotInstance[] = new Array(buf.n), { x, y, r, opacity, tone, palette, shape, roundness } = buf
-  for (let i = 0; i < buf.n; i++) out[i] = { x: x[i], y: y[i], r: r[i], opacity: opacity[i], color: palette[tone[i]], shape, roundness }
+  const out: DotInstance[] = new Array(buf.n), { x, y, r, opacity, tone, palette, shape, roundness, pitch } = buf
+  for (let i = 0; i < buf.n; i++) {
+    const ri = r[i], ease = shape === 'squircle' && roundness && pitch && ri > pitch
+    out[i] = { x: x[i], y: y[i], r: ri, opacity: opacity[i], color: palette[tone[i]], shape, roundness: ease ? easedRoundness(roundness, ri, pitch) : roundness }
+  }
   // squares channels: per-dot form and join (their hook is installed wherever such a frame exists)
   if (buf.join) samplerExt.decode?.(buf, out)
   return out

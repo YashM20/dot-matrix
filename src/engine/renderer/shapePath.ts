@@ -6,6 +6,15 @@
  * above that the curve is a rounded square whose corner radius shrinks as n grows.
  */
 export function squircleExponent(roundness = 0): number { const r = Math.max(0, Math.min(1, roundness)); return 2 + 30 * r * r }
+/**
+ * The roundness a dot of radius `r` draws with on a card of `pitch` (both px): big dots ease toward a circle as they
+ * grow, so a knob or a ball reads round, while dots up to a pitch in radius keep the card's look. The exponent's
+ * excess over a circle is divided by the radius in pitches, n' = 2 + (n − 2) / max(1, r / pitch), which in roundness
+ * is r' = roundness / √max(1, r / pitch). The one place the rule lives: the sampler stamps it on each dot, the
+ * buffer renderer and `toDots` apply it per dot. The size ratio snaps to 1/64, so a float32 radius (a `DotBuffer`)
+ * eases exactly like the float64 one.
+ */
+export function easedRoundness(roundness: number, r: number, pitch: number): number { const m = Math.round((r / pitch) * 64) / 64; return m > 1 ? roundness / Math.sqrt(m) : roundness }
 /** Bézier handle length (fraction of r) so the curve hits the true superellipse at 45°. */
 export function bezierHandle(n: number): number { return (2 ** (-1 / n) - 0.5) / 0.375 }
 /** Corner radius (fraction of r) of the rounded square that meets the exact superellipse at 45°. */
