@@ -80,8 +80,8 @@ export function uxChecks(assert: Assert) {
     assert('ux: browse writes its filters and keeps other params', writeFilters({ board: 'metro', tag: '', q: 'a b' }, '?skin=crt&tag=old') === '?skin=crt&in=metro&q=a+b')
     const all = ROWS.filter(r => matches(r, { board: '', tag: '', q: '' })).length, clocks = ROWS.filter(r => matches(r, { board: '', tag: 'clock', q: '' }))
     assert('ux: browse lists every widget once, and a tag filter keeps only cards with that tag', all === ROWS.length && new Set(ROWS.map(r => r.slug)).size === ROWS.length && clocks.length > 0 && clocks.every(r => r.tags.includes('clock')), `${all} cards, ${clocks.length} clocks`)
-    const start = boardGroups[0].boards as readonly string[], lead = ORDERED.slice(FEATURED.length, FEATURED.length + 9).map(r => r.board)
-    assert('ux: ALL opens on the quality-bar cards, then the START HERE boards, and lists every card once', ORDERED.slice(0, FEATURED.length).every((r, i) => r.slug === FEATURED[i]) && lead.every(b => b === start[0]) && ORDERED.length === ROWS.length && new Set(ORDERED.map(r => r.slug)).size === ROWS.length, ORDERED.slice(0, 4).map(r => r.slug).join(', '))
+    const start = boardGroups[0].boards as readonly string[], lead = ORDERED.slice(FEATURED.length, FEATURED.length + 5).map(r => r.board)
+    assert('ux: ALL opens on the still lead row and the quality-bar cards, then the START HERE boards, and lists every card once', ORDERED.slice(0, FEATURED.length).every((r, i) => r.slug === FEATURED[i]) && lead.every(b => b === start[0]) && ORDERED.length === ROWS.length && new Set(ORDERED.map(r => r.slug)).size === ROWS.length, ORDERED.slice(0, FEATURED.length).map(r => r.slug).join(', '))
     assert('ux: browse search finds a card by its name', ROWS.some(r => r.slug === 'home-clock' && matches(r, { board: '', tag: '', q: 'HOME' })))
   }
 

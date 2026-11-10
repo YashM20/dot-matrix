@@ -8,6 +8,7 @@ import { widgetById, withChrome, type WidgetPreset } from '../../src/widgets'
 import { touchingPairs } from '../touching'
 import { theme, visible } from '../lib/stats'
 import type { Assert } from '../lib/check'
+import { STILL_LEAD } from '../../src/components/browse/data'
 
 /** Cards with no touching dots anywhere, at three times (moving parts included). */
 const CLEAR = ['line-map', 'service', 'departures', 'ir-ripple', 'chart-bar', 'chart-line', 'chart-area', 'chart-candle', 'hb-done', 'sim-sand', 'live-contribs',
@@ -37,5 +38,11 @@ export function cardChecks(assert: Assert) {
   {
     const p = widgetById('sim-sand')!, red = dotsAt(p, 1.3).filter(d => d.color === theme.dotActive && d.opacity > 0)
     assert('cards: sim-sand draws at most 3 red grains (one per falling column)', red.length > 0 && red.length <= 3, `${red.length} red dots`)
+  }
+  // ALL's first row on `/` (#315) holds still and draws light, so a phone's first screen settles fast (leading with
+  // LEVEL 03, 20,000 dots, tripled the phone's Total Blocking Time)
+  {
+    const heavy = STILL_LEAD.flatMap(id => { const p = widgetById(id); if (!p) return [`${id} missing`]; const n = dotsAt(p, 0).length; return p.animated || n > 4000 ? [`${id}: ${p.animated ? 'animated' : ''} ${n} dots`] : [] })
+    assert("cards: ALL's first row is still and light (no animated card, at most 4,000 dots each)", STILL_LEAD.length >= 4 && !heavy.length, heavy.join(', '))
   }
 }

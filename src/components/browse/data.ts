@@ -27,10 +27,18 @@ export const ROWS: readonly Row[] = catalog.map(([slug, , board]) => {
 })
 
 /**
- * ALL's opening order (#315): the quality-bar cards first (LEVEL 03, AFTERLIGHT), then the START HERE boards in picker
- * order, then the components board, then every other card in catalog (board) order. Stable: ties keep catalog order.
+ * ALL's opening order (#315): a first row of still, light cards (`STILL_LEAD`), then the quality-bar cards (LEVEL 03,
+ * AFTERLIGHT), then the START HERE boards in picker order, then the components board, then every other card in catalog
+ * (board) order. Stable: ties keep catalog order.
+ *
+ * The first row holds still and costs little to draw (each a few thousand dots at most, none `animated`), so the first
+ * screen settles fast on a phone: LEVEL 03 alone is 20,000 dots, and leading with it tripled the phone's Total Blocking
+ * Time (832 → 2,634 ms). Four, so LEVEL 03 and AFTERLIGHT open the second row at three and four columns, and on a
+ * phone they sit past the window ALL mounts at load (`useWindow`), drawn only once they scroll near.
+ * `scripts/verify/cards.ts` checks the first row stays still and light.
  */
-export const FEATURED: readonly string[] = ['level-03', 'afterlight']
+export const STILL_LEAD: readonly string[] = ['fitness-rings', 'codex-usage', 'home-clock', 'music']
+export const FEATURED: readonly string[] = [...STILL_LEAD, 'level-03', 'afterlight']
 const LEAD_BOARDS: readonly string[] = [...(boardGroups.find(g => g.id === 'start')?.boards ?? []), 'components']
 const rank = (r: Row) => { const f = FEATURED.indexOf(r.slug), b = LEAD_BOARDS.indexOf(r.board); return f >= 0 ? f : b >= 0 ? FEATURED.length + b : FEATURED.length + LEAD_BOARDS.length }
 export const ORDERED: readonly Row[] = ROWS.map((r, i) => [r, i] as const).sort(([a, i], [b, j]) => rank(a) - rank(b) || i - j).map(([r]) => r)
