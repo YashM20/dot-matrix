@@ -42,7 +42,7 @@ In the browser, the app rewrites these tags as you move between boards and widge
 - Routing (`vercel.json`): redirects first, then real files, then rewrites, else `404.html` with status 404. Vercel reads a `source` exactly (case-sensitive, no optional trailing slash), so routes list both slash forms. Only the app's own route shapes fall back:
   - `/<board>` (no slash) rewrites to `/<board>/index.html`; the board ids are listed in the rule, so **a new board adds its id there** (`seo-check.ts` fails until it does). `/<board>/` is a real file.
   - `/widget/<key>`, `/@<scope>/widget/<key>` and a uid-shaped `/<uid>` (each with or without the slash) rewrite to `/index.html`, so old slugs and unknown uids still reach the app's own resolver.
-  - `/about` redirects to `/?about`, the About view's own URL, in one hop (its page would otherwise carry the home page's canonical). Old `/widget/glyph-<x>/` card links redirect to `/widget/lock-<x>/`.
+  - `/about/` is a real file (About's own page). `/about` and any-case forms (`/About/`) rewrite to it, like `/browse`; a redirect there would loop, since a source can match the slashed form too. The old `/?about` (and `/index.html?about`) redirects to `/about/` in one hop, keeping its query (`/about/?about`; the canonical is `/about/` and the app tidies the address bar). Old `/widget/glyph-<x>/` card links redirect to `/widget/lock-<x>/`.
   - `/browse` rewrites to `/browse/index.html`; `/browse/` is a real file.
   - `/blog/*` rewrites to `blog.html`; `/lab`, `/privacy`, `/terms` to their pages.
   - Board aliases redirect (`/glyph/` → `/lock/`, permanent). A new alias in `boardAliases` adds its redirect.

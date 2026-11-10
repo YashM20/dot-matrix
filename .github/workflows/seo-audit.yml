@@ -1,8 +1,9 @@
 # The SEO audit with free tools, on demand (docs/HARNESS.md › SEO audit): builds this ref, serves dist/ with
-# vercel.json's routing (scripts/site/serve.ts, so unknown paths get a real 404), then runs Lighthouse (SEO, best
-# practices, accessibility) on a set of routes, the W3C Nu HTML checker on the built pages and lychee on every link in
-# every sitemap page. `live=true` also runs Lighthouse on the production site. Report only: the run summary has the
-# tables (scripts/site/seo-audit.ts) and the raw reports are the `seo-audit` artifact. No keys, no paid services.
+# vercel.json's routing (scripts/site/serve.ts, so unknown paths get a real 404), then runs Lighthouse through
+# scripts/ci/lighthouse.ts (the same script as the probes workflow's job: performance, accessibility, SEO, best
+# practices), the W3C Nu HTML checker on the built pages and lychee on every link in every sitemap page. `live=true`
+# also runs Lighthouse on the production site. Report only: the run summary has the tables (lighthouse.ts and
+# scripts/site/seo-audit.ts) and the raw reports are the `seo-audit` artifact. No keys, no paid services.
 name: seo-audit
 
 on:
@@ -23,9 +24,6 @@ concurrency:
 env:
   ORIGIN: https://matrix.reactopia.me
   LOCAL: http://localhost:4321
-  # a board, a second board, two widget pages, a markdown post, the legal pages and a 404
-  ROUTES: / /browse/ /henry/ /mosaic/ /widget/timer/ /widget/weather/ /blog/ /blog/dot-matrix-essay/ /blog/living-matter/ /about /privacy /terms /no-such-page
-  LIGHTHOUSE: lighthouse@13.6.0
   LYCHEE: v0.24.2
 
 jobs:
@@ -56,30 +54,20 @@ jobs:
           curl -s -o /dev/null -w 'home %{http_code}\n' "$LOCAL/"
           curl -s -o /dev/null -w 'unknown %{http_code}\n' "$LOCAL/no-such-page"
 
+      # the one Lighthouse path (scripts/ci/lighthouse.ts, also the probes workflow's job): it serves dist/ like Vercel
+      # itself and appends its table to the run summary
       - name: Lighthouse
         env:
           LIVE: ${{ inputs.live }}
         run: |
-          mkdir -p seo-audit/lh
-          export CHROME_PATH=$(command -v google-chrome || command -v chromium)
-          targets="build=$LOCAL"; [ "$LIVE" = true ] && targets="$targets live=$ORIGIN"
-          for t in $targets; do
-            for r in $ROUTES; do
-              for form in mobile desktop; do
-                name="${t%%=*}__$(node -p 'encodeURIComponent(process.argv[1])' "$r")__$form"
-                preset=""; [ $form = desktop ] && preset="--preset=desktop"
-                pnpm dlx "$LIGHTHOUSE" "${t#*=}$r" $preset --quiet --only-categories=seo,best-practices,accessibility \
-                  --output=json --output-path="seo-audit/lh/$name.json" --chrome-flags="--headless=new --no-sandbox --enable-unsafe-swiftshader" \
-                  || echo "lighthouse failed: $t $r $form"
-              done
-            done
-          done
+          pnpm exec tsx scripts/ci/lighthouse.ts --out seo-audit/lh-build || echo "lighthouse: build run failed"
+          if [ "$LIVE" = true ]; then pnpm exec tsx scripts/ci/lighthouse.ts --base "$ORIGIN/" --out seo-audit/lh-live || echo "lighthouse: live run failed"; fi
 
       - name: W3C Nu HTML checker
         run: |
           curl -sSL -o vnu.jar https://github.com/validator/validator/releases/download/latest/vnu.jar
           files="dist/index.html dist/browse/index.html dist/henry/index.html dist/mosaic/index.html dist/widget/timer/index.html dist/widget/weather/index.html
-            dist/blog/index.html dist/blog/dot-matrix-essay/index.html dist/blog/living-matter/index.html dist/lab/index.html dist/privacy.html dist/terms.html dist/404.html"
+            dist/blog/index.html dist/blog/dot-matrix-essay/index.html dist/blog/living-matter/index.html dist/about/index.html dist/lab/index.html dist/privacy.html dist/terms.html dist/404.html"
           java -jar vnu.jar --format json --also-check-svg $files 2> seo-audit/vnu.json || true
 
       - name: lychee (links on every sitemap page)
@@ -87,7 +75,7 @@ jobs:
           curl -sSL "https://github.com/lycheeverse/lychee/releases/download/lychee-$LYCHEE/lychee-x86_64-unknown-linux-gnu.tar.gz" | (mkdir -p lychee-bin && tar xz -C lychee-bin)
           LYCHEE_BIN=$(find lychee-bin -type f -name lychee | head -1)
           grep -o '<loc>[^<]*' dist/sitemap.xml | sed "s#<loc>$ORIGIN#$LOCAL#" > pages.txt
-          printf '%s\n' "$LOCAL/?about" "$LOCAL/404.html" >> pages.txt
+          printf '%s\n' "$LOCAL/404.html" >> pages.txt
           "$LYCHEE_BIN" --no-progress --format json --output seo-audit/lychee.json --max-concurrency 16 --max-retries 2 --timeout 20 \
             --remap "^$ORIGIN $LOCAL" --accept '200..=299,429' \
             --exclude '^https?://(www\.)?(x|twitter|linkedin)\.com' --exclude "^$LOCAL/ingest" \

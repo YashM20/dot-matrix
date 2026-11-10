@@ -14,8 +14,8 @@
     { "source": "/glyph/", "destination": "/lock/", "permanent": true },
     { "source": "/widget/glyph-:rest", "destination": "/widget/lock-:rest/", "permanent": true },
     { "source": "/widget/glyph-:rest/", "destination": "/widget/lock-:rest/", "permanent": true },
-    { "source": "/about", "destination": "/?about", "permanent": true },
-    { "source": "/about/", "destination": "/?about", "permanent": true }
+    { "source": "/", "has": [{ "type": "query", "key": "about" }], "destination": "/about/", "permanent": true },
+    { "source": "/index.html", "has": [{ "type": "query", "key": "about" }], "destination": "/about/", "permanent": true }
   ],
   "rewrites": [
     { "source": "/ingest/static/:path*", "destination": "https://us-assets.i.posthog.com/static/:path*" },
@@ -29,6 +29,8 @@
     { "source": "/terms/", "destination": "/terms.html" },
     { "source": "/:board(henry|deerflow12|mosaic|henry3|metro|ride|audio|departures|instrument|ir|cinema|light|levels|heartbeat|sim|lock|live|mirror|gpu|surfaces|components|type|physics|scope|heal|algorithms|materials|pond|workshop|squares|fractals|oldschool|scenes|dash|kinetic|faces|charts|motion|watch)", "destination": "/:board/index.html" },
     { "source": "/browse", "destination": "/browse/index.html" },
+    { "source": "/:about([Aa][Bb][Oo][Uu][Tt])", "destination": "/about/index.html" },
+    { "source": "/:about([Aa][Bb][Oo][Uu][Tt])/", "destination": "/about/index.html" },
     { "source": "/widget/:key", "destination": "/index.html" },
     { "source": "/widget/:key/", "destination": "/index.html" },
     { "source": "/:scope(@[^/]+)/widget/:key", "destination": "/index.html" },

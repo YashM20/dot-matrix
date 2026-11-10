@@ -66,7 +66,7 @@ export function shareChecks(check: Assert) {
     && html.includes('<a href="https://x/widget/timer/"') && !/<script/i.test(html) && !html.includes('-->\n<svg') && (html.match(/<svg /g) ?? []).length === 2,
     `${(svg.length / 1024).toFixed(1)} KB svg`)
   const timer = index.find(x => x.slug === 'timer')!, pm = widgetPageMeta(timer)
-  check('share: widget page meta: title, blurb description, canonical slug path, OG image by uid', pm.title === 'Timer · MICRO UI · MATRIX' && pm.description.startsWith(timer.blurb) && pm.path === '/widget/timer/' && pm.image === `/og/widget/${timer.uid}.png`)
+  check('share: widget page meta: title, blurb description, canonical slug path, OG image by uid', pm.title === 'Timer · Micro UI · Matrix' && pm.description.startsWith(timer.blurb) && pm.path === '/widget/timer/' && pm.image === `/og/widget/${timer.uid}.png`)
 }
 
 if (/[\\/]scripts[\\/]widgets[\\/]checks\.ts$/.test(process.argv[1] ?? '')) {

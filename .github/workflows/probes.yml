@@ -170,8 +170,9 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # Lighthouse (the PageSpeed Insights engine, no API key) on the SEO routes, mobile and desktop: Performance and
-  # Accessibility, LCP, CLS, TBT and the audits that lost points, in the job summary and the `lighthouse` artifact.
+  # Lighthouse (the PageSpeed Insights engine, no API key) on the SEO routes, mobile and desktop, through the one script
+  # the seo-audit workflow runs too (dist/ served like Vercel): Performance, Accessibility, SEO, Best practices, LCP, CLS,
+  # TBT and the audits that lost points, in the job summary and the `lighthouse` artifact.
   # A report like the rest of this workflow. `live` audits the production site instead of this build.
   lighthouse:
     name: lighthouse ${{ matrix.target }}
