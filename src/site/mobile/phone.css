@@ -119,7 +119,9 @@
     padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
     border-top: 1px solid var(--line);
     border-image: var(--hair-x) 1;
-    background: color-mix(in srgb, var(--panel) 90%, transparent);
+    /* 96%: what scrolls under the glass can't pull the labels under 4.5:1 (a dark inset card under a light bar was
+       4.02:1 at 90%, #315) */
+    background: color-mix(in srgb, var(--panel) 96%, transparent);
     -webkit-backdrop-filter: var(--glass-blur);
     backdrop-filter: var(--glass-blur)
   }

@@ -40,7 +40,7 @@ const HOME = boardIds[0], ESSAY = '/blog/dot-matrix-essay/'
 const uid = (JSON.parse(readFileSync('src/widgets/ids.json', 'utf8')) as Record<string, string>).timer
 
 /**
- * What the page shows, or '' while it loads: `EXPLORE:<board>`, `MAKE`, `ABOUT`, `widget:<slug>`, `widget-missing`,
+ * What the page shows, or '' while it loads: `EXPLORE:<board>` (`EXPLORE:all` for ALL, #315), `MAKE`, `ABOUT`, `widget:<slug>`, `widget-missing`,
  * `post` (a blog post: the URL says which), `privacy`, `terms`, `lab`, `crashed` (the root error boundary).
  */
 const VIEW = `(() => {
@@ -49,7 +49,7 @@ const VIEW = `(() => {
     if (document.querySelector('.view-loading')) return ''
     if (shell.classList.contains('shell--widget')) return document.querySelector('.wp-missing') ? 'widget-missing' : document.querySelector('.wp-ids code')?.textContent.trim().replace(/^/, 'widget:') ?? ''
     const v = shell.dataset.view
-    if (v === 'EXPLORE') { const b = document.querySelector('.board-picker [data-board].selected'); return b && document.querySelector('.board-grid .dot-card') ? 'EXPLORE:' + b.dataset.board : '' }
+    if (v === 'EXPLORE') { const b = document.querySelector('.board-picker [data-board].selected'); return b && document.querySelector(b.dataset.board === 'all' ? '.browse-grid .dot-card' : '.board-grid .dot-card') ? 'EXPLORE:' + b.dataset.board : '' }
     if (v === 'MAKE') return document.querySelector('.ed-top, .ed-root') ? 'MAKE' : ''
     if (v === 'ABOUT') return document.querySelector('.log-view') ? 'ABOUT' : ''
     return ''
@@ -66,7 +66,11 @@ const settle = async (p: Page, ms = 30000) => { await p.waitFor(`(${VIEW}) !== '
 
 /** The route table: a URL (relative to the site root), the view it opens and its canonical URL. */
 const ROUTES: [string, string, string][] = [
-  ['', `EXPLORE:${HOME}`, '/'],
+  ['', 'EXPLORE:all', '/'],
+  [`${HOME}/`, `EXPLORE:${HOME}`, `/${HOME}/`],
+  // BROWSE became ALL on / (#315); its board filter opens that board
+  ['browse/', 'EXPLORE:all', '/'],
+  ['browse/?in=lock', 'EXPLORE:lock', '/lock/'],
   ['lock/', 'EXPLORE:lock', '/lock/'],
   ['glyph/', 'EXPLORE:lock', '/lock/'],
   ['?board=mosaic', 'EXPLORE:mosaic', '/mosaic/'],
@@ -75,7 +79,7 @@ const ROUTES: [string, string, string][] = [
   ['about', 'ABOUT', '/about/'],
   ['?make', 'MAKE', '/?make'],
   ['?make=code', 'MAKE', '/?make=code'],
-  ['?tab=gallery', 'EXPLORE:henry', HOME === 'henry' ? '/' : '/henry/'],
+  ['?tab=gallery', 'EXPLORE:henry', '/henry/'],
   ['?tab=dots', 'MAKE', '/?make=code'],
   ['?tab=log', 'ABOUT', '/about/'],
   ['?tab=essay', 'post', ESSAY],
@@ -88,10 +92,10 @@ const ROUTES: [string, string, string][] = [
   ['widget/timer/', 'widget:timer', '/widget/timer/'],
   [uid, 'widget:timer', '/widget/timer/'],
   ['?card=timer', 'widget:timer', '/widget/timer/'],
-  ['nope/', `EXPLORE:${HOME}`, '/'],
+  ['nope/', 'EXPLORE:all', '/'],
   // #148: a `//host` path stays on the site, a bad escape in the hash doesn't blank the page
   ['/lock/', 'EXPLORE:lock', '/lock/'],
-  ['/evil.example/', `EXPLORE:${HOME}`, '/'],
+  ['/evil.example/', 'EXPLORE:all', '/'],
   ['blog/dot-matrix-essay/#%E0', 'post', ESSAY],
   ['lab/#%E0', 'lab', '/lab/'],
 ]

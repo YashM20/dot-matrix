@@ -1,4 +1,5 @@
-/* BROWSE (#182): the filter row, then the card grid. Loaded with the view's chunk. The grid's columns follow the
+/* ALL (#315, was BROWSE #182): EXPLORE's every-card view on `/`, under the board picker: the filter row, then the card
+   grid. Loaded with the view's chunk. The grid's columns follow the
    board grid's rule (src/site/app/grid.css: auto-fill between the CARD SIZE bounds, --card-min-standard), but each
    cell is a slot: the square card (or its placeholder) over a caption with the card's and its board's links. */
 .browse {
@@ -95,7 +96,7 @@
   flex-basis: 100%;
   margin: 0;
   color: var(--label);
-  font: 500 var(--fs-label-11) var(--mono);
+  font: 500 var(--fs-label-12) var(--mono);
   letter-spacing: .12em;
   font-variant-numeric: tabular-nums
 }
@@ -110,7 +111,7 @@
     var(--card-min),
     (100% - (var(--board-cols-min) - 1) * var(--spacing-cardGap)) / var(--board-cols-min) - .5px), 1fr));
   gap: var(--spacing-cardGap);
-  margin: var(--space-4) 0 0;
+  margin: var(--gap-group) 0 0;
   padding: 0;
   list-style: none
 }
@@ -148,7 +149,7 @@
   gap: var(--space-3);
   margin: 0;
   min-width: 0;
-  font: 500 var(--fs-label-11) var(--mono);
+  font: 500 var(--fs-label-12) var(--mono);
   letter-spacing: .08em
 }
 
@@ -203,7 +204,8 @@
   }
 }
 
-/* phones: the search on its own row, BOARD and TAG side by side, each name above its field */
+/* phones: SEARCH and TAG share one row, each name above its field, so a whole card still starts above the fold on /
+   (#315); the count follows, with CLEAR beside it once a filter is on */
 @media (max-width: 600px) {
   .browse-field {
     grid-template-columns: minmax(0, 1fr);
@@ -211,15 +213,52 @@
   }
 
   .browse-field--q {
-    flex-basis: 100%;
+    flex: 2 1 160px;
     max-width: none
   }
 
   .browse-field:not(.browse-field--q) {
-    flex: 1 1 0
+    flex: 1 1 100px
   }
 
   .browse-field select {
     max-width: none
+  }
+
+  /* the count opens the second row (too wide to join the fields), CLEAR beside it */
+  .browse-count {
+    flex: 1 1 60%;
+    align-self: center
+  }
+
+  .browse-tools .browse-clear {
+    order: 1
+  }
+
+  .browse-tools .browse-clear:disabled {
+    display: none
+  }
+}
+
+/* narrow phones (320 px, an iPhone SE, 568 px tall): the ALL chip already says where you are, so the section's title and
+   blurb step out (the title still names the section for screen readers through aria-labelledby) and the field names
+   are read, not shown; a whole card then starts above the fold, as on a board (src/site/mobile/phone.css) */
+@media (max-width: 359px) {
+  .browse > .board-title,
+  .browse > .board-blurb {
+    display: none
+  }
+
+  .browse-field > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap
+  }
+
+  .browse > .browse-tools {
+    margin-top: 0
   }
 }

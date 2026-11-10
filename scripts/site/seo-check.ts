@@ -39,7 +39,7 @@ const route = (path: string, exact: boolean) => routeIn(vercel, DIST, path, exac
 const widgets = readWidgets(), sample = widgets[0], lock = widgets.find(w => w.slug.startsWith('lock-'))
 /** [path, what it must serve: a file, `→ <to>` for a redirect, or 404]; `view` checks the app opens it. */
 const CASES: [path: string, want: string, view?: (v: ReturnType<typeof viewFromUrl>) => boolean][] = [
-  ['/', 'index.html'], ['/index.html', 'index.html'], ['/browse', 'browse/index.html', v => v.view === 'BROWSE'], ['/browse/', 'browse/index.html', v => v.view === 'BROWSE'], ['/about', 'about/index.html', v => v.view === 'ABOUT'], ['/about/', 'about/index.html', v => v.view === 'ABOUT'], ['/About/', 'about/index.html', v => v.view === 'ABOUT'], ['/ABOUT', 'about/index.html', v => v.view === 'ABOUT'], ['/?about', '→ /about/'], ['/index.html?about', '→ /about/'], ['/?skin=crt', 'index.html'],
+  ['/', 'index.html', v => v.view === 'EXPLORE' && v.all], ['/index.html', 'index.html'], ['/browse', '→ /'], ['/browse/', '→ /'], ['/about', 'about/index.html', v => v.view === 'ABOUT'], ['/about/', 'about/index.html', v => v.view === 'ABOUT'], ['/About/', 'about/index.html', v => v.view === 'ABOUT'], ['/ABOUT', 'about/index.html', v => v.view === 'ABOUT'], ['/?about', '→ /about/'], ['/index.html?about', '→ /about/'], ['/?skin=crt', 'index.html'],
   ...boardIds.flatMap(id => [[`/${id}/`, `${id}/index.html`], [`/${id}`, `${id}/index.html`]] as [string, string][]),
   ...Object.entries(boardAliases).flatMap(([a, to]) => [[`/${a}`, `→ /${to}/`], [`/${a}/`, `→ /${to}/`]] as [string, string][]),
   ...widgets.flatMap(w => [[w.url, `widget/${w.slug}/index.html`], [`/widget/${w.uid}/`, `widget/${w.uid}/index.html`], [`/${w.uid}/`, `${w.uid}/index.html`]] as [string, string][]),
@@ -72,8 +72,8 @@ assert('seo: the board rewrite in vercel.json lists every board id (add a new bo
 
 // ── sitemap + robots ──
 const xml = readFileSync(join(DIST, 'sitemap.xml'), 'utf8'), locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].replace(/&amp;/g, '&'))
-const expected = 1 + boardIds.length + 2 + widgets.length + 1 + POSTS.length + (flag('lab') ? 3 : 2)
-assert(`seo: sitemap.xml lists ${expected} URLs (home, boards, browse, about, widgets, blog, posts, lab, privacy, terms), none twice`, locs.length === expected && new Set(locs).size === locs.length, `${locs.length} URLs`)
+const expected = 1 + boardIds.length + 1 + widgets.length + 1 + POSTS.length + (flag('lab') ? 3 : 2)
+assert(`seo: sitemap.xml lists ${expected} URLs (home, boards, about, widgets, blog, posts, lab, privacy, terms), none twice`, locs.length === expected && new Set(locs).size === locs.length, `${locs.length} URLs`)
 const strayWidget = locs.filter(l => l.includes('/widget/') && !widgets.some(w => l === origin + w.url))
 assert('seo: the sitemap lists widgets by their canonical slug URL only (no uid or alias forms)', !strayWidget.length, strayWidget.slice(0, 3).join(', '))
 if (origin) assert(`seo: every sitemap URL is absolute on ${origin}`, locs.every(l => l.startsWith(`${origin}/`)))
@@ -121,16 +121,16 @@ const boardGaps = boardIds.flatMap(id => {
 assert(`seo: all ${boardIds.length} board pages carry their h1, blurb and a link to every card in the root`, !boardGaps.length, boardGaps.slice(0, 6).join('; '))
 const widgetGaps = widgets.filter(w => [`widget/${w.slug}`, `widget/${w.uid}`, w.uid].some(d => { const b = rootBlock(read(`${d}/index.html`), 'root'); return !b.includes('<h1>') || !b.includes(`href="/${w.board}/"`) })).map(w => w.slug)
 assert(`seo: all ${widgets.length * 3} widget pages carry the card's h1 and a link to its board`, !widgetGaps.length, widgetGaps.slice(0, 6).join(', '))
-const home = rootBlock(read('index.html'), 'root'), homeMiss = boardIds.filter(id => !home.includes(`href="/${id}/"`))
-assert('seo: the home page links every board', home.includes('<h1>') && !homeMiss.length, homeMiss.join(', '))
+// the home page is ALL (#315): it links every board and every card (BROWSE's page is gone)
+const home = rootBlock(read('index.html'), 'root'), homeMiss = [...boardIds.map(id => `/${id}/`), ...widgets.map(w => w.url)].filter(u => !home.includes(`href="${esc(u)}"`))
+assert(`seo: the home page links every board and all ${widgets.length} cards`, home.includes('<h1>') && !homeMiss.length, homeMiss.slice(0, 3).join(', '))
+assert('seo: no browse page is built (/browse/ redirects to /)', !existsSync(join(DIST, 'browse', 'index.html')))
 const postGaps = POSTS.filter(p => {
   const b = rootBlock(read(`blog/${p.slug}/index.html`), 'blog'), md = join('docs', 'blog', `${p.slug}.md`)
   const heads = p.kind === 'md' && existsSync(md) ? parse(readFileSync(md, 'utf8')).flatMap(x => (x.t === 'h' && x.level > 1 ? [x.id] : [])) : []
   return !b.includes(`<h1>${esc(p.title)}</h1>`) || heads.some(h => !b.includes(`id="${h}"`))
 }).map(p => p.slug)
 assert('seo: every blog post page carries its title, and a markdown post its whole text (every heading)', !postGaps.length, postGaps.join(', '))
-const browse = rootBlock(read('browse/index.html'), 'root'), browseMiss = widgets.filter(w => !browse.includes(`href="${w.url}"`)).map(w => w.slug)
-assert(`seo: the browse page carries its h1 and a link to all ${widgets.length} cards`, browse.includes('<h1>') && !browseMiss.length, browseMiss.slice(0, 3).join(', '))
 assert('seo: the blog and lab indexes carry their static block', ['blog.html', 'blog/index.html'].every(f => rootBlock(read(f), 'blog').includes('<h1>')) && ['lab.html', 'lab/index.html'].every(f => rootBlock(read(f), 'lab').includes('<h1>')))
 
 // ── every built page: JSON-LD parses, no type twice, no display:none on the static block ──
