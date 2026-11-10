@@ -434,3 +434,20 @@
     padding-top: calc(var(--space-4) + env(safe-area-inset-top))
   }
 }
+
+/* narrow phones (320 px, an iPhone SE): the intro's short line no longer fits (it was cut to "Every card is a live d…")
+   and its row pushed the first card below a 568 px fold. It steps out there, as if dismissed, and the picker moves up
+   to a group step under the bar; the essay stays one tap away as the footer's first link (HOW IT WORKS) */
+@media (max-width: 359px) {
+  .intro-line {
+    display: none
+  }
+
+  .boards-view {
+    padding-top: var(--gap-group)
+  }
+
+  .intro-line + .board-picker {
+    margin-top: 0
+  }
+}
