@@ -34,6 +34,7 @@ import { engineChecks } from './verify/engine'
 import { uxChecks } from './verify/ux'
 import { flagChecks } from './verify/flags'
 import { cardChecks } from './verify/cards'
+import { creditChecks } from './verify/credits'
 
 // timing checks warn unless DOT_TIMING=strict (scripts/lib/check.ts, docs/CHECKPOINTS.md, #75)
 const { assert, done } = checker()
@@ -184,10 +185,17 @@ goldenKeyChecks(assert)
 
 // UX U1, U3) board picker groups, labels and old paths; views and canonical URLs (scripts/verify/ux.ts)
 uxChecks(assert)
+// credits live on each card's page: every card on a concept-credited board resolves to one (scripts/verify/credits.ts)
+creditChecks(assert)
 // CP6 wave 3) cards fixed at dot level keep every dot clear of its neighbours (scripts/verify/cards.ts)
 cardChecks(assert)
 // FLAGS (#144, #145) every release flag documented; the URL sets none; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
 await flagChecks(assert)
+// APP STATE (docs/STATE-MACHINES.md A): stale-deploy offline reload, the likes record across tabs (scripts/verify/appstate.ts)
+{
+  const { appStateChecks } = await import('./verify/appstate')
+  await appStateChecks(assert)
+}
 // LIKES (#169) the likes API on the in-memory store: limits, holds, bursts, cookies, forget, budget, the function bundle (scripts/likes/checks.ts)
 {
   const { likesChecks } = await import('./likes/checks')

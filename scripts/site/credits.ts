@@ -27,7 +27,7 @@ const concept = (): string[] => [
   '',
   'What came from his posts:',
   '',
-  `- The first seven boards (${cc.boards.map(b => `\`/${b}/\``).join(', ')}) rebuild his reference sheets, kept in \`public/images/\`, most of them under his X media ids as file names ([BLOCK-INVENTORY.md](BLOCK-INVENTORY.md)). Those boards show this credit under their blurb.`,
+  `- The first seven boards (${cc.boards.map(b => `\`/${b}/\``).join(', ')}) rebuild his reference sheets, kept in \`public/images/\`, most of them under his X media ids as file names ([BLOCK-INVENTORY.md](BLOCK-INVENTORY.md)). Each card from them shows this credit on its own page (\`/widget/<id>/\`).`,
   '- The idea the engine grew from: a whole interface drawn in dots on a dense square matrix.',
   "- The 480 in Dot/480, the engine's codename: his device is 480 × 480.",
   '',

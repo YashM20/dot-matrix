@@ -100,13 +100,13 @@
   "lv-scores": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "568618a5",
-    "dots": 1521
+    "hash": "6bc161d8",
+    "dots": 1465
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "568618a5",
-    "dots": 1521
+    "hash": "6bc161d8",
+    "dots": 1465
    }
   }
  }

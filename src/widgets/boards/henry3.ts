@@ -65,8 +65,9 @@ export const midnightCircuit: WidgetPreset = {
   id: 'midnight-circuit', name: 'Midnight Circuit', label: "Henry's Desk", group: 'chart', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
   defaults: { played: 0.47 },
   layers: ({ t, data }) => {
-    const bars = T.dotBars(chatter(48, t * 0.6, 5), 1, 77, { gap: 3, pitch: 2.2, height: 22, size: 1.5, mirror: true })
     const head = Math.round(data.played * 47) * 3 + 1
+    // the bars clear the playhead, so no bar dot shows half under it
+    const bars = T.knockout(T.dotBars(chatter(48, t * 0.6, 5), 1, 77, { gap: 3, pitch: 2.2, height: 22, size: 1.5, mirror: true }), [[head, 77]], 5.2)
     const played: Field = u => (u * (TILE.cols - 1) < head - 1 ? 1 : 0)
     return [
       layer(T.big('MIDNIGHT CIRCUIT', 0, 32, { lattice: 1.25 }), 'idle'),
@@ -173,6 +174,21 @@ export const inhale: WidgetPreset = {
 // Hypnogram in chart-lattice dots (2.8 cells apart): levels 12 / 16 / 19, REM spikes rise to row 5.
 const HYPNO: [number, number][] = [[0, 19], [1, 18], [1, 16], [4, 16], [4, 12], [15, 12], [15, 16], [22, 16], [22, 12], [26, 12], [26, 16], [29, 16], [29, 19], [34, 19], [34, 16], [35, 16], [35, 12], [43, 12], [43, 16], [48, 16], [48, 19], [50, 19], [50, 13]]
 const SPIKES = [7, 8, 39, 40]
+/** Centre of chart lattice cell `i` (2.8 cells, from card cell `o`), in card cells. */
+const onChart = (i: number, o = 0) => o + (i + .5) * 2.8 - .5
+/** The chart lattice cells the step line and the spikes light ([col, row]). */
+const CHART_CELLS = [
+  ...HYPNO.slice(1).flatMap(([c1, r1], i) => {
+    const [c0, r0] = HYPNO[i], n = Math.max(1, Math.abs(c1 - c0), Math.abs(r1 - r0))
+    return Array.from({ length: n + 1 }, (_, s) => [Math.round(c0 + ((c1 - c0) * s) / n), Math.round(r0 + ((r1 - r0) * s) / n)])
+  }),
+  ...SPIKES.flatMap(c => Array.from({ length: 7 }, (_, r) => [c, 5 + r])),
+].map(([c, r]): [number, number] => [onChart(c), onChart(r, 80)])
+// the grid leaves out its tiny dots under the chart's dots, so the line doesn't read as beads on a string
+const GRID: [number, number][] = [
+  ...[0, 4, 8, 12, 16, 20].flatMap(r => Array.from({ length: 141 }, (_, x): [number, number] => [onChart(0) + x, onChart(r, 80)])),
+  ...Array.from({ length: 11 }, (_, i) => i * 5).flatMap(c => Array.from({ length: 56 }, (_, y): [number, number] => [onChart(c), onChart(0, 80) + y])).filter(([, y]) => y <= onChart(20, 80)),
+].filter(([x, y]) => !CHART_CELLS.some(([cx, cy]) => Math.hypot(x - cx, y - cy) < 1.6))
 export const goodMorning: WidgetPreset = {
   id: 'good-morning', name: 'Good Morning, Henry', group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => {
@@ -180,9 +196,9 @@ export const goodMorning: WidgetPreset = {
     return [
       layer(T.big('7', 1, 24, { lattice: 2.5, smooth: true })), layer(T.big('H', 31, 46.4, { lattice: 1.8 })),
       layer(T.big('42', 64, 24, { lattice: 2.5, smooth: true })), layer(T.big('M', 124, 46.4, { lattice: 1.8 })),
-      // dotted grid behind the chart: tiny dots on the card pitch
-      ...[0, 11, 22, 33, 44, 55].map(r => layer(T.hrule(0, 80 + r, 144, 1, .45), 'idle')),
-      ...Array.from({ length: 11 }, (_, i) => layer(T.vrule(i * 14, 80, 56, 1, .45), 'idle')),
+      // dotted grid behind the chart: tiny dots one cell apart, on the chart lattice's rows and columns (every 4 rows,
+      // every 5 columns), so the step line runs along a grid line instead of half a lattice step off it
+      layer({ field: () => .45, sites: GRID, size: 1 }, 'idle'),
       layer(chart.at(chart.line(HYPNO))),
       ...SPIKES.map(c => layer(chart.at(chart.vrule(c, 10, 2)))),
       ...SPIKES.map(c => layer(chart.at(chart.vrule(c, 5, 5)), 'active')),

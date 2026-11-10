@@ -9,7 +9,7 @@
  * 2. JSON-LD: `WebSite` on the home page, a `CollectionPage` per board with its cards as `hasPart`. Widget, blog and
  *    lab pages already have theirs from postbuild.
  * 3. `dist/sitemap.xml` (home, boards, BROWSE, canonical widget slugs, blog, the lab while its flag is on, privacy, terms) and `dist/robots.txt`.
- * 4. A `rel=canonical` on the legal pages, which have none in their source.
+ * 4. A `rel=canonical` and the OG and Twitter tags on the legal pages, which have none in their source.
  * 5. `dist/404.html` (`./notfound.ts`): what Vercel serves for a path no file or rewrite matches.
  *
  * Every insert sits between `<!-- seo -->` markers, so a rerun replaces it. `SITE_URL` (or, on Vercel,
@@ -22,7 +22,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { boardIds, boardManifest } from '../../src/widgets/manifest'
 import { boardBlurbs } from '../../src/widgets/blurbs'
-import { SITE_DESCRIPTION, SITE_NAME, widgetTitle } from '../../src/site/meta'
+import { metaTags, SITE_DESCRIPTION, SITE_NAME, widgetTitle } from '../../src/site/meta'
 import { POSTS, postPath } from '../../src/blog/posts'
 import { LAB } from '../../src/lab/experiments'
 import { flag } from '../../src/site/flags'
@@ -78,6 +78,21 @@ export function boardLd(id: string, cards: readonly WidgetRow[]): object {
 }
 export const homeLd = (): object => ({ '@context': 'https://schema.org', ...site, description: SITE_DESCRIPTION, inLanguage: 'en' })
 
+const unesc = (s: string) => s.replace(/&quot;/g, '"').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&amp;/g, '&')
+const LEGAL = /\n?\s*<!-- seo-legal -->[\s\S]*?<!-- \/seo-legal -->/
+/**
+ * The legal pages are plain HTML with only a title and a description: add a canonical and the OG and Twitter tags
+ * from those two, so a shared /privacy link previews like every other page.
+ */
+export const legalHead = (name: string) => (html: string): string => {
+  const out = html.replace(LEGAL, ''), title = unesc(/<title>([^<]*)<\/title>/.exec(out)?.[1] ?? SITE_NAME)
+  const description = unesc(/<meta name="description" content="([^"]*)"/.exec(out)?.[1] ?? SITE_DESCRIPTION)
+  const tags = metaTags({ title, description, path: `/${name}`, image: '/og/default.png' }, origin)
+    .filter(([, key]) => key !== 'description').map(([attr, key, content]) => `<meta ${attr}="${key}" content="${esc(content)}" />`)
+  const block = [`<link rel="canonical" href="${esc(`${origin}/${name}`)}" />`, ...tags].join('\n    ')
+  return out.replace('</head>', `    <!-- seo-legal -->\n    ${block}\n    <!-- /seo-legal -->\n  </head>`)
+}
+
 /** Read, change and write one built file; false when the build has no such file. */
 function edit(file: string, change: (html: string) => string): boolean {
   const f = join(DIST, file)
@@ -104,10 +119,7 @@ export function seo() {
   }
   for (const file of ['lab.html', join('lab', 'index.html')]) fill(file, 'lab', labBody())
 
-  // the legal pages are plain HTML without a canonical
-  for (const name of ['privacy', 'terms']) {
-    edit(`${name}.html`, h => h.replace(/\s*<link rel="canonical"[^>]*>/, '').replace('</title>', `</title>\n    <link rel="canonical" href="${esc(`${origin}/${name}`)}" />`))
-  }
+  for (const name of ['privacy', 'terms']) edit(`${name}.html`, legalHead(name))
 
   const entries = sitemapEntries(widgets)
   writeFileSync(join(DIST, 'sitemap.xml'), sitemapXml(entries))

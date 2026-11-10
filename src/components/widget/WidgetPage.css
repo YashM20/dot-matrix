@@ -148,6 +148,13 @@
 }
 
 /* ── page ────────────────────────────────────────────────────────────────────────── */
+/* while the card's board loads, the page holds a full screen: on a phone the square placeholder alone left the footer
+   in the first screen, and the card's arrival pushed it down (CLS 0.14; scripts/site/perf-check.ts) */
+.wp[aria-busy="true"] {
+  min-height: 100vh;
+  min-height: 100svh
+}
+
 .wp-loading {
   width: min(648px, 100%);
   aspect-ratio: 1;

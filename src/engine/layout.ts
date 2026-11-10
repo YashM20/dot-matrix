@@ -1,5 +1,6 @@
 import type { CellBounds, Field, GridConfig, Layer } from './types'
 import { glyph, glyphMetrics, textField, textWidth, type TextOptions } from './fields/bitmapFont'
+import { HERO_H, heroCovers, heroRows, heroWidth, type HeroFace } from './fields/heroFaces'
 import { latticeGrid } from './sampler/gridSampler'
 
 /**
@@ -63,6 +64,11 @@ export interface BigTextOptions extends TextOptions {
   align?: 'left' | 'center' | 'right'
   /** The glyphs are a shape (a relief or engraving mask), never drawn as dots: `smooth` keeps Scale2x at any lattice. */
   mask?: boolean
+  /**
+   * The face for hero numerals (`fields/heroFaces`): `twin` (default), `fine` or `condensed`. It draws `smooth` text
+   * made only of digits, `. : % - +` and spaces; anything else keeps the Scale2x glyphs.
+   */
+  face?: HeroFace
 }
 /**
  * `smooth` (Scale2x) text needs a lattice of this many card cells or more (21 rows tall): below it the two-dot strokes
@@ -72,12 +78,41 @@ export const SMOOTH_MIN_LATTICE = 1.5
 /**
  * Hero text on its own lattice: `lattice` card cells per font pixel, anchored at card cell (col,row); `align` moves the
  * anchor to the text's centre or right edge. Every font pixel is one dot:
+ * - `smooth` numerals take a hero face (`face`), 14 dots tall;
  * - `smooth` below `SMOOTH_MIN_LATTICE` draws the plain 5×7 glyph at twice the lattice (same size, one-dot strokes);
  * - `scale` multiplies the lattice instead of drawing blocks of dots. A non-uniform scale gives columns `kx` and rows
  *   `ky` apart, drawn as round dot sites (sized by the narrower pitch), so the dots stay round.
  */
+/** The hero face `bigText` sets `str` in, or undefined when it draws font glyphs (a mask, plain text or not all numerals). */
+export function heroFaceOf(str: string, opts: BigTextOptions): HeroFace | undefined {
+  if (!opts.smooth || opts.mask || opts.lattice < SMOOTH_MIN_LATTICE) return undefined
+  const face = opts.face ?? 'twin'
+  return heroCovers(face, str) ? face : undefined
+}
+/** Width and height of `bigText(str, opts)` in card cells. */
+export function bigTextSize(str: string, opts: BigTextOptions): [number, number] {
+  const [sx, sy] = scaleOf(opts), hero = heroFaceOf(str, opts), plain = !hero && !!opts.smooth && !opts.mask && opts.lattice < SMOOTH_MIN_LATTICE
+  const k = plain ? opts.lattice * 2 : opts.lattice, face: TextOptions = { smooth: !!opts.smooth && !plain }
+  return hero ? [heroWidth(hero, str) * k * sx, HERO_H * k * sy] : [textWidth(str, face) * k * sx, glyphMetrics(face).h * k * sy]
+}
 export function bigText(grid: GridConfig, str: string, col: number, row: number, opts: BigTextOptions): Omit<Layer, 'tone'> {
-  const [sx, sy] = scaleOf(opts), plain = !!opts.smooth && !opts.mask && opts.lattice < SMOOTH_MIN_LATTICE
+  const [sx, sy] = scaleOf(opts), hero = heroFaceOf(str, opts)
+  if (hero) {
+    const kx = opts.lattice * sx, ky = opts.lattice * sy, bits = heroRows(hero, str), w = bits[0].length * kx
+    const left = opts.align === 'center' ? col - w / 2 : opts.align === 'right' ? col - w : col
+    if (kx === ky) {
+      // tagged as a sprite so a spec export (src/spec) rebuilds the same bitmap on the same lattice
+      const sub = latticeGrid(grid, kx, [left, row]), field = spriteAt(sub, bits, 0, 0)
+      field.text = str
+      field.from = { gen: 'sprite', grid: sub, args: [bits, 0, 0] }
+      return { field, lattice: kx, origin: [left, row] }
+    }
+    const field: Field = () => 1, sites: [number, number][] = []
+    field.text = str
+    bits.forEach((line, y) => [...line].forEach((c, x) => { if (c === '#') sites.push([left + (x + .5) * kx - .5, row + (y + .5) * ky - .5]) }))
+    return { field, sites, size: Math.min(kx, ky) }
+  }
+  const plain = !!opts.smooth && !opts.mask && opts.lattice < SMOOTH_MIN_LATTICE
   const k = plain ? opts.lattice * 2 : opts.lattice, face: TextOptions = { smooth: !!opts.smooth && !plain }
   const kx = k * sx, ky = k * sy, w = textWidth(str, face) * kx
   const left = opts.align === 'center' ? col - w / 2 : opts.align === 'right' ? col - w : col

@@ -91,10 +91,7 @@ function weatherIcon(icon: Icon): Layer[] {
   if (icon === 'fog') return [0, 1, 2, 3].map(i => layer(T.dotLine(cx - 22 + (i % 2) * 5, cy - 12 + i * 7.5, cx + 20 + (i % 2) * 5, cy - 12 + i * 7.5, { spacing: 3.5, size: 2.2 }), i % 2 ? 'mid' : 'value'))
   if (icon === 'partly') {
     const c = cloudShape(cx + 6, cy + 7, .9), [core, rays] = sunPts(cx - 13, cy - 8, 8.5), keep = ([x, y]: Pt) => !c.inside(x, y)
-    // the cloud cuts whole rays (both dots) and whole runs of the ring: no lone ring dot is left between cuts
-    const ring = core.map(keep), n = ring.length, arc = core.filter((_, i) => ring[i] && (ring[(i + 1) % n] || ring[(i + n - 1) % n]))
-    const beams = rays.filter((_, i) => keep(rays[i & ~1]) && keep(rays[i | 1]))
-    return [layer(T.dots(arc, 2.8), 'idle'), layer(T.dots(beams, 2.2), 'mid'), layer(T.dots(c.pts, 2.7))]
+    return [layer(T.dots(core.filter(keep), 2.8), 'idle'), layer(T.dots(rays.filter(keep), 2.2), 'mid'), layer(T.dots(c.pts, 2.7))]
   }
   const up = icon === 'cloud' ? 0 : -7, c = cloudShape(cx, cy + up)
   const out = [layer(T.dots(c.pts, 2.7))]

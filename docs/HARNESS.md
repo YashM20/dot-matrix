@@ -13,6 +13,7 @@
 - **Which probes:** `scripts/ci/affected.ts` maps path globs to probes for `git diff --name-only <base>...HEAD`. A probe's own script picks that probe. Shared code (`src/engine/`, `src/hooks/`, `src/widgets/types*` and `manifest*`, `DotCanvas`, `DotWidget`, `scripts/lib/`, `scripts/ci/`, `vite.config.ts`, `index.html`, `package.json`, the lockfile, this workflow) runs every probe, and so does any path with no row. Try a table change with `pnpm exec tsx scripts/ci/affected.ts --files <path,path>`.
 - **Every probe** runs on a push to `main`, on a dispatch with `probes=all`, and on a PR with the `full-probes` label (adding the label starts the run).
 - **The table** of probes is `scripts/ci/probe-list.ts` (`scripts/ci/probes.ts --list` prints it). Add a new probe there, with its usual seconds, and give it a row in `affected.ts`. A full run uses each probe's `shard`; each shard's run prints a timing table in the job summary, so move probes between shards when one runs long. A partial run packs the picked probes into as few shards as their seconds allow: three short probes share one runner.
+- **Lighthouse** (`scripts/ci/lighthouse.ts`, the `lighthouse` job): the PageSpeed Insights engine, with no API key, on the SEO routes (home, `/browse/`, two boards, two widget pages, the blog, a post, `/about`, `/privacy`), mobile and desktop. It writes the Performance and Accessibility scores, LCP, CLS, TBT and every audit that lost points to the run summary and the `lighthouse-<target>` artifact. It runs on this build for every run; a dispatch with `-f lighthouse=live` (or `both`) audits the production site instead. A report: runner timings are noisy. `scripts/site/perf-check.ts` in CI pins what it found, without a browser.
 - **Screenshots** are `route@width[@theme]` items for `scripts/ci/shots.ts`: widths up to 600 are a phone; theme is `dark`, `light` or a full name like `light_cobalt`.
 - **On demand**, for agents. `gh run watch` is not allowed: list the runs and check back.
   ```bash
@@ -31,6 +32,13 @@ Regenerate `goldens/<board>.json` on a runner instead of a laptop, after an inte
 gh workflow run goldens -f branch=<branch>
 ```
 The `goldens` workflow runs `pnpm golden` on that branch and commits the changed files back as `Regenerate goldens`, only when one changed. It refuses `main` and does nothing in a fork. A push made by the workflow starts no pull_request run, so the workflow dispatches CI on the branch to give the new head its `check + build` result. Merge the new commit before you push again: `git pull` on the branch.
+
+## SEO audit
+An on-demand audit with free tools, on a runner (`.github/workflows/seo-audit.yml`):
+```bash
+gh workflow run seo-audit --ref <branch> [-f live=true]
+```
+It builds the branch and serves `dist/` with `vercel.json`'s redirects, rewrites, headers and 404 page (`scripts/site/serve.ts`, so a broken link gets a real 404 instead of the home page). Then it runs Lighthouse (SEO, best practices, accessibility) on a set of routes at mobile and desktop, the W3C Nu checker on the built pages, and lychee on every link of every sitemap page. `live=true` adds Lighthouse on the production site. The run summary has the tables (`scripts/site/seo-audit.ts`) and the raw reports are the `seo-audit` artifact. It is a report, not a gate: `scripts/site/seo-check.ts` in CI holds the fixes in place.
 
 ## The first harness (historical, 2026-08)
 > The commands below are outdated (npm, module counts). Use the section above.

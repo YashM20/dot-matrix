@@ -30,7 +30,7 @@ export const complicationsFace = face('watch-complications', 'Complications', 's
     const moon = moonSites(m[0], m[1], 9.6, 2.4, moonPhase(now.utc).phase, false)
     const pulse = ctx.reducedMotion ? 1 : beat(ctx.t, bpm)
     return [
-      layer(T.big(hhmm(now), CX, 24, { lattice: 1.5, smooth: true, align: 'center' }), 'value'),
+      layer(T.big(hhmm(now), CX, 24, { lattice: 1.5, smooth: true, face: 'fine', align: 'center' }), 'value'),
       layer(T.text(`${DAYS[now.dow]} ${pad2(now.day)} ${MONTHS[now.month]}`, CX, 49, { align: 'center' }), 'idle'),
       ...dial(b, ctx.data.battery ?? .78, String(Math.round((ctx.data.battery ?? .78) * 100)), 'BAT'),
       ...dial(h, 0, String(bpm), 'BPM', 'idle', true),
@@ -61,7 +61,7 @@ export const stepsFace = face('watch-steps', 'Steps', 'squircle', {
       ...(f > .005 ? [layer(ring(f * TAU - 1e-6, 2.6), 'value')] : []),
       layer(T.dots([head], 6), 'active'),
       layer(T.text('STEPS', CX, 46, { align: 'center' }), 'idle'),
-      layer(T.big(String(total), CX, 56, { lattice: total >= 10000 ? 1.3 : 1.5, smooth: true, align: 'center' }), 'value'),
+      layer(T.big(String(total), CX, 56, { lattice: total >= 10000 ? 1.3 : 1.5, smooth: true, face: 'fine', align: 'center' }), 'value'),
       layer(T.text(`OF ${STEP_GOAL}`, CX, 82, { align: 'center' }), 'mid'),
       layer(T.dots(span(h => h > now.hour), 1.4), 'faint'),
       layer(T.dots(span(h => h < now.hour), 1.6), 'idle'),

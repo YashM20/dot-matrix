@@ -26,6 +26,11 @@ export interface TeletextOptions {
   mode: 'contiguous' | 'separated'
   /** Row of a character's glyph top inside its cell (default: centred, ⌊(cell height − 7) / 2⌋). */
   baseline?: number
+  /**
+   * A background stops one row short (a card row for text, a sub-row for mosaics) above a cell that holds something
+   * on no background, so a panel never touches the text or rule under it.
+   */
+  moat?: boolean
 }
 
 /** Join groups: contiguous mosaics, mosaic backgrounds, text backgrounds (tones differ anyway; the ids keep them apart if not). */
@@ -47,6 +52,8 @@ export function teletextLayers(page: (TtCell | null)[][], o: TeletextOptions): L
     return p.data
   }
   const out: Layer[] = [], ty = o.baseline ?? Math.floor((ch - 7) / 2)
+  /** The cell under (r, c) holds something on no background: a background above it keeps a moat (`moat`). */
+  const bare = (r: number, c: number) => { const n = o.moat ? page[r + 1]?.[c] : null; return !!n && !n.bg }
   for (let r = 0; r < Math.min(o.rows, page.length); r++) {
     const row = page[r], y0 = oy + r * ch
     // text: one `textAt` per run of characters in one tone, one layer per (row, tone) bounded to its row; a run of one
@@ -57,7 +64,11 @@ export function teletextLayers(page: (TtCell | null)[][], o: TeletextOptions): L
       if (!cell || !('ch' in cell)) { c++; continue }
       let e = c + 1, str = cell.ch
       while (e < Math.min(o.cols, row.length)) { const n = row[e]; if (!n || !('ch' in n) || n.fg !== cell.fg || n.bg !== cell.bg) break; str += n.ch; e++ }
-      if (cell.bg) push(bg, cell.bg, rectCells(grid, ox + c * cw, y0, (e - c) * cw, ch, .5))
+      if (cell.bg) {
+        let short = false
+        for (let i = c; i < e; i++) short ||= bare(r, i)
+        push(bg, cell.bg, rectCells(grid, ox + c * cw, y0, (e - c) * cw, short ? ch - 1 : ch, .5))
+      }
       // the font advances 6 cells: a wider cell spaces the glyphs one by one
       if (str.trim()) {
         if (cw === 6) push(text, cell.fg, textAt(grid, str, ox + c * cw, y0 + ty))
@@ -73,7 +84,7 @@ export function teletextLayers(page: (TtCell | null)[][], o: TeletextOptions): L
       const sep = cell.sep ?? o.mode === 'separated'
       for (let i = 0; i < 6; i++) {
         const j = (r * 3 + (i >> 1)) * W + c * 2 + (i & 1)
-        if (cell.bg) plane(cell.bg, 'bg')[j] = 1
+        if (cell.bg && !(i >> 1 === 2 && bare(r, c))) plane(cell.bg, 'bg')[j] = 1
         if (cell.sextant >> i & 1) plane(cell.fg, sep ? 'sep' : 'fg')[j] = 1
       }
     }

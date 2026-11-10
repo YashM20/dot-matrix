@@ -31,6 +31,19 @@
   max-width: var(--measure)
 }
 
+/* the home's first readable line is the lead: what the site is, on a line of its own in the lead size and the
+   brightest ink; the how-to, the essay link and × share the row under it (phones show the short line instead,
+   src/site/mobile/phone.css). `contents` makes the lead and the how-to rows of the intro's own flex wrap. */
+.intro-long {
+  display: contents
+}
+
+.intro-lead {
+  flex-basis: 100%;
+  color: var(--value);
+  font-size: var(--fs-lead-18)
+}
+
 .intro-line b {
   font-weight: 500;
   color: var(--value)
@@ -115,8 +128,8 @@
   text-wrap: pretty
 }
 
-/* the concept credit (ConceptCredit.tsx): a quiet line under the blurb, its links marked like the inline link
-   (DESIGN.md › Chrome components › link) */
+/* the concept credit (ConceptCredit.tsx, on ABOUT and a card's widget page): a quiet line, its links marked like the
+   inline link (DESIGN.md › Chrome components › link) */
 .concept-credit {
   max-width: var(--measure);
   margin: var(--space-2) 0 0;
@@ -210,8 +223,67 @@
   margin-top: var(--gap-group)
 }
 
+/* desktop: an action step between the picker and the board it opened, so the board's name, blurb and cards read as
+   the content and the picker as the way to it (phones keep the group step: the first card stays high) */
+@media not ((max-width: 760px) or ((max-height: 500px) and (pointer: coarse))) {
+  .board-picker + .board-view {
+    margin-top: var(--gap-action)
+  }
+}
+
 /* a board whose chunk is still loading holds a screen of room, so the footer starts below the fold and doesn't jump
    down when the cards land (layout shift, #198) */
 .board-view[aria-busy='true'] {
   min-height: 100svh
+}
+
+/* the board's end, at every width: the next board in its group (BoardPicker.tsx NextBoard). Phones take the full width
+   for the thumb; wider screens a quiet pager at the grid's right edge */
+.next-board {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 64px;
+  margin: var(--gap-action) 0 0;
+  padding: 0 var(--space-4);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-card);
+  background: var(--surface);
+  color: var(--value);
+  font: 600 var(--fs-label-12) var(--mono);
+  letter-spacing: .14em;
+  text-align: left;
+  cursor: pointer
+}
+
+.next-board:hover,
+.next-board:focus-visible {
+  border-color: var(--line-hover)
+}
+
+.next-board:active {
+  background-color: color-mix(in srgb, var(--surface), var(--tint) 4%)
+}
+
+.next-board small {
+  color: var(--mute);
+  font-size: var(--fs-label-12)
+}
+
+.next-board b {
+  flex: 1;
+  font-weight: inherit
+}
+
+.next-board span {
+  color: var(--label);
+  font-size: var(--fs-copy-14)
+}
+
+@media not ((max-width: 760px) or ((max-height: 500px) and (pointer: coarse))) {
+  .next-board {
+    width: min(100%, 360px);
+    margin-left: auto
+  }
 }

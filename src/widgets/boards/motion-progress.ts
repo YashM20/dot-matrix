@@ -54,7 +54,7 @@ export const progressCard = loopCard({
  * Two bars chase along a thick rail, a long one then a short one, each easing in and out (1.5 s a cycle).
  * After three cycles the answer comes back: the rail fills from the left and the copy turns to UP TO DATE.
  */
-const WAIT = { x0: 6, n: 41, pitch: 3.3, ys: [72, 76], cycle: 1.5, cycles: 3, fill: .4, period: 6.8 }
+const WAIT = { x0: 6, n: 41, pitch: 3.3, ys: [71, 76], cycle: 1.5, cycles: 3, fill: .4, period: 6.8 }
 const waitEnd = WAIT.cycle * WAIT.cycles
 /** Lit fraction ranges [tail, head] of the two bars at cycle phase `f`. */
 const bars = (f: number): [number, number][] => [
@@ -81,7 +81,8 @@ export const waitCard = loopCard({
     return [
       layer(T.big(done ? 'UP TO DATE' : 'CHECKING', 6, 34, BODY), 'value'),
       layer(T.text(done ? 'VERSION 4.8.0' : 'FOR UPDATES', 6, 50), 'idle'),
-      ...[...by].map(([tn, pts]) => layer(T.dots(pts, tn === 'faint' ? 1.6 : tn === 'active' ? 3.8 : 3), tn)),
+      // two rows 5 cells apart, lit dots 0.73 of the pitch: the band reads as dots, not one white block
+      ...[...by].map(([tn, pts]) => layer(T.dots(pts, tn === 'faint' ? 1.4 : tn === 'active' ? 3.4 : 2.4), tn)),
       layer(T.text(done ? 'LAST CHECK JUST NOW' : 'THIS CAN TAKE A MINUTE', 6, 92), 'mid'),
     ]
   },

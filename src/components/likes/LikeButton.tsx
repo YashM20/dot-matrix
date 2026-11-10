@@ -6,7 +6,7 @@
  * reads out the state and the count.
  */
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { countOf, dailyVisit, ensureBot, gpc, local, programItem, sendForget, sendLike, sendVisit, setLocal, subscribeLocal, type Program } from './client'
+import { countOf, dailyVisit, ensureBot, gpc, local, programItem, sendForget, sendLike, sendVisit, setLocal, subscribeLocal, updateLocal, type Program } from './client'
 import { RememberSheet } from './RememberSheet'
 import './likes.css'
 
@@ -64,11 +64,12 @@ export default function LikeButton({ item: widgetItem, program, name, compact }:
     await ensureBot()
     const r = await sendLike(program && !widgetItem ? { program } : { item }, on)
     setBusy(false)
-    const l = local()
     if (!r.ok) { setNote(r.why === 'limit' ? 'limit' : 'paused'); setSaid(NOTES[r.why === 'limit' ? 'limit' : 'paused']); return }
-    const next = { ...l.mine }
-    if (r.body.on) next[item] = count ?? 0; else delete next[item]
-    setLocal({ ...l, mine: next })
+    updateLocal(l => {
+      const next = { ...l.mine }
+      if (r.body.on) next[item] = count ?? 0; else delete next[item]
+      return { ...l, mine: next }
+    })
     const n = r.body.on ? Math.max(count ?? 0, (count ?? 0) + 1) : count ?? 0
     const nn: Note = !r.body.on ? '' : r.body.already ? 'already' : r.body.soon ? 'soon' : ''
     setNote(nn)
@@ -84,7 +85,7 @@ export default function LikeButton({ item: widgetItem, program, name, compact }:
   const choose = async (c: 'r' | 'o' | null) => {
     setAsking(false)
     if (!c) return
-    setLocal({ ...local(), c, ...(c === 'r' && { d: Math.floor(Date.now() / 864e5) }) })
+    updateLocal(l => ({ ...l, c, ...(c === 'r' && { d: Math.floor(Date.now() / 864e5) }) }))
     if (c === 'r') { setBusy(true); await ensureBot(); await sendVisit(); setBusy(false) }
     await send(true)
   }

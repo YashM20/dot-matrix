@@ -11,7 +11,7 @@ This project started from the ESP-Mosaico concept screens for a 480 × 480 OLED 
 
 What came from his posts:
 
-- The first seven boards (`/henry/`, `/deerflow12/`, `/mosaic/`, `/henry3/`, `/metro/`, `/ride/`, `/audio/`) rebuild his reference sheets, kept in `public/images/`, most of them under his X media ids as file names ([BLOCK-INVENTORY.md](BLOCK-INVENTORY.md)). Those boards show this credit under their blurb.
+- The first seven boards (`/henry/`, `/deerflow12/`, `/mosaic/`, `/henry3/`, `/metro/`, `/ride/`, `/audio/`) rebuild his reference sheets, kept in `public/images/`, most of them under his X media ids as file names ([BLOCK-INVENTORY.md](BLOCK-INVENTORY.md)). Each card from them shows this credit on its own page (`/widget/<id>/`).
 - The idea the engine grew from: a whole interface drawn in dots on a dense square matrix.
 - The 480 in Dot/480, the engine's codename: his device is 480 × 480.
 

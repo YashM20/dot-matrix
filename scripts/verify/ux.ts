@@ -5,6 +5,7 @@ import { SITE_NAME, boardFromPath } from '../../src/site/meta'
 import { BROWSE_META } from '../../src/site/browse'
 import { PLACES, placeView, urlForView, viewFromUrl, type ViewState } from '../../src/site/views'
 import { matches, readFilters, writeFilters, ROWS, MAX_QUERY } from '../../src/components/browse/data'
+import { readFileSync } from 'node:fs'
 import type { Assert } from '../lib/check'
 
 export function uxChecks(assert: Assert) {
@@ -73,5 +74,12 @@ export function uxChecks(assert: Assert) {
     assert('ux: browse lists every widget once, and a tag filter keeps only cards with that tag', all === ROWS.length && new Set(ROWS.map(r => r.slug)).size === ROWS.length && clocks.length > 0 && clocks.every(r => r.tags.includes('clock')), `${all} cards, ${clocks.length} clocks`)
     assert('ux: the browse title ends with the site name', BROWSE_META.title.endsWith(` · ${SITE_NAME}`), BROWSE_META.title)
     assert('ux: browse search finds a card by its name', ROWS.some(r => r.slug === 'home-clock' && matches(r, { board: '', tag: '', q: 'HOME' })))
+  }
+
+  // the phone bar folds LIVE DATA to its dot with `font-size: 0`; unscoped, that rule also blanked the footer's LIVE label
+  {
+    const css = readFileSync('src/site/mobile/phone.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
+    const bare = [...css.matchAll(/(^|[{}])\s*([^{}]*)\{[^}]*font-size:\s*0[;\s}]/g)].map(m => m[2].trim()).filter(sel => sel.split(',').some(s => /(^|\s)\.live$/.test(s.trim()) && !/\.topbar\s+\.live$/.test(s.trim())))
+    assert('ux: the phone LIVE fold stays in the top bar (the footer keeps its LIVE word)', !bare.length, bare.join(' | '))
   }
 }

@@ -26,8 +26,11 @@
   letter-spacing: .16em
 }
 
+/* underlined: colour alone doesn't set the link apart from the text around it (Lighthouse link-in-text-block) */
 .consent-text a {
-  color: var(--value)
+  color: var(--value);
+  text-decoration: underline;
+  text-underline-offset: 2px
 }
 
 .consent-actions {

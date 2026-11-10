@@ -76,6 +76,11 @@ export interface WidgetPreset {
    * `by …` line on the widget page (DESIGN.md "Credit line"). Read it through `creditsOf`.
    */
   credit?: WidgetCredit | readonly WidgetCredit[]
+  /**
+   * Whether the card rebuilds Henry Li's ESP-Mosaico concept screens, so its widget page carries that credit. Unset:
+   * the board's default (`conceptCredit.boards`, src/widgets/blurbs.ts). Read it through `hasConcept`.
+   */
+  concept?: boolean
   layers(ctx: WidgetContext): Layer[]
 }
 

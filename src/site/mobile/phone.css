@@ -74,13 +74,13 @@
     color: var(--mute)
   }
 
-  /* LIVE DATA folds to its red dot (the words stay for screen readers) */
-  .live {
+  /* LIVE DATA folds to its red dot (the words stay for screen readers); the footer's LIVE label keeps its word */
+  .topbar .live {
     flex: none;
     font-size: 0
   }
 
-  .live i {
+  .topbar .live i {
     width: 6px;
     height: 6px;
     margin: 0
@@ -298,49 +298,6 @@
     box-shadow: inset 0 0 0 1px var(--red);
     background-color: var(--glow-wash);
     color: var(--red-text)
-  }
-
-  /* the board's end: the next board in its group */
-  .next-board {
-    display: flex;
-    align-items: center;
-    gap: var(--space-3);
-    width: 100%;
-    min-height: 64px;
-    margin: var(--gap-action) 0 0;
-    padding: 0 var(--space-4);
-    border: 1px solid var(--line);
-    border-radius: var(--radius-card);
-    background: var(--surface);
-    color: var(--value);
-    font: 600 var(--fs-label-12) var(--mono);
-    letter-spacing: .14em;
-    text-align: left;
-    cursor: pointer
-  }
-
-  .next-board:hover,
-  .next-board:focus-visible {
-    border-color: var(--line-hover)
-  }
-
-  .next-board:active {
-    background-color: color-mix(in srgb, var(--surface), var(--tint) 4%)
-  }
-
-  .next-board small {
-    color: var(--mute);
-    font-size: var(--fs-label-12)
-  }
-
-  .next-board b {
-    flex: 1;
-    font-weight: inherit
-  }
-
-  .next-board span {
-    color: var(--label);
-    font-size: var(--fs-copy-14)
   }
 
   /* the intent line is one line here (T3: intro + picker ≤ 120 px): the short sentence, the link, the close */
