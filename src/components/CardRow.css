@@ -122,6 +122,11 @@
   opacity: 1
 }
 
+/* MORE's menu hangs where the bubble would: the menu wins */
+.dot-card-row.open .copied::after {
+  visibility: hidden
+}
+
 /* the ring stays inside the target, clear of the card's bottom edge */
 .dot-card-row a:focus-visible,
 .dot-card-row > button:focus-visible {

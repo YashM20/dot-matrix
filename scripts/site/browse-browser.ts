@@ -44,17 +44,13 @@ mkdirSync(ROWS, { recursive: true })
 async function rowShot(p: Page, name: string, slot: string) {
   const r = await p.js<{ x: number; y: number; w: number; h: number }>(`(() => { const s = document.querySelector(${JSON.stringify(slot)}), c = s.querySelector('.dot-card').getBoundingClientRect(),
     b = s.getBoundingClientRect(), m = s.querySelector('.dot-card-menu')?.getBoundingClientRect(), bottom = Math.max(b.bottom, m ? m.bottom : 0)
-    return { x: Math.max(0, b.left - 8), y: c.bottom - 48 + scrollY, w: b.width + 16, h: bottom - c.bottom + 48 + 16 } })()`)
+    return { x: Math.max(0, b.left - 8), y: c.bottom - 48 + scrollY, w: b.width + 16, h: bottom - c.bottom + 48 + 48 } })()`)
   const res = await p.cdp('Page.captureScreenshot', { format: 'png', clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: 3 }, captureBeyondViewport: true })
   writeFileSync(join(ROWS, `${name}.png`), Buffer.from(res.result.data, 'base64'))
 }
 /** The first slot's row at rest, under the pointer (Open's tooltip), with keyboard focus on Open, after Copy link, and
- * with More open. The close-ups take a mouse (`hover: hover`, `pointer: fine`): headless Chrome reports none, which
- * gives the touch row. */
+ * with More open (once the "Copied" note is gone). */
 async function rowStates(p: Page, name: string, slot: string) {
-  await p.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'hover', value: 'hover' }, { name: 'pointer', value: 'fine' }] }).catch(() => null)
-  const fine = await p.js<boolean>(`matchMedia('(hover: hover) and (pointer: fine)').matches`)
-  console.log(`card row close-ups (${name}): ${fine ? 'mouse layout' : 'touch layout (hover emulation not taken)'}`)
   await p.js(`document.querySelector(${JSON.stringify(slot)}).scrollIntoView({ block: 'center' }), document.activeElement?.blur(), 1`)
   await p.mouse('mouseMoved', 2, 2); await sleep(400); await rowShot(p, `${name}-rest`, slot)
   const o = await p.js<{ x: number; y: number }>(`(r => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 }))(document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-open').getBoundingClientRect())`)
@@ -62,12 +58,14 @@ async function rowStates(p: Page, name: string, slot: string) {
   await p.mouse('mouseMoved', 2, 2, 0); await p.key('Shift', 'ShiftLeft', 16)
   await p.js(`document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-open').focus(), 1`); await sleep(400); await rowShot(p, `${name}-focus`, slot)
   const copied = await copyLink(p, slot); await rowShot(p, `${name}-copied`, slot)
-  await p.mouse('mouseMoved', 2, 2, 0)
+  await p.mouse('mouseMoved', 2, 2, 0); await sleep(2600)
   await p.js(`document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-more').click(), 1`); await sleep(400); await rowShot(p, `${name}-more`, slot)
   await p.key('Escape', 'Escape', 27); await sleep(150)
-  await p.cdp('Emulation.setEmulatedMedia', { features: [] }).catch(() => null)
   return copied
 }
+/** Chrome flags for a browser with a mouse: headless Chrome on the runner reports no hover and no fine pointer, so the
+ * site shows its touch row; these Blink settings give the desktop row. */
+const MOUSE = '--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4'
 /** A real click on the slot's Copy link (the clipboard allowed): what its tooltip, its icon and the site's polite toast say. */
 async function copyLink(p: Page, slot: string) {
   await p.cdp('Browser.grantPermissions', { permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'], origin: new URL(base).origin }).catch(() => null)
@@ -164,14 +162,33 @@ try {
     !boardRow.name && boardRow.words === '' && boardRow.icons === 3 && /^Open \S/.test(boardRow.open) && boardRow.right, JSON.stringify(boardRow))
   assert('browse: a board card row adds ≤ 24 px (32 on touch) and its actions are ≥ 24 × 24', onBoard.added <= onBoard.max && !onBoard.small.length, JSON.stringify(onBoard))
   console.log(`card row: adds ${onBoard.added} px under a board card`)
-  const copied = await rowStates(p, 'row-board', '.board-grid > .dot-slot')
-  assert('browse: Copy link says Copied (tooltip shown, check icon) and the polite toast says link copied',
-    copied.tip === 'Copied' && copied.check && copied.shown && /link copied/.test(copied.toast) && copied.live === 'polite', JSON.stringify(copied))
-  for (const theme of ['dark_signal', 'light_signal']) {
-    await open(p, `${base}?theme=${theme}`); await p.waitFor(`!!document.querySelector('.browse-item > .dot-card:not(.browse-ghost)')`, 15000); await sleep(1200)
-    const onAll = await rowSize(p, '.browse-item')
-    assert(`browse: an ALL card row adds ≤ 24 px (32 on touch) and its actions are ≥ 24 × 24 (${theme})`, onAll.added <= onAll.max && !onAll.small.length, JSON.stringify(onAll))
-    await rowStates(p, `row-all-${theme.split('_')[0]}`, '.browse-item')
+  await open(p, base); await p.waitFor(`!!document.querySelector('.browse-item > .dot-card:not(.browse-ghost)')`, 15000); await sleep(1200)
+  const onAll = await rowSize(p, '.browse-item')
+  assert('browse: an ALL card row adds ≤ 24 px (32 on touch) and its actions are ≥ 24 × 24', onAll.added <= onAll.max && !onAll.small.length, JSON.stringify(onAll))
+
+  // with a mouse (a second Chrome, MOUSE): the desktop row's height, the copy confirmation, and the 3× close-ups
+  const flags0 = process.env.CHROME_FLAGS
+  process.env.CHROME_FLAGS = [flags0, MOUSE].filter(Boolean).join(' ')
+  const m = await launch(1280, 900, { flags: { make: false, lab: false }, testHooks: false })
+  if (flags0 === undefined) delete process.env.CHROME_FLAGS; else process.env.CHROME_FLAGS = flags0
+  try {
+    await quiet(m, base)
+    await m.cdp('Page.navigate', { url: new URL(boardPath, base).href })
+    await m.waitFor(`!!document.querySelector('.board-grid > .dot-slot > .dot-card canvas, .board-grid > .dot-slot > .dot-card svg')`, 20000); await sleep(1200)
+    const mouse = await m.js<boolean>(`matchMedia('(hover: hover) and (pointer: fine)').matches`)
+    const desk = await rowSize(m, '.board-grid > .dot-slot')
+    assert('browse: with a mouse the row adds ≤ 24 px under a card and its actions are ≥ 24 × 24', mouse && desk.added <= 24 && !desk.small.length, JSON.stringify({ mouse, ...desk }))
+    console.log(`card row: adds ${desk.added} px under a card with a mouse`)
+    const copied = await rowStates(m, 'row-board', '.board-grid > .dot-slot')
+    assert('browse: Copy link says Copied (tooltip shown, check icon) and the polite toast says link copied',
+      copied.tip === 'Copied' && copied.check && copied.shown && /link copied/.test(copied.toast) && copied.live === 'polite', JSON.stringify(copied))
+    for (const theme of ['dark_signal', 'light_signal']) {
+      await open(m, `${base}?theme=${theme}`); await m.waitFor(`!!document.querySelector('.browse-item > .dot-card:not(.browse-ghost)')`, 15000); await sleep(1200)
+      await rowStates(m, `row-all-${theme.split('_')[0]}`, '.browse-item')
+    }
+    assert('browse: no page errors with a mouse', !m.logs.length, m.logs.slice(0, 3).join(' | '))
+  } finally {
+    await m.close()
   }
 
   // every width, two schemes and a second accent: nothing overflows sideways
