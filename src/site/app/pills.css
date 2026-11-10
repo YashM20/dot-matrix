@@ -1,0 +1,86 @@
+/* App styles: the pill controls (docs/SHARE-PLAN.md §4.3, src/components/widget/PillBar.tsx). One capsule (`.pill`)
+   holds one or more small mono uppercase buttons (`.pill-btn`): the widget page's bars and the board's NEXT BOARD.
+   First-load CSS so a board view can use them; grey chrome only, the card keeps the one accent. */
+.pill-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2)
+}
+
+.pill {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1);
+  background: var(--glass);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-pill);
+  -webkit-backdrop-filter: var(--glass-blur);
+  backdrop-filter: var(--glass-blur)
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .pill {
+    background: var(--raised)
+  }
+}
+
+.pill-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-pill);
+  color: var(--label);
+  font: 600 var(--fs-label-12)/1 var(--mono);
+  letter-spacing: .14em;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation
+}
+
+/* the four states (the focus ring is the global accent ring) */
+.pill-btn:hover,
+.pill-btn:focus-visible {
+  background: var(--wash-hover);
+  color: var(--value)
+}
+
+.pill-btn:active,
+.pill-btn[aria-expanded="true"] {
+  background: var(--wash-press);
+  color: var(--value)
+}
+
+/* a pill that is on (X-RAY): the accent wash */
+.pill-btn[aria-pressed="true"] {
+  background: var(--glow-wash);
+  color: var(--value)
+}
+
+.pill-glyph {
+  color: var(--mute);
+  font-size: var(--fs-label-12);
+  letter-spacing: 0
+}
+
+.pill-btn:hover .pill-glyph,
+.pill-btn:focus-visible .pill-glyph,
+.pill-btn:active .pill-glyph,
+.pill-btn[aria-pressed="true"] .pill-glyph {
+  color: var(--value)
+}
+
+@media (pointer: coarse) {
+  .pill-btn {
+    min-width: var(--tap);
+    min-height: var(--tap)
+  }
+}

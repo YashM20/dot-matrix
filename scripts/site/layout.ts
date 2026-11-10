@@ -54,8 +54,6 @@ const KNOWN: readonly string[] = [
   'sticky:widget@1440:mid', 'sticky:widget@1440:bottom', 'sticky:widget@768:mid', 'sticky:widget@768:bottom',
   // S3 (P1-B): MAKE scrolls to show the footer under the editor
   'no-app-scroll:make@1920', 'no-app-scroll:make@1440', 'no-app-scroll:make@1280', 'no-app-scroll:make@1024', 'no-app-scroll:make@768',
-  // L7 (P1-B): no whole card above the fold at 320 x 568
-  'fold-one:home@320',
 ]
 
 const args = process.argv.slice(2)

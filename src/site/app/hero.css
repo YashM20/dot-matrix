@@ -1,7 +1,8 @@
 /* App styles: the touchable hero (home only) */
 /* ── T2: the touchable hero (home only, docs/LAYOUT-THEME-PLAN.md §1c #2) ──────────────────────────────────
    The slot is first-load CSS so the box is there before its lazy chunk (src/components/hero/) fills it: beside
-   the header on wide screens, after the board on narrower ones (scroll-first: the cards come first on a phone). */
+   the header on wide screens, after the board on narrower ones (scroll-first: the cards come first on a phone).
+   App.tsx renders it in that place in the DOM as well, so the Tab order follows the page. */
 .home-hero {
   width: min(100%, 420px);
   margin: 0
@@ -34,7 +35,6 @@
   }
 
   .home-hero {
-    order: 1;
     margin-top: var(--gap-section)
   }
 }
