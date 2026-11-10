@@ -20,6 +20,7 @@ import { useDotField } from '../hooks/useDotField'
 import { drawn as drawnStat } from '../site/stats'
 import { useControlInput } from '../hooks/useControlInput'
 import { ControlOverlay } from './ControlOverlay'
+import { firstDraws } from './firstDraw'
 import { DisplaySurface } from './skins/DisplaySurface'
 // card touch policy (pan-y drag pads, engaged state): every interactive surface needs it, the essay's figures too;
 // ./touch.css is pulled into each page's stylesheet by src/index.css and src/blog/blog.css (#198)
@@ -191,12 +192,25 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
 
   // entrance: sampling waits for the stagger delay, so a board spreads its sampling cost over the stagger
   const [enterSpec] = useState(() => (enter && !window.matchMedia(reducedMotionQuery).matches ? enter : undefined))
-  const [ready, setReady] = useState(!enterSpec)
+  const [delayed, setDelayed] = useState(!enterSpec)
   useEffect(() => {
     if (!enterSpec) return
-    const id = window.setTimeout(() => setReady(true), enterSpec.delay)
+    const id = window.setTimeout(() => setDelayed(true), enterSpec.delay)
     return () => window.clearTimeout(id)
   }, [enterSpec])
+  // a grid card (one with an entrance, under reduced motion too) then waits for its turn near the screen: one first
+  // draw per task, on-screen cards first (./firstDraw.ts, #312). Its pixels stay the same; only when they are sampled moves
+  const [gated] = useState(() => !!enter)
+  const [granted, setGranted] = useState(!gated)
+  const askedRef = useRef<Element | null>(null)
+  useEffect(() => {
+    if (!gated || !delayed) return
+    const el = canvasRef.current ?? svgRef.current
+    if (!el) { setGranted(true); return }
+    askedRef.current = el
+    return firstDraws().request(el, () => setGranted(true))
+  }, [gated, delayed])
+  const ready = delayed && granted
 
   // a live card reads the latest interaction per frame; the static frame re-samples only on a committed change.
   // A live card draws every frame itself, so it skips the static sample (a data edit, or a board-shared key that
@@ -404,6 +418,8 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     const canvas = canvasRef.current
     if (canvas) draw(canvas, dots)
   }, [mode, live, transient, dots, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
+  // the first frame is on screen (drawn by the effects above, in this same commit): the next grid card may go
+  useEffect(() => { if (ready && askedRef.current) { firstDraws().done(askedRef.current); askedRef.current = null } }, [ready])
 
   // live frames straight from the master clock; a throwing frame keeps the last good one on screen
   const { cols, rows, pitch: gridPitch } = grid
