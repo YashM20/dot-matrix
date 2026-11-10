@@ -8,7 +8,7 @@
  *
  *   npx tsx scripts/ci/lighthouse.ts                          → dist/ (build first), served like Vercel
  *   npx tsx scripts/ci/lighthouse.ts --base https://matrix.reactopia.me/   → the live site
- *   npx tsx scripts/ci/lighthouse.ts --routes /,/browse/ --forms mobile --out lh
+ *   npx tsx scripts/ci/lighthouse.ts --routes /,/henry/ --forms mobile --out lh
  *   npx tsx scripts/ci/lighthouse.ts --routes /mosaic/ --runs 3 --trace   → 3 runs each, the median-TBT one reported
  *   npx tsx scripts/ci/lighthouse.ts --routes /,/mosaic/ --forms mobile --timeout 90   → a PR push: bounded and quick
  *
@@ -27,9 +27,10 @@ import { findChrome } from '../lib/cdp'
 import { serveVercel } from '../site/serve'
 
 const LIGHTHOUSE = 'lighthouse@13.6.0'
-/** The SEO routes: home, browse, three boards, two widget pages, the blog, the essay, a markdown post, about and the
- *  legal pages. The 404 is left out: Lighthouse refuses a page that answers 404 (scripts/site/seo-check.ts checks it). */
-const ROUTES = ['/', '/browse/', '/henry/', '/mosaic/', '/components/', '/widget/timer/', '/widget/weather/', '/blog/', '/blog/dot-matrix-essay/', '/blog/living-matter/', '/about/', '/privacy', '/terms']
+/** The SEO routes: home (ALL, #315), three boards (the first on its own path), two widget pages, the blog, the essay, a
+ *  markdown post, about and the legal pages. The 404 is left out: Lighthouse refuses a page that answers 404
+ *  (scripts/site/seo-check.ts checks it). */
+const ROUTES = ['/', '/henry/', '/mosaic/', '/components/', '/widget/timer/', '/widget/weather/', '/blog/', '/blog/dot-matrix-essay/', '/blog/living-matter/', '/about/', '/privacy', '/terms']
 const CATEGORIES = ['performance', 'accessibility', 'seo', 'best-practices']
 
 const argv = process.argv.slice(2)

@@ -212,7 +212,7 @@ jobs:
           set -- --out lh --runs "$LH_RUNS"
           [ "$TARGET" = live ] && set -- "$@" --base https://matrix.reactopia.me/
           [ -n "$LH_ROUTES" ] && set -- "$@" --routes "$LH_ROUTES" --trace
-          [ "$EVENT" = pull_request ] && set -- "$@" --routes /,/mosaic/,/widget/timer/ --forms mobile --timeout 90
+          [ "$EVENT" = pull_request ] && set -- "$@" --routes /,/henry/,/mosaic/ --forms mobile --timeout 90
           pnpm exec tsx scripts/ci/lighthouse.ts "$@"
 
       - name: Upload reports
