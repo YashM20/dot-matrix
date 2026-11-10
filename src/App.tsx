@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore, type ComponentType, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { Board, VIEW_EXIT_MS } from './components/Board'
 import { LoadBoundary, LoadFailed } from './components/LoadBoundary'
@@ -66,6 +66,11 @@ const useIdle = () => {
 const viewFailed = <section className="view-loading"><LoadFailed what="This view" /></section>
 // static markup: 'use no memo' keeps the compiler's memo slots (first-load bytes) out of these two
 const slot = <div className="home-hero-slot" />
+// the hero floats beside the header from 1280 px (src/site/app/hero.css) and follows the board below that: it sits
+// there in the DOM too, so the Tab order matches what the eye sees (a phone's first stop is not at the page's end)
+const HERO_BESIDE = '(min-width: 1280px)'
+const onHeroBeside = (cb: () => void) => { const m = window.matchMedia(HERO_BESIDE); m.addEventListener('change', cb); return () => m.removeEventListener('change', cb) }
+const useHeroBeside = () => useSyncExternalStore(onHeroBeside, () => window.matchMedia(HERO_BESIDE).matches, () => true)
 function Hero() {
   'use no memo'
   return <div className="home-hero">{useIdle() ? <LoadBoundary fallback={slot}><Suspense fallback={slot}><HeroCard /></Suspense></LoadBoundary> : slot}</div>
@@ -188,12 +193,13 @@ const toTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia('(pref
  * Phones: the bottom tab bar (EXPLORE / MAKE / ABOUT, then TOOLS for the dock, the DISPLAY menu and the
  * palette). The current view is `aria-current="page"`; tapping it again goes back to the top, and on
  * EXPLORE at the top it opens every board. TOOLS carries a dot while X-ray or the time machine is on.
+ * The widget page has the bar too, with no current view (`view` unset): each view leaves the card's page.
  */
-function TabBar({ view, onView, onBoards }: { view: View; onView: (v: View) => void; onBoards: () => void }) {
+function TabBar({ view, onView, onBoards }: { view?: View; onView: (v: View) => void; onBoards?: () => void }) {
   const busy = useXR(s => s.global || s.on.size > 0 || s.frozen), views = useViews()
   const pick = (v: View) => {
     if (v !== view) { window.scrollTo(0, 0); return onView(v) }
-    if (v === 'EXPLORE' && window.scrollY < 8) onBoards(); else toTop()
+    if (v === 'EXPLORE' && window.scrollY < 8) onBoards?.(); else toTop()
   }
   return <nav className="tabbar" aria-label="Main">
     {views.map(v => <button key={v} type="button" aria-current={view === v ? 'page' : undefined} onClick={() => pick(v)}><Glyph rows={GLYPHS[v]} /><span>{v}</span></button>)}
@@ -279,6 +285,11 @@ export default function App() {
     }
     window.setTimeout(find, 60)
   }
+  /** A card's page → ALL (a history entry, like leaving to its board). */
+  const leaveToAll = () => {
+    pushUrl(urlForView({ view: 'EXPLORE', mode, board, all: true }, location.search, location.pathname))
+    setWidget(undefined); setView('EXPLORE'); setAll(true)
+  }
   /** One board in EXPLORE (leaves ALL); `showAll` is EXPLORE's ALL. */
   const pickBoard = (id: string) => { setWidget(undefined); setBoard(id); setAll(false) }
   const showAll = () => { setWidget(undefined); setAll(true); setView('EXPLORE') }
@@ -289,12 +300,15 @@ export default function App() {
   const [shown, leaving] = useExitSwap(`${place}|${all ? '*' : board}`, s => reduced || !s.startsWith('EXPLORE|') ? 0 : VIEW_EXIT_MS)
   const [shownPlace, shownBoard] = shown.split('|') as [string, string]
   const shownAll = shownBoard === '*'
+  const heroBeside = useHeroBeside()
   if (widget) return <div className="shell shell--widget">
     <SkipLink />
     <main id="main" tabIndex={-1}>
       <LoadBoundary key={widget.key} fallback={viewFailed}><Suspense fallback={<section className="view-loading" aria-busy="true" />}><WidgetPage route={widget} onOpen={openWidget} onBoard={leaveWidget} /></Suspense></LoadBoundary>
       <CommandLayer tab="EXPLORE" board={board} setTab={go} setBoard={pickBoard} />
     </main>
+    {/* the phone tab bar on a card's page: EXPLORE is ALL, the home view (#315); the page's own ‹ pill goes back to the card's board */}
+    <TabBar onView={v => { if (v === 'EXPLORE') return leaveToAll(); setWidget(undefined); setView(v) }} />
     <SiteFooter onAbout={() => { setWidget(undefined); setView('ABOUT') }} />
   </div>
   const title = view === 'MAKE' ? 'MAKE' : view === 'EXPLORE' ? (all ? 'ALL' : boardLabel(board)) : view
@@ -324,12 +338,13 @@ export default function App() {
     <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
     {shownPlace === 'EXPLORE' ? (
       <section className="boards-view" role="tabpanel" aria-labelledby="tab-EXPLORE">
-        {shownAll && <Hero />}
+        {shownAll && heroBeside && <Hero />}
         <IntroLine />
         <BoardPicker board={board} all={all} onPick={pickBoard} onPickAll={showAll} onSheet={() => setBoards(true)} />
         {shownAll
           ? <Browse onOpen={openWidget} cardPath={widgetPath} onBoard={id => { window.scrollTo(0, 0); pickBoard(id) }} />
           : <><Board key={shownBoard} id={shownBoard} leaving={leaving} /><NextBoard board={board} onPick={pickBoard} /></>}
+        {shownAll && !heroBeside && <Hero />}
       </section>
     ) : shownPlace === 'ABOUT' ? (
       <section className="about-view" role="tabpanel" aria-labelledby="tab-ABOUT"><About /></section>

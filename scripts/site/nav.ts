@@ -30,8 +30,6 @@ const KNOWN: readonly string[] = [
   'scroll:forward-about',
   // N4 (P1-A): Back with a sheet open leaves the view and keeps the sheet open
   'sheet-back:boards', 'sheet-url:boards', 'sheet-back:tools', 'sheet-url:tools', 'sheet-back:palette', 'sheet-url:palette',
-  // N8 (P2-B): on a phone the hero card comes first in the Tab order, at the bottom of the page
-  'tab-order:home@390',
 ]
 
 const args = process.argv.slice(2)

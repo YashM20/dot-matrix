@@ -28,10 +28,7 @@ import { tabWalk } from '../lib/site-probe'
  * Today's failures (docs/POLISH-PLAN.md §2). Each P1–P3 task deletes its ids when its fix lands, which makes the
  * check a gate. Seeded from a run against `pnpm dev`.
  */
-const KNOWN: readonly string[] = [
-  // N3 (P1-B): the widget page has no tab bar
-  'tabbar:widget',
-]
+const KNOWN: readonly string[] = []
 
 const base = (process.argv[2] ?? 'http://localhost:4317/').replace(/\/?$/, '/')
 const only = process.argv[3]?.split(',')
@@ -295,6 +292,12 @@ phone chrome: ${pg.name}`)
         await p.js('window.scrollTo(0, 0)')
         const stops = await tabWalk(p, 80), under = stops.filter(s => s.under)
         check(`focus-clear:${pg.name}`, stops.length > 0 && !under.length, `${stops.length} stops${under.length ? `; ${under.length} under a bar: ${under.slice(0, 5).map(s => `#${s.n} ${s.label} (${s.under}, y ${s.top})`).join(' | ')}` : ''}`)
+      }
+      // #315: the bar has no BROWSE, and EXPLORE from a card's page opens ALL on `/`
+      if (pg.tabbar) {
+        const tabs = await p.js(`[...document.querySelectorAll('.tabbar button')].map(b => b.textContent.trim())`) as string[]
+        await p.js(`[...document.querySelectorAll('.tabbar button')].find(b => b.textContent.trim() === 'EXPLORE')?.click()`)
+        check(`tabbar-explore:${pg.name}`, !tabs.includes('BROWSE') && await p.waitFor(`location.pathname === '/' && !!document.querySelector('.browse-grid')`, 15000), `${tabs.join(' ')} → ${await p.js('location.pathname')}`)
       }
     }
   } finally {

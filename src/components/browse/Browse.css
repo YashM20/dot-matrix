@@ -198,3 +198,26 @@
     display: none
   }
 }
+
+/* narrow phones (320 px, an iPhone SE, 568 px tall): the ALL chip already says where you are, so the section's title and
+   blurb step out (the title still names the section for screen readers through aria-labelledby) and the field names
+   are read, not shown; a whole card then starts above the fold, as on a board (src/site/mobile/phone.css) */
+@media (max-width: 359px) {
+  .browse > .board-title,
+  .browse > .board-blurb {
+    display: none
+  }
+
+  .browse-field > span {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap
+  }
+
+  .browse > .browse-tools {
+    margin-top: 0
+  }
+}
