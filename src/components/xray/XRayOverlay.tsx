@@ -199,27 +199,36 @@ export function XRayOverlay({ xr, preset, layers, data, grid, style, theme, anim
     // `theme`: a theme switch re-inks the guides (the card's tokens object changes with it)
   }, [box, hover, grid.cols, grid.rows, stats.t, theme]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  const mode = stats.mode, w = stats.worker
-  const tip = hover?.p
-  const flipX = hover && box ? hover.x > box.width * .55 : false, flipY = hover && box ? hover.y > box.height * .6 : false
   return (
     <div ref={rootRef} className="xr-overlay" style={box ? { left: box.left, top: box.top, width: box.width, height: box.height } : { display: 'none' }} aria-hidden="true">
       <canvas ref={canvasRef} className="xr-grid" />
-      <div className="xr-hud">
-        <b>X-RAY</b><span>{mode.toUpperCase()}{w ? ' · WORKER' : ''}</span>
-        <span>{animated && cardFps ? `${stats.fps}/${cardFps} FPS` : 'STATIC'}</span>
-        <span>{stats.dots.toLocaleString('en-US')} DOTS</span><span>{grid.cols}×{grid.rows}</span>
-        {animated && <span>T {stats.t.toFixed(2)}</span>}
-      </div>
-      {tip && hover && <div className={`xr-tip${flipX ? ' xr-tip--left' : ''}${flipY ? ' xr-tip--up' : ''}`} style={{ left: hover.x, top: hover.y }}>
-        <div className="xr-tip-dim">c{tip.col} r{tip.row} · u {fmt(tip.u)} v {fmt(tip.v)}</div>
-        {tip.layer < 0 ? <div>empty cell · no layer lit</div> : <>
-          <div>value <b>{fmt(tip.value)}</b>{tip.steps ? <> → size step <b>{tip.step}</b>/{tip.steps - 1}</> : <> (unquantized)</>} · r {tip.r.toFixed(2)}px</div>
-          <div>tone <b>{tip.tone}</b> · layer <b>{tip.layer}</b> {layerLabel(tip)}</div>
-          <div className="xr-tip-dim">{tip.kind === 'card' ? 'card lattice' : tip.kind === 'lattice' ? `lattice ${tip.box[2]}× dot` : `site dot ${tip.box[2]}×`}</div>
-        </>}
-      </div>}
+      <XRayHud stats={stats} animated={animated} cardFps={cardFps} grid={grid} />
+      {hover && <XRayTip hover={hover} box={box} />}
     </div>
   )
 }
 const layerLabel = (p: DotProbe) => (p.name.startsWith('"') ? p.name : `'${p.name}'`)
+
+/** The corner readout: the renderer (and the worker), the frame rate against the card's, the dots lit, the grid, t. */
+function XRayHud({ stats, animated, cardFps, grid }: { stats: { fps: number; dots: number; t: number; mode: string; worker: boolean }; animated?: boolean; cardFps: number; grid: { cols: number; rows: number } }) {
+  return <div className="xr-hud">
+    <b>X-RAY</b><span>{stats.mode.toUpperCase()}{stats.worker ? ' · WORKER' : ''}</span>
+    <span>{animated && cardFps ? `${stats.fps}/${cardFps} FPS` : 'STATIC'}</span>
+    <span>{stats.dots.toLocaleString('en-US')} DOTS</span><span>{grid.cols}×{grid.rows}</span>
+    {animated && <span>T {stats.t.toFixed(2)}</span>}
+  </div>
+}
+
+/** The hovered dot's card: where it is, what lit it (value, size step, radius, tone, layer) and on which lattice. */
+function XRayTip({ hover, box }: { hover: { p: DotProbe; x: number; y: number }; box: { width: number; height: number } | null }) {
+  const tip = hover.p, flipX = !!box && hover.x > box.width * .55, flipY = !!box && hover.y > box.height * .6
+  const lattice = tip.kind === 'card' ? 'card lattice' : tip.kind === 'lattice' ? `lattice ${tip.box[2]}× dot` : `site dot ${tip.box[2]}×`
+  return <div className={`xr-tip${flipX ? ' xr-tip--left' : ''}${flipY ? ' xr-tip--up' : ''}`} style={{ left: hover.x, top: hover.y }}>
+    <div className="xr-tip-dim">c{tip.col} r{tip.row} · u {fmt(tip.u)} v {fmt(tip.v)}</div>
+    {tip.layer < 0 ? <div>empty cell · no layer lit</div> : <>
+      <div>value <b>{fmt(tip.value)}</b>{tip.steps ? <> → size step <b>{tip.step}</b>/{tip.steps - 1}</> : <> (unquantized)</>} · r {tip.r.toFixed(2)}px</div>
+      <div>tone <b>{tip.tone}</b> · layer <b>{tip.layer}</b> {layerLabel(tip)}</div>
+      <div className="xr-tip-dim">{lattice}</div>
+    </>}
+  </div>
+}
