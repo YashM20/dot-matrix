@@ -48,7 +48,7 @@ const ALL_ROUTES: [string, string, string][] = [
   ['mirror', 'mirror/', APP_READY],
   ['widget', 'widget/timer/', `!!document.querySelector('.shell--widget .wp-ids, .shell--widget .wp-missing')`],
   ['browse', 'browse/', `!document.querySelector('.view-loading') && !!document.querySelector('.browse-grid .dot-card')`],
-  ['about', '?about', `!document.querySelector('.view-loading') && !!document.querySelector('.about-view')`],
+  ['about', 'about/', `!document.querySelector('.view-loading') && !!document.querySelector('.about-view')`],
   ['post', 'blog/build-your-own-dot-engine/', `!!document.querySelector('.essay.post > main .hero') && !document.querySelector('.post-wait')`],
   ['essay', 'blog/dot-matrix-essay/', `!!document.querySelector('.essay.post > main .hero') && !document.querySelector('.post-wait')`],
   ['privacy', 'privacy', `!!document.querySelector('.legal > main')`],

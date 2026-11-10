@@ -9,7 +9,7 @@ import { renderSVG } from '../../src/engine/renderer/svgRenderer'
 import { dot480 } from '../../src/engine/theme/tokens'
 import type { DotStyle, Field, Layer } from '../../src/engine/types'
 import { boardGroups, boardLabel } from '../../src/widgets/manifest'
-import { SITE_NAME } from '../../src/site/meta'
+import { SITE_NAME, searchTitle } from '../../src/site/meta'
 import { esc } from './seo-html'
 
 const PITCH = 5
@@ -54,7 +54,7 @@ export function notFoundPage(): string {
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
-    <title>Not found · ${SITE_NAME}</title>
+    <title>${searchTitle('Not found', SITE_NAME)}</title>
     <style>${css}</style>
   </head>
   <body>

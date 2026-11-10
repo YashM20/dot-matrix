@@ -19,6 +19,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { boardIds } from '../../src/widgets/manifest'
+import { pageMeta } from '../../src/site/meta'
 import { launch } from '../lib/cdp'
 import { knownChecker } from '../lib/check'
 import { tabWalk } from '../lib/site-probe'
@@ -200,16 +201,18 @@ try {
     // deep links
     await cdp('Page.navigate', { url: `${base}light/` })
     check('/light/ opens the light board', await waitFor(`document.querySelector('.board-tabs .selected')?.textContent === 'LIGHT' && ${boardReady}`))
-    check('/light/ sets the title and og:image', await js(`document.title.startsWith('LIGHT') && document.querySelector('meta[property="og:image"]').content.endsWith('/og/light.png')`))
+    // titles are search titles (`searchTitle`, src/site/meta.ts: `Light · Matrix`), the same in og:title and twitter:title
+    const title = (id: string) => JSON.stringify(pageMeta(id).title), metaIs = (key: string, attr = 'property') => `document.querySelector('meta[${attr}="${key}"]')?.content`
+    check('/light/ sets the title, og:title, twitter:title and og:image', await js(`document.title === ${title('light')} && ${metaIs('og:title')} === ${title('light')} && ${metaIs('twitter:title', 'name')} === ${title('light')} && !!${metaIs('og:image')}?.endsWith('/og/light.png')`), await js(`document.title + ' | ' + ${metaIs('og:image')}`))
     await cdp('Page.navigate', { url: `${base}?board=mosaic&worker=1` })
     await waitFor(boardReady)
     check('?board=mosaic moves the address bar to /mosaic/ and keeps other params', await js(`location.pathname === '/mosaic/' && location.search === '?worker=1'`), await js('location.href'))
     await js(`[...document.querySelectorAll('.board-tabs button')].find(b => b.textContent === 'CINEMA').click()`)
-    check('picking a board updates path and title', await waitFor(`location.pathname === '/cinema/' && document.title.startsWith('CINEMA')`))
+    check('picking a board updates path, title and og:image', await waitFor(`location.pathname === '/cinema/' && document.title === ${title('cinema')} && !!${metaIs('og:image')}?.endsWith('/og/cinema.png')`), await js(`location.pathname + ' | ' + document.title`))
     const og = await fetch(`${base}og/cinema.png`)
     check('dist/og/cinema.png is served', og.ok && (og.headers.get('content-type') ?? '').includes('png'))
     const crawl = await (await fetch(`${base}cinema/`)).text()
-    check('crawler HTML for /cinema/ carries its meta', crawl.includes('<title>CINEMA') && crawl.includes('/og/cinema.png'))
+    check('crawler HTML for /cinema/ carries its meta', crawl.includes(`<title>${pageMeta('cinema').title}</title>`) && /<meta property="og:image" content="[^"]*\/og\/cinema\.png"/.test(crawl), /<title>[^<]*<\/title>/.exec(crawl)?.[0])
   }
 
   // the views other than EXPLORE (docs/UX-PLAN.md §4.1): the four MAKE modes and ABOUT, by their canonical query
@@ -268,7 +271,7 @@ async function phoneChrome() {
     const STATIC = (sel: string) => `!!document.querySelector('${sel}')`
     const pages = [
       { name: 'home', path: '', ready: `!!document.querySelector('.board-grid canvas, .board-grid svg')`, focus: true },
-      { name: 'about', path: '?about', ready: STATIC('.log-view'), focus: true },
+      { name: 'about', path: 'about/', ready: STATIC('.log-view'), focus: true },
       { name: 'widget', path: 'widget/timer/', ready: `!!document.querySelector('.wp-stage canvas, .wp-stage svg')`, focus: true, tabbar: true },
       { name: 'essay', path: 'blog/dot-matrix-essay/', ready: STATIC('.hero .dot-title'), focus: true, tap: true },
       { name: 'privacy', path: 'privacy', ready: STATIC('.legal > main'), focus: true, tap: true },

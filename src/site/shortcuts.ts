@@ -33,7 +33,7 @@ export const URL_PARAMS: readonly Shortcut[] = [
   { keys: '/<board>/', does: 'open a board (the first board is /)' },
   { keys: '?make=tune|compose|code|draw', does: 'open MAKE in a mode' },
   { keys: '?make=code&p=…', does: 'a shared field program' },
-  { keys: '?about', does: 'this page' },
+  { keys: '/about/', does: 'this page' },
   { keys: '/widget/<id>/', does: 'one card on its own page (also /<short id>)' },
   { keys: '?skin=crt|vfd|led|eink|flipdisc|nixie|lcd|grout', does: 'display skin' },
   { keys: '?tab=…, ?board=…', does: 'old links: still open the view they named' },

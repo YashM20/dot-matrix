@@ -10,7 +10,7 @@ import { useXR } from './components/xray/store'
 import { boardIds, boardLabel, liveBoards, prefetchBoard } from './widgets/manifest'
 import { widgetPath, type WidgetRoute } from './site/routes'
 import { onLayerWake, requestLayer } from './site/layer'
-import { boardFromPath, setPageMeta, syncUrl } from './site/meta'
+import { ABOUT_META, boardFromPath, setPageMeta, syncUrl } from './site/meta'
 import { flag } from './site/flags'
 import { pushUrl, replace } from './site/safe-url'
 import { BROWSE_META, BROWSE_PARAMS } from './site/browse'
@@ -81,7 +81,7 @@ function SiteFooter({ onAbout }: { onAbout: () => void }) {
   return <footer className="bottom">
     <div className="live-band">{idle && <LoadBoundary fallback={null}><Suspense fallback={null}><LiveBand /></Suspense></LoadBoundary>}</div>
     <div className="bottom-row"><span>MATRIX · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span>
-      <span><a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · {lab && <><a href="/lab/">LAB</a> · </>}<a href="/blog/">BLOG</a> · <a href="?about" onClick={e => { e.preventDefault(); onAbout() }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></div>
+      <span><a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · {lab && <><a href="/lab/">LAB</a> · </>}<a href="/blog/">BLOG</a> · <a href="/about/" onClick={e => { e.preventDefault(); onAbout() }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></div>
   </footer>
 }
 // MAKE is one editor (docs/EDITOR-PLAN.md): frames on an infinite canvas, layers, a contextual inspector.
@@ -132,7 +132,7 @@ function CommandLayer(props: CommandLayerProps) {
   return ready ? <LoadBoundary fallback={null}><Suspense fallback={null}><CommandLayerLazy {...props} /><ReplayKey ev={pending} /></Suspense></LoadBoundary> : null
 }
 // Deep links (all resolved in src/site/views.ts): `/<board>/` or ?board=<id> opens a board, ?make=<mode> a MAKE
-// mode (?make=code&p=<encoded> a shared Field IR program), ?about the about page, /widget/<slug|uid>/ (or /<uid>,
+// mode (?make=code&p=<encoded> a shared Field IR program), /about/ the about page, /widget/<slug|uid>/ (or /<uid>,
 // or the old ?card=<id>) one card on its own page; every old ?tab= still opens the view it became.
 // MAKE behind its flag (src/site/flags.ts): off, a MAKE URL opens the board it names (the home board for `?make`)
 const urlView = (mode?: Mode) => { const v = viewFromUrl(location.search, location.pathname, mode); return v.view === 'MAKE' && !flag('make') ? { ...v, view: 'EXPLORE' as const } : v }
@@ -238,7 +238,7 @@ export default function App() {
     if (widget) return // the widget page keeps its own URL and meta
     const want = { view, mode, board }, url = urlForView(want, location.search, location.pathname)
     // the home page (`/`, which shows the first board) keeps the site's own title and canonical; a board path gets the board's
-    setPageMeta(view === 'BROWSE' ? BROWSE_META : view === 'EXPLORE' && boardFromPath(url.split('?')[0]) ? board : undefined)
+    setPageMeta(view === 'BROWSE' ? BROWSE_META : view === 'ABOUT' ? ABOUT_META : view === 'EXPLORE' && boardFromPath(url.split('?')[0]) ? board : undefined)
     syncUrl(url, !first.current && !sameView(urlView(mode), want))
     first.current = false
   }, [view, mode, board, widget])
