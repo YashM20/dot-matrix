@@ -6,7 +6,7 @@
  *
  *   npx tsx scripts/ci/lighthouse.ts                          → a `vite preview` of dist/ (build first)
  *   npx tsx scripts/ci/lighthouse.ts --base https://matrix.reactopia.me/   → the live site
- *   npx tsx scripts/ci/lighthouse.ts --routes /,/browse/ --forms mobile --out lh
+ *   npx tsx scripts/ci/lighthouse.ts --routes /,/henry/ --forms mobile --out lh
  *
  * Writes `<out>/<route>-<form>.json` (the full report) and `<out>/summary.md`, and appends the summary to
  * $GITHUB_STEP_SUMMARY when it is set. Chrome comes from $CHROME or the usual paths (scripts/lib/cdp.ts).
@@ -20,7 +20,7 @@ import { findChrome, serveDist } from '../lib/cdp'
 const LIGHTHOUSE = 'lighthouse@13.6.0'
 /** The SEO routes: home, browse, two boards, two widget pages, the blog, a post, about, privacy. The 404 is left out:
  *  Lighthouse refuses a page that answers 404 (scripts/site/seo-check.ts checks that page). */
-const ROUTES = ['/', '/browse/', '/mosaic/', '/components/', '/widget/timer/', '/widget/weather/', '/blog/', '/blog/dot-matrix-essay/', '/about', '/privacy']
+const ROUTES = ['/', '/henry/', '/mosaic/', '/components/', '/widget/timer/', '/widget/weather/', '/blog/', '/blog/dot-matrix-essay/', '/about', '/privacy']
 
 const argv = process.argv.slice(2)
 const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : undefined }

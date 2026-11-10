@@ -1,6 +1,7 @@
 /**
- * BROWSE (#182): every card from every board in one grid at `/browse/`, with a board filter, a tag filter and a
- * name search. Lazy (its own chunk with its data and styles). The filters live in the URL query (`./data.ts`), so a
+ * ALL (#315, was BROWSE #182): every card from every board in one grid, EXPLORE's view on `/`, under the board picker
+ * (whose board chips are the board filter), with a tag filter and a name search. It opens in a curated order
+ * (`ORDERED`, ./data.ts). Lazy (its own chunk with its data and styles). The filters live in the URL query, so a
  * filtered view can be shared. The grid is windowed (`./useWindow.ts`): every result has a slot (a square placeholder
  * and a caption with links), and only slots near the screen mount their card, through the same `DotWidget` the
  * boards use, so the ⋯ actions behave the same. The result count is announced politely.
@@ -10,10 +11,9 @@ import { DotWidget } from '../DotWidget'
 import { BoardTitle } from '../DotName'
 import { useMinuteTick } from '../Board'
 import { LoadBoundary, LoadFailed } from '../LoadBoundary'
-import { boardGroups, boardLabel, loadBoard, prefetchBoard } from '../../widgets/manifest'
+import { boardLabel, loadBoard, prefetchBoard } from '../../widgets/manifest'
 import { replaceUrl } from '../../site/safe-url'
-import { BROWSE_PATH } from '../../site/browse'
-import { ROWS, TAG_OPTIONS, boardCount, cleanQuery, matches, readFilters, tagCountOf, writeFilters, type Filters, type Row } from './data'
+import { ORDERED, ROWS, TAG_OPTIONS, cleanQuery, matches, readFilters, tagCountOf, writeFilters, type Filters, type Row } from './data'
 import { useWindow } from './useWindow'
 import './Browse.css'
 
@@ -31,9 +31,8 @@ export interface BrowseProps {
 const SEARCH_MS = 180
 const ENTER = { delay: 0, mask: 'bayer' } as const
 const plain = (e: MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey
-const onBrowse = () => /^\/browse\/?$/i.test(location.pathname)
-/** Board options in picker order (each board once, under its own group). */
-const BOARD_GROUPS = boardGroups.filter(g => g.id !== 'start')
+/** ALL's own address: `/` (or `/index.html`); a widget page shown over it keeps its own. */
+const home = () => /^\/(index\.html)?$/.test(location.pathname)
 
 const Ghost = () => <div className="dot-card browse-ghost" aria-hidden="true" />
 /** A slot whose board chunk failed (after the loader's retries): the card's square with the error state. */
@@ -46,7 +45,8 @@ function Card({ row, tick }: { row: Row; tick: number }) {
 }
 
 export function Browse({ onBoard, onOpen, cardPath }: BrowseProps) {
-  const [f, setF] = useState<Filters>(() => readFilters(location.search))
+  // the board filter is the picker's board chips now: ALL filters by tag and name only
+  const [f, setF] = useState<Filters>(() => ({ ...readFilters(location.search), board: '' }))
   const [typed, setTyped] = useState(f.q)
   const search = useRef<HTMLInputElement>(null)
   const ids = useId(), titleId = `${ids}t`, countId = `${ids}c`
@@ -55,36 +55,28 @@ export function Browse({ onBoard, onOpen, cardPath }: BrowseProps) {
     const t = window.setTimeout(() => setF(x => (x.q === typed.trim() ? x : { ...x, q: typed.trim() })), SEARCH_MS)
     return () => window.clearTimeout(t)
   }, [typed])
-  // the address bar carries the filters (other params stay); only while the page is BROWSE's own
+  // the address bar carries the filters (other params stay); only while the page is ALL's own
   useEffect(() => {
-    if (!onBrowse()) return
-    const want = BROWSE_PATH + writeFilters(f, location.search) + location.hash
+    if (!home()) return
+    const want = location.pathname + writeFilters(f, location.search) + location.hash
     if (want !== location.pathname + location.search + location.hash) replaceUrl(want)
   }, [f])
-  const rows = useMemo(() => ROWS.filter(r => matches(r, f)), [f])
+  const rows = useMemo(() => ORDERED.filter(r => matches(r, f)), [f])
   const { mounted, slot } = useWindow()
   const tick = useMinuteTick()
-  const any = !!(f.board || f.tag || f.q)
+  const any = !!(f.tag || f.q)
   const clear = () => { setTyped(''); setF({ board: '', tag: '', q: '' }); search.current?.focus() }
   const tags = f.tag && !TAG_OPTIONS.some(([t]) => t === f.tag) ? [...TAG_OPTIONS, [f.tag, tagCountOf(f.tag)] as const] : TAG_OPTIONS
   const go = (e: MouseEvent, run: () => void) => { if (!plain(e)) return; e.preventDefault(); run() }
 
   return <section className="browse" aria-labelledby={titleId}>
-    <BoardTitle title="BROWSE" id={titleId} />
-    <p className="board-blurb">All {ROWS.length} cards from every board in one place. Filter by board or tag, or search by name, then open a card or the board it lives on.</p>
+    <BoardTitle title="ALL CARDS" id={titleId} />
+    <p className="board-blurb">Every card from every board, {ROWS.length} in all. Search by name or pick a tag, then open a card or the board it lives on.</p>
     {/* role="search" too: browsers before <search> (Chrome and Firefox 118, Safari 17) still get the landmark */}
     <search className="browse-tools" role="search" aria-label="Filter the cards">
       <label className="browse-field browse-field--q"><span>SEARCH</span>
         <input ref={search} type="search" value={typed} maxLength={60} placeholder="clock, ring, game…" autoComplete="off" spellCheck={false}
           aria-describedby={countId} onChange={e => setTyped(cleanQuery(e.target.value))} />
-      </label>
-      <label className="browse-field"><span>BOARD</span>
-        <select value={f.board} onChange={e => { const board = e.target.value; prefetchBoard(board); setF(x => ({ ...x, board })) }}>
-          <option value="">All boards ({ROWS.length})</option>
-          {BOARD_GROUPS.map(g => <optgroup key={g.id} label={g.label}>
-            {g.boards.map(id => <option key={id} value={id}>{boardLabel(id)} ({boardCount(id)})</option>)}
-          </optgroup>)}
-        </select>
       </label>
       <label className="browse-field"><span>TAG</span>
         <select value={f.tag} onChange={e => { const tag = e.target.value; setF(x => ({ ...x, tag })) }}>
@@ -96,7 +88,7 @@ export function Browse({ onBoard, onOpen, cardPath }: BrowseProps) {
       <p className="browse-count" id={countId} role="status">{rows.length === ROWS.length ? `${rows.length} cards` : `${rows.length} of ${ROWS.length} cards`}</p>
     </search>
     {rows.length
-      ? <ul className="browse-grid" aria-labelledby={titleId}>
+      ? <ul className="browse-grid" data-density="standard" aria-labelledby={titleId}>
         {rows.map(r => <li key={r.slug} className="browse-item" data-slot={r.slug} ref={slot(r.slug)}>
           {mounted.has(r.slug) ? <LoadBoundary fallback={<Failed />}><Suspense fallback={<Ghost />}><Card row={r} tick={tick} /></Suspense></LoadBoundary> : <Ghost />}
           <p className="browse-cap">

@@ -61,7 +61,7 @@ export interface PaletteItem {
 
 // what each place used to be called, and what people may type for it
 const PLACE_WORDS: Record<(typeof PLACES)[number], string> = {
-  EXPLORE: 'boards gallery home', BROWSE: 'all cards every card grid filter tags search catalog list', TUNE: 'make workspace playground preset style', COMPOSE: 'make studio layers timeline',
+  EXPLORE: 'boards gallery home browse all cards every card grid filter tags search catalog list', TUNE: 'make workspace playground preset style', COMPOSE: 'make studio layers timeline',
   CODE: 'make dots repl dwitter ir program', DRAW: 'make paint', ABOUT: 'log changelog essay shortcuts help keys',
 }
 

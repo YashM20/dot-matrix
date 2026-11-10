@@ -8,7 +8,7 @@
  */
 import { catalog } from '../../widgets/catalog'
 import { cardNames } from '../../widgets/names'
-import { boardIds, boardLabel, resolveBoardId } from '../../widgets/manifest'
+import { boardGroups, boardIds, boardLabel, resolveBoardId } from '../../widgets/manifest'
 
 export interface Row { slug: string; board: string; name: string; tags: readonly string[]; /** Lowercase search text: name, slug words, tags, board. */ hay: string }
 /** `''` means any. */
@@ -26,12 +26,20 @@ export const ROWS: readonly Row[] = catalog.map(([slug, , board]) => {
   return { slug, board, name, tags, hay: fold(`${name} ${slug.replace(/-/g, ' ')} ${tags.join(' ')} ${board} ${boardLabel(board)}`) }
 })
 
+/**
+ * ALL's opening order (#315): the quality-bar cards first (LEVEL 03, AFTERLIGHT), then the START HERE boards in picker
+ * order, then the components board, then every other card in catalog (board) order. Stable: ties keep catalog order.
+ */
+export const FEATURED: readonly string[] = ['level-03', 'afterlight']
+const LEAD_BOARDS: readonly string[] = [...(boardGroups.find(g => g.id === 'start')?.boards ?? []), 'components']
+const rank = (r: Row) => { const f = FEATURED.indexOf(r.slug), b = LEAD_BOARDS.indexOf(r.board); return f >= 0 ? f : b >= 0 ? FEATURED.length + b : FEATURED.length + LEAD_BOARDS.length }
+export const ORDERED: readonly Row[] = ROWS.map((r, i) => [r, i] as const).sort(([a, i], [b, j]) => rank(a) - rank(b) || i - j).map(([r]) => r)
+
 const tagCount = new Map<string, number>()
 for (const r of ROWS) for (const t of r.tags) tagCount.set(t, (tagCount.get(t) ?? 0) + 1)
 /** The TAG menu: common tags, A to Z, with their counts. */
 export const TAG_OPTIONS: readonly (readonly [tag: string, count: number])[] = [...tagCount].filter(([, n]) => n >= TAG_MIN).sort(([a], [b]) => a.localeCompare(b))
 export const tagCountOf = (t: string) => tagCount.get(t) ?? 0
-export const boardCount = (id: string) => ROWS.reduce((n, r) => n + (r.board === id ? 1 : 0), 0)
 
 /** Search text as typed: control characters become spaces, runs of space collapse, capped at `MAX_QUERY`. */
 export const cleanQuery = (s: string) => [...s].map(c => { const n = c.charCodeAt(0); return n < 32 || (n >= 127 && n < 160) ? ' ' : c }).join('').replace(/\s+/g, ' ').trimStart().slice(0, MAX_QUERY)

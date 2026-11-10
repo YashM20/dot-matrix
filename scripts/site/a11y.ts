@@ -5,7 +5,7 @@
  * `KNOWN` holds the serious and critical findings already listed on #187 with an owner issue: they print as known
  * and don't fail the run (scripts/lib/check.ts `knownChecker`). A summary table closes the run.
  *
- * Routes: home, three boards (mirror for the ⋯ target size), a widget page, browse, about, a blog post, the essay and the
+ * Routes: home (ALL, #315), four boards (the first; mirror for the ⋯ target size), a widget page, about, a blog post, the essay and the
  * privacy page (`--all` adds every board, the blog index, the terms page and the 404 page). On the blog and legal pages
  * it also checks the shell (#187): SKIP TO CONTENT is the first stop and points at `<main>`, and the site nav and
  * footer sit outside `<main>`. Modes: the default dark theme and light (`--modes` takes any of
@@ -41,13 +41,15 @@ for (const m of MODES) if (!MEDIA[m]) { console.error(`unknown mode ${m} (use ${
 
 /** [name, path, what must be on the page before axe runs]. */
 const APP_READY = `!document.querySelector('.view-loading') && !!document.querySelector('.board-grid .dot-card')`
+/** `/` is ALL (#315): every card in one windowed grid, under the board picker. */
+const ALL_READY = `!document.querySelector('.view-loading') && !!document.querySelector('.browse-grid .dot-card')`
 const ALL_ROUTES: [string, string, string][] = [
-  ['home', '', APP_READY],
+  ['home', '', ALL_READY],
+  [boardIds[0], `${boardIds[0]}/`, APP_READY],
   ['mosaic', 'mosaic/', APP_READY],
   ['components', 'components/', APP_READY],
   ['mirror', 'mirror/', APP_READY],
   ['widget', 'widget/timer/', `!!document.querySelector('.shell--widget .wp-ids, .shell--widget .wp-missing')`],
-  ['browse', 'browse/', `!document.querySelector('.view-loading') && !!document.querySelector('.browse-grid .dot-card')`],
   ['about', '?about', `!document.querySelector('.view-loading') && !!document.querySelector('.about-view')`],
   ['post', 'blog/build-your-own-dot-engine/', `!!document.querySelector('.essay.post > main .hero') && !document.querySelector('.post-wait')`],
   ['essay', 'blog/dot-matrix-essay/', `!!document.querySelector('.essay.post > main .hero') && !document.querySelector('.post-wait')`],

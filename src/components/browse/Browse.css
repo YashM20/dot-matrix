@@ -1,4 +1,5 @@
-/* BROWSE (#182): the filter row, then the card grid. Loaded with the view's chunk. The grid's columns follow the
+/* ALL (#315, was BROWSE #182): EXPLORE's every-card view on `/`, under the board picker: the filter row, then the card
+   grid. Loaded with the view's chunk. The grid's columns follow the
    board grid's rule (src/site/app/grid.css: auto-fill between the CARD SIZE bounds, --card-min-standard), but each
    cell is a slot: the square card (or its placeholder) over a caption with the card's and its board's links. */
 .browse {

@@ -1,7 +1,7 @@
 /**
  * Live-bug probe in headless Chrome over CDP (scripts/lib/cdp.ts), on a visitor-like page (no test hooks):
  *  - a missing board chunk (the motion board's, answered 404 as after a new deploy) costs a handful of requests at
- *    most on BROWSE, the board and a card page: the page reloads once (src/site/stale-deploy.ts), the loader tries
+ *    most on ALL, the board and a card page: the page reloads once (src/site/stale-deploy.ts), the loader tries
  *    each chunk three times, then the card or board shows its error state (src/components/LoadBoundary.tsx);
  *  - a card page fetches one board chunk, its own (#214), and its SVG download still works (the export code loads then);
  *  - the SURFACES and LOCK boards draw dots on every card and keep the main thread free (no long frame gaps).
@@ -50,7 +50,8 @@ const { url: base, stop } = await serveDist(4331)
 try {
   // ── a chunk gone with an old deploy ──
   for (const [where, path, failed] of [
-    ['browse', 'browse/?in=motion', `document.querySelectorAll('.browse-item > .load-failed').length > 0`],
+    // ALL (#315): searched down to the motion board's cards, so their slots need the broken chunk
+    ['browse', `?q=${encodeURIComponent(motionCard.replace(/-/g, ' '))}`, `document.querySelectorAll('.browse-item > .load-failed').length > 0`],
     ['board', 'motion/', `!!document.querySelector('.board-view .load-failed')`],
     // the card page loads only its own board (#214), so its own error state shows, never the RootBoundary
     ['card page', `widget/${motionCard}/`, `!!document.querySelector('.wp .load-failed')`],
@@ -76,7 +77,7 @@ try {
   // ── a view's own chunk fails where the page can't reload (docs/STATE-MACHINES.md A2): the reload gap is used up, or
   // the browser is offline. The view shows its error state; the page around it (header, footer) stays, no crash screen ──
   const browseChunk = readdirSync('dist/assets').find(f => /^Browse-[\w-]+\.js$/.test(f))
-  assert('missing view chunk: the BROWSE view has its own chunk', !!browseChunk)
+  assert('missing view chunk: ALL (was BROWSE) has its own chunk', !!browseChunk)
   if (browseChunk) for (const how of ['gap used', 'offline'] as const) {
     const p = await launch(1280, 900, { flags: { make: false, lab: false }, testHooks: false })
     try {
@@ -87,17 +88,18 @@ try {
         const hits = { n: 0 }
         p.on('Fetch.requestPaused', e => { hits.n++; void p.cdp('Fetch.fulfillRequest', { requestId: e.requestId, responseCode: 404, body: Buffer.from('gone').toString('base64') }).catch(() => {}) })
         await p.cdp('Fetch.enable', { patterns: [{ urlPattern: `*/assets/${browseChunk}*` }] })
-        await p.cdp('Page.navigate', { url: `${base}browse/` })
-      } else {
         await p.cdp('Page.navigate', { url: base })
+      } else {
+        // a board first (ALL's chunk is not fetched there), then ALL while offline
+        await p.cdp('Page.navigate', { url: `${base}motion/` })
         await p.waitFor(`!!document.querySelector('.board-grid canvas')`, 20000)
         await sleep(2500) // the idle parts (hero, live band, command layer) load while online
         await p.cdp('Network.enable')
         await p.cdp('Network.emulateNetworkConditions', { offline: true, latency: 0, downloadThroughput: -1, uploadThroughput: -1 })
-        await p.js(`(document.getElementById('tab-BROWSE').click(), 1)`)
+        await p.js(`(document.querySelector('.board-tabs [data-board="all"]').click(), 1)`)
       }
       const shown = await p.waitFor(viewFailed, 20000)
-      assert(`missing view chunk, ${how}: BROWSE shows its error state inside the page (header kept, no crash screen)`, shown)
+      assert(`missing view chunk, ${how}: ALL shows its error state inside the page (header kept, no crash screen)`, shown)
       if (how === 'offline') assert('missing view chunk, offline: the page did not reload, and the reload stamp is unused', await p.js<boolean>(`!sessionStorage.getItem('dot480:stale-reload')`))
       if (how === 'gap used') await shot(p, 'browse-view-chunk-failed')
     } finally { await p.close() }
