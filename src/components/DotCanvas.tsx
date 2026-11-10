@@ -317,9 +317,8 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   // WebGL2 (P5): forced, or picked for a card whose layers carry GPU passes (`gpuIR` / `gpuValues`); it draws on the canvas surface
   // asked once per card and grid, never per data edit: it samples the layers at t 0, and a live main-thread world
   // (engine/physics/world) resets when its time jumps back, so a tap's own data edit wiped what the tap did.
-  // GPU passes belong to the card, not to its data. Asked at the first draw (`ready`), so a card still waiting for its
-  // turn builds no layers (#312)
-  const gpuCard = useMemo(() => ready && !renderer && !!layers && gpuLayers(layers, JSON.parse(dataKey) as Record<string, number>, { cols: grid.cols, rows: grid.rows, pitch: grid.pitch, aspect: grid.aspect }), [ready, layers, renderer, grid.cols, grid.rows, grid.pitch, grid.aspect]) // eslint-disable-line react-hooks/exhaustive-deps
+  // GPU passes belong to the card, not to its data
+  const gpuCard = useMemo(() => !renderer && !!layers && gpuLayers(layers, JSON.parse(dataKey) as Record<string, number>, { cols: grid.cols, rows: grid.rows, pitch: grid.pitch, aspect: grid.aspect }), [layers, renderer, grid.cols, grid.rows, grid.pitch, grid.aspect]) // eslint-disable-line react-hooks/exhaustive-deps
   const webgl = renderer === 'webgl' || gpuCard, gpuFade = useRef(1)
   const mode: RenderMode = renderer && renderer !== 'webgl' ? renderer : (webgl || animated || live || transient || visible > CANVAS_THRESHOLD ? 'canvas' : 'svg')
   const markup = useMemo(() => mode === 'svg' ? renderSVG(dots, width, height) : '', [mode, dots, width, height])
