@@ -19,7 +19,7 @@ import { SkipLink } from './site/SkipLink'
 import { cardTransition } from './site/viewTransition'
 import { GALLERY_BOARD, VIEWS, placeFromName, placeView, sameView, urlForView, viewFromUrl, type Mode, type View } from './site/views'
 // the app's styles, then the phone styles over them: the order is the cascade, keep it
-import './site/brand/mark.css'
+// the header mark (site/brand/mark.css) and the skip link come through src/index.css: shared modules, one stylesheet
 import './site/app/chrome.css'
 import './site/app/explore.css'
 import './site/app/grid.css'

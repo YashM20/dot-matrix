@@ -1,5 +1,5 @@
 import { flag } from '../../site/flags'
-import '../../site/brand/mark.css'
+// the mark's styles (src/site/brand/mark.css) come through src/blog/blog.css, so the page keeps one stylesheet
 
 /** The nav and footer shared by the blog and the lab (their own pages, outside the app shell). Plain links: the brand
  * goes home and each item is the canonical URL of its place (`urlForView` in src/site/views.ts). */

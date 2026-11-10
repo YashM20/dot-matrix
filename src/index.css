@@ -7,6 +7,10 @@
    second render-blocking stylesheet (#198) */
 @import "./components/touch.css";
 @import "./site/root-boundary.css";
+/* the skip link and the header mark: SkipLink.tsx and the blog's SiteNav.tsx are shared with other pages, so a CSS
+   import there became a second render-blocking stylesheet on every page (scripts/site/perf-check.ts) */
+@import "./site/skip-link.css";
+@import "./site/brand/mark.css";
 
 /*
   Page base. Tokens live in src/tokens.css (DESIGN.md has the tables); component styles in src/site/app/ and src/site/mobile/ (imported in order by App.tsx).
