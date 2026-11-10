@@ -51,7 +51,7 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
   ['src/site/stale-deploy.ts', ['chunks']], ['src/components/LoadBoundary.tsx', ['chunks']],
   ['src/site/meta.ts', ['nav', 'mobile']],
   ['src/site/mobile/**', ['mobile', 'mobile-boards', 'layout-narrow']],
-  ['src/components/widget/**', ['layout', 'layout-narrow', 'nav', 'mobile', 'csp']],
+  ['src/components/widget/**', ['layout', 'layout-narrow', 'nav', 'mobile', 'csp', 'c10']],
   ['src/components/hero/**', ['layout', 'layout-narrow', 'mobile']],
   ['src/components/About.tsx', ['layout', 'layout-narrow', 'mobile']],
   ['src/lab/**', ['csp']], ['src/legal/**', ['layout', 'csp', 'a11y-phone']],
