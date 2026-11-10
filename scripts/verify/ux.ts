@@ -1,7 +1,7 @@
 /** UX checks for `pnpm verify` (scripts/verify.ts): the board picker (U1), the EXPLORE / BROWSE / MAKE / ABOUT views (U3) and BROWSE's filters (#182). */
 import { boardGroups, boardIds, boardLabel, groupOf } from '../../src/widgets/manifest'
 import { boardBlurbs } from '../../src/widgets/blurbs'
-import { SITE_NAME, boardFromPath } from '../../src/site/meta'
+import { SITE_NAME, boardFromPath, searchTitle } from '../../src/site/meta'
 import { BROWSE_META } from '../../src/site/browse'
 import { PLACES, placeView, urlForView, viewFromUrl, type ViewState } from '../../src/site/views'
 import { matches, readFilters, writeFilters, ROWS, MAX_QUERY } from '../../src/components/browse/data'
@@ -72,7 +72,7 @@ export function uxChecks(assert: Assert) {
     assert('ux: browse writes its filters and keeps other params', writeFilters({ board: 'metro', tag: '', q: 'a b' }, '?skin=crt&tag=old') === '?skin=crt&in=metro&q=a+b')
     const all = ROWS.filter(r => matches(r, { board: '', tag: '', q: '' })).length, clocks = ROWS.filter(r => matches(r, { board: '', tag: 'clock', q: '' }))
     assert('ux: browse lists every widget once, and a tag filter keeps only cards with that tag', all === ROWS.length && new Set(ROWS.map(r => r.slug)).size === ROWS.length && clocks.length > 0 && clocks.every(r => r.tags.includes('clock')), `${all} cards, ${clocks.length} clocks`)
-    assert('ux: the browse title ends with the site name', BROWSE_META.title.endsWith(` · ${SITE_NAME}`), BROWSE_META.title)
+    assert('ux: the browse title is a search title ending with the site name', BROWSE_META.title === searchTitle('Browse every card', SITE_NAME), BROWSE_META.title)
     assert('ux: browse search finds a card by its name', ROWS.some(r => r.slug === 'home-clock' && matches(r, { board: '', tag: '', q: 'HOME' })))
   }
 

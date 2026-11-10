@@ -11,7 +11,7 @@ export const BROWSE_PATH = '/browse/'
 export const BROWSE_PARAMS = ['in', 'tag', 'q'] as const
 
 export const BROWSE_META: PageMeta = {
-  title: 'Browse every card · MATRIX', // `SITE_NAME` (scripts/verify/ux.ts checks they agree)
+  title: 'Browse every card · Matrix', // `searchTitle(…, SITE_NAME)` (scripts/verify/ux.ts checks they agree)
   description: 'Every dot-matrix card from every MATRIX board on one page. Filter by board or tag, or search by name, then open a card or its board.',
   path: BROWSE_PATH,
   image: '/og/default.png',

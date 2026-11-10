@@ -108,7 +108,7 @@ export function blogPages() {
   // blog.html is the fallback for any /blog/ path (vercel.json), so only the index's own page preloads the index's hero
   writeFileSync(file, withMeta(html, index, [listLd])); page('blog', withMeta(html, index, [...preload(BLOG.slug), listLd]))
   for (const p of POSTS) {
-    const m: PageMeta = { title: `${p.title} · MATRIX blog`, description: p.dek, path: postPath(p.slug), image: social(p.slug), imageAlt: imageAlt(p.slug) }
+    const m: PageMeta = { title: `${p.title} · Matrix blog`, description: p.dek, path: postPath(p.slug), image: social(p.slug), imageAlt: imageAlt(p.slug) }
     const ld = {
       '@context': 'https://schema.org', '@type': 'BlogPosting', headline: p.title, description: p.dek, datePublished: p.date, author, publisher: author,
       image: [origin + m.image, ...(has(heroImage(p.slug)) ? [origin + heroImage(p.slug)] : [])], url: origin + m.path, mainEntityOfPage: origin + m.path,
