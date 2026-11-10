@@ -226,7 +226,8 @@
 /* desktop: an action step between the picker and the board it opened, so the board's name, blurb and cards read as
    the content and the picker as the way to it (phones keep the group step: the first card stays high) */
 @media not ((max-width: 760px) or ((max-height: 500px) and (pointer: coarse))) {
-  .board-picker + .board-view {
+  .board-picker + .board-view,
+  .board-picker + .browse {
     margin-top: var(--gap-action)
   }
 }

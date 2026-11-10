@@ -24,7 +24,7 @@ export const titleCase = (s: string): string => s.replace(/\b[A-Z][A-Z']+\b/g, w
 export const searchTitle = (...parts: string[]): string => parts.map(titleCase).join(' · ')
 
 export const SITE_TITLE = searchTitle(SITE_NAME, 'a field-based dot-matrix UI engine')
-export const SITE_DESCRIPTION = 'Interfaces drawn entirely in dots. Each card is a field, sampled onto a quantized dot grid and rendered live. Browse the boards, or read how the engine works.'
+export const SITE_DESCRIPTION = 'Interfaces drawn entirely in dots. Each card is a field, sampled onto a quantized dot grid and rendered live. See every card on one page, open a board, or read how the engine works.'
 export const SITE_LOCALE = 'en_US'
 const PRODUCTION = 'https://matrix.reactopia.me'
 const ENV: Record<string, unknown> = import.meta.env ?? {}

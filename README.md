@@ -15,7 +15,7 @@ This is a personal project: a website to look at and play with. Some of its card
 
 ## What you can do there
 - **Look through over 40 boards** of cards: UI kits, car instruments, watch faces, live weather and GitHub data, charts, physics toys, a synth, a game, camera halftone, simulations and GPU light.
-- **See every card at once** on `/browse/`, filtered by board, tag or name.
+- **See every card at once** on the home page, `/`, filtered by tag or name, or pick a board.
 - **Change the look** of everything at once: light or dark, seven accents or any hue, and display skins like CRT, VFD, LED, e-ink, flip-disc and Nixie.
 - **Save any card** as PNG or SVG, copy a link to it, or open it on its own page.
 - **Read how it works** in the blog: the essay "Ditherpunk for UI" and three tutorials with live cards and code.
@@ -51,7 +51,7 @@ The engine (codename Dot/480) is plain TypeScript with no framework and no depen
 ## Links into the site
 - `/<board>/` opens a board, for example `/light/` or `/components/`.
 - `/widget/<card>/` opens one card on its own page.
-- `/browse/` shows every card; `?in=<board>`, `?tag=<tag>` and `?q=<words>` filter it.
+- `/` shows every card (ALL); `?tag=<tag>` and `?q=<words>` filter it. The old `/browse/` redirects there.
 - `?about` opens ABOUT.
 - `?skin=crt` picks a display skin, and `?pro=1` opens every fold.
 - `?theme=light_cobalt` (or `?scheme=` and `?accent=`) shows a theme for the visit without saving it.
@@ -63,7 +63,7 @@ Old links keep working: renamed boards resolve through `boardAliases` in `src/wi
 |---|---|
 | `src/engine/` | The engine: fields, sampler, renderers, layout, motion, Field IR, light, simulations, halftone, display skins. No framework, no dependencies. |
 | `src/widgets/` | The cards (`boards/<board>.ts`), the board manifest and the card descriptions |
-| `src/components/` | The React app: boards, browse, the picker, the MAKE editor, the palette, the shell and the skins |
+| `src/components/` | The React app: boards, ALL (every card), the picker, the MAKE editor, the palette, the shell and the skins |
 | `src/site/`, `src/data/`, `src/blog/`, `src/essay/` | Page meta and URLs, themes, live data sources, the blog and the essay |
 | `api/` | Vercel Functions for likes (`docs/DEPLOY.md` › Likes) |
 | `scripts/` | Checks, goldens, snapshots, the size budget, the post-build step and the headless browser probes |

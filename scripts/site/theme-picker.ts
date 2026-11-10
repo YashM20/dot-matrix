@@ -243,8 +243,11 @@ try {
   check('reduced motion (OS): a scheme pick is instant too', seg.now === 'light' && seg.vt === 0, JSON.stringify(seg))
   await open('/')
   await key('k', 'KeyK', 75, 2)
-  await waitFor('!!document.querySelector(".pal input")', 4000)
-  await cdp('Input.insertText', { text: 'reduced motion: on' }); await sleep(200)
+  // the palette focuses its input once it has painted: type after that (ALL keeps the main thread busier on `/`, #315)
+  await waitFor('document.activeElement === document.querySelector(".pal input")', 4000)
+  await cdp('Input.insertText', { text: 'reduced motion: on' })
+  // the palette ranks as you type: Enter once the command leads (on `/`, ALL mounts its cards meanwhile, #315)
+  check('⌘K "reduced motion: on" ranks the command first', await waitFor(`/reduced motion/i.test(document.querySelector('.pal-item')?.textContent ?? '')`, 4000), await js(`document.querySelector('.pal-item')?.textContent ?? ''`) as string)
   await key('Enter', 'Enter', 13); await sleep(200)
   await click(btn.x, btn.y)
   await waitFor('!!document.querySelector(".theme-pop [data-accent=vite]")', 3000)
@@ -352,8 +355,8 @@ try {
   await key('Enter', 'Enter', 13)
   check('…and runs it (3 a row, stored)', await waitFor(`document.documentElement.dataset.cards === 'l' && localStorage.getItem('dot480:cards') === 'l' && ${firstRow} === 3`, 3000))
 
-  // ── touch: TOOLS › THEME ──
-  await open('/', { phone: true })
+  // ── touch: TOOLS › THEME ── (on a board: `/` is ALL, #315, and the card-size checks count a board's grid)
+  await open('/henry/', { phone: true })
   check('phone: the header THEME button is hidden', await js(`getComputedStyle(document.querySelector('.theme-switch')).display === 'none'`) === true)
   const tools = (await centreOf('.tabbar button[aria-haspopup]'))!
   await tap(tools.x, tools.y)
