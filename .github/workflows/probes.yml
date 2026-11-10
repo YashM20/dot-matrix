@@ -33,6 +33,9 @@ on:
       shots:
         description: 'Comma list of route@width[@theme] screenshots, e.g. /browse/@1280,/@390@light'
         default: ''
+      lighthouse:
+        description: 'Lighthouse on the SEO routes (scripts/ci/lighthouse.ts): build, live, both or none'
+        default: build
 
 permissions:
   contents: read
@@ -164,5 +167,41 @@ jobs:
         with:
           name: screenshots
           path: shots
+          retention-days: 7
+          if-no-files-found: ignore
+
+  # Lighthouse (the PageSpeed Insights engine, no API key) on the SEO routes, mobile and desktop: Performance and
+  # Accessibility, LCP, CLS, TBT and the audits that lost points, in the job summary and the `lighthouse` artifact.
+  # A report like the rest of this workflow. `live` audits the production site instead of this build.
+  lighthouse:
+    name: lighthouse ${{ matrix.target }}
+    needs: build
+    if: github.event_name != 'workflow_dispatch' || inputs.lighthouse != 'none'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        target: ${{ fromJson(github.event_name == 'workflow_dispatch' && (inputs.lighthouse == 'both' && '["build","live"]' || format('["{0}"]', inputs.lighthouse)) || '["build"]') }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        if: matrix.target == 'build'
+        with:
+          name: dist
+          path: dist
+
+      - name: Lighthouse
+        env:
+          TARGET: ${{ matrix.target }}
+        run: pnpm exec tsx scripts/ci/lighthouse.ts --out lh $([ "$TARGET" = live ] && echo --base https://matrix.reactopia.me/)
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: lighthouse-${{ matrix.target }}
+          path: lh
           retention-days: 7
           if-no-files-found: ignore

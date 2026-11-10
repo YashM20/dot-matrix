@@ -70,7 +70,7 @@ export function widgetBody(w: WidgetRow): string {
 /** The blog index: every post with its line and date. */
 export function blogIndexBody(): string {
   const list = POSTS.map(p => `<li><a href="${postPath(p.slug)}">${esc(p.title)}</a>: ${esc(p.dek)} <time datetime="${p.date}">${p.date}</time></li>`).join('')
-  return wrap(`${siteNav(`<a href="${postPath()}">Blog</a>`)}<h1>${esc(BLOG.title)}</h1><p>${esc(BLOG.dek)}</p><ul>${list}</ul>`)
+  return wrap(`${siteNav(`<a href="${postPath()}">Blog</a>`)}<h1>Blog</h1><p>${esc(BLOG.dek)}</p><ul>${list}</ul>`)
 }
 
 /** The lab index: every piece with its line. */

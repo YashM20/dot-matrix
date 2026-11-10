@@ -169,7 +169,7 @@ function withBoot(html: string): string {
   const metas = [...html.matchAll(/^[ \t]*<meta name="(?:viewport|theme-color|color-scheme)"[^>]*>\r?\n/gm)], last = metas.at(-1)
   if (!last) return html
   const at = last.index + last[0].length
-  return `${html.slice(0, at)}    <!-- no-flash theme boot: src/site/theme/boot.ts (written by scripts/site/theme.ts --write; its sha256 is in vercel.json's CSP) -->\n    ${block}\n${html.slice(at)}`
+  return `${html.slice(0, at)}    <!-- no-flash theme boot: src/site/theme/boot.ts (written by the write mode of scripts/site/theme.ts; its sha256 is in vercel.json's CSP) -->\n    ${block}\n${html.slice(at)}`
 }
 /** The boot script sits once in <head>, after the color-scheme and theme-color metas it rewrites. */
 const bootPlaced = (html: string) => {

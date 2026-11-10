@@ -12,7 +12,7 @@ import { pushUrl, replaceUrl } from './safe-url'
 
 export const SITE_NAME = 'MATRIX'
 export const SITE_TITLE = 'MATRIX · a field-based dot-matrix UI engine'
-export const SITE_DESCRIPTION = 'Interfaces drawn entirely in dots: every card is a field, sampled onto a quantized dot grid and rendered live. Boards, a playground, a Field IR REPL and a drawing board.'
+export const SITE_DESCRIPTION = 'Interfaces drawn entirely in dots. Each card is a field, sampled onto a quantized dot grid and rendered live. Browse the boards, or read how the engine works.'
 export const SITE_LOCALE = 'en_US'
 const PRODUCTION = 'https://matrix.reactopia.me'
 const ENV: Record<string, unknown> = import.meta.env ?? {}
@@ -56,15 +56,19 @@ export interface WidgetPageInfo { slug: string; uid: string; name: string; blurb
 /** A card's name without its board numbering (`01 Home` → `Home`). */
 export const widgetTitle = (name: string): string => name.replace(/^\d{2}\s+/, '').trim() || name
 
-/** Meta for a widget page: canonical `/widget/<slug>/`, OG image `/og/widget/<uid>.png` (keyed by uid, so a rename keeps cached previews). */
+/**
+ * Meta for a widget page: canonical `/widget/<slug>/`, OG image `/og/widget/<uid>.png` (keyed by uid, so a rename keeps
+ * cached previews). The title names the board, since a card name can repeat across boards (`Weather` on MICRO UI and
+ * LIVE); the description leads with the blurb and keeps the board line short, so search snippets show the blurb.
+ */
 export function widgetPageMeta(w: WidgetPageInfo): PageMeta {
-  const name = widgetTitle(w.name)
+  const name = widgetTitle(w.name), label = boardLabel(w.board)
   return {
-    title: `${name} · ${SITE_NAME}`,
-    description: `${w.blurb ? `${w.blurb} ` : ''}A dot-matrix widget from the ${boardLabel(w.board)} board of MATRIX: a field sampled onto a quantized dot grid and rendered live.`,
+    title: `${name} · ${label} · ${SITE_NAME}`,
+    description: w.blurb ? `${w.blurb} A live dot-matrix card from the ${label} board of MATRIX.` : `A dot-matrix card from the ${label} board of MATRIX: a field sampled onto a quantized dot grid and rendered live.`,
     path: widgetPath(w.slug, w.scope),
     image: `/og/widget/${w.uid}.png`,
-    imageAlt: `${name}, a dot-matrix card from the ${boardLabel(w.board)} board of MATRIX.`,
+    imageAlt: `${name}, a dot-matrix card from the ${label} board of MATRIX.`,
   }
 }
 

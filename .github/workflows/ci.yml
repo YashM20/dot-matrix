@@ -109,6 +109,10 @@ jobs:
         env:
           SITE_URL: ${{ vars.SITE_URL }}
 
+      # page speed without a browser (scripts/site/perf-check.ts): one stylesheet per page, fonts, cache headers, images
+      - name: Page-speed checks on the build
+        run: pnpm exec tsx scripts/site/perf-check.ts
+
       - name: Upload site
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:

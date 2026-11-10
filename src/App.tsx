@@ -19,7 +19,7 @@ import { SkipLink } from './site/SkipLink'
 import { cardTransition } from './site/viewTransition'
 import { GALLERY_BOARD, VIEWS, placeFromName, placeView, sameView, urlForView, viewFromUrl, type Mode, type View } from './site/views'
 // the app's styles, then the phone styles over them: the order is the cascade, keep it
-import './site/brand/mark.css'
+// the header mark (site/brand/mark.css) and the skip link come through src/index.css: shared modules, one stylesheet
 import './site/app/chrome.css'
 import './site/app/explore.css'
 import './site/app/grid.css'
@@ -164,7 +164,7 @@ function IntroLine() {
   if (!shown) return null
   return <p className="intro-line">
     {/* phones show the short line (one text line, so intro + picker stay ≤ 120 px; src/site/mobile/) */}
-    <span className="intro-long"><span className="intro-lead">Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid.</span> <span>{xray ? <>Touch the cards, switch the display, or press <b>X-RAY</b> to see how one works.</> : 'Touch the cards or switch the display.'}</span></span>
+    <span className="intro-long"><span className="intro-lead">Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid.</span> <span>{xray ? <>Touch the cards, try another <b>DISPLAY</b>, or press <b>X-RAY</b> to see how one works.</> : <>Touch the cards, or try another <b>DISPLAY</b>.</>}</span></span>
     <span className="intro-short">Every card is a live dot field.</span>
     <a href="/blog/dot-matrix-essay/">Read the essay →</a>
     <button type="button" aria-label="Hide this note" onClick={() => { setShown(false); try { localStorage.setItem('dot480:intro', 'off') } catch { /* private mode */ } }}>×</button>

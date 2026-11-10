@@ -1,0 +1,108 @@
+# The SEO audit with free tools, on demand (docs/HARNESS.md › SEO audit): builds this ref, serves dist/ with
+# vercel.json's routing (scripts/site/serve.ts, so unknown paths get a real 404), then runs Lighthouse (SEO, best
+# practices, accessibility) on a set of routes, the W3C Nu HTML checker on the built pages and lychee on every link in
+# every sitemap page. `live=true` also runs Lighthouse on the production site. Report only: the run summary has the
+# tables (scripts/site/seo-audit.ts) and the raw reports are the `seo-audit` artifact. No keys, no paid services.
+name: seo-audit
+
+on:
+  workflow_dispatch:
+    inputs:
+      live:
+        description: Also run Lighthouse on the production site
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: seo-audit-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  ORIGIN: https://matrix.reactopia.me
+  LOCAL: http://localhost:4321
+  # a board, a second board, two widget pages, a markdown post, the legal pages and a 404
+  ROUTES: / /browse/ /henry/ /mosaic/ /widget/timer/ /widget/weather/ /blog/ /blog/dot-matrix-essay/ /blog/living-matter/ /about /privacy /terms /no-such-page
+  LIGHTHOUSE: lighthouse@13.6.0
+  LYCHEE: v0.24.2
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: ./.github/actions/setup
+
+      - name: Restore OG image cache
+        uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: node_modules/.cache/dot480-og
+          key: og-${{ hashFiles('goldens/**', 'scripts/og.ts', 'scripts/lib/raster.ts', 'scripts/lib/cards.ts', 'scripts/lib/stats.ts', 'src/engine/sampler/gridSampler.ts') }}
+          restore-keys: og-
+
+      # absolute canonicals and og:urls name production, as on Vercel; lychee maps them back to the local server
+      - name: Build
+        run: pnpm exec vite build
+        env:
+          SITE_URL: ${{ env.ORIGIN }}
+
+      - name: Serve dist with vercel.json routing
+        run: |
+          nohup pnpm exec tsx scripts/site/serve.ts 4321 > serve.log 2>&1 &
+          for i in $(seq 30); do curl -sf "$LOCAL/" > /dev/null && break; sleep 1; done
+          curl -s -o /dev/null -w 'home %{http_code}\n' "$LOCAL/"
+          curl -s -o /dev/null -w 'unknown %{http_code}\n' "$LOCAL/no-such-page"
+
+      - name: Lighthouse
+        env:
+          LIVE: ${{ inputs.live }}
+        run: |
+          mkdir -p seo-audit/lh
+          export CHROME_PATH=$(command -v google-chrome || command -v chromium)
+          targets="build=$LOCAL"; [ "$LIVE" = true ] && targets="$targets live=$ORIGIN"
+          for t in $targets; do
+            for r in $ROUTES; do
+              for form in mobile desktop; do
+                name="${t%%=*}__$(node -p 'encodeURIComponent(process.argv[1])' "$r")__$form"
+                preset=""; [ $form = desktop ] && preset="--preset=desktop"
+                pnpm dlx "$LIGHTHOUSE" "${t#*=}$r" $preset --quiet --only-categories=seo,best-practices,accessibility \
+                  --output=json --output-path="seo-audit/lh/$name.json" --chrome-flags="--headless=new --no-sandbox --enable-unsafe-swiftshader" \
+                  || echo "lighthouse failed: $t $r $form"
+              done
+            done
+          done
+
+      - name: W3C Nu HTML checker
+        run: |
+          curl -sSL -o vnu.jar https://github.com/validator/validator/releases/download/latest/vnu.jar
+          files="dist/index.html dist/browse/index.html dist/henry/index.html dist/mosaic/index.html dist/widget/timer/index.html dist/widget/weather/index.html
+            dist/blog/index.html dist/blog/dot-matrix-essay/index.html dist/blog/living-matter/index.html dist/lab/index.html dist/privacy.html dist/terms.html dist/404.html"
+          java -jar vnu.jar --format json --also-check-svg $files 2> seo-audit/vnu.json || true
+
+      - name: lychee (links on every sitemap page)
+        run: |
+          curl -sSL "https://github.com/lycheeverse/lychee/releases/download/lychee-$LYCHEE/lychee-x86_64-unknown-linux-gnu.tar.gz" | (mkdir -p lychee-bin && tar xz -C lychee-bin)
+          LYCHEE_BIN=$(find lychee-bin -type f -name lychee | head -1)
+          grep -o '<loc>[^<]*' dist/sitemap.xml | sed "s#<loc>$ORIGIN#$LOCAL#" > pages.txt
+          printf '%s\n' "$LOCAL/?about" "$LOCAL/404.html" >> pages.txt
+          "$LYCHEE_BIN" --no-progress --format json --output seo-audit/lychee.json --max-concurrency 16 --max-retries 2 --timeout 20 \
+            --remap "^$ORIGIN $LOCAL" --accept '200..=299,429' \
+            --exclude '^https?://(www\.)?(x|twitter|linkedin)\.com' --exclude "^$LOCAL/ingest" \
+            $(cat pages.txt) || true
+
+      - name: Summary
+        if: always()
+        run: pnpm exec tsx scripts/site/seo-audit.ts seo-audit | tee seo-audit/summary.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: seo-audit
+          path: |
+            seo-audit
+            serve.log
+          retention-days: 14

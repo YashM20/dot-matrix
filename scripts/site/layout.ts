@@ -139,11 +139,10 @@ const MEASURE = (kind: string, H: number) => `(() => {
   for (const [k, el] of Object.entries(edges)) if (el) left[k] = Math.round(R(el).left * 10) / 10
   // vertical rhythm: each block's top against the lowest bottom above it
   const blocks = ${JSON.stringify(kind)} === 'board'
-    ? [['topbar', q('.topbar')], ['hero', q('.home-hero')], ['intro', q('.intro-line')], ['picker', q('.board-picker')], ['header', q('.board-title'), q('.board-view .concept-credit') || q('.board-blurb')], ['grid', q('.board-grid')], ['next', q('.next-board')], ['footer', q('.bottom')]]
+    ? [['topbar', q('.topbar')], ['hero', q('.home-hero')], ['intro', q('.intro-line')], ['picker', q('.board-picker')], ['header', q('.board-title'), q('.board-blurb')], ['grid', q('.board-grid')], ['next', q('.next-board')], ['footer', q('.bottom')]]
     : ${JSON.stringify(kind)} === 'about' ? [['topbar', q('.topbar')], ['about', q('.about-intro')], ['log', q('.log-view')], ['footer', q('.bottom')]]
     : ${JSON.stringify(kind)} === 'widget' ? [['top', q('.wp-top')], ['main', q('.wp-main')], ['footer', q('.bottom')]] : []
-  // a block is one element, or [top element, bottom element] (the board header: title, then blurb, then the concept
-  // credit on the boards that rebuild someone's screens)
+  // a block is one element, or [top element, bottom element] (the board header: title, then blurb)
   const placed = blocks.filter(([, el]) => el && getComputedStyle(el).position !== 'fixed').map(([n, el, end]) => ({ n, top: R(el).top + y0, bottom: R(end || el).bottom + y0, float: getComputedStyle(el).float !== 'none' })).sort((a, b) => a.top - b.top)
   const gaps = []
   for (let i = 1; i < placed.length; i++) {

@@ -103,9 +103,22 @@ export default {
       {
         // a card spec is a JSON format: the round trip is the point (it drops functions, undefined and non-finite
         // numbers the way a saved file would, where `structuredClone` throws on a function and keeps the rest), and
-        // it runs once per card build or export, not per frame
-        files: ['src/spec/build.ts', 'src/spec/export.ts'],
+        // it runs once per card build or export, not per frame. The editor checks a card from a file in that saved form too
+        files: ['src/spec/build.ts', 'src/spec/export.ts', 'src/components/editor/store.ts'],
         rules: ['react-doctor/no-json-parse-stringify-clone'],
+      },
+      {
+        // the card flight (src/site/viewTransition.ts) runs `document.startViewTransition` by hand: its callback has to
+        // commit the board ⇄ card swap before it returns so the new snapshot holds it, which is what `flushSync` is for.
+        // No React `<ViewTransition>` is in use, so there is none for it to skip
+        files: ['src/App.tsx'],
+        rules: ['react-doctor/no-flush-sync'],
+      },
+      {
+        // `role="search"` on `<search>` keeps the landmark in browsers older than the element (Chrome and Firefox 118,
+        // Safari 17), which the build target still covers; a `<div role="search">` trips prefer-tag-over-role instead
+        files: ['src/components/browse/Browse.tsx'],
+        rules: ['react-doctor/no-redundant-roles'],
       },
       {
         // `Num` takes `Number()` only after it checks for an empty input and a non-finite result
