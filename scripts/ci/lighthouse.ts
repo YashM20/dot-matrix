@@ -65,6 +65,7 @@ try {
       lhr = run(f)
       if (!lhr || lhr.runtimeError) lhr = run(f)
       if (lhr && !lhr.runtimeError) done.push(lhr)
+      console.log(`${route} ${form} run ${i}: TBT ${lhr?.audits['total-blocking-time']?.numericValue?.toFixed(0) ?? 'failed'} ms`)
     }
     if (!done.length && !lhr) { rows.push(`| ${route} | ${form} | failed | | | | | | | |`); continue }
     if (!done.length) { rows.push(`| ${route} | ${form} | ${lhr!.runtimeError!.message.slice(0, 60)} | | | | | | | |`); continue }

@@ -185,7 +185,7 @@ jobs:
     needs: build
     if: github.event_name != 'workflow_dispatch' || inputs.lighthouse != 'none'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -200,6 +200,8 @@ jobs:
           path: dist
 
       - name: Lighthouse
+        # a step limit below the job's, so a long focused run (lighthouse_runs) still uploads what it measured
+        timeout-minutes: 50
         env:
           TARGET: ${{ matrix.target }}
           LH_ROUTES: ${{ github.event_name == 'workflow_dispatch' && inputs.lighthouse_routes || '' }}
