@@ -71,7 +71,7 @@ const heroes = new Map<string, Hero>()
 export function lensHero(hh: string, mm: string): Hero {
   const key = `${hh}:${mm}`, hit = heroes.get(key)
   if (hit) return hit
-  const big = T.big(key, DIAL.cx, HERO.row - 10.5, { lattice: HERO.k, smooth: true, align: 'center' }), [ox, oy] = big.origin!
+  const big = T.big(key, DIAL.cx, HERO.row - 10.5, { lattice: HERO.k, smooth: true, mask: true, align: 'center' }), [ox, oy] = big.origin!
   const g = latticeGrid(TILE, HERO.k, [ox, oy]), lc = g.cols, lr = g.rows, bits = new Float32Array(lc * lr), near = new Uint8Array(COLS * TILE.rows)
   const b = big.field.bounds ?? [0, 0, lc - 1, lr - 1], i0 = Math.max(0, Math.floor(b[0])), j0 = Math.max(0, Math.floor(b[1])), i1 = Math.min(lc - 1, Math.ceil(b[2])), j1 = Math.min(lr - 1, Math.ceil(b[3]))
   for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {

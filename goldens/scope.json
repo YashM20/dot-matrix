@@ -4,13 +4,13 @@
   "scope-wave": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "7bea591c",
-    "dots": 530
+    "hash": "1f7d6270",
+    "dots": 484
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "23cf8324",
-    "dots": 431
+    "hash": "d81da4e2",
+    "dots": 409
    }
   },
   "scope-spectrum": {
@@ -28,13 +28,13 @@
   "scope-mic": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "a00f0bbd",
-    "dots": 379
+    "hash": "e4d8c4ee",
+    "dots": 382
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "c21d2d19",
-    "dots": 345
+    "hash": "47613ea7",
+    "dots": 350
    }
   }
  }

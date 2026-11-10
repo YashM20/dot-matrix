@@ -41,7 +41,8 @@ In the browser, the app rewrites these tags as you move between boards and widge
 - Links to the blog must be root-absolute (`/blog/`, `/blog/dot-matrix-essay/`): a relative link breaks under `/<board>/` paths.
 - Routing (`vercel.json`): redirects first, then real files, then rewrites, else `404.html` with status 404. Vercel reads a `source` exactly (case-sensitive, no optional trailing slash), so routes list both slash forms. Only the app's own route shapes fall back:
   - `/<board>` (no slash) rewrites to `/<board>/index.html`; the board ids are listed in the rule, so **a new board adds its id there** (`seo-check.ts` fails until it does). `/<board>/` is a real file.
-  - `/about`, `/widget/<key>`, `/@<scope>/widget/<key>` and a uid-shaped `/<uid>` (each with or without the slash) rewrite to `/index.html`, so old slugs and unknown uids still reach the app's own resolver.
+  - `/widget/<key>`, `/@<scope>/widget/<key>` and a uid-shaped `/<uid>` (each with or without the slash) rewrite to `/index.html`, so old slugs and unknown uids still reach the app's own resolver.
+  - `/about` redirects to `/?about`, the About view's own URL, in one hop (its page would otherwise carry the home page's canonical). Old `/widget/glyph-<x>/` card links redirect to `/widget/lock-<x>/`.
   - `/browse` rewrites to `/browse/index.html`; `/browse/` is a real file.
   - `/blog/*` rewrites to `blog.html`; `/lab`, `/privacy`, `/terms` to their pages.
   - Board aliases redirect (`/glyph/` → `/lock/`, permanent). A new alias in `boardAliases` adds its redirect.
@@ -120,7 +121,7 @@ Reload. The object can hold several flags, `{ xray: true, worker: false }`, and 
 CI runs once per push: on `pull_request` for PRs (a new push cancels the old run) and on `push` for `main`. These jobs run in parallel:
 1. **typecheck + lint:** `pnpm check:static` (tsc, oxlint, file size, credits, headers, URLs, prose lint, analytics) and the CSS token lint;
 2. **verify:** `pnpm verify`. With the job above, that is all of `pnpm check`;
-3. **build + site checks:** `vite build` (the widget OG images come from a cache keyed by their renderer and the goldens), the bundle budget (`scripts/site/size.ts --check`: first-load JS ≤ 150 kB gz), the theme, header and SEO checks on `dist/`, the `site` artifact upload and `golden --check`;
+3. **build + site checks:** `vite build` (the widget OG images come from a cache keyed by their renderer and the goldens), the bundle budget (`scripts/site/size.ts --check`: first-load JS ≤ 150 kB gz), the theme, header, SEO and page-speed checks on `dist/` (`scripts/site/perf-check.ts`: one render-blocking stylesheet per page, fonts, cache headers, image sizes, the blog hero preload, the lazy view placeholder), the `site` artifact upload and `golden --check`;
 4. **mcp:** `pnpm typecheck` and `pnpm test` in `mcp/`;
 5. **perf report:** `pnpm bench`, on `main` only and report-only;
 6. **react doctor (report):** `pnpm react-doctor` (settings in `doctor.config.ts`, #210), report-only and outside the gate.

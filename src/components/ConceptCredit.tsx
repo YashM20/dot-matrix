@@ -1,7 +1,8 @@
 /**
  * The credit for Henry Li's ESP-Mosaico concept screens, where the project started (`conceptCredit` in
- * src/widgets/blurbs.ts). The board heading shows the line on the seven boards that rebuild his sheets, a widget page
- * from those boards shows it for its one card, and ABOUT shows `full`. The data stays in the lazy blurbs chunk, and the caller passes it in.
+ * src/widgets/blurbs.ts). A card's widget page shows the line when the card rebuilds his sheets (`hasConcept`: the card's
+ * own `concept`, else its board's default), and ABOUT shows `full`. Board views show none: each card can credit
+ * something else. The data stays in the lazy blurbs chunk, and the caller passes it in.
  */
 type Credit = typeof import('../widgets/blurbs').conceptCredit
 
@@ -17,10 +18,10 @@ function Sources({ credit }: { credit: Credit }) {
   </>
 }
 
-/** `full` on ABOUT, `card` on a widget page (one card of those boards), else the board heading's line. */
-export function ConceptCredit({ credit, full = false, card = false }: { credit: Credit; full?: boolean; card?: boolean }) {
+/** `full` on ABOUT, else the one-card line of a widget page. */
+export function ConceptCredit({ credit, full = false }: { credit: Credit; full?: boolean }) {
   return full
     ? <p className="concept-credit">This project started from the ESP-Mosaico concept screens for a 480 × 480 OLED device
         by <Sources credit={credit} /> The first seven boards rebuild his sheets, and the 480 in Dot/480 is his screen.</p>
-    : <p className="concept-credit">{card ? 'This card rebuilds' : 'These cards rebuild'} the ESP-Mosaico concept screens by <Sources credit={credit} /></p>
+    : <p className="concept-credit">This card rebuilds the ESP-Mosaico concept screens by <Sources credit={credit} /></p>
 }

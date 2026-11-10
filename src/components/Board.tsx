@@ -10,7 +10,6 @@ import type { DotCanvasProps } from './DotCanvas'
 import { pick, useLiveData } from '../data/useLiveData'
 import { HiveStart } from './game/HiveStart'
 import { useBlurbs } from './useBlurbs'
-import { ConceptCredit } from './ConceptCredit'
 import { LoadBoundary, LoadFailed } from './LoadBoundary'
 
 // sound (C5) is its own chunk: only the instrument / scope boards fetch the audio engine
@@ -83,7 +82,6 @@ function LoadedBoard({ id, leaving }: { id: string; leaving: boolean }) {
   // live sources (`BoardDef.sources`): fixture → cached → live data, merged over each card's defaults
   const live = useLiveData(board.sources)
   const blurbs = useBlurbs(), blurb = blurbs?.boardBlurbs[board.id as BoardId]
-  const credit = blurbs?.conceptCredit.boards.includes(board.id as BoardId) ? blurbs.conceptCredit : undefined
   const cards = (map: (p: WidgetPreset) => WidgetPreset) => board.items.map((preset, i) => <DotWidget key={preset.id} type={preset.id} preset={map(preset)} tick={preset.clock ? tick : undefined} boardOrder={i}
     data={board.sources ? pick(live, preset.defaults) : undefined}
     {...(sharing ? { shared, sharedKeys: board.shared, onShared } : {})} {...cardMotion(i, board.columns, board.items.length, leaving)} />)
@@ -91,7 +89,6 @@ function LoadedBoard({ id, leaving }: { id: string; leaving: boolean }) {
     <section className="board-view" aria-labelledby={titleId}>
       <BoardTitle title={board.title} id={titleId} />
       <p className="board-blurb">{blurb}</p>
-      {credit && <ConceptCredit credit={credit} />}
       {/* C4: the levels board opens HIVE in play mode (the cards stay as attract-mode previews) */}
       {board.id === 'levels' && <HiveStart theme={theme} />}
       {/* intent, not columns: src/site/app/grid.css turns the density into an auto-fill grid (DESIGN.md › Board grid) */}

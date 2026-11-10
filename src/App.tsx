@@ -19,7 +19,7 @@ import { SkipLink } from './site/SkipLink'
 import { cardTransition } from './site/viewTransition'
 import { GALLERY_BOARD, VIEWS, placeFromName, placeView, sameView, urlForView, viewFromUrl, type Mode, type View } from './site/views'
 // the app's styles, then the phone styles over them: the order is the cascade, keep it
-import './site/brand/mark.css'
+// the header mark (site/brand/mark.css) and the skip link come through src/index.css: shared modules, one stylesheet
 import './site/app/chrome.css'
 import './site/app/explore.css'
 import './site/app/grid.css'
@@ -75,7 +75,7 @@ function SiteFooter({ onAbout }: { onAbout: () => void }) {
   const idle = useIdle(), lab = useFlag('lab')
   return <footer className="bottom">
     <div className="live-band">{idle && <LoadBoundary fallback={null}><Suspense fallback={null}><LiveBand /></Suspense></LoadBoundary>}</div>
-    <div className="bottom-row"><span>MATRIX · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span><span>FIELD → GRID SAMPLER → RENDERER</span>
+    <div className="bottom-row"><span>MATRIX · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span>
       <span><a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · {lab && <><a href="/lab/">LAB</a> · </>}<a href="/blog/">BLOG</a> · <a href="?about" onClick={e => { e.preventDefault(); onAbout() }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></div>
   </footer>
 }
@@ -164,7 +164,7 @@ function IntroLine() {
   if (!shown) return null
   return <p className="intro-line">
     {/* phones show the short line (one text line, so intro + picker stay ≤ 120 px; src/site/mobile/) */}
-    <span className="intro-long">Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid. {xray ? <>Touch the cards, switch the display, or press <b>X-RAY</b> to see how one works.</> : 'Touch the cards or switch the display.'}</span>
+    <span className="intro-long"><span className="intro-lead">Interfaces drawn entirely in dots: every card is a live field, sampled onto a grid.</span> <span>{xray ? <>Touch the cards, try another <b>DISPLAY</b>, or press <b>X-RAY</b> to see how one works.</> : <>Touch the cards, or try another <b>DISPLAY</b>.</>}</span></span>
     <span className="intro-short">Every card is a live dot field.</span>
     <a href="/blog/dot-matrix-essay/">Read the essay →</a>
     <button type="button" aria-label="Hide this note" onClick={() => { setShown(false); try { localStorage.setItem('dot480:intro', 'off') } catch { /* private mode */ } }}>×</button>

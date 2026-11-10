@@ -10,7 +10,7 @@
 import type { Control } from '../../engine/context'
 import type { Tone } from '../../engine/types'
 import { BINS, FLOOR_DB, WAVE, audioOf, demoFrame, type AudioFrame } from '../../audio/frame'
-import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
+import { TAU, TILE, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -56,13 +56,15 @@ export const scopeWave: WidgetPreset = {
     const f = busOf(ctx)
     let pk = 0
     for (let j = 0; j < WAVE; j++) pk = Math.max(pk, Math.abs(f.wave[j]))
+    // the trace's dots keep a gap (0.8 of their spacing) and the graticule gives way where the trace crosses it
+    const line = T.dots(trace(f.wave, 2.5), 2, undefined, 1.8), wave = line.sites ?? []
     return [
       ...liveDot(f),
-      layer(spots(GRAT, 1.6), 'mid'),
-      layer(spots(AXES, 1), 'faint'),
+      layer(T.knockout(spots(GRAT, 1.6), wave, 1.9), 'mid'),
+      layer(T.knockout(spots(AXES, 1), wave, 1.6), 'faint'),
       // trigger marker on the left edge of the centre line
       layer(spots([[SC.x - 4, MID - 2], [SC.x - 4, MID + 2], [SC.x - 2, MID]], 1.6), 'idle'),
-      layer(spots(trace(f.wave), 2.3)),
+      layer(line),
       layer(T.text(SOURCE_LABEL[f.source], SC.x, FOOT), 'idle'),
       layer(T.text(`PK ${Math.round(pk * 100)}`, SC.x + SC.w, FOOT, { align: 'right' }), 'idle'),
     ]
@@ -101,14 +103,13 @@ export const scopeSpectrum: WidgetPreset = {
 // marching outward with energy. Centre: the level in dB once listening, a mic glyph before.
 // The whole card is one toggle (`mic`); `micState` (0 idle, 1 asking, 2 live, 3 blocked) comes back
 // from the host. Idle, the ring breathes on the stand-in at low gain.
-const RING = { cx: 72, cy: 64, r: 24, len: 32, pitch: 3.4, rays: BINS * 2 }
+/** Rays start two pitches out from the base ring (`gap`), so the base reads as its own ring, not one of three borders. */
+const RING = { cx: 72, cy: 64, r: 24, gap: 3.4, len: 28.6, pitch: 3.4, rays: BINS * 2 }
 const ray = (j: number) => { const b = j < BINS ? j : RING.rays - 1 - j; return { b, a: ((j + .5) / RING.rays) * TAU } }
 const BASE: Pt[] = Array.from({ length: RING.rays }, (_, j) => { const { a } = ray(j); return [RING.cx + RING.r * Math.sin(a), RING.cy - RING.r * Math.cos(a)] })
-/** Mic glyph: capsule, cradle and stem, as sites (cells from the centre). */
-const MIC_GLYPH: Pt[] = [
-  ...[-6, -3, 0, 3].flatMap((y): Pt[] => [[-3, y], [3, y]]), [0, -8.5], [-2, -8], [2, -8], [0, 5.5], [-2, 5], [2, 5],
-  [-6.5, 0], [6.5, 0], [-6, 3.5], [6, 3.5], [-4, 7], [4, 7], [0, 11], [-3, 12], [3, 12],
-]
+/** Mic glyph: capsule, cradle, stem and foot as a sprite on a 2-cell lattice (even spacing, no overlapping sites). */
+const MIC_GLYPH = ['...###...', '..#...#..', '..#...#..', '#.#...#.#', '#..###..#', '.#.....#.', '..#####..', '....#....', '....#....', '..#####..']
+const MIC_LAT = T.lattice(2, RING.cx - 8.5, RING.cy - 9.5), MIC = MIC_LAT.sprite(MIC_GLYPH, 0, 0)
 const MIC_STATE = ['TAP TO LISTEN', 'ASKING', 'LOCAL ONLY', 'MIC BLOCKED']
 
 export const scopeMic: WidgetPreset = {
@@ -122,7 +123,7 @@ export const scopeMic: WidgetPreset = {
     for (let j = 0; j < RING.rays; j++) {
       const { b, a } = ray(j), n = Math.round(clamp01(f.bins[b] * gain) * (RING.len / RING.pitch))
       for (let k = 1; k <= n; k++) {
-        const r = RING.r + k * RING.pitch, pt: Pt = [RING.cx + r * Math.sin(a), RING.cy - r * Math.cos(a)]
+        const r = RING.r + RING.gap + k * RING.pitch, pt: Pt = [RING.cx + r * Math.sin(a), RING.cy - r * Math.cos(a)]
         ;(k === n ? tips : body).push(pt)
       }
     }
@@ -136,7 +137,7 @@ export const scopeMic: WidgetPreset = {
       ...(focus ? [layer(spots(BASE.filter((_, i) => (i + Math.floor(ctx.t * 6)) % 3 !== 0), 1.4), 'value')] : []),
       live
         ? layer(T.big(db <= FLOOR_DB ? '--' : String(Math.round(db)), RING.cx, RING.cy - 7, { lattice: 2, align: 'center' }))
-        : layer(spots(MIC_GLYPH.map(([x, y]): Pt => [RING.cx + x, RING.cy - 2 + y]), 2.4, press ? .75 : 1), hover ? 'value' : 'idle'),
+        : layer(MIC_LAT.at(press ? dim(MIC, .75) : MIC), hover ? 'value' : 'idle'),
       ...(live ? [layer(T.text('DB', RING.cx, RING.cy + 9, { align: 'center' }), 'idle')] : []),
       layer(T.text(MIC_STATE[live ? 2 : state] ?? MIC_STATE[0], RING.cx, FOOT, { align: 'center' }), state === 3 ? 'mid' : 'idle'),
     ]

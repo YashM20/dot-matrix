@@ -45,7 +45,7 @@ export function BoardPicker({ board, onPick, onAll }: { board: string; onPick: (
   </div>
 }
 
-/** The end of a board (phones): the next one in its group, so a thumb never has to go back up. */
+/** The end of a board, at every width: the next one in its group, so nobody has to go back up to move on. */
 export function NextBoard({ board, onPick }: { board: string; onPick: (id: string) => void }) {
   const list = groupById(homeGroup(board)).boards as readonly string[]
   const next = list[(list.indexOf(board) + 1) % list.length]

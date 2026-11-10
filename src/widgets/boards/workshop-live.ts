@@ -192,7 +192,7 @@ interface PaperGeo { n: NormalRaster; ao: Raster; floor: Float32Array; inset: Ra
 const paperGeo = once((): PaperGeo => {
   const N = COLS * TILE.rows, h: HeightRaster = { ...createRaster(TILE, 'card', PBOX), mask: new Float32Array(N) }
   for (let r = PBOX[1]; r <= PBOX[3]; r++) paperRow(h.data, h.mask, r)
-  const [a, b] = PAPER.lines.map(([w, row]) => cardMask(T.big(w, 72, row, { lattice: PAPER.k, smooth: true, align: 'center' }), TILE))
+  const [a, b] = PAPER.lines.map(([w, row]) => cardMask(T.big(w, 72, row, { lattice: PAPER.k, smooth: true, mask: true, align: 'center' }), TILE))
   // both lines in one mask (b is 0 outside its window, and max(a, 0) = a); the letters' window, for the floor below
   const [a0, a1, a2, a3] = rasterWindow(a), [b0, b1, b2, b3] = rasterWindow(b), win: CellBounds = [Math.min(a0, b0), Math.min(a1, b1), Math.max(a2, b2), Math.max(a3, b3)]
   for (let r = b1; r <= b3; r++) for (let i = r * COLS + b0, end = r * COLS + b2; i <= end; i++) a.data[i] = Math.max(a.data[i], b.data[i])

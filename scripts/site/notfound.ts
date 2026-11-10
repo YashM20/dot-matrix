@@ -28,7 +28,7 @@ export function notFoundSvg(): string {
   const svg = renderSVG(sampleLayers(layers, grid, style, dot480), cols * PITCH, rows * PITCH)
   const cls: Record<string, string> = { [dot480.dotActive]: 'a', [dot480.dotIdle]: 'i', [dot480.dotFaint!]: 'f' }
   return svg.replace(/<g fill="([^"]+)"/g, (all, c: string) => (cls[c] ? `<g class="${cls[c]}"` : all))
-    .replace('<svg ', '<svg role="img" aria-label="404, not found" ')
+    .replace('<svg ', '<svg aria-hidden="true" ')
 }
 
 /** The whole page: the dot 404, a line, and links home and to every board. */
@@ -39,7 +39,7 @@ export function notFoundPage(): string {
     ':root{color-scheme:dark;--bg:#070809;--value:#F2F3F5;--mute:#81858B;--a:#FF3B30;--i:#8A8F98;--f:#2E3033}',
     '@media (prefers-color-scheme: light){:root{color-scheme:light;--bg:#F2EFEF;--value:#1C1A1A;--mute:#676261;--a:#E43226;--i:#484846;--f:#D1D1CF}}',
     'body{margin:0;min-height:100svh;display:grid;place-items:center;background:var(--bg);color:var(--value);font:15px/1.6 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}',
-    'main{max-width:40rem;padding:48px 24px}svg{display:block;width:100%;max-width:380px;height:auto;margin-bottom:24px}',
+    'main{max-width:40rem;padding:48px 24px}h1{margin:0}.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}svg{display:block;width:100%;max-width:380px;height:auto;margin-bottom:24px}',
     '.a{fill:var(--a)}.i{fill:var(--i)}.f{fill:var(--f)}',
     'p{margin:0 0 16px}a{color:inherit;text-underline-offset:3px}ul{list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:8px 16px;color:var(--mute)}',
     'h2{font-size:12px;letter-spacing:.12em;color:var(--mute);margin:32px 0 12px}',
@@ -59,7 +59,7 @@ export function notFoundPage(): string {
   </head>
   <body>
     <main>
-      ${notFoundSvg()}
+      <h1>${notFoundSvg()}<span class="vh">404, not found</span></h1>
       <p>There is no page at this address. It may have moved, or the link has a typo.</p>
       <p><a href="/">Go to the home board</a> or <a href="/blog/">read the blog</a>.</p>
       <h2>BOARDS</h2>

@@ -308,7 +308,7 @@ export function rustPlate(count: string): RustPlate {
   if (hit) { rustPlates.delete(count); rustPlates.set(count, hit); return hit }
   const b = rustBase(), cut = [
     cardMask(T.big('DAYS SINCE', 72, 25, { lattice: 1.3, align: 'center' }), TILE),
-    ...(count ? [cardMask(T.big(count, 72, COUNT_ROW, { lattice: 2.5, smooth: true, align: 'center' }), TILE)] : []),
+    ...(count ? [cardMask(T.big(count, 72, COUNT_ROW, { lattice: 2.5, smooth: true, mask: true, align: 'center' }), TILE)] : []),
     cardMask({ field: T.text('RESET', 72, RESET_BOX[1] + 5, { align: 'center' }) }, TILE),
   ].map(m => m.data)
   cut.push(resetFrame()) // the button's outline, cell for cell (T.box has no bounds: cardMask would scan the card)

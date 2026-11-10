@@ -37,6 +37,7 @@ import { BLOG, heroImage, POSTS, postPath, socialImage } from '../../src/blog/po
 import { EXPERIMENTS, LAB, experimentPath } from '../../src/lab/experiments'
 import { metaTags, pageMeta, widgetPageMeta, widgetTitle, type PageMeta } from '../../src/site/meta'
 import { boardBlurbs } from '../../src/widgets/blurbs'
+import { boardLabel } from '../../src/widgets/manifest'
 import { BROWSE_META } from '../../src/site/browse'
 import type { WidgetMeta } from '../../src/widgets/meta'
 import { widgetIndex } from '../widgets/meta'
@@ -63,7 +64,7 @@ export function withMeta(html: string, page?: string | PageMeta, extra: string[]
 export function widgetHead(w: WidgetMeta, m: PageMeta): string[] {
   const ld = {
     '@context': 'https://schema.org', '@type': 'CreativeWork', name: widgetTitle(w.name), description: w.blurb, identifier: w.uid,
-    url: origin + m.path, image: origin + m.image, keywords: w.tags.join(', '), isPartOf: { '@type': 'Collection', name: `${w.board} board`, url: `${origin}/${w.board}/` },
+    url: origin + m.path, image: origin + m.image, keywords: w.tags.join(', '), isPartOf: { '@type': 'Collection', name: `${boardLabel(w.board)} board`, url: `${origin}/${w.board}/` },
     ...(w.version && { version: w.version }),
   }
   return [
@@ -96,19 +97,23 @@ export function blogPages() {
   const alts: Record<string, { social?: string }> = existsSync(altFile) ? JSON.parse(readFileSync(altFile, 'utf8')) : {}
   const imageAlt = (slug: string) => (has(socialImage(slug)) ? alts[slug]?.social : undefined)
   const author = { '@type': 'Organization', name: 'Reactopia', url: 'https://reactopia.me/' }
+  // the hero is the page's LCP image, but React draws it: name it in the HTML so the browser fetches it with the CSS
+  // (Lighthouse "LCP request discovery"; scripts/site/perf-check.ts keeps it)
+  const preload = (slug: string) => (has(heroImage(slug)) ? [`<link rel="preload" as="image" href="${heroImage(slug)}" fetchpriority="high" />`] : [])
   const index: PageMeta = { title: BLOG.title, description: BLOG.dek, path: postPath(), image: social(BLOG.slug), imageAlt: imageAlt(BLOG.slug) }
-  const list = withMeta(html, index, [jsonLd({
+  const listLd = jsonLd({
     '@context': 'https://schema.org', '@type': 'CollectionPage', name: BLOG.title, description: BLOG.dek, url: origin + index.path, image: origin + index.image,
     hasPart: POSTS.map(p => ({ '@type': 'BlogPosting', headline: p.title, url: origin + postPath(p.slug), datePublished: p.date })),
-  })])
-  writeFileSync(file, list); page('blog', list)
+  })
+  // blog.html is the fallback for any /blog/ path (vercel.json), so only the index's own page preloads the index's hero
+  writeFileSync(file, withMeta(html, index, [listLd])); page('blog', withMeta(html, index, [...preload(BLOG.slug), listLd]))
   for (const p of POSTS) {
     const m: PageMeta = { title: `${p.title} · MATRIX blog`, description: p.dek, path: postPath(p.slug), image: social(p.slug), imageAlt: imageAlt(p.slug) }
     const ld = {
       '@context': 'https://schema.org', '@type': 'BlogPosting', headline: p.title, description: p.dek, datePublished: p.date, author, publisher: author,
       image: [origin + m.image, ...(has(heroImage(p.slug)) ? [origin + heroImage(p.slug)] : [])], url: origin + m.path, mainEntityOfPage: origin + m.path,
     }
-    page(join('blog', p.slug), withMeta(html, m, [`<meta property="article:published_time" content="${p.date}" />`, jsonLd(ld)]).replace('property="og:type" content="website"', 'property="og:type" content="article"'))
+    page(join('blog', p.slug), withMeta(html, m, [`<meta property="article:published_time" content="${p.date}" />`, ...preload(p.slug), jsonLd(ld)]).replace('property="og:type" content="website"', 'property="og:type" content="article"'))
   }
   console.log(`site: blog index + ${POSTS.length} post pages`)
 }
@@ -147,12 +152,14 @@ export function postbuild({ og = true } = {}) {
   const jobs: [file: string, card: string][] = [['default', heroOf(boards[0].id)], ...boards.map(b => [b.id, heroOf(b.id)] as [string, string])]
   for (const [file, card] of jobs) writeFileSync(join(DIST, 'og', `${file}.png`), ogImage(card).png())
   const t2 = performance.now()
-  // ~0.7 s per image: cached by the renderer's source + the card's golden hashes, so only changed cards re-render
+  // ~0.7 s per image: cached by the renderer's source, the card's golden hashes and the board title the image draws
+  // (as scripts/og.ts finds it), so only changed cards re-render and a renamed board never keeps its old title
   const cache = process.env.OG_CACHE || join('node_modules', '.cache', 'dot480-og'), golden = goldenOf(), salt = createHash('sha1').update(OG_SOURCES.map(f => readFileSync(f)).join('\0')).digest('hex')
   mkdirSync(cache, { recursive: true })
   let fresh = 0
   for (const w of widgets) {
-    const key = createHash('sha1').update(`${salt}|${w.slug}|${JSON.stringify(golden[w.slug] ?? null)}`).digest('hex').slice(0, 16), hit = join(cache, `${w.uid}-${key}.png`)
+    const title = boards.find(b => b.items.some(i => i.id === w.slug))?.title ?? ''
+    const key = createHash('sha1').update(`${salt}|${w.slug}|${title}|${JSON.stringify(golden[w.slug] ?? null)}`).digest('hex').slice(0, 16), hit = join(cache, `${w.uid}-${key}.png`)
     if (!existsSync(hit)) { writeFileSync(hit, ogImage(w.slug).png()); fresh++ }
     copyFileSync(hit, join(DIST, 'og', 'widget', `${w.uid}.png`))
   }

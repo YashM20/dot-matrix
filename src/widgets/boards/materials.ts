@@ -251,7 +251,7 @@ function knobLayers(v: number, L: Light): Layer[] {
     cite('KAJIYA-KAY 1989'),
     surfaceLayer([[own(body), MATTE_BANDS], [own(rim), 'idle'], [own(core), 'value']], L15),
     layer(T.dots(k.a, .9), 'mid'), layer(T.dots(k.b, .9), 'faint'),
-    layer(T.dots([[dx, dy]], 2.2), 'faint'),
+    layer(T.dots([[dx, dy]], 2.2), 'mid'),
     layer(T.dots(sites.slice(on), 1.2), 'faint'),
     ...(on > 0 ? [layer(T.dots(sites.slice(0, on), 1.4), 'active')] : []),
     layer(T.big(`VOL ${pad2(Math.round(v * 100))}`, 72, 132, { lattice: 1.3, align: 'center' }), 'idle'),

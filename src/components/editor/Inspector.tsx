@@ -14,11 +14,11 @@ import { CARD, widgetById } from '../../widgets'
 import { More } from '../More'
 import { CodeEditor } from '../dwitter/CodeEditor'
 import { EXAMPLES } from '../dwitter/examples'
-import { presetAsSpecCard, specV1 } from '../studio/adapter'
-import { BLENDS, LATTICES, paintCells, SITE_SIZES, TONES, type LayerTone, type PaintLayer, type SitesLayer, type StudioCard, type StudioLayer, type TextLayer, type IRLayer, type Motion } from '../studio/doc'
+import { looksLikeSpec, presetAsSpecCard, specV1 } from '../studio/adapter'
+import { BLENDS, cardFromJSON, LATTICES, paintCells, SITE_SIZES, TONES, type LayerTone, type PaintLayer, type SitesLayer, type StudioCard, type StudioLayer, type TextLayer, type IRLayer, type Motion } from '../studio/doc'
 import { trackSpans, type Track } from '../studio/playback'
 import { specBounds } from './direct'
-import { cellsFromMatrix, duplicateFrame, duplicateLayer, editCard, editFrame, editLayer, encodeCells, frameById, groupOf, layerOf, movable, moveLayer, newIRLayer, removeFrame, removeLayer, renameGroup, seedDoc, shareable, THEMES, topDown, type EditorFrame, type Sel, type ThemeName } from './doc'
+import { cellsFromMatrix, docFromJSON, duplicateFrame, duplicateLayer, editCard, editFrame, editLayer, encodeCells, frameById, groupOf, layerOf, movable, moveLayer, newIRLayer, removeFrame, removeLayer, renameGroup, seedDoc, shareable, THEMES, topDown, type EditorFrame, type Sel, type ThemeName } from './doc'
 import { arrangeSel, copyEverywhere, copyText, deleteSel, duplicateSel, framesLink, groupSel, knownParent, lockSel, paste, programLink, ungroupSel } from './actions'
 import { canShareLink, isPhone, shareLink } from './phone'
 import { LinkLineage, RemixGraph } from './Lineage'
@@ -105,10 +105,8 @@ function ManyPanel({ f }: { f: EditorFrame }) {
 async function openFile(fl: File) {
   const { setNote, fit } = getEditor()
   const text = await fl.text(), x = JSON.parse(text) as { kind?: string }
-  const { docFromJSON } = await import('./doc')
   if (x.kind === 'dot480.editor') { getEditor().openDoc(docFromJSON(text)); setNote(`opened ${fl.name}`); requestAnimationFrame(() => fit()) } // held from the autosave until it draws
   else {
-    const { looksLikeSpec } = await import('../studio/adapter'), { cardFromJSON } = await import('../studio/doc')
     const card = looksLikeSpec(x) ? specV1.fromSpec(x as never) : cardFromJSON(text)
     getEditor().insertCard(card, { source: 'file' }); setNote(`added ${fl.name} as a frame`)
   }

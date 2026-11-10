@@ -96,16 +96,19 @@ function art(w: number, h: number, draw: (pen: Pen) => void): string[] {
 const flipX = (rows: string[]) => rows.map(r => [...r].reverse().join(''))
 /** The pad icons: hand-drawn bitmaps on a 2-cell lattice (big dots, one-dot strokes, fills of a few dots), centred in their pad. */
 const ICON_K = 2
-const UNDO = ['..#.....', '.#......', '#######.', '.#.....#', '..#....#', '.......#', '..######']
+// undo: a filled head on a shaft that curves round and back; redo is its mirror
+const UNDO = ['..#......', '.##......', '########.', '.##.....#', '..#.....#', '........#', '.......#.', '..#####..']
 const ARROW_UP = ['...#...', '..###..', '.#.#.#.', '#..#..#', '...#...', '...#...', '...#...', '...#...']
 const ICONS: Record<string, string[]> = {
   play: ['#...', '##..', '###.', '####', '###.', '##..', '#...'],
   stop: ['######', '######', '######', '######', '######', '######'],
   undo: UNDO, redo: flipX(UNDO),
-  node: ['..###..', '..#.#..', '..###..', '...#...', '..#.#..', '###.###', '#.#.#.#', '###.###'],
+  // branch: a trunk between two round nodes, a third node curving into it
+  node: ['.#....#.', '###..###', '.#....#.', '.#....#.', '.#...#..', '.#..#...', '.#.#....', '###.....', '.#......'],
   terminal: ['#.......', '.#......', '..#.....', '...#....', '..#.....', '.#......', '#...####'],
   mic: ['..###..', '..###..', '#.###.#', '#.###.#', '.#...#.', '..###..', '...#...', '.#####.'],
-  globe: ['..###..', '.#.#.#.', '#..#..#', '#######', '#..#..#', '.#.#.#.', '..###..'],
+  // globe: a rim stepped one lattice dot at a time (no doubled corners), the equator and one curved meridian
+  globe: ['..#####..', '.#..#..#.', '#..#.#..#', '#..#.#..#', '#########', '#..#.#..#', '#..#.#..#', '.#..#..#.', '..#####..'],
   list: ['#.######', '........', '........', '#.######', '........', '........', '#.######'],
   code: ['.....#...', '.....#...', '.#..#..#.', '#...#...#', '.#..#..#.', '...#.....', '...#.....'],
   check: ['.......#', '......#.', '.....#..', '#...#...', '.#.#....', '..#.....'],
@@ -239,7 +242,8 @@ export const interpreter: WidgetPreset = {
       layer(face('EN', 8.5, 16.5, { lattice: 2.3 })), layer(face('ZH', 91, 16.5, { lattice: 2.3, gap: 3 })),
       layer(T.dots(ARROW, 2)),
       layer(tint(dotWave(said, 3, 65.5, 5.1, 2.2, 2.1), .82), 'value'),
-      layer(T.hrule(0, 82, 144, 3), 'idle'), layer(T.hrule(1, 82, 143, 3), 'idle'),
+      // one divider at half the waveform pitch, its dots under every other bar
+      layer(T.dotLine(.45, 82, 143, 82, { spacing: 2.55, size: 1.2 }), 'idle'),
       layer(dotWave(heard, 3, 98, 5.1, 2.2, 2.1), 'value'),
       layer(T.cjk('开始吧', 32, 119, 23)),
     ]
