@@ -51,11 +51,12 @@ export function Devices({ f, t }: { f: EditorFrame; t: number }) {
     setBusy(true); setStatus('')
     await attempt(async () => {
       const name = slug(f.card.name), full = deviceFrames(f, t, false), files: string[] = []
-      for (const fr of full) {
+      // the PNGs encode side by side (toBlob runs off the main thread), then download in device order
+      const blobs = await Promise.all(full.map(fr => {
         const c = document.createElement('canvas'); paint(c, fr, exportScale(fr))
-        const blob = await new Promise<Blob | null>(r => c.toBlob(r, 'image/png'))
-        if (blob) { download(blob, deviceFile(name, fr)); files.push(`${fr.profile.id} ${fr.cols}×${fr.rows}`) }
-      }
+        return new Promise<Blob | null>(r => c.toBlob(r, 'image/png'))
+      }))
+      full.forEach((fr, i) => { const blob = blobs[i]; if (blob) { download(blob, deviceFile(name, fr)); files.push(`${fr.profile.id} ${fr.cols}×${fr.rows}`) } })
       const plan = full.map(plotterPlan).find(Boolean)
       if (plan) { download(new Blob([plan], { type: 'image/svg+xml' }), `${name}-plotter-device.svg`); files.push('plotter pen plan SVG') }
       if (TEST_HOOKS) (window as { __editorDevices?: string[] }).__editorDevices = files

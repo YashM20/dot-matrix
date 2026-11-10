@@ -214,6 +214,19 @@ export function coreChecks(assert: Assert) {
       assert('clock: a card off a board redraws at the earlier t at once after a backward seek or a time source that steps back',
         Math.abs(afterSeek - 2 / 12) < 1e-9 && afterStepBack >= 0 && afterStepBack < afterSeek, `seek → ${afterSeek.toFixed(3)}, step back → ${afterStepBack.toFixed(3)}`)
     }
+    // a board card that drops another while the turns are ranked (its staggerable() unsubscribes card 0): the frame
+    // still draws the cards left, no crash on the dropped one (react-doctor no-non-null-assertion, src/engine/clock.ts)
+    {
+      let now = 0
+      const q: ((time: number) => void)[] = [], c = createMasterClock({ now: () => now, raf: cb => { q.push(cb); return q.length }, caf: () => {} })
+      const drew = [0, 0, 0], offs: (() => void)[] = []
+      let drop = false
+      for (let i = 0; i < 3; i++) offs.push(c.subscribe({ fps: 12, order: i, staggerable: () => { if (drop && i === 1) { drop = false; offs[0]() } return true }, onFrame: () => { drew[i]++ } }))
+      q.shift()?.(now)
+      let err = ''
+      try { drop = true; for (let k = 0; k < 12; k++) { now += 1000 / 60; q.shift()?.(now) } } catch (e) { err = (e as Error).message }
+      assert('clock: a card that unsubscribes another mid-frame leaves the frame drawing the rest', !err && drew[1] > 1 && drew[2] > 1, err || drew.join('/'))
+    }
 
     const qStyle = { shape: 'circle' as const, sizeMin: 0, sizeMax: 1, quantizeSteps: 5 }
     const holes = sampleLayers([{ field: () => 1, tone: 'faint' }, { field: () => .1, tone: 'idle', lattice: 2 }], { cols: 8, rows: 8, pitch: 2 }, qStyle, dot480)
