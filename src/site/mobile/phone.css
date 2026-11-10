@@ -1,10 +1,11 @@
 /* Phone styles: portrait and short landscape */
 /* ── phones: portrait (≤ 760 px wide) and short landscape (a touch screen ≤ 500 px tall) ── */
 @media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
-  /* focus and scrolled-to targets land clear of the top bar and the tab bar (S5) */
+  /* focus and scrolled-to targets land clear of the top bar and the tab bar (S5), with room for the focus ring: the
+     bars' borders sit outside --app-top and --tabbar-h, so a target scrolled in flush would slip a pixel under one */
   html {
     overscroll-behavior-x: none;
-    scroll-padding: var(--app-top) 0 var(--tabbar-h)
+    scroll-padding: calc(var(--app-top) + var(--space-2)) 0 calc(var(--tabbar-h) + var(--space-2))
   }
 
   .shell {
