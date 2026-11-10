@@ -32,25 +32,30 @@ try {
   const value = () => p.js<number>(`+window.__ctl.getAttribute('aria-valuenow')`)
   /** A mouse move with no button down: what Chrome sees when the button came up somewhere else. */
   const hover = (x: number, y: number) => p.cdp('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y, button: 'none', buttons: 0 })
-  const d = Math.max(12, Math.min(box.w, box.h) * .35), path = (k: number) => [box.x + d * k, box.y - d * k] as const
+  // drag along the control's long axis (a knob: up), far enough to cross many steps
+  const wide = box.w >= box.h * 1.5, d = Math.max(40, (wide ? box.w : box.h) * .4)
+  const path = (k: number) => (wide ? [box.x + d * k, box.y] : [box.x, box.y - d * k]) as [number, number]
+  const press = async () => { await hover(box.x, box.y); await p.mouse('mousePressed', box.x, box.y) }
 
   // a plain drag, then a hover: the control follows only while the button is down
   const v0 = await value()
-  await hover(box.x, box.y); await p.mouse('mousePressed', box.x, box.y)
-  for (let k = 1; k <= 6; k++) { await p.mouse('mouseMoved', ...path(k / 6)); await sleep(30) }
+  await press()
+  for (let k = 1; k <= 8; k++) { await p.mouse('mouseMoved', ...path(k / 8)); await sleep(30) }
   await p.mouse('mouseReleased', ...path(1)); await sleep(200)
   const v1 = await value()
-  for (let k = 1; k <= 6; k++) { await hover(...path(1 - k / 6)); await sleep(30) }
+  for (let k = 1; k <= 8; k++) { await hover(...path(1 - k / 8)); await sleep(30) }
   await sleep(200)
   const v2 = await value()
-  assert('a mouse drag on a card control moves it', v1 !== v0, `${box.key}: ${v0} → ${v1}`)
+  assert('a mouse drag on a card control moves it', v1 !== v0, `${box.key} (${wide ? 'across' : 'up'} ${Math.round(d)} px): ${v0} → ${v1}`)
   assert('after the release, a mouse moving with no button down leaves it alone', v2 === v1, `${v1} → ${v2}`)
 
-  // B4-1: press and drag, the window loses focus, the button comes up elsewhere, the mouse comes back with no button
-  await hover(box.x, box.y); await p.mouse('mousePressed', box.x, box.y)
-  for (let k = 1; k <= 3; k++) { await p.mouse('mouseMoved', ...path(k / 6)); await sleep(30) }
+  // B4-1: press and drag the other way, the window loses focus, the button comes up elsewhere (the page never sees the
+  // release), the mouse comes back with no button down and moves back across the control
+  await press()
+  for (let k = 1; k <= 8; k++) { await p.mouse('mouseMoved', ...path(-k / 8)); await sleep(30) }
   await sleep(200)
   const v3 = await value()
+  assert('B4-1 precondition: the second drag is live before the blur (the control moved)', v3 !== v1, `${v1} → ${v3}`)
   let blurred = 'none'
   try {
     const { result } = await p.cdp('Target.createTarget', { url: 'about:blank' })
@@ -59,7 +64,7 @@ try {
     await p.cdp('Page.bringToFront'); await sleep(300)
     await p.cdp('Target.closeTarget', { targetId: result.targetId })
   } catch (e) { blurred = `no second tab (${(e as Error).message}); window blur event only`; await p.js(`window.dispatchEvent(new Event('blur')), 1`) }
-  for (let k = 1; k <= 6; k++) { await hover(...path(.5 - k / 6)); await sleep(30) }
+  for (let k = 1; k <= 8; k++) { await hover(...path(-1 + 2 * k / 8)); await sleep(30) }
   await sleep(250)
   const v4 = await value()
   await p.shot(join(OUT, 'after-blur.png'))
