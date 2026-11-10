@@ -46,7 +46,8 @@ export interface DotCanvasProps {
   tick?: number
   /**
    * The card's position on a board. A live board card with one may take turns with the other board cards on screen
-   * (the master clock's `STAGGER`), except while a transient runs, the visitor is using it, or WebGL2 draws it.
+   * (the master clock's `STAGGER`), except while a transient other than its entrance runs, the visitor is using it, or
+   * WebGL2 draws it. A static board card takes turns during its entrance too (#312).
    */
   boardOrder?: number
   /** Seconds of live re-sampling after each `tick` bump, with `ctx.since` set (instead of the change dissolve). */
@@ -406,7 +407,9 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     if (!canvas) return
     const clock = sharedClock()
     draw(canvas, applyTransient(shownRef.current, clock.time()))
-    return clock.subscribe({ fps: 30, onFrame: t => draw(canvas, applyTransient(shownRef.current, t)) })
+    // a board card's entrance takes turns like a live card (#312): cards entering together redraw on alternate frames
+    const order = transient === 'enter' ? boardOrder : undefined
+    return clock.subscribe({ fps: 30, order, staggerable: () => transientRef.current?.kind === 'enter', onFrame: t => draw(canvas, applyTransient(shownRef.current, t)) })
   }, [ready, transient, live, mode, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // static frame (also the paused / reduced-motion frame of an animated card)
@@ -450,7 +453,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     const sub = {
       fps: fps ?? (motion ? 12 : 30),
       order: boardOrder,
-      staggerable: () => !webgl && !transientRef.current && !engagedNow(),
+      staggerable: () => !webgl && (!transientRef.current || transientRef.current.kind === 'enter') && !engagedNow(),
       onFrame(t: number, frame: number, sync = false) {
         try { frameAt(t, frame, sync) }
         catch (error) {
