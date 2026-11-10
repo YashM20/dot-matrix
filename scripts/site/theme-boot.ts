@@ -159,7 +159,7 @@ try {
     await cdp('Page.navigate', { url: base + '/components/' })
     for (let i = 0; i < 100 && !(await js(`document.readyState === 'complete' && window.__firstCols !== undefined && !!document.querySelector('.board-grid canvas, .board-grid svg')`)); i++) await sleep(100)
     await sleep(500)
-    const got = await js(`({ body: window.__cardsAtBody, first: window.__firstCols, now: getComputedStyle(document.querySelector('.board-grid')).gridTemplateColumns.split(' ').length, row: (() => { const ys = [...document.querySelectorAll('.board-grid > .dot-card')].map(c => Math.round(c.getBoundingClientRect().top)); return ys.filter(y => y === ys[0]).length })() })`) as { body: string | null; first: number; now: number; row: number } | undefined
+    const got = await js(`({ body: window.__cardsAtBody, first: window.__firstCols, now: getComputedStyle(document.querySelector('.board-grid')).gridTemplateColumns.split(' ').length, row: (() => { const ys = [...document.querySelectorAll('.board-grid > .dot-slot > .dot-card')].map(c => Math.round(c.getBoundingClientRect().top)); return ys.filter(y => y === ys[0]).length })() })`) as { body: string | null; first: number; now: number; row: number } | undefined
     check(`card size · stored ${stored ?? 'nothing'}: <html data-cards="${want}"> when <body> starts, and /components/ at 1440 has ${cols} columns from its first layout (no reflow)`, got?.body === want && got.first === cols && got.now === cols && got.row === cols, JSON.stringify(got))
     await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: result.identifier })
   }
