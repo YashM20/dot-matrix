@@ -1,6 +1,7 @@
-/* The row under a card (CardRow.tsx): one short line in the smallest mono, `--mute` at rest, so the card stays the
-   focus. It adds 20 px under a card (a 4 px step and a 16 px line; 28 px on touch). Every action is a 24 × 24 target
-   (44 × 44 on touch) through padding and an invisible hit area, never through visible size. */
+/* The row under a card (CardRow.tsx): one short line, `--mute` at rest, so the card stays the focus. ALL's name and
+   board in the smallest mono on the left; three 16 px icons on the right (open, copy link, more), each with the site's
+   tooltip (tips.css), shown under the row. It adds 20 px under a card (a 4 px step and a 16 px line; 28 px on touch).
+   Every action is a 24 × 24 target (44 × 44 on touch) through padding and an invisible hit area. */
 
 /* a board's grid cell: the card, then its row (grid.css places the slot) */
 .dot-slot {
@@ -39,7 +40,12 @@
   color: var(--label)
 }
 
-/* left: the name (and ALL's board link), which gives way first */
+/* the actions sit right; on ALL the name and its board link fill the left and give way first */
+.dot-card-row-open {
+  margin-left: auto
+}
+
+/* left (ALL): the name and the board link */
 .dot-card-row-meta {
   display: flex;
   flex: 1;
@@ -55,7 +61,7 @@
   text-overflow: ellipsis
 }
 
-/* the actions: plain words, no border and no fill; the target is the padding round them */
+/* the actions: no border and no fill; the target is the padding round them (an icon: 4 + 16 + 4) */
 .dot-card-row a,
 .dot-card-row > button {
   display: inline-flex;
@@ -91,10 +97,29 @@
   color: var(--value)
 }
 
-.dot-card-row a:hover,
-.dot-card-row > button:hover {
+.dot-card-row-icon {
+  display: block;
+  flex: none
+}
+
+/* the board link (ALL) is text: an underline on hover; the icons only brighten */
+.dot-card-row-meta a:hover,
+.dot-card-row-meta a:active,
+.dot-card-row-meta a:focus-visible {
   text-decoration: underline;
   text-underline-offset: 3px
+}
+
+/* the site's tooltip, under the row (never over the card), right-aligned to its icon; after a copy LINK's says
+   "Copied" for a moment, shown without a hover */
+.dot-card-row [data-tip]::after {
+  top: calc(100% + var(--space-1));
+  bottom: auto
+}
+
+.dot-card-row .copied::after {
+  visibility: visible;
+  opacity: 1
 }
 
 /* the ring stays inside the target, clear of the card's bottom edge */
@@ -103,13 +128,7 @@
   outline-offset: -1px
 }
 
-/* a narrow tile: LINK goes (it is in MORE too), then the name (the card shows it) */
-@container slot (width < 240px) {
-  .dot-card-row-link {
-    display: none
-  }
-}
-
+/* a narrow tile: ALL's name goes (the card shows it) */
 @container slot (width < 180px) {
   .dot-card-row-name {
     display: none
@@ -181,8 +200,9 @@
     min-height: 28px
   }
 
-  .dot-card-row a::after,
-  .dot-card-row > button::after {
+  /* the hit area is ::before (::after is the tooltip) */
+  .dot-card-row a::before,
+  .dot-card-row > button::before {
     content: "";
     position: absolute;
     top: 0;
@@ -192,14 +212,20 @@
     translate: -50% 0
   }
 
+  /* no hover tooltips on touch (a tap would leave one behind); "Copied" still shows */
+  .dot-card-row [data-tip]:not(.copied)::after {
+    display: none
+  }
+
   .dot-card-menu button {
     min-height: var(--tap);
     font-size: var(--fs-label-12)
   }
 }
 
+/* the row itself carries the tooltip group's --tip-on transition (tips.css): its children fade */
 @media (prefers-reduced-motion: no-preference) {
-  .dot-card-row,
+  .dot-card-row-meta,
   .dot-card-row a,
   .dot-card-row > button {
     transition: color var(--dur-out)

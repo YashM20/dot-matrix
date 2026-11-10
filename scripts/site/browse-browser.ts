@@ -7,10 +7,12 @@
  *    a scroll to the bottom;
  *  - a shared query (`?tag=&q=`) opens filtered, BROWSE's old `?in=<board>` opens that board, a hostile query is
  *    cleaned, typing updates the URL and the polite count; the filters are labelled and reachable with Tab;
- *  - a card's OPEN → (the row under it) goes to its page and Back returns to ALL; a board link opens the board;
+ *  - the row under a card: Open (a link to its page), Copy link and More, named for the card and with tooltips; Open
+ *    goes to the card's page and Back returns to ALL; a board link opens the board; Copy link says Copied (and the
+ *    polite toast says so); a board's row has no name, only the icons;
  *  - no horizontal overflow at 390, 768, 1280 and 1920, in the dark and light schemes and a second accent.
  *  - the row under a card adds at most 24 px under it (32 where touch rules apply) and every action in it is a 24 × 24 target or more.
- * `--shots <dir>` saves the PR screenshots there; 3× close-ups of a card's row (rest, hover, focus, MORE open) go
+ * `--shots <dir>` saves the PR screenshots there; 3× close-ups of a card's row (rest, hover, focus, copied, More open) go
  * there too, or to `.snapshots/card-row/`.
  *
  * Needs a build: `npx vite build`, then `npx tsx scripts/site/browse-browser.ts [--shots <dir>]` (it serves dist/).
@@ -46,16 +48,33 @@ async function rowShot(p: Page, name: string, slot: string) {
   const res = await p.cdp('Page.captureScreenshot', { format: 'png', clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: 3 }, captureBeyondViewport: true })
   writeFileSync(join(ROWS, `${name}.png`), Buffer.from(res.result.data, 'base64'))
 }
-/** The first slot's row at rest, under the pointer, with keyboard focus on OPEN, and with MORE open. */
+/** The first slot's row at rest, under the pointer (Open's tooltip), with keyboard focus on Open, after Copy link, and
+ * with More open. The close-ups take a mouse (`hover: hover`, `pointer: fine`): headless Chrome reports none, which
+ * gives the touch row. */
 async function rowStates(p: Page, name: string, slot: string) {
+  await p.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'hover', value: 'hover' }, { name: 'pointer', value: 'fine' }] }).catch(() => null)
+  const fine = await p.js<boolean>(`matchMedia('(hover: hover) and (pointer: fine)').matches`)
+  console.log(`card row close-ups (${name}): ${fine ? 'mouse layout' : 'touch layout (hover emulation not taken)'}`)
   await p.js(`document.querySelector(${JSON.stringify(slot)}).scrollIntoView({ block: 'center' }), document.activeElement?.blur(), 1`)
   await p.mouse('mouseMoved', 2, 2); await sleep(400); await rowShot(p, `${name}-rest`, slot)
   const o = await p.js<{ x: number; y: number }>(`(r => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 }))(document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-open').getBoundingClientRect())`)
-  await p.mouse('mouseMoved', o.x, o.y); await sleep(400); await rowShot(p, `${name}-hover`, slot)
-  await p.mouse('mouseMoved', 2, 2); await p.key('Shift', 'ShiftLeft', 16)
+  await p.mouse('mouseMoved', o.x, o.y, 0); await sleep(900); await rowShot(p, `${name}-hover`, slot)
+  await p.mouse('mouseMoved', 2, 2, 0); await p.key('Shift', 'ShiftLeft', 16)
   await p.js(`document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-open').focus(), 1`); await sleep(400); await rowShot(p, `${name}-focus`, slot)
+  const copied = await copyLink(p, slot); await rowShot(p, `${name}-copied`, slot)
+  await p.mouse('mouseMoved', 2, 2, 0)
   await p.js(`document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-more').click(), 1`); await sleep(400); await rowShot(p, `${name}-more`, slot)
   await p.key('Escape', 'Escape', 27); await sleep(150)
+  await p.cdp('Emulation.setEmulatedMedia', { features: [] }).catch(() => null)
+  return copied
+}
+/** A real click on the slot's Copy link (the clipboard allowed): what its tooltip, its icon and the site's polite toast say. */
+async function copyLink(p: Page, slot: string) {
+  await p.cdp('Browser.grantPermissions', { permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'], origin: new URL(base).origin }).catch(() => null)
+  const l = await p.js<{ x: number; y: number }>(`(r => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 }))(document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-link').getBoundingClientRect())`)
+  await p.mouse('mouseMoved', l.x, l.y, 0); await p.mouse('mousePressed', l.x, l.y); await p.mouse('mouseReleased', l.x, l.y); await sleep(500)
+  return p.js<{ tip: string | null; check: boolean; toast: string; live: string | null; shown: boolean }>(`(() => { const b = document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-link'), t = document.querySelector('.pal-toast')
+    return { tip: b.dataset.tip ?? null, check: b.classList.contains('copied'), toast: t?.textContent ?? '', live: t?.getAttribute('aria-live') ?? null, shown: getComputedStyle(b, '::after').visibility === 'visible' } })()`)
 }
 /** What the row costs: the px it adds under the card (at most 24, or 32 where touch rules apply: ALL's old caption), and any action under 24 × 24. */
 const rowSize = (p: Page, slot: string) => p.js<{ added: number; max: number; small: string[] }>(`(() => { const s = document.querySelector(${JSON.stringify(slot)}), c = s.querySelector('.dot-card').getBoundingClientRect(), r = s.querySelector('.dot-card-row').getBoundingClientRect()
@@ -110,12 +129,14 @@ try {
   await p.key('Tab', 'Tab', 9); const f1 = await p.js<string>(`document.activeElement.closest('label')?.textContent.slice(0, 3) ?? document.activeElement.tagName`)
   assert('browse: Tab goes from the search to TAG', f1 === 'TAG', f1)
 
-  // card actions: the row's OPEN → opens its page, Back → ALL again; a board link opens the board
+  // card actions: the row's Open opens its page, Back → ALL again; a board link opens the board
   await open(p, `${base}?tag=clock`); await p.waitFor(`!!document.querySelector('.browse-item .dot-card-row-open') && !!document.querySelector('.browse-item .dot-card')`, 15000); await sleep(600)
   const slug = await p.js<string>(`document.querySelector('.browse-item').dataset.slot`)
-  const row = await p.js<{ open: string; name: string; more: string; href: string }>(`(r => ({ open: r.querySelector('.dot-card-row-open').getAttribute('aria-label'), name: r.querySelector('.dot-card-row-name').textContent,
-    more: r.querySelector('.dot-card-row-more').getAttribute('aria-label'), href: new URL(r.querySelector('.dot-card-row-open').href).pathname }))(document.querySelector('.browse-item .dot-card-row'))`)
-  assert('browse: the row names its card: OPEN is a link to its page, MORE says whose', row.open === `Open ${row.name}` && row.more === `More for ${row.name}` && row.href === `/widget/${slug}/`, JSON.stringify(row))
+  const row = await p.js<{ open: string; link: string; name: string; more: string; href: string; tips: string[] }>(`(r => ({ open: r.querySelector('.dot-card-row-open').getAttribute('aria-label'), name: r.querySelector('.dot-card-row-name').textContent,
+    link: r.querySelector('.dot-card-row-link').getAttribute('aria-label'), more: r.querySelector('.dot-card-row-more').getAttribute('aria-label'), href: new URL(r.querySelector('.dot-card-row-open').href).pathname,
+    tips: [...r.querySelectorAll('[data-tip]')].map(e => e.dataset.tip) }))(document.querySelector('.browse-item .dot-card-row'))`)
+  assert('browse: the row names its card: Open (a link to its page), Copy link and More say whose, each with a tooltip',
+    row.open === `Open ${row.name}` && row.link === `Copy link to ${row.name}` && row.more === `More for ${row.name}` && row.href === `/widget/${slug}/` && row.tips.join() === 'Open,Copy link,More', JSON.stringify(row))
   // MORE opens the menu under the row (below the card, never over it); Escape closes it back onto MORE
   await p.js(`document.querySelector('.browse-item .dot-card-row-more').click(), 1`); await sleep(200)
   const menu = await p.js<{ below: boolean; focus: boolean; items: string[] }>(`(() => { const it = document.querySelector('.browse-item'), m = it.querySelector('.dot-card-menu'), c = it.querySelector('.dot-card')
@@ -125,7 +146,7 @@ try {
   assert('browse: Escape closes the menu back onto MORE', await p.js<boolean>(`!document.querySelector('.dot-card-menu') && !!document.activeElement?.classList.contains('dot-card-row-more')`))
   await p.js(`document.querySelector('.browse-item .dot-card-row-open').click(), 1`)
   const opened = await p.waitFor(`location.pathname === '/widget/${slug}/' && !!document.querySelector('.wp')`, 15000)
-  assert('browse: a card\'s OPEN → goes to its page, without the filters in its URL', opened && await p.js<string>('location.search') === '', await p.js<string>('location.href'))
+  assert('browse: a card\'s Open goes to its page, without the filters in its URL', opened && await p.js<string>('location.search') === '', await p.js<string>('location.href'))
   await p.js('history.back(), 1')
   assert('browse: Back returns to ALL with the filter', await p.waitFor(`location.pathname === '/' && /tag=clock/.test(location.search) && !!document.querySelector('.browse-count')`, 15000))
   await sleep(500)
@@ -136,9 +157,16 @@ try {
   // the row under each card: compact (≤ 24 px under the card), 24 px targets; close-ups on a board and on ALL
   await sleep(1200)
   const onBoard = await rowSize(p, '.board-grid > .dot-slot')
+  const boardRow = await p.js<{ name: boolean; words: string; icons: number; open: string; right: boolean }>(`(r => ({ name: !!r.querySelector('.dot-card-row-name'), words: r.innerText.trim(),
+    icons: r.querySelectorAll(':scope > a > svg, :scope > button > svg').length, open: r.querySelector('.dot-card-row-open').getAttribute('aria-label'),
+    right: r.getBoundingClientRect().right - r.querySelector('.dot-card-row-more').getBoundingClientRect().right < 2 }))(document.querySelector('.board-grid > .dot-slot > .dot-card-row'))`)
+  assert('browse: a board card row has no name (its header shows it), only the three icons on the right, and Open still says whose',
+    !boardRow.name && boardRow.words === '' && boardRow.icons === 3 && /^Open \S/.test(boardRow.open) && boardRow.right, JSON.stringify(boardRow))
   assert('browse: a board card row adds ≤ 24 px (32 on touch) and its actions are ≥ 24 × 24', onBoard.added <= onBoard.max && !onBoard.small.length, JSON.stringify(onBoard))
   console.log(`card row: adds ${onBoard.added} px under a board card`)
-  await rowStates(p, 'row-board', '.board-grid > .dot-slot')
+  const copied = await rowStates(p, 'row-board', '.board-grid > .dot-slot')
+  assert('browse: Copy link says Copied (tooltip shown, check icon) and the polite toast says link copied',
+    copied.tip === 'Copied' && copied.check && copied.shown && /link copied/.test(copied.toast) && copied.live === 'polite', JSON.stringify(copied))
   for (const theme of ['dark_signal', 'light_signal']) {
     await open(p, `${base}?theme=${theme}`); await p.waitFor(`!!document.querySelector('.browse-item > .dot-card:not(.browse-ghost)')`, 15000); await sleep(1200)
     const onAll = await rowSize(p, '.browse-item')
