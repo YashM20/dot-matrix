@@ -17,8 +17,8 @@ Findings at a glance, worst first. Severity: data loss, broken UI, wrong output,
 | A5.1 | Likes client | Data loss (this browser's likes record) | Confirmed (`scripts/verify/appstate.ts`) | #301 | Fixed in #303: storage listener and read-modify-write |
 | A5.2 | Likes client | Wrong output | Likely | #302 | Left: needs the server to say whether the caller's like is counted |
 | A5.3 | Likes client | Wrong output | Likely | #302 | Left: heals on the next day's visit |
-| A8.1 | Global keys | Broken UI (stuck input) | Confirmed (`c10` probe) | #302 | Fixed in #PR: a window blur ends the hold |
-| A9.1 | Widget page SHARE | Cosmetic | Confirmed (`c10` probe) | #302 | Fixed in #PR: a keyboard SHARE makes a fresh PNG |
+| A8.1 | Global keys | Broken UI (stuck input) | Confirmed (`c10` probe) | #302 | Fixed in #316: a window blur ends the hold |
+| A9.1 | Widget page SHARE | Cosmetic | Confirmed (`c10` probe) | #302 | Fixed in #316: a keyboard SHARE makes a fresh PNG |
 | A4.1 | Theme | n/a | By design | | `theme-picker` probe pins it |
 | A5.4 | Likes client | n/a | Not reachable | | Entries are keyed by content |
 
@@ -290,7 +290,7 @@ Persists: shell history per tab (sessionStorage, validated on read: strings only
 100 entries); nothing else.
 
 Findings:
-- **A8.1, Confirmed, fixed in #PR.** Hold T, then switch windows (Alt+Tab) and let go of T there: the `keyup` never
+- **A8.1, Confirmed, fixed in #316.** Hold T, then switch windows (Alt+Tab) and let go of T there: the `keyup` never
   reaches the page, `tHeld` stayed true, and back on the page every pointer move scrubbed the frozen clock until T was
   pressed again. Fix: a window `blur` ends the hold (`CommandLayer.tsx:312`). Probe: the `c10` probe's `holdt` section
   holds T with no keyup, fires the window's `blur`, and moves the pointer. Without the fix the clock went from
@@ -311,7 +311,7 @@ inside the click with the file ready. Since A9.1 only the click that follows tha
 (`detail` 0) makes a fresh one.
 
 Findings:
-- **A9.1, Confirmed, fixed in #PR.** Press on SHARE, drag off and let go (no click), change the theme, then SHARE
+- **A9.1, Confirmed, fixed in #316.** Press on SHARE, drag off and let go (no click), change the theme, then SHARE
   with the keyboard: the PNG from the first press was shared, in the old theme and at the old time. Fix: the press's
   PNG serves only a pointer click (`WidgetPage.tsx:131`). Probe: the `c10` probe's `share` section, with a Web
   Share stand-in that records each shared PNG, on `/widget/settings/` after switching the accent to cobalt. Without
