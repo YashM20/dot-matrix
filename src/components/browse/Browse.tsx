@@ -71,7 +71,7 @@ export function Browse({ onBoard, onOpen, cardPath }: BrowseProps) {
 
   return <section className="browse" aria-labelledby={titleId}>
     <BoardTitle title="ALL CARDS" id={titleId} />
-    <p className="board-blurb">Every card from every board, {ROWS.length} in all. Search by name or pick a tag, then open a card or the board it lives on.</p>
+    <p className="board-blurb">Every card from every board, {ROWS.length} in all.</p>
     {/* role="search" too: browsers before <search> (Chrome and Firefox 118, Safari 17) still get the landmark */}
     <search className="browse-tools" role="search" aria-label="Filter the cards">
       <label className="browse-field browse-field--q"><span>SEARCH</span>

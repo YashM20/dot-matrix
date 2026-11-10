@@ -619,7 +619,7 @@ export async function editorE5Checks(assert: Assert) {
   const st = useEditor.getState, n0 = st().h.past.length
   const ids1 = st().openLink(bd), n1 = st().h.past.length, ids2 = st().openLink(bd)
   assert('E5 store: openLink adds the frames as one undo step and selects them; again it only re-selects', Array.isArray(ids1) && ids1.length === 3 && n1 === n0 + 1 && same(ids2, ids1) && st().h.past.length === n1 && same(selFrames(st().sel), ids1) && (st().undo(), st().h.present.frames.length === seed.frames.length))
-  const v = viewFromUrl('?make&d=zAbc', '/'), q = (view: 'EXPLORE' | 'MAKE') => urlForView({ view, mode: 'TUNE', board: v.board }, '?make&d=zAbc', '/')
+  const v = viewFromUrl('?make&d=zAbc', '/'), q = (view: 'EXPLORE' | 'MAKE') => urlForView({ view, mode: 'TUNE', board: v.board, all: v.all }, '?make&d=zAbc', '/')
   assert('E5 url: ?make&d= opens MAKE; the link stays while in MAKE and goes when leaving it', v.view === 'MAKE' && /[?&]d=zAbc/.test(q('MAKE')) && !/d=/.test(q('EXPLORE')) && linkUrl('zAbc', 'https://x.dev/') === 'https://x.dev/?make&d=zAbc', `${q('MAKE')} | ${q('EXPLORE')}`)
 
   // ── programs: the remix parent and the graph

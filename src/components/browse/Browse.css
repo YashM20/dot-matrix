@@ -96,7 +96,7 @@
   flex-basis: 100%;
   margin: 0;
   color: var(--label);
-  font: 500 var(--fs-label-11) var(--mono);
+  font: 500 var(--fs-label-12) var(--mono);
   letter-spacing: .12em;
   font-variant-numeric: tabular-nums
 }
@@ -111,7 +111,7 @@
     var(--card-min),
     (100% - (var(--board-cols-min) - 1) * var(--spacing-cardGap)) / var(--board-cols-min) - .5px), 1fr));
   gap: var(--spacing-cardGap);
-  margin: var(--space-4) 0 0;
+  margin: var(--gap-group) 0 0;
   padding: 0;
   list-style: none
 }
@@ -149,7 +149,7 @@
   gap: var(--space-3);
   margin: 0;
   min-width: 0;
-  font: 500 var(--fs-label-11) var(--mono);
+  font: 500 var(--fs-label-12) var(--mono);
   letter-spacing: .08em
 }
 
@@ -204,7 +204,8 @@
   }
 }
 
-/* phones: the search on its own row, BOARD and TAG side by side, each name above its field */
+/* phones: SEARCH and TAG share one row, each name above its field, so a whole card still starts above the fold on /
+   (#315); the count follows, with CLEAR beside it once a filter is on */
 @media (max-width: 600px) {
   .browse-field {
     grid-template-columns: minmax(0, 1fr);
@@ -212,7 +213,7 @@
   }
 
   .browse-field--q {
-    flex-basis: 100%;
+    flex: 2 1 0;
     max-width: none
   }
 
@@ -222,5 +223,18 @@
 
   .browse-field select {
     max-width: none
+  }
+
+  .browse-count {
+    flex: 1 1 auto;
+    align-self: center
+  }
+
+  .browse-tools .browse-clear {
+    order: 1
+  }
+
+  .browse-tools .browse-clear:disabled {
+    display: none
   }
 }
