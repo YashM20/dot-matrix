@@ -8,7 +8,7 @@ export function SiteNav({ here }: { here?: 'blog' | 'lab' }) {
   return (
     <nav className="site-nav" aria-label="Site">
       <a className="kicker" href="/" aria-label="MATRIX home"><i className="mark" aria-hidden="true" />MATRIX</a>
-      <span><a href="/">EXPLORE</a>{flag('make') && <a href="/?make">MAKE</a>}{flag('lab') && <a href="/lab/" aria-current={cur('lab')}>LAB</a>}<a href="/blog/" aria-current={cur('blog')}>BLOG</a><a href="/?about">ABOUT</a></span>
+      <span><a href="/">EXPLORE</a>{flag('make') && <a href="/?make">MAKE</a>}{flag('lab') && <a href="/lab/" aria-current={cur('lab')}>LAB</a>}<a href="/blog/" aria-current={cur('blog')}>BLOG</a><a href="/about/">ABOUT</a></span>
     </nav>
   )
 }

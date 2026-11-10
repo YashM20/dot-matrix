@@ -3,10 +3,10 @@
  * so `scripts/verify.ts` checks every old link in Node. Canonical: EXPLORE is the board path (`/light/`; the
  * first board keeps `/`), BROWSE is `/browse/` (its filters ride along as `?in=&tag=&q=`, #182), MAKE is `?make`
  * (the editor; `=compose|code|draw` open it on that tool, a DOTS program keeps `&p=`, a frame or document link
- * `&d=`), ABOUT is `?about`. Old links resolve through `TAB_ALIASES`, `?board=`, `boardAliases` and a bare `?p=`.
+ * `&d=`), ABOUT is `/about/`. Old links (`?about` among them) resolve through `TAB_ALIASES`, `?board=`, `boardAliases` and a bare `?p=`.
  */
 import { boardIds, resolveBoardId } from '../widgets/manifest'
-import { boardFromPath, pageMeta } from './meta'
+import { ABOUT_PATH, boardFromPath, pageMeta } from './meta'
 import { widgetRoute, type WidgetRoute } from './routes'
 import { flag } from './flags'
 import { BROWSE_PARAMS, BROWSE_PATH } from './browse'
@@ -47,7 +47,7 @@ export const placeView = (p: Place, mode: Mode = 'TUNE'): { view: View; mode: Mo
 export function viewFromUrl(search: string, pathname: string, mode: Mode = 'TUNE'): ViewState {
   const q = new URLSearchParams(search), tab = (q.get('tab') ?? '').toLowerCase(), b = resolveBoardId(q.get('board') ?? '')
   const make = (q.get('make') ?? '').toUpperCase(), legal = /^\/(privacy|terms)\/?$/.exec(pathname)?.[1] as ViewState['legal']
-  // `/about` is ABOUT too (a guessed or typed link); it is written back as `?about`
+  // ABOUT is `/about/`; `/about` and the older `?about` open it too (vercel.json redirects both to `/about/`)
   const place: Place = q.has('about') || /^\/about\/?$/i.test(pathname) ? 'ABOUT' : /^\/browse\/?$/i.test(pathname) ? 'BROWSE' : isMode(make) ? make : q.has('make') ? 'MAKE' : placeFromName(tab) ?? (q.get('p') ? 'CODE' : 'EXPLORE')
   const board = boardIds.includes(b) ? b : tab === 'gallery' ? GALLERY_BOARD : boardFromPath(pathname) ?? boardIds[0]
   // a widget page needs a widget-shaped path or ?card=; a MAKE / ABOUT link that also carries ?card= opens that view
@@ -69,9 +69,10 @@ export function urlForView(v: Pick<ViewState, 'view' | 'mode' | 'board'>, search
   if (v.view !== 'EXPLORE' || v.board !== 'pond') q.delete('day') // the pond's day (X1), the pond's alone
   if (v.view !== 'EXPLORE' || v.board !== 'kinetic') q.delete('word') // the kinetic board's word (#129), its alone
   // the editor's default way in (TUNE) is plain `?make`
-  const head = v.view === 'ABOUT' ? 'about' : v.view === 'MAKE' ? (v.mode === 'TUNE' ? 'make' : `make=${v.mode.toLowerCase()}`) : ''
+  const head = v.view === 'MAKE' ? (v.mode === 'TUNE' ? 'make' : `make=${v.mode.toLowerCase()}`) : ''
   const query = [head, q.toString()].filter(Boolean).join('&')
   if (v.view === 'BROWSE') return BROWSE_PATH + (query ? `?${query}` : '')
+  if (v.view === 'ABOUT') return ABOUT_PATH + (query ? `?${query}` : '') // its own page, whatever board is behind it
   // the first board keeps `/` or `/index.html`; any other non-board path (a widget page's, `/about`, an unknown
   // `/nope/` that fell back to the home board) is written back as `/`
   const path = v.board === boardIds[0] && boardFromPath(pathname) === undefined ? (/^\/(index\.html)?$/.test(pathname) ? pathname : '/') : pageMeta(v.board).path

@@ -271,7 +271,7 @@ async function phoneChrome() {
     const STATIC = (sel: string) => `!!document.querySelector('${sel}')`
     const pages = [
       { name: 'home', path: '', ready: `!!document.querySelector('.board-grid canvas, .board-grid svg')`, focus: true },
-      { name: 'about', path: '?about', ready: STATIC('.log-view'), focus: true },
+      { name: 'about', path: 'about/', ready: STATIC('.log-view'), focus: true },
       { name: 'widget', path: 'widget/timer/', ready: `!!document.querySelector('.wp-stage canvas, .wp-stage svg')`, focus: true, tabbar: true },
       { name: 'essay', path: 'blog/dot-matrix-essay/', ready: STATIC('.hero .dot-title'), focus: true, tap: true },
       { name: 'privacy', path: 'privacy', ready: STATIC('.legal > main'), focus: true, tap: true },

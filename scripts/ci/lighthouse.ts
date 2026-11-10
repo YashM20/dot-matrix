@@ -1,10 +1,12 @@
 /**
- * Lighthouse on the SEO routes, mobile and desktop, in CI (.github/workflows/probes.yml, the `lighthouse` job).
- * The same engine and throttling as PageSpeed Insights, without its API key: Performance and Accessibility per route,
- * the Core Web Vitals lab numbers (LCP, CLS, TBT as the lab stand-in for INP), and every audit that lost points.
+ * The one way Lighthouse runs: on the SEO routes, mobile and desktop, from the probes workflow's `lighthouse` job and
+ * the on-demand seo-audit workflow (docs/HARNESS.md). The same engine and throttling as PageSpeed Insights, without
+ * its API key: Performance, Accessibility, SEO and Best practices per route, the Core Web Vitals lab numbers (LCP,
+ * CLS, TBT as the lab stand-in for INP), and every audit that lost points. A build is served the way Vercel serves it
+ * (`scripts/site/serve.ts`: vercel.json redirects, headers, compression and real 404s).
  * A report: it exits 0 unless Lighthouse itself never ran, because shared runners are too noisy to gate on timings.
  *
- *   npx tsx scripts/ci/lighthouse.ts                          → a `vite preview` of dist/ (build first)
+ *   npx tsx scripts/ci/lighthouse.ts                          → dist/ (build first), served like Vercel
  *   npx tsx scripts/ci/lighthouse.ts --base https://matrix.reactopia.me/   → the live site
  *   npx tsx scripts/ci/lighthouse.ts --routes /,/browse/ --forms mobile --out lh
  *
@@ -15,12 +17,14 @@
 import { spawnSync } from 'node:child_process'
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { findChrome, serveDist } from '../lib/cdp'
+import { findChrome } from '../lib/cdp'
+import { serveVercel } from '../site/serve'
 
 const LIGHTHOUSE = 'lighthouse@13.6.0'
-/** The SEO routes: home, browse, two boards, two widget pages, the blog, a post, about, privacy. The 404 is left out:
- *  Lighthouse refuses a page that answers 404 (scripts/site/seo-check.ts checks that page). */
-const ROUTES = ['/', '/browse/', '/mosaic/', '/components/', '/widget/timer/', '/widget/weather/', '/blog/', '/blog/dot-matrix-essay/', '/about', '/privacy']
+/** The SEO routes: home, browse, three boards, two widget pages, the blog, the essay, a markdown post, about and the
+ *  legal pages. The 404 is left out: Lighthouse refuses a page that answers 404 (scripts/site/seo-check.ts checks it). */
+const ROUTES = ['/', '/browse/', '/henry/', '/mosaic/', '/components/', '/widget/timer/', '/widget/weather/', '/blog/', '/blog/dot-matrix-essay/', '/blog/living-matter/', '/about/', '/privacy', '/terms']
+const CATEGORIES = ['performance', 'accessibility', 'seo', 'best-practices']
 
 const argv = process.argv.slice(2)
 const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i + 1] : undefined }
@@ -31,7 +35,7 @@ const chrome = findChrome()
 if (!chrome) { console.error('no Chrome found (set $CHROME)'); process.exit(2) }
 mkdirSync(out, { recursive: true })
 
-const server = opt('--base') ? undefined : await serveDist(4319)
+const server = opt('--base') ? undefined : await serveVercel(4319)
 const base = opt('--base') ?? server!.url
 
 interface Audit { id: string; title: string; score: number | null; scoreDisplayMode: string; displayValue?: string; numericValue?: number }
@@ -45,19 +49,19 @@ try {
   for (const route of routes) for (const form of forms) {
     const slug = `${route.replace(/[^\w]+/g, '-').replace(/^-|-$/g, '') || 'home'}-${form}`, file = join(out, `${slug}.json`)
     const url = new URL(route.replace(/^\//, ''), base).href
-    const args = ['dlx', LIGHTHOUSE, url, '--quiet', '--output=json', `--output-path=${file}`, '--only-categories=performance,accessibility',
+    const args = ['dlx', LIGHTHOUSE, url, '--quiet', '--output=json', `--output-path=${file}`, `--only-categories=${CATEGORIES.join(',')}`,
       '--chrome-flags=--headless=new --no-sandbox --disable-gpu', '--max-wait-for-load=45000', ...(form === 'desktop' ? ['--preset=desktop'] : [])]
     const run = () => { rmSync(file, { force: true }); const r = spawnSync('pnpm', args, { stdio: ['ignore', 'ignore', 'inherit'], env: { ...process.env, CHROME_PATH: chrome }, shell: process.platform === 'win32', timeout: 180_000 }); return r.status === 0 && existsSync(file) ? JSON.parse(readFileSync(file, 'utf8')) as Report : undefined }
     // one retry: a run on a shared runner now and then loses its trace (NO_NAVSTART)
     let lhr = run()
     if (!lhr || lhr.runtimeError) lhr = run()
-    if (!lhr) { rows.push(`| ${route} | ${form} | failed | | | | | |`); continue }
-    if (lhr.runtimeError) { rows.push(`| ${route} | ${form} | ${lhr.runtimeError.message.slice(0, 60)} | | | | | |`); continue }
+    if (!lhr) { rows.push(`| ${route} | ${form} | failed | | | | | | | |`); continue }
+    if (lhr.runtimeError) { rows.push(`| ${route} | ${form} | ${lhr.runtimeError.message.slice(0, 60)} | | | | | | | |`); continue }
     ran++
     const a = lhr.audits, c = lhr.categories
-    rows.push(`| ${route} | ${form} | ${pct(c.performance?.score)} | ${pct(c.accessibility?.score)} | ${ms(a['largest-contentful-paint'])} | ${a['cumulative-layout-shift']?.displayValue ?? '-'} | ${a['total-blocking-time']?.displayValue ?? '-'} | ${ms(a['first-contentful-paint'])} |`)
+    rows.push(`| ${route} | ${form} | ${pct(c.performance?.score)} | ${pct(c.accessibility?.score)} | ${pct(c.seo?.score)} | ${pct(c['best-practices']?.score)} | ${ms(a['largest-contentful-paint'])} | ${a['cumulative-layout-shift']?.displayValue ?? '-'} | ${a['total-blocking-time']?.displayValue ?? '-'} | ${ms(a['first-contentful-paint'])} |`)
     // every audit of either category that lost points (or, for an informative insight, says something), by route
-    for (const cat of ['performance', 'accessibility']) for (const ref of c[cat]?.auditRefs ?? []) {
+    for (const cat of CATEGORIES) for (const ref of c[cat]?.auditRefs ?? []) {
       const au = a[ref.id]
       if (!au || au.score === null || au.score >= 0.9 || au.scoreDisplayMode === 'manual' || au.scoreDisplayMode === 'notApplicable') continue
       const key = `${cat}: ${au.title}`, e = losses.get(key) ?? { title: key, where: [] }
@@ -68,7 +72,7 @@ try {
 } finally { server?.stop() }
 
 const md = [`## Lighthouse (${LIGHTHOUSE}) on ${base}`, '',
-  '| Route | Form | Perf | A11y | LCP | CLS | TBT | FCP |', '|---|---|---|---|---|---|---|---|', ...rows, '',
+  '| Route | Form | Perf | A11y | SEO | BP | LCP | CLS | TBT | FCP |', '|---|---|---|---|---|---|---|---|---|---|', ...rows, '',
   '### Audits that lost points', '', ...[...losses.values()].sort((x, y) => y.where.length - x.where.length).map(l => `- **${l.title}**: ${l.where.join(', ')}`), ''].join('\n')
 writeFileSync(join(out, 'summary.md'), md)
 console.log(md)

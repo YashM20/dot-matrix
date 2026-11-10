@@ -49,16 +49,16 @@ export function uxChecks(assert: Assert) {
       ['/?tab=dots&p=zAbC&worker=0', { view: 'MAKE', mode: 'CODE', board: first }, '/?make=code&p=zAbC&worker=0'],
       ['/light/?make=code&p=zAbC', { view: 'MAKE', mode: 'DRAW', board: 'light' }, '/light/?make=draw'],
       ['/?make=tune', { view: 'MAKE', mode: 'TUNE', board: first }, '/?make'], ['/?tab=workspace&pro=1', { view: 'MAKE', mode: 'TUNE', board: first }, '/?make&pro=1'],
-      ['/?tab=log', { view: 'ABOUT', mode: 'TUNE', board: first }, '/?about'], ['/metro/?about&skin=vfd', { view: 'EXPLORE', mode: 'TUNE', board: 'metro' }, '/metro/?skin=vfd'],
-      ['/about', { view: 'ABOUT', mode: 'TUNE', board: first }, '/?about'], ['/nope/?skin=crt', { view: 'EXPLORE', mode: 'TUNE', board: first }, '/?skin=crt'],
+      ['/?tab=log', { view: 'ABOUT', mode: 'TUNE', board: first }, '/about/'], ['/metro/?about&skin=vfd', { view: 'EXPLORE', mode: 'TUNE', board: 'metro' }, '/metro/?skin=vfd'],
+      ['/about', { view: 'ABOUT', mode: 'TUNE', board: first }, '/about/'], ['/?about&skin=crt', { view: 'ABOUT', mode: 'TUNE', board: first }, '/about/?skin=crt'], ['/light/', { view: 'ABOUT', mode: 'TUNE', board: 'light' }, '/about/'], ['/nope/?skin=crt', { view: 'EXPLORE', mode: 'TUNE', board: first }, '/?skin=crt'],
       ['/index.html', { view: 'EXPLORE', mode: 'TUNE', board: first }, '/index.html'],
       ['/browse/?in=metro&tag=clock&skin=crt', { view: 'BROWSE', mode: 'TUNE', board: first }, '/browse/?in=metro&tag=clock&skin=crt'],
       ['/browse/?in=metro&tag=clock&q=x&skin=crt', { view: 'EXPLORE', mode: 'TUNE', board: 'metro' }, '/metro/?skin=crt'],
     ]
     const off = want.filter(([u, v, w]) => canon(u, v) !== w).map(([u, v, w]) => `${u} → ${canon(u, v)} (want ${w})`)
-    assert('ux: views write their canonical URL (board path, ?make (the editor) / ?make=<mode>, ?about; ?skin/?worker/?p kept, old params folded)', !off.length, off.join('; '))
-    // BROWSE has one URL for every board (`/browse/`): it opens on the first board's state
-    const trips = PLACES.flatMap(p => [first, 'light'].map(board => ({ ...placeView(p), board }))).filter(v => { const u = new URL(urlForView(v, '?skin=crt', '/'), 'https://x'); return !is(viewFromUrl(u.search, u.pathname), v.view, v.view === 'MAKE' ? v.mode : null, v.view === 'BROWSE' ? first : v.board) })
+    assert('ux: views write their canonical URL (board path, ?make (the editor) / ?make=<mode>, /about/; ?skin/?worker/?p kept, old params folded)', !off.length, off.join('; '))
+    // BROWSE and ABOUT have one URL for every board (`/browse/`, `/about/`): they open on the first board's state
+    const trips = PLACES.flatMap(p => [first, 'light'].map(board => ({ ...placeView(p), board }))).filter(v => { const u = new URL(urlForView(v, '?skin=crt', '/'), 'https://x'); return !is(viewFromUrl(u.search, u.pathname), v.view, v.view === 'MAKE' ? v.mode : null, v.view === 'BROWSE' || v.view === 'ABOUT' ? first : v.board) })
     assert('ux: every view and MAKE mode round-trips through its canonical URL', !trips.length, trips.map(v => `${v.view}/${v.mode}/${v.board}`).join(', '))
   }
 

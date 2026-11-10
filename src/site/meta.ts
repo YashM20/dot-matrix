@@ -146,7 +146,7 @@ export function setNoIndex(on: boolean) {
 /**
  * Keep the address bar on the view, so a copied link opens it and Back / Forward walk the views
  * (docs/UX-PLAN.md U0, U3). `pathAndQuery` is the view's canonical URL (`urlForView` in `./views`: the
- * board path, `?make=<mode>`, `?about`; other params stay). `push` adds a history entry; otherwise it
+ * board path, `?make=<mode>`, `/about/`; other params stay). `push` adds a history entry; otherwise it
  * only replaces (the first render, or an older URL form of the same view).
  */
 export function syncUrl(pathAndQuery: string, push: boolean) {
