@@ -6,7 +6,7 @@
  * A `source` reads two ways: `exact` is Vercel's own reading (case-sensitive, no optional trailing slash); the loose
  * reading (any case, optional slash) catches a rule that only works by accident.
  */
-import { existsSync, readFileSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, realpathSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 
 /** A rule's condition; only `query` is read here (a rule with any other kind never matches). */
@@ -38,10 +38,13 @@ export function compile(source: string, exact: boolean): { re: RegExp; keys: str
   return { re: new RegExp(`^${re}${exact ? '' : '\\/?'}$`, exact ? '' : 'i'), keys }
 }
 
-/** A built file at `path` (a directory path means its index.html), relative to `dist`, or undefined. */
+/** A built file at `path` (a directory path means its index.html), relative to `dist`, or undefined; exact case only. */
 export const fileAt = (dist: string, path: string): string | undefined => {
   const f = join(dist, path.endsWith('/') ? path + 'index.html' : path)
-  return existsSync(f) && statSync(f).isFile() ? relative(dist, f).replace(/\\/g, '/') : undefined
+  if (!existsSync(f) || !statSync(f).isFile()) return undefined
+  // Vercel's file system is case-sensitive: `/About/` is not `about/index.html`, even on a disk that ignores case
+  const rel = relative(dist, f).replace(/\\/g, '/'), real = relative(realpathSync.native(dist), realpathSync.native(f)).replace(/\\/g, '/')
+  return real === rel ? rel : undefined
 }
 
 export type Outcome = { file: string; rewritten: boolean } | { redirect: string; permanent: boolean } | { status: 404 }

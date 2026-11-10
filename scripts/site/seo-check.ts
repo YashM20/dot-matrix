@@ -39,7 +39,7 @@ const route = (path: string, exact: boolean) => routeIn(vercel, DIST, path, exac
 const widgets = readWidgets(), sample = widgets[0], lock = widgets.find(w => w.slug.startsWith('lock-'))
 /** [path, what it must serve: a file, `→ <to>` for a redirect, or 404]; `view` checks the app opens it. */
 const CASES: [path: string, want: string, view?: (v: ReturnType<typeof viewFromUrl>) => boolean][] = [
-  ['/', 'index.html'], ['/index.html', 'index.html'], ['/browse', 'browse/index.html', v => v.view === 'BROWSE'], ['/browse/', 'browse/index.html', v => v.view === 'BROWSE'], ['/about', '→ /about/'], ['/about/', 'about/index.html', v => v.view === 'ABOUT'], ['/?about', '→ /about/'], ['/index.html?about', '→ /about/'], ['/?skin=crt', 'index.html'],
+  ['/', 'index.html'], ['/index.html', 'index.html'], ['/browse', 'browse/index.html', v => v.view === 'BROWSE'], ['/browse/', 'browse/index.html', v => v.view === 'BROWSE'], ['/about', 'about/index.html', v => v.view === 'ABOUT'], ['/about/', 'about/index.html', v => v.view === 'ABOUT'], ['/About/', 'about/index.html', v => v.view === 'ABOUT'], ['/ABOUT', 'about/index.html', v => v.view === 'ABOUT'], ['/?about', '→ /about/'], ['/index.html?about', '→ /about/'], ['/?skin=crt', 'index.html'],
   ...boardIds.flatMap(id => [[`/${id}/`, `${id}/index.html`], [`/${id}`, `${id}/index.html`]] as [string, string][]),
   ...Object.entries(boardAliases).flatMap(([a, to]) => [[`/${a}`, `→ /${to}/`], [`/${a}/`, `→ /${to}/`]] as [string, string][]),
   ...widgets.flatMap(w => [[w.url, `widget/${w.slug}/index.html`], [`/widget/${w.uid}/`, `widget/${w.uid}/index.html`], [`/${w.uid}/`, `${w.uid}/index.html`]] as [string, string][]),
