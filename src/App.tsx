@@ -285,6 +285,11 @@ export default function App() {
     }
     window.setTimeout(find, 60)
   }
+  /** A card's page → ALL (a history entry, like leaving to its board). */
+  const leaveToAll = () => {
+    pushUrl(urlForView({ view: 'EXPLORE', mode, board, all: true }, location.search, location.pathname))
+    setWidget(undefined); setView('EXPLORE'); setAll(true)
+  }
   /** One board in EXPLORE (leaves ALL); `showAll` is EXPLORE's ALL. */
   const pickBoard = (id: string) => { setWidget(undefined); setBoard(id); setAll(false) }
   const showAll = () => { setWidget(undefined); setAll(true); setView('EXPLORE') }
@@ -302,7 +307,8 @@ export default function App() {
       <LoadBoundary key={widget.key} fallback={viewFailed}><Suspense fallback={<section className="view-loading" aria-busy="true" />}><WidgetPage route={widget} onOpen={openWidget} onBoard={leaveWidget} /></Suspense></LoadBoundary>
       <CommandLayer tab="EXPLORE" board={board} setTab={go} setBoard={pickBoard} />
     </main>
-    <TabBar onView={v => { if (v === 'EXPLORE') return leaveWidget(board); setWidget(undefined); setView(v) }} />
+    {/* the phone tab bar on a card's page: EXPLORE is ALL, the home view (#315); the page's own ‹ pill goes back to the card's board */}
+    <TabBar onView={v => { if (v === 'EXPLORE') return leaveToAll(); setWidget(undefined); setView(v) }} />
     <SiteFooter onAbout={() => { setWidget(undefined); setView('ABOUT') }} />
   </div>
   const title = view === 'MAKE' ? 'MAKE' : view === 'EXPLORE' ? (all ? 'ALL' : boardLabel(board)) : view
