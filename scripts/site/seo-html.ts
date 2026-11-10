@@ -5,8 +5,9 @@
  * app loads (no flash) and shown as a plain page when scripts are off (`<noscript>`). It is never `display:none`.
  */
 import { boardGroups, boardLabel, boardManifest } from '../../src/widgets/manifest'
-import { boardBlurbs, groupBlurbs } from '../../src/widgets/blurbs'
-import { SITE_DESCRIPTION, SITE_NAME, widgetTitle } from '../../src/site/meta'
+import { boardBlurbs, conceptCredit, groupBlurbs } from '../../src/widgets/blurbs'
+import { ABOUT_META, ABOUT_PATH, SITE_DESCRIPTION, SITE_NAME, widgetTitle } from '../../src/site/meta'
+import { releases } from '../../src/changelog'
 import { BLOG, POSTS, postPath, type PostInfo } from '../../src/blog/posts'
 import { EXPERIMENTS, LAB, experimentPath } from '../../src/lab/experiments'
 import { inline, parse, tex, type Block, type Inline, type ListBlock } from '../../src/blog/markdown'
@@ -40,7 +41,7 @@ export function homeBody(widgets: readonly WidgetRow[]): string {
     .map(id => `<h3>${boardLink(id)}</h3><p>${esc(boardBlurbs[id])}</p><ul>${cards(id)}</ul>`).join('')}`).join('')
   const more = [
     `<li><a href="${postPath()}">Blog</a>: ${esc(BLOG.dek)}</li>`, ...(flag('lab') ? [`<li><a href="${LAB.path}">Lab</a>: ${esc(LAB.dek)}</li>`] : []),
-    '<li><a href="/privacy">Privacy</a></li>', '<li><a href="/terms">Terms</a></li>',
+    `<li><a href="${ABOUT_PATH}">About</a>: ${esc(ABOUT_META.description)}</li>`, '<li><a href="/privacy">Privacy</a></li>', '<li><a href="/terms">Terms</a></li>',
   ].join('')
   return wrap(`<h1>${SITE_NAME}</h1><p>${esc(SITE_DESCRIPTION)}</p>${groups}<h2>More</h2><ul>${more}</ul>`)
 }
@@ -64,6 +65,19 @@ export function widgetBody(w: WidgetRow): string {
 export function blogIndexBody(): string {
   const list = POSTS.map(p => `<li><a href="${postPath(p.slug)}">${esc(p.title)}</a>: ${esc(p.dek)} <time datetime="${p.date}">${p.date}</time></li>`).join('')
   return wrap(`${siteNav(`<a href="${postPath()}">Blog</a>`)}<h1>Blog</h1><p>${esc(BLOG.dek)}</p><ul>${list}</ul>`)
+}
+
+/**
+ * ABOUT (`/about/`): what this is, the links, the credits and the visitor log, as `src/components/About.tsx` shows them
+ * with the `make` flag off (its default). The app's view replaces this block on mount.
+ */
+export function aboutBody(): string {
+  const c = conceptCredit, log = releases.map(r => `<li><b>${esc(r.version)}</b> <time datetime="${esc(r.date)}">${esc(r.date)}</time>: ${esc(r.title)}. ${esc(r.summary)}</li>`).join('')
+  return wrap(`${siteNav(`<a href="${ABOUT_PATH}">About</a>`)}<h1>About</h1>`
+    + `<p>${SITE_NAME} runs on Dot/480, an interface engine where everything you see is dots. Every card is a field, a function that says how bright each point is; a sampler reads it onto a quantized grid of dots, and a renderer (SVG, Canvas or WebGL) draws them, live. EXPLORE has the boards.</p>`
+    + `<p><a href="/blog/dot-matrix-essay/">How it works: the essay</a> · <a href="${postPath()}">Blog</a> · <a href="https://github.com/YashM20/dot-matrix">Source</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>`
+    + `<h2>Credits</h2><p>This project started from the ESP-Mosaico concept screens for a 480 × 480 OLED device by <a href="${esc(c.profile)}" rel="noreferrer">${esc(c.by)} (${esc(c.handle)})</a>. The first seven boards rebuild his sheets, and the 480 in Dot/480 is his screen. Cards built on someone else's work name it on their own page. The full list is in <a href="https://github.com/YashM20/dot-matrix/blob/main/docs/CREDITS.md">CREDITS.md</a>.</p>`
+    + `<h2>What changed</h2><ul>${log}</ul>`)
 }
 
 /** The lab index: every piece with its line. */

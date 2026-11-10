@@ -184,7 +184,7 @@
   .tabbar button:focus-visible,
   .topbar button:focus-visible,
   .board-picker button:focus-visible,
-  .next-board:focus-visible {
+  .next-board a:focus-visible {
     outline-offset: -3px
   }
 

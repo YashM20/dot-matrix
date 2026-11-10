@@ -76,13 +76,14 @@ const ROUTES: [string, string, string][] = [
   ['lock/', 'EXPLORE:lock', '/lock/'],
   ['glyph/', 'EXPLORE:lock', '/lock/'],
   ['?board=mosaic', 'EXPLORE:mosaic', '/mosaic/'],
-  ['?about', 'ABOUT', '/?about'],
-  ['about', 'ABOUT', '/?about'],
+  ['?about', 'ABOUT', '/about/'],
+  ['about/', 'ABOUT', '/about/'],
+  ['about', 'ABOUT', '/about/'],
   ['?make', 'MAKE', '/?make'],
   ['?make=code', 'MAKE', '/?make=code'],
   ['?tab=gallery', 'EXPLORE:henry', '/henry/'],
   ['?tab=dots', 'MAKE', '/?make=code'],
-  ['?tab=log', 'ABOUT', '/?about'],
+  ['?tab=log', 'ABOUT', '/about/'],
   ['?tab=essay', 'post', ESSAY],
   ['essay', 'post', ESSAY],
   ['essay/', 'post', ESSAY],
@@ -192,7 +193,7 @@ async function sheets(p: Page) {
 }
 
 async function tabs(p: Page, W: number, H: number) {
-  for (const [name, path] of [['home', ''], ['about', '?about'], ['essay', ESSAY.slice(1)]]) {
+  for (const [name, path] of [['home', ''], ['about', 'about/'], ['essay', ESSAY.slice(1)]]) {
     await p.cdp('Page.navigate', { url: base + path })
     await settle(p); await sleep(1500)
     // the home's hero card mounts once the page is idle, and it is part of the Tab order

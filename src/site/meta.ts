@@ -11,8 +11,20 @@ import { widgetPath } from './routes'
 import { pushUrl, replaceUrl } from './safe-url'
 
 export const SITE_NAME = 'MATRIX'
-export const SITE_TITLE = 'MATRIX · a field-based dot-matrix UI engine'
-export const SITE_DESCRIPTION = 'Interfaces drawn entirely in dots. Each card is a field, sampled onto a quantized dot grid and rendered live. Browse the boards, or read how the engine works.'
+
+/** Capitalised words a search title keeps as they are: acronyms, not shouted words. */
+const ACRONYMS = new Set(['AI', 'API', 'ASCII', 'BPM', 'CPU', 'CRT', 'CSS', 'EV', 'GPS', 'GPU', 'HTML', 'ID', 'IR', 'LCD', 'LED', 'MCP', 'MIDI', 'NFC', 'OLED', 'PNG', 'QR', 'SDF', 'SVG', 'UI', 'XY'])
+/** An all-caps word (two letters or more, no digits) in title case, unless it is an acronym; other words stay as written. */
+export const titleCase = (s: string): string => s.replace(/\b[A-Z][A-Z']+\b/g, w => (ACRONYMS.has(w) ? w : w[0] + w.slice(1).toLowerCase()))
+/**
+ * A page's `<title>` (and og:title, twitter:title): its parts in title case, joined with ` · `. Search results read
+ * better without the all-caps the boards and cards show on the page (`Timer · Micro UI · Matrix`); the visible
+ * titles stay as they are.
+ */
+export const searchTitle = (...parts: string[]): string => parts.map(titleCase).join(' · ')
+
+export const SITE_TITLE = searchTitle(SITE_NAME, 'a field-based dot-matrix UI engine')
+export const SITE_DESCRIPTION = 'Interfaces drawn entirely in dots. Each card is a field, sampled onto a quantized dot grid and rendered live. See every card on one page, open a board, or read how the engine works.'
 export const SITE_LOCALE = 'en_US'
 const PRODUCTION = 'https://matrix.reactopia.me'
 const ENV: Record<string, unknown> = import.meta.env ?? {}
@@ -43,12 +55,20 @@ export function pageMeta(boardId?: string, blurbs: Blurbs | undefined = loadedBl
   if (!b) return { title: SITE_TITLE, description: SITE_DESCRIPTION, path: '/', image: '/og/default.png', imageAlt: defaultAlt }
   const blurb = blurbs?.[b.id], label = boardLabel(b.id)
   return {
-    title: `${b.title} · ${SITE_NAME}`,
+    title: searchTitle(label, SITE_NAME),
     description: blurb ? `${blurb} The ${label} board of MATRIX, where every card is a live dot field.` : `The ${label} board of MATRIX, a field-based dot-matrix UI engine: every card is a field sampled onto a quantized dot grid and rendered live.`,
     path: `/${b.id}/`,
     image: `/og/${b.id}.png`,
     imageAlt: `A card from the ${label} board of MATRIX, drawn in dots.`,
   }
+}
+
+/** ABOUT's own page (`/about/`; `/about` and the old `/?about` redirect there): what this is, credits, shortcuts and the log. */
+export const ABOUT_PATH = '/about/'
+export const ABOUT_META: PageMeta = {
+  title: searchTitle('About', SITE_NAME),
+  description: 'What MATRIX is and how it draws everything in dots, who it credits, the keyboard shortcuts and URL options, and a log of what changed.',
+  path: ABOUT_PATH, image: '/og/default.png', imageAlt: defaultAlt,
 }
 
 /** What a widget page's meta needs (a subset of `WidgetMeta`, src/widgets/meta.ts). */
@@ -59,12 +79,12 @@ export const widgetTitle = (name: string): string => name.replace(/^\d{2}\s+/, '
 /**
  * Meta for a widget page: canonical `/widget/<slug>/`, OG image `/og/widget/<uid>.png` (keyed by uid, so a rename keeps
  * cached previews). The title names the board, since a card name can repeat across boards (`Weather` on MICRO UI and
- * LIVE); the description leads with the blurb and keeps the board line short, so search snippets show the blurb.
+ * LIVE), in title case like every search title; the description leads with the blurb and keeps the board line short, so search snippets show the blurb.
  */
 export function widgetPageMeta(w: WidgetPageInfo): PageMeta {
   const name = widgetTitle(w.name), label = boardLabel(w.board)
   return {
-    title: `${name} · ${label} · ${SITE_NAME}`,
+    title: searchTitle(name, label, SITE_NAME),
     description: w.blurb ? `${w.blurb} A live dot-matrix card from the ${label} board of MATRIX.` : `A dot-matrix card from the ${label} board of MATRIX: a field sampled onto a quantized dot grid and rendered live.`,
     path: widgetPath(w.slug, w.scope),
     image: `/og/widget/${w.uid}.png`,
@@ -126,7 +146,7 @@ export function setNoIndex(on: boolean) {
 /**
  * Keep the address bar on the view, so a copied link opens it and Back / Forward walk the views
  * (docs/UX-PLAN.md U0, U3). `pathAndQuery` is the view's canonical URL (`urlForView` in `./views`: the
- * board path, `?make=<mode>`, `?about`; other params stay). `push` adds a history entry; otherwise it
+ * board path, `?make=<mode>`, `/about/`; other params stay). `push` adds a history entry; otherwise it
  * only replaces (the first render, or an older URL form of the same view).
  */
 export function syncUrl(pathAndQuery: string, push: boolean) {

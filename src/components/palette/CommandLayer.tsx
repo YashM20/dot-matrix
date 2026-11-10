@@ -310,6 +310,8 @@ export function CommandLayer({ tab, board, all = false, setTab, setBoard }: Comm
       }
     }
     const onUp = (e: KeyboardEvent) => { if (e.key === 't' || e.key === 'T') tHeld = false }
+    // T let go in another window never sends its keyup here: losing focus ends the hold (docs/STATE-MACHINES.md A8.1)
+    const onBlur = () => { tHeld = false }
     // hold T and move the pointer: 100 px = 1 s of board time
     const onMove = (e: PointerEvent) => {
       if (!tHeld) return
@@ -322,9 +324,10 @@ export function CommandLayer({ tab, board, all = false, setTab, setBoard }: Comm
     }
     window.addEventListener('keydown', onKey)
     window.addEventListener('keyup', onUp)
+    window.addEventListener('blur', onBlur)
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerover', onHover)
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onUp); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerover', onHover) }
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onUp); window.removeEventListener('blur', onBlur); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerover', onHover) }
   }, [api])
 
   return <>

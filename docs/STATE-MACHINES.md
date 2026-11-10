@@ -12,13 +12,13 @@ Findings at a glance, worst first. Severity: data loss, broken UI, wrong output,
 
 | Id | Machine | Severity | Status | Issue | Fix |
 |---|---|---|---|---|---|
-| A2.1 | Chunk loading | Broken UI | Confirmed (`scripts/verify/appstate.ts`) | #300 | Fixed: offline never reloads |
-| A2.2 | Chunk loading | Broken UI | Confirmed (`chunks` probe) | #300 | Fixed: each lazy part has a `LoadBoundary` |
-| A5.1 | Likes client | Data loss (this browser's likes record) | Confirmed (`scripts/verify/appstate.ts`) | #301 | Fixed: storage listener and read-modify-write |
+| A2.1 | Chunk loading | Broken UI | Confirmed (`scripts/verify/appstate.ts`) | #300 | Fixed in #303: offline never reloads |
+| A2.2 | Chunk loading | Broken UI | Confirmed (`chunks` probe) | #300 | Fixed in #303: each lazy part has a `LoadBoundary` |
+| A5.1 | Likes client | Data loss (this browser's likes record) | Confirmed (`scripts/verify/appstate.ts`) | #301 | Fixed in #303: storage listener and read-modify-write |
 | A5.2 | Likes client | Wrong output | Likely | #302 | Left: needs the server to say whether the caller's like is counted |
 | A5.3 | Likes client | Wrong output | Likely | #302 | Left: heals on the next day's visit |
-| A8.1 | Global keys | Broken UI (stuck input) | Likely | #302 | Left: needs real input to confirm |
-| A9.1 | Widget page SHARE | Cosmetic | Likely | #302 | Left |
+| A8.1 | Global keys | Broken UI (stuck input) | Confirmed (`c10` probe) | #302 | Fixed in #316: a window blur ends the hold |
+| A9.1 | Widget page SHARE | Cosmetic | Confirmed (`c10` probe) | #302 | Fixed in #316: a keyboard SHARE makes a fresh PNG |
 | A4.1 | Theme | n/a | By design | | `theme-picker` probe pins it |
 | A5.4 | Likes client | n/a | Not reachable | | Entries are keyed by content |
 
@@ -284,14 +284,18 @@ closes the shell.
 | shell | Ctrl+C | a command runs | shell | its `AbortController` aborts, queue dropped |
 | shell | Escape, backtick on an empty line | | closed | running command aborted |
 | closed | hold T | not typing | frozen | the shared clock freezes; pointer moves scrub while T is held |
+| frozen, T held | T let go, or the window loses focus | | frozen | the hold ends: pointer moves no longer scrub |
 
 Persists: shell history per tab (sessionStorage, validated on read: strings only, at most 256 characters, at most
 100 entries); nothing else.
 
 Findings:
-- **A8.1, Likely, left.** Hold T, then switch windows (Alt+Tab) and let go of T there: the `keyup` never reaches the
-  page, `tHeld` stays true (`CommandLayer.tsx:310`), and back on the page every pointer move scrubs the frozen clock
-  until T is pressed again. A `blur` listener that clears `tHeld` would fix it; it needs real input to confirm.
+- **A8.1, Confirmed, fixed in #316.** Hold T, then switch windows (Alt+Tab) and let go of T there: the `keyup` never
+  reaches the page, `tHeld` stayed true, and back on the page every pointer move scrubbed the frozen clock until T was
+  pressed again. Fix: a window `blur` ends the hold (`CommandLayer.tsx:312`). Probe: the `c10` probe's `holdt` section
+  holds T with no keyup, fires the window's `blur`, and moves the pointer. Without the fix the clock went from
+  T = 3.19s to T = 6.19s; with it, it stays put. Headless Chrome can't switch windows, so the probe fires the `blur`
+  event itself.
 - Not reachable: two shell commands at once. `pump` returns while one runs, and the loop picks up what was queued.
 
 ### A9. Share, LINK, REMIX and export
@@ -303,11 +307,15 @@ text copy to showing the URL in a toast. Links go through `withTheme` (the share
 pond link carries its day). REMIX pushes `?make=code&p=…` (MAKE flag on), or opens the card in the editor.
 
 The one stateful piece: `sharePNG` (`WidgetPage.tsx:119`), a PNG started on `pointerdown` so the share sheet opens
-inside the click with the file ready.
+inside the click with the file ready. Since A9.1 only the click that follows that press uses it; a keyboard click
+(`detail` 0) makes a fresh one.
 
 Findings:
-- **A9.1, Likely, left.** Press on SHARE, drag off and let go (no click), change the theme, then SHARE with the
-  keyboard: the PNG from the first press is shared, in the old theme and at the old time. Cosmetic.
+- **A9.1, Confirmed, fixed in #316.** Press on SHARE, drag off and let go (no click), change the theme, then SHARE
+  with the keyboard: the PNG from the first press was shared, in the old theme and at the old time. Fix: the press's
+  PNG serves only a pointer click (`WidgetPage.tsx:131`). Probe: the `c10` probe's `share` section, with a Web
+  Share stand-in that records each shared PNG, on `/widget/settings/` after switching the accent to cobalt. Without
+  the fix the two shared PNGs differed (76925 and 76203 bytes); with it they match.
 - Object URLs for downloads are revoked after 1 to 1.5 s; a slow save dialog doesn't need them (the download has
   started by then).
 

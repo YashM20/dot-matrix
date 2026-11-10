@@ -53,11 +53,11 @@
 
 /* touch: press feedback instead of hover, and no hover colour left stuck after a tap */
 @media (hover: none) {
-  :is(.tabbar button, .topbar-place, .topbar-search, .board-picker button, .next-board, .sheet button, .bottom a, .intro-line button) {
+  :is(.tabbar button, .topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button) {
     transition: transform var(--dur-out) ease-out, background-color var(--dur-out) ease-out
   }
 
-  :is(.topbar-place, .topbar-search, .board-picker button, .next-board, .sheet button, .bottom a, .intro-line button):active {
+  :is(.topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button):active {
     transform: scale(.96)
   }
 
@@ -93,11 +93,11 @@
     transition: none
   }
 
-  :is(.tabbar button, .tabbar .glyph, .topbar-place, .topbar-search, .board-picker button, .next-board, .sheet button, .bottom a, .intro-line button) {
+  :is(.tabbar button, .tabbar .glyph, .topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button) {
     transition: none
   }
 
-  :is(.topbar-place, .topbar-search, .board-picker button, .next-board, .sheet button, .bottom a, .intro-line button):active,
+  :is(.topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button):active,
   .tabbar button:active .glyph {
     transform: none
   }

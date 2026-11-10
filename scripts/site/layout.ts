@@ -93,7 +93,7 @@ const ALL_PAGES = [
   { name: 'components', path: 'components/', kind: 'board' },
   { name: 'lock', path: 'lock/', kind: 'board' },
   { name: 'deerflow12', path: 'deerflow12/', kind: 'board' },
-  { name: 'about', path: '?about', kind: 'about' },
+  { name: 'about', path: 'about/', kind: 'about' },
   { name: 'make', path: '?make=tune', kind: 'make' },
   { name: 'widget', path: 'widget/timer/', kind: 'widget' },
   { name: 'essay', path: 'blog/dot-matrix-essay/', kind: 'essay' },

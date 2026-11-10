@@ -46,12 +46,18 @@ export function BoardPicker({ board, all, onPick, onPickAll, onSheet }: { board:
   </div>
 }
 
-/** The end of a board, at every width: the next one in its group, so nobody has to go back up to move on. */
+/**
+ * The end of a board, at every width: the next one in its group, so nobody has to go back up to move on. A real link
+ * (`/<board>/`, so it opens in a new tab too) in the site's pill (src/site/app/pills.css), like the widget page's
+ * PREV / NEXT; a plain click switches the board in place.
+ */
 export function NextBoard({ board, onPick }: { board: string; onPick: (id: string) => void }) {
   const list = groupById(homeGroup(board)).boards as readonly string[]
   const next = list[(list.indexOf(board) + 1) % list.length]
-  return <button type="button" className="next-board" onPointerEnter={() => prefetchBoard(next)} onFocus={() => prefetchBoard(next)}
-    onClick={() => { window.scrollTo({ top: 0, behavior: smooth() }); onPick(next) }}>
-    <small>NEXT BOARD</small><b>{boardLabel(next)}</b><span aria-hidden="true">→</span>
-  </button>
+  return <div className="next-board"><div className="pill">
+    <a className="pill-btn" href={`/${next}/`} onPointerEnter={() => prefetchBoard(next)} onFocus={() => prefetchBoard(next)}
+      onClick={e => { if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); window.scrollTo({ top: 0, behavior: smooth() }); onPick(next) }}>
+      NEXT BOARD<span className="pill-glyph" aria-hidden="true">·</span><b>{boardLabel(next)}</b><span className="pill-glyph" aria-hidden="true">→</span>
+    </a>
+  </div></div>
 }

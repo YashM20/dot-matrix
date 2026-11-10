@@ -47,7 +47,7 @@ try {
   assert('browse: the header has EXPLORE, selected here, and no BROWSE, MAKE or LAB', head.tabs.includes('EXPLORE') && !head.tabs.includes('BROWSE') && !head.tabs.includes('MAKE') && !head.lab
     && await p.js<boolean>(`document.querySelector('#tab-EXPLORE')?.getAttribute('aria-selected') === 'true'`), head.tabs.join(' '))
   assert('browse: the ALL chip is pressed and ALL opens on the quality-bar cards', head.chip === 'true' && head.first.join() === FEATURED.join(), `${head.chip} | ${head.first.join()}`)
-  assert('browse: / keeps the site title and its own canonical', /^MATRIX/.test(head.title) && new URL(head.canonical).pathname === '/', `${head.title} | ${head.canonical}`)
+  assert('browse: / keeps the site title and its own canonical', /^Matrix/i.test(head.title) && new URL(head.canonical).pathname === '/', `${head.title} | ${head.canonical}`)
   assert(`browse: lists all ${ALL} cards`, await p.js<number>(`document.querySelectorAll('.browse-item').length`) === ALL && (await count(p)) === `${ALL} cards`, await count(p))
   const near = await mountedCards(p)
   assert('browse: only the cards near the screen are mounted', near > 0 && near <= 24, `${near} mounted of ${ALL}`)

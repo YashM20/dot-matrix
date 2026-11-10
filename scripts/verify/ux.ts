@@ -48,24 +48,25 @@ export function uxChecks(assert: Assert) {
     const canon = (u: string, v: V) => { const x = new URL(u, 'https://x'); return urlForView(v, x.search, x.pathname) }
     const E = (board: string, all = false): V => ({ view: 'EXPLORE', mode: 'TUNE', board, all })
     const M = (mode: ViewState['mode'], board = first): V => ({ view: 'MAKE', mode, board, all: true })
-    const A: V = { view: 'ABOUT', mode: 'TUNE', board: first, all: true }
+    const A = (board = first): V => ({ view: 'ABOUT', mode: 'TUNE', board, all: true })
     const want: [string, V, string][] = [
       ['/?tab=boards', E(first, true), '/'], ['/?board=glyph', E('lock'), '/lock/'], ['/', E(first), '/henry/'], ['/index.html', E(first, true), '/index.html'],
       ['/?tab=studio&skin=crt', M('COMPOSE'), '/?make=compose&skin=crt'],
       ['/?tab=dots&p=zAbC&worker=0', M('CODE'), '/?make=code&p=zAbC&worker=0'],
       ['/light/?make=code&p=zAbC', M('DRAW', 'light'), '/light/?make=draw'],
       ['/?make=tune', M('TUNE'), '/?make'], ['/?tab=workspace&pro=1', M('TUNE'), '/?make&pro=1'],
-      ['/?tab=log', A, '/?about'], ['/metro/?about&skin=vfd', E('metro'), '/metro/?skin=vfd'],
-      ['/about', A, '/?about'], ['/nope/?skin=crt', E(first, true), '/?skin=crt'],
+      ['/?tab=log', A(), '/about/'], ['/metro/?about&skin=vfd', E('metro'), '/metro/?skin=vfd'],
+      ['/about', A(), '/about/'], ['/?about&skin=crt', A(), '/about/?skin=crt'], ['/light/', A('light'), '/about/'], ['/nope/?skin=crt', E(first, true), '/?skin=crt'],
       // ALL keeps its filters on `/`; a board, MAKE and ABOUT drop them; BROWSE's old ?in= never survives
       ['/browse/?tag=clock&q=x&skin=crt', E(first, true), '/?tag=clock&q=x&skin=crt'],
       ['/browse/?in=metro&tag=clock&q=x&skin=crt', E('metro'), '/metro/?skin=crt'],
-      ['/?tag=clock&q=x', A, '/?about'], ['/?in=nope&tag=clock', E(first, true), '/?tag=clock'],
+      ['/?tag=clock&q=x', A(), '/about/'], ['/?in=nope&tag=clock', E(first, true), '/?tag=clock'],
     ]
     const off = want.filter(([u, v, w]) => canon(u, v) !== w).map(([u, v, w]) => `${u} → ${canon(u, v)} (want ${w})`)
-    assert('ux: views write their canonical URL (/ for ALL, board path, ?make (the editor) / ?make=<mode>, ?about; ?skin/?worker/?p kept, old params folded)', !off.length, off.join('; '))
+    assert('ux: views write their canonical URL (/ for ALL, board path, ?make (the editor) / ?make=<mode>, /about/; ?skin/?worker/?p kept, old params folded)', !off.length, off.join('; '))
+    // ABOUT has one URL for every board (`/about/`): it opens on the first board's state
     const trips = [...PLACES.flatMap(p => [first, 'light'].map(board => ({ ...placeView(p), board, all: false }))), E(first, true)]
-      .filter(v => { const u = new URL(urlForView(v, '?skin=crt', '/'), 'https://x'); return !is(viewFromUrl(u.search, u.pathname), v.view, v.view === 'MAKE' ? v.mode : null, v.view === 'EXPLORE' && v.all ? '*' : v.board) })
+      .filter(v => { const u = new URL(urlForView(v, '?skin=crt', '/'), 'https://x'); return !is(viewFromUrl(u.search, u.pathname), v.view, v.view === 'MAKE' ? v.mode : null, v.view === 'EXPLORE' && v.all ? '*' : v.view === 'ABOUT' ? first : v.board) })
     assert('ux: every view, MAKE mode and ALL round-trips through its canonical URL', !trips.length, trips.map(v => `${v.view}/${v.mode}/${v.board}${v.all ? '/all' : ''}`).join(', '))
   }
 

@@ -238,53 +238,15 @@
   min-height: 100svh
 }
 
-/* the board's end, at every width: the next board in its group (BoardPicker.tsx NextBoard). Phones take the full width
-   for the thumb; wider screens a quiet pager at the grid's right edge */
+/* the board's end, at every width: the next board in its group (BoardPicker.tsx NextBoard), one link in the site's pill
+   (src/site/app/pills.css), right-aligned under the grid like the widget page's PREV / NEXT */
 .next-board {
   display: flex;
-  align-items: center;
-  gap: var(--space-3);
-  width: 100%;
-  min-height: 64px;
-  margin: var(--gap-action) 0 0;
-  padding: 0 var(--space-4);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-card);
-  background: var(--surface);
-  color: var(--value);
-  font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .14em;
-  text-align: left;
-  cursor: pointer
-}
-
-.next-board:hover,
-.next-board:focus-visible {
-  border-color: var(--line-hover)
-}
-
-.next-board:active {
-  background-color: color-mix(in srgb, var(--surface), var(--tint) 4%)
-}
-
-.next-board small {
-  color: var(--mute);
-  font-size: var(--fs-label-12)
+  justify-content: flex-end;
+  margin-top: var(--gap-action)
 }
 
 .next-board b {
-  flex: 1;
-  font-weight: inherit
-}
-
-.next-board span {
-  color: var(--label);
-  font-size: var(--fs-copy-14)
-}
-
-@media not ((max-width: 760px) or ((max-height: 500px) and (pointer: coarse))) {
-  .next-board {
-    width: min(100%, 360px);
-    margin-left: auto
-  }
+  font-weight: inherit;
+  color: var(--value)
 }
