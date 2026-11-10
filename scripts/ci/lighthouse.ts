@@ -10,10 +10,12 @@
  *   npx tsx scripts/ci/lighthouse.ts --base https://matrix.reactopia.me/   → the live site
  *   npx tsx scripts/ci/lighthouse.ts --routes /,/browse/ --forms mobile --out lh
  *   npx tsx scripts/ci/lighthouse.ts --routes /mosaic/ --runs 3 --trace   → 3 runs each, the median-TBT one reported
+ *   npx tsx scripts/ci/lighthouse.ts --routes /,/mosaic/ --forms mobile --timeout 90   → a PR push: bounded and quick
  *
  * `--runs N` audits each route N times and reports the run with the median TBT (a single run on a shared runner swings
  * by a third); the TBT column lists every run. `--trace` keeps each run's trace beside its report (`--save-assets`),
- * to read the long tasks in the Performance panel.
+ * to read the long tasks in the Performance panel. `--timeout S` kills one audit after S seconds (default 180),
+ * and it gets one retry.
  * Writes `<out>/<route>-<form>.json` (the full report) and `<out>/summary.md`, and appends the summary to
  * $GITHUB_STEP_SUMMARY when it is set. Chrome comes from $CHROME or the usual paths (scripts/lib/cdp.ts).
  * Lighthouse runs through `pnpm dlx` at a pinned version: it is a CI tool, not a dependency.
@@ -36,6 +38,7 @@ const routes = (opt('--routes') ?? ROUTES.join(',')).split(',').map(s => s.trim(
 const forms = (opt('--forms') ?? 'mobile,desktop').split(',').filter(f => f === 'mobile' || f === 'desktop')
 const out = resolve(opt('--out') ?? join('.snapshots', 'lighthouse'))
 const runs = Math.max(1, Math.min(9, Number(opt('--runs')) || 1)), trace = argv.includes('--trace')
+const limit = Math.max(30, Math.min(600, Number(opt('--timeout')) || 180)) * 1000
 const chrome = findChrome()
 if (!chrome) { console.error('no Chrome found (set $CHROME)'); process.exit(2) }
 mkdirSync(out, { recursive: true })
@@ -46,10 +49,10 @@ const base = opt('--base') ?? server!.url
 interface Audit { id: string; title: string; score: number | null; scoreDisplayMode: string; displayValue?: string; numericValue?: number }
 interface Report { categories: Record<string, { score: number | null; auditRefs: { id: string; weight: number }[] }>; audits: Record<string, Audit>; runtimeError?: { message: string } }
 
-/** Run a command without blocking this process's event loop; resolves its exit code (null when killed at 180 s). */
+/** Run a command without blocking this process's event loop; resolves its exit code (null when killed at `--timeout`). */
 const exec = (cmd: string, args: string[]) => new Promise<number | null>(done => {
   const child = spawn(cmd, args, { stdio: ['ignore', 'ignore', 'inherit'], env: { ...process.env, CHROME_PATH: chrome }, shell: process.platform === 'win32' })
-  const timer = setTimeout(() => child.kill('SIGKILL'), 180_000)
+  const timer = setTimeout(() => child.kill('SIGKILL'), limit)
   child.on('error', () => { clearTimeout(timer); done(null) })
   child.on('close', code => { clearTimeout(timer); done(code) })
 })

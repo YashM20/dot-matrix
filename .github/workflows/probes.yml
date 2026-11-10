@@ -185,7 +185,8 @@ jobs:
     needs: build
     if: github.event_name != 'workflow_dispatch' || inputs.lighthouse != 'none'
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    # a PR push audits three key routes on mobile, once each (about 2 minutes); main and dispatches run the full set
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 12 || 60 }}
     strategy:
       fail-fast: false
       matrix:
@@ -201,15 +202,17 @@ jobs:
 
       - name: Lighthouse
         # a step limit below the job's, so a long focused run (lighthouse_runs) still uploads what it measured
-        timeout-minutes: 50
+        timeout-minutes: ${{ github.event_name == 'pull_request' && 10 || 50 }}
         env:
           TARGET: ${{ matrix.target }}
+          EVENT: ${{ github.event_name }}
           LH_ROUTES: ${{ github.event_name == 'workflow_dispatch' && inputs.lighthouse_routes || '' }}
           LH_RUNS: ${{ github.event_name == 'workflow_dispatch' && inputs.lighthouse_runs || '1' }}
         run: |
           set -- --out lh --runs "$LH_RUNS"
           [ "$TARGET" = live ] && set -- "$@" --base https://matrix.reactopia.me/
           [ -n "$LH_ROUTES" ] && set -- "$@" --routes "$LH_ROUTES" --trace
+          [ "$EVENT" = pull_request ] && set -- "$@" --routes /,/mosaic/,/widget/timer/ --forms mobile --timeout 90
           pnpm exec tsx scripts/ci/lighthouse.ts "$@"
 
       - name: Upload reports
