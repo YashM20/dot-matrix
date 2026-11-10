@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore, type ComponentType, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { Board, VIEW_EXIT_MS } from './components/Board'
 import { LoadBoundary, LoadFailed } from './components/LoadBoundary'
@@ -31,6 +31,7 @@ import './site/app/dots.css'
 import './site/app/xray.css'
 import './site/app/tips.css'
 import './site/app/palette.css'
+import './site/app/pills.css'
 import './site/app/raised.css'
 import './site/app/tap.css'
 import './site/app/skins.css'
@@ -65,6 +66,11 @@ const useIdle = () => {
 const viewFailed = <section className="view-loading"><LoadFailed what="This view" /></section>
 // static markup: 'use no memo' keeps the compiler's memo slots (first-load bytes) out of these two
 const slot = <div className="home-hero-slot" />
+// the hero floats beside the header from 1280 px (src/site/app/hero.css) and follows the board below that: it sits
+// there in the DOM too, so the Tab order matches what the eye sees (a phone's first stop is not at the page's end)
+const HERO_BESIDE = '(min-width: 1280px)'
+const onHeroBeside = (cb: () => void) => { const m = window.matchMedia(HERO_BESIDE); m.addEventListener('change', cb); return () => m.removeEventListener('change', cb) }
+const useHeroBeside = () => useSyncExternalStore(onHeroBeside, () => window.matchMedia(HERO_BESIDE).matches, () => true)
 function Hero() {
   'use no memo'
   return <div className="home-hero">{useIdle() ? <LoadBoundary fallback={slot}><Suspense fallback={slot}><HeroCard /></Suspense></LoadBoundary> : slot}</div>
@@ -188,12 +194,13 @@ const toTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia('(pref
  * Phones: the bottom tab bar (EXPLORE / MAKE / ABOUT, then TOOLS for the dock, the DISPLAY menu and the
  * palette). The current view is `aria-current="page"`; tapping it again goes back to the top, and on
  * EXPLORE at the top it opens every board. TOOLS carries a dot while X-ray or the time machine is on.
+ * The widget page has the bar too, with no current view (`view` unset): each view leaves the card's page.
  */
-function TabBar({ view, onView, onBoards }: { view: View; onView: (v: View) => void; onBoards: () => void }) {
+function TabBar({ view, onView, onBoards }: { view?: View; onView: (v: View) => void; onBoards?: () => void }) {
   const busy = useXR(s => s.global || s.on.size > 0 || s.frozen), views = useViews()
   const pick = (v: View) => {
     if (v !== view) { window.scrollTo(0, 0); return onView(v) }
-    if (v === 'EXPLORE' && window.scrollY < 8) onBoards(); else toTop()
+    if (v === 'EXPLORE' && window.scrollY < 8) onBoards?.(); else toTop()
   }
   return <nav className="tabbar" aria-label="Main">
     {views.map(v => <button key={v} type="button" aria-current={view === v ? 'page' : undefined} onClick={() => pick(v)}><Glyph rows={GLYPHS[v]} /><span>{v}</span></button>)}
@@ -282,12 +289,14 @@ export default function App() {
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
   const [shown, leaving] = useExitSwap(`${place}|${board}`, s => reduced || !s.startsWith('EXPLORE|') ? 0 : VIEW_EXIT_MS)
   const [shownPlace, shownBoard] = shown.split('|') as [string, string]
+  const heroBeside = useHeroBeside()
   if (widget) return <div className="shell shell--widget">
     <SkipLink />
     <main id="main" tabIndex={-1}>
       <LoadBoundary key={widget.key} fallback={viewFailed}><Suspense fallback={<section className="view-loading" aria-busy="true" />}><WidgetPage route={widget} onOpen={openWidget} onBoard={leaveWidget} /></Suspense></LoadBoundary>
       <CommandLayer tab="EXPLORE" board={board} setTab={go} setBoard={pickBoard} />
     </main>
+    <TabBar onView={v => { if (v === 'EXPLORE') return leaveWidget(board); setWidget(undefined); setView(v) }} />
     <SiteFooter onAbout={() => { setWidget(undefined); setView('ABOUT') }} />
   </div>
   const title = view === 'MAKE' ? 'MAKE' : view === 'EXPLORE' ? boardLabel(board) : view
@@ -317,11 +326,12 @@ export default function App() {
     <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
     {shownPlace === 'EXPLORE' ? (
       <section className="boards-view" role="tabpanel" aria-labelledby="tab-EXPLORE">
-        {shownBoard === boardIds[0] && <Hero />}
+        {shownBoard === boardIds[0] && heroBeside && <Hero />}
         <IntroLine />
         <BoardPicker board={board} onPick={setBoard} onAll={() => setBoards(true)} />
         <Board key={shownBoard} id={shownBoard} leaving={leaving} />
         <NextBoard board={board} onPick={setBoard} />
+        {shownBoard === boardIds[0] && !heroBeside && <Hero />}
       </section>
     ) : shownPlace === 'BROWSE' ? (
       <section className="browse-view" role="tabpanel" aria-labelledby="tab-BROWSE">

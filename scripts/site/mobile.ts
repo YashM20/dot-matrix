@@ -28,10 +28,7 @@ import { tabWalk } from '../lib/site-probe'
  * Today's failures (docs/POLISH-PLAN.md §2). Each P1–P3 task deletes its ids when its fix lands, which makes the
  * check a gate. Seeded from a run against `pnpm dev`.
  */
-const KNOWN: readonly string[] = [
-  // N3 (P1-B): the widget page has no tab bar
-  'tabbar:widget',
-]
+const KNOWN: readonly string[] = []
 
 const base = (process.argv[2] ?? 'http://localhost:4317/').replace(/\/?$/, '/')
 const only = process.argv[3]?.split(',')
