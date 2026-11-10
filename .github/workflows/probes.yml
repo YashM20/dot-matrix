@@ -36,6 +36,12 @@ on:
       lighthouse:
         description: 'Lighthouse on the SEO routes (scripts/ci/lighthouse.ts): build, live, both or none'
         default: build
+      lighthouse_routes:
+        description: 'Lighthouse on these routes only, e.g. /,/mosaic/ (empty = the SEO routes); a focused run keeps the traces'
+        default: ''
+      lighthouse_runs:
+        description: 'Lighthouse runs per route and form; the median-TBT run is reported'
+        default: '1'
 
 permissions:
   contents: read
@@ -179,7 +185,7 @@ jobs:
     needs: build
     if: github.event_name != 'workflow_dispatch' || inputs.lighthouse != 'none'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 60
     strategy:
       fail-fast: false
       matrix:
@@ -194,9 +200,17 @@ jobs:
           path: dist
 
       - name: Lighthouse
+        # a step limit below the job's, so a long focused run (lighthouse_runs) still uploads what it measured
+        timeout-minutes: 50
         env:
           TARGET: ${{ matrix.target }}
-        run: pnpm exec tsx scripts/ci/lighthouse.ts --out lh $([ "$TARGET" = live ] && echo --base https://matrix.reactopia.me/)
+          LH_ROUTES: ${{ github.event_name == 'workflow_dispatch' && inputs.lighthouse_routes || '' }}
+          LH_RUNS: ${{ github.event_name == 'workflow_dispatch' && inputs.lighthouse_runs || '1' }}
+        run: |
+          set -- --out lh --runs "$LH_RUNS"
+          [ "$TARGET" = live ] && set -- "$@" --base https://matrix.reactopia.me/
+          [ -n "$LH_ROUTES" ] && set -- "$@" --routes "$LH_ROUTES" --trace
+          pnpm exec tsx scripts/ci/lighthouse.ts "$@"
 
       - name: Upload reports
         if: always()
