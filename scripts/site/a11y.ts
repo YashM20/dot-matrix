@@ -5,7 +5,7 @@
  * `KNOWN` holds the serious and critical findings already listed on #187 with an owner issue: they print as known
  * and don't fail the run (scripts/lib/check.ts `knownChecker`). A summary table closes the run.
  *
- * Routes: home (ALL, #315), four boards (the first; mirror for the ⋯ target size), a widget page, about, a blog post, the essay and the
+ * Routes: home (ALL, #315), four boards (the first; mirror for the card row's target size), a widget page, about, a blog post, the essay and the
  * privacy page (`--all` adds every board, the blog index, the terms page and the 404 page). On the blog and legal pages
  * it also checks the shell (#187): SKIP TO CONTENT is the first stop and points at `<main>`, and the site nav and
  * footer sit outside `<main>`. Modes: the default dark theme and light (`--modes` takes any of

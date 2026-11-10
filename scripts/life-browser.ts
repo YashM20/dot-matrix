@@ -242,10 +242,8 @@ try {
       await p.cdp('Page.navigate', { url: `${server.url}pond/?probe=1` })
       const ready = await p.waitFor(`!!globalThis.__pondBoard && !!${mcard}?.querySelector('canvas,svg')`, READY_MS)
       await p.js(`${mcard}.scrollIntoView({ block: 'center' })`); await sleep(800)
-      // OPEN sits in the card's ⋯ menu (#181): open the menu, then its first item
-      await p.js(`${mcard}.querySelector('button[aria-haspopup="menu"]').click()`)
-      await p.waitFor(`!!${mcard}.querySelector('[role="menu"] [role="menuitem"]')`, 5000)
-      await p.js(`[...${mcard}.querySelectorAll('[role="menu"] [role="menuitem"]')].find(b => b.textContent === 'Open its page').click()`)
+      // OPEN → sits in the row under the card
+      await p.js(`${mcard}.parentElement.querySelector('.dot-card-row-open').click()`)
       const opened = await p.waitFor(`location.pathname === '/widget/pond-marble/' && !!document.querySelector('.wp [data-card-id="pond-marble"] canvas')`, 20000)
       await sleep(900)
       if (mode === 'vt') await p.shot(join(out, 'x1-vt-widget.png'))

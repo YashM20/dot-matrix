@@ -192,12 +192,12 @@ const MEASURE = (kind: string, H: number) => `(() => {
     }
     strip.scrollLeft = x0; strip.style.scrollSnapType = ''; strip.style.scrollBehavior = ''
   }
-  // chrome text under 12 px (outside cards; hidden and screen-reader-only text skipped)
+  // chrome text under 12 px (outside cards and the rows under them; hidden and screen-reader-only text skipped)
   let all = 0, small = 0
   const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
   for (let n = walk.nextNode(); n; n = walk.nextNode()) {
     const el = n.parentElement, t = n.textContent.replace(/\\s+/g, '')
-    if (!t || !el || el.closest('.dot-card, .sr-only, [aria-hidden="true"], script, style') || !vis(el)) continue
+    if (!t || !el || el.closest('.dot-card, .dot-card-row, .sr-only, [aria-hidden="true"], script, style') || !vis(el)) continue
     all += t.length; if (parseFloat(getComputedStyle(el).fontSize) < 12) small += t.length
   }
   const doc = document.documentElement

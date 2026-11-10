@@ -7,13 +7,15 @@
  *    a scroll to the bottom;
  *  - a shared query (`?tag=&q=`) opens filtered, BROWSE's old `?in=<board>` opens that board, a hostile query is
  *    cleaned, typing updates the URL and the polite count; the filters are labelled and reachable with Tab;
- *  - a card's ⋯ OPEN goes to its page and Back returns to ALL; a board link opens the board;
+ *  - a card's OPEN → (the row under it) goes to its page and Back returns to ALL; a board link opens the board;
  *  - no horizontal overflow at 390, 768, 1280 and 1920, in the dark and light schemes and a second accent.
- * `--shots <dir>` saves the PR screenshots there.
+ *  - the row under a card adds at most 24 px under it and every action in it is a 24 × 24 target or more.
+ * `--shots <dir>` saves the PR screenshots there; 3× close-ups of a card's row (rest, hover, focus, MORE open) go
+ * there too, or to `.snapshots/card-row/`.
  *
  * Needs a build: `npx vite build`, then `npx tsx scripts/site/browse-browser.ts [--shots <dir>]` (it serves dist/).
  */
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { launch, serveDist, sleep, type Page } from '../lib/cdp'
 import { checker } from '../lib/check'
@@ -34,6 +36,30 @@ const open = async (p: Page, url: string) => { await p.cdp('Page.navigate', { ur
 const count = (p: Page) => p.js<string>(`document.querySelector('.browse-count')?.textContent ?? ''`)
 const mountedCards = (p: Page) => p.js<number>(`document.querySelectorAll('.browse-item > .dot-card:not(.browse-ghost)').length`)
 const shot = async (p: Page, name: string) => { if (shots) await p.shot(join(shots, `${name}.png`)) }
+const ROWS = shots ?? join('.snapshots', 'card-row')
+mkdirSync(ROWS, { recursive: true })
+/** A 3× close-up of a slot's foot: the card's last 48 px, its row, and its MORE menu when open. */
+async function rowShot(p: Page, name: string, slot: string) {
+  const r = await p.js<{ x: number; y: number; w: number; h: number }>(`(() => { const s = document.querySelector(${JSON.stringify(slot)}), c = s.querySelector('.dot-card').getBoundingClientRect(),
+    b = s.getBoundingClientRect(), m = s.querySelector('.dot-card-menu')?.getBoundingClientRect(), bottom = Math.max(b.bottom, m ? m.bottom : 0)
+    return { x: Math.max(0, b.left - 8), y: c.bottom - 48 + scrollY, w: b.width + 16, h: bottom - c.bottom + 48 + 16 } })()`)
+  const res = await p.cdp('Page.captureScreenshot', { format: 'png', clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: 3 }, captureBeyondViewport: true })
+  writeFileSync(join(ROWS, `${name}.png`), Buffer.from(res.result.data, 'base64'))
+}
+/** The first slot's row at rest, under the pointer, with keyboard focus on OPEN, and with MORE open. */
+async function rowStates(p: Page, name: string, slot: string) {
+  await p.js(`document.querySelector(${JSON.stringify(slot)}).scrollIntoView({ block: 'center' }), document.activeElement?.blur(), 1`)
+  await p.mouse('mouseMoved', 2, 2); await sleep(400); await rowShot(p, `${name}-rest`, slot)
+  const o = await p.js<{ x: number; y: number }>(`(r => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 }))(document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-open').getBoundingClientRect())`)
+  await p.mouse('mouseMoved', o.x, o.y); await sleep(400); await rowShot(p, `${name}-hover`, slot)
+  await p.mouse('mouseMoved', 2, 2); await p.key('Shift', 'ShiftLeft', 16)
+  await p.js(`document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-open').focus(), 1`); await sleep(400); await rowShot(p, `${name}-focus`, slot)
+  await p.js(`document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-more').click(), 1`); await sleep(400); await rowShot(p, `${name}-more`, slot)
+  await p.key('Escape', 'Escape', 27); await sleep(150)
+}
+/** What the row costs: the px it adds under the card, and any action smaller than 24 × 24. */
+const rowSize = (p: Page, slot: string) => p.js<{ added: number; small: string[] }>(`(() => { const s = document.querySelector(${JSON.stringify(slot)}), c = s.querySelector('.dot-card').getBoundingClientRect(), r = s.querySelector('.dot-card-row').getBoundingClientRect()
+  return { added: Math.round(r.bottom - c.bottom), small: [...s.querySelectorAll('.dot-card-row a, .dot-card-row > button')].filter(e => e.getClientRects().length).map(e => [e.textContent, e.getBoundingClientRect()]).filter(([, b]) => b.width < 24 || b.height < 24).map(([t, b]) => t + ' ' + Math.round(b.width) + '×' + Math.round(b.height)) } })()`)
 
 const { url: base, stop } = await serveDist(4327)
 const p = await launch(1280, 900, { flags: { make: false, lab: false }, testHooks: false })
@@ -84,19 +110,41 @@ try {
   await p.key('Tab', 'Tab', 9); const f1 = await p.js<string>(`document.activeElement.closest('label')?.textContent.slice(0, 3) ?? document.activeElement.tagName`)
   assert('browse: Tab goes from the search to TAG', f1 === 'TAG', f1)
 
-  // card actions: ⋯ → open its page, Back → ALL again; a board link opens the board
-  await open(p, `${base}?tag=clock`); await p.waitFor(`!!document.querySelector('.browse-item .dot-card-more')`, 15000); await sleep(600)
+  // card actions: the row's OPEN → opens its page, Back → ALL again; a board link opens the board
+  await open(p, `${base}?tag=clock`); await p.waitFor(`!!document.querySelector('.browse-item .dot-card-row-open') && !!document.querySelector('.browse-item .dot-card')`, 15000); await sleep(600)
   const slug = await p.js<string>(`document.querySelector('.browse-item').dataset.slot`)
-  await p.js(`document.querySelector('.browse-item .dot-card-more').click(), 1`); await sleep(200)
-  await p.js(`[...document.querySelectorAll('.dot-card-menu [role=menuitem]')].find(b => /open/i.test(b.textContent)).click(), 1`)
+  const row = await p.js<{ open: string; name: string; more: string; href: string }>(`(r => ({ open: r.querySelector('.dot-card-row-open').getAttribute('aria-label'), name: r.querySelector('.dot-card-row-name').textContent,
+    more: r.querySelector('.dot-card-row-more').getAttribute('aria-label'), href: new URL(r.querySelector('.dot-card-row-open').href).pathname }))(document.querySelector('.browse-item .dot-card-row'))`)
+  assert('browse: the row names its card: OPEN is a link to its page, MORE says whose', row.open === `Open ${row.name}` && row.more === `More for ${row.name}` && row.href === `/widget/${slug}/`, JSON.stringify(row))
+  // MORE opens the menu under the row (below the card, never over it); Escape closes it back onto MORE
+  await p.js(`document.querySelector('.browse-item .dot-card-row-more').click(), 1`); await sleep(200)
+  const menu = await p.js<{ below: boolean; focus: boolean; items: string[] }>(`(() => { const it = document.querySelector('.browse-item'), m = it.querySelector('.dot-card-menu'), c = it.querySelector('.dot-card')
+    return { below: !!m && m.getBoundingClientRect().top >= c.getBoundingClientRect().bottom, focus: !!m && m.contains(document.activeElement), items: m ? [...m.querySelectorAll('[role^=menuitem]')].map(b => b.textContent) : [] } })()`)
+  assert('browse: MORE opens its menu under the card, focus on its first item', menu.below && menu.focus && menu.items.includes('Download PNG'), JSON.stringify(menu))
+  await p.key('Escape', 'Escape', 27); await sleep(150)
+  assert('browse: Escape closes the menu back onto MORE', await p.js<boolean>(`!document.querySelector('.dot-card-menu') && !!document.activeElement?.classList.contains('dot-card-row-more')`))
+  await p.js(`document.querySelector('.browse-item .dot-card-row-open').click(), 1`)
   const opened = await p.waitFor(`location.pathname === '/widget/${slug}/' && !!document.querySelector('.wp')`, 15000)
-  assert('browse: a card\'s ⋯ OPEN goes to its page, without the filters in its URL', opened && await p.js<string>('location.search') === '', await p.js<string>('location.href'))
+  assert('browse: a card\'s OPEN → goes to its page, without the filters in its URL', opened && await p.js<string>('location.search') === '', await p.js<string>('location.href'))
   await p.js('history.back(), 1')
   assert('browse: Back returns to ALL with the filter', await p.waitFor(`location.pathname === '/' && /tag=clock/.test(location.search) && !!document.querySelector('.browse-count')`, 15000))
   await sleep(500)
   const boardPath = await p.js<string>(`new URL(document.querySelector('.browse-board').href).pathname`)
   await p.js(`document.querySelector('.browse-board').click(), 1`)
   assert('browse: a board link opens that board', await p.waitFor(`location.pathname === ${JSON.stringify(boardPath)} && !!document.querySelector('.board-grid .dot-card')`, 15000), await p.js<string>('location.href'))
+
+  // the row under each card: compact (≤ 24 px under the card), 24 px targets; close-ups on a board and on ALL
+  await sleep(1200)
+  const onBoard = await rowSize(p, '.board-grid > .dot-slot')
+  assert('browse: a board card row adds ≤ 24 px and its actions are ≥ 24 × 24', onBoard.added <= 24 && !onBoard.small.length, JSON.stringify(onBoard))
+  console.log(`card row: adds ${onBoard.added} px under a board card`)
+  await rowStates(p, 'row-board-dark', '.board-grid > .dot-slot')
+  for (const theme of ['dark_signal', 'light_signal']) {
+    await open(p, `${base}?theme=${theme}`); await p.waitFor(`!!document.querySelector('.browse-item > .dot-card:not(.browse-ghost)')`, 15000); await sleep(1200)
+    const onAll = await rowSize(p, '.browse-item')
+    assert(`browse: an ALL card row adds ≤ 24 px and its actions are ≥ 24 × 24 (${theme})`, onAll.added <= 24 && !onAll.small.length, JSON.stringify(onAll))
+    await rowStates(p, `row-all-${theme.split('_')[0]}`, '.browse-item')
+  }
 
   // every width, two schemes and a second accent: nothing overflows sideways
   const over: string[] = []
