@@ -213,20 +213,21 @@
   }
 
   .browse-field--q {
-    flex: 2 1 0;
+    flex: 2 1 160px;
     max-width: none
   }
 
   .browse-field:not(.browse-field--q) {
-    flex: 1 1 0
+    flex: 1 1 100px
   }
 
   .browse-field select {
     max-width: none
   }
 
+  /* the count opens the second row (too wide to join the fields), CLEAR beside it */
   .browse-count {
-    flex: 1 1 auto;
+    flex: 1 1 60%;
     align-self: center
   }
 
