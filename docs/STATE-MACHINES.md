@@ -18,7 +18,7 @@ Findings at a glance:
 |---|---|---|---|---|---|
 | B7-1 | media: camera | stuck UI | Confirmed, fixed | #296 | #298 |
 | B6-1 | editor and IR worker | wrong output | Confirmed, fixed | #297 | #298 |
-| B6-3 | editor autosave | data loss (two tabs) | Likely, owner decision | | |
+| B6-3 | editor autosave | data loss (two tabs) | Confirmed, fixed | #304 | #PRNUM |
 | B7-2 | media: mic | stuck UI | Likely | | |
 | B7-3 | media: HAND mode | stuck UI | Likely | | |
 | B4-1 | card input | stuck press | Likely | | |
@@ -229,12 +229,23 @@ The worker client: `src/engine/ir/sandbox/remote.ts:74` (`irRemote`). The worker
 | any | document edit | save scheduled |
 | any | `resetEditorDoc` | no more saves; the seed is written |
 
+**Two tabs** (`src/components/editor/otherTab.ts`, since #304). Explicit: `useOtherTab.incoming`, the JSON another tab saved, or null. Nothing is locked or merged; each tab still autosaves its own document.
+
+| from | event | guard | to | side effects |
+|---|---|---|---|---|
+| quiet | `storage` event on `dot480.editor.v1` | the value differs from what this tab would save now | changed | "Changed in another tab." with RELOAD and KEEP MINE, in a polite status region |
+| quiet | the same event | an echo of this tab's own document, or the key cleared | quiet | |
+| changed | RELOAD | the other version opens | quiet | this tab takes it with a fresh undo history; saving it back is an echo, so the other tab stays quiet |
+| changed | RELOAD | it doesn't open | quiet | this tab keeps its document and says why |
+| changed | KEEP MINE | | quiet | nothing else: this tab's next autosave replaces the other version |
+| changed | another save from the other tab | | changed | RELOAD opens the newest one |
+
 **Persists:** `localStorage['dot480.editor.v1']` (the document), `localStorage['dot480.editor.clip']` (the clipboard, shared across tabs through the `storage` event), the asset library. The worker's point store and the program cache live per page.
 
 **Findings**
 - **B6-1, Confirmed, fixed (#297, PR #298). Wrong output.** A layer whose source no longer compiles keeps its last good program (`doc.ts:222`, `compileIR`), but its builders passed the broken source to the worker (`remote.field(prog, l.src, …)`). The worker failed to compile it, replied `error`, and `remote.ts:168` paused the program, so the canvas showed PROGRAM PAUSED for a typo while the main thread drew the last good frame. Reproduced by a new check in `scripts/ir-worker.ts` (628 vs 4234 dots, state paused). Fix: the editor sends the source the kept program was compiled from (`sourceOf`, `doc.ts:221`).
 - **B6-2, Not reachable.** A reply for an older source in the same slot would be cached under an input signature that has no source in it (`remote.ts:157`). Slot keys carry the source (`guardKey`, `doc.ts:211`; `thumb|<src>` in the remix graph), and `slotFor` empties the cache when the source changes (`remote.ts:183`).
-- **B6-3, Likely, data loss, owner decision.** Two tabs on MAKE each autosave their whole document to the same key (`store.ts:336`), and nothing listens for the other tab's save (`Editor.tsx:434` handles only the clipboard key). The last tab to save wins; the other tab's edits are gone on its next reload. MAKE is behind the `make` flag. Options: a `storage` listener that warns, or a per-tab lock.
+- **B6-3, Confirmed, fixed (#304, PR #PRNUM). Data loss.** Two tabs on MAKE each autosave their whole document to the same key (`store.ts:336`), and nothing listened for the other tab's save (`Editor.tsx:434` handled only the clipboard key). The last tab to save won; the other tab's edits were gone on its next reload, without a word. The owner chose a warning over a lock: the two-tab machine above. `scripts/editor-tabs.ts` (new, run by verify) plays the second tab through `storage` events in Node.
 - **B6-4, Not reachable.** The watchdog pauses the item the worker last announced (`remote.ts:144`), so a hang between two `start` messages would blame the previous program. The only work there is `compileUntrusted`, which is memoised and capped at 8192 characters.
 
 ### B7. Media: camera, mic and HAND mode
