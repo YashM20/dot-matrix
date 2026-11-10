@@ -9,7 +9,7 @@
  *    cleaned, typing updates the URL and the polite count; the filters are labelled and reachable with Tab;
  *  - a card's OPEN → (the row under it) goes to its page and Back returns to ALL; a board link opens the board;
  *  - no horizontal overflow at 390, 768, 1280 and 1920, in the dark and light schemes and a second accent.
- *  - the row under a card adds at most 24 px under it and every action in it is a 24 × 24 target or more.
+ *  - the row under a card adds at most 24 px under it (32 where touch rules apply) and every action in it is a 24 × 24 target or more.
  * `--shots <dir>` saves the PR screenshots there; 3× close-ups of a card's row (rest, hover, focus, MORE open) go
  * there too, or to `.snapshots/card-row/`.
  *
@@ -57,9 +57,9 @@ async function rowStates(p: Page, name: string, slot: string) {
   await p.js(`document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-more').click(), 1`); await sleep(400); await rowShot(p, `${name}-more`, slot)
   await p.key('Escape', 'Escape', 27); await sleep(150)
 }
-/** What the row costs: the px it adds under the card, and any action smaller than 24 × 24. */
-const rowSize = (p: Page, slot: string) => p.js<{ added: number; small: string[] }>(`(() => { const s = document.querySelector(${JSON.stringify(slot)}), c = s.querySelector('.dot-card').getBoundingClientRect(), r = s.querySelector('.dot-card-row').getBoundingClientRect()
-  return { added: Math.round(r.bottom - c.bottom), small: [...s.querySelectorAll('.dot-card-row a, .dot-card-row > button')].filter(e => e.getClientRects().length).map(e => [e.textContent, e.getBoundingClientRect()]).filter(([, b]) => b.width < 24 || b.height < 24).map(([t, b]) => t + ' ' + Math.round(b.width) + '×' + Math.round(b.height)) } })()`)
+/** What the row costs: the px it adds under the card (at most 24, or 32 where touch rules apply: ALL's old caption), and any action under 24 × 24. */
+const rowSize = (p: Page, slot: string) => p.js<{ added: number; max: number; small: string[] }>(`(() => { const s = document.querySelector(${JSON.stringify(slot)}), c = s.querySelector('.dot-card').getBoundingClientRect(), r = s.querySelector('.dot-card-row').getBoundingClientRect()
+  return { added: Math.round(r.bottom - c.bottom), max: matchMedia('(hover: none), (pointer: coarse)').matches ? 32 : 24, small: [...s.querySelectorAll('.dot-card-row a, .dot-card-row > button')].filter(e => e.getClientRects().length).map(e => [e.textContent, e.getBoundingClientRect()]).filter(([, b]) => b.width < 24 || b.height < 24).map(([t, b]) => t + ' ' + Math.round(b.width) + '×' + Math.round(b.height)) } })()`)
 
 const { url: base, stop } = await serveDist(4327)
 const p = await launch(1280, 900, { flags: { make: false, lab: false }, testHooks: false })
@@ -136,13 +136,13 @@ try {
   // the row under each card: compact (≤ 24 px under the card), 24 px targets; close-ups on a board and on ALL
   await sleep(1200)
   const onBoard = await rowSize(p, '.board-grid > .dot-slot')
-  assert('browse: a board card row adds ≤ 24 px and its actions are ≥ 24 × 24', onBoard.added <= 24 && !onBoard.small.length, JSON.stringify(onBoard))
+  assert('browse: a board card row adds ≤ 24 px (32 on touch) and its actions are ≥ 24 × 24', onBoard.added <= onBoard.max && !onBoard.small.length, JSON.stringify(onBoard))
   console.log(`card row: adds ${onBoard.added} px under a board card`)
-  await rowStates(p, 'row-board-dark', '.board-grid > .dot-slot')
+  await rowStates(p, 'row-board', '.board-grid > .dot-slot')
   for (const theme of ['dark_signal', 'light_signal']) {
     await open(p, `${base}?theme=${theme}`); await p.waitFor(`!!document.querySelector('.browse-item > .dot-card:not(.browse-ghost)')`, 15000); await sleep(1200)
     const onAll = await rowSize(p, '.browse-item')
-    assert(`browse: an ALL card row adds ≤ 24 px and its actions are ≥ 24 × 24 (${theme})`, onAll.added <= 24 && !onAll.small.length, JSON.stringify(onAll))
+    assert(`browse: an ALL card row adds ≤ 24 px (32 on touch) and its actions are ≥ 24 × 24 (${theme})`, onAll.added <= onAll.max && !onAll.small.length, JSON.stringify(onAll))
     await rowStates(p, `row-all-${theme.split('_')[0]}`, '.browse-item')
   }
 

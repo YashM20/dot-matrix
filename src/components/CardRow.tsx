@@ -66,7 +66,7 @@ export function CardRow({ id, name, href, onOpen, meta }: CardRowProps) {
   const pick = (a: CardAction) => () => { close(); run(a) }
   return <div ref={row} className={`dot-card-row${opened ? ' open' : ''}`}>
     <p className="dot-card-row-meta"><span className="dot-card-row-name" aria-hidden="true">{name}</span>{meta}</p>
-    <a className="dot-card-row-open" href={href} aria-label={`Open ${name}`} onClick={open}>OPEN<span aria-hidden="true"> →</span></a>
+    <a className="dot-card-row-open" href={href} aria-label={`Open ${name}`} onClick={open}>OPEN<span aria-hidden="true">&nbsp;→</span></a>
     <button type="button" className="dot-card-row-link" aria-label={`Copy link to ${name}`} onClick={() => run('link')}>LINK</button>
     <button ref={more} type="button" className="dot-card-row-more" aria-label={`More for ${name}`} aria-haspopup="menu" aria-expanded={opened} onClick={() => setMenu(opened ? false : acts() ?? null)}>MORE</button>
     {opened && <div className="dot-card-menu" role="menu" aria-label={`${name}: more`} onKeyDown={onMenuKey}>
