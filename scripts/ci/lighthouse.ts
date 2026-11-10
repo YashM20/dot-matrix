@@ -18,7 +18,7 @@
  * $GITHUB_STEP_SUMMARY when it is set. Chrome comes from $CHROME or the usual paths (scripts/lib/cdp.ts).
  * Lighthouse runs through `pnpm dlx` at a pinned version: it is a CI tool, not a dependency.
  */
-import { spawnSync } from 'node:child_process'
+import { spawn } from 'node:child_process'
 import { appendFileSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { findChrome } from '../lib/cdp'
@@ -46,6 +46,13 @@ const base = opt('--base') ?? server!.url
 interface Audit { id: string; title: string; score: number | null; scoreDisplayMode: string; displayValue?: string; numericValue?: number }
 interface Report { categories: Record<string, { score: number | null; auditRefs: { id: string; weight: number }[] }>; audits: Record<string, Audit>; runtimeError?: { message: string } }
 
+/** Run a command without blocking this process's event loop; resolves its exit code (null when killed at 180 s). */
+const exec = (cmd: string, args: string[]) => new Promise<number | null>(done => {
+  const child = spawn(cmd, args, { stdio: ['ignore', 'ignore', 'inherit'], env: { ...process.env, CHROME_PATH: chrome }, shell: process.platform === 'win32' })
+  const timer = setTimeout(() => child.kill('SIGKILL'), 180_000)
+  child.on('error', () => { clearTimeout(timer); done(null) })
+  child.on('close', code => { clearTimeout(timer); done(code) })
+})
 const ms = (a?: Audit) => (a?.numericValue === undefined ? '-' : `${(a.numericValue / 1000).toFixed(2)} s`)
 const pct = (s: number | null | undefined) => (s === null || s === undefined ? '-' : String(Math.round(s * 100)))
 const rows: string[] = [], losses = new Map<string, { title: string; where: string[] }>()
@@ -56,14 +63,15 @@ try {
     const url = new URL(route.replace(/^\//, ''), base).href
     const args = (f: string) => ['dlx', LIGHTHOUSE, url, '--quiet', '--output=json', `--output-path=${f}`, `--only-categories=${CATEGORIES.join(',')}`,
       '--chrome-flags=--headless=new --no-sandbox --disable-gpu', '--max-wait-for-load=45000', ...(form === 'desktop' ? ['--preset=desktop'] : []), ...(trace ? ['--save-assets'] : [])]
-    const run = (f: string) => { rmSync(f, { force: true }); const r = spawnSync('pnpm', args(f), { stdio: ['ignore', 'ignore', 'inherit'], env: { ...process.env, CHROME_PATH: chrome }, shell: process.platform === 'win32', timeout: 180_000 }); return r.status === 0 && existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) as Report : undefined }
+    // async on purpose: the server above lives in this process, and a blocking spawnSync leaves it unable to answer
+    const run = async (f: string) => { rmSync(f, { force: true }); const status = await exec('pnpm', args(f)); return status === 0 && existsSync(f) ? JSON.parse(readFileSync(f, 'utf8')) as Report : undefined }
     const done: Report[] = []
     let lhr: Report | undefined
     for (let i = 1; i <= runs; i++) {
       const f = runs > 1 ? join(out, `${slug}-${i}.json`) : file
       // one retry: a run on a shared runner now and then loses its trace (NO_NAVSTART)
-      lhr = run(f)
-      if (!lhr || lhr.runtimeError) lhr = run(f)
+      lhr = await run(f)
+      if (!lhr || lhr.runtimeError) lhr = await run(f)
       if (lhr && !lhr.runtimeError) done.push(lhr)
       console.log(`${route} ${form} run ${i}: TBT ${lhr?.audits['total-blocking-time']?.numericValue?.toFixed(0) ?? 'failed'} ms`)
     }
