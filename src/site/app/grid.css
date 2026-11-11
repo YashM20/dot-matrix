@@ -33,11 +33,15 @@
   --cols: calc(var(--board-cols-max) + 1)
 }
 
-/* wide and short screens: the column outgrows the 62svh cap, so the card stops and sits in the middle of it */
-.board-grid > .dot-card {
+/* each cell is a slot: the card, then its row (src/components/CardRow.css). Wide and short screens: the column
+   outgrows the 62svh cap, so the slot stops and sits in the middle of it */
+.board-grid > .dot-slot {
   width: 100%;
   max-width: var(--card-max);
-  justify-self: center;
+  justify-self: center
+}
+
+.board-grid > .dot-slot > .dot-card {
   container: card / inline-size
 }
 
@@ -164,13 +168,12 @@
   gap: 0
 }
 
-:root[data-grid="ruled"] .board-grid > .dot-card {
+/* the slot is the cell: its rules go round the card and its row */
+:root[data-grid="ruled"] .board-grid > .dot-slot {
   width: calc(100% + 1px);
   max-width: calc(var(--card-max) + 1px);
   margin: 0 -1px -1px 0;
-  border: 0;
-  border-radius: 0;
-  box-shadow: none;
+  padding-bottom: var(--space-1);
   background:
     var(--arm-x) left top / 5px 1px no-repeat, var(--arm-y) left top / 1px 5px no-repeat,
     var(--arm-x) right top / 5px 1px no-repeat, var(--arm-y) right top / 1px 5px no-repeat,
@@ -181,11 +184,30 @@
     var(--surface)
 }
 
+:root[data-grid="ruled"] .board-grid > .dot-slot > .dot-card {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: none
+}
+
+/* the row lines up with the card's padding inside the cell */
+:root[data-grid="ruled"] .board-grid > .dot-slot > .dot-card-row {
+  padding-inline: var(--spacing-cardPad) calc(var(--spacing-cardPad) - var(--space-1))
+}
+
 /* a bleed card's picture stops inside its rules */
-:root[data-grid="ruled"] .board-grid > .dot-card--bleed {
+:root[data-grid="ruled"] .board-grid > .dot-slot > .dot-card--bleed {
   padding: 1px
 }
 
-:root[data-grid="ruled"] .board-grid > .dot-card.dot-card--engaged {
+:root[data-grid="ruled"] .board-grid > .dot-slot > .dot-card.dot-card--engaged {
   box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--red) 60%, transparent), var(--glow-halo)
+}
+
+/* touch: the row's 44 px hit areas reach 16 px below it (CardRow.css), so a ruled cell keeps that room */
+@media (hover: none), (pointer: coarse) {
+  :root[data-grid="ruled"] .board-grid > .dot-slot {
+    padding-bottom: var(--space-4)
+  }
 }

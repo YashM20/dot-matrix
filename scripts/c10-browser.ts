@@ -146,12 +146,12 @@ try {
   // ── per-card X while hovering
   if (run('card')) {
   await open('?board=metro'); await sleep(1500)
-  const p = await cardPoint('.board-view [data-xr-key]:nth-child(2)')
+  const p = await cardPoint('.board-view .dot-slot:nth-child(2) > [data-xr-key]')
   await move(p.x, p.y); await sleep(150)
   await key('x')
   // the overlay is a lazy chunk on a fresh page: wait for it
   await waitFor(`document.querySelectorAll('.xr-overlay').length > 0`, 4000)
-  check('X on a hovered card x-rays only that card', (await count('.xr-overlay')) === 1 && (await count('.board-view [data-xr-key]:nth-child(2) .xr-overlay')) === 1, `${await count('.xr-overlay')} overlays`)
+  check('X on a hovered card x-rays only that card', (await count('.xr-overlay')) === 1 && (await count('.board-view .dot-slot:nth-child(2) > [data-xr-key] .xr-overlay')) === 1, `${await count('.xr-overlay')} overlays`)
   await key('x')
   check('X again turns it off', (await count('.xr-overlay')) === 0)
 

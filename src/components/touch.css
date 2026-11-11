@@ -58,23 +58,11 @@
     font-size: var(--fs-tag-8)
   }
 
-  /* menu rows: full 44 px targets */
-  .dot-card-bar .dot-card-menu button {
-    min-height: var(--tap);
-    font-size: var(--fs-label-12)
-  }
-
-  /* ⋯ and DONE stay small in the card's top padding, but their hit area is 44 × 44 (an invisible margin);
-     ⋯ is as wide as its hit area, so the two areas sit side by side and never overlap */
+  /* DONE stays small in the card's top padding, but its hit area is 44 × 44 (an invisible margin) */
   .dot-card-bar .dot-card-done {
     position: relative
   }
 
-  .dot-card-bar .dot-card-more {
-    min-width: var(--tap)
-  }
-
-  .dot-card-bar .dot-card-more::after,
   .dot-card-bar .dot-card-done::after {
     content: "";
     position: absolute;
@@ -85,18 +73,8 @@
     transform: translate(-50%, -50%)
   }
 
-  /* ⋯ is a 24 px box from the card's top edge with its chip 2 px down (views.css): centre the 44 px area on the chip
-     (a bleed card's chip sits on the box's centre) */
-  .dot-card-bar .dot-card-more::after {
-    top: 8px
-  }
-
-  .dot-card--bleed .dot-card-bar .dot-card-more::after {
-    top: 50%
-  }
-
   /* a card that draws its own name in dots: the grey hint would sit on its dot text; on touch the
-     header hint is gone and only ⋯ (or DONE) stays */
+     header hint is gone and only DONE (while engaged) stays */
   .dot-card-bar > .dot-card-hint {
     display: none
   }

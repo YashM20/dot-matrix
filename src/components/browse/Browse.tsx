@@ -3,11 +3,12 @@
  * (whose board chips are the board filter), with a tag filter and a name search. It opens in a curated order
  * (`ORDERED`, ./data.ts). Lazy (its own chunk with its data and styles). The filters live in the URL query, so a
  * filtered view can be shared. The grid is windowed (`./useWindow.ts`): every result has a slot (a square placeholder
- * and a caption with links), and only slots near the screen mount their card, through the same `DotWidget` the
- * boards use, so the ⋯ actions behave the same. The result count is announced politely.
+ * and the card's row: OPEN →, its board, LINK, MORE), and only slots near the screen mount their card, through the
+ * same `DotWidget` and `CardRow` the boards use, so the actions behave the same. The result count is announced politely.
  */
 import { Suspense, use, useEffect, useId, useMemo, useRef, useState, type MouseEvent } from 'react'
 import { DotWidget } from '../DotWidget'
+import { CardRow } from '../CardRow'
 import { BoardTitle } from '../DotName'
 import { useMinuteTick } from '../Board'
 import { LoadBoundary, LoadFailed } from '../LoadBoundary'
@@ -91,11 +92,9 @@ export function Browse({ onBoard, onOpen, cardPath }: BrowseProps) {
       ? <ul className="browse-grid" data-density="standard" aria-labelledby={titleId}>
         {rows.map(r => <li key={r.slug} className="browse-item" data-slot={r.slug} ref={slot(r.slug)}>
           {mounted.has(r.slug) ? <LoadBoundary fallback={<Failed />}><Suspense fallback={<Ghost />}><Card row={r} tick={tick} /></Suspense></LoadBoundary> : <Ghost />}
-          <p className="browse-cap">
-            <a href={cardPath(r.slug)} onClick={e => go(e, () => onOpen(r.slug))}>{r.name}<span className="sr-only">: open its page</span></a>
-            <a href={`/${r.board}/`} className="browse-board" onClick={e => go(e, () => onBoard(r.board))} onPointerEnter={() => prefetchBoard(r.board)}>
-              <span className="sr-only">On the board </span>{boardLabel(r.board)}</a>
-          </p>
+          <CardRow id={r.slug} name={r.name} href={cardPath(r.slug)} onOpen={onOpen}
+            meta={<a href={`/${r.board}/`} className="browse-board" onClick={e => go(e, () => onBoard(r.board))} onPointerEnter={() => prefetchBoard(r.board)}>
+              <span className="sr-only">{r.name} is on the board </span>{boardLabel(r.board)}</a>} />
         </li>)}
       </ul>
       : <div className="browse-empty"><p>No card matches these filters.</p><button type="button" className="browse-clear" onClick={clear}>CLEAR THE FILTERS</button></div>}

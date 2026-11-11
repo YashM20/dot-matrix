@@ -182,13 +182,13 @@ export function DotWidget({ type, density, dotShape, roundness, size, theme: the
   const label = spoken ?? name
   const onAct = (a: CardAction) => cardAction(a, { key: xr.key, preset, data: merged, layers, grid, style, theme, animated: !!(animated ?? preset.animated) })
   return (
-    // a group (it holds the action strip); a static card's body is one dot-matrix picture (role="img"), an
+    // a group (it holds the strip); a static card's body is one dot-matrix picture (role="img"), an
     // interactive card's body holds its accessibility overlay (real controls)
     <div className={`dot-card${preset.bleed ? ' dot-card--bleed' : ''}${letGo ? ' dot-card--engaged' : ''}`} role="group" data-xr-key={xr.key} data-card-id={preset.id} aria-label={interactive ? label : name}
       {...(inset ? { 'data-scheme': scheme, 'data-accent': site.accent } : {})}>
       {preset.chrome !== 'dots' && <CardHead preset={preset} hint={hint} touchHint={touchHint} />}
-      {/* #181: one ⋯ in the card's top padding */}
-      <DotWidgetBar name={preset.name} hint={preset.chrome === 'dots' ? hint : undefined} touchHint={touchHint} letGo={letGo} xrOn={xr.on} xray={xray} make={make} onAct={onAct} />
+      {/* the hint on a dots-only card and DONE; the card's actions are in the row under it (CardRow) */}
+      <DotWidgetBar name={preset.name} cardKey={xr.key} hint={preset.chrome === 'dots' ? hint : undefined} touchHint={touchHint} letGo={letGo} xrOn={xr.on} xray={xray} make={make} onAct={onAct} />
       <div className="dot-card-body" role={interactive ? undefined : 'img'} aria-label={interactive ? undefined : label}>
         <DotCanvas layers={xr.layers} renderer={xr.renderer} onMode={xr.onMode} data={preset.media ? { ...merged, ...camera.data, ...hand.data } : { ...merged, ...hand.data }} grid={grid} style={style} theme={theme} animated={animated ?? preset.animated} fps={fps} tick={tick} boardOrder={boardOrder} burst={preset.burst} enter={enter} exit={exit} springKeys={preset.springKeys}
           controls={controls} onInput={interactive ? onInput : undefined} onEngage={interactive ? onEngage : undefined} />

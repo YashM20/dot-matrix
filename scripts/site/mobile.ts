@@ -152,10 +152,10 @@ async function fpsRow() {
     await cdp('Page.navigate', { url: `${base}${pick.board}/` })
     const card = `document.querySelector('[data-card-id="${id}"]')`
     if (!await waitFor(`!!${card}?.querySelector('canvas, svg')`, 20000)) return 'card did not render'
-    // X-ray lives in the card's ⋯ menu (#181)
-    await js(`${card}.querySelector('.dot-card-more')?.click()`)
-    const how = `[...${card}.querySelectorAll('.dot-card-menu [role^="menuitem"]')].find(b => /X-ray/.test(b.textContent))`
-    if (!await waitFor(`!!${how}`, 5000)) return 'no X-ray item in the ⋯ menu (xray flag off?)'
+    // X-ray lives in the MORE menu of the row under the card
+    await js(`${card}.parentElement.querySelector('.dot-card-row-more')?.click()`)
+    const how = `[...${card}.parentElement.querySelectorAll('.dot-card-menu [role^="menuitem"]')].find(b => /X-ray/.test(b.textContent))`
+    if (!await waitFor(`!!${how}`, 5000)) return 'no X-ray item in the MORE menu (xray flag off?)'
     await js(`${how}.click()`)
     const hud = `(${card}.textContent.match(/(\\d+)\\/(\\d+) FPS/) || [])[2]`
     return await waitFor(`!!${hud}`, 10000) ? Number(await js(hud)) : 'no X-ray fps HUD'
