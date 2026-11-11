@@ -45,7 +45,7 @@ async function rowShot(p: Page, name: string, slot: string) {
   const r = await p.js<{ x: number; y: number; w: number; h: number }>(`(() => { const s = document.querySelector(${JSON.stringify(slot)}), c = s.querySelector('.dot-card').getBoundingClientRect(),
     b = s.getBoundingClientRect(), m = s.querySelector('.dot-card-menu')?.getBoundingClientRect(), bottom = Math.max(b.bottom, m ? m.bottom : 0)
     return { x: Math.max(0, b.left - 8), y: c.bottom - 48 + scrollY, w: b.width + 16, h: bottom - c.bottom + 48 + 48 } })()`)
-  const res = await p.cdp('Page.captureScreenshot', { format: 'png', clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: 3 }, captureBeyondViewport: true })
+  const res = await p.cdp('Page.captureScreenshot', { format: 'png', clip: { x: r.x, y: r.y, width: r.w, height: r.h, scale: 3 } })
   writeFileSync(join(ROWS, `${name}.png`), Buffer.from(res.result.data, 'base64'))
 }
 /** The first slot's row at rest, under the pointer (Open's tooltip), with keyboard focus on Open, after Copy link, and
