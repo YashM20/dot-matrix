@@ -1,7 +1,7 @@
 /**
  * C10 (the explorable layer) in headless Chrome over CDP (Node's built-in WebSocket, no deps):
  * X-ray on three boards (hover tooltip, inspector, solo/mute, pixels unchanged once off), per-card X,
- * the time machine (T, scrub, Space), the ⌘K palette (search + open), the dot shell (help, ls, xray,
+ * the time machine (T, scrub, Space; a window blur ends a held T), SHARE on the card page (a cancelled press leaves no PNG), the ⌘K palette (search + open), the dot shell (help, ls, xray,
  * t, open, Tab completion, history across reopening, Ctrl+C / Ctrl+U, did-you-mean, the output log, focus back),
  * remix in DOTS and the Konami boss. Screenshots in `.snapshots/c10/`. X-ray is behind the `xray` flag
  * (src/site/flags.ts, off by default; flags come from localStorage, never the URL), so every page opens with `xray`
@@ -146,12 +146,12 @@ try {
   // ── per-card X while hovering
   if (run('card')) {
   await open('?board=metro'); await sleep(1500)
-  const p = await cardPoint('.board-view [data-xr-key]:nth-child(2)')
+  const p = await cardPoint('.board-view .dot-slot:nth-child(2) > [data-xr-key]')
   await move(p.x, p.y); await sleep(150)
   await key('x')
   // the overlay is a lazy chunk on a fresh page: wait for it
   await waitFor(`document.querySelectorAll('.xr-overlay').length > 0`, 4000)
-  check('X on a hovered card x-rays only that card', (await count('.xr-overlay')) === 1 && (await count('.board-view [data-xr-key]:nth-child(2) .xr-overlay')) === 1, `${await count('.xr-overlay')} overlays`)
+  check('X on a hovered card x-rays only that card', (await count('.xr-overlay')) === 1 && (await count('.board-view .dot-slot:nth-child(2) > [data-xr-key] .xr-overlay')) === 1, `${await count('.xr-overlay')} overlays`)
   await key('x')
   check('X again turns it off', (await count('.xr-overlay')) === 0)
 
@@ -178,6 +178,52 @@ try {
   await key(' ')
   check('Space resumes', !(await js(`!!document.querySelector('.xr-time')`)))
 
+  }
+  // ── hold T, then the window loses focus (docs/STATE-MACHINES.md A8.1): T let go in another window sends no keyup
+  // here, so the blur has to end the hold, or every pointer move keeps scrubbing the frozen clock
+  if (run('holdt')) {
+  await open('?board=levels', 'xray,-worker'); await sleep(1200)
+  const tKey = { key: 't', code: 'KeyT', windowsVirtualKeyCode: 84 }
+  await cdp('Input.dispatchKeyEvent', { type: 'keyDown', ...tKey, text: 't' })
+  await waitFor(`!!document.querySelector('.xr-time')`, 2000)
+  await move(600, 500); await sleep(120)
+  const t0 = await text('.xr-time-t')
+  await move(800, 500); await sleep(250)
+  const held = await text('.xr-time-t')
+  check('hold T and move the pointer: it scrubs the clock', held !== t0, `${t0} → ${held}`)
+  await js(`(dispatchEvent(new Event('blur')), 1)`)
+  await move(600, 500); await sleep(120); await move(1100, 500); await sleep(250)
+  const after = await text('.xr-time-t')
+  check('hold T, the window loses focus: the pointer no longer scrubs', after === held, `${held} → ${after}`)
+  await cdp('Input.dispatchKeyEvent', { type: 'keyUp', ...tKey })
+  await js(`document.activeElement?.blur()`)
+  await key(' ')
+  }
+  // ── SHARE on the card page (A9.1): a press that ends off the button (no click) leaves no PNG for a later keyboard SHARE
+  if (run('share')) {
+  // a Web Share stand-in (headless Linux Chrome has none): it records each shared PNG as `bytes:hash`
+  const stub = (await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `window.__shared=[];navigator.canShare=()=>true;navigator.share=async d=>{const f=d.files&&d.files[0];if(!f){window.__shared.push('link');return}const b=new Uint8Array(await f.arrayBuffer());let h=0;for(let i=0;i<b.length;i++)h=(h*31+b[i])>>>0;window.__shared.push(b.length+':'+h)}` })).result.identifier
+  await open('widget/settings/'); await sleep(1200)
+  const btn = await js(`(() => { const b = document.querySelector('.wp-actions button[aria-label="Share"]'); if (!b) return null; b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } })()`) as { x: number; y: number } | null
+  check('card page: SHARE shows where Web Share exists', !!btn)
+  if (btn) {
+    await cdp('Input.dispatchMouseEvent', { type: 'mousePressed', x: btn.x, y: btn.y, button: 'left', clickCount: 1 })
+    await move(btn.x, btn.y + 240)
+    await cdp('Input.dispatchMouseEvent', { type: 'mouseReleased', x: btn.x, y: btn.y + 240, button: 'left', clickCount: 1 })
+    await sleep(300)
+    await js(`(window.dot480.setTheme({ accent: 'cobalt' }), 1)`)
+    await waitFor(`document.documentElement.dataset.accent === 'cobalt'`, 3000); await sleep(400)
+    await js(`(document.querySelector('.wp-actions button[aria-label="Share"]').focus(), 1)`)
+    await key(' ')
+    await waitFor(`window.__shared.length === 1`, 8000)
+    await key(' ')
+    await waitFor(`window.__shared.length === 2`, 8000)
+    const shared = await js(`window.__shared`) as string[]
+    check('card page: a keyboard SHARE after a cancelled press shares the card as it is now (theme changed in between)',
+      shared.length === 2 && shared[0] !== 'link' && shared[0] === shared[1], shared.join(' vs '))
+    await js(`(window.dot480.setTheme({ accent: 'signal' }), 1)`)
+  }
+  await cdp('Page.removeScriptToEvaluateOnNewDocument', { identifier: stub })
   }
   // ── ⌘K palette
   if (run('palette')) {

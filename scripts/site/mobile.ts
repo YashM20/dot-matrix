@@ -19,6 +19,7 @@ import { existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, 
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { boardIds } from '../../src/widgets/manifest'
+import { pageMeta } from '../../src/site/meta'
 import { launch } from '../lib/cdp'
 import { knownChecker } from '../lib/check'
 import { tabWalk } from '../lib/site-probe'
@@ -27,10 +28,7 @@ import { tabWalk } from '../lib/site-probe'
  * Today's failures (docs/POLISH-PLAN.md §2). Each P1–P3 task deletes its ids when its fix lands, which makes the
  * check a gate. Seeded from a run against `pnpm dev`.
  */
-const KNOWN: readonly string[] = [
-  // N3 (P1-B): the widget page has no tab bar
-  'tabbar:widget',
-]
+const KNOWN: readonly string[] = []
 
 const base = (process.argv[2] ?? 'http://localhost:4317/').replace(/\/?$/, '/')
 const only = process.argv[3]?.split(',')
@@ -154,10 +152,10 @@ async function fpsRow() {
     await cdp('Page.navigate', { url: `${base}${pick.board}/` })
     const card = `document.querySelector('[data-card-id="${id}"]')`
     if (!await waitFor(`!!${card}?.querySelector('canvas, svg')`, 20000)) return 'card did not render'
-    // X-ray lives in the card's ⋯ menu (#181)
-    await js(`${card}.querySelector('.dot-card-more')?.click()`)
-    const how = `[...${card}.querySelectorAll('.dot-card-menu [role^="menuitem"]')].find(b => /X-ray/.test(b.textContent))`
-    if (!await waitFor(`!!${how}`, 5000)) return 'no X-ray item in the ⋯ menu (xray flag off?)'
+    // X-ray lives in the MORE menu of the row under the card
+    await js(`${card}.parentElement.querySelector('.dot-card-row-more')?.click()`)
+    const how = `[...${card}.parentElement.querySelectorAll('.dot-card-menu [role^="menuitem"]')].find(b => /X-ray/.test(b.textContent))`
+    if (!await waitFor(`!!${how}`, 5000)) return 'no X-ray item in the MORE menu (xray flag off?)'
     await js(`${how}.click()`)
     const hud = `(${card}.textContent.match(/(\\d+)\\/(\\d+) FPS/) || [])[2]`
     return await waitFor(`!!${hud}`, 10000) ? Number(await js(hud)) : 'no X-ray fps HUD'
@@ -177,21 +175,24 @@ try {
   await cdp('Emulation.setDeviceMetricsOverride', { width: W, height: H, deviceScaleFactor: 1, mobile: true })
   await cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
   const boardReady = `!!document.querySelector('.board-grid canvas, .board-grid svg')`
+  // `/` is ALL (#315): every card in one windowed grid
+  const allReady = `!!document.querySelector('.browse-grid canvas, .browse-grid svg')`
 
   if (!only || only.includes('first-load')) {
-    // first load: entry + static imports + the default board only
+    // first load: entry + static imports, then ALL's lazy chunk and the boards of the cards on screen
     await cdp('Page.navigate', { url: base })
-    check('home opens the first board', await waitFor(boardReady))
+    check('home opens ALL', await waitFor(allReady))
     // everything fetched must be the entry or one of its modulepreloads (the static closure): no lazy chunk
     const first = await jsFiles(), html = await (await fetch(base)).text()
     const preload = new Set([...html.matchAll(/(?:src|href)="\/assets\/([^"]+\.js)"/g)].map(m => m[1]))
     // after first paint, by design: the board blurbs (UX U1), the command layer, mounted once the page is idle (C10),
     // and the phone sheets it warms (the board sheet, the sheet itself, the display list); the home's hero card and
-    // live number band (T2: the `home` chunk and the halftone it draws with), mounted once the page is idle; and the
-    // home board itself (`henry`), which loads like every other board since T4b took the widget registry off first load
+    // live number band (T2: the `home` chunk and the halftone it draws with), mounted once the page is idle; and ALL
+    // (#315: its `Browse` chunk and its card names) with the board chunks of the cards it mounts on screen, which load
+    // like any board since T4b took the widget registry off first load
     // A deferred chunk brings its own static imports (shared chunks named after a module: `text`, `ops`, `posts`, …),
     // so those count too when dist/ is here to read them from
-    const deferred = /^(sampleWorker|blurbs|CommandLayer|Palette|Shell|fuzzy|describe|BoardSheet|Sheet|SkinList|useSwipeDown|home|halftone|mask|henry)-/
+    const deferred = new RegExp(`^(sampleWorker|blurbs|CommandLayer|Palette|Shell|fuzzy|describe|BoardSheet|Sheet|SkinList|useSwipeDown|home|halftone|mask|Browse|names|catalog|${boardIds.join('|')})-`)
     const allowed = staticClosure([...preload, ...first.filter(f => deferred.test(f))])
     const extra = first.filter(f => !preload.has(f) && !deferred.test(f) && !allowed.has(f))
     check('first load fetches only the entry and its static imports', extra.length === 0, `${first.length} JS files${extra.length ? `; lazy: ${extra.join(', ')}` : ''}`)
@@ -203,16 +204,18 @@ try {
     // deep links
     await cdp('Page.navigate', { url: `${base}light/` })
     check('/light/ opens the light board', await waitFor(`document.querySelector('.board-tabs .selected')?.textContent === 'LIGHT' && ${boardReady}`))
-    check('/light/ sets the title and og:image', await js(`document.title.startsWith('LIGHT') && document.querySelector('meta[property="og:image"]').content.endsWith('/og/light.png')`))
+    // titles are search titles (`searchTitle`, src/site/meta.ts: `Light · Matrix`), the same in og:title and twitter:title
+    const title = (id: string) => JSON.stringify(pageMeta(id).title), metaIs = (key: string, attr = 'property') => `document.querySelector('meta[${attr}="${key}"]')?.content`
+    check('/light/ sets the title, og:title, twitter:title and og:image', await js(`document.title === ${title('light')} && ${metaIs('og:title')} === ${title('light')} && ${metaIs('twitter:title', 'name')} === ${title('light')} && !!${metaIs('og:image')}?.endsWith('/og/light.png')`), await js(`document.title + ' | ' + ${metaIs('og:image')}`))
     await cdp('Page.navigate', { url: `${base}?board=mosaic&worker=1` })
     await waitFor(boardReady)
     check('?board=mosaic moves the address bar to /mosaic/ and keeps other params', await js(`location.pathname === '/mosaic/' && location.search === '?worker=1'`), await js('location.href'))
     await js(`[...document.querySelectorAll('.board-tabs button')].find(b => b.textContent === 'CINEMA').click()`)
-    check('picking a board updates path and title', await waitFor(`location.pathname === '/cinema/' && document.title.startsWith('CINEMA')`))
+    check('picking a board updates path, title and og:image', await waitFor(`location.pathname === '/cinema/' && document.title === ${title('cinema')} && !!${metaIs('og:image')}?.endsWith('/og/cinema.png')`), await js(`location.pathname + ' | ' + document.title`))
     const og = await fetch(`${base}og/cinema.png`)
     check('dist/og/cinema.png is served', og.ok && (og.headers.get('content-type') ?? '').includes('png'))
     const crawl = await (await fetch(`${base}cinema/`)).text()
-    check('crawler HTML for /cinema/ carries its meta', crawl.includes('<title>CINEMA') && crawl.includes('/og/cinema.png'))
+    check('crawler HTML for /cinema/ carries its meta', crawl.includes(`<title>${pageMeta('cinema').title}</title>`) && /<meta property="og:image" content="[^"]*\/og\/cinema\.png"/.test(crawl), /<title>[^<]*<\/title>/.exec(crawl)?.[0])
   }
 
   // the views other than EXPLORE (docs/UX-PLAN.md §4.1): the four MAKE modes and ABOUT, by their canonical query
@@ -270,8 +273,8 @@ async function phoneChrome() {
     await p.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
     const STATIC = (sel: string) => `!!document.querySelector('${sel}')`
     const pages = [
-      { name: 'home', path: '', ready: `!!document.querySelector('.board-grid canvas, .board-grid svg')`, focus: true },
-      { name: 'about', path: '?about', ready: STATIC('.log-view'), focus: true },
+      { name: 'home', path: '', ready: `!!document.querySelector('.browse-grid canvas, .browse-grid svg')`, focus: true },
+      { name: 'about', path: 'about/', ready: STATIC('.log-view'), focus: true },
       { name: 'widget', path: 'widget/timer/', ready: `!!document.querySelector('.wp-stage canvas, .wp-stage svg')`, focus: true, tabbar: true },
       { name: 'essay', path: 'blog/dot-matrix-essay/', ready: STATIC('.hero .dot-title'), focus: true, tap: true },
       { name: 'privacy', path: 'privacy', ready: STATIC('.legal > main'), focus: true, tap: true },
@@ -289,6 +292,12 @@ phone chrome: ${pg.name}`)
         await p.js('window.scrollTo(0, 0)')
         const stops = await tabWalk(p, 80), under = stops.filter(s => s.under)
         check(`focus-clear:${pg.name}`, stops.length > 0 && !under.length, `${stops.length} stops${under.length ? `; ${under.length} under a bar: ${under.slice(0, 5).map(s => `#${s.n} ${s.label} (${s.under}, y ${s.top})`).join(' | ')}` : ''}`)
+      }
+      // #315: the bar has no BROWSE, and EXPLORE from a card's page opens ALL on `/`
+      if (pg.tabbar) {
+        const tabs = await p.js(`[...document.querySelectorAll('.tabbar button')].map(b => b.textContent.trim())`) as string[]
+        await p.js(`[...document.querySelectorAll('.tabbar button')].find(b => b.textContent.trim() === 'EXPLORE')?.click()`)
+        check(`tabbar-explore:${pg.name}`, !tabs.includes('BROWSE') && await p.waitFor(`location.pathname === '/' && !!document.querySelector('.browse-grid')`, 15000), `${tabs.join(' ')} → ${await p.js('location.pathname')}`)
       }
     }
   } finally {

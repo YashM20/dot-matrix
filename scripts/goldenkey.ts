@@ -132,7 +132,10 @@ function fpsChecks(assert: Assert): void {
   }
   const drift = [...new Set([...declared.keys(), ...table.keys()])].filter(id => declared.get(id) !== table.get(id)).map(id => `${id}: preset ${declared.get(id) ?? '-'}, DESIGN.md ${table.get(id) ?? '-'}`)
   const src = readFileSync('src/components/DotWidget.tsx', 'utf8')
-  const passes = src.includes("camera.status === 'live' ? 30 : preset.fps !== undefined ? cardFps(preset.fps, fpsTier()) : undefined") && (src.match(/ fps=\{fps\}/g) ?? []).length === 2
+  // cardLook() works the rate out (the live camera at 30, else the declared fps at the device tier) from the camera's
+  // status, DotWidget takes that `fps` from it, and passes it to both DotCanvas and the X-ray overlay
+  const passes = src.includes("o.cameraLive ? 30 : preset.fps !== undefined ? cardFps(preset.fps, fpsTier()) : undefined")
+    && src.includes("cameraLive: camera.status === 'live'") && /const \{[^}]*\bfps \} = cardLook\(/.test(src) && (src.match(/ fps=\{fps\}/g) ?? []).length === 2
   assert('fps: the presets that declare fps are exactly DESIGN.md\'s fps table, at its rates (DotWidget passes the tiered fps to DotCanvas and the X-ray overlay)', table.size > 0 && !drift.length && passes,
     !table.size ? 'no fps table under "Cards that declare a rate:" in DESIGN.md' : drift.length ? drift.join('; ') : passes ? [...declared].map(([id, f]) => `${id} ${f}`).join(', ') : 'DotWidget no longer passes the tiered fps to both')
 }

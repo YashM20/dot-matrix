@@ -54,8 +54,6 @@ const KNOWN: readonly string[] = [
   'sticky:widget@1440:mid', 'sticky:widget@1440:bottom', 'sticky:widget@768:mid', 'sticky:widget@768:bottom',
   // S3 (P1-B): MAKE scrolls to show the footer under the editor
   'no-app-scroll:make@1920', 'no-app-scroll:make@1440', 'no-app-scroll:make@1280', 'no-app-scroll:make@1024', 'no-app-scroll:make@768',
-  // L7 (P1-B): no whole card above the fold at 320 x 568
-  'fold-one:home@320',
 ]
 
 const args = process.argv.slice(2)
@@ -93,7 +91,7 @@ const ALL_PAGES = [
   { name: 'components', path: 'components/', kind: 'board' },
   { name: 'lock', path: 'lock/', kind: 'board' },
   { name: 'deerflow12', path: 'deerflow12/', kind: 'board' },
-  { name: 'about', path: '?about', kind: 'about' },
+  { name: 'about', path: 'about/', kind: 'about' },
   { name: 'make', path: '?make=tune', kind: 'make' },
   { name: 'widget', path: 'widget/timer/', kind: 'widget' },
   { name: 'essay', path: 'blog/dot-matrix-essay/', kind: 'essay' },
@@ -104,7 +102,7 @@ const PAGES = ALL_PAGES.filter(p => !onlyPages || onlyPages.includes(p.name))
 /** Where the `sticky` check runs (docs/POLISH-PLAN.md §2 P0). */
 const STICKY_PAGES = ['home', 'about', 'essay', 'privacy', 'widget'], STICKY_WIDTHS = [1440, 768]
 const READY: Record<string, string> = {
-  board: `!!document.querySelector('.board-grid canvas, .board-grid svg') && !!document.querySelector('.live-band canvas, .live-band svg')`,
+  board: `!!document.querySelector('.board-grid canvas, .board-grid svg, .browse-grid canvas, .browse-grid svg') && !!document.querySelector('.live-band canvas, .live-band svg')`,
   about: `!!document.querySelector('.log-view') && !!document.querySelector('.live-band canvas, .live-band svg')`,
   make: `!!document.querySelector('.ed-top')`,
   widget: `!!document.querySelector('.wp-stage canvas, .wp-stage svg')`,
@@ -131,7 +129,9 @@ const MEASURE = (kind: string, H: number) => `(() => {
   // the picker's edge: its first tab, or (a phone strip that scrolls) the strip's content edge
   const strip = q('.board-groups'), scrolls = strip && strip.scrollWidth > strip.clientWidth + 1
   const firstBtn = strip && (scrolls ? { getBoundingClientRect: () => ({ left: R(strip).left + parseFloat(getComputedStyle(strip).paddingLeft) }) } : [...strip.children].find(vis))
-  const edges = ${JSON.stringify(kind)} === 'board' ? { topbar: q('.topbar .brand'), intro: q('.intro-line'), picker: firstBtn, title: q('.board-title'), grid: q('.board-grid'), footer: q('.bottom-row') }
+  // a board page, or ALL on / (#315): ALL's grid is .browse-grid, with its filter row between the header and the grid
+  const G0 = q('.board-grid') || q('.browse-grid')
+  const edges = ${JSON.stringify(kind)} === 'board' ? { topbar: q('.topbar .brand'), intro: q('.intro-line'), picker: firstBtn, title: q('.board-title'), grid: G0, footer: q('.bottom-row') }
     : ${JSON.stringify(kind)} === 'about' ? { topbar: q('.topbar .brand'), about: q('.about-flavour'), keys: q('.about-cols'), log: q('.log-view'), footer: q('.bottom-row') }
     : ${JSON.stringify(kind)} === 'make' ? { topbar: q('.topbar .brand'), tools: q('.ed-top > :first-child') }
     : ${JSON.stringify(kind)} === 'widget' ? { top: q('.wp-top > .pill'), card: q('.wp-stagebox'), footer: q('.bottom-row') } : {}
@@ -139,7 +139,7 @@ const MEASURE = (kind: string, H: number) => `(() => {
   for (const [k, el] of Object.entries(edges)) if (el) left[k] = Math.round(R(el).left * 10) / 10
   // vertical rhythm: each block's top against the lowest bottom above it
   const blocks = ${JSON.stringify(kind)} === 'board'
-    ? [['topbar', q('.topbar')], ['hero', q('.home-hero')], ['intro', q('.intro-line')], ['picker', q('.board-picker')], ['header', q('.board-title'), q('.board-blurb')], ['grid', q('.board-grid')], ['next', q('.next-board')], ['footer', q('.bottom')]]
+    ? [['topbar', q('.topbar')], ['hero', q('.home-hero')], ['intro', q('.intro-line')], ['picker', q('.board-picker')], ['header', q('.board-title'), q('.board-blurb')], ['tools', q('.browse-tools')], ['grid', G0], ['next', q('.next-board')], ['footer', q('.bottom')]]
     : ${JSON.stringify(kind)} === 'about' ? [['topbar', q('.topbar')], ['about', q('.about-intro')], ['log', q('.log-view')], ['footer', q('.bottom')]]
     : ${JSON.stringify(kind)} === 'widget' ? [['top', q('.wp-top')], ['main', q('.wp-main')], ['footer', q('.bottom')]] : []
   // a block is one element, or [top element, bottom element] (the board header: title, then blurb)
@@ -154,7 +154,7 @@ const MEASURE = (kind: string, H: number) => `(() => {
     gaps.push({ from: from.n, to: b.n, px: Math.round((b.top - from.bottom) * 10) / 10 })
   }
   // cards
-  const cards = [...document.querySelectorAll('.board-grid > .dot-card, .board-grid .dot-card')].filter(vis).filter((c, i, a) => !a.slice(0, i).some(p => p.contains(c)))
+  const cards = [...document.querySelectorAll('.board-grid > .dot-card, .board-grid .dot-card, .browse-grid > .browse-item > .dot-card')].filter(vis).filter((c, i, a) => !a.slice(0, i).some(p => p.contains(c)))
   const rects = cards.map(c => { const r = R(c); return { x: r.left, y: r.top + y0, w: r.width, h: r.height } })
   const fold = rects.filter(r => r.y >= -1 && r.y + r.h <= ${H} + 1).length
   const tallest = rects.reduce((m, r) => Math.max(m, r.h), 0)
@@ -163,7 +163,7 @@ const MEASURE = (kind: string, H: number) => `(() => {
   const orphanStretched = rows.length > 1 && last.some(r => r.w > firstW + 1)
   const square = rects.reduce((m, r) => Math.max(m, Math.abs(r.w - r.h)), 0)
   // T3: columns (cards in the first row), and where a partial last row sits
-  const grid = q('.board-grid'), G = grid ? R(grid) : null
+  const grid = G0, G = grid ? R(grid) : null
   const cols = rects.filter(r => Math.round(r.y) === rows[0]).length
   const ruled = document.documentElement.dataset.grid === 'ruled'
   let orphan = 'full'
@@ -190,12 +190,12 @@ const MEASURE = (kind: string, H: number) => `(() => {
     }
     strip.scrollLeft = x0; strip.style.scrollSnapType = ''; strip.style.scrollBehavior = ''
   }
-  // chrome text under 12 px (outside cards; hidden and screen-reader-only text skipped)
+  // chrome text under 12 px (outside cards and the rows under them; hidden and screen-reader-only text skipped)
   let all = 0, small = 0
   const walk = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT)
   for (let n = walk.nextNode(); n; n = walk.nextNode()) {
     const el = n.parentElement, t = n.textContent.replace(/\\s+/g, '')
-    if (!t || !el || el.closest('.dot-card, .sr-only, [aria-hidden="true"], script, style') || !vis(el)) continue
+    if (!t || !el || el.closest('.dot-card, .dot-card-row, .sr-only, [aria-hidden="true"], script, style') || !vis(el)) continue
     all += t.length; if (parseFloat(getComputedStyle(el).fontSize) < 12) small += t.length
   }
   const doc = document.documentElement

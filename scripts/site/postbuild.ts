@@ -17,7 +17,7 @@
  *    `public/og/blog/<slug>-social.png` (`pnpm og:blog`) once it exists, else `/og/default.png`; its alt text
  *    (`og:image:alt`, `twitter:image:alt`) comes from `public/og/blog/alt.json`.
  * 5. The lab page (`src/lab/experiments.ts`): `dist/lab/index.html` from `dist/lab.html`, with its meta and JSON-LD.
- * 6. BROWSE (#182): `dist/browse/index.html`, a copy of `dist/index.html` with its own title, description and canonical.
+ * 6. ABOUT (#318): `dist/about/index.html`, a copy of `dist/index.html` with its own title, description and canonical.
  *
  * Widget OG images are cached in `node_modules/.cache/dot480-og` (or `OG_CACHE`), keyed by the OG renderer's source and
  * the card's golden hashes: a cold run renders all of them (~2 min), a warm one copies.
@@ -35,10 +35,9 @@ import { ogImage } from '../og'
 import { boards } from '../../src/widgets'
 import { BLOG, heroImage, POSTS, postPath, socialImage } from '../../src/blog/posts'
 import { EXPERIMENTS, LAB, experimentPath } from '../../src/lab/experiments'
-import { metaTags, pageMeta, widgetPageMeta, widgetTitle, type PageMeta } from '../../src/site/meta'
+import { ABOUT_META, metaTags, pageMeta, widgetPageMeta, widgetTitle, type PageMeta } from '../../src/site/meta'
 import { boardBlurbs } from '../../src/widgets/blurbs'
 import { boardLabel } from '../../src/widgets/manifest'
-import { BROWSE_META } from '../../src/site/browse'
 import type { WidgetMeta } from '../../src/widgets/meta'
 import { widgetIndex } from '../widgets/meta'
 
@@ -108,7 +107,7 @@ export function blogPages() {
   // blog.html is the fallback for any /blog/ path (vercel.json), so only the index's own page preloads the index's hero
   writeFileSync(file, withMeta(html, index, [listLd])); page('blog', withMeta(html, index, [...preload(BLOG.slug), listLd]))
   for (const p of POSTS) {
-    const m: PageMeta = { title: `${p.title} · MATRIX blog`, description: p.dek, path: postPath(p.slug), image: social(p.slug), imageAlt: imageAlt(p.slug) }
+    const m: PageMeta = { title: `${p.title} · Matrix blog`, description: p.dek, path: postPath(p.slug), image: social(p.slug), imageAlt: imageAlt(p.slug) }
     const ld = {
       '@context': 'https://schema.org', '@type': 'BlogPosting', headline: p.title, description: p.dek, datePublished: p.date, author, publisher: author,
       image: [origin + m.image, ...(has(heroImage(p.slug)) ? [origin + heroImage(p.slug)] : [])], url: origin + m.path, mainEntityOfPage: origin + m.path,
@@ -135,7 +134,7 @@ export function postbuild({ og = true } = {}) {
   const index = readFileSync(join(DIST, 'index.html'), 'utf8')
   writeFileSync(join(DIST, 'index.html'), withMeta(index))
   for (const b of boards) page(b.id, withMeta(index, b.id))
-  page('browse', withMeta(index, BROWSE_META))
+  page('about', withMeta(index, ABOUT_META))
   blogPages()
   labPage()
   console.log(`site: ${boards.length} board pages${origin ? ` (${origin})` : ' (relative URLs: set SITE_URL for absolute og:image)'}`)

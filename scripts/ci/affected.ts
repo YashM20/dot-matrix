@@ -23,7 +23,8 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
   // shared code and the CI itself: every probe
   ['src/engine/**', ALL], ['src/hooks/**', ALL], ['src/lib/*.ts', ALL], ['src/workers/**', ALL],
   ['src/widgets/types*', ALL], ['src/widgets/manifest*', ALL],
-  ['src/components/DotCanvas*', ALL], ['src/components/DotWidget*', ALL],
+  ['src/components/DotCanvas*', ALL], ['src/components/DotWidget*', ALL], ['src/components/firstDraw*', ALL],
+  ['src/components/CardRow*', ALL], ['src/components/cardActs.ts', ALL],
   ['scripts/lib/**', ALL], ['scripts/ci/**', ALL], ['.github/workflows/probes.yml', ALL], ['.github/actions/**', ALL],
   ['vite.config.ts', ALL], ['index.html', ALL], ['package.json', ALL], ['pnpm-lock.yaml', ALL], ['tsconfig*.json', ALL],
   // the build's own steps (vite.config.ts runs them) write every page
@@ -52,7 +53,7 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
   ['src/site/stale-deploy.ts', ['chunks']], ['src/components/LoadBoundary.tsx', ['chunks']],
   ['src/site/meta.ts', ['nav', 'mobile']],
   ['src/site/mobile/**', ['mobile', 'mobile-boards', 'layout-narrow']],
-  ['src/components/widget/**', ['layout', 'layout-narrow', 'nav', 'mobile', 'csp']],
+  ['src/components/widget/**', ['layout', 'layout-narrow', 'nav', 'mobile', 'csp', 'c10']],
   ['src/components/hero/**', ['layout', 'layout-narrow', 'mobile']],
   ['src/components/About.tsx', ['layout', 'layout-narrow', 'mobile']],
   ['src/lab/**', ['csp']], ['src/legal/**', ['layout', 'csp', 'a11y-phone']],

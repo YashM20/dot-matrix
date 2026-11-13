@@ -243,8 +243,11 @@ try {
   check('reduced motion (OS): a scheme pick is instant too', seg.now === 'light' && seg.vt === 0, JSON.stringify(seg))
   await open('/')
   await key('k', 'KeyK', 75, 2)
-  await waitFor('!!document.querySelector(".pal input")', 4000)
-  await cdp('Input.insertText', { text: 'reduced motion: on' }); await sleep(200)
+  // the palette focuses its input once it has painted: type after that (ALL keeps the main thread busier on `/`, #315)
+  await waitFor('document.activeElement === document.querySelector(".pal input")', 4000)
+  await cdp('Input.insertText', { text: 'reduced motion: on' })
+  // the palette ranks as you type: Enter once the command leads (on `/`, ALL mounts its cards meanwhile, #315)
+  check('⌘K "reduced motion: on" ranks the command first', await waitFor(`/reduced motion/i.test(document.querySelector('.pal-item')?.textContent ?? '')`, 4000), await js(`document.querySelector('.pal-item')?.textContent ?? ''`) as string)
   await key('Enter', 'Enter', 13); await sleep(200)
   await click(btn.x, btn.y)
   await waitFor('!!document.querySelector(".theme-pop [data-accent=vite]")', 3000)
@@ -320,7 +323,7 @@ try {
   check('hue: a junk ?hue= is ignored', await html('accent') === 'signal' && await html('scheme') === 'light')
 
   // ── CARD SIZE (src/site/cards.ts): a radio group under the theme; a pick reflows the grid, persists, survives a reload ──
-  const firstRow = `(() => { const ys = [...document.querySelectorAll('.board-grid > .dot-card')].map(c => Math.round(c.getBoundingClientRect().top)); return ys.filter(y => y === ys[0]).length })()`
+  const firstRow = `(() => { const ys = [...document.querySelectorAll('.board-grid > .dot-slot > .dot-card')].map(c => Math.round(c.getBoundingClientRect().top)); return ys.filter(y => y === ys[0]).length })()`
   const cardsSel = '.theme-pop .theme-cards [role=radiogroup]'
   await open('/components/')
   await waitFor('!!document.querySelector(".board-grid canvas, .board-grid svg")', 10000)
@@ -332,7 +335,7 @@ try {
   const compact = (await centreOf(`${cardsSel} [role=radio]:nth-child(3)`))!
   // the card and its DotCanvas root: an SVG card swaps its <svg> for each new dot list, and the enter transient draws on a
   // canvas before handing back to SVG, so the drawing element itself changes without any re-mount
-  const card0 = `(c => [c, c?.querySelector('.dot-a11y-root')])(document.querySelector('.board-grid > .dot-card:has(.dot-a11y-root)'))`
+  const card0 = `(c => [c, c?.querySelector('.dot-a11y-root')])(document.querySelector('.board-grid > .dot-slot > .dot-card:has(.dot-a11y-root)'))`
   await js(`window.__card0 = ${card0}`)
   await click(compact.x, compact.y)
   check('card size: a click on COMPACT sets data-cards="s", stores it and reflows to 4 a row at 1280', await waitFor(`document.documentElement.dataset.cards === 's' && localStorage.getItem('dot480:cards') === 's' && ${firstRow} === 4`, 3000), String(await js(firstRow)))
@@ -352,8 +355,8 @@ try {
   await key('Enter', 'Enter', 13)
   check('…and runs it (3 a row, stored)', await waitFor(`document.documentElement.dataset.cards === 'l' && localStorage.getItem('dot480:cards') === 'l' && ${firstRow} === 3`, 3000))
 
-  // ── touch: TOOLS › THEME ──
-  await open('/', { phone: true })
+  // ── touch: TOOLS › THEME ── (on a board: `/` is ALL, #315, and the card-size checks count a board's grid)
+  await open('/henry/', { phone: true })
   check('phone: the header THEME button is hidden', await js(`getComputedStyle(document.querySelector('.theme-switch')).display === 'none'`) === true)
   const tools = (await centreOf('.tabbar button[aria-haspopup]'))!
   await tap(tools.x, tools.y)

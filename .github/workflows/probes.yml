@@ -36,6 +36,12 @@ on:
       lighthouse:
         description: 'Lighthouse on the SEO routes (scripts/ci/lighthouse.ts): build, live, both or none'
         default: build
+      lighthouse_routes:
+        description: 'Lighthouse on these routes only, e.g. /,/mosaic/ (empty = the SEO routes); a focused run keeps the traces'
+        default: ''
+      lighthouse_runs:
+        description: 'Lighthouse runs per route and form; the median-TBT run is reported'
+        default: '1'
 
 permissions:
   contents: read
@@ -170,15 +176,17 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # Lighthouse (the PageSpeed Insights engine, no API key) on the SEO routes, mobile and desktop: Performance and
-  # Accessibility, LCP, CLS, TBT and the audits that lost points, in the job summary and the `lighthouse` artifact.
+  # Lighthouse (the PageSpeed Insights engine, no API key) on the SEO routes, mobile and desktop, through the one script
+  # the seo-audit workflow runs too (dist/ served like Vercel): Performance, Accessibility, SEO, Best practices, LCP, CLS,
+  # TBT and the audits that lost points, in the job summary and the `lighthouse` artifact.
   # A report like the rest of this workflow. `live` audits the production site instead of this build.
   lighthouse:
     name: lighthouse ${{ matrix.target }}
     needs: build
     if: github.event_name != 'workflow_dispatch' || inputs.lighthouse != 'none'
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    # a PR push audits three key routes on mobile, once each (about 2 minutes); main and dispatches run the full set
+    timeout-minutes: ${{ github.event_name == 'pull_request' && 12 || 60 }}
     strategy:
       fail-fast: false
       matrix:
@@ -193,9 +201,19 @@ jobs:
           path: dist
 
       - name: Lighthouse
+        # a step limit below the job's, so a long focused run (lighthouse_runs) still uploads what it measured
+        timeout-minutes: ${{ github.event_name == 'pull_request' && 10 || 50 }}
         env:
           TARGET: ${{ matrix.target }}
-        run: pnpm exec tsx scripts/ci/lighthouse.ts --out lh $([ "$TARGET" = live ] && echo --base https://matrix.reactopia.me/)
+          EVENT: ${{ github.event_name }}
+          LH_ROUTES: ${{ github.event_name == 'workflow_dispatch' && inputs.lighthouse_routes || '' }}
+          LH_RUNS: ${{ github.event_name == 'workflow_dispatch' && inputs.lighthouse_runs || '1' }}
+        run: |
+          set -- --out lh --runs "$LH_RUNS"
+          [ "$TARGET" = live ] && set -- "$@" --base https://matrix.reactopia.me/
+          [ -n "$LH_ROUTES" ] && set -- "$@" --routes "$LH_ROUTES" --trace
+          [ "$EVENT" = pull_request ] && set -- "$@" --routes /,/henry/,/mosaic/ --forms mobile --timeout 90
+          pnpm exec tsx scripts/ci/lighthouse.ts "$@"
 
       - name: Upload reports
         if: always()

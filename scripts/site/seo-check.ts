@@ -18,6 +18,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { checker } from '../lib/check'
 import { boardAliases, boardIds, boardManifest } from '../../src/widgets/manifest'
+import { ABOUT_PATH, titleCase } from '../../src/site/meta'
 import { boardBlurbs } from '../../src/widgets/blurbs'
 import { viewFromUrl } from '../../src/site/views'
 import { POSTS, postPath } from '../../src/blog/posts'
@@ -38,7 +39,7 @@ const route = (path: string, exact: boolean) => routeIn(vercel, DIST, path, exac
 const widgets = readWidgets(), sample = widgets[0], lock = widgets.find(w => w.slug.startsWith('lock-'))
 /** [path, what it must serve: a file, `→ <to>` for a redirect, or 404]; `view` checks the app opens it. */
 const CASES: [path: string, want: string, view?: (v: ReturnType<typeof viewFromUrl>) => boolean][] = [
-  ['/', 'index.html'], ['/index.html', 'index.html'], ['/browse', 'browse/index.html', v => v.view === 'BROWSE'], ['/browse/', 'browse/index.html', v => v.view === 'BROWSE'], ['/about', '→ /?about'], ['/about/', '→ /?about'], ['/?about', 'index.html', v => v.view === 'ABOUT'],
+  ['/', 'index.html', v => v.view === 'EXPLORE' && v.all], ['/index.html', 'index.html'], ['/browse', '→ /'], ['/browse/', '→ /'], ['/about', 'about/index.html', v => v.view === 'ABOUT'], ['/about/', 'about/index.html', v => v.view === 'ABOUT'], ['/About/', 'about/index.html', v => v.view === 'ABOUT'], ['/ABOUT', 'about/index.html', v => v.view === 'ABOUT'], ['/?about', '→ /about/'], ['/index.html?about', '→ /about/'], ['/?skin=crt', 'index.html'],
   ...boardIds.flatMap(id => [[`/${id}/`, `${id}/index.html`], [`/${id}`, `${id}/index.html`]] as [string, string][]),
   ...Object.entries(boardAliases).flatMap(([a, to]) => [[`/${a}`, `→ /${to}/`], [`/${a}/`, `→ /${to}/`]] as [string, string][]),
   ...widgets.flatMap(w => [[w.url, `widget/${w.slug}/index.html`], [`/widget/${w.uid}/`, `widget/${w.uid}/index.html`], [`/${w.uid}/`, `${w.uid}/index.html`]] as [string, string][]),
@@ -72,7 +73,7 @@ assert('seo: the board rewrite in vercel.json lists every board id (add a new bo
 // ── sitemap + robots ──
 const xml = readFileSync(join(DIST, 'sitemap.xml'), 'utf8'), locs = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1].replace(/&amp;/g, '&'))
 const expected = 1 + boardIds.length + 1 + widgets.length + 1 + POSTS.length + (flag('lab') ? 3 : 2)
-assert(`seo: sitemap.xml lists ${expected} URLs (home, boards, browse, widgets, blog, posts, lab, privacy, terms), none twice`, locs.length === expected && new Set(locs).size === locs.length, `${locs.length} URLs`)
+assert(`seo: sitemap.xml lists ${expected} URLs (home, boards, about, widgets, blog, posts, lab, privacy, terms), none twice`, locs.length === expected && new Set(locs).size === locs.length, `${locs.length} URLs`)
 const strayWidget = locs.filter(l => l.includes('/widget/') && !widgets.some(w => l === origin + w.url))
 assert('seo: the sitemap lists widgets by their canonical slug URL only (no uid or alias forms)', !strayWidget.length, strayWidget.slice(0, 3).join(', '))
 if (origin) assert(`seo: every sitemap URL is absolute on ${origin}`, locs.every(l => l.startsWith(`${origin}/`)))
@@ -84,13 +85,16 @@ assert('seo: robots.txt allows crawling' + (origin ? ' and names the absolute si
 
 // ── every sitemap page's head: a title and description no other page has, one h1, OG and Twitter image tags
 // naming a built 1200×630 PNG ──
-const titles = new Map<string, string[]>(), descs = new Map<string, string[]>(), headBad: string[] = [], pngs = new Map<string, string>()
+const titles = new Map<string, string[]>(), descs = new Map<string, string[]>(), headBad: string[] = [], caps: string[] = [], pngs = new Map<string, string>()
 const pngSize = (f: string) => { const b = readFileSync(f); return b.toString('latin1', 1, 4) === 'PNG' ? `${b.readUInt32BE(16)}x${b.readUInt32BE(20)}` : 'not a PNG' }
 for (const l of locs) {
   const o = route(l.slice(origin.length), true)
   if (!('file' in o)) continue
   const html = readFileSync(join(DIST, o.file), 'utf8'), attr = (re: RegExp) => re.exec(html)?.[1]?.replace(/&amp;/g, '&')
   const title = attr(/<title>([^<]*)<\/title>/) ?? '', desc = attr(/<meta name="description" content="([^"]*)"/) ?? ''
+  // search titles: title case through `searchTitle` (src/site/meta.ts), the same in <title>, og:title and twitter:title
+  const og = attr(/<meta property="og:title" content="([^"]*)"/), twt = attr(/<meta name="twitter:title" content="([^"]*)"/)
+  if (titleCase(title) !== title || og !== title || twt !== title) caps.push(`${l}: "${title}" (og "${og}", twitter "${twt}")`)
   titles.set(title, [...(titles.get(title) ?? []), l]); descs.set(desc, [...(descs.get(desc) ?? []), l])
   const h1 = (html.match(/<h1[\s>]/g) ?? []).length
   if (!title || !desc || h1 !== 1) headBad.push(`${l}: ${!title ? 'no title ' : ''}${!desc ? 'no description ' : ''}${h1} h1`)
@@ -103,6 +107,7 @@ for (const l of locs) {
 const twice = (m: Map<string, string[]>) => [...m].filter(([, v]) => v.length > 1).map(([k, v]) => `"${k.slice(0, 60)}" on ${v.slice(0, 3).join(', ')}`)
 assert(`seo: all ${locs.length} sitemap pages have a title, a description and one h1, and OG and Twitter images that are built 1200×630 PNGs`, !headBad.length, headBad.slice(0, 6).join('; '))
 assert('seo: no two sitemap pages share a title', !twice(titles).length, twice(titles).slice(0, 4).join('; '))
+assert('seo: every sitemap page title is in title case (no all-caps words but acronyms) and og:title and twitter:title match it', !caps.length, caps.slice(0, 4).join('; '))
 assert('seo: no two sitemap pages share a description', !twice(descs).length, twice(descs).slice(0, 4).join('; '))
 
 // ── crawlable roots ──
@@ -116,16 +121,16 @@ const boardGaps = boardIds.flatMap(id => {
 assert(`seo: all ${boardIds.length} board pages carry their h1, blurb and a link to every card in the root`, !boardGaps.length, boardGaps.slice(0, 6).join('; '))
 const widgetGaps = widgets.filter(w => [`widget/${w.slug}`, `widget/${w.uid}`, w.uid].some(d => { const b = rootBlock(read(`${d}/index.html`), 'root'); return !b.includes('<h1>') || !b.includes(`href="/${w.board}/"`) })).map(w => w.slug)
 assert(`seo: all ${widgets.length * 3} widget pages carry the card's h1 and a link to its board`, !widgetGaps.length, widgetGaps.slice(0, 6).join(', '))
-const home = rootBlock(read('index.html'), 'root'), homeMiss = boardIds.filter(id => !home.includes(`href="/${id}/"`))
-assert('seo: the home page links every board', home.includes('<h1>') && !homeMiss.length, homeMiss.join(', '))
+// the home page is ALL (#315): it links every board and every card (BROWSE's page is gone)
+const home = rootBlock(read('index.html'), 'root'), homeMiss = [...boardIds.map(id => `/${id}/`), ...widgets.map(w => w.url)].filter(u => !home.includes(`href="${esc(u)}"`))
+assert(`seo: the home page links every board and all ${widgets.length} cards`, home.includes('<h1>') && !homeMiss.length, homeMiss.slice(0, 3).join(', '))
+assert('seo: no browse page is built (/browse/ redirects to /)', !existsSync(join(DIST, 'browse', 'index.html')))
 const postGaps = POSTS.filter(p => {
   const b = rootBlock(read(`blog/${p.slug}/index.html`), 'blog'), md = join('docs', 'blog', `${p.slug}.md`)
   const heads = p.kind === 'md' && existsSync(md) ? parse(readFileSync(md, 'utf8')).flatMap(x => (x.t === 'h' && x.level > 1 ? [x.id] : [])) : []
   return !b.includes(`<h1>${esc(p.title)}</h1>`) || heads.some(h => !b.includes(`id="${h}"`))
 }).map(p => p.slug)
 assert('seo: every blog post page carries its title, and a markdown post its whole text (every heading)', !postGaps.length, postGaps.join(', '))
-const browse = rootBlock(read('browse/index.html'), 'root'), browseMiss = widgets.filter(w => !browse.includes(`href="${w.url}"`)).map(w => w.slug)
-assert(`seo: the browse page carries its h1 and a link to all ${widgets.length} cards`, browse.includes('<h1>') && !browseMiss.length, browseMiss.slice(0, 3).join(', '))
 assert('seo: the blog and lab indexes carry their static block', ['blog.html', 'blog/index.html'].every(f => rootBlock(read(f), 'blog').includes('<h1>')) && ['lab.html', 'lab/index.html'].every(f => rootBlock(read(f), 'lab').includes('<h1>')))
 
 // ── every built page: JSON-LD parses, no type twice, no display:none on the static block ──
@@ -145,6 +150,7 @@ assert('seo: every JSON-LD block in every built page parses, and no page repeats
 assert('seo: no page hides its static block with display:none', !hidden.length, hidden.slice(0, 3).join(', '))
 assert('seo: no HTML comment in a built page holds a double hyphen', !dashes.length, dashes.slice(0, 3).join(', '))
 const lds = (f: string) => [...read(f).matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(m => JSON.parse(m[1]))
+assert('seo: the about page has AboutPage JSON-LD and its static block (h1 and the log)', lds('about/index.html').some(o => o['@type'] === 'AboutPage' && o.url === origin + ABOUT_PATH) && /<h1>About<\/h1>[\s\S]*<time datetime=/.test(rootBlock(read('about/index.html'), 'root')))
 assert('seo: the home page has WebSite JSON-LD', lds('index.html').some(o => o['@type'] === 'WebSite'))
 const ldGaps = boardIds.filter(id => lds(`${id}/index.html`).find(o => o['@type'] === 'CollectionPage')?.hasPart?.length !== cardsOf(id, widgets).length)
 assert('seo: every board page has a CollectionPage with its cards as hasPart', !ldGaps.length, ldGaps.join(', '))

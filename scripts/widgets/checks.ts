@@ -56,8 +56,9 @@ export function shareChecks(check: Assert) {
   const at = (u: string) => { const x = new URL(u, 'https://x'); return viewFromUrl(x.search, x.pathname) }
   const w = at('/widget/timer/?skin=crt'), s = at('/8vw39pnx'), c = at('/?card=music'), m = at('/widget/timer/?make=code')
   check('share: views carry the widget route (EXPLORE), and a MAKE link wins over a widget path', w.view === 'EXPLORE' && w.widget?.key === 'timer' && s.widget?.via === 'short' && c.widget?.key === 'music' && c.card === 'music' && m.view === 'MAKE' && !m.widget)
-  check('share: leaving a widget page writes the board URL (/, /light/, ?make=)', urlForView({ view: 'EXPLORE', mode: 'TUNE', board: 'henry' }, '?skin=crt', '/widget/timer/') === '/?skin=crt'
-    && urlForView({ view: 'EXPLORE', mode: 'TUNE', board: 'light' }, '', '/8vw39pnx') === '/light/' && urlForView({ view: 'MAKE', mode: 'CODE', board: 'henry' }, '', '/widget/timer/') === '/?make=code')
+  check('share: leaving a widget page writes the board or ALL URL (/henry/, /, /light/, ?make=)', urlForView({ view: 'EXPLORE', mode: 'TUNE', board: 'henry', all: false }, '?skin=crt', '/widget/timer/') === '/henry/?skin=crt'
+    && urlForView({ view: 'EXPLORE', mode: 'TUNE', board: 'henry', all: true }, '?skin=crt', '/widget/timer/') === '/?skin=crt'
+    && urlForView({ view: 'EXPLORE', mode: 'TUNE', board: 'light', all: false }, '', '/8vw39pnx') === '/light/' && urlForView({ view: 'MAKE', mode: 'CODE', board: 'henry', all: true }, '', '/widget/timer/') === '/?make=code')
   // exports (S2): the card SVG is one standalone document with a title and credit; the HTML snippet has no script
   const timerPreset = widgetById('timer')!, src = presetSource(timerPreset, dot480), credit = { name: 'Timer <3>', slug: 'timer', url: 'https://x/widget/timer/' }
   const svg = cardSVG(src.frame(0), { width: src.width, height: src.height, background: dot480.surface, border: dot480.hairline }, credit), html = cardHTML(svg, credit)
@@ -66,7 +67,7 @@ export function shareChecks(check: Assert) {
     && html.includes('<a href="https://x/widget/timer/"') && !/<script/i.test(html) && !html.includes('-->\n<svg') && (html.match(/<svg /g) ?? []).length === 2,
     `${(svg.length / 1024).toFixed(1)} KB svg`)
   const timer = index.find(x => x.slug === 'timer')!, pm = widgetPageMeta(timer)
-  check('share: widget page meta: title, blurb description, canonical slug path, OG image by uid', pm.title === 'Timer · MICRO UI · MATRIX' && pm.description.startsWith(timer.blurb) && pm.path === '/widget/timer/' && pm.image === `/og/widget/${timer.uid}.png`)
+  check('share: widget page meta: title, blurb description, canonical slug path, OG image by uid', pm.title === 'Timer · Micro UI · Matrix' && pm.description.startsWith(timer.blurb) && pm.path === '/widget/timer/' && pm.image === `/og/widget/${timer.uid}.png`)
 }
 
 if (/[\\/]scripts[\\/]widgets[\\/]checks\.ts$/.test(process.argv[1] ?? '')) {

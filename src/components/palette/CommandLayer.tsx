@@ -48,6 +48,8 @@ export interface CommandLayerProps {
   /** The place: EXPLORE, ABOUT, or a MAKE mode (TUNE, COMPOSE, CODE, DRAW); `setTab` takes any name, old tabs too. */
   tab: string
   board: string
+  /** EXPLORE shows ALL (every card, on `/`) rather than `board`. */
+  all?: boolean
   /** Absent in single-card mode: navigation then reloads into the requested view. */
   setTab?: (tab: string) => void
   setBoard?: (id: string) => void
@@ -133,7 +135,7 @@ function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { 
   </Sheet>
 }
 
-export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps) {
+export function CommandLayer({ tab, board, all = false, setTab, setBoard }: CommandLayerProps) {
   // left to React as is (#207): the command API uses getters, `this` and lazy import()s, which the React Compiler
   // can't compile yet, and this layer renders only when a palette, shell or X-ray switch changes
   'use no memo'
@@ -142,8 +144,8 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
   const anyXray = useXR(s => s.global || s.on.size > 0), frozen = useXR(s => s.frozen), fpsHud = useXR(s => s.fpsHud), note = useXR(s => s.toast)
   const xray = useFlag('xray')
   // the latest view for the command API and handlers, written after commit (never during render)
-  const view = useRef({ tab, board })
-  useLayoutEffect(() => { view.current = { tab, board } })
+  const view = useRef({ tab, board, all })
+  useLayoutEffect(() => { view.current = { tab, board, all } })
   useTrackEvents(board)
 
   // the layer itself mounts once the page is idle: warm the palette / shell chunks now, so a ⌘K followed by
@@ -157,7 +159,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
 
   const go = useCallback((query: string) => { assign(`${location.pathname}${query}`) }, [])
   // a place's canonical URL on this board (src/site/views.ts): reloads in single-card mode, links, remix
-  const urlOf = useCallback((p: Place, search = location.search) => urlForView({ ...placeView(p), board: view.current.board }, search, location.pathname), [])
+  const urlOf = useCallback((p: Place, search = location.search) => urlForView({ ...placeView(p), board: view.current.board, all: view.current.all }, search, location.pathname), [])
   const api: CommandApi = useMemo(() => ({
     get tab() { return view.current.tab },
     get board() { return view.current.board },
@@ -210,9 +212,9 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       }, e => toast(`editor failed: ${(e as Error).message}`))
     },
     copyLink(cardId) {
-      const { tab: t, board: b } = view.current
+      const { tab: t, board: b, all: a } = view.current
       // a card's own page (canonical /widget/<slug>/, docs/SHARE-PLAN.md §3), or this view's canonical link (a CODE program keeps its ?p=)
-      const url = withPondDay(withTheme(location.origin + (cardId ? widgetPath(cardId) : urlForView({ ...placeView(placeFromName(t) ?? 'EXPLORE'), board: b }, location.search, location.pathname))), cardId ? cardId.startsWith('pond-') : b === 'pond' && t === 'EXPLORE')
+      const url = withPondDay(withTheme(location.origin + (cardId ? widgetPath(cardId) : urlForView({ ...placeView(placeFromName(t) ?? 'EXPLORE'), board: b, all: a }, location.search, location.pathname))), cardId ? cardId.startsWith('pond-') : b === 'pond' && t === 'EXPLORE' && !a)
       const done = () => { toast('link copied'); track('link_copied', cardId ? { card: cardId } : { view: t }) }
       if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(done, () => toast(url))
       else toast(url)
@@ -255,7 +257,7 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       if (location.pathname === widgetPath(preset.id)) return
       const go = () => {
         const q = new URLSearchParams(location.search); q.delete('card')
-        for (const k of BROWSE_PARAMS) q.delete(k) // BROWSE's filters stay on BROWSE
+        for (const k of BROWSE_PARAMS) q.delete(k) // ALL's filters stay on ALL
         pushUrl(widgetPath(preset.id) + (q.size ? `?${q}` : ''))
         dispatchEvent(new PopStateEvent('popstate'))
       }
@@ -308,6 +310,8 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
       }
     }
     const onUp = (e: KeyboardEvent) => { if (e.key === 't' || e.key === 'T') tHeld = false }
+    // T let go in another window never sends its keyup here: losing focus ends the hold (docs/STATE-MACHINES.md A8.1)
+    const onBlur = () => { tHeld = false }
     // hold T and move the pointer: 100 px = 1 s of board time
     const onMove = (e: PointerEvent) => {
       if (!tHeld) return
@@ -320,9 +324,10 @@ export function CommandLayer({ tab, board, setTab, setBoard }: CommandLayerProps
     }
     window.addEventListener('keydown', onKey)
     window.addEventListener('keyup', onUp)
+    window.addEventListener('blur', onBlur)
     window.addEventListener('pointermove', onMove)
     window.addEventListener('pointerover', onHover)
-    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onUp); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerover', onHover) }
+    return () => { window.removeEventListener('keydown', onKey); window.removeEventListener('keyup', onUp); window.removeEventListener('blur', onBlur); window.removeEventListener('pointermove', onMove); window.removeEventListener('pointerover', onHover) }
   }, [api])
 
   return <>

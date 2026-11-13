@@ -30,8 +30,6 @@ const KNOWN: readonly string[] = [
   'scroll:forward-about',
   // N4 (P1-A): Back with a sheet open leaves the view and keeps the sheet open
   'sheet-back:boards', 'sheet-url:boards', 'sheet-back:tools', 'sheet-url:tools', 'sheet-back:palette', 'sheet-url:palette',
-  // N8 (P2-B): on a phone the hero card comes first in the Tab order, at the bottom of the page
-  'tab-order:home@390',
 ]
 
 const args = process.argv.slice(2)
@@ -42,7 +40,7 @@ const HOME = boardIds[0], ESSAY = '/blog/dot-matrix-essay/'
 const uid = (JSON.parse(readFileSync('src/widgets/ids.json', 'utf8')) as Record<string, string>).timer
 
 /**
- * What the page shows, or '' while it loads: `EXPLORE:<board>`, `MAKE`, `ABOUT`, `widget:<slug>`, `widget-missing`,
+ * What the page shows, or '' while it loads: `EXPLORE:<board>` (`EXPLORE:all` for ALL, #315), `MAKE`, `ABOUT`, `widget:<slug>`, `widget-missing`,
  * `post` (a blog post: the URL says which), `privacy`, `terms`, `lab`, `crashed` (the root error boundary).
  */
 const VIEW = `(() => {
@@ -51,7 +49,7 @@ const VIEW = `(() => {
     if (document.querySelector('.view-loading')) return ''
     if (shell.classList.contains('shell--widget')) return document.querySelector('.wp-missing') ? 'widget-missing' : document.querySelector('.wp-ids code')?.textContent.trim().replace(/^/, 'widget:') ?? ''
     const v = shell.dataset.view
-    if (v === 'EXPLORE') { const b = document.querySelector('.board-picker [data-board].selected'); return b && document.querySelector('.board-grid .dot-card') ? 'EXPLORE:' + b.dataset.board : '' }
+    if (v === 'EXPLORE') { const b = document.querySelector('.board-picker [data-board].selected'); return b && document.querySelector(b.dataset.board === 'all' ? '.browse-grid .dot-card' : '.board-grid .dot-card') ? 'EXPLORE:' + b.dataset.board : '' }
     if (v === 'MAKE') return document.querySelector('.ed-top, .ed-root') ? 'MAKE' : ''
     if (v === 'ABOUT') return document.querySelector('.log-view') ? 'ABOUT' : ''
     return ''
@@ -68,17 +66,22 @@ const settle = async (p: Page, ms = 30000) => { await p.waitFor(`(${VIEW}) !== '
 
 /** The route table: a URL (relative to the site root), the view it opens and its canonical URL. */
 const ROUTES: [string, string, string][] = [
-  ['', `EXPLORE:${HOME}`, '/'],
+  ['', 'EXPLORE:all', '/'],
+  [`${HOME}/`, `EXPLORE:${HOME}`, `/${HOME}/`],
+  // BROWSE became ALL on / (#315); its board filter opens that board
+  ['browse/', 'EXPLORE:all', '/'],
+  ['browse/?in=lock', 'EXPLORE:lock', '/lock/'],
   ['lock/', 'EXPLORE:lock', '/lock/'],
   ['glyph/', 'EXPLORE:lock', '/lock/'],
   ['?board=mosaic', 'EXPLORE:mosaic', '/mosaic/'],
-  ['?about', 'ABOUT', '/?about'],
-  ['about', 'ABOUT', '/?about'],
+  ['?about', 'ABOUT', '/about/'],
+  ['about/', 'ABOUT', '/about/'],
+  ['about', 'ABOUT', '/about/'],
   ['?make', 'MAKE', '/?make'],
   ['?make=code', 'MAKE', '/?make=code'],
-  ['?tab=gallery', 'EXPLORE:henry', HOME === 'henry' ? '/' : '/henry/'],
+  ['?tab=gallery', 'EXPLORE:henry', '/henry/'],
   ['?tab=dots', 'MAKE', '/?make=code'],
-  ['?tab=log', 'ABOUT', '/?about'],
+  ['?tab=log', 'ABOUT', '/about/'],
   ['?tab=essay', 'post', ESSAY],
   ['essay', 'post', ESSAY],
   ['essay/', 'post', ESSAY],
@@ -89,10 +92,10 @@ const ROUTES: [string, string, string][] = [
   ['widget/timer/', 'widget:timer', '/widget/timer/'],
   [uid, 'widget:timer', '/widget/timer/'],
   ['?card=timer', 'widget:timer', '/widget/timer/'],
-  ['nope/', `EXPLORE:${HOME}`, '/'],
+  ['nope/', 'EXPLORE:all', '/'],
   // #148: a `//host` path stays on the site, a bad escape in the hash doesn't blank the page
   ['/lock/', 'EXPLORE:lock', '/lock/'],
-  ['/evil.example/', `EXPLORE:${HOME}`, '/'],
+  ['/evil.example/', 'EXPLORE:all', '/'],
   ['blog/dot-matrix-essay/#%E0', 'post', ESSAY],
   ['lab/#%E0', 'lab', '/lab/'],
 ]
@@ -188,7 +191,7 @@ async function sheets(p: Page) {
 }
 
 async function tabs(p: Page, W: number, H: number) {
-  for (const [name, path] of [['home', ''], ['about', '?about'], ['essay', ESSAY.slice(1)]]) {
+  for (const [name, path] of [['home', ''], ['about', 'about/'], ['essay', ESSAY.slice(1)]]) {
     await p.cdp('Page.navigate', { url: base + path })
     await settle(p); await sleep(1500)
     // the home's hero card mounts once the page is idle, and it is part of the Tab order

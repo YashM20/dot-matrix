@@ -5,13 +5,13 @@
  * app loads (no flash) and shown as a plain page when scripts are off (`<noscript>`). It is never `display:none`.
  */
 import { boardGroups, boardLabel, boardManifest } from '../../src/widgets/manifest'
-import { boardBlurbs, groupBlurbs } from '../../src/widgets/blurbs'
-import { SITE_DESCRIPTION, SITE_NAME, widgetTitle } from '../../src/site/meta'
+import { boardBlurbs, conceptCredit, groupBlurbs } from '../../src/widgets/blurbs'
+import { ABOUT_META, ABOUT_PATH, SITE_DESCRIPTION, SITE_NAME, widgetTitle } from '../../src/site/meta'
+import { releases } from '../../src/changelog'
 import { BLOG, POSTS, postPath, type PostInfo } from '../../src/blog/posts'
 import { EXPERIMENTS, LAB, experimentPath } from '../../src/lab/experiments'
 import { inline, parse, tex, type Block, type Inline, type ListBlock } from '../../src/blog/markdown'
 import { flag } from '../../src/site/flags'
-import { BROWSE_META, BROWSE_PATH } from '../../src/site/browse'
 
 /** The fields of a `dist/widgets.json` row this step reads. */
 export interface WidgetRow { slug: string; uid: string; name: string; blurb: string; board: string; boards: string[]; tags: string[]; url: string }
@@ -34,15 +34,16 @@ const wrap = (body: string) => `<div class="${STATIC_CLASS}">${body}</div>`
 /** "A, B and C" */
 const andList = (xs: string[]) => (xs.length < 2 ? xs.join('') : `${xs.slice(0, -1).join(', ')} and ${xs[xs.length - 1]}`)
 
-/** The home page: what the site is, every board by group, and the other pages. */
-export function homeBody(): string {
-  const groups = boardGroups.filter(g => g.id !== 'start').map(g => `<h2>${esc(g.label)}</h2><p>${esc(groupBlurbs[g.id])}</p><ul>${g.boards
-    .map(id => `<li>${boardLink(id)}: ${esc(boardBlurbs[id])}</li>`).join('')}</ul>`).join('')
+/** The home page (ALL, #315): what the site is, every board by group with a link to each of its cards, and the other pages. */
+export function homeBody(widgets: readonly WidgetRow[]): string {
+  const cards = (id: string) => widgets.filter(w => w.board === id).map(w => `<li><a href="${esc(w.url)}">${esc(widgetTitle(w.name))}</a>: ${esc(w.blurb)}</li>`).join('')
+  const groups = boardGroups.filter(g => g.id !== 'start').map(g => `<h2>${esc(g.label)}</h2><p>${esc(groupBlurbs[g.id])}</p>${g.boards
+    .map(id => `<h3>${boardLink(id)}</h3><p>${esc(boardBlurbs[id])}</p><ul>${cards(id)}</ul>`).join('')}`).join('')
   const more = [
     `<li><a href="${postPath()}">Blog</a>: ${esc(BLOG.dek)}</li>`, ...(flag('lab') ? [`<li><a href="${LAB.path}">Lab</a>: ${esc(LAB.dek)}</li>`] : []),
-    '<li><a href="/privacy">Privacy</a></li>', '<li><a href="/terms">Terms</a></li>',
+    `<li><a href="${ABOUT_PATH}">About</a>: ${esc(ABOUT_META.description)}</li>`, '<li><a href="/privacy">Privacy</a></li>', '<li><a href="/terms">Terms</a></li>',
   ].join('')
-  return wrap(`<h1>${SITE_NAME}</h1><p>${esc(SITE_DESCRIPTION)}</p><p><a href="${BROWSE_PATH}">Browse every card</a></p>${groups}<h2>More</h2><ul>${more}</ul>`)
+  return wrap(`<h1>${SITE_NAME}</h1><p>${esc(SITE_DESCRIPTION)}</p>${groups}<h2>More</h2><ul>${more}</ul>`)
 }
 
 /** A board page: its title, its blurb and a link to every card's widget page. */
@@ -50,13 +51,6 @@ export function boardBody(id: string, cards: readonly WidgetRow[]): string {
   const list = cards.map(w => `<li><a href="${esc(w.url)}">${esc(widgetTitle(w.name))}</a>: ${esc(w.blurb)}</li>`).join('')
   return wrap(`${siteNav(boardLink(id))}<h1>${esc(boardTitle(id))}</h1><p>${esc(boardBlurbs[id as keyof typeof boardBlurbs] ?? '')}</p>`
     + `<h2>${cards.length} card${cards.length === 1 ? '' : 's'}</h2><ul>${list}</ul><p><a href="/">All boards</a></p>`)
-}
-
-/** BROWSE (#182): every card by board group, each linking its widget page. */
-export function browseBody(widgets: readonly WidgetRow[]): string {
-  const groups = boardGroups.filter(g => g.id !== 'start').map(g => `<h2>${esc(g.label)}</h2><ul>${widgets.filter(w => (g.boards as readonly string[]).includes(w.board))
-    .map(w => `<li><a href="${esc(w.url)}">${esc(widgetTitle(w.name))}</a> (${boardLink(w.board)}): ${esc(w.blurb)}</li>`).join('')}</ul>`).join('')
-  return wrap(`${siteNav(`<a href="${BROWSE_PATH}">Browse</a>`)}<h1>Browse every card</h1><p>${esc(BROWSE_META.description)}</p>${groups}<p><a href="/">All boards</a></p>`)
 }
 
 /** A widget page: the card's name and blurb, and the boards that show it. */
@@ -71,6 +65,19 @@ export function widgetBody(w: WidgetRow): string {
 export function blogIndexBody(): string {
   const list = POSTS.map(p => `<li><a href="${postPath(p.slug)}">${esc(p.title)}</a>: ${esc(p.dek)} <time datetime="${p.date}">${p.date}</time></li>`).join('')
   return wrap(`${siteNav(`<a href="${postPath()}">Blog</a>`)}<h1>Blog</h1><p>${esc(BLOG.dek)}</p><ul>${list}</ul>`)
+}
+
+/**
+ * ABOUT (`/about/`): what this is, the links, the credits and the visitor log, as `src/components/About.tsx` shows them
+ * with the `make` flag off (its default). The app's view replaces this block on mount.
+ */
+export function aboutBody(): string {
+  const c = conceptCredit, log = releases.map(r => `<li><b>${esc(r.version)}</b> <time datetime="${esc(r.date)}">${esc(r.date)}</time>: ${esc(r.title)}. ${esc(r.summary)}</li>`).join('')
+  return wrap(`${siteNav(`<a href="${ABOUT_PATH}">About</a>`)}<h1>About</h1>`
+    + `<p>${SITE_NAME} runs on Dot/480, an interface engine where everything you see is dots. Every card is a field, a function that says how bright each point is; a sampler reads it onto a quantized grid of dots, and a renderer (SVG, Canvas or WebGL) draws them, live. EXPLORE has the boards.</p>`
+    + `<p><a href="/blog/dot-matrix-essay/">How it works: the essay</a> · <a href="${postPath()}">Blog</a> · <a href="https://github.com/YashM20/dot-matrix">Source</a> · <a href="/privacy">Privacy</a> · <a href="/terms">Terms</a></p>`
+    + `<h2>Credits</h2><p>This project started from the ESP-Mosaico concept screens for a 480 × 480 OLED device by <a href="${esc(c.profile)}" rel="noreferrer">${esc(c.by)} (${esc(c.handle)})</a>. The first seven boards rebuild his sheets, and the 480 in Dot/480 is his screen. Cards built on someone else's work name it on their own page. The full list is in <a href="https://github.com/YashM20/dot-matrix/blob/main/docs/CREDITS.md">CREDITS.md</a>.</p>`
+    + `<h2>What changed</h2><ul>${log}</ul>`)
 }
 
 /** The lab index: every piece with its line. */

@@ -109,7 +109,6 @@ const OUTLINE_OK: { file: string; sel: string; why: string }[] = [
   { file: 'src/components/editor/editor.css', sel: '.ed-viewport', why: 'the canvas shows focus: .ed-viewport:focus-visible' },
   { file: 'src/components/editor/editor.css', sel: '.ed-field input:focus', why: 'fields show focus with the accent border' },
   { file: 'src/components/game/hive.css', sel: '.hive-screen', why: 'the full-screen game owns the screen; it has no other focus target' },
-  { file: 'src/site/app/views.css', sel: '.dot-card-bar .dot-card-more:focus-visible', why: 'the ⋯ ring is drawn on its chip (::before), inside the 24 px target' },
   { file: 'src/site/skip-link.css', sel: '#main:focus', why: 'not a control: the skip link focuses the page body only to start the Tab order there' },
 ]
 /** Selectors where the glow may appear: active, selected, pressed, open, focus, live. */

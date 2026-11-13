@@ -1,5 +1,7 @@
 import { lazy, Suspense, use, useCallback, useEffect, useId, useState } from 'react'
 import { DotWidget } from './DotWidget'
+import { CardRow } from './CardRow'
+import { widgetPath } from '../site/routes'
 import { BoardTitle } from './DotName'
 import { useThemeTokens } from '../site/theme/useTheme'
 import { boardMeta, loadBoard, type BoardDef, type BoardId } from '../widgets/manifest'
@@ -82,9 +84,13 @@ function LoadedBoard({ id, leaving }: { id: string; leaving: boolean }) {
   // live sources (`BoardDef.sources`): fixture → cached → live data, merged over each card's defaults
   const live = useLiveData(board.sources)
   const blurbs = useBlurbs(), blurb = blurbs?.boardBlurbs[board.id as BoardId]
-  const cards = (map: (p: WidgetPreset) => WidgetPreset) => board.items.map((preset, i) => <DotWidget key={preset.id} type={preset.id} preset={map(preset)} tick={preset.clock ? tick : undefined} boardOrder={i}
-    data={board.sources ? pick(live, preset.defaults) : undefined}
-    {...(sharing ? { shared, sharedKeys: board.shared, onShared } : {})} {...cardMotion(i, board.columns, board.items.length, leaving)} />)
+  // each grid cell is a slot: the card, then its quiet row (OPEN → and the card's actions, ./CardRow.tsx)
+  const cards = (map: (p: WidgetPreset) => WidgetPreset) => board.items.map((preset, i) => <div key={preset.id} className="dot-slot">
+    <DotWidget type={preset.id} preset={map(preset)} tick={preset.clock ? tick : undefined} boardOrder={i}
+      data={board.sources ? pick(live, preset.defaults) : undefined}
+      {...(sharing ? { shared, sharedKeys: board.shared, onShared } : {})} {...cardMotion(i, board.columns, board.items.length, leaving)} />
+    <CardRow id={preset.id} name={preset.name} href={widgetPath(preset.id)} />
+  </div>)
   return (
     <section className="board-view" aria-labelledby={titleId}>
       <BoardTitle title={board.title} id={titleId} />

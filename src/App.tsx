@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState, type ComponentType, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { lazy, Suspense, useEffect, useRef, useState, useSyncExternalStore, type ComponentType, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { flushSync } from 'react-dom'
 import { Board, VIEW_EXIT_MS } from './components/Board'
 import { LoadBoundary, LoadFailed } from './components/LoadBoundary'
@@ -7,13 +7,13 @@ import { SkinSwitcher } from './components/skins/SkinSwitcher'
 import { ThemeButton } from './components/theme/ThemeButton'
 import { useExitSwap } from './hooks/useExitSwap'
 import { useXR } from './components/xray/store'
-import { boardIds, boardLabel, liveBoards, prefetchBoard } from './widgets/manifest'
+import { boardLabel, liveBoards, prefetchBoard } from './widgets/manifest'
 import { widgetPath, type WidgetRoute } from './site/routes'
 import { onLayerWake, requestLayer } from './site/layer'
-import { boardFromPath, setPageMeta, syncUrl } from './site/meta'
+import { ABOUT_META, boardFromPath, setPageMeta, syncUrl } from './site/meta'
 import { flag } from './site/flags'
 import { pushUrl, replace } from './site/safe-url'
-import { BROWSE_META, BROWSE_PARAMS } from './site/browse'
+import { BROWSE_PARAMS } from './site/browse'
 import { useFlag } from './site/useFlag'
 import { SkipLink } from './site/SkipLink'
 import { cardTransition } from './site/viewTransition'
@@ -31,6 +31,7 @@ import './site/app/dots.css'
 import './site/app/xray.css'
 import './site/app/tips.css'
 import './site/app/palette.css'
+import './site/app/pills.css'
 import './site/app/raised.css'
 import './site/app/tap.css'
 import './site/app/skins.css'
@@ -65,6 +66,11 @@ const useIdle = () => {
 const viewFailed = <section className="view-loading"><LoadFailed what="This view" /></section>
 // static markup: 'use no memo' keeps the compiler's memo slots (first-load bytes) out of these two
 const slot = <div className="home-hero-slot" />
+// the hero floats beside the header from 1280 px (src/site/app/hero.css) and follows the board below that: it sits
+// there in the DOM too, so the Tab order matches what the eye sees (a phone's first stop is not at the page's end)
+const HERO_BESIDE = '(min-width: 1280px)'
+const onHeroBeside = (cb: () => void) => { const m = window.matchMedia(HERO_BESIDE); m.addEventListener('change', cb); return () => m.removeEventListener('change', cb) }
+const useHeroBeside = () => useSyncExternalStore(onHeroBeside, () => window.matchMedia(HERO_BESIDE).matches, () => true)
 function Hero() {
   'use no memo'
   return <div className="home-hero">{useIdle() ? <LoadBoundary fallback={slot}><Suspense fallback={slot}><HeroCard /></Suspense></LoadBoundary> : slot}</div>
@@ -76,13 +82,13 @@ function SiteFooter({ onAbout }: { onAbout: () => void }) {
   return <footer className="bottom">
     <div className="live-band">{idle && <LoadBoundary fallback={null}><Suspense fallback={null}><LiveBand /></Suspense></LoadBoundary>}</div>
     <div className="bottom-row"><span>MATRIX · <b>EVERY PIXEL IS A DOT SAMPLED FROM A FIELD</b></span>
-      <span><a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · {lab && <><a href="/lab/">LAB</a> · </>}<a href="/blog/">BLOG</a> · <a href="?about" onClick={e => { e.preventDefault(); onAbout() }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></div>
+      <span><a href="/blog/dot-matrix-essay/">HOW IT WORKS</a> · {lab && <><a href="/lab/">LAB</a> · </>}<a href="/blog/">BLOG</a> · <a href="/about/" onClick={e => { e.preventDefault(); onAbout() }}>SHORTCUTS</a> · <a href="https://github.com/YashM20/dot-matrix">SOURCE</a> · <a href="/privacy">PRIVACY</a> · <a href="/terms">TERMS</a></span></div>
   </footer>
 }
 // MAKE is one editor (docs/EDITOR-PLAN.md): frames on an infinite canvas, layers, a contextual inspector.
 // The old modes (TUNE / COMPOSE / CODE / DRAW) are ways into it. Lazy: no other view loads the editor.
 const Editor = lazy(() => import('./components/editor/Editor').then(m => ({ default: m.Editor })))
-// BROWSE (#182): every card in one filtered, windowed grid; its data, styles and filters load with it
+// ALL (#315, was BROWSE #182): EXPLORE's every-card grid on `/`, filtered and windowed; its data, styles and filters load with it
 const Browse = lazy(() => import('./components/browse/Browse').then(m => ({ default: m.Browse })))
 // the single-widget page (docs/SHARE-PLAN.md §4): /widget/<slug|uid>/, /<uid>, ?card=; lazy like the views
 const WidgetPage = lazy(() => import('./components/widget/WidgetPage').then(m => ({ default: m.WidgetPage })))
@@ -127,7 +133,7 @@ function CommandLayer(props: CommandLayerProps) {
   return ready ? <LoadBoundary fallback={null}><Suspense fallback={null}><CommandLayerLazy {...props} /><ReplayKey ev={pending} /></Suspense></LoadBoundary> : null
 }
 // Deep links (all resolved in src/site/views.ts): `/<board>/` or ?board=<id> opens a board, ?make=<mode> a MAKE
-// mode (?make=code&p=<encoded> a shared Field IR program), ?about the about page, /widget/<slug|uid>/ (or /<uid>,
+// mode (?make=code&p=<encoded> a shared Field IR program), /about/ the about page, /widget/<slug|uid>/ (or /<uid>,
 // or the old ?card=<id>) one card on its own page; every old ?tab= still opens the view it became.
 // MAKE behind its flag (src/site/flags.ts): off, a MAKE URL opens the board it names (the home board for `?make`)
 const urlView = (mode?: Mode) => { const v = viewFromUrl(location.search, location.pathname, mode); return v.view === 'MAKE' && !flag('make') ? { ...v, view: 'EXPLORE' as const } : v }
@@ -176,7 +182,6 @@ function Glyph({ rows }: { rows: string }) {
 }
 const GLYPHS: Record<View | 'TOOLS' | 'SEARCH', string> = {
   EXPLORE: '11011 11011 00000 11011 11011',
-  BROWSE: '10101 00000 10101 00000 10101',
   MAKE: '00100 00100 11111 00100 00100',
   ABOUT: '00100 00000 00100 00100 00100',
   TOOLS: '10001 01010 00100 01010 10001',
@@ -188,12 +193,13 @@ const toTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia('(pref
  * Phones: the bottom tab bar (EXPLORE / MAKE / ABOUT, then TOOLS for the dock, the DISPLAY menu and the
  * palette). The current view is `aria-current="page"`; tapping it again goes back to the top, and on
  * EXPLORE at the top it opens every board. TOOLS carries a dot while X-ray or the time machine is on.
+ * The widget page has the bar too, with no current view (`view` unset): each view leaves the card's page.
  */
-function TabBar({ view, onView, onBoards }: { view: View; onView: (v: View) => void; onBoards: () => void }) {
+function TabBar({ view, onView, onBoards }: { view?: View; onView: (v: View) => void; onBoards?: () => void }) {
   const busy = useXR(s => s.global || s.on.size > 0 || s.frozen), views = useViews()
   const pick = (v: View) => {
     if (v !== view) { window.scrollTo(0, 0); return onView(v) }
-    if (v === 'EXPLORE' && window.scrollY < 8) onBoards(); else toTop()
+    if (v === 'EXPLORE' && window.scrollY < 8) onBoards?.(); else toTop()
   }
   return <nav className="tabbar" aria-label="Main">
     {views.map(v => <button key={v} type="button" aria-current={view === v ? 'page' : undefined} onClick={() => pick(v)}><Glyph rows={GLYPHS[v]} /><span>{v}</span></button>)}
@@ -214,6 +220,8 @@ export default function App() {
   const [view, setView] = useState<View>(() => urlView().view)
   const [mode, setMode] = useState<Mode>(() => urlView().mode)
   const [board, setBoard] = useState(() => urlView().board)
+  // EXPLORE's ALL (every card, on `/`) or the board above
+  const [all, setAll] = useState(() => urlView().all)
   const [widget, setWidget] = useState<WidgetRoute | undefined>(() => urlView().widget)
   const [boards, setBoards] = useState(false) // the phone board sheet
   const views = useViews(), lab = useFlag('lab')
@@ -230,19 +238,19 @@ export default function App() {
   const first = useRef(true)
   useEffect(() => {
     if (widget) return // the widget page keeps its own URL and meta
-    const want = { view, mode, board }, url = urlForView(want, location.search, location.pathname)
-    // the home page (`/`, which shows the first board) keeps the site's own title and canonical; a board path gets the board's
-    setPageMeta(view === 'BROWSE' ? BROWSE_META : view === 'EXPLORE' && boardFromPath(url.split('?')[0]) ? board : undefined)
+    const want = { view, mode, board, all }, url = urlForView(want, location.search, location.pathname)
+    // the home page (`/`, ALL) keeps the site's own title and canonical; ABOUT has its own; a board path gets the board's
+    setPageMeta(view === 'ABOUT' ? ABOUT_META : view === 'EXPLORE' && !all && boardFromPath(url.split('?')[0]) ? board : undefined)
     syncUrl(url, !first.current && !sameView(urlView(mode), want))
     first.current = false
-  }, [view, mode, board, widget])
+  }, [view, mode, board, all, widget])
   // board ⇄ widget page (Back / Forward, a card's OPEN) as a view transition: the card's frame flies (X1, #18)
   const shownWidget = useRef(widget)
   useEffect(() => { shownWidget.current = widget })
   useEffect(() => {
     const onPop = () => {
       const v = urlView(), was = shownWidget.current
-      const apply = () => { setView(v.view); setBoard(v.board); setWidget(v.widget); if (v.view === 'MAKE') setMode(v.mode) }
+      const apply = () => { setView(v.view); setBoard(v.board); setAll(v.all); setWidget(v.widget); if (v.view === 'MAKE') setMode(v.mode) }
       const slug = !v.widget !== !was ? (v.widget ?? was)?.key : undefined
       if (slug) cardTransition(slug, apply, flushSync, !v.widget); else apply()
     }
@@ -255,7 +263,8 @@ export default function App() {
     if (!p) return
     const v = placeView(p, mode)
     if (v.view === 'MAKE' && !flag('make')) return
-    if (name.toLowerCase() === 'gallery') setBoard(GALLERY_BOARD)
+    // GALLERY was a board; EXPLORE by any other name (BROWSE, ALL, BOARDS) lands on ALL, the home view
+    if (name.toLowerCase() === 'gallery') { setBoard(GALLERY_BOARD); setAll(false) } else if (v.view === 'EXPLORE') setAll(true)
     setMode(v.mode); setView(v.view); setWidget(undefined)
   }
   // widget page ⇄ boards: each move is a history entry; back on a board, the card it came from is brought to the eye
@@ -266,8 +275,8 @@ export default function App() {
     setWidget({ key: slug, scope: '', via: 'path' })
   }
   const leaveWidget = (id: string, slug?: string) => {
-    pushUrl(urlForView({ view: 'EXPLORE', mode, board: id }, location.search, location.pathname))
-    const apply = () => { setWidget(undefined); setView('EXPLORE'); setBoard(id) }
+    pushUrl(urlForView({ view: 'EXPLORE', mode, board: id, all: false }, location.search, location.pathname))
+    const apply = () => { setWidget(undefined); setView('EXPLORE'); setBoard(id); setAll(false) }
     if (!slug) return apply()
     cardTransition(slug, apply, flushSync, true)
     const t0 = performance.now(), find = () => {
@@ -276,21 +285,33 @@ export default function App() {
     }
     window.setTimeout(find, 60)
   }
-  const pickBoard = (id: string) => { setWidget(undefined); setBoard(id) }
+  /** A card's page → ALL (a history entry, like leaving to its board). */
+  const leaveToAll = () => {
+    pushUrl(urlForView({ view: 'EXPLORE', mode, board, all: true }, location.search, location.pathname))
+    setWidget(undefined); setView('EXPLORE'); setAll(true)
+  }
+  /** One board in EXPLORE (leaves ALL); `showAll` is EXPLORE's ALL. */
+  const pickBoard = (id: string) => { setWidget(undefined); setBoard(id); setAll(false) }
+  const showAll = () => { setWidget(undefined); setAll(true); setView('EXPLORE') }
   const place = view === 'MAKE' ? mode : view
   // the old view dissolves out before the new one mounts and enters (instant under reduced motion)
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-  const [shown, leaving] = useExitSwap(`${place}|${board}`, s => reduced || !s.startsWith('EXPLORE|') ? 0 : VIEW_EXIT_MS)
+  // `*` is ALL in the swap key: ALL ⇄ a board dissolves like a board switch
+  const [shown, leaving] = useExitSwap(`${place}|${all ? '*' : board}`, s => reduced || !s.startsWith('EXPLORE|') ? 0 : VIEW_EXIT_MS)
   const [shownPlace, shownBoard] = shown.split('|') as [string, string]
+  const shownAll = shownBoard === '*'
+  const heroBeside = useHeroBeside()
   if (widget) return <div className="shell shell--widget">
     <SkipLink />
     <main id="main" tabIndex={-1}>
       <LoadBoundary key={widget.key} fallback={viewFailed}><Suspense fallback={<section className="view-loading" aria-busy="true" />}><WidgetPage route={widget} onOpen={openWidget} onBoard={leaveWidget} /></Suspense></LoadBoundary>
       <CommandLayer tab="EXPLORE" board={board} setTab={go} setBoard={pickBoard} />
     </main>
+    {/* the phone tab bar on a card's page: EXPLORE is ALL, the home view (#315); the page's own ‹ pill goes back to the card's board */}
+    <TabBar onView={v => { if (v === 'EXPLORE') return leaveToAll(); setWidget(undefined); setView(v) }} />
     <SiteFooter onAbout={() => { setWidget(undefined); setView('ABOUT') }} />
   </div>
-  const title = view === 'MAKE' ? 'MAKE' : view === 'EXPLORE' ? boardLabel(board) : view
+  const title = view === 'MAKE' ? 'MAKE' : view === 'EXPLORE' ? (all ? 'ALL' : boardLabel(board)) : view
   return <div className="shell" data-view={view}>
     <SkipLink />
     <header className="topbar"><a className="brand" href="/" aria-label="MATRIX home"><i className="mark" aria-hidden="true" />MATRIX</a>
@@ -307,7 +328,7 @@ export default function App() {
       <SkinSwitcher />
       <ThemeButton />
       {/* red means live: only while a board streams real data */}
-      {view === 'EXPLORE' && liveBoards.includes(board) && <div className="live"><i aria-hidden="true"/> LIVE DATA</div>}
+      {view === 'EXPLORE' && !all && liveBoards.includes(board) && <div className="live"><i aria-hidden="true"/> LIVE DATA</div>}
       {/* the tool dock (CommandLayer portals it here on desktop) */}
       <div className="topbar-dock"><DockGhost /></div>
       <button type="button" className="topbar-search" aria-label="Search boards, cards and actions" aria-haspopup="dialog" onClick={() => requestLayer('palette')}><Glyph rows={GLYPHS.SEARCH} /></button></header>
@@ -317,15 +338,13 @@ export default function App() {
     <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
     {shownPlace === 'EXPLORE' ? (
       <section className="boards-view" role="tabpanel" aria-labelledby="tab-EXPLORE">
-        {shownBoard === boardIds[0] && <Hero />}
+        {shownAll && heroBeside && <Hero />}
         <IntroLine />
-        <BoardPicker board={board} onPick={setBoard} onAll={() => setBoards(true)} />
-        <Board key={shownBoard} id={shownBoard} leaving={leaving} />
-        <NextBoard board={board} onPick={setBoard} />
-      </section>
-    ) : shownPlace === 'BROWSE' ? (
-      <section className="browse-view" role="tabpanel" aria-labelledby="tab-BROWSE">
-        <Browse onOpen={openWidget} cardPath={widgetPath} onBoard={id => { window.scrollTo(0, 0); pickBoard(id); setView('EXPLORE') }} />
+        <BoardPicker board={board} all={all} onPick={pickBoard} onPickAll={showAll} onSheet={() => setBoards(true)} />
+        {shownAll
+          ? <Browse onOpen={openWidget} cardPath={widgetPath} onBoard={id => { window.scrollTo(0, 0); pickBoard(id) }} />
+          : <><Board key={shownBoard} id={shownBoard} leaving={leaving} /><NextBoard board={board} onPick={pickBoard} /></>}
+        {shownAll && !heroBeside && <Hero />}
       </section>
     ) : shownPlace === 'ABOUT' ? (
       <section className="about-view" role="tabpanel" aria-labelledby="tab-ABOUT"><About /></section>
@@ -340,9 +359,9 @@ export default function App() {
     </Suspense>
     </LoadBoundary>
     {/* C10: ⌘K palette, dot shell, X-ray inspector, time machine; `tab` is the place (a view or a MAKE mode) */}
-    <CommandLayer tab={place} board={board} setTab={go} setBoard={setBoard} />
+    <CommandLayer tab={place} board={board} all={all} setTab={go} setBoard={pickBoard} />
     </main>
-    {boards && <LoadBoundary fallback={null}><Suspense fallback={null}><BoardSheet board={board} onClose={() => setBoards(false)} onPick={id => { window.scrollTo(0, 0); setView('EXPLORE'); setBoard(id) }} /></Suspense></LoadBoundary>}
+    {boards && <LoadBoundary fallback={null}><Suspense fallback={null}><BoardSheet board={board} onClose={() => setBoards(false)} onPick={id => { window.scrollTo(0, 0); setView('EXPLORE'); pickBoard(id) }} /></Suspense></LoadBoundary>}
     <TabBar view={view} onView={setView} onBoards={() => setBoards(true)} />
     <SiteFooter onAbout={() => setView('ABOUT')} /></div>
 }

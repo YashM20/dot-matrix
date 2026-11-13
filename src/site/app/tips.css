@@ -23,7 +23,7 @@
 }
 
 /* ── tooltip (one component): data-tip names the control, data-kbd its key ─────────────────────────────
-   One at a time (the hovered control only). In a group (the dock, a pill bar) the first waits --dur-tip,
+   One at a time (the hovered control only). In a group (the dock, a pill bar, a card's row) the first waits --dur-tip,
    the next ones show at once while the pointer stays in the group (a registered --tip-on that turns on
    after the delay and off at once). Keyboard focus shows it without the wait. No motion. */
 @property --tip-on {
@@ -33,25 +33,29 @@
 }
 
 .pal-dock,
-.pill-bar {
+.pill-bar,
+.dot-card-row {
   --tip-on: 0;
   transition: --tip-on 0s
 }
 
 .pal-dock:hover,
-.pill-bar:hover {
+.pill-bar:hover,
+.dot-card-row:hover {
   --tip-on: 1;
   transition: --tip-on 0s var(--dur-tip)
 }
 
 .pal-dock:focus-within,
-.pill-bar:focus-within {
+.pill-bar:focus-within,
+.dot-card-row:focus-within {
   --tip-on: 1
 }
 
 /* pressing hides it; it comes back after the wait */
 .pal-dock:active,
-.pill-bar:active {
+.pill-bar:active,
+.dot-card-row:active {
   --tip-on: 0
 }
 
