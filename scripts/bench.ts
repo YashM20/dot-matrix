@@ -123,6 +123,13 @@ const boardRows: BoardRow[] = boards.map(b => {
 console.log(`Boards — budgets: mount ≤ ${BUDGET.mountMs} ms, frame (worst ${VIEWPORT_CARDS} consecutive live CPU cards, taking turns from ${STAGGER.min + 1}) ≤ ${BUDGET.frameMs} ms, live card ≤ ${BUDGET.liveMs} ms (exceptions: ${Object.entries(LIVE_EXCEPTIONS).map(([id, ms]) => `${id} ≤ ${ms}`).join(', ')}), SVG < ${kb(BUDGET.svgBytes)} KB; all and gpu fb are reference only`)
 console.log(`${pad('board', 11)} ${lpad('cards', 5)} ${lpad('anim', 4)} ${lpad('mount ms', 9)} ${lpad('frame ms', 9)} ${lpad('all ms', 8)} ${lpad('gpu fb', 7)} ${pad('worst live (ms)', 26)} ${lpad('svg cards', 9)} ${lpad('SVG KB', 7)} ${lpad('all-SVG KB', 10)}  over`)
 for (const r of boardRows) console.log(`${pad(r.id, 11)} ${lpad(r.cards, 5)} ${lpad(r.animated, 4)} ${lpad(f(r.mountMs), 9)} ${lpad(f(r.frameMs), 9)} ${lpad(f(r.allMs), 8)} ${lpad(r.gpuMs ? f(r.gpuMs) : '-', 7)} ${pad(r.animated ? `${r.worstLive} (${f(r.worstLiveMs)})` : '-', 26)} ${lpad(r.svgCards, 9)} ${lpad(kb(r.svgBytes), 7)} ${lpad(kb(r.svgAllBytes), 10)}  ${r.over.join(',') || 'ok'}`)
+// the boards over or near (≥ 75 %) the frame budget: their live CPU cards in board order, so a fix can aim at the heavier group
+const near = boardRows.filter(r => r.over.length || r.frameMs >= BUDGET.frameMs * .75)
+if (near.length) console.log(`\nLive CPU cards of the boards over or near the frame budget (board order, frame ms; a/b = turn group)`)
+for (const r of near) {
+  const an = boards.find(b => b.id === r.id)!.items.map(p => rows.get(p.id)!).filter(c => c.animated && !c.gpu)
+  console.log(`  ${pad(r.id, 11)} ${an.map((c, i) => `${c.id} ${f(c.frameMs)}${'ab'[i & 1]}`).join('  ')}`)
+}
 
 const si = args.indexOf('--sim-t'), simTs = (si >= 0 ? args[si + 1] : '1,60,3600').split(',').map(Number)
 const simRows = simTs.map(T => {
