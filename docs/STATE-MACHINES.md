@@ -328,9 +328,9 @@ Findings at a glance:
 | B7-1 | media: camera | stuck UI | Confirmed, fixed | #296 | #298 |
 | B6-1 | editor and IR worker | wrong output | Confirmed, fixed | #297 | #298 |
 | B6-3 | editor autosave | data loss (two tabs) | Confirmed, fixed | #304 | #PRNUM |
-| B7-2 | media: mic | stuck UI | Likely | | |
-| B7-3 | media: HAND mode | stuck UI | Likely | | |
-| B4-1 | card input | stuck press | Likely | | |
+| B7-2 | media: mic | stuck UI | Confirmed, fixed | #304 | #PRNUM |
+| B7-3 | media: HAND mode | stuck UI | Confirmed, fixed | #304 | #PRNUM |
+| B4-1 | card input | stuck press | Not reachable | #304 | #PRNUM |
 | B4-2 | card input | stale state | Likely | | |
 | B3-1 | transitions | cosmetic | Likely | | |
 | B1-1 | card lifecycle | performance | Likely | | |
@@ -469,7 +469,7 @@ Keyboard: `press` holds a button down for 140 ms (`:432`); `set` applies a patch
 **Persists:** nothing.
 
 **Findings**
-- **B4-1, Likely, stuck press.** No handler for window blur. A mouse drag on a card while the window loses focus (Alt+Tab) relies on the browser sending `pointercancel` or `lostpointercapture` (`:417`). Where it sends neither, the control stays pressed until the next pointerup on the card. Needs a browser to confirm.
+- **B4-1, Not reachable (PR #PRNUM).** No handler for window blur: a mouse drag on a card while the window loses focus (Alt+Tab) relies on the browser ending it with `pointercancel` or lost pointer capture (`:417`). Chrome does. The `input` probe (`scripts/input-browser.ts`) drags a range control, brings another tab to the front (`document.hasFocus()` false), lets the button up outside the page, then moves the mouse back across the control with no button down. The control stays put (0.1 → 0.1), with no change to the input code. The probe stays as the check.
 - **B4-2, Likely, stale state.** When the card's controls change (a preset swap, `:454`), drags, claims and candidates are cleared, but tap replays, lingering pointers and the engaged state are kept. A replayed tap then finishes on a control that is gone (harmless: the patch is for an unknown key), and the card can stay engaged until idle.
 - Multi-touch: two fingers on two drag controls both work, but `pressed` shows only the last one (`:195`). By design.
 
@@ -591,12 +591,13 @@ The shared camera stream: `src/media/stream.ts:28` (reference counted). A camera
 | starting | stream resolves | turned off meanwhile | idle (tracks stopped) |
 | starting | any error | | denied |
 | live or starting | `setMic(false)`, scope unmount | | idle |
+| live | a track ended (unplugged, permission revoked) | still this stream | idle (`setMic(false)`, B7-2 fix) |
 
 **Persists:** nothing in storage. Browser permissions persist outside the page.
 
 **Findings**
 - **B7-1, Confirmed, fixed (#296, PR #298). Stuck UI.** Two parts. `acquireCamera` handed the shared stream to the next consumer even after every track ended, so with HAND mode holding it, toggling a camera card off and on got the dead stream again. And `grab()` never checked the tracks: an ended track stops new frames, `grab()` returned false forever, `status` stayed `live`, and the card showed its last frame as live. Reproduced by `scripts/media.ts` under a fake `getUserMedia` (`1 opened, same stream true`; `status live`). Fix: a dead stream is dropped on the next acquire (`stream.ts:31`), and a live capture whose tracks ended releases its reference and goes to `error` (`camera.ts:80`; the status change is heard after the frame, since a grab can run inside a React render).
-- **B7-2, Likely, stuck UI.** The mic has no `ended` handler (`engine.ts:258`). Unplugging the mic or revoking its permission leaves `micState` at `live` with a silent analysis. Turning the mic off and on recovers.
-- **B7-3, Likely, stuck UI.** HAND mode has no `ended` handler either. Its frame loop (`handPointer.ts:133`) waits for new video frames, which never come, and the status stays `live`. Turning HAND off and on recovers once no other consumer holds the dead stream (and with the B7-1 fix, a new acquire skips the dead one).
+- **B7-2, Confirmed, fixed (#304, PR #PRNUM). Stuck UI.** The mic had no `ended` handler (`engine.ts:258`). Unplugging the mic or revoking its permission left `micState` at `live` with a silent analysis. Turning the mic off and on recovered. Reproduced by the `audio` probe (`scripts/audio-chrome.ts`), which stops the fake mic's track and fires `ended`: before the fix `{"state":"live","checked":"true"}`. Fix: each mic track's `ended` turns the mic off, switch included (`engine.ts:266`).
+- **B7-3, Confirmed, fixed (#304, PR #PRNUM). Stuck UI.** HAND mode had no `ended` handler either. Its frame loop (`handPointer.ts:133`) waited for new video frames, which never came, and the status stayed `live`. Turning HAND off and on recovered once no other consumer held the dead stream (and with the B7-1 fix, a new acquire skips the dead one). Reproduced by the `c6` probe (`scripts/c6-browser.ts`), which ends the fake camera's tracks: before the fix the HUD still said `PINCH TO PRESS`. Fix: a track's `ended` stops HAND mode, releases the camera and shows `NO CAMERA` (`handPointer.ts:167`); HAND stays on, so the next tab show or an off and on asks again.
 - **B7-4, Not reachable.** If every reference were released while the prompt is open and a new consumer then acquired, `acquireCamera` would open a second stream and the first would never stop. Consumers only release after their own acquire resolved (`camera.ts:60`, `handPointer.ts:164`), so the count cannot reach 0 while a stream is pending.
 - **B7-5, Not reachable.** Mic on, off, on while `getUserMedia` is pending: the first stream to resolve while `starting` is kept, the other is stopped (`engine.ts:259`), so exactly one stream stays open.
