@@ -17,6 +17,7 @@ import { frameById, groupOf, layerOf, topDown } from './doc'
 import { TEST_HOOKS } from '../../lib/testHooks'
 import { EditorBoundary } from './EditorBoundary'
 import { ImportPrompt, useLinkImports } from './imports'
+import { OtherTabNote } from './OtherTabNote'
 import { editableText } from './direct'
 import { codeTarget, KEY_TOOL, MODE_ENTRY, paintTarget } from './input'
 import { InspectorBody, InspectorTabs } from './Inspector'
@@ -142,6 +143,7 @@ function EditorView({ mode, onExit }: EditorProps) {
           {banner && <p className="ed-banner" role="alert">{banner}<button type="button" aria-label="Dismiss" onClick={() => setBanner('')}>×</button></p>}
           {prompt && <ImportPrompt prompt={prompt} />}
           <p className="ed-note" role="status" aria-live="polite">{note}</p>
+          <OtherTabNote />
           {phone && !sheet && <SelBar />}
           {phone && !sheet && <PhoneTools />}
         </div>
