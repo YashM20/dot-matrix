@@ -228,6 +228,7 @@
 .ed-banner ~ .ed-other { top: 56px }
 .ed-other button { min-height: 28px; padding: 0 var(--space-2); background: none; border: 1px solid transparent; border-radius: var(--radius-ctl); color: var(--label) }
 .ed-other button:hover, .ed-other button:focus-visible { color: var(--value); border-color: var(--line); background: var(--raised) }
+.ed-other button:active { background: var(--wash-press) }
 
 /* ── inspector ── */
 .ed-sec { padding: var(--space-3) var(--space-4) var(--space-4); border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1; display: grid; gap: var(--space-2); min-width: 0 }
