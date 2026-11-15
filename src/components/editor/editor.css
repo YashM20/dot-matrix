@@ -230,7 +230,7 @@
 .ed-other-text { flex: 1 1 auto; min-width: 0 }
 .ed-other-acts { flex: none; margin-left: auto; background: none }
 /* the toolbar button's own look, over .ed-root button's inherit */
-.ed-other .pill-btn { color: var(--label); font: 500 var(--fs-label-12)/1 var(--mono); letter-spacing: .08em }
+.ed-other .pill-btn { color: var(--label); font: 500 var(--fs-label-12)/1 var(--mono); letter-spacing: .06em }
 .ed-other .pill-btn:hover, .ed-other .pill-btn:focus-visible, .ed-other .pill-btn:active { color: var(--value) }
 .ed-other .pill-btn:focus-visible { outline-offset: -2px }
 .ed-stage:has(> .ed-other:not(:empty)) > :is(.ed-banner, .ed-confirm) { top: 48px }
