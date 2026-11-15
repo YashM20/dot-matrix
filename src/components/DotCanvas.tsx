@@ -335,7 +335,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   // transients animate on canvas; a sparse card hands back to SVG when they finish
   // WebGL2 (P5): forced, or picked for a card whose layers carry GPU passes (`gpuIR` / `gpuValues`); it draws on the canvas surface
   // (`gpuWanted` above) when this browser can draw them; `gl` is the loaded renderer
-  const gpuCard = gpuWanted && !!gl && gl.webglReady()
+  const gpuCard = useMemo(() => gpuWanted && !!gl && gl.webglReady(), [gpuWanted, gl])
   const webgl = renderer === 'webgl' || gpuCard, gpuFade = useRef(1)
   const mode: RenderMode = renderer && renderer !== 'webgl' ? renderer : (webgl || animated || live || transient || visible > CANVAS_THRESHOLD ? 'canvas' : 'svg')
   const markup = useMemo(() => mode === 'svg' ? renderSVG(dots, width, height) : '', [mode, dots, width, height])
