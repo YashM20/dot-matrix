@@ -78,7 +78,9 @@ interface CardActionsProps extends ActsInput {
 /** The actions as one toolbar: the card's own actions (export, link, share, remix) left, the rest (X-RAY, MORE) right. */
 export function CardActions({ xrayOn, xray, onBoard, ...input }: CardActionsProps) {
   const act = useWidgetActs(input), { w } = input
-  const share = useMemo(() => canShare(), [])
+  // SHARE is a touch action (owner decision): on a mouse the system sheet adds little to LINK, and the toolbar stays one
+  // row with X-RAY on. The test is the phone UI's own, a coarse pointer
+  const share = useMemo(() => canShare() && matchMedia('(pointer: coarse)').matches, [])
   return <PillBar label="Card actions" className="wp-actions">
     <Pill className="wp-copy">
       <PillButton label="PNG" title="Copy as PNG" onClick={act.png} />

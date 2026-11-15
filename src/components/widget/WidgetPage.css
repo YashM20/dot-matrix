@@ -286,9 +286,8 @@
   font: 400 var(--fs-copy-14)/1.5 var(--sans)
 }
 
-/* ── more menu (MoreMenu.tsx): an opaque popover, fixed under its button (right edges lined up) and kept in the
-   viewport by script. A solid raised surface, a hairline, a small radius and a short soft shadow; no blur, no
-   motion. Rows are one line: the label left, its meta right in muted mono. ── */
+/* ── more menu (MoreMenu.tsx): the solid popover (its look and rows: src/site/app/raised.css), fixed under its button
+   with their right edges lined up and kept in the viewport by script ── */
 .wp-more {
   position: fixed;
   z-index: calc(var(--z-pinned) + 1);
@@ -299,79 +298,8 @@
   max-width: calc(100cqi - 16px);
   display: flex;
   flex-direction: column;
-  padding: var(--space-1);
-  background: var(--raised);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-ctl);
-  box-shadow: var(--shadow-pop)
+  padding: var(--space-1)
 }
-
-.wp-more button {
-  display: flex;
-  align-items: center;
-  gap: var(--space-5);
-  min-height: 30px;
-  padding: 0 var(--space-2);
-  background: none;
-  border: 0;
-  border-radius: var(--radius-sm);
-  color: var(--label);
-  font: 500 var(--fs-label-12)/1 var(--mono);
-  letter-spacing: .06em;
-  text-align: left;
-  text-transform: uppercase;
-  white-space: nowrap;
-  cursor: pointer
-}
-
-.wp-more button:hover,
-.wp-more button:focus-visible {
-  background: var(--wash-hover);
-  color: var(--value)
-}
-
-.wp-more button:active {
-  background: var(--wash-press);
-  color: var(--value)
-}
-
-.wp-more button:focus-visible {
-  outline-offset: -2px
-}
-
-.wp-more-label {
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis
-}
-
-.wp-more small {
-  flex: none;
-  color: var(--mute);
-  font: inherit;
-  letter-spacing: 0;
-  text-transform: none
-}
-
-/* a new group: a hairline above it, edge to edge */
-.wp-more .wp-more-group {
-  position: relative;
-  margin-top: var(--space-2)
-}
-
-.wp-more .wp-more-group::before {
-  content: '';
-  position: absolute;
-  top: calc(-1 * var(--space-1) - 1px);
-  left: calc(-1 * var(--space-1));
-  right: calc(-1 * var(--space-1));
-  height: 1px;
-  background: var(--line);
-  pointer-events: none
-}
-
-@media (pointer: coarse) {}
 
 /* the narrowest phones: REMIX keeps its icon only, so the toolbar stays one row */
 @media (max-width: 360px) {
@@ -465,9 +393,6 @@
     display: flex !important
   }
 
-  .wp-more button {
-    min-height: var(--tap)
-  }
 }
 
 /* motion: the shared chrome states in src/site/app/chrome.css (in at once, out over --dur-out; none under reduced motion) */

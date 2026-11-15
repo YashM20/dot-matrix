@@ -200,7 +200,11 @@ try {
   if (run('share')) {
   // a Web Share stand-in (headless Linux Chrome has none): it records each shared PNG as `bytes:hash`
   const stub = (await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `window.__shared=[];navigator.canShare=()=>true;navigator.share=async d=>{const f=d.files&&d.files[0];if(!f){window.__shared.push('link');return}const b=new Uint8Array(await f.arrayBuffer());let h=0;for(let i=0;i<b.length;i++)h=(h*31+b[i])>>>0;window.__shared.push(b.length+':'+h)}` })).result.identifier
+  // SHARE shows on touch only (a coarse pointer, read when the page mounts): load the page as a touch device, then
+  // drive it with the mouse
+  await cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
   await open('widget/settings/'); await sleep(1200)
+  await cdp('Emulation.setTouchEmulationEnabled', { enabled: false })
   const btn = await js(`(() => { const b = document.querySelector('.wp-actions button[aria-label="Share"]'); if (!b) return null; b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } })()`) as { x: number; y: number } | null
   check('card page: SHARE shows where Web Share exists', !!btn)
   if (btn) {
@@ -387,6 +391,13 @@ try {
   // and with the xray flag on both come back
   await open(`widget/${slug}/`); await waitFor(`!!document.querySelector('.wp-more-btn')`, 8000)
   check('flag on: the widget page has its X-RAY pill and menu item', await openMore() && await js(`[...document.querySelectorAll('.wp-actions button')].some(b => b.textContent.includes('X-RAY')) && [...document.querySelectorAll('.wp-more [role=menuitem]')].some(b => /x-ray/i.test(b.textContent))`))
+  // at 1280 with X-RAY on, the panel's toolbar is still one row, and SHARE stays off a mouse even where Web Share exists
+  await cdp('Emulation.setDeviceMetricsOverride', { width: 1280, height: 900, deviceScaleFactor: 1, mobile: false })
+  await cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'navigator.share = navigator.share || (async () => {})' })
+  await open(`widget/${slug}/`); await waitFor(`!!document.querySelector('.wp-more-btn')`, 8000)
+  const row = await js(`(() => { const g = [...document.querySelectorAll('.wp-actions .pill')]; return { tops: new Set(g.map(x => Math.round(x.getBoundingClientRect().top))).size, xray: [...document.querySelectorAll('.wp-actions button')].some(b => b.textContent.includes('X-RAY')), share: !!document.querySelector('.wp-actions [aria-label="Share"]') } })()`) as { tops: number; xray: boolean; share: boolean }
+  check('flag on, 1280: the widget toolbar is one row with X-RAY, and no SHARE on a mouse', row.tops === 1 && row.xray && !row.share, JSON.stringify(row))
+  await cdp('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1100, deviceScaleFactor: 1, mobile: false })
   await open('?board=henry'); await sleep(600)
   check('flag on: the intro says press X-RAY', /X-RAY/.test(await text('.intro-line .intro-long')))
   }

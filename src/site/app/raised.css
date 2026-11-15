@@ -1,12 +1,11 @@
 /* App styles: the raised layer (menus, popovers, sheets, the palette) */
 /* ── raised layer (one look): menus, popovers, sheets, ⌘K ─────────────────────────────────────────────
    Glass: translucent raised, one small blur, the raised shadow; it opens with no animation. Cards keep their
-   single hairline. Used by .skin-menu, .theme-pop, .ed-menu (editor), .dot-card-menu (a card's MORE, CardRow), .pal,
-   .sheet-panel. The widget page's MORE (.wp-more) is an opaque popover instead (WidgetPage.css). */
+   single hairline. Used by .skin-menu, .theme-pop, .ed-menu (editor), .pal, .sheet-panel. The two MORE menus (the
+   widget page's .wp-more and a card's .dot-card-menu) are the solid popover below. */
 .skin-menu,
 .theme-pop,
 .ed-menu,
-.dot-card-menu,
 .pal,
 .sheet-panel {
   background: var(--glass);
@@ -21,10 +20,100 @@
   .skin-menu,
   .theme-pop,
   .ed-menu,
-  .dot-card-menu,
   .pal,
   .sheet-panel {
     background: var(--raised)
+  }
+}
+
+/* ── popover (one look): the two MORE menus, the widget page's (MoreMenu.tsx) and a card's (CardRow.tsx) ───────────
+   Solid raised, a hairline, a small radius, a short soft shadow; no blur, no motion. Rows are 30 px (--tap on touch),
+   one line each: the label left, a short muted meta right (<small>); a hairline edge to edge starts a group. Each
+   menu's own file places it. */
+.wp-more,
+.dot-card-menu {
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  box-shadow: var(--shadow-pop)
+}
+
+.wp-more button,
+.dot-card-menu button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--label);
+  font: 500 var(--fs-label-12)/1 var(--mono);
+  letter-spacing: .06em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer
+}
+
+.wp-more button:hover,
+.wp-more button:focus-visible,
+.dot-card-menu button:hover,
+.dot-card-menu button:focus-visible {
+  background: var(--wash-hover);
+  color: var(--value)
+}
+
+.wp-more button:active,
+.dot-card-menu button:active {
+  background: var(--wash-press);
+  color: var(--value)
+}
+
+.wp-more button:focus-visible,
+.dot-card-menu button:focus-visible {
+  outline-offset: -2px
+}
+
+.wp-more-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis
+}
+
+.wp-more small {
+  flex: none;
+  color: var(--mute);
+  font: inherit;
+  letter-spacing: 0;
+  text-transform: none
+}
+
+/* a new group (a card's X-ray toggle) */
+.wp-more .wp-more-group,
+.dot-card-menu [role="menuitemcheckbox"]:not(:first-child) {
+  position: relative;
+  margin-top: var(--space-2)
+}
+
+.wp-more .wp-more-group::before,
+.dot-card-menu [role="menuitemcheckbox"]:not(:first-child)::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--space-1) - 1px);
+  left: calc(-1 * var(--space-1));
+  right: calc(-1 * var(--space-1));
+  height: 1px;
+  background: var(--line);
+  pointer-events: none
+}
+
+@media (hover: none), (pointer: coarse) {
+  .wp-more button,
+  .dot-card-menu button {
+    min-height: var(--tap)
   }
 }
 
