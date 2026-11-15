@@ -40,10 +40,12 @@ export const outline = (x: number, y: number, w: number, h: number, r: number, s
 export const spriteAt = (rows: string[], col: number, row: number, k: number): LatticeField => { const L = T.lattice(k, col, row); return L.at(L.sprite(rows, 0, 0)) }
 /** The first `n` columns of a sprite (a mark drawing on from left to right). */
 export const cols = (rows: string[], n: number) => rows.map(r => [...r].map((ch, i) => (i < n ? ch : '.')).join(''))
-/** Hero number on a smooth lattice (10×14 glyphs per character), left-aligned. */
-export const hero = (s: string, x: number, top: number, lattice = 2.5) => T.big(s, x, top, { lattice, smooth: true, face: 'fine' })
-/** Width in cells of hero text on `lattice`. */
-export const heroW = (s: string, lattice = 2.5) => ([...s].length * 12 - 2) * lattice
+/** The hero face on `lattice`: smooth `fine` numerals (8×14 digits, 2 dots apart). */
+export const heroOpts = (lattice = 2.5) => ({ lattice, smooth: true, face: 'fine' as const })
+/** Hero number on a smooth lattice, left-aligned. */
+export const hero = (s: string, x: number, top: number, lattice = 2.5) => T.big(s, x, top, heroOpts(lattice))
+/** Width in cells of hero text on `lattice`, measured from the face. */
+export const heroW = (s: string, lattice = 2.5) => T.bigSize(s, heroOpts(lattice))[0]
 
 // ── marks (7 × 7, lattice sprites) ──────────────────────────────────────────
 export const CHECK = ['......#', '.....##', '#...##.', '##.##..', '.###...', '..#....', '.......']

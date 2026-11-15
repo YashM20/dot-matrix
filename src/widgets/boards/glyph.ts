@@ -124,7 +124,14 @@ const ring = (r: number, o: { size?: number; sweep?: number; cx?: number; cy?: n
 // the app: a now-playing glyph. Disc of three dotted grooves round a hub, a progress line, transport
 const DISC = { cx: 72, cy: 55, r: [30, 22.5, 15] }, BAR = { x0: 24, x1: 120, y: 97, sp: 4 }, PLAYED = .36, TRACK = 214
 const icon = (rows: string[], x: number, y: number, p: number): Pt[] => rows.flatMap((row, j) => [...row].flatMap((ch, i) => (ch === '#' ? [[x + (i - (row.length - 1) / 2) * p, y + (j - (rows.length - 1) / 2) * p] as Pt] : [])))
-const PREV = ['..#', '.##', '###', '.##', '..#'], NEXT = PREV.map(r => [...r].reverse().join('')), PAUSE = ['#.#', '#.#', '#.#']
+const PAUSE = ['#.#', '#.#', '#.#']
+/** Prev and next as `T.dotTri` (hex-packed dots `k` apart, the skip bar beyond the tip), centred on `cx`. */
+const SKIP = { n: 4, k: 3 }
+const skip = (cx: number, y: number, dir: 'left' | 'right'): Part => {
+  const run = ((SKIP.n - 1) * SKIP.k * Math.sqrt(3)) / 2, s = dir === 'left' ? 1 : -1
+  const tri = T.dotTri(cx + (s * (SKIP.k - run)) / 2, y, SKIP.n, { k: SKIP.k, dir, bar: true })
+  return { pts: tri.sites ?? [], size: tri.size ?? 1, tone: 'idle' }
+}
 /** Disc grooves keep one site pitch at every radius (the lock ring's shared spokes would crowd the small ones into a line). */
 const groove = (r: number) => T.dotRing(DISC.cx, DISC.cy, r, { spacing: 4.2, size: 1 }).sites!
 const barSites: Pt[] = []
@@ -135,9 +142,9 @@ const appParts: Part[] = [
   { pts: groove(DISC.r[1]), size: 1.7, tone: 'mid' },
   { pts: groove(DISC.r[2]), size: 1.7, tone: 'mid' },
   { pts: [[DISC.cx, DISC.cy]], size: 4.4, tone: 'value' },
-  { pts: icon(PREV, 44, 113, 3.4), size: 2.5, tone: 'idle' },
+  skip(44, 113, 'left'),
   { pts: icon(PAUSE, 72, 113, 4.2), size: 3.2, tone: 'value' },
-  { pts: icon(NEXT, 100, 113, 3.4), size: 2.5, tone: 'idle' },
+  skip(100, 113, 'right'),
 ]
 /** Progress line at `played` (0..1): played dots lit, a bigger playhead, the rest faint. */
 const progressParts = (played: number): Part[] => {
