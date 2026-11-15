@@ -5,7 +5,7 @@
  * pixels of the filled stadium) and every other pixel round the loop is lit, so the ends read as clean as the
  * straight runs and every dot is a whole pixel.
  *
- * `dotRing` is a ref callback: it watches the element's size and sets `--ring` (an SVG mask, cached per size); the
+ * `dotRing` is a ref callback (first-load chrome uses `ringLater`, which fetches this as its own chunk): it watches the element's size and sets `--ring` (an SVG mask, cached per size); the
  * CSS (`.dot-ring`, src/site/app/ring.css) paints it in `--ring-c`. The check is in scripts/verify/ux.ts.
  */
 

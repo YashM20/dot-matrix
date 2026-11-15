@@ -1,7 +1,7 @@
-import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { SKINS, SKIN_NAMES } from '../../engine/display/names'
 import { getSkin, setClack, setSkin, useClack, useDisplaySkin } from './store'
-import { dotRing } from '../dotRing'
+import { ringLater } from '../ringLater'
 
 /** The one-line description: the skin title after its "NAME: " prefix. */
 const blurb = (title: string) => title.slice(title.indexOf(': ') + 2)
@@ -17,7 +17,7 @@ export function SkinSwitcher() {
   const skin = useDisplaySkin(), clack = useClack()
   const [open, setOpen] = useState(false), [right, setRight] = useState(true)
   const wrap = useRef<HTMLDivElement>(null), btn = useRef<HTMLButtonElement>(null)
-  useLayoutEffect(() => dotRing(btn.current), [])
+  useEffect(() => ringLater(btn.current), [])
   const items = useRef<(HTMLButtonElement | null)[]>([])
   const id = useId()
 
@@ -90,7 +90,7 @@ export function SkinSwitcher() {
         </div>
       )}
       {skin === 'flipdisc' && (
-        <button ref={dotRing} type="button" className={`skin-clack dot-ring${clack ? ' selected' : ''}`} aria-pressed={clack} title="Flip-disc clack (sound)" onClick={() => setClack(!clack)}>
+        <button ref={ringLater} type="button" className={`skin-clack dot-ring${clack ? ' selected' : ''}`} aria-pressed={clack} title="Flip-disc clack (sound)" onClick={() => setClack(!clack)}>
           {clack ? 'CLACK ON' : 'CLACK OFF'}
         </button>
       )}
