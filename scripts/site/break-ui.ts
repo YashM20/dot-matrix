@@ -166,7 +166,9 @@ async function widget() {
       if (!rail || !foot || !last) return 'missing ' + (!rail ? '.wp-rail' : !foot ? 'footer' : 'facts')
       window.scrollTo(0, 0); rail.scrollTop = rail.scrollHeight
       const f = foot.getBoundingClientRect().top, r = rail.getBoundingClientRect().bottom, l = last.getBoundingClientRect().bottom
-      return r > f + 1 || l > f + 1 ? 'panel ends at ' + Math.round(r) + ', last row at ' + Math.round(l) + ', footer at ' + Math.round(f) : ''
+      // on a miss, the chain from the shell down: each box's top-bottom, display, rows and overflow, to say which grew
+      const chain = () => ['.shell--widget', '.shell--widget > main', '.wp', '.wp-top', '.wp-main', '.wp-stagebox', '.wp-rail', '.shell--widget > .bottom'].map(sel => { const e = document.querySelector(sel); if (!e) return sel + ' none'; const b = e.getBoundingClientRect(), c = getComputedStyle(e); return sel + ' ' + Math.round(b.top) + '-' + Math.round(b.bottom) + ' ' + c.display + ' h=' + c.height + ' rows=' + c.gridTemplateRows + ' oy=' + c.overflowY + ' mt=' + c.marginTop }).join(' | ') + ' | inner ' + innerHeight + ' scroll ' + document.scrollingElement.scrollHeight
+      return r > f + 1 || l > f + 1 ? 'panel ends at ' + Math.round(r) + ', last row at ' + Math.round(l) + ', footer at ' + Math.round(f) + ': ' + chain() : ''
     })()`)
     check(`widget-rail:footer@${W}`, !end, end)
     await sleep(200); await shot('widget-rail-end')
