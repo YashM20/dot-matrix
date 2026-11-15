@@ -58,6 +58,19 @@ export async function likesChecks(assert: Assert) {
     assert('likes: a flagged like stays flagged after an unlike and a like again, a day later', before.flag === 1 && after.flag === 1 && after.raw === before.raw, `before ${JSON.stringify(before)} after ${JSON.stringify(after)}`)
   }
 
+  // A5.2 (docs/STATE-MACHINES.md): every like answer carries the item's public count after it (`n`), so an unlike of
+  // a like counted since shows the lower count at once
+  {
+    const w = world(), b = new Browser(w)
+    await b.remember()
+    const liked = await jsonOf(await b.like(WA)); w.advance(25); const counted = await count(w, A)
+    const again = await jsonOf(await b.like(WA)), unliked = await jsonOf(await b.like(WA, false)), unlikedTwice = await jsonOf(await b.like(WA, false))
+    const restored = await jsonOf(await b.like(WA)), after = await count(w, A)
+    assert('likes: a like answer reports the public count after it (pending 0, counted 1, already 1, unliked 0, restored 1) (A5.2)',
+      liked.n === 0 && counted === 1 && again.n === 1 && unliked.n === 0 && unlikedTwice.n === 0 && restored.n === 1 && after === 1,
+      JSON.stringify({ liked: liked.n, counted, again: again.n, unliked: unliked.n, unlikedTwice: unlikedTwice.n, restored: restored.n, after }))
+  }
+
   // bursts: New and Once likes past 20 an hour on one item are flagged; Returning likes in the same hour count
   {
     const w = world()

@@ -15,8 +15,8 @@ Findings at a glance, worst first. Severity: data loss, broken UI, wrong output,
 | A2.1 | Chunk loading | Broken UI | Confirmed (`scripts/verify/appstate.ts`) | #300 | Fixed in #303: offline never reloads |
 | A2.2 | Chunk loading | Broken UI | Confirmed (`chunks` probe) | #300 | Fixed in #303: each lazy part has a `LoadBoundary` |
 | A5.1 | Likes client | Data loss (this browser's likes record) | Confirmed (`scripts/verify/appstate.ts`) | #301 | Fixed in #303: storage listener and read-modify-write |
-| A5.2 | Likes client | Wrong output | Likely | #302 | Left: needs the server to say whether the caller's like is counted |
-| A5.3 | Likes client | Wrong output | Likely | #302 | Left: heals on the next day's visit |
+| A5.2 | Likes client | Wrong output | Confirmed (`likes` probe) | #302 | Fixed in #PRNUM: the like answer carries the count after it |
+| A5.3 | Likes client | Wrong output | Confirmed (`likes` probe) | #302 | Fixed in #PRNUM: Remember is stored only after the check-in |
 | A8.1 | Global keys | Broken UI (stuck input) | Confirmed (`c10` probe) | #302 | Fixed in #316: a window blur ends the hold |
 | A9.1 | Widget page SHARE | Cosmetic | Confirmed (`c10` probe) | #302 | Fixed in #316: a keyboard SHARE makes a fresh PNG |
 | A4.1 | Theme | n/a | By design | | `theme-picker` probe pins it |
@@ -188,10 +188,11 @@ Invariants:
 | ready | click | liked | busy | `POST /api/like {on: false}` |
 | ready | click | GPC, or a choice stored | busy | `POST /api/like {on: true}` |
 | ready | click | no choice | asking | remember sheet (modal) |
-| asking | Remember | | busy | choice stored, `POST /api/visit`, then the like |
+| asking | Remember | | busy | `POST /api/visit`, then the choice stored and the like |
+| busy | check-in fails | | ready | nothing stored, no like, note: limit or paused (A5.3) |
 | asking | Just this once | | busy | choice stored, the like |
 | asking | Escape, scrim | | ready | nothing sent |
-| busy | like ok | | ready | `mine` updated (read-modify-write), note: counting soon or already liked |
+| busy | like ok | | ready | `mine` updated (read-modify-write), the count set to the server's `n`, note: counting soon or already liked |
 | busy | 429 or failure | | ready | note: limit or paused |
 | ready | Forget this browser | ok | ready | record removed, server drops this voter's likes |
 | any | `storage` event for `dot480:likes` | | same | cached record dropped, buttons re-render |
@@ -205,16 +206,20 @@ Findings:
   undid "Forget this browser": tab B wrote its old `c: 'r'` back on its next like, so the browser looked remembered
   with no cookie behind it. Fix: a `storage` listener drops the cache and re-renders, and every write goes through
   `updateLocal`, which reads the stored record first. Check: `scripts/verify/appstate.ts`.
-- **A5.2, Likely, left.** Unlike after a reload doesn't lower the count. Like X, wait until it is counted, reload:
-  `count` (from the server) includes this like and `mine[X]` holds the count from before it, so the button shows
-  `count`. Unlike: `mine[X]` is dropped and the button still shows `count` (`LikeButton.tsx`, `send`). The client
-  can't tell whether its own like is in the public count (it may still be held as pending, and other visitors move
-  the count too), so a fix needs the server to report it. Low impact: the next page view after the CDN cache (5 min)
-  is right.
-- **A5.3, Likely, left.** Remember stores `c: 'r'` before `POST /api/visit` answers, and ignores the answer
-  (`LikeButton.tsx`, `choose`). If the visit fails (paused or timed out), the browser shows "Forget this browser"
-  with no cookie, and the failure starts the rest window, so the like that follows comes back "Likes paused" at once.
-  `dailyVisit` issues the cookie on the next day's visit, so it heals.
+- **A5.2, Confirmed, fixed in #PRNUM.** Unlike after a reload didn't lower the count. Like X, wait until it is
+  counted, reload: `count` (from the server) includes this like and `mine[X]` holds the count from before it, so the
+  button shows `count`. Unlike: `mine[X]` was dropped and the button still showed `count` (`LikeButton.tsx`, `send`).
+  The client can't tell whether its own like is in the public count (it may still be pending, likes are weighted, and
+  other visitors move the count too). Fix: every like answer carries `n`, the item's public count after the change
+  (`api/_lib/likes.ts`, `like`: one more read of the item's counted weight), and the button shows it. Checks: the
+  `likes` probe seeds a like counted since (count 12, liked at 11) and unlikes it; before the fix it stayed at 12,
+  now it shows 11. `scripts/likes/checks.ts` pins `n` through pending, counted, already, unliked and restored.
+- **A5.3, Confirmed, fixed in #PRNUM.** Remember stored `c: 'r'` before `POST /api/visit` answered, and ignored the
+  answer (`LikeButton.tsx`, `choose`). When the visit failed, the browser showed "Forget this browser" with no cookie,
+  and the failure started the rest window, so the like that followed came back "Likes paused" at once. Fix: the
+  choice is stored only after the visit answers ok. A failed visit stores nothing, sends no like and says why, so
+  the next like asks again. Check: the `likes` probe's `visitfail` mode; before the fix the record held `c: 'r'`
+  and "Forget this browser" showed.
 - **A5.4, Not reachable.** A `LikeButton` whose `program` prop changes would keep the old `item` until the new count
   loads. Gallery entries are keyed by their content hash (`programHash`), so a changed program is a new button.
 - Double clicks: not reachable. `busy` re-renders before the next click (React flushes a discrete event's updates).
