@@ -209,7 +209,7 @@ export const goodMorning: WidgetPreset = {
       ...SPIKES.map(c => layer(chart.at(chart.vrule(c, 10, 2)))),
       ...SPIKES.map(c => layer(chart.at(chart.vrule(c, 5, 5)), 'active')),
       // the key for the red spikes, above the chart's top right
-      layer(T.dots([[121, 71]], 2.6), 'active'), layer(T.text('REM', 143, 68, { align: 'right' }), 'idle'),
+      layer(T.dots([[121, 71]], 3.4), 'active'), layer(T.text('REM', 143, 68, { align: 'right' }), 'idle'),
     ]
   },
 }
