@@ -3,8 +3,9 @@
  * now playing from a push / websocket feed, GitHub contributions from the public API. Each card
  * draws only from `data` (its defaults are the source's deterministic fixture, so snapshots and
  * goldens never touch the network); numbers glide on data springs, text and status changes
- * dissolve. The footer says where the frame came from: LIVE, CACHED (last good value) or OFFLINE
- * (the fixture). The board spends its one red on today's contribution dot and the playhead knob.
+ * dissolve. The footer says where the frame came from: LIVE, CACHED (last good value) or SAMPLE
+ * (offline: the fixture, which is sample data and not a failure, so a card that is "playing" never
+ * also reads OFFLINE). The board spends its one red on today's contribution dot and the playhead knob.
  *
  * Config (URL params, read once, checked by `parseLiveConfig`): `?board=live&lat=51.51&lon=-0.13&place=London&gh=<user>`.
  * No parameter names a host: now playing reads this page's Media Session and same-origin pushes.
@@ -12,7 +13,7 @@
 import { hash01 } from '../../engine/math'
 import type { Layer, Tone } from '../../engine/types'
 import { parseLiveConfig } from '../../data/parse'
-import { statusName } from '../../data/source'
+import { statusName, type SourceStatus } from '../../data/source'
 import { contribSource, GH_WEEKS, nowPlayingSource, weatherSource, WX_HOURS } from '../../data/sources'
 import { fit, textOf } from '../../data/text'
 import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
@@ -35,15 +36,20 @@ export const liveSources = [sources.weather, sources.nowPlaying, sources.contrib
 
 // ── shared footer: hairline, status dot + word, source name ────────────────
 const FOOT = 136
+/** The status word drawn in the footer, and what a screen reader hears for it (the card's text). */
+const STATUS: Record<SourceStatus, [shown: string, spoken: string]> = {
+  live: ['LIVE', 'live data'], cached: ['CACHED', 'cached, showing the last good data'], offline: ['SAMPLE', 'offline, showing sample data'],
+}
 function footer(code: number | undefined, origin: string): Layer[] {
-  const s = statusName(code), y = FOOT + 3
+  const s = statusName(code), y = FOOT + 3, [shown, spoken] = STATUS[s], word = T.text(shown, 10, FOOT)
+  word.text = spoken // a fresh field per call, so the spoken phrase never leaks onto another frame
   const mark = s === 'offline'
     ? layer(T.dotRing(3.5, y, 2.4, { spacing: (TAU * 2.4) / 8, size: .8 }), 'mid')
     : layer(T.dots([[3.5, y]], 3.4), s === 'live' ? 'value' : 'mid')
   return [
     layer(T.dotLine(1, 131.5, 142, 131.5, { spacing: 2.25, size: .6 }), 'faint'),
     mark,
-    layer(T.text(s.toUpperCase(), 10, FOOT), s === 'live' ? 'value' : 'idle'),
+    layer(word, s === 'live' ? 'value' : 'idle'),
     layer(T.text(origin, 143, FOOT, { align: 'right' }), 'mid'),
   ]
 }
@@ -197,7 +203,7 @@ export const liveNowPlaying: WidgetPreset = {
       layer(T.dots([[knob, 106]], 4.6), 'active'),
       ...(dur > 0 ? [layer(T.text(mmss(pos * dur), 1, 112), 'idle'), layer(T.text(`-${mmss(dur - pos * dur)}`, 143, 112, { align: 'right' }), 'mid')] : []),
       layer(T.text(fit(textOf(data.npAlbum), 23), 1, 122), 'mid'),
-      ...footer(data.npStatus, 'PUSH'),
+      ...footer(data.npStatus, 'MEDIA SESSION'),
     ]
   },
 }
@@ -234,7 +240,7 @@ export const liveContribs: WidgetPreset = {
       ...byLevel.map((pts, l) => layer(T.dots(pts, LEVEL[l][0]), LEVEL[l][1])),
       layer(T.dots([at(n - 1)], Math.max(2.6, LEVEL[todayLevel][0])), 'active'),
       ...months,
-      ...stat('TODAY', `${Math.round(data.ghToday)}`, 1), ...stat('STREAK', `${Math.round(data.ghStreak)}D`, 50), ...stat('BEST', `${Math.round(data.ghBest)}`, 99),
+      ...stat('TODAY', `${Math.round(data.ghToday)}`, 1), ...stat('STREAK', `${Math.round(data.ghStreak)}D`, 50), ...stat('BEST', `${Math.round(data.ghBest)}D`, 99),
       ...footer(data.ghStatus, 'GITHUB'),
     ]
   },
