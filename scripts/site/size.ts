@@ -111,6 +111,11 @@ if (check && m.total > BUDGET_KB) { console.error('over budget'); failed = true 
 // (usually a value import from the `src/engine` barrel, or `passes.ts` importing `../../ir`)
 const irIn = board ? [] : m.files.filter(({ f }) => /is a function; call it as|ir_sdBox/.test(readFileSync(join(dist, 'assets', f), 'utf8'))).map(x => x.f)
 if (irIn.length) { console.error(`Field IR core is in first load (${irIn.join(', ')})`); if (check) failed = true }
+// code that loads when a card asks for it, never in first load (#333): a static import of it crept back
+if (!board) for (const [mark, what] of [[/uniform vec4 uPalette/, 'the WebGL dot renderer (src/components/glLoader.ts)'], [/facingMode/, 'the camera capture (src/media/cameraCore.ts)'], [/PLAY HIVE/, "HIVE's start button (src/components/Board.tsx)"]] as const) {
+  const hits = m.files.filter(({ f }) => mark.test(readFileSync(join(dist, 'assets', f), 'utf8'))).map(x => x.f)
+  if (hits.length) { console.error(`${what} is in first load (${hits.join(', ')})`); if (check) failed = true }
+}
 // code that never ships in any worker chunk: the squares GL join program (Q1.7: the worker rasterizes on Canvas only)
 // and the pond's glyph alphabet (L1: pond cards are main-thread only, the worker build stubs the board)
 if (showWorker && m.worker) for (const [mark, what] of [['uJointO', 'the squares GL join program'], ['EDGE3', 'the pond glyph alphabet']]) {
