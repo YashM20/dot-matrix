@@ -38,3 +38,5 @@ jobs:
             for (const id of cards) { const g = (R, j) => med(R.map(r => r.c[id]?.[j] ?? NaN)); const a = g(A, 1), b = g(B, 1), am = g(A, 0), bm = g(B, 0); if (Math.abs(a - b) > .1 || Math.abs(am - bm) > .2 || a > 2) console.log(id.padEnd(18), am.toFixed(2).padStart(10), bm.toFixed(2).padStart(10), a.toFixed(2).padStart(12), b.toFixed(2).padStart(9)) }
           '
           for s in main branch; do echo "== $s run 3, live cards"; sed -n "/^Live CPU/,/^\$/p" ab/$s-3.txt; done
+          for i in 1 2; do RUNS=21 BENCH_PATH=buffer pnpm -s bench --cards 0 > ab/buffer-$i.txt; done
+          for i in 1 2; do echo "== branch, buffer path, run $i"; grep -E '^(levels|scenes|squares|workshop|pond|mirror) ' ab/buffer-$i.txt; sed -n "/^Live CPU/,/^\$/p" ab/buffer-$i.txt; done

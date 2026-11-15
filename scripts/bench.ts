@@ -5,6 +5,8 @@
  *   pnpm bench --strict        # exit 1 when a board exceeds a budget
  *   pnpm bench --cards 0       # how many slowest cards to list (default 15, `all` for every card)
  *   RUNS=30 pnpm bench         # timing runs per card (median; default 15)
+ *   BENCH_PATH=buffer pnpm bench  # frame runs sample into a DotBuffer (`sampleLayersInto`, the live canvas path) instead of
+ *                              # DotInstance[]: a comparison only, the budgets stay on the default path
  *
  * Per card: layers() build + sampleLayers time (median over RUNS; animated cards over t = i/12). Mount runs start
  * with no repeated frame kept (`forgetFrames`); frame runs keep them, as the app does (a card at rest repeats its frame),
@@ -36,7 +38,7 @@
  * Writes .snapshots/bench.json.
  */
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { sampleLayers } from '../src/engine/sampler/gridSampler'
+import { sampleLayers, sampleLayersInto } from '../src/engine/sampler/gridSampler'
 import { renderSVG } from '../src/engine/renderer/svgRenderer'
 import { boards, withChrome, type WidgetPreset } from '../src/widgets'
 import { median, pitchOf, theme, uniquePresets, visible } from './lib/cards'
@@ -50,7 +52,7 @@ import { simBoard, simBoardSims } from '../src/widgets/boards/sim'
 freezeWallClock()
 const args = process.argv.slice(2), strict = args.includes('--strict')
 const ci = args.indexOf('--cards'), showCards = ci >= 0 ? (args[ci + 1] === 'all' ? Infinity : +args[ci + 1]) : 15
-const RUNS = +(process.env.RUNS ?? 15), CANVAS_THRESHOLD = 2000
+const RUNS = +(process.env.RUNS ?? 15), CANVAS_THRESHOLD = 2000, INTO = process.env.BENCH_PATH === 'buffer'
 const BUDGET = { mountMs: 30, frameMs: 8, liveMs: 4, svgBytes: 0.5 * 1024 * 1024 }
 /**
  * The written exceptions to the 4 ms live-card budget: showcase cards that may take up to 8 ms a frame. Speeding them up
@@ -65,10 +67,11 @@ interface Row { id: string; animated: boolean; gpu: boolean; fps: number; layers
 function benchCard(p: WidgetPreset): Row {
   const lf = withChrome(p), data = { ...p.defaults }
   const run = (t: number) => { const a = performance.now(); const L = lf({ t, data }); const b = performance.now(); const d = sampleLayers(L, p.grid, p.style, theme); return { build: b - a, sample: performance.now() - b, L, d } }
+  const runInto = (t: number) => { const a = performance.now(); const L = lf({ t, data }); const b = performance.now(); sampleLayersInto(L, p.grid, p.style, theme); return { build: b - a, sample: performance.now() - b } }
   for (let i = 0; i < 3; i++) run(i / 12) // warm-up
   // a mount is a first frame: no repeated frame kept from the run before (src/engine/sampler/repeat.ts)
   const mount = Array.from({ length: RUNS }, () => { forgetFrames(); return run(0) })
-  const frames = p.animated ? Array.from({ length: RUNS }, (_, i) => run((i + 1) / 12)) : []
+  const frames = p.animated ? Array.from({ length: RUNS }, (_, i) => (INTO ? runInto : run)((i + 1) / 12)) : []
   const { L, d } = mount[0], vis = d.filter(visible).length, pitch = pitchOf(p)
   // a GPU card: GPU-tagged layers, and the CPU rest draws the same dots at two times (static), as DotCanvas splits them
   const cpuKey = (t: number) => { const { cpu } = splitGPULayers(lf({ t, data }), p.grid, p.style, p.grid.pitch ?? theme.gridPx); return JSON.stringify(sampleLayers(cpu, p.grid, p.style, theme)) }
@@ -121,6 +124,7 @@ const boardRows: BoardRow[] = boards.map(b => {
   return row
 })
 console.log(`Boards — budgets: mount ≤ ${BUDGET.mountMs} ms, frame (worst ${VIEWPORT_CARDS} consecutive live CPU cards, taking turns from ${STAGGER.min + 1}) ≤ ${BUDGET.frameMs} ms, live card ≤ ${BUDGET.liveMs} ms (exceptions: ${Object.entries(LIVE_EXCEPTIONS).map(([id, ms]) => `${id} ≤ ${ms}`).join(', ')}), SVG < ${kb(BUDGET.svgBytes)} KB; all and gpu fb are reference only`)
+if (INTO) console.log('Frame runs sample into a DotBuffer (BENCH_PATH=buffer): a comparison, not the budgeted path')
 console.log(`${pad('board', 11)} ${lpad('cards', 5)} ${lpad('anim', 4)} ${lpad('mount ms', 9)} ${lpad('frame ms', 9)} ${lpad('all ms', 8)} ${lpad('gpu fb', 7)} ${pad('worst live (ms)', 26)} ${lpad('svg cards', 9)} ${lpad('SVG KB', 7)} ${lpad('all-SVG KB', 10)}  over`)
 for (const r of boardRows) console.log(`${pad(r.id, 11)} ${lpad(r.cards, 5)} ${lpad(r.animated, 4)} ${lpad(f(r.mountMs), 9)} ${lpad(f(r.frameMs), 9)} ${lpad(f(r.allMs), 8)} ${lpad(r.gpuMs ? f(r.gpuMs) : '-', 7)} ${pad(r.animated ? `${r.worstLive} (${f(r.worstLiveMs)})` : '-', 26)} ${lpad(r.svgCards, 9)} ${lpad(kb(r.svgBytes), 7)} ${lpad(kb(r.svgAllBytes), 10)}  ${r.over.join(',') || 'ok'}`)
 // the boards over or near (≥ 75 %) the frame budget: their live CPU cards in board order, so a fix can aim at the heavier group
