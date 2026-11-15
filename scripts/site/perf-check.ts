@@ -93,7 +93,7 @@ if (!existsSync(CHUNK_GRAPH)) assert(`perf: the build left its chunk graph (${CH
 else {
   const graph = readGraph(), mods = boardModules(), assets = join(DIST, 'assets')
   const imports = (f: string) => existsSync(join(assets, f)) ? [...readFileSync(join(assets, f), 'utf8').matchAll(/(?:from|import)\s*"\.\/([^"]+\.js)"/g)].map(m => m[1]) : []
-  const loadedBy = (html: string) => new Set(closure(imports, [entryOf(html) ?? '']))
+  const loadedBy = (html: string) => { const e = entryOf(html); return new Set(e ? closure(imports, [e]) : []) }
   /** A page's module preloads beyond its entry's static closure (which Vite preloads itself). */
   const extra = (html: string) => { const loaded = loadedBy(html); return modulePreloads(html).filter(f => !loaded.has(f)) }
   const want = (html: string, roots: string[]) => closure(imports, roots.map(r => graph.modules[r] ?? `(no chunk for ${r})`), loadedBy(html))
