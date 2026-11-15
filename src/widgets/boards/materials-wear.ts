@@ -14,7 +14,6 @@ import { twill } from '../../engine/matter/weave'
 import { createRaster, sample, type Raster } from '../../engine/raster/raster'
 import type { CellBounds, Layer } from '../../engine/types'
 import { TILE, layer, type WidgetPreset } from '../types'
-import { footer } from '../captions'
 import { L15, LG15, LIGHT_DEFAULTS, T, cite, lightId, matLight, own, mod, once, pad2, scratch, snapTorch, tile, toCard15, valuedSites, type Pt } from './materials-shared'
 
 const COLS = TILE.cols
@@ -23,7 +22,8 @@ const COLS = TILE.cols
 // Card pitch. A quiet twill ground (2/3, crossing 3) in faint, a satin-stitched bolt (stitches run across each column,
 // so each column catches the light on its own: Kajiya–Kay p 24 along the stitch), a merrowed edge wrapped radially,
 // and a running stitch round the inside that the needle (the live red) sews one lap per 24 s.
-export const PATCH = { cx: 72, cy: 78, r: 58, edge: 55, ground: 53.5, run: 50 }
+// cy 73: the patch ends at row 131, two rows clear of the footer at 134
+export const PATCH = { cx: 72, cy: 73, r: 58, edge: 55, ground: 53.5, run: 50 }
 const PBOX: CellBounds = [PATCH.cx - 59, PATCH.cy - 59, PATCH.cx + 59, PATCH.cy + 59]
 /** The bolt, 7 vertices round its outline (cells from the patch centre): about 36 × 68 cells. */
 export const BOLT: Pt[] = [[-2, -34], [-18, 4], [-3, 4], [-10, 34], [18, -8], [3, -8], [14, -34]]
@@ -126,8 +126,8 @@ export const matPatch: WidgetPreset = {
       layer(T.dots(holes, .7), 'faint'), layer(T.dots(sewn, .9), 'idle'),
       ...(sw.phase < 1 ? [layer(T.dots(tail, .8), 'mid')] : []),
       layer(valuedSites([[needle[0], needle[1], 1]], 2), 'active'),
-      // the corners under the round patch: how far the border is sewn
-      ...footer('STITCH', `${sw.sewn}/${st.count}`, 134),
+      // under the patch: how far the border is sewn, both halves idle so they read at 390 too
+      layer(T.text('STITCH', 0, 134), 'idle'), layer(T.text(`${sw.sewn}/${st.count}`, 143, 134, { align: 'right' }), 'idle'),
     ]
   },
 }

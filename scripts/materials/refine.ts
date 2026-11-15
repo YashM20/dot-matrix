@@ -66,5 +66,10 @@ export function refineChecks(assert: Assert, frameOf: FrameFn): void {
   {
     const pt = said(byId('mat-patch')).text
     assert('patch: the footer counts the border\'s stitches', pt.includes('STITCH') && pt.some(s => /^\d+\/\d+$/.test(s)), pt.join(' | '))
+    // both halves idle (mid was too dim at 390), and at least one clear row between the patch and the footer
+    const patch = byId('mat-patch'), ls = atClock(() => withChrome(patch)({ t: 0, data: { ...patch.defaults } }))
+    const foot = ls.filter(l => l.field.text === 'STITCH' || /^\d+\/\d+$/.test(l.field.text ?? ''))
+    const rows = atClock(() => frameOf(patch, 0)).map(d => Math.round(cell(d)[1])), ring = Math.max(...rows.filter(r => r < 134))
+    assert('patch: the footer is idle on both halves and clears the patch by ≥ 1 row', foot.length === 2 && foot.every(l => l.tone === 'idle') && ring <= 132 && rows.some(r => r >= 134), `${foot.map(l => l.tone).join(', ')}; patch ends at row ${ring}`)
   }
 }
