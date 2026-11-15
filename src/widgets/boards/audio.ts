@@ -169,7 +169,7 @@ function peakDot(cx: number, cy: number, level: number, peak: number) {
   return p > at(level) + 1e-6 ? [layer(T.dots([[cx + r * Math.sin(p), cy - r * Math.cos(p)]], size * 1.35), 'value')] : []
 }
 /** Gauge centre row: the rings (open at the bottom) and the numbers under them sit midway between the label row and the card's foot. */
-const G_Y = 76
+const G_Y = 78
 export const audioLevels: WidgetPreset = {
   id: 'audio-levels', name: 'Audio', group: 'polar', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
   defaults: { speaker: 0.72, mic: 0.48 }, springKeys: ['speaker', 'mic'],
