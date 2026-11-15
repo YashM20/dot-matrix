@@ -28,8 +28,11 @@
     padding: var(--gap-group) 0
   }
 
+  /* one row the height of the page's middle (an auto row grew to the side panel's content, so the panel ran on
+     under the footer instead of scrolling) */
   .wp-main {
     flex: 1 1 auto;
+    grid-template-rows: minmax(0, 1fr);
     min-height: 0;
     align-items: stretch
   }
