@@ -6,46 +6,31 @@
 import { lazy, Suspense, useEffect, useRef, useState, type ReactNode } from 'react'
 import { IR_LIMITS } from '../../engine/ir'
 import { ease, masks, type EaseName, type MaskName } from '../../engine/motion'
-import { squircleExponent } from '../../engine/renderer/shapePath'
-import { dotifyUpload } from '../../lib/photoDotify'
-import { encodeShare, programHash, shareUrl, SHARE_GRIDS } from '../../lib/share'
+import { encodeShare, programHash, shareUrl, type SharedProgram } from '../../lib/share'
 import type { ClipFormat } from '../../export'
-import { CARD, widgetById } from '../../widgets'
 import { More } from '../More'
 import { CodeEditor } from '../dwitter/CodeEditor'
 import { EXAMPLES } from '../dwitter/examples'
-import { looksLikeSpec, presetAsSpecCard, specV1 } from '../studio/adapter'
-import { BLENDS, cardFromJSON, LATTICES, paintCells, SITE_SIZES, TONES, type LayerTone, type PaintLayer, type SitesLayer, type StudioCard, type StudioLayer, type TextLayer, type IRLayer, type Motion } from '../studio/doc'
+import { specV1 } from '../studio/adapter'
+import type { IRLayer, Motion, SitesLayer, StudioLayer } from '../studio/doc'
 import { trackSpans, type Track } from '../studio/playback'
-import { specBounds } from './direct'
-import { cellsFromMatrix, docFromJSON, duplicateFrame, duplicateLayer, editCard, editFrame, editLayer, encodeCells, frameById, groupOf, layerOf, movable, moveLayer, newIRLayer, removeFrame, removeLayer, renameGroup, seedDoc, shareable, THEMES, topDown, type EditorFrame, type Sel, type ThemeName } from './doc'
-import { arrangeSel, copyEverywhere, copyText, deleteSel, duplicateSel, framesLink, groupSel, knownParent, lockSel, paste, programLink, ungroupSel } from './actions'
+import { newIRLayer, shareable, topDown, type EditorFrame, type Sel } from './doc'
+import { copyText, framesLink, knownParent, programLink } from './actions'
 import { canShareLink, isPhone, shareLink } from './phone'
+import { Design } from './DesignPanels'
 import { LinkLineage, RemixGraph } from './Lineage'
 import { exporters, recordFrame } from './exporters'
-import { ALIGNS, selCount, selFrames, selGroup, selIds, type Align } from './select'
+import { selFrames } from './select'
 import { compiledOf } from './render'
 import { getEditor, useEditor, type RightTab } from './store'
+import { useTarget } from './target'
 import { attempt } from './attempt'
-import { MiniDots, Num, Pick, Section, Seg, Slider, Text, useCurve, useMask } from './ui'
+import { MiniDots, Num, Pick, Section, Slider, useCurve, useMask } from './ui'
 
 // EXPORT's review folds load with the fold, not with the editor (device simulators, the fidelity scorecard)
 const Devices = lazy(() => import('./Review').then(m => ({ default: m.Devices })))
 const Quality = lazy(() => import('./Review').then(m => ({ default: m.Quality })))
 const TABS: { id: RightTab; label: string }[] = [{ id: 'design', label: 'DESIGN' }, { id: 'animate', label: 'ANIMATE' }, { id: 'code', label: 'CODE' }, { id: 'export', label: 'EXPORT' }]
-const GRIDS = { 'tile 144×144': SHARE_GRIDS.square, 'wide 216×108': SHARE_GRIDS.wide, 'tall 108×162': SHARE_GRIDS.tall, 'card 80×74': { ...CARD, pitch: 4 } } as const
-type GridName = keyof typeof GRIDS
-const THEME_LABEL: Record<ThemeName, string> = { dot480: 'DOT/480', deerflowMosaic: 'MOSAIC' }
-
-/** The selection's frame, layer and edit helpers. */
-function useTarget() {
-  const doc = useEditor(s => s.h.present), sel = useEditor(s => s.sel)
-  const f = frameById(doc, sel.frame), l = layerOf(doc, sel)
-  const { edit } = getEditor()
-  const card = (fn: (c: StudioCard) => StudioCard, tag?: string) => f && edit(d => editCard(d, f.id, fn), tag)
-  const layer = (fn: (l: StudioLayer) => StudioLayer, tag?: string) => f && l && edit(d => editLayer(d, { frame: f.id, layer: l.id }, fn), tag ?? `layer:${l.id}`)
-  return { doc, sel, f, l, card, layer }
-}
 
 export function InspectorTabs({ className = '' }: { className?: string }) {
   const right = useEditor(s => s.right), setRight = useEditor(s => s.setRight)
@@ -56,284 +41,6 @@ export function InspectorBody() {
   return <div className="ed-insp" id="ed-insp" role="tabpanel" aria-labelledby={`ed-tab-${right}`}>
     {right === 'design' ? <Design /> : right === 'animate' ? <Animate /> : right === 'code' ? <Code /> : <Export />}
   </div>
-}
-
-// ── DESIGN ─────────────────────────────────────────────────────────────────
-function Design() {
-  const { f, l, doc, sel } = useTarget()
-  if (!f) return <DocPanel />
-  if (selCount(sel) > 1 || selGroup(doc, sel)) return <ManyPanel f={f} />
-  if (!l) return <FramePanel f={f} />
-  return <LayerPanel f={f} l={l} />
-}
-
-const ALIGN_LABEL: Record<Align, string> = { left: 'LEFT', hcenter: 'CENTRE', right: 'RIGHT', top: 'TOP', vcenter: 'MIDDLE', bottom: 'BOTTOM' }
-/** Many frames, many layers of a frame, or a group: align / distribute, group, and the edits of many. */
-function ManyPanel({ f }: { f: EditorFrame }) {
-  const { doc, sel } = useTarget(), { edit, select } = getEditor()
-  const layers = !!sel.layer, ids = selIds(sel), g = selGroup(doc, sel), grouped = layers && ids.some(id => groupOf(f, id))
-  const name = (id: string) => (layers ? f.card.layers.find(l => l.id === id)?.name : frameById(doc, id)?.card.name) ?? id
-  const locked = layers ? ids.every(id => f.locks?.includes(id)) : ids.every(id => frameById(doc, id)?.locked)
-  return <>
-    <Section title={g ? 'GROUP' : 'SELECTION'} aside={layers ? `${ids.length} layers · ${f.card.name}` : `${ids.length} frames`}>
-      {g && <div className="ed-grid2"><Text label="NAME" value={g.name} onChange={v => edit(d => renameGroup(d, f.id, g.id, v), `group:${g.id}`)} /></div>}
-      <ul className="ed-mini-list">{ids.map(id => <li key={id}><button type="button" onClick={() => select(layers ? { frame: f.id, layer: id } : { frame: id })}>{name(id)}</button></li>)}</ul>
-    </Section>
-    <Section title="ALIGN" aside={layers ? (ids.length === 1 ? 'to the frame · text, sites, placed spec · whole cells' : 'text, sites, placed spec · whole cells') : 'Alt+A D W S H V'}>
-      <div className="ed-row-btns ed-align">{ALIGNS.map(a => <button key={a} type="button" aria-label={`Align ${ALIGN_LABEL[a].toLowerCase()}`} onClick={() => arrangeSel(a)}>{ALIGN_LABEL[a]}</button>)}</div>
-      <div className="ed-row-btns">
-        <button type="button" disabled={ids.length < 3} onClick={() => arrangeSel('dist-x')}>DISTRIBUTE ↔</button>
-        <button type="button" disabled={ids.length < 3} onClick={() => arrangeSel('dist-y')}>DISTRIBUTE ↕</button>
-      </div>
-    </Section>
-    <Section title="ARRANGE">
-      <div className="ed-row-btns">
-        {layers && !g && <button type="button" onClick={groupSel}>GROUP</button>}
-        {grouped && <button type="button" onClick={ungroupSel}>UNGROUP</button>}
-        <button type="button" onClick={duplicateSel}>DUPLICATE</button>
-        <button type="button" onClick={copyEverywhere}>COPY</button>
-        <button type="button" onClick={() => paste()}>PASTE</button>
-        <button type="button" onClick={lockSel}>{locked ? 'UNLOCK' : 'LOCK'}</button>
-        <button type="button" className="ed-danger" onClick={deleteSel}>DELETE</button>
-      </div>
-      <p className="ed-hint">{layers ? 'Ctrl+G groups, Ctrl+⇧G ungroups. ' : ''}Ctrl+D duplicates, Alt-drag moves a copy, Ctrl+C / Ctrl+V copy and paste (also into another tab).</p>
-    </Section>
-  </>
-}
-
-/** Open a picked file: an editor document replaces the canvas, a card spec or card JSON becomes a frame. */
-async function openFile(fl: File) {
-  const { setNote, fit } = getEditor()
-  const text = await fl.text(), x = JSON.parse(text) as { kind?: string }
-  if (x.kind === 'dot480.editor') { getEditor().openDoc(docFromJSON(text)); setNote(`opened ${fl.name}`); requestAnimationFrame(() => fit()) } // held from the autosave until it draws
-  else {
-    const card = looksLikeSpec(x) ? specV1.fromSpec(x as never) : cardFromJSON(text)
-    getEditor().insertCard(card, { source: 'file' }); setNote(`added ${fl.name} as a frame`)
-  }
-}
-
-function DocPanel() {
-  const doc = useEditor(s => s.h.present), { edit, setNote, fit, setShortcuts } = getEditor()
-  const file = useRef<HTMLInputElement>(null)
-  const open = (fl: File) => attempt(() => openFile(fl), e => setNote(`could not open ${fl.name}: ${e.message}`))
-  return <>
-    <Section title="DOCUMENT" aside={`${doc.frames.length} frames`}>
-      <div className="ed-grid2"><Text label="NAME" value={doc.name} onChange={name => edit(d => ({ ...d, name }), 'doc:name')} /></div>
-      <p className="ed-hint">Select a frame or a layer to edit it. Insert cards from ASSETS, or use a tool: <b>F</b> frame, <b>B</b> draw, <b>T</b> text, <b>C</b> code.</p>
-      <div className="ed-row-btns">
-        <button type="button" onClick={() => fit()}>ZOOM TO FIT</button>
-        <button type="button" onClick={() => setShortcuts(true)}>SHORTCUTS</button>
-      </div>
-    </Section>
-    <Section title="FILE">
-      <div className="ed-row-btns">
-        <button type="button" onClick={() => exporters.doc(doc)}>DOWNLOAD JSON</button>
-        <button type="button" onClick={() => file.current?.click()}>OPEN FILE</button>
-        <button type="button" onClick={() => { edit(() => seedDoc()); getEditor().select({}); requestAnimationFrame(() => fit()) }} title="Replace the canvas with the starter frames (undoable)">RESET CANVAS</button>
-      </div>
-      <input ref={file} type="file" accept=".json,application/json" hidden aria-label="Open an editor document, Studio card or card spec JSON" onChange={e => { const x = e.target.files?.[0]; if (x) void open(x); e.target.value = '' }} />
-      <p className="ed-hint">Opens an editor document, or adds a Studio card / card spec v1 file as a frame. The canvas autosaves in this browser.</p>
-    </Section>
-  </>
-}
-
-function FramePanel({ f }: { f: EditorFrame }) {
-  const { card } = useTarget(), { edit, select, fit, setRight } = getEditor()
-  const c = f.card, st = c.style, pitch = c.grid.pitch ?? 4
-  const gridName = (Object.keys(GRIDS) as GridName[]).find(k => GRIDS[k].cols === c.grid.cols && GRIDS[k].rows === c.grid.rows)
-  const setStyle = (p: Partial<typeof st>, tag: string) => card(x => ({ ...x, style: { ...x.style, ...p } }), tag)
-  const ref = c.reference ? widgetById(c.reference) : undefined
-  // every data key the card reads (its code layers included), not only the ones it has defaults for
-  const keys = [...new Set([...c.bindings.map(b => b.key), ...Object.keys(c.data), ...compiledOf(c).keys])]
-  return <>
-    <Section title="FRAME" aside={c.reference ? `REF ${c.reference.toUpperCase()}` : undefined}>
-      <div className="ed-grid2">
-        <Text label="NAME" value={c.name} onChange={name => card(x => ({ ...x, name }), 'frame:name')} />
-        <Num label="X" value={f.x} step={4} onChange={x => edit(d => editFrame(d, f.id, y => ({ ...y, x })), 'frame:x')} />
-        <Num label="Y" value={f.y} step={4} onChange={y => edit(d => editFrame(d, f.id, z => ({ ...z, y })), 'frame:y')} />
-        <label className="ed-field ed-wide"><span>SIZE</span><select value={gridName ?? ''} disabled={!!c.reference} onChange={e => { const g = GRIDS[e.target.value as GridName]; if (g) card(x => ({ ...x, grid: { ...g }, style: rescale(x, g.pitch ?? 4) })) }}>
-          {!gridName && <option value="">{c.grid.cols}×{c.grid.rows}</option>}{(Object.keys(GRIDS) as GridName[]).map(k => <option key={k} value={k}>{k}</option>)}</select></label>
-        <Num label="COLS" value={c.grid.cols} min={8} max={512} disabled={!!c.reference} onChange={cols => card(x => ({ ...x, grid: { ...x.grid, cols } }), 'frame:cols')} />
-        <Num label="ROWS" value={c.grid.rows} min={8} max={512} disabled={!!c.reference} onChange={rows => card(x => ({ ...x, grid: { ...x.grid, rows } }), 'frame:rows')} />
-      </div>
-      {c.reference && <p className="ed-hint">A reference frame draws its preset live, layer by layer. Tone, blend, order and visibility are yours; to edit its fields and text, make it editable.</p>}
-      {ref && <div className="ed-row-btns"><button type="button" onClick={() => { try { card(() => ({ ...presetAsSpecCard(ref), name: c.name })); select({ frame: f.id }) } catch (e) { getEditor().setNote((e as Error).message) } }}>MAKE EDITABLE</button></div>}
-    </Section>
-    <Section title="DOTS" aside={`pitch ${pitch}px`}>
-      <Slider label="ROUNDNESS" hint={`n = ${squircleExponent(st.cornerRoundness ?? 0).toFixed(1)}`} value={st.cornerRoundness ?? 0} min={0} max={1} step={.02} onChange={cornerRoundness => setStyle({ cornerRoundness }, 'st:round')} />
-      <Slider label="DOT SIZE" hint="max radius px" value={st.sizeMax} min={.1} max={Math.max(2, pitch * .8)} step={.05} onChange={sizeMax => setStyle({ sizeMax }, 'st:max')} />
-      <Slider label="DENSITY" hint="pitch px" value={pitch} min={1.5} max={8} step={.25} onChange={p => card(x => ({ ...x, grid: { ...x.grid, pitch: p }, style: rescale(x, p) }), 'st:pitch')} fmt={v => `${v}`} />
-      <More id="editor-dots" label="Dot size & texture" tech="advanced">
-        <Slider label="DOT MIN" value={st.sizeMin} min={0} max={Math.max(1, st.sizeMax)} step={.05} onChange={sizeMin => setStyle({ sizeMin }, 'st:min')} />
-        <Slider label="JITTER" hint="0 gridded · 1 organic" value={st.jitter ?? 0} min={0} max={1} step={.05} onChange={jitter => setStyle({ jitter }, 'st:jit')} />
-        <Slider label="QUANTIZE" hint="size steps" value={st.quantizeSteps ?? 0} min={0} max={10} step={1} onChange={q => setStyle({ quantizeSteps: q || undefined }, 'st:q')} fmt={v => (v ? String(v) : 'OFF')} />
-      </More>
-      <div className="ed-grid2">
-        <div className="ed-field ed-wide"><span>THEME</span><Seg label="Theme" value={f.theme} options={THEMES} fmt={t => THEME_LABEL[t]} onChange={theme => edit(d => editFrame(d, f.id, x => ({ ...x, theme })))} /></div>
-        <label className="ed-check"><input type="checkbox" checked={c.animated} onChange={e => card(x => ({ ...x, animated: e.target.checked }))} /> ANIMATED</label>
-      </div>
-      {ref && <div className="ed-row-btns"><button type="button" onClick={() => card(x => ({ ...x, grid: { ...x.grid, pitch: ref.grid.pitch ?? 4 }, style: { ...ref.style } }))}>RESET STYLE</button></div>}
-    </Section>
-    {keys.length > 0 && <Section title="DATA" aside="what the card shows">
-      {keys.map(k => { const b = c.bindings.find(x => x.key === k), v = c.data[k] ?? 0, lo = b?.min ?? Math.min(0, v), hi = b?.max ?? Math.max(1, v)
-        return <Slider key={k} label={k} value={v} min={lo} max={hi} step={b?.step ?? .01} onChange={x => card(y => ({ ...y, data: { ...y.data, [k]: x } }), `data:${k}`)} fmt={x => (Math.abs(x) >= 10 ? x.toFixed(0) : x.toFixed(2))} /> })}
-    </Section>}
-    <Section title="LAYERS" aside={`${c.layers.length}`}>
-      <ul className="ed-mini-list">{topDown(c).map(x => <li key={x.id}><button type="button" onClick={() => select({ frame: f.id, layer: x.id })}>{x.name}</button></li>)}</ul>
-      <div className="ed-row-btns">
-        <button type="button" onClick={() => { getEditor().addLayerTo(f.id, newIRLayer(c.layers.length + 1)); setRight('code') }}>+ CODE LAYER</button>
-        <button type="button" onClick={() => getEditor().setTool('text')}>+ TEXT (T)</button>
-        <button type="button" onClick={() => getEditor().setTool('draw')}>+ PAINT (B)</button>
-      </div>
-    </Section>
-    <Section title="ARRANGE">
-      <div className="ed-row-btns">
-        <button type="button" onClick={() => fit([f.id], 4)}>ZOOM TO</button>
-        <button type="button" onClick={() => { const r = duplicateFrame(getEditor().h.present, f.id); edit(() => r.doc); if (r.id) select({ frame: r.id }) }}>DUPLICATE</button>
-        <button type="button" onClick={copyEverywhere}>COPY</button>
-        <button type="button" onClick={() => edit(d => editFrame(d, f.id, x => ({ ...x, hidden: !x.hidden })))}>{f.hidden ? 'SHOW' : 'HIDE'}</button>
-        <button type="button" aria-pressed={!!f.locked} onClick={lockSel}>{f.locked ? 'UNLOCK' : 'LOCK'}</button>
-        <button type="button" className="ed-danger" onClick={() => { edit(d => removeFrame(d, f.id)); select({}) }}>DELETE</button>
-      </div>
-    </Section>
-  </>
-}
-/** Dot radii are in px: keep them proportional when the pitch changes. */
-const rescale = (c: StudioCard, pitch: number) => { const k = pitch / (c.grid.pitch ?? 4); return { ...c.style, sizeMin: c.style.sizeMin * k, sizeMax: c.style.sizeMax * k } }
-
-const KIND_NAME: Record<StudioLayer['kind'], string> = { ir: 'CODE', text: 'TEXT', sites: 'SITES', 'preset-layer': 'REFERENCE', spec: 'SPEC', paint: 'PAINT' }
-function LayerPanel({ f, l }: { f: EditorFrame; l: StudioLayer }) {
-  const { layer } = useTarget(), { edit, select, setRight } = getEditor()
-  const sel = { frame: f.id, layer: l.id }, ro = l.kind === 'preset-layer', idx = topDown(f.card).findIndex(x => x.id === l.id)
-  const err = compiledOf(f.card).errors.get(l.id)
-  return <>
-    <Section title={KIND_NAME[l.kind]} aside={<button type="button" className="ed-link" onClick={() => select({ frame: f.id })}>IN {f.card.name.toUpperCase()} ↑</button>}>
-      <div className="ed-grid2">
-        <Text label="NAME" value={l.name} onChange={name => layer(x => ({ ...x, name }), `name:${l.id}`)} />
-        <Pick label="TONE" value={l.tone} options={(ro || l.kind === 'spec' ? ['preset', ...TONES] : TONES) as LayerTone[]} onChange={tone => layer(x => ({ ...x, tone }))} />
-        <Pick label="BLEND" value={l.blend} options={BLENDS} onChange={blend => layer(x => ({ ...x, blend }))} />
-        {(l.kind === 'ir' || l.kind === 'text' || l.kind === 'paint') && <Pick label="LATTICE" value={l.lattice} options={LATTICES} disabled={l.kind === 'paint'} onChange={lattice => layer(x => ({ ...x, lattice }) as StudioLayer)} fmt={k => `${k}× · ${Math.floor(f.card.grid.cols / k)}×${Math.floor(f.card.grid.rows / k)}`} />}
-        <label className="ed-check"><input type="checkbox" checked={l.visible} onChange={e => layer(x => ({ ...x, visible: e.target.checked }))} /> VISIBLE</label>
-      </div>
-      {err && <p className="ed-bad" role="alert">{err.message}</p>}
-    </Section>
-    {l.kind === 'text' && <TextFields l={l} />}
-    {l.kind === 'sites' && <SiteFields l={l} />}
-    {l.kind === 'paint' && <PaintFields f={f} l={l} />}
-    {(l.kind === 'ir' || l.kind === 'sites') && <Section title="FIELD"><pre className="ed-code-peek">{l.src.split('\n').slice(0, 4).join('\n')}</pre><div className="ed-row-btns"><button type="button" onClick={() => setRight('code')}>EDIT CODE</button></div></Section>}
-    {l.kind === 'spec' && <SpecFields key={l.id} f={f} l={l} />}
-    {ro && <p className="ed-hint">Layer <b>#{l.params.index}</b> of preset <b>{l.params.preset}</b>, live and read-only. Select its frame and press MAKE EDITABLE to change its field or text.</p>}
-    <Section title="ARRANGE">
-      <div className="ed-row-btns">
-        <button type="button" disabled={idx <= 0} onClick={() => edit(d => moveLayer(d, sel, idx - 1))} aria-label="Bring forward">FORWARD ↑</button>
-        <button type="button" disabled={idx >= f.card.layers.length - 1} onClick={() => edit(d => moveLayer(d, sel, idx + 1))} aria-label="Send backward">BACK ↓</button>
-        <button type="button" onClick={() => { const r = duplicateLayer(getEditor().h.present, sel); edit(() => r.doc); if (r.id) select({ frame: f.id, layer: r.id }) }}>DUPLICATE</button>
-        {groupOf(f, l.id) ? <button type="button" onClick={ungroupSel}>UNGROUP</button> : <button type="button" onClick={groupSel}>GROUP</button>}
-        <button type="button" onClick={copyEverywhere}>COPY</button>
-        <button type="button" aria-pressed={!!f.locks?.includes(l.id)} onClick={lockSel}>{f.locks?.includes(l.id) ? 'UNLOCK' : 'LOCK'}</button>
-        <button type="button" className="ed-danger" onClick={() => { edit(d => removeLayer(d, sel)); select({ frame: f.id }) }}>DELETE</button>
-      </div>
-    </Section>
-  </>
-}
-
-function TextFields({ l }: { l: TextLayer }) {
-  const { layer } = useTarget()
-  const set = (p: Partial<TextLayer['params']>, tag?: string) => layer(x => ({ ...x, params: { ...(x as TextLayer).params, ...p } }) as StudioLayer, tag ?? `text:${l.id}`)
-  return <Section title="TEXT" aside="drag it · double-click (tap when selected) to type on the canvas">
-    <div className="ed-grid2">
-      <label className="ed-field ed-wide"><span>TEXT</span><input data-focus="text" value={l.params.text} maxLength={64} autoCapitalize="characters" spellCheck={false} onChange={e => set({ text: e.target.value.toUpperCase() })} /></label>
-      <Num label="COL" value={l.params.col} onChange={col => set({ col }, `col:${l.id}`)} />
-      <Num label="ROW" value={l.params.row} onChange={row => set({ row }, `row:${l.id}`)} />
-      <Pick label="ALIGN" value={l.params.align} options={['left', 'center', 'right'] as const} onChange={align => set({ align })} />
-      <Pick label="SCALE" value={l.params.scale} options={[1, 2, 3, 4]} onChange={scale => set({ scale })} fmt={s => `${s}×`} />
-      <label className="ed-check"><input type="checkbox" checked={l.params.smooth} onChange={e => set({ smooth: e.target.checked })} /> SMOOTH (HERO WEIGHT)</label>
-    </div>
-  </Section>
-}
-function SiteFields({ l }: { l: SitesLayer }) {
-  const { layer } = useTarget(), p = l.params
-  const set = (q: Partial<SitesLayer['params']>, k: string) => layer(x => ({ ...x, params: { ...(x as SitesLayer).params, ...q } }) as StudioLayer, `${k}:${l.id}`)
-  const deg = (r: number) => Math.round((r * 180) / Math.PI), rad = (d: number) => (d * Math.PI) / 180
-  return <Section title="SITES" aside="drag it, or its handles on the canvas">
-    <div className="ed-grid2">
-      <Pick label="SHAPE" value={p.shape} options={['ring', 'line', 'disc'] as const} onChange={shape => set({ shape }, 'shape')} />
-      <Pick label="SIZE" value={l.size} options={SITE_SIZES} onChange={size => layer(x => ({ ...x, size }) as StudioLayer)} fmt={s => `${s}×`} />
-      <Num label={p.shape === 'line' ? 'X0' : 'CX'} value={p.cx} onChange={cx => set({ cx }, 'cx')} />
-      <Num label={p.shape === 'line' ? 'Y0' : 'CY'} value={p.cy} onChange={cy => set({ cy }, 'cy')} />
-      {p.shape === 'line' ? <><Num label="X1" value={p.x1} onChange={x1 => set({ x1 }, 'x1')} /><Num label="Y1" value={p.y1} onChange={y1 => set({ y1 }, 'y1')} /></> : <Num label="RADIUS" value={p.r} min={1} max={512} onChange={r => set({ r }, 'r')} />}
-      <Num label="SPACING" value={p.spacing} min={1} max={64} step={.5} onChange={spacing => set({ spacing }, 'sp')} />
-      {p.shape === 'ring' && <><Num label="START °" value={deg(p.start)} min={-360} max={360} step={5} onChange={d => set({ start: rad(d) }, 'start')} /><Num label="SWEEP °" value={deg(p.sweep)} min={1} max={360} step={5} onChange={d => set({ sweep: rad(d) }, 'sweep')} /></>}
-    </div>
-  </Section>
-}
-function PaintFields({ f, l }: { f: EditorFrame; l: PaintLayer }) {
-  const { layer } = useTarget(), brush = useEditor(s => s.brush), picking = useEditor(s => s.picking), { setBrush, setTool, setNote, setPicking } = getEditor(), tool = useEditor(s => s.tool)
-  const [busy, setBusy] = useState(false)
-  const file = useRef<HTMLInputElement>(null)
-  const lit = paintCells(l).reduce((n, v) => n + (v > 0 ? 1 : 0), 0)
-  const map = (fn: (v: number) => number) => layer(x => { const a = paintCells(x as PaintLayer).map(fn); return { ...x, cells: encodeCells(a) } as StudioLayer })
-  const trace = async (fl?: File) => {
-    if (!fl || !fl.type.startsWith('image/')) return
-    setBusy(true)
-    await attempt(async () => {
-      const field = await dotifyUpload(fl, { cols: l.cols, rows: l.rows }, 'bayer')
-      const m = Array.from({ length: l.rows }, (_, r) => Array.from({ length: l.cols }, (_, c) => field(l.cols === 1 ? .5 : c / (l.cols - 1), l.rows === 1 ? .5 : r / (l.rows - 1))))
-      layer(x => ({ ...x, cells: cellsFromMatrix(x as PaintLayer, m) }) as StudioLayer)
-      setNote(`traced ${fl.name} into ${l.name}`)
-    }, e => setNote(`trace failed: ${e.message}`), () => setBusy(false))
-  }
-  return <Section title="BRUSH" aside={`${l.cols}×${l.rows} · ${lit} lit`}>
-    <div className="ed-row-btns">
-      <button type="button" aria-pressed={tool === 'draw' && !brush.erase && !picking} onClick={() => { setTool('draw'); setBrush({ erase: false }) }}>PAINT (B)</button>
-      <button type="button" aria-pressed={tool === 'draw' && brush.erase && !picking} onClick={() => { setTool('draw'); setBrush({ erase: true }) }}>ERASE (E)</button>
-      <button type="button" aria-pressed={picking} onClick={() => { setPicking(!picking); if (!picking) setNote('PICK: tap a painted dot to take its ink') }} title="Eyedropper: the ink of a painted dot (I, or Alt-click while drawing)">PICK INK (I)</button>
-    </div>
-    <Slider label="SIZE" hint="[ ]" value={brush.size} min={1} max={8} step={1} onChange={size => setBrush({ size })} fmt={v => String(v)} />
-    <Slider label="INK" hint="dot value" value={brush.value} min={.2} max={1} step={.2} onChange={value => setBrush({ value })} />
-    <div className="ed-row-btns">
-      <button type="button" onClick={() => map(v => 255 - v)}>INVERT</button>
-      <button type="button" onClick={() => map(() => 0)}>CLEAR</button>
-      <button type="button" disabled={busy} onClick={() => file.current?.click()}>{busy ? 'TRACING…' : 'TRACE A PICTURE'}</button>
-    </div>
-    <input ref={file} type="file" accept="image/*" hidden aria-label="Picture to trace into this paint layer" onChange={e => { void trace(e.target.files?.[0]); e.target.value = '' }} />
-    <p className="ed-hint">Paints whole cells of the {l.lattice}× lattice in {f.card.name}. Right-drag erases; PICK INK (or Alt-click) takes the ink of a painted dot. Two fingers pan and zoom.</p>
-  </Section>
-}
-/** The SPEC JSON box's text as a spec; throws with the reason it isn't one. */
-function parseSpec(text: string) {
-  const spec = JSON.parse(text)
-  if (!spec?.kind) throw new Error('needs a "kind"')
-  return spec
-}
-
-function SpecFields({ f, l }: { f: EditorFrame; l: Extract<StudioLayer, { kind: 'spec' }> }) {
-  const { layer } = useTarget()
-  const [text, setText] = useState(() => JSON.stringify(l.spec, null, 1)), [err, setErr] = useState('')
-  // a change made elsewhere (a drag, the bounds handles, the quick bar, undo) rewrites the JSON; typing here does not.
-  // `mine` is the spec the box last showed or wrote; a different one is adopted during render, before it paints
-  const [mine, setMine] = useState(l.spec)
-  if (l.spec !== mine) { setMine(l.spec); setText(JSON.stringify(l.spec, null, 1)); setErr('') }
-  const big = text.length > 20000, s = l.spec
-  const setSpec = (spec: typeof s, tag: string) => layer(x => ({ ...x, spec }) as StudioLayer, `${tag}:${l.id}`)
-  const ir = s.kind === 'ir' ? s : undefined, b = ir ? specBounds(f, ir) : undefined
-  return <>
-    {(ir || (movable(l) && s.kind !== 'sites')) && <Section title="PLACE" aside={ir ? 'bounds in layer cells · drag the corners on the canvas' : 'drag it on the canvas · whole cells'}>
-      <div className="ed-grid2">
-        {ir && b && (['COL', 'ROW', 'W', 'H'] as const).map((k, i) => <Num key={k} label={k} value={b[i]} min={i > 1 ? 1 : -512} max={512} onChange={v => { const nb = [...b] as [number, number, number, number]; nb[i] = Math.round(v); setSpec({ ...ir, bounds: nb }, 'bounds') }} />)}
-        {'origin' in s || s.kind !== 'sites' ? <>
-          <Num label="ORIGIN X" value={(s as { origin?: [number, number] }).origin?.[0] ?? 0} onChange={x => setSpec({ ...s, origin: [Math.round(x), (s as { origin?: [number, number] }).origin?.[1] ?? 0] } as typeof s, 'origin')} />
-          <Num label="ORIGIN Y" value={(s as { origin?: [number, number] }).origin?.[1] ?? 0} onChange={y => setSpec({ ...s, origin: [(s as { origin?: [number, number] }).origin?.[0] ?? 0, Math.round(y)] } as typeof s, 'origin')} />
-        </> : null}
-      </div>
-      {ir?.bounds && <div className="ed-row-btns"><button type="button" onClick={() => { const { bounds: _, ...rest } = ir; setSpec(rest, 'bounds') }}>WHOLE CARD</button></div>}
-    </Section>}
-    <Section title="SPEC JSON" aside={l.spec.kind}>
-      <textarea className="ed-json" aria-label="Spec layer JSON" spellCheck={false} rows={8} readOnly={big} value={big ? text.slice(0, 20000) : text}
-        onChange={e => { const v = e.target.value; setText(v); try { const spec = parseSpec(v); setMine(spec); layer(x => ({ ...x, spec }) as StudioLayer, `spec:${l.id}`); setErr('') } catch (er) { setErr((er as Error).message) } }} />
-      {err && <p className="ed-bad" role="alert">JSON: {err}</p>}
-    </Section>
-  </>
 }
 
 // ── ANIMATE ────────────────────────────────────────────────────────────────
@@ -405,20 +112,20 @@ function SpecPeek({ f }: { f: EditorFrame }) {
   useEffect(() => { const h = setTimeout(() => { try { setJson(JSON.stringify(specV1.toSpec(f.card).spec, (_, v) => (typeof v === 'string' && v.length > 240 ? `${v.slice(0, 60)}… (${v.length} chars)` : v), 1)) } catch (e) { setJson(`// ${(e as Error).message}`) } }, 200); return () => clearTimeout(h) }, [f.card])
   return <More id="editor-spec" label="This frame as card spec v1" tech="read-only JSON"><pre className="ed-json ed-json--ro" tabIndex={0} aria-label="Card spec v1 JSON">{json}</pre></More>
 }
-function CodeLayer({ f, l }: { f: EditorFrame; l: IRLayer | SitesLayer }) {
-  const { layer, card } = useTarget()
-  const compiled = compiledOf(f.card), err = compiled.errors.get(l.id)
+/**
+ * A program's share link, encoded (after a pause) for the program on screen only, so nothing has to clear it when the
+ * program changes. COPY records it in the remix gallery under its parent; `version` counts those for the graph.
+ */
+function useProgramLink(share: SharedProgram | string, bad: boolean) {
   const [made, setMade] = useState<{ key: string; url: string } | null>(null), [copied, setCopied] = useState(false), [version, setVersion] = useState(0)
-  const share = shareable(f, l, knownParent)
   const shareKey = typeof share === 'string' ? share : `${share.src}|${share.grid}|${share.lattice}|${share.tone}|${share.parent}`
-  // the link shows only for the program it was encoded from, so nothing has to clear it when the program changes
-  const link = typeof share !== 'string' && !err && made?.key === shareKey ? made.url : ''
+  const link = typeof share !== 'string' && !bad && made?.key === shareKey ? made.url : ''
   useEffect(() => {
-    if (typeof share === 'string' || err) return
+    if (typeof share === 'string' || bad) return
     let gone = false
     const h = setTimeout(() => { encodeShare(share).then(url => { if (!gone) setMade({ key: shareKey, url }) }, () => { if (!gone) setMade(null) }) }, 250)
     return () => { gone = true; clearTimeout(h) }
-  }, [shareKey, !!err, version]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [shareKey, bad, version]) // eslint-disable-line react-hooks/exhaustive-deps
   const copy = async () => {
     if (!link || typeof share === 'string') return
     const m = await programLink(share) // records it in the remix gallery, under its parent
@@ -426,28 +133,41 @@ function CodeLayer({ f, l }: { f: EditorFrame; l: IRLayer | SitesLayer }) {
     await copyText(m.url) // clipboard closed: the link is shown below
     setCopied(true); setTimeout(() => setCopied(false), 1400)
   }
+  return { link, copied, copy, version }
+}
+
+/** SHARE: COPY LINK and the link's size, or why this layer has no link. */
+function ShareSection({ share, link, copied, onCopy }: { share: SharedProgram | string; link: string; copied: boolean; onCopy: () => void }) {
+  return <Section title="SHARE" aside="?make=code&p=…">
+    {typeof share === 'string' ? <p className="ed-hint">{share}.</p> : <>
+      <div className="ed-row-btns ed-share">
+        <button type="button" className="ed-primary" onClick={onCopy} disabled={!link}>{copied ? 'COPIED' : 'COPY LINK'}</button>
+        <output className="ed-url" title={link ? shareUrl(link) : ''}>{link ? <>LINK <b>{shareUrl(link).length}</b> CHARS · {link[0] === 'z' ? 'DEFLATE' : 'PLAIN'}</> : '—'}</output>
+      </div>
+      {share.parent && <p className="ed-hint">Remix of <b>#{share.parent}</b>: the link records it.</p>}
+      <p className="ed-hint">The link opens this program in the editor on any device; nothing is uploaded. The whole frame (style, data, every layer) has a link in EXPORT · LINK.</p></>}
+  </Section>
+}
+
+function CodeLayer({ f, l }: { f: EditorFrame; l: IRLayer | SitesLayer }) {
+  const { layer, card } = useTarget()
+  const compiled = compiledOf(f.card), err = compiled.errors.get(l.id)
+  const share = shareable(f, l, knownParent), hash = typeof share === 'string' ? undefined : programHash(share)
+  const { link, copied, copy, version } = useProgramLink(share, !!err)
   const keys = [...new Set(compiled.keys)].filter(k => l.src.includes(`data.${k}`))
   const near = l.src.length > IR_LIMITS.source * .9
   return <>
-    <Section title="PROGRAM" aside={typeof share === 'string' ? l.name : `#${programHash(share)}`}>
+    <Section title="PROGRAM" aside={hash === undefined ? l.name : `#${hash}`}>
       <CodeEditor value={l.src} onChange={src => layer(x => ({ ...x, src }) as StudioLayer, `src:${l.id}`)} error={err} maxLength={IR_LIMITS.source} />
       <div className="dw-status" id="dw-status" aria-live="polite">{err ? <span className="dw-bad">ERROR {err.line}:{err.col} · LAST GOOD PROGRAM SHOWN</span> : <span className={near ? 'dw-warn' : ''}><b>{l.src.length}</b>/{IR_LIMITS.source} CHARS · OK</span>}</div>
       <label className="ed-field ed-wide"><span>START FROM AN EXAMPLE</span><select value="" onChange={e => { const x = EXAMPLES.find(y => y.name === e.target.value); if (x) layer(y => ({ ...y, src: x.src, ...(y.kind === 'ir' && { lattice: x.lattice, tone: x.tone }) }) as StudioLayer) }}>
         <option value="">…</option>{EXAMPLES.map(x => <option key={x.name} value={x.name}>{x.name}</option>)}</select></label>
     </Section>
-    <Section title="SHARE" aside="?make=code&p=…">
-      {typeof share === 'string' ? <p className="ed-hint">{share}.</p> : <>
-        <div className="ed-row-btns ed-share">
-          <button type="button" className="ed-primary" onClick={copy} disabled={!link}>{copied ? 'COPIED' : 'COPY LINK'}</button>
-          <output className="ed-url" title={link ? shareUrl(link) : ''}>{link ? <>LINK <b>{shareUrl(link).length}</b> CHARS · {link[0] === 'z' ? 'DEFLATE' : 'PLAIN'}</> : '—'}</output>
-        </div>
-        {share.parent && <p className="ed-hint">Remix of <b>#{share.parent}</b>: the link records it.</p>}
-        <p className="ed-hint">The link opens this program in the editor on any device; nothing is uploaded. The whole frame (style, data, every layer) has a link in EXPORT · LINK.</p></>}
-    </Section>
+    <ShareSection share={share} link={link} copied={copied} onCopy={copy} />
     {keys.length > 0 && <Section title="DATA" aside="data.* sliders">
       {keys.map(k => <Slider key={k} label={`data.${k}`} value={f.card.data[k] ?? 0} min={0} max={1} step={.01} onChange={v => card(c => ({ ...c, data: { ...c.data, [k]: v } }), `data:${k}`)} />)}
     </Section>}
-    <RemixGraph current={typeof share === 'string' ? undefined : programHash(share)} version={version} />
+    <RemixGraph current={hash} version={version} />
   </>
 }
 

@@ -1,6 +1,7 @@
 // React Doctor (`pnpm react-doctor`): https://react.doctor/docs/configuration/config-files
 // Plain object on purpose: react-doctor runs through a pinned `pnpm dlx`, so it isn't installed and its types
-// aren't importable here. Every ignore says why. Findings still worth doing: #208, #209.
+// aren't importable here. Every ignore says why. The one finding left open, the like button's complexity, waits
+// for its #302 fixes.
 export default {
   rules: {
     // the same check as oxlint's `react/only-export-components`, which `.oxlintrc.json` already runs (with
@@ -64,7 +65,7 @@ export default {
       },
       {
         // the dock ghost is `inert` as well as `aria-hidden`, so none of its buttons can take focus (#198)
-        files: ['src/App.tsx'],
+        files: ['src/site/app/bars.tsx'],
         rules: ['react-doctor/no-focusable-content-in-aria-hidden'],
       },
       {
@@ -93,6 +94,15 @@ export default {
           'react-doctor/no-pass-live-state-to-parent',
           'react-doctor/no-pass-data-to-parent',
         ],
+      },
+      {
+        // DotCanvas's complexity is the transient state machine itself (#313): enter, burst, spring, change, exit and
+        // migrate start in layout effects that share `transientRef` and `shownRef`, and their declaration order is
+        // behaviour (the tick burst is declared before the dissolve so it wins, #207). Hooks would pass those refs
+        // around and hide the order. DotWidget's rest is per-prop wiring (the still or interactive role and label, the
+        // camera and hand data merges); a body component would take about 20 props, which reads worse than this
+        files: ['src/components/DotCanvas.tsx', 'src/components/DotWidget.tsx'],
+        rules: ['react-doctor/no-high-complexity-react-function', 'react-doctor/no-giant-component'],
       },
       {
         // the command layer is `'use no memo'` (#207): its command API uses getters, `this` and lazy import()s, which

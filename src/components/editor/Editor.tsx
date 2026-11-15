@@ -7,7 +7,7 @@
  * E6: the sheet remembers its detent per panel, the keyboard never covers the sheet or the text being typed
  * (`visualViewport`), and SHARE opens the system share sheet when there is one.
  */
-import { useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type ReactNode, type PointerEvent } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { Mode } from '../../site/views'
 import { librarySave } from '../studio/doc'
 import { Canvas } from './Canvas'
@@ -21,10 +21,12 @@ import { editableText } from './direct'
 import { codeTarget, KEY_TOOL, MODE_ENTRY, paintTarget } from './input'
 import { InspectorBody, InspectorTabs } from './Inspector'
 import { AssetsPanel, LayersPanel } from './Panels'
-import { DETENTS, detentFor, isPhone, keyboardBox, LANDSCAPE_QUERY, panelOf, PHONE_QUERY, rememberDetent, rememberedDetent, shareLink, type Layout, type ShareOutcome } from './phone'
-import { getEditor, revealAbove, useEditor, type Tool } from './store'
+import { isPhone, shareLink, type ShareOutcome } from './phone'
+import { PhoneSheet } from './PhoneSheet'
+import { useFillWindow, useKeyboard, useLayout, usePhoneScreen } from './screen'
+import { getEditor, useEditor, type Tool } from './store'
 import { selCount, selFrames, selLayers, type Align } from './select'
-import { keepTypingInView, startTyping } from './typing'
+import { startTyping } from './typing'
 import { DotIcon, type IconName } from './ui'
 import { Modal } from '../Modal'
 import './editor.css'
@@ -38,36 +40,20 @@ const TOOLS: { id: Tool; icon: IconName; key: string; label: string; phone: bool
   { id: 'code', icon: 'code', key: 'C', label: 'Code: add a Field IR layer', phone: true },
 ]
 
-const subscribeMQ = (cb: () => void) => {
-  const ms = [matchMedia(PHONE_QUERY), matchMedia(LANDSCAPE_QUERY)]
-  for (const m of ms) m.addEventListener('change', cb)
-  return () => { for (const m of ms) m.removeEventListener('change', cb) }
-}
-const layoutNow = (): Layout => (!matchMedia(PHONE_QUERY).matches ? 'desktop' : matchMedia(LANDSCAPE_QUERY).matches ? 'landscape' : 'portrait')
-const useLayout = () => useSyncExternalStore(subscribeMQ, layoutNow, (): Layout => 'desktop')
-type KeyboardBox = ReturnType<typeof keyboardBox>
-const sameBox = (a: KeyboardBox, b: KeyboardBox) => a?.top === b?.top && a?.height === b?.height
-/**
- * Phone: the part of the screen an on-screen keyboard leaves (`visualViewport`), or undefined when none is
- * open. The editor then fills just that part, so the sheet sits on the keyboard and the canvas above it.
- */
-function useKeyboard(phone: boolean): KeyboardBox {
-  const [box, setBox] = useState<KeyboardBox>(undefined)
-  useEffect(() => {
-    const vv = window.visualViewport
-    if (!phone || !vv) return
-    let raf = 0
-    const on = () => {
-      cancelAnimationFrame(raf)
-      raf = requestAnimationFrame(() => { const b = keyboardBox(window.innerHeight, vv); setBox(p => (sameBox(p, b) ? p : b)) })
-    }
-    on()
-    vv.addEventListener('resize', on); vv.addEventListener('scroll', on)
-    return () => { cancelAnimationFrame(raf); vv.removeEventListener('resize', on); vv.removeEventListener('scroll', on) }
-  }, [phone])
-  return phone ? box : undefined
-}
 const editable = (t: EventTarget | null) => t instanceof HTMLElement && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))
+
+/** The old MAKE modes are ways in: each picks a tool and the panels it used to be (on a mode change only). */
+function useModeEntry(mode: Mode, phone: boolean) {
+  useEffect(() => {
+    const s = getEditor(), d = s.h.present, entry = MODE_ENTRY[mode]
+    s.setTool(entry.tool); s.setLeft(entry.left); s.setRight(entry.right)
+    if (mode === 'DRAW') { const t = paintTarget(d, s.sel); if (t) s.select(t) }
+    else if (mode === 'CODE') {
+      if (!new URLSearchParams(location.search).get('p')) { const t = codeTarget(d, s.sel); if (t) s.select(t) }
+      if (phone) s.setSheet('inspector')
+    }
+  }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
+}
 
 interface EditorProps { mode: Mode; onExit?: () => void }
 /** The editor inside its recovery screen (#143): a crash anywhere in it (top bar, panels, inspector) offers a reset. */
@@ -81,55 +67,11 @@ function EditorView({ mode, onExit }: EditorProps) {
   // probes only: a render crash on demand, to check the recovery screen around the whole editor
   if (TEST_HOOKS && (globalThis as { __editorCrash?: boolean }).__editorCrash) throw new Error('probe: the editor was asked to crash')
   const root = useRef<HTMLElement>(null)
-  // desktop: fill the window below the site bar (the footer sits below the fold). Re-measured when the page
-  // above changes height too: the site bar grows after mount (the lazily loaded tool dock is portaled into it),
-  // and a height measured once would leave the editor's bottom edge below the window.
-  useLayoutEffect(() => {
-    const el = root.current
-    if (!el || phone) return
-    const size = () => { const top = el.getBoundingClientRect().top + window.scrollY; el.style.setProperty('--ed-h', `${Math.max(520, window.innerHeight - top)}px`) }
-    size()
-    window.addEventListener('resize', size)
-    // next frame, not inside the callback: resizing the editor resizes the observed page (no RO loop error)
-    let raf = 0
-    const ro = new ResizeObserver(() => { cancelAnimationFrame(raf); raf = requestAnimationFrame(size) })
-    ro.observe(document.documentElement)
-    return () => { window.removeEventListener('resize', size); ro.disconnect(); cancelAnimationFrame(raf) }
-  }, [phone])
-
-  // the old MAKE modes are ways in: each picks a tool and the panels it used to be
-  useEffect(() => {
-    const s = getEditor(), d = s.h.present, entry = MODE_ENTRY[mode]
-    s.setTool(entry.tool); s.setLeft(entry.left); s.setRight(entry.right)
-    if (mode === 'DRAW') { const t = paintTarget(d, s.sel); if (t) s.select(t) }
-    else if (mode === 'CODE') {
-      if (!new URLSearchParams(location.search).get('p')) { const t = codeTarget(d, s.sel); if (t) s.select(t) }
-      if (phone) s.setSheet('inspector')
-    }
-  }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  // phone: the editor is the whole screen; the page underneath must not scroll or rubber-band
-  useEffect(() => {
-    if (!phone) return
-    document.documentElement.classList.add('ed-scroll-lock')
-    return () => document.documentElement.classList.remove('ed-scroll-lock')
-  }, [phone])
-
+  useFillWindow(root, phone)
+  useModeEntry(mode, phone)
+  usePhoneScreen(phone, kb?.height)
   useEffect(() => { if (!note) return; const h = setTimeout(() => getEditor().setNote(''), 4200); return () => clearTimeout(h) }, [note])
   useShortcuts(phone)
-
-  // the keyboard opened or closed: once the canvas has its new size, the text being typed and the field
-  // with focus in the sheet move back into view (the caret stays visible)
-  const kbH = kb?.height
-  useEffect(() => {
-    if (!phone) return
-    const t = setTimeout(() => {
-      keepTypingInView()
-      const a = document.activeElement
-      if (a instanceof HTMLElement && a.closest('.ed-sheet')) a.scrollIntoView({ block: 'nearest' })
-    }, 120)
-    return () => clearTimeout(t)
-  }, [kbH, phone])
 
   return (
     <section ref={root} className={`ed-root${phone ? ' is-phone' : ''}${landscape ? ' is-landscape' : ''}${kb ? ' has-kb' : ''}`} aria-label="Editor"
@@ -147,7 +89,7 @@ function EditorView({ mode, onExit }: EditorProps) {
         </div>
         {!phone && <aside className="ed-right" aria-label="Inspector"><InspectorTabs /><InspectorBody /></aside>}
       </div>
-      {phone && sheet && <Sheet key={sheet} side={landscape} vh={kb?.height} onClose={() => getEditor().setSheet(null)} />}
+      {phone && sheet && <PhoneSheet key={sheet} side={landscape} vh={kb?.height} onClose={() => getEditor().setSheet(null)} />}
       {shortcuts && <Shortcuts onClose={() => getEditor().setShortcuts(false)} />}
     </section>
   )
@@ -274,67 +216,8 @@ function SelBar() {
   </div>
 }
 
-// ── phone bottom sheet (on its side: a side sheet) ─────────────────────────
-/**
- * The phone's sheet: LAYERS, ASSETS or the inspector. Upright it is a bottom sheet with detents (36 / 60 /
- * 90 % of what the keyboard leaves visible): drag or tap the handle, drag down to close. It opens at the
- * detent it was last left at for that panel (E6: this session, and across reloads in localStorage). On its
- * side the phone gets a side sheet at the right instead, the full height under the top bar.
- */
-function Sheet({ onClose, side, vh: visible }: { onClose: () => void; side: boolean; vh?: number }) {
-  const sheet = useEditor(s => s.sheet), right = useEditor(s => s.right)
-  const panel = panelOf(sheet ?? 'inspector', right)
-  const [detent, setDetentNow] = useState(() => detentFor(panel))
-  const setDetent = (i: number) => { setDetentNow(i); rememberDetent(panel, i) }
-  // another inspector tab in the same sheet: the detent that tab was last left at, if it was
-  const [shown, setShown] = useState(panel)
-  if (shown !== panel) { setShown(panel); const r = rememberedDetent(panel); if (r !== undefined) setDetentNow(r) }
-  const [drag, setDrag] = useState<number | null>(null)
-  const start = useRef<{ y: number; h: number } | null>(null), ref = useRef<HTMLElement>(null)
-  const vh = visible ?? (typeof window === 'undefined' ? 800 : (window.visualViewport?.height ?? window.innerHeight))
-  const h = drag ?? DETENTS[detent] * vh
-  const selFrame = useEditor(s => s.sel.frame)
-  // the selection stays in view beside the sheet (after the height transition)
-  useEffect(() => {
-    if (drag !== null) return
-    const t = setTimeout(() => { if (side) revealAbove(0, ref.current?.offsetWidth ?? 0); else revealAbove(DETENTS[detent] * vh) }, 240)
-    return () => clearTimeout(t)
-  }, [detent, drag, selFrame, vh, side])
-  const onDown = (e: PointerEvent<HTMLDivElement>) => { e.currentTarget.setPointerCapture(e.pointerId); start.current = { y: e.clientY, h } }
-  const onMove = (e: PointerEvent<HTMLDivElement>) => { if (start.current) setDrag(Math.max(80, Math.min(vh * .95, start.current.h - (e.clientY - start.current.y)))) }
-  const onUp = (e: PointerEvent<HTMLDivElement>) => {
-    const st = start.current
-    start.current = null
-    if (!st) return
-    const moved = Math.abs(e.clientY - st.y) > 6, now = drag ?? st.h
-    setDrag(null)
-    if (!moved) { setDetent((detent + 1) % DETENTS.length); return } // a tap on the handle steps the detent
-    if (now < DETENTS[0] * vh * .7) { onClose(); return }
-    let best = 0
-    DETENTS.forEach((d, i) => { if (Math.abs(d * vh - now) < Math.abs(DETENTS[best] * vh - now)) best = i })
-    setDetent(best)
-  }
-  const title = sheet === 'layers' ? 'LAYERS' : sheet === 'assets' ? 'ASSETS' : null
-  let body: ReactNode = null
-  if (sheet === 'layers') body = <LayersPanel />
-  else if (sheet === 'assets') body = <AssetsPanel onInserted={onClose} />
-  else body = <InspectorBody />
-  return (
-    <section ref={ref} className={`ed-sheet${side ? ' ed-sheet--side' : ''}${drag !== null ? ' dragging' : ''}`} aria-label={title ?? 'Inspector'} data-detent={side ? undefined : detent} style={side ? undefined : { height: h }}>
-      {!side && <div className="ed-sheet-grab" onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}
-        role="slider" aria-label="Sheet height: drag, or tap to step" aria-valuemin={0} aria-valuemax={2} aria-valuenow={detent} tabIndex={0}
-        onKeyDown={e => { if (e.key === 'ArrowUp') setDetent(Math.min(2, detent + 1)); else if (e.key === 'ArrowDown') { if (detent === 0) onClose(); else setDetent(detent - 1) } }}><i /></div>}
-      <div className="ed-sheet-head">
-        {title ? <b>{title}</b> : <InspectorTabs className="ed-tabs--sheet" />}
-        <button type="button" className="ed-ibtn" aria-label="Close" onClick={onClose}>×</button>
-      </div>
-      <div className="ed-sheet-body">{body}</div>
-    </section>
-  )
-}
-
 // ── keyboard ───────────────────────────────────────────────────────────────
-export const EDITOR_KEYS: [string, string][] = [
+const EDITOR_KEYS: [string, string][] = [
   ['V', 'move / select'], ['H · hold Space', 'hand (pan)'], ['F', 'frame: drag out a new card'], ['B', 'draw dots'], ['E', 'eraser'], ['[ ]', 'brush size'],
   ['T', 'text: click a frame, then type on the canvas'], ['Enter · double-click a text layer', 'type into it on the canvas (Enter finishes, Esc cancels)'], ['I · Alt-click (draw)', 'eyedropper: take the ink of a painted dot'], ['C', 'code: add a Field IR layer'], ['Esc', 'back to move · select the parent · deselect'], ['Enter / ⇧Enter', 'into the frame\'s layers / up to the group or the frame'],
   ['⇧-click · drag on empty canvas', 'add to the selection · marquee (⇧ adds)'], ['Ctrl-drag on a frame', 'marquee its layers'], ['Ctrl+A', 'select all (frames, or the frame\'s layers)'],
