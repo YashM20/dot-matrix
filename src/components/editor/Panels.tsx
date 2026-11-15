@@ -78,7 +78,7 @@ function FrameRows({ f }: { f: EditorFrame }) {
         <span className="ed-grip" aria-hidden="true" title="Drag to reorder (keys: Alt+↑/↓ on the name)" onPointerDown={e => onGrip(e, l.id, i)} onPointerMove={onGripMove} onPointerUp={onGripUp} onPointerCancel={() => setDrag(null)}>⋮⋮</span>
         {renaming === l.id ? <Rename value={l.name} onDone={v => { setRenaming(null); if (v) edit(d => editLayer(d, { frame: f.id, layer: l.id }, x => ({ ...x, name: v }))) }} />
           : <button type="button" className="ed-row-name" aria-pressed={on} title="Select (⇧ adds) · double-click or F2 renames · Alt+↑/↓ reorders" onClick={e => pick(e, l.id)} onDoubleClick={() => setRenaming(l.id)} onKeyDown={e => onKey(e, l.id, i)}>
-            <b>{KIND[l.kind]}</b>{l.name}{errors.has(l.id) && <i className="ed-err" title={errors.get(l.id)!.message}>ERR</i>}{l.blend !== 'normal' && <small>{l.blend}</small>}</button>}
+            <b>{KIND[l.kind]}</b><span className="ed-name" dir="auto">{l.name}</span>{errors.has(l.id) && <i className="ed-err" title={errors.get(l.id)!.message}>ERR</i>}{l.blend !== 'normal' && <small>{l.blend}</small>}</button>}
         {lockBtn(locked, l.name, () => edit(d => lockLayers(d, f.id, [l.id], !locked)))}
         <button type="button" className="ed-eye" aria-pressed={l.visible} aria-label={`${l.visible ? 'Hide' : 'Show'} ${l.name}`} onClick={() => edit(d => editLayer(d, { frame: f.id, layer: l.id }, x => ({ ...x, visible: !x.visible })))}>{l.visible ? '●' : '○'}</button>
       </li>
@@ -91,7 +91,7 @@ function FrameRows({ f }: { f: EditorFrame }) {
         <button type="button" className="ed-twist" aria-expanded={isOpen} aria-label={`${isOpen ? 'Collapse' : 'Expand'} ${f.card.name}`} onClick={() => setOpen(!isOpen)}>{isOpen ? '▾' : '▸'}</button>
         {renaming === f.id ? <Rename value={f.card.name} onDone={v => { setRenaming(null); if (v) edit(d => editFrame(d, f.id, x => ({ ...x, card: { ...x.card, name: v } }))) }} />
           : <button type="button" className="ed-row-name" aria-pressed={frameOn} onClick={e => pick(e)} onDoubleClick={() => setRenaming(f.id)} onKeyDown={e => { if (e.key === 'F2') setRenaming(f.id) }}>
-            <b>#</b>{f.card.name}<small>{f.card.grid.cols}×{f.card.grid.rows}</small></button>}
+            <b>#</b><span className="ed-name" dir="auto">{f.card.name}</span><small>{f.card.grid.cols}×{f.card.grid.rows}</small></button>}
         {lockBtn(!!f.locked, `frame ${f.card.name}`, () => edit(d => lockFrames(d, [f.id])))}
         <button type="button" className="ed-eye" aria-pressed={!f.hidden} aria-label={`${f.hidden ? 'Show' : 'Hide'} frame ${f.card.name}`} onClick={() => edit(d => editFrame(d, f.id, x => ({ ...x, hidden: !x.hidden })))}>{f.hidden ? '○' : '●'}</button>
       </div>
@@ -107,7 +107,7 @@ function FrameRows({ f }: { f: EditorFrame }) {
                 <button type="button" className="ed-twist" aria-expanded={gOpen} aria-label={`${gOpen ? 'Collapse' : 'Expand'} group ${g.name}`} onClick={() => setShut(x => ({ ...x, [g.id]: gOpen }))}>{gOpen ? '▾' : '▸'}</button>
                 {renaming === g.id ? <Rename value={g.name} onDone={v => { setRenaming(null); if (v) edit(d => renameGroup(d, f.id, g.id, v)) }} />
                   : <button type="button" className="ed-row-name" aria-pressed={gOn} title="Select the group · double-click or F2 renames · Ctrl+⇧G ungroups" onClick={e => pickGroup(e, g)} onDoubleClick={() => setRenaming(g.id)} onKeyDown={e => { if (e.key === 'F2') setRenaming(g.id) }}>
-                    <b>GROUP</b>{g.name}<small>{members.length}</small></button>}
+                    <b>GROUP</b><span className="ed-name" dir="auto">{g.name}</span><small>{members.length}</small></button>}
                 {lockBtn(locked, `group ${g.name}`, () => edit(d => lockLayers(d, f.id, g.layers, !locked)))}
                 <button type="button" className="ed-eye" aria-pressed={shown} aria-label={`${shown ? 'Hide' : 'Show'} group ${g.name}`} onClick={() => edit(d => g.layers.reduce((x, id) => editLayer(x, { frame: f.id, layer: id }, l => ({ ...l, visible: !shown })), d))}>{shown ? '●' : '○'}</button>
               </div>

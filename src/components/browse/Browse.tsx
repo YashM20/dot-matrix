@@ -14,6 +14,7 @@ import { useMinuteTick } from '../Board'
 import { LoadBoundary, LoadFailed } from '../LoadBoundary'
 import { boardLabel, loadBoard, prefetchBoard } from '../../widgets/manifest'
 import { replaceUrl } from '../../site/safe-url'
+import { intent } from '../../site/prefetch'
 import { ORDERED, ROWS, TAG_OPTIONS, cleanQuery, matches, readFilters, tagCountOf, writeFilters, type Filters, type Row } from './data'
 import { useWindow } from './useWindow'
 import './Browse.css'
@@ -93,7 +94,7 @@ export function Browse({ onBoard, onOpen, cardPath }: BrowseProps) {
         {rows.map(r => <li key={r.slug} className="browse-item" data-slot={r.slug} ref={slot(r.slug)}>
           {mounted.has(r.slug) ? <LoadBoundary fallback={<Failed />}><Suspense fallback={<Ghost />}><Card row={r} tick={tick} /></Suspense></LoadBoundary> : <Ghost />}
           <CardRow id={r.slug} name={r.name} href={cardPath(r.slug)} onOpen={onOpen}
-            meta={<a href={`/${r.board}/`} className="browse-board" onClick={e => go(e, () => onBoard(r.board))} onPointerEnter={() => prefetchBoard(r.board)}>
+            meta={<a href={`/${r.board}/`} className="browse-board" onClick={e => go(e, () => onBoard(r.board))} {...intent(() => prefetchBoard(r.board))}>
               <span className="sr-only">{r.name} is on the board </span>{boardLabel(r.board)}</a>} />
         </li>)}
       </ul>
