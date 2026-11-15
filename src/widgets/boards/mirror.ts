@@ -10,7 +10,7 @@ import type { Control } from '../../engine/context'
 import type { Field, Tone } from '../../engine/types'
 import { createRaster, type Raster } from '../../engine/raster'
 import { halftone, halftoneStream, type HalftoneStream } from '../../engine/halftone'
-import { TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { LIVE_DOT, TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
 import type { Layer } from '../../engine/types'
 import { splitFlapText } from '../../engine/motion/text'
 import { handAt, handPath } from '../../vision/synthetic'
@@ -150,8 +150,10 @@ export const CAM = { idle: 0, starting: 1, live: 2, denied: 3 } as const
 const PROMPT: Record<number, string> = { [CAM.idle]: 'TAP TO START', [CAM.starting]: 'ALLOW CAMERA', [CAM.denied]: 'NO CAMERA' }
 const cameraControl: Control = { key: 'cam', kind: 'toggle', box: [0, 0, 144, 144], label: 'Camera mirror: start or stop the webcam' }
 
+/** A REC or LIVE word with the chrome's live dot (same size and column), both on the inset label row. */
+const liveTag = (word: string) => [layer(T.text(word, 132, 1, { align: 'right' }), 'idle'), layer(T.dots([[TILE.cols - 4, 4]], LIVE_DOT), 'active')]
 /** Live: REC + the board's one red dot, top right. */
-const REC = [layer(T.text('REC', 128, 1, { align: 'right' }), 'idle'), layer(T.dots([[138.5, 4]], 2.6), 'active')]
+const REC = liveTag('REC')
 /**
  * The label of a bleed card (no padding): drawn one cell in from the top and left edges, on REC's row, instead of
  * the chrome label at (0, 0), which would sit on the card's edge.
@@ -286,7 +288,7 @@ export const mirrorShadow: WidgetPreset = {
     }
     const wall: Layer = { ...T.lattice(2, 0, WALL_TOP).at(field), toneOf: shadowTone }
     const state = live ? CAM.live : data.cam && !data.camState ? CAM.starting : data.camState ?? CAM.idle
-    if (live) return [wall, layer(T.text('LIVE', 128, 1, { align: 'right' }), 'idle'), layer(T.dots([[138.5, 4]], 2.6), 'active')]
+    if (live) return [wall, ...liveTag('LIVE')]
     const prompt = state === CAM.starting ? 'ALLOW CAMERA' : state === CAM.denied ? 'NO CAMERA' : 'TAP FOR YOUR SHADOW'
     const showPrompt = state !== CAM.idle || t % 1.2 < .8
     return [wall, ...(showPrompt ? [cta(prompt)] : []), PRIVACY]
@@ -355,7 +357,7 @@ export const mirrorConduct: WidgetPreset = {
       layer(T.dots(calm, 1.3), 'mid'),
       layer(T.dots(stirred, 1.5), 'value'),
       ...(p && p.y > FIELD.y0 - 12 ? [layer(T.dotRing(p.x, p.y, p.down ? 4 : 7, { spacing: 3, size: 1 }), p.down ? 'value' : 'idle')] : []),
-      ...(on && hs === 2 ? [layer(T.text(mode === 'HAND' ? 'HAND' : 'LIVE', 128, 1, { align: 'right' }), 'idle'), layer(T.dots([[138.5, 4]], 2.6), 'active')] : [layer(T.text(mode, 143, 1, { align: 'right' }), 'mid')]),
+      ...(on && hs === 2 ? liveTag(mode === 'HAND' ? 'HAND' : 'LIVE') : [layer(T.text(mode, 143, 1, { align: 'right' }), 'mid')]),
       ...(pulse ? [cta(status)] : []),
       PRIVACY,
     ]

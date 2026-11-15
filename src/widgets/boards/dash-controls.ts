@@ -7,7 +7,7 @@
 import type { Layer, Tone } from '../../engine/types'
 import { layer } from '../types'
 import { GEARS, GEAR_NAMES, LEFT, OFF, RIGHT, dashOf, indicators, rangeKm } from './dash-drive'
-import { BODY, LINE, PRESS, SIGNAL_ARROW, T, at, card, dimmed, hero, mirror, mod, rr, spriteAt, spriteW, states, ui, type Pt } from './dash-kit'
+import { BODY, LINE, PRESS, SIGNAL_ARROW, T, at, card, dimmed, hero, heroOpts, mirror, mod, rr, spriteAt, spriteW, states, ui, type Pt } from './dash-kit'
 
 // ── BATTERY ─────────────────────────────────────────────────────────────────
 /**
@@ -34,7 +34,7 @@ export const batteryCard = card('dash-battery', 'Battery', {
     const tone = (i: number): Tone => (i < lit ? 'value' : i === front ? 'active' : i < front ? 'idle' : 'faint')
     const cv = cs.pressed ? PRESS : 1, pv = ps.pressed ? PRESS : 1
     const pack = rr(PACK.x, PACK.y, PACK.w, PACK.h, PACK.r), plug = rr(PLUG.x, PLUG.y, PLUG.w, PLUG.h, PLUG.h / 2)
-    const hw = (String(pct).length * 12 - 2) * 2
+    const hw = T.bigSize(String(pct), heroOpts())[0]
     const [word, detail] = d.charging
       ? ['CHARGING 11 KW', lit >= PACK.n ? 'FULL' : `FULL IN ${fullIn(d.soc)}`]
       : regen ? [`REGEN ${Math.round(-d.kw)} KW`, 'BRAKING INTO THE PACK'] : ['READY', `${Math.round(rangeKm(d.soc, d.kmh))} KM LEFT`]
@@ -43,7 +43,7 @@ export const batteryCard = card('dash-battery', 'Battery', {
       layer(T.dots([0, 3].flatMap(dx => [46, 52, 58].map((y): Pt => [130 + dx, y])), LINE.size), 'mid'),
       ...Array.from({ length: PACK.n }, (_, i) => layer(at(T.dots(cellCol(i), PACK.size), cv), tone(i))),
       layer(hero(String(pct), 8 + hw / 2, 90), 'value'),
-      layer(T.big('%', 8 + hw + 3, 106.8, { lattice: 1.6 }), 'idle'),
+      layer(T.heroUnit(String(pct), '%', 8, 90, heroOpts(), { lattice: 1.6 }), 'idle'),
       ...(d.charging ? [layer(spriteAt(BOLT, 8 + hw + 4, 91, 1.6), 'value')] : []),
       layer(T.text(word, 8, 125), 'idle'),
       layer(T.text(detail, 8, 135), 'mid'),
