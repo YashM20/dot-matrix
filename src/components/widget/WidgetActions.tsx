@@ -1,6 +1,6 @@
 /**
- * The widget page's card actions: copy and download (PNG, SVG, HTML), the links, SHARE, REMIX and X-RAY, and the pills
- * that hold them, grouped by what they do. Exports are what the visitor sees: the card's theme and clock at the moment
+ * The widget page's card actions: copy and download (PNG, SVG, HTML), the links, SHARE, REMIX and X-RAY, and the
+ * toolbar that holds them, grouped by what they do. Exports are what the visitor sees: the card's theme and clock at the moment
  * of the click, and the data on the stage (live values, typed words). The export code loads on the first export (#214).
  */
 import { useMemo, useRef, type RefObject } from 'react'
@@ -17,6 +17,7 @@ import { getSkin } from '../skins/store'
 import { boardTime, cardAction, toast } from '../xray/store'
 import { MoreMenu } from './MoreMenu'
 import { Pill, PillBar, PillButton } from './PillBar'
+import { LinkIcon, PlayIcon, RemixIcon, ShareIcon, XrayIcon } from './toolIcons'
 
 /** The export code (PNG, SVG, HTML), loaded on the first export. */
 const exporter = () => import('./cardExport')
@@ -74,25 +75,25 @@ interface CardActionsProps extends ActsInput {
   onBoard: (board: string, slug?: string) => void
 }
 
-/** The actions, grouped by what they do: export, then share and remix, then the rest. */
+/** The actions as one toolbar: the card's own actions (export, link, share, remix) left, the rest (X-RAY, MORE) right. */
 export function CardActions({ xrayOn, xray, onBoard, ...input }: CardActionsProps) {
   const act = useWidgetActs(input), { w } = input
   const share = useMemo(() => canShare(), [])
   return <PillBar label="Card actions" className="wp-actions">
     <Pill className="wp-copy">
-      <PillButton label="PNG" glyph="▣" title="Copy as PNG" onClick={act.png} />
-      <PillButton label="SVG" glyph="◇" title="Copy as SVG" onClick={act.svg} />
-      <PillButton label="LINK" glyph="⌁" title="Copy link" onClick={act.link} />
+      <PillButton label="PNG" title="Copy as PNG" onClick={act.png} />
+      <PillButton label="SVG" title="Copy as SVG" onClick={act.svg} />
+      <PillButton label="LINK" title="Copy link" icon={<LinkIcon />} iconOnly onClick={act.link} />
+      {share && <PillButton label="SHARE" title="Share" icon={<ShareIcon />} iconOnly onPointerDown={act.pressShare} onClick={act.share} />}
+      {flag('make') && <PillButton label="REMIX" title="Remix in MAKE" icon={<RemixIcon />} onClick={act.remix} className="wp-remix" />}
+      {/* the levels board's cards are HIVE's screens: the game opens on its board (HiveStart reads ?play=1) */}
+      {w.board === 'levels' && <PillButton label="PLAY" title="Play HIVE" icon={<PlayIcon />} href="/levels/?play=1" />}
     </Pill>
     <Pill className="wp-go">
-      {/* the levels board's cards are HIVE's screens: the game opens on its board (HiveStart reads ?play=1) */}
-      {w.board === 'levels' && <PillButton label="PLAY" glyph="▸" title="Play HIVE" href="/levels/?play=1" />}
-      {share && <PillButton label="SHARE" glyph="↗" title="Share" onPointerDown={act.pressShare} onClick={act.share} />}
-      {flag('make') && <PillButton label="REMIX" glyph="✎" title="Remix in MAKE" onClick={act.remix} />}
-      {xrayOn && <PillButton label="X-RAY" glyph="ⓘ" title="X-ray: how it works" onClick={act.xray} pressed={xray} className="wp-desk" />}
+      {xrayOn && <PillButton label="X-RAY" title="X-ray: how it works" icon={<XrayIcon />} onClick={act.xray} pressed={xray} className="wp-desk" />}
       <MoreMenu items={[
         { label: 'Copy short link', note: shortPath(w.uid), run: act.short },
-        { label: 'Copy HTML', note: 'static SVG, no script', run: act.html },
+        { label: 'Copy HTML', note: 'static SVG', run: act.html },
         { label: 'Download PNG', run: act.savePNG, group: true },
         { label: 'Download SVG', run: act.saveSVG },
         ...(xrayOn ? [{ label: 'X-ray: how it works', run: act.xray, group: true, className: 'wp-phone' }] : []),

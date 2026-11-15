@@ -1,11 +1,11 @@
 /* App styles: the raised layer (menus, popovers, sheets, the palette) */
 /* ── raised layer (one look): menus, popovers, sheets, ⌘K ─────────────────────────────────────────────
    Glass: translucent raised, one small blur, the raised shadow; it opens with no animation. Cards keep their
-   single hairline. Used by .skin-menu, .theme-pop, .ed-menu (editor), .wp-more (widget page), .dot-card-menu (a card's MORE, CardRow), .pal, .sheet-panel. */
+   single hairline. Used by .skin-menu, .theme-pop, .ed-menu (editor), .dot-card-menu (a card's MORE, CardRow), .pal,
+   .sheet-panel. The widget page's MORE (.wp-more) is an opaque popover instead (WidgetPage.css). */
 .skin-menu,
 .theme-pop,
 .ed-menu,
-.wp-more,
 .dot-card-menu,
 .pal,
 .sheet-panel {
@@ -21,7 +21,6 @@
   .skin-menu,
   .theme-pop,
   .ed-menu,
-  .wp-more,
   .dot-card-menu,
   .pal,
   .sheet-panel {
@@ -31,8 +30,7 @@
 
 /* menu rows (one look): a wash on hover, one step more on press */
 .skin-menu button,
-.ed-menu button,
-.wp-more button {
+.ed-menu button {
   border-radius: var(--radius-ctl)
 }
 

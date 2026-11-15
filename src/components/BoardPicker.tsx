@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { boardGroups, boardLabel, groupOf, prefetchBoard, type BoardGroupId } from '../widgets/manifest'
 import { useBlurbs } from './useBlurbs'
+import { NextIcon } from './widget/toolIcons'
 
 /** A group by id (every `BoardGroupId` names one; the fallback only satisfies the type). */
 const groupById = (g: BoardGroupId) => boardGroups.find(x => x.id === g) ?? boardGroups[0]
@@ -48,7 +49,7 @@ export function BoardPicker({ board, all, onPick, onPickAll, onSheet }: { board:
 
 /**
  * The end of a board, at every width: the next one in its group, so nobody has to go back up to move on. A real link
- * (`/<board>/`, so it opens in a new tab too) in the site's pill (src/site/app/pills.css), like the widget page's
+ * (`/<board>/`, so it opens in a new tab too) in the site's toolbar group (src/site/app/pills.css), like the widget page's
  * PREV / NEXT; a plain click switches the board in place.
  */
 export function NextBoard({ board, onPick }: { board: string; onPick: (id: string) => void }) {
@@ -57,7 +58,7 @@ export function NextBoard({ board, onPick }: { board: string; onPick: (id: strin
   return <div className="next-board"><div className="pill">
     <a className="pill-btn" href={`/${next}/`} onPointerEnter={() => prefetchBoard(next)} onFocus={() => prefetchBoard(next)}
       onClick={e => { if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); window.scrollTo({ top: 0, behavior: smooth() }); onPick(next) }}>
-      NEXT BOARD<span className="pill-glyph" aria-hidden="true">·</span><b>{boardLabel(next)}</b><span className="pill-glyph" aria-hidden="true">→</span>
+      <span className="pill-label">NEXT BOARD</span><b>{boardLabel(next)}</b><NextIcon />
     </a>
   </div></div>
 }

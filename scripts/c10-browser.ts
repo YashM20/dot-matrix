@@ -372,6 +372,17 @@ try {
   const openMore = async () => { await js(`document.querySelector('.wp-more-btn').click()`); return waitFor(`!!document.querySelector('.wp-more [role=menuitem]')`, 2000) }
   await open(`widget/${slug}/`, ''); await waitFor(`!!document.querySelector('.wp-more-btn')`, 8000)
   check(`flag off: the widget page (${slug}) has no X-RAY pill or menu item`, await openMore() && !(await js(wpXray)) && !(await js(xrStyles)))
+  // the toolbar and its menu (owner feedback on the pills): one row of 28 px buttons with no blur; MORE opens an opaque
+  // menu right-aligned under its button, on screen, each row one line
+  const bar = await js(`(() => {
+    const b = document.querySelector('.wp-more-btn').getBoundingClientRect(), m = document.querySelector('.wp-more'), r = m.getBoundingClientRect()
+    const groups = [...document.querySelectorAll('.wp-actions .pill')], blur = el => !/^(none)?$/.test(getComputedStyle(el).backdropFilter)
+    const rows = [...m.querySelectorAll('[role=menuitem]')].filter(x => x.offsetParent).map(x => Math.round(x.getBoundingClientRect().height))
+    return { h: Math.round(b.height), tops: new Set(groups.map(g => Math.round(g.getBoundingClientRect().top))).size, dx: Math.round(r.right - b.right), below: r.top >= b.bottom,
+      on: r.left >= 0 && r.right <= innerWidth && r.bottom <= innerHeight, blur: [m, ...groups].some(blur), rows: Math.max(...rows) }
+  })()`) as { h: number; tops: number; dx: number; below: boolean; on: boolean; blur: boolean; rows: number }
+  check('the widget toolbar is one row of 28 px buttons, no blur; MORE opens under it, right edges lined up, on screen, one line a row',
+    bar.h <= 30 && bar.tops === 1 && Math.abs(bar.dx) <= 1 && bar.below && bar.on && !bar.blur && bar.rows <= 34, JSON.stringify(bar))
   await shot('09-flagsoff-widget')
   // and with the xray flag on both come back
   await open(`widget/${slug}/`); await waitFor(`!!document.querySelector('.wp-more-btn')`, 8000)

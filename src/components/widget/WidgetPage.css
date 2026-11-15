@@ -1,5 +1,5 @@
-/* SHARE S1: the single-widget page and its iOS-style pill bars (docs/SHARE-PLAN.md §4). Grey chrome only:
-   the card keeps the one accent. Loaded with the lazy WidgetPage chunk. */
+/* SHARE S1: the single-widget page and its toolbars (docs/SHARE-PLAN.md §4). Grey chrome only: the card keeps
+   the one accent. Loaded with the lazy WidgetPage chunk. */
 
 /* the widget page is an app in the frame (#183): on a desktop the shell is exactly the viewport's height, the
    page fills it (top bar, then the stage beside the side panel) and the footer is one slim line at the bottom.
@@ -49,9 +49,9 @@
   }
 }
 
-/* ── pills: the shared capsule and its buttons live in src/site/app/pills.css (first load: NEXT BOARD uses them) ── */
-/* tooltips (src/site/app/tips.css): the top bar's open below, its first pill's from the left edge; the panel's
-   first pill's from the left edge too, so the panel's scroll box doesn't clip them */
+/* ── toolbar: the shared group and its buttons live in src/site/app/pills.css (first load: NEXT BOARD uses them) ── */
+/* tooltips (src/site/app/tips.css): the top bar's open below, its first group's from the left edge; the panel's
+   first group's from the left edge too, so the panel's scroll box doesn't clip them */
 .wp-top [data-tip]::after {
   top: calc(100% + var(--space-2));
   bottom: auto
@@ -91,11 +91,15 @@
 }
 
 .wp-count {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-width: var(--tap);
+  padding: 0 var(--space-2);
   color: var(--mute);
   font: 500 var(--fs-label-12) var(--mono);
-  letter-spacing: .1em;
-  text-align: center
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .06em
 }
 
 .wp-main {
@@ -196,10 +200,14 @@
   text-decoration: underline solid var(--value)
 }
 
-/* the panel's actions: export, then share and remix and MORE, wrapping as whole capsules */
+/* the panel's toolbar: the card's actions left, X-RAY and MORE right; a narrow panel wraps it as whole groups */
 .wp-actions {
   flex-wrap: wrap;
   margin: 0 0 var(--space-4)
+}
+
+.wp-go {
+  margin-left: auto
 }
 
 /* tags are labels, not controls (#185): no outline, no pill; a small dot leads each */
@@ -274,34 +282,41 @@
   font: 400 var(--fs-copy-14)/1.5 var(--sans)
 }
 
-/* ── more menu (MoreMenu.tsx): the raised layer, fixed under its button and kept in the viewport by script ── */
+/* ── more menu (MoreMenu.tsx): an opaque popover, fixed under its button (right edges lined up) and kept in the
+   viewport by script. A solid raised surface, a hairline, a small radius and a short soft shadow; no blur, no
+   motion. Rows are one line: the label left, its meta right in muted mono. ── */
 .wp-more {
   position: fixed;
   z-index: calc(var(--z-pinned) + 1);
   top: 0;
   left: 0;
-  width: 264px;
+  width: max-content;
+  min-width: 208px;
   max-width: calc(100cqi - 16px);
   display: flex;
   flex-direction: column;
-  padding: var(--space-1)
-  /* surface, edge, radius and blur: the shared raised layer (src/site/app/raised.css) */
+  padding: var(--space-1);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  box-shadow: var(--shadow-pop)
 }
 
 .wp-more button {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-  gap: var(--space-3);
-  min-height: 36px;
-  padding: 0 var(--space-3);
+  align-items: center;
+  gap: var(--space-5);
+  min-height: 30px;
+  padding: 0 var(--space-2);
   background: none;
   border: 0;
+  border-radius: var(--radius-sm);
   color: var(--label);
-  font: 500 var(--fs-label-12) var(--mono);
+  font: 500 var(--fs-label-12)/1 var(--mono);
   letter-spacing: .06em;
   text-align: left;
   text-transform: uppercase;
+  white-space: nowrap;
   cursor: pointer
 }
 
@@ -320,17 +335,49 @@
   outline-offset: -2px
 }
 
-/* a new group: a dotted rule above it, as in the palette and the TOOLS sheet */
-.wp-more .wp-more-group {
-  margin-top: var(--space-1);
-  border-top: 1px solid var(--line);
-  border-image: var(--hair-x) 1
+.wp-more-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis
 }
 
 .wp-more small {
+  flex: none;
   color: var(--mute);
   font: inherit;
+  letter-spacing: 0;
   text-transform: none
+}
+
+/* a new group: a hairline above it, edge to edge */
+.wp-more .wp-more-group {
+  position: relative;
+  margin-top: var(--space-2)
+}
+
+.wp-more .wp-more-group::before {
+  content: '';
+  position: absolute;
+  top: calc(-1 * var(--space-1) - 1px);
+  left: calc(-1 * var(--space-1));
+  right: calc(-1 * var(--space-1));
+  height: 1px;
+  background: var(--line);
+  pointer-events: none
+}
+
+@media (pointer: coarse) {}
+
+/* the narrowest phones: REMIX keeps its icon only, so the toolbar stays one row */
+@media (max-width: 360px) {
+  .wp-remix {
+    padding: 0
+  }
+
+  .wp-remix .pill-label {
+    display: none
+  }
 }
 
 .wp-phone {
@@ -351,17 +398,21 @@
     position: relative
   }
 
-  /* its tips open below, like the top bar's (src/site/app/hero.css) */
+  /* its tips open below, like the top bar's (src/site/app/hero.css); it takes the toolbar's look: a 28 px row in
+     one hairline group */
   .shell--widget .pal-dock {
     position: absolute;
     inset: var(--gap-group) auto auto 50%;
     translate: -50% 0;
-    border-radius: var(--radius-pill)
+    gap: 0;
+    padding: 0;
+    background: var(--surface);
+    border-radius: var(--radius-sm)
   }
 
   .shell--widget .pal-dock button {
-    min-height: 36px;
-    border-radius: var(--radius-pill)
+    min-height: 28px;
+    border-radius: 0
   }
 }
 
@@ -395,12 +446,15 @@
     font-size: var(--fs-title-24)
   }
 
-  .wp-step .pill-label {
+  /* X-RAY moves into MORE: MORE is then the group's only button, with no hairline before it */
+  .wp-desk {
     display: none
   }
 
-  .wp-desk {
-    display: none
+  .wp-go > .wp-desk + .pill-btn {
+    border-left: 0;
+    border-start-start-radius: var(--radius-sm);
+    border-end-start-radius: var(--radius-sm)
   }
 
   .wp-phone {
