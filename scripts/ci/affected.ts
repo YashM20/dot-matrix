@@ -29,6 +29,8 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
   ['vite.config.ts', ALL], ['index.html', ALL], ['package.json', ALL], ['pnpm-lock.yaml', ALL], ['tsconfig*.json', ALL],
   // the build's own steps (vite.config.ts runs them) write every page
   ['scripts/site/postbuild.ts', ALL], ['scripts/site/seo*.ts', ALL], ['scripts/og.ts', ALL],
+  // the cold-load hints (#348) change what `/` and every board page fetch first
+  ['scripts/site/preload.ts', ALL], ['scripts/site/chunk-graph.ts', ALL],
 
   // site areas
   ['src/components/editor/**', ['editor', 'editor-phone', 'break-ui']],
