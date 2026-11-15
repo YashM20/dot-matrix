@@ -4,10 +4,12 @@ export type SkinName = typeof SKIN_NAMES[number]
 export const isSkinName = (s: unknown): s is SkinName => typeof s === 'string' && (SKIN_NAMES as readonly string[]).includes(s)
 
 /**
- * The skin a page opens on: a valid `?skin=` first, then the saved `dot480:skin`, else `oled`. A name that is not a
- * skin (a typo, or a removed skin such as `eink` or `flipdisc` from an old link or an old save) is skipped, never an error.
+ * The skin a page opens on. A `?skin=` link decides when it is there: its skin, or `oled` when it names no skin (a typo,
+ * or a removed skin such as `eink` or `flipdisc` from an old link), whatever is saved. With no link, the saved
+ * `dot480:skin` if it is a skin, else `oled`. Never an error.
  */
-export const pickSkin = (query: unknown, stored: unknown): SkinName => isSkinName(query) ? query : isSkinName(stored) ? stored : 'oled'
+export const pickSkin = (query: unknown, stored: unknown): SkinName =>
+  typeof query === 'string' && query !== '' ? (isSkinName(query) ? query : 'oled') : isSkinName(stored) ? stored : 'oled'
 
 export interface SkinInfo {
   name: SkinName

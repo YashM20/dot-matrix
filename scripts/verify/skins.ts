@@ -25,13 +25,13 @@ async function firstSkin(search: string, saved: string | null): Promise<string> 
 
 export async function skinChecks(assert: Assert) {
   assert('skins: OLED, NIXIE, VFD, CRT in that order', SKIN_NAMES.join() === 'oled,nixie,vfd,crt', SKIN_NAMES.join())
-  assert('skins: pickSkin skips a removed or unknown name for the next source, then OLED',
-    REMOVED.every(r => pickSkin(r, null) === 'oled' && pickSkin(null, r) === 'oled' && pickSkin(r, r) === 'oled' && pickSkin(r, 'vfd') === 'vfd')
-      && pickSkin('crt', 'nixie') === 'crt' && pickSkin(null, 'nixie') === 'nixie' && pickSkin(undefined, 42) === 'oled')
+  assert('skins: pickSkin: a link naming a removed or unknown skin is OLED even over a saved skin; a saved removed skin is OLED',
+    REMOVED.every(r => pickSkin(r, null) === 'oled' && pickSkin(null, r) === 'oled' && pickSkin(r, r) === 'oled' && pickSkin(r, 'vfd') === 'oled')
+      && pickSkin('crt', 'nixie') === 'crt' && pickSkin(null, 'nixie') === 'nixie' && pickSkin('', 'vfd') === 'vfd' && pickSkin(undefined, 42) === 'oled')
 
   const bad: string[] = []
   for (const r of REMOVED) {
-    for (const [search, saved] of [['', r], [`?skin=${r}`, null], [`?skin=${r}`, r]] as const) {
+    for (const [search, saved] of [['', r], [`?skin=${r}`, null], [`?skin=${r}`, r], [`?skin=${r}`, 'crt']] as const) {
       try { const got = await firstSkin(search, saved); if (got !== 'oled') bad.push(`${search || '(no query)'} + saved ${saved}: ${got}`) }
       catch (e) { bad.push(`${search || '(no query)'} + saved ${saved}: threw ${(e as Error).message}`) }
     }

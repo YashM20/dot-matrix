@@ -1,6 +1,6 @@
 /**
- * The global display skin (C7): one value for the whole site. Read from `?skin=` first, then
- * localStorage `dot480:skin`, default `oled` (`pickSkin`: an unknown or removed name falls through, no error).
+ * The global display skin (C7): one value for the whole site. A `?skin=` link decides, else localStorage
+ * `dot480:skin`, default `oled` (`pickSkin`: a link or save naming an unknown or removed skin opens on OLED, no error).
  * `setSkin(name)` is the public entry point (switcher, command palette, a terminal `skin crt`); it keeps the
  * URL and storage in sync.
  */
