@@ -9,7 +9,7 @@ import { DataSprings, duration as motionDuration, ease, maskByName, revealDots, 
 import { renderSVG } from '../engine/renderer/svgRenderer'
 import { svgHtml } from '../lib/trusted'
 import { hasGPULayers, splitGPULayers, type GPUPass } from '../engine/renderer/webgl/passes'
-import { renderWebGL, webglReady } from '../engine/renderer/webgl/dotgl'
+import { dotGL, loadDotGL, subscribeDotGL } from './glLoader'
 import { migrate as migrateDots, type MigrateOptions, type Migration } from '../engine/migrate'
 import type { Control, ControlPatch, DotInstance, DotStyle, Field, GridConfig, Layer, ThemeTokens } from '../engine'
 // first-load code imports engine modules by path; a value import from the `../engine` barrel pulls every engine
@@ -157,9 +157,9 @@ function sameFrame(a: DotInstance[], b: DotInstance[]): boolean {
   return true
 }
 
-/** Does the card's first frame carry GPU passes, and can this browser draw them? (A throwing frame: no.) */
+/** Does the card's first frame carry GPU passes? (A throwing frame: no.) Whether this browser can draw them is asked once the renderer loaded. */
 function gpuLayers(layers: (ctx: WidgetContext) => Layer[], data: Record<string, number>, grid: WidgetContext['grid']): boolean {
-  try { return hasGPULayers(layers({ t: 0, frame: 0, data, grid })) && webglReady() } catch { return false }
+  try { return hasGPULayers(layers({ t: 0, frame: 0, data, grid })) } catch { return false }
 }
 
 /** Short-lived animation drawn over the sampled frame: the entrance, a change dissolve from the previous frame, or the exit (held blank at the end). */
@@ -201,16 +201,24 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   // a grid card (one with an entrance, under reduced motion too) then waits for its turn near the screen: one first
   // draw per task, on-screen cards first (./firstDraw.ts, #312). Its pixels stay the same; only when they are sampled moves
   const [gated] = useState(() => !!enter)
+  // a card that needs WebGL2 (./glLoader.ts: GPU passes, or forced from the X-ray) waits for the renderer's chunk, fetched
+  // from mount, so during the entrance delay; it then takes its first-draw turn as any card does. GPU passes belong to the
+  // card, not to its data: asked once per card and grid, never per data edit (a live main-thread world, engine/physics/world,
+  // resets when its time jumps back, so a tap's own data edit wiped what the tap did)
+  const gpuWanted = useMemo(() => !renderer && !!layers && gpuLayers(layers, { ...data }, { cols: grid.cols, rows: grid.rows, pitch: grid.pitch, aspect: grid.aspect }), [layers, renderer, grid.cols, grid.rows, grid.pitch, grid.aspect]) // eslint-disable-line react-hooks/exhaustive-deps
+  const gl = useSyncExternalStore(subscribeDotGL, dotGL, dotGL)
+  const needsGL = gpuWanted || renderer === 'webgl', glPending = needsGL && gl === null
+  useEffect(() => { if (needsGL) loadDotGL() }, [needsGL])
   const [granted, setGranted] = useState(!gated)
   const askedRef = useRef<Element | null>(null)
   useEffect(() => {
-    if (!gated || !delayed) return
+    if (!gated || !delayed || glPending) return
     const el = canvasRef.current ?? svgRef.current
     if (!el) { setGranted(true); return }
     askedRef.current = el
     return firstDraws().request(el, () => setGranted(true))
-  }, [gated, delayed])
-  const ready = delayed && granted
+  }, [gated, delayed, glPending])
+  const ready = delayed && granted && !glPending
 
   // a live card reads the latest interaction per frame; the static frame re-samples only on a committed change.
   // A live card draws every frame itself, so it skips the static sample (a data edit, or a board-shared key that
@@ -315,10 +323,8 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   const visible = useMemo(() => { let n = 0; for (const d of dots) if (d.opacity > 0 && d.r > 0) n++; return n }, [dots])
   // transients animate on canvas; a sparse card hands back to SVG when they finish
   // WebGL2 (P5): forced, or picked for a card whose layers carry GPU passes (`gpuIR` / `gpuValues`); it draws on the canvas surface
-  // asked once per card and grid, never per data edit: it samples the layers at t 0, and a live main-thread world
-  // (engine/physics/world) resets when its time jumps back, so a tap's own data edit wiped what the tap did.
-  // GPU passes belong to the card, not to its data
-  const gpuCard = useMemo(() => !renderer && !!layers && gpuLayers(layers, JSON.parse(dataKey) as Record<string, number>, { cols: grid.cols, rows: grid.rows, pitch: grid.pitch, aspect: grid.aspect }), [layers, renderer, grid.cols, grid.rows, grid.pitch, grid.aspect]) // eslint-disable-line react-hooks/exhaustive-deps
+  // (`gpuWanted` above) when this browser can draw them; `gl` is the loaded renderer
+  const gpuCard = gpuWanted && !!gl && gl.webglReady()
   const webgl = renderer === 'webgl' || gpuCard, gpuFade = useRef(1)
   const mode: RenderMode = renderer && renderer !== 'webgl' ? renderer : (webgl || animated || live || transient || visible > CANVAS_THRESHOLD ? 'canvas' : 'svg')
   const markup = useMemo(() => mode === 'svg' ? renderSVG(dots, width, height) : '', [mode, dots, width, height])
@@ -343,7 +349,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     const context = prepare(canvas)
     if (!context) return
     context.clearRect(0, 0, width, height)
-    if (!webgl || !renderWebGL(context, frame, passes, theme, gpuFade.current)) renderCanvas(context, frame)
+    if (!webgl || !gl || !gl.renderWebGL(context, frame, passes, theme, gpuFade.current)) renderCanvas(context, frame)
     drawnStat.dots += frame.length
     input.drawn(drawn)
   }
@@ -443,7 +449,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     const frameAt = (t: number, frame: number, sync: boolean) => {
       const d = springKey && springsRef.current ? { ...frameData, ...springsRef.current.at(t) } : frameData
       // P5-A: GPU passes leave the CPU sample and are drawn by WebGL2 under the rest, on this thread (all CPU when WebGL2 is unavailable or lost)
-      if (webgl && webglReady()) {
+      if (webgl && gl && gl.webglReady()) {
         const { cpu, passes } = splitGPULayers(layers({ t, frame, data: d, grid: g, ...input.ixRef.current }), g, s, gridPitch ?? theme.gridPx)
         draw(canvas, applyTransient(sampleLayers(cpu, g, s, theme), t), frameData, passes)
       } else if (transientRef.current) draw(canvas, applyTransient(sampleLayers(layers({ t, frame, data: d, grid: g, ...input.ixRef.current }), g, s, theme), t), frameData)
@@ -474,7 +480,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     }
     const off = sharedClock().subscribe(sub), unbind = bindLive(sub)
     return () => { off(); unbind(); remote?.dispose(); releaseDotBuffer(local) }
-  }, [live, ready, mode, webgl, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, gap, theme, dataKey, springKey, fps, motion, width, height, scale, boardOrder]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [live, ready, mode, webgl, gl, layers, cols, rows, gridPitch, shape, sizeMin, sizeMax, cornerRoundness, opacityMode, jitter, quantizeSteps, gap, theme, dataKey, springKey, fps, motion, width, height, scale, boardOrder]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // C7 display skins: post-raster stage around the surface (src/components/skins/); OLED = no-op wrapper
   const surface = <DisplaySurface mode={mode} dots={dots} running={live || !!transient} fps={transient ? 30 : fps ?? (motion ? 12 : 30)} cols={grid.cols} rows={grid.rows} width={width} height={height} accent={theme.dotActive} tones={{ surface: theme.surface, value: theme.value ?? theme.dotIdle, dotFaint: theme.dotFaint ?? theme.dotIdle }}>{mode === 'canvas'
