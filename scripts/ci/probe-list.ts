@@ -46,6 +46,8 @@ export const PROBES: Probe[] = [
   { name: 'skins', shard: 12, secs: 5, args: ['scripts/skins-browser.ts', '--fidelity'] },
   { name: 'likes', shard: 12, secs: 12, args: ['scripts/likes-browser.ts'] },
   { name: 'theme-picker', shard: 12, secs: 35, args: ['scripts/site/theme-picker.ts'] },
+  // card input edge cases (docs/STATE-MACHINES.md B4): a drag whose release happened outside the page
+  { name: 'input', shard: 12, secs: 20, args: ['scripts/input-browser.ts', '$BASE'] },
 ]
 
 /** A partial run's shards: the picked probes, longest first, each into the first shard with room (first-fit

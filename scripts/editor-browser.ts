@@ -126,6 +126,12 @@ async function desktop() {
     check('the site tabs stay visible and uncovered above the editor (MAKE selected)', await h.uncovered('#tab-EXPLORE, #tab-MAKE, #tab-ABOUT') && siteTab.b <= editorTop + 1 && await p.js(`document.querySelector('#tab-MAKE').getAttribute('aria-selected') === 'true'`), `tab bottom ${siteTab.b}, editor top ${editorTop}`)
     check('?make (TUNE) opens with ASSETS on the left and DESIGN on the right', await h.tab('.ed-left') === 'ASSETS' && await h.tab('.ed-right') === 'DESIGN')
     await p.shot(join(out, 'desktop-01-open.png'))
+    // B6-3: another tab saves a different document; the note shows with RELOAD and KEEP MINE, KEEP MINE clears it
+    await p.js(`window.dispatchEvent(new StorageEvent('storage', { key: 'dot480.editor.v1', newValue: '{"kind":"other tab"}' })), 1`)
+    const otherTab = await p.waitFor(`/Changed in another tab/.test(document.querySelector('.ed-other')?.textContent ?? '') && document.querySelectorAll('.ed-other button').length === 2`, 5000)
+    await p.shot(join(out, 'desktop-01-other-tab.png'))
+    await p.js(`[...document.querySelectorAll('.ed-other button')].find(b => b.textContent === 'KEEP MINE')?.click(), 1`)
+    check('another tab\'s save shows "Changed in another tab" with RELOAD and KEEP MINE; KEEP MINE clears it (B6-3)', otherTab && await p.waitFor(`document.querySelector('.ed-other')?.childElementCount === 0`, 3000) && (await h.frameIds()).length === 3)
     await h.clickText('.ed-left [role=tab]', 'LAYERS'); await sleep(200)
 
     // ── select: a frame label, a click on a frame, empty canvas deselects

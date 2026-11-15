@@ -163,6 +163,9 @@ async function start() {
     const s = await acquireCamera()
     if (mine !== token) { releaseCamera(); return }
     holding = true
+    // the camera went away (unplugged, permission revoked): its tracks end on its own, so HAND mode stops and says so
+    const gone = () => { if (mine === token) { halt(); emit({ status: 'error' }); hudText(HUD.error) } }
+    for (const t of s.getTracks()) t.addEventListener('ended', gone, { once: true })
     video ??= Object.assign(document.createElement('video'), { muted: true, playsInline: true })
     video.srcObject = s
     await video.play()
