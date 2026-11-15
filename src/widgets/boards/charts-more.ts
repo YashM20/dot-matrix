@@ -21,6 +21,7 @@ let drawnBounds = donutBounds(STORAGE[0])
 export const donutPick = (x: number, y: number) => segmentAt(drawnBounds, clockOf(DONUT.cx, DONUT.cy, x, y))
 export const donutCard = chartCard({
   id: 'chart-donut', name: 'Donut Chart', label: 'DONUT / DISK', sets: ['PHONE', 'PC'], n: KINDS.length, offset: 1.6,
+  say: { point: i => KINDS[i].toLowerCase(), value: (i, s) => `${STORAGE[s][i]} GB` },
   box: [16, 26, 112, 112], map: donutPick, pick0: 0,
   draw: v => {
     const vs = tween(STORAGE[0], STORAGE[1], v.set).map(Math.round), total = vs.reduce((a, b) => a + b, 0)
@@ -47,6 +48,7 @@ const flatA = COMMITS[0].flat(), flatB = COMMITS[1].flat()
 const LEGEND = { x: 30, y: 132, gap: 9 }
 export const heatCard = chartCard({
   id: 'chart-heatmap', name: 'Heatmap', label: 'HEAT / COMMITS', sets: ['THIS', 'LAST'], n: ROWS * COLS, offset: 2,
+  say: { point: i => `${DAYS[Math.floor(i / COLS)]} ${HEAT_HOURS[i % COLS]}:00`, value: (i, s) => `${COMMITS[s][Math.floor(i / COLS)][i % COLS]} commits` },
   box: [12, 50, 132, 64], map: (x, y) => nearestPoint(HEAT_PTS, x, y), pick0: flatA.indexOf(Math.max(...flatA)),
   style: { ...style, cornerRoundness: 1 },
   draw: v => {
@@ -75,6 +77,7 @@ const SPARK_ROWS = GAUGES.map((_, k) => {
 })
 export const sparkCard = chartCard({
   id: 'chart-spark', name: 'Sparklines', label: 'SPARK / SERVERS', sets: ['WEB', 'DB'], n: SPARK_N, offset: 2.4,
+  say: { point: i => (i === SPARK_N - 1 ? 'now' : `${SPARK_N - 1 - i} minutes ago`) },
   box: [0, 12, 110, 118], map: x => nearestIndex(SPARK_XS, x),
   draw: v => {
     const marks: Mark[] = [], labels: Label[] = []

@@ -172,6 +172,8 @@ function memoIndex(x: number, y: number): number {
   return Math.abs(x - c) < 1e-6 && Math.abs(y - r) < 1e-6 && c >= 0 && r >= 0 && c < COLS && r < TILE.rows ? r * COLS + c : -1
 }
 const VALUE_IN = .875, MID_LO = .625
+/** The live second: a 2.2 site (a marker among the 1-cell ticks), the screen cleared within 2 cells of it (a moat). */
+const SEC_SIZE = 2.2, SEC_CUT = 4
 /**
  * This frame's lens, read by the screen's and the hero's fields. The fields themselves are made once: a field closure
  * made per frame starts every frame with fresh type feedback, and over 20k–80k reads that alone cost ~10× here.
@@ -185,7 +187,7 @@ const lensD = new Float64Array(2)
 /** The screen: through + Fresnel (+1 step on the bezel) + the specular rim, minus the contact shadow and the second's cell. */
 function screenAt(u: number, v: number): number {
   const F = LF!, x = u * W1, y = v * H1, c = F.c, d = lensD
-  if ((x - F.sec[0]) ** 2 + (y - F.sec[1]) ** 2 < 2.2) return 0
+  if ((x - F.sec[0]) ** 2 + (y - F.sec[1]) ** 2 < SEC_CUT) return 0
   // most of the card is far from the glass and its shadow: the scene as baked this minute, no lens maths
   const far = Math.abs(x - c[0]) > LENS.hw + 1 || y < c[1] - LENS.hh - 1 || y > c[1] + LENS.hh + 5
   const bez = far ? -1 : F.off(x, y, d)
@@ -200,11 +202,12 @@ function screenAt(u: number, v: number): number {
     return val
   }
   // the specular rim on the outer quarter of the bezel; the glass's edge (its outer 1.5 cells, where Fresnel climbs)
-  // shows a step up even over an empty scene, on the screen's own 2-cell rhythm, so the pill reads as an outline
+  // shows even over an empty scene, so the pill reads as an outline
   if (bez < .25 && F.lens.rim(u, v) >= .7) return 1
   // ≡ lens.through(u, v) (the offset is already in d); Fresnel only reaches .15 on the bezel's outer fifth
   const val = d[0] === 0 && d[1] === 0 ? behindAt(F.ticks, F.hero.near, x, y) : behindAt(F.ticks, F.hero.near, x + d[0], y + d[1])
-  if (bez < .125) { const b = Math.max(val, floorAt(x, y)); return b > 0 ? Math.min(1, b + .25) : 0 }
+  // the glass's outer edge: a continuous mid outline (the floor's dots alone left it a broken ring), ticks a step up
+  if (bez < .125) return val > 0 ? Math.max(.75, Math.min(1, val + .25)) : .75
   return val > 0 ? Math.min(1, val + (bez < .2 && F.lens.fresnel(u, v) >= .15 ? .25 : 0)) : 0
 }
 /** Row r of the screen at card cell centres, into the memo. */
@@ -255,6 +258,7 @@ export const matLens: WidgetPreset = {
       const lens = liquidGlass((u, v) => behindAt(ticks, hero.near, u * W1, v * H1), TILE, o)
       const m = screenMemo(key)
       LF = { c, sec, hero, scene: lensScene(hero, ticks), ticks, off, lens, memo: m.memo }
+      heroField.text = hero.key // the time, for describe() and the card's accessible name
       // a new screen: fill its card-pitch values row by row here (a tight loop compiles at once), so the sampler's reads
       // are lookups even on the first frame
       if (m.fresh) for (let r = 12; r < TILE.rows; r++) screenRow(m.memo, r)
@@ -265,7 +269,7 @@ export const matLens: WidgetPreset = {
         cite('SNELL · N 1.5'),
         { field: screenGPU, toneOf: screenTone },
         { field: heroField, lattice: HERO.k, origin: [ox, oy], toneOf: heroTone },
-        layer(valuedSites([[sec[0], sec[1], 1]], 1.6), 'active'),
+        layer(valuedSites([[sec[0], sec[1], 1]], SEC_SIZE), 'active'),
       ]
     })
   },
@@ -290,6 +294,8 @@ export const ROSE_SITES: Pt[] = [
   [WIN.rose.cx, WIN.rose.cy],
 ]
 const WIN_BOX: Box = [WIN.x0, 14, WIN.x1, WIN.bottom]
+/** The rose's centre pane (its last site): what a key press lights. */
+const ROSE_CENTRE = ROSE_SITES.length - 1
 export interface WindowGeo {
   /** Per card cell: 0 wall, 1 stone frame, 2 lead came, 3 moat, 4 glass. */
   kind: Uint8Array
@@ -416,7 +422,8 @@ export const matWindow: WidgetPreset = {
     const sky = matLight(ctx, { sky: true }), gain = skyGain(hour, sky), night = !(hour >= 6 && hour < 18)
     const lateral = Array.isArray(sky) ? .15 * (sky as Vec3)[0] : 0
     const ptr = ctx.pointers?.find(q => q.inside && !q.up), lamp: Pt | null = ptr && !ptr.down ? [ptr.x, ptr.y] : null
-    const pressed = ptr && ptr.down && (ctx.data.k ?? 0) >= .5 ? g.pane[Math.round(ptr.y) * COLS + Math.round(ptr.x)] ?? -1 : -1
+    // the pane under a pressed pointer; Enter or Space (no pointer down) lights the rose's centre
+    const k = (ctx.data.k ?? 0) >= .5, pressed = !k ? -1 : ptr && ptr.down ? g.pane[Math.round(ptr.y) * COLS + Math.round(ptr.x)] ?? -1 : ROSE_CENTRE
     const torch = matLight(ctx, { torch: { height: 30, falloff: 160 } })
     // the frame repeats while the hour, the sky, the lamp, the pressed pane and the torch hold
     return windowMemo(`${hour}|${now.getHours()}|${lightId(sky)}|${lamp}|${pressed}|${lightId(torch)}`, () => {
@@ -426,15 +433,18 @@ export const matWindow: WidgetPreset = {
       s.panes.bounds = s.petal.bounds = g.latBox
       cameGlints(g, torch, s.glints.data)
       s.glints.bounds = WIN_BOX
+      // the red pane in words, for describe() and the card's accessible name (the glass carries no text)
+      const lit = sample(own(s.petal))
+      lit.text = `${petal || 12} O'CLOCK PANE`
       return [
         cite('ROSE · LANCET'),
         surfaceLayer([[own(frameRaster()), [[.06, .3, 'faint'], [.3, 2, 'mid']]], [own(s.glints), 'mid']]),
         tonedLayer(own(s.panes), s.tones.slice(), L15),
-        { field: sample(own(s.petal)), tone: 'active', lattice: L15, origin: [0, 0] },
+        { field: lit, tone: 'active', lattice: L15, origin: [0, 0] },
       ]
     })
   },
 }
 const windowMemo = frameMemo()
 
-export const glassHooks = { LENS, lensCentre, lensRim, lensHero, lensLUT, apparent, windowGeometry, hourPetal, skyGain, lancetSdf, ROSE_SITES }
+export const glassHooks = { ROSE_CENTRE, LENS, lensCentre, lensRim, lensHero, lensLUT, apparent, windowGeometry, hourPetal, skyGain, lancetSdf, ROSE_SITES }
