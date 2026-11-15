@@ -34,8 +34,11 @@ export interface ChartCardSpec {
   offset: number
   /** The readout's resting point (default: the latest, `n - 1`). */
   pick0?: number
-  /** The readout as a screen reader says it ("DEC, 78 orders"), for point `i` of data set `set` (default: "point i of n"). */
-  say?: (i: number, set: 0 | 1) => string
+  /**
+   * The readout as a screen reader says it: point `i`'s name ("DEC") and its value in data set `set` ("78 orders").
+   * While the demo loop runs the card may show either set, so only the name is said (default: "point i of n").
+   */
+  say?: { point: (i: number) => string; value?: (i: number, set: 0 | 1) => string }
   style?: WidgetPreset['style']
   draw: (v: View) => Pick<Chart, 'marks' | 'labels'>
 }
@@ -62,7 +65,9 @@ export function chartCard(c: ChartCardSpec): WidgetPreset {
     { key: 'set', kind: 'segmented', options: 2, optionLabels: c.sets, box: sw.box, label: 'Data set' },
     { key: 'pick', kind: 'slider', min: 0, max: Math.max(0, c.n - 1), step: 1, box: c.box, map: c.map, label: 'Readout', valueText: (v, data) => {
       const i = Math.max(0, Math.min(c.n - 1, Math.round(v)))
-      return c.say ? c.say(i, (data.set ?? 0) >= .5 ? 1 : 0) : `point ${i + 1} of ${c.n}`
+      if (!c.say) return `point ${i + 1} of ${c.n}`
+      const demo = (data.demo ?? 1) >= .5, point = c.say.point(i)
+      return demo || !c.say.value ? point : `${point}, ${c.say.value(i, (data.set ?? 0) >= .5 ? 1 : 0)}`
     } },
   ]
   return {
