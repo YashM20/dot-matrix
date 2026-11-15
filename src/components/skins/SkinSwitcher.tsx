@@ -1,6 +1,7 @@
-import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useId, useLayoutEffect, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { SKINS, SKIN_NAMES } from '../../engine/display/names'
 import { getSkin, setClack, setSkin, useClack, useDisplaySkin } from './store'
+import { dotRing } from '../dotRing'
 
 /** The one-line description: the skin title after its "NAME: " prefix. */
 const blurb = (title: string) => title.slice(title.indexOf(': ') + 2)
@@ -16,6 +17,7 @@ export function SkinSwitcher() {
   const skin = useDisplaySkin(), clack = useClack()
   const [open, setOpen] = useState(false), [right, setRight] = useState(true)
   const wrap = useRef<HTMLDivElement>(null), btn = useRef<HTMLButtonElement>(null)
+  useLayoutEffect(() => dotRing(btn.current), [])
   const items = useRef<(HTMLButtonElement | null)[]>([])
   const id = useId()
 
@@ -73,7 +75,7 @@ export function SkinSwitcher() {
 
   return (
     <div className="skin-switch" ref={wrap} onPointerEnter={e => intent(e, true)} onPointerLeave={e => intent(e, false)}>
-      <button ref={btn} type="button" className="skin-menu-btn" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined}
+      <button ref={btn} type="button" className="skin-menu-btn dot-ring" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined}
         onClick={() => { clearTimeout(timer.current); if (open && !byHover.current) close(false); else if (open) { byHover.current = false; items.current[SKIN_NAMES.indexOf(skin)]?.focus() } else show() }} onKeyDown={onButtonKey}>
         DISPLAY: <b>{SKINS[skin].label}</b><span aria-hidden="true">▾</span>
       </button>
@@ -88,7 +90,7 @@ export function SkinSwitcher() {
         </div>
       )}
       {skin === 'flipdisc' && (
-        <button type="button" className={`skin-clack${clack ? ' selected' : ''}`} aria-pressed={clack} title="Flip-disc clack (sound)" onClick={() => setClack(!clack)}>
+        <button ref={dotRing} type="button" className={`skin-clack dot-ring${clack ? ' selected' : ''}`} aria-pressed={clack} title="Flip-disc clack (sound)" onClick={() => setClack(!clack)}>
           {clack ? 'CLACK ON' : 'CLACK OFF'}
         </button>
       )}

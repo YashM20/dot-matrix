@@ -1,4 +1,5 @@
-import { lazy, Suspense, useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { lazy, Suspense, useEffect, useId, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
+import { dotRing } from '../dotRing'
 
 // the popover's content is its own chunk: warmed while the mouse rests on the button (the 100 ms of hover intent)
 const load = () => import('./ThemePicker')
@@ -17,6 +18,7 @@ export function ThemeButton() {
   // 'hover': opened by intent, closes when the mouse leaves; 'click': pinned, focus inside
   const [open, setOpen] = useState<false | 'hover' | 'click'>(false)
   const wrap = useRef<HTMLDivElement>(null), btn = useRef<HTMLButtonElement>(null), timer = useRef(0)
+  useLayoutEffect(() => dotRing(btn.current), [])
   const at = useRef<[number, number]>([0, 0]) // the mouse's last position
   const id = useId()
   const close = (refocus: boolean) => { clearTimeout(timer.current); setOpen(false); if (refocus) btn.current?.focus() }
@@ -49,7 +51,7 @@ export function ThemeButton() {
   return (
     <div className="theme-switch" ref={wrap} onPointerEnter={e => intent(e, true)} onPointerLeave={e => intent(e, false)}
       onBlur={e => { if (open === 'click' && e.relatedTarget && !wrap.current?.contains(e.relatedTarget as Node)) close(false) }}>
-      <button ref={btn} type="button" className="skin-menu-btn theme-menu-btn" aria-haspopup="dialog" aria-expanded={!!open} aria-controls={open ? id : undefined}
+      <button ref={btn} type="button" className="skin-menu-btn theme-menu-btn dot-ring" aria-haspopup="dialog" aria-expanded={!!open} aria-controls={open ? id : undefined}
         onClick={() => { clearTimeout(timer.current); if (open === 'click') close(false); else setOpen('click') }}
         onKeyDown={e => { if (e.key === 'ArrowDown') { e.preventDefault(); setOpen('click') } }}>
         THEME<i aria-hidden="true" /><span aria-hidden="true">▾</span>
