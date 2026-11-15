@@ -208,17 +208,17 @@ function PhoneTools() {
  * draws a marquee; two fingers still pan and zoom.
  */
 function SelBar() {
-  // a short label is part of its button's name (WCAG 2.5.3: a voice user says what they see)
+  // a short label leads its button's name (WCAG 2.5.3: a voice user says what they see)
   const sel = useEditor(s => s.sel), mode = useEditor(s => s.selectMode), doc = useEditor(s => s.h.present), clip = useEditor(s => s.hasClip)
   const n = selCount(sel), f = frameById(doc, sel.frame), grouped = !!sel.layer && selLayers(sel).some(id => groupOf(f, id))
   return <div className="ed-selbar" role="toolbar" aria-label={`Selection: ${n} selected`}>
     <button type="button" className={mode ? 'on' : ''} aria-pressed={mode} aria-label="Select mode: taps add to the selection, a drag on empty canvas draws a marquee" onClick={() => getEditor().setSelectMode(!mode)}>SELECT</button>
     <button type="button" aria-label="Select all" disabled={!doc.frames.length} onClick={selectAllSel}>ALL</button>
-    <button type="button" aria-label="Duplicate the selection (DUP)" disabled={!n} onClick={duplicateSel}>DUP</button>
-    {grouped ? <button type="button" aria-label="Ungroup (UNGRP)" onClick={ungroupSel}>UNGRP</button> : <button type="button" aria-label="Group the selected layers" disabled={!sel.layer} onClick={groupSel}>GROUP</button>}
+    <button type="button" aria-label="DUP, duplicate the selection" disabled={!n} onClick={duplicateSel}>DUP</button>
+    {grouped ? <button type="button" aria-label="UNGRP, ungroup" onClick={ungroupSel}>UNGRP</button> : <button type="button" aria-label="Group the selected layers" disabled={!sel.layer} onClick={groupSel}>GROUP</button>}
     <button type="button" aria-label="Copy the selection" disabled={!n} onClick={copyEverywhere}>COPY</button>
     <button type="button" aria-label="Paste" disabled={!clip} onClick={() => paste()}>PASTE</button>
-    <button type="button" className="ed-danger" aria-label="Delete the selection (DEL)" disabled={!n} onClick={deleteSel}>DEL</button>
+    <button type="button" className="ed-danger" aria-label="DEL, delete the selection" disabled={!n} onClick={deleteSel}>DEL</button>
   </div>
 }
 
