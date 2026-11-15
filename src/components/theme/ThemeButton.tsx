@@ -49,7 +49,7 @@ export function ThemeButton() {
   return (
     <div className="theme-switch" ref={wrap} onPointerEnter={e => intent(e, true)} onPointerLeave={e => intent(e, false)}
       onBlur={e => { if (open === 'click' && e.relatedTarget && !wrap.current?.contains(e.relatedTarget as Node)) close(false) }}>
-      <button ref={btn} type="button" className="skin-menu-btn theme-menu-btn" aria-haspopup="dialog" aria-expanded={!!open} aria-controls={open ? id : undefined}
+      <button ref={btn} type="button" className="skin-menu-btn theme-menu-btn dot-ring" aria-haspopup="dialog" aria-expanded={!!open} aria-controls={open ? id : undefined}
         onClick={() => { clearTimeout(timer.current); if (open === 'click') close(false); else setOpen('click') }}
         onKeyDown={e => { if (e.key === 'ArrowDown') { e.preventDefault(); setOpen('click') } }}>
         THEME<i aria-hidden="true" /><span aria-hidden="true">▾</span>

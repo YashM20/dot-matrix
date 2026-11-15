@@ -1,0 +1,23 @@
+/* ── dotted outline (one component): the chrome's pills and switches, a stadium of 1 px dots on the pixel grid.
+   src/components/dotRing.ts sets --ring (the mask) for the element's size; --ring-c is its colour, a step up on
+   hover and focus. Each control keeps a 1 px transparent border for its box's size. ── */
+/* until the ring is set (the header's pills get it once the idle command layer loads): the browser's dotted border */
+.dot-ring:not([style*="--ring"]) {
+  border-style: dotted;
+  border-color: var(--ring-c)
+}
+
+.dot-ring {
+  --ring-c: color-mix(in srgb, var(--tint) 20%, transparent);
+  position: relative
+}
+
+.dot-ring::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background: var(--ring-c);
+  -webkit-mask: var(--ring, linear-gradient(transparent 0 0)) 0 0 no-repeat;
+  mask: var(--ring, linear-gradient(transparent 0 0)) 0 0 no-repeat;
+  pointer-events: none
+}

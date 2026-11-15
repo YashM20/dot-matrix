@@ -1,6 +1,6 @@
 /* The row under a card (CardRow.tsx): one short line, `--mute` at rest, so the card stays the focus. ALL's name and
    board in the smallest mono on the left; three 16 px icons on the right (open, copy link, more), each with the site's
-   tooltip (tips.css), shown under the row. It adds 20 px under a card (a 4 px step and a 16 px line; 28 px on touch).
+   tooltip (tips.css), shown beside the icon. It adds 20 px under a card (a 4 px step and a 16 px line; 28 px on touch).
    Every action is a 24 × 24 target (44 × 44 on touch) through padding and an invisible hit area. */
 
 /* a board's grid cell: the card, then its row (grid.css places the slot) */
@@ -110,11 +110,15 @@
   text-underline-offset: 3px
 }
 
-/* the site's tooltip, under the row (never over the card), right-aligned to its icon; after a copy LINK's says
+/* the site's tooltip, 20 px tall here, left of its icon and inside the icon's 24 px band (the row's step under the
+   card and its line), so it clears its card and the card below by 2 px, at any grid. After a copy LINK's says
    "Copied" for a moment, shown without a hover */
 .dot-card-row [data-tip]::after {
-  top: calc(100% + var(--space-1));
-  bottom: auto
+  top: calc(50% - 10px);
+  right: calc(100% + var(--space-1));
+  bottom: auto;
+  height: 20px;
+  line-height: 18px
 }
 
 .dot-card-row .copied::after {

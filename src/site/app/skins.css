@@ -15,7 +15,7 @@
   gap: var(--space-2);
   min-height: 24px;
   padding: 0 var(--space-2);
-  border: 1px dotted color-mix(in srgb, var(--tint) 20%, transparent);
+  border: 1px solid transparent;
   border-radius: var(--radius-pill);
   color: var(--mute)
 }
@@ -29,7 +29,7 @@
 .topbar .skin-menu-btn:focus-visible,
 .topbar .skin-clack:hover,
 .topbar .skin-clack:focus-visible {
-  border-color: var(--line-hover);
+  --ring-c: var(--line-hover);
   color: var(--label)
 }
 
@@ -40,7 +40,7 @@
 }
 
 .topbar .skin-menu-btn[aria-expanded="true"] {
-  border-color: var(--line-hover);
+  --ring-c: var(--line-hover);
   color: var(--value)
 }
 
