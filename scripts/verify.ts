@@ -35,6 +35,7 @@ import { uxChecks } from './verify/ux'
 import { flagChecks } from './verify/flags'
 import { cardChecks } from './verify/cards'
 import { creditChecks } from './verify/credits'
+import { frameCacheChecks } from './verify/frame-cache'
 
 // timing checks warn unless DOT_TIMING=strict (scripts/lib/check.ts, docs/CHECKPOINTS.md, #75)
 const { assert, done } = checker()
@@ -189,6 +190,7 @@ uxChecks(assert)
 creditChecks(assert)
 // CP6 wave 3) cards fixed at dot level keep every dot clear of its neighbours (scripts/verify/cards.ts)
 cardChecks(assert)
+frameCacheChecks(assert)
 // FLAGS (#144, #145) every release flag documented; the URL sets none; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
 await flagChecks(assert)
 // FIRST DRAW (#312) grid cards draw their first frame one per task, near the screen only (scripts/verify/first-draw.ts)
