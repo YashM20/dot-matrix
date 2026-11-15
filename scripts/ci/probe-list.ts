@@ -49,6 +49,8 @@ export const PROBES: Probe[] = [
   { name: 'likes', shard: 12, secs: 12, args: ['scripts/likes-browser.ts'] },
   { name: 'theme-picker', shard: 12, secs: 35, args: ['scripts/site/theme-picker.ts'] },
   // card input edge cases (docs/STATE-MACHINES.md B4): a drag whose release happened outside the page
+  // worst-case data on the site's own UI (long, unbreakable, one-letter, Japanese, Arabic and emoji names, huge counts)
+  { name: 'break-ui', shard: 13, secs: 200, args: ['scripts/site/break-ui.ts', '$BASE'], timeoutMin: 8 },
   { name: 'input', shard: 12, secs: 20, args: ['scripts/input-browser.ts', '$BASE'] },
 ]
 
