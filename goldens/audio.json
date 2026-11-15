@@ -4,20 +4,20 @@
   "audio-levels": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "e3c95039",
+    "hash": "151db459",
     "dots": 526
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "5c406c2b",
+    "hash": "324aa903",
     "dots": 526
    }
   },
   "vibe-pad": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "841e4da8",
-    "dots": 1072
+    "hash": "5b57bf6e",
+    "dots": 1071
    }
   },
   "midi": {
@@ -30,13 +30,13 @@
   "recorder": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "61ef9127",
-    "dots": 1624
+    "hash": "9eca3daf",
+    "dots": 1618
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "14335349",
-    "dots": 1624
+    "hash": "60e2a889",
+    "dots": 1618
    }
   },
   "radio": {
@@ -49,19 +49,19 @@
   "interpreter": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "8429e68b",
-    "dots": 720
+    "hash": "f46a8954",
+    "dots": 912
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "cc4ec1e7",
-    "dots": 720
+    "hash": "16a8df10",
+    "dots": 912
    }
   },
   "thermal-puppy": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "2038b2b2",
+    "hash": "caaa7a8a",
     "dots": 20731
    }
   },
@@ -75,8 +75,8 @@
   "shopping": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "c8eb39ee",
-    "dots": 1379
+    "hash": "6e28428e",
+    "dots": 1369
    }
   }
  }
