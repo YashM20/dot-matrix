@@ -51,7 +51,7 @@ function FrameLabels({ frames, sel, selSet, cam }: { frames: EditorFrame[]; sel:
   return frames.filter(f => !f.hidden).map(f => {
     const b = box(cam, f), on = selSet.has(f.id) || sel.frame === f.id
     return <button key={f.id} type="button" tabIndex={-1} data-frame-label={f.id} className={`ed-flabel${on ? ' on' : ''}${f.locked ? ' locked' : ''}`} style={{ left: b.left, top: (b.top as number) - 22, maxWidth: Math.max(48, b.width as number) }}
-      onClick={e => { if (e.detail === 0) getEditor().select({ frame: f.id }) /* keyboard / script: pointer clicks select on press and release */ }}>{f.card.name}<small>{f.card.grid.cols}×{f.card.grid.rows}</small>{f.locked && <i className="ed-flock">LOCKED</i>}</button>
+      onClick={e => { if (e.detail === 0) getEditor().select({ frame: f.id }) /* keyboard / script: pointer clicks select on press and release */ }}><span className="ed-name" dir="auto">{f.card.name}</span><small>{f.card.grid.cols}×{f.card.grid.rows}</small>{f.locked && <i className="ed-flock">LOCKED</i>}</button>
   })
 }
 

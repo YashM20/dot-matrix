@@ -18,7 +18,7 @@
  *
  *   npx vite build && npx tsx scripts/site/break-ui.ts [baseUrl] [--only rows,widget,palette,toast,theme,boards,editor]
  */
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { addFrame, addLayer, blankCard, EDITOR_KEY, EDITOR_VERSION, type EditorDoc } from '../../src/components/editor/doc'
 import { textLayer } from '../../src/components/studio/doc'
@@ -49,6 +49,7 @@ const NAMES = [
 const LONG_URL = 'https://matrix.reactopia.me/widget/aperiodic-ammann-beenker-octagonal/?theme=light_cobalt&utm_source=newsletter'
 
 // the likes API, mocked in the page (scripts/likes-browser.ts): every card has `?lkn=` likes (BotID's challenge stubbed)
+const UIDS = Object.values(JSON.parse(readFileSync('src/widgets/ids.json', 'utf8')) as Record<string, string>)
 const MOCK = `(() => {
   const n = Number(new URLSearchParams(location.search).get('lkn') ?? sessionStorage.getItem('lkn') ?? 1234567)
   sessionStorage.setItem('lkn', String(n))
@@ -58,7 +59,7 @@ const MOCK = `(() => {
   window.fetch = async (input, init) => {
     const url = new URL(typeof input === 'string' ? input : input.url, location.href)
     if (!url.pathname.startsWith('/api/')) return real(input, init)
-    if (url.pathname === '/api/likes/widgets') return reply({ w: new Proxy({}, { get: () => n }) })
+    if (url.pathname === '/api/likes/widgets') return reply({ w: Object.fromEntries(${JSON.stringify(UIDS)}.map(u => [u, n])) })
     return reply({ n, ok: true })
   }
 })()`
@@ -72,7 +73,7 @@ const LIB = `(() => {
   const textRect = t => { const g = document.createRange(); g.selectNodeContents(t); return g.getBoundingClientRect() }
   window.__spill = (root, name) => {
     if (!root) return [name + ' missing']
-    const R = root.getBoundingClientRect(), lo = Math.max(R.left, 0) - 1, hi = Math.min(R.right, innerWidth) + 1, out = []
+    const R = root.getBoundingClientRect(), lo = Math.max(R.left, 0) - 1, hi = Math.min(R.right, innerWidth, screen.width) + 1, out = []
     const test = (r, what) => { if (r.width && (r.right > hi || r.left < lo)) out.push(what + ' ' + Math.round(r.right > hi ? r.right - hi : lo - r.left) + ' px past the ' + (r.right > hi ? 'right' : 'left')) }
     for (const el of root.querySelectorAll('*')) if (!clipped(el, root) && shown(el) && !el.closest('.sr-only')) test(el.getBoundingClientRect(), label(el))
     const walk = document.createTreeWalker(root, NodeFilter.SHOW_TEXT)
@@ -83,7 +84,8 @@ const LIB = `(() => {
     }
     return [...new Set(out)].slice(0, 6)
   }
-  window.__wide = () => { const se = document.scrollingElement; return se.scrollWidth > innerWidth + 1 ? 'page is ' + se.scrollWidth + ' px wide at ' + innerWidth : '' }
+  // screen.width: a phone widens its layout viewport (innerWidth) to fit what spills, so it can't be the measure
+  window.__wide = () => { const se = document.scrollingElement, w = Math.max(se.scrollWidth, innerWidth); return w > screen.width + 1 ? 'page is ' + w + ' px wide on a ' + screen.width + ' px screen' : '' }
   // a card row: its line's height, its three icons inside the slot at full size, its text never under OPEN
   window.__row = row => {
     const slot = row.parentElement.getBoundingClientRect(), r = row.getBoundingClientRect(), out = []
@@ -111,7 +113,7 @@ const phone = () => W < 600
 async function open(path: string, w = W, s = scheme, ready = '!!document.querySelector(".shell")') {
   W = w; scheme = s
   await p.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: s }, { name: 'prefers-reduced-motion', value: 'reduce' }] })
-  await p.cdp('Emulation.setDeviceMetricsOverride', { width: w, height: phone() ? 760 : 800, deviceScaleFactor: phone() ? 2 : 1, mobile: phone() })
+  await p.cdp('Emulation.setDeviceMetricsOverride', { width: w, height: phone() ? 760 : 800, screenWidth: w, screenHeight: phone() ? 760 : 800, deviceScaleFactor: phone() ? 2 : 1, mobile: phone() })
   await p.cdp('Emulation.setTouchEmulationEnabled', phone() ? { enabled: true, maxTouchPoints: 5 } : { enabled: false })
   await p.cdp('Page.navigate', { url: base + path.replace(/^\//, '') })
   await p.waitFor('document.readyState === "complete"', 30000)
@@ -144,6 +146,8 @@ async function rows() {
 async function widget() {
   // the real card with the longest name (from ALL's rows), so the title, the eyebrow and the pills see real data
   await open('/', W, scheme, '!!document.querySelector(".browse-grid .dot-card-row")')
+  // the share-link opt-in: LINK's URL carries the theme too, the longest link the page copies
+  await p.js(`localStorage.setItem('dot480:share-theme', '1'); 1`)
   const slug = await p.js<string>(`[...document.querySelectorAll('.browse-item')].sort((a, b) => b.querySelector('.dot-card-row-name').textContent.length - a.querySelector('.dot-card-row-name').textContent.length)[0].dataset.slot`)
   await open(`/widget/${slug}/?lkn=1234567`, W, scheme, '!!document.querySelector(".wp-rail .lk-btn")')
   await spill('widget-real', '.wp-rail'); await spill('widget-top', '.wp-top'); await wide('widget-real')
