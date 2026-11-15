@@ -158,6 +158,19 @@ async function widget() {
   const slug = await p.js<string>(`[...document.querySelectorAll('.browse-item')].sort((a, b) => b.querySelector('.dot-card-row-name').textContent.length - a.querySelector('.dot-card-row-name').textContent.length)[0].dataset.slot`)
   await open(`/widget/${slug}/?lkn=1234567`, W, scheme, '!!document.querySelector(".wp-rail .lk-btn")')
   await spill('widget-real', '.wp-rail'); await spill('widget-top', '.wp-top'); await wide('widget-real')
+  // desktop (the page fits the screen): the side panel scrolls on its own, and at its end the last facts row sits
+  // above the footer line, not behind it
+  if (W >= 761) {
+    const end = await p.js<string>(`(() => {
+      const rail = document.querySelector('.wp-rail'), foot = document.querySelector('.shell--widget > .bottom'), last = document.querySelector('.wp-facts > div:last-child')
+      if (!rail || !foot || !last) return 'missing ' + (!rail ? '.wp-rail' : !foot ? 'footer' : 'facts')
+      window.scrollTo(0, 0); rail.scrollTop = rail.scrollHeight
+      const f = foot.getBoundingClientRect().top, r = rail.getBoundingClientRect().bottom, l = last.getBoundingClientRect().bottom
+      return r > f + 1 || l > f + 1 ? 'panel ends at ' + Math.round(r) + ', last row at ' + Math.round(l) + ', footer at ' + Math.round(f) : ''
+    })()`)
+    check(`widget-rail:footer@${W}`, !end, end)
+    await sleep(200); await shot('widget-rail-end')
+  }
   if (scheme === 'dark') {
     await p.js(`(() => {
       document.querySelector('.wp-eyebrow').textContent = ${JSON.stringify(NAMES[0][1] + ' · 07')}
