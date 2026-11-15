@@ -38,12 +38,12 @@ export const PROBES: Probe[] = [
   // the same axe run at phone width (#187): touch emulation, so the 44 px targets apply
   { name: 'a11y-phone', shard: 12, secs: 50, args: ['scripts/site/a11y.ts', '--width', '390'] },
   // axe under more contrast (the OS setting and the header's CONTRAST: MORE switch), and on the six other accents
-  { name: 'a11y-contrast', shard: 5, secs: 150, args: ['scripts/site/a11y.ts', '--modes', 'more-dark,more-light,switch-dark,switch-light'] },
-  { name: 'a11y-accents', shard: 14, secs: 150, args: ['scripts/site/a11y.ts', '--routes', 'home,widget,about', '--modes',
+  { name: 'a11y-contrast', shard: 5, secs: 110, args: ['scripts/site/a11y.ts', '--modes', 'more-dark,more-light,switch-dark,switch-light'] },
+  { name: 'a11y-accents', shard: 14, secs: 95, args: ['scripts/site/a11y.ts', '--routes', 'home,widget,about', '--modes',
     ['amber', 'phosphor', 'cyan', 'cobalt', 'vite', 'magenta'].flatMap(a => [`dark:${a}`, `light:${a}`]).join(',')] },
   // the keyboard walk (focus rings, names, menus, popovers, sheets), and zoom to 200% and 400% with reduced motion
-  { name: 'a11y-keys', shard: 7, secs: 120, args: ['scripts/site/a11y-keys.ts'] },
-  { name: 'a11y-zoom', shard: 8, secs: 75, args: ['scripts/site/a11y-zoom.ts'] },
+  { name: 'a11y-keys', shard: 7, secs: 110, args: ['scripts/site/a11y-keys.ts'] },
+  { name: 'a11y-zoom', shard: 14, secs: 115, args: ['scripts/site/a11y-zoom.ts'] },
   // life finishes in about two minutes (the koi heal waits for their meal, up to ~40 s), or hangs
   // its own watchdog fires first, so the log names the step it hung in
   { name: 'life', shard: 11, secs: 205, args: ['scripts/life-browser.ts'], timeoutMin: 5, env: { LIFE_BROWSER_TIMEOUT_S: '270' } },
