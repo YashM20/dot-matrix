@@ -37,8 +37,8 @@
   "pharma-track": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "6e82c0e5",
-    "dots": 1268
+    "hash": "69d3864e",
+    "dots": 1385
    }
   },
   "medical-monitor": {
@@ -46,12 +46,17 @@
     "style": "squircle:2.30",
     "hash": "fe845c82",
     "dots": 982
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "0993f07e",
+    "dots": 965
    }
   },
   "bio-sensor": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "07bce8e8",
+    "hash": "4e6aceb8",
     "dots": 636
    }
   },
@@ -64,6 +69,11 @@
   },
   "retail-analytics": {
    "t=0": {
+    "style": "squircle:2.30",
+    "hash": "676737e1",
+    "dots": 680
+   },
+   "t=1.3": {
     "style": "squircle:2.30",
     "hash": "676737e1",
     "dots": 680
