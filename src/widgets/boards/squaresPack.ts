@@ -37,7 +37,7 @@ const siteLayer = (sites: Pt[], size: number, value: number, tone: Tone, rotatio
 const S_COLS = 12, S_ROWS = 22, S_K = 5, S_ORIGIN: Pt = [6, 12], S_LOOP = 18
 export const schotterK = (t: number) => .5 + .5 * tsin((2 * Math.PI * t) / S_LOOP + Math.PI / 2)
 export const sqSchotter: WidgetPreset = {
-  id: 'sq-schotter', name: 'Squares Schotter', label: 'SCHOTTER', ...tile,
+  id: 'sq-schotter', name: 'Schotter', label: 'SCHOTTER', ...tile,
   credit: [
     { by: ['Georg Nees'], title: 'Schotter (1968)', source: 'https://collections.vam.ac.uk/item/O221321/schotter-print-nees-georg/', note: 'the composition' },
     { by: ['Vera Molnár'], title: 'Vera Molnár', source: 'https://en.wikipedia.org/wiki/Vera_Moln%C3%A1r', note: 'the nested square rings beside it' },
@@ -53,7 +53,7 @@ export const sqSchotter: WidgetPreset = {
     const red = sq[worst], rings = molnar({ cx: 105, cy: 70, rings: 8, side: 52, step: 6, seed: 3, jitter: 1 + 3 * k, pitch: 2 })
     return [
       cite('NEES 1968'),
-      siteLayer(rings.map(p => [p.x, p.y] as Pt), 1, .5, 'faint'),
+      siteLayer(rings.map(p => [p.x, p.y] as Pt), 1, .75, 'mid'),
       siteLayer(flat, S_K, .75, 'mid'), siteLayer(turned, S_K, .75, 'idle', Math.PI / 4),
       siteLayer([at(red.x, red.y)], S_K, .75, 'active', red.rot),
       layer(T.text('MOLNAR', 105, 104, { align: 'center' }), 'mid'),
@@ -69,14 +69,45 @@ export const sqSchotter: WidgetPreset = {
 // the same seeds give diamonds. Regions arrive one at a time; the red is the newest.
 const V_K = 3, V_ORIGIN: Pt = [0, 12], V_W = 48, V_H = 40, V_SEEDS = 14, V_LOOP = 24, V_FIRST = 6, V_OFF = 9
 const V_LEVEL: Record<string, number> = { faint: .25, mid: .25, idle: .5 }
+/**
+ * The region ids with one-cell spurs folded into their neighbours: a cell with fewer than two same-region edge
+ * neighbours takes the region most of its neighbours belong to, so every region edge is a clean stair.
+ */
+function despur(src: ArrayLike<number>): Int16Array {
+  const id = Int16Array.from(src), nb = new Int16Array(4)
+  for (let pass = 0; pass < 3; pass++) {
+    let moved = 0
+    for (let r = 0; r < V_H; r++) for (let c = 0; c < V_W; c++) {
+      const j = r * V_W + c, own = id[j]
+      // off the card counts as the cell's own region, so a region running along the border is not eaten
+      let n = 0, same = 0
+      if (c > 0) nb[n++] = id[j - 1]; else same++
+      if (c < V_W - 1) nb[n++] = id[j + 1]; else same++
+      if (r > 0) nb[n++] = id[j - V_W]; else same++
+      if (r < V_H - 1) nb[n++] = id[j + V_W]; else same++
+      for (let i = 0; i < n; i++) if (nb[i] === own) same++
+      if (same >= 2) continue
+      let best = own, most = 0
+      for (let i = 0; i < n; i++) {
+        if (nb[i] === own) continue
+        let m = 0
+        for (let k = 0; k < n; k++) if (nb[k] === nb[i]) m++
+        if (m > most) { most = m; best = nb[i] }
+      }
+      id[j] = best; moved++
+    }
+    if (!moved) break
+  }
+  return id
+}
 const V_TONES: Tone[] = ['faint', 'mid', 'faint', 'idle', 'mid', 'faint', 'idle', 'mid', 'faint', 'idle', 'mid', 'faint', 'mid', 'idle']
 export const sqBlocks: WidgetPreset = {
-  id: 'sq-blocks', name: 'Squares Blocks', label: 'BLOCKS', ...tile,
+  id: 'sq-blocks', name: 'Blocks', label: 'BLOCKS', ...tile,
   credit: { by: ['Piet Mondrian'], title: 'Composition with Red, Blue and Yellow (1930)', source: 'https://en.wikipedia.org/wiki/Composition_with_Red,_Blue_and_Yellow', note: 'the look the blocks are after' },
   layers: ctx => {
     const t = ctx.t + V_OFF, half = V_LOOP / 2, metric: BlockMetric = Math.floor(t / half) & 1 ? 'l1' : 'linf', p = mod(t, half) / half
     const n = Math.min(V_SEEDS, V_FIRST + Math.floor(p * (V_SEEDS - V_FIRST + 1)))
-    const vo = blockVoronoi({ seed: 11, n, metric, w: V_W, h: V_H, t, drift: 3 }), id = (c: number, r: number) => vo.id[r * V_W + c]
+    const vo = blockVoronoi({ seed: 11, n, metric, w: V_W, h: V_H, t, drift: 3 }), ids = despur(vo.id), id = (c: number, r: number) => ids[r * V_W + c]
     return [
       cite('MONDRIAN 1930'),
       cells(V_K, V_ORIGIN, V_W, V_H, (c, r) => (id(c, r) === n - 1 ? 0 : V_LEVEL[V_TONES[id(c, r)]]), { toneOf: (c, r) => V_TONES[id(c, r)], group: id, join: true }),
@@ -107,7 +138,7 @@ function sortFrame(): SortState {
 }
 const sortTone = (v: number): Tone => (v > .62 ? 'idle' : v > .4 ? 'mid' : 'faint')
 export const sqSort: WidgetPreset = {
-  id: 'sq-sort', name: 'Squares Sort', label: 'SORT', ...tile,
+  id: 'sq-sort', name: 'Sort', label: 'SORT', ...tile,
   credit: { by: ['Kim Asendorf'], title: 'ASDFPixelSort (2010)', source: 'https://github.com/kimasendorf/ASDFPixelSort', note: 'the pixel sorting idea; none of its code' },
   layers: ctx => {
     const s = sortFrame(), t = ctx.t, p = mod(t + P_OFF, P_LOOP) / P_LOOP, line = Math.min(P_H - 1, Math.floor(p * 1.15 * P_H))
@@ -133,7 +164,7 @@ export const sqSort: WidgetPreset = {
 // 3 × 2 tiles of 24 cells, split by hash into 12s and 6s; arcs, crosses and bars a third of a tile wide; each level
 // inverts the colour. Tiles are placed breadth first, so the pattern resolves level by level; the ink fuses into
 // one joined figure. The red is the tile being placed.
-const R_K = 2, R_ORIGIN: Pt = [0, 22], R_COLS = 3, R_ROWS = 2, R_SIZE = 24, R_W = 72, R_H = 48, R_LOOP = 16, R_REVEAL = 12, R_OFF = 13.5
+const R_K = 2, R_ORIGIN: Pt = [0, 22], R_COLS = 3, R_ROWS = 2, R_SIZE = 24, R_W = 72, R_H = 48, R_LOOP = 16, R_REVEAL = 12, R_BACK = 13, R_OFF = 12.5
 let truchet: TruchetTile[] | undefined, truchetLast: { placed: number; ink: Uint8Array; owner: Int16Array } | undefined
 /** Ink and the showing tile per lattice cell with `placed` tiles down (cached: it changes a few times a second at most). */
 function truchetFrame(ts: TruchetTile[], placed: number): { placed: number; ink: Uint8Array; owner: Int16Array } {
@@ -147,10 +178,12 @@ function truchetFrame(ts: TruchetTile[], placed: number): { placed: number; ink:
 }
 const tiles = () => (truchet ??= truchetTiles({ seed: 6, cols: R_COLS, rows: R_ROWS, size: R_SIZE, split: [.85, .5] }))
 export const sqTruchet: WidgetPreset = {
-  id: 'sq-truchet', name: 'Squares Truchet', label: 'TRUCHET', ...tile,
+  id: 'sq-truchet', name: 'Truchet', label: 'TRUCHET', ...tile,
   credit: { by: ['Christopher Carlson'], title: 'Multi-scale Truchet patterns (2018)', source: 'https://archive.bridgesmathart.org/2018/bridges2018-39.html', note: 'technique' },
   layers: ctx => {
-    const ts = tiles(), p = mod(ctx.t + R_OFF, R_LOOP), placed = Math.max(1, Math.min(ts.length, Math.ceil((p / R_REVEAL) * ts.length))), live = placed - 1
+    // placed over 12 s, held, then lifted in reverse over the last 3 s, so the seam never cuts the figure to one tile
+    const ts = tiles(), p = mod(ctx.t + R_OFF, R_LOOP), shown = p < R_BACK ? Math.min(1, p / R_REVEAL) : 1 - (p - R_BACK) / (R_LOOP - R_BACK)
+    const placed = Math.max(1, Math.min(ts.length, Math.ceil(shown * ts.length))), live = placed - 1
     const { ink, owner } = truchetFrame(ts, placed)
     const level = ts[live].level
     return [
@@ -158,7 +191,7 @@ export const sqTruchet: WidgetPreset = {
       cells(R_K, R_ORIGIN, R_W, R_H, (c, r) => (owner[r * R_W + c] < 0 ? 0 : ink[r * R_W + c] ? (owner[r * R_W + c] === live ? 0 : 1) : .25),
         { toneOf: (c, r) => (ink[r * R_W + c] ? 'mid' : 'faint'), join: { at: .5 } }),
       cells(R_K, R_ORIGIN, R_W, R_H, (c, r) => (owner[r * R_W + c] === live && ink[r * R_W + c] ? 1 : 0), { tone: 'active', join: { accent: true } }),
-      ...footer(Math.min(1, p / R_REVEAL), `TILES ${pad(placed, 2)}/${ts.length}`, `LEVEL ${level + 1}`),
+      ...footer(shown, `TILES ${pad(placed, 2)}/${ts.length}`, `LEVEL ${level + 1}`),
     ]
   },
 }
@@ -204,15 +237,16 @@ function stitchChart(): Sampler {
   return (sampler = { tone, order, count: cellsOf.length })
 }
 export const sqStitch: WidgetPreset = {
-  id: 'sq-stitch', name: 'Squares Stitch', label: 'STITCH', ...tile,
+  id: 'sq-stitch', name: 'Stitch', label: 'STITCH', ...tile,
+  credit: { by: ['Maxim Gumin'], title: 'WaveFunctionCollapse (2016)', source: 'https://github.com/mxgmn/WaveFunctionCollapse', note: 'the simple tiled model that lays the border' },
   layers: ctx => {
     const ch = stitchChart(), p = mod(ctx.t + X_OFF, X_LOOP) / X_LOOP, sewn = Math.min(ch.count, Math.floor(p * 1.1 * ch.count)), live = Math.min(ch.count - 1, sewn)
     const at = (c: number, r: number) => r * X_W + c, done = (c: number, r: number) => ch.order[at(c, r)] >= 0 && ch.order[at(c, r)] < sewn
     const thread = (t: number): Layer => ({ ...cells(X_K, X_ORIGIN, X_W, X_H, (c, r) => (ch.tone[at(c, r)] === t && done(c, r) && ch.order[at(c, r)] !== live ? 1 : 0), { tone: X_TONES[t] }), motif: 'stitch' })
     return [
       cite('SAMPLER 1888'),
-      // the chart: unsewn stitches as small faint squares
-      cells(X_K, X_ORIGIN, X_W, X_H, (c, r) => (ch.tone[at(c, r)] && !done(c, r) && ch.order[at(c, r)] !== live ? .25 : 0), { tone: 'faint' }),
+      // the chart: unsewn stitches as faint squares, at half size so the empty sampler still shows its pattern
+      cells(X_K, X_ORIGIN, X_W, X_H, (c, r) => (ch.tone[at(c, r)] && !done(c, r) && ch.order[at(c, r)] !== live ? .5 : 0), { tone: 'faint' }),
       thread(1), thread(2), thread(3),
       { ...cells(X_K, X_ORIGIN, X_W, X_H, (c, r) => (ch.order[at(c, r)] === live ? 1 : 0), { tone: 'active' }), motif: 'stitch' },
       layer(T.text(`STITCH ${pad(sewn, 3)}/${ch.count}`, 0, FOOT), 'idle'),
@@ -256,7 +290,7 @@ const SPRITE = [
 const B_TONE: Record<string, Tone> = { 1: 'idle', 2: 'mid', 3: 'faint', 4: 'faint', e: 'active' }
 const pix = (c: number, r: number) => SPRITE[r]?.[c] ?? '.'
 export const sqBeads: WidgetPreset = {
-  id: 'sq-beads', name: 'Squares Beads', label: 'BEADS', ...tile,
+  id: 'sq-beads', name: 'Beads', label: 'BEADS', ...tile,
   layers: ctx => {
     const p = mod(ctx.t, B_LOOP) / B_LOOP, tri = p < .5 ? 2 * p : 2 - 2 * p, split = Math.round(4 + tri * (B_W - 8))
     const lit = (c: number, r: number) => pix(c, r) !== '.' && pix(c, r) !== 'e'
