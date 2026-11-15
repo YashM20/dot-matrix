@@ -364,9 +364,14 @@
     padding-inline: var(--space-1)
   }
 
-  /* ABOUT's links: 44 px lines, so the targets don't overlap (#187) */
+  /* ABOUT's links: 44 px lines, so the targets don't overlap (#187), on the frame's left edge */
   .about-links {
-    row-gap: 0
+    gap: 0 var(--space-4)
+  }
+
+  .about-links a {
+    justify-content: flex-start;
+    padding-inline: 0
   }
 
   /* the links as 44 px targets in balanced lines: the · between them drop out (font-size 0) for a space, so no line
