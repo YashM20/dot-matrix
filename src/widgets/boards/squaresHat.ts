@@ -114,8 +114,9 @@ export function hatCells(front: number): HatCells {
     // grout: a cell whose right or lower neighbour is another piece stays empty, so every piece is ringed by one cell
     const p = piece(i), right = c + 1 < W ? f.hat[j + 1] : i, down = r + 1 < H ? f.hat[j + W] : i
     if ((right >= 0 && right !== i && piece(right) !== p) || (down >= 0 && down !== i && piece(down) !== p)) continue
+    // a fused piece sits a level below its split hats, so the front reads as a change in tone, not only in grout
     const m = f.mirrored[i] === 1
-    value[j] = m ? 1 : KIND_LEVEL[f.kind[i]]
+    value[j] = m ? 1 : KIND_LEVEL[f.kind[i]] - (split(i) ? 0 : .25)
     tone[j] = m ? 3 : TONES.indexOf(KIND_TONE[f.kind[i]])
     group[j] = split(i) ? f.hatGroup[i] : 128 + f.clusterGroup[f.cluster[i]]
   }
@@ -123,7 +124,7 @@ export function hatCells(front: number): HatCells {
 }
 
 export const sqHat: WidgetPreset = {
-  id: 'sq-hat', name: 'Squares Hat', label: 'HAT', ...tile,
+  id: 'sq-hat', name: 'Hat', label: 'HAT', ...tile,
   credit: { by: ['David Smith', 'Joseph Samuel Myers', 'Craig S. Kaplan', 'Chaim Goodman-Strauss'], title: 'An aperiodic monotile', source: 'https://arxiv.org/abs/2303.10798', note: 'technique' },
   layers: ctx => {
     const f = hatFloor(), front = hatFront(ctx.t, f.reach), h = hatCells(front)
