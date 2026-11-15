@@ -48,6 +48,9 @@
   left: 50%;
   bottom: 76px;
   transform: translateX(-50%);
+  /* centred on its own width, up to the screen less a margin (left: 50% alone would cap it at half the screen) */
+  width: max-content;
+  max-width: calc(100vw - var(--space-6));
   z-index: var(--z-toast);
   pointer-events: none
 }
@@ -62,7 +65,9 @@
   color: var(--value);
   font: 500 var(--fs-label-12) var(--mono);
   letter-spacing: .08em;
-  white-space: nowrap
+  text-align: center;
+  /* a long note wraps (the time machine's at 320 px, a copy that failed shows the whole URL) */
+  overflow-wrap: anywhere
 }
 
 .pal-fps {

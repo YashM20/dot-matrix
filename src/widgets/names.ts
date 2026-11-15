@@ -186,7 +186,7 @@ export const cardNames: Readonly<Record<string, readonly [name: string, tags: st
   "mat-lens": ["Lens", "material glass clock control"],
   "mat-pool": ["Pool", "material water physics animated"],
   "mat-window": ["Window", "material glass clock animated"],
-  "mat-patch": ["Patch", "material textile thread animated"],
+  "mat-patch": ["Patch", "material textile thread animated control"],
   "mat-rust": ["Rust", "material metal counter animated"],
   "mat-candle": ["Candle", "material wax clock animated"],
   "pond-koi": ["Pond Koi", "life koi water creature control animated"],
