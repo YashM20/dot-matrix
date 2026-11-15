@@ -41,7 +41,7 @@ function screen(count: number): { r: TileRaster; f: AsciiFrame } {
 }
 
 export const sqAscii: WidgetPreset = {
-  id: 'sq-ascii', name: 'Squares ASCII', label: 'ASCII', ...tile,
+  id: 'sq-ascii', name: 'ASCII', label: 'ASCII', ...tile,
   layers: ctx => {
     const { r, f } = screen(asciiCount(S, ctx.t, OFF)), cx = f.cursor % S.cols, cy = (f.cursor - cx) / S.cols
     const at: Pt = [ORIGIN[0] + cx * S.pitch, ORIGIN[1] + cy * S.pitchY]
