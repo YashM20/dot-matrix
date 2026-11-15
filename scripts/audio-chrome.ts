@@ -184,6 +184,14 @@ globalThis.__DOT_PROBE__ = true; { const o = URL.createObjectURL; URL.createObje
   await shot('scope-mic')
   await click('Listen to the microphone')
   check('mic off releases the device', await until(`${E}.micState === 'idle'`, 3000))
+  // B7-2 (docs/STATE-MACHINES.md): the mic goes away mid-listen (unplugged, permission revoked). The browser ends the
+  // track on its own: `stop()` sets readyState to ended, the event is what a real unplug fires (`stop()` alone doesn't)
+  await click('Listen to the microphone')
+  check('mic live again', await until(`${E}.micState === 'live'`, 8000), await evaluate(`${E}.micState`))
+  await evaluate(`(() => { const t = ${E}.mic.stream.getAudioTracks()[0]; t.stop(); t.dispatchEvent(new Event('ended')); return 1 })()`)
+  const gone = await until(`${E}.micState === 'idle' && document.querySelector('[aria-label="Listen to the microphone"]')?.getAttribute('aria-checked') === 'false'`, 3000)
+  check('mic: a track that ends on its own (unplugged, revoked) turns the mic off, switch included (B7-2)', gone,
+    JSON.stringify(await evaluate(`({ state: ${E}.micState, checked: document.querySelector('[aria-label="Listen to the microphone"]')?.getAttribute('aria-checked') })`)))
 
   // leaving both audio boards stops the sound
   await openBoard('INTERFACES', 'components')

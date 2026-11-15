@@ -4,7 +4,7 @@
  * released on every like, on uncached count reads and by the daily job. A visitor never learns a like was flagged.
  */
 import type { Limits, LikesConfig } from './config.js'
-import { active, decode, encode, HOLD, K, member, moveTotals, ONCE_KEEP_S, RESTORE_S, splitMember, type Entry, type Tier } from './ledger.js'
+import { active, decode, encode, HOLD, K, member, moveTotals, ONCE_KEEP_S, RESTORE_S, splitMember, WEIGHT, type Entry, type Tier } from './ledger.js'
 import { hashOf, int, str, type Cmd, type Guard, type LikeStore, type Op, type Tx } from './store.js'
 
 export interface Site {
@@ -27,12 +27,15 @@ export interface Deps {
   memo: { write: number; read: number }
 }
 
-export type Outcome = { k: 'ok'; on: boolean; soon: boolean; already?: boolean } | { k: 'limit' } | { k: 'paused' } | { k: 'busy' }
+/** `n`: the item's public count after this like or unlike, so the button can show it (docs/STATE-MACHINES.md A5.2). */
+export type Outcome = { k: 'ok'; on: boolean; soon: boolean; already?: boolean; n: number } | { k: 'limit' } | { k: 'paused' } | { k: 'busy' }
 
 const DAY_TTL = 2 * 86400
 const RATE_TTL = { vm: 120, day: DAY_TTL, ni: ONCE_KEEP_S, burst: 7200 }
 const sec = (d: Deps) => Math.floor(d.now() / 1000)
 const budgetOf = (s: number): Tx['budget'] => ({ key: K.budget(s), extra: 0, ttl: DAY_TTL })
+/** The public count from the counted weight in quarters, rounded the way the `pub` op rounds it. */
+const pub = (w: number) => Math.floor((w + 2) / 4)
 const RELEASE_PER_REQUEST = 5
 
 export interface LikeArgs { item: string; on: boolean; key: string; net: string; voter: { field: string; days: number } | null }
@@ -45,12 +48,13 @@ export async function like(d: Deps, a: LikeArgs, retry = true): Promise<Outcome>
   const reads: Cmd[] = [
     ['GET', K.budget(s)], ['GET', K.site(s)], ['GET', idemKey], ['GET', burstKey],
     ['ZRANGEBYSCORE', K.pending, '-inf', s, 'LIMIT', 0, RELEASE_PER_REQUEST],
-    ['HGET', ledger, a.net], ...(a.voter ? [['HGET', ledger, a.voter.field], ['SISMEMBER', K.revoked, a.voter.field]] : []),
+    ['HGET', ledger, a.net], ['HGET', K.totals(a.item), 'w'], ...(a.voter ? [['HGET', ledger, a.voter.field], ['SISMEMBER', K.revoked, a.voter.field]] : []),
   ]
   const r = await d.store.read(reads)
-  const [budget, site, idem, burst, due, netRaw, voterRaw, revoked] = r
+  const [budget, site, idem, burst, due, netRaw, wRaw, voterRaw, revoked] = r
+  const w0 = int(wRaw)
   if (int(budget) >= L.budget) { d.memo.write = today; return { k: 'paused' } }
-  if (str(idem)) return { k: 'ok', on: str(idem)[0] === '1', soon: str(idem)[1] === '1' }
+  if (str(idem)) return { k: 'ok', on: str(idem)[0] === '1', soon: str(idem)[1] === '1', n: pub(w0) }
   if (a.on && int(site) >= L.site) return { k: 'paused' }
 
   const voter = a.voter && int(revoked) !== 1 ? a.voter : null
@@ -59,11 +63,11 @@ export async function like(d: Deps, a: LikeArgs, retry = true): Promise<Outcome>
 
   let to: Entry, fresh = false
   if (a.on) {
-    if (entry && active(entry)) return { k: 'ok', on: true, soon: entry.s !== 'c', already: true }
+    if (entry && active(entry)) return { k: 'ok', on: true, soon: entry.s !== 'c', already: true, n: pub(w0) }
     if (entry && entry.prev !== '-' && (entry.prev === 'f' || s - entry.rm < RESTORE_S)) to = { ...entry, s: entry.prev, rm: 0, prev: '-' }
     else { fresh = true; to = { s: tier !== 'R' && int(burst) >= L.burst ? 'b' : 'p', t: tier, at: s, rm: 0, prev: '-' } }
   } else {
-    if (!entry || !active(entry)) return { k: 'ok', on: false, soon: false }
+    if (!entry || !active(entry)) return { k: 'ok', on: false, soon: false, n: pub(w0) }
     to = { ...entry, s: 'r', rm: s, prev: entry.s }
   }
 
@@ -100,7 +104,9 @@ export async function like(d: Deps, a: LikeArgs, retry = true): Promise<Outcome>
   }
   const dueList = (Array.isArray(due) ? due : []).map(String)
   if (dueList.length) await release(d, dueList).catch(() => 0)
-  return { k: 'ok', on: a.on, soon }
+  // the weight moves only into or out of counted (`moveTotals`)
+  const dw = to.s === 'c' && entry?.s !== 'c' ? WEIGHT[to.t] : entry?.s === 'c' && to.s !== 'c' ? -WEIGHT[to.t] : 0
+  return { k: 'ok', on: a.on, soon, n: pub(w0 + dw) }
 }
 
 /** Count the pending likes whose hold is over (`due`, or the oldest `limit`); returns how many were looked at. */

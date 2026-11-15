@@ -64,7 +64,8 @@ const randomKey = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), b
 
 export function sendLike(target: { item: string } | { program: Program }, on: boolean) {
   const body = 'item' in target ? { item: target.item, on, key: randomKey() } : { program: { src: target.program.src, grid: target.program.grid, lattice: target.program.lattice, tone: target.program.tone }, on, key: randomKey() }
-  return post<{ on: boolean; soon: boolean; already?: boolean }>('like', body)
+  // n: the item's public count after this change (older servers leave it out)
+  return post<{ on: boolean; soon: boolean; already?: boolean; n?: number }>('like', body)
 }
 export const sendVisit = () => post<{ ok: true }>('visit', { remember: true })
 export const sendForget = () => post<{ ok: true }>('forget', {})
