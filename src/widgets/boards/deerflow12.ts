@@ -204,7 +204,7 @@ export const bioSensor: WidgetPreset = {
       layer(path(LEAF.rib, 2.6, 1.1), 'idle'), layer(T.dots([...path(LEAF.outline, 2, 1.35, true).sites ?? [], ...path(LEAF.stem, 2, 1.35).sites ?? []], 1.35, undefined, 1.7)),
       layer(T.text('MOISTURE', 0, 110), 'idle'), layer(T.big('64%', 0, 121, { lattice: 1.6 })),
       // the unit sits on the value line, so both readouts are two rows deep
-      layer(T.text('LIGHT', 97, 110), 'idle'), layer(T.big('420', 97, 121, { lattice: 1.6 })), layer(T.text('LUX', 143, 124, { align: 'right' }), 'idle'),
+      layer(T.text('LIGHT', 94, 110), 'idle'), layer(T.big('420', 94, 121, { lattice: 1.6 })), layer(T.text('LUX', 143, 124, { align: 'right' }), 'idle'),
     ]
   },
 }
