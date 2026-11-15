@@ -5,6 +5,9 @@
  * stays missing shows the page's error state (`LoadBoundary`, `RootBoundary`) instead of a reload loop.
  * Offline, a failed import is the network, not a deploy: a reload would only swap the page for the browser's
  * offline screen, so the page keeps its error state and the stamp stays unused (docs/STATE-MACHINES.md A2).
+ * A prefetch (src/site/prefetch.ts) runs inside `prefetching`: while one is loading, a failed chunk reloads nothing, so a
+ * stale tab never reloads under a hover. The prefetch leaves no failure behind, so the open fetches the chunk again,
+ * and that failure reloads as before.
  * First-load code, kept tiny; each entry point imports it (src/main.tsx, src/blog/main.tsx, src/lab/main.tsx).
  */
 const KEY = 'dot480:stale-reload'
@@ -22,5 +25,15 @@ export function reloadForStaleChunk(now = Date.now()): boolean {
   return true
 }
 
+let quiet = 0
+/** Load a chunk ahead of an open: a `vite:preloadError` while it runs reloads nothing (the open decides). */
+export function prefetching<T>(load: () => Promise<T>): Promise<T> {
+  quiet++
+  const p = Promise.resolve().then(load), end = () => { quiet-- }
+  // Vite fires the event inside the import's own chain, so it lands before `end`
+  p.then(end, end)
+  return p
+}
+
 // the import still rejects (no preventDefault), so a page that can't reload shows its error state
-if (typeof window !== 'undefined') window.addEventListener('vite:preloadError', () => { reloadForStaleChunk() })
+if (typeof window !== 'undefined') window.addEventListener('vite:preloadError', () => { if (!quiet) reloadForStaleChunk() })
