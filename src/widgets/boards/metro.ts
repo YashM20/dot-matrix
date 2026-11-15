@@ -6,6 +6,7 @@
  * `narrow` = Scale2x with the inner column pairs merged (7–9 wide, poster headlines).
  */
 import { glyph, scale2x } from '../../engine/fields/bitmapFont'
+import { decodeText } from '../../engine/motion/text'
 import type { Field } from '../../engine/types'
 import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
@@ -120,9 +121,9 @@ const PCT = [
 export const oxygen: WidgetPreset = {
   id: 'oxygen', name: 'Oxygen', group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
-    // 43 dots round, the 12 o'clock one red
-    layer(T.dotRing(76.1, 76.2, 65.8, { spacing: (TAU * 65.8) / 43, size: 2.6 }), 'idle'),
-    layer(T.dots([[76.1, 10.4]], 2.8), 'active'),
+    // 43 slots round from 12 o'clock: 98% lights 42 of them, the last one red, so one empty slot is left before the top
+    layer(T.dotRing(76.1, 76.2, 65.8, { spacing: (TAU * 65.8) / 43, size: 2.6, sweep: (40 / 43) * TAU }), 'idle'),
+    layer(T.dots([[76.1 + 65.8 * Math.sin((41 / 43) * TAU), 76.2 - 65.8 * Math.cos((41 / 43) * TAU)]], 2.8), 'active'),
     layer(textDots('98', 33.6, 57.4, { font: 'smooth', px: 2.9, py: 3.08, size: 2.9 })),
     layer(spriteDots(PCT, 103.3, 71.7, 2.9, 2.92, 2.9)),
   ],
@@ -161,16 +162,28 @@ export const finalLap: WidgetPreset = {
   ],
 }
 
+/** Headlines the wire runs, one word a line, each up to BLINKED's width (t < NEWS_S = the static first one). */
+const NEWS = [['THE', 'MOON', 'BLINKED'], ['LAST', 'TRAIN', 'WAITS'], ['COMET', 'SKIPS', 'SUNDAY']]
+const NEWS_S = 6, NEWS_Y = [15, 59.5, 104]
+/** Scrambled letters stay normal width (M N O W are wider), so a line never runs past the card edge while it decodes. */
+const NARROW: Record<string, string> = { M: 'A', N: 'U', O: 'C', W: 'V' }
+const newsAt = (t: number) => {
+  const k = Math.floor(Math.max(0, t) / NEWS_S), tau = t - k * NEWS_S, next = NEWS[k % NEWS.length]
+  if (k === 0) return next
+  const prev = NEWS[(k - 1) % NEWS.length]
+  return next.map((s, i) => [...decodeText(prev[i], s, tau, { seed: i + 1, lead: .1 + i * .15 })].map((c, j) => (c === s[j] ? c : NARROW[c] ?? c)).join(''))
+}
+const HEAD = { font: 'narrow', px: 2.52, py: 2.75, size: 2.4 } as const
+/** The last drawn string per line: a settled headline isn't laid out again every frame. */
+const headCache = NEWS_Y.map(() => ({ s: '', f: undefined as LatticeField | undefined }))
+const headLine = (i: number, s: string) => {
+  const c = headCache[i]
+  if (c.s !== s || !c.f) { c.s = s; c.f = textDots(s, 1.8, NEWS_Y[i], HEAD) }
+  return c.f
+}
 export const newswire: WidgetPreset = {
-  id: 'newswire', name: 'Newswire', group: 'text', chrome: 'dots', live: true, grid: TILE, style: tileStyle,
-  layers: () => {
-    const head = { font: 'narrow', px: 2.52, py: 2.75, size: 2.4 } as const
-    return [
-      layer(textDots('THE', 1.8, 15, head)),
-      layer(textDots('MOON', 1.8, 59.5, head)),
-      layer(textDots('BLINKED', 1.8, 104, head)),
-    ]
-  },
+  id: 'newswire', name: 'Newswire', group: 'text', chrome: 'dots', live: true, animated: true, grid: TILE, style: tileStyle,
+  layers: ({ t }) => newsAt(t).map((s, i) => layer(headLine(i, s))),
 }
 
 // antlers as loose dot sprays, measured off the reference
