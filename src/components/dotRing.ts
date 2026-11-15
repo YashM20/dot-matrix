@@ -6,8 +6,7 @@
  * straight runs and every dot is a whole pixel.
  *
  * `dotRing` is a ref callback: it watches the element's size and sets `--ring` (an SVG mask, cached per size); the
- * CSS (`.dot-ring`, src/site/app/ring.css) paints it in `--ring-c`. First-load chrome uses `ringLater`, which fetches
- * this module as its own chunk. The check is in scripts/verify/ux.ts.
+ * CSS (`.dot-ring`, src/site/app/ring.css) paints it in `--ring-c`. The check is in scripts/verify/ux.ts.
  */
 
 /** The lit pixels `[x, y]` of a `w` × `h` stadium outline (ends of radius h / 2), in order round the loop. */
@@ -42,4 +41,11 @@ export function dotRing(el: HTMLElement | null) {
   })
   watch.observe(el, { box: 'border-box' })
   return () => watch?.unobserve(el)
+}
+
+/** The header's dotted pills (DISPLAY ▾, THEME ▾, CLACK) are first-load code, which keeps this module out: the idle
+ * command layer rings them, and again when the skin changes (CLACK comes and goes). Until then they keep the browser's
+ * dotted border (ring.css). */
+export function ringHeader() {
+  document.querySelectorAll<HTMLElement>('.topbar .dot-ring').forEach(el => { dotRing(el) })
 }

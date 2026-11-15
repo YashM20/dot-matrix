@@ -1,5 +1,4 @@
 import { lazy, Suspense, useEffect, useId, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react'
-import { ringLater } from '../ringLater'
 
 // the popover's content is its own chunk: warmed while the mouse rests on the button (the 100 ms of hover intent)
 const load = () => import('./ThemePicker')
@@ -18,7 +17,6 @@ export function ThemeButton() {
   // 'hover': opened by intent, closes when the mouse leaves; 'click': pinned, focus inside
   const [open, setOpen] = useState<false | 'hover' | 'click'>(false)
   const wrap = useRef<HTMLDivElement>(null), btn = useRef<HTMLButtonElement>(null), timer = useRef(0)
-  useEffect(() => ringLater(btn.current), [])
   const at = useRef<[number, number]>([0, 0]) // the mouse's last position
   const id = useId()
   const close = (refocus: boolean) => { clearTimeout(timer.current); setOpen(false); if (refocus) btn.current?.focus() }
