@@ -18,7 +18,11 @@
  *  - CARD SIZE: the popover's labelled radio group (LARGE checked by default, one tab stop), a click reflows the
  *    components board (3 → 4 a row at 1280) without re-mounting a card and stores it, arrows pick, a reload keeps
  *    it, ⌘K "Card size: large" runs; on a phone TOOLS › DISPLAY › COMPACT puts 2 a row.
- * Captures to look at go to `.snapshots/t5/` (the popover previewing, an accent and a scheme wipe held at 20% and 45%, the phone sheet).
+ *  - the header's dotted pills at load: no border and no ring until the idle command layer rings them, then the ring
+ *    fades in (at once under reduced motion); the header hides in 200 ms and comes back in 280; a pressed phone tab
+ *    glyph sinks to .94.
+ * Captures to look at go to `.snapshots/t5/` (the popover previewing, an accent and a scheme wipe held at 20% and 45%, the phone sheet,
+ * the dotted pills up close as `ring-*` and at load as `arrive-*`).
  * Needs a build: `npx vite build`, then `npx tsx scripts/site/theme-picker.ts`. Chrome: $CHROME or the usual paths.
  */
 import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
@@ -161,6 +165,50 @@ const ringCloseUps = async () => {
   await closeUp('.tools-sheet .theme-ctl :is(.theme-contrast, .theme-share)', 'ring-phone-switches')
   await js(`document.querySelector('.tools-sheet .skin-list-clack')?.scrollIntoView({ block: 'center' })`); await sleep(300)
   await closeUp('.tools-sheet .skin-list-clack', 'ring-phone-clack')
+}
+
+/** The header's pills at load (`arrive-*.png`): before the idle command layer rings them (simulated by taking `--ring`
+ * off again) they show text and caret only, no border; the ring then fades in over --dur-out (at once under reduced
+ * motion). Then the phone tab bar's press (the glyph sinks to .94) and the desktop header hiding quicker than it shows. */
+const ringArrival = async () => {
+  const pills = '.topbar .dot-ring', head = '.topbar .skin-switch, .topbar .theme-switch'
+  const strip = `window.__rings = [...document.querySelectorAll(${JSON.stringify(pills)})].map(el => { const v = el.style.getPropertyValue('--ring'); el.style.removeProperty('--ring'); return [el, v] })`
+  const fades = `document.getAnimations().filter(a => a.transitionProperty === 'opacity' && a.effect?.pseudoElement === '::before' && a.effect.target.matches(${JSON.stringify(pills)})).length`
+  for (const [os, reduce] of [['dark', false], ['light', false], ['dark', true]] as const) {
+    await open('/henry/?skin=flipdisc', { os, reduce })
+    await waitFor(`document.querySelectorAll(${JSON.stringify(pills)}).length >= 3 && [...document.querySelectorAll(${JSON.stringify(pills)})].every(el => el.style.getPropertyValue('--ring'))`, 4000)
+    await js(strip); await sleep(400)
+    const pre = await js(`[...document.querySelectorAll(${JSON.stringify(pills)})].map(el => { const c = getComputedStyle(el), b = getComputedStyle(el, '::before')
+      return { text: el.textContent.trim(), border: c.borderTopStyle + ' ' + c.borderTopColor, before: b.opacity, ink: c.color, w: el.getBoundingClientRect().width } })`) as { text: string; border: string; before: string; ink: string; w: number }[]
+    const tag = `${os}${reduce ? ', reduced motion' : ''}`
+    check(`header pills before the ring (${tag}): no border, no ring, text and caret stay`, pre.length >= 3 && pre.every(p => !p.border.startsWith('dotted') && /rgba\(0, 0, 0, 0\)|transparent/.test(p.border) && p.before === '0' && p.text.length > 1 && !/(, | \/ )0\)$/.test(p.ink)), JSON.stringify(pre))
+    if (!reduce) await closeUp(head, `arrive-${os}-header-load`)
+    await js(`window.__rings.forEach(([el, v]) => el.style.setProperty('--ring', v))`)
+    const n = await js(`new Promise(r => requestAnimationFrame(() => r(${fades})))`) as number
+    check(reduce ? 'reduced motion: the ring appears at once (no fade)' : `the ring fades in when it arrives (${tag})`, reduce ? n === 0 && await js(`[...document.querySelectorAll(${JSON.stringify(pills)})].every(el => getComputedStyle(el, '::before').opacity === '1')`) === true : n >= 3, String(n))
+    await sleep(400)
+    if (!reduce) await closeUp(head, `arrive-${os}-header-ringed`)
+  }
+  // the header hides on a scroll down in --dur-exit and comes back in --dur-enter (where scroll-state queries work)
+  await open('/henry/')
+  await js('document.activeElement?.blur(); scrollTo(0, 400)'); await sleep(200); await js('scrollTo(0, 900)'); await sleep(500)
+  const down = await js(`(() => { const c = getComputedStyle(document.querySelector('.topbar')); return [c.translate, c.transitionDuration] })()`) as [string, string]
+  if (down[0] === 'none') console.log('  (scroll-state queries not supported here: the header stays pinned)')
+  else {
+    await js('scrollTo(0, 700)'); await sleep(500)
+    const up = await js(`getComputedStyle(document.querySelector('.topbar')).transitionDuration`) as string
+    check('the header hides quicker than it shows (200 ms out, 280 ms back)', down[1] === '0.2s' && up === '0.28s', JSON.stringify({ down, up }))
+  }
+  // the phone tab bar: a press sinks the glyph to .94 on the chrome's ease
+  await open('/henry/', { phone: true })
+  const tab = (await centreOf('.tabbar button'))!
+  await closeUp('.tabbar', 'arrive-phone-tab-rest')
+  await cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: tab.x, y: tab.y }] }); await sleep(400)
+  const press = await js(`(() => { const b = document.querySelector('.tabbar button'), g = getComputedStyle(b.querySelector('.glyph')); return { active: b.matches(':active'), transform: g.transform, ease: g.transitionTimingFunction } })()`) as { active: boolean; transform: string; ease: string }
+  await closeUp('.tabbar', 'arrive-phone-tab-press')
+  await cdp('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] })
+  if (!press.active) console.log('  (the touch press did not hold :active here: no tab press check)')
+  else check('phone: a pressed tab glyph sinks to .94 on the chrome ease', /^matrix\(0\.94, 0, 0, 0\.94/.test(press.transform) && press.ease.startsWith('cubic-bezier(0.2, 0.8, 0.2, 1)'), JSON.stringify(press))
 }
 
 try {
@@ -428,6 +476,7 @@ try {
   check('phone: a tap on custom opens the hue slider in the sheet (44 px tall)', await waitFor(`document.documentElement.dataset.accent === 'custom' && !!document.querySelector('.tools-sheet .theme-hue input')`, 6000) && await js(`document.querySelector('.tools-sheet .theme-hue').getBoundingClientRect().height >= 44`) === true)
   await shot('sheet-custom')
   await ringCloseUps()
+  await ringArrival()
   check('no page errors', errors.length === 0, errors.join(' | '))
 } finally {
   ws.close(); proc.kill(); server.close()
