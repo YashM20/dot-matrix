@@ -193,6 +193,11 @@ cardChecks(assert)
 frameCacheChecks(assert)
 // FLAGS (#144, #145) every release flag documented; the URL sets none; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
 await flagChecks(assert)
+// SKINS (#345) four display skins in order; a saved or linked removed skin opens on OLED (scripts/verify/skins.ts)
+{
+  const { skinChecks } = await import('./verify/skins')
+  await skinChecks(assert)
+}
 // FIRST DRAW (#312) grid cards draw their first frame one per task, near the screen only (scripts/verify/first-draw.ts)
 {
   const { firstDrawChecks } = await import('./verify/first-draw')

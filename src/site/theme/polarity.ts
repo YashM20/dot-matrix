@@ -4,9 +4,9 @@
  * (`data-scheme="dark"` + the page's accent on the card), when light would make it a negative or a lie:
  *  - photos and halftones (`group: 'photo'`) and the live camera (`media: 'camera'`) would print as negatives on paper;
  *  - cards that set `inset: 'dark'` (lit and emissive scenes, halftone portraits, night skies) would too;
- *  - an emissive display skin (CRT, VFD, LED, Nixie: the skins that add light) is dark glass, so its cards are
+ *  - an emissive display skin (every skin but OLED: CRT, VFD and Nixie add light) is dark glass, so its cards are
  *    dark with the accent's dots; Nixie's neon stays orange (skin physics).
- * Reflective skins (e-ink, flip-disc) and every other card follow the page.
+ * Every other card follows the page.
  */
 import { SKINS, type SkinName } from '../../engine/display/names'
 import type { WidgetPreset } from '../../widgets/types'

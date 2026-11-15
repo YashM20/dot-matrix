@@ -16,7 +16,7 @@
   pointer-events: none
 }
 
-/* the header's pills (DISPLAY ▾, CLACK, THEME ▾) get their ring once the idle command layer loads: until then they
+/* the header's pills (DISPLAY ▾, THEME ▾) get their ring once the idle command layer loads: until then they
    show their text and caret only, then the ring fades in (at once under reduced motion: a11y.css) */
 .topbar .dot-ring::before {
   transition: opacity var(--dur-out) var(--ease)

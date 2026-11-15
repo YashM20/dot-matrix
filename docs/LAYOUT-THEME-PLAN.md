@@ -311,9 +311,9 @@ Revision 1's `violet` is dropped because it is nearly identical to vite's `#B39A
 
 ### Theme versus display skin
 - A theme is the palette roles; a skin is the display physics. They layer: theme first, then skin.
-- **Emissive skins** (CRT, VFD, LED, Nixie) render the card with a dark scheme even on a light page, because a tube is dark glass. They are tinted by the accent: VFD phosphor and LED colour come from `accent`, so a `cyan` accent gives a cyan VFD.
+- **Emissive skins** (CRT, VFD, Nixie; LED was removed in #345) render the card with a dark scheme even on a light page, because a tube is dark glass. They are tinted by the accent: VFD phosphor and LED colour come from `accent`, so a `cyan` accent gives a cyan VFD.
 - **Nixie** stays neon orange by physics unless the owner prefers accent-tinted tubes (decision).
-- **Reflective skins** (e-ink, flip-disc) take their panel colours from the scheme and their "ink" from the theme.
+- **Reflective skins** (e-ink, flip-disc; both removed in #345) took their panel colours from the scheme and their "ink" from the theme.
 - This avoids black dots on a black tube.
 
 ### Runtime path

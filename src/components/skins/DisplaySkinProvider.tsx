@@ -1,5 +1,5 @@
 import { useEffect, type ReactNode } from 'react'
-import { SKIN_NAMES } from '../../engine/display/names'
+import { pickSkin, SKIN_NAMES } from '../../engine/display/names'
 import { setSkin, useDisplaySkin } from './store'
 
 /**
@@ -15,7 +15,7 @@ export function DisplaySkinProvider({ children }: { children?: ReactNode }) {
     for (const s of SKIN_NAMES) root.classList.toggle(`skin-${s}`, s === skin)
   }, [skin])
   useEffect(() => {
-    const onPop = () => setSkin(new URLSearchParams(window.location.search).get('skin') ?? 'oled')
+    const onPop = () => setSkin(pickSkin(new URLSearchParams(window.location.search).get('skin'), null))
     window.addEventListener('popstate', onPop)
     const w = window as unknown as { dot480?: Record<string, unknown> }
     w.dot480 = { ...w.dot480, setSkin }

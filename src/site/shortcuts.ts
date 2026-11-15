@@ -35,6 +35,6 @@ export const URL_PARAMS: readonly Shortcut[] = [
   { keys: '?make=code&p=…', does: 'a shared field program' },
   { keys: '/about/', does: 'this page' },
   { keys: '/widget/<id>/', does: 'one card on its own page (also /<short id>)' },
-  { keys: '?skin=crt|vfd|led|eink|flipdisc|nixie|lcd|grout', does: 'display skin' },
+  { keys: '?skin=nixie|vfd|crt', does: 'display skin' },
   { keys: '?tab=…, ?board=…', does: 'old links: still open the view they named' },
 ]

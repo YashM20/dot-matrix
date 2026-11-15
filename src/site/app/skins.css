@@ -8,8 +8,7 @@
   gap: var(--space-2)
 }
 
-.topbar .skin-menu-btn,
-.topbar .skin-clack {
+.topbar .skin-menu-btn {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -26,15 +25,12 @@
 }
 
 .topbar .skin-menu-btn:hover,
-.topbar .skin-menu-btn:focus-visible,
-.topbar .skin-clack:hover,
-.topbar .skin-clack:focus-visible {
+.topbar .skin-menu-btn:focus-visible {
   --ring-c: var(--line-hover);
   color: var(--label)
 }
 
-.topbar .skin-menu-btn:active,
-.topbar .skin-clack:active {
+.topbar .skin-menu-btn:active {
   background-color: var(--wash-press);
   color: var(--value)
 }
@@ -124,10 +120,6 @@
   opacity: 1
 }
 
-.topbar .skin-clack.selected {
-  color: var(--value)
-}
-
 /* ── T5 THEME (src/components/theme/): the header button (DISPLAY ▾'s look, its dot the accent) and the switch
    moment. The popover and the controls it shares with the phone TOOLS sheet are styled by
    src/components/theme/picker.css, which loads with their lazy chunk. ── */
@@ -212,10 +204,9 @@ html.theme-wipe::view-transition-new(root) {
   position: relative
 }
 
-/* emissive skins add light over the card; reflective ones (e-ink, flip-disc) cover it */
+/* every skin is emissive: it adds light over the card */
 .skin-surface[data-skin="crt"] > .skin-overlay,
 .skin-surface[data-skin="vfd"] > .skin-overlay,
-.skin-surface[data-skin="led"] > .skin-overlay,
 .skin-surface[data-skin="nixie"] > .skin-overlay {
   mix-blend-mode: screen
 }
@@ -225,10 +216,6 @@ html.theme-wipe::view-transition-new(root) {
   border-radius: 5% / 5%;
   -webkit-mask-image: radial-gradient(ellipse 72% 72% at 50% 50%, var(--shade) 62%, color-mix(in srgb, var(--shade) 50%, transparent) 100%);
   mask-image: radial-gradient(ellipse 72% 72% at 50% 50%, var(--shade) 62%, color-mix(in srgb, var(--shade) 50%, transparent) 100%)
-}
-
-.skin-surface[data-skin="eink"] > .skin-overlay {
-  border-radius: var(--radius-sm)
 }
 
 .skin-surface[data-skin="nixie"] > .skin-overlay {
