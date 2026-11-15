@@ -212,7 +212,7 @@ export const cardNames: Readonly<Record<string, readonly [name: string, tags: st
   "mat-kintsugi": ["Kintsugi", "material ceramic algorithm animated control"],
   "mat-mud": ["Mud", "material clay algorithm animated"],
   "mat-fold": ["Paper fold", "material paper origami algorithm animated"],
-  "sq-tetris": ["Squares Tetris", "squares join tetris game animated"],
+  "sq-stack": ["Stack", "squares join stack blocks game animated"],
   "sq-quads": ["Quads", "squares join quadtree portrait animated"],
   "sq-blob": ["Blob", "squares join metaballs animated"],
   "sq-gameboy": ["LCD", "squares lcd clock pixel animated"],

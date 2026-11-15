@@ -59,14 +59,14 @@ export function viewFromUrl(search: string, pathname: string, mode: Mode = 'TUNE
   // BROWSE's old board filter (`/browse/?in=metro`) is that board now
   const inBoard = resolveBoardId((q.get('in') ?? '').trim().toLowerCase()), filtered = boardIds.includes(inBoard) ? inBoard : undefined
   // a widget page needs a widget-shaped path or ?card=; a MAKE / ABOUT link that also carries ?card= opens that view.
-  // A removed card's link (`removedCards`) opens the board it was on instead.
-  const route = place === 'EXPLORE' ? widgetRoute(pathname, search) : undefined
-  const gone = route && !route.scope ? removedCardBoard(route.key) : undefined, widget = gone ? undefined : route
-  const named = gone ?? (boardIds.includes(b) ? b : tab === 'gallery' ? GALLERY_BOARD : filtered ?? (browse || ALL_NAMES.includes(tab) ? undefined : boardFromPath(pathname)))
+  // A retired card's link (#364) opens the board it lived on instead.
+  const route = place === 'EXPLORE' ? widgetRoute(pathname, search) : undefined, retired = route && !route.scope ? removedCardBoard(route.key) : undefined
+  const widget = retired ? undefined : route
+  const named = retired ?? (boardIds.includes(b) ? b : tab === 'gallery' ? GALLERY_BOARD : filtered ?? (browse || ALL_NAMES.includes(tab) ? undefined : boardFromPath(pathname)))
   const board = named ?? boardIds[0], all = !named
   return {
     ...placeView(place, mode), board, all,
-    ...(q.get('card') && !gone && { card: q.get('card')! }), ...(tab === 'essay' && { essay: true }), ...(legal && { legal }),
+    ...(q.get('card') && !retired && { card: q.get('card')! }), ...(tab === 'essay' && { essay: true }), ...(legal && { legal }),
     ...(widget && { widget }),
   }
 }

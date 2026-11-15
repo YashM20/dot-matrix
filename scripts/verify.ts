@@ -199,6 +199,11 @@ frameCacheChecks(assert)
   const { metroDashboardChecks } = await import('./verify/metro-dashboard')
   metroDashboardChecks(assert)
 }
+// card drawing fixes (#359): fine-face units, the lap knob, glyph transport, REC dot size (scripts/verify/card-drawing.ts)
+{
+  const { cardDrawingChecks } = await import('./verify/card-drawing')
+  cardDrawingChecks(assert)
+}
 // FLAGS (#144, #145) every release flag documented; the URL sets none; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
 await flagChecks(assert)
 // FIRST DRAW (#312) grid cards draw their first frame one per task, near the screen only (scripts/verify/first-draw.ts)
@@ -206,7 +211,7 @@ await flagChecks(assert)
   const { firstDrawChecks } = await import('./verify/first-draw')
   firstDrawChecks(assert)
 }
-// APP STATE (docs/STATE-MACHINES.md A): stale-deploy offline reload, the likes record across tabs (scripts/verify/appstate.ts)
+// APP STATE (docs/STATE-MACHINES.md A): stale-deploy offline reload, quiet prefetch and hover dwell, the likes record across tabs (scripts/verify/appstate.ts)
 {
   const { appStateChecks } = await import('./verify/appstate')
   await appStateChecks(assert)

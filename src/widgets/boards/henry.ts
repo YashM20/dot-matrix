@@ -8,7 +8,7 @@ import { glyph } from '../../engine/fields/bitmapFont'
 import { hash01 } from '../../engine/math'
 import { decodeText, splitFlapCells, type FlapCell } from '../../engine/motion/text'
 import type { Control } from '../../engine/context'
-import { TAU, TILE, bounded, combine, layer, layoutFor, tileStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
+import { LIVE_DOT, TAU, TILE, bounded, combine, layer, layoutFor, tileStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
 import { PRESS, at, marching, rr, ui, type UiState } from './components-kit'
 
 const T = layoutFor(TILE)
@@ -299,8 +299,8 @@ export const camera: WidgetPreset = {
   layers: () => {
     const { x0, x1, y0, y1 } = FR, w = x1 - x0, h = y1 - y0, cx = Math.round((x0 + x1) / 2), cy = Math.round((y0 + y1) / 2)
     return [
-      // recording indicator in place of the live dot
-      layer(T.dots([[116, 3.5]], 7.5), 'active'), layer(T.big('REC', 143, 0, { lattice: 1.15, align: 'right' }), 'active'),
+      // recording indicator in place of the live dot, at the live dot's size
+      layer(T.dots([[116, 3.5]], LIVE_DOT), 'active'), layer(T.big('REC', 143, 0, { lattice: 1.15, align: 'right' }), 'active'),
       ...[...corner(x0, y0, 1, 1), ...corner(x1, y0, -1, 1), ...corner(x0, y1, 1, -1), ...corner(x1, y1, -1, -1)].map(f => layer(f)),
       ...[1, 2].map(k => layer(T.vrule(Math.round(x0 + (w * k) / 3), y0, h + 1, 2), 'mid')),
       ...[1, 2].map(k => layer(T.hrule(x0, Math.round(y0 + (h * k) / 3), w + 1, 2), 'mid')),

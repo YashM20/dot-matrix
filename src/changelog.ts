@@ -81,7 +81,7 @@ export const releases: Release[] = [
     changes: [
       { kind: 'new', text: 'Materials board: a loom weaving cloth, a metal knob, a speaker grille, a clock carved in marble and a month of terrazzo chips, all made of dots and lit by one light. With TILT on, tipping your phone moves the light.' },
       { kind: 'new', text: 'Pond board: koi swim through rippling water drawn in tiny dot tiles. Tap or click to drop food, hold to lure them; leave it alone and the pond settles back into its loop.' },
-      { kind: 'new', text: 'Squares board: Tetris pieces that fuse into blocks, a face built from 1,201 squares, blobs that merge in stepped terraces and a four-shade pocket-console clock.' },
+      { kind: 'new', text: 'Squares board: falling-block pieces that fuse into blocks, a face built from 1,201 squares, blobs that merge in stepped terraces and a four-shade pocket-console clock.' },
       { kind: 'new', text: 'Edit right on the canvas: in MAKE, drag handles to resize rings, discs, lines and fields, type text straight onto a frame in its own dots, change tone and dot size from a small bar over the selection, and pick a colour from the canvas with the eyedropper.' },
       { kind: 'improved', text: '3 big cards a row again, plus a CARD SIZE option (large / medium / compact).' },
       { kind: 'improved', text: 'Cards start sooner: the background helper that draws the animated cards now loads only the board you are looking at (17 kB to start instead of 178 kB), and materials cold bakes are 2–4× faster.' },

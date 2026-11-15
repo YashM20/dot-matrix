@@ -9,6 +9,7 @@
 import type { Source } from '../data/source'
 import type { WidgetPreset } from './types'
 import { registerPresets } from './registry'
+import { prefetching } from '../site/stale-deploy'
 
 /** What a board module supplies; title and columns live in the manifest so tabs and meta need no chunk. */
 export interface BoardContents {
@@ -87,20 +88,19 @@ export const boardMeta = (id: string): BoardMeta | undefined => boardManifest.fi
  * Old card ids (slugs) that still open their card (docs/SHARE-PLAN.md §3): a renamed card adds `old: 'new'`
  * here and its old `/widget/<old>/` link keeps working forever. The lock board's cards were `glyph-*`.
  */
-export const cardAliases: Readonly<Record<string, string>> = {}
+export const cardAliases: Readonly<Record<string, string>> = { 'sq-tetris': 'sq-stack' }
 export const resolveCardId = (id: string): string => cardAliases[id] ?? (id.startsWith('glyph-') ? `lock-${id.slice(6)}` : id)
 /**
- * Cards taken off the site, `[slug, uid, board]`: their old `/widget/<slug>/`, `/<uid>` and `?card=` links open the
- * board they were on (`viewFromUrl`, src/site/views.ts), and vercel.json redirects the same paths there. The uid
- * stays in ids.json and is never reused.
+ * Retired cards (#364): slug → [uid, board]. Their old `/widget/<slug|uid>/`, `/<uid>` and `?card=` links open the
+ * board they lived on (`viewFromUrl`; vercel.json redirects the same paths). The uids stay in `ids.json`, never reused.
  */
-export const removedCards: readonly (readonly [slug: string, uid: string, board: string])[] = [
-  ['thermal-puppy', '05cze99w', 'audio'], // #343: the owner took it off the AUDIO board
-]
-/** The board a removed card's slug or uid opens, else undefined. */
+export const removedCards: Readonly<Record<string, readonly [uid: string, board: string]>> = {
+  'thermal-puppy': ['05cze99w', 'audio'],
+}
+/** The board a retired card's slug or uid lived on, else undefined. */
 export const removedCardBoard = (key: string): string | undefined => {
   const k = key.toLowerCase()
-  return removedCards.find(([slug, uid]) => slug === k || uid === k)?.[2]
+  return (Object.hasOwn(removedCards, k) ? removedCards[k] : Object.values(removedCards).find(([uid]) => uid === k))?.[1]
 }
 
 /**
@@ -152,8 +152,14 @@ export function loadBoard(id: string): Promise<BoardDef> {
   }
   return p
 }
-/** Start fetching a board's chunk (tab hover / focus); errors surface when it is opened. */
-export const prefetchBoard = (id: string) => { loadBoard(id).catch(() => {}) }
+/**
+ * Start fetching a board's chunk ahead of an open (a pick, or intent: src/site/prefetch.ts). Quiet, one try: a failure
+ * reloads nothing and leaves nothing held, so the open fetches again and its own failure reloads (src/site/stale-deploy.ts).
+ */
+export const prefetchBoard = (id: string) => {
+  const entry = boardManifest.find(b => b.id === id) ?? boardManifest[0]
+  if (!loaded.has(entry.id)) prefetching(entry.load).then(() => loadBoard(entry.id), () => {}).catch(() => {})
+}
 /** A preset by id from any board, loading every board chunk if needed (gallery, `?card=`). */
 export async function findPreset(id: string): Promise<WidgetPreset | undefined> {
   const all = await Promise.all(boardManifest.map(b => loadBoard(b.id)))

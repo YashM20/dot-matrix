@@ -3,14 +3,8 @@
  * Run alone: `pnpm exec tsx scripts/verify/audio-personal.ts`.
  */
 import { describe } from '../../src/engine/describe'
-import { catalog } from '../../src/widgets/catalog'
-import { cardBlurbs } from '../../src/widgets/meta'
-import { cardNames } from '../../src/widgets/names'
-import { removedCards } from '../../src/widgets/manifest'
-import { urlForView, viewFromUrl } from '../../src/site/views'
-import { readVercel, route } from '../site/vercel-routes'
 import { sampleLayers } from '../../src/engine/sampler/gridSampler'
-import { boardById, widgetById } from '../../src/widgets'
+import { widgetById } from '../../src/widgets'
 import { theme, visible } from '../lib/stats'
 import type { Assert } from '../lib/check'
 
@@ -22,23 +16,6 @@ const card = (id: string) => {
 const shows = (id: string, ctx: Parameters<typeof describe>[1] = {}) => describe(card(id), ctx).text
 
 export function audioPersonalChecks(assert: Assert) {
-  // removed cards (thermal-puppy, #343): gone from the board, catalog, names and blurbs; every old link opens the board it was on,
-  // in the app (`viewFromUrl`, then the URL written back) and on the server (a vercel.json 301), never a missing-widget page or 404
-  {
-    const vercel = readVercel(), bad: string[] = []
-    for (const [slug, uid, board] of removedCards) {
-      const left = [boardById(board)?.items.some(p => p.id === slug), catalog.some(r => r[0] === slug), slug in cardNames, slug in cardBlurbs]
-      if (left.some(Boolean)) bad.push(`${slug} still listed (${left})`)
-      for (const [path, search] of [[`/widget/${slug}/`, ''], [`/widget/${slug}`, ''], [`/${uid}`, ''], [`/${uid}/`, ''], ['/', `?card=${slug}`]]) {
-        const v = viewFromUrl(search, path), url = urlForView(v, search, path)
-        if (v.widget || v.all || v.board !== board || url !== `/${board}/`) bad.push(`app ${path}${search} → ${v.widget ? 'widget page' : url}`)
-        if (search) continue
-        const r = route(vercel, 'dist', path)
-        if (!('redirect' in r) || r.redirect !== `/${board}/` || !r.permanent) bad.push(`vercel ${path} → ${'redirect' in r ? r.redirect : 'no redirect'}`)
-      }
-    }
-    assert('cards: a removed card is gone from the site and its old links open its board', !bad.length, bad.join('; '))
-  }
   // interpreter: the translated line is baked dots, so it draws with no system CJK font (Node has no document at all)
   {
     const p = card('interpreter'), pitch = p.grid.pitch ?? theme.gridPx

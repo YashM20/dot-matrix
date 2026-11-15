@@ -15,11 +15,13 @@ import { presetSource } from '../../src/export/source'
 import { cardHTML, cardSVG } from '../../src/export/snippets'
 import { idsChecks } from './ids'
 import { metaChecks, widgetIndex } from './meta'
+import { removedChecks } from './removed'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 
 export function shareChecks(check: Assert) {
   idsChecks(check)
+  removedChecks(check)
   const index = widgetIndex()
   metaChecks(check, index)
 
@@ -49,6 +51,9 @@ export function shareChecks(check: Assert) {
   const aliased = resolveWidget({ key: 'glyph-hourglass', scope: '' }, catalog, resolveCardId)
   check('share: old slugs resolve through cardAliases; unknown keys and scopes do not resolve', aliased?.slug === 'lock-hourglass' && aliased.via === 'alias' && aliased.uid === lockUid
     && !resolveWidget({ key: 'nope', scope: '' }, catalog, resolveCardId) && !resolveWidget({ key: 'timer', scope: 'acme' }, catalog, resolveCardId) && !resolveWidget({ key: 'k7m2qx9z', scope: '' }, catalog, resolveCardId))
+  // #188: the falling-blocks card was sq-tetris; its old slug opens sq-stack with the same uid (likes and short links keep it)
+  const stackUid = catalog.find(x => x[0] === 'sq-stack')?.[1], stack = resolveWidget({ key: 'sq-tetris', scope: '' }, catalog, resolveCardId)
+  check('share: the old sq-tetris URL resolves to sq-stack with its uid', !!stackUid && stack?.slug === 'sq-stack' && stack.via === 'alias' && stack.uid === stackUid && stackUid === '2rtb099q')
   check('share: canonical widget URL is /widget/<slug>/, keeps state params, drops ?card=; short link is /<uid>', canonicalWidgetUrl({ slug: 'timer', scope: '' }, '?card=dykmba98&skin=crt&t=2') === '/widget/timer/?skin=crt&t=2'
     && widgetPath('timer', 'acme') === '/@acme/widget/timer/' && shortPath('dykmba98') === '/dykmba98')
 
