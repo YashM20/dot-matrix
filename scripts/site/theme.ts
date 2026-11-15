@@ -305,7 +305,7 @@ export async function themeChecks(assert: Assert, { print = false } = {}): Promi
 
   // the boot script and the store resolve the same theme
   const { resolvePrefs, resolveScheme, themeTokens } = await import('../../src/site/theme/theme')
-  const searches = ['', '?scheme=light', '?scheme=dark', '?accent=vite', '?theme=light_cobalt', '?theme=system_amber', '?theme=bogus_cobalt', '?theme=light_bogus', '?theme=dark_vite&accent=cyan', '?scheme=system&theme=light_amber', '?scheme=nope&accent=nope', '?accent=custom', '?theme=light_custom', '?scheme=light&hue=212', '?hue=40&contrast=more', '?contrast=more']
+  const searches = ['', '?scheme=light', '?scheme=dark', '?accent=vite', '?theme=light_cobalt', '?theme=system_amber', '?theme=bogus_cobalt', '?theme=light_bogus', '?theme=dark_vite&accent=cyan', '?scheme=system&theme=light_amber', '?scheme=nope&accent=nope', '?accent=custom', '?theme=light_custom', '?scheme=light&hue=212', '?hue=40&contrast=more', '?contrast=more', '?contrast=system', '?contrast=max']
   const cssJ = JSON.stringify(customCss(212))
   const stored = [null, '{"scheme":"dark","accent":"vite"}', '{"scheme":"light"}', '{"accent":"magenta"}', '{"scheme":"system","accent":"phosphor"}', 'garbage', '"light_cobalt"', '{"accent":"custom"}', 'null', '5',
     `{"scheme":"light","accent":"custom","hue":212,"css":${cssJ}}`, `{"accent":"cobalt","hue":212,"css":${cssJ}}`, '{"accent":"custom","hue":212,"css":5}', '{"scheme":"light","accent":"amber","contrast":"more"}',
@@ -316,11 +316,11 @@ export async function themeChecks(assert: Assert, { print = false } = {}): Promi
   const mismatch: string[] = []
   for (const s of searches) for (const st of stored) for (const light of [false, true]) {
     const b = runBoot(s, st, light), p = resolvePrefs(s, st), scheme = resolveScheme(p.scheme, light)
-    const want = { 'data-scheme': scheme, 'data-accent': p.accent, ...(p.accent === 'custom' ? { style: (JSON.parse(st!) as { css: string }).css } : {}), 'color-scheme': scheme, 'theme-color': BG[scheme] }
+    const want = { 'data-scheme': scheme, 'data-accent': p.accent, ...(p.contrast === 'more' ? { 'data-contrast': 'more' } : {}), ...(p.accent === 'custom' ? { style: (JSON.parse(st!) as { css: string }).css } : {}), 'color-scheme': scheme, 'theme-color': BG[scheme] }
     if (JSON.stringify(b) !== JSON.stringify(want)) mismatch.push(`${s || '(none)'} + ${st} + ${light ? 'light' : 'dark'} OS: boot ${JSON.stringify(b)} vs store ${JSON.stringify(want)}`)
   }
-  assert(`theme: boot script ≡ store resolution (${searches.length * stored.length * 2} cases: URL, storage, OS scheme; attributes, the custom hue's <style>, color-scheme and theme-color metas)`, !mismatch.length, mismatch.slice(0, 3).join('; '))
-  // CONTRAST: MORE and ?hue= (issue #34): the store reads them after boot (the boot script is inlined in every HTML entry)
+  assert(`theme: boot script ≡ store resolution (${searches.length * stored.length * 2} cases: URL, storage, OS scheme; attributes with CONTRAST: MORE, the custom hue's <style>, color-scheme and theme-color metas)`, !mismatch.length, mismatch.slice(0, 3).join('; '))
+  // ?hue= (issue #34): the store reads it after boot; CONTRAST: MORE is in the boot cases above too (#187)
   const hueCases: [string, number | undefined][] = [['?hue=212', 212], ['?scheme=dark&hue=7', 7], ['?hue=-30', 330], ['?hue=720', 0], ['?hue=359.6', 0], ['?hue=12.4', 12], ['?hue=abc', undefined], ['?hue=', undefined], ['?hue=1e3', undefined], ['?hue=99999', undefined], ['?hue=212&accent=cobalt', undefined], ['?theme=light_vite&hue=212', undefined], ['?accent=custom&hue=90', 90]]
   const hueOff = hueCases.filter(([s, h]) => resolvePrefs(s, null).hue !== h).map(([s]) => s)
   assert(`theme: ?hue= is a number of degrees wrapped into 0–359, junk ignored, a preset accent in the URL wins (${hueCases.length} cases)`, !hueOff.length, hueOff.join(', '))
@@ -437,7 +437,7 @@ function runBoot(search: string, stored: string | null, prefersLight: boolean, b
   const metas: Record<string, object> = { 'meta[name=color-scheme]': meta('color-scheme'), 'meta[name=theme-color]': meta('theme-color') }
   const env = {
     document: {
-      documentElement: { dataset: { set scheme(v: string) { attrs['data-scheme'] = v }, set accent(v: string) { attrs['data-accent'] = v }, set cards(v: string) { attrs['data-cards'] = v } } }, querySelector: (q: string) => metas[q] ?? null,
+      documentElement: { dataset: { set scheme(v: string) { attrs['data-scheme'] = v }, set accent(v: string) { attrs['data-accent'] = v }, set contrast(v: string) { attrs['data-contrast'] = v }, set cards(v: string) { attrs['data-cards'] = v } } }, querySelector: (q: string) => metas[q] ?? null,
       // the style element is appended before its id and text are set: read them back after the run
       createElement: () => ({ id: '', textContent: '' }), head: { appendChild: (el: { id: string; textContent: string }) => { styles.push(el); return el } },
     },
@@ -450,7 +450,7 @@ function runBoot(search: string, stored: string | null, prefersLight: boolean, b
   new Function(...Object.keys(env), BOOT_SCRIPT)(...Object.values(env))
   for (const el of styles) if (el.id === 'theme-custom') attrs.style = el.textContent
   // the attribute order of the store's expectation (scheme, accent, style, metas); the card size only when asked for
-  const order = ['data-scheme', 'data-accent', 'style', 'color-scheme', 'theme-color', ...(cards === undefined ? [] : ['data-cards'])]
+  const order = ['data-scheme', 'data-accent', 'data-contrast', 'style', 'color-scheme', 'theme-color', ...(cards === undefined ? [] : ['data-cards'])]
   return Object.fromEntries(order.filter(k => k in attrs).map(k => [k, attrs[k]]))
 }
 

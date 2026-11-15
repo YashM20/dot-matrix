@@ -196,6 +196,23 @@
   text-decoration: underline solid var(--value)
 }
 
+/* touch: the board link in the facts takes a 44 px tall touch area round its text (WCAG 2.5.5, #187); nothing moves */
+@media (pointer: coarse) {
+  .wp-facts .wp-link {
+    position: relative
+  }
+
+  .wp-facts .wp-link::before {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: calc(-1 * var(--space-1));
+    width: max(calc(100% + 2 * var(--space-1)), var(--tap));
+    height: var(--tap);
+    translate: 0 -50%
+  }
+}
+
 /* the panel's actions: export, then share and remix and MORE, wrapping as whole capsules */
 .wp-actions {
   flex-wrap: wrap;

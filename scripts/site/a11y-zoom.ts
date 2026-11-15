@@ -4,8 +4,8 @@
  *    the page doesn't scroll sideways (scrollWidth ≤ the viewport), and it names what sticks out. The phone
  *    layout probes run at 390 and 320 with touch; a zoomed desktop keeps hover and a fine pointer, so its CSS differs.
  *    MAKE is a two-dimensional tool (the WCAG exception): it may pan, but its own frame must not push the page wide;
- *  - `zoom-header:<page>@<w>`: the top bar fits in a quarter of the viewport's height, so the page under a pinned
- *    bar keeps room to read (WCAG 1.4.10 and 2.4.11 at 400%);
+ *  - `zoom-focus:<page>@<w>` (WCAG 2.4.11): the first 40 Tab stops each land clear of the pinned top bar and the tab
+ *    bar (scripts/lib/site-probe.ts `tabWalk`), so a zoomed page never hides what has focus under its chrome;
  *  - `motion:<page>` (WCAG 2.3.3, 2.2.2): under `prefers-reduced-motion: reduce`, once the page settles, no CSS
  *    animation or transition still runs, and the page asks for animation frames at most a few times a second (a
  *    card loop that ignored the setting would ask 60 times).
@@ -19,6 +19,7 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { findChrome, launch, serveDist, sleep, type Page } from '../lib/cdp'
 import { knownChecker } from '../lib/check'
+import { tabWalk } from '../lib/site-probe'
 
 const KNOWN: readonly string[] = []
 
@@ -79,8 +80,8 @@ try {
       if (!(await load(p, base + path, ready))) { check(`ready:${name}@${w}`, false, 'not ready in 30 s'); continue }
       const m = await p.js<{ scroll: number; W: number; out: string[] }>(WIDE)
       check(`reflow:${name}@${w}`, m.scroll <= m.W + 1, `scrollWidth ${m.scroll} in ${m.W}${m.out.length ? `; ${m.out.join(' | ')}` : ''}`)
-      const bar = await p.js<number>(`(() => { const t = document.querySelector('.topbar, .site-nav, .legal-nav'); return t ? Math.round(t.getBoundingClientRect().height) : 0 })()`)
-      check(`zoom-header:${name}@${w}`, bar <= h / 4, `top bar ${bar} px of ${h}`)
+      const stops = await tabWalk(p, 40), under = stops.filter(s => s.under)
+      check(`zoom-focus:${name}@${w}`, stops.length > 0 && !under.length, `${stops.length} stops${under.length ? `; ${under.length} under a bar: ${under.slice(0, 4).map(s => `#${s.n} ${s.label} (${s.under})`).join(' | ')}` : ''}`)
       if (shots) await p.shot(join(shots, `${name}-${w}.png`))
     }
   }

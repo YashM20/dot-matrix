@@ -14,7 +14,7 @@
  *  - `wp-skip`, `wp-more`: the widget page starts with SKIP TO CONTENT; its MORE menu opens from the keyboard and
  *    Escape sends focus back to MORE.
  * Phone, 390 × 844 with touch: `tap44:<page>`, every control outside the cards has a 44 × 44 touch area (WCAG 2.5.5;
- *  links in running text are exempt). `sheet:<name>`: TOOLS, BOARDS and search open a modal sheet or the palette with focus
+ *  targets in a sentence and MAKE's frame names, which LAYERS repeats as 44 px rows, are exempt). `sheet:<name>`: TOOLS, BOARDS and search open a modal sheet or the palette with focus
  * inside; Escape closes it and focus goes back to the button that opened it.
  *
  *   npx vite build && npx tsx scripts/site/a11y-keys.ts            → serves dist/ on port 4328 for the run
@@ -100,11 +100,13 @@ async function ringWalk(p: Page, page: string, mode: string, max = 60) {
   let n = 0
   for (; n < max; n++) {
     await press(p, 'Tab', 0, 60)
-    const s = await p.js<{ label: string; card: boolean; ring: boolean; on: boolean } | 'wrap' | null>(`(() => {
+    const s = await p.js<{ label: string; card: boolean; ring: boolean; on: boolean } | 'wrap' | null>(`(async () => {
       const a = document.activeElement
       if (!a || a === document.body) return null
       if (window.__seen.has(a)) return 'wrap'
       window.__seen.add(a)
+      // a page with smooth scrolling (the blog) brings focus into view over a few frames: wait until it settles
+      for (let i = 0, y = -1, still = 0; i < 60 && still < 3; i++) { await new Promise(r => requestAnimationFrame(r)); still = scrollY === y ? still + 1 : 0; y = scrollY }
       const r = a.getBoundingClientRect()
       const label = a.tagName.toLowerCase() + (typeof a.className === 'string' && a.className.trim() ? '.' + a.className.trim().split(/\\s+/)[0] : '') + (a.textContent?.trim() ? ' "' + a.textContent.trim().slice(0, 18) + '"' : '')
       return { label, card: !!a.closest('.dot-card, .dot-a11y-group'), ring: ${RINGED},
@@ -225,8 +227,7 @@ async function phone() {
       const back = await is(p, opener)
       check(`sheet:${name}`, inside && back, `focus inside ${inside}, back on the opener ${back} (${await active(p)})`)
     }
-    // every control outside the cards has a 44 × 44 touch area (its box, or a larger ::before / ::after hit area);
-    // links inside running text are exempt (WCAG 2.5.5)
+    // every control outside the cards has a 44 × 44 touch area (its box, or a larger ::before / ::after hit area)
     for (const [name, path, ready] of PAGES.filter(([n]) => n !== 'post')) {
       if (!(await load(p, base + path, ready))) { check(`tap44:${name}`, false, 'not ready in 30 s'); continue }
       const small = await p.js<string[]>(`(() => {
@@ -234,7 +235,11 @@ async function phone() {
         for (const el of document.querySelectorAll('a[href], button, input:not([type=hidden]), select, summary, [role=tab], [role=switch], [tabindex="0"]')) {
           const s = getComputedStyle(el), r = el.getBoundingClientRect()
           if (s.display === 'none' || s.visibility === 'hidden' || r.width < 2 || r.height < 2 || el.closest('.dot-card, .sr-only, [inert], [aria-hidden="true"], .skip-link')) continue
-          if (s.display === 'inline' && el.closest('p, li')) continue
+          // in a sentence (its paragraph flows as text and says more than the target) or MAKE's frame names on the canvas
+          // (each frame is also a 44 px row in LAYERS): the WCAG 2.5.5 inline and equivalent exceptions
+          const para = el.closest('p, li')
+          if (para && !/flex|grid/.test(getComputedStyle(para).display) && para.innerText.trim().length > el.innerText.trim().length + 12) continue
+          if (el.matches('.ed-flabel')) continue
           let w = r.width, h = r.height
           for (const pe of ['::before', '::after']) { const ps = getComputedStyle(el, pe); if (ps.content !== 'none' && ps.position === 'absolute' && ps.pointerEvents !== 'none') { w = Math.max(w, parseFloat(ps.width) || 0); h = Math.max(h, parseFloat(ps.height) || 0) } }
           if (Math.min(w, h) < 43.5) out.push(el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/)[0] : '') + (el.textContent.trim() ? ' "' + el.textContent.trim().slice(0, 14) + '"' : '') + ' ' + Math.round(w) + '×' + Math.round(h))
