@@ -3,7 +3,6 @@
  * `mirror-camera`: the webcam as a step-2 halftone with temporal stability (`halftoneStream`). Before the
  * user taps (and in snapshots/goldens) it shows a deterministic test portrait built from fields, so the
  * card is a pure function of ctx; the host feeds `ctx.media.camera` only after the toggle grants access.
- * `mirror-ladder`: the same portrait plus sensor noise at ladder step 1 vs step 2, side by side.
  */
 import { clamp, hash01 } from '../../engine/math'
 import type { Control } from '../../engine/context'
@@ -103,11 +102,10 @@ export function portrait(x: number, y: number, eyes = 1): number {
 }
 
 /** The portrait rasterized on the card grid below the label row (eyes open / closed). */
-function portraitRaster(eyes: number, map: (x: number, y: number) => [number, number] = (x, y) => [x, y], noise = 0, box: [number, number, number, number] = [0, TOP, N, N]): Raster {
-  const r = createRaster(TILE, 'card', box)
-  for (let y = box[1]; y <= box[3]; y++) for (let x = box[0]; x <= box[2]; x++) {
-    const [px, py] = map(x, y)
-    r.data[y * TILE.cols + x] = clamp(portrait(px, py, eyes) + (noise ? (hash01(x * 131 + y, 9) + hash01(x * 37 + y * 101, 4) - 1) * noise : 0))
+function portraitRaster(eyes: number, noise = 0): Raster {
+  const r = createRaster(TILE, 'card', [0, TOP, N, N])
+  for (let y = TOP; y <= N; y++) for (let x = 0; x <= N; x++) {
+    r.data[y * TILE.cols + x] = clamp(portrait(x, y, eyes) + (noise ? (hash01(x * 131 + y, 9) + hash01(x * 37 + y * 101, 4) - 1) * noise : 0))
   }
   return r
 }
@@ -157,7 +155,7 @@ const REC = [layer(T.text('REC', 128, 1, { align: 'right' }), 'idle'), layer(T.d
  * the chrome label at (0, 0), which would sit on the card's edge.
  */
 const insetLabel = (s: string) => layer(T.text(s, 1, 1), 'idle')
-const MIRROR_LABEL = insetLabel('MIRROR'), LADDER_LABEL = insetLabel('LADDER')
+const MIRROR_LABEL = insetLabel('MIRROR')
 const prompts = new Map<string, Layer>()
 const promptLayer = (s: string) => { let l = prompts.get(s); if (!l) prompts.set(s, (l = layer(T.text(s, 72, 130, { align: 'center' }), 'value'))); return l }
 
@@ -188,24 +186,6 @@ export const mirrorCamera: WidgetPreset = {
       ...(showPrompt ? [promptLayer(prompt)] : []),
     ]
   },
-}
-
-// ladder: two panels of the same noisy portrait, zoomed onto the head; step 1 left, step 2 right
-const PANEL = { top: TOP + 1, bottom: 116, w: 70 }
-const zoom = (pcx: number) => (x: number, y: number): [number, number] => [HX + (x - pcx) / .7, HY + 2 + (y - 64) / .7]
-const NOISE = .07
-const ladderLeft = lazy(() => halftone(portraitRaster(1, zoom(34.5), NOISE, [0, PANEL.top, PANEL.w - 1, PANEL.bottom]), { step: 1, levels: LEVELS }))
-const ladderRight = lazy(() => halftone(portraitRaster(1, zoom(108.5), NOISE, [N - PANEL.w + 1, PANEL.top, N, PANEL.bottom]), STEP2))
-
-export const mirrorLadder: WidgetPreset = {
-  id: 'mirror-ladder', name: 'Ladder', label: '', group: 'photo', chrome: 'dots', bleed: true, grid: TILE, style: photoStyle,
-  credit: { by: ['Robert Ulichney'], title: 'The void-and-cluster method for dither array generation (1993)', source: 'https://doi.org/10.1117/12.152707', note: 'the blue-noise thresholds' },
-  layers: () => [
-    dotsLayer(ladderLeft()), dotsLayer(ladderRight()),
-    layer(T.big('1', 0, 122, { lattice: 2 }), 'value'), layer(T.text('ORDERED', 14, 129), 'idle'),
-    layer(T.big('2', 74, 122, { lattice: 2 }), 'value'), layer(T.text('STRUCTURE', 88, 129), 'idle'),
-    LADDER_LABEL,
-  ],
 }
 
 // ── C6 camera magic: shared bits ─────────────────────────────────────────────────────────────────────
@@ -362,6 +342,6 @@ export const mirrorConduct: WidgetPreset = {
   },
 }
 
-export const mirrorBoard: WidgetPreset[] = [mirrorCamera, mirrorLadder, mirrorShadow, mirrorConduct]
+export const mirrorBoard: WidgetPreset[] = [mirrorCamera, mirrorShadow, mirrorConduct]
 /** The test portrait rasterized below the label row, optionally with deterministic sensor noise (tests, bench). */
-export const mirrorPortrait = (eyes = 1, noise = 0): Raster => portraitRaster(eyes, undefined, noise)
+export const mirrorPortrait = (eyes = 1, noise = 0): Raster => portraitRaster(eyes, noise)

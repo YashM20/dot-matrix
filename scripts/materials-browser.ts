@@ -172,7 +172,7 @@ try {
     }
     {
       let same = true, detail = ''
-      for (const id of ['mat-loom', 'mat-knob', 'mat-grille', 'mat-marble', 'mat-terrazzo', 'mat-lens', 'mat-pool', 'mat-window', 'mat-patch', 'mat-rust', 'mat-candle']) {
+      for (const id of ['mat-loom', 'mat-knob', 'mat-grille', 'mat-terrazzo', 'mat-lens', 'mat-pool', 'mat-window', 'mat-patch', 'mat-rust', 'mat-candle']) {
         await center(p, id)
         const d0 = await dataOf(p), [x, y] = await at(p, id, 72, 100)
         await p.touch(Array.from({ length: 14 }, (_, i) => [[x, y - i * 14]] as [number, number][]))

@@ -1,20 +1,19 @@
 /**
- * Board · SURFACES — "One Field, Five Surfaces" (P5). One timer, one shared time, five displays:
- * the browser card itself, a Glyph Matrix (25×25 round LED matrix), a TRMNL e-ink panel (1-bit
- * blue-noise dither, partial refreshes that ghost, a full refresh that flashes), a flip-disc sign
- * (column-scanned discs with inertia) and a pen plotter (dots → pen strokes, plotted over time).
+ * Board · SURFACES (P5). One timer, one shared time, three displays: the browser card itself, a Glyph
+ * Matrix (25×25 round LED matrix) and a flip-disc sign (column-scanned discs with inertia). The e-ink
+ * and plotter cards were retired (#364); their profiles and simulators stay in `src/engine/device` for MAKE.
+ * Card labels keep their original numbers (01, 02, 04) so the remaining cards' pixels don't move.
  *
  * Every device card is `toDevice(timer, profile)` (`src/engine/device`) → that device's simulator →
- * dot sites. Tiny grids use the timer's curated `variants` (§3.9); the e-ink and plotter resample the
- * authored TILE card area-weighted. All cards read board time `t + data.clockOffset`, and the
+ * dot sites. Tiny grids use the timer's curated `variants` (§3.9). All cards read board time `t + data.clockOffset`, and the
  * `clock` source keeps `clockOffset` in step across tabs over BroadcastChannel (`src/engine/clockSync`).
  * One red on the board: the browser timer's remaining arc (monochrome devices show it as full light).
  */
 import { sharedClock } from '../../engine/clock'
 import { browserChannel, createClockSync } from '../../engine/clockSync'
 import {
-  createEinkSim, createFlipSim, DEVICES, ledGlow, plotAt, plotPaths, previewProfile, toDevice,
-  type DeviceProfile, type DeviceSpec, type PlotPlan,
+  createFlipSim, DEVICES, ledGlow, toDevice,
+  type DeviceProfile, type DeviceSpec,
 } from '../../engine/device'
 import { glyph } from '../../engine/fields/bitmapFont'
 import { toCell } from '../../engine/layout'
@@ -149,35 +148,6 @@ export const surfaceGlyph: WidgetPreset = {
   },
 }
 
-// ── 03 E-INK: TRMNL 800×480, shown at 1/6 (133×80 pixels, one per card cell) ──
-const EINK = previewProfile(DEVICES['trmnl-800x480'], 1 / 6), EX = 5, EY = 24
-const eink = createEinkSim(frameAt(EINK), DEVICES['trmnl-800x480'].physics, EINK.refresh)
-export const surfaceEink: WidgetPreset = {
-  id: 'surface-eink', name: 'Surface E-ink', label: '03  E-INK', ...tile, defaults: { clockOffset: 0 },
-  credit: { by: ['TRMNL'], title: 'TRMNL', source: 'https://trmnl.com/', note: 'the 7.5 inch e-ink panel this simulates' },
-  layers: ctx => {
-    const bt = boardTime(ctx), view = eink.at(bt), { cols, rows } = EINK, ink = view.ink
-    const px = (c: number, r: number) => { const x = c - EX, y = r - EY; return x < 0 || y < 0 || x >= cols || y >= rows ? -1 : ink[y * cols + x] }
-    // paper is the lit dot (e-ink grey, never white); ink is the hole; a ghost darkens the paper a step
-    const panel: Layer = {
-      field: bounded((u, v) => { const k = px(toCell(u, 144), toCell(v, 144)); return k < 0 || k >= .8 ? 0 : k >= .4 ? .5 : k >= .12 ? .75 : 1 }, EX, EY, EX + cols - 1, EY + rows - 1),
-      toneOf: value => (value >= 1 ? 'idle' : value >= .75 ? 'mid' : 'faint'),
-    }
-    const k = view.k, cyc = ((k % 10) + 10) % 10, every = DEVICES['trmnl-800x480'].physics.fullEvery
-    const status = view.phase === 'full' ? 'FULL REFRESH' : view.phase === 'partial' ? `PARTIAL ${String(cyc).padStart(2, '0')}/${every}` : `IDLE ${String(cyc).padStart(2, '0')}/${every}`
-    let ghosts = 0; for (let i = 0; i < ink.length; i++) if (ink[i] >= .12 && ink[i] < .8) ghosts++
-    return [
-      spec('800X480'),
-      bezel(EX - 3, EY - 3, EX + cols + 2, EY + rows + 2),
-      panel,
-      // the status has its row to itself: PARTIAL 01/10 and FULL REFRESH are too wide to share it (#215)
-      layer(T.text(status, EX - 3, 118), view.phase === 'full' ? 'value' : 'idle'),
-      layer(T.text('1-BIT', EX - 3, 130), 'mid'),
-      layer(T.text(`GHOST ${String(Math.min(999, ghosts)).padStart(3, '0')} PX`, 143 - 2, 130, { align: 'right' }), 'mid'),
-    ]
-  },
-}
-
 // ── 04 FLIP-DISC: 28×14 discs, column-scanned, with inertia ──────────────────
 const FLIP = DEVICES['flipdisc-28x14'], FP = 5, FX = 72 - 13.5 * FP, FY = 36
 export const flip = createFlipSim(frameAt(FLIP), FLIP.physics, FLIP.refresh)
@@ -200,41 +170,6 @@ export const surfaceFlipdisc: WidgetPreset = {
       layer(T.text(view.moving ? `SCAN COL ${String(col + 1).padStart(2, '0')}` : 'HOLD', 0, 118), view.moving ? 'value' : 'idle'),
       layer(T.text(`${String(flips).padStart(3, '0')} FLIPS`, 143 - 2, 118, { align: 'right' }), 'mid'),
       layer(T.text('CLACK MUTED', 0, 130), 'mid'),
-    ]
-  },
-}
-
-// ── 05 PLOTTER: the timer as pen strokes, one sheet every 20 s ───────────────
-const PLOT = DEVICES.plotter, SHEET_S = 20, PP = 2.5, PX = 72 - 23.5 * PP, PY = 14
-const plans = new Map<number, PlotPlan>()
-const planOf = (sheet: number) => {
-  let p = plans.get(sheet)
-  if (!p) { p = plotPaths(toDevice(timerSpec, PLOT, { ctx: { t: sheet * SHEET_S, data: {} } }), PLOT.physics); plans.set(sheet, p); if (plans.size > 4) plans.delete(plans.keys().next().value!) }
-  return p
-}
-export const surfacePlotter: WidgetPreset = {
-  id: 'surface-plotter', name: 'Surface Plotter', label: '05  PLOTTER', ...tile, defaults: { clockOffset: 0 },
-  layers: ctx => {
-    // reduced motion shows the finished sheet, not the pen part way through it
-    const bt = boardTime(ctx), sheet = Math.floor(bt / SHEET_S), plan = planOf(sheet), tau = ctx.reducedMotion ? Infinity : bt - sheet * SHEET_S, st = plotAt(plan, tau)
-    const at = (x: number, y: number): Pt => [PX + (x - .5) * PP, PY + (y - .5) * PP]
-    const marks: { at: Pt; tone: Tone; size: number }[] = []
-    plan.strokes.forEach((s, i) => {
-      const k = s.loops.length, full = k === 1 ? 1.3 : k === 2 ? 2.1 : 2.8
-      // plotted ink (k loops = a heavier mark), the stroke under the pen growing, the rest planned in faint
-      if (i < st.done) marks.push({ at: at(s.col + .5, s.row + .5), tone: 'value', size: full })
-      else if (i === st.done && st.partial > 0) marks.push({ at: at(s.col + .5, s.row + .5), tone: 'value', size: st.partial > .5 ? full : 1.3 })
-      else marks.push({ at: at(s.col + .5, s.row + .5), tone: 'mid', size: .8 })
-    })
-    const [hx, hy] = at(st.head[0], st.head[1]), next = plan.strokes[st.done]
-    const pct = Math.min(100, Math.floor((st.done / Math.max(1, plan.strokes.length)) * 100))
-    return [
-      spec('A6 PEN'),
-      ...bands(marks),
-      ...(next && !st.down ? [layer(T.dotLine(hx, hy, ...at(next.col + .5, next.row + .5), { spacing: 2, size: .7 }), 'mid')] : []),
-      layer(T.dotRing(hx, hy, 2.6, { spacing: 1.4, size: .7 }), 'idle'),
-      layer(T.text(`SHEET ${String(sheet + 1).padStart(2, '0')}`, PX - 1.25, 134), 'idle'),
-      layer(T.text(`${String(pct).padStart(3, ' ')}%`, 143 - 2, 134, { align: 'right' }), pct >= 100 ? 'value' : 'mid'),
     ]
   },
 }
@@ -275,4 +210,4 @@ export const clockSource: Source<number> = createSource<number>({
   }],
 })
 export const surfacesSources = [clockSource]
-export const surfacesBoard: WidgetPreset[] = [surfaceBrowser, surfaceGlyph, surfaceEink, surfaceFlipdisc, surfacePlotter]
+export const surfacesBoard: WidgetPreset[] = [surfaceBrowser, surfaceGlyph, surfaceFlipdisc]

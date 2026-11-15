@@ -69,12 +69,6 @@ By David Smith, Joseph Samuel Myers, Craig S. Kaplan, Chaim Goodman-Strauss.
 
 - Hat (`sq-hat`), board `/squares/`: technique
 
-### [An image synthesizer (1985)](https://doi.org/10.1145/325165.325247)
-
-By Ken Perlin.
-
-- Marble (`mat-marble`), board `/materials/`: the turbulence-sine marble
-
 ### [animal-proc-anim](https://github.com/argonautcode/animal-proc-anim)
 
 By argonautcode.
@@ -163,11 +157,9 @@ By Islam El-Ashi.
 
 By Henry Li.
 
-- Closer (`cinema-closer`), board `/cinema/`: grown from his Afterlight face
 - Encore (`cinema-encore`), board `/cinema/`: grown from his Afterlight face
 - Exit 14 (`cinema-exit-14`), board `/cinema/`: grown from his Afterlight face
 - Keeper (`cinema-keeper`), board `/cinema/`: grown from his Afterlight face
-- Last Call (`cinema-last-call`), board `/cinema/`: grown from his Afterlight face
 - Signal (`cinema-signal`), board `/cinema/`: grown from his Afterlight face
 - Sundown (`cinema-sundown`), board `/cinema/`: grown from his Afterlight face
 - Upstairs (`cinema-upstairs`), board `/cinema/`: grown from his Afterlight face
@@ -473,7 +465,6 @@ By Alan Turing, Edmund Crampin, Eamonn Gaffney, Philip Maini.
 By Robert Ulichney.
 
 - Mirror (`mirror-camera`), board `/mirror/`: the blue-noise thresholds
-- Ladder (`mirror-ladder`), board `/mirror/`: the blue-noise thresholds
 
 ### [tixy.land](https://tixy.land/)
 
@@ -482,12 +473,6 @@ By Martin Kleppe.
 - IR Dial (`ir-dial`), board `/ir/`: one small program drives the whole card; this program is our own
 - IR Plasma (`ir-plasma`), board `/ir/`: one small program drives the whole card; this program is our own
 - IR Ripple (`ir-ripple`), board `/ir/`: one small program drives the whole card; this program is our own
-
-### [TRMNL](https://trmnl.com/)
-
-By TRMNL.
-
-- Surface E-ink (`surface-eink`), board `/surfaces/`: the 7.5 inch e-ink panel this simulates
 
 ### [Vera Molnár](https://en.wikipedia.org/wiki/Vera_Moln%C3%A1r)
 

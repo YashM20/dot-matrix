@@ -15,11 +15,13 @@ import { presetSource } from '../../src/export/source'
 import { cardHTML, cardSVG } from '../../src/export/snippets'
 import { idsChecks } from './ids'
 import { metaChecks, widgetIndex } from './meta'
+import { removedChecks } from './removed'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 
 export function shareChecks(check: Assert) {
   idsChecks(check)
+  removedChecks(check)
   const index = widgetIndex()
   metaChecks(check, index)
 

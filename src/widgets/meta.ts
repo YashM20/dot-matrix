@@ -202,11 +202,9 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'ir-plasma': ['A plasma written as a Field IR program.', 'ir program animated'],
   'ir-dial': ['A dial written in Field IR, driven by one data value you can drag.', 'ir program dial control'],
   // cinema: the Afterlight cycle
-  'cinema-last-call': ['Noir in animated halftone: a man in a fedora and one cigarette ember.', 'film noir animated photo'],
   'cinema-signal': ['Sci-fi: someone answered the signal.', 'film scifi animated photo'],
   'cinema-sundown': ['Western: the last light in the west.', 'film western animated photo'],
   'cinema-upstairs': ['Horror: someone left the light on upstairs.', 'film horror animated photo'],
-  'cinema-closer': ['Romance: no lights, just us.', 'film romance animated photo'],
   'cinema-witness': ['Documentary: she saw the fire.', 'film documentary animated photo'],
   'cinema-exit-14': ['Thriller: a highway exit at night. Don’t look back.', 'film thriller animated photo'],
   'cinema-keeper': ['Drama: a lighthouse keeper who kept it burning.', 'film drama animated photo'],
@@ -253,19 +251,16 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'live-contribs': ['GitHub contributions for the last year, with your streak.', 'github live data'],
   // mirror: camera halftone
   'mirror-camera': ['Your camera as halftone dots. Video stays on your device.', 'camera halftone live'],
-  'mirror-ladder': ['The halftone ladder: ordered and structured dithering side by side.', 'halftone dither photo'],
   'mirror-shadow': ['Your shadow as a puppet of dots. Video stays on your device.', 'camera shadow live'],
   'mirror-conduct': ['Hand mode: wave or pinch in front of the camera to drive the cards.', 'camera hand control'],
   // gpu: half a million dots
   'gpu-plasma': ['A plasma of half a million dots, evaluated on the GPU.', 'gpu plasma animated'],
   'gpu-starfield': ['A starfield flying past, on the GPU.', 'gpu stars animated'],
   'gpu-moire': ['Moire interference patterns on the GPU.', 'gpu pattern animated'],
-  // surfaces: one field, five surfaces
+  // surfaces: one field, three surfaces
   'surface-browser': ['The shared field as a browser draws it: 144 × 144 dots.', 'surface display animated'],
   'surface-glyph': ['The same field on a 25 × 25 glyph matrix.', 'surface display animated'],
-  'surface-eink': ['The same field on e-ink, with full refreshes and ghosting.', 'surface eink animated'],
   'surface-flipdisc': ['The same field on a flip-disc panel, disc by disc.', 'surface flipdisc animated'],
-  'surface-plotter': ['The same field drawn by a pen plotter on A6 paper.', 'surface plotter animated'],
   // components: primitives
   'ui-toggle': ['A toggle switch. Tap it.', 'ui toggle control'],
   'ui-pill': ['Pill buttons: an action and a destructive one.', 'ui button'],
@@ -313,7 +308,6 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'mat-loom': ['A loom weaving twill live, with its draft shown as dots.', 'material weave textile animated control'],
   'mat-knob': ['A spun-aluminium knob: drag round it to set the volume. The highlight follows the light.', 'material metal knob control'],
   'mat-grille': ['A perforated speaker grille lit from behind by the beat.', 'material metal audio animated'],
-  'mat-marble': ['The time engraved in marble, read by raking light.', 'material stone clock animated'],
   'mat-terrazzo': ['A month of terrazzo chips; today is the red one.', 'material stone calendar'],
   'mat-lens': ['A lens of liquid glass you drag over a clock to bend it.', 'material glass clock control'],
   'mat-pool': ['A rippling pool casting a caustic net on its tiles; tap to drop a pebble.', 'material water physics animated'],

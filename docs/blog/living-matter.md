@@ -82,7 +82,7 @@ In `geometry.ts`, each cell quadrant draws with joined half-extents expanded tow
 
 ## Direction: ambient installations and healing trace
 
-<!-- VISUAL: kind=card · what=mat-marble · notice=time digits cut into marble, lit by a raking light source -->
+<!-- VISUAL: kind=card · what=mat-window · notice=a rose window lit by the sun of the hour, this hour's pane in red -->
 
 A dot display can sit in a room and change slowly through the day:
 

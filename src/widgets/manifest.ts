@@ -55,7 +55,7 @@ export const boardManifest = [
   { id: 'live', title: 'LIVE: WEATHER, NOW PLAYING, CONTRIBUTIONS', columns: 3, density: 'hero', load: () => import('./boards/live').then(m => ({ items: m.liveBoard, sources: m.liveSources })) },
   { id: 'mirror', title: 'MIRROR: LIVE HALFTONE', columns: 3, density: 'hero', load: () => import('./boards/mirror').then(m => ({ items: m.mirrorBoard })) },
   { id: 'gpu', title: 'GPU: HALF A MILLION DOTS', columns: 2, density: 'hero', load: () => import('./boards/gpu').then(m => ({ items: m.gpuBoard })) },
-  { id: 'surfaces', title: 'SURFACES: ONE FIELD, FIVE SURFACES', columns: 5, density: 'standard', load: () => import('./boards/surfaces').then(m => ({ items: m.surfacesBoard, sources: m.surfacesSources })) },
+  { id: 'surfaces', title: 'SURFACES: ONE FIELD, THREE SURFACES', columns: 3, density: 'standard', load: () => import('./boards/surfaces').then(m => ({ items: m.surfacesBoard, sources: m.surfacesSources })) },
   { id: 'components', title: 'PRIMITIVE COMPONENTS', columns: 5, density: 'standard', load: () => import('./boards/components').then(m => ({ items: m.componentsBoard })) },
   { id: 'type', title: 'TYPE: VARIABLE DOT TYPE', columns: 3, density: 'standard', load: () => import('./boards/type').then(m => ({ items: m.typeBoard })) },
   { id: 'physics', title: 'PHYSICS: DOTS YOU CAN TOUCH', columns: 3, density: 'standard', load: () => import('./boards/physics').then(m => ({ items: m.physicsBoard, sources: m.physicsSources })) },
@@ -89,6 +89,19 @@ export const boardMeta = (id: string): BoardMeta | undefined => boardManifest.fi
  */
 export const cardAliases: Readonly<Record<string, string>> = {}
 export const resolveCardId = (id: string): string => cardAliases[id] ?? (id.startsWith('glyph-') ? `lock-${id.slice(6)}` : id)
+/**
+ * Retired cards (#364): slug → [uid, board]. Their old `/widget/<slug|uid>/`, `/<uid>` and `?card=` links open the
+ * board they lived on (`viewFromUrl`; vercel.json redirects the same paths). The uids stay in `ids.json`, never reused.
+ */
+export const removedCards: Readonly<Record<string, readonly [uid: string, board: string]>> = {
+  'cinema-last-call': ['y6q3xhhe', 'cinema'], 'cinema-closer': ['ezrp10da', 'cinema'], 'mirror-ladder': ['nhneq04s', 'mirror'],
+  'surface-eink': ['pbq54zfr', 'surfaces'], 'surface-plotter': ['jfm4e97e', 'surfaces'], 'mat-marble': ['cbmez41j', 'materials'],
+}
+/** The board a retired card's slug or uid lived on, else undefined. */
+export const removedCardBoard = (key: string): string | undefined => {
+  const k = key.toLowerCase()
+  return (Object.hasOwn(removedCards, k) ? removedCards[k] : Object.values(removedCards).find(([uid]) => uid === k))?.[1]
+}
 
 /**
  * The board picker (docs/UX-PLAN.md §4.2): plain names and groups. UI only: ids, paths, OG pages and goldens
