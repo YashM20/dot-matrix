@@ -110,7 +110,8 @@
   pointer-events: none
 }
 
-@media (hover: none), (pointer: coarse) {
+/* touch rows: a coarse pointer, like the toolbar (not hover: none, which a desktop without a mouse reports too) */
+@media (pointer: coarse) {
   .wp-more button,
   .dot-card-menu button {
     min-height: var(--tap)
