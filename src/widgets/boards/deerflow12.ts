@@ -4,6 +4,7 @@
  * 1.8–3, and every outline (car, cube, leaf, rings, chart) as evenly spaced dot sites.
  */
 import { hash01 } from '../../engine/math'
+import type { Layer } from '../../engine/types'
 import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
@@ -126,7 +127,7 @@ const pillSites = (() => {
   }
   return { red, white }
 })()
-const NODES = [12, 51, 90, 129], NODE_Y = 101
+const NODES = [12, 51, 90, 129], NODE_Y = 101, STEPS = ['PRE', 'I', 'II', 'III']
 /** A done step: a red disc of big dots, a white check of finer dots in a clear band through it, inside a fine ring. */
 const CHECK: Pt[] = [[-4.2, 0], [-1.5, 2.7], [4.2, -3]]
 const doneNode = (x: number) => {
@@ -148,7 +149,9 @@ export const pharmaTrack: WidgetPreset = {
     layer(T.hrule(NODES[0] + 9, NODE_Y, NODES[1] - NODES[0] - 18), 'idle'),
     layer(T.hrule(NODES[1] + 9, NODE_Y, NODES[2] - NODES[1] - 18), 'mid'), layer(T.hrule(NODES[2] + 9, NODE_Y, NODES[3] - NODES[2] - 18), 'mid'),
     ...doneNode(NODES[0]), ...doneNode(NODES[1]),
-    ...NODES.slice(2).map(x => layer(T.dotRing(x, NODE_Y, 8.6, { spacing: 1.5, size: 1.1 }), 'idle')),
+    // PRE and I done, II the current step (a white ring), III to come
+    ...NODES.slice(2).map((x, i) => layer(T.dotRing(x, NODE_Y, 8.6, { spacing: 1.5, size: 1.1 }), i ? 'idle' : 'value')),
+    ...STEPS.map((s, i) => layer(T.text(s, NODES[i], 113, { align: 'center' }), i === 2 ? 'value' : 'idle')),
     layer(T.text('PROGRESS', 2, 130), 'idle'), layer(T.big('66%', 143, 127, { lattice: 1.6, align: 'right' }), 'active'),
   ],
 }
@@ -158,10 +161,20 @@ export const pharmaTrack: WidgetPreset = {
 const ECG_A: Pt[] = [[4, 47], [17, 47], [19, 44], [21, 40], [23, 50], [26, 30], [28.5, 57], [31, 31], [34, 58], [37, 42], [40, 52], [42, 45], [45, 48], [48, 46], [52, 47], [64, 47], [66, 48]]
 const ECG_R: Pt[] = [[66, 48], [69.5, 28], [73, 52]]
 const ECG_B: Pt[] = [[73, 52], [75, 62], [78, 47], [80, 58], [83, 45], [86, 52], [88, 46], [91, 48], [94, 47], [108, 48], [111, 44], [114, 57], [117, 46], [119, 36], [121, 50], [123, 47], [140, 48]]
+const ECG = [path(ECG_A, 2, 1.25), path(ECG_B, 2, 1.25), path(ECG_R, 1.8, 1.25)]
+/**
+ * A bedside sweep: a gap runs left to right ahead of the pen, about one complex (45 cells) per beat at 72 BPM.
+ * At t = 0 the gap sits off the card, so the reduced-motion still is the whole trace.
+ */
+const SWEEP_GAP = 8, SWEEP_S = 2.8
+const swept = (lf: LatticeField, t: number): LatticeField => {
+  const head = (((t / SWEEP_S) % 1 + 1) % 1) * (TILE.cols + SWEEP_GAP) - SWEEP_GAP
+  return { ...lf, sites: lf.sites!.filter(([x]) => x <= head || x > head + SWEEP_GAP) }
+}
 export const medicalMonitor: WidgetPreset = {
-  id: 'medical-monitor', name: '06 Medical Monitor', group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
-  layers: () => [
-    layer(path(ECG_A, 2, 1.25)), layer(path(ECG_B, 2, 1.25)), layer(path(ECG_R, 1.8, 1.25), 'active'),
+  id: 'medical-monitor', name: '06 Medical Monitor', group: 'chart', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
+  layers: ({ t }) => [
+    layer(swept(ECG[0], t)), layer(swept(ECG[1], t)), layer(swept(ECG[2], t), 'active'),
     ...stat('HR', '72', 0, 84), layer(T.text('BPM', 0, 109), 'idle'),
     ...stat('SPO2', '98%', 46, 84),
     ...stat('TEMP', '36.6', 92, 84), layer(T.text('°C', 131, 100), 'idle'),
@@ -190,7 +203,8 @@ export const bioSensor: WidgetPreset = {
       // the rib under the outline; outline and stem as one site set with a 1.7-cell gap, so the sharp tip and the stem join keep one dot each
       layer(path(LEAF.rib, 2.6, 1.1), 'idle'), layer(T.dots([...path(LEAF.outline, 2, 1.35, true).sites ?? [], ...path(LEAF.stem, 2, 1.35).sites ?? []], 1.35, undefined, 1.7)),
       layer(T.text('MOISTURE', 0, 110), 'idle'), layer(T.big('64%', 0, 121, { lattice: 1.6 })),
-      layer(T.text('LIGHT', 106, 110), 'idle'), layer(T.big('420', 106, 121, { lattice: 1.6 })), layer(T.text('LUX', 106, 135), 'idle'),
+      // the unit sits on the value line, so both readouts are two rows deep
+      layer(T.text('LIGHT', 94, 110), 'idle'), layer(T.big('420', 94, 121, { lattice: 1.6 })), layer(T.text('LUX', 143, 124, { align: 'right' }), 'idle'),
     ]
   },
 }
@@ -215,19 +229,28 @@ export const wordPlay: WidgetPreset = {
 // ── 09 ─────────────────────────────────────────────────────────────────────────────
 const SALES: Pt[] = [[5, 93], [10, 89], [15, 88], [19, 84], [25, 88], [29, 86], [34, 82], [40, 74], [45, 78], [53, 88], [58, 86], [64, 79], [71, 71], [78, 75], [86, 79], [92, 73], [100, 67], [105, 62], [110, 57], [115, 63], [121, 72], [126, 77], [131, 80], [135, 78], [139, 72]]
 const PEAK = 18, SALES_KNOTS = [3, 7, 9, 12, 14, 21, 23, 24]
+/** Every TICK_S seconds the line takes a new point on the right (the series cycles) and two more visitors come in. */
+const TICK_S = 3
+let retailMemo: { key: string; layers: Layer[] } | undefined
 export const retailAnalytics: WidgetPreset = {
-  id: 'retail-analytics', name: '09 Retail Analytics', group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'retail-analytics', name: '09 Retail Analytics', group: 'chart', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
   defaults: { peak: 56 },
-  layers: ({ data }) => {
-    const pts = SALES.map(([x, y], i) => [x, i === PEAK ? 77 - data.peak * .36 : y] as Pt), [px, py] = pts[PEAK], knots = T.dots(SALES_KNOTS.map(i => pts[i]), 2.2)
-    return [
-      layer(T.big('1.28K', 0, 18, { lattice: 2 })), layer(T.text('LIVE', 140, 24, { align: 'right' }), 'active'),
+  layers: ({ t, data }) => {
+    const step = Math.floor(Math.max(0, t) / TICK_S), key = `${step}|${data.peak}`
+    if (retailMemo?.key === key) return retailMemo.layers
+    const src = (i: number) => (i + step) % SALES.length
+    const pts = SALES.map(([x], i) => [x, src(i) === PEAK ? 77 - data.peak * .36 : SALES[src(i)][1]] as Pt)
+    const top = pts.findIndex((_, i) => src(i) === PEAK), [px, py] = pts[top], knots = T.dots(pts.filter((_, i) => SALES_KNOTS.includes(src(i))), 2.2)
+    const layers = [
+      layer(T.big(`${((1280 + 2 * step) / 1000).toFixed(2)}K`, 0, 18, { lattice: 2 })), layer(T.text('LIVE', 140, 24, { align: 'right' }), 'active'),
       layer(T.text('VISITORS', 0, 44), 'idle'),
       // the line clears the knots and the peak ring, so no knot or ring dot sits on a line dot
       layer(T.knockout(T.knockout(path(pts, 3.3, 1.5), knots, 2.9), [[px, py]], 6.4)), layer(knots),
       layer(T.dotRing(px, py, 4.6, { spacing: 1, size: 1.1 }), 'active'), layer(T.dots([[px, py]], 3.6), 'active'),
       layer(T.text('SALES', 4, 126), 'idle'), layer(T.big('+$23%', 143, 123, { ...VALUE, align: 'right' }), 'active'),
     ]
+    retailMemo = { key, layers }
+    return layers
   },
 }
 
@@ -240,7 +263,7 @@ export const entertainment: WidgetPreset = {
   layers: ({ t }) => [
     layer(T.sprite(SPEAKER, 133, 0)),
     ...GROOVES.map(([r, n, tone, size], i) => layer(ringSlots(VINYL[0], VINYL[1], r * (1 + .025 * Math.sin(t * 1.6 - i * .7)), n, i * .5 + t * .15 * (i % 2 ? 1 : -1), size), tone)),
-    layer(T.dots([VINYL], 5), 'active'),
+    layer(T.dots([VINYL], 5, 'NOW PLAYING'), 'active'),
     layer(T.dotTri(27.2, 126, 5, { dir: 'left', bar: true }), 'value'),
     layer(T.dotRing(69, 126, 14.5, { spacing: 1.2, size: 1.1 }), 'active'), layer(T.dotTri(74, 126, 5), 'active'),
     layer(T.dotTri(110.8, 126, 5, { bar: true }), 'value'),

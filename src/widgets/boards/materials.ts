@@ -30,7 +30,7 @@ import { dexp, dpow } from '../../engine/noise/dmath'
 import { hash01 } from '../../engine/math'
 import type { Field, Layer } from '../../engine/types'
 import { lightSource } from '../../site/light'
-import { TILE, layer, layoutFor, type WidgetPreset } from '../types'
+import { TILE, layer, type WidgetPreset } from '../types'
 import { cellToLattice15, cite, DEG, frameMemo, lightId, own, L15, LG15, LIGHT_DEFAULTS, matLight, mod, once, pad2, rasterLayer, scratch, T, TAU, tile, toCard15, toLattice15, valuedSites, type Box, type Pt } from './materials-shared'
 import { matLens, matWindow, glassHooks } from './materials-glass'
 import { matPool, matRust, poolHooks } from './materials-live'
@@ -429,20 +429,18 @@ export const matGrille: WidgetPreset = {
 
 // ── 04 MARBLE ─ the time, cut into marble, read by raking light ────────────────────────────────────────
 // A chamfered plaque on the 1.5 lattice, Perlin turbulence-sine marble (veins a band lower), HH MM engraved as a
-// V-groove (lit wall / dark wall under a light raked to ≤ 18°), the year below. The colon is the live red.
+// V-groove (lit wall / dark wall under a light raked to ≤ 18°). The colon is the live red.
 const PLAQUE = sdfBox(LG15, 48, 48, 44, 36, 4)
 const plaqueHeight = once(() => heightRaster(PLAQUE, { shape: 'linear', width: 2, height: 1.5 }, LG15))
 const marbleBody = once(() => marble(LG15, { period: 20, sharp: 2.5 }))
-const ROMAN: [number, string][] = [[1000, 'M'], [900, 'CM'], [500, 'D'], [400, 'CD'], [100, 'C'], [90, 'XC'], [50, 'L'], [40, 'XL'], [10, 'X'], [9, 'IX'], [5, 'V'], [4, 'IV'], [1, 'I']]
-export const roman = (n: number) => { let s = ''; for (const [v, r] of ROMAN) while (n >= v) { s += r; n -= v } return s }
-const HERO_ROW = 50, YEAR_ROW = 61
+const HERO_ROW = 50
 /** The hero's lattice: 2 (smooth `00:00` is 58 dots wide, 116 cells: the plan's 2.5 would overrun the 132-cell plaque). */
 const HERO_K = 2
-export interface Engraving { key: string; n: NormalRaster; ao: Raster; hero: Raster; year: Raster; colon: Pt[]; clear: Uint8Array }
+export interface Engraving { key: string; n: NormalRaster; ao: Raster; hero: Raster; colon: Pt[]; clear: Uint8Array }
 const engravings = new Map<string, Engraving>()
-/** The engraving of one minute (LRU of 2): height, normals and AO of the plaque with `HH MM` and the year cut in. */
-export function engraving(hh: string, mm: string, year: number): Engraving {
-  const key = `${hh}:${mm}|${year}`, hit = engravings.get(key)
+/** The engraving of one minute (LRU of 2): height, normals and AO of the plaque with `HH MM` cut in. */
+export function engraving(hh: string, mm: string): Engraving {
+  const key = `${hh}:${mm}`, hit = engravings.get(key)
   if (hit) { engravings.delete(key); engravings.set(key, hit); return hit }
   const opts = { lattice: HERO_K, smooth: true, mask: true, align: 'center' as const }
   const full = cardMask(T.big(`${hh}:${mm}`, 72, HERO_ROW, opts), TILE), cut = cardMask(T.big(`${hh} ${mm}`, 72, HERO_ROW, opts), TILE)
@@ -452,8 +450,7 @@ export function engraving(hh: string, mm: string, year: number): Engraving {
   const midY = pts.reduce((s, p) => s + p[1], 0) / Math.max(1, pts.length)
   const centroid = (q: Pt[]): Pt => [q.reduce((s, p) => s + p[0], 0) / q.length, q.reduce((s, p) => s + p[1], 0) / q.length]
   const top = pts.filter(p => p[1] < midY), bottom = pts.filter(p => p[1] >= midY), colon = top.length && bottom.length ? [centroid(top), centroid(bottom)] : []
-  const hero = toLattice15(cut), year15 = rasterize(layoutFor(LG15).text(`ANNO ${roman(year)}`, 48, YEAR_ROW, { align: 'center' }), LG15)
-  // the year is a hairline (1-dot strokes): drawn as void, not relief, so its AO doesn't swallow the gaps between letters
+  const hero = toLattice15(cut)
   const h = stackHeights(plaqueHeight(), heightRaster(insetDistance(hero), { shape: 'linear', width: 1.6, height: -1.8 }))
   // the colon's sites sit over the plaque lattice: clear the stone under them (sites don't hide lattice dots)
   const clear = new Uint8Array(LG15.cols * LG15.rows)
@@ -463,7 +460,7 @@ export function engraving(hh: string, mm: string, year: number): Engraving {
     const ja = Math.max(0, Math.floor((y - 3 + .5) / L15 - .5)), jb = Math.min(LG15.rows - 1, Math.ceil((y + 3 + .5) / L15 - .5))
     for (let j = ja; j <= jb; j++) for (let i = ia; i <= ib; i++) if (Math.hypot(toCard15(i) - x, toCard15(j) - y) < 3) clear[j * LG15.cols + i] = 1
   }
-  const e: Engraving = { key, n: normalRaster(h), ao: ambientOcclusion(h, { radius: 2, strength: .7 }), hero, year: year15, colon, clear }
+  const e: Engraving = { key, n: normalRaster(h), ao: ambientOcclusion(h, { radius: 2, strength: .7 }), hero, colon, clear }
   engravings.set(key, e)
   if (engravings.size > 2) engravings.delete(engravings.keys().next().value!)
   return e
@@ -471,9 +468,9 @@ export function engraving(hh: string, mm: string, year: number): Engraving {
 const marbleScratch = scratch(4, LG15)
 /** Cells i … end of one plaque row: the exposed, veined, occluded body, or the polish a step up where the highlight is. */
 function marbleRow(e: Engraving, M: Float32Array, D: Float32Array, S: Float32Array, B: Float32Array, P: Float32Array, gain: number, i: number, end: number): void {
-  const N = e.n.mask, Y = e.year.data, C = e.clear, A = e.ao.data
+  const N = e.n.mask, C = e.clear, A = e.ao.data
   for (; i <= end; i++) {
-    if (N[i] < .5 || Y[i] || C[i]) continue // the year: a hairline cut in its own shadow (void letters)
+    if (N[i] < .5 || C[i]) continue
     const b = Math.min(1, Math.max(0, D[i] - .1) * gain) * (.55 + .45 * M[i]) * A[i]
     if (S[i] >= .35 && b >= .06) P[i] = Math.min(1, b + .25)
     else B[i] = b
@@ -499,14 +496,15 @@ export const matMarble: WidgetPreset = {
   credit: { by: ['Ken Perlin'], title: 'An image synthesizer (1985)', source: 'https://doi.org/10.1145/325165.325247', note: 'the turbulence-sine marble' },
   defaults: { ...LIGHT_DEFAULTS },
   layers: ctx => {
-    const now = new Date(), e = engraving(pad2(now.getHours()), pad2(now.getMinutes()), now.getFullYear())
+    const now = new Date(), e = engraving(pad2(now.getHours()), pad2(now.getMinutes()))
     const L = matLight(ctx, { lattice: L15, torch: { height: 14, falloff: 120 }, rake: true }), on = ctx.reducedMotion || mod(ctx.t, 1) < .5
     // the frame repeats between the colon's blinks while the light holds still
     return marbleMemo(`${e.key}|${lightId(L)}|${on}`, () => {
-      const { body, polish } = marbleLit(e, L)
+      const { body, polish } = marbleLit(e, L), stone = surfaceLayer([[own(body), MATTE_BANDS], [own(polish), 'value']], L15)
+      stone.field.text = e.key // the time is relief, not glyphs: name it for describe() and the card's accessible name
       return [
         cite('PERLIN 1985'),
-        surfaceLayer([[own(body), MATTE_BANDS], [own(polish), 'value']], L15),
+        stone,
         ...(on && e.colon.length ? [layer(T.dots(e.colon, 2), 'active')] : []),
       ]
     })
@@ -605,22 +603,34 @@ function grow3(src: Float32Array, dst: Float32Array, r: number, c0: number, c1: 
     dst[r * cols + c] = m
   }
 }
-/** Lattice cells i … end: each day's chip as today (red), past (honed, or polished under the sheen) or future. */
-function chipTones(chip: Int16Array, today: number, spec: Float32Array, past: Float32Array, polished: Float32Array, future: Float32Array, now1: Float32Array, i: number, end: number): void {
+/**
+ * Lattice cells i … end: each day's chip as today (red), past (honed, or polished under the sheen) or future. The
+ * previewed day sits a step up: a past chip polished all over, a future chip in the past chips' tone.
+ */
+function chipTones(chip: Int16Array, today: number, preview: number, spec: Float32Array, past: Float32Array, polished: Float32Array, future: Float32Array, now1: Float32Array, i: number, end: number): void {
   for (; i <= end; i++) {
     const d = chip[i]
     if (d < 0) continue
     if (d === today) now1[i] = 1
-    else if (d < today) { if (spec[i] > .3) polished[i] = 1; else past[i] = .75 }
+    else if (d < today) { if (d === preview || spec[i] > .3) polished[i] = 1; else past[i] = .75 }
+    else if (d === preview) past[i] = .75
     else future[i] = .5
   }
 }
 const TZ_BOX: Box = [SLAB.x0 - 4, SLAB.y0 - 4, SLAB.x1 - SLAB.x0 + 8, SLAB.y1 - SLAB.y0 + 8]
+/** The day the preview pad points at, in words (said once for the pad: its y axis adds nothing). */
+function tzDayText(_v: number, data: Record<string, number>, key: string): string {
+  if (key !== 'px') return ''
+  const now = new Date(), m = monthOf(now.getFullYear(), now.getMonth())
+  const d = chipAt(m, TZ_BOX[0] + (data.px ?? 0) * TZ_BOX[2], TZ_BOX[1] + TZ_BOX[3] - (data.py ?? 1) * TZ_BOX[3])
+  const day = d >= 0 ? d : now.getDate() - 1
+  return `${WEEKDAY[(day + m.offset) % 7]} ${day + 1}${day === now.getDate() - 1 ? ', today' : ''}`
+}
 const tzScratch = scratch(5, LG15)
 export const matTerrazzo: WidgetPreset = {
   ...tile, id: 'mat-terrazzo', name: 'Terrazzo', clock: true,
   defaults: { ...LIGHT_DEFAULTS, px: 0, py: 1 },
-  controls: [{ key: 'px', keyY: 'py', kind: 'xy', box: TZ_BOX, label: 'Preview a day' }],
+  controls: [{ key: 'px', keyY: 'py', kind: 'xy', box: TZ_BOX, label: 'Preview a day', valueText: tzDayText }],
   layers: ctx => {
     const now = new Date(), m = monthOf(now.getFullYear(), now.getMonth()), today = now.getDate() - 1
     const L = matLight(ctx, { lattice: L15, torch: { height: 30, falloff: 140 } })
@@ -637,7 +647,7 @@ function terrazzoLayers(m: Month, today: number, preview: number, L: Light): Lay
   const [spec0, past0, polished0, future0, now10] = tzScratch()
   phong(m.pillow, L, [0, 0, 1], 40, { into: spec0 })
   for (const r of [past0, polished0, future0, now10]) { r.data.fill(0); r.bounds = m.pillow.bounds }
-  for (let r = 0; r < LG15.rows; r++) chipTones(m.chip, today, spec0.data, past0.data, polished0.data, future0.data, now10.data, r * LG15.cols, (r + 1) * LG15.cols - 1)
+  for (let r = 0; r < LG15.rows; r++) chipTones(m.chip, today, preview, spec0.data, past0.data, polished0.data, future0.data, now10.data, r * LG15.cols, (r + 1) * LG15.cols - 1)
   const [spec, past, polished, future, now1] = [spec0, past0, polished0, future0, now10].map(own)
   const sheen = sample(spec), N = TILE.cols - 1
   const agg = (lift: number): Field => (u, v) => (sheen(((u * N + .5) / L15 - .5) / (LG15.cols - 1), ((v * N + .5) / L15 - .5) / (LG15.rows - 1)) > .3 ? 1 : lift)
@@ -663,6 +673,6 @@ export const materialsSources = [lightSource]
 /** The board's internals, for the checks (`scripts/materials.ts`). */
 export const materialsHooks = {
   LOOM, LOOM_ORDER, loomAt, loomDraft, loomCloth, drawdownOf, woven, KNOB_ARC, KNOB_CARD, knobSpec, grilleHoles, grillePlate, grilleSurface, grilleTarget, grilleVU, livePeak,
-  engraving, marbleLit, monthOf, chipAt, roman, PANEL, LG15, toCard15,
+  engraving, marbleLit, monthOf, chipAt, PANEL, LG15, toCard15,
   ...glassHooks, ...poolHooks, ...wearHooks,
 }

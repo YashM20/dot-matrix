@@ -44,8 +44,8 @@ export function dotRing(el: HTMLElement | null) {
 }
 
 /** The header's dotted pills (DISPLAY ▾, THEME ▾, CLACK) are first-load code, which keeps this module out: the idle
- * command layer rings them, and again when the skin changes (CLACK comes and goes). Until then they keep the browser's
- * dotted border (ring.css). */
+ * command layer rings them, and again when the skin changes (CLACK comes and goes). Until then they show their text
+ * and caret only; the ring fades in when it arrives (ring.css). */
 export function ringHeader() {
   document.querySelectorAll<HTMLElement>('.topbar .dot-ring').forEach(el => { dotRing(el) })
 }

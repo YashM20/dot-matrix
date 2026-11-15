@@ -69,6 +69,13 @@ export async function liveChecks(assert: Assert) {
   const frame = () => liveBoard.map(p => JSON.stringify(sampleLayers(withChrome(p)({ t: 0, data: p.defaults ?? {} }), p.grid, p.style, dot480))).join()
   assert('live board: every card declares its source status key in its defaults (the board only passes declared keys)', liveBoard.every(p => ['wxStatus', 'npStatus', 'ghStatus'].some(k => p.defaults?.[k] === 0)))
   assert('live board: fixture frames are identical across samples (goldens never see the network)', frame() === frame())
+  // #226: the fixture reads as SAMPLE (not OFFLINE beside "PLAYING"), a screen reader hears what it means, no internal source words
+  {
+    const texts = liveBoard.map(p => withChrome(p)({ t: 0, data: p.defaults ?? {} }).map(l => l.field.text ?? ''))
+    assert('live footer: the fixture says SAMPLE, read as "offline, showing sample data"; no OFFLINE word, no PUSH source',
+      texts.every(ts => ts.includes('offline, showing sample data') && !ts.includes('OFFLINE')) && !texts.flat().includes('PUSH'), texts.map(ts => ts.slice(-2).join(' / ')).join('; '))
+    assert('live contributions: STREAK and BEST carry the same unit', ['TODAY', 'STREAK', 'BEST'].every(k => texts[2].includes(k)) && texts[2].filter(s => /^\d+D$/.test(s)).length === 2, texts[2].join(' | '))
+  }
 
   // backoff: doubles from base, capped, jitter in [0.5, 1]
   const seq = [0, 1, 2, 3, 20].map(n => backoff(n, 1, { baseMs: 1000, maxMs: 30_000 }))

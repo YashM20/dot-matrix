@@ -607,7 +607,8 @@ The HTML chrome (sheets, menus, pills, tabs) animates with these durations only 
 | `--dur-in` | 0 ms | hover and press in: instant (the resting state carries the transition) |
 | `--dur-out` | 150 ms | hover out, press, small fades |
 | `--dur-move` | 220 ms | a sheet or panel following a drag or snapping to a stop |
-| `--dur-enter` | 280 ms | a sheet arriving; a display powering off |
+| `--dur-enter` | 280 ms | a sheet arriving; a display powering off; the header coming back on a scroll up |
+| `--dur-exit` | 200 ms | the header leaving as the page scrolls down: leaving is quicker than arriving |
 | `--ease` | `cubic-bezier(.2, .8, .2, 1)` | chrome easing |
 | `--dur-tip` | 400 ms | the first tooltip in a group waits this long; the next ones show at once |
 | `--dur-wipe` | 720 ms | the theme switch: the halftone front crossing the screen from the pressed control (Theme › Picker) |
@@ -701,7 +702,7 @@ The HTML chrome has one component per job; a new control reuses one of these ins
 
 | Component | Class(es) | Used by |
 |---|---|---|
-| **pill** | outlined pill: `.board-tabs button`, `.skin-menu-btn`, `.intro-line button`, `.ed-textbtn`, `.ed-row-btns button`; capsule pill: `.pill` + `.pill-btn` (`PillBar`); dotted pill `.dot-ring` (DISPLAY ▾, THEME ▾, CLACK, the CONTRAST: MORE and shared-link switches): a stadium of 1 px dots on the pixel grid, every other pixel of the rasterised outline (`src/components/dotRing.ts`, `ring.css`; the header's pills get it from the idle command layer (`ringHeader`), with the browser's dotted border until then), in `--ring-c`, a step up on hover and focus; on and off differ only in the ON / OFF word | board picker, DISPLAY ▾, THEME ▾, CLACK, the theme switches, the widget page bars, editor actions |
+| **pill** | outlined pill: `.board-tabs button`, `.skin-menu-btn`, `.intro-line button`, `.ed-textbtn`, `.ed-row-btns button`; capsule pill: `.pill` + `.pill-btn` (`PillBar`); dotted pill `.dot-ring` (DISPLAY ▾, THEME ▾, CLACK, the CONTRAST: MORE and shared-link switches): a stadium of 1 px dots on the pixel grid, every other pixel of the rasterised outline (`src/components/dotRing.ts`, `ring.css`; the header's pills get it from the idle command layer (`ringHeader`): until then they show text and caret only, then the ring fades in over `--dur-out`, at once under reduced motion), in `--ring-c`, a step up on hover and focus; on and off differ only in the ON / OFF word | board picker, DISPLAY ▾, THEME ▾, CLACK, the theme switches, the widget page bars, editor actions |
 | **segmented** | `.ed-seg` (`role=radio` items; the editor's), `.theme-seg` (the THEME picker's, same look); text tabs `.view-tabs`, `.board-groups`, `.ed-tabs` | editor options; views, groups and panels |
 | **sheet** | `Sheet` (`.sheet` › `.sheet-rest` + `.sheet-panel` › `.sheet-grab`, `.sheet-head`, `.sheet-body`): a scroll-snap sheet; the five-dot grab handle is shared with `.pal-grab`, `.ed-sheet-grab`, `.xr-grip` | BOARDS, TOOLS; the phone ⌘K, the editor and X-ray sheets reuse its handle and surface |
 | **menu** | the raised layer (`.skin-menu`, `.theme-pop`, `.ed-menu`, `.wp-more`, `.dot-card-menu`, `.pal`, `.sheet-panel`) with rows (`.skin-menu button`, `.ed-menu button`, `.wp-more button`, `.pal-item`, sheet rows): `--radius-panel` outside, `--radius-ctl` rows, `--wash-hover` / `--wash-press` | DISPLAY ▾, THEME, editor menus, widget MORE, a card's MORE, ⌘K, sheets |

@@ -10,7 +10,6 @@ import type { WidgetPreset } from '../widgets/types'
 import { duration } from '../engine/motion'
 import type { DotCanvasProps } from './DotCanvas'
 import { pick, useLiveData } from '../data/useLiveData'
-import { HiveStart } from './game/HiveStart'
 import { useBlurbs } from './useBlurbs'
 import { LoadBoundary, LoadFailed } from './LoadBoundary'
 
@@ -18,6 +17,10 @@ import { LoadBoundary, LoadFailed } from './LoadBoundary'
 const loadAudio = () => import('../audio/AudioCards')
 const AudioCards = lazy(() => loadAudio().then(m => ({ default: m.AudioCards })))
 const AUDIO_BOARDS = new Set(['instrument', 'scope'])
+// the levels board's PRESS START button: its own chunk, fetched alongside the board chunk. It has no Suspense of its
+// own, so the board waits for it and shows whole (the grid never shifts down when the button arrives)
+const loadHive = () => import('./game/HiveStart')
+const HiveStart = lazy(() => loadHive().then(m => ({ default: m.HiveStart })))
 
 /** Total exit window for a view of cards: the last card on the diagonal finishes by then. */
 export const VIEW_EXIT_MS = 420
@@ -62,6 +65,7 @@ function seedShared(board: BoardDef): ControlPatch {
 /** A board by id: its chunk loads on first open (`widgets/manifest`); the title holds the place meanwhile. */
 export function Board({ id, leaving = false }: { id: string; leaving?: boolean }) {
   if (AUDIO_BOARDS.has(id)) void loadAudio() // fetched alongside the board chunk, not after it
+  if (id === 'levels') void loadHive()
   const title = <BoardTitle title={boardMeta(id)?.title ?? ''} />
   return <LoadBoundary fallback={<section className="board-view">{title}<LoadFailed what="This board" /></section>}>
     <Suspense fallback={<section className="board-view" aria-busy="true">{title}</section>}>

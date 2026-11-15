@@ -18,6 +18,7 @@ import { LIGHT_DEFAULTS, matGrille, matKnob, matLight, matLoom, materialsBoard, 
 import { freezeWallClock } from '../lib/freeze'
 import { fmtLoaded, loadOf, medianLoaded, onceLoaded, spin as refLoop, spinMs, type Loaded } from '../lib/load'
 import { type Assert, same, DEG, type MaterialsOptions } from './util'
+import { refineChecks } from './refine'
 
 /** Cards with no red in their pristine run (M §4.2: the pool's pebble only appears when one is dropped). */
 const NO_ACCENT_AT_REST = new Set(['mat-pool'])
@@ -87,9 +88,9 @@ export async function boardChecks(assert: Assert, load: number, opts: MaterialsO
     assert('materials board: frame ≤ 4 ms (median, warm, × load), no pointer and a hovering torch', rows.every(r => within(r.rest, 4) && within(r.hover, 4)), rows.map(r => `${r.id} ${fmtLoaded(r.rest)}/${fmtLoaded(r.hover)}`).join(', '))
     assert('materials board: cold first frame ≤ 30 ms (× load)', !!coldMod && rows.every(r => within(r.cold, 30)), rows.map(r => `${r.id} ${fmtLoaded(r.cold, 1)}`).join(', ') + (coldMod ? '' : ' (no fresh module graph)'))
     // a rebake is one-shot work: the best of 3 cache misses (minutes 32–34; contention only ever adds time), each with its own load
-    const H = materialsHooks, rb = atClock(() => ['32', '33', '34'].map(mm => onceLoaded(() => H.engraving('12', mm, 2026))).reduce((a, b) => (b.ms / b.load < a.ms / a.load ? b : a)))
-    const first = H.engraving('12', '34', 2026); H.engraving('12', '35', 2026); const keep = H.engraving('12', '34', 2026) === first; H.engraving('12', '36', 2026); H.engraving('12', '37', 2026)
-    assert('marble: the engraving LRU keeps 2', keep && H.engraving('12', '34', 2026) !== first)
+    const H = materialsHooks, rb = atClock(() => ['32', '33', '34'].map(mm => onceLoaded(() => H.engraving('12', mm))).reduce((a, b) => (b.ms / b.load < a.ms / a.load ? b : a)))
+    const first = H.engraving('12', '34'); H.engraving('12', '35'); const keep = H.engraving('12', '34') === first; H.engraving('12', '36'); H.engraving('12', '37')
+    assert('marble: the engraving LRU keeps 2', keep && H.engraving('12', '34') !== first)
     assert('marble: rebake on a minute change ≤ 10 ms', within(rb, 10), fmtLoaded(rb))
     if (opts.bench) {
       console.log('  materials --bench (ms):  card            cold    warm   hover')
@@ -161,7 +162,7 @@ export async function boardChecks(assert: Assert, load: number, opts: MaterialsO
   }
   // ── marble ──
   {
-    const e = H.engraving('09', '41', 2026), n = e.n
+    const e = H.engraving('09', '41'), n = e.n
     let ok = true, detail = ''
     for (const az of [90, 270]) {
       const L = rake(lightDir(az * DEG, 40 * DEG)) as Vec3, { body, polish } = H.marbleLit(e, L)
@@ -199,6 +200,7 @@ export async function boardChecks(assert: Assert, load: number, opts: MaterialsO
     assert('terrazzo: past/future split follows the date (frozen 2026-01-01 → 0 past)', p1 === 0 && p15 > 0, `past dots: Jan 1 ${p1}, Jan 15 ${p15}`)
   }
   m2CardChecks(assert, frameOf)
+  refineChecks(assert, frameOf)
 }
 
 type FrameFn = (p: WidgetPreset, t: number, pointers?: Pointer[], data?: Record<string, number>) => ReturnType<typeof sampleLayers>
