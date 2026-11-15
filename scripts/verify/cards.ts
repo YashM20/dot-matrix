@@ -45,4 +45,11 @@ export function cardChecks(assert: Assert) {
     const heavy = STILL_LEAD.flatMap(id => { const p = widgetById(id); if (!p) return [`${id} missing`]; const n = dotsAt(p, 0).length; return p.animated || n > 4000 ? [`${id}: ${p.animated ? 'animated' : ''} ${n} dots`] : [] })
     assert("cards: ALL's first row is still and light (no animated card, at most 4,000 dots each)", STILL_LEAD.length >= 4 && !heavy.length, heavy.join(', '))
   }
+  // MICRO UI settings (#247): the Bluetooth and Sound switches are toggles; the resting frame is the reference's (off, on)
+  {
+    const p = widgetById('settings')!, frame = (data: Record<string, number>) => JSON.stringify(sampleLayers(withChrome(p)({ t: 0, data }), p.grid, p.style, theme))
+    const keys = (p.controls ?? []).filter(c => c.kind === 'toggle').map(c => c.key), rest = { ...p.defaults }
+    assert('cards: settings has toggles for Bluetooth and Sound, off and on at rest, and flipping one moves its knob',
+      keys.join() === 'bluetooth,sound' && rest.bluetooth === 0 && rest.sound === 1 && frame({ ...rest, bluetooth: 1 }) !== frame(rest) && frame({ ...rest, sound: 0 }) !== frame(rest), keys.join())
+  }
 }
