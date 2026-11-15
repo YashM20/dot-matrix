@@ -5,6 +5,7 @@ import { boardFromPath } from '../../src/site/meta'
 import { PLACES, placeView, urlForView, viewFromUrl, type ViewState } from '../../src/site/views'
 import { matches, readFilters, writeFilters, ROWS, ORDERED, FEATURED, MAX_QUERY } from '../../src/components/browse/data'
 import { readFileSync } from 'node:fs'
+import { ringDots } from '../../src/components/dotRing'
 import type { Assert } from '../lib/check'
 
 export function uxChecks(assert: Assert) {
@@ -90,5 +91,21 @@ export function uxChecks(assert: Assert) {
     const css = readFileSync('src/site/mobile/phone.css', 'utf8').replace(/\/\*[\s\S]*?\*\//g, '')
     const bare = [...css.matchAll(/(^|[{}])\s*([^{}]*)\{[^}]*font-size:\s*0[;\s}]/g)].map(m => m[2].trim()).filter(sel => sel.split(',').some(s => /(^|\s)\.live$/.test(s.trim()) && !/\.topbar\s+\.live$/.test(s.trim())))
     assert('ux: the phone LIVE fold stays in the top bar (the footer keeps its LIVE word)', !bare.length, bare.join(' | '))
+  }
+  // the dotted pills and switches (src/components/dotRing.ts): their round ends were ragged (the browser's `dotted` border
+  // spreads dots along the curve, between pixels). Every size in use and a run of widths: whole pixels inside the box, on
+  // all four sides, no two dots touching (not even at a corner), and both straight runs one dot every 2 px
+  {
+    const bad: string[] = []
+    for (const h of [24, 28, 44]) for (let w = h; w <= h + 260; w += 7) {
+      const d = ringDots(w, h), key = new Set(d.map(([x, y]) => `${x},${y}`))
+      const inBox = d.every(([x, y]) => Number.isInteger(x) && Number.isInteger(y) && x >= 0 && y >= 0 && x < w && y < h)
+      const sides = d.some(([x]) => x === 0) && d.some(([x]) => x === w - 1) && d.some(([, y]) => y === 0) && d.some(([, y]) => y === h - 1)
+      const touch = d.some(([x, y]) => [[1, 0], [0, 1], [1, 1], [1, -1]].some(([dx, dy]) => key.has(`${x + dx},${y + dy}`)))
+      const run = (y: number) => d.filter(([x, yy]) => yy === y && x >= h / 2 && x < w - h / 2).map(([x]) => x).sort((a, b) => a - b)
+      const even = [run(0), run(h - 1)].every(r => r.every((x, i) => !i || x - r[i - 1] === 2))
+      if (!d.length || !inBox || !sides || touch || !even) bad.push(`${w}×${h}${inBox ? '' : ' off-box'}${sides ? '' : ' short'}${touch ? ' touching' : ''}${even ? '' : ' uneven'}`)
+    }
+    assert('ux: the dotted pill outline is whole pixels, round on both ends, no dots touching, the straight runs even', !bad.length, bad.slice(0, 6).join(', '))
   }
 }

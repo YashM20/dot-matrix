@@ -21,6 +21,7 @@ import { ACCENTS, type AccentChoice, type AccentId, type Scheme, type SchemePref
 import { resolveScheme, setContrast, setTheme } from '../../site/theme/theme'
 import { useTheme } from '../../site/theme/useTheme'
 import { dropUrlParams, switchTheme } from '../../site/theme/moment'
+import { dotRing } from '../dotRing'
 import { setShareTheme, shareTheme, subscribeShareTheme } from '../../site/theme/share'
 import { CARD_SIZE_LABELS, CARD_SIZE_LINES, CARD_SIZES, cardSize, setCardSize, subscribeCardSize, type CardSize } from '../../site/cards'
 import './picker.css'
@@ -83,11 +84,11 @@ function ThemeSwitches() {
   const t = useTheme(), share = useSyncExternalStore(subscribeShareTheme, shareTheme, () => false)
   return <>
     {/* CONTRAST: MORE: on while the OS asks for it too (then the OS decides, and the switch says so) */}
-    <button type="button" className="theme-contrast" role="switch" aria-checked={t.more} aria-disabled={t.osMore || undefined}
+    <button ref={dotRing} type="button" className="theme-contrast dot-ring" role="switch" aria-checked={t.more} aria-disabled={t.osMore || undefined}
       onClick={() => { if (t.osMore) return; dropUrlParams(['contrast']); setContrast(t.contrast === 'more' ? 'system' : 'more') }}>
       <span>Contrast: more</span><b>{t.osMore ? 'ON · SYSTEM' : t.more ? 'ON' : 'OFF'}</b>
     </button>
-    <button type="button" className="theme-share" role="switch" aria-checked={share} onClick={() => setShareTheme(!share)}>
+    <button ref={dotRing} type="button" className="theme-share dot-ring" role="switch" aria-checked={share} onClick={() => setShareTheme(!share)}>
       <span>Shared links keep my theme</span><b>{share ? 'ON' : 'OFF'}</b>
     </button>
   </>

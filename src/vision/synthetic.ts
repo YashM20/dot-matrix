@@ -32,16 +32,20 @@ const seg = (px: number, py: number, ax: number, ay: number, bx: number, by: num
 }
 
 /** Is (x, y) (pixels) on the hand at `pose`? `S` = hand size in pixels. Returns a shade 0.8..1 or 0. */
+/** Middle, ring and little fingers: x offset and length, in hand sizes. */
+const FINGERS: readonly (readonly [number, number])[] = [[-.04, .62], [.13, .56], [.28, .44]]
 export function handAt(x: number, y: number, cx: number, cy: number, S: number, pinch: number): number {
   const dx = x - cx, dy = y - cy
   // palm
   if ((dx / (.36 * S)) ** 2 + (dy / (.4 * S)) ** 2 < 1) return .95 - .1 * (dy / S)
   // forearm down to the frame edge
   if (dy > 0 && Math.abs(dx + dy * .08) < .24 * S) return .85
+  // past every finger, the thumb and the ring (they span dx −.72 … .41 and dy −1.01 … .15 hand sizes, widths included):
+  // nothing else can be hit, so skip their distance tests
+  if (dy > .2 * S || dy < -1.1 * S || dx < -.85 * S || dx > .55 * S) return 0
   const fw = .085 * S, top = cy - .3 * S
   // middle, ring, little fingers (always up)
-  const fingers: [number, number][] = [[-.04, .62], [.13, .56], [.28, .44]]
-  for (const [ox, len] of fingers) if (seg(x, y, cx + ox * S, top, cx + ox * S * 1.15, top - len * S) < fw) return .9
+  for (const [ox, len] of FINGERS) if (seg(x, y, cx + ox * S, top, cx + ox * S * 1.15, top - len * S) < fw) return .9
   if (pinch < .5) {
     // index up, thumb out to the side
     if (seg(x, y, cx - .2 * S, top, cx - .25 * S, top - .58 * S) < fw) return .9
