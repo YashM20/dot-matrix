@@ -3,7 +3,7 @@
  * visible dot clear of its neighbours, across all their layers (scripts/touching.ts checks one site layer at a time).
  */
 import { sampleLayers } from '../../src/engine/sampler/gridSampler'
-import type { DotInstance } from '../../src/engine/types'
+import type { CellBounds, DotInstance, Layer } from '../../src/engine/types'
 import { widgetById, withChrome, type WidgetPreset } from '../../src/widgets'
 import { touchingPairs } from '../touching'
 import { theme, visible } from '../lib/stats'
@@ -17,7 +17,45 @@ const CLEAR = ['line-map', 'service', 'departures', 'ir-ripple', 'chart-bar', 'c
 const CINEMA = ['cinema-last-call', 'cinema-signal', 'cinema-sundown', 'cinema-upstairs', 'cinema-closer', 'cinema-witness', 'cinema-exit-14', 'cinema-keeper', 'cinema-encore']
 const dotsAt = (p: WidgetPreset, t: number): DotInstance[] => sampleLayers(withChrome(p)({ t, data: { ...p.defaults } }), p.grid, p.style, theme)
 
+/** Every text layer's box in card cells: plain text from its bounds, lattice text scaled from its origin, dot-site text from its sites. */
+export function textBoxes(layers: Layer[]): { text: string; box: CellBounds }[] {
+  return layers.flatMap(l => {
+    const text = l.field.text?.trim(), b = l.field.bounds
+    if (!text) return []
+    if (l.sites?.length) {
+      const r = (l.size ?? 1) / 2, xs = l.sites.map(p => p[0]), ys = l.sites.map(p => p[1])
+      return [{ text, box: [Math.min(...xs) - r, Math.min(...ys) - r, Math.max(...xs) + r, Math.max(...ys) + r] as CellBounds }]
+    }
+    if (!b) return []
+    if (!l.lattice) return [{ text, box: b }]
+    const [kx, ky] = Array.isArray(l.lattice) ? l.lattice : [l.lattice, l.lattice], [ox, oy] = l.origin ?? [0, 0]
+    return [{ text, box: [ox + b[0] * kx, oy + b[1] * ky, ox + (b[2] + 1) * kx - 1, oy + (b[3] + 1) * ky - 1] as CellBounds }]
+  })
+}
+const overlaps = (a: CellBounds, b: CellBounds) => a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3]
+/** Text on these cards never overlaps other text or leaves the card, at each listed time (the e-ink card runs one full refresh cycle). */
+const NO_TEXT_OVERLAP: [string, number[]][] = [
+  ['surface-eink', Array.from({ length: 22 }, (_, i) => i * .5)],
+  ...['departures', 'station-clock', 'platform', 'next-train', 'line-map', 'service'].map((id): [string, number[]] => [id, [0, 1.3, 3.7, 7.1, 8.05, 9, 61]]),
+]
+export function textOverlapChecks(assert: Assert) {
+  for (const [id, times] of NO_TEXT_OVERLAP) {
+    const p = widgetById(id)
+    if (!p) { assert(`cards: ${id} exists`, false); continue }
+    const bad = new Set<string>()
+    for (const t of times) {
+      const boxes = textBoxes(withChrome(p)({ t, data: { ...p.defaults } }))
+      boxes.forEach((a, i) => {
+        if (a.box[0] < 0 || a.box[1] < 0 || a.box[2] > p.grid.cols - 1 || a.box[3] > p.grid.rows - 1) bad.add(`${a.text} leaves the card at t = ${t}`)
+        boxes.slice(i + 1).forEach(b => { if (overlaps(a.box, b.box)) bad.add(`${a.text} / ${b.text} at t = ${t}`) })
+      })
+    }
+    assert(`cards: ${id} text boxes never overlap or leave the card (#215)`, !bad.size, [...bad].slice(0, 4).join('; '))
+  }
+}
+
 export function cardChecks(assert: Assert) {
+  textOverlapChecks(assert)
   for (const id of CLEAR) {
     const p = widgetById(id)
     if (!p) { assert(`cards: ${id} exists`, false); continue }

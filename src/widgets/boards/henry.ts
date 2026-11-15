@@ -33,12 +33,14 @@ const NUM: Record<string, string[]> = {
   ' ': ['...', '...', '...', '...', '...', '...', '...', '...'],
 }
 const bitsOf = (ch: string) => NUM[ch] ?? glyph(ch).map(row => row.map(b => (b ? '#' : '.')).join(''))
+/** `dotText` / `flapText` layout: `px`/`py` cells between dots, `gap` blank columns between glyphs, `font` the glyph rows (default the 6×8 numerals). */
+export interface DotTextOptions { px: number; py?: number; size: number; gap?: number; font?: (ch: string) => string[] }
 /**
  * Text as explicit dot sites: `px`/`py` cells between dots, `size` = dot size. Unlike a lattice
  * layer this keeps the reference's dot-to-gap ratio (big dots with clear air between them).
  */
-export function dotText(str: string, x: number, y: number, o: { px: number; py?: number; size: number; gap?: number; align?: 'left' | 'center' | 'right' }): LatticeField {
-  const { px, py = px, size, gap = 1 } = o, chars = [...str].map(bitsOf)
+export function dotText(str: string, x: number, y: number, o: DotTextOptions & { align?: 'left' | 'center' | 'right' }): LatticeField {
+  const { px, py = px, size, gap = 1, font = bitsOf } = o, chars = [...str].map(ch => font(ch))
   const cols = chars.reduce((n, g) => n + g[0].length, 0) + gap * (chars.length - 1), w = (cols - 1) * px
   let cx = o.align === 'center' ? x - w / 2 : o.align === 'right' ? x - w : x
   const sites: Pt[] = []
@@ -54,12 +56,12 @@ export function dotText(str: string, x: number, y: number, o: { px: number; py?:
  * the hinge by |cos(πφ)| (old top half falling, then new bottom half landing) and hide whatever it
  * covers. Returns `[faces, flap]`; the flap dims while it is steep, so the fold reads as depth.
  */
-export function flapText(cells: FlapCell[], x: number, y: number, o: { px: number; py?: number; size: number; gap?: number }): [LatticeField, LatticeField] {
-  const { px, py = px, size, gap = 1 } = o
+export function flapText(cells: FlapCell[], x: number, y: number, o: DotTextOptions): [LatticeField, LatticeField] {
+  const { px, py = px, size, gap = 1, font = bitsOf } = o
   const faces: Pt[] = [], flap: Pt[] = []
   let cx = x
   for (const { from, to, phase } of cells) {
-    const a = bitsOf(from), b = bitsOf(to), rows = b.length, hinge = y + ((rows - 1) / 2) * py
+    const a = font(from), b = font(to), rows = b.length, hinge = y + ((rows - 1) / 2) * py
     const fold = Math.abs(Math.cos(Math.PI * phase)), reach = (rows / 2) * py * fold
     b.forEach((row, r) => [...row].forEach((bit, c) => {
       const top = r < rows / 2, sy = y + r * py, sx = cx + c * px

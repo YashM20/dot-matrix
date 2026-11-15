@@ -22,6 +22,7 @@ import type { Field, GridConfig, Layer, Tone } from '../../engine/types'
 import { createSource, type Source } from '../../data/source'
 import { clackEnabled, createClack } from '../../media/clack'
 import { TAU, TILE, bounded, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { caption, footer } from '../captions'
 import { dotText } from './henry'
 
 const T = layoutFor(TILE)
@@ -151,6 +152,7 @@ export const surfaceGlyph: WidgetPreset = {
 
 // ── 03 E-INK: TRMNL 800×480, shown at 1/6 (133×80 pixels, one per card cell) ──
 const EINK = previewProfile(DEVICES['trmnl-800x480'], 1 / 6), EX = 5, EY = 24
+const EINK_STATUS_ROW = 118, EINK_FOOTER_ROW = 130
 const eink = createEinkSim(frameAt(EINK), DEVICES['trmnl-800x480'].physics, EINK.refresh)
 export const surfaceEink: WidgetPreset = {
   id: 'surface-eink', name: 'Surface E-ink', label: '03  E-INK', ...tile, defaults: { clockOffset: 0 },
@@ -170,10 +172,10 @@ export const surfaceEink: WidgetPreset = {
       spec('800X480'),
       bezel(EX - 3, EY - 3, EX + cols + 2, EY + rows + 2),
       panel,
-      // the status has its row to itself: PARTIAL 01/10 and FULL REFRESH are too wide to share it (#215)
-      layer(T.text(status, EX - 3, 118), view.phase === 'full' ? 'value' : 'idle'),
-      layer(T.text('1-BIT', EX - 3, 130), 'mid'),
-      layer(T.text(`GHOST ${String(Math.min(999, ghosts)).padStart(3, '0')} PX`, 143 - 2, 130, { align: 'right' }), 'mid'),
+      // the status has its row to itself: PARTIAL 01/10 and FULL REFRESH are too wide to share the GHOST row (#215).
+      // Both rows sit on the label's columns, left edge 0 and right edge 143 (scripts/verify/cards.ts checks they never overlap)
+      caption(status, 0, EINK_STATUS_ROW, 'left', view.phase === 'full' ? 'value' : 'idle'),
+      ...footer('1-BIT', `GHOST ${String(Math.min(999, ghosts)).padStart(3, '0')} PX`, EINK_FOOTER_ROW),
     ]
   },
 }
