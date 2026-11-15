@@ -13,7 +13,8 @@
  *    on the first item, ↓ moves, Escape closes it with focus back on MORE;
  *  - `wp-skip`, `wp-more`: the widget page starts with SKIP TO CONTENT; its MORE menu opens from the keyboard and
  *    Escape sends focus back to MORE.
- * Phone, 390 × 844 with touch (`sheet:<name>`): TOOLS, BOARDS and search open a modal sheet or the palette with focus
+ * Phone, 390 × 844 with touch: `tap44:<page>`, every control outside the cards has a 44 × 44 touch area (WCAG 2.5.5;
+ *  links in running text are exempt). `sheet:<name>`: TOOLS, BOARDS and search open a modal sheet or the palette with focus
  * inside; Escape closes it and focus goes back to the button that opened it.
  *
  *   npx vite build && npx tsx scripts/site/a11y-keys.ts            → serves dist/ on port 4328 for the run
@@ -223,6 +224,24 @@ async function phone() {
       await p.waitFor(`!document.querySelector(${q(open)})`, 3000)
       const back = await is(p, opener)
       check(`sheet:${name}`, inside && back, `focus inside ${inside}, back on the opener ${back} (${await active(p)})`)
+    }
+    // every control outside the cards has a 44 × 44 touch area (its box, or a larger ::before / ::after hit area);
+    // links inside running text are exempt (WCAG 2.5.5)
+    for (const [name, path, ready] of PAGES.filter(([n]) => n !== 'post')) {
+      if (!(await load(p, base + path, ready))) { check(`tap44:${name}`, false, 'not ready in 30 s'); continue }
+      const small = await p.js<string[]>(`(() => {
+        const out = []
+        for (const el of document.querySelectorAll('a[href], button, input:not([type=hidden]), select, summary, [role=tab], [role=switch], [tabindex="0"]')) {
+          const s = getComputedStyle(el), r = el.getBoundingClientRect()
+          if (s.display === 'none' || s.visibility === 'hidden' || r.width < 2 || r.height < 2 || el.closest('.dot-card, .sr-only, [inert], [aria-hidden="true"], .skip-link')) continue
+          if (s.display === 'inline' && el.closest('p, li')) continue
+          let w = r.width, h = r.height
+          for (const pe of ['::before', '::after']) { const ps = getComputedStyle(el, pe); if (ps.content !== 'none' && ps.position === 'absolute' && ps.pointerEvents !== 'none') { w = Math.max(w, parseFloat(ps.width) || 0); h = Math.max(h, parseFloat(ps.height) || 0) } }
+          if (Math.min(w, h) < 43.5) out.push(el.tagName.toLowerCase() + (typeof el.className === 'string' && el.className.trim() ? '.' + el.className.trim().split(/\\s+/)[0] : '') + (el.textContent.trim() ? ' "' + el.textContent.trim().slice(0, 14) + '"' : '') + ' ' + Math.round(w) + '×' + Math.round(h))
+        }
+        return [...new Set(out)]
+      })()`)
+      check(`tap44:${name}`, !small.length, small.length ? `${small.length} under 44 px: ${small.slice(0, 8).join(' | ')}` : 'every control')
     }
   } finally {
     await p.close()

@@ -44,7 +44,9 @@
    count as on screen, so nine animated canvases kept compositing under the game: ~200 ms frames headless) */
 .board-view:has(.hive-play) > .board-grid { display: none }
 .hive-play canvas { display: block }
-.hive-play .hive-screen { outline: none; cursor: crosshair }
+/* the screen takes focus (the keys play it): the site's focus ring shows when the keyboard put it there (#187) */
+.hive-play .hive-screen { cursor: crosshair }
+.hive-play .hive-screen:not(:focus-visible) { outline: none }
 .hive-bar {
   display: flex;
   gap: var(--space-4);
