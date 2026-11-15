@@ -24,7 +24,8 @@ import { dot480 } from '../src/engine/theme/tokens'
 import { TILE, withChrome, type WidgetPreset } from '../src/widgets'
 import { chartsBoard } from '../src/widgets/boards/charts'
 import { DONUT, HEAT_PTS, SPARK_XS, donutPick } from '../src/widgets/boards/charts-more'
-import { AREA_XS, BAR_SCALE, BAR_XS, CANDLE_XS, LINE_SCALE, LINE_XS } from '../src/widgets/boards/charts-xy'
+import { STOCK } from '../src/widgets/boards/charts-data'
+import { AREA_XS, BAR_SCALE, BAR_XS, CANDLE_SCALE, CANDLE_XS, LINE_SCALE, LINE_XS } from '../src/widgets/boards/charts-xy'
 import { sampleCard, type CtxExtra } from './lib/cards'
 import { detLint } from './lib/detLint'
 import { fmtLoaded, medianLoaded } from './lib/load'
@@ -97,6 +98,16 @@ export function chartsChecks(assert: Assert): void {
       if (key({ pointers: [ptr(x, y)] }) !== key({ data: { pick: i } })) hovered.push(id)
     }
     assert('charts: a hovering pointer moves the readout to the nearest point (same frame as picking it)', hovered.length === 0, hovered.join(', '))
+
+    // #232: a screen reader hears the picked point the way the card prints it, not "point 4 of 12"
+    const said = chartsBoard.map(p => [p.id, p.controls![1].valueText!(3, { set: 0 }, 'pick'), p.controls![1].valueText!(3, { set: 1 }, 'pick')])
+    const mute = said.filter(([, a, b]) => /^point /.test(a) || !/\d/.test(a) || a === b && !/ago|now/.test(a))
+    assert('charts: every readout says its point in words ("APR, 52 orders"), per data set', mute.length === 0, mute.map(s => s.join(' / ')).join('; '))
+
+    // #232: the candle axis fits the prices (both months), so the candles fill the plot instead of its top half
+    const lows = STOCK.flat().map(d => d.l), highs = STOCK.flat().map(d => d.h)
+    const fill = (CANDLE_SCALE.cell(Math.min(...lows)) - CANDLE_SCALE.cell(Math.max(...highs))) / 64
+    assert('charts: the candles span at least 70% of the plot height', fill >= .7, fill.toFixed(2))
   }
 
   // ── empty and single-point data ────────────────────────────────────────────────────────────────────

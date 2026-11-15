@@ -90,9 +90,10 @@ export function areaChart(values: readonly number[], pick: number, s: AreaSpec):
 export interface Candle { o: number; h: number; l: number; c: number }
 /**
  * Candles: a body of big sites from open to close (`value` when it closed up, `mid` when down), a wick of fine sites
- * to the high and the low. The picked candle is red; its anchor is the close.
+ * to the high and the low. The picked candle is red; its anchor is the close. `body.cols` sites wide (default 1),
+ * `body.pitch` apart both ways and centred on the candle's x, so a body reads as a bar and the wick as a line.
  */
-export interface CandleSpec { scale: Scale; xs: readonly number[]; body: { pitch: number; size: number }; wick: { pitch: number; size: number } }
+export interface CandleSpec { scale: Scale; xs: readonly number[]; body: { pitch: number; size: number; cols?: number }; wick: { pitch: number; size: number } }
 export function candleChart(data: readonly Candle[], pick: number, s: CandleSpec): Chart {
   const n = Math.min(data.length, s.xs.length), hot = pickIndex(pick, n)
   if (!n) return emptyChart()
@@ -102,7 +103,8 @@ export function candleChart(data: readonly Candle[], pick: number, s: CandleSpec
     const d = data[i], x = s.xs[i], c = s.scale.cell(d.c), o = s.scale.cell(d.o), hi = s.scale.cell(d.h), lo = s.scale.cell(d.l)
     const top = Math.min(o, c), bot = Math.max(o, c), g = groups[i === hot ? 'hot' : d.c >= d.o ? 'up' : 'down'], gap = s.body.pitch * .8
     anchors.push([x, c])
-    g.body.push(...column(x, top, bot, s.body.pitch, true))
+    const cols = Math.max(1, Math.round(s.body.cols ?? 1))
+    for (let k = 0; k < cols; k++) g.body.push(...column(x + (k - (cols - 1) / 2) * s.body.pitch, top, bot, s.body.pitch, true))
     if (top - Math.min(hi, lo) > gap) g.wick.push(...column(x, Math.min(hi, lo), top - gap, s.wick.pitch))
     if (Math.max(hi, lo) - bot > gap) g.wick.push(...column(x, bot + gap, Math.max(hi, lo), s.wick.pitch))
   }
