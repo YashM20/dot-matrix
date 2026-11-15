@@ -113,7 +113,9 @@
   gap: var(--spacing-cardGap);
   margin: var(--gap-group) 0 0;
   padding: 0;
-  list-style: none
+  list-style: none;
+  /* the board grid's container name, so a lone last card is centred like on a board (src/site/app/grid.css › Orphans) */
+  container: board-grid / inline-size
 }
 
 .browse-item {
