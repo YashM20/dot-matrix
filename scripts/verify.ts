@@ -194,6 +194,11 @@ cardChecks(assert)
 // AUDIO and PERSONAL (#259, #256): the baked CJK line, the counts, push to talk, the colon, the running track time (scripts/verify/audio-personal.ts)
 audioPersonalChecks(assert)
 frameCacheChecks(assert)
+// METRO (#257) and DASHBOARD (#250) refine fixes (scripts/verify/metro-dashboard.ts)
+{
+  const { metroDashboardChecks } = await import('./verify/metro-dashboard')
+  metroDashboardChecks(assert)
+}
 // FLAGS (#144, #145) every release flag documented; the URL sets none; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
 await flagChecks(assert)
 // FIRST DRAW (#312) grid cards draw their first frame one per task, near the screen only (scripts/verify/first-draw.ts)

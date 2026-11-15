@@ -118,7 +118,7 @@ const BPM = 120
 const stepAt = (t: number, bpm: number) => Math.floor((Math.max(0, t) * bpm) / 15)
 const stepKey = (i: number) => `s${i}`
 /** Transport `mode` 2 = stop: the meter goes silent and the playhead parks. */
-const runningOf = (data: Record<string, number>) => Math.round(data.mode ?? 0) !== 2
+const runningOf = (data: Record<string, number>) => Math.round(data.mode ?? 1) !== 2
 /**
  * Board-shared data keys (`BoardDef.shared`): tempo, transport mode and the 16 steps live in one
  * board store, so sequencer edits, stop and tempo reach the meter and the playhead. A card alone
@@ -131,6 +131,8 @@ export const instrumentShared = ['bpm', 'mode', 'sound', 'cutoff', 'resonance', 
 // defaults when alone): each hit kicks both channels (panned per step), decays, and leaves a held
 // peak that falls after a beat. Stopped transport = silence.
 const METER = { xs: [52, 92], base: 114, n: 13, pitch: 7.3, size: 6 }
+/** The gain handle's sites, in cells out from each meter's centre (clear of the 6-cell meter dots). */
+const GAIN_CAP = [8, 11, 14]
 const DECAY = .28, HOLD = .5, FALL = .9, LOOK = 1.4
 interface Song { bpm: number; pattern: boolean[] }
 const songOf = (data: Record<string, number>): Song => ({ bpm: Math.max(1, data.bpm ?? BPM), pattern: PATTERN.map((on, i) => (data[stepKey(i)] ?? on) >= .5) })
@@ -171,11 +173,15 @@ export const meter: WidgetPreset = {
       ]
     })
     const g = y(Math.round(clamp01(ctx.data.gain ?? .8) * (n - 1)))
+    // the gain handle: a short bar outside each meter at the gain row, like a fader cap
+    const cap = GAIN_CAP.flatMap((dx): Pt[] => [[xs[0] - dx, g], [xs[1] + dx, g]])
     return [
       ...out,
-      ...[[12, '0'], [9, '6'], [6, '12'], [3, '24'], [0, '48']].map(([i, s]) => layer(T.text(String(s), 72, Math.round(y(+i) - 3), { align: 'center' }), 'mid')),
-      layer(spots([[xs[0] - 8, g], [xs[1] + 8, g]], 3), 'mid'),
-      ...(f.focus ? [focusRing(rect(38, 20, 68, 100, 3), ctx.t)] : []),
+      ...[[12, '0'], [9, '-6'], [6, '-12'], [3, '-24'], [0, '-48']].map(([i, s]) => layer(T.text(String(s), 72, Math.round(y(+i) - 3), { align: 'center' }), 'mid')),
+      layer(T.text('DB', 72, FOOT, { align: 'center' }), 'idle'),
+      ...(f.hover ? [glow(rect(xs[0] - 17, g - 4, 12, 8, 2.6)), glow(rect(xs[1] + 5, g - 4, 12, 8, 2.6))] : []),
+      layer(spots(cap, 2.4, f.v), 'value'),
+      ...(f.focus ? [focusRing(rect(32, 18, 80, 104, 3), ctx.t)] : []),
     ]
   },
 }
@@ -214,27 +220,34 @@ export const xyPad: WidgetPreset = {
 
 // ── 07 TRANSPORT ────────────────────────────────────────────────────────────
 // Tempo on top (a stepper), four beat lights, and REC / PLAY / STOP as one segmented control
-// (`mode`: 0 record, 1 play, 2 stop). The record light is the card's one red. The footer is the SOUND
-// toggle (`sound`): it starts the audio engine on the user's tap; while recording it reads REC m:ss.
+// (`mode`: 0 record, 1 play, 2 stop). The card opens in Play, so the record light turns red only when pressed.
+// The footer is the SOUND toggle (`sound`): it starts the audio engine on the user's tap; while recording it reads REC m:ss.
 const SEG = { x: 13, y: 86, w: 118, h: 36 }, SEG_W = SEG.w / 3, BTN_Y = SEG.y + SEG.h / 2, BTN_R = 16
 const segX = (i: number) => SEG.x + SEG_W * (i + .5)
 const BPM_BOX: [number, number, number, number] = [38, 18, 68, 48]
-/** Play and stop drawn from a few big sites (offsets in cells from the button centre), like the record light. */
-const PLAY: Pt[] = [[-4.5, -6], [-4.5, 0], [-4.5, 6], [.7, -3], [.7, 3], [5.9, 0]], STOP: Pt[] = [[-3.2, -3.2], [3.2, -3.2], [-3.2, 3.2], [3.2, 3.2]]
-const icon = (pts: Pt[], size: number, cx: number, cy: number, v: number) => spots(pts.map(([x, y]): Pt => [cx + x, cy + y]), size, v)
+/**
+ * Play and stop on one lattice (offsets in cells from the button centre): play a hex-packed triangle 4 sites tall,
+ * stop a 3×3 square of the same sites, so the two read as shapes beside the record light.
+ */
+const GLYPH = { k: 4.4, size: 3.5 }
+const PLAY: Pt[] = T.dotTri(6.2, 0, 4, { k: GLYPH.k }).sites ?? []
+const STOP: Pt[] = Array.from({ length: 9 }, (_, i): Pt => [((i % 3) - 1) * GLYPH.k, (Math.floor(i / 3) - 1) * GLYPH.k])
+const icon = (pts: Pt[], cx: number, cy: number, v: number) => spots(pts.map(([x, y]): Pt => [cx + x, cy + y]), GLYPH.size, v)
+/** Tempo hint on hover and focus: an up and a down chevron beside the number (vertical drag or arrows). */
+const CARET_X = 116, CARETS: Pt[][] = [[[-3, 27], [0, 24], [3, 27]], [[-3, 39], [0, 42], [3, 39]]]
 const SOUND_BOX: [number, number, number, number] = [30, 123, 84, 14]
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 export const transport: WidgetPreset = {
   id: 'inst-transport', name: 'Transport', label: '07  TRANSPORT', ...device,
   credit: TEENAGE_ENGINEERING,
-  defaults: { bpm: BPM, mode: 0, sound: 0 },
+  defaults: { bpm: BPM, mode: 1, sound: 0 },
   controls: [
     { key: 'bpm', kind: 'stepper', orientation: 'vertical', box: BPM_BOX, min: 40, max: 240, step: 1, label: 'Tempo', valueText: v => `${Math.round(v)} BPM` },
     { key: 'mode', kind: 'segmented', box: [SEG.x, SEG.y, SEG.w, SEG.h], options: 3, optionLabels: ['Record', 'Play', 'Stop'], label: 'Transport' },
     { key: 'sound', kind: 'toggle', box: SOUND_BOX, label: 'Sound' },
   ],
   layers: ctx => {
-    const bpm = Math.round(ctx.data.bpm ?? BPM), mode = Math.round(ctx.data.mode ?? 0), running = mode !== 2
+    const bpm = Math.round(ctx.data.bpm ?? BPM), mode = Math.round(ctx.data.mode ?? 1), running = mode !== 2
     const tempo = feel(ctx, 'bpm'), seg = feel(ctx, 'mode'), snd = feel(ctx, 'sound'), sound = (ctx.data.sound ?? 0) >= .5
     const rec = audioOf(ctx)?.rec ?? -1, [sx, sy, sw, sh] = SOUND_BOX, spk = 46, cy = FOOT + 3
     // which segment the pointer is over (falls back to the selected one)
@@ -246,13 +259,15 @@ export const transport: WidgetPreset = {
     return [
       layer(scaled(T.big(String(bpm), 72, 22, { lattice: 3, align: 'center' }), tempo.v)),
       layer(T.text('BPM', 72, 50, { align: 'center' }), 'idle'),
-      ...[0, 1, 2, 3].map(i => layer(spots([[54 + i * 12, 66]], running && i === beat ? 5 : 3.4), running && i === beat ? 'value' : 'faint')),
-      ...(tempo.hover ? [glow(rect(bx, by, bw, bh, 2.6))] : []),
-      ...(tempo.focus ? [focusRing(rect(bx - 3, by - 3, bw + 6, bh + 6, 3), ctx.t)] : []),
+      ...[0, 1, 2, 3].map(i => layer(spots([[54 + i * 12, 66]], running && i === beat ? 5 : 3.4), running && i === beat ? 'value' : 'mid')),
+      // the hover and focus outlines stop above the beat lights
+      ...(tempo.hover ? [glow(rect(bx, by, bw, bh - 6, 2.6))] : []),
+      ...(tempo.hover || tempo.focus ? CARETS.map(c => layer(spots(c.map(([x, y]): Pt => [CARET_X + x, y]), 2), 'value')) : []),
+      ...(tempo.focus ? [focusRing(rect(bx - 3, by - 3, bw + 6, bh - 2, 3), ctx.t)] : []),
       ...[0, 1, 2].map(i => layer(spots(circle(segX(i), BTN_Y, BTN_R, 3), 1.4, vOf(i)), tone(i))),
       layer(spots([[segX(0), BTN_Y]], 15, vOf(0)), mode === 0 ? 'active' : 'mid'),
-      layer(icon(PLAY, 5.4, segX(1), BTN_Y, vOf(1)), tone(1)),
-      layer(icon(STOP, 6.6, segX(2), BTN_Y, vOf(2)), tone(2)),
+      layer(icon(PLAY, segX(1), BTN_Y, vOf(1)), tone(1)),
+      layer(icon(STOP, segX(2), BTN_Y, vOf(2)), tone(2)),
       ...(seg.hover ? [glow(circle(segX(under), BTN_Y, BTN_R + 3.5, 2.6))] : []),
       ...(seg.focus ? [focusRing(circle(segX(mode), BTN_Y, BTN_R + 4, 3), ctx.t)] : []),
       // SOUND: a hollow ring when off, a lit dot when on (the red stays with REC)

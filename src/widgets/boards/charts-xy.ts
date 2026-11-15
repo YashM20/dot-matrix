@@ -24,6 +24,7 @@ const BAR_AXIS = niceDomain(0, Math.max(...ORDERS.flat()), 2)
 export const BAR_SCALE = linear(BAR_AXIS.domain, [PLOT.base, PLOT.top], 4)
 export const barCard = chartCard({
   id: 'chart-bar', name: 'Bar Chart', label: 'BAR / ORDERS', sets: ['2025', '2026'], n: 12, offset: 0,
+  say: { point: i => MONTHS[i], value: (i, s) => `${ORDERS[s][i]} orders` },
   box: PLOT_BOX, map: x => nearestIndex(BAR_XS, x),
   draw: v => {
     const vs = grow(tween(ORDERS[0], ORDERS[1], v.set), v.intro).map(Math.round)
@@ -48,6 +49,7 @@ const LINE_AXIS = niceDomain(0, Math.max(...VISITS.flat()), 4)
 export const LINE_SCALE = linear(LINE_AXIS.domain, [PLOT.base, PLOT.top])
 export const lineCard = chartCard({
   id: 'chart-line', name: 'Line Chart', label: 'LINE / VISITS', sets: ['MON', 'SUN'], n: 24, offset: .4,
+  say: { point: i => `${HOURS[i]}:00`, value: (i, s) => `${VISITS[s][i]} visits` },
   box: PLOT_BOX, map: x => nearestIndex(LINE_XS, x),
   draw: v => {
     const vs = grow(tween(VISITS[0], VISITS[1], v.set), v.intro, 0, .5).map(Math.round)
@@ -73,6 +75,7 @@ const AREA_AXIS = niceDomain(0, Math.max(...SOLAR.flat()), 5)
 export const AREA_SCALE = linear(AREA_AXIS.domain, [PLOT.base, PLOT.top])
 export const areaCard = chartCard({
   id: 'chart-area', name: 'Area Chart', label: 'AREA / SOLAR', sets: ['SUN', 'CLOUD'], n: 15, offset: .8, pick0: 7,
+  say: { point: i => `${SUN_HOURS[i]}:00`, value: (i, s) => `${SOLAR[s][i]} kilowatts` },
   box: PLOT_BOX, map: x => nearestIndex(AREA_XS, x),
   draw: v => {
     const vs = grow(tween(SOLAR[0], SOLAR[1], v.set), v.intro, 0, .5).map(x => Math.round(x * 10) / 10)
@@ -93,7 +96,8 @@ export const areaCard = chartCard({
 // ── CANDLESTICK ─────────────────────────────────────────────────────────────
 /** Twenty sessions 6 cells apart: bodies of big sites, wicks of fine ones; candles open out from their middle. */
 export const CANDLE_XS = bands(20, PLOT.x0, PLOT.x1)
-const CANDLE_AXIS = (() => { const all = STOCK.flat(); return niceDomain(Math.min(...all.map(d => d.l)), Math.max(...all.map(d => d.h)), 3) })()
+/** Fitted to both months with a 10-point step (170 to 220), so the candles fill the plot instead of its top half. */
+const CANDLE_AXIS = (() => { const all = STOCK.flat(); return niceDomain(Math.min(...all.map(d => d.l)), Math.max(...all.map(d => d.h)), 4) })()
 export const CANDLE_SCALE = linear(CANDLE_AXIS.domain, [PLOT.base, PLOT.top])
 const flat = (d: Candle): Candle => { const m = (d.o + d.c) / 2; return { o: m, h: m, l: m, c: m } }
 const KEYS = ['o', 'h', 'l', 'c'] as const
@@ -104,6 +108,7 @@ export function tweenCandles(a: readonly Candle[], b: readonly Candle[], s: numb
 }
 export const candleCard = chartCard({
   id: 'chart-candle', name: 'Candlestick Chart', label: 'CANDLES / DTX', sets: ['MAY', 'JUN'], n: 20, offset: 1.2,
+  say: { point: i => `day ${SESSIONS[i]}`, value: (i, s) => `${s ? 'June' : 'May'}, closed at ${STOCK[s][i].c}` },
   box: PLOT_BOX, map: x => nearestIndex(CANDLE_XS, x),
   draw: v => {
     const m = tweenCandles(STOCK[0], STOCK[1], v.set), ds = tweenCandles(m.map(flat), m, v.intro, .5).map(d => ({ o: Math.round(d.o), h: Math.round(d.h), l: Math.round(d.l), c: Math.round(d.c) }))

@@ -105,7 +105,7 @@ export const sqTetris: WidgetPreset = {
 // one square; the quad with the largest error (RMS × area^¼) splits into four, again and again. Each quad is
 // one joined square on a 2× lattice (its own group), so the grout between quads stays one gutter wide at every
 // size. Tone is the quad's mean luma, a band low (faint, faint, mid, idle at the 40/80/94% quantiles). The red is the four children of the newest split.
-const Q_SIZE = 128, Q_ORIGIN: Pt = [8, 8], QK = 2, Q_SPLITS = 400, Q_LOOP = 16, Q_GROW = 12, Q_OFF = 13
+const Q_SIZE = 128, Q_ORIGIN: Pt = [8, 8], QK = 2, Q_SPLITS = 400, Q_LOOP = 16, Q_GROW = 12, Q_BACK = 13, Q_OFF = 12.5
 interface Quads { x: Int16Array; y: Int16Array; size: Int16Array; mean: Float32Array; killed: Int32Array; rms: Float32Array; splits: number; cuts: number[] }
 let quads: Quads | undefined
 /** The split history, built once: integral images of v and v², a max-heap by RMS × area^¼ (ties: lower quad id). */
@@ -150,11 +150,16 @@ function quadTree(): Quads {
   return (quads = q)
 }
 const Q_TONES: Tone[] = ['faint', 'faint', 'mid', 'idle']
+/** Splits shown at t: they grow over 12 s, hold, then play back over the last 3 s, so the seam never cuts the face to one square. */
+function quadsAt(t: number, splits: number): { k: number; live: boolean } {
+  const p = mod(t + Q_OFF, Q_LOOP), grow = p < Q_BACK ? clamp(p / Q_GROW) : 1 - (p - Q_BACK) / (Q_LOOP - Q_BACK)
+  return { k: Math.max(1, Math.round(splits * grow * grow)), live: grow < 1 }
+}
 export const sqQuads: WidgetPreset = {
-  id: 'sq-quads', name: 'Squares Quads', label: 'QUADS', ...tile, inset: 'dark',
+  id: 'sq-quads', name: 'Quads', label: 'QUADS', ...tile, inset: 'dark',
   credit: { by: ['Michael Fogleman'], title: 'Quads', source: 'https://www.michaelfogleman.com/projects/quads/', note: 'split the worst quad, again and again' },
   layers: ctx => {
-    const q = quadTree(), p = mod(ctx.t + Q_OFF, Q_LOOP), grow = clamp(p / Q_GROW), k = Math.max(1, Math.round(q.splits * grow * grow)), live = grow < 1
+    const q = quadTree(), { k, live } = quadsAt(ctx.t, q.splits)
     const side = Q_SIZE / QK, id = new Int16Array(side * side).fill(-1)
     for (let i = 0; i <= 4 * k && i < q.x.length; i++) {
       if (q.killed[i] < k || q.size[i] === 0) continue
@@ -244,7 +249,7 @@ function blobFrame(at: Pt[]): { val: Float32Array; neck: Uint8Array; necks: numb
   return { val, neck, necks: bestCells.length, gap }
 }
 export const sqBlob: WidgetPreset = {
-  id: 'sq-blob', name: 'Squares Blob', label: 'BLOB', ...tile,
+  id: 'sq-blob', name: 'Blob', label: 'BLOB', ...tile,
   credit: { by: ['James F. Blinn'], title: 'A generalization of algebraic surface drawing (1982)', source: 'https://doi.org/10.1145/357306.357310', note: 'the blobby model behind metaballs' },
   layers: ctx => {
     const t = ctx.t + B_OFF, at = ballsAt(t)
@@ -279,7 +284,7 @@ const SHADE: Tone[] = ['faint', 'faint', 'mid', 'idle', 'value']
 /** LCD rows: the date (7 px) from row 27, then the sky with one empty row between (clouds are 2 px tall). */
 const [LCD_DATE, LCD_SKY] = stack(27, [7, 2])
 /** The LCD's shade per pixel (0 unlit … 4 value) at t, the colon's phase and its pixels (shared with sq-morph). */
-function lcdFrame(t: number): { px: Uint8Array; colon: boolean; dots: Set<number> } {
+function lcdFrame(t: number): { px: Uint8Array; colon: boolean; dots: Set<number>; text: string } {
   const px = new Uint8Array(LW * LH), set = (x: number, y: number, s: number) => { if (x >= 0 && y >= 0 && x < LW && y < LH) px[y * LW + x] = s }
   // sky: two clouds drifting left (mid)
   for (const [cx, cy, w, speed] of [[20, Math.max(37, LCD_SKY + 1), 9, 1.5], [58, Math.max(35, LCD_SKY + 1), 7, 1]]) {
@@ -310,22 +315,25 @@ function lcdFrame(t: number): { px: Uint8Array; colon: boolean; dots: Set<number
   ;[...date].forEach((ch, k) => glyph(ch).forEach((row, gy) => row.forEach((on, gx) => { if (on) set(dx0 + k * 6 + gx, LCD_DATE + gy, 2) })))
   const colon = (Math.floor(t) & 1) === 0
   const dots = new Set([[34, 9], [35, 9], [34, 10], [35, 10], [34, 17], [35, 17], [34, 18], [35, 18]].map(([x, y]) => y * LW + x))
-  return { px, colon, dots }
+  return { px, colon, dots, text: `${hh}:${mm} ${date}` }
 }
 /** The LCD with its colon lit when on (the morph draws it in the panel's own shade). */
-function lcdWithColon(t: number): Uint8Array {
-  const { px, colon, dots } = lcdFrame(t)
+function lcdWithColon(t: number): { px: Uint8Array; text: string } {
+  const { px, colon, dots, text } = lcdFrame(t)
   if (colon) for (const i of dots) px[i] = 4
-  return px
+  return { px, text }
 }
 export const sqGameboy: WidgetPreset = {
-  id: 'sq-gameboy', name: 'Squares LCD', label: 'LCD', ...tile, clock: true,
+  id: 'sq-gameboy', name: 'LCD', label: 'LCD', ...tile, clock: true,
   credit: { by: ['Nintendo R&D1'], title: 'Game Boy (DMG-01, 1989)', source: 'https://en.wikipedia.org/wiki/Game_Boy', note: 'the four-shade LCD this mimics' },
   layers: ctx => {
-    const { px, colon, dots } = lcdFrame(ctx.t)
+    const { px, colon, dots, text } = lcdFrame(ctx.t)
+    // the time and date are LCD pixels, not text: name them for describe()
+    const lcd = cells(LK, L_ORIGIN, LW, LH, (c, r) => (colon && dots.has(r * LW + c) ? 0 : px[r * LW + c] ? 1 : .25), { toneOf: (c, r) => SHADE[px[r * LW + c]] })
+    lcd.field.text = text
     return [
       cite('DMG-01 1989'),
-      cells(LK, L_ORIGIN, LW, LH, (c, r) => (colon && dots.has(r * LW + c) ? 0 : px[r * LW + c] ? 1 : .25), { toneOf: (c, r) => SHADE[px[r * LW + c]] }),
+      lcd,
       ...(colon ? [cells(LK, L_ORIGIN, LW, LH, (c, r) => (dots.has(r * LW + c) ? 1 : 0), { tone: 'active' })] : []),
     ]
   },
@@ -343,9 +351,9 @@ const M_LOOP = 14, M_OFF = 4.2, M_WIDTH = .3
 export const morphK = (t: number) => { const p = mod(t + M_OFF, M_LOOP) / M_LOOP, tri = p < .5 ? 2 * p : 2 - 2 * p; return clamp(tri * 1.2 - .1) }
 const M_ROWS = latticeGrid(TILE, LK, L_ORIGIN).rows
 export const sqMorph: WidgetPreset = {
-  id: 'sq-morph', name: 'Squares Morph', label: 'MORPH', ...tile, style: morphStyle, clock: true,
+  id: 'sq-morph', name: 'Morph', label: 'MORPH', ...tile, style: morphStyle, clock: true,
   layers: ctx => {
-    const px = lcdWithColon(ctx.t), k = morphK(ctx.t), opts = { width: M_WIDTH, join: { at: .5, outer: 0 }, rows: M_ROWS }
+    const { px, text } = lcdWithColon(ctx.t), k = morphK(ctx.t), opts = { width: M_WIDTH, join: { at: .5, outer: 0 }, rows: M_ROWS }
     // the front row: where the wavefront crosses w = .5 (the LCD row whose dots are halfway to squares)
     const w = frontOf(k, opts)
     let front = -1, best = 1
@@ -355,7 +363,10 @@ export const sqMorph: WidgetPreset = {
     // only the front row can light: bound the red layer's window to it
     red.field.bounds = front < 0 ? [0, 0, -1, -1] : [0, front, LW - 1, front]
     // the red row is always mid-turn (never joined): only its shape follows the front
-    return [cite(`SHAPE ${pad(k * 100, 3)}%`), ...squareMorph([lcd], k, opts), ...squareMorph([red], k, { width: M_WIDTH })]
+    // the morph wraps the LCD's field, so its words go on the first wrapped layer
+    const panel = squareMorph([lcd], k, opts)
+    panel[0].field.text = text
+    return [cite(`SHAPE ${pad(k * 100, 3)}%`), ...panel, ...squareMorph([red], k, { width: M_WIDTH })]
   },
 }
 
@@ -369,15 +380,34 @@ const TT_COLS = 24, TT_ROWS = 16, TT_CELL: Pt = [6, 9]
 const TT_INDEX: [string, string][] = [['NEWS', '101'], ['SPORT', '102'], ['WEATHER', '103'], ['TETRIS', '104'], ['QUADS', '105'], ['LCD', '106'], ['LINES', '107']]
 const TT_SUBS = ['SIX CELLS A CHARACTER', 'BLOCKS FUSE ON CONTACT', 'SEPARATED: GROUT SHOWS', 'ONE RED: THE SECONDS']
 /** The weather map: an island on 22 × 21 sub-cells (land 1, sea 0), from two blobs and a ragged hash coast. */
+const TT_LW = 22, TT_LH = 21
+let ttIsland: Uint8Array | undefined
 const ttLand = (x: number, y: number) => {
-  const a = ((x - 10) / 6.5) ** 2 + ((y - 7) / 5.5) ** 2, b = ((x - 12) / 5) ** 2 + ((y - 15) / 5.5) ** 2
-  return Math.min(a, b) + .25 * (hash01(x, y, 17) - .5) < 1
+  if (!ttIsland) {
+    const raw = (x: number, y: number) => {
+      const a = ((x - 10) / 6.5) ** 2 + ((y - 7) / 5.5) ** 2, b = ((x - 12) / 5) ** 2 + ((y - 15) / 5.5) ** 2
+      return x >= 0 && y >= 0 && x < TT_LW && y < TT_LH && Math.min(a, b) + .25 * (hash01(x, y, 17) - .5) < 1
+    }
+    // the coast keeps only cells with two land neighbours, so no single square sticks out of it
+    ttIsland = new Uint8Array(TT_LW * TT_LH)
+    for (let j = 0; j < TT_LW; j++) for (let i = 0; i < TT_LH; i++) {
+      const n = [raw(j - 1, i), raw(j + 1, i), raw(j, i - 1), raw(j, i + 1)].filter(Boolean).length
+      ttIsland[i * TT_LW + j] = raw(j, i) && n >= 2 ? 1 : 0
+    }
+  }
+  return x >= 0 && y >= 0 && x < TT_LW && y < TT_LH && ttIsland[y * TT_LW + x] === 1
 }
+/** The banner's Q and R with their diagonal strokes stepped, so every contiguous sextant stays joined to its letter. */
+const TT_BANNER: Record<string, string[]> = {
+  Q: ['01110', '10001', '10001', '10001', '10101', '10110', '01111'],
+  R: ['11110', '10001', '10001', '11110', '10100', '10110', '10011'],
+}
+const bannerPx = (ch: string, x: number, y: number) => (TT_BANNER[ch] ? TT_BANNER[ch][y][x] === '1' : !!glyph(ch)[y]?.[x])
 /** A 2 × 3 sextant from a sub-cell predicate at character (c, r). */
 let ttCache: { key: string; layers: Layer[] } | undefined
 const sext = (c: number, r: number, on: (x: number, y: number) => boolean) => { let b = 0; for (let i = 0; i < 6; i++) if (on(c * 2 + (i & 1), r * 3 + (i >> 1))) b |= 1 << i; return b }
 export const sqTeletext: WidgetPreset = {
-  id: 'sq-teletext', name: 'Squares Teletext', label: 'TELETEXT', ...tile, clock: true,
+  id: 'sq-teletext', name: 'Teletext', label: 'TELETEXT', ...tile, clock: true,
   credit: { by: ['John Adams'], title: 'Teletext', source: 'https://en.wikipedia.org/wiki/Teletext', note: 'the page format and its block graphics' },
   layers: ctx => {
     // the page changes with the clock's second, the subtitle and the rain front (half a sub-cell at a time): one cached build
@@ -391,7 +421,7 @@ export const sqTeletext: WidgetPreset = {
     put('P100', 10, 0, 'mid'); put(`${two(now.getHours())}:${two(now.getMinutes())}:`, 16, 0, 'idle'); put(two(now.getSeconds()), 22, 0, 'active')
     // banner: SQUARES in contiguous sextants (the 5 × 7 font, one sub-cell per font pixel) on a joined panel
     const word = 'SQUARES', bx = Math.floor((TT_COLS * 2 - (word.length * 6 - 1)) / 2), by = 1
-    const ink = (x: number, y: number) => { const gx = x - bx, gy = y - by, k = Math.floor(gx / 6); return gx >= 0 && gy >= 0 && gy < 7 && k < word.length && gx % 6 < 5 && !!glyph(word[k])[gy]?.[gx % 6] }
+    const ink = (x: number, y: number) => { const gx = x - bx, gy = y - by, k = Math.floor(gx / 6); return gx >= 0 && gy >= 0 && gy < 7 && k < word.length && gx % 6 < 5 && bannerPx(word[k], gx % 6, gy) }
     for (let r = 1; r <= 3; r++) for (let c = 0; c < TT_COLS; c++) page[r][c] = { sextant: sext(c, r - 1, ink), fg: 'value', bg: 'faint' }
     put(' SQUARE CELLS SINCE 1974', 0, 4, 'idle')
     // a contiguous rule: the middle sub-row of every cell, one joined line with a clear sub-row above and below
@@ -406,8 +436,8 @@ export const sqTeletext: WidgetPreset = {
     }
     // subtitles on a joined panel, one line every 4 s (a full line at t = 0)
     put(` ${TT_SUBS[sub].padEnd(22)} `, 0, 14, 'value', 'faint')
-    // fastext: four links in four greys
-    put('NEWS', 0, 15, 'value'); put('SPORT', 6, 15, 'idle'); put('TV', 13, 15, 'mid'); put('INDEX', 19, 15, 'faint')
+    // fastext: four links, brightest first (none in faint, so INDEX still reads on paper)
+    put('NEWS', 0, 15, 'value'); put('SPORT', 6, 15, 'idle'); put('TV', 13, 15, 'mid'); put('INDEX', 19, 15, 'mid')
     const layers = teletextLayers(page, { grid: TILE, cols: TT_COLS, rows: TT_ROWS, origin: [0, 0], cell: TT_CELL, mode: 'contiguous', baseline: 0, moat: true })
     ttCache = { key, layers }
     return layers
@@ -418,18 +448,34 @@ export const sqTeletext: WidgetPreset = {
 // Thesis: "One stroke per line: the weight is the tone." The mirror portrait as a line screen of 36 lines on rect
 // cells (1 × 3, `sizeAxis: 'y'`): each cell keeps its full width and takes the luma as its height, and the cells of a
 // line join across levels, so every line is one continuous stroke whose weight steps with the value. Lines sway a
-// cell at a time. Under it a solid-bar spectrum on 3 × 1 cells (`sizeAxis: 'x'`): the stroke weight of the line
+// cell at a time. Under it a solid-bar spectrum, each bar two joined cells wide with one empty cell between: the stroke weight of the line
 // being scanned (normalised to its peak), 42 bars; the red is the bar at the peak.
 const LN_ORIGIN: Pt = [8, 9], LN_W = 128, LN_LINES = 36, LN_K: Pt = [1, 3], SP_ORIGIN: Pt = [8, 118], SP_BARS = 42, SP_H = 13
 let lnLuma: Float64Array | undefined
-/** Stroke value of line `r` at column `c` (portrait luma at the line's centre row, cached once; a gentle whole-cell sway). */
+/**
+ * Each line's stroke levels: the portrait luma at the line's centre row, quantized, with every one-cell run merged into
+ * the run on its left, so a line never dips or bumps for a single cell and no one-cell stub floats between strokes.
+ */
+function lineLevels(): Float64Array {
+  if (lnLuma) return lnLuma
+  const steps = squareStyle.quantizeSteps!, L = Float64Array.from({ length: LN_W * LN_LINES }, (_, i) => quantize(portrait(LN_ORIGIN[0] + (i % LN_W), LN_ORIGIN[1] + Math.floor(i / LN_W) * LN_K[1] + 1), steps))
+  for (let r = 0; r < LN_LINES; r++) {
+    const row = L.subarray(r * LN_W, (r + 1) * LN_W)
+    for (let c = 0; c < LN_W; c++) {
+      const single = (c === 0 || row[c - 1] !== row[c]) && (c === LN_W - 1 || row[c + 1] !== row[c])
+      if (single) row[c] = c > 0 ? row[c - 1] : row[c + 1]
+    }
+  }
+  return (lnLuma = L)
+}
+/** Stroke value of line `r` at column `c` (the cached line levels; a gentle whole-cell sway). */
 const lineValue = (c: number, r: number, t: number) => {
-  const L = (lnLuma ??= Float64Array.from({ length: LN_W * LN_LINES }, (_, i) => clamp(portrait(LN_ORIGIN[0] + (i % LN_W), LN_ORIGIN[1] + Math.floor(i / LN_W) * LN_K[1] + 1))))
+  const L = lineLevels()
   const x = c - Math.round(1.6 * tsin(t * .9 + r * .42))
   return x < 0 || x >= LN_W ? 0 : L[r * LN_W + x]
 }
 export const sqLines: WidgetPreset = {
-  id: 'sq-lines', name: 'Squares Lines', label: 'LINES', ...tile, inset: 'dark',
+  id: 'sq-lines', name: 'Lines', label: 'LINES', ...tile, inset: 'dark',
   credit: { by: ['Georg Meisenbach'], title: 'Halftone', source: 'https://en.wikipedia.org/wiki/Halftone', note: 'the line screen of his 1882 patent' },
   layers: ctx => {
     const t = ctx.t, scan = Math.floor(mod(t * 3 + 14, LN_LINES))
@@ -443,8 +489,9 @@ export const sqLines: WidgetPreset = {
     return [
       cite('MEISENBACH 1882'),
       lines,
-      cells([3, 1], SP_ORIGIN, SP_BARS, SP_H, (b, r) => (b !== peak && bar(b, r) ? .75 : 0), { tone: 'mid', join: true, sizeAxis: 'x' }),
-      cells([3, 1], SP_ORIGIN, SP_BARS, SP_H, (b, r) => (b === peak && bar(b, r) ? .75 : 0), { tone: 'active', join: { accent: true }, sizeAxis: 'x' }),
+      // each bar is two joined cells on a three-cell pitch: one empty cell between bars
+      cells(1, SP_ORIGIN, SP_BARS * 3, SP_H, (c, r) => (c % 3 < 2 && Math.floor(c / 3) !== peak && bar(Math.floor(c / 3), r) ? .75 : 0), { tone: 'mid', join: true }),
+      cells(1, SP_ORIGIN, SP_BARS * 3, SP_H, (c, r) => (c % 3 < 2 && Math.floor(c / 3) === peak && bar(peak, r) ? .75 : 0), { tone: 'active', join: { accent: true } }),
       layer(T.text(`LINE ${pad(scan + 1, 2)}/${LN_LINES}`, 0, FOOT), 'idle'),
       layer(T.text(`PEAK ${pad(peak + 1, 2)}`, 143, FOOT, { align: 'right' }), 'mid'),
     ]
@@ -453,4 +500,4 @@ export const sqLines: WidgetPreset = {
 
 export const squaresBoard = [sqTetris, sqQuads, sqBlob, sqGameboy, sqTeletext, sqLines, ...squaresPack, sqMorph, sqHat, sqAmmann, sqArctic, sqSandpile, sqAscii]
 /** The board's sims and sizes, for the checks (`scripts/squares.ts`). */
-export const squaresSources = { game, quadTree, ballsAt, blobFrame, B_OFF, B_LOOP, TETRIS: { w: TW, h: TH, k: TK, origin: T_ORIGIN }, BLOB: { k: BK, origin: B_ORIGIN, w: BW, h: BH }, QUADS: { size: Q_SIZE, k: QK, origin: Q_ORIGIN, splits: Q_SPLITS } }
+export const squaresSources = { game, quadTree, quadsAt, ballsAt, blobFrame, lineLevels, TT_BANNER, B_OFF, B_LOOP, LINES: { w: LN_W, lines: LN_LINES }, TETRIS: { w: TW, h: TH, k: TK, origin: T_ORIGIN }, BLOB: { k: BK, origin: B_ORIGIN, w: BW, h: BH }, QUADS: { size: Q_SIZE, k: QK, origin: Q_ORIGIN, splits: Q_SPLITS } }

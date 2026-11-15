@@ -233,10 +233,16 @@
 }
 
 /* the row itself carries the tooltip group's --tip-on transition (tips.css): its children fade */
-@media (prefers-reduced-motion: no-preference) {
-  .dot-card-row-meta,
-  .dot-card-row a,
-  .dot-card-row > button {
-    transition: color var(--dur-out)
+.dot-card-row-meta,
+.dot-card-row a,
+.dot-card-row > button {
+  transition: color var(--dur-out)
+}
+
+/* a colour fade isn't motion, so reduced motion keeps it: a11y.css zeroes every transition there, and this gives the
+   rest state its fade back (hover, press and focus still come in at once) */
+@media (prefers-reduced-motion: reduce) {
+  :is(.dot-card-row-meta, .dot-card-row a, .dot-card-row > button):not(:hover, :active, :focus-visible) {
+    transition-duration: var(--dur-out) !important
   }
 }
