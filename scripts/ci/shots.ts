@@ -8,6 +8,8 @@
  * (900 px tall). Theme is `dark`, `light` or a full `<scheme>_<accent>` name (src/site/theme/names.ts); default
  * `dark_signal`. Reduced motion is emulated so nothing is caught mid-animation. Files: `<route>-<width>-<theme>.png`
  * in `--out` (default `.snapshots/ci-shots/`). Exit 1 when a page never got ready, 2 on a bad item.
+ * A fourth part opens a UI state first and captures the viewport only: `@display` (the header's DISPLAY ▾ menu) or
+ * `@tools` (the phone TOOLS sheet, scrolled to its skin list), e.g. `/@1280@dark@display`, `/@390@light@tools`.
  */
 import { mkdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -19,17 +21,23 @@ const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i +
 const out = resolve(opt('--out') ?? join('.snapshots', 'ci-shots'))
 const items = (opt('--list') ?? '').split(',').map(s => s.trim()).filter(Boolean)
 
-type Item = { route: string; width: number; scheme: string; accent: string; file: string }
+/** UI states a shot can open first: the control to press, then what shows it is open. */
+const STATES: Record<string, { press: string; open: string; then?: string }> = {
+  display: { press: '.skin-switch .skin-menu-btn', open: `!!document.querySelector('.skin-menu [role=menuitemradio]')` },
+  tools: { press: '.tabbar button[aria-haspopup="dialog"]', open: `!!document.querySelector('.tools-sheet .skin-list [role=radio]')`, then: `document.querySelector('.tools-sheet .skin-list')?.scrollIntoView({ block: 'center' })` },
+}
+type Item = { route: string; width: number; scheme: string; accent: string; state?: string; file: string }
 const parse = (s: string): Item | string => {
   // the leading slash is optional: Git Bash on Windows rewrites a leading `/` into a Windows path
-  const [r, w, theme = 'dark'] = s.split('@'), route = r.startsWith('/') ? r : `/${r}`
+  const [r, w, theme = 'dark', state] = s.split('@'), route = r.startsWith('/') ? r : `/${r}`
   if (!/^\/[\w\-./?=&%]*$/.test(route) || route.includes('..')) return `bad route in "${s}"`
   const width = Number(w)
   if (!Number.isInteger(width) || width < 240 || width > 3840) return `bad width in "${s}" (240 to 3840)`
   const [scheme, accent = 'signal'] = theme.split('_')
   if (!(SCHEMES as readonly string[]).includes(scheme) || !(ACCENTS as readonly string[]).includes(accent)) return `bad theme in "${s}" (dark, light or <scheme>_<accent>)`
+  if (state !== undefined && !STATES[state]) return `bad state in "${s}" (${Object.keys(STATES).join(', ')})`
   const slug = route.replace(/[^\w]+/g, '-').replace(/^-|-$/g, '') || 'home'
-  return { route, width, scheme, accent, file: `${slug}-${width}-${scheme}_${accent}.png` }
+  return { route, width, scheme, accent, state, file: `${slug}-${width}-${scheme}_${accent}${state ? `-${state}` : ''}.png` }
 }
 const parsed = items.map(parse)
 const bad = parsed.filter((p): p is string => typeof p === 'string')
@@ -53,6 +61,19 @@ try {
     const ok = await page.waitFor(`!window.__shotOld && document.readyState === 'complete' && !document.querySelector('.view-loading, [aria-busy="true"]')`, 30000)
     await page.js(`document.fonts.ready.then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))`).catch(() => {})
     await sleep(1500)
+    if (it.state) {
+      // a UI state: press its control, wait for it to open, capture the viewport as it is
+      const st = STATES[it.state]
+      await page.js(`document.querySelector(${JSON.stringify(st.press)})?.click()`).catch(() => {})
+      const open = await page.waitFor(st.open, 8000)
+      if (st.then) await page.js(st.then).catch(() => {})
+      await sleep(900)
+      await page.shot(join(out, it.file))
+      if (!ok || !open) failed++
+      console.log(`${ok && open ? 'OK       ' : 'NOT READY'} ${it.file} (${((Date.now() - t) / 1000).toFixed(1)} s)`)
+      await page.js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`).catch(() => {})
+      continue
+    }
     const h = Math.min(4000, Math.max(H, Math.ceil(await page.js<number>('document.documentElement.scrollHeight').catch(() => H))))
     await page.cdp('Emulation.setDeviceMetricsOverride', { width: it.width, height: h, deviceScaleFactor: 1, mobile: phone })
     await sleep(800)
