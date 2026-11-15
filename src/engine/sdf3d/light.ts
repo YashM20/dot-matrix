@@ -46,8 +46,11 @@ export function applyFogSplit(col: V3, fog: V3, t: number, be: V3, bi: V3): V3 {
  * Fog whose density falls off with height, d(y) = a·e^(−b·y), integrated in closed form along the ray from the eye
  * (height `oy`, ray slope `dy`) to `t`. Clamped to [0, 1]; a level ray takes the limit a·e^(−b·oy)·t.
  */
+let hfA = NaN, hfB = NaN, hfOy = NaN, hfBase = 0
 export function heightFog(t: number, oy: number, dy: number, a: number, b: number): number {
-  const base = a * dexp(-oy * b)
+  // the eye's own density, a·e^(−b·oy), is the same for every dot of a frame: kept for the last (a, b, oy)
+  if (a !== hfA || b !== hfB || oy !== hfOy) { hfA = a; hfB = b; hfOy = oy; hfBase = a * dexp(-oy * b) }
+  const base = hfBase
   const k = Math.abs(dy * b) < 1e-6 ? t : (1 - dexp(-t * dy * b)) / (dy * b)
   return clamp01(base * k)
 }

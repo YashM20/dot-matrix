@@ -6,7 +6,7 @@
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { lookAt, type Camera, type V3 } from '../../engine/sdf3d/march'
 import { renderScene, SKY, SUN, type Frame, type Scene } from '../../engine/sdf3d/render'
-import type { Layer, Tone } from '../../engine/types'
+import type { Field, Layer, Tone } from '../../engine/types'
 import { TILE, layoutFor, tileStyle, type WidgetCredit } from '../types'
 import { caption, footer as footerText } from '../captions'
 
@@ -75,8 +75,11 @@ export function scenePlate(K: number, scene: (rows: number) => Scene, paint: (f:
     for (let k = 0; k < cols * rows; k++) { ink.v = 0; ink.tone = undefined; paint(frame, k, ink); val[k] = ink.v; tone[k] = ink.tone }
   }
   const at = (u: number, v: number) => Math.round(v * (all - 1)) * cols + Math.round(u * (cols - 1))
+  const field: Field = (u, v) => { bake(); return val![at(u, v)] ?? 0 }
+  // the same values on the plate's own lattice (`Field.cells`): the sampler reads the array instead of calling per dot
+  Object.defineProperty(field, 'cells', { get: () => { bake(); return { cols, rows: all, data: val! } } })
   return {
-    layer: { field: (u, v) => { bake(); return val![at(u, v)] ?? 0 }, toneOf: (_, u, v) => { bake(); return tone[at(u, v)] }, lattice: K, origin: [ox, oy] },
+    layer: { field, toneOf: (_, u, v) => { bake(); return tone[at(u, v)] }, lattice: K, origin: [ox, oy] },
     frame: () => { bake(); return frame! },
   }
 }

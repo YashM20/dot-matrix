@@ -1,6 +1,7 @@
 import type { KeyboardEvent } from 'react'
 import { SKINS, SKIN_NAMES } from '../../engine/display/names'
 import { setClack, setSkin, useClack, useDisplaySkin } from './store'
+import { dotRing } from '../dotRing'
 
 /** The one-line description: the skin title after its "NAME: " prefix (as in the DISPLAY ▾ menu). */
 const blurb = (title: string) => title.slice(title.indexOf(': ') + 2)
@@ -25,6 +26,6 @@ export function SkinList() {
         <i aria-hidden="true" /><b>{SKINS[name].label}</b><span>{blurb(SKINS[name].title)}</span>
       </button>)}
     </div>
-    {skin === 'flipdisc' && <button type="button" className={`skin-list-clack${clack ? ' selected' : ''}`} aria-pressed={clack} onClick={() => setClack(!clack)}>FLIP-DISC CLACK: <b>{clack ? 'ON' : 'OFF'}</b></button>}
+    {skin === 'flipdisc' && <button ref={dotRing} type="button" className={`skin-list-clack dot-ring${clack ? ' selected' : ''}`} aria-pressed={clack} onClick={() => setClack(!clack)}>FLIP-DISC CLACK: <b>{clack ? 'ON' : 'OFF'}</b></button>}
   </>
 }

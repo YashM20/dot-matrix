@@ -99,7 +99,7 @@
   width: 100%;
   min-height: var(--tap);
   margin-top: var(--space-2);
-  border: 1px dotted color-mix(in srgb, var(--tint) 20%, transparent);
+  border: 1px solid transparent;
   border-radius: var(--radius-pill);
   background: none;
   color: var(--mute);
@@ -115,7 +115,7 @@
 
 .skin-list-clack:hover,
 .skin-list-clack:focus-visible {
-  border-color: var(--line-hover);
+  --ring-c: var(--line-hover);
   color: var(--label)
 }
 

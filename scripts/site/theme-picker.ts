@@ -124,6 +124,44 @@ const holdWipe = async (name: string) => {
   await js(`window.__hold = false; window.__held?.play(); window.__held = null`)
 }
 const vts = () => js('window.__vt.length') as Promise<number>
+/** A 3× capture round the elements `sel` matches (6 px of margin): `.snapshots/t5/<name>.png`. */
+const closeUp = async (sel: string, name: string) => {
+  const r = await js(`(() => { const rs = [...document.querySelectorAll(${JSON.stringify(sel)})].map(e => e.getBoundingClientRect()).filter(r => r.width); if (!rs.length) return null
+    const x = Math.min(...rs.map(r => r.left)) - 6, y = Math.min(...rs.map(r => r.top)) - 6
+    return { x: x + scrollX, y: y + scrollY, width: Math.max(...rs.map(r => r.right)) + 6 - x, height: Math.max(...rs.map(r => r.bottom)) + 6 - y, scale: 3 } })()`)
+  if (!r) { console.log(`close-up ${name}: nothing matches ${sel}`); return }
+  const s = await cdp('Page.captureScreenshot', { format: 'png', clip: r })
+  if (s.result?.data) { mkdirSync(join('.snapshots', 't5'), { recursive: true }); writeFileSync(join('.snapshots', 't5', `${name}.png`), Buffer.from(s.result.data, 'base64')) }
+}
+/** The dotted pills and switches up close (`ring-*.png`): the header's DISPLAY ▾, CLACK and THEME ▾, the popover's
+ * two switches off, on and with keyboard focus, in both schemes; then TOOLS › THEME and DISPLAY on a phone. Last, as
+ * `?skin=flipdisc` (for CLACK) stays stored. */
+const ringCloseUps = async () => {
+  const head = '.topbar .skin-switch, .topbar .theme-switch', sw = '.theme-pop :is(.theme-contrast, .theme-share)'
+  for (const os of ['dark', 'light']) {
+    await open('/henry/?skin=flipdisc', { os })
+    await waitFor('!!document.querySelector(".topbar .skin-clack")', 4000); await sleep(300)
+    await closeUp(head, `ring-${os}-header-off`)
+    await js(`document.querySelector('.topbar .skin-clack').click()`); await move(5, 790); await sleep(200)
+    await closeUp(head, `ring-${os}-header-on`)
+    await js(`document.querySelector('.theme-menu-btn').click()`)
+    await waitFor('!!document.querySelector(".theme-pop .theme-share")', 3000); await move(5, 790); await sleep(300)
+    await closeUp(sw, `ring-${os}-switches-off`)
+    await js(`document.querySelectorAll(${JSON.stringify(sw)}).forEach(b => b.click())`); await sleep(400)
+    await closeUp(sw, `ring-${os}-switches-on`)
+    await js(`document.querySelector('.theme-pop .theme-contrast').focus()`); await key('Tab', 'Tab', 9); await sleep(200)
+    await closeUp(sw, `ring-${os}-switches-focus`)
+    await key('Escape', 'Escape', 27)
+  }
+  await open('/henry/?skin=flipdisc', { phone: true })
+  const tools = (await centreOf('.tabbar button[aria-haspopup]'))!
+  await tap(tools.x, tools.y)
+  await waitFor('!!document.querySelector(".tools-sheet[open] .theme-ctl")', 6000); await sleep(700)
+  await js(`document.querySelector('.tools-sheet .theme-share')?.scrollIntoView({ block: 'center' })`); await sleep(300)
+  await closeUp('.tools-sheet .theme-ctl :is(.theme-contrast, .theme-share)', 'ring-phone-switches')
+  await js(`document.querySelector('.tools-sheet .skin-list-clack')?.scrollIntoView({ block: 'center' })`); await sleep(300)
+  await closeUp('.tools-sheet .skin-list-clack', 'ring-phone-clack')
+}
 
 try {
   // ── desktop: hover intent, live preview, a pick and its wipe ──
@@ -389,6 +427,7 @@ try {
   await tap(tc.x, tc.y)
   check('phone: a tap on custom opens the hue slider in the sheet (44 px tall)', await waitFor(`document.documentElement.dataset.accent === 'custom' && !!document.querySelector('.tools-sheet .theme-hue input')`, 6000) && await js(`document.querySelector('.tools-sheet .theme-hue').getBoundingClientRect().height >= 44`) === true)
   await shot('sheet-custom')
+  await ringCloseUps()
   check('no page errors', errors.length === 0, errors.join(' | '))
 } finally {
   ws.close(); proc.kill(); server.close()
