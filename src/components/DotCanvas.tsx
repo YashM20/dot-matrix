@@ -10,7 +10,7 @@ import { renderSVG } from '../engine/renderer/svgRenderer'
 import { svgHtml } from '../lib/trusted'
 import { hasGPULayers, splitGPULayers, type GPUPass } from '../engine/renderer/webgl/passes'
 import { dotGL, loadDotGL, subscribeDotGL } from './glLoader'
-import { migrate as migrateDots, type MigrateOptions, type Migration } from '../engine/migrate'
+import type { MigrateOptions, Migration } from '../engine/migrate'
 import type { Control, ControlPatch, DotInstance, DotStyle, Field, GridConfig, Layer, ThemeTokens } from '../engine'
 // first-load code imports engine modules by path; a value import from the `../engine` barrel pulls every engine
 // module a lazy board uses into first load (docs/LIVING-MATTER-PLAN.md §6, F0.11). Type imports are fine.
@@ -95,6 +95,10 @@ const MAX_BACKING_SCALE = 3
 const CHANGE_MS = 360
 const EXIT_MS = 220
 const MIGRATE_MS = 640
+// the dot migration (engine/migrate): its own chunk, fetched by the first card given a `migrate` target
+type MigrateModule = typeof import('../engine/migrate/migrate')
+let migrateModule: MigrateModule | null = null, migrateLoading: Promise<MigrateModule> | null = null
+const loadMigrate = () => (migrateLoading ??= import('../engine/migrate/migrate').then(m => (migrateModule = m), (error: unknown) => { migrateLoading = null; throw error }))
 /** Data-spring half-life (s): a value closes half the distance to its new target in this time. */
 const SPRING_HALFLIFE = .12
 /** A frame that lands this soon (ms) after input is a direct response: it cuts, never dissolves. */
@@ -305,19 +309,26 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   // migrate: fly the frame on screen into the target's dots and hold; cleared → fly back to the frame
   const migrateKey = migrate?.key ?? '', migrateTo = useRef<DotInstance[] | null>(null)
   useLayoutEffect(() => {
-    if (transientRef.current?.kind === 'exit') return
-    const running = transientRef.current?.kind
-    if (migrate) {
-      migrateTo.current = migrate.to
-      const m = migrateDots(shownRef.current, migrate.to, { stagger: .3, arc: .12, ease: ease.emphasized, ...migrate.options })
-      transientRef.current = { kind: 'migrate', t0: null, m, delay: reducedMotion ? 0 : migrate.delay ?? 0, duration: reducedMotion ? 0 : migrate.duration ?? MIGRATE_MS, back: false, out: [] }
-      setTransient('migrate')
-    } else if (running === 'migrate' && migrateTo.current) {
-      if (reducedMotion) { transientRef.current = null; setTransient(null); return }
-      const m = migrateDots(migrateTo.current, shownRef.current, { stagger: .3, arc: .12, ease: ease.emphasized })
-      transientRef.current = { kind: 'migrate', t0: null, m, delay: 0, duration: MIGRATE_MS, back: true, out: [] }
-      setTransient('migrate')
+    const start = (migrateDots: MigrateModule['migrate']) => {
+      if (transientRef.current?.kind === 'exit') return
+      const running = transientRef.current?.kind
+      if (migrate) {
+        migrateTo.current = migrate.to
+        const m = migrateDots(shownRef.current, migrate.to, { stagger: .3, arc: .12, ease: ease.emphasized, ...migrate.options })
+        transientRef.current = { kind: 'migrate', t0: null, m, delay: reducedMotion ? 0 : migrate.delay ?? 0, duration: reducedMotion ? 0 : migrate.duration ?? MIGRATE_MS, back: false, out: [] }
+        setTransient('migrate')
+      } else if (running === 'migrate' && migrateTo.current) {
+        if (reducedMotion) { transientRef.current = null; setTransient(null); return }
+        const m = migrateDots(migrateTo.current, shownRef.current, { stagger: .3, arc: .12, ease: ease.emphasized })
+        transientRef.current = { kind: 'migrate', t0: null, m, delay: 0, duration: MIGRATE_MS, back: true, out: [] }
+        setTransient('migrate')
+      }
     }
+    if (migrateModule) { start(migrateModule.migrate); return }
+    if (!migrate) return // nothing ever migrated on this page: nothing to fly back
+    let current = true
+    loadMigrate().then(m => { if (current) start(m.migrate) }, (error: unknown) => console.error('DotCanvas: migrate failed to load', error))
+    return () => { current = false }
   }, [migrateKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const visible = useMemo(() => { let n = 0; for (const d of dots) if (d.opacity > 0 && d.r > 0) n++; return n }, [dots])
