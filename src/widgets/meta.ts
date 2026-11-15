@@ -177,7 +177,6 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'recorder': ['A voice recorder: the time, the waveform and the line it caught.', 'audio recorder animated'],
   'radio': ['A two-way radio on channel 07: hold the ring to talk.', 'radio audio ring'],
   'interpreter': ['A live interpreter: speech in, translated text out.', 'ai voice translate live'],
-  'thermal-puppy': ['A puppy seen by a thermal camera, 38.6°.', 'thermal photo animal'],
   'level-03': ['A game level drawn in scattered dots.', 'game level scatter'],
   'shopping': ['A shopping list: milk in the basket, coffee next, two left.', 'shopping retail'],
   // departures: a live transit board

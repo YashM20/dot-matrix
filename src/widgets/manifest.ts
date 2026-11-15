@@ -42,7 +42,7 @@ export const boardManifest = [
   { id: 'henry3', title: 'HENRY LI: 14A / 247W', columns: 3, density: 'standard', load: () => import('./boards/henry3').then(m => ({ items: m.henry3Board })) },
   { id: 'metro', title: 'METRO / OXYGEN / QUIET', columns: 3, density: 'standard', load: () => import('./boards/metro').then(m => ({ items: m.metroBoard })) },
   { id: 'ride', title: 'RIDE / HENRY / SYSTEM', columns: 3, density: 'standard', load: () => import('./boards/ride').then(m => ({ items: m.rideBoard })) },
-  { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, density: 'standard', load: () => import('./boards/audio').then(m => ({ items: m.audioBoard })) },
+  { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, density: 'dense', load: () => import('./boards/audio').then(m => ({ items: m.audioBoard })) },
   { id: 'departures', title: 'DEPARTURES: LIVE TRANSIT BOARD', columns: 3, density: 'dense', load: () => import('./boards/departures').then(m => ({ items: m.departuresBoard })) },
   { id: 'instrument', title: 'INSTRUMENT DEVICE', columns: 3, density: 'standard', load: () => import('./boards/instrument').then(m => ({ items: m.instrumentBoard, shared: m.instrumentShared })) },
   { id: 'ir', title: 'FIELD IR: DOT PROGRAMS', columns: 3, density: 'hero', load: () => import('./boards/ir').then(m => ({ items: m.irBoard })) },
@@ -89,6 +89,19 @@ export const boardMeta = (id: string): BoardMeta | undefined => boardManifest.fi
  */
 export const cardAliases: Readonly<Record<string, string>> = {}
 export const resolveCardId = (id: string): string => cardAliases[id] ?? (id.startsWith('glyph-') ? `lock-${id.slice(6)}` : id)
+/**
+ * Cards taken off the site, `[slug, uid, board]`: their old `/widget/<slug>/`, `/<uid>` and `?card=` links open the
+ * board they were on (`viewFromUrl`, src/site/views.ts), and vercel.json redirects the same paths there. The uid
+ * stays in ids.json and is never reused.
+ */
+export const removedCards: readonly (readonly [slug: string, uid: string, board: string])[] = [
+  ['thermal-puppy', '05cze99w', 'audio'], // #343: the owner took it off the AUDIO board
+]
+/** The board a removed card's slug or uid opens, else undefined. */
+export const removedCardBoard = (key: string): string | undefined => {
+  const k = key.toLowerCase()
+  return removedCards.find(([slug, uid]) => slug === k || uid === k)?.[2]
+}
 
 /**
  * The board picker (docs/UX-PLAN.md §4.2): plain names and groups. UI only: ids, paths, OG pages and goldens

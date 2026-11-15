@@ -64,7 +64,6 @@ export const cardNames: Readonly<Record<string, readonly [name: string, tags: st
   "recorder": ["Recorder", "audio recorder animated"],
   "radio": ["Radio", "radio audio ring"],
   "interpreter": ["Interpreter", "ai voice translate live"],
-  "thermal-puppy": ["Thermal", "thermal photo animal"],
   "level-03": ["Level 03", "game level scatter"],
   "shopping": ["Shopping", "shopping retail"],
   "departures": ["Departures", "transit train splitflap live"],

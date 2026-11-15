@@ -983,7 +983,6 @@ var catalog = [
   ["recorder", "m3eej4af", "audio"],
   ["radio", "825wmyt4", "audio"],
   ["interpreter", "81r0wnzb", "audio"],
-  ["thermal-puppy", "05cze99w", "audio"],
   ["level-03", "6yz4t3j4", "audio"],
   ["shopping", "znf5r5p5", "audio"],
   ["departures", "p8xka5g4", "departures"],

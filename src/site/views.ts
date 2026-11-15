@@ -6,7 +6,7 @@
  * program keeps `&p=`, a frame or document link `&d=`), ABOUT is `/about/`. Old links (`?about` among them) resolve
  * through `TAB_ALIASES`, `?board=`, `boardAliases`, a bare `?p=`, and `/browse/` (ALL; its old `?in=<board>` opens that board).
  */
-import { boardIds, resolveBoardId } from '../widgets/manifest'
+import { boardIds, removedCardBoard, resolveBoardId } from '../widgets/manifest'
 import { ABOUT_PATH, boardFromPath, pageMeta } from './meta'
 import { widgetRoute, type WidgetRoute } from './routes'
 import { flag } from './flags'
@@ -58,13 +58,15 @@ export function viewFromUrl(search: string, pathname: string, mode: Mode = 'TUNE
   const place: Place = q.has('about') || /^\/about\/?$/i.test(pathname) ? 'ABOUT' : isMode(make) ? make : q.has('make') ? 'MAKE' : browse ? 'EXPLORE' : placeFromName(tab) ?? (q.get('p') ? 'CODE' : 'EXPLORE')
   // BROWSE's old board filter (`/browse/?in=metro`) is that board now
   const inBoard = resolveBoardId((q.get('in') ?? '').trim().toLowerCase()), filtered = boardIds.includes(inBoard) ? inBoard : undefined
-  const named = boardIds.includes(b) ? b : tab === 'gallery' ? GALLERY_BOARD : filtered ?? (browse || ALL_NAMES.includes(tab) ? undefined : boardFromPath(pathname))
+  // a widget page needs a widget-shaped path or ?card=; a MAKE / ABOUT link that also carries ?card= opens that view.
+  // A removed card's link (`removedCards`) opens the board it was on instead.
+  const route = place === 'EXPLORE' ? widgetRoute(pathname, search) : undefined
+  const gone = route && !route.scope ? removedCardBoard(route.key) : undefined, widget = gone ? undefined : route
+  const named = gone ?? (boardIds.includes(b) ? b : tab === 'gallery' ? GALLERY_BOARD : filtered ?? (browse || ALL_NAMES.includes(tab) ? undefined : boardFromPath(pathname)))
   const board = named ?? boardIds[0], all = !named
-  // a widget page needs a widget-shaped path or ?card=; a MAKE / ABOUT link that also carries ?card= opens that view
-  const widget = place === 'EXPLORE' ? widgetRoute(pathname, search) : undefined
   return {
     ...placeView(place, mode), board, all,
-    ...(q.get('card') && { card: q.get('card')! }), ...(tab === 'essay' && { essay: true }), ...(legal && { legal }),
+    ...(q.get('card') && !gone && { card: q.get('card')! }), ...(tab === 'essay' && { essay: true }), ...(legal && { legal }),
     ...(widget && { widget }),
   }
 }
