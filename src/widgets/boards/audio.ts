@@ -349,8 +349,8 @@ const PUPPY = toneRamp((u, v) => pupHeat(u * 143, v * 143), [
   { at: .2, blend: .04, tone: 'mid', value: pupSize },
   { at: .4, blend: .05, tone: 'idle', value: pupSize },
   { at: .6, blend: .06, tone: 'value', value: pupSize },
-  // no blend on the accent: a dithered edge left single red dots in the white fur
-  { at: .84, tone: 'active', value: pupSize },
+  // no blend on the accent (a dithered edge left single red dots in the white fur): one cut at the old blend's midpoint
+  { at: .89, tone: 'active', value: pupSize },
 ])
 export const thermalPuppy: WidgetPreset = {
   id: 'thermal-puppy', name: 'Thermal', label: '', group: 'photo', chrome: 'dots', bleed: true, grid: TILE,
