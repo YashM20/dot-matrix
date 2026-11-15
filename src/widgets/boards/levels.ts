@@ -270,7 +270,12 @@ function skyTable(far: number, mid: number): Float64Array {
   const kept = skyTables.find(s => s.far === far && s.mid === mid)
   if (kept) return kept.v
   const W = N + 1, v = new Float64Array(W * W), k: SkyColumn = { ...oneColumn }
-  for (let x = 0; x < W; x++) { skyColumn(x, far, mid, k); for (let y = 0; y < W; y++) v[y * W + x] = lift(skyCell(k, x, y)) }
+  // a column runs through a few flat values (void, pines, ground band): `lift` is taken again only when the value changes
+  let lastIn = NaN, lastOut = 0
+  for (let x = 0; x < W; x++) {
+    skyColumn(x, far, mid, k)
+    for (let y = 0; y < W; y++) { const s = skyCell(k, x, y); if (s !== lastIn) { lastIn = s; lastOut = lift(s) } v[y * W + x] = lastOut }
+  }
   skyTables.unshift({ far, mid, v })
   if (skyTables.length > 2) skyTables.pop()
   return v
