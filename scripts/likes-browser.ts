@@ -22,7 +22,7 @@ const uid = (JSON.parse(readFileSync('src/widgets/ids.json', 'utf8')) as Record<
 const { assert, done } = checker('likes browser')
 
 const MOCK = `(() => {
-  const q = new URLSearchParams(location.search), st = { mode: q.get('lkmock') || 'ok', liked: {}, calls: [] }
+  const q = new URLSearchParams(location.search), st = { mode: q.get('lkmock') || 'ok', liked: {}, counted: {}, calls: [] }
   window.__lk = st
   window.V_C = [{ b: 1, v: 'probe', e: '', d: 0 }]
   // the challenge script's tag, at the exact src BotID builds (URLSearchParams encodes the port's colon), so it skips the load
@@ -40,10 +40,12 @@ const MOCK = `(() => {
     if (url.pathname.startsWith('/api/likes/p/')) return reply(200, { n: 3 })
     if (url.pathname === '/api/like') {
       if (st.mode === 'limit') return reply(429, { error: 'limit' })
-      const k = body.item || JSON.stringify(body.program), was = !!st.liked[k]
-      if (body.on) { st.liked[k] = true; return reply(200, st.mode === 'already' || was ? { on: true, soon: true, already: true } : { on: true, soon: true }) }
-      delete st.liked[k]; return reply(200, { on: false, soon: false })
+      // n: the item's public count after this change, as the server reports it (12, less this browser's like once counted)
+      const k = body.item || JSON.stringify(body.program), was = !!st.liked[k] || !!st.counted[k]
+      if (body.on) { st.liked[k] = true; return reply(200, st.mode === 'already' || was ? { on: true, soon: true, already: true, n: 12 } : { on: true, soon: true, n: 12 }) }
+      const n = 12 - (st.counted[k] ? 1 : 0); delete st.liked[k]; delete st.counted[k]; return reply(200, { on: false, soon: false, n })
     }
+    if (url.pathname === '/api/visit' && st.mode === 'visitfail') return reply(503, { error: 'paused' })
     return reply(200, { ok: true })
   }
 })()`
@@ -129,6 +131,29 @@ try {
   await p.key('Escape', 'Escape', 27)
   const left = await p.js<boolean>('!!document.querySelector(".lk-sheet")'), likes = (await calls()).filter(c => c.path === '/api/like').length
   assert('likes-browser: from the keyboard, Enter asks again and Escape cancels without a like', again && !left && likes === before, `focused ${focused}, sheet ${again}, still open ${left}, likes ${before} → ${likes}`)
+
+  // A5.3 (docs/STATE-MACHINES.md): Remember, but the check-in fails. Nothing is remembered (no cookie came back), no
+  // like is sent, and the next like asks again
+  await p.js(`localStorage.removeItem('dot480:likes'); 1`)
+  await go(`${widget}?lkmock=visitfail`, `!!document.querySelector('.lk-btn')`)
+  await sleep(300)
+  await click('.lk-btn'); await p.waitFor(`!!document.querySelector('.lk-sheet')`, 3000)
+  await click('.lk-choices button:first-child')
+  await p.waitFor(`document.querySelector('.lk-note')?.textContent !== ''`, 6000)
+  const failed = await p.js<{ stored: string | null; forget: boolean; pressed: string | null; note: string; likes: number }>(`({ stored: localStorage.getItem('dot480:likes'), forget: !!document.querySelector('.lk-forget'),
+    pressed: document.querySelector('.lk-btn')?.getAttribute('aria-pressed') ?? null, note: document.querySelector('.lk-note')?.textContent ?? '', likes: window.__lk.calls.filter(c => c.path === '/api/like').length })`)
+  assert('likes-browser: a failed check-in after Remember stores no choice, shows no "Forget this browser", sends no like and says "Likes paused." (A5.3)',
+    !/"c"/.test(failed.stored ?? '') && !failed.forget && failed.pressed === 'false' && failed.note === 'Likes paused.' && failed.likes === 0, JSON.stringify(failed))
+
+  // A5.2: liked here earlier and counted since, so the count read (12) already holds this browser's like (liked at 11).
+  // An unlike shows the count the server reports after it (11), where it used to keep showing 12
+  await p.js(`localStorage.setItem('dot480:likes', JSON.stringify({ c: 'o', mine: { 'w:${uid}': 11 } })); 1`)
+  await go(`${widget}?lkmock=ok`, `document.querySelector('.lk-btn')?.getAttribute('aria-pressed') === 'true'`)
+  await p.js(`window.__lk.counted['w:${uid}'] = true; 1`)
+  const likedCount = await p.js<string>(`document.querySelector('.lk-count')?.textContent ?? ''`)
+  await click('.lk-btn'); await p.waitFor(`document.querySelector('.lk-btn')?.getAttribute('aria-pressed') === 'false'`, 4000)
+  const unlikedCount = await p.js<string>(`document.querySelector('.lk-count')?.textContent ?? ''`)
+  assert('likes-browser: unliking a like that was counted since lowers the count (12 → 11) (A5.2)', likedCount === '12' && unlikedCount === '11', `${likedCount} → ${unlikedCount}`)
 
   // paused: the API is down
   await go(`${widget}?lkmock=paused`, `!!document.querySelector('.lk-btn')`)
