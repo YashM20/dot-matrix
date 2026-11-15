@@ -83,19 +83,20 @@ export function abFrame(p: number): AbFrame {
 
 const dots = (sites: Pt[], tone: Tone, value: number): Layer => ({ field: () => value, sites, size: 1, tone, shapeOf: () => 0 })
 export const sqAmmann: WidgetPreset = {
-  id: 'sq-ammann', name: 'Squares Ammann', label: 'AMMANN', ...tile,
+  id: 'sq-ammann', name: 'Ammann', label: 'AMMANN', ...tile,
   credit: { by: ['Robert Ammann', 'Frans Beenker', 'Nicolaas Govert de Bruijn'], title: 'Ammann–Beenker tiling, by de Bruijn’s multigrid', source: 'https://en.wikipedia.org/wiki/Ammann%E2%80%93Beenker_tiling', note: 'technique' },
   layers: ctx => {
     const p = mod(ctx.t, LOOP) / LOOP, f = abFrame(p), at = (c: number, r: number) => f.code[r * W + c]
     // the squares, one layer: axis squares join, turned squares are π/4 cells, which never join
-    const squares = cardCells(ORIGIN, W, H, (c, r) => { const k = at(c, r) & 7; return k === 1 || k === 2 ? .75 : 0 }, {
+    // the red tile at full value, so the accent reads as the board's red, not a dull brick
+    const squares = cardCells(ORIGIN, W, H, (c, r) => { const k = at(c, r) & 7; return k === 1 || k === 2 ? (at(c, r) & 8 ? 1 : .75) : 0 }, {
       toneOf: (c, r) => (at(c, r) & 8 ? 'active' : at(c, r) === 1 ? 'idle' : 'mid'), group: (c, r) => f.group[r * W + c], join: { accent: true },
       rotation: (c, r) => ((at(c, r) & 7) === 2 ? Math.PI / 4 : 0),
     })
     return [
       cite('DE BRUIJN 1981'),
       squares,
-      dots(f.mid, 'mid', .5), dots(f.faint, 'faint', .75), dots(f.redSites, 'active', .75),
+      dots(f.mid, 'mid', .5), dots(f.faint, 'faint', .75), dots(f.redSites, 'active', 1),
       ...footer(p, `TILES ${pad(f.shown, 3)}`, `ZOOM ${f.zoom.toFixed(2)}`),
     ]
   },

@@ -11,8 +11,8 @@
   "oxygen": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "e75b0046",
-    "dots": 321
+    "hash": "d22ad4b1",
+    "dots": 320
    }
   },
   "home-quiet": {
@@ -31,6 +31,11 @@
   },
   "newswire": {
    "t=0": {
+    "style": "squircle:2.30",
+    "hash": "1e0d032c",
+    "dots": 940
+   },
+   "t=1.3": {
     "style": "squircle:2.30",
     "hash": "1e0d032c",
     "dots": 940

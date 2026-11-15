@@ -191,6 +191,11 @@ creditChecks(assert)
 // CP6 wave 3) cards fixed at dot level keep every dot clear of its neighbours (scripts/verify/cards.ts)
 cardChecks(assert)
 frameCacheChecks(assert)
+// METRO (#257) and DASHBOARD (#250) refine fixes (scripts/verify/metro-dashboard.ts)
+{
+  const { metroDashboardChecks } = await import('./verify/metro-dashboard')
+  metroDashboardChecks(assert)
+}
 // FLAGS (#144, #145) every release flag documented; the URL sets none; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
 await flagChecks(assert)
 // SKINS (#345) four display skins in order; a saved or linked removed skin opens on OLED (scripts/verify/skins.ts)
