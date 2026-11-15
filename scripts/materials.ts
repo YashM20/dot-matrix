@@ -101,7 +101,7 @@ export async function materialsChecks(assert: Assert, opts: MaterialsOptions = {
     // lattice dot (3, 2) spans card x ∈ [17.5, 20), y ∈ [25, 27.5): centres x + ½ in range → cols 17, 18, 19; rows 25, 26 (a 2.5 lattice alternates 3 and 2 cells)
     assert('materials: cardMask: a lattice dot fills the card cells whose centres fall in it', lit === 6 && m.data[25 * 144 + 17] === 1 && m.data[26 * 144 + 19] === 1 && m.data[27 * 144 + 19] === 0, `${lit} cells`)
     // the marble's engraving: a banded inset distance stands in for two full-grid EDTs (identical heights, bit for bit)
-    const glyphs = atClock(() => materialsHooks.engraving('09', '41', 2026).hero), prof = { shape: 'linear' as const, width: 1.6, height: -1.8 }
+    const glyphs = atClock(() => materialsHooks.engraving('09', '41').hero), prof = { shape: 'linear' as const, width: 1.6, height: -1.8 }
     const viaEdt = heightRaster(distanceRaster(glyphs), prof), viaBand = heightRaster(insetDistance(glyphs), prof)
     assert('materials: insetDistance ≡ distanceRaster under an engraving profile (heights and coverage bit for bit)', same(viaEdt.data, viaBand.data) && same(viaEdt.mask, viaBand.mask))
     const barrel = readFileSync(new URL('../src/engine/index.ts', import.meta.url), 'utf8')

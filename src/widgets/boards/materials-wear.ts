@@ -14,6 +14,7 @@ import { twill } from '../../engine/matter/weave'
 import { createRaster, sample, type Raster } from '../../engine/raster/raster'
 import type { CellBounds, Layer } from '../../engine/types'
 import { TILE, layer, type WidgetPreset } from '../types'
+import { footer } from '../captions'
 import { L15, LG15, LIGHT_DEFAULTS, T, cite, lightId, matLight, own, mod, once, pad2, scratch, snapTorch, tile, toCard15, valuedSites, type Pt } from './materials-shared'
 
 const COLS = TILE.cols
@@ -125,6 +126,8 @@ export const matPatch: WidgetPreset = {
       layer(T.dots(holes, .7), 'faint'), layer(T.dots(sewn, .9), 'idle'),
       ...(sw.phase < 1 ? [layer(T.dots(tail, .8), 'mid')] : []),
       layer(valuedSites([[needle[0], needle[1], 1]], 2), 'active'),
+      // the corners under the round patch: how far the border is sewn
+      ...footer('STITCH', `${sw.sewn}/${st.count}`, 134),
     ]
   },
 }

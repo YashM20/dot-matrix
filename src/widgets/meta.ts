@@ -318,7 +318,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'mat-lens': ['A lens of liquid glass you drag over a clock to bend it.', 'material glass clock control'],
   'mat-pool': ['A rippling pool casting a caustic net on its tiles; tap to drop a pebble.', 'material water physics animated'],
   'mat-window': ['A stained-glass rose window lit by the sun; the pane of this hour is red.', 'material glass clock animated'],
-  'mat-patch': ['An embroidered patch whose border is still being sewn.', 'material textile thread animated'],
+  'mat-patch': ['An embroidered patch whose border is still being sewn; tap to turn it in the light.', 'material textile thread animated control'],
   'mat-rust': ['A steel "days since" sign that rusts as the days go by.', 'material metal counter animated'],
   'mat-candle': ['A wax candle clock that burns down over the day; the flame is red.', 'material wax clock animated'],
   'mat-knit': ['A knitted swatch with a rope cable, knitted a stitch at a time; tap to knit a row.', 'material textile knit animated control'],
