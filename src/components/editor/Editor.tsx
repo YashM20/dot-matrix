@@ -21,7 +21,7 @@ import { editableText } from './direct'
 import { codeTarget, KEY_TOOL, MODE_ENTRY, paintTarget } from './input'
 import { InspectorBody, InspectorTabs } from './Inspector'
 import { AssetsPanel, LayersPanel } from './Panels'
-import { isPhone, shareLink, type ShareOutcome } from './phone'
+import { isPhone, shareLink, type Layout, type ShareOutcome } from './phone'
 import { PhoneSheet } from './PhoneSheet'
 import { useFillWindow, useKeyboard, useLayout, usePhoneScreen } from './screen'
 import { getEditor, useEditor, type Tool } from './store'
@@ -55,27 +55,30 @@ function useModeEntry(mode: Mode, phone: boolean) {
   }, [mode]) // eslint-disable-line react-hooks/exhaustive-deps
 }
 
+/** Probes only: a render crash on demand, to check the recovery screen around the whole editor. */
+const probeCrash = () => { if (TEST_HOOKS && (globalThis as { __editorCrash?: boolean }).__editorCrash) throw new Error('probe: the editor was asked to crash') }
+/** The root's classes: the layout (a phone, on its side) and an open on-screen keyboard. */
+const rootClass = (layout: Layout, kb: boolean) => `ed-root${layout !== 'desktop' ? ' is-phone' : ''}${layout === 'landscape' ? ' is-landscape' : ''}${kb ? ' has-kb' : ''}`
+
 interface EditorProps { mode: Mode; onExit?: () => void }
 /** The editor inside its recovery screen (#143): a crash anywhere in it (top bar, panels, inspector) offers a reset. */
 export const Editor = (props: EditorProps) => <EditorBoundary area="editor"><EditorView {...props} /></EditorBoundary>
 
 function EditorView({ mode, onExit }: EditorProps) {
-  const layout = useLayout(), phone = layout !== 'desktop', landscape = layout === 'landscape', kb = useKeyboard(phone)
+  const layout = useLayout(), phone = layout !== 'desktop', landscape = layout === 'landscape', kb = useKeyboard(phone), kbH = kb?.height
   const sheet = useEditor(s => s.sheet), note = useEditor(s => s.note), shortcuts = useEditor(s => s.shortcuts)
   const [banner, setBanner] = useState('')
   const prompt = useLinkImports(mode, setBanner) // `?p=` / `?make&d=` links wait for KEEP
-  // probes only: a render crash on demand, to check the recovery screen around the whole editor
-  if (TEST_HOOKS && (globalThis as { __editorCrash?: boolean }).__editorCrash) throw new Error('probe: the editor was asked to crash')
+  probeCrash()
   const root = useRef<HTMLElement>(null)
   useFillWindow(root, phone)
   useModeEntry(mode, phone)
-  usePhoneScreen(phone, kb?.height)
+  usePhoneScreen(phone, kbH)
   useEffect(() => { if (!note) return; const h = setTimeout(() => getEditor().setNote(''), 4200); return () => clearTimeout(h) }, [note])
   useShortcuts(phone)
 
   return (
-    <section ref={root} className={`ed-root${phone ? ' is-phone' : ''}${landscape ? ' is-landscape' : ''}${kb ? ' has-kb' : ''}`} aria-label="Editor"
-      style={kb ? { top: kb.top, height: kb.height } : undefined}>
+    <section ref={root} className={rootClass(layout, !!kb)} aria-label="Editor" style={kb && { top: kb.top, height: kb.height }}>
       <TopBar phone={phone} onExit={onExit} />
       <div className="ed-body">
         {!phone && <LeftPanel />}
@@ -89,7 +92,7 @@ function EditorView({ mode, onExit }: EditorProps) {
         </div>
         {!phone && <aside className="ed-right" aria-label="Inspector"><InspectorTabs /><InspectorBody /></aside>}
       </div>
-      {phone && sheet && <PhoneSheet key={sheet} side={landscape} vh={kb?.height} onClose={() => getEditor().setSheet(null)} />}
+      {phone && sheet && <PhoneSheet key={sheet} side={landscape} vh={kbH} onClose={() => getEditor().setSheet(null)} />}
       {shortcuts && <Shortcuts onClose={() => getEditor().setShortcuts(false)} />}
     </section>
   )
