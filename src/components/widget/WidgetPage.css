@@ -28,9 +28,10 @@
     padding: var(--gap-group) 0
   }
 
-  /* one row the height of the page's middle (an auto row grew to the side panel's content, so the panel ran on
-     under the footer instead of scrolling) */
-  .wp-main {
+  /* one row the height of the page's middle, both columns stretched to it: the side panel scrolls inside it and the
+     stage is a size container the card fits. Two classes, so the base rules further down (align-items: start, the
+     stage's column width) don't undo this: they did, and the panel and the card's caption ran on behind the footer */
+  .wp > .wp-main {
     flex: 1 1 auto;
     grid-template-rows: minmax(0, 1fr);
     min-height: 0;
@@ -41,7 +42,7 @@
     container-type: size
   }
 
-  .wp-stage {
+  .wp-stagebox > .wp-stage {
     width: min(100cqw, var(--wp-max), (100cqh - var(--space-7)) * var(--wp-ar))
   }
 
