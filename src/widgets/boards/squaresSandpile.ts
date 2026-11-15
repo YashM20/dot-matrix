@@ -34,7 +34,7 @@ export function sandSweep(t: number): number {
 }
 
 export const sqSandpile: WidgetPreset = {
-  id: 'sq-sandpile', name: 'Squares Sandpile', label: 'SANDPILE', ...tile,
+  id: 'sq-sandpile', name: 'Sandpile', label: 'SANDPILE', ...tile,
   credit: { by: ['Per Bak', 'Chao Tang', 'Kurt Wiesenfeld'], title: 'Self-organized criticality: an explanation of the 1/f noise', source: 'https://doi.org/10.1103/PhysRevLett.59.381', note: 'technique' },
   layers: ctx => {
     const b = sandBurn(), s = sandSweep(ctx.t), z = b.z[s]

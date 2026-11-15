@@ -94,7 +94,7 @@ const NB = [[1, 0], [-1, 0], [0, 1], [0, -1]]
 const inFrame = (c: number, r: number) => Math.abs(2 * (c - ORDERS) + 1) + Math.abs(2 * (ORDERS - 1 - r) + 1) <= 2 * ORDERS
 
 export const sqArctic: WidgetPreset = {
-  id: 'sq-arctic', name: 'Squares Arctic', label: 'ARCTIC', ...tile,
+  id: 'sq-arctic', name: 'Arctic', label: 'ARCTIC', ...tile,
   credit: { by: ['William Jockusch', 'James Propp', 'Peter Shor'], title: 'Random domino tilings and the arctic circle theorem', source: 'https://arxiv.org/abs/math/9801068', note: 'technique; domino shuffling by Noam Elkies, Greg Kuperberg, Michael Larsen and James Propp (1992)' },
   layers: ctx => {
     const b = arcticBeat(ctx.t), a = arcticCells(b.step, b.beat), at = (c: number, r: number) => a.tone[r * SIDE + c]
