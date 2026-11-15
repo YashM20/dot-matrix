@@ -75,38 +75,67 @@ function slab(lo: number, hi: number, o: number, d: number, out: number[]): bool
 }
 
 /**
- * The per-ray work that only the camera, the sun, the fog, the exposure and the planes decide: each dot's ray, its
- * sun-coloured fog (× exposure), the nearest plane in front of the eye, and the sky's luma (on first need). A scene
- * whose camera holds still reuses it every frame (a few recent ones are kept): the same numbers, computed once.
+ * The per-ray work that the camera, the sun, the fog, the exposure and the planes decide, kept so a scene whose
+ * camera holds still reuses it every frame (a few recent ones are kept): the same numbers, computed once.
+ * Two parts, each with its own key. `Rays` is each dot's ray and the nearest plane in front of the eye: the camera's
+ * basis and focal length decide the ray, and each plane's offset from the eye, n·eye + h, decides where the ray meets
+ * it, so a camera sliding along a plane (the posts walk) keeps it. `Glow` is each ray's sun-coloured fog (× exposure)
+ * and the sky's luma (on first need): a sun that moves (the lathe) redoes only this part.
  */
-interface Rays { key: string; rd: Float64Array; fc: Float64Array; t: Float64Array; hit: Int16Array; sky: Float64Array }
-const raysKept: Rays[] = []
-function raysFor(scene: Scene, w: number, h: number, aspect: number): Rays {
-  const { cam, sun, fog, tmax } = scene, planes = scene.planes ?? [], exposure = scene.exposure ?? 1
-  const key = [w, h, aspect, cam.ox, cam.oy, cam.oz, cam.ux, cam.uy, cam.uz, cam.vx, cam.vy, cam.vz, cam.wx, cam.wy, cam.wz, cam.fl, sun[0], sun[1], sun[2],
-    fog.base[0], fog.base[1], fog.base[2], fog.sun[0], fog.sun[1], fog.sun[2], exposure, tmax, ...planes.flat()].join(',')
-  const hit = raysKept.findIndex(r => r.key === key)
-  if (hit >= 0) { const r = raysKept[hit]; if (hit) { raysKept.splice(hit, 1); raysKept.unshift(r) } return r }
-  const n = w * h, r: Rays = { key, rd: new Float64Array(3 * n), fc: new Float64Array(3 * n), t: new Float64Array(n), hit: new Int16Array(n), sky: new Float64Array(n).fill(NaN) }
-  const rd: V3 = new Float64Array(3), fc: V3 = new Float64Array(3), half = w / h * aspect
-  for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
-    const k = j * w + i, sx = (2 * (i + .5) / w - 1) * half, sy = 1 - 2 * (j + .5) / h
-    cameraRay(cam, sx, sy, rd)
-    sunFogColor(rd, sun, fog.base, fog.sun, fc)
-    for (let c = 0; c < 3; c++) fc[c] *= exposure
-    // the nearest plane in front of the eye
-    let t = tmax, hp = -2
-    for (let q = 0; q < planes.length; q++) {
-      const p = planes[q], dn = p[0] * rd[0] + p[1] * rd[1] + p[2] * rd[2]
-      if (dn >= 0) continue
-      const tp = -(p[0] * cam.ox + p[1] * cam.oy + p[2] * cam.oz + p[3]) / dn
-      if (tp > 0 && tp < t) { t = tp; hp = q }
-    }
-    r.rd.set(rd, 3 * k); r.fc.set(fc, 3 * k); r.t[k] = t; r.hit[k] = hp
-  }
-  raysKept.unshift(r)
-  if (raysKept.length > 4) raysKept.pop()
+interface Rays { key: string; rd: Float64Array; t: Float64Array; hit: Int16Array }
+interface Glow { key: string; fc: Float64Array; sky: Float64Array }
+const raysKept: Rays[] = [], glowKept: Glow[] = []
+/** The entry under `key` in a most-recent-first list of up to 4, moved to the front; undefined when absent. */
+function kept<T extends { key: string }>(list: T[], key: string): T | undefined {
+  const at = list.findIndex(r => r.key === key)
+  if (at < 0) return undefined
+  const r = list[at]
+  if (at) { list.splice(at, 1); list.unshift(r) }
   return r
+}
+function keep<T>(list: T[], r: T): T {
+  list.unshift(r)
+  if (list.length > 4) list.pop()
+  return r
+}
+function raysFor(scene: Scene, w: number, h: number, aspect: number): Rays & Glow {
+  const { cam, sun, fog, tmax } = scene, planes = scene.planes ?? [], exposure = scene.exposure ?? 1
+  // each plane as its normal and n·eye + h (summed in the order the hit below needs)
+  const offsets = planes.map(p => p[0] * cam.ox + p[1] * cam.oy + p[2] * cam.oz + p[3])
+  const key = [w, h, aspect, cam.ux, cam.uy, cam.uz, cam.vx, cam.vy, cam.vz, cam.wx, cam.wy, cam.wz, cam.fl, tmax,
+    ...planes.flatMap((p, q) => [p[0], p[1], p[2], offsets[q]])].join(',')
+  const n = w * h
+  let rays = kept(raysKept, key)
+  if (!rays) {
+    rays = keep(raysKept, { key, rd: new Float64Array(3 * n), t: new Float64Array(n), hit: new Int16Array(n) })
+    const rd: V3 = new Float64Array(3), half = w / h * aspect
+    for (let j = 0; j < h; j++) for (let i = 0; i < w; i++) {
+      const k = j * w + i, sx = (2 * (i + .5) / w - 1) * half, sy = 1 - 2 * (j + .5) / h
+      cameraRay(cam, sx, sy, rd)
+      // the nearest plane in front of the eye
+      let t = tmax, hp = -2
+      for (let q = 0; q < planes.length; q++) {
+        const p = planes[q], dn = p[0] * rd[0] + p[1] * rd[1] + p[2] * rd[2]
+        if (dn >= 0) continue
+        const tp = -offsets[q] / dn
+        if (tp > 0 && tp < t) { t = tp; hp = q }
+      }
+      rays.rd.set(rd, 3 * k); rays.t[k] = t; rays.hit[k] = hp
+    }
+  }
+  const glowKey = [key, sun[0], sun[1], sun[2], fog.base[0], fog.base[1], fog.base[2], fog.sun[0], fog.sun[1], fog.sun[2], exposure].join(',')
+  let glow = kept(glowKept, glowKey)
+  if (!glow) {
+    glow = keep(glowKept, { key: glowKey, fc: new Float64Array(3 * n), sky: new Float64Array(n).fill(NaN) })
+    const rd: V3 = new Float64Array(3), fc: V3 = new Float64Array(3)
+    for (let k = 0; k < n; k++) {
+      rd[0] = rays.rd[3 * k]; rd[1] = rays.rd[3 * k + 1]; rd[2] = rays.rd[3 * k + 2]
+      sunFogColor(rd, sun, fog.base, fog.sun, fc)
+      for (let c = 0; c < 3; c++) fc[c] *= exposure
+      glow.fc.set(fc, 3 * k)
+    }
+  }
+  return { key: glowKey, rd: rays.rd, t: rays.t, hit: rays.hit, fc: glow.fc, sky: glow.sky }
 }
 
 /**

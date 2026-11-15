@@ -12,7 +12,7 @@
 import { HENRY_LEVEL } from '../creditSources'
 import { clamp, hash01, smoothstep } from '../../engine/math'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
-import { HALL_CEIL, HALL_FLOOR, castHall, fog, hallCells, lamp, project, seam, type Hall } from '../../engine/scene'
+import { HALL_CEIL, HALL_FLOOR, castHall, fog, hallCells, lamp, project, seam, type Hall, type HallCells } from '../../engine/scene'
 import type { Field } from '../../engine/types'
 import { TILE, baked, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 import { SHIP } from '../sprites'
@@ -225,22 +225,26 @@ export const SKY_STARS: V3[] = Array.from({ length: 30 }, (_, n): V3 => [Math.ro
   .filter(([x, y]) => Math.hypot(x - 110, y - 34) > 16)
 export const ridge = (x: number) => 27 + 10 * Math.sin(x * .043) + 6 * Math.sin(x * .11 + 1) + 2.5 * Math.sin(x * .29 + 2)
 export const MOON = { x: 110, y: 34, r: 12 }
-/** The surface sky at card cell (x, y) with the far range shifted `far` cells and the pines `mid` cells (shared with the game). */
-export const surfaceSky = (x: number, y: number, far: number, mid: number) => {
-  x = Math.round(x); y = Math.round(y)
+/** What a column of the surface sky needs, from its x alone: the pine, the ground band, the far ridge. */
+interface SkyColumn { xm: number; c: number; top: number; band: number; h: number; ry: number; lit: number }
+const skyColumn = (x: number, far: number, mid: number, out: SkyColumn): SkyColumn => {
+  const xm = x + mid, n = Math.floor(xm / 19), xf = x + far, h = ridge(xf)
+  out.xm = xm; out.c = n * 19 + 5 + Math.floor(hash01(n, 7) * 9); out.top = 116 - (12 + Math.floor(hash01(n, 8) * 14)) - 4
+  out.band = 108 + Math.round(2 * Math.sin(xm * .05)); out.h = h; out.ry = 104 - Math.round(h); out.lit = ridge(xf + 1) < ridge(xf - 1) ? 0 : 1
+  return out
+}
+/** The surface sky at whole card cell (x, y) of column `k` (`skyColumn(x)`). */
+function skyCell(k: SkyColumn, x: number, y: number): number {
   if (y >= 116) return 0
   // pines (mid layer, 6 cells/s): lit on the moon side
-  const xm = x + mid, n = Math.floor(xm / 19), c = n * 19 + 5 + Math.floor(hash01(n, 7) * 9), th = 12 + Math.floor(hash01(n, 8) * 14)
-  const top = 116 - th - 4
+  const { xm, c, top, band, h, ry } = k
   if (y > top && y < 112 && Math.abs(xm - c) <= (y - top) * .42) return xm >= c ? .5 : .28
   if (y >= 112 && Math.abs(xm - c) <= 1) return .2
-  if (y >= 108 + Math.round(2 * Math.sin(xm * .05))) return y === 108 + Math.round(2 * Math.sin(xm * .05)) ? .2 : .12
+  if (y >= band) return y === band ? .2 : .12
   // far range (2 cells/s): snow on the high peaks, lit flank facing the moon
-  const xf = x + far, h = ridge(xf), ry = 104 - Math.round(h)
   if (y >= ry) {
-    const lit = ridge(xf + 1) < ridge(xf - 1) ? 0 : 1
     if (y - ry < 3 && h > 36) return .5
-    return (.11 + .07 * lit) * (1 - .45 * (y - ry) / (104 - ry + 6))
+    return (.11 + .07 * k.lit) * (1 - .45 * (y - ry) / (104 - ry + 6))
   }
   // the moon: a lit sphere with soft limb and two craters
   const mx = (x - MOON.x) / MOON.r, my = (y - MOON.y) / MOON.r, rr = mx * mx + my * my
@@ -251,9 +255,34 @@ export const surfaceSky = (x: number, y: number, far: number, mid: number) => {
   }
   return 0
 }
+const oneColumn: SkyColumn = { xm: 0, c: 0, top: 0, band: 0, h: 0, ry: 0, lit: 0 }
+/** The surface sky at card cell (x, y) with the far range shifted `far` cells and the pines `mid` cells (shared with the game). */
+export const surfaceSky = (x: number, y: number, far: number, mid: number) => {
+  x = Math.round(x); y = Math.round(y)
+  return skyCell(skyColumn(x, far, mid, oneColumn), x, y)
+}
+/**
+ * The card's lifted sky, one value per card cell, for the last two (far, mid) shifts. The column terms are worked out
+ * once per column instead of once per cell (nine sines a cell before): the same values, cell for cell.
+ */
+const skyTables: { far: number; mid: number; v: Float64Array }[] = []
+function skyTable(far: number, mid: number): Float64Array {
+  const kept = skyTables.find(s => s.far === far && s.mid === mid)
+  if (kept) return kept.v
+  const W = N + 1, v = new Float64Array(W * W), k: SkyColumn = { ...oneColumn }
+  for (let x = 0; x < W; x++) { skyColumn(x, far, mid, k); for (let y = 0; y < W; y++) v[y * W + x] = lift(skyCell(k, x, y)) }
+  skyTables.unshift({ far, mid, v })
+  if (skyTables.length > 2) skyTables.pop()
+  return v
+}
 const backdrop = (t: number): Field => {
   const far = Math.floor(t * 2), mid = Math.floor(t * 6)
-  return cells((x, y) => lift(surfaceSky(x, y, far, mid)))
+  let sky: Float64Array | undefined
+  return cells((x, y) => {
+    const c = Math.round(x), r = Math.round(y)
+    if (!(c >= 0 && r >= 0 && c <= N && r <= N)) return lift(surfaceSky(x, y, far, mid))
+    return (sky ??= skyTable(far, mid))[r * (N + 1) + c]
+  })
 }
 export const RUN_A = ['..##..', '..##..', '.####.', '#.##.#', '..##..', '.#..#.', '#....#']
 export const RUN_B = ['..##..', '..##..', '.####.', '.###.#', '..##..', '..##..', '..#.#.']
@@ -437,13 +466,23 @@ export const lvQueen: WidgetPreset = {
 }
 
 // ── title / game over floors: a ray-plane floor grid, fogged into the horizon ───────────────────
-const gridFloor = (h: Hall, scroll: number, peak: number, mask?: (x: number, y: number) => boolean): Field => cells((px, py) => {
-  if (mask?.(px, py)) return 0
-  const hit = cast(h, px, py)
-  if (!hit || hit.s !== FLOOR) return 0
-  const on = seam(hit.x + 50, .7, .03, hit.fp) || seam(hit.z + scroll, .8, .03, hit.fz)
-  return on ? peak * fog(hit.z, h.far, 1.1) : 0
-})
+/** Each floor hall's hits and fog per card cell (`hallCells`): the hall stands still, so a frame only scrolls the seams. */
+const floorCells = new Map<Hall, HallCells>()
+const gridFloor = (h: Hall, scroll: number, peak: number, mask?: (x: number, y: number) => boolean): Field => {
+  let A = floorCells.get(h)
+  if (!A) floorCells.set(h, (A = hallCells(h, TILE.cols, TILE.rows, 1.1)))
+  const C = A
+  const field = cells((px, py) => {
+    if (mask?.(px, py)) return 0
+    const at = C.at(px, py), hit = at < 0 ? cast(h, px, py) : C.hit[at]
+    if (!hit || hit.s !== FLOOR) return 0
+    const on = seam(hit.x + 50, .7, .03, hit.fp) || seam(hit.z + scroll, .8, .03, hit.fz)
+    return on ? peak * (at < 0 ? fog(hit.z, h.far, 1.1) : C.fog[at]) : 0
+  })
+  // a floor-only hall hits nothing above its vanishing row: the sampler skips those rows (one row of slack)
+  if (h.ceil === undefined && h.wall === undefined) field.bounds = [0, Math.max(0, Math.floor(h.vy) - 1), N, N]
+  return field
+}
 
 // ── title: HIVE over a scrolling floor and a striped hive moon; the red cursor says press start ─
 const TITLE_FLOOR: Hall = { vx: 72, vy: 98, f: 40, floor: 1, far: 16 }
@@ -453,6 +492,8 @@ const hiveMoon = cells((x, y) => {
   const band = (y - top) / 24, gap = frac(band * 6) < band * .55
   return gap ? 0 : .5 - .25 * band
 })
+// zero outside the half disc (cols 48 to 96, rows 74 to 97): the sampler visits only that box, with a cell of slack
+hiveMoon.bounds = [47, 73, 97, 98]
 export const CURSOR = ['#...', '##..', '###.', '####', '###.', '##..', '#...']
 export const lvTitle: WidgetPreset = {
   id: 'lv-title', name: 'Hive', ...scene, animated: true,
