@@ -126,7 +126,9 @@ try {
       for (const tab of ['DATA', 'DESCRIBE', 'SPEC']) {
         await js(`[...document.querySelectorAll('.xr-tabs button')].find(b => b.textContent === '${tab}').click()`); await sleep(tab === 'SPEC' ? 900 : 200)
         const body = await text('.xr-tabpanel')
-        check(`inspector ${tab.toLowerCase()} tab has content`, body.length > 20, body.slice(0, 80).replace(/\s+/g, ' '))
+        // DATA is a key/value table (a card with two short keys, like settings' bluetooth/sound, is under 20 characters) or the "no data keys" note
+        const ok = tab === 'DATA' ? (await count('.xr-tabpanel .xr-data tr')) > 0 || /No data keys/.test(body) : body.length > 20
+        check(`inspector ${tab.toLowerCase()} tab has content`, ok, body.slice(0, 80).replace(/\s+/g, ' '))
       }
       await shot('01b-xray-spec')
     }

@@ -2,8 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { CellBounds, GridConfig, Layer } from '../engine/types'
 import type { FrameContext } from '../engine/context'
 import type { Raster } from '../engine/raster'
-import { createCamera, type CameraStatus } from './camera'
-import { createSilhouette } from '../vision/silhouette'
+import type { CameraStatus } from './camera'
+
+type CameraCore = typeof import('./cameraCore')
+let core: CameraCore | null = null, loading: Promise<CameraCore> | null = null
+const loadCore = () => (loading ??= import('./cameraCore').then(m => (core = m), (error: unknown) => { loading = null; throw error }))
 
 /** `data.camState` codes a camera card reads (see `CAM` in the mirror board). */
 const STATE: Record<CameraStatus, number> = { idle: 0, starting: 1, live: 2, denied: 3, error: 3 }
@@ -21,30 +24,6 @@ export interface CameraFeed {
 }
 
 /**
- * Silhouette / motion over a camera's luma: a background model fed once per new camera frame, read through
- * getters (outside the hook: the React Compiler can't compile getters in an object literal).
- */
-function visionOf(cam: NonNullable<ReturnType<typeof createCamera>>, cols: number, rows: number) {
-  const n = cols * rows, sil = createSilhouette(n), bounds = cam.raster.bounds
-  let fed = -1, first = 0
-  // the first half second re-learns the room every frame (auto-exposure is still settling)
-  const feed = () => {
-    if (fed === cam.frame) return
-    if (fed < 0 || cam.frame < fed) first = cam.frame
-    if (cam.frame - first < 15) sil.reset()
-    fed = cam.frame; sil.push(cam.raster.data)
-  }
-  const silhouette: Raster = { grid: cam.raster.grid, space: 'card', data: sil.fg, bounds }
-  const motion: Raster = { grid: cam.raster.grid, space: 'card', data: sil.motion, bounds }
-  const media = {
-    camera: cam.raster,
-    get silhouette() { feed(); return silhouette },
-    get motion() { feed(); return motion },
-  }
-  return { media, reset: () => { fed = -1 } }
-}
-
-/**
  * Camera for a card that declares `media: 'camera'`. Nothing is requested until `on` turns true (a
  * control the user pressed), so the permission prompt only ever follows a user action. The stream stops
  * when `on` turns false, the card unmounts or the tab is hidden, and resumes when the tab is shown again.
@@ -52,7 +31,15 @@ function visionOf(cam: NonNullable<ReturnType<typeof createCamera>>, cols: numbe
 export function useCamera(enabled: boolean, on: boolean, grid: GridConfig | undefined, box?: CellBounds): CameraFeed {
   const cols = grid?.cols ?? 0, rows = grid?.rows ?? 0, boxKey = box?.join(',') ?? ''
   const [raw, setStatus] = useState<CameraStatus>('idle')
-  const cam = useMemo(() => (enabled && cols && rows ? createCamera({ cols, rows }, boxKey ? (boxKey.split(',').map(Number) as CellBounds) : undefined, { onStatus: setStatus }) : null), [enabled, cols, rows, boxKey])
+  // capture and vision code (./cameraCore.ts) load when a camera card mounts, well before its feed is switched on
+  const [mod, setMod] = useState(core)
+  useEffect(() => {
+    if (!enabled || mod) return
+    let live = true
+    loadCore().then(m => { if (live) setMod(m) }, () => { if (live) setStatus('error') })
+    return () => { live = false }
+  }, [enabled, mod])
+  const cam = useMemo(() => (mod && enabled && cols && rows ? mod.createCamera({ cols, rows }, boxKey ? (boxKey.split(',').map(Number) as CellBounds) : undefined, { onStatus: setStatus }) : null), [mod, enabled, cols, rows, boxKey])
   // switched off: always idle (a denial is forgotten, so the next tap asks again)
   const status: CameraStatus = on ? raw : 'idle'
   useEffect(() => {
@@ -64,7 +51,7 @@ export function useCamera(enabled: boolean, on: boolean, grid: GridConfig | unde
     return () => { document.removeEventListener('visibilitychange', sync); cam.stop() }
   }, [cam, on])
   // silhouette / motion: a background model over the card's own luma, fed once per new camera frame
-  const vision = useMemo(() => (cam ? visionOf(cam, cols, rows) : null), [cam, cols, rows])
+  const vision = useMemo(() => (mod && cam ? mod.visionOf(cam, cols, rows) : null), [mod, cam, cols, rows])
   useEffect(() => { if (on) vision?.reset() }, [on, vision])
   const read = useCallback(() => {
     if (!cam || cam.status !== 'live') return undefined
