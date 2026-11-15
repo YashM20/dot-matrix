@@ -54,7 +54,7 @@
 /* touch: press feedback instead of hover, and no hover colour left stuck after a tap */
 @media (hover: none) {
   :is(.tabbar button, .topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button) {
-    transition: transform var(--dur-out) ease-out, background-color var(--dur-out) ease-out
+    transition: transform var(--dur-out) var(--ease), background-color var(--dur-out) var(--ease)
   }
 
   :is(.topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button):active {
@@ -62,11 +62,11 @@
   }
 
   .tabbar button:active .glyph {
-    transform: scale(.86)
+    transform: scale(.94)
   }
 
   .tabbar .glyph {
-    transition: transform var(--dur-out) ease-out
+    transition: transform var(--dur-out) var(--ease)
   }
 
   :is(.sheet li button, .skin-list button):active {

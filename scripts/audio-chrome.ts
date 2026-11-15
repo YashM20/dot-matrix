@@ -13,10 +13,10 @@
  *
  *   npx tsx scripts/audio-chrome.ts
  */
-import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
+import { pageSocket, startChrome } from './lib/chrome'
 
 const root = resolve(import.meta.dirname, '..'), outDir = join(root, '.snapshots', 'c5')
 mkdirSync(join(outDir, 'rec'), { recursive: true })
@@ -24,16 +24,10 @@ const url = process.env.URL ?? 'http://localhost:5202/'
 const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
 if (!chrome) { console.log('no Chrome found (set $CHROME): skipped'); process.exit(0) }
 
-const profile = mkdtempSync(join(tmpdir(), 'dot-c5-'))
-const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--hide-scrollbars',
-  '--window-size=1400,1300', '--autoplay-policy=no-user-gesture-required', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', ...(process.env.CHROME_FLAGS?.split(' ').filter(Boolean) ?? []), 'about:blank'], { stdio: 'ignore' })
+const { proc, port } = await startChrome(chrome, ['--no-first-run', '--no-default-browser-check', '--hide-scrollbars',
+  '--window-size=1400,1300', '--autoplay-policy=no-user-gesture-required', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', ...(process.env.CHROME_FLAGS?.split(' ').filter(Boolean) ?? []), 'about:blank'], 'dot-c5-')
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
-let port = ''
-// a cold Chrome on a shared CI runner can take well over 10 s to open its DevTools port
-for (let i = 0; i < 300 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
-if (!port) { proc.kill(); throw new Error('Chrome did not open a DevTools port in 30 s') }
-const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json() as { type: string; webSocketDebuggerUrl: string }[]
-const ws = new WebSocket(targets.find(t => t.type === 'page')!.webSocketDebuggerUrl)
+const ws = new WebSocket(await pageSocket(port))
 await new Promise(r => ws.addEventListener('open', r, { once: true }))
 let seq = 0
 const calls = new Map<number, (m: any) => void>(), logs: string[] = []
@@ -184,6 +178,14 @@ globalThis.__DOT_PROBE__ = true; { const o = URL.createObjectURL; URL.createObje
   await shot('scope-mic')
   await click('Listen to the microphone')
   check('mic off releases the device', await until(`${E}.micState === 'idle'`, 3000))
+  // B7-2 (docs/STATE-MACHINES.md): the mic goes away mid-listen (unplugged, permission revoked). The browser ends the
+  // track on its own: `stop()` sets readyState to ended, the event is what a real unplug fires (`stop()` alone doesn't)
+  await click('Listen to the microphone')
+  check('mic live again', await until(`${E}.micState === 'live'`, 8000), await evaluate(`${E}.micState`))
+  await evaluate(`(() => { const t = ${E}.mic.stream.getAudioTracks()[0]; t.stop(); t.dispatchEvent(new Event('ended')); return 1 })()`)
+  const gone = await until(`${E}.micState === 'idle' && document.querySelector('[aria-label="Listen to the microphone"]')?.getAttribute('aria-checked') === 'false'`, 3000)
+  check('mic: a track that ends on its own (unplugged, revoked) turns the mic off, switch included (B7-2)', gone,
+    JSON.stringify(await evaluate(`({ state: ${E}.micState, checked: document.querySelector('[aria-label="Listen to the microphone"]')?.getAttribute('aria-checked') })`)))
 
   // leaving both audio boards stops the sound
   await openBoard('INTERFACES', 'components')

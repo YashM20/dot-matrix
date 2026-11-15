@@ -18,6 +18,8 @@
  *    (`og:image:alt`, `twitter:image:alt`) comes from `public/og/blog/alt.json`.
  * 5. The lab page (`src/lab/experiments.ts`): `dist/lab/index.html` from `dist/lab.html`, with its meta and JSON-LD.
  * 6. ABOUT (#318): `dist/about/index.html`, a copy of `dist/index.html` with its own title, description and canonical.
+ * 7. Cold-load hints (#348, scripts/site/preload.ts): `/` and each board page name the lazy chunks they are sure to
+ *    need as `<link rel="modulepreload">`, so those start with the main bundle.
  *
  * Widget OG images are cached in `node_modules/.cache/dot480-og` (or `OG_CACHE`), keyed by the OG renderer's source and
  * the card's golden hashes: a cold run renders all of them (~2 min), a warm one copies.
@@ -40,6 +42,7 @@ import { boardBlurbs } from '../../src/widgets/blurbs'
 import { boardLabel } from '../../src/widgets/manifest'
 import type { WidgetMeta } from '../../src/widgets/meta'
 import { widgetIndex } from '../widgets/meta'
+import { BROWSE_MODULE, CHUNK_GRAPH, boardModules, entryOf, hintTags, leadBoards, pageHints, readGraph, withHints } from './preload'
 
 const DIST = 'dist'
 const vercel = process.env.VERCEL_PROJECT_PRODUCTION_URL
@@ -130,10 +133,24 @@ export function labPage() {
   console.log(`site: lab page (${EXPERIMENTS.length} piece${EXPERIMENTS.length === 1 ? '' : 's'})`)
 }
 
+/**
+ * Step 7: the hint tags for `/` (ALL's chunk and the boards of its first row) and for one board's page, from the build's
+ * chunk graph. Without the graph (postbuild run on a build made elsewhere) no page gets hints; perf-check.ts fails then.
+ */
+export function coldHints(html: string): { home: string[]; board: (id: string) => string[] } {
+  const entry = entryOf(html)
+  if (!existsSync(CHUNK_GRAPH) || !entry) { console.warn(`site: no ${CHUNK_GRAPH}, so no cold-load hints`); return { home: [], board: () => [] } }
+  const g = readGraph(), mods = boardModules(), mod = (id: string) => mods.get(id) ?? (() => { throw new Error(`preload: no loader for board ${id}`) })()
+  const lead = leadBoards()
+  const home = hintTags(pageHints(g, entry, [BROWSE_MODULE, ...lead.map(mod)]))
+  console.log(`site: cold-load hints, / has ${home.length} (ALL + ${lead.join(', ')})`)
+  return { home, board: id => hintTags(pageHints(g, entry, [mod(id)])) }
+}
+
 export function postbuild({ og = true } = {}) {
-  const index = readFileSync(join(DIST, 'index.html'), 'utf8')
-  writeFileSync(join(DIST, 'index.html'), withMeta(index))
-  for (const b of boards) page(b.id, withMeta(index, b.id))
+  const index = readFileSync(join(DIST, 'index.html'), 'utf8'), hints = coldHints(index)
+  writeFileSync(join(DIST, 'index.html'), withHints(withMeta(index), hints.home))
+  for (const b of boards) page(b.id, withHints(withMeta(index, b.id), hints.board(b.id)))
   page('about', withMeta(index, ABOUT_META))
   blogPages()
   labPage()

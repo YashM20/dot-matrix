@@ -346,8 +346,10 @@ function sampleLayersOnce(dots: Sink, layers: Layer[], grid: GridConfig, style: 
     const i = row * grid.cols + col, value = best[i]
     // empty cells are invisible unless the style draws every dot (constant opacity); 0 always shows as 0
     if (covered?.[i]) continue
+    // an empty cell is skipped before it is quantized (most of a sparse card)
+    if (value <= 0 && !background) continue
     const sv = shown(value, style)
-    if ((value <= 0 || sv <= 0) && !background) continue
+    if (sv <= 0 && !background) continue
     emit(dots, sv, J ? J.tone[i] : toneIndex(toneOf(base, owner[i], value, us[col], vs[row]), value), (col + .5) * pitch, (row + .5) * pitch, i, style, 1,
       J ? J.join[i] : NO_JOIN, J ? J.form[i] : NO_FORM)
   }

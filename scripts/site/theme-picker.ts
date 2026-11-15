@@ -18,14 +18,16 @@
  *  - CARD SIZE: the popover's labelled radio group (LARGE checked by default, one tab stop), a click reflows the
  *    components board (3 → 4 a row at 1280) without re-mounting a card and stores it, arrows pick, a reload keeps
  *    it, ⌘K "Card size: large" runs; on a phone TOOLS › DISPLAY › COMPACT puts 2 a row.
- * Captures to look at go to `.snapshots/t5/` (the popover previewing, an accent and a scheme wipe held at 20% and 45%, the phone sheet).
+ *  - the header's dotted pills at load: no border and no ring until the idle command layer rings them, then the ring
+ *    fades in (at once under reduced motion); a pressed phone tab glyph sinks to .94.
+ * Captures to look at go to `.snapshots/t5/` (the popover previewing, an accent and a scheme wipe held at 20% and 45%, the phone sheet,
+ * the dotted pills up close as `ring-*` and at load as `arrive-*`).
  * Needs a build: `npx vite build`, then `npx tsx scripts/site/theme-picker.ts`. Chrome: $CHROME or the usual paths.
  */
-import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
-import { tmpdir } from 'node:os'
 import { extname, join, normalize } from 'node:path'
+import { pageSocket, startChrome } from '../lib/chrome'
 
 const DIST = 'dist', PORT = Number(process.env.PORT) || 4381
 if (!existsSync(join(DIST, 'index.html'))) { console.log('no dist/index.html (run npx vite build first): skipped'); process.exit(0) }
@@ -45,13 +47,9 @@ const base = `http://127.0.0.1:${PORT}`
 
 const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
 if (!chrome) { console.log('no Chrome found (set $CHROME): skipped'); server.close(); process.exit(0) }
-const profile = mkdtempSync(join(tmpdir(), 'dot-theme-picker-'))
-const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--window-size=1280,800', 'about:blank'], { stdio: 'ignore' })
+const { proc, port, profile } = await startChrome(chrome, ['--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--window-size=1280,800', 'about:blank'], 'dot-theme-picker-')
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
-let port = ''
-for (let i = 0; i < 300 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
-const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json() as { type: string; webSocketDebuggerUrl: string }[]
-const ws = new WebSocket(targets.find(t => t.type === 'page')!.webSocketDebuggerUrl)
+const ws = new WebSocket(await pageSocket(port))
 await new Promise(r => ws.addEventListener('open', r, { once: true }))
 let seq = 0
 const calls = new Map<number, (m: any) => void>()
@@ -129,6 +127,86 @@ const holdWipe = async (name: string) => {
   await js(`window.__hold = false; window.__held?.play(); window.__held = null`)
 }
 const vts = () => js('window.__vt.length') as Promise<number>
+/** A 3× capture round the elements `sel` matches (6 px of margin): `.snapshots/t5/<name>.png`. */
+const closeUp = async (sel: string, name: string) => {
+  const r = await js(`(() => { const rs = [...document.querySelectorAll(${JSON.stringify(sel)})].map(e => e.getBoundingClientRect()).filter(r => r.width); if (!rs.length) return null
+    const x = Math.min(...rs.map(r => r.left)) - 6, y = Math.min(...rs.map(r => r.top)) - 6
+    return { x: x + scrollX, y: y + scrollY, width: Math.max(...rs.map(r => r.right)) + 6 - x, height: Math.max(...rs.map(r => r.bottom)) + 6 - y, scale: 3 } })()`)
+  if (!r) { console.log(`close-up ${name}: nothing matches ${sel}`); return }
+  const s = await cdp('Page.captureScreenshot', { format: 'png', clip: r })
+  if (s.result?.data) { mkdirSync(join('.snapshots', 't5'), { recursive: true }); writeFileSync(join('.snapshots', 't5', `${name}.png`), Buffer.from(s.result.data, 'base64')) }
+}
+/** The dotted pills and switches up close (`ring-*.png`): the header's DISPLAY ▾, CLACK and THEME ▾, the popover's
+ * two switches off, on and with keyboard focus, in both schemes; then TOOLS › THEME and DISPLAY on a phone. Last, as
+ * `?skin=flipdisc` (for CLACK) stays stored. */
+const ringCloseUps = async () => {
+  const head = '.topbar .skin-switch, .topbar .theme-switch', sw = '.theme-pop :is(.theme-contrast, .theme-share)'
+  for (const os of ['dark', 'light']) {
+    await open('/henry/?skin=flipdisc', { os })
+    await waitFor('!!document.querySelector(".topbar .skin-clack")', 4000); await sleep(300)
+    await closeUp(head, `ring-${os}-header-off`)
+    await js(`document.querySelector('.topbar .skin-clack').click()`); await move(5, 790); await sleep(200)
+    await closeUp(head, `ring-${os}-header-on`)
+    await js(`document.querySelector('.theme-menu-btn').click()`)
+    await waitFor('!!document.querySelector(".theme-pop .theme-share")', 3000); await move(5, 790); await sleep(300)
+    await closeUp(sw, `ring-${os}-switches-off`)
+    await js(`document.querySelectorAll(${JSON.stringify(sw)}).forEach(b => b.click())`); await sleep(400)
+    await closeUp(sw, `ring-${os}-switches-on`)
+    await js(`document.querySelector('.theme-pop .theme-contrast').focus()`); await key('Tab', 'Tab', 9); await sleep(200)
+    await closeUp(sw, `ring-${os}-switches-focus`)
+    await key('Escape', 'Escape', 27)
+  }
+  await open('/henry/?skin=flipdisc', { phone: true })
+  const tools = (await centreOf('.tabbar button[aria-haspopup]'))!
+  await tap(tools.x, tools.y)
+  await waitFor('!!document.querySelector(".tools-sheet[open] .theme-ctl")', 6000); await sleep(700)
+  await js(`document.querySelector('.tools-sheet .theme-share')?.scrollIntoView({ block: 'center' })`); await sleep(300)
+  await closeUp('.tools-sheet .theme-ctl :is(.theme-contrast, .theme-share)', 'ring-phone-switches')
+  await js(`document.querySelector('.tools-sheet .skin-list-clack')?.scrollIntoView({ block: 'center' })`); await sleep(300)
+  await closeUp('.tools-sheet .skin-list-clack', 'ring-phone-clack')
+}
+
+/** The phone viewport at 3× (`.snapshots/t5/<name>.png`): a clipped capture of the fixed tab bar on an emulated phone
+ * comes from the page top instead, so the whole screen is captured and the bar is cropped by hand. */
+const phoneShot = async (name: string) => {
+  await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 3, mobile: true }); await sleep(300)
+  await shot(name)
+  await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true })
+}
+/** The header's pills at load (`arrive-*.png`): before the idle command layer rings them (simulated by taking `--ring`
+ * off again) they show text and caret only, no border; the ring then fades in over --dur-out (at once under reduced
+ * motion). Then the phone tab bar's press: the glyph sinks to .94. */
+const ringArrival = async () => {
+  const pills = '.topbar .dot-ring', head = '.topbar .skin-switch, .topbar .theme-switch'
+  const strip = `window.__rings = [...document.querySelectorAll(${JSON.stringify(pills)})].map(el => { const v = el.style.getPropertyValue('--ring'); el.style.removeProperty('--ring'); return [el, v] })`
+  const fades = `document.getAnimations().filter(a => a.transitionProperty === 'opacity' && a.effect?.pseudoElement === '::before' && a.effect.target.matches(${JSON.stringify(pills)})).length`
+  for (const [os, reduce] of [['dark', false], ['light', false], ['dark', true]] as const) {
+    await open('/henry/?skin=flipdisc', { os, reduce })
+    await waitFor(`document.querySelectorAll(${JSON.stringify(pills)}).length >= 3 && [...document.querySelectorAll(${JSON.stringify(pills)})].every(el => el.style.getPropertyValue('--ring'))`, 4000)
+    await js(strip); await sleep(400)
+    const pre = await js(`[...document.querySelectorAll(${JSON.stringify(pills)})].map(el => { const c = getComputedStyle(el), b = getComputedStyle(el, '::before')
+      return { text: el.textContent.trim(), border: c.borderTopStyle + ' ' + c.borderTopColor, before: b.opacity, ink: c.color, w: el.getBoundingClientRect().width } })`) as { text: string; border: string; before: string; ink: string; w: number }[]
+    const tag = `${os}${reduce ? ', reduced motion' : ''}`
+    check(`header pills before the ring (${tag}): no border, no ring, text and caret stay`, pre.length >= 3 && pre.every(p => !p.border.startsWith('dotted') && /rgba\(0, 0, 0, 0\)|transparent/.test(p.border) && p.before === '0' && p.text.length > 1 && !/(, | \/ )0\)$/.test(p.ink)), JSON.stringify(pre))
+    if (!reduce) await closeUp(head, `arrive-${os}-header-load`)
+    await js(`window.__rings.forEach(([el, v]) => el.style.setProperty('--ring', v))`)
+    const n = await js(`new Promise(r => requestAnimationFrame(() => r(${fades})))`) as number
+    check(reduce ? 'reduced motion: the ring appears at once (no fade)' : `the ring fades in when it arrives (${tag})`, reduce ? n === 0 && await js(`[...document.querySelectorAll(${JSON.stringify(pills)})].every(el => getComputedStyle(el, '::before').opacity === '1')`) === true : n >= 3, String(n))
+    await sleep(400)
+    if (!reduce) await closeUp(head, `arrive-${os}-header-ringed`)
+  }
+  // the phone tab bar: a press sinks the glyph to .94 on the chrome's ease
+  await open('/henry/', { phone: true })
+  await phoneShot('arrive-phone-tab-rest')
+  // a held touch doesn't keep :active in headless Chrome, so the press is forced on the button (CSS.forcePseudoState)
+  await cdp('DOM.enable'); await cdp('CSS.enable')
+  const root = (await cdp('DOM.getDocument')).result.root.nodeId, node = (await cdp('DOM.querySelector', { nodeId: root, selector: '.tabbar button' })).result.nodeId
+  await cdp('CSS.forcePseudoState', { nodeId: node, forcedPseudoClasses: ['active'] }); await sleep(400)
+  const press = await js(`(() => { const g = getComputedStyle(document.querySelector('.tabbar button .glyph')); return { transform: g.transform, ease: g.transitionTimingFunction } })()`) as { transform: string; ease: string }
+  await phoneShot('arrive-phone-tab-press')
+  await cdp('CSS.forcePseudoState', { nodeId: node, forcedPseudoClasses: [] })
+  check('phone: a pressed tab glyph sinks to .94 on the chrome ease', /^matrix\(0\.94, 0, 0, 0\.94/.test(press.transform) && press.ease.startsWith('cubic-bezier(0.2, 0.8, 0.2, 1)'), JSON.stringify(press))
+}
 
 try {
   // ── desktop: hover intent, live preview, a pick and its wipe ──
@@ -184,12 +262,23 @@ try {
   check('Escape closes and returns focus to THEME', await waitFor(`!document.querySelector('.theme-pop') && document.activeElement?.classList.contains('theme-menu-btn')`, 2000))
 
   // ── share-link opt-in, through ⌘K "Copy deep link" ──
-  const copyLink = async () => {
+  /**
+   * ⌘K, then `text` in its input; waits for the filter to land (the input holds `text`, the highlighted row matches
+   * `first`) instead of a fixed pause, so a busy runner can't press Enter on the unfiltered list (#224).
+   */
+  const palette = async (text: string, first: RegExp) => {
     await key('k', 'KeyK', 75, 2)
-    await waitFor('!!document.querySelector(".pal input")', 4000)
-    await cdp('Input.insertText', { text: 'copy deep link to this view' }); await sleep(150)
-    await key('Enter', 'Enter', 13); await sleep(200)
-    return js('window.__copied.at(-1)') as Promise<string | undefined>
+    if (!await waitFor('document.activeElement === document.querySelector(".pal input")', 4000)) return false
+    await cdp('Input.insertText', { text })
+    return waitFor(`document.querySelector('.pal input')?.value === ${JSON.stringify(text)} && ${first}.test(document.querySelector('.pal-item--sel')?.textContent ?? '')`, 4000)
+  }
+  /** The link ⌘K "Copy deep link" copies: waits for the clipboard write, not a fixed time. */
+  const copyLink = async () => {
+    const n = await js('window.__copied.length') as number
+    const ready = await palette('copy deep link to this view', /Copy deep link to this view/)
+    await key('Enter', 'Enter', 13)
+    if (!await waitFor(`window.__copied.length > ${n}`, 4000)) console.log(`  copyLink: nothing copied (palette ready ${ready}, open ${await js('!!document.querySelector(".pal")')})`)
+    return js('window.__copied.length > ' + n + ' ? window.__copied.at(-1) : undefined') as Promise<string | undefined>
   }
   const plain = await copyLink()
   check('share opt-in off: a copied link has no theme', !!plain && !plain.includes('theme='), String(plain))
@@ -202,22 +291,16 @@ try {
   check('share opt-in on: the link carries ?theme=light_cobalt', !!themed && new URL(themed).searchParams.get('theme') === 'light_cobalt', String(themed))
 
   // ── ⌘K commands ──
-  await key('k', 'KeyK', 75, 2)
-  await waitFor('!!document.querySelector(".pal input")', 4000)
-  await cdp('Input.insertText', { text: 'theme' }); await sleep(200)
+  await palette('theme', /Theme: /)
   const rows = await js(`[...document.querySelectorAll('.pal-item')].map(e => e.textContent)`) as string[]
   check('⌘K lists "Theme: system / light / dark", not the raw theme ids', ['Theme: system', 'Theme: light', 'Theme: dark'].every(t => rows.some(r => r.includes(t))) && !rows.some(r => /(dark|light)_(signal|amber|phosphor|cyan|cobalt|vite|magenta)/.test(r)), rows.slice(0, 12).join(' | '))
   await key('Escape', 'Escape', 27); await sleep(100)
-  await key('k', 'KeyK', 75, 2)
-  await waitFor('!!document.querySelector(".pal input")', 4000)
-  await cdp('Input.insertText', { text: 'accent magenta' }); await sleep(200)
+  await palette('accent magenta', /Accent: magenta/)
   check('⌘K "accent magenta" ranks "Accent: magenta" first', (await js(`document.querySelector('.pal-item')?.textContent`) as string)?.includes('Accent: magenta'))
   await key('Enter', 'Enter', 13)
   check('…and runs it', await waitFor(`document.documentElement.dataset.accent === 'magenta'`, 3000))
   await sleep(900)
-  await key('k', 'KeyK', 75, 2)
-  await waitFor('!!document.querySelector(".pal input")', 4000)
-  await cdp('Input.insertText', { text: 'accent next' }); await sleep(200)
+  await palette('accent next', /Accent: next/)
   await key('Enter', 'Enter', 13)
   check('⌘K "Accent: next" cycles (magenta → signal)', await waitFor(`document.documentElement.dataset.accent === 'signal'`, 3000))
 
@@ -348,9 +431,7 @@ try {
   await open('/components/', { keep: true })
   await waitFor('!!document.querySelector(".board-grid canvas, .board-grid svg")', 10000)
   check('card size: a reload keeps MEDIUM (4 a row at 1280)', await js(`document.documentElement.dataset.cards`) === 'm' && await js(firstRow) === 4, String(await js(firstRow)))
-  await key('k', 'KeyK', 75, 2)
-  await waitFor('!!document.querySelector(".pal input")', 4000)
-  await cdp('Input.insertText', { text: 'card size large' }); await sleep(200)
+  await palette('card size large', /Card size: large/)
   check('⌘K "card size large" ranks "Card size: large" first', (await js(`document.querySelector('.pal-item')?.textContent`) as string)?.includes('Card size: large'))
   await key('Enter', 'Enter', 13)
   check('…and runs it (3 a row, stored)', await waitFor(`document.documentElement.dataset.cards === 'l' && localStorage.getItem('dot480:cards') === 'l' && ${firstRow} === 3`, 3000))
@@ -391,6 +472,8 @@ try {
   await tap(tc.x, tc.y)
   check('phone: a tap on custom opens the hue slider in the sheet (44 px tall)', await waitFor(`document.documentElement.dataset.accent === 'custom' && !!document.querySelector('.tools-sheet .theme-hue input')`, 6000) && await js(`document.querySelector('.tools-sheet .theme-hue').getBoundingClientRect().height >= 44`) === true)
   await shot('sheet-custom')
+  await ringCloseUps()
+  await ringArrival()
   check('no page errors', errors.length === 0, errors.join(' | '))
 } finally {
   ws.close(); proc.kill(); server.close()

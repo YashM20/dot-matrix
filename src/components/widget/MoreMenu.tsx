@@ -35,7 +35,11 @@ export function MoreMenu({ items }: { items: readonly MoreItem[] }) {
       const left = Math.min(Math.max(EDGE, r.right - w), innerWidth - w - EDGE)
       let top = r.bottom + GAP
       if (top + h > innerHeight - EDGE && r.top - GAP - h >= EDGE) top = r.top - GAP - h
-      m.style.left = `${Math.max(EDGE, left)}px`; m.style.top = `${Math.max(EDGE, Math.min(top, innerHeight - h - EDGE))}px`
+      const x = Math.max(EDGE, left), y = Math.max(EDGE, Math.min(top, innerHeight - h - EDGE))
+      m.style.left = `${x}px`; m.style.top = `${y}px`
+      // the pill's backdrop blur makes it the fixed menu's containing block: take its offset back out
+      const at = m.getBoundingClientRect()
+      if (Math.abs(at.left - x) > .5 || Math.abs(at.top - y) > .5) { m.style.left = `${2 * x - at.left}px`; m.style.top = `${2 * y - at.top}px` }
     }
     place()
     // scroll and resize fire many times a frame: place once per frame

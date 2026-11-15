@@ -12,8 +12,9 @@
  *    polite toast says so); a board's row has no name, only the icons;
  *  - no horizontal overflow at 390, 768, 1280 and 1920, in the dark and light schemes and a second accent.
  *  - the row under a card adds at most 24 px under it (32 where touch rules apply) and every action in it is a 24 × 24 target or more.
- * `--shots <dir>` saves the PR screenshots there; 3× close-ups of a card's row (rest, hover, focus, copied, More open) go
- * there too, or to `.snapshots/card-row/`.
+ *  - "Copied" (Copy link's bubble) overlaps no card, at LARGE, at the compact grid and on a phone.
+ * `--shots <dir>` saves the PR screenshots there; 3× close-ups of a card's row (rest, hover, focus, copied, More open, and
+ * copied at the compact grid on a desktop and a phone) go there too, or to `.snapshots/card-row/`.
  *
  * Needs a build: `npx vite build`, then `npx tsx scripts/site/browse-browser.ts [--shots <dir>]` (it serves dist/).
  */
@@ -73,8 +74,11 @@ async function copyLink(p: Page, slot: string) {
   await p.cdp('Browser.grantPermissions', { permissions: ['clipboardReadWrite', 'clipboardSanitizedWrite'], origin: new URL(base).origin }).catch(() => null)
   const l = await p.js<{ x: number; y: number }>(`(r => ({ x: r.left + r.width / 2, y: r.top + r.height / 2 }))(document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-link').getBoundingClientRect())`)
   await p.mouse('mouseMoved', l.x, l.y, 0); await p.mouse('mousePressed', l.x, l.y); await p.mouse('mouseReleased', l.x, l.y); await sleep(500)
-  return p.js<{ tip: string | null; check: boolean; toast: string; live: string | null; shown: boolean }>(`(() => { const b = document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-link'), t = document.querySelector('.pal-toast')
-    return { tip: b.dataset.tip ?? null, check: b.classList.contains('copied'), toast: t?.textContent ?? '', live: t?.getAttribute('aria-live') ?? null, shown: getComputedStyle(b, '::after').visibility === 'visible' } })()`)
+  // `hits`: the cards the "Copied" bubble (Copy link's ::after) overlaps, its own included (it used to hang over the next row)
+  return p.js<{ tip: string | null; check: boolean; toast: string; live: string | null; shown: boolean; hits: number; box: number[] }>(`(() => { const b = document.querySelector(${JSON.stringify(slot)}).querySelector('.dot-card-row-link'), t = document.querySelector('.pal-toast')
+    const a = getComputedStyle(b, '::after'), r = b.getBoundingClientRect(), right = r.right - parseFloat(a.right), top = r.top + parseFloat(a.top), box = [right - parseFloat(a.width), top, right, top + parseFloat(a.height)]
+    const hits = [...document.querySelectorAll('.dot-card')].map(c => c.getBoundingClientRect()).filter(c => c.left < box[2] - .5 && c.right > box[0] + .5 && c.top < box[3] - .5 && c.bottom > box[1] + .5).length
+    return { tip: b.dataset.tip ?? null, check: b.classList.contains('copied'), toast: t?.textContent ?? '', live: t?.getAttribute('aria-live') ?? null, shown: a.visibility === 'visible', hits, box: box.map(Math.round) } })()`)
 }
 /** What the row costs: the px it adds under the card (at most 24, or 32 where touch rules apply: ALL's old caption), and any action under 24 × 24. */
 const rowSize = (p: Page, slot: string) => p.js<{ added: number; max: number; small: string[] }>(`(() => { const s = document.querySelector(${JSON.stringify(slot)}), c = s.querySelector('.dot-card').getBoundingClientRect(), r = s.querySelector('.dot-card-row').getBoundingClientRect()
@@ -184,6 +188,13 @@ try {
     const copied = await rowStates(m, 'row-board', '.board-grid > .dot-slot')
     assert('browse: Copy link says Copied (tooltip shown, check icon) and the polite toast says link copied',
       copied.tip === 'Copied' && copied.check && copied.shown && /link copied/.test(copied.toast) && copied.live === 'polite', JSON.stringify(copied))
+    // the narrowest grid (CARD SIZE compact): the bubble still clears the cards round it
+    await m.js(`localStorage.setItem('dot480:cards', 's'), 1`)
+    await m.cdp('Page.navigate', { url: new URL(boardPath, base).href })
+    await m.waitFor(`!!document.querySelector('.board-grid > .dot-slot > .dot-card canvas, .board-grid > .dot-slot > .dot-card svg')`, 20000); await sleep(1200)
+    const compact = await copyLink(m, '.board-grid > .dot-slot'); await rowShot(m, 'row-compact-copied', '.board-grid > .dot-slot')
+    await m.js(`localStorage.removeItem('dot480:cards'), 1`)
+    assert('browse: "Copied" overlaps no card, at LARGE and at the compact grid', copied.hits === 0 && compact.shown && compact.hits === 0, JSON.stringify({ large: copied.box, compact: compact.box, hits: [copied.hits, compact.hits] }))
     for (const theme of ['dark_signal', 'light_signal']) {
       await open(m, `${base}?theme=${theme}`); await m.waitFor(`!!document.querySelector('.browse-item > .dot-card:not(.browse-ghost)')`, 15000); await sleep(1200)
       await rowStates(m, `row-all-${theme.split('_')[0]}`, '.browse-item')
@@ -192,6 +203,17 @@ try {
   } finally {
     await m.close()
   }
+
+  // a phone at the compact grid (two cards a row, touch): "Copied" stays in the row
+  await p.cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true })
+  await p.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
+  await p.js(`localStorage.setItem('dot480:cards', 's'), 1`)
+  await p.cdp('Page.navigate', { url: new URL(boardPath, base).href })
+  await p.waitFor(`!!document.querySelector('.board-grid > .dot-slot > .dot-card canvas, .board-grid > .dot-slot > .dot-card svg')`, 20000); await sleep(1200)
+  const phone = await copyLink(p, '.board-grid > .dot-slot'); await rowShot(p, 'row-phone-copied', '.board-grid > .dot-slot')
+  assert('browse: on a phone at the compact grid "Copied" shows and overlaps no card', phone.shown && phone.hits === 0, JSON.stringify(phone))
+  await p.js(`localStorage.removeItem('dot480:cards'), 1`)
+  await p.cdp('Emulation.setTouchEmulationEnabled', { enabled: false })
 
   // every width, two schemes and a second accent: nothing overflows sideways
   const over: string[] = []

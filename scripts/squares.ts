@@ -32,6 +32,8 @@ import { detLint } from './lib/detLint'
 import { boards, widgetById, withChrome, type WidgetPreset } from '../src/widgets'
 import { morphStyle, squareStyle, squaresBoard, squaresSources as Q } from '../src/widgets/boards/squares'
 import { hatFloor } from '../src/widgets/boards/squaresHat'
+import { packSources as QP } from '../src/widgets/boards/squaresPack'
+import { describe } from '../src/engine/describe'
 import { handleSample } from '../src/workers/protocol'
 import { renderCardFull, sampleCard, uniquePresets } from './lib/cards'
 import { freezeWallClock } from './lib/freeze'
@@ -526,7 +528,7 @@ export function squaresChecks(assert: Assert): void {
     assert('squares: blob accent (≤ 1 joined red component per frame over t ∈ 0:20:0.5)', worstComp <= 1 && withNeck > 0, `max ${worstComp}, neck in ${withNeck}/41 frames`)
     // accents: one red element per card frame (the falling piece, the newest split's 4 quads, the neck, the colon)
     // (teletext: the red is the header's two seconds digits: every red dot sits in that 2-character box)
-    const PITCH: Record<string, number> = { 'sq-tetris': 6, 'sq-quads': 2, 'sq-blob': 3, 'sq-gameboy': 2, 'sq-teletext': 1, 'sq-lines': 1, 'sq-schotter': 5, 'sq-blocks': 3, 'sq-sort': 2, 'sq-truchet': 2, 'sq-stitch': 3, 'sq-beads': 6, 'sq-morph': 2, 'sq-hat': 1, 'sq-ammann': 1, 'sq-arctic': 2, 'sq-sandpile': 2, 'sq-ascii': 1 }
+    const PITCH: Record<string, number> = { 'sq-stack': 6, 'sq-quads': 2, 'sq-blob': 3, 'sq-gameboy': 2, 'sq-teletext': 1, 'sq-lines': 1, 'sq-schotter': 5, 'sq-blocks': 3, 'sq-sort': 2, 'sq-truchet': 2, 'sq-stitch': 3, 'sq-beads': 6, 'sq-morph': 2, 'sq-hat': 1, 'sq-ammann': 1, 'sq-arctic': 2, 'sq-sandpile': 2, 'sq-ascii': 1 }
     // the truchet's live tile is one tile whose motif may cut its ink into up to 6 pieces (arcs, stubs, inverted corners)
     // the hat floor's red is the set of mirrored hats (the tiling's one exception, about 1 hat in 7.85): one piece each
     // the arctic red is the edge of the frozen corners (one ring, which can break where the edge touches the rim);
@@ -534,6 +536,45 @@ export function squaresChecks(assert: Assert): void {
     const ALLOW: Record<string, number> = { 'sq-gameboy': 2, 'sq-truchet': 6, 'sq-hat': hatFloor().shownMirrored, 'sq-arctic': 8, 'sq-sandpile': 48 }
     const reds = squaresBoard.map(p => [p.id, [0, 1.3, 5.7].map(t => { const r = sampleCard(p, t).filter(x => x.color === dot480.dotActive); return p.id === 'sq-teletext' ? (r.length && r.every(d => d.x > 132 * 2.25 && d.y < 9 * 2.25) ? 1 : 99) : components(r, PITCH[p.id] * 2.25) })] as const)
     assert('squares: one accent per card (the red is one live element: ≤ 1 connected piece; 2 for the LCD colon dots; the teletext seconds digits)', reds.every(([id, n]) => n.every(x => x <= (ALLOW[id] ?? 1))), reds.map(([id, n]) => `${id} ${n.join('/')}`).join(', '))
+    // #234: the loop seams play back instead of cutting the picture: over one 16 s loop at 0.05 s steps, the quads' splits
+    // and the truchet's placed tiles never move by more than a tenth of their total in one step (the old wrap went from
+    // every split to none, and from 62 tiles to one)
+    const jump = (at: (t: number) => number, total: number) => {
+      let worst = 0
+      for (let i = 1; i <= 320; i++) worst = Math.max(worst, Math.abs(at(i * .05) - at((i - 1) * .05)) / total)
+      return worst
+    }
+    const nTiles = QP.tiles().length, splits = Q.quadTree().splits
+    const seams = [['sq-quads', jump(t => Q.quadsAt(t, splits).k, splits)], ['sq-truchet', jump(t => QP.truchetAt(t, nTiles).placed, nTiles)]] as const
+    assert('squares: loop seams (quads, truchet: no step moves a tenth of the splits or tiles over a loop)', seams.every(([, f]) => f < .1), seams.map(([id, f]) => `${id} ${(f * 100).toFixed(1)}%`).join(', '))
+    // #234: the LCD's time and date are pixels, so its layer names them for describe()
+    const lcdSays = ['sq-gameboy', 'sq-morph'].map(id => [id, describe(widgetById(id)!, { t: 1 }).text.join(' | ')] as const)
+    assert('squares: LCD text (sq-gameboy and sq-morph describe the time and date)', lcdSays.every(([, s]) => /\d\d:\d\d [A-Z]{3} \d\d [A-Z]{3}/.test(s)), lcdSays.map(([id, s]) => `${id}: ${s}`).join('; '))
+    // #234: the teletext banner's stepped glyphs: every lit font pixel has a lit edge neighbour (contiguous sextants join)
+    const loose = Object.entries(Q.TT_BANNER).flatMap(([ch, rows]) => rows.flatMap((row, y) => [...row].map((on, x) => (on === '1' && ![[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]].some(([u, v]) => rows[v]?.[u] === '1') ? `${ch}(${x},${y})` : '')))).filter(Boolean)
+    assert('squares: teletext banner glyphs (no lit pixel joins its letter only by a corner)', loose.length === 0, loose.join(' ') || 'Q, R stepped')
+    // #234: no one-cell notch or stub in the line screen: every run of one level in a line is at least two cells long
+    const LV = Q.lineLevels(), LW = Q.LINES.w
+    let singles = 0
+    for (let r = 0; r < Q.LINES.lines; r++) for (let c = 0; c < LW; c++) {
+      const v = LV[r * LW + c], l = c > 0 ? LV[r * LW + c - 1] : NaN, rr = c < LW - 1 ? LV[r * LW + c + 1] : NaN
+      if (v !== l && v !== rr) singles++
+    }
+    assert('squares: line runs (sq-lines: no one-cell run in any line)', singles === 0, `${singles} one-cell runs`)
+    // #234: no one-cell spur in the blocks: no cell has fewer than two edge neighbours (or card edges) in its own region
+    // while another region holds two or more of them (a junction of three or four regions is not a spur)
+    let spurs = 0
+    const { w: BW2, h: BH2 } = QP.BLOCKS
+    for (const t of [0, 3, 7.5, 12, 19]) {
+      const ids = QP.blocksFrame(t).ids
+      for (let r = 0; r < BH2; r++) for (let c = 0; c < BW2; c++) {
+        const j = r * BW2 + c, own = ids[j]
+        const same = (c > 0 ? +(ids[j - 1] === own) : 1) + (c < BW2 - 1 ? +(ids[j + 1] === own) : 1) + (r > 0 ? +(ids[j - BW2] === own) : 1) + (r < BH2 - 1 ? +(ids[j + BW2] === own) : 1)
+        const nb = [c > 0 ? ids[j - 1] : -1, c < BW2 - 1 ? ids[j + 1] : -1, r > 0 ? ids[j - BW2] : -1, r < BH2 - 1 ? ids[j + BW2] : -1].filter(k => k >= 0 && k !== own)
+        if (same < 2 && nb.some(k => nb.filter(x => x === k).length >= 2)) spurs++
+      }
+    }
+    assert('squares: block edges (sq-blocks: no one-cell spur at five times)', spurs === 0, `${spurs} spur cells`)
     // ink: ≤ 1.2 × the inkiest liked reference card (level-03, afterlight, mosaic, components); 1.2 since the tag and footer
     // stat moved from faint to mid (#225: faint text can't be read), which lifts every card's ink a little
     // (deviation from Q-squares §2.5: the median of the liked cards is dominated by the sparse components board, so the

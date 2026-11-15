@@ -75,7 +75,13 @@ try {
     await p.cdp('Page.navigate', { url: base + page })
     await p.waitFor('document.readyState === "complete" && !!window.__violations', 20000)
     // scroll through the page (lazy figures and cards mount on screen), then let it run
-    await p.js(`(async () => { for (let y = 0; y < document.documentElement.scrollHeight; y += 600) { scrollTo(0, y); await new Promise(r => setTimeout(r, 120)) } scrollTo(0, 0) })()`, 30000)
+    // the walk's length follows the page (home holds every card) and a busy runner stretches each step: start it, then
+    // wait for it to say it is done, instead of one evaluate that must finish in 30 s (#224)
+    await p.js(`window.__walked = 0; (async () => { const t0 = performance.now(); for (let y = 0; y < document.documentElement.scrollHeight; y += 600) { scrollTo(0, y); await new Promise(r => setTimeout(r, 120)) } scrollTo(0, 0); window.__walked = Math.max(1, Math.round(performance.now() - t0)) })(); 0`)
+    const walked = await p.waitFor('window.__walked > 0', 90000)
+    const walkMs = await p.js<number>('window.__walked')
+    if (!walked || walkMs > 20000) console.log(`  ${page}: the scroll walk ${walked ? `took ${(walkMs / 1000).toFixed(1)} s` : 'did not finish in 90 s'}`)
+    check(`${page}: the scroll walk reaches the end`, walked)
     await sleep(1500)
     const got = await p.js<{ v: string[]; w: string[]; globals: string[]; api: boolean; svg: number }>(`({ v: window.__violations, w: window.__workers,
       globals: ${JSON.stringify(TEST_GLOBALS)}.filter(k => k in window), api: typeof window.dot480?.setTheme === 'function' && typeof window.dot480?.themeTokens === 'function',

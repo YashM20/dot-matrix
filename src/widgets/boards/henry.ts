@@ -7,7 +7,9 @@
 import { glyph } from '../../engine/fields/bitmapFont'
 import { hash01 } from '../../engine/math'
 import { decodeText, splitFlapCells, type FlapCell } from '../../engine/motion/text'
-import { TAU, TILE, bounded, combine, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
+import type { Control } from '../../engine/context'
+import { LIVE_DOT, TAU, TILE, bounded, combine, layer, layoutFor, tileStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
+import { PRESS, at, marching, rr, ui, type UiState } from './components-kit'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -299,8 +301,8 @@ export const camera: WidgetPreset = {
   layers: () => {
     const { x0, x1, y0, y1 } = FR, w = x1 - x0, h = y1 - y0, cx = Math.round((x0 + x1) / 2), cy = Math.round((y0 + y1) / 2)
     return [
-      // recording indicator in place of the live dot
-      layer(T.dots([[116, 3.5]], 7.5), 'active'), layer(T.big('REC', 143, 0, { lattice: 1.15, align: 'right' }), 'active'),
+      // recording indicator in place of the live dot, at the live dot's size
+      layer(T.dots([[116, 3.5]], LIVE_DOT), 'active'), layer(T.big('REC', 143, 0, { lattice: 1.15, align: 'right' }), 'active'),
       ...[...corner(x0, y0, 1, 1), ...corner(x1, y0, -1, 1), ...corner(x0, y1, 1, -1), ...corner(x1, y1, -1, -1)].map(f => layer(f)),
       ...[1, 2].map(k => layer(T.vrule(Math.round(x0 + (w * k) / 3), y0, h + 1, 2), 'mid')),
       ...[1, 2].map(k => layer(T.hrule(x0, Math.round(y0 + (h * k) / 3), w + 1, 2), 'mid')),
@@ -326,23 +328,27 @@ const settingIcon = (g: Glyph, x: number, y: number) => {
     case 'info': return icon(arcPts(x + 6, y + 5.5, 6), [[x + 6, y + 2.5]], linePts(x + 6, y + 4.6, [[0, 0], [0, 4.4]]))
   }
 }
-type Right = 'on' | 'chevron' | 'toggle-on' | 'toggle-off'
+/** A row's right end: ON plus a chevron, a chevron, or a switch (its on state and interaction state). */
+type Right = 'on' | 'chevron' | { on: boolean; ui: UiState; t: number }
 /** Five rows in one rounded outline, one separator between neighbours, inset a cell so no corner meets the card edge. */
 const ROWS = { x: 1, top: 15, w: 141, h: 24, n: 5, r: 5, spacing: 2.2, size: 1.05 }
 /**
  * One toggle, two states: the same stadium outline at the row borders' pitch and the same knob dot. Off: outline and
  * knob in `idle`, knob at the left. On: knob at the right in `value`, the track behind it filled with big `mid` dots on
  * the outline's pitch, cleared one dot round the knob so it stands apart.
+ * Interaction, sized for a switch inside a list row (the components board's halo and outer focus ring would hit the
+ * row borders and the card edge): hover lifts the outline to `value`, press drops the knob one step, and focus turns
+ * the outline itself into marching dots.
  */
 const SWITCH = { x: 117, w: 22, h: 12, knob: 8, k: 2.2 }
-const toggle = (on: boolean, mid: number) => {
+const toggle = (on: boolean, mid: number, s: UiState, t: number) => {
   const { x, w, h, knob, k } = SWITCH, r = h / 2, y = mid - r, kx = on ? x + w - r : x + r
   const reach = (knob * .84) / 2 + k, core = r - 2.4
   const fill = T.fillOn(k, (px, py) => Math.hypot(px - Math.max(x + r, Math.min(x + w - r, px)), py - mid) <= core && Math.hypot(px - kx, py - mid) > reach, [x + 1, y + 1, x + w - 1, y + h - 1])
   return [
-    layer(T.stadium(x, y, w, h, { spacing: ROWS.spacing, size: ROWS.size }), 'idle'),
+    s.focus ? marching(rr(x, y, w, h, r), t, 0) : layer(T.stadium(x, y, w, h, { spacing: ROWS.spacing, size: ROWS.size }), s.hover ? 'value' : 'idle'),
     ...(on ? [layer(fill, 'mid')] : []),
-    layer(T.dots([[kx, mid]], knob), on ? 'value' : 'idle'),
+    layer(at(T.dots([[kx, mid]], knob), s.pressed ? PRESS : 1), on ? 'value' : 'idle'),
   ]
 }
 const settingRow = (i: number, g: Glyph, label: string, right: Right, selected = false) => {
@@ -350,19 +356,24 @@ const settingRow = (i: number, g: Glyph, label: string, right: Right, selected =
   const out = [layer(settingIcon(g, 5, top + 6.5), selected ? 'active' : 'value'), layer(T.text(label, 27, top + 9), tone)]
   if (right === 'on') out.push(layer(T.text('ON', 130, top + 9, { align: 'right' }), 'idle'))
   if (right === 'on' || right === 'chevron') out.push(layer(T.sprite(['#...', '.#..', '..#.', '...#', '..#.', '.#..', '#...'], 135, top + 9), selected ? 'active' : 'idle'))
-  if (right.startsWith('toggle')) out.push(...toggle(right === 'toggle-on', mid))
+  else out.push(...toggle(right.on, mid, right.ui, right.t))
   return out
 }
 const SELECTED = 2
 const [rowLines, pickedLines] = T.rows(ROWS.x, ROWS.top, ROWS.w, ROWS.h, ROWS.n, { ...ROWS, pick: SELECTED })
+/** The two switches work: each row is a toggle's hit box (a bigger target than the switch on a phone). */
+const SWITCHES = { bluetooth: { row: 1, label: 'Bluetooth' }, sound: { row: 3, label: 'Sound' } }
+const switchAt = (ctx: WidgetContext, key: keyof typeof SWITCHES): Right => ({ on: (ctx.data[key] ?? 0) >= .5, ui: ui(ctx, key), t: ctx.t })
 export const settings: WidgetPreset = {
   id: 'settings', name: '08 Settings', group: 'icon', ...tile,
-  layers: () => [
+  defaults: { bluetooth: 0, sound: 1 },
+  controls: Object.entries(SWITCHES).map(([key, s]): Control => ({ key, kind: 'toggle', box: [ROWS.x, ROWS.top + s.row * ROWS.h, ROWS.w, ROWS.h], label: s.label })),
+  layers: ctx => [
     layer(rowLines, 'mid'), layer(pickedLines, 'active'),
     ...settingRow(0, 'wifi', 'WI-FI', 'on'),
-    ...settingRow(1, 'bluetooth', 'BLUETOOTH', 'toggle-off'),
+    ...settingRow(SWITCHES.bluetooth.row, 'bluetooth', 'BLUETOOTH', switchAt(ctx, 'bluetooth')),
     ...settingRow(SELECTED, 'sun', 'BRIGHTNESS', 'chevron', true),
-    ...settingRow(3, 'sound', 'SOUND', 'toggle-on'),
+    ...settingRow(SWITCHES.sound.row, 'sound', 'SOUND', switchAt(ctx, 'sound')),
     ...settingRow(4, 'info', 'ABOUT', 'chevron'),
   ],
 }

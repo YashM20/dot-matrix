@@ -73,7 +73,7 @@ export function SkinSwitcher() {
 
   return (
     <div className="skin-switch" ref={wrap} onPointerEnter={e => intent(e, true)} onPointerLeave={e => intent(e, false)}>
-      <button ref={btn} type="button" className="skin-menu-btn" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined}
+      <button ref={btn} type="button" className="skin-menu-btn dot-ring" aria-haspopup="menu" aria-expanded={open} aria-controls={open ? id : undefined}
         onClick={() => { clearTimeout(timer.current); if (open && !byHover.current) close(false); else if (open) { byHover.current = false; items.current[SKIN_NAMES.indexOf(skin)]?.focus() } else show() }} onKeyDown={onButtonKey}>
         DISPLAY: <b>{SKINS[skin].label}</b><span aria-hidden="true">▾</span>
       </button>
@@ -88,7 +88,7 @@ export function SkinSwitcher() {
         </div>
       )}
       {skin === 'flipdisc' && (
-        <button type="button" className={`skin-clack${clack ? ' selected' : ''}`} aria-pressed={clack} title="Flip-disc clack (sound)" onClick={() => setClack(!clack)}>
+        <button type="button" className={`skin-clack dot-ring${clack ? ' selected' : ''}`} aria-pressed={clack} title="Flip-disc clack (sound)" onClick={() => setClack(!clack)}>
           {clack ? 'CLACK ON' : 'CLACK OFF'}
         </button>
       )}

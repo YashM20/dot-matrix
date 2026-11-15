@@ -12,7 +12,7 @@ import { STILL_LEAD } from '../../src/components/browse/data'
 
 /** Cards with no touching dots anywhere, at three times (moving parts included). */
 const CLEAR = ['line-map', 'service', 'departures', 'ir-ripple', 'chart-bar', 'chart-line', 'chart-area', 'chart-candle', 'hb-done', 'sim-sand', 'live-contribs',
-  'lv-title', 'lv-queen', 'sq-teletext', 'phys-jelly', 'phys-splash', 'light-emissive', 'inst-crank', 'inst-xy', 'mo-wait', 'mo-send', 'scope-mic', 'scope-wave',
+  'lv-title', 'lv-queen', 'sq-teletext', 'phys-jelly', 'phys-splash', 'light-emissive', 'inst-crank', 'inst-xy', 'inst-level', 'inst-transport', 'mo-wait', 'mo-send', 'scope-mic', 'scope-wave',
   'cinema-exit-14', 'cinema-sundown', 'cinema-keeper', 'heal-mirror', 'mat-knob', 'mirror-conduct']
 const CINEMA = ['cinema-last-call', 'cinema-signal', 'cinema-sundown', 'cinema-upstairs', 'cinema-closer', 'cinema-witness', 'cinema-exit-14', 'cinema-keeper', 'cinema-encore']
 const dotsAt = (p: WidgetPreset, t: number): DotInstance[] => sampleLayers(withChrome(p)({ t, data: { ...p.defaults } }), p.grid, p.style, theme)
@@ -62,6 +62,8 @@ export function cardChecks(assert: Assert) {
     const bad = [0, 1.3, 3.7].flatMap(t => touchingPairs(dotsAt(p, t)).map(() => t))
     assert(`cards: ${id} has no touching dots (t = 0, 1.3, 3.7)`, !bad.length, `${bad.length} pair(s) at t = ${[...new Set(bad)].join(', ')}`)
   }
+  // #237: the transport opens in Play, so its red record light means the visitor pressed record
+  assert('cards: inst-transport opens in Play (mode 1)', widgetById('inst-transport')?.defaults?.mode === 1)
   // cinema: the red mark keeps the title's moat, no grey dot within one lattice dot (2.5 cells; the next ring is 5 away)
   {
     const near: string[] = []
@@ -82,5 +84,12 @@ export function cardChecks(assert: Assert) {
   {
     const heavy = STILL_LEAD.flatMap(id => { const p = widgetById(id); if (!p) return [`${id} missing`]; const n = dotsAt(p, 0).length; return p.animated || n > 4000 ? [`${id}: ${p.animated ? 'animated' : ''} ${n} dots`] : [] })
     assert("cards: ALL's first row is still and light (no animated card, at most 4,000 dots each)", STILL_LEAD.length >= 4 && !heavy.length, heavy.join(', '))
+  }
+  // MICRO UI settings (#247): the Bluetooth and Sound switches are toggles; the resting frame is the reference's (off, on)
+  {
+    const p = widgetById('settings')!, frame = (data: Record<string, number>) => JSON.stringify(sampleLayers(withChrome(p)({ t: 0, data }), p.grid, p.style, theme))
+    const keys = (p.controls ?? []).filter(c => c.kind === 'toggle').map(c => c.key), rest = { ...p.defaults }
+    assert('cards: settings has toggles for Bluetooth and Sound, off and on at rest, and flipping one moves its knob',
+      keys.join() === 'bluetooth,sound' && rest.bluetooth === 0 && rest.sound === 1 && frame({ ...rest, bluetooth: 1 }) !== frame(rest) && frame({ ...rest, sound: 0 }) !== frame(rest), keys.join())
   }
 }

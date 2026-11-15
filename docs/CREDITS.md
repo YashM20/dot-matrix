@@ -43,7 +43,7 @@ By Inigo Quilez.
 
 By James F. Blinn.
 
-- Squares Blob (`sq-blob`), board `/squares/`: the blobby model behind metaballs
+- Blob (`sq-blob`), board `/squares/`: the blobby model behind metaballs
 
 ### [A local cellular model for snow crystal growth](https://webbox.lafayette.edu/~reiterc/mvp/sfn/sfn_pp.pdf)
 
@@ -61,19 +61,25 @@ By Shigeru Kondo, Rihito Asai.
 
 By Robert Ammann, Frans Beenker, Nicolaas Govert de Bruijn.
 
-- Squares Ammann (`sq-ammann`), board `/squares/`: technique
+- Ammann (`sq-ammann`), board `/squares/`: technique
 
 ### [An aperiodic monotile](https://arxiv.org/abs/2303.10798)
 
 By David Smith, Joseph Samuel Myers, Craig S. Kaplan, Chaim Goodman-Strauss.
 
-- Squares Hat (`sq-hat`), board `/squares/`: technique
+- Hat (`sq-hat`), board `/squares/`: technique
 
 ### [An image synthesizer (1985)](https://doi.org/10.1145/325165.325247)
 
 By Ken Perlin.
 
 - Marble (`mat-marble`), board `/materials/`: the turbulence-sine marble
+
+### [An improvement on Pierre Dellacherie’s algorithm (2011)](https://imake.ninja/el-tetris-an-improvement-on-pierre-dellacheries-algorithm/)
+
+By Islam El-Ashi.
+
+- Stack (`sq-stack`), board `/squares/`: the weights the player uses
 
 ### [animal-proc-anim](https://github.com/argonautcode/animal-proc-anim)
 
@@ -85,7 +91,7 @@ By argonautcode.
 
 By Kim Asendorf.
 
-- Squares Sort (`sq-sort`), board `/squares/`: the pixel sorting idea; none of its code
+- Sort (`sq-sort`), board `/squares/`: the pixel sorting idea; none of its code
 
 ### [Astronomical Algorithms](https://en.wikipedia.org/wiki/Astronomical_Algorithms)
 
@@ -130,7 +136,7 @@ By John E. Pearson, Peter Gray, Stephen K. Scott.
 
 By Piet Mondrian.
 
-- Squares Blocks (`sq-blocks`), board `/squares/`: the look the blocks are after
+- Blocks (`sq-blocks`), board `/squares/`: the look the blocks are after
 
 ### [daoho.dev koi pond](https://www.daoho.dev/)
 
@@ -152,12 +158,6 @@ By lionleaf.
 - IR Dial (`ir-dial`), board `/ir/`: demos in 140 characters
 - IR Plasma (`ir-plasma`), board `/ir/`: demos in 140 characters
 - IR Ripple (`ir-ripple`), board `/ir/`: demos in 140 characters
-
-### [El-Tetris, an improvement on Pierre Dellacherie’s algorithm (2011)](https://imake.ninja/el-tetris-an-improvement-on-pierre-dellacheries-algorithm/)
-
-By Islam El-Ashi.
-
-- Squares Tetris (`sq-tetris`), board `/squares/`: the weights the player uses
 
 ### [ESP-Mosaico concept screens](https://x.com/henry19840301/status/2090273665669874050)
 
@@ -202,7 +202,7 @@ By Lutz Niemeyer, Luciano Pietronero, Hans J. Wiesmann.
 
 By Nintendo R&D1.
 
-- Squares LCD (`sq-gameboy`), board `/squares/`: the four-shade LCD this mimics
+- LCD (`sq-gameboy`), board `/squares/`: the four-shade LCD this mimics
 
 ### [Geometric orbit traps](https://iquilezles.org/articles/ftrapsgeometric/)
 
@@ -234,7 +234,7 @@ By Alexander Mordvintsev, Ettore Randazzo, Eyvind Niklasson, Michael Levin.
 
 By Georg Meisenbach.
 
-- Squares Lines (`sq-lines`), board `/squares/`: the line screen of his 1882 patent
+- Lines (`sq-lines`), board `/squares/`: the line screen of his 1882 patent
 
 ### [Hierarchical crack pattern as formed by successive domain divisions (2005)](https://doi.org/10.1103/PhysRevE.71.046214)
 
@@ -306,7 +306,7 @@ By Adam Runions, Brendan Lane, Przemyslaw Prusinkiewicz.
 
 By Christopher Carlson.
 
-- Squares Truchet (`sq-truchet`), board `/squares/`: technique
+- Truchet (`sq-truchet`), board `/squares/`: technique
 
 ### [OP-1 and pocket operator industrial design](https://teenage.engineering/)
 
@@ -354,13 +354,13 @@ By Matthias Müller, Bruno Heidelberger, Marcus Hennix, John Ratcliff.
 
 By Michael Fogleman.
 
-- Squares Quads (`sq-quads`), board `/squares/`: split the worst quad, again and again
+- Quads (`sq-quads`), board `/squares/`: split the worst quad, again and again
 
 ### [Random domino tilings and the arctic circle theorem](https://arxiv.org/abs/math/9801068)
 
 By William Jockusch, James Propp, Peter Shor.
 
-- Squares Arctic (`sq-arctic`), board `/squares/`: technique; domino shuffling by Noam Elkies, Greg Kuperberg, Michael Larsen and James Propp (1992)
+- Arctic (`sq-arctic`), board `/squares/`: technique; domino shuffling by Noam Elkies, Greg Kuperberg, Michael Larsen and James Propp (1992)
 
 ### [Real Time Dynamic Fracture with Volumetric Approximate Convex Decompositions](https://doi.org/10.1145/2461912.2461934)
 
@@ -385,13 +385,13 @@ By Evan Wallace.
 
 By Georg Nees.
 
-- Squares Schotter (`sq-schotter`), board `/squares/`: the composition
+- Schotter (`sq-schotter`), board `/squares/`: the composition
 
 ### [Self-organized criticality: an explanation of the 1/f noise](https://doi.org/10.1103/PhysRevLett.59.381)
 
 By Per Bak, Chao Tang, Kurt Wiesenfeld.
 
-- Squares Sandpile (`sq-sandpile`), board `/squares/`: technique
+- Sandpile (`sq-sandpile`), board `/squares/`: technique
 
 ### [Smooth iteration count for generalized Mandelbrot sets](https://iquilezles.org/articles/msetsmooth/)
 
@@ -454,19 +454,19 @@ By Renato E. Mirollo, Steven H. Strogatz.
 
 By John Adams.
 
-- Squares Teletext (`sq-teletext`), board `/squares/`: the page format and its block graphics
-
-### [Tetris (1984)](https://en.wikipedia.org/wiki/Tetris)
-
-By Alexey Pajitnov.
-
-- Squares Tetris (`sq-tetris`), board `/squares/`: the game
+- Teletext (`sq-teletext`), board `/squares/`: the page format and its block graphics
 
 ### [The chemical basis of morphogenesis (1952); reaction and diffusion on growing domains (1999)](https://doi.org/10.1006/bulm.1999.0131)
 
 By Alan Turing, Edmund Crampin, Eamonn Gaffney, Philip Maini.
 
 - Pond Turing (`pond-turing`), board `/pond/`: technique
+
+### [The falling-blocks game (1984)](https://en.wikipedia.org/wiki/Tetris)
+
+By Alexey Pajitnov.
+
+- Stack (`sq-stack`), board `/squares/`: the game this card plays
 
 ### [The void-and-cluster method for dither array generation (1993)](https://doi.org/10.1117/12.152707)
 
@@ -493,13 +493,14 @@ By TRMNL.
 
 By Vera Molnár.
 
-- Squares Schotter (`sq-schotter`), board `/squares/`: the nested square rings beside it
+- Schotter (`sq-schotter`), board `/squares/`: the nested square rings beside it
 
 ### [WaveFunctionCollapse (2016)](https://github.com/mxgmn/WaveFunctionCollapse)
 
 By Maxim Gumin.
 
 - Algorithms Collapse (`algo-collapse`), board `/algorithms/`: the simple tiled model; backtracking as in Isaac Karth and Adam M. Smith (2017)
+- Stitch (`sq-stitch`), board `/squares/`: the simple tiled model that lays the border
 
 ### [Weather data by Open-Meteo.com (CC BY 4.0)](https://open-meteo.com/)
 

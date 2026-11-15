@@ -113,7 +113,9 @@ html {
 @media not ((max-width: 760px) or ((max-height: 500px) and (pointer: coarse))) {
   @container scroll-state(scrolled: bottom) {
     .topbar:not(:focus-within) {
-      translate: 0 -100%
+      translate: 0 -100%;
+      /* hiding is quicker than showing: the transition comes from the state it moves to */
+      transition-duration: var(--dur-exit)
     }
   }
 }

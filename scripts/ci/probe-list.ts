@@ -20,8 +20,10 @@ export const PROBES: Probe[] = [
   // mobile.ts in two halves: its MAKE tabs take up to a minute each on a runner
   { name: 'mobile', shard: 5, secs: 65, args: ['scripts/site/mobile.ts', '$BASE', 'first-load,fps,chrome,tab:make=tune,tab:make=compose,tab:make=code,tab:make=draw,tab:about'] },
   { name: 'mobile-boards', shard: 13, secs: 210, args: ['scripts/site/mobile.ts', '$BASE', boardIds.join(',')] },
-  // the mat-lens checks alone take minutes on a runner (its frames are slow there): materials gets 8 minutes
-  { name: 'materials', shard: 6, secs: 360, args: ['scripts/materials-browser.ts'], timeoutMin: 8 },
+  // the mat-lens checks alone take minutes on a runner (its frames are slow there): the board on touch gets 8 minutes,
+  // and the workshop and desktop sections run as their own probe (#224)
+  { name: 'materials', shard: 6, secs: 240, args: ['scripts/materials-browser.ts', '--parts', 'touch'], timeoutMin: 8 },
+  { name: 'workshop', shard: 8, secs: 90, args: ['scripts/materials-browser.ts', '--parts', 'workshop,desktop'] },
   { name: 'audio', shard: 7, secs: 35, args: ['scripts/audio-chrome.ts'], env: { URL: '$BASE' } },
   { name: 'theme-boot', shard: 7, secs: 10, args: ['scripts/site/theme-boot.ts'] },
   { name: 'light', shard: 7, secs: 25, args: ['scripts/light-browser.ts'] },
@@ -46,6 +48,10 @@ export const PROBES: Probe[] = [
   { name: 'skins', shard: 12, secs: 5, args: ['scripts/skins-browser.ts', '--fidelity'] },
   { name: 'likes', shard: 12, secs: 12, args: ['scripts/likes-browser.ts'] },
   { name: 'theme-picker', shard: 12, secs: 35, args: ['scripts/site/theme-picker.ts'] },
+  // card input edge cases (docs/STATE-MACHINES.md B4): a drag whose release happened outside the page
+  // worst-case data on the site's own UI (long, unbreakable, one-letter, Japanese, Arabic and emoji names, huge counts)
+  { name: 'break-ui', shard: 13, secs: 200, args: ['scripts/site/break-ui.ts', '$BASE'], timeoutMin: 8 },
+  { name: 'input', shard: 12, secs: 20, args: ['scripts/input-browser.ts', '$BASE'] },
 ]
 
 /** A partial run's shards: the picked probes, longest first, each into the first shard with room (first-fit

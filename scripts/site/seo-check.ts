@@ -17,7 +17,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join } from 'node:path'
 import { checker } from '../lib/check'
-import { boardAliases, boardIds, boardManifest } from '../../src/widgets/manifest'
+import { boardAliases, boardIds, boardManifest, cardAliases } from '../../src/widgets/manifest'
 import { ABOUT_PATH, titleCase } from '../../src/site/meta'
 import { boardBlurbs } from '../../src/widgets/blurbs'
 import { viewFromUrl } from '../../src/site/views'
@@ -46,6 +46,8 @@ const CASES: [path: string, want: string, view?: (v: ReturnType<typeof viewFromU
   [`/widget/${sample.slug}`, 'index.html', v => v.widget?.key === sample.slug], [`/${sample.uid}`, 'index.html', v => v.widget?.key === sample.uid],
   // the glyph board became lock: its old card links redirect in one hop to the card's canonical page
   ...(lock ? [`/widget/glyph-${lock.slug.slice(5)}/`, `/widget/glyph-${lock.slug.slice(5)}`].map(p => [p, `→ /widget/${lock.slug}/`]) as typeof CASES : []),
+  // a renamed card (cardAliases, e.g. sq-tetris → sq-stack, #188): its old link redirects in one hop to the new page
+  ...Object.entries(cardAliases).flatMap(([old, to]) => [[`/widget/${old}/`, `→ /widget/${to}/`], [`/widget/${old}`, `→ /widget/${to}/`]] as typeof CASES),
   ['/ab12cd34', 'index.html', v => v.widget?.key === 'ab12cd34'], ['/@acme/widget/timer/', 'index.html', v => v.widget?.scope === 'acme'],
   ['/blog', 'blog/index.html'], ['/blog/', 'blog/index.html'], ...POSTS.map(p => [postPath(p.slug), `blog/${p.slug}/index.html`] as [string, string]),
   ['/essay', '→ /blog/dot-matrix-essay/'], ['/essay/', '→ /blog/dot-matrix-essay/'], ['/essay.html', '→ /blog/dot-matrix-essay/'],

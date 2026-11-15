@@ -9,6 +9,13 @@
  *                                                  its static imports) and, per board, the chunks a card's first
  *                                                  request adds (the worker loads one board chunk at a time)
  *   npx tsx scripts/site/size.ts --check         → exit 1 over budget (the 150 kB backstop)
+ *   npx tsx scripts/site/size.ts --modules 40    → also the 40 biggest first-load source modules (default 30), from the
+ *                                                  build's module report (size-modules.ts); CI prints them every build
+ *
+ * The page's cold-load hints (#348, scripts/site/preload.ts: `<link rel="modulepreload">` for lazy chunks the page is
+ * sure to need) print on their own line and stay out of the budget: those chunks were fetched on every cold load before
+ * the hints too, one round trip later, so the hints move bytes earlier without adding any. `--board` already counts
+ * its board's chunk, so a board page's hints add nothing there.
  *
  * Delta gates (docs/LIVING-MATTER-PLAN.md §6, the first-load ledger): a change is gated on its growth against
  * the build before it, not on the absolute number. Give the base as another build (`--against <dist dir>`) or as
@@ -21,6 +28,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
+import { SIZE_MODULES, type ModuleReport } from './size-modules'
 
 const BUDGET_KB = 150
 const args = process.argv.slice(2)
@@ -49,6 +57,10 @@ function measure(dist: string, board?: string) {
     if (chunk) roots.push(chunk); else console.log(`(no separate chunk for ${board}: it ships in the entry)`)
   }
   const files = [...closure(roots)].sort().map(f => ({ f, kb: gz(f) / 1024 }))
+  // the page's cold-load hints beyond that closure (the board page's own HTML for --board)
+  const pageHtml = board && existsSync(join(dist, board, 'index.html')) ? readFileSync(join(dist, board, 'index.html'), 'utf8') : html
+  const inClosure = new Set(files.map(x => x.f))
+  const hints = [...pageHtml.slice(0, pageHtml.indexOf('</head>')).matchAll(/<link rel="modulepreload"[^>]*href="\/assets\/([^"]+\.js)"/g)].map(m => m[1]).filter(f => !inClosure.has(f))
   // the sample worker: what loads before it answers, then per board what one card's first request adds
   const worker = all.find(f => /^sampleWorker-.*\.js$/.test(f))
   const workerInit = worker ? closure([worker]) : new Set<string>()
@@ -62,7 +74,7 @@ function measure(dist: string, board?: string) {
   })
   const css = [...html.matchAll(/href="\/assets\/([^"]+\.css)"/g)].map(m => m[1])
   return {
-    files, total: files.reduce((s, x) => s + x.kb, 0), cssKb: css.reduce((s, f) => s + gz(f), 0) / 1024,
+    files, total: files.reduce((s, x) => s + x.kb, 0), hints, hintsKb: kbOf(hints), cssKb: css.reduce((s, f) => s + gz(f), 0) / 1024,
     worker, workerKb: worker ? kbOf(workerInit) : NaN, workerInit: [...workerInit], workerBoards,
     workerAllKb: kbOf(workerChunks), workerChunks, read: (f: string) => readFileSync(join(assets, f), 'utf8'),
   }
@@ -78,6 +90,22 @@ const dist = opt('--dist') ?? 'dist', board = opt('--board'), showWorker = args.
 const m = measure(dist, board)
 for (const { f, kb } of m.files) console.log(`  ${f.padEnd(40)} ${kb.toFixed(2)} kB gz`)
 console.log(`first-load JS${board ? ` (${board})` : ''}: ${m.total.toFixed(2)} kB gz in ${m.files.length} file(s), budget ${BUDGET_KB}; CSS ${m.cssKb.toFixed(2)} kB gz`)
+if (m.hints.length) {
+  for (const f of m.hints) console.log(`  + ${f.padEnd(38)} ${(gzipSync(m.read(f), { level: 9 }).length / 1024).toFixed(2)} kB gz`)
+  console.log(`cold-load hints (#348): +${m.hintsKb.toFixed(2)} kB gz in ${m.hints.length} file(s), fetched beside first load (${(m.total + m.hintsKb).toFixed(2)} kB gz together); not in the budget, they loaded one round trip later before`)
+}
+// which source modules make up first load: each module's own gzip size, scaled so a chunk's modules add up to its real
+// gzip size. Needs this build's module report (absent for a `--dist` build made elsewhere: then nothing prints).
+if (args.includes('--modules') && existsSync(SIZE_MODULES)) {
+  const report = JSON.parse(readFileSync(SIZE_MODULES, 'utf8')) as ModuleReport
+  const rows = m.files.flatMap(({ f, kb }) => {
+    const mods = Object.entries(report[f] ?? {}), sum = mods.reduce((s, [, x]) => s + x.gz, 0)
+    return mods.map(([name, x]) => ({ name, f, kb: sum ? kb * x.gz / sum : 0 }))
+  }).sort((a, b) => b.kb - a.kb)
+  const n = Number(opt('--modules')) || 30
+  if (rows.length) console.log(`biggest first-load modules (${Math.min(n, rows.length)} of ${rows.length}):`)
+  for (const r of rows.slice(0, n)) console.log(`  ${r.kb.toFixed(2).padStart(6)} kB gz  ${r.name}  (${r.f})`)
+}
 if (showWorker && !m.worker) console.log('sample worker: no sampleWorker-*.js in this build')
 else if (showWorker) {
   console.log(`sample worker: initial ${m.workerKb.toFixed(2)} kB gz (${m.workerInit.join(', ')}); all ${m.workerChunks.length} worker chunks ${m.workerAllKb.toFixed(2)} kB gz`)
@@ -96,6 +124,11 @@ if (check && m.total > BUDGET_KB) { console.error('over budget'); failed = true 
 // (usually a value import from the `src/engine` barrel, or `passes.ts` importing `../../ir`)
 const irIn = board ? [] : m.files.filter(({ f }) => /is a function; call it as|ir_sdBox/.test(readFileSync(join(dist, 'assets', f), 'utf8'))).map(x => x.f)
 if (irIn.length) { console.error(`Field IR core is in first load (${irIn.join(', ')})`); if (check) failed = true }
+// code that loads when a card asks for it, never in first load (#333): a static import of it crept back
+if (!board) for (const [mark, what] of [[/uniform vec4 uPalette/, 'the WebGL dot renderer (src/components/glLoader.ts)'], [/facingMode/, 'the camera capture (src/media/cameraCore.ts)'], [/PLAY HIVE/, "HIVE's start button (src/components/Board.tsx)"]] as const) {
+  const hits = m.files.filter(({ f }) => mark.test(readFileSync(join(dist, 'assets', f), 'utf8'))).map(x => x.f)
+  if (hits.length) { console.error(`${what} is in first load (${hits.join(', ')})`); if (check) failed = true }
+}
 // code that never ships in any worker chunk: the squares GL join program (Q1.7: the worker rasterizes on Canvas only)
 // and the pond's glyph alphabet (L1: pond cards are main-thread only, the worker build stubs the board)
 if (showWorker && m.worker) for (const [mark, what] of [['uJointO', 'the squares GL join program'], ['EDGE3', 'the pond glyph alphabet']]) {

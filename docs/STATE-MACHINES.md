@@ -14,9 +14,10 @@ Findings at a glance, worst first. Severity: data loss, broken UI, wrong output,
 |---|---|---|---|---|---|
 | A2.1 | Chunk loading | Broken UI | Confirmed (`scripts/verify/appstate.ts`) | #300 | Fixed in #303: offline never reloads |
 | A2.2 | Chunk loading | Broken UI | Confirmed (`chunks` probe) | #300 | Fixed in #303: each lazy part has a `LoadBoundary` |
+| A2.3 | Chunk loading | Broken UI | Prevented (`scripts/verify/appstate.ts`) | #346 | A prefetch never reloads; the open does |
 | A5.1 | Likes client | Data loss (this browser's likes record) | Confirmed (`scripts/verify/appstate.ts`) | #301 | Fixed in #303: storage listener and read-modify-write |
-| A5.2 | Likes client | Wrong output | Likely | #302 | Left: needs the server to say whether the caller's like is counted |
-| A5.3 | Likes client | Wrong output | Likely | #302 | Left: heals on the next day's visit |
+| A5.2 | Likes client | Wrong output | Confirmed (`likes` probe) | #302 | Fixed in #327: the like answer carries the count after it |
+| A5.3 | Likes client | Wrong output | Confirmed (`likes` probe) | #302 | Fixed in #327: Remember is stored only after the check-in |
 | A8.1 | Global keys | Broken UI (stuck input) | Confirmed (`c10` probe) | #302 | Fixed in #316: a window blur ends the hold |
 | A9.1 | Widget page SHARE | Cosmetic | Confirmed (`c10` probe) | #302 | Fixed in #316: a keyboard SHARE makes a fresh PNG |
 | A4.1 | Theme | n/a | By design | | `theme-picker` probe pins it |
@@ -89,6 +90,7 @@ Invariants:
 | loading | import rejects | offline, or stamp used | failed | nearest `LoadBoundary` shows `LoadFailed` |
 | failed-held | 30 s pass | | idle | the next open tries again (board loader only) |
 | failed | RELOAD pressed | | page reload | |
+| loading (prefetch) | import rejects | | idle | nothing held, no reload: the open fetches again |
 
 Persists: the stamp, per tab (sessionStorage; a duplicated tab copies it).
 
@@ -105,6 +107,12 @@ Findings:
   turned into the "THIS PAGE STOPPED" screen for a part that wasn't even on screen. Fix: a `LoadBoundary` around each
   lazy part: the views show `LoadFailed` in place (keyed by the place, so moving to another view resets it), the
   optional parts show nothing. Probe: the `chunks` probe's "missing view chunk" cases (stamp used, and offline).
+- **A2.3, Prevented (#346).** Prefetch on intent (`src/site/prefetch.ts`) loads chunks on a hover, focus or press.
+  On a stale tab, a hover alone would have fired `vite:preloadError` and reloaded the page under the pointer. Fix: a
+  prefetch runs inside `prefetching` (`stale-deploy.ts`), which counts loads in flight; the listener reloads nothing
+  while one runs. A failed board prefetch tries once and holds nothing, so the open fetches again and that failure
+  reloads. The card page's `lazy()` also reloads on its own rejection, in case its import joined a prefetch still in
+  flight. Check: `scripts/verify/appstate.ts`.
 - `useBlurbs` imports the blurbs chunk with no `.catch` (#209); a failure there is an unhandled rejection with no
   visible effect. Left for #209.
 
@@ -188,10 +196,11 @@ Invariants:
 | ready | click | liked | busy | `POST /api/like {on: false}` |
 | ready | click | GPC, or a choice stored | busy | `POST /api/like {on: true}` |
 | ready | click | no choice | asking | remember sheet (modal) |
-| asking | Remember | | busy | choice stored, `POST /api/visit`, then the like |
+| asking | Remember | | busy | `POST /api/visit`, then the choice stored and the like |
+| busy | check-in fails | | ready | nothing stored, no like, note: limit or paused (A5.3) |
 | asking | Just this once | | busy | choice stored, the like |
 | asking | Escape, scrim | | ready | nothing sent |
-| busy | like ok | | ready | `mine` updated (read-modify-write), note: counting soon or already liked |
+| busy | like ok | | ready | `mine` updated (read-modify-write), the count set to the server's `n`, note: counting soon or already liked |
 | busy | 429 or failure | | ready | note: limit or paused |
 | ready | Forget this browser | ok | ready | record removed, server drops this voter's likes |
 | any | `storage` event for `dot480:likes` | | same | cached record dropped, buttons re-render |
@@ -205,16 +214,20 @@ Findings:
   undid "Forget this browser": tab B wrote its old `c: 'r'` back on its next like, so the browser looked remembered
   with no cookie behind it. Fix: a `storage` listener drops the cache and re-renders, and every write goes through
   `updateLocal`, which reads the stored record first. Check: `scripts/verify/appstate.ts`.
-- **A5.2, Likely, left.** Unlike after a reload doesn't lower the count. Like X, wait until it is counted, reload:
-  `count` (from the server) includes this like and `mine[X]` holds the count from before it, so the button shows
-  `count`. Unlike: `mine[X]` is dropped and the button still shows `count` (`LikeButton.tsx`, `send`). The client
-  can't tell whether its own like is in the public count (it may still be held as pending, and other visitors move
-  the count too), so a fix needs the server to report it. Low impact: the next page view after the CDN cache (5 min)
-  is right.
-- **A5.3, Likely, left.** Remember stores `c: 'r'` before `POST /api/visit` answers, and ignores the answer
-  (`LikeButton.tsx`, `choose`). If the visit fails (paused or timed out), the browser shows "Forget this browser"
-  with no cookie, and the failure starts the rest window, so the like that follows comes back "Likes paused" at once.
-  `dailyVisit` issues the cookie on the next day's visit, so it heals.
+- **A5.2, Confirmed, fixed in #327.** Unlike after a reload didn't lower the count. Like X, wait until it is
+  counted, reload: `count` (from the server) includes this like and `mine[X]` holds the count from before it, so the
+  button shows `count`. Unlike: `mine[X]` was dropped and the button still showed `count` (`LikeButton.tsx`, `send`).
+  The client can't tell whether its own like is in the public count (it may still be pending, likes are weighted, and
+  other visitors move the count too). Fix: every like answer carries `n`, the item's public count after the change
+  (`api/_lib/likes.ts`, `like`: one more read of the item's counted weight), and the button shows it. Checks: the
+  `likes` probe seeds a like counted since (count 12, liked at 11) and unlikes it; before the fix it stayed at 12,
+  now it shows 11. `scripts/likes/checks.ts` pins `n` through pending, counted, already, unliked and restored.
+- **A5.3, Confirmed, fixed in #327.** Remember stored `c: 'r'` before `POST /api/visit` answered, and ignored the
+  answer (`LikeButton.tsx`, `choose`). When the visit failed, the browser showed "Forget this browser" with no cookie,
+  and the failure started the rest window, so the like that followed came back "Likes paused" at once. Fix: the
+  choice is stored only after the visit answers ok. A failed visit stores nothing, sends no like and says why, so
+  the next like asks again. Check: the `likes` probe's `visitfail` mode; before the fix the record held `c: 'r'`
+  and "Forget this browser" showed.
 - **A5.4, Not reachable.** A `LikeButton` whose `program` prop changes would keep the old `item` until the new count
   loads. Gallery entries are keyed by their content hash (`programHash`), so a changed program is a new button.
 - Double clicks: not reachable. `busy` re-renders before the next click (React flushes a discrete event's updates).
@@ -327,10 +340,10 @@ Findings at a glance:
 |---|---|---|---|---|---|
 | B7-1 | media: camera | stuck UI | Confirmed, fixed | #296 | #298 |
 | B6-1 | editor and IR worker | wrong output | Confirmed, fixed | #297 | #298 |
-| B6-3 | editor autosave | data loss (two tabs) | Likely, owner decision | | |
-| B7-2 | media: mic | stuck UI | Likely | | |
-| B7-3 | media: HAND mode | stuck UI | Likely | | |
-| B4-1 | card input | stuck press | Likely | | |
+| B6-3 | editor autosave | data loss (two tabs) | Confirmed, fixed | #304 | #323 |
+| B7-2 | media: mic | stuck UI | Confirmed, fixed | #304 | #323 |
+| B7-3 | media: HAND mode | stuck UI | Confirmed, fixed | #304 | #323 |
+| B4-1 | card input | stuck press | Not reachable | #304 | #323 |
 | B4-2 | card input | stale state | Likely | | |
 | B3-1 | transitions | cosmetic | Likely | | |
 | B1-1 | card lifecycle | performance | Likely | | |
@@ -469,7 +482,7 @@ Keyboard: `press` holds a button down for 140 ms (`:432`); `set` applies a patch
 **Persists:** nothing.
 
 **Findings**
-- **B4-1, Likely, stuck press.** No handler for window blur. A mouse drag on a card while the window loses focus (Alt+Tab) relies on the browser sending `pointercancel` or `lostpointercapture` (`:417`). Where it sends neither, the control stays pressed until the next pointerup on the card. Needs a browser to confirm.
+- **B4-1, Not reachable (PR #323).** No handler for window blur: a mouse drag on a card while the window loses focus (Alt+Tab) relies on the browser ending it with `pointercancel` or lost pointer capture (`:417`). Chrome does. The `input` probe (`scripts/input-browser.ts`) drags a range control, brings another tab to the front (`document.hasFocus()` false), lets the button up outside the page, then moves the mouse back across the control with no button down. The control stays put (0.1 → 0.1), with no change to the input code. The probe stays as the check.
 - **B4-2, Likely, stale state.** When the card's controls change (a preset swap, `:454`), drags, claims and candidates are cleared, but tap replays, lingering pointers and the engaged state are kept. A replayed tap then finishes on a control that is gone (harmless: the patch is for an unknown key), and the card can stay engaged until idle.
 - Multi-touch: two fingers on two drag controls both work, but `pressed` shows only the last one (`:195`). By design.
 
@@ -538,12 +551,23 @@ The worker client: `src/engine/ir/sandbox/remote.ts:74` (`irRemote`). The worker
 | any | document edit | save scheduled |
 | any | `resetEditorDoc` | no more saves; the seed is written |
 
+**Two tabs** (`src/components/editor/otherTab.ts`, since #304). Explicit: `useOtherTab.incoming`, the JSON another tab saved, or null. Nothing is locked or merged; each tab still autosaves its own document.
+
+| from | event | guard | to | side effects |
+|---|---|---|---|---|
+| quiet | `storage` event on `dot480.editor.v1` | the value differs from what this tab would save now | changed | "Changed in another tab." with RELOAD and KEEP MINE, in a polite status region |
+| quiet | the same event | an echo of this tab's own document, or the key cleared | quiet | |
+| changed | RELOAD | the other version opens | quiet | this tab takes it with a fresh undo history; saving it back is an echo, so the other tab stays quiet |
+| changed | RELOAD | it doesn't open | quiet | this tab keeps its document and says why |
+| changed | KEEP MINE | | quiet | nothing else: this tab's next autosave replaces the other version |
+| changed | another save from the other tab | | changed | RELOAD opens the newest one |
+
 **Persists:** `localStorage['dot480.editor.v1']` (the document), `localStorage['dot480.editor.clip']` (the clipboard, shared across tabs through the `storage` event), the asset library. The worker's point store and the program cache live per page.
 
 **Findings**
 - **B6-1, Confirmed, fixed (#297, PR #298). Wrong output.** A layer whose source no longer compiles keeps its last good program (`doc.ts:222`, `compileIR`), but its builders passed the broken source to the worker (`remote.field(prog, l.src, …)`). The worker failed to compile it, replied `error`, and `remote.ts:168` paused the program, so the canvas showed PROGRAM PAUSED for a typo while the main thread drew the last good frame. Reproduced by a new check in `scripts/ir-worker.ts` (628 vs 4234 dots, state paused). Fix: the editor sends the source the kept program was compiled from (`sourceOf`, `doc.ts:221`).
 - **B6-2, Not reachable.** A reply for an older source in the same slot would be cached under an input signature that has no source in it (`remote.ts:157`). Slot keys carry the source (`guardKey`, `doc.ts:211`; `thumb|<src>` in the remix graph), and `slotFor` empties the cache when the source changes (`remote.ts:183`).
-- **B6-3, Likely, data loss, owner decision.** Two tabs on MAKE each autosave their whole document to the same key (`store.ts:336`), and nothing listens for the other tab's save (`Editor.tsx:434` handles only the clipboard key). The last tab to save wins; the other tab's edits are gone on its next reload. MAKE is behind the `make` flag. Options: a `storage` listener that warns, or a per-tab lock.
+- **B6-3, Confirmed, fixed (#304, PR #323). Data loss.** Two tabs on MAKE each autosave their whole document to the same key (`store.ts:336`), and nothing listened for the other tab's save (`Editor.tsx:434` handled only the clipboard key). The last tab to save won; the other tab's edits were gone on its next reload, without a word. The owner chose a warning over a lock: the two-tab machine above. `scripts/editor-tabs.ts` (new, run by verify) plays the second tab through `storage` events in Node.
 - **B6-4, Not reachable.** The watchdog pauses the item the worker last announced (`remote.ts:144`), so a hang between two `start` messages would blame the previous program. The only work there is `compileUntrusted`, which is memoised and capped at 8192 characters.
 
 ### B7. Media: camera, mic and HAND mode
@@ -580,12 +604,13 @@ The shared camera stream: `src/media/stream.ts:28` (reference counted). A camera
 | starting | stream resolves | turned off meanwhile | idle (tracks stopped) |
 | starting | any error | | denied |
 | live or starting | `setMic(false)`, scope unmount | | idle |
+| live | a track ended (unplugged, permission revoked) | still this stream | idle (`setMic(false)`, B7-2 fix) |
 
 **Persists:** nothing in storage. Browser permissions persist outside the page.
 
 **Findings**
 - **B7-1, Confirmed, fixed (#296, PR #298). Stuck UI.** Two parts. `acquireCamera` handed the shared stream to the next consumer even after every track ended, so with HAND mode holding it, toggling a camera card off and on got the dead stream again. And `grab()` never checked the tracks: an ended track stops new frames, `grab()` returned false forever, `status` stayed `live`, and the card showed its last frame as live. Reproduced by `scripts/media.ts` under a fake `getUserMedia` (`1 opened, same stream true`; `status live`). Fix: a dead stream is dropped on the next acquire (`stream.ts:31`), and a live capture whose tracks ended releases its reference and goes to `error` (`camera.ts:80`; the status change is heard after the frame, since a grab can run inside a React render).
-- **B7-2, Likely, stuck UI.** The mic has no `ended` handler (`engine.ts:258`). Unplugging the mic or revoking its permission leaves `micState` at `live` with a silent analysis. Turning the mic off and on recovers.
-- **B7-3, Likely, stuck UI.** HAND mode has no `ended` handler either. Its frame loop (`handPointer.ts:133`) waits for new video frames, which never come, and the status stays `live`. Turning HAND off and on recovers once no other consumer holds the dead stream (and with the B7-1 fix, a new acquire skips the dead one).
+- **B7-2, Confirmed, fixed (#304, PR #323). Stuck UI.** The mic had no `ended` handler (`engine.ts:258`). Unplugging the mic or revoking its permission left `micState` at `live` with a silent analysis. Turning the mic off and on recovered. Reproduced by the `audio` probe (`scripts/audio-chrome.ts`), which stops the fake mic's track and fires `ended`: before the fix `{"state":"live","checked":"true"}`. Fix: each mic track's `ended` turns the mic off, switch included (`engine.ts:266`).
+- **B7-3, Confirmed, fixed (#304, PR #323). Stuck UI.** HAND mode had no `ended` handler either. Its frame loop (`handPointer.ts:133`) waited for new video frames, which never came, and the status stayed `live`. Turning HAND off and on recovered once no other consumer held the dead stream (and with the B7-1 fix, a new acquire skips the dead one). Reproduced by the `c6` probe (`scripts/c6-browser.ts`), which ends the fake camera's tracks: before the fix the HUD still said `PINCH TO PRESS`. Fix: a track's `ended` stops HAND mode, releases the camera and shows `NO CAMERA` (`handPointer.ts:167`); HAND stays on, so the next tab show or an off and on asks again.
 - **B7-4, Not reachable.** If every reference were released while the prompt is open and a new consumer then acquired, `acquireCamera` would open a second stream and the first would never stop. Consumers only release after their own acquire resolved (`camera.ts:60`, `handPointer.ts:164`), so the count cannot reach 0 while a stream is pending.
 - **B7-5, Not reachable.** Mic on, off, on while `getUserMedia` is pending: the first stream to resolve while `starting` is kept, the other is stopped (`engine.ts:259`), so exactly one stream stays open.

@@ -113,6 +113,7 @@
   --dur-out: 150ms;     /* chrome: hover-out, press, small fades */
   --dur-move: 220ms;    /* a sheet or panel following a drag or snapping to a stop */
   --dur-enter: 280ms;   /* a sheet arriving; a display powering off */
+  --dur-exit: 200ms;    /* the header leaving as the page scrolls down: quicker than it comes back (--dur-enter) */
   --dur-wipe: 720ms;    /* the theme switch: the halftone front crossing the screen from the pressed control */
   --ease: cubic-bezier(.2, .8, .2, 1);
 

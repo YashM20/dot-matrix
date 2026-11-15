@@ -5,7 +5,7 @@
  */
 import type { Layer, Tone } from '../../engine/types'
 import { layer } from '../types'
-import { BODY, CHECK, T, arcRing, cols, frac, hero, heroW, inOut, loopCard, outCubic, span, spriteAt, step4, type Pt } from './motion-kit'
+import { BODY, CHECK, T, arcRing, cols, frac, hero, heroOpts, heroW, inOut, loopCard, outCubic, span, spriteAt, step4, type Pt } from './motion-kit'
 
 /** Piecewise-linear progress through keyframes [time, value]. */
 const track = (keys: [number, number][]) => (lt: number) => {
@@ -28,12 +28,12 @@ export const progressCard = loopCard({
   id: 'mo-progress', name: 'Progress', period: UP.period, settled: 6,
   draw: lt => {
     const p = upAt(lt), pct = Math.floor(p * 100), full = Math.floor(p * UP.n + 1e-9), part = p * UP.n - full
-    const x = (i: number): Pt => [UP.x0 + i * UP.pitch, UP.y], hw = heroW(String(pct))
+    const x = (i: number): Pt => [UP.x0 + i * UP.pitch, UP.y]
     const out: Layer[] = [
       layer(T.text(p < 1 ? 'UPLOADING' : 'UPLOADED', 6, 18), 'idle'),
       layer(T.text('BOARD.PNG', 138, 18, { align: 'right' }), 'mid'),
       layer(hero(String(pct), 6, 30), 'value'),
-      layer(T.big('%', 6 + hw + 3, 30 + 35 - 11.2, { lattice: 1.6 }), 'idle'),
+      layer(T.heroUnit(String(pct), '%', 6, 30, heroOpts(), { lattice: 1.6 }), 'idle'),
       layer(T.dots(Array.from({ length: full }, (_, i) => x(i)), UP.block), 'value'),
       layer(T.dots(Array.from({ length: UP.n - full - (p < 1 ? 1 : 0) }, (_, i) => x(full + 1 + i)), UP.empty), 'faint'),
     ]
@@ -114,7 +114,7 @@ export const ringCard = loopCard({
       const w = heroW(String(pct), RING_LAT), all = w + 2 + 6.5, left = cx - all / 2
       out.push(
         layer(hero(String(pct), left, 52, RING_LAT), 'value'),
-        layer(T.big('%', left + w + 2, 52 + 25.2 - 9.1, BODY), 'idle'),
+        layer(T.heroUnit(String(pct), '%', left, 52, heroOpts(RING_LAT), BODY, 2), 'idle'),
       )
     }
     out.push(layer(T.text(`${Math.round(p * RING.files)}/${RING.files}`, cx, 83, { align: 'center' }), 'mid'))
