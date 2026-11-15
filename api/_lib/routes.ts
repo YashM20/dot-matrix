@@ -3,7 +3,7 @@
  * against the in-memory store. With likes off (`deps` null) every route is a cheap 404 that never reaches the store.
  *
  * | route | method | does | cache |
- * | `/api/like` | POST `{ item | program, on, key }` | like / unlike | none |
+ * | `/api/like` | POST `{ item | program, on, key }` | like / unlike, answers `{ on, soon, n, already? }` (`n`: the count after) | none |
  * | `/api/visit` | POST `{ remember: true }` | issue the voter cookie, re-sign it once a day | none |
  * | `/api/forget` | POST `{}` | remove this browser's likes, clear the cookie | none |
  * | `/api/likes/widgets` | GET | every widget count | 5 min at the CDN, no cookie |
@@ -93,7 +93,7 @@ async function onLike(req: Request, d: Deps): Promise<Response> {
   if (d.cfg.botid && await d.bot(req)) return fail(403, 'bot')
   const v = await readVoter(req, d.cfg.cookieKey)
   const out = await like(d, { item, on: b.on, key: b.key, net: await hash(d, 'n', net), voter: v ? { field: await hash(d, 'v', v.id), days: v.days } : null })
-  if (out.k === 'ok') return json(200, { on: out.on, soon: out.soon, ...(out.already && { already: true }) })
+  if (out.k === 'ok') return json(200, { on: out.on, soon: out.soon, n: out.n, ...(out.already && { already: true }) })
   return out.k === 'limit' ? fail(429, 'limit') : out.k === 'busy' ? fail(409, 'busy') : paused()
 }
 

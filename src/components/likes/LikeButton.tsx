@@ -6,7 +6,7 @@
  * reads out the state and the count.
  */
 import { useEffect, useState, useSyncExternalStore } from 'react'
-import { countOf, dailyVisit, ensureBot, gpc, local, programItem, sendForget, sendLike, sendVisit, setLocal, subscribeLocal, updateLocal, type Program } from './client'
+import { countOf, dailyVisit, ensureBot, gpc, local, programItem, sendForget, sendLike, sendVisit, setLocal, subscribeLocal, today, updateLocal, type Fail, type Program } from './client'
 import { RememberSheet } from './RememberSheet'
 import './likes.css'
 
@@ -59,18 +59,22 @@ export default function LikeButton({ item: widgetItem, program, name, compact }:
   const base = mine.mine[item], liked = base !== undefined
   const shown = Math.max(count ?? 0, liked ? base + 1 : 0)
 
+  const fail = (why: Fail) => { const k = why === 'limit' ? 'limit' : 'paused'; setNote(k); setSaid(NOTES[k]) }
   const send = async (on: boolean) => {
     setBusy(true)
     await ensureBot()
     const r = await sendLike(program && !widgetItem ? { program } : { item }, on)
     setBusy(false)
-    if (!r.ok) { setNote(r.why === 'limit' ? 'limit' : 'paused'); setSaid(NOTES[r.why === 'limit' ? 'limit' : 'paused']); return }
+    if (!r.ok) { fail(r.why); return }
     updateLocal(l => {
       const next = { ...l.mine }
       if (r.body.on) next[item] = count ?? 0; else delete next[item]
       return { ...l, mine: next }
     })
-    const n = r.body.on ? Math.max(count ?? 0, (count ?? 0) + 1) : count ?? 0
+    // the server's count after this change: an unlike of a like counted since the like drops it (A5.2)
+    const after = typeof r.body.n === 'number' && Number.isFinite(r.body.n) ? Math.max(0, Math.floor(r.body.n)) : count ?? 0
+    setCount(after)
+    const n = r.body.on ? Math.max(after, (count ?? 0) + 1) : after
     const nn: Note = !r.body.on ? '' : r.body.already ? 'already' : r.body.soon ? 'soon' : ''
     setNote(nn)
     setSaid(`${r.body.on ? 'Liked' : 'Like removed'}. ${n > 0 ? plural(n) + '.' : ''} ${nn === 'soon' ? 'Counting soon.' : nn === 'already' ? 'Already liked.' : ''}`.replace(/\s+/g, ' ').trim())
@@ -85,15 +89,19 @@ export default function LikeButton({ item: widgetItem, program, name, compact }:
   const choose = async (c: 'r' | 'o' | null) => {
     setAsking(false)
     if (!c) return
-    updateLocal(l => ({ ...l, c, ...(c === 'r' && { d: Math.floor(Date.now() / 864e5) }) }))
-    if (c === 'r') { setBusy(true); await ensureBot(); await sendVisit(); setBusy(false) }
+    if (c === 'r') {
+      setBusy(true); await ensureBot(); const v = await sendVisit(); setBusy(false)
+      // no cookie came back: remember nothing and send no like, so the next like asks again (A5.3)
+      if (!v.ok) { fail(v.why); return }
+    }
+    updateLocal(l => ({ ...l, c, ...(c === 'r' && { d: today() }) }))
     await send(true)
   }
   const forget = async () => {
     setBusy(true)
     const r = await sendForget()
     setBusy(false)
-    if (!r.ok) { setNote('paused'); setSaid(NOTES.paused); return }
+    if (!r.ok) { fail(r.why); return }
     setLocal(null)
     setNote('forgotten'); setSaid(NOTES.forgotten)
   }

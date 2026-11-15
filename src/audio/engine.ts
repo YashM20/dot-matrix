@@ -262,6 +262,9 @@ export class AudioEngine {
       // analysers only: the mic never reaches the speakers (no feedback, nothing leaves the page)
       node.connect(gain); gain.connect(this.g!.micA); gain.connect(this.g!.busA)
       this.mic = { stream, node, gain }
+      // the mic went away (unplugged, permission revoked): its track ends on its own, so the mic turns off
+      const gone = () => { if (this.mic?.stream === stream) void this.setMic(false) }
+      for (const t of stream.getTracks()) t.addEventListener('ended', gone, { once: true })
       this.micState = 'live'
     } catch { this.micState = 'denied' }
     this.emit()
