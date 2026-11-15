@@ -54,7 +54,8 @@ export async function appStateChecks(assert: Assert) {
   {
     const b = fakeBrowser(true)
     try {
-      const m = await import(`../../src/site/stale-deploy.ts?appstate=${Date.now()}`) as typeof import('../../src/site/stale-deploy')
+      // its own query: a second `Date.now()` in the same millisecond would hand back the module bound to the last fake window
+      const m = await import(`../../src/site/stale-deploy.ts?appstate=prefetch-${Date.now()}`) as typeof import('../../src/site/stale-deploy')
       const failed = () => b.fire('vite:preloadError', { key: null })
       await m.prefetching(async () => { failed(); throw new Error('404') }).catch(() => {})
       const during = b.reloads.n
