@@ -21,11 +21,10 @@
  * Captures to look at go to `.snapshots/t5/` (the popover previewing, an accent and a scheme wipe held at 20% and 45%, the phone sheet).
  * Needs a build: `npx vite build`, then `npx tsx scripts/site/theme-picker.ts`. Chrome: $CHROME or the usual paths.
  */
-import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { createServer } from 'node:http'
-import { tmpdir } from 'node:os'
 import { extname, join, normalize } from 'node:path'
+import { pageSocket, startChrome } from '../lib/chrome'
 
 const DIST = 'dist', PORT = Number(process.env.PORT) || 4381
 if (!existsSync(join(DIST, 'index.html'))) { console.log('no dist/index.html (run npx vite build first): skipped'); process.exit(0) }
@@ -45,13 +44,9 @@ const base = `http://127.0.0.1:${PORT}`
 
 const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
 if (!chrome) { console.log('no Chrome found (set $CHROME): skipped'); server.close(); process.exit(0) }
-const profile = mkdtempSync(join(tmpdir(), 'dot-theme-picker-'))
-const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--window-size=1280,800', 'about:blank'], { stdio: 'ignore' })
+const { proc, port, profile } = await startChrome(chrome, ['--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--window-size=1280,800', 'about:blank'], 'dot-theme-picker-')
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
-let port = ''
-for (let i = 0; i < 300 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
-const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json() as { type: string; webSocketDebuggerUrl: string }[]
-const ws = new WebSocket(targets.find(t => t.type === 'page')!.webSocketDebuggerUrl)
+const ws = new WebSocket(await pageSocket(port))
 await new Promise(r => ws.addEventListener('open', r, { once: true }))
 let seq = 0
 const calls = new Map<number, (m: any) => void>()
@@ -184,12 +179,23 @@ try {
   check('Escape closes and returns focus to THEME', await waitFor(`!document.querySelector('.theme-pop') && document.activeElement?.classList.contains('theme-menu-btn')`, 2000))
 
   // ── share-link opt-in, through ⌘K "Copy deep link" ──
-  const copyLink = async () => {
+  /**
+   * ⌘K, then `text` in its input; waits for the filter to land (the input holds `text`, the highlighted row matches
+   * `first`) instead of a fixed pause, so a busy runner can't press Enter on the unfiltered list (#224).
+   */
+  const palette = async (text: string, first: RegExp) => {
     await key('k', 'KeyK', 75, 2)
-    await waitFor('!!document.querySelector(".pal input")', 4000)
-    await cdp('Input.insertText', { text: 'copy deep link to this view' }); await sleep(150)
-    await key('Enter', 'Enter', 13); await sleep(200)
-    return js('window.__copied.at(-1)') as Promise<string | undefined>
+    if (!await waitFor('document.activeElement === document.querySelector(".pal input")', 4000)) return false
+    await cdp('Input.insertText', { text })
+    return waitFor(`document.querySelector('.pal input')?.value === ${JSON.stringify(text)} && ${first}.test(document.querySelector('.pal-item--sel')?.textContent ?? '')`, 4000)
+  }
+  /** The link ⌘K "Copy deep link" copies: waits for the clipboard write, not a fixed time. */
+  const copyLink = async () => {
+    const n = await js('window.__copied.length') as number
+    const ready = await palette('copy deep link to this view', /Copy deep link to this view/)
+    await key('Enter', 'Enter', 13)
+    if (!await waitFor(`window.__copied.length > ${n}`, 4000)) console.log(`  copyLink: nothing copied (palette ready ${ready}, open ${await js('!!document.querySelector(".pal")')})`)
+    return js('window.__copied.length > ' + n + ' ? window.__copied.at(-1) : undefined') as Promise<string | undefined>
   }
   const plain = await copyLink()
   check('share opt-in off: a copied link has no theme', !!plain && !plain.includes('theme='), String(plain))
@@ -202,22 +208,16 @@ try {
   check('share opt-in on: the link carries ?theme=light_cobalt', !!themed && new URL(themed).searchParams.get('theme') === 'light_cobalt', String(themed))
 
   // ── ⌘K commands ──
-  await key('k', 'KeyK', 75, 2)
-  await waitFor('!!document.querySelector(".pal input")', 4000)
-  await cdp('Input.insertText', { text: 'theme' }); await sleep(200)
+  await palette('theme', /Theme: /)
   const rows = await js(`[...document.querySelectorAll('.pal-item')].map(e => e.textContent)`) as string[]
   check('⌘K lists "Theme: system / light / dark", not the raw theme ids', ['Theme: system', 'Theme: light', 'Theme: dark'].every(t => rows.some(r => r.includes(t))) && !rows.some(r => /(dark|light)_(signal|amber|phosphor|cyan|cobalt|vite|magenta)/.test(r)), rows.slice(0, 12).join(' | '))
   await key('Escape', 'Escape', 27); await sleep(100)
-  await key('k', 'KeyK', 75, 2)
-  await waitFor('!!document.querySelector(".pal input")', 4000)
-  await cdp('Input.insertText', { text: 'accent magenta' }); await sleep(200)
+  await palette('accent magenta', /Accent: magenta/)
   check('⌘K "accent magenta" ranks "Accent: magenta" first', (await js(`document.querySelector('.pal-item')?.textContent`) as string)?.includes('Accent: magenta'))
   await key('Enter', 'Enter', 13)
   check('…and runs it', await waitFor(`document.documentElement.dataset.accent === 'magenta'`, 3000))
   await sleep(900)
-  await key('k', 'KeyK', 75, 2)
-  await waitFor('!!document.querySelector(".pal input")', 4000)
-  await cdp('Input.insertText', { text: 'accent next' }); await sleep(200)
+  await palette('accent next', /Accent: next/)
   await key('Enter', 'Enter', 13)
   check('⌘K "Accent: next" cycles (magenta → signal)', await waitFor(`document.documentElement.dataset.accent === 'signal'`, 3000))
 
@@ -348,9 +348,7 @@ try {
   await open('/components/', { keep: true })
   await waitFor('!!document.querySelector(".board-grid canvas, .board-grid svg")', 10000)
   check('card size: a reload keeps MEDIUM (4 a row at 1280)', await js(`document.documentElement.dataset.cards`) === 'm' && await js(firstRow) === 4, String(await js(firstRow)))
-  await key('k', 'KeyK', 75, 2)
-  await waitFor('!!document.querySelector(".pal input")', 4000)
-  await cdp('Input.insertText', { text: 'card size large' }); await sleep(200)
+  await palette('card size large', /Card size: large/)
   check('⌘K "card size large" ranks "Card size: large" first', (await js(`document.querySelector('.pal-item')?.textContent`) as string)?.includes('Card size: large'))
   await key('Enter', 'Enter', 13)
   check('…and runs it (3 a row, stored)', await waitFor(`document.documentElement.dataset.cards === 'l' && localStorage.getItem('dot480:cards') === 'l' && ${firstRow} === 3`, 3000))

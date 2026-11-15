@@ -21,15 +21,14 @@
  *    components board at 1440 has that size's columns (3 / 4 / 5) from the grid's first layout: no reflow on reload.
  * Needs a build: `npx vite build` (or `pnpm build`), then `npx tsx scripts/site/theme-boot.ts`. Chrome: $CHROME or the usual paths.
  */
-import { spawn } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs'
+import { existsSync, readFileSync, rmSync, statSync } from 'node:fs'
 import { createServer } from 'node:http'
-import { tmpdir } from 'node:os'
 import { extname, join, normalize } from 'node:path'
 import { THEME_TABLE } from '../../src/site/theme/table'
 import { tokensOf } from '../../src/site/theme/tokens'
 import { ACCENTS, SCHEMES, themeName } from '../../src/site/theme/names'
 import { customCss, generate, generateHue, moreRoles, NEUTRALS } from '../../src/site/theme/accents'
+import { pageSocket, startChrome } from '../lib/chrome'
 
 const DIST = 'dist'
 if (!existsSync(join(DIST, 'index.html'))) { console.log('no dist/index.html (run npx vite build first): skipped'); process.exit(0) }
@@ -53,13 +52,9 @@ const base = `http://127.0.0.1:${(server.address() as { port: number }).port}`
 
 const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
 if (!chrome) { console.log('no Chrome found (set $CHROME): skipped'); server.close(); process.exit(0) }
-const profile = mkdtempSync(join(tmpdir(), 'dot-theme-boot-'))
-const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--window-size=1280,800', 'about:blank'], { stdio: 'ignore' })
+const { proc, port, profile } = await startChrome(chrome, ['--no-first-run', '--no-default-browser-check', '--window-size=1280,800', 'about:blank'], 'dot-theme-boot-')
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
-let port = ''
-for (let i = 0; i < 150 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
-const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json() as { type: string; webSocketDebuggerUrl: string }[]
-const ws = new WebSocket(targets.find(t => t.type === 'page')!.webSocketDebuggerUrl)
+const ws = new WebSocket(await pageSocket(port))
 await new Promise(r => ws.addEventListener('open', r, { once: true }))
 let seq = 0
 const calls = new Map<number, (m: any) => void>()

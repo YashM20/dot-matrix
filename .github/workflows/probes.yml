@@ -133,6 +133,10 @@ jobs:
           name: dist
           path: dist
 
+      # the first Chrome start on a fresh runner is the slow one (issue #224): take it here, logged, before the probes
+      - name: Warm up Chrome
+        run: pnpm exec tsx scripts/ci/chrome-warm.ts
+
       - name: Probes
         env:
           PROBES: ${{ needs.build.outputs.probes }}
@@ -163,6 +167,10 @@ jobs:
         with:
           name: dist
           path: dist
+
+      # the first Chrome start on a fresh runner is the slow one (issue #224): take it here, logged, before the probes
+      - name: Warm up Chrome
+        run: pnpm exec tsx scripts/ci/chrome-warm.ts
 
       - name: Screenshots
         run: pnpm exec tsx scripts/ci/shots.ts --list "$SHOTS" --out shots
@@ -199,6 +207,10 @@ jobs:
         with:
           name: dist
           path: dist
+
+      # the first Chrome start on a fresh runner is the slow one (issue #224): take it here, logged, before the probes
+      - name: Warm up Chrome
+        run: pnpm exec tsx scripts/ci/chrome-warm.ts
 
       - name: Lighthouse
         # a step limit below the job's, so a long focused run (lighthouse_runs) still uploads what it measured

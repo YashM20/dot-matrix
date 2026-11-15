@@ -5,23 +5,18 @@
  * Needs the dev server (`pnpm dev --port 5200`), then `npx tsx scripts/essay-browser.ts [baseUrl]`.
  * Screenshots go to `.snapshots/essay/`. Chrome path: $CHROME, else the usual install paths.
  */
-import { spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
+import { pageSocket, startChrome } from './lib/chrome'
 
 const base = process.argv[2] ?? 'http://localhost:5200/'
 const out = join('.snapshots', 'essay')
 mkdirSync(out, { recursive: true })
 const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
 if (!chrome) { console.log('no Chrome found (set $CHROME): skipped'); process.exit(0) }
-const profile = mkdtempSync(join(tmpdir(), 'dot-essay-'))
-const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--window-size=1280,900', 'about:blank'], { stdio: 'ignore' })
+const { proc, port, profile } = await startChrome(chrome, ['--no-first-run', '--no-default-browser-check', '--hide-scrollbars', '--window-size=1280,900', 'about:blank'], 'dot-essay-')
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
-let port = ''
-for (let i = 0; i < 100 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
-const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json() as { type: string; webSocketDebuggerUrl: string }[]
-const ws = new WebSocket(targets.find(t => t.type === 'page')!.webSocketDebuggerUrl)
+const ws = new WebSocket(await pageSocket(port))
 await new Promise(r => ws.addEventListener('open', r, { once: true }))
 let seq = 0
 const calls = new Map<number, (m: any) => void>(), logs: string[] = []

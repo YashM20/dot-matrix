@@ -38,8 +38,12 @@ const LIT = `(() => { const c = document.querySelector('.ed-frame[data-frame="' 
 const lit = (p: Page) => p.js<number>(LIT)
 /** The longest gap between 10 ms timer ticks over `ms`: how long the page's main thread was blocked. */
 const maxGap = (p: Page, ms = 2000) => p.js<number>(`new Promise(r => { let last = performance.now(), max = 0; const id = setInterval(() => { const n = performance.now(); max = Math.max(max, n - last); last = n }, 10); setTimeout(() => { clearInterval(id); r(Math.round(max)) }, ${ms}) })`)
-/** Main-thread draw time of the animated frame: the mean of `__editor.lastMs` over `ms`, read every 50 ms. */
-const frameMs = (p: Page, ms = 3000) => p.js<number>(`new Promise(r => { const xs = []; const id = setInterval(() => { const e = window.__editor; if (e && e.drawn) xs.push(e.lastMs) }, 50); setTimeout(() => { clearInterval(id); r(xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : -1) }, ${ms}) })`)
+/**
+ * Median main-thread ms of the frames drawn in `ms`: one sample per new frame (`drawn` moved), so a single slow frame
+ * counts once. A mean of `lastMs` read every 50 ms counted a slow cold frame many times over when frames were sparse,
+ * and failed the with-vs-without comparison on a busy runner (#224). -1 when nothing drew.
+ */
+const frameMs = (p: Page, ms = 3000) => p.js<number>(`new Promise(r => { const xs = []; let seen = -1; const id = setInterval(() => { const e = window.__editor; if (e && e.drawn && e.drawn !== seen) { seen = e.drawn; xs.push(e.lastMs) } }, 16); setTimeout(() => { clearInterval(id); xs.sort((a, b) => a - b); r(xs.length ? xs[(xs.length - 1) >> 1] : -1) }, ${ms}) })`)
 /**
  * Open a program link; `asks` = it is new to this document, so the editor asks first (a re-open only re-selects, unless
  * the document never saved it: a program paused on this device is held out of the autosave, #142, so it asks again).
