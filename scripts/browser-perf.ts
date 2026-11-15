@@ -11,23 +11,17 @@
  *   workers worker targets the page started
  * Medians over `--runs`. Chrome path: $CHROME or the usual install paths. Needs the dev server running.
  */
-import { spawn } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { existsSync, rmSync } from 'node:fs'
+import { pageSocket, startChrome } from './lib/chrome'
 
 const arg = (k: string, d: string) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d }
 const TOP = +arg('top', '0')
 const URL0 = arg('url', 'http://localhost:5196'), BOARDS = arg('boards', 'mosaic,cinema').split(','), SECS = +arg('secs', '5'), RUNS = +arg('runs', '3')
 const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
 if (!chrome) { console.log('no Chrome found (set $CHROME)'); process.exit(0) }
-const profile = mkdtempSync(join(tmpdir(), 'dot-perf-'))
-const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--window-size=1400,1000', 'about:blank'], { stdio: 'ignore' })
+const { proc, port, profile } = await startChrome(chrome, ['--no-first-run', '--window-size=1400,1000', 'about:blank'], 'dot-perf-')
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
-let port = ''
-for (let i = 0; i < 100 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
-const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json() as { type: string; webSocketDebuggerUrl: string }[]
-const ws = new WebSocket(targets.find(t => t.type === 'page')!.webSocketDebuggerUrl)
+const ws = new WebSocket(await pageSocket(port))
 await new Promise(r => ws.addEventListener('open', r, { once: true }))
 let seq = 0, workers = 0
 const calls = new Map<number, (m: any) => void>() // eslint-disable-line @typescript-eslint/no-explicit-any

@@ -61,7 +61,7 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
 
   // boards: every board's card at 375 px and under the CSP, plus the board's own probe
   ['src/widgets/boards/**', ['mobile-boards', 'csp']],
-  ['src/widgets/boards/materials*', ['materials', 'gates']], ['src/widgets/boards/workshop*', ['materials']],
+  ['src/widgets/boards/materials*', ['materials', 'workshop', 'gates']], ['src/widgets/boards/workshop*', ['workshop']],
   ['src/widgets/boards/pond/**', ['life']], ['src/widgets/boards/physics*', ['light']],
   ['src/widgets/boards/squares*', ['squares']], ['src/widgets/boards/gpu.ts', ['webgl']],
   ['src/widgets/boards/levels.ts', ['game', 'c10']], ['src/widgets/boards/instrument.ts', ['audio']],

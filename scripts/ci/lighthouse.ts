@@ -59,6 +59,14 @@ const exec = (cmd: string, args: string[]) => new Promise<number | null>(done =>
 })
 const ms = (a?: Audit) => (a?.numericValue === undefined ? '-' : `${(a.numericValue / 1000).toFixed(2)} s`)
 const pct = (s: number | null | undefined) => (s === null || s === undefined ? '-' : String(Math.round(s * 100)))
+// `pnpm dlx` resolves Lighthouse's own dependencies fresh, so a registry hiccup (one dependency published before the
+// one it needs, #224) fails every audit. Install it once up front, with two more tries; without it, stop with the reason
+let installed = false
+for (let i = 1; i <= 3 && !installed; i++) {
+  installed = await exec('pnpm', ['dlx', LIGHTHOUSE, '--version']) === 0
+  if (!installed && i < 3) { console.log(`${LIGHTHOUSE} did not install (try ${i} of 3), trying again in 20 s`); await new Promise(r => setTimeout(r, 20_000)) }
+}
+if (!installed) { server?.stop(); console.error(`${LIGHTHOUSE} did not install (pnpm's error is above): no audit ran`); process.exit(1) }
 const rows: string[] = [], losses = new Map<string, { title: string; where: string[] }>()
 let ran = 0
 try {

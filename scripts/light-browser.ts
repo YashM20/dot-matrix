@@ -11,10 +11,10 @@
  * the probe sees the app's own hub and worlds) and closes it and Chrome at the end.
  *   npx tsx scripts/light-browser.ts [baseUrl]   (a baseUrl skips the server; it must be a dev server)
  */
-import { spawn } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
+import { existsSync, rmSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
+import { pageSocket, startChrome } from './lib/chrome'
 
 const W = 390, H = 844, PORT = 5219
 const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
@@ -33,16 +33,12 @@ if (!base) {
 }
 base = base.replace(/\/?$/, '/')
 
-const profile = mkdtempSync(join(tmpdir(), 'dot-light-'))
-const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--hide-scrollbars', `--window-size=${W},${H}`, 'about:blank'], { stdio: 'ignore' })
+const { proc, port, profile } = await startChrome(chrome, ['--no-first-run', '--no-default-browser-check', '--hide-scrollbars', `--window-size=${W},${H}`, 'about:blank'], 'dot-light-')
 let failures = 0
 const check = (name: string, ok: boolean, detail = '') => { console.log(`${ok ? '✓' : '✗'} ${name}${detail ? ` — ${detail}` : ''}`); if (!ok) failures++ }
 let ws: WebSocket | null = null
 try {
-  let port = ''
-  for (let i = 0; i < 100 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
-  const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json() as { type: string; webSocketDebuggerUrl: string }[]
-  const sock = new WebSocket(targets.find(t => t.type === 'page')!.webSocketDebuggerUrl)
+  const sock = new WebSocket(await pageSocket(port))
   ws = sock
   await new Promise(r => sock.addEventListener('open', r, { once: true }))
   let seq = 0

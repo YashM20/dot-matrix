@@ -17,11 +17,11 @@
  *   npx tsx scripts/squares-browser.ts --swiftshader   # software rasterizer
  * PNGs (each renderer, diff ×4) and `report-<backend>.json` in `.snapshots/squares/`. Exit 1 when a gate fails.
  */
-import { execFileSync, spawn } from 'node:child_process'
-import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
+import { execFileSync } from 'node:child_process'
+import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
+import { pageSocket, startChrome } from './lib/chrome'
 
 const args = process.argv.slice(2), swift = args.includes('--swiftshader'), backend = swift ? 'swiftshader' : 'gpu'
 const OUT = '.snapshots/squares'
@@ -35,14 +35,10 @@ writeFileSync(html, `<!doctype html><html><head><meta charset="utf-8"></head><bo
 
 const chrome = [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
 if (!chrome) { console.log('no Chrome found (set $CHROME): skipped'); process.exit(0) }
-const profile = mkdtempSync(join(tmpdir(), 'dot-sq-'))
-const flags = ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', '--window-size=900,900', ...(swift ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : ['--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=d3d11']), 'about:blank']
-const proc = spawn(chrome, flags, { stdio: 'ignore' })
+const flags = ['--no-first-run', '--no-default-browser-check', '--window-size=900,900', ...(swift ? ['--use-angle=swiftshader', '--enable-unsafe-swiftshader'] : ['--enable-gpu', '--ignore-gpu-blocklist', '--use-angle=d3d11']), 'about:blank']
+const { proc, port, profile } = await startChrome(chrome, flags, 'dot-sq-')
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
-let port = ''
-for (let i = 0; i < 150 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
-const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json() as { type: string; webSocketDebuggerUrl: string }[]
-const ws = new WebSocket(targets.find(t => t.type === 'page')!.webSocketDebuggerUrl)
+const ws = new WebSocket(await pageSocket(port))
 await new Promise(r => ws.addEventListener('open', r, { once: true }))
 let seq = 0
 const calls = new Map<number, (m: any) => void>(), logs: string[] = []
