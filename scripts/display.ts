@@ -2,11 +2,10 @@
  * C7 display-skin checks (the pure parts of `src/engine/display/`; the canvas stage is browser-only, see
  * scripts/skins-browser.ts). Called from verify.ts (`displayChecks(assert)`); also runnable alone.
  */
-import { afterglow, decayFactor, ghostStep, lcdGhost, settleSeconds } from '../src/engine/display/afterglow'
-import { accentLit, applyMatrix, lcdMatrix, phosphorMatrix, rgbOf, SKIN_NAMES, SKIN_PHYSICS, isSkinName, skinPhosphor } from '../src/engine/display/skins'
+import { afterglow, decayFactor, settleSeconds } from '../src/engine/display/afterglow'
+import { accentLit, applyMatrix, phosphorMatrix, rgbOf, SKIN_NAMES, SKIN_PHYSICS, isSkinName, skinPhosphor } from '../src/engine/display/skins'
 import { ACCENTS } from '../src/site/theme/names'
 import { tokensOf } from '../src/site/theme/tokens'
-import { cellFrame, createEinkPanel, createFlipPanel } from '../src/engine/display/panels'
 import type { Raster } from '../src/engine/raster/raster'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
@@ -35,8 +34,8 @@ export function displayChecks(assert: Assert): void {
   }
 
   // skin × accent (docs/LAYOUT-THEME-PLAN.md §4, decision 4): emissive skins are dark glass, so every dark-scheme
-  // accent: VFD / LED glow in the accent's hue and pass the accent unchanged; greys, white, accent and the dim
-  // accent map inside sRGB unclamped; lit dots ≥ 3:1 on the stage (black glass for VFD, the tinted unlit lens for LED).
+  // accent: VFD glows in the accent's hue and passes the accent unchanged; greys, white, accent and the dim
+  // accent map inside sRGB unclamped; lit dots ≥ 3:1 on the stage (black glass).
   // Nixie takes no accent (orange neon, red column), so it is the red-column check above in every theme.
   const lum = (c: readonly number[]) => { const l = c.map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4); return .2126 * l[0] + .7152 * l[1] + .0722 * l[2] }
   const contrast = (x: readonly number[], y: readonly number[]) => { const a = lum(x), b = lum(y); return (Math.max(a, b) + .05) / (Math.min(a, b) + .05) }
@@ -44,62 +43,22 @@ export function displayChecks(assert: Assert): void {
   const hd = (x: readonly number[], y: readonly number[]) => { const d = Math.abs(hue(x) - hue(y)); return Math.min(d, 360 - d) }
   const accents = ACCENTS.map(id => ({ id, a: rgbOf(tokensOf('dark', id).dotActive), dim: rgbOf(tokensOf('dark', id).dotActiveDim ?? '#000000') }))
   const issues: string[] = []
-  for (const { id, a, dim } of accents) for (const skin of ['vfd', 'led'] as const) {
+  for (const { id, a, dim } of accents) for (const skin of ['vfd'] as const) {
     const p = skinPhosphor(skin, a), m = phosphorMatrix(p, a), tag = `${skin}×${id}`
     const out = [white, a, dim, [.5, .5, .5], [.18, .18, .19]].map(c => raw(m, c))
     if (out.flat().some(v => v < -1e-3 || v > 1 + 1e-3)) issues.push(`${tag} out of sRGB ${out.map(c => c.map(v => v.toFixed(2)).join('/')).join(' ')}`)
     if (raw(m, a).some((v, i) => Math.abs(v - a[i]) > 1e-6)) issues.push(`${tag} accent moves`)
     if (hd(raw(m, [1, 1, 1]), a) > 6) issues.push(`${tag} white → hue ${hue(raw(m, [1, 1, 1])).toFixed(0)}°, want ${hue(a).toFixed(0)}°`)
     if (lum(raw(m, [1, 1, 1])) < lum(a)) issues.push(`${tag} white dimmer than the accent`)
-    const glass = skin === 'led' ? p.map(v => v * Math.min(1, SKIN_PHYSICS.led.offGlow * 2.6)) : [0, 0, 0]
     for (const [what, c] of [['white', out[0]], ['accent', out[1]]] as const) {
-      const k = contrast(c, glass)
+      const k = contrast(c, [0, 0, 0])
       if (k < 3) issues.push(`${tag} ${what} ${k.toFixed(2)}:1 on the stage`)
     }
   }
-  assert(`display: ${accents.length} accents × vfd/led: hue, accent kept, sRGB, lit ≥ 3:1 on the stage`, !issues.length, issues.join('; '))
-  assert('display: vfd / led follow the accent, nixie and crt do not', accentLit('vfd') && accentLit('led') && !accentLit('nixie') && !accentLit('crt'))
-  assert('display: skin names', SKIN_NAMES.length === 9 && isSkinName('crt') && isSkinName('lcd') && isSkinName('grout') && !isSkinName('accent'))
-
-  // LCD (squares Q2): the liquid-crystal response is symmetric and a step reaches 63% after τ (± 10 ms), simulated at 240 Hz
-  {
-    const tau = SKIN_PHYSICS.lcd.tau, dt = 1 / 240, at = (on: boolean) => {
-      let v = Float32Array.from([on ? 0 : 1]), t = 0
-      while ((on ? v[0] : 1 - v[0]) < 1 - Math.exp(-1) && t < 2) { v = lcdGhost(v, Float32Array.from([on ? 1 : 0]), dt, tau); t += dt }
-      return t
-    }
-    const up = at(true), down = at(false)
-    assert(`display: lcd ghost (a step reaches 63% at τ = ${tau * 1000} ms ± 10 ms, on ${(up * 1000).toFixed(1)} ms, off ${(down * 1000).toFixed(1)} ms; symmetric)`,
-      Math.abs(up - tau) <= .01 && Math.abs(down - tau) <= .01 && ghostStep(0, tau) === 0 && Math.abs(ghostStep(1e3, tau) - 1) < 1e-9)
-    // the colour matrix: no light → paper, white → ink, the accent prints as itself darkened (hue kept) on every dark accent
-    const P = SKIN_PHYSICS.lcd, near = (x: readonly number[], y: readonly number[]) => x.every((v, i) => Math.abs(v - y[i]) < 2 / 255)
-    const bad: string[] = []
-    for (const { id, a } of accents) {
-      const m = lcdMatrix(P.paper, P.ink, a, P.pigment), w = applyMatrix(m, [1, 1, 1]), k = applyMatrix(m, [0, 0, 0]), ac = applyMatrix(m, a)
-      if (!near(k, P.paper) || !near(w, P.ink) || !near(ac, a.map(c => c * P.pigment)) || hd(ac, a) > 3) bad.push(`${id}: ${ac.map(v => v.toFixed(2))}`)
-    }
-    assert(`display: lcd matrix (black → paper, white → ink, ${accents.length} accents print as pigment, hue kept)`, !bad.length, bad.join('; '))
-  }
-
-  // e-ink: first refresh is full (flash: inverted, then solid ink), partials leave ghosts
-  const cols = 8, rows = 4, n = cols * rows, rgba = (on: (i: number) => boolean) => { const d = new Uint8ClampedArray(n * 4); for (let i = 0; i < n; i++) { const v = on(i) ? 255 : 0; d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v; d[i * 4 + 3] = 255 } return d }
-  const full = cellFrame(rgba(() => true), cols, rows), none = cellFrame(rgba(() => false), cols, rows)
-  const ink = new Float32Array(n), P = SKIN_PHYSICS.eink
-  const panel = createEinkPanel(cols, rows, P)
-  const k0 = panel.push(full, 0)
-  panel.at(P.fullS * .3, ink); const solid = ink.every(v => v === 1)
-  panel.at(P.fullS + .01, ink); const inked = ink.every(v => v === 1)
-  const ready = panel.ready(P.fullS + P.gapS + .01)
-  const k1 = panel.push(none, 2)
-  panel.at(2 + P.partialS + .01, ink)
-  assert('display: e-ink full refresh flashes, then a partial leaves a ghost', k0 === 'full' && solid && inked && ready && k1 === 'partial' && ink.every(v => Math.abs(v - P.ghost) < 1e-6), `${k0} ${solid} ${inked} ${ready} ${k1} ${ink[0]}`)
-
-  // flip-disc: a change sweeps by column and every disc settles on its new face
-  const F = SKIN_PHYSICS.flipdisc, flip = createFlipPanel(cols, rows, F), face = new Uint8Array(n), tilt = new Float32Array(n)
-  const ev = flip.push(full, 0, F.threshold)
-  const midMoving = flip.at(.02, face, tilt)
-  flip.at(2, face, tilt)
-  assert('display: flip-disc column sweep, discs settle on the new face', ev.length === cols && ev[cols - 1].at > ev[0].at && ev[cols - 1].at <= F.sweepS + 1e-9 && midMoving > 0 && face.every(f => f === 1) && tilt.every(t => t === 1), `${ev.length} ${midMoving}`)
+  assert(`display: ${accents.length} accents × vfd: hue, accent kept, sRGB, lit ≥ 3:1 on the stage`, !issues.length, issues.join('; '))
+  assert('display: vfd follows the accent, nixie and crt do not', accentLit('vfd') && !accentLit('nixie') && !accentLit('crt'))
+  assert('display: skin names (#345: OLED, NIXIE, VFD, CRT; the removed five are not skins)', SKIN_NAMES.join() === 'oled,nixie,vfd,crt'
+    && isSkinName('crt') && !['led', 'eink', 'flipdisc', 'lcd', 'grout', 'accent'].some(isSkinName), SKIN_NAMES.join())
 }
 
 if (import.meta.url === `file:///${process.argv[1]?.replace(/\\/g, '/')}`) {

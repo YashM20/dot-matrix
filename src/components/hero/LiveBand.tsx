@@ -3,7 +3,7 @@
  * (every frame a DotCanvas paints adds its dots, src/site/stats.ts), drawn in dot type through the pipeline like
  * any card. It reads the counter at most 4 times a second, only while the band is on screen and the tab visible;
  * under reduced motion it does not tick, it shows the count from when it came into view. Lazy (App mounts it idle).
- * Display skins dress it like a card: an emissive skin (CRT, VFD, LED, Nixie) is dark glass, so on a light page the
+ * Display skins dress it like a card: an emissive skin (CRT, VFD, Nixie) is dark glass, so on a light page the
  * number sits in a dark inset with the dark scheme's tones (`polarity.ts`), never dark ink on dark glass (T6).
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'

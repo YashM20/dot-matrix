@@ -95,34 +95,6 @@
   opacity: 1
 }
 
-.skin-list-clack {
-  width: 100%;
-  min-height: var(--tap);
-  margin-top: var(--space-2);
-  border: 1px solid transparent;
-  border-radius: var(--radius-pill);
-  background: none;
-  color: var(--mute);
-  font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .14em;
-  cursor: pointer
-}
-
-.skin-list-clack b {
-  color: var(--value);
-  font-weight: inherit
-}
-
-.skin-list-clack:hover,
-.skin-list-clack:focus-visible {
-  --ring-c: var(--line-hover);
-  color: var(--label)
-}
-
-.skin-list-clack:active {
-  background-color: var(--wash-press)
-}
-
 /* one blur at a time: while a sheet or the palette is up, the bars under its scrim stop blurring */
 html:has(.sheet[open], .pal-backdrop) :is(.topbar, .tabbar) {
   -webkit-backdrop-filter: none !important;
