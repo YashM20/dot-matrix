@@ -9,6 +9,8 @@
  *                                                  its static imports) and, per board, the chunks a card's first
  *                                                  request adds (the worker loads one board chunk at a time)
  *   npx tsx scripts/site/size.ts --check         → exit 1 over budget (the 150 kB backstop)
+ *   npx tsx scripts/site/size.ts --modules 40    → also the 40 biggest first-load source modules (default 30), from the
+ *                                                  build's module report (size-modules.ts); CI prints them every build
  *
  * Delta gates (docs/LIVING-MATTER-PLAN.md §6, the first-load ledger): a change is gated on its growth against
  * the build before it, not on the absolute number. Give the base as another build (`--against <dist dir>`) or as
@@ -21,6 +23,7 @@
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { gzipSync } from 'node:zlib'
+import { SIZE_MODULES, type ModuleReport } from './size-modules'
 
 const BUDGET_KB = 150
 const args = process.argv.slice(2)
@@ -78,6 +81,18 @@ const dist = opt('--dist') ?? 'dist', board = opt('--board'), showWorker = args.
 const m = measure(dist, board)
 for (const { f, kb } of m.files) console.log(`  ${f.padEnd(40)} ${kb.toFixed(2)} kB gz`)
 console.log(`first-load JS${board ? ` (${board})` : ''}: ${m.total.toFixed(2)} kB gz in ${m.files.length} file(s), budget ${BUDGET_KB}; CSS ${m.cssKb.toFixed(2)} kB gz`)
+// which source modules make up first load: each module's own gzip size, scaled so a chunk's modules add up to its real
+// gzip size. Needs this build's module report (absent for a `--dist` build made elsewhere: then nothing prints).
+if (args.includes('--modules') && existsSync(SIZE_MODULES)) {
+  const report = JSON.parse(readFileSync(SIZE_MODULES, 'utf8')) as ModuleReport
+  const rows = m.files.flatMap(({ f, kb }) => {
+    const mods = Object.entries(report[f] ?? {}), sum = mods.reduce((s, [, x]) => s + x.gz, 0)
+    return mods.map(([name, x]) => ({ name, f, kb: sum ? kb * x.gz / sum : 0 }))
+  }).sort((a, b) => b.kb - a.kb)
+  const n = Number(opt('--modules')) || 30
+  if (rows.length) console.log(`biggest first-load modules (${Math.min(n, rows.length)} of ${rows.length}):`)
+  for (const r of rows.slice(0, n)) console.log(`  ${r.kb.toFixed(2).padStart(6)} kB gz  ${r.name}  (${r.f})`)
+}
 if (showWorker && !m.worker) console.log('sample worker: no sampleWorker-*.js in this build')
 else if (showWorker) {
   console.log(`sample worker: initial ${m.workerKb.toFixed(2)} kB gz (${m.workerInit.join(', ')}); all ${m.workerChunks.length} worker chunks ${m.workerAllKb.toFixed(2)} kB gz`)

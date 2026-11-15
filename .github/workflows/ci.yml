@@ -92,7 +92,7 @@ jobs:
 
       # first-load JS ≤ 150 kB gz (docs/WEB-PLAN.md §1)
       - name: Bundle budget
-        run: pnpm exec tsx scripts/site/size.ts --check
+        run: pnpm exec tsx scripts/site/size.ts --check --modules 80
 
       # verify → themeChecks ran without dist/, so it skipped the "dist/index.html kept the boot script byte for
       # byte" check (the CSP hash in vercel.json). Run the theme checks on the build so that one is gated too.
