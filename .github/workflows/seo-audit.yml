@@ -25,6 +25,8 @@ env:
   ORIGIN: https://matrix.reactopia.me
   LOCAL: http://localhost:4321
   LYCHEE: v0.24.2
+  # the release's own digest for lychee-x86_64-unknown-linux-gnu.tar.gz: a new LYCHEE needs its new hash
+  LYCHEE_SHA256: 1f4e0ef7f6554a6ed33dd7ac144fb2e1bbed98598e7af973042fc5cd43951c9a
 
 jobs:
   audit:
@@ -72,7 +74,9 @@ jobs:
 
       - name: lychee (links on every sitemap page)
         run: |
-          curl -sSL "https://github.com/lycheeverse/lychee/releases/download/lychee-$LYCHEE/lychee-x86_64-unknown-linux-gnu.tar.gz" | (mkdir -p lychee-bin && tar xz -C lychee-bin)
+          curl -sSL -o lychee.tar.gz "https://github.com/lycheeverse/lychee/releases/download/lychee-$LYCHEE/lychee-x86_64-unknown-linux-gnu.tar.gz"
+          echo "$LYCHEE_SHA256  lychee.tar.gz" | sha256sum -c -
+          mkdir -p lychee-bin && tar xzf lychee.tar.gz -C lychee-bin
           LYCHEE_BIN=$(find lychee-bin -type f -name lychee | head -1)
           grep -o '<loc>[^<]*' dist/sitemap.xml | sed "s#<loc>$ORIGIN#$LOCAL#" > pages.txt
           printf '%s\n' "$LOCAL/404.html" >> pages.txt
