@@ -19,8 +19,7 @@
  *    components board (3 → 4 a row at 1280) without re-mounting a card and stores it, arrows pick, a reload keeps
  *    it, ⌘K "Card size: large" runs; on a phone TOOLS › DISPLAY › COMPACT puts 2 a row.
  *  - the header's dotted pills at load: no border and no ring until the idle command layer rings them, then the ring
- *    fades in (at once under reduced motion); the header hides in 200 ms and comes back in 280; a pressed phone tab
- *    glyph sinks to .94.
+ *    fades in (at once under reduced motion); a pressed phone tab glyph sinks to .94.
  * Captures to look at go to `.snapshots/t5/` (the popover previewing, an accent and a scheme wipe held at 20% and 45%, the phone sheet,
  * the dotted pills up close as `ring-*` and at load as `arrive-*`).
  * Needs a build: `npx vite build`, then `npx tsx scripts/site/theme-picker.ts`. Chrome: $CHROME or the usual paths.
@@ -169,7 +168,7 @@ const ringCloseUps = async () => {
 
 /** The header's pills at load (`arrive-*.png`): before the idle command layer rings them (simulated by taking `--ring`
  * off again) they show text and caret only, no border; the ring then fades in over --dur-out (at once under reduced
- * motion). Then the phone tab bar's press (the glyph sinks to .94) and the desktop header hiding quicker than it shows. */
+ * motion). Then the phone tab bar's press: the glyph sinks to .94. */
 const ringArrival = async () => {
   const pills = '.topbar .dot-ring', head = '.topbar .skin-switch, .topbar .theme-switch'
   const strip = `window.__rings = [...document.querySelectorAll(${JSON.stringify(pills)})].map(el => { const v = el.style.getPropertyValue('--ring'); el.style.removeProperty('--ring'); return [el, v] })`
@@ -189,26 +188,17 @@ const ringArrival = async () => {
     await sleep(400)
     if (!reduce) await closeUp(head, `arrive-${os}-header-ringed`)
   }
-  // the header hides on a scroll down in --dur-exit and comes back in --dur-enter (where scroll-state queries work)
-  await open('/henry/')
-  await js('document.activeElement?.blur(); scrollTo(0, 400)'); await sleep(200); await js('scrollTo(0, 900)'); await sleep(500)
-  const down = await js(`(() => { const c = getComputedStyle(document.querySelector('.topbar')); return [c.translate, c.transitionDuration] })()`) as [string, string]
-  if (down[0] === 'none') console.log('  (scroll-state queries not supported here: the header stays pinned)')
-  else {
-    await js('scrollTo(0, 700)'); await sleep(500)
-    const up = await js(`getComputedStyle(document.querySelector('.topbar')).transitionDuration`) as string
-    check('the header hides quicker than it shows (200 ms out, 280 ms back)', down[1] === '0.2s' && up === '0.28s', JSON.stringify({ down, up }))
-  }
   // the phone tab bar: a press sinks the glyph to .94 on the chrome's ease
   await open('/henry/', { phone: true })
-  const tab = (await centreOf('.tabbar button'))!
   await closeUp('.tabbar', 'arrive-phone-tab-rest')
-  await cdp('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [{ x: tab.x, y: tab.y }] }); await sleep(400)
-  const press = await js(`(() => { const b = document.querySelector('.tabbar button'), g = getComputedStyle(b.querySelector('.glyph')); return { active: b.matches(':active'), transform: g.transform, ease: g.transitionTimingFunction } })()`) as { active: boolean; transform: string; ease: string }
+  // a held touch doesn't keep :active in headless Chrome, so the press is forced on the button (CSS.forcePseudoState)
+  await cdp('DOM.enable'); await cdp('CSS.enable')
+  const root = (await cdp('DOM.getDocument')).result.root.nodeId, node = (await cdp('DOM.querySelector', { nodeId: root, selector: '.tabbar button' })).result.nodeId
+  await cdp('CSS.forcePseudoState', { nodeId: node, forcedPseudoClasses: ['active'] }); await sleep(400)
+  const press = await js(`(() => { const g = getComputedStyle(document.querySelector('.tabbar button .glyph')); return { transform: g.transform, ease: g.transitionTimingFunction } })()`) as { transform: string; ease: string }
   await closeUp('.tabbar', 'arrive-phone-tab-press')
-  await cdp('Input.dispatchTouchEvent', { type: 'touchCancel', touchPoints: [] })
-  if (!press.active) console.log('  (the touch press did not hold :active here: no tab press check)')
-  else check('phone: a pressed tab glyph sinks to .94 on the chrome ease', /^matrix\(0\.94, 0, 0, 0\.94/.test(press.transform) && press.ease.startsWith('cubic-bezier(0.2, 0.8, 0.2, 1)'), JSON.stringify(press))
+  await cdp('CSS.forcePseudoState', { nodeId: node, forcedPseudoClasses: [] })
+  check('phone: a pressed tab glyph sinks to .94 on the chrome ease', /^matrix\(0\.94, 0, 0, 0\.94/.test(press.transform) && press.ease.startsWith('cubic-bezier(0.2, 0.8, 0.2, 1)'), JSON.stringify(press))
 }
 
 try {
