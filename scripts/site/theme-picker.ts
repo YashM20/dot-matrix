@@ -166,6 +166,13 @@ const ringCloseUps = async () => {
   await closeUp('.tools-sheet .skin-list-clack', 'ring-phone-clack')
 }
 
+/** The phone viewport at 3× (`.snapshots/t5/<name>.png`): a clipped capture of the fixed tab bar on an emulated phone
+ * comes from the page top instead, so the whole screen is captured and the bar is cropped by hand. */
+const phoneShot = async (name: string) => {
+  await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 3, mobile: true }); await sleep(300)
+  await shot(name)
+  await cdp('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, deviceScaleFactor: 1, mobile: true })
+}
 /** The header's pills at load (`arrive-*.png`): before the idle command layer rings them (simulated by taking `--ring`
  * off again) they show text and caret only, no border; the ring then fades in over --dur-out (at once under reduced
  * motion). Then the phone tab bar's press: the glyph sinks to .94. */
@@ -190,13 +197,13 @@ const ringArrival = async () => {
   }
   // the phone tab bar: a press sinks the glyph to .94 on the chrome's ease
   await open('/henry/', { phone: true })
-  await closeUp('.tabbar', 'arrive-phone-tab-rest')
+  await phoneShot('arrive-phone-tab-rest')
   // a held touch doesn't keep :active in headless Chrome, so the press is forced on the button (CSS.forcePseudoState)
   await cdp('DOM.enable'); await cdp('CSS.enable')
   const root = (await cdp('DOM.getDocument')).result.root.nodeId, node = (await cdp('DOM.querySelector', { nodeId: root, selector: '.tabbar button' })).result.nodeId
   await cdp('CSS.forcePseudoState', { nodeId: node, forcedPseudoClasses: ['active'] }); await sleep(400)
   const press = await js(`(() => { const g = getComputedStyle(document.querySelector('.tabbar button .glyph')); return { transform: g.transform, ease: g.transitionTimingFunction } })()`) as { transform: string; ease: string }
-  await closeUp('.tabbar', 'arrive-phone-tab-press')
+  await phoneShot('arrive-phone-tab-press')
   await cdp('CSS.forcePseudoState', { nodeId: node, forcedPseudoClasses: [] })
   check('phone: a pressed tab glyph sinks to .94 on the chrome ease', /^matrix\(0\.94, 0, 0, 0\.94/.test(press.transform) && press.ease.startsWith('cubic-bezier(0.2, 0.8, 0.2, 1)'), JSON.stringify(press))
 }
