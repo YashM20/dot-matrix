@@ -203,7 +203,7 @@ await flagChecks(assert)
   const { firstDrawChecks } = await import('./verify/first-draw')
   firstDrawChecks(assert)
 }
-// APP STATE (docs/STATE-MACHINES.md A): stale-deploy offline reload, the likes record across tabs (scripts/verify/appstate.ts)
+// APP STATE (docs/STATE-MACHINES.md A): stale-deploy offline reload, quiet prefetch and hover dwell, the likes record across tabs (scripts/verify/appstate.ts)
 {
   const { appStateChecks } = await import('./verify/appstate')
   await appStateChecks(assert)

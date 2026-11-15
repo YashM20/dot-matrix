@@ -9,6 +9,7 @@
 import type { Source } from '../data/source'
 import type { WidgetPreset } from './types'
 import { registerPresets } from './registry'
+import { prefetching } from '../site/stale-deploy'
 
 /** What a board module supplies; title and columns live in the manifest so tabs and meta need no chunk. */
 export interface BoardContents {
@@ -152,8 +153,14 @@ export function loadBoard(id: string): Promise<BoardDef> {
   }
   return p
 }
-/** Start fetching a board's chunk (tab hover / focus); errors surface when it is opened. */
-export const prefetchBoard = (id: string) => { loadBoard(id).catch(() => {}) }
+/**
+ * Start fetching a board's chunk ahead of an open (a pick, or intent: src/site/prefetch.ts). Quiet, one try: a failure
+ * reloads nothing and leaves nothing held, so the open fetches again and its own failure reloads (src/site/stale-deploy.ts).
+ */
+export const prefetchBoard = (id: string) => {
+  const entry = boardManifest.find(b => b.id === id) ?? boardManifest[0]
+  if (!loaded.has(entry.id)) prefetching(entry.load).then(() => loadBoard(entry.id), () => {}).catch(() => {})
+}
 /** A preset by id from any board, loading every board chunk if needed (gallery, `?card=`). */
 export async function findPreset(id: string): Promise<WidgetPreset | undefined> {
   const all = await Promise.all(boardManifest.map(b => loadBoard(b.id)))

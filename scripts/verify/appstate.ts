@@ -3,6 +3,9 @@
  * module in a fake browser (no DOM, no network):
  *  - A2 stale-deploy: a failed chunk while offline never reloads the page (the reload would land on the browser's
  *    offline screen) and leaves the once-per-gap stamp unused; online it reloads once, then holds.
+ *  - A2.3 prefetch (#346): a chunk that fails while a prefetch loads reloads nothing; once it settles, a failure
+ *    reloads again. A hover prefetches after the dwell only, so a sweep across a tab row loads nothing; focus and a
+ *    press load at once.
  *  - A5 likes client: a like, a choice or a forget in another tab reaches this tab's record (the `storage` event), and
  *    a write here is a read-modify-write of what is stored, so it never drops another tab's likes.
  * On its own: `npx tsx scripts/verify/appstate.ts` (also part of `pnpm verify`).
@@ -45,6 +48,34 @@ export async function appStateChecks(assert: Assert) {
       assert('stale-deploy: back online, it reloads once, holds inside the 5 min gap, and may reload again after it',
         first && !again && later && b.reloads.n === 2, `${first} ${again} ${later}, ${b.reloads.n} reloads`)
     } finally { b.done() }
+  }
+
+  // ── A2.3: a prefetch never reloads the page; the open still does ──
+  {
+    const b = fakeBrowser(true)
+    try {
+      // its own query: a second `Date.now()` in the same millisecond would hand back the module bound to the last fake window
+      const m = await import(`../../src/site/stale-deploy.ts?appstate=prefetch-${Date.now()}`) as typeof import('../../src/site/stale-deploy')
+      const failed = () => b.fire('vite:preloadError', { key: null })
+      await m.prefetching(async () => { failed(); throw new Error('404') }).catch(() => {})
+      const during = b.reloads.n
+      failed()
+      assert('stale-deploy: a chunk that fails during a prefetch reloads nothing; a failed open afterwards reloads',
+        during === 0 && b.reloads.n === 1, `${during} reloads during the prefetch, ${b.reloads.n} after the open`)
+    } finally { b.done() }
+  }
+  {
+    const p = await import('../../src/site/prefetch') as typeof import('../../src/site/prefetch')
+    const wait = (ms: number) => new Promise(r => setTimeout(r, ms))
+    let n = 0
+    const on = p.intent(() => { n++ })
+    on.onPointerEnter(); await wait(p.DWELL_MS / 3); on.onPointerLeave(); await wait(p.DWELL_MS * 2)
+    const swept = n
+    on.onPointerEnter(); await wait(p.DWELL_MS * 2)
+    const rested = n
+    on.onFocus(); on.onPointerDown()
+    assert(`prefetch: a hover loads after ${p.DWELL_MS} ms of rest only; focus and a press load at once`,
+      swept === 0 && rested === 1 && n === 3, `sweep ${swept}, rest ${rested}, focus and press ${n - rested}`)
   }
 
   // ── A5: the likes client's record across tabs ──

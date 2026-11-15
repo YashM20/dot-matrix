@@ -14,6 +14,7 @@ Findings at a glance, worst first. Severity: data loss, broken UI, wrong output,
 |---|---|---|---|---|---|
 | A2.1 | Chunk loading | Broken UI | Confirmed (`scripts/verify/appstate.ts`) | #300 | Fixed in #303: offline never reloads |
 | A2.2 | Chunk loading | Broken UI | Confirmed (`chunks` probe) | #300 | Fixed in #303: each lazy part has a `LoadBoundary` |
+| A2.3 | Chunk loading | Broken UI | Prevented (`scripts/verify/appstate.ts`) | #346 | A prefetch never reloads; the open does |
 | A5.1 | Likes client | Data loss (this browser's likes record) | Confirmed (`scripts/verify/appstate.ts`) | #301 | Fixed in #303: storage listener and read-modify-write |
 | A5.2 | Likes client | Wrong output | Confirmed (`likes` probe) | #302 | Fixed in #327: the like answer carries the count after it |
 | A5.3 | Likes client | Wrong output | Confirmed (`likes` probe) | #302 | Fixed in #327: Remember is stored only after the check-in |
@@ -89,6 +90,7 @@ Invariants:
 | loading | import rejects | offline, or stamp used | failed | nearest `LoadBoundary` shows `LoadFailed` |
 | failed-held | 30 s pass | | idle | the next open tries again (board loader only) |
 | failed | RELOAD pressed | | page reload | |
+| loading (prefetch) | import rejects | | idle | nothing held, no reload: the open fetches again |
 
 Persists: the stamp, per tab (sessionStorage; a duplicated tab copies it).
 
@@ -105,6 +107,12 @@ Findings:
   turned into the "THIS PAGE STOPPED" screen for a part that wasn't even on screen. Fix: a `LoadBoundary` around each
   lazy part: the views show `LoadFailed` in place (keyed by the place, so moving to another view resets it), the
   optional parts show nothing. Probe: the `chunks` probe's "missing view chunk" cases (stamp used, and offline).
+- **A2.3, Prevented (#346).** Prefetch on intent (`src/site/prefetch.ts`) loads chunks on a hover, focus or press.
+  On a stale tab, a hover alone would have fired `vite:preloadError` and reloaded the page under the pointer. Fix: a
+  prefetch runs inside `prefetching` (`stale-deploy.ts`), which counts loads in flight; the listener reloads nothing
+  while one runs. A failed board prefetch tries once and holds nothing, so the open fetches again and that failure
+  reloads. The card page's `lazy()` also reloads on its own rejection, in case its import joined a prefetch still in
+  flight. Check: `scripts/verify/appstate.ts`.
 - `useBlurbs` imports the blurbs chunk with no `.catch` (#209); a failure there is an unhandled rejection with no
   visible effect. Left for #209.
 
