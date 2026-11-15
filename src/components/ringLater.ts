@@ -4,8 +4,7 @@
  * browser's dotted border (src/site/app/ring.css). Lazy chunks import `dotRing` itself.
  */
 export function ringLater(el: HTMLElement | null) {
-  if (!el) return
-  let off: (() => void) | undefined, on = true
-  void import('./dotRing').then(m => { if (on) off = m.dotRing(el) }, () => {})
-  return () => { on = false; off?.() }
+  let off: (() => void) | undefined
+  if (el) void import('./dotRing').then(m => { off = m.dotRing(el) })
+  return () => off?.()
 }
