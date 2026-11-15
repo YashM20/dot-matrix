@@ -585,7 +585,7 @@ The common chrome:
   - **Marble:** `marble(LG15, { period: 20 /* lattice ≈ 30 cells */, sharp: 2.5 })`.
   - **Engraving:** `HH:MM` as hero, tier 2.5 smooth (`T.big(time, 72, 50, { lattice: 2.5, smooth: true, align: 'center' })`), then `cardMask` → down-sampled to the 1.5 lattice (a cell is lit when ≥ 50% of its card cells are) → `distanceRaster` → `heightRaster(…, { shape: 'linear', width: 1.6, height: −1.8 })`, a V-groove.
     - Smooth strokes at 2.5 are 5 card cells ≈ 3.3 lattice dots, which leaves room for one lit wall and one dark wall ✓.
-    - A second line, `ANNO MMXXVI` (the year in Roman numerals), is engraved at tier 1.3 → `mid` only (shallower: height −1).
+    - The time is the only engraving: a second line with the year (`ANNO MMXXVI`) could not be read at card size and was dropped (#239). The surface layer carries the time as its text, for `describe()`.
   - **Tone:**
     - body = `lambert(rake(L, 18°), ambient .1)` × (.55 + .45·marble) × AO (R 2, s .7);
     - bands faint/mid/idle;
@@ -922,7 +922,7 @@ This is Evan Wallace's area-ratio caustic done as photon splatting on the CPU (h
 - `mat-lens`: 'A lens of liquid glass you drag over a clock to bend it.' (`material glass clock control`)
 - `mat-pool`: 'A rippling pool casting a caustic net on its tiles; tap to drop a pebble.' (`material water physics animated`)
 - `mat-window`: 'A stained-glass rose window lit by the sun; this hour's pane is red.' (`material glass clock animated`)
-- `mat-patch`: 'An embroidered patch whose border is still being sewn.' (`material textile thread animated`)
+- `mat-patch`: 'An embroidered patch whose border is still being sewn; tap to turn it in the light.' (`material textile thread animated control`)
 - `mat-rust`: 'A steel "days since" sign that rusts as the days go by.' (`material metal counter animated`)
 
 **Done when (M2):** M1's criteria for the five cards, plus:
