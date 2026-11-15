@@ -5,6 +5,8 @@ import { LoadBoundary, LoadFailed } from './components/LoadBoundary'
 import { BoardPicker, NextBoard } from './components/BoardPicker'
 import { useExitSwap } from './hooks/useExitSwap'
 import { prefetchBoard } from './widgets/manifest'
+import { watchCardLinks } from './site/prefetch'
+import { reloadForStaleChunk } from './site/stale-deploy'
 import { widgetPath, type WidgetRoute } from './site/routes'
 import { onLayerWake } from './site/layer'
 import { ABOUT_META, boardFromPath, setPageMeta, syncUrl } from './site/meta'
@@ -89,8 +91,9 @@ function SiteFooter({ onAbout }: { onAbout: () => void }) {
 const Editor = lazy(() => import('./components/editor/Editor').then(m => ({ default: m.Editor })))
 // ALL (#315, was BROWSE #182): EXPLORE's every-card grid on `/`, filtered and windowed; its data, styles and filters load with it
 const Browse = lazy(() => import('./components/browse/Browse').then(m => ({ default: m.Browse })))
-// the single-widget page (docs/SHARE-PLAN.md §4): /widget/<slug|uid>/, /<uid>, ?card=; lazy like the views
-const WidgetPage = lazy(() => import('./components/widget/WidgetPage').then(m => ({ default: m.WidgetPage })))
+// the single-widget page (docs/SHARE-PLAN.md §4): /widget/<slug|uid>/, /<uid>, ?card=; lazy like the views. A card link
+// prefetches it quietly (src/site/prefetch.ts); the open reloads for a stale chunk itself, in case a prefetch was in flight
+const WidgetPage = lazy(() => import('./components/widget/WidgetPage').then(m => ({ default: m.WidgetPage }), (e: unknown) => { reloadForStaleChunk(); throw e }))
 // the phone board sheet: its own chunk, fetched on the first tap (or once the command layer has mounted)
 const loadBoardSheet = () => import('./components/BoardSheet')
 const BoardSheet = lazy(() => loadBoardSheet().then(m => ({ default: m.BoardSheet })))
@@ -224,6 +227,8 @@ export default function App() {
   // board ⇄ widget page (Back / Forward, a card's OPEN) as a view transition: the card's frame flies (X1, #18)
   const shownWidget = useRef(widget)
   useEffect(() => { shownWidget.current = widget })
+  // a card's OPEN (any link to a card page) fetches the card page on intent
+  useEffect(watchCardLinks, [])
   useEffect(() => {
     const onPop = () => {
       const v = urlView(), was = shownWidget.current
@@ -267,8 +272,9 @@ export default function App() {
     pushUrl(urlForView({ view: 'EXPLORE', mode, board, all: true }, location.search, location.pathname))
     setWidget(undefined); setView('EXPLORE'); setAll(true)
   }
-  /** One board in EXPLORE (leaves ALL); `showAll` is EXPLORE's ALL. */
-  const pickBoard = (id: string) => { setWidget(undefined); setBoard(id); setAll(false) }
+  /** One board in EXPLORE (leaves ALL); `showAll` is EXPLORE's ALL. The fetch starts now, under the exit dissolve
+   * (the sheet and the palette pick through here too). */
+  const pickBoard = (id: string) => { prefetchBoard(id); setWidget(undefined); setBoard(id); setAll(false) }
   const showAll = () => { setWidget(undefined); setAll(true); setView('EXPLORE') }
   const place = view === 'MAKE' ? mode : view
   // the old view dissolves out before the new one mounts and enters (instant under reduced motion)

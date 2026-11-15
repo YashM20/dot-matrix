@@ -142,7 +142,9 @@
   color: var(--label)
 }
 .ed-row-name b { flex: none; color: var(--mute); font-size: var(--fs-label-12); font-weight: 600; letter-spacing: .1em; min-width: 30px }
-.ed-row-name small { color: var(--mute); font-size: var(--fs-label-12); margin-left: auto; padding-left: var(--space-2) }
+.ed-row-name small { flex: none; color: var(--mute); font-size: var(--fs-label-12); margin-left: auto; padding-left: var(--space-2) }
+/* a name people typed: it gives way first, with an ellipsis at its own end (dir="auto": an Arabic name ends on the left) */
+.ed-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .ed-row--frame .ed-row-name { color: var(--value) }
 .ed-row--frame .ed-row-name b { min-width: 0 }
 .ed-tree-frame.on > .ed-row, .ed-row--layer.on { background: var(--raised); box-shadow: inset 0 0 0 1px var(--ed-sel) }
@@ -199,7 +201,7 @@
   overflow: hidden;
   text-overflow: ellipsis
 }
-.ed-flabel small { color: var(--mute); font-size: var(--fs-label-12) }
+.ed-flabel small { flex: none; color: var(--mute); font-size: var(--fs-label-12) }
 .ed-flabel:hover, .ed-flabel:focus-visible { color: var(--label) }
 .ed-flabel:active { color: var(--value) }
 .ed-flabel.on { color: var(--value) }

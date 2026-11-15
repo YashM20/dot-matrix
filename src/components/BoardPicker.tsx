@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { boardGroups, boardLabel, groupOf, prefetchBoard, type BoardGroupId } from '../widgets/manifest'
 import { useBlurbs } from './useBlurbs'
+import { intent } from '../site/prefetch'
 import { NextIcon } from './widget/toolIcons'
 
 /** A group by id (every `BoardGroupId` names one; the fallback only satisfies the type). */
@@ -42,7 +43,7 @@ export function BoardPicker({ board, all, onPick, onPickAll, onSheet }: { board:
     <div className="board-tabs" role="group" aria-label={`Boards: ${open.label}`}>
       <button type="button" data-board="all" className={all ? 'selected' : ''} aria-pressed={all} title="Every card from every board" onClick={onPickAll}>ALL</button>
       {open.boards.map(id => <button key={id} type="button" data-board={id} className={!all && board === id ? 'selected' : ''} aria-pressed={!all && board === id} title={b?.boardBlurbs[id]}
-        onClick={() => onPick(id)} onPointerEnter={() => prefetchBoard(id)} onFocus={() => prefetchBoard(id)}>{boardLabel(id)}</button>)}
+        onClick={() => onPick(id)} {...intent(() => prefetchBoard(id))}>{boardLabel(id)}</button>)}
     </div>
   </div>
 }
@@ -56,7 +57,7 @@ export function NextBoard({ board, onPick }: { board: string; onPick: (id: strin
   const list = groupById(homeGroup(board)).boards as readonly string[]
   const next = list[(list.indexOf(board) + 1) % list.length]
   return <div className="next-board"><div className="pill">
-    <a className="pill-btn" href={`/${next}/`} onPointerEnter={() => prefetchBoard(next)} onFocus={() => prefetchBoard(next)}
+    <a className="pill-btn" href={`/${next}/`} {...intent(() => prefetchBoard(next))}
       onClick={e => { if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); window.scrollTo({ top: 0, behavior: smooth() }); onPick(next) }}>
       <span className="pill-label">NEXT BOARD</span><b>{boardLabel(next)}</b><NextIcon />
     </a>
