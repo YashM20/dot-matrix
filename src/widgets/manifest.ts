@@ -88,7 +88,7 @@ export const boardMeta = (id: string): BoardMeta | undefined => boardManifest.fi
  * Old card ids (slugs) that still open their card (docs/SHARE-PLAN.md §3): a renamed card adds `old: 'new'`
  * here and its old `/widget/<old>/` link keeps working forever. The lock board's cards were `glyph-*`.
  */
-export const cardAliases: Readonly<Record<string, string>> = {}
+export const cardAliases: Readonly<Record<string, string>> = { 'sq-tetris': 'sq-stack' }
 export const resolveCardId = (id: string): string => cardAliases[id] ?? (id.startsWith('glyph-') ? `lock-${id.slice(6)}` : id)
 
 /**
