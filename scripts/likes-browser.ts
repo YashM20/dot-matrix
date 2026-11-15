@@ -144,6 +144,7 @@ try {
     pressed: document.querySelector('.lk-btn')?.getAttribute('aria-pressed') ?? null, note: document.querySelector('.lk-note')?.textContent ?? '', likes: window.__lk.calls.filter(c => c.path === '/api/like').length })`)
   assert('likes-browser: a failed check-in after Remember stores no choice, shows no "Forget this browser", sends no like and says "Likes paused." (A5.3)',
     !/"c"/.test(failed.stored ?? '') && !failed.forget && failed.pressed === 'false' && failed.note === 'Likes paused.' && failed.likes === 0, JSON.stringify(failed))
+  await shot('remember-failed')
 
   // A5.2: liked here earlier and counted since, so the count read (12) already holds this browser's like (liked at 11).
   // An unlike shows the count the server reports after it (11), where it used to keep showing 12
@@ -154,6 +155,7 @@ try {
   await click('.lk-btn'); await p.waitFor(`document.querySelector('.lk-btn')?.getAttribute('aria-pressed') === 'false'`, 4000)
   const unlikedCount = await p.js<string>(`document.querySelector('.lk-count')?.textContent ?? ''`)
   assert('likes-browser: unliking a like that was counted since lowers the count (12 → 11) (A5.2)', likedCount === '12' && unlikedCount === '11', `${likedCount} → ${unlikedCount}`)
+  await shot('unlike-counted')
 
   // paused: the API is down
   await go(`${widget}?lkmock=paused`, `!!document.querySelector('.lk-btn')`)
