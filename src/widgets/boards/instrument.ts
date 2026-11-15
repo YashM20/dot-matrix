@@ -118,7 +118,7 @@ const BPM = 120
 const stepAt = (t: number, bpm: number) => Math.floor((Math.max(0, t) * bpm) / 15)
 const stepKey = (i: number) => `s${i}`
 /** Transport `mode` 2 = stop: the meter goes silent and the playhead parks. */
-const runningOf = (data: Record<string, number>) => Math.round(data.mode ?? 0) !== 2
+const runningOf = (data: Record<string, number>) => Math.round(data.mode ?? 1) !== 2
 /**
  * Board-shared data keys (`BoardDef.shared`): tempo, transport mode and the 16 steps live in one
  * board store, so sequencer edits, stop and tempo reach the meter and the playhead. A card alone
@@ -220,8 +220,8 @@ export const xyPad: WidgetPreset = {
 
 // ── 07 TRANSPORT ────────────────────────────────────────────────────────────
 // Tempo on top (a stepper), four beat lights, and REC / PLAY / STOP as one segmented control
-// (`mode`: 0 record, 1 play, 2 stop). The record light is the card's one red. The footer is the SOUND
-// toggle (`sound`): it starts the audio engine on the user's tap; while recording it reads REC m:ss.
+// (`mode`: 0 record, 1 play, 2 stop). The card opens in Play, so the record light turns red only when pressed.
+// The footer is the SOUND toggle (`sound`): it starts the audio engine on the user's tap; while recording it reads REC m:ss.
 const SEG = { x: 13, y: 86, w: 118, h: 36 }, SEG_W = SEG.w / 3, BTN_Y = SEG.y + SEG.h / 2, BTN_R = 16
 const segX = (i: number) => SEG.x + SEG_W * (i + .5)
 const BPM_BOX: [number, number, number, number] = [38, 18, 68, 48]
@@ -240,14 +240,14 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60))
 export const transport: WidgetPreset = {
   id: 'inst-transport', name: 'Transport', label: '07  TRANSPORT', ...device,
   credit: TEENAGE_ENGINEERING,
-  defaults: { bpm: BPM, mode: 0, sound: 0 },
+  defaults: { bpm: BPM, mode: 1, sound: 0 },
   controls: [
     { key: 'bpm', kind: 'stepper', orientation: 'vertical', box: BPM_BOX, min: 40, max: 240, step: 1, label: 'Tempo', valueText: v => `${Math.round(v)} BPM` },
     { key: 'mode', kind: 'segmented', box: [SEG.x, SEG.y, SEG.w, SEG.h], options: 3, optionLabels: ['Record', 'Play', 'Stop'], label: 'Transport' },
     { key: 'sound', kind: 'toggle', box: SOUND_BOX, label: 'Sound' },
   ],
   layers: ctx => {
-    const bpm = Math.round(ctx.data.bpm ?? BPM), mode = Math.round(ctx.data.mode ?? 0), running = mode !== 2
+    const bpm = Math.round(ctx.data.bpm ?? BPM), mode = Math.round(ctx.data.mode ?? 1), running = mode !== 2
     const tempo = feel(ctx, 'bpm'), seg = feel(ctx, 'mode'), snd = feel(ctx, 'sound'), sound = (ctx.data.sound ?? 0) >= .5
     const rec = audioOf(ctx)?.rec ?? -1, [sx, sy, sw, sh] = SOUND_BOX, spk = 46, cy = FOOT + 3
     // which segment the pointer is over (falls back to the selected one)

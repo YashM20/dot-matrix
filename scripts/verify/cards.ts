@@ -24,6 +24,8 @@ export function cardChecks(assert: Assert) {
     const bad = [0, 1.3, 3.7].flatMap(t => touchingPairs(dotsAt(p, t)).map(() => t))
     assert(`cards: ${id} has no touching dots (t = 0, 1.3, 3.7)`, !bad.length, `${bad.length} pair(s) at t = ${[...new Set(bad)].join(', ')}`)
   }
+  // #237: the transport opens in Play, so its red record light means the visitor pressed record
+  assert('cards: inst-transport opens in Play (mode 1)', widgetById('inst-transport')?.defaults?.mode === 1)
   // cinema: the red mark keeps the title's moat, no grey dot within one lattice dot (2.5 cells; the next ring is 5 away)
   {
     const near: string[] = []

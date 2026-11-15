@@ -94,7 +94,7 @@ export const areaCard = chartCard({
 })
 
 // ── CANDLESTICK ─────────────────────────────────────────────────────────────
-/** Twenty sessions 6 cells apart: bodies two sites wide, wicks one fine site; candles open out from their middle. */
+/** Twenty sessions 6 cells apart: bodies of big sites, wicks of fine ones; candles open out from their middle. */
 export const CANDLE_XS = bands(20, PLOT.x0, PLOT.x1)
 /** Fitted to both months with a 10-point step (170 to 220), so the candles fill the plot instead of its top half. */
 const CANDLE_AXIS = (() => { const all = STOCK.flat(); return niceDomain(Math.min(...all.map(d => d.l)), Math.max(...all.map(d => d.h)), 4) })()
@@ -112,7 +112,7 @@ export const candleCard = chartCard({
   box: PLOT_BOX, map: x => nearestIndex(CANDLE_XS, x),
   draw: v => {
     const m = tweenCandles(STOCK[0], STOCK[1], v.set), ds = tweenCandles(m.map(flat), m, v.intro, .5).map(d => ({ o: Math.round(d.o), h: Math.round(d.h), l: Math.round(d.l), c: Math.round(d.c) }))
-    const c = candleChart(ds, v.pick, { scale: CANDLE_SCALE, xs: CANDLE_XS, body: { pitch: 2.5, size: 2, cols: 2 }, wick: { pitch: 2, size: 1 } })
+    const c = candleChart(ds, v.pick, { scale: CANDLE_SCALE, xs: CANDLE_XS, body: { pitch: 3, size: 2.8 }, wick: { pitch: 2, size: 1 } })
     const ticks = CANDLE_AXIS.ticks.length > 3 ? CANDLE_AXIS.ticks.filter((_, i) => i % 2 === 0) : CANDLE_AXIS.ticks
     const axis = valueAxis(CANDLE_SCALE, ticks, PLOT, x => fmt(x), { avoid: CANDLE_XS, gap: 1.6 }), d = ds[c.pick], prev = ds[c.pick - 1]
     return {
