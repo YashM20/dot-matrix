@@ -110,13 +110,15 @@
   text-underline-offset: 3px
 }
 
-/* the site's tooltip (24 px tall), left of its icon and in the icon's own 24 px band: the row's step under the card
-   and its line, so it covers neither its card nor the card below, at any grid. After a copy LINK's says "Copied" for a
-   moment, shown without a hover */
+/* the site's tooltip, 20 px tall here, left of its icon and inside the icon's 24 px band (the row's step under the
+   card and its line), so it clears its card and the card below by 2 px, at any grid. After a copy LINK's says
+   "Copied" for a moment, shown without a hover */
 .dot-card-row [data-tip]::after {
-  top: calc(50% - 12px);
+  top: calc(50% - 10px);
   right: calc(100% + var(--space-1));
-  bottom: auto
+  bottom: auto;
+  height: 20px;
+  line-height: 18px
 }
 
 .dot-card-row .copied::after {
