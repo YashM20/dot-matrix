@@ -72,7 +72,7 @@ The material pipeline operates in four steps:
 
 ## Dots that join into squares
 
-<!-- VISUAL: kind=card · what=sq-tetris · notice=falling tetromino pieces fuse into solid joined shapes when settled -->
+<!-- VISUAL: kind=card · what=sq-stack · notice=falling block pieces fuse into solid joined shapes when settled -->
 
 In a standard dot matrix, every cell renders an isolated round dot. Certain physical displays, like flip-disc boards and split-flap indicators, use square tiles. In other cases, graphic elements like buttons, progress blocks and retro gaming shapes look better when adjacent dots fuse into solid geometric slabs.
 

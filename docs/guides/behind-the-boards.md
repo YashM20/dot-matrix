@@ -22,9 +22,9 @@ The pond also follows your local time. It is full night between 21:00 and 05:00,
 
 ## Joined squares and teletext
 
-<!-- VISUAL: kind=card · what=sq-tetris · notice=square dots joining into solid tetromino blocks -->
+<!-- VISUAL: kind=card · what=sq-stack · notice=square dots joining into solid tetromino blocks -->
 
-Open `/squares/` to see square dots that fuse into solid shapes, as in the Tetris card (`sq-tetris`) and the quad tree portrait (`sq-quads`).
+Open `/squares/` to see square dots that fuse into solid shapes, as in the Stack card (`sq-stack`) and the quad tree portrait (`sq-quads`).
 
 A normal dot matrix leaves gaps between neighboring dots. The squares board draws true squares instead. When two neighboring cells share the same group, tone and dot size, the engine joins them into one block.
 

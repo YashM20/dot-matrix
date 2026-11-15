@@ -30,6 +30,8 @@
     { "source": "/widget/:key(mat-marble|cbmez41j)/", "destination": "/materials/", "permanent": true },
     { "source": "/:uid(cbmez41j)", "destination": "/materials/", "permanent": true },
     { "source": "/:uid(cbmez41j)/", "destination": "/materials/", "permanent": true },
+    { "source": "/widget/sq-tetris", "destination": "/widget/sq-stack/", "permanent": true },
+    { "source": "/widget/sq-tetris/", "destination": "/widget/sq-stack/", "permanent": true },
     { "source": "/", "has": [{ "type": "query", "key": "about" }], "destination": "/about/", "permanent": true },
     { "source": "/index.html", "has": [{ "type": "query", "key": "about" }], "destination": "/about/", "permanent": true },
     { "source": "/browse", "destination": "/", "permanent": true },

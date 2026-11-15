@@ -8,7 +8,8 @@
  *  - images: OG images are 1200 × 630 PNGs under 300 kB, every `<img>` in a built page has width, height and alt;
  *  - LCP and CLS: each blog page preloads its hero (the LCP image, drawn by React), and a lazy view's placeholder
  *    holds a full screen (and so does a widget page while its card loads), so the footer never paints in the first
- *    screen and then jumps.
+ *    screen and then jumps;
+ *  - cold load (#348): `/` and each board page preload the lazy chunks they are sure to need, and nothing more.
  *
  *   npx tsx scripts/site/perf-check.ts [--dist <dir>]   → exit 1 on a failure (CI runs it after the build)
  */
@@ -16,6 +17,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 import { join, relative } from 'node:path'
 import { checker } from '../lib/check'
 import { sourceRegex } from '../lib/vercel-source'
+import { BROWSE_MODULE, CHUNK_GRAPH, boardModules, closure, entryOf, leadBoards, modulePreloads, readGraph } from './preload'
 
 const argv = process.argv.slice(2)
 const DIST = argv.includes('--dist') ? argv[argv.indexOf('--dist') + 1] : 'dist'
@@ -82,5 +84,35 @@ assert('perf: the lazy view placeholder is at least a screen tall (no footer jum
 // the same for a widget page while its card's board loads (its own chunk's stylesheet)
 const lazyCss = files.filter(f => /^assets\/[^/]+\.css$/.test(rel(f))).map(f => readFileSync(f, 'utf8')).join('\n')
 assert('perf: a loading widget page is at least a screen tall (no footer jump on phones)', /\.wp\[aria-busy=("?)true\1\]\{[^}]*min-height:100s?vh/.test(lazyCss))
+
+// ── cold-load hints (#348, scripts/site/preload.ts) ──
+// `/` and each board page preload the lazy chunks they are sure to need, and no other page preloads any. The expected
+// lists come from the chunk files on disk (their static imports, as size.ts reads them); only the roots' file names
+// come from the build's chunk graph.
+if (!existsSync(CHUNK_GRAPH)) assert(`perf: the build left its chunk graph (${CHUNK_GRAPH})`, false)
+else {
+  const graph = readGraph(), mods = boardModules(), assets = join(DIST, 'assets')
+  const imports = (f: string) => existsSync(join(assets, f)) ? [...readFileSync(join(assets, f), 'utf8').matchAll(/(?:from|import)\s*"\.\/([^"]+\.js)"/g)].map(m => m[1]) : []
+  const loadedBy = (html: string) => { const e = entryOf(html); return new Set(e ? closure(imports, [e]) : []) }
+  /** A page's module preloads beyond its entry's static closure (which Vite preloads itself). */
+  const extra = (html: string) => { const loaded = loadedBy(html); return modulePreloads(html).filter(f => !loaded.has(f)) }
+  const want = (html: string, roots: string[]) => closure(imports, roots.map(r => graph.modules[r] ?? `(no chunk for ${r})`), loadedBy(html))
+  /** Empty when `html` preloads exactly what `roots` need, each root included; else what it has against what it needs. */
+  const diff = (html: string, roots: string[]) => {
+    const has = extra(html), need = want(html, roots)
+    const ok = has.length === need.length && need.every(f => has.includes(f)) && roots.every(r => has.includes(graph.modules[r]))
+    return ok ? '' : `has ${has.join(', ') || 'none'}; needs ${need.join(', ')}`
+  }
+  const lead = leadBoards(), home = readFileSync(join(DIST, 'index.html'), 'utf8')
+  const homeDiff = diff(home, [BROWSE_MODULE, ...lead.map(id => mods.get(id) ?? id)])
+  assert(`perf: / preloads ALL's chunk and its first row's boards (${lead.join(', ')}), and nothing more`, lead.length > 0 && !homeDiff, homeDiff)
+  const badBoards = [...mods].map(([id, mod]) => [id, diff(readFileSync(join(DIST, id, 'index.html'), 'utf8'), [mod])]).filter(([, d]) => d)
+  assert('perf: each board page preloads its own chunk, and nothing more', mods.size > 0 && !badBoards.length, badBoards.slice(0, 3).map(([id, d]) => `${id}: ${d}`).join('; ') || `${mods.size} boards`)
+  const hinted = new Set(['index.html', ...[...mods.keys()].map(id => `${id}/index.html`)])
+  const others = pages.filter(p => !hinted.has(rel(p)) && extra(readFileSync(p, 'utf8')).length)
+  assert('perf: no other page preloads a lazy chunk', !others.length, others.slice(0, 3).map(rel).join(', '))
+  const missing = pages.flatMap(p => modulePreloads(readFileSync(p, 'utf8'))).filter(f => !existsSync(join(assets, f)))
+  assert('perf: every module preload names a built file', !missing.length, [...new Set(missing)].slice(0, 3).join(', '))
+}
 
 done('perf checks passed')

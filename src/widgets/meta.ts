@@ -339,7 +339,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'pond-marble': ['Suminagashi: the day\'s ink is combed by the koi swimming under it; tap to drop ink, drag to comb it.', 'life marbling ink suminagashi koi control animated'],
   'pond-plankton': ['Every dot is a particle; clumps pull themselves into creatures (Particle Lenia). Tap one to burst it, watch it re-form.', 'life lenia particles creature control animated'],
   'pond-turing': ['A fish whose spots split in two as it grows (Turing reaction-diffusion). Tap a spot to scratch it off.', 'life turing reaction-diffusion pattern creature control animated'],
-  'sq-tetris': ['A Tetris game played by a greedy AI, each settled piece fused into one joined tetromino.', 'squares join tetris game animated'],
+  'sq-stack': ['A falling-blocks game played by a greedy AI, each settled piece fused into one joined block.', 'squares join stack blocks game animated'],
   'sq-quads': ['A portrait found by splitting the worst square into four until 1,201 squares remain (after Fogleman’s Quads).', 'squares join quadtree portrait animated'],
   'sq-blob': ['Four metaballs on a square lattice whose terraces fuse level by level; the red neck forms where two meet.', 'squares join metaballs animated'],
   'sq-gameboy': ['A four-shade LCD in spaced squares: the time, the date and a walker over a parallax strip.', 'squares lcd clock pixel animated'],

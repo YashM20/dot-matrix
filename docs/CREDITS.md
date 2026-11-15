@@ -69,6 +69,12 @@ By David Smith, Joseph Samuel Myers, Craig S. Kaplan, Chaim Goodman-Strauss.
 
 - Hat (`sq-hat`), board `/squares/`: technique
 
+### [An improvement on Pierre Dellacherie’s algorithm (2011)](https://imake.ninja/el-tetris-an-improvement-on-pierre-dellacheries-algorithm/)
+
+By Islam El-Ashi.
+
+- Stack (`sq-stack`), board `/squares/`: the weights the player uses
+
 ### [animal-proc-anim](https://github.com/argonautcode/animal-proc-anim)
 
 By argonautcode.
@@ -146,12 +152,6 @@ By lionleaf.
 - IR Dial (`ir-dial`), board `/ir/`: demos in 140 characters
 - IR Plasma (`ir-plasma`), board `/ir/`: demos in 140 characters
 - IR Ripple (`ir-ripple`), board `/ir/`: demos in 140 characters
-
-### [El-Tetris, an improvement on Pierre Dellacherie’s algorithm (2011)](https://imake.ninja/el-tetris-an-improvement-on-pierre-dellacheries-algorithm/)
-
-By Islam El-Ashi.
-
-- Squares Tetris (`sq-tetris`), board `/squares/`: the weights the player uses
 
 ### [ESP-Mosaico concept screens](https://x.com/henry19840301/status/2090273665669874050)
 
@@ -448,17 +448,17 @@ By John Adams.
 
 - Teletext (`sq-teletext`), board `/squares/`: the page format and its block graphics
 
-### [Tetris (1984)](https://en.wikipedia.org/wiki/Tetris)
-
-By Alexey Pajitnov.
-
-- Squares Tetris (`sq-tetris`), board `/squares/`: the game
-
 ### [The chemical basis of morphogenesis (1952); reaction and diffusion on growing domains (1999)](https://doi.org/10.1006/bulm.1999.0131)
 
 By Alan Turing, Edmund Crampin, Eamonn Gaffney, Philip Maini.
 
 - Pond Turing (`pond-turing`), board `/pond/`: technique
+
+### [The falling-blocks game (1984)](https://en.wikipedia.org/wiki/Tetris)
+
+By Alexey Pajitnov.
+
+- Stack (`sq-stack`), board `/squares/`: the game this card plays
 
 ### [The void-and-cluster method for dither array generation (1993)](https://doi.org/10.1117/12.152707)
 
