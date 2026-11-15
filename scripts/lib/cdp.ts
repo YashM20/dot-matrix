@@ -16,9 +16,8 @@
  * but a flag in the launch seed comes back on the next page: turn a seeded flag off with `false`.
  */
 import { spawn, type ChildProcess } from 'node:child_process'
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
-import { tmpdir } from 'node:os'
-import { join } from 'node:path'
+import { existsSync, rmSync, writeFileSync } from 'node:fs'
+import { pageSocket, startChrome } from './chrome'
 
 export const sleep = (ms: number) => new Promise(r => setTimeout(r, ms))
 export const findChrome = () => [process.env.CHROME, 'C:/Program Files/Google/Chrome/Application/chrome.exe', 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe', '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].find(p => p && existsSync(p))
@@ -82,14 +81,9 @@ export interface LaunchOptions {
 export async function launch(width: number, height: number, opts: LaunchOptions = {}): Promise<Page> {
   const chrome = findChrome()
   if (!chrome) throw new Error('no Chrome found (set $CHROME)')
-  const profile = mkdtempSync(join(tmpdir(), 'dot-probe-'))
-  const proc = spawn(chrome, ['--headless=new', '--remote-debugging-port=0', `--user-data-dir=${profile}`, '--no-first-run', '--no-default-browser-check', ...(opts.scrollbars ? [] : ['--hide-scrollbars']), `--window-size=${width},${height}`, ...(process.env.CHROME_FLAGS?.split(' ').filter(Boolean) ?? []), 'about:blank'], { stdio: 'ignore' })
-  let port = ''
-  // a cold Chrome on a shared CI runner can take well over 10 s to open its DevTools port
-  for (let i = 0; i < 300 && !port; i++) { await sleep(100); try { port = readFileSync(join(profile, 'DevToolsActivePort'), 'utf8').split('\n')[0] } catch { /* not yet */ } }
-  if (!port) { proc.kill(); throw new Error('Chrome did not open a DevTools port') }
-  const targets = await (await fetch(`http://127.0.0.1:${port}/json/list`)).json() as { type: string; webSocketDebuggerUrl: string }[]
-  const ws = new WebSocket(targets.find(t => t.type === 'page')!.webSocketDebuggerUrl)
+  // a cold Chrome on a shared CI runner can take well over 10 s to open its DevTools port: startChrome waits and retries
+  const { proc, port, profile } = await startChrome(chrome, ['--no-first-run', '--no-default-browser-check', ...(opts.scrollbars ? [] : ['--hide-scrollbars']), `--window-size=${width},${height}`, ...(process.env.CHROME_FLAGS?.split(' ').filter(Boolean) ?? []), 'about:blank'])
+  const ws = new WebSocket(await pageSocket(port))
   let openTimer: ReturnType<typeof setTimeout> | undefined
   const opened = await new Promise<boolean>(r => { openTimer = setTimeout(() => r(false), 20000); ws.addEventListener('open', () => r(true), { once: true }) })
   clearTimeout(openTimer)
