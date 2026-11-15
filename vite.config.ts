@@ -6,6 +6,7 @@ import { defineConfig, type Plugin } from 'vite'
 import react, { reactCompilerPreset } from '@vitejs/plugin-react'
 import babel from '@rolldown/plugin-babel'
 import tailwindcss from '@tailwindcss/vite'
+import { sizeModules } from './scripts/site/size-modules.ts'
 
 /**
  * After a production build: OG images + per-board crawler pages (scripts/site/postbuild.ts), then the SEO step
@@ -131,6 +132,7 @@ export default defineConfig({
     blogRoutes(),
     noApi(),
     sitePostbuild(),
+    sizeModules(),
   ],
   // agent worktrees live under .claude/ — don't let their edits reload this checkout's dev server
   server: { watch: { ignored: ['**/.claude/**'] } },
