@@ -98,6 +98,8 @@ function keep<T>(list: T[], r: T): T {
   if (list.length > 4) list.pop()
   return r
 }
+/** Drop every kept ray and glow table (a check compares warm frames with cold ones). */
+export function forgetRays(): void { raysKept.length = 0; glowKept.length = 0 }
 function raysFor(scene: Scene, w: number, h: number, aspect: number): Rays & Glow {
   const { cam, sun, fog, tmax } = scene, planes = scene.planes ?? [], exposure = scene.exposure ?? 1
   // each plane as its normal and n·eye + h (summed in the order the hit below needs)
