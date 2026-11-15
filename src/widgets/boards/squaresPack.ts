@@ -71,7 +71,7 @@ const V_K = 3, V_ORIGIN: Pt = [0, 12], V_W = 48, V_H = 40, V_SEEDS = 14, V_LOOP 
 const V_LEVEL: Record<string, number> = { faint: .25, mid: .25, idle: .5 }
 /**
  * The region ids with one-cell spurs folded into their neighbours: a cell with fewer than two same-region edge
- * neighbours takes the region most of its neighbours belong to, so every region edge is a clean stair.
+ * neighbours takes the region that holds two or more of them, so every region edge is a clean stair.
  */
 function despur(src: ArrayLike<number>): Int16Array {
   const id = Int16Array.from(src), nb = new Int16Array(4)
@@ -94,20 +94,25 @@ function despur(src: ArrayLike<number>): Int16Array {
         for (let k = 0; k < n; k++) if (nb[k] === nb[i]) m++
         if (m > most) { most = m; best = nb[i] }
       }
-      id[j] = best; moved++
+      // a junction (three or four regions meet) has no region to fold into: it stays
+      if (most >= 2) { id[j] = best; moved++ }
     }
     if (!moved) break
   }
   return id
 }
 const V_TONES: Tone[] = ['faint', 'mid', 'faint', 'idle', 'mid', 'faint', 'idle', 'mid', 'faint', 'idle', 'mid', 'faint', 'mid', 'idle']
+/** The blocks at card time t: the metric, the seeds shown and the region id per lattice cell (spurs folded in). */
+function blocksFrame(ct: number): { metric: BlockMetric; n: number; ids: Int16Array } {
+  const t = ct + V_OFF, half = V_LOOP / 2, metric: BlockMetric = Math.floor(t / half) & 1 ? 'l1' : 'linf', p = mod(t, half) / half
+  const n = Math.min(V_SEEDS, V_FIRST + Math.floor(p * (V_SEEDS - V_FIRST + 1)))
+  return { metric, n, ids: despur(blockVoronoi({ seed: 11, n, metric, w: V_W, h: V_H, t, drift: 3 }).id) }
+}
 export const sqBlocks: WidgetPreset = {
   id: 'sq-blocks', name: 'Blocks', label: 'BLOCKS', ...tile,
   credit: { by: ['Piet Mondrian'], title: 'Composition with Red, Blue and Yellow (1930)', source: 'https://en.wikipedia.org/wiki/Composition_with_Red,_Blue_and_Yellow', note: 'the look the blocks are after' },
   layers: ctx => {
-    const t = ctx.t + V_OFF, half = V_LOOP / 2, metric: BlockMetric = Math.floor(t / half) & 1 ? 'l1' : 'linf', p = mod(t, half) / half
-    const n = Math.min(V_SEEDS, V_FIRST + Math.floor(p * (V_SEEDS - V_FIRST + 1)))
-    const vo = blockVoronoi({ seed: 11, n, metric, w: V_W, h: V_H, t, drift: 3 }), ids = despur(vo.id), id = (c: number, r: number) => ids[r * V_W + c]
+    const { metric, n, ids } = blocksFrame(ctx.t), id = (c: number, r: number) => ids[r * V_W + c]
     return [
       cite('MONDRIAN 1930'),
       cells(V_K, V_ORIGIN, V_W, V_H, (c, r) => (id(c, r) === n - 1 ? 0 : V_LEVEL[V_TONES[id(c, r)]]), { toneOf: (c, r) => V_TONES[id(c, r)], group: id, join: true }),
@@ -176,14 +181,17 @@ function truchetFrame(ts: TruchetTile[], placed: number): { placed: number; ink:
   }
   return (truchetLast = { placed, ink, owner })
 }
+/** Tiles placed at t: over 12 s, held, then lifted in reverse over the last 3 s, so the seam never cuts the figure to one tile. */
+function truchetAt(t: number, count: number): { shown: number; placed: number } {
+  const p = mod(t + R_OFF, R_LOOP), shown = p < R_BACK ? Math.min(1, p / R_REVEAL) : 1 - (p - R_BACK) / (R_LOOP - R_BACK)
+  return { shown, placed: Math.max(1, Math.min(count, Math.ceil(shown * count))) }
+}
 const tiles = () => (truchet ??= truchetTiles({ seed: 6, cols: R_COLS, rows: R_ROWS, size: R_SIZE, split: [.85, .5] }))
 export const sqTruchet: WidgetPreset = {
   id: 'sq-truchet', name: 'Truchet', label: 'TRUCHET', ...tile,
   credit: { by: ['Christopher Carlson'], title: 'Multi-scale Truchet patterns (2018)', source: 'https://archive.bridgesmathart.org/2018/bridges2018-39.html', note: 'technique' },
   layers: ctx => {
-    // placed over 12 s, held, then lifted in reverse over the last 3 s, so the seam never cuts the figure to one tile
-    const ts = tiles(), p = mod(ctx.t + R_OFF, R_LOOP), shown = p < R_BACK ? Math.min(1, p / R_REVEAL) : 1 - (p - R_BACK) / (R_LOOP - R_BACK)
-    const placed = Math.max(1, Math.min(ts.length, Math.ceil(shown * ts.length))), live = placed - 1
+    const ts = tiles(), { shown, placed } = truchetAt(ctx.t, ts.length), live = placed - 1
     const { ink, owner } = truchetFrame(ts, placed)
     const level = ts[live].level
     return [
@@ -309,4 +317,4 @@ export const sqBeads: WidgetPreset = {
 
 export const squaresPack: WidgetPreset[] = [sqSchotter, sqBlocks, sqSort, sqTruchet, sqStitch, sqBeads]
 /** Sims and sizes for the checks (`scripts/squares.ts`). */
-export const packSources = { schotterK, sortFrame, tiles, stitchChart, TRUCHET: { k: R_K, origin: R_ORIGIN, w: R_W, h: R_H }, STITCH: { k: X_K, origin: X_ORIGIN, w: X_W, h: X_H }, hash01 }
+export const packSources = { schotterK, sortFrame, tiles, truchetAt, stitchChart, blocksFrame, BLOCKS: { w: V_W, h: V_H }, TRUCHET: { k: R_K, origin: R_ORIGIN, w: R_W, h: R_H }, STITCH: { k: X_K, origin: X_ORIGIN, w: X_W, h: X_H }, hash01 }

@@ -150,13 +150,16 @@ function quadTree(): Quads {
   return (quads = q)
 }
 const Q_TONES: Tone[] = ['faint', 'faint', 'mid', 'idle']
+/** Splits shown at t: they grow over 12 s, hold, then play back over the last 3 s, so the seam never cuts the face to one square. */
+function quadsAt(t: number, splits: number): { k: number; live: boolean } {
+  const p = mod(t + Q_OFF, Q_LOOP), grow = p < Q_BACK ? clamp(p / Q_GROW) : 1 - (p - Q_BACK) / (Q_LOOP - Q_BACK)
+  return { k: Math.max(1, Math.round(splits * grow * grow)), live: grow < 1 }
+}
 export const sqQuads: WidgetPreset = {
   id: 'sq-quads', name: 'Quads', label: 'QUADS', ...tile, inset: 'dark',
   credit: { by: ['Michael Fogleman'], title: 'Quads', source: 'https://www.michaelfogleman.com/projects/quads/', note: 'split the worst quad, again and again' },
   layers: ctx => {
-    // the splits grow over 12 s, hold, then play back over the last 3 s, so the seam never cuts the face to one square
-    const q = quadTree(), p = mod(ctx.t + Q_OFF, Q_LOOP), grow = p < Q_BACK ? clamp(p / Q_GROW) : 1 - (p - Q_BACK) / (Q_LOOP - Q_BACK)
-    const k = Math.max(1, Math.round(q.splits * grow * grow)), live = grow < 1
+    const q = quadTree(), { k, live } = quadsAt(ctx.t, q.splits)
     const side = Q_SIZE / QK, id = new Int16Array(side * side).fill(-1)
     for (let i = 0; i <= 4 * k && i < q.x.length; i++) {
       if (q.killed[i] < k || q.size[i] === 0) continue
@@ -497,4 +500,4 @@ export const sqLines: WidgetPreset = {
 
 export const squaresBoard = [sqTetris, sqQuads, sqBlob, sqGameboy, sqTeletext, sqLines, ...squaresPack, sqMorph, sqHat, sqAmmann, sqArctic, sqSandpile, sqAscii]
 /** The board's sims and sizes, for the checks (`scripts/squares.ts`). */
-export const squaresSources = { game, quadTree, ballsAt, blobFrame, B_OFF, B_LOOP, TETRIS: { w: TW, h: TH, k: TK, origin: T_ORIGIN }, BLOB: { k: BK, origin: B_ORIGIN, w: BW, h: BH }, QUADS: { size: Q_SIZE, k: QK, origin: Q_ORIGIN, splits: Q_SPLITS } }
+export const squaresSources = { game, quadTree, quadsAt, ballsAt, blobFrame, lineLevels, TT_BANNER, B_OFF, B_LOOP, LINES: { w: LN_W, lines: LN_LINES }, TETRIS: { w: TW, h: TH, k: TK, origin: T_ORIGIN }, BLOB: { k: BK, origin: B_ORIGIN, w: BW, h: BH }, QUADS: { size: Q_SIZE, k: QK, origin: Q_ORIGIN, splits: Q_SPLITS } }
