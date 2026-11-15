@@ -302,6 +302,8 @@
   letter-spacing: .06em;
   text-align: left;
   text-transform: uppercase;
+  /* the label holds its line; a long note beside it wraps instead ("COPY HTML" had split in two) */
+  white-space: nowrap;
   cursor: pointer
 }
 
@@ -330,7 +332,9 @@
 .wp-more small {
   color: var(--mute);
   font: inherit;
-  text-transform: none
+  text-align: right;
+  text-transform: none;
+  white-space: normal
 }
 
 .wp-phone {

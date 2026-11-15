@@ -26,7 +26,14 @@ import { findChrome, launch, sleep, type Page } from '../lib/cdp'
 import { knownChecker } from '../lib/check'
 
 /** Breaks only made-up data reaches: card names, board labels, credits and facts are written in the repo. */
-const KNOWN: readonly string[] = []
+const KNOWN: readonly string[] = [
+  // a 26-character board label at 320 px runs under OPEN: the longest real one is 14 ("MICRO MOTION"), and the row
+  // hides the card's name below 180 px, so the label has the room
+  'rows:worst@320',
+  // a 43-character slug with no break in it widens the figure caption at 320 px: slugs are hyphenated and 20 at most
+  // ("hb-awaiting-approval"), so the caption wraps at a hyphen
+  'widget-cap:spill@320', 'widget-worst:page-wide@320',
+]
 
 const args = process.argv.slice(2)
 const base = (args.find(a => /^https?:/.test(a)) ?? 'http://localhost:4317/').replace(/\/?$/, '/')
