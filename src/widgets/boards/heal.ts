@@ -11,6 +11,7 @@ import type { Field, Layer } from '../../engine/types'
 import type { Control } from '../../engine/context'
 import { lizardNca } from '../../assets/nca/lizard'
 import { TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetCredit, type WidgetPreset } from '../types'
+import { railFooter } from '../captions'
 
 const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
@@ -26,19 +27,11 @@ const W = 32, H = model.h, DT = 1 / 30, SEED_X = model.seedAt[0] + ((W - model.w
 const K = 4, OX = (TILE.cols - W * K) >> 1, OY = 11
 const GRID = T.lattice(K, OX, OY)
 const on = (f: Field) => GRID.at(GRID.place(f, 0, 0, W, H))
-const FOOT = 134, RAIL = { x0: 0, x1: 143, y: 129 }
 const pad = (n: number, k = 4) => String(Math.max(0, Math.min(10 ** k - 1, Math.round(n)))).padStart(k, '0')
 const healPct = (g: NcaGrid) => Math.min(100, ncaAliveCount(g) / model.grown * 100)
 
-function footer(run: NcaRun, t: number, left: string, right: string): Layer[] {
-  const k = run.live ? 1 : ncaPhase(run, t), done: [number, number][] = [], rest: [number, number][] = []
-  for (let c = RAIL.x0; c <= RAIL.x1; c += 3) (c - RAIL.x0 <= (RAIL.x1 - RAIL.x0) * k ? done : rest).push([c, RAIL.y])
-  return [
-    layer(T.dots(rest, .9), 'faint'), layer(T.dots(done, 1.1), 'mid'),
-    layer(T.text(left, 0, FOOT), 'idle'),
-    layer(T.text(right, 143, FOOT, { align: 'right' }), 'mid'),
-  ]
-}
+const footer = (run: NcaRun, t: number, left: string, right: string): Layer[] =>
+  railFooter(run.live ? 1 : ncaPhase(run, t), left, right, { rail: 129, foot: 134 })
 
 /** The whole lizard area is one xy control, so the host hands this card its pointers. */
 const scratchPad = (label: string): Control[] => [{ key: 'sx', keyY: 'sy', kind: 'xy', box: [OX, OY, W * K, H * K], min: 0, max: 1, label }]

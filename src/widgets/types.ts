@@ -99,6 +99,8 @@ export const TILE: GridConfig = { cols: 144, rows: 144, pitch: 2.25 }
 export const baseStyle: DotStyle = { shape: 'squircle', sizeMin: .3, sizeMax: 1.55, cornerRoundness: .25, opacityMode: 'fromValue', quantizeSteps: 5 }
 /** Dot radii for the 2.25px TILE pitch: a full dot is ~85% of the pitch, like the references. */
 export const tileStyle: DotStyle = { ...baseStyle, sizeMin: .2, sizeMax: .95, cornerRoundness: .1 }
+/** TILE style with true-circle dots (roundness 0, n = 2): knobs, status dots and other big single sites read as circles. */
+export const tileCircleStyle: DotStyle = { ...tileStyle, cornerRoundness: 0 }
 
 /** A field placed on a coarser lattice or explicit dot sites (see `Layer.lattice` / `Layer.sites`). */
 export type LatticeField = Omit<Layer, 'tone'>
@@ -219,13 +221,15 @@ export const presetField = (p: WidgetPreset, ctx: WidgetContext = { t: 0, data: 
   return (u, v) => { let m = 0; for (const f of ls) { const x = f(u, v); if (x > m) m = x } return m }
 }
 
-/** Label row drawn in dots (TILE cards): name top-left, red live dot top-right. */
 /** Size of the chrome's live dot (`cardChrome`, 4 cells in from the right edge, centred on the label row). A card that draws its own LIVE or REC dot uses this size. */
 export const LIVE_DOT = 7
+/** The chrome's red live dot on `grid`'s label row. A card that turns it on and off itself (a live source) draws this. */
+export const liveDot = (grid: GridConfig): Layer => layer(layoutFor(grid).dots([[grid.cols - 4, 3]], LIVE_DOT), 'active')
+/** Label row drawn in dots (TILE cards): name top-left, red live dot top-right. */
 export function cardChrome(p: WidgetPreset): Layer[] {
   if (p.chrome !== 'dots') return []
   const M = layoutFor(p.grid), label = (p.label ?? p.name).toUpperCase()
-  return [...(label ? [layer(M.text(label, 0, 0), 'idle')] : []), ...(p.live ? [layer(M.dots([[p.grid.cols - 4, 3]], LIVE_DOT), 'active')] : [])]
+  return [...(label ? [layer(M.text(label, 0, 0), 'idle')] : []), ...(p.live ? [liveDot(p.grid)] : [])]
 }
 /** The preset's layers with its chrome in front — what every renderer should draw. */
 const chromed = new WeakMap<WidgetPreset, WidgetPreset['layers']>()

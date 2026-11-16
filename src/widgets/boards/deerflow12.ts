@@ -6,6 +6,7 @@
 import { hash01 } from '../../engine/math'
 import type { Layer } from '../../engine/types'
 import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
+import { transportGlyph } from '../dot-controls'
 import { numberBoard } from '../numbered'
 
 const T = layoutFor(TILE)
@@ -267,9 +268,9 @@ export const entertainment: WidgetPreset = {
     layer(T.sprite(SPEAKER, 133, 0)),
     ...GROOVES.map(([r, n, tone, size], i) => layer(ringSlots(VINYL[0], VINYL[1], r * (1 + .025 * Math.sin(t * 1.6 - i * .7)), n, i * .5 + t * .15 * (i % 2 ? 1 : -1), size), tone)),
     layer(T.dots([VINYL], 5, 'NOW PLAYING'), 'active'),
-    layer(T.dotTri(27.2, 126, 5, { dir: 'left', bar: true }), 'value'),
-    layer(T.dotRing(69, 126, 14.5, { spacing: 1.2, size: 1.1 }), 'active'), layer(T.dotTri(74, 126, 5), 'active'),
-    layer(T.dotTri(110.8, 126, 5, { bar: true }), 'value'),
+    layer(transportGlyph('prev', 27.2, 126, 5), 'value'),
+    layer(T.dotRing(69, 126, 14.5, { spacing: 1.2, size: 1.1 }), 'active'), layer(transportGlyph('play', 74, 126, 5), 'active'),
+    layer(transportGlyph('next', 110.8, 126, 5), 'value'),
   ],
 }
 

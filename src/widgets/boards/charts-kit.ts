@@ -12,12 +12,12 @@ import type { Layer, Tone } from '../../engine/types'
 import { LOOP, settle, loopPhase } from '../../engine/charts/motion'
 import { chartLayers } from '../../engine/charts/paint'
 import type { Chart, Label } from '../../engine/charts/marks'
-import { TILE, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { TILE, layoutFor, tileCircleStyle, type WidgetContext, type WidgetPreset } from '../types'
 import { marching, rr, ui } from './components-kit'
 
 export const T = layoutFor(TILE)
 /** Big sites and readout dots are true circles (n = 2), like the components board. */
-export const style = { ...tileStyle, cornerRoundness: 0 }
+export const style = tileCircleStyle
 type Box = [number, number, number, number]
 
 /** What a card draws from: the data set (0 = A, 1 = B, between while it morphs), the intro (0 → 1) and the picked index. */

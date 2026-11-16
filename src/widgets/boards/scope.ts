@@ -10,12 +10,12 @@
 import type { Control } from '../../engine/context'
 import type { Tone } from '../../engine/types'
 import { BINS, FLOOR_DB, WAVE, audioOf, demoFrame, type AudioFrame } from '../../audio/frame'
-import { TAU, TILE, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
+import { TAU, TILE, dim, layer, layoutFor, liveDot as chromeLiveDot, tileCircleStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
 import { numberBoard } from '../numbered'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
-const style = { ...tileStyle, cornerRoundness: 0 }
+const style = tileCircleStyle
 const card = { group: 'chart', chrome: 'dots', grid: TILE, style, animated: true } as const
 const FOOT = 126
 const spots = (pts: Pt[], size: number, v = 1): LatticeField => ({ field: () => v, sites: pts, size })
@@ -24,7 +24,7 @@ const SOURCE_LABEL = { demo: 'DEMO', synth: 'SYNTH', mic: 'MIC' } as const
 
 /** The bus frame for this context: live when the host supplies one, else the stand-in. */
 const busOf = (ctx: WidgetContext): AudioFrame => audioOf(ctx) ?? demoFrame(ctx.t)
-const liveDot = (f: AudioFrame) => (f.source === 'demo' ? [] : [layer(T.dots([[TILE.cols - 4, 3]], 7), 'active')])
+const liveDot = (f: AudioFrame) => (f.source === 'demo' ? [] : [chromeLiveDot(TILE)])
 
 // ── 01 SCOPE ────────────────────────────────────────────────────────────────
 // A trigger-aligned trace over an 8×6 graticule. The trace is dot sites along the waveform's
@@ -131,7 +131,7 @@ export const scopeMic: WidgetPreset = {
     const db = Math.max(f.level[0], f.level[1])
     const tone: Tone = live ? 'value' : 'mid'
     return [
-      ...(live ? [layer(T.dots([[TILE.cols - 4, 3]], 7), 'active')] : []),
+      ...(live ? [chromeLiveDot(TILE)] : []),
       layer(spots(BASE, hover ? 2.6 : 2, press ? .75 : 1), hover ? 'idle' : 'mid'),
       layer(spots(body, 2.2), live ? 'idle' : 'faint'),
       layer(spots(tips, 2.6), tone),

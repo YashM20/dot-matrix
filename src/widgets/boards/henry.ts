@@ -9,8 +9,9 @@ import { hash01 } from '../../engine/math'
 import { decodeText, splitFlapCells, type FlapCell } from '../../engine/motion/text'
 import type { Control } from '../../engine/context'
 import { LIVE_DOT, TAU, TILE, bounded, combine, layer, layoutFor, tileStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
+import { PRESS, marching, rr, ui, type UiState } from './components-kit'
+import { scrubber, switchKnob, switchTrack, transportGlyph, type ScrubSpec } from '../dot-controls'
 import { numberBoard } from '../numbered'
-import { PRESS, at, marching, rr, ui, type UiState } from './components-kit'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -155,21 +156,20 @@ const ridge = combine(...[[64, 90, 105, 52], [80, 58, 104, 69]].map(([ax, ay, bx
 const TRANSPORT = { k: 2, n: 5, y: 127.25 }
 const transport = (bar: number, dir: 1 | -1): LatticeField => {
   const { k, n, y } = TRANSPORT, d = dir > 0 ? 'left' : 'right', run = ((n - 1) * k * Math.sqrt(3)) / 2, tip = bar + dir * k
-  const a = T.dotTri(tip, y, n, { k, dir: d, bar: true }), b = T.dotTri(tip + dir * (run + k), y, n, { k, dir: d })
+  const a = transportGlyph(dir > 0 ? 'prev' : 'next', tip, y, n, k), b = T.dotTri(tip + dir * (run + k), y, n, { k, dir: d })
   return { ...a, sites: [...a.sites!, ...b.sites!] }
 }
+/** The scrubber: two fine dot lines stopping short of the red knob (the `lines` method). */
+const SCRUB: ScrubSpec = { x0: 2, x1: 141, y: 141, spacing: 1.65, size: [.9, .7], knob: 5, gap: 3, method: 'lines', travel: [2, 140] }
 export const music: WidgetPreset = {
   id: 'music', name: 'Music', numbered: true, group: 'photo', ...tile,
   defaults: { position: 0.44 }, springKeys: ['position'],
   layers: ({ data }) => {
-    const knob = 2 + data.position * 138
     return [
       layer(cover), layer(ridge),
       layer(T.big('DAYLIGHT', 71.5, 100, { lattice: 1.4, align: 'center' })),
-      layer(transport(9.5, 1)), layer(T.dotTri(76, 127.25, 6, { k: 2.2 })), layer(transport(133.5, -1)),
-      layer(T.dotLine(2, 141, knob - 3, 141, { spacing: 1.65, size: .9 })),
-      layer(T.dotLine(141, 141, knob + 3, 141, { spacing: 1.65, size: .7 }), 'mid'),
-      layer(T.dots([[knob, 141]], 5), 'active'),
+      layer(transport(9.5, 1)), layer(transportGlyph('play', 76, 127.25, 6)), layer(transport(133.5, -1)),
+      ...scrubber(SCRUB, data.position, ['value', 'mid', 'active']),
     ]
   },
 }
@@ -186,7 +186,7 @@ export const timer: WidgetPreset = {
       layer(dotText('12:48', 72, 60, { px: 2.9, py: 3.4, size: 3.2, align: 'center' })),
       layer(T.dotRing(72, 117, 14.5, { spacing: 1.8, size: .75 })),
       // stop: a full 5 × 5 square of big dots, corners kept, so it reads as stop and not as a round record button
-      layer(T.fillOn(2, () => true, [67.5, 112.5, 76.5, 121.5]), 'active'),
+      layer(transportGlyph('stop', 72, 117, 5, 2), 'active'),
     ]
   },
 }
@@ -343,14 +343,11 @@ const ROWS = { x: 1, top: 15, w: 141, h: 24, n: 5, r: 5, spacing: 2.2, size: 1.0
  */
 const SWITCH = { x: 117, w: 22, h: 12, knob: 8, k: 2.2 }
 const toggle = (on: boolean, mid: number, s: UiState, t: number) => {
-  const { x, w, h, knob, k } = SWITCH, r = h / 2, y = mid - r, kx = on ? x + w - r : x + r
-  const reach = (knob * .84) / 2 + k, core = r - 2.4
+  const { x, w, h, knob, k } = SWITCH, r = h / 2, y = mid - r, sw = { ...SWITCH, y, spacing: ROWS.spacing, size: ROWS.size }
+  const [kx] = switchKnob(sw, on ? 1 : 0), reach = (knob * .84) / 2 + k, core = r - 2.4
   const fill = T.fillOn(k, (px, py) => Math.hypot(px - Math.max(x + r, Math.min(x + w - r, px)), py - mid) <= core && Math.hypot(px - kx, py - mid) > reach, [x + 1, y + 1, x + w - 1, y + h - 1])
-  return [
-    s.focus ? marching(rr(x, y, w, h, r), t, 0) : layer(T.stadium(x, y, w, h, { spacing: ROWS.spacing, size: ROWS.size }), s.hover ? 'value' : 'idle'),
-    ...(on ? [layer(fill, 'mid')] : []),
-    layer(at(T.dots([[kx, mid]], knob), s.pressed ? PRESS : 1), on ? 'value' : 'idle'),
-  ]
+  const [track, knobDot] = switchTrack(sw, on ? 1 : 0, [s.hover ? 'value' : 'idle', on ? 'value' : 'idle'], s.pressed ? PRESS : 1)
+  return [s.focus ? marching(rr(x, y, w, h, r), t, 0) : track, ...(on ? [layer(fill, 'mid')] : []), knobDot]
 }
 const settingRow = (i: number, g: Glyph, label: string, right: Right, selected = false) => {
   const top = ROWS.top + i * ROWS.h, tone = selected ? 'active' : 'idle', mid = top + 12

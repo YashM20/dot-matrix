@@ -22,6 +22,7 @@ import { createSource, type Source } from '../../data/source'
 import { TAU, TILE, bounded, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
 import { numberBoard } from '../numbered'
 import { dotText } from './henry'
+import { caption } from '../captions'
 
 const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
@@ -100,7 +101,7 @@ export const timerSpec: DeviceSpec = {
 const frameAt = (profile: DeviceProfile) => (k: number) => toDevice(timerSpec, profile, { ctx: { t: k / (profile.refresh || 1), data: {} } })
 
 /** Chrome shared by the device cards: the device grid, right-aligned in the label row. */
-const spec = (s: string): Layer => layer(T.text(s, 143, 0, { align: 'right' }), 'mid')
+const spec = (s: string): Layer => caption(s)
 /** The device housing: a dotted faint outline (sites every 2 cells). */
 const bezel = (x0: number, y0: number, x1: number, y1: number): Layer => {
   const sites: Pt[] = []

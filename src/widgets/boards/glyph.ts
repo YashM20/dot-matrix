@@ -13,9 +13,10 @@ import { grayScott, simAt } from '../../engine/sim'
 import { migrate, migrationLayers } from '../../engine/migrate'
 import type { Control } from '../../engine/context'
 import type { DotInstance, Layer, Tone } from '../../engine/types'
-import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
+import { TAU, TILE, layer, layoutFor, tileCircleStyle, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 import { numberBoard } from '../numbered'
 import { dotText } from './henry'
+import { transportGlyph } from '../dot-controls'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -130,7 +131,7 @@ const PAUSE = ['#.#', '#.#', '#.#']
 const SKIP = { n: 4, k: 3 }
 const skip = (cx: number, y: number, dir: 'left' | 'right'): Part => {
   const run = ((SKIP.n - 1) * SKIP.k * Math.sqrt(3)) / 2, s = dir === 'left' ? 1 : -1
-  const tri = T.dotTri(cx + (s * (SKIP.k - run)) / 2, y, SKIP.n, { k: SKIP.k, dir, bar: true })
+  const tri = transportGlyph(dir === 'left' ? 'prev' : 'next', cx + (s * (SKIP.k - run)) / 2, y, SKIP.n, SKIP.k)
   return { pts: tri.sites ?? [], size: tri.size ?? 1, tone: 'idle' }
 }
 /** Disc grooves keep one site pitch at every radius (the lock ring's shared spokes would crowd the small ones into a line). */
@@ -169,7 +170,7 @@ const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).
 const migProgress = (age: number) => clamp01((age - MIG0) / MIG)
 export const glyphLongpress: WidgetPreset = {
   id: 'lock-longpress', name: 'Long Press', label: 'LONG PRESS', numbered: true, group: 'composite', ...tile,
-  style: { ...tileStyle, cornerRoundness: 0 },
+  style: tileCircleStyle,
   defaults: { hold: 0 },
   controls: [{ key: 'hold', kind: 'button', box: [CX - RING - 4, CY - RING - 4, 2 * RING + 8, 2 * RING + 8], label: 'Hold to unlock' } satisfies Control],
   layers: ctx => {
