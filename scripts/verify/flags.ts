@@ -3,7 +3,7 @@
  * names its `VITE_FLAG_<ID>`), the URL never sets a flag (a fresh load of the module in a fake browser whose address
  * has `?flags=`, `?worker=0` and `?clack=1` reads only localStorage), and with the `xray` flag off the palette, the
  * shell and the shortcuts table have no X-ray in them. The `clack` flag and its sound are gone for good: no flag, no
- * `src/media/clack.ts`, no source line that reads it, and a saved `"clack": true` is ignored and dropped.
+ * `src/media/clack.ts`, no "clack" in src/ (code or card text), and a saved `"clack": true` is ignored and dropped.
  * The dock, the card's ⓘ and the keys are UI: the browser half
  * is the `flagsoff` section of scripts/c10-browser.ts. On its own: `npx tsx scripts/verify/flags.ts`.
  */
@@ -64,8 +64,9 @@ const sources = (dir: string): string[] => readdirSync(dir).flatMap(n => {
 
 /** The clack sound and its flag were removed (owner decision after #345): they stay out, and an old saved value is harmless. */
 async function clackCheck(assert: Assert) {
-  const users = sources('src').filter(f => /media\/clack|createClack|clackEnabled|flag\(\s*['"]clack['"]|VITE_FLAG_CLACK/.test(readFileSync(f, 'utf8')))
-  assert('flags: no clack flag, no src/media/clack.ts, and nothing in src/ plays or reads it',
+  // any "clack" in src/ (code, a flag read, or card text such as the flip-disc card's old CLACK MUTED line)
+  const users = sources('src').filter(f => /clack/i.test(readFileSync(f, 'utf8')))
+  assert('flags: no clack flag, no src/media/clack.ts, and no "clack" anywhere in src/ (code or card text)',
     !FLAGS.some(f => (f.id as string) === 'clack') && !existsSync('src/media/clack.ts') && !users.length, users.join(', '))
 
   const g = globalThis as Record<string, unknown>, keep = { window: g.window, location: g.location, localStorage: g.localStorage }
