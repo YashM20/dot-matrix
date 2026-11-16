@@ -15,6 +15,7 @@ import { sharedClock } from '../../engine/clock'
 import type { DotInstance } from '../../engine/types'
 import { TEST_HOOKS } from '../../lib/testHooks'
 import { skinChangedAt, useDisplaySkin } from './store'
+import { reducedMotion } from '../../site/motion'
 
 export interface SkinSurfaceProps {
   /** Which surface DotCanvas mounted ('canvas' | 'svg'). */
@@ -35,7 +36,6 @@ export interface SkinSurfaceProps {
 
 const MAX_BACKING_SCALE = 3
 const now = () => performance.now() / 1000
-const reduced = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 // ── perf probe (read by scripts/skins-perf.ts): ms of stage work per card frame, last 2000 ──
 interface SkinPerf { skin: SkinName; frame: number[]; render: number[] }
@@ -122,7 +122,7 @@ export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, wid
     if (canvas.width !== W || canvas.height !== H) { canvas.width = W; canvas.height = H }
     const ctx = canvas.getContext('2d', { alpha: false })
     if (!ctx) return
-    const same = runner.built === drawn, calm = reduced(), switched = now() - skinChangedAt() < 1.5
+    const same = runner.built === drawn, calm = reducedMotion(), switched = now() - skinChangedAt() < 1.5
     // a switch sweeps down the page like a raster scan; a fresh card (board change) refreshes at once
     const delay = switched && !same ? Math.min(1, Math.max(0, wrap.getBoundingClientRect().top / window.innerHeight)) * .3 : 0
     runner.stage = createDisplayStage(drawn, { cols, rows, w: W, h: H, delay, instant: same || calm, accent: tint })

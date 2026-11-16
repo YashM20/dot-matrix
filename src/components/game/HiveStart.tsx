@@ -9,6 +9,7 @@ import { layer, layoutFor, tileStyle } from '../../widgets/types'
 import { paint, sampleInto, surfaceFor } from './dots'
 import { replaceUrl } from '../../site/safe-url'
 import './hive.css'
+import { reducedMotion } from '../../site/motion'
 
 const HivePlay = lazy(() => import('./HivePlay'))
 /** The title card's cursor (levels.ts `CURSOR`), copied so the button doesn't pull the lazily loaded levels board in. */
@@ -31,7 +32,7 @@ export function HiveStart({ theme = dot480 }: { theme?: ThemeTokens }) {
   useEffect(() => {
     const canvas = ref.current
     if (!canvas) return
-    const s = surfaceFor(canvas, GRID.cols, GRID.rows, PITCH), reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const s = surfaceFor(canvas, GRID.cols, GRID.rows, PITCH), reduced = reducedMotion()
     let on = true
     const draw = () => {
       sampleInto(s, [layer(cursor.at(cursor.sprite(CURSOR, 0, 0)), 'value'), ...(on ? [layer(T.big('PRESS START', 11, 2, { lattice: 1 }), 'value')] : [])], style, theme)

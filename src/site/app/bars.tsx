@@ -10,6 +10,7 @@ import { boardLabel, liveBoards } from '../../widgets/manifest'
 import { requestLayer } from '../layer'
 import { useFlag } from '../useFlag'
 import { VIEWS, type View } from '../views'
+import { scrollBehavior } from '../motion'
 
 /** The views on offer: MAKE only while its flag is on. */
 const useViews = (): readonly View[] => useFlag('make') ? VIEWS : VIEWS.filter(v => v !== 'MAKE')
@@ -47,7 +48,7 @@ const GLYPHS: Record<View | 'TOOLS' | 'SEARCH', string> = {
   TOOLS: '10001 01010 00100 01010 10001',
   SEARCH: '01110 10001 10001 01110 00001',
 }
-const toTop = () => window.scrollTo({ top: 0, behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+const toTop = () => window.scrollTo({ top: 0, behavior: scrollBehavior() })
 
 /** The place's name in the top bar: MAKE, ALL, the board's label, or the view. */
 const placeTitle = (view: View, all: boolean, board: string) => view === 'MAKE' ? 'MAKE' : view === 'EXPLORE' ? (all ? 'ALL' : boardLabel(board)) : view

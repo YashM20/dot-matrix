@@ -80,8 +80,13 @@
   }
 }
 
+/* full motion (src/site/motion.ts); a page that hasn't written data-motion yet asks the OS */
+:where([data-motion="full"]) .dot-card {
+  transition: border-color var(--dur-out), box-shadow var(--dur-out)
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .dot-card {
+  :where(:root:not([data-motion])) .dot-card {
     transition: border-color var(--dur-out), box-shadow var(--dur-out)
   }
 }

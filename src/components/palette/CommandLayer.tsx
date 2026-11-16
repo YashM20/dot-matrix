@@ -18,7 +18,6 @@ import { widgetPath } from '../../site/routes'
 import { BROWSE_PARAMS } from '../../site/browse'
 import { assign, pushUrl } from '../../site/safe-url'
 import { boardOfCard, type CommandApi } from './api'
-import { setReducedMotion } from './reducedMotion'
 import { onLayerRequest } from '../../site/layer'
 import { Sheet } from '../Sheet'
 import { Modal } from '../Modal'
@@ -32,6 +31,7 @@ import { useFlag } from '../../site/useFlag'
 import { track } from '../../site/analytics'
 import { AnalyticsButton } from './analyticsUi'
 import { useTrackEvents } from './useTrackEvents'
+import { scrollBehavior, setReducedMotion } from '../../site/motion'
 
 // the panels load on first use: first-load JS stays inside the site budget. X-ray's are left out of a build with
 // VITE_FLAG_XRAY=kill (the test stays inline at each import so the bundler sees a constant)
@@ -184,7 +184,7 @@ export function CommandLayer({ tab, board, all = false, setTab, setBoard }: Comm
       const find = () => {
         const el = document.querySelector<HTMLElement>(`.board-view [data-card-id="${CSS.escape(cardId)}"]`)
         if (!el) { if (performance.now() - t0 < 3000) window.setTimeout(find, 80); return }
-        el.scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+        el.scrollIntoView({ block: 'center', behavior: scrollBehavior() })
         el.classList.add('xr-flash'); window.setTimeout(() => el.classList.remove('xr-flash'), 1400)
         if (opts?.xray && flag('xray') && el.dataset.xrKey && !xrState().on.has(el.dataset.xrKey)) toggleCard(el.dataset.xrKey)
       }

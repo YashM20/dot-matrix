@@ -628,7 +628,7 @@ Every HTML control in the chrome has the same four states plus disabled, from th
 | active / selected / on / live | the accent at full strength with `--glow-wash` or `--glow-halo` | none |
 | disabled | 40% opacity, no pointer | — |
 
-No state changes a size, so nothing shifts. On coarse pointers every chrome target is at least 40 px (44 px on phones). Menus, popovers and ⌘K open with no animation; only sheets slide in (`--dur-enter`). `prefers-reduced-motion` removes all of it. In-card controls are different: they draw hover, press and focus in dots (below).
+No state changes a size, so nothing shifts. On coarse pointers every chrome target is at least 40 px (44 px on phones). Menus, popovers and ⌘K open with no animation; only sheets slide in (`--dur-enter`). Reduced motion removes all of it: the OS setting, or the ⌘K override (on, off, system), which wins both ways. One helper answers for JS (`reducedMotion()`, `scrollBehavior()` in `src/site/motion.ts`) and writes `<html data-motion="reduce|full">`, which every CSS reduced-motion rule keys off. In-card controls are different: they draw hover, press and focus in dots (below).
 
 ### Grammar rules
 

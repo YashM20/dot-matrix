@@ -12,6 +12,7 @@ import { GLOSSARY, GLOSSARY_TERMS, type GlossaryTerm } from '../glossary'
 import { fmt, layerKind, layerName, layerIR } from './probe'
 import { cardElement, muteLayer, probes, setXR, soloLayer, toggleCard, toggleGlobal, useXR, xrState, type CardProbe } from './store'
 import './inspector.css'
+import { scrollBehavior } from '../../site/motion'
 
 /** At this width the inspector is a bottom sheet (./inspector.css): a grip, swipe down to close, swipe up for more. */
 const SHEET = '(max-width: 760px)'
@@ -151,7 +152,7 @@ export function Inspector({ onRemix, onStudio, onCopyLink }: { onRemix: (cardId:
     const el = cardElement(active)
     if (!el) return
     const r = el.getBoundingClientRect(), sheetTop = window.innerHeight * .58
-    if (r.bottom > sheetTop && r.top > 64) window.scrollBy({ top: Math.min(r.top - 64, r.bottom - sheetTop), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+    if (r.bottom > sheetTop && r.top > 64) window.scrollBy({ top: Math.min(r.top - 64, r.bottom - sheetTop), behavior: scrollBehavior() })
   }, [active])
   const probe = active ? probes.get(active) : undefined
   const layers = useMemo(() => (probe ? layersOf(probe) : []), [probe, probe?.stats.t, probe?.data]) // eslint-disable-line react-hooks/exhaustive-deps
