@@ -8,7 +8,7 @@ import { deformFloor, deformFlower, deformLUT, deformStar, deformTunnel, wrap01,
 import { dsin, ihash } from '../../engine/noise/dmath'
 import { checkersTriangle } from '../../engine/filter/checkers'
 import { layer, type WidgetPreset } from '../types'
-import { ACTIVE, BODY_BOTTOM, BODY_TOP, CREDIT_DEFORM, FAINT, IDLE, MID, T, VALUE, caption, clamp01, dotCentre, footer, frac, pad, plate, plateGeom, tile, type Ink, type PlateGeom } from './oldschool-kit'
+import { ACTIVE, BODY_BOTTOM, BODY_TOP, CREDIT_DEFORM, FAINT, IDLE, MID, T, VALUE, clamp01, dotCentre, footer, frac, pad, plate, plateGeom, tile, type Ink, type PlateGeom } from './oldschool-kit'
 
 const K = 2
 /** 2×2 supersample offsets inside one lattice dot, in card cells. */
@@ -135,11 +135,10 @@ export const osFloor: WidgetPreset = {
   layers: ctx => {
     const tw = Math.floor(ctx.t * 2) % STARS.length
     return [
-      caption('U=X/ABS(Y)'),
       layer(plate(SUN_K, sunInk, BODY_TOP, HORIZON - 2)),
       layer(T.dots(STARS.filter((_, i) => i !== tw), 1), 'mid'),
       layer(plate(K, floorInk(ctx.t), HORIZON, BODY_BOTTOM)),
-      ...footer(`MILE ${pad(ctx.t * 2, 4)}`, 'V=1/ABS(Y)'),
+      ...footer(`MILE ${pad(ctx.t * 2, 4)}`),
     ]
   },
 }
