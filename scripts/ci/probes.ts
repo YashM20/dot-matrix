@@ -12,7 +12,7 @@
  *
  * Needs `dist/` (vite build) and Chrome ($CHROME or the usual paths). Exit 1 when a probe fails, 2 on a bad name.
  * Writes a timing table to $GITHUB_STEP_SUMMARY when it is set. Rebalance shards by those timings: no shard should
- * outlast materials, which runs alone. Split a long probe by its own filters (editor `--only`,
+ * outlast mobile-boards, the longest probe, which runs alone. Split a long probe by its own filters (editor `--only`,
  * layout `--widths`).
  */
 import { spawn, spawnSync } from 'node:child_process'

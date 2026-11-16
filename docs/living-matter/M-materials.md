@@ -1,5 +1,7 @@
 # Track M: physical materials (M1 core, M2 glass and water, M3 extras)
 
+> **Update (2026-11-16, #378):** the MATERIALS board (M1 and M2's cards) was removed: it did not meet the quality bar. Its card links open WORKSHOP. The M3 cards on WORKSHOP, the shared shell (`materials-shared.ts`) and the engine modules in `src/engine/matter/` stay. The notes below are history.
+>
 > Status: **planned** (2026-10-27, branch `docs/living-matter-plan`). This is part M of the phase-wise build of `docs/LIVING-MATTER-PLAN.md` §5. Nothing in it is built yet.
 >
 > **M2 status (2026-10-29, round 3):** built, not merged. Engine: `matter/glass.ts` (`BEZEL`, `snellLUT`, `lensOffset`, `liquidGlass`, `frost`), `matter/caustics.ts` (`causticSplat`, `refractFloor`, `causticStats`), `stone.ts` `voronoiSites`. Six cards on `/materials/`: `mat-lens` (the board's one GPU layer), `mat-pool` (ripple + World, `fps: 30`), `mat-window`, `mat-patch`, `mat-rust` (World) and the candle clock `mat-candle` (§4.4, L1.4's `ropeStep` drips). The board shell moved to `boards/materials-shared.ts`; the cards are in `materials-glass.ts`, `materials-live.ts` (pool, rust: main thread, a worker stub keeps them out of `wk-materials`) and `materials-wear.ts`. **Deviations:**

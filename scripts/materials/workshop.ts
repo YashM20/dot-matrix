@@ -1,4 +1,4 @@
-/** Materials checks, workshop and tilt groups (scripts/materials.ts): M3's board, its per-card invariants, and M3.10 tilt on both boards. */
+/** Materials checks, workshop and tilt groups (scripts/materials.ts): M3's board, its per-card invariants, and M3.10 tilt on it. */
 import { readFileSync } from 'node:fs'
 import { matcapMatrix, twill } from '../../src/engine/matter'
 import { hourOf, lightDir, sunAt, type Vec3 } from '../../src/engine/light'
@@ -11,7 +11,6 @@ import { TILE, withChrome, type WidgetPreset } from '../../src/widgets/types'
 import { lightBoard } from '../../src/widgets/boards/light'
 import { workshopBoard, workshopHooks, workshopSources } from '../../src/widgets/boards/workshop'
 import { lightTrace } from '../../src/widgets/boards/materials-shared'
-import { materialsBoard } from '../../src/widgets/boards/materials'
 import { bucketLight, lightOfBucket } from '../../src/engine/light/input'
 import { dla } from '../../src/engine/algo/dla'
 import { voronoiBorder2 } from '../../src/engine/noise/voronoi'
@@ -20,8 +19,7 @@ import { leatherAt, leatherCells } from '../../src/engine/matter/leather'
 import { sandRelax, sandVolume, sandRake } from '../../src/engine/matter/sand'
 import { DET_PATHS, detLint } from '../lib/detLint'
 import { fmtLoaded, medianLoaded, onceLoaded, type Loaded } from '../lib/load'
-import { type Assert, same, DEG, type MaterialsOptions } from './util'
-import { POINTER, atClock } from './board'
+import { type Assert, same, DEG, POINTER, atClock, type MaterialsOptions } from './util'
 
 // ── workshop (M3, M §5) ───────────────────────────────────────────────────────────────────────────────
 /** Workshop cards with no red at rest: purely material (denim, paper, leather) or red only while touched (sand, mercury, thread). */
@@ -248,9 +246,9 @@ function reds(p: WidgetPreset, t: number, data?: Record<string, number>): Return
   return atClock(() => wsFrame(p, t, undefined, data)).filter(d => d.color === dot480.dotActive)
 }
 
-// ── tilt (M3.10, both boards) ─────────────────────────────────────────────────────────────────────────
+// ── tilt (M3.10, the workshop board) ─────────────────────────────────────────────────────────────────────────
 export function tiltChecks(assert: Assert): void {
-  const both = [...materialsBoard, ...workshopBoard]
+  const cards = workshopBoard
   // the hub's bucket: a light turned less than one bucket (1/64 turn) keeps it; a full bucket moves it
   let sticky = true
   for (let k = 0; k < 64; k++) {
@@ -259,22 +257,22 @@ export function tiltChecks(assert: Assert): void {
     if (bucketLight(lightDirAt(a0 + 1 / 64 * 2 * Math.PI), prev).az === prev.az) sticky = false
   }
   assert('materials: tilt bucket changes only on a ≥ 1/64-turn change', sticky)
-  const files = ['materials', 'materials-shared', 'materials-glass', 'materials-live', 'materials-wear', 'workshop', 'workshop-live', 'workshop-physics', 'workshop-plate', 'workshop-stone', 'workshop-frost', 'workshop-kintsugi', 'workshop-kintsugi-shade', 'workshop-fold']
+  const files = ['materials-shared', 'workshop', 'workshop-live', 'workshop-physics', 'workshop-plate', 'workshop-stone', 'workshop-frost', 'workshop-kintsugi', 'workshop-kintsugi-shade', 'workshop-fold']
   const src = Object.fromEntries(files.map(f => [f, readFileSync(new URL(`../../src/widgets/boards/${f}.ts`, import.meta.url), 'utf8')]))
-  assert('materials: no card reads DeviceOrientation directly (both boards)', files.every(f => !/DeviceOrientation|deviceorientation/.test(src[f])))
+  assert('materials: no card reads DeviceOrientation directly', files.every(f => !/DeviceOrientation|deviceorientation/.test(src[f])))
   const gravity = files.filter(f => /data\.g[xy]\b|data\[['"]g[xy]['"]\]/.test(src[f]))
   assert('materials: no card reads data.light, and no light or matcap path reads gx/gy (only the sand, mercury and thread step inputs do)', files.every(f => !/data\.light\b/.test(src[f])) && gravity.join() === 'workshop-physics' && (src['workshop-physics'].match(/data\.g[xy]\b/g) ?? []).length === 2,
     `gx/gy read in: ${gravity.join(', ')}`)
   const noTilt = (d: Record<string, number>) => { const { tx: _x, ty: _y, ...rest } = d; return rest }
-  const same0 = both.every(p => [0, 1.3].every(t => atClock(() => JSON.stringify(sampleLayers(withChrome(p)({ t, data: { ...p.defaults, tx: 0, ty: 0 } }), p.grid, p.style, dot480)) === JSON.stringify(sampleLayers(withChrome(p)({ t, data: noTilt({ ...p.defaults }) }), p.grid, p.style, dot480)))))
-  assert('materials: tx = ty = 0 → every matcap and KK card equals its no-tilt frame (bit for bit, both boards)', same0 && matcapMatrix(0, [0, 0]) === null)
+  const same0 = cards.every(p => [0, 1.3].every(t => atClock(() => JSON.stringify(sampleLayers(withChrome(p)({ t, data: { ...p.defaults, tx: 0, ty: 0 } }), p.grid, p.style, dot480)) === JSON.stringify(sampleLayers(withChrome(p)({ t, data: noTilt({ ...p.defaults }) }), p.grid, p.style, dot480)))))
+  assert('materials: tx = ty = 0 → every matcap and KK card equals its no-tilt frame (bit for bit)', same0 && matcapMatrix(0, [0, 0]) === null)
   // each card's light through matLight: the pointer (hover), else the hub (lightSrc 1), else the sun, each = sceneLight
   // (a sky-only call, the window's panes, sees no pointer: under hover it is the sun)
   const hour = atClock(() => hourOf(new Date())), ctxs = [
     ['hover', [POINTER(60, 70)], {}], ['tilt', undefined, { lightSrc: 1, lightAz: 20, lightEl: 3 }], ['sun', undefined, {}],
   ] as const
   let ok = true, detail = '', lit = 0
-  for (const p of both) {
+  for (const p of cards) {
     let calls = 0
     for (const [name, pointers, data] of ctxs) {
       lightTrace.on = true; lightTrace.calls.length = 0
@@ -289,6 +287,6 @@ export function tiltChecks(assert: Assert): void {
     }
     if (calls) lit++
   }
-  assert('materials: each card\'s light, in order: pointer → lightSrc 1 → sun (3 synthetic contexts), equal to sceneLight (every lit card, both boards)', ok && lit >= both.length - 1, detail || `${lit} of ${both.length} cards light through matLight (the lens's light is its rim, from the pointer and the tilt offset)`)
+  assert('materials: each card\'s light, in order: pointer → lightSrc 1 → sun (3 synthetic contexts), equal to sceneLight (every lit card)', ok && lit === cards.length, detail || `${lit} of ${cards.length} cards light through matLight`)
 }
 const lightDirAt = (az: number): Vec3 => lightDir(az, 40 * DEG)
