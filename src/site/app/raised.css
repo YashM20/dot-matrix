@@ -1,13 +1,9 @@
 /* App styles: the raised layer (menus, popovers, sheets, the palette) */
-/* ── raised layer (one look): menus, popovers, sheets, ⌘K ─────────────────────────────────────────────
-   Glass: translucent raised, one small blur, the raised shadow; it opens with no animation. Cards keep their
-   single hairline. Used by .skin-menu, .theme-pop, .ed-menu (editor), .pal, .sheet-panel. The two MORE menus (the
-   widget page's .wp-more and a card's .dot-card-menu) are the solid popover below. */
-.skin-menu,
-.theme-pop,
+/* ── glass layer: the editor's menus and ⌘K ─────────────────────────────────────────────────────────
+   Translucent raised, one small blur, the raised shadow; it opens with no animation. Cards keep their single
+   hairline. The site's menus, popovers and sheets are the solid popover below. */
 .ed-menu,
-.pal,
-.sheet-panel {
+.pal {
   background: var(--glass);
   border: 1px solid var(--line);
   border-radius: var(--radius-panel);
@@ -17,29 +13,38 @@
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .skin-menu,
-  .theme-pop,
   .ed-menu,
-  .pal,
-  .sheet-panel {
+  .pal {
     background: var(--raised)
   }
 }
 
-/* ── popover (one look): the two MORE menus, the widget page's (MoreMenu.tsx) and a card's (CardRow.tsx) ───────────
-   Solid raised, a hairline, a small radius, a short soft shadow; no blur, no motion. Rows are 30 px (--tap on touch),
-   one line each: the label left, a short muted meta right (<small>); a hairline edge to edge starts a group. Each
-   menu's own file places it. */
+/* ── popover (one look): the two MORE menus (MoreMenu.tsx, CardRow.tsx), the header's DISPLAY ▾ menu (SkinSwitcher.tsx)
+   and THEME popover (ThemePicker.tsx), and on a phone the sheets that hold them (Sheet.tsx) ────────────────────────
+   Solid raised, a hairline, a small radius, a short soft shadow; no blur, no motion. Rows are 30 px (--tap on touch):
+   the label left, a short muted meta right (<small>); a hairline edge to edge starts a group. Each menu's own file
+   places it (and a sheet keeps its own corners). */
 .wp-more,
-.dot-card-menu {
+.dot-card-menu,
+.skin-menu,
+.theme-pop,
+.sheet-panel {
   background: var(--raised);
   border: 1px solid var(--line);
-  border-radius: var(--radius-ctl);
   box-shadow: var(--shadow-pop)
 }
 
+/* a sheet keeps its own corners (sheet.css) */
+.wp-more,
+.dot-card-menu,
+.skin-menu,
+.theme-pop {
+  border-radius: var(--radius-ctl)
+}
+
 .wp-more button,
-.dot-card-menu button {
+.dot-card-menu button,
+.topbar .skin-menu button {
   display: flex;
   align-items: center;
   gap: var(--space-5);
@@ -60,19 +65,23 @@
 .wp-more button:hover,
 .wp-more button:focus-visible,
 .dot-card-menu button:hover,
-.dot-card-menu button:focus-visible {
+.dot-card-menu button:focus-visible,
+.topbar .skin-menu button:hover,
+.topbar .skin-menu button:focus-visible {
   background: var(--wash-hover);
   color: var(--value)
 }
 
 .wp-more button:active,
-.dot-card-menu button:active {
+.dot-card-menu button:active,
+.topbar .skin-menu button:active {
   background: var(--wash-press);
   color: var(--value)
 }
 
 .wp-more button:focus-visible,
-.dot-card-menu button:focus-visible {
+.dot-card-menu button:focus-visible,
+.topbar .skin-menu button:focus-visible {
   outline-offset: -2px
 }
 
@@ -113,13 +122,13 @@
 /* touch rows: a coarse pointer, like the toolbar (not hover: none, which a desktop without a mouse reports too) */
 @media (pointer: coarse) {
   .wp-more button,
-  .dot-card-menu button {
+  .dot-card-menu button,
+  .topbar .skin-menu button {
     min-height: var(--tap)
   }
 }
 
-/* menu rows (one look): a wash on hover, one step more on press */
-.skin-menu button,
+/* the editor's menu rows: a wash on hover, one step more on press */
 .ed-menu button {
   border-radius: var(--radius-ctl)
 }
