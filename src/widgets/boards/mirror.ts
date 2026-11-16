@@ -205,8 +205,10 @@ const livePointer = (ctx: WidgetContext) => ctx.pointers?.find(q => q.inside && 
 // A spotlight on the wall (far plane) and the silhouette's shadow (near plane) move against each other with
 // device tilt, the pointer over the card, or a slow sway in the fixture. Live: the camera's foreground
 // (`media.silhouette`: what differs from the room as first seen). Fixture: the test portrait's outline in the
-// front row plus a scripted hand puppet moving through the light. Wall on a 2× lattice (bigger single dots).
-const WALL_TOP = TOP + 1, WALL = { cols: 72, rows: Math.floor((TILE.rows - WALL_TOP) / 2) }
+// front row plus a scripted hand puppet moving through the light. The wall is a body far wider than 16 cells, so it
+// sits on a 3× lattice (big single dots, #242) and the shadow's edge is thresholded: no grey fringe round the shape.
+const WALL_K = 3, WALL_TOP = TOP + 1
+const WALL = { cols: Math.floor(TILE.cols / WALL_K), rows: Math.floor((TILE.rows - WALL_TOP) / WALL_K) }
 /** The test portrait's outline (head + hair + ears + neck + shoulders), 1 inside, in portrait cells. */
 const inPortrait = (x: number, y: number) => {
   if (ell(x, y, HX + 1, HY - 4, RX + 4, RY + 4) < 1 || y >= shoulder(x)) return true
@@ -221,7 +223,7 @@ const audience = lazy(() => {
   for (let y = 0; y < TILE.rows; y++) for (let x = 0; x < TILE.cols; x++) m[y * TILE.cols + x] = inPortrait(HX + (x - 34) / .75, HY + (y - 118) / .75) ? 1 : 0
   return m
 })
-const HAND_S = 30
+const HAND_S = 36
 const shadowTone = (v: number): Tone => (v >= .8 ? 'value' : v >= .55 ? 'idle' : v >= .3 ? 'mid' : 'faint')
 const shadowControl: Control = { key: 'cam', kind: 'toggle', box: [0, 0, 144, 144], label: 'Shadow puppet: start or stop the webcam (video stays on this device)' }
 
@@ -255,18 +257,19 @@ export const mirrorShadow: WidgetPreset = {
       return fixture![r * cols + c] || (hand && handAt(x, y, hx, hy, HAND_S, hand.pinch) ? 1 : 0)
     }
     const field: Field = (u, v) => {
-      const x = Math.round(u * (WALL.cols - 1)) * 2 + .5, y = WALL_TOP + Math.round(v * (WALL.rows - 1)) * 2 + .5
+      const x = Math.round(u * (WALL.cols - 1)) * WALL_K + 1, y = WALL_TOP + Math.round(v * (WALL.rows - 1)) * WALL_K + 1
       if (y >= plateTop) return 0
-      const d =Math.hypot(x - lx, y - ly), spot = d >= R ? 0 : d <= R - 14 ? 1 : (R - d) / 14
+      const d = Math.hypot(x - lx, y - ly), spot = d >= R ? 0 : d <= R - 7 ? 1 : (R - d) / 7
       const wall = .14 + .02 * Math.sin(x * .7 + y * .3)
       if (!spot) return wall
-      // the shadow grows away from the lamp (×1.12 about the light) and blurs at its edge (penumbra)
+      // the shadow grows away from the lamp (×1.12 about the light); its edge is averaged over the site, then cut at
+      // half, so the shape stays one crisp mass on the lattice
       const ox = lx + (x - lx) / 1.12 - sx, oy = ly + (y - ly) / 1.12 - sy
-      const o = (occ(ox, oy) * 2 + occ(ox - 2, oy) + occ(ox + 2, oy) + occ(ox, oy - 2) + occ(ox, oy + 2)) / 6
-      const light = .36 + .64 * spot * (1 - .25 * (d / R) ** 2)
-      return Math.max(wall, light * (1 - o) + .1 * o * spot)
+      const o = (occ(ox, oy) * 2 + occ(ox - 1, oy) + occ(ox + 1, oy) + occ(ox, oy - 1) + occ(ox, oy + 1)) / 6
+      if (o >= .5) return wall
+      return Math.max(wall, .36 + .64 * spot * (1 - .25 * (d / R) ** 2))
     }
-    const wall: Layer = { ...T.lattice(2, 0, WALL_TOP).at(field), toneOf: shadowTone }
+    const wall: Layer = { ...T.lattice(WALL_K, 0, WALL_TOP).at(field), toneOf: shadowTone }
     const state = live ? CAM.live : data.cam && !data.camState ? CAM.starting : data.camState ?? CAM.idle
     if (live) return [wall, ...liveTag('LIVE')]
     const prompt = state === CAM.starting ? 'ALLOW CAMERA' : state === CAM.denied ? 'NO CAMERA' : 'TAP FOR YOUR SHADOW'
@@ -291,6 +294,8 @@ const FIELD = { x0: 8, x1: 136, y0: 64, y1: 116, step: 4 }
 const fieldSites: [number, number][] = []
 for (let y = FIELD.y0; y <= FIELD.y1; y += FIELD.step) for (let x = FIELD.x0; x <= FIELD.x1; x += FIELD.step) fieldSites.push([x, y])
 const FLAP = { flip: .045, stagger: .06 }
+/** The pointer ring's radius in cells: tight while pressing / pinching. */
+const ringR = (down: boolean) => (down ? 4 : 7)
 
 function conduct(ctx: WidgetContext) {
   const { t } = ctx, c = conductor, p = livePointer(ctx)
@@ -336,7 +341,8 @@ export const mirrorConduct: WidgetPreset = {
       layer(T.text('WAVE: FLIP', 4, 50), 'idle'), layer(T.text('PINCH: GRAB', 140, 50, { align: 'right' }), 'idle'),
       layer(T.dots(calm, 1.3), 'mid'),
       layer(T.dots(stirred, 1.5), 'value'),
-      ...(p && p.y > FIELD.y0 - 12 ? [layer(T.dotRing(p.x, p.y, p.down ? 4 : 7, { spacing: 3, size: 1 }), p.down ? 'value' : 'idle')] : []),
+      // the pointer ring, only while it clears the WAVE / PINCH line by the same two rows as the field (#242)
+      ...(p && p.y - ringR(p.down) >= FIELD.y0 - 4 ? [layer(T.dotRing(p.x, p.y, ringR(p.down), { spacing: 3, size: 1 }), p.down ? 'value' : 'idle')] : []),
       ...(on && hs === 2 ? liveTag(mode === 'HAND' ? 'HAND' : 'LIVE') : [layer(T.text(mode, 143, 1, { align: 'right' }), 'mid')]),
       ...(pulse ? [cta(status)] : []),
       PRIVACY,
