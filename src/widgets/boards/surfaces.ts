@@ -198,7 +198,6 @@ export const surfaceFlipdisc: WidgetPreset = {
       ...bands(discs),
       layer(T.text(view.moving ? `SCAN COL ${String(col + 1).padStart(2, '0')}` : 'HOLD', 0, 118), view.moving ? 'value' : 'idle'),
       layer(T.text(`${String(flips).padStart(3, '0')} FLIPS`, 143 - 2, 118, { align: 'right' }), 'mid'),
-      layer(T.text('CLACK MUTED', 0, 130), 'mid'),
     ]
   },
 }
