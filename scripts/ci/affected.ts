@@ -76,6 +76,7 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
 
   // scripts a probe imports (beside its own script, which picks it already)
   ['scripts/life*.ts', ['life']], ['scripts/ir.ts', ['webgl']], ['scripts/noise.ts', ['webgl', 'gates']],
+  ['scripts/editor-browser/**', ['editor', 'editor-phone']],
 
   // nothing a probe loads
   ['docs/**', []], ['*.md', []], ['goldens/**', []], ['mcp/**', []], ['.github/**', []], ['public/images/**', []],
