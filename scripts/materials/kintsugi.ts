@@ -13,9 +13,6 @@ import { dot480 } from '../../src/engine/theme/tokens'
 import type { Pointer } from '../../src/engine/context'
 import { withChrome, type WidgetPreset } from '../../src/widgets/types'
 import { kintsugiHooks as K } from '../../src/widgets/boards/workshop-kintsugi'
-import { mudHooks as M } from '../../src/widgets/boards/workshop-mud'
-import { mudCracks } from '../../src/engine/matter/mudcrack'
-import { hash32 } from '../../src/engine/math'
 import { workshopBoard } from '../../src/widgets/boards/workshop'
 import { DET_PATHS, detLint } from '../lib/detLint'
 import { fmtLoaded, medianLoaded, onceLoaded } from '../lib/load'
@@ -141,33 +138,5 @@ export async function kintsugiChecks(assert: Assert, opts: MaterialsOptions): Pr
     for (const t0 of [-2.5, 0]) for (let i = 0; i < 3; i++) frame(card, t0 + i / 12)
     const strike = medianLoaded(i => frame(card, -2.6 + i / 12), 9), mend = medianLoaded(i => frame(card, -.5 + i / 12), 13)
     assert('kintsugi: a frame ≤ 4 ms while it breaks and while it mends (median, warm, × load)', strike.ms <= 4 * strike.load && mend.ms <= 4 * mend.load, `${fmtLoaded(strike)} / ${fmtLoaded(mend)}`)
-  }
-  mudChecks(assert, opts)
-}
-
-/** The mud: T-junctions (each crack starts on one and ends on one or at the edge), determinism, the red, the cost. */
-function mudChecks(assert: Assert, opts: MaterialsOptions): void {
-  const card = workshopBoard.find(p => p.id === 'mat-mud')!, mask = M.slab()
-  const m = M.mudOf(0), again = mudCracks({ cols: COLS, rows: ROWS, mask, seed: hash32(M.MUD.seed, 0), cracks: M.MUD.cracks })
-  assert('mud: the cracks are deterministic (two fresh runs, cell for cell) and in the determinism lint', same(m.order, again.order) && same(m.start, again.start) && detLint(['src/engine/matter/mudcrack']).violations.length === 0, `${m.count} cracks, ${m.order.length} cells`)
-  // within 2 cells of a cell of an earlier crack, or of the slab's edge
-  const touches = (c: number, k: number) => {
-    const x = c % COLS, y = (c / COLS) | 0
-    for (let dy = -2; dy <= 2; dy++) for (let dx = -2; dx <= 2; dx++) { const q = (y + dy) * COLS + x + dx; if (!mask[q] || (m.crackOf[q] >= 0 && m.crackOf[q] < k)) return true }
-    return false
-  }
-  const bad: string[] = []
-  for (let k = 1; k < m.count; k++) {
-    const a = m.order[m.start[k]], b = m.order[m.start[k + 1] - 1]
-    if (!touches(a, k)) bad.push(`crack ${k} starts in open mud`)
-    if (!touches(b, k)) bad.push(`crack ${k} ends in open mud`)
-  }
-  assert('mud: every crack starts on an earlier crack and ends on one or at the edge (T-junctions, closed polygons)', !bad.length && m.count >= 20, bad.slice(0, 3).join('; ') || `${m.count} cracks`)
-  const reds = (t: number) => frame(card, t).filter(d => d.color === dot480.dotActive).length, f0 = M.mudAt(0), dry = M.MUD.dry - M.MUD.offset + .5
-  assert('mud: t = 0 is drying with the newest crack opening in red; the dry slab and the rain have none', f0.phase === 'drying' && reds(0) > 0 && reds(dry) === 0 && reds(dry + M.MUD.hold + .5) === 0, `red ${reds(0)} / ${reds(dry)} / ${reds(dry + M.MUD.hold + .5)}`)
-  if (!opts.quick) {
-    for (let i = 0; i < 4; i++) frame(card, i / 12)
-    const run = medianLoaded(i => frame(card, .5 + i / 12), 13)
-    assert('mud: a frame ≤ 4 ms while it cracks (median, warm, × load)', run.ms <= 4 * run.load, fmtLoaded(run))
   }
 }

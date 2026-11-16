@@ -24,7 +24,7 @@ const BOARDS: Record<string, () => Promise<Loaded>> = {
 const CARD_BOARD: Record<string, keyof typeof BOARDS> = {
   'home-clock': 'henry', timer: 'henry', weather: 'henry', 'device-overview': 'deerflow12', 'audio-levels': 'audio', 'level-03': 'audio', departures: 'departures',
   'ir-ripple': 'ir', 'ir-plasma': 'ir', 'ir-dial': 'ir',
-  'pond-koi': 'pond', 'pond-jelly': 'pond', 'pond-marble': 'pond', 'light-matte': 'light', 'sq-stack': 'squares', 'mat-erosion': 'workshop',
+  'pond-koi': 'pond', 'pond-jelly': 'pond', 'pond-marble': 'pond', 'light-matte': 'light', 'sq-stack': 'squares', 'mat-frost': 'workshop',
 }
 
 export interface PostCard { preset: WidgetPreset; sources?: readonly Source[] }

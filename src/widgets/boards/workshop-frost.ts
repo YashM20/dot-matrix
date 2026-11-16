@@ -4,12 +4,12 @@
  * sees the same flake that day and a new one tomorrow. The flake's cells are dots on a hex lattice (`hexSites`): the
  * rim turned to the board light catches it, the rim turned away and the spines a step under, the plates quieter
  * still; the cells freezing now are the card's red.
- * It grows over 9 s, holds, and sublimes back in 1.5 s; t = 0 is the flake all but finished.
+ * It grows over 9 s, holds, and sublimes back in 1.5 s; t = 0 is the flake all but finished. The glass round it stays
+ * clear: lone hoar sites in the corners read as stray dots.
  */
 import { reiter, type Reiter } from '../../engine/matter/reiter'
 import { hexSites } from '../../engine/algo/hex'
 import { hash32 } from '../../engine/math'
-import { fbm2 } from '../../engine/noise/gradient'
 import { layer, type WidgetPreset } from '../types'
 import type { Light, Vec3 } from '../../engine/light/shade'
 import { cite, fnvBytes, LIGHT_DEFAULTS, lightKey, lru, matLight, mod, once, pad2, snapTorch, T, tile, type Pt } from './materials-shared'
@@ -42,16 +42,6 @@ export function frostStep(t: number, steps: number): { n: number; growing: boole
   if (p < FROST.grow + FROST.hold) return { n: steps, growing: false }
   return { n: Math.round(steps * (1 - (p - FROST.grow - FROST.hold) / FROST.melt)), growing: false }
 }
-/** Hoar on the glass: sparse faint sites where the corners' noise is high, away from the flake's disc. */
-const hoar = once(() => {
-  const out: Pt[] = [], [cx, cy] = siteOf(0, 0), reach = (FROST.radius + 2) * FROST.pitch
-  for (let j = 0; j < FROST.rows; j++) for (let i = 0; i < FROST.cols; i++) {
-    const [x, y] = lattice()[j * FROST.cols + i], d = Math.hypot(x - cx, y - cy)
-    if (d < reach || x < 3 || x > 141 || y > 128) continue
-    if (fbm2(x / 9, y / 9, 3, 83) + Math.min(1, (d - reach) / 40) * .6 > .55) out.push([x, y])
-  }
-  return out
-})
 const groups = lru<Record<'mid' | 'idle' | 'value' | 'active', Pt[]>>(4)
 export const matFrost: WidgetPreset = {
   ...tile, id: 'mat-frost', name: 'Frost', clock: true,
@@ -87,8 +77,7 @@ export const matFrost: WidgetPreset = {
     })
     const date = now.toLocaleString('en-US', { month: 'short' }).toUpperCase()
     return [
-      cite('REITER 2005'),
-      layer(T.dots(hoar(), .9), 'faint'),
+      cite('SNOWFLAKE'),
       ...(['mid', 'idle', 'value'] as const).filter(t => g[t].length).map(t => layer(T.dots(g[t], t === 'mid' ? 1.3 : 1.5), t)),
       ...(g.active.length ? [layer(T.dots(g.active, 1.5), 'active')] : []),
       layer(T.text(`${date} ${pad2(now.getDate())}`, 6, 135), 'mid'),

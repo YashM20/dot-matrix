@@ -19,6 +19,7 @@ import {
 } from '../../engine/type'
 import { textOf } from '../../data/text'
 import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
+import { circle, states, ui } from '../dot-controls'
 import { numberBoard } from '../numbered'
 
 const T = layoutFor(TILE)
@@ -36,10 +37,10 @@ const centred = (fr: TypeFrame, row: number, o: Omit<TypeOptions, 'grid'>): Type
 // knob in miniature), each with its axis tag.
 const KN = { y: 108, r: 13, xs: [26, 72, 118], start: (TAU * 5) / 8, sweep: (TAU * 3) / 4 }
 const AXES = [{ key: 'wght', tag: 'WGHT', label: 'Weight' }, { key: 'wdth', tag: 'WDTH', label: 'Width' }, { key: 'rond', tag: 'ROND', label: 'Roundness' }] as const
-const knob = (cx: number, v: number, hot: boolean): Layer[] => {
+const knob = (cx: number, v: number): Layer[] => {
   const ring = { spacing: 2.6, size: 1.3, start: KN.start }, a = KN.start + v * KN.sweep
   return [
-    layer(T.dotRing(cx, KN.y, KN.r, { ...ring, sweep: KN.sweep }), hot ? 'idle' : 'mid'),
+    layer(T.dotRing(cx, KN.y, KN.r, { ...ring, sweep: KN.sweep }), 'mid'),
     layer(T.dotRing(cx, KN.y, KN.r, { ...ring, sweep: Math.max(1e-6, v * KN.sweep), size: 1.8 }), 'value'),
     layer(T.dots([[cx + (KN.r - 6) * Math.sin(a), KN.y - (KN.r - 6) * Math.cos(a)]], 3.4), 'value'),
   ]
@@ -58,8 +59,10 @@ export const typeAxesCard: WidgetPreset = {
       SPEC.layer(typeField('GO', centred(SPEC, 0, { size: 21, ...axes }))),
       layer(typeField(PANGRAM, { ...PANGRAM_OPTS, ...axes, tracking: pangramTracking(axes) }), 'idle'),
       ...AXES.flatMap((ax, i) => [
-        ...knob(KN.xs[i], axes[(['weight', 'width', 'roundness'] as const)[i]], ctx.hover === ax.key || ctx.focus === ax.key),
-        layer(T.text(ax.tag, KN.xs[i], 130, { align: 'center' }), ctx.focus === ax.key ? 'value' : 'idle'),
+        ...knob(KN.xs[i], axes[(['weight', 'width', 'roundness'] as const)[i]]),
+        // the shared grammar (#358): halos on hover, the focus ring 4 cells out so it clears the axis tag
+        ...states(ui(ctx, ax.key), ctx.t, circle(KN.xs[i], KN.y, KN.r), circle(KN.xs[i], KN.y, KN.r), 4),
+        layer(T.text(ax.tag, KN.xs[i], 130, { align: 'center' }), 'idle'),
       ]),
     ]
   },
