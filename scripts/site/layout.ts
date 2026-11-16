@@ -126,9 +126,9 @@ const MEASURE = (kind: string, H: number) => `(() => {
   // the rhythm tokens as computed at this width
   const tok = {}
   for (const n of ['gap-group', 'gap-action', 'gap-section']) { const d = document.createElement('div'); d.style.cssText = 'position:absolute;visibility:hidden;width:0;height:var(--' + n + ')'; document.body.append(d); tok[n] = d.getBoundingClientRect().height; d.remove() }
-  // the picker's edge: its first tab, or (a phone strip that scrolls) the strip's content edge
+  // the picker's edge: its first tab (the tabs sit in a box-less tablist), or (a phone strip that scrolls) the strip's content edge
   const strip = q('.board-groups'), scrolls = strip && strip.scrollWidth > strip.clientWidth + 1
-  const firstBtn = strip && (scrolls ? { getBoundingClientRect: () => ({ left: R(strip).left + parseFloat(getComputedStyle(strip).paddingLeft) }) } : [...strip.children].find(vis))
+  const firstBtn = strip && (scrolls ? { getBoundingClientRect: () => ({ left: R(strip).left + parseFloat(getComputedStyle(strip).paddingLeft) }) } : [...strip.querySelectorAll(':scope > *, :scope > .board-group-tabs > *')].find(vis))
   // a board page, or ALL on / (#315): ALL's grid is .browse-grid, with its filter row between the header and the grid
   const G0 = q('.board-grid') || q('.browse-grid')
   const edges = ${JSON.stringify(kind)} === 'board' ? { topbar: q('.topbar .brand'), intro: q('.intro-line'), picker: firstBtn, title: q('.board-title'), grid: G0, footer: q('.bottom-row') }
