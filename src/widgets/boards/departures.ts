@@ -137,8 +137,8 @@ export const nextTrain: WidgetPreset = {
 const STOPS = ['HARBOUR', 'CENTRAL', 'OLD TOWN', 'RIVERSIDE', 'NORTHGATE', 'AIRPORT']
 const ABBR = ['HBR', 'CTR', 'OLD', 'RVS', 'NGT', 'APT']
 const HOP = 4.5, DWELL = 1.4, TRACK_Y = 82
-/** Stops 22 cells apart from 16, so HBR and APT keep the 8-cell edge margin of the card's other text (#228). */
-const stopX = (i: number) => 16 + i * 22
+/** Stops 22 cells apart from 16, so HBR and APT keep the 8-cell edge margin of the card's other text (#228). The track steps a seventh of a gap, so each gap keeps 4 even dots. */
+const STOP_GAP = 22, stopX = (i: number) => 16 + i * STOP_GAP
 export const lineMap: WidgetPreset = {
   id: 'line-map', name: 'Line 3', group: 'chart', ...live,
   layers: ({ t, reducedMotion }) => {
@@ -149,7 +149,7 @@ export const lineMap: WidgetPreset = {
     // the first stop opens on the settled name (the still and the first paint), later ones decode into it
     const name = k === 0 || reducedMotion ? STOPS[to] : decodeText(STOPS[from], STOPS[to], tau, { stagger: .05, lead: .15 })
     // the track stops short of each station ring, so no track dot touches a ring dot
-    const track = T.knockout(T.dotLine(stopX(0), TRACK_Y, stopX(hops), TRACK_Y, { spacing: 3, size: 1.6 }), STOPS.map((_, i): Pt => [stopX(i), TRACK_Y]), 5)
+    const track = T.knockout(T.dotLine(stopX(0), TRACK_Y, stopX(hops), TRACK_Y, { spacing: STOP_GAP / 7, size: 1.6 }), STOPS.map((_, i): Pt => [stopX(i), TRACK_Y]), 5)
     // the train clears the track dots under it as it glides
     const free = (track.sites ?? []).filter(([sx]) => Math.abs(sx - x) > 4.4)
     const passed = free.filter(([sx]) => sx <= x), ahead = free.filter(([sx]) => sx > x)
