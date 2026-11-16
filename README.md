@@ -76,15 +76,7 @@ flowchart LR
 
 The engine (codename Dot/480) is plain TypeScript and browser APIs. No framework, no npm packages, nothing to install.
 
-### A tiny language for dots
-
-Cards can also be written as small formulas. The same few lines run on the GPU in the browser, and a link to the card carries the whole program.
-
-<p align="center">
-  <img src="docs/readme/five-lines.gif" alt="Five lines of code on the left, typed one at a time, and on the right the ripple of dots they draw" width="100%">
-</p>
-
-Try the [ripple card](https://matrix.reactopia.me/widget/ir-ripple/), or read [A tiny language for dots](https://matrix.reactopia.me/blog/a-tiny-language-for-dots/) to build the parser yourself.
+Cards can also be written as small formulas in a tiny language of their own, and a link to the card carries the whole program. Try the [ripple card](https://matrix.reactopia.me/widget/ir-ripple/), or read [A tiny language for dots](https://matrix.reactopia.me/blog/a-tiny-language-for-dots/) to build the parser yourself.
 
 ## Run it locally
 
