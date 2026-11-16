@@ -4,19 +4,11 @@
  * Home / End) move between its buttons. Grey chrome only: the card keeps the one accent. (The class names are the
  * old capsule's; probes and NEXT BOARD use them.)
  */
-import type { KeyboardEvent, ReactNode } from 'react'
+import type { ReactNode } from 'react'
+import { useRoving } from '../../hooks/useRoving'
 
 export function PillBar({ label, className = '', children }: { label: string; className?: string; children: ReactNode }) {
-  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    const keys = ['ArrowLeft', 'ArrowRight', 'Home', 'End']
-    if (!keys.includes(e.key) || !(e.target instanceof HTMLButtonElement || e.target instanceof HTMLAnchorElement)) return
-    const items = [...e.currentTarget.querySelectorAll<HTMLElement>('.pill-btn')].filter(b => b.offsetParent !== null && !(b as HTMLButtonElement).disabled)
-    const i = items.indexOf(e.target as HTMLElement)
-    if (i < 0) return
-    e.preventDefault(); e.stopPropagation()
-    const j = e.key === 'Home' ? 0 : e.key === 'End' ? items.length - 1 : (i + (e.key === 'ArrowRight' ? 1 : -1) + items.length) % items.length
-    items[j].focus()
-  }
+  const onKey = useRoving({ items: '.pill-btn' })
   return <div className={`pill-bar ${className}`} role="toolbar" aria-label={label} onKeyDown={onKey}>{children}</div>
 }
 

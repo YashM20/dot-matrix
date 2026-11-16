@@ -2,7 +2,7 @@
  * The shell's two bars: the top bar (brand, place name, view tabs, DISPLAY, theme, the tool dock's slot, search) and
  * the phone's bottom tab bar. App owns the view state and passes it in; styles are in chrome.css and mobile/.
  */
-import type { KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useRoving } from '../../hooks/useRoving'
 import { SkinSwitcher } from '../../components/skins/SkinSwitcher'
 import { ThemeButton } from '../../components/theme/ThemeButton'
 import { useXR } from '../../components/xray/store'
@@ -14,16 +14,10 @@ import { VIEWS, type View } from '../views'
 /** The views on offer: MAKE only while its flag is on. */
 const useViews = (): readonly View[] => useFlag('make') ? VIEWS : VIEWS.filter(v => v !== 'MAKE')
 
-/** A row of real tabs: arrow keys move between them, the selected one is the only tab stop. */
+/** A row of real tabs: ← → Home End move and pick, the selected one is the only tab stop. */
 function Tabs<T extends string>({ label, items, value, onPick, className }: { label: string; items: readonly T[]; value: T; onPick: (t: T) => void; className: string }) {
-  const onKey = (e: ReactKeyboardEvent<HTMLButtonElement>, i: number) => {
-    const d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0
-    if (!d) return
-    e.preventDefault()
-    const j = (i + d + items.length) % items.length
-    onPick(items[j]); (e.currentTarget.parentElement?.children[j] as HTMLElement | undefined)?.focus()
-  }
-  return <div className={className} role="tablist" aria-label={label}>{items.map((t, i) => <button key={t} type="button" role="tab" id={`tab-${t}`} aria-selected={value === t} tabIndex={value === t ? 0 : -1} className={value === t ? 'selected' : ''} onClick={() => onPick(t)} onKeyDown={e => onKey(e, i)}>{t}</button>)}</div>
+  const onKey = useRoving({ items: '[role=tab]', pick: true })
+  return <div className={className} role="tablist" aria-label={label} onKeyDown={onKey}>{items.map(t => <button key={t} type="button" role="tab" id={`tab-${t}`} aria-selected={value === t} tabIndex={value === t ? 0 : -1} className={value === t ? 'selected' : ''} onClick={() => onPick(t)}>{t}</button>)}</div>
 }
 
 /**
