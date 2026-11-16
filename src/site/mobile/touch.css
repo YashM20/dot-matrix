@@ -85,29 +85,28 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .sheet,
-  .sheet::backdrop,
-  .pal {
-    animation: none;
-    transition: none
-  }
+/* reduced motion: data-motion from src/site/motion.ts (the palette setting, else the OS) */
+:where([data-motion="reduce"]) .sheet,
+:where([data-motion="reduce"]) .sheet::backdrop,
+:where([data-motion="reduce"]) .pal {
+  animation: none;
+  transition: none
+}
 
-  :is(.tabbar button, .tabbar .glyph, .topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button) {
-    transition: none
-  }
+:where([data-motion="reduce"]) :is(.tabbar button, .tabbar .glyph, .topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button) {
+  transition: none
+}
 
-  :is(.topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button):active,
-  .tabbar button:active .glyph {
-    transform: none
-  }
+:where([data-motion="reduce"]) :is(.topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button):active,
+:where([data-motion="reduce"]) .tabbar button:active .glyph {
+  transform: none
+}
 
-  /* the edge fades follow the scroll position, not time: they are not motion, and a 0 s duration would pin them
-     to their end state */
-  .board-picker .board-groups,
-  .board-picker .board-tabs {
-    animation-duration: auto !important
-  }
+/* the edge fades follow the scroll position, not time: they are not motion, and a 0 s duration would pin them
+   to their end state */
+:where([data-motion="reduce"]) .board-picker .board-groups,
+:where([data-motion="reduce"]) .board-picker .board-tabs {
+  animation-duration: auto !important
 }
 
 /* the strips' edge fades (above): two registered lengths, so the scroll timeline can move them */

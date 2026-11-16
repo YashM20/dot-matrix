@@ -6,6 +6,7 @@ import type { ClockSubscriber, Control, ControlPatch, DragStart, GridConfig, Poi
 import type { InteractionContext } from './useDotField'
 import { LATENCY_PROBE, resolveMarks, type LatencyMark } from './latencyProbe'
 import { HAND_POINTER_ID } from '../vision/pointerId'
+import { reducedMotion } from '../site/motion'
 
 /** How long a keyboard-pressed button stays down (ms). */
 const KEY_PRESS_MS = 140
@@ -39,7 +40,6 @@ function watchScroll() {
   window.addEventListener('scroll', () => { lastScroll = performance.now() }, { capture: true, passive: true })
 }
 
-const reducedMotion = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 /** One short tick when a hold grabs a card: feature-detected, never under reduced motion or before the page had a real activation. */
 function haptic() {
   try { if (!reducedMotion() && navigator.userActivation?.hasBeenActive !== false) navigator.vibrate?.(10) } catch { /* unsupported */ }

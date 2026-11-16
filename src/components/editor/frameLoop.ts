@@ -10,6 +10,7 @@ import { selIds, type Guide } from './select'
 import { CUE_MS } from './phone'
 import { setEditor, getEditor, drew, type Camera } from './store'
 import { TEST_HOOKS } from '../../lib/testHooks'
+import { reducedMotion } from '../../site/motion'
 
 /** Probe hooks (scripts/editor-browser.ts): draw stats, the selected frame id and every selected id. */
 /** Render stats for the browser probes. `tl`: the timeline t each frame last drew at while ANIMATE previews it, so a
@@ -29,7 +30,6 @@ export function feedPointer(f: EditorFrame | undefined, wx: number, wy: number) 
   if (f && en) { const p = pitchOf(f.card); en.pointer = { x: (wx - f.x) / p, y: (wy - f.y) / p, down: false }; en.dirty = true }
 }
 export const readsPointer = (f: EditorFrame) => f.card.layers.some(l => (l.kind === 'ir' || l.kind === 'sites') && l.src.includes('pointer'))
-const reduced = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches
 /** A card that cannot compile counts as still: the draw below reports it once. */
 const animates = (c: EditorFrame['card']) => { try { return isAnimated(c) } catch { return false } }
 
@@ -60,7 +60,7 @@ export function useFrameLoop(phone: boolean) {
   const glow = useRef<{ x: number; y: number } | undefined>(undefined), cue = useRef<Cue | undefined>(undefined)
   useEffect(() => {
     let raf = 0, lastCam: Camera | undefined, lastVp = '', lastPublish = 0, lastTick = performance.now()
-    const wall0 = performance.now(), still = reduced()
+    const wall0 = performance.now(), still = reducedMotion()
     const stats: NonNullable<Window["__editor"]> = { frames: 0, drawn: 0, maxMs: 0, lastMs: 0, tl: {} }
     if (TEST_HOOKS) window.__editor = stats
     const step = (now: number) => {

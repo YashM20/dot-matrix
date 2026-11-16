@@ -150,6 +150,7 @@ Each is a small module store with listeners, read before or at first paint:
 | Share links carry the theme | `src/site/theme/share.ts` | `dot480:share-theme` | storage | next load |
 | Intro line hidden | `App.tsx` `IntroLine` | `dot480:intro` | storage | next load |
 | Pond memory | `src/site/pondMemory.ts` | `dot480:pond` (the record is the opt-in) | storage | next read |
+| Reduced motion (⌘K) | `src/site/motion.ts` | `dot480:motion` (`on`, `off`; system removes it) | storage, the OS query | next load |
 
 Shared invariants: every read is wrapped in `try` and validated (a corrupt or old-schema entry counts as missing),
 every write is wrapped too (blocked storage keeps the choice for this page). The theme's custom CSS is never read

@@ -232,12 +232,10 @@ html.theme-wipe::view-transition-new(root) {
   to { clip-path: inset(100% 0 0 0) }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .skin-surface[data-skin] > .skin-overlay.skin-overlay--out {
-    animation-duration: 1ms
-  }
+:where([data-motion="reduce"]) .skin-surface[data-skin] > .skin-overlay.skin-overlay--out {
+  animation-duration: 1ms
+}
 
-  .skin-surface[data-skin="nixie"] > .skin-overlay {
-    animation: none
-  }
+:where([data-motion="reduce"]) .skin-surface[data-skin="nixie"] > .skin-overlay {
+  animation: none
 }

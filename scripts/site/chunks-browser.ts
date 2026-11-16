@@ -23,13 +23,15 @@ const shot = async (p: Page, name: string) => { if (shots) await p.shot(join(sho
 /** More fetches than this for one missing chunk is a retry loop (3 tries before the reload, 3 after, some slack). */
 const MAX_TRIES = 8
 
-const chunk = readdirSync('dist/assets').find(f => /^motion-[\w-]+\.js$/.test(f))
-if (!chunk) throw new Error('no motion board chunk in dist/assets: run `npx vite build` first')
-const motionCard = catalog.find(r => r[2] === 'motion')![0]
 /** Every board chunk: the ones the manifest chunk loads with `import()`. */
-const manifestChunk = readdirSync('dist/assets').find(f => /^manifest-[\w-]+\.js$/.test(f))!
+const manifestChunk = readdirSync('dist/assets').find(f => /^manifest-[\w-]+\.js$/.test(f))
+if (!manifestChunk) throw new Error('no manifest chunk in dist/assets: run `npx vite build` first')
 const boardChunks = new Set([...readFileSync(join('dist/assets', manifestChunk), 'utf8').matchAll(/import\([`"']\.\/([^`"']+\.js)[`"']\)/g)].map(m => m[1]))
-if (!boardChunks.has(chunk)) throw new Error(`${chunk} is not one of the manifest's board chunks`)
+// the motion board's chunk is the `motion-` one the manifest loads: other chunks can share the prefix
+// (src/site/motion.ts, the reduced-motion helper, #351)
+const chunk = [...boardChunks].find(f => /^motion-[\w-]+\.js$/.test(f))
+if (!chunk) throw new Error(`no motion board chunk among the manifest's board chunks (motion-*: ${readdirSync('dist/assets').filter(f => f.startsWith('motion-')).join(', ') || 'none'})`)
+const motionCard = catalog.find(r => r[2] === 'motion')![0]
 
 /** Count of requests for the motion chunk, each answered 404. */
 async function breakChunk(p: Page): Promise<{ n: number }> {
