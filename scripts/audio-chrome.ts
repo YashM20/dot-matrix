@@ -7,7 +7,7 @@
  *   - the analyser output is non-silent while playing, and silent after STOP;
  *   - the visual transport clock tracks the audio clock;
  *   - REC → PLAY saves a .webm with video + an audible audio track;
- *   - the scope board and the mic card (fake capture device) go live;
+ *   - the scope board and the mic card (fake capture device) go live, and a refused mic shows as blocked;
  *   - no exceptions or console errors.
  * Screenshots → .snapshots/c5/.
  *
@@ -186,6 +186,16 @@ globalThis.__DOT_PROBE__ = true; { const o = URL.createObjectURL; URL.createObje
   const gone = await until(`${E}.micState === 'idle' && document.querySelector('[aria-label="Listen to the microphone"]')?.getAttribute('aria-checked') === 'false'`, 3000)
   check('mic: a track that ends on its own (unplugged, revoked) turns the mic off, switch included (B7-2)', gone,
     JSON.stringify(await evaluate(`({ state: ${E}.micState, checked: document.querySelector('[aria-label="Listen to the microphone"]')?.getAttribute('aria-checked') })`)))
+
+  // #240: the browser refuses the mic (permission denied): the card shows its blocked state, and a second tap clears it
+  await evaluate(`(() => { window.__gum = navigator.mediaDevices.getUserMedia; navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError')); return 1 })()`)
+  await click('Listen to the microphone')
+  check('mic: a refused permission reads as blocked', await until(`${E}.micState === 'denied'`, 5000), await evaluate(`${E}.micState`))
+  await sleep(800)
+  await shot('scope-mic-blocked')
+  await evaluate(`(() => { navigator.mediaDevices.getUserMedia = window.__gum; return 1 })()`)
+  await click('Listen to the microphone')
+  check('mic: tapping a blocked mic resets it', await until(`${E}.micState === 'idle'`, 3000), await evaluate(`${E}.micState`))
 
   // leaving both audio boards stops the sound
   await openBoard('INTERFACES', 'components')
