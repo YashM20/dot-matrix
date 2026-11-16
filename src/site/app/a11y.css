@@ -12,10 +12,23 @@
   border: 0
 }
 
+/* reduced motion (#351): src/site/motion.ts writes <html data-motion="reduce|full"> from the palette setting (on,
+   off, system) and the OS query, so the setting wins both ways. Every reduced-motion rule keys off it; the media
+   query here only covers the moment before that script runs. */
+:where([data-motion="reduce"]),
+:where([data-motion="reduce"]) *,
+:where([data-motion="reduce"]) *::before,
+:where([data-motion="reduce"]) *::after {
+  transition-duration: 0s !important;
+  animation-duration: 0s !important;
+  animation-iteration-count: 1 !important
+}
+
 @media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+  :where(:root:not([data-motion])),
+  :where(:root:not([data-motion])) *,
+  :where(:root:not([data-motion])) *::before,
+  :where(:root:not([data-motion])) *::after {
     transition-duration: 0s !important;
     animation-duration: 0s !important;
     animation-iteration-count: 1 !important

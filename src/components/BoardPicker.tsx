@@ -4,12 +4,12 @@ import { boardGroups, boardLabel, groupOf, prefetchBoard, type BoardGroupId } fr
 import { useBlurbs } from './useBlurbs'
 import { intent } from '../site/prefetch'
 import { NextIcon } from './widget/toolIcons'
+import { scrollBehavior } from '../site/motion'
 
 /** A group by id (every `BoardGroupId` names one; the fallback only satisfies the type). */
 const groupById = (g: BoardGroupId) => boardGroups.find(x => x.id === g) ?? boardGroups[0]
 const inGroup = (g: BoardGroupId, id: string) => (groupById(g).boards as readonly string[]).includes(id)
 const homeGroup = (id: string): BoardGroupId => inGroup('start', id) ? 'start' : groupOf(id)
-const smooth = (): ScrollBehavior => window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'
 
 /**
  * Board picker (docs/UX-PLAN.md §4.2): group tabs, then ALL (every card, the home view, #315) and the open group's
@@ -35,7 +35,7 @@ export function BoardPicker({ board, all, onPick, onPickAll, onSheet }: { board:
       const strip = el.closest<HTMLElement>('.board-groups, .board-tabs')
       if (!strip) continue
       if (strip.scrollWidth <= strip.clientWidth) continue
-      strip.scrollTo({ left: el.offsetLeft - (strip.clientWidth - el.offsetWidth) / 2, behavior: smooth() })
+      strip.scrollTo({ left: el.offsetLeft - (strip.clientWidth - el.offsetWidth) / 2, behavior: scrollBehavior() })
     }
   }, [board, group, all])
   return <div className="board-picker" ref={root}>
@@ -65,7 +65,7 @@ export function NextBoard({ board, onPick }: { board: string; onPick: (id: strin
   const next = list[(list.indexOf(board) + 1) % list.length]
   return <div className="next-board"><div className="pill">
     <a className="pill-btn" href={`/${next}/`} {...intent(() => prefetchBoard(next))}
-      onClick={e => { if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); window.scrollTo({ top: 0, behavior: smooth() }); onPick(next) }}>
+      onClick={e => { if (e.button || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); window.scrollTo({ top: 0, behavior: scrollBehavior() }); onPick(next) }}>
       <span className="pill-label">NEXT BOARD</span><b>{boardLabel(next)}</b><NextIcon />
     </a>
   </div></div>

@@ -11,6 +11,7 @@
 import { resolveScheme, getTheme, setTheme, type ThemePrefs } from './theme'
 import { isAccentChoice, isSchemePref, themeName } from './names'
 import { replaceUrl } from '../safe-url'
+import { reducedMotion } from '../motion'
 
 export type WipeOrigin = Element | { x: number; y: number } | null | undefined
 type VT = { finished: Promise<void> }
@@ -45,7 +46,7 @@ export function switchTheme(next: Partial<ThemePrefs>, from?: WipeOrigin): void 
   const scheme = isSchemePref(next.scheme) ? next.scheme : now.scheme, accent = isAccentChoice(next.accent) ? next.accent : now.accent
   const changes = themeName(resolveScheme(scheme, matchMedia('(prefers-color-scheme: light)').matches), accent) !== now.name
   const doc = document as Document & { startViewTransition?: (update: () => void) => VT }
-  if (!changes || !doc.startViewTransition || document.visibilityState === 'hidden' || matchMedia('(prefers-reduced-motion: reduce)').matches) return setTheme(next)
+  if (!changes || !doc.startViewTransition || document.visibilityState === 'hidden' || reducedMotion()) return setTheme(next)
   const root = document.documentElement, p = centre(from)
   // the front has to reach the farthest corner; its dithered band is ~8% of that (at least four lattice steps)
   const far = Math.hypot(Math.max(p.x, innerWidth - p.x), Math.max(p.y, innerHeight - p.y))

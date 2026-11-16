@@ -15,6 +15,7 @@ import { drawn } from '../../site/stats'
 import { useTheme, useThemeTokens } from '../../site/theme/useTheme'
 import { useDisplaySkin } from '../skins/store'
 import { SKINS } from '../../engine/display/names'
+import { reducedMotion } from '../../site/motion'
 
 /** 5×7 dot type at a 4 px pitch, one dot of margin; the grid is as wide as the number (a digit more, a few cells more). */
 const PITCH = 4, ROWS = 9
@@ -36,7 +37,7 @@ export function LiveBand() {
   // commit's layout effects and its passive effects (the child's passive effect runs first) are set aside
   const own = useRef(0), mark = useRef(0)
   useEffect(() => {
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+    const reduced = reducedMotion()
     let seen = false, timer = 0
     const read = () => setCount(drawn.dots - own.current)
     const stop = () => { window.clearInterval(timer); timer = 0 }

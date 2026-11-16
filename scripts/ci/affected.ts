@@ -52,6 +52,7 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
   ['src/essay/**', ['essay', 'csp', 'a11y-phone']], ['src/blog/**', ['essay', 'csp', 'a11y-phone']], ['docs/blog/**', ['essay', 'csp']],
   ['src/site/analytics*', ['analytics', 'csp']], ['src/site/analytics/**', ['analytics', 'csp']],
   ['src/site/light.ts', ['light']],
+  ['src/site/motion.ts', ['theme-picker', 'a11y-zoom', 'light', 'essay']],
   ['src/site/stale-deploy.ts', ['chunks']], ['src/components/LoadBoundary.tsx', ['chunks']], ['src/site/prefetch.ts', ['chunks', 'nav', 'mobile']],
   ['src/site/meta.ts', ['nav', 'mobile']],
   ['src/site/mobile/**', ['mobile', 'mobile-boards', 'layout-narrow', 'break-ui']],

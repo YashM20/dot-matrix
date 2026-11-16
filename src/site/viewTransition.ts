@@ -6,10 +6,11 @@
  * cross-fades unscaled.
  *
  * Instant (exactly today's swap) without `document.startViewTransition`, in a hidden tab, or under reduced motion
- * (the OS setting or the ⌘K override, which wraps `matchMedia`). The update runs inside the transition callback
+ * (the OS setting or the ⌘K override, `src/site/motion.ts`). The update runs inside the transition callback
  * through `flush` (React's `flushSync`), and the new snapshot waits up to ~450 ms (28 polls) for the card to mount
  * (the widget page and the board are lazy); if it doesn't, the page cross-fades.
  */
+import { reducedMotion } from './motion'
 const mark = (el: HTMLElement | null | undefined, on: boolean) => { if (el) { el.style.viewTransitionName = on ? 'dm-card' : ''; el.classList.toggle('vt-fly', on) } }
 
 /**
@@ -18,7 +19,7 @@ const mark = (el: HTMLElement | null | undefined, on: boolean) => { if (el) { el
  */
 export function cardTransition(slug: string, update: () => void, flush: (fn: () => void) => void, scroll?: boolean): void {
   const doc = document as Document & { startViewTransition?: (cb: () => Promise<void>) => { finished: Promise<void> } }
-  if (!doc.startViewTransition || doc.hidden || matchMedia('(prefers-reduced-motion: reduce)').matches) return update()
+  if (!doc.startViewTransition || doc.hidden || reducedMotion()) return update()
   const find = (not?: Element) => [...doc.querySelectorAll<HTMLElement>(`[data-card-id="${CSS.escape(slug)}"]`)].find(e => e !== not && e.isConnected)
   const from = find()
   let to: HTMLElement | undefined

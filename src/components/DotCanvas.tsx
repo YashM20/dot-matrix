@@ -25,6 +25,7 @@ import { DisplaySurface } from './skins/DisplaySurface'
 // card touch policy (pan-y drag pads, engaged state): every interactive surface needs it, the essay's figures too;
 // ./touch.css is pulled into each page's stylesheet by src/index.css and src/blog/blog.css (#198)
 import { shapeExt } from '../engine/renderer/ext'
+import { onMotionChange, reducedMotion as motionReduced } from '../site/motion'
 
 // the squares WebGL join hook (src/engine/squares/gl.ts): its own chunk, fetched by DotGL on the first join frame.
 // Set here because this is main-thread code: the sample worker's build inlines every import() it can reach.
@@ -104,13 +105,7 @@ const SPRING_HALFLIFE = .12
 /** A frame that lands this soon (ms) after input is a direct response: it cuts, never dissolves. */
 const INPUT_CUT_MS = 250
 
-const reducedMotionQuery = '(prefers-reduced-motion: reduce)'
-function subscribeReducedMotion(cb: () => void) {
-  const mql = window.matchMedia(reducedMotionQuery)
-  mql.addEventListener('change', cb)
-  return () => mql.removeEventListener('change', cb)
-}
-const usePrefersReducedMotion = () => useSyncExternalStore(subscribeReducedMotion, () => window.matchMedia(reducedMotionQuery).matches, () => false)
+const usePrefersReducedMotion = () => useSyncExternalStore(onMotionChange, () => motionReduced(), () => false)
 
 /** True while the element is (near) the viewport. Only observes when `enabled`, so static cards pay nothing. */
 function useOnScreen(ref: RefObject<Element | null>, enabled: boolean): boolean {
@@ -195,7 +190,7 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   const live = ((motion && onScreen) || engaged) && !!layers
 
   // entrance: sampling waits for the stagger delay, so a board spreads its sampling cost over the stagger
-  const [enterSpec] = useState(() => (enter && !window.matchMedia(reducedMotionQuery).matches ? enter : undefined))
+  const [enterSpec] = useState(() => (enter && !motionReduced() ? enter : undefined))
   const [delayed, setDelayed] = useState(!enterSpec)
   useEffect(() => {
     if (!enterSpec) return

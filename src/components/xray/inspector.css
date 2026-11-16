@@ -320,8 +320,8 @@
   }
 }
 
-@media(max-width:760px) and (prefers-reduced-motion: reduce) {
-  .xr-panel {
+@media(max-width:760px) {
+  :where([data-motion="reduce"]) .xr-panel {
     transition: none
   }
 }
