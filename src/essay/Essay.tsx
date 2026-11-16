@@ -35,7 +35,7 @@ const Moment = ({ n, children }: { n: number; children: ReactNode }) => <p class
 const TOC: [string, string][] = [
   ['why', 'Why dots'], ['pipeline', 'Field, sampler, renderer'], ['quantize', 'Quantization and the squircle'], ['lattice', 'Lattices and sites'],
   ['accent', 'One accent'], ['motion', 'Motion'], ['interaction', 'Interaction'], ['light', 'Light and material'], ['sim', 'Simulation'],
-  ['halftone', 'Halftone and time'], ['ir', 'Field IR'], ['surfaces', 'Five surfaces'], ['agents', 'Agents'], ['credits', 'Prior art'],
+  ['halftone', 'Halftone and time'], ['ir', 'Field IR'], ['surfaces', 'Three surfaces'], ['agents', 'Agents'], ['credits', 'Prior art'],
 ]
 
 /**
@@ -230,7 +230,7 @@ export function Essay({ nav }: { nav: ReactNode }) {
           On a still scene, the engine's own test allows at most 10% of the dot changes that plain thresholding makes per frame. The real number is far lower. That is why a
           webcam mirror can sit on a dashboard without making anyone seasick.
         </p>
-        <Figure id="mirror" body={fig.mirror} minHeight={340} caption={<>Left: drag across the portrait to scratch it. Right: the two ladder steps side by side on the same noisy portrait.</>} />
+        <Figure id="mirror" body={fig.mirror} minHeight={340} caption={<>Drag across the portrait to scratch it.</>} />
         <Moment n={2}><b>The Mirror that Heals.</b> The mirror shows the step-2 halftone of a portrait built from fields. On the mirror board, with your camera on, it shows you. Scratch it and the damage
           grows back from its edges inward. A cell heals faster when more of its neighbours are whole. The scar closes as a front of faint, flickering dots and ends on the exact original halftone, dot for dot.</Moment>
       </Sec>
@@ -249,16 +249,16 @@ export function Essay({ nav }: { nav: ReactNode }) {
         <Figure id="ir" body={fig.ir} minHeight={420} caption={<>Your program on a 3× lattice. "Open in MAKE · CODE" opens it in the editor as a share link, compressed into the URL, with a scrubber, data sliders and a remix graph.</>} />
       </Sec>
 
-      <Sec id="surfaces" num="12" title="One field, five surfaces">
+      <Sec id="surfaces" num="12" title="One field, three surfaces">
         <p>
-          The figure below runs one timer on five displays. A <C>DeviceProfile</C> describes a physical display: its grid, its mask, how many levels a pixel has, its gamma and its physics.
+          The figure below runs one timer on three displays. A <C>DeviceProfile</C> describes a physical display: its grid, its mask, how many levels a pixel has, its gamma and its physics.
           {' '}<C>toDevice</C> samples the card onto that grid. Tiny grids get a hand-tuned version of the layout, because resampling 5×7 text onto 25×25 turns it to mush. Bigger grids
-          are resampled by area. Then each device's simulator adds what the hardware does: LED bloom, e-ink ghosting and its full-refresh flash, a flip-disc's column scan and the overshoot of a
-          real disc with inertia, and a pen plotter's travel between strokes.
+          are resampled by area. Then each device's simulator adds what the hardware does: LED bloom, and a flip-disc's column scan with the overshoot of a
+          real disc with inertia.
         </p>
-        <Figure id="surfaces" body={fig.surfaces} wide minHeight={240} caption={<>One 60-second timer on a browser card, a 25×25 round LED matrix, an 800×480 1-bit e-ink panel, a 28×14 flip-disc sign and a pen plotter, on one board clock (synced across tabs).</>} />
-        <Moment n={3}><b>One Field, Five Surfaces.</b> Nobody redrew anything for these screens. The red arc on the browser card becomes full-brightness light on the one-colour devices, because
-          they can't show red. The simulators copy what each panel really does: the e-ink ghosts until its tenth refresh flashes it clean, and the discs overshoot before they settle.</Moment>
+        <Figure id="surfaces" body={fig.surfaces} wide minHeight={240} caption={<>One 60-second timer on a browser card, a 25×25 round LED matrix and a 28×14 flip-disc sign, on one board clock (synced across tabs).</>} />
+        <Moment n={3}><b>One Field, Three Surfaces.</b> Nobody redrew anything for these screens. The red arc on the browser card becomes full-brightness light on the one-colour devices, because
+          they can't show red. The simulators copy what each panel really does: the LEDs bloom into their neighbours, and the discs overshoot before they settle.</Moment>
       </Sec>
 
       <Sec id="agents" num="13" title="Agents">
