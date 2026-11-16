@@ -11,10 +11,11 @@ import { HINT_CLEAR, pullCard, pullParts } from '../../src/widgets/boards/motion
 import { HOLDER_X, sendCard } from '../../src/widgets/boards/motion-chat'
 import type { Assert } from '../lib/check'
 
+const pitch = pullCard.grid.pitch ?? dot480.gridPx
+const lit = (ls: Layer[]) => sampleLayers(ls, pullCard.grid, pullCard.style, dot480).filter(d => d.opacity > 0 && d.r > 0)
 /** Lit dot rows of some layers, in cells: [top, bottom] of the dot centres (none lit: null). */
 function rows(ls: Layer[]): [number, number] | null {
-  const pitch = pullCard.grid.pitch ?? dot480.gridPx
-  const ys = sampleLayers(ls, pullCard.grid, pullCard.style, dot480).filter(d => d.opacity > 0 && d.r > 0).map(d => d.y / pitch - .5)
+  const ys = lit(ls).map(d => d.y / pitch - .5)
   return ys.length ? [Math.min(...ys), Math.max(...ys)] : null
 }
 
@@ -31,7 +32,8 @@ export function motionChecks(assert: Assert) {
       if (list && list[0] - hint[1] < HINT_CLEAR + 1 - 1e-6) bad.push(`${p.phase} ${off}: ${(list[0] - hint[1]).toFixed(1)} to the rows`)
       if (ring && hint[0] - ring[1] < 2) bad.push(`${p.phase} ${off}: ${(hint[0] - ring[1]).toFixed(1)} to the ring`)
     }
-    assert('motion: mo-pull hint clears the chat rows by 4 rows and the ring at every pull offset', seen > 100 && !bad.length, `${seen} frames with a hint; ${bad.slice(0, 4).join(', ')}`)
+    for (let off = 0; off <= 60; off += .5) for (const lt of [1, 2.5]) if (lit(pullParts(lt, off).ring).some(d => d.y - d.r < 0)) bad.push(`${off}: ring above the card`)
+    assert('motion: mo-pull hint clears the chat rows by 4 rows and the ring, and the ring stays in the card, at every pull offset', seen > 100 && !bad.length, `${seen} frames with a hint; ${bad.slice(0, 4).join(', ')}`)
   }
   // mo-send: the empty field's MESSAGE is mid (faint broke up at zoom) and starts past the caret
   {

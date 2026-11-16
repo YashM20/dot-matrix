@@ -40,17 +40,23 @@ function chatRow([name, line, time]: [string, string, string], y: number, fresh:
 /** Rows of clear air between the hint's last row and the first chat row, at every pull offset (#238). */
 export const HINT_CLEAR = 4
 const HINT_H = textSize('PULL')[1]
+/** The ring's highest centre: its top sites stay inside the card. */
+export const RING_TOP = 10
 /**
  * The ring and its hint ride on the list's top edge as one stack: the hint sits `HINT_CLEAR` rows above the first
  * row and the ring 12 rows above the hint, so the gap the pull opens shows them and the rows never run into them.
+ * Early in the pull the ring waits at the card's top (`RING_TOP`), and the hint fades in once the stack has room.
  */
-export const pullStack = (off: number) => { const y0 = Math.round(PULL.top + off), hint = y0 - HINT_CLEAR - HINT_H; return { y0, hint, cy: hint - 12 } }
+export const pullStack = (off: number) => {
+  const y0 = Math.round(PULL.top + off), hint = y0 - HINT_CLEAR - HINT_H, ride = hint - 12
+  return { y0, hint, cy: Math.max(RING_TOP, ride), room: (ride - RING_TOP) / 4 }
+}
 
 /** The card's picture in parts at loop time `lt`, pulled down `off` cells (the loop's own offset unless given). */
 export function pullParts(lt: number, off = offsetAt(lt)) {
   const phase = phaseAt(lt, off), rows: Layer[] = [], ring: Layer[] = [], hint: Layer[] = [], finger: Layer[] = []
   const ins = outCubic(span(lt, PULL.insert, PULL.close)), stretch = .3 * Math.max(0, off - 20)
-  const { y0, hint: hy, cy } = pullStack(off), pitch = PULL.row + stretch
+  const { y0, hint: hy, cy, room } = pullStack(off), pitch = PULL.row + stretch
   // the new chat fades into the first slot as the others move down one row
   if (ins > 0) for (const l of chatRow(NEW, y0, true)) rows.push(...fade(l, ins))
   ROWS.forEach((r, i) => rows.push(...chatRow(r, Math.round(y0 + (i + ins) * pitch), false)))
@@ -62,7 +68,7 @@ export function pullParts(lt: number, off = offsetAt(lt)) {
       : arcRing(72, cy, 8, n, 0, Math.min(1, off / (PULL.max - 8)) * n - 1, { track: 1.4, arc: 2.4, head: 2.4, headTone: 'value' })
     for (const l of arc) ring.push(...fade(l, show))
     const word = phase === 'RELEASE' ? 'RELEASE' : phase === 'PULLING' ? 'PULL TO REFRESH' : phase === 'REFRESHING' ? 'REFRESHING' : ''
-    if (word) hint.push(layer(T.text(word, 72, hy, { align: 'center' }), phase === 'RELEASE' ? 'value' : 'mid'))
+    if (word && room >= 0) hint.push(...fade(layer(T.text(word, 72, hy, { align: 'center' }), phase === 'RELEASE' ? 'value' : 'mid'), Math.min(show, room)))
   }
   // the finger: a ring of fine sites holding the first row's avatar while it drags
   if (lt >= PULL.start && lt < release + .1) finger.push(layer(T.dotRing(13, y0 + 8, 9, { spacing: 2.2, size: 1.2 }), 'idle'))
