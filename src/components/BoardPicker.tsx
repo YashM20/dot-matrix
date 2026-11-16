@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { useRoving } from '../hooks/useRoving'
 import { boardGroups, boardLabel, groupOf, prefetchBoard, type BoardGroupId } from '../widgets/manifest'
 import { useBlurbs } from './useBlurbs'
 import { intent } from '../site/prefetch'
@@ -12,7 +13,8 @@ const smooth = (): ScrollBehavior => window.matchMedia('(prefers-reduced-motion:
 
 /**
  * Board picker (docs/UX-PLAN.md §4.2): group tabs, then ALL (every card, the home view, #315) and the open group's
- * boards. On phones both rows are thumb strips that scroll sideways (the open group and board slide into view), and
+ * boards. The groups are real tabs (#352: ← → Home End move and open a group, the open one is the tab stop) and the
+ * boards row is their panel; a board is a pressed button. On phones both rows are thumb strips that scroll sideways (the open group and board slide into view), and
  * BOARDS opens a sheet with every board. A board opened elsewhere (palette, shell, Back) opens its group.
  */
 export function BoardPicker({ board, all, onPick, onPickAll, onSheet }: { board: string; all: boolean; onPick: (id: string) => void; onPickAll: () => void; onSheet?: () => void }) {
@@ -25,22 +27,27 @@ export function BoardPicker({ board, all, onPick, onPickAll, onSheet }: { board:
   const setGroup = (g: BoardGroupId) => setView({ board, group: g })
   const b = useBlurbs()
   const open = groupById(group)
-  const root = useRef<HTMLDivElement>(null)
+  const root = useRef<HTMLDivElement>(null), ids = useId()
+  const groupKey = useRoving({ items: '[role=tab]', pick: true })
   // phones: bring the selected group and board into the strips (a no-op where the rows wrap)
   useEffect(() => {
     for (const el of root.current?.querySelectorAll<HTMLElement>('.selected') ?? []) {
-      const strip = el.parentElement!
+      const strip = el.closest<HTMLElement>('.board-groups, .board-tabs')
+      if (!strip) continue
       if (strip.scrollWidth <= strip.clientWidth) continue
       strip.scrollTo({ left: el.offsetLeft - (strip.clientWidth - el.offsetWidth) / 2, behavior: smooth() })
     }
   }, [board, group, all])
   return <div className="board-picker" ref={root}>
-    <div className="board-groups" role="group" aria-label="Board groups">
+    <div className="board-groups">
       {onSheet && <button type="button" className="board-all" aria-haspopup="dialog" onClick={onSheet}>BOARDS<span aria-hidden="true"> ▾</span></button>}
-      {boardGroups.map(g => <button key={g.id} type="button" className={g.id === group ? 'selected' : ''} aria-pressed={g.id === group} onClick={() => setGroup(g.id)}>{g.label}</button>)}
+      <div className="board-group-tabs" role="tablist" aria-label="Board groups" onKeyDown={groupKey}>
+        {boardGroups.map(g => <button key={g.id} type="button" role="tab" id={`${ids}-${g.id}`} aria-selected={g.id === group} aria-controls={`${ids}-boards`} tabIndex={g.id === group ? 0 : -1}
+          className={g.id === group ? 'selected' : ''} onClick={() => setGroup(g.id)}>{g.label}</button>)}
+      </div>
       {b && <span className="board-group-blurb">{b.groupBlurbs[group]}</span>}
     </div>
-    <div className="board-tabs" role="group" aria-label={`Boards: ${open.label}`}>
+    <div className="board-tabs" role="tabpanel" id={`${ids}-boards`} aria-labelledby={`${ids}-${group}`}>
       <button type="button" data-board="all" className={all ? 'selected' : ''} aria-pressed={all} title="Every card from every board" onClick={onPickAll}>ALL</button>
       {open.boards.map(id => <button key={id} type="button" data-board={id} className={!all && board === id ? 'selected' : ''} aria-pressed={!all && board === id} title={b?.boardBlurbs[id]}
         onClick={() => onPick(id)} {...intent(() => prefetchBoard(id))}>{boardLabel(id)}</button>)}

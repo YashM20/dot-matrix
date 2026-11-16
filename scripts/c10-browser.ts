@@ -48,7 +48,7 @@ const shot = async (name: string) => { const r = await cdp('Page.captureScreensh
 const waitFor = async (expr: string, ms = 8000) => { for (let i = 0; i < ms / 100; i++) { if (await js(expr).catch(() => false)) return true; await sleep(100) } return false }
 const count = (sel: string) => js(`document.querySelectorAll(${JSON.stringify(sel)}).length`) as Promise<number>
 const text = (sel: string) => js(`document.querySelector(${JSON.stringify(sel)})?.textContent ?? ''`) as Promise<string>
-const KEYS: Record<string, { code: string; vk: number }> = { ' ': { code: 'Space', vk: 32 }, Enter: { code: 'Enter', vk: 13 }, Escape: { code: 'Escape', vk: 27 }, '`': { code: 'Backquote', vk: 192 }, ArrowUp: { code: 'ArrowUp', vk: 38 }, ArrowDown: { code: 'ArrowDown', vk: 40 }, ArrowLeft: { code: 'ArrowLeft', vk: 37 }, ArrowRight: { code: 'ArrowRight', vk: 39 }, Tab: { code: 'Tab', vk: 9 }, PageUp: { code: 'PageUp', vk: 33 } }
+const KEYS: Record<string, { code: string; vk: number }> = { ' ': { code: 'Space', vk: 32 }, Enter: { code: 'Enter', vk: 13 }, Escape: { code: 'Escape', vk: 27 }, '`': { code: 'Backquote', vk: 192 }, ArrowUp: { code: 'ArrowUp', vk: 38 }, ArrowDown: { code: 'ArrowDown', vk: 40 }, ArrowLeft: { code: 'ArrowLeft', vk: 37 }, ArrowRight: { code: 'ArrowRight', vk: 39 }, Tab: { code: 'Tab', vk: 9 }, PageUp: { code: 'PageUp', vk: 33 }, Home: { code: 'Home', vk: 36 } }
 /** A real key press (keyDown + keyUp). `mods`: 2 ctrl, 8 shift. */
 async function key(k: string, mods = 0, holdMs = 0) {
   const known = KEYS[k], ch = k.length === 1 ? k : ''
@@ -111,6 +111,13 @@ try {
     // U2: the inspector opens on SUMMARY (plain words); LAYERS is one tab behind it
     await waitFor(`!!document.querySelector('.xr-panel .xr-summary')`, 3000)
     check(`${board}: inspector opens on SUMMARY (dots, glossary words)`, /\d dots? on a/.test(await text('.xr-panel .xr-summary')) && (await count('.xr-panel .xr-summary .xr-term')) >= 5)
+    // #352: the tabs take arrow keys (→ picks LAYERS, Home goes back), the selected one is the only tab stop, and the
+    // panel is named by it
+    await js(`document.querySelector('.xr-tabs [role=tab][aria-selected=true]')?.focus(); 1`)
+    await key('ArrowRight')
+    const tabs = await js(`(() => { const a = document.activeElement, p = document.querySelector('.xr-tabpanel'); return { on: a?.textContent === 'LAYERS' && a.getAttribute('aria-selected') === 'true', stop: document.querySelectorAll('.xr-tabs [tabindex="0"]').length === 1 && a.tabIndex === 0, named: !!a?.id && p?.getAttribute('aria-labelledby') === a.id } })()`) as { on: boolean; stop: boolean; named: boolean }
+    await key('Home')
+    check(`${board}: inspector tabs: arrows, Home, one tab stop, a named panel`, tabs.on && tabs.stop && tabs.named && (await js(`document.activeElement?.textContent === 'SUMMARY'`)) as boolean, JSON.stringify(tabs))
     await js(`[...document.querySelectorAll('.xr-tabs button')].find(b => b.textContent === 'LAYERS').click()`)
     await waitFor(`!!document.querySelector('.xr-panel .xr-layers li')`, 3000)
     const panel = await text('.xr-panel')

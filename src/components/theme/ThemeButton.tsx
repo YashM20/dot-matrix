@@ -19,7 +19,7 @@ export function ThemeButton() {
   const wrap = useRef<HTMLDivElement>(null), btn = useRef<HTMLButtonElement>(null), timer = useRef(0)
   const at = useRef<[number, number]>([0, 0]) // the mouse's last position
   const id = useId()
-  const close = (refocus: boolean) => { clearTimeout(timer.current); setOpen(false); if (refocus) btn.current?.focus() }
+  const close = (refocus: boolean) => { clearTimeout(timer.current); setOpen(false); if (refocus) btn.current?.focus({ preventScroll: true }) }
   const intent = (e: ReactPointerEvent, enter: boolean) => {
     if (e.pointerType !== 'mouse') return
     clearTimeout(timer.current)

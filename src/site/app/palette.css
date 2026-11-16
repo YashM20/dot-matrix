@@ -88,7 +88,8 @@
   color: var(--value)
 }
 
-/* the scrim only: the palette itself is the one blurred layer (no blur stacking) */
+/* the scrim only: the palette itself is the one blurred layer (no blur stacking). Both are modal <dialog>s: no UA
+   border or side padding */
 .pal-backdrop,
 .pal-boss {
   position: fixed;
@@ -97,6 +98,7 @@
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding-top: 12vh;
+  padding: 12vh 0 0;
+  border: 0;
   background: var(--scrim)
 }

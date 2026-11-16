@@ -125,12 +125,26 @@ try {
   await p.js(`document.querySelector('.lk-btn').focus(); 1`)
   const focused = await p.js<boolean>(`document.activeElement === document.querySelector('.lk-btn')`)
   // a real Enter: a keyDown without its text is a raw key, which never activates a focused button
-  await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' })
-  await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 })
+  const enter = async () => {
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, text: '\r' })
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13 })
+  }
+  await enter()
   const again = await p.waitFor(`!!document.querySelector('.lk-sheet')`, 3000)
   await p.key('Escape', 'Escape', 27)
   const left = await p.js<boolean>('!!document.querySelector(".lk-sheet")'), likes = (await calls()).filter(c => c.path === '/api/like').length
   assert('likes-browser: from the keyboard, Enter asks again and Escape cancels without a like', again && !left && likes === before, `focused ${focused}, sheet ${again}, still open ${left}, likes ${before} → ${likes}`)
+  // #352: Escape hands focus back to the like button, and a like from the keyboard keeps it there while the request
+  // runs (aria-disabled, not disabled); the name stays "Like …" and aria-pressed says liked
+  const home = await p.js<boolean>(`document.activeElement === document.querySelector('.lk-btn')`)
+  await enter(); await p.waitFor(`!!document.querySelector('.lk-sheet')`, 3000)
+  await p.js(`document.querySelector('.lk-choices button:last-child').focus(); 1`)
+  await enter()
+  const kept: boolean[] = []
+  for (let i = 0; i < 12; i++) { kept.push(await p.js<boolean>(`document.activeElement === document.querySelector('.lk-btn')`)); if (await pressed() === 'true') break; await sleep(100) }
+  const kname = await p.js<string>(`document.querySelector('.lk-btn')?.getAttribute('aria-label') ?? ''`)
+  assert('likes-browser: a keyboard like keeps focus on the button throughout; its name stays "Like …" while aria-pressed turns true (#352)',
+    home && kept.every(Boolean) && (await pressed()) === 'true' && /^Like /.test(kname), `back ${home}, focus ${kept.join(',')}, name "${kname}"`)
 
   // A5.3 (docs/STATE-MACHINES.md): Remember, but the check-in fails. Nothing is remembered (no cookie came back), no
   // like is sent, and the next like asks again
@@ -160,7 +174,13 @@ try {
   // paused: the API is down
   await go(`${widget}?lkmock=paused`, `!!document.querySelector('.lk-btn')`)
   await sleep(300)
-  assert('likes-browser: with the API down the button is disabled and says "Likes paused."', await p.js<boolean>(`document.querySelector('.lk-btn').disabled`) && (await note()) === 'Likes paused.')
+  // aria-disabled, so it stays focusable; Enter on it does nothing (#352)
+  await p.js(`document.querySelector('.lk-btn').focus(); 1`)
+  const pausedCalls = (await calls()).filter(c => c.path === '/api/like').length
+  await enter(); await sleep(300)
+  assert('likes-browser: with the API down the button is aria-disabled, keeps focus, ignores Enter and says "Likes paused."',
+    await p.js<boolean>(`(b => b.getAttribute('aria-disabled') === 'true' && !b.disabled && document.activeElement === b && !document.querySelector('.lk-sheet'))(document.querySelector('.lk-btn'))`)
+    && (await calls()).filter(c => c.path === '/api/like').length === pausedCalls && (await note()) === 'Likes paused.')
   await shot('like-paused')
 
   // gallery programs in MAKE · CODE
