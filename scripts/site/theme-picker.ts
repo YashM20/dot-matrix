@@ -353,7 +353,9 @@ try {
   const off = await motionCmd('off')
   check('⌘K "reduced motion: off" (OS reduce): data-motion="full" and the card border fades again', off.motion === 'full' && fades(off.card), JSON.stringify(off))
   const back = await pickVite()
-  check('⌘K "reduced motion: off" (OS reduce): a pick runs the view transition again', back.now === 'vite' && back.vt >= 1, JSON.stringify(back))
+  // with a transition the accent lands inside its callback, a moment after the click
+  const landed = await waitFor(`document.documentElement.dataset.accent === 'vite'`, 3000)
+  check('⌘K "reduced motion: off" (OS reduce): a pick runs the view transition again', back.vt >= 1 && landed, JSON.stringify(back))
 
   // ── T6: the custom hue ──
   await open('/')
