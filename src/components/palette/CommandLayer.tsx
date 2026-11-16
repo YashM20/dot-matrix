@@ -86,7 +86,7 @@ function TiltButton({ onClose }: { onClose: () => void }) {
     else void requestTilt().then(s => toast(s === 'granted' ? 'tilt on: light and gravity follow your phone' : 'tilt blocked: allow motion access in the browser settings'))
     onClose()
   }
-  return <button type="button" className="tool-tilt" aria-pressed={on} onClick={click}><b>TILT</b><span>{state === 'denied' ? 'Motion access is blocked' : 'Light and gravity follow your phone'}</span></button>
+  return <button type="button" className="tool-tilt" role="switch" aria-checked={on} onClick={click}><b>TILT</b><span>{state === 'denied' ? 'Motion access is blocked' : 'Light and gravity follow your phone'}</span></button>
 }
 
 /**
@@ -97,7 +97,7 @@ function PondMemoryButton({ onClose }: { onClose: () => void }) {
   const [on, setOn] = useState(pondMemoryOn)
   useEffect(() => onPondMemory(() => setOn(pondMemoryOn())), [])
   const click = () => { setPondMemory(!on); toast(on ? 'pond memory off: the record is deleted' : 'pond memory on: your koi age with your visits'); onClose() }
-  return <button type="button" className="tool-pond" aria-pressed={on} onClick={click}><b>POND MEMORY</b><span>{on ? 'Your pond ages with your visits' : 'Off: nothing is stored'}</span></button>
+  return <button type="button" className="tool-pond" role="switch" aria-checked={on} onClick={click}><b>POND MEMORY</b><span>{on ? 'Your pond ages with your visits' : 'Off: nothing is stored'}</span></button>
 }
 
 /**
@@ -116,8 +116,8 @@ function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { 
   return <Sheet label="TOOLS" onClose={onClose} className="tools-sheet">
     <div className="tools-grid">
       <button type="button" onClick={run(onPalette)}><b>SEARCH</b><span>Boards, cards and actions</span></button>
-      {xray !== undefined && <button type="button" aria-pressed={xray} onClick={run(() => toggleGlobal())}><b>X-RAY</b><span>See how every card is built</span></button>}
-      <button type="button" aria-pressed={frozen} onClick={run(() => (frozen ? resume() : api.freeze()))}><b>TIME</b><span>Freeze and scrub the clock</span></button>
+      {xray !== undefined && <button type="button" role="switch" aria-checked={xray} onClick={run(() => toggleGlobal())}><b>X-RAY</b><span>See how every card is built</span></button>}
+      <button type="button" role="switch" aria-checked={frozen} onClick={run(() => (frozen ? resume() : api.freeze()))}><b>TIME</b><span>Freeze and scrub the clock</span></button>
       <TiltButton onClose={onClose} />
       {pond && <PondMemoryButton onClose={onClose} />}
       <AnalyticsButton onClose={onClose} />
@@ -335,8 +335,8 @@ export function CommandLayer({ tab, board, all = false, setTab, setBoard }: Comm
     {xray && anyXray && Inspector && <Suspense fallback={null}><Inspector onRemix={(id, data) => api.remix(id, data)} onStudio={id => api.studio(id)} onCopyLink={id => void api.copyLink(id)} /></Suspense>}
     <TimeMachine />
     {dockIn(<div className="pal-dock" role="toolbar" aria-label="Explore">
-      {xray && <button aria-pressed={anyXray} onClick={() => toggleGlobal()} data-tip="X-ray every card · ⇧X all" data-kbd="X" aria-keyshortcuts="X Shift+X">X-RAY</button>}
-      <button aria-pressed={frozen} onClick={() => (frozen ? resume() : api.freeze())} data-tip="Time machine · hold" data-kbd="T" aria-keyshortcuts="T">TIME</button>
+      {xray && <button type="button" role="switch" aria-checked={anyXray} onClick={() => toggleGlobal()} data-tip="X-ray every card · ⇧X all" data-kbd="X" aria-keyshortcuts="X Shift+X">X-RAY</button>}
+      <button type="button" role="switch" aria-checked={frozen} onClick={() => (frozen ? resume() : api.freeze())} data-tip="Time machine · hold" data-kbd="T" aria-keyshortcuts="T">TIME</button>
       <button onClick={() => setPalette(true)} data-tip="Command palette" data-kbd="⌘K" aria-label="⌘K command palette" aria-keyshortcuts="Meta+K Control+K">⌘K</button>
       <button onClick={() => setShell(true)} data-tip="Dot shell" data-kbd="`" aria-label="Dot shell" aria-keyshortcuts="`">&gt;_</button>
     </div>)}
@@ -349,7 +349,7 @@ export function CommandLayer({ tab, board, all = false, setTab, setBoard }: Comm
       <div className="pal-boss-card">
         <p className="pal-boss-title">↑↑↓↓←→←→BA · LEVEL 07 · THE QUEEN</p>
         <DotWidget type="lv-queen" enter={{ delay: 0, mask: 'radial', duration: 900 }} />
-        <button type="button" className="pal-boss-flee" data-autofocus onClick={() => setBoss(false)}>FLEE <kbd>ESC</kbd></button>
+        <button type="button" className="btn pal-boss-flee" data-autofocus onClick={() => setBoss(false)}>FLEE <kbd>ESC</kbd></button>
       </div>
     </Modal>}
   </>

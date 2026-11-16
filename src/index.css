@@ -3,6 +3,8 @@
 @import "./tokens.css";
 /* the theme roles per [data-scheme] × [data-accent]: after tokens.css (same specificity, the later wins) */
 @import "./site/theme/themes.css";
+/* the shared controls (.btn, .field, .menu-row, .status-dot) and the focus ring: every page loads them (#354) */
+@import "./site/controls.css";
 /* shared with the blog and the lab (src/blog/blog.css imports them too): inlined here, so no shared chunk carries a
    second render-blocking stylesheet (#198) */
 @import "./components/touch.css";

@@ -12,7 +12,7 @@ import { useMenuButton } from '../hooks/useMenuButton'
 import type { CardAction } from './xray/store'
 import { cardActs, type CardActs } from './cardActs'
 import { copyLink } from './copyLink'
-import { CopiedIcon, LinkIcon, MoreIcon, OpenIcon } from './rowIcons'
+import { CopiedIcon, LinkIcon, MoreIcon, OpenIcon } from './icons'
 import './CardRow.css'
 
 export interface CardRowProps {
@@ -69,8 +69,8 @@ export function CardRow({ id, name, href, onOpen, meta }: CardRowProps) {
       onClick={() => { if (!opened) setOwn(acts() ?? null); m.toggle() }}><MoreIcon /></button>
     {opened && <div {...m.menu} className="dot-card-menu" aria-label={`${name}: more`}>
       {items.map(([a, label]) => a === 'how'
-        ? <button key={a} type="button" tabIndex={-1} role="menuitemcheckbox" aria-checked={!!own?.xrOn} onClick={pick(a)}>{label}</button>
-        : <button key={a} type="button" tabIndex={-1} role="menuitem" onClick={pick(a)}>{label}</button>)}
+        ? <button key={a} type="button" className="menu-row" tabIndex={-1} role="menuitemcheckbox" aria-checked={!!own?.xrOn} onClick={pick(a)}>{label}</button>
+        : <button key={a} type="button" className="menu-row" tabIndex={-1} role="menuitem" onClick={pick(a)}>{label}</button>)}
     </div>}
   </div>
 }

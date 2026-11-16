@@ -3,7 +3,7 @@ import { useRoving } from '../hooks/useRoving'
 import { boardGroups, boardLabel, groupOf, prefetchBoard, type BoardGroupId } from '../widgets/manifest'
 import { useBlurbs } from './useBlurbs'
 import { intent } from '../site/prefetch'
-import { NextIcon } from './widget/toolIcons'
+import { NextIcon } from './icons'
 import { scrollBehavior } from '../site/motion'
 
 /** A group by id (every `BoardGroupId` names one; the fallback only satisfies the type). */

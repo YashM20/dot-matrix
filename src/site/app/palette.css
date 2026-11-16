@@ -37,7 +37,7 @@
 }
 
 /* a tool that is on: the accent, its wash */
-.pal-dock button[aria-pressed="true"] {
+.pal-dock button[aria-checked="true"] {
   color: var(--red-text);
   border-color: color-mix(in srgb, var(--red) 50%, transparent);
   background-color: var(--glow-wash)

@@ -118,3 +118,12 @@
 [data-tip][data-kbd]:active::before {
   opacity: 0
 }
+
+/* touch: no hover tooltips (a tap would leave one behind on the bar it pressed). Keyboard focus still shows its tip
+   (hover: none is also a desktop without a mouse), and so does a copy's "Copied" (.copied) */
+@media (hover: none), (pointer: coarse) {
+  [data-tip]:not(.copied, :focus-visible)::after,
+  [data-tip][data-kbd]:not(:focus-visible)::before {
+    display: none
+  }
+}

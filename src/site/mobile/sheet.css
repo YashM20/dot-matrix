@@ -149,7 +149,7 @@ html:has(.sheet[open]) {
 
 /* rows fill the sheet's width: their ring is drawn inside */
 .sheet button:focus-visible {
-  outline-offset: -2px
+  outline-offset: var(--focus-in)
 }
 
 /* the boards sheet: every group, a row per board with its line; the current one carries the red dot */

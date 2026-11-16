@@ -47,7 +47,7 @@
 }
 
 .hero-card:focus-visible {
-  outline-offset: 2px
+  outline-offset: var(--focus-out)
 }
 
 /* a file held over the card: the accent edge (the one glow: an active drop target) */
@@ -104,7 +104,7 @@
   margin: 0
 }
 
-.live-label .live i {
+.live-label .live .status-dot {
   margin-right: var(--space-1);
   vertical-align: middle
 }

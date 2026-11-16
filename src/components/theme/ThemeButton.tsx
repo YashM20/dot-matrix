@@ -52,7 +52,7 @@ export function ThemeButton() {
       <button ref={btn} type="button" className="skin-menu-btn theme-menu-btn dot-ring" aria-haspopup="dialog" aria-expanded={!!open} aria-controls={open ? id : undefined}
         onClick={() => { clearTimeout(timer.current); if (open === 'click') close(false); else setOpen('click') }}
         onKeyDown={e => { if (e.key === 'ArrowDown') { e.preventDefault(); setOpen('click') } }}>
-        THEME<i aria-hidden="true" /><span aria-hidden="true">▾</span>
+        THEME<i className="status-dot" aria-hidden="true" /><span aria-hidden="true">▾</span>
       </button>
       {open && <Suspense fallback={null}><ThemePopover id={id} focus={open === 'click'} /></Suspense>}
     </div>

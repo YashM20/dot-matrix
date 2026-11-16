@@ -97,11 +97,6 @@
   color: var(--value)
 }
 
-.dot-card-row-icon {
-  display: block;
-  flex: none
-}
-
 /* the board link (ALL) is text: an underline on hover; the icons only brighten */
 .dot-card-row-meta a:hover,
 .dot-card-row-meta a:active,
@@ -134,7 +129,7 @@
 /* the ring stays inside the target, clear of the card's bottom edge */
 .dot-card-row a:focus-visible,
 .dot-card-row > button:focus-visible {
-  outline-offset: -1px
+  outline-offset: var(--focus-in)
 }
 
 /* a narrow tile: ALL's name goes (the card shows it) */
@@ -171,13 +166,6 @@
   line-height: 1.25
 }
 
-.dot-card-menu button[aria-checked="true"],
-.dot-card-menu button[aria-checked="true"]:hover,
-.dot-card-menu button[aria-checked="true"]:focus-visible,
-.dot-card-menu button[aria-checked="true"]:active {
-  color: var(--red-text)
-}
-
 /* touch: a 28 px row under the card; each action's 44 × 44 area runs from the card's edge down into the grid gap
    (28 + 16), so it never takes a touch from the card */
 @media (hover: none), (pointer: coarse) {
@@ -204,19 +192,13 @@
     height: var(--tap);
     translate: -50% 0
   }
-
-  /* no hover tooltips on touch (a tap would leave one behind); "Copied" still shows */
-  .dot-card-row [data-tip]:not(.copied)::after {
-    display: none
-  }
-
 }
 
 /* the row itself carries the tooltip group's --tip-on transition (tips.css): its children fade */
 .dot-card-row-meta,
 .dot-card-row a,
 .dot-card-row > button {
-  transition: color var(--dur-out)
+  transition: color var(--dur-out), transform var(--dur-out)
 }
 
 /* a colour fade isn't motion, so reduced motion keeps it: a11y.css zeroes every transition there, and this gives the

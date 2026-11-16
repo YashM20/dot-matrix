@@ -113,7 +113,7 @@ export default function LikeButton({ item: widgetItem, program, name, compact }:
   const label = `Like ${name}${shown > 0 ? `, ${plural(shown)}` : ''}`
   const visible = paused ? NOTES.paused : note ? NOTES[note] : ''
   return <div className={`lk${compact ? ' lk--compact' : ''}`} data-likes={item}>
-    <button type="button" className="lk-btn" aria-pressed={liked} aria-label={label} title={paused ? NOTES.paused : label} aria-disabled={paused || busy || undefined} onClick={click}>
+    <button type="button" className="lk-btn" aria-pressed={liked} aria-label={label} aria-disabled={paused || busy || undefined} onClick={click}>
       <span className="lk-glyph" aria-hidden="true">{liked ? '♥' : '♡'}</span>
       <span className="lk-label">{liked ? 'LIKED' : 'LIKE'}</span>
       {shown > 0 && <span className="lk-count">{shown.toLocaleString('en')}</span>}
