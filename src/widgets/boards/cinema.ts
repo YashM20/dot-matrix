@@ -5,8 +5,8 @@
  * afterlight face pitch), so dot size is luminance. In each frame red is the last light left
  * (a beacon, the sun, a window, a reflection, a taillight, a lamp, a rose).
  * Titles sit on the same lattice, knocked out of the scene, and decode in on each reel; the whole
- * lattice breathes with a quantized projector flicker. Each poster keeps its cycle number (02, 03, …): it
- * seeds the flicker and title decode, and two posters (01, 05) were retired.
+ * lattice breathes with a quantized projector flicker. Each poster keeps its cycle number `n` as the seed of
+ * the flicker and title decode. The number drawn on the poster is its place on the board (`numberBoard`).
  */
 import { HENRY_AFTERLIGHT } from '../creditSources'
 import { clamp, hash01, len } from '../../engine/math'
@@ -16,6 +16,7 @@ import { valueNoise2 } from '../../engine/noise/value'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import type { Field, Layer, Tone } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
+import { numberBoard, pad2 } from '../numbered'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -116,7 +117,9 @@ const star = (x: number, y: number, seed: number, density: number) => {
 
 // ── poster builder ──────────────────────────────────────────────────────────────────────────────
 interface Spec {
-  id: string; n: number; genre: string; title: string; tag: string
+  id: string; genre: string; title: string; tag: string
+  /** Seed of the flicker and title decode (the old cycle number). Never drawn: the poster shows its board number. */
+  n: number
   /** Title anchor in lattice cells (column, row). */
   at: Pt
   scene: Luma
@@ -143,9 +146,9 @@ function poster(s: Spec): WidgetPreset {
     liveCells = []
     if (s.live) for (let r = 0; r < NY; r++) for (let c = 0; c < NX; c++) if (yOf(r) >= Y0 && yOf(r) <= Y1 && s.live.where(xOf(c), yOf(r))) liveCells.push(r * NX + c)
   }
-  return {
+  const card: WidgetPreset = {
     // the widget page title and the accessible name: "Exit 14", not the poster's capitals
-    id: s.id, name: s.title.toLowerCase().replace(/(^|\s)\S/g, ch => ch.toUpperCase()), label: '', group: 'photo', chrome: 'dots', animated: true, grid: TILE,
+    id: s.id, name: s.title.toLowerCase().replace(/(^|\s)\S/g, ch => ch.toUpperCase()), label: '', numbered: true, group: 'photo', chrome: 'dots', animated: true, grid: TILE,
     credit: HENRY_AFTERLIGHT,
     style: { ...tileStyle, sizeMin: 0, sizeMax: 1.05, quantizeSteps: 0 },
     layers: ({ t }) => {
@@ -173,10 +176,12 @@ function poster(s: Spec): WidgetPreset {
         onLattice(redField, 'active'),
         onLattice(title, 'value'),
         layer(T.text(s.tag, 0, 136), 'idle'),
-        layer(T.text(String(s.n).padStart(2, '0'), 143, 136, { align: 'right' }), 'mid'),
+        // the poster number is the card's place on the board (numberBoard); `n` stays the flicker and decode seed
+        layer(T.text(pad2(card.number ?? 0), 143, 136, { align: 'right' }), 'mid'),
       ]
     },
   }
+  return card
 }
 /** Title rows: top band (5) or bottom band (46), 7 lattice rows tall. */
 const TOP = 5, BOTTOM = 46
@@ -466,4 +471,4 @@ const encorePoster = poster({
   scene: encore, red: (x, y) => (rect(x, y, ...ROSE) ? 1 : 0),
 })
 
-export const cinemaBoard = [signalPoster, sundownPoster, upstairsPoster, witnessPoster, exit14Poster, keeperPoster, encorePoster]
+export const cinemaBoard = numberBoard([signalPoster, sundownPoster, upstairsPoster, witnessPoster, exit14Poster, keeperPoster, encorePoster])

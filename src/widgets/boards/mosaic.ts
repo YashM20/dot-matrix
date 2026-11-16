@@ -7,6 +7,7 @@
 import { clamp, hash01, len, smoothstep } from '../../engine/math'
 import type { Field } from '../../engine/types'
 import { TAU, TILE, baked, layer, layoutFor, tileStyle, toneRamp, type LatticeField, type WidgetPreset } from '../types'
+import { numberBoard, pad2 } from '../numbered'
 import { HEART, INVADER } from '../sprites'
 
 const T = layoutFor(TILE)
@@ -69,8 +70,8 @@ const TAG_H = 11
 const tagW = (text: string) => Math.round(capW(text)) + 8
 const tag = (x: number, y: number, text: string) => [layer(T.box(x, y, tagW(text), TAG_H, 2), 'idle'), layer(cap(text, x + 4, y + 3), 'value')]
 
-// ── header: "NN  TITLE" label (number in red over the chrome label) + a grey glyph top-right ──────
-const num = (n: string) => layer(T.text(n, 0, 0), 'active')
+// ── header: "NN  TITLE" label (the board number, numberBoard, in red over the chrome label) + a grey glyph top-right ──────
+const num = (p: WidgetPreset) => layer(T.text(pad2(p.number ?? 0), 0, 0), 'active')
 /** The ⁘ menu glyph: two columns of three dots with two small dots between the rows. */
 const menuGlyph = [layer(T.dots([[137, .5], [142, .5], [137, 3.5], [142, 3.5], [137, 6.5], [142, 6.5]], 1.35), 'idle'), layer(T.dots([[139.5, 2], [139.5, 5]], 1), 'idle')]
 // the bolt as sites 1.5 apart, so its dots read like the menu glyph's instead of a fine-grid cluster
@@ -111,9 +112,9 @@ const HEAT = toneRamp(cells(mugHeat, PANEL), [
   { at: .76, blend: .2, tone: 'value', value: h => .7 + .3 * clamp((h - .9) / .1) },
 ])
 export const thermalMonitor: WidgetPreset = {
-  id: 'thermal-monitor', name: '01 Thermal Monitor', label: '01  THERMAL MONITOR', group: 'photo', chrome: 'dots', grid: TILE, style: photoStyle,
+  id: 'thermal-monitor', name: '01 Thermal Monitor', label: 'THERMAL MONITOR', numbered: true, group: 'photo', chrome: 'dots', grid: TILE, style: photoStyle,
   layers: () => [
-    num('01'), ...menuGlyph,
+    num(thermalMonitor), ...menuGlyph,
     // sensor frame, then the heat
     layer(frame(0, 16, 118, 95, 6), 'faint'),
     ...HEAT,
@@ -215,12 +216,12 @@ const CAR = toneRamp(cells(car, [0, 48, N, 97]), [
   { at: .34, tone: 'idle', value: carDot }, { at: .62, tone: 'value', value: carDot },
 ])
 export const evCharge: WidgetPreset = {
-  id: 'ev-charge', name: '02 EV Charge', label: '02  EV CHARGE', group: 'icon', inset: 'dark', chrome: 'dots', grid: TILE, style: photoStyle,
+  id: 'ev-charge', name: '02 EV Charge', label: 'EV CHARGE', numbered: true, group: 'icon', inset: 'dark', chrome: 'dots', grid: TILE, style: photoStyle,
   defaults: { charge: 0.78 },
   layers: ({ data }) => {
     const pct = String(Math.round(data.charge * 100)), w = T.size(pct)[0] * 3
     return [
-      num('02'), ...boltGlyph,
+      num(evCharge), ...boltGlyph,
       layer(T.big(pct, 0, 22, { lattice: 3 })), layer(T.big('%', w + 3, 32.4, { lattice: 1.6 })),
       layer(cap('CHARGING', Math.max(57, Math.round(w + 19)), 36), 'idle'),
       ...CAR,
@@ -244,12 +245,12 @@ const TOTAL = [.2, .14, .28, .14, .33, .44, .5, .22, .26, .54, .17, .33, .76, .4
 const USED = [0, 0, 0, 0, .09, .28, .28, .22, .19, .27, .17, .17, .25, .43, .21, .43]
 const CHART = { x0: 72, gap: 3.8, base: 119, height: 76, size: 1.4, pitch: 1.5 }
 export const codexUsage: WidgetPreset = {
-  id: 'codex-usage', name: '03 Codex Usage', label: '03  CODEX USAGE', group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'codex-usage', name: '03 Codex Usage', label: 'CODEX USAGE', numbered: true, group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => {
     // each bar is two dot columns wide, like the reference's chunky bars
     const bars = (v: number[]) => [0, CHART.pitch].map(dx => T.dotBars(v, CHART.x0 + dx, CHART.base, { gap: CHART.gap, pitch: CHART.pitch, height: CHART.height, size: CHART.size }))
     return [
-      num('03'), ...menuGlyph,
+      num(codexUsage), ...menuGlyph,
       layer(cap('HENRY / CODEX', 0, 27), 'active'),
       layer(T.big('2,842', 0, 42, { lattice: 2.3 })),
       layer(cap('TOKENS REMAINING', 0, 67), 'idle'),
@@ -275,7 +276,7 @@ const RING_C: Pt = [33.5, 61]
 /** The dim red wash fading out below the trend line. */
 const TREND_WASH = baked(TILE, cells((x, y) => { const d = y - along(TREND, x); return d > 1.5 ? .32 * (1 - d / 16) : 0 }, [0, 100, N, 127]))
 export const fitnessRings: WidgetPreset = {
-  id: 'fitness-rings', name: '04 Fitness Rings', label: '04  FITNESS RINGS', group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'fitness-rings', name: '04 Fitness Rings', label: 'FITNESS RINGS', numbered: true, group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
   defaults: { move: 0.5, exercise: 0.58, stand: 0.5 },
   layers: ({ data }) => {
     const ring = (r: number, spacing: number, size: number, fill: number, tone: 'active' | 'value') => [
@@ -283,7 +284,7 @@ export const fitnessRings: WidgetPreset = {
       layer(T.dotRing(...RING_C, r, { spacing, size, sweep: TAU * fill }), tone),
     ]
     return [
-      num('04'), ...menuGlyph,
+      num(fitnessRings), ...menuGlyph,
       ...ring(33, 3.6, 2.85, data.move, 'active'), ...ring(23.5, 3.6, 2.85, data.exercise, 'active'), ...ring(13.5, 2.2, 1.7, data.stand, 'value'),
       layer(T.sprite(FLAME, 73, 26), 'active'), layer(T.big('1,234', 86, 27, { lattice: 1.15 })), layer(cap('CAL', 125, 31), 'idle'),
       layer(T.sprite(SHOE, 72, 51), 'idle'), layer(T.big('8,935', 86, 50, { lattice: 1.15 })), layer(cap('MOVE', 125, 54), 'idle'),
@@ -308,9 +309,9 @@ const band = (spans: Pt[], row: number, h: number) => T.fillOn(2, (x, y) => y >=
 const key = (col: number) => T.dots([[col + 1.5, 47.5]], 4.2)
 const STATS = [['DEEP', '1:46'], ['CORE', '4:35'], ['REM', '1:32'], ['AWAKE', '0:14']]
 export const henrySleep: WidgetPreset = {
-  id: 'henry-sleep', name: '05 Henry Sleep', label: '05  HENRY SLEEP', group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'henry-sleep', name: '05 Henry Sleep', label: 'HENRY SLEEP', numbered: true, group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
-    num('05'), ...menuGlyph,
+    num(henrySleep), ...menuGlyph,
     layer(T.big('8:07', 0, 22, { lattice: 2 })), layer(cap('HR', 48, 31), 'idle'),
     layer(key(0), 'active'), layer(cap('DEEP', 7, 45.5), 'idle'),
     layer(key(40), 'value'), layer(cap('CORE', 47, 45.5), 'idle'),
@@ -343,14 +344,14 @@ const STARS: Pt[] = Array.from({ length: 34 }, (_, i) => [Math.round(hash01(i, 2
   .filter(([x, y]) => !(x > 52 && x < 84 && y > 108) && !(x > 90 && y < 40) && !(x < 30 && y < 28))
 const SPARKS: Pt[] = [[82, 41], [76, 47], [91, 47], [75, 57], [92, 57], [79, 62], [88, 62], [83.5, 65]]
 export const miniGame: WidgetPreset = {
-  id: 'mini-game', name: '06 Mini Game', label: '06  MINI GAME', group: 'scatter', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
+  id: 'mini-game', name: '06 Mini Game', label: 'MINI GAME', numbered: true, group: 'scatter', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
   credit: { by: ['Tomohiro Nishikado', 'Taito'], title: 'Space Invaders (1978)', source: 'https://en.wikipedia.org/wiki/Space_Invaders', note: 'the invader sprite' },
   layers: ({ t }) => {
     const sway = Math.round(Math.sin(t * 1.2) * 2), shot = (t * 18) % 22
     const invader = (x: number, y: number) => { const L = T.lattice(1.25, x + sway, y); return L.at(L.sprite(INVADER, 0, 0)) }
     const ship = T.lattice(1.3, 57, 115)
     return [
-      num('06'), ...menuGlyph,
+      num(miniGame), ...menuGlyph,
       layer(T.dots(STARS.filter((_, i) => i % 3), 1), 'mid'), layer(T.dots(STARS.filter((_, i) => !(i % 3)), 1.3), 'idle'),
       ...([[HEART, 0, 'active'], [HEART, 10.5, 'active'], [HEART_OUTLINE, 21, 'idle']] as const).map(([art, x, tone]) => { const L = T.lattice(1.15, x, 18); return layer(L.at(L.sprite([...art], 0, 0)), tone) }),
       layer(T.text('SCORE', 94, 20), 'idle'), layer(T.big('01260', 94, 30, { lattice: 1.25 })),
@@ -374,9 +375,9 @@ const pillIcon = (kind: number, cy: number): Field[] => {
 const SEND: Pt = [133, 133], SEND_BOX = [124, 124, 142, 142] as const
 const SUGGESTIONS = ['SUMMARIZE MY DAY', 'CHECK MY CALENDAR', 'ANALYZE MY WORKOUT', 'DRAFT PROJECT UPDATE']
 export const aiAssistant: WidgetPreset = {
-  id: 'ai-assistant', name: '07 AI Assistant', label: '07  AI ASSISTANT', group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'ai-assistant', name: '07 AI Assistant', label: 'AI ASSISTANT', numbered: true, group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
-    num('07'), ...menuGlyph,
+    num(aiAssistant), ...menuGlyph,
     layer(T.big('HELLO,', 2, 20, { lattice: 1.2 })), layer(T.big('HENRY', 2 + 42 * 1.2, 20, { lattice: 1.2 }), 'active'),
     layer(cap('HOW CAN I HELP TODAY?', 2, 33), 'idle'),
     ...SUGGESTIONS.flatMap((s, i) => {
@@ -479,9 +480,9 @@ const brackets = ([x0, y0, x1, y1]: Box, arm = 4) => [
   T.hrule(x0, y1, arm), T.vrule(x0, y1 - arm + 1, arm), T.hrule(x1 - arm + 1, y1, arm), T.vrule(x1, y1 - arm + 1, arm),
 ]
 export const visionCamera: WidgetPreset = {
-  id: 'vision-camera', name: '08 Vision Camera', label: '08  VISION CAMERA', group: 'composite', inset: 'dark', chrome: 'dots', grid: TILE, style: photoStyle,
+  id: 'vision-camera', name: '08 Vision Camera', label: 'VISION CAMERA', numbered: true, group: 'composite', inset: 'dark', chrome: 'dots', grid: TILE, style: photoStyle,
   layers: () => [
-    num('08'), ...menuGlyph,
+    num(visionCamera), ...menuGlyph,
     ...DESK,
     ...[...corner(4, 21, 1, 1), ...corner(139, 21, -1, 1), ...corner(4, 123, 1, -1), ...corner(139, 123, -1, -1)].map(f => layer(f, 'value')),
     ...DETECT.flatMap(([s, box, [x, y]]) => [...brackets(box).map(f => layer(f, 'idle')), ...tag(x, y, s)]),
@@ -499,7 +500,7 @@ const DEER_C: Pt = [111, 50]
 const CPU = [['CPU', '18%'], ['MEM', '42%'], ['NET', '23 KB/S'], ['TEMP', '37°C']]
 const CPU_X = [0, 34, 68, 120]
 export const deerflowAgent: WidgetPreset = {
-  id: 'deerflow-agent', name: '09 DeerFlow Agent', label: '09  DEERFLOW AGENT', group: 'composite', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
+  id: 'deerflow-agent', name: '09 DeerFlow Agent', label: 'DEERFLOW AGENT', numbered: true, group: 'composite', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
   defaults: { progress: 0.72 },
   layers: ({ data, t }) => {
     // two dotted halos with a brightness sweep running around them
@@ -507,7 +508,7 @@ export const deerflowAgent: WidgetPreset = {
     const head = T.lattice(1.8, DEER_C[0] - 13.5, DEER_C[1] - 12)
     const dots = Math.floor(t * 2) % 4
     return [
-      num('09'), ...waveGlyph,
+      num(deerflowAgent), ...waveGlyph,
       layer(T.big('ACTIVE', 0, 28, { lattice: 2 }), 'active'),
       layer(cap('RUNNING AGENT', 1, 53), 'value'),
       ...Array.from({ length: dots }, (_, i) => layer(T.dots([[1 + capW('RUNNING AGENT') + 2.5 + i * 2.6, 57.5]], .9), 'value')),
@@ -526,4 +527,4 @@ export const deerflowAgent: WidgetPreset = {
   },
 }
 
-export const mosaicBoard = [thermalMonitor, evCharge, codexUsage, fitnessRings, henrySleep, miniGame, aiAssistant, visionCamera, deerflowAgent]
+export const mosaicBoard = numberBoard([thermalMonitor, evCharge, codexUsage, fitnessRings, henrySleep, miniGame, aiAssistant, visionCamera, deerflowAgent])

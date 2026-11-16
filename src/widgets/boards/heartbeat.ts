@@ -9,6 +9,7 @@ import type { Field, Layer, Tone } from '../../engine/types'
 import { clamp, hash01, smoothstep } from '../../engine/math'
 import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
 import { OUTLINE, stadium } from './components-kit'
+import { numberBoard } from '../numbered'
 
 const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: { ...tileStyle, cornerRoundness: 0 } } as const
@@ -165,18 +166,18 @@ const doneCheck = (t: number) => {
   const ph = (t + 4) % 7
   return ph < 1 ? 0 : ph < 2.4 ? 1 - (1 - (ph - 1) / 1.4) ** 3 : ph < 5.6 ? 1 : 1 - smoothstep(5.6, 7, ph)
 }
-const make = (id: string, index: number, label: string, st: HeartbeatState): WidgetPreset => ({
-  id, name: label, label: `0${index}  ${label}`, ...tile, animated: true,
+const make = (id: string, label: string, st: HeartbeatState): WidgetPreset => ({
+  id, name: label, label, numbered: true, ...tile, animated: true,
   layers: (ctx: WidgetContext) => {
     const p = st === 'done' ? { ...HEARTBEAT.done, check: doneCheck(ctx.t) } : HEARTBEAT[st]
     return [...scene(p, ctx.t, STAGE, true), ...statusLine(st, ctx.t, FOOT)]
   },
 })
-export const hbThinking = make('hb-thinking', 1, 'THINKING', 'thinking')
-export const hbToolRunning = make('hb-tool-running', 2, 'TOOL RUNNING', 'tool-running')
-export const hbAwaiting = make('hb-awaiting-approval', 3, 'AWAITING APPROVAL', 'awaiting-approval')
-export const hbError = make('hb-error', 4, 'ERROR', 'error')
-export const hbDone = make('hb-done', 5, 'DONE', 'done')
+export const hbThinking = make('hb-thinking', 'THINKING', 'thinking')
+export const hbToolRunning = make('hb-tool-running', 'TOOL RUNNING', 'tool-running')
+export const hbAwaiting = make('hb-awaiting-approval', 'AWAITING APPROVAL', 'awaiting-approval')
+export const hbError = make('hb-error', 'ERROR', 'error')
+export const hbDone = make('hb-done', 'DONE', 'done')
 
 // ── AGENT ── `data.state` 0..4 (sprung) picks the parameters; the knob glides between stops.
 const AGENT = stageAt(12, 28, .78)
@@ -184,7 +185,7 @@ const SEG = { x: 6, y: 106, w: 132, h: 18, knob: 13, labels: ['THK', 'RUN', 'ASK
 const segX = (i: number) => SEG.x + SEG.h / 2 + (i * (SEG.w - SEG.h)) / 4
 const track = (d: number, spacing: number) => stadium(SEG.x - d, SEG.y - d, SEG.w + 2 * d, SEG.h + 2 * d, spacing)
 const hbAgent: WidgetPreset = {
-  id: 'hb-agent', name: 'AGENT', label: '06  AGENT', ...tile, animated: true,
+  id: 'hb-agent', name: 'AGENT', label: 'AGENT', numbered: true, ...tile, animated: true,
   defaults: { state: 0 },
   springKeys: ['state'],
   controls: [{ key: 'state', kind: 'segmented', options: 5, optionLabels: ['Thinking', 'Running tool', 'Awaiting approval', 'Error', 'Done'], box: [SEG.x, SEG.y - 4, SEG.w, SEG.h + 18], label: 'Agent state' }],
@@ -207,7 +208,7 @@ const hbAgent: WidgetPreset = {
   },
 }
 
-export const heartbeatBoard = [hbThinking, hbToolRunning, hbAwaiting, hbError, hbDone, hbAgent]
+export const heartbeatBoard = numberBoard([hbThinking, hbToolRunning, hbAwaiting, hbError, hbDone, hbAgent])
 
 // ── LIVE ── the card an agent drives from outside (MCP App `ui://dot-card/heartbeat`): `data.state`
 // 0..4 (sprung by the host page) picks the parameters; `label` replaces the status line's left text.

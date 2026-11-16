@@ -62,6 +62,10 @@ export interface WidgetPreset {
   chrome?: 'dots'
   /** Label text drawn by `chrome: 'dots'` (defaults to `name`; '' = no label). */
   label?: string
+  /** The card shows a board number. Never type the number: `numberBoard()` (src/widgets/numbered.ts) sets it. */
+  numbered?: boolean
+  /** Set by `numberBoard()`: this card's place among its board's numbered cards, from 1. */
+  number?: number
   /** Edge-to-edge artwork: the card has no inner padding (photo cards). */
   bleed?: boolean
   /** Live media the host feeds into `ctx.media` (app-level capture in `src/media/`, started only by a control). */

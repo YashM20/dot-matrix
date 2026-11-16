@@ -17,6 +17,7 @@ import {
 } from '../../engine/type'
 import { textOf } from '../../data/text'
 import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
+import { numberBoard } from '../numbered'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -43,7 +44,7 @@ const knob = (cx: number, v: number, hot: boolean): Layer[] => {
 }
 const SPEC = frame(2, 14)
 export const typeAxesCard: WidgetPreset = {
-  id: 'type-axes', name: 'Variable', label: '01  VARIABLE', group: 'text', ...tile,
+  id: 'type-axes', name: 'Variable', label: 'VARIABLE', numbered: true, group: 'text', ...tile,
   defaults: { wght: .55, wdth: .5, rond: .7 },
   controls: AXES.map((ax, i): Control => ({ key: ax.key, kind: 'knob', box: [KN.xs[i] - KN.r - 5, KN.y - KN.r - 5, 2 * KN.r + 10, 2 * KN.r + 10], label: ax.label })),
   layers: ctx => {
@@ -65,7 +66,7 @@ export const typeAxesCard: WidgetPreset = {
 const WORDS = ['DOTS', '480', 'FIELD'], HOLD = 1.4, FLOW = 1.6, CYCLE = HOLD + FLOW
 const MOR = frame(2.5, 34), MOR_OPTS = centred(MOR, 0, { size: 16, weight: .55, roundness: .7 })
 export const typeMorphCard: WidgetPreset = {
-  id: 'type-morph', name: 'Morph', label: '02  MORPH', group: 'text', ...tile, animated: true,
+  id: 'type-morph', name: 'Morph', label: 'MORPH', numbered: true, group: 'text', ...tile, animated: true,
   layers: ({ t }) => {
     const n = WORDS.length, i = Math.floor(t / CYCLE) % n, tau = t % CYCLE, k = tau < HOLD ? 0 : clamp01((tau - HOLD) / FLOW)
     const a = WORDS[i], b = WORDS[(i + 1) % n], rail: Pt[] = Array.from({ length: 23 }, (_, j) => [17 + j * 5, 118])
@@ -88,7 +89,7 @@ const LED = frame(3, 24), LED_ROWS = 23, LED_COLS = LED.grid.cols
 const LED_MSG = 'DOT/480 · FIELD-BASED DOT MATRIX', LED_MSG2 = 'NOW BOARDING  GATE 480  ON TIME'
 const ledPanel = LED.layer(Object.assign((_u: number, v: number) => (v * (LED.grid.rows - 1) < LED_ROWS - .5 ? .22 : 0), { bounds: [0, 0, LED_COLS - 1, LED_ROWS - 1] as [number, number, number, number] }), 'faint')
 export const typeMarqueeCard: WidgetPreset = {
-  id: 'type-marquee', name: 'Marquee', label: '03  MARQUEE', group: 'text', ...tile, animated: true, live: true,
+  id: 'type-marquee', name: 'Marquee', label: 'MARQUEE', numbered: true, group: 'text', ...tile, animated: true, live: true,
   layers: ({ t }) => [
     ledPanel,
     LED.layer(marqueeField(LED_MSG, t, { grid: LED.grid, row: 1, size: 9, weight: .62, roundness: .55, speed: 7, sub: 4, gap: 12, from: 0, to: LED_COLS - 1 })),
@@ -106,7 +107,7 @@ export const typeMarqueeCard: WidgetPreset = {
 // letter by letter and squashes on landing, BREATHE inhales and exhales its weight.
 const KIN1 = frame(2, 16), KIN2 = frame(1.5, 66)
 export const typeKineticCard: WidgetPreset = {
-  id: 'type-kinetic', name: 'Kinetic', label: '04  KINETIC', group: 'text', ...tile, animated: true,
+  id: 'type-kinetic', name: 'Kinetic', label: 'KINETIC', numbered: true, group: 'text', ...tile, animated: true,
   layers: ({ t }) => [
     KIN1.layer(typeField('WAVE', centred(KIN1, 2, { size: 15, roundness: .8, glyph: glyphs(waveGlyphs(t, { amp: 2, period: 1.8, phase: .14 }), weightWave(t, { min: .25, max: .9, period: 1.8, spread: .14 })) }))),
     KIN2.layer(typeField('BOUNCE', centred(KIN2, 3, { size: 11, weight: .55, glyph: bounceGlyphs(t, { height: 3, period: 1.2, stagger: .1, weight: .55 }) })), 'idle'),
@@ -120,7 +121,7 @@ export const typeKineticCard: WidgetPreset = {
 const FLIGHT = ['HELLO', 'WORLD', 'DOTS'], F_HOLD = 1.4, F_FLY = 1.3, F_CYCLE = F_HOLD + F_FLY
 const FLY = frame(2.5, 40), FLY_OPTS = { ...centred(FLY, 0, { size: 13, weight: .5, roundness: .75 }) }
 export const typeFlightCard: WidgetPreset = {
-  id: 'type-flight', name: 'Flight', label: '05  FLIGHT', group: 'text', ...tile, animated: true,
+  id: 'type-flight', name: 'Flight', label: 'FLIGHT', numbered: true, group: 'text', ...tile, animated: true,
   layers: ({ t }) => {
     const n = FLIGHT.length, i = Math.floor(t / F_CYCLE) % n, tau = t % F_CYCLE, a = FLIGHT[i], b = FLIGHT[(i + 1) % n]
     const m = typeMigration(a, b, FLY, FLY_OPTS, { stagger: .35, arc: .18, ease: ease.emphasized })
@@ -181,7 +182,7 @@ let shown: { text: string; prev: string; since: number } | undefined
 const ANY_FLY = 1.1
 export const DEFAULT_TEXT = 'TYPE ANYTHING'
 export const typeAnythingCard: WidgetPreset = {
-  id: 'type-anything', name: 'Type Anything', label: '06  TYPE ANYTHING', group: 'text', ...tile, animated: true,
+  id: 'type-anything', name: 'Type Anything', label: 'TYPE ANYTHING', numbered: true, group: 'text', ...tile, animated: true,
   defaults: { text: 0 },
   typing: { key: 'text', label: 'Your words', placeholder: 'Type here', max: 40 },
   layers: ({ t, data }) => {
@@ -209,4 +210,4 @@ function flight(a: string, b: string, from: ReturnType<typeof frameDots>, to: Re
   return flightMemo.m
 }
 
-export const typeBoard: WidgetPreset[] = [typeAxesCard, typeMorphCard, typeMarqueeCard, typeKineticCard, typeFlightCard, typeAnythingCard]
+export const typeBoard: WidgetPreset[] = numberBoard([typeAxesCard, typeMorphCard, typeMarqueeCard, typeKineticCard, typeFlightCard, typeAnythingCard])

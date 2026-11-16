@@ -17,6 +17,7 @@
  * goldens, sound off) every card renders exactly as before.
  */
 import { TEENAGE_ENGINEERING } from '../creditSources'
+import { numberBoard } from '../numbered'
 import type { Control } from '../../engine/context'
 import type { Tone } from '../../engine/types'
 import { audioOf, meterSegment } from '../../audio/frame'
@@ -72,7 +73,7 @@ const focusRing = (pts: Pt[], t: number) => layer(spots(marching(pts, t), 1.7), 
 // bottom (7:30 → 4:30); the readout sits in the scale's mouth.
 const KNOB = { cx: 72, cy: 66, r: 46, detents: 25, body: 44, tip: 11.5, start: deg(225), sweep: deg(270) }
 const STEPS = KNOB.detents - 1
-interface KnobSpec { id: string; name: string; index: string; key: string; detent: number; read: (v: number) => [string, string] }
+interface KnobSpec { id: string; name: string; key: string; detent: number; read: (v: number) => [string, string] }
 const hz = (v: number): [string, string] => {
   const f = 20 * 1000 ** v
   return [f < 1000 ? `${Math.round(f)}` : f < 10000 ? `${(f / 1000).toFixed(1)}K` : `${Math.round(f / 1000)}K`, 'HZ']
@@ -86,7 +87,7 @@ function knob(spec: KnobSpec): WidgetPreset {
   const controls: Control[] = [{ key: spec.key, kind: 'knob', box: [cx - r, cy - r, 2 * r, 2 * r], min: 0, max: 1, step: 1 / STEPS, label: spec.name,
     valueText: v => spoken(spec.read(Math.round(clamp01(v) * STEPS) / STEPS)) }]
   return {
-    id: spec.id, name: spec.name, label: `${spec.index}  ${spec.name.toUpperCase()}`, ...device,
+    id: spec.id, name: spec.name, label: spec.name.toUpperCase(), numbered: true, ...device,
     credit: TEENAGE_ENGINEERING,
     defaults: { [spec.key]: spec.detent / STEPS }, controls,
     layers: ctx => {
@@ -105,10 +106,10 @@ function knob(spec: KnobSpec): WidgetPreset {
     },
   }
 }
-export const cutoff = knob({ id: 'inst-cutoff', name: 'Cutoff', index: '01', key: 'cutoff', detent: 15, read: hz })
-export const resonance = knob({ id: 'inst-resonance', name: 'Resonance', index: '02', key: 'resonance', detent: 8, read: v => [`${Math.round(v * 100)}`, '%'] })
-export const attack = knob({ id: 'inst-attack', name: 'Attack', index: '04', key: 'attack', detent: 5, read: time })
-export const release = knob({ id: 'inst-release', name: 'Release', index: '05', key: 'release', detent: 16, read: time })
+export const cutoff = knob({ id: 'inst-cutoff', name: 'Cutoff', key: 'cutoff', detent: 15, read: hz })
+export const resonance = knob({ id: 'inst-resonance', name: 'Resonance', key: 'resonance', detent: 8, read: v => [`${Math.round(v * 100)}`, '%'] })
+export const attack = knob({ id: 'inst-attack', name: 'Attack', key: 'attack', detent: 5, read: time })
+export const release = knob({ id: 'inst-release', name: 'Release', key: 'release', detent: 16, read: time })
 
 // ── shared clock: the sequencer's pattern drives the meter ──────────────────
 /** The default 16-step pattern (kick on the beats, off-beat ghosts). */
@@ -153,7 +154,7 @@ const peakOf = (t: number, side: number, song: Song) => {
   return p
 }
 export const meter: WidgetPreset = {
-  id: 'inst-level', name: 'Level', label: '03  LEVEL', ...device,
+  id: 'inst-level', name: 'Level', label: 'LEVEL', numbered: true, ...device,
   credit: TEENAGE_ENGINEERING,
   defaults: { gain: .8 },
   controls: [{ key: 'gain', kind: 'slider', orientation: 'vertical', box: [36, 20, 72, 100], min: 0, max: 1, step: 1 / 20, label: 'Output gain' }],
@@ -195,7 +196,7 @@ const xyAt = (x: number, y: number, t: number, amp: number): [number, number] =>
 const toPad = ([x, y]: [number, number]): Pt => [XY.x + x * XY.s, XY.y + (1 - y) * XY.s]
 const SURFACE: Pt[] = Array.from({ length: 121 }, (_, i) => [XY.x + (i % 11) * XY.grid, XY.y + Math.floor(i / 11) * XY.grid])
 export const xyPad: WidgetPreset = {
-  id: 'inst-xy', name: 'XY Pad', label: '06  XY PAD', ...device,
+  id: 'inst-xy', name: 'XY Pad', label: 'XY PAD', numbered: true, ...device,
   credit: TEENAGE_ENGINEERING,
   defaults: { x: .38, y: .58 },
   controls: [{ key: 'x', keyY: 'y', kind: 'xy', box: [XY.x, XY.y, XY.s, XY.s], min: 0, max: 1, label: 'Filter XY pad' }],
@@ -238,7 +239,7 @@ const CARET_X = 116, CARETS: Pt[][] = [[[-3, 27], [0, 24], [3, 27]], [[-3, 39], 
 const SOUND_BOX: [number, number, number, number] = [30, 123, 84, 14]
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 export const transport: WidgetPreset = {
-  id: 'inst-transport', name: 'Transport', label: '07  TRANSPORT', ...device,
+  id: 'inst-transport', name: 'Transport', label: 'TRANSPORT', numbered: true, ...device,
   credit: TEENAGE_ENGINEERING,
   defaults: { bpm: BPM, mode: 1, sound: 0 },
   controls: [
@@ -286,7 +287,7 @@ export const transport: WidgetPreset = {
 const SEQ = { x0: 33, y0: 28, pitch: 26, on: 13, off: 4.4 }
 const stepPos = (i: number): Pt => [SEQ.x0 + (i % 4) * SEQ.pitch, SEQ.y0 + Math.floor(i / 4) * SEQ.pitch]
 export const sequencer: WidgetPreset = {
-  id: 'inst-sequencer', name: 'Sequencer', label: '08  SEQUENCER', ...device,
+  id: 'inst-sequencer', name: 'Sequencer', label: 'SEQUENCER', numbered: true, ...device,
   credit: TEENAGE_ENGINEERING,
   defaults: { bpm: BPM, ...Object.fromEntries(PATTERN.map((on, i) => [stepKey(i), on])) },
   controls: PATTERN.map((_, i): Control => {
@@ -319,7 +320,7 @@ const CRANK = { cx: 72, cy: 60, wheel: 28, tickR: 37, handle: 15, ticks: 24 }
 const ARM = [.42 * 8 + .42 * 2.6 + 1.5, CRANK.wheel - .42 * CRANK.handle - .42 * 2.6 - 1.5]
 const TICKS = Array.from({ length: CRANK.ticks }, (_, i) => polar(CRANK.cx, CRANK.cy, CRANK.tickR, (i / CRANK.ticks) * TAU))
 export const crank: WidgetPreset = {
-  id: 'inst-crank', name: 'Crank', label: '09  CRANK', ...device,
+  id: 'inst-crank', name: 'Crank', label: 'CRANK', numbered: true, ...device,
   credit: TEENAGE_ENGINEERING,
   defaults: { crank: 16 + 5 / 24 },
   controls: [{ key: 'crank', kind: 'crank', box: [CRANK.cx - CRANK.tickR, CRANK.cy - CRANK.tickR, 2 * CRANK.tickR, 2 * CRANK.tickR], min: 0, max: 416, step: 1 / 24, label: 'Crank', valueText: v => `${Math.round(v * CRANK.ticks)} ticks` }],
@@ -343,4 +344,4 @@ export const crank: WidgetPreset = {
 }
 
 /** 2×2 knob block top-left, meter and XY pad down the right, transport / sequencer / crank along the bottom. */
-export const instrumentBoard: WidgetPreset[] = [cutoff, resonance, meter, attack, release, xyPad, transport, sequencer, crank]
+export const instrumentBoard: WidgetPreset[] = numberBoard([cutoff, resonance, meter, attack, release, xyPad, transport, sequencer, crank])

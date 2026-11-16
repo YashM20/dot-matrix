@@ -129,7 +129,7 @@ function koiLight(ctx: WidgetContext, hour: number): KoiDrawOpts['light'] {
 }
 
 export const pondKoi: WidgetPreset = {
-  id: 'pond-koi', name: 'Pond Koi', label: '01  KOI', ...tile, fps: 30,
+  id: 'pond-koi', name: 'Pond Koi', label: 'KOI', numbered: true, ...tile, fps: 30,
   credit: [
     { by: ['Dao Ho'], title: 'daoho.dev koi pond', source: 'https://www.daoho.dev/', note: 'the pond this board is after; none of its code' },
     { by: ['argonautcode'], title: 'animal-proc-anim', source: 'https://github.com/argonautcode/animal-proc-anim', note: 'the follow-the-leader spine' },

@@ -2,7 +2,7 @@
  * Board · SURFACES (P5). One timer, one shared time, three displays: the browser card itself, a Glyph
  * Matrix (25×25 round LED matrix) and a flip-disc sign (column-scanned discs with inertia). The e-ink
  * and plotter cards were retired (#364); their profiles and simulators stay in `src/engine/device` for MAKE.
- * Card labels keep their original numbers (01, 02, 04) so the remaining cards' pixels don't move.
+ * Card numbers come from the board order (`numberBoard`).
  *
  * Every device card is `toDevice(timer, profile)` (`src/engine/device`) → that device's simulator →
  * dot sites. Tiny grids use the timer's curated `variants` (§3.9). All cards read board time `t + data.clockOffset`, and the
@@ -20,6 +20,7 @@ import { toCell } from '../../engine/layout'
 import type { Field, GridConfig, Layer, Tone } from '../../engine/types'
 import { createSource, type Source } from '../../data/source'
 import { TAU, TILE, bounded, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { numberBoard } from '../numbered'
 import { dotText } from './henry'
 
 const T = layoutFor(TILE)
@@ -121,14 +122,14 @@ function bands(list: { at: Pt; tone: Tone; size: number }[]): Layer[] {
 
 // ── 01 BROWSER: the card itself ─────────────────────────────────────────────
 export const surfaceBrowser: WidgetPreset = {
-  id: 'surface-browser', name: 'Surface Browser', label: '01  BROWSER', ...tile, defaults: { clockOffset: 0 },
+  id: 'surface-browser', name: 'Surface Browser', label: 'BROWSER', numbered: true, ...tile, defaults: { clockOffset: 0 },
   layers: ctx => [spec('144X144'), ...timerSpec.layers(ctx)],
 }
 
 // ── 02 GLYPH MATRIX: 489 LEDs behind a round window ─────────────────────────
 const GLYPH = DEVICES['glyph-matrix-25'], GP = 5.2, GX = 72 - 12 * GP, GY = 76 - 12 * GP
 export const surfaceGlyph: WidgetPreset = {
-  id: 'surface-glyph', name: 'Surface Glyph Matrix', label: '02  GLYPH MATRIX', ...tile, defaults: { clockOffset: 0 },
+  id: 'surface-glyph', name: 'Surface Glyph Matrix', label: 'GLYPH MATRIX', numbered: true, ...tile, defaults: { clockOffset: 0 },
   credit: { by: ['Nothing'], title: 'Glyph Matrix Developer Kit', source: 'https://github.com/Nothing-Developer-Programme/GlyphMatrix-Developer-Kit', note: 'the 25 × 25 round LED matrix this simulates' },
   layers: ctx => {
     const f = toDevice(timerSpec, GLYPH, { ctx: { t: boardTime(ctx), data: {} } }), { lit, halo } = ledGlow(f, GLYPH.physics)
@@ -147,11 +148,11 @@ export const surfaceGlyph: WidgetPreset = {
   },
 }
 
-// ── 04 FLIP-DISC: 28×14 discs, column-scanned, with inertia ──────────────────
+// ── FLIP-DISC: 28×14 discs, column-scanned, with inertia ─────────────────────
 const FLIP = DEVICES['flipdisc-28x14'], FP = 5, FX = 72 - 13.5 * FP, FY = 36
 export const flip = createFlipSim(frameAt(FLIP), FLIP.physics, FLIP.refresh)
 export const surfaceFlipdisc: WidgetPreset = {
-  id: 'surface-flipdisc', name: 'Surface Flip-disc', label: '04  FLIP-DISC', ...tile, defaults: { clockOffset: 0 },
+  id: 'surface-flipdisc', name: 'Surface Flip-disc', label: 'FLIP-DISC', numbered: true, ...tile, defaults: { clockOffset: 0 },
   layers: ctx => {
     const bt = boardTime(ctx), view = flip.at(bt), discs: { at: Pt; tone: Tone; size: number }[] = []
     for (let r = 0; r < 14; r++) for (let c = 0; c < 28; c++) {
@@ -200,4 +201,4 @@ export const clockSource: Source<number> = createSource<number>({
   }],
 })
 export const surfacesSources = [clockSource]
-export const surfacesBoard: WidgetPreset[] = [surfaceBrowser, surfaceGlyph, surfaceFlipdisc]
+export const surfacesBoard: WidgetPreset[] = numberBoard([surfaceBrowser, surfaceGlyph, surfaceFlipdisc])
