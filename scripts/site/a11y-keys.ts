@@ -154,7 +154,8 @@ async function pressSink(mode: string) {
   const p = await launch(1280, 800, { mouse: true })
   try {
     await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false })
-    await p.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: mode }] })
+    // full motion, whatever the machine's own setting: the reduce phase comes last
+    await p.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: mode }, { name: 'prefers-reduced-motion', value: 'no-preference' }] })
     if (!(await load(p, base + PAGES[2][1], PAGES[2][2]))) { check(`press: ready:${mode}`, false, 'not ready in 30 s'); return }
     const fine = await p.js<boolean>(`matchMedia('(hover: hover) and (pointer: fine)').matches`)
     const token = await p.js<number>(`parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--press-sink-fine'))`)
