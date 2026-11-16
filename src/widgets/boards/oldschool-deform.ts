@@ -46,12 +46,13 @@ const PLATE = plateGeom(K)
 
 // ── 01 TUNNEL ── the off-axis tunnel (u = .3/(r + .5x) deep, v = 3a/π around) lined with staggered bricks. The camera
 // flies in at 1.6 depth units a second; every 1.5 units one brick pair is lit red and comes at you from the dark.
-const RINGS = 6, BRICKS = 4, SPEED = 1.6, RED_EVERY = 1.5, RED_PHASE = .5
+const RINGS = 6, BRICKS = 4, SPEED = 1.6, RED_EVERY = 1.5, RED_PHASE = 7 / RINGS
 const tunnelTable = table(PLATE, deformTunnel, square, (_x, _y, u) => (u > 0 ? 1 / (1 + .3 * u * u) : 0))
 function tunnelInk(t: number): (x: number, y: number, ink: Ink, i: number) => void {
   const du = SPEED * t, dv = .04 * t, { uv, fog } = tunnelTable()
   // the red brick's ring (unwrapped): each RED_EVERY depth units a new one appears at the far end; the phase puts it
-  // near the viewer at the golden frame (t = 1.3, depth ≈ .42), where a brick is a dozen dots across
+  // near the viewer at t = 0 (the reduced-motion still, depth ≈ .33), where a brick is a dozen dots across. It is a
+  // whole number of rings, or no ring ever matches
   const redRing = (Math.floor((du + RED_PHASE) / RED_EVERY) + 1) * RED_EVERY * RINGS - RED_PHASE * RINGS, redCol = 2
   return (_x, _y, ink, i) => {
     let s = 0, red = 0, lit = 0

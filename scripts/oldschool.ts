@@ -136,6 +136,13 @@ function boardChecks(assert: Assert): void {
   }
   const reds = oldschoolBoard.map((_, i) => groups(dots(i, 1.3).filter(d => d.color === dot480.dotActive)))
   assert('oldschool: at most one red element per card, and only the accent red', reds.every(n => n <= 1), reds.join(' '))
+  // #251: the reduced-motion still (t = 0) shows the tunnel's red brick near the viewer, not a sliver in the dark
+  const tunnelRed = dots(0, 0).filter(d => d.color === dot480.dotActive).length
+  assert("oldschool: os-tunnel's red brick is near at t = 0 (40+ red dots)", tunnelRed >= 40, `${tunnelRed} red dots`)
+  // #251: os-echo fades out before its loop resets and back in after, so the reset never shows; t = 0 is full strength
+  const body = (t: number) => dots(4, t).filter(d => d.y / 2.25 - .5 > 12 && d.y / 2.25 - .5 < 130).length
+  const echo = { start: body(0), mid: body(20), end: body(42 - .02), back: body(42 + .01) }
+  assert('oldschool: os-echo fades round its loop reset and starts full at t = 0', echo.end < echo.mid / 4 && echo.back < echo.mid / 4 && echo.start > echo.mid / 2, JSON.stringify(echo))
   for (const [i, p] of oldschoolBoard.entries()) {
     let t = 30
     const { ms, load } = medianLoaded(() => dots(i, (t += 1 / 12)), 9)

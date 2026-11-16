@@ -422,7 +422,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   // watch: smartwatch faces, the time from the device clock, the sky worked out from the date
   'watch-analog': ['An analog watch face on the device\'s time. The seconds hand sweeps round with a red tip.', 'watch clock analog hands time animated'],
   'watch-digital': ['Hours over minutes in big dots. The seconds run round the edge of the screen, the current one in red.', 'watch clock digital time seconds animated'],
-  'watch-complications': ['The time, the date and four small dials: battery, pulse, air and the moon. The red dot beats with the pulse.', 'watch clock complications pulse battery moon animated'],
+  'watch-complications': ['The time, the date and four small dials: battery, pulse, outside temperature and the moon. The red dot beats with the pulse.', 'watch clock complications pulse battery moon animated'],
   'watch-moon': ['The moon\'s phase, worked out from the date on your device. The red dot is today on the lunar month.', 'watch moon phase lunar astronomy clock'],
   'watch-tide': ['A tide clock run by a simple model, as an illustration. The hand turns once a tide and the water fills the dial.', 'watch tide clock model illustration water'],
   'watch-sun': ['Sunrise and sunset in London on a 24-hour dial, worked out from the date. The sun is the red dot.', 'watch sun sunrise sunset daylight astronomy clock'],
