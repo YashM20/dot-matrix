@@ -4,10 +4,9 @@
  * the Q3 field pack, motif and morph cards in squaresPack.ts.
  */
 import { latticeGrid } from '../../engine/sampler/gridSampler'
-import { clamp } from '../../engine/math'
 import type { DotStyle, Field, JoinSpec, Layer, Tone } from '../../engine/types'
-import { TILE, layer, layoutFor } from '../types'
-import { caption, footer as footerText } from '../captions'
+import { TILE, layoutFor } from '../types'
+import { caption, railFooter } from '../captions'
 
 export const T = layoutFor(TILE)
 export type Pt = [number, number]
@@ -23,17 +22,7 @@ export const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: squ
 export const cite = (s: string) => caption(s)
 export const FOOT = 137, RAIL_Y = 132
 /** Footer: a faint dotted rail filled in `mid` to `k`, an optional live (red) knob, a counter left and one stat right. */
-export function footer(k: number, left: string, right: string, live = false): Layer[] {
-  const done: Pt[] = [], rest: Pt[] = [], end = N * clamp(k)
-  let knob: Pt | undefined
-  for (let c = 0; c <= N; c += 3) (c <= end ? done : rest).push([c, RAIL_Y])
-  if (live && done.length) knob = done.pop()
-  return [
-    layer(T.dots(rest, .9), 'faint'), layer(T.dots(done, 1.1), 'mid'),
-    ...(knob ? [layer(T.dots([knob], 2.2), 'active')] : []),
-    ...footerText(left, right, FOOT),
-  ]
-}
+export const footer = (k: number, left: string, right: string, live = false): Layer[] => railFooter(k, left, right, { rail: RAIL_Y, foot: FOOT, live })
 export const pad = (n: number, w: number) => String(Math.max(0, Math.round(n))).padStart(w, '0')
 export const thousands = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 export const mod = (x: number, m: number) => ((x % m) + m) % m

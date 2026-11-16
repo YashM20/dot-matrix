@@ -4,6 +4,7 @@
  */
 import type { Layer } from '../../engine/types'
 import { layer } from '../types'
+import { divider } from '../captions'
 import { BODY, PRESS, T, at, dimmed, fade, frac, loopCard, outCubic, outline, span, spriteAt, step4 } from './motion-kit'
 
 /** Width in cells of body text (1.3 lattice). */
@@ -29,7 +30,7 @@ export const typingCard = loopCard({
       layer(T.big('NADIA', 6, 16, BODY), 'value'),
       layer(T.dots([[6 + bodyW('NADIA') + 5, 20]], 5), typing ? 'active' : 'mid'),
       layer(T.text(typing ? 'TYPING' : 'ONLINE', 6, 29), 'mid'),
-      layer(T.dotLine(6, 40, 138, 40, { spacing: 3.3, size: 1 }), 'faint'),
+      divider(6, 138, 40),
       ...bubble(ASK, 138 - bodyW(ASK) - 2 * BUBBLE.pad, 46, 'mid', 'value'),
     ]
     if (lt < TY.start) return out

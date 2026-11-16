@@ -20,12 +20,14 @@ import { TEENAGE_ENGINEERING } from '../creditSources'
 import type { Control } from '../../engine/context'
 import type { Tone } from '../../engine/types'
 import { audioOf, meterSegment } from '../../audio/frame'
-import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
+import { polar } from '../dials'
+import { transportGlyph } from '../dot-controls'
+import { TAU, TILE, layer, layoutFor, tileCircleStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
 /** Knobs, handles and step LEDs are true circles, like the components board. */
-const style = { ...tileStyle, cornerRoundness: 0 }
+const style = tileCircleStyle
 const device = { group: 'composite', chrome: 'dots', grid: TILE, style, animated: true } as const
 const deg = (d: number) => (d / 360) * TAU
 const clamp01 = (x: number) => Math.max(0, Math.min(1, x))
@@ -39,8 +41,6 @@ const PRESS = .75
 /** Marching focus dots advance this many sites per second (3-cell spacing → 18 cells/s). */
 const MARCH = 6
 const spots = (pts: Pt[], size: number, v = 1): LatticeField => ({ field: () => v, sites: pts, size })
-/** A point at clock angle `a` (clockwise from 12) on a circle. */
-const polar = (cx: number, cy: number, r: number, a: number): Pt => [cx + r * Math.sin(a), cy - r * Math.cos(a)]
 const circle = (cx: number, cy: number, r: number, spacing: number): Pt[] => {
   const n = Math.max(6, Math.round((TAU * r) / spacing))
   return Array.from({ length: n }, (_, i) => polar(cx, cy, r, (i / n) * TAU))
@@ -230,8 +230,8 @@ const BPM_BOX: [number, number, number, number] = [38, 18, 68, 48]
  * stop a 3×3 square of the same sites, so the two read as shapes beside the record light.
  */
 const GLYPH = { k: 4.4, size: 3.5 }
-const PLAY: Pt[] = T.dotTri(6.2, 0, 4, { k: GLYPH.k }).sites ?? []
-const STOP: Pt[] = Array.from({ length: 9 }, (_, i): Pt => [((i % 3) - 1) * GLYPH.k, (Math.floor(i / 3) - 1) * GLYPH.k])
+const PLAY: Pt[] = transportGlyph('play', 6.2, 0, 4, GLYPH.k).sites ?? []
+const STOP: Pt[] = transportGlyph('stop', 0, 0, 3, GLYPH.k).sites ?? []
 const icon = (pts: Pt[], cx: number, cy: number, v: number) => spots(pts.map(([x, y]): Pt => [cx + x, cy + y]), GLYPH.size, v)
 /** Tempo hint on hover and focus: an up and a down chevron beside the number (vertical drag or arrows). */
 const CARET_X = 116, CARETS: Pt[][] = [[[-3, 27], [0, 24], [3, 27]], [[-3, 39], [0, 42], [3, 39]]]
