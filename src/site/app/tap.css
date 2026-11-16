@@ -44,7 +44,8 @@
     min-width: 40px
   }
 
-  :is(.shell) select,
+  /* a .field (src/site/controls.css) is a tap target tall on touch already */
+  :is(.shell) select:where(:not(.field)),
   :is(.shell) input[type=range] {
     min-height: 24px
   }
