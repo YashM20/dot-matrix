@@ -401,7 +401,7 @@ By Inigo Quilez.
 
 By Tomohiro Nishikado, Taito.
 
-- 06 Mini Game (`mini-game`), board `/mosaic/`: the invader sprite
+- Mini Game (`mini-game`), board `/mosaic/`: the invader sprite
 
 ### [Split-flap display](https://en.wikipedia.org/wiki/Split-flap_display)
 
