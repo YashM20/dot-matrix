@@ -143,6 +143,20 @@ function boardChecks(assert: Assert): void {
   const body = (t: number) => dots(4, t).filter(d => d.y / 2.25 - .5 > 12 && d.y / 2.25 - .5 < 130).length
   const echo = { start: body(0), mid: body(20), end: body(42 - .02), back: body(42 + .01) }
   assert('oldschool: os-echo fades round its loop reset and starts full at t = 0', echo.end < echo.mid / 4 && echo.back < echo.mid / 4 && echo.start > echo.mid / 2, JSON.stringify(echo))
+  // os-star reads as three arms: dot area by angle in a ring round the centre (10° bins, lightly smoothed) has three
+  // peaks at every t. A checker through the star formula gave six to nine blades (#251)
+  const star = oldschoolBoard.findIndex(p => p.id === 'os-star'), cell = (px: number) => px / 2.25 - .5
+  const peaksAt = (t: number) => {
+    const bins = new Float64Array(36)
+    for (const d of dots(star, t)) {
+      const dx = cell(d.x) - 71.5, dy = cell(d.y) - 71, r = Math.hypot(dx, dy) / 72
+      if (r >= .35 && r <= .85) bins[Math.floor(((Math.atan2(dy, dx) / (2 * Math.PI) + 1) % 1) * 36) % 36] += d.r * d.r
+    }
+    const sm = bins.map((_, k) => bins[(k + 35) % 36] + 2 * bins[k] + bins[(k + 1) % 36]), mean = sm.reduce((s, x) => s + x, 0) / 36
+    return sm.filter((x, k) => x >= sm[(k + 35) % 36] && x > sm[(k + 1) % 36] && x > 1.5 * mean).length
+  }
+  const starPeaks = [0, 1.3, 3, 7.7, 21].map(peaksAt)
+  assert('oldschool: os-star has three arms (three angular density peaks at t 0, 1.3, 3, 7.7, 21)', starPeaks.every(n => n === 3), starPeaks.join(' '))
   for (const [i, p] of oldschoolBoard.entries()) {
     let t = 30
     const { ms, load } = medianLoaded(() => dots(i, (t += 1 / 12)), 9)

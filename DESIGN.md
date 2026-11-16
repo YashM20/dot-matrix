@@ -486,6 +486,7 @@ A knob, a single status dot or a masked password character is one site (`T.dots(
 | `divider(x0, x1, y)` | `src/widgets/captions.ts` | The faint dotted rule (spacing 3.3, size 1) between card sections |
 | `liveDot(grid)` / `LIVE_DOT` | `src/widgets/types.ts` | The chrome's red live dot; a card that switches it on itself draws this |
 | `tileCircleStyle` | `src/widgets/types.ts` | `tileStyle` with roundness 0, for boards whose knobs and status dots are true circles |
+| `ui(ctx, key)`, `states(s, t, hover, focus?, d?)`, `glow`, `marching`, `PRESS` | `src/widgets/dot-controls.ts` | The one hover, press and focus grammar (#358, the Interaction tokens). A card passes its outline as a `Shape` (`rr`, `circle`, or its own sites) and the ring's distance; `clear` drops halo sites a neighbour sits on. A card keeps its own shape only where its layout leaves no room, and says so in a comment |
 
 ### Status & Indicators
 
@@ -592,13 +593,14 @@ Interaction is a state the card's *data* is in, not a CSS layer on top. The inpu
 
 | Token | Value | Applies to |
 |---|---|---|
-| `{interaction.hoverGlowRadius}` | 6 cells (falloff to 0 at the radius, soft ramp about 1 cell wide per the organic-edge rule) | Soft light pool under the pointer, drawn behind the hovered control |
-| `{interaction.hoverGlowTone}` | `value` at the centre, `mid` at the rim. **Never `{colors.dotActive}`** | Hover glow layer tone |
+| `{interaction.hoverGlowRadius}` | Two halo outlines, 2.6 and 5.2 cells out from the control's outline (`glow`, `src/widgets/dot-controls.ts`) | Hover glow round the hovered control |
+| `{interaction.hoverGlowTone}` | `value` at 0.5, then 0.25, in outline sites (spacing 3.3, size 1.5). **Never `{colors.dotActive}`** | Hover glow layer tone |
 | `{interaction.pressStep}` | 1 `{grid.quantizeSteps}` step down (`1 / quantizeSteps`: 0.2 at the default 5); **0.25** on unquantized styles | Dot size (radius value) of a pressed control, relative to its resting value |
 | `{interaction.springHalfLife.data}` | 0.12 s, critically damped | Data keys that glide to a new value (`springKeys`): sliders, knobs, scrub position |
 | `{interaction.springHalfLife.release}` | 0.08 s, under-damped (damping ratio 0.5, one visible overshoot) | Press release: the dot size springs back past rest once, then settles |
-| `{interaction.focusDash}` | 3 dots lit, 2 dots dark (one 5-site period) along the control's dotted outline | Keyboard focus ring (marching dots) |
-| `{interaction.focusSpeed}` | 8 cells per second (at most 1 cell per frame at the card's fps, 12 by default), linear, stepped by time, not by frame | Marching speed of the focus dash; held still under reduced motion |
+| `{interaction.focusDash}` | 3 dots lit, 2 dots dark (one 5-site period) on an outline of sites 2.4 cells apart, size 1.3, 7 cells out by default (`marching`) | Keyboard focus ring (marching dots) |
+| `{interaction.focusSpeed}` | 10 sites per second, stepped by time, not by frame | Marching speed of the focus dash; held still under reduced motion (`ctx.reducedMotion`) |
+| `{interaction.focusTone}` | `idle` on every board: at least 5.1:1 on the dark cards and 8.6:1 on paper | Focus ring tone |
 | `{interaction.hitPad}` | Pad each target by whole cells until it is at least 24 px square (`ceil(24 / pxPerCell)` cells per axis); **44 px** when the pointer is touch | Hit-test rectangle around every control; never changes what is drawn |
 | `{interaction.touchSlop}` | 10 px of finger travel | Below it a touch can still be a tap or a hold; past it, a vertical move is the page's scroll and a horizontal one claims a drag control (`TOUCH.slop`, `src/engine/interaction/gesture.ts`) |
 | `{interaction.pressDelay}` | 110 ms still | A touched tap control shows its press (a button goes down) only after this, so a swipe that starts on it never flashes it |

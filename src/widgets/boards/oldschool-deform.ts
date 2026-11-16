@@ -4,9 +4,8 @@
  * formulas go into a look-up table once per card (`deformLUT`, 2×2 samples per dot, with a static fog per sample)
  * and each frame only scrolls the texture. Dots sit on a coarse lattice, so dot size is light.
  */
-import { deformFloor, deformFlower, deformLUT, deformStar, deformTunnel, wrap01, type Deformation, type UV } from '../../engine/oldschool/deform'
-import { dsin, ihash } from '../../engine/noise/dmath'
-import { checkersTriangle } from '../../engine/filter/checkers'
+import { deformFloor, deformFlower, deformLUT, deformTunnel, wrap01, type Deformation, type UV } from '../../engine/oldschool/deform'
+import { datan2, dsin, ihash } from '../../engine/noise/dmath'
 import { layer, type WidgetPreset } from '../types'
 import { ACTIVE, BODY_BOTTOM, BODY_TOP, CREDIT_DEFORM, FAINT, IDLE, MID, T, VALUE, clamp01, dotCentre, footer, frac, pad, plate, plateGeom, tile, type Ink, type PlateGeom } from './oldschool-kit'
 
@@ -144,25 +143,42 @@ export const osFloor: WidgetPreset = {
   },
 }
 
-// ── 06 STAR ── the three-armed star (u = .02y + .03 cos 3a / r): a fine checker spun out along three arms, scrolling
-// so the arms seem to turn. The centre, where the formula runs to infinity, fades to black, and so do the corners.
-const starTable = table(PLATE, deformStar, square, (px, py) => { const r = Math.sqrt(px * px + py * py); return clamp01(r * 4 - .15) * clamp01((1.05 - r) * 2.2) })
-/** Checker cells per unit of (u, v), and the dot's footprint in sample steps (samples sit one cell apart, a dot is K). */
-const STAR_N = 14
+// ── 06 STAR ── the article's three-armed star (u = .02y + .03 cos 3a / r, v = .02x + .03 sin 3a / r). A checker read
+// through it lights two quadrants a turn, three turns round, so on the dot grid it showed six blades, not three. Here
+// the cos 3a term draws the arms: three straight-edged spikes that narrow to a point, swept back a little, turning
+// slowly, with bright bands running out along them. The centre, where the formula runs to infinity, stays dark.
+const STAR = { turn: .35, sweep: .35, width: .27, reach: 1, soft: .06, bands: 4.5, flow: .6 }
+/** Each plate dot's polar position (a, r) and fog, from its centre in screen units: fixed, so baked once. */
+const starGeom = (() => {
+  const n = PLATE.cols * PLATE.rows, a = new Float32Array(n), r = new Float32Array(n), fog = new Float32Array(n), p: UV = [0, 0]
+  for (let i = 0; i < n; i++) {
+    const [x, y] = dotCentre(PLATE, i), [px, py] = square(x, y, p), d = Math.sqrt(px * px + py * py)
+    a[i] = datan2(py, px); r[i] = d; fog[i] = clamp01(d * 9 - .5)
+  }
+  return { a, r, fog }
+})()
+const TAU = 2 * Math.PI
+/**
+ * How far inside an arm a point at angle `th` (spines at 0 and ±120°) and radius `r` sits: 0 outside, 1 a soft edge
+ * in. An arm's half width falls from `width` at the hub to 0 at `reach`, measured along the arc, so its edges are straight.
+ */
+function starArm(th: number, r: number): number {
+  const phi = 3 * th, off = Math.abs(phi - TAU * Math.round(phi / TAU)) / 3
+  return clamp01((STAR.width * (1 - r / STAR.reach) - off * r) / STAR.soft)
+}
 function starInk(t: number): (x: number, y: number, ink: Ink, i: number) => void {
-  const du = .9 * t, dv = -.35 * t, { uv, fog } = starTable()
+  const spin = STAR.turn * t, flow = STAR.flow * t, { a, r, fog } = starGeom
   return (_x, _y, ink, i) => {
-    const k = i * 4
-    if (!(fog[k] && fog[k + 1] && fog[k + 2] && fog[k + 3])) return
-    // the dot's centre and footprint from its four samples (the LUT's finite differences), in checker cells
-    const u0 = uv[2 * k], v0 = uv[2 * k + 1], u1 = uv[2 * k + 2], v1 = uv[2 * k + 3], u2 = uv[2 * k + 4], v2 = uv[2 * k + 5], u3 = uv[2 * k + 6], v3 = uv[2 * k + 7]
-    const cu = (u0 + u1 + u2 + u3) * .25 * STAR_N + du, cv = (v0 + v1 + v2 + v3) * .25 * STAR_N + dv
-    const xu = (u1 - u0 + u3 - u2) * .5 * K * STAR_N, xv = (v1 - v0 + v3 - v2) * .5 * K * STAR_N
-    const yu = (u2 - u0 + u3 - u1) * .5 * K * STAR_N, yv = (v2 - v0 + v3 - v1) * .5 * K * STAR_N
-    // triangle-filtered checkers (IQ4): a cell edge crossing the dot gives a part value, so the arms' edges taper
-    const c = checkersTriangle(cu, cv, xu, xv, yu, yv), f = (fog[k] + fog[k + 1] + fog[k + 2] + fog[k + 3]) * .25, v = c * f
-    ink.v = v < .12 ? 0 : v
-    ink.tone = (Math.floor(cu) & 1) ? (v > .55 ? VALUE : MID) : v > .55 ? IDLE : MID
+    const f = fog[i]
+    if (!f) return
+    // swept back: the outer part of an arm trails the turn
+    const m = starArm(a[i] - spin + STAR.sweep * r[i], r[i]) * f
+    if (m < .12) return
+    // a band every 1/bands of radius, running outward
+    const band = frac(STAR.bands * r[i] - flow) < .4
+    // the arm's body stays `idle` so its outline reads between the bands; `mid` at this size sank into the card
+    ink.v = band ? m : m * .6
+    ink.tone = band && m > .55 ? VALUE : m > .3 ? IDLE : MID
   }
 }
 export const osStar: WidgetPreset = {
