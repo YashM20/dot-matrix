@@ -84,7 +84,6 @@ const SHOTS: Shot[] = [
   { name: 'lock', path: 'lock/', ready: BOARD, full: true },
   { name: 'pond', path: 'pond/', ready: BOARD, full: true },
   { name: 'squares', path: 'squares/', ready: BOARD, full: true },
-  { name: 'materials', path: 'materials/', ready: BOARD, full: true },
   { name: 'mosaic', path: 'mosaic/', ready: BOARD, full: true },
   { name: 'workshop', path: 'workshop/', ready: BOARD, full: true },
   { name: 'about', path: 'about/', ready: STATIC('.about-intro'), full: true },

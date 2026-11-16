@@ -1,5 +1,5 @@
 /**
- * Watch faces about the wearer's day: a modular face with four complications (battery, pulse, air, moon) whose
+ * Watch faces about the wearer's day: a modular face with four complications (battery, pulse, outside temperature, moon) whose
  * one red dot beats with the pulse, and a step ring filled toward the day's goal with its red head and the steps
  * of each hour underneath. The numbers come from small seeded day models (./watch-kit), so they move with the clock.
  */
@@ -35,7 +35,8 @@ export const complicationsFace = face('watch-complications', 'Complications', 's
       ...dial(b, ctx.data.battery ?? .78, String(Math.round((ctx.data.battery ?? .78) * 100)), 'BAT'),
       ...dial(h, 0, String(bpm), 'BPM', 'idle', true),
       layer({ field: () => pulse, sites: [polar(SLOT.r, 0, h[0], h[1])], size: 4.4 }, 'active'),
-      ...dial(a, (air + 10) / 45, `${air}°`, 'AIR'),
+      // OUT: the outside temperature (AIR read like air quality)
+      ...dial(a, (air + 10) / 45, `${air}°`, 'OUT'),
       layer(T.dotRing(m[0], m[1], SLOT.r, SLOT.ring), 'faint'),
       layer(T.dots(moon.dark, 1.9), 'faint'),
       layer(T.dots(moon.lit, 1.9), 'value'),

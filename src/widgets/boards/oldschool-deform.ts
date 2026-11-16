@@ -8,7 +8,7 @@ import { deformFloor, deformFlower, deformLUT, deformStar, deformTunnel, wrap01,
 import { dsin, ihash } from '../../engine/noise/dmath'
 import { checkersTriangle } from '../../engine/filter/checkers'
 import { layer, type WidgetPreset } from '../types'
-import { ACTIVE, BODY_BOTTOM, BODY_TOP, CREDIT_DEFORM, FAINT, IDLE, MID, T, VALUE, caption, clamp01, dotCentre, footer, frac, pad, plate, plateGeom, tile, type Ink, type PlateGeom } from './oldschool-kit'
+import { ACTIVE, BODY_BOTTOM, BODY_TOP, CREDIT_DEFORM, FAINT, IDLE, MID, T, VALUE, clamp01, dotCentre, footer, frac, pad, plate, plateGeom, tile, type Ink, type PlateGeom } from './oldschool-kit'
 
 const K = 2
 /** 2×2 supersample offsets inside one lattice dot, in card cells. */
@@ -46,12 +46,13 @@ const PLATE = plateGeom(K)
 
 // ── 01 TUNNEL ── the off-axis tunnel (u = .3/(r + .5x) deep, v = 3a/π around) lined with staggered bricks. The camera
 // flies in at 1.6 depth units a second; every 1.5 units one brick pair is lit red and comes at you from the dark.
-const RINGS = 6, BRICKS = 4, SPEED = 1.6, RED_EVERY = 1.5, RED_PHASE = .5
+const RINGS = 6, BRICKS = 4, SPEED = 1.6, RED_EVERY = 1.5, RED_PHASE = 7 / RINGS
 const tunnelTable = table(PLATE, deformTunnel, square, (_x, _y, u) => (u > 0 ? 1 / (1 + .3 * u * u) : 0))
 function tunnelInk(t: number): (x: number, y: number, ink: Ink, i: number) => void {
   const du = SPEED * t, dv = .04 * t, { uv, fog } = tunnelTable()
   // the red brick's ring (unwrapped): each RED_EVERY depth units a new one appears at the far end; the phase puts it
-  // near the viewer at the golden frame (t = 1.3, depth ≈ .42), where a brick is a dozen dots across
+  // near the viewer at t = 0 (the reduced-motion still, depth ≈ .33), where a brick is a dozen dots across. It is a
+  // whole number of rings, or no ring ever matches
   const redRing = (Math.floor((du + RED_PHASE) / RED_EVERY) + 1) * RED_EVERY * RINGS - RED_PHASE * RINGS, redCol = 2
   return (_x, _y, ink, i) => {
     let s = 0, red = 0, lit = 0
@@ -135,11 +136,10 @@ export const osFloor: WidgetPreset = {
   layers: ctx => {
     const tw = Math.floor(ctx.t * 2) % STARS.length
     return [
-      caption('U=X/ABS(Y)'),
       layer(plate(SUN_K, sunInk, BODY_TOP, HORIZON - 2)),
       layer(T.dots(STARS.filter((_, i) => i !== tw), 1), 'mid'),
       layer(plate(K, floorInk(ctx.t), HORIZON, BODY_BOTTOM)),
-      ...footer(`MILE ${pad(ctx.t * 2, 4)}`, 'V=1/ABS(Y)'),
+      ...footer(`MILE ${pad(ctx.t * 2, 4)}`),
     ]
   },
 }

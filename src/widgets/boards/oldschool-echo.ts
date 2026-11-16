@@ -6,7 +6,7 @@ import { feedbackQuad, feedbackSim, feedbackSpin, sampleTexture } from '../../en
 import { dsin } from '../../engine/noise/dmath'
 import { simPhase, simStep, simView } from '../../engine/sim/sim'
 import { layer, type WidgetPreset } from '../types'
-import { ACTIVE, BODY_BOTTOM, BODY_TOP, CREDIT_FEEDBACK, IDLE, MID, VALUE, caption, footer, frac, pad, plate, tile } from './oldschool-kit'
+import { ACTIVE, BODY_BOTTOM, BODY_TOP, CREDIT_FEEDBACK, IDLE, MID, VALUE, caption, clamp01, footer, frac, pad, plate, tile } from './oldschool-kit'
 
 const K = 2
 
@@ -14,6 +14,8 @@ const K = 2
 // (the article: .75) and read as black off the texture, so copies don't tile. The border starts as a thin line and a
 // row of dashes; a red block runs round it, and every frame carries its trail inward.
 const S = 96, BORDER = 12, DT = 1 / 20, SRC = 6, FADE = .82
+/** The loop: a 6 s head start, then 42 s before the texture resets; the plate fades out and back in over SEAM s round the reset. */
+const LEAD = 6, PERIOD = 42, SEAM = .6
 /** Where the red block is at step n: once round the border band every 6 s, in texels (lower-left corner). */
 function sourceAt(n: number): [number, number] {
   const k = frac(n * DT / 6) * 4, side = Math.floor(k), f = k - side, span = S - BORDER, lo = (BORDER - SRC) / 2
@@ -35,7 +37,7 @@ function eachTexel([x0, y0]: [number, number], size: number, f: (k: number, i: n
   }
 }
 const echo = feedbackSim({
-  size: S, border: BORDER, dt: DT, lead: 6, period: 42, every: 40, wrap: 'clear', fade: FADE, zoom,
+  size: S, border: BORDER, dt: DT, lead: LEAD, period: PERIOD, every: 40, wrap: 'clear', fade: FADE, zoom,
   init: tex => { for (let j = 0; j < S; j++) for (let i = 0; i < S; i++) tex[j * S + i] = frameAt(i, j) },
   source: (tex, size, n) => {
     // put back the frame under the block's last window, then draw the new one: the border holds one block, no trail
@@ -50,6 +52,9 @@ export const osEcho: WidgetPreset = {
   layers: ctx => {
     const n = simStep(echo, ctx.t), tex = simView(echo, ctx.t), tt = n * DT, a = feedbackSpin(tt), s = zoom(tt)
     const [sx0, sy0] = sourceAt(n), uv: [number, number] = [0, 0]
+    // the reset would snap the texture back to the start square and the spin by about 63°: fade out before it and in
+    // after it. The first pass (t < PERIOD, the still at t = 0 included) starts at full strength.
+    const inLoop = tt - LEAD, seam = clamp01((PERIOD - inLoop) / SEAM) * (ctx.t < PERIOD ? 1 : clamp01(inLoop / SEAM))
     // the body is square: screen x, y ∈ [−1, 1] over the 120 body rows, centred
     const half = (BODY_BOTTOM - BODY_TOP) / 2, cy = (BODY_TOP + BODY_BOTTOM) / 2
     const body = plate(K, (x, y, ink) => {
@@ -59,9 +64,9 @@ export const osEcho: WidgetPreset = {
       const v = sampleTexture(tex, S, uv[0], uv[1], 'clear')
       // the source itself, where the texture shows it (wrapped like the read)
       const ti = uv[0] * S, tj = uv[1] * S
-      if (ti >= sx0 && ti < sx0 + SRC && tj >= sy0 && tj < sy0 + SRC) { ink.v = 1; ink.tone = ACTIVE; return }
+      if (ti >= sx0 && ti < sx0 + SRC && tj >= sy0 && tj < sy0 + SRC) { ink.v = seam; ink.tone = ACTIVE; return }
       if (v < .06) return
-      ink.v = Math.min(1, v * 1.3); ink.tone = v > .55 ? VALUE : v > .25 ? IDLE : MID
+      ink.v = Math.min(1, v * 1.3) * seam; ink.tone = v > .55 ? VALUE : v > .25 ? IDLE : MID
     })
     return [
       caption(`FADE .${Math.round(FADE * 100)}`),

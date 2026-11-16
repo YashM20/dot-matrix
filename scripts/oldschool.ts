@@ -6,7 +6,7 @@
  *   in any order;
  * - feedback: the quad's corners, the fade, the border the copy never writes, and a replay from t that matches a
  *   straight run step for step;
- * - the board: six cards, each with its credit, the same dots for the same t, and a frame budget.
+ * - the board: six cards, each with its credit, the same dots for the same t, no formula text, and a frame budget.
  * Exported as `oldschoolChecks(assert)`; also runnable alone: `npx tsx scripts/oldschool.ts`.
  */
 import type { Assert } from './lib/check'
@@ -16,6 +16,7 @@ import { CLOUD_OCTAVES, CLOUD_RAY, cloudCover, cloudFbm, cloudGrid, cloudMarch, 
 import { feedbackFrame, feedbackQuad, feedbackSim, feedbackZoom, sampleTexture } from '../src/engine/oldschool/feedback'
 import { simAt, simAtStep, simReset } from '../src/engine/sim/sim'
 import { sampleLayers } from '../src/engine/sampler/gridSampler'
+import { describe } from '../src/engine/describe'
 import { dot480 } from '../src/engine/theme/tokens'
 import { creditsOf, withChrome } from '../src/widgets/types'
 import { oldschoolBoard } from '../src/widgets/boards/oldschool'
@@ -123,6 +124,9 @@ function boardChecks(assert: Assert): void {
   const key = (i: number, t: number) => JSON.stringify(dots(i, t))
   const same = oldschoolBoard.every((_, i) => { const a = key(i, 1.3); key(i, 7.9); return key(i, 1.3) === a })
   assert('oldschool: every card draws the same dots for the same t', same)
+  // #251: captions and footers say plain words; a formula on the 5x7 font reads as noise ("." and "," look alike)
+  const formulas = oldschoolBoard.flatMap(p => describe(p, { t: 1.3 }).text.filter(s => /[=()/]/.test(s)).map(s => `${p.id}: ${s}`))
+  assert('oldschool: no card prints a formula in its caption or footer', formulas.length === 0, formulas.join('; '))
   // a red element is one group of red dots: dots link when their centres are within 16 px (the sun's bands, a brick
   // pair across its mortar), so two separate red things count as 2
   const groups = (pts: { x: number; y: number }[]) => {
@@ -132,6 +136,13 @@ function boardChecks(assert: Assert): void {
   }
   const reds = oldschoolBoard.map((_, i) => groups(dots(i, 1.3).filter(d => d.color === dot480.dotActive)))
   assert('oldschool: at most one red element per card, and only the accent red', reds.every(n => n <= 1), reds.join(' '))
+  // #251: the reduced-motion still (t = 0) shows the tunnel's red brick near the viewer, not a sliver in the dark
+  const tunnelRed = dots(0, 0).filter(d => d.color === dot480.dotActive).length
+  assert("oldschool: os-tunnel's red brick is near at t = 0 (40+ red dots)", tunnelRed >= 40, `${tunnelRed} red dots`)
+  // #251: os-echo fades out before its loop resets and back in after, so the reset never shows; t = 0 is full strength
+  const body = (t: number) => dots(4, t).filter(d => d.y / 2.25 - .5 > 12 && d.y / 2.25 - .5 < 130).length
+  const echo = { start: body(0), mid: body(20), end: body(42 - .02), back: body(42 + .01) }
+  assert('oldschool: os-echo fades round its loop reset and starts full at t = 0', echo.end < echo.mid / 4 && echo.back < echo.mid / 4 && echo.start > echo.mid / 2, JSON.stringify(echo))
   for (const [i, p] of oldschoolBoard.entries()) {
     let t = 30
     const { ms, load } = medianLoaded(() => dots(i, (t += 1 / 12)), 9)

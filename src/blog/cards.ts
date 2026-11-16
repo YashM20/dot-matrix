@@ -18,13 +18,13 @@ const BOARDS: Record<string, () => Promise<Loaded>> = {
   pond: () => import('../widgets/boards/pond/index').then(m => ({ items: m.pondBoard, sources: m.pondSources })),
   light: () => import('../widgets/boards/light').then(m => ({ items: m.lightBoard })),
   squares: () => import('../widgets/boards/squares').then(m => ({ items: m.squaresBoard })),
-  materials: () => import('../widgets/boards/materials').then(m => ({ items: m.materialsBoard, sources: m.materialsSources })),
+  workshop: () => import('../widgets/boards/workshop').then(m => ({ items: m.workshopBoard, sources: m.workshopSources })),
 }
 /** Card id → its board (the rows of src/widgets/catalog.ts the posts use). */
 const CARD_BOARD: Record<string, keyof typeof BOARDS> = {
   'home-clock': 'henry', timer: 'henry', weather: 'henry', 'device-overview': 'deerflow12', 'audio-levels': 'audio', 'level-03': 'audio', departures: 'departures',
   'ir-ripple': 'ir', 'ir-plasma': 'ir', 'ir-dial': 'ir',
-  'pond-koi': 'pond', 'pond-jelly': 'pond', 'pond-marble': 'pond', 'light-matte': 'light', 'sq-stack': 'squares', 'mat-window': 'materials',
+  'pond-koi': 'pond', 'pond-jelly': 'pond', 'pond-marble': 'pond', 'light-matte': 'light', 'sq-stack': 'squares', 'mat-frost': 'workshop',
 }
 
 export interface PostCard { preset: WidgetPreset; sources?: readonly Source[] }

@@ -16,12 +16,12 @@
   "hb-tool-running": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "223218fa",
+    "hash": "c3eaec96",
     "dots": 624
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "a5d38770",
+    "hash": "e1f90094",
     "dots": 612
    }
   },
@@ -64,13 +64,13 @@
   "hb-agent": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "98a5539a",
-    "dots": 923
+    "hash": "b86adcff",
+    "dots": 990
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "c940e205",
-    "dots": 950
+    "hash": "216fddfc",
+    "dots": 1017
    }
   }
  }

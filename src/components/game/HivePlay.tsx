@@ -27,6 +27,7 @@ import { sound } from '../../game/sound'
 import { GAME } from '../../game/world'
 import { paint, sampleInto, surfaceFor, type Surface } from './dots'
 import { Modal } from '../Modal'
+import { reducedMotion } from '../../site/motion'
 
 const G = layoutFor(GAME)
 /** Stage dissolves: which mask carries you into each stage. */
@@ -74,7 +75,7 @@ declare global { interface Window { __hive?: Record<string, unknown> } }
  * because its test API uses getters, which the React Compiler can't compile inside a component yet.
  */
 function runHive(canvas: HTMLCanvasElement, theme: ThemeTokens, touch: boolean, closeRef: RefObject<() => void>, touchBits: RefObject<number>, hive: RefObject<Hive | undefined>): () => void {
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const reduced = reducedMotion()
   const input = new GameInput(), params = new URLSearchParams(window.location.search)
   let g: Game = newGame(loadScores()), demo = params.get('demo') === '1', idle = 0, paused = false, dirty = true
   let lastStage = g.stage, trans: Trans | null = null, s: Surface, style = gameStyle(4)

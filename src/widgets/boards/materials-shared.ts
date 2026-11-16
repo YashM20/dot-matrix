@@ -1,23 +1,18 @@
 /**
- * The materials board's shared plumbing (docs/living-matter/M-materials.md §2): the card shell, the board light
- * (`matLight`), lazy bakes, scratch rasters and the 1.5 lattice. Used by `materials.ts` (M1) and the M2 card files
- * (`materials-glass.ts`, `materials-pool.ts`, `materials-wear.ts`), which `materials.ts` gathers into one board.
+ * The shared plumbing of the material cards (docs/living-matter/M-materials.md §2): the card shell, the board light
+ * (`matLight`), lazy bakes and the light-keyed caches. Used by the WORKSHOP files (`workshop*.ts`). It was
+ * the MATERIALS board's shell first; that board was removed (#378).
  */
 import { rake } from '../../engine/matter/relief'
 import type { Light } from '../../engine/light/shade'
 import { hourOf } from '../../engine/light/material'
 import { sceneLight, type SceneLightInput } from '../../engine/light/input'
-import { createRaster, rasterWindow, sample, type Raster } from '../../engine/raster/raster'
-import { latticeGrid } from '../../engine/sampler/gridSampler'
-export { frameMemo } from '../../engine/sampler/repeat'
-import type { Field, Layer, Tone } from '../../engine/types'
 import { TILE, layoutFor, tileStyle, type WidgetContext } from '../types'
 import { caption } from '../captions'
 
 export const T = layoutFor(TILE)
 export type Pt = [number, number]
-export type Box = [number, number, number, number]
-export const DEG = Math.PI / 180, TAU = Math.PI * 2
+export const DEG = Math.PI / 180
 export const mod = (a: number, n: number) => ((a % n) + n) % n
 export const pad2 = (n: number) => String(n).padStart(2, '0')
 /** Lazily baked once, on first use (never at import: opening the board doesn't stall). */
@@ -67,43 +62,6 @@ export function snapTorch(L: Light, q: number): Light {
   const p = L as { at: readonly [number, number, number]; falloff?: number }
   return { ...p, at: [Math.round(p.at[0] / q) * q, Math.round(p.at[1] / q) * q, p.at[2]] }
 }
-/** A light as an exact frame-memo key: every digit (a light that moved at all draws again). */
-export const lightId = (L: Light) => JSON.stringify(L)
-/** A copy of a scratch raster, for a frame `frameMemo` hands out again (the next frame that changes rewrites the scratch). */
-export const own = (r: Raster): Raster => ({ ...r, data: r.data.slice(), bounds: r.bounds && [r.bounds[0], r.bounds[1], r.bounds[2], r.bounds[3]] })
-/** Scratch rasters per card, allocated on first use and reused every frame. */
-export function scratch(n: number, grid = TILE): () => Raster[] { return once(() => Array.from({ length: n }, () => createRaster(grid))) }
-/** A raster's values as a layer (nearest), on a lattice or card pitch. */
-export const rasterLayer = (r: Raster, tone: Tone, k?: number): Layer => (k ? { field: sample(r), tone, lattice: k, origin: [0, 0] } : { field: sample(r), tone })
-/** Sites with a per-site value (one field reads it back by position). */
-export function valuedSites(points: readonly (readonly [number, number, number])[], size: number): Omit<Layer, 'tone'> {
-  const sites = points.map(p => [p[0], p[1]] as Pt), N = TILE.cols - 1
-  const field: Field = (u, v) => {
-    const x = u * N, y = v * N
-    for (const p of points) if (Math.abs(p[0] - x) < 1e-3 && Math.abs(p[1] - y) < 1e-3) return p[2]
-    return 0
-  }
-  return { field, sites, size }
-}
-export const L15 = 1.5, LG15 = latticeGrid(TILE, L15)
-/** Card cell ↔ 1.5-lattice cell (the sampler's lattice placement, origin 0). */
-export const toCard15 = (j: number) => (j + .5) * L15 - .5
-/** Card cell → the 1.5-lattice cell it lies in, ⌊(c + ½) / 1.5⌋, tabled (the card is square: rows and columns alike). */
-export const cellToLattice15 = once(() => Int32Array.from({ length: Math.max(TILE.cols, TILE.rows) }, (_, c) => Math.floor((c + .5) / L15)))
-/** A card-cell mask down-sampled to the 1.5 lattice: a lattice cell is lit when ≥ 50% of the card cells in it are. */
-export function toLattice15(m: Raster): Raster {
-  const out = createRaster(LG15), cols = TILE.cols, [b0, b1, b2, b3] = rasterWindow(m)
-  // lattice cell j covers card rows ⌈1.5j − ½⌉ … < 1.5(j + 1) − ½: only cells over the mask's bounds can be lit
-  const ja = Math.max(0, Math.floor((b1 + .5) / L15) - 1), jb = Math.min(LG15.rows - 1, Math.ceil((b3 + .5) / L15))
-  const ia = Math.max(0, Math.floor((b0 + .5) / L15) - 1), ib = Math.min(LG15.cols - 1, Math.ceil((b2 + .5) / L15))
-  for (let j = ja; j <= jb; j++) for (let i = ia; i <= ib; i++) {
-    let lit = 0, all = 0
-    for (let r = Math.ceil(j * L15 - .5); r < (j + 1) * L15 - .5; r++) for (let c = Math.ceil(i * L15 - .5); c < (i + 1) * L15 - .5; c++) { all++; lit += m.data[r * cols + c] }
-    if (all && lit / all >= .5) out.data[j * LG15.cols + i] = 1
-  }
-  return out
-}
-
 /**
  * A light as a cache key (M3.10): the hub's light is bucketed (64 azimuths × 8 elevations) and the sun is fixed for an
  * hour, so a per-card cache keyed by this hits across frames; a moving torch (snap it with `snapTorch`) misses.

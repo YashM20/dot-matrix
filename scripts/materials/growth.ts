@@ -10,8 +10,7 @@ import { dot480 } from '../../src/engine/theme/tokens'
 import { withChrome, type WidgetPreset } from '../../src/widgets/types'
 import { workshopBoard } from '../../src/widgets/boards/workshop'
 import { fmtLoaded, onceLoaded } from '../lib/load'
-import { type Assert, same } from './util'
-import { atClock } from './board'
+import { type Assert, same, atClock } from './util'
 
 const frame = (p: WidgetPreset, t: number) => sampleLayers(withChrome(p)({ t, data: { ...p.defaults } }), p.grid, p.style, dot480)
 

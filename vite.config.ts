@@ -30,8 +30,7 @@ function sitePostbuild(): Plugin {
 }
 
 /**
- * Worker build only: boards whose cards are all main-thread only (pond, physics), the materials board's two live
- * cards (`materials-live.ts`) and the workshop board's two (`workshop-ice.ts`, `workshop-kintsugi.ts`), resolve to a stub, so their code never
+ * Worker build only: boards whose cards are all main-thread only (pond, physics) and the workshop board's two (`workshop-ice.ts`, `workshop-kintsugi.ts`), resolve to a stub, so their code never
  * ships in the worker's chunks and the worker never fetches it. A card the worker doesn't know gets an error reply and
  * samples on the main thread, which is what those cards ask for anyway (docs/living-matter/L-pond.md §L1 "Worker bundle",
  * F0-foundation.md §7 R13).
@@ -147,7 +146,7 @@ export default defineConfig({
   // shipping every board; its chunks are `wk-*` so they never collide with the page's chunks (`size.ts --worker`)
   worker: {
     format: 'es',
-    plugins: () => [mainThreadOnly({ '/boards/pond/index': './src/widgets/boards/pond/worker-stub.ts', '/boards/physics': './src/widgets/boards/physics-worker-stub.ts', '/materials-live': './src/widgets/boards/materials-live-worker-stub.ts', '/workshop-ice': './src/widgets/boards/workshop-ice-worker-stub.ts', '/workshop-kintsugi': './src/widgets/boards/workshop-kintsugi-worker-stub.ts' })],
+    plugins: () => [mainThreadOnly({ '/boards/pond/index': './src/widgets/boards/pond/worker-stub.ts', '/boards/physics': './src/widgets/boards/physics-worker-stub.ts', '/workshop-ice': './src/widgets/boards/workshop-ice-worker-stub.ts', '/workshop-kintsugi': './src/widgets/boards/workshop-kintsugi-worker-stub.ts' })],
     rolldownOptions: { output: { chunkFileNames: 'assets/wk-[name]-[hash].js' } },
   },
   build: pages.length ? { rolldownOptions: { input: { main: 'index.html', ...Object.fromEntries(pages.map(f => [f.replace(/\.html$/, ''), f])) } } } : {},

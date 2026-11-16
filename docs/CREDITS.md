@@ -29,7 +29,6 @@ By Inigo Quilez.
 
 By Hugo Elias.
 
-- Pool (`mat-pool`), board `/materials/`: the ripple scheme
 - Pond Koi (`pond-koi`), board `/pond/`: the ripple scheme
 
 ### [3D distance functions](https://iquilezles.org/articles/distfunctions/)
@@ -124,7 +123,7 @@ By John E. Pearson, Peter Gray, Stephen K. Scott.
 
 - Idle (`lock-idle`), board `/lock/`: the Gray-Scott model and its pattern map
 - Pond Turing (`pond-turing`), board `/pond/`: the Gray-Scott model and its pattern map
-- Sim Reaction-Diffusion (`sim-rd`), board `/sim/`: the Gray-Scott model and its pattern map
+- Reaction-Diffusion (`sim-rd`), board `/sim/`: the Gray-Scott model and its pattern map
 
 ### [Composition with Red, Blue and Yellow (1930)](https://en.wikipedia.org/wiki/Composition_with_Red,_Blue_and_Yellow)
 
@@ -246,12 +245,6 @@ By Yoshiki Kuramoto.
 
 - Pond Jelly (`pond-jelly`), board `/pond/`: how the pulses drift into step
 
-### [Liquid Glass in the browser: refraction with CSS and SVG](https://kube.io/blog/liquid-glass-css-svg/)
-
-By kube.io.
-
-- Lens (`mat-lens`), board `/materials/`: the bezel refraction, rebuilt from the method
-
 ### [Lyapunov fractals](https://iquilezles.org/articles/lyapunovfractals/)
 
 By Inigo Quilez, Mario Markus.
@@ -262,7 +255,7 @@ By Inigo Quilez, Mario Markus.
 
 By John Horton Conway, Martin Gardner.
 
-- Sim Life (`sim-life`), board `/sim/`: the rules; the glider gun is Bill Gosper’s
+- Game of Life (`sim-life`), board `/sim/`: the rules; the glider gun is Bill Gosper’s
 
 ### [Mathematical marbling (2012)](https://doi.org/10.1109/MCG.2011.51)
 
@@ -341,19 +334,6 @@ By William Jockusch, James Propp, Peter Shor.
 By Matthias Müller, Nuttapong Chentanez, Tae-Yong Kim.
 
 - Kintsugi (`mat-kintsugi`), board `/workshop/`: the impact-aligned shard pattern
-
-### [Rendering fur with three dimensional textures (1989)](https://doi.org/10.1145/74334.74361)
-
-By James T. Kajiya, Timothy L. Kay.
-
-- Knob (`mat-knob`), board `/materials/`: the sheen along the fibres
-- Patch (`mat-patch`), board `/materials/`: the sheen along the fibres
-
-### [Rendering realtime caustics in WebGL](https://medium.com/@evanwallace/rendering-realtime-caustics-in-webgl-2a99a29a0b2c)
-
-By Evan Wallace.
-
-- Pool (`mat-pool`), board `/materials/`: the area-ratio caustics
 
 ### [Schotter (1968)](https://collections.vam.ac.uk/item/O221321/schotter-print-nees-georg/)
 

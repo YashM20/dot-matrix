@@ -55,7 +55,7 @@ export const tideFace = face('watch-tide', 'Tide', 'round', {
 })
 
 // ── WORLD ─────────────────────────────────────────────────────────────────────
-const ROW = { top: 62, h: 14, k: 1.3, mark: 24, code: 29, sun: 63, diff: 67, time: 121 }
+const ROW = { top: 62, h: 14, k: 1.3, mark: 24, code: 29, sun: 63, diff: 66, time: 121 }
 const PLACES = [{ code: 'HERE', name: 'LOCAL' }, ...CITIES]
 const rowTop = (i: number) => ROW.top + i * ROW.h
 export const worldFace = face('watch-world', 'World', 'squircle', {
@@ -74,7 +74,8 @@ export const worldFace = face('watch-world', 'World', 'squircle', {
           ...(on ? [layer(at(T.dots([[ROW.mark, y + 4.5]], 3.4), pv), 'active')] : []),
           layer(T.big(PLACES[i].code, ROW.code, y, { lattice: ROW.k }), on ? 'value' : 'idle'),
           layer(T.dots([[ROW.sun, y + 4.5]], 2.6), day ? 'idle' : 'faint'),
-          ...(diff ? [layer(T.text(diff > 0 ? `+${diff}` : `${diff}`, ROW.diff, y + 1), 'mid')] : []),
+          // the day offset on the rows' own lattice, dimmed, so each row keeps one pitch
+          ...(diff ? [layer(T.big(diff > 0 ? `+${diff}` : `${diff}`, ROW.diff, y, { lattice: ROW.k }), 'mid')] : []),
           layer(T.big(clockOf(w), ROW.time, y, { lattice: ROW.k, align: 'right' }), on ? 'value' : 'idle'),
         ]
       }),
