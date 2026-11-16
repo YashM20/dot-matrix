@@ -196,8 +196,9 @@ export const surfaceFlipdisc: WidgetPreset = {
       spec('28X14'),
       bezel(FX - 4, FY - 4, FX + 27 * FP + 4, FY + 13 * FP + 4),
       ...bands(discs),
-      layer(T.text(view.moving ? `SCAN COL ${String(col + 1).padStart(2, '0')}` : 'HOLD', 0, 118), view.moving ? 'value' : 'idle'),
-      layer(T.text(`${String(flips).padStart(3, '0')} FLIPS`, 143 - 2, 118, { align: 'right' }), 'mid'),
+      // the status row sits on the plotter card's bottom row (134): the same margin to the card edge across the board
+      layer(T.text(view.moving ? `SCAN COL ${String(col + 1).padStart(2, '0')}` : 'HOLD', 0, 134), view.moving ? 'value' : 'idle'),
+      layer(T.text(`${String(flips).padStart(3, '0')} FLIPS`, 143 - 2, 134, { align: 'right' }), 'mid'),
     ]
   },
 }
