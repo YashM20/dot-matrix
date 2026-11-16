@@ -18,6 +18,7 @@ import { contribSource, GH_WEEKS, nowPlayingSource, weatherSource, WX_HOURS } fr
 import { fit, textOf } from '../../data/text'
 import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
 import { capSize } from '../sites'
+import { scrubber, type ScrubSpec } from '../dot-controls'
 import { dotText } from './henry'
 
 const T = layoutFor(TILE)
@@ -183,13 +184,15 @@ const eqLevels = (t: number, seed: number) => {
     return Math.max(.08, Math.min(1, tilt * wobble * (i < 3 ? .65 + .45 * beat : .85 + .15 * beat)))
   })
 }
+/** The scrubber: henry's music card's two dot lines, on this card's row. */
+const SCRUB: ScrubSpec = { x0: 3, x1: 141, y: 106, spacing: 1.65, size: [.9, .7], knob: 4.6, gap: 3.5, method: 'lines', travel: [3, 140] }
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 export const liveNowPlaying: WidgetPreset = {
   id: 'live-now-playing', name: 'Now Playing', label: 'NOW PLAYING', group: 'photo', liveData: true, ...tile, animated: true,
   defaults: sources.nowPlaying.fixture, springKeys: ['npPos'],
   layers: ({ data, t }) => {
     const playing = data.npPlay !== 0, title = textOf(data.npTitle, 'NOTHING PLAYING'), dur = data.npDur, pos = Math.max(0, Math.min(1, data.npPos))
-    const knob = 3 + pos * 137, seed = data.npTitle || 1
+    const seed = data.npTitle || 1
     // spectrum to the right of the cover: it moves with the board clock while playing, flat when paused
     const eq = playing ? eqLevels(t, seed) : Array.from({ length: EQ_BANDS }, () => .04)
     return [
@@ -198,9 +201,7 @@ export const liveNowPlaying: WidgetPreset = {
       layer(T.dotBars(eq, 64, 63, { gap: 8.3, pitch: 2.8, height: 36, size: 1.7 }), playing ? 'idle' : 'faint'),
       layer(T.big(fit(title, 17), 1.5, 75, { lattice: 1.4 })),
       layer(T.big(fit(textOf(data.npArtist), 20), 1.5, 89, { lattice: 1.15 }), 'idle'),
-      layer(T.dotLine(3, 106, knob - 3.5, 106, { spacing: 1.65, size: .9 })),
-      layer(T.dotLine(141, 106, knob + 3.5, 106, { spacing: 1.65, size: .7 }), 'mid'),
-      layer(T.dots([[knob, 106]], 4.6), 'active'),
+      ...scrubber(SCRUB, pos, ['value', 'mid', 'active']),
       ...(dur > 0 ? [layer(T.text(mmss(pos * dur), 1, 112), 'idle'), layer(T.text(`-${mmss(dur - pos * dur)}`, 143, 112, { align: 'right' }), 'mid')] : []),
       layer(T.text(fit(textOf(data.npAlbum), 23), 1, 122), 'mid'),
       ...footer(data.npStatus, 'MEDIA SESSION'),

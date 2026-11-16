@@ -16,7 +16,7 @@ import { attractorDensity, dla, stipple, wfc, type WfcTile } from '../../engine/
 import { clamp, hash01, len, smoothstep } from '../../engine/math'
 import type { Field, Layer, Tone } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
-import { caption, footer as footerText } from '../captions'
+import { caption, railFooter } from '../captions'
 import { GAP, nearest } from '../sites'
 
 const T = layoutFor(TILE)
@@ -26,19 +26,8 @@ const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle,
 
 /** Top-right: the paper the card is built on. */
 const cite = (s: string) => caption(s)
-const FOOT = 134, RAIL_Y = 129
 /** Footer: a faint dotted rail filled in `mid` to `k` (0..1), an optional live (red) knob at the fill point, a counter left and one stat right. */
-function footer(k: number, left: string, right: string, live = false): Layer[] {
-  const done: Pt[] = [], rest: Pt[] = [], end = N * clamp(k)
-  let knob: Pt | undefined
-  for (let c = 0; c <= N; c += 3) (c <= end ? done : rest).push([c, RAIL_Y])
-  if (live && done.length) knob = done.pop()
-  return [
-    layer(T.dots(rest, .9), 'faint'), layer(T.dots(done, 1.1), 'mid'),
-    ...(knob ? [layer(T.dots([knob], 2.2), 'active')] : []),
-    ...footerText(left, right, FOOT),
-  ]
-}
+const footer = (k: number, left: string, right: string, live = false): Layer[] => railFooter(k, left, right, { rail: 129, foot: 134, live })
 const pad = (n: number, w: number) => String(Math.max(0, Math.round(n))).padStart(w, '0')
 const thousands = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
 /**

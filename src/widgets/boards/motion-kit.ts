@@ -10,14 +10,16 @@
  * grammar), so these cards read as the same kit set in motion.
  */
 import type { Layer, Tone } from '../../engine/types'
-import { TAU, TILE, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
+import { TAU, TILE, dim, layer, layoutFor, tileCircleStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
 import { OUTLINE, PRESS, marching, rr, rrect, ui } from './components-kit'
+import { railFooter } from '../captions'
+import { polar } from '../dials'
 
 export { PRESS, at, circle, dimmed, rr, rrect } from './components-kit'
 export const T = layoutFor(TILE)
 export type Pt = [number, number]
 /** Knobs, status dots and loader dots are true circles, like the components board. */
-export const style = { ...tileStyle, cornerRoundness: 0 }
+export const style = tileCircleStyle
 export const BODY = { lattice: 1.3 }
 export const LINE = OUTLINE
 export const clamp01 = (x: number) => (x < 0 ? 0 : x > 1 ? 1 : x)
@@ -29,8 +31,7 @@ export const inCubic = (x: number) => clamp01(x) ** 3
 export const inOut = (x: number) => { const k = clamp01(x); return k * k * (3 - 2 * k) }
 /** A value snapped to the quantize steps the style uses (5: 0, .25, .5, .75, 1), so a fade steps like the dots do. */
 export const step4 = (x: number) => Math.round(clamp01(x) * 4) / 4
-/** A point at clock angle `a` (clockwise from 12) on a circle. */
-export const polar = (cx: number, cy: number, r: number, a: number): Pt => [cx + r * Math.sin(a), cy - r * Math.cos(a)]
+export { polar } from '../dials'
 
 /** A layer at a quantized brightness (1 keeps it as is, 0 drops it). */
 export const fade = (l: Layer, v: number): Layer[] => (v <= 0 ? [] : v >= 1 ? [l] : [{ ...l, field: dim(l.field, step4(v)) }])
@@ -69,17 +70,8 @@ export function loopAge(ctx: WidgetContext, id: string): number {
 }
 
 // ── the footer ──────────────────────────────────────────────────────────────
-const RAIL = 131, FOOT = 137
 /** A dotted rail through the loop (done in mid), the state on the left, a detail on the right. */
-export function footer(k: number, left: string, right: string, rightTone: Tone = 'mid'): Layer[] {
-  const done: Pt[] = [], rest: Pt[] = [], end = (TILE.cols - 1) * clamp01(k)
-  for (let c = 0; c < TILE.cols; c += 3) (c <= end ? done : rest).push([c, RAIL])
-  return [
-    layer(T.dots(rest, .9), 'faint'), layer(T.dots(done, 1.1), 'mid'),
-    layer(T.text(left, 0, FOOT), 'idle'),
-    layer(T.text(right, TILE.cols - 1, FOOT, { align: 'right' }), rightTone),
-  ]
-}
+export const footer = (k: number, left: string, right: string, rightTone: Tone = 'mid'): Layer[] => railFooter(k, left, right, { rail: 131, foot: 137, rightTone })
 
 // ── the card ────────────────────────────────────────────────────────────────
 export interface LoopSpec {

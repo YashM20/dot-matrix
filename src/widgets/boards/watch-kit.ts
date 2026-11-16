@@ -6,13 +6,14 @@
 import { hash01 } from '../../engine/math'
 import type { Layer } from '../../engine/types'
 import { MINUTE, partsOf, type WallParts } from '../../engine/astro/calendar'
-import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
+import { TAU, TILE, layer, layoutFor, tileCircleStyle, type WidgetPreset } from '../types'
+import { polar as clockPoint } from '../dials'
 
 export { PRESS, at, circle, rr, states, ui } from './components-kit'
 export const T = layoutFor(TILE)
 export type Pt = [number, number]
 /** Round dots (n = 2), like the components and dash boards. */
-export const style = { ...tileStyle, cornerRoundness: 0 }
+export const style = tileCircleStyle
 /** Centre of every face. */
 export const CX = 72, CY = 77
 export type FrameKind = 'round' | 'squircle'
@@ -24,7 +25,7 @@ export const LINE = { spacing: 3.3, size: 1.5 }
 
 export const mod = (x: number, m: number) => ((x % m) + m) % m
 /** A point at clock angle `a` (clockwise from 12) and radius `r` around the face centre. */
-export const polar = (r: number, a: number, cx = CX, cy = CY): Pt => [cx + r * Math.sin(a), cy - r * Math.cos(a)]
+export const polar = (r: number, a: number, cx = CX, cy = CY): Pt => clockPoint(cx, cy, r, a)
 /** Sites from radius r0 to r1 along clock angle `a`, `step` cells apart (a hand). */
 export const ray = (a: number, r0: number, r1: number, step: number): Pt[] => {
   const n = Math.max(1, Math.round((r1 - r0) / step))
