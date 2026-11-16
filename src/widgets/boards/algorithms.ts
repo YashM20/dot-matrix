@@ -155,7 +155,7 @@ const DARK_LIMB: Pt[] = (() => {
 const ST_P = 14, ST_HOLD = 4, ST_SCATTER = .9
 const posBuf = new Float32Array(STIPPLES * 2)
 export const algoStipple: WidgetPreset = {
-  id: 'algo-stipple', name: 'Algorithms Stipple', label: 'STIPPLE', ...tile,
+  id: 'algo-stipple', name: 'Stipple', label: 'STIPPLE', ...tile,
   credit: { by: ['Adrian Secord'], title: 'Weighted Voronoi stippling (2002)', source: 'https://doi.org/10.1145/508530.508537', note: 'technique' },
   layers: ctx => {
     const s = moonStipple(), p = ((ctx.t % ST_P) + ST_P) % ST_P
@@ -227,7 +227,7 @@ const atLayer = (t: number): Layer => {
   return { field, toneOf: (_, u, v) => tones[band(Math.round(u * N), Math.round(v * N))] }
 }
 export const algoAttractor: WidgetPreset = {
-  id: 'algo-attractor', name: 'Algorithms Attractor', label: 'ATTRACTOR', ...tile,
+  id: 'algo-attractor', name: 'Attractor', label: 'ATTRACTOR', ...tile,
   credit: { by: ['Clifford Pickover', 'Paul Bourke'], title: 'Clifford attractors', source: 'https://paulbourke.net/fractals/clifford/', note: 'the map' },
   layers: ctx => {
     const t = ctx.t
@@ -236,7 +236,7 @@ export const algoAttractor: WidgetPreset = {
     return [
       cite('CLIFFORD MAP'),
       atLayer(t),
-      ...footer(.5 + .5 * Math.sin(t * 2 * Math.PI / 37), `A${q.a.toFixed(2)} B${q.b.toFixed(2)}`, '32K STEPS'),
+      ...footer(.5 + .5 * Math.sin(t * 2 * Math.PI / 37), `A ${q.a.toFixed(2)} B ${q.b.toFixed(2)}`, '32K STEPS'),
     ]
   },
 }
@@ -287,7 +287,7 @@ const solve = (seed: number) => {
   return r
 }
 export const algoCollapse: WidgetPreset = {
-  id: 'algo-collapse', name: 'Algorithms Collapse', label: 'COLLAPSE', ...tile,
+  id: 'algo-collapse', name: 'Collapse', label: 'COLLAPSE', ...tile,
   credit: { by: ['Maxim Gumin'], title: 'WaveFunctionCollapse (2016)', source: 'https://github.com/mxgmn/WaveFunctionCollapse', note: 'the simple tiled model; backtracking as in Isaac Karth and Adam M. Smith (2017)' },
   layers: ctx => {
     const tt = ctx.t + KN_OFF, loop = Math.floor(tt / KN_P), p = tt - loop * KN_P, r = solve(1 + (((loop % 64) + 64) % 64))
@@ -313,7 +313,7 @@ export const algoCollapse: WidgetPreset = {
       ...ghostLayers,
       layer(T.dots(done, 1.25), 'value'),
       ...(hot.length ? [layer(T.dots(hot, 1.5), 'active')] : []),
-      ...footer(settled / cells, `OBSERVE ${pad(step, 3)}`, `${pad(settled, 3)}/${cells}`),
+      ...footer(settled / cells, `OBSERVE ${pad(step, 3)}`, `SET ${pad(settled, 3)}/${cells}`),
     ]
   },
 }
@@ -326,7 +326,7 @@ export const algoCollapse: WidgetPreset = {
 const AG_UNIT = 1, AG_W = 143, AG_H = 114, AG_ROW = 12
 let agg: ReturnType<typeof dla> | undefined
 const aggregate = () => (agg ??= dla({ w: AG_W, h: AG_H, n: 4000, seed: 12 }))
-const AG_P = 18, AG_GROW = 13, AG_OFF = 12.6
+const AG_P = 18, AG_GROW = 13, AG_OFF = 13.2
 /** Mass–radius fractal dimension: least-squares slope of log N against log Rg (radius of gyration) over the grown history. */
 function dimension(d: ReturnType<typeof dla>, k: number): number {
   let sx = 0, sy = 0, sxx = 0, sxy = 0, m = 0
@@ -334,7 +334,7 @@ function dimension(d: ReturnType<typeof dla>, k: number): number {
   return m > 2 ? (m * sxy - sx * sy) / (m * sxx - sx * sx) : 0
 }
 export const algoAggregate: WidgetPreset = {
-  id: 'algo-aggregate', name: 'Algorithms Aggregate', label: 'AGGREGATE', ...tile,
+  id: 'algo-aggregate', name: 'Aggregate', label: 'AGGREGATE', ...tile,
   credit: DLA,
   layers: ctx => {
     const d = aggregate(), tt = ctx.t + AG_OFF, p = ((tt % AG_P) + AG_P) % AG_P
@@ -351,7 +351,7 @@ export const algoAggregate: WidgetPreset = {
     return [
       cite('WITTEN SANDER'),
       ...siteLayers(groups, 1.05, ['faint', 'mid', 'idle', 'value', 'active']),
-      ...footer(k / d.count, `N ${thousands(k).padStart(5, ' ')}`, dim > 0 ? `D ${dim.toFixed(2)}` : 'D -.--'),
+      ...footer(k / d.count, `N ${thousands(k)}`, dim > 0 ? `D ${dim.toFixed(2)}` : 'D -.--'),
     ]
   },
 }
