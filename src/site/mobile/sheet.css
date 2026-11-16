@@ -113,7 +113,7 @@ html:has(.sheet[open]) {
   margin: 0;
   color: var(--label);
   font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .18em
+  letter-spacing: var(--track-wide)
 }
 
 .sheet-done {
@@ -125,7 +125,7 @@ html:has(.sheet[open]) {
   background: none;
   color: var(--value);
   font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .14em;
+  letter-spacing: var(--track-caps);
   cursor: pointer
 }
 
@@ -161,12 +161,12 @@ html:has(.sheet[open]) {
   margin: var(--space-4) var(--space-2) var(--space-1);
   color: var(--mute);
   font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .18em
+  letter-spacing: var(--track-wide)
 }
 
 .board-sheet h3 small {
   font: 400 var(--fs-label-12) var(--mono);
-  letter-spacing: .02em
+  letter-spacing: var(--track-snug)
 }
 
 .board-sheet ul {
@@ -190,8 +190,8 @@ html:has(.sheet[open]) {
   border-radius: var(--radius-ctl);
   background: none;
   color: var(--mute);
-  font: 400 var(--fs-label-12)/1.4 var(--mono);
-  letter-spacing: .02em;
+  font: 400 var(--fs-label-12)/var(--lh-snug) var(--mono);
+  letter-spacing: var(--track-snug);
   text-align: left;
   cursor: pointer
 }
@@ -201,7 +201,7 @@ html:has(.sheet[open]) {
   color: var(--label);
   font-weight: 600;
   font-size: var(--fs-label-12);
-  letter-spacing: .14em
+  letter-spacing: var(--track-caps)
 }
 
 .board-sheet li button span {

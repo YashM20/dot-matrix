@@ -24,7 +24,7 @@
   background: none;
   color: var(--label);
   font: 600 var(--fs-label-12)/1 var(--mono);
-  letter-spacing: .14em;
+  letter-spacing: var(--track-caps);
   cursor: pointer;
   transition: color var(--dur-out) var(--ease), background-color var(--dur-out) var(--ease), border-color var(--dur-out) var(--ease), transform var(--dur-out) var(--ease);
   -webkit-tap-highlight-color: transparent;
@@ -74,7 +74,7 @@
 
 .lk-note {
   color: var(--mute);
-  font: 500 var(--fs-label-11)/1.4 var(--mono)
+  font: 500 var(--fs-label-11)/var(--lh-snug) var(--mono)
 }
 
 .lk-note:empty {
@@ -86,7 +86,7 @@
   border: 0;
   background: none;
   color: var(--mute);
-  font: 500 var(--fs-label-11)/1.4 var(--mono);
+  font: 500 var(--fs-label-11)/var(--lh-snug) var(--mono);
   text-decoration: underline;
   text-underline-offset: 2px;
   cursor: pointer
@@ -125,12 +125,12 @@
 .lk-sheet h2 {
   margin: 0 0 var(--space-3);
   color: var(--value);
-  font: 600 var(--fs-copy-16)/1.35 var(--sans)
+  font: 600 var(--fs-copy-16)/var(--lh-snug) var(--sans)
 }
 
 .lk-sheet p {
   margin: 0 0 var(--space-5);
-  font: 400 var(--fs-copy-14)/1.5 var(--sans)
+  font: 400 var(--fs-copy-14)/var(--lh-body) var(--sans)
 }
 
 .lk-sheet a {
@@ -186,7 +186,7 @@
 .lk-name {
   overflow: hidden;
   color: var(--label);
-  font: 500 var(--fs-label-12)/1.4 var(--mono);
+  font: 500 var(--fs-label-12)/var(--lh-snug) var(--mono);
   text-overflow: ellipsis;
   white-space: nowrap
 }
