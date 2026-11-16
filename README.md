@@ -6,11 +6,11 @@
 
 <p align="center">
   <b>Interfaces drawn one dot at a time.</b><br>
-  Clocks, dashboards, games, photos and type, all sampled live onto a 144 × 144 grid of dots.
+  Clocks, dashboards, games, photos and type, every one of them drawn on a 144 × 144 grid of dots.
 </p>
 
 <p align="center">
-  <a href="https://matrix.reactopia.me"><img alt="Live site" src="https://img.shields.io/badge/live-matrix.reactopia.me-ff3b30?style=flat-square&labelColor=111214"></a>
+  <a href="https://matrix.reactopia.me"><img alt="Website: matrix.reactopia.me" src="https://img.shields.io/badge/website-matrix.reactopia.me-ff3b30?style=flat-square&labelColor=111214"></a>
   <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-strict-e8e8e8?style=flat-square&labelColor=111214&logo=typescript&logoColor=e8e8e8">
   <img alt="Engine dependencies: zero" src="https://img.shields.io/badge/engine%20deps-0-e8e8e8?style=flat-square&labelColor=111214">
   <img alt="Renderers: SVG, Canvas, WebGL2" src="https://img.shields.io/badge/render-SVG%20%C2%B7%20Canvas%20%C2%B7%20WebGL2-e8e8e8?style=flat-square&labelColor=111214">
