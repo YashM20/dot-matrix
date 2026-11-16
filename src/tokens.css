@@ -48,7 +48,6 @@
   --space-6: 32px;
   --space-7: 48px;
   --space-8: 64px;
-  --space-9: 96px;
   --space-10: 128px;
   /* rhythm: inside a group / before actions / between sections */
   --gap-group: var(--space-3);
@@ -75,7 +74,6 @@
   --board-cols-max: 3;
   --board-cols-min: 1;
   --measure: 68ch;                      /* body text */
-  --measure-head: 42rem;                /* headings */
   --hair-dot: 1px;                      /* dotted hairline: a 1 px dot ... */
   --hair-pitch: 4px;                    /* ... every 4 px */
 
@@ -123,7 +121,8 @@
   --dur-enter: 280ms;   /* a sheet arriving; a display powering off */
   --dur-exit: 200ms;    /* the header leaving as the page scrolls down: quicker than it comes back (--dur-enter) */
   --dur-wipe: 720ms;    /* the theme switch: the halftone front crossing the screen from the pressed control */
-  --ease: cubic-bezier(.2, .8, .2, 1);
+  --ease: cubic-bezier(.2, .8, .2, 1);    /* every chrome transition: quick start, long settle */
+  --ease-in: cubic-bezier(.3, 0, .8, .15); /* a thing switching off for good: starts slow, leaves fast (the skin's power-off) */
 
   /* ── type: named by role and size (rem, root 16 px); family is --mono or --sans ── */
   --mono: ui-monospace, Consolas, monospace;
@@ -134,7 +133,7 @@
   --fs-tag-9: .5625rem;       /* card labels, keycaps, glyph marks, on-canvas badges */
   --fs-label-10: .625rem;     /* in-card header */
   --fs-label-11: .6875rem;    /* in-card action row */
-  --fs-label-12: .75rem;      /* chrome: labels, tabs, buttons, menus, meta (uppercase mono, +.06em) */
+  --fs-label-12: .75rem;      /* chrome: labels, tabs, buttons, menus, meta (uppercase mono, --track-caps) */
   --fs-copy-14: .875rem;      /* short prose, intro lines */
   --fs-copy-16: 1rem;         /* body copy; phone form fields (no iOS zoom) */
   --fs-lead-18: 1.125rem;     /* essay prose, lead paragraphs */
@@ -143,8 +142,16 @@
   --fs-title-28: 1.75rem;     /* widget page title */
   --fs-h1-page: clamp(1.875rem, 6vw, 2.75rem);   /* legal page title, 30–44 px */
   --fs-h1-hero: clamp(2.375rem, 5vw, 4.5rem);    /* hero heading, 38–72 px */
-  --lh-tight: 1.1;
-  --lh-body: 1.6;
+  /* line height: unitless, so a child with its own size keeps the ratio. 1 (a one-line box) and 0 stay raw */
+  --lh-tight: 1.1;    /* headings */
+  --lh-snug: 1.35;    /* short lines: labels that wrap, menus, small headings, code */
+  --lh-body: 1.5;     /* copy: blurbs, notes, lists */
+  --lh-loose: 1.65;   /* long reads: essay prose, the About lede, the blog */
+  /* tracking: four steps. Prose and headings in --sans carry none */
+  --track-snug: .02em;    /* mixed-case small text: fields, tooltips, list rows, keycaps */
+  --track-label: .06em;   /* quiet labels: menu rows, pills, counts */
+  --track-caps: .12em;    /* uppercase mono chrome: buttons, tabs, nav, meta */
+  --track-wide: .16em;    /* eyebrows, kickers, section heads */
   /* tooltips: the first waits, the next ones in the same group show at once */
   --dur-tip: 400ms;
 }

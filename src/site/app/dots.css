@@ -121,7 +121,7 @@
   margin-top: var(--space-2);
   color: var(--mute);
   font: 500 var(--fs-label-12) var(--mono);
-  letter-spacing: .12em
+  letter-spacing: var(--track-caps)
 }
 
 .dw-status b {

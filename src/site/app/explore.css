@@ -22,7 +22,7 @@
   max-width: calc(var(--measure) + 2 * var(--space-10));
   margin: 0;
   color: var(--label);
-  font: 400 var(--fs-copy-14)/1.5 var(--sans);
+  font: 400 var(--fs-copy-14)/var(--lh-body) var(--sans);
   text-wrap: pretty
 }
 
@@ -101,7 +101,7 @@
   background: none;
   color: var(--mute);
   font: 500 var(--fs-label-12) var(--mono);
-  letter-spacing: .14em;
+  letter-spacing: var(--track-caps);
   cursor: pointer
 }
 
@@ -129,7 +129,7 @@
   max-width: var(--measure);
   margin: var(--space-2) 0 0;
   color: var(--label);
-  font: 400 var(--fs-copy-14)/1.5 var(--sans);
+  font: 400 var(--fs-copy-14)/var(--lh-body) var(--sans);
   text-wrap: pretty
 }
 
@@ -139,7 +139,7 @@
   max-width: var(--measure);
   margin: var(--space-2) 0 0;
   color: var(--mute);
-  font: 400 var(--fs-label-12)/1.5 var(--sans);
+  font: 400 var(--fs-label-12)/var(--lh-body) var(--sans);
   text-wrap: pretty
 }
 
@@ -173,7 +173,7 @@
 
 .board-tabs button {
   font: 500 var(--fs-label-12) var(--mono);
-  letter-spacing: .1em;
+  letter-spacing: var(--track-caps);
   padding: var(--space-2) var(--space-2);
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
@@ -211,7 +211,7 @@
   margin: 0;
   color: var(--mute);
   font: 500 var(--fs-label-12)/1 var(--mono);
-  letter-spacing: .12em
+  letter-spacing: var(--track-caps)
 }
 
 .dot-name {

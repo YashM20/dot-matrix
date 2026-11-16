@@ -67,5 +67,5 @@ code {
   color: var(--value);
   font-family: var(--mono);
   font-size: var(--fs-copy-14);
-  line-height: 135%
+  line-height: var(--lh-snug)
 }

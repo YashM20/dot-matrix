@@ -7,12 +7,12 @@
   margin: 0 0 var(--space-4);
   color: var(--mute);
   font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .12em
+  letter-spacing: var(--track-caps)
 }
 
 /* the input is .field (src/site/controls.css) */
 
 .wp-type small {
   font: inherit;
-  letter-spacing: .04em
+  letter-spacing: var(--track-snug)
 }

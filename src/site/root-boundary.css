@@ -1,12 +1,12 @@
 /* ── the page's recovery screen (RootBoundary.tsx): the editor's .ed-crash (editor.css), page-sized ──
    Every entry point loads tokens.css, themes.css and controls.css (index.css, essay.css) before this, so the roles and
    the buttons (.btn) are there. */
-.root-crash { box-sizing: border-box; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; gap: var(--space-2); width: min(560px, calc(100% - 40px)); margin: 0 auto; padding: var(--space-4) 0; color: var(--value); font: var(--fs-label-12)/1.6 var(--mono) }
-.root-crash b { color: var(--red-text); letter-spacing: .14em; font-weight: 600 }
+.root-crash { box-sizing: border-box; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; justify-content: center; gap: var(--space-2); width: min(560px, calc(100% - 40px)); margin: 0 auto; padding: var(--space-4) 0; color: var(--value); font: var(--fs-label-12)/var(--lh-loose) var(--mono) }
+.root-crash b { color: var(--red-text); letter-spacing: var(--track-caps); font-weight: 600 }
 .root-crash p { margin: 0; color: var(--label); font-size: var(--fs-copy-14) }
 .root-crash code { color: var(--value); font: inherit; background: none; padding: 0; white-space: normal; overflow-wrap: anywhere }
 .root-crash-btns { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2) }
 
 /* ── a chunk that failed to load (LoadBoundary.tsx): one board or one BROWSE card, the rest of the page stays ── */
-.load-failed { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-2); color: var(--label); font: var(--fs-copy-14)/1.5 var(--sans) }
+.load-failed { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-2); color: var(--label); font: var(--fs-copy-14)/var(--lh-body) var(--sans) }
 .load-failed p { margin: 0 }

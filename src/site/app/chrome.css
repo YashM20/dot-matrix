@@ -74,7 +74,7 @@ body {
   align-items: center;
   color: var(--mute);
   font: 500 var(--fs-label-12)/1 var(--mono);
-  letter-spacing: .14em
+  letter-spacing: var(--track-caps)
 }
 
 /* the header is sticky and edge to edge (its content stays on the frame's edge), with the phone bar's glass. It
@@ -127,7 +127,7 @@ html {
 /* BLOG: a link to its own page, set like the view tabs beside it */
 .topbar-blog {
   color: var(--mute);
-  letter-spacing: .13em;
+  letter-spacing: var(--track-caps);
   text-decoration: none
 }
 
@@ -164,7 +164,7 @@ html {
    no specificity, so every rule that beat this one still does */
 .topbar button:where(:not(.menu-row)) {
   font: inherit;
-  letter-spacing: .13em;
+  letter-spacing: var(--track-caps);
   padding: 0;
   border: 0;
   background: none;
@@ -190,7 +190,7 @@ html {
   margin: 0 0 var(--space-3);
   color: var(--label);
   font: 500 var(--fs-label-10) var(--mono);
-  letter-spacing: .16em
+  letter-spacing: var(--track-wide)
 }
 
 h1 {
@@ -213,7 +213,7 @@ label {
   margin-top: var(--space-5);
   color: var(--label);
   font: var(--fs-label-12) var(--mono);
-  letter-spacing: .1em
+  letter-spacing: var(--track-caps)
 }
 
 input {
@@ -306,7 +306,7 @@ label b {
 .dot-card-label {
   color: var(--label);
   font: 500 var(--fs-tag-9) var(--mono);
-  letter-spacing: .16em
+  letter-spacing: var(--track-wide)
 }
 
 .dot-card--bleed {

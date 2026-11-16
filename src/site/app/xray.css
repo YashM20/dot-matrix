@@ -1,7 +1,7 @@
 /* App styles: the time machine bar and the card flash (the palette's "go to card"). The X-ray overlay and
    inspector styles load with their lazy chunks (src/components/xray/overlay.css, inspector.css) */
 .xr-flash {
-  animation: xr-flash 1.2s ease-out
+  animation: xr-flash 1.2s var(--ease)
 }
 
 @keyframes xr-flash {
@@ -26,7 +26,7 @@
   box-shadow: var(--shadow-raised);
   color: var(--label);
   font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .12em
+  letter-spacing: var(--track-caps)
 }
 
 .xr-time-label {

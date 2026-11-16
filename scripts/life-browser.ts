@@ -11,8 +11,8 @@
  *  - L3.5, on all six cards at 375 and 390 px (touch, coarse pointer): each card draws at F0.10's phone tier
  *    (`cardFps(fps, 'phone')`, counted draws over 2 s), a vertical swipe that starts on it scrolls ≥ 150 px with its
  *    world pristine, a tap acts (the world forks live) and a 300 ms hold engages it;
- *  - L3.5 reduced motion (390 px, `prefers-reduced-motion: reduce`): no card's pixels change over 2 s or after a tap,
- *    and every world stays pristine;
+ *  - L3.5 reduced motion (390 px, `prefers-reduced-motion: reduce`, the wall clock pinned at 06:00): no card's pixels
+ *    change over 2 s or after a tap, and every world stays pristine;
  *  - X1: `?day=` sets the pond's day (and survives the app's URL sync); nothing is stored without the opt-in, TOOLS ›
  *    POND MEMORY stores one record (an aged record grows fry), and off deletes it; a card's OPEN runs a view
  *    transition to its widget page and Back runs one home, the flying card's canvas hidden in flight; under reduced
@@ -25,6 +25,7 @@
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { findChrome, launch, serveDist, sleep, type Page } from './lib/cdp'
+import { pinnedClockScript } from './lib/freeze'
 import { lifeSnapshot, pond as pondModule } from './life'
 import { planktonSnapshot } from './life-plankton'
 import { turingSnapshot } from './life-turing'
@@ -274,6 +275,9 @@ try {
   const phone = async (width: number, reduce = false) => {
     const page = await open(width, 844)
     await page.cdp('Page.addScriptToEvaluateOnNewDocument', { source: 'globalThis.__POND_PROBE__ = true' })
+    // reduced motion compares frames, so pin the wall clock: koi, fireflies and terrarium draw the hour (the dawn
+    // dither, the hour's creeper, the moon), and a tap's redraw a minute later showed new pixels (#28). 06:00 is mid-dawn
+    if (reduce) await page.cdp('Page.addScriptToEvaluateOnNewDocument', { source: pinnedClockScript(2026, 10, 16, 6, 0) })
     await page.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 2 })
     await page.cdp('Emulation.setDeviceMetricsOverride', { width, height: 844, deviceScaleFactor: 2, mobile: true })
     if (reduce) await page.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] })

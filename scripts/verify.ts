@@ -214,6 +214,11 @@ frameCacheChecks(assert)
 }
 // FLAGS (#144, #145) every release flag documented; the URL sets none; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
 await flagChecks(assert)
+// OG KEY (#103) widget OG images cache on each card's golden rows in goldens/<board>.json; no hashes.json index (scripts/verify/og-key.ts)
+{
+  const { ogKeyChecks } = await import('./verify/og-key')
+  ogKeyChecks(assert)
+}
 // SKINS (#345) four display skins in order; a saved or linked removed skin opens on OLED (scripts/verify/skins.ts)
 {
   const { skinChecks } = await import('./verify/skins')

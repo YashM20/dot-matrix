@@ -178,7 +178,7 @@ try {
     await cdp('Page.navigate', { url: base })
     check('home opens ALL', await waitFor(allReady))
     // everything fetched must be the entry or one of its modulepreloads (the static closure): no lazy chunk
-    const first = await jsFiles(), html = await (await fetch(base)).text()
+    const html = await (await fetch(base)).text()
     const preload = new Set([...html.matchAll(/(?:src|href)="\/assets\/([^"]+\.js)"/g)].map(m => m[1]))
     // after first paint, by design: the board blurbs (UX U1), the command layer, mounted once the page is idle (C10),
     // and the phone sheets it warms (the board sheet, the sheet itself, the display list); the home's hero card and
@@ -188,8 +188,15 @@ try {
     // A deferred chunk brings its own static imports (shared chunks named after a module: `text`, `ops`, `posts`, …),
     // so those count too when dist/ is here to read them from
     const deferred = new RegExp(`^(sampleWorker|blurbs|CommandLayer|Palette|Shell|fuzzy|describe|BoardSheet|Sheet|SkinList|useSwipeDown|home|halftone|mask|Browse|names|catalog|${boardIds.join('|')})-`)
-    const allowed = staticClosure([...preload, ...first.filter(f => deferred.test(f))])
-    const extra = first.filter(f => !preload.has(f) && !deferred.test(f) && !allowed.has(f))
+    const extraOf = (files: string[]) => {
+      const allowed = staticClosure([...preload, ...files.filter(f => deferred.test(f))])
+      return files.filter(f => !preload.has(f) && !deferred.test(f) && !allowed.has(f))
+    }
+    // the list holds finished requests only, and a deferred chunk's imports load beside it, so a small one (`sprites`)
+    // can finish before the board chunk that imports it (#28). A stray file gets 3 s for its importer to land; a chunk
+    // nothing deferred imports never does, and still fails
+    let first = await jsFiles(), extra = extraOf(first)
+    for (let i = 0; i < 10 && extra.length; i++) { await sleep(300); first = await jsFiles(); extra = extraOf(first) }
     check('first load fetches only the entry and its static imports', extra.length === 0, `${first.length} JS files${extra.length ? `; lazy: ${extra.join(', ')}` : ''}`)
     await js(`document.querySelector('.board-tabs [data-board="${boardIds[2]}"]').dispatchEvent(new PointerEvent('pointerover', { bubbles: true }))`)
     await js(`document.querySelector('.board-tabs [data-board="${boardIds[2]}"]').dispatchEvent(new PointerEvent('pointerenter'))`)
