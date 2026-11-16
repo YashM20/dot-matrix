@@ -14,6 +14,7 @@ import { chartLayers } from '../../engine/charts/paint'
 import type { Chart, Label } from '../../engine/charts/marks'
 import { TILE, layoutFor, tileCircleStyle, type WidgetContext, type WidgetPreset } from '../types'
 import { marching, rr, ui } from './components-kit'
+import { LABEL_SWITCH, labelSwitch } from '../dot-controls'
 
 export const T = layoutFor(TILE)
 /** Big sites and readout dots are true circles (n = 2), like the components board. */
@@ -43,13 +44,6 @@ export interface ChartCardSpec {
   draw: (v: View) => Pick<Chart, 'marks' | 'labels'>
 }
 
-const width = (s: string) => T.size(s)[0]
-/** The switch: both names right-aligned in the label row, 6 cells apart. */
-function switchOf(sets: [string, string]) {
-  const xb = TILE.cols - width(sets[1]), xa = xb - 6 - width(sets[0]), x = xa - 2
-  return { xs: [xa, xb], box: [x, 0, TILE.cols - x, 8] as Box }
-}
-
 export function view(c: ChartCardSpec, ctx: WidgetContext): View {
   const t = ctx.reducedMotion ? 0 : ctx.t, demo = (ctx.data.demo ?? 1) >= .5
   const { intro, set } = demo ? loopPhase((t % LOOP.period) + c.offset) : { intro: 1, set: settle(ctx.data.set ?? 0) }
@@ -60,7 +54,7 @@ export function view(c: ChartCardSpec, ctx: WidgetContext): View {
 }
 
 export function chartCard(c: ChartCardSpec): WidgetPreset {
-  const sw = switchOf(c.sets)
+  const sw = labelSwitch(c.sets)
   const controls: Control[] = [
     { key: 'set', kind: 'segmented', options: 2, optionLabels: c.sets, box: sw.box, label: 'Data set' },
     { key: 'pick', kind: 'slider', min: 0, max: Math.max(0, c.n - 1), step: 1, box: c.box, map: c.map, label: 'Readout', valueText: (v, data) => {
@@ -78,7 +72,7 @@ export function chartCard(c: ChartCardSpec): WidgetPreset {
       const names: Label[] = c.sets.map((text, i) => ({ text, col: sw.xs[i], row: 0, tone: (i === on ? 'value' : s.hover ? 'idle' : 'mid') as Tone }))
       const [bx, by, bw, bh] = c.box
       const out: Layer[] = [...chartLayers(c.draw(v), TILE), ...chartLayers({ marks: [], labels: names }, TILE)]
-      if (s.focus) out.push(marching(rr(sw.box[0], 10, sw.box[2] - 1, 0, 0), ctx.t, 0))
+      if (s.focus) out.push(marching(rr(sw.box[0], LABEL_SWITCH.row, sw.box[2] - 1, 0, 0), ctx.t, 0))
       if (ui(ctx, 'pick').focus) out.push(marching(rr(bx, by, bw - 1, bh - 1, 4), ctx.t, 0))
       return out
     },

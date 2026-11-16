@@ -11,7 +11,7 @@ import type { Layer, Tone } from '../../engine/types'
 import { TAU, TILE, dim, layer, layoutFor, tileCircleStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
 import { OUTLINE, PRESS, at, circle, dimmed, glow, marching, rr, rrect, stadium, states, ui } from './components-kit'
 import { scrubber, switchTrack, type SwitchSpec } from '../dot-controls'
-import { polar } from '../dials'
+import { dialArc, polar } from '../dials'
 import { divider } from '../captions'
 // the primitives live in components-kit.ts; other boards import them from there
 export { OUTLINE, PRESS, at, circle, dimmed, glow, marching, rr, rrect, stadium, states, ui, type Shape, type UiState } from './components-kit'
@@ -27,7 +27,7 @@ const outline = (x: number, y: number, w: number, h: number) => T.dots(stadium(x
 // ── TOGGLE ──────────────────────────────────────────────────────────────────
 const TRACK = { x: 22, w: 100, h: 46 }
 const toggle = (top: number, on: boolean) =>
-  switchTrack({ ...TRACK, y: top, knob: 30, ...OUTLINE }, on ? 1 : 0, on ? 'value' : 'mid')
+  switchTrack({ ...TRACK, y: top, ...OUTLINE }, on ? 1 : 0, on ? 'value' : 'mid')
 export const toggleCard: WidgetPreset = {
   id: 'ui-toggle', name: 'Toggle', group: 'composite', chrome: 'dots', grid: TILE, style,
   defaults: { on: 1, on2: 0 },
@@ -156,7 +156,7 @@ const ptr = (ctx: Ctx) => ctx.pointers?.find(q => !q.up)
 
 // ── SEGMENTED ───────────────────────────────────────────────────────────────
 /** A three-stop switch: the toggle's track and knob, mid detents at the free stops, labels below. */
-const SEG = { x: 6, y: 44, w: 132, h: 40, knob: 30, labels: ['LOW', 'MID', 'HIGH'] }
+const SEG = { x: 6, y: 44, w: 132, h: 40, labels: ['LOW', 'MID', 'HIGH'] }
 const segX = (i: number) => SEG.x + SEG.h / 2 + (i * (SEG.w - SEG.h)) / 2
 const SEG_SWITCH: SwitchSpec = { ...SEG, ...OUTLINE, outline: 'rrect' }
 export const segmentedCard: WidgetPreset = {
@@ -177,7 +177,10 @@ export const segmentedCard: WidgetPreset = {
 }
 
 // ── STEPPED SLIDER ──────────────────────────────────────────────────────────
-/** Slider with 9 detents: big detent dots, fine dots between, the value as the hero above. */
+/**
+ * Slider with 9 detents: big detent dots, fine dots between, the value as the hero above. The scrubber's site index
+ * with a knob gap, drawn here because its rail has two site sizes (detents and fine dots), which `scrubber` has not.
+ */
 const DET = { x0: 12, x1: 132, y: 100, n: 8, sub: 4, knob: 18, gap: 10 }
 export const steppedSliderCard: WidgetPreset = {
   id: 'ui-stepped-slider', name: 'Stepped Slider', group: 'composite', chrome: 'dots', grid: TILE, style,
@@ -210,11 +213,9 @@ export const knobCard: WidgetPreset = {
   controls: [{ key: 'gain', kind: 'knob', box: [KNOB.cx - KNOB.r - 4, KNOB.cy - KNOB.r - 4, 2 * KNOB.r + 8, 2 * KNOB.r + 8], label: 'Gain' }],
   layers: ctx => {
     const { cx, cy, r } = KNOB, s = ui(ctx, 'gain'), v = clamp(ctx.data.gain), a = KNOB.start + v * KNOB.sweep, pv = s.pressed ? PRESS : 1
-    const ring = { spacing: OUTLINE.spacing, size: OUTLINE.size, start: KNOB.start }
     return [
-      // the dash dials' recipe (`dialArc`), drawn here because at 0 this card keeps one lit site at the start (#360)
-      layer(T.dotRing(cx, cy, r, { ...ring, sweep: KNOB.sweep }), 'mid'),
-      layer(T.dotRing(cx, cy, r, { ...ring, sweep: v * KNOB.sweep, size: 2.2 }), 'value'),
+      // the dash dials' track (`dialArc`): at 0 no track site is lit (#360)
+      ...dialArc(KNOB, 0, v),
       layer(at(T.dots([[cx, cy]], KNOB.body), pv), 'mid'),
       layer(at(T.dots([polar(cx, cy, 13, a)], 6), pv), 'value'),
       layer(T.big(String(Math.round(v * 100)), cx, cy + r - 8, { ...BODY, align: 'center' }), 'idle'),

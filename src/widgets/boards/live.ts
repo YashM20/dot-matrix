@@ -184,8 +184,8 @@ const eqLevels = (t: number, seed: number) => {
     return Math.max(.08, Math.min(1, tilt * wobble * (i < 3 ? .65 + .45 * beat : .85 + .15 * beat)))
   })
 }
-/** The scrubber: henry's music card's two dot lines, on this card's row. */
-const SCRUB: ScrubSpec = { x0: 3, x1: 141, y: 106, spacing: 1.65, size: [.9, .7], knob: 4.6, gap: 3.5, method: 'lines', travel: [3, 140] }
+/** The scrubber: the shared site index with a knob gap (#360) in henry's music card's fine dots, on this card's row. */
+const SCRUB: ScrubSpec = { x0: 3, x1: 141, y: 106, spacing: 1.65, size: [.9, .7], knob: 4.6, gap: 3 }
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 export const liveNowPlaying: WidgetPreset = {
   id: 'live-now-playing', name: 'Now Playing', label: 'NOW PLAYING', group: 'photo', liveData: true, ...tile, animated: true,
