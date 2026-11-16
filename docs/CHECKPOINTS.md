@@ -1,56 +1,82 @@
 # CHECKPOINTS: how work moves forward
 
-One checkpoint at a time. A checkpoint is a GitHub milestone with a fixed list of issues. We build toward it, publish it, take a breather, and only then start the next one. No loops, and no new work in the middle.
+One checkpoint at a time. A checkpoint is a GitHub milestone with a fixed list of issues and one tracking issue that orders them. We build toward it, publish it, take a breather, and only then start the next one. No loops, and no new work in the middle.
+
+GitHub is the source of truth: the milestones, the labels, the tracking issue and the issue comments. This file holds the process and the plan; the live order of work is the tracking issue.
 
 ## The cycle
-1. **Scope.** The milestone's issues are the whole job. A new idea or request that comes up mid-checkpoint becomes an issue in a later milestone, or in Backlog or ideation. It does not join the current one unless the owner says so.
-2. **Build.** At most 4 agents, each working only on issues in this milestone. Merge each one into the checkpoint branch as it finishes.
-3. **Gate.** The full suite is green on the checkpoint branch (the coordinator's full-suite runner, run detached, with a summary file at the end). Known timing flakes are listed and pass on CI.
+1. **Scope.** The milestone's issues are the whole job. A new idea or request that comes up mid-checkpoint becomes an issue in a later milestone or in Backlog. It does not join the current one unless the owner says so.
+2. **Build.** Four to six lanes at once, one agent per line of the tracking issue, each working only on issues in this milestone. Each lane opens its own PR to `main`. It merges once `check + build` is green, and once the owner has OK'd the before and after shots for anything visitors can see.
+3. **Gate.** One full CI run with every browser probe on the last PR of the checkpoint (label the PR `full-probes`). Goldens change only where a lane meant to change them, and first load stays at or under 150 kB gz.
    - `pnpm check` (and so CI) runs `scripts/site/prose-lint.ts` on visitor prose (`docs/WRITING.md`): 0 errors before publish. Read its warnings at the gate.
 4. **Publish.**
-   - Open a PR from the checkpoint branch to main. Wait for CI and Vercel to pass, then merge.
    - Turn the shipped `upcoming` rows into a released version in `src/changelog.ts` and `CHANGELOG.md`.
-   - Close the milestone's issues and the milestone itself.
+   - Close the milestone's issues, the tracking issue and the milestone itself.
 5. **Breather (mandatory, nothing new starts):**
-   - **Clean up:** remove finished worktrees (junction-safe), scratch dirs, merged branches, and stale locks or tickets.
+   - **Clean up:** remove finished worktrees (junction-safe), scratch dirs and merged branches.
    - **Docs:** `docs/PROGRESS.md` (trim the run state to the next checkpoint), `docs/README.md` statuses, and the plan docs' status blocks.
    - **Issues:**
-     - Every closed issue is really done.
-     - Open issues are still accurate.
+     - Every closed issue is really done, with the PR that did it.
+     - Open issues are still accurate. Triage them against `main` and say what's left in a comment.
      - Follow-ups found during the checkpoint are filed in the right milestone.
-     - Decisions are added to #12.
-   - **Owner review:** a taste pass on what shipped, and answers to the open decisions.
-6. **Pick the next checkpoint.** The owner confirms it, then a new checkpoint branch is cut from main.
+     - Decisions are recorded on the issue they affect, and on #12 if they shape planned work.
+   - **Owner review:** a taste pass on what shipped.
+6. **Pick the next checkpoint.** The owner confirms it, and its tracking issue becomes the queue.
 
-## Speed rules (from the round-3 review: same quality, much less time and fewer tokens)
+## Labels
+- **Priority:** every open issue has exactly one. `priority: high` is the current checkpoint's close list. `priority: medium` is planned: the next checkpoints, and Backlog items picked at the next breather. `priority: low` is nice to have.
+- **Area:** at least one `area:` label. Board and card work is `area: cards`; site chrome is `area: site-ux`.
+- **Status:** `status: in progress` only while a lane has a PR open. `status: blocked` names the blocking issue in a comment. `status: needs decision` only where the owner must choose, with the choice stated in one line. Small look and consistency calls don't need the owner: decide them with the COMPONENTS board as the reference and record them on the issue.
 
+## Speed rules
 **Big, few checkpoints.** Batch related work into one milestone, and publish it about once per round, not per feature.
 
-**At most 3 agents at once.** The machine has 2 cores and runs one heavy job at a time, so more agents only queue: round 3 saw 5–8 jobs waiting 30–60 min each.
+**No local builds.** The coordinator's machine has 2 cores. Agents run quick checks locally and push; CI runs the builds, goldens, probes and screenshots (`docs/HARNESS.md`).
 
-**Frame budgets wait (owner, 2026-11-01): functionality first.** `pnpm verify` and every area script (`npx tsx scripts/<area>.ts`) report wall-clock checks (a `≤ N ms` limit, or a `budget` measured in ms, × load or fastest-of-N) as warnings. Step, flicker and size budgets are correctness checks and always fail. Only `DOT_TIMING=strict` enforces them, and they come back at a later checkpoint. The rule lives in one place, `scripts/lib/check.ts`. Workshop speed work in progress is on branch `perf/workshop-cold-frames` (#27).
+**Frame budgets wait (owner, 2026-11-01): functionality first.** `pnpm verify` and every area script (`pnpm exec tsx scripts/<area>.ts`) report wall-clock checks (a `≤ N ms` limit, or a `budget` measured in ms, × load or fastest-of-N) as warnings. Step, flicker and size budgets are correctness checks and always fail. Only `DOT_TIMING=strict` enforces them. The rule lives in one place, `scripts/lib/check.ts`. From CP6 on, the board budget is read on the buffer path the site draws (#339).
 
 **Two test tiers:**
 
 | Tier | When | What |
 |---|---|---|
-| Quick (agents) | while building | `npx tsc -b`, `npx oxlint <changed>`, the area script (timing only warns by default; `--quick` where it exists), `pnpm golden --check`, and size only if first-load imports changed. **No** browser probes, screenshots or timing runs. |
-| Gate (coordinator) | once per checkpoint, idle machine, no agents running | the full suite (the full-suite runner, with `DOT_TIMING=strict` once budgets are back): timing budgets, every browser probe, size, theme, CSS and goldens, then CI. Screenshots are taken once here. |
+| Quick (agents, local) | while building | `pnpm exec tsc -b`, `pnpm exec oxlint <changed>`, small Node scripts (the area script where it is pure Node). **No** builds, goldens, browser probes or screenshots. |
+| CI (every PR push) | on push | `check + build` (`pnpm check`, the build, size, header, SEO and theme checks, `pnpm golden --check`), plus the browser probes the change affects (`scripts/ci/affected.ts`). Goldens for an intended card change: `gh workflow run goldens -f branch=<branch>`. |
+| Gate (once per checkpoint) | the last PR | every probe (`full-probes`), screenshots for the owner, then publish. |
 
 **Shared and lean:**
-- One shared base build per checkpoint for size deltas (kept in a local scratch folder). Agents compare against it instead of building their own.
-- Agent reports stay under 300 words: SHA, check results, sizes, anything open.
-- No always-on watchdog. Run it only for long unattended runs, such as overnight.
-- Merging append-only registry files (`ids.json`, `catalog.ts`, `manifest.ts`, DESIGN tables) uses a local union-merge script, not hand edits.
-- Goldens are one file per board (`goldens/<board>.json`), so a board branch touches only its own file. When two branches change the same board's file, merge the code and rerun `pnpm golden`; don't merge the hashes by hand.
+- Agent reports stay under 400 words: what was built, the choices made, what was skipped, and the PR line.
+- Merging append-only registry files (`ids.json`, `catalog.ts`, `manifest.ts`, DESIGN tables) uses a union merge, not hand edits.
+- Goldens are one file per board (`goldens/<board>.json`), so a board lane touches only its own file. When two branches change the same board's file, merge the code and regenerate; don't merge the hashes by hand.
 
 ## Checkpoints
 
 | # | Milestone | Ships | Status |
 |---|---|---|---|
-| CP1 | `CP1 · 0.13 · Round 3 to main` | Round 3: editor share and phone polish, squares Q2–Q3, glass and water, workshop, pond polish and depth, 0.12 release notes | **published** 2026-11-01 (PR #78); milestone closed |
-| CP2 | `CP2 · 0.14 · Foundations and fixes` | IQ1–IQ4 (2D SDFs, operators, shaping, filtered fields), the tixy adapter and card credits (#53), the quick/gate test tiers (#75), the `mat-lens` parity entry (#29), the koi feed fix (#90); also the blog, the lab, goldens per board and the file-size rule | **merged** to main by 2026-11-03 (`CHANGELOG.md` 0.14); all issues closed, milestone still open. #28, #74, #76 and #54 moved to Backlog |
-| CP3 | `CP3 · 0.15 · Kits and new boards` | the car dash, faces, kinetic type, micro motion, charts and watch faces (#125–#129, #132), the IQ card sets (#66–#68), the P0 probes and token sweep (#37, #45) | **merged** to main 2026-11-02 to 11-04 (`CHANGELOG.md` 0.15); all issues closed, milestone still open |
-| CP4 | `CP4 · 0.16 · Flags, SEO, analytics, shell and security` | feature flags and X-ray off (#144, #145), SEO (#146), analytics (#151), the shell (#152), likes phase 1 (#169), security fixes (#141–#143, #147–#150, #158) | **merged** to main 2026-11-04 (`CHANGELOG.md` 0.16); open: #169 (likes) |
-| CP5 | `CP5 · 0.17 · UI hill climb` | UI polish before new features (#178–#188, tracking #189), plus CI (#190, #193, #197), flags from localStorage only and the SEO checkup (#198) | **in progress**; open: #186, #187, #188 |
-| later | Next phases (E4, E7, X) · Backlog | picked at a breather | waiting |
+| CP1 | `CP1 · 0.13 · Round 3 to main` | Round 3: editor share and phone polish, squares Q2 and Q3, glass and water, workshop, pond polish and depth, 0.12 release notes | **published** 2026-11-01 (PR #78); closed |
+| CP2 | `CP2 · 0.14 · Foundations and fixes` | IQ1 to IQ4, the tixy adapter and card credits (#53), the test tiers (#75), the blog, the lab, goldens per board and the file-size rule | **published** by 2026-11-03 (`CHANGELOG.md` 0.14); closed |
+| CP3 | `CP3 · 0.15 · Kits and new boards` | the car dash, faces, kinetic type, micro motion, charts and watch faces (#125 to #129, #132), the IQ card sets, the P0 probes and token sweep | **published** 2026-11-02 to 11-04 (`CHANGELOG.md` 0.15); closed |
+| CP4 | `CP4 · 0.16 · Flags, SEO, analytics, shell and security` | feature flags and X-ray off, SEO, analytics, the shell, likes (#169, #176), security fixes | **published** 2026-11-04 (`CHANGELOG.md` 0.16); closed 2026-11-16 |
+| CP5 | `CP5 · 0.17 · UI hill climb` | UI polish before new features (#178 to #188, tracker #189), CI, flags from localStorage only, the SEO checkup | **published**; closed 2026-11-16. #186 waits in Backlog for MAKE |
+| CP6 | `CP6 · 0.18 · Stabilise` | bugs, flaky gates, accessibility, the design system audit (#361), card cuts and the first board refines | **closing**: the queue is #403 |
+| CP7 | `CP7 · 0.19 · Board refinement` | the remaining #221 cuts, then twelve boards brought up to the bar | **next**; queue #401 |
+| CP8 | `CP8 · 0.20 · Play, live data and guides` | games, a live world board, a wallpaper maker, the guides on the blog, and the chrome they need | **planned**; queue #402 |
+| later | Backlog | picked at a breather, highest priority first | waiting |
+
+### CP6 · 0.18 · Stabilise (closing)
+- **Goal:** fix what exists before building anything new: bugs, flaky checks, accessibility, the design system audit, and the cards below the bar.
+- **Close list:** #28 flaky gates, #43 home hero and focus order, #355 type rhythm tokens, #393 POND focus rings, #261 COMPONENTS status dot labels, #341 desktop press, #339 buffer-path bench, #340 SQUARES frame cost, #103 goldens index, #361 (design system tracker), #379 branches at the breather.
+- **Exit criterion:** every issue in the milestone is closed, CI is green with every probe, goldens changed only on purpose, first load at or under 150 kB gz, and 0.18 is published.
+
+### CP7 · 0.19 · Board refinement
+- **Goal:** every board that stays meets the bar of `level-03`, the afterlight face, MOSAIC and COMPONENTS. No new boards or features.
+- **Issues:** #221 first (the owner's remaining cuts), then HEAL #244, MIRROR #242, MICRO MOTION #238, DEPARTURES #228, LEVELS #233, SCOPE #240, FRACTALS #248, CINEMA #245, 500K DOTS #241, MOSAIC #253, RIDE #258 and POND #246, with #225 as the tracker.
+- **Exit criterion:** every CP7 issue is closed, removed cards keep their links, each lane changes only its own board's goldens and on purpose, the owner has OK'd the shots, CI is green, and 0.19 is published.
+- **At its breather:** PROGRAMS #227, PHYSICS #235, MICRO UI #247 and LOCK #260 from Backlog, and LIGHT #236, KINETIC TYPE #252, SCENES #254 and FACES #255 once the #221 picks unblock them.
+
+### CP8 · 0.20 · Play, live data and guides
+- **Goal:** new things to do on the site, built to the same bar: original games, a live world board, a wallpaper maker, and the guides published on the blog. The chrome those pages lean on comes first.
+- **Issues:** site first: #38 Back and scroll, #40 the blog and legal bar, #34 the theme control in it, #39 footer and board end, #41 wayfinding and cuts, #44 desktop hit targets. Then #131 three games, #311 the hill-driving game, #130 the world board, #133 the wallpaper maker and #77 the guides.
+- **Exit criterion:** every CP8 issue is closed, games and the world board work with mouse, touch and keyboard and respect reduced motion, the world board has loading, cached and offline states with goldens on fixed data, the guides are live, first load is at or under 150 kB gz with every new view lazy, CI is green, and 0.20 is published.
+
+### Backlog
+Ordered by priority. Medium: the eight board refines above, the polish tracker #72 and the decisions tracker #12. Low: MAKE's return as one batch (#186, #18, #19, #31, #33; MAKE is off by default), the tixy gallery (#51 to #58, #60, blocked on the permission request in #52), pond senses (#22), WebGPU (#24, ideation), the power layer (#35), sessions with people (#47, after CP8), X-ray rect cells (#74), Speculation Rules (#347) and the IQ ideation list (#70).

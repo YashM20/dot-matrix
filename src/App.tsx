@@ -68,8 +68,9 @@ const useIdle = () => {
 const viewFailed = <section className="view-loading"><LoadFailed what="This view" /></section>
 // static markup: 'use no memo' keeps the compiler's memo slots (first-load bytes) out of these two
 const slot = <div className="home-hero-slot" />
-// the hero floats beside the header from 1280 px (src/site/app/hero.css) and follows the board below that: it sits
-// there in the DOM too, so the Tab order matches what the eye sees (a phone's first stop is not at the page's end)
+// the hero is a grid area beside the intro and the picker from 1280 px (src/site/app/hero.css) and follows the grid
+// below that. It sits after the picker in the DOM there too, so the Tab order reads as the eye does: the intro and the
+// picker on the left, then the hero on the right, then the cards (#43)
 const HERO_BESIDE = '(min-width: 1280px)'
 const onHeroBeside = (cb: () => void) => { const m = window.matchMedia(HERO_BESIDE); m.addEventListener('change', cb); return () => m.removeEventListener('change', cb) }
 const useHeroBeside = () => useSyncExternalStore(onHeroBeside, () => window.matchMedia(HERO_BESIDE).matches, () => true)
@@ -167,10 +168,10 @@ function PlaceView({ place, shownBoard, leaving, board, all, mode, onPick, onPic
   return <LoadBoundary key={place} fallback={viewFailed}>
     <Suspense fallback={<section className="view-loading" aria-busy="true" />}>
     {place === 'EXPLORE' ? (
-      <section className="boards-view" role="tabpanel" aria-labelledby="tab-EXPLORE">
-        {shownAll && heroBeside && <Hero />}
+      <section className={`boards-view${shownAll ? ' boards-view--hero' : ''}`} role="tabpanel" aria-labelledby="tab-EXPLORE">
         <IntroLine />
         <BoardPicker board={board} all={all} onPick={onPick} onPickAll={onPickAll} onSheet={onSheet} />
+        {shownAll && heroBeside && <Hero />}
         {shownAll
           ? <Browse onOpen={onOpen} cardPath={widgetPath} onBoard={id => { window.scrollTo(0, 0); onPick(id) }} />
           : <><Board key={shownBoard} id={shownBoard} leaving={leaving} /><NextBoard board={board} onPick={onPick} /></>}

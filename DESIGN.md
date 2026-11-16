@@ -211,7 +211,7 @@ There is no substitute typeface — the bitmap dot-font *is* the typography syst
 | `--app-top` | `52px + safe-area-inset-top`; `--tap + inset` in short landscape | phone: the sticky top bar's height |
 | `--tabbar-h` | `58px + safe-area-inset-bottom`; `--tap + inset` in short landscape | phone: the tab bar's height, home indicator included |
 | `--topbar-h` | 48 px | desktop: the sticky header's height; `html` scroll padding is this plus `--gap-group`, so a focused or scrolled-to target lands clear of it |
-| `--pillbar-h` | 30 px; `--tap` + 2 px on a coarse pointer | widget page: a toolbar group's height (28 px buttons, `--tap` on touch, in one 1 px hairline); nothing reads it yet (R5) |
+| `--pillbar-h` | 30 px; `--tap` + 2 px on a coarse pointer | widget page: a toolbar group's height (28 px buttons, `--tap` on touch, in one 1 px hairline); a phone's page starts a group step under its pinned top bar with it |
 
 ### Stacking (z-index)
 
@@ -503,6 +503,7 @@ A knob, a single status dot or a masked password character is one site (`T.dots(
 | `liveDot(grid)` / `LIVE_DOT` | `src/widgets/types.ts` | The chrome's red live dot; a card that switches it on itself draws this |
 | `tileCircleStyle` | `src/widgets/types.ts` | `tileStyle` with roundness 0, for boards whose knobs and status dots are true circles |
 | `ui(ctx, key)`, `states(s, t, hover, focus?, d?)`, `glow`, `marching`, `PRESS` | `src/widgets/dot-controls.ts` | The one hover, press and focus grammar (#358, the Interaction tokens). A card passes its outline as a `Shape` (`rr`, `circle`, or its own sites) and the ring's distance; `clear` drops halo sites a neighbour sits on. A card keeps its own shape only where its layout leaves no room, and says so in a comment |
+| `surfaceFocus(ctx, key, w?)` / `labelLine(x0, w)` | `src/widgets/boards/pond/shared.ts` | A pond card's touch surface fills the card, so its focus marches a dotted line on row 10 under the label (every other cell, from column 1, the whole row unless a label row control sits at its right). Hover draws nothing: the scene answers the pointer (#393) |
 
 ### Status & Indicators
 

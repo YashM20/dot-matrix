@@ -6,9 +6,12 @@
  * card. The row sits outside the card's tree (a sibling in its grid slot), so the card's own pointer and keys
  * stay the card's; its actions reach the mounted card through `cardActs`. Copy link needs no card: it takes the
  * site's one path (`copyLink`, #353), so a card ALL hasn't mounted yet copies the same link as a mounted one.
+ * The row is a toolbar with one Tab stop (#43): OPEN holds it at first, then whichever action was focused last, and
+ * ← → Home End move between the actions (ALL's board link is one of them), so a grid of cards costs a stop per row.
  */
-import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState, type FocusEvent, type MouseEvent, type ReactNode } from 'react'
 import { useMenuButton } from '../hooks/useMenuButton'
+import { useRoving } from '../hooks/useRoving'
 import type { CardAction } from './xray/store'
 import { cardActs, type CardActs } from './cardActs'
 import { copyLink } from './copyLink'
@@ -32,6 +35,8 @@ export interface CardRowProps {
  * only while the card isn't mounted (the rest need it). */
 const MORE: [CardAction, string][] = [['png', 'Download PNG'], ['link', 'Copy link'], ['remix', 'Remix in MAKE'], ['how', 'X-ray: how it works']]
 const plain = (e: MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey
+/** The row's actions: OPEN, LINK, MORE and (ALL) the board link; not MORE's menu items. */
+const ACTS = ':scope > a, :scope > button, :scope > .dot-card-row-meta a'
 
 export function CardRow({ id, name, href, onOpen, meta }: CardRowProps) {
   // the menu (`useMenuButton`, #352), with the card's actions as they were when it opened (null: not mounted)
@@ -47,6 +52,12 @@ export function CardRow({ id, name, href, onOpen, meta }: CardRowProps) {
     return () => window.clearTimeout(t)
   }, [copied])
   const row = useRef<HTMLDivElement>(null)
+  // the one Tab stop: set on the elements themselves (no tabIndex prop), since the board link comes in through `meta`
+  const stops = () => [...(row.current?.querySelectorAll<HTMLElement>(ACTS) ?? [])]
+  const stopOn = (to: EventTarget | null) => { for (const el of stops()) el.tabIndex = el === to ? 0 : -1 }
+  useLayoutEffect(() => { stopOn(row.current?.querySelector('.dot-card-row-open') ?? null) }, [])
+  const onFocus = (e: FocusEvent<HTMLDivElement>) => { if (stops().includes(e.target)) stopOn(e.target) }
+  const onKey = useRoving({ items: ACTS })
   // the card in the same slot (the row's previous sibling), and its actions once it is mounted
   const acts = () => cardActs(row.current?.parentElement?.querySelector<HTMLElement>(':scope > [data-xr-key]')?.dataset.xrKey)
   const run = (a: CardAction) => {
@@ -60,7 +71,7 @@ export function CardRow({ id, name, href, onOpen, meta }: CardRowProps) {
   // X-ray only while its flag is on, REMIX only while `make` is; PNG and REMIX need the mounted card
   const items = MORE.filter(([a]) => (a === 'link' ? !own : own) && (a !== 'how' || own?.xray) && (a !== 'remix' || own?.make))
   const pick = (a: CardAction) => () => { m.close(); run(a) }
-  return <div ref={row} className={`dot-card-row${opened ? ' open' : ''}`}>
+  return <div ref={row} className={`dot-card-row${opened ? ' open' : ''}`} role="toolbar" aria-label={`${name}: actions`} onFocus={onFocus} onKeyDown={onKey}>
     {meta && <p className="dot-card-row-meta"><span className="dot-card-row-name" aria-hidden="true">{name}</span>{meta}</p>}
     <a className="dot-card-row-open" href={href} aria-label={`Open ${name}`} data-tip="Open" onClick={open}><OpenIcon /></a>
     <button type="button" className={`dot-card-row-link${copied ? ' copied' : ''}`} aria-label={`Copy link to ${name}`} data-tip={copied ? 'Copied' : 'Copy link'}
