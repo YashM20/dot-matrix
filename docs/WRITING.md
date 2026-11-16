@@ -83,7 +83,7 @@ Pick the visual before you write the section. Write down what it is and what the
 |---|---|---|
 | Lattices and sites | live figure `FigLattice` | the clumped "42" looks like a mosaic, and the lattice one looks like hardware |
 | Halftone and time | live figure `FigFlicker` | the dot-change counter under each panel |
-| Five surfaces | live figure `FigSurfaces` (one board clock, five devices) | the red arc turns into plain light on one-colour devices |
+| Three surfaces | live figure `FigSurfaces` (one board clock, three devices) | the red arc turns into plain light on one-colour devices |
 
 A visual is a live card id, a diagram (a figure component), or a step shot (a screenshot from `scripts/site/shots.ts`). In a markdown post, write it as a note (see `docs/blog/README.md`). If a section has no visual, ask whether it needs to exist.
 

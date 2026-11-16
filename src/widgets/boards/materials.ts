@@ -1,37 +1,36 @@
 /**
- * Board · MATERIALS (M1, docs/living-matter/M-materials.md §3): cloth, spun aluminium, perforated steel, marble and
- * terrazzo here; M2 (§4: liquid glass, a caustic pool, stained glass, embroidery, rust, a wax candle) in
+ * Board · MATERIALS (M1, docs/living-matter/M-materials.md §3): cloth, spun aluminium, perforated steel and terrazzo
+ * here (the marble clock was retired, #364); M2 (§4: liquid glass, a caustic pool, stained glass, embroidery, rust, a wax candle) in
  * `materials-glass.ts` (lens, window), `materials-live.ts` (pool, rust: main thread only) and `materials-wear.ts` (patch, candle),
  * with the shared shell in `materials-shared.ts`.
  * Each is made of relief + one light + a micro-pattern of whole size steps (`src/engine/matter`). Material never comes from hue: height → normal → tone band, AO, an anisotropic sheen, and the card's one moving part in red.
  *
  * Rules (M §1):
- * - One accent per card, on the live element only (the shuttle, the value arc, the peak hole, the colon, today's chip).
+ * - One accent per card, on the live element only (the shuttle, the value arc, the peak hole, today's chip).
  *   No `activeDim` until the owner rules (M §10.6): "was active" is size contrast in the one `active` layer.
  * - Every bake (relief, AO, normals, tangents, stone) runs lazily on the card's first frame, never at import; per frame
  *   only the light, the signal and per-cell lookups run (≤ 4 ms, `scripts/materials.ts`). The first frame, bakes
- *   included, stays ≤ 30 ms: bakes visit only their geometry's box (a chip, a colon, the plaque), and per-cell loops
+ *   included, stays ≤ 30 ms: bakes visit only their geometry's box (a chip, a grille hole), and per-cell loops
  *   live in small per-row helpers (`loomRow`, `plateRow`, …) that reach compiled code within that first frame, where
  *   one long loop in a once-run closure would stay interpreted. Every speed-up here is pixel-identical.
  * - The light is `sceneLight` (src/engine/light/input.ts) through `matLight`: the hovering pointer as a torch, else the
  *   tilt hub (`lightSrc` 1), else the sun of the hour. Every card declares the hub keys in `defaults`.
  */
 import { KAJIYA_KAY } from '../creditSources'
-import { ambientOcclusion, anisoSpec, cardMask, DRAFTS, fromDraft, marble, surfaceLayer, tangentLinear, tangentRadial, terrazzo, tonedLayer, weaveRelief, type Draft, type Drawdown, type TangentRaster } from '../../engine/matter'
+import { ambientOcclusion, anisoSpec, DRAFTS, fromDraft, surfaceLayer, tangentLinear, tangentRadial, terrazzo, tonedLayer, weaveRelief, type Draft, type Drawdown, type TangentRaster } from '../../engine/matter'
 import { heightFromField } from '../../engine/matter/relief'
 import { heightRaster, normalRaster, stackHeights, type HeightRaster, type NormalRaster } from '../../engine/light/height'
-import { illuminate, lambert, phong, type Light } from '../../engine/light/shade'
+import { lambert, phong, type Light } from '../../engine/light/shade'
 import { MATTE_BANDS, type ToneBand } from '../../engine/light/material'
 import { sdfBox, sdfCircle } from '../../engine/light/sdf'
 import { createRaster, rasterize, rasterWindow, sample, type Raster } from '../../engine/raster/raster'
-import { insetDistance } from '../../engine/matter/relief'
 import { noise2 } from '../../engine/noise/gradient'
 import { dexp, dpow } from '../../engine/noise/dmath'
 import { hash01 } from '../../engine/math'
 import type { Field, Layer } from '../../engine/types'
 import { lightSource } from '../../site/light'
 import { TILE, layer, type WidgetPreset } from '../types'
-import { cellToLattice15, cite, DEG, frameMemo, lightId, own, L15, LG15, LIGHT_DEFAULTS, matLight, mod, once, pad2, rasterLayer, scratch, T, TAU, tile, toCard15, toLattice15, valuedSites, type Box, type Pt } from './materials-shared'
+import { cellToLattice15, cite, DEG, frameMemo, lightId, own, L15, LG15, LIGHT_DEFAULTS, matLight, mod, once, pad2, rasterLayer, scratch, T, TAU, tile, toCard15, valuedSites, type Box, type Pt } from './materials-shared'
 import { matLens, matWindow, glassHooks } from './materials-glass'
 import { matPool, matRust, poolHooks } from './materials-live'
 import { matPatch, matCandle, wearHooks } from './materials-wear'
@@ -427,91 +426,6 @@ export const matGrille: WidgetPreset = {
   },
 }
 
-// ── 04 MARBLE ─ the time, cut into marble, read by raking light ────────────────────────────────────────
-// A chamfered plaque on the 1.5 lattice, Perlin turbulence-sine marble (veins a band lower), HH MM engraved as a
-// V-groove (lit wall / dark wall under a light raked to ≤ 18°). The colon is the live red.
-const PLAQUE = sdfBox(LG15, 48, 48, 44, 36, 4)
-const plaqueHeight = once(() => heightRaster(PLAQUE, { shape: 'linear', width: 2, height: 1.5 }, LG15))
-const marbleBody = once(() => marble(LG15, { period: 20, sharp: 2.5 }))
-const HERO_ROW = 50
-/** The hero's lattice: 2 (smooth `00:00` is 58 dots wide, 116 cells: the plan's 2.5 would overrun the 132-cell plaque). */
-const HERO_K = 2
-export interface Engraving { key: string; n: NormalRaster; ao: Raster; hero: Raster; colon: Pt[]; clear: Uint8Array }
-const engravings = new Map<string, Engraving>()
-/** The engraving of one minute (LRU of 2): height, normals and AO of the plaque with `HH MM` cut in. */
-export function engraving(hh: string, mm: string): Engraving {
-  const key = `${hh}:${mm}`, hit = engravings.get(key)
-  if (hit) { engravings.delete(key); engravings.set(key, hit); return hit }
-  const opts = { lattice: HERO_K, smooth: true, mask: true, align: 'center' as const }
-  const full = cardMask(T.big(`${hh}:${mm}`, 72, HERO_ROW, opts), TILE), cut = cardMask(T.big(`${hh} ${mm}`, 72, HERO_ROW, opts), TILE)
-  // the colon's two dots: what the full string lights and the spaced one doesn't, split top / bottom
-  const pts: Pt[] = [], [f0, f1, f2, f3] = rasterWindow(full)
-  for (let r = f1; r <= f3; r++) for (let c = f0; c <= f2; c++) if (full.data[r * TILE.cols + c] && !cut.data[r * TILE.cols + c]) pts.push([c, r])
-  const midY = pts.reduce((s, p) => s + p[1], 0) / Math.max(1, pts.length)
-  const centroid = (q: Pt[]): Pt => [q.reduce((s, p) => s + p[0], 0) / q.length, q.reduce((s, p) => s + p[1], 0) / q.length]
-  const top = pts.filter(p => p[1] < midY), bottom = pts.filter(p => p[1] >= midY), colon = top.length && bottom.length ? [centroid(top), centroid(bottom)] : []
-  const hero = toLattice15(cut)
-  const h = stackHeights(plaqueHeight(), heightRaster(insetDistance(hero), { shape: 'linear', width: 1.6, height: -1.8 }))
-  // the colon's sites sit over the plaque lattice: clear the stone under them (sites don't hide lattice dots)
-  const clear = new Uint8Array(LG15.cols * LG15.rows)
-  // only the lattice cells within 3 cells of a colon dot (their box, then the exact distance test)
-  for (const [x, y] of colon) {
-    const ia = Math.max(0, Math.floor((x - 3 + .5) / L15 - .5)), ib = Math.min(LG15.cols - 1, Math.ceil((x + 3 + .5) / L15 - .5))
-    const ja = Math.max(0, Math.floor((y - 3 + .5) / L15 - .5)), jb = Math.min(LG15.rows - 1, Math.ceil((y + 3 + .5) / L15 - .5))
-    for (let j = ja; j <= jb; j++) for (let i = ia; i <= ib; i++) if (Math.hypot(toCard15(i) - x, toCard15(j) - y) < 3) clear[j * LG15.cols + i] = 1
-  }
-  const e: Engraving = { key, n: normalRaster(h), ao: ambientOcclusion(h, { radius: 2, strength: .7 }), hero, colon, clear }
-  engravings.set(key, e)
-  if (engravings.size > 2) engravings.delete(engravings.keys().next().value!)
-  return e
-}
-const marbleScratch = scratch(4, LG15)
-/** Cells i … end of one plaque row: the exposed, veined, occluded body, or the polish a step up where the highlight is. */
-function marbleRow(e: Engraving, M: Float32Array, D: Float32Array, S: Float32Array, B: Float32Array, P: Float32Array, gain: number, i: number, end: number): void {
-  const N = e.n.mask, C = e.clear, A = e.ao.data
-  for (; i <= end; i++) {
-    if (N[i] < .5 || C[i]) continue
-    const b = Math.min(1, Math.max(0, D[i] - .1) * gain) * (.55 + .45 * M[i]) * A[i]
-    if (S[i] >= .35 && b >= .06) P[i] = Math.min(1, b + .25)
-    else B[i] = b
-  }
-}
-/**
- * The plaque's lit body and polish for one light (rasters on the 1.5 lattice, reused per frame). Exposure: the flat
- * face reads at .62 whatever the light (a raked sun alone would leave it faint); walls turned to the light climb past
- * it, walls turned away fall to void. Veins drop the body a band (x .55), AO darkens the groove floors.
- */
-export function marbleLit(e: Engraving, L: Light): { body: Raster; polish: Raster } {
-  const M = marbleBody().data, [dif, spe, body, polish] = marbleScratch()
-  illuminate(e.n, L, { ambient: .1, shininess: 40, into: dif, intoSpecular: spe })
-  body.data.fill(0); polish.data.fill(0)
-  const cols = LG15.cols, [c0, r0, c1, r1] = e.n.bounds ?? [0, 0, cols - 1, LG15.rows - 1]
-  const Ld = Array.isArray(L) ? L as readonly number[] : [0, 0, 1], Lz = Ld[2] / (Math.hypot(Ld[0], Ld[1], Ld[2]) || 1), gain = .58 / (.9 * Math.max(.05, Lz))
-  for (let r = r0; r <= r1; r++) marbleRow(e, M, dif.data, spe.data, body.data, polish.data, gain, r * cols + c0, r * cols + c1)
-  body.bounds = polish.bounds = e.n.bounds
-  return { body, polish }
-}
-export const matMarble: WidgetPreset = {
-  ...tile, id: 'mat-marble', name: 'Marble', clock: true,
-  credit: { by: ['Ken Perlin'], title: 'An image synthesizer (1985)', source: 'https://doi.org/10.1145/325165.325247', note: 'the turbulence-sine marble' },
-  defaults: { ...LIGHT_DEFAULTS },
-  layers: ctx => {
-    const now = new Date(), e = engraving(pad2(now.getHours()), pad2(now.getMinutes()))
-    const L = matLight(ctx, { lattice: L15, torch: { height: 14, falloff: 120 }, rake: true }), on = ctx.reducedMotion || mod(ctx.t, 1) < .5
-    // the frame repeats between the colon's blinks while the light holds still
-    return marbleMemo(`${e.key}|${lightId(L)}|${on}`, () => {
-      const { body, polish } = marbleLit(e, L), stone = surfaceLayer([[own(body), MATTE_BANDS], [own(polish), 'value']], L15)
-      stone.field.text = e.key // the time is relief, not glyphs: name it for describe() and the card's accessible name
-      return [
-        cite('PERLIN 1985'),
-        stone,
-        ...(on && e.colon.length ? [layer(T.dots(e.colon, 2), 'active')] : []),
-      ]
-    })
-  },
-}
-const marbleMemo = frameMemo()
-
 // ── 05 TERRAZZO ─ the month, set in stone: each day a chip, today's chip red ─────────────────────────────
 // A pillowed slab on the 1.5 lattice; one irregular chip per day (superellipse, rotated, noise-warped edge), past days
 // polished (+1 step where the sheen crosses), future days honed, today red. Poisson aggregate in three sizes between.
@@ -667,12 +581,12 @@ function terrazzoLayers(m: Month, today: number, preview: number, L: Light): Lay
 }
 
 /** M1 (loom … terrazzo), then M2: glass and water (lens, pool, window), then wear (patch, rust, candle). */
-export const materialsBoard = [matLoom, matKnob, matGrille, matMarble, matTerrazzo, matLens, matPool, matWindow, matPatch, matRust, matCandle]
+export const materialsBoard = [matLoom, matKnob, matGrille, matTerrazzo, matLens, matPool, matWindow, matPatch, matRust, matCandle]
 /** Live data for the board: the light / tilt hub (F0), subscribed while the board is open. */
 export const materialsSources = [lightSource]
 /** The board's internals, for the checks (`scripts/materials.ts`). */
 export const materialsHooks = {
   LOOM, LOOM_ORDER, loomAt, loomDraft, loomCloth, drawdownOf, woven, KNOB_ARC, KNOB_CARD, knobSpec, grilleHoles, grillePlate, grilleSurface, grilleTarget, grilleVU, livePeak,
-  engraving, marbleLit, monthOf, chipAt, PANEL, LG15, toCard15,
+  monthOf, chipAt, PANEL, LG15, toCard15,
   ...glassHooks, ...poolHooks, ...wearHooks,
 }

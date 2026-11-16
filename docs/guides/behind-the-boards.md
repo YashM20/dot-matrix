@@ -40,19 +40,17 @@ The page is 24 columns by 16 rows of character cells, smaller than a real 40 × 
 
 <!-- VISUAL: kind=card · what=mat-loom · notice=cloth woven one pick at a time, with highlights on the threads moving as the light moves -->
 
-Open `/materials/` to see physical surfaces drawn in dots: the loom (`mat-loom`), the marble clock (`mat-marble`) and the lens (`mat-lens`).
+Open `/materials/` to see physical surfaces drawn in dots: the loom (`mat-loom`), the machined knob (`mat-knob`) and the lens (`mat-lens`).
 
-Each material card builds a height map, either from a distance field (the marble plaque) or from the pattern itself (the loom's weave), then works out surface normals with central differences. Each card has one light. While your pointer hovers a card it acts as a torch; otherwise the light follows your phone's tilt, and failing that the sun for your time of day. Diffuse shading is Lambert. The shine depends on the material: Phong on the marble, a thread sheen (Kajiya and Kay's hair model) on the loom, and Blinn on the pool's glints.
+Each material card builds a height map, either from a distance field (the knob, the terrazzo slab) or from the pattern itself (the loom's weave), then works out surface normals with central differences. Each card has one light. While your pointer hovers a card it acts as a torch; otherwise the light follows your phone's tilt, and failing that the sun for your time of day. Diffuse shading is Lambert. The shine depends on the material: Phong on the terrazzo, a thread sheen (Kajiya and Kay's hair model) on the loom, and Blinn on the pool's glints.
 
-On a one-color display a highlight has to be a bigger dot. On the loom and the marble, a glint is drawn one quantize step above the dot under it. On a phone that reports tilt, tipping it moves the light, and the highlights glide across the cards.
+On a one-color display a highlight has to be a bigger dot. On the loom, a glint is drawn one quantize step above the dot under it. On a phone that reports tilt, tipping it moves the light, and the highlights glide across the cards.
 
-<!-- VISUAL: kind=card · what=mat-marble · notice=the time engraved in stone, one groove wall lit and one dark under the raked light -->
+<!-- VISUAL: kind=card · what=mat-knob · notice=a machined knob whose highlight slides round its grooves as the light moves -->
 
 Each material has its own rules.
 
 The loom (`mat-loom`) weaves real patterns (twill, satin, herringbone, basket and plain), one pick at a time, with the draft drawn beside the cloth. The fabric patch (`mat-patch`) is twill with satin stitching. Both shade their threads with the sheen model, so light runs along the thread.
-
-The marble clock (`mat-marble`) cuts the time, hours and minutes, into a marble plaque as a V-shaped groove. The light rakes low across the stone, at 18 degrees or less, so one wall of each groove catches it and the other falls into shadow. The year sits below in Roman numerals, as hairline letters.
 
 The lens (`mat-lens`) and the pool (`mat-pool`) bend light. For the lens, Snell's law is worked out once into a 127-sample table of how far the light shifts across the bezel. Each frame, the lens looks up that shift and reads the clock face behind it from the moved spot, at finer than one cell, while every dot stays on its lattice. The digits behind the glass look magnified and bent. In the pool, the pond's ripple simulation focuses light onto the floor, and the engine splats photons to draw the shifting caustic webs.
 
