@@ -14,7 +14,8 @@
  *  - URL params: `?theme=` / `?scheme=` + `?accent=` apply and aren't stored; a pick drops them from the URL;
  *  - reduced motion (the OS setting, and the palette's override): a pick is instant, with no view transition; the
  *    override wins over the OS both ways (#351): `<html data-motion>` and a card's CSS border fade follow it, and
- *    "off" under an OS reduce brings the view transition back;
+ *    "off" under an OS reduce brings the view transition back; "on" survives a reload (`dot480:motion`) and
+ *    "system" removes the key;
  *  - touch (390 × 844, touch emulation): TOOLS › THEME has 44 px targets, no overflow, and taps switch scheme and
  *    accent with the sheet staying open; the header THEME button is hidden;
  *  - CARD SIZE: the popover's labelled radio group (LARGE checked by default, one tab stop), a click reflows the
@@ -106,7 +107,7 @@ const open = async (path: string, { os = 'dark', reduce = false, phone = false, 
   await cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: os }, { name: 'prefers-reduced-motion', value: reduce ? 'reduce' : 'no-preference' }, { name: 'prefers-contrast', value: more ? 'more' : 'no-preference' }] })
   await cdp('Emulation.setDeviceMetricsOverride', phone ? { width: 390, height: 844, deviceScaleFactor: 1, mobile: true } : { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false })
   await cdp('Emulation.setTouchEmulationEnabled', phone ? { enabled: true, maxTouchPoints: 5 } : { enabled: false })
-  if (!keep) { await cdp('Page.navigate', { url: base + '/' }); await waitFor('document.readyState === "complete"'); await js(`localStorage.removeItem('dot480:theme'); localStorage.removeItem('dot480:share-theme'); localStorage.removeItem('dot480:cards'); localStorage.setItem('dot480:intro', 'off')`) }
+  if (!keep) { await cdp('Page.navigate', { url: base + '/' }); await waitFor('document.readyState === "complete"'); await js(`localStorage.removeItem('dot480:theme'); localStorage.removeItem('dot480:share-theme'); localStorage.removeItem('dot480:cards'); localStorage.removeItem('dot480:motion'); localStorage.setItem('dot480:intro', 'off')`) }
   await cdp('Page.navigate', { url: base + path })
   await waitFor('document.readyState === "complete"')
   // the command layer (dock, sheets, ⌘K) mounts once the page is idle
@@ -334,7 +335,7 @@ try {
   check('reduced motion (OS): a scheme pick is instant too', seg.now === 'light' && seg.vt === 0, JSON.stringify(seg))
   // the ⌘K setting wins over the OS both ways (#351), in JS (the view transition) and in CSS (<html data-motion>,
   // which zeroes a card's border fade under reduce)
-  const motionCmd = async (s: 'on' | 'off') => {
+  const motionCmd = async (s: 'on' | 'off' | 'system') => {
     await key('k', 'KeyK', 75, 2)
     // the palette focuses its input once it has painted: type after that (ALL keeps the main thread busier on `/`, #315)
     await waitFor('document.activeElement === document.querySelector(".pal input")', 4000)
@@ -359,6 +360,10 @@ try {
   check('⌘K "reduced motion: on" (OS no preference): data-motion="reduce" and CSS transitions drop to 0 s', on.motion === 'reduce' && !fades(on.card), JSON.stringify(on))
   const over = await pickVite()
   check('reduced motion (the ⌘K override): instant, no view transition', over.now === 'vite' && over.vt === 0, JSON.stringify(over))
+  // the setting persists (dot480:motion) and is read before the first paint: a reload keeps "on" with no OS preference
+  await open('/', { keep: true })
+  const kept = await js(`({ motion: document.documentElement.dataset.motion, stored: localStorage.getItem('dot480:motion') })`) as { motion: string; stored: string | null }
+  check('⌘K "reduced motion: on" survives a reload: data-motion="reduce" with no OS preference', kept.motion === 'reduce' && kept.stored === 'on', JSON.stringify(kept))
   await open('/', { reduce: true })
   const off = await motionCmd('off')
   check('⌘K "reduced motion: off" (OS reduce): data-motion="full" and the card border fades again', off.motion === 'full' && fades(off.card), JSON.stringify(off))
@@ -366,6 +371,9 @@ try {
   // with a transition the accent lands inside its callback, a moment after the click
   const landed = await waitFor(`document.documentElement.dataset.accent === 'vite'`, 3000)
   check('⌘K "reduced motion: off" (OS reduce): a pick runs the view transition again', back.vt >= 1 && landed, JSON.stringify(back))
+  const sys = await motionCmd('system')
+  const cleared = await js(`localStorage.getItem('dot480:motion')`)
+  check('⌘K "reduced motion: system" removes the key and follows the OS again (reduce)', sys.motion === 'reduce' && cleared === null, JSON.stringify({ ...sys, cleared }))
 
   // ── T6: the custom hue ──
   await open('/')
