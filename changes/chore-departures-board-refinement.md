@@ -1,2 +1,2 @@
 visitor: The DEPARTURES board is easier to read: later trains and on-time lines are brighter, the station clock says its time to screen readers, and the line map keeps its stop names off the card edge.
-engineering: Departures board refinement for #228 (#PR): station-clock names HH:MM, departures rows, service statuses and the line-map status move from mid to idle, line-map stops keep an 8-cell edge margin, and service reads each line with its status; checks in scripts/verify/cards.ts.
+engineering: Departures board refinement (#228, #421): station-clock names HH:MM, departures rows, service statuses and the line-map status move from mid to idle, line-map stops keep an 8-cell edge margin, and service reads each line with its status; checks in scripts/verify/cards.ts.
