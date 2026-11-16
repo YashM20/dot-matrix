@@ -107,18 +107,19 @@ async function act(opts: Option[], phone: boolean): Promise<boolean> {
   }
   if (opts.includes('load-failed') && !(await page.waitFor(`!!document.querySelector('.load-failed')`, 20000))) return false
   if (opts.includes('mic-blocked')) {
-    // the browser says no, then a real tap on the mic card (a trusted input, so the audio context may start); the pointer
-    // and the focus leave the card so neither its hover nor its focus ring shows
+    // the browser says no, then a tap on the mic card; the pointer and the focus leave the card so neither its hover nor its
+    // focus ring shows. A headless page may never get to start audio, so `resume()` settles at once instead of waiting
     const sel = '[data-dot-focus="mic"]'
     if (!(await page.waitFor(`!!document.querySelector('${sel}')`, 15000))) return false
-    await page.js(`(navigator.mediaDevices && (navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError'))), 1)`)
+    await page.js(`(AudioContext.prototype.resume = () => Promise.resolve(), navigator.mediaDevices && (navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError'))), 1)`)
     const c = await page.js<{ x: number; y: number }>(`(() => { const b = document.querySelector('${sel}'); b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } })()`)
     if (phone) await page.tap(c.x, c.y)
     else { await page.mouse('mouseMoved', c.x, c.y, 0); await page.mouse('mousePressed', c.x, c.y); await page.mouse('mouseReleased', c.x, c.y); await page.mouse('mouseMoved', 4, 4, 0) }
     if (!(await page.waitFor(`document.querySelector('${sel}')?.getAttribute('aria-checked') === 'true'`, 3000))) await page.js(`(document.querySelector('${sel}')?.click(), 1)`)
     await page.js(`(document.activeElement?.blur?.(), 1)`)
-    if (!(await page.waitFor(`document.querySelector('${sel}')?.getAttribute('aria-checked') === 'true'`, 5000))) return false
-    await sleep(1500)
+    // the card's name carries the words it draws, so it says when the blocked state is on screen
+    if (!(await page.waitFor(`[...document.querySelectorAll('[aria-label]')].some(e => /MIC BLOCKED/i.test(e.getAttribute('aria-label')))`, 8000))) return false
+    await sleep(1000)
   }
   if (opts.includes('other-tab')) {
     if (!(await page.waitFor(`!!document.querySelector('.ed-other')`, 15000))) return false
