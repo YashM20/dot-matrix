@@ -1,5 +1,6 @@
-import type { DotInstance, DotStyle, GridConfig, Layer, ThemeTokens } from '../types'
-import type { DotBuffer } from '../buffer/dotBuffer'
+import type { DotInstance, DotStyle, GridConfig, JointGeom, Layer, ThemeTokens } from '../types'
+import { reserve, type DotBuffer } from '../buffer/dotBuffer'
+import { samplerExt } from './ext'
 
 /**
  * Frame repeat: a card whose frame did not change hands the sampler the same `Layer[]` it returned last frame, and the
@@ -38,7 +39,12 @@ const sameStyle = (a: DotStyle, b: DotStyle) => {
   for (const k of ka) if (a[k] !== b[k]) return false
   return true
 }
-interface Kept { at: number; grid: GridConfig; style: DotStyle; theme: ThemeTokens; dots?: DotInstance[]; buf?: { n: number; x: Float32Array; y: Float32Array; r: Float32Array; opacity: Float32Array; tone: Uint8Array } }
+/** A kept buffer frame; a squares frame also keeps its channels and joint table (`ext`). */
+interface KeptBuf {
+  n: number; x: Float32Array; y: Float32Array; r: Float32Array; opacity: Float32Array; tone: Uint8Array
+  ext?: { aspect: Float32Array; join: Uint16Array; form: Uint8Array; joints: JointGeom[] | undefined }
+}
+interface Kept { at: number; grid: GridConfig; style: DotStyle; theme: ThemeTokens; dots?: DotInstance[]; buf?: KeptBuf }
 const kept = new WeakMap<Layer[], Kept>()
 const keptFor = (layers: Layer[], grid: GridConfig, style: DotStyle, theme: ThemeTokens): Kept | undefined => {
   const k = marked.has(layers) ? kept.get(layers) : undefined
@@ -59,17 +65,28 @@ export function keepDots(layers: Layer[], grid: GridConfig, style: DotStyle, the
 }
 
 /**
- * Copy a marked frame's kept buffer into `buf` and say so; false when there is none, or when `buf` is too small or has
- * squares channels (those frames are sampled again: a plain copy can't restore their joints).
+ * Copy a marked frame's kept buffer into `buf` (grown to fit) and say so; false when there is none. `buf`'s squares
+ * channels arrive reset to plain (`sampleLayersInto`); a squares frame writes its own back, with its joint table
+ * (#340: `sq-hat` holds its floor for 3 s of every 12).
  */
 export function repeatInto(layers: Layer[], grid: GridConfig, style: DotStyle, theme: ThemeTokens, buf: DotBuffer): boolean {
   const k = keptFor(layers, grid, style, theme)?.buf
-  if (!k || buf.join || buf.capacity < k.n) return false
+  if (!k) return false
+  reserve(buf, k.n)
+  if (k.ext) {
+    // a buffer without squares channels gets a plain store first (the squares hooks are installed: they kept this frame)
+    if (!buf.join) samplerExt.grow?.(buf, 0)
+    if (!buf.join) return false
+    buf.aspect!.set(k.ext.aspect); buf.join.set(k.ext.join); buf.form!.set(k.ext.form); buf.joints = k.ext.joints
+  }
   buf.x.set(k.x); buf.y.set(k.y); buf.r.set(k.r); buf.opacity.set(k.opacity); buf.tone.set(k.tone); buf.n = k.n
   return true
 }
 export function keepInto(layers: Layer[], grid: GridConfig, style: DotStyle, theme: ThemeTokens, buf: DotBuffer): void {
-  if (!marked.has(layers) || buf.join || buf.joints) return
+  if (!marked.has(layers)) return
   const n = buf.n
-  entry(layers, grid, style, theme).buf = { n, x: buf.x.slice(0, n), y: buf.y.slice(0, n), r: buf.r.slice(0, n), opacity: buf.opacity.slice(0, n), tone: buf.tone.slice(0, n) }
+  entry(layers, grid, style, theme).buf = {
+    n, x: buf.x.slice(0, n), y: buf.y.slice(0, n), r: buf.r.slice(0, n), opacity: buf.opacity.slice(0, n), tone: buf.tone.slice(0, n),
+    ...(buf.join ? { ext: { aspect: buf.aspect!.slice(0, n), join: buf.join.slice(0, n), form: buf.form!.slice(0, n), joints: buf.joints?.slice() } } : {}),
+  }
 }

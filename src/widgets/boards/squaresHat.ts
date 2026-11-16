@@ -10,6 +10,7 @@
  * (H, T, P, F, its hats fused into one piece) splits into its hats; later the pieces fuse back from the rim in.
  */
 import { bakeHats, hatAt, type MetaKind } from '../../engine/algo/hat'
+import { frameMemo } from '../../engine/sampler/repeat'
 import type { Tone } from '../../engine/types'
 import type { WidgetPreset } from '../types'
 import { cardCells, cite, footer, mod, pad, tile, type Pt } from './squaresKit'
@@ -123,16 +124,22 @@ export function hatCells(front: number): HatCells {
   return (lastCells = { value, tone, group, split: lo })
 }
 
+/**
+ * The hold (every hat apart, the footer full) is one frame for 3 s of every 12: the same marked array, so the sampler
+ * repeats its dots (#340). A sweep frame is new every frame and isn't kept.
+ */
+const holdMemo = frameMemo()
 export const sqHat: WidgetPreset = {
   id: 'sq-hat', name: 'Hat', label: 'HAT', ...tile,
   credit: { by: ['David Smith', 'Joseph Samuel Myers', 'Craig S. Kaplan', 'Chaim Goodman-Strauss'], title: 'An aperiodic monotile', source: 'https://arxiv.org/abs/2303.10798', note: 'technique' },
   layers: ctx => {
     const f = hatFloor(), front = hatFront(ctx.t, f.reach), h = hatCells(front)
-    return [
+    const frame = () => [
       cite('SMITH 2023'),
       cardCells(ORIGIN, W, H, (c, r) => h.value[r * W + c], { toneOf: (c, r) => TONES[h.tone[r * W + c]], group: (c, r) => h.group[r * W + c], join: { accent: true } }),
       ...footer(Math.min(1, front / (f.reach + 1)), `HATS ${pad(f.shown, 3)}`, `MIRRORED ${pad(f.shownMirrored, 2)}`),
     ]
+    return front === Infinity ? holdMemo('hold', frame) : frame()
   },
 }
 /** Sizes for the checks (`scripts/aperiodic.ts`). */

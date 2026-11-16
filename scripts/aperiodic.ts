@@ -14,7 +14,8 @@ import { sampleLayersInto } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
 import { withChrome, type WidgetPreset } from '../src/widgets'
 import { HAT_CARD, bakeHatFloor, hatCells, hatFloor, sqHat } from '../src/widgets/boards/squaresHat'
-import { abFrame, sqAmmann } from '../src/widgets/boards/squaresAmmann'
+import { AB_STEPS, abFrame, abStep, sqAmmann } from '../src/widgets/boards/squaresAmmann'
+import { mod } from '../src/widgets/boards/squaresKit'
 import { sampleCard } from './lib/cards'
 import { detLint } from './lib/detLint'
 import { fmtLoaded, medianLoaded, onceLoaded } from './lib/load'
@@ -155,6 +156,13 @@ export function aperiodicChecks(assert: Assert): void {
     let same = 0
     for (let i = 0; i < a0.length; i++) if ((a0[i] & 7) === (a1[i] & 7)) same++
     assert('aperiodic: ammann loop (after one inflation by δ every tile has split and the floor matches the first frame: ≥ 99.5% of cells)', same / a0.length >= .995, `${(100 * same / a0.length).toFixed(2)}% of cells`)
+    // the step cache (#340): a 12 fps card's t = n / 12 over three loops draws the frame `abFrame` gives for its own p
+    let stepBad = 0
+    for (let n = 0; n < 3 * AB_STEPS; n++) {
+      const t = n / 12, p = mod(t, 6) / 6, f = abFrame(p), s = abStep(n % AB_STEPS)
+      if (s.zoom.toFixed(2) !== f.zoom.toFixed(2) || s.shown !== f.shown || f.code.some((c, i) => s.cell[i] !== (c | f.group[i] << 4))) stepBad++
+    }
+    assert('aperiodic: ammann step cache (each of the 72 kept frames matches abFrame at a 12 fps t, three loops)', stepBad === 0, `${stepBad} of ${3 * AB_STEPS} frames differ`)
     // pinholes: an empty cell whose 4 neighbours are one tile (a cell centre lost on a shared edge)
     let pin = 0
     for (let q = 0; q < 40; q++) {

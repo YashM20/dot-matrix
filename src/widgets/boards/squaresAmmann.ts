@@ -81,16 +81,53 @@ export function abFrame(p: number): AbFrame {
   return f
 }
 
+/**
+ * The app's clock hands a 12 fps card t = frame / 12, so its p falls on 72 steps a loop (#340). Each step's frame is
+ * kept, packed (code | group << 4, 17 KB a step, 1.2 MB for the loop), so from the second loop on a frame is a lookup
+ * instead of two `abRaster` passes. A step's frame is built from p = k / 72, the p a frame of the first loop has to
+ * within rounding (`scripts/aperiodic.ts` checks every step against `abFrame`). Any other t (a golden at 1.3 s, a scrub)
+ * gets `abFrame(p)`.
+ */
+export const AB_STEPS = LOOP * 12
+interface AbStep { cell: Uint8Array; zoom: number; shown: number }
+const stepCache: (AbStep | undefined)[] = []
+/** The kept frame of step k (built on first use). */
+export function abStep(k: number): AbStep {
+  let s = stepCache[k]
+  if (!s) {
+    const f = abFrame(k / AB_STEPS), cell = new Uint8Array(W * H)
+    for (let i = 0; i < W * H; i++) cell[i] = f.code[i] | f.group[i] << 4
+    stepCache[k] = s = { cell, zoom: f.zoom, shown: f.shown }
+  }
+  return s
+}
+/** What a frame draws from: code and group per cell, the rhombus sites, the zoom and the pieces shown. */
+interface AbView { code: (i: number) => number; group: (i: number) => number; mid: Pt[]; faint: Pt[]; redSites: Pt[]; zoom: number; shown: number }
+function abView(p: number): AbView {
+  const x = p * AB_STEPS, k = Math.round(x)
+  if (Math.abs(x - k) > 1e-9 || k === AB_STEPS) {
+    const f = abFrame(p)
+    return { code: i => f.code[i], group: i => f.group[i], mid: f.mid, faint: f.faint, redSites: f.redSites, zoom: f.zoom, shown: f.shown }
+  }
+  // the sites in cell order, as `abFrame` pushes them
+  const { cell, zoom, shown } = abStep(k), mid: Pt[] = [], faint: Pt[] = [], redSites: Pt[] = []
+  for (let i = 0; i < W * H; i++) {
+    const c = cell[i] & 15, kind = c & 7
+    if (kind >= 3) (c & 8 ? redSites : kind === 3 ? mid : faint).push(CELLS[i])
+  }
+  return { code: i => cell[i] & 15, group: i => cell[i] >> 4, mid, faint, redSites, zoom, shown }
+}
+
 const dots = (sites: Pt[], tone: Tone, value: number): Layer => ({ field: () => value, sites, size: 1, tone, shapeOf: () => 0 })
 export const sqAmmann: WidgetPreset = {
   id: 'sq-ammann', name: 'Ammann', label: 'AMMANN', ...tile,
   credit: { by: ['Robert Ammann', 'Frans Beenker', 'Nicolaas Govert de Bruijn'], title: 'Ammann–Beenker tiling, by de Bruijn’s multigrid', source: 'https://en.wikipedia.org/wiki/Ammann%E2%80%93Beenker_tiling', note: 'technique' },
   layers: ctx => {
-    const p = mod(ctx.t, LOOP) / LOOP, f = abFrame(p), at = (c: number, r: number) => f.code[r * W + c]
+    const p = mod(ctx.t, LOOP) / LOOP, f = abView(p), at = (c: number, r: number) => f.code(r * W + c)
     // the squares, one layer: axis squares join, turned squares are π/4 cells, which never join
     // the red tile at full value, so the accent reads as the board's red, not a dull brick
     const squares = cardCells(ORIGIN, W, H, (c, r) => { const k = at(c, r) & 7; return k === 1 || k === 2 ? (at(c, r) & 8 ? 1 : .75) : 0 }, {
-      toneOf: (c, r) => (at(c, r) & 8 ? 'active' : at(c, r) === 1 ? 'idle' : 'mid'), group: (c, r) => f.group[r * W + c], join: { accent: true },
+      toneOf: (c, r) => (at(c, r) & 8 ? 'active' : at(c, r) === 1 ? 'idle' : 'mid'), group: (c, r) => f.group(r * W + c), join: { accent: true },
       rotation: (c, r) => ((at(c, r) & 7) === 2 ? Math.PI / 4 : 0),
     })
     return [
