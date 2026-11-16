@@ -484,6 +484,19 @@ A knob, a single status dot or a masked password character is one site (`T.dots(
 - Track: horizontal dotted line, `{colors.dotFaint}` for the unfilled segment, `{colors.dotIdle}` or `{colors.dotActive}` for the filled segment depending on context.
 - Thumb: solid circle, `{colors.dotIdle}` default / `{colors.dotActive}` when the value represents a "live" quantity (e.g. mic level).
 
+**Shared dot controls** (TILE cards, #357). Draw these through the helpers and pass the board's own sizes and tones. One look for all boards is #360.
+
+| Helper | File | Draws |
+|---|---|---|
+| `switchTrack(spec, k, tone, v?)` / `switchKnob(spec, k)` | `src/widgets/dot-controls.ts` | A stadium track of outline sites and one knob dot at `k` (0 left, 1 right, a fraction for a segmented stop or a glide). `spec.outline` picks the `stadium` or `rrect` site order. Returns `[track, knob]`; `v` presses the knob |
+| `scrubber(spec, v, [filled, rest, knob], p?)` | `src/widgets/dot-controls.ts` | A dotted slider. `index` (default): sites on a fitted pitch, the knob on the nearest site, `gap` cells clear round it. `lines`: two `T.dotLine`s stopping `gap` short of a gliding knob |
+| `transportGlyph('prev' \| 'next' \| 'play' \| 'stop', x, y, n, k?)` | `src/widgets/dot-controls.ts` | `T.dotTri` triangles (prev and next with the skip bar), stop as an n × n `T.fillOn` square |
+| `Dial`, `dialArc`, `dialTicks`, `dialLabels`, `needle`, `dialMap`, `polar` | `src/widgets/dials.ts` | A dial's dotted track and lit stretch, ticks, scale numbers, the needle, the knob's pointer map. `polar` is the one clock-angle point |
+| `railFooter(k, left, right, { rail, foot, live?, rightTone? })` | `src/widgets/captions.ts` | `footer()` under a progress rail, a site every 3 cells, `faint` ahead and `mid` behind; `live` makes the fill point a red knob |
+| `divider(x0, x1, y)` | `src/widgets/captions.ts` | The faint dotted rule (spacing 3.3, size 1) between card sections |
+| `liveDot(grid)` / `LIVE_DOT` | `src/widgets/types.ts` | The chrome's red live dot; a card that switches it on itself draws this |
+| `tileCircleStyle` | `src/widgets/types.ts` | `tileStyle` with roundness 0, for boards whose knobs and status dots are true circles |
+
 ### Status & Indicators
 
 **`statusDot`**

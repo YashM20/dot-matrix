@@ -8,25 +8,17 @@ import { GRAY_SCOTT } from '../creditSources'
 import { fallingSand, grayScott, life, lifeStamp, SAND, SAND_B, simMapField, simPhase, simStep, simView, WALL, type Sim } from '../../engine/sim'
 import type { Field, Layer } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
-import { footer as footerText } from '../captions'
+import { railFooter } from '../captions'
 
 const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle } as const
 const N = 72, H = 58
 const GRID = T.lattice(2, 0, 11)
-const FOOT = 134
-const RAIL = { x0: 0, x1: 143, y: 129 }
 const on = (f: Field) => GRID.at(GRID.place(f, 0, 0, N, H))
 
 /** Footer: a faint rail filled in `mid` up to the loop position, step counter left, one stat right. */
-function footer(sim: Sim, t: number, left: string, right: string): Layer[] {
-  const k = simPhase(sim, t), done: [number, number][] = [], rest: [number, number][] = []
-  for (let c = RAIL.x0; c <= RAIL.x1; c += 3) (c - RAIL.x0 <= (RAIL.x1 - RAIL.x0) * k ? done : rest).push([c, RAIL.y])
-  return [
-    layer(T.dots(rest, .9), 'faint'), layer(T.dots(done, 1.1), 'mid'),
-    ...footerText(`${left} ${String(simStep(sim, t)).padStart(4, '0')}`, right, FOOT),
-  ]
-}
+const footer = (sim: Sim, t: number, left: string, right: string): Layer[] =>
+  railFooter(simPhase(sim, t), `${left} ${String(simStep(sim, t)).padStart(4, '0')}`, right, { rail: 129, foot: 134 })
 const pad4 = (n: number) => String(Math.min(9999, n)).padStart(4, '0')
 
 // ── 01 Reaction: coral growth (F .0545, k .062) from 50 seeds, with a narrow diffusion (du .09, dv .045) so

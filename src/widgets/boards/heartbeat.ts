@@ -7,11 +7,12 @@
  */
 import type { Field, Layer, Tone } from '../../engine/types'
 import { clamp, hash01, smoothstep } from '../../engine/math'
-import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { TAU, TILE, layer, layoutFor, tileCircleStyle, type WidgetContext, type WidgetPreset } from '../types'
 import { OUTLINE, stadium } from './components-kit'
+import { switchTrack } from '../dot-controls'
 
 const T = layoutFor(TILE)
-const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: { ...tileStyle, cornerRoundness: 0 } } as const
+const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileCircleStyle } as const
 type Pt = [number, number]
 
 // ── TOKENS ── the closed presence vocabulary: state → motion parameters (cells, seconds, 0..1).
@@ -183,6 +184,7 @@ const AGENT = stageAt(12, 28, .78)
 const SEG = { x: 6, y: 106, w: 132, h: 18, knob: 13, labels: ['THK', 'RUN', 'ASK', 'ERR', 'OK'] }
 const segX = (i: number) => SEG.x + SEG.h / 2 + (i * (SEG.w - SEG.h)) / 4
 const track = (d: number, spacing: number) => stadium(SEG.x - d, SEG.y - d, SEG.w + 2 * d, SEG.h + 2 * d, spacing)
+const SWITCH = { ...SEG, ...OUTLINE }
 const hbAgent: WidgetPreset = {
   id: 'hb-agent', name: 'AGENT', label: '06  AGENT', ...tile, animated: true,
   defaults: { state: 0 },
@@ -192,13 +194,13 @@ const hbAgent: WidgetPreset = {
     const s = clamp(Number.isFinite(ctx.data.state) ? ctx.data.state : 0, 0, 4), i0 = Math.min(3, Math.floor(s)), sel = Math.round(s)
     const p = blendStates(HEARTBEAT[HEARTBEAT_STATES[i0]], HEARTBEAT[HEARTBEAT_STATES[i0 + 1]], s - i0)
     const hover = ctx.hover === 'state', pressed = ctx.pressed === 'state', focus = ctx.focus === 'state'
-    const cy = SEG.y + SEG.h / 2, mark = Math.floor(ctx.t * 10)
+    const cy = SEG.y + SEG.h / 2, mark = Math.floor(ctx.t * 10), [rail, knob] = switchTrack(SWITCH, s / 4, ['mid', 'value'], pressed ? .75 : 1)
     return [
       // red-free: the agent card's pulse stays in `value`, so the board spends red once
       ...scene(p, ctx.t, AGENT, false), ...statusLine(HEARTBEAT_STATES[sel], ctx.t, 94),
-      layer(T.dots(track(0, OUTLINE.spacing), OUTLINE.size), 'mid'),
+      rail,
       layer(T.dots([0, 1, 2, 3, 4].filter(i => Math.abs(i - s) > .5).map((i): Pt => [segX(i), cy]), 3), 'mid'),
-      layer({ ...T.dots([[SEG.x + SEG.h / 2 + (s * (SEG.w - SEG.h)) / 4, cy]], SEG.knob), field: () => (pressed ? .75 : 1) }, 'value'),
+      knob,
       ...SEG.labels.map((l, i) => layer(T.text(l, segX(i), SEG.y + SEG.h + 6, { align: 'center' }), i === sel ? 'value' : 'idle')),
       ...(hover ? [layer({ ...T.dots(track(2.6, OUTLINE.spacing), OUTLINE.size), field: () => .5 }, 'value')] : []),
       // focus: the track's own sites march (no extra outline: the status line and labels sit close)
