@@ -484,6 +484,19 @@ A knob, a single status dot or a masked password character is one site (`T.dots(
 - Track: horizontal dotted line, `{colors.dotFaint}` for the unfilled segment, `{colors.dotIdle}` or `{colors.dotActive}` for the filled segment depending on context.
 - Thumb: solid circle, `{colors.dotIdle}` default / `{colors.dotActive}` when the value represents a "live" quantity (e.g. mic level).
 
+**Shared dot controls** (TILE cards, #357). Draw these through the helpers and pass the board's own sizes and tones. One look for all boards is #360.
+
+| Helper | File | Draws |
+|---|---|---|
+| `switchTrack(spec, k, tone, v?)` / `switchKnob(spec, k)` | `src/widgets/dot-controls.ts` | A stadium track of outline sites and one knob dot at `k` (0 left, 1 right, a fraction for a segmented stop or a glide). `spec.outline` picks the `stadium` or `rrect` site order. Returns `[track, knob]`; `v` presses the knob |
+| `scrubber(spec, v, [filled, rest, knob], p?)` | `src/widgets/dot-controls.ts` | A dotted slider. `index` (default): sites on a fitted pitch, the knob on the nearest site, `gap` cells clear round it. `lines`: two `T.dotLine`s stopping `gap` short of a gliding knob |
+| `transportGlyph('prev' \| 'next' \| 'play' \| 'stop', x, y, n, k?)` | `src/widgets/dot-controls.ts` | `T.dotTri` triangles (prev and next with the skip bar), stop as an n × n `T.fillOn` square |
+| `Dial`, `dialArc`, `dialTicks`, `dialLabels`, `needle`, `dialMap`, `polar` | `src/widgets/dials.ts` | A dial's dotted track and lit stretch, ticks, scale numbers, the needle, the knob's pointer map. `polar` is the one clock-angle point |
+| `railFooter(k, left, right, { rail, foot, live?, rightTone? })` | `src/widgets/captions.ts` | `footer()` under a progress rail, a site every 3 cells, `faint` ahead and `mid` behind; `live` makes the fill point a red knob |
+| `divider(x0, x1, y)` | `src/widgets/captions.ts` | The faint dotted rule (spacing 3.3, size 1) between card sections |
+| `liveDot(grid)` / `LIVE_DOT` | `src/widgets/types.ts` | The chrome's red live dot; a card that switches it on itself draws this |
+| `tileCircleStyle` | `src/widgets/types.ts` | `tileStyle` with roundness 0, for boards whose knobs and status dots are true circles |
+
 ### Status & Indicators
 
 **`statusDot`**
@@ -718,6 +731,8 @@ The HTML chrome has one component per job; a new control reuses one of these ins
 **Tooltip rules.** One at a time (the hovered control). The first in a group waits `--dur-tip`; moving to a neighbour shows its tooltip at once, until the pointer leaves the group (a registered `--tip-on` custom property that switches on after the delay and off at once, no JS). Keyboard focus shows it without the wait; a press hides it. No motion.
 
 **Hover intent.** DISPLAY ▾ and THEME open after the mouse rests on them for 100 ms (without taking focus) and close 150 ms after the mouse leaves; a click or the keyboard opens them with focus inside. THEME fetches its popover chunk during those 100 ms. Touch never opens them by hover (`pointerType` must be `mouse`).
+
+**Keyboard (#352).** Three shared pieces, so the keys work the same everywhere. A menu button is `useMenuButton` (`src/hooks/`): ↑ or ↓ on the button opens the menu on its last or first item (a radio menu on its checked one), ↑ ↓ Home End and a first letter move, Escape closes with focus back on the button, Tab and a press outside close, the button carries `aria-controls`, and one rule places the menu: under its button with the right edges lined up, above when there is no room, 8 px inside the viewport (the two MORE menus, DISPLAY ▾). A group with one tab stop is `useRoving`: arrows wrap, Home and End jump, and tabs and radios pick as they move (the toolbars, the view and board-group tabs, the X-ray tabs, the skin list, the theme radios and swatches). An overlay is a modal `<dialog>` through `useModal` (`Modal.tsx`): the page behind is inert and focus goes back to the opener without scrolling (sheets, ⌘K, the shell, the boss card, the likes question). A busy or paused control is `aria-disabled` and ignores presses, so it keeps focus; a toggle keeps one name and says its state with `aria-pressed`.
 
 ## Responsive Behavior
 

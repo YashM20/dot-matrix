@@ -10,6 +10,8 @@ import type { Control } from '../../engine/context'
 import { clamp } from '../../engine/math'
 import { ease } from '../../engine/motion'
 import { migrate, migrationLayers } from '../../engine/migrate'
+import { morph } from '../../engine/migrate/morph'
+import { sample } from '../../engine/raster/raster'
 import type { Layer } from '../../engine/types'
 import {
   bounceGlyphs, breathe, glyphs, marqueeField, typeField, typeFrame, typeLayout, typeMigration, typeMorph, typeWidth, waveGlyphs, weightWave,
@@ -42,6 +44,9 @@ const knob = (cx: number, v: number, hot: boolean): Layer[] => {
   ]
 }
 const SPEC = frame(2, 14)
+/** The pangram gets one cell of tracking so neighbouring strokes keep a gap, unless that would push it off the card (widest setting). */
+const PANGRAM = 'QUICK FOX JUMPS', PANGRAM_OPTS = { grid: TILE, col: 71.5, row: 66, size: 9, align: 'center' } as const
+const pangramTracking = (axes: Omit<TypeOptions, 'grid'>) => (typeWidth(PANGRAM, { ...PANGRAM_OPTS, ...axes, tracking: 1 }) <= TILE.cols - 4 ? 1 : 0)
 export const typeAxesCard: WidgetPreset = {
   id: 'type-axes', name: 'Variable', label: '01  VARIABLE', group: 'text', ...tile,
   defaults: { wght: .55, wdth: .5, rond: .7 },
@@ -50,7 +55,7 @@ export const typeAxesCard: WidgetPreset = {
     const d = ctx.data, axes = { weight: clamp01(d.wght), width: clamp01(d.wdth), roundness: clamp01(d.rond) }
     return [
       SPEC.layer(typeField('GO', centred(SPEC, 0, { size: 21, ...axes }))),
-      layer(typeField('QUICK FOX JUMPS', { grid: TILE, col: 71.5, row: 66, size: 9, align: 'center', ...axes }), 'idle'),
+      layer(typeField(PANGRAM, { ...PANGRAM_OPTS, ...axes, tracking: pangramTracking(axes) }), 'idle'),
       ...AXES.flatMap((ax, i) => [
         ...knob(KN.xs[i], axes[(['weight', 'width', 'roundness'] as const)[i]], ctx.hover === ax.key || ctx.focus === ax.key),
         layer(T.text(ax.tag, KN.xs[i], 130, { align: 'center' }), ctx.focus === ax.key ? 'value' : 'idle'),
@@ -105,12 +110,20 @@ export const typeMarqueeCard: WidgetPreset = {
 // A headline in motion: WAVE rides a travelling sine with a weight wave chasing it, BOUNCE hops
 // letter by letter and squashes on landing, BREATHE inhales and exhales its weight.
 const KIN1 = frame(2, 16), KIN2 = frame(1.5, 66)
+// BREATHE swings between two hinted weights (1-cell and 3-cell strokes, crisp edge dots) and holds at each end; in
+// between, the two signed distances blend. t = 0 is the full inhale (reduced motion and first paint).
+const BREATH = { grid: TILE, col: 71.5, row: 106, size: 13, align: 'center' } as const
+const EXHALE = typeField('BREATHE', { ...BREATH, weight: .2 }), INHALE = typeField('BREATHE', { ...BREATH, weight: .9 })
+const breath = (t: number) => {
+  const k = clamp01(breathe(t, { min: -.25, max: 1.25, period: 4, phase: .5 }))
+  return k <= 0 ? EXHALE : k >= 1 ? INHALE : sample(morph(EXHALE, INHALE, k, { grid: TILE }))
+}
 export const typeKineticCard: WidgetPreset = {
   id: 'type-kinetic', name: 'Kinetic', label: '04  KINETIC', group: 'text', ...tile, animated: true,
   layers: ({ t }) => [
     KIN1.layer(typeField('WAVE', centred(KIN1, 2, { size: 15, roundness: .8, glyph: glyphs(waveGlyphs(t, { amp: 2, period: 1.8, phase: .14 }), weightWave(t, { min: .25, max: .9, period: 1.8, spread: .14 })) }))),
     KIN2.layer(typeField('BOUNCE', centred(KIN2, 3, { size: 11, weight: .55, glyph: bounceGlyphs(t, { height: 3, period: 1.2, stagger: .1, weight: .55 }) })), 'idle'),
-    layer(typeField('BREATHE', { grid: TILE, col: 71.5, row: 106, size: 13, align: 'center', hint: false, weight: breathe(t, { min: .3, max: .9, period: 3.2, phase: .5 }) }), 'mid'),
+    layer(breath(t), 'mid'),
   ],
 }
 

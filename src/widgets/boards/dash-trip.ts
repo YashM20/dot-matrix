@@ -5,12 +5,14 @@
  */
 import type { Layer } from '../../engine/types'
 import { layer, type LatticeField } from '../types'
+import { divider } from '../captions'
+import { scrubber, switchTrack, type SwitchSpec } from '../dot-controls'
 import { DASH_PERIOD, LAP, dashOf, distText, indicators } from './dash-drive'
 import { ARRIVE, BODY, LINE, PRESS, STRAIGHT, T, TURN_LEFT, at, card, mirror, mod, rr, spriteAt, states, ui, type Pt } from './dash-kit'
 
 // ── NAV ─────────────────────────────────────────────────────────────────────
 /** Next manoeuvre as a big sprite, the distance to it as the hero, the street in dot type, the leg as a rail. */
-const RAIL = { x0: 6, x1: 138, y: 116, spacing: 4.4, size: 2.1, head: 8, gap: 6 }
+const RAIL = { x0: 6, x1: 138, y: 116, spacing: 4.4, size: 2.1, knob: 8, gap: 6 }
 const SPRITES = { left: TURN_LEFT, right: mirror(TURN_LEFT), straight: STRAIGHT, arrive: ARRIVE }
 const clockText = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 export const navCard = card('dash-nav', 'Nav', {
@@ -18,9 +20,6 @@ export const navCard = card('dash-nav', 'Nav', {
   layers: ctx => {
     const d = dashOf(ctx), { arrow, street, toGo, len } = d.leg, [num, unit] = distText(Math.max(0, toGo))
     const big = { lattice: 1.8, smooth: true }, f = Math.max(0, Math.min(1, 1 - toGo / len))
-    const span = RAIL.x1 - RAIL.x0, n = Math.round(span / RAIL.spacing), step = span / n, head = Math.round(f * n)
-    const done: Pt[] = [], todo: Pt[] = []
-    for (let i = 0; i <= n; i++) if (Math.abs(i - head) * step >= RAIL.gap) (i < head ? done : todo).push([RAIL.x0 + i * step, RAIL.y])
     const action = arrow === 'arrive' ? (toGo < 1 ? 'ARRIVED AT' : 'ARRIVE AT') : arrow === 'straight' ? 'STAY ON' : `TURN ${arrow.toUpperCase()} ONTO`
     const eta = d.kmh > 1 ? `IN ${clockText(toGo / (d.kmh / 3.6))}` : '--:--'
     return [
@@ -29,8 +28,7 @@ export const navCard = card('dash-nav', 'Nav', {
       layer(T.heroUnit(num, unit, 60, 22, big, { lattice: 1.6 }), 'idle'),
       layer(T.text(action, 6, 74), 'idle'),
       layer(T.big(street, 6, 86, { lattice: 1.6 }), 'value'),
-      layer(T.dots(done, RAIL.size), 'idle'), layer(T.dots(todo, RAIL.size), 'faint'),
-      layer(T.dots([[RAIL.x0 + head * step, RAIL.y]], RAIL.head), 'active'),
+      ...scrubber(RAIL, f, ['idle', 'faint', 'active']),
       layer(T.text(arrow === 'arrive' ? 'DESTINATION' : 'NEXT TURN', 6, 128), 'mid'),
       layer(T.text(eta, 138, 128, { align: 'right' }), 'mid'),
     ]
@@ -63,7 +61,7 @@ export const roadCard = card('dash-road', 'Road', {
         put(`${lane.dashed ? 'value' : 'idle'}:${size}`, [x, y])
       }
     }
-    const out: Layer[] = [layer(T.dotLine(4, ROAD.hy, 140, ROAD.hy, { spacing: 3.3, size: 1 }), 'faint')]
+    const out: Layer[] = [divider(4, 140, ROAD.hy)]
     for (const [key, pts] of lines) { const [tone, size] = key.split(':'); out.push(layer(T.dots(pts, +size), tone as 'value' | 'idle')) }
     // the stop line across your lane, once it is closer than the far rows
     if (d.stop >= 6 && d.stop < 90) {
@@ -88,10 +86,12 @@ export const roadCard = card('dash-road', 'Road', {
 /**
  * The loop that drives the board: the phase as the hero, the 30 s lap as a rail with its playhead, the trip
  * so far, and the AUTO switch. Touching any control on the board hands the car over (AUTO goes off); AUTO on
- * runs the lap again. The switch is the components board's toggle.
+ * runs the lap again. The switch is the components board's toggle (`switchTrack`). The lap rail keeps its own sites,
+ * one a second, so it is not a `scrubber`.
  */
 const LAPR = { x0: 6, x1: 138, y: 62, size: 1.8, knob: 6, clear: 5 }
 const SW = { x: 6, y: 114, w: 52, h: 24 }
+const SWITCH: SwitchSpec = { ...SW, knob: 18, ...LINE, outline: 'rrect' }
 export const driveCard = card('dash-drive', 'Drive', {
   springKeys: ['drive', 'speed', 'gear'],
   controls: [{ key: 'drive', kind: 'toggle', box: [SW.x, SW.y - 2, 132, SW.h + 4], label: 'Auto drive' }],
@@ -101,7 +101,7 @@ export const driveCard = card('dash-drive', 'Drive', {
     const rail: Pt[][] = [[], []]
     for (let i = 0; i <= LAP; i++) rail[on && i <= d.lap ? 0 : 1].push([xAt(i), LAPR.y])
     const head: Pt = [xAt(d.lap), LAPR.y], clear = (lf: LatticeField) => (on ? T.knockout(lf, [head], LAPR.clear) : lf)
-    const r = SW.h / 2, knob: Pt = [SW.x + r + d.auto * (SW.w - SW.h), SW.y + r], track = rr(SW.x, SW.y, SW.w, SW.h, r)
+    const r = SW.h / 2, track = rr(SW.x, SW.y, SW.w, SW.h, r), [swTrack, swKnob] = switchTrack(SWITCH, d.auto, on ? 'value' : 'mid', pv)
     const use = d.kmh > 1 && d.kw > 0 ? String(Math.round((Math.max(0, d.kw) / d.kmh) * 100)) : '--'
     return [
       layer(T.text(on ? 'DRIVE LOOP' : 'YOUR CAR', 6, 20), 'idle'),
@@ -115,8 +115,7 @@ export const driveCard = card('dash-drive', 'Drive', {
       layer(T.big((d.dist / 1000).toFixed(2), 6, 86, BODY), 'value'), layer(T.text('KM', 6, 100), 'idle'),
       // no reading: three separate dots on the glyph row, not a minus pair of touching small dots
       layer(use === '--' ? T.dots([78, 81.5, 85].map((x): Pt => [x, 90]), 1.6) : T.big(use, 76, 86, BODY), 'value'), layer(T.text('KWH/100 KM', 76, 100), 'idle'),
-      layer(at(T.dots(track(0, LINE.spacing), LINE.size), pv), on ? 'value' : 'mid'),
-      layer(at(T.dots([knob], 18), pv), on ? 'value' : 'mid'),
+      layer(at(swTrack, pv), swTrack.tone), swKnob,
       layer(T.big('AUTO', 70, SW.y + r - 4.5, BODY), on ? 'value' : 'mid'),
       ...states(s, ctx.t, track, rr(SW.x - 2, SW.y - 2, 136, SW.h + 4, r + 2), 0),
     ]

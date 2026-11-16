@@ -41,7 +41,7 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
   ['src/components/xray/**', ['c10']], ['src/components/palette/**', ['c10', 'analytics', 'break-ui', 'a11y-keys']],
   ['src/site/app/xray.css', ['c10']], ['src/site/app/palette.css', ['c10', 'break-ui']],
   ['src/components/browse/**', ['browse']], ['src/site/browse.ts', ['browse']],
-  ['src/components/skins/**', ['skins']], ['src/site/app/skins.css', ['skins']],
+  ['src/components/skins/**', ['skins', 'a11y-keys']], ['src/site/app/skins.css', ['skins', 'a11y-keys']],
   ['src/components/theme/**', ['theme-picker', 'layout', 'layout-narrow', 'break-ui', 'a11y-keys', 'a11y-contrast']],
   ['src/site/theme/**', ['theme-picker', 'csp', 'layout', 'layout-narrow', 'a11y-contrast', 'a11y-accents']],
   ['src/components/likes/**', ['likes', 'break-ui']], ['src/lib/likes/**', ['likes']], ['api/**', ['likes']],

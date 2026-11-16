@@ -51,7 +51,9 @@
   color: var(--value)
 }
 
-.lk-btn:disabled {
+/* aria-disabled, not disabled: it keeps focus (LikeButton.tsx) */
+.lk-btn[aria-disabled="true"],
+.lk-forget[aria-disabled="true"] {
   opacity: .4;
   cursor: default
 }

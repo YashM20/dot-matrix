@@ -115,7 +115,7 @@ By Jeff Jones.
 
 By Clifford Pickover, Paul Bourke.
 
-- Algorithms Attractor (`algo-attractor`), board `/algorithms/`: the map
+- Attractor (`algo-attractor`), board `/algorithms/`: the map
 
 ### [Complex patterns in a simple system (1993)](https://doi.org/10.1126/science.261.5118.189)
 
@@ -141,7 +141,7 @@ By Dao Ho.
 
 By Thomas A. Witten, Leonard M. Sander.
 
-- Algorithms Aggregate (`algo-aggregate`), board `/algorithms/`: the growth model
+- Aggregate (`algo-aggregate`), board `/algorithms/`: the growth model
 - Ice (`mat-ice`), board `/workshop/`: the growth model
 
 ### [Dwitter](https://www.dwitter.net/)
@@ -464,7 +464,7 @@ By Vera Molnár.
 
 By Maxim Gumin.
 
-- Algorithms Collapse (`algo-collapse`), board `/algorithms/`: the simple tiled model; backtracking as in Isaac Karth and Adam M. Smith (2017)
+- Collapse (`algo-collapse`), board `/algorithms/`: the simple tiled model; backtracking as in Isaac Karth and Adam M. Smith (2017)
 - Stitch (`sq-stitch`), board `/squares/`: the simple tiled model that lays the border
 
 ### [Weather data by Open-Meteo.com (CC BY 4.0)](https://open-meteo.com/)
@@ -477,7 +477,7 @@ By Open-Meteo.
 
 By Adrian Secord.
 
-- Algorithms Stipple (`algo-stipple`), board `/algorithms/`: technique
+- Stipple (`algo-stipple`), board `/algorithms/`: technique
 
 ## Code ports
 
