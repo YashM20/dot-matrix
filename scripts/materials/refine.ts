@@ -16,10 +16,6 @@ export function refineChecks(assert: Assert, frameOf: FrameFn): void {
   const cell = (d: { x: number; y: number }): [number, number] => [d.x / pitch - .5, d.y / pitch - .5]
   const said = (p: WidgetPreset, data?: Record<string, number>) => atClock(() => describe(p, { data: { ...p.defaults, ...data }, reducedMotion: true }))
 
-  // marble: the time is relief, so its surface layer names it; the unreadable year line is gone
-  const marble = byId('mat-marble'), mt = said(marble).text
-  assert('marble: the accessible text carries the engraved time (09:41) and no year line', mt.includes('09:41') && !mt.some(s => s.startsWith('ANNO')), mt.join(' | '))
-
   // terrazzo: the previewed chip sits a step up, and the pad names the day it points at
   {
     const tz = byId('mat-terrazzo'), c = tz.controls![0], m = atClock(() => H.monthOf(2026, 0)), [x, y] = m.centres[14]

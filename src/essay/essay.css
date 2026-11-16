@@ -87,6 +87,7 @@ em { color: var(--value) }
 .cards--2 { grid-template-columns: repeat(2, 1fr) }
 .cards--3 { grid-template-columns: repeat(3, 1fr) }
 .cards--5 { grid-template-columns: repeat(5, 1fr) }
+.cards > :only-child { grid-column: 1 / -1; width: 100%; max-width: calc(50% - var(--space-4) / 2); justify-self: center }
 .panel--dark { padding: var(--space-2) }
 
 /* card chrome (the app's dot-card, trimmed) */

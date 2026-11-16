@@ -13,6 +13,8 @@
  *  - no horizontal overflow at 390, 768, 1280 and 1920, in the dark and light schemes and a second accent.
  *  - the row under a card adds at most 24 px under it (32 where touch rules apply) and every action in it is a 24 × 24 target or more.
  *  - "Copied" (Copy link's bubble) overlaps no card, at LARGE, at the compact grid and on a phone.
+ *  - Copy link on a card ALL hasn't mounted (#353) copies the shared link (the theme opt-in, a pond's day) and the
+ *    toast says "link copied"; a refused write says "copy failed" with the link, and LINK shows no check.
  * `--shots <dir>` saves the PR screenshots there; 3× close-ups of a card's row (rest, hover, focus, copied, More open, and
  * copied at the compact grid on a desktop and a phone) go there too, or to `.snapshots/card-row/`.
  *
@@ -41,6 +43,18 @@ const mountedCards = (p: Page) => p.js<number>(`document.querySelectorAll('.brow
 const shot = async (p: Page, name: string) => { if (shots) await p.shot(join(shots, `${name}.png`)) }
 const ROWS = shots ?? join('.snapshots', 'card-row')
 mkdirSync(ROWS, { recursive: true })
+/** Copy link on a slot by script, with the clipboard copying (`ok`) or refusing: what was copied, what the toast and LINK say. */
+const rowCopy = (p: Page, slot: string, ok: boolean) => p.js<{ mounted: boolean; copied: string[]; toast: string; check: boolean; want: string }>(`(async () => {
+  const c = navigator.clipboard, own = c.writeText, copied = [], s = document.querySelector(${JSON.stringify(slot)}), d = document.documentElement.dataset
+  c.writeText = ${ok ? 't => (copied.push(t), Promise.resolve())' : "() => Promise.reject(new DOMException('denied', 'NotAllowedError'))"}
+  const mounted = !!s.querySelector('.dot-card:not(.browse-ghost)')
+  s.querySelector('.dot-card-row-link').click()
+  await new Promise(r => setTimeout(r, 400))
+  c.writeText = own
+  const want = new URL('/widget/' + s.dataset.slot + '/', location.origin); want.searchParams.set('theme', d.scheme + '_' + d.accent)
+  if (s.dataset.slot.startsWith('pond-')) want.searchParams.set('day', (n => n.getFullYear() + '-' + String(n.getMonth() + 1).padStart(2, '0') + '-' + String(n.getDate()).padStart(2, '0'))(new Date()))
+  return { mounted, copied, toast: document.querySelector('.pal-toast')?.textContent ?? '', check: s.querySelector('.dot-card-row-link').classList.contains('copied'), want: want.href }
+})()`)
 /** A 3× close-up of a slot's foot: the card's last 48 px, its row, and its MORE menu when open. */
 async function rowShot(p: Page, name: string, slot: string) {
   const r = await p.js<{ x: number; y: number; w: number; h: number }>(`(() => { const s = document.querySelector(${JSON.stringify(slot)}), c = s.querySelector('.dot-card').getBoundingClientRect(),
@@ -88,6 +102,8 @@ const { url: base, stop } = await serveDist(4327)
 const p = await launch(1280, 900, { flags: { make: false, lab: false }, testHooks: false })
 try {
   await quiet(p, base)
+  // the share-link opt-in (THEME › share links) on: a copied link carries the theme (#353)
+  await p.js(`localStorage.setItem('dot480:share-theme', '1'), 1`)
   assert('browse: / opens ALL', await open(p, base))
   await p.waitFor(`document.querySelectorAll('.browse-item > .dot-card:not(.browse-ghost)').length > 2`, 20000); await sleep(1500)
   const head = await p.js<{ tabs: string[]; title: string; canonical: string; lab: boolean; chip: string | null; first: string[] }>(`({ tabs: [...document.querySelectorAll('.view-tabs [role=tab]')].map(t => t.textContent), title: document.title,
@@ -108,6 +124,22 @@ try {
   await sleep(1500)
   const after = await p.js<{ first: boolean; last: boolean; n: number }>(`(() => { const s = [...document.querySelectorAll('.browse-item')]; const card = li => !!li.querySelector('.dot-card:not(.browse-ghost)'); return { first: card(s[0]), last: card(s.at(-1)), n: s.filter(card).length } })()`)
   assert('browse: after scrolling to the bottom the first card is unmounted, the last one mounted, and the count stays small', !after.first && after.last && after.n <= 30, `${JSON.stringify(after)} in ${Date.now() - t0} ms`)
+
+  // #353: Copy link on a card that isn't mounted takes the site's one path: the shared link and the toast; a refused
+  // write says "copy failed" with the link. A pond card's link carries its day
+  {
+    const first = await rowCopy(p, '.browse-item:nth-child(1)', true)
+    await p.shot(join(ROWS, 'copy-link-copied.png'))
+    assert("browse: Copy link on a card ALL hasn't mounted copies its shared link (the theme opt-in) and the toast says link copied",
+      !first.mounted && first.copied.length === 1 && first.copied[0] === first.want && first.toast === 'link copied' && first.check, JSON.stringify(first))
+    const failed = await rowCopy(p, '.browse-item:nth-child(2)', false)
+    await p.shot(join(ROWS, 'copy-link-failed.png'))
+    assert('browse: a refused copy says "copy failed" with the link, and LINK shows no check',
+      !failed.mounted && failed.toast === `copy failed: ${failed.want}` && !failed.check, JSON.stringify(failed))
+    const pond = await p.js<number>(`[...document.querySelectorAll('.browse-item')].findIndex(s => s.dataset.slot.startsWith('pond-')) + 1`)
+    const koi = pond ? await rowCopy(p, `.browse-item:nth-child(${pond})`, true) : undefined
+    assert("browse: a pond card's copied link carries the day", !!koi && koi.copied[0] === koi.want && /[?&]day=\d{4}-\d{2}-\d{2}$/.test(koi.want), JSON.stringify(koi))
+  }
   assert('browse: no page errors so far', !p.logs.length, p.logs.slice(0, 3).join(' | '))
 
   // a shared, filtered link; BROWSE's old page and its board filter
