@@ -70,7 +70,7 @@ function departuresChecks(assert: Assert) {
   assert("cards: station-clock's accessible name has the time (HH:MM)", /^Station: \d{2}:\d{2}$/.test(label), label)
   const service = describe(widgetById('service')!, { reducedMotion: true }).label
   assert('cards: service names each line with its status', [1, 2, 3, 4].every(n => new RegExp(`LINE ${n} (ON TIME|PLUS \\d MIN|DELAYED)`).test(service)), service)
-  for (const id of ['departures', 'service']) {
+  for (const id of ['departures', 'service', 'line-map']) {
     const p = widgetById(id)!, quiet = p.layers({ t: 0, data: { ...p.defaults } }).filter(l => l.field.text?.trim() && l.tone === 'mid')
     assert(`cards: ${id} draws no text in mid (rows and statuses are read, ≥ 4.5:1)`, !quiet.length, quiet.map(l => l.field.text).join(', '))
   }

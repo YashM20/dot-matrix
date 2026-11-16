@@ -160,7 +160,7 @@ export const lineMap: WidgetPreset = {
       ...STOPS.map((_, i) => layer(T.knockout(T.dotRing(stopX(i), TRACK_Y, 4.2, { spacing: 2.6, size: 1.9 }), [[x, TRACK_Y]], 4), stopX(i) <= x + .5 ? 'value' : 'mid')),
       ...ABBR.map((a, i) => layer(T.text(a, stopX(i), i % 2 ? 66 : 94, { align: 'center' }), 'idle')),
       layer(T.dots([[x, TRACK_Y]], 7.5), 'active'),
-      layer(T.text(p > 0 ? 'DEPARTED' : 'AT PLATFORM', 8, 124), 'mid'),
+      layer(T.text(p > 0 ? 'DEPARTED' : 'AT PLATFORM', 8, 124), 'idle'),
     ]
   },
 }
