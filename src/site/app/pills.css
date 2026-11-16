@@ -14,7 +14,13 @@
   align-items: stretch;
   background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-sm)
+  border-radius: var(--radius-sm);
+  transition: transform var(--dur-out) var(--ease)
+}
+
+/* a group of one button sinks whole on press (src/site/mobile/touch.css): in at once, out over --dur-out */
+.pill:has(> .pill-btn:active) {
+  transition-duration: var(--dur-in)
 }
 
 /* the hairline between neighbours (the MORE menu is a fixed layer, not a neighbour) */
