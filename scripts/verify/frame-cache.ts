@@ -3,7 +3,10 @@
  * values a cold frame gives. Goldens draw each card cold at fixed times, so a cache keyed too loosely would only show
  * in motion; these checks draw the motion.
  */
-import { sampleLayers } from '../../src/engine/sampler/gridSampler'
+import { sampleLayers, sampleLayersInto } from '../../src/engine/sampler/gridSampler'
+import { forgetFrames, stableLayers } from '../../src/engine/sampler/repeat'
+import { createDotBuffer, toDots, type DotBuffer } from '../../src/engine/buffer/dotBuffer'
+import { installSquares } from '../../src/engine/squares'
 import { forgetRays, renderScene, type Frame, type Scene } from '../../src/engine/sdf3d/render'
 import { lookAt, normalize, type V3 } from '../../src/engine/sdf3d/march'
 import { sdSphere } from '../../src/engine/sdf3d/prims'
@@ -16,6 +19,11 @@ import type { Assert } from '../lib/check'
 const dotsAt = (p: WidgetPreset, t: number): DotInstance[] => sampleLayers(withChrome(p)({ t, data: { ...p.defaults } }), p.grid, p.style, theme)
 const same = (a: DotInstance[], b: DotInstance[]) =>
   a.length === b.length && a.every((d, i) => Object.is(d.x, b[i].x) && Object.is(d.y, b[i].y) && Object.is(d.r, b[i].r) && Object.is(d.opacity, b[i].opacity) && d.color === b[i].color)
+/** `same`, plus the squares fields a buffer frame decodes to (join, joint, form, aspect). */
+const sameSquares = (a: DotInstance[], b: DotInstance[]) => same(a, b) && a.every((d, i) => {
+  const e = b[i]
+  return d.join === e.join && JSON.stringify(d.joint) === JSON.stringify(e.joint) && d.shape === e.shape && d.roundness === e.roundness && d.rot === e.rot && d.motif === e.motif && d.aspect === e.aspect
+})
 
 /**
  * A ball on a floor. The eye slides along z (its rays and floor hits stay), rises on odd frames (the floor's offset
@@ -50,6 +58,28 @@ export function frameCacheChecks(assert: Assert) {
     const cold = ts.map(t => { forgetRays(); return dotsAt(p, t) })
     const bad = ts.filter((_, i) => !same(warm[i], cold[i]))
     assert(`frame cache: ${id} frames drawn in a row match cold frames`, !bad.length, `t = ${bad.join(', ')}`)
+  }
+  // squares frames repeat on the buffer path (#340): sq-hat's hold hands back one marked array, and the sampler copies
+  // its kept dots with their squares channels and joint table instead of sampling again. Into a fresh buffer, one with
+  // channels left by another squares frame, and one a plain card drew last
+  {
+    installSquares()
+    const p = widgetById('sq-hat')!, at = (t: number) => withChrome(p)({ t, data: {} })
+    const into = (t: number, buf: DotBuffer) => toDots(sampleLayersInto(at(t), p.grid, p.style, theme, buf))
+    // t = 1 to 2 is the hold (the front runs 7 s ahead), t = 0 too
+    forgetFrames()
+    const cold = into(1, createDotBuffer())
+    const repeats = at(1) === at(1.5), stained = createDotBuffer(), plain = createDotBuffer()
+    sampleLayersInto(withChrome(widgetById('sq-ammann')!)({ t: .4, data: {} }), p.grid, p.style, theme, stained)
+    sampleLayersInto(withChrome(widgetById('cinema-witness') ?? p)({ t: .4, data: {} }), p.grid, p.style, theme, plain)
+    const warm = [into(1.5, createDotBuffer()), into(1.75, stained), into(2, plain)]
+    // proof that the copy ran: a marked array whose last layer lights the whole card once `lit` is set still draws its first frame
+    let lit = 0
+    const lie = stableLayers([...at(1), { field: () => lit, tone: 'idle' }]), first = toDots(sampleLayersInto(lie, p.grid, p.style, theme, createDotBuffer()))
+    lit = 1
+    const copied = toDots(sampleLayersInto(lie, p.grid, p.style, theme, createDotBuffer())).length === first.length
+    assert('frame cache: sq-hat hold frames repeat on the buffer path with their squares channels (fresh, squares-stained and plain buffers)',
+      repeats && copied && cold.some(d => d.join !== undefined) && warm.every(w => sameSquares(w, cold)), `same array ${repeats}, copied ${copied}; ${warm.map(w => sameSquares(w, cold)).join(', ')}`)
   }
   // lv-surface: the sky kept per (far, mid) shift is surfaceSky cell for cell
   {
