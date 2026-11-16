@@ -70,8 +70,11 @@ jobs:
       # `pnpm build` is `tsc -b && vite build && pnpm registry:build`; the typecheck job already ran tsc -b, the registry step is below.
       # Also writes dist/og/*.png and dist/<board>/index.html (vite.config.ts → scripts/site/postbuild.ts);
       # SITE_URL (repo variable, e.g. your Vercel production URL) makes og:image / og:url absolute
+      # postbuild reads goldens/<board>.json directly, so the build leaves no goldens/hashes.json behind (#103)
       - name: Build
-        run: pnpm exec vite build
+        run: |
+          pnpm exec vite build
+          test ! -e goldens/hashes.json
         env:
           SITE_URL: ${{ vars.SITE_URL }}
 

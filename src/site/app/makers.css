@@ -17,7 +17,7 @@
   border-radius: var(--radius-ctl);
   color: var(--label);
   font: 500 var(--fs-label-12) var(--mono);
-  letter-spacing: .14em;
+  letter-spacing: var(--track-caps);
   text-transform: uppercase;
   user-select: none
 }
@@ -35,7 +35,7 @@
   border-right: 4px solid transparent;
   border-top: 5px solid var(--mute);
   transform: rotate(-90deg);
-  transition: transform var(--dur-out)
+  transition: transform var(--dur-out) var(--ease)
 }
 
 .more[open] > summary::before {
@@ -45,7 +45,7 @@
 .more > summary small {
   color: var(--mute);
   font: inherit;
-  letter-spacing: .04em;
+  letter-spacing: var(--track-snug);
   text-transform: none
 }
 

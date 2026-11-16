@@ -78,9 +78,9 @@
 
 .skin-menu button span {
   color: var(--mute);
-  letter-spacing: .04em;
+  letter-spacing: var(--track-snug);
   text-transform: none;
-  line-height: 1.35
+  line-height: var(--lh-snug)
 }
 
 .skin-menu button i {
@@ -202,7 +202,7 @@ html.theme-wipe::view-transition-new(root) {
 
 /* back to OLED: the old display wipes off row by row, top to bottom (a refresh) */
 .skin-surface[data-skin] > .skin-overlay.skin-overlay--out {
-  animation: skin-off var(--dur-enter) cubic-bezier(.3, 0, .8, .15) forwards
+  animation: skin-off var(--dur-enter) var(--ease-in) forwards
 }
 
 @keyframes skin-off {

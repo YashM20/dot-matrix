@@ -14,7 +14,7 @@ html { container-type: scroll-state; scroll-padding-top: calc(var(--tap) + var(-
   border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1;
   background: color-mix(in srgb, var(--bg) 84%, transparent); -webkit-backdrop-filter: var(--glass-blur); backdrop-filter: var(--glass-blur);
   transition: translate var(--dur-enter) var(--ease);
-  font: 500 var(--fs-label-12) var(--mono); letter-spacing: .16em
+  font: 500 var(--fs-label-12) var(--mono); letter-spacing: var(--track-wide)
 }
 @container scroll-state(scrolled: bottom) { .legal-nav:not(:focus-within) { translate: 0 -100% } }
 .legal-nav a { color: var(--mute); text-decoration: none; display: inline-block; padding: var(--space-2) 0 }
@@ -22,12 +22,12 @@ html { container-type: scroll-state; scroll-padding-top: calc(var(--tap) + var(-
 .legal-nav span { display: flex; gap: var(--space-4) }
 /* touch: every nav link is a --tap target */
 @media (pointer: coarse) { .legal-nav a { display: inline-flex; align-items: center; justify-content: center; min-width: var(--tap); min-height: var(--tap); padding-block: 0 } }
-.legal h1 { font: 600 var(--fs-h1-page)/1.1 var(--sans); color: var(--value); letter-spacing: -.01em; margin: 0 }
+.legal h1 { font: 600 var(--fs-h1-page)/var(--lh-tight) var(--sans); color: var(--value); letter-spacing: 0; margin: 0 }
 .legal .hero { padding-bottom: var(--gap-action) }
 .legal .lede { margin: var(--gap-group) 0 0 }
-.legal .stamp { font: 500 var(--fs-label-12) var(--mono); letter-spacing: .14em; color: var(--mute); margin: var(--space-4) 0 0 }
-.legal h2 { font: 500 var(--fs-label-12)/1.4 var(--mono); letter-spacing: .16em; text-transform: uppercase; color: var(--value); margin: var(--gap-action) 0 var(--space-4) }
-.legal h3 { font: 600 var(--fs-copy-16)/1.4 var(--sans); color: var(--value); margin: var(--space-5) 0 var(--space-2) }
+.legal .stamp { font: 500 var(--fs-label-12) var(--mono); letter-spacing: var(--track-caps); color: var(--mute); margin: var(--space-4) 0 0 }
+.legal h2 { font: 500 var(--fs-label-12)/var(--lh-snug) var(--mono); letter-spacing: var(--track-wide); text-transform: uppercase; color: var(--value); margin: var(--gap-action) 0 var(--space-4) }
+.legal h3 { font: 600 var(--fs-copy-16)/var(--lh-snug) var(--sans); color: var(--value); margin: var(--space-5) 0 var(--space-2) }
 .legal p, .legal ul { margin: 0 0 1em }
 .legal ul { padding-left: 1.2em }
 .legal li { margin: 0 0 .5em }
@@ -36,7 +36,7 @@ html { container-type: scroll-state; scroll-padding-top: calc(var(--tap) + var(-
 .keys { margin: 0 0 1.2em; border-top: 1px solid var(--line); border-image: var(--hair-x) 1 }
 .keys > div { display: grid; grid-template-columns: minmax(0, 15em) minmax(0, 1fr); gap: var(--space-1) var(--gap-group); padding: var(--space-2) 0; border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1 }
 .keys dt code { white-space: normal; overflow-wrap: anywhere }
-.keys dd { margin: 0; font-size: var(--fs-copy-16); line-height: 1.55 }
+.keys dd { margin: 0; font-size: var(--fs-copy-16); line-height: var(--lh-body) }
 
 @media (max-width: 640px) {
   .legal { padding-top: var(--gap-group) }
