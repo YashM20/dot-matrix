@@ -12,7 +12,7 @@
  *    the one before it (stops in pinned bars are skipped);
  *  - `hero-order:home@<width>` (1440 and 390, #43): the hero's Tab neighbours match where it stands. At 1440 it sits
  *    beside the intro and the picker, so Shift+Tab from it lands in the picker and Tab past it in ALL's filters; at
- *    390 it follows the cards, so Shift+Tab from it lands in the card grid.
+ *    390 it follows the cards, so Shift+Tab from it lands in the card grid and Tab past it in the tab bar or the footer.
  * `KNOWN` lists today's failures: they print as known and don't fail the run (scripts/lib/check.ts `knownChecker`).
  *
  * Needs a server: `npx vite build && npx vite preview --port 4319` (or `pnpm dev`), then
@@ -213,15 +213,16 @@ async function tabs(p: Page, W: number, H: number) {
 
 /** Where focus goes from the hero's first stop (Shift+Tab) and its last one (Tab): its neighbours in the Tab order. */
 async function heroOrder(p: Page, W: number) {
-  const zone = `(() => { const a = document.activeElement; return !a ? '' : a.closest('.board-picker') ? 'picker' : a.closest('.browse-tools') ? 'filters' : a.closest('.browse-grid') ? 'cards' : a.closest('footer') ? 'footer' : a.closest('.home-hero') ? 'hero' : a.tagName.toLowerCase() })()`
+  const zone = `(() => { const a = document.activeElement; return !a ? '' : a.closest('.board-picker') ? 'picker' : a.closest('.browse-tools') ? 'filters' : a.closest('.browse-grid') ? 'cards' : a.closest('footer') ? 'footer' : a.closest('.tabbar') ? 'tab bar' : a.closest('.home-hero') ? 'hero' : a.tagName.toLowerCase() })()`
   await p.js(`document.querySelector('.home-hero button')?.focus(), 1`)
   await p.key('Tab', 'Tab', 9, 8) // Shift+Tab
   const before = await p.js<string>(zone)
   await p.js(`[...document.querySelectorAll('.home-hero button')].at(-1)?.focus(), 1`)
   await p.key('Tab', 'Tab', 9)
   const after = await p.js<string>(zone)
-  const want = W >= 1280 ? ['picker', 'filters'] : ['cards', 'footer']
-  check(`hero-order:home@${W}`, before === want[0] && after === want[1], `before the hero: ${before || 'nothing'}, after it: ${after || 'nothing'} (want ${want.join(', ')})`)
+  // a phone's tab bar comes after the page's content in the DOM, before the footer
+  const want = W >= 1280 ? ['picker', ['filters']] as const : ['cards', ['tab bar', 'footer']] as const
+  check(`hero-order:home@${W}`, before === want[0] && (want[1] as readonly string[]).includes(after), `before the hero: ${before || 'nothing'}, after it: ${after || 'nothing'} (want ${want[0]}, then ${want[1].join(' or ')})`)
 }
 
 if (!findChrome()) { console.log('no Chrome found (set $CHROME): skipped'); process.exit(0) }
