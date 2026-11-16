@@ -1,7 +1,8 @@
 /**
- * Dot-drawn controls several boards share (#357): the switch track, the scrubber and the transport glyphs. Each board
- * passes its own sizes and tones, so adopting a helper moves no dot; making the boards match is #360. TILE cards
- * (cell space, lattice 1).
+ * Dot-drawn controls several boards share (#357): the switch track, the scrubber, the label row switch and the
+ * transport glyphs. Since #360 a switch and a scrubber look the same on every board: the knob takes the components
+ * toggle's share of the track, a scrubber is a site index with a knob gap. A board passes only its sizes and tones.
+ * TILE cards (cell space, lattice 1).
  * It also holds the one hover, press and focus grammar for dot controls (#358), first drawn by the components board.
  */
 import type { Layer, Tone } from '../engine/types'
@@ -52,10 +53,13 @@ export const states = (s: UiState, t: number, hover: Shape, focus: Shape = hover
 
 // ── switch ──────────────────────────────────────────────────────────────────
 /**
- * A switch: the track box (a stadium, radius h/2), the knob dot's size, and the outline's site `spacing` and `size`.
- * `outline` picks where the sites start: `stadium` on the top edge (default), `rrect` past the top-left arc.
+ * A switch: the track box (a stadium, radius h/2) and the outline's site `spacing` and `size`. The knob dot is
+ * `switchKnobSize(h)`. `outline` picks where the sites start: `stadium` on the top edge (default), `rrect` past the
+ * top-left arc. Off is `mid` on every board (#360).
  */
-export interface SwitchSpec { x: number; y: number; w: number; h: number; knob: number; spacing: number; size: number; outline?: 'stadium' | 'rrect' }
+export interface SwitchSpec { x: number; y: number; w: number; h: number; spacing: number; size: number; outline?: 'stadium' | 'rrect' }
+/** The knob dot's size on a track `h` cells tall: the components toggle's 30 on 46, scaled (#360). */
+export const switchKnobSize = (h: number) => (h * 30) / 46
 /** The knob's centre at `k`: 0 = the left stop, 1 = the right stop, a fraction for a stop between (segmented) or a glide. */
 export const switchKnob = (s: SwitchSpec, k: number): Pt => [s.x + s.h / 2 + k * (s.w - s.h), s.y + s.h / 2]
 /**
@@ -65,37 +69,34 @@ export const switchKnob = (s: SwitchSpec, k: number): Pt => [s.x + s.h / 2 + k *
 export function switchTrack(s: SwitchSpec, k: number, tone: Tone | [Tone, Tone], v = 1): [Layer, Layer] {
   const [trackTone, knobTone] = typeof tone === 'string' ? [tone, tone] : tone
   const sites = s.outline === 'rrect' ? rrect(s.x, s.y, s.w, s.h, s.h / 2, s.spacing) : stadium(s.x, s.y, s.w, s.h, s.spacing)
-  return [layer(T.dots(sites, s.size), trackTone), layer(at(T.dots([switchKnob(s, k)], s.knob), v), knobTone)]
+  return [layer(T.dots(sites, s.size), trackTone), layer(at(T.dots([switchKnob(s, k)], switchKnobSize(s.h)), v), knobTone)]
+}
+
+// ── label row switch ────────────────────────────────────────────────────────
+/**
+ * Two names in a TILE card's label row, right-aligned with `gap` cells between them; the one chosen is `value`. Its
+ * underline (hover, focus) runs on `row`, under the label's rows 0 to 6. One spec for every board (#360).
+ */
+export const LABEL_SWITCH = { gap: 6, row: 10 }
+/** The names' left columns and widths, and the hit box: two cells left of the first name to the card's edge, 8 rows. */
+export function labelSwitch(names: [string, string]) {
+  const ws = names.map(n => T.size(n)[0]) as [number, number], xb = TILE.cols - ws[1], xa = xb - LABEL_SWITCH.gap - ws[0], x = xa - 2
+  return { xs: [xa, xb] as [number, number], ws, box: [x, 0, TILE.cols - x, 8] as [number, number, number, number] }
 }
 
 // ── scrubber ────────────────────────────────────────────────────────────────
 /**
- * A dotted slider on row `y` from `x0` to `x1` with a knob dot of size `knob`.
- * - `index` (default): sites `spacing` apart (rounded to fit the span), the knob on the nearest site, and no site
- *   within `gap` cells of it.
- * - `lines`: two `T.dotLine`s, each from its end of the rail to `gap` cells short of the knob; the knob glides over
- *   `travel` (default the rail). `size` may differ per side: `[filled, rest]`.
+ * A dotted slider on row `y` from `x0` to `x1`: sites `spacing` apart (rounded to fit the span), the knob dot of size
+ * `knob` on the nearest site, and no site within `gap` cells of it. `size` may differ per side: `[filled, rest]`.
  */
-export interface ScrubSpec {
-  x0: number; x1: number; y: number; spacing: number; size: number | [number, number]; knob: number; gap: number
-  method?: 'index' | 'lines'; travel?: [number, number]
-}
+export interface ScrubSpec { x0: number; x1: number; y: number; spacing: number; size: number | [number, number]; knob: number; gap: number }
 /** `[filled, rest, knob]` at value `v` (0..1); `tones` in that order. `p` presses the filled side and the knob. */
 export function scrubber(s: ScrubSpec, v: number, tones: [Tone, Tone, Tone], p = 1): Layer[] {
   const [sizeL, sizeR] = typeof s.size === 'number' ? [s.size, s.size] : s.size
-  let left: LatticeField, right: LatticeField, knob: Pt
-  if (s.method === 'lines') {
-    const [a, b] = s.travel ?? [s.x0, s.x1], kx = a + v * (b - a)
-    left = T.dotLine(s.x0, s.y, kx - s.gap, s.y, { spacing: s.spacing, size: sizeL })
-    right = T.dotLine(s.x1, s.y, kx + s.gap, s.y, { spacing: s.spacing, size: sizeR })
-    knob = [kx, s.y]
-  } else {
-    const span = s.x1 - s.x0, n = Math.round(span / s.spacing), step = span / n, head = Math.round(Math.max(0, Math.min(1, v)) * n)
-    const done: Pt[] = [], todo: Pt[] = []
-    for (let i = 0; i <= n; i++) if (Math.abs(i - head) * step >= s.gap) (i < head ? done : todo).push([s.x0 + i * step, s.y])
-    left = T.dots(done, sizeL); right = T.dots(todo, sizeR); knob = [s.x0 + head * step, s.y]
-  }
-  return [layer(at(left, p), tones[0]), layer(right, tones[1]), layer(at(T.dots([knob], s.knob), p), tones[2])]
+  const span = s.x1 - s.x0, n = Math.round(span / s.spacing), step = span / n, head = Math.round(Math.max(0, Math.min(1, v)) * n)
+  const done: Pt[] = [], todo: Pt[] = []
+  for (let i = 0; i <= n; i++) if (Math.abs(i - head) * step >= s.gap) (i < head ? done : todo).push([s.x0 + i * step, s.y])
+  return [layer(at(T.dots(done, sizeL), p), tones[0]), layer(T.dots(todo, sizeR), tones[1]), layer(at(T.dots([[s.x0 + head * step, s.y]], s.knob), p), tones[2])]
 }
 
 // ── transport ───────────────────────────────────────────────────────────────

@@ -87,11 +87,12 @@ export const roadCard = card('dash-road', 'Road', {
  * The loop that drives the board: the phase as the hero, the 30 s lap as a rail with its playhead, the trip
  * so far, and the AUTO switch. Touching any control on the board hands the car over (AUTO goes off); AUTO on
  * runs the lap again. The switch is the components board's toggle (`switchTrack`). The lap rail keeps its own sites,
- * one a second, so it is not a `scrubber`.
+ * one a second, so it is not a `scrubber` (#360): the playhead glides between the seconds instead of snapping to a
+ * site, and it leaves the rail while AUTO is off.
  */
 const LAPR = { x0: 6, x1: 138, y: 62, size: 1.8, knob: 6, clear: 5 }
 const SW = { x: 6, y: 114, w: 52, h: 24 }
-const SWITCH: SwitchSpec = { ...SW, knob: 18, ...LINE, outline: 'rrect' }
+const SWITCH: SwitchSpec = { ...SW, ...LINE, outline: 'rrect' }
 export const driveCard = card('dash-drive', 'Drive', {
   springKeys: ['drive', 'speed', 'gear'],
   controls: [{ key: 'drive', kind: 'toggle', box: [SW.x, SW.y - 2, 132, SW.h + 4], label: 'Auto drive' }],

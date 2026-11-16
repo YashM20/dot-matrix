@@ -17,9 +17,7 @@ const WARN = 500
 const FAIL = 800
 
 /** Files still over 800 lines, each waiting on its split. Remove the entry when the file comes under the limit. */
-const ALLOW: Record<string, string> = {
-  'scripts/editor-browser.ts': '#76: split per phase (editor is backlog)',
-}
+const ALLOW: Record<string, string> = {}
 
 const quiet = process.argv.includes('--quiet')
 
