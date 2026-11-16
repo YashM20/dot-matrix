@@ -6,7 +6,7 @@
 import { createJelly, createTileRaster, drawJelly, tileLayers, type Jelly, type TileGrid } from '../../../engine/life'
 import { worldAt } from '../../../engine/physics/world'
 import type { WidgetPreset } from '../../types'
-import { caption, frameOf, mainThread, tile, touch } from './shared'
+import { caption, frameOf, mainThread, surfaceFocus, tile, touch } from './shared'
 
 export const JELLY_TILES: TileGrid = { cols: 36, rows: 33, pitch: 4, ox: 0, oy: 11 }
 export const jelly: Jelly = createJelly({
@@ -23,6 +23,6 @@ export const pondJelly: WidgetPreset = {
     mainThread()
     const s = worldAt(jelly.world, ctx.t, frameOf(ctx, 'jelly'))
     drawJelly(jelly, s, ctx.t, raster)
-    return [caption('AURELIA'), ...tileLayers(raster)]
+    return [caption('AURELIA'), ...surfaceFocus(ctx, 'jelly'), ...tileLayers(raster)]
   },
 }
