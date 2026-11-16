@@ -1,18 +1,13 @@
 /**
  * Clipboard, download and share helpers for the widget page (docs/SHARE-PLAN.md §5). Every write runs
  * **inside the click**: Safari rejects `clipboard.write` after an `await`, so binary items are handed over as
- * a `Promise<Blob>` (Chrome accepts the same), and text that is still being built goes the same way. Each helper resolves to how it ended, so the caller can say so.
+ * a `Promise<Blob>` (Chrome accepts the same). Text goes through the site's one helper, `src/lib/copyText.ts`
+ * (#353). Each helper resolves to how it ended, so the caller can say so.
  */
-export type Outcome = 'copied' | 'downloaded' | 'shared' | 'cancelled' | 'failed'
+import { canCopy, copyText, inTime, type Text } from '../lib/copyText'
 
-type ClipboardItemCtor = typeof ClipboardItem & { supports?: (type: string) => boolean }
-const Item = (): ClipboardItemCtor | undefined => (typeof ClipboardItem === 'function' ? ClipboardItem as ClipboardItemCtor : undefined)
-/** `ClipboardItem` can carry `type` (PNG always; SVG on Chrome 124+ only; `supports()` itself is recent). */
-export const canCopy = (type: string): boolean => {
-  const I = Item()
-  if (!I || !navigator.clipboard?.write) return false
-  return typeof I.supports === 'function' ? I.supports(type) : type === 'image/png' || type === 'text/plain'
-}
+export { canCopy, copyText, type Text }
+export type Outcome = 'copied' | 'downloaded' | 'shared' | 'cancelled' | 'failed'
 
 export function download(blob: Blob, name: string) {
   const a = document.createElement('a'), url = URL.createObjectURL(blob)
@@ -20,21 +15,12 @@ export function download(blob: Blob, name: string) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1500)
 }
 
-/** Text now, or text still being built (a lazy export): a pending one goes over as a `ClipboardItem` promise. */
-export type Text = string | Promise<string>
 const blobOf = (text: Text, type: string) => Promise.resolve(text).then(t => new Blob([t], { type }))
-
-export async function copyText(text: Text): Promise<Outcome> {
-  if (typeof text !== 'string' && canCopy('text/plain')) {
-    try { await navigator.clipboard.write([new ClipboardItem({ 'text/plain': blobOf(text, 'text/plain') })]); return 'copied' } catch { /* refused: try plain text */ }
-  }
-  try { await navigator.clipboard.writeText(await text); return 'copied' } catch { return 'failed' }
-}
 
 /** A PNG on the clipboard where `ClipboardItem` works, else (or if the write is refused) downloaded as `name`. */
 export async function copyPNG(png: Promise<Blob>, name: string): Promise<Outcome> {
   if (canCopy('image/png')) {
-    try { await navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]); return 'copied' } catch { /* refused: fall back */ }
+    try { await inTime(navigator.clipboard.write([new ClipboardItem({ 'image/png': png })]), png); return 'copied' } catch { /* refused: fall back */ }
   }
   try { download(await png, name); return 'downloaded' } catch { return 'failed' }
 }
@@ -43,7 +29,7 @@ export async function copyPNG(png: Promise<Blob>, name: string): Promise<Outcome
 export async function copySVG(svg: Text, name: string): Promise<Outcome> {
   if (canCopy('image/svg+xml')) {
     try {
-      await navigator.clipboard.write([new ClipboardItem({ 'text/plain': blobOf(svg, 'text/plain'), 'image/svg+xml': blobOf(svg, 'image/svg+xml') })])
+      await inTime(navigator.clipboard.write([new ClipboardItem({ 'text/plain': blobOf(svg, 'text/plain'), 'image/svg+xml': blobOf(svg, 'image/svg+xml') })]), svg)
       return 'copied'
     } catch { /* fall through to text */ }
   }

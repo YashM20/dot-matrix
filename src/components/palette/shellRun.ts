@@ -9,6 +9,7 @@ import { boardTime, probes, xrState } from '../xray/store'
 import { fuzzy } from './fuzzy'
 import { MODES, PLACES, VIEWS, placeFromName, placeOpen } from '../../site/views'
 import { allBoards, paletteItems, type CommandApi } from './api'
+import type { LinkCopy } from '../copyLink'
 import { commandWords, findCommand, helpFor, shellHelp, shellKnows } from './shellHelp'
 import { nearest, type Sources } from './shellLine'
 import { SHELL_KEYS } from '../../site/shortcuts'
@@ -37,6 +38,8 @@ export interface Ctx {
 const err = (text: string): Out => ({ kind: 'err', text })
 const dim = (text: string): Out => ({ kind: 'dim', text })
 const maybe = (w?: string) => (w ? ` did you mean ${w}?` : '')
+/** What `link` prints: the link copied, or the copy failed (the link printed to take by hand). */
+const copied = (r: LinkCopy): Out => (r.outcome === 'copied' ? `copied ${r.url}` : err(`link: copy failed, select it: ${r.url}`))
 
 function measureFps(signal: AbortSignal, ms = 600): Promise<number> {
   return new Promise(res => {
@@ -127,11 +130,11 @@ export async function exec(raw: string, ctx: Ctx): Promise<void> {
       return print(err(`${word}: nothing called "${arg}".${maybe(nearest(arg, [...sources.boards, ...sources.places]))}`))
     }
     case 'describe': case 'remix': case 'studio': case 'link': {
-      if (c.name === 'link' && !arg) return print(`copied ${api.copyLink()}`)
+      if (c.name === 'link' && !arg) return print(copied(await ctx.wait(api.copyLink(undefined, { toast: false }))))
       const card = arg ? await findCard(arg, ctx) : undefined
       if (!card) return print(err(`${word}: ${arg ? `no card "${arg}"` : 'which card?'} e.g. ${c.examples?.[0] ?? `${c.name} queen`}`))
       if (c.name === 'describe') return print(...wrapWords(describe(card, {}).summary, ctx.width))
-      if (c.name === 'link') return print(`copied ${api.copyLink(card.id)}`)
+      if (c.name === 'link') return print(copied(await ctx.wait(api.copyLink(card.id, { toast: false }))))
       if (c.name === 'remix') { void api.remix(card.id); return print(`→ MAKE · CODE with ${card.id}`) }
       void api.studio(card.id); return print(`→ MAKE · COMPOSE with ${card.id}`)
     }

@@ -1,11 +1,12 @@
 /**
  * Board — Cinema: the Afterlight cycle (MASTER-PLAN §4 P3 "Cinema").
- * Nine film posters from one fiction: the night the city's grid went dark. Every poster is a
+ * Seven film posters from one fiction: the night the city's grid went dark. Every poster is a
  * procedural scene in card cells, baked once onto one coarse luma lattice (K = 2.5 cells, the
  * afterlight face pitch), so dot size is luminance. In each frame red is the last light left
- * (an ember, a beacon, the sun, a window, a candle, a reflection, a taillight, a lamp, a rose).
+ * (a beacon, the sun, a window, a reflection, a taillight, a lamp, a rose).
  * Titles sit on the same lattice, knocked out of the scene, and decode in on each reel; the whole
- * lattice breathes with a quantized projector flicker.
+ * lattice breathes with a quantized projector flicker. Each poster keeps its cycle number (02, 03, …): it
+ * seeds the flicker and title decode, and two posters (01, 05) were retired.
  */
 import { HENRY_AFTERLIGHT } from '../creditSources'
 import { clamp, hash01, len } from '../../engine/math'
@@ -107,12 +108,6 @@ const seg = (x: number, y: number, [ax, ay]: Pt, [bx, by]: Pt) => {
   return len(x - ax - k * dx, y - ay - k * dy)
 }
 const rect = (x: number, y: number, x0: number, y0: number, x1: number, y1: number) => x >= x0 && x <= x1 && y >= y0 && y <= y1
-/** Piecewise-linear lookup through (key, value) pairs sorted by key. */
-const pl = (pts: Pt[], k: number) => {
-  if (k <= pts[0][0]) return pts[0][1]
-  for (let i = 0; i < pts.length - 1; i++) if (k <= pts[i + 1][0]) { const [k0, v0] = pts[i], [k1, v1] = pts[i + 1]; return v0 + ((v1 - v0) * (k - k0)) / (k1 - k0) }
-  return pts[pts.length - 1][1]
-}
 /** A star on lattice cell granularity: same value for every supersample inside one dot. */
 const star = (x: number, y: number, seed: number, density: number) => {
   const c = Math.round((x - xOf(0)) / K), r = Math.round((y - yOf(0)) / K)
@@ -149,7 +144,7 @@ function poster(s: Spec): WidgetPreset {
     if (s.live) for (let r = 0; r < NY; r++) for (let c = 0; c < NX; c++) if (yOf(r) >= Y0 && yOf(r) <= Y1 && s.live.where(xOf(c), yOf(r))) liveCells.push(r * NX + c)
   }
   return {
-    // the widget page title and the accessible name: "Last Call", not the poster's capitals
+    // the widget page title and the accessible name: "Exit 14", not the poster's capitals
     id: s.id, name: s.title.toLowerCase().replace(/(^|\s)\S/g, ch => ch.toUpperCase()), label: '', group: 'photo', chrome: 'dots', animated: true, grid: TILE,
     credit: HENRY_AFTERLIGHT,
     style: { ...tileStyle, sizeMin: 0, sizeMax: 1.05, quantizeSteps: 0 },
@@ -187,40 +182,6 @@ function poster(s: Spec): WidgetPreset {
 const TOP = 5, BOTTOM = 46
 /** Left column that centres `title` on the 57-dot lattice. */
 const centre = (title: string) => Math.floor((NX - ([...title].length * 6 - 1)) / 2)
-
-// ── 01 LAST CALL · noir ─────────────────────────────────────────────────────────────────────────
-// A man in a fedora, in profile, black against venetian-blind light with one slit across his eyes;
-// the cigarette ember is the last light.
-const HAT = poly([[73, 40], [74, 27], [78, 21], [86, 19.5], [91, 22.5], [96, 19.5], [104, 21], [108, 27], [109, 40]])
-const brim = (x: number, y: number) => ell(x, y + (x - 90) * .05, 90, 41, 31, 3.4) < 1
-const HEAD = poly([[72, 42], [70, 48], [68, 52], [66.5, 55], [63, 58.5], [59.5, 63], [60.5, 65], [64, 66.5], [63.5, 69], [65.5, 71], [64, 73], [64.5, 76], [67, 80.5], [71, 84], [78, 86.5], [81, 92], [101, 92], [100, 84], [104, 74], [107, 62], [107.5, 44]])
-const COAT = poly([[81, 88], [70, 95], [57, 102], [46, 110], [38, 131], [144, 131], [144, 100], [126, 93], [104, 87]])
-const EMBER: Pt = [46.5, 76.5]
-/** Blind slats: diagonal bands of window light falling from the upper left. */
-const slat = (x: number, y: number) => (frac((y - .42 * x) / 12.5) < .45 ? 1 : 0)
-const lastCall: Luma = (x, y) => {
-  const lit = slat(x, y) * clamp(1.15 - x / 240)
-  if (seg(x, y, [62.5, 73.6], [48, 76.4]) < .85) return .88
-  if (HAT(x, y) || brim(x, y)) return brim(x, y) && !brim(x, y - 2.2) && !HAT(x, y - 2.2) ? .55 : 0 // brim edge
-  if (HEAD(x, y)) {
-    // one slit of light across the eyes; the rest of him is shadow with a rim on the profile
-    const slit = y > 50.5 && y < 58.5 && x < 92
-    if (slit) return ell(x, y, 71.5, 55, 2.4, 1.6) < 1 ? .06 : .97 * clamp(1.6 - (x - 60) / 32)
-    return !HEAD(x - 2.6, y) ? .8 : 0
-  }
-  if (COAT(x, y)) return seg(x, y, [82, 89], [93, 131]) < .9 || seg(x, y, [103, 88], [96, 131]) < .9 ? .32 : 0 // lapels
-  // smoke curls up from the ember through the slats
-  let smoke = 0
-  if (y < 75 && y > 18) {
-    const k = (75 - y) / 57, xc = EMBER[0] + 7 * Math.sin((75 - y) * .11) * k + 3 * k
-    if (Math.abs(x - xc) < 1.1 + k) smoke = .4 * (1 - k * .6)
-  }
-  return Math.max(x > 4 && y > 13 ? lit * .36 : 0, smoke)
-}
-const lastCallPoster = poster({
-  id: 'cinema-last-call', n: 1, genre: 'NOIR', title: 'LAST CALL', tag: 'THE BAR NEVER CLOSED', at: [centre('LAST CALL'), BOTTOM],
-  scene: lastCall, red: (x, y) => (len(x - EMBER[0], y - EMBER[1]) < 1.3 ? 1 : 0),
-})
 
 // ── 02 SIGNAL · sci-fi ──────────────────────────────────────────────────────────────────────────
 // A gas giant lit from behind (a thin crescent), a small moon, and on the night side one red light
@@ -323,46 +284,6 @@ const upstairs: Luma = (x, y) => {
 const upstairsPoster = poster({
   id: 'cinema-upstairs', n: 4, genre: 'HORROR', title: 'UPSTAIRS', tag: 'SOMEONE LEFT IT ON', at: [centre('UPSTAIRS'), BOTTOM],
   scene: upstairs, red: (x, y) => (rect(x, y, ...RED_WINDOW) ? 1 : 0),
-})
-
-// ── 05 CLOSER · romance ─────────────────────────────────────────────────────────────────────────
-// Two profiles almost touching, lit only by the one flame between their lips: each face is bright
-// where it turns to the flame and falls into the dark behind the cheek, so the faces (not the gap)
-// are the figure.
-/** Face profile: how far the front edge reaches toward the other face, by row (forehead → neck). */
-const PROFILE: Pt[] = [[16, -16], [20, -9], [26, -4.5], [34, -1.5], [44, 0], [49, 1], [52, -.2], [55, .6], [58, 3], [62.5, 7.2], [64.5, 6], [66, 2], [68, 2.6], [70, 3.6], [71.5, 2], [73, 3], [75, 1], [78, .2], [81, 1.6], [84, -1], [87, -7], [93, -10.5], [131, -11.5]]
-const FLAME: Pt = [72, 71.25], PK = 1.7
-const leftEdge = (y: number) => 58 + PK * pl(PROFILE, y)
-const rightEdge = (y: number) => 86 - PK * pl(PROFILE, y - 1.5)
-const inLeft = (x: number, y: number) => x < leftEdge(y) && y > 15 && (ell(x, y, 40, 50, 23, 36) < 1 || (y > 78 && x > leftEdge(y) - 20 - Math.max(0, y - 98) * 1.6))
-const inRight = (x: number, y: number) => x > rightEdge(y) && y > 16.5 && (ell(x, y, 104, 51.5, 23, 36) < 1 || (y > 79.5 && x < rightEdge(y) + 20 + Math.max(0, y - 99.5) * 1.6))
-/** Closed eyes: a short dark lash line a cheek's width behind the brow. */
-const lash = (x: number, y: number, ex: number, ey: number) => Math.abs(y - ey - .1 * (x - ex) ** 2) < .9 && Math.abs(x - ex) < 3.2
-const face = (d: number, y: number, dx: number) => {
-  // lit by the flame: bright on the profile, ~8 cells of falloff into the cheek, dimmer with height off the flame
-  const fromFlame = len(dx * .6, y - FLAME[1]), key = .35 + .65 * Math.exp(-((fromFlame / 34) ** 2))
-  return key * (.2 + .8 * Math.exp(-d / 14)) * (d < 1.2 ? .8 : 1)
-}
-const closer: Luma = (x, y) => {
-  const df = len((x - FLAME[0]) * 1.3, y - FLAME[1])
-  if (inLeft(x, y)) {
-    const d = leftEdge(y) - x
-    if (lash(x, y, leftEdge(50) - 8, 50.5) || (Math.abs(y - 71.5) < .7 && d < 3.5)) return .04
-    return face(d, y, leftEdge(y) - FLAME[0])
-  }
-  if (inRight(x, y)) {
-    const d = x - rightEdge(y)
-    if (lash(x, y, rightEdge(52) + 8, 52) || (Math.abs(y - 73) < .7 && d < 3.5)) return .04
-    // her hair falls over the back of her head: only the strands nearest the flame catch it
-    const hair = x > rightEdge(y) + 16 && y > 26 ? .35 + .3 * Math.sin(x * .9 + y * .25) : 1
-    return face(d, y, rightEdge(y) - FLAME[0]) * hair
-  }
-  // between them: only the flame's own small halo, the rest is night
-  return .95 * Math.exp(-((df / 7) ** 2))
-}
-const closerPoster = poster({
-  id: 'cinema-closer', n: 5, genre: 'ROMANCE', title: 'CLOSER', tag: 'NO LIGHTS. JUST US.', at: [centre('CLOSER'), BOTTOM],
-  scene: closer, red: (x, y) => (ell(x, y, FLAME[0], FLAME[1], 1.4, 2.9) < 1 ? 1 : 0),
 })
 
 // ── 06 WITNESS · documentary ────────────────────────────────────────────────────────────────────
@@ -545,4 +466,4 @@ const encorePoster = poster({
   scene: encore, red: (x, y) => (rect(x, y, ...ROSE) ? 1 : 0),
 })
 
-export const cinemaBoard = [lastCallPoster, signalPoster, sundownPoster, upstairsPoster, closerPoster, witnessPoster, exit14Poster, keeperPoster, encorePoster]
+export const cinemaBoard = [signalPoster, sundownPoster, upstairsPoster, witnessPoster, exit14Poster, keeperPoster, encorePoster]
