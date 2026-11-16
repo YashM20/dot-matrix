@@ -212,6 +212,11 @@ frameCacheChecks(assert)
   const { cardDrawingChecks } = await import('./verify/card-drawing')
   cardDrawingChecks(assert)
 }
+// MICRO MOTION (#238, #413): the pull hint clears the rows, the send placeholder and caret, drawn read ticks (scripts/verify/motion.ts)
+{
+  const { motionChecks } = await import('./verify/motion')
+  motionChecks(assert)
+}
 // FLAGS (#144, #145) every release flag documented; the URL sets none; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
 await flagChecks(assert)
 // OG KEY (#103) widget OG images cache on each card's golden rows in goldens/<board>.json; no hashes.json index (scripts/verify/og-key.ts)
