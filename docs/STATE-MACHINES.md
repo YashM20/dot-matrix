@@ -132,7 +132,7 @@ final. The URL never sets a flag (`scripts/verify/flags.ts`).
 Persists: `dot480:flags` (JSON of booleans). Missing or corrupt counts as no overrides; blocked storage gives the
 defaults and a `setFlag` that lasts for the page.
 
-Known invalid states: an older key (`dot480:worker`, `dot480:clack`) edited by hand in another tab doesn't notify
+Known invalid states: the older key `dot480:worker` edited by hand in another tab doesn't notify
 this tab (`onStorage` listens to `dot480:flags` only). Not reachable from the UI: only DevTools writes those keys.
 Turning `analytics` off at runtime doesn't stop a running PostHog until the next load. Not reachable from the UI
 either: no control sets that flag.

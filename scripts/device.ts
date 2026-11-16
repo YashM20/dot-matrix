@@ -70,7 +70,7 @@ export function deviceChecks(assert: Assert) {
   for (let i = 0; i < cur.length; i++) { const c = i % 28; if (c >= 16) ok &&= mid.face[i] === old[i] }
   const changed = cur.reduce((n, x, i) => n + (x !== old[i] ? 1 : 0), 0), evs = fs.events(k, k + 1), evCount = evs.reduce((n, e) => n + e.count, 0)
   const peak = Math.max(...Array.from({ length: 200 }, (_, i) => flipAngle(i / 1000, fp.physics.omega, fp.physics.zeta)))
-  assert('flip-disc: old face → column sweep → new face; inertia overshoots and settles; clack events = flips',
+  assert('flip-disc: old face → column sweep → new face; inertia overshoots and settles; column-write events = flips',
     ok && changed > 0 && evCount === changed && evs.every((e, i) => !i || e.t > evs[i - 1].t) && peak > 1.05 && Math.abs(flipAngle(.5, fp.physics.omega, fp.physics.zeta) - 1) < .01,
     `${changed} discs flip at t=${k}, ${evs.length} column writes, peak swing ${peak.toFixed(2)}`)
 

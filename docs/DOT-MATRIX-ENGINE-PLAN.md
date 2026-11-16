@@ -72,7 +72,7 @@ src/components/                   DotCanvas (renderer choice, clock, worker, tra
   game/                           HIVE: PRESS START + play overlay; dots.ts draws layers via the buffer renderer
 src/hooks/                        useDotField (static sample cache), useControlInput, useDrawBoard, useExitSwap, latencyProbe
 src/data/                         live data: createSource, transports (poll, broadcast, websocket, mediaSession), sources, textId/textOf, useLiveData
-src/media/                        shared webcam stream, camera grab → luma Raster, useCamera, useHand (lazy tracker), flip-disc clack
+src/media/                        shared webcam stream, camera grab → luma Raster, useCamera, useHand (lazy tracker)
 src/vision/                       dependency-free hand tracker (skin + motion, blobs, One Euro), HAND-mode virtual pointer, silhouette, synthetic camera
 src/audio/                        Instrument/Scope sound: WebAudio engine, voices, lookahead scheduler, REC; AudioFrame via ctx.media; AudioCards (lazy chunk)
 src/game/                         HIVE: deterministic 60 Hz sim, fixed-step loop, input map, bot, worlds, render → Layer[] on 192×144, scores

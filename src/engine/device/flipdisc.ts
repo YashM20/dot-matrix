@@ -20,7 +20,7 @@ export interface FlipView {
 export interface FlipEvent { t: number; col: number; count: number }
 export interface FlipSim {
   at(t: number): FlipView
-  /** Column writes with at least one flip in [t0, t1): the clack schedule (app-side audio). */
+  /** Column writes with at least one flip in [t0, t1) (the card's SCAN COL readout). */
   events(t0: number, t1: number): FlipEvent[]
   physics: FlipPhysics
   refresh: number
