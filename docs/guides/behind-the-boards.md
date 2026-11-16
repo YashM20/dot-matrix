@@ -38,21 +38,21 @@ The page is 24 columns by 16 rows of character cells, smaller than a real 40 × 
 
 ## Physical materials and lighting
 
-<!-- VISUAL: kind=card · what=mat-denim · notice=denim twill whose highlights run along the threads as the light moves -->
+<!-- VISUAL: kind=card · what=mat-kintsugi · notice=a glazed plate that breaks where you tap it and mends one seam at a time -->
 
-Open `/workshop/` to see physical surfaces drawn in dots: denim (`mat-denim`), the time carved in wood (`mat-wood`) and a pool of mercury (`mat-mercury`).
+Open `/workshop/` to see four materials drawn in dots: a frost window (`mat-frost`), a frost fern on ice (`mat-ice`), a kintsugi plate (`mat-kintsugi`) and a paper fold (`mat-fold`).
 
-Each material card builds a height map, either from a distance field (the carved digits) or from the pattern itself (the denim's twill), then works out surface normals with central differences. Each card has one light. While your pointer hovers a card it acts as a torch; otherwise the light follows your phone's tilt, and failing that the sun for your time of day. Diffuse shading is Lambert. The shine depends on the material: Phong on the wood's lacquer, a thread sheen (Kajiya and Kay's hair model) on the denim and along the wood's rings, and a matcap on the mercury.
+Each card has one light. While your pointer hovers a card it acts as a torch; otherwise the light follows your phone's tilt, and failing that the sun for your time of day. The kintsugi plate builds a height map of its glaze and shards, works out surface normals with central differences, and shades them with Lambert for the body and Phong for the shine. The paper fold lights each facet by the way it faces the light, so the back of the sheet sits one band darker.
 
 On a one-color display a highlight has to be a bigger dot. On a phone that reports tilt, tipping it moves the light, and the highlights glide across the cards.
 
-<!-- VISUAL: kind=card · what=mat-wood · notice=the time carved in a lacquered board, one groove wall lit and one dark under the raked light -->
+<!-- VISUAL: kind=card · what=mat-frost · notice=one snowflake a day, its rim brightest on the side that faces the light -->
 
 Each material has its own rules.
 
-The denim (`mat-denim`) is a 3/1 twill, with the warp on the face and the white weft behind it. Its threads are shaded with the sheen model, so light runs along the thread.
+The frost window (`mat-frost`) grows one snowflake a day on a hex lattice. The rim cells that face the light are the brightest, and the cells freezing right now are red. The frost fern (`mat-ice`) grows one grain at a time, and a grain catches a glint when its branch runs across the light. Hover or tap to breathe on it: the frost melts round that spot, then freezes back.
 
-The wood (`mat-wood`) cuts the time into the board as a groove. The light rakes low across it, so one wall of each groove catches it and the other falls into shadow. The mercury (`mat-mercury`) is a simulated liquid: its density becomes a height, read through a matcap, so the pool looks like curved metal. Stir it, tip the phone to pour it, or tap to split off a bead.
+The kintsugi plate (`mat-kintsugi`) breaks where you tap it. Its cracks fill one seam at a time, and the seam filling now is red.
 
 ## More boards
 
