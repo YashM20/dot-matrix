@@ -6,6 +6,7 @@
 import { clamp, hash01, len } from '../../engine/math'
 import type { Field, Tone } from '../../engine/types'
 import { TAU, TILE, layer, layoutFor, tileStyle, toneRamp, type WidgetPreset } from '../types'
+import { scrubber, type ScrubSpec } from '../dot-controls'
 
 const T = layoutFor(TILE)
 const BODY = { lattice: 1.3 }
@@ -214,19 +215,17 @@ export const goodMorning: WidgetPreset = {
   },
 }
 
+/** The queue rail: big sites, one tone each side of the red knob. */
+const SCRUB: ScrubSpec = { x0: 0, x1: 143, y: 140, spacing: 4.2, size: 2.3, knob: 8.5, gap: 7 }
 export const cardiology: WidgetPreset = {
   id: 'cardiology', name: 'Henry Li · Cardiology', group: 'text', chrome: 'dots', grid: TILE, style: tileStyle,
   defaults: { position: 0.4 },
-  layers: ({ data }) => {
-    const knob = Math.round(data.position * 143)
-    return [
-      layer(T.big('A-07', 0, 37, { lattice: 3.05, smooth: true })),
-      layer(T.big('03 AHEAD', 0, 91, BODY), 'idle'),
-      layer(T.dotLine(0, 140, knob - 7, 140, { spacing: 4.2, size: 2.3 }), 'idle'),
-      layer(T.dotLine(knob + 7, 140, 143, 140, { spacing: 4.2, size: 2.3 }), 'idle'),
-      layer(T.dots([[knob, 140]], 8.5), 'active'),
-    ]
-  },
+  layers: ({ data }) => [
+    layer(T.big('A-07', 0, 37, { lattice: 3.05, smooth: true })),
+    layer(T.big('03 AHEAD', 0, 91, BODY), 'idle'),
+    // the shared scrubber (#360); both sides `idle`, as the sheet draws them
+    ...scrubber(SCRUB, data.position, ['idle', 'idle', 'active']),
+  ],
 }
 
 export const listening: WidgetPreset = {
