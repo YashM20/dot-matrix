@@ -76,13 +76,16 @@ export interface LaunchOptions {
   testHooks?: boolean
   /** Flags to seed on every page, over the probe defaults `{ make: true, lab: true }` (see the header). */
   flags?: Flags
+  /** A mouse: headless Chrome on the runner reports no hover and no fine pointer, so the site takes its touch rules;
+   * these Blink settings match `(hover: hover) and (pointer: fine)` instead. */
+  mouse?: boolean
 }
 
 export async function launch(width: number, height: number, opts: LaunchOptions = {}): Promise<Page> {
   const chrome = findChrome()
   if (!chrome) throw new Error('no Chrome found (set $CHROME)')
   // a cold Chrome on a shared CI runner can take well over 10 s to open its DevTools port: startChrome waits and retries
-  const { proc, port, profile } = await startChrome(chrome, ['--no-first-run', '--no-default-browser-check', ...(opts.scrollbars ? [] : ['--hide-scrollbars']), `--window-size=${width},${height}`, ...(process.env.CHROME_FLAGS?.split(' ').filter(Boolean) ?? []), 'about:blank'])
+  const { proc, port, profile } = await startChrome(chrome, ['--no-first-run', '--no-default-browser-check', ...(opts.scrollbars ? [] : ['--hide-scrollbars']), ...(opts.mouse ? ['--blink-settings=primaryHoverType=2,availableHoverTypes=2,primaryPointerType=4,availablePointerTypes=4'] : []), `--window-size=${width},${height}`, ...(process.env.CHROME_FLAGS?.split(' ').filter(Boolean) ?? []), 'about:blank'])
   const ws = new WebSocket(await pageSocket(port))
   let openTimer: ReturnType<typeof setTimeout> | undefined
   const opened = await new Promise<boolean>(r => { openTimer = setTimeout(() => r(false), 20000); ws.addEventListener('open', () => r(true), { once: true }) })

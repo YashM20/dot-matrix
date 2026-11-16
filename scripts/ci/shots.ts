@@ -13,8 +13,8 @@
  * scrolled to its skin list) and `boards` (the BOARDS sheet, scrolled to its ENGINE group); `card-more`, `display`, `theme`,
  * `tools` and `boards` capture the viewport only, e.g. `/@1280@dark@display`, `/@390@light@tools`. `focus` puts the
  * keyboard focus ring on the page's first toolbar button, else the first card row action (the viewport, the control in
- * its middle); `press` holds a mouse press on the page's first toolbar button (the viewport, the button in its middle;
- * add `motion` to see it sink, #341); `load-failed` answers every board chunk 404, so the boards show their error state (LoadBoundary.tsx)
+ * its middle); `press` holds a mouse press on the page's first toolbar button (the viewport, the button in its middle, in a
+ * Chrome with a mouse; add `motion` to see it sink, #341); `load-failed` answers every board chunk 404, so the boards show their error state (LoadBoundary.tsx)
  * after the page's one stale-deploy reload, e.g. `/levels/@390@light@load-failed`.
  * Two options name a card control by its data key (letters and digits): `hover=<key>` puts the mouse on it and
  * `focus=<key>` reaches it from the keyboard (Shift+Tab, then Tab), so its dot hover or focus ring shows; both capture
@@ -25,7 +25,7 @@
  */
 import { mkdirSync, readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { launch, serveDist, sleep } from '../lib/cdp'
+import { launch, serveDist, sleep, type Page } from '../lib/cdp'
 import { ACCENTS, SCHEMES } from '../../src/site/theme/names'
 
 const argv = process.argv.slice(2)
@@ -129,13 +129,19 @@ async function reach(t: Target): Promise<boolean> {
 
 mkdirSync(out, { recursive: true })
 const server = await serveDist(4318)
-const page = await launch(1280, 900)
-// `load-failed`: while Fetch is on, every paused request (a board chunk) is answered 404, as after a new deploy
-page.on('Fetch.requestPaused', e => { void page.cdp('Fetch.fulfillRequest', { requestId: e.requestId, responseCode: 404, body: Buffer.from('gone').toString('base64') }).catch(() => {}) })
+/** One Chrome at a time; `press` needs one with a mouse (the runner's has no fine pointer), so it reopens for it. */
+let page: Page, mouse = false
+const open = async (m: boolean) => {
+  page = await launch(1280, 900, { mouse: m }); mouse = m
+  // `load-failed`: while Fetch is on, every paused request (a board chunk) is answered 404, as after a new deploy
+  page.on('Fetch.requestPaused', e => { void page.cdp('Fetch.fulfillRequest', { requestId: e.requestId, responseCode: 404, body: Buffer.from('gone').toString('base64') }).catch(() => {}) })
+}
+await open(false)
 let failed = 0
 try {
   for (const it of parsed as Item[]) {
     const phone = it.width <= 600, H = phone ? 844 : 900, t = Date.now(), dpr = it.opts.includes('2x') ? 2 : 1
+    if (it.opts.includes('press') !== mouse) { await page.close(); await open(!mouse) }
     await page.cdp('Emulation.setDeviceMetricsOverride', { width: it.width, height: H, deviceScaleFactor: dpr, mobile: phone })
     await page.cdp('Emulation.setTouchEmulationEnabled', phone ? { enabled: true, maxTouchPoints: 5 } : { enabled: false })
     await page.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: it.opts.includes('motion') ? 'no-preference' : 'reduce' }, { name: 'prefers-color-scheme', value: it.scheme }] })
