@@ -374,9 +374,9 @@
 
 /* phones: a full-width card, the panel under it */
 @media (max-width: 760px) {
-  /* the top pills stay pinned under the status bar (iOS-style); the page starts under them */
+  /* the top pills stay pinned under the status bar (iOS-style); the page starts a group step under them (R5) */
   .wp {
-    padding-top: calc(var(--space-8) + env(safe-area-inset-top))
+    padding-top: calc(2 * var(--gap-group) + var(--pillbar-h) + env(safe-area-inset-top))
   }
 
   .wp-top {
