@@ -15,17 +15,17 @@
   background: var(--surface)
 }
 
-/* wide: the header band is a grid. The intro, the picker and ALL's title and blurb stack on the left; the hero (a
-   216 px card with its 240 px legend beside it, so a legend part never breaks) stands on the right across them, as
-   the float it replaces did; ALL's filters and cards run full width under whichever side ends lower. ALL's section
-   adds no box here (its parts are the grid's items), so the first row of cards stays where it was. The blurb's row
-   takes the hero's extra height, so the steps on the left hold (and close up when the intro is dismissed). */
+/* wide: the header band is a grid. The intro, the picker and ALL's title, blurb and filters stack on the left; the hero
+   (a 216 px card with its 240 px legend beside it, so a legend part never breaks) stands on the right across them,
+   where the float it replaces stood; ALL's cards run full width a group step under whichever side ends lower. ALL's
+   section adds no box here (its parts are the grid's items). The filters' row takes the hero's extra height, so the
+   steps on the left hold, and with the intro dismissed the filters still sit beside the hero, as they did by the float. */
 @media (min-width: 1280px) {
   .boards-view--hero {
     display: grid;
-    grid-template-areas: "intro hero" "picker hero" "title hero" "blurb hero" "tools tools" "cards cards";
+    grid-template-areas: "intro hero" "picker hero" "title hero" "blurb hero" "tools hero" "cards cards";
     grid-template-columns: minmax(0, 1fr) 468px;
-    grid-template-rows: auto auto auto 1fr auto auto;
+    grid-template-rows: auto auto auto auto 1fr auto;
     align-items: start;
     column-gap: var(--gap-action)
   }
