@@ -1,76 +1,16 @@
 {
  "about": "FNV-1a 32 of the sorted quantized dot list per preset on the workshop board (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
  "presets": {
-  "mat-knit": {
+  "mat-frost": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "bd1fde38",
-    "dots": 10525
+    "hash": "42bc3196",
+    "dots": 1186
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "b2fb04f6",
-    "dots": 10219
-   }
-  },
-  "mat-denim": {
-   "t=0": {
-    "style": "squircle:2.30",
-    "hash": "7f16d07c",
-    "dots": 10397
-   },
-   "t=1.3": {
-    "style": "squircle:2.30",
-    "hash": "7f16d07c",
-    "dots": 10397
-   }
-  },
-  "mat-paper": {
-   "t=0": {
-    "style": "squircle:2.30",
-    "hash": "7d933a78",
-    "dots": 9028
-   },
-   "t=1.3": {
-    "style": "squircle:2.30",
-    "hash": "7d933a78",
-    "dots": 9028
-   }
-  },
-  "mat-wood": {
-   "t=0": {
-    "style": "squircle:2.30",
-    "hash": "03ca5769",
-    "dots": 7217
-   },
-   "t=1.3": {
-    "style": "squircle:2.30",
-    "hash": "03ca5769",
-    "dots": 7217
-   }
-  },
-  "mat-leather": {
-   "t=0": {
-    "style": "squircle:2.30",
-    "hash": "4bd2377e",
-    "dots": 10225
-   },
-   "t=1.3": {
-    "style": "squircle:2.30",
-    "hash": "4bd2377e",
-    "dots": 10225
-   }
-  },
-  "mat-sand": {
-   "t=0": {
-    "style": "squircle:2.30",
-    "hash": "78f54ece",
-    "dots": 4496
-   },
-   "t=1.3": {
-    "style": "squircle:2.30",
-    "hash": "78f54ece",
-    "dots": 4496
+    "hash": "b385e1ae",
+    "dots": 1222
    }
   },
   "mat-ice": {
@@ -85,66 +25,6 @@
     "dots": 885
    }
   },
-  "mat-mercury": {
-   "t=0": {
-    "style": "squircle:2.30",
-    "hash": "895dd7f4",
-    "dots": 2355
-   },
-   "t=1.3": {
-    "style": "squircle:2.30",
-    "hash": "895dd7f4",
-    "dots": 2355
-   }
-  },
-  "mat-thread": {
-   "t=0": {
-    "style": "squircle:2.30",
-    "hash": "bf633152",
-    "dots": 1508
-   },
-   "t=1.3": {
-    "style": "squircle:2.30",
-    "hash": "497c764d",
-    "dots": 1504
-   }
-  },
-  "mat-lichtenberg": {
-   "t=0": {
-    "style": "squircle:2.30",
-    "hash": "3f29a329",
-    "dots": 9768
-   },
-   "t=1.3": {
-    "style": "squircle:2.30",
-    "hash": "8192cde8",
-    "dots": 9759
-   }
-  },
-  "mat-erosion": {
-   "t=0": {
-    "style": "squircle:2.30",
-    "hash": "e5244ca3",
-    "dots": 6740
-   },
-   "t=1.3": {
-    "style": "squircle:2.30",
-    "hash": "a830b747",
-    "dots": 6742
-   }
-  },
-  "mat-frost": {
-   "t=0": {
-    "style": "squircle:2.30",
-    "hash": "42bc3196",
-    "dots": 1186
-   },
-   "t=1.3": {
-    "style": "squircle:2.30",
-    "hash": "b385e1ae",
-    "dots": 1222
-   }
-  },
   "mat-kintsugi": {
    "t=0": {
     "style": "squircle:2.30",
@@ -155,18 +35,6 @@
     "style": "squircle:2.30",
     "hash": "9b0859d8",
     "dots": 9338
-   }
-  },
-  "mat-mud": {
-   "t=0": {
-    "style": "squircle:2.30",
-    "hash": "9e5f0346",
-    "dots": 10008
-   },
-   "t=1.3": {
-    "style": "squircle:2.30",
-    "hash": "e3cfa8f5",
-    "dots": 9831
    }
   },
   "mat-fold": {
