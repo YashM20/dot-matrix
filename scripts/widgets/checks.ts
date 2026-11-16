@@ -10,7 +10,7 @@ import { canonicalWidgetUrl, isUid, makeUid, resolveWidget, shortPath, widgetPat
 import { urlForView, viewFromUrl } from '../../src/site/views'
 import { widgetPageMeta } from '../../src/site/meta'
 import { widgetById } from '../../src/widgets'
-import { dot480 } from '../../src/engine/theme/tokens'
+import { cardFrame, dot480 } from '../../src/engine/theme/tokens'
 import { presetSource } from '../../src/export/source'
 import { cardHTML, cardSVG } from '../../src/export/snippets'
 import { idsChecks } from './ids'
@@ -66,9 +66,9 @@ export function shareChecks(check: Assert) {
     && urlForView({ view: 'EXPLORE', mode: 'TUNE', board: 'light', all: false }, '', '/8vw39pnx') === '/light/' && urlForView({ view: 'MAKE', mode: 'CODE', board: 'henry', all: true }, '', '/widget/timer/') === '/?make=code')
   // exports (S2): the card SVG is one standalone document with a title and credit; the HTML snippet has no script
   const timerPreset = widgetById('timer')!, src = presetSource(timerPreset, dot480), credit = { name: 'Timer <3>', slug: 'timer', url: 'https://x/widget/timer/' }
-  const svg = cardSVG(src.frame(0), { width: src.width, height: src.height, background: dot480.surface, border: dot480.hairline }, credit), html = cardHTML(svg, credit)
-  check('share: card SVG export is one escaped, titled document on the card surface; HTML is a linked static SVG with no script',
-    svg.startsWith('<!-- dot480 card timer · https://x/widget/timer/ -->\n<svg ') && (svg.match(/<svg /g) ?? []).length === 2 && svg.includes('<title>Timer &lt;3&gt; · MATRIX</title>') && svg.includes(`fill="${dot480.surface}"`)
+  const svg = cardSVG(src.frame(0), { width: src.width, height: src.height, ...cardFrame(dot480) }, credit), html = cardHTML(svg, credit)
+  check('share: card SVG export is one escaped, titled document in the site card frame (surface, hairline, 12 px radius); HTML is a linked static SVG with no script',
+    svg.startsWith('<!-- dot480 card timer · https://x/widget/timer/ -->\n<svg ') && (svg.match(/<svg /g) ?? []).length === 2 && svg.includes('<title>Timer &lt;3&gt; · MATRIX</title>') && svg.includes(`rx="12" fill="${dot480.surface}" stroke="${dot480.hairline}"`)
     && html.includes('<a href="https://x/widget/timer/"') && !/<script/i.test(html) && !html.includes('-->\n<svg') && (html.match(/<svg /g) ?? []).length === 2,
     `${(svg.length / 1024).toFixed(1)} KB svg`)
   const timer = index.find(x => x.slug === 'timer')!, pm = widgetPageMeta(timer)

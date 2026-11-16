@@ -2,11 +2,12 @@
 /**
  * MATRIX card host for React: a thin wrapper over the framework-free card runtime (`lib/matrix/widgets/mount`).
  * The runtime samples the preset's fields onto its dot grid and draws SVG (static, under 2000 dots) or Canvas
- * (animated or dense), handles pointer and keyboard controls, and honours reduced motion. The card is padded by
- * `--matrix-card-pad` (default 16px; none for edge-to-edge photo cards) and fills the width you give it.
+ * (animated or dense), handles pointer and keyboard controls, and honours reduced motion. The card wears the MATRIX
+ * card frame (`cardFrame`: the theme's surface, a 1px hairline, the card radius), is padded by `--matrix-card-pad`
+ * (default 16px; none for edge-to-edge photo cards) and fills the width you give it.
  */
 import { useEffect, useRef, type CSSProperties } from 'react'
-import { dot480, mountCard, type CardHandle, type CardOptions, type RendererChoice, type ThemeTokens, type WidgetPreset } from '@/lib/matrix/widgets/mount'
+import { cardFrame, dot480, mountCard, type CardHandle, type CardOptions, type RendererChoice, type ThemeTokens, type WidgetPreset } from '@/lib/matrix/widgets/mount'
 
 export type { RendererChoice, ThemeTokens, WidgetPreset }
 
@@ -45,13 +46,13 @@ export function MatrixDotCard({ preset, data, theme, renderer, pitch, animated, 
   useEffect(() => {
     handle.current?.update({ data: JSON.parse(dataKey) as Record<string, number>, theme, renderer, pitch, animated, reducedMotion })
   }, [dataKey, theme, renderer, pitch, animated, reducedMotion])
-  const t = theme ?? dot480
+  const f = cardFrame(theme ?? dot480)
   return (
     <div
       ref={ref}
       className={className ? `matrix-card ${className}` : 'matrix-card'}
       style={{
-        position: 'relative', boxSizing: 'border-box', background: t.bg, borderRadius: t.cornerRadiusCard, overflow: 'hidden',
+        position: 'relative', boxSizing: 'border-box', background: f.background, border: `1px solid ${f.border}`, borderRadius: f.radius, overflow: 'hidden',
         padding: preset.bleed ? 0 : 'var(--matrix-card-pad, 16px)', ...style,
       }}
     />
