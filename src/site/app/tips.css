@@ -118,3 +118,11 @@
 [data-tip][data-kbd]:active::before {
   opacity: 0
 }
+
+/* touch: no tooltips (a tap would leave one behind on the bar it pressed); a copy's "Copied" (.copied) still shows */
+@media (hover: none), (pointer: coarse) {
+  [data-tip]:not(.copied)::after,
+  [data-tip][data-kbd]::before {
+    display: none
+  }
+}

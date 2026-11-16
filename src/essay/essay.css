@@ -128,7 +128,7 @@ em { color: var(--value) }
 .ir { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); align-items: start }
 .ir-code { display: grid; gap: var(--space-2) }
 .ir textarea { width: 100%; resize: vertical; font: var(--fs-label-12)/1.55 var(--mono); color: var(--value); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-panel); padding: var(--space-3); tab-size: 2 }
-.ir textarea:focus { outline: 1px solid var(--red); outline-offset: 2px }
+.ir textarea:focus { outline: 1px solid var(--red); outline-offset: var(--focus-out) }
 .ir-status { font: var(--fs-label-12) var(--mono); color: var(--mute); letter-spacing: .06em; min-height: 1.4em }
 .ir-status--err { color: var(--value) }
 

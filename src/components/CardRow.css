@@ -192,12 +192,6 @@
     height: var(--tap);
     translate: -50% 0
   }
-
-  /* no hover tooltips on touch (a tap would leave one behind); "Copied" still shows */
-  .dot-card-row [data-tip]:not(.copied)::after {
-    display: none
-  }
-
 }
 
 /* the row itself carries the tooltip group's --tip-on transition (tips.css): its children fade */
