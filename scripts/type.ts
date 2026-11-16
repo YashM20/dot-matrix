@@ -72,4 +72,15 @@ export function typeChecks(assert: Assert) {
     return dots.length
   })
   assert(`type board: ${board.items.length} cards render, one red (the marquee's ON AIR dot)`, counts.every(n => n > 100) && reds.join() === 'type-marquee', `dots ${counts.join('/')}`)
+
+  // BREATHE: the t = 0 still (reduced motion, first paint) is the full inhale, hinted, so every dot is whole (#243)
+  const kin = board.items.find(p => p.id === 'type-kinetic')!, breath = kin.layers({ t: 0, data: {} })[2].field, bv: number[] = []
+  for (let r = 100; r < 125; r++) for (let c = 0; c < 144; c++) bv.push(breath(c / 143, r / 143))
+  assert('type board: BREATHE holds crisp at t = 0 (no part-lit edge dots)', bv.some(v => v === 1) && bv.every(v => v === 0 || v === 1))
+  // the pangram keeps its tracking on the card at every width (#243)
+  const axes = board.items.find(p => p.id === 'type-axes')!, inCard = [0, .5, 1].every(wdth => {
+    const b = axes.layers({ t: 0, data: { ...axes.defaults, wdth, wght: 1 } })[1].field.bounds!
+    return b[0] >= 0 && b[2] <= 143
+  })
+  assert('type board: the pangram stays inside the card at every width', inCard)
 }
