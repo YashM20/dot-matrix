@@ -9,8 +9,8 @@
  *
  * Role names are the CSS custom properties of src/tokens.css (`red` = {colors.dotActive}, `surface`, `value`, …).
  * Checks, per theme (7 accents × dark/light), with no waiver (T6): every generated colour inside sRGB; WCAG 4.5:1 for
- * the text roles (`value`, `label`, `mute`, `dot-idle`) and `red-text` on every surface (+ APCA Lc 60 on `surface`),
- * `on-red` on the solid, `red-surface-text` on `red-surface`; 3:1 for the glyph grey `dim`; under `prefers-contrast:
+ * the text roles (`value`, `label`, `mute`, `dot-idle`) and `red-text` on every surface (+ APCA Lc 60 on `surface`);
+ * 3:1 for the glyph grey `dim`; under `prefers-contrast:
  * more`, 7:1 for label, mute and red-text and 4.5:1 for `dim`; 3:1 for the accent dots (`red`) and `red-line` on
  * `surface` and `bg`; the same rules for every custom hue (0–359°, both schemes); every `color:` in the site CSS a
  * text role (or `dim` on a glyph); APCA
@@ -30,7 +30,7 @@ import { join } from 'node:path'
 import { ACCENT_ROLES, ACCENT_SPECS, customCss, DARK, decls, DOT_ROLES, generateAll, generateHue, MORE, MORE_ROLES, moreRoles, NEUTRAL_ROLES, NEUTRALS, neutralRoles, PINS, type Role, type Theme } from '../../src/site/theme/accents'
 import { apca, CVD_DE, CVD_DL, distinctness, gamutMisses, hexToRgb, wcag } from '../../src/site/theme/color'
 import { BOOT_END, BOOT_SCRIPT, BOOT_START, bootTag } from '../../src/site/theme/boot'
-import { isCustomCss } from '../../src/site/theme/customPattern'
+import { CUSTOM_CSS_MAX, isCustomCss } from '../../src/site/theme/customPattern'
 import { ACCENTS, moreSelector, SCHEMES, type Scheme } from '../../src/site/theme/names'
 import type { ThemeTokens } from '../../src/engine/types'
 import { dot480 } from '../../src/engine/theme/tokens'
@@ -60,10 +60,10 @@ function todayRoles(): Partial<Record<Role, string>> {
 /** The roles text may be set in (`color:` in the site CSS); each is held to 4.5:1 on every surface in every theme. */
 export const TEXT_ROLES = ['value', 'label', 'mute', 'dot-idle', 'red-text'] as const
 /**
- * Other `color:` values the site CSS may use: text on a fill (`bg` on a `value` pill, `on-red` on the accent,
- * `red-surface-text` on its inset) and `tint` (the ink of washes, as strong as `value`), checked as pairs below.
+ * Other `color:` values the site CSS may use: text on a fill (`bg` on a `value` pill) and `tint` (the ink of washes,
+ * as strong as `value`), checked as pairs below.
  */
-const TEXT_ON_FILL = ['bg', 'tint', 'on-red', 'red-surface-text'] as const
+const TEXT_ON_FILL = ['bg', 'tint'] as const
 /**
  * Glyphs in `--dim` (≥ 3:1, WCAG 1.4.11 non-text): the editor's grip, off eye and lock. Nothing else may use it as a colour.
  */
@@ -213,7 +213,7 @@ export async function themeChecks(assert: Assert, { print = false } = {}): Promi
 
   const SURF = ['bg', 'panel', 'surface', 'raised'] as const, TEXT = TEXT_ROLES
   const textFail = themes.flatMap(textFailures)
-  assert(`theme: WCAG ≥ 4.5:1, no waiver — ${TEXT.join(' / ')} on bg / panel / surface / raised, value on tint fills (bg on value), on-red on red, red-surface-text on red-surface; dim ≥ 3:1 (glyphs)`, !textFail.length, textFail.join(', '))
+  assert(`theme: WCAG ≥ 4.5:1, no waiver — ${TEXT.join(' / ')} on bg / panel / surface / raised, value on tint fills (bg on value); dim ≥ 3:1 (glyphs)`, !textFail.length, textFail.join(', '))
   const moreFail = themes.flatMap(t => {
     const m = moreRoles(t), r = { ...t.roles, ...m }
     return [...(['label', 'mute', 'red-text'] as const).flatMap(k => SURF.filter(s => wcag(r[k], r[s]) < MORE.text).map(s => `${t.name}.${k}/${s} ${fmt(wcag(r[k], r[s]))}`)),
@@ -270,6 +270,10 @@ export async function themeChecks(assert: Assert, { print = false } = {}): Promi
   const drift = Object.entries(today).filter(([k, v]) => !(k in ds.roles) || !sameColour(ds.roles[k as Role], v!)).map(([k, v]) => `${k} ${ds.roles[k as Role] ?? '(no such role)'} ≠ ${v}`)
   const eng = engineOf(ds.roles), engDrift = Object.entries(eng).filter(([k, v]) => !sameColour(v as string, dot480[k as keyof ThemeTokens] as string)).map(([k]) => k)
   assert(`theme: dark_signal equals the ${Object.keys(today).length} colour roles of src/tokens.css :root and its engine tokens equal dot480`, Object.keys(today).length >= 17 && !drift.length && !engDrift.length, [...drift, ...engDrift].join(', '))
+  // the card radius: the site's CSS (--radius-card) and the engine token the card exports and the registry host draw
+  // (cardFrame) are one value (#356)
+  const radiusCss = /--radius-card:\s*(\d+)px/.exec(readFileSync(FILES.tokens, 'utf8'))?.[1]
+  assert(`theme: --radius-card (${radiusCss} px) equals dot480.cornerRadiusCard (${dot480.cornerRadiusCard} px)`, Number(radiusCss) === dot480.cornerRadiusCard)
   assert('theme: dark_signal is untinted (neutrals = the dark base exactly)', NEUTRAL_ROLES.every(k => ds.roles[k] === schemeBase('dark')[k]) && ds.roles.panel === DARK.panel)
   const pinDrift = Object.entries(PINS).flatMap(([n, p]) => Object.entries(p!).filter(([k, v]) => themes.find(t => t.name === n)!.roles[k as Role] !== v).map(([k]) => `${n}.${k}`))
   assert('theme: hand-pinned values win (dark_signal, dark_vite, light_vite)', !pinDrift.length && themes.find(t => t.name === 'dark_vite')!.roles.red === '#B39AFF' && themes.find(t => t.name === 'light_vite')!.roles.red === '#6C3BFF', pinDrift.join(', '))
@@ -340,7 +344,7 @@ export async function themeChecks(assert: Assert, { print = false } = {}): Promi
   assert("theme: every hue's customCss() (0–359°) and the CSS stored before CONTRAST: MORE pass the stored CSS shape test", !shapeMiss.length && isCustomCss(cssOld), shapeMiss.slice(0, 5).join(', '))
   const BAD = [EVIL, '', cssNow + 'html{display:none}', cssNow.replace('--bg: #', '--bg: url(//x/a.png) #'), cssNow.replace('{--bg:', '{/* */--bg:'), cssNow.replace(/#[0-9A-F]{6}/, '#06080'),
     cssNow.replace('[data-accent="custom"]', '[data-accent="signal"]'), cssNow.replace('--bg:', 'background:'), cssNow.replace(';--panel', ';}html{--panel'), '@import url(x.css);' + cssNow,
-    cssNow.replace('transparent)', 'transparent) !important'), cssNow.replace(/#[0-9A-F]{6}/, 'red'), cssNow + '\n', cssNow.repeat(4), 5, null]
+    cssNow.replace('transparent)', 'transparent) !important'), cssNow.replace(/#[0-9A-F]{6}/, 'red'), cssNow + '\n', cssNow.repeat(Math.ceil(CUSTOM_CSS_MAX / cssNow.length) + 1), 5, null]
   const passed = BAD.filter(b => isCustomCss(b))
   assert(`theme: the stored CSS shape test refuses tampered CSS (${BAD.length} cases: other rules, selectors, properties, url(), comments, at-rules, !important, colour names, broken hex, too long, not a string)`, !passed.length, passed.map(b => String(b).slice(0, 60)).join(' | '))
   assert('theme: custom CSS stored before CONTRAST: MORE is replaced by the current generator output', cleanStored(entry({ scheme: 'dark', accent: 'custom', hue: 212, css: cssOld }), customCss) === entry({ scheme: 'dark', accent: 'custom', hue: 212, css: cssNow }))
@@ -384,11 +388,11 @@ export async function themeChecks(assert: Assert, { print = false } = {}): Promi
   assert('theme: tokensOf(scheme, accent) matches the role table for all 14 themes and is memoised', !tokFail.length, tokFail.join(', '))
 
   if (print) {
-    console.log('\n  theme          red      hover    text     line     dim      on-red   solid C (req → got)  min text  dot/surface')
+    console.log('\n  theme          red      text     line     dim      solid C (req → got)  min text  dot/surface')
     for (const t of themes) {
       const r = t.roles, minText = Math.min(...TEXT.flatMap(k => SURF.map(s => wcag(r[k], r[s]))))
       const clamp = t.pinned.includes('red') ? 'pinned' : `${fmt(t.solid.requestedC, 3)} → ${fmt(t.solid.C, 3)}${t.solid.C < t.solid.requestedC - 1e-3 ? ` (−${fmt(100 * (1 - t.solid.C / t.solid.requestedC), 0)}%)` : ''}`
-      console.log(`  ${t.name.padEnd(14)} ${r.red}  ${r['red-hover']}  ${r['red-text']}  ${r['red-line']}  ${r['red-dim']}  ${r['on-red']}  ${clamp.padEnd(20)} ${fmt(minText)}:1    ${fmt(wcag(r.red, r.surface))}:1`)
+      console.log(`  ${t.name.padEnd(14)} ${r.red}  ${r['red-text']}  ${r['red-line']}  ${r['red-dim']}  ${clamp.padEnd(20)} ${fmt(minText)}:1    ${fmt(wcag(r.red, r.surface))}:1`)
     }
     for (const row of cvdRows) console.log(`  cvd ${row}`)
   }
@@ -399,7 +403,7 @@ function textFailures(t: Theme): string[] {
   const r = t.roles, SURF = ['bg', 'panel', 'surface', 'raised'] as const, out: string[] = []
   const pairs: [string, string, string, number][] = [
     ...TEXT_ROLES.flatMap(k => SURF.map(s => [`${k}/${s}`, r[k], r[s], 4.5] as [string, string, string, number])),
-    ['value/tint-fill', r.bg, r.value, 4.5], ['on-red', r['on-red'], r.red, 4.5], ['red-surface-text', r['red-surface-text'], r['red-surface'], 4.5],
+    ['value/tint-fill', r.bg, r.value, 4.5],
     ...SURF.map(s => [`dim/${s}`, r.dim, r[s], 3] as [string, string, string, number]),
   ]
   for (const [k, fg, bg, min] of pairs) { const c = wcag(fg, bg); if (c < min) out.push(`${t.name}.${k} ${fmt(c)}:1`) }
