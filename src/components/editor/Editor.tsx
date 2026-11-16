@@ -249,7 +249,8 @@ function useShortcuts(phone: boolean) {
       if (json) { e.clipboardData?.setData('text/plain', json); e.preventDefault() }
     }
     const later = (fn: () => void) => { raised = false; setTimeout(() => { if (!raised) fn() }, 0) }
-    const toSystem = (json?: string) => { if (json) void navigator.clipboard?.writeText(json).catch(() => { /* not allowed: this browser's copy still pastes */ }) }
+    // not allowed (or no answer): this browser's copy still pastes
+    const toSystem = (json?: string) => { if (json) void copyText(json) }
     const onKey = (e: KeyboardEvent) => {
       if (editable(e.target) || (e.target instanceof Element && e.target.closest('.ed-confirm')) || document.querySelector('.pal-backdrop, .pal-shell')) return
       const s = getEditor(), d = s.h.present, mod = e.ctrlKey || e.metaKey, k = e.key.toLowerCase()
