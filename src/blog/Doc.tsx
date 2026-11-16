@@ -58,7 +58,7 @@ function Code({ lang, text }: { lang: string; text: string }) {
     const t = window.setTimeout(() => setState('idle'), 1800)
     return () => window.clearTimeout(t)
   }, [state])
-  const copy = async () => setState(await copyText(text) ? 'copied' : 'failed')
+  const copy = async () => setState(await copyText(text))
   // tokenised once per block; plain runs stay text nodes, so a long snippet costs a few hundred spans at most
   const tokens = useMemo(() => highlight(text, lang), [text, lang])
   return (
