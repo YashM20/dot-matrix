@@ -225,7 +225,7 @@ export const algoAttractor: WidgetPreset = {
     return [
       cite('CLIFFORD MAP'),
       atLayer(t),
-      ...footer(.5 + .5 * Math.sin(t * 2 * Math.PI / 37), `A ${q.a.toFixed(2)} B ${q.b.toFixed(2)}`, '32K STEPS'),
+      ...footer(.5 + .5 * Math.sin(t * 2 * Math.PI / 37), `A ${q.a.toFixed(2)} B ${q.b.toFixed(2)}`, '32K'),
     ]
   },
 }
