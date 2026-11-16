@@ -59,7 +59,7 @@
 .hero-note {
   margin: var(--space-1) 0 0;
   color: var(--mute);
-  font: 400 var(--fs-label-12)/1.5 var(--mono);
+  font: 400 var(--fs-label-12)/var(--lh-body) var(--mono);
   text-wrap: pretty
 }
 

@@ -43,15 +43,15 @@
 .fig-cap {
   margin: var(--space-2) 0 0;
   color: var(--mute);
-  font: 400 var(--fs-label-12)/1.5 var(--mono);
-  letter-spacing: .02em
+  font: 400 var(--fs-label-12)/var(--lh-body) var(--mono);
+  letter-spacing: var(--track-snug)
 }
 
 .fig-cap b {
   margin-right: var(--space-2);
   color: var(--label);
   font-weight: 500;
-  letter-spacing: .12em
+  letter-spacing: var(--track-caps)
 }
 
 /* the live number band (§1c #13): one engine stat in dot type, in the footer band */

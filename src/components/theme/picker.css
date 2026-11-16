@@ -10,8 +10,8 @@
   width: min(328px, calc(100cqi - 24px));
   padding: var(--space-3);
   color: var(--label);
-  font: 500 var(--fs-label-12)/1.3 var(--mono);
-  letter-spacing: .1em;
+  font: 500 var(--fs-label-12)/var(--lh-snug) var(--mono);
+  letter-spacing: var(--track-caps);
   text-align: left
 }
 
@@ -68,7 +68,7 @@
   background: none;
   color: var(--mute);
   font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .12em;
+  letter-spacing: var(--track-caps);
   cursor: pointer
 }
 
@@ -200,7 +200,7 @@
   margin: 0;
   color: var(--mute);
   font-size: var(--fs-label-12);
-  letter-spacing: .06em;
+  letter-spacing: var(--track-label);
   text-transform: uppercase
 }
 
@@ -216,7 +216,7 @@
   background: none;
   color: var(--mute);
   font: 500 var(--fs-label-12) var(--mono);
-  letter-spacing: .06em;
+  letter-spacing: var(--track-label);
   text-align: left;
   cursor: pointer
 }
@@ -235,7 +235,7 @@
 :is(.theme-share, .theme-contrast) b {
   color: var(--mute);
   font-weight: 600;
-  letter-spacing: .12em
+  letter-spacing: var(--track-caps)
 }
 
 .theme-ctl :is(.theme-share, .theme-contrast)[aria-checked="true"] b {
@@ -276,8 +276,8 @@
 .tools-sheet .theme-ctl {
   padding: 0 var(--space-2);
   color: var(--label);
-  font: 500 var(--fs-label-12)/1.3 var(--mono);
-  letter-spacing: .1em
+  font: 500 var(--fs-label-12)/var(--lh-snug) var(--mono);
+  letter-spacing: var(--track-caps)
 }
 
 .tools-sheet .theme-ctl .theme-seg button,

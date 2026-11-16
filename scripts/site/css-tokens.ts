@@ -1,7 +1,7 @@
 /**
  * CSS token lint (docs/LAYOUT-THEME-PLAN.md §1b "Consistency rules", §6). Every stylesheet under src/ uses token
- * names from src/tokens.css for colour, spacing, type size, radius, duration, stacking and tap size; raw literals live
- * only there.
+ * names from src/tokens.css for colour, spacing, type size, radius, duration, stacking, tap size, tracking, line
+ * height and easing; raw literals live only there.
  *
  *   npx tsx scripts/site/css-tokens.ts             → list violations, exit 1 if any (or if an allowlist entry is stale)
  *   npx tsx scripts/site/css-tokens.ts --summary   → also print literal counts per category for every file
@@ -12,12 +12,19 @@
  *   spacing  px/rem in margin*, padding*, gap, row-gap, column-gap, scroll-margin*, scroll-padding*. 0 and 1px (a
  *            hairline overlap) are fine; em is typographic rhythm and fine. Sizes and offsets (width, top, inset)
  *            are geometry, not spacing, and are not checked.
- *   type     px/rem in font-size and in the size slot of the `font` shorthand (line-height after `/` is not checked).
+ *   type     px/rem in font-size and in the size slot of the `font` shorthand (line-height after `/`: see leading).
  *   radius   px/rem in border-*radius; % (circles, glass) is fine.
  *   duration non-zero s/ms in transition* and animation*.
  *   z-index  anything but a --z-* token (`var(--z-sheet)`, or `calc(var(--z-sheet) + 2)` for a layer one step over
  *            its neighbour), auto, 0 or -1.
  *   tap      a raw 44px anywhere, custom properties included: tap sizes are var(--tap) (and var(--tap-min), 24 px).
+ *   tracking anything but a var() in letter-spacing: var(--track-*); 0, normal and inherit are fine.
+ *   leading  anything but a var() in line-height and in the `font` shorthand after `/`: var(--lh-*), or a size token
+ *            (var(--tap)) for a box one line tall; 0, 1, normal and inherit are fine.
+ *   easing   an easing keyword or function (ease-out, linear, cubic-bezier(), steps()) in transition* or animation*,
+ *            and a transition or animation shorthand part with a non-zero duration and no var(--ease*). A
+ *            `transition-duration` longhand is not checked: its rule, or the chrome base rule, sets the curve.
+ *            The editor (src/components/editor/editor.css, MAKE behind a flag) skips these three for now (#355).
  *
  * Consistency rules (docs/LAYOUT-THEME-PLAN.md §1b, §1c #15, §6; DESIGN.md › Chrome states):
  *   four-state  every selector with `:hover` has the same selector with `:active` and with `:focus-visible` (or
@@ -42,9 +49,24 @@ const ALLOW: { file: string; has: string; why: string }[] = [
   { file: 'src/components/xray/inspector.css', has: 'padding-bottom: min(42dvh, 400px)', why: 'room for the pinned canvas: mirrors its height cap, not rhythm' },
   { file: 'src/site/app/skins.css', has: 'grid-template-columns: 4px 44px 1fr', why: 'the skin menu swatch column: a preview width, not a tap target' },
   { file: 'src/components/editor/editor.css', has: 'grid-template-columns: 44px 1fr', why: 'the score list number column: a text width, not a tap target' },
+  { file: 'src/index.css', has: 'letter-spacing: .18px', why: "the page's base tracking (.01em of the 18 px body): every element inherits it as a length" },
+  { file: 'src/index.css', has: 'font: var(--fs-lead-18)/145%', why: 'the body line is a length (26 px) that text setting only a size inherits; a factor would move every such line' },
+  { file: 'src/site/app/chrome.css', has: 'letter-spacing: -.095em', why: 'the hero heading: display numerals set tight, one of a kind' },
+  { file: 'src/site/app/chrome.css', has: 'font: 500 var(--fs-h1-hero)/.86', why: 'the hero heading: display numerals set tight, one of a kind' },
+  { file: 'src/essay/essay.css', has: 'font: var(--fs-label-12)/1.9', why: 'the contents list: the row pitch spaces the links as targets, not as reading rhythm' },
+  { file: 'src/site/app/dots.css', has: 'font: var(--fs-label-12)/18px', why: 'the code editor: the textarea and its highlight mirror share one pixel row height' },
+  { file: 'src/site/app/tips.css', has: 'font: 500 var(--fs-label-12)/22px', why: 'the tooltip bubble: its line height is its height' },
+  { file: 'src/components/CardRow.css', has: 'line-height: 18px', why: 'the card row tooltip bubble: its line height is its height' },
+  { file: 'src/site/app/raised.css', has: 'calc(var(--d) * 8) / calc(var(--d) * 9)', why: "the shell: text sits on the screen's dot grid, one row = 9 dots" },
+  { file: 'src/site/app/raised.css', has: 'letter-spacing: calc(var(--d) * 6 - 1ch)', why: "the shell: one character = 6 dots of the screen's grid" },
+  { file: 'src/site/mobile/phone.css', has: 'animation: strip-fade linear', why: 'scroll-driven: progress follows the scroll 1:1' },
+  { file: 'src/site/mobile/sheet.css', has: 'animation: sheet-scrim linear', why: 'scroll-driven: progress follows the scroll 1:1' },
 ]
+/** Stylesheets that skip tracking, leading and easing for now: the editor (MAKE, behind a flag) follows later (#355). */
+const LATER = new Set(['src/components/editor/editor.css'])
 
-type Cat = 'colour' | 'spacing' | 'type' | 'radius' | 'duration' | 'z-index' | 'tap'
+type Cat = 'colour' | 'spacing' | 'type' | 'radius' | 'duration' | 'z-index' | 'tap' | 'tracking' | 'leading' | 'easing'
+const RHYTHM: Cat[] = ['tracking', 'leading', 'easing']
 const NAMED = /\b(white|black|red|green|blue|gray|grey|silver|orange|yellow|purple|pink|navy|teal|maroon|olive|lime|aqua|fuchsia)\b/i
 const COLOUR = /#[0-9a-f]{3,8}\b|\b(?:rgba?|hsla?|oklch|oklab|lab|lch|hwb|color)\(/i
 const LEN = /(?<![\w.-])-?\d*\.?\d+(px|rem)\b/g
@@ -66,8 +88,26 @@ function check(prop: string, value: string): Cat[] {
   if (prop === 'font' && lens(v.replace(/\/\s*[^\s,]+/g, '')).length) out.push('type')
   if (/radius$/.test(prop) && lens(v).length) out.push('radius')
   if (/^(transition|animation)/.test(prop) && [...v.matchAll(/(?<![\w.-])\d*\.?\d+m?s\b/g)].some(m => parseFloat(m[0]) !== 0)) out.push('duration')
+  if (prop === 'letter-spacing' && !/^(0|normal|inherit)?$/.test(noVar(v))) out.push('tracking')
+  const lh = prop === 'line-height' ? v : prop === 'font' ? v.match(/\/\s*(calc\((?:[^()]|\([^()]*\))*\)|[^\s,]+)/)?.[1] : undefined
+  if (lh !== undefined && !/^(0|1|normal|inherit)?$/.test(noVar(lh))) out.push('leading')
+  if (/^(transition|animation)(-timing-function)?$/.test(prop) && easingOff(prop, v)) out.push('easing')
   return out
 }
+
+const noVar = (s: string) => s.replace(/var\([^)]*\)/g, '').trim()
+/** An easing keyword or function anywhere, or a shorthand part that moves with no var(--ease*): the browser's `ease`. */
+function easingOff(prop: string, v: string): boolean {
+  if (/cubic-bezier\(|steps\(|linear\(|(?<![\w-])(ease|ease-in|ease-out|ease-in-out|linear|step-start|step-end)(?![\w-])/.test(noVar(v))) return true
+  if (prop.endsWith('-timing-function')) return noVar(v) !== ''
+  return splitTop(v).some(part => {
+    const dur = part.match(/var\(--dur-[\w-]+\)|(?<![\w.-])\d*\.?\d+m?s\b/)?.[0]
+    const moves = dur !== undefined && dur !== 'var(--dur-in)' && !(/^[\d.]/.test(dur) && parseFloat(dur) === 0)
+    return moves && !/var\(--ease[\w-]*\)/.test(part)
+  })
+}
+/** Top-level comma split (keeps `calc(a, b)` whole). */
+const splitTop = (s: string) => { const out: string[] = []; let d = 0, cur = ''; for (const ch of s) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && !d) { out.push(cur); cur = '' } else cur += ch } return [...out, cur] }
 
 const walk = (d: string): string[] => readdirSync(d).flatMap(n => { const p = join(d, n); return statSync(p).isDirectory() ? walk(p) : [p] })
 const files = walk(ROOT).filter(f => f.endsWith('.css')).map(f => relative('.', f).replace(/\\/g, '/')).sort()
@@ -80,10 +120,10 @@ for (const file of files) {
   if (TOKEN_FILES.has(file)) continue
   // blank out comments but keep line numbers
   const src = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, m => m.replace(/[^\n]/g, ' '))
-  const c = counts[file] = { colour: 0, spacing: 0, type: 0, radius: 0, duration: 0, 'z-index': 0, tap: 0 }
+  const c = counts[file] = { colour: 0, spacing: 0, type: 0, radius: 0, duration: 0, 'z-index': 0, tap: 0, tracking: 0, leading: 0, easing: 0 }
   for (const m of src.matchAll(/(^|[{;\s])([a-z-]+|--[\w-]+)\s*:\s*([^;{}]+?)\s*(?=[;}])/g)) {
     const [, , prop, value] = m
-    const cats = check(prop, value)
+    const cats = check(prop, value).filter(k => !LATER.has(file) || !RHYTHM.includes(k))
     if (!cats.length) continue
     const decl = `${prop}: ${value.replace(/\s+/g, ' ')}`
     const a = ALLOW.findIndex(e => e.file === file && decl.includes(e.has))

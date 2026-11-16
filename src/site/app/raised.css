@@ -96,7 +96,7 @@
 .pal-prompt {
   color: var(--red-text);
   font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .12em
+  letter-spacing: var(--track-caps)
 }
 
 .pal-input {
@@ -145,7 +145,7 @@
 .pal-group {
   color: var(--mute);
   font-size: var(--fs-label-12);
-  letter-spacing: .16em
+  letter-spacing: var(--track-wide)
 }
 
 .pal-text {
@@ -162,7 +162,7 @@
 .pal-hint {
   font: 500 var(--fs-label-12) var(--mono);
   color: var(--mute);
-  letter-spacing: .1em
+  letter-spacing: var(--track-caps)
 }
 
 .pal-empty {
@@ -179,7 +179,7 @@
   border-image: var(--hair-x) 1;
   color: var(--mute);
   font: 500 var(--fs-label-12) var(--mono);
-  letter-spacing: .1em
+  letter-spacing: var(--track-caps)
 }
 
 .pal-shell {
@@ -269,7 +269,7 @@
   margin-top: var(--space-2);
   color: var(--mute);
   font: 500 var(--fs-label-12) var(--mono);
-  letter-spacing: .14em
+  letter-spacing: var(--track-caps)
 }
 
 .pal-boss {
@@ -290,7 +290,7 @@
   margin: 0;
   color: var(--red-text);
   font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .2em
+  letter-spacing: var(--track-wide)
 }
 
 /* FLEE is a .btn (src/site/controls.css) */

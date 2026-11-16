@@ -11,7 +11,7 @@
   border-radius: var(--radius-ctl);
   color: var(--mute);
   font: 500 var(--fs-label-12) var(--mono, monospace);
-  letter-spacing: .16em;
+  letter-spacing: var(--track-wide);
   cursor: pointer;
   text-align: left;
   touch-action: manipulation;
@@ -53,7 +53,7 @@
   align-items: center;
   color: var(--mute);
   font: 500 var(--fs-label-12) var(--mono, monospace);
-  letter-spacing: .16em
+  letter-spacing: var(--track-wide)
 }
 .hive-bar button {
   background: none;
