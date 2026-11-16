@@ -28,8 +28,9 @@ function wallValues(wall: Layer): number[] {
 }
 
 export function mirrorChecks(assert: Assert) {
-  // mirror-shadow: the wall is a body ~120 cells across, so it sits on a 3-cell lattice (big single dots, not a mass of
-  // small ones), and the shadow's edge is cut at half: no grey penumbra between the wall (.12–.16) and the lit spot (≥ .36)
+  // mirror-shadow: the wall stays on a 2-cell lattice, the owner's exception to the coarse-lattice rule (on 3 cells the
+  // hand's fingers shrink to stubs), and the shadow's edge is cut at half: no grey penumbra between the wall (.12–.16)
+  // and the lit spot (≥ .36)
   {
     const fringe: string[] = [], lattices = new Set<number>()
     const cases: [string, Partial<WidgetContext>][] = [['fixture', {}], ['live', { media: { silhouette: softSilhouette() } as WidgetContext['media'] }]]
@@ -40,7 +41,7 @@ export function mirrorChecks(assert: Assert) {
       const grey = wallValues(wall).filter(v => v > .17 && v < .35).length
       if (grey) fringe.push(`${name} t = ${t}: ${grey} grey edge site(s)`)
     }
-    assert('mirror: mirror-shadow wall sits on a 3-cell lattice', [...lattices].join() === '3', [...lattices].join())
+    assert('mirror: mirror-shadow wall sits on a 2-cell lattice (owner exception, the hand keeps its shape)', [...lattices].join() === '2', [...lattices].join())
     assert('mirror: mirror-shadow silhouette has a crisp edge (no grey fringe), fixture and soft live silhouette', !fringe.length, fringe.slice(0, 3).join('; '))
   }
   // mirror-conduct: the scripted pinch rises above the field, and a live hand or mouse goes anywhere. The pointer ring

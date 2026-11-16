@@ -205,9 +205,10 @@ const livePointer = (ctx: WidgetContext) => ctx.pointers?.find(q => q.inside && 
 // A spotlight on the wall (far plane) and the silhouette's shadow (near plane) move against each other with
 // device tilt, the pointer over the card, or a slow sway in the fixture. Live: the camera's foreground
 // (`media.silhouette`: what differs from the room as first seen). Fixture: the test portrait's outline in the
-// front row plus a scripted hand puppet moving through the light. The wall is a body far wider than 16 cells, so it
-// sits on a 3× lattice (big single dots, #242) and the shadow's edge is thresholded: no grey fringe round the shape.
-const WALL_K = 3, WALL_TOP = TOP + 1
+// front row plus a scripted hand puppet moving through the light. The shadow's edge is thresholded: no grey fringe
+// round the shape. Exception to "bigger elements use a coarser lattice" (#242, owner's call): the wall stays on a 2×
+// lattice. On 3× the fingers shrink to single-dot stubs and the edge steps, so the hand loses its shape.
+const WALL_K = 2, WALL_TOP = TOP + 1
 const WALL = { cols: Math.floor(TILE.cols / WALL_K), rows: Math.floor((TILE.rows - WALL_TOP) / WALL_K) }
 /** The test portrait's outline (head + hair + ears + neck + shoulders), 1 inside, in portrait cells. */
 const inPortrait = (x: number, y: number) => {
@@ -223,7 +224,7 @@ const audience = lazy(() => {
   for (let y = 0; y < TILE.rows; y++) for (let x = 0; x < TILE.cols; x++) m[y * TILE.cols + x] = inPortrait(HX + (x - 34) / .75, HY + (y - 118) / .75) ? 1 : 0
   return m
 })
-const HAND_S = 36
+const HAND_S = 30
 const shadowTone = (v: number): Tone => (v >= .8 ? 'value' : v >= .55 ? 'idle' : v >= .3 ? 'mid' : 'faint')
 const shadowControl: Control = { key: 'cam', kind: 'toggle', box: [0, 0, 144, 144], label: 'Shadow puppet: start or stop the webcam (video stays on this device)' }
 
@@ -257,7 +258,7 @@ export const mirrorShadow: WidgetPreset = {
       return fixture![r * cols + c] || (hand && handAt(x, y, hx, hy, HAND_S, hand.pinch) ? 1 : 0)
     }
     const field: Field = (u, v) => {
-      const x = Math.round(u * (WALL.cols - 1)) * WALL_K + 1, y = WALL_TOP + Math.round(v * (WALL.rows - 1)) * WALL_K + 1
+      const x = Math.round(u * (WALL.cols - 1)) * WALL_K + (WALL_K - 1) / 2, y = WALL_TOP + Math.round(v * (WALL.rows - 1)) * WALL_K + (WALL_K - 1) / 2
       if (y >= plateTop) return 0
       const d = Math.hypot(x - lx, y - ly), spot = d >= R ? 0 : d <= R - 7 ? 1 : (R - d) / 7
       const wall = .14 + .02 * Math.sin(x * .7 + y * .3)
