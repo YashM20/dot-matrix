@@ -95,6 +95,13 @@ const csp = (p: Page) => p.logs.filter(l => /Content Security Policy|Refused to/
 const settle = async (n: number) => { const end = Date.now() + 8000; while (Date.now() < end && pageviews().length < n) await sleep(150) }
 /** Enter as a keyboard press that activates a focused button (CDP needs the key's text for that). */
 const enter = async (p: Page) => { for (const type of ['keyDown', 'keyUp']) await p.cdp('Input.dispatchKeyEvent', { type, key: 'Enter', code: 'Enter', windowsVirtualKeyCode: 13, ...(type === 'keyDown' && { text: '\r' }) }); await sleep(150) }
+/** The same page in the light scheme for one screenshot (the theme roles follow <html data-scheme>), then back. */
+const lightShot = async (p: Page, file: string) => {
+  const was = await p.js<string>('document.documentElement.dataset.scheme ?? "dark"')
+  await p.js('(document.documentElement.dataset.scheme = "light", 1)'); await sleep(300)
+  await p.shot(join(SHOTS, file))
+  await p.js(`(document.documentElement.dataset.scheme = ${JSON.stringify(was)}, 1)`); await sleep(100)
+}
 const tapEl = async (p: Page, sel: string) => { const r = await p.js<{ x: number; y: number } | null>(`(() => { const e = [...document.querySelectorAll(${JSON.stringify(sel.split('|')[0])})].find(e => e.textContent.includes(${JSON.stringify(sel.split('|')[1] ?? '')})); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x + r.width / 2, y: r.y + r.height / 2 } })()`); if (r) await p.tap(r.x, r.y); return !!r }
 
 try {
@@ -107,12 +114,14 @@ try {
     await sleep(600)
     const b = await banner(p)
     await p.shot(join(SHOTS, 'banner-desktop.png'))
+    await lightShot(p, 'banner-desktop-light.png')
     let urls = await requested()
     assert('analytics browser: desktop: the banner shows once idle, two equal buttons (ALLOW, NO THANKS), neither focused', up && b.shown && b.eq && !b.focused && b.texts.join() === 'ALLOW,NO THANKS', JSON.stringify(b))
     assert('analytics browser: before Allow nothing is requested from /ingest, the posthog chunk is not fetched, nothing is stored', !hits.length && !chunkFetched(urls) && !(await phKeys(p)).length && (await stored(p)) === null, `${hits.length} hits, chunk ${chunkFetched(urls)}, keys ${await phKeys(p)}`)
     // Allow, by keyboard
     // Allow is the first button: Tab order and focus() agree
-    await p.js('document.querySelector(".consent-actions button").focus(), 1')
+    await p.js('document.querySelector(".consent-actions button").focus({ focusVisible: true }), 1')
+    await p.shot(join(SHOTS, 'banner-focus.png'))
     await enter(p)
     await settle(1)
     assert('analytics browser: Allow (Enter) closes the banner, loads the chunk and sends a page view for /', !(await banner(p)).shown && chunkFetched(await requested()) && pageviews()[0] === '/' && (await stored(p)) === 'on', `stored ${await stored(p)}, banner ${(await banner(p)).shown}, chunk ${chunkFetched(await requested())}, hits ${hits.map(h => h.path).join(' ')}, views ${pageviews().join(' ')}`)
@@ -150,6 +159,7 @@ try {
     await go(p, '/')
     await p.waitFor('!!document.querySelector(".consent")', 12000); await sleep(600)
     await p.shot(join(SHOTS, 'banner-phone.png'))
+    await lightShot(p, 'banner-phone-light.png')
     const covered = await p.js<boolean>('(() => { const b = document.querySelector(".consent").getBoundingClientRect(), t = document.querySelector(".tabbar")?.getBoundingClientRect(); return !!t && b.bottom <= t.top })()')
     assert('analytics browser: phone: the banner sits above the tab bar', covered)
     await tapEl(p, '.consent-actions button|NO THANKS'); await sleep(500)
