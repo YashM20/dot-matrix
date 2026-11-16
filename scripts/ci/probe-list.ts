@@ -28,8 +28,8 @@ export const PROBES: Probe[] = [
   { name: 'game', shard: 8, secs: 20, args: ['scripts/game-browser.ts', '$BASE'] },
   { name: 'nav', shard: 9, secs: 160, args: ['scripts/site/nav.ts', '$BASE'] },
   { name: 'essay', shard: 9, secs: 95, args: ['scripts/essay-browser.ts', '$BASE'] },
-  // the #28 timing gates, 10 runs each on an idle runner (Node only: no page, no Chrome)
-  { name: 'gates', shard: 9, secs: 15, args: ['scripts/gates.ts', '--runs', '10'] },
+  // the #28 timing gates, 10 runs each plus 3 slowed 2× that must fail (Node only: no page, no Chrome)
+  { name: 'gates', shard: 9, secs: 25, args: ['scripts/gates.ts', '--runs', '10'] },
   { name: 'csp', shard: 10, secs: 150, args: ['scripts/site/csp-browser.ts'] },
   { name: 'a11y', shard: 10, secs: 45, args: ['scripts/site/a11y.ts'] },
   // the same axe run at phone width (#187): touch emulation, so the 44 px targets apply
