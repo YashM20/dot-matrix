@@ -110,7 +110,7 @@ Cards are `TILE` rasters: **144×144 dots at 2.25px** (`src/widgets/types.ts`), 
 |---|---|---|---|
 | `twin` (default) | 2 dots, corners cut by two dots | 10×14 | charts, components, henry3, ir, materials, ride, dash-nav and every card that sets no face |
 | `fine` | 1 dot, corners cut by one dot | 8×14 | dash except dash-nav, watch, motion |
-| `condensed` | 2 dots, flat sides | 8×14 | levels and the HIVE game page |
+| `condensed` | 2 dots, flat sides | 8×14 | levels, the HIVE game page, and the departures platform and minute numerals (split-flap, on a 4-cell pitch) |
 
 A hero read as a field (a card mask, the lens) passes `mask: true` and keeps the Scale2x glyphs.
 
