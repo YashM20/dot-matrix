@@ -26,7 +26,7 @@ export const releases: Release[] = [
       { kind: 'improved', text: 'Boards and card pages start loading when you point at a link, so they open sooner.' },
       { kind: 'improved', text: 'Better with a keyboard and at 400% zoom, with CONTRAST: MORE and in every accent colour.' },
       { kind: 'improved', text: 'The falling-blocks card is called STACK.' },
-      { kind: 'improved', text: 'Six cards, the MATERIALS board and eleven WORKSHOP cards are gone, along with five display skins and the clack sound. Old links open the board the card lived on.' },
+      { kind: 'improved', text: 'Six cards, the MATERIALS board and eleven WORKSHOP cards are gone, along with five display skins and the flip-disc sound. Old links open the board the card lived on.' },
       { kind: 'fixed', text: 'A tap or drag on a live card stays, and the reduced motion setting now reaches every part of the page.' },
     ],
   },
