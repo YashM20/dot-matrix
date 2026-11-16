@@ -15,7 +15,7 @@ import type { Control } from '../../engine/context'
 import type { DotInstance, Layer, Tone } from '../../engine/types'
 import { TAU, TILE, layer, layoutFor, tileCircleStyle, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 import { dotText } from './henry'
-import { transportGlyph } from '../dot-controls'
+import { PRESS, states, transportGlyph, ui, type Shape } from '../dot-controls'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -96,9 +96,8 @@ export const glyphHourglass: WidgetPreset = {
 // the lock's dots migrate (engine `migrate`: Hilbert-rank pairs, staggered along the curve, bowed
 // paths) into the app it opens, a now-playing glyph: vinyl rings, progress line, transport. Release
 // and the same pairs fly back (age from tUp), the shackle drops shut. Hover lights the lock and haloes
-// the ring, focus marches outside it (the components-board grammar, one ring each).
+// the ring, focus marches outside it (the shared grammar, `../dot-controls`).
 const HOLD = 1.6, CX = 72, CY = 72, RING = 50
-const LP = .75, GLOW = { d: 3.5, v: .45 }, FOCUS = { d: 7, size: 1.3, on: 3, period: 5, rate: 10 }
 /** Migration timeline (s): starts MIG0 after the press, takes MIG; the way back takes BACK, then the shackle closes in SHUT. */
 const MIG0 = HOLD + .5, MIG = 1.1, BACK = .38, SHUT = .12, DWELL = 2.2, REST = .7
 const BODY = { x0: CX - 15, y0: CY - 4, cols: 11, rows: 9, pitch: 3, size: 2.5 }
@@ -122,6 +121,8 @@ function shackle(lift: number, free: number): Pt[] {
 }
 /** Rings share the track's site count, so halo and focus dots sit on the track's spokes (no moiré). */
 const ring = (r: number, o: { size?: number; sweep?: number; cx?: number; cy?: number } = {}) => T.dotRing(o.cx ?? CX, o.cy ?? CY, r, { spacing: (4.4 * r) / RING, size: 1.6, ...o })
+/** The lock ring as a kit shape that keeps the spokes: it takes the track's site count, not the kit's pitch. */
+const spokes: Shape = d => ring(RING + d).sites ?? []
 // the app: a now-playing glyph. Disc of three dotted grooves round a hub, a progress line, transport
 const DISC = { cx: 72, cy: 55, r: [30, 22.5, 15] }, BAR = { x0: 24, x1: 120, y: 97, sp: 4 }, PLAYED = .36, TRACK = 214
 const icon = (rows: string[], x: number, y: number, p: number): Pt[] => rows.flatMap((row, j) => [...row].flatMap((ch, i) => (ch === '#' ? [[x + (i - (row.length - 1) / 2) * p, y + (j - (rows.length - 1) / 2) * p] as Pt] : [])))
@@ -197,7 +198,7 @@ export const glyphLongpress: WidgetPreset = {
       const inner = appParts[2].pts, k = Math.floor(since * 6) % inner.length
       out.push(...partLayers([...appParts, ...progressParts(Math.min(1, PLAYED + since / TRACK))]), layer(T.dots([inner[k]], 2.2), 'value'))
     } else {
-      const v = down && !open ? LP : 1, a = f * TAU, lit = down || u > 0 || ctx.hover === 'hold'
+      const v = down && !open ? PRESS : 1, a = f * TAU, lit = down || u > 0 || ctx.hover === 'hold'
       out.push(
         layer(ring(RING), down ? 'mid' : 'faint'),
         ...(down && f > 0 ? [layer(ring(RING, { size: 2.4, sweep: open ? TAU : a }), 'value')] : []),
@@ -210,11 +211,9 @@ export const glyphLongpress: WidgetPreset = {
     const playing = m >= .5
     const label = playing ? (m >= 1 ? `LOW TIDE  ${mmss(PLAYED * TRACK + since)}` : 'LOW TIDE') : open || u > 0 ? 'UNLOCKED' : down ? `${Math.round(f * 100)}%` : 'HOLD TO UNLOCK'
     out.push(layer(T.big(label, 72, 132, { lattice: 1.1, align: 'center' }), down || u > 0 || m > 0 ? 'value' : 'idle'))
-    if (ctx.hover === 'hold' && !down && m === 0 && u === 0) out.push(layer(at(ring(RING + GLOW.d), GLOW.v), 'value'))
-    if (ctx.focus === 'hold') {
-      const ph = Math.floor(ctx.t * FOCUS.rate), P = FOCUS.period, rr = ring(RING + FOCUS.d, { size: FOCUS.size })
-      out.push(layer({ ...rr, sites: rr.sites!.filter((_, i) => (((i - ph) % P) + P) % P < FOCUS.on) }, 'idle'))
-    }
+    // hover haloes the ring only while the lock is at rest
+    const s = ui(ctx, 'hold')
+    out.push(...states({ ...s, hover: s.hover && !down && m === 0 && u === 0 }, ctx.t, spokes))
     return out
   },
 }

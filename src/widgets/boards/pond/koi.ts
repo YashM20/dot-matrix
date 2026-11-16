@@ -21,6 +21,7 @@ import { simAtStep } from '../../../engine/sim/sim'
 import { sampleLayers } from '../../../engine/sampler/gridSampler'
 import { dot480 } from '../../../engine/theme/tokens'
 import { layer, type WidgetContext, type WidgetPreset } from '../../types'
+import { OUTLINE, at, clock, marching, ui } from '../../dot-controls'
 import { caption, frameOf, hourNow, mainThread, T, tile, touch } from './shared'
 
 /** Tiles: 36 × 33 at pitch 4 from card row 11 (a glyph is 3 dots + a 1-cell gutter). The ripple grid is the tile grid. */
@@ -97,27 +98,38 @@ export const KOI_LIGHT_KEYS = { lightSrc: 0, lightAz: 0, lightEl: 7, tx: 0, ty: 
 export const GLYPH_STYLES = ['DOTS', 'TYPE'] as const
 const SWITCH = { x: 93, w: 51, h: 8 } as const
 /** The switch's underline: card dots on row 9 (the label is rows 0 to 6, the tiles start on row 11), every other cell. */
-const UNDER = { row: 9, step: 2, on: 3, period: 5, rate: 10 } as const
+const UNDER = { row: 9, step: 2 } as const
+/** A dotted line on the underline row from `x0` for `w` cells (a kit shape: a line, not an outline, so `d` is ignored). */
+const underline = (x0: number, w: number): [number, number][] => {
+  const pts: [number, number][] = []
+  for (let x = x0; x < x0 + w; x += UNDER.step) pts.push([x, UNDER.row])
+  return pts
+}
+/** The feed button's focus line: the free stretch of the underline row, left of the switch. */
+const FEED_LINE = underline(1, SWITCH.x - 6)
 /**
  * The label row's right side: the switch, always drawn so a phone can see what to tap (#269): DOTS · TYPE, the
- * chosen one in `value` and the other in `mid`, so the style that is on reads without a hover in both schemes. Hover
- * puts a dotted line under the chosen one and keyboard focus makes the line march (it holds still under reduced
- * motion).
+ * chosen one in `value` and the other in `mid`, so the style that is on reads without a hover in both schemes.
+ * The shared grammar (`../../dot-controls`) on the board's own shape: two rows of air between the label and the tiles
+ * leave no room for a ring, so hover is the kit's inner halo as a line under the chosen one, and focus marches that
+ * line in the kit's focus dash and tone (still under reduced motion). The feed button covers the whole pond, whose
+ * tiles fill the card, so its focus marches the rest of that row.
  */
 function labelRow(ctx: WidgetContext, sel: number): Layer[] {
-  const k = 'glyphs', w = T.size('TYPE')[0], gap = 5, right = 143
-  const focus = ctx.focus === k, hover = ctx.hover === k
+  const w = T.size('TYPE')[0], gap = 5, right = 143
+  const s = ui(ctx, 'glyphs'), feed = ui(ctx, 'koi')
   const row: Layer[] = [
     caption('TYPE', right, 0, 'right', sel === 1 ? 'value' : 'mid'),
     caption('DOTS', right - w - gap, 0, 'right', sel === 0 ? 'value' : 'mid'),
+    ...(feed.focus ? [marching(() => FEED_LINE, clock(feed, ctx.t), 0)] : []),
   ]
-  if (!focus && !hover) return row
-  const x0 = sel === 1 ? right - w + 1 : right - 2 * w - gap + 1, pts: [number, number][] = []
-  const ph = focus && !ctx.reducedMotion ? Math.floor(ctx.t * UNDER.rate) : 0
-  for (let i = 0, x = x0; x < x0 + w; i++, x += UNDER.step) {
-    if (!focus || (((i - ph) % UNDER.period) + UNDER.period) % UNDER.period < UNDER.on) pts.push([x, UNDER.row])
-  }
-  return [...row, layer(T.dots(pts, 1), focus ? 'value' : 'mid')]
+  if (!s.focus && !s.hover) return row
+  const pts = underline(sel === 1 ? right - w + 1 : right - 2 * w - gap + 1, w)
+  return [
+    ...row,
+    ...(s.hover ? [layer(at(T.dots(pts, OUTLINE.size), .5), 'value')] : []),
+    ...(s.focus ? [marching(() => pts, clock(s, ctx.t), 0)] : []),
+  ]
 }
 /** The koi light this frame: tilt light by bucket when the hub says so (`lightSrc` 1), else the fixed L1 light. */
 function koiLight(ctx: WidgetContext, hour: number): KoiDrawOpts['light'] {

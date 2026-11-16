@@ -2,15 +2,53 @@
  * Dot-drawn controls several boards share (#357): the switch track, the scrubber and the transport glyphs. Each board
  * passes its own sizes and tones, so adopting a helper moves no dot; making the boards match is #360. TILE cards
  * (cell space, lattice 1).
+ * It also holds the one hover, press and focus grammar for dot controls (#358), first drawn by the components board.
  */
 import type { Layer, Tone } from '../engine/types'
 import { rrect, stadium } from '../engine/layout'
-import { TILE, layer, layoutFor, type LatticeField } from './types'
+import { TILE, dim, layer, layoutFor, type LatticeField, type WidgetContext } from './types'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
-/** The site layer at value `v` (a press is one quantize step down); 1 leaves it as is. */
-const at = (lf: LatticeField, v: number): LatticeField => (v === 1 ? lf : { ...lf, field: () => v })
+
+// ── states: hover, press, focus ─────────────────────────────────────────────
+/** Dotted outlines: sites `spacing` cells apart, `size` each. */
+export const OUTLINE = { spacing: 3.3, size: 1.5 }
+/** Press: one quantize step down at quantizeSteps 5 (1 → .75). */
+export const PRESS = .75
+/** `still`: reduced motion, so the focus ring holds still. */
+export interface UiState { hover: boolean; pressed: boolean; focus: boolean; still?: boolean }
+export const ui = (ctx: WidgetContext, key: string): UiState =>
+  ({ hover: ctx.hover === key, pressed: ctx.pressed === key, focus: ctx.focus === key, still: !!ctx.reducedMotion })
+/** The site layer at value `v` (press = PRESS); 1 leaves it as is. */
+export const at = (lf: LatticeField, v: number): LatticeField => (v === 1 ? lf : { ...lf, field: () => v })
+/** A text or lattice layer scaled by `v`. */
+export const dimmed = (lf: LatticeField, v: number): LatticeField => (v === 1 ? lf : { ...lf, field: dim(lf.field, v) })
+
+/** A control's outline grown by `d` cells, as sites `spacing` apart. A board may keep its own site order or pitch. */
+export type Shape = (d: number, spacing: number) => Pt[]
+export const rr = (x: number, y: number, w: number, h: number, r: number): Shape => (d, sp) => rrect(x - d, y - d, w + 2 * d, h + 2 * d, r + d, sp)
+export const circle = (cx: number, cy: number, r: number): Shape => rr(cx - r, cy - r, 2 * r, 2 * r, r)
+/** `shape` without the sites `keep` rejects: a halo gives way to a neighbour that sits closer than its reach. */
+export const clear = (shape: Shape, keep: (p: Pt) => boolean): Shape => (d, sp) => shape(d, sp).filter(keep)
+
+/** Hover glow: two halo outlines in `value`, fading outward. */
+const GLOW = [{ d: 2.6, v: .5 }, { d: 5.2, v: .25 }]
+/**
+ * Focus: `on` of every `period` sites lit in `idle`, marching `rate` sites per second, `d` cells outside the control.
+ * `idle` is the one focus tone on every board: at least 5.1:1 on the dark cards and 8.6:1 on paper, every accent.
+ */
+const FOCUS = { d: 7, spacing: 2.4, size: 1.3, on: 3, period: 5, rate: 10 }
+export const glow = (shape: Shape): Layer[] => GLOW.map(g => layer(at(T.dots(shape(g.d, OUTLINE.spacing), OUTLINE.size), g.v), 'value'))
+export const marching = (shape: Shape, t: number, d = FOCUS.d): Layer => {
+  const ph = Math.floor(t * FOCUS.rate), P = FOCUS.period
+  return layer(T.dots(shape(d, FOCUS.spacing).filter((_, i) => (((i - ph) % P) + P) % P < FOCUS.on), FOCUS.size), 'idle')
+}
+/** The focus ring's clock: frozen at 0 under reduced motion. */
+export const clock = (s: UiState, t: number) => (s.still ? 0 : t)
+/** Hover glow around `hover`, marching focus ring around `focus` (defaults to the same outline). */
+export const states = (s: UiState, t: number, hover: Shape, focus: Shape = hover, focusD = FOCUS.d): Layer[] =>
+  [...(s.hover ? glow(hover) : []), ...(s.focus ? [marching(focus, clock(s, t), focusD)] : [])]
 
 // ── switch ──────────────────────────────────────────────────────────────────
 /**

@@ -216,6 +216,11 @@ await flagChecks(assert)
   const { copyLinkChecks } = await import('./verify/copy-link')
   await copyLinkChecks(assert)
 }
+// DOT STATES (#358) one hover, press and focus grammar for dot controls: every control rings on focus (scripts/verify/dot-states.ts)
+{
+  const { dotStateChecks } = await import('./verify/dot-states')
+  await dotStateChecks(assert)
+}
 // FIRST DRAW (#312) grid cards draw their first frame one per task, near the screen only (scripts/verify/first-draw.ts)
 {
   const { firstDrawChecks } = await import('./verify/first-draw')

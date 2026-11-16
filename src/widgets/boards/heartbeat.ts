@@ -8,8 +8,8 @@
 import type { Field, Layer, Tone } from '../../engine/types'
 import { clamp, hash01, smoothstep } from '../../engine/math'
 import { TAU, TILE, layer, layoutFor, tileCircleStyle, type WidgetContext, type WidgetPreset } from '../types'
-import { OUTLINE, stadium } from './components-kit'
-import { switchTrack } from '../dot-controls'
+import { stadium } from '../../engine/layout'
+import { OUTLINE, PRESS, states, switchTrack, ui } from '../dot-controls'
 
 const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileCircleStyle } as const
@@ -183,6 +183,7 @@ export const hbDone = make('hb-done', 5, 'DONE', 'done')
 const AGENT = stageAt(12, 28, .78)
 const SEG = { x: 6, y: 106, w: 132, h: 18, knob: 13, labels: ['THK', 'RUN', 'ASK', 'ERR', 'OK'] }
 const segX = (i: number) => SEG.x + SEG.h / 2 + (i * (SEG.w - SEG.h)) / 4
+/** The switch's outline as a kit shape (`../dot-controls`). */
 const track = (d: number, spacing: number) => stadium(SEG.x - d, SEG.y - d, SEG.w + 2 * d, SEG.h + 2 * d, spacing)
 const SWITCH = { ...SEG, ...OUTLINE }
 const hbAgent: WidgetPreset = {
@@ -193,8 +194,7 @@ const hbAgent: WidgetPreset = {
   layers: ctx => {
     const s = clamp(Number.isFinite(ctx.data.state) ? ctx.data.state : 0, 0, 4), i0 = Math.min(3, Math.floor(s)), sel = Math.round(s)
     const p = blendStates(HEARTBEAT[HEARTBEAT_STATES[i0]], HEARTBEAT[HEARTBEAT_STATES[i0 + 1]], s - i0)
-    const hover = ctx.hover === 'state', pressed = ctx.pressed === 'state', focus = ctx.focus === 'state'
-    const cy = SEG.y + SEG.h / 2, mark = Math.floor(ctx.t * 10), [rail, knob] = switchTrack(SWITCH, s / 4, ['mid', 'value'], pressed ? .75 : 1)
+    const st = ui(ctx, 'state'), cy = SEG.y + SEG.h / 2, [rail, knob] = switchTrack(SWITCH, s / 4, ['mid', 'value'], st.pressed ? PRESS : 1)
     return [
       // red-free: the agent card's pulse stays in `value`, so the board spends red once
       ...scene(p, ctx.t, AGENT, false), ...statusLine(HEARTBEAT_STATES[sel], ctx.t, 94),
@@ -202,9 +202,8 @@ const hbAgent: WidgetPreset = {
       layer(T.dots([0, 1, 2, 3, 4].filter(i => Math.abs(i - s) > .5).map((i): Pt => [segX(i), cy]), 3), 'mid'),
       knob,
       ...SEG.labels.map((l, i) => layer(T.text(l, segX(i), SEG.y + SEG.h + 6, { align: 'center' }), i === sel ? 'value' : 'idle')),
-      ...(hover ? [layer({ ...T.dots(track(2.6, OUTLINE.spacing), OUTLINE.size), field: () => .5 }, 'value')] : []),
-      // focus: the track's own sites march (no extra outline: the status line and labels sit close)
-      ...(focus ? [layer(T.dots(track(0, OUTLINE.spacing).filter((_, i) => (((i - mark) % 5) + 5) % 5 < 2), OUTLINE.size), 'value')] : []),
+      // the status line and the stop labels sit close, so the focus ring runs 3 cells out, between them and the track
+      ...states(st, ctx.t, track, track, 3),
     ]
   },
 }

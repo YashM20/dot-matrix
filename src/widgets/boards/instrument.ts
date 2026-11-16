@@ -5,10 +5,12 @@
  * purely from the frame context (`data`, `hover`, `pressed`, `focus`, `t`); the input layer only
  * edits data, so goldens stay deterministic.
  *
- * Interaction grammar, the same on every card:
- * - hover: a glow in `mid` / `value` (never the accent);
+ * Interaction grammar: the components kit's (`../dot-controls`, #358), the same on every card:
+ * - hover: two `value` halos round the part under the pointer (never the accent);
  * - press: the pressed part drops one quantize step (1 → .75 on the 5-step ladder);
- * - focus: a marching-dots outline whose phase steps with `t`.
+ * - focus: the marching `idle` ring, still under reduced motion.
+ * Each card picks the outline and the ring's distance; where a neighbour sits closer than a halo reaches, the halo's
+ * sites give way (`clear`).
  * Red (`active`) is only ever the sequencer playhead, the record light and the XY pad's live dot.
  *
  * Sound (C5, `src/audio/`): the transport's SOUND toggle starts the WebAudio engine; the board store
@@ -21,8 +23,8 @@ import type { Control } from '../../engine/context'
 import type { Tone } from '../../engine/types'
 import { audioOf, meterSegment } from '../../audio/frame'
 import { polar } from '../dials'
-import { transportGlyph } from '../dot-controls'
-import { TAU, TILE, layer, layoutFor, tileCircleStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
+import { PRESS, circle, clear, clock, dimmed, glow, marching, rr, states, transportGlyph, ui } from '../dot-controls'
+import { TAU, TILE, layer, layoutFor, tileCircleStyle, type LatticeField, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -35,42 +37,17 @@ const pad = (n: number, w: number) => String(Math.max(0, Math.round(n))).padStar
 /** Footer baseline shared by every card, so captions line up across the device. */
 const FOOT = 126
 
-// ── interaction grammar ─────────────────────────────────────────────────────
-/** Press = one step down the 5-step quantize ladder. */
-const PRESS = .75
-/** Marching focus dots advance this many sites per second (3-cell spacing → 18 cells/s). */
-const MARCH = 6
 const spots = (pts: Pt[], size: number, v = 1): LatticeField => ({ field: () => v, sites: pts, size })
-const circle = (cx: number, cy: number, r: number, spacing: number): Pt[] => {
+/** Sites round a circle, about `spacing` cells apart (button rings, the crank's wheel). */
+const ring = (cx: number, cy: number, r: number, spacing: number): Pt[] => {
   const n = Math.max(6, Math.round((TAU * r) / spacing))
   return Array.from({ length: n }, (_, i) => polar(cx, cy, r, (i / n) * TAU))
 }
-/** Sites around a rectangle, corners included, about `spacing` cells apart. */
-const rect = (x: number, y: number, w: number, h: number, spacing: number): Pt[] => {
-  const pts: Pt[] = []
-  const side = (x0: number, y0: number, x1: number, y1: number) => {
-    const n = Math.max(1, Math.round(Math.hypot(x1 - x0, y1 - y0) / spacing))
-    for (let i = 0; i < n; i++) pts.push([x0 + ((x1 - x0) * i) / n, y0 + ((y1 - y0) * i) / n])
-  }
-  side(x, y, x + w, y); side(x + w, y, x + w, y + h); side(x + w, y + h, x, y + h); side(x, y + h, x, y)
-  return pts
-}
-/** Two sites on, one off, the gap stepping forward with `t`. */
-const marching = (pts: Pt[], t: number) => { const s = Math.floor(Math.max(0, t) * MARCH) % 3; return pts.filter((_, i) => (((i - s) % 3) + 3) % 3 !== 0) }
-interface Feel { hover: boolean; press: boolean; focus: boolean; v: number }
-const feel = (ctx: WidgetContext, key: string): Feel => {
-  const press = ctx.pressed === key
-  return { hover: ctx.hover === key, press, focus: ctx.focus === key, v: press ? PRESS : 1 }
-}
-/** A lattice/text layer at `v` of its value (press feedback on glyphs and icons). */
-const scaled = (lf: LatticeField, v: number): LatticeField => (v === 1 ? lf : { ...lf, field: (u, w) => lf.field(u, w) * v })
-const glow = (pts: Pt[]) => layer(spots(pts, 1.5), 'mid')
-const focusRing = (pts: Pt[], t: number) => layer(spots(marching(pts, t), 1.7), 'value')
 
 // ── 01 · 02 · 04 · 05 KNOBS ─────────────────────────────────────────────────
 // One huge site for the knob body with a pointer dot on it, inside a detent scale open at the
 // bottom (7:30 → 4:30); the readout sits in the scale's mouth.
-const KNOB = { cx: 72, cy: 66, r: 46, detents: 25, body: 44, tip: 11.5, start: deg(225), sweep: deg(270) }
+const KNOB = { cx: 72, cy: 66, r: 46, detents: 25, body: 44, bodyR: 19, tip: 11.5, start: deg(225), sweep: deg(270) }
 const STEPS = KNOB.detents - 1
 interface KnobSpec { id: string; name: string; index: string; key: string; detent: number; read: (v: number) => [string, string] }
 const hz = (v: number): [string, string] => {
@@ -81,7 +58,7 @@ const time = (v: number): [string, string] => { const ms = 5000 ** v; return ms 
 /** A knob's reading as a screen reader should say it: "1.5 kHz", "120 ms", "2.4 seconds", "33%". */
 const spoken = ([n, unit]: [string, string]) => unit === '%' ? `${n}%` : unit === 'HZ' ? (n.endsWith('K') ? `${n.slice(0, -1)} kHz` : `${n} Hz`) : unit === 'MS' ? `${n} ms` : `${n} seconds`
 function knob(spec: KnobSpec): WidgetPreset {
-  const { cx, cy, r, body, tip, start, sweep } = KNOB
+  const { cx, cy, r, body, bodyR, tip, start, sweep } = KNOB
   const scale = Array.from({ length: KNOB.detents }, (_, i) => polar(cx, cy, r, start + (i / STEPS) * sweep))
   const controls: Control[] = [{ key: spec.key, kind: 'knob', box: [cx - r, cy - r, 2 * r, 2 * r], min: 0, max: 1, step: 1 / STEPS, label: spec.name,
     valueText: v => spoken(spec.read(Math.round(clamp01(v) * STEPS) / STEPS)) }]
@@ -90,15 +67,15 @@ function knob(spec: KnobSpec): WidgetPreset {
     credit: TEENAGE_ENGINEERING,
     defaults: { [spec.key]: spec.detent / STEPS }, controls,
     layers: ctx => {
-      const k = Math.round(clamp01(ctx.data[spec.key] ?? 0) * STEPS), f = feel(ctx, spec.key)
+      const k = Math.round(clamp01(ctx.data[spec.key] ?? 0) * STEPS), s = ui(ctx, spec.key), v = s.pressed ? PRESS : 1
       const [num, unit] = spec.read(k / STEPS)
       return [
         layer(spots(scale.slice(k + 1), 2.4), 'mid'),
         layer(spots(scale.slice(0, k + 1), 3.6)),
-        ...(f.hover ? [glow(circle(cx, cy, 24, 2.6))] : []),
-        ...(f.focus ? [focusRing(circle(cx, cy, 29, 3), ctx.t)] : []),
-        layer(spots([[cx, cy]], body, f.v), f.hover ? 'idle' : 'mid'),
-        layer(spots([polar(cx, cy, tip, start + (k / STEPS) * sweep)], 7, f.v)),
+        layer(spots([[cx, cy]], body, v), 'mid'),
+        layer(spots([polar(cx, cy, tip, start + (k / STEPS) * sweep)], 7, v)),
+        // the focus ring sits inside the detent scale (the components knob's goes outside): the readout fills the mouth
+        ...states(s, ctx.t, circle(cx, cy, bodyR), circle(cx, cy, bodyR), 10),
         layer(T.big(num, cx, 101, { lattice: 2, align: 'center' })),
         layer(T.text(unit, cx, FOOT, { align: 'center' }), 'idle'),
       ]
@@ -158,7 +135,7 @@ export const meter: WidgetPreset = {
   defaults: { gain: .8 },
   controls: [{ key: 'gain', kind: 'slider', orientation: 'vertical', box: [36, 20, 72, 100], min: 0, max: 1, step: 1 / 20, label: 'Output gain' }],
   layers: ctx => {
-    const { xs, base, n, pitch, size } = METER, f = feel(ctx, 'gain'), gain = clamp01(ctx.data.gain ?? .8) * 1.15
+    const { xs, base, n, pitch, size } = METER, s = ui(ctx, 'gain'), v = s.pressed ? PRESS : 1, gain = clamp01(ctx.data.gain ?? .8) * 1.15
     const y = (i: number) => base - i * pitch, song = songOf(ctx.data), running = runningOf(ctx.data), live = audioOf(ctx)
     const out = METER.xs.flatMap((x, side) => {
       // live: RMS and held peak in dBFS on the printed scale (gain is already in the signal); else the simulation
@@ -166,8 +143,8 @@ export const meter: WidgetPreset = {
       const peak = live ? meterSegment(live.peak[side]) : running ? Math.round(clamp01(peakOf(ctx.t, side, song) * gain) * n) - 1 : -1
       const seg = Array.from({ length: n }, (_, i): Pt => [x, y(i)])
       return [
-        layer(spots(seg.slice(lit).filter((_, i) => i + lit !== peak), size), f.hover ? 'mid' : 'faint'),
-        layer(spots(seg.slice(0, lit), size, f.v)),
+        layer(spots(seg.slice(lit).filter((_, i) => i + lit !== peak), size), 'faint'),
+        layer(spots(seg.slice(0, lit), size, v)),
         ...(peak >= lit ? [layer(spots([seg[peak]], size), 'idle')] : []),
         layer(T.text(side ? 'R' : 'L', x, FOOT, { align: 'center' }), 'idle'),
       ]
@@ -179,9 +156,10 @@ export const meter: WidgetPreset = {
       ...out,
       ...[[12, '0'], [9, '-6'], [6, '-12'], [3, '-24'], [0, '-48']].map(([i, s]) => layer(T.text(String(s), 72, Math.round(y(+i) - 3), { align: 'center' }), 'mid')),
       layer(T.text('DB', 72, FOOT, { align: 'center' }), 'idle'),
-      ...(f.hover ? [glow(rect(xs[0] - 17, g - 4, 12, 8, 2.6)), glow(rect(xs[1] + 5, g - 4, 12, 8, 2.6))] : []),
-      layer(spots(cap, 2.4, f.v), 'value'),
-      ...(f.focus ? [focusRing(rect(32, 18, 80, 104, 3), ctx.t)] : []),
+      // hover haloes each cap; the outer halo gives way to its meter column
+      ...(s.hover ? xs.flatMap((x, side) => glow(clear(rr(side ? x + GAIN_CAP[0] : x - GAIN_CAP[2], g, GAIN_CAP[2] - GAIN_CAP[0], 0, 0), p => Math.abs(p[0] - x) > 4.2))) : []),
+      layer(spots(cap, 2.4, v), 'value'),
+      ...(s.focus ? [marching(rr(32, 18, 80, 104, 4), clock(s, ctx.t), 0)] : []),
     ]
   },
 }
@@ -200,18 +178,19 @@ export const xyPad: WidgetPreset = {
   defaults: { x: .38, y: .58 },
   controls: [{ key: 'x', keyY: 'y', kind: 'xy', box: [XY.x, XY.y, XY.s, XY.s], min: 0, max: 1, label: 'Filter XY pad' }],
   layers: ctx => {
-    const f = feel(ctx, 'x'), amp = f.press ? 0 : ORBIT, x = ctx.data.x ?? .5, y = ctx.data.y ?? .5
+    const s = ui(ctx, 'x'), amp = s.pressed ? 0 : ORBIT, x = ctx.data.x ?? .5, y = ctx.data.y ?? .5
     const now = xyAt(x, y, ctx.t, amp), live = toPad(now)
     const trail = Array.from({ length: TRAIL }, (_, k) => toPad(xyAt(x, y, ctx.t - (k + 1) * DT, amp)))
     const moat = (p: Pt) => Math.hypot(p[0] - live[0], p[1] - live[1]) > 8
     return [
-      layer(spots(SURFACE.filter(moat), 1.4), f.hover ? 'mid' : 'faint'),
+      // hover lifts the pad's own surface: the edge markers sit where a halo would go
+      layer(spots(SURFACE.filter(moat), 1.4), s.hover ? 'mid' : 'faint'),
       // a trail dot that would touch the puck is left out: the red sits in clear air
       ...trail.map((p, k) => layer(spots(Math.hypot(p[0] - live[0], p[1] - live[1]) > .42 * (10 + 6.4 - k * .6) + .6 ? [p] : [], 6.4 - k * .6, k < 2 ? .75 : k < 5 ? .5 : .25), 'value')),
       // edge markers: where the live dot projects onto the pad's rulers
       layer(spots([[live[0], XY.y - 6], [live[0], XY.y + XY.s + 6], [XY.x - 6, live[1]], [XY.x + XY.s + 6, live[1]]], 3), 'idle'),
-      layer(spots([live], 10, f.v), 'active'),
-      ...(f.focus ? [focusRing(rect(XY.x - 3, XY.y - 3, XY.s + 6, XY.s + 6, 3), ctx.t)] : []),
+      layer(spots([live], 10, s.pressed ? PRESS : 1), 'active'),
+      ...(s.focus ? [marching(rr(XY.x, XY.y, XY.s, XY.s, 0), clock(s, ctx.t), 3)] : []),
       layer(T.text(`X ${pad(now[0] * 100, 2)}`, XY.x, FOOT), 'idle'),
       layer(T.text(`Y ${pad(now[1] * 100, 2)}`, XY.x + XY.s, FOOT, { align: 'right' }), 'idle'),
     ]
@@ -225,6 +204,8 @@ export const xyPad: WidgetPreset = {
 const SEG = { x: 13, y: 86, w: 118, h: 36 }, SEG_W = SEG.w / 3, BTN_Y = SEG.y + SEG.h / 2, BTN_R = 16
 const segX = (i: number) => SEG.x + SEG_W * (i + .5)
 const BPM_BOX: [number, number, number, number] = [38, 18, 68, 48]
+/** The tempo's outline: the number and BPM, short of the beat lights. */
+const TEMPO = rr(38, 18, 68, 36, 6)
 /**
  * Play and stop on one lattice (offsets in cells from the button centre): play a hex-packed triangle 4 sites tall,
  * stop a 3×3 square of the same sites, so the two read as shapes beside the record light.
@@ -236,7 +217,10 @@ const icon = (pts: Pt[], cx: number, cy: number, v: number) => spots(pts.map(([x
 /** Tempo hint on hover and focus: an up and a down chevron beside the number (vertical drag or arrows). */
 const CARET_X = 116, CARETS: Pt[][] = [[[-3, 27], [0, 24], [3, 27]], [[-3, 39], [0, 42], [3, 39]]]
 const SOUND_BOX: [number, number, number, number] = [30, 123, 84, 14]
-const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
+/** SOUND's outline round the speaker and its word; the halo gives way to the mode buttons above it. */
+const SOUND = rr(42, 125, 52, 8, 4)
+const offButtons = (p: Pt) => [0, 1, 2].every(i => Math.hypot(p[0] - segX(i), p[1] - BTN_Y) > BTN_R + 2.2)
+const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 export const transport: WidgetPreset = {
   id: 'inst-transport', name: 'Transport', label: '07  TRANSPORT', ...device,
   credit: TEENAGE_ENGINEERING,
@@ -248,33 +232,31 @@ export const transport: WidgetPreset = {
   ],
   layers: ctx => {
     const bpm = Math.round(ctx.data.bpm ?? BPM), mode = Math.round(ctx.data.mode ?? 1), running = mode !== 2
-    const tempo = feel(ctx, 'bpm'), seg = feel(ctx, 'mode'), snd = feel(ctx, 'sound'), sound = (ctx.data.sound ?? 0) >= .5
-    const rec = audioOf(ctx)?.rec ?? -1, [sx, sy, sw, sh] = SOUND_BOX, spk = 46, cy = FOOT + 3
+    const tempo = ui(ctx, 'bpm'), seg = ui(ctx, 'mode'), snd = ui(ctx, 'sound'), sound = (ctx.data.sound ?? 0) >= .5
+    const rec = audioOf(ctx)?.rec ?? -1, spk = 46, cy = FOOT + 3, sv = snd.pressed ? PRESS : 1
     // which segment the pointer is over (falls back to the selected one)
     const p = ctx.pointers?.find(q => q.inside), under = p ? Math.max(0, Math.min(2, Math.floor((p.x - SEG.x) / SEG_W))) : mode
     const beat = Math.floor((Math.max(0, ctx.t) * bpm) / 60) % 4
-    const vOf = (i: number) => (seg.press && i === under ? PRESS : 1)
+    const vOf = (i: number) => (seg.pressed && i === under ? PRESS : 1)
     const tone = (i: number): Tone => (i === mode ? 'value' : 'mid')
-    const [bx, by, bw, bh] = BPM_BOX
     return [
-      layer(scaled(T.big(String(bpm), 72, 22, { lattice: 3, align: 'center' }), tempo.v)),
+      layer(dimmed(T.big(String(bpm), 72, 22, { lattice: 3, align: 'center' }), tempo.pressed ? PRESS : 1)),
       layer(T.text('BPM', 72, 50, { align: 'center' }), 'idle'),
       ...[0, 1, 2, 3].map(i => layer(spots([[54 + i * 12, 66]], running && i === beat ? 5 : 3.4), running && i === beat ? 'value' : 'mid')),
       // the hover and focus outlines stop above the beat lights
-      ...(tempo.hover ? [glow(rect(bx, by, bw, bh - 6, 2.6))] : []),
+      ...states(tempo, ctx.t, TEMPO, TEMPO, 4),
       ...(tempo.hover || tempo.focus ? CARETS.map(c => layer(spots(c.map(([x, y]): Pt => [CARET_X + x, y]), 2), 'value')) : []),
-      ...(tempo.focus ? [focusRing(rect(bx - 3, by - 3, bw + 6, bh - 2, 3), ctx.t)] : []),
-      ...[0, 1, 2].map(i => layer(spots(circle(segX(i), BTN_Y, BTN_R, 3), 1.4, vOf(i)), tone(i))),
+      ...[0, 1, 2].map(i => layer(spots(ring(segX(i), BTN_Y, BTN_R, 3), 1.4, vOf(i)), tone(i))),
       layer(spots([[segX(0), BTN_Y]], 15, vOf(0)), mode === 0 ? 'active' : 'mid'),
       layer(icon(PLAY, segX(1), BTN_Y, vOf(1)), tone(1)),
       layer(icon(STOP, segX(2), BTN_Y, vOf(2)), tone(2)),
-      ...(seg.hover ? [glow(circle(segX(under), BTN_Y, BTN_R + 3.5, 2.6))] : []),
-      ...(seg.focus ? [focusRing(circle(segX(mode), BTN_Y, BTN_R + 4, 3), ctx.t)] : []),
+      // the hover halo stops short of the SOUND row; the focus ring marks the selected mode
+      ...(seg.hover ? glow(clear(circle(segX(under), BTN_Y, BTN_R), p => p[1] < 123)) : []),
+      ...(seg.focus ? [marching(circle(segX(mode), BTN_Y, BTN_R), clock(seg, ctx.t), 4)] : []),
       // SOUND: a hollow ring when off, a lit dot when on (the red stays with REC)
-      layer(sound ? spots([[spk, cy]], 6, snd.v) : spots(circle(spk, cy, 3, 2.4), 1.3, snd.v), sound ? 'value' : 'mid'),
-      layer(scaled({ field: T.text(rec >= 0 ? `REC ${clock(rec)}` : sound ? 'SOUND ON' : 'SOUND OFF', spk + 9, FOOT) }, snd.v), sound ? 'value' : 'idle'),
-      ...(snd.hover ? [glow(rect(sx, sy, sw, sh, 2.6))] : []),
-      ...(snd.focus ? [focusRing(rect(sx - 2, sy - 1, sw + 4, sh + 2, 3), ctx.t)] : []),
+      layer(sound ? spots([[spk, cy]], 6, sv) : spots(ring(spk, cy, 3, 2.4), 1.3, sv), sound ? 'value' : 'mid'),
+      layer(dimmed({ field: T.text(rec >= 0 ? `REC ${mmss(rec)}` : sound ? 'SOUND ON' : 'SOUND OFF', spk + 9, FOOT) }, sv), sound ? 'value' : 'idle'),
+      ...states(snd, ctx.t, clear(SOUND, offButtons), SOUND, 2),
     ]
   },
 }
@@ -297,12 +279,11 @@ export const sequencer: WidgetPreset = {
     const bpm = ctx.data.bpm ?? BPM, head = runningOf(ctx.data) ? stepAt(ctx.t, bpm) % 16 : -1
     return [
       ...PATTERN.flatMap((_, i) => {
-        const p = stepPos(i), on = (ctx.data[stepKey(i)] ?? 0) >= .5, f = feel(ctx, stepKey(i)), here = i === head
+        const p = stepPos(i), on = (ctx.data[stepKey(i)] ?? 0) >= .5, s = ui(ctx, stepKey(i)), here = i === head
         const tone: Tone = here ? 'active' : on ? 'value' : i % 4 ? 'mid' : 'idle'
         return [
-          ...(f.hover ? [glow(circle(p[0], p[1], 9, 2.4))] : []),
-          ...(f.focus ? [focusRing(circle(p[0], p[1], 12, 2.6), ctx.t)] : []),
-          layer(spots([p], on ? SEQ.on : here ? 7 : SEQ.off, f.v), tone),
+          layer(spots([p], on ? SEQ.on : here ? 7 : SEQ.off, s.pressed ? PRESS : 1), tone),
+          ...states(s, ctx.t, circle(p[0], p[1], 6.5)),
         ]
       }),
       layer(T.text('STEP', 27, FOOT), 'idle'),
@@ -324,18 +305,18 @@ export const crank: WidgetPreset = {
   defaults: { crank: 16 + 5 / 24 },
   controls: [{ key: 'crank', kind: 'crank', box: [CRANK.cx - CRANK.tickR, CRANK.cy - CRANK.tickR, 2 * CRANK.tickR, 2 * CRANK.tickR], min: 0, max: 416, step: 1 / 24, label: 'Crank', valueText: v => `${Math.round(v * CRANK.ticks)} ticks` }],
   layers: ctx => {
-    const { cx, cy, wheel } = CRANK, f = feel(ctx, 'crank'), ticks = Math.round((ctx.data.crank ?? 0) * CRANK.ticks)
+    const { cx, cy, wheel } = CRANK, s = ui(ctx, 'crank'), ticks = Math.round((ctx.data.crank ?? 0) * CRANK.ticks)
     const at = ((ticks % CRANK.ticks) + CRANK.ticks) % CRANK.ticks, a = (at / CRANK.ticks) * TAU, handle = polar(cx, cy, wheel, a)
     return [
       layer(spots(TICKS.slice(1), 2.2), 'mid'),
       layer(spots(TICKS.slice(0, 1), 3.4), 'idle'),
       // the wheel's ring clears the handle; the arm runs from the hub's rim to the handle's with the same gap at each end
-      layer(T.knockout(spots(circle(cx, cy, wheel, 3.3), 1.5), [handle], .42 * (CRANK.handle + 1.5) + .8), 'mid'),
+      layer(T.knockout(spots(ring(cx, cy, wheel, 3.3), 1.5), [handle], .42 * (CRANK.handle + 1.5) + .8), 'mid'),
       layer(T.dotLine(...polar(cx, cy, ARM[0], a), ...polar(cx, cy, ARM[1], a), { spacing: (ARM[1] - ARM[0]) / 3, size: 2.6 }), 'mid'),
       layer(spots([[cx, cy]], 8)),
-      ...(f.hover ? [glow(circle(handle[0], handle[1], 10.5, 2.4))] : []),
-      layer(spots([handle], CRANK.handle, f.v)),
-      ...(f.focus ? [focusRing(circle(cx, cy, 43, 3), ctx.t)] : []),
+      layer(spots([handle], CRANK.handle, s.pressed ? PRESS : 1)),
+      // hover haloes the handle you turn, focus rings the whole crank outside its ticks
+      ...states(s, ctx.t, circle(handle[0], handle[1], 7), circle(cx, cy, CRANK.tickR), 6),
       layer(T.big(pad(ticks, 4), cx, 107, { lattice: 2, align: 'center' })),
       layer(T.text('TICKS', cx, FOOT, { align: 'center' }), 'idle'),
     ]

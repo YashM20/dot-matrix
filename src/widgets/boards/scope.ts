@@ -10,6 +10,7 @@
 import type { Control } from '../../engine/context'
 import type { Tone } from '../../engine/types'
 import { BINS, FLOOR_DB, WAVE, audioOf, demoFrame, type AudioFrame } from '../../audio/frame'
+import { PRESS, circle, marching, ui, clock } from '../dot-controls'
 import { TAU, TILE, dim, layer, layoutFor, liveDot as chromeLiveDot, tileCircleStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
@@ -118,7 +119,7 @@ export const scopeMic: WidgetPreset = {
   controls: [{ key: 'mic', kind: 'toggle', box: [8, 12, 128, 128], label: 'Listen to the microphone' } satisfies Control],
   layers: ctx => {
     const live = audioOf(ctx, 'mic'), f = live ?? demoFrame(ctx.t), gain = live ? 1 : .35
-    const state = Math.round(ctx.data.micState ?? 0), hover = ctx.hover === 'mic', press = ctx.pressed === 'mic', focus = ctx.focus === 'mic'
+    const state = Math.round(ctx.data.micState ?? 0), s = ui(ctx, 'mic'), hover = s.hover, press = s.pressed
     const tips: Pt[] = [], body: Pt[] = []
     for (let j = 0; j < RING.rays; j++) {
       const { b, a } = ray(j), n = Math.round(clamp01(f.bins[b] * gain) * (RING.len / RING.pitch))
@@ -131,13 +132,15 @@ export const scopeMic: WidgetPreset = {
     const tone: Tone = live ? 'value' : 'mid'
     return [
       ...(live ? [chromeLiveDot(TILE)] : []),
-      layer(spots(BASE, hover ? 2.6 : 2, press ? .75 : 1), hover ? 'idle' : 'mid'),
+      // hover swells the base ring and lights the mic (the board's own): the rays fill the room a halo would take
+      layer(spots(BASE, hover ? 2.6 : 2, press ? PRESS : 1), hover ? 'idle' : 'mid'),
       layer(spots(body, 2.2), live ? 'idle' : 'faint'),
       layer(spots(tips, 2.6), tone),
-      ...(focus ? [layer(spots(BASE.filter((_, i) => (i + Math.floor(ctx.t * 6)) % 3 !== 0), 1.4), 'value')] : []),
+      // focus rings the whole visualizer, one ray pitch past the longest ray
+      ...(s.focus ? [marching(circle(RING.cx, RING.cy, RING.r + RING.gap + RING.len), clock(s, ctx.t), RING.pitch)] : []),
       live
         ? layer(T.big(db <= FLOOR_DB ? '--' : String(Math.round(db)), RING.cx, RING.cy - 7, { lattice: 2, align: 'center' }))
-        : layer(MIC_LAT.at(press ? dim(MIC, .75) : MIC), hover ? 'value' : 'idle'),
+        : layer(MIC_LAT.at(press ? dim(MIC, PRESS) : MIC), hover ? 'value' : 'idle'),
       ...(live ? [layer(T.text('DB', RING.cx, RING.cy + 9, { align: 'center' }), 'idle')] : []),
       layer(T.text(MIC_STATE[live ? 2 : state] ?? MIC_STATE[0], RING.cx, FOOT, { align: 'center' }), state === 3 ? 'mid' : 'idle'),
     ]
