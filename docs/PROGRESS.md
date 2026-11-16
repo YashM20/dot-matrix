@@ -16,7 +16,7 @@
 - **CP8 · 0.20 · Play, live data and guides** (queue #402), after CP7.
 - **Backlog**, by priority. Plan and exit criteria: `docs/CHECKPOINTS.md`.
 
-**Closed milestones:** CP1 to CP5, "Tixy gallery" and "Next phases". CP1 to CP6 shipped as 0.13 to 0.18 (`CHANGELOG.md`); CP6 closes with its milestone after the breather.
+**Closed milestones:** CP1 to CP5. "Tixy gallery" and "Next phases" were reopened on Nov 16 as parked theme milestones (`docs/CHECKPOINTS.md`). CP1 to CP6 shipped as 0.13 to 0.18 (`CHANGELOG.md`); CP6 closes with its milestone after the breather.
 
 **Defaults on main:** MAKE, LAB and X-ray are off; likes (#169, #176) and opt-in PostHog analytics (#171) are on. The like button stays hidden while the likes API answers 404, and analytics needs `VITE_POSTHOG_PROJECT_TOKEN`. Trusted Types stays Report-Only, because the BotID challenge script writes a plain string to `srcdoc`. CI runs four parallel jobs behind the required `check + build` gate; PR pushes also run the affected browser probes (`docs/HARNESS.md`).
 

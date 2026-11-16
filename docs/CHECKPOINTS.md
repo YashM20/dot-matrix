@@ -7,10 +7,12 @@ GitHub is the source of truth: the milestones, the labels, the tracking issue an
 ## The cycle
 1. **Scope.** The milestone's issues are the whole job. A new idea or request that comes up mid-checkpoint becomes an issue in a later milestone or in Backlog. It does not join the current one unless the owner says so.
 2. **Build.** Four to six lanes at once, one agent per line of the tracking issue, each working only on issues in this milestone. Each lane opens its own PR to `main`. It merges once `check + build` is green, and once the owner has OK'd the before and after shots for anything visitors can see.
+   - **Changelog fragment.** Each PR adds one `changes/<branch>.md` (or `changes/<pr>.md`) with a `visitor:` line (one plain sentence for the LOG tab, or `none`) and an `engineering:` line (one sentence with the issue and PR numbers). Lanes don't edit `CHANGELOG.md` or `src/changelog.ts`. `scripts/site/changes.ts` in `pnpm check` warns when a PR changes `src/` without one. Format: `changes/README.md`.
 3. **Gate.** One full CI run with every browser probe on the last PR of the checkpoint (label the PR `full-probes`). Goldens change only where a lane meant to change them, and first load stays at or under 150 kB gz.
    - `pnpm check` (and so CI) runs `scripts/site/prose-lint.ts` on visitor prose (`docs/WRITING.md`): 0 errors before publish. Read its warnings at the gate.
 4. **Publish.**
    - Turn the shipped `upcoming` rows into a released version in `src/changelog.ts` and `CHANGELOG.md`.
+   - Fold the fragments in `changes/` into that version: the engineering lines into `CHANGELOG.md`, the visitor lines that aren't `none` into `src/changelog.ts`. Delete the fragments in the same PR and keep `changes/README.md`.
    - Close the milestone's issues, the tracking issue and the milestone itself.
 5. **Breather (mandatory, nothing new starts):**
    - **Clean up:** remove finished worktrees (junction-safe), scratch dirs and merged branches.
@@ -77,6 +79,13 @@ GitHub is the source of truth: the milestones, the labels, the tracking issue an
 - **Goal:** new things to do on the site, built to the same bar: original games, a live world board, a wallpaper maker, and the guides published on the blog. The chrome those pages lean on comes first.
 - **Issues:** site first: #38 Back and scroll, #40 the blog and legal bar, #34 the theme control in it, #39 footer and board end, #41 wayfinding and cuts, #44 desktop hit targets. Then #131 three games, #311 the hill-driving game, #130 the world board, #133 the wallpaper maker and #77 the guides.
 - **Exit criterion:** every CP8 issue is closed, games and the world board work with mouse, touch and keyboard and respect reduced motion, the world board has loading, cached and offline states with goldens on fixed data, the guides are live, first load is at or under 150 kB gz with every new view lazy, CI is green, and 0.20 is published.
+
+### Parked theme milestones
+Two milestones hold future bodies of work that no checkpoint has picked yet. The owner reopened both on Nov 16.
+- **Tixy gallery:** #51, #52, #54 to #58 and #60. The ports wait on the permission request in #52.
+- **Next phases:** editor and advanced work: #71, #73, #18, #19, #31, #33, #186, #22 and #24, plus the parked ideas #23, #25 and #32.
+
+A parked milestone stays open even when it looks empty or blocked. A checkpoint takes issues from it when the owner chooses, and they move to that checkpoint's milestone. Close a parked milestone only when its work is done or the owner drops it.
 
 ### Backlog
 Ordered by priority. Medium: the eight board refines above, the polish tracker #72 and the decisions tracker #12. Low: MAKE's return as one batch (#186, #18, #19, #31, #33; MAKE is off by default), the tixy gallery (#51 to #58, #60, blocked on the permission request in #52), pond senses (#22), WebGPU (#24, ideation), the power layer (#35), sessions with people (#47, after CP8), X-ray rect cells (#74), Speculation Rules (#347) and the IQ ideation list (#70).

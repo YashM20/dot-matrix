@@ -29,7 +29,8 @@ jobs:
       - uses: ./.github/actions/setup
 
       # tsc -b, oxlint, file size (warn > 500 lines, fail > 800, #76), credits, headers and URLs on the source pages,
-      # the prose lint and the analytics checks: `pnpm check` minus `pnpm verify`, so the two can't drift apart
+      # the prose lint, the changelog fragment warning and the analytics checks: `pnpm check` minus `pnpm verify`,
+      # so the two can't drift apart
       - name: Check (static)
         run: pnpm check:static
 
