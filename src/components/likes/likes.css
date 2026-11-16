@@ -26,7 +26,7 @@
   font: 600 var(--fs-label-12)/1 var(--mono);
   letter-spacing: .14em;
   cursor: pointer;
-  transition: color var(--dur-out) var(--ease), background-color var(--dur-out) var(--ease), border-color var(--dur-out) var(--ease);
+  transition: color var(--dur-out) var(--ease), background-color var(--dur-out) var(--ease), border-color var(--dur-out) var(--ease), transform var(--dur-out) var(--ease);
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation
 }

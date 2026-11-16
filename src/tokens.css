@@ -188,6 +188,18 @@
   --shadow-pop: 0 8px 24px -6px color-mix(in srgb, var(--shade) 36%, transparent), 0 2px 6px color-mix(in srgb, var(--shade) 18%, transparent);
 }
 
+/* reduced motion (src/site/motion.ts writes data-motion; the media query covers the moment before it runs): a touched
+   control no longer sinks */
+:where([data-motion="reduce"]) {
+  --press-sink: 1
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :where(:root:not([data-motion])) {
+    --press-sink: 1
+  }
+}
+
 /* phones: the same rhythm, one step down (a group stays 12 px; before actions 24) */
 @media (max-width: 760px) {
   :root {

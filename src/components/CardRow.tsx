@@ -12,7 +12,7 @@ import { useMenuButton } from '../hooks/useMenuButton'
 import type { CardAction } from './xray/store'
 import { cardActs, type CardActs } from './cardActs'
 import { copyLink } from './copyLink'
-import { CopiedIcon, LinkIcon, MoreIcon, OpenIcon } from './rowIcons'
+import { CopiedIcon, LinkIcon, MoreIcon, OpenIcon } from './icons'
 import './CardRow.css'
 
 export interface CardRowProps {

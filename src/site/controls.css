@@ -147,6 +147,12 @@
   }
 }
 
+/* ── .icon: an icon from src/components/icons.tsx, 16 px in currentColor, never squeezed by its label ── */
+.icon {
+  display: block;
+  flex: none
+}
+
 /* ── .status-dot: the 6 px accent dot. Alone it marks the accent (THEME, a page kicker); --live adds the halo for a
    live state (LIVE DATA, a live card, TOOLS while X-ray or the time machine is on) ── */
 .status-dot {

@@ -5,7 +5,7 @@
  */
 import type { ReactNode } from 'react'
 import { useMenuButton } from '../../hooks/useMenuButton'
-import { MoreIcon } from './toolIcons'
+import { MoreIcon } from '../icons'
 
 export interface MoreItem {
   label: ReactNode

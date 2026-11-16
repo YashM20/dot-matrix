@@ -97,11 +97,6 @@
   color: var(--value)
 }
 
-.dot-card-row-icon {
-  display: block;
-  flex: none
-}
-
 /* the board link (ALL) is text: an underline on hover; the icons only brighten */
 .dot-card-row-meta a:hover,
 .dot-card-row-meta a:active,
@@ -209,7 +204,7 @@
 .dot-card-row-meta,
 .dot-card-row a,
 .dot-card-row > button {
-  transition: color var(--dur-out)
+  transition: color var(--dur-out), transform var(--dur-out)
 }
 
 /* a colour fade isn't motion, so reduced motion keeps it: a11y.css zeroes every transition there, and this gives the

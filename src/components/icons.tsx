@@ -1,16 +1,22 @@
 /**
- * The toolbar's icons (PillBar.tsx, the widget page and NEXT BOARD): inline SVG at 16 px with a 1.5 stroke in
- * `currentColor`, the same set and weight as the card row's (rowIcons.tsx).
+ * The chrome's icons, one module (DESIGN.md › Chrome components): the toolbar (PillBar.tsx: the widget page, NEXT
+ * BOARD), the card row (CardRow.tsx) and the board picker. Inline SVG at 16 px with a 1.5 stroke in `currentColor`,
+ * class `icon` (src/site/controls.css). Each icon is its own export, so a chunk carries only the paths it uses.
+ * Small actions take an icon, never an arrow character or a bare word; the icon stays muted with its control.
  * Paths from Lucide (https://lucide.dev), ISC License, Copyright (c) Lucide Contributors.
  */
 import type { ReactNode } from 'react'
 
-const Svg = ({ children }: { children: ReactNode }) => <svg className="pill-icon" viewBox="0 0 24 24" width="16" height="16" fill="none"
+const Svg = ({ children }: { children: ReactNode }) => <svg className="icon" viewBox="0 0 24 24" width="16" height="16" fill="none"
   stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">{children}</svg>
 
+/** lucide: arrow-up-right (open a card's page) */
+export const OpenIcon = () => <Svg><path d="M7 7h10v10" /><path d="M7 17 17 7" /></Svg>
 /** lucide: link */
 export const LinkIcon = () => <Svg><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" /></Svg>
-/** lucide: ellipsis */
+/** lucide: check (LINK's icon for a moment after a copy) */
+export const CopiedIcon = () => <Svg><path d="M20 6 9 17l-5-5" /></Svg>
+/** lucide: ellipsis (MORE) */
 export const MoreIcon = () => <Svg><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /><circle cx="5" cy="12" r="1" /></Svg>
 /** lucide: pencil (REMIX) */
 export const RemixIcon = () => <Svg><path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" /></Svg>

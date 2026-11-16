@@ -16,7 +16,7 @@ import { boardTime, cardAction, toast } from '../xray/store'
 import { copyLink, shareLink } from '../copyLink'
 import { MoreMenu } from './MoreMenu'
 import { Pill, PillBar, PillButton } from './PillBar'
-import { LinkIcon, PlayIcon, RemixIcon, ShareIcon, XrayIcon } from './toolIcons'
+import { LinkIcon, PlayIcon, RemixIcon, ShareIcon, XrayIcon } from '../icons'
 
 /** The export code (PNG, SVG, HTML), loaded on the first export. */
 const exporter = () => import('./cardExport')
