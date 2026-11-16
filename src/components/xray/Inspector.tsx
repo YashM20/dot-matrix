@@ -4,14 +4,16 @@
  * card's spec (`presetToSpec`), plus Open in DOTS and a deep link. It opens on SUMMARY (UX U2): the same card in
  * plain words, with tap / hover definitions from the glossary.
  */
-import { useEffect, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
+import { useEffect, useId, useMemo, useRef, useState, type PointerEvent as ReactPointerEvent, type ReactNode } from 'react'
 import type { Layer } from '../../engine'
 import { describe, type CardDescription } from '../../engine/describe'
 import { presetToSpec } from '../../spec'
+import { useRoving } from '../../hooks/useRoving'
 import { GLOSSARY, GLOSSARY_TERMS, type GlossaryTerm } from '../glossary'
 import { fmt, layerKind, layerName, layerIR } from './probe'
 import { cardElement, muteLayer, probes, setXR, soloLayer, toggleCard, toggleGlobal, useXR, xrState, type CardProbe } from './store'
 import './inspector.css'
+import { scrollBehavior } from '../../site/motion'
 
 /** At this width the inspector is a bottom sheet (./inspector.css): a grip, swipe down to close, swipe up for more. */
 const SHEET = '(max-width: 760px)'
@@ -144,6 +146,8 @@ export function Inspector({ onRemix, onStudio, onCopyLink }: { onRemix: (cardId:
     return () => clearInterval(id)
   }, [anyOn, active])
   const [tab, setTab] = useState<'summary' | 'layers' | 'data' | 'describe' | 'spec'>('summary')
+  // the tabs: ← → Home End move and pick, the selected one is the tab stop and names the panel
+  const tabsKey = useRoving({ items: '[role=tab]', pick: true }), ids = useId()
   const sheet = useSheetDrag(() => dismiss(active))
   // sheet: keep the inspected card in view above the half-height sheet (it covers the lower part of the screen)
   useEffect(() => {
@@ -151,7 +155,7 @@ export function Inspector({ onRemix, onStudio, onCopyLink }: { onRemix: (cardId:
     const el = cardElement(active)
     if (!el) return
     const r = el.getBoundingClientRect(), sheetTop = window.innerHeight * .58
-    if (r.bottom > sheetTop && r.top > 64) window.scrollBy({ top: Math.min(r.top - 64, r.bottom - sheetTop), behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+    if (r.bottom > sheetTop && r.top > 64) window.scrollBy({ top: Math.min(r.top - 64, r.bottom - sheetTop), behavior: scrollBehavior() })
   }, [active])
   const probe = active ? probes.get(active) : undefined
   const layers = useMemo(() => (probe ? layersOf(probe) : []), [probe, probe?.stats.t, probe?.data]) // eslint-disable-line react-hooks/exhaustive-deps
@@ -175,10 +179,11 @@ export function Inspector({ onRemix, onStudio, onCopyLink }: { onRemix: (cardId:
         <button onClick={() => onStudio(probe.preset.id)}>OPEN IN COMPOSE</button>
         <button onClick={() => onCopyLink(probe.preset.id)}>LINK</button>
       </div>
-      <div className="xr-tabs" role="tablist" aria-label="Inspector sections">
-        {(['summary', 'layers', 'data', 'describe', 'spec'] as const).map(t => <button key={t} role="tab" aria-selected={tab === t} className={tab === t ? 'selected' : ''} onClick={() => setTab(t)}>{t.toUpperCase()}</button>)}
+      <div className="xr-tabs" role="tablist" aria-label="Inspector sections" onKeyDown={tabsKey}>
+        {(['summary', 'layers', 'data', 'describe', 'spec'] as const).map(t => <button key={t} type="button" role="tab" id={`${ids}-${t}`} aria-selected={tab === t} aria-controls={`${ids}-panel`}
+          tabIndex={tab === t ? 0 : -1} className={tab === t ? 'selected' : ''} onClick={() => setTab(t)}>{t.toUpperCase()}</button>)}
       </div>
-      <div className="xr-tabpanel" role="tabpanel">
+      <div className="xr-tabpanel" role="tabpanel" id={`${ids}-panel`} aria-labelledby={`${ids}-${tab}`} tabIndex={0}>
         {tab === 'summary' && <Summary probe={probe} layers={layers} d={d} />}
         {tab === 'layers' && <LayersTab probe={probe} layers={layers} solo={solo} muted={muted} />}
         {tab === 'data' && <DataTab data={probe.data} />}

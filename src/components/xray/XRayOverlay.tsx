@@ -15,6 +15,7 @@ import { flag } from '../../site/flags'
 import { fmt, probeDot, type DotProbe } from './probe'
 import { probes, setXR, xrState, type CardProbe } from './store'
 import type { XRayHook } from './useXRay'
+import { reducedMotion } from '../../site/motion'
 
 export interface XRayOverlayProps {
   xr: XRayHook
@@ -30,7 +31,6 @@ export interface XRayOverlayProps {
   tick?: number
 }
 
-const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 const workerOff = () => typeof Worker === 'undefined' || !flag('worker')
 
 /** Visible dots in a sampled frame; 0 if sampling throws. Outside the component for the compiler's sake (try/catch). */
@@ -45,7 +45,7 @@ export function XRayOverlay({ xr, preset, layers, data, grid, style, theme, anim
   const [box, setBox] = useState<{ left: number; top: number; width: number; height: number } | null>(null)
   const [hover, setHover] = useState<{ p: DotProbe; x: number; y: number } | null>(null)
   const [stats, setStats] = useState({ fps: 0, dots: 0, t: 0, mode: 'svg', worker: false })
-  const cardFps = fps ?? (animated && !reduced() ? 12 : 0)
+  const cardFps = fps ?? (animated && !reducedMotion() ? 12 : 0)
   const live = useRef({ layers, data, grid, style, skip: xr.skip, tick, animated, cardFps })
   useLayoutEffect(() => { live.current = { layers, data, grid, style, skip: xr.skip, tick, animated, cardFps } })
   const pointer = useRef<{ fx: number; fy: number; x: number; y: number } | null>(null)
@@ -119,7 +119,7 @@ export function XRayOverlay({ xr, preset, layers, data, grid, style, theme, anim
   }, [xr.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /** Is the card's live frame sampled in the worker? (the same test `remoteSampler` runs) */
-  function workerOn() { return xr.mode() === 'canvas' && animated && !reduced() && !workerOff() && !!workerPresetId(xr.layers ?? {}) }
+  function workerOn() { return xr.mode() === 'canvas' && animated && !reducedMotion() && !workerOff() && !!workerPresetId(xr.layers ?? {}) }
 
   // live stats: dots drawn now (re-sampled off the card's own path: once per data / solo / mute change, and
   // once a second while animated) and the frames the clock delivered at the card's rate

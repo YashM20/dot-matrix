@@ -1,5 +1,5 @@
-import type { KeyboardEvent } from 'react'
 import { SKINS, SKIN_NAMES } from '../../engine/display/names'
+import { useRoving } from '../../hooks/useRoving'
 import { setSkin, useDisplaySkin } from './store'
 
 /** The one-line description: the skin title after its "NAME: " prefix (as in the DISPLAY ▾ menu). */
@@ -7,17 +7,11 @@ const blurb = (title: string) => title.slice(title.indexOf(': ') + 2)
 
 /**
  * The same choice as a list (the phone Tools sheet): a radio group, a 44 px row per skin with its line;
- * arrows move and pick, like native radios.
+ * arrows (and Home, End) move and pick, like native radios.
  */
 export function SkinList() {
   const skin = useDisplaySkin()
-  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    const d = e.key === 'ArrowDown' || e.key === 'ArrowRight' ? 1 : e.key === 'ArrowUp' || e.key === 'ArrowLeft' ? -1 : 0
-    if (!d) return
-    e.preventDefault()
-    const n = SKIN_NAMES.length, j = (SKIN_NAMES.indexOf(skin) + d + n) % n
-    setSkin(SKIN_NAMES[j]); e.currentTarget.querySelectorAll<HTMLElement>('[role=radio]')[j]?.focus()
-  }
+  const onKey = useRoving({ items: '[role=radio]', axis: 'both', pick: true })
   return (
     <div className="skin-list" role="radiogroup" aria-label="Display" onKeyDown={onKey}>
       {SKIN_NAMES.map(name => <button key={name} type="button" role="radio" aria-checked={skin === name} tabIndex={skin === name ? 0 : -1}

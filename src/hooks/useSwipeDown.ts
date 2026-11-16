@@ -1,6 +1,6 @@
 import { useEffect, useRef, type RefObject } from 'react'
+import { reducedMotion } from '../site/motion'
 
-const reduced = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 /** How far (px) or how fast (px/ms) a downward drag must go to dismiss a sheet. */
 const DISMISS_PX = 90, DISMISS_V = 0.6
 
@@ -36,8 +36,8 @@ export function useSwipeDown(ref: RefObject<HTMLElement | null>, onClose: () => 
       if (!armed || !moving) return
       armed = moving = false
       const v = dy / Math.max(1, performance.now() - t0)
-      el.style.transition = reduced() ? 'none' : ''
-      if (dy > DISMISS_PX || v > DISMISS_V) { el.style.transform = `translateY(100%)`; timer = window.setTimeout(() => close.current(), reduced() ? 0 : 160) }
+      el.style.transition = reducedMotion() ? 'none' : ''
+      if (dy > DISMISS_PX || v > DISMISS_V) { el.style.transform = `translateY(100%)`; timer = window.setTimeout(() => close.current(), reducedMotion() ? 0 : 160) }
       else el.style.transform = ''
     }
     el.addEventListener('touchstart', start, { passive: true })

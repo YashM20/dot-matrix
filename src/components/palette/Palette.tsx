@@ -1,13 +1,15 @@
 /**
  * ⌘K / Ctrl-K command palette: fuzzy search over actions, views, boards and cards. Keyboard-first
  * (↑ ↓ Home End, Enter runs, Esc closes) and an ARIA combobox: the input owns a listbox and points
- * at the highlighted option with `aria-activedescendant`, so focus never leaves the input.
+ * at the highlighted option with `aria-activedescendant`, so focus never leaves the input. The scrim is a modal
+ * `<dialog>` (`useModal`, #352): the page behind is inert, and focus goes back to the opener on close.
  */
 import { useEffect, useId, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { rank } from './fuzzy'
 import { allBoards, paletteItems, type CommandApi, type PaletteItem } from './api'
 import type { BoardDef } from '../../widgets/manifest'
 import { useSwipeDown } from '../../hooks/useSwipeDown'
+import { useModal } from '../Modal'
 import { flag } from '../../site/flags'
 import { track } from '../../site/analytics'
 
@@ -29,6 +31,7 @@ export function Palette({ api, hoveredCard, onClose }: { api: CommandApi; hovere
   const [query, setQuery] = useState('')
   const [index, setIndex] = useState(0)
   const inputRef = useRef<HTMLInputElement>(null), listRef = useRef<HTMLUListElement>(null), palRef = useRef<HTMLDivElement>(null)
+  const dialog = useModal(onClose)
   useSwipeDown(palRef, onClose) // phones: the palette is a sheet
   const listId = useId(), base = useId()
   // boards come from the manifest at once; their cards join the search when the board chunks have loaded
@@ -43,12 +46,8 @@ export function Palette({ api, hoveredCard, onClose }: { api: CommandApi; hovere
   const sel = Math.min(index, Math.max(0, results.length - 1))
   const optionId = (i: number) => `${base}-o${i}`
 
-  useEffect(() => {
-    const prev = document.activeElement as HTMLElement | null
-    // a touch opens on the list (the sheet itself takes focus): the keyboard comes up when the field is tapped
-    if (touch) palRef.current?.focus(); else inputRef.current?.focus()
-    return () => { prev?.focus?.() }
-  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+  // a touch opens on the list (the sheet itself takes focus): the keyboard comes up when the field is tapped
+  useEffect(() => { if (touch) palRef.current?.focus(); else inputRef.current?.focus() }, []) // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { listRef.current?.querySelector(`[id="${CSS.escape(optionId(sel))}"]`)?.scrollIntoView({ block: 'nearest' }) }, [sel]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const run = (i: number) => { const r = results[i]; if (!r) return; onClose(); track('palette_command', { id: r.item.id }); r.item.run(api) }
@@ -67,9 +66,8 @@ export function Palette({ api, hoveredCard, onClose }: { api: CommandApi; hovere
   // a group's first row gets the separator gap
   const heads = results.map((r, i) => i === 0 || results[i - 1].item.group !== r.item.group)
   return (
-    <div className="pal-backdrop" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
-      <div ref={palRef} className="pal" role="dialog" aria-modal="true" aria-label="Command palette" tabIndex={-1}
-        onKeyDown={e => { if (e.key === 'Escape' && e.target === e.currentTarget) onClose() }}>
+    <dialog ref={dialog} className="pal-backdrop" aria-label="Command palette" onMouseDown={e => { if (e.target === e.currentTarget) onClose() }}>
+      <div ref={palRef} className="pal" tabIndex={-1}>
         <div className="sheet-grab pal-grab" data-sheet-grab aria-hidden="true"><i /></div>
         <div className="pal-field">
           <span className="pal-prompt" aria-hidden="true">⌘K</span>
@@ -93,6 +91,6 @@ export function Palette({ api, hoveredCard, onClose }: { api: CommandApi; hovere
         <footer className="pal-foot" aria-hidden="true"><span><kbd>↑</kbd><kbd>↓</kbd> move</span><span><kbd>↵</kbd> run</span><span><kbd>ESC</kbd> close</span><span><kbd>`</kbd> dot shell</span></footer>
         <div className="sr-only" aria-live="polite">{results.length} results</div>
       </div>
-    </div>
+    </dialog>
   )
 }

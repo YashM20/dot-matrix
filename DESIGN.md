@@ -643,7 +643,7 @@ Every HTML control in the chrome has the same four states plus disabled, from th
 | active / selected / on / live | the accent at full strength with `--glow-wash` or `--glow-halo` | none |
 | disabled | 40% opacity, no pointer | — |
 
-No state changes a size, so nothing shifts. On coarse pointers every chrome target is at least 40 px (44 px on phones). Menus, popovers and ⌘K open with no animation; only sheets slide in (`--dur-enter`). `prefers-reduced-motion` removes all of it. In-card controls are different: they draw hover, press and focus in dots (below).
+No state changes a size, so nothing shifts. On coarse pointers every chrome target is at least 40 px (44 px on phones). Menus, popovers and ⌘K open with no animation; only sheets slide in (`--dur-enter`). Reduced motion removes all of it: the OS setting, or the ⌘K override (on, off, system; kept in localStorage `dot480:motion`), which wins both ways. One helper answers for JS (`reducedMotion()`, `scrollBehavior()` in `src/site/motion.ts`) and writes `<html data-motion="reduce|full">`, which every CSS reduced-motion rule keys off. In-card controls are different: they draw hover, press and focus in dots (below).
 
 ### Grammar rules
 
@@ -735,6 +735,8 @@ The HTML chrome has one component per job; a new control reuses one of these ins
 **Tooltip rules.** One at a time (the hovered control). The first in a group waits `--dur-tip`; moving to a neighbour shows its tooltip at once, until the pointer leaves the group (a registered `--tip-on` custom property that switches on after the delay and off at once, no JS). Keyboard focus shows it without the wait; a press hides it. No motion.
 
 **Hover intent.** DISPLAY ▾ and THEME open after the mouse rests on them for 100 ms (without taking focus) and close 150 ms after the mouse leaves; a click or the keyboard opens them with focus inside. THEME fetches its popover chunk during those 100 ms. Touch never opens them by hover (`pointerType` must be `mouse`).
+
+**Keyboard (#352).** Three shared pieces, so the keys work the same everywhere. A menu button is `useMenuButton` (`src/hooks/`): ↑ or ↓ on the button opens the menu on its last or first item (a radio menu on its checked one), ↑ ↓ Home End and a first letter move, Escape closes with focus back on the button, Tab and a press outside close, the button carries `aria-controls`, and one rule places the menu: under its button with the right edges lined up, above when there is no room, 8 px inside the viewport (the two MORE menus, DISPLAY ▾). A group with one tab stop is `useRoving`: arrows wrap, Home and End jump, and tabs and radios pick as they move (the toolbars, the view and board-group tabs, the X-ray tabs, the skin list, the theme radios and swatches). An overlay is a modal `<dialog>` through `useModal` (`Modal.tsx`): the page behind is inert and focus goes back to the opener without scrolling (sheets, ⌘K, the shell, the boss card, the likes question). A busy or paused control is `aria-disabled` and ignores presses, so it keeps focus; a toggle keeps one name and says its state with `aria-pressed`.
 
 ## Responsive Behavior
 

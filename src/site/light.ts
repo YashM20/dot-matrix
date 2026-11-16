@@ -14,6 +14,7 @@
  */
 import type { Data, Snapshot, Source } from '../data/source'
 import { bucketLight, LIGHT_EL_BANDS, type LightBucket } from '../engine/light/input'
+import { reducedMotion } from './motion'
 
 export type TiltState = 'unsupported' | 'prompt' | 'granted' | 'denied' | 'insecure'
 /** `TiltState` as the published `tilt` number. */
@@ -216,7 +217,7 @@ const session = {
   get(): string | null { try { return browser()?.win.sessionStorage?.getItem(SESSION_KEY) ?? null } catch { return null } },
   set(v: string) { try { browser()?.win.sessionStorage?.setItem(SESSION_KEY, v) } catch { /* storage blocked */ } },
 }
-const reduced = () => { try { return !!browser()?.win.matchMedia?.('(prefers-reduced-motion: reduce)').matches } catch { return false } }
+const reduced = () => reducedMotion(browser()?.win ?? null)
 
 /** iOS's answer this page (`requestPermission` resolves it), and a sensorless desktop's all-null event. */
 let permission: 'granted' | 'denied' | null = null, sensorless = false

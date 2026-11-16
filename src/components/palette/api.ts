@@ -7,7 +7,7 @@ import { boardIds, boardLabel, boardManifest, loadBoard, type BoardDef } from '.
 import { MODE_LINES, PLACES, isMode, placeOpen } from '../../site/views'
 import type { RendererOverride } from '../xray/store'
 import type { LinkCopy } from '../copyLink'
-import type { MotionSetting } from './reducedMotion'
+import type { MotionSetting } from '../../site/motion'
 import { ACCENTS, type AccentId } from '../../site/theme/names'
 import { getTheme, setContrast } from '../../site/theme/theme'
 import { dropUrlParams, switchTheme } from '../../site/theme/moment'

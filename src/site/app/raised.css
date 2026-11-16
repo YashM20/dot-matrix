@@ -246,6 +246,7 @@
   position: fixed;
   left: 50%;
   top: 0;
+  margin: 0;
   transform: translateX(-50%);
   z-index: calc(var(--z-sheet) + 2);
   width: min(1000px, 100cqi);
