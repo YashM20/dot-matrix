@@ -1,6 +1,6 @@
 import type { DotStyle, Field, GridConfig, Layer, Tone } from '../engine/types'
 import type { Control, FrameContext } from '../engine/context'
-import { type BigTextOptions, barsAt, bigText, centeredBarsAt, cutAround, discCells, dotAt, hRule, knockBoxes, knockSites, placeCells, polylineCells, rectCells, ringCells, rrect, snapToLattice, spriteAt, stackedRows, stadium, textAt, textSize, vRule } from '../engine/layout'
+import { type BigTextOptions, barsAt, bigText, bigTextSize, centeredBarsAt, cutAround, discCells, dotAt, hRule, knockBoxes, knockSites, placeCells, polylineCells, rectCells, ringCells, rrect, snapToLattice, spriteAt, stackedRows, stadium, textAt, textSize, vRule } from '../engine/layout'
 import { cellU, latticeGrid } from '../engine/sampler/gridSampler'
 import { isStable, stableLayers } from '../engine/sampler/repeat'
 import { cachedIconField, iconPaths } from '../engine/fields/iconSDF'
@@ -216,10 +216,12 @@ export const presetField = (p: WidgetPreset, ctx: WidgetContext = { t: 0, data: 
 }
 
 /** Label row drawn in dots (TILE cards): name top-left, red live dot top-right. */
+/** Size of the chrome's live dot (`cardChrome`, 4 cells in from the right edge, centred on the label row). A card that draws its own LIVE or REC dot uses this size. */
+export const LIVE_DOT = 7
 export function cardChrome(p: WidgetPreset): Layer[] {
   if (p.chrome !== 'dots') return []
   const M = layoutFor(p.grid), label = (p.label ?? p.name).toUpperCase()
-  return [...(label ? [layer(M.text(label, 0, 0), 'idle')] : []), ...(p.live ? [layer(M.dots([[p.grid.cols - 4, 3]], 7), 'active')] : [])]
+  return [...(label ? [layer(M.text(label, 0, 0), 'idle')] : []), ...(p.live ? [layer(M.dots([[p.grid.cols - 4, 3]], LIVE_DOT), 'active')] : [])]
 }
 /** The preset's layers with its chrome in front — what every renderer should draw. */
 const chromed = new WeakMap<WidgetPreset, WidgetPreset['layers']>()
@@ -276,6 +278,16 @@ export function layoutFor(grid: GridConfig) {
      * draws the plain glyph at twice the lattice, and `scale` multiplies the lattice (`bigText`, engine/layout).
      */
     big: (str: string, col: number, row: number, opts: BigTextOptions): LatticeField => bigText(grid, str, col, row, opts),
+    /** Width and height in card cells of `big(str, …, opts)`, measured from the face it draws (a `fine` digit is 2 dots narrower than `twin`). */
+    bigSize: (str: string, opts: BigTextOptions): [number, number] => bigTextSize(str, opts),
+    /**
+     * A unit (`%`, `KM`) after big text `str` set at card cell (col,row) with `opts` (left-aligned): `gap` cells right
+     * of the text's measured width, bottoms aligned, drawn with `unitOpts`.
+     */
+    heroUnit: (str: string, unit: string, col: number, row: number, opts: BigTextOptions, unitOpts: BigTextOptions, gap = 3): LatticeField => {
+      const [w, h] = bigTextSize(str, opts)
+      return bigText(grid, unit, col + w + gap, row + h - bigTextSize(unit, unitOpts)[1], unitOpts)
+    },
     /**
      * Evenly spaced dots on a circle (radius in cells), optionally an arc: `start` clockwise from
      * 12 o'clock, `sweep` radians. Sites are fixed by `spacing`, so an arc lands exactly on its

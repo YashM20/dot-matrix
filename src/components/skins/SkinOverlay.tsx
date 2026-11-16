@@ -6,16 +6,15 @@
  *   - a running canvas card (live / transient): its canvas is copied once per its own clock tick;
  *   - a static card (SVG or canvas): its `dots` are rasterized here once, so a skin switch re-skins
  *     without re-sampling.
- * The stage then draws on its own rAF only while it has something moving (decay, flips, refresh).
+ * The stage then draws on its own rAF only while it has something moving (decay, power-on).
  */
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type RefObject } from 'react'
-import { createDisplayStage, type DisplayStage, type SkinName, type StageColors } from '../../engine/display'
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from 'react'
+import { createDisplayStage, type DisplayStage, type SkinName } from '../../engine/display'
 import { renderCanvas } from '../../engine/renderer/canvasRenderer'
 import { sharedClock } from '../../engine/clock'
 import type { DotInstance } from '../../engine/types'
 import { TEST_HOOKS } from '../../lib/testHooks'
-import { createClack, type Clack } from '../../media/clack'
-import { getClack, skinChangedAt, useDisplaySkin } from './store'
+import { skinChangedAt, useDisplaySkin } from './store'
 
 export interface SkinSurfaceProps {
   /** Which surface DotCanvas mounted ('canvas' | 'svg'). */
@@ -30,22 +29,8 @@ export interface SkinSurfaceProps {
   /** Logical px of the frame (cols × pitch, rows × pitch). */
   width: number
   height: number
-  /** The card theme's `dotActive`: VFD and LED glow in it; a theme switch rebuilds the stage settled, no reload. */
+  /** The card theme's `dotActive`: VFD glows in it; a theme switch rebuilds the stage settled, no reload. */
   accent?: string
-  /**
-   * The card theme's neutral tones. The reflective skins take their panel from the scheme and their ink from the theme
-   * (docs/LAYOUT-THEME-PLAN.md §4 "Theme versus display skin"): on a light card e-ink is the card's own paper with the
-   * theme's ink, and flip-disc discs turn from the faint tone to the ink on the card surface. On a dark card the stage
-   * keeps its physics colours (`STAGE_COLORS`), so today's dark skins don't change.
-   */
-  tones?: { surface: string; value: string; dotFaint: string }
-}
-
-/** Light card (the surface is light): the reflective skins' colours from the theme, else the stage's own. */
-function stageColors(tones: SkinSurfaceProps['tones']): Partial<StageColors> | undefined {
-  if (!tones || !/^#[0-9a-f]{6}$/i.test(tones.surface)) return undefined
-  const n = parseInt(tones.surface.slice(1), 16), luma = .2126 * (n >> 16) + .7152 * ((n >> 8) & 255) + .0722 * (n & 255)
-  return luma > 128 ? { paper: tones.surface, ink: tones.value, panel: tones.surface, bright: tones.value, off: tones.dotFaint, tile: tones.surface, grout: tones.dotFaint } : undefined
 }
 
 const MAX_BACKING_SCALE = 3
@@ -61,16 +46,6 @@ function record(skin: SkinName, kind: 'frame' | 'render', ms: number) {
 }
 if (TEST_HOOKS && typeof window !== 'undefined') (window as unknown as { __skinPerf: typeof perf }).__skinPerf = perf
 
-// one clack voice for the page, capped so a whole board flipping is a rattle, not a roar
-let clack: Clack | null | undefined, clackWindow = 0, clackCount = 0
-function playClack(events: { at: number; count: number }[]) {
-  if (!getClack()) return
-  clack ??= createClack()
-  const t = performance.now()
-  if (t - clackWindow > 250) { clackWindow = t; clackCount = 0 }
-  for (const e of events) if (clackCount++ < 10) clack?.play(e.at, e.count)
-}
-
 /** Per-card mutable state outside React's render: the stage, its 2D context, the rAF loop, the scratch raster. */
 class Runner {
   stage: DisplayStage | null = null
@@ -78,7 +53,6 @@ class Runner {
   raf = 0
   scratch: HTMLCanvasElement | null = null
   built: SkinName | null = null
-  gain = 1
   step = () => {
     this.raf = 0
     const { stage, ctx } = this
@@ -113,7 +87,7 @@ const wrapOf = (overlay: RefObject<HTMLCanvasElement | null>, wrap: RefObject<HT
  * Lazy part of the display stage (loaded on the first non-OLED skin): the overlay canvas and its stage,
  * mounted as a sibling of the card surface inside `DisplaySurface`'s wrapper, which it marks via `wrapRef`.
  */
-export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, width, height, accent, tones }:SkinSurfaceProps & { wrapRef: RefObject<HTMLDivElement | null> }) {
+export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, width, height, accent }: SkinSurfaceProps & { wrapRef: RefObject<HTMLDivElement | null> }) {
   const skin = useDisplaySkin()
   // the overlay keeps its last skin while it wipes off after a switch back to OLED
   const [last, setLast] = useState<SkinName>(skin)
@@ -124,15 +98,6 @@ export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, wid
   const runnerRef = useRef<Runner | null>(null)
   const [scale, setScale] = useState(1)
   const [stageId, setStageId] = useState(0)
-
-  // light gain for the cell-based skins: 1 / the cell coverage of the biggest dot on the card
-  const gain = useMemo(() => {
-    let r = 0
-    for (const d of dots) if (d.opacity > 0 && d.r > r) r = d.r
-    const pitch = width / cols, cover = r > 0 ? Math.min(1, (Math.PI * r * r) / (pitch * pitch)) : 1
-    return Math.min(4, Math.max(1, 1 / cover))
-  }, [dots, width, cols])
-  useLayoutEffect(() => { runnerOf(runnerRef).gain = gain }, [gain])
 
   // backing scale: CSS size × DPR (same rule as DotCanvas), measured only while a skin is on
   useLayoutEffect(() => {
@@ -148,10 +113,8 @@ export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, wid
   }, [wrapRef, drawn, width])
 
   const W = Math.round(width * scale), H = Math.round(height * scale)
-  // only VFD and LED read the accent, so a theme switch rebuilds just those (the other stages keep their state)
-  const tint = drawn === 'vfd' || drawn === 'led' ? accent : undefined
-  // e-ink, flip-disc and the mosaic read the neutral tones (a light card); a string key, so an equal palette doesn't rebuild
-  const colorKey = drawn === 'eink' || drawn === 'flipdisc' || drawn === 'grout' ? JSON.stringify(stageColors(tones) ?? null) : 'null'
+  // only VFD reads the accent, so a theme switch rebuilds just that one (the other stages keep their state)
+  const tint = drawn === 'vfd' ? accent : undefined
   // the stage: one per (skin, backing size); a resize keeps the skin without replaying its power-on
   useLayoutEffect(() => {
     const runner = runnerOf(runnerRef), canvas = overlayRef.current, wrap = wrapOf(overlayRef, wrapRef)
@@ -162,11 +125,11 @@ export function SkinOverlay({ wrapRef, mode, dots, running, fps, cols, rows, wid
     const same = runner.built === drawn, calm = reduced(), switched = now() - skinChangedAt() < 1.5
     // a switch sweeps down the page like a raster scan; a fresh card (board change) refreshes at once
     const delay = switched && !same ? Math.min(1, Math.max(0, wrap.getBoundingClientRect().top / window.innerHeight)) * .3 : 0
-    runner.stage = createDisplayStage(drawn, { cols, rows, w: W, h: H, gain: runner.gain, delay, instant: same || calm, noFlash: calm, onFlip: playClack, accent: tint, colors: JSON.parse(colorKey) ?? undefined })
+    runner.stage = createDisplayStage(drawn, { cols, rows, w: W, h: H, delay, instant: same || calm, accent: tint })
     runner.ctx = ctx; runner.built = drawn
     setStageId(id => id + 1)
     return () => runner.stop()
-  }, [wrapRef, drawn, W, H, cols, rows, tint, colorKey])
+  }, [wrapRef, drawn, W, H, cols, rows, tint])
 
   const copying = running && mode === 'canvas'
   // static frame, no re-sample: a canvas card (2D or WebGL-composited) is copied once DotCanvas's own static

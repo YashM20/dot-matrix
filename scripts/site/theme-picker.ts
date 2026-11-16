@@ -136,17 +136,15 @@ const closeUp = async (sel: string, name: string) => {
   const s = await cdp('Page.captureScreenshot', { format: 'png', clip: r })
   if (s.result?.data) { mkdirSync(join('.snapshots', 't5'), { recursive: true }); writeFileSync(join('.snapshots', 't5', `${name}.png`), Buffer.from(s.result.data, 'base64')) }
 }
-/** The dotted pills and switches up close (`ring-*.png`): the header's DISPLAY ▾, CLACK and THEME ▾, the popover's
- * two switches off, on and with keyboard focus, in both schemes; then TOOLS › THEME and DISPLAY on a phone. Last, as
- * `?skin=flipdisc` (for CLACK) stays stored. */
+/** The dotted pills and switches up close (`ring-*.png`): the header's DISPLAY ▾ and THEME ▾, the popover's
+ * two switches off, on and with keyboard focus, in both schemes; then TOOLS › THEME on a phone. Last, as
+ * `?skin=nixie` (a non-default skin on the DISPLAY pill) stays stored. */
 const ringCloseUps = async () => {
   const head = '.topbar .skin-switch, .topbar .theme-switch', sw = '.theme-pop :is(.theme-contrast, .theme-share)'
   for (const os of ['dark', 'light']) {
-    await open('/henry/?skin=flipdisc', { os })
-    await waitFor('!!document.querySelector(".topbar .skin-clack")', 4000); await sleep(300)
-    await closeUp(head, `ring-${os}-header-off`)
-    await js(`document.querySelector('.topbar .skin-clack').click()`); await move(5, 790); await sleep(200)
-    await closeUp(head, `ring-${os}-header-on`)
+    await open('/henry/?skin=nixie', { os })
+    await waitFor(`!!document.querySelector('.topbar .skin-menu-btn')?.style.getPropertyValue('--ring')`, 4000); await move(5, 790); await sleep(300)
+    await closeUp(head, `ring-${os}-header`)
     await js(`document.querySelector('.theme-menu-btn').click()`)
     await waitFor('!!document.querySelector(".theme-pop .theme-share")', 3000); await move(5, 790); await sleep(300)
     await closeUp(sw, `ring-${os}-switches-off`)
@@ -156,14 +154,12 @@ const ringCloseUps = async () => {
     await closeUp(sw, `ring-${os}-switches-focus`)
     await key('Escape', 'Escape', 27)
   }
-  await open('/henry/?skin=flipdisc', { phone: true })
+  await open('/henry/?skin=nixie', { phone: true })
   const tools = (await centreOf('.tabbar button[aria-haspopup]'))!
   await tap(tools.x, tools.y)
   await waitFor('!!document.querySelector(".tools-sheet[open] .theme-ctl")', 6000); await sleep(700)
   await js(`document.querySelector('.tools-sheet .theme-share')?.scrollIntoView({ block: 'center' })`); await sleep(300)
   await closeUp('.tools-sheet .theme-ctl :is(.theme-contrast, .theme-share)', 'ring-phone-switches')
-  await js(`document.querySelector('.tools-sheet .skin-list-clack')?.scrollIntoView({ block: 'center' })`); await sleep(300)
-  await closeUp('.tools-sheet .skin-list-clack', 'ring-phone-clack')
 }
 
 /** The phone viewport at 3× (`.snapshots/t5/<name>.png`): a clipped capture of the fixed tab bar on an emulated phone
@@ -181,17 +177,17 @@ const ringArrival = async () => {
   const strip = `window.__rings = [...document.querySelectorAll(${JSON.stringify(pills)})].map(el => { const v = el.style.getPropertyValue('--ring'); el.style.removeProperty('--ring'); return [el, v] })`
   const fades = `document.getAnimations().filter(a => a.transitionProperty === 'opacity' && a.effect?.pseudoElement === '::before' && a.effect.target.matches(${JSON.stringify(pills)})).length`
   for (const [os, reduce] of [['dark', false], ['light', false], ['dark', true]] as const) {
-    await open('/henry/?skin=flipdisc', { os, reduce })
-    await waitFor(`document.querySelectorAll(${JSON.stringify(pills)}).length >= 3 && [...document.querySelectorAll(${JSON.stringify(pills)})].every(el => el.style.getPropertyValue('--ring'))`, 4000)
+    await open('/henry/?skin=nixie', { os, reduce })
+    await waitFor(`document.querySelectorAll(${JSON.stringify(pills)}).length >= 2 && [...document.querySelectorAll(${JSON.stringify(pills)})].every(el => el.style.getPropertyValue('--ring'))`, 4000)
     await js(strip); await sleep(400)
     const pre = await js(`[...document.querySelectorAll(${JSON.stringify(pills)})].map(el => { const c = getComputedStyle(el), b = getComputedStyle(el, '::before')
       return { text: el.textContent.trim(), border: c.borderTopStyle + ' ' + c.borderTopColor, before: b.opacity, ink: c.color, w: el.getBoundingClientRect().width } })`) as { text: string; border: string; before: string; ink: string; w: number }[]
     const tag = `${os}${reduce ? ', reduced motion' : ''}`
-    check(`header pills before the ring (${tag}): no border, no ring, text and caret stay`, pre.length >= 3 && pre.every(p => !p.border.startsWith('dotted') && /rgba\(0, 0, 0, 0\)|transparent/.test(p.border) && p.before === '0' && p.text.length > 1 && !/(, | \/ )0\)$/.test(p.ink)), JSON.stringify(pre))
+    check(`header pills before the ring (${tag}): no border, no ring, text and caret stay`, pre.length >= 2 && pre.every(p => !p.border.startsWith('dotted') && /rgba\(0, 0, 0, 0\)|transparent/.test(p.border) && p.before === '0' && p.text.length > 1 && !/(, | \/ )0\)$/.test(p.ink)), JSON.stringify(pre))
     if (!reduce) await closeUp(head, `arrive-${os}-header-load`)
     await js(`window.__rings.forEach(([el, v]) => el.style.setProperty('--ring', v))`)
     const n = await js(`new Promise(r => requestAnimationFrame(() => r(${fades})))`) as number
-    check(reduce ? 'reduced motion: the ring appears at once (no fade)' : `the ring fades in when it arrives (${tag})`, reduce ? n === 0 && await js(`[...document.querySelectorAll(${JSON.stringify(pills)})].every(el => getComputedStyle(el, '::before').opacity === '1')`) === true : n >= 3, String(n))
+    check(reduce ? 'reduced motion: the ring appears at once (no fade)' : `the ring fades in when it arrives (${tag})`, reduce ? n === 0 && await js(`[...document.querySelectorAll(${JSON.stringify(pills)})].every(el => getComputedStyle(el, '::before').opacity === '1')`) === true : n >= 2, String(n))
     await sleep(400)
     if (!reduce) await closeUp(head, `arrive-${os}-header-ringed`)
   }

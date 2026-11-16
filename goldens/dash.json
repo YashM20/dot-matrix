@@ -64,12 +64,12 @@
   "dash-battery": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "1dc4b547",
+    "hash": "50084ca0",
     "dots": 605
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "a4609178",
+    "hash": "01e5e281",
     "dots": 827
    }
   },
@@ -100,13 +100,13 @@
   "dash-drive": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "dadeafbb",
-    "dots": 1000
+    "hash": "789c1a4e",
+    "dots": 998
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "7e44b006",
-    "dots": 965
+    "hash": "7a14e513",
+    "dots": 963
    }
   }
  }

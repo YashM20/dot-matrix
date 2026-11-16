@@ -1,16 +1,16 @@
 {
  "about": "FNV-1a 32 of the sorted quantized dot list per preset on the squares board (scripts/golden.ts). Re-baseline with `pnpm golden` when a change is intended.",
  "presets": {
-  "sq-tetris": {
+  "sq-stack": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "072b3b11",
-    "dots": 1348
+    "hash": "484a1d40",
+    "dots": 1335
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "d571dd40",
-    "dots": 1348
+    "hash": "53f114cb",
+    "dots": 1335
    }
   },
   "sq-quads": {
@@ -52,13 +52,13 @@
   "sq-teletext": {
    "t=0": {
     "style": "square:2.00",
-    "hash": "806f0a8d",
-    "dots": 3409
+    "hash": "82a05758",
+    "dots": 3396
    },
    "t=1.3": {
     "style": "square:2.00",
-    "hash": "1b7322fe",
-    "dots": 3405
+    "hash": "b88046e5",
+    "dots": 3392
    }
   },
   "sq-lines": {

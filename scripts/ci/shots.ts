@@ -8,7 +8,10 @@
  * (900 px tall). Theme is `dark`, `light` or a full `<scheme>_<accent>` name (src/site/theme/names.ts); default
  * `dark_signal`. Options, from a fixed list (no script comes from the input): `2x` (device scale 2), `xray` (the
  * xray flag on), `more` (click the widget page's MORE), `card-more` (click the first card row's MORE; the shot is the
- * viewport, the row in its middle), `other-tab` (another tab saves the editor's document, so the two-tab note shows). Reduced motion is emulated so nothing is caught mid-animation. Files:
+ * viewport, the row in its middle), `other-tab` (another tab saves the editor's document, so the two-tab note shows),
+ * `display` (the header's DISPLAY ▾ menu) and `tools` (the phone TOOLS sheet, scrolled to its skin list); `card-more`,
+ * `display` and `tools` capture the viewport only, e.g. `/@1280@dark@display`, `/@390@light@tools`. Reduced motion is
+ * emulated so nothing is caught mid-animation. Files:
  * `<route>-<width>-<theme>[-<option>...].png` in `--out` (default `.snapshots/ci-shots/`). Exit 1 when a page never
  * got ready (or an option's state never showed), 2 on a bad item.
  */
@@ -22,8 +25,15 @@ const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i +
 const out = resolve(opt('--out') ?? join('.snapshots', 'ci-shots'))
 const items = (opt('--list') ?? '').split(',').map(s => s.trim()).filter(Boolean)
 
-const OPTIONS = ['2x', 'xray', 'more', 'card-more', 'other-tab'] as const
+const OPTIONS = ['2x', 'xray', 'more', 'card-more', 'other-tab', 'display', 'tools'] as const
 type Option = typeof OPTIONS[number]
+/** Options that capture the viewport as it is (a resize to the full page would scroll or close what they opened). */
+const VIEWPORT: readonly Option[] = ['card-more', 'display', 'tools']
+/** UI states opened by a script click: the control to press, then what shows it is open. */
+const STATES: Partial<Record<Option, { press: string; open: string; then?: string }>> = {
+  display: { press: '.skin-switch .skin-menu-btn', open: `!!document.querySelector('.skin-menu [role=menuitemradio]')` },
+  tools: { press: '.tabbar button[aria-haspopup="dialog"]', open: `!!document.querySelector('.tools-sheet .skin-list [role=radio]')`, then: `document.querySelector('.tools-sheet .skin-list')?.scrollIntoView({ block: 'center' })` },
+}
 type Item = { route: string; width: number; scheme: string; accent: string; opts: Option[]; file: string }
 const parse = (s: string): Item | string => {
   // the leading slash is optional: Git Bash on Windows rewrites a leading `/` into a Windows path
@@ -52,6 +62,14 @@ async function act(opts: Option[], phone: boolean): Promise<boolean> {
     if (phone) await page.tap(c.x, c.y)
     else { await page.mouse('mouseMoved', c.x, c.y, 0); await page.mouse('mousePressed', c.x, c.y); await page.mouse('mouseReleased', c.x, c.y) }
     if (!(await page.waitFor(`!!document.querySelector('${menu} [role^="menuitem"]')`, 5000))) return false
+  }
+  for (const o of opts) {
+    const st = STATES[o]
+    if (!st) continue
+    await page.js(`document.querySelector(${JSON.stringify(st.press)})?.click()`).catch(() => {})
+    if (!(await page.waitFor(st.open, 8000))) return false
+    if (st.then) await page.js(st.then).catch(() => {})
+    await sleep(500)
   }
   if (opts.includes('other-tab')) {
     if (!(await page.waitFor(`!!document.querySelector('.ed-other')`, 15000))) return false
@@ -82,8 +100,8 @@ try {
     await page.js(`document.fonts.ready.then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))`).catch(() => {})
     await sleep(1500)
     const state = await act(it.opts, phone)
-    // a full page (capped), except an open card menu: the viewport around it (a resize would scroll it away)
-    if (!it.opts.includes('card-more')) {
+    // a full page (capped), except the viewport-only options
+    if (!it.opts.some(o => VIEWPORT.includes(o))) {
       const h = Math.min(4000, Math.max(H, Math.ceil(await page.js<number>('document.documentElement.scrollHeight').catch(() => H))))
       await page.cdp('Emulation.setDeviceMetricsOverride', { width: it.width, height: h, deviceScaleFactor: dpr, mobile: phone })
       await sleep(800)
@@ -91,6 +109,7 @@ try {
     await page.shot(join(out, it.file))
     if (!ok || !state) failed++
     console.log(`${ok && state ? 'OK       ' : 'NOT READY'} ${it.file} (${((Date.now() - t) / 1000).toFixed(1)} s)`)
+    if (it.opts.some(o => STATES[o])) await page.js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`).catch(() => {})
   }
 } finally {
   await page.close()

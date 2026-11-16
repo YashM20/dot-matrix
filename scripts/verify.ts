@@ -34,6 +34,7 @@ import { engineChecks } from './verify/engine'
 import { uxChecks } from './verify/ux'
 import { flagChecks } from './verify/flags'
 import { cardChecks } from './verify/cards'
+import { audioPersonalChecks } from './verify/audio-personal'
 import { creditChecks } from './verify/credits'
 import { frameCacheChecks } from './verify/frame-cache'
 
@@ -190,14 +191,26 @@ uxChecks(assert)
 creditChecks(assert)
 // CP6 wave 3) cards fixed at dot level keep every dot clear of its neighbours (scripts/verify/cards.ts)
 cardChecks(assert)
+// AUDIO and PERSONAL (#259, #256): the baked CJK line, the counts, push to talk, the colon, the running track time (scripts/verify/audio-personal.ts)
+audioPersonalChecks(assert)
 frameCacheChecks(assert)
 // METRO (#257) and DASHBOARD (#250) refine fixes (scripts/verify/metro-dashboard.ts)
 {
   const { metroDashboardChecks } = await import('./verify/metro-dashboard')
   metroDashboardChecks(assert)
 }
+// card drawing fixes (#359): fine-face units, the lap knob, glyph transport, REC dot size (scripts/verify/card-drawing.ts)
+{
+  const { cardDrawingChecks } = await import('./verify/card-drawing')
+  cardDrawingChecks(assert)
+}
 // FLAGS (#144, #145) every release flag documented; the URL sets none; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
 await flagChecks(assert)
+// SKINS (#345) four display skins in order; a saved or linked removed skin opens on OLED (scripts/verify/skins.ts)
+{
+  const { skinChecks } = await import('./verify/skins')
+  await skinChecks(assert)
+}
 // FIRST DRAW (#312) grid cards draw their first frame one per task, near the screen only (scripts/verify/first-draw.ts)
 {
   const { firstDrawChecks } = await import('./verify/first-draw')

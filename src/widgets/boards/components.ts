@@ -339,11 +339,12 @@ export const progressCard: WidgetPreset = {
     const span = PROG.x1 - PROG.x0, n = Math.round(span / PROG.spacing), step = span / n, head = Math.round(v * n)
     const done: Pt[] = [], todo: Pt[] = []
     for (let i = 0; i <= n; i++) if (Math.abs(i - head) * step >= PROG.gap) (i < head ? done : todo).push([PROG.x0 + i * step, PROG.y])
-    const hw = (String(pct).length * 12 - 2) * 2.5, pw = 5 * 1.6, left = 72 - (hw + 3 + pw) / 2, pv = s.pressed ? PRESS : 1
+    const big = { lattice: 2.5, smooth: true }, pctOpts = { lattice: 1.6 }
+    const hw = T.bigSize(String(pct), big)[0], pw = T.bigSize('%', pctOpts)[0], left = 72 - (hw + 3 + pw) / 2, pv = s.pressed ? PRESS : 1
     const bar = rr(PROG.x0 - 3, PROG.y - 3, span + 6, 6, 3)
     return [
-      layer(T.big(String(pct), left, PROG.top, { lattice: 2.5, smooth: true }), 'value'),
-      layer(T.big('%', left + hw + 3, PROG.top + 35 - 11.2, { lattice: 1.6 }), 'idle'),
+      layer(T.big(String(pct), left, PROG.top, big), 'value'),
+      layer(T.heroUnit(String(pct), '%', left, PROG.top, big, pctOpts), 'idle'),
       layer(at(T.dots(done, PROG.size), pv), 'value'), layer(T.dots(todo, PROG.size), 'faint'),
       layer(at(T.dots([[PROG.x0 + head * step, PROG.y]], PROG.head), pv), 'active'),
       layer(T.text('SYNC', PROG.x0, PROG.y + 12), 'idle'),

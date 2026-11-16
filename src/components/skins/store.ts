@@ -1,28 +1,25 @@
 /**
- * The global display skin (C7): one value for the whole site. Read from `?skin=` first, then
- * localStorage `dot480:skin`, default `oled`. `setSkin(name)` is the public entry point (switcher,
- * command palette, a terminal `skin crt`); it keeps the URL and storage in sync.
+ * The global display skin (C7): one value for the whole site. A `?skin=` link decides, else localStorage
+ * `dot480:skin`, default `oled` (`pickSkin`: a link or save naming an unknown or removed skin opens on OLED, no error).
+ * `setSkin(name)` is the public entry point (switcher, command palette, a terminal `skin crt`); it keeps the
+ * URL and storage in sync.
  */
 import { useSyncExternalStore } from 'react'
-import { isSkinName, type SkinName } from '../../engine/display/names'
-import { flag, setFlag } from '../../site/flags'
+import { isSkinName, pickSkin, type SkinName } from '../../engine/display/names'
 import { replaceUrl } from '../../site/safe-url'
 
 const KEY = 'dot480:skin'
 
 function initialSkin(): SkinName {
   if (typeof window === 'undefined') return 'oled'
-  const q = new URLSearchParams(window.location.search).get('skin')
-  if (isSkinName(q)) return q
-  try { const s = localStorage.getItem(KEY); if (isSkinName(s)) return s } catch { /* storage blocked */ }
-  return 'oled'
+  let stored: string | null = null
+  try { stored = localStorage.getItem(KEY) } catch { /* storage blocked */ }
+  return pickSkin(new URLSearchParams(window.location.search).get('skin'), stored)
 }
 
 let skin: SkinName = initialSkin()
 /** Seconds (performance clock) of the last switch: cards time their refresh from it. */
 let changedAt = 0
-// the `clack` flag, as `clackEnabled()` in src/media/clack.ts reads it (the switcher doesn't pull the audio module in)
-let clack = flag('clack')
 const listeners = new Set<() => void>()
 const emit = () => { for (const l of listeners) l() }
 
@@ -44,13 +41,4 @@ export function setSkin(name: string): void {
   emit()
 }
 
-export const getClack = (): boolean => clack
-/** Flip-disc clack on/off (muted by default; the switcher's toggle, saved as the `clack` flag). */
-export function setClack(on: boolean): void {
-  clack = on
-  setFlag('clack', on)
-  emit()
-}
-
 export const useDisplaySkin = (): SkinName => useSyncExternalStore(subscribeSkin, getSkin, () => 'oled')
-export const useClack = (): boolean => useSyncExternalStore(subscribeSkin, getClack, () => false)

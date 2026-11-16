@@ -12,6 +12,11 @@
  *   npx tsx scripts/site/size.ts --modules 40    → also the 40 biggest first-load source modules (default 30), from the
  *                                                  build's module report (size-modules.ts); CI prints them every build
  *
+ * The page's cold-load hints (#348, scripts/site/preload.ts: `<link rel="modulepreload">` for lazy chunks the page is
+ * sure to need) print on their own line and stay out of the budget: those chunks were fetched on every cold load before
+ * the hints too, one round trip later, so the hints move bytes earlier without adding any. `--board` already counts
+ * its board's chunk, so a board page's hints add nothing there.
+ *
  * Delta gates (docs/LIVING-MATTER-PLAN.md §6, the first-load ledger): a change is gated on its growth against
  * the build before it, not on the absolute number. Give the base as another build (`--against <dist dir>`) or as
  * the ledger's running totals (`--base <kB>`, `--worker-base <kB>`); `--delta <kB>` / `--worker-delta <kB>` is the
@@ -52,6 +57,10 @@ function measure(dist: string, board?: string) {
     if (chunk) roots.push(chunk); else console.log(`(no separate chunk for ${board}: it ships in the entry)`)
   }
   const files = [...closure(roots)].sort().map(f => ({ f, kb: gz(f) / 1024 }))
+  // the page's cold-load hints beyond that closure (the board page's own HTML for --board)
+  const pageHtml = board && existsSync(join(dist, board, 'index.html')) ? readFileSync(join(dist, board, 'index.html'), 'utf8') : html
+  const inClosure = new Set(files.map(x => x.f))
+  const hints = [...pageHtml.slice(0, pageHtml.indexOf('</head>')).matchAll(/<link rel="modulepreload"[^>]*href="\/assets\/([^"]+\.js)"/g)].map(m => m[1]).filter(f => !inClosure.has(f))
   // the sample worker: what loads before it answers, then per board what one card's first request adds
   const worker = all.find(f => /^sampleWorker-.*\.js$/.test(f))
   const workerInit = worker ? closure([worker]) : new Set<string>()
@@ -65,7 +74,7 @@ function measure(dist: string, board?: string) {
   })
   const css = [...html.matchAll(/href="\/assets\/([^"]+\.css)"/g)].map(m => m[1])
   return {
-    files, total: files.reduce((s, x) => s + x.kb, 0), cssKb: css.reduce((s, f) => s + gz(f), 0) / 1024,
+    files, total: files.reduce((s, x) => s + x.kb, 0), hints, hintsKb: kbOf(hints), cssKb: css.reduce((s, f) => s + gz(f), 0) / 1024,
     worker, workerKb: worker ? kbOf(workerInit) : NaN, workerInit: [...workerInit], workerBoards,
     workerAllKb: kbOf(workerChunks), workerChunks, read: (f: string) => readFileSync(join(assets, f), 'utf8'),
   }
@@ -81,6 +90,10 @@ const dist = opt('--dist') ?? 'dist', board = opt('--board'), showWorker = args.
 const m = measure(dist, board)
 for (const { f, kb } of m.files) console.log(`  ${f.padEnd(40)} ${kb.toFixed(2)} kB gz`)
 console.log(`first-load JS${board ? ` (${board})` : ''}: ${m.total.toFixed(2)} kB gz in ${m.files.length} file(s), budget ${BUDGET_KB}; CSS ${m.cssKb.toFixed(2)} kB gz`)
+if (m.hints.length) {
+  for (const f of m.hints) console.log(`  + ${f.padEnd(38)} ${(gzipSync(m.read(f), { level: 9 }).length / 1024).toFixed(2)} kB gz`)
+  console.log(`cold-load hints (#348): +${m.hintsKb.toFixed(2)} kB gz in ${m.hints.length} file(s), fetched beside first load (${(m.total + m.hintsKb).toFixed(2)} kB gz together); not in the budget, they loaded one round trip later before`)
+}
 // which source modules make up first load: each module's own gzip size, scaled so a chunk's modules add up to its real
 // gzip size. Needs this build's module report (absent for a `--dist` build made elsewhere: then nothing prints).
 if (args.includes('--modules') && existsSync(SIZE_MODULES)) {

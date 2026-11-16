@@ -3,7 +3,7 @@
  * (`{grid.gap}`), and cells that fuse into one shape where they are equal (`Layer.join`): only cells of the same
  * tone, group and quantized level join, so every blob reads as one piece, one terrace or one quad.
  *
- *   TETRIS  a deterministic game (7-bag, El-Tetris AI): each settled piece fuses into one tetromino
+ *   STACK   a deterministic falling-blocks game (7-bag, El-Ashi's AI weights): each settled piece fuses into one tetromino
  *   QUADS   Fogleman's Quads: split the worst quad 400 times, until 1,201 squares find a face
  *   BLOB    metaballs on a lattice: terraces fuse level by level, and the red neck is where two balls meet
  *   LCD     a four-shade 72 × 64 LCD in spaced squares: a clock, a walker and a parallax strip
@@ -41,7 +41,7 @@ export { squareStyle }
 
 installSquares()
 
-// ── 01 TETRIS ─ seven shapes, one rule ────────────────────────────────────────────────────────────────
+// ── 01 STACK ─ seven shapes, one rule ─────────────────────────────────────────────────────────────────
 // Thesis: "Seven shapes, one rule: only equals fuse." A 10 × 18 well on a 6× lattice. The settled stack is one
 // layer whose cells join by piece colour (a greedy colouring of the pieces that ever touch), so every piece reads
 // as one tetromino even beside a same-tone neighbour. The falling piece is the red; a cleared line flashes as one
@@ -53,11 +53,13 @@ const game = () => (tet ??= tetris({ w: TW, h: TH, seed: 3, max: 400, garbage: 6
 const PIECE = .5, DROP = .7, FLASH = 2 / 12, T_OFF = 96.2
 /** Tone of each kind (I O T S Z J L): joined fills sit a grey band low (Q-squares §2.5). */
 const KIND_TONE: Tone[] = ['idle', 'mid', 'idle', 'mid', 'idle', 'mid', 'value']
-export const sqTetris: WidgetPreset = {
-  id: 'sq-tetris', name: 'Squares Tetris', label: 'TETRIS', ...tile,
+// Was `sq-tetris` (#188): the old id still opens it through `cardAliases`. The visitor text never uses the game's
+// trademark; the credit names its author and year.
+export const sqStack: WidgetPreset = {
+  id: 'sq-stack', name: 'Stack', label: 'STACK', ...tile,
   credit: [
-    { by: ['Alexey Pajitnov'], title: 'Tetris (1984)', source: 'https://en.wikipedia.org/wiki/Tetris', note: 'the game' },
-    { by: ['Islam El-Ashi'], title: 'El-Tetris, an improvement on Pierre Dellacherie’s algorithm (2011)', source: 'https://imake.ninja/el-tetris-an-improvement-on-pierre-dellacheries-algorithm/', note: 'the weights the player uses' },
+    { by: ['Alexey Pajitnov'], title: 'The falling-blocks game (1984)', source: 'https://en.wikipedia.org/wiki/Tetris', note: 'the game this card plays' },
+    { by: ['Islam El-Ashi'], title: 'An improvement on Pierre Dellacherie’s algorithm (2011)', source: 'https://imake.ninja/el-tetris-an-improvement-on-pierre-dellacheries-algorithm/', note: 'the weights the player uses' },
   ],
   layers: ctx => {
     const g = game(), wh = TW * TH, loop = g.count * PIECE, p = mod(ctx.t + T_OFF, loop), k = Math.min(g.count - 1, Math.floor(p / PIECE)), into = p - k * PIECE
@@ -377,7 +379,7 @@ export const sqMorph: WidgetPreset = {
 // separated (spaced squares, the gutter shows). Backgrounds are joined panels a level down. The header is the label
 // row: the page number and the clock, whose seconds are the red.
 const TT_COLS = 24, TT_ROWS = 16, TT_CELL: Pt = [6, 9]
-const TT_INDEX: [string, string][] = [['NEWS', '101'], ['SPORT', '102'], ['WEATHER', '103'], ['TETRIS', '104'], ['QUADS', '105'], ['LCD', '106'], ['LINES', '107']]
+const TT_INDEX: [string, string][] = [['NEWS', '101'], ['SPORT', '102'], ['WEATHER', '103'], ['STACK', '104'], ['QUADS', '105'], ['LCD', '106'], ['LINES', '107']]
 const TT_SUBS = ['SIX CELLS A CHARACTER', 'BLOCKS FUSE ON CONTACT', 'SEPARATED: GROUT SHOWS', 'ONE RED: THE SECONDS']
 /** The weather map: an island on 22 × 21 sub-cells (land 1, sea 0), from two blobs and a ragged hash coast. */
 const TT_LW = 22, TT_LH = 21
@@ -498,6 +500,6 @@ export const sqLines: WidgetPreset = {
   },
 }
 
-export const squaresBoard = [sqTetris, sqQuads, sqBlob, sqGameboy, sqTeletext, sqLines, ...squaresPack, sqMorph, sqHat, sqAmmann, sqArctic, sqSandpile, sqAscii]
+export const squaresBoard = [sqStack, sqQuads, sqBlob, sqGameboy, sqTeletext, sqLines, ...squaresPack, sqMorph, sqHat, sqAmmann, sqArctic, sqSandpile, sqAscii]
 /** The board's sims and sizes, for the checks (`scripts/squares.ts`). */
 export const squaresSources = { game, quadTree, quadsAt, ballsAt, blobFrame, lineLevels, TT_BANNER, B_OFF, B_LOOP, LINES: { w: LN_W, lines: LN_LINES }, TETRIS: { w: TW, h: TH, k: TK, origin: T_ORIGIN }, BLOB: { k: BK, origin: B_ORIGIN, w: BW, h: BH }, QUADS: { size: Q_SIZE, k: QK, origin: Q_ORIGIN, splits: Q_SPLITS } }

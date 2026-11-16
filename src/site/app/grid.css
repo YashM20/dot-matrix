@@ -64,7 +64,8 @@
    stays on the columns. The column count per width mirrors auto-fill: n columns fit when the grid is at least
    n·--card-min + (n−1)·--spacing-cardGap wide (tokens.css: 340 / 240 / 200, gap 16), up to the CARD SIZE cap:
    LARGE (no data-cards, or "l") 3 (dense 4), MEDIUM ("m") 4 (dense 5), COMPACT ("s") none. A hero board fits only
-   3 in the frame, so no cap reaches it. Two columns never orphan. */
+   3 in the frame, so no cap reaches it. Two columns never orphan. ALL's grid (`.browse-grid`, every card, standard)
+   is a board-grid container too and takes the standard rules. */
 @container board-grid (1052px <= width) {
   :root:not([data-grid="ruled"]) .board-grid[data-density="hero"] > :nth-child(3n+1):last-child {
     translate: calc(1 * (100% + var(--spacing-cardGap)))
@@ -73,34 +74,34 @@
 
 /* standard: 3 columns from 752 px (LARGE stays at 3), 4 from 1008 (MEDIUM stays at 4), 5 from 1264 */
 @container board-grid (752px <= width < 1008px) {
-  :root:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(3n+1):last-child {
+  :root:not([data-grid="ruled"]) :is(.board-grid, .browse-grid)[data-density="standard"] > :nth-child(3n+1):last-child {
     translate: calc(1 * (100% + var(--spacing-cardGap)))
   }
 }
 
 @container board-grid (1008px <= width) {
-  :root:not([data-grid="ruled"], [data-cards="m"], [data-cards="s"]) .board-grid[data-density="standard"] > :nth-child(3n+1):last-child {
+  :root:not([data-grid="ruled"], [data-cards="m"], [data-cards="s"]) :is(.board-grid, .browse-grid)[data-density="standard"] > :nth-child(3n+1):last-child {
     translate: calc(1 * (100% + var(--spacing-cardGap)))
   }
 }
 
 @container board-grid (1008px <= width < 1264px) {
-  :root:is([data-cards="m"], [data-cards="s"]):not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(4n+1):last-child {
+  :root:is([data-cards="m"], [data-cards="s"]):not([data-grid="ruled"]) :is(.board-grid, .browse-grid)[data-density="standard"] > :nth-child(4n+1):last-child {
     translate: calc(1.5 * (100% + var(--spacing-cardGap)))
   }
 }
 
 @container board-grid (1264px <= width) {
-  :root[data-cards="m"]:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(4n+1):last-child {
+  :root[data-cards="m"]:not([data-grid="ruled"]) :is(.board-grid, .browse-grid)[data-density="standard"] > :nth-child(4n+1):last-child {
     translate: calc(1.5 * (100% + var(--spacing-cardGap)))
   }
 
-  :root[data-cards="s"]:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(5n+1):last-child {
+  :root[data-cards="s"]:not([data-grid="ruled"]) :is(.board-grid, .browse-grid)[data-density="standard"] > :nth-child(5n+1):last-child {
     translate: calc(2 * (100% + var(--spacing-cardGap)))
   }
 
-  :root[data-cards="s"]:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(5n+1):nth-last-child(2),
-  :root[data-cards="s"]:not([data-grid="ruled"]) .board-grid[data-density="standard"] > :nth-child(5n+1):nth-last-child(2) + * {
+  :root[data-cards="s"]:not([data-grid="ruled"]) :is(.board-grid, .browse-grid)[data-density="standard"] > :nth-child(5n+1):nth-last-child(2),
+  :root[data-cards="s"]:not([data-grid="ruled"]) :is(.board-grid, .browse-grid)[data-density="standard"] > :nth-child(5n+1):nth-last-child(2) + * {
     translate: calc(1.5 * (100% + var(--spacing-cardGap)))
   }
 }

@@ -1,5 +1,7 @@
 # Track Q: squares (spaced and joined), implementation plan
 
+> Renamed (#188, 2026-11-15): the falling-blocks card `sq-tetris` is now `sq-stack` (label STACK). The old id and URL still open it. This plan keeps the old id where it describes history.
+
 > Status: **Q1, Q2 and Q3 built** (Q1 2026-10-28, round 2; Q2 2026-10-29, round 3; Q3 2026-10-31, round 3; the optional DISPLAY "squares" skin not built; `sq-ascii` built 2026-11-03 for #36). Q1 shipped on the buffer path (F0.11's cut had landed): `src/engine/squares/` (mask, geometry, sampler join pass, buffer channels, canvas, svg, lazy gl, tetris), the core hook points (`sampler/ext.ts`, `renderer/ext.ts`), the `/squares/` board, `scripts/squares.ts` (in verify) and `scripts/squares-browser.ts` (all gates green). Deviations from the text below:
 > - `JointGeom` keeps F0.5's field names (`ro` as a fraction of s, `ri` / `seam` in px).
 > - More of the work sits behind hooks than §2.2–2.4 say, to save first load: the buffer channels (`samplerExt.push / attach / grow / decode`), per-dot form codes (computed in the join pass, `samplerExt.form` for sites), Canvas buffer dots (`shapeExt.bufferDot`) and the whole SVG of a joined dot list (`shapeExt.svg`, `squares/svg.ts`; plain lists keep `renderSVG` byte for byte).

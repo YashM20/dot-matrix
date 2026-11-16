@@ -48,6 +48,7 @@ export const sunburst: WidgetPreset = {
 
 export const powerRing: WidgetPreset = {
   id: 'power-ring', name: '247 W', label: '', group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
+  // load: the red arc's share of an 800 W supply (247 / 800)
   defaults: { load: 0.31 },
   layers: ({ data }) => {
     // open at the bottom: 7 o'clock → over the top → 5 o'clock; the load fills the tail end in red
@@ -61,11 +62,15 @@ export const powerRing: WidgetPreset = {
   },
 }
 
+/** Track length in seconds (3:52) and m:ss for the time line. */
+const TRACK = 232
+const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 export const midnightCircuit: WidgetPreset = {
   id: 'midnight-circuit', name: 'Midnight Circuit', label: "Henry's Desk", group: 'chart', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
-  defaults: { played: 0.47 },
+  // 1:47 in: the track plays on with t, the playhead and the time moving together (looping at the end)
+  defaults: { played: 107 / TRACK },
   layers: ({ t, data }) => {
-    const head = Math.round(data.played * 47) * 3 + 1
+    const at = (data.played + Math.max(0, t) / TRACK) % 1, head = Math.round(at * 47) * 3 + 1
     // the bars clear the playhead, so no bar dot shows half under it
     const bars = T.knockout(T.dotBars(chatter(48, t * 0.6, 5), 1, 77, { gap: 3, pitch: 2.2, height: 22, size: 1.5, mirror: true }), [[head, 77]], 5.2)
     const played: Field = u => (u * (TILE.cols - 1) < head - 1 ? 1 : 0)
@@ -73,7 +78,7 @@ export const midnightCircuit: WidgetPreset = {
       layer(T.big('MIDNIGHT CIRCUIT', 0, 32, { lattice: 1.25 }), 'idle'),
       layer(bars, 'value'), layer({ ...bars, field: played }, 'active'),
       layer(T.dots([[head, 77]], 8), 'active'),
-      layer(T.big('1:47 / 3:52', 0, 124, BODY), 'idle'),
+      layer(T.big(`${mmss(at * TRACK)} / ${mmss(TRACK)}`, 0, 124, BODY), 'idle'),
     ]
   },
 }
@@ -173,7 +178,8 @@ export const inhale: WidgetPreset = {
 
 // Hypnogram in chart-lattice dots (2.8 cells apart): levels 12 / 16 / 19, REM spikes rise to row 5.
 const HYPNO: [number, number][] = [[0, 19], [1, 18], [1, 16], [4, 16], [4, 12], [15, 12], [15, 16], [22, 16], [22, 12], [26, 12], [26, 16], [29, 16], [29, 19], [34, 19], [34, 16], [35, 16], [35, 12], [43, 12], [43, 16], [48, 16], [48, 19], [50, 19], [50, 13]]
-const SPIKES = [7, 8, 39, 40]
+// one chart column per REM spike (two touching columns read as a bar)
+const SPIKES = [7, 39]
 /** Centre of chart lattice cell `i` (2.8 cells, from card cell `o`), in card cells. */
 const onChart = (i: number, o = 0) => o + (i + .5) * 2.8 - .5
 /** The chart lattice cells the step line and the spikes light ([col, row]). */
@@ -202,6 +208,8 @@ export const goodMorning: WidgetPreset = {
       layer(chart.at(chart.line(HYPNO))),
       ...SPIKES.map(c => layer(chart.at(chart.vrule(c, 10, 2)))),
       ...SPIKES.map(c => layer(chart.at(chart.vrule(c, 5, 5)), 'active')),
+      // the key for the red spikes, above the chart's top right
+      layer(T.dots([[121, 71]], 3.4), 'active'), layer(T.text('REM', 143, 68, { align: 'right' }), 'idle'),
     ]
   },
 }
@@ -225,7 +233,7 @@ export const listening: WidgetPreset = {
   id: 'listening', name: 'Listening', label: 'DeerFlow', group: 'chart', chrome: 'dots', live: true, animated: true, grid: TILE, style: tileStyle,
   layers: ({ t }) => {
     return [
-      layer(T.dotBars(chatter(36, t * 1.5, 8, .15).map(v => Math.min(1, v * 1.25)), 1, 68, { gap: 4, pitch: 2.5, height: 30, size: 1.6, mirror: true }), 'idle'),
+      layer(T.dotBars(chatter(36, t * 1.5, 8, .15).map(v => Math.min(1, v * 1.25)), 1, 68, { gap: 4, pitch: 2.5, height: 30, size: 1.6, mirror: true }), 'value'),
       layer(T.big('LISTENING', 72, 133, { ...BODY, align: 'center' }), 'idle'),
     ]
   },

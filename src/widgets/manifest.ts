@@ -43,7 +43,7 @@ export const boardManifest = [
   { id: 'henry3', title: 'HENRY LI: 14A / 247W', columns: 3, density: 'standard', load: () => import('./boards/henry3').then(m => ({ items: m.henry3Board })) },
   { id: 'metro', title: 'METRO / OXYGEN / QUIET', columns: 3, density: 'standard', load: () => import('./boards/metro').then(m => ({ items: m.metroBoard })) },
   { id: 'ride', title: 'RIDE / HENRY / SYSTEM', columns: 3, density: 'standard', load: () => import('./boards/ride').then(m => ({ items: m.rideBoard })) },
-  { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, density: 'standard', load: () => import('./boards/audio').then(m => ({ items: m.audioBoard })) },
+  { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, density: 'dense', load: () => import('./boards/audio').then(m => ({ items: m.audioBoard })) },
   { id: 'departures', title: 'DEPARTURES: LIVE TRANSIT BOARD', columns: 3, density: 'dense', load: () => import('./boards/departures').then(m => ({ items: m.departuresBoard })) },
   { id: 'instrument', title: 'INSTRUMENT DEVICE', columns: 3, density: 'standard', load: () => import('./boards/instrument').then(m => ({ items: m.instrumentBoard, shared: m.instrumentShared })) },
   { id: 'ir', title: 'FIELD IR: DOT PROGRAMS', columns: 3, density: 'hero', load: () => import('./boards/ir').then(m => ({ items: m.irBoard })) },
@@ -88,8 +88,20 @@ export const boardMeta = (id: string): BoardMeta | undefined => boardManifest.fi
  * Old card ids (slugs) that still open their card (docs/SHARE-PLAN.md §3): a renamed card adds `old: 'new'`
  * here and its old `/widget/<old>/` link keeps working forever. The lock board's cards were `glyph-*`.
  */
-export const cardAliases: Readonly<Record<string, string>> = {}
+export const cardAliases: Readonly<Record<string, string>> = { 'sq-tetris': 'sq-stack' }
 export const resolveCardId = (id: string): string => cardAliases[id] ?? (id.startsWith('glyph-') ? `lock-${id.slice(6)}` : id)
+/**
+ * Retired cards (#364): slug → [uid, board]. Their old `/widget/<slug|uid>/`, `/<uid>` and `?card=` links open the
+ * board they lived on (`viewFromUrl`; vercel.json redirects the same paths). The uids stay in `ids.json`, never reused.
+ */
+export const removedCards: Readonly<Record<string, readonly [uid: string, board: string]>> = {
+  'thermal-puppy': ['05cze99w', 'audio'],
+}
+/** The board a retired card's slug or uid lived on, else undefined. */
+export const removedCardBoard = (key: string): string | undefined => {
+  const k = key.toLowerCase()
+  return (Object.hasOwn(removedCards, k) ? removedCards[k] : Object.values(removedCards).find(([uid]) => uid === k))?.[1]
+}
 
 /**
  * The board picker (docs/UX-PLAN.md §4.2): plain names and groups. UI only: ids, paths, OG pages and goldens
