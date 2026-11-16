@@ -204,8 +204,8 @@ export const xyPad: WidgetPreset = {
 const SEG = { x: 13, y: 86, w: 118, h: 36 }, SEG_W = SEG.w / 3, BTN_Y = SEG.y + SEG.h / 2, BTN_R = 16
 const segX = (i: number) => SEG.x + SEG_W * (i + .5)
 const BPM_BOX: [number, number, number, number] = [38, 18, 68, 48]
-/** The tempo's outline: the number and BPM, short of the beat lights. */
-const TEMPO = rr(38, 18, 68, 36, 6)
+/** The tempo's outline: the number and BPM (rows 50 to 57); its halo stops short of the beat lights. */
+const TEMPO = rr(38, 18, 68, 40, 6), TEMPO_HALO = clear(TEMPO, p => p[1] < 62)
 /**
  * Play and stop on one lattice (offsets in cells from the button centre): play a hex-packed triangle 4 sites tall,
  * stop a 3×3 square of the same sites, so the two read as shapes beside the record light.
@@ -217,8 +217,8 @@ const icon = (pts: Pt[], cx: number, cy: number, v: number) => spots(pts.map(([x
 /** Tempo hint on hover and focus: an up and a down chevron beside the number (vertical drag or arrows). */
 const CARET_X = 116, CARETS: Pt[][] = [[[-3, 27], [0, 24], [3, 27]], [[-3, 39], [0, 42], [3, 39]]]
 const SOUND_BOX: [number, number, number, number] = [30, 123, 84, 14]
-/** SOUND's outline round the speaker and its word; the halo gives way to the mode buttons above it. */
-const SOUND = rr(42, 125, 52, 8, 4)
+/** SOUND's outline round the speaker and its widest word (SOUND OFF, REC 10:00: x 55 to 108); the halo gives way to the mode buttons. */
+const SOUND = rr(42, 125, 67, 9, 4.5)
 const offButtons = (p: Pt) => [0, 1, 2].every(i => Math.hypot(p[0] - segX(i), p[1] - BTN_Y) > BTN_R + 2.2)
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 export const transport: WidgetPreset = {
@@ -244,7 +244,7 @@ export const transport: WidgetPreset = {
       layer(T.text('BPM', 72, 50, { align: 'center' }), 'idle'),
       ...[0, 1, 2, 3].map(i => layer(spots([[54 + i * 12, 66]], running && i === beat ? 5 : 3.4), running && i === beat ? 'value' : 'mid')),
       // the hover and focus outlines stop above the beat lights
-      ...states(tempo, ctx.t, TEMPO, TEMPO, 4),
+      ...states(tempo, ctx.t, TEMPO_HALO, TEMPO, 2),
       ...(tempo.hover || tempo.focus ? CARETS.map(c => layer(spots(c.map(([x, y]): Pt => [CARET_X + x, y]), 2), 'value')) : []),
       ...[0, 1, 2].map(i => layer(spots(ring(segX(i), BTN_Y, BTN_R, 3), 1.4, vOf(i)), tone(i))),
       layer(spots([[segX(0), BTN_Y]], 15, vOf(0)), mode === 0 ? 'active' : 'mid'),

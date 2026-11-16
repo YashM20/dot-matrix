@@ -10,7 +10,7 @@
 import type { Control } from '../../engine/context'
 import type { Tone } from '../../engine/types'
 import { BINS, FLOOR_DB, WAVE, audioOf, demoFrame, type AudioFrame } from '../../audio/frame'
-import { PRESS, circle, marching, ui, clock } from '../dot-controls'
+import { PRESS, circle, clock, marching, ui, type Shape } from '../dot-controls'
 import { TAU, TILE, dim, layer, layoutFor, liveDot as chromeLiveDot, tileCircleStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
@@ -112,6 +112,8 @@ const BASE: Pt[] = Array.from({ length: RING.rays }, (_, j) => { const { a } = r
 const MIC_GLYPH = ['...###...', '..#...#..', '..#...#..', '#.#...#.#', '#..###..#', '.#.....#.', '..#####..', '....#....', '....#....', '..#####..']
 const MIC_LAT = T.lattice(2, RING.cx - 8.5, RING.cy - 9.5), MIC = MIC_LAT.sprite(MIC_GLYPH, 0, 0)
 const MIC_STATE = ['TAP TO LISTEN', 'ASKING', 'LOCAL ONLY', 'MIC BLOCKED']
+/** The base ring as a kit shape that grows inward: `d` cells inside it. */
+const INSIDE: Shape = (d, sp) => circle(RING.cx, RING.cy, RING.r - d)(0, sp)
 
 export const scopeMic: WidgetPreset = {
   id: 'scope-mic', name: 'Mic', label: '03  MIC', ...card,
@@ -136,8 +138,8 @@ export const scopeMic: WidgetPreset = {
       layer(spots(BASE, hover ? 2.6 : 2, press ? PRESS : 1), hover ? 'idle' : 'mid'),
       layer(spots(body, 2.2), live ? 'idle' : 'faint'),
       layer(spots(tips, 2.6), tone),
-      // focus rings the whole visualizer, one ray pitch past the longest ray
-      ...(s.focus ? [marching(circle(RING.cx, RING.cy, RING.r + RING.gap + RING.len), clock(s, ctx.t), RING.pitch)] : []),
+      // focus marches inside the base ring, round the mic or the reading: the rays take the room outside it
+      ...(s.focus ? [marching(INSIDE, clock(s, ctx.t), 5.5)] : []),
       live
         ? layer(T.big(db <= FLOOR_DB ? '--' : String(Math.round(db)), RING.cx, RING.cy - 7, { lattice: 2, align: 'center' }))
         : layer(MIC_LAT.at(press ? dim(MIC, PRESS) : MIC), hover ? 'value' : 'idle'),

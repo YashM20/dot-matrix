@@ -59,8 +59,8 @@ export const typeAxesCard: WidgetPreset = {
       layer(typeField(PANGRAM, { ...PANGRAM_OPTS, ...axes, tracking: pangramTracking(axes) }), 'idle'),
       ...AXES.flatMap((ax, i) => [
         ...knob(KN.xs[i], axes[(['weight', 'width', 'roundness'] as const)[i]]),
-        // the shared grammar (#358): halos on hover, the focus ring 6 cells out so it clears the axis tag
-        ...states(ui(ctx, ax.key), ctx.t, circle(KN.xs[i], KN.y, KN.r), circle(KN.xs[i], KN.y, KN.r), 6),
+        // the shared grammar (#358): halos on hover, the focus ring 4 cells out so it clears the axis tag
+        ...states(ui(ctx, ax.key), ctx.t, circle(KN.xs[i], KN.y, KN.r), circle(KN.xs[i], KN.y, KN.r), 4),
         layer(T.text(ax.tag, KN.xs[i], 130, { align: 'center' }), 'idle'),
       ]),
     ]

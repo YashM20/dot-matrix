@@ -206,8 +206,8 @@ const hbAgent: WidgetPreset = {
       layer(T.dots([0, 1, 2, 3, 4].filter(i => Math.abs(i - s) > .5).map((i): Pt => [segX(i), cy]), 3), 'mid'),
       knob,
       ...SEG.labels.map((l, i) => layer(T.text(l, segX(i), SEG.y + SEG.h + 6, { align: 'center' }), i === sel ? 'value' : 'idle')),
-      // the status line and the stop labels sit close, so the focus ring runs 3 cells out, between them and the track
-      ...states(st, ctx.t, track, track, 3),
+      // the status line and the stop labels sit close, so focus marches the track's own sites (its pitch, no extra ring)
+      ...states(st, ctx.t, track, d => track(d, OUTLINE.spacing), 0),
     ]
   },
 }
