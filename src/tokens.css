@@ -171,7 +171,8 @@
   --glow-halo: 0 0 var(--space-4) color-mix(in srgb, var(--red) 30%, transparent);
   --glow: 0 0 0 1px var(--red), var(--glow-halo);
   --glow-wash: color-mix(in srgb, var(--red) 12%, transparent);     /* the accent wash behind an active item */
-  /* raised layers (menus, popovers, sheets, ⌘K) are glass: translucent raised, one small blur, never stacked */
+  /* the glass layers (the editor's menus, ⌘K, some sheets of their own): translucent raised, one small blur, never
+     stacked. The site's menus, popovers and sheets are solid (raised.css › popover) */
   --glass: color-mix(in srgb, var(--raised) 84%, transparent);
   --glass-blur: blur(16px) saturate(140%);
   --shadow-raised: 0 4px 40px 8px color-mix(in srgb, var(--shade) 40%, transparent), 0 0 0 .5px color-mix(in srgb, var(--shade) 80%, transparent), inset 0 .5px 0 color-mix(in srgb, var(--tint) 25%, transparent);

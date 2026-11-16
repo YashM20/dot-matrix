@@ -1,6 +1,7 @@
 /* T5 THEME picker (src/components/theme/ThemePicker.tsx): loaded with its lazy chunk, so first-load CSS carries only
    the header button and the switch moment (src/site/app/skins.css). The popover and each swatch carry data-scheme +
-   data-accent, so their roles resolve to the previewed theme (DESIGN.md › Theme › Picker). */
+   data-accent, so their roles resolve to the previewed theme (DESIGN.md › Theme › Picker). The popover's surface is the
+   solid popover (src/site/app/raised.css); its rows are 30 px (--tap on touch). */
 .theme-pop {
   position: absolute;
   top: calc(100% + 6px);
@@ -60,7 +61,7 @@
 }
 
 .theme-ctl .theme-seg button {
-  min-height: 28px;
+  min-height: 30px;
   padding: 0 var(--space-2);
   border: 0;
   border-radius: var(--radius-pill);
@@ -208,7 +209,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-2);
-  min-height: 28px;
+  min-height: 30px;
   padding: 0 var(--space-3);
   border: 1px solid transparent;
   border-radius: var(--radius-pill);
@@ -251,12 +252,20 @@
   color: var(--mute)
 }
 
-/* CARD SIZE (CardSizeControl): under the theme in the popover, a dotted rule apart; in TOOLS › DISPLAY, above the skins */
+/* CARD SIZE (CardSizeControl): under the theme in the popover, a hairline edge to edge apart (the popover's group
+   rule); in TOOLS › DISPLAY, above the skins */
 .theme-pop .theme-cards {
-  margin-top: var(--space-3);
-  padding-top: var(--space-3);
-  border-top: 1px solid;
-  border-image: var(--hair-x) 1
+  margin: var(--space-3) calc(-1 * var(--space-3)) 0;
+  padding: var(--space-3) var(--space-3) 0;
+  border-top: 1px solid var(--line)
+}
+
+/* the popover on a touch screen (a tablet): its rows at touch size */
+@media (pointer: coarse) {
+  .theme-pop .theme-ctl .theme-seg button,
+  .theme-pop .theme-ctl :is(.theme-share, .theme-contrast) {
+    min-height: var(--tap)
+  }
 }
 
 .tools-sheet .theme-cards {
