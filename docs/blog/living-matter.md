@@ -67,7 +67,7 @@ The material pipeline operates in four steps:
 3. **Lighting evaluation.** A light source `L` is positioned in space. It can be a distant directional light (such as the sun at azimuth $\theta$ and elevation $\phi$) or a local point light (such as a torch tracking the user pointer). Shading combines three terms:
    - **Diffuse.** Lambertian reflection $I_d = \max(0, N \cdot L)$.
    - **Specular.** Blinn-Phong highlight $I_s = (N \cdot H)^{shininess}$, where $H$ is the halfway vector between light and viewer.
-   - **Sheen.** Anisotropic scattering across woven thread directions in textiles (`src/engine/matter/knit.ts`).
+   - **Sheen.** Anisotropic scattering across woven thread directions in textiles (`src/engine/matter/weave.ts`).
 4. **Matcap texturing.** For materials like chrome, mercury or polished obsidian, `src/engine/matter/matcap.ts` maps surface normals directly to texture coordinates on a pre-rendered sphere.
 
 ## Dots that join into squares

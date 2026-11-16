@@ -14,17 +14,15 @@
  *  - glass:    Snell LUT (127 samples, signs per profile, ior 1), strength 0 ≡ behind, Fresnel, frost (M2.1)
  *  - caustics: flat water = 1, energy, focusing, determinism and timing (M2.3)
  *  - cards:    loom, knob, grille, terrazzo invariants; M2: lens, pool, window, patch, rust, candle
- *  - workshop: M3's board (the board checks again, over the nine cards; gx / gy declared by the physics cards), the
- *              determinism lint scope, and one invariant per card (knit, denim, paper, wood, leather, sand, ice,
- *              mercury, thread), with the worlds' tap / drag / heal behaviour
- *  - growth:   XM's Lichtenberg plate and erosion stone: resumable growth, the discharge, the tap; droplets in batches,
- *              checkpointed replays, mass, legibility at 19:59 and 23:59, bake and frame costs
+ *  - workshop: the workshop board's four cards (frost, ice, kintsugi, paper fold): the board checks again, each tag clear
+ *              of its title, the ice card's cluster and its breath world
+ *  - growth:   the frost window: the wedge automaton ≡ the plain one, the vetted table, one flake a day, the red tips
  *  - kintsugi: the kintsugi plate: cracks connected and anchored, shards tile the piece, deterministic breaks, red only
  *              while a seam fills, the repair completes, a tap heals back to the loop, bake and frame costs
  *  - fold:     the paper fold: area kept, facets placed by isometries, a turning fold keeps 3D distances and lands on the
  *              next flat state, unfolding returns the exact sheet, unit normals, the loop wraps, red only on the moving
  *              crease, the determinism lint, the frame cost
- *  - tilt:     M3.10 on both boards: the hub's buckets, no DeviceOrientation / data.light, gx / gy only in step inputs,
+ *  - tilt:     M3.10 on both boards: the hub's buckets, no DeviceOrientation / data.light / gx / gy,
  *              tx = ty = 0 ≡ no tilt, and every card's light = sceneLight (pointer → lightSrc 1 → sun)
  * Timings are printed; budgets scale by a measured load factor so a busy box doesn't fail them. `--bench` prints
  * each card's cold / warm / hover frame.
@@ -296,7 +294,7 @@ export async function materialsChecks(assert: Assert, opts: MaterialsOptions = {
   if (run('caustics')) causticChecks(assert)
   if (run('board') || run('cards')) await boardChecks(assert, load, opts, run)
   if (run('workshop')) await workshopChecks(assert, opts)
-  if (run('growth')) await growthChecks(assert, opts)
+  if (run('growth')) growthChecks(assert)
   if (run('kintsugi')) await kintsugiChecks(assert, opts)
   if (run('fold')) foldChecks(assert, opts)
   if (run('tilt')) tiltChecks(assert)

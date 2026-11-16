@@ -65,7 +65,7 @@ export const boardManifest = [
   { id: 'algorithms', title: 'ALGORITHMS: STIPPLE, ATTRACT, COLLAPSE, AGGREGATE', columns: 2, density: 'hero', load: () => import('./boards/algorithms').then(m => ({ items: m.algorithmsBoard })) },
   { id: 'materials', title: 'MATERIALS: WOVEN, SPUN, CARVED, POURED', columns: 3, density: 'standard', load: () => import('./boards/materials').then(m => ({ items: m.materialsBoard, sources: m.materialsSources })) },
   { id: 'pond', title: 'POND: LIVING SCENES IN GLYPH TILES', columns: 3, density: 'standard', load: () => import('./boards/pond/index').then(m => ({ items: m.pondBoard, sources: m.pondSources })) },
-  { id: 'workshop', title: 'WORKSHOP: MATERIALS THAT CHANGE', columns: 3, density: 'standard', load: () => import('./boards/workshop').then(m => ({ items: m.workshopBoard, sources: m.workshopSources })) },
+  { id: 'workshop', title: 'WORKSHOP: FROST, ICE, KINTSUGI, PAPER FOLD', columns: 2, density: 'standard', load: () => import('./boards/workshop').then(m => ({ items: m.workshopBoard, sources: m.workshopSources })) },
   { id: 'squares', title: 'SQUARES: SPACED AND JOINED', columns: 3, density: 'hero', load: () => import('./boards/squares').then(m => ({ items: m.squaresBoard })) },
   { id: 'fractals', title: 'FRACTALS: ESCAPE, TRAP, DENSITY', columns: 3, density: 'standard', load: () => import('./boards/fractals').then(m => ({ items: m.fractalsBoard })) },
   { id: 'oldschool', title: 'OLDSCHOOL: TUNNELS, CLOUDS AND FEEDBACK', columns: 3, density: 'standard', load: () => import('./boards/oldschool').then(m => ({ items: m.oldschoolBoard })) },
@@ -98,6 +98,9 @@ export const removedCards: Readonly<Record<string, readonly [uid: string, board:
   'cinema-last-call': ['y6q3xhhe', 'cinema'], 'cinema-closer': ['ezrp10da', 'cinema'], 'mirror-ladder': ['nhneq04s', 'mirror'],
   'surface-eink': ['pbq54zfr', 'surfaces'], 'surface-plotter': ['jfm4e97e', 'surfaces'], 'mat-marble': ['cbmez41j', 'materials'],
   'thermal-puppy': ['05cze99w', 'audio'],
+  'mat-knit': ['k8par51e', 'workshop'], 'mat-denim': ['5ccpsd8c', 'workshop'], 'mat-paper': ['ev8dqt4a', 'workshop'], 'mat-wood': ['zv5k2rra', 'workshop'],
+  'mat-leather': ['9q3kgrk7', 'workshop'], 'mat-sand': ['ey87ejrb', 'workshop'], 'mat-mercury': ['qn7td5fx', 'workshop'], 'mat-thread': ['rh733bmf', 'workshop'],
+  'mat-mud': ['r9kvhax6', 'workshop'], 'mat-lichtenberg': ['rxtyh8y2', 'workshop'], 'mat-erosion': ['2xeq5xxe', 'workshop'],
 }
 /** The board a retired card's slug or uid lived on, else undefined. */
 export const removedCardBoard = (key: string): string | undefined => {
