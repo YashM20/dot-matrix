@@ -59,6 +59,6 @@ export function LiveBand() {
   return <>
     <div className={`live-number${inset ? ' live-number--inset' : ''}`} ref={box} style={{ width: cols * PITCH }}
       {...(inset ? { 'data-scheme': 'dark', 'data-accent': site.accent } : {})}><DotCanvas layers={layers} grid={grid} style={STYLE} theme={theme} change={false} /></div>
-    <p className="fig-cap live-label"><b className="live"><i aria-hidden="true" />LIVE</b>dots drawn this visit, each one sampled from a field <span className="sr-only">: {text}</span></p>
+    <p className="fig-cap live-label"><b className="live"><i className="status-dot status-dot--live" aria-hidden="true" />LIVE</b>dots drawn this visit, each one sampled from a field <span className="sr-only">: {text}</span></p>
   </>
 }

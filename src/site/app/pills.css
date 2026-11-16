@@ -1,6 +1,6 @@
 /* App styles: the toolbar (DESIGN.md › Chrome components › toolbar; src/components/widget/PillBar.tsx). A group
    (`.pill`) is one hairline box with a hairline between its buttons (`.pill-btn`): short mono labels, Lucide icons
-   (toolIcons.tsx), icons alone where the label adds nothing. 28 px tall on a mouse, --tap on touch (padding, not a
+   (src/components/icons.tsx), icons alone where the label adds nothing. 28 px tall on a mouse, --tap on touch (padding, not a
    bigger look). Opaque, no blur. Used by the widget page's bars and the board's NEXT BOARD, so it is first-load CSS.
    Grey chrome only: the card keeps the one accent. (The class names are the old capsule's.) */
 .pill-bar {
@@ -59,11 +59,6 @@
   border-end-end-radius: var(--radius-sm)
 }
 
-.pill-icon {
-  display: block;
-  flex: none
-}
-
 /* the four states; the focus ring sits inside, so a neighbour's hairline never cuts it */
 .pill-btn:hover,
 .pill-btn:focus-visible {
@@ -72,7 +67,7 @@
 }
 
 .pill-btn:focus-visible {
-  outline-offset: -2px
+  outline-offset: var(--focus-in)
 }
 
 .pill-btn:active,
@@ -81,8 +76,8 @@
   color: var(--value)
 }
 
-/* a button that is on (X-RAY): the accent wash */
-.pill-btn[aria-pressed="true"] {
+/* a switch that is on (X-RAY): the accent wash */
+.pill-btn[aria-checked="true"] {
   background: var(--glow-wash);
   color: var(--value)
 }

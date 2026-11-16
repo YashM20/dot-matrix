@@ -1,5 +1,6 @@
 /* The analytics consent banner (src/site/analytics/banner.ts): a raised panel in the bottom left corner, the toast's
-   surface. Two equal buttons: neither carries the accent, so neither reads as the default. */
+   surface. Two equal buttons (.btn, src/site/controls.css): neither carries the accent, so neither reads as the
+   default. Their focus ring is the site's accent ring. */
 .consent {
   position: fixed;
   left: var(--space-4);
@@ -40,37 +41,12 @@
   margin-top: var(--space-3)
 }
 
-.consent-actions button {
-  min-height: 40px;
-  border: 1px solid var(--line-hover);
-  border-radius: var(--radius-ctl);
-  background: transparent;
-  color: var(--value);
-  font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .12em;
-  cursor: pointer
-}
-
-.consent-actions button:hover,
-.consent-actions button:focus-visible {
-  background-color: var(--wash-hover)
-}
-
-.consent-actions button:focus-visible {
-  outline: 2px solid var(--value);
-  outline-offset: 2px
-}
-
-.consent-actions button:active {
-  background-color: var(--wash-press)
-}
-
 /* the end of the page grows by the banner's height (set inline), so the last card scrolls clear of it */
 .consent-space {
   flex: none
 }
 
-/* phones: full width, above the tab bar where the page has one; 44 px targets */
+/* phones: full width, above the tab bar where the page has one (.btn is --tap tall on touch) */
 @media (max-width: 760px), (max-height: 500px) and (pointer: coarse) {
   .consent {
     left: var(--space-2);
@@ -81,9 +57,5 @@
 
   body:has(.tabbar) .consent {
     bottom: calc(var(--tabbar-h) + var(--space-2))
-  }
-
-  .consent-actions button {
-    min-height: var(--tap)
   }
 }

@@ -20,7 +20,7 @@ export interface PillButtonProps {
    * accessible name after the label). */
   label: string
   title: string
-  /** An icon from toolIcons.tsx, before the label. */
+  /** An icon from src/components/icons.tsx (`<XrayIcon />`), before the label. */
   icon?: ReactNode
   /** Show the icon alone: the label adds nothing to it (LINK, SHARE, PREV, NEXT). The tooltip and the name are `title`. */
   iconOnly?: boolean
@@ -29,12 +29,13 @@ export interface PillButtonProps {
   /** `detail` is the click count: 0 for a click from the keyboard. */
   onClick?: (e?: { detail: number }) => void
   onPointerDown?: () => void
-  pressed?: boolean
+  /** An on/off button (X-RAY): a switch, its state in `aria-checked` (one name, DESIGN.md › Chrome components). */
+  on?: boolean
   expanded?: boolean
   className?: string
   href?: string
 }
-export function PillButton({ label, title, icon, iconOnly, kbd, onClick, onPointerDown, pressed, expanded, className = '', href }: PillButtonProps) {
+export function PillButton({ label, title, icon, iconOnly, kbd, onClick, onPointerDown, on, expanded, className = '', href }: PillButtonProps) {
   const inner = <>{icon}{!iconOnly && <span className="pill-label">{label}</span>}</>
   // the name holds the words it shows (WCAG 2.5.3: a voice user says what they see): the label leads unless the title has it
   const words = (t: string) => ` ${t.toLowerCase().replace(/[^\p{L}\p{N}-]+/gu, ' ').trim()} `
@@ -42,5 +43,5 @@ export function PillButton({ label, title, icon, iconOnly, kbd, onClick, onPoint
   const cls = `pill-btn${iconOnly ? ' pill-btn--icon' : ''} ${className}`
   // `data-tip` is the bar's grouped tooltip (src/site/app/tips.css), in place of the native `title`
   if (href) return <a className={cls} href={href} data-tip={title} data-kbd={kbd} aria-label={name} onClick={e => { if (onClick && !e.metaKey && !e.ctrlKey && !e.shiftKey && e.button === 0) { e.preventDefault(); onClick() } }}>{inner}</a>
-  return <button type="button" className={cls} data-tip={title} data-kbd={kbd} aria-label={name} aria-pressed={pressed} aria-expanded={expanded} onClick={onClick} onPointerDown={onPointerDown}>{inner}</button>
+  return <button type="button" className={cls} data-tip={title} data-kbd={kbd} aria-label={name} role={on === undefined ? undefined : 'switch'} aria-checked={on} aria-expanded={expanded} onClick={onClick} onPointerDown={onPointerDown}>{inner}</button>
 }

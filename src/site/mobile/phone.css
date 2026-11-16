@@ -83,9 +83,7 @@
     font-size: 0
   }
 
-  .topbar .live i {
-    width: 6px;
-    height: 6px;
+  .topbar .live .status-dot {
     margin: 0
   }
 
@@ -172,23 +170,17 @@
   }
 
   /* X-ray or the time machine is on */
-  .tabbar .busy::after {
-    content: '';
+  .tabbar .tabbar-busy {
     position: absolute;
     top: 9px;
-    left: calc(50% + 11px);
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--red);
-    box-shadow: var(--glow-halo)
+    left: calc(50% + 11px)
   }
 
   .tabbar button:focus-visible,
   .topbar button:focus-visible,
   .board-picker button:focus-visible,
   .next-board a:focus-visible {
-    outline-offset: -3px
+    outline-offset: var(--focus-in)
   }
 
   /* the floating dock is folded into TOOLS; what stayed fixed sits clear of the tab bar */
