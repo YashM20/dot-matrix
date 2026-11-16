@@ -417,7 +417,7 @@ Never cut the v1.0 gates or the taste sessions.
 
 **Day 3–5 (agent, C1.4–C1.8):**
 - [ ] Split `scripts/verify.ts` into `scripts/verify/*.ts`, with the same check count before and after.
-- [ ] Shard `goldens/hashes.json` per board; update `scripts/golden.ts`.
+- [x] Shard `goldens/hashes.json` per board; update `scripts/golden.ts` (#76; the build's leftover index went in #103).
 - [ ] Generate the board registry with lazy imports; measure the shell gzip before and after.
 - [ ] Archive the stale docs; fix README, HARNESS and the CI comments; re-verify AGENTS.md against the code and DESIGN.md (do D-1/D-2 rewording only after the user answers).
 - [ ] Set up progress fragments; trim the stale "Next up" in PROGRESS.md.
