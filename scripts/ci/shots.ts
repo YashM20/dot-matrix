@@ -13,13 +13,13 @@
  * scrolled to its skin list) and `boards` (the BOARDS sheet, scrolled to its ENGINE group); `card-more`, `display`, `theme`,
  * `tools` and `boards` capture the viewport only, e.g. `/@1280@dark@display`, `/@390@light@tools`. `focus` puts the
  * keyboard focus ring on the page's first toolbar button, else the first card row action (the viewport, the control in
- * its middle); `press` holds a mouse press on the page's first toolbar button (the viewport, motion on, so it sinks:
- * #341); `load-failed` answers every board chunk 404, so the boards show their error state (LoadBoundary.tsx)
+ * its middle); `press` holds a mouse press on the page's first toolbar button (the viewport, the button in its middle;
+ * add `motion` to see it sink, #341); `load-failed` answers every board chunk 404, so the boards show their error state (LoadBoundary.tsx)
  * after the page's one stale-deploy reload, e.g. `/levels/@390@light@load-failed`.
  * Two options name a card control by its data key (letters and digits): `hover=<key>` puts the mouse on it and
  * `focus=<key>` reaches it from the keyboard (Shift+Tab, then Tab), so its dot hover or focus ring shows; both capture
  * the viewport with the control's card in the middle, e.g. `/widget/inst-cutoff/@1280@light@focus=cutoff`. Reduced motion is
- * emulated so nothing is caught mid-animation (except for `press`: a press comes in at once). Files:
+ * emulated so nothing is caught mid-animation; `motion` turns it off (a press or hover comes in at once). Files:
  * `<route>-<width>-<theme>[-<option>...].png` in `--out` (default `.snapshots/ci-shots/`). Exit 1 when a page never
  * got ready (or an option's state never showed), 2 on a bad item.
  */
@@ -33,7 +33,7 @@ const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i +
 const out = resolve(opt('--out') ?? join('.snapshots', 'ci-shots'))
 const items = (opt('--list') ?? '').split(',').map(s => s.trim()).filter(Boolean)
 
-const OPTIONS = ['2x', 'xray', 'more', 'card-more', 'other-tab', 'display', 'theme', 'tools', 'boards', 'focus', 'press', 'load-failed'] as const
+const OPTIONS = ['2x', 'xray', 'more', 'card-more', 'other-tab', 'display', 'theme', 'tools', 'boards', 'focus', 'press', 'motion', 'load-failed'] as const
 type Option = typeof OPTIONS[number]
 /** Options that capture the viewport as it is (a resize to the full page would scroll or close what they opened). */
 const VIEWPORT: readonly Option[] = ['card-more', 'display', 'theme', 'tools', 'boards', 'focus', 'press']
@@ -138,7 +138,7 @@ try {
     const phone = it.width <= 600, H = phone ? 844 : 900, t = Date.now(), dpr = it.opts.includes('2x') ? 2 : 1
     await page.cdp('Emulation.setDeviceMetricsOverride', { width: it.width, height: H, deviceScaleFactor: dpr, mobile: phone })
     await page.cdp('Emulation.setTouchEmulationEnabled', phone ? { enabled: true, maxTouchPoints: 5 } : { enabled: false })
-    await page.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: it.opts.includes('press') ? 'no-preference' : 'reduce' }, { name: 'prefers-color-scheme', value: it.scheme }] })
+    await page.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: it.opts.includes('motion') ? 'no-preference' : 'reduce' }, { name: 'prefers-color-scheme', value: it.scheme }] })
     // the stored theme, set on the site's origin before the page loads
     await page.cdp('Page.navigate', { url: `${server.url}favicon.svg` }); await sleep(150)
     await page.js(`localStorage.setItem('dot480:theme', ${JSON.stringify(JSON.stringify({ scheme: it.scheme, accent: it.accent }))})`).catch(() => {})
