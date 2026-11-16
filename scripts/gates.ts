@@ -1,8 +1,9 @@
 /**
  * The timing gates of #28, run back to back to read their pass rate (Node, no browser):
- *  - voronoi: voronoi2 l2 / l1 / linf at 144² ≤ 3.5 ms × load each, best of 3 medians (scripts/noise.ts `voronoiBudget`).
- * Each gate runs plain `--runs` times (every run must pass) and slowed 2× three times (every run must fail), so a
- * green gate still catches a real 2× slowdown on the same runner.
+ *  - voronoi: voronoi2 144², l2 ≤ 3.0 ms and l1 / linf ≤ 3.5 ms × load, best of 3 medians (scripts/noise.ts `voronoiBudget`).
+ * Each gate runs plain `--runs` times (every run must pass) and slowed 2× three times. A slowed run counts as caught
+ * only when every metric reads at least `MARGIN` over its own budget, so a green gate catches a real 2× slowdown of
+ * any one metric on the same runner, with room to spare.
  * The lens gate went with the MATERIALS board (#378).
  * The other gate of #28, the editor's ANIMATE scrub, waits on the drawn frame (scripts/editor-browser.ts); the
  * `editor` probe runs it.
@@ -14,27 +15,24 @@
 import { freezeWallClock } from './lib/freeze'
 import { voronoiBudget } from './noise'
 
+/** How far over its budget each metric must read when slowed 2× (on a runner: l2 +22%, l1 +20%, linf +32%). */
+const MARGIN = 1.1
 freezeWallClock()
 const argv = process.argv.slice(2)
 const runs = Math.max(1, Number(argv[argv.indexOf('--runs') + 1]) || 10), slowRuns = 3
-const gates: { name: string; run: (slow: boolean) => { ok: boolean; detail: string } }[] = [
-  { name: 'voronoi2 144² ≤ 3.5 ms × load', run: slow => voronoiBudget(slow) },
-]
-let bad = false
-for (const g of gates) {
-  let pass = 0, caught = 0
-  for (let i = 0; i < runs; i++) {
-    const r = g.run(false)
-    if (r.ok) pass++
-    console.log(`  ${g.name} run ${i + 1}: ${r.ok ? 'pass' : 'FAIL'} (${r.detail})`)
-  }
-  for (let i = 0; i < slowRuns; i++) {
-    const r = g.run(true)
-    if (!r.ok) caught++
-    console.log(`  ${g.name} 2× slower, run ${i + 1}: ${r.ok ? 'passed (should fail)' : 'failed, as it should'} (${r.detail})`)
-  }
-  bad ||= pass !== runs || caught !== slowRuns
-  console.log(`${pass === runs ? '✓' : '✗'} gates: ${g.name}: ${pass}/${runs} passed`)
-  console.log(`${caught === slowRuns ? '✓' : '✗'} gates: ${g.name} fails 2× slower: ${caught}/${slowRuns} caught`)
+let pass = 0, caught = 0
+for (let i = 0; i < runs; i++) {
+  const r = voronoiBudget()
+  if (r.ok) pass++
+  console.log(`  voronoi run ${i + 1}: ${r.ok ? 'pass' : 'FAIL'} (${r.detail})`)
 }
-process.exit(bad ? 1 : 0)
+for (let i = 0; i < slowRuns; i++) {
+  const r = voronoiBudget(true)
+  const over = r.metrics.map(m => ({ metric: m.metric, x: m.ms / m.load / m.budget }))
+  const all = over.every(o => o.x >= MARGIN)
+  if (all) caught++
+  console.log(`  voronoi 2× slower, run ${i + 1}: ${all ? 'every metric caught' : 'NOT every metric caught'} (${over.map(o => `${o.metric} ${((o.x - 1) * 100).toFixed(0)}% over`).join(', ')}; ${r.detail})`)
+}
+console.log(`${pass === runs ? '✓' : '✗'} gates: voronoi2 144² l2 ≤ 3.0 ms, l1 / linf ≤ 3.5 ms × load: ${pass}/${runs} passed`)
+console.log(`${caught === slowRuns ? '✓' : '✗'} gates: voronoi2 2× slower reads ≥ ${Math.round((MARGIN - 1) * 100)}% over budget on every metric: ${caught}/${slowRuns} caught`)
+process.exit(pass === runs && caught === slowRuns ? 0 : 1)
