@@ -353,6 +353,16 @@ By Matthias Müller, Nuttapong Chentanez, Tae-Yong Kim.
 
 - Kintsugi (`mat-kintsugi`), board `/workshop/`: the impact-aligned shard pattern
 
+### [Rendering fur with three dimensional textures (1989)](https://doi.org/10.1145/74334.74361)
+
+By James T. Kajiya, Timothy L. Kay.
+
+- Denim (`mat-denim`), board `/workshop/`: the sheen along the fibres
+- Ice (`mat-ice`), board `/workshop/`: the glint along each branch
+- Knit (`mat-knit`), board `/workshop/`: the sheen along the fibres
+- Thread (`mat-thread`), board `/workshop/`: the sheen along the fibres
+- Wood (`mat-wood`), board `/workshop/`: the sheen along the fibres
+
 ### [Schotter (1968)](https://collections.vam.ac.uk/item/O221321/schotter-print-nees-georg/)
 
 By Georg Nees.

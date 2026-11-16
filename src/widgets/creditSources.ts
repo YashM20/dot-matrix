@@ -22,6 +22,10 @@ export const PBD: WidgetCredit = {
   by: ['Matthias Müller', 'Bruno Heidelberger', 'Marcus Hennix', 'John Ratcliff'], title: 'Position based dynamics (2007)',
   source: 'https://doi.org/10.1016/j.jvcir.2007.01.005', note: 'the solver',
 }
+export const KAJIYA_KAY: WidgetCredit = {
+  by: ['James T. Kajiya', 'Timothy L. Kay'], title: 'Rendering fur with three dimensional textures (1989)',
+  source: 'https://doi.org/10.1145/74334.74361', note: 'the sheen along the fibres',
+}
 export const ELIAS_WATER: WidgetCredit = {
   by: ['Hugo Elias'], title: '2D water', source: 'https://web.archive.org/web/2016/http://freespace.virgin.net/hugo.elias/graphics/x_water.htm',
   note: 'the ripple scheme',

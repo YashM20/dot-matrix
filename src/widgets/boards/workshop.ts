@@ -23,6 +23,7 @@ import { createRaster, rasterWindow, type Raster } from '../../engine/raster/ras
 import type { CellBounds, Layer } from '../../engine/types'
 import { lightSource } from '../../site/light'
 import { TILE, layer, type WidgetPreset } from '../types'
+import { KAJIYA_KAY } from '../creditSources'
 import { cite, L15, LG15, LIGHT_DEFAULTS, lightKey, lru, matLight, mod, once, pad2, scratch, snapTorch, T, tile, toCard15, toLattice15, type Box, type Pt } from './materials-shared'
 import { matKnit, matPaper, matIce, liveHooks } from './workshop-live'
 import { matSand, matMercury, matThread, physicsHooks } from './workshop-physics'
@@ -211,6 +212,7 @@ function denimRow(g: DenimGeo, D: Float32Array, S: Float32Array, V: Float32Array
 }
 export const matDenim: WidgetPreset = {
   ...tile, id: 'mat-denim', name: 'Denim',
+  credit: KAJIYA_KAY,
   defaults: { ...LIGHT_DEFAULTS },
   layers: ctx => {
     const L = snapTorch(matLight(ctx, { torch: { height: 40, falloff: 160 } }), 6)
@@ -280,6 +282,7 @@ function woodRow(e: WoodCut, lateOf: Float64Array, fleck: Float32Array, D: Float
 }
 export const matWood: WidgetPreset = {
   ...tile, id: 'mat-wood', name: 'Wood', clock: true,
+  credit: KAJIYA_KAY,
   defaults: { ...LIGHT_DEFAULTS },
   layers: ctx => {
     const now = new Date(), e = woodCut(pad2(now.getHours()), pad2(now.getMinutes()))

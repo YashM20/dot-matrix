@@ -11,7 +11,7 @@
  * Main thread only (the worlds live here): the sampling worker's build resolves this module to
  * `workshop-live-worker-stub.ts` (vite.config.ts `mainThreadOnly`).
  */
-import { DLA } from '../creditSources'
+import { DLA, KAJIYA_KAY } from '../creditSources'
 import { ambientOcclusion, cardMask, insetDistance, tonedLayer } from '../../engine/matter'
 import { knitRelief, type KnitOptions } from '../../engine/matter/knit'
 import { anisoSpec } from '../../engine/matter/aniso'
@@ -135,6 +135,7 @@ const knitComposed = { key: '' }
 const needleLit = lru<{ values: Float32Array; tones: Uint8Array }>(8)
 export const matKnit: WidgetPreset = {
   ...tile, id: 'mat-knit', name: 'Knit',
+  credit: KAJIYA_KAY,
   defaults: { ...LIGHT_DEFAULTS, k: 0 },
   controls: [{ key: 'k', kind: 'button', box: KNIT_BOX, label: 'Knit a row' }],
   layers: ctx => {
@@ -349,7 +350,7 @@ const iceWorld = once((): World => createWorld({
 }))
 export const matIce: WidgetPreset = {
   ...tile, id: 'mat-ice', name: 'Ice',
-  credit: DLA,
+  credit: [DLA, { ...KAJIYA_KAY, note: 'the glint along each branch' }],
   defaults: { ...LIGHT_DEFAULTS, k: 0 },
   controls: [{ key: 'k', kind: 'button', box: [0, 12, 144, 132], label: 'Breathe on the glass' }],
   layers: ctx => {

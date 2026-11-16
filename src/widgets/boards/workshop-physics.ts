@@ -14,7 +14,7 @@
  *
  * Main thread only: the sampling worker's build resolves this module to `workshop-physics-worker-stub.ts`.
  */
-import { STABLE_FLUIDS } from '../creditSources'
+import { KAJIYA_KAY, STABLE_FLUIDS } from '../creditSources'
 import { createSand, sandCarve, sandGarden, sandRake, sandRelax, sandSize, sandVolume, type Sand } from '../../engine/matter/sand'
 import { createMercury, mercuryInit, mercuryMass, mercuryStep, BEAD, type Mercury } from '../../engine/matter/mercury'
 import { createThread, threadInit, threadStep, threadStrain, type Thread } from '../../engine/matter/thread'
@@ -425,6 +425,7 @@ function needle(V: Float32Array, Tn: Uint8Array, HP: Float32Array, L: Light, x: 
 }
 export const matThread: WidgetPreset = {
   ...tile, id: 'mat-thread', name: 'Thread',
+  credit: KAJIYA_KAY,
   defaults: { ...PHYS_DEFAULTS },
   controls: surface('Pull the thread'),
   layers: ctx => {
