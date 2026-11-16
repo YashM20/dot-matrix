@@ -1,11 +1,15 @@
 /**
  * Card drawing fixes (#359) for `pnpm verify`: each pins one fix so it can't come back.
  * The unit after a `fine` hero number, the dash-drive lap knob in clear air, the glyph transport as hex-packed
- * triangles, and own-drawn REC dots at the chrome live dot's size.
+ * triangles, own-drawn REC dots at the chrome live dot's size, and the speed and power dials' end labels clear of
+ * the needle (#263).
  */
 import { LIVE_DOT, TILE, layoutFor, type LatticeField, type WidgetPreset } from '../../src/widgets/types'
 import { progressCard } from '../../src/widgets/boards/motion-progress'
 import { driveCard } from '../../src/widgets/boards/dash-trip'
+import { PWR, SPD, dialEndAt } from '../../src/widgets/boards/dash-dials'
+import { needleSites } from '../../src/widgets/dials'
+import { textSize } from '../../src/engine/layout'
 import { glyphLongpress } from '../../src/widgets/boards/glyph'
 import { camera } from '../../src/widgets/boards/henry'
 import type { Assert } from '../lib/check'
@@ -38,6 +42,18 @@ export function cardDrawingChecks(assert: Assert) {
       if (d < 5 - 1e-6) bad.push(`${t.toFixed(2)}: ${d.toFixed(2)}`)
     }
     assert('cards: dash-drive rail clears the lap knob', seen > 0 && !bad.length, `${seen} frames with the knob; ${bad.slice(0, 4).join(', ')}`)
+  }
+  // dash-speed and dash-power: each end label sits clear of the needle parked at that end (it ran into -60 before)
+  {
+    const bad: string[] = []
+    for (const [name, d, ends] of [['speed', SPD, ['0', '160']], ['power', PWR, ['-60', '150']]] as const) {
+      ends.forEach((s, f) => {
+        const [cx, top] = dialEndAt(d, f), [w, h] = textSize(s), x0 = cx - w / 2, x1 = cx + w / 2
+        const gap = Math.min(...needleSites(d, f).map(([x, y]) => Math.hypot(Math.max(x0 - x, 0, x - x1), Math.max(top - y, 0, y - (top + h)))))
+        if (gap < 3) bad.push(`${name} ${s}: ${gap.toFixed(2)}`)
+      })
+    }
+    assert('cards: dash speed and power end labels clear the needle by 3 cells', !bad.length, bad.join(', '))
   }
   // glyph long press: prev and next are hex-packed triangles (columns k·√3/2 apart), not square-grid sprites
   {

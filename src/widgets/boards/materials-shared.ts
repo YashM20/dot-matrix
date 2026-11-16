@@ -1,20 +1,17 @@
 /**
  * The shared plumbing of the material cards (docs/living-matter/M-materials.md §2): the card shell, the board light
- * (`matLight`), lazy bakes, scratch rasters and the 1.5 lattice. Used by the WORKSHOP files (`workshop*.ts`). It was
+ * (`matLight`), lazy bakes and the light-keyed caches. Used by the WORKSHOP files (`workshop*.ts`). It was
  * the MATERIALS board's shell first; that board was removed (#378).
  */
 import { rake } from '../../engine/matter/relief'
 import type { Light } from '../../engine/light/shade'
 import { hourOf } from '../../engine/light/material'
 import { sceneLight, type SceneLightInput } from '../../engine/light/input'
-import { createRaster, rasterWindow, type Raster } from '../../engine/raster/raster'
-import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { TILE, layoutFor, tileStyle, type WidgetContext } from '../types'
 import { caption } from '../captions'
 
 export const T = layoutFor(TILE)
 export type Pt = [number, number]
-export type Box = [number, number, number, number]
 export const DEG = Math.PI / 180
 export const mod = (a: number, n: number) => ((a % n) + n) % n
 export const pad2 = (n: number) => String(n).padStart(2, '0')
@@ -65,25 +62,6 @@ export function snapTorch(L: Light, q: number): Light {
   const p = L as { at: readonly [number, number, number]; falloff?: number }
   return { ...p, at: [Math.round(p.at[0] / q) * q, Math.round(p.at[1] / q) * q, p.at[2]] }
 }
-/** Scratch rasters per card, allocated on first use and reused every frame. */
-export function scratch(n: number, grid = TILE): () => Raster[] { return once(() => Array.from({ length: n }, () => createRaster(grid))) }
-export const L15 = 1.5, LG15 = latticeGrid(TILE, L15)
-/** Card cell ↔ 1.5-lattice cell (the sampler's lattice placement, origin 0). */
-export const toCard15 = (j: number) => (j + .5) * L15 - .5
-/** A card-cell mask down-sampled to the 1.5 lattice: a lattice cell is lit when ≥ 50% of the card cells in it are. */
-export function toLattice15(m: Raster): Raster {
-  const out = createRaster(LG15), cols = TILE.cols, [b0, b1, b2, b3] = rasterWindow(m)
-  // lattice cell j covers card rows ⌈1.5j − ½⌉ … < 1.5(j + 1) − ½: only cells over the mask's bounds can be lit
-  const ja = Math.max(0, Math.floor((b1 + .5) / L15) - 1), jb = Math.min(LG15.rows - 1, Math.ceil((b3 + .5) / L15))
-  const ia = Math.max(0, Math.floor((b0 + .5) / L15) - 1), ib = Math.min(LG15.cols - 1, Math.ceil((b2 + .5) / L15))
-  for (let j = ja; j <= jb; j++) for (let i = ia; i <= ib; i++) {
-    let lit = 0, all = 0
-    for (let r = Math.ceil(j * L15 - .5); r < (j + 1) * L15 - .5; r++) for (let c = Math.ceil(i * L15 - .5); c < (i + 1) * L15 - .5; c++) { all++; lit += m.data[r * cols + c] }
-    if (all && lit / all >= .5) out.data[j * LG15.cols + i] = 1
-  }
-  return out
-}
-
 /**
  * A light as a cache key (M3.10): the hub's light is bucketed (64 azimuths × 8 elevations) and the sun is fixed for an
  * hour, so a per-card cache keyed by this hits across frames; a moving torch (snap it with `snapTorch`) misses.

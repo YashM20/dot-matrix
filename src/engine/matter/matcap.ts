@@ -115,5 +115,3 @@ const striped = (horizon: number, bend: number, stops: readonly (readonly [numbe
 export const CHROME: MatcapFn = striped(-.06, .35, [[.62, .5], [.22, .75], [.08, 1], [-.12, 0], [-.5, .5], [-.62, 0], [-2, .25]])
 /** Satin metal: two wide soft bands (a bright upper half, a mid lower half) and a dark rim, no black horizon line. */
 export const SATIN: MatcapFn = (_nx, ny, nz) => (nz < .22 ? .25 : -ny > .05 ? .75 : -ny > -.55 ? .5 : .25)
-/** Liquid (mercury): CHROME with a wider sky and a bright floor. */
-export const LIQUID: MatcapFn = striped(-.1, .3, [[.4, .75], [.1, 1], [-.08, 0], [-.45, .5], [-2, .75]])
