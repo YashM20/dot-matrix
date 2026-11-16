@@ -198,7 +198,11 @@ const hbAgent: WidgetPreset = {
   layers: ctx => {
     const s = clamp(Number.isFinite(ctx.data.state) ? ctx.data.state : 0, 0, 4), i0 = Math.min(3, Math.floor(s)), sel = Math.round(s)
     const p = blendStates(HEARTBEAT[HEARTBEAT_STATES[i0]], HEARTBEAT[HEARTBEAT_STATES[i0 + 1]], s - i0)
-    const st = ui(ctx, 'state'), cy = SEG.y + SEG.h / 2, [rail, knob] = switchTrack(SWITCH, s / 4, ['mid', 'value'], st.pressed ? PRESS : 1)
+    const st = ui(ctx, 'state'), cy = SEG.y + SEG.h / 2, [track0, knob] = switchTrack(SWITCH, s / 4, ['mid', 'value'], st.pressed ? PRESS : 1)
+    // the status line and the stop labels sit close, so focus marches the track's own sites (its pitch, no extra ring);
+    // the lit sites leave the track while it does, so they read on their own and not as a core inside a `mid` dot
+    const ring = states(st, ctx.t, track, d => track(d, OUTLINE.spacing), 0), lit = new Set(ring.flatMap(l => l.sites ?? []).map(p => p.join()))
+    const rail = lit.size ? { ...track0, sites: track0.sites?.filter(p => !lit.has(p.join())) } : track0
     return [
       // red-free: the agent card's pulse stays in `value`, so the board spends red once
       ...scene(p, ctx.t, AGENT, false), ...statusLine(HEARTBEAT_STATES[sel], ctx.t, 94),
@@ -206,8 +210,7 @@ const hbAgent: WidgetPreset = {
       layer(T.dots([0, 1, 2, 3, 4].filter(i => Math.abs(i - s) > .5).map((i): Pt => [segX(i), cy]), 3), 'mid'),
       knob,
       ...SEG.labels.map((l, i) => layer(T.text(l, segX(i), SEG.y + SEG.h + 6, { align: 'center' }), i === sel ? 'value' : 'idle')),
-      // the status line and the stop labels sit close, so focus marches the track's own sites (its pitch, no extra ring)
-      ...states(st, ctx.t, track, d => track(d, OUTLINE.spacing), 0),
+      ...ring,
     ]
   },
 }
