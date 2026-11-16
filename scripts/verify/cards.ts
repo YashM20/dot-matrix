@@ -9,11 +9,12 @@ import { touchingPairs } from '../touching'
 import { theme, visible } from '../lib/stats'
 import type { Assert } from '../lib/check'
 import { STILL_LEAD } from '../../src/components/browse/data'
+import { describe } from '../../src/engine/describe'
 
 /** Cards with no touching dots anywhere, at three times (moving parts included). */
 const CLEAR = ['line-map', 'service', 'departures', 'ir-ripple', 'chart-bar', 'chart-line', 'chart-area', 'chart-candle', 'hb-done', 'sim-sand', 'live-contribs',
   'lv-title', 'lv-queen', 'sq-teletext', 'phys-jelly', 'phys-splash', 'light-emissive', 'inst-crank', 'inst-xy', 'inst-level', 'inst-transport', 'mo-wait', 'mo-send', 'scope-mic', 'scope-wave',
-  'cinema-exit-14', 'cinema-sundown', 'cinema-keeper', 'heal-mirror', 'mirror-conduct']
+  'cinema-exit-14', 'cinema-sundown', 'cinema-keeper', 'heal-mirror', 'mirror-conduct', 'ui-status-dot']
 const CINEMA = ['cinema-signal', 'cinema-sundown', 'cinema-upstairs', 'cinema-witness', 'cinema-exit-14', 'cinema-keeper', 'cinema-encore']
 const dotsAt = (p: WidgetPreset, t: number): DotInstance[] => sampleLayers(withChrome(p)({ t, data: { ...p.defaults } }), p.grid, p.style, theme)
 
@@ -54,6 +55,11 @@ export function cardChecks(assert: Assert) {
     assert('cards: settings has toggles for Bluetooth and Sound, off and on at rest, and flipping one moves its knob',
       keys.join() === 'bluetooth,sound' && rest.bluetooth === 0 && rest.sound === 1 && frame({ ...rest, bluetooth: 1 }) !== frame(rest) && frame({ ...rest, sound: 0 }) !== frame(rest), keys.join())
   }
+  // COMPONENTS status dot (#261): each dot is named, so the card reads out online, away and busy
+  {
+    const text = describe(widgetById('ui-status-dot')!).text
+    assert('cards: ui-status-dot names online, away and busy', ['ONLINE', 'AWAY', 'BUSY'].every(w => text.includes(w)), text.join(', '))
+  }
   textOverlapChecks(assert)
 }
 
@@ -74,7 +80,7 @@ export function textBoxes(layers: Layer[]): { text: string; box: CellBounds }[] 
 }
 const overlaps = (a: CellBounds, b: CellBounds) => a[0] <= b[2] && b[0] <= a[2] && a[1] <= b[3] && b[1] <= a[3]
 /** Cards whose text never overlaps other text or leaves the card, at each listed time (the departures numerals mid-flip at 8.05). */
-const NO_TEXT_OVERLAP = ['departures', 'station-clock', 'platform', 'next-train', 'line-map', 'service'], OVERLAP_TIMES = [0, 1.3, 3.7, 7.1, 8.05, 9, 61]
+const NO_TEXT_OVERLAP = ['departures', 'station-clock', 'platform', 'next-train', 'line-map', 'service', 'ui-status-dot'], OVERLAP_TIMES = [0, 1.3, 3.7, 7.1, 8.05, 9, 61]
 export function textOverlapChecks(assert: Assert) {
   for (const id of NO_TEXT_OVERLAP) {
     const p = widgetById(id)
