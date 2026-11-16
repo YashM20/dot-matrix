@@ -8,14 +8,17 @@
 import type { Control } from '../../engine/context'
 import { clamp } from '../../engine/math'
 import type { Layer, Tone } from '../../engine/types'
-import { TAU, TILE, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
+import { TAU, TILE, dim, layer, layoutFor, tileCircleStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
 import { OUTLINE, PRESS, at, circle, dimmed, glow, marching, rr, rrect, stadium, states, ui } from './components-kit'
+import { scrubber, switchTrack, type SwitchSpec } from '../dot-controls'
+import { polar } from '../dials'
+import { divider } from '../captions'
 // the primitives live in components-kit.ts; other boards import them from there
 export { OUTLINE, PRESS, at, circle, dimmed, glow, marching, rr, rrect, stadium, states, ui, type Shape, type UiState } from './components-kit'
 
 const T = layoutFor(TILE)
 /** Knobs and status dots are true circles at this size, so roundness drops to 0 (n = 2). */
-const style = { ...tileStyle, cornerRoundness: 0 }
+const style = tileCircleStyle
 const BODY = { lattice: 1.3 }
 type Pt = [number, number]
 
@@ -23,11 +26,8 @@ const outline = (x: number, y: number, w: number, h: number) => T.dots(stadium(x
 
 // ── TOGGLE ──────────────────────────────────────────────────────────────────
 const TRACK = { x: 22, w: 100, h: 46 }
-const toggle = (top: number, on: boolean) => {
-  const r = TRACK.h / 2, knob: Pt = [on ? TRACK.x + TRACK.w - r : TRACK.x + r, top + r]
-  const tone: Tone = on ? 'value' : 'mid'
-  return [layer(outline(TRACK.x, top, TRACK.w, TRACK.h), tone), layer(T.dots([knob], 30), tone)]
-}
+const toggle = (top: number, on: boolean) =>
+  switchTrack({ ...TRACK, y: top, knob: 30, ...OUTLINE }, on ? 1 : 0, on ? 'value' : 'mid')
 export const toggleCard: WidgetPreset = {
   id: 'ui-toggle', name: 'Toggle', group: 'composite', chrome: 'dots', grid: TILE, style,
   defaults: { on: 1, on2: 0 },
@@ -64,13 +64,7 @@ export const pillCard: WidgetPreset = {
 // ── SLIDER ──────────────────────────────────────────────────────────────────
 const RAIL = { x0: 6, x1: 138, spacing: 4.4, size: 2.1, knob: 18, gap: 11 }
 /** Dotted rail with a knob at `value`; the filled side takes `fill`, the rest stays dim. */
-const slider = (y: number, value: number, fill: Tone, knobTone: Tone) => {
-  const span = RAIL.x1 - RAIL.x0, n = Math.round(span / RAIL.spacing), step = span / n
-  const at = Math.round(Math.max(0, Math.min(1, value)) * n), kx = RAIL.x0 + at * step
-  const left: Pt[] = [], right: Pt[] = []
-  for (let i = 0; i <= n; i++) { const x = RAIL.x0 + i * step; if (Math.abs(x - kx) >= RAIL.gap) (x < kx ? left : right).push([x, y]) }
-  return [layer(T.dots(left, RAIL.size), fill), layer(T.dots(right, RAIL.size), 'mid'), layer(T.dots([[kx, y]], RAIL.knob), knobTone)]
-}
+const slider = (y: number, value: number, fill: Tone, knobTone: Tone) => scrubber({ ...RAIL, y }, value, [fill, 'mid', knobTone])
 export const sliderCard: WidgetPreset = {
   id: 'ui-slider', name: 'Slider', group: 'composite', chrome: 'dots', grid: TILE, style,
   defaults: { value: .55, level: .4 },
@@ -164,16 +158,18 @@ const ptr = (ctx: Ctx) => ctx.pointers?.find(q => !q.up)
 /** A three-stop switch: the toggle's track and knob, mid detents at the free stops, labels below. */
 const SEG = { x: 6, y: 44, w: 132, h: 40, knob: 30, labels: ['LOW', 'MID', 'HIGH'] }
 const segX = (i: number) => SEG.x + SEG.h / 2 + (i * (SEG.w - SEG.h)) / 2
+const SEG_SWITCH: SwitchSpec = { ...SEG, ...OUTLINE, outline: 'rrect' }
 export const segmentedCard: WidgetPreset = {
   id: 'ui-segmented', name: 'Segmented', group: 'composite', chrome: 'dots', grid: TILE, style,
   defaults: { seg: 1 },
   controls: [{ key: 'seg', kind: 'segmented', options: 3, optionLabels: SEG.labels, box: [SEG.x, SEG.y, SEG.w, SEG.h + 28], label: 'Fan speed' }],
   layers: ctx => {
     const s = ui(ctx, 'seg'), sel = int(ctx.data.seg, 0, 2), cy = SEG.y + SEG.h / 2, track = rr(SEG.x, SEG.y, SEG.w, SEG.h, SEG.h / 2)
+    const [rail, knob] = switchTrack(SEG_SWITCH, sel / 2, ['mid', 'value'], s.pressed ? PRESS : 1)
     return [
-      layer(T.dots(track(0, OUTLINE.spacing), OUTLINE.size), 'mid'),
+      rail,
       layer(T.dots([0, 1, 2].filter(i => i !== sel).map((i): Pt => [segX(i), cy]), 4), 'mid'),
-      layer(at(T.dots([[segX(sel), cy]], SEG.knob), s.pressed ? PRESS : 1), 'value'),
+      knob,
       ...SEG.labels.map((l, i) => layer(T.big(l, segX(i), SEG.y + SEG.h + 14, { ...BODY, align: 'center' }), i === sel ? 'value' : 'mid')),
       ...states(s, ctx.t, track),
     ]
@@ -216,10 +212,11 @@ export const knobCard: WidgetPreset = {
     const { cx, cy, r } = KNOB, s = ui(ctx, 'gain'), v = clamp(ctx.data.gain), a = KNOB.start + v * KNOB.sweep, pv = s.pressed ? PRESS : 1
     const ring = { spacing: OUTLINE.spacing, size: OUTLINE.size, start: KNOB.start }
     return [
+      // the dash dials' recipe (`dialArc`), drawn here because at 0 this card keeps one lit site at the start (#360)
       layer(T.dotRing(cx, cy, r, { ...ring, sweep: KNOB.sweep }), 'mid'),
       layer(T.dotRing(cx, cy, r, { ...ring, sweep: v * KNOB.sweep, size: 2.2 }), 'value'),
       layer(at(T.dots([[cx, cy]], KNOB.body), pv), 'mid'),
-      layer(at(T.dots([[cx + 13 * Math.sin(a), cy - 13 * Math.cos(a)]], 6), pv), 'value'),
+      layer(at(T.dots([polar(cx, cy, 13, a)], 6), pv), 'value'),
       layer(T.big(String(Math.round(v * 100)), cx, cy + r - 8, { ...BODY, align: 'center' }), 'idle'),
       ...states(s, ctx.t, circle(cx, cy, KNOB.bodyR), circle(cx, cy, r)),
     ]
@@ -291,7 +288,7 @@ export const checkCard: WidgetPreset = {
       ...(on ? [layer(at(T.dots(checkMark(CHK.x, y0), 2.4), cv), 'value')] : []),
       layer(T.big(CHK.labels[0], CHK.labelX, y0 - 4.5, BODY), on ? 'value' : 'mid'),
       ...states(c, ctx.t, box, rr(10, y0 - 14, 124, 28, 8), 0),
-      layer(T.dotLine(CHK.x - half, 60, 134, 60, { spacing: 3.3, size: 1 }), 'faint'),
+      divider(CHK.x - half, 134, 60),
       ...radio(0), ...radio(1),
       ...(g.focus ? [marching(rr(10, y1 - 14, 124, y2 - y1 + 28, 8), ctx.t, 0)] : []),
     ]
@@ -329,24 +326,20 @@ export const tabsCard: WidgetPreset = {
 
 // ── PROGRESS ────────────────────────────────────────────────────────────────
 /** Determinate progress: percentage hero, the slider's dot rail filled to a red live head, a caption row. */
-const PROG = { x0: 6, x1: 138, y: 98, top: 38, spacing: 4.4, size: 2.1, head: 8, gap: 6, total: 3.2 }
+const PROG = { x0: 6, x1: 138, y: 98, top: 38, spacing: 4.4, size: 2.1, knob: 8, gap: 6, total: 3.2 }
 export const progressCard: WidgetPreset = {
   id: 'ui-progress', name: 'Progress', group: 'composite', chrome: 'dots', grid: TILE, style,
   defaults: { progress: .64 },
   controls: [{ key: 'progress', kind: 'slider', box: [PROG.x0 - 4, PROG.y - 10, PROG.x1 - PROG.x0 + 8, 20], label: 'Sync progress' }],
   layers: ctx => {
     const s = ui(ctx, 'progress'), v = clamp(ctx.data.progress), pct = Math.round(v * 100)
-    const span = PROG.x1 - PROG.x0, n = Math.round(span / PROG.spacing), step = span / n, head = Math.round(v * n)
-    const done: Pt[] = [], todo: Pt[] = []
-    for (let i = 0; i <= n; i++) if (Math.abs(i - head) * step >= PROG.gap) (i < head ? done : todo).push([PROG.x0 + i * step, PROG.y])
-    const big = { lattice: 2.5, smooth: true }, pctOpts = { lattice: 1.6 }
+    const span = PROG.x1 - PROG.x0, big = { lattice: 2.5, smooth: true }, pctOpts = { lattice: 1.6 }
     const hw = T.bigSize(String(pct), big)[0], pw = T.bigSize('%', pctOpts)[0], left = 72 - (hw + 3 + pw) / 2, pv = s.pressed ? PRESS : 1
     const bar = rr(PROG.x0 - 3, PROG.y - 3, span + 6, 6, 3)
     return [
       layer(T.big(String(pct), left, PROG.top, big), 'value'),
       layer(T.heroUnit(String(pct), '%', left, PROG.top, big, pctOpts), 'idle'),
-      layer(at(T.dots(done, PROG.size), pv), 'value'), layer(T.dots(todo, PROG.size), 'faint'),
-      layer(at(T.dots([[PROG.x0 + head * step, PROG.y]], PROG.head), pv), 'active'),
+      ...scrubber(PROG, v, ['value', 'faint', 'active'], pv),
       layer(T.text('SYNC', PROG.x0, PROG.y + 12), 'idle'),
       layer(T.text(`${(PROG.total * v).toFixed(1)}/${PROG.total} GB`, PROG.x1, PROG.y + 12, { align: 'right' }), 'mid'),
       ...states(s, ctx.t, bar, bar, 5),

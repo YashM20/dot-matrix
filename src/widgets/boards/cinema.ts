@@ -16,6 +16,7 @@ import { valueNoise2 } from '../../engine/noise/value'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import type { Field, Layer, Tone } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
+import { caption } from '../captions'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -168,7 +169,7 @@ function poster(s: Spec): WidgetPreset {
       const redField: Field = (u, v) => { const i = at(u, v); return cut[i] ? 0 : mark[i] * rg }
       return [
         layer(T.text('AFTERLIGHT', 0, 0), 'idle'),
-        layer(T.text(s.genre, 143, 0, { align: 'right' }), 'mid'),
+        caption(s.genre),
         onLattice(sceneField, 'value'),
         onLattice(redField, 'active'),
         onLattice(title, 'value'),

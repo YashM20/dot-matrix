@@ -16,32 +16,32 @@
   "algo-attractor": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "61427f01",
+    "hash": "0c25c343",
     "dots": 4923
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "aa505c8a",
+    "hash": "6cf408f7",
     "dots": 4860
    }
   },
   "algo-collapse": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "bda9d130",
-    "dots": 1179
+    "hash": "cdf916df",
+    "dots": 1223
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "bda9d130",
-    "dots": 1179
+    "hash": "cdf916df",
+    "dots": 1223
    }
   },
   "algo-aggregate": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "2e13039b",
-    "dots": 1595
+    "hash": "4f59999c",
+    "dots": 1645
    },
    "t=1.3": {
     "style": "squircle:2.30",

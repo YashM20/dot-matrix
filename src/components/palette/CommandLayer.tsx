@@ -285,8 +285,9 @@ export function CommandLayer({ tab, board, all = false, setTab, setBoard }: Comm
     let konami = 0, tHeld = false, tX: number | null = null, tBase = 0
     const onKey = (e: KeyboardEvent) => {
       // a modal dialog (the HIVE game, the boss card, the likes question) owns the keyboard: no board shortcut,
-      // palette or Konami code reaches past it (the palette would open behind it, under the inert page)
-      if (document.querySelector('dialog:modal')) { konami = 0; return }
+      // palette or Konami code reaches past it (the palette would open behind it, under the inert page). The palette
+      // and the shell are modal too, but ⌘K still toggles them
+      if (document.querySelector('dialog:modal:not(.pal-backdrop, .pal-shell)')) { konami = 0; return }
       const k = e.key
       konami = k.toLowerCase() === KONAMI[konami].toLowerCase() ? konami + 1 : k === KONAMI[0] ? 1 : 0
       if (konami === KONAMI.length) { konami = 0; api.boss(); return }

@@ -2,8 +2,10 @@
  * The like button (#169), outside the card frame: on the widget page's rail and on gallery entries. Grey chrome;
  * liked is the "on" state, so it takes the theme's one accent like every other on state. Hidden while the API
  * answers 404 (likes not set up). The first like asks once whether to remember this browser (`RememberSheet`).
- * States: counting soon, already liked, limit reached, likes paused. `aria-pressed`, and a polite live region that
- * reads out the state and the count.
+ * States: counting soon, already liked, limit reached, likes paused. The name stays "Like <name>" and `aria-pressed`
+ * carries the state (#352); a polite live region reads out the state and the count. While a request runs or likes
+ * are paused the button is `aria-disabled` and ignores presses, so it keeps keyboard focus (a `disabled` button
+ * drops it, even right after the remember sheet hands focus back). "Forget this browser" works the same way.
  */
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import { countOf, dailyVisit, ensureBot, gpc, local, programItem, sendForget, sendLike, sendVisit, setLocal, subscribeLocal, today, updateLocal, type Fail, type Program } from './client'
@@ -81,7 +83,7 @@ export default function LikeButton({ item: widgetItem, program, name, compact }:
   }
 
   const click = () => {
-    if (busy) return
+    if (busy || state === 'paused') return
     if (liked) { void send(false); return }
     if (gpc() || local().c) { void send(true); return }
     setAsking(true)
@@ -98,6 +100,7 @@ export default function LikeButton({ item: widgetItem, program, name, compact }:
     await send(true)
   }
   const forget = async () => {
+    if (busy) return
     setBusy(true)
     const r = await sendForget()
     setBusy(false)
@@ -107,16 +110,16 @@ export default function LikeButton({ item: widgetItem, program, name, compact }:
   }
 
   const paused = state === 'paused'
-  const label = `${liked ? 'Unlike' : 'Like'} ${name}${shown > 0 ? `, ${plural(shown)}` : ''}`
+  const label = `Like ${name}${shown > 0 ? `, ${plural(shown)}` : ''}`
   const visible = paused ? NOTES.paused : note ? NOTES[note] : ''
   return <div className={`lk${compact ? ' lk--compact' : ''}`} data-likes={item}>
-    <button type="button" className="lk-btn" aria-pressed={liked} aria-label={label} title={paused ? NOTES.paused : label} disabled={paused || busy} onClick={click}>
+    <button type="button" className="lk-btn" aria-pressed={liked} aria-label={label} title={paused ? NOTES.paused : label} aria-disabled={paused || busy || undefined} onClick={click}>
       <span className="lk-glyph" aria-hidden="true">{liked ? '♥' : '♡'}</span>
       <span className="lk-label">{liked ? 'LIKED' : 'LIKE'}</span>
       {shown > 0 && <span className="lk-count">{shown.toLocaleString('en')}</span>}
     </button>
     <span className="lk-note" aria-hidden="true">{visible}</span>
-    {!compact && mine.c === 'r' && <button type="button" className="lk-forget" disabled={busy} onClick={() => void forget()}>Forget this browser</button>}
+    {!compact && mine.c === 'r' && <button type="button" className="lk-forget" aria-disabled={busy || undefined} onClick={() => void forget()}>Forget this browser</button>}
     <span className="sr-only" role="status" aria-live="polite">{said}</span>
     {asking && <RememberSheet onChoose={c => void choose(c)} />}
   </div>

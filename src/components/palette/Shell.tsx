@@ -4,10 +4,12 @@
  * sits the real output, a `role="log"` list with transparent text on the same cell grid, so the output can be
  * selected, copied and followed by link, a screen reader hears each new line, and scrolling it (wheel, PgUp / PgDn)
  * scrolls the dots. A transparent input over the prompt row takes the keys: Tab completes, ↑ ↓ walk this tab's
- * history, Ctrl+C cancels or stops, Ctrl+U and Ctrl+L clear. Commands run one at a time (`./shellRun.ts`).
+ * history, Ctrl+C cancels or stops, Ctrl+U and Ctrl+L clear. Commands run one at a time (`./shellRun.ts`). It is a
+ * modal `<dialog>` (`useModal`, #352): the page behind is inert, a press outside closes it, focus goes back on close.
  */
 import { useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type KeyboardEvent } from 'react'
 import { DotCanvas } from '../DotCanvas'
+import { useModal } from '../Modal'
 import { tileStyle } from '../../widgets/types'
 import { useXR } from '../xray/store'
 import type { CommandApi } from './api'
@@ -39,7 +41,7 @@ export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }
   const [input, setInput] = useState(''), [caret, setCaret] = useState(0), [focused, setFocused] = useState(true)
   const [busy, setBusy] = useState<string | null>(null)
   const [scrollRow, setScrollRow] = useState<number | null>(null) // null: following the newest line
-  const inputRef = useRef<HTMLInputElement>(null), logRef = useRef<HTMLUListElement>(null), rootRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null), logRef = useRef<HTMLUListElement>(null)
   const history = useRef<string[]>([]), hcur = useRef(-1), draft = useRef('')
   const queue = useRef<string[]>([]), running = useRef<AbortController | null>(null), quietUntil = useRef(0)
   const pendingCaret = useRef<number | null>(null), live = useRef({ input, caret })
@@ -56,19 +58,12 @@ export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }
     pendingCaret.current = null; el.setSelectionRange(at, at); setCaret(at)
   }, [input])
 
-  // open: history from this tab, focus in, a focus trap; close: stop what runs, focus back where it was
+  // open: history from this tab, focus in (the modal keeps it inside); close: stop what runs (useModal sends focus back)
+  const rootRef = useModal(onClose)
   useEffect(() => {
     history.current = loadHistory()
-    const back = document.activeElement as HTMLElement | null, root = rootRef.current
     inputRef.current?.focus()
-    const trap = (e: FocusEvent) => { if (root && e.target instanceof Node && !root.contains(e.target)) inputRef.current?.focus() }
-    document.addEventListener('focusin', trap)
-    return () => {
-      document.removeEventListener('focusin', trap)
-      running.current?.abort(); queue.current = []
-      const a = document.activeElement
-      if (back?.isConnected && back !== document.body && (!a || a === document.body || root?.contains(a))) back.focus({ preventScroll: true })
-    }
+    return () => { running.current?.abort(); queue.current = [] }
   }, [])
 
   // what the shared API reports by toast (link copied, remix failed, no card…) lands in the shell too
@@ -177,7 +172,8 @@ export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }
 
   const vars = { '--cols': grid.cols, '--chars': chars, '--lines': LINES } as CSSProperties
   return (
-    <div ref={rootRef} className="pal-shell" role="dialog" aria-modal="true" aria-label="Dot shell"
+    <dialog ref={rootRef} className="pal-shell" aria-label="Dot shell"
+      onPointerDown={e => { if (e.target !== e.currentTarget) return; const r = e.currentTarget.getBoundingClientRect(); if (e.clientX < r.left || e.clientX > r.right || e.clientY < r.top || e.clientY > r.bottom) onClose() }}
       onMouseUp={() => { if (!window.getSelection()?.toString()) inputRef.current?.focus() }}
       onKeyDown={e => {
         if (e.target === inputRef.current) return
@@ -197,6 +193,6 @@ export function Shell({ api, onClose }: { api: CommandApi; onClose: () => void }
           onFocus={() => setFocused(true)} onBlur={() => setFocused(false)} onKeyDown={onKey} />
       </div>
       <div className="pal-shell-foot" aria-hidden="true">DOT SHELL · <kbd>TAB</kbd> COMPLETE · <kbd>↑</kbd> HISTORY · <kbd>CTRL C</kbd> CANCEL · <kbd>PGUP</kbd> SCROLL · <kbd>ESC</kbd> CLOSE · HELP KEYS</div>
-    </div>
+    </dialog>
   )
 }

@@ -13,8 +13,9 @@
  */
 import type { Field, Layer, Tone } from '../../engine/types'
 import { DEFAULT_WORD, GH, SLOTS, fromSlots, slotKey, slotsOf, wordData, wordParam, wordWidth, type Cell, type Frame } from '../../engine/kinetic/word'
-import { TILE, layer, layoutFor, tileStyle, type WidgetContext } from '../types'
+import { TILE, layoutFor, tileStyle, type WidgetContext } from '../types'
 import { replaceUrl } from '../../site/safe-url'
+import { railFooter } from '../captions'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -119,15 +120,6 @@ export function paint(st: Stage, f: Frame, o: PaintOptions = {}): Layer[] {
 }
 
 // ── footer ──────────────────────────────────────────────────────────────────
-const RAIL = 132, FOOT = 137
 /** A dotted rail through the loop (done in mid), a state on the left and a count on the right. */
-export function footer(k: number, left: string, right: string): Layer[] {
-  const done: Pt[] = [], rest: Pt[] = [], end = (TILE.cols - 1) * Math.max(0, Math.min(1, k))
-  for (let c = 0; c < TILE.cols; c += 3) (c <= end ? done : rest).push([c, RAIL])
-  return [
-    layer(T.dots(rest, .9), 'faint'), layer(T.dots(done, 1.1), 'mid'),
-    layer(T.text(left, 0, FOOT), 'idle'),
-    layer(T.text(right, TILE.cols - 1, FOOT, { align: 'right' }), 'mid'),
-  ]
-}
+export const footer = (k: number, left: string, right: string): Layer[] => railFooter(k, left, right, { rail: 132, foot: 137 })
 export { T }

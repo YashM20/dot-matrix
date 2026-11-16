@@ -89,6 +89,11 @@
   margin-bottom: var(--space-2)
 }
 
+/* the group tabs' tablist (BoardPicker.tsx) adds no box: its tabs stay items of the row, beside BOARDS and the blurb */
+.board-group-tabs {
+  display: contents
+}
+
 .board-groups button {
   padding: var(--space-1) 0;
   border: 0;

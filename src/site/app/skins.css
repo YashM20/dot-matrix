@@ -50,7 +50,8 @@
 }
 
 .skin-menu {
-  /* the solid popover (src/site/app/raised.css): surface, rows and their states; here its place and the rows' layout */
+  /* the solid popover (src/site/app/raised.css): surface, rows and their states; here its resting place (useMenuButton
+     moves it under the button, right edges lined up) and the rows' layout */
   position: absolute;
   top: calc(100% + 6px);
   left: 0;
@@ -59,11 +60,6 @@
   gap: 0;
   width: min(330px, calc(100cqi - 24px));
   padding: var(--space-1)
-}
-
-.skin-menu--right {
-  left: auto;
-  right: 0
 }
 
 .topbar .skin-menu button {
