@@ -20,11 +20,14 @@
   gap: var(--space-3)
 }
 
+/* the label step, so the name and its note stay on one line at rest and in preview: hovering a swatch never moves
+   the swatches under the pointer */
 .theme-head {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 16px
+  min-height: 16px;
+  letter-spacing: var(--track-label)
 }
 
 .theme-head b {
