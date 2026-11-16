@@ -51,6 +51,13 @@ export function metroDashboardChecks(assert: Assert) {
     const left = low(d => d.x < 40 * pitch), right = low(d => d.x > 90 * pitch)
     assert('dashboard: bio-sensor LIGHT block is no deeper than MOISTURE', right <= left + pitch, `right bottom ${(right / pitch).toFixed(1)}, left ${(left / pitch).toFixed(1)}`)
   }
+  // bio-sensor: the red arc follows the moisture readout (#250: it swept 14% beside a 64% readout), on its own ring
+  {
+    const ls = at(bioSensor, 0), ring = ls[2].sites!.length, red = ls[3].sites!.length, said = textOf(bioSensor).find(s => s.endsWith('%'))
+    assert('dashboard: bio-sensor red arc matches the moisture readout', said === '64%' && Math.abs(red / ring - .64) < 1.5 / ring, `${said}, ${red} of ${ring} inner dots`)
+    const outer = new Set(ls[1].sites!.map(p => p.join())), inner = new Set([...ls[2].sites!, ...ls[3].sites!].map(p => p.join()))
+    assert('dashboard: bio-sensor light arc sits on the outer ring, clear of the moisture arc', [...outer].every(k => !inner.has(k)) && ls[0].sites!.length > ls[1].sites!.length, '')
+  }
   // pharma-track names its steps; entertainment says what it is doing
   assert('dashboard: pharma-track labels PRE, I, II, III', ['PRE', 'I', 'II', 'III'].every(s => textOf(pharmaTrack).includes(s)), textOf(pharmaTrack).join(', '))
   assert('dashboard: entertainment has an accessible state', textOf(entertainment).includes('NOW PLAYING'), textOf(entertainment).join(', '))

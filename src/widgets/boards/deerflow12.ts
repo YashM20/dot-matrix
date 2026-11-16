@@ -183,7 +183,7 @@ export const medicalMonitor: WidgetPreset = {
 }
 
 // ── 07 ─────────────────────────────────────────────────────────────────────────────
-const BIO: Pt = [66, 62]
+const BIO: Pt = [66, 62], LIGHT_LUX = 420
 /** Leaf: round base lower-left, sharp tip upper-right, a midrib and a short stem. */
 const LEAF = (() => {
   const a: Pt = [56, 70], b: Pt = [81, 49], d: Pt = [b[0] - a[0], b[1] - a[1]], len = Math.hypot(...d), n: Pt = [-d[1] / len, d[0] / len]
@@ -192,19 +192,21 @@ const LEAF = (() => {
 })()
 export const bioSensor: WidgetPreset = {
   id: 'bio-sensor', name: '07 Bio Sensor', group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
-  defaults: { moisture: .14 },
+  defaults: { moisture: .64 },
   layers: ({ data }) => {
-    const inner = { spacing: 4.4, size: 2 }
+    const inner = { spacing: 4.4, size: 2 }, outer = { spacing: 4.9, size: 1.9 }
+    // two gauges from 12 o'clock: moisture red on the inner ring, light white on the outer one (420 of 800 lux).
+    // The readouts take their arc's tone, so 64% in red and 420 in white are the key.
     return [
-      layer(T.dotRing(BIO[0], BIO[1], 41, { spacing: 4.9, size: 1.9 }), 'mid'),
+      layer(T.dotRing(BIO[0], BIO[1], 41, outer), 'mid'),
+      layer(T.dotRing(BIO[0], BIO[1], 41, { ...outer, sweep: TAU * LIGHT_LUX / 800 })),
       layer(T.dotRing(BIO[0], BIO[1], 33, inner), 'idle'),
-      layer(T.dotRing(BIO[0], BIO[1], 33, { ...inner, start: deg(62), sweep: deg(190) })),
-      layer(T.dotRing(BIO[0], BIO[1], 33, { ...inner, start: 0, sweep: TAU * data.moisture }), 'active'),
+      layer(T.dotRing(BIO[0], BIO[1], 33, { ...inner, sweep: TAU * data.moisture }), 'active'),
       // the rib under the outline; outline and stem as one site set with a 1.7-cell gap, so the sharp tip and the stem join keep one dot each
       layer(path(LEAF.rib, 2.6, 1.1), 'idle'), layer(T.dots([...path(LEAF.outline, 2, 1.35, true).sites ?? [], ...path(LEAF.stem, 2, 1.35).sites ?? []], 1.35, undefined, 1.7)),
-      layer(T.text('MOISTURE', 0, 110), 'idle'), layer(T.big('64%', 0, 121, { lattice: 1.6 })),
+      layer(T.text('MOISTURE', 0, 110), 'idle'), layer(T.big(`${Math.round(data.moisture * 100)}%`, 0, 121, { lattice: 1.6 }), 'active'),
       // the unit sits on the value line, so both readouts are two rows deep
-      layer(T.text('LIGHT', 94, 110), 'idle'), layer(T.big('420', 94, 121, { lattice: 1.6 })), layer(T.text('LUX', 143, 124, { align: 'right' }), 'idle'),
+      layer(T.text('LIGHT', 94, 110), 'idle'), layer(T.big(String(LIGHT_LUX), 94, 121, { lattice: 1.6 })), layer(T.text('LUX', 143, 124, { align: 'right' }), 'idle'),
     ]
   },
 }
