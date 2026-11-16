@@ -6,15 +6,14 @@
 import { useMemo, useRef, type RefObject } from 'react'
 import { canShare, copyPNG, copySVG, copyText, download, shareCard, type Outcome } from '../../export/clipboard'
 import { flag } from '../../site/flags'
-import { withPondDay } from '../../site/pondMemory'
 import { shortPath, widgetPath, type ResolvedWidget } from '../../site/routes'
 import { getTheme, themeTokens } from '../../site/theme/theme'
-import { withTheme } from '../../site/theme/share'
 import { cardScheme } from '../../site/theme/polarity'
 import { withChrome, type WidgetPreset } from '../../widgets/types'
 import { boardLabel } from '../../widgets/manifest'
 import { getSkin } from '../skins/store'
 import { boardTime, cardAction, toast } from '../xray/store'
+import { copyLink, shareLink } from '../copyLink'
 import { MoreMenu } from './MoreMenu'
 import { Pill, PillBar, PillButton } from './PillBar'
 import { LinkIcon, PlayIcon, RemixIcon, ShareIcon, XrayIcon } from './toolIcons'
@@ -53,16 +52,16 @@ function useWidgetActs({ w, preset, name, cardData, stageRef }: ActsInput) {
     png: () => void copyPNG(png(), `${w.slug}.png`).then(report('PNG')),
     svg: () => void copySVG(svg(), `${w.slug}.svg`).then(report('SVG')),
     html: () => void copyText(html()).then(report('HTML')),
-    // the share-link opt-in (THEME popover) adds the visitor's ?theme=
-    link: () => { const u = withPondDay(withTheme(url), pond); void copyText(u).then(o => toast(o === 'copied' ? 'link copied' : u)) },
-    short: () => { const u = withPondDay(withTheme(short), pond); void copyText(u).then(o => toast(o === 'copied' ? `short link copied: ${shortPath(w.uid)}` : u)) },
+    // the site's one copy-link path (#353): the share-link opt-in (THEME popover) adds the visitor's ?theme=, a pond its day
+    link: () => void copyLink(url, { card: w.slug, pond }),
+    short: () => void copyLink(short, { card: w.slug, pond, said: `short link copied: ${shortPath(w.uid)}` }),
     savePNG: () => void png().then(b => { download(b, `${w.slug}.png`); toast(`${w.slug}.png saved`) }, () => toast('PNG failed')),
     saveSVG: () => void svg().then(s => { download(new Blob([s], { type: 'image/svg+xml' }), `${w.slug}.svg`); toast(`${w.slug}.svg saved`) }, () => toast('SVG failed')),
     // SHARE starts its PNG on the press; the click that follows shares it
     pressShare: () => { sharePNG.current = png() },
     // the PNG made on the press is this click's only: a keyboard click (detail 0) after a press that ended off the
     // button would otherwise share an old one, in the theme and at the time of that press (docs/STATE-MACHINES.md A9.1)
-    share: (e?: { detail: number }) => { const p = (e?.detail ? sharePNG.current : undefined) ?? png(); sharePNG.current = undefined; void shareCard({ title: `${name} · MATRIX`, url: withPondDay(withTheme(url), pond), png: p, file: `${w.slug}.png` }).then(report('card')) },
+    share: (e?: { detail: number }) => { const p = (e?.detail ? sharePNG.current : undefined) ?? png(); sharePNG.current = undefined; void shareCard({ title: `${name} · MATRIX`, url: shareLink(url, pond), png: p, file: `${w.slug}.png` }).then(report('card')) },
     remix: () => cardAction('remix', actionArgs()),
     xray: () => cardAction('how', actionArgs()),
   }

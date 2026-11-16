@@ -70,6 +70,8 @@ const js = async (expression: string) => {
 const waitFor = async (expr: string, ms = 8000) => { for (let i = 0; i < ms / 50; i++) { if (await js(expr).catch(() => false)) return true; await sleep(50) } return false }
 let failures = 0
 const check = (name: string, ok: boolean, detail = '') => { console.log(`${ok ? '✓' : '✗'} ${name}${detail && !ok ? ` — ${detail}` : ''}`); if (!ok) failures++ }
+/** A raised layer's solid look: the shortest visible row's height, or what is wrong (a blur, a translucent fill). */
+const solid = (sel: string, rows: string) => js(`(() => { const el = document.querySelector(${JSON.stringify(sel)}); if (!el) return 'missing'; const cs = getComputedStyle(el), h = Math.min(...[...el.querySelectorAll(${JSON.stringify(rows)})].filter(r => r.offsetParent).map(r => r.getBoundingClientRect().height)); return /^(none)?$/.test(cs.backdropFilter) && cs.backgroundColor.startsWith('rgb(') ? h : 'blur ' + cs.backdropFilter + ' ' + cs.backgroundColor })()`)
 
 // before any page script: record view transitions (and where the wipe starts) and copied text
 await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `(() => {
@@ -258,6 +260,14 @@ try {
   await js('new Promise(r => setTimeout(r, 900))')
   await key('Escape', 'Escape', 27)
   check('Escape closes and returns focus to THEME', await waitFor(`!document.querySelector('.theme-pop') && document.activeElement?.classList.contains('theme-menu-btn')`, 2000))
+  // the solid popover (DESIGN.md › Chrome components › menu): no blur, an opaque surface, rows at least 30 px on a mouse
+  await js(`document.querySelector('.theme-menu-btn').click()`); await waitFor('!!document.querySelector(".theme-pop .theme-seg button")', 3000)
+  const pop = await solid('.theme-pop', '.theme-seg button, .theme-share, .theme-contrast')
+  await key('Escape', 'Escape', 27)
+  await js(`document.querySelector('.skin-menu-btn').click()`); await waitFor('!!document.querySelector(".skin-menu [role=menuitemradio]")', 3000)
+  const disp = await solid('.skin-menu', '[role=menuitemradio]')
+  await key('Escape', 'Escape', 27)
+  check('THEME and DISPLAY ▾ are solid popovers (no blur, opaque) with rows of 30 px or more', typeof pop === 'number' && pop >= 30 && typeof disp === 'number' && disp >= 30, JSON.stringify({ pop, disp }))
 
   // ── share-link opt-in, through ⌘K "Copy deep link" ──
   /**
@@ -487,6 +497,8 @@ try {
   const lt = (await centreOf('.tools-sheet .theme-seg [role=radio]:nth-child(2)'))!
   await tap(lt.x, lt.y)
   check('a tap on LIGHT switches the scheme', await waitFor(`document.documentElement.dataset.scheme === 'light'`, 3000))
+  const sheet = await solid('.tools-sheet .sheet-panel', '.theme-seg button')
+  check('phone: the TOOLS sheet is solid (no blur, opaque) with 44 px rows', typeof sheet === 'number' && sheet >= 44, JSON.stringify(sheet))
   await sleep(900)
   const tc = (await centreOf('.tools-sheet .theme-custom'))!
   await tap(tc.x, tc.y)

@@ -6,6 +6,7 @@ import { SKINS as SKIN_INFO, SKIN_NAMES } from '../../engine/display/names'
 import { boardIds, boardLabel, boardManifest, loadBoard, type BoardDef } from '../../widgets/manifest'
 import { MODE_LINES, PLACES, isMode, placeOpen } from '../../site/views'
 import type { RendererOverride } from '../xray/store'
+import type { LinkCopy } from '../copyLink'
 import type { MotionSetting } from '../../site/motion'
 import { ACCENTS, type AccentId } from '../../site/theme/names'
 import { getTheme, setContrast } from '../../site/theme/theme'
@@ -33,8 +34,9 @@ export interface CommandApi {
   remix(cardId: string, data?: Record<string, number>): void | Promise<void>
   /** Open the card in MAKE · COMPOSE as a layer stack (`importPreset`). */
   studio(cardId: string): void | Promise<void>
-  /** Copies the link and returns it. */
-  copyLink(cardId?: string): string
+  /** Copies the link to `cardId`'s page, or to this view (`copyLink`: the site's one path, #353); resolves to how it
+   * went and the link. `toast: false` for a caller that reports it itself (the shell). */
+  copyLink(cardId?: string, opts?: { toast?: boolean }): Promise<LinkCopy>
   toggleXray(force?: boolean): void
   freeze(): void
   resume(): void
@@ -79,8 +81,8 @@ export function paletteItems(hoveredCard?: string, boards: BoardDef[] = []): Pal
   act('resume', 'Time machine: resume the clock', a => a.resume(), 'SPACE', 'play unpause')
   if (hoveredCard && flag('make')) act('remix-hover', `Open ${hoveredCard} in MAKE · CODE (remix)`, a => a.remix(hoveredCard), '', 'remix dots ir program')
   if (hoveredCard && flag('make')) act('studio-hover', `Open ${hoveredCard} in MAKE · COMPOSE`, a => a.studio(hoveredCard), '', 'remix studio edit layers')
-  act('link', 'Copy deep link to this view', a => a.copyLink(), '', 'share url clipboard')
-  if (hoveredCard) act('link-card', `Copy deep link to ${hoveredCard}`, a => a.copyLink(hoveredCard), '', 'share url clipboard card')
+  act('link', 'Copy deep link to this view', a => void a.copyLink(), '', 'share url clipboard')
+  if (hoveredCard) act('link-card', `Copy deep link to ${hoveredCard}`, a => void a.copyLink(hoveredCard), '', 'share url clipboard card')
   act('shell', 'Open the dot shell', a => a.openShell(), '`', 'terminal console cli')
   act('fps', 'Toggle the fps meter', a => a.toggleFps(), '', 'performance frames')
   for (const m of ['on', 'off', 'system'] as const) act(`rm-${m}`, `Reduced motion: ${m}`, a => a.setReducedMotion(m), '', 'motion animation accessibility a11y')

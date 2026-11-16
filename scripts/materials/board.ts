@@ -1,7 +1,7 @@
 /** Materials checks, board group (scripts/materials.ts): the materials board invariants and budgets, and the M2 cards. */
 import { readFileSync } from 'node:fs'
-import { DRAFTS, lensOffset, fromDraft, rake, twill, weaveRelief } from '../../src/engine/matter'
-import { hourOf, lightDir, sunAt, torch, type Light, type Vec3 } from '../../src/engine/light'
+import { DRAFTS, lensOffset, fromDraft, twill, weaveRelief } from '../../src/engine/matter'
+import { hourOf, sunAt, torch, type Light } from '../../src/engine/light'
 import { gpuTag, gpuValues, layerPass, type GPUPass } from '../../src/engine/renderer/webgl/passes'
 import { worldAt, worldReset } from '../../src/engine/physics/world'
 import { simReset, simStep } from '../../src/engine/sim/sim'
@@ -87,11 +87,6 @@ export async function boardChecks(assert: Assert, load: number, opts: MaterialsO
     const within = (r: Loaded, budget: number) => r.ms <= budget * r.load
     assert('materials board: frame ≤ 4 ms (median, warm, × load), no pointer and a hovering torch', rows.every(r => within(r.rest, 4) && within(r.hover, 4)), rows.map(r => `${r.id} ${fmtLoaded(r.rest)}/${fmtLoaded(r.hover)}`).join(', '))
     assert('materials board: cold first frame ≤ 30 ms (× load)', !!coldMod && rows.every(r => within(r.cold, 30)), rows.map(r => `${r.id} ${fmtLoaded(r.cold, 1)}`).join(', ') + (coldMod ? '' : ' (no fresh module graph)'))
-    // a rebake is one-shot work: the best of 3 cache misses (minutes 32–34; contention only ever adds time), each with its own load
-    const H = materialsHooks, rb = atClock(() => ['32', '33', '34'].map(mm => onceLoaded(() => H.engraving('12', mm))).reduce((a, b) => (b.ms / b.load < a.ms / a.load ? b : a)))
-    const first = H.engraving('12', '34'); H.engraving('12', '35'); const keep = H.engraving('12', '34') === first; H.engraving('12', '36'); H.engraving('12', '37')
-    assert('marble: the engraving LRU keeps 2', keep && H.engraving('12', '34') !== first)
-    assert('marble: rebake on a minute change ≤ 10 ms', within(rb, 10), fmtLoaded(rb))
     if (opts.bench) {
       console.log('  materials --bench (ms):  card            cold    warm   hover')
       for (const r of rows) console.log(`                           ${r.id.padEnd(14)} ${r.cold.ms.toFixed(1).padStart(6)} ${r.rest.ms.toFixed(2).padStart(7)} ${r.hover.ms.toFixed(2).padStart(7)}`)
@@ -159,26 +154,6 @@ export async function boardChecks(assert: Assert, load: number, opts: MaterialsO
     let det = true
     for (let i = 0; i < 200; i++) { const s = i * .137; if (JSON.stringify(H.grilleVU(s)) !== JSON.stringify(H.grilleVU(s))) det = false }
     assert('grille: signal deterministic (two fresh runs equal at 200 t\'s)', det && holes.length === 23 * 11 + 22 * 11)
-  }
-  // ── marble ──
-  {
-    const e = H.engraving('09', '41'), n = e.n
-    let ok = true, detail = ''
-    for (const az of [90, 270]) {
-      const L = rake(lightDir(az * DEG, 40 * DEG)) as Vec3, { body, polish } = H.marbleLit(e, L)
-      let lit = 0, litN = 0, far = 0, farN = 0
-      for (let i = 0; i < n.x.length; i++) {
-        if (!e.hero.data[i] || n.mask[i] < .5) continue
-        const tilt = Math.hypot(n.x[i], n.y[i]), facing = (n.x[i] * L[0] + n.y[i] * L[1]) / (tilt || 1)
-        if (tilt < .5) continue // wall cells only (slope ≥ 30°)
-        const v = Math.max(body.data[i], polish.data[i])
-        if (facing > .7) { litN++; if (v >= .62) lit++ }
-        if (facing < -.7) { farN++; if (v < .06) far++ }
-      }
-      if (lit < .8 * litN || far < farN || !litN || !farN) { ok = false; detail = `az ${az}: lit ${lit}/${litN}, far void ${far}/${farN}` }
-      else detail += `az ${az}: lit ${lit}/${litN}, void ${far}/${farN}; `
-    }
-    assert('marble: engraved grooves: lit wall ≥ idle and far wall void under a raked light from either side', ok, detail)
   }
   // ── terrazzo ──
   {

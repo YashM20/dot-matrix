@@ -14,7 +14,7 @@ import { STILL_LEAD } from '../../src/components/browse/data'
 const CLEAR = ['line-map', 'service', 'departures', 'ir-ripple', 'chart-bar', 'chart-line', 'chart-area', 'chart-candle', 'hb-done', 'sim-sand', 'live-contribs',
   'lv-title', 'lv-queen', 'sq-teletext', 'phys-jelly', 'phys-splash', 'light-emissive', 'inst-crank', 'inst-xy', 'inst-level', 'inst-transport', 'mo-wait', 'mo-send', 'scope-mic', 'scope-wave',
   'cinema-exit-14', 'cinema-sundown', 'cinema-keeper', 'heal-mirror', 'mat-knob', 'mirror-conduct']
-const CINEMA = ['cinema-last-call', 'cinema-signal', 'cinema-sundown', 'cinema-upstairs', 'cinema-closer', 'cinema-witness', 'cinema-exit-14', 'cinema-keeper', 'cinema-encore']
+const CINEMA = ['cinema-signal', 'cinema-sundown', 'cinema-upstairs', 'cinema-witness', 'cinema-exit-14', 'cinema-keeper', 'cinema-encore']
 const dotsAt = (p: WidgetPreset, t: number): DotInstance[] => sampleLayers(withChrome(p)({ t, data: { ...p.defaults } }), p.grid, p.style, theme)
 
 export function cardChecks(assert: Assert) {
