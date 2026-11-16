@@ -29,7 +29,7 @@
 /* coarse pointers (tablets and phones): every chrome target is at least 40 px; text tabs grow their box, not
    their type (phones get 44 px from src/site/mobile/) */
 @media (pointer: coarse) {
-  .topbar button,
+  .topbar button:where(:not(.menu-row)),
   .board-groups button,
   .board-tabs button,
   .intro-line button,
