@@ -128,13 +128,19 @@ export const iconButtonCard: WidgetPreset = {
 }
 
 // ── STATUS DOT ──────────────────────────────────────────────────────────────
+/** Online (the live red dot), away (a ring), busy (a grey dot), each named in a `mid` caption under it. */
+const STATUS = { y: 66, label: 20, xs: [24, 72, 120] as const, names: ['ONLINE', 'AWAY', 'BUSY'] }
 export const statusDotCard: WidgetPreset = {
   id: 'ui-status-dot', name: 'Status Dot', group: 'icon', chrome: 'dots', grid: TILE, style,
-  layers: () => [
-    layer(T.dots([[24, 76]], 18), 'active'),
-    layer(T.dotRing(72, 76, 7, { spacing: 1.2, size: 1.4 }), 'value'),
-    layer(T.dots([[120, 76]], 18), 'mid'),
-  ],
+  layers: () => {
+    const [a, b, c] = STATUS.xs, y = STATUS.y
+    return [
+      layer(T.dots([[a, y]], 18), 'active'),
+      layer(T.dotRing(b, y, 7, { spacing: 1.2, size: 1.4 }), 'value'),
+      layer(T.dots([[c, y]], 18), 'mid'),
+      ...STATUS.names.map((name, i) => layer(T.text(name, STATUS.xs[i], y + STATUS.label, { align: 'center' }), 'mid')),
+    ]
+  },
 }
 
 // ════════════════════════════════════════════════════════════════════════════
