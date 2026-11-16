@@ -55,8 +55,6 @@ function bilerp(s: Float32Array, off: number, w: number, h: number, x: number, y
   const r0 = off + y0 * w, r1 = off + y1 * w
   return (s[r0 + x0] * (1 - fx) + s[r0 + x1] * fx) * (1 - fy) + (s[r1 + x0] * (1 - fx) + s[r1 + x1] * fx) * fy
 }
-/** Ink density at cell coordinates (bilinear). */
-export const fluidDensityAt = (f: Fluid, s: Float32Array, x: number, y: number) => bilerp(s, f.D, f.w, f.h, x, y)
 
 /**
  * Gaussian splat at cell (x, y), radius r cells: adds velocity (du, dv) in cells / s and ink dd (density is

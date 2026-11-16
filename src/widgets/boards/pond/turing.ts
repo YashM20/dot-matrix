@@ -77,7 +77,7 @@ const ray = (a: number, n: number) => { const r = n ? a * n : a, f = r - Math.fl
 const MOTES = Array.from({ length: 16 }, (_, i) => [(i * 89.3) % 144, 18 + ((i * 53.7) % 120), 1.2 + (i % 4) * .5] as const)
 
 export const pondTuring: WidgetPreset = {
-  id: 'pond-turing', name: 'Pond Turing', label: '09  TURING', ...tile, fps: 18, controls: touch('turing', 'Scratch the skin'),
+  id: 'pond-turing', name: 'Pond Turing', label: 'TURING', numbered: true, ...tile, fps: 18, controls: touch('turing', 'Scratch the skin'),
   credit: [
     { by: ['Alan Turing', 'Edmund Crampin', 'Eamonn Gaffney', 'Philip Maini'], title: 'The chemical basis of morphogenesis (1952); reaction and diffusion on growing domains (1999)', source: 'https://doi.org/10.1006/bulm.1999.0131', note: 'technique' },
     GRAY_SCOTT,

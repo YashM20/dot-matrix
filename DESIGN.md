@@ -232,7 +232,7 @@ Boards declare intent, not columns. `BoardMeta.density` (`src/widgets/manifest.t
 |---|---|---|---|
 | `hero` | 340 px | a few cards that want size: showpieces, cameras, lock screens | lock, gpu, algorithms, ir, sim, live, mirror, scope, heal, squares |
 | `standard` | 240 px | the default | every other board (home, components, surfaces, ...) |
-| `dense` | 200 px | dashboards of many small tiles; boards of 8 (two full rows of 4 at LARGE) | deerflow12, departures, audio |
+| `dense` | 200 px | dashboards of many small tiles; boards of 4 or 8 (full rows of 4 at LARGE) | deerflow12, departures, audio, workshop |
 
 **CARD SIZE** (owner feedback on round 3: T3's 5 a row at 1440 lost the cards' impact and detail; 3 a row is the default again, and the visitor can choose). Three sizes, set as `html[data-cards]` (`src/site/cards.ts`): only CSS custom properties change, so nothing re-renders. The pick is kept in localStorage `dot480:cards`, and the theme boot script sets the attribute before first paint, so a reload does not reflow. The control is a segmented radio group (LARGE / MEDIUM / COMPACT) under the theme in the THEME popover, under TOOLS › DISPLAY on a phone, and in ⌘K as "Card size: large / medium / compact". A missing attribute reads as LARGE.
 
@@ -301,16 +301,8 @@ A material is a dot vocabulary, not a shader: given one normal raster and one li
 | Caustics | `causticSplat`, `refractFloor` | Forward photon splat (2×2 stratified photons per cell, tent + [1 2 1]² binomial: a 1.5-cell B-spline footprint), mean 1 on flat water; net ≥ 1.6 → +1 step in `value`, < .7 → `faint`; the floor read through the water at p − depth·(1 − 1/n)·∇h |
 | Stained glass | `voronoiSites` (exact bisectors, the rose) + F0 `voronoi2` ((F2 − F1)/2, the lancet) | Panes in three transmittances (.35 / .6 / .85) × the sky's gain, on the 1.5 lattice; lead came is void with `mid` glints only, a 1-cell moat between came and panes; the live pane is red at its own transmittance size |
 | Rust, wax | `fbm2` + AO thresholds (rust), wrap diffuse + e^(−σ·thickness) transmission (wax) | Rust kills the sheen: it replaces the brushed bands (fresh `mid`, deep `faint` pitted on 2×2 blocks), crevices first; only the advancing edge is red. Wax glows near the flame through its thin rim; the flame is the accent |
-| Knit | `knitRelief` / `knitAt` (`src/engine/matter/knit.ts`) | Stitches 6 × 4 cells: two 3-cell legs leaning into a V, a void crevice between loops; purl as horizontal bumps; a rope cable's front strand rides up over the crossing; Kajiya–Kay (p 20) along each arm, +1 step at .3, `value` at .6 |
-| Letterpress | `heightRaster` of `insetDistance` (smooth, −1.5) + fibres (blue noise + stretched noise) | Paper stays `faint` / `mid` with its tooth void; under raked light the deboss wall facing the light is `idle`, the far wall void; ink is `value` on the impression's floor only (≥ 1.9 cells into a stroke) |
-| Wood | `woodRings` (`src/engine/matter/wood.ts`) | Rings `fract(k·dist + warp)` round a diving pith (the cathedral), period ≥ 3 lattice cells; latewood a band down, flecks a step up, knot cores `faint`; the lacquer's chatoyance is Kajiya–Kay along the rings (+1 step), its polish `value` |
-| Leather | `leatherAt` / `leatherGrain` (`src/engine/matter/leather.ts`) | Pebbles from Worley cells, creases (the borders) void; a burnished round edge; saddle stitches slanted 30°, the thread `idle` / `value` in AO pits |
-| Sand | `sandRake`, `sandCarve`, `sandRelax` (`src/engine/matter/sand.ts`) | A height raster on the 2× lattice in a world: a tine carves a gaussian and heaps the same volume beside it; repose relaxes slopes over `{material.sand.talus}`; light raked to ≤ 22°; grains a blue-noise band down; the rake head is the accent while it carves |
-| Mercury | `mercuryStep` over `fluid.ts` + the LIQUID matcap | The metal is fluid ink sinking along gravity (`gx`, `gy`: the step only); its height is the blurred coverage (a domed pool), read through the matcap tipped by `tx`, `ty` (none at rest); the lamp's reflection `value`; a split bead is the accent |
-| Lichtenberg | `dbm` (`src/engine/matter/lichtenberg.ts`: fast DBM, η 3, an applied field between two electrodes) | Burned cells are char grooves cut into the plate's height (width from the branch weight, 1 to 2.6 cells), lit through normals, AO and raked light: the floor void, the wall turned to the light `idle` / `value`; maple a quiet `mid` with 40% of its grain void; only the cells burning now and the discharge path are red |
-| Weathered stone | `rain` (`src/engine/matter/erosion.ts`, droplet erosion) | Raised digits on a sandstone face on the 1.5 lattice; droplets for every minute since midnight in one seeded order, checkpointed; a digit is cut afresh when it changes and is harder than the open stone; the raised face a band up while proud; rain runs as `value` trails; the minute's digit is red sites, crisp |
-| Snow crystal | `reiter` (`src/engine/matter/reiter.ts`, 1/12 wedge) on `hexSites` | One flake a day from a vetted (β, γ) table; the rim `value`, spines `idle`, plates `mid`, hoar `faint` on the glass; the cells freezing now are red |
-| Thread, frost | `threadStep` over `life/chain.ts` `ropeStep`; `dla` | A 5-cell cord along the rope, its tangent twisted ±20° every 2 cells (the ply catches the light in steps); inextensible at rest; the needle's eye red only while pulled. Frost grains are DLA sites with a Kajiya–Kay glint along each branch; the grains sticking now are red |
+| Snow crystal | `reiter` (`src/engine/matter/reiter.ts`, 1/12 wedge) on `hexSites` | One flake a day from a vetted (β, γ) table; the rim `value`, spines `idle`, plates `mid`, the glass round it clear; the cells freezing now are red |
+| Frost fern | `dla` | Frost grains are DLA sites with a Kajiya–Kay glint along each branch; the grains sticking now are red |
 
 Material comes from relief, never from hue (no colour tokens). Every material card is CPU by dot count, and the workshop's live and physics cards sample on the main thread. "Was active" is size contrast in the one `active` layer: `{colors.dotActiveDim}` is not used on material boards until the owner rules (M-materials §10.6). `src/engine/matter` is not in the engine barrel: import it by path.
 
@@ -328,11 +320,8 @@ Material comes from relief, never from hue (no colour tokens). Every material ca
 | `{material.glass.bezel}` | `squircle` |
 | `{material.water.ior}` | 1.33 |
 | `{material.caustic.net}` | 1.6 |
-| `{material.sand.talus}` | .8 height units between 4-neighbours (2 relaxation passes a step) |
-| `{material.sand.rake}` | 5 tines, 3 lattice cells apart; light raked to ≤ 22° |
-| `{material.wood.ring}` | 5.5 lattice cells, never under 3 |
 
-On the workshop board (M3, XM) every card is CPU by dot count; the seven with a world (knit, paper, ice, sand, mercury, thread, the Lichtenberg plate) sample on the main thread (worker stubs keep their sims out of the worker), and denim, paper and leather carry no red at all.
+On the workshop board every card is CPU by dot count; the ice and the kintsugi plate keep a tap world and sample on the main thread (worker stubs keep their sims out of the worker).
 
 **Board-wide light:** a board shares one light direction, the sun of the wall-clock hour (`sunAt(hourOf(date))`: rises on the left at 6, highest at noon, sets on the right at 18, a lower moon at night). Over a card the pointer replaces it as a torch.
 
@@ -437,6 +426,7 @@ A surface that wraps a rounded child with padding takes the child's radius plus 
 - **Halftone photo grid:** default 48×48 to 96×96 cells depending on card size; below ~32 cells, detail recognizability drops sharply (see Caveats in the engineering plan).
 - **Icon SDF canvas:** icons rasterize at 4× target grid resolution before distance-transform, then downsample — keeps edges clean at any density.
 - **Status dot:** one site dot about 7 card dots across, top-right of the label row — drawn by `cardChrome()` for `live` TILE cards.
+- **Card number:** a card marked `numbered: true` shows its place among the numbered cards on its board, from 01, in board order. `numberBoard()` (`src/widgets/numbered.ts`) sets it where the board array is exported, so a removed card leaves no gap. Never type the number. It joins an authored label with two spaces (`03  FLIP-DISC`) and a label taken from the name with one (`02 MUSIC`). CINEMA draws it on the poster and MOSAIC in red over the label, both from `number`. `scripts/verify/numbers.ts` checks every board.
 - **Filtered fields (footprint):** a pattern finer than about two cells (stripes, checkers, fine noise) aliases when it is sampled once per dot, and it shimmers as it moves. A field can opt in to its footprint by setting `footprint` (`withFootprint` / `patternField` in `src/engine/filter`). The sampler then calls it as `f(u, v, du, dv)`, where `du` / `dv` is one cell of the grid it is sampled on: 1 / (cols − 1) on the card or on a layer's `lattice`, and a site dot's `size` in card cells. The field returns its mean over that cell: box or triangle-filtered checkers, `fcos`, the band-limited `ffbm2`, or `supersampled` as the generic fallback. Fields without the flag are called as `f(u, v)` and draw exactly as before. Prefer the triangle filter on animated boards. The GPU value pass (`gpuValues`) samples without a footprint.
 
 ### Dot spacing and fills (`src/widgets/sites.ts`)

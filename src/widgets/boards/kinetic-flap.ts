@@ -52,7 +52,7 @@ function editStates(slots: number[], ctx: WidgetContext): (m: number) => FlapSta
 const moduleOf = (key: string | undefined) => (key && /^w\d+$/.test(key) ? +key.slice(1) : -1)
 
 export const ktFlap: WidgetPreset = {
-  id: 'kt-flap', name: 'Split-Flap', label: '01  FLAP', ...tile, defaults: WORD, controls,
+  id: 'kt-flap', name: 'Split-Flap', label: 'FLAP', numbered: true, ...tile, defaults: WORD, controls,
   credit: SPLIT_FLAP,
   layers: ctx => {
     keepWord(ctx.data)

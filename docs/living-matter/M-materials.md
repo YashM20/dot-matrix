@@ -949,6 +949,8 @@ The advanced doc's #14 candle clock (`docs/living-matter/X-advanced.md`, "Subsur
 
 ## 5. Phase M3: extras and tilt polish (about 4.25–5.25 days, board `workshop`)
 
+> **Nov 16, 2026 (#221, #249):** the owner kept four workshop cards: `mat-frost`, `mat-ice`, `mat-kintsugi` and `mat-fold`. The other eleven (knit, denim, paper, wood, leather, sand, mercury, thread, mud, the Lichtenberg plate and the erosion stone) are gone with their engine modules, worker stubs and checks; their links open `/workshop/` (`removedCards`). What follows is plan history.
+
 **Goal:** nine more materials on their own lazy board, `/workshop/`, titled `WORKSHOP — KNIT, DENIM, PAPER, WOOD, LEATHER, SAND, ICE, MERCURY, THREAD`, 3 columns, `play` group. Then one polish pass on tilt lighting across both boards.
 
 All of them reuse M1 and M2 modules. New engine code is kept to small generators in `matter/`:

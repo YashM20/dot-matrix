@@ -9,7 +9,14 @@ import { PRESS, SMALL_ARROW, T, angleOf, card, circle, dialArc, dialLabels, dial
 
 // ── SPEED ───────────────────────────────────────────────────────────────────
 /** 270° dial, 0–160 km/h. Dragging or tapping the scale sets the speed; the needle eases there (spring key). */
-const SPD: Dial = { cx: 72, cy: 78, r: 52, start: (TAU * 5) / 8, sweep: (TAU * 3) / 4 }
+export const SPD: Dial = { cx: 72, cy: 78, r: 52, start: (TAU * 5) / 8, sweep: (TAU * 3) / 4 }
+/** Where a dial's end label sits: centred (x) under the end of its arc, its top row (y). */
+export const dialEndAt = (d: Dial, f: number): [number, number] => { const [x, y] = polar(d.cx, d.cy, d.r, angleOf(d, f)); return [Math.round(x), Math.round(y + 7)] }
+/** A dial's end labels, under the ends of its arc. */
+const dialEnds = (d: Dial, lo: string, hi: string) => ([[0, lo], [1, hi]] as const).map(([f, s]) => {
+  const [x, y] = dialEndAt(d, f)
+  return layer(T.text(s, x, y, { align: 'center' }), 'idle')
+})
 const dialBox = (d: Dial): [number, number, number, number] => [d.cx - d.r - 6, d.cy - d.r - 6, 2 * d.r + 12, 2 * d.r + 12]
 export const speedCard = card('dash-speed', 'Speed', {
   fps: 24, springKeys: ['drive', 'speed', 'gear'],
@@ -19,7 +26,8 @@ export const speedCard = card('dash-speed', 'Speed', {
     return [
       ...dialArc(SPD, 0, f, 'value', f),
       layer(dialTicks(SPD, Array.from({ length: 9 }, (_, i) => i / 8)), 'idle'),
-      ...dialLabels(SPD, [[0, '0'], [.5, '80'], [1, '160']]),
+      // the scale's ends below the arc's ends, clear of KM/H; 80 stays inside the ticks
+      ...dialEnds(SPD, '0', '160'), ...dialLabels(SPD, [[.5, '80']]),
       layer(needle(SPD, f, s.pressed ? PRESS : 1), 'active'),
       layer(hero(String(Math.round(d.kmh)), SPD.cx, 58), 'value'),
       layer(T.text('KM/H', SPD.cx, 92, { align: 'center' }), 'mid'),
@@ -35,7 +43,7 @@ export const speedCard = card('dash-speed', 'Speed', {
 
 // ── POWER ───────────────────────────────────────────────────────────────────
 /** 240° dial from 60 kW of regen to 150 kW of drive; the lit stretch runs from 0 to the needle, either way. */
-const PWR: Dial = { cx: 72, cy: 80, r: 52, start: (TAU * 2) / 3, sweep: (TAU * 2) / 3 }
+export const PWR: Dial = { cx: 72, cy: 80, r: 52, start: (TAU * 2) / 3, sweep: (TAU * 2) / 3 }
 const kwF = (kw: number) => (kw - KW_MIN) / (KW_MAX - KW_MIN)
 export const powerCard = card('dash-power', 'Power', {
   fps: 24, springKeys: ['drive', 'speed', 'gear'],
@@ -46,8 +54,8 @@ export const powerCard = card('dash-power', 'Power', {
       ...dialArc(PWR, zero, f, 'value', f),
       layer(dialTicks(PWR, [-60, -30, 50, 100, 150].map(kwF)), 'idle'),
       layer(T.dots([polar(PWR.cx, PWR.cy, PWR.r - 6, angleOf(PWR, zero))], 3.6), 'value'),
-      // the scale's ends, outside the ring so the needle never covers them
-      ...dialLabels(PWR, [[0, '-60'], [1, '150']], -9),
+      // the scale's ends below the arc's ends, so the needle at either end never touches them
+      ...dialEnds(PWR, '-60', '150'),
       layer(needle(PWR, f), 'active'),
       layer(hero(String(kw), PWR.cx, 58), 'value'),
       layer(T.text('KW', PWR.cx, 92, { align: 'center' }), 'mid'),
@@ -77,7 +85,7 @@ export const rangeCard = card('dash-range', 'Range', {
       layer({ field: () => pv, sites: [polar(RNG.cx, RNG.cy, RNG.r, angleOf(RNG, d.soc))], size: 7 }, 'active'),
       layer(T.dots([polar(RNG.cx, RNG.cy, RNG.r - 7, angleOf(RNG, home))], 2.4), 'idle'),
       layer(hero(String(km), RNG.cx, 54), 'value'),
-      layer(T.text('KM', RNG.cx, 88, { align: 'center' }), 'mid'),
+      layer(T.text('KM EST', RNG.cx, 88, { align: 'center' }), 'mid'),
       layer(T.big(`${Math.round(d.soc * 100)}%`, RNG.cx, 100, { lattice: 1.3, align: 'center' }), 'idle'),
       // fuel-gauge ends under the arc, the trip home along the bottom
       ...([['E', 0], ['F', 1]] as const).map(([ch, f]) => { const [x, y] = polar(RNG.cx, RNG.cy, RNG.r, angleOf(RNG, f)); return layer(T.big(ch, x, y + 8, { lattice: 1.3, align: 'center' }), 'mid') }),

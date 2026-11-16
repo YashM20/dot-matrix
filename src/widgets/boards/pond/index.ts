@@ -13,6 +13,7 @@ import { sampleLayers } from '../../../engine/sampler/gridSampler'
 import { simAtStep } from '../../../engine/sim'
 import { dot480 } from '../../../engine/theme/tokens'
 import type { WidgetPreset } from '../../types'
+import { numberBoard } from '../../numbered'
 import { fireflies, pondFireflies } from './fireflies'
 import { jelly, pondJelly } from './jelly'
 import { koiPond, koiProbe, pondKoi, stateHash } from './koi'
@@ -24,7 +25,7 @@ import { pondSlime, slime } from './slime'
 import { pondTerrarium, terrarium } from './terrarium'
 import { pondTuring, turing } from './turing'
 
-export const pondBoard: WidgetPreset[] = [pondKoi, pondJelly, pondSlime, pondFireflies, pondMurmur, pondTerrarium, pondMarble, pondPlankton, pondTuring]
+export const pondBoard: WidgetPreset[] = numberBoard([pondKoi, pondJelly, pondSlime, pondFireflies, pondMurmur, pondTerrarium, pondMarble, pondPlankton, pondTuring])
 /** The board's live data: the light hub (L3.6; `pond-koi` declares its keys) and the day (X1 #5: `day`, `age`). */
 export const pondSources = [lightSource, pondDaySource]
 /** The board's worlds (tests reset them), in card order. The koi and the marble follow the day: their slots read the current ones. */

@@ -183,12 +183,6 @@ By Inigo Quilez.
 
 - Oldschool Echo (`os-echo`), board `/oldschool/`: technique
 
-### [Fractal Dimension of Dielectric Breakdown](https://doi.org/10.1103/PhysRevLett.52.1033)
-
-By Lutz Niemeyer, Luciano Pietronero, Hans J. Wiesmann.
-
-- Lichtenberg (`mat-lichtenberg`), board `/workshop/`: the model (grown the fast way of Kim, Sewall, Sud and Lin, 2007)
-
 ### [Game Boy (DMG-01, 1989)](https://en.wikipedia.org/wiki/Game_Boy)
 
 By Nintendo R&D1.
@@ -227,12 +221,6 @@ By Georg Meisenbach.
 
 - Lines (`sq-lines`), board `/squares/`: the line screen of his 1882 patent
 
-### [Hierarchical crack pattern as formed by successive domain divisions (2005)](https://doi.org/10.1103/PhysRevE.71.046214)
-
-By Steffen Bohn, Ludovic Pauchard, Yves Couder.
-
-- Mud (`mat-mud`), board `/workshop/`: the order the cracks form in
-
 ### [Icon images](https://iquilezles.org/articles/iconimages/)
 
 By Inigo Quilez, Michael Field, Martin Golubitsky.
@@ -244,12 +232,6 @@ By Inigo Quilez, Michael Field, Martin Golubitsky.
 By Inigo Quilez.
 
 - Fractals Flame (`fr-flame`), board `/fractals/`: technique
-
-### [Implementation of a method for hydraulic erosion](https://www.firespark.de/resources/downloads/implementation%20of%20a%20methode%20for%20hydraulic%20erosion.pdf)
-
-By Hans Theobald Beyer.
-
-- Erosion (`mat-erosion`), board `/workshop/`: the droplet model
 
 ### [Interaction ruling animal collective behavior depends on topological rather than metric distance (2008)](https://doi.org/10.1073/pnas.0711437105)
 
@@ -381,7 +363,7 @@ By Inigo Quilez.
 
 By Tomohiro Nishikado, Taito.
 
-- 06 Mini Game (`mini-game`), board `/mosaic/`: the invader sprite
+- Mini Game (`mini-game`), board `/mosaic/`: the invader sprite
 
 ### [Split-flap display](https://en.wikipedia.org/wiki/Split-flap_display)
 
@@ -396,7 +378,6 @@ By Solari di Udine.
 By Jos Stam.
 
 - Physics Ink (`phys-ink`), board `/physics/`: the fluid solver
-- Mercury (`mat-mercury`), board `/workshop/`: the fluid solver
 
 ### [Star Wars (1977)](https://en.wikipedia.org/wiki/Tatooine)
 

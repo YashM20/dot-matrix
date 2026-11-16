@@ -4,37 +4,37 @@
   "dash-speed": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "284f7acd",
+    "hash": "923d0be7",
     "dots": 493
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "9f105ace",
+    "hash": "d5110fc0",
     "dots": 500
    }
   },
   "dash-power": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "16be45a6",
+    "hash": "fe7d9856",
     "dots": 384
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "393de735",
-    "dots": 438
+    "hash": "32ba6150",
+    "dots": 440
    }
   },
   "dash-range": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "0d22870c",
-    "dots": 444
+    "hash": "0a774392",
+    "dots": 488
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "e32b20b8",
-    "dots": 457
+    "hash": "a84d1ede",
+    "dots": 501
    }
   },
   "dash-gear": {
@@ -52,13 +52,13 @@
   "dash-signals": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "42e313e8",
-    "dots": 570
+    "hash": "1f8b2d30",
+    "dots": 564
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "42e313e8",
-    "dots": 570
+    "hash": "1f8b2d30",
+    "dots": 564
    }
   },
   "dash-battery": {
@@ -69,8 +69,8 @@
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "01e5e281",
-    "dots": 827
+    "hash": "9b1ec6b5",
+    "dots": 711
    }
   },
   "dash-nav": {
