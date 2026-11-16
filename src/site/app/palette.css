@@ -19,7 +19,7 @@
   border-radius: var(--radius-ctl);
   color: var(--mute);
   font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .12em;
+  letter-spacing: var(--track-caps);
   padding: var(--space-1) var(--space-2);
   cursor: pointer
 }
@@ -64,7 +64,7 @@
   box-shadow: var(--shadow-raised);
   color: var(--value);
   font: 500 var(--fs-label-12) var(--mono);
-  letter-spacing: .08em;
+  letter-spacing: var(--track-label);
   text-align: center;
   /* a long note wraps (the time machine's at 320 px, a copy that failed shows the whole URL) */
   overflow-wrap: anywhere
@@ -81,7 +81,7 @@
   border-radius: var(--radius-ctl);
   color: var(--mute);
   font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .12em
+  letter-spacing: var(--track-caps)
 }
 
 .pal-fps b {

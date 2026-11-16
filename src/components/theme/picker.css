@@ -10,8 +10,8 @@
   width: min(328px, calc(100cqi - 24px));
   padding: var(--space-3);
   color: var(--label);
-  font: 500 var(--fs-label-12)/1.3 var(--mono);
-  letter-spacing: .1em;
+  font: 500 var(--fs-label-12)/var(--lh-snug) var(--mono);
+  letter-spacing: var(--track-caps);
   text-align: left
 }
 
@@ -20,11 +20,15 @@
   gap: var(--space-3)
 }
 
+/* one line at rest and in preview: a note that wrapped at rest (FOLLOWS THE SYSTEM) and not in preview moved the
+   swatches a line up under the pointer, which ended the preview. The note gives way (an ellipsis), the name never */
 .theme-head {
   display: flex;
   align-items: center;
   gap: var(--space-2);
-  min-height: 16px
+  min-height: 16px;
+  letter-spacing: var(--track-label);
+  white-space: nowrap
 }
 
 .theme-head b {
@@ -33,8 +37,11 @@
 }
 
 .theme-head span {
+  min-width: 0;
+  overflow: hidden;
   color: var(--mute);
-  font-size: var(--fs-label-12)
+  font-size: var(--fs-label-12);
+  text-overflow: ellipsis
 }
 
 /* the shown theme's dot tones: faint, mid, idle, value, the accent */
@@ -68,7 +75,7 @@
   background: none;
   color: var(--mute);
   font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .12em;
+  letter-spacing: var(--track-caps);
   cursor: pointer
 }
 
@@ -200,7 +207,7 @@
   margin: 0;
   color: var(--mute);
   font-size: var(--fs-label-12);
-  letter-spacing: .06em;
+  letter-spacing: var(--track-label);
   text-transform: uppercase
 }
 
@@ -216,7 +223,7 @@
   background: none;
   color: var(--mute);
   font: 500 var(--fs-label-12) var(--mono);
-  letter-spacing: .06em;
+  letter-spacing: var(--track-label);
   text-align: left;
   cursor: pointer
 }
@@ -235,7 +242,7 @@
 :is(.theme-share, .theme-contrast) b {
   color: var(--mute);
   font-weight: 600;
-  letter-spacing: .12em
+  letter-spacing: var(--track-caps)
 }
 
 .theme-ctl :is(.theme-share, .theme-contrast)[aria-checked="true"] b {
@@ -276,8 +283,8 @@
 .tools-sheet .theme-ctl {
   padding: 0 var(--space-2);
   color: var(--label);
-  font: 500 var(--fs-label-12)/1.3 var(--mono);
-  letter-spacing: .1em
+  font: 500 var(--fs-label-12)/var(--lh-snug) var(--mono);
+  letter-spacing: var(--track-caps)
 }
 
 .tools-sheet .theme-ctl .theme-seg button,

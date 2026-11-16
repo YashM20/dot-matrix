@@ -24,7 +24,7 @@
   margin-top: var(--space-1);
   color: var(--mute);
   font: 600 var(--fs-tag-8)/1 var(--mono);
-  letter-spacing: .16em;
+  letter-spacing: var(--track-wide);
   text-transform: uppercase;
   white-space: nowrap
 }
@@ -163,7 +163,7 @@
 /* a narrow card (COMPACT on a phone): a long label wraps inside the card's width instead of running past it */
 .dot-card-row .dot-card-menu button {
   white-space: normal;
-  line-height: 1.25
+  line-height: var(--lh-snug)
 }
 
 /* touch: a 28 px row under the card; each action's 44 × 44 area runs from the card's edge down into the grid gap
@@ -198,7 +198,7 @@
 .dot-card-row-meta,
 .dot-card-row a,
 .dot-card-row > button {
-  transition: color var(--dur-out), transform var(--dur-out)
+  transition: color var(--dur-out) var(--ease), transform var(--dur-out) var(--ease)
 }
 
 /* a colour fade isn't motion, so reduced motion keeps it: a11y.css zeroes every transition there, and this gives the

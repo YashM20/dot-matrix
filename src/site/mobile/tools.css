@@ -45,13 +45,13 @@
 
 .tools-grid b {
   font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .16em
+  letter-spacing: var(--track-wide)
 }
 
 .tools-grid span {
   color: var(--mute);
-  font: 400 var(--fs-label-12)/1.35 var(--mono);
-  letter-spacing: .02em
+  font: 400 var(--fs-label-12)/var(--lh-snug) var(--mono);
+  letter-spacing: var(--track-snug)
 }
 
 /* a tool that is on: the accent, its wash */
@@ -72,7 +72,7 @@
   margin: var(--space-5) var(--space-2) var(--space-2);
   color: var(--mute);
   font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .18em
+  letter-spacing: var(--track-wide)
 }
 
 .skin-list {

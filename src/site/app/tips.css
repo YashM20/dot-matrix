@@ -12,8 +12,8 @@
   border-radius: var(--radius-sm);
   background: radial-gradient(circle, var(--line-dot) .6px, transparent .9px) 0 0 / 3px 3px;
   color: var(--label);
-  font: 600 var(--fs-tag-9)/1.5 var(--mono);
-  letter-spacing: .04em;
+  font: 600 var(--fs-tag-9)/var(--lh-body) var(--mono);
+  letter-spacing: var(--track-snug);
   text-align: center;
   text-transform: none
 }
@@ -84,7 +84,7 @@
   box-shadow: var(--shadow-raised);
   color: var(--value);
   font: 500 var(--fs-label-12)/22px var(--mono);
-  letter-spacing: .02em;
+  letter-spacing: var(--track-snug);
   text-transform: none;
   white-space: nowrap
 }

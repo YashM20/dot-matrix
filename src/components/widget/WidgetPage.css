@@ -103,7 +103,7 @@
   color: var(--mute);
   font: 500 var(--fs-label-12) var(--mono);
   font-variant-numeric: tabular-nums;
-  letter-spacing: .06em
+  letter-spacing: var(--track-label)
 }
 
 .wp-main {
@@ -138,7 +138,7 @@
   /* room for the focus rings at the scroll box's edges */
   padding: var(--space-1);
   color: var(--label);
-  font: 500 var(--fs-label-12)/1.6 var(--mono);
+  font: 500 var(--fs-label-12)/var(--lh-loose) var(--mono);
   text-align: left
 }
 
@@ -155,7 +155,7 @@
   margin: 0 0 var(--space-2);
   color: var(--mute);
   font: 500 var(--fs-label-12) var(--mono);
-  letter-spacing: .16em
+  letter-spacing: var(--track-wide)
 }
 
 /* the card's name in dot type (DotName.tsx, T6); the missing-card title stays text */
@@ -166,14 +166,14 @@
 .wp-missing h1 {
   margin: 0 0 var(--space-3);
   color: var(--value);
-  font: 600 var(--fs-title-28)/1.1 var(--sans);
-  letter-spacing: .02em
+  font: 600 var(--fs-title-28)/var(--lh-tight) var(--sans);
+  letter-spacing: var(--track-snug)
 }
 
 .wp-blurb {
   margin: 0 0 var(--space-4);
   color: var(--label);
-  font: 400 var(--fs-copy-14)/1.5 var(--sans);
+  font: 400 var(--fs-copy-14)/var(--lh-body) var(--sans);
   letter-spacing: 0
 }
 
@@ -181,7 +181,7 @@
 .wp-credit {
   margin: calc(-1 * var(--space-2)) 0 var(--space-4);
   color: var(--label);
-  font: 400 var(--fs-label-12)/1.5 var(--sans)
+  font: 400 var(--fs-label-12)/var(--lh-body) var(--sans)
 }
 
 /* the concept credit of the seven boards that rebuild the ESP-Mosaico sheets (ConceptCredit), under the card's own */
@@ -247,7 +247,7 @@
   gap: var(--space-2);
   color: var(--mute);
   font: 500 var(--fs-label-12) var(--mono);
-  letter-spacing: .16em;
+  letter-spacing: var(--track-wide);
   cursor: default
 }
 
@@ -281,7 +281,7 @@
 .wp-facts dt {
   color: var(--mute);
   font-size: var(--fs-label-12);
-  letter-spacing: .16em;
+  letter-spacing: var(--track-wide);
   text-transform: uppercase
 }
 
@@ -300,7 +300,7 @@
   max-width: var(--measure);
   margin: var(--gap-action) 0 0;
   color: var(--label);
-  font: 400 var(--fs-copy-14)/1.5 var(--sans)
+  font: 400 var(--fs-copy-14)/var(--lh-body) var(--sans)
 }
 
 /* ── more menu (MoreMenu.tsx): the solid popover (its look and rows: src/site/app/raised.css), fixed under its button

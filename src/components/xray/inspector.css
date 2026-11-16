@@ -16,7 +16,7 @@
   border-radius: var(--radius-panel);
   box-shadow: var(--shadow-raised);
   color: var(--label);
-  font: 500 var(--fs-label-12)/1.45 var(--mono);
+  font: 500 var(--fs-label-12)/var(--lh-body) var(--mono);
   text-align: left;
   overflow: hidden
 }
@@ -32,7 +32,7 @@
   border-radius: var(--radius-ctl);
   color: var(--label);
   font: 600 var(--fs-label-12) var(--mono);
-  letter-spacing: .12em;
+  letter-spacing: var(--track-caps);
   padding: var(--space-1) var(--space-2);
   cursor: pointer
 }
@@ -64,7 +64,7 @@
 .xr-panel-head b {
   display: block;
   color: var(--value);
-  letter-spacing: .14em
+  letter-spacing: var(--track-caps)
 }
 
 .xr-panel-head small {
@@ -88,7 +88,7 @@
 .xr-runtime dt {
   color: var(--mute);
   font-size: var(--fs-label-12);
-  letter-spacing: .14em
+  letter-spacing: var(--track-caps)
 }
 
 .xr-runtime dd {
@@ -176,7 +176,7 @@
 
 .xr-spec {
   margin: 0;
-  font: var(--fs-label-12)/1.35 var(--mono);
+  font: var(--fs-label-12)/var(--lh-snug) var(--mono);
   color: var(--label);
   white-space: pre-wrap;
   word-break: break-all
@@ -256,7 +256,7 @@
     border-radius: var(--radius-panel) var(--radius-panel) 0 0;
     padding-bottom: env(safe-area-inset-bottom);
     overscroll-behavior: contain;
-    transition: height var(--dur-move) cubic-bezier(.2, 0, 0, 1), transform var(--dur-move) cubic-bezier(.2, 0, 0, 1)
+    transition: height var(--dur-move) var(--ease), transform var(--dur-move) var(--ease)
   }
 
   .xr-panel--empty {

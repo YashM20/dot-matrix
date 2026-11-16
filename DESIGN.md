@@ -127,7 +127,7 @@ A second, opt-in face for display and kinetic type: `src/engine/type` (`typeFiel
 Every size in the hierarchy is a strict multiple of the base grid unit — there is no arbitrary in-between size. Weight is simulated by dot density, not a bold-font variant: a "heavier" numeral is achieved by widening `{grid.pitch}` or increasing `{dotStyle.sizeMax}` for that glyph's field, never by swapping a font file. This keeps every text role rendering through the exact same `Field → Sampler → Renderer` pipeline as every icon, chart, and photo in the system.
 
 ### Chrome type (CSS)
-The page chrome around the cards (topbar, pickers, editor, sheets, essay) is real text. Sizes are tokens named by **role and size** (`src/tokens.css`, rem on a 16 px root); the family is set separately (`--mono` for UI, labels, numbers and meta; `--sans` = Oxanium for headings and prose). Weights 400 / 500 / 600. `scripts/site/css-tokens.ts` fails on a raw px or rem in `font-size` or the `font` shorthand.
+The page chrome around the cards (topbar, pickers, editor, sheets, essay) is real text. Sizes are tokens named by **role and size** (`src/tokens.css`, rem on a 16 px root); the family is set separately (`--mono` for UI, labels, numbers and meta; `--sans` = Oxanium for headings and prose). Weights 400 / 500 / 600. Line height and tracking have their own scales below. `scripts/site/css-tokens.ts` fails on a raw px or rem in `font-size` or the `font` shorthand, and on a raw value in `letter-spacing`, `line-height` or the shorthand's line height.
 
 | Token | Size | Use |
 |---|---|---|
@@ -135,14 +135,33 @@ The page chrome around the cards (topbar, pickers, editor, sheets, essay) is rea
 | `--fs-tag-9` | 9 px | card labels, keycaps, glyph marks (▾, the grip), on-canvas badges (the editor's gap readout, a thumbnail label) |
 | `--fs-label-10` | 10 px | the card header only |
 | `--fs-label-11` | 11 px | the card's action row only |
-| `--fs-label-12` | 12 px | **the chrome minimum**: labels, tabs, buttons, menus, the editor, sheets, meta (uppercase mono, +.06em) |
+| `--fs-label-12` | 12 px | **the chrome minimum**: labels, tabs, buttons, menus, the editor, sheets, meta (uppercase mono, `--track-caps`) |
 | `--fs-copy-14` | 14 px | short prose in the display face: the intro's link, board and group blurbs, changelog summaries |
 | `--fs-copy-16` | 16 px | body copy; phone form fields (no iOS focus zoom) |
 | `--fs-lead-18` | 18 px | the page's inherited size; essay prose; the home intro (desktop) |
 | `--fs-title-20` / `-24` / `-28` | 20 / 24 / 28 px | titles (28: the widget page) |
 | `--fs-h1-page` | `clamp(30px, 6vw, 44px)` | legal page title |
 | `--fs-h1-hero` | `clamp(38px, 5vw, 72px)` | hero heading |
-| `--lh-tight` / `--lh-body` | 1.1 / 1.6 | headings / copy (adopted in T6) |
+
+**Line height.** Unitless, so a child that sets its own size keeps the ratio. `1` (a box one line tall: buttons, tabs, pills) and `0` stay raw; a box sized by a token may use it (`/var(--tap)`).
+
+| Token | Value | Use |
+|---|---|---|
+| `--lh-tight` | 1.1 | headings |
+| `--lh-snug` | 1.35 | short lines: labels that wrap, menus, small headings, code |
+| `--lh-body` | 1.5 | copy: blurbs, notes, lists, the X-ray panel |
+| `--lh-loose` | 1.65 | long reads: essay prose, the About lede, the blog |
+
+**Tracking.** Four steps, in em, so they follow the size. `--sans` prose and headings carry none (`0`).
+
+| Token | Value | Use |
+|---|---|---|
+| `--track-snug` | .02em | mixed-case small text: fields, tooltips, list rows, keycaps, the essay's controls |
+| `--track-label` | .06em | quiet labels: menu rows, pills, counts, the essay's control labels |
+| `--track-caps` | .12em | uppercase mono chrome: buttons, tabs, nav, meta, the topbar |
+| `--track-wide` | .16em | eyebrows, kickers, section and sheet heads, the card row |
+
+Allowlisted one-offs (`scripts/site/css-tokens.ts`): the body's base (.18 px tracking, a 145% line that text setting only a size inherits as a length), the hero heading (−.095em, .86), the essay's contents list (1.9), the tooltip bubbles and the code editor (a px line height that is the box's height), and the shell (its dot grid). The editor (MAKE) is not on the scales yet.
 
 **T6 type rules** (docs/LAYOUT-THEME-PLAN.md §5 T6):
 - **12 px chrome minimum.** Under 12 px only inside a card (its own small print), keycaps, glyph marks and on-canvas badges. `scripts/site/layout.ts` fails a page where 10% or more of the chrome characters (outside cards; hidden and `aria-hidden` text skipped) are under 12 px, at all six widths.
@@ -162,7 +181,7 @@ There is no substitute typeface — the bitmap dot-font *is* the typography syst
 | Token | Value | Use |
 |---|---|---|
 | `--space-1` … `--space-5` | 4 · 8 · 12 · 16 · 24 px | inside controls and groups |
-| `--space-6` … `--space-10` | 32 · 48 · 64 · 96 · 128 px | between blocks and sections |
+| `--space-6` … `--space-8`, `--space-10` | 32 · 48 · 64 · 128 px | between blocks and sections (there is no `--space-9`) |
 | `--gap-group` | `--space-3` (12 px) | rhythm: inside a group |
 | `--gap-action` | `--space-6` (32 px); `--space-5` (24 px) ≤ 760 px | rhythm: before actions, and between the top bar and a view |
 | `--gap-section` | `clamp(--space-8, 8vw, --space-10)` | rhythm: between sections (the last board and the footer band, ABOUT's bands) |
@@ -183,7 +202,10 @@ There is no substitute typeface — the bitmap dot-font *is* the typography syst
 | `--card-min-hero` / `--card-min-standard` / `--card-min-dense` | 340 / 240 / 200 px | the narrowest card per board density before the grid drops a column (› Board grid) |
 | `--board-cols-max` | 3; 4 under `html[data-cards="m"]`; 99 (no cap) under `"s"` | the most columns a board shows at the visitor's CARD SIZE; a dense board shows one more (› Board grid) |
 | `--board-cols-min` | 1; 2 under `html[data-cards="s"]` | the fewest columns a board shows: COMPACT keeps 2 on a phone (› Board grid) |
-| `--measure` / `--measure-head` | 68ch / 42rem | longest line of body text / of a heading |
+| `--measure` | 68ch | longest line of body text |
+| `--cols` | set where it is used | a column count read by a grid's track math: the board grid's cap (`--board-cols-max`, one more on a dense board; `src/site/app/grid.css`, BROWSE's grid) and the shell screen's dot columns (set inline by `Shell.tsx`, `--d` = one dot) |
+| `--gutter` | `(100cqi − 100%) / 2` | phone: the frame's side margin, from `src/site/mobile/shell.css`; full-bleed strips and the top bar pull out by it and pad back in |
+| `--dot-target-min` / `--dot-hit-min` | `--tap-min`; `--dot-hit-min` is `--tap` on a coarse pointer | an interactive card's accessibility overlay (`src/site/app/input.css`, the essay): the smallest focus box and hit box around a control drawn in dots (`ControlOverlay.tsx`) |
 | `--hair-dot` / `--hair-pitch` | 1 px / 4 px | dotted hairline: a 1 px dot every 4 px |
 | `--tap` / `--tap-min` | 44 px / 24 px | tap target on a coarse pointer / the WCAG 2.2 floor on a fine one. Every 44 px target size in CSS is `var(--tap)`; the fine-pointer hit floors (`--dot-hit-min`, `--ed-hit`) are `var(--tap-min)` |
 | `--app-top` | `52px + safe-area-inset-top`; `--tap + inset` in short landscape | phone: the sticky top bar's height |
@@ -602,7 +624,7 @@ Interaction is a state the card's *data* is in, not a CSS layer on top. The inpu
 | `{interaction.holdEngage}` | 300 ms still | Press-and-hold on a drag control grabs it in any direction and engages the card (hairline-active border, DONE in the bar) until a touch elsewhere, Escape, DONE or 8 s idle |
 
 ### Chrome motion tokens (CSS)
-The HTML chrome (sheets, menus, pills, tabs) animates with these durations only (`src/tokens.css`); `scripts/site/css-tokens.ts` fails on a raw duration. Card motion stays the engine's own (masks, dissolves, springs above).
+The HTML chrome (sheets, menus, pills, tabs) animates with these durations and curves only (`src/tokens.css`); `scripts/site/css-tokens.ts` fails on a raw duration, an easing keyword or function, and a transition or animation part that moves without a `--ease*` curve. Card motion stays the engine's own (masks, dissolves, springs above).
 
 | Token | Value | Use |
 |---|---|---|
@@ -611,11 +633,12 @@ The HTML chrome (sheets, menus, pills, tabs) animates with these durations only 
 | `--dur-move` | 220 ms | a sheet or panel following a drag or snapping to a stop |
 | `--dur-enter` | 280 ms | a sheet arriving; a display powering off; the header coming back on a scroll up |
 | `--dur-exit` | 200 ms | the header leaving as the page scrolls down: leaving is quicker than arriving |
-| `--ease` | `cubic-bezier(.2, .8, .2, 1)` | chrome easing |
+| `--ease` | `cubic-bezier(.2, .8, .2, 1)` | chrome easing: every transition and animation that moves (quick start, long settle) |
+| `--ease-in` | `cubic-bezier(.3, 0, .8, .15)` | a thing switching off for good: starts slow, leaves fast (a skin's display powering off) |
 | `--dur-tip` | 400 ms | the first tooltip in a group waits this long; the next ones show at once |
 | `--dur-wipe` | 720 ms | the theme switch: the halftone front crossing the screen from the pressed control (Theme › Picker) |
 
-Allowlisted exceptions (effects, not chrome): the X-RAY flash (1.2 s), the nixie flicker loop (5.3 s), and the 1 ms reduced-motion end-state trick.
+Allowlisted exceptions (effects, not chrome): the X-RAY flash (1.2 s), the nixie flicker loop (5.3 s, `steps(1)`), the 1 ms reduced-motion end-state trick, and the two scroll-driven fades (`linear`: progress follows the scroll). The editor's transitions are not checked yet.
 
 ### Chrome states (CSS)
 Every HTML control in the chrome has the same four states plus disabled, from the same tokens (`src/site/app/chrome.css` › chrome states). `scripts/site/css-tokens.ts` checks that every `:hover` selector has its `:active` and `:focus-visible` twin, that `--glow*` appears only on active / focus / live selectors, that no `outline: none` lacks a replacement, and that nothing uses `transition: all`.
@@ -710,11 +733,11 @@ The HTML chrome has one component per job; a new control reuses one of these ins
 |---|---|---|
 | **button** | `.btn` (`src/site/controls.css`, loaded by every page): a rectangular button, no fill, a 1 px `--line-strong` edge, `--radius-ctl`, `--value` 12 px mono at +.1em; `--wash-hover` and `--line-hover` on hover, `--wash-press` on press, the accent ring outside. 36 px tall on a mouse, `--tap` on touch. Its text keeps its case (`Remember`, `RELOAD`) | RELOAD and GO HOME (the page recovery screen, a load-failed board or card), the consent banner's ALLOW and NO THANKS, the likes question's choices, the boss screen's FLEE |
 | **field** | `.field` (`src/site/controls.css`): a one-line `input` or `select` on `--raised`, 1 px `--line`, `--radius-ctl`, 36 px (`--tap` on touch), `--value` 12 px mono, `--mute` placeholder; a wash over the fill on hover and press, the accent border plus the halo on focus. The label beside it is its own component's | BROWSE's SEARCH and TAG, a typing card's words |
-| **menu row** | `.menu-row` (`src/site/controls.css`): a row of the solid popover (› menu below). 30 px (`--tap` on touch), `--label` 12 px mono at +.06em uppercase, `--radius-sm`; the label left, a short `--mute` meta right (`<small>`); `--wash-hover` / `--wash-press` and `--value`, the ring inside (`--focus-in`); checked (`aria-checked`) is `--value` on the dot-matrix fill (4 px pitch, `--tint` at 16%). DISPLAY ▾ lays its rows out as a grid of dot, name and note (`.skin-menu .menu-row`) | both MORE menus, DISPLAY ▾ |
+| **menu row** | `.menu-row` (`src/site/controls.css`): a row of the solid popover (› menu below). 30 px (`--tap` on touch), `--label` 12 px mono, `--track-label`, uppercase, `--radius-sm`; the label left, a short `--mute` meta right (`<small>`); `--wash-hover` / `--wash-press` and `--value`, the ring inside (`--focus-in`); checked (`aria-checked`) is `--value` on the dot-matrix fill (4 px pitch, `--tint` at 16%). DISPLAY ▾ lays its rows out as a grid of dot, name and note (`.skin-menu .menu-row`) | both MORE menus, DISPLAY ▾ |
 | **icon** | `src/components/icons.tsx`: Lucide paths as inline SVG, 16 px, 1.5 stroke, `currentColor`, class `.icon`; one export per icon, so a chunk carries only the ones it draws. Small actions take an icon, never an arrow character or a bare word, and stay muted with their control | the toolbar, the card row, NEXT BOARD |
 | **status dot** | `.status-dot` (+ `.status-dot--live`), › Status & Indicators | LIVE DATA, the live band, a live card, THEME, TOOLS, the legal pages |
 | **pill** | outlined pill: `.board-tabs button`, `.skin-menu-btn`, `.intro-line button`, `.ed-textbtn`, `.ed-row-btns button`; dotted pill `.dot-ring` (DISPLAY ▾, THEME ▾, the CONTRAST: MORE and shared-link switches): a stadium of 1 px dots on the pixel grid, every other pixel of the rasterised outline (`src/components/dotRing.ts`, `ring.css`; the header's pills get it from the idle command layer (`ringHeader`): until then they show text and caret only, then the ring fades in over `--dur-out`, at once under reduced motion), in `--ring-c`, a step up on hover and focus; on and off differ only in the ON / OFF word | board picker, DISPLAY ▾, THEME ▾, the theme switches, editor actions |
-| **toolbar** | `.pill-bar` (`PillBar`, `role=toolbar`, ← → Home End) › `.pill` groups › `.pill-btn` (the class names are the old capsule's): a group is one opaque `--surface` box with a 1 px `--line` edge, `--radius-sm` corners and a 1 px `--line` between its buttons; no blur, no shadow. Buttons are 28 px tall on a mouse and `--tap` on touch (padding, not a bigger look), `--label` 12 px mono at +.06em, 8 px side padding, the icon 4 px from its label, `--wash-hover` / `--wash-press`, the accent ring inside (`--focus-in`), `--glow-wash` on a switch that is on (X-RAY, `on` → `role="switch"`, `aria-checked`). The `icon` prop takes an icon from `icons.tsx` (› icon); an icon stands alone with its `[data-tip]` tooltip where the label adds nothing (LINK, SHARE, PREV, NEXT, MORE), and a short uppercase label stays where it carries the meaning (PNG, SVG, REMIX, X-RAY, a board's name). Primary actions in the left group, secondary (X-RAY, MORE) in a right group; a narrow panel wraps whole groups. SHARE shows only on a coarse pointer (where Web Share exists), so the desktop row holds X-RAY | the widget page's actions (PNG, SVG, LINK, SHARE, REMIX, PLAY; X-RAY, MORE) and top row (‹ BOARD; ← n/N →), the missing-card BOARDS, NEXT BOARD under a board, the editor's two-tab note |
+| **toolbar** | `.pill-bar` (`PillBar`, `role=toolbar`, ← → Home End) › `.pill` groups › `.pill-btn` (the class names are the old capsule's): a group is one opaque `--surface` box with a 1 px `--line` edge, `--radius-sm` corners and a 1 px `--line` between its buttons; no blur, no shadow. Buttons are 28 px tall on a mouse and `--tap` on touch (padding, not a bigger look), `--label` 12 px mono at `--track-label`, 8 px side padding, the icon 4 px from its label, `--wash-hover` / `--wash-press`, the accent ring inside (`--focus-in`), `--glow-wash` on a switch that is on (X-RAY, `on` → `role="switch"`, `aria-checked`). The `icon` prop takes an icon from `icons.tsx` (› icon); an icon stands alone with its `[data-tip]` tooltip where the label adds nothing (LINK, SHARE, PREV, NEXT, MORE), and a short uppercase label stays where it carries the meaning (PNG, SVG, REMIX, X-RAY, a board's name). Primary actions in the left group, secondary (X-RAY, MORE) in a right group; a narrow panel wraps whole groups. SHARE shows only on a coarse pointer (where Web Share exists), so the desktop row holds X-RAY | the widget page's actions (PNG, SVG, LINK, SHARE, REMIX, PLAY; X-RAY, MORE) and top row (‹ BOARD; ← n/N →), the missing-card BOARDS, NEXT BOARD under a board, the editor's two-tab note |
 | **segmented** | `.ed-seg` (`role=radio` items; the editor's), `.theme-seg` (the THEME picker's, same look); text tabs `.view-tabs`, `.board-groups`, `.ed-tabs` | editor options; views, groups and panels |
 | **sheet** | `Sheet` (`.sheet` › `.sheet-rest` + `.sheet-panel` › `.sheet-grab`, `.sheet-head`, `.sheet-body`): a scroll-snap sheet; the five-dot grab handle is shared with `.pal-grab`, `.ed-sheet-grab`, `.xr-grip` | BOARDS, TOOLS; the phone ⌘K, the editor and X-ray sheets reuse its handle and surface |
 | **menu** | the solid popover, one look in `raised.css` (each file places its own): the two MORE menus, the widget page's (`.wp-more`, `MoreMenu.tsx`) and a card's (`.dot-card-menu`, `CardRow.tsx`), the header's DISPLAY ▾ (`.skin-menu`, `SkinSwitcher.tsx`; its rows keep their dot, name and one-line note as a grid that may wrap) and THEME (`.theme-pop`, `ThemePicker.tsx`; its scheme and size segments and its two switches are its 30 px rows, and a hairline edge to edge sets CARD SIZE apart), and the phone sheets that hold them (`.sheet-panel`, keeping its own top corners and 44 px+ rows). The glass layer (`.ed-menu`, `.pal`: `--glass`, `--glass-blur`, `--radius-panel` outside, `--radius-ctl` rows) is left to the editor's menus and ⌘K. The popover: solid `--raised`, 1 px `--line`, `--radius-ctl` outside and `--radius-sm` rows inside a 4 px pad, `--shadow-pop`, no blur. Rows are `.menu-row` (› menu row), one line each: the label left, a short `--mute` mono meta right (`/x7k2`, `static SVG`); a 1 px `--line` edge to edge starts a group (before BACK TO <BOARD>; before a card's X-ray toggle). On a narrow card (COMPACT on a phone) a card menu's label wraps inside the card's width. The widget MORE sits under its trigger with their right edges lined up, flips above when there is no room and stays on screen; it is measured once on open, then placed by one transform | DISPLAY ▾, THEME, editor menus, widget MORE, a card's MORE, ⌘K, sheets |

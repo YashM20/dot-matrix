@@ -35,7 +35,7 @@
   border-radius: 0;
   color: var(--label);
   font: 500 var(--fs-label-12)/1 var(--mono);
-  letter-spacing: .06em;
+  letter-spacing: var(--track-label);
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;

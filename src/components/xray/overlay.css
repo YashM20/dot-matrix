@@ -12,8 +12,8 @@
   position: absolute;
   pointer-events: none;
   z-index: var(--z-raise);
-  font: 500 var(--fs-tag-9)/1.35 var(--mono);
-  letter-spacing: .06em;
+  font: 500 var(--fs-tag-9)/var(--lh-snug) var(--mono);
+  letter-spacing: var(--track-label);
   text-align: left
 }
 
@@ -37,7 +37,7 @@
   padding: var(--space-1) var(--space-1);
   background: color-mix(in srgb, var(--panel) 78%, transparent);
   color: var(--label);
-  letter-spacing: .12em
+  letter-spacing: var(--track-caps)
 }
 
 .xr-hud b {
