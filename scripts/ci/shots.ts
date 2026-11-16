@@ -9,8 +9,9 @@
  * `dark_signal`. Options, from a fixed list (no script comes from the input): `2x` (device scale 2), `xray` (the
  * xray flag on), `more` (click the widget page's MORE), `card-more` (click the first card row's MORE; the shot is the
  * viewport, the row in its middle), `other-tab` (another tab saves the editor's document, so the two-tab note shows),
- * `display` (the header's DISPLAY ▾ menu), `theme` (the header's THEME popover) and `tools` (the phone TOOLS sheet,
- * scrolled to its skin list); `card-more`, `display`, `theme` and `tools` capture the viewport only, e.g. `/@1280@dark@display`, `/@390@light@tools`.
+ * `display` (the header's DISPLAY ▾ menu), `theme` (the header's THEME popover), `tools` (the phone TOOLS sheet,
+ * scrolled to its skin list) and `boards` (the BOARDS sheet, scrolled to its ENGINE group); `card-more`, `display`, `theme`,
+ * `tools` and `boards` capture the viewport only, e.g. `/@1280@dark@display`, `/@390@light@tools`.
  * Two options name a card control by its data key (letters and digits): `hover=<key>` puts the mouse on it and
  * `focus=<key>` reaches it from the keyboard (Shift+Tab, then Tab), so its dot hover or focus ring shows; both capture
  * the viewport with the control's card in the middle, e.g. `/widget/inst-cutoff/@1280@light@focus=cutoff`. Reduced motion is
@@ -28,15 +29,16 @@ const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i +
 const out = resolve(opt('--out') ?? join('.snapshots', 'ci-shots'))
 const items = (opt('--list') ?? '').split(',').map(s => s.trim()).filter(Boolean)
 
-const OPTIONS = ['2x', 'xray', 'more', 'card-more', 'other-tab', 'display', 'theme', 'tools'] as const
+const OPTIONS = ['2x', 'xray', 'more', 'card-more', 'other-tab', 'display', 'theme', 'tools', 'boards'] as const
 type Option = typeof OPTIONS[number]
 /** Options that capture the viewport as it is (a resize to the full page would scroll or close what they opened). */
-const VIEWPORT: readonly Option[] = ['card-more', 'display', 'theme', 'tools']
+const VIEWPORT: readonly Option[] = ['card-more', 'display', 'theme', 'tools', 'boards']
 /** UI states opened by a script click: the control to press, then what shows it is open. */
 const STATES: Partial<Record<Option, { press: string; open: string; then?: string }>> = {
   display: { press: '.skin-switch .skin-menu-btn', open: `!!document.querySelector('.skin-menu [role=menuitemradio]')` },
   theme: { press: '.theme-switch .theme-menu-btn', open: `!!document.querySelector('.theme-pop .theme-seg [role=radio]')` },
   tools: { press: '.tabbar button[aria-haspopup="dialog"]', open: `!!document.querySelector('.tools-sheet .skin-list [role=radio]')`, then: `document.querySelector('.tools-sheet .skin-list')?.scrollIntoView({ block: 'center' })` },
+  boards: { press: '.board-all', open: `!!document.querySelector('.board-sheet #bs-engine')`, then: `document.querySelector('.board-sheet #bs-engine')?.scrollIntoView({ block: 'start' })` },
 }
 /** A card control to hover or focus, by its data key. */
 type Target = { how: 'hover' | 'focus'; key: string }

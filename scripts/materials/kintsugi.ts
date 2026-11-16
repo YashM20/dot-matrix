@@ -19,8 +19,7 @@ import { hash32 } from '../../src/engine/math'
 import { workshopBoard } from '../../src/widgets/boards/workshop'
 import { DET_PATHS, detLint } from '../lib/detLint'
 import { fmtLoaded, medianLoaded, onceLoaded } from '../lib/load'
-import { type Assert, same, type MaterialsOptions } from './util'
-import { POINTER, atClock } from './board'
+import { type Assert, same, POINTER, atClock, type MaterialsOptions } from './util'
 
 const COLS = 144, ROWS = 144
 const frame = (p: WidgetPreset, t: number, pointers?: Pointer[]) => atClock(() => sampleLayers(withChrome(p)({ t, data: { ...p.defaults }, pointers }), p.grid, p.style, dot480))

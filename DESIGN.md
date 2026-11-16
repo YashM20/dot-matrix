@@ -109,7 +109,7 @@ Cards are `TILE` rasters: **144×144 dots at 2.25px** (`src/widgets/types.ts`), 
 
 | Face | Stroke | Digit box | Boards |
 |---|---|---|---|
-| `twin` (default) | 2 dots, corners cut by two dots | 10×14 | charts, components, henry3, ir, materials, ride, dash-nav and every card that sets no face |
+| `twin` (default) | 2 dots, corners cut by two dots | 10×14 | charts, components, henry3, ir, ride, dash-nav and every card that sets no face |
 | `fine` | 1 dot, corners cut by one dot | 8×14 | dash except dash-nav, watch, motion |
 | `condensed` | 2 dots, flat sides | 8×14 | levels, the HIVE game page, and the departures platform and minute numerals (split-flap, on a 4-cell pitch) |
 
@@ -312,7 +312,7 @@ A material is a dot vocabulary, not a shader: given one normal raster and one li
 | Snow crystal | `reiter` (`src/engine/matter/reiter.ts`, 1/12 wedge) on `hexSites` | One flake a day from a vetted (β, γ) table; the rim `value`, spines `idle`, plates `mid`, hoar `faint` on the glass; the cells freezing now are red |
 | Thread, frost | `threadStep` over `life/chain.ts` `ropeStep`; `dla` | A 5-cell cord along the rope, its tangent twisted ±20° every 2 cells (the ply catches the light in steps); inextensible at rest; the needle's eye red only while pulled. Frost grains are DLA sites with a Kajiya–Kay glint along each branch; the grains sticking now are red |
 
-Material comes from relief, never from hue (no colour tokens). On the materials board only `mat-lens` is GPU-tagged (a fine glass screen is the point of that card); every other material card is CPU by dot count, and the two live-fork cards (`mat-pool`, `mat-rust`) sample on the main thread. "Was active" is size contrast in the one `active` layer: `{colors.dotActiveDim}` is not used on material boards until the owner rules (M-materials §10.6). `src/engine/matter` is not in the engine barrel: import it by path.
+Material comes from relief, never from hue (no colour tokens). Every material card is CPU by dot count, and the workshop's live and physics cards sample on the main thread. "Was active" is size contrast in the one `active` layer: `{colors.dotActiveDim}` is not used on material boards until the owner rules (M-materials §10.6). `src/engine/matter` is not in the engine barrel: import it by path.
 
 | Material token | Value |
 |---|---|
@@ -686,8 +686,6 @@ No state changes a size, so nothing shifts. On coarse pointers every chrome targ
   | `sc-twist` | 12 | the twist and the ring move slowly; capped at the default rate because every frame is sphere-traced on the CPU |
   | `sc-posts` | 12 | the walk is slow and foggy; capped at the default rate because every frame is sphere-traced on the CPU |
   | `sc-chain` | 12 | a slow pendulum swing; capped at the default rate because every frame is sphere-traced on the CPU |
-  | `mat-loom` | 40 | the shuttle runs 80 cells/s, 2 cells a frame at 40 (docs/living-matter/M-materials.md, STYLE-BIBLE ≤ 2 cells a frame); 20 on a phone, with a size-contrast trail |
-  | `mat-pool` | 30 | the ripple steps at dt 1/30 (track L's tuning): one step a frame; 15 on a phone |
   | `dash-speed` | 24 | the needle eases on a 0.12 s spring and sweeps up to 270° in a pull-away; at 12 it ticks; 12 on a phone |
   | `dash-power` | 24 | the needle swings from regen to full power within a second; 12 on a phone |
   | `dash-road` | 24 | near lane dashes pass at up to 17 m/s, about 3 rows a frame at 24; 12 on a phone |
