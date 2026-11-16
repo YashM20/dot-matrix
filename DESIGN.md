@@ -231,7 +231,7 @@ Boards declare intent, not columns. `BoardMeta.density` (`src/widgets/manifest.t
 |---|---|---|---|
 | `hero` | 340 px | a few cards that want size: showpieces, cameras, lock screens | lock, gpu, algorithms, ir, sim, live, mirror, scope, heal, squares |
 | `standard` | 240 px | the default | every other board (home, components, surfaces, ...) |
-| `dense` | 200 px | dashboards of many small tiles | deerflow12, departures |
+| `dense` | 200 px | dashboards of many small tiles; boards of 8 (two full rows of 4 at LARGE) | deerflow12, departures, audio |
 
 **CARD SIZE** (owner feedback on round 3: T3's 5 a row at 1440 lost the cards' impact and detail; 3 a row is the default again, and the visitor can choose). Three sizes, set as `html[data-cards]` (`src/site/cards.ts`): only CSS custom properties change, so nothing re-renders. The pick is kept in localStorage `dot480:cards`, and the theme boot script sets the attribute before first paint, so a reload does not reflow. The control is a segmented radio group (LARGE / MEDIUM / COMPACT) under the theme in the THEME popover, under TOOLS › DISPLAY on a phone, and in ⌘K as "Card size: large / medium / compact". A missing attribute reads as LARGE.
 

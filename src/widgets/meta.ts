@@ -143,7 +143,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   // henry3: a personal day
   'boarding-pass': ['A boarding pass: seat 14A, San Francisco to London.', 'travel flight ticket'],
   'sunburst': ['Day 3 of 7 as a sunburst of rays.', 'progress ring calendar'],
-  'power-ring': ['Power draw, 247 W, on a ring of dots.', 'power energy ring'],
+  'power-ring': ['Power draw on a ring of dots: 247 W, the red arc its share of 800 W.', 'power energy ring'],
   'midnight-circuit': ['A track playing late at night: its waveform, the playhead and the time.', 'focus chart animated'],
   'silhouette': ['A portrait silhouette in halftone dots.', 'photo portrait halftone'],
   'inhale': ['A breathing guide: the ring grows as you breathe in and shrinks as you breathe out.', 'breathing health animated'],
@@ -175,11 +175,10 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'vibe-pad': ['A 4 × 4 pad of command icons: play, undo, the terminal, code.', 'audio pad music'],
   'midi': ['A MIDI controller: the chord, eight step dots and three faders.', 'midi music audio'],
   'recorder': ['A voice recorder: the time, the waveform and the line it caught.', 'audio recorder animated'],
-  'radio': ['A two-way radio on channel 07, standing by.', 'radio audio ring'],
+  'radio': ['A two-way radio on channel 07: hold the ring to talk.', 'radio audio ring'],
   'interpreter': ['A live interpreter: speech in, translated text out.', 'ai voice translate live'],
-  'thermal-puppy': ['A puppy seen by a thermal camera, 38.6°.', 'thermal photo animal'],
   'level-03': ['A game level drawn in scattered dots.', 'game level scatter'],
-  'shopping': ['A shopping card with a basket and items.', 'shopping retail'],
+  'shopping': ['A shopping list: milk in the basket, coffee next, two left.', 'shopping retail'],
   // departures: a live transit board
   'departures': ['A split-flap departures board, flipping letter by letter.', 'transit train splitflap live'],
   'station-clock': ['A station clock, its second hand sweeping.', 'clock time transit live'],

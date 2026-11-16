@@ -91,6 +91,7 @@
 | `/widget/<uid>/` | The same page | Prebuilt copy (so chat-app previews work), `rel=canonical` → the slug URL; the app keeps the uid form in the address bar |
 | `/<uid>` | The same page (the shortest share link) | Also a prebuilt copy. Safe at the root because a uid can never be a board id (the pattern check) |
 | `/widget/<old-slug>/` | The renamed widget | Via `cardAliases`, then `replaceState` to the current slug |
+| `/widget/<removed-slug>/`, `/<removed-uid>` | The board the card was on | `removedCards` (`src/widgets/manifest.ts`, slug → [uid, board]): `viewFromUrl` opens the board, and vercel.json redirects the slug and uid paths (301); checked by `scripts/widgets/removed.ts`. The uid stays in ids.json. `thermal-puppy` → `/audio/` (#343) |
 | `/widget/<key>/?skin=crt&t=12.5&d=progress:.8,mode:2` | Same widget in a given state | Every param is optional; see the state table below |
 | `?card=<slug>` (any path) | Old link | Kept forever: `replaceState` to `/widget/<slug>/`, keeping the other params. The skins probe keeps working. |
 | `/embed/<slug or uid>` | Bare card for iframes | A Vercel rewrite to `embed.html` (no files per card); §5.1 |
