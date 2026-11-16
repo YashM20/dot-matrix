@@ -21,8 +21,8 @@ import { simAtStep } from '../../../engine/sim/sim'
 import { sampleLayers } from '../../../engine/sampler/gridSampler'
 import { dot480 } from '../../../engine/theme/tokens'
 import { layer, type WidgetContext, type WidgetPreset } from '../../types'
-import { LABEL_SWITCH, OUTLINE, at, clock, labelSwitch, marching, ui } from '../../dot-controls'
-import { caption, frameOf, hourNow, mainThread, T, tile, touch } from './shared'
+import { OUTLINE, at, clock, labelSwitch, marching, ui } from '../../dot-controls'
+import { caption, frameOf, hourNow, labelLine, mainThread, surfaceFocus, T, tile, touch } from './shared'
 
 /** Tiles: 36 × 33 at pitch 4 from card row 11 (a glyph is 3 dots + a 1-cell gutter). The ripple grid is the tile grid. */
 export const KOI_TILES: TileGrid = { cols: 36, rows: 33, pitch: 4, ox: 0, oy: 11 }
@@ -98,32 +98,22 @@ export const KOI_LIGHT_KEYS = { lightSrc: 0, lightAz: 0, lightEl: 7, tx: 0, ty: 
 export const GLYPH_STYLES = ['DOTS', 'TYPE'] as const
 /** The shared label row switch (#360): the names 6 cells apart, the hit box from 2 cells left of DOTS to the card's edge. */
 const SWITCH = labelSwitch([...GLYPH_STYLES])
-/** The switch's underline: card dots on the shared row (the label is rows 0 to 6, the tiles start on row 11), every other cell. */
-const UNDER = { row: LABEL_SWITCH.row, step: 2 } as const
-/** A dotted line on the underline row from `x0` for `w` cells (a kit shape: a line, not an outline, so `d` is ignored). */
-const underline = (x0: number, w: number): [number, number][] => {
-  const pts: [number, number][] = []
-  for (let x = x0; x < x0 + w; x += UNDER.step) pts.push([x, UNDER.row])
-  return pts
-}
-/** The feed button's focus line: the free stretch of the underline row, left of the switch. */
-const FEED_LINE = underline(1, SWITCH.xs[0] - 6)
 /**
  * The label row's right side: the switch, always drawn so a phone can see what to tap (#269): DOTS · TYPE, the
  * chosen one in `value` and the other in `mid`, so the style that is on reads without a hover in both schemes.
  * The shared grammar (`../../dot-controls`) on the board's own shape: two rows of air between the label and the tiles
  * leave no room for a ring, so hover is the kit's inner halo as a line under the chosen one, and focus marches that
  * line in the kit's focus dash and tone (still under reduced motion). The feed button covers the whole pond, whose
- * tiles fill the card, so its focus marches the rest of that row.
+ * tiles fill the card, so its focus marches the free stretch of that row, left of the switch, as on every pond card.
  */
 function labelRow(ctx: WidgetContext, sel: number): Layer[] {
-  const s = ui(ctx, 'glyphs'), feed = ui(ctx, 'koi')
+  const s = ui(ctx, 'glyphs')
   const row: Layer[] = [
     ...GLYPH_STYLES.map((n, i) => caption(n, SWITCH.xs[i], 0, 'left', sel === i ? 'value' : 'mid')),
-    ...(feed.focus ? [marching(() => FEED_LINE, clock(feed, ctx.t), 0)] : []),
+    ...surfaceFocus(ctx, 'koi', SWITCH.xs[0] - 6),
   ]
   if (!s.focus && !s.hover) return row
-  const pts = underline(SWITCH.xs[sel], SWITCH.ws[sel])
+  const pts = labelLine(SWITCH.xs[sel], SWITCH.ws[sel])
   return [
     ...row,
     ...(s.hover ? [layer(at(T.dots(pts, OUTLINE.size), .5), 'value')] : []),

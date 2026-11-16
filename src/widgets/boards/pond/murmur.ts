@@ -7,7 +7,7 @@
 import { createMurmur, createTileRaster, drawMurmur, tileLayers, type Murmur, type TileGrid } from '../../../engine/life'
 import { worldAt } from '../../../engine/physics/world'
 import type { WidgetPreset } from '../../types'
-import { caption, frameOf, mainThread, tile, touch } from './shared'
+import { caption, frameOf, mainThread, surfaceFocus, tile, touch } from './shared'
 
 export const MURMUR_TILES: TileGrid = { cols: 36, rows: 33, pitch: 4, ox: 0, oy: 11 }
 export const murmur: Murmur = createMurmur({ seed: 480, tiles: MURMUR_TILES, lead: 8, period: 40, seam: 3 })
@@ -23,6 +23,6 @@ export const pondMurmur: WidgetPreset = {
     mainThread()
     const s = worldAt(murmur.world, ctx.t, frameOf(ctx, 'murmur'))
     drawMurmur(murmur, s, raster)
-    return [caption('400 BIRDS'), ...tileLayers(raster)]
+    return [caption('400 BIRDS'), ...surfaceFocus(ctx, 'murmur'), ...tileLayers(raster)]
   },
 }
