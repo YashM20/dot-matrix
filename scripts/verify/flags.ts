@@ -2,10 +2,13 @@
  * Release flag checks for `pnpm verify` (#144, #145): every flag in `src/site/flags.ts` is documented (docs/DEPLOY.md
  * names its `VITE_FLAG_<ID>`), the URL never sets a flag (a fresh load of the module in a fake browser whose address
  * has `?flags=`, `?worker=0` and `?clack=1` reads only localStorage), and with the `xray` flag off the palette, the
- * shell and the shortcuts table have no X-ray in them. The dock, the card's ⓘ and the keys are UI: the browser half
+ * shell and the shortcuts table have no X-ray in them. The `clack` flag and its sound are gone for good: no flag, no
+ * `src/media/clack.ts`, no source line that reads it, and a saved `"clack": true` is ignored and dropped.
+ * The dock, the card's ⓘ and the keys are UI: the browser half
  * is the `flagsoff` section of scripts/c10-browser.ts. On its own: `npx tsx scripts/verify/flags.ts`.
  */
-import { readFileSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
+import { join } from 'node:path'
 import { FLAGS, flag, setFlag } from '../../src/site/flags'
 import { SHORTCUTS, URL_PARAMS } from '../../src/site/shortcuts'
 import { shellHelp, shellKnows } from '../../src/components/palette/shellHelp'
@@ -19,6 +22,7 @@ export async function flagChecks(assert: Assert) {
   assert('flags: ids are unique, and the URL params list names no flag param (?flags=, ?worker=, ?clack=)', new Set(FLAGS.map(f => f.id)).size === FLAGS.length
     && !URL_PARAMS.some(p => /\?(flags|worker|clack)=/.test(p.keys)))
   await urlCheck(assert)
+  await clackCheck(assert)
 
   const xrayRow = (rows: readonly { keys: string; does: string }[]) => rows.some(r => /x-ray/i.test(r.does))
   const shellHasXray = () => shellHelp().some(([c]) => c.startsWith('xray'))
@@ -49,6 +53,35 @@ async function urlCheck(assert: Assert) {
       && store.get('dot480:flags') === JSON.stringify({ make: true }), JSON.stringify(got))
     const likes = FLAGS.find(f => f.id === 'likes')
     assert('flags: likes is on by default', likes?.default === true)
+  } finally { for (const [k, v] of Object.entries(keep)) if (v === undefined) delete g[k]; else g[k] = v }
+}
+
+/** Every .ts / .tsx file under `dir`. */
+const sources = (dir: string): string[] => readdirSync(dir).flatMap(n => {
+  const f = join(dir, n)
+  return statSync(f).isDirectory() ? sources(f) : /\.tsx?$/.test(n) ? [f] : []
+})
+
+/** The clack sound and its flag were removed (owner decision after #345): they stay out, and an old saved value is harmless. */
+async function clackCheck(assert: Assert) {
+  const users = sources('src').filter(f => /media\/clack|createClack|clackEnabled|flag\(\s*['"]clack['"]|VITE_FLAG_CLACK/.test(readFileSync(f, 'utf8')))
+  assert('flags: no clack flag, no src/media/clack.ts, and nothing in src/ plays or reads it',
+    !FLAGS.some(f => (f.id as string) === 'clack') && !existsSync('src/media/clack.ts') && !users.length, users.join(', '))
+
+  const g = globalThis as Record<string, unknown>, keep = { window: g.window, location: g.location, localStorage: g.localStorage }
+  const store = new Map<string, string>([['dot480:flags', JSON.stringify({ clack: true, make: true })], ['dot480:clack', '1']])
+  g.window = { addEventListener() {}, removeEventListener() {} }
+  g.location = { search: '', href: 'https://example.test/' }
+  g.localStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v), removeItem: (k: string) => void store.delete(k) }
+  try {
+    const fresh = await import(`../../src/site/flags.ts?clack-check=${Date.now()}`) as typeof import('../../src/site/flags')
+    const make = fresh.flag('make')
+    fresh.setFlag('lab', true)
+    const after = JSON.parse(store.get('dot480:flags') ?? '{}') as Record<string, unknown>
+    assert('flags: a saved "clack": true (and the old dot480:clack key) is ignored with no error, and the next save drops it',
+      make && !('clack' in after) && after.make === true && after.lab === true, JSON.stringify(after))
+  } catch (e) {
+    assert('flags: a saved "clack": true (and the old dot480:clack key) is ignored with no error, and the next save drops it', false, (e as Error).message)
   } finally { for (const [k, v] of Object.entries(keep)) if (v === undefined) delete g[k]; else g[k] = v }
 }
 
