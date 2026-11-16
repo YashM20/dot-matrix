@@ -4,12 +4,13 @@
  * each with the site's tooltip. A board's row has no name (the card's header shows it), only the icons. The smallest
  * mono and `--mute` at rest, so the card stays the focus. MORE opens the card's menu under the row, never over the
  * card. The row sits outside the card's tree (a sibling in its grid slot), so the card's own pointer and keys
- * stay the card's; its actions reach the mounted card through `cardActs`.
+ * stay the card's; its actions reach the mounted card through `cardActs`. Copy link needs no card: it takes the
+ * site's one path (`copyLink`, #353), so a card ALL hasn't mounted yet copies the same link as a mounted one.
  */
 import { useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type ReactNode } from 'react'
 import type { CardAction } from './xray/store'
-import { toast, useXR, xrState } from './xray/store'
 import { cardActs, type CardActs } from './cardActs'
+import { copyLink } from './copyLink'
 import { CopiedIcon, LinkIcon, MoreIcon, OpenIcon } from './rowIcons'
 import './CardRow.css'
 
@@ -35,12 +36,15 @@ export function CardRow({ id, name, href, onOpen, meta }: CardRowProps) {
   // the menu: closed (false), or open with the card's actions as they were when it opened (null: not mounted)
   const [menu, setMenu] = useState<CardActs | null | false>(false)
   const opened = menu !== false
-  // LINK's confirmation: while the site's "link copied" toast that followed this row's click is up (2.4 s), LINK's
-  // tooltip says "Copied" and its icon is a check. The toast is a polite live region, so screen readers hear it too;
-  // a copy that fails toasts the URL instead, and LINK stays as it was
-  const note = useXR(s => s.toast)
-  const [asked, setAsked] = useState<number | null>(null)
-  const copied = asked !== null && !!note && note.id > asked && note.text === 'link copied'
+  // LINK's confirmation: for as long as the site's "link copied" toast stays up (2.4 s), LINK's tooltip says "Copied"
+  // and its icon is a check. It follows this click's own outcome; the toast (a polite live region) says it for screen
+  // readers, and a copy that fails toasts "copy failed" with the link while LINK stays as it was
+  const [copied, setCopied] = useState(0)
+  useEffect(() => {
+    if (!copied) return
+    const t = window.setTimeout(() => setCopied(0), 2400)
+    return () => window.clearTimeout(t)
+  }, [copied])
   const row = useRef<HTMLDivElement>(null), more = useRef<HTMLButtonElement>(null)
   // the card in the same slot (the row's previous sibling), and its actions once it is mounted
   const acts = () => cardActs(row.current?.parentElement?.querySelector<HTMLElement>(':scope > [data-xr-key]')?.dataset.xrKey)
@@ -54,10 +58,8 @@ export function CardRow({ id, name, href, onOpen, meta }: CardRowProps) {
     return () => document.removeEventListener('pointerdown', away, true)
   }, [opened])
   const run = (a: CardAction) => {
-    const own = acts()
-    if (own) return own.act(a)
-    // a card that isn't mounted yet (a windowed slot on ALL) can still give its link
-    if (a === 'link') void navigator.clipboard?.writeText(new URL(href, location.href).href).then(() => toast('link copied'), () => {})
+    if (a === 'link') return void copyLink(href, { card: id }).then(r => { if (r.outcome === 'copied') setCopied(c => c + 1) })
+    acts()?.act(a)
   }
   const open = (e: MouseEvent) => {
     if (!plain(e)) return
@@ -77,7 +79,7 @@ export function CardRow({ id, name, href, onOpen, meta }: CardRowProps) {
     {meta && <p className="dot-card-row-meta"><span className="dot-card-row-name" aria-hidden="true">{name}</span>{meta}</p>}
     <a className="dot-card-row-open" href={href} aria-label={`Open ${name}`} data-tip="Open" onClick={open}><OpenIcon /></a>
     <button type="button" className={`dot-card-row-link${copied ? ' copied' : ''}`} aria-label={`Copy link to ${name}`} data-tip={copied ? 'Copied' : 'Copy link'}
-      onClick={() => { setAsked(xrState().toast?.id ?? 0); run('link') }}>{copied ? <CopiedIcon /> : <LinkIcon />}</button>
+      onClick={() => run('link')}>{copied ? <CopiedIcon /> : <LinkIcon />}</button>
     <button ref={more} type="button" className="dot-card-row-more" aria-label={`More for ${name}`} data-tip={opened ? undefined : 'More'} aria-haspopup="menu" aria-expanded={opened}
       onClick={() => setMenu(opened ? false : acts() ?? null)}><MoreIcon /></button>
     {opened && <div className="dot-card-menu" role="menu" aria-label={`${name}: more`} onKeyDown={onMenuKey}>

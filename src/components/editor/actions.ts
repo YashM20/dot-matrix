@@ -11,6 +11,7 @@ import { arrangeFrames, arrangeLayers, framesSel, layersSel, selCount, selectAll
 import { useEditor } from './store'
 import { encodeShare, programHash, shareUrl, type SharedProgram } from '../../lib/share'
 import { TEST_HOOKS } from '../../lib/testHooks'
+import { copyText as copyTextOutcome } from '../../lib/copyText'
 import { loadGallery, recordProgram } from '../dwitter/gallery'
 import { encodeLink, linkPayload, linkUrl, loadLinks, recordLink, type LinkKind } from './link'
 
@@ -202,5 +203,5 @@ export async function shareSel(): Promise<MadeLink> {
   }
   return framesLink(f ? (sel.layer ? [f.id] : selFrames(sel)) : [])
 }
-/** The clipboard helper with its timeout (§8.4), shared with the guides: `src/lib/copyText.ts`. */
-export { copyText } from '../../lib/copyText'
+/** The site's clipboard helper with its timeout (§8.4, `src/lib/copyText.ts`), as the editor reads it: true when copied. */
+export const copyText = (text: string): Promise<boolean> => copyTextOutcome(text).then(o => o === 'copied')

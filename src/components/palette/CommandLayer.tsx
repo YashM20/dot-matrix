@@ -24,8 +24,8 @@ import { Sheet } from '../Sheet'
 import { Modal } from '../Modal'
 import { SkinList } from '../skins/SkinList'
 import { onTiltChange, requestTilt, setTiltOn, tiltOn, tiltState } from '../../site/light'
-import { withTheme } from '../../site/theme/share'
-import { onPondMemory, pondMemoryOn, setPondMemory, withPondDay } from '../../site/pondMemory'
+import { onPondMemory, pondMemoryOn, setPondMemory } from '../../site/pondMemory'
+import { copyLink, shareLink } from '../copyLink'
 import { CardSizeControl, ThemeControls } from '../theme/ThemePicker'
 import { flag } from '../../site/flags'
 import { useFlag } from '../../site/useFlag'
@@ -109,9 +109,9 @@ function ToolsSheet({ api, xray, frozen, pond, onClose, onPalette, onShell }: { 
   // each tool closes the sheet so its effect is in view; the toggles show their state when it reopens
   const run = (f: () => void) => () => { onClose(); f() }
   const share = () => {
-    const url = withPondDay(withTheme(location.href), pond)
+    const url = shareLink(location.href, pond)
     if (navigator.share) navigator.share({ title: document.title, url }).then(() => track('link_shared', { via: 'share' }), () => {})
-    else api.copyLink()
+    else void api.copyLink()
   }
   return <Sheet label="TOOLS" onClose={onClose} className="tools-sheet">
     <div className="tools-grid">
@@ -214,14 +214,11 @@ export function CommandLayer({ tab, board, all = false, setTab, setBoard }: Comm
         setTab('COMPOSE')
       }, e => toast(`editor failed: ${(e as Error).message}`))
     },
-    copyLink(cardId) {
+    copyLink(cardId, opts) {
       const { tab: t, board: b, all: a } = view.current
       // a card's own page (canonical /widget/<slug>/, docs/SHARE-PLAN.md §3), or this view's canonical link (a CODE program keeps its ?p=)
-      const url = withPondDay(withTheme(location.origin + (cardId ? widgetPath(cardId) : urlForView({ ...placeView(placeFromName(t) ?? 'EXPLORE'), board: b, all: a }, location.search, location.pathname))), cardId ? cardId.startsWith('pond-') : b === 'pond' && t === 'EXPLORE' && !a)
-      const done = () => { toast('link copied'); track('link_copied', cardId ? { card: cardId } : { view: t }) }
-      if (navigator.clipboard?.writeText) navigator.clipboard.writeText(url).then(done, () => toast(url))
-      else toast(url)
-      return url
+      if (cardId) return copyLink(widgetPath(cardId), { card: cardId, ...opts })
+      return copyLink(urlForView({ ...placeView(placeFromName(t) ?? 'EXPLORE'), board: b, all: a }, location.search, location.pathname), { view: t, pond: b === 'pond' && t === 'EXPLORE' && !a, ...opts })
     },
     toggleXray(force) { if (flag('xray')) toggleGlobal(force) },
     freeze() { freeze(); toast(matchMedia('(pointer: coarse)').matches ? 'time machine: drag the scrubber, RESUME plays' : 'time machine: drag the scrubber, ← → step, space resumes') },
@@ -253,7 +250,7 @@ export function CommandLayer({ tab, board, all = false, setTab, setBoard }: Comm
       const s = xrState()
       return isXRay(s, key) && s.active === key ? toggleCard(key) : setXR({ on: s.global ? s.on : new Set(s.on).add(key), active: key })
     }
-    if (action === 'link') return api.copyLink(preset.id)
+    if (action === 'link') return void api.copyLink(preset.id)
     if (action === 'open') {
       // the widget page, in place: App's popstate handler swaps to it (a view transition where there is one); its
       // chunk is fetched first, so the transition's new snapshot can show the landed card
@@ -334,7 +331,7 @@ export function CommandLayer({ tab, board, all = false, setTab, setBoard }: Comm
   }, [api])
 
   return <>
-    {xray && anyXray && Inspector && <Suspense fallback={null}><Inspector onRemix={(id, data) => api.remix(id, data)} onStudio={id => api.studio(id)} onCopyLink={id => api.copyLink(id)} /></Suspense>}
+    {xray && anyXray && Inspector && <Suspense fallback={null}><Inspector onRemix={(id, data) => api.remix(id, data)} onStudio={id => api.studio(id)} onCopyLink={id => void api.copyLink(id)} /></Suspense>}
     <TimeMachine />
     {dockIn(<div className="pal-dock" role="toolbar" aria-label="Explore">
       {xray && <button aria-pressed={anyXray} onClick={() => toggleGlobal()} data-tip="X-ray every card · ⇧X all" data-kbd="X" aria-keyshortcuts="X Shift+X">X-RAY</button>}
