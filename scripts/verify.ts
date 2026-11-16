@@ -207,6 +207,11 @@ frameCacheChecks(assert)
   const { heartbeatLivingChecks } = await import('./verify/heartbeat-living')
   heartbeatLivingChecks(assert)
 }
+// MIRROR (#242) refine fixes: the shadow on a 3-cell lattice with a crisp edge, the conduct ring off the text (scripts/verify/mirror.ts)
+{
+  const { mirrorChecks } = await import('./verify/mirror')
+  mirrorChecks(assert)
+}
 // card drawing fixes (#359): fine-face units, the lap knob, glyph transport, REC dot size (scripts/verify/card-drawing.ts)
 {
   const { cardDrawingChecks } = await import('./verify/card-drawing')

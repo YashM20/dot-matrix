@@ -16,13 +16,13 @@
   "mirror-shadow": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "a9c79720",
-    "dots": 4158
+    "hash": "4b88dd82",
+    "dots": 4109
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "2bd919b8",
-    "dots": 4124
+    "hash": "febf7ffe",
+    "dots": 4089
    }
   },
   "mirror-conduct": {
