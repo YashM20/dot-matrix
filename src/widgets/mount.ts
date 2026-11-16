@@ -30,7 +30,7 @@ import { withChrome, type WidgetPreset } from './types'
  */
 export type { DotStyle, Field, Layer, ThemeTokens, Tone } from '../engine/types'
 export { baseStyle, type WidgetPreset } from './types'
-export { dot480 } from '../engine/theme/tokens'
+export { cardFrame, dot480, type CardFrameStyle } from '../engine/theme/tokens'
 
 export type RendererChoice = 'auto' | 'svg' | 'canvas'
 export interface CardOptions {

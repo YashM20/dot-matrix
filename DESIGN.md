@@ -29,7 +29,6 @@ Two surface tones do all the work: `{colors.bg}` (near-black canvas) behind ever
 - **Card Surface** (`{colors.surface}` — `#111315`): every widget card sits on this — one perceptible step lighter than `{colors.bg}`, never a shadow.
 - **Surface Raised** (`{colors.surfaceRaised}` — `#1B1E21`): nested elements inside a card (list rows, settings items, chat bubbles).
 - **Hairline** (`{colors.hairline}` — `rgba(255,255,255,0.08)`): 1px card border, divider between list rows, table rule.
-- **Hairline Active** (`{colors.hairlineActive}` — `#FF3B30` at 60% opacity): border treatment for a selected/focused card (see `settings-row-selected` in Components).
 
 ### Dot Grey Scale (the actual "ink" of the system)
 - **Dot Idle** (`{colors.dotIdle}` — `#8A8F98`): default dot color at full field value (1.0) — used for the brightest part of any static widget.
@@ -40,15 +39,9 @@ Two surface tones do all the work: `{colors.bg}` (near-black canvas) behind ever
 - **Label** (`{colors.label}` — `#C7CBD1`): card eyebrow labels ("HOME", "MUSIC", "SYSTEM") — always uppercase, always `{typography.caption}`.
 - **Value** (`{colors.value}` — `#F2F3F5`): primary dot-font numerals/short strings (clock time, percentages, scores).
 - **Mute** (`{colors.mute}` — `#81858B`): secondary metadata under a primary value (date, sub-label, unit). ≥ 4.5:1 on every surface (T6 lifted it from `#6E7278`, which was 3.46:1 on `{colors.surfaceRaised}`).
-- **On Active** (`{colors.onActive}` — `#321A16`): text/labels drawn directly on a `{colors.dotActive}` fill (destructive pill button label, selected settings row). The red's own dark ink: white on `#FF3B30` is only 3.55:1 (T6).
-
-### Semantic
-- **Success** (`{colors.success}` — `#3FBF63`): rare — only appears in "Great job!" word-game feedback and checklist-complete states. Never used for a primary CTA.
-- **Warning** (`{colors.warning}` — `#E8A33D`): battery-low, alert-count badges.
-- **Charging/Positive Delta** (`{colors.deltaPositive}` — `#7BC96F`): retail/analytics up-arrow figures (e.g. "+$23%").
 
 ### CSS colour roles (chrome)
-The page chrome reads these custom properties (`src/tokens.css`), never a hex. Values are today's dark palette (`dark_signal`); the theme CSS (`src/site/theme/themes.css`, generated; see Theme below) sets the same names per scheme and accent, plus the accent family (`--red-text`, `--on-red`, `--red-line`, ...). An alpha variant is written where it is used, `color-mix(in srgb, var(--role) N%, transparent)`, so it follows the role. `scripts/site/css-tokens.ts` fails on a colour literal anywhere else (the two token files excepted).
+The page chrome reads these custom properties (`src/tokens.css`), never a hex. Values are today's dark palette (`dark_signal`); the theme CSS (`src/site/theme/themes.css`, generated; see Theme below) sets the same names per scheme and accent, plus the accent family (`--red-text`, `--red-line`, `--red-halo`, ...). An alpha variant is written where it is used, `color-mix(in srgb, var(--role) N%, transparent)`, so it follows the role. `scripts/site/css-tokens.ts` fails on a colour literal anywhere else (the two token files excepted).
 
 | CSS token | Value | Design token | Role |
 |---|---|---|---|
@@ -264,7 +257,7 @@ Whitespace in Dot/480 is *dot absence*, not empty px. A "quiet" card (e.g. the `
 |---|---|---|
 | 0 — Flat | No border | Base canvas, full-bleed photoreal hero backgrounds (`deerflowMosaic` preset only) |
 | 1 — Hairline | 1px `{colors.hairline}` | Every standard card, list-row divider, table rule |
-| 2 — Hairline Active | 1px `{colors.hairlineActive}` | Selected/focused card or settings row (e.g. "BRIGHTNESS" highlighted red outline) |
+| 2 · Accent line | 1px `--red-line` | Selected/focused card or settings row (e.g. "BRIGHTNESS" highlighted red outline) |
 | 3 — Ambient Glow | Soft radial `{colors.dotActive}` blur, 12px, 15% opacity | Reserved for the `deerflowMosaic` hero preset's ambient lighting behind cards — never used in flat `dot480` |
 
 Dot/480 has effectively no drop-shadow elevation. Depth, where it exists at all, comes from the **halftone/photo field** (real depth-of-field photography rasterized into dots) rather than from CSS effects — see `haltoneField.ts`. Cards are flat rectangles with a hairline border; nothing lifts, nothing casts a shadow.
@@ -363,7 +356,7 @@ Fixture (goldens, snapshots, no sensor): `{ lightSrc: 0, lightAz: 0, lightEl: 7,
 
 **Big dots ease toward a circle.** The exponent is the card's for any dot up to a pitch in radius. A bigger dot (a knob, a ball, a status dot, a hero on a lattice of 3 or more) draws with n' = 2 + (n − 2) / (r / P), r its radius and P the card pitch, so its flat sides fade as it grows and it reads round. One rule, `easedRoundness()` in `shapePath.ts`: the sampler stamps it on each dot, and the buffer renderer and `toDots` apply it per dot. Joined square cells and `shape: 'square'` keep their shape. There is no per-layer shape preset.
 
-Individual dot shape is controlled by one continuous parameter (the superellipse exponent) rather than a discrete shape enum — sliding from `{rounded.sharp}` to `{rounded.circle}` smoothly passes through every intermediate "squircle" state. Card container corners are the chrome radius `{rounded.cardCorner}` (`--radius-card`, 12 px) so card chrome and dot chrome always read as the same geometric family.
+Individual dot shape is controlled by one continuous parameter (the superellipse exponent) rather than a discrete shape enum — sliding from `{rounded.sharp}` to `{rounded.circle}` smoothly passes through every intermediate "squircle" state. Card container corners are the chrome radius `{rounded.cardCorner}` (`--radius-card`, 12 px) so card chrome and dot chrome always read as the same geometric family. The engine token `cornerRadiusCard` is the same 12 px (`scripts/site/theme.ts` checks they match), and the card exports (PNG, SVG, HTML) and the registry's card host draw the site's frame from one helper, `cardFrame(theme)` in `src/engine/theme/tokens.ts`: the card surface, a 1 px hairline and this radius.
 
 ### Outlines, rows and markers (dot sites)
 Outlines, separators and markers are evenly spaced **sites**, never a signed-distance band on the card pitch (a band is two cells wide at 45° and doubles where two shapes meet). The helpers live in `src/engine/layout.ts` and on `layoutFor` (`T`):
@@ -532,7 +525,7 @@ A knob, a single status dot or a masked password character is one site (`T.dots(
 
 **`settings-row`** + **`settings-row-selected`**
 - Default: icon + label in `{colors.value}`, chevron or toggle at row end.
-- Selected: full row outlined in `{colors.hairlineActive}`, label recolored to `{colors.dotActive}` (the "BRIGHTNESS" reference state).
+- Selected: full row outlined in `--red-line`, label recolored to `{colors.dotActive}` (the "BRIGHTNESS" reference state).
 
 **`chat-bubble`**
 - AI/system message: left-aligned, `{colors.surfaceRaised}` fill, `{rounded.cardCorner}` at n=3 (slightly softer than standard cards).
@@ -647,7 +640,7 @@ No state changes a size, so nothing shifts. On coarse pointers every chrome targ
 - **Hover glow** is `value`/`mid`, never the accent. Red keeps its meaning (live, hot, primary); hover and focus inside a card never use it. (The HTML chrome's keyboard focus ring is the accent, per Chrome states above: it marks "here", outside the card's dots.)
 - **Press** is one quantize step *down* in dot size, so the control visibly sinks. On release it springs back with `{interaction.springHalfLife.release}`. It is never a colour change.
 - **Data motion** uses `{interaction.springHalfLife.data}`: the value glides on a critically damped spring and snaps to the next integer cell or lattice step each frame.
-- **Focus** is marching dots: the control's own outline sites light in the `{interaction.focusDash}` pattern and travel at `{interaction.focusSpeed}`. It replaces the `{colors.hairlineActive}` card border for in-card controls; the hairline treatment stays for whole-card selection.
+- **Focus** is marching dots: the control's own outline sites light in the `{interaction.focusDash}` pattern and travel at `{interaction.focusSpeed}`. It replaces the `--red-line` card border for in-card controls; the hairline treatment stays for whole-card selection.
 - **Drag scrubs whole dot columns.** A horizontal drag moves a value one whole column (or lattice step) at a time, never a fractional position. Bars, sliders and playheads quantize to site columns, so the control always sits exactly on dots.
 - **Long-press is a radial-reveal progress.** Holding a control reveals a ring of sites clockwise from 12 o'clock around the press point; the action fires when the ring closes. Releasing early un-reveals it on the release spring.
 - **Hit pad** is invisible. Targets below 24 px (44 px on touch) grow their hit rectangle, not their dots.
@@ -821,18 +814,18 @@ Components and cards read roles, never hues. Same keys in every theme. **One set
 |---|---|
 | Neutral | `bg`, `panel`, `surface`, `raised`, `line`, `line-strong`, `tint`, `shade`, `well`, `scrim`, `value`, `label`, `mute`, `dim` |
 | Dot tones | `dot-faint`, `dot-mid`, `dot-idle`, plus `value` (the brightest tone) |
-| Accent | `red` ({colors.dotActive}), `red-dim` ({colors.dotActiveDim}), `red-hover`, `red-press`, `red-text` (the accent as text, ≥ 4.5:1), `red-line` (active border, focus ring, ≥ 3:1), `on-red` ({colors.onActive}, text on a solid fill), `red-surface` + `red-surface-text` (hero insets only), `red-halo` (chrome halos only), `selection` (`::selection`, the accent at 30%) |
+| Accent | `red` ({colors.dotActive}), `red-dim` ({colors.dotActiveDim}), `red-text` (the accent as text, ≥ 4.5:1), `red-line` (active border, focus ring, ≥ 3:1), `red-halo` (chrome halos only), `selection` (`::selection`, the accent at 30%) |
 
 The 12% wash and the glow are built from `--red` in `src/tokens.css` (`--glow-wash`, `--glow-halo`, `--glow`); they and the other chrome materials (`--line-dot`, `--hair-x`/`-y`, `--wash-*`, `--glass`, `--shadow-raised`) are declared on `:root, [data-scheme]`, so a pinned subtree draws its own lines and glow.
 
 In `light`, `--tint` is the ink (washes and dotted lines darken the paper) and `--shade` a deep ink (shadows, scrims). Text roles in light: `value` ≈ L .22, `label` .38, `mute` .50; the glyph grey `dim` .60.
 
-| Theme | `--red` | `--red-text` | `--on-red` | `--red-dim` |
-|---|---|---|---|---|
-| `dark_signal` | `#FF3B30` | `#FFA193` | `#321A16` | `#B8241A` |
-| `light_signal` | `#E43226` | `#B42219` | `#190403` | `#FF9687` |
-| `dark_vite` | `#B39AFF` | `#C2AEFF` | `#16171D` | `#6C3BFF` |
-| `light_cobalt` | `#105FD9` | `#0145A7` | `#FFFFFF` | `#8DB8FF` |
+| Theme | `--red` | `--red-text` | `--red-dim` |
+|---|---|---|---|
+| `dark_signal` | `#FF3B30` | `#FFA193` | `#B8241A` |
+| `light_signal` | `#E43226` | `#B42219` | `#FF9687` |
+| `dark_vite` | `#B39AFF` | `#C2AEFF` | `#6C3BFF` |
+| `light_cobalt` | `#105FD9` | `#0145A7` | `#8DB8FF` |
 
 The other ten are in `src/site/theme/table.ts` (`npx tsx scripts/site/theme.ts` prints them all).
 
@@ -842,14 +835,14 @@ Engine side: `themeTokens(scheme, accent)` (`src/site/theme/theme.ts`) returns a
 Each accent is one OKLCH hue with a 12-step ramp per scheme (1–2 washes, 3–5 fills, 6–8 lines, 9–10 solid, 11–12 text). The generator clamps or nudges until every rule passes, and hand-pinned values must pass them too.
 - **Gamut:** every colour is inside sRGB. Chroma is binary-searched at fixed L and h. Cut today: dark cobalt −11%, dark magenta −34% (its L rose to stay clear of the idle grey for protans), light amber −16%, light cyan −14%.
 - **Dots:** `red` and `red-line` are ≥ 3:1 on `surface` and `bg`.
-- **Text:** `value`, `label`, `mute`, `dot-idle` and `red-text` are ≥ 4.5:1 on all four surfaces, in every theme, with no waiver. `red-text` is also ≥ APCA Lc 60 on `surface`. `dim` is not text and is ≥ 3:1. Every `color:` in the site CSS must be one of these roles (or `bg` / `tint` / `on-red` / `red-surface-text` on their fills, `dim` on the editor's glyphs): accent text is always `--red-text`, never `--red` (`scripts/site/theme.ts`).
-- **`on-red`:** white if it reaches APCA 60 and 4.5:1 on the solid. Otherwise a dark tint of the hue (`oklch(.25 max(.08·C, .04) h)`), darkened until it reaches 4.5:1.
+- **Text:** `value`, `label`, `mute`, `dot-idle` and `red-text` are ≥ 4.5:1 on all four surfaces, in every theme, with no waiver. `red-text` is also ≥ APCA Lc 60 on `surface`. `dim` is not text and is ≥ 3:1. Every `color:` in the site CSS must be one of these roles (or `bg` / `tint` on their fills, `dim` on the editor's glyphs): accent text is always `--red-text`, never `--red` (`scripts/site/theme.ts`).
+- **Only what the site reads:** the generator makes no role that no CSS reads. Hover, press, text on a solid fill and the hero inset pair went in #356; a future one comes back with its first reader and its contrast check.
 - **Colour-blind safety:** in normal vision and under simulated protanopia, deuteranopia and tritanopia (Machado 2009), `red` differs from `value`, `dot-idle` and `dot-mid` by ΔL ≥ .08 or ΔE_OK ≥ .10. If needed, the solid's L is searched ±.3 (nearest first) to get there, then at .85, .7 and .55 of the chroma (a few custom pink-reds on paper need it).
 - **Tone order:** APCA on `surface` gives faint < mid < idle < value, and `red-dim` < `red`.
 - **`red-dim`:** dark uses step 7 (a dimmer accent). Light uses step 7 too, a lighter tint (less ink), which matches vite's pinned `#B39AFF`.
 - **Tinted neutrals:** surfaces lean toward the hue by C .005 (vite .014), `line`, `line-strong`, `mute` and `dim` by .010, `label` by .006, and `value` by .003. Light gets 70% of these. L is kept. Neutral dot tones stay untinted, and `dark_signal` is not tinted at all.
-- **Pins:** `dark_signal` keeps `#FF3B30` / `#B8241A` (its `on-red` is generated: the dark ink `#321A16`). `vite` dark is `#B39AFF` (line and dim `#6C3BFF`, on-red `#16171D`, surface `#370A7F`). `vite` light is `#6C3BFF` (text `#6B1EB9`, line `#8A63FE`, dim `#B39AFF`, surface `#F0EBFF` / `#140033`). Dark vite's `red-text` is `#C2AEFF`, because `#B39AFF` reaches only Lc 55.
-- **No waivers (T6):** the two `dark_signal` exceptions are gone: `mute` is `#81858B` (was `#6E7278`, 3.46:1 on `raised`) and `on-red` is the dark ink (white was 3.55:1). Neither is an engine token, so no card moved.
+- **Pins:** `dark_signal` keeps `#FF3B30` / `#B8241A`. `vite` dark is `#B39AFF` (line and dim `#6C3BFF`). `vite` light is `#6C3BFF` (text `#6B1EB9`, line `#8A63FE`, dim `#B39AFF`). Dark vite's `red-text` is `#C2AEFF`, because `#B39AFF` reaches only Lc 55.
+- **No waivers (T6):** the `dark_signal` exception is gone: `mute` is `#81858B` (was `#6E7278`, 3.46:1 on `raised`). It is not an engine token, so no card moved.
 - **Gradient rule:** `red-halo` (vite: electric `#6C3BFF` → vite `#B39AFF`) is for chrome halos only: glow, focus and live ring, swatch ring. Never use it on dots, text or lines.
 
 ### Contrast (`prefers-contrast: more`, T6)

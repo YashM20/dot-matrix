@@ -4,8 +4,6 @@
  * binary-searched at fixed L and h), then nudged until the rules hold:
  *  - `red` (the accent solid, dots) ≥ 3:1 on `surface`; `red-text` ≥ 4.5:1 on every surface and ≥ APCA Lc 60
  *    on `surface`;
- *  - `on-red` by measured contrast: white when it reaches APCA 60 and 4.5:1, else a dark tint of the hue,
- *    darkened until 4.5:1;
  *  - `red-line` = the first of steps 6–8 at ≥ 3:1 on `surface` (nudged if none);
  *  - neutrals tinted toward the hue by a little chroma (surfaces .005, line / mute ≤ .012, value ≤ .004,
  *    vite surfaces up to .016; light gets 70%); the neutral dot tones stay untinted.
@@ -81,13 +79,13 @@ export const ACCENT_SPECS: Record<AccentId, AccentSpec> = {
 export const NEUTRAL_ROLES = ['bg', 'panel', 'surface', 'raised', 'line', 'line-strong', 'tint', 'shade', 'well', 'scrim', 'value', 'label', 'mute', 'dim'] as const
 export const DOT_ROLES = ['dot-faint', 'dot-mid', 'dot-idle'] as const
 /**
- * The accent family: `red` ({colors.dotActive}, dots and fills), `red-dim` ({colors.dotActiveDim}), hover / press
- * (±1 step), `red-text` (accent as text, ≥ 4.5:1), `red-line` (active border, focus ring), `on-red`
- * ({colors.onActive}, text on a solid fill), `red-surface` + `red-surface-text` (hero insets only), `red-halo`
- * (chrome halos only: never dots, text or lines), `selection` (::selection). The 12% wash and the glow are
- * built from `red` in src/tokens.css (`--glow-wash`, `--glow-halo`).
+ * The accent family: `red` ({colors.dotActive}, dots and fills), `red-dim` ({colors.dotActiveDim}), `red-text`
+ * (accent as text, ≥ 4.5:1), `red-line` (active border, focus ring), `red-halo` (chrome halos only: never dots, text
+ * or lines), `selection` (::selection). The 12% wash and the glow are built from `red` in src/tokens.css
+ * (`--glow-wash`, `--glow-halo`). Only roles the site reads are generated (#356 dropped hover, press, on-red and the
+ * inset pair, which no CSS read).
  */
-export const ACCENT_ROLES = ['red', 'red-dim', 'red-hover', 'red-press', 'red-text', 'red-line', 'on-red', 'red-surface', 'red-surface-text', 'red-halo', 'selection'] as const
+export const ACCENT_ROLES = ['red', 'red-dim', 'red-text', 'red-line', 'red-halo', 'selection'] as const
 export type Role = (typeof NEUTRAL_ROLES)[number] | (typeof DOT_ROLES)[number] | (typeof ACCENT_ROLES)[number]
 export type Roles = Record<Role, string>
 
@@ -149,21 +147,16 @@ export function tint(base: Neutrals, scheme: Scheme, accent: AccentChoice, hue: 
 
 /** Hand-pinned roles (they win over the generator, and must pass the same rules). */
 export const PINS: Partial<Record<ThemeName, Partial<Roles>>> = {
-  // today's site: {colors.dotActive}, {colors.dotActiveDim} (the goldens). {colors.onActive} is generated: white on
-  // #FF3B30 is 3.55:1, so text on the red fill is the hue's dark ink (T6)
+  // today's site: {colors.dotActive}, {colors.dotActiveDim} (the goldens)
   dark_signal: { red: '#FF3B30', 'red-dim': '#B8241A' },
-  // vite.dev: --color-vite #B39AFF, --color-electric #6C3BFF, vite docs' light brand #6B1EB9, hero panels #370A7F
+  // vite.dev: --color-vite #B39AFF, --color-electric #6C3BFF, vite docs' light brand #6B1EB9
   dark_vite: {
-    red: '#B39AFF', 'red-hover': '#C2AEFF', 'red-press': '#A388F8', 'red-text': '#C2AEFF',
-    'red-line': '#6C3BFF', 'on-red': '#16171D', 'red-dim': '#6C3BFF',
+    red: '#B39AFF', 'red-text': '#C2AEFF', 'red-line': '#6C3BFF', 'red-dim': '#6C3BFF',
     'red-halo': `radial-gradient(closest-side, ${rgba('#6C3BFF', .45)}, ${rgba('#B39AFF', .22)} 60%, transparent)`,
-    'red-surface': '#370A7F', 'red-surface-text': '#F2F3F5',
   },
   light_vite: {
-    red: '#6C3BFF', 'red-hover': '#602AE3', 'red-press': '#6B1EB9', 'red-text': '#6B1EB9',
-    'red-line': '#8A63FE', 'on-red': '#FFFFFF', 'red-dim': '#B39AFF',
+    red: '#6C3BFF', 'red-text': '#6B1EB9', 'red-line': '#8A63FE', 'red-dim': '#B39AFF',
     'red-halo': `radial-gradient(closest-side, ${rgba('#6C3BFF', .28)}, ${rgba('#B39AFF', .14)} 60%, transparent)`,
-    'red-surface': '#F0EBFF', 'red-surface-text': '#140033',
   },
 }
 
@@ -227,20 +220,15 @@ function generateFrom(scheme: Scheme, spec: AccentSpec, accent: AccentChoice): T
   const steps = L_STEPS[scheme](spec.L[scheme])
   const ramp = steps.map((L, i) => gamutClamp(L, Ct * C_CURVE[i], h))
   const pins = (PINS as Partial<Record<ThemeKey, Partial<Roles>>>)[name] ?? {}
-  // a pinned solid anchors the derived roles (hover, press, text) too
+  // a pinned solid anchors the derived role (text) too
   const solid = pins.red ? oklch(pins.red) : pickSolid(ramp[8], Ct, n)
   const text = nudge({ ...ramp[10], C: Math.min(ramp[10].C, solid.C) }, scheme, x => worst(x, n) >= 4.5 && Math.abs(apca(x, surf)) >= 60, Math.min(ramp[10].C, solid.C))
   const lineStep = [5, 6, 7].map(i => ramp[i]).find(c => onPage(fromOklch(c), n) >= 3) ?? nudge(ramp[7], scheme, x => onPage(x, n) >= 3)
-  // hover lifts toward contrast (lighter on dark, darker on light); press sinks (dimmer on dark, deeper on light)
-  const hover = gamutClamp(solid.L + (scheme === 'dark' ? .05 : -.05), Ct, h), press = gamutClamp(solid.L - (scheme === 'dark' ? .06 : .1), Ct, h)
   const dim = ramp[6]
   const solidHex = fromOklch(solid)
-  const inset = scheme === 'dark' ? gamutClamp(.3, Math.min(.12, Ct * .7), h) : gamutClamp(.955, Math.min(.03, Ct * .25), h)
-  const insetText = scheme === 'dark' ? n.value : clampHex(.2, Math.min(.08, Ct * .5), h)
   const roles: Roles = {
     ...neutralRoles(n, scheme),
-    red: solidHex, 'red-dim': fromOklch(dim), 'red-hover': fromOklch(hover), 'red-press': fromOklch(press), 'red-text': fromOklch(text),
-    'red-line': fromOklch(lineStep), 'on-red': onAccent(solidHex, solid), 'red-surface': fromOklch(inset), 'red-surface-text': insetText,
+    red: solidHex, 'red-dim': fromOklch(dim), 'red-text': fromOklch(text), 'red-line': fromOklch(lineStep),
     'red-halo': `radial-gradient(closest-side, ${rgba(solidHex, .35)}, transparent)`, selection: rgba(solidHex, .3),
   }
   // the washes follow a pinned solid unless pinned themselves
@@ -280,16 +268,6 @@ export function customCss(hue: number): string {
     const more = decls(moreRoles(t), MORE_ROLES, '').join('')
     return `${sel}{${decls(t.roles, ALL_ROLES, '').join('')}}@media (prefers-contrast: more){${sel}{${more}}}${moreSelector(sel)}{${more}}`
   }).join('')
-}
-
-/** White when it reaches APCA 60 and WCAG 4.5:1 on the solid, else `oklch(.25 max(.08·C, .04) H)` darkened to 4.5:1. */
-export function onAccent(solidHex: string, solid: Oklch): string {
-  const white = '#FFFFFF'
-  if (Math.abs(apca(white, solidHex)) >= 60 && wcag(white, solidHex) >= 4.5) return white
-  let L = .25
-  const C = Math.max(.08 * solid.C, .04)
-  while (L > .02 && wcag(clampHex(L, C, solid.h), solidHex) < 4.5) L -= .01
-  return clampHex(L, C, solid.h)
 }
 
 /** All 14 themes, in table order (dark first, accents in preset order). */
