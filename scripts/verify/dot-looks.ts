@@ -9,6 +9,7 @@
 import type { FrameContext } from '../../src/engine/context'
 import type { Layer } from '../../src/engine/types'
 import { LABEL_SWITCH, switchKnobSize } from '../../src/widgets/dot-controls'
+import { LIT } from '../../src/widgets/dials'
 import type { WidgetPreset } from '../../src/widgets/types'
 import { checker, type Assert } from '../lib/check'
 
@@ -26,7 +27,7 @@ export async function dotLookChecks(assert: Assert) {
   const { music, settings } = await import('../../src/widgets/boards/henry')
   const { liveNowPlaying } = await import('../../src/widgets/boards/live')
   const { cardiology } = await import('../../src/widgets/boards/henry3')
-  const { typeAxesCard } = await import('../../src/widgets/boards/type')
+  const { typeAxesCard, TYPE_KNOB_LIT } = await import('../../src/widgets/boards/type')
   const { pondKoi } = await import('../../src/widgets/boards/pond/koi')
   const { donutCard } = await import('../../src/widgets/boards/charts-more')
   const agent = heartbeatBoard.find(p => p.id === 'hb-agent')!
@@ -45,10 +46,13 @@ export async function dotLookChecks(assert: Assert) {
   assert('dot looks: every switch knob is the components toggle\'s 30 on 46, scaled to its track', !badKnob.length, badKnob.join(' '))
   assert('dot looks: a switch that is off draws its knob in mid', !badOff.length, badOff.join(' '))
 
-  // a knob at 0: no lit track site (dialArc's lit stretch is value, 2.2)
-  const lit = [[knobCard, { gain: 0 }], [typeAxesCard, { wght: 0, wdth: 0, rond: 0 }]] as const
-  const litAt0 = lit.filter(([p, d]) => frame(p, d).some(l => l.tone === 'value' && (l.sites?.length ?? 0) > 0 && near(l.size ?? 0, 2.2))).map(([p]) => p.id)
-  assert('dot looks: a knob at 0 lights no track site', !litAt0.length, litAt0.join(' '))
+  // a knob at 0: no lit track site (dialArc's lit stretch is value, LIT; type keeps its documented finer size)
+  const lit: [WidgetPreset, string[], number][] = [[knobCard, ['gain'], LIT], [typeAxesCard, ['wght', 'wdth', 'rond'], TYPE_KNOB_LIT]]
+  const litOf = (p: WidgetPreset, keys: string[], v: number, size: number) =>
+    frame(p, Object.fromEntries(keys.map(k => [k, v]))).some(l => l.tone === 'value' && (l.sites?.length ?? 0) > 1 && near(l.size ?? 0, size))
+  // lit at 0 fails, and so does a knob at .64 whose lit stretch is not its own size
+  const litAt0 = lit.filter(([p, keys, size]) => litOf(p, keys, 0, size) || !litOf(p, keys, .64, size)).map(([p]) => p.id)
+  assert('dot looks: a knob at 0 lights no track site; lit, its stretch takes the dial size (2.2, type 1.8)', !litAt0.length, litAt0.join(' '))
 
   // scrubbers: [card, rail row]; the knob (one `active` site) sits on the rail's pitch
   const scrubs: [WidgetPreset, number][] = [[music, 141], [liveNowPlaying, 106], [cardiology, 140]]

@@ -38,9 +38,11 @@ const centred = (fr: TypeFrame, row: number, o: Omit<TypeOptions, 'grid'>): Type
 // knob in miniature), each with its axis tag.
 const KN = { y: 108, r: 13, xs: [26, 72, 118], start: (TAU * 5) / 8, sweep: (TAU * 3) / 4 }
 const AXES = [{ key: 'wght', tag: 'WGHT', label: 'Weight' }, { key: 'wdth', tag: 'WDTH', label: 'Width' }, { key: 'rond', tag: 'ROND', label: 'Roundness' }] as const
-/** The components knob's track (`dialArc`, its site spacing and sizes, #360) and a pointer dot. */
+/** The finer lit size: on a 13-cell knob the components 2.2 reads chunky (#360, owner's call). */
+export const TYPE_KNOB_LIT = 1.8
+/** The components knob's track (`dialArc`, its site spacing, #360) with the finer lit size, and a pointer dot. */
 const knob = (cx: number, v: number): Layer[] => {
-  const d = { cx, cy: KN.y, r: KN.r, start: KN.start, sweep: KN.sweep }
+  const d = { cx, cy: KN.y, r: KN.r, start: KN.start, sweep: KN.sweep, lit: TYPE_KNOB_LIT }
   return [...dialArc(d, 0, v), layer(T.dots([polar(cx, KN.y, KN.r - 6, KN.start + v * KN.sweep)], 3.4), 'value')]
 }
 const SPEC = frame(2, 14)
