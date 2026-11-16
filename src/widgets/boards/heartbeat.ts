@@ -200,9 +200,9 @@ const hbAgent: WidgetPreset = {
     const p = blendStates(HEARTBEAT[HEARTBEAT_STATES[i0]], HEARTBEAT[HEARTBEAT_STATES[i0 + 1]], s - i0)
     const st = ui(ctx, 'state'), cy = SEG.y + SEG.h / 2, [track0, knob] = switchTrack(SWITCH, s / 4, ['mid', 'value'], st.pressed ? PRESS : 1)
     // the status line and the stop labels sit close, so focus marches the track's own sites (its pitch, no extra ring);
-    // the lit sites leave the track while it does, so they read on their own and not as a core inside a `mid` dot
+    // the lit sites leave the track while it does and the rest drop to `faint`, so the `idle` dash reads on its own
     const ring = states(st, ctx.t, track, d => track(d, OUTLINE.spacing), 0), lit = new Set(ring.flatMap(l => l.sites ?? []).map(p => p.join()))
-    const rail = lit.size ? { ...track0, sites: track0.sites?.filter(p => !lit.has(p.join())) } : track0
+    const rail: Layer = lit.size ? { ...track0, tone: 'faint', sites: track0.sites?.filter(p => !lit.has(p.join())) } : track0
     return [
       // red-free: the agent card's pulse stays in `value`, so the board spends red once
       ...scene(p, ctx.t, AGENT, false), ...statusLine(HEARTBEAT_STATES[sel], ctx.t, 94),
