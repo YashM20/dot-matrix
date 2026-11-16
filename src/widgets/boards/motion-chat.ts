@@ -60,6 +60,10 @@ const SEND = { type: .2, typed: 1.2, press: 1.6, fly: 1.8, flight: .4, sent: 3, 
 const MSG = 'AT 8, OK?', FIELD = { x: 6, y: 104, w: 102, h: 22 }, BTN = { cx: 126, cy: 115, r: 11 }
 const ARROW = ['...#...', '..###..', '.#.#.#.', '...#...', '...#...', '...#...', '...#...']
 const OUT = { x: 138 - bodyW(MSG) - 2 * BUBBLE.pad, y: 46 }
+/** The read ticks as on-grid bitmaps on the body lattice (#413): drawn, so screen readers hear READ and no symbol. */
+export const TICK = ['....#', '...#.', '#.#..', '.#...'], TICKS = ['....#..#', '...#..#.', '#.#..#..', '.#..#...']
+/** The empty field's placeholder starts this far right of the text column, so the caret sits before it. */
+export const HOLDER_X = 5
 type SendState = 'DRAFT' | 'TYPING' | 'SENDING' | 'SENT' | 'READ'
 const sendState = (lt: number): SendState =>
   lt < SEND.type ? 'DRAFT' : lt < SEND.fly ? 'TYPING' : lt < SEND.sent ? 'SENDING' : lt < SEND.read ? 'SENT' : 'READ'
@@ -77,8 +81,8 @@ export const sendCard = loopCard({
     ]
     if (inField) {
       if (n > 0) out.push(layer(T.big(MSG.slice(0, n), tx, ty, BODY), 'value'))
-      else out.push(layer(T.text('MESSAGE', tx, ty + 1), 'faint'))
-      if (frac(lt / .9) < .55) { const cx = tx + n * 6 * BODY.lattice + 2; out.push(layer(T.dotLine(cx, ty - 1, cx, ty + 10, { spacing: 2.2, size: 1.4 }), 'value')) }
+      else out.push(layer(T.text('MESSAGE', tx + HOLDER_X, ty + 1), 'mid'))
+      if (frac(lt / .9) < .55) { const cx = n > 0 ? tx + n * 6 * BODY.lattice + 2 : tx; out.push(layer(T.dotLine(cx, ty - 1, cx, ty + 10, { spacing: 2.2, size: 1.4 }), 'value')) }
       return out
     }
     // the words fly from the field into the bubble, which draws in as they land
@@ -92,10 +96,9 @@ export const sendCard = loopCard({
       out.push(layer(T.text('SENDING', 138, sy, { align: 'right' }), 'mid'))
       out.push(...[0, 1, 2].map(i => layer(T.dots([[80 + i * 5, sy + 3]], 1.8), i === k ? 'value' : 'faint')))
     } else {
-      const word = st === 'SENT' ? 'SENT' : 'READ 21:04', x = 138 - [...word].length * 6 + 1
+      const word = st === 'SENT' ? 'SENT' : 'READ 21:04', x = 138 - [...word].length * 6 + 1, marks = st === 'READ' ? TICKS : TICK
       out.push(layer(T.text(word, 138, sy, { align: 'right' }), 'mid'))
-      const tone = st === 'READ' ? 'active' : 'value', tick = (x0: number) => layer(T.big('✓', x0, sy - 1, BODY), tone)
-      out.push(...(st === 'READ' ? [tick(x - 14), tick(x - 9.5)] : [tick(x - 10)]))
+      out.push(layer(spriteAt(marks, x - 4 - marks[0].length * BODY.lattice, sy + 6 - 3 * BODY.lattice, BODY.lattice), st === 'READ' ? 'active' : 'value'))
     }
     return out
   },
