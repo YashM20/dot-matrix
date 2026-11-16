@@ -721,6 +721,8 @@ The HTML chrome has one component per job; a new control reuses one of these ins
 
 **Hover intent.** DISPLAY ▾ and THEME open after the mouse rests on them for 100 ms (without taking focus) and close 150 ms after the mouse leaves; a click or the keyboard opens them with focus inside. THEME fetches its popover chunk during those 100 ms. Touch never opens them by hover (`pointerType` must be `mouse`).
 
+**Keyboard (#352).** Three shared pieces, so the keys work the same everywhere. A menu button is `useMenuButton` (`src/hooks/`): ↑ or ↓ on the button opens the menu on its last or first item (a radio menu on its checked one), ↑ ↓ Home End and a first letter move, Escape closes with focus back on the button, Tab and a press outside close, the button carries `aria-controls`, and one rule places the menu: under its button with the right edges lined up, above when there is no room, 8 px inside the viewport (the two MORE menus, DISPLAY ▾). A group with one tab stop is `useRoving`: arrows wrap, Home and End jump, and tabs and radios pick as they move (the toolbars, the view and board-group tabs, the X-ray tabs, the skin list, the theme radios and swatches). An overlay is a modal `<dialog>` through `useModal` (`Modal.tsx`): the page behind is inert and focus goes back to the opener without scrolling (sheets, ⌘K, the shell, the boss card, the likes question). A busy or paused control is `aria-disabled` and ignores presses, so it keeps focus; a toggle keeps one name and says its state with `aria-pressed`.
+
 ## Responsive Behavior
 
 ### Breakpoints
