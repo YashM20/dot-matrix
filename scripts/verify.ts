@@ -216,6 +216,11 @@ await flagChecks(assert)
   const { skinChecks } = await import('./verify/skins')
   await skinChecks(assert)
 }
+// COPY LINK (#353) one path for every copy-link action: the shared link, the timeout, the outcome (scripts/verify/copy-link.ts)
+{
+  const { copyLinkChecks } = await import('./verify/copy-link')
+  await copyLinkChecks(assert)
+}
 // FIRST DRAW (#312) grid cards draw their first frame one per task, near the screen only (scripts/verify/first-draw.ts)
 {
   const { firstDrawChecks } = await import('./verify/first-draw')
