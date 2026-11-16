@@ -32,7 +32,7 @@ const box: [number, number, number, number] = [8, 14, 136, 142]
 bodyField.bounds = box
 
 export const pondPlankton: WidgetPreset = {
-  id: 'pond-plankton', name: 'Pond Plankton', label: '08  PLANKTON', ...tile, fps: 18, controls: touch('plankton', 'Burst a creature'),
+  id: 'pond-plankton', name: 'Pond Plankton', label: 'PLANKTON', numbered: true, ...tile, fps: 18, controls: touch('plankton', 'Burst a creature'),
   credit: { by: ['Alexander Mordvintsev', 'Eyvind Niklasson', 'Ettore Randazzo'], title: 'Particle Lenia and the energy-based formulation', source: 'https://google-research.github.io/self-organising-systems/particle-lenia/', note: 'technique' },
   layers: ctx => {
     mainThread()

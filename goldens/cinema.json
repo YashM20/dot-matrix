@@ -4,85 +4,85 @@
   "cinema-signal": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "3a03ef70",
-    "dots": 1388
+    "hash": "ae999fb5",
+    "dots": 1384
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "e5dacad8",
-    "dots": 1388
+    "hash": "a0269be9",
+    "dots": 1384
    }
   },
   "cinema-sundown": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "e01ed06b",
-    "dots": 1174
+    "hash": "167ae268",
+    "dots": 1173
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "60401e92",
-    "dots": 1174
+    "hash": "10bb4fa1",
+    "dots": 1173
    }
   },
   "cinema-upstairs": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "bed3ad00",
-    "dots": 1815
+    "hash": "a8551d89",
+    "dots": 1816
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "7d103449",
-    "dots": 1815
+    "hash": "b4e22400",
+    "dots": 1816
    }
   },
   "cinema-witness": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "99d747d8",
-    "dots": 2665
+    "hash": "373ff0ff",
+    "dots": 2664
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "2028323f",
-    "dots": 2665
+    "hash": "b084227c",
+    "dots": 2664
    }
   },
   "cinema-exit-14": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "8c407424",
-    "dots": 839
+    "hash": "35a3c0c9",
+    "dots": 845
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "7f387288",
-    "dots": 864
+    "hash": "a724732d",
+    "dots": 870
    }
   },
   "cinema-keeper": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "3de65a67",
-    "dots": 1272
+    "hash": "dbbf7a29",
+    "dots": 1270
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "d78ab15a",
-    "dots": 1272
+    "hash": "8e4dd0cc",
+    "dots": 1270
    }
   },
   "cinema-encore": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "b4dadd87",
-    "dots": 1929
+    "hash": "9a56827d",
+    "dots": 1924
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "46f18733",
-    "dots": 1919
+    "hash": "718bc1d9",
+    "dots": 1914
    }
   }
  }
