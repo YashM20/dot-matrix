@@ -97,8 +97,8 @@ export const simSand: WidgetPreset = {
     let top = 0
     for (let i = 0; i < N * NECK; i++) if (grain(g, i)) top++
     return [
-      // the glass in `mid`, a size step under the mid strata: in `faint` the empty bulb all but vanished on paper (#229)
-      layer(on(simMapField(sand, t, (g, i) => g[i] === WALL ? .6 : 0)), 'mid'),
+      // the glass in `mid` at full size, a step over the mid strata: in `faint` the empty bulb all but vanished on paper (#229)
+      layer(on(simMapField(sand, t, (g, i) => g[i] === WALL ? 1 : 0)), 'mid'),
       layer(on(simMapField(sand, t, (g, i, x, y) => g[i] === SAND && !(top > 0 && falling(g, i, x, y)) ? f : 0)), 'value'),
       layer(on(simMapField(sand, t, (g, i, x, y) => g[i] === SAND_B && !(top > 0 && falling(g, i, x, y)) ? .8 * f : 0)), 'mid'),
       layer(on(simMapField(sand, t, (g, i, x, y) => (top > 0 && falling(g, i, x, y) && !leading(g, i, x, y)) ? .55 : 0)), 'idle'),
