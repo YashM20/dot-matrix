@@ -36,6 +36,7 @@ import { flagChecks } from './verify/flags'
 import { cardChecks } from './verify/cards'
 import { audioPersonalChecks } from './verify/audio-personal'
 import { creditChecks } from './verify/credits'
+import { numberChecks } from './verify/numbers'
 import { frameCacheChecks } from './verify/frame-cache'
 
 // timing checks warn unless DOT_TIMING=strict (scripts/lib/check.ts, docs/CHECKPOINTS.md, #75)
@@ -189,6 +190,8 @@ goldenKeyChecks(assert)
 uxChecks(assert)
 // credits live on each card's page: every card on a concept-credited board resolves to one (scripts/verify/credits.ts)
 creditChecks(assert)
+// card numbers (#383): every board runs 01..N from its order, none typed by hand (scripts/verify/numbers.ts)
+numberChecks(assert)
 // CP6 wave 3) cards fixed at dot level keep every dot clear of its neighbours (scripts/verify/cards.ts)
 cardChecks(assert)
 // AUDIO and PERSONAL (#259, #256): the baked CJK line, the counts, push to talk, the colon, the running track time (scripts/verify/audio-personal.ts)

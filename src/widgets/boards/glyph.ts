@@ -14,6 +14,7 @@ import { migrate, migrationLayers } from '../../engine/migrate'
 import type { Control } from '../../engine/context'
 import type { DotInstance, Layer, Tone } from '../../engine/types'
 import { TAU, TILE, layer, layoutFor, tileCircleStyle, tileStyle, type LatticeField, type WidgetPreset } from '../types'
+import { numberBoard } from '../numbered'
 import { dotText } from './henry'
 import { PRESS, states, transportGlyph, ui, type Shape } from '../dot-controls'
 
@@ -45,7 +46,7 @@ const NECK = DY + 6 * DIG.py, TRICKLE = { from: 2.4, every: .95 }
 /** Distance fallen after τ s under gravity g, in whole `step`s; null before release. */
 const fallen = (tau: number, g: number, step: number) => (tau < 0 ? null : Math.floor((.5 * g * tau * tau) / step) * step)
 export const glyphHourglass: WidgetPreset = {
-  id: 'lock-hourglass', name: 'Hourglass', label: '01  HOURGLASS', group: 'text', ...tile, clock: true,
+  id: 'lock-hourglass', name: 'Hourglass', label: 'HOURGLASS', numbered: true, group: 'text', ...tile, clock: true,
   defaults: { tilt: 0 },
   layers: ({ since, data }) => {
     const now = new Date(), sec = since ?? now.getSeconds() + now.getMilliseconds() / 1000
@@ -169,7 +170,7 @@ const partLayers = (parts: Part[]) => parts.filter(p => p.pts.length).map(p => l
 const mmss = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`
 const migProgress = (age: number) => clamp01((age - MIG0) / MIG)
 export const glyphLongpress: WidgetPreset = {
-  id: 'lock-longpress', name: 'Long Press', label: '02  LONG PRESS', group: 'composite', ...tile,
+  id: 'lock-longpress', name: 'Long Press', label: 'LONG PRESS', numbered: true, group: 'composite', ...tile,
   style: tileCircleStyle,
   defaults: { hold: 0 },
   controls: [{ key: 'hold', kind: 'button', box: [CX - RING - 4, CY - RING - 4, 2 * RING + 8, 2 * RING + 8], label: 'Hold to unlock' } satisfies Control],
@@ -236,7 +237,7 @@ const MINI: Record<string, string[]> = {
 const away = (t: number) => { const tau = t % PERIOD; return tau < 1 ? 0 : tau < 2.6 ? ease.emphasized((tau - 1) / 1.6) : tau < 4.6 ? 1 : tau < 6.2 ? 1 - ease.emphasized((tau - 4.6) / 1.6) : 0 }
 const snap = (x: number) => Math.round(x / PITCH) * PITCH
 export const glyphNotify: WidgetPreset = {
-  id: 'lock-notify', name: 'Notify', label: '03  NOTIFY', group: 'composite', ...tile,
+  id: 'lock-notify', name: 'Notify', label: 'NOTIFY', numbered: true, group: 'composite', ...tile,
   layers: ({ t }) => {
     const tt = t + 2.4, s = away(tt), wob = Math.sin(t * 2.1) * .6 * (1 - s), n = 2 + (Math.floor(tt / PERIOD) % 8) // stills land on the badge
     const drop: Pt = [BIG[0] + 8 + s * (OFF[0] - 8), BIG[1] - 8 + s * (OFF[1] + 8)], rBig = 24 - 4 * s + wob, rDrop = 8 + 14 * s
@@ -274,7 +275,7 @@ const rd = grayScott({ w: N, h: N, feed: .037, kill: .06, du: .05, dv: .025, see
 const LEAD = 1, LOOP = 11, RATE = .06
 const BANDS = [{ at: .3, size: 1.9, tone: 'value' }, { at: .24, size: 1.6, tone: 'idle' }, { at: .17, size: 1.2, tone: 'mid' }, { at: .1, size: .8, tone: 'faint' }] as const
 export const glyphIdle: WidgetPreset = {
-  id: 'lock-idle', name: 'Idle', label: '04  IDLE', group: 'scatter', ...tile,
+  id: 'lock-idle', name: 'Idle', label: 'IDLE', numbered: true, group: 'scatter', ...tile,
   credit: GRAY_SCOTT,
   layers: ({ t }) => {
     const ph = (((t * RATE + 5.5) % LOOP) + LOOP) % LOOP, g = simAt(rd, LEAD + ph)
@@ -290,4 +291,4 @@ export const glyphIdle: WidgetPreset = {
   },
 }
 
-export const lockBoard: WidgetPreset[] = [glyphHourglass, glyphLongpress, glyphNotify, glyphIdle]
+export const lockBoard: WidgetPreset[] = numberBoard([glyphHourglass, glyphLongpress, glyphNotify, glyphIdle])

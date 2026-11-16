@@ -7,6 +7,7 @@ import { hash01 } from '../../engine/math'
 import type { Layer } from '../../engine/types'
 import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 import { transportGlyph } from '../dot-controls'
+import { numberBoard } from '../numbered'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -39,7 +40,7 @@ const agentWave = (t: number) => Array.from({ length: 48 }, (_, i) => {
   return 0
 })
 export const agentStatus: WidgetPreset = {
-  id: 'agent-status', name: '01 Agent Status', group: 'composite', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'agent-status', name: 'Agent Status', numbered: true, group: 'composite', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
   layers: ({ t }) => {
     const wave = agentWave(t), bars = { gap: 3, pitch: 2.2, height: 7, size: 1.3, mirror: true }
     return [
@@ -64,7 +65,7 @@ const REQ: [number, 'value' | 'idle' | 'mid' | 'faint' | 'active'][] = [
   [1, 'faint'], [2, 'mid'], [4, 'mid'], [3, 'faint'], [1, 'faint'], [2, 'mid'], [4, 'active'], [2, 'faint'], [3, 'mid'], [6, 'active'],
 ]
 export const codexTokens: WidgetPreset = {
-  id: 'codex-tokens', name: '02 Claude / Codex', group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'codex-tokens', name: 'Claude / Codex', numbered: true, group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     layer(T.big('12.4K', 0, 18, { lattice: 3 })),
     layer(T.text('TOKENS', 0, 47), 'idle'),
@@ -83,7 +84,7 @@ const ticks = (tone: string) => T.dots(Array.from({ length: TICKS }, (_, i) => (
 const legend = (row: number, label: string, value: string, tone: 'value' | 'active') =>
   [layer(T.dots([[94, row + 3]], 5), tone), layer(T.text(label, 101, row), 'idle'), layer(T.big(value, 101, row + 10, VALUE))]
 export const deviceOverview: WidgetPreset = {
-  id: 'device-overview', name: '03 Device Overview', group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'device-overview', name: 'Device Overview', numbered: true, group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     layer(ticks('idle'), 'idle'), layer(ticks('value'), 'value'), layer(ticks('active'), 'active'),
     layer(T.big('128', RING[0], 47, { lattice: 2.1, align: 'center' })),
@@ -104,7 +105,7 @@ const CAR_TAIL: Pt[] = [[128, 49], [137, 49], [137, 57], [129, 57]]
 const TAIL_LIGHT = Array.from({ length: 13 }, (_, i) => 117 + i * 1.5).flatMap(x => [[x, 46], ...(x > 123 ? [[x, 44.5] as Pt] : []), ...(x > 126 ? [[x, 47.5] as Pt] : [])] as Pt[])
 const LOCK = ['..#####..', '.##...##.', '.#.....#.', '.#.....#.', '.#.....#.', '#########', '#.......#', '#...#...#', '#...#...#', '#.......#', '#.......#', '.#######.']
 export const teslaStatus: WidgetPreset = {
-  id: 'tesla-status', name: '04 Tesla Status', group: 'icon', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'tesla-status', name: 'Tesla Status', numbered: true, group: 'icon', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     layer(path(CAR_BODY, 2.1, 1)), layer(path(CAR_SILL, 2.1, 1)), layer(path(CAR_GLASS, 2.1, 1), 'idle'), layer(path(CAR_TAIL, 2.1, 1), 'idle'),
     layer(T.dotRing(24, 55, 9, { spacing: 2.1, size: 1.1 }), 'idle'), layer(T.dotRing(101, 57, 9, { spacing: 2.1, size: 1.1 }), 'idle'),
@@ -143,7 +144,7 @@ const doneNode = (x: number) => {
   ]
 }
 export const pharmaTrack: WidgetPreset = {
-  id: 'pharma-track', name: '05 Pharma Track', group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'pharma-track', name: 'Pharma Track', numbered: true, group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     layer(T.text('COMPOUND AI-07', 2, 20), 'idle'), layer(T.text('PHASE II', 2, 32), 'idle'),
     layer(T.dots(pillSites.red, 1.35), 'active'), layer(T.dots(pillSites.white, 1.35)),
@@ -173,7 +174,7 @@ const swept = (lf: LatticeField, t: number): LatticeField => {
   return { ...lf, sites: lf.sites!.filter(([x]) => x <= head || x > head + SWEEP_GAP) }
 }
 export const medicalMonitor: WidgetPreset = {
-  id: 'medical-monitor', name: '06 Medical Monitor', group: 'chart', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'medical-monitor', name: 'Medical Monitor', numbered: true, group: 'chart', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
   layers: ({ t }) => [
     layer(swept(ECG[0], t)), layer(swept(ECG[1], t)), layer(swept(ECG[2], t), 'active'),
     ...stat('HR', '72', 0, 84), layer(T.text('BPM', 0, 109), 'idle'),
@@ -192,7 +193,7 @@ const LEAF = (() => {
   return { outline: [...side(1), ...side(-1).reverse()], rib: [a, [a[0] + d[0] * .62, a[1] + d[1] * .62]] as Pt[], stem: [a, [52, 76]] as Pt[] }
 })()
 export const bioSensor: WidgetPreset = {
-  id: 'bio-sensor', name: '07 Bio Sensor', group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'bio-sensor', name: 'Bio Sensor', numbered: true, group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
   defaults: { moisture: .64 },
   layers: ({ data }) => {
     const inner = { spacing: 4.4, size: 2 }, outer = { spacing: 4.9, size: 1.9 }
@@ -214,7 +215,7 @@ export const bioSensor: WidgetPreset = {
 
 // ── 08 ─────────────────────────────────────────────────────────────────────────────
 export const wordPlay: WidgetPreset = {
-  id: 'word-play', name: '08 Word Play', group: 'text', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'word-play', name: 'Word Play', numbered: true, group: 'text', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     layer(T.text('FILL IN THE BLANK', 8, 29), 'idle'),
     layer(T.big('C   D E', 8, 47, { lattice: 2 })),
@@ -236,7 +237,7 @@ const PEAK = 18, SALES_KNOTS = [3, 7, 9, 12, 14, 21, 23, 24]
 const TICK_S = 3
 let retailMemo: { key: string; layers: Layer[] } | undefined
 export const retailAnalytics: WidgetPreset = {
-  id: 'retail-analytics', name: '09 Retail Analytics', group: 'chart', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'retail-analytics', name: 'Retail Analytics', numbered: true, group: 'chart', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
   defaults: { peak: 56 },
   layers: ({ t, data }) => {
     const step = Math.floor(Math.max(0, t) / TICK_S), key = `${step}|${data.peak}`
@@ -262,7 +263,7 @@ const SPEAKER = ['....#.....', '...##..#..', '####.#..#.', '#...#.#.#.', '#...#.
 const VINYL: Pt = [69, 62]
 const GROOVES: [number, number, 'value' | 'idle' | 'mid', number][] = [[15, 32, 'value', 1.5], [19.3, 30, 'value', 1.45], [23.6, 36, 'value', 1.45], [27.9, 41, 'idle', 1.4], [32.2, 47, 'idle', 1.35], [36.5, 52, 'mid', 1.35], [40.8, 57, 'mid', 1.3]]
 export const entertainment: WidgetPreset = {
-  id: 'entertainment', name: '10 Entertainment', group: 'polar', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'entertainment', name: 'Entertainment', numbered: true, group: 'polar', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
   layers: ({ t }) => [
     layer(T.sprite(SPEAKER, 133, 0)),
     ...GROOVES.map(([r, n, tone, size], i) => layer(ringSlots(VINYL[0], VINYL[1], r * (1 + .025 * Math.sin(t * 1.6 - i * .7)), n, i * .5 + t * .15 * (i % 2 ? 1 : -1), size), tone)),
@@ -293,7 +294,7 @@ const HEART = ['.##...##.', '####.####', '#########', '#########', '.#######.', 
 const ALIEN = ['.....#.....', '....###....', '.#.#####.#.', '##.#.#.#.##', '###########', '..##...##..', '.#.......#.']
 const STARS: Pt[] = [[66, 38], [51, 53], [82, 63], [120, 82], [87, 93], [51, 98], [76, 109], [130, 113], [140, 70]]
 export const gameZone: WidgetPreset = {
-  id: 'game-zone', name: '11 Game Zone', group: 'scatter', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'game-zone', name: 'Game Zone', numbered: true, group: 'scatter', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
   layers: ({ t }) => [
     layer(T.dots(STARS, .9), 'mid'),
     layer(sprite(ROCKET, 13, 43, 2.4)),
@@ -312,7 +313,7 @@ const CUBE_FRONT: Pt[][] = [[TOP_F[0], TOP_F[3], TOP_F[2]], [TOP_F[0], TOP_F[1],
 const CUBE_BACK: Pt[][] = [[BOT_F[0], BOT_F[1], BOT_F[2]], [TOP_F[1], BOT_F[1]]]
 const bracket = (x: number, y: number, dx: number, dy: number) => [T.hrule(dx > 0 ? x : x - 13, y, 14), T.vrule(x, dy > 0 ? y : y - 13, 14)]
 export const visionAI: WidgetPreset = {
-  id: 'vision-ai', name: '12 Vision AI', group: 'icon', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'vision-ai', name: 'Vision AI', numbered: true, group: 'icon', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
   layers: ({ t }) => [
     layer(T.dots([[118, 3]], 5), Math.sin(t * 3) > -.9 ? 'active' : 'faint'), layer(T.text('REC', 125, 0)),
     ...[...bracket(2, 24, 1, 1), ...bracket(141, 24, -1, 1), ...bracket(2, 99, 1, -1), ...bracket(141, 99, -1, -1)].map(f => layer(f)),
@@ -322,4 +323,4 @@ export const visionAI: WidgetPreset = {
   ],
 }
 
-export const deerflow12Board = [agentStatus, codexTokens, deviceOverview, teslaStatus, pharmaTrack, medicalMonitor, bioSensor, wordPlay, retailAnalytics, entertainment, gameZone, visionAI]
+export const deerflow12Board = numberBoard([agentStatus, codexTokens, deviceOverview, teslaStatus, pharmaTrack, medicalMonitor, bioSensor, wordPlay, retailAnalytics, entertainment, gameZone, visionAI])

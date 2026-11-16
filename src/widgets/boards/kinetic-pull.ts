@@ -26,7 +26,7 @@ function heldAt(ctx: WidgetContext, st: Stage): [number, number] | undefined {
   return toWord(st, x + (ctx.data.mag ?? .5) * w, y + (1 - (ctx.data.magY ?? .5)) * h)
 }
 export const ktMagnet: WidgetPreset = {
-  id: 'kt-magnet', name: 'Magnet', label: '06  MAGNET', ...tile, defaults: WORD, controls: [PAD],
+  id: 'kt-magnet', name: 'Magnet', label: 'MAGNET', numbered: true, ...tile, defaults: WORD, controls: [PAD],
   layers: ctx => {
     const word = wordOf(ctx.data), t = loopTime(ctx), st = wordStage(word, centred), held = heldAt(ctx, st)
     const f = magnetFrame(word, t, held), px = wordPixels(word)
@@ -38,7 +38,7 @@ export const ktMagnet: WidgetPreset = {
 
 // ── 07 SHATTER ──────────────────────────────────────────────────────────────
 export const ktShatter: WidgetPreset = {
-  id: 'kt-shatter', name: 'Shatter', label: '07  SHATTER', ...tile, defaults: WORD,
+  id: 'kt-shatter', name: 'Shatter', label: 'SHATTER', numbered: true, ...tile, defaults: WORD,
   layers: ctx => {
     const word = wordOf(ctx.data), t = loopTime(ctx), lt = loopT(t, SHATTER.period), n = letters(word)
     let home = 0, rank = 0

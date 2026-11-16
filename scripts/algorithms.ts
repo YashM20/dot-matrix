@@ -136,6 +136,14 @@ export function algorithmsChecks(assert: Assert): void {
     const done = texts(algorithmsBoard[0], 0).includes(`LLOYD ${A.LLOYD}/${A.LLOYD}`) && texts(algorithmsBoard[2], 0).includes('180/180')
       && texts(algorithmsBoard[3], 0).includes(`N ${thousands(A.aggregate().count)}`)
     assert('algorithms board: t = 0 (goldens, thumbnails, reduced motion) is the finished picture', done && ![0, 3].some(i => frame(algorithmsBoard[i], 0).some(d => d.color === dot480.dotActive)))
+    // attractor footer (#231): the a / b readout and "32K" keep at least two spaces (12 cells) between them for every
+    // drifted a, b. The card grid is the same at 390 and 1280 (only the cell pitch changes), so one check covers both.
+    const gaps = [0, 1.3, 9.25, 27.75, 30, 55.5].map(t => {
+      const ls = withChrome(algorithmsBoard[1])({ t, data: {} }), at = (re: RegExp) => ls.find(l => re.test(l.field.text ?? ''))?.field.bounds
+      const left = at(/^A -?\d/), right = at(/^32K$/)
+      return left && right ? right[0] - left[2] - 1 : -1
+    })
+    assert('algorithms board: the attractor footer keeps a clean gap (≥ 12 cells) between the readout and "32K"', gaps.every(g => g >= 12), `gaps ${gaps.join('/')}`)
     const red = algorithmsBoard.map(p => [0, 6, 9.5].some(t => frame(p, t).some(d => d.color === dot480.dotActive)))
     assert('algorithms board: one accent, used only for the live front (stipple knob, observed tile, newest grains)', red[0] && !red[1] && red[2] && red[3])
     const warmMedian = (p: WidgetPreset) => {
