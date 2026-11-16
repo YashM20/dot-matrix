@@ -215,8 +215,8 @@ export const goodMorning: WidgetPreset = {
   },
 }
 
-/** The queue rail: big sites, one tone each side of the red knob. */
-const SCRUB: ScrubSpec = { x0: 0, x1: 143, y: 140, spacing: 4.2, size: 2.3, knob: 8.5, gap: 7 }
+/** The queue rail: big sites, one tone each side of the red knob, its end sites a cell in so the card edge cuts neither. */
+const SCRUB: ScrubSpec = { x0: 1, x1: 142, y: 140, spacing: 4.2, size: 2.3, knob: 8.5, gap: 7 }
 export const cardiology: WidgetPreset = {
   id: 'cardiology', name: 'Henry Li · Cardiology', group: 'text', chrome: 'dots', grid: TILE, style: tileStyle,
   defaults: { position: 0.4 },
