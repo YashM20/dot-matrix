@@ -64,7 +64,7 @@ export const boardManifest = [
   { id: 'heal', title: 'HEAL: THE MIRROR THAT HEALS', columns: 3, density: 'hero', load: () => import('./boards/heal').then(m => ({ items: m.healBoard })) },
   { id: 'algorithms', title: 'ALGORITHMS: STIPPLE, ATTRACT, COLLAPSE, AGGREGATE', columns: 2, density: 'hero', load: () => import('./boards/algorithms').then(m => ({ items: m.algorithmsBoard })) },
   { id: 'pond', title: 'POND: LIVING SCENES IN GLYPH TILES', columns: 3, density: 'standard', load: () => import('./boards/pond/index').then(m => ({ items: m.pondBoard, sources: m.pondSources })) },
-  { id: 'workshop', title: 'WORKSHOP: FROST, ICE, KINTSUGI, PAPER FOLD', columns: 2, density: 'standard', load: () => import('./boards/workshop').then(m => ({ items: m.workshopBoard, sources: m.workshopSources })) },
+  { id: 'workshop', title: 'WORKSHOP: FROST, ICE, KINTSUGI, PAPER FOLD', columns: 4, density: 'dense', load: () => import('./boards/workshop').then(m => ({ items: m.workshopBoard, sources: m.workshopSources })) },
   { id: 'squares', title: 'SQUARES: SPACED AND JOINED', columns: 3, density: 'hero', load: () => import('./boards/squares').then(m => ({ items: m.squaresBoard })) },
   { id: 'fractals', title: 'FRACTALS: ESCAPE, TRAP, DENSITY', columns: 3, density: 'standard', load: () => import('./boards/fractals').then(m => ({ items: m.fractalsBoard })) },
   { id: 'oldschool', title: 'OLDSCHOOL: TUNNELS, CLOUDS AND FEEDBACK', columns: 3, density: 'standard', load: () => import('./boards/oldschool').then(m => ({ items: m.oldschoolBoard })) },
