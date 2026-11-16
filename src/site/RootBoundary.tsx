@@ -30,8 +30,8 @@ export class RootBoundary extends Component<RootBoundaryProps, State> {
         <p>Something went wrong while drawing it: <code>{messageOf(error)}</code></p>
         <p>Reload to try again. If it keeps happening, the home page still works.</p>
         <div className="root-crash-btns">
-          <button type="button" onClick={() => location.reload()}>RELOAD</button>
-          <a href="/">GO HOME</a>
+          <button type="button" className="btn" onClick={() => location.reload()}>RELOAD</button>
+          <a className="btn" href="/">GO HOME</a>
         </div>
       </main>
     )

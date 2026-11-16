@@ -26,7 +26,7 @@ export function TypeField({ typing, onText }: { typing: NonNullable<WidgetPreset
   const fit = (next: string) => { let v = next; while (v && sanitize(v).length > max) v = v.slice(0, -1); return v }
   return <label className="wp-type" htmlFor={id}>
     <span>{typing.label.toUpperCase()}</span>
-    <input id={id} type="text" value={value} maxLength={max * 4} placeholder={typing.placeholder} autoComplete="off" spellCheck={false}
+    <input id={id} className="field" type="text" value={value} maxLength={max * 4} placeholder={typing.placeholder} autoComplete="off" spellCheck={false}
       enterKeyHint="done" aria-describedby={`${id}-n`} onChange={e => setValue(fit(e.target.value))} />
     <small id={`${id}-n`} aria-live="polite">{words.length}/{max}</small>
   </label>

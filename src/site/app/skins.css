@@ -62,7 +62,8 @@
   padding: var(--space-1)
 }
 
-.topbar .skin-menu button {
+/* the rows are .menu-row (src/site/controls.css): here only their grid of dot, name and one-line note, which may wrap */
+.skin-menu .menu-row {
   display: grid;
   grid-template-columns: 4px 44px 1fr;
   align-items: center;
@@ -90,24 +91,8 @@
   opacity: .35
 }
 
-/* the selected skin is a dot-matrix fill, not a solid pill */
-.topbar .skin-menu button.selected {
-  color: var(--value);
-  background: radial-gradient(circle, color-mix(in srgb, var(--tint) 16%, transparent) .8px, transparent 1.1px) 0 0 / 4px 4px
-}
-
-.topbar .skin-menu button:hover,
-.topbar .skin-menu button:focus-visible {
-  color: var(--value);
-  background-color: var(--wash-hover)
-}
-
-.topbar .skin-menu button:active {
-  color: var(--value);
-  background-color: var(--wash-press)
-}
-
-.skin-menu button.selected i {
+/* the selected skin is the row's checked dot-matrix fill (.menu-row); its dot lights */
+.skin-menu [aria-checked="true"] i {
   opacity: 1
 }
 
@@ -118,13 +103,6 @@
   position: relative;
   display: flex;
   align-items: center
-}
-
-.theme-menu-btn i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--red)
 }
 
 /* the switch moment (src/site/theme/moment.ts): the new page shows through a halftone front spreading from the

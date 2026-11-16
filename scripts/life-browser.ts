@@ -214,7 +214,7 @@ try {
     await ph.js(`document.querySelector('.tools-sheet .tool-pond').click()`); await sleep(400)
     const on = await ph.js<string | null>(`localStorage.getItem('dot480:pond')`)
     await ph.js(`${tools}.click()`); await ph.waitFor(`!!document.querySelector('.tools-sheet .tool-pond')`, 15000)
-    const pressed = await ph.js<string | null>(`document.querySelector('.tools-sheet .tool-pond').getAttribute('aria-pressed')`)
+    const pressed = await ph.js<string | null>(`document.querySelector('.tools-sheet .tool-pond').getAttribute('aria-checked')`)
     await ph.js(`document.querySelector('.tools-sheet .tool-pond').click()`); await sleep(400)
     const off = await ph.js<string | null>(`localStorage.getItem('dot480:pond')`)
     check('life-browser: X1 TOOLS › POND MEMORY (on /pond/): off at first; on writes one small record; it shows pressed; off deletes it',

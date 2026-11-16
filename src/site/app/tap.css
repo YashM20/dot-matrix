@@ -29,14 +29,13 @@
 /* coarse pointers (tablets and phones): every chrome target is at least 40 px; text tabs grow their box, not
    their type (phones get 44 px from src/site/mobile/) */
 @media (pointer: coarse) {
-  .topbar button,
+  .topbar button:where(:not(.menu-row)),
   .board-groups button,
   .board-tabs button,
   .intro-line button,
   .pal-dock button,
   .xr-panel button,
-  .xr-time button,
-  .pal-boss-flee {
+  .xr-time button {
     min-height: 40px
   }
 
@@ -45,7 +44,8 @@
     min-width: 40px
   }
 
-  :is(.shell) select,
+  /* a .field (src/site/controls.css) is a tap target tall on touch already */
+  :is(.shell) select:where(:not(.field)),
   :is(.shell) input[type=range] {
     min-height: 24px
   }

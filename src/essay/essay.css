@@ -4,6 +4,7 @@
    attributes before first paint (scripts/site/theme.ts --write); without it the page is dark_signal. */
 @import '../tokens.css';
 @import '../site/theme/themes.css';
+@import '../site/controls.css';
 @import '../site/skip-link.css';
 
 /* the essay's own voice: system prose face, a wider mono stack, a fixed prose measure (color-scheme: themes.css) */
@@ -24,8 +25,7 @@ html { background: var(--bg); scroll-behavior: smooth; -webkit-text-size-adjust:
 body { margin: 0; container-type: inline-size; background: var(--bg); color: var(--label); font: var(--fs-lead-18)/1.65 var(--sans); -webkit-font-smoothing: antialiased }
 a { color: var(--value); text-decoration-color: color-mix(in srgb, var(--tint) 30%, transparent); text-underline-offset: 3px }
 a:hover, a:focus-visible, a:active { text-decoration-color: var(--value) }
-/* focus is the accent ring, as on the site (src/site/app/chrome.css) */
-:focus-visible { outline: 1px solid var(--red); outline-offset: 3px }
+/* focus is the accent ring, as on the site (src/site/controls.css) */
 code { font: .86em var(--mono); color: var(--value); background: var(--raised); padding: .08em .35em; border-radius: var(--radius-sm); white-space: nowrap }
 /* prose code wraps on a narrow screen: a long host name or key can't push the page sideways */
 @media (max-width: 640px) { :is(p, li, dd) code { white-space: normal; overflow-wrap: anywhere } }
@@ -40,7 +40,6 @@ em { color: var(--value) }
 /* hero */
 .hero { padding: var(--space-5) 0 var(--gap-action); border-bottom: 1px solid var(--line); border-image: var(--hair-x) 1; margin-bottom: var(--space-5) }
 .kicker { font: 500 var(--fs-label-12) var(--mono); letter-spacing: .18em; color: var(--mute); display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--gap-action) }
-.kicker i:not(.mark) { width: 6px; height: 6px; border-radius: 50%; background: var(--red); display: inline-block }
 .lede { font-size: var(--fs-title-20); line-height: 1.55; color: var(--value); margin: var(--gap-action) 0 }
 .toc ol { list-style: none; margin: 0; padding: 0; columns: 2; column-gap: var(--gap-action) }
 .toc li { break-inside: avoid; margin: 0 0 var(--space-1) }
@@ -129,7 +128,7 @@ em { color: var(--value) }
 .ir { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-4); align-items: start }
 .ir-code { display: grid; gap: var(--space-2) }
 .ir textarea { width: 100%; resize: vertical; font: var(--fs-label-12)/1.55 var(--mono); color: var(--value); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-panel); padding: var(--space-3); tab-size: 2 }
-.ir textarea:focus { outline: 1px solid var(--red); outline-offset: 2px }
+.ir textarea:focus { outline: 1px solid var(--red); outline-offset: var(--focus-out) }
 .ir-status { font: var(--fs-label-12) var(--mono); color: var(--mute); letter-spacing: .06em; min-height: 1.4em }
 .ir-status--err { color: var(--value) }
 

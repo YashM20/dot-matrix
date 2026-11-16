@@ -11,7 +11,10 @@
  * viewport, the row in its middle), `other-tab` (another tab saves the editor's document, so the two-tab note shows),
  * `display` (the header's DISPLAY ▾ menu), `theme` (the header's THEME popover), `tools` (the phone TOOLS sheet,
  * scrolled to its skin list) and `boards` (the BOARDS sheet, scrolled to its ENGINE group); `card-more`, `display`, `theme`,
- * `tools` and `boards` capture the viewport only, e.g. `/@1280@dark@display`, `/@390@light@tools`.
+ * `tools` and `boards` capture the viewport only, e.g. `/@1280@dark@display`, `/@390@light@tools`. `focus` puts the
+ * keyboard focus ring on the page's first toolbar button, else the first card row action (the viewport, the control in
+ * its middle); `load-failed` answers every board chunk 404, so the boards show their error state (LoadBoundary.tsx)
+ * after the page's one stale-deploy reload, e.g. `/levels/@390@light@load-failed`.
  * Two options name a card control by its data key (letters and digits): `hover=<key>` puts the mouse on it and
  * `focus=<key>` reaches it from the keyboard (Shift+Tab, then Tab), so its dot hover or focus ring shows; both capture
  * the viewport with the control's card in the middle, e.g. `/widget/inst-cutoff/@1280@light@focus=cutoff`. Reduced motion is
@@ -19,7 +22,7 @@
  * `<route>-<width>-<theme>[-<option>...].png` in `--out` (default `.snapshots/ci-shots/`). Exit 1 when a page never
  * got ready (or an option's state never showed), 2 on a bad item.
  */
-import { mkdirSync } from 'node:fs'
+import { mkdirSync, readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { launch, serveDist, sleep } from '../lib/cdp'
 import { ACCENTS, SCHEMES } from '../../src/site/theme/names'
@@ -29,10 +32,16 @@ const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i +
 const out = resolve(opt('--out') ?? join('.snapshots', 'ci-shots'))
 const items = (opt('--list') ?? '').split(',').map(s => s.trim()).filter(Boolean)
 
-const OPTIONS = ['2x', 'xray', 'more', 'card-more', 'other-tab', 'display', 'theme', 'tools', 'boards'] as const
+const OPTIONS = ['2x', 'xray', 'more', 'card-more', 'other-tab', 'display', 'theme', 'tools', 'boards', 'focus', 'load-failed'] as const
 type Option = typeof OPTIONS[number]
 /** Options that capture the viewport as it is (a resize to the full page would scroll or close what they opened). */
-const VIEWPORT: readonly Option[] = ['card-more', 'display', 'theme', 'tools', 'boards']
+const VIEWPORT: readonly Option[] = ['card-more', 'display', 'theme', 'tools', 'boards', 'focus']
+
+/** Every board chunk (the ones the manifest chunk loads with `import()`), for `load-failed`; as scripts/site/chunks-browser.ts. */
+const boardChunks = (): string[] => {
+  const m = readdirSync('dist/assets').find(f => /^manifest-[\w-]+\.js$/.test(f))
+  return m ? [...readFileSync(join('dist/assets', m), 'utf8').matchAll(/import\([`"']\.\/([^`"']+\.js)[`"']\)/g)].map(x => x[1]) : []
+}
 /** UI states opened by a script click: the control to press, then what shows it is open. */
 const STATES: Partial<Record<Option, { press: string; open: string; then?: string }>> = {
   display: { press: '.skin-switch .skin-menu-btn', open: `!!document.querySelector('.skin-menu [role=menuitemradio]')` },
@@ -81,6 +90,13 @@ async function act(opts: Option[], phone: boolean): Promise<boolean> {
     if (st.then) await page.js(st.then).catch(() => {})
     await sleep(500)
   }
+  if (opts.includes('focus')) {
+    const sel = '.pill-btn, .dot-card-row a, .dot-card-row > button'
+    if (!(await page.waitFor(`!!document.querySelector('${sel}')`, 15000))) return false
+    await page.js(`(() => { const b = document.querySelector('${sel}'); b.scrollIntoView({ block: 'center' }); b.focus({ focusVisible: true }); return 1 })()`)
+    if (!(await page.waitFor(`document.activeElement?.matches(':focus-visible')`, 3000))) return false
+  }
+  if (opts.includes('load-failed') && !(await page.waitFor(`!!document.querySelector('.load-failed')`, 20000))) return false
   if (opts.includes('other-tab')) {
     if (!(await page.waitFor(`!!document.querySelector('.ed-other')`, 15000))) return false
     await page.js(`window.dispatchEvent(new StorageEvent('storage', { key: 'dot480.editor.v1', newValue: '{"kind":"other tab"}' })), 1`)
@@ -108,6 +124,8 @@ async function reach(t: Target): Promise<boolean> {
 mkdirSync(out, { recursive: true })
 const server = await serveDist(4318)
 const page = await launch(1280, 900)
+// `load-failed`: while Fetch is on, every paused request (a board chunk) is answered 404, as after a new deploy
+page.on('Fetch.requestPaused', e => { void page.cdp('Fetch.fulfillRequest', { requestId: e.requestId, responseCode: 404, body: Buffer.from('gone').toString('base64') }).catch(() => {}) })
 let failed = 0
 try {
   for (const it of parsed as Item[]) {
@@ -120,6 +138,7 @@ try {
     await page.js(`localStorage.setItem('dot480:theme', ${JSON.stringify(JSON.stringify({ scheme: it.scheme, accent: it.accent }))})`).catch(() => {})
     await page.setFlags({ xray: it.opts.includes('xray') ? true : null }).catch(() => {})
     await page.js('window.__shotOld = 1').catch(() => {})
+    if (it.opts.includes('load-failed')) await page.cdp('Fetch.enable', { patterns: boardChunks().map(f => ({ urlPattern: `*/assets/${f}*` })) })
     await page.cdp('Page.navigate', { url: new URL(it.route.slice(1), server.url).href })
     const ok = await page.waitFor(`!window.__shotOld && document.readyState === 'complete' && !document.querySelector('.view-loading, [aria-busy="true"]')`, 30000)
     await page.js(`document.fonts.ready.then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))`).catch(() => {})
@@ -134,6 +153,7 @@ try {
     await page.shot(join(out, it.file))
     if (!ok || !state) failed++
     console.log(`${ok && state ? 'OK       ' : 'NOT READY'} ${it.file} (${((Date.now() - t) / 1000).toFixed(1)} s)`)
+    if (it.opts.includes('load-failed')) await page.cdp('Fetch.disable').catch(() => {})
     if (it.opts.some(o => STATES[o])) await page.js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`).catch(() => {})
   }
 } finally {

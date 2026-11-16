@@ -37,7 +37,7 @@ export function SkinSwitcher() {
         <div {...m.menu} className="skin-menu" aria-label="Display">
           {SKIN_NAMES.map(name => (
             <button key={name} type="button" role="menuitemradio" aria-checked={skin === name} tabIndex={-1}
-              data-skin={name} className={skin === name ? 'selected' : ''} onClick={() => pick(name)}>
+              data-skin={name} className="menu-row" onClick={() => pick(name)}>
               <i aria-hidden="true" /><b>{SKINS[name].label}</b><span>{blurb(SKINS[name].title)}</span>
             </button>
           ))}

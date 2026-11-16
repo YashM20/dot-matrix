@@ -1,7 +1,7 @@
 /* App styles: EXPLORE / MAKE / ABOUT, the ABOUT bands and the card ladder */
 /* UX U3: EXPLORE / MAKE / ABOUT (docs/UX-PLAN.md §4.1); their focus is the global accent ring */
 .topbar .view-tabs button:focus-visible {
-  outline-offset: 4px
+  outline-offset: var(--focus-out)
 }
 
 /* ABOUT: bands in the frame (intro, figure, shortcuts, changelog), on the frame's left edge */
@@ -150,7 +150,7 @@
 
 /* the bar sits at the card's top edge, inside its clip: the ring is drawn inside */
 .dot-card-bar button:focus-visible {
-  outline-offset: -1px
+  outline-offset: var(--focus-in)
 }
 
 /* a bleed card has no padding: its bar sits in the corner */

@@ -7,7 +7,7 @@
  * Main thread only (the world lives here): the sampling worker's build resolves this module to
  * `workshop-ice-worker-stub.ts` (vite.config.ts `mainThreadOnly`).
  */
-import { DLA } from '../creditSources'
+import { DLA, KAJIYA_KAY } from '../creditSources'
 import type { Vec3 } from '../../engine/light/shade'
 import { createWorld, framePointers, worldAt, type World } from '../../engine/physics/world'
 import { dla, type Dla } from '../../engine/algo/dla'
@@ -84,7 +84,7 @@ const iceWorld = once((): World => createWorld({
 }))
 export const matIce: WidgetPreset = {
   ...tile, id: 'mat-ice', name: 'Ice',
-  credit: DLA,
+  credit: [DLA, { ...KAJIYA_KAY, note: 'the glint along each branch' }],
   defaults: { ...LIGHT_DEFAULTS, k: 0 },
   controls: [{ key: 'k', kind: 'button', box: [0, 12, 144, 132], label: 'Breathe on the glass' }],
   layers: ctx => {

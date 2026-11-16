@@ -16,7 +16,7 @@
     height: 15px
   }
 
-  .tabbar .busy::after {
+  .tabbar .tabbar-busy {
     top: 8px;
     left: calc(50% + 4px)
   }
@@ -51,14 +51,12 @@
   grid-column: 1 / -1
 }
 
-/* touch: press feedback instead of hover, and no hover colour left stuck after a tap */
+/* touch: press feedback instead of hover, and no hover colour left stuck after a tap. The press-sink list: the one
+   place that names the chrome that sinks under a finger (DESIGN.md › Chrome states). It sinks to --press-sink, which
+   is 1 under reduced motion (tokens.css); the transform's fade comes from the chrome states (chrome.css) */
 @media (hover: none) {
-  :is(.tabbar button, .topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button) {
-    transition: transform var(--dur-out) var(--ease), background-color var(--dur-out) var(--ease)
-  }
-
-  :is(.topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button):active {
-    transform: scale(.96)
+  :is(.btn, .pill-btn, .lk-btn, .dot-card-row a, .dot-card-row > button, .topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button):active {
+    transform: scale(var(--press-sink))
   }
 
   .tabbar button:active .glyph {
@@ -93,11 +91,7 @@
   transition: none
 }
 
-:where([data-motion="reduce"]) :is(.tabbar button, .tabbar .glyph, .topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button) {
-  transition: none
-}
-
-:where([data-motion="reduce"]) :is(.topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button):active,
+/* the press-sink list needs nothing here: --press-sink is 1 (tokens.css) and a11y.css zeroes the transitions */
 :where([data-motion="reduce"]) .tabbar button:active .glyph {
   transform: none
 }

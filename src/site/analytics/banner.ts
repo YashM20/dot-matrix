@@ -11,7 +11,7 @@ export function showBanner(choose: (on: boolean) => void): () => void {
   box.setAttribute('aria-label', 'Analytics')
   // built node by node: the CSP's Trusted Types refuse a plain string in innerHTML (src/lib/trusted.ts)
   const el = <K extends keyof HTMLElementTagNameMap>(tag: K, props: Partial<HTMLElementTagNameMap[K]>, ...kids: (Node | string)[]) => { const e = Object.assign(document.createElement(tag), props); e.append(...kids); return e }
-  const button = (on: string, text: string) => { const b = el('button', { type: 'button' }, text); b.dataset.on = on; return b }
+  const button = (on: string, text: string) => { const b = el('button', { type: 'button', className: 'btn' }, text); b.dataset.on = on; return b }
   box.append(
     el('p', { className: 'consent-head' }, 'ANALYTICS'),
     el('p', { className: 'consent-text' }, 'With your OK, this site counts page views and the buttons you press, through PostHog. '
