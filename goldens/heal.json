@@ -16,13 +16,13 @@
   "heal-xray": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "e428ed0b",
-    "dots": 1588
+    "hash": "71f5d0d5",
+    "dots": 1707
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "80f5df0e",
-    "dots": 1476
+    "hash": "75ba537f",
+    "dots": 1552
    }
   },
   "heal-persist": {

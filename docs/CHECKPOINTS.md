@@ -7,10 +7,12 @@ GitHub is the source of truth: the milestones, the labels, the tracking issue an
 ## The cycle
 1. **Scope.** The milestone's issues are the whole job. A new idea or request that comes up mid-checkpoint becomes an issue in a later milestone or in Backlog. It does not join the current one unless the owner says so.
 2. **Build.** Four to six lanes at once, one agent per line of the tracking issue, each working only on issues in this milestone. Each lane opens its own PR to `main`. It merges once `check + build` is green, and once the owner has OK'd the before and after shots for anything visitors can see.
+   - **Changelog fragment.** Each PR adds one `changes/<branch>.md` (or `changes/<pr>.md`) with a `visitor:` line (one plain sentence for the LOG tab, or `none`) and an `engineering:` line (one sentence with the issue and PR numbers). Lanes don't edit `CHANGELOG.md` or `src/changelog.ts`. `scripts/site/changes.ts` in `pnpm check` warns when a PR changes `src/` without one. Format: `changes/README.md`.
 3. **Gate.** One full CI run with every browser probe on the last PR of the checkpoint (label the PR `full-probes`). Goldens change only where a lane meant to change them, and first load stays at or under 150 kB gz.
    - `pnpm check` (and so CI) runs `scripts/site/prose-lint.ts` on visitor prose (`docs/WRITING.md`): 0 errors before publish. Read its warnings at the gate.
 4. **Publish.**
    - Turn the shipped `upcoming` rows into a released version in `src/changelog.ts` and `CHANGELOG.md`.
+   - Fold the fragments in `changes/` into that version: the engineering lines into `CHANGELOG.md`, the visitor lines that aren't `none` into `src/changelog.ts`. Delete the fragments in the same PR and keep `changes/README.md`.
    - Close the milestone's issues, the tracking issue and the milestone itself.
 5. **Breather (mandatory, nothing new starts):**
    - **Clean up:** remove finished worktrees (junction-safe), scratch dirs and merged branches.
@@ -57,12 +59,12 @@ GitHub is the source of truth: the milestones, the labels, the tracking issue an
 | CP3 | `CP3 · 0.15 · Kits and new boards` | the car dash, faces, kinetic type, micro motion, charts and watch faces (#125 to #129, #132), the IQ card sets, the P0 probes and token sweep | **published** 2026-11-02 to 11-04 (`CHANGELOG.md` 0.15); closed |
 | CP4 | `CP4 · 0.16 · Flags, SEO, analytics, shell and security` | feature flags and X-ray off, SEO, analytics, the shell, likes (#169, #176), security fixes | **published** 2026-11-04 (`CHANGELOG.md` 0.16); closed 2026-11-16 |
 | CP5 | `CP5 · 0.17 · UI hill climb` | UI polish before new features (#178 to #188, tracker #189), CI, flags from localStorage only, the SEO checkup | **published**; closed 2026-11-16. #186 waits in Backlog for MAKE |
-| CP6 | `CP6 · 0.18 · Stabilise` | bugs, flaky gates, accessibility, the design system audit (#361), card cuts and the first board refines | **closing**: the queue is #403 |
+| CP6 | `CP6 · 0.18 · Stabilise` | bugs, flaky gates, accessibility, the design system audit (#361), card cuts and the first board refines | **published** 2026-11-16 (PR #417, `CHANGELOG.md` 0.18); the milestone closes after the breather |
 | CP7 | `CP7 · 0.19 · Board refinement` | the remaining #221 cuts, then twelve boards brought up to the bar | **next**; queue #401 |
 | CP8 | `CP8 · 0.20 · Play, live data and guides` | games, a live world board, a wallpaper maker, the guides on the blog, and the chrome they need | **planned**; queue #402 |
 | later | Backlog | picked at a breather, highest priority first | waiting |
 
-### CP6 · 0.18 · Stabilise (closing)
+### CP6 · 0.18 · Stabilise (published 2026-11-16, PR #417)
 - **Goal:** fix what exists before building anything new: bugs, flaky checks, accessibility, the design system audit, and the cards below the bar.
 - **Close list:** #28 flaky gates, #43 home hero and focus order, #355 type rhythm tokens, #393 POND focus rings, #261 COMPONENTS status dot labels, #341 desktop press, #339 buffer-path bench, #340 SQUARES frame cost, #103 goldens index, #361 (design system tracker), #379 branches at the breather.
 - **Exit criterion:** every issue in the milestone is closed, CI is green with every probe, goldens changed only on purpose, first load at or under 150 kB gz, and 0.18 is published.
@@ -77,6 +79,13 @@ GitHub is the source of truth: the milestones, the labels, the tracking issue an
 - **Goal:** new things to do on the site, built to the same bar: original games, a live world board, a wallpaper maker, and the guides published on the blog. The chrome those pages lean on comes first.
 - **Issues:** site first: #38 Back and scroll, #40 the blog and legal bar, #34 the theme control in it, #39 footer and board end, #41 wayfinding and cuts, #44 desktop hit targets. Then #131 three games, #311 the hill-driving game, #130 the world board, #133 the wallpaper maker and #77 the guides.
 - **Exit criterion:** every CP8 issue is closed, games and the world board work with mouse, touch and keyboard and respect reduced motion, the world board has loading, cached and offline states with goldens on fixed data, the guides are live, first load is at or under 150 kB gz with every new view lazy, CI is green, and 0.20 is published.
+
+### Parked theme milestones
+Two milestones hold future bodies of work that no checkpoint has picked yet. The owner reopened both on Nov 16.
+- **Tixy gallery:** #51, #52, #54 to #58 and #60. The ports wait on the permission request in #52.
+- **Next phases:** editor and advanced work: #71, #73, #18, #19, #31, #33, #186, #22 and #24, plus the parked ideas #23, #25 and #32.
+
+A parked milestone stays open even when it looks empty or blocked. A checkpoint takes issues from it when the owner chooses, and they move to that checkpoint's milestone. Close a parked milestone only when its work is done or the owner drops it.
 
 ### Backlog
 Ordered by priority. Medium: the eight board refines above, the polish tracker #72 and the decisions tracker #12. Low: MAKE's return as one batch (#186, #18, #19, #31, #33; MAKE is off by default), the tixy gallery (#51 to #58, #60, blocked on the permission request in #52), pond senses (#22), WebGPU (#24, ideation), the power layer (#35), sessions with people (#47, after CP8), X-ray rect cells (#74), Speculation Rules (#347) and the IQ ideation list (#70).
