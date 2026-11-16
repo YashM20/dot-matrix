@@ -28,12 +28,14 @@ function footer(sim: Sim, t: number, left: string, right: string): Layer[] {
   ]
 }
 const pad4 = (n: number) => String(Math.min(9999, n)).padStart(4, '0')
+const smooth = (a: number, b: number, x: number) => { const s = Math.min(1, Math.max(0, (x - a) / (b - a))); return s * s * (3 - 2 * s) }
+/** Loop fade: full until the last 10% of the loop, then out, so the reset reads as a fresh run, not a cut. */
+const loopFade = (sim: Sim, t: number) => 1 - smooth(.9, 1, simPhase(sim, t))
 
 // ── 01 Reaction: coral growth (F .0545, k .062) from 50 seeds, with a narrow diffusion (du .09, dv .045) so
 // the labyrinth walls are ~4 dots wide: rings open, branch and fill the card in ~10 s; hold, dissolve over
 // the last 1.4 s, regrow. Edges wrap (no wall artefact) and a 9-cell size falloff hides the seam.
 const rd = grayScott({ w: N, h: H, seed: 3, feed: .0545, kill: .062, du: .09, dv: .045, sub: 6, blobs: 50, radius: [1, 3], lead: 4, period: 13, maxSteps: 240, every: 24 })
-const smooth = (a: number, b: number, x: number) => { const s = Math.min(1, Math.max(0, (x - a) / (b - a))); return s * s * (3 - 2 * s) }
 /** Border falloff: full inside, ramping to 0 over the outer 9 cells (in sim cells). */
 const vignette = (x: number, y: number) => smooth(-1, 9, Math.min(x, y, N - 1 - x, H - 1 - y))
 /**
@@ -51,16 +53,17 @@ function rdBand(t: number, band: 0 | 1 | 2, fade: number): Field {
   })
 }
 export const simRd: WidgetPreset = {
-  id: 'sim-rd', name: 'Sim Reaction-Diffusion', label: 'SIM  REACTION', ...tile, animated: true,
+  id: 'sim-rd', name: 'Reaction-Diffusion', label: 'SIM  REACTION', ...tile, animated: true,
   credit: GRAY_SCOTT,
   layers: ctx => {
-    const t = ctx.t, k = simPhase(rd, t), fade = 1 - smooth(.9, 1, k)
+    const t = ctx.t, fade = loopFade(rd, t)
     return [
       // three tone bands, each a size step: fronts faint and small, bodies mid, cores white and full
       layer(on(rdBand(t, 0, fade)), 'faint'),
       layer(on(rdBand(t, 1, fade)), 'mid'),
       layer(on(rdBand(t, 2, fade)), 'value'),
-      ...footer(rd, t, 'STEP', 'F.055 K.062'),
+      // the stat names the pattern the feed and kill rates grow, not the rates themselves (#229)
+      ...footer(rd, t, 'STEP', 'CORAL'),
     ]
   },
 }
@@ -88,18 +91,19 @@ const falling = (g: Float32Array, i: number, x: number, y: number) =>
 /** The lowest grain of a falling run (nothing falling right under it): the only grain drawn red, so the stream reads as grains. */
 const leading = (g: Float32Array, i: number, x: number, y: number) => falling(g, i, x, y) && !(y + 1 < H && falling(g, i + N, x, y + 1))
 export const simSand: WidgetPreset = {
-  id: 'sim-sand', name: 'Sim Falling Sand', label: 'SIM  SAND', ...tile, animated: true,
+  id: 'sim-sand', name: 'Hourglass', label: 'SIM  SAND', ...tile, animated: true,
   layers: ctx => {
-    const t = ctx.t, g = simView(sand, t)
+    const t = ctx.t, g = simView(sand, t), f = loopFade(sand, t)
     let top = 0
     for (let i = 0; i < N * NECK; i++) if (grain(g, i)) top++
     return [
-      layer(on(simMapField(sand, t, (g, i) => g[i] === WALL ? 1 : 0)), 'faint'),
-      layer(on(simMapField(sand, t, (g, i, x, y) => g[i] === SAND && !(top > 0 && falling(g, i, x, y)) ? 1 : 0)), 'value'),
-      layer(on(simMapField(sand, t, (g, i, x, y) => g[i] === SAND_B && !(top > 0 && falling(g, i, x, y)) ? .8 : 0)), 'mid'),
+      // the glass in `mid`, a size step under the mid strata: in `faint` the empty bulb all but vanished on paper (#229)
+      layer(on(simMapField(sand, t, (g, i) => g[i] === WALL ? .6 : 0)), 'mid'),
+      layer(on(simMapField(sand, t, (g, i, x, y) => g[i] === SAND && !(top > 0 && falling(g, i, x, y)) ? f : 0)), 'value'),
+      layer(on(simMapField(sand, t, (g, i, x, y) => g[i] === SAND_B && !(top > 0 && falling(g, i, x, y)) ? .8 * f : 0)), 'mid'),
       layer(on(simMapField(sand, t, (g, i, x, y) => (top > 0 && falling(g, i, x, y) && !leading(g, i, x, y)) ? .55 : 0)), 'idle'),
       layer(on(simMapField(sand, t, (g, i, x, y) => (top > 0 && leading(g, i, x, y)) ? 1 : 0)), 'active'),
-      ...footer(sand, t, 'STEP', `TOP ${pad4(top)}/${GRAINS}`),
+      ...footer(sand, t, 'STEP', `TOP ${String(top).padStart(String(GRAINS).length, '0')}/${GRAINS}`),
     ]
   },
 }
@@ -126,15 +130,15 @@ const lifeSim = life({
   stamps: (g, w, _h, ch) => { lifeStamp(g, w, GUN, 1, 1, ch); lifeStamp(g, w, PULSAR, 56, 2, ch); lifeStamp(g, w, PULSAR, 4, 26, ch) },
 })
 export const simLife: WidgetPreset = {
-  id: 'sim-life', name: 'Sim Life', label: 'SIM  LIFE', ...tile, animated: true,
+  id: 'sim-life', name: 'Game of Life', label: 'SIM  LIFE', ...tile, animated: true,
   credit: { by: ['John Horton Conway', 'Martin Gardner'], title: 'Mathematical Games: the game of Life (Scientific American, 1970)', source: 'https://www.scientificamerican.com/article/mathematical-games-1970-10', note: 'the rules; the glider gun is Bill Gosper’s' },
   layers: ctx => {
-    const t = ctx.t, g = simView(lifeSim, t)
+    const t = ctx.t, g = simView(lifeSim, t), f = loopFade(lifeSim, t)
     let pop = 0
     for (let i = 0; i < g.length; i += 2) pop += g[i]
     return [
-      layer(on(simMapField(lifeSim, t, (g, i) => g[i] === 0 && g[i + 1] > .2 ? .5 : 0)), 'faint'),
-      layer(on(simMapField(lifeSim, t, (g, i) => g[i])), 'value'),
+      layer(on(simMapField(lifeSim, t, (g, i) => g[i] === 0 && g[i + 1] > .2 ? .5 * f : 0)), 'faint'),
+      layer(on(simMapField(lifeSim, t, (g, i) => g[i] * f)), 'value'),
       ...footer(lifeSim, t, 'GEN ', `POP ${pad4(pop)}`),
     ]
   },

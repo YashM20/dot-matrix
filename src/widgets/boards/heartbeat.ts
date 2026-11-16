@@ -132,13 +132,17 @@ const halo = (p: HeartbeatParams, t: number, s: Stage): Layer[] => {
     const site = (i: number): Pt => { const a = (((i % n) + n) % n) / n * TAU - Math.PI / 2; return [s.cx + R * Math.cos(a), s.cy + R * Math.sin(a)] }
     const tail = [3.8, 3.2, 2.8, 2.5, 2.2, 2, 1.8, 1.6, 1.5, 1.4].map((size, i) => ({ size, tone: (i < 2 ? 'value' : i < 5 ? 'mid' : 'idle') as Tone }))
     const v = () => p.orbit
-    out.push(layer({ ...T.dots(Array.from({ length: n - tail.length }, (_, i) => site(head + 1 + i)), 1.4), field: v }, 'faint'))
+    // the track is `mid`: in `faint` it all but vanished on the paper sheet (#230)
+    out.push(layer({ ...T.dots(Array.from({ length: n - tail.length }, (_, i) => site(head + 1 + i)), 1.4), field: v }, 'mid'))
     tail.forEach((d, i) => out.push(layer({ ...T.dots([site(head - i)], d.size), field: v }, d.tone)))
   }
   if (p.beat > .02 && p.beatHz) {
-    const ph = (t * p.beatHz) % 1, R = Math.round((34 + 22 * smoothstep(0, .8, ph)) * s.scale / 2) * 2, n = Math.round((TAU * R) / 4.6)
-    const fade = (1 - smoothstep(.1, .85, ph)) * Math.min(1, p.beat / .1)
-    if (fade > .1) out.push(layer({ ...T.dotRing(s.cx, s.cy, R, { spacing: (TAU * R) / n, size: 1.3 }), field: () => fade }, 'idle'))
+    const ring = (R: number, value: number) => { const n = Math.round((TAU * R) / 4.6); return layer({ ...T.dotRing(s.cx, s.cy, R, { spacing: (TAU * R) / n, size: 1.3 }), field: () => value }, 'idle') }
+    const ph = (t * p.beatHz) % 1, R0 = Math.round(34 * s.scale / 2) * 2, R = Math.round((34 + 22 * smoothstep(0, .8, ph)) * s.scale / 2) * 2
+    const k = Math.min(1, p.beat / .1), fade = (1 - smoothstep(.1, .85, ph)) * k
+    // a resting ring at 40% the ripple leaves from, so the card never blinks between ring and no ring (#230)
+    if (R > R0 + 2) out.push(ring(R0, .4 * k))
+    if (fade > .1) out.push(ring(R, fade))
   }
   return out
 }
@@ -160,7 +164,6 @@ const statusLine = (st: HeartbeatState, t: number, row: number): Layer[] => [
 ]
 const scene = (p: HeartbeatParams, t: number, s: Stage, accent: boolean) => [...halo(p, t, s), organism(p, t, s, accent && p.accent > .5 ? 'active' : 'value')]
 /** Done tile: blob → condense (1.4 s, decelerating) → hold the check → relax back, on a 7 s loop (t = 0 opens on the held check). */
-/** Done tile: blob → condense (1.4 s, decelerating) → hold the check → relax back, on a 7 s loop. */
 const doneCheck = (t: number) => {
   const ph = (t + 4) % 7
   return ph < 1 ? 0 : ph < 2.4 ? 1 - (1 - (ph - 1) / 1.4) ** 3 : ph < 5.6 ? 1 : 1 - smoothstep(5.6, 7, ph)
@@ -180,7 +183,8 @@ export const hbDone = make('hb-done', 5, 'DONE', 'done')
 
 // ── AGENT ── `data.state` 0..4 (sprung) picks the parameters; the knob glides between stops.
 const AGENT = stageAt(12, 28, .78)
-const SEG = { x: 6, y: 106, w: 132, h: 18, knob: 13, labels: ['THK', 'RUN', 'ASK', 'ERR', 'OK'] }
+// whole words under the stops (#230): ERROR beside DONE left a two-column gap, so the error stop reads FAIL
+const SEG = { x: 6, y: 106, w: 132, h: 18, knob: 13, labels: ['THINK', 'RUN', 'ASK', 'FAIL', 'DONE'] }
 const segX = (i: number) => SEG.x + SEG.h / 2 + (i * (SEG.w - SEG.h)) / 4
 const track = (d: number, spacing: number) => stadium(SEG.x - d, SEG.y - d, SEG.w + 2 * d, SEG.h + 2 * d, spacing)
 const hbAgent: WidgetPreset = {

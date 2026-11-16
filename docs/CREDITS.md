@@ -130,7 +130,7 @@ By John E. Pearson, Peter Gray, Stephen K. Scott.
 
 - Idle (`lock-idle`), board `/lock/`: the Gray-Scott model and its pattern map
 - Pond Turing (`pond-turing`), board `/pond/`: the Gray-Scott model and its pattern map
-- Sim Reaction-Diffusion (`sim-rd`), board `/sim/`: the Gray-Scott model and its pattern map
+- Reaction-Diffusion (`sim-rd`), board `/sim/`: the Gray-Scott model and its pattern map
 
 ### [Composition with Red, Blue and Yellow (1930)](https://en.wikipedia.org/wiki/Composition_with_Red,_Blue_and_Yellow)
 
@@ -288,7 +288,7 @@ By Inigo Quilez, Mario Markus.
 
 By John Horton Conway, Martin Gardner.
 
-- Sim Life (`sim-life`), board `/sim/`: the rules; the glider gun is Bill Gosper’s
+- Game of Life (`sim-life`), board `/sim/`: the rules; the glider gun is Bill Gosper’s
 
 ### [Mathematical marbling (2012)](https://doi.org/10.1109/MCG.2011.51)
 

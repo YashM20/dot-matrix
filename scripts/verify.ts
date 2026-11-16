@@ -199,6 +199,11 @@ frameCacheChecks(assert)
   const { metroDashboardChecks } = await import('./verify/metro-dashboard')
   metroDashboardChecks(assert)
 }
+// HEARTBEAT (#230) and LIVING (#229) refine fixes (scripts/verify/heartbeat-living.ts)
+{
+  const { heartbeatLivingChecks } = await import('./verify/heartbeat-living')
+  heartbeatLivingChecks(assert)
+}
 // card drawing fixes (#359): fine-face units, the lap knob, glyph transport, REC dot size (scripts/verify/card-drawing.ts)
 {
   const { cardDrawingChecks } = await import('./verify/card-drawing')
