@@ -7,7 +7,7 @@
  */
 import { lazy, Suspense, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
-import { getSkin, setSkin as setDisplaySkin, useDisplaySkin } from '../skins/store'
+import { getSkin, setSkin as setDisplaySkin } from '../skins/store'
 import { ringHeader } from '../dotRing'
 import { findPreset } from '../../widgets/manifest'
 import { DotWidget } from '../DotWidget'
@@ -149,8 +149,7 @@ export function CommandLayer({ tab, board, all = false, setTab, setBoard }: Comm
   useLayoutEffect(() => { view.current = { tab, board, all } })
   useTrackEvents(board)
   // the header's dotted pills: their ring code loads with this layer, not on first load (src/components/dotRing.ts)
-  const skin = useDisplaySkin()
-  useEffect(ringHeader, [skin])
+  useEffect(ringHeader, [])
 
   // the layer itself mounts once the page is idle: warm the palette / shell chunks now, so a ⌘K followed by
   // quick typing finds the input already there instead of dropping the first keystrokes into the page

@@ -4,17 +4,16 @@
  *   npx tsx scripts/skins-browser.ts [--url http://localhost:5204] [--boards mosaic,components,levels] [--skins all] [--perf mosaic] [--secs 4]
  *
  * 1. Screenshots: every board × skin (`?board=…&skin=…`, after the entrance and the power-on refresh) and a
- *    few frames of a live switch (OLED → CRT, CRT → INK, INK → OLED) → `.snapshots/c7/`.
+ *    few frames of a live switch (OLED → CRT, CRT → NIXIE, NIXIE → OLED) → `.snapshots/c7/`.
  * 2. Perf: on the `--perf` board, the stage's own JS ms per card frame (frame copy + render, from the page's
  *    `__skinPerf` probe) and the main-thread busy ms per 12 fps tick (CPU profile) per skin vs OLED.
  * 3. Console errors / exceptions are listed. Needs the dev server running; Chrome from $CHROME or the usual paths.
  *
- *   npx tsx scripts/skins-browser.ts --fidelity   # no server: the lcd and grout stages (squares Q2) on a synthetic card
+ *   npx tsx scripts/skins-browser.ts --fidelity   # no server: every display stage on a synthetic card
  *
- *    lcd: the gutter is the paper (± 20/255), an unlit pixel a touch darker, white → ink, the accent keeps its hue (± 6°),
- *         a step reaches 63% (± 8%) after τ and the stage stops asking for frames once settled;
- *    grout: the grout is the stage's grout colour (± 2/255), unlit tiles sit above it, the accent keeps its hue (± 6°).
- *    Exit 1 when one fails; PNGs in .snapshots/c7/fidelity-*.png.
+ *    The skin list is OLED, NIXIE, VFD, CRT (#345) and OLED builds no stage. Each other stage lights a white block well
+ *    above an unlit cell, keeps the red accent's hue (± 12°: the CRT passes it, VFD keeps it, Nixie passes the red
+ *    column) and stops asking for frames once settled. Exit 1 when one fails; PNGs in .snapshots/c7/fidelity-*.png.
  */
 import { execFileSync } from 'node:child_process'
 import { existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs'
@@ -24,7 +23,7 @@ import { pageSocket, startChrome } from './lib/chrome'
 
 const arg = (k: string, d: string) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d }
 const URL0 = arg('url', 'http://localhost:5204'), BOARDS = arg('boards', 'mosaic,components,levels').split(','), PERF = arg('perf', 'mosaic'), SECS = +arg('secs', '4')
-const ALL = ['oled', 'crt', 'vfd', 'led', 'eink', 'flipdisc', 'nixie', 'lcd', 'grout']
+const ALL = ['oled', 'nixie', 'vfd', 'crt']
 const SKINS = arg('skins', 'all') === 'all' ? ALL : arg('skins', '').split(',')
 const OUT = join(import.meta.dirname, '../.snapshots/c7')
 mkdirSync(OUT, { recursive: true })
@@ -58,7 +57,7 @@ const settled = async () => {
 await cdp('Runtime.enable'); await cdp('Page.enable'); await cdp('Profiler.enable')
 await cdp('Emulation.setDeviceMetricsOverride', { width: 1400, height: 1000, deviceScaleFactor: 1, mobile: false })
 
-// --fidelity: the lcd / grout stages on a synthetic card (esbuild page, file://), measured in pixels
+// --fidelity: every display stage on a synthetic card (esbuild page, file://), measured in pixels
 if (process.argv.includes('--fidelity')) {
   execFileSync('npx', ['esbuild', 'scripts/lib/skins-page.ts', '--bundle', '--format=iife', '--platform=browser', '--target=es2022', `--outfile=${OUT}/skins-page.js`, '--log-level=warning'], { stdio: 'inherit', shell: true })
   const html = join(OUT, 'skins-page.html')
@@ -67,24 +66,26 @@ if (process.argv.includes('--fidelity')) {
   for (let i = 0; i < 80 && !(await evaluate<boolean>('!!window.SK').catch(() => false)); i++) await sleep(100)
   let fail = 0
   const ok = (name: string, cond: boolean, detail: string) => { if (!cond) fail++; console.log(`${cond ? '✓' : '✗'} ${name} — ${detail}`) }
-  const near = (a: number[], b: number[], d: number) => a.every((v, i) => Math.abs(v - b[i]) <= d)
   const hd = (a: number, b: number) => Math.min(Math.abs(a - b), 360 - Math.abs(a - b))
   const L = (c: number[]) => .2126 * c[0] + .7152 * c[1] + .0722 * c[2]
-  const l = await evaluate<{ gutter: number[]; unlit: number[]; white: number[]; red: number[]; paper: number[]; ink: number[]; frac: number; busy: boolean; settled: boolean; redHue: number; accentHue: number }>('SK.lcd()')
-  ok('skins-browser: lcd (gutter = paper, unlit pixel darker, white → ink, accent hue kept, 63% after τ, settles)',
-    near(l.gutter, l.paper, 20) && L(l.unlit) < L(l.gutter) && near(l.white, l.ink, 24) && hd(l.redHue, l.accentHue) <= 6 && Math.abs(l.frac - (1 - Math.exp(-1))) <= .08 && l.busy && l.settled,
-    `gutter ${l.gutter} (paper ${l.paper.map(Math.round)}), unlit ${l.unlit}, white ${l.white} (ink ${l.ink.map(Math.round)}), accent ${l.red} hue ${l.redHue.toFixed(1)}°/${l.accentHue.toFixed(1)}°, step ${(l.frac * 100).toFixed(1)}% at τ`)
-  const g = await evaluate<{ grout: number[]; want: number[]; tile: number[]; white: number[]; red: number[]; busy0: boolean; redHue: number; accentHue: number }>('SK.grout()')
-  ok('skins-browser: grout (grout = bg ± 2/255, unlit tiles above it, accent hue kept)', near(g.grout, g.want, 2) && L(g.tile) > L(g.grout) && L(g.white) > 200 && hd(g.redHue, g.accentHue) <= 6,
-    `grout ${g.grout} (want ${g.want}), tile ${g.tile}, white ${g.white}, accent ${g.red} hue ${g.redHue.toFixed(1)}°/${g.accentHue.toFixed(1)}°`)
-  for (const skin of ['lcd', 'grout']) { const d = await evaluate<string>(`SK.shot(${JSON.stringify(skin)})`); writeFileSync(join(OUT, `fidelity-${skin}.png`), Buffer.from(d.split(',')[1], 'base64')) }
+  const names = await evaluate<string[]>('SK.names')
+  ok('skins-browser: the skins are OLED, NIXIE, VFD, CRT in that order', names.join() === 'oled,nixie,vfd,crt', names.join())
+  for (const skin of names) {
+    type Got = { white: number[]; red: number[]; unlit: number[]; settled: boolean; redHue: number; accentHue: number; png: string } | null
+    const g = await evaluate<Got>(`SK.stage(${JSON.stringify(skin)})`)
+    if (skin === 'oled') { ok('skins-browser: oled builds no stage', g === null, String(g)); continue }
+    if (!g) { ok(`skins-browser: ${skin} builds a stage`, false, 'null'); continue }
+    ok(`skins-browser: ${skin} (white lit, unlit dark, accent hue kept, settles)`, L(g.white) > 100 && L(g.unlit) < L(g.white) / 3 && hd(g.redHue, g.accentHue) <= 12 && g.settled,
+      `white ${g.white}, unlit ${g.unlit}, accent ${g.red} hue ${g.redHue.toFixed(1)}°/${g.accentHue.toFixed(1)}°, settled ${g.settled}`)
+    writeFileSync(join(OUT, `fidelity-${skin}.png`), Buffer.from(g.png.split(',')[1], 'base64'))
+  }
   for (const m of logs) console.log('  ' + m)
   ws.close(); proc.kill(); await sleep(300)
   try { rmSync(profile, { recursive: true, force: true }) } catch { /* chrome still holds it */ }
   process.exit(fail ? 1 : 0)
 }
 
-// debug: `--page '?board=mosaic&skin=eink' --wait 4000 --eval '<expr>' [--shot name]` → prints the value and exits
+// debug: `--page '?board=mosaic&skin=nixie' --wait 4000 --eval '<expr>' [--shot name]` → prints the value and exits
 const EVAL = arg('eval-file', '') ? readFileSync(arg('eval-file', ''), 'utf8') : arg('eval', ''), PAGE = arg('page', '')
 if (PAGE) {
   await cdp('Page.navigate', { url: `${URL0}/${PAGE}` }); await sleep(+arg('wait', '4000'))
@@ -101,12 +102,12 @@ try {
   for (const board of BOARDS) for (const skin of SKINS) {
     await cdp('Page.navigate', { url: `${URL0}/?board=${board}&skin=${skin}` })
     await settled()
-    await sleep(skin === 'eink' || skin === 'flipdisc' ? 4200 : 3200)
+    await sleep(3200)
     await shot(`${board}-${skin}`)
   }
   // live switches: the refresh itself
   await cdp('Page.navigate', { url: `${URL0}/?board=${BOARDS[0]}&skin=oled` }); await settled(); await sleep(3000)
-  for (const [to, times] of [['crt', [90, 260, 520]], ['eink', [250, 600, 1000]], ['oled', [120]]] as const) {
+  for (const [to, times] of [['crt', [90, 260, 520]], ['nixie', [250, 600, 1000]], ['oled', [120]]] as const) {
     await evaluate(`window.dot480.setSkin(${JSON.stringify(to)})`)
     let t0 = 0
     for (const t of times) { await sleep(t - t0); t0 = t; await shot(`switch-${to}-${t}ms`) }
@@ -122,7 +123,7 @@ try {
   console.log(`\nperf ${PERF} (${SECS} s steady state, headless Chrome, DPR 1)`)
   console.log('skin       cards  stage ms/card-frame (mean / p95)   frames/s   main busy ms per 12 fps tick')
   let oledBusy = 0
-  for (const skin of ['oled', 'crt', 'led', 'vfd', 'nixie', 'eink', 'flipdisc']) {
+  for (const skin of ALL) {
     await cdp('Page.navigate', { url: `${URL0}/?board=${PERF}&skin=${skin}` })
     await settled(); await sleep(4000)
     await evaluate(`(() => { const p = window.__skinPerf || {}; for (const k in p) { p[k].frame.length = 0; p[k].render.length = 0 } })()`)
@@ -142,9 +143,9 @@ try {
     if (skin === 'oled') oledBusy = busy
     console.log(`${skin.padEnd(10)} ${String(s.cards).padStart(5)}  ${s.mean.toFixed(3).padStart(8)} / ${s.p95.toFixed(3).padStart(6)}               ${(s.frames / SECS).toFixed(1).padStart(6)}     ${busy.toFixed(2)}${skin === 'oled' ? '' : ` (+${(busy - oledBusy).toFixed(2)})`}`)
   }
-  // the 144² gate: one animated TILE card alone (mini-game), crt and led
+  // the 144² gate: one animated TILE card alone (mini-game), crt and vfd
   console.log('\nsingle 144² animated card (mini-game), stage ms per card frame:')
-  for (const skin of ['crt', 'led']) {
+  for (const skin of ['crt', 'vfd']) {
     await cdp('Page.navigate', { url: `${URL0}/?card=mini-game&skin=${skin}` }); await settled(); await sleep(3000)
     await evaluate(`(() => { const p = window.__skinPerf || {}; for (const k in p) { p[k].frame.length = 0; p[k].render.length = 0 } })()`)
     await sleep(SECS * 1000)

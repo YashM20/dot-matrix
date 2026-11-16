@@ -83,13 +83,15 @@ function ToneRamp() {
 function ThemeSwitches() {
   const t = useTheme(), share = useSyncExternalStore(subscribeShareTheme, shareTheme, () => false)
   return <>
-    {/* CONTRAST: MORE: on while the OS asks for it too (then the OS decides, and the switch says so) */}
+    {/* CONTRAST: MORE: on while the OS asks for it too (then the OS decides, and the switch says so). The ON / OFF
+        word is for the eye: a screen reader hears the switch's own state, so the name stays the label (#187) */}
     <button ref={dotRing} type="button" className="theme-contrast dot-ring" role="switch" aria-checked={t.more} aria-disabled={t.osMore || undefined}
+      aria-description={t.osMore ? 'Set by your system' : undefined}
       onClick={() => { if (t.osMore) return; dropUrlParams(['contrast']); setContrast(t.contrast === 'more' ? 'system' : 'more') }}>
-      <span>Contrast: more</span><b>{t.osMore ? 'ON · SYSTEM' : t.more ? 'ON' : 'OFF'}</b>
+      <span>Contrast: more</span><b aria-hidden="true">{t.osMore ? 'ON · SYSTEM' : t.more ? 'ON' : 'OFF'}</b>
     </button>
     <button ref={dotRing} type="button" className="theme-share dot-ring" role="switch" aria-checked={share} onClick={() => setShareTheme(!share)}>
-      <span>Shared links keep my theme</span><b>{share ? 'ON' : 'OFF'}</b>
+      <span>Shared links keep my theme</span><b aria-hidden="true">{share ? 'ON' : 'OFF'}</b>
     </button>
   </>
 }

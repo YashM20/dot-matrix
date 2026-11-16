@@ -5,9 +5,9 @@
  * places it on a coarser lattice like `T.big`; rings, sliders and waveforms are dot sites.
  */
 import { scale2x } from '../../engine/fields/bitmapFont'
-import { clamp, hash01, len, smoothstep } from '../../engine/math'
+import { hash01 } from '../../engine/math'
 import type { Field } from '../../engine/types'
-import { TAU, TILE, baked, dim, layer, layoutFor, tileStyle, toneRamp, type LatticeField, type WidgetPreset } from '../types'
+import { TAU, TILE, baked, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -31,7 +31,7 @@ const FACE: Record<string, string[]> = {
   5: ['####', '#...', '####', '...#', '...#', '#..#', '####'],
   6: ['.##.', '#...', '#...', '###.', '#..#', '#..#', '.##.'], 7: ['####', '...#', '...#', '..#.', '.#..', '.#..', '.#..'],
   8: ['####', '#..#', '#..#', '####', '#..#', '#..#', '####'], 9: ['.##.', '#..#', '#..#', '.###', '...#', '...#', '.##.'],
-  ':': ['.', '.', '#', '.', '.', '#', '.'], '.': ['.', '.', '.', '.', '.', '.', '#'], ' ': ['..', '..', '..', '..', '..', '..', '..'],
+  '.': ['.', '.', '.', '.', '.', '.', '#'], ' ': ['..', '..', '..', '..', '..', '..', '..'],
 }
 /** Glyphs Scale2x can't draw from 4×7 (odd-centred strokes and long diagonals), drawn at 8–9×14 directly. */
 const BOX = ['.######.', '########', ...Array.from({ length: 10 }, () => '##....##'), '########', '.######.']
@@ -46,6 +46,8 @@ const FACE_14: Record<string, string[]> = {
   4: ['....###.', '....###.', '...####.', '...####.', '..##.##.', '..##.##.', '.##..##.', '.##..##.', '##...##.', '########', '########', '.....##.', '.....##.', '.....##.'],
   T: ['########', '########', ...Array.from({ length: 12 }, () => '...##...')],
   Z: ['########', '########', '.....###', '.....##.', '....###.', '....##..', '...###..', '...##...', '..###...', '..##....', '.###....', '.##.....', '########', '########'],
+  // a colon is two big sites (`colonSites`); Scale2x would draw each of its dots as a 2 × 2 cluster
+  ':': Array.from({ length: 14 }, () => '..'),
 }
 /** Straight-stroke letters double plainly: Scale2x would fillet their T-junctions into blobs. */
 const BLOCKY = new Set('BEFHIKLP')
@@ -76,6 +78,15 @@ function face(str: string, col: number, row: number, opts: FaceOptions): Lattice
   const g = T.lattice(opts.lattice, opts.align === 'center' ? col - w / 2 : col, row), f = g.sprite(rows, 0, 0)
   f.text = str // the words, for describe() and screen readers
   return g.at(f)
+}
+/** The dots of the colons in `face(str, ...)` (14 rows only): one site per dot, centred on the 2 × 2 block it replaces. */
+function colonSites(str: string, col: number, row: number, opts: FaceOptions): Pt[] {
+  const k = opts.lattice, gap = opts.gap ?? 2, w = faceRows(str, opts)[0].length * k, left = opts.align === 'center' ? col - w / 2 : col
+  return [...str].flatMap((ch, i) => {
+    if (ch !== ':') return []
+    const x = left + (faceRows(str.slice(0, i), opts)[0].length + (i ? gap : 0) + 1) * k - .5
+    return [5, 11].map((r): Pt => [x, row + r * k - .5])
+  })
 }
 
 // ── pixel-art icons on the card pitch ───────────────────────────────────────
@@ -111,7 +122,7 @@ const ICONS: Record<string, string[]> = {
   globe: ['..#####..', '.#..#..#.', '#..#.#..#', '#..#.#..#', '#########', '#..#.#..#', '#..#.#..#', '.#..#..#.', '..#####..'],
   list: ['#.######', '........', '........', '#.######', '........', '........', '#.######'],
   code: ['.....#...', '.....#...', '.#..#..#.', '#...#...#', '.#..#..#.', '...#.....', '...#.....'],
-  check: ['.......#', '......#.', '.....#..', '#...#...', '.#.#....', '..#.....'],
+  check: ['......#', '.....#.', '#...#..', '.#.#...', '..#....'],
   cross: ['#.....#', '.#...#.', '..#.#..', '...#...', '..#.#..', '.#...#.', '#.....#'],
   gear: ['...#...', '.#####.', '.#...#.', '##...##', '.#...#.', '.#####.', '...#...'],
   target: ['....#....', '....#....', '....#....', '...#.#...', '###...###', '...#.#...', '....#....', '....#....', '....#....'],
@@ -157,14 +168,16 @@ function peakDot(cx: number, cy: number, level: number, peak: number) {
   const p = at(peak)
   return p > at(level) + 1e-6 ? [layer(T.dots([[cx + r * Math.sin(p), cy - r * Math.cos(p)]], size * 1.35), 'value')] : []
 }
+/** Gauge centre row: the rings (open at the bottom) and the numbers under them sit midway between the label row and the card's foot. */
+const G_Y = 78
 export const audioLevels: WidgetPreset = {
   id: 'audio-levels', name: 'Audio', group: 'polar', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
   defaults: { speaker: 0.72, mic: 0.48 }, springKeys: ['speaker', 'mic'],
   layers: ({ data, t }) => [
-    ...gauge(35, 70, data.speaker, false), ...gauge(110, 70, micLevel(data.mic, t), true), ...peakDot(110, 70, micLevel(data.mic, t), micPeak(data.mic, t)),
-    layer(T.text('SPEAKER', 35, 59, { align: 'center' }), 'idle'), layer(T.text('MIC', 110, 59, { align: 'center' }), 'idle'),
-    layer(face(`${Math.round(data.speaker * 100)}`, 35.5, 71, { lattice: 2.1, align: 'center' })),
-    layer(face(`${Math.round(data.mic * 100)}`, 109, 71, { lattice: 2.1, align: 'center' })),
+    ...gauge(35, G_Y, data.speaker, false), ...gauge(110, G_Y, micLevel(data.mic, t), true), ...peakDot(110, G_Y, micLevel(data.mic, t), micPeak(data.mic, t)),
+    layer(T.text('SPEAKER', 35, G_Y - 11, { align: 'center' }), 'idle'), layer(T.text('MIC', 110, G_Y - 11, { align: 'center' }), 'idle'),
+    layer(face(`${Math.round(data.speaker * 100)}`, 35.5, G_Y + 1, { lattice: 2.1, align: 'center' })),
+    layer(face(`${Math.round(data.mic * 100)}`, 109, G_Y + 1, { lattice: 2.1, align: 'center' })),
   ],
 }
 
@@ -185,7 +198,7 @@ export const vibePad: WidgetPreset = {
     return [
       layer(T.dots(dotBox(x, y, PAD_S), 1.6), hot ? 'value' : 'idle'),
       layer(sprite, 'value'),
-      ...(hot ? [layer(T.dots([[x + 21, y + 5]], 4.2), 'active')] : []),
+      ...(hot ? [layer(T.dots([[x + 21, y + 4]], 4.2), 'active')] : []),
     ]
   }),
 }
@@ -208,12 +221,13 @@ export const midi: WidgetPreset = {
 // Half-heights (in dots) read off the reference waveforms, left to right.
 const REC_BARS = [0, 1, 2, 5, 3, 0, 0, 1, 4, 3, 2, 1, 2, 0, 1, 3, 1, 0, 1, 0, 0, 3, 1, 0, 0, 1, 0, 0]
 const SAY_BARS = [0, 1, 2, 4, 2, 2, 3, 1, 3, 2, 3, 2, 1, 0, 1, 2, 4, 1, 1, 2, 1, 2, 0, 1, 0, 1, 0, 0]
+const TIME: FaceOptions = { lattice: 2.45, align: 'center', gap: 3 }
 export const recorder: WidgetPreset = {
   id: 'recorder', name: 'Recorder', group: 'composite', animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
   layers: ({ t }) => {
     const bars = scroll(REC_BARS, t), head = 15, x = (i: number) => 1.5 + i * 5.15
     return [
-      layer(face('01:47', 71.5, 27.5, { lattice: 2.45, align: 'center', gap: 3 })),
+      layer(face('01:47', 71.5, 27.5, TIME)), layer(T.dots(colonSites('01:47', 71.5, 27.5, TIME), 4.2)),
       layer(tint(dotWave(bars, x(0), 91, 5.15, 2.5, 2.3), .8), 'value'),
       layer(dotWave([bars[head]], x(head), 91, 0, 2.5, 2.3), 'value'),
       layer(T.dots([[x(head), 101.5]], 5.5), 'active'),
@@ -222,106 +236,58 @@ export const recorder: WidgetPreset = {
   },
 }
 
+const RING = { x: 75, y: 84, r: 36 }
 export const radio: WidgetPreset = {
   id: 'radio', name: 'Radio', group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
-  layers: () => [
-    layer(face('CH 07', 76.5, 12.5, { lattice: 1.95, align: 'center', space: 8 })),
-    layer(T.dotRing(75, 84, 36, { spacing: 5.4, size: 3.6 }), 'idle'),
-    layer(T.dots([[75, 48]], 7), 'active'),
-    layer(face('HOLD', 75, 78.5, { lattice: 1.08, align: 'center' })),
-    layer(face('READY', 76, 128.5, { lattice: .95, align: 'center' })),
-  ],
+  // HOLD is push to talk: while the ring is held (pointer, Space or Enter) it lights and READY turns to TALK
+  defaults: { talk: 0 },
+  controls: [{ key: 'talk', kind: 'button', box: [RING.x - RING.r - 4, RING.y - RING.r - 4, 2 * RING.r + 8, 2 * RING.r + 8], label: 'Hold to talk' }],
+  layers: ({ data, pressed }) => {
+    const talking = pressed === 'talk' || (data.talk ?? 0) >= .5
+    return [
+      layer(face('CH 07', 76.5, 12.5, { lattice: 1.95, align: 'center', space: 8 })),
+      layer(T.dotRing(RING.x, RING.y, RING.r, { spacing: 5.4, size: 3.6 }), talking ? 'value' : 'idle'),
+      layer(T.dots([[RING.x, RING.y - RING.r]], 7), 'active'),
+      layer(face('HOLD', 75, 78.5, { lattice: 1.08, align: 'center' })),
+      layer(face(talking ? 'TALK' : 'READY', 76, 128.5, { lattice: .95, align: 'center' })),
+    ]
+  },
 }
 
-const ARROW: Pt[] = [[60.5, 31], [63, 31], [65.5, 31], [68, 31], [70.5, 31], [73.2, 25.8], [73.2, 28.4], [73.2, 31], [73.2, 33.6], [73.2, 36.2], [75.8, 28.4], [75.8, 31], [75.8, 33.6], [78.4, 31]]
+/** EN → ZH: an arrow on the language glyphs' 2.3 lattice (rows 4–8 of EN, so its shaft is the glyphs' middle row). */
+const SAY_K = 2.3, SAY_X = 8.5, SAY_Y = 16.5
+const ARROW = ['....#..', '....##.', '#######', '....##.', '....#..']
+/**
+ * The translated line as 15 × 16 bitmaps, one dot per stroke pixel: 开 始 吧 ("let's begin"). Baked, so it never
+ * depends on a system CJK font (the font path drew nothing where none is installed, and nothing in the goldens).
+ */
+const ZH_LINE: string[][] = [
+  ['...............', '.#############.', '....#.....#....', '....#.....#....', '....#.....#....', '....#.....#....', '....#.....#....', '###############', '....#.....#....', '....#.....#....', '....#.....#....', '....#.....#....', '...#......#....', '...#......#....', '..#.......#....', '.#........#....'],
+  ['...#......#....', '...#......#....', '...#......#....', '...#.....#.....', '######...#..#..', '..#..#..#....#.', '..#..#.########', '..#..#..#.....#', '..#..#.........', '.#..#...######.', '..#.#...#....#.', '...#....#....#.', '..#.#...#....#.', '.#...#..#....#.', '#.......######.', '........#....#.'],
+  ['...............', '......#######..', '.####.#..#..#..', '.#..#.#..#..#..', '.#..#.#..#..#..', '.#..#.#..#..#..', '.#..#.#..#..#..', '.#..#.#######..', '.#..#.#.....#..', '.#..#.#........', '.####.#........', '.#..#.#.......#', '......#.......#', '......#.......#', '.......########', '...............'],
+]
+const ZH_K = 1.5, ZH_GAP = 2
+const ZH_ROWS = ZH_LINE[0].map((_, r) => ZH_LINE.map(g => g[r]).join('.'.repeat(ZH_GAP)))
+/** A bitmap on a `k`-cell lattice with its top-left at (col,row), carrying `text` for describe(). */
+function bitmap(rows: string[], k: number, col: number, row: number, text?: string): LatticeField {
+  const g = T.lattice(k, col, row), f = g.sprite(rows, 0, 0)
+  if (text) f.text = text
+  return g.at(f)
+}
 export const interpreter: WidgetPreset = {
   id: 'interpreter', name: 'Interpreter', group: 'composite', live: true, animated: true, chrome: 'dots', grid: TILE, style: tileStyle,
   layers: ({ t }) => {
     const said = scroll(SAY_BARS, t), heard = scroll(SAY_BARS, t + .7)
     return [
-      layer(face('EN', 8.5, 16.5, { lattice: 2.3 })), layer(face('ZH', 91, 16.5, { lattice: 2.3, gap: 3 })),
-      layer(T.dots(ARROW, 2)),
+      layer(face('EN', SAY_X, SAY_Y, { lattice: SAY_K })), layer(face('ZH', 91, SAY_Y, { lattice: SAY_K, gap: 3 })),
+      layer(bitmap(ARROW, SAY_K, SAY_X + 24 * SAY_K, SAY_Y + 4 * SAY_K)),
       layer(tint(dotWave(said, 3, 65.5, 5.1, 2.2, 2.1), .82), 'value'),
       // one divider at half the waveform pitch, its dots under every other bar
       layer(T.dotLine(.45, 82, 143, 82, { spacing: 2.55, size: 1.2 }), 'idle'),
       layer(dotWave(heard, 3, 98, 5.1, 2.2, 2.1), 'value'),
-      layer(T.cjk('开始吧', 32, 119, 23)),
+      layer(bitmap(ZH_ROWS, ZH_K, 71.5 - (ZH_ROWS[0].length * ZH_K) / 2, 118, '开始吧')),
     ]
   },
-}
-
-// Thermal puppy: a sitting pup through a thermal camera. Heat is dot size and tone at once: cold floor
-// void, cool ears and paws mid grey, warm fur grey → white, the hot chest core red (accent = hot) and a
-// cold nose. Hand-tuned parts in card cells, painted back to front; each overlap leaves a cooler fur fold.
-// [cx, cy, rx, ry, tilt (rad), heat at the part's root, heat at its far end (down the part)]
-type Part = [number, number, number, number, number, number, number]
-const PUP: Part[] = [
-  [40, 118, 11, 6.5, 0, .44, .36], [104, 118, 11, 6.5, 0, .44, .36], // hind paws
-  [72, 101, 32, 21, 0, .6, .5], // haunches
-  [72, 83, 23, 26, 0, .68, .64], // chest
-  [61, 102, 7.5, 18, .05, .74, .58], [83, 102, 7.5, 18, -.05, .74, .58], // front legs
-  [60, 121, 9.5, 5.5, 0, .48, .4], [84, 121, 9.5, 5.5, 0, .48, .4], // front paws
-  [42, 54, 8.5, 20, .34, .44, .24], [104, 54, 8.5, 20, -.34, .44, .24], // floppy ears, hanging clear of the chest
-  [73, 40, 24, 20, 0, .52, .5], // head
-  [73, 54, 12, 9, 0, .64, .6], // muzzle
-]
-const HOT: Pt = [72, 73]
-const partSd = (x: number, y: number, [cx, cy, rx, ry, a]: Part) => {
-  const dx = x - cx, dy = y - cy, c = Math.cos(a), s = Math.sin(a)
-  return (len((c * dx + s * dy) / rx, (c * dy - s * dx) / ry) - 1) * Math.min(rx, ry)
-}
-const pupHeat = (x: number, y: number) => {
-  // a 1-cell moat around the spot-meter crosshair arms
-  const ax = Math.abs(x - HOT[0]), ay = Math.abs(y - HOT[1])
-  if ((ax < 1.6 && ay > 2.4 && ay < 9.6) || (ay < 1.6 && ax > 2.4 && ax < 9.6)) return 0
-  let h = 0, inside = false, sd = 99
-  for (const p of PUP) {
-    const d = partSd(x, y, p)
-    sd = Math.min(sd, d)
-    if (d >= .5) continue
-    const along = clamp((y - (p[1] - p[3])) / (2 * p[3])), heat = p[5] + (p[6] - p[5]) * along
-    // a part in front of another: a ~1.5-cell cooler fold where its edge crosses the fur behind it
-    const fold = inside && d > -1.3 ? .72 : 1
-    h = inside ? heat * fold : heat
-    inside = true
-  }
-  if (inside) {
-    // chest core: thin fur, the hottest skin
-    h += .36 * Math.exp(-((x - HOT[0]) ** 2 + ((y - HOT[1]) / 1.2) ** 2) / (2 * 9 ** 2))
-    // forehead and eyes run warm; the wet nose is the coldest thing on the dog
-    h += .06 * Math.exp(-((x - 73) ** 2 + (y - 38) ** 2) / (2 * 9 ** 2))
-    const eye = Math.min(len(x - 63, y - 41), len(x - 83, y - 41))
-    if (eye < 2.6) h = .8
-    else if (eye < 3.6) h = .3
-    if (len((x - 73) / 5, (y - 50.5) / 3.6) < 1) h = 0
-    // fur insulates: the outline runs cooler over ~3 cells, then a 1-cell edge into the floor
-    h *= .8 + .2 * smoothstep(0, 3, -sd)
-  }
-  const edge = clamp(.5 - sd)
-  // warm air hugging the body and a faint warm patch on the floor under it
-  const halo = .2 * Math.exp(-Math.max(0, sd) / 2.2) + .1 * clamp(1 - len((x - 72) / 50, (y - 126) / 6))
-  return clamp(halo + (h - halo) * edge)
-}
-/** Heat → tone and size in one pass: the puppy never changes, so `toneRamp` evaluates each cell once. */
-const pupSize = (h: number) => .2 + .8 * h
-const PUPPY = toneRamp((u, v) => pupHeat(u * 143, v * 143), [
-  { at: .05, tone: 'faint', value: h => .3 + h },
-  { at: .2, blend: .04, tone: 'mid', value: pupSize },
-  { at: .4, blend: .05, tone: 'idle', value: pupSize },
-  { at: .6, blend: .06, tone: 'value', value: pupSize },
-  { at: .84, blend: .1, tone: 'active', value: pupSize },
-])
-export const thermalPuppy: WidgetPreset = {
-  id: 'thermal-puppy', name: 'Thermal', label: '', group: 'photo', chrome: 'dots', bleed: true, grid: TILE,
-  style: { ...tileStyle, sizeMin: 0, sizeMax: 1.05, quantizeSteps: 0, opacityMode: 'constant' },
-  layers: () => [
-    ...PUPPY,
-    // spot meter on the hottest point: a crosshair and its readout
-    ...[[-1, 0], [1, 0], [0, -1], [0, 1]].map(([dx, dy]) => layer(T.dotLine(HOT[0] + dx * 4, HOT[1] + dy * 4, HOT[0] + dx * 8, HOT[1] + dy * 8, { spacing: 1, size: 1.1 }), 'value')),
-    layer(T.big('38.6°', 139, 5, { lattice: 1.3, align: 'right' })),
-    // bleed cards have no padding, so the label is placed by hand at the padded inset
-    layer(T.big('THERMAL', 5, 5, { lattice: .92 })),
-  ],
 }
 
 // Corridor in perspective: brick walls, tiled floor, ribbed ceiling, a black end wall. Joints and
@@ -385,9 +351,9 @@ const item = (row: number, text: string, state: 'done' | 'current' | 'todo') => 
 export const shopping: WidgetPreset = {
   id: 'shopping', name: 'Shopping', group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
-    layer(face('5 LEFT', 14, 15.5, { lattice: 2.2, space: 5 })),
+    layer(face('2 LEFT', 14, 15.5, { lattice: 2.2, space: 5 })),
     ...item(65.5, 'MILK', 'done'), ...item(93, 'COFFEE', 'current'), ...item(119.5, 'RAMEN', 'todo'),
   ],
 }
 
-export const audioBoard = [audioLevels, vibePad, midi, recorder, radio, interpreter, thermalPuppy, level03, shopping]
+export const audioBoard = [audioLevels, vibePad, midi, recorder, radio, interpreter, level03, shopping]

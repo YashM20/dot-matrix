@@ -71,7 +71,7 @@ Reload. The object can hold several flags, `{ xray: true, worker: false }`, and 
 |---|---|---|---|
 | `xray` | off | `VITE_FLAG_XRAY` | X-ray: the card's ⓘ overlay and the inspector (and their styles), the dock button and TOOLS tile, the widget page's X-RAY pill and menu item, the intro line's "press X-RAY", X / ⇧X, the palette action, the shell's `xray`. |
 | `worker` | on | `VITE_FLAG_WORKER` | Sampling in the web worker. |
-| `clack` | off | `VITE_FLAG_CLACK` | The flip-disc clack sound. The skin list's toggle turns it on. |
+| `clack` | off | `VITE_FLAG_CLACK` | The clack sound of the flip-disc card on the SURFACES board. No toggle since the flip-disc skin went (#345): set it in `localStorage['dot480:flags']`. |
 | `analytics` | on | `VITE_FLAG_ANALYTICS` | PostHog analytics (opt-in): the consent banner, the TOOLS tile and the palette's two commands. Does nothing without `VITE_POSTHOG_PROJECT_TOKEN` (see Analytics below). `kill` leaves `posthog-js` and the banner out of the build. |
 | `likes` | on | `VITE_FLAG_LIKES` | The like button on widget pages and gallery programs (#169). It stays hidden while the likes API answers 404, which it does until the store and its secrets are set (see Likes below). `vite dev` and `vite preview` answer every `/api/` path with 404, so local runs show no button. |
 | `make` | off | `VITE_FLAG_MAKE` | MAKE, the editor: the MAKE tab (header and phone), the palette places and remix actions, the shell's `remix` and `studio`, the cards' and widget page's REMIX, and the MAKE links in About, the changelog and the essay. Off, a MAKE URL (`?make`, `?tab=studio`, …) opens the home board. |

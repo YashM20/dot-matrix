@@ -16,7 +16,7 @@ This is a personal project: a website to look at and play with. Some of its card
 ## What you can do there
 - **Look through over 40 boards** of cards: UI kits, car instruments, watch faces, live weather and GitHub data, charts, physics toys, a synth, a game, camera halftone, simulations and GPU light.
 - **See every card at once** on the home page, `/`, filtered by tag or name, or pick a board.
-- **Change the look** of everything at once: light or dark, seven accents or any hue, and display skins like CRT, VFD, LED, e-ink, flip-disc and Nixie.
+- **Change the look** of everything at once: light or dark, seven accents or any hue, and four display skins: OLED, Nixie, VFD and CRT.
 - **Save any card** as PNG or SVG, copy a link to it, or open it on its own page.
 - **Read how it works** in the blog: the essay "Ditherpunk for UI" and three tutorials with live cards and code.
 
