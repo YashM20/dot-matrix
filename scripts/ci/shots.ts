@@ -13,18 +13,20 @@
  * scrolled to its skin list) and `boards` (the BOARDS sheet, scrolled to its ENGINE group); `card-more`, `display`, `theme`,
  * `tools` and `boards` capture the viewport only, e.g. `/@1280@dark@display`, `/@390@light@tools`. `focus` puts the
  * keyboard focus ring on the page's first toolbar button, else the first card row action (the viewport, the control in
- * its middle); `load-failed` answers every board chunk 404, so the boards show their error state (LoadBoundary.tsx)
+ * its middle); `press` holds a mouse press on the page's first toolbar button (the viewport, the button in its middle, in a
+ * Chrome with a mouse; add `motion` to see it sink, #341), and `press-multi` on the second button of a group (its
+ * neighbours on both sides); `load-failed` answers every board chunk 404, so the boards show their error state (LoadBoundary.tsx)
  * after the page's one stale-deploy reload, e.g. `/levels/@390@light@load-failed`.
  * Two options name a card control by its data key (letters and digits): `hover=<key>` puts the mouse on it and
  * `focus=<key>` reaches it from the keyboard (Shift+Tab, then Tab), so its dot hover or focus ring shows; both capture
  * the viewport with the control's card in the middle, e.g. `/widget/inst-cutoff/@1280@light@focus=cutoff`. Reduced motion is
- * emulated so nothing is caught mid-animation. Files:
+ * emulated so nothing is caught mid-animation; `motion` turns it off (a press or hover comes in at once). Files:
  * `<route>-<width>-<theme>[-<option>...].png` in `--out` (default `.snapshots/ci-shots/`). Exit 1 when a page never
  * got ready (or an option's state never showed), 2 on a bad item.
  */
 import { mkdirSync, readdirSync, readFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
-import { launch, serveDist, sleep } from '../lib/cdp'
+import { launch, serveDist, sleep, type Page } from '../lib/cdp'
 import { ACCENTS, SCHEMES } from '../../src/site/theme/names'
 
 const argv = process.argv.slice(2)
@@ -32,10 +34,10 @@ const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i +
 const out = resolve(opt('--out') ?? join('.snapshots', 'ci-shots'))
 const items = (opt('--list') ?? '').split(',').map(s => s.trim()).filter(Boolean)
 
-const OPTIONS = ['2x', 'xray', 'more', 'card-more', 'other-tab', 'display', 'theme', 'tools', 'boards', 'focus', 'load-failed'] as const
+const OPTIONS = ['2x', 'xray', 'more', 'card-more', 'other-tab', 'display', 'theme', 'tools', 'boards', 'focus', 'press', 'press-multi', 'motion', 'load-failed'] as const
 type Option = typeof OPTIONS[number]
 /** Options that capture the viewport as it is (a resize to the full page would scroll or close what they opened). */
-const VIEWPORT: readonly Option[] = ['card-more', 'display', 'theme', 'tools', 'boards', 'focus']
+const VIEWPORT: readonly Option[] = ['card-more', 'display', 'theme', 'tools', 'boards', 'focus', 'press', 'press-multi']
 
 /** Every board chunk (the ones the manifest chunk loads with `import()`), for `load-failed`; as scripts/site/chunks-browser.ts. */
 const boardChunks = (): string[] => {
@@ -96,6 +98,12 @@ async function act(opts: Option[], phone: boolean): Promise<boolean> {
     await page.js(`(() => { const b = document.querySelector('${sel}'); b.scrollIntoView({ block: 'center' }); b.focus({ focusVisible: true }); return 1 })()`)
     if (!(await page.waitFor(`document.activeElement?.matches(':focus-visible')`, 3000))) return false
   }
+  const held = PRESSES.find(([o]) => opts.includes(o))?.[1]
+  if (held) {
+    if (!(await page.waitFor(`!!document.querySelector('${held}')`, 15000))) return false
+    const c = await page.js<{ x: number; y: number }>(`(() => { const b = document.querySelector('${held}'); b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } })()`)
+    await page.mouse('mouseMoved', c.x, c.y, 0); await page.mouse('mousePressed', c.x, c.y)
+  }
   if (opts.includes('load-failed') && !(await page.waitFor(`!!document.querySelector('.load-failed')`, 20000))) return false
   if (opts.includes('other-tab')) {
     if (!(await page.waitFor(`!!document.querySelector('.ed-other')`, 15000))) return false
@@ -105,6 +113,10 @@ async function act(opts: Option[], phone: boolean): Promise<boolean> {
   await sleep(400)
   return true
 }
+
+/** The button each press option holds down. */
+const PRESSES = [['press', '.pill-btn'], ['press-multi', '.pill > .pill-btn + .pill-btn']] as const
+const pressing = (opts: Option[]) => opts.includes('press') || opts.includes('press-multi')
 
 /** Hovers or keyboard-focuses a card control (its overlay element, `data-dot-focus`); false if it never got there. */
 async function reach(t: Target): Promise<boolean> {
@@ -123,16 +135,22 @@ async function reach(t: Target): Promise<boolean> {
 
 mkdirSync(out, { recursive: true })
 const server = await serveDist(4318)
-const page = await launch(1280, 900)
-// `load-failed`: while Fetch is on, every paused request (a board chunk) is answered 404, as after a new deploy
-page.on('Fetch.requestPaused', e => { void page.cdp('Fetch.fulfillRequest', { requestId: e.requestId, responseCode: 404, body: Buffer.from('gone').toString('base64') }).catch(() => {}) })
+/** One Chrome at a time; `press` needs one with a mouse (the runner's has no fine pointer), so it reopens for it. */
+let page: Page, mouse = false
+const open = async (m: boolean) => {
+  page = await launch(1280, 900, { mouse: m }); mouse = m
+  // `load-failed`: while Fetch is on, every paused request (a board chunk) is answered 404, as after a new deploy
+  page.on('Fetch.requestPaused', e => { void page.cdp('Fetch.fulfillRequest', { requestId: e.requestId, responseCode: 404, body: Buffer.from('gone').toString('base64') }).catch(() => {}) })
+}
+await open(false)
 let failed = 0
 try {
   for (const it of parsed as Item[]) {
     const phone = it.width <= 600, H = phone ? 844 : 900, t = Date.now(), dpr = it.opts.includes('2x') ? 2 : 1
+    if (pressing(it.opts) !== mouse) { await page.close(); await open(!mouse) }
     await page.cdp('Emulation.setDeviceMetricsOverride', { width: it.width, height: H, deviceScaleFactor: dpr, mobile: phone })
     await page.cdp('Emulation.setTouchEmulationEnabled', phone ? { enabled: true, maxTouchPoints: 5 } : { enabled: false })
-    await page.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }, { name: 'prefers-color-scheme', value: it.scheme }] })
+    await page.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: it.opts.includes('motion') ? 'no-preference' : 'reduce' }, { name: 'prefers-color-scheme', value: it.scheme }] })
     // the stored theme, set on the site's origin before the page loads
     await page.cdp('Page.navigate', { url: `${server.url}favicon.svg` }); await sleep(150)
     await page.js(`localStorage.setItem('dot480:theme', ${JSON.stringify(JSON.stringify({ scheme: it.scheme, accent: it.accent }))})`).catch(() => {})
@@ -151,6 +169,8 @@ try {
       await sleep(800)
     }
     await page.shot(join(out, it.file))
+    // let go of a held press off the button, so it doesn't fire
+    if (pressing(it.opts)) { await page.mouse('mouseMoved', 4, H - 4); await page.mouse('mouseReleased', 4, H - 4) }
     if (!ok || !state) failed++
     console.log(`${ok && state ? 'OK       ' : 'NOT READY'} ${it.file} (${((Date.now() - t) / 1000).toFixed(1)} s)`)
     if (it.opts.includes('load-failed')) await page.cdp('Fetch.disable').catch(() => {})

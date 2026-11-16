@@ -19,6 +19,9 @@
  *    at its menu (`aria-controls`), moves by first letter and closes on a press outside; the widget page's MORE opens
  *    with ↓; the pill bar and the accent swatches jump with Home and End; the board groups are tabs whose arrows
  *    open a group and whose boards row is the labelled panel.
+ *  - `press` (#341, first mode only, in a second Chrome with a mouse): on the widget page a mouse press sinks MORE's
+ *    one-button group to `--press-sink-fine`, a button among several (SVG) takes the press fill and doesn't sink, a held
+ *    Space sinks nothing, and under reduced motion nothing sinks (`--press-sink` is 1 too).
  * Phone, 390 × 844 with touch: `tap44:<page>`, every control outside the cards has a 44 × 44 touch area (WCAG 2.5.5;
  *  targets in a sentence and MAKE's frame names, which LAYERS repeats as 44 px rows, are exempt). `sheet:<name>`: TOOLS, BOARDS and search open a modal sheet or the palette with focus
  * inside, as a modal dialog (`:modal`); Escape closes it and focus goes back to the button that opened it.
@@ -133,6 +136,62 @@ async function ringWalk(p: Page, page: string, mode: string, max = 60) {
     if (why) bad.push(`#${n + 1} ${s.label}: ${why}`)
   }
   check(`ring:${page}:${mode}`, n > 0 && !bad.length, `${n} stops${bad.length ? `; ${bad.slice(0, 6).join(' | ')}` : ''}`)
+}
+
+/** A toolbar button's state right now: its own scale, its group's (`.pill`) scale (1 for no transform), how many
+ * buttons the group holds, and its background. */
+type PillState = { btn: number; group: number; n: number; bg: string }
+const pillState = (sel: string) => `(() => { const b = document.querySelector(${JSON.stringify(sel)}), g = b.closest('.pill')
+  const sc = e => { const t = getComputedStyle(e).transform; return t === 'none' ? 1 : new DOMMatrix(t).a }
+  return { btn: sc(b), group: sc(g), n: g.querySelectorAll(':scope > .pill-btn').length, bg: getComputedStyle(b).backgroundColor } })()`
+const MORE = '.wp-more-btn', MULTI = '.pill > .pill-btn + .pill-btn'
+/** Desktop press (#341), on the widget page in a Chrome with a mouse (`launch(…, { mouse: true })`: the runner's
+ * headless Chrome has no fine pointer otherwise). MORE sits alone in its group, so a held mouse press sinks the group
+ * to `--press-sink-fine` and the button keeps its own scale; a button in a group of several (SVG) only takes the press
+ * fill, nothing sinks (a lone sinking button opens a band inside the group's frame); a held Space sinks nothing (a key
+ * must not leave it small), nor does anything under reduced motion. Each mouse press is let go off the button. */
+async function pressSink(mode: string) {
+  const p = await launch(1280, 800, { mouse: true })
+  try {
+    await p.cdp('Emulation.setDeviceMetricsOverride', { width: 1280, height: 800, deviceScaleFactor: 1, mobile: false })
+    // full motion, whatever the machine's own setting: the reduce phase comes last
+    await p.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: mode }, { name: 'prefers-reduced-motion', value: 'no-preference' }] })
+    if (!(await load(p, base + PAGES[2][1], PAGES[2][2]))) { check(`press: ready:${mode}`, false, 'not ready in 30 s'); return }
+    const fine = await p.js<boolean>(`matchMedia('(hover: hover) and (pointer: fine)').matches`)
+    const token = await p.js<number>(`parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--press-sink-fine'))`)
+
+    const reached = await tabTo(p, MORE)
+    const visible = await p.js<boolean>(`document.activeElement?.matches('.wp-more-btn:focus-visible') ?? false`)
+    const [code, vk, text] = KEYS[' ']
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: ' ', code, windowsVirtualKeyCode: vk, text }); await sleep(120)
+    const held = await p.js<PillState>(pillState(MORE))
+    await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: ' ', code, windowsVirtualKeyCode: vk }); await sleep(150)
+    await press(p, 'Escape')
+    check(`press: a held Space sinks nothing:${mode}`, reached && visible && held.btn === 1 && held.group === 1, `focus-visible ${visible}, ${JSON.stringify(held)}`)
+
+    const mouse = async (sel: string) => {
+      await p.js(`document.activeElement?.blur?.(); 1`)
+      const [x, y] = await p.js<[number, number]>(`(r => [r.x + r.width / 2, r.y + r.height / 2])(document.querySelector(${JSON.stringify(sel)}).getBoundingClientRect())`)
+      await p.mouse('mouseMoved', x, y, 0); await p.mouse('mousePressed', x, y); await sleep(120)
+      const st = await p.js<PillState>(pillState(sel))
+      await p.mouse('mouseMoved', x, y + 200); await p.mouse('mouseReleased', x, y + 200); await sleep(150)
+      return st
+    }
+    const one = await mouse(MORE)
+    check(`press: a one-button group sinks whole to --press-sink-fine:${mode}`, fine && token > .9 && token < 1 && one.n === 1 && Math.abs(one.group - token) < 1e-3 && one.btn === 1,
+      `fine pointer ${fine}, token ${token}, ${JSON.stringify(one)}`)
+    const rest = await p.js<PillState>(pillState(MULTI)), many = await mouse(MULTI)
+    check(`press: a button among several takes the fill and doesn't sink:${mode}`, many.n > 1 && many.btn === 1 && many.group === 1 && many.bg !== rest.bg,
+      `rest ${rest.bg}, pressed ${JSON.stringify(many)}`)
+
+    await p.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: mode }, { name: 'prefers-reduced-motion', value: 'reduce' }] })
+    const reduced = await p.waitFor(`document.documentElement.dataset.motion === 'reduce'`, 5000)
+    const still = await mouse(MORE)
+    const touchToken = await p.js<string>(`getComputedStyle(document.documentElement).getPropertyValue('--press-sink').trim()`)
+    check(`press: no sink under reduced motion:${mode}`, reduced && still.btn === 1 && still.group === 1 && touchToken === '1', `data-motion reduce ${reduced}, ${JSON.stringify(still)}, --press-sink ${touchToken}`)
+  } finally {
+    await p.close()
+  }
 }
 
 async function desktop() {
@@ -321,7 +380,7 @@ async function phone() {
 }
 
 try {
-  if (ONLY.includes('desktop')) await desktop()
+  if (ONLY.includes('desktop')) { await desktop(); await pressSink(MODES[0]) }
   if (ONLY.includes('phone')) await phone()
 } finally {
   server?.stop()

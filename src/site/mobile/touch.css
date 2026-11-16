@@ -53,9 +53,13 @@
 
 /* touch: press feedback instead of hover, and no hover colour left stuck after a tap. The press-sink list: the one
    place that names the chrome that sinks under a finger (DESIGN.md › Chrome states). It sinks to --press-sink, which
-   is 1 under reduced motion (tokens.css); the transform's fade comes from the chrome states (chrome.css) */
+   is 1 under reduced motion (tokens.css); the transform's fade comes from the chrome states (chrome.css). A toolbar
+   group (.pill) of one button sinks whole, so its hairline frame moves with the fill; a button in a group of several
+   only takes the press fill, since sinking it alone would open a band inside the frame (#341). Without :has() the
+   group rule drops out and the fill stays */
 @media (hover: none) {
-  :is(.btn, .pill-btn, .lk-btn, .dot-card-row a, .dot-card-row > button, .topbar-place, .topbar-search, .board-picker button, .next-board a, .sheet button, .bottom a, .intro-line button):active {
+  :is(.btn, .lk-btn, .dot-card-row a, .dot-card-row > button, .topbar-place, .topbar-search, .board-picker button, .sheet button, .bottom a, .intro-line button):active,
+  .pill:has(> .pill-btn:active):not(:has(> .pill-btn ~ .pill-btn)) {
     transform: scale(var(--press-sink))
   }
 
@@ -73,6 +77,16 @@
 
   .board-groups button:not(.selected):hover {
     color: var(--mute)
+  }
+}
+
+/* mouse: the pills sink a step less than under a finger (--press-sink-fine, 1 under reduced motion), so press reads the
+   same on every device (#341); toolbar groups as on touch (above). Not from the keyboard: Space holds :active, and a
+   held key must not leave a button small */
+@media (hover: hover) and (pointer: fine) {
+  :is(.btn, .lk-btn, .skin-menu-btn, .board-picker button, .intro-line button):active:not(:focus-visible),
+  .pill:has(> .pill-btn:active:not(:focus-visible)):not(:has(> .pill-btn ~ .pill-btn)) {
+    transform: scale(var(--press-sink-fine))
   }
 }
 

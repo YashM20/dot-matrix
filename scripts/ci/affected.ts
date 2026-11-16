@@ -55,7 +55,7 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
   ['src/site/motion.ts', ['theme-picker', 'a11y-zoom', 'light', 'essay']],
   ['src/site/stale-deploy.ts', ['chunks']], ['src/components/LoadBoundary.tsx', ['chunks']], ['src/site/prefetch.ts', ['chunks', 'nav', 'mobile']],
   ['src/site/meta.ts', ['nav', 'mobile']],
-  ['src/site/mobile/**', ['mobile', 'mobile-boards', 'layout-narrow', 'break-ui']],
+  ['src/site/mobile/**', ['mobile', 'mobile-boards', 'layout-narrow', 'break-ui', 'a11y-keys']],
   ['src/components/widget/**', ['layout', 'layout-narrow', 'nav', 'mobile', 'csp', 'c10', 'break-ui', 'a11y-keys', 'a11y-zoom']],
   // the hero's place on `/` and its Tab neighbours (nav's hero-order, #43)
   ['src/components/hero/**', ['layout', 'layout-narrow', 'nav', 'mobile']], ['src/site/app/hero.css', ['layout', 'layout-narrow', 'nav', 'mobile']],
