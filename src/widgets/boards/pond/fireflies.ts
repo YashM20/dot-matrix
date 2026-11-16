@@ -7,7 +7,7 @@
 import { createFireflies, createTileRaster, drawFireflies, flySync, tileLayers, type Fireflies, type TileGrid } from '../../../engine/life'
 import { worldAt } from '../../../engine/physics/world'
 import type { WidgetPreset } from '../../types'
-import { caption, frameOf, hourNow, mainThread, tile, touch } from './shared'
+import { caption, frameOf, hourNow, mainThread, surfaceFocus, tile, touch } from './shared'
 
 export const FLY_TILES: TileGrid = { cols: 36, rows: 33, pitch: 4, ox: 0, oy: 11 }
 export const fireflies: Fireflies = createFireflies({ seed: 480, tiles: FLY_TILES, lead: 24, period: 40, seam: 3 })
@@ -22,6 +22,6 @@ export const pondFireflies: WidgetPreset = {
     mainThread()
     const t = ctx.reducedMotion ? FLY_STILL_T : ctx.t, s = worldAt(fireflies.world, t, frameOf(ctx, 'flies'))
     drawFireflies(fireflies, s, t, hourNow(), raster)
-    return [caption(`SYNC ${Math.round(100 * flySync(fireflies, s))}%`), ...tileLayers(raster)]
+    return [caption(`SYNC ${Math.round(100 * flySync(fireflies, s))}%`), ...surfaceFocus(ctx, 'flies'), ...tileLayers(raster)]
   },
 }

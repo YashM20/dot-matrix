@@ -10,7 +10,7 @@ import { createDensityRaster, densityAt, planktonCreatures, planktonDensity } fr
 import { worldAt } from '../../../engine/physics/world'
 import type { Field, Layer } from '../../../engine/types'
 import { layer, type WidgetPreset } from '../../types'
-import { caption, frameOf, mainThread, T, tile, touch } from './shared'
+import { caption, frameOf, mainThread, T, surfaceFocus, tile, touch } from './shared'
 
 export const PLANKTON_DISH = { x: 72, y: 78, r: 62 }
 export const plankton: Plankton = createPlankton({
@@ -51,6 +51,7 @@ export const pondPlankton: WidgetPreset = {
     box[0] = Math.max(8, Math.floor(box[0] - 12)); box[1] = Math.max(14, Math.floor(box[1] - 12)); box[2] = Math.min(136, Math.ceil(box[2] + 12)); box[3] = Math.min(142, Math.ceil(box[3] + 12))
     const out: Layer[] = [
       caption(creatures.length === 1 ? '1 CREATURE' : `${creatures.length} CREATURES`),
+      ...surfaceFocus(ctx, 'plankton'),
       layer(T.dotRing(PLANKTON_DISH.x, PLANKTON_DISH.y, PLANKTON_DISH.r + 2, { spacing: 3.2, size: .8 }), 'faint'),
       layer(bodyField, 'faint'),
       layer(T.dots(loose, 1.2), 'idle'),
