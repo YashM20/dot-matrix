@@ -8,7 +8,7 @@ import { LIVE_DOT, TILE, layoutFor, type LatticeField, type WidgetPreset } from 
 import { progressCard } from '../../src/widgets/boards/motion-progress'
 import { driveCard } from '../../src/widgets/boards/dash-trip'
 import { PWR, SPD, dialEndAt } from '../../src/widgets/boards/dash-dials'
-import { needleSites } from '../../src/widgets/boards/dash-kit'
+import { needleSites } from '../../src/widgets/dials'
 import { textSize } from '../../src/engine/layout'
 import { glyphLongpress } from '../../src/widgets/boards/glyph'
 import { camera } from '../../src/widgets/boards/henry'

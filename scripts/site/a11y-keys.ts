@@ -13,9 +13,14 @@
  *    on the first item, ↓ moves, Escape closes it with focus back on MORE;
  *  - `wp-skip`, `wp-more`: the widget page starts with SKIP TO CONTENT; its MORE menu opens from the keyboard and
  *    Escape sends focus back to MORE.
+ *  - #352, one check per behaviour: the palette and the shell are modal dialogs (the page behind is inert) that give
+ *    focus back; DISPLAY ▾ opens on the current skin with ↓; a card row's MORE opens on its last item with ↑, points
+ *    at its menu (`aria-controls`), moves by first letter and closes on a press outside; the widget page's MORE opens
+ *    with ↓; the pill bar and the accent swatches jump with Home and End; the board groups are tabs whose arrows
+ *    open a group and whose boards row is the labelled panel.
  * Phone, 390 × 844 with touch: `tap44:<page>`, every control outside the cards has a 44 × 44 touch area (WCAG 2.5.5;
  *  targets in a sentence and MAKE's frame names, which LAYERS repeats as 44 px rows, are exempt). `sheet:<name>`: TOOLS, BOARDS and search open a modal sheet or the palette with focus
- * inside; Escape closes it and focus goes back to the button that opened it.
+ * inside, as a modal dialog (`:modal`); Escape closes it and focus goes back to the button that opened it.
  *
  *   npx vite build && npx tsx scripts/site/a11y-keys.ts            → serves dist/ on port 4328 for the run
  *   npx tsx scripts/site/a11y-keys.ts http://localhost:5173/        → any running site
@@ -39,6 +44,14 @@ const shot = async (p: Page, name: string) => { if (shots) await p.shot(join(sho
 
 const KEYS: Record<string, [string, number, string?]> = {
   Tab: ['Tab', 9], Enter: ['Enter', 13, '\r'], Escape: ['Escape', 27], ' ': ['Space', 32, ' '], k: ['KeyK', 75, 'k'], ArrowDown: ['ArrowDown', 40],
+  ArrowUp: ['ArrowUp', 38], ArrowLeft: ['ArrowLeft', 37], ArrowRight: ['ArrowRight', 39], Home: ['Home', 36], End: ['End', 35], '`': ['Backquote', 192, '`'],
+}
+/** A letter key (type-ahead), with its text. */
+async function letter(p: Page, ch: string) {
+  const up = ch.toUpperCase(), code = /[A-Z]/.test(up) ? `Key${up}` : /[0-9]/.test(up) ? `Digit${up}` : ''
+  await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: ch, code, windowsVirtualKeyCode: up.charCodeAt(0), text: ch })
+  await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: ch, code, windowsVirtualKeyCode: up.charCodeAt(0) })
+  await sleep(150)
 }
 async function press(p: Page, key: string, modifiers = 0, wait = 150) {
   const [code, vk, text] = KEYS[key]
@@ -152,6 +165,10 @@ async function desktop() {
       await press(p, 'Enter')
       const inside = await p.waitFor(`!!document.querySelector('dialog.theme-pop[open]')?.contains(document.activeElement)`, 5000)
       check(`theme: focus inside:${mode}`, theme && inside && (await ringed(p)), await active(p))
+      const swatch = await tabTo(p, '.theme-swatches [role=option]', 6)
+      await press(p, 'End'); const swEnd = await is(p, '.theme-swatches [role=option]:last-child')
+      await press(p, 'Home'); const swHome = await is(p, '.theme-swatches [role=option]:first-child')
+      check(`theme: swatches Home / End:${mode}`, swatch && swEnd && swHome, `${await active(p)}, End ${swEnd}, Home ${swHome}`)
       const sw = await tabTo(p, '.theme-contrast', 20)
       const before = await p.js<string>(`document.activeElement?.getAttribute('aria-checked') ?? ''`), ax = await axOf(p)
       await press(p, ' ')
@@ -166,10 +183,33 @@ async function desktop() {
 
       await press(p, 'k', 2) // Ctrl
       await p.waitFor(`!!document.querySelector('.pal [role=combobox]') && document.activeElement?.matches('.pal-input')`, 20000) // the first Ctrl-K loads the command layer
-      check(`palette: Ctrl-K, focus in the field:${mode}`, await is(p, '.pal-input'), await active(p))
+      check(`palette: Ctrl-K, focus in the field of a modal dialog:${mode}`, (await is(p, '.pal-input')) && (await p.js<boolean>(`!!document.querySelector('dialog.pal-backdrop:modal')`)), await active(p))
       await press(p, 'Escape')
       await sleep(200)
       check(`palette: Escape back:${mode}`, !(await p.js<boolean>(`!!document.querySelector('.pal')`)) && (await is(p, '.theme-menu-btn')), await active(p))
+
+      // the shell: a modal dialog with focus in its line; Escape gives focus back
+      await press(p, '`')
+      const shell = await p.waitFor(`!!document.querySelector('dialog.pal-shell:modal') && !!document.activeElement?.matches('.pal-shell-input')`, 10000)
+      await press(p, 'Escape')
+      await sleep(200)
+      check(`shell: modal, Escape back:${mode}`, shell && !(await p.js<boolean>(`!!document.querySelector('.pal-shell')`)) && (await is(p, '.theme-menu-btn')), await active(p))
+
+      // DISPLAY ▾: ↓ opens it on the current skin, Escape closes it with focus back on the button
+      await p.js(`document.querySelector('.skin-switch .skin-menu-btn')?.focus(); 1`)
+      await press(p, 'ArrowDown')
+      const skin = await p.js<boolean>(`!!document.querySelector('.skin-menu')?.contains(document.activeElement) && document.activeElement.getAttribute('aria-checked') === 'true' && document.querySelector('.skin-switch .skin-menu-btn').getAttribute('aria-controls') === document.querySelector('.skin-menu').id`)
+      await press(p, 'Escape')
+      check(`display: ↓ opens on the current skin:${mode}`, skin && !(await p.js<boolean>(`!!document.querySelector('.skin-menu')`)) && (await is(p, '.skin-switch .skin-menu-btn')), await active(p))
+
+      // the board groups are tabs: → opens the next group (it takes focus and the one tab stop) and names the boards panel
+      const g0 = await p.js<string>(`document.querySelector('.board-group-tabs [role=tab][aria-selected=true]')?.id ?? ''`)
+      await p.js(`document.querySelector('.board-group-tabs [role=tab][aria-selected=true]')?.focus(); 1`)
+      await press(p, 'ArrowRight')
+      const groups = await p.js<{ tab: boolean; stop: boolean; panel: boolean }>(`(() => { const a = document.activeElement, panel = document.querySelector('.board-tabs[role=tabpanel]')
+        return { tab: a?.getAttribute('role') === 'tab' && a.getAttribute('aria-selected') === 'true' && a.id !== ${q(g0)}, stop: a?.tabIndex === 0 && document.querySelectorAll('.board-group-tabs [tabindex="0"]').length === 1, panel: !!panel && panel.getAttribute('aria-labelledby') === a?.id } })()`)
+      await press(p, 'ArrowLeft')
+      check(`board groups: tabs and a panel:${mode}`, !!g0 && groups.tab && groups.stop && groups.panel && (await p.js<string>('document.activeElement?.id')) === g0, JSON.stringify(groups))
 
       // the first card's row on ALL: three named stops, then MORE's menu
       const names: string[] = []
@@ -184,6 +224,16 @@ async function desktop() {
       await shot(p, `row-menu-${mode}`)
       await press(p, 'Escape')
       check(`row-menu:${mode}`, first && moved && !(await p.js<boolean>(`!!document.querySelector('.dot-card-menu')`)) && (await is(p, '.dot-card-row-more')), `first item ${first}, ↓ moves ${moved}, back on ${await active(p)}`)
+      // ↑ opens on the last item; the button points at the menu; a letter moves to the item it starts; a press outside closes
+      await press(p, 'ArrowUp')
+      const rm = await p.js<{ last: boolean; controls: boolean; ch: string }>(`(() => { const m = document.querySelector('.dot-card-menu'), it = [...(m?.querySelectorAll('[role^=menuitem]') ?? [])]
+        return { last: it.length > 1 && document.activeElement === it[it.length - 1], controls: !!m && document.activeElement?.closest('.dot-card-row')?.querySelector('.dot-card-row-more')?.getAttribute('aria-controls') === m.id, ch: (it[0]?.textContent ?? '').trim().charAt(0).toLowerCase() } })()`)
+      if (rm.ch) await letter(p, rm.ch)
+      const typed = await p.js<boolean>(`document.activeElement === document.querySelector('.dot-card-menu [role^=menuitem]')`)
+      // a press on plain page (no control, no card) outside the menu
+      const [ox, oy] = await p.js<[number, number]>(`(() => { for (const [x, y] of [[2, 400], [1276, 400], [2, 796], [640, 796], [2, 2]]) { const e = document.elementFromPoint(x, y); if (e && !e.closest('a, button, input, [tabindex="0"], .dot-card, .dot-card-menu')) return [x, y] } return [2, 400] })()`)
+      await p.mouse('mousePressed', ox, oy); await p.mouse('mouseReleased', ox, oy); await sleep(200)
+      check(`row-menu: ↑, aria-controls, a letter, a press outside:${mode}`, rm.last && rm.controls && typed && !(await p.js<boolean>(`!!document.querySelector('.dot-card-menu')`)), JSON.stringify({ ...rm, typed }))
 
       // the widget page: skip link first, MORE by keyboard
       await load(p, base + 'widget/timer/', PAGES[2][2])
@@ -195,6 +245,16 @@ async function desktop() {
       const open = await p.waitFor(`!!document.querySelector('.wp-more')?.contains(document.activeElement)`, 5000)
       await press(p, 'Escape')
       check(`wp-more:${mode}`, more && open && !(await p.js<boolean>(`!!document.querySelector('.wp-more')`)) && (await is(p, '.wp-more-btn')), await active(p))
+      // ↓ opens it too, and the button points at the menu
+      await press(p, 'ArrowDown')
+      const down = await p.js<boolean>(`(() => { const m = document.querySelector('.wp-more'); return !!m && m.contains(document.activeElement) && document.querySelector('.wp-more-btn').getAttribute('aria-controls') === m.id })()`)
+      await press(p, 'Escape')
+      check(`wp-more: ↓ opens, aria-controls:${mode}`, down && (await is(p, '.wp-more-btn')), await active(p))
+      // the pill bar: Home and End jump to its ends
+      const ends = `[...(document.activeElement?.closest('.pill-bar')?.querySelectorAll('.pill-btn') ?? [])].filter(b => b.offsetParent)`
+      await press(p, 'Home'); const barHome = await p.js<boolean>(`(${ends})[0] === document.activeElement`)
+      await press(p, 'End'); const barEnd = await p.js<boolean>(`(a => a.length > 1 && a[a.length - 1] === document.activeElement)(${ends})`)
+      check(`pill bar: Home / End:${mode}`, barHome && barEnd, `Home ${barHome}, End ${barEnd}, on ${await active(p)}`)
     }
   } finally {
     await p.close()
@@ -210,9 +270,9 @@ async function phone() {
     await p.cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
     console.log('\nphone')
     const SHEETS: [name: string, opener: string, open: string][] = [
-      ['tools', '.tabbar button[aria-haspopup=dialog]', 'dialog.tools-sheet[open]'],
-      ['boards', '.topbar-place', 'dialog.board-sheet[open]'],
-      ['search', '.topbar-search', '.pal'],
+      ['tools', '.tabbar button[aria-haspopup=dialog]', 'dialog.tools-sheet:modal'],
+      ['boards', '.topbar-place', 'dialog.board-sheet:modal'],
+      ['search', '.topbar-search', 'dialog.pal-backdrop:modal'],
     ]
     for (const [name, opener, open] of SHEETS) {
       await load(p, base, ALL_READY)

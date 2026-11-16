@@ -131,9 +131,11 @@ export function algorithmsChecks(assert: Assert): void {
     const key = (p: WidgetPreset, t: number) => JSON.stringify(frame(p, t))
     const pure = algorithmsBoard.every(p => [0, 1.3, 7.7, 3600].every(t => key(p, t) === key(p, t)))
     assert('algorithms board: every card is a pure function of t (same t, same dots, any order)', pure)
+    const thousands = (n: number) => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
     const texts = (p: WidgetPreset, t: number) => withChrome(p)({ t, data: {} }).map(l => l.field.text).filter(Boolean).join('|')
     const done = texts(algorithmsBoard[0], 0).includes(`LLOYD ${A.LLOYD}/${A.LLOYD}`) && texts(algorithmsBoard[2], 0).includes('180/180')
-    assert('algorithms board: t = 0 (goldens, thumbnails, reduced motion) is the finished picture', done && !frame(algorithmsBoard[0], 0).some(d => d.color === dot480.dotActive))
+      && texts(algorithmsBoard[3], 0).includes(`N ${thousands(A.aggregate().count)}`)
+    assert('algorithms board: t = 0 (goldens, thumbnails, reduced motion) is the finished picture', done && ![0, 3].some(i => frame(algorithmsBoard[i], 0).some(d => d.color === dot480.dotActive)))
     const red = algorithmsBoard.map(p => [0, 6, 9.5].some(t => frame(p, t).some(d => d.color === dot480.dotActive)))
     assert('algorithms board: one accent, used only for the live front (stipple knob, observed tile, newest grains)', red[0] && !red[1] && red[2] && red[3])
     const warmMedian = (p: WidgetPreset) => {

@@ -6,6 +6,7 @@
  */
 import type { Layer, Tone } from '../../engine/types'
 import { layer } from '../types'
+import { divider } from '../captions'
 import { GEARS, GEAR_NAMES, LEFT, OFF, RIGHT, dashOf, indicators, rangeKm } from './dash-drive'
 import { BODY, LINE, PRESS, SIGNAL_ARROW, T, at, card, dimmed, hero, heroOpts, mirror, mod, rr, spriteAt, spriteW, states, ui, type Pt } from './dash-kit'
 
@@ -124,7 +125,7 @@ export const signalsCard = card('dash-signals', 'Signals', {
       arrow(SIGNAL_ARROW, 4, left, d.signal === LEFT || d.hazard),
       arrow(mirror(SIGNAL_ARROW), 140 - ARROW_W, right, d.signal === RIGHT || d.hazard),
       layer(T.big(word, 72, ARROW.y + 7.5, { ...BODY, align: 'center' }), d.signal === OFF && !d.hazard ? 'mid' : 'value'),
-      layer(T.dotLine(6, 66, 138, 66, { spacing: 3.3, size: 1 }), 'faint'),
+      divider(6, 138, 66),
       layer(at(T.dots(button(0, LINE.spacing), LINE.size), hv), d.hazard ? 'value' : 'mid'),
       layer(at(T.dots(TRI_OUT, 1.8), hv), tri), layer(at(T.dots(TRI_IN, 1.8), hv), tri),
       layer(T.text('HAZARD', 72, 124, { align: 'center' }), d.hazard ? 'value' : 'idle'),

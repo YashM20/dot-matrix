@@ -16,7 +16,8 @@
  * the page changes only on a pick. A pick goes through `switchTheme` (the radial halftone wipe from the pressed
  * control; instant under reduced motion). Colours come from the theme CSS: no colour table in JS.
  */
-import { useEffect, useRef, useState, useSyncExternalStore, type FocusEvent, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useEffect, useRef, useState, useSyncExternalStore, type FocusEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { useRoving } from '../../hooks/useRoving'
 import { ACCENTS, type AccentChoice, type AccentId, type Scheme, type SchemePref } from '../../site/theme/names'
 import { resolveScheme, setContrast, setTheme } from '../../site/theme/theme'
 import { useTheme } from '../../site/theme/useTheme'
@@ -119,20 +120,9 @@ export function ThemeControls({ shown, onPreview, focus = false }: { shown?: { s
     })
   }
 
-  const onSegKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
-    if (!d) return
-    e.preventDefault()
-    const n = SCHEME_PREFS.length, j = (SCHEME_PREFS.indexOf(t.scheme) + d + n) % n
-    const el = e.currentTarget.querySelectorAll<HTMLElement>('[role=radio]')[j]
-    el?.focus(); if (el) pickScheme(SCHEME_PREFS[j], el)
-  }
-  const onSwatchKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    const all = [...e.currentTarget.querySelectorAll<HTMLElement>('[role=option]')], i = all.indexOf(document.activeElement as HTMLElement), n = all.length
-    const j = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? (i + 1) % n : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? (i + n - 1) % n : e.key === 'Home' ? 0 : e.key === 'End' ? n - 1 : -1
-    if (j < 0) return
-    e.preventDefault(); all[j]?.focus()
-  }
+  // the scheme radios: arrows, Home and End move and pick; the swatches: they move focus (and so the preview) only
+  const onSegKey = useRoving({ items: '[role=radio]', axis: 'both', pick: true })
+  const onSwatchKey = useRoving({ items: '[role=option]', axis: 'both' })
   // focus leaving a row ends its preview
   const leaveRow = (e: FocusEvent<HTMLDivElement>) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) preview({}) }
   const previewing = view.scheme !== t.resolved || view.accent !== t.accent
@@ -172,13 +162,7 @@ export function ThemeControls({ shown, onPreview, focus = false }: { shown?: { s
  */
 export function CardSizeControl() {
   const size = useSyncExternalStore(subscribeCardSize, cardSize, () => 'l' as CardSize)
-  const onKey = (e: KeyboardEvent<HTMLDivElement>) => {
-    const d = e.key === 'ArrowRight' || e.key === 'ArrowDown' ? 1 : e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 0
-    if (!d) return
-    e.preventDefault()
-    const n = CARD_SIZES.length, j = (CARD_SIZES.indexOf(size) + d + n) % n
-    setCardSize(CARD_SIZES[j]); e.currentTarget.querySelectorAll<HTMLElement>('[role=radio]')[j]?.focus()
-  }
+  const onKey = useRoving({ items: '[role=radio]', axis: 'both', pick: true })
   return <div className="theme-ctl theme-cards">
     <div className="theme-head"><b>CARDS · {CARD_SIZE_LABELS[size]}</b><span>{CARD_SIZE_LINES[size].toUpperCase()}</span></div>
     <div className="theme-seg" role="radiogroup" aria-label="Card size" onKeyDown={onKey}>
