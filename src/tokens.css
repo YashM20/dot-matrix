@@ -95,7 +95,7 @@
   --app-top: calc(52px + env(safe-area-inset-top));      /* phone: the sticky top bar */
   --tabbar-h: calc(58px + env(safe-area-inset-bottom));  /* phone: the tab bar, with the home-indicator inset */
   --topbar-h: 48px;                                      /* desktop: the sticky header (plus --gap-group: its scroll padding) */
-  --pillbar-h: 30px;                                     /* widget page: a toolbar group, 28 px buttons in a 1 px hairline (R5; no user yet) */
+  --pillbar-h: 30px;                                     /* widget page: a toolbar group, 28 px buttons in a 1 px hairline (R5: the phone page's top offset) */
 
   /* ── stacking: one scale for the whole page. A layer one step over its neighbour is calc(var(--z-x) + n) ── */
   --z-raise: 3;     /* inside a component, over its canvas: card action bar, X-RAY overlay; editor banner +2, context menu +5 */
