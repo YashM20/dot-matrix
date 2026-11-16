@@ -57,7 +57,8 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
   ['src/site/meta.ts', ['nav', 'mobile']],
   ['src/site/mobile/**', ['mobile', 'mobile-boards', 'layout-narrow', 'break-ui']],
   ['src/components/widget/**', ['layout', 'layout-narrow', 'nav', 'mobile', 'csp', 'c10', 'break-ui', 'a11y-keys', 'a11y-zoom']],
-  ['src/components/hero/**', ['layout', 'layout-narrow', 'mobile']],
+  // the hero's place on `/` and its Tab neighbours (nav's hero-order, #43)
+  ['src/components/hero/**', ['layout', 'layout-narrow', 'nav', 'mobile']], ['src/site/app/hero.css', ['layout', 'layout-narrow', 'nav', 'mobile']],
   ['src/components/About.tsx', ['layout', 'layout-narrow', 'mobile']],
   ['src/lab/**', ['csp']], ['src/legal/**', ['layout', 'csp', 'a11y-phone']],
   ['privacy.html', ['layout', 'csp', 'a11y-phone']], ['terms.html', ['layout', 'csp', 'a11y-phone']],
