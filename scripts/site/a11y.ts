@@ -5,20 +5,23 @@
  * `KNOWN` holds the serious and critical findings already listed on #187 with an owner issue: they print as known
  * and don't fail the run (scripts/lib/check.ts `knownChecker`). A summary table closes the run.
  *
- * Routes: home (ALL, #315), four boards (the first; mirror for the card row's target size), a widget page, about, a blog post, the essay and the
+ * Routes: home (ALL, #315), four boards (the first; mirror for the card row's target size), a widget page, MAKE, about, a blog post, the essay and the
  * privacy page (`--all` adds every board, the blog index, the terms page and the 404 page). On the blog and legal pages
  * it also checks the shell (#187): SKIP TO CONTENT is the first stop and points at `<main>`, and the site nav and
  * footer sit outside `<main>`. Modes: the default dark theme and light (`--modes` takes any of
- * dark, light, more-dark, more-light; `more` is `prefers-contrast: more`).
+ * dark, light, more-dark, more-light, switch-dark, switch-light; `more` is `prefers-contrast: more`, `switch` the
+ * header's CONTRAST: MORE switch, stored as a visitor's pick). `<mode>:<accent>` stores that accent first (`dark:amber`).
  *
  *   npx vite build && npx tsx scripts/site/a11y.ts            → serves dist/ on port 4327 for the run
  *   npx tsx scripts/site/a11y.ts https://matrix.reactopia.me/  → any running site (`pnpm dev`, preview, production)
  *   flags: --all, --modes dark,light,more-dark, --routes home,post (by name), --width 390 (default 1440; up to 600 is a
- *   phone: 844 tall, touch, so the 44 px touch targets apply), --shots <dir> (a PNG per route and mode, the top of the page). Chrome: $CHROME or the usual paths. Not in CI yet.
+ *   phone: 844 tall, touch, so the 44 px touch targets apply), --shots <dir> (a PNG per route and mode, the top of the page). Chrome: $CHROME or the usual paths.
+ * In CI: `a11y` (dark, light), `a11y-phone` (390 px) and `a11y-themes` (more contrast, the switch, every accent).
  */
 import { mkdirSync, readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { boardIds } from '../../src/widgets/manifest'
+import { ACCENTS } from '../../src/site/theme/names'
 import { findChrome, launch, serveDist, sleep, type Page } from '../lib/cdp'
 import { knownChecker } from '../lib/check'
 
@@ -36,8 +39,19 @@ const MEDIA: Record<string, [string, string][]> = {
   light: [['prefers-color-scheme', 'light']],
   'more-dark': [['prefers-color-scheme', 'dark'], ['prefers-contrast', 'more']],
   'more-light': [['prefers-color-scheme', 'light'], ['prefers-contrast', 'more']],
+  'switch-dark': [['prefers-color-scheme', 'dark']],
+  'switch-light': [['prefers-color-scheme', 'light']],
 }
-for (const m of MODES) if (!MEDIA[m]) { console.error(`unknown mode ${m} (use ${Object.keys(MEDIA).join(', ')})`); process.exit(2) }
+const mediaOf = (mode: string) => MEDIA[mode.split(':')[0]]
+/** What a mode stores as the visitor's theme (`dot480:theme`) before its routes load; null clears it. */
+const storedOf = (mode: string) => {
+  const [m, accent] = mode.split(':'), more = m.startsWith('switch-')
+  return more || accent ? JSON.stringify({ scheme: 'system', accent: accent ?? 'signal', ...(more ? { contrast: 'more' } : {}) }) : null
+}
+for (const m of MODES) {
+  const accent = m.split(':')[1]
+  if (!mediaOf(m) || (accent && !(ACCENTS as readonly string[]).includes(accent))) { console.error(`unknown mode ${m} (use ${Object.keys(MEDIA).join(', ')}, then :${ACCENTS.join('|')})`); process.exit(2) }
+}
 
 /** [name, path, what must be on the page before axe runs]. */
 const APP_READY = `!document.querySelector('.view-loading') && !!document.querySelector('.board-grid .dot-card')`
@@ -50,6 +64,7 @@ const ALL_ROUTES: [string, string, string][] = [
   ['components', 'components/', APP_READY],
   ['mirror', 'mirror/', APP_READY],
   ['widget', 'widget/timer/', `!!document.querySelector('.shell--widget .wp-ids, .shell--widget .wp-missing')`],
+  ['make', '?make', `!!document.querySelector('.ed-frame')`],
   ['about', 'about/', `!document.querySelector('.view-loading') && !!document.querySelector('.about-view')`],
   ['post', 'blog/build-your-own-dot-engine/', `!!document.querySelector('.essay.post > main .hero') && !document.querySelector('.post-wait')`],
   ['essay', 'blog/dot-matrix-essay/', `!!document.querySelector('.essay.post > main .hero') && !document.querySelector('.post-wait')`],
@@ -77,7 +92,7 @@ const RUN = `(async () => {
 
 async function audit(p: Page, base: string, mode: string, route: [string, string, string]) {
   const [name, path, ready] = route
-  await p.cdp('Emulation.setEmulatedMedia', { features: MEDIA[mode].map(([n, value]) => ({ name: n, value })) })
+  await p.cdp('Emulation.setEmulatedMedia', { features: mediaOf(mode).map(([n, value]) => ({ name: n, value })) })
   await p.cdp('Page.navigate', { url: base + path })
   await sleep(400)
   const ok = await p.waitFor(`document.readyState === 'complete' && (${ready})`, 30000)
@@ -86,7 +101,8 @@ async function audit(p: Page, base: string, mode: string, route: [string, string
   const found = await p.js<Finding[]>(RUN, 60000)
   if (shots) await p.shot(join(shots, `${name}-${mode}.png`))
   const shell = SHELL.includes(name) ? await p.js<string>(SHELL_CHECK) : ''
-  return { ok, found, name, shell }
+  const theme = await p.js<string>(`(document.documentElement.dataset.accent ?? '') + (document.documentElement.dataset.contrast ? ' more' : '')`)
+  return { ok, found, name, shell, theme }
 }
 
 /** The pages outside the app (#187): the blog, its posts and the legal pages. */
@@ -117,8 +133,16 @@ try {
   await p.cdp('Page.setBypassCSP', { enabled: true }) // the production CSP has no grant for the injected axe script
   for (const mode of MODES) {
     console.log(`\n${mode}`)
+    // the stored theme is per origin: set it (or clear it) from a page of the site, before the mode's first route
+    await p.cdp('Page.navigate', { url: base + '404.html' })
+    await p.waitFor(`document.readyState === 'complete'`, 15000)
+    const stored = storedOf(mode)
+    await p.js(stored ? `localStorage.setItem('dot480:theme', ${JSON.stringify(stored)})` : `localStorage.removeItem('dot480:theme')`)
     for (const route of ROUTES) {
-      const { ok, found, name, shell } = await audit(p, base, mode, route)
+      const { ok, found, name, shell, theme } = await audit(p, base, mode, route)
+      // a mode that stores a theme must show it on every page
+      const want = `${mode.split(':')[1] ?? 'signal'}${mode.startsWith('switch-') ? ' more' : ''}`
+      if (storedOf(mode) && theme !== want) check(`theme@${name}:${mode}`, false, `shows "${theme}", wants "${want}"`)
       if (!ok) check(`ready@${name}`, false, `${mode}: the page did not finish loading in 30 s (audited anyway)`)
       if (SHELL.includes(name)) check(`skip link and landmarks@${name}:${mode}`, !shell, shell || 'skip link first, nav and footer outside <main>')
       const bad = found.filter(f => f.impact === 'serious' || f.impact === 'critical')
