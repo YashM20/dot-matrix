@@ -112,7 +112,7 @@ const HEAT = toneRamp(cells(mugHeat, PANEL), [
   { at: .76, blend: .2, tone: 'value', value: h => .7 + .3 * clamp((h - .9) / .1) },
 ])
 export const thermalMonitor: WidgetPreset = {
-  id: 'thermal-monitor', name: '01 Thermal Monitor', label: 'THERMAL MONITOR', numbered: true, group: 'photo', chrome: 'dots', grid: TILE, style: photoStyle,
+  id: 'thermal-monitor', name: 'Thermal Monitor', label: 'THERMAL MONITOR', numbered: true, group: 'photo', chrome: 'dots', grid: TILE, style: photoStyle,
   layers: () => [
     num(thermalMonitor), ...menuGlyph,
     // sensor frame, then the heat
@@ -216,7 +216,7 @@ const CAR = toneRamp(cells(car, [0, 48, N, 97]), [
   { at: .34, tone: 'idle', value: carDot }, { at: .62, tone: 'value', value: carDot },
 ])
 export const evCharge: WidgetPreset = {
-  id: 'ev-charge', name: '02 EV Charge', label: 'EV CHARGE', numbered: true, group: 'icon', inset: 'dark', chrome: 'dots', grid: TILE, style: photoStyle,
+  id: 'ev-charge', name: 'EV Charge', label: 'EV CHARGE', numbered: true, group: 'icon', inset: 'dark', chrome: 'dots', grid: TILE, style: photoStyle,
   defaults: { charge: 0.78 },
   layers: ({ data }) => {
     const pct = String(Math.round(data.charge * 100)), w = T.size(pct)[0] * 3
@@ -245,7 +245,7 @@ const TOTAL = [.2, .14, .28, .14, .33, .44, .5, .22, .26, .54, .17, .33, .76, .4
 const USED = [0, 0, 0, 0, .09, .28, .28, .22, .19, .27, .17, .17, .25, .43, .21, .43]
 const CHART = { x0: 72, gap: 3.8, base: 119, height: 76, size: 1.4, pitch: 1.5 }
 export const codexUsage: WidgetPreset = {
-  id: 'codex-usage', name: '03 Codex Usage', label: 'CODEX USAGE', numbered: true, group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'codex-usage', name: 'Codex Usage', label: 'CODEX USAGE', numbered: true, group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => {
     // each bar is two dot columns wide, like the reference's chunky bars
     const bars = (v: number[]) => [0, CHART.pitch].map(dx => T.dotBars(v, CHART.x0 + dx, CHART.base, { gap: CHART.gap, pitch: CHART.pitch, height: CHART.height, size: CHART.size }))
@@ -276,7 +276,7 @@ const RING_C: Pt = [33.5, 61]
 /** The dim red wash fading out below the trend line. */
 const TREND_WASH = baked(TILE, cells((x, y) => { const d = y - along(TREND, x); return d > 1.5 ? .32 * (1 - d / 16) : 0 }, [0, 100, N, 127]))
 export const fitnessRings: WidgetPreset = {
-  id: 'fitness-rings', name: '04 Fitness Rings', label: 'FITNESS RINGS', numbered: true, group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'fitness-rings', name: 'Fitness Rings', label: 'FITNESS RINGS', numbered: true, group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
   defaults: { move: 0.5, exercise: 0.58, stand: 0.5 },
   layers: ({ data }) => {
     const ring = (r: number, spacing: number, size: number, fill: number, tone: 'active' | 'value') => [
@@ -309,7 +309,7 @@ const band = (spans: Pt[], row: number, h: number) => T.fillOn(2, (x, y) => y >=
 const key = (col: number) => T.dots([[col + 1.5, 47.5]], 4.2)
 const STATS = [['DEEP', '1:46'], ['CORE', '4:35'], ['REM', '1:32'], ['AWAKE', '0:14']]
 export const henrySleep: WidgetPreset = {
-  id: 'henry-sleep', name: '05 Henry Sleep', label: 'HENRY SLEEP', numbered: true, group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'henry-sleep', name: 'Henry Sleep', label: 'HENRY SLEEP', numbered: true, group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     num(henrySleep), ...menuGlyph,
     layer(T.big('8:07', 0, 22, { lattice: 2 })), layer(cap('HR', 48, 31), 'idle'),
@@ -344,7 +344,7 @@ const STARS: Pt[] = Array.from({ length: 34 }, (_, i) => [Math.round(hash01(i, 2
   .filter(([x, y]) => !(x > 52 && x < 84 && y > 108) && !(x > 90 && y < 40) && !(x < 30 && y < 28))
 const SPARKS: Pt[] = [[82, 41], [76, 47], [91, 47], [75, 57], [92, 57], [79, 62], [88, 62], [83.5, 65]]
 export const miniGame: WidgetPreset = {
-  id: 'mini-game', name: '06 Mini Game', label: 'MINI GAME', numbered: true, group: 'scatter', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
+  id: 'mini-game', name: 'Mini Game', label: 'MINI GAME', numbered: true, group: 'scatter', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
   credit: { by: ['Tomohiro Nishikado', 'Taito'], title: 'Space Invaders (1978)', source: 'https://en.wikipedia.org/wiki/Space_Invaders', note: 'the invader sprite' },
   layers: ({ t }) => {
     const sway = Math.round(Math.sin(t * 1.2) * 2), shot = (t * 18) % 22
@@ -375,7 +375,7 @@ const pillIcon = (kind: number, cy: number): Field[] => {
 const SEND: Pt = [133, 133], SEND_BOX = [124, 124, 142, 142] as const
 const SUGGESTIONS = ['SUMMARIZE MY DAY', 'CHECK MY CALENDAR', 'ANALYZE MY WORKOUT', 'DRAFT PROJECT UPDATE']
 export const aiAssistant: WidgetPreset = {
-  id: 'ai-assistant', name: '07 AI Assistant', label: 'AI ASSISTANT', numbered: true, group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'ai-assistant', name: 'AI Assistant', label: 'AI ASSISTANT', numbered: true, group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     num(aiAssistant), ...menuGlyph,
     layer(T.big('HELLO,', 2, 20, { lattice: 1.2 })), layer(T.big('HENRY', 2 + 42 * 1.2, 20, { lattice: 1.2 }), 'active'),
@@ -480,7 +480,7 @@ const brackets = ([x0, y0, x1, y1]: Box, arm = 4) => [
   T.hrule(x0, y1, arm), T.vrule(x0, y1 - arm + 1, arm), T.hrule(x1 - arm + 1, y1, arm), T.vrule(x1, y1 - arm + 1, arm),
 ]
 export const visionCamera: WidgetPreset = {
-  id: 'vision-camera', name: '08 Vision Camera', label: 'VISION CAMERA', numbered: true, group: 'composite', inset: 'dark', chrome: 'dots', grid: TILE, style: photoStyle,
+  id: 'vision-camera', name: 'Vision Camera', label: 'VISION CAMERA', numbered: true, group: 'composite', inset: 'dark', chrome: 'dots', grid: TILE, style: photoStyle,
   layers: () => [
     num(visionCamera), ...menuGlyph,
     ...DESK,
@@ -500,7 +500,7 @@ const DEER_C: Pt = [111, 50]
 const CPU = [['CPU', '18%'], ['MEM', '42%'], ['NET', '23 KB/S'], ['TEMP', '37°C']]
 const CPU_X = [0, 34, 68, 120]
 export const deerflowAgent: WidgetPreset = {
-  id: 'deerflow-agent', name: '09 DeerFlow Agent', label: 'DEERFLOW AGENT', numbered: true, group: 'composite', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
+  id: 'deerflow-agent', name: 'DeerFlow Agent', label: 'DEERFLOW AGENT', numbered: true, group: 'composite', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
   defaults: { progress: 0.72 },
   layers: ({ data, t }) => {
     // two dotted halos with a brightness sweep running around them

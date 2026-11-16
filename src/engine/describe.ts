@@ -110,9 +110,10 @@ export function describe(preset: Describable, ctx: Partial<FrameContext> = {}): 
 
 /** Longest accessible name the site reads out; a card that prints a lot (a news list) stops at a whole string. */
 const LABEL_MAX = 240
-/** Name, then the drawn strings, minus the label row that only repeats the name. */
+/** Name, then the drawn strings, minus the label row that only repeats the name and the card number drawn on its own (MOSAIC's red number). */
 function spokenLabel(preset: Describable, text: string[]): string {
-  const name = `${preset.name}${preset.liveData ? ' (live)' : ''}`, own = new Set([preset.name, preset.label ?? ''].map(s => s.replace(/\s+/g, ' ').trim().toUpperCase()))
+  const name = `${preset.name}${preset.liveData ? ' (live)' : ''}`, num = /^(\d{2})\s/.exec(preset.label ?? '')?.[1] ?? ''
+  const own = new Set([preset.name, preset.label ?? '', num].map(s => s.replace(/\s+/g, ' ').trim().toUpperCase()))
   let out = name, first = true
   for (const s of text) {
     if (own.has(s.replace(/\s+/g, ' ').trim().toUpperCase())) continue
