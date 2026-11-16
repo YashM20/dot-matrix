@@ -34,6 +34,8 @@ import { createHash } from 'node:crypto'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { ogImage } from '../og'
+import { readGoldens } from '../lib/goldenFiles'
+import type { Goldens } from '../lib/goldenKey'
 import { boards } from '../../src/widgets'
 import { BLOG, heroImage, POSTS, postPath, socialImage } from '../../src/blog/posts'
 import { EXPERIMENTS, LAB, experimentPath } from '../../src/lab/experiments'
@@ -170,12 +172,12 @@ export function postbuild({ og = true } = {}) {
   const t2 = performance.now()
   // ~0.7 s per image: cached by the renderer's source, the card's golden hashes and the board title the image draws
   // (as scripts/og.ts finds it), so only changed cards re-render and a renamed board never keeps its old title
-  const cache = process.env.OG_CACHE || join('node_modules', '.cache', 'dot480-og'), golden = goldenOf(), salt = createHash('sha1').update(OG_SOURCES.map(f => readFileSync(f)).join('\0')).digest('hex')
+  const cache = process.env.OG_CACHE || join('node_modules', '.cache', 'dot480-og'), golden = readGoldens().presets, salt = createHash('sha1').update(OG_SOURCES.map(f => readFileSync(f)).join('\0')).digest('hex')
   mkdirSync(cache, { recursive: true })
   let fresh = 0
   for (const w of widgets) {
     const title = boards.find(b => b.items.some(i => i.id === w.slug))?.title ?? ''
-    const key = createHash('sha1').update(`${salt}|${w.slug}|${title}|${JSON.stringify(golden[w.slug] ?? null)}`).digest('hex').slice(0, 16), hit = join(cache, `${w.uid}-${key}.png`)
+    const hit = join(cache, `${w.uid}-${ogKey(salt, w.slug, title, golden)}.png`)
     if (!existsSync(hit)) { writeFileSync(hit, ogImage(w.slug).png()); fresh++ }
     copyFileSync(hit, join(DIST, 'og', 'widget', `${w.uid}.png`))
   }
@@ -184,6 +186,8 @@ export function postbuild({ og = true } = {}) {
 
 /** What a widget OG image depends on besides its card: the OG layout and the raster path. */
 const OG_SOURCES = ['scripts/og.ts', 'scripts/lib/raster.ts', 'scripts/lib/cards.ts', 'scripts/lib/stats.ts', 'src/engine/sampler/gridSampler.ts']
-const goldenOf = (): Record<string, unknown> => JSON.parse(readFileSync('goldens/hashes.json', 'utf8')).presets
+/** A widget OG image's cache key: the OG sources' salt, the card, its board title and its rows in `goldens/<board>.json`. */
+export const ogKey = (salt: string, slug: string, title: string, golden: Goldens): string =>
+  createHash('sha1').update(`${salt}|${slug}|${title}|${JSON.stringify(golden[slug] ?? null)}`).digest('hex').slice(0, 16)
 
 if (/[\\/]scripts[\\/]site[\\/]postbuild\.ts$/.test(process.argv[1] ?? '')) postbuild({ og: !process.argv.includes('--no-og') })

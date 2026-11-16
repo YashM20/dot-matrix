@@ -59,7 +59,7 @@
 
 | Key | Example | What it is | Can it change? |
 |---|---|---|---|
-| **slug** | `panel`, `timer`, `hb-agent` | Today's preset id: kebab-case, readable, already unique (173/173) and pinned by `goldens/hashes.json` | It can be renamed. The old slug goes into a `cardAliases` table (`src/widgets/manifest.ts`, beside `boardAliases`) and keeps working forever. The `glyph-*` → `lock-*` rule moves there too. |
+| **slug** | `panel`, `timer`, `hb-agent` | Today's preset id: kebab-case, readable, already unique (173/173) and pinned by `goldens/<board>.json` | It can be renamed. The old slug goes into a `cardAliases` table (`src/widgets/manifest.ts`, beside `boardAliases`) and keeps working forever. The `glyph-*` → `lock-*` rule moves there too. |
 | **uid** | `k7m2qx9a` | A short permanent id: 8 characters from the lowercase Crockford base-32 alphabet `0123456789abcdefghjkmnpqrstvwxyz` (no `i l o u`, so it reads aloud and survives handwriting). 32⁸ ≈ 10¹² values. | Never. Never reused, even if the widget is deleted. |
 
 - **Telling them apart.** A uid is exactly 8 characters and always has at least two digits and one letter. Slugs and board ids may never match that pattern (verify check), so any URL segment is unambiguous: try uid → slug → `cardAliases`.
