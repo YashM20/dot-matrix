@@ -786,7 +786,7 @@ One global switch (header control, `?skin=`, localStorage `dot480:skin`, `setSki
 
 - **Cost:** every skin is GPU-side 2D ops (drawImage, composites, mips, one SVG colour-matrix filter; no readback). A static card is re-skinned from its existing frame (no re-sample); a running card's canvas is copied once per its own tick.
 - **Reduced motion:** no power-on animation, no nixie flicker.
-- **Not skins:** the SURFACES cards (`surface-eink`, `surface-flipdisc`), `sq-gameboy` and the device profiles in `src/engine/device/` draw e-ink, flip-disc, LCD and LED panels as cards, inside the pipeline.
+- **Not skins:** the SURFACES cards (`surface-glyph`, `surface-flipdisc`), `sq-gameboy` and the device profiles in `src/engine/device/` draw e-ink, flip-disc, LCD and LED panels as cards, inside the pipeline.
 - Not yet: split-flap skin (the split-flap text motion already exists per card), real-hardware calibration.
 
 ## Theme
