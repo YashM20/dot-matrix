@@ -13,6 +13,7 @@ import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetP
 import { dotText, flapText } from './henry'
 
 const T = layoutFor(TILE)
+const pad2 = (n: number) => String(n).padStart(2, '0')
 type Pt = [number, number]
 const live = { chrome: 'dots', grid: TILE, style: tileStyle, animated: true, live: true } as const
 /** Cycle bookkeeping: which cycle `t` is in, and seconds into it. */
@@ -54,7 +55,8 @@ export const departures: WidgetPreset = {
     })
     return [
       layer(T.text('TIME', col(0), 21), 'idle'), layer(T.text('TO', col(6), 21), 'idle'), layer(T.text('P', col(16), 21), 'idle'),
-      ...rows.map((s, i) => layer(T.big(s, 6, 33 + i * 17, { lattice: L }), i === 0 ? 'value' : 'mid')),
+      // the next train in `value`, the rest in `idle`: every row is information to read, so none drops to `mid` (#228)
+      ...rows.map((s, i) => layer(T.big(s, 6, 33 + i * 17, { lattice: L }), i === 0 ? 'value' : 'idle')),
       layer(T.dotLine(6, 104, 138, 104, { spacing: 3.3, size: 1.2 }), 'faint'),
       layer(T.big('BOARDING', 6, 116, { lattice: L })),
       ...(blink(t, 1.2) ? [layer(T.dots([[134, 120.5]], 6), 'active')] : []),
@@ -74,7 +76,7 @@ export const stationClock: WidgetPreset = {
     const m = now.getMinutes(), h = now.getHours() % 12
     const jump = underdampedSpring(-1, 0, 0, 2.2, .32, s).x // minutes behind the target, springing to 0
     const minute = ((m + jump) / 60) * TAU, hour = ((h + (m + jump) / 60) / 12) * TAU, second = (Math.min(s, 58.5) / 58.5) * TAU
-    const [cx, cy] = C, ticks: Pt[] = [], hours: Pt[] = []
+    const [cx, cy] = C, ticks: Pt[] = [], hours: Pt[] = [], said = `${pad2(now.getHours())}:${pad2(m)}`
     for (let i = 0; i < 60; i++) (i % 5 ? ticks.push(...ray(cx, cy, (i / 60) * TAU, R, R, 1)) : hours.push(...ray(cx, cy, (i / 60) * TAU, R - 8, R, 2.6)))
     // the red second hand, its disc and the hub clear the white hand dots under them, so red never sits on white
     const sec = [...ray(cx, cy, second + Math.PI, 3.4, 13, 2.2), ...ray(cx, cy, second, 3.4, 33, 2.2)], disc = ray(cx, cy, second, 38, 38, 1)
@@ -86,7 +88,8 @@ export const stationClock: WidgetPreset = {
       layer(hand(ray(cx, cy, minute, -9.6, 48, 3.2), 3.3)),
       layer(T.dots(sec, 1.7), 'active'),
       layer(T.dots(disc, 8.5), 'active'),
-      layer(T.dots([C], 4.2), 'active'),
+      // the hub names the time, so the card reads "Station: 09:41" like the other clocks (#228)
+      layer(T.dots([C], 4.2, said), 'active'),
     ]
   },
 }
@@ -134,7 +137,8 @@ export const nextTrain: WidgetPreset = {
 const STOPS = ['HARBOUR', 'CENTRAL', 'OLD TOWN', 'RIVERSIDE', 'NORTHGATE', 'AIRPORT']
 const ABBR = ['HBR', 'CTR', 'OLD', 'RVS', 'NGT', 'APT']
 const HOP = 4.5, DWELL = 1.4, TRACK_Y = 82
-const stopX = (i: number) => 12 + i * 24
+/** Stops 22 cells apart from 16, so HBR and APT keep the 8-cell edge margin of the card's other text (#228). */
+const stopX = (i: number) => 16 + i * 22
 export const lineMap: WidgetPreset = {
   id: 'line-map', name: 'Line 3', group: 'chart', ...live,
   layers: ({ t, reducedMotion }) => {
@@ -175,10 +179,14 @@ export const service: WidgetPreset = {
     const { k, tau } = cycle(t, SERVICE_PERIOD), now = STATUS[k % STATUS.length], before = STATUS[(k + STATUS.length - 1) % STATUS.length]
     return STATUS[0].flatMap((_, i) => {
       const y = 28 + i * 28, ok = now[i] === 'ON TIME', text = k === 0 ? now[i] : decodeText(before[i], now[i], tau - i * .12)
+      // each line is read as one phrase ("LINE 2 ON TIME"): the card's text drops repeats, so a bare ON TIME was said once (#228)
+      const num = T.big(String(i + 1), 14.5, y, { lattice: 1, align: 'center' }), status = T.big(text, 30, y - 1, { lattice: 1.15 })
+      num.field.text = undefined; status.field.text = `LINE ${i + 1} ${now[i]}`
       return [
         layer(T.dotRing(14, y + 3, 8, { spacing: 2.9, size: 1.7 }), ok ? 'idle' : 'value'),
-        layer(T.big(String(i + 1), 14.5, y, { lattice: 1, align: 'center' })),
-        layer(T.big(text, 30, y - 1, { lattice: 1.15 }), ok ? 'mid' : 'value'),
+        layer(num),
+        // ON TIME is a status to read, so `idle` (as on the platform card), a disruption `value`
+        layer(status, ok ? 'idle' : 'value'),
         ...(!ok && blink(t + i * .3, 1.4) ? [layer(T.dots([[134, y + 3]], 4.5), 'active')] : []),
       ]
     })
