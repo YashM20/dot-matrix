@@ -10,7 +10,7 @@ import { decodeText, splitFlapCells, type FlapCell } from '../../engine/motion/t
 import type { Control } from '../../engine/context'
 import { LIVE_DOT, TAU, TILE, bounded, combine, layer, layoutFor, tileStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
 import { PRESS, marching, rr, ui, type UiState } from './components-kit'
-import { scrubber, switchKnob, switchTrack, transportGlyph, type ScrubSpec } from '../dot-controls'
+import { scrubber, switchKnob, switchKnobSize, switchTrack, transportGlyph, type ScrubSpec } from '../dot-controls'
 import { numberBoard } from '../numbered'
 
 const T = layoutFor(TILE)
@@ -159,8 +159,8 @@ const transport = (bar: number, dir: 1 | -1): LatticeField => {
   const a = transportGlyph(dir > 0 ? 'prev' : 'next', tip, y, n, k), b = T.dotTri(tip + dir * (run + k), y, n, { k, dir: d })
   return { ...a, sites: [...a.sites!, ...b.sites!] }
 }
-/** The scrubber: two fine dot lines stopping short of the red knob (the `lines` method). */
-const SCRUB: ScrubSpec = { x0: 2, x1: 141, y: 141, spacing: 1.65, size: [.9, .7], knob: 5, gap: 3, method: 'lines', travel: [2, 140] }
+/** The scrubber: the shared site index with a knob gap (#360) in the sheet's fine dots, brighter behind the red knob. */
+const SCRUB: ScrubSpec = { x0: 2, x1: 141, y: 141, spacing: 1.65, size: [.9, .7], knob: 5, gap: 3 }
 export const music: WidgetPreset = {
   id: 'music', name: 'Music', numbered: true, group: 'photo', ...tile,
   defaults: { position: 0.44 }, springKeys: ['position'],
@@ -334,19 +334,21 @@ type Right = 'on' | 'chevron' | { on: boolean; ui: UiState; t: number }
 /** Five rows in one rounded outline, one separator between neighbours, inset a cell so no corner meets the card edge. */
 const ROWS = { x: 1, top: 15, w: 141, h: 24, n: 5, r: 5, spacing: 2.2, size: 1.05 }
 /**
- * One toggle, two states: the same stadium outline at the row borders' pitch and the same knob dot. Off: outline and
- * knob in `idle`, knob at the left. On: knob at the right in `value`, the track behind it filled with big `mid` dots on
- * the outline's pitch, cleared one dot round the knob so it stands apart.
+ * One toggle, two states: the same stadium outline at the row borders' pitch and the same knob dot (the shared size,
+ * #360). Off: outline and knob in `mid` (the shared off tone, as the sheet's own TOGGLE draws it), knob at the left.
+ * On: knob at the right in `value`, the outline in `idle` and the track behind it filled with big `mid` dots on the
+ * outline's pitch, cleared one dot round the knob so it stands apart. The fill is this board's own: the sheet's
+ * SETTINGS rows draw an on switch as a filled track.
  * Interaction, sized for a switch inside a list row (the components board's halo and outer focus ring would hit the
  * row borders and the card edge): hover lifts the outline to `value`, press drops the knob one step, and focus turns
  * the outline itself into marching dots.
  */
-const SWITCH = { x: 117, w: 22, h: 12, knob: 8, k: 2.2 }
+const SWITCH = { x: 117, w: 22, h: 12, k: 2.2 }
 const toggle = (on: boolean, mid: number, s: UiState, t: number) => {
-  const { x, w, h, knob, k } = SWITCH, r = h / 2, y = mid - r, sw = { ...SWITCH, y, spacing: ROWS.spacing, size: ROWS.size }
-  const [kx] = switchKnob(sw, on ? 1 : 0), reach = (knob * .84) / 2 + k, core = r - 2.4
+  const { x, w, h, k } = SWITCH, r = h / 2, y = mid - r, sw = { ...SWITCH, y, spacing: ROWS.spacing, size: ROWS.size }
+  const [kx] = switchKnob(sw, on ? 1 : 0), reach = (switchKnobSize(h) * .84) / 2 + k, core = r - 2.4
   const fill = T.fillOn(k, (px, py) => Math.hypot(px - Math.max(x + r, Math.min(x + w - r, px)), py - mid) <= core && Math.hypot(px - kx, py - mid) > reach, [x + 1, y + 1, x + w - 1, y + h - 1])
-  const [track, knobDot] = switchTrack(sw, on ? 1 : 0, [s.hover ? 'value' : 'idle', on ? 'value' : 'idle'], s.pressed ? PRESS : 1)
+  const [track, knobDot] = switchTrack(sw, on ? 1 : 0, [s.hover ? 'value' : on ? 'idle' : 'mid', on ? 'value' : 'mid'], s.pressed ? PRESS : 1)
   return [s.focus ? marching(rr(x, y, w, h, r), t, 0) : track, ...(on ? [layer(fill, 'mid')] : []), knobDot]
 }
 const settingRow = (i: number, g: Glyph, label: string, right: Right, selected = false) => {

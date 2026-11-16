@@ -1,8 +1,8 @@
 /* App styles: the touchable hero (home only) */
 /* ── T2: the touchable hero (home only, docs/LAYOUT-THEME-PLAN.md §1c #2) ──────────────────────────────────
-   The slot is first-load CSS so the box is there before its lazy chunk (src/components/hero/) fills it: beside
-   the header on wide screens, after the board on narrower ones (scroll-first: the cards come first on a phone).
-   App.tsx renders it in that place in the DOM as well, so the Tab order follows the page. */
+   The slot is first-load CSS so the box is there before its lazy chunk (src/components/hero/) fills it: a grid area
+   beside the intro and the picker on wide screens, after the cards on narrower ones (scroll-first: the cards come
+   first on a phone). App.tsx renders it in that place in the DOM as well, so the Tab order follows the page (#43). */
 .home-hero {
   width: min(100%, 420px);
   margin: 0
@@ -15,12 +15,57 @@
   background: var(--surface)
 }
 
-/* wide: a 216 px card with its legend beside it (240 px, so a legend part never breaks), floated right of the header (it is as tall as the header) */
+/* wide: the header band is a grid. The intro, the picker and ALL's title, blurb and filters stack on the left; the hero
+   (a 216 px card with its 240 px legend beside it, so a legend part never breaks) stands on the right across them,
+   where the float it replaces stood; ALL's cards run full width a group step under whichever side ends lower. ALL's
+   section adds no box here (its parts are the grid's items). The filters' row takes the hero's extra height, so the
+   steps on the left hold, and with the intro dismissed the filters still sit beside the hero, as they did by the float. */
 @media (min-width: 1280px) {
-  .home-hero {
-    float: right;
-    width: 468px;
-    margin: 0 0 var(--gap-group) var(--gap-action)
+  .boards-view--hero {
+    display: grid;
+    grid-template-areas: "intro hero" "picker hero" "title hero" "blurb hero" "tools hero" "cards cards";
+    grid-template-columns: minmax(0, 1fr) 468px;
+    grid-template-rows: auto auto auto auto 1fr auto;
+    align-items: start;
+    column-gap: var(--gap-action)
+  }
+
+  .boards-view--hero::after {
+    display: none
+  }
+
+  .boards-view--hero > .intro-line {
+    grid-area: intro
+  }
+
+  .boards-view--hero > .board-picker {
+    grid-area: picker
+  }
+
+  .boards-view--hero > .home-hero {
+    grid-area: hero;
+    width: auto
+  }
+
+  .boards-view--hero > .browse {
+    display: contents
+  }
+
+  .boards-view--hero > .browse > .board-title {
+    grid-area: title;
+    margin-top: var(--gap-action)
+  }
+
+  .boards-view--hero > .browse > .board-blurb {
+    grid-area: blurb
+  }
+
+  .boards-view--hero > .browse > .browse-tools {
+    grid-area: tools
+  }
+
+  .boards-view--hero > .browse > :is(.browse-grid, .browse-empty) {
+    grid-area: cards
   }
 
   .home-hero-slot {

@@ -14,8 +14,13 @@ const mod = (x: number, m: number) => ((x % m) + m) % m
 /** A point at clock angle `a` (clockwise from 12) on a circle. */
 export const polar = (cx: number, cy: number, r: number, a: number): Pt => [cx + r * Math.sin(a), cy - r * Math.cos(a)]
 
-/** A dial: centre, radius and its arc (start clockwise from 12, sweep), both in radians. */
-export interface Dial { cx: number; cy: number; r: number; start: number; sweep: number }
+/**
+ * A dial: centre, radius and its arc (start clockwise from 12, sweep), both in radians. `lit` is the lit stretch's site
+ * size (default `LIT`, the components knob's); a board that changes it says why.
+ */
+export interface Dial { cx: number; cy: number; r: number; start: number; sweep: number; lit?: number }
+/** The lit stretch's site size on the components knob and the dash dials. */
+export const LIT = 2.2
 export const angleOf = (d: Dial, f: number) => d.start + Math.max(0, Math.min(1, f)) * d.sweep
 /** A knob control's `map`: the pointer's angle on the dial → value, so a tap on the scale jumps there. */
 export const dialMap = (d: Dial) => (x: number, y: number, v: number): number => {
@@ -33,7 +38,7 @@ export function dialArc(d: Dial, f0: number, f1: number, tone: Tone = 'value', n
   const clear = (lf: LatticeField) => (needleAt === undefined ? lf : T.knockout(lf, needleSites(d, needleAt), NEEDLE.clear))
   return [
     layer(clear(T.dotRing(d.cx, d.cy, d.r, { ...RING, start: d.start, sweep: d.sweep })), 'mid'),
-    ...(hi - lo > 1e-3 ? [layer(clear(T.dotRing(d.cx, d.cy, d.r, { ...RING, start: angleOf(d, lo), sweep: (hi - lo) * d.sweep, size: 2.2 })), tone)] : []),
+    ...(hi - lo > 1e-3 ? [layer(clear(T.dotRing(d.cx, d.cy, d.r, { ...RING, start: angleOf(d, lo), sweep: (hi - lo) * d.sweep, size: d.lit ?? LIT })), tone)] : []),
   ]
 }
 /** Tick sites just inside the track at fractions `fs`. */

@@ -9,7 +9,8 @@
  *  - `tab`, `theme`, `contrast`, `palette`: the header's view tab has a ring; THEME opens with focus inside; Tab
  *    reaches CONTRAST: MORE, a switch named "Contrast: more" whose state Space flips (and flips back); Escape sends
  *    focus back to THEME; Ctrl-K opens the palette with focus in its field and Escape sends focus back;
- *  - `row`, `row-menu`: a card's row on ALL is three named stops (Open, Copy link, More); Enter on MORE opens its menu
+ *  - `row`, `row-stop`, `row-menu`: a card's row on ALL is a toolbar with one Tab stop whose → walks three named
+ *    actions (Open, Copy link, More); Tab leaves it and Shift+Tab returns to the last one; Enter on MORE opens its menu
  *    on the first item, ↓ moves, Escape closes it with focus back on MORE;
  *  - `wp-skip`, `wp-more`: the widget page starts with SKIP TO CONTENT; its MORE menu opens from the keyboard and
  *    Escape sends focus back to MORE.
@@ -211,12 +212,18 @@ async function desktop() {
       await press(p, 'ArrowLeft')
       check(`board groups: tabs and a panel:${mode}`, !!g0 && groups.tab && groups.stop && groups.panel && (await p.js<string>('document.activeElement?.id')) === g0, JSON.stringify(groups))
 
-      // the first card's row on ALL: three named stops, then MORE's menu
+      // the first card's row on ALL: a toolbar with one Tab stop (#43); → walks three named actions, then MORE's menu
       const names: string[] = []
       if (await tabTo(p, '.browse-item .dot-card-row-open', 80)) {
-        for (let i = 0; i < 3; i++) { const a = await axOf(p); names.push(`${a.name}${(await ringed(p)) ? '' : ' (no ring)'}`); if (i < 2) await press(p, 'Tab') }
+        for (let i = 0; i < 3; i++) { const a = await axOf(p); names.push(`${a.name}${(await ringed(p)) ? '' : ' (no ring)'}`); if (i < 2) await press(p, 'ArrowRight') }
       }
       check(`row:${mode}`, names.length === 3 && /^Open /.test(names[0]) && /^Copy link to /.test(names[1]) && /^More for /.test(names[2]) && !names.some(n => n.includes('no ring')), names.join(' | '))
+      // one stop: Tab from MORE leaves the row, and Shift+Tab comes back to MORE, the action focused last
+      await press(p, 'Tab')
+      const left = await p.js<boolean>(`!document.activeElement?.closest('.browse-item')?.matches('.browse-item:first-child')`)
+      await press(p, 'Tab', 8)
+      const rowBack = await is(p, '.browse-item:first-child .dot-card-row-more')
+      check(`row-stop:${mode}`, left && rowBack && (await p.js<number>(`document.querySelectorAll('.browse-item:first-child .dot-card-row [tabindex="0"]').length`)) === 1, `Tab leaves the row ${left}, Shift+Tab back on MORE ${rowBack}`)
       await press(p, 'Enter')
       const first = await p.waitFor(`document.activeElement?.matches('.dot-card-menu [role^=menuitem]') && document.activeElement === document.querySelector('.dot-card-menu [role^=menuitem]')`, 5000)
       await press(p, 'ArrowDown')

@@ -11,13 +11,13 @@
   "live-now-playing": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "db03aa7d",
-    "dots": 1592
+    "hash": "62a2cbeb",
+    "dots": 1594
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "f18c094c",
-    "dots": 1588
+    "hash": "3331d8ba",
+    "dots": 1590
    }
   },
   "live-contribs": {

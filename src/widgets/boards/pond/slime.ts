@@ -7,7 +7,7 @@
 import { createSlime, createTileRaster, drawSlime, slimeFoods, slimeSalt, tileLayers, type Slime, type TileGrid } from '../../../engine/life'
 import { worldAt } from '../../../engine/physics/world'
 import { layer, type WidgetPreset } from '../../types'
-import { caption, frameOf, mainThread, T, tile, touch } from './shared'
+import { caption, frameOf, mainThread, T, surfaceFocus, tile, touch } from './shared'
 
 export const SLIME_TILES: TileGrid = { cols: 36, rows: 33, pitch: 4, ox: 0, oy: 11 }
 export const slime: Slime = createSlime({
@@ -26,6 +26,6 @@ export const pondSlime: WidgetPreset = {
     const s = worldAt(slime.world, ctx.t, frameOf(ctx, 'slime'))
     drawSlime(slime, s, raster, slimeSalt(slime, s))
     const food = slimeFoods(slime, s).filter(f => f.on).map(f => [f.x, f.y] as [number, number])
-    return [caption(`${food.length} FOOD`), ...tileLayers(raster), layer(T.dots(food, 2.6), 'active')]
+    return [caption(`${food.length} FOOD`), ...surfaceFocus(ctx, 'slime'), ...tileLayers(raster), layer(T.dots(food, 2.6), 'active')]
   },
 }

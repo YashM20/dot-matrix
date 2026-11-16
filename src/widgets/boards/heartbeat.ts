@@ -186,7 +186,7 @@ export const hbDone = make('hb-done', 'DONE', 'done')
 // ── AGENT ── `data.state` 0..4 (sprung) picks the parameters; the knob glides between stops.
 const AGENT = stageAt(12, 28, .78)
 // whole words under the stops (#230): ERROR beside DONE left a two-column gap, so the error stop reads FAIL
-const SEG = { x: 6, y: 106, w: 132, h: 18, knob: 13, labels: ['THINK', 'RUN', 'ASK', 'FAIL', 'DONE'] }
+const SEG = { x: 6, y: 106, w: 132, h: 18, labels: ['THINK', 'RUN', 'ASK', 'FAIL', 'DONE'] }
 const segX = (i: number) => SEG.x + SEG.h / 2 + (i * (SEG.w - SEG.h)) / 4
 /** The switch's outline as a kit shape (`../dot-controls`). */
 const track = (d: number, spacing: number) => stadium(SEG.x - d, SEG.y - d, SEG.w + 2 * d, SEG.h + 2 * d, spacing)
