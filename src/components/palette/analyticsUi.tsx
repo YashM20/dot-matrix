@@ -9,5 +9,5 @@ export function AnalyticsButton({ onClose }: { onClose: () => void }) {
   if (s === 'unavailable') return null
   const on = s === 'on'
   const line = s === 'blocked' ? 'Off: your browser asks sites not to track you' : on ? 'Anonymous page views and button names' : 'Off: nothing is sent'
-  return <button type="button" className="tool-analytics" aria-pressed={on} onClick={() => { onClose(); toast(setAnalytics(!on)) }}><b>ANALYTICS</b><span>{line}</span></button>
+  return <button type="button" className="tool-analytics" role="switch" aria-checked={on} onClick={() => { onClose(); toast(setAnalytics(!on)) }}><b>ANALYTICS</b><span>{line}</span></button>
 }

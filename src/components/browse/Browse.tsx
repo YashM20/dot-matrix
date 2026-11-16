@@ -77,11 +77,11 @@ export function Browse({ onBoard, onOpen, cardPath }: BrowseProps) {
     {/* role="search" too: browsers before <search> (Chrome and Firefox 118, Safari 17) still get the landmark */}
     <search className="browse-tools" role="search" aria-label="Filter the cards">
       <label className="browse-field browse-field--q"><span>SEARCH</span>
-        <input ref={search} type="search" value={typed} maxLength={60} placeholder="clock, ring, game…" autoComplete="off" spellCheck={false}
+        <input ref={search} className="field" type="search" value={typed} maxLength={60} placeholder="clock, ring, game…" autoComplete="off" spellCheck={false}
           aria-describedby={countId} onChange={e => setTyped(cleanQuery(e.target.value))} />
       </label>
       <label className="browse-field"><span>TAG</span>
-        <select value={f.tag} onChange={e => { const tag = e.target.value; setF(x => ({ ...x, tag })) }}>
+        <select className="field" value={f.tag} onChange={e => { const tag = e.target.value; setF(x => ({ ...x, tag })) }}>
           <option value="">All tags</option>
           {tags.map(([t, n]) => <option key={t} value={t}>{t} ({n})</option>)}
         </select>

@@ -67,11 +67,11 @@ try {
   }
   const center = (sel: string) => js(`(() => { const r = document.querySelector(${JSON.stringify(sel)})?.getBoundingClientRect(); return r && r.width ? [r.left + r.width / 2, r.top + r.height / 2] : null })()`) as Promise<[number, number] | null>
   const boardReady = `!!document.querySelector('.board-grid [data-card-id="phys-pit"] canvas, .board-grid [data-card-id="phys-pit"] svg')`
-  /** Open TOOLS from the phone tab bar; returns whether TILT is in the sheet and its aria-pressed. */
+  /** Open TOOLS from the phone tab bar; returns whether TILT is in the sheet and its aria-checked (a switch). */
   const tools = async () => {
     await js(`[...document.querySelectorAll('.tabbar button')].find(b => b.textContent.includes('TOOLS')).click()`)
     const open = await waitFor(`!!document.querySelector('.tools-sheet .tools-grid')`, 20000)
-    const tilt = await js(`(() => { const b = document.querySelector('.tools-grid .tool-tilt'); return b ? b.getAttribute('aria-pressed') : null })()`) as string | null
+    const tilt = await js(`(() => { const b = document.querySelector('.tools-grid .tool-tilt'); return b ? b.getAttribute('aria-checked') : null })()`) as string | null
     return { open, tilt }
   }
   // the sheet is a native <dialog>: its cancel event is what Escape sends
@@ -110,7 +110,7 @@ try {
   const after = await tools()
   await closeTools()
   check('TILT shown only with the stub; tap → granted', before.tilt === 'false' && asks === 1 && after.tilt === 'true' && await ajs(`const h = ${hub}; return h.tiltState() === 'granted' && h.tiltListening()`),
-    `before: aria-pressed ${before.tilt}; tap on ${hit}; requestPermission calls ${asks}; after: ${after.tilt}`)
+    `before: aria-checked ${before.tilt}; tap on ${hit}; requestPermission calls ${asks}; after: ${after.tilt}`)
 
   // record every hub emit in the page: [time, gx, gy, lightSrc]
   await ajs(`const h = ${hub}; window.__emits = []; h.lightSource.subscribe(s => window.__emits.push([performance.now(), s.data.gx, s.data.gy, s.data.lightSrc]))`)

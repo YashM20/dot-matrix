@@ -91,7 +91,7 @@ export function CardActions({ xrayOn, xray, onBoard, ...input }: CardActionsProp
       {w.board === 'levels' && <PillButton label="PLAY" title="Play HIVE" icon={<PlayIcon />} href="/levels/?play=1" />}
     </Pill>
     <Pill className="wp-go">
-      {xrayOn && <PillButton label="X-RAY" title="X-ray: how it works" icon={<XrayIcon />} onClick={act.xray} pressed={xray} className="wp-desk" />}
+      {xrayOn && <PillButton label="X-RAY" title="X-ray: how it works" icon={<XrayIcon />} onClick={act.xray} on={xray} className="wp-desk" />}
       <MoreMenu items={[
         { label: 'Copy short link', note: shortPath(w.uid), run: act.short },
         { label: 'Copy HTML', note: 'static SVG', run: act.html },

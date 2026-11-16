@@ -55,16 +55,16 @@
 }
 
 /* a tool that is on: the accent, its wash */
-.tools-grid [aria-pressed="true"] {
+.tools-grid [aria-checked="true"] {
   border-color: var(--red);
   background-color: var(--glow-wash)
 }
 
-.tools-grid [aria-pressed="true"] b {
+.tools-grid [aria-checked="true"] b {
   color: var(--red-text)
 }
 
-.tools-grid [aria-pressed="true"] b::after {
+.tools-grid [aria-checked="true"] b::after {
   content: ' · ON'
 }
 

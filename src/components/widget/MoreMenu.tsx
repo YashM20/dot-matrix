@@ -24,7 +24,7 @@ export function MoreMenu({ items }: { items: readonly MoreItem[] }) {
       <MoreIcon />
     </button>
     {m.open && <div {...m.menu} className="wp-more" aria-label="More actions">
-      {items.map((it, k) => <button key={k} type="button" role="menuitem" tabIndex={-1} className={`${it.group ? 'wp-more-group ' : ''}${it.className ?? ''}`}
+      {items.map((it, k) => <button key={k} type="button" role="menuitem" tabIndex={-1} className={`menu-row${it.group ? ' wp-more-group' : ''}${it.className ? ` ${it.className}` : ''}`}
         onClick={() => { m.close(); it.run() }}><span className="wp-more-label">{it.label}</span>{it.note && <small>{it.note}</small>}</button>)}
     </div>}
   </>

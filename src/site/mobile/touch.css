@@ -16,7 +16,7 @@
     height: 15px
   }
 
-  .tabbar .busy::after {
+  .tabbar .tabbar-busy {
     top: 8px;
     left: calc(50% + 4px)
   }

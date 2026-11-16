@@ -156,7 +156,7 @@ function useCardData(preset: WidgetPreset | undefined, data: DotWidgetProps['dat
 function CardHead({ preset, hint, touchHint }: { preset: WidgetPreset; hint?: string; touchHint?: string }) {
   return <header className="dot-card-head" aria-hidden="true">
     <span className="dot-card-label">{preset.name.toUpperCase()}{hint && <small className="dot-card-hint" data-touch={touchHint}>{hint}</small>}</span>
-    {preset.live && <i className="status-dot" />}
+    {preset.live && <i className="status-dot status-dot--live" />}
   </header>
 }
 

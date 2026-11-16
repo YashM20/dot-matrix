@@ -134,7 +134,7 @@
 /* the ring stays inside the target, clear of the card's bottom edge */
 .dot-card-row a:focus-visible,
 .dot-card-row > button:focus-visible {
-  outline-offset: -1px
+  outline-offset: var(--focus-in)
 }
 
 /* a narrow tile: ALL's name goes (the card shows it) */
@@ -169,13 +169,6 @@
 .dot-card-row .dot-card-menu button {
   white-space: normal;
   line-height: 1.25
-}
-
-.dot-card-menu button[aria-checked="true"],
-.dot-card-menu button[aria-checked="true"]:hover,
-.dot-card-menu button[aria-checked="true"]:focus-visible,
-.dot-card-menu button[aria-checked="true"]:active {
-  color: var(--red-text)
 }
 
 /* touch: a 28 px row under the card; each action's 44 × 44 area runs from the card's edge down into the grid gap

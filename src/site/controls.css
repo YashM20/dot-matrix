@@ -1,0 +1,163 @@
+/* The shared chrome controls (DESIGN.md › Chrome components): the focus ring, .btn, .field, .menu-row and .status-dot.
+   Every page loads this file: src/index.css (the site and the root boundary) and src/essay/essay.css (the essay, the
+   blog, the lab and the legal pages) @import it after tokens.css and themes.css, so the roles are there. A component
+   file only places these (margin, grid, width); it does not restyle them. */
+
+/* ── focus: the accent ring in every theme, a 1 px ring and its halo. It sits --focus-out from the control; a row,
+   field or strip button that fills its container draws it inside with --focus-in (in-card controls draw theirs in
+   dots) ── */
+:focus-visible {
+  outline: 1px solid var(--red);
+  outline-offset: var(--focus-out);
+  box-shadow: var(--glow-halo)
+}
+
+/* ── .btn: the rectangular button (RELOAD, GO HOME, the consent and like choices). A hairline box with no fill, a
+   wash on hover, one step more on press. 36 px tall on a mouse, --tap on touch ── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  min-height: 36px;
+  padding: 0 var(--space-4);
+  background: none;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-ctl);
+  color: var(--value);
+  font: 600 var(--fs-label-12)/1 var(--mono);
+  letter-spacing: .1em;
+  text-decoration: none;
+  cursor: pointer;
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-duration: var(--dur-out);
+  transition-timing-function: var(--ease)
+}
+
+.btn:hover,
+.btn:focus-visible {
+  background-color: var(--wash-hover);
+  border-color: var(--line-hover)
+}
+
+.btn:active {
+  background-color: var(--wash-press);
+  border-color: var(--line-hover)
+}
+
+.btn:is(:hover, :active, :focus-visible) {
+  transition-duration: var(--dur-in)
+}
+
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  opacity: .4;
+  cursor: default
+}
+
+/* ── .field: the one-line text field and its select (SEARCH, TAG, a typing card's words). The accent border is its
+   focus ring (the halo comes from :focus-visible above) ── */
+.field {
+  width: 100%;
+  min-width: 0;
+  min-height: 36px;
+  padding: 0 var(--space-3);
+  background: var(--raised);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-ctl);
+  color: var(--value);
+  font: 500 var(--fs-label-12) var(--mono);
+  letter-spacing: .02em;
+  transition: border-color var(--dur-out) var(--ease)
+}
+
+.field::placeholder {
+  color: var(--mute)
+}
+
+/* a wash over the raised fill on hover, one step more on press */
+.field:hover {
+  background-image: linear-gradient(var(--wash-hover), var(--wash-hover));
+  border-color: var(--line-hover)
+}
+
+.field:active {
+  background-image: linear-gradient(var(--wash-press), var(--wash-press))
+}
+
+.field:focus-visible {
+  border-color: var(--red)
+}
+
+/* ── .menu-row: a row of the solid popover (raised.css): the two MORE menus and DISPLAY ▾. 30 px (--tap on touch),
+   the label left and a short --mute meta right (<small>); checked is the dot-matrix fill, as in the skin list ── */
+.menu-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  min-height: 30px;
+  padding: 0 var(--space-2);
+  background: none;
+  border: 0;
+  border-radius: var(--radius-sm);
+  color: var(--label);
+  font: 500 var(--fs-label-12)/1 var(--mono);
+  letter-spacing: .06em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer
+}
+
+.menu-row[aria-checked="true"] {
+  color: var(--value);
+  background-image: radial-gradient(circle, color-mix(in srgb, var(--tint) 16%, transparent) .8px, transparent 1.1px);
+  background-size: 4px 4px
+}
+
+.menu-row:hover,
+.menu-row:focus-visible {
+  background-color: var(--wash-hover);
+  color: var(--value)
+}
+
+.menu-row:active {
+  background-color: var(--wash-press);
+  color: var(--value)
+}
+
+.menu-row:focus-visible {
+  outline-offset: var(--focus-in)
+}
+
+.menu-row small {
+  flex: none;
+  color: var(--mute);
+  font: inherit;
+  letter-spacing: 0;
+  text-transform: none
+}
+
+/* touch: a coarse pointer (not hover: none, which a desktop without a mouse reports too) */
+@media (pointer: coarse) {
+  .btn,
+  .field,
+  .menu-row {
+    min-height: var(--tap)
+  }
+}
+
+/* ── .status-dot: the 6 px accent dot. Alone it marks the accent (THEME, a page kicker); --live adds the halo for a
+   live state (LIVE DATA, a live card, TOOLS while X-ray or the time machine is on) ── */
+.status-dot {
+  display: inline-block;
+  flex: none;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--red)
+}
+
+.status-dot--live {
+  box-shadow: var(--glow-halo)
+}

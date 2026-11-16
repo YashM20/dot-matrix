@@ -90,7 +90,7 @@
 .ed-menu button { display: flex; justify-content: space-between; gap: var(--space-3); text-align: left; padding: var(--space-2) var(--space-2); background: none; border: 0 }
 .ed-menu button:hover, .ed-menu button:focus-visible { background: var(--wash-hover) }
 .ed-menu button:active { background: var(--wash-press) }
-.ed-menu button:focus-visible { outline-offset: -2px }
+.ed-menu button:focus-visible { outline-offset: var(--focus-in) }
 .ed-menu kbd, .ed-keys kbd { color: var(--mute); font: inherit }
 
 /* ── body: left panel · canvas · inspector ── */
@@ -114,7 +114,7 @@
 .ed-tabs button[aria-selected="true"] { color: var(--value); border-bottom-color: var(--value) }
 .ed-tabs button:hover, .ed-tabs button:focus-visible { color: var(--label) }
 .ed-tabs button:active { color: var(--value) }
-.ed-tabs button:focus-visible { outline-offset: -2px }
+.ed-tabs button:focus-visible { outline-offset: var(--focus-in) }
 .ed-pane, .ed-insp { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding-bottom: var(--space-8) }
 .ed-empty, .ed-hint { color: var(--mute); font: 500 var(--fs-label-12)/1.5 var(--mono); margin: 0; padding: var(--space-1) 0 }
 .ed-pane > .ed-empty { padding: var(--space-4) }
@@ -234,7 +234,7 @@
 /* the toolbar button's own look, over .ed-root button's inherit */
 .ed-other .pill-btn { color: var(--label); font: 500 var(--fs-label-12)/1 var(--mono); letter-spacing: .06em }
 .ed-other .pill-btn:hover, .ed-other .pill-btn:focus-visible, .ed-other .pill-btn:active { color: var(--value) }
-.ed-other .pill-btn:focus-visible { outline-offset: -2px }
+.ed-other .pill-btn:focus-visible { outline-offset: var(--focus-in) }
 .ed-stage:has(> .ed-other:not(:empty)) > :is(.ed-banner, .ed-confirm) { top: 48px }
 .is-phone .ed-stage:has(> .ed-other:not(:empty)) > :is(.ed-banner, .ed-confirm) { top: 88px }
 
@@ -617,7 +617,6 @@ html.ed-scroll-lock .pal-dock { display: none }
 .ed-crash-btns { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2) }
 .ed-crash-btns button { min-height: var(--tap-min); padding: 0 var(--space-4); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-ctl); color: var(--value); font: 600 var(--fs-label-12) var(--mono); letter-spacing: .1em }
 .ed-crash-btns .ed-crash-reset { border-color: color-mix(in srgb, var(--red) 60%, transparent) }
-.ed-crash-btns button:focus-visible { outline: 1px solid var(--red); outline-offset: 2px }
 /* the whole editor's recovery screen (#143) stands in for the editor's height */
 .ed-crash[data-area="editor"] { min-height: min(560px, 80dvh) }
 /* a link waiting for KEEP (#143): over the canvas, where the banner sits */
@@ -629,5 +628,5 @@ html.ed-scroll-lock .pal-dock { display: none }
 .ed-confirm-btns .ed-confirm-keep { border-color: color-mix(in srgb, var(--value) 55%, transparent); color: var(--value) }
 .ed-confirm-btns button:hover, .ed-confirm-btns button:focus-visible { border-color: var(--line-hover) }
 .ed-confirm-btns button:active { background: var(--wash-press) }
-.ed-confirm-btns button:focus-visible { outline: 1px solid var(--value); outline-offset: 2px }
+.ed-confirm-btns button:focus-visible { outline-offset: var(--focus-out) }
 .is-phone .ed-confirm-btns button { min-height: var(--tap) }

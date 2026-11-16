@@ -13,10 +13,10 @@ export class LoadBoundary extends Component<Props, { failed: boolean }> {
   render() { return this.state.failed ? this.props.fallback : this.props.children }
 }
 
-/** The error state: what failed, a likely reason and RELOAD. Styles: `.load-failed` (src/site/root-boundary.css). */
+/** The error state: what failed, a likely reason and RELOAD. Styles: `.load-failed` (src/site/root-boundary.css), the button is `.btn`. */
 export const LoadFailed = ({ what, className = '' }: { what: string; className?: string }) => (
   <div className={`load-failed ${className}`.trim()}>
     <p>{what} didn’t load. The site may have just updated.</p>
-    <button type="button" onClick={() => location.reload()}>RELOAD</button>
+    <button type="button" className="btn" onClick={() => location.reload()}>RELOAD</button>
   </div>
 )

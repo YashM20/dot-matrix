@@ -63,7 +63,7 @@ export function TopBar({ view, all, board, onView, onBoards }: TopBarProps) {
     <SkinSwitcher />
     <ThemeButton />
     {/* red means live: only while a board streams real data */}
-    {view === 'EXPLORE' && !all && liveBoards.includes(board) && <div className="live"><i aria-hidden="true"/> LIVE DATA</div>}
+    {view === 'EXPLORE' && !all && liveBoards.includes(board) && <div className="live"><i className="status-dot status-dot--live" aria-hidden="true"/> LIVE DATA</div>}
     {/* the tool dock (CommandLayer portals it here on desktop) */}
     <div className="topbar-dock"><DockGhost /></div>
     <button type="button" className="topbar-search" aria-label="Search boards, cards and actions" aria-haspopup="dialog" onClick={() => requestLayer('palette')}><Glyph rows={GLYPHS.SEARCH} /></button></header>
@@ -83,6 +83,6 @@ export function TabBar({ view, onView, onBoards }: { view?: View; onView: (v: Vi
   }
   return <nav className="tabbar" aria-label="Main">
     {views.map(v => <button key={v} type="button" aria-current={view === v ? 'page' : undefined} onClick={() => pick(v)}><Glyph rows={GLYPHS[v]} /><span>{v}</span></button>)}
-    <button type="button" aria-haspopup="dialog" className={busy ? 'busy' : ''} onClick={() => requestLayer('tools')}><Glyph rows={GLYPHS.TOOLS} /><span>TOOLS</span></button>
+    <button type="button" aria-haspopup="dialog" className={busy ? 'busy' : ''} onClick={() => requestLayer('tools')}><Glyph rows={GLYPHS.TOOLS} /><span>TOOLS</span>{busy && <i className="status-dot status-dot--live tabbar-busy" aria-hidden="true" />}</button>
   </nav>
 }

@@ -122,11 +122,6 @@
   box-shadow: var(--shadow-raised)
 }
 
-.lk-sheet:focus-visible {
-  outline: 1px solid var(--red);
-  outline-offset: 2px
-}
-
 .lk-sheet h2 {
   margin: 0 0 var(--space-3);
   color: var(--value);
@@ -148,25 +143,9 @@
   gap: var(--space-3)
 }
 
-.lk-choices button {
-  min-height: var(--tap);
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-ctl);
-  background: var(--raised);
-  color: var(--value);
-  font: 600 var(--fs-label-12)/1 var(--mono);
-  letter-spacing: .1em;
-  cursor: pointer
-}
-
-.lk-choices button:hover,
-.lk-choices button:focus-visible {
-  background: var(--wash-hover);
-  border-color: var(--line-hover)
-}
-
-.lk-choices button:active {
-  background: var(--wash-press)
+/* the two choices are .btn (src/site/controls.css), a touch target tall on every pointer */
+.lk-choices .btn {
+  min-height: var(--tap)
 }
 
 @media (max-width: 560px) {

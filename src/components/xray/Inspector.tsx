@@ -114,8 +114,8 @@ function LayersTab({ probe, layers, solo, muted }: { probe: CardProbe; layers: L
       return <li key={i} className={off ? 'xr-off' : ''}>
         <span className="xr-idx">{String(i).padStart(2, '0')}</span>
         <span className="xr-lname" title={layerIR(l) ?? undefined}>{layerName(l)}<small>{layerKind(l)} · {l.toneOf ? 'multi-tone' : l.tone ?? 'auto'}{l.field.bounds ? ` · [${l.field.bounds.map(b => Math.round(b)).join(',')}]` : ''}</small></span>
-        <button aria-pressed={solo === i} aria-label={`Solo layer ${i}`} onClick={() => soloLayer(probe.key, i)}>S</button>
-        <button aria-pressed={!!muted?.includes(i)} aria-label={`Mute layer ${i}`} onClick={() => muteLayer(probe.key, i)}>M</button>
+        <button type="button" role="switch" aria-checked={solo === i} aria-label={`Solo layer ${i}`} onClick={() => soloLayer(probe.key, i)}>S</button>
+        <button type="button" role="switch" aria-checked={!!muted?.includes(i)} aria-label={`Mute layer ${i}`} onClick={() => muteLayer(probe.key, i)}>M</button>
       </li>
     })}
   </ol>

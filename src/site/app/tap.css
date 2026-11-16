@@ -35,8 +35,7 @@
   .intro-line button,
   .pal-dock button,
   .xr-panel button,
-  .xr-time button,
-  .pal-boss-flee {
+  .xr-time button {
     min-height: 40px
   }
 

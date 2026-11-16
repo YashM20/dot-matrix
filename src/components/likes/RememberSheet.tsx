@@ -11,8 +11,8 @@ export function RememberSheet({ onChoose }: { onChoose: (c: 'r' | 'o' | null) =>
       <h2 id="lk-sheet-title">Remember this browser so your likes count fully?</h2>
       <p id="lk-sheet-body">Remember sets one cookie, used only for likes. Just this once sets none, and your like counts a little less. You can forget this browser at any time. <a href="/privacy/#likes">How likes work</a></p>
       <div className="lk-choices">
-        <button type="button" onClick={() => onChoose('r')}>Remember</button>
-        <button type="button" onClick={() => onChoose('o')}>Just this once</button>
+        <button type="button" className="btn" onClick={() => onChoose('r')}>Remember</button>
+        <button type="button" className="btn" onClick={() => onChoose('o')}>Just this once</button>
       </div>
     </div>
   </Modal>

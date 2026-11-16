@@ -83,6 +83,14 @@
   --tap: 44px;
   --tap-min: 24px;
 
+  /* ── focus ring offset (the ring itself: src/site/controls.css): outside a control, or inside a row or field that
+     fills its container (a menu row, a toolbar button, a tab in a strip) ── */
+  --focus-out: 2px;
+  --focus-in: -2px;
+
+  /* ── press sink: a touched chrome control scales to this on press (src/site/mobile/touch.css); 1 under reduced motion ── */
+  --press-sink: .96;
+
   /* ── bar heights: fixed and sticky things sit clear of these ── */
   --app-top: calc(52px + env(safe-area-inset-top));      /* phone: the sticky top bar */
   --tabbar-h: calc(58px + env(safe-area-inset-bottom));  /* phone: the tab bar, with the home-indicator inset */
