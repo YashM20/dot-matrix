@@ -43,15 +43,19 @@ export function mirrorChecks(assert: Assert) {
     assert('mirror: mirror-shadow wall sits on a 3-cell lattice', [...lattices].join() === '3', [...lattices].join())
     assert('mirror: mirror-shadow silhouette has a crisp edge (no grey fringe), fixture and soft live silhouette', !fringe.length, fringe.slice(0, 3).join('; '))
   }
-  // mirror-conduct: the scripted pinch rises above the field; its pointer ring stays off the WAVE / PINCH line (rows
-  // 50–56) and keeps the two clear rows under it, like the field dots (#295)
+  // mirror-conduct: the scripted pinch rises above the field, and a live hand or mouse goes anywhere. The pointer ring
+  // stays off the WAVE / PINCH line (rows 50–56) and the bottom plate (from row 126), with the field's clear rows
+  // between (57–59 above, 121–125 below; field dots stop at row 120)
   {
-    const pitch = pitchOf(mirrorConduct), hits: number[] = []
-    for (const t of times(0, 9, .05)) {
-      const dots = sampleLayers(at(mirrorConduct, t), mirrorConduct.grid, mirrorConduct.style, theme).filter(visible)
-      if (dots.some(d => { const row = d.y / pitch - .5; return row > 56.5 && row < 59.5 })) hits.push(t)
+    const pitch = pitchOf(mirrorConduct), hits: string[] = []
+    const inGap = (ctx: Partial<WidgetContext>, t: number) => sampleLayers(at(mirrorConduct, t, ctx), mirrorConduct.grid, mirrorConduct.style, theme).filter(visible)
+      .some(d => { const row = d.y / pitch - .5; return (row > 56.5 && row < 59.5) || (row > 120.5 && row < 125.5) })
+    for (const t of times(0, 9, .05)) if (inGap({}, t)) hits.push(`demo t = ${t}`)
+    for (let y = 40; y <= 140; y += 2) for (const down of [false, true]) {
+      const pointers = [{ id: 'hand' as const, x: 72, y, inside: true, down, tDown: 0, tUp: 0, vx: 0, vy: 0, pressure: down ? 1 : 0 }]
+      if (inGap({ pointers }, 1)) hits.push(`pointer y = ${y}${down ? ' down' : ''}`)
     }
-    assert('mirror: mirror-conduct keeps rows 57–58 under the WAVE / PINCH line clear (pointer ring included)', !hits.length, `t = ${hits.slice(0, 6).join(', ')}`)
+    assert('mirror: mirror-conduct keeps the rows round the WAVE / PINCH line and the bottom plate clear (pointer ring included)', !hits.length, hits.slice(0, 6).join(', '))
   }
 }
 

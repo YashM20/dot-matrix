@@ -341,8 +341,8 @@ export const mirrorConduct: WidgetPreset = {
       layer(T.text('WAVE: FLIP', 4, 50), 'idle'), layer(T.text('PINCH: GRAB', 140, 50, { align: 'right' }), 'idle'),
       layer(T.dots(calm, 1.3), 'mid'),
       layer(T.dots(stirred, 1.5), 'value'),
-      // the pointer ring, only while it clears the WAVE / PINCH line by the same two rows as the field (#242)
-      ...(p && p.y - ringR(p.down) >= FIELD.y0 - 4 ? [layer(T.dotRing(p.x, p.y, ringR(p.down), { spacing: 3, size: 1 }), p.down ? 'value' : 'idle')] : []),
+      // the pointer ring, only inside the field's rows: clear of the WAVE / PINCH line and the bottom plate (#242)
+      ...(p && p.y - ringR(p.down) >= FIELD.y0 - 4 && p.y + ringR(p.down) <= FIELD.y1 + 4 ? [layer(T.dotRing(p.x, p.y, ringR(p.down), { spacing: 3, size: 1 }), p.down ? 'value' : 'idle')] : []),
       ...(on && hs === 2 ? liveTag(mode === 'HAND' ? 'HAND' : 'LIVE') : [layer(T.text(mode, 143, 1, { align: 'right' }), 'mid')]),
       ...(pulse ? [cta(status)] : []),
       PRIVACY,
