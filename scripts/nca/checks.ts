@@ -3,11 +3,11 @@
  * timeline, regrowth from a 50% cut (gate < 5 s at 30 steps/s), step cost at the board grid and at 64²,
  * pointer scratches, and the heal board rendering. Imported by scripts/verify.ts.
  */
-import { ncaAliveCount, ncaGrid, ncaModel, ncaRun, ncaRunAt, ncaRunAtStep, ncaScratch, ncaSeed, ncaStep, ncaStepAt } from '../../src/engine/nca'
+import { ncaAliveCount, ncaGrid, ncaLift, ncaModel, ncaRun, ncaRunAt, ncaRunAtStep, ncaScratch, ncaSeed, ncaStep, ncaStepAt } from '../../src/engine/nca'
 import { sampleLayers } from '../../src/engine/sampler/gridSampler'
 import { dot480 } from '../../src/engine/theme/tokens'
 import { lizardNca } from '../../src/assets/nca/lizard'
-import { healBoard } from '../../src/widgets/boards/heal'
+import { healBoard, healMirror, healRuns, healXray, XRAY_STAT } from '../../src/widgets/boards/heal'
 import { withChrome } from '../../src/widgets'
 import { gradCheck } from './gradcheck'
 import { lizardTarget } from './target'
@@ -64,4 +64,39 @@ export function ncaChecks(assert: Assert): void {
   const counts = healBoard.map(p => [0, 1.3, 3].map(t => sampleLayers(withChrome(p)({ t, data: { ...p.defaults } }), p.grid, p.style, dot480).length))
   const again = healBoard.map(p => sampleLayers(withChrome(p)({ t: 1.3, data: { ...p.defaults } }), p.grid, p.style, dot480).length)
   assert('nca: heal board renders every card, stable without a pointer', counts.every(c => c.every(n => n > 150)) && again.every((n, i) => n === counts[i][1]), counts.map(c => c.join('/')).join(' · '))
+
+  healChecks(assert, m)
+}
+
+/** The heal board's own fixes (#244). Runnable without the slow model checks above. */
+export function healChecks(assert: Assert, m = ncaModel(lizardNca)): void {
+  // #244: the X-ray stat counts the hidden channels it shows, in words a visitor reads (it said "12CH 48H": the
+  // channel count and the MLP width, and "H" clashed with the H3 panel labels)
+  const [shown, of] = (XRAY_STAT.match(/^(\d+) OF (\d+) SHOWN$/) ?? []).slice(1).map(Number)
+  assert('heal: the X-ray footer says how many hidden channels its panels show', shown === 4 && of === m.channels - 2, XRAY_STAT)
+
+  // #244: a scratch takes heal-mirror live; its rail then ends in the red knob, as on every other rail footer
+  const hero = healRuns[0], pitch = healMirror.grid.pitch ?? 1
+  const knobs = (t: number) => sampleLayers(withChrome(healMirror)({ t, data: { ...healMirror.defaults } }), healMirror.grid, healMirror.style, dot480)
+    .filter(d => d.color === dot480.dotActive && Math.abs(d.y / pitch - 129.5) < 1.5).length
+  const rest = knobs(4)
+  ncaScratch(hero, 4, 16, 12, 2.2, 1); ncaLift(hero, 1)
+  const live = knobs(4.1)
+  ncaRunAt(hero, 40)
+  assert('heal: a scratched heal-mirror marks LIVE with the red knob on its rail (none at rest)', rest === 0 && live === 1 && !hero.live, `rest ${rest}, live ${live}`)
+
+  // #244: each X-ray panel is a readable figure, not a few bright specks over a faint ghost: a panel is windowed to
+  // the 90th percentile of |h| (it was the peak), so every panel draws over 120 dots at 60% of the card's biggest dot
+  // or more (the old window drew 44 to 108)
+  const pitchX = healXray.grid.pitch ?? 1
+  const panels = [1.5, 5.6, 8].map(t => {
+    const ds = sampleLayers(withChrome(healXray)({ t, data: {} }), healXray.grid, healXray.style, dot480)
+    const big = .6 * Math.max(...ds.map(d => d.r)), q = [0, 0, 0, 0]
+    for (const d of ds) {
+      const x = d.x / pitchX, y = d.y / pitchX
+      if ((d.color === dot480.value || d.color === dot480.dotMid) && d.r >= big && y > 11 && y < 127) q[(x > 72 ? 1 : 0) + (y > 69 ? 2 : 0)]++
+    }
+    return q
+  })
+  assert('heal: every X-ray panel draws its channel as a readable figure (over 120 big dots a panel)', panels.every(q => q.every(n => n > 120)), panels.map(q => q.join('/')).join(' · '))
 }

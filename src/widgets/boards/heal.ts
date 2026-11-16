@@ -30,8 +30,12 @@ const on = (f: Field) => GRID.at(GRID.place(f, 0, 0, W, H))
 const pad = (n: number, k = 4) => String(Math.max(0, Math.min(10 ** k - 1, Math.round(n)))).padStart(k, '0')
 const healPct = (g: NcaGrid) => Math.min(100, ncaAliveCount(g) / model.grown * 100)
 
+/**
+ * The rail is the loop's progress and STEP counts the same loop, so the number labels it (as on SIM). A scratch
+ * fills it and ends it in the red knob, the kit's live mark.
+ */
 const footer = (run: NcaRun, t: number, left: string, right: string): Layer[] =>
-  railFooter(run.live ? 1 : ncaPhase(run, t), left, right, { rail: 129, foot: 134 })
+  railFooter(run.live ? 1 : ncaPhase(run, t), left, right, { rail: 129, foot: 134, live: run.live })
 
 /** The whole lizard area is one xy control, so the host hands this card its pointers. */
 const scratchPad = (label: string): Control[] => [{ key: 'sx', keyY: 'sy', kind: 'xy', box: [OX, OY, W * K, H * K], min: 0, max: 1, label }]
@@ -91,10 +95,16 @@ export const healMirror: WidgetPreset = {
 }
 
 // ── 02 X-ray: the same rule, seen through four hidden channels (2 × 2 small multiples on a 2× lattice).
-// Positive state in `value`, negative in `mid`, dot size = |h| / panel peak, the silhouette faint. Loop [1.4 s, 11.4 s) from mid-growth;
+// Positive state in `value`, negative in `mid`, dot size = √(|h| / panel window), the silhouette faint. Loop [1.4 s, 11.4 s) from mid-growth;
 // a wound in the head at 5 s shows the chemistry rushing back in, a reseed at 10 s closes the loop.
 const XK = 2, XW = W * XK, XH = H * XK, GAP = 4, XO = (TILE.cols - 2 * XW - GAP) >> 1, XY0 = 12
+/** The share of living cells under a panel's full-size |h|, and the |h| (over that) a panel leaves quiet. */
+const WINDOW = .9, QUIET = .12
+/** Grid cells under a panel's H label (3 glyphs × 6 cells, 7 rows, on the 2× lattice): no dots there. */
+const under = (x: number, y: number) => x < 9 && y < 4
 const XRAY = (String(lizardNca.meta?.xray ?? '2,3,4,5')).split(',').map(Number).slice(0, 4)
+/** The footer stat: how many of the hidden channels (all but alpha and tone) the panels show. */
+export const XRAY_STAT = `${XRAY.length} OF ${model.channels - 2} SHOWN`
 const xrayRun = ncaRun({
   model, w: W, h: H, dt: DT, seed: 5, lead: 1.4, period: 10, every: 24,
   script: (g, n) => { if (n === at(5)) ncaDamage(g, 16, 4.5, 5); else if (n === at(10)) reseed(g) },
@@ -105,19 +115,22 @@ export const healXray: WidgetPreset = {
     const g = ncaRunAt(xrayRun, ctx.t), out: Layer[] = []
     XRAY.forEach((ch, k) => {
       const col = XO + (k % 2) * (XW + GAP), row = XY0 + (k >> 1) * (XH + GAP / 2), L = T.lattice(XK, col, row)
-      // each panel is normalised to its own peak |h|, so a quiet channel still reads (like an x-ray's window)
-      let peak = .05
-      for (let i = 0; i < g.cells.length; i += model.channels) if (g.cells[i] > .1) peak = Math.max(peak, Math.abs(g.cells[i + ch]))
-      const put = (sign: 1 | -1) => L.at(L.place(ncaMapField(g, (c, i) => {
-        if (c[i] <= .1) return 0
+      // each panel has its own window (like an x-ray's): |h| at the 90th percentile of the living cells is full size,
+      // and the size follows √|h|, so a quiet channel still draws its pattern and not a few bright specks
+      const mags: number[] = []
+      for (let i = 0; i < g.cells.length; i += model.channels) if (g.cells[i] > .1) mags.push(Math.abs(g.cells[i + ch]))
+      mags.sort((a, b) => a - b)
+      const peak = Math.max(.05, mags[Math.floor(mags.length * WINDOW)] ?? 0)
+      const put = (sign: 1 | -1) => L.at(L.place(ncaMapField(g, (c, i, x, y) => {
+        if (c[i] <= .1 || under(x, y)) return 0
         const v = c[i + ch] * sign / peak
-        return v <= .12 ? 0 : v > 1 ? 1 : v
+        return v <= QUIET ? 0 : v >= 1 ? 1 : Math.sqrt(v)
       }), 0, 0, W, H))
       // the body's silhouette as small faint dots underneath, where the channel is quiet
-      const ghost = L.at(L.place(ncaMapField(g, (c, i) => c[i] > .5 && Math.abs(c[i + ch]) / peak <= .12 ? .4 : 0), 0, 0, W, H))
+      const ghost = L.at(L.place(ncaMapField(g, (c, i, x, y) => !under(x, y) && c[i] > .5 && Math.abs(c[i + ch]) / peak <= QUIET ? .4 : 0), 0, 0, W, H))
       out.push(layer(ghost, 'faint'), layer(put(-1), 'mid'), layer(put(1), 'value'), layer(T.text(`H${ch}`, col, row), 'idle'))
     })
-    return [...out, ...footer(xrayRun, ctx.t, `STEP ${pad(ncaStepAt(xrayRun, ctx.t) - xrayRun.start)}`, `${model.channels}CH ${model.hidden}H`)]
+    return [...out, ...footer(xrayRun, ctx.t, `STEP ${pad(ncaStepAt(xrayRun, ctx.t) - xrayRun.start)}`, XRAY_STAT)]
   },
 }
 
