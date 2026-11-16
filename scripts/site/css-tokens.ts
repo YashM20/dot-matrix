@@ -89,13 +89,25 @@ function check(prop: string, value: string): Cat[] {
   if (/radius$/.test(prop) && lens(v).length) out.push('radius')
   if (/^(transition|animation)/.test(prop) && [...v.matchAll(/(?<![\w.-])\d*\.?\d+m?s\b/g)].some(m => parseFloat(m[0]) !== 0)) out.push('duration')
   if (prop === 'letter-spacing' && !/^(0|normal|inherit)?$/.test(noVar(v))) out.push('tracking')
-  const lh = prop === 'line-height' ? v : prop === 'font' ? v.match(/\/\s*(calc\((?:[^()]|\([^()]*\))*\)|[^\s,]+)/)?.[1] : undefined
+  const lh = prop === 'line-height' ? v : prop === 'font' ? fontLeading(v) : undefined
   if (lh !== undefined && !/^(0|1|normal|inherit)?$/.test(noVar(lh))) out.push('leading')
   if (/^(transition|animation)(-timing-function)?$/.test(prop) && easingOff(prop, v)) out.push('easing')
   return out
 }
 
-const noVar = (s: string) => s.replace(/var\([^)]*\)/g, '').trim()
+/** The value with a trailing !important and every var() (fallbacks and nesting included) removed. */
+const noVar = (s: string) => { let t = s.replace(/!\s*important\s*$/i, ''), was; do { was = t; t = t.replace(/var\([^()]*\)/g, '') } while (t !== was); return t.trim() }
+/** The `font` shorthand's line height: what follows the top-level `/`, a function read to its closing parenthesis. */
+function fontLeading(v: string): string | undefined {
+  let d = 0, i = 0
+  for (; i < v.length && !(v[i] === '/' && !d); i++) d += v[i] === '(' ? 1 : v[i] === ')' ? -1 : 0
+  if (i === v.length) return undefined
+  let j = i + 1
+  while (v[j] === ' ') j++
+  let k = j
+  for (d = 0; k < v.length && !(/\s/.test(v[k]) && !d); k++) d += v[k] === '(' ? 1 : v[k] === ')' ? -1 : 0
+  return v.slice(j, k)
+}
 /** An easing keyword or function anywhere, or a shorthand part that moves with no var(--ease*): the browser's `ease`. */
 function easingOff(prop: string, v: string): boolean {
   if (/cubic-bezier\(|steps\(|linear\(|(?<![\w-])(ease|ease-in|ease-out|ease-in-out|linear|step-start|step-end)(?![\w-])/.test(noVar(v))) return true
@@ -108,6 +120,20 @@ function easingOff(prop: string, v: string): boolean {
 }
 /** Top-level comma split (keeps `calc(a, b)` whole). */
 const splitTop = (s: string) => { const out: string[] = []; let d = 0, cur = ''; for (const ch of s) { if (ch === '(') d++; if (ch === ')') d--; if (ch === ',' && !d) { out.push(cur); cur = '' } else cur += ch } return [...out, cur] }
+/** Regression cases for the rhythm checks, run every time: a mismatch fails the lint. */
+const SELF: [string, string, Cat[]][] = [
+  ['font', '500 var(--fs-label-12)/var(--lh-body, 1) var(--mono)', []],
+  ['font', '500 var(--fs-label-12)/1.4 var(--mono)', ['leading']],
+  ['font', '400 calc(var(--d) * 8) / calc(var(--d) * 9) var(--mono)', ['leading']],
+  ['line-height', 'var(--lh-body) !important', []],
+  ['letter-spacing', 'var(--track-caps, var(--track-wide)) !important', []],
+  ['letter-spacing', '.14em', ['tracking']],
+  ['transition-timing-function', 'var(--ease) !important', []],
+  ['transition', 'color var(--dur-out)', ['easing']],
+  ['transition', '--tip-on 0s var(--dur-tip)', []],
+]
+const selfFail = SELF.filter(([p, v, want]) => check(p, v).join() !== want.join())
+for (const [p, v] of selfFail) console.log(`self-check failed: ${p}: ${v} → ${check(p, v).join() || 'no finding'}`)
 
 const walk = (d: string): string[] => readdirSync(d).flatMap(n => { const p = join(d, n); return statSync(p).isDirectory() ? walk(p) : [p] })
 const files = walk(ROOT).filter(f => f.endsWith('.css')).map(f => relative('.', f).replace(/\\/g, '/')).sort()
@@ -204,4 +230,4 @@ for (const file of files) {
 const staleOutline = OUTLINE_OK.filter((_, i) => !usedOutline.has(i))
 for (const e of staleOutline) console.log(`stale outline allowlist entry: ${e.file} "${e.sel}"`)
 console.log(`css consistency: ${consistency} issue(s) (four-state, glow, outline, transition), outline allowlist ${OUTLINE_OK.length} (${staleOutline.length} stale)`)
-process.exit(violations || stale.length || consistency || staleOutline.length ? 1 : 0)
+process.exit(violations || selfFail.length || stale.length || consistency || staleOutline.length ? 1 : 0)
