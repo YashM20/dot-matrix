@@ -26,6 +26,7 @@ import { hash01 } from '../../engine/math'
 import type { Control } from '../../engine/context'
 import type { DotInstance, Field, Layer, Tone } from '../../engine/types'
 import { TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
+import { numberBoard } from '../numbered'
 import { lightSource } from '../../site/light'
 import { minGap } from '../sites'
 
@@ -167,7 +168,7 @@ const splashWorld = createWorld({
 })
 const SPLASH_CAPTION = ['08:42  PLATFORM 3', '08:47  PLATFORM 1']
 export const physicsSplash: WidgetPreset = {
-  id: 'phys-splash', name: 'Physics Splash', label: '01  SPLASH', ...tile, controls: touch('splash', 'Splash the word'), defaults: { ...TILT },
+  id: 'phys-splash', name: 'Physics Splash', label: 'SPLASH', numbered: true, ...tile, controls: touch('splash', 'Splash the word'), defaults: { ...TILT },
   layers: ctx => {
     mainThread()
     const s = worldAt(splashWorld, ctx.t, frameOf(ctx, 'splash')), n = worldStep(splashWorld, ctx.t), sites: Site[] = []
@@ -216,7 +217,7 @@ function inkStep(s: Float32Array, n: number, inp: StepInput) {
 const inkWorld = createWorld({ size: fluidSize(fluid), dt: I_DT, lead: 3, period: I_PERIOD, seam: 1.2, every: 12, maxSteps: 720, maxLiveSteps: 4, init: () => {}, step: inkStep })
 const inkTone = (v: number): Tone => (v >= .86 ? 'value' : v >= .68 ? 'idle' : v >= .48 ? 'mid' : 'faint')
 export const physicsInk: WidgetPreset = {
-  id: 'phys-ink', name: 'Physics Ink', label: '02  INK', ...tile, controls: touch('ink', 'Stir the ink'), defaults: { ...TILT },
+  id: 'phys-ink', name: 'Physics Ink', label: 'INK', numbered: true, ...tile, controls: touch('ink', 'Stir the ink'), defaults: { ...TILT },
   credit: STABLE_FLUIDS,
   layers: ctx => {
     mainThread()
@@ -279,7 +280,7 @@ const flagWorld = createWorld({
 const LIGHT = (() => { const v = [-.75, -.35, .55], l = Math.hypot(...v); return v.map(x => x / l) })()
 const FOCAL = 170
 export const physicsFlag: WidgetPreset = {
-  id: 'phys-flag', name: 'Physics Flag', label: '03  FLAG', ...tile, controls: touch('flag', 'Grab the flag'), defaults: { ...TILT },
+  id: 'phys-flag', name: 'Physics Flag', label: 'FLAG', numbered: true, ...tile, controls: touch('flag', 'Grab the flag'), defaults: { ...TILT },
   credit: PBD,
   layers: ctx => {
     mainThread()
@@ -388,7 +389,7 @@ function jellyRaster(s: Float32Array, t: number): [number, number] {
 const jellyField: Field = (u, v) => jVal[Math.round(v * (JR - 1)) * JC + Math.round(u * (JC - 1))]
 const jellyToneOf = (_: number, u: number, v: number): Tone => J_TONES[jTone[Math.round(v * (JR - 1)) * JC + Math.round(u * (JC - 1))]]
 export const physicsJelly: WidgetPreset = {
-  id: 'phys-jelly', name: 'Physics Jelly', label: '04  JELLY', ...tile, controls: touch('jelly', 'Poke the jelly'), defaults: { ...TILT },
+  id: 'phys-jelly', name: 'Physics Jelly', label: 'JELLY', numbered: true, ...tile, controls: touch('jelly', 'Poke the jelly'), defaults: { ...TILT },
   credit: PBD,
   layers: ctx => {
     mainThread()
@@ -451,7 +452,7 @@ const pitWorld = createWorld({
 /** Site size for a disc of radius r cells (a full card dot is ~.95 of the pitch). */
 const discSize = (r: number) => (2 * r) / .95
 export const physicsPit: WidgetPreset = {
-  id: 'phys-pit', name: 'Physics Pit', label: '05  PIT', ...tile, controls: touch('pit', 'Throw a dot'), defaults: { ...TILT },
+  id: 'phys-pit', name: 'Physics Pit', label: 'PIT', numbered: true, ...tile, controls: touch('pit', 'Throw a dot'), defaults: { ...TILT },
   layers: ctx => {
     mainThread()
     const s = worldAt(pitWorld, ctx.t, frameOf(ctx, 'pit')), sites: Site[] = [], grab = s[P_GRAB]
@@ -466,7 +467,7 @@ export const physicsPit: WidgetPreset = {
 
 /** The board's worlds (tests reset them; see scripts/physics.ts). */
 export const physicsWorlds: World[] = [splashWorld, inkWorld, flagWorld, jellyWorld, pitWorld]
-export const physicsBoard: WidgetPreset[] = [physicsSplash, physicsInk, physicsFlag, physicsJelly, physicsPit]
+export const physicsBoard: WidgetPreset[] = numberBoard([physicsSplash, physicsInk, physicsFlag, physicsJelly, physicsPit])
 
 /** Read-outs for tests (scripts/physics.ts): splash dot modes, a pit ball, the grabs, total ink. */
 export const physicsProbe = {

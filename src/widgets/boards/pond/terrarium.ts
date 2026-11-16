@@ -28,7 +28,7 @@ export function sunOnFloor(hour: number): [number, number] {
 export const creeperNow = (hour: number) => creeperFor(terrarium, Math.floor(hour), sunOnFloor(Math.floor(hour) + .5))
 
 export const pondTerrarium: WidgetPreset = {
-  id: 'pond-terrarium', name: 'Pond Terrarium', label: '06  TERRARIUM', ...tile, fps: 12, controls: touch('terra', 'Drop a crumb'),
+  id: 'pond-terrarium', name: 'Pond Terrarium', label: 'TERRARIUM', numbered: true, ...tile, fps: 12, controls: touch('terra', 'Drop a crumb'),
   credit: { by: ['Adam Runions', 'Brendan Lane', 'Przemyslaw Prusinkiewicz'], title: 'Modeling trees with a space colonization algorithm (2007)', source: 'https://algorithmicbotany.org/papers/colonization.egwnp2007.html', note: 'how the creeper grows' },
   layers: ctx => {
     mainThread()

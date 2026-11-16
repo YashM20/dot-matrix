@@ -11,6 +11,7 @@ import type { Control } from '../../engine/context'
 import type { Tone } from '../../engine/types'
 import { BINS, FLOOR_DB, WAVE, audioOf, demoFrame, type AudioFrame } from '../../audio/frame'
 import { TAU, TILE, dim, layer, layoutFor, liveDot as chromeLiveDot, tileCircleStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
+import { numberBoard } from '../numbered'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -51,7 +52,7 @@ function trace(wave: ArrayLike<number>, spacing = 2.1): Pt[] {
 }
 
 export const scopeWave: WidgetPreset = {
-  id: 'scope-wave', name: 'Scope', label: '01  SCOPE', ...card,
+  id: 'scope-wave', name: 'Scope', label: 'SCOPE', numbered: true, ...card,
   layers: ctx => {
     const f = busOf(ctx)
     let pk = 0
@@ -79,7 +80,7 @@ const siteAt = (i: number, k: number): Pt => [SP.x0 + i * SP.gap, SP.base - k * 
 const LATTICE: Pt[][] = Array.from({ length: BINS }, (_, i) => Array.from({ length: SP.n }, (_, k) => siteAt(i, k)))
 
 export const scopeSpectrum: WidgetPreset = {
-  id: 'scope-spectrum', name: 'Spectrum', label: '02  SPECTRUM', ...card,
+  id: 'scope-spectrum', name: 'Spectrum', label: 'SPECTRUM', numbered: true, ...card,
   layers: ctx => {
     const f = busOf(ctx), lit: Pt[] = [], dark: Pt[] = [], caps: Pt[] = []
     for (let i = 0; i < BINS; i++) {
@@ -113,7 +114,7 @@ const MIC_LAT = T.lattice(2, RING.cx - 8.5, RING.cy - 9.5), MIC = MIC_LAT.sprite
 const MIC_STATE = ['TAP TO LISTEN', 'ASKING', 'LOCAL ONLY', 'MIC BLOCKED']
 
 export const scopeMic: WidgetPreset = {
-  id: 'scope-mic', name: 'Mic', label: '03  MIC', ...card,
+  id: 'scope-mic', name: 'Mic', label: 'MIC', numbered: true, ...card,
   defaults: { mic: 0, micState: 0 },
   controls: [{ key: 'mic', kind: 'toggle', box: [8, 12, 128, 128], label: 'Listen to the microphone' } satisfies Control],
   layers: ctx => {
@@ -144,6 +145,6 @@ export const scopeMic: WidgetPreset = {
   },
 }
 
-export const scopeBoard: WidgetPreset[] = [scopeWave, scopeSpectrum, scopeMic]
+export const scopeBoard: WidgetPreset[] = numberBoard([scopeWave, scopeSpectrum, scopeMic])
 /** Board-shared keys: the mic toggle and its state round-trip through the board store to `src/audio`. */
 export const scopeShared = ['mic', 'micState']

@@ -11,6 +11,7 @@ import type { Control } from '../../engine/context'
 import { LIVE_DOT, TAU, TILE, bounded, combine, layer, layoutFor, tileStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
 import { PRESS, marching, rr, ui, type UiState } from './components-kit'
 import { scrubber, switchKnob, switchTrack, transportGlyph, type ScrubSpec } from '../dot-controls'
+import { numberBoard } from '../numbered'
 
 const T = layoutFor(TILE)
 type Pt = [number, number]
@@ -110,7 +111,7 @@ const dateNow = () => { const d = new Date(); return `${MONTHS[d.getMonth()]} ${
 
 // ── 01 HOME ─────────────────────────────────────────────────────────────────
 export const homeClock: WidgetPreset = {
-  id: 'home-clock', name: '01 Home', label: '01  HOME', group: 'text', live: true, clock: true, burst: 1.2, ...tile,
+  id: 'home-clock', name: 'Home', label: 'HOME', numbered: true, group: 'text', live: true, clock: true, burst: 1.2, ...tile,
   defaults: { battery: 0.78 },
   layers: ({ data, since }) => {
     // battery gauge: 27 dots on a half ring, 9 o'clock → 3 o'clock; charged run white, the rest dim
@@ -161,7 +162,7 @@ const transport = (bar: number, dir: 1 | -1): LatticeField => {
 /** The scrubber: two fine dot lines stopping short of the red knob (the `lines` method). */
 const SCRUB: ScrubSpec = { x0: 2, x1: 141, y: 141, spacing: 1.65, size: [.9, .7], knob: 5, gap: 3, method: 'lines', travel: [2, 140] }
 export const music: WidgetPreset = {
-  id: 'music', name: '02 Music', group: 'photo', ...tile,
+  id: 'music', name: 'Music', numbered: true, group: 'photo', ...tile,
   defaults: { position: 0.44 }, springKeys: ['position'],
   layers: ({ data }) => {
     return [
@@ -175,7 +176,7 @@ export const music: WidgetPreset = {
 
 // ── 03 TIMER ────────────────────────────────────────────────────────────────
 export const timer: WidgetPreset = {
-  id: 'timer', name: '03 Timer', group: 'polar', ...tile,
+  id: 'timer', name: 'Timer', numbered: true, group: 'polar', ...tile,
   defaults: { progress: 0.38 }, springKeys: ['progress'],
   layers: ({ data }) => {
     const ring = { spacing: (TAU * 60) / 104, size: 3.1 }
@@ -213,7 +214,7 @@ const weatherAt = (t: number) => {
   return next.map((s, i) => decodeText(prev[i], s, tau, { seed: i + 1 }))
 }
 export const weather: WidgetPreset = {
-  id: 'weather', name: '04 Weather', label: '04  WEATHER', group: 'icon', animated: true, ...tile,
+  id: 'weather', name: 'Weather', label: 'WEATHER', numbered: true, group: 'icon', animated: true, ...tile,
   layers: ({ t }) => {
     const [city, temp, range] = weatherAt(t)
     return [
@@ -230,7 +231,7 @@ export const weather: WidgetPreset = {
 const DAYS = ['M', 'T', 'W', 'T', 'F', 'S', 'S']
 const WEEK = [7, 9, 7, 6, 8, 9, 8], TODAY_EXTRA = 7
 export const fitness: WidgetPreset = {
-  id: 'fitness', name: '05 Fitness', group: 'polar', ...tile,
+  id: 'fitness', name: 'Fitness', numbered: true, group: 'polar', ...tile,
   defaults: { move: 0.62, exercise: 0.58, stand: 0.6 }, springKeys: ['move', 'exercise', 'stand'],
   layers: ({ data }) => {
     const rings = ([[26.5, data.move, 'value'], [21, data.exercise, 'active'], [15.5, data.stand, 'active']] as const).flatMap(([r, p, tone]) => {
@@ -275,7 +276,7 @@ const typewriter = (t: number): [string, string, (0 | 1)?] => {
   return Math.floor(tau * 2.5) % 2 ? [a, b] : [a, b, 1]
 }
 export const messages: WidgetPreset = {
-  id: 'messages', name: '06 Messages', group: 'composite', live: true, animated: true, ...tile,
+  id: 'messages', name: 'Messages', numbered: true, group: 'composite', live: true, animated: true, ...tile,
   layers: ({ t }) => [
     ...bubble(17, 'A', 'ALEX', '10:30', ...typewriter(t)),
     ...bubble(77, 'M', 'MAYA', '09:12', "DON'T FORGET", 'THE REPORT.'),
@@ -297,7 +298,7 @@ const slidersIcon = (cx: number, cy: number) => icon(
   linePts(cx - 6, cy + 3, [[0, 0], [6, 0]]), linePts(cx + 5, cy + 3, [[0, 0], [2, 0]]), arcPts(cx + 2.5, cy + 3, 2),
 )
 export const camera: WidgetPreset = {
-  id: 'camera', name: '07 Camera', label: '07  CAMERA', group: 'composite', ...tile,
+  id: 'camera', name: 'Camera', label: 'CAMERA', numbered: true, group: 'composite', ...tile,
   layers: () => {
     const { x0, x1, y0, y1 } = FR, w = x1 - x0, h = y1 - y0, cx = Math.round((x0 + x1) / 2), cy = Math.round((y0 + y1) / 2)
     return [
@@ -362,7 +363,7 @@ const [rowLines, pickedLines] = T.rows(ROWS.x, ROWS.top, ROWS.w, ROWS.h, ROWS.n,
 const SWITCHES = { bluetooth: { row: 1, label: 'Bluetooth' }, sound: { row: 3, label: 'Sound' } }
 const switchAt = (ctx: WidgetContext, key: keyof typeof SWITCHES): Right => ({ on: (ctx.data[key] ?? 0) >= .5, ui: ui(ctx, key), t: ctx.t })
 export const settings: WidgetPreset = {
-  id: 'settings', name: '08 Settings', group: 'icon', ...tile,
+  id: 'settings', name: 'Settings', numbered: true, group: 'icon', ...tile,
   defaults: { bluetooth: 0, sound: 1 },
   controls: Object.entries(SWITCHES).map(([key, s]): Control => ({ key, kind: 'toggle', box: [ROWS.x, ROWS.top + s.row * ROWS.h, ROWS.w, ROWS.h], label: s.label })),
   layers: ctx => [
@@ -385,7 +386,7 @@ const usage = (row: number, value: number, tone: 'active' | 'value') => {
   ]
 }
 export const system: WidgetPreset = {
-  id: 'system', name: '09 System', group: 'chart', ...tile,
+  id: 'system', name: 'System', numbered: true, group: 'chart', ...tile,
   defaults: { cpu: 0.42 },
   layers: ({ data }) => [
     layer(T.text('CPU USAGE', 0, 24), 'idle'), layer(T.text(`${Math.round(data.cpu * 100)}%`, 139, 24, { align: 'right' })),
@@ -394,4 +395,4 @@ export const system: WidgetPreset = {
   ],
 }
 
-export const henryBoard = [homeClock, music, timer, weather, fitness, messages, camera, settings, system]
+export const henryBoard = numberBoard([homeClock, music, timer, weather, fitness, messages, camera, settings, system])

@@ -17,6 +17,7 @@ import { loopT, wordOf, wordPixels, wordWidth } from '../../engine/kinetic/word'
 import { MELT, WAVE, meltFloor, meltFrame, waveFrame, waveOffset } from '../../engine/kinetic/drift'
 import { SCRAMBLE, TYPE, scrambleFrame, scrambleLock, typed, typewriterFrame } from '../../engine/kinetic/glyphs'
 import type { WidgetPreset } from '../types'
+import { numberBoard } from '../numbered'
 import { SCREEN, WORD, WORD_KEYS, centred, footer, letters, loopTime, paint, tile, wordStage } from './kinetic-kit'
 import { ktFlap } from './kinetic-flap'
 import { ktMagnet, ktShatter } from './kinetic-pull'
@@ -24,7 +25,7 @@ import { ktMagnet, ktShatter } from './kinetic-pull'
 
 // ── 02 MELT ─────────────────────────────────────────────────────────────────
 export const ktMelt: WidgetPreset = {
-  id: 'kt-melt', name: 'Melt', label: '02  MELT', ...tile, defaults: WORD,
+  id: 'kt-melt', name: 'Melt', label: 'MELT', numbered: true, ...tile, defaults: WORD,
   layers: ctx => {
     const word = wordOf(ctx.data), t = loopTime(ctx), lt = loopT(t, MELT.period)
     // the word and its pool (7 + drop rows) centred together
@@ -36,7 +37,7 @@ export const ktMelt: WidgetPreset = {
 
 // ── 03 SCRAMBLE ─────────────────────────────────────────────────────────────
 export const ktScramble: WidgetPreset = {
-  id: 'kt-scramble', name: 'Scramble', label: '03  SCRAMBLE', ...tile, defaults: WORD,
+  id: 'kt-scramble', name: 'Scramble', label: 'SCRAMBLE', numbered: true, ...tile, defaults: WORD,
   layers: ctx => {
     const word = wordOf(ctx.data), t = loopTime(ctx), lt = loopT(t, SCRAMBLE.period)
     let busy = 0
@@ -48,7 +49,7 @@ export const ktScramble: WidgetPreset = {
 
 // ── 04 WAVE ─────────────────────────────────────────────────────────────────
 export const ktWave: WidgetPreset = {
-  id: 'kt-wave', name: 'Wave', label: '04  WAVE', ...tile, defaults: WORD,
+  id: 'kt-wave', name: 'Wave', label: 'WAVE', numbered: true, ...tile, defaults: WORD,
   layers: ctx => {
     const word = wordOf(ctx.data), t = loopTime(ctx), lt = loopT(t, WAVE.period)
     let amp = 0
@@ -59,7 +60,7 @@ export const ktWave: WidgetPreset = {
 
 // ── 05 TYPE ─────────────────────────────────────────────────────────────────
 export const ktType: WidgetPreset = {
-  id: 'kt-type', name: 'Typewriter', label: '05  TYPE', ...tile, defaults: WORD,
+  id: 'kt-type', name: 'Typewriter', label: 'TYPE', numbered: true, ...tile, defaults: WORD,
   layers: ctx => {
     const word = wordOf(ctx.data), t = loopTime(ctx), lt = loopT(t, TYPE.period), { len, busy } = typed(word, t)
     const state = !busy ? 'READY' : lt < TYPE.empty ? 'DELETE' : 'TYPING'
@@ -67,6 +68,6 @@ export const ktType: WidgetPreset = {
   },
 }
 
-export const kineticBoard: WidgetPreset[] = [ktFlap, ktMelt, ktScramble, ktWave, ktType, ktMagnet, ktShatter]
+export const kineticBoard: WidgetPreset[] = numberBoard([ktFlap, ktMelt, ktScramble, ktWave, ktType, ktMagnet, ktShatter])
 /** Board-shared data: the twelve flap modules, so the FLAP card's edits reach every card. */
 export const kineticShared = WORD_KEYS
