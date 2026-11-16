@@ -11,17 +11,15 @@
  *  - stone:    marble (the engine generator) determinism and vein width, terrazzo spacing and keep-out
  *  - glass:    Snell LUT (127 samples, signs per profile, ior 1), strength 0 ≡ behind, Fresnel, frost (M2.1)
  *  - caustics: flat water = 1, energy, focusing, determinism and timing (M2.3)
- *  - workshop: M3's board (the board checks again, over the nine cards; gx / gy declared by the physics cards), the
- *              determinism lint scope, and one invariant per card (knit, denim, paper, wood, leather, sand, ice,
- *              mercury, thread), with the worlds' tap / drag / heal behaviour
- *  - growth:   XM's Lichtenberg plate and erosion stone: resumable growth, the discharge, the tap; droplets in batches,
- *              checkpointed replays, mass, legibility at 19:59 and 23:59, bake and frame costs
+ *  - workshop: the workshop board's four cards (frost, ice, kintsugi, paper fold): the board checks again, each tag clear
+ *              of its title, the ice card's cluster and its breath world
+ *  - growth:   the frost window: the wedge automaton ≡ the plain one, the vetted table, one flake a day, the red tips
  *  - kintsugi: the kintsugi plate: cracks connected and anchored, shards tile the piece, deterministic breaks, red only
  *              while a seam fills, the repair completes, a tap heals back to the loop, bake and frame costs
  *  - fold:     the paper fold: area kept, facets placed by isometries, a turning fold keeps 3D distances and lands on the
  *              next flat state, unfolding returns the exact sheet, unit normals, the loop wraps, red only on the moving
  *              crease, the determinism lint, the frame cost
- *  - tilt:     M3.10 on the workshop: the hub's buckets, no DeviceOrientation / data.light, gx / gy only in step inputs,
+ *  - tilt:     M3.10 on the workshop: the hub's buckets, no DeviceOrientation / data.light / gx / gy,
  *              tx = ty = 0 ≡ no tilt, and every card's light = sceneLight (pointer → lightSrc 1 → sun)
  * Timings are printed; budgets scale by a measured load factor so a busy box doesn't fail them. `--bench` prints
  * each workshop card's cold / warm / hover frame. The MATERIALS board and its board and cards groups were removed
@@ -33,7 +31,7 @@ import { heightRaster, lightDir, metal, normalRaster, sdfBox, sdfCircle, type Li
 import { blur, createRaster, distanceRaster, rasterize, rasterWindow } from '../src/engine/raster'
 import { latticeGrid } from '../src/engine/sampler/gridSampler'
 import type { GridConfig } from '../src/engine/types'
-import { T, toLattice15 } from '../src/widgets/boards/materials-shared'
+import { T } from '../src/widgets/boards/materials-shared'
 import { fmtLoaded, medianLoaded } from './lib/load'
 import { type Assert, same, DEG, loadFactor, cells, type MaterialsOptions } from './materials/util'
 import { glassChecks, causticChecks } from './materials/optics'
@@ -97,9 +95,9 @@ export async function materialsChecks(assert: Assert, opts: MaterialsOptions = {
     let lit = 0; for (const v of m.data) lit += v
     // lattice dot (3, 2) spans card x ∈ [17.5, 20), y ∈ [25, 27.5): centres x + ½ in range → cols 17, 18, 19; rows 25, 26 (a 2.5 lattice alternates 3 and 2 cells)
     assert('materials: cardMask: a lattice dot fills the card cells whose centres fall in it', lit === 6 && m.data[25 * 144 + 17] === 1 && m.data[26 * 144 + 19] === 1 && m.data[27 * 144 + 19] === 0, `${lit} cells`)
-    // an engraving (the workshop's cut letters, once the marble clock's): a banded inset distance stands in for two
+    // an engraving (cut letters, as the retired marble and wood clocks had): a banded inset distance stands in for two
     // full-grid EDTs (identical heights, bit for bit)
-    const glyphs = toLattice15(cardMask(T.big('09 41', 72, 50, { lattice: 2, smooth: true, mask: true, align: 'center' }), TILE)), prof = { shape: 'linear' as const, width: 1.6, height: -1.8 }
+    const glyphs = cardMask(T.big('09 41', 72, 50, { lattice: 2, smooth: true, mask: true, align: 'center' }), TILE), prof = { shape: 'linear' as const, width: 1.6, height: -1.8 }
     const viaEdt = heightRaster(distanceRaster(glyphs), prof), viaBand = heightRaster(insetDistance(glyphs), prof)
     assert('materials: insetDistance ≡ distanceRaster under an engraving profile (heights and coverage bit for bit)', same(viaEdt.data, viaBand.data) && same(viaEdt.mask, viaBand.mask))
     const barrel = readFileSync(new URL('../src/engine/index.ts', import.meta.url), 'utf8')
@@ -292,7 +290,7 @@ export async function materialsChecks(assert: Assert, opts: MaterialsOptions = {
   if (run('glass')) glassChecks(assert)
   if (run('caustics')) causticChecks(assert)
   if (run('workshop')) await workshopChecks(assert, opts)
-  if (run('growth')) await growthChecks(assert, opts)
+  if (run('growth')) growthChecks(assert)
   if (run('kintsugi')) await kintsugiChecks(assert, opts)
   if (run('fold')) foldChecks(assert, opts)
   if (run('tilt')) tiltChecks(assert)

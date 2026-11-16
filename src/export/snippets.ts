@@ -1,9 +1,11 @@
 /**
  * What a widget leaves the site as (docs/SHARE-PLAN.md §5): pure string builders, no DOM, testable in Node.
- * The card frame matches `stillPNG`: the dots on the card surface with 14 px padding and the card's corner.
+ * The card frame matches `stillPNG`: the dots with 14 px padding in the site's card frame (`cardFrame`: surface, 1 px
+ * hairline, the card radius).
  */
 import type { DotInstance } from '../engine/types'
 import { renderSVG } from '../engine/renderer/svgRenderer'
+import { dot480 } from '../engine/theme/tokens'
 
 export interface CardFrame { width: number; height: number; background: string; border?: string; radius?: number; pad?: number }
 export interface CardCredit { name: string; slug: string; url: string }
@@ -12,7 +14,7 @@ const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replac
 
 /** A standalone card SVG: surface, hairline border, the dots, a `<title>` and a credit comment with the widget's URL. */
 export function cardSVG(dots: DotInstance[], f: CardFrame, c: CardCredit): string {
-  const pad = f.pad ?? 14, W = f.width + pad * 2, H = f.height + pad * 2, r = f.radius ?? 16
+  const pad = f.pad ?? 14, W = f.width + pad * 2, H = f.height + pad * 2, r = f.radius ?? dot480.cornerRadiusCard
   const inner = renderSVG(dots, f.width, f.height).replace('<svg ', `<svg x="${pad}" y="${pad}" `)
   return `<!-- dot480 card ${c.slug} · ${c.url} -->\n<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${esc(c.name)}">`
     + `<title>${esc(c.name)} · MATRIX</title>`

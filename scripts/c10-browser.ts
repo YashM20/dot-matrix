@@ -205,8 +205,9 @@ try {
   }
   // ── SHARE on the card page (A9.1): a press that ends off the button (no click) leaves no PNG for a later keyboard SHARE
   if (run('share')) {
-  // a Web Share stand-in (headless Linux Chrome has none): it records each shared PNG as `bytes:hash`
-  const stub = (await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `window.__shared=[];navigator.canShare=()=>true;navigator.share=async d=>{const f=d.files&&d.files[0];if(!f){window.__shared.push('link');return}const b=new Uint8Array(await f.arrayBuffer());let h=0;for(let i=0;i<b.length;i++)h=(h*31+b[i])>>>0;window.__shared.push(b.length+':'+h)}` })).result.identifier
+  // a Web Share stand-in (headless Linux Chrome has none): it records each shared PNG as `bytes:hash` and keeps the last
+  // one as a data URL, saved as `share-card.png` (the card export's frame, for before/after shots)
+  const stub = (await cdp('Page.addScriptToEvaluateOnNewDocument', { source: `window.__shared=[];navigator.canShare=()=>true;navigator.share=async d=>{const f=d.files&&d.files[0];if(!f){window.__shared.push('link');return}const fr=new FileReader();fr.onload=()=>{window.__sharedPng=fr.result};fr.readAsDataURL(f);const b=new Uint8Array(await f.arrayBuffer());let h=0;for(let i=0;i<b.length;i++)h=(h*31+b[i])>>>0;window.__shared.push(b.length+':'+h)}` })).result.identifier
   // SHARE shows on touch only (a coarse pointer, read when the page mounts): load the page as a touch device, then
   // drive it with the mouse
   await cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
@@ -227,6 +228,8 @@ try {
     await key(' ')
     await waitFor(`window.__shared.length === 2`, 8000)
     const shared = await js(`window.__shared`) as string[]
+    const png = await js(`window.__sharedPng ?? null`) as string | null
+    if (png?.startsWith('data:image/png;base64,')) writeFileSync(join(out, 'share-card.png'), Buffer.from(png.slice(22), 'base64'))
     check('card page: a keyboard SHARE after a cancelled press shares the card as it is now (theme changed in between)',
       shared.length === 2 && shared[0] !== 'link' && shared[0] === shared[1], shared.join(' vs '))
     await js(`(window.dot480.setTheme({ accent: 'signal' }), 1)`)

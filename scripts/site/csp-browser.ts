@@ -52,7 +52,7 @@ const PAGES = ['/', '/about', ...boardIds.map(b => `/${b}/`), '/widget/clock/', 
   '/blog/', '/blog/dot-matrix-essay/', '/lab/', '/lab/motion-lab.html', '/privacy', '/terms']
 /** Test-only globals a visitor must never get (src/lib/testHooks.ts and the boards' `?probe=1` hooks). */
 const TEST_GLOBALS = ['dot480Live', 'dot480Audio', '__hive', '__editor', '__editorShared', '__editorLink', '__editorClip', '__editorDevices', '__skinPerf', '__dotLatency', '__dotTestCamera', '__dotHandLog',
-  '__pond', '__pondBoard', '__workshop', '__kintsugi', '__plate', '__frost', '__mud', '__stone']
+  '__pond', '__pondBoard', '__kintsugi', '__frost']
 // before any page script: record violations, and every worker the page starts (the real constructor still runs, so
 // Trusted Types still checks its URL)
 const RECORD = `(() => {

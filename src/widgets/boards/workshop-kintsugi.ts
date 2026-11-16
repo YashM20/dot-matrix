@@ -201,7 +201,7 @@ export const matKintsugi: WidgetPreset = {
     const out = shadeBreak(b, beat, close, L), word = beat.phase === 'whole' ? 'WHOLE' : beat.phase === 'struck' ? 'STRUCK' : beat.phase === 'mending' ? 'MENDING' : 'MENDED'
     const pieces = beat.phase === 'whole' ? (b.prev?.pieces ?? 1) : b.pieces
     return [
-      cite('MULLER 2013'),
+      cite('GOLD REPAIR'),
       tonedLayer(out.values, out.tones),
       ...(out.red.length ? [layer(T.dots(out.red, 1), 'active')] : []),
       layer(T.text(`${close > .5 ? 1 : pieces} ${pieces === 1 || close > .5 ? 'PIECE' : 'PIECES'}`, 6, 135), 'mid'),
