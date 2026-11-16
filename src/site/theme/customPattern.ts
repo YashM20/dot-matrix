@@ -15,7 +15,7 @@
 export const CUSTOM_RULE = String.raw`\[data-scheme="(dark|light)"\]\[data-accent="custom"\]\{(--[a-z-]+: (#[0-9A-F]{6}|(radial-gradient\(closest-side, )?rgba\((\d{1,3}, ){3}[01](\.\d{1,3})?\)(, transparent\))?);)+\}`
 export const CUSTOM_MEDIA = String.raw`@media \(prefers-contrast: more\)\{`
 export const CUSTOM_WHERE = String.raw`:where\(\[data-contrast="more"\], \[data-contrast="more"\] \*\)`
-/** The longest stored CSS considered (today's is ~2.1 kB). */
+/** The longest stored CSS considered (today's is ~1.9 kB). */
 export const CUSTOM_CSS_MAX = 8192
 const pattern = new RegExp(`^(${CUSTOM_RULE}|${CUSTOM_MEDIA}${CUSTOM_RULE}\\}|${CUSTOM_WHERE}${CUSTOM_RULE})+$`)
 /** True when `css` may be painted as the custom theme (the boot script runs the same test). */

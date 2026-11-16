@@ -3,7 +3,7 @@ import type { ThemeTokens } from '../../engine/types'
 import type { ThemeName } from './names'
 
 /** The light neutral preset: warm paper (#f7f7f4-like) with dark ink dots, the light signal red as accent. */
-export const PAPER: ThemeTokens = { bg: '#F1F0EC', surface: '#F8F8F5', surfaceRaised: '#FEFDFB', hairline: 'rgba(27, 27, 25, 0.12)', dotIdle: '#484846', dotMid: '#939290', dotFaint: '#D1D1CF', dotActive: '#E43226', dotActiveDim: '#FF9687', accentAmber: '#D98A3D', value: '#1B1B19', gridPx: 4, cornerRadiusCard: 16 }
+export const PAPER: ThemeTokens = { bg: '#F1F0EC', surface: '#F8F8F5', surfaceRaised: '#FEFDFB', hairline: 'rgba(27, 27, 25, 0.12)', dotIdle: '#484846', dotMid: '#939290', dotFaint: '#D1D1CF', dotActive: '#E43226', dotActiveDim: '#FF9687', accentAmber: '#D98A3D', value: '#1B1B19', gridPx: 4, cornerRadiusCard: 12 }
 
 /** What each theme changes on its scheme's preset (`dot480` dark, `PAPER` light); `dark_signal` changes nothing. */
 export const DOT_TABLE: Record<ThemeName, Partial<ThemeTokens>> = {

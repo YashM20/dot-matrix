@@ -54,7 +54,7 @@ export function Panel() {
 
 Every card takes the same props: `data` (merged over the card's defaults), `theme`, `renderer` (`auto`, `svg` or
 `canvas`), `pitch` (dot spacing in px), `animated`, `reducedMotion`, `enter`, `onInput`, `className` and `style`. A card
-fills the width you give it and keeps its aspect ratio, on a dark rounded tile padded by `--matrix-card-pad` (16px by default). Interactive cards take pointer and keyboard input: Tab moves
+fills the width you give it and keeps its aspect ratio, in the site's card frame (the theme's surface, a 1px hairline, the 12px card radius) padded by `--matrix-card-pad` (16px by default). Interactive cards take pointer and keyboard input: Tab moves
 between controls, the arrow keys change a value. Under reduced motion a card shows one still frame.
 
 The components are client components (`'use client'`), so they work in the Next.js App Router as well as in Vite.
@@ -64,8 +64,8 @@ The components are client components (`'use client'`), so they work in the Next.
 | Item | What |
 |---|---|
 | `matrix-core` | The engine subset and card runtime (`lib/matrix/`), and `<MatrixDotCard>` (`components/matrix/dot-card.tsx`). Every card installs it once. |
-| `matrix-board-henry`, `-components`, `-audio`, `-heartbeat` | The card presets of one board (`lib/matrix/widgets/boards/`). Cards install the board they need. |
-| `matrix-timer`, `matrix-home-clock`, `matrix-weather`, `matrix-music` | Widgets from the home board |
+| `matrix-board-henry`, `-components`, `-audio`, `-heartbeat` | The card presets of one board (`lib/matrix/widgets/boards/`). Cards install the board they need. `henry` is the board visitors know as MICRO UI. |
+| `matrix-timer`, `matrix-home-clock`, `matrix-weather`, `matrix-music` | Widgets from the MICRO UI board |
 | `matrix-ui-segmented`, `-stepped-slider`, `-knob`, `-stepper`, `-check`, `-tabs`, `-progress`, `-loaders`, `-keypad`, `-text-field` | Interactive controls from the components board |
 | `matrix-audio-levels`, `matrix-hb-agent` | An animated audio meter and the agent heartbeat |
 | `matrix-dot-text` | `<MatrixDotText text>`: text in the 5×7 dot font, regular or bold, light or accent |
