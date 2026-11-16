@@ -28,7 +28,6 @@ import { algorithmsBoard } from './boards/algorithms'
 import { squaresBoard } from './boards/squares'
 import { fractalsBoard } from './boards/fractals'
 import { pondBoard, pondSources } from './boards/pond/index'
-import { materialsBoard, materialsSources } from './boards/materials'
 import { workshopBoard, workshopSources } from './boards/workshop'
 import { oldschoolBoard } from './boards/oldschool'
 import { scenesBoard } from './boards/scenes'
@@ -73,7 +72,6 @@ const contents = {
   scope: { items: scopeBoard, shared: scopeShared },
   heal: { items: healBoard },
   algorithms: { items: algorithmsBoard },
-  materials: { items: materialsBoard, sources: materialsSources },
   pond: { items: pondBoard, sources: pondSources },
   squares: { items: squaresBoard },
   fractals: { items: fractalsBoard },

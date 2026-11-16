@@ -14,8 +14,7 @@ import { foldHooks as F } from '../../src/widgets/boards/workshop-fold'
 import { workshopBoard } from '../../src/widgets/boards/workshop'
 import { DET_PATHS, detLint } from '../lib/detLint'
 import { fmtLoaded, medianLoaded } from '../lib/load'
-import { type Assert, same, type MaterialsOptions } from './util'
-import { atClock } from './board'
+import { type Assert, same, atClock, type MaterialsOptions } from './util'
 
 const frame = (p: WidgetPreset, t: number) => atClock(() => sampleLayers(withChrome(p)({ t, data: { ...p.defaults } }), p.grid, p.style, dot480))
 const key = (p: WidgetPreset, t: number) => JSON.stringify(frame(p, t))

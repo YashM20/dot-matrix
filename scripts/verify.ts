@@ -166,8 +166,8 @@ goldenKeyChecks(assert)
   await lightChecks(assert)
 }
 
-// MATERIALS) M1 (docs/living-matter/M-materials.md): relief + AO, anisotropic sheen, matcaps, weave / stitch, stone, and the
-// materials board (one accent, no activeDim, light keys, frame budgets, per-card invariants) (scripts/materials.ts)
+// MATERIALS) M1 (docs/living-matter/M-materials.md): relief + AO, anisotropic sheen, matcaps, weave / stitch, stone, glass,
+// caustics, and the workshop board (one accent, light keys, frame budgets, per-card invariants) (scripts/materials.ts)
 {
   const { materialsChecks } = await import('./materials')
   await materialsChecks(assert)

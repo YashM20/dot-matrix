@@ -31,7 +31,6 @@ export const boardBlurbs: Record<BoardId, string> = {
   scope: 'The instrument seen as signal: oscilloscope, spectrum and your microphone.',
   heal: 'Scratch the dots with your cursor and watch them grow back.',
   algorithms: 'Four niche algorithms drawing in dots: Voronoi stippling, a strange attractor, wave function collapse and frost growth.',
-  materials: 'Stone, glass, metal, cloth and thread made of dots: relief, one light and a moving part.',
   workshop: 'Twelve materials: knit, denim, paper, wood, leather, sand, ice, mercury, thread, a burned plate, a worn stone and frost.',
   pond: 'A koi pond and other small ecosystems, drawn in glyph tiles. Tap to feed, hold to lure.',
   squares: 'Square cells that sit apart, fuse where they match, turn and get cut. Games, portraits, old screens, generative prints and two floors that never repeat.',

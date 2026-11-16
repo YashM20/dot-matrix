@@ -1,6 +1,6 @@
 /**
  * The WebGL2 dot renderer (engine/renderer/webgl/dotgl + its shaders) loads only when a card needs it: a card whose
- * layers carry GPU passes (the GPU board, MATERIALS glass) or one forced to `webgl` from the X-ray. Every other card
+ * layers carry GPU passes (the GPU board) or one forced to `webgl` from the X-ray. Every other card
  * draws on Canvas or SVG, so first load leaves it out. DotCanvas starts the fetch when such a card mounts, during its
  * entrance delay, and holds the card's first frame until it is settled.
  */

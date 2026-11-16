@@ -3,7 +3,7 @@
  *   1. GPU ≡ JS IR parity: the 20 `IR_TEST_FIELDS` × 3 envs over 48×48, GPU value readback vs `compileJS`; then the
  *      noise row, the IR noise pack's `IR_NOISE_FIELDS` (scripts/noise.ts) under its own gate (flips ≤ 0.5%).
  *   2. Pixel parity: presets drawn by canvas 2D vs WebGL2 (explicit dots), and the GPU layers' passes at
- *      density 1 vs the CPU sample (the gpu board and `mat-lens`). PNGs (canvas / webgl / diff×4) in `.snapshots/p5a/`.
+ *      density 1 vs the CPU sample (the gpu board). PNGs (canvas / webgl / diff×4) in `.snapshots/p5a/`.
  *   3. Context loss + restore.
  *   4. Frame rate: 500k GPU IR dots, 100k CPU dots (value texture, instance buffer, canvas 2D).
  *
@@ -109,7 +109,7 @@ try {
 
   if (args.includes("--ir-only")) throw new Error("--ir-only: stopped after IR parity")
   // 2. pixel parity
-  const presets: [string, number, number?][] = [['ir-plasma', 1.3], ['ir-dial', 0], ['level-03', 0], ['ui-knob', 0], ['afterlight', 0], ['gpu-plasma', 1.3, 1], ['gpu-starfield', 1.3, 1], ['gpu-moire', 1.3, 1], ['mat-lens', 0, 1]]
+  const presets: [string, number, number?][] = [['ir-plasma', 1.3], ['ir-dial', 0], ['level-03', 0], ['ui-knob', 0], ['afterlight', 0], ['gpu-plasma', 1.3, 1], ['gpu-starfield', 1.3, 1], ['gpu-moire', 1.3, 1]]
   const px: unknown[] = []
   for (const [id, t, density] of presets) {
     const r = await run(`P5.presetParity(${JSON.stringify(id)}, ${t}, 2, ${density ?? 'undefined'})`)

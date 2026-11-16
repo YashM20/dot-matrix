@@ -1,11 +1,11 @@
 /**
- * Board · WORKSHOP (M3, docs/living-matter/M-materials.md §5): nine more materials on the materials board's shell
+ * Board · WORKSHOP (M3, docs/living-matter/M-materials.md §5): materials on the shared material shell
  * (`materials-shared.ts`: the card tile, `matLight`, lazy bakes). The pure cards are here: denim, wood and leather.
  * The cards with a tap that needs time (knit, paper, ice) are in `workshop-live.ts`; the three physics worlds (sand,
  * mercury, thread) in `workshop-physics.ts`. Both keep their worlds on the main thread: the sampling worker's build
  * resolves them to stubs (vite.config.ts `mainThreadOnly`).
  *
- * Rules (M §1), as on the materials board: material from relief and one light, never hue; one red, on a live part
+ * Rules (M §1): material from relief and one light, never hue; one red, on a live part
  * only (the working loop, the colon, the fresh frost, the rake head, the bead, the needle eye), and denim, paper and
  * leather have none; bakes on the first frame, never at import; per frame the light, the sims and lookups only,
  * the lit surfaces cached per light (LRU of 8, M3.10) so the sun and the tilt hub's buckets hit across frames.
