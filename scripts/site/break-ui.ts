@@ -189,7 +189,7 @@ async function widget() {
   await shot('widget')
   // the clipboard refuses: LINK toasts the whole URL
   await p.js(`navigator.clipboard.writeText = () => Promise.reject(new Error('denied')); navigator.clipboard.write = () => Promise.reject(new Error('denied')); 1`)
-  await click('.wp-copy .pill-btn', 'LINK')
+  await click('.wp-copy .pill-btn[aria-label="Copy link"]') // LINK is an icon: find it by its name
   await p.waitFor('!!document.querySelector(".pal-toast span")', 3000)
   await spill('toast-url', '.pal-toast span'); await shot('toast-url')
   await p.waitFor('!document.querySelector(".pal-toast span")', 4000)

@@ -87,7 +87,7 @@
   --app-top: calc(52px + env(safe-area-inset-top));      /* phone: the sticky top bar */
   --tabbar-h: calc(58px + env(safe-area-inset-bottom));  /* phone: the tab bar, with the home-indicator inset */
   --topbar-h: 48px;                                      /* desktop: the sticky header (plus --gap-group: its scroll padding) */
-  --pillbar-h: 46px;                                     /* widget page: a 36 px pill in a 4 px padded, bordered capsule (R5; no user yet) */
+  --pillbar-h: 30px;                                     /* widget page: a toolbar group, 28 px buttons in a 1 px hairline (R5; no user yet) */
 
   /* ── stacking: one scale for the whole page. A layer one step over its neighbour is calc(var(--z-x) + n) ── */
   --z-raise: 3;     /* inside a component, over its canvas: card action bar, X-RAY overlay; editor banner +2, context menu +5 */
@@ -175,6 +175,8 @@
   --glass: color-mix(in srgb, var(--raised) 84%, transparent);
   --glass-blur: blur(16px) saturate(140%);
   --shadow-raised: 0 4px 40px 8px color-mix(in srgb, var(--shade) 40%, transparent), 0 0 0 .5px color-mix(in srgb, var(--shade) 80%, transparent), inset 0 .5px 0 color-mix(in srgb, var(--tint) 25%, transparent);
+  /* a small opaque popover (the widget page's MORE): a short, soft drop under its hairline, no halo */
+  --shadow-pop: 0 8px 24px -6px color-mix(in srgb, var(--shade) 36%, transparent), 0 2px 6px color-mix(in srgb, var(--shade) 18%, transparent);
 }
 
 /* phones: the same rhythm, one step down (a group stays 12 px; before actions 24) */
@@ -192,10 +194,10 @@
   }
 }
 
-/* touch: the widget page's pills grow to --tap */
+/* touch: the widget page's toolbar buttons grow to --tap */
 @media (pointer: coarse) {
   :root {
-    --pillbar-h: 54px
+    --pillbar-h: calc(var(--tap) + 2px)
   }
 }
 

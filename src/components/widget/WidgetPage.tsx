@@ -25,6 +25,7 @@ import { ConceptCredit } from '../ConceptCredit'
 import { useBlurbs } from '../useBlurbs'
 import { LoadFailed } from '../LoadBoundary'
 import { Pill, PillBar, PillButton } from './PillBar'
+import { BackIcon, NextIcon, PrevIcon } from './toolIcons'
 import { WidgetLike } from '../likes/slot'
 import { TypeField } from './TypeField'
 import { CardActions } from './WidgetActions'
@@ -70,7 +71,7 @@ export function WidgetPage({ route, onOpen, onBoard }: WidgetPageProps) {
 
   if (state.status === 'loading') return <section className="wp" aria-busy="true"><div className="wp-loading" /></section>
   if (state.status === 'missing' || state.status === 'failed') return <section className="wp wp--missing">
-    <PillBar label="Navigation" className="wp-top"><Pill><PillButton label="BOARDS" glyph="‹" title="Back to the boards" href="/" onClick={() => onBoard(boardIds[0])} /></Pill></PillBar>
+    <PillBar label="Navigation" className="wp-top"><Pill><PillButton label="BOARDS" icon={<BackIcon />} title="Back to the boards" href="/" onClick={() => onBoard(boardIds[0])} /></Pill></PillBar>
     {state.status === 'failed'
       ? <div className="wp-missing"><LoadFailed what="This card" /></div>
       : <div className="wp-missing"><h1>No widget “{route.key}”</h1><p>It may have been renamed or removed. Every card is on one of the boards.</p></div>}
@@ -110,11 +111,11 @@ function Loaded({ w, preset, items, meta, sources, onOpen, onBoard }: Loaded & O
   const blurbs = useBlurbs(), concept = blurbs?.hasConcept(w.board, preset) ? blurbs.conceptCredit : undefined
   return <section className="wp" aria-labelledby="wp-title">
     <PillBar label="Navigation" className="wp-top">
-      <Pill><PillButton label={boardLabel(w.board)} glyph="‹" title={`Back to the ${boardLabel(w.board)} board`} href={`/${w.board}/`} onClick={() => onBoard(w.board, w.slug)} /></Pill>
+      <Pill><PillButton label={boardLabel(w.board)} icon={<BackIcon />} title={`Back to the ${boardLabel(w.board)} board`} href={`/${w.board}/`} onClick={() => onBoard(w.board, w.slug)} /></Pill>
       <Pill className="wp-step">
-        <PillButton label="PREV" glyph="←" kbd="←" title={`Previous card: ${widgetTitle(prev.name)}`} href={widgetPath(prev.id)} onClick={() => onOpen(prev.id)} />
+        <PillButton label="PREV" icon={<PrevIcon />} iconOnly kbd="←" title={`Previous card: ${widgetTitle(prev.name)}`} href={widgetPath(prev.id)} onClick={() => onOpen(prev.id)} />
         <span className="wp-count" aria-label={`card ${i + 1} of ${items.length}`}>{i + 1}/{items.length}</span>
-        <PillButton label="NEXT" glyph="→" kbd="→" title={`Next card: ${widgetTitle(next.name)}`} href={widgetPath(next.id)} onClick={() => onOpen(next.id)} />
+        <PillButton label="NEXT" icon={<NextIcon />} iconOnly kbd="→" title={`Next card: ${widgetTitle(next.name)}`} href={widgetPath(next.id)} onClick={() => onOpen(next.id)} />
       </Pill>
     </PillBar>
     <div className="wp-main">

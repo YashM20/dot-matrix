@@ -4,12 +4,16 @@
  *
  *   npx tsx scripts/ci/shots.ts --list "/browse/@1280,/@390@light,/widget/timer/@1280@light_cobalt" [--out <dir>]
  *
- * Each item is `route@width[@theme]`; the route's leading slash is optional (`browse/@1280`, `@390` for home). Widths up to 600 are a phone (844 px tall, touch), wider ones a desktop
+ * Each item is `route@width[@theme][@option...]`; the route's leading slash is optional (`browse/@1280`, `@390` for home). Widths up to 600 are a phone (844 px tall, touch), wider ones a desktop
  * (900 px tall). Theme is `dark`, `light` or a full `<scheme>_<accent>` name (src/site/theme/names.ts); default
- * `dark_signal`. Reduced motion is emulated so nothing is caught mid-animation. Files: `<route>-<width>-<theme>.png`
- * in `--out` (default `.snapshots/ci-shots/`). Exit 1 when a page never got ready, 2 on a bad item.
- * A fourth part opens a UI state first and captures the viewport only: `@display` (the header's DISPLAY ▾ menu) or
- * `@tools` (the phone TOOLS sheet, scrolled to its skin list), e.g. `/@1280@dark@display`, `/@390@light@tools`.
+ * `dark_signal`. Options, from a fixed list (no script comes from the input): `2x` (device scale 2), `xray` (the
+ * xray flag on), `more` (click the widget page's MORE), `card-more` (click the first card row's MORE; the shot is the
+ * viewport, the row in its middle), `other-tab` (another tab saves the editor's document, so the two-tab note shows),
+ * `display` (the header's DISPLAY ▾ menu) and `tools` (the phone TOOLS sheet, scrolled to its skin list); `card-more`,
+ * `display` and `tools` capture the viewport only, e.g. `/@1280@dark@display`, `/@390@light@tools`. Reduced motion is
+ * emulated so nothing is caught mid-animation. Files:
+ * `<route>-<width>-<theme>[-<option>...].png` in `--out` (default `.snapshots/ci-shots/`). Exit 1 when a page never
+ * got ready (or an option's state never showed), 2 on a bad item.
  */
 import { mkdirSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -21,27 +25,60 @@ const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i +
 const out = resolve(opt('--out') ?? join('.snapshots', 'ci-shots'))
 const items = (opt('--list') ?? '').split(',').map(s => s.trim()).filter(Boolean)
 
-/** UI states a shot can open first: the control to press, then what shows it is open. */
-const STATES: Record<string, { press: string; open: string; then?: string }> = {
+const OPTIONS = ['2x', 'xray', 'more', 'card-more', 'other-tab', 'display', 'tools'] as const
+type Option = typeof OPTIONS[number]
+/** Options that capture the viewport as it is (a resize to the full page would scroll or close what they opened). */
+const VIEWPORT: readonly Option[] = ['card-more', 'display', 'tools']
+/** UI states opened by a script click: the control to press, then what shows it is open. */
+const STATES: Partial<Record<Option, { press: string; open: string; then?: string }>> = {
   display: { press: '.skin-switch .skin-menu-btn', open: `!!document.querySelector('.skin-menu [role=menuitemradio]')` },
   tools: { press: '.tabbar button[aria-haspopup="dialog"]', open: `!!document.querySelector('.tools-sheet .skin-list [role=radio]')`, then: `document.querySelector('.tools-sheet .skin-list')?.scrollIntoView({ block: 'center' })` },
 }
-type Item = { route: string; width: number; scheme: string; accent: string; state?: string; file: string }
+type Item = { route: string; width: number; scheme: string; accent: string; opts: Option[]; file: string }
 const parse = (s: string): Item | string => {
   // the leading slash is optional: Git Bash on Windows rewrites a leading `/` into a Windows path
-  const [r, w, theme = 'dark', state] = s.split('@'), route = r.startsWith('/') ? r : `/${r}`
+  const [r, w, theme = 'dark', ...rest] = s.split('@'), route = r.startsWith('/') ? r : `/${r}`
   if (!/^\/[\w\-./?=&%]*$/.test(route) || route.includes('..')) return `bad route in "${s}"`
   const width = Number(w)
   if (!Number.isInteger(width) || width < 240 || width > 3840) return `bad width in "${s}" (240 to 3840)`
   const [scheme, accent = 'signal'] = theme.split('_')
   if (!(SCHEMES as readonly string[]).includes(scheme) || !(ACCENTS as readonly string[]).includes(accent)) return `bad theme in "${s}" (dark, light or <scheme>_<accent>)`
-  if (state !== undefined && !STATES[state]) return `bad state in "${s}" (${Object.keys(STATES).join(', ')})`
+  const opts = rest.filter((o): o is Option => (OPTIONS as readonly string[]).includes(o))
+  if (opts.length !== rest.length) return `bad option in "${s}" (${OPTIONS.join(', ')})`
   const slug = route.replace(/[^\w]+/g, '-').replace(/^-|-$/g, '') || 'home'
-  return { route, width, scheme, accent, state, file: `${slug}-${width}-${scheme}_${accent}${state ? `-${state}` : ''}.png` }
+  return { route, width, scheme, accent, opts, file: `${slug}-${width}-${scheme}_${accent}${opts.map(o => `-${o}`).join('')}.png` }
 }
 const parsed = items.map(parse)
 const bad = parsed.filter((p): p is string => typeof p === 'string')
 if (bad.length || !items.length) { console.error(bad.length ? bad.join('\n') : 'no --list given'); process.exit(2) }
+
+/** Puts the page in an option's state (a real click or tap on MORE, so no keyboard focus ring shows); false if it never showed. */
+async function act(opts: Option[], phone: boolean): Promise<boolean> {
+  for (const [opt, btn, menu] of [['more', '.wp-more-btn', '.wp-more'], ['card-more', '.dot-card-row-more', '.dot-card-menu']] as const) {
+    if (!opts.includes(opt)) continue
+    if (opt === 'card-more' && !(await page.waitFor(`!!document.querySelector('${btn}')`, 15000))) return false
+    const c = await page.js<{ x: number; y: number } | null>(`(() => { const b = document.querySelector('${btn}'); if (!b) return null; b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } })()`).catch(() => null)
+    if (!c) return false
+    if (phone) await page.tap(c.x, c.y)
+    else { await page.mouse('mouseMoved', c.x, c.y, 0); await page.mouse('mousePressed', c.x, c.y); await page.mouse('mouseReleased', c.x, c.y) }
+    if (!(await page.waitFor(`!!document.querySelector('${menu} [role^="menuitem"]')`, 5000))) return false
+  }
+  for (const o of opts) {
+    const st = STATES[o]
+    if (!st) continue
+    await page.js(`document.querySelector(${JSON.stringify(st.press)})?.click()`).catch(() => {})
+    if (!(await page.waitFor(st.open, 8000))) return false
+    if (st.then) await page.js(st.then).catch(() => {})
+    await sleep(500)
+  }
+  if (opts.includes('other-tab')) {
+    if (!(await page.waitFor(`!!document.querySelector('.ed-other')`, 15000))) return false
+    await page.js(`window.dispatchEvent(new StorageEvent('storage', { key: 'dot480.editor.v1', newValue: '{"kind":"other tab"}' })), 1`)
+    if (!(await page.waitFor(`document.querySelectorAll('.ed-other button').length === 2`, 5000))) return false
+  }
+  await sleep(400)
+  return true
+}
 
 mkdirSync(out, { recursive: true })
 const server = await serveDist(4318)
@@ -49,37 +86,30 @@ const page = await launch(1280, 900)
 let failed = 0
 try {
   for (const it of parsed as Item[]) {
-    const phone = it.width <= 600, H = phone ? 844 : 900, t = Date.now()
-    await page.cdp('Emulation.setDeviceMetricsOverride', { width: it.width, height: H, deviceScaleFactor: 1, mobile: phone })
+    const phone = it.width <= 600, H = phone ? 844 : 900, t = Date.now(), dpr = it.opts.includes('2x') ? 2 : 1
+    await page.cdp('Emulation.setDeviceMetricsOverride', { width: it.width, height: H, deviceScaleFactor: dpr, mobile: phone })
     await page.cdp('Emulation.setTouchEmulationEnabled', phone ? { enabled: true, maxTouchPoints: 5 } : { enabled: false })
     await page.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }, { name: 'prefers-color-scheme', value: it.scheme }] })
     // the stored theme, set on the site's origin before the page loads
     await page.cdp('Page.navigate', { url: `${server.url}favicon.svg` }); await sleep(150)
     await page.js(`localStorage.setItem('dot480:theme', ${JSON.stringify(JSON.stringify({ scheme: it.scheme, accent: it.accent }))})`).catch(() => {})
+    await page.setFlags({ xray: it.opts.includes('xray') ? true : null }).catch(() => {})
     await page.js('window.__shotOld = 1').catch(() => {})
     await page.cdp('Page.navigate', { url: new URL(it.route.slice(1), server.url).href })
     const ok = await page.waitFor(`!window.__shotOld && document.readyState === 'complete' && !document.querySelector('.view-loading, [aria-busy="true"]')`, 30000)
     await page.js(`document.fonts.ready.then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))`).catch(() => {})
     await sleep(1500)
-    if (it.state) {
-      // a UI state: press its control, wait for it to open, capture the viewport as it is
-      const st = STATES[it.state]
-      await page.js(`document.querySelector(${JSON.stringify(st.press)})?.click()`).catch(() => {})
-      const open = await page.waitFor(st.open, 8000)
-      if (st.then) await page.js(st.then).catch(() => {})
-      await sleep(900)
-      await page.shot(join(out, it.file))
-      if (!ok || !open) failed++
-      console.log(`${ok && open ? 'OK       ' : 'NOT READY'} ${it.file} (${((Date.now() - t) / 1000).toFixed(1)} s)`)
-      await page.js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`).catch(() => {})
-      continue
+    const state = await act(it.opts, phone)
+    // a full page (capped), except the viewport-only options
+    if (!it.opts.some(o => VIEWPORT.includes(o))) {
+      const h = Math.min(4000, Math.max(H, Math.ceil(await page.js<number>('document.documentElement.scrollHeight').catch(() => H))))
+      await page.cdp('Emulation.setDeviceMetricsOverride', { width: it.width, height: h, deviceScaleFactor: dpr, mobile: phone })
+      await sleep(800)
     }
-    const h = Math.min(4000, Math.max(H, Math.ceil(await page.js<number>('document.documentElement.scrollHeight').catch(() => H))))
-    await page.cdp('Emulation.setDeviceMetricsOverride', { width: it.width, height: h, deviceScaleFactor: 1, mobile: phone })
-    await sleep(800)
     await page.shot(join(out, it.file))
-    if (!ok) failed++
-    console.log(`${ok ? 'OK       ' : 'NOT READY'} ${it.file} (${((Date.now() - t) / 1000).toFixed(1)} s)`)
+    if (!ok || !state) failed++
+    console.log(`${ok && state ? 'OK       ' : 'NOT READY'} ${it.file} (${((Date.now() - t) / 1000).toFixed(1)} s)`)
+    if (it.opts.some(o => STATES[o])) await page.js(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`).catch(() => {})
   }
 } finally {
   await page.close()
