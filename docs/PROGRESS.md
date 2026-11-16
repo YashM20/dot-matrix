@@ -9,14 +9,14 @@
 >
 > **Process: [`docs/CHECKPOINTS.md`](CHECKPOINTS.md).** One checkpoint at a time: scope, build, gate, publish, breather, then the owner picks the next one. Four to six lanes, one agent per line of the checkpoint's tracking issue. Agents run quick checks only; CI runs builds, goldens and probes. GitHub (milestones, labels, the tracking issue, issue comments) is the source of truth.
 
-**Now: closing CP6 · 0.18 · Stabilise.** The order of work is the CP6 closing queue, #403, which replaced #349 on Nov 16. Running: #43 (home hero and focus order), #355 (type rhythm tokens), #28 (flaky gates) and #393 (POND focus rings). Then #261, #341, #339, #340 and #103, the full CI gate, and the 0.18 release. What merged in CP6 so far: `CHANGELOG.md` 0.18.
+**Now: CP6 · 0.18 · Stabilise is published (2026-11-16), and the breather is on.** Nothing new starts until the owner confirms CP7. 0.18 is in `CHANGELOG.md` and the LOG tab. SQUARES (12.7 ms) and SCENES (8.9 ms) are still over the 8 ms board budget on the buffer path; that is #416, in CP7.
 
 **What's next:**
-- **CP7 · 0.19 · Board refinement** (queue #401). The owner's remaining #221 cuts first, then twelve boards: HEAL, MIRROR, MICRO MOTION, DEPARTURES, LEVELS, SCOPE, FRACTALS, CINEMA, 500K DOTS, MOSAIC, RIDE and POND. Each board issue has a "Triage against `main` (Nov 16)" comment with what's left.
-- **CP8 · 0.20 · Play, live data and guides** (queue #402). The blog bar, wayfinding and Back fixes (#38, #40, #34, #39, #41, #44), then three original games (#131), the hill-driving game (#311), the world board (#130), the wallpaper maker (#133) and the guides on the blog (#77).
-- **Backlog**, by priority: the other eight board refines, MAKE's return, the tixy gallery, and the rest. Plan and exit criteria: `docs/CHECKPOINTS.md`.
+- **CP7 · 0.19 · Board refinement** (queue #401). The owner's remaining #221 cuts first, then twelve boards, smallest first: HEAL, MIRROR, MICRO MOTION, DEPARTURES, LEVELS, SCOPE, FRACTALS, CINEMA, 500K DOTS, MOSAIC, RIDE and POND. Then the dot symbols (#413) and the dot font check (#412). Each board issue has a "Triage against `main` (Nov 16)" comment with what's left. One board per lane, so lanes never share a goldens file.
+- **CP8 · 0.20 · Play, live data and guides** (queue #402), after CP7.
+- **Backlog**, by priority. Plan and exit criteria: `docs/CHECKPOINTS.md`.
 
-**Closed milestones:** CP1 to CP5, "Tixy gallery" and "Next phases". CP1 to CP4 shipped as 0.13 to 0.16 and CP5 as 0.17 (`CHANGELOG.md`).
+**Closed milestones:** CP1 to CP5, "Tixy gallery" and "Next phases". CP1 to CP6 shipped as 0.13 to 0.18 (`CHANGELOG.md`); CP6 closes with its milestone after the breather.
 
 **Defaults on main:** MAKE, LAB and X-ray are off; likes (#169, #176) and opt-in PostHog analytics (#171) are on. The like button stays hidden while the likes API answers 404, and analytics needs `VITE_POSTHOG_PROJECT_TOKEN`. Trusted Types stays Report-Only, because the BotID challenge script writes a plain string to `srcdoc`. CI runs four parallel jobs behind the required `check + build` gate; PR pushes also run the affected browser probes (`docs/HARNESS.md`).
 

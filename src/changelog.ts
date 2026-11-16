@@ -15,6 +15,22 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 
 export const releases: Release[] = [
   {
+    version: '0.18', date: '2026-11-16', title: 'Fewer cards, each one checked',
+    summary: 'Every card had a dot-level review, the weakest cards and boards are gone, big numbers have their own faces, and controls look and behave the same on every board.',
+    changes: [
+      { kind: 'new', text: 'ALL on the home page: every card from every board in one grid, with a quiet row of icons under each card to open it, copy its link or see more.' },
+      { kind: 'new', text: 'Big numbers use one of three faces drawn on the dot grid, picked per board.' },
+      { kind: 'improved', text: 'Every card was checked dot by dot. Gaps between dots are even, fills and play buttons use bigger dots, and small captions are easier to read.' },
+      { kind: 'improved', text: 'Switches, sliders, play buttons and dials look the same on every board, and react to hover, press and focus the same way.' },
+      { kind: 'improved', text: 'Card numbers follow the order on their board, so they close up when a card goes.' },
+      { kind: 'improved', text: 'Boards and card pages start loading when you point at a link, so they open sooner.' },
+      { kind: 'improved', text: 'Better with a keyboard and at 400% zoom, with CONTRAST: MORE and in every accent colour.' },
+      { kind: 'improved', text: 'The falling-blocks card is called STACK.' },
+      { kind: 'improved', text: 'Six cards, the MATERIALS board and eleven WORKSHOP cards are gone, along with five display skins and the clack sound. Old links open the board the card lived on.' },
+      { kind: 'fixed', text: 'A tap or drag on a live card stays, and the reduced motion setting now reaches every part of the page.' },
+    ],
+  },
+  {
     version: '0.16', date: '2026-11-04', title: 'Safer, easier to find, and a shell that helps',
     summary: 'A security pass over every page, pages that search engines can read, analytics that ask first, and a command shell that completes what you type.',
     changes: [
@@ -215,7 +231,7 @@ export const releases: Release[] = [
 ]
 
 export const upcoming: Upcoming[] = [
-  { phase: 'CP6 HERO', title: 'Sharper numbers', status: 'next', text: 'Three hero number faces for big readouts, with the dots on a diagonal spaced as evenly as on a straight stroke.' },
-  { phase: 'CP6 REVIEW', title: 'Every card checked dot by dot', status: 'next', text: 'Every card had a dot-level review. Its fixes land card by card: even gaps between dots, cleaner fills and captions you can read.' },
+  { phase: 'CP7', title: 'Every board up to the bar', status: 'next', text: 'Twelve boards get the same care as the best cards, and the cards that can’t get there are removed. Their links keep working.' },
+  { phase: 'CP8', title: 'Games, a live world and guides', status: 'planned', text: 'Three small games, a board of live world data, a wallpaper maker, and the guides published on the blog.' },
   { phase: 'C1', title: 'A million dots', status: 'planned', text: 'Fields evaluated on the GPU with WebGPU: a full-screen field that follows the cursor, and a zoom from one card into a million dots.' },
 ]
