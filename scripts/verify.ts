@@ -229,6 +229,11 @@ await flagChecks(assert)
   const { dotStateChecks } = await import('./verify/dot-states')
   await dotStateChecks(assert)
 }
+// DOT LOOKS (#360) one switch, scrubber and label row switch look on every board (scripts/verify/dot-looks.ts)
+{
+  const { dotLookChecks } = await import('./verify/dot-looks')
+  await dotLookChecks(assert)
+}
 // FIRST DRAW (#312) grid cards draw their first frame one per task, near the screen only (scripts/verify/first-draw.ts)
 {
   const { firstDrawChecks } = await import('./verify/first-draw')

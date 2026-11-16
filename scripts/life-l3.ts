@@ -35,11 +35,11 @@ const fnvStr = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length
  * when the top-right caption moved from faint to mid, and again when it moved from the 0.72 lattice to the card grid
  * (#225), and when big dots began to ease toward a circle (each dot's roundness is in the hash), and for pond-koi when
  * its DOTS/TYPE switch took the time-of-day caption's place at rest (#269, so a phone can see it) and its chosen
- * word went to `value` (the other stays `mid`); nothing else in the
- * frames changed.
+ * word went to `value` (the other stays `mid`), and again when the switch took the shared label row spec (#360: the
+ * names 6 cells apart, so DOTS moved one cell left); nothing else in the frames changed.
  */
 const L2_FRAMES: Record<string, string[]> = {
-  'pond-koi': ['aeb3e444', '3861eb34', '3fd7cad2', '4565d443', '5184b184'],
+  'pond-koi': ['26d308b7', '6651d28b', 'abeac167', '6d1b7ee2', 'f0438ae1'],
   'pond-jelly': ['ab366d7c', '60c52111', 'cc4380bf', '894c0c34', '7ed619a0'],
   'pond-slime': ['0f69b10d', 'ae470b32', '7d5d4160', 'a334b32e', 'bfedb193'],
   'pond-fireflies': ['c9e73652', 'e9e9cd82', '18ad1d40', 'ce3fd4f2', '85c3abda'],
@@ -235,17 +235,19 @@ export async function lifeL3Checks(assert: Assert, pond: () => Promise<typeof im
     const fr = medianLoaded(i => frame(koiCard, 5.3 + i / 30, typeData), 15)
     assert('pond-koi: TYPE frame (step + layers + sample) ≤ 4 ms median warm × load', fr.ms <= 4 * fr.load, fmtLoaded(fr))
     // the switch is drawn at rest (#269: a phone has no hover); hover underlines the chosen option, focus marches it
-    const rest = frame(koiCard, 0), under = (f: typeof rest) => f.filter(d => d.y > 8 * 2.25 && d.y < 10 * 2.25 && d.x > 93 * 2.25).length
+    // the underline row (LABEL_SWITCH.row, 10) and the switch's columns (from DOTS at 92), in pixels at 2.25 a cell
+    const uRow = (d: { y: number }) => d.y > 9 * 2.25 && d.y < 11 * 2.25, left = 91 * 2.25
+    const rest = frame(koiCard, 0), under = (f: typeof rest) => f.filter(d => uRow(d) && d.x > left).length
     const hover = frame(koiCard, 0, { hover: 'glyphs' }), focus = [0, .1].map(t => frame(koiCard, t, { focus: 'glyphs' }))
     const still = [0, .1].map(t => frame(koiCard, t, { focus: 'glyphs', reducedMotion: true }))
-    const words = rest.filter(d => d.y < 7 * 2.25 && d.x > 93 * 2.25).length
-    const marches = JSON.stringify(focus[0].filter(d => d.y > 8 * 2.25 && d.y < 10 * 2.25)) !== JSON.stringify(focus[1].filter(d => d.y > 8 * 2.25 && d.y < 10 * 2.25))
-    const holds = under(still[0]) === under(still[1]) && JSON.stringify(still[0].filter(d => d.y > 8 * 2.25 && d.y < 10 * 2.25)) === JSON.stringify(still[1].filter(d => d.y > 8 * 2.25 && d.y < 10 * 2.25))
+    const words = rest.filter(d => d.y < 7 * 2.25 && d.x > left).length
+    const marches = JSON.stringify(focus[0].filter(uRow)) !== JSON.stringify(focus[1].filter(uRow))
+    const holds = under(still[0]) === under(still[1]) && JSON.stringify(still[0].filter(uRow)) === JSON.stringify(still[1].filter(uRow))
     assert('pond-koi: the DOTS/TYPE switch is drawn at rest (the label row), hover underlines it, focus marches (still under reduced motion), and the default frame is the pinned one',
       words > 20 && under(rest) === 0 && under(hover) > 0 && marches && holds && fnvStr(key(koiCard, 0, { data: { ...koiCard.defaults } })) === L2_FRAMES['pond-koi'][0],
       `${words} switch dots, underline ${under(rest)} / ${under(hover)}, marches ${marches}, still ${holds}`)
     // at rest the style that is on reads without a hover: the chosen word in `value`, the other in `mid`
-    const tones = (f: typeof rest) => ['DOTS', 'TYPE'].map(w => [...new Set(f.filter(d => d.y < 7 * 2.25 && d.x > 92 * 2.25 && (w === 'DOTS') === (d.x < 118 * 2.25)).map(d => d.color))].join('/'))
+    const tones = (f: typeof rest) => ['DOTS', 'TYPE'].map(w => [...new Set(f.filter(d => d.y < 7 * 2.25 && d.x > left && (w === 'DOTS') === (d.x < 118 * 2.25)).map(d => d.color))].join('/'))
     const dotsOn = tones(rest), typeOn = tones(frame(koiCard, 0, { data: { ...koiCard.defaults, glyphs: 1 } }))
     assert('pond-koi: at rest the chosen style is in value and the other in mid (DOTS on and TYPE on)',
       dotsOn.join() === `${dot480.value},${dot480.dotMid}` && typeOn.join() === `${dot480.dotMid},${dot480.value}`, `DOTS on ${dotsOn.join(' · ')}, TYPE on ${typeOn.join(' · ')}`)

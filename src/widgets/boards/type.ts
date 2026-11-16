@@ -20,6 +20,7 @@ import {
 import { textOf } from '../../data/text'
 import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
 import { circle, states, ui } from '../dot-controls'
+import { dialArc, polar } from '../dials'
 import { numberBoard } from '../numbered'
 
 const T = layoutFor(TILE)
@@ -37,13 +38,12 @@ const centred = (fr: TypeFrame, row: number, o: Omit<TypeOptions, 'grid'>): Type
 // knob in miniature), each with its axis tag.
 const KN = { y: 108, r: 13, xs: [26, 72, 118], start: (TAU * 5) / 8, sweep: (TAU * 3) / 4 }
 const AXES = [{ key: 'wght', tag: 'WGHT', label: 'Weight' }, { key: 'wdth', tag: 'WDTH', label: 'Width' }, { key: 'rond', tag: 'ROND', label: 'Roundness' }] as const
+/** The finer lit size: on a 13-cell knob the components 2.2 reads chunky (#360, owner's call). */
+export const TYPE_KNOB_LIT = 1.8
+/** The components knob's track (`dialArc`, its site spacing, #360) with the finer lit size, and a pointer dot. */
 const knob = (cx: number, v: number): Layer[] => {
-  const ring = { spacing: 2.6, size: 1.3, start: KN.start }, a = KN.start + v * KN.sweep
-  return [
-    layer(T.dotRing(cx, KN.y, KN.r, { ...ring, sweep: KN.sweep }), 'mid'),
-    layer(T.dotRing(cx, KN.y, KN.r, { ...ring, sweep: Math.max(1e-6, v * KN.sweep), size: 1.8 }), 'value'),
-    layer(T.dots([[cx + (KN.r - 6) * Math.sin(a), KN.y - (KN.r - 6) * Math.cos(a)]], 3.4), 'value'),
-  ]
+  const d = { cx, cy: KN.y, r: KN.r, start: KN.start, sweep: KN.sweep, lit: TYPE_KNOB_LIT }
+  return [...dialArc(d, 0, v), layer(T.dots([polar(cx, KN.y, KN.r - 6, KN.start + v * KN.sweep)], 3.4), 'value')]
 }
 const SPEC = frame(2, 14)
 /** The pangram gets one cell of tracking so neighbouring strokes keep a gap, unless that would push it off the card (widest setting). */
