@@ -22,6 +22,7 @@ import { TILE, withChrome, type WidgetPreset } from '../src/widgets'
 import { facesCard, faceIndex, WATCH_FACES, watchBoard } from '../src/widgets/boards/watch'
 import { HANDS, analogFace, handAngles, handSites } from '../src/widgets/boards/watch-hands'
 import { complicationsFace } from '../src/widgets/boards/watch-life'
+import { worldFace } from '../src/widgets/boards/watch-tide'
 import { CX, CY, caseOf, frameOf, onScreen, style, type FrameKind, type Pt } from '../src/widgets/boards/watch-kit'
 import { sampleCard, theme, type CtxExtra } from './lib/cards'
 import { detLint } from './lib/detLint'
@@ -145,6 +146,12 @@ export function watchChecks(assert: Assert): void {
     const c = facesCard.controls![0], tap = (x: number, v: number) => dragValue(c, beginDrag(c, x, CY, { face: v }), { x, y: CY }).face
     const steps = [tap(CX + 30, 0) === 1, tap(CX - 30, 0) === 7, tap(CX + 30, 7) === 0, keyValue(c, 7, 'ArrowRight') === 0, keyValue(c, 0, 'ArrowLeft') === 7, faceIndex(-1) === 7]
     assert('watch: the switcher draws each face like its own card, and taps and arrow keys step and wrap', differs.length === 0 && steps.every(Boolean), [...differs, ...steps.map((s, i) => (s ? '' : `step ${i}`)).filter(Boolean)].join(', '))
+
+    // world clock (#264): the day offset sits on its row's lattice, so a row keeps one pitch (was the card's 5x7 beside 1.3 times)
+    freezeWallClock(2026, 0, 1, 20, 0, 0)
+    const rows = worldFace.layers({ t: 0, data: { ...worldFace.defaults } }), latOf = (s: string) => rows.find(l => l.field.text === s)?.lattice
+    assert('watch: the world clock prints +1 on the same lattice as its row (TYO at 20:00 UTC)', latOf('+1') !== undefined && latOf('+1') === latOf('TYO'), `+1 ${latOf('+1')}, TYO ${latOf('TYO')}`)
+    freezeWallClock()
 
     // reduced motion: the pulse dot holds still
     const still = (t: number) => JSON.stringify(sampleCard(complicationsFace, t, complicationsFace.style, undefined, { reducedMotion: true }))

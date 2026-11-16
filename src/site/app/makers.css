@@ -62,10 +62,8 @@
   min-width: 0
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .more > summary::before {
-    transition: none
-  }
+:where([data-motion="reduce"]) .more > summary::before {
+  transition: none
 }
 
 /* board <-> widget page (X1, X-advanced #18): the card's frame flies; its dots stay off the raster snapshots */

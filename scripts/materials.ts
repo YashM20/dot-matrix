@@ -1,5 +1,5 @@
 /**
- * Checks for the physical materials (`src/engine/matter`, docs/living-matter/M-materials.md) and the `materials` board.
+ * Checks for the physical materials (`src/engine/matter`, docs/living-matter/M-materials.md) and the `workshop` board.
  * Called from verify.ts (`materialsChecks(assert)`); also runnable alone:
  *   npx tsx scripts/materials.ts [--only <group>] [--bench] [--quick]
  * Groups:
@@ -9,11 +9,8 @@
  *  - weave:    drawdowns (plain, twill, satin, herringbone, basket), drafts round trip, relief period / gap / tangents, bake time
  *  - stitch:   stitch lengths and gaps, at(s) continuity, contour of a disc
  *  - stone:    marble (the engine generator) determinism and vein width, terrazzo spacing and keep-out
- *  - board:    every card pure in t, one accent on the live part, no activeDim, no red material dot, quantized, light
- *              keys declared, matLight ≡ sceneLight, frame / cold budgets
  *  - glass:    Snell LUT (127 samples, signs per profile, ior 1), strength 0 ≡ behind, Fresnel, frost (M2.1)
  *  - caustics: flat water = 1, energy, focusing, determinism and timing (M2.3)
- *  - cards:    loom, knob, grille, terrazzo invariants; M2: lens, pool, window, patch, rust, candle
  *  - workshop: M3's board (the board checks again, over the nine cards; gx / gy declared by the physics cards), the
  *              determinism lint scope, and one invariant per card (knit, denim, paper, wood, leather, sand, ice,
  *              mercury, thread), with the worlds' tap / drag / heal behaviour
@@ -24,10 +21,11 @@
  *  - fold:     the paper fold: area kept, facets placed by isometries, a turning fold keeps 3D distances and lands on the
  *              next flat state, unfolding returns the exact sheet, unit normals, the loop wraps, red only on the moving
  *              crease, the determinism lint, the frame cost
- *  - tilt:     M3.10 on both boards: the hub's buckets, no DeviceOrientation / data.light, gx / gy only in step inputs,
+ *  - tilt:     M3.10 on the workshop: the hub's buckets, no DeviceOrientation / data.light, gx / gy only in step inputs,
  *              tx = ty = 0 ≡ no tilt, and every card's light = sceneLight (pointer → lightSrc 1 → sun)
  * Timings are printed; budgets scale by a measured load factor so a busy box doesn't fail them. `--bench` prints
- * each card's cold / warm / hover frame.
+ * each workshop card's cold / warm / hover frame. The MATERIALS board and its board and cards groups were removed
+ * (#378); the engine generators it used keep their checks here.
  */
 import { readFileSync } from 'node:fs'
 import { ambientOcclusion, aoBlur, anisoSpec, bakeMatcap, basket, cardMask, contour, DRAFTS, insetDistance, fromDraft, heightFromField, herringbone, marble, matcap, matcapMatrix, plain, rake, satin, stitch, stitchHoles, studioMatcap, tangentLinear, tangentRadial, tangentSDF, terrazzo, toDraft, twill, weaveRelief, CHROME, type Drawdown } from '../src/engine/matter'
@@ -39,7 +37,6 @@ import { T, toLattice15 } from '../src/widgets/boards/materials-shared'
 import { fmtLoaded, medianLoaded } from './lib/load'
 import { type Assert, same, DEG, loadFactor, cells, type MaterialsOptions } from './materials/util'
 import { glassChecks, causticChecks } from './materials/optics'
-import { boardChecks } from './materials/board'
 import { workshopChecks, tiltChecks } from './materials/workshop'
 import { growthChecks } from './materials/growth'
 import { kintsugiChecks } from './materials/kintsugi'
@@ -294,7 +291,6 @@ export async function materialsChecks(assert: Assert, opts: MaterialsOptions = {
 
   if (run('glass')) glassChecks(assert)
   if (run('caustics')) causticChecks(assert)
-  if (run('board') || run('cards')) await boardChecks(assert, load, opts, run)
   if (run('workshop')) await workshopChecks(assert, opts)
   if (run('growth')) await growthChecks(assert, opts)
   if (run('kintsugi')) await kintsugiChecks(assert, opts)

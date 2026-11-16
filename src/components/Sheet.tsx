@@ -1,4 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
+import { reducedMotion } from '../site/motion'
 import { useModal } from './Modal'
 
 /**
@@ -23,7 +24,7 @@ export function Sheet({ label, onClose, children, className = '' }: { label: str
     // dialog too): no transform, so the snap geometry never moves; at once under reduced motion
     const end = () => d.scrollHeight - d.clientHeight
     let armed = false
-    if (matchMedia('(prefers-reduced-motion: reduce)').matches) { d.scrollTop = end(); armed = true }
+    if (reducedMotion()) { d.scrollTop = end(); armed = true }
     else { d.scrollTop = 0; d.scrollTo({ top: end(), behavior: 'smooth' }) }
     const onScroll = () => { if (!armed) armed = d.scrollTop >= end() - 2; else if (d.scrollTop < 2) close.current() }
     d.addEventListener('scroll', onScroll, { passive: true })

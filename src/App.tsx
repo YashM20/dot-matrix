@@ -43,6 +43,7 @@ import './site/mobile/sheet.css'
 import './site/mobile/tools.css'
 import './site/mobile/phone.css'
 import './site/mobile/touch.css'
+import { reducedMotion } from './site/motion'
 
 // every view but EXPLORE (and every MAKE mode) is its own chunk, fetched when it opens (first-load budget, docs/WEB-PLAN.md §1)
 const later = <K extends string>(load: () => Promise<{ [k in K]: ComponentType }>, name: K) => lazy(() => load().then(m => ({ default: m[name] })))
@@ -278,7 +279,7 @@ export default function App() {
   const showAll = () => { setWidget(undefined); setAll(true); setView('EXPLORE') }
   const place = view === 'MAKE' ? mode : view
   // the old view dissolves out before the new one mounts and enters (instant under reduced motion)
-  const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const reduced = reducedMotion()
   // `*` is ALL in the swap key: ALL ⇄ a board dissolves like a board switch
   const [shown, leaving] = useExitSwap(`${place}|${all ? '*' : board}`, s => reduced || !s.startsWith('EXPLORE|') ? 0 : VIEW_EXIT_MS)
   const [shownPlace, shownBoard] = shown.split('|') as [string, string]

@@ -1,7 +1,7 @@
 /**
  * Every browser probe CI runs (scripts/ci/probes.ts runs them, scripts/ci/affected.ts picks them for a PR push).
  * `shard` places a probe in the full run (`probes=all`, every push to main); rebalance by the timing table each shard
- * writes to the job summary, so no shard outlasts materials, which runs alone. `secs` is its usual time on a runner
+ * writes to the job summary, so no shard outlasts mobile-boards, the longest probe, which runs alone. `secs` is its usual time on a runner
  * (from those tables): a partial run packs the picked probes into as few shards as that allows.
  * `$BASE` in an argument becomes the preview's URL; `$HOST` the same without the trailing slash.
  */
@@ -20,10 +20,7 @@ export const PROBES: Probe[] = [
   // mobile.ts in two halves: its MAKE tabs take up to a minute each on a runner
   { name: 'mobile', shard: 5, secs: 65, args: ['scripts/site/mobile.ts', '$BASE', 'first-load,fps,chrome,tab:make=tune,tab:make=compose,tab:make=code,tab:make=draw,tab:about'] },
   { name: 'mobile-boards', shard: 13, secs: 210, args: ['scripts/site/mobile.ts', '$BASE', boardIds.join(',')] },
-  // the mat-lens checks alone take minutes on a runner (its frames are slow there): the board on touch gets 8 minutes,
-  // and the workshop and desktop sections run as their own probe (#224)
-  { name: 'materials', shard: 6, secs: 240, args: ['scripts/materials-browser.ts', '--parts', 'touch'], timeoutMin: 8 },
-  { name: 'workshop', shard: 8, secs: 90, args: ['scripts/materials-browser.ts', '--parts', 'workshop,desktop'] },
+  { name: 'workshop', shard: 6, secs: 90, args: ['scripts/workshop-browser.ts'] },
   { name: 'audio', shard: 7, secs: 35, args: ['scripts/audio-chrome.ts'], env: { URL: '$BASE' } },
   { name: 'theme-boot', shard: 7, secs: 10, args: ['scripts/site/theme-boot.ts'] },
   { name: 'light', shard: 7, secs: 25, args: ['scripts/light-browser.ts'] },

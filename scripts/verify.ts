@@ -167,8 +167,8 @@ goldenKeyChecks(assert)
   await lightChecks(assert)
 }
 
-// MATERIALS) M1 (docs/living-matter/M-materials.md): relief + AO, anisotropic sheen, matcaps, weave / stitch, stone, and the
-// materials board (one accent, no activeDim, light keys, frame budgets, per-card invariants) (scripts/materials.ts)
+// MATERIALS) M1 (docs/living-matter/M-materials.md): relief + AO, anisotropic sheen, matcaps, weave / stitch, stone, glass,
+// caustics, and the workshop board (one accent, light keys, frame budgets, per-card invariants) (scripts/materials.ts)
 {
   const { materialsChecks } = await import('./materials')
   await materialsChecks(assert)
@@ -201,6 +201,11 @@ frameCacheChecks(assert)
 {
   const { metroDashboardChecks } = await import('./verify/metro-dashboard')
   metroDashboardChecks(assert)
+}
+// HEARTBEAT (#230) and LIVING (#229) refine fixes (scripts/verify/heartbeat-living.ts)
+{
+  const { heartbeatLivingChecks } = await import('./verify/heartbeat-living')
+  heartbeatLivingChecks(assert)
 }
 // card drawing fixes (#359): fine-face units, the lap knob, glyph transport, REC dot size (scripts/verify/card-drawing.ts)
 {
