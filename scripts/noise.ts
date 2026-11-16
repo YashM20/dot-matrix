@@ -21,7 +21,7 @@ import { compileBytecode, compileJS, deserialize, emitGLSL, IRError, parse, refe
 import '../src/engine/noise/ir' // the IR noise pack (F0.4)
 import { NOISE_GLSL } from '../src/engine/noise/glsl'
 import { DET_PATHS, detLint } from './lib/detLint'
-import { fmtLoaded, medianLoaded, spin } from './lib/load'
+import { fmtLoaded, medianLoaded, type Loaded } from './lib/load'
 import { hash01, hash32 } from '../src/engine/math'
 import { curl2, datan2, dexp, dpow, dsin, fbm2, ihash, noise2, noise3, noise3Grad, octaveSeed, ridge2, rngFor, tsin, turb2, valueNoise2, voronoi2, voronoiBorder2, type Metric, type VoronoiOut } from '../src/engine/noise'
 
@@ -140,18 +140,35 @@ const IR_NOISE_ENVS: IREnv[] = [
 const fnv1a = (str: string) => { let h = 0x811c9dc5; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0 } return h.toString(16).padStart(8, '0') }
 
 /**
- * Voronoi (#28): the median of 21 warm runs of a 144² voronoi2 per metric, each after its own load sample
- * (lib/load.ts), so one lucky or unlucky run can't decide it and the factor sees the same contention as the runs.
- * The gate: ≤ 3.5 ms × load each. `slow` (scripts/gates.ts --slow) adds three reference loops (3.6 ms × load) per run.
+ * Voronoi (#28): per metric, the best of 3 medians of 15 warm runs of a 144² voronoi2, each run after its own load
+ * sample (lib/load.ts). The rounds go l2, l1, linf, l2, … so each metric's three medians are spread over about a
+ * second. The gate, × load: l2 ≤ 3.0 ms, l1 and linf ≤ 3.5 ms (`VORONOI_BUDGET`).
+ * Why the best of 3: on a fast runner the load factor reads 1.00 (its reference loop beats the budget machine's), so
+ * a short burst from a neighbour that slows the runs by 30% doesn't move the factor. One such burst pushed one median
+ * to 3.62 ms (the others 2.4 to 2.9) and failed the gate once. A burst that short spoils one round; a real slowdown
+ * moves every round. `slow` (scripts/gates.ts) runs each grid twice, a true 2× slowdown, and every metric must fail.
+ * l2 is the fastest metric (1.8 to 2.4 ms on a runner), so at 3.5 ms its 2× read only 4% over; at 3.0 ms it clears
+ * by about 20%, like the others.
  */
-export function voronoiBudget(slow = false): { ok: boolean; detail: string } {
-  const G = 144, out = { f1: 0, f2: 0, id: 0, x: 0, y: 0 }
-  const vor = (['l2', 'l1', 'linf'] as const).map(m => {
-    const f = () => { let s = 0; for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) s += voronoi2(c * 8 / G, r * 8 / G, 1, m, out).f1; if (slow) s += spin() + spin() + spin(); return s }
+export const VORONOI_BUDGET = { l2: 3, l1: 3.5, linf: 3.5 } as const
+export interface VoronoiMetric { metric: Metric; ms: number; load: number; budget: number }
+export function voronoiBudget(slow = false): { ok: boolean; detail: string; metrics: VoronoiMetric[] } {
+  const G = 144, out = { f1: 0, f2: 0, id: 0, x: 0, y: 0 }, reps = slow ? 2 : 1, names = ['l2', 'l1', 'linf'] as const
+  const runs = names.map(m => {
+    const f = () => { let s = 0; for (let k = 0; k < reps; k++) for (let r = 0; r < G; r++) for (let c = 0; c < G; c++) s += voronoi2(c * 8 / G, r * 8 / G, 1, m, out).f1; return s }
     for (let k = 0; k < 5; k++) f()
-    return medianLoaded(f, 21)
+    return f
   })
-  return { ok: vor.every(t => t.ms <= 3.5 * t.load), detail: vor.map(t => `${fmtLoaded(t)} → ${(t.ms / t.load).toFixed(2)}`).join(' / ') }
+  const rounds: Loaded[][] = runs.map(() => [])
+  for (let round = 0; round < 3; round++) runs.forEach((f, i) => rounds[i].push(medianLoaded(f, 15)))
+  const norm = (t: Loaded) => t.ms / t.load
+  const best = rounds.map(rs => rs.reduce((a, b) => norm(b) < norm(a) ? b : a))
+  const metrics = best.map((t, i) => ({ metric: names[i], ms: t.ms, load: t.load, budget: VORONOI_BUDGET[names[i]] }))
+  return {
+    ok: metrics.every(m => m.ms <= m.budget * m.load),
+    detail: best.map((t, i) => `${names[i]} ${fmtLoaded(t)} → ${norm(t).toFixed(2)} / ${metrics[i].budget} (rounds ${rounds[i].map(r => norm(r).toFixed(2)).join(', ')})`).join(' · '),
+    metrics,
+  }
 }
 
 export function noiseChecks(assert: Assert, opts: { update?: boolean } = {}): void {
@@ -507,7 +524,7 @@ export function noiseChecks(assert: Assert, opts: { update?: boolean } = {}): vo
     assert('noise: budget noise2 144² ≤ 1.2 ms, fbm2 4 oct 144² ≤ 4.5 ms, fbm2 4 oct 48² ≤ 0.8 ms (fastest warm run, × interleaved load)', ok(n2, 1.2) && ok(fb, 4.5) && ok(fl, .8),
       `noise2 ${fmt(n2)}, fbm2 ${fmt(fb)}, fbm2 48² ${fmt(fl)}`)
     const vor = voronoiBudget()
-    assert('noise: budget voronoi2 l2 / l1 / linf 144² ≤ 3.5 ms each (median of 21 warm runs, × interleaved load)', vor.ok, vor.detail)
+    assert('noise: budget voronoi2 144² l2 ≤ 3.0 ms, l1 / linf ≤ 3.5 ms (best of 3 medians of 15 warm runs, × interleaved load)', vor.ok, vor.detail)
     const r = lcg(35), px = Float64Array.from({ length: 1000 }, () => r() * 40), py = Float64Array.from({ length: 1000 }, () => r() * 40), v: [number, number] = [0, 0]
     const cu = timed(() => { let s = 0; for (let i = 0; i < 1000; i++) s += curl2(px[i], py[i], 2.5, 3, v)[0]; return s }, 21)
     assert('noise: budget curl2 2 oct, 1000 points ≤ 0.3 ms (fastest warm run, × interleaved load)', ok(cu, .3), fmt(cu))

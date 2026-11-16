@@ -17,3 +17,19 @@ export function freezeWallClock(year = 2026, month = 0, day = 1, hours = 9, minu
   }
   globalThis.Date = FrozenDate as DateConstructor
 }
+
+/**
+ * The same pin for a page, as a script for `Page.addScriptToEvaluateOnNewDocument`: `new Date()`, `Date()` and
+ * `Date.now()` give one fixed local time, so a card that reads the wall clock (the pond's hour, a clock face) draws the
+ * same frame whenever a probe looks at it. Without it a redraw that lands on the next minute or hour shows new pixels,
+ * and a probe that compares frames fails on the time of day (#28: the pond terrarium's dawn dither, the koi's moon).
+ * A Proxy rather than a subclass, so `Date()` called without `new` still works and `instanceof Date` holds.
+ */
+export const pinnedClockScript = (year = 2026, month = 0, day = 1, hours = 9, minutes = 41) => `(() => {
+  const Real = Date, fixed = new Real(${year}, ${month}, ${day}, ${hours}, ${minutes}).getTime()
+  globalThis.Date = new Proxy(Real, {
+    construct: (D, args, target) => Reflect.construct(D, args.length ? args : [fixed], target),
+    apply: () => new Real(fixed).toString(),
+    get: (D, key) => key === 'now' ? () => fixed : Reflect.get(D, key),
+  })
+})()`

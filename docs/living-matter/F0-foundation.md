@@ -677,7 +677,7 @@ Per-call costs come from the prototype at 144² unless noted, normalised to load
 | `noise2`, 144² | 0.75 ms | ≤ 1.2 ms | OK per frame, but only for a single octave |
 | `fbm2` 4 oct, 144² | 3.2 ms | ≤ 4.5 ms (bake path) | **Never per frame at full res.** Bake once (materials: static relief), or sample on a lattice |
 | `fbm2` 4 oct, 48² (lattice 3) | 0.52 ms | ≤ 0.8 ms | per-frame OK (koi markings in body UV are far fewer cells) |
-| `voronoi2` l2 / l1 / linf, 144² | 2.4 / 1.55 / 2.3 ms | ≤ 3.5 ms each | bake (panes, terrazzo); per frame only on lattices ≥ 2 |
+| `voronoi2` l2 / l1 / linf, 144² | 2.4 / 1.55 / 2.3 ms | l2 ≤ 3.0 ms, l1 and linf ≤ 3.5 ms (best of 3 medians; a 2× slowdown of any one must read ≥ 10% over, `scripts/gates.ts`) | bake (panes, terrazzo); per frame only on lattices ≥ 2 |
 | `curl2` 2 oct, 1000 points | ≈ 0.1 ms (est. 4× `noise2` per point) | ≤ 0.3 ms | per frame for agents and particles |
 | `datan2`, 1e6 calls | 1.3× `Math.atan2` | ≤ 2× | free at agent counts |
 | `dexp` / `dpow`, 1e6 calls | measured in F0.1 | ≤ 4× `Math.exp` / ≤ 6× `Math.pow` | per agent per step is fine; not per cell per frame at 144² |
