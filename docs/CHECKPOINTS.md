@@ -57,12 +57,12 @@ GitHub is the source of truth: the milestones, the labels, the tracking issue an
 | CP3 | `CP3 · 0.15 · Kits and new boards` | the car dash, faces, kinetic type, micro motion, charts and watch faces (#125 to #129, #132), the IQ card sets, the P0 probes and token sweep | **published** 2026-11-02 to 11-04 (`CHANGELOG.md` 0.15); closed |
 | CP4 | `CP4 · 0.16 · Flags, SEO, analytics, shell and security` | feature flags and X-ray off, SEO, analytics, the shell, likes (#169, #176), security fixes | **published** 2026-11-04 (`CHANGELOG.md` 0.16); closed 2026-11-16 |
 | CP5 | `CP5 · 0.17 · UI hill climb` | UI polish before new features (#178 to #188, tracker #189), CI, flags from localStorage only, the SEO checkup | **published**; closed 2026-11-16. #186 waits in Backlog for MAKE |
-| CP6 | `CP6 · 0.18 · Stabilise` | bugs, flaky gates, accessibility, the design system audit (#361), card cuts and the first board refines | **closing**: the queue is #403 |
+| CP6 | `CP6 · 0.18 · Stabilise` | bugs, flaky gates, accessibility, the design system audit (#361), card cuts and the first board refines | **published** 2026-11-16 (PR #417, `CHANGELOG.md` 0.18); the milestone closes after the breather |
 | CP7 | `CP7 · 0.19 · Board refinement` | the remaining #221 cuts, then twelve boards brought up to the bar | **next**; queue #401 |
 | CP8 | `CP8 · 0.20 · Play, live data and guides` | games, a live world board, a wallpaper maker, the guides on the blog, and the chrome they need | **planned**; queue #402 |
 | later | Backlog | picked at a breather, highest priority first | waiting |
 
-### CP6 · 0.18 · Stabilise (closing)
+### CP6 · 0.18 · Stabilise (published 2026-11-16, PR #417)
 - **Goal:** fix what exists before building anything new: bugs, flaky checks, accessibility, the design system audit, and the cards below the bar.
 - **Close list:** #28 flaky gates, #43 home hero and focus order, #355 type rhythm tokens, #393 POND focus rings, #261 COMPONENTS status dot labels, #341 desktop press, #339 buffer-path bench, #340 SQUARES frame cost, #103 goldens index, #361 (design system tracker), #379 branches at the breather.
 - **Exit criterion:** every issue in the milestone is closed, CI is green with every probe, goldens changed only on purpose, first load at or under 150 kB gz, and 0.18 is published.
