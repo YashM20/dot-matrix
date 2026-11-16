@@ -2,7 +2,7 @@
 
 <!-- VISUAL: kind=card · what=pond-koi · notice=koi swimming through rippling water drawn in dot tiles, with red markings -->
 
-The site has more than thirty live boards. This guide goes behind three of them: the koi pond, the joined squares and the materials. They all use the same pipeline as every other card: a continuous field, sampled onto a fixed grid of dots.
+The site has more than thirty live boards. This guide goes behind three of them: the koi pond, the joined squares and the workshop's materials. They all use the same pipeline as every other card: a continuous field, sampled onto a fixed grid of dots.
 
 ## The living koi pond
 
@@ -38,21 +38,21 @@ The page is 24 columns by 16 rows of character cells, smaller than a real 40 × 
 
 ## Physical materials and lighting
 
-<!-- VISUAL: kind=card · what=mat-loom · notice=cloth woven one pick at a time, with highlights on the threads moving as the light moves -->
+<!-- VISUAL: kind=card · what=mat-denim · notice=denim twill whose highlights run along the threads as the light moves -->
 
-Open `/materials/` to see physical surfaces drawn in dots: the loom (`mat-loom`), the machined knob (`mat-knob`) and the lens (`mat-lens`).
+Open `/workshop/` to see physical surfaces drawn in dots: denim (`mat-denim`), the time carved in wood (`mat-wood`) and a pool of mercury (`mat-mercury`).
 
-Each material card builds a height map, either from a distance field (the knob, the terrazzo slab) or from the pattern itself (the loom's weave), then works out surface normals with central differences. Each card has one light. While your pointer hovers a card it acts as a torch; otherwise the light follows your phone's tilt, and failing that the sun for your time of day. Diffuse shading is Lambert. The shine depends on the material: Phong on the terrazzo, a thread sheen (Kajiya and Kay's hair model) on the loom, and Blinn on the pool's glints.
+Each material card builds a height map, either from a distance field (the carved digits) or from the pattern itself (the denim's twill), then works out surface normals with central differences. Each card has one light. While your pointer hovers a card it acts as a torch; otherwise the light follows your phone's tilt, and failing that the sun for your time of day. Diffuse shading is Lambert. The shine depends on the material: Phong on the wood's lacquer, a thread sheen (Kajiya and Kay's hair model) on the denim and along the wood's rings, and a matcap on the mercury.
 
-On a one-color display a highlight has to be a bigger dot. On the loom, a glint is drawn one quantize step above the dot under it. On a phone that reports tilt, tipping it moves the light, and the highlights glide across the cards.
+On a one-color display a highlight has to be a bigger dot. On a phone that reports tilt, tipping it moves the light, and the highlights glide across the cards.
 
-<!-- VISUAL: kind=card · what=mat-knob · notice=a machined knob whose highlight slides round its grooves as the light moves -->
+<!-- VISUAL: kind=card · what=mat-wood · notice=the time carved in a lacquered board, one groove wall lit and one dark under the raked light -->
 
 Each material has its own rules.
 
-The loom (`mat-loom`) weaves real patterns (twill, satin, herringbone, basket and plain), one pick at a time, with the draft drawn beside the cloth. The fabric patch (`mat-patch`) is twill with satin stitching. Both shade their threads with the sheen model, so light runs along the thread.
+The denim (`mat-denim`) is a 3/1 twill, with the warp on the face and the white weft behind it. Its threads are shaded with the sheen model, so light runs along the thread.
 
-The lens (`mat-lens`) and the pool (`mat-pool`) bend light. For the lens, Snell's law is worked out once into a 127-sample table of how far the light shifts across the bezel. Each frame, the lens looks up that shift and reads the clock face behind it from the moved spot, at finer than one cell, while every dot stays on its lattice. The digits behind the glass look magnified and bent. In the pool, the pond's ripple simulation focuses light onto the floor, and the engine splats photons to draw the shifting caustic webs.
+The wood (`mat-wood`) cuts the time into the board as a groove. The light rakes low across it, so one wall of each groove catches it and the other falls into shadow. The mercury (`mat-mercury`) is a simulated liquid: its density becomes a height, read through a matcap, so the pool looks like curved metal. Stir it, tip the phone to pour it, or tap to split off a bead.
 
 ## More boards
 

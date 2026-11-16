@@ -63,7 +63,6 @@ export const boardManifest = [
   { id: 'scope', title: 'SCOPE: THE INSTRUMENT, SEEN', columns: 3, density: 'hero', load: () => import('./boards/scope').then(m => ({ items: m.scopeBoard, shared: m.scopeShared })) },
   { id: 'heal', title: 'HEAL: THE MIRROR THAT HEALS', columns: 3, density: 'hero', load: () => import('./boards/heal').then(m => ({ items: m.healBoard })) },
   { id: 'algorithms', title: 'ALGORITHMS: STIPPLE, ATTRACT, COLLAPSE, AGGREGATE', columns: 2, density: 'hero', load: () => import('./boards/algorithms').then(m => ({ items: m.algorithmsBoard })) },
-  { id: 'materials', title: 'MATERIALS: WOVEN, SPUN, CARVED, POURED', columns: 3, density: 'standard', load: () => import('./boards/materials').then(m => ({ items: m.materialsBoard, sources: m.materialsSources })) },
   { id: 'pond', title: 'POND: LIVING SCENES IN GLYPH TILES', columns: 3, density: 'standard', load: () => import('./boards/pond/index').then(m => ({ items: m.pondBoard, sources: m.pondSources })) },
   { id: 'workshop', title: 'WORKSHOP: KNIT, DENIM, PAPER, WOOD, LEATHER, SAND, ICE, MERCURY, THREAD', columns: 3, density: 'standard', load: () => import('./boards/workshop').then(m => ({ items: m.workshopBoard, sources: m.workshopSources })) },
   { id: 'squares', title: 'SQUARES: SPACED AND JOINED', columns: 3, density: 'hero', load: () => import('./boards/squares').then(m => ({ items: m.squaresBoard })) },
@@ -80,8 +79,11 @@ export const boardManifest = [
 
 export type BoardId = typeof boardManifest[number]['id']
 export const boardIds: string[] = boardManifest.map(b => b.id)
-/** Old board ids that still resolve (deep links, bookmarks, paths): `?board=glyph` / `/glyph/` open the lock board. */
-export const boardAliases: Readonly<Record<string, string>> = { glyph: 'lock' }
+/**
+ * Old board ids that still resolve (deep links, bookmarks, paths): `?board=glyph` / `/glyph/` open the lock board, and
+ * the removed MATERIALS board (#378) opens WORKSHOP. vercel.json redirects the same paths.
+ */
+export const boardAliases: Readonly<Record<string, string>> = { glyph: 'lock', materials: 'workshop' }
 export const resolveBoardId = (id: string): string => boardAliases[id] ?? id
 export const boardMeta = (id: string): BoardMeta | undefined => boardManifest.find(b => b.id === id)
 /**
@@ -91,13 +93,16 @@ export const boardMeta = (id: string): BoardMeta | undefined => boardManifest.fi
 export const cardAliases: Readonly<Record<string, string>> = { 'sq-tetris': 'sq-stack' }
 export const resolveCardId = (id: string): string => cardAliases[id] ?? (id.startsWith('glyph-') ? `lock-${id.slice(6)}` : id)
 /**
- * Retired cards (#364): slug → [uid, board]. Their old `/widget/<slug|uid>/`, `/<uid>` and `?card=` links open the
+ * Retired cards (#364, #378): slug → [uid, board]. Their old `/widget/<slug|uid>/`, `/<uid>` and `?card=` links open the
  * board they lived on (`viewFromUrl`; vercel.json redirects the same paths). The uids stay in `ids.json`, never reused.
  */
 export const removedCards: Readonly<Record<string, readonly [uid: string, board: string]>> = {
   'cinema-last-call': ['y6q3xhhe', 'cinema'], 'cinema-closer': ['ezrp10da', 'cinema'], 'mirror-ladder': ['nhneq04s', 'mirror'],
-  'surface-eink': ['pbq54zfr', 'surfaces'], 'surface-plotter': ['jfm4e97e', 'surfaces'], 'mat-marble': ['cbmez41j', 'materials'],
-  'thermal-puppy': ['05cze99w', 'audio'],
+  'surface-eink': ['pbq54zfr', 'surfaces'], 'surface-plotter': ['jfm4e97e', 'surfaces'], 'thermal-puppy': ['05cze99w', 'audio'],
+  // the MATERIALS board (#378): its cards open WORKSHOP
+  'mat-loom': ['0t47ey59', 'workshop'], 'mat-knob': ['9942tpm6', 'workshop'], 'mat-grille': ['k6h584d5', 'workshop'], 'mat-marble': ['cbmez41j', 'workshop'],
+  'mat-terrazzo': ['5wg1q77w', 'workshop'], 'mat-lens': ['pe6dn0fm', 'workshop'], 'mat-pool': ['bm0q7rq9', 'workshop'], 'mat-window': ['8705twys', 'workshop'],
+  'mat-patch': ['6bka443r', 'workshop'], 'mat-rust': ['gt231wn2', 'workshop'], 'mat-candle': ['pymm8vf0', 'workshop'],
 }
 /** The board a retired card's slug or uid lived on, else undefined. */
 export const removedCardBoard = (key: string): string | undefined => {
@@ -117,7 +122,7 @@ export const boardGroups = [
   { id: 'ui', label: 'INTERFACES', boards: ['henry', 'deerflow12', 'mosaic', 'henry3', 'metro', 'ride', 'audio', 'lock', 'components', 'surfaces', 'dash', 'motion', 'watch'] },
   { id: 'data', label: 'DATA', boards: ['live', 'departures', 'heartbeat', 'charts'] },
   { id: 'play', label: 'PLAY', boards: ['levels', 'physics', 'instrument', 'scope', 'mirror', 'heal', 'pond', 'workshop', 'kinetic', 'faces'] },
-  { id: 'engine', label: 'ENGINE', boards: ['ir', 'sim', 'algorithms', 'squares', 'light', 'materials', 'gpu', 'type', 'cinema', 'fractals', 'oldschool', 'scenes'] },
+  { id: 'engine', label: 'ENGINE', boards: ['ir', 'sim', 'algorithms', 'squares', 'light', 'gpu', 'type', 'cinema', 'fractals', 'oldschool', 'scenes'] },
 ] as const satisfies readonly { id: string; label: string; boards: readonly BoardId[] }[]
 export type BoardGroupId = typeof boardGroups[number]['id']
 /** The group a board lives in (START HERE is a tour, not a home). */

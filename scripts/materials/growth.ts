@@ -20,8 +20,7 @@ import { stoneHooks as S } from '../../src/widgets/boards/workshop-stone'
 import { workshopBoard } from '../../src/widgets/boards/workshop'
 import { fmtLoaded, medianLoaded, onceLoaded } from '../lib/load'
 import { freezeWallClock } from '../lib/freeze'
-import { type Assert, same, type MaterialsOptions } from './util'
-import { POINTER, atClock } from './board'
+import { type Assert, same, POINTER, atClock, type MaterialsOptions } from './util'
 
 const frame = (p: WidgetPreset, t: number, pointers?: Pointer[]) => sampleLayers(withChrome(p)({ t, data: { ...p.defaults }, pointers }), p.grid, p.style, dot480)
 /** Run `f` with the wall clock frozen at h:m on the golden day (then back to the golden 09:41). */
