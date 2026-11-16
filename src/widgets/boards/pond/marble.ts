@@ -11,7 +11,7 @@ import { ihash } from '../../../engine/noise/dmath'
 import { worldAt } from '../../../engine/physics/world'
 import type { WidgetPreset } from '../../types'
 import { dayLabel } from './day'
-import { caption, frameOf, mainThread, tile, touch } from './shared'
+import { caption, frameOf, mainThread, surfaceFocus, tile, touch } from './shared'
 
 export const MARBLE_TILES: TileGrid = { cols: 36, rows: 33, pitch: 4, ox: 0, oy: 11 }
 /** The basin: a superellipse (|x−72|/66)⁴ + (|y−77|/62)⁴ − 1 (× 30), the koi pond's outline without the rocks. */
@@ -47,7 +47,7 @@ export const pondMarble: WidgetPreset = {
     marbleNow = m
     const s = worldAt(m.world, ctx.t, frameOf(ctx, 'marble'))
     drawMarble(m, s, ctx.t, raster)
-    return [caption(day ? dayLabel(day) : 'SUMINAGASHI'), ...tileLayers(raster)]
+    return [caption(day ? dayLabel(day) : 'SUMINAGASHI'), ...surfaceFocus(ctx, 'marble'), ...tileLayers(raster)]
   },
 }
 /** Read-outs for the checks and the browser probe. */

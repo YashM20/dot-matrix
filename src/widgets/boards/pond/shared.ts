@@ -5,8 +5,10 @@
  */
 import { framePointers, type FrameInput } from '../../../engine/physics/world'
 import type { Control } from '../../../engine/context'
+import type { Layer } from '../../../engine/types'
 import { TILE, layoutFor, tileStyle, type WidgetContext } from '../../types'
 import { caption } from '../../captions'
+import { LABEL_SWITCH, clock, marching, ui } from '../../dot-controls'
 
 export const T = layoutFor(TILE)
 export const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
@@ -21,6 +23,25 @@ export const mainThread = () => { if (IN_WORKER) throw new Error('pond cards kee
  * is a drag surface (UX-PLAN §10): a horizontal drag or a 300 ms hold engages it, a vertical swipe scrolls the page.
  */
 export const touch = (key: string, label: string): Control[] => [{ key, kind: 'button', gesture: 'surface', box: [0, 10, 144, 134], label }]
+
+/**
+ * A dotted line under the label row (the label is rows 0 to 6, the tiles start on row 11): card dots on the shared
+ * underline row (`LABEL_SWITCH.row`), every other cell, from `x0` for `w` cells.
+ */
+export const labelLine = (x0: number, w: number): [number, number][] => {
+  const pts: [number, number][] = []
+  for (let x = x0; x < x0 + w; x += 2) pts.push([x, LABEL_SWITCH.row])
+  return pts
+}
+/**
+ * The touch surface's focus (#393): the pond fills the card, so a ring has no room. Focus marches the label row's
+ * line instead, `w` cells from column 1 (the whole row unless the card has a label row control), in the kit's focus
+ * dash and tone, still under reduced motion. Hover draws nothing: the scene itself answers the pointer.
+ */
+export function surfaceFocus(ctx: WidgetContext, key: string, w = TILE.cols - 1): Layer[] {
+  const s = ui(ctx, key)
+  return s.focus ? [marching(() => labelLine(1, w), clock(s, ctx.t), 0)] : []
+}
 
 type Map2 = (x: number, y: number) => [number, number]
 const ident: Map2 = (x, y) => [x, y]

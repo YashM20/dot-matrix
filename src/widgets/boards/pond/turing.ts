@@ -13,7 +13,7 @@ import { datan2, dcos, dpow, dsin } from '../../../engine/noise/dmath'
 import { worldAt, worldStep } from '../../../engine/physics/world'
 import type { Field, Layer, Tone } from '../../../engine/types'
 import { layer, type WidgetPreset } from '../../types'
-import { caption, frameOf, mainThread, T, tile, touch } from './shared'
+import { caption, frameOf, mainThread, surfaceFocus, T, tile, touch } from './shared'
 
 export const turing: Turing = createTuring({ seed: 480, period: 48, lifeAt: .14, units: 20000 })
 
@@ -99,6 +99,7 @@ export const pondTuring: WidgetPreset = {
     return [
       // the count, while any of the fish is in the pond
       caption(pose.headX < 0 || pose.headX - 1.3 * bodyL > 143 ? '' : n === 1 ? '1 SPOT' : `${n} SPOTS`),
+      ...surfaceFocus(ctx, 'turing'),
       layer(T.dots(motes, .8), 'faint'),
       layer(fins, 'idle'),
       skinLayer,
