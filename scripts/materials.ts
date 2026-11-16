@@ -8,12 +8,12 @@
  *  - matcap:   studioMatcap ≡ metal().env, LUT agreement, rotate / tilt identities, hard stops
  *  - weave:    drawdowns (plain, twill, satin, herringbone, basket), drafts round trip, relief period / gap / tangents, bake time
  *  - stitch:   stitch lengths and gaps, at(s) continuity, contour of a disc
- *  - stone:    marble determinism and vein width, terrazzo spacing and keep-out
+ *  - stone:    marble (the engine generator) determinism and vein width, terrazzo spacing and keep-out
  *  - board:    every card pure in t, one accent on the live part, no activeDim, no red material dot, quantized, light
  *              keys declared, matLight ≡ sceneLight, frame / cold budgets
  *  - glass:    Snell LUT (127 samples, signs per profile, ior 1), strength 0 ≡ behind, Fresnel, frost (M2.1)
  *  - caustics: flat water = 1, energy, focusing, determinism and timing (M2.3)
- *  - cards:    loom, knob, grille, marble, terrazzo invariants; M2: lens, pool, window, patch, rust, candle
+ *  - cards:    loom, knob, grille, terrazzo invariants; M2: lens, pool, window, patch, rust, candle
  *  - workshop: M3's board (the board checks again, over the nine cards; gx / gy declared by the physics cards), the
  *              determinism lint scope, and one invariant per card (knit, denim, paper, wood, leather, sand, ice,
  *              mercury, thread), with the worlds' tap / drag / heal behaviour
@@ -35,11 +35,11 @@ import { heightRaster, lightDir, metal, normalRaster, sdfBox, sdfCircle, type Li
 import { blur, createRaster, distanceRaster, rasterize, rasterWindow } from '../src/engine/raster'
 import { latticeGrid } from '../src/engine/sampler/gridSampler'
 import type { GridConfig } from '../src/engine/types'
-import { materialsHooks } from '../src/widgets/boards/materials'
+import { T, toLattice15 } from '../src/widgets/boards/materials-shared'
 import { fmtLoaded, medianLoaded } from './lib/load'
 import { type Assert, same, DEG, loadFactor, cells, type MaterialsOptions } from './materials/util'
 import { glassChecks, causticChecks } from './materials/optics'
-import { atClock, boardChecks } from './materials/board'
+import { boardChecks } from './materials/board'
 import { workshopChecks, tiltChecks } from './materials/workshop'
 import { growthChecks } from './materials/growth'
 import { kintsugiChecks } from './materials/kintsugi'
@@ -100,8 +100,9 @@ export async function materialsChecks(assert: Assert, opts: MaterialsOptions = {
     let lit = 0; for (const v of m.data) lit += v
     // lattice dot (3, 2) spans card x ∈ [17.5, 20), y ∈ [25, 27.5): centres x + ½ in range → cols 17, 18, 19; rows 25, 26 (a 2.5 lattice alternates 3 and 2 cells)
     assert('materials: cardMask: a lattice dot fills the card cells whose centres fall in it', lit === 6 && m.data[25 * 144 + 17] === 1 && m.data[26 * 144 + 19] === 1 && m.data[27 * 144 + 19] === 0, `${lit} cells`)
-    // the marble's engraving: a banded inset distance stands in for two full-grid EDTs (identical heights, bit for bit)
-    const glyphs = atClock(() => materialsHooks.engraving('09', '41').hero), prof = { shape: 'linear' as const, width: 1.6, height: -1.8 }
+    // an engraving (the workshop's cut letters, once the marble clock's): a banded inset distance stands in for two
+    // full-grid EDTs (identical heights, bit for bit)
+    const glyphs = toLattice15(cardMask(T.big('09 41', 72, 50, { lattice: 2, smooth: true, mask: true, align: 'center' }), TILE)), prof = { shape: 'linear' as const, width: 1.6, height: -1.8 }
     const viaEdt = heightRaster(distanceRaster(glyphs), prof), viaBand = heightRaster(insetDistance(glyphs), prof)
     assert('materials: insetDistance ≡ distanceRaster under an engraving profile (heights and coverage bit for bit)', same(viaEdt.data, viaBand.data) && same(viaEdt.mask, viaBand.mask))
     const barrel = readFileSync(new URL('../src/engine/index.ts', import.meta.url), 'utf8')

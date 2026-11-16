@@ -7,11 +7,11 @@ import { registerPresets } from '../../widgets/registry'
 // registry cards: the sample worker can rebuild them by id, static ones share the sample cache
 registerPresets(surfacesBoard)
 
-/** One Field, Five Surfaces: one timer on browser, LED matrix, e-ink, flip-disc and plotter, on one clock. */
+/** One Field, Three Surfaces: one timer on browser, LED matrix and flip-disc, on one clock. */
 export default function FigSurfaces() {
   const live = useLiveData(surfacesSources)
   return (
-    <Cards n={5}>
+    <Cards n={3}>
       {surfacesBoard.map(p => <Card key={p.id} preset={p} data={pick(live, p.defaults)} />)}
     </Cards>
   )
