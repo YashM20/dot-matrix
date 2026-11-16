@@ -189,7 +189,7 @@ There is no substitute typeface — the bitmap dot-font *is* the typography syst
 | `--app-top` | `52px + safe-area-inset-top`; `--tap + inset` in short landscape | phone: the sticky top bar's height |
 | `--tabbar-h` | `58px + safe-area-inset-bottom`; `--tap + inset` in short landscape | phone: the tab bar's height, home indicator included |
 | `--topbar-h` | 48 px | desktop: the sticky header's height; `html` scroll padding is this plus `--gap-group`, so a focused or scrolled-to target lands clear of it |
-| `--pillbar-h` | 30 px; `--tap` + 2 px on a coarse pointer | widget page: a toolbar group's height (28 px buttons, `--tap` on touch, in one 1 px hairline); nothing reads it yet (R5) |
+| `--pillbar-h` | 30 px; `--tap` + 2 px on a coarse pointer | widget page: a toolbar group's height (28 px buttons, `--tap` on touch, in one 1 px hairline); a phone's page starts a group step under its pinned top bar with it |
 
 ### Stacking (z-index)
 
