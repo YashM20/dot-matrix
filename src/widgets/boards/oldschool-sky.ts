@@ -2,9 +2,9 @@
  * The oldschool board's clouds card: 2D dynamic clouds (src/engine/oldschool/clouds.ts) drifting past a red sun over a
  * calm horizon, shaded by the march toward the sun. A pure function of t: the cover is baked once a frame.
  */
-import { cloudCover, cloudFbm, cloudMarch } from '../../engine/oldschool/clouds'
+import { CLOUD_OCTAVES, cloudCover, cloudFbm, cloudMarch } from '../../engine/oldschool/clouds'
 import { layer, type WidgetPreset } from '../types'
-import { BODY_TOP, CREDIT_CLOUDS, IDLE, MID, T, VALUE, caption, clamp01, footer, pad, plate, tile } from './oldschool-kit'
+import { BODY_TOP, CREDIT_CLOUDS, IDLE, MID, T, VALUE, clamp01, footer, pad, plate, tile } from './oldschool-kit'
 
 // ── 04 SKY ── four octaves drifting at their own speeds, a clear-sky threshold, and four samples marched toward the
 // sun (up and to the right): the side of a cloud facing the sun is lit white, the body grey, the far side and the
@@ -45,14 +45,13 @@ export const osSky: WidgetPreset = {
       ink.tone = b > .72 ? VALUE : b > .4 ? IDLE : MID
     }, BODY_TOP, CLOUD_BOTTOM)
     return [
-      caption('DE=MAX(FBM-RAY,0)'),
       layer(T.dots([SUN], 9), 'active'),
       layer(sky),
       // the horizon: one dotted line, the sun's path on the water below it as a few short dashes
       layer(T.hrule(0, HORIZON, 144, 3), 'mid'),
       layer(T.hrule(SUN[0] - 6, HORIZON + 4, 13, 3), 'faint'),
       layer(T.hrule(SUN[0] - 3, HORIZON + 8, 7, 3), 'faint'),
-      ...footer(`COVER ${pad(mean * 100, 2)}%`, `A.${Math.round(A * 100)} B.${Math.round(B * 100)}`),
+      ...footer(`COVER ${pad(mean * 100, 2)}%`, `${CLOUD_OCTAVES.length} OCTAVES`),
     ]
   },
 }

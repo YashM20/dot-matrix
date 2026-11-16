@@ -35,7 +35,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   pond: 'A koi pond and other small ecosystems, drawn in glyph tiles. Tap to feed, hold to lure.',
   squares: 'Square cells that sit apart, fuse where they match, turn and get cut. Games, portraits, old screens, generative prints and two floors that never repeat.',
   fractals: 'Six fractals in dots: a Julia set walking the Mandelbrot map, orbit traps, popcorn, a chaos-game flame, an eight-fold icon and a Lyapunov field.',
-  oldschool: 'Demo effects from the late 1990s: a brick tunnel, a flower, a floor to the horizon, drifting clouds and a screen filming itself.',
+  oldschool: 'Demo effects from the late 1990s: a brick tunnel, a flower, a floor to the horizon, drifting clouds, a screen filming itself and a three-armed star.',
   scenes: 'Small 3D scenes traced onto big dots: a turned vase, a twisted column, a walk through a field of posts and a swinging chain.',
   dash: 'A car dashboard that drives itself in a loop. Touch any control and the car is yours: gears, signals, speed, charge.',
   kinetic: 'One word in big dots, moved seven ways: flipped, melted, scrambled, waved, typed, pulled and blown apart. Tap a flap to change the word.',

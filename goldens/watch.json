@@ -28,13 +28,13 @@
   "watch-complications": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "d1c2ca4c",
-    "dots": 962
+    "hash": "389f6164",
+    "dots": 957
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "576e8952",
-    "dots": 962
+    "hash": "03cda4ae",
+    "dots": 957
    }
   },
   "watch-moon": {
