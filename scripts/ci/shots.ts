@@ -10,7 +10,10 @@
  * xray flag on), `more` (click the widget page's MORE), `card-more` (click the first card row's MORE; the shot is the
  * viewport, the row in its middle), `other-tab` (another tab saves the editor's document, so the two-tab note shows),
  * `display` (the header's DISPLAY ▾ menu), `theme` (the header's THEME popover) and `tools` (the phone TOOLS sheet,
- * scrolled to its skin list); `card-more`, `display`, `theme` and `tools` capture the viewport only, e.g. `/@1280@dark@display`, `/@390@light@tools`. Reduced motion is
+ * scrolled to its skin list); `card-more`, `display`, `theme` and `tools` capture the viewport only, e.g. `/@1280@dark@display`, `/@390@light@tools`.
+ * Two options name a card control by its data key (letters and digits): `hover=<key>` puts the mouse on it and
+ * `focus=<key>` reaches it from the keyboard (Shift+Tab, then Tab), so its dot hover or focus ring shows; both capture
+ * the viewport with the control's card in the middle, e.g. `/widget/inst-cutoff/@1280@light@focus=cutoff`. Reduced motion is
  * emulated so nothing is caught mid-animation. Files:
  * `<route>-<width>-<theme>[-<option>...].png` in `--out` (default `.snapshots/ci-shots/`). Exit 1 when a page never
  * got ready (or an option's state never showed), 2 on a bad item.
@@ -35,7 +38,9 @@ const STATES: Partial<Record<Option, { press: string; open: string; then?: strin
   theme: { press: '.theme-switch .theme-menu-btn', open: `!!document.querySelector('.theme-pop .theme-seg [role=radio]')` },
   tools: { press: '.tabbar button[aria-haspopup="dialog"]', open: `!!document.querySelector('.tools-sheet .skin-list [role=radio]')`, then: `document.querySelector('.tools-sheet .skin-list')?.scrollIntoView({ block: 'center' })` },
 }
-type Item = { route: string; width: number; scheme: string; accent: string; opts: Option[]; file: string }
+/** A card control to hover or focus, by its data key. */
+type Target = { how: 'hover' | 'focus'; key: string }
+type Item = { route: string; width: number; scheme: string; accent: string; opts: Option[]; target?: Target; file: string }
 const parse = (s: string): Item | string => {
   // the leading slash is optional: Git Bash on Windows rewrites a leading `/` into a Windows path
   const [r, w, theme = 'dark', ...rest] = s.split('@'), route = r.startsWith('/') ? r : `/${r}`
@@ -44,10 +49,12 @@ const parse = (s: string): Item | string => {
   if (!Number.isInteger(width) || width < 240 || width > 3840) return `bad width in "${s}" (240 to 3840)`
   const [scheme, accent = 'signal'] = theme.split('_')
   if (!(SCHEMES as readonly string[]).includes(scheme) || !(ACCENTS as readonly string[]).includes(accent)) return `bad theme in "${s}" (dark, light or <scheme>_<accent>)`
+  const targets = rest.map(o => /^(hover|focus)=([A-Za-z0-9]{1,24})$/.exec(o)).filter(m => m !== null).map(m => ({ how: m[1] as Target['how'], key: m[2] }))
   const opts = rest.filter((o): o is Option => (OPTIONS as readonly string[]).includes(o))
-  if (opts.length !== rest.length) return `bad option in "${s}" (${OPTIONS.join(', ')})`
-  const slug = route.replace(/[^\w]+/g, '-').replace(/^-|-$/g, '') || 'home'
-  return { route, width, scheme, accent, opts, file: `${slug}-${width}-${scheme}_${accent}${opts.map(o => `-${o}`).join('')}.png` }
+  if (opts.length + targets.length !== rest.length || targets.length > 1) return `bad option in "${s}" (${OPTIONS.join(', ')}, hover=<key> or focus=<key>)`
+  const slug = route.replace(/[^\w]+/g, '-').replace(/^-|-$/g, '') || 'home', target = targets[0]
+  const tail = `${opts.map(o => `-${o}`).join('')}${target ? `-${target.how}-${target.key}` : ''}`
+  return { route, width, scheme, accent, opts, target, file: `${slug}-${width}-${scheme}_${accent}${tail}.png` }
 }
 const parsed = items.map(parse)
 const bad = parsed.filter((p): p is string => typeof p === 'string')
@@ -81,6 +88,21 @@ async function act(opts: Option[], phone: boolean): Promise<boolean> {
   return true
 }
 
+/** Hovers or keyboard-focuses a card control (its overlay element, `data-dot-focus`); false if it never got there. */
+async function reach(t: Target): Promise<boolean> {
+  const sel = JSON.stringify(`[data-dot-focus="${t.key}"]`)
+  if (!(await page.waitFor(`!!document.querySelector(${sel})`, 15000))) return false
+  const c = await page.js<{ x: number; y: number }>(`(() => { const b = document.querySelector(${sel}); b.closest('canvas, svg, .dot-a11y-group')?.parentElement?.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } })()`)
+  await sleep(600)
+  if (t.how === 'hover') { await page.mouse('mouseMoved', c.x, c.y, 0); await sleep(800); return true }
+  // from the keyboard: land on it without a ring, step back, then Tab onto it
+  await page.js(`document.querySelector(${sel}).focus({ preventScroll: true, focusVisible: false }), 1`)
+  await page.key('Tab', 'Tab', 9, 8)
+  await page.key('Tab', 'Tab', 9)
+  await sleep(800)
+  return page.js<boolean>(`(() => { const a = document.activeElement; return !!a && a.getAttribute('data-dot-focus') === ${JSON.stringify(t.key)} && a.matches(':focus-visible') })()`)
+}
+
 mkdirSync(out, { recursive: true })
 const server = await serveDist(4318)
 const page = await launch(1280, 900)
@@ -100,9 +122,9 @@ try {
     const ok = await page.waitFor(`!window.__shotOld && document.readyState === 'complete' && !document.querySelector('.view-loading, [aria-busy="true"]')`, 30000)
     await page.js(`document.fonts.ready.then(() => new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r))))`).catch(() => {})
     await sleep(1500)
-    const state = await act(it.opts, phone)
+    const state = (await act(it.opts, phone)) && (!it.target || (await reach(it.target)))
     // a full page (capped), except the viewport-only options
-    if (!it.opts.some(o => VIEWPORT.includes(o))) {
+    if (!it.target && !it.opts.some(o => VIEWPORT.includes(o))) {
       const h = Math.min(4000, Math.max(H, Math.ceil(await page.js<number>('document.documentElement.scrollHeight').catch(() => H))))
       await page.cdp('Emulation.setDeviceMetricsOverride', { width: it.width, height: h, deviceScaleFactor: dpr, mobile: phone })
       await sleep(800)
