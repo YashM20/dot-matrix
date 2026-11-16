@@ -37,7 +37,7 @@ export const batteryCard = card('dash-battery', 'Battery', {
     const hw = T.bigSize(String(pct), heroOpts())[0]
     const [word, detail] = d.charging
       ? ['CHARGING 11 KW', lit >= PACK.n ? 'FULL' : `FULL IN ${fullIn(d.soc)}`]
-      : regen ? [`REGEN ${Math.round(-d.kw)} KW`, 'BRAKING INTO THE PACK'] : ['READY', `${Math.round(rangeKm(d.soc, d.kmh))} KM LEFT`]
+      : regen ? [`REGEN ${Math.round(-d.kw)} KW`, 'INTO THE PACK'] : ['READY', `${Math.round(rangeKm(d.soc, d.kmh))} KM LEFT`]
     return [
       layer(at(T.dots(pack(0, LINE.spacing), LINE.size), cv), 'mid'),
       layer(T.dots([0, 3].flatMap(dx => [46, 52, 58].map((y): Pt => [130 + dx, y])), LINE.size), 'mid'),
@@ -103,7 +103,8 @@ function loop(pts: Pt[], spacing: number): Pt[] {
   })
   return out
 }
-const TRI_OUT = loop([[72, 81], [57, 106], [87, 106]], 2.5), TRI_IN = loop([[72, 90], [64.5, 102], [79.5, 102]], 2.5)
+// the inner triangle sits 5.6 cells inside the outer one on every side (apex included), in the same dots
+const TRI_OUT = loop([[72, 81], [57, 106], [87, 106]], 2.5), TRI_IN = loop([[72, 92], [66.6, 101], [77.4, 101]], 2.5)
 const SIGNAL_WORD = ['LEFT', 'OFF', 'RIGHT']
 export const signalsCard = card('dash-signals', 'Signals', {
   springKeys: ['drive'],
@@ -125,7 +126,7 @@ export const signalsCard = card('dash-signals', 'Signals', {
       layer(T.big(word, 72, ARROW.y + 7.5, { ...BODY, align: 'center' }), d.signal === OFF && !d.hazard ? 'mid' : 'value'),
       layer(T.dotLine(6, 66, 138, 66, { spacing: 3.3, size: 1 }), 'faint'),
       layer(at(T.dots(button(0, LINE.spacing), LINE.size), hv), d.hazard ? 'value' : 'mid'),
-      layer(at(T.dots(TRI_OUT, 1.8), hv), tri), layer(at(T.dots(TRI_IN, 1.3), hv), tri),
+      layer(at(T.dots(TRI_OUT, 1.8), hv), tri), layer(at(T.dots(TRI_IN, 1.8), hv), tri),
       layer(T.text('HAZARD', 72, 124, { align: 'center' }), d.hazard ? 'value' : 'idle'),
       layer(T.text(d.hazard || d.signal !== OFF ? '92 / MIN' : 'STALK', 72, 135, { align: 'center' }), 'mid'),
       ...states(ss, ctx.t, stalk, stalk, 0), ...states(hs, ctx.t, button, button, 3),

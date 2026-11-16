@@ -206,12 +206,12 @@ export const matLichtenberg: WidgetPreset = {
     for (let q = 0; q < Math.min(2, f.count); q++) if (f.parent[q] < 0) seeds.push(gridPt(f, q))
     const st = studs(L, seeds)
     return [
-      cite('NIEMEYER 1984'),
+      cite('MAPLE PLATE'),
       tonedLayer(lit.values, lit.tones),
       layer(T.dots(st.body, 1), 'idle'), layer(T.dots(st.lit, 1), 'value'),
       ...(front.length ? [layer(T.dots(front, b.arc ? 1.2 : 1), 'active')] : []),
       layer(T.text(`${f.count} CELLS`, 6, 135), 'mid'),
-      layer(T.text(`ETA ${PLATE.eta}`, 138, 135, { align: 'right' }), 'mid'),
+      layer(T.text(`BRANCHING ${PLATE.eta}`, 138, 135, { align: 'right' }), 'mid'),
     ]
   },
 }

@@ -57,7 +57,7 @@ export const dialLabels = (d: Dial, marks: [number, string][], inset = 15): Laye
 })
 /** The needle: a short run of big sites across the track at fraction `f`; `clear` = the track's knockout radius round each. */
 const NEEDLE = { size: 2.6, clear: 3.2 }
-const needleSites = (d: Dial, f: number): Pt[] => { const a = angleOf(d, f); return [-13, -9, -5, -1, 3].map(k => polar(d.cx, d.cy, d.r + k, a)) }
+export const needleSites = (d: Dial, f: number): Pt[] => { const a = angleOf(d, f); return [-13, -9, -5, -1, 3].map(k => polar(d.cx, d.cy, d.r + k, a)) }
 export const needle = (d: Dial, f: number, v = 1): LatticeField => ({ field: () => v, sites: needleSites(d, f), size: NEEDLE.size })
 
 /** The hero face on `lattice`: smooth `fine` numerals (8×14 digits, 2 dots apart). */

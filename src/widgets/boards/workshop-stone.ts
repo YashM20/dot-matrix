@@ -154,7 +154,8 @@ function litStone(m: number, L: ReturnType<typeof matLight>) {
       const proud = SO[i] < 1 && H[i] - B[i] > .55 ? 1.45 : 1, b = Math.min(1.2, Math.max(0, D.data[i] - .03) * gain * proud) * A[i]
       // sandstone: grain voids (blue noise) on the open face; lit walls a band up, the sun's glint in value
       if (b < .1 || (b < .5 && stbn(x, y, 2) < .18)) continue
-      if (b < .32) { V[i] = .24; tones[i] = FAINT } else if (b < .66) { V[i] = .5; tones[i] = MID } else if (b < .95) { V[i] = .8; tones[i] = IDLE } else { V[i] = 1; tones[i] = VALUE }
+      // the arris (the outer 3 cells) is one frame: lit, it takes mid at most, so the top and left edges match
+      if (b < .32) { V[i] = .24; tones[i] = FAINT } else if (b < .66 || x - x0 < 3 || x1 - x < 3 || y - y0 < 3 || y1 - y < 3) { V[i] = .5; tones[i] = MID } else if (b < .95) { V[i] = .8; tones[i] = IDLE } else { V[i] = 1; tones[i] = VALUE }
     }
     return { values, tones, dots }
   })
@@ -189,7 +190,7 @@ export const matErosion: WidgetPreset = {
     const L = snapTorch(matLight(ctx, { lattice: L15, torch: { height: 18, falloff: 110 }, rake: true }), 2)
     const lit = litStone(m, L), d = ctx.reducedMotion ? [] : drops(rainPaths(m), ctx.t)
     return [
-      cite('BEYER 2015'),
+      cite('WORN BY RAIN'),
       tonedLayer(lit.values, lit.tones, L15),
       ...(d.length ? [layer(T.dots(d, .8), 'value')] : []),
       layer(T.dots(lit.dots, 1.6), 'active'),

@@ -177,7 +177,13 @@ export const matKnit: WidgetPreset = {
 // the light climbs to idle, the far wall falls to void, and the ink sits on the floor of the impression in value. The
 // paper stays faint / mid. A tap is one more impression: the ink lifts and is laid again from the strokes' middle
 // out over 0.4 s, and the count goes up. No red: nothing on paper is live.
-export const PAPER = { box: [14, 20, 129, 134] as Box, r: 3, lines: [['DOT', 34], ['480', 62]] as [string, number][], k: 2.5, inkAt: 1.9 }
+// The two lines on a 2-cell lattice (a glyph is 14 dots: 28 cells, every stroke 4 cells wide) with 6 cells of paper
+// between them; the edition and the stock print below the plate, on a clear band of the sheet.
+export const PAPER = { box: [14, 20, 129, 134] as Box, r: 3, lines: [['DOT', 28], ['480', 62]] as [string, number][], k: 2, inkAt: 1.9, text: [100, 112] as const }
+/** The clear band round a printed line at `row` down to row `end` (cells): the line's width and air round it. */
+const PAPER_BAND = (chars: number, row: number, end: number): CellBounds => { const w = 6 * chars - 1, x0 = Math.floor(72 - w / 2) - 2; return [x0, row - 1, x0 + w + 3, end] }
+/** The two bands meet, so no strip of tooth runs between the lines. */
+const PAPER_BANDS = [PAPER_BAND(8, PAPER.text[0], PAPER.text[1]), PAPER_BAND(14, PAPER.text[1], PAPER.text[1] + 7)]
 const PCX = (PAPER.box[0] + PAPER.box[2]) / 2, PCY = (PAPER.box[1] + PAPER.box[3]) / 2, PHW = (PAPER.box[2] - PAPER.box[0]) / 2, PHH = (PAPER.box[3] - PAPER.box[1]) / 2
 /** Signed distance to the deckle edge (cells, < 0 on the sheet): a rounded box, the edge torn by fBm along it. */
 export function deckle(x: number, y: number): number {
@@ -230,14 +236,15 @@ function inkRows(V: Float32Array, Tn: Uint8Array, ink: Uint8Array, g: PaperGeo, 
   const ra = Math.max(r0, PBOX[1]), rb = Math.min(r1, PBOX[3]), ca = Math.max(c0, PBOX[0]), cb = Math.min(c1, PBOX[2])
   for (let r = ra; r <= rb; r++) for (let i = r * COLS + ca, end = r * COLS + cb; i <= end; i++) if (ink[i] && floor[i] >= reach) { V[i] = .95; Tn[i] = VALUE }
 }
+const inBand = (c: number, r: number) => PAPER_BANDS.some(([x0, y0, x1, y1]) => c >= x0 && c <= x1 && r >= y0 && r <= y1)
 function paperShadeRow(g: PaperGeo, D: Float32Array, V: Float32Array, Tn: Uint8Array, ink: Uint8Array, gain: number, r: number): void {
   const M = g.n.mask, A = g.ao.data, F = g.floor, inkAt = PAPER.inkAt
   for (let c = PBOX[0], i = r * COLS + c; c <= PBOX[2]; c++, i++) {
     if (M[i] <= 0) continue
     const f = F[i]
     if (f >= inkAt) { ink[i] = 1; continue } // the impression's floor: the ink's (drawn per frame)
-    // the paper's tooth: a quarter of the flat sheet is void (blue noise), its shadowed fibres too
-    if (f === 0 && stbn(c, r, 5) < .25) continue
+    // the paper's tooth: a quarter of the flat sheet is void (blue noise), its shadowed fibres too; none under the print
+    if (f === 0 && (stbn(c, r, 5) < .25 || inBand(c, r))) continue
     // min(1, max(0, D − .1) · gain) · AO, as compares (the same values)
     const e = D[i] - .1, y = (e > 0 ? e : 0) * gain, b = (y < 1 ? y : 1) * A[i]
     // paper is quiet (faint / mid); only a deboss wall turned to the light climbs to idle
@@ -286,8 +293,8 @@ export const matPaper: WidgetPreset = {
     return [
       cite('LETTERPRESS'),
       surface,
-      layer(T.text(`NO. ${String(count).padStart(4, '0')}`, 72, 102, { align: 'center' }), 'mid'),
-      layer(T.text('COTTON 300 GSM', 72, 114, { align: 'center' }), 'mid'),
+      layer(T.text(`NO. ${String(count).padStart(4, '0')}`, 72, PAPER.text[0], { align: 'center' }), 'mid'),
+      layer(T.text('COTTON 300 GSM', 72, PAPER.text[1], { align: 'center' }), 'mid'),
     ]
   },
 }
@@ -369,7 +376,7 @@ export const matIce: WidgetPreset = {
       const th = (g.tx[i] * hx + g.ty[i] * hy) / hl, spark = (1 - th * th) ** 12, age = (k - i) / k
       groups[spark > .9 && age < .7 ? 'value' : age > .85 ? 'mid' : 'idle'].push([x, y])
     }
-    const out: Layer[] = [cite('WITTEN-SANDER 1981'), layer(T.dots(m2 === 0 ? g.hoar : g.hoar.filter(([x, y]) => (x - s[0]) ** 2 + (y - s[1]) ** 2 >= m2), .8), 'faint')]
+    const out: Layer[] = [cite('FROST FERN'), layer(T.dots(m2 === 0 ? g.hoar : g.hoar.filter(([x, y]) => (x - s[0]) ** 2 + (y - s[1]) ** 2 >= m2), .8), 'faint')]
     for (const tone of ['mid', 'idle', 'value'] as const) if (groups[tone].length) out.push(layer(T.dots(groups[tone], 1.3), tone))
     if (groups.active.length) out.push(layer(T.dots(groups.active, 1.45), 'active'))
     return out

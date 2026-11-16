@@ -7,7 +7,8 @@ import { sceneLight } from '../../src/engine/light/input'
 import { sampleLayers } from '../../src/engine/sampler/gridSampler'
 import { dot480 } from '../../src/engine/theme/tokens'
 import type { Pointer } from '../../src/engine/context'
-import { TILE, withChrome, type WidgetPreset } from '../../src/widgets/types'
+import { TILE, layoutFor, withChrome, type WidgetPreset } from '../../src/widgets/types'
+import { textSize } from '../../src/engine/layout'
 import { lightBoard } from '../../src/widgets/boards/light'
 import { workshopBoard, workshopHooks, workshopSources } from '../../src/widgets/boards/workshop'
 import { lightTrace } from '../../src/widgets/boards/materials-shared'
@@ -28,6 +29,7 @@ import { POINTER, atClock } from './board'
 const WS_NO_ACCENT_AT_REST = new Set(['mat-denim', 'mat-paper', 'mat-leather', 'mat-sand', 'mat-mercury', 'mat-thread'])
 const WS_NEVER_RED = new Set(['mat-denim', 'mat-paper', 'mat-leather'])
 const WS_PHYSICS = new Set(['mat-sand', 'mat-mercury', 'mat-thread'])
+const T = layoutFor(TILE)
 const wsFrame = (p: WidgetPreset, t: number, pointers?: Pointer[], data?: Record<string, number>) =>
   sampleLayers(withChrome(p)({ t, data: { ...p.defaults, ...data }, pointers }), p.grid, p.style, dot480)
 
@@ -66,6 +68,15 @@ export async function workshopChecks(assert: Assert, opts: MaterialsOptions): Pr
   const keys = ['lightSrc', 'lightAz', 'lightEl', 'tx', 'ty']
   assert('workshop board: every card declares lightSrc/lightAz/lightEl/tx/ty in defaults; sand, mercury and thread also gx/gy (0, 1)', board.every(p => keys.every(k => p.defaults && k in p.defaults) && (!WS_PHYSICS.has(p.id) || (p.defaults!.gx === 0 && p.defaults!.gy === 1))) && workshopSources.length === 1)
   assert('workshop board: one row a card, three columns (WORKSHOP manifest title, play group): M3\'s nine, XM\'s plate, stone and frost, then the kintsugi plate, the mud and the paper fold', board.length === 15 && new Set(board.map(p => p.id)).size === 15)
+  // the right-hand tag never runs into the card's title: no header dot in the 5 cells right of the title
+  {
+    const pitch = TILE.pitch!, bad: string[] = []
+    for (const p of board) {
+      const tw = textSize(p.name.toUpperCase())[0], cols = atClock(() => wsFrame(p, 0)).filter(d => d.y / pitch - .5 < 7).map(d => Math.round(d.x / pitch - .5))
+      if (cols.some(c => c >= tw && c < tw + 5)) bad.push(p.id)
+    }
+    assert('workshop board: each tag stays 5 cells clear of the title', !bad.length, bad.join(', '))
+  }
   // a red that is never a material: denim (no redline: §10.2), paper and leather (no awl: §10.3) never show it, whatever the input
   const neverRed = [...WS_NEVER_RED].every(id => [0, 1.3, 6].every(t => !atClock(() => wsFrame(byId(id), t, [POINTER(70, 70)], { k: 1 })).some(d => d.color === dot480.dotActive)))
   assert('workshop board: denim, paper and leather draw no red, hovered or pressed (the owner options stay off)', neverRed)
@@ -116,6 +127,11 @@ export async function workshopChecks(assert: Assert, opts: MaterialsOptions): Pr
     assert('denim: 3/1 twill warp fraction .75; the selvedge is value, with no active dot', up / 64 === .75 && selv.length > 200 && selv.every(d => d.color === dot480.value) && !dots.some(d => d.color === dot480.dotActive), `${selv.length} selvedge dots`)
   }
   // ── paper ──
+  {
+    // DOT over 480 with paper between them, and the print below the plate (the two lines overlapped before)
+    const lh = T.bigSize('DOT', { lattice: H.PAPER.k, smooth: true })[1], [[, r0], [, r1]] = H.PAPER.lines
+    assert('paper: DOT and 480 sit 4+ cells apart, and the print starts 4+ cells under 480', r0 + lh + 4 <= r1 && r1 + lh + 4 <= H.PAPER.text[0], `rows ${r0}, ${r1}, ${H.PAPER.text[0]}; a line is ${lh} cells`)
+  }
   {
     const g = H.paperGeo(), n = g.n
     let ok = true, detail = ''
