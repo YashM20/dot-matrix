@@ -623,7 +623,7 @@ Every HTML control in the chrome has the same four states plus disabled, from th
 |---|---|---|
 | rest | neutral text (`--mute` / `--label`) on its surface | carries the transition: `color, background-color, border-color, box-shadow, opacity, transform` over `--dur-out` |
 | hover | `--wash-hover` or `--line-hover`, text one step up | in at once (`--dur-in`), out over `--dur-out` |
-| press (`:active`) | `--wash-press` | in at once; on touch, the press-sink list (one selector list in `src/site/mobile/touch.css`) also sinks to `scale(var(--press-sink))` |
+| press (`:active`) | `--wash-press` | in at once, and the control sinks, out over `--dur-out` on `--ease`. On touch the press-sink list (one selector list in `src/site/mobile/touch.css`) sinks to `scale(var(--press-sink))`. On a mouse (`hover: hover` and `pointer: fine`) the pills sink to `scale(var(--press-sink-fine))`: `.btn`, `.pill-btn` (NEXT BOARD and the toolbars), `.lk-btn`, the header pills (`.skin-menu-btn`: DISPLAY ▾, THEME ▾), the board picker and the intro line's buttons. A key press never sinks a control (`:not(:focus-visible)`), and nothing sinks under reduced motion |
 | focus (`:focus-visible`) | the accent ring: `outline: 1px solid --red`, offset `--focus-out` (inside, `--focus-in`, for rows, fields and strip buttons that fill their container), plus `--glow-halo`. One rule in `src/site/controls.css`; a component sets only the offset | none |
 | active / selected / on / live | the accent at full strength with `--glow-wash` or `--glow-halo` | none |
 | disabled | 40% opacity, no pointer | — |
@@ -633,6 +633,7 @@ Every HTML control in the chrome has the same four states plus disabled, from th
 | `--focus-out` | 2 px | the ring's offset outside a control |
 | `--focus-in` | -2 px | the ring drawn inside a row, field or strip button that fills its container |
 | `--press-sink` | .96 (1 under reduced motion) | the scale a touched chrome control sinks to |
+| `--press-sink-fine` | .97 (1 under reduced motion) | the scale a pill sinks to under a mouse press: a step less than under a finger |
 
 No state changes a size, so nothing shifts. On coarse pointers every chrome target is at least 40 px (44 px on phones). Menus, popovers and ⌘K open with no animation; only sheets slide in (`--dur-enter`). Reduced motion removes all of it: the OS setting, or the ⌘K override (on, off, system; kept in localStorage `dot480:motion`), which wins both ways. One helper answers for JS (`reducedMotion()`, `scrollBehavior()` in `src/site/motion.ts`) and writes `<html data-motion="reduce|full">`, which every CSS reduced-motion rule keys off. In-card controls are different: they draw hover, press and focus in dots (below).
 

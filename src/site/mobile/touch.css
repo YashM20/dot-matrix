@@ -76,6 +76,14 @@
   }
 }
 
+/* mouse: the pills sink a step less than under a finger (--press-sink-fine, 1 under reduced motion), so press reads the
+   same on every device (#341). Not from the keyboard: Space holds :active, and a held key must not leave a button small */
+@media (hover: hover) and (pointer: fine) {
+  :is(.btn, .pill-btn, .lk-btn, .skin-menu-btn, .board-picker button, .next-board a, .intro-line button):active:not(:focus-visible) {
+    transform: scale(var(--press-sink-fine))
+  }
+}
+
 /* an installed app (display: standalone) has no pull-to-refresh to keep */
 @media (display-mode: standalone) {
   html {

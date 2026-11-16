@@ -19,6 +19,8 @@
  *    at its menu (`aria-controls`), moves by first letter and closes on a press outside; the widget page's MORE opens
  *    with ↓; the pill bar and the accent swatches jump with Home and End; the board groups are tabs whose arrows
  *    open a group and whose boards row is the labelled panel.
+ *  - `press` (#341, first mode only): on the widget page a held mouse press sinks MORE (a pill) to `--press-sink-fine`, a
+ *    held Space leaves it full size, and under reduced motion nothing sinks (`--press-sink` is 1 too).
  * Phone, 390 × 844 with touch: `tap44:<page>`, every control outside the cards has a 44 × 44 touch area (WCAG 2.5.5;
  *  targets in a sentence and MAKE's frame names, which LAYERS repeats as 44 px rows, are exempt). `sheet:<name>`: TOOLS, BOARDS and search open a modal sheet or the palette with focus
  * inside, as a modal dialog (`:modal`); Escape closes it and focus goes back to the button that opened it.
@@ -133,6 +135,45 @@ async function ringWalk(p: Page, page: string, mode: string, max = 60) {
     if (why) bad.push(`#${n + 1} ${s.label}: ${why}`)
   }
   check(`ring:${page}:${mode}`, n > 0 && !bad.length, `${n} stops${bad.length ? `; ${bad.slice(0, 6).join(' | ')}` : ''}`)
+}
+
+/** The scale MORE (`.wp-more-btn`, a `.pill-btn`) shows right now: 1 when it has no transform. */
+const MORE_SCALE = `(() => { const t = getComputedStyle(document.querySelector('.wp-more-btn')).transform; return t === 'none' ? 1 : new DOMMatrix(t).a })()`
+/** Desktop press (#341), on the widget page: a held mouse press sinks a pill to `--press-sink-fine`; a held Space
+ * doesn't (a key must not leave it small), and nothing sinks under reduced motion. Each mouse press is let go off the
+ * button, so MORE doesn't open. */
+async function pressSink(p: Page, mode: string) {
+  const fine = await p.js<boolean>(`matchMedia('(hover: hover) and (pointer: fine)').matches`)
+  const token = await p.js<number>(`parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--press-sink-fine'))`)
+  const mouse = async () => {
+    await p.js(`document.activeElement?.blur?.(); 1`)
+    const [x, y] = await p.js<[number, number]>(`(r => [r.x + r.width / 2, r.y + r.height / 2])(document.querySelector('.wp-more-btn').getBoundingClientRect())`)
+    await p.mouse('mouseMoved', x, y, 0); await p.mouse('mousePressed', x, y); await sleep(120)
+    const s = await p.js<number>(MORE_SCALE)
+    await p.mouse('mouseMoved', x, y + 200); await p.mouse('mouseReleased', x, y + 200); await sleep(150)
+    return s
+  }
+  const pressed = await mouse()
+  check(`press: a mouse press sinks a pill to --press-sink-fine:${mode}`, fine && token > .9 && token < 1 && Math.abs(pressed - token) < 1e-3,
+    `fine pointer ${fine}, token ${token}, pressed ${pressed}`)
+
+  await p.js(`document.querySelector('.wp-more-btn').focus(); 1`)
+  const visible = await p.js<boolean>(`document.activeElement?.matches('.wp-more-btn:focus-visible') ?? false`)
+  const [code, vk, text] = KEYS[' ']
+  await p.cdp('Input.dispatchKeyEvent', { type: 'keyDown', key: ' ', code, windowsVirtualKeyCode: vk, text }); await sleep(120)
+  const held = await p.js<number>(MORE_SCALE)
+  await p.cdp('Input.dispatchKeyEvent', { type: 'keyUp', key: ' ', code, windowsVirtualKeyCode: vk }); await sleep(150)
+  const after = await p.js<number>(MORE_SCALE)
+  await press(p, 'Escape')
+  check(`press: a held Space leaves a pill full size:${mode}`, visible && held === 1 && after === 1, `focus-visible ${visible}, held ${held}, after ${after}`)
+
+  await p.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: mode }, { name: 'prefers-reduced-motion', value: 'reduce' }] })
+  const reduced = await p.waitFor(`document.documentElement.dataset.motion === 'reduce'`, 5000)
+  const still = await mouse()
+  const touchToken = await p.js<string>(`getComputedStyle(document.documentElement).getPropertyValue('--press-sink').trim()`)
+  await p.cdp('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: mode }] })
+  await p.waitFor(`document.documentElement.dataset.motion === 'full'`, 5000)
+  check(`press: no sink under reduced motion:${mode}`, reduced && still === 1 && touchToken === '1', `data-motion reduce ${reduced}, pressed ${still}, --press-sink ${touchToken}`)
 }
 
 async function desktop() {
@@ -262,6 +303,7 @@ async function desktop() {
       await press(p, 'Home'); const barHome = await p.js<boolean>(`(${ends})[0] === document.activeElement`)
       await press(p, 'End'); const barEnd = await p.js<boolean>(`(a => a.length > 1 && a[a.length - 1] === document.activeElement)(${ends})`)
       check(`pill bar: Home / End:${mode}`, barHome && barEnd, `Home ${barHome}, End ${barEnd}, on ${await active(p)}`)
+      if (mode === MODES[0]) await pressSink(p, mode)
     }
   } finally {
     await p.close()
