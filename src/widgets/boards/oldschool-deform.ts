@@ -176,8 +176,9 @@ function starInk(t: number): (x: number, y: number, ink: Ink, i: number) => void
     if (m < .12) return
     // a band every 1/bands of radius, running outward
     const band = frac(STAR.bands * r[i] - flow) < .4
+    // the arm's body stays `idle` so its outline reads between the bands; `mid` at this size sank into the card
     ink.v = band ? m : m * .6
-    ink.tone = band ? (m > .55 ? VALUE : IDLE) : MID
+    ink.tone = band && m > .55 ? VALUE : m > .3 ? IDLE : MID
   }
 }
 export const osStar: WidgetPreset = {
