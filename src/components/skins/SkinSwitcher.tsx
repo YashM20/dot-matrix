@@ -1,6 +1,6 @@
 import { useEffect, useId, useRef, useState, type KeyboardEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import { SKINS, SKIN_NAMES } from '../../engine/display/names'
-import { getSkin, setClack, setSkin, useClack, useDisplaySkin } from './store'
+import { getSkin, setSkin, useDisplaySkin } from './store'
 
 /** The one-line description: the skin title after its "NAME: " prefix. */
 const blurb = (title: string) => title.slice(title.indexOf(': ') + 2)
@@ -9,11 +9,10 @@ const blurb = (title: string) => title.slice(title.indexOf(': ') + 2)
  * The header's DISPLAY ▾ menu button (docs/UX-PLAN.md §4.3): one compact button that opens a menu of
  * the skins, each with its one-line description. WAI-ARIA menu button with `menuitemradio` items:
  * Enter/Space/arrows open it on the current skin, arrows/Home/End/first letter move, Enter/Space/click
- * pick, Escape or Tab closes (Escape returns focus), a press outside closes. The flip-disc skin adds a
- * clack toggle (muted by default).
+ * pick, Escape or Tab closes (Escape returns focus), a press outside closes.
  */
 export function SkinSwitcher() {
-  const skin = useDisplaySkin(), clack = useClack()
+  const skin = useDisplaySkin()
   const [open, setOpen] = useState(false), [right, setRight] = useState(true)
   const wrap = useRef<HTMLDivElement>(null), btn = useRef<HTMLButtonElement>(null)
   const items = useRef<(HTMLButtonElement | null)[]>([])
@@ -86,11 +85,6 @@ export function SkinSwitcher() {
             </button>
           ))}
         </div>
-      )}
-      {skin === 'flipdisc' && (
-        <button type="button" className={`skin-clack dot-ring${clack ? ' selected' : ''}`} aria-pressed={clack} title="Flip-disc clack (sound)" onClick={() => setClack(!clack)}>
-          {clack ? 'CLACK ON' : 'CLACK OFF'}
-        </button>
       )}
     </div>
   )

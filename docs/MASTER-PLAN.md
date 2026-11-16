@@ -85,7 +85,7 @@ v1 measured engineering, not taste. Scored as written, it failed the user's favo
 2. **Tonal depth:** shadows, mids and highlights used with intent.
 3. **Hierarchy:** the read order survives a 6 px Gaussian blur (squint test, computed as HVS-filtered at two viewing distances).
 4. **One idea / story.**
-5. **Material honesty:** tone means something physical (`thermal-monitor` passes; `thermal-puppy`, a grey ghost labelled THERMAL, fails).
+5. **Material honesty:** tone means something physical (`thermal-monitor` passes; `thermal-puppy`, a grey ghost labelled THERMAL, failed and was later removed, #343).
 6. **Edge quality:** soft one-cell ramps for organic shapes, hard edges for UI.
 7. **Density balance:** negative space; nothing denser than the hero.
 8. **Board coherence:** shared label system, hero baselines, margins, one numeral weight per board (henry fails: `home-clock`/`weather` versus `timer`).
@@ -587,7 +587,7 @@ Multitouch via `pointers[]`. Sound is a Track R spike, not a gate.
 |---|---|---|---|
 | `henry-bear` | Flat grey block; the bunny is illegible | Hand-authored 3-tone sprite (fur mid, muzzle light, eyes void); drop the bunny or make it a clear sprite on 1.6 | P2 |
 | `silhouette` | Two-tone threshold, banding, figure is a blob | Halftone ladder step 2 (structure-aware); blue-noise sky; hand-masked figure edge | P3 |
-| `thermal-puppy` | Grey ghost with no heat story | `toneRamp` heat, with the hot core in red (accent = hot); one hotspot readout | P3 |
+| `thermal-puppy` (removed, #343) | Grey ghost with no heat story | `toneRamp` heat, with the hot core in red (accent = hot); one hotspot readout | P3 |
 | `sunburst` | Square grid patch at the centre | Concentric site disc + radially tapered rays | P2 |
 | `vision-camera` | Objects unreadable, flat grey | Silhouette pass per object, tone-ramp lamp pool, bounding boxes snapped to objects | P3 |
 | `ev-charge` | Car is a faint smear | Lambert-lit car rim from the cable side; the cable is the single red path | P3 |

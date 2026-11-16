@@ -1,6 +1,8 @@
-/* App styles: the pill controls (docs/SHARE-PLAN.md §4.3, src/components/widget/PillBar.tsx). One capsule (`.pill`)
-   holds one or more small mono uppercase buttons (`.pill-btn`): the widget page's bars and the board's NEXT BOARD.
-   First-load CSS so a board view can use them; grey chrome only, the card keeps the one accent. */
+/* App styles: the toolbar (DESIGN.md › Chrome components › toolbar; src/components/widget/PillBar.tsx). A group
+   (`.pill`) is one hairline box with a hairline between its buttons (`.pill-btn`): short mono labels, Lucide icons
+   (toolIcons.tsx), icons alone where the label adds nothing. 28 px tall on a mouse, --tap on touch (padding, not a
+   bigger look). Opaque, no blur. Used by the widget page's bars and the board's NEXT BOARD, so it is first-load CSS.
+   Grey chrome only: the card keeps the one accent. (The class names are the old capsule's.) */
 .pill-bar {
   display: flex;
   align-items: center;
@@ -9,36 +11,31 @@
 
 .pill {
   display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  padding: var(--space-1);
-  background: var(--glass);
+  align-items: stretch;
+  background: var(--surface);
   border: 1px solid var(--line);
-  border-radius: var(--radius-pill);
-  -webkit-backdrop-filter: var(--glass-blur);
-  backdrop-filter: var(--glass-blur)
+  border-radius: var(--radius-sm)
 }
 
-@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .pill {
-    background: var(--raised)
-  }
+/* the hairline between neighbours (the MORE menu is a fixed layer, not a neighbour) */
+.pill > :not(.wp-more) + :not(.wp-more) {
+  border-left: 1px solid var(--line)
 }
 
 .pill-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-2);
-  min-width: 36px;
-  min-height: 36px;
-  padding: 0 var(--space-4);
+  gap: var(--space-1);
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0 var(--space-2);
   background: none;
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: 0;
   color: var(--label);
-  font: 600 var(--fs-label-12)/1 var(--mono);
-  letter-spacing: .14em;
+  font: 500 var(--fs-label-12)/1 var(--mono);
+  letter-spacing: .06em;
   text-decoration: none;
   white-space: nowrap;
   cursor: pointer;
@@ -46,11 +43,36 @@
   touch-action: manipulation
 }
 
-/* the four states (the focus ring is the global accent ring) */
+/* an icon alone: a square */
+.pill-btn--icon {
+  padding: 0
+}
+
+/* the group's end buttons keep its corners, so a hover wash stays inside them */
+.pill > .pill-btn:first-child {
+  border-start-start-radius: var(--radius-sm);
+  border-end-start-radius: var(--radius-sm)
+}
+
+.pill > :nth-last-child(1 of .pill-btn) {
+  border-start-end-radius: var(--radius-sm);
+  border-end-end-radius: var(--radius-sm)
+}
+
+.pill-icon {
+  display: block;
+  flex: none
+}
+
+/* the four states; the focus ring sits inside, so a neighbour's hairline never cuts it */
 .pill-btn:hover,
 .pill-btn:focus-visible {
   background: var(--wash-hover);
   color: var(--value)
+}
+
+.pill-btn:focus-visible {
+  outline-offset: -2px
 }
 
 .pill-btn:active,
@@ -59,22 +81,9 @@
   color: var(--value)
 }
 
-/* a pill that is on (X-RAY): the accent wash */
+/* a button that is on (X-RAY): the accent wash */
 .pill-btn[aria-pressed="true"] {
   background: var(--glow-wash);
-  color: var(--value)
-}
-
-.pill-glyph {
-  color: var(--mute);
-  font-size: var(--fs-label-12);
-  letter-spacing: 0
-}
-
-.pill-btn:hover .pill-glyph,
-.pill-btn:focus-visible .pill-glyph,
-.pill-btn:active .pill-glyph,
-.pill-btn[aria-pressed="true"] .pill-glyph {
   color: var(--value)
 }
 

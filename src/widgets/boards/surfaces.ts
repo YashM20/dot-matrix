@@ -19,7 +19,6 @@ import { glyph } from '../../engine/fields/bitmapFont'
 import { toCell } from '../../engine/layout'
 import type { Field, GridConfig, Layer, Tone } from '../../engine/types'
 import { createSource, type Source } from '../../data/source'
-import { clackEnabled, createClack } from '../../media/clack'
 import { TAU, TILE, bounded, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPreset } from '../types'
 import { dotText } from './henry'
 
@@ -174,11 +173,11 @@ export const surfaceFlipdisc: WidgetPreset = {
   },
 }
 
-// ── clock sync (and the optional clack) ─────────────────────────────────────
+// ── clock sync ──────────────────────────────────────────────────────────────
 /**
  * `clockOffset` for every card: board time = master clock + offset, the same in every tab (see
  * `createClockSync`). Re-emitted when a peer with an earlier epoch is heard, on visibility changes and
- * every 2 s if it drifted > 20 ms. With the `clack` flag on the flip-disc's column writes also tick.
+ * every 2 s if it drifted > 20 ms.
  */
 export const clockSource: Source<number> = createSource<number>({
   id: 'surfaces-clock', fixture: { clockOffset: 0 }, statusKey: 'clockSync', cacheMaxAgeMs: 0,
@@ -192,17 +191,8 @@ export const clockSource: Source<number> = createSource<number>({
       const tick = () => { emit(); timer = link.env.setTimeout(tick, 2000) }
       const off = sync.onChange(emit)
       tick()
-      // flip-disc clack, muted unless asked for
-      const clack = clackEnabled() ? createClack() : null
-      let prev = NaN
-      const sub = { fps: 60, onFrame: (t: number) => {
-        const bt = t + sync.offset()
-        if (clack && bt > prev && bt - prev < .5) for (const e of flip.events(prev, bt)) clack.play(e.t - bt, e.count)
-        prev = bt
-      } }
-      const unsub = clack ? clock.subscribe(sub) : () => {}
       return {
-        close() { off(); sync.close(); unsub(); clack?.close(); if (timer !== null) link.env.clearTimeout(timer) },
+        close() { off(); sync.close(); if (timer !== null) link.env.clearTimeout(timer) },
         pause() { if (timer !== null) link.env.clearTimeout(timer); timer = null },
         resume() { if (timer === null) tick() },
       }

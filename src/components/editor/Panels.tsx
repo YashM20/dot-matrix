@@ -176,7 +176,8 @@ const Thumb = memo(function Thumb({ make, label }: { make: () => { layers: Retur
     io.observe(c)
     return () => { io.disconnect(); cancel?.() }
   }, [make, theme])
-  return <canvas ref={ref} className="ed-thumb" role="img" aria-label={label} />
+  // with no label it only decorates its button (whose text names it): hidden from screen readers (#187)
+  return label ? <canvas ref={ref} className="ed-thumb" role="img" aria-label={label} /> : <canvas ref={ref} className="ed-thumb" aria-hidden="true" />
 })
 type ThumbMake = Parameters<typeof Thumb>[0]['make']
 const thumbs = new Map<string, ThumbMake>()

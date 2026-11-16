@@ -60,6 +60,13 @@ try {
   await sleep(600)
   assert('title screen draws in dots, with its one red cursor', (await lit()) > 500 && (await red()) > 0, `${await lit()} lit px, ${await red()} red px`)
   await shot('01-title')
+  // #187: the screen takes focus (the keys go to it), so it shows the focus ring when the keyboard put it there
+  await cdp('DOM.enable'); await cdp('CSS.enable')
+  const screenNode = (await cdp('DOM.querySelector', { nodeId: (await cdp('DOM.getDocument')).result.root.nodeId, selector: '.hive-screen' })).result.nodeId
+  await cdp('CSS.forcePseudoState', { nodeId: screenNode, forcedPseudoClasses: ['focus-visible'] })
+  const ring = await js(`getComputedStyle(document.querySelector('.hive-screen')).outlineStyle`)
+  await cdp('CSS.forcePseudoState', { nodeId: screenNode, forcedPseudoClasses: [] })
+  assert('the game screen shows the focus ring when focused from the keyboard', ring !== 'none', `outline ${ring}`)
   // real keys: Enter starts, the arrows walk the corridor, space fires
   await hold('Enter', 80)
   await waitFor(`window.__hive.game.stage === 'corridor'`, 3000)

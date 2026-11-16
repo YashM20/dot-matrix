@@ -7,6 +7,7 @@
  * so goldens stay deterministic. One accent (the live red) marks what is happening *now*.
  */
 import { SPLIT_FLAP } from '../creditSources'
+import { heroRows, heroWidth } from '../../engine/fields/heroFaces'
 import { decodeText, ease, splitFlapCells, splitFlapText, underdampedSpring } from '../../engine/motion'
 import { TAU, TILE, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
 import { dotText, flapText } from './henry'
@@ -23,9 +24,16 @@ const ray = (cx: number, cy: number, a: number, r0: number, r1: number, spacing:
   const n = Math.max(1, Math.round((r1 - r0) / spacing)), s = Math.sin(a), c = Math.cos(a)
   return Array.from({ length: n + 1 }, (_, i) => { const r = r0 + ((r1 - r0) * i) / n; return [cx + r * s, cy - r * c] as Pt })
 }
-/** The big 6×8 numerals (the home-clock face), mid-flip when `since` is inside the flip window. */
-const flapDigits = (prev: string, next: string, since: number, x: number, y: number, o: { px: number; size: number; flip?: number }): LatticeField[] =>
-  since < 0 ? [dotText(next, x, y, o)] : flapText(splitFlapCells(prev, next, since, { flip: o.flip ?? .22, stagger: .14 }), x, y, o)
+/**
+ * The big numerals in the condensed hero face (8×14 dots, the face LEVELS and HIVE use), one glyph pixel per dot on a
+ * `DIGIT`-cell lattice from an integer cell, so every dot lands on a card cell; mid-flip when `since` is in the flip window.
+ */
+const DIGIT = 4, condensed = (ch: string) => heroRows('condensed', ch)
+const digitOpts = { px: DIGIT, size: DIGIT, gap: 2, font: condensed }
+/** Width of a numeral string in card cells, first dot centre to last. */
+const digitSpan = (s: string) => (heroWidth('condensed', s) - 1) * DIGIT
+const flapDigits = (prev: string, next: string, since: number, x: number, y: number): LatticeField[] =>
+  since < 0 ? [dotText(next, x, y, digitOpts)] : flapText(splitFlapCells(prev, next, since, { flip: .22, stagger: .14 }), x, y, digitOpts)
 
 // ── 01 DEPARTURES ───────────────────────────────────────────────────────────
 const TRAINS: [string, string, string][] = [
@@ -93,7 +101,7 @@ export const platform: WidgetPreset = {
     const { k, tau } = cycle(t, PLATFORM_PERIOD), plat = k % 2 ? '5' : '3', was = k % 2 ? '3' : '5'
     const changed = k % 2 === 1
     return [
-      ...flapDigits(was, plat, k === 0 ? -1 : tau, 54.5, 25, { px: 7, size: 6.4 }).map((f, i) => layer(f, i ? 'mid' : 'value')),
+      ...flapDigits(was, plat, k === 0 ? -1 : tau, 72 - digitSpan(plat) / 2, 25).map((f, i) => layer(f, i ? 'mid' : 'value')),
       layer(T.big('08:42 HARBOUR', 72, 98, { lattice: 1.1, align: 'center' })),
       layer(T.big(changed ? `CHANGED FROM ${was}` : 'ON TIME', 72, 117, { lattice: 1.1, align: 'center' }), changed ? 'value' : 'idle'),
       ...(changed && blink(t, .8) ? [layer(T.dots([[72, 135]], 5), 'active')] : []),
@@ -112,7 +120,7 @@ export const nextTrain: WidgetPreset = {
     const prev = String(mins === 4 ? 1 : mins + 1), lit = Math.ceil(((left - 1e-9) % 60) / 2) || BAR
     const bar = Array.from({ length: BAR }, (_, i): Pt => [8 + i * 4.4, 124])
     return [
-      ...flapDigits(prev, String(mins), t < 1 ? -1 : since, 18, 30, { px: 7, size: 6.4 }).map((f, i) => layer(f, i ? 'mid' : 'value')),
+      ...flapDigits(prev, String(mins), t < 1 ? -1 : since, 26, 30).map((f, i) => layer(f, i ? 'mid' : 'value')),
       layer(T.big('MIN', 70, 66, { lattice: 2.6 })),
       layer(T.text('TO HARBOUR', 70, 93), 'idle'),
       layer(T.dots(bar.slice(lit), 2.6), 'faint'),

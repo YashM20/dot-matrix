@@ -144,8 +144,8 @@
   }
 }
 
-/* MORE's menu: the raised layer (raised.css), under the row and right-aligned, so it never covers its own card. The
-   slot is a size container: 100cqi is the card's width */
+/* MORE's menu: the solid popover (its look and rows: raised.css), under the row and right-aligned, so it never covers
+   its own card. The slot is a size container: 100cqi is the card's width */
 .dot-card-menu {
   position: absolute;
   top: calc(100% + var(--space-1));
@@ -155,10 +155,7 @@
   width: max-content;
   min-width: min(168px, 100cqi);
   max-width: 100cqi;
-  padding: var(--space-1);
-  letter-spacing: normal;
-  text-transform: none;
-  white-space: normal
+  padding: var(--space-1)
 }
 
 /* the open slot rises over the cards after it (the menu hangs over the next row) */
@@ -168,29 +165,16 @@
   z-index: var(--z-menu)
 }
 
-.dot-card-menu button {
-  min-height: 28px;
-  padding: 0 var(--space-3);
-  background: none;
-  border: 0;
-  border-radius: var(--radius-ctl);
-  color: var(--value);
-  font: 500 var(--fs-label-11) var(--mono);
-  letter-spacing: .04em;
-  text-align: left;
-  cursor: pointer
+/* a narrow card (COMPACT on a phone): a long label wraps inside the card's width instead of running past it */
+.dot-card-row .dot-card-menu button {
+  white-space: normal;
+  line-height: 1.25
 }
 
-.dot-card-menu button:hover,
-.dot-card-menu button:focus-visible {
-  background: var(--wash-hover)
-}
-
-.dot-card-menu button:active {
-  background: var(--wash-press)
-}
-
-.dot-card-menu button[aria-checked="true"] {
+.dot-card-menu button[aria-checked="true"],
+.dot-card-menu button[aria-checked="true"]:hover,
+.dot-card-menu button[aria-checked="true"]:focus-visible,
+.dot-card-menu button[aria-checked="true"]:active {
   color: var(--red-text)
 }
 
@@ -226,10 +210,6 @@
     display: none
   }
 
-  .dot-card-menu button {
-    min-height: var(--tap);
-    font-size: var(--fs-label-12)
-  }
 }
 
 /* the row itself carries the tooltip group's --tip-on transition (tips.css): its children fade */

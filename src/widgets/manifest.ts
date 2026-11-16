@@ -43,7 +43,7 @@ export const boardManifest = [
   { id: 'henry3', title: 'HENRY LI: 14A / 247W', columns: 3, density: 'standard', load: () => import('./boards/henry3').then(m => ({ items: m.henry3Board })) },
   { id: 'metro', title: 'METRO / OXYGEN / QUIET', columns: 3, density: 'standard', load: () => import('./boards/metro').then(m => ({ items: m.metroBoard })) },
   { id: 'ride', title: 'RIDE / HENRY / SYSTEM', columns: 3, density: 'standard', load: () => import('./boards/ride').then(m => ({ items: m.rideBoard })) },
-  { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, density: 'standard', load: () => import('./boards/audio').then(m => ({ items: m.audioBoard })) },
+  { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, density: 'dense', load: () => import('./boards/audio').then(m => ({ items: m.audioBoard })) },
   { id: 'departures', title: 'DEPARTURES: LIVE TRANSIT BOARD', columns: 3, density: 'dense', load: () => import('./boards/departures').then(m => ({ items: m.departuresBoard })) },
   { id: 'instrument', title: 'INSTRUMENT DEVICE', columns: 3, density: 'standard', load: () => import('./boards/instrument').then(m => ({ items: m.instrumentBoard, shared: m.instrumentShared })) },
   { id: 'ir', title: 'FIELD IR: DOT PROGRAMS', columns: 3, density: 'hero', load: () => import('./boards/ir').then(m => ({ items: m.irBoard })) },
@@ -97,6 +97,7 @@ export const resolveCardId = (id: string): string => cardAliases[id] ?? (id.star
 export const removedCards: Readonly<Record<string, readonly [uid: string, board: string]>> = {
   'cinema-last-call': ['y6q3xhhe', 'cinema'], 'cinema-closer': ['ezrp10da', 'cinema'], 'mirror-ladder': ['nhneq04s', 'mirror'],
   'surface-eink': ['pbq54zfr', 'surfaces'], 'surface-plotter': ['jfm4e97e', 'surfaces'], 'mat-marble': ['cbmez41j', 'materials'],
+  'thermal-puppy': ['05cze99w', 'audio'],
 }
 /** The board a retired card's slug or uid lived on, else undefined. */
 export const removedCardBoard = (key: string): string | undefined => {

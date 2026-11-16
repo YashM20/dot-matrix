@@ -27,7 +27,7 @@
   - thermal-monitor uses a cool grey halo, a red body and a white core (`mosaic.ts:108-110`). Red → white is *dithered* by hash (`:101`), never stepped.
 - **Pass:** `level-03`, `afterlight`, `thermal-monitor`, `cody` (mid fur `+` under value `#` highlights, `metro.ts:215-216`).
 - **Fail:**
-  - `thermal-puppy`: the body sits at .8–1.0 everywhere (`audio.ts:241`), a grey ghost with no shadow side;
+  - `thermal-puppy` (removed, #343): the body sits at .8–1.0 everywhere (`audio.ts:241`), a grey ghost with no shadow side;
   - `henry-bear`: one flat grey block;
   - `silhouette`: a two-tone threshold with banding;
   - `ev-charge`: the car spans .14–.9 but has no key light, so it reads as a smear.
@@ -91,7 +91,7 @@
     - `ACTIVE` is *live* (`:393`);
   - components: the destructive pill, the live level slider and the live status dot (`components.ts:59,75,110`).
 - **Fail:**
-  - `thermal-puppy`: a red nose ring with no heat meaning (`audio.ts:251-252`); the lift moves red to the hot core;
+  - `thermal-puppy` (removed, #343): a red nose ring with no heat meaning (`audio.ts:251-252`); the lift moves red to the hot core;
   - `agent-status`: red eyes are decoration.
 - **Code:**
   - Use `layer(f, 'active')`, with `activeDim` for "was active".
@@ -108,7 +108,7 @@
   - mosaic: the `SHIP_W`/`SHIP_R` two-layer sprite with white hull and red detail (`mosaic.ts:268-276`), `DEER_HEAD` (`:376-379`), and the measured `TOTAL`/`USED`, hypnogram and `TREND` arrays (`:184-185,214,241-243`).
 - **Fail:**
   - `henry-bear`: a generic block with an illegible bunny (lift: a hand-authored 3-tone sprite);
-  - `thermal-puppy`: procedural ellipses plus hash fuzz;
+  - `thermal-puppy` (removed, #343): procedural ellipses plus hash fuzz;
   - `silhouette`: a threshold, not a drawing.
 - **Code:**
   - **Sprites:** `T.lattice(k, col, row)` then `.at(L.sprite(rows, 0, 0))`, one layer per tone character.
@@ -174,7 +174,7 @@
   - level-03 keeps mortar joints hard (.04) because they are structure;
   - `frame()` rounds to integer cells before testing (`mosaic.ts:49`).
 - **Fail:**
-  - `thermal-puppy`: `smoothstep(-.04, .1)` in uv is a ~20-cell ramp plus ±.17 hash fuzz (`audio.ts:239`), giving a ragged, mushy edge;
+  - `thermal-puppy` (removed, #343): `smoothstep(-.04, .1)` in uv is a ~20-cell ramp plus ±.17 hash fuzz (`audio.ts:239`), giving a ragged, mushy edge;
   - `silhouette`: banding where a ramp belongs.
 - **Code:**
   - Ramp on signed distance *in cells*: `sstep(0, 1, d)` inside `cells()`.

@@ -1,5 +1,5 @@
 /**
- * The dotted outline of the chrome's pills and switches (DISPLAY ▾, THEME ▾, CLACK, CONTRAST: MORE, the shared-link
+ * The dotted outline of the chrome's pills and switches (DISPLAY ▾, THEME ▾, CONTRAST: MORE, the shared-link
  * switch): a stadium of 1 px dots on the pixel grid. The browser's own `dotted` border spaces its dots along the
  * curve, so the round ends land between pixels and look ragged. Here the outline is rasterised first (the edge
  * pixels of the filled stadium) and every other pixel round the loop is lit, so the ends read as clean as the
@@ -43,9 +43,9 @@ export function dotRing(el: HTMLElement | null) {
   return () => watch?.unobserve(el)
 }
 
-/** The header's dotted pills (DISPLAY ▾, THEME ▾, CLACK) are first-load code, which keeps this module out: the idle
- * command layer rings them, and again when the skin changes (CLACK comes and goes). Until then they show their text
- * and caret only; the ring fades in when it arrives (ring.css). */
+/** The header's dotted pills (DISPLAY ▾, THEME ▾) are first-load code, which keeps this module out: the idle
+ * command layer rings them once. Until then they show their text and caret only; the ring fades in when it arrives
+ * (ring.css). */
 export function ringHeader() {
   document.querySelectorAll<HTMLElement>('.topbar .dot-ring').forEach(el => { dotRing(el) })
 }

@@ -15,7 +15,7 @@
  *  - `system` follows `prefers-color-scheme` live (a `matchMedia` listener while on `system`).
  *  - CONTRAST: MORE (`contrast: 'more'`, stored next to the theme, `?contrast=more` for a visit) puts
  *    `data-contrast="more"` on `<html>`: the roles of `prefers-contrast: more`, which still applies on its own. The
- *    boot script doesn't read it (it is inlined into every HTML entry), so the store sets it when the bundle runs.
+ *    boot script sets it before first paint too (#187), so the pages with no bundle (privacy, terms) keep it.
  *  - `?hue=` (a shared custom theme): the visit shows that hue once the lazy generator (`custom.ts`) loads; like
  *    every URL param it is not stored.
  *  - `window.dot480.setTheme` (`consoleSetTheme`) takes `scheme`, `accent`, `contrast` and a `hue`, never CSS.

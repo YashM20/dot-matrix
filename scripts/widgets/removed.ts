@@ -24,7 +24,7 @@ export function removedChecks(check: Assert) {
   }))
   check('share: a retired card\'s /widget/<slug|uid>/, /<uid> and ?card= links open its board in the app', !app.length, app.slice(0, 4).join('; '))
   check('share: removedCardBoard ignores current cards, unknown keys and prototype names', removedCardBoard('timer') === undefined && removedCardBoard('constructor') === undefined
-    && removedCardBoard('__proto__') === undefined && removedCardBoard('MAT-MARBLE') === 'materials')
+    && removedCardBoard('__proto__') === undefined && entries.every(([slug, [, board]]) => removedCardBoard(slug.toUpperCase()) === board))
 
   // on the server: one permanent redirect straight to the board (redirects run before files, so no dist is needed)
   const v = readVercel()

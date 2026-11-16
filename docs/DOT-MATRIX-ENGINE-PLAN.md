@@ -47,7 +47,7 @@ src/engine/                       framework-free TypeScript + browser Canvas/SVG
   nca/                            neural cellular automata, CPU inference from Int8 weights: ncaModel, ncaRun timeline, ncaScratch, ncaField/ncaMapField
   scene/raycast.ts                castHall (analytic hall), castGrid (DDA maze), lamp, fog, seam, project — HIVE cards and game
   device/                         profiles (DEVICES, deviceProfile), toDevice (card → device frame + tone map), simulators: eink, flipdisc, led, plotter (pen plan, penPlanSVG)
-  display/                        display skins oled/crt/vfd/led/eink/flipdisc/nixie: SKINS, SKIN_PHYSICS, afterglow decay, e-ink/flip panels, createDisplayStage (Canvas 2D post-raster)
+  display/                        display skins oled/nixie/vfd/crt: SKINS, SKIN_PHYSICS, afterglow decay, createDisplayStage (Canvas 2D post-raster)
   (checks live in scripts/ — `pnpm verify`)
 src/widgets/
   types.ts                        WidgetPreset { grid, style, chrome?, label?, bleed?, defaults?, layers(ctx) }, TILE/CARD grids, tileStyle, layoutFor() (big, dotRing, dotLine, dotDisc, dotBars, dots, lattice …), toneRamp, cardChrome/withChrome
@@ -72,7 +72,7 @@ src/components/                   DotCanvas (renderer choice, clock, worker, tra
   game/                           HIVE: PRESS START + play overlay; dots.ts draws layers via the buffer renderer
 src/hooks/                        useDotField (static sample cache), useControlInput, useDrawBoard, useExitSwap, latencyProbe
 src/data/                         live data: createSource, transports (poll, broadcast, websocket, mediaSession), sources, textId/textOf, useLiveData
-src/media/                        shared webcam stream, camera grab → luma Raster, useCamera, useHand (lazy tracker), flip-disc clack
+src/media/                        shared webcam stream, camera grab → luma Raster, useCamera, useHand (lazy tracker)
 src/vision/                       dependency-free hand tracker (skin + motion, blobs, One Euro), HAND-mode virtual pointer, silhouette, synthetic camera
 src/audio/                        Instrument/Scope sound: WebAudio engine, voices, lookahead scheduler, REC; AudioFrame via ctx.media; AudioCards (lazy chunk)
 src/game/                         HIVE: deterministic 60 Hz sim, fixed-step loop, input map, bot, worlds, render → Layer[] on 192×144, scores
@@ -245,7 +245,7 @@ A card as JSON (`src/spec/`, schema `schema/card.v1.schema.json`, JSON Schema 20
 ## Devices and display skins
 Two post-sampler stages; neither changes palette roles, the one accent keeps its hue.
 - **Devices** (`src/engine/device/`, P5): a profile is plain data (grid, mask, tone depth, tone map, pitch, refresh, physics). `toDevice` resamples a card into an area-weighted device frame; pure simulators (e-ink ghosts + full refresh, flip-disc sweep and overshoot, LED gamma + halo, pen plotter) show it at time t. `targets/` pushes frames or IR bytecode to real hardware. DESIGN.md › Devices; checks `scripts/device.ts`.
-- **Display skins** (`src/engine/display/`, C7): a post-raster Canvas 2D stage over the card canvas (CRT afterglow + bloom, VFD phosphor, LED lenses, e-ink, flip-disc, nixie); `oled` is the identity and loads nothing. App wiring is `src/components/skins/` (lazy `SkinOverlay`). DESIGN.md › Display skins; checks `scripts/display.ts`, `scripts/skins-browser.ts`.
+- **Display skins** (`src/engine/display/`, C7): a post-raster Canvas 2D stage over the card canvas (Nixie neon, VFD phosphor, CRT afterglow + bloom; LED, e-ink, flip-disc, LCD and grout were removed in #345); `oled` is the identity and loads nothing. App wiring is `src/components/skins/` (lazy `SkinOverlay`). DESIGN.md › Display skins; checks `scripts/display.ts`, `scripts/skins-browser.ts`.
 
 ## App shell and board loading
 `src/widgets/manifest.ts` is the only board import on first load: each board is its own chunk (`loadBoard`, `prefetchBoard` on tab hover), registered into `widgets/registry.ts` as it lands; `widgets/index.ts` is the eager twin for scripts, playground and the worker (`tsc` fails if they disagree). `BoardPicker` shows `boardGroups` (START HERE tour + INTERFACES / DATA / PLAY / ENGINE); one-line blurbs load lazily (`useBlurbs`). Heavy features load on demand: audio (`AudioCards`), HIVE and its start button, the hand tracker, the camera capture (`media/cameraCore`), the WebGL2 dot renderer (`components/glLoader`), the dot migration, skin overlays, essay figures. Budget: `scripts/site/size.ts`; plan: `docs/UX-PLAN.md`, `docs/WEB-PLAN.md`.

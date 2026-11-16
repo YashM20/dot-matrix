@@ -238,8 +238,8 @@
   min-height: 100svh
 }
 
-/* the board's end, at every width: the next board in its group (BoardPicker.tsx NextBoard), one link in the site's pill
-   (src/site/app/pills.css), right-aligned under the grid like the widget page's PREV / NEXT */
+/* the board's end, at every width: the next board in its group (BoardPicker.tsx NextBoard), one link in the site's toolbar
+   group (src/site/app/pills.css), right-aligned under the grid like the widget page's PREV / NEXT */
 .next-board {
   display: flex;
   justify-content: flex-end;
@@ -247,6 +247,7 @@
 }
 
 .next-board b {
+  margin-left: var(--space-1);
   font-weight: inherit;
   color: var(--value)
 }
