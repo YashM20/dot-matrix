@@ -227,6 +227,12 @@ shareChecks(assert)
   watchChecks(assert)
 }
 
+// arcade mini games (#131): seeded replays land on pinned scores and states, the rules, input, pausing and reduced motion on the cards (scripts/arcade.ts)
+{
+  const { arcadeChecks } = await import('./arcade')
+  arcadeChecks(assert)
+}
+
 // blog syntax colouring (#84): code blocks round-trip, regex vs division, kinds (scripts/site/highlight.ts)
 {
   const { highlightChecks } = await import('./site/highlight')

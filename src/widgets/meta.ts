@@ -429,4 +429,8 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'watch-world': ['Local time and four cities, summer time included. Tap a row to show that city\'s time large.', 'watch world clock time zones cities control'],
   'watch-steps': ['Today\'s steps filling a ring toward an 8000 goal, with each hour\'s steps as small bars below.', 'watch steps fitness ring goal chart'],
   'watch-faces': ['One watch with all eight faces. Tap the right half for the next face and the left half to go back, or use the arrows.', 'watch faces switcher swipe control animated'],
+  // arcade: three small games (#131), an attract loop until the first press, best scores on the device
+  'arc-knock': ['A rhythm memory game. The machine knocks a pattern round the ring, then you knock it back: tap, click, Space or Enter on each beat. A clean bar adds a beat; three wrong bars and the game ends.', 'game rhythm memory beat tap keyboard control animated'],
+  'arc-hopline': ['A one-button runner on two rails. Tap, click, Space or Enter to hop to the other rail. Breaks drop you, posts stop you, sparks are five points, and it speeds up as you go.', 'game runner one button reflex rails keyboard control animated'],
+  'arc-poise': ['A balance puzzle with no timer. Tap the left or right half, or press the arrow keys, to put the red weight on that pan. Three alike on one pan vanish and the beam swings. Keep it from tipping.', 'game puzzle balance turn based keyboard control animated'],
 }

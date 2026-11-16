@@ -44,6 +44,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   charts: 'Seven charts in dots that grow in and swap between two data sets. Hover or tap a chart to read the nearest point.',
   motion: 'Small interface moments in dots: loaders, progress, skeletons, toasts, pull to refresh and chat. Tap a card to replay it.',
   watch: 'Eight smartwatch faces in dots: hands, big digits, moon, tide, sun, world time and steps. The last card wears them all.',
+  arcade: 'Three small games made for the dot grid: knock a rhythm back, hop between two rails, keep a beam level. Tap a card to play; your best score stays on this device.',
 }
 
 export const groupBlurbs: Record<BoardGroupId, string> = {

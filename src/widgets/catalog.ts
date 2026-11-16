@@ -296,4 +296,7 @@ export const catalog: readonly CatalogRow[] = [
   ['watch-world', 'd81jrrs7', 'watch'],
   ['watch-steps', 'qqfps0r9', 'watch'],
   ['watch-faces', '8fs777n1', 'watch'],
+  ['arc-knock', '44878gfg', 'arcade'],
+  ['arc-hopline', 'fyw6krs3', 'arcade'],
+  ['arc-poise', '6s47gks4', 'arcade'],
 ]

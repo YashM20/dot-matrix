@@ -294,4 +294,7 @@ export const cardNames: Readonly<Record<string, readonly [name: string, tags: st
   "watch-world": ["World", "watch world clock time zones cities control"],
   "watch-steps": ["Steps", "watch steps fitness ring goal chart"],
   "watch-faces": ["Faces", "watch faces switcher swipe control animated"],
+  "arc-knock": ["Knock", "game rhythm memory beat tap keyboard control animated"],
+  "arc-hopline": ["Hopline", "game runner one button reflex rails keyboard control animated"],
+  "arc-poise": ["Poise", "game puzzle balance turn based keyboard control animated"],
 }
