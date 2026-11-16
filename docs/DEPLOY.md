@@ -122,7 +122,7 @@ CI runs once per push: on `pull_request` for PRs (a new push cancels the old run
 2. **verify:** `pnpm verify`. With the job above, that is all of `pnpm check`;
 3. **build + site checks:** `vite build` (the widget OG images come from a cache keyed by their renderer and the goldens), the bundle budget (`scripts/site/size.ts --check --modules 80`: first-load JS ≤ 150 kB gz, then its 80 biggest source modules from the build's module report, `scripts/site/size-modules.ts`), the theme, header, SEO and page-speed checks on `dist/` (`scripts/site/perf-check.ts`: one render-blocking stylesheet per page, fonts, cache headers, image sizes, the blog hero preload, the lazy view placeholder), the `site` artifact upload and `golden --check`;
 4. **mcp:** `pnpm typecheck` and `pnpm test` in `mcp/`;
-5. **perf report:** `pnpm bench`, on `main` only and report-only;
+5. **perf report:** `pnpm bench` (frames on the buffer path the site draws, #339), on `main` and on a dispatch, report-only;
 6. **react doctor (report):** `pnpm react-doctor` (settings in `doctor.config.ts`, #210), report-only and outside the gate.
 
 The `check + build` job passes when jobs 1 to 4 pass. The `main` ruleset requires it by that name, so don't rename it.

@@ -33,6 +33,17 @@ gh workflow run goldens -f branch=<branch>
 ```
 The `goldens` workflow runs `pnpm golden` on that branch and commits the changed files back as `Regenerate goldens`, only when one changed. It refuses `main` and does nothing in a fork. A push made by the workflow starts no pull_request run, so the workflow dispatches CI on the branch to give the new head its `check + build` result. Merge the new commit before you push again: `git pull` on the branch.
 
+## Frame budgets in CI
+`pnpm bench` reads each board's mount and frame time against the budgets in `docs/MASTER-PLAN.md` §6 (8 ms per board frame, 4 ms per live card). Its frame runs sample into a `DotBuffer` (`sampleLayersInto`), the path the site draws live cards with (#339). `BENCH_PATH=object pnpm bench` times the old path, one `DotInstance` per dot, for a comparison. Mount runs build `DotInstance[]` on both paths, as a static card's first draw does.
+
+The `perf report` job in `ci.yml` runs it on every push to `main` and on a dispatch. It is a report: runner timings are noisy. To read a branch, dispatch CI there, more than once, and compare the runs:
+```bash
+gh workflow run ci --ref <branch>
+gh run list --workflow ci --branch <branch> --limit 3
+gh run view <id> --log --job <perf report job id>     # the card and board tables
+```
+Don't time boards on a laptop that runs other work.
+
 ## SEO audit
 An on-demand audit with free tools, on a runner (`.github/workflows/seo-audit.yml`):
 ```bash

@@ -5,11 +5,13 @@
  *   pnpm bench --strict        # exit 1 when a board exceeds a budget
  *   pnpm bench --cards 0       # how many slowest cards to list (default 15, `all` for every card)
  *   RUNS=30 pnpm bench         # timing runs per card (median; default 15)
- *   BENCH_PATH=buffer pnpm bench  # frame runs sample into a DotBuffer (`sampleLayersInto`, the live canvas path) instead of
- *                              # DotInstance[]: a comparison only, the budgets stay on the default path
+ *   BENCH_PATH=object pnpm bench  # frame runs build DotInstance[] (`sampleLayers`, one object per dot) instead of sampling
+ *                              # into a DotBuffer: the old path, a comparison only
  *
- * Per card: layers() build + sampleLayers time (median over RUNS; animated cards over t = i/12). Mount runs start
- * with no repeated frame kept (`forgetFrames`); frame runs keep them, as the app does (a card at rest repeats its frame),
+ * Per card: layers() build + sample time (median over RUNS; animated cards over t = i/12). Mount runs start
+ * with no repeated frame kept (`forgetFrames`) and build DotInstance[] (`sampleLayers`), as a static card's first draw
+ * does. Frame runs keep the repeated frames, as the app does (a card at rest repeats its frame), and sample into a
+ * DotBuffer (`sampleLayersInto`), the path DotCanvas and the sample worker draw live cards with (#339). Also per card:
  * visible dots, renderer by the app's rule (animated or > 2000 visible → canvas, else SVG), SVG bytes.
  * The frame budgets count what the app runs. DotCanvas pauses a card outside the viewport (IntersectionObserver,
  * 64 px root margin), so a board frame is the cards on screen together, not the whole board. N (VIEWPORT_CARDS) = 20
@@ -52,7 +54,7 @@ import { simBoard, simBoardSims } from '../src/widgets/boards/sim'
 freezeWallClock()
 const args = process.argv.slice(2), strict = args.includes('--strict')
 const ci = args.indexOf('--cards'), showCards = ci >= 0 ? (args[ci + 1] === 'all' ? Infinity : +args[ci + 1]) : 15
-const RUNS = +(process.env.RUNS ?? 15), CANVAS_THRESHOLD = 2000, INTO = process.env.BENCH_PATH === 'buffer'
+const RUNS = +(process.env.RUNS ?? 15), CANVAS_THRESHOLD = 2000, INTO = process.env.BENCH_PATH !== 'object'
 const BUDGET = { mountMs: 30, frameMs: 8, liveMs: 4, svgBytes: 0.5 * 1024 * 1024 }
 /**
  * The written exceptions to the 4 ms live-card budget: showcase cards that may take up to 8 ms a frame. Speeding them up
@@ -124,7 +126,7 @@ const boardRows: BoardRow[] = boards.map(b => {
   return row
 })
 console.log(`Boards — budgets: mount ≤ ${BUDGET.mountMs} ms, frame (worst ${VIEWPORT_CARDS} consecutive live CPU cards, taking turns from ${STAGGER.min + 1}) ≤ ${BUDGET.frameMs} ms, live card ≤ ${BUDGET.liveMs} ms (exceptions: ${Object.entries(LIVE_EXCEPTIONS).map(([id, ms]) => `${id} ≤ ${ms}`).join(', ')}), SVG < ${kb(BUDGET.svgBytes)} KB; all and gpu fb are reference only`)
-if (INTO) console.log('Frame runs sample into a DotBuffer (BENCH_PATH=buffer): a comparison, not the budgeted path')
+console.log(INTO ? 'Frame runs sample into a DotBuffer (sampleLayersInto), the path the site draws' : 'Frame runs build DotInstance[] (BENCH_PATH=object): a comparison, not the budgeted path')
 console.log(`${pad('board', 11)} ${lpad('cards', 5)} ${lpad('anim', 4)} ${lpad('mount ms', 9)} ${lpad('frame ms', 9)} ${lpad('all ms', 8)} ${lpad('gpu fb', 7)} ${pad('worst live (ms)', 26)} ${lpad('svg cards', 9)} ${lpad('SVG KB', 7)} ${lpad('all-SVG KB', 10)}  over`)
 for (const r of boardRows) console.log(`${pad(r.id, 11)} ${lpad(r.cards, 5)} ${lpad(r.animated, 4)} ${lpad(f(r.mountMs), 9)} ${lpad(f(r.frameMs), 9)} ${lpad(f(r.allMs), 8)} ${lpad(r.gpuMs ? f(r.gpuMs) : '-', 7)} ${pad(r.animated ? `${r.worstLive} (${f(r.worstLiveMs)})` : '-', 26)} ${lpad(r.svgCards, 9)} ${lpad(kb(r.svgBytes), 7)} ${lpad(kb(r.svgAllBytes), 10)}  ${r.over.join(',') || 'ok'}`)
 // the boards over or near (≥ 75 %) the frame budget: their live CPU cards in board order, so a fix can aim at the heavier group
@@ -137,7 +139,7 @@ for (const r of near) {
 
 const si = args.indexOf('--sim-t'), simTs = (si >= 0 ? args[si + 1] : '1,60,3600').split(',').map(Number)
 const simRows = simTs.map(T => {
-  const frameAt = (t: number) => { const a = performance.now(); for (const p of simBoard) sampleLayers(withChrome(p)({ t, data: { ...p.defaults } }), p.grid, p.style, theme); return performance.now() - a }
+  const frameAt = (t: number) => { const a = performance.now(); for (const p of simBoard) (INTO ? sampleLayersInto : sampleLayers)(withChrome(p)({ t, data: { ...p.defaults } }), p.grid, p.style, theme); return performance.now() - a }
   for (const s of simBoardSims) { simReset(s); s.stepsTaken = 0 }
   const mountMs = frameAt(T), steps = simBoardSims.map(s => s.stepsTaken)
   const frameMs = median(Array.from({ length: RUNS }, (_, i) => frameAt(T + (i + 1) / 30)))
@@ -158,7 +160,7 @@ for (const backend of ['gpu', 'swiftshader']) {
 }
 
 mkdirSync('.snapshots', { recursive: true })
-writeFileSync('.snapshots/bench.json', JSON.stringify({ runs: RUNS, budget: BUDGET, boards: boardRows, cards: sorted, simColdStart: simRows }, null, 1))
+writeFileSync('.snapshots/bench.json', JSON.stringify({ runs: RUNS, path: INTO ? 'buffer' : 'object', budget: BUDGET, boards: boardRows, cards: sorted, simColdStart: simRows }, null, 1))
 const failing = boardRows.filter(r => r.over.length)
 console.log(`\n${failing.length}/${boardRows.length} boards over budget${strict ? '' : ' (report only; --strict to fail)'} — .snapshots/bench.json`)
 if (strict && failing.length) process.exit(1)
