@@ -537,7 +537,8 @@ export const lvOver: WidgetPreset = {
 
 // ── high scores: the table recedes into fog; your entry is red, initials typing in ──────────────
 export const TABLE: [string, string, string][] = [['2ND', 'ZAP', '10450'], ['3RD', 'KAI', '08420'], ['4TH', 'HEX', '06100'], ['5TH', 'BIT', '04730'], ['6TH', 'ION', '02200']]
-const ROW_TONE = ['value', 'active', 'idle', 'mid', 'faint'] as const
+/** The fade bottoms out at `mid`: text in `faint` can't be read in either theme (DESIGN.md › Don't). */
+export const ROW_TONE = ['value', 'active', 'idle', 'mid', 'mid'] as const
 export const lvScores: WidgetPreset = {
   id: 'lv-scores', name: 'High Scores', group: 'text', chrome: 'dots', label: '', bleed: true, animated: true, grid: TILE, style: tileStyle,
   credit: HENRY_LEVEL,
@@ -546,7 +547,9 @@ export const lvScores: WidgetPreset = {
     const RL = 1.3, row = (i: number) => 70 + i * 14
     return [
       title('HIGH SCORES'),
-      layer(T.text('1ST ACE', 14, 21), 'idle'),
+      // the leader heads the table: its row in the table's own size and columns, brightest, over its score
+      layer(T.big('1ST', 14, 17, { lattice: RL }), 'value'),
+      layer(T.big('ACE', 58, 17, { lattice: RL }), 'value'),
       layer(T.big('12800', 72, 30, { lattice: 2, smooth: true, face: 'condensed', align: 'center' })),
       layer(T.hrule(14, 62, 116, 2), 'faint'),
       ...TABLE.flatMap(([rank, name, pts], i) => {

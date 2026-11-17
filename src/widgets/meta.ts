@@ -222,7 +222,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'lv-title': ['HIVE’s title screen: push start.', 'game title animated'],
   'lv-corridor': ['HIVE level 01: a corridor of enemies.', 'game level animated'],
   'lv-vault': ['HIVE level 02: the vault.', 'game level animated'],
-  'lv-surface': ['HIVE level 04: the surface.', 'game level animated'],
+  'lv-surface': ['HIVE level 04: the surface. Level 03 sits on the AUDIO board.', 'game level animated'],
   'lv-warren': ['HIVE level 05: the warren.', 'game level animated'],
   'lv-void': ['HIVE level 06: the void, 0.4 light years from the hive.', 'game level animated'],
   'lv-queen': ['HIVE level 07: the queen, the final boss.', 'game boss animated'],

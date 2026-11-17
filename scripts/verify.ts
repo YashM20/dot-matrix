@@ -212,6 +212,11 @@ frameCacheChecks(assert)
   const { mirrorChecks } = await import('./verify/mirror')
   mirrorChecks(assert)
 }
+// LEVELS (#233) refine fixes: no faint score rows, the leader's row leads, the blurb explains the missing level 03 (scripts/verify/levels.ts)
+{
+  const { levelsChecks } = await import('./verify/levels')
+  levelsChecks(assert)
+}
 // card drawing fixes (#359): fine-face units, the lap knob, glyph transport, REC dot size (scripts/verify/card-drawing.ts)
 {
   const { cardDrawingChecks } = await import('./verify/card-drawing')
