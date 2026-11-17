@@ -37,6 +37,28 @@ export function cardChecks(assert: Assert) {
     }
     assert('cards: every cinema poster keeps a moat round its red', !near.length, near.join(', '))
   }
+  // #245: cinema-sundown's sun is solid red cut only by the gunslinger: no stripe splits it and no red sliver sits alone
+  // (before, a hole ringed by single red dots read as a hole). Two red shapes: the sun and the light between his legs.
+  {
+    const p = widgetById('cinema-sundown')!, pitch = p.grid.pitch ?? theme.gridPx, cell = (v: number) => Math.round((v / pitch - 2) / 2.5)
+    const red = new Set(dotsAt(p, 0).filter(d => visible(d) && d.color === theme.dotActive).map(d => `${cell(d.x)},${cell(d.y)}`))
+    const seen = new Set<string>(), sizes: number[] = []
+    for (const start of red) {
+      if (seen.has(start)) continue
+      let n = 0
+      const stack = [start]
+      while (stack.length) {
+        const k = stack.pop()!
+        if (seen.has(k) || !red.has(k)) continue
+        seen.add(k); n++
+        const [c, r] = k.split(',').map(Number)
+        for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) stack.push(`${c + i},${r + j}`)
+      }
+      sizes.push(n)
+    }
+    assert('cards: cinema-sundown draws its sun as at most two red shapes, none smaller than 8 dots',
+      red.size > 150 && sizes.length <= 2 && Math.min(...sizes) >= 8, `red shapes of ${sizes.join(', ')} dots`)
+  }
   // sim-sand: the falling stream is grains (red only on the leading grain of each run), not a red bar
   {
     const p = widgetById('sim-sand')!, red = dotsAt(p, 1.3).filter(d => d.color === theme.dotActive && d.opacity > 0)
