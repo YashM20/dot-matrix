@@ -10,7 +10,9 @@
  *    the tone curve;
  *  - Lyapunov: the exponent at r = 2.5 (ln ½) and r = 4 (ln 2), the folded product against a plain sum of logs;
  *  - the determinism lint on the folder;
- *  - the board: frames pure in t, one red dot per card, and a frame within 4 ms (warm median, × load).
+ *  - the board: frames pure in t, one red dot per card, and a frame within 4 ms (warm median, × load);
+ *  - the board's words (#248): names without the board prefix, a caption naming a person from the card's credit
+ *    (never a technique), Scott Draves on the flame, the Julia footer's i apart from its digits and clear of the map.
  */
 import type { Assert } from './lib/check'
 import {
@@ -23,6 +25,8 @@ import { sampleLayers } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
 import { creditsOf, withChrome, type WidgetPreset } from '../src/widgets'
 import { fractalsBoard } from '../src/widgets/boards/fractals'
+import { JULIA_MAP_COL, juliaC, juliaFooter } from '../src/widgets/boards/fractals-escape'
+import { FOOT, cite, footer } from '../src/widgets/boards/fractals-kit'
 
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[s.length >> 1] }
 const time = <T>(f: () => T): [number, T] => { const a = performance.now(), r = f(); return [performance.now() - a, r] }
@@ -187,6 +191,34 @@ export function fractalChecks(assert: Assert): void {
   const rows = fractalsBoard.map(p => [p.id, warm(p)] as const)
   assert('fractals board: a frame (layers + sample) of each card in ≤ 4 ms (median, warm; × load)', rows.every(([, ms]) => ms <= 4 * load),
     rows.map(([id, ms]) => `${id} ${ms.toFixed(2)}`).join(', ') + ' ms')
+  wordChecks(assert)
+}
+
+/** #248: what the board says. Each check fails on the board before the fix. */
+function wordChecks(assert: Assert): void {
+  const sample = (p: WidgetPreset, layers: Parameters<typeof sampleLayers>[0]) => sampleLayers(layers, p.grid, p.style, dot480)
+  const key = (d: { x: number; y: number; color: string }) => `${d.x.toFixed(2)},${d.y.toFixed(2)},${d.color}`
+  assert('fractals board: card names drop the board prefix ("Julia", not "Fractals Julia")', fractalsBoard.every(p => !/^fractals?\b/i.test(p.name)),
+    fractalsBoard.map(p => p.name).join(', '))
+  // the caption top-right is drawn exactly as `cite(<surname>)` for a person in the card's credit: a surname, or a
+  // credit's surnames joined with "-" (FIELD-GOLUBITSKY); "SMOOTH COUNT", "POINT + LINE" or "CHAOS GAME" match none
+  const surname = (n: string) => n.split(' ').at(-1)!.toUpperCase()
+  const people = (p: WidgetPreset) => creditsOf(p).flatMap(c => [c.by.filter(n => n !== 'Inigo Quilez').map(surname).join('-'), ...c.by.map(surname)]).filter(Boolean)
+  const said = fractalsBoard.map(p => {
+    const shown = new Set(sample(p, withChrome(p)({ t: 1.3, data: {} })).map(key))
+    return [p.id, people(p).find(s => sample(p, [cite(s)]).every(d => shown.has(key(d))))] as const
+  })
+  assert('fractals board: every caption names a person from the card’s credit, never a technique', said.every(([, s]) => s),
+    said.map(([id, s]) => `${id} ${s ?? '?'}`).join(', '))
+  const flame = fractalsBoard.find(p => p.id === 'fr-flame')!
+  assert('fractals board: fr-flame credits Scott Draves with a source link', creditsOf(flame).some(c => c.by.includes('Scott Draves') && /^https:\/\/\S+$/.test(c.source)))
+  // the font has no lower-case i: a capital I glued to a digit reads as a 1 ("+0.64I")
+  const julia = fractalsBoard.find(p => p.id === 'fr-julia')!
+  const foots = [0, 13, 37, 61, 90].map(t => juliaFooter(juliaC(t)))
+  assert('fractals board: the Julia footer keeps the I off the digits ("C -0.22 +0.64 I") and never shows -0.00', foots.every(f => !/\d[A-Z]/.test(f) && / I$/.test(f) && !/-0\.00\b/.test(f)), foots.join(' | '))
+  const pitch = julia.grid.pitch ?? dot480.gridPx, cell = (px: number) => px / pitch - .5
+  const right = Math.max(...foots.flatMap(f => sample(julia, footer(f, '')).filter(d => cell(d.y) >= FOOT - 1).map(d => cell(d.x))))
+  assert('fractals board: the Julia footer ends two cells left of the Mandelbrot map', right <= JULIA_MAP_COL - 2, `${right.toFixed(1)} vs map at ${JULIA_MAP_COL}`)
 }
 
 const self = process.argv[1]?.replace(/\\/g, '/')

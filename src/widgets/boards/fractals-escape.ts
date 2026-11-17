@@ -56,16 +56,23 @@ const mandelGrid = () => {
 }
 const M_BANDS: Band[] = [{ at: 4, tone: 'faint', v: .25 }, { at: 7, tone: 'mid', v: .5 }, { at: 12, tone: 'idle', v: .75 }, { at: IN, tone: 'mid', v: .75 }]
 const mCell = toCell(M_WIN, MW, MH, MC, MR)
+/** The card column where the Mandelbrot map starts: the footer ends left of it. */
+export const JULIA_MAP_COL = MC
+/**
+ * The footer for c, left of the map (the map takes the right stat's place): "C -0.22 +0.64 I". The font has no
+ * lower-case i, and a capital I glued to the last digit read as a 1 ("+0.64I"), so the unit stands as its own word.
+ */
+export const juliaFooter = ([cx, cy]: Pt) => `C ${signed(cx, 2)} ${signed(cy, 2)} I`
 export const frJulia: WidgetPreset = {
-  id: 'fr-julia', name: 'Fractals Julia', label: 'JULIA', ...tile,
+  id: 'fr-julia', name: 'Julia', label: 'JULIA', ...tile,
   credit: credit('msetsmooth', 'Smooth iteration count for generalized Mandelbrot sets'),
   layers: ctx => {
-    const [cx, cy] = juliaC(jTime(ctx.t))
+    const c = juliaC(jTime(ctx.t))
     return [
-      cite('SMOOTH COUNT'),
+      cite('QUILEZ'),
       gridLayer(juliaGrid(ctx.t), JW, JH, 0, JR, J_BANDS, jAt),
-      ...probe(gridLayer(mandelGrid(), MW, MH, MC, MR, M_BANDS), mCell(cx, cy)),
-      ...footer(`C ${signed(cx, 2)}${signed(cy, 2)}I`, ''),
+      ...probe(gridLayer(mandelGrid(), MW, MH, MC, MR, M_BANDS), mCell(c[0], c[1])),
+      ...footer(juliaFooter(c), ''),
     ]
   },
 }
@@ -102,7 +109,7 @@ const PROBE_P = 40, orbitBuf = new Float64Array(2 * T_ITER), probeHit = trapHit(
 /** The probe z at t: a slow figure-eight through the pearls. */
 const probeZ = (t: number): Pt => { const a = TAU * phase(t, PROBE_P); return [-.18 + .78 * dcos(a), .1 + .52 * dsin(2 * a)] }
 export const frTrap: WidgetPreset = {
-  id: 'fr-trap', name: 'Fractals Trap', label: 'ORBIT TRAP', ...tile,
+  id: 'fr-trap', name: 'Orbit Trap', label: 'ORBIT TRAP', ...tile,
   credit: credit('ftrapsgeometric', 'Geometric orbit traps'),
   layers: ctx => {
     const [zx, zy] = probeZ(ctx.t), k = orbitPoints(zx, zy, T_C[0], T_C[1], orbitBuf, T_BAIL)
@@ -112,7 +119,7 @@ export const frTrap: WidgetPreset = {
     const shown = pts.filter(p => p[0] >= 0 && p[0] <= 143 && p[1] >= TR && p[1] < TR + TH)
     const [grid, mark] = hit.at ? probe(gridLayer(trapGrid(), TW, TH, 0, TR, T_BANDS), tCell(hit.ax, hit.ay)) : [gridLayer(trapGrid(), TW, TH, 0, TR, T_BANDS)]
     return [
-      cite('POINT + LINE'),
+      cite('QUILEZ'),
       grid,
       layer(mark ? T.knockout(T.dots(shown, 1.1), mark.sites ?? [], 3) : T.dots(shown, 1.1), 'idle'),
       ...(mark ? [mark] : []),
