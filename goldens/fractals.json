@@ -4,25 +4,25 @@
   "fr-julia": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "2db63553",
-    "dots": 7411
+    "hash": "09845a2a",
+    "dots": 7333
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "5e353579",
-    "dots": 7544
+    "hash": "44e81fcd",
+    "dots": 7466
    }
   },
   "fr-trap": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "22d9dd2a",
-    "dots": 6303
+    "hash": "487268a0",
+    "dots": 6254
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "ec7912bd",
-    "dots": 6275
+    "hash": "16c8b5dd",
+    "dots": 6226
    }
   },
   "fr-popcorn": {
@@ -40,13 +40,13 @@
   "fr-flame": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "5ccb1c30",
-    "dots": 8735
+    "hash": "4d1c5a47",
+    "dots": 8684
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "b62d3bea",
-    "dots": 8735
+    "hash": "c836a813",
+    "dots": 8684
    }
   },
   "fr-icon": {
