@@ -4,37 +4,37 @@
   "scope-wave": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "1f7d6270",
-    "dots": 484
+    "hash": "b0463a0f",
+    "dots": 563
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "d81da4e2",
-    "dots": 409
+    "hash": "60c580cc",
+    "dots": 485
    }
   },
   "scope-spectrum": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "569ba614",
-    "dots": 956
+    "hash": "f70fe72e",
+    "dots": 988
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "30be2d0c",
-    "dots": 956
+    "hash": "dce4b6f4",
+    "dots": 988
    }
   },
   "scope-mic": {
    "t=0": {
     "style": "squircle:2.00",
-    "hash": "e4d8c4ee",
-    "dots": 382
+    "hash": "83b342fd",
+    "dots": 372
    },
    "t=1.3": {
     "style": "squircle:2.00",
-    "hash": "47613ea7",
-    "dots": 350
+    "hash": "3151a72e",
+    "dots": 340
    }
   }
  }

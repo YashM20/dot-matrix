@@ -70,7 +70,7 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
   ['src/widgets/boards/pond/**', ['life']], ['src/widgets/boards/physics*', ['light']],
   ['src/widgets/boards/squares*', ['squares']], ['src/widgets/boards/gpu.ts', ['webgl']],
   ['src/widgets/boards/levels.ts', ['game', 'c10']], ['src/widgets/boards/instrument.ts', ['audio']],
-  ['src/widgets/boards/audio.ts', ['audio']], ['src/widgets/boards/mirror.ts', ['c6']],
+  ['src/widgets/boards/audio.ts', ['audio']], ['src/widgets/boards/scope.ts', ['audio']], ['src/widgets/boards/mirror.ts', ['c6']],
   ['src/widgets/boards/mosaic.ts', ['skins']], ['src/widgets/boards/components*', ['skins', 'layout', 'layout-narrow']],
   ['src/widgets/boards/deerflow12.ts', ['layout', 'layout-narrow']],
   ['src/widgets/boards/henry*', ['c10']], ['src/widgets/boards/ir.ts', ['c10', 'webgl']], ['src/widgets/boards/metro.ts', ['c10']],

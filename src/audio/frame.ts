@@ -70,27 +70,34 @@ export function audioOf(ctx: FrameContext, key: 'audio' | 'mic' = 'audio'): Audi
 // ── deterministic stand-in ──────────────────────────────────────────────────
 /** A two-voice bass line at 120 BPM: root per beat, a filter sweep per note, harmonics falling as 1/k. */
 const ROOTS = [55, 55, 65.41, 49]
-const noteAt = (t: number) => { const beat = Math.floor(Math.max(0, t) * 2); return { f: ROOTS[beat % 4], age: Math.max(0, t) * 2 - beat } }
+/**
+ * Accents per beat. With every note equally loud, each onset reached the last one's held peak before the .4 s hold ran
+ * out, so the low bands' peaks never fell and looked pinned (#240). The softer beats let a held peak fall in view.
+ */
+const VELOCITY = [1, .7, .85, .6]
+const noteAt = (t: number) => { const beat = Math.floor(Math.max(0, t) * 2); return { f: ROOTS[beat % 4], age: Math.max(0, t) * 2 - beat, vel: VELOCITY[beat % 4] } }
 /** Brightness (harmonic roll-off) for a note `age` beats old: plucky, like a filter envelope. */
 const bright = (age: number) => 2 + 10 * Math.exp(-age * 4)
 const env = (age: number) => .25 + .75 * Math.exp(-age * 2.2)
+/** Band gain: the loudest onset tops out near .94, so a band never clips flat against the top of the column. */
+const BAND_GAIN = .86
 /** Band centre for band `i` of BINS: 40 Hz … 16 kHz, log spaced. */
 export const bandHz = (i: number) => 40 * 400 ** (i / (BINS - 1))
 const dbOf = (amp: number) => (amp > 1e-6 ? 20 * Math.log10(amp) : FLOOR_DB)
 
 function demoBins(t: number, out: Float32Array) {
-  const { f, age } = noteAt(t), b = bright(age), e = env(age)
+  const { f, age, vel } = noteAt(t), b = bright(age), e = env(age) * vel
   for (let i = 0; i < BINS; i++) {
     // energy of harmonic k nearest the band, plus a little noise floor that breathes with t
     const k = Math.max(1, bandHz(i) / f), harmonic = Math.exp(-(k - 1) / b) / Math.sqrt(k)
     const floor = .05 + .03 * Math.sin(t * 3.1 + i * .7)
-    out[i] = Math.max(0, Math.min(1, e * harmonic * 1.15 + floor * (1 - i / BINS)))
+    out[i] = Math.max(0, Math.min(1, e * harmonic * BAND_GAIN + floor * (1 - i / BINS)))
   }
 }
 
 /** The stand-in frame at `t`: deterministic, so goldens and snapshots are stable. */
 export function demoFrame(t: number): AudioFrame {
-  const f = emptyFrame('demo'), { age } = noteAt(t), b = bright(age), e = env(age)
+  const f = emptyFrame('demo'), { age, vel } = noteAt(t), b = bright(age), e = env(age) * vel
   // one trigger-aligned period and a half of a band-limited saw, in phase from 0
   for (let j = 0; j < WAVE; j++) {
     const ph = (j / WAVE) * 2.5 * Math.PI * 2
@@ -110,7 +117,7 @@ export function demoFrame(t: number): AudioFrame {
   }
   const amp = .5 * e
   f.level = [dbOf(amp), dbOf(amp * .9)]
-  f.peak = [dbOf(.5 * env(Math.min(age, .35))), dbOf(.45 * env(Math.min(age, .35)))]
+  f.peak = [dbOf(.5 * vel * env(Math.min(age, .35))), dbOf(.45 * vel * env(Math.min(age, .35)))]
   return f
 }
 

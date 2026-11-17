@@ -35,6 +35,7 @@ import { uxChecks } from './verify/ux'
 import { flagChecks } from './verify/flags'
 import { cardChecks } from './verify/cards'
 import { audioPersonalChecks } from './verify/audio-personal'
+import { scopeChecks } from './verify/scope'
 import { creditChecks } from './verify/credits'
 import { numberChecks } from './verify/numbers'
 import { frameCacheChecks } from './verify/frame-cache'
@@ -196,6 +197,8 @@ numberChecks(assert)
 cardChecks(assert)
 // AUDIO and PERSONAL (#259, #256): the baked CJK line, the counts, push to talk, the colon, the running track time (scripts/verify/audio-personal.ts)
 audioPersonalChecks(assert)
+// SCOPE (#240): the trigger arrow, the units, the demo's falling peaks, the blocked mic's second line (scripts/verify/scope.ts)
+scopeChecks(assert)
 frameCacheChecks(assert)
 // METRO (#257) and DASHBOARD (#250) refine fixes (scripts/verify/metro-dashboard.ts)
 {

@@ -16,7 +16,8 @@
  * its middle); `press` holds a mouse press on the page's first toolbar button (the viewport, the button in its middle, in a
  * Chrome with a mouse; add `motion` to see it sink, #341), and `press-multi` on the second button of a group (its
  * neighbours on both sides); `load-failed` answers every board chunk 404, so the boards show their error state (LoadBoundary.tsx)
- * after the page's one stale-deploy reload, e.g. `/levels/@390@light@load-failed`.
+ * after the page's one stale-deploy reload, e.g. `/levels/@390@light@load-failed`. `mic-blocked` makes the browser refuse the
+ * microphone and taps the SCOPE mic card, so its blocked state shows (`/scope/@1280@light@mic-blocked`, #240).
  * Two options name a card control by its data key (letters and digits): `hover=<key>` puts the mouse on it and
  * `focus=<key>` reaches it from the keyboard (Shift+Tab, then Tab), so its dot hover or focus ring shows; both capture
  * the viewport with the control's card in the middle, e.g. `/widget/inst-cutoff/@1280@light@focus=cutoff`. Reduced motion is
@@ -34,7 +35,7 @@ const opt = (f: string) => { const i = argv.indexOf(f); return i >= 0 ? argv[i +
 const out = resolve(opt('--out') ?? join('.snapshots', 'ci-shots'))
 const items = (opt('--list') ?? '').split(',').map(s => s.trim()).filter(Boolean)
 
-const OPTIONS = ['2x', 'xray', 'more', 'card-more', 'other-tab', 'display', 'theme', 'tools', 'boards', 'focus', 'press', 'press-multi', 'motion', 'load-failed'] as const
+const OPTIONS = ['2x', 'xray', 'more', 'card-more', 'other-tab', 'display', 'theme', 'tools', 'boards', 'focus', 'press', 'press-multi', 'motion', 'load-failed', 'mic-blocked'] as const
 type Option = typeof OPTIONS[number]
 /** Options that capture the viewport as it is (a resize to the full page would scroll or close what they opened). */
 const VIEWPORT: readonly Option[] = ['card-more', 'display', 'theme', 'tools', 'boards', 'focus', 'press', 'press-multi']
@@ -105,6 +106,21 @@ async function act(opts: Option[], phone: boolean): Promise<boolean> {
     await page.mouse('mouseMoved', c.x, c.y, 0); await page.mouse('mousePressed', c.x, c.y)
   }
   if (opts.includes('load-failed') && !(await page.waitFor(`!!document.querySelector('.load-failed')`, 20000))) return false
+  if (opts.includes('mic-blocked')) {
+    // the browser says no, then a tap on the mic card; the pointer and the focus leave the card so neither its hover nor its
+    // focus ring shows. A headless page may never get to start audio, so `resume()` settles at once instead of waiting
+    const sel = '[data-dot-focus="mic"]'
+    if (!(await page.waitFor(`!!document.querySelector('${sel}')`, 15000))) return false
+    await page.js(`(AudioContext.prototype.resume = () => Promise.resolve(), navigator.mediaDevices && (navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException('Permission denied', 'NotAllowedError'))), 1)`)
+    const c = await page.js<{ x: number; y: number }>(`(() => { const b = document.querySelector('${sel}'); b.scrollIntoView({ block: 'center' }); const r = b.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 } })()`)
+    if (phone) await page.tap(c.x, c.y)
+    else { await page.mouse('mouseMoved', c.x, c.y, 0); await page.mouse('mousePressed', c.x, c.y); await page.mouse('mouseReleased', c.x, c.y); await page.mouse('mouseMoved', 4, 4, 0) }
+    if (!(await page.waitFor(`document.querySelector('${sel}')?.getAttribute('aria-checked') === 'true'`, 3000))) await page.js(`(document.querySelector('${sel}')?.click(), 1)`)
+    await page.js(`(document.activeElement?.blur?.(), 1)`)
+    // the switch stays on while the card shows blocked; the refusal lands within a frame or two
+    if (!(await page.waitFor(`document.querySelector('${sel}')?.getAttribute('aria-checked') === 'true'`, 5000))) return false
+    await sleep(2000)
+  }
   if (opts.includes('other-tab')) {
     if (!(await page.waitFor(`!!document.querySelector('.ed-other')`, 15000))) return false
     await page.js(`window.dispatchEvent(new StorageEvent('storage', { key: 'dot480.editor.v1', newValue: '{"kind":"other tab"}' })), 1`)

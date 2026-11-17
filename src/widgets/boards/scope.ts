@@ -9,7 +9,7 @@
  */
 import type { Control } from '../../engine/context'
 import type { Tone } from '../../engine/types'
-import { BINS, FLOOR_DB, WAVE, audioOf, demoFrame, type AudioFrame } from '../../audio/frame'
+import { BINS, FLOOR_DB, WAVE, audioOf, bandHz, demoFrame, type AudioFrame } from '../../audio/frame'
 import { PRESS, circle, clock, marching, ui, type Shape } from '../dot-controls'
 import { TAU, TILE, dim, layer, layoutFor, liveDot as chromeLiveDot, tileCircleStyle, type LatticeField, type WidgetContext, type WidgetPreset } from '../types'
 import { numberBoard } from '../numbered'
@@ -34,6 +34,15 @@ const SC = { x: 8, y: 18, w: 128, h: 90, divX: 8, divY: 6 }
 const MID = SC.y + SC.h / 2, AMP = SC.h / 2 - 3
 const GRAT: Pt[] = []
 for (let j = 0; j <= SC.divY; j++) for (let i = 0; i <= SC.divX; i++) GRAT.push([SC.x + (i * SC.w) / SC.divX, SC.y + (j * SC.h) / SC.divY])
+/**
+ * Trigger marker: a solid arrow in the left margin pointing at the trigger level. It was two dots above and below the
+ * level with a small tip, which read as two loose dots at the start of the trace (#240).
+ */
+export const TRIGGER: Pt[] = [-4, -2, 0, 2, 4].map(d => [SC.x - 7, MID + d] as Pt).concat([[SC.x - 5, MID - 2], [SC.x - 5, MID], [SC.x - 5, MID + 2], [SC.x - 3, MID]])
+/** The screen's time span: the engine draws ~20 ms of the bus across the 8 divisions (`analyse` in `src/audio/engine.ts`). */
+export const SPAN_LABEL = '20 MS'
+/** The trace's peak as a percent of full scale. */
+export const peakLabel = (pk: number) => `PK ${Math.round(clamp01(pk) * 100)}%`
 // centre cross: finer ticks on the axes
 const AXES: Pt[] = []
 for (let i = 0; i <= SC.divX * 4; i++) AXES.push([SC.x + (i * SC.w) / (SC.divX * 4), MID])
@@ -64,11 +73,12 @@ export const scopeWave: WidgetPreset = {
       ...liveDot(f),
       layer(T.knockout(spots(GRAT, 1.6), wave, 1.9), 'mid'),
       layer(T.knockout(spots(AXES, 1), wave, 1.6), 'faint'),
-      // trigger marker on the left edge of the centre line
-      layer(spots([[SC.x - 4, MID - 2], [SC.x - 4, MID + 2], [SC.x - 2, MID]], 1.6), 'idle'),
+      layer(spots(TRIGGER, 1.6), 'idle'),
       layer(line),
+      // footer: the source, the time across the screen under the centre line, the peak in percent of full scale
       layer(T.text(SOURCE_LABEL[f.source], SC.x, FOOT), 'idle'),
-      layer(T.text(`PK ${Math.round(pk * 100)}`, SC.x + SC.w, FOOT, { align: 'right' }), 'idle'),
+      layer(T.text(SPAN_LABEL, SC.x + SC.w / 2, FOOT, { align: 'center' }), 'idle'),
+      layer(T.text(peakLabel(pk), SC.x + SC.w, FOOT, { align: 'right' }), 'idle'),
     ]
   },
 }
@@ -79,6 +89,8 @@ export const scopeWave: WidgetPreset = {
 const SP = { x0: 10, base: 108, gap: 4, pitch: 4, n: 22, size: 3.1 }
 const siteAt = (i: number, k: number): Pt => [SP.x0 + i * SP.gap, SP.base - k * SP.pitch]
 const LATTICE: Pt[][] = Array.from({ length: BINS }, (_, i) => Array.from({ length: SP.n }, (_, k) => siteAt(i, k)))
+/** Where 1 kHz falls on the band axis (band 16.6): the label used to sit at band 17.5, about 1.2 kHz. */
+export const BAND_1K = ((BINS - 1) * Math.log(1000 / bandHz(0))) / Math.log(bandHz(BINS - 1) / bandHz(0))
 
 export const scopeSpectrum: WidgetPreset = {
   id: 'scope-spectrum', name: 'Spectrum', label: 'SPECTRUM', numbered: true, ...card,
@@ -93,8 +105,9 @@ export const scopeSpectrum: WidgetPreset = {
       layer(spots(dark, 1.3), 'faint'),
       layer(spots(lit, SP.size)),
       layer(spots(caps, SP.size), 'idle'),
-      layer(T.text('40', SP.x0 - 2, FOOT), 'idle'),
-      layer(T.text('1K', SP.x0 + 17.5 * SP.gap, FOOT, { align: 'center' }), 'idle'),
+      // the axis unit rides on the first label, so 1K and 16K stay under their own bands
+      layer(T.text('40 HZ', SP.x0 - 2, FOOT), 'idle'),
+      layer(T.text('1K', SP.x0 + BAND_1K * SP.gap, FOOT, { align: 'center' }), 'idle'),
       layer(T.text('16K', SP.x0 + (BINS - 1) * SP.gap + 2, FOOT, { align: 'right' }), 'idle'),
     ]
   },
@@ -113,6 +126,8 @@ const BASE: Pt[] = Array.from({ length: RING.rays }, (_, j) => { const { a } = r
 const MIC_GLYPH = ['...###...', '..#...#..', '..#...#..', '#.#...#.#', '#..###..#', '.#.....#.', '..#####..', '....#....', '....#....', '..#####..']
 const MIC_LAT = T.lattice(2, RING.cx - 8.5, RING.cy - 9.5), MIC = MIC_LAT.sprite(MIC_GLYPH, 0, 0)
 const MIC_STATE = ['TAP TO LISTEN', 'ASKING', 'LOCAL ONLY', 'MIC BLOCKED']
+/** micState 3: the browser said no. The second line says where to fix it (#240). */
+export const BLOCKED = 3, BLOCKED_HINT = 'CHECK SETTINGS'
 /** The base ring as a kit shape that grows inward: `d` cells inside it. */
 const INSIDE: Shape = (d, sp) => circle(RING.cx, RING.cy, RING.r - d)(0, sp)
 
@@ -131,7 +146,7 @@ export const scopeMic: WidgetPreset = {
         ;(k === n ? tips : body).push(pt)
       }
     }
-    const db = Math.max(f.level[0], f.level[1])
+    const db = Math.max(f.level[0], f.level[1]), blocked = !live && state === BLOCKED
     const tone: Tone = live ? 'value' : 'mid'
     return [
       ...(live ? [chromeLiveDot(TILE)] : []),
@@ -143,9 +158,13 @@ export const scopeMic: WidgetPreset = {
       ...(s.focus ? [marching(INSIDE, clock(s, ctx.t), 5.5)] : []),
       live
         ? layer(T.big(db <= FLOOR_DB ? '--' : String(Math.round(db)), RING.cx, RING.cy - 7, { lattice: 2, align: 'center' }))
-        : layer(MIC_LAT.at(press ? dim(MIC, PRESS) : MIC), hover ? 'value' : 'idle'),
+        // blocked, the mic steps back to mid: nothing is listening
+        : layer(MIC_LAT.at(press ? dim(MIC, PRESS) : MIC), hover ? 'value' : blocked ? 'mid' : 'idle'),
       ...(live ? [layer(T.text('DB', RING.cx, RING.cy + 9, { align: 'center' }), 'idle')] : []),
-      layer(T.text(MIC_STATE[live ? 2 : state] ?? MIC_STATE[0], RING.cx, FOOT, { align: 'center' }), state === 3 ? 'mid' : 'idle'),
+      // blocked takes two lines: what happened, then where to fix it, with the footer row kept for the last line
+      ...(blocked
+        ? [layer(T.text(MIC_STATE[BLOCKED], RING.cx, FOOT - 9, { align: 'center' }), 'idle'), layer(T.text(BLOCKED_HINT, RING.cx, FOOT, { align: 'center' }), 'mid')]
+        : [layer(T.text(MIC_STATE[live ? 2 : state] ?? MIC_STATE[0], RING.cx, FOOT, { align: 'center' }), 'idle')]),
     ]
   },
 }
