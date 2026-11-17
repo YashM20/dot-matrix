@@ -61,6 +61,22 @@ export function cardChecks(assert: Assert) {
     assert('cards: ui-status-dot names online, away and busy', ['ONLINE', 'AWAY', 'BUSY'].every(w => text.includes(w)), text.join(', '))
   }
   textOverlapChecks(assert)
+  departuresChecks(assert)
+}
+
+/** DEPARTURES (#228): the clock names its time, every line reads its own status, no text in `mid`, line-map labels off the edge. */
+function departuresChecks(assert: Assert) {
+  const label = describe(widgetById('station-clock')!, { reducedMotion: true }).label
+  assert("cards: station-clock's accessible name has the time (HH:MM)", /^Station: \d{2}:\d{2}$/.test(label), label)
+  const service = describe(widgetById('service')!, { reducedMotion: true }).label
+  assert('cards: service names each line with its status', [1, 2, 3, 4].every(n => new RegExp(`LINE ${n} (ON TIME|PLUS \\d MIN|DELAYED)`).test(service)), service)
+  for (const id of ['departures', 'service', 'line-map']) {
+    const p = widgetById(id)!, quiet = p.layers({ t: 0, data: { ...p.defaults } }).filter(l => l.field.text?.trim() && l.tone === 'mid')
+    assert(`cards: ${id} draws no text in mid (rows and statuses are read, ≥ 4.5:1)`, !quiet.length, quiet.map(l => l.field.text).join(', '))
+  }
+  const p = widgetById('line-map')!, cols = p.grid.cols, EDGE = 8
+  const near = textBoxes(p.layers({ t: 0, data: {} })).filter(b => b.box[0] < EDGE || b.box[2] > cols - 1 - EDGE).map(b => `${b.text} [${b.box[0]}, ${b.box[2]}]`)
+  assert(`cards: line-map text keeps ${EDGE} cells from the side edges`, !near.length, near.join(', '))
 }
 
 /** Every text layer's box in card cells: plain text from its bounds, lattice text scaled from its origin, dot-site text from its sites. */
