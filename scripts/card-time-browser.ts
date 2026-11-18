@@ -5,7 +5,7 @@
  * sample worker on an `OffscreenCanvas`), and a card whose draw costs more than its sample shows only here.
  * Runs `SQ.time` of scripts/lib/squares-page.ts (bundled by esbuild). A report, never fails on a timing.
  *
- *   npx tsx scripts/card-time-browser.ts [--boards squares,scenes] [--frames 48] [--warm 6]
+ *   npx tsx scripts/card-time-browser.ts [--boards squares,scenes] [--frames 48] [--warm 6] [--parts sq-ammann]
  * Report → `.snapshots/card-time/report.json`, and a table in the job summary.
  */
 import { execFileSync } from 'node:child_process'
@@ -43,6 +43,11 @@ try {
         console.log(`  ${r.id.padEnd(14)} ×${String(r.scale).padEnd(4)} ${String(r.dots).padStart(6)} dots  sample ${r.sample.toFixed(2).padStart(6)} / ${r.sample95.toFixed(2).padStart(6)}  draw ${r.draw.toFixed(2).padStart(7)} / ${r.draw95.toFixed(2).padStart(7)}`)
       }
     }
+  }
+  // `--parts id,id`: where each card's draw time goes, by dot kind (one frame at t = 10)
+  for (const id of opt('parts', '').split(',').filter(Boolean)) for (const v of VIEWPORTS) {
+    const b = boards.find(x => x.items.some(c => c.id === id)), css = Math.round(boardGrid(b?.density ?? 'standard', v).card)
+    console.log(`\n${id} @${v.id} draw by dot kind: ${JSON.stringify(await p.js(`SQ.parts(${JSON.stringify(id)}, 10, ${css}, ${v.dpr})`, 300_000))}`)
   }
   if (p.logs.length) console.log(p.logs.slice(0, 6).join('\n'))
 } finally { await p.close() }

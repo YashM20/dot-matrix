@@ -14,6 +14,7 @@ import { shapeExt } from '../../src/engine/renderer/ext'
 shapeExt.glLoad = () => import('../../src/engine/squares/gl').then(m => { shapeExt.gl = m.glJoin })
 import { dot480 } from '../../src/engine/theme/tokens'
 import { createDotBuffer } from '../../src/engine/buffer/dotBuffer'
+import { samplerExt } from '../../src/engine/sampler/ext'
 import type { DotInstance, GridConfig, Layer } from '../../src/engine/types'
 import { widgetById, withChrome } from '../../src/widgets'
 import { squareStyle } from '../../src/widgets/boards/squares'
@@ -231,6 +232,42 @@ function time(id: string, frames: number, warm: number, css: number, dpr: number
   return { id, scale, dots: buf.n, sample: q(sample, .5), sample95: q(sample, .95), draw: q(draw, .5), draw95: q(draw, .95) }
 }
 
+/**
+ * Where a card's draw time goes (#416): one frame at `t`, its dots split by kind (joined cells, round form dots,
+ * rotated form dots, other form dots, plain dots), each kind drawn alone `reps` times. Median ms per kind, and its count.
+ */
+function parts(id: string, t: number, css: number, dpr: number, reps = 15) {
+  const p = widgetById(id)!, grid = p.grid, pitch = grid.pitch ?? theme.gridPx, w = grid.cols * pitch, h = grid.rows * pitch
+  const scale = Math.min(3, Math.max(1, Math.round(css / w * dpr * 4) / 4)), S = surface(w, h, scale)
+  const buf = sampleLayersInto(withChrome(p)({ t, data: { ...p.defaults } }), grid, p.style, theme, createDotBuffer(grid.cols * grid.rows))
+  const kind = (i: number) => {
+    if (!buf.join || buf.join[i] === 0xFFFF) { const f = buf.form?.[i] ?? 15; return f === 15 ? 'plain' : f & 16 ? 'rotated' : (f & 15) === 0 ? 'round' : 'form' }
+    return 'joined'
+  }
+  const out: Record<string, { n: number; ms: number }> = {}
+  for (const k of ['all', 'joined', 'round', 'rotated', 'form', 'plain']) {
+    const sub = createDotBuffer(buf.n)
+    sub.palette = buf.palette; sub.shape = buf.shape; sub.roundness = buf.roundness; sub.pitch = buf.pitch; sub.joints = buf.joints
+    for (let i = 0; i < buf.n; i++) {
+      if (k !== 'all' && kind(i) !== k) continue
+      const j = sub.n++
+      sub.x[j] = buf.x[i]; sub.y[j] = buf.y[i]; sub.r[j] = buf.r[i]; sub.opacity[j] = buf.opacity[i]; sub.tone[j] = buf.tone[i]
+      if (buf.join) samplerExt.push!(sub, j, buf.join[i], buf.form![i], buf.aspect![i] || 1)
+    }
+    if (!sub.n) continue
+    const ms: number[] = []
+    for (let r = 0; r < reps; r++) {
+      const a = performance.now()
+      S.ctx.setTransform(1, 0, 0, 1, 0, 0); S.ctx.clearRect(0, 0, S.c.width, S.c.height); S.ctx.setTransform(scale, 0, 0, scale, 0, 0)
+      renderCanvasBuffer(S.ctx, sub); S.ctx.getImageData(0, 0, 1, 1)
+      ms.push(performance.now() - a)
+    }
+    ms.sort((x, y) => x - y)
+    out[k] = { n: sub.n, ms: +ms[ms.length >> 1].toFixed(2) }
+  }
+  return out
+}
+
 function info() {
   const gl = sharedDotGL()
   if (!gl?.gl) return { webgl2: false }
@@ -238,4 +275,4 @@ function info() {
   return { webgl2: true, renderer: ext ? gl.gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.gl.getParameter(gl.gl.RENDERER) }
 }
 
-;(window as unknown as { SQ: unknown }).SQ = { info, loadGL, card, cracks, lines, forms, time }
+;(window as unknown as { SQ: unknown }).SQ = { info, loadGL, card, cracks, lines, forms, time, parts }

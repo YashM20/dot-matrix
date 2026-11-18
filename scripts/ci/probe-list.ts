@@ -59,7 +59,7 @@ export const PROBES: Probe[] = [
   // what a visitor's browser spends per frame on SQUARES and SCENES (#416), and the bench's viewport model against the page
   { name: 'viewport-frames', shard: 15, secs: 300, args: ['scripts/site/viewport-frames.ts', '$BASE'], timeoutMin: 9 },
   // per-card sample and Canvas draw time in Chrome for the same boards (#416): a report, Node only builds the page
-  { name: 'card-time', shard: 15, secs: 120, args: ['scripts/card-time-browser.ts'], timeoutMin: 8 },
+  { name: 'card-time', shard: 15, secs: 120, args: ['scripts/card-time-browser.ts', '--parts', 'sq-ammann,sq-hat'], timeoutMin: 8 },
 ]
 
 /** A partial run's shards: the picked probes, longest first, each into the first shard with room (first-fit
