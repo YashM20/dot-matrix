@@ -9,10 +9,10 @@
  * - `pond-turing`: the skin draws no spot dots (no 3 × 3 blocks); each counted spot is a site, clear of the eye.
  * Called from scripts/life.ts (`lifeChecks`); also runnable alone: `pnpm exec tsx scripts/life-pond-dots.ts`.
  */
-import { EDGE3, RAMP3, T_FAINT } from '../src/engine/life'
+import { BIRDS, EDGE3, falconView, RAMP3 } from '../src/engine/life'
 import { SKIN_NX } from '../src/engine/life/turing'
 import { spotCount } from '../src/engine/life/turingView'
-import { worldReset } from '../src/engine/physics/world'
+import { worldAt, worldReset } from '../src/engine/physics/world'
 import { sampleLayers } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
 import type { DotInstance, Layer } from '../src/engine/types'
@@ -39,6 +39,7 @@ export async function pondDotChecks(assert: Assert, pond: () => Promise<PondModu
   const { pondBoard, pondWorlds, pondProbe } = await pond()
   // the card modules the pond index loaded (after the caller pinned the clock)
   const { murmurProbe } = await import('../src/widgets/boards/pond/murmur'), { turingProbe } = await import('../src/widgets/boards/pond/turing')
+  const { firefliesProbe } = await import('../src/widgets/boards/pond/fireflies')
   const card = (id: string) => pondBoard.find(p => p.id === id)!
   const reset = () => { for (const w of pondWorlds) worldReset(w) }
   reset()
@@ -70,33 +71,44 @@ export async function pondDotChecks(assert: Assert, pond: () => Promise<PondModu
         if (g < worst) { worst = g; at = `t=${t} (${(b.x / PX).toFixed(1)}, ${(b.y / PX).toFixed(1)})` }
       }
     }
-    assert(`${id}: a lattice dot keeps at least 1.5 px to the tile glyphs beside it (#246)`, worst >= 1.5, `${worst.toFixed(2)} px at ${at}`)
+    assert(`${id}: a lattice dot keeps at least 1.5 px to the tile glyphs beside it (#246)`, Number.isFinite(worst) && worst >= 1.5, `${worst.toFixed(2)} px at ${at}`)
   }
 
-  // ── fireflies: grass along its blades ──
-  const ff = pondProbe.fireflies, fr = { tone: new Int8Array(144 * 144).fill(-1) }
-  for (const i of ff.grass) fr.tone[i] = T_FAINT
-  let gt = 0, gl = 0
-  for (let ty = 0; ty < ff.spec.tiles.rows; ty++) for (let tx = 0; tx < ff.spec.tiles.cols; tx++) {
-    const m = tileMask(fr.tone, 144, ff.spec.tiles.ox + tx * ff.spec.tiles.pitch, ff.spec.tiles.oy + ty * ff.spec.tiles.pitch)
+  // ── fireflies: grass along its blades (read off the card's own raster: the flies keep above row 112, the grass
+  // is the bottom 26 rows, so nothing covers it) ──
+  const ff = pondProbe.fireflies, fg = ff.spec.tiles
+  card('pond-fireflies').layers({ t: 1.3, data: {} })
+  const fr = firefliesProbe.raster
+  let gt = 0, gl = 0, missing = 0
+  for (const i of ff.grass) if (fr.tone[i] < 0) missing++
+  for (let ty = Math.ceil((118 - fg.oy) / fg.pitch); ty < fg.rows; ty++) for (let tx = 0; tx < fg.cols; tx++) {
+    const m = tileMask(fr.tone, fr.cardW, fg.ox + tx * fg.pitch, fg.oy + ty * fg.pitch)
     if (!m) continue
     gt++; if (LINES.has(m)) gl++
   }
-  assert('pond-fireflies: the grass follows its blades: under half its tiles are one snapped line glyph (#246)', gt > 30 && gl / gt < .5, `${gl} of ${gt} tiles`)
+  assert('pond-fireflies: the card draws every grass cell, and under half its grass tiles are one snapped line glyph (#246)', missing === 0 && gt > 30 && gl / gt < .5, `${gl} of ${gt} tiles, ${missing} grass cells missing`)
 
   // ── murmur: one dot per bird ──
   const mur = card('pond-murmur')
-  let mt = 0, ml = 0
+  let mt = 0, ml = 0, birds = 0, unlit = 0
   for (const t of TS) {
     mur.layers({ t, data: {} })
     const r = murmurProbe.raster, g = r.grid
+    // every bird in the sky lights its own card cell (two birds in one cell share a dot), except under the falcon
+    const ms = worldAt(pondProbe.murmur.world, t), { X, Y } = pondProbe.murmur.layout, f = falconView(pondProbe.murmur, ms)
+    for (let i = 0; i < BIRDS; i++) {
+      const x = ms[X + i], y = ms[Y + i]
+      if (x < g.ox || y < g.oy || x >= g.ox + g.cols * g.pitch || y >= g.oy + g.rows * g.pitch || Math.hypot(x - f.x, y - f.y) < 9) continue
+      birds++; if (r.tone[Math.floor(y) * r.cardW + Math.floor(x)] < 0) unlit++
+    }
     for (let ty = 0; ty < g.rows; ty++) for (let tx = 0; tx < g.cols; tx++) {
       const m = tileMask(r.tone, r.cardW, g.ox + tx * g.pitch, g.oy + ty * g.pitch, k => k !== 5)
       if (!m) continue
       mt++; if (LINES.has(m)) ml++
     }
   }
-  assert('pond-murmur: the flock is one dot per bird: under 15% of its tiles show a whole line glyph (#246)', mt > 100 && ml / mt < .15, `${ml} of ${mt} tiles`)
+  assert('pond-murmur: every bird lights its own cell (#246)', birds > 1000 && unlit === 0, `${unlit} of ${birds} birds unlit`)
+  assert('pond-murmur: the flock is no longer lined up: under 15% of its tiles show a whole line glyph (#246)', mt > 100 && ml / mt < .15, `${ml} of ${mt} tiles`)
 
   // ── turing: spots as sites ──
   const tur = card('pond-turing'), probe = turingProbe
@@ -111,14 +123,15 @@ export async function pondDotChecks(assert: Assert, pond: () => Promise<PondModu
     // only while the whole fish is in the pond: a spot whose site would leave the card is not drawn
     if (want && p.headX <= 140 && p.headX - 1.3 * SKIN_NX * p.px >= 3) {
       seen++
-      // a splitting spot is two lobes, so a frame can hold one site more than it has spots
-      if (n < want) short++
+      // one site per counted spot, and the splitting one is two lobes
+      const sp = probe.spots(), split = sp.splitting >= 0 && sp.spots[sp.splitting].cells >= 3 ? 1 : 0
+      if (n !== want + split) short++
     }
     const eye = probe.eye()
     for (const l of sites) for (const [x, y] of l.sites!) if (Math.hypot(x - eye[0], y - eye[1]) < eye[2] + (l.size ?? 0) / 2 + .9) near++
   }
   assert('pond-turing: the skin draws no spot dots (the spots are sites, not blocks of fine dots) (#246)', blocks === 0, `${blocks} spot dots on the skin lattice`)
-  assert('pond-turing: every counted spot has its site while the fish is in the pond', seen > 3 && short === 0, `${short} of ${seen} frames short of sites`)
+  assert('pond-turing: one site per counted spot (two for the splitting one) while the fish is in the pond', seen > 3 && short === 0, `${short} of ${seen} frames off`)
   assert('pond-turing: spot sites keep a cell of air to the eye ring', near === 0, `${near} sites at the eye`)
   reset()
 }
