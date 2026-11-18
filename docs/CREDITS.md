@@ -193,7 +193,7 @@ By Nintendo R&D1.
 
 By Inigo Quilez.
 
-- Fractals Trap (`fr-trap`), board `/fractals/`: technique
+- Orbit Trap (`fr-trap`), board `/fractals/`: technique
 
 ### [github-contributions-api](https://github.com/grubersjoe/github-contributions-api)
 
@@ -225,13 +225,13 @@ By Georg Meisenbach.
 
 By Inigo Quilez, Michael Field, Martin Golubitsky.
 
-- Fractals Icon (`fr-icon`), board `/fractals/`: technique
+- Icon (`fr-icon`), board `/fractals/`: technique
 
 ### [IFS fractals](https://iquilezles.org/articles/ifsfractals/)
 
 By Inigo Quilez.
 
-- Fractals Flame (`fr-flame`), board `/fractals/`: technique
+- Flame (`fr-flame`), board `/fractals/`: technique
 
 ### [Interaction ruling animal collective behavior depends on topological rather than metric distance (2008)](https://doi.org/10.1073/pnas.0711437105)
 
@@ -249,7 +249,7 @@ By Yoshiki Kuramoto.
 
 By Inigo Quilez, Mario Markus.
 
-- Fractals Lyapunov (`fr-lyapunov`), board `/fractals/`: technique
+- Lyapunov (`fr-lyapunov`), board `/fractals/`: technique
 
 ### [Mathematical Games: the game of Life (Scientific American, 1970)](https://www.scientificamerican.com/article/mathematical-games-1970-10)
 
@@ -308,7 +308,7 @@ By Inigo Quilez.
 
 By Inigo Quilez, Clifford Pickover.
 
-- Fractals Popcorn (`fr-popcorn`), board `/fractals/`: technique
+- Popcorn (`fr-popcorn`), board `/fractals/`: technique
 
 ### [Position based dynamics (2007)](https://doi.org/10.1016/j.jvcir.2007.01.005)
 
@@ -357,7 +357,7 @@ By Per Bak, Chao Tang, Kurt Wiesenfeld.
 
 By Inigo Quilez.
 
-- Fractals Julia (`fr-julia`), board `/fractals/`: technique
+- Julia (`fr-julia`), board `/fractals/`: technique
 
 ### [Soft shadows](https://iquilezles.org/articles/rmshadows/)
 
@@ -426,6 +426,12 @@ By Alan Turing, Edmund Crampin, Eamonn Gaffney, Philip Maini.
 By Alexey Pajitnov.
 
 - Stack (`sq-stack`), board `/squares/`: the game this card plays
+
+### [The fractal flame algorithm (2003)](https://flam3.com/flame_draves.pdf)
+
+By Scott Draves, Erik Reckase.
+
+- Flame (`fr-flame`), board `/fractals/`: the fractal flame idea
 
 ### [The void-and-cluster method for dither array generation (1993)](https://doi.org/10.1117/12.152707)
 

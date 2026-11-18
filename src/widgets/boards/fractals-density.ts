@@ -34,7 +34,7 @@ const popCell = toCell(POP_WIN, W, H, 0, R0)
 const inPort = (p: Pt) => { const dx = p[0] - (W - 1) / 2, dy = p[1] - R0 - (H - 1) / 2; return dx * dx + dy * dy <= PORT * PORT }
 const POP_BANDS = densityBands(.12, .3, .55, .82)
 export const frPopcorn: WidgetPreset = {
-  id: 'fr-popcorn', name: 'Fractals Popcorn', label: 'POPCORN', ...tile,
+  id: 'fr-popcorn', name: 'Popcorn', label: 'POPCORN', ...tile,
   credit: credit('popcorns', 'Popcorn images', ['Clifford Pickover']),
   layers: ctx => {
     const { tone, path } = popBake(), k = Math.floor(ctx.t * 8), at = (i: number): Pt => { const j = ((i % POP_LOOP) + POP_LOOP) % POP_LOOP; return popCell(path[2 * j], path[2 * j + 1]) }
@@ -77,8 +77,11 @@ const flameBake = () => {
 }
 const FL_BANDS = densityBands(.1, .28, .52, .8)
 export const frFlame: WidgetPreset = {
-  id: 'fr-flame', name: 'Fractals Flame', label: 'FLAME', ...tile,
-  credit: credit('ifsfractals', 'IFS fractals'),
+  id: 'fr-flame', name: 'Flame', label: 'FLAME', ...tile,
+  credit: [
+    credit('ifsfractals', 'IFS fractals'),
+    { by: ['Scott Draves', 'Erik Reckase'], title: 'The fractal flame algorithm (2003)', source: 'https://flam3.com/flame_draves.pdf', note: 'the fractal flame idea' },
+  ],
   layers: ctx => {
     const f = flameBake(), cell = toCell(f.win, W, H, 0, R0), n = Math.floor(ctx.t * 4), i = ((n % FL_HOPS) + FL_HOPS) % FL_HOPS, j = (i + FL_HOPS - 1) % FL_HOPS
     const now = cell(f.xs[i], f.ys[i]), prev = cell(f.xs[j], f.ys[j])
@@ -86,7 +89,7 @@ export const frFlame: WidgetPreset = {
     for (let d = 0; d < 6; d++) addr += f.ks[(i - d + FL_HOPS) % FL_HOPS]
     const [flGrid, flProbe] = probe(gridLayer(f.tone, W, H, 0, R0, FL_BANDS), now)
     return [
-      cite('CHAOS GAME'),
+      cite('DRAVES'),
       flGrid,
       layer(T.knockout(T.dotLine(prev[0], prev[1], now[0], now[1], { spacing: 3, size: .8, from: 3 }), flProbe.sites ?? [], 3), 'idle'),
       flProbe,
@@ -112,7 +115,7 @@ const iconBake = () => {
 }
 const IC_BANDS = densityBands(.1, .3, .55, .82)
 export const frIcon: WidgetPreset = {
-  id: 'fr-icon', name: 'Fractals Icon', label: 'ICON', ...tile,
+  id: 'fr-icon', name: 'Icon', label: 'ICON', ...tile,
   credit: credit('iconimages', 'Icon images', ['Michael Field', 'Martin Golubitsky']),
   layers: ctx => {
     const c = iconBake(), cell = toCell(c.win, W, H, 0, R0), n = Math.floor(ctx.t * 3), i = ((n % IC_HOPS) + IC_HOPS) % IC_HOPS
@@ -154,7 +157,7 @@ const LY_BANDS: Band[] = [{ at: .012, tone: 'faint', v: .25 }, { at: .07, tone: 
 const lyCell = toCell(LY_WIN, LY_W, H, LY_C0, R0)
 const probeAB = (t: number): [number, number] => { const p = TAU * phase(t, 48); return [3.35 + .5 * dsin(p), 3.35 + .45 * dcos(2 * p + .6)] }
 export const frLyapunov: WidgetPreset = {
-  id: 'fr-lyapunov', name: 'Fractals Lyapunov', label: 'LYAPUNOV', ...tile,
+  id: 'fr-lyapunov', name: 'Lyapunov', label: 'LYAPUNOV', ...tile,
   credit: credit('lyapunovfractals', 'Lyapunov fractals', ['Mario Markus']),
   layers: ctx => {
     const [a, b] = probeAB(ctx.t), l = lyapunov(a, b, SEQ_V, LY_OPTS)
