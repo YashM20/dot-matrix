@@ -223,23 +223,23 @@ const MESA_L = poly([[0, HY], [0, 60], [4, 58], [20, 58], [23, 63], [27, 70], [3
 const MESA_R = poly([[104, HY], [107, 80], [110, 71], [113, 67], [131, 67], [134, 72], [138, 74], [144, 74], [144, HY]])
 const mesa = any(MESA_L, MESA_R)
 /**
- * The gunslinger, drawn on the lattice (columns 25–31, rows 26–36) so every edge is a whole dot: hat, head, shoulders,
- * coat and legs apart, boots on the horizon, all inside the sun. The sun is one solid red; he is its only cut (#245).
+ * The gunslinger, drawn on the lattice so every edge is a whole dot (#245): a crown on an 11-dot brim, head, broad
+ * shoulders, arms held out from the body with red between, a holstered hip, legs apart, boots on the horizon. Every
+ * part is at least two dots wide, so at 390 he still reads as a man in a hat. `FIG` is the top-left lattice cell.
  */
+const FIG: [number, number] = [22, 28]
 const FIGURE = [
-  '..###..',
-  '#######',
-  '..###..',
-  '.#####.',
-  '.#####.',
-  '.#####.',
-  '.#####.',
-  '.##.##.',
-  '.##.##.',
-  '##...##',
-  '##...##',
+  '....#####....',
+  '.###########.',
+  '.....###.....',
+  '..#########..',
+  '.##..###..##.',
+  '.##.#####.##.',
+  '....##.##....',
+  '...##...##...',
+  '..##.....##..',
 ]
-const rider = (x: number, y: number) => FIGURE[Math.round((y - yOf(26)) / K)]?.[Math.round((x - xOf(25)) / K)] === '#'
+const rider = (x: number, y: number) => FIGURE[Math.round((y - yOf(FIG[1])) / K)]?.[Math.round((x - xOf(FIG[0])) / K)] === '#'
 /** A thin lit cloud streak, [y, x0, x1], in the sky above the sun. */
 const STREAKS: [number, number, number][] = [[49, 92, 134]]
 const streak = (x: number, y: number) => STREAKS.some(([sy, a, b]) => Math.abs(y - sy) < 1.15 && x > a && x < b)

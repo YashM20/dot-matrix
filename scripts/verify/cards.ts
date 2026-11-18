@@ -59,6 +59,19 @@ export function cardChecks(assert: Assert) {
     assert('cards: cinema-sundown draws its sun as at most two red shapes, none smaller than 8 dots',
       red.size > 150 && sizes.length <= 2 && Math.min(...sizes) >= 8, `red shapes of ${sizes.join(', ')} dots`)
   }
+  // #245: the gunslinger reads as a man in a hat, not a keyhole slot: his brim is the widest dark run in the sun (11+
+  // dots) and on some row his arms stand clear of his body (arm, torso, arm: three dark runs between red)
+  {
+    const p = widgetById('cinema-sundown')!, pitch = p.grid.pitch ?? theme.gridPx, cell = (v: number) => Math.round((v / pitch - 2) / 2.5)
+    const red = dotsAt(p, 0).filter(d => visible(d) && d.color === theme.dotActive).map(d => [cell(d.x), cell(d.y)])
+    const runs = [...new Set(red.map(([, r]) => r))].map(r => {
+      const cs = red.filter(d => d[1] === r).map(d => d[0]).sort((a, b) => a - b), out: number[] = []
+      for (let i = 1; i < cs.length; i++) if (cs[i] - cs[i - 1] > 1) out.push(cs[i] - cs[i - 1] - 1)
+      return out
+    })
+    const brim = Math.max(...runs.flat()), arms = runs.some(r => r.length >= 3)
+    assert("cards: cinema-sundown's gunslinger has an 11-dot brim and arms held out from his body", brim >= 11 && arms, `widest dark run ${brim}, arms out ${arms}`)
+  }
   // sim-sand: the falling stream is grains (red only on the leading grain of each run), not a red bar
   {
     const p = widgetById('sim-sand')!, red = dotsAt(p, 1.3).filter(d => d.color === theme.dotActive && d.opacity > 0)
