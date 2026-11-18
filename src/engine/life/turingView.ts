@@ -22,14 +22,18 @@ export function skinV(t: Turing, s: Float32Array, x: number, y: number): number 
   return (s[o] * (1 - a) + s[o + 1] * a) * (1 - b) + (s[o + SKIN_NX] * (1 - a) + s[o + SKIN_NX + 1] * a) * b
 }
 
-export interface Spot { cells: number; x: number; y: number; elong: number; label: number }
+export interface Spot {
+  cells: number; x: number; y: number; elong: number; label: number
+  /** The long axis in the water (a unit vector over material cells scaled by growth; (1, 0) for a round spot). */
+  ax: number; ay: number
+}
 export interface SpotMap { spots: Spot[]; label: Int32Array; splitting: number }
 
 let lab: Int32Array | undefined, stack: Int32Array | undefined
 /**
  * The spots of state `s` with the body at cell size (lx, ly) (growth's fractions; only their ratio matters):
  * centre in material cells, size in cells, elongation (√ of the covariance's eigenvalue ratio, in the water).
- * `label[c]` is the spot index of cell c (−1: none); `splitting` the index of the most elongated spot past SPLIT, or −1.
+ * `ax`, `ay` its long axis. `label[c]` is the spot index of cell c (−1: none); `splitting` the index of the most elongated spot past SPLIT, or −1.
  */
 export function turingSpots(t: Turing, s: Float32Array, lx = 1, ly = 1): SpotMap {
   const { n, V } = t.layout, nx = SKIN_NX, mask = t.skin.mask
@@ -51,10 +55,14 @@ export function turingSpots(t: Turing, s: Float32Array, lx = 1, ly = 1): SpotMap
         if (q >= 0 && lab[q] === -1 && mask[q] && s[V + q] >= SPOT_V) { lab[q] = id; st[top++] = q }
       }
     }
-    if (m < MIN_CELLS) { spots.push({ cells: m, x: -1, y: -1, elong: 0, label: id }); continue }
+    if (m < MIN_CELLS) { spots.push({ cells: m, x: -1, y: -1, elong: 0, label: id, ax: 1, ay: 0 }); continue }
     const mx = sx / m, my = sy / m, a = sxx / m - mx * mx + lx * lx / 12, d = syy / m - my * my + ly * ly / 12, b = sxy / m - mx * my
     const tr = (a + d) / 2, det = Math.sqrt(Math.max(0, ((a - d) / 2) ** 2 + b * b)), elong = Math.sqrt((tr + det) / Math.max(1e-9, tr - det))
-    spots.push({ cells: m, x: mx / lx, y: my / ly, elong, label: id })
+    // the major eigenvector of [[a, b], [b, d]]
+    let ex = b, ey = tr + det - a
+    if (Math.abs(ex) + Math.abs(ey) < 1e-12) { ex = a >= d ? 1 : 0; ey = a >= d ? 0 : 1 }
+    const el = Math.sqrt(ex * ex + ey * ey)
+    spots.push({ cells: m, x: mx / lx, y: my / ly, elong, label: id, ax: ex / el, ay: ey / el })
     if (elong > most) { most = elong; splitting = id }
   }
   return { spots, label: lab, splitting }

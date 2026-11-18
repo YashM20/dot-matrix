@@ -88,9 +88,10 @@ export async function lifeTuringChecks(assert: Assert, pond: () => Promise<PondM
   const key = (t: number) => JSON.stringify(frame(t))
   {
     simReset(sim); worldReset(W)
-    const f0 = frame(0), white = f0.filter(d => d.color === dot480.value).length
+    // a spot is one dot site (#246): a `value` dot over 2 px across the eye's ring and pupil are smaller
+    const f0 = frame(0), white = f0.filter(d => (d.color === dot480.value || d.color === dot480.dotActive) && d.r > 2).length
     const off = frame(1.3).filter(d => ![dot480.dotFaint, dot480.dotMid, dot480.dotIdle, dot480.value, dot480.dotActive].includes(d.color)).length
-    assert('pond-turing: t = 0 draws a spotted fish (≥ 400 dots, ≥ 40 spot dots), in the palette (dotActive the only accent, no dotActiveDim)', f0.length >= 400 && white >= 40 && off === 0, `${f0.length} dots, ${white} spot dots, ${off} off-palette`)
+    assert('pond-turing: t = 0 draws a spotted fish (≥ 400 dots, 3 or more spot sites), in the palette (dotActive the only accent, no dotActiveDim)', f0.length >= 400 && white >= 3 && off === 0, `${f0.length} dots, ${white} spot sites, ${off} off-palette`)
     let reds = 0
     for (let t = 0; t < 48; t += 2) if (frame(t).some(d => d.color === dot480.dotActive)) reds++
     assert('pond-turing: the accent (the splitting spot) shows in some frames but not all (every 2 s over the loop)', reds >= 3 && reds < 24, `${reds} of 24`)
