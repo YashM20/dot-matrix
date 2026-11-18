@@ -1,0 +1,2 @@
+visitor: The 500K DOTS board shows its fine GPU dots even with reduced motion, its footers count the dots each card draws, and stars on the starfield no longer get cut flat at the window's edge.
+engineering: 500K DOTS refinement (#241, #426): still frames and OG images draw GPU passes, footers read the dot count from layerPass, plain names and labels, tiny-program credits, starfield stars fade out before the window edge (main's look kept by owner's call); checks in scripts/verify/gpu.ts.

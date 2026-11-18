@@ -37,6 +37,27 @@ export function cardChecks(assert: Assert) {
     }
     assert('cards: every cinema poster keeps a moat round its red', !near.length, near.join(', '))
   }
+  // #245: cinema-sundown keeps its striped, broken sun, but no red piece is a speck: every 8-connected red piece on the
+  // poster lattice is at least 4 dots (main drew four single dots and two 2-dot bits round the gunslinger)
+  {
+    const p = widgetById('cinema-sundown')!, pitch = p.grid.pitch ?? theme.gridPx, cell = (v: number) => Math.round((v / pitch - 2) / 2.5)
+    const red = new Set(dotsAt(p, 0).filter(d => visible(d) && d.color === theme.dotActive).map(d => `${cell(d.x)},${cell(d.y)}`))
+    const seen = new Set<string>(), sizes: number[] = []
+    for (const start of red) {
+      if (seen.has(start)) continue
+      let n = 0
+      const stack = [start]
+      while (stack.length) {
+        const k = stack.pop()!
+        if (seen.has(k) || !red.has(k)) continue
+        seen.add(k); n++
+        const [c, r] = k.split(',').map(Number)
+        for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) stack.push(`${c + i},${r + j}`)
+      }
+      sizes.push(n)
+    }
+    assert('cards: cinema-sundown has no red piece smaller than 4 dots', red.size > 100 && Math.min(...sizes) >= 4, `red pieces of ${sizes.join(', ')} dots`)
+  }
   // sim-sand: the falling stream is grains (red only on the leading grain of each run), not a red bar
   {
     const p = widgetById('sim-sand')!, red = dotsAt(p, 1.3).filter(d => d.color === theme.dotActive && d.opacity > 0)

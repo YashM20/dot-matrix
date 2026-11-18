@@ -4,6 +4,7 @@
  */
 import { sampleLayers } from '../../src/engine/sampler/gridSampler'
 import { squircleExponent } from '../../src/engine/renderer/shapePath'
+import { passToDots, splitGPULayers } from '../../src/engine/renderer/webgl/passes'
 import { MOTIFS, shapeExponent } from '../../src/engine/squares/form'
 import type { DotInstance, DotStyle } from '../../src/engine/types'
 import { boards, withChrome, type WidgetContext, type WidgetPreset } from '../../src/widgets'
@@ -31,6 +32,13 @@ export type CtxExtra = Partial<WidgetContext>
 export const sampleCard = (p: WidgetPreset, t: number, style: DotStyle = p.style, since?: number, extra: CtxExtra = {}): DotInstance[] =>
   sampleLayers(withChrome(p)({ t, since, ...extra, data: { ...p.defaults, ...extra.data } }), p.grid, style, theme)
 
+/** The same frame as WebGL2 draws it: GPU-tagged layers at their own density (`passToDots`), the rest sampled as usual (#241). */
+export function sampleCardGPU(p: WidgetPreset, t: number, style: DotStyle = p.style, since?: number, extra: CtxExtra = {}): DotInstance[] {
+  const layers = withChrome(p)({ t, since, ...extra, data: { ...p.defaults, ...extra.data } })
+  const { cpu, passes } = splitGPULayers(layers, p.grid, style, p.grid.pitch ?? theme.gridPx)
+  return [...passes.flatMap(q => passToDots(q, theme)), ...sampleLayers(cpu, p.grid, style, theme)]
+}
+
 export const PAD = 14 // card padding in output px, like the CSS card
 export interface RenderOptions {
   /** Output pixels per CSS pixel. */
@@ -42,16 +50,18 @@ export interface RenderOptions {
   since?: number
   /** Extra frame-context fields (snap `--ctx '<json>'`). */
   ctx?: CtxExtra
+  /** Draw GPU-tagged layers at their density, as WebGL2 does (OG images, `snap --gpu`); default: the card lattice, as goldens and the Canvas fallback. */
+  gpu?: boolean
 }
 export interface RenderedCard { raster: Raster; dots: DotInstance[]; /** card px → raster px */ map: (x: number, y: number) => [number, number] }
 
-export function renderCardFull(p: WidgetPreset, { px, t, silhouette = false, since, ctx }: RenderOptions): RenderedCard {
+export function renderCardFull(p: WidgetPreset, { px, t, silhouette = false, since, ctx, gpu = false }: RenderOptions): RenderedCard {
   // bleed cards have no padding, so scale their dots up to fill the same footprint
   const base = pitchOf(p) * px, pitch = p.bleed ? base + (PAD * 2) / p.grid.cols : base, k = (pitch / base) * px
   const w = Math.round(p.grid.cols * pitch), h = Math.round(p.grid.rows * pitch)
   // silhouette: same lit set (same quantization), but every dot at full radius
   const style: DotStyle = silhouette ? { ...p.style, sizeMin: p.style.sizeMax, sizeCurve: undefined, opacityMode: 'fromValue' } : p.style
-  const dots = sampleCard(p, t, style, since, ctx)
+  const dots = (gpu ? sampleCardGPU : sampleCard)(p, t, style, since, ctx)
   const pad = p.bleed ? 0 : PAD
   const card = new Raster(w + pad * 2, h + pad * 2, theme.bg)
   card.rect(0, 0, card.w, card.h, silhouette ? '#000000' : theme.surface, 14, '#26292d')
