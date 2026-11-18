@@ -265,64 +265,6 @@ function parts(id: string, t: number, css: number, dpr: number, reps = 15) {
     ms.sort((x, y) => x - y)
     out[k] = { n: sub.n, ms: +ms[ms.length >> 1].toFixed(2) }
   }
-  // the rotated dots traced other ways, in one colour at alpha .75 (diagnostics: what makes a diamond slow)
-  const rot: number[] = []
-  for (let i = 0; i < buf.n; i++) if (kind(i) === 'rotated') rot.push(i)
-  const D = Math.SQRT2
-  const trace = (sink: { moveTo(x: number, y: number): void; lineTo(x: number, y: number): void; closePath(): void; rect(x: number, y: number, w: number, h: number): void }, how: string, from = 0, to = rot.length) => {
-    for (let k = from; k < to; k++) {
-      const i = rot[k], x = buf.x[i], y = buf.y[i], s = buf.r[i]
-      if (how === 'upright') { sink.rect(x - s, y - s, 2 * s, 2 * s); continue }
-      sink.moveTo(x, y - D * s); sink.lineTo(x + D * s, y); sink.lineTo(x, y + D * s); sink.lineTo(x - D * s, y); sink.closePath()
-      if (how === 'twice') sink.closePath()
-    }
-  }
-  const variants: Record<string, () => void> = {
-    once: () => { const p = new Path2D(); trace(p, 'once'); S.ctx.fill(p) },
-    twice: () => { const p = new Path2D(); trace(p, 'twice'); S.ctx.fill(p) },
-    ctx: () => { S.ctx.beginPath(); trace(S.ctx, 'once'); S.ctx.fill() },
-    upright: () => { const p = new Path2D(); trace(p, 'upright'); S.ctx.fill(p) },
-    chunks: () => { for (let a = 0; a < rot.length; a += 256) { const p = new Path2D(); trace(p, 'once', a, Math.min(rot.length, a + 256)); S.ctx.fill(p) } },
-    chunks64: () => { for (let a = 0; a < rot.length; a += 64) { const p = new Path2D(); trace(p, 'once', a, Math.min(rot.length, a + 64)); S.ctx.fill(p) } },
-    chunks1024: () => { for (let a = 0; a < rot.length; a += 1024) { const p = new Path2D(); trace(p, 'once', a, Math.min(rot.length, a + 1024)); S.ctx.fill(p) } },
-    evenodd: () => { const p = new Path2D(); trace(p, 'once'); S.ctx.fill(p, 'evenodd') },
-    // eight strips by centre, across (rows) or down (columns) the card
-    rows8: () => strips(i => buf.y[i] / h),
-    cols8: () => strips(i => buf.x[i] / w),
-  }
-  function strips(at: (i: number) => number) {
-    const by: number[][] = Array.from({ length: 8 }, () => [])
-    rot.forEach((i, k) => by[Math.min(7, Math.max(0, Math.floor(at(i) * 8)))].push(k))
-    for (const ks of by) {
-      if (!ks.length) continue
-      const p = new Path2D()
-      for (const k of ks) trace(p, 'once', k, k + 1)
-      S.ctx.fill(p)
-    }
-  }
-  // each variant's pixels against the current trace (`twice`): pixels that differ and the largest channel step
-  const pixels = (run: () => void) => {
-    S.ctx.setTransform(1, 0, 0, 1, 0, 0); S.ctx.clearRect(0, 0, S.c.width, S.c.height); S.ctx.setTransform(scale, 0, 0, scale, 0, 0)
-    S.ctx.globalAlpha = .75; S.ctx.fillStyle = theme.dotIdle; run(); S.ctx.globalAlpha = 1
-    return S.ctx.getImageData(0, 0, S.c.width, S.c.height).data
-  }
-  const ref = rot.length ? pixels(variants.twice) : new Uint8ClampedArray()
-  if (rot.length) out['rotated:sample-order'] = { n: rot.slice(0, 6).map(i => `${buf.x[i].toFixed(1)},${buf.y[i].toFixed(1)}`).join(' ') as never, ms: 0 }
-  if (rot.length) for (const [name, run] of Object.entries(variants)) {
-    const px = pixels(run)
-    let changed = 0, max = 0
-    for (let i = 0; i < px.length; i += 4) { let m = 0; for (let c = 0; c < 4; c++) m = Math.max(m, Math.abs(px[i + c] - ref[i + c])); if (m) changed++; max = Math.max(max, m) }
-    out[`rotated:${name}:diff`] = { n: changed, ms: max }
-    const ms: number[] = []
-    for (let r = 0; r < reps; r++) {
-      const a = performance.now()
-      S.ctx.setTransform(1, 0, 0, 1, 0, 0); S.ctx.clearRect(0, 0, S.c.width, S.c.height); S.ctx.setTransform(scale, 0, 0, scale, 0, 0)
-      S.ctx.globalAlpha = .75; S.ctx.fillStyle = theme.dotIdle; run(); S.ctx.globalAlpha = 1; S.ctx.getImageData(0, 0, 1, 1)
-      ms.push(performance.now() - a)
-    }
-    ms.sort((x, y) => x - y)
-    out[`rotated:${name}`] = { n: rot.length, ms: +ms[ms.length >> 1].toFixed(2) }
-  }
   return out
 }
 

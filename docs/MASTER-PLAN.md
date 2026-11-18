@@ -601,7 +601,7 @@ Multitouch via `pointers[]`. Sound is a Track R spike, not a gate.
 ## 6. Budgets (CI-enforced)
 | Budget | Value |
 |---|---|
-| Board frame p95 (incl. enter, 30 fps tier), over the cards one viewport shows together: the worst run of 20 consecutive live CPU cards. When 2 or more such cards run they take turns (the master clock's `STAGGER`): two groups by board order, the second half a frame period behind, so a 60 Hz frame redraws one group; cards above 30 fps count in both (`scripts/bench.ts` header). Timed on the buffer path the site draws (`sampleLayersInto`, #339) | ≤ 8 ms |
+| Board frame p95 (incl. enter, 30 fps tier), over the cards one viewport keeps live together: at 1280 × 800 and on a 390 × 844 phone, the worst run of the rows the live band touches (`scripts/lib/viewport.ts`, #416; the read before #416 was the worst 20 consecutive live CPU cards). When 2 or more such cards run they take turns (the master clock's `STAGGER`): two groups by board order, the second half a frame period behind, so a 60 Hz frame redraws one group; cards above 30 fps count in both (`scripts/bench.ts` header). Timed on the buffer path the site draws (`sampleLayersInto`, #339) | ≤ 8 ms |
 | Live card sample + render (CPU cards; a card whose animated layers are all GPU-tagged is GPU work). `sq-ammann`, `lv-corridor` and `sc-posts` are showcase cards that may take up to 8 ms, since speeding them up needs pixel-changing work left for a later per-card pass; only the owner adds a card to this list (`LIVE_EXCEPTIONS`, `scripts/bench.ts`). Timed on the buffer path, like the board frame | ≤ 2 ms typical, ≤ 4 ms hero |
 | Input → next draw | ≤ 1 frame (p95) |
 | Board mount (progressive) | ≤ 30 ms to first frame |

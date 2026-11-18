@@ -34,7 +34,13 @@ gh workflow run goldens -f branch=<branch>
 The `goldens` workflow runs `pnpm golden` on that branch and commits the changed files back as `Regenerate goldens`, only when one changed. It refuses `main` and does nothing in a fork. A push made by the workflow starts no pull_request run, so the workflow dispatches CI on the branch to give the new head its `check + build` result. Merge the new commit before you push again: `git pull` on the branch.
 
 ## Frame budgets in CI
-`pnpm bench` reads each board's mount and frame time against the budgets in `docs/MASTER-PLAN.md` §6 (8 ms per board frame, 4 ms per live card). Its frame runs sample into a `DotBuffer` (`sampleLayersInto`), the path the site draws live cards with (#339). `BENCH_PATH=object pnpm bench` times the old path, one `DotInstance` per dot, for a comparison. Mount runs build `DotInstance[]` on both paths, as a static card's first draw does.
+`pnpm bench` reads each board's mount and frame time against the budgets in `docs/MASTER-PLAN.md` §6 (8 ms per board frame, 4 ms per live card). Its frame runs sample into a `DotBuffer` (`sampleLayersInto`), the path the site draws live cards with (#339). `BENCH_PATH=object pnpm bench` times the old path, one `DotInstance` per dot, for a comparison. Mount runs build `DotInstance[]` on both paths, as a static card's first draw does. Frame runs follow the clock: 6 s of warm-up frames at the card's fps, then the median of 12 s of frames (#340), so a loop's cache is warm and a hold or a sweep can't fill the window.
+
+The board frame counts the cards a viewport keeps live (#416): DotCanvas sleeps a card more than 64 px off screen, and the clock stops in a hidden tab. `scripts/lib/viewport.ts` models the grid at 1280 × 800 and on a 390 × 844 phone (columns per density, the rows the live band touches), and a board's frame is its worst run of rows on either. `BENCH_FRAME=window pnpm bench` budgets the read before #416, the worst 20 consecutive live cards; the table prints both.
+
+The bench times sampling in Node. Two probes read the rest in Chrome, as reports:
+- `viewport-frames` opens SQUARES and SCENES at both viewports, scrolls each row to the top, and reads what the page spends per frame, with the sample worker on (the site as shipped: the main thread's frame and the frames each card gets back) and off (every card sampled and drawn on the main thread). It fails when a card off screen asks for frames, or when the bench's viewport model no longer matches the page.
+- `card-time` times each card's sample and its Canvas draw apart, at the site's backing scale. A card whose draw costs more than its sample shows only here.
 
 The `perf report` job in `ci.yml` runs it on every push to `main` and on a dispatch. It is a report: runner timings are noisy. To read a branch, dispatch CI there, more than once, and compare the runs:
 ```bash
