@@ -17,7 +17,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   ir: 'Cards written as Field IR programs. The same code runs in MAKE · CODE.',
   cinema: 'Seven animated scenes from the Afterlight cycle: light, motion and silhouettes.',
   light: 'Lit dots: drag the torch across matte, gloss, glass, metal and fabric.',
-  levels: 'HIVE, a dot-matrix game in nine worlds. Press start and play with keys, a gamepad or touch.',
+  levels: 'HIVE, a dot-matrix game. Level 03 sits on the AUDIO board, where the game began. Press start and play with keys, a gamepad or touch.',
   heartbeat: 'How an AI agent could show its state: thinking, running a tool, waiting, done.',
   sim: 'Fields that live: reaction-diffusion, falling sand and the Game of Life.',
   lock: 'Lock-screen moments: an hourglass, a long-press unlock, a notification, idle.',

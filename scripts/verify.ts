@@ -35,6 +35,7 @@ import { uxChecks } from './verify/ux'
 import { flagChecks } from './verify/flags'
 import { cardChecks } from './verify/cards'
 import { audioPersonalChecks } from './verify/audio-personal'
+import { scopeChecks } from './verify/scope'
 import { creditChecks } from './verify/credits'
 import { numberChecks } from './verify/numbers'
 import { frameCacheChecks } from './verify/frame-cache'
@@ -196,6 +197,8 @@ numberChecks(assert)
 cardChecks(assert)
 // AUDIO and PERSONAL (#259, #256): the baked CJK line, the counts, push to talk, the colon, the running track time (scripts/verify/audio-personal.ts)
 audioPersonalChecks(assert)
+// SCOPE (#240): the trigger arrow, the units, the demo's falling peaks, the blocked mic's second line (scripts/verify/scope.ts)
+scopeChecks(assert)
 frameCacheChecks(assert)
 // METRO (#257) and DASHBOARD (#250) refine fixes (scripts/verify/metro-dashboard.ts)
 {
@@ -211,6 +214,11 @@ frameCacheChecks(assert)
 {
   const { mirrorChecks } = await import('./verify/mirror')
   mirrorChecks(assert)
+}
+// LEVELS (#233) refine fixes: no faint score rows, the leader's row leads, the blurb explains the missing level 03 (scripts/verify/levels.ts)
+{
+  const { levelsChecks } = await import('./verify/levels')
+  levelsChecks(assert)
 }
 // card drawing fixes (#359): fine-face units, the lap knob, glyph transport, REC dot size (scripts/verify/card-drawing.ts)
 {
