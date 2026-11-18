@@ -283,9 +283,23 @@ function parts(id: string, t: number, css: number, dpr: number, reps = 15) {
     ctx: () => { S.ctx.beginPath(); trace(S.ctx, 'once'); S.ctx.fill() },
     upright: () => { const p = new Path2D(); trace(p, 'upright'); S.ctx.fill(p) },
     chunks: () => { for (let a = 0; a < rot.length; a += 256) { const p = new Path2D(); trace(p, 'once', a, Math.min(rot.length, a + 256)); S.ctx.fill(p) } },
+    chunks64: () => { for (let a = 0; a < rot.length; a += 64) { const p = new Path2D(); trace(p, 'once', a, Math.min(rot.length, a + 64)); S.ctx.fill(p) } },
+    chunks1024: () => { for (let a = 0; a < rot.length; a += 1024) { const p = new Path2D(); trace(p, 'once', a, Math.min(rot.length, a + 1024)); S.ctx.fill(p) } },
     evenodd: () => { const p = new Path2D(); trace(p, 'once'); S.ctx.fill(p, 'evenodd') },
   }
+  // each variant's pixels against the current trace (`twice`): pixels that differ and the largest channel step
+  const pixels = (run: () => void) => {
+    S.ctx.setTransform(1, 0, 0, 1, 0, 0); S.ctx.clearRect(0, 0, S.c.width, S.c.height); S.ctx.setTransform(scale, 0, 0, scale, 0, 0)
+    S.ctx.globalAlpha = .75; S.ctx.fillStyle = theme.dotIdle; run(); S.ctx.globalAlpha = 1
+    return S.ctx.getImageData(0, 0, S.c.width, S.c.height).data
+  }
+  const ref = rot.length ? pixels(variants.twice) : new Uint8ClampedArray()
+  if (rot.length) out['rotated:sample-order'] = { n: rot.slice(0, 6).map(i => `${buf.x[i].toFixed(1)},${buf.y[i].toFixed(1)}`).join(' ') as never, ms: 0 }
   if (rot.length) for (const [name, run] of Object.entries(variants)) {
+    const px = pixels(run)
+    let changed = 0, max = 0
+    for (let i = 0; i < px.length; i += 4) { let m = 0; for (let c = 0; c < 4; c++) m = Math.max(m, Math.abs(px[i + c] - ref[i + c])); if (m) changed++; max = Math.max(max, m) }
+    out[`rotated:${name}:diff`] = { n: changed, ms: max }
     const ms: number[] = []
     for (let r = 0; r < reps; r++) {
       const a = performance.now()
