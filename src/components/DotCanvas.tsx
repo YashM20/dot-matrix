@@ -9,6 +9,7 @@ import { DataSprings, duration as motionDuration, ease, maskByName, revealDots, 
 import { renderSVG } from '../engine/renderer/svgRenderer'
 import { svgHtml } from '../lib/trusted'
 import { hasGPULayers, splitGPULayers, type GPUPass } from '../engine/renderer/webgl/passes'
+import { gpuStill } from './gpuStill'
 import { dotGL, loadDotGL, subscribeDotGL } from './glLoader'
 import type { MigrateOptions, Migration } from '../engine/migrate'
 import type { Control, ControlPatch, DotInstance, DotStyle, Field, GridConfig, Layer, ThemeTokens } from '../engine'
@@ -350,12 +351,12 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     context.setTransform(scale, 0, 0, scale, 0, 0)
     return context
   }
-  /** `drawn` = the data this frame shows (dev latency probe: answers the input events it reflects). */
-  const draw = (canvas: HTMLCanvasElement, frame: DotInstance[], drawn: Record<string, number> = data ?? {}, passes: GPUPass[] = []) => {
+  /** `drawn` = the data this frame shows (dev latency probe: answers the input events it reflects); `fallback` = the whole frame on the CPU, drawn when WebGL2 fails. */
+  const draw = (canvas: HTMLCanvasElement, frame: DotInstance[], drawn: Record<string, number> = data ?? {}, passes: GPUPass[] = [], fallback = frame) => {
     const context = prepare(canvas)
     if (!context) return
     context.clearRect(0, 0, width, height)
-    if (!webgl || !gl || !gl.renderWebGL(context, frame, passes, theme, gpuFade.current)) renderCanvas(context, frame)
+    if (!webgl || !gl || !gl.renderWebGL(context, frame, passes, theme, gpuFade.current)) renderCanvas(context, fallback)
     drawnStat.dots += frame.length
     input.drawn(drawn)
   }
@@ -428,8 +429,11 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
   useEffect(() => {
     if (mode !== 'canvas' || live || transient) return
     const canvas = canvasRef.current
-    if (canvas) draw(canvas, dots)
-  }, [mode, live, transient, dots, width, height, scale]) // eslint-disable-line react-hooks/exhaustive-deps
+    if (!canvas) return
+    const g = { cols: grid.cols, rows: grid.rows, pitch: grid.pitch }
+    const still = gpuCard && layers ? gpuStill(layers, { t: animated ? 0 : tick, data: { ...data }, grid: g, ...ix }, g, style, theme) : null
+    if (still) draw(canvas, still.dots, data ?? {}, still.passes, dots); else draw(canvas, dots)
+  }, [mode, live, transient, dots, width, height, scale, gpuCard]) // eslint-disable-line react-hooks/exhaustive-deps
   // the first frame is on screen (drawn by the effects above, in this same commit): the next grid card may go
   useEffect(() => { if (ready && askedRef.current) { firstDraws().done(askedRef.current); askedRef.current = null } }, [ready])
 
