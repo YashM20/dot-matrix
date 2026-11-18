@@ -372,6 +372,12 @@ const pillIcon = (kind: number, cy: number): Field[] => {
   if (kind === 3) return [ring, T.dot(7, cy - 1), T.dot(6, cy), T.dot(8, cy), T.dot(7, cy + 1)]
   return [ring, T.dot(7, cy)]
 }
+/**
+ * The row chevron, a 3 × 5 open sprite in caption-size dots 1.5 caption dots apart, from (x, y) the top dot: thin like
+ * the sheet's, on the box the typed `>` filled, and drawn outside the text so the card's name skips it (#413).
+ */
+const CHEVRON: Pt[] = [[0, 0], [1, 1], [2, 2], [1, 3], [0, 4]]
+const chevron = (x: number, y: number) => T.dots(CHEVRON.map(([i, j]): Pt => [x + i * CAP * 1.5, y + j * CAP * 1.5]), CAP)
 const SEND: Pt = [133, 133], SEND_BOX = [124, 124, 142, 142] as const
 const SUGGESTIONS = ['SUMMARIZE MY DAY', 'CHECK MY CALENDAR', 'ANALYZE MY WORKOUT', 'DRAFT PROJECT UPDATE']
 export const aiAssistant: WidgetPreset = {
@@ -386,7 +392,7 @@ export const aiAssistant: WidgetPreset = {
         // a cell in at the top and bottom, so neighbouring pills keep 5 empty rows and never read as a doubled line
         layer(frame(0, Math.round(y) + 1, 144, 15, 7), 'faint'),
         ...pillIcon(i, cy).map(f => layer(f, 'idle')),
-        layer(cap(s, 15, cy - 2.5), 'value'), layer(cap('>', 137, cy - 2.5), 'idle'),
+        layer(cap(s, 15, cy - 2.5), 'value'), layer(chevron(137.58, cy - 2.64), 'idle'),
       ]
     }),
     layer(frame(0, 123, 144, 21, 9), 'faint'),
