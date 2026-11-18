@@ -286,6 +286,19 @@ function parts(id: string, t: number, css: number, dpr: number, reps = 15) {
     chunks64: () => { for (let a = 0; a < rot.length; a += 64) { const p = new Path2D(); trace(p, 'once', a, Math.min(rot.length, a + 64)); S.ctx.fill(p) } },
     chunks1024: () => { for (let a = 0; a < rot.length; a += 1024) { const p = new Path2D(); trace(p, 'once', a, Math.min(rot.length, a + 1024)); S.ctx.fill(p) } },
     evenodd: () => { const p = new Path2D(); trace(p, 'once'); S.ctx.fill(p, 'evenodd') },
+    // eight strips by centre, across (rows) or down (columns) the card
+    rows8: () => strips(i => buf.y[i] / h),
+    cols8: () => strips(i => buf.x[i] / w),
+  }
+  function strips(at: (i: number) => number) {
+    const by: number[][] = Array.from({ length: 8 }, () => [])
+    rot.forEach((i, k) => by[Math.min(7, Math.max(0, Math.floor(at(i) * 8)))].push(k))
+    for (const ks of by) {
+      if (!ks.length) continue
+      const p = new Path2D()
+      for (const k of ks) trace(p, 'once', k, k + 1)
+      S.ctx.fill(p)
+    }
   }
   // each variant's pixels against the current trace (`twice`): pixels that differ and the largest channel step
   const pixels = (run: () => void) => {

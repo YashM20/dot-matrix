@@ -108,7 +108,8 @@ export function formOutline(p: FormSink, x: number, y: number, s: number, n: num
   const q: FormSink = rot45 && (n > 2 || motif === STITCH) ? new Turned(p, x, y) : p
   if (motif === STITCH) { stitch(q, x, y, s); return }
   if (n <= 2) circle(p, x, y, s, false)
-  else { rectOutline(q, x, y, s, s, n); p.closePath() }
+  // a square (n = ∞) comes back closed: a rect, or a turned rect's polygon
+  else if (!rectOutline(q, x, y, s, s, n)) p.closePath()
   if (motif === BEAD) circle(p, x, y, BEAD_HOLE * s, true)
   else if (motif === STUD) { circle(p, x, y, (STUD_RING + STUD_HALF) * s, true); circle(p, x, y, (STUD_RING - STUD_HALF) * s, false) }
 }

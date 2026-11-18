@@ -115,24 +115,27 @@ export function insideJoined(px: number, py: number, cx: number, cy: number, s: 
  * A rect cell's plain outline (squares Q2; half sides sx × sy, exponent n, Infinity = 'square'), clockwise: the box;
  * for a square-like squircle (n > 8) the rounded rect whose corner is min(sx, sy)·cornerFraction(n), the same corner
  * the round renderers give a square cell; for n ≤ 8 (circles, soft squircles) the superellipse stretched to sx × sy
- * (its four béziers scale exactly). Canvas `Path2D` and the SVG string sink both take it.
+ * (its four béziers scale exactly). Canvas `Path2D` and the SVG string sink both take it. True when it drew a `rect`,
+ * which is already closed: a caller that closes the outline must not close it again (a second `closePath` is an empty
+ * contour to Chrome, and doubled the fill time of `sq-ammann`'s turned squares, #416).
  */
-export function rectOutline(p: OutlineSink & { bezierCurveTo(ax: number, ay: number, bx: number, by: number, x: number, y: number): void }, x: number, y: number, sx: number, sy: number, n: number): void {
+export function rectOutline(p: OutlineSink & { bezierCurveTo(ax: number, ay: number, bx: number, by: number, x: number, y: number): void }, x: number, y: number, sx: number, sy: number, n: number): boolean {
   if (n > BEZIER_MAX_N) {
     const c = n === Infinity ? 0 : Math.min(sx, sy) * cornerFraction(n)
-    if (c <= 0) { p.rect(x - sx, y - sy, 2 * sx, 2 * sy); return }
+    if (c <= 0) { p.rect(x - sx, y - sy, 2 * sx, 2 * sy); return true }
     const H = Math.PI / 2
     p.moveTo(x - sx + c, y - sy); p.lineTo(x + sx - c, y - sy); p.arc(x + sx - c, y - sy + c, c, -H, 0, false, x + sx, y - sy + c)
     p.lineTo(x + sx, y + sy - c); p.arc(x + sx - c, y + sy - c, c, 0, H, false, x + sx - c, y + sy)
     p.lineTo(x - sx + c, y + sy); p.arc(x - sx + c, y + sy - c, c, H, Math.PI, false, x - sx, y + sy - c)
     p.lineTo(x - sx, y - sy + c); p.arc(x - sx + c, y - sy + c, c, Math.PI, 3 * H, false, x - sx + c, y - sy)
-    return
+    return false
   }
   const h = bezierHandle(n), kx = sx * h, ky = sy * h
   p.moveTo(x, y - sy); p.bezierCurveTo(x + kx, y - sy, x + sx, y - ky, x + sx, y)
   p.bezierCurveTo(x + sx, y + ky, x + kx, y + sy, x, y + sy)
   p.bezierCurveTo(x - kx, y + sy, x - sx, y + ky, x - sx, y)
   p.bezierCurveTo(x - sx, y - ky, x - kx, y - sy, x, y - sy)
+  return false
 }
 /** Is (px, py) inside the rect cell of `rectOutline`? (The superellipse itself for n ≤ 8: the béziers are within 0.1% of it.) */
 export function insideRect(px: number, py: number, cx: number, cy: number, sx: number, sy: number, n: number): boolean {
