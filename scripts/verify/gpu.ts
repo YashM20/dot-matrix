@@ -3,12 +3,12 @@
  * Run alone: `pnpm exec tsx scripts/verify/gpu.ts`.
  */
 import { gpuStill } from '../../src/components/gpuStill'
-import { passDots, splitGPULayers } from '../../src/engine/renderer/webgl/passes'
+import { passDots, passToDots, splitGPULayers } from '../../src/engine/renderer/webgl/passes'
 import { sampleLayers } from '../../src/engine/sampler/gridSampler'
 import { dot480 } from '../../src/engine/theme/tokens'
 import type { Layer } from '../../src/engine/types'
 import { creditsOf, withChrome, type WidgetPreset } from '../../src/widgets/types'
-import { gpuBoard, gpuStarfield, kilo, nearStars } from '../../src/widgets/boards/gpu'
+import { gpuBoard, gpuStarfield, kilo } from '../../src/widgets/boards/gpu'
 import { checker, type Assert } from '../lib/check'
 
 const TIMES = [0, .7, 1.3, 2.5, 5, 9.1, 13.4]
@@ -39,38 +39,18 @@ export function gpuChecks(assert: Assert) {
     assert('gpu: names and labels read plain', !bad.length, bad.join('; '))
   }
   assert('gpu: every card credits its source', gpuBoard.every(p => creditsOf(p).length > 0))
-  // starfield: every near star is one site, whole inside the IR window (rows 10–129), never cut at an edge
+  // starfield: no star is cut flat by the window's top or bottom edge (owner's call: the stars keep main's look; #241).
+  // A star touching an edge row would be cut, so the GPU pass's first and last rows stay dark at every t
   {
-    const out = TIMES.flatMap(t => nearStars(t).flatMap(l => l.sites!.filter(([x, y]) => {
-      const r = l.size! / 2
-      return x - r < 0 || x + r > 143 || y - r < 10 || y + r > 129
-    }).map(([x, y]) => `t${t}:${x},${y}`)))
-    assert('gpu: starfield near stars stay inside the window', !out.length, out.slice(0, 5).join(' '))
-  }
-  // starfield: the IR draws far stars only, each one dot at the card lattice (they were clusters of mixed sizes)
-  {
-    let worst = 0
+    const cut: string[] = []
     for (const t of TIMES) {
-      const ir = frame(gpuStarfield, t).filter(l => splitGPULayers([l], gpuStarfield.grid, gpuStarfield.style, 2.25).passes.length)
-      const lit = new Set(sampleLayers(ir, gpuStarfield.grid, gpuStarfield.style, dot480).map(d => `${Math.round(d.x / 2.25 - .5)},${Math.round(d.y / 2.25 - .5)}`))
-      // the largest group of touching lit cells (8-neighbourhood)
-      const seen = new Set<string>()
-      for (const start of lit) {
-        if (seen.has(start)) continue
-        let n = 0
-        const stack = [start]
-        seen.add(start)
-        while (stack.length) {
-          const [c, r] = stack.pop()!.split(',').map(Number); n++
-          for (let dc = -1; dc <= 1; dc++) for (let dr = -1; dr <= 1; dr++) {
-            const k = `${c + dc},${r + dr}`
-            if (lit.has(k) && !seen.has(k)) { seen.add(k); stack.push(k) }
-          }
-        }
-        worst = Math.max(worst, n)
-      }
+      const pass = splitGPULayers(frame(gpuStarfield, t), gpuStarfield.grid, gpuStarfield.style, 2.25).passes[0]
+      const dots = passToDots(pass, dot480), ys = dots.map(d => d.y), top = Math.min(...ys), y0 = (pass.origin[1] + (pass.map[2] + .5) * pass.k) * pass.pitch
+      const y1 = (pass.origin[1] + (pass.map[2] + (pass.rows - 1) * pass.map[3] + .5) * pass.k) * pass.pitch
+      const edge = dots.filter(d => Math.abs(d.y - y0) < 1e-6 || Math.abs(d.y - y1) < 1e-6).length
+      if (edge) cut.push(`t${t}: ${edge} dots on an edge row (top dot y ${top.toFixed(2)})`)
     }
-    assert('gpu: starfield IR stars are at most a 2×2 speck at the card lattice', worst <= 4, `largest ${worst} cells`)
+    assert('gpu: starfield stars fade out before the window edge instead of being cut', !cut.length, cut.join('; '))
   }
 }
 
