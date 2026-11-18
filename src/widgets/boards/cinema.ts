@@ -250,8 +250,8 @@ const GS = 1.3
 const rider = (X: number, Y: number) => gunslinger(71.5 + (X - 71.5) / GS, 94.5 + (Y - 94.5) / GS)
 const gunslinger = (x: number, y: number) =>
   rect(x, y, 67.8, 57.2, 75.2, 61.6) || rect(x, y, 63, 61.6, 80, 63.4) || rect(x, y, 69, 63.4, 74, 68.4) || rect(x, y, 70, 68.4, 73, 70.5) ||
-  DUSTER(x, y) || seg(x, y, [64.8, 71], [61, 85]) < 1.3 || seg(x, y, [78.2, 71], [82, 85]) < 1.3 ||
-  seg(x, y, [68.5, 86], [64.8, 94.5]) < 1.4 || seg(x, y, [74.5, 86], [78.2, 94.5]) < 1.4 || ell(x, y, 79.8, 84.5, 1.6, 2) < 1
+  DUSTER(x, y) || seg(x, y, [64.8, 71], [59, 85]) < 1.15 || seg(x, y, [78.2, 71], [84, 85]) < 1.15 ||
+  seg(x, y, [68.5, 86], [64.8, 94.5]) < 1.4 || seg(x, y, [74.5, 86], [78.2, 94.5]) < 1.4 || ell(x, y, 81.8, 84.5, 1.5, 2) < 1
 /** Thin lit cloud streaks: [y, x0, x1]. The low one crosses the sun. */
 const STREAKS: [number, number, number][] = [[49, 92, 134], [79, 40, 104]]
 const streak = (x: number, y: number) => STREAKS.some(([sy, a, b]) => Math.abs(y - sy) < 1.15 && x > a && x < b)
@@ -273,7 +273,7 @@ const sundown: Luma = (x, y) => {
 }
 const sundownPoster = poster({
   id: 'cinema-sundown', n: 3, genre: 'WESTERN', title: 'SUNDOWN', tag: 'THE LAST LIGHT WEST', at: [centre('SUNDOWN'), BOTTOM],
-  scene: sundown, red: (x, y) => (inSun(x, y) ? 1 : 0), minPiece: 4,
+  scene: sundown, red: (x, y) => (inSun(x, y) ? 1 : 0), minPiece: 2,
 })
 
 // ── 04 UPSTAIRS · horror ────────────────────────────────────────────────────────────────────────
