@@ -38,7 +38,7 @@ const spriteOn = (rows: string[], k: number, col: number, row: number): LatticeF
 const ringSites = (cx: number, cy: number, r: number, n: number, keep: (i: number) => boolean): Pt[] =>
   Array.from({ length: n }, (_, i) => i).filter(keep).map(i => [cx + r * Math.sin((i / n) * TAU), cy - r * Math.cos((i / n) * TAU)])
 /** Light-grey text: value-tone dots at 3/4 size and opacity. */
-const soft = (l: LatticeField, v = .75): LatticeField => ({ ...l, field: dim(l.field, v) })
+const soft = (l: LatticeField, v = .75): LatticeField => ({ ...l, field: Object.assign(dim(l.field, v), { text: l.field.text }) })
 const range = (x0: number, step: number, n: number) => Array.from({ length: n }, (_, i) => x0 + i * step)
 
 // ── Ride: speed ring open at the bottom, effort arc in red ──────────────────
@@ -96,8 +96,8 @@ const BEAR = [
   '..fFFFFFFFFFFFFFFFFFFf..',
   '...ffffffffffffffffff...',
 ]
-const BUNNY = [
-  '.##...##.',
+// the ears are two rows, so the bunny sits centred in the hold with air above and below it (#258)
+export const BUNNY = [
   '.##...##.',
   '.##...##.',
   '#########',
@@ -109,7 +109,7 @@ const BUNNY = [
   '.#######.',
   '.##...##.',
 ]
-const BEAR_K = 3, BUNNY_K = 2, BEAR_AT: Pt = [36, 30], BUNNY_AT: Pt = [63, 79]
+export const BEAR_K = 3, BUNNY_K = 2, BEAR_AT: Pt = [36, 30], BUNNY_AT: Pt = [63, 80]
 /** Fur luma by lighting: lit top-left rim, plain fur, shaded right rim and chin. */
 const furLuma = (i: number, j: number): string => {
   const at = (x: number, y: number) => (BEAR[y]?.[x] ?? '.') === 'F' || BEAR[y]?.[x] === 'E'
@@ -233,10 +233,10 @@ export const lastPassword: WidgetPreset = {
 export const notifications: WidgetPreset = {
   id: 'notifications', name: 'Notifications', group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => {
-    const big = { lattice: 2.15, smooth: true, scale: [1, 1.2] as [number, number] }
     const grid = [80.6, 102.4, 124.2].flatMap(y => [36.5, 50.5, 64.4, 77.7, 90.9].map((x): Pt => [x, y]))
     return [
-      layer(T.big('3', 14, 24, big)), layer(T.big('NEW', 54, 24, big)),
+      // condensed caps on one lattice, as wide and tall as the stretched 3 and NEW they replace
+      layer(poster('3 NEW', 2.5, 15, 24)),
       layer(T.dots(grid.slice(1), 5.9), 'idle'),
       layer(T.dots(grid.slice(0, 1), 7.9), 'active'),
     ]
