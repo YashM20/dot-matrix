@@ -23,7 +23,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   lock: 'Lock-screen moments: an hourglass, a long-press unlock, a notification, idle.',
   live: 'Real data: the weather, a now-playing feed and GitHub contributions.',
   mirror: 'Your camera as halftone dots, a shadow puppet, and a hand mode that drives every card. Video stays on your device.',
-  gpu: 'Half a million dots evaluated on the GPU: plasma, a starfield and moiré.',
+  gpu: 'Up to half a million dots, each computed on the GPU: a plasma, a starfield and a moire pattern.',
   surfaces: 'One field on three surfaces: browser, glyph matrix and flip-disc.',
   components: 'The building blocks: toggles, sliders, knobs, tabs and a keypad. All of them work.',
   type: 'A variable dot typeface: weight and width knobs, morphs, a marquee. Type your own.',

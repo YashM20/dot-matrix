@@ -148,6 +148,9 @@ By Thomas A. Witten, Leonard M. Sander.
 
 By lionleaf.
 
+- Moire (`gpu-moire`), board `/gpu/`: demos in 140 characters
+- Plasma (`gpu-plasma`), board `/gpu/`: demos in 140 characters
+- Starfield (`gpu-starfield`), board `/gpu/`: demos in 140 characters
 - IR Dial (`ir-dial`), board `/ir/`: demos in 140 characters
 - IR Plasma (`ir-plasma`), board `/ir/`: demos in 140 characters
 - IR Ripple (`ir-ripple`), board `/ir/`: demos in 140 characters
@@ -437,6 +440,9 @@ By Robert Ulichney.
 
 By Martin Kleppe.
 
+- Moire (`gpu-moire`), board `/gpu/`: one small program drives the whole card; this program is our own
+- Plasma (`gpu-plasma`), board `/gpu/`: one small program drives the whole card; this program is our own
+- Starfield (`gpu-starfield`), board `/gpu/`: one small program drives the whole card; this program is our own
 - IR Dial (`ir-dial`), board `/ir/`: one small program drives the whole card; this program is our own
 - IR Plasma (`ir-plasma`), board `/ir/`: one small program drives the whole card; this program is our own
 - IR Ripple (`ir-ripple`), board `/ir/`: one small program drives the whole card; this program is our own

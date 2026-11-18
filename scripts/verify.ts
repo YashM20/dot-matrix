@@ -36,6 +36,7 @@ import { flagChecks } from './verify/flags'
 import { cardChecks } from './verify/cards'
 import { audioPersonalChecks } from './verify/audio-personal'
 import { scopeChecks } from './verify/scope'
+import { gpuChecks } from './verify/gpu'
 import { creditChecks } from './verify/credits'
 import { numberChecks } from './verify/numbers'
 import { frameCacheChecks } from './verify/frame-cache'
@@ -199,6 +200,7 @@ cardChecks(assert)
 audioPersonalChecks(assert)
 // SCOPE (#240): the trigger arrow, the units, the demo's falling peaks, the blocked mic's second line (scripts/verify/scope.ts)
 scopeChecks(assert)
+gpuChecks(assert)
 frameCacheChecks(assert)
 // METRO (#257) and DASHBOARD (#250) refine fixes (scripts/verify/metro-dashboard.ts)
 {

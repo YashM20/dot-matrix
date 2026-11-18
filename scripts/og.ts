@@ -35,7 +35,8 @@ export function ogImage(cardId: string, { t = 1.3, data = {} as Record<string, n
   // card on the right, as tall as the frame allows, at most ~55% of the width
   const pad = p.bleed ? 0 : PAD * 2
   const px = Math.min((OG_H - 2 * M - pad) / ch1, (OG_W * 0.55 - pad) / cw1)
-  const card = renderCard(p, { px, t, ctx: { data } })
+  // a GPU card shows its WebGL2 look (the passes at their density), not the CPU fallback (#241)
+  const card = renderCard(p, { px, t, ctx: { data }, gpu: true })
   const out = new Raster(OG_W, OG_H, theme.bg)
   const cx = OG_W - M - card.w, cy = Math.round((OG_H - card.h) / 2)
   out.paste(card, cx, cy)
