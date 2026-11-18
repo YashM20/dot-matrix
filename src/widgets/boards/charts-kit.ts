@@ -13,7 +13,7 @@ import { LOOP, settle, loopPhase } from '../../engine/charts/motion'
 import { chartLayers } from '../../engine/charts/paint'
 import type { Chart, Label } from '../../engine/charts/marks'
 import { TILE, layoutFor, tileCircleStyle, type WidgetContext, type WidgetPreset } from '../types'
-import { marching, rr, ui } from './components-kit'
+import { clock, marching, rr, ui } from './components-kit'
 import { LABEL_SWITCH, labelSwitch } from '../dot-controls'
 
 export const T = layoutFor(TILE)
@@ -72,8 +72,10 @@ export function chartCard(c: ChartCardSpec): WidgetPreset {
       const names: Label[] = c.sets.map((text, i) => ({ text, col: sw.xs[i], row: 0, tone: (i === on ? 'value' : s.hover ? 'idle' : 'mid') as Tone }))
       const [bx, by, bw, bh] = c.box
       const out: Layer[] = [...chartLayers(c.draw(v), TILE), ...chartLayers({ marks: [], labels: names }, TILE)]
-      if (s.focus) out.push(marching(rr(sw.box[0], LABEL_SWITCH.row, sw.box[2] - 1, 0, 0), ctx.t, 0))
-      if (ui(ctx, 'pick').focus) out.push(marching(rr(bx, by, bw - 1, bh - 1, 4), ctx.t, 0))
+      const pk = ui(ctx, 'pick')
+      // the shared focus clock (#388): both lines hold still under reduced motion (#408)
+      if (s.focus) out.push(marching(rr(sw.box[0], LABEL_SWITCH.row, sw.box[2] - 1, 0, 0), clock(s, ctx.t), 0))
+      if (pk.focus) out.push(marching(rr(bx, by, bw - 1, bh - 1, 4), clock(pk, ctx.t), 0))
       return out
     },
   }
