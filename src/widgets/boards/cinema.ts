@@ -128,8 +128,28 @@ interface Spec {
   red: Luma
   /** Red gain over time (a blinking beacon); default steady. */
   pulse?: (t: number) => number
+  /** Red pieces (8-connected lattice dots) smaller than this are dropped, so a cut-up mark has no lone specks. */
+  minPiece?: number
   /** Scene parts that move: `where` marks lattice cells re-evaluated every frame with `f(x, y, t)`. */
   live?: { where: (x: number, y: number) => boolean; f: (x: number, y: number, t: number) => number }
+}
+/** Clears every 8-connected piece of `m` smaller than `min` lattice dots. */
+function dropSpecks(m: Float32Array, min: number) {
+  const seen = new Uint8Array(NX * NY)
+  for (let i = 0; i < m.length; i++) {
+    if (!m[i] || seen[i]) continue
+    const piece: number[] = [], stack = [i]
+    seen[i] = 1
+    while (stack.length) {
+      const k = stack.pop()!, c = k % NX, r = (k - c) / NX
+      piece.push(k)
+      for (let j = -1; j <= 1; j++) for (let d = -1; d <= 1; d++) {
+        const cc = c + d, rr = r + j, n = rr * NX + cc
+        if (cc >= 0 && rr >= 0 && cc < NX && rr < NY && m[n] && !seen[n]) { seen[n] = 1; stack.push(n) }
+      }
+    }
+    if (piece.length < min) for (const k of piece) m[k] = 0
+  }
 }
 function poster(s: Spec): WidgetPreset {
   let scene: Float32Array | undefined, red: Float32Array | undefined, moat: Uint8Array | undefined, liveCells: number[] | undefined
@@ -140,8 +160,10 @@ function poster(s: Spec): WidgetPreset {
     for (let r = 0; r < NY; r++) for (let c = 0; c < NX; c++) red[r * NX + c] = s.red(xOf(c), yOf(r)) > .5 ? 1 : 0
     // the red gets the title's moat: no scene dot under it or within one lattice dot of it, so red never touches grey
     moat = new Uint8Array(NX * NY)
+    const lit = red.slice()
+    if (s.minPiece) dropSpecks(red, s.minPiece) // after `lit`: a dropped speck keeps its moat, so the scene round it is unchanged
     for (let r = 0; r < NY; r++) for (let c = 0; c < NX; c++) {
-      if (!red[r * NX + c]) continue
+      if (!lit[r * NX + c]) continue
       for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const rr = r + j, cc = c + i; if (rr >= 0 && cc >= 0 && rr < NY && cc < NX) moat[rr * NX + cc] = 1 }
     }
     liveCells = []
@@ -218,30 +240,20 @@ const signalPoster = poster({
 
 // ── 03 SUNDOWN · western ────────────────────────────────────────────────────────────────────────
 // A red sun on the horizon between two mesas, a lone gunslinger standing in it, his long shadow.
-const HY = 93, SUN: Pt = [71.5, 93], SUN_R = 32
+const HY = 93, SUN: Pt = [72, 93], SUN_R = 32
 const MESA_L = poly([[0, HY], [0, 60], [4, 58], [20, 58], [23, 63], [27, 70], [31, 80], [36, HY]])
 const MESA_R = poly([[104, HY], [107, 80], [110, 71], [113, 67], [131, 67], [134, 72], [138, 74], [144, 74], [144, HY]])
 const mesa = any(MESA_L, MESA_R)
-/**
- * The gunslinger, drawn on the lattice so every edge is a whole dot (#245): a crown on an 11-dot brim, head, broad
- * shoulders, arms held out from the body with red between, a holstered hip, legs apart, boots on the horizon. Every
- * part is at least two dots wide, so at 390 he still reads as a man in a hat. `FIG` is the top-left lattice cell.
- */
-const FIG: [number, number] = [22, 28]
-const FIGURE = [
-  '....#####....',
-  '.###########.',
-  '.....###.....',
-  '..#########..',
-  '.##..###..##.',
-  '.##.#####.##.',
-  '....##.##....',
-  '...##...##...',
-  '..##.....##..',
-]
-const rider = (x: number, y: number) => FIGURE[Math.round((y - yOf(FIG[1])) / K)]?.[Math.round((x - xOf(FIG[0])) / K)] === '#'
-/** A thin lit cloud streak, [y, x0, x1], in the sky above the sun. */
-const STREAKS: [number, number, number][] = [[49, 92, 134]]
+/** The gunslinger: hat, duster, arms clear of the body, legs apart, boots on the horizon. */
+const DUSTER = poly([[66, 70], [77, 70], [78.5, 87], [64.5, 87]])
+const GS = 1.3
+const rider = (X: number, Y: number) => gunslinger(71.5 + (X - 71.5) / GS, 94.5 + (Y - 94.5) / GS)
+const gunslinger = (x: number, y: number) =>
+  rect(x, y, 67.8, 57.2, 75.2, 61.6) || rect(x, y, 63, 61.6, 80, 63.4) || rect(x, y, 69, 63.4, 74, 68.4) || rect(x, y, 70, 68.4, 73, 70.5) ||
+  DUSTER(x, y) || seg(x, y, [64.8, 71], [61, 85]) < 1.3 || seg(x, y, [78.2, 71], [82, 85]) < 1.3 ||
+  seg(x, y, [68.5, 86], [64.8, 94.5]) < 1.4 || seg(x, y, [74.5, 86], [78.2, 94.5]) < 1.4 || ell(x, y, 79.8, 84.5, 1.6, 2) < 1
+/** Thin lit cloud streaks: [y, x0, x1]. The low one crosses the sun. */
+const STREAKS: [number, number, number][] = [[49, 92, 134], [79, 40, 104]]
 const streak = (x: number, y: number) => STREAKS.some(([sy, a, b]) => Math.abs(y - sy) < 1.15 && x > a && x < b)
 const inSun = (x: number, y: number) => y < HY && len(x - SUN[0], y - SUN[1]) < SUN_R && !mesa(x, y) && !rider(x, y) && !streak(x, y)
 const sundown: Luma = (x, y) => {
@@ -261,7 +273,7 @@ const sundown: Luma = (x, y) => {
 }
 const sundownPoster = poster({
   id: 'cinema-sundown', n: 3, genre: 'WESTERN', title: 'SUNDOWN', tag: 'THE LAST LIGHT WEST', at: [centre('SUNDOWN'), BOTTOM],
-  scene: sundown, red: (x, y) => (inSun(x, y) ? 1 : 0),
+  scene: sundown, red: (x, y) => (inSun(x, y) ? 1 : 0), minPiece: 4,
 })
 
 // ── 04 UPSTAIRS · horror ────────────────────────────────────────────────────────────────────────

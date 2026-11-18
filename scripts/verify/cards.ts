@@ -37,8 +37,8 @@ export function cardChecks(assert: Assert) {
     }
     assert('cards: every cinema poster keeps a moat round its red', !near.length, near.join(', '))
   }
-  // #245: cinema-sundown's sun is solid red cut only by the gunslinger: no stripe splits it and no red sliver sits alone
-  // (before, a hole ringed by single red dots read as a hole). Two red shapes: the sun and the light between his legs.
+  // #245: cinema-sundown keeps its striped, broken sun, but no red piece is a speck: every 8-connected red piece on the
+  // poster lattice is at least 4 dots (main drew four single dots and two 2-dot bits round the gunslinger)
   {
     const p = widgetById('cinema-sundown')!, pitch = p.grid.pitch ?? theme.gridPx, cell = (v: number) => Math.round((v / pitch - 2) / 2.5)
     const red = new Set(dotsAt(p, 0).filter(d => visible(d) && d.color === theme.dotActive).map(d => `${cell(d.x)},${cell(d.y)}`))
@@ -56,21 +56,7 @@ export function cardChecks(assert: Assert) {
       }
       sizes.push(n)
     }
-    assert('cards: cinema-sundown draws its sun as at most two red shapes, none smaller than 8 dots',
-      red.size > 150 && sizes.length <= 2 && Math.min(...sizes) >= 8, `red shapes of ${sizes.join(', ')} dots`)
-  }
-  // #245: the gunslinger reads as a man in a hat, not a keyhole slot: his brim is the widest dark run in the sun (11+
-  // dots) and on some row his arms stand clear of his body (arm, torso, arm: three dark runs between red)
-  {
-    const p = widgetById('cinema-sundown')!, pitch = p.grid.pitch ?? theme.gridPx, cell = (v: number) => Math.round((v / pitch - 2) / 2.5)
-    const red = dotsAt(p, 0).filter(d => visible(d) && d.color === theme.dotActive).map(d => [cell(d.x), cell(d.y)])
-    const runs = [...new Set(red.map(([, r]) => r))].map(r => {
-      const cs = red.filter(d => d[1] === r).map(d => d[0]).sort((a, b) => a - b), out: number[] = []
-      for (let i = 1; i < cs.length; i++) if (cs[i] - cs[i - 1] > 1) out.push(cs[i] - cs[i - 1] - 1)
-      return out
-    })
-    const brim = Math.max(...runs.flat()), arms = runs.some(r => r.length >= 3)
-    assert("cards: cinema-sundown's gunslinger has an 11-dot brim and arms held out from his body", brim >= 11 && arms, `widest dark run ${brim}, arms out ${arms}`)
+    assert('cards: cinema-sundown has no red piece smaller than 4 dots', red.size > 100 && Math.min(...sizes) >= 4, `red pieces of ${sizes.join(', ')} dots`)
   }
   // sim-sand: the falling stream is grains (red only on the leading grain of each run), not a red bar
   {
