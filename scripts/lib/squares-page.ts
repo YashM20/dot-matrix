@@ -265,6 +265,37 @@ function parts(id: string, t: number, css: number, dpr: number, reps = 15) {
     ms.sort((x, y) => x - y)
     out[k] = { n: sub.n, ms: +ms[ms.length >> 1].toFixed(2) }
   }
+  // the rotated dots traced other ways, in one colour at alpha .75 (diagnostics: what makes a diamond slow)
+  const rot: number[] = []
+  for (let i = 0; i < buf.n; i++) if (kind(i) === 'rotated') rot.push(i)
+  const D = Math.SQRT2
+  const trace = (sink: { moveTo(x: number, y: number): void; lineTo(x: number, y: number): void; closePath(): void; rect(x: number, y: number, w: number, h: number): void }, how: string, from = 0, to = rot.length) => {
+    for (let k = from; k < to; k++) {
+      const i = rot[k], x = buf.x[i], y = buf.y[i], s = buf.r[i]
+      if (how === 'upright') { sink.rect(x - s, y - s, 2 * s, 2 * s); continue }
+      sink.moveTo(x, y - D * s); sink.lineTo(x + D * s, y); sink.lineTo(x, y + D * s); sink.lineTo(x - D * s, y); sink.closePath()
+      if (how === 'twice') sink.closePath()
+    }
+  }
+  const variants: Record<string, () => void> = {
+    once: () => { const p = new Path2D(); trace(p, 'once'); S.ctx.fill(p) },
+    twice: () => { const p = new Path2D(); trace(p, 'twice'); S.ctx.fill(p) },
+    ctx: () => { S.ctx.beginPath(); trace(S.ctx, 'once'); S.ctx.fill() },
+    upright: () => { const p = new Path2D(); trace(p, 'upright'); S.ctx.fill(p) },
+    chunks: () => { for (let a = 0; a < rot.length; a += 256) { const p = new Path2D(); trace(p, 'once', a, Math.min(rot.length, a + 256)); S.ctx.fill(p) } },
+    evenodd: () => { const p = new Path2D(); trace(p, 'once'); S.ctx.fill(p, 'evenodd') },
+  }
+  if (rot.length) for (const [name, run] of Object.entries(variants)) {
+    const ms: number[] = []
+    for (let r = 0; r < reps; r++) {
+      const a = performance.now()
+      S.ctx.setTransform(1, 0, 0, 1, 0, 0); S.ctx.clearRect(0, 0, S.c.width, S.c.height); S.ctx.setTransform(scale, 0, 0, scale, 0, 0)
+      S.ctx.globalAlpha = .75; S.ctx.fillStyle = theme.dotIdle; run(); S.ctx.globalAlpha = 1; S.ctx.getImageData(0, 0, 1, 1)
+      ms.push(performance.now() - a)
+    }
+    ms.sort((x, y) => x - y)
+    out[`rotated:${name}`] = { n: rot.length, ms: +ms[ms.length >> 1].toFixed(2) }
+  }
   return out
 }
 
