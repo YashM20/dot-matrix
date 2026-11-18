@@ -13,7 +13,7 @@ export type Pt = [number, number]
 export const N = TILE.cols - 1
 export const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
 
-/** Top-right: the person or idea the card is built on, in `mid`. */
+/** Top-right: the person the card is built on (a surname from its credit, never a technique), in `mid`. */
 export const cite = (s: string) => caption(s)
 export const FOOT = 134
 /** Footer: a counter left (idle) and one stat right (mid). */
@@ -75,5 +75,5 @@ export const toPlane = (win: readonly [number, number, number, number], w: numbe
 /** Seconds → a looped phase in [0, 1). */
 export const phase = (t: number, period: number) => { const p = (t % period) / period; return p < 0 ? p + 1 : p }
 export const thousands = (n: number) => String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
-/** Signed fixed-point text that keeps its width: "+0.31" / "-0.31". */
-export const signed = (x: number, digits = 2) => (x < 0 ? '-' : '+') + Math.abs(x).toFixed(digits)
+/** Signed fixed-point text that keeps its width: "+0.31" / "-0.31". A value that rounds to zero reads "+0.00", never "-0.00". */
+export const signed = (x: number, digits = 2) => { const s = Math.abs(x).toFixed(digits); return (x < 0 && +s !== 0 ? '-' : '+') + s }
