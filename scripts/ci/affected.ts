@@ -68,7 +68,7 @@ const AREAS: [glob: string, probes: string[] | typeof ALL][] = [
   ['src/widgets/boards/**', ['mobile-boards', 'csp']],
   ['src/widgets/boards/materials-shared.ts', ['workshop']], ['src/widgets/boards/workshop*', ['workshop']],
   ['src/widgets/boards/pond/**', ['life']], ['src/widgets/boards/physics*', ['light']],
-  ['src/widgets/boards/squares*', ['squares', 'viewport-frames']], ['src/widgets/boards/scenes*', ['viewport-frames']], ['src/widgets/boards/gpu.ts', ['webgl']],
+  ['src/widgets/boards/squares*', ['squares', 'viewport-frames', 'card-time']], ['src/widgets/boards/scenes*', ['viewport-frames', 'card-time']], ['src/widgets/boards/gpu.ts', ['webgl']],
   ['src/widgets/boards/levels.ts', ['game', 'c10']], ['src/widgets/boards/instrument.ts', ['audio']],
   ['src/widgets/boards/audio.ts', ['audio']], ['src/widgets/boards/scope.ts', ['audio']], ['src/widgets/boards/mirror.ts', ['c6']],
   ['src/widgets/boards/mosaic.ts', ['skins']], ['src/widgets/boards/components*', ['skins', 'layout', 'layout-narrow']],

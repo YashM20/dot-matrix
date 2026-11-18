@@ -30,8 +30,8 @@ export interface Viewport {
 
 /** The two viewports #416 reads: a 1280 × 800 laptop and a 390 × 844 phone. */
 export const VIEWPORTS: readonly Viewport[] = [
-  { id: '1280', w: 1280, h: 800, scrollbar: 15, dpr: 1, phone: false, rowExtra: 40 },
-  { id: '390', w: 390, h: 844, scrollbar: 0, dpr: 3, phone: true, rowExtra: 52 },
+  { id: '1280', w: 1280, h: 800, scrollbar: 15, dpr: 1, phone: false, rowExtra: 20 },
+  { id: '390', w: 390, h: 844, scrollbar: 0, dpr: 3, phone: true, rowExtra: 28 },
 ]
 /** DotCanvas's IntersectionObserver root margin (src/components/DotCanvas.tsx `useOnScreen`). */
 export const LIVE_MARGIN = 64

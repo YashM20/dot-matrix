@@ -13,6 +13,7 @@ import { insideForm, insideJoined, insideRect, installSquares, MOTIFS } from '..
 import { shapeExt } from '../../src/engine/renderer/ext'
 shapeExt.glLoad = () => import('../../src/engine/squares/gl').then(m => { shapeExt.gl = m.glJoin })
 import { dot480 } from '../../src/engine/theme/tokens'
+import { createDotBuffer } from '../../src/engine/buffer/dotBuffer'
 import type { DotInstance, GridConfig, Layer } from '../../src/engine/types'
 import { widgetById, withChrome } from '../../src/widgets'
 import { squareStyle } from '../../src/widgets/boards/squares'
@@ -205,6 +206,31 @@ async function forms(set: 'diamond' | 'motif', scale: number) {
   return out
 }
 
+/**
+ * Per-card frame cost in this browser (#416): `frames` consecutive frames at the card's fps after `warm` seconds of
+ * warm-up, each sampled into one reused `DotBuffer` (the live path) and drawn with `renderCanvasBuffer` on a canvas at
+ * the site's backing scale for a card `css` px wide at `dpr` (DotCanvas `useBackingScale`). The draw is timed through a
+ * 1 px read, which makes Chrome raster what the fills recorded. Medians and p95 in ms.
+ */
+function time(id: string, frames: number, warm: number, css: number, dpr: number) {
+  const p = widgetById(id)!, grid = p.grid, pitch = grid.pitch ?? theme.gridPx, w = grid.cols * pitch, h = grid.rows * pitch
+  const scale = Math.min(3, Math.max(1, Math.round(css / w * dpr * 4) / 4)), S = surface(w, h, scale), lf = withChrome(p), fps = p.fps ?? 12
+  const buf = createDotBuffer(grid.cols * grid.rows), sample: number[] = [], draw: number[] = []
+  const frame = (t: number, keep: boolean) => {
+    const a = performance.now()
+    sampleLayersInto(lf({ t, data: { ...p.defaults } }), grid, p.style, theme, buf)
+    const b = performance.now()
+    S.ctx.setTransform(1, 0, 0, 1, 0, 0); S.ctx.clearRect(0, 0, S.c.width, S.c.height); S.ctx.setTransform(scale, 0, 0, scale, 0, 0)
+    renderCanvasBuffer(S.ctx, buf); S.ctx.getImageData(0, 0, 1, 1)
+    if (keep) { sample.push(b - a); draw.push(performance.now() - b) }
+  }
+  const n0 = Math.round(warm * fps)
+  for (let n = 1; n <= n0; n++) frame(n / fps, false)
+  for (let n = 1; n <= frames; n++) frame((n0 + n) / fps, true)
+  const q = (xs: number[], f: number) => { const s = [...xs].sort((x, y) => x - y); return +s[Math.min(s.length - 1, Math.floor(f * s.length))].toFixed(2) }
+  return { id, scale, dots: buf.n, sample: q(sample, .5), sample95: q(sample, .95), draw: q(draw, .5), draw95: q(draw, .95) }
+}
+
 function info() {
   const gl = sharedDotGL()
   if (!gl?.gl) return { webgl2: false }
@@ -212,4 +238,4 @@ function info() {
   return { webgl2: true, renderer: ext ? gl.gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.gl.getParameter(gl.gl.RENDERER) }
 }
 
-;(window as unknown as { SQ: unknown }).SQ = { info, loadGL, card, cracks, lines, forms }
+;(window as unknown as { SQ: unknown }).SQ = { info, loadGL, card, cracks, lines, forms, time }
