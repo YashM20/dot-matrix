@@ -4,29 +4,29 @@
   "ride": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "727766d2",
+    "hash": "f3b8817b",
     "dots": 417
    }
   },
   "henry-bear": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "4717974b",
-    "dots": 940
+    "hash": "a5fd2982",
+    "dots": 969
    }
   },
   "design-review": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "2aadfa00",
-    "dots": 584
+    "hash": "69351a1d",
+    "dots": 594
    }
   },
   "memo": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "40038931",
-    "dots": 852
+    "hash": "b8507758",
+    "dots": 762
    }
   },
   "wiki": {
@@ -39,8 +39,8 @@
   "system-menu": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "df5b467a",
-    "dots": 466
+    "hash": "8d111819",
+    "dots": 550
    }
   },
   "last-password": {
@@ -53,14 +53,14 @@
   "notifications": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "a30f2cf8",
-    "dots": 482
+    "hash": "fe1ecf3b",
+    "dots": 466
    }
   },
   "apps": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "96f2cc74",
+    "hash": "d0067ebe",
     "dots": 843
    }
   }
