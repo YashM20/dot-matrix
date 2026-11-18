@@ -128,8 +128,28 @@ interface Spec {
   red: Luma
   /** Red gain over time (a blinking beacon); default steady. */
   pulse?: (t: number) => number
+  /** Red pieces (8-connected lattice dots) smaller than this are dropped, so a cut-up mark has no lone specks. */
+  minPiece?: number
   /** Scene parts that move: `where` marks lattice cells re-evaluated every frame with `f(x, y, t)`. */
   live?: { where: (x: number, y: number) => boolean; f: (x: number, y: number, t: number) => number }
+}
+/** Clears every 8-connected piece of `m` smaller than `min` lattice dots. */
+function dropSpecks(m: Float32Array, min: number) {
+  const seen = new Uint8Array(NX * NY)
+  for (let i = 0; i < m.length; i++) {
+    if (!m[i] || seen[i]) continue
+    const piece: number[] = [], stack = [i]
+    seen[i] = 1
+    while (stack.length) {
+      const k = stack.pop()!, c = k % NX, r = (k - c) / NX
+      piece.push(k)
+      for (let j = -1; j <= 1; j++) for (let d = -1; d <= 1; d++) {
+        const cc = c + d, rr = r + j, n = rr * NX + cc
+        if (cc >= 0 && rr >= 0 && cc < NX && rr < NY && m[n] && !seen[n]) { seen[n] = 1; stack.push(n) }
+      }
+    }
+    if (piece.length < min) for (const k of piece) m[k] = 0
+  }
 }
 function poster(s: Spec): WidgetPreset {
   let scene: Float32Array | undefined, red: Float32Array | undefined, moat: Uint8Array | undefined, liveCells: number[] | undefined
@@ -140,8 +160,10 @@ function poster(s: Spec): WidgetPreset {
     for (let r = 0; r < NY; r++) for (let c = 0; c < NX; c++) red[r * NX + c] = s.red(xOf(c), yOf(r)) > .5 ? 1 : 0
     // the red gets the title's moat: no scene dot under it or within one lattice dot of it, so red never touches grey
     moat = new Uint8Array(NX * NY)
+    const lit = red.slice()
+    if (s.minPiece) dropSpecks(red, s.minPiece) // after `lit`: a dropped speck keeps its moat, so the scene round it is unchanged
     for (let r = 0; r < NY; r++) for (let c = 0; c < NX; c++) {
-      if (!red[r * NX + c]) continue
+      if (!lit[r * NX + c]) continue
       for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) { const rr = r + j, cc = c + i; if (rr >= 0 && cc >= 0 && rr < NY && cc < NX) moat[rr * NX + cc] = 1 }
     }
     liveCells = []
@@ -251,7 +273,7 @@ const sundown: Luma = (x, y) => {
 }
 const sundownPoster = poster({
   id: 'cinema-sundown', n: 3, genre: 'WESTERN', title: 'SUNDOWN', tag: 'THE LAST LIGHT WEST', at: [centre('SUNDOWN'), BOTTOM],
-  scene: sundown, red: (x, y) => (inSun(x, y) ? 1 : 0),
+  scene: sundown, red: (x, y) => (inSun(x, y) ? 1 : 0), minPiece: 4,
 })
 
 // ── 04 UPSTAIRS · horror ────────────────────────────────────────────────────────────────────────

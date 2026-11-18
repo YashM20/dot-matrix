@@ -8,6 +8,7 @@
  *   pnpm snap --film home-clock --since --t 0:1.2:0.1   # tick burst: ctx.since = t (split-flap)
  *   pnpm snap --bar silhouette            # bar sheet vs the reference cards → <out>/bar/silhouette.png
  *   pnpm snap ui-knob --ctx '{"hover":"knob","data":{"knob":0.8}}'   # extra frame-context fields (interaction states)
+ *   pnpm snap --board gpu --gpu           # GPU layers at their density, as WebGL2 draws them (default: the card lattice)
  *   options: --out <dir> (default .snapshots)  --px <pixels per CSS px> (default 2; film/bar default 1)
  *            --t <seconds> (default 1.3; with --film a:b:step, default 0:2:0.25)  --cols <n> (film frames per row)
  *
@@ -24,7 +25,7 @@ const opt = (name: string, fallback: string) => { const i = args.indexOf(`--${na
 const film = opt('film', ''), bar = opt('bar', '')
 const out = opt('out', '.snapshots'), px = +opt('px', film || bar ? '1' : '2'), tArg = opt('t', ''), board = opt('board', ''), filmCols = +opt('cols', '0')
 const t = tArg && !tArg.includes(':') ? +tArg : 1.3
-const since = args.includes('--since')
+const since = args.includes('--since'), gpu = args.includes('--gpu')
 const ctxArg = opt('ctx', '')
 let ctx: CtxExtra | undefined
 try { ctx = ctxArg ? JSON.parse(ctxArg) as CtxExtra : undefined } catch { console.error(`bad --ctx JSON: ${ctxArg}`); process.exit(1) }
@@ -88,5 +89,5 @@ function barSheet(p: WidgetPreset) {
 mkdirSync(out, { recursive: true })
 if (film) filmSheet(need(film), tArg.includes(':') ? timeRange(tArg) : tArg ? [t] : timeRange('0:2:0.25'))
 if (bar) barSheet(need(bar))
-for (const b of all ? boards : board ? [boardById(board)!] : []) save(`board-${b.id}`, sheet(b.items.map(p => renderCard(p, { px, t, ctx })), b.columns))
-for (const id of ids) { const p = widgetById(id); if (!p) { console.error(`unknown card ${id}`); continue } save(id, renderCard(p, { px, t, ctx })) }
+for (const b of all ? boards : board ? [boardById(board)!] : []) save(`board-${b.id}`, sheet(b.items.map(p => renderCard(p, { px, t, ctx, gpu })), b.columns))
+for (const id of ids) { const p = widgetById(id); if (!p) { console.error(`unknown card ${id}`); continue } save(id, renderCard(p, { px, t, ctx, gpu })) }
