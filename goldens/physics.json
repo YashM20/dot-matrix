@@ -13,40 +13,52 @@
     "dots": 447
    }
   },
-  "phys-flag": {
+  "phys-ink": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "d12a6354",
-    "dots": 449
+    "hash": "9031990f",
+    "dots": 339
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "d0ac9507",
-    "dots": 449
+    "hash": "6224622d",
+    "dots": 490
+   }
+  },
+  "phys-flag": {
+   "t=0": {
+    "style": "squircle:2.30",
+    "hash": "b9edc390",
+    "dots": 450
+   },
+   "t=1.3": {
+    "style": "squircle:2.30",
+    "hash": "7b1fe9e7",
+    "dots": 450
    }
   },
   "phys-jelly": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "15783648",
-    "dots": 434
+    "hash": "3b5b1b8a",
+    "dots": 433
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "64b9b8fd",
-    "dots": 432
+    "hash": "0c7ea0b3",
+    "dots": 431
    }
   },
   "phys-pit": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "353a805b",
-    "dots": 121
+    "hash": "ac57b86a",
+    "dots": 124
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "e82c31ee",
-    "dots": 121
+    "hash": "1ffa12b5",
+    "dots": 124
    }
   }
  }
