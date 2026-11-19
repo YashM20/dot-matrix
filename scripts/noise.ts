@@ -160,8 +160,9 @@ export const VORONOI_BUDGET = { l2: 3, l1: 3.5, linf: 3.5 } as const
 /**
  * The gate's reference workload: the l2 search of `voronoi2` as it stood when the budgets were read (3 × 3 cells, a
  * murmur finalizer for the feature points), on a 72² grid. A copy, so it never speeds up or slows down with the
- * engine: a slower `voronoi2` reads slower against it on any CPU. `ms`: its time on a usual runner (l2 1.83 ms there;
- * the copy runs about 7.8× faster than the 144² l2 grid on every runner read so far).
+ * engine: a slower `voronoi2` reads slower against it on any CPU. `ms`: its time on a usual runner, where l2 reads
+ * 1.8 ms. The 144² l2 grid takes about 7.8× the copy on usual and slow runners and 9.8× on a fast one, so a fast
+ * runner's budget comes out a little tight (plain runs at about 80% of it, 62% on a usual runner), never loose.
  */
 function voronoiRef(): number {
   let s = 0
