@@ -16,12 +16,27 @@ export function fnv1a(str: string): number {
   return h >>> 0
 }
 
-/** Upper-case, accents folded, only glyphs the 5×7 font has, single spaces (what a card can draw). */
-export function sanitize(s: string): string {
-  let out = ''
-  for (const ch of s.normalize('NFD').toUpperCase()) out += bitmapFont[ch] ? ch : /\s/.test(ch) ? ' ' : ''
-  return out.replace(/ +/g, ' ').trim()
+/**
+ * Text folded to the 5×7 font: upper case, accents folded (É → E, ß → SS), any white space a space, the rest the font
+ * lacks dropped and listed in `dropped` (each once, in order). Spaces stay as typed, so MAKE's text fields can use it
+ * while you type; `sanitize` also collapses and trims them. `hasOwn` keeps a lookup here from counting as a missed glyph.
+ */
+export function foldText(s: string): { text: string; dropped: string[] } {
+  let text = ''
+  const dropped = new Set<string>()
+  for (const ch of s.normalize('NFD').toUpperCase()) {
+    if (Object.hasOwn(bitmapFont, ch)) text += ch
+    else if (/\s/.test(ch)) text += ' '
+    else if (!/\p{M}/u.test(ch)) dropped.add(ch) // a combining accent folds away without a word
+  }
+  return { text, dropped: [...dropped] }
 }
+
+/** The short note for characters the font can't draw, or '' when every character draws. */
+export const undrawnNote = (dropped: readonly string[]): string => (dropped.length ? `the dot font has no ${dropped.join(' ')}` : '')
+
+/** Upper-case, accents folded, only glyphs the 5×7 font has, single spaces (what a card can draw). */
+export const sanitize = (s: string): string => foldText(s).text.replace(/ +/g, ' ').trim()
 
 /** Numeric id of `s` (sanitized unless `raw`), registered so `textOf` can read it back. 0 = empty. */
 export function textId(s: string, raw = false): number {

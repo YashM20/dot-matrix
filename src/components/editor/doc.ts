@@ -504,8 +504,8 @@ function validateExtras(f: EditorFrame, w: string): EditorFrame {
   }
   return tidyGroups(f)
 }
-/** Check (and migrate) a parsed document; throws an `Error` naming the first bad field. */
-export function validateDoc(x: unknown): EditorDoc {
+/** Check (and migrate) a parsed document; throws an `Error` naming the first bad field. Text folds as in `validateCard`. */
+export function validateDoc(x: unknown, dropped?: Set<string>): EditorDoc {
   const d = migrateDoc(x) as EditorDoc
   if (!d || typeof d !== 'object' || d.kind !== 'dot480.editor') throw new Error('editor document: not a dot480.editor document')
   if (typeof d.v !== 'number' || d.v < 1 || d.v > EDITOR_VERSION) throw new Error('editor document: unknown version')
@@ -517,7 +517,7 @@ export function validateDoc(x: unknown): EditorDoc {
     ids.add(f.id)
     if (![f.x, f.y].every(n => typeof n === 'number' && Number.isFinite(n) && Math.abs(n) < 1e7)) throw new Error(`editor document: frames[${i}] position`)
     if (!THEMES.includes(f.theme)) throw new Error(`editor document: frames[${i}].theme must be one of ${THEMES.join(', ')}`)
-    try { validateCard(f.card) } catch (e) { throw new Error(`editor document: frames[${i}]: ${(e as Error).message}`) }
+    try { validateCard(f.card, dropped) } catch (e) { throw new Error(`editor document: frames[${i}]: ${(e as Error).message}`) }
   })
   const px = d.frames.reduce((n, f) => n + f.card.grid.cols * f.card.grid.rows * pitchOf(f.card) ** 2, 0)
   if (px > DOC_LIMITS.px) throw new Error(`editor document: its frames cover ${px.toLocaleString('en-US')} px in all, more than ${DOC_LIMITS.px.toLocaleString('en-US')} (cols × rows × pitch²)`)
@@ -525,11 +525,11 @@ export function validateDoc(x: unknown): EditorDoc {
   return frames.every((f, i) => f === d.frames[i]) ? d : { ...d, frames }
 }
 export const docToJSON = (d: EditorDoc) => JSON.stringify(d)
-export function docFromJSON(json: string): EditorDoc {
+export function docFromJSON(json: string, dropped?: Set<string>): EditorDoc {
   if (json.length > 8_000_000) throw new Error('editor document: file too large')
   let x: unknown
   try { x = JSON.parse(json) } catch (e) { throw new Error(`editor document: not JSON (${(e as Error).message})`) }
-  return validateDoc(x)
+  return validateDoc(x, dropped)
 }
 /** The autosave slot. Its name predates v2 and stays: a v1 document saved there loads through `migrateDoc`. */
 export const EDITOR_KEY = 'dot480.editor.v1'

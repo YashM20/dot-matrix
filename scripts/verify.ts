@@ -237,6 +237,14 @@ frameCacheChecks(assert)
   const { cardLabelChecks } = await import('./verify/card-labels')
   cardLabelChecks(assert)
 }
+// DOT FONT (#412) every card's text has its glyphs (a Proxy records missed lookups); MAKE text folds to the font
+// in the TEXT field, typed on the canvas and in imports (scripts/verify/glyphs.ts, scripts/verify/make-text.ts)
+{
+  const { glyphChecks } = await import('./verify/glyphs')
+  glyphChecks(assert)
+  const { makeTextChecks } = await import('./verify/make-text')
+  makeTextChecks(assert)
+}
 // FLAGS (#144, #145) every release flag documented; the URL sets none; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
 await flagChecks(assert)
 // OG KEY (#103) widget OG images cache on each card's golden rows in goldens/<board>.json; no hashes.json index (scripts/verify/og-key.ts)

@@ -3,10 +3,11 @@
  * its JSON). LayerPanel shows the one that matches the selected layer.
  */
 import { useRef, useState } from 'react'
+import { foldText, undrawnNote } from '../../data/text'
 import { dotifyUpload } from '../../lib/photoDotify'
 import { paintCells, SITE_SIZES, type PaintLayer, type SitesLayer, type StudioLayer, type TextLayer } from '../studio/doc'
 import { attempt } from './attempt'
-import { specBounds } from './direct'
+import { specBounds, typedText } from './direct'
 import { cellsFromMatrix, encodeCells, movable, type EditorFrame } from './doc'
 import { getEditor, useEditor } from './store'
 import { useTarget } from './target'
@@ -15,15 +16,20 @@ import { Num, Pick, Section, Slider } from './ui'
 export function TextFields({ l }: { l: TextLayer }) {
   const { layer } = useTarget()
   const set = (p: Partial<TextLayer['params']>, tag?: string) => layer(x => ({ ...x, params: { ...(x as TextLayer).params, ...p } }) as StudioLayer, tag ?? `text:${l.id}`)
+  // what the last keystroke into this layer dropped (the 5×7 font lacks it), named under the field
+  const [gone, setGone] = useState({ id: l.id, note: '' })
+  const type = (v: string) => { set({ text: typedText(v) }); setGone({ id: l.id, note: undrawnNote(foldText(v).dropped) }) }
+  const note = gone.id === l.id ? gone.note : ''
   return <Section title="TEXT" aside="drag it · double-click (tap when selected) to type on the canvas">
     <div className="ed-grid2">
-      <label className="ed-field ed-wide"><span>TEXT</span><input data-focus="text" value={l.params.text} maxLength={64} autoCapitalize="characters" spellCheck={false} onChange={e => set({ text: e.target.value.toUpperCase() })} /></label>
+      <label className="ed-field ed-wide"><span>TEXT</span><input data-focus="text" value={l.params.text} maxLength={64} autoCapitalize="characters" spellCheck={false} aria-describedby={note ? `undrawn-${l.id}` : undefined} onChange={e => type(e.target.value)} /></label>
       <Num label="COL" value={l.params.col} onChange={col => set({ col }, `col:${l.id}`)} />
       <Num label="ROW" value={l.params.row} onChange={row => set({ row }, `row:${l.id}`)} />
       <Pick label="ALIGN" value={l.params.align} options={['left', 'center', 'right'] as const} onChange={align => set({ align })} />
       <Pick label="SCALE" value={l.params.scale} options={[1, 2, 3, 4]} onChange={scale => set({ scale })} fmt={s => `${s}×`} />
       <label className="ed-check"><input type="checkbox" checked={l.params.smooth} onChange={e => set({ smooth: e.target.checked })} /> SMOOTH (HERO WEIGHT)</label>
     </div>
+    <p className="ed-hint" id={`undrawn-${l.id}`} role="status">{note}</p>
   </Section>
 }
 export function SiteFields({ l }: { l: SitesLayer }) {
