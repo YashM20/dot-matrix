@@ -21,6 +21,7 @@ export function makeTextChecks(assert: Assert) {
   const f = foldText(TYPED)
   assert('make text: foldText upper-cases, folds accents and ß, keeps spacing, names what it drops', f.text === FOLDED && f.dropped.join('') === '~“”', `${JSON.stringify(f.text)} [${f.dropped.join('')}]`)
   assert('make text: sanitize still collapses and trims for live feeds', sanitize('  Zoë   Björk ~ ') === 'ZOE BJORK' && sanitize('Ñandú') === 'NANDU')
+  assert('make text: the font draws " ; [ ] | @ and sanitize keeps them (#412)', sanitize('Say "hi"; [a|b] @home') === 'SAY "HI"; [A|B] @HOME')
   assert('make text: the note names the characters, and says nothing when all draw', undrawnNote(f.dropped) === 'the dot font has no ~ “ ”' && undrawnNote(foldText('ok').dropped) === '')
 
   // the TEXT field stores typedText: folded, at most 64 glyphs (ß can grow it)
@@ -52,7 +53,7 @@ export function makeTextChecks(assert: Assert) {
   const texts = (ls: StudioLayer[]) => ls.map(l => (l.kind === 'text' ? l.params.text : l.kind === 'spec' && l.spec.kind === 'text' ? l.spec.text : '')).join('|')
   const docGone = new Set<string>(), doc = docFromJSON(docToJSON(addFrame({ kind: 'dot480.editor', v: EDITOR_VERSION, name: 'd', frames: [] }, JSON.parse(json)).doc), docGone)
   assert('make text: an imported card or document folds its text layers and names what the font lacks',
-    texts(back.layers) === `${FOLDED}|SENOR HOME` && [...gone].join('') === '~“”@' && texts(doc.frames[0].card.layers) === texts(back.layers) && [...docGone].join('') === [...gone].join(''),
+    texts(back.layers) === `${FOLDED}|SENOR @HOME` && [...gone].join('') === '~“”' && texts(doc.frames[0].card.layers) === texts(back.layers) && [...docGone].join('') === [...gone].join(''),
     `${texts(back.layers)} [${[...gone].join('')}]`)
 }
 
