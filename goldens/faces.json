@@ -4,37 +4,37 @@
   "face-calm": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "d6f6fc26",
-    "dots": 1133
+    "hash": "1f89e81f",
+    "dots": 1117
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "92bd23a8",
-    "dots": 1136
+    "hash": "3223cf3c",
+    "dots": 1116
    }
   },
   "face-curious": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "35f2a71f",
-    "dots": 1105
+    "hash": "e2380802",
+    "dots": 1083
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "e83d9f0e",
-    "dots": 1112
+    "hash": "5b9abcff",
+    "dots": 1083
    }
   },
   "face-sleepy": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "680839db",
-    "dots": 1254
+    "hash": "88a2dab9",
+    "dots": 1237
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "271c8e5d",
-    "dots": 1241
+    "hash": "bd375271",
+    "dots": 1240
    }
   },
   "face-pip": {

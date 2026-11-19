@@ -27,7 +27,7 @@ const KEY = 'poke'
 interface Character {
   id: string; name: string; look: Look
   /** Resting expression while awake. */
-  rest: { lid: number; curve: number; brow: Pt; slant: Pt; smile: number; open: number; mouthW: number; mouthX: number }
+  rest: { lid: number; curve: number; brow: Pt; slant: Pt; smile: number; open: number; mouthW: number; mouthX: number; tilt?: number }
   /** Lid when fully asleep (1: shut). */
   asleep: number
   /** How far the head turns and tilts after the gaze. */
@@ -62,7 +62,7 @@ const calm: Character = {
     eye: { dx: 17, y: -2, rx: 9, ry: 7, pupil: 3.8 }, brow: { gap: 6, half: 8, w: 3.6, arch: 1.5 },
     mouth: { y: 23, half: 11, depth: 4.5 }, cheek: { dx: 27, y: 12, r: 7.5 }, nose: { y: 10, r: 4.5 }, parallax: [5, 3.5], gloss: .12,
   },
-  rest: { lid: .3, curve: 0, brow: [0, 0], slant: [1, 1], smile: .55, open: 0, mouthW: 1, mouthX: 0 },
+  rest: { lid: .3, curve: 0, brow: [0, 0], slant: [1, 1], smile: .7, open: 0, mouthW: 1, mouthX: 0 },
   asleep: .85, turn: .5, tiltBy: .03, breath: [4.6, .6],
   gazes: makeGazes(11, 2.8, [.45, .3], [0, .05]), blinks: makeBlinks(21, 4.2, .3),
   dur: 1.4, word: () => 'WINK',
@@ -81,7 +81,7 @@ const curious: Character = {
     eye: { dx: 16, y: -6, rx: 10.5, ry: 11.5, pupil: 4.6 }, brow: { gap: 7, half: 8.5, w: 3.6, arch: 2.2 },
     mouth: { y: 27, half: 8, depth: 2.5 }, cheek: { dx: 25, y: 10, r: 6.5 }, nose: { y: 10, r: 3.5 }, parallax: [6, 4], gloss: .15,
   },
-  rest: { lid: 0, curve: 0, brow: [0, 3.5], slant: [0, -1.5], smile: .15, open: .32, mouthW: .55, mouthX: 2 },
+  rest: { lid: 0, curve: 0, brow: [0, 3.5], slant: [0, -1.5], smile: .15, open: .5, mouthW: .75, mouthX: 2 },
   asleep: .8, turn: 1, tiltBy: .14, breath: [3.8, .5],
   gazes: makeGazes(31, 1.3, [.85, .55], [.1, 0]), blinks: makeBlinks(41, 3.4, .05),
   dur: 1.55, word: () => 'OH',
@@ -101,7 +101,7 @@ const sleepy: Character = {
     eye: { dx: 20, y: -1, rx: 10, ry: 8, pupil: 4.2 }, brow: { gap: 6, half: 9, w: 3.6, arch: .8 },
     mouth: { y: 18, half: 7, depth: 2 }, cheek: { dx: 32, y: 11, r: 8 }, nose: { y: 8, r: 4 }, parallax: [4, 3], gloss: .1,
   },
-  rest: { lid: .55, curve: -.15, brow: [0, 0], slant: [2, 2], smile: .2, open: .08, mouthW: 1, mouthX: 0 },
+  rest: { lid: .62, curve: -.8, brow: [0, 0], slant: [2, 2], smile: 0, open: 0, mouthW: 1.1, mouthX: 0 },
   asleep: 1, turn: .35, tiltBy: .02, breath: [5.2, .8], zz: true,
   gazes: makeGazes(51, 3.6, [.35, .2], [0, .25]), blinks: makeBlinks(61, 5.5, .4),
   dur: 3.9, word: tau => (tau < 1.9 ? 'HUH' : 'YAWN'),
@@ -140,12 +140,12 @@ const pip: Character = {
 /** The slow blink rhythm under reduced motion (the only motion then). */
 const SLOW_BLINKS = makeBlinks(7, 7, 0)
 
-/** Rising Z's beside a sleeping head: three on a 3.2 s cycle, growing as they fade. */
+/** Rising Z's beside a sleeping head: three on a 3.2 s cycle, fading as they rise. Each sits on whole card cells at a 2-cell lattice, so its strokes stay on the grid (#255). */
 function zzz(c: Character, t: number, still: boolean): Layer[] {
   const { cx, cy } = c.look
   return [0, 1, 2].map(k => {
     const ph = still ? .15 + k * .35 : ((t / 3.2 + k / 3) % 1 + 1) % 1
-    const z = T.big('Z', cx + 28 + 14 * ph, cy - 48 - 22 * ph, { lattice: 1.7 + 1.2 * ph })
+    const z = T.big('Z', Math.round(cx + 28 + 14 * ph), Math.round(cy - 48 - 22 * ph), { lattice: 2 })
     return layer({ ...z, field: dim(z.field, .9 * (1 - ph)) }, 'idle')
   })
 }
@@ -169,7 +169,7 @@ function draw(c: Character, mem: Memory, ctx: WidgetContext): Layer[] {
     if (m > 1) { ax /= m; ay /= m }
     gx = mix(gx, ax, inp.w); gy = mix(gy, ay, inp.w)
   }
-  p.gx = gx; p.gy = gy; p.turnX = gx * c.turn; p.turnY = gy * c.turn * .6; p.tilt = gx * c.tiltBy
+  p.gx = gx; p.gy = gy; p.turnX = gx * c.turn; p.turnY = gy * c.turn * .6; p.tilt = gx * c.tiltBy + (r.tilt ?? 0) * alert
 
   // the lids: the mood's rest, plus blinks (slower when drowsy, slowest under reduced motion)
   const blink = still ? blinkAt(SLOW_BLINKS, t, 4) : blinkAt(c.blinks, t, 1 + (1 - alert) * 1.2)
