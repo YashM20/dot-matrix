@@ -5,8 +5,9 @@
  * then it swims off and the next one comes in. The skin sits on a 2-cell lattice, the fins are fine rays at the card
  * pitch. The spot that is splitting right now is the accent. Tap the body to scratch a patch clean; the spots around
  * it split into the gap.
- * The owner kept the cluster spots on this card (#246): each spot stays a block of skin-lattice dots. Drawing a spot
- * as one round site was tried and rejected, so the only #246 change here is a cell of air between a spot and the eye.
+ * The owner kept the cluster spots on this card (#246): each spot stays a block of skin-lattice dots, and the splitting
+ * one stays red. One round dot site per spot was tried and rejected. A cell of air between the spots and the eye was
+ * tried too, and dropped: it ate into the spot beside the eye.
  */
 import { GRAY_SCOTT } from '../../creditSources'
 import { ADULT_PX, bodyHalf, bodyMid, createTuring, growth, lifeOf, onBody, SKIN_NX, SKIN_NY, toBody, turingPose, turingUnits, type Pose, type Turing } from '../../../engine/life/turing'
@@ -26,11 +27,6 @@ const nx = SKIN_NX, ny = SKIN_NY
 
 /** Material cell under body point (ξ, η). */
 const cellOf = (x: number, y: number) => Math.min(ny - 1, Math.max(0, Math.floor(((y + 1) / 2) * ny))) * nx + Math.min(nx - 1, Math.max(0, Math.floor(x * nx)))
-/**
- * Spot cells closer than this to the eye's centre (past its ring radius, in card cells) draw as skin: a spot dot
- * (radius .95 cells at lattice 2) and a ring dot (radius .43) then keep about a cell between them.
- */
-const EYE_AIR = 2.4
 const skin: Field = (u, v) => {
   lastTone = undefined; lastU = u; lastV = v
   const x = u * LC * K, y = v * LC * K, ex = x - eye[0], ey = y - eye[1]
@@ -38,15 +34,13 @@ const skin: Field = (u, v) => {
   const [bx, by] = toBody(pose, x, y)
   if (!onBody(bx, by)) return 0
   const c = skinV(turing, state, bx, by)
-  // a spot keeps a cell of air to the eye's ring (#246): its cells that close draw as plain skin instead
-  if (c >= SPOT_V * .7 && ex * ex + ey * ey >= (eye[2] + EYE_AIR) ** 2) {
+  if (c >= SPOT_V * .7) {
     lastTone = spots.splitting >= 0 && spots.label[cellOf(bx, by)] === spots.splitting ? 'active' : 'value'
     return c >= SPOT_V ? 1 : .8
   }
   // counter-shaded: a darker back, a paler belly
   lastTone = 'idle'
-  // (a spot cell by the eye shades like the skin around it, so it stays a small dot)
-  return .42 + .14 * (by - bodyMid(bx)) / Math.max(.2, bodyHalf(bx)) + .8 * Math.min(c, SPOT_V * .7)
+  return .42 + .14 * (by - bodyMid(bx)) / Math.max(.2, bodyHalf(bx)) + .8 * c
 }
 // the sampler asks for the tone after the value, not always straight after: recompute unless it is the same cell
 const skinLayer: Layer = { field: skin, lattice: K, origin: [0, 0], toneOf: (_, u, v) => { if (u !== lastU || v !== lastV) skin(u, v); return lastTone } }
@@ -120,5 +114,3 @@ export const pondTuring: WidgetPreset = {
     ]
   },
 }
-/** Read-outs for the checks (scripts/life-pond-dots.ts): the eye (x, y, ring radius) the card drew last. */
-export const turingProbe = { eye: () => eye }

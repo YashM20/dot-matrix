@@ -6,12 +6,10 @@
  *   glyphs beside it than two lattice dots keep to each other (`pond-marble`'s koi touched the ink, `pond-koi` too).
  * - `pond-fireflies`: the grass follows its blades, so most grass tiles are not one snapped line glyph.
  * - `pond-murmur`: one dot per bird, so few tiles show a whole 3-dot line glyph.
- * - `pond-turing`: the skin draws no spot dots (no 3 × 3 blocks); each counted spot is a site, clear of the eye.
+ * - `pond-turing`: the owner kept the cluster spots, so the check guards them (blocks of skin-lattice dots, a red one).
  * Called from scripts/life.ts (`lifeChecks`); also runnable alone: `pnpm exec tsx scripts/life-pond-dots.ts`.
  */
 import { BIRDS, EDGE3, falconView, RAMP3 } from '../src/engine/life'
-import { SKIN_NX } from '../src/engine/life/turing'
-import { spotCount } from '../src/engine/life/turingView'
 import { worldAt, worldReset } from '../src/engine/physics/world'
 import { sampleLayers } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
@@ -38,7 +36,7 @@ const LINES = new Set(['-', '|', '\\', '/'].map(c => glyphMask(EDGE3.glyphs.find
 export async function pondDotChecks(assert: Assert, pond: () => Promise<PondModule>): Promise<void> {
   const { pondBoard, pondWorlds, pondProbe } = await pond()
   // the card modules the pond index loaded (after the caller pinned the clock)
-  const { murmurProbe } = await import('../src/widgets/boards/pond/murmur'), { turingProbe } = await import('../src/widgets/boards/pond/turing')
+  const { murmurProbe } = await import('../src/widgets/boards/pond/murmur')
   const { firefliesProbe } = await import('../src/widgets/boards/pond/fireflies')
   const card = (id: string) => pondBoard.find(p => p.id === id)!
   const reset = () => { for (const w of pondWorlds) worldReset(w) }
@@ -110,29 +108,14 @@ export async function pondDotChecks(assert: Assert, pond: () => Promise<PondModu
   assert('pond-murmur: every bird lights its own cell (#246)', birds > 1000 && unlit === 0, `${unlit} of ${birds} birds unlit`)
   assert('pond-murmur: the flock is no longer lined up: under 15% of its tiles show a whole line glyph (#246)', mt > 100 && ml / mt < .15, `${ml} of ${mt} tiles`)
 
-  // ── turing: spots as sites ──
-  const tur = card('pond-turing'), probe = turingProbe
-  let blocks = 0, short = 0, near = 0, seen = 0
-  for (const t of [9, 15, 22, 26, 30, 34]) {
-    const ls = tur.layers({ t, data: {} })
-    const skin = ls.find(l => l.lattice === 2 && l.toneOf) as Layer
-    const skinDots = sampleLayers([skin], tur.grid, tur.style, dot480).filter(d => d.opacity > 0 && d.r > 0)
-    blocks += skinDots.filter(d => d.color === dot480.value || d.color === dot480.dotActive).length
-    const sites = ls.filter(l => l.sites && (l.tone === 'value' || l.tone === 'active') && (l.size ?? 0) >= 2)
-    const n = sites.reduce((a, l) => a + l.sites!.length, 0), want = spotCount(probe.spots()), p = probe.pose()
-    // only while the whole fish is in the pond: a spot whose site would leave the card is not drawn
-    if (want && p.headX <= 140 && p.headX - 1.3 * SKIN_NX * p.px >= 3) {
-      seen++
-      // one site per counted spot, and the splitting one is two lobes
-      const sp = probe.spots(), split = sp.splitting >= 0 && sp.spots[sp.splitting].cells >= 3 ? 1 : 0
-      if (n !== want + split) short++
-    }
-    const eye = probe.eye()
-    for (const l of sites) for (const [x, y] of l.sites!) if (Math.hypot(x - eye[0], y - eye[1]) < eye[2] + (l.size ?? 0) / 2 + .9) near++
+  // ── turing: the owner kept the cluster spots (a block of skin-lattice dots per spot, the splitting one red) ──
+  const tur = card('pond-turing')
+  let blocks = 0, red = 0
+  for (const t of [1.3, 15, 30]) {
+    const skin = tur.layers({ t, data: {} }).find(l => l.lattice === 2 && l.toneOf) as Layer
+    for (const d of sampleLayers([skin], tur.grid, tur.style, dot480)) if (d.opacity > 0) { if (d.color === dot480.value) blocks++; else if (d.color === dot480.dotActive) red++ }
   }
-  assert('pond-turing: the skin draws no spot dots (the spots are sites, not blocks of fine dots) (#246)', blocks === 0, `${blocks} spot dots on the skin lattice`)
-  assert('pond-turing: one site per counted spot (two for the splitting one) while the fish is in the pond', seen > 3 && short === 0, `${short} of ${seen} frames off`)
-  assert('pond-turing: spot sites keep a cell of air to the eye ring', near === 0, `${near} sites at the eye`)
+  assert('pond-turing: the spots stay blocks of skin-lattice dots, with the splitting one in red (#246, the owner kept them)', blocks > 150 && red > 0, `${blocks} spot dots, ${red} red`)
   reset()
 }
 
