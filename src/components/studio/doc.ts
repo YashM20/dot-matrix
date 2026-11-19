@@ -10,6 +10,7 @@ import { compileUntrusted, contextEnv, IRError, IR_LIMITS, type IREnv, type IRGu
 import type { IRRemote } from '../../engine/ir/sandbox/remote'
 import '../../engine/noise/ir' // IR noise pack: noise() fbm() turb() voronoi() in studio IR
 import { textAt } from '../../engine/layout'
+import { foldText } from '../../data/text'
 import type { Control } from '../../engine/context'
 import type { DotStyle, Field, GridConfig, Layer, Tone } from '../../engine/types'
 import { ease, masks, type EaseName, type MaskName } from '../../engine/motion'
@@ -383,8 +384,15 @@ const motionOf = (m: unknown, what: string): Motion => {
   return o
 }
 
-/** Check a parsed document; throws an `Error` naming the first bad field. Returns the same object. */
-export function validateCard(x: unknown): StudioCard {
+/** `s` folded to the dot font (#412); the characters it lacks go into `gone`. */
+const folded = (s: string, gone?: Set<string>) => { const f = foldText(s); for (const ch of f.dropped) gone?.add(ch); return f.text }
+
+/**
+ * Check a parsed document; throws an `Error` naming the first bad field. Returns the same object, with the literal
+ * text of its text layers folded to the dot font in place (`foldText`: upper case, É → E, ß → SS); the characters the
+ * font lacks are dropped and added to `dropped`, so an import can name them.
+ */
+export function validateCard(x: unknown, dropped?: Set<string>): StudioCard {
   const c = x as StudioCard
   if (!c || typeof c !== 'object') throw new Error('studio card: expected an object')
   if (c.kind !== 'dot480.studio') throw new Error('studio card: not a Dot Studio document (kind)')
@@ -408,10 +416,13 @@ export function validateCard(x: unknown): StudioCard {
     if (typeof l.visible !== 'boolean') throw new Error(`studio card: ${w}.visible must be a boolean`)
     if (l.kind === 'ir') { str(l.src, IR_LIMITS.source, `${w}.src`); num(l.lattice, 1, 16, `${w}.lattice`) }
     if (l.kind === 'sites') { str(l.src, IR_LIMITS.source, `${w}.src`); num(l.size, .25, 16, `${w}.size`); oneOf(l.params?.shape, ['ring', 'line', 'disc'] as const, `${w}.params.shape`); bad(sitesIssue(l, w)) }
-    if (l.kind === 'text') { str(l.params?.text, 64, `${w}.params.text`); num(l.params.col, -512, 512, `${w}.params.col`); num(l.params.row, -512, 512, `${w}.params.row`); num(l.lattice, 1, 16, `${w}.lattice`); bad(textIssue(l, w)) }
+    if (l.kind === 'text') { str(l.params?.text, 64, `${w}.params.text`); num(l.params.col, -512, 512, `${w}.params.col`); num(l.params.row, -512, 512, `${w}.params.row`); num(l.lattice, 1, 16, `${w}.lattice`); bad(textIssue(l, w))
+      const t = folded(l.params.text, dropped).slice(0, 64); if (t !== l.params.text) l.params.text = t
+    }
     if (l.kind === 'spec') {
       if (!(l.spec && typeof l.spec === 'object' && (LAYER_KINDS as readonly string[]).includes(l.spec.kind))) throw new Error(`studio card: ${w}.spec must be a card spec v1 layer`)
       bad(specLayerIssue(l.spec, `${w}.spec`))
+      if (l.spec.kind === 'text' && typeof l.spec.text === 'string') { const t = folded(l.spec.text, dropped); if (t !== l.spec.text) l.spec.text = t }
     }
     if (l.kind === 'paint') {
       num(l.lattice, 1, 16, `${w}.lattice`); num(l.cols, 1, 512, `${w}.cols`); num(l.rows, 1, 512, `${w}.rows`)
@@ -433,11 +444,12 @@ export function validateCard(x: unknown): StudioCard {
   return c
 }
 export const cardToJSON = (c: StudioCard) => JSON.stringify(c, null, 2)
-export const cardFromJSON = (json: string): StudioCard => {
+/** Parse and check a card (`validateCard`); characters its text layers lose go into `dropped`. */
+export const cardFromJSON = (json: string, dropped?: Set<string>): StudioCard => {
   if (json.length > 4_000_000) throw new Error('studio card: file too large')
   let x: unknown
   try { x = JSON.parse(json) } catch (e) { throw new Error(`studio card: not JSON (${(e as Error).message})`) }
-  return validateCard(x)
+  return validateCard(x, dropped)
 }
 
 // ── undo / redo ────────────────────────────────────────────────────────────

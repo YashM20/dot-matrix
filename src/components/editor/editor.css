@@ -117,6 +117,7 @@
 .ed-tabs button:focus-visible { outline-offset: var(--focus-in) }
 .ed-pane, .ed-insp { flex: 1; min-height: 0; overflow: auto; overscroll-behavior: contain; padding-bottom: var(--space-8) }
 .ed-empty, .ed-hint { color: var(--mute); font: 500 var(--fs-label-12)/1.5 var(--mono); margin: 0; padding: var(--space-1) 0 }
+.ed-hint:empty { padding: 0 } /* a live note (the TEXT field's undrawn characters) takes no room until it speaks */
 .ed-pane > .ed-empty { padding: var(--space-4) }
 .ed-hint b { color: var(--label); font-weight: 600 }
 
