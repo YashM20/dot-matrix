@@ -222,6 +222,11 @@ frameCacheChecks(assert)
   const { levelsChecks } = await import('./verify/levels')
   levelsChecks(assert)
 }
+// RIDE (#258) refine fixes: one-number speed, the tenths' baseline, henry's still header, text on uniform lattices, one apps lattice (scripts/verify/ride.ts)
+{
+  const { rideChecks } = await import('./verify/ride')
+  rideChecks(assert)
+}
 // card drawing fixes (#359): fine-face units, the lap knob, glyph transport, REC dot size (scripts/verify/card-drawing.ts)
 {
   const { cardDrawingChecks } = await import('./verify/card-drawing')
