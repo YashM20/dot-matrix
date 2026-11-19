@@ -1,6 +1,6 @@
 /* App styles: the board grid, orphans and ruled cells */
 /* ── T3: the board grid (docs/LAYOUT-THEME-PLAN.md §3; DESIGN.md › Board grid) ─────────────────────────────
-   Boards declare intent, not columns: data-density (hero / standard / dense) picks --card-min, and the grid
+   Boards declare intent, not columns: data-density (hero / pair / standard / dense) picks --card-min, and the grid
    fits as many columns as hold it (auto-fill), between the CARD SIZE bounds (html[data-cards], tokens.css): at
    most --board-cols-max (one more on a dense board), at least --board-cols-min. So LARGE, the default, steps
    3 → 2 → 1 as the frame narrows, MEDIUM 4 → 3 → 2 → 1 and COMPACT 5 → 4 → 3 → 2. The grid is its own
@@ -26,6 +26,12 @@
 
 .board-grid[data-density="hero"] {
   --card-min: var(--card-min-hero)
+}
+
+/* pair: two wide cards a row at every CARD SIZE (boards of 2 or 4), one column below two hero cards' width */
+.board-grid[data-density="pair"] {
+  --card-min: var(--card-min-hero);
+  --cols: 2
 }
 
 .board-grid[data-density="dense"] {

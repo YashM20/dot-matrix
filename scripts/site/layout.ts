@@ -85,7 +85,7 @@ const SIZE_COLS: Record<'l' | 'm' | 's', Record<number, Record<string, number>>>
   s: { 1440: { components: 5, deerflow12: 6, lock: 3 }, 1280: { components: 4, deerflow12: 5 }, 390: { components: 2, deerflow12: 2, lock: 2 } },
 }
 /** Whole cards above the fold at 1440, per density: LARGE gives each card ~440 px, so one full row (T3 wanted 6 at 240 px). */
-const FOLD_1440: Record<string, number> = { hero: 2, standard: 3, dense: 4 }
+const FOLD_1440: Record<string, number> = { hero: 2, pair: 2, standard: 3, dense: 4 }
 const ALL_PAGES = [
   { name: 'home', path: '', kind: 'board', hero: true },
   { name: 'components', path: 'components/', kind: 'board' },
