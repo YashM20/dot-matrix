@@ -237,6 +237,11 @@ frameCacheChecks(assert)
   const { motionChecks } = await import('./verify/motion')
   motionChecks(assert)
 }
+// CARD LABELS (#413) every card's accessible name reads as words; describe() words the font's symbols (scripts/verify/card-labels.ts)
+{
+  const { cardLabelChecks } = await import('./verify/card-labels')
+  cardLabelChecks(assert)
+}
 // FLAGS (#144, #145) every release flag documented; the URL sets none; with xray off no palette, shell or shortcut entry (scripts/verify/flags.ts)
 await flagChecks(assert)
 // OG KEY (#103) widget OG images cache on each card's golden rows in goldens/<board>.json; no hashes.json index (scripts/verify/og-key.ts)

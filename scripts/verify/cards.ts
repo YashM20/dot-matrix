@@ -37,26 +37,31 @@ export function cardChecks(assert: Assert) {
     }
     assert('cards: every cinema poster keeps a moat round its red', !near.length, near.join(', '))
   }
-  // #245: cinema-sundown keeps its striped, broken sun, but no red piece is a speck: every 8-connected red piece on the
-  // poster lattice is at least 4 dots (main drew four single dots and two 2-dot bits round the gunslinger)
+  // #245: cinema-sundown keeps its striped, broken sun with no lone red specks. The only small red pieces are on purpose,
+  // in pairs: his eyes (two 2-dot pairs on one row at the sun's top) and the gaps by his hands (two 2-dot columns side by
+  // side on the same rows). Pre-#424 main had single dots; #424 dropped the eyes and hands with them.
   {
     const p = widgetById('cinema-sundown')!, pitch = p.grid.pitch ?? theme.gridPx, cell = (v: number) => Math.round((v / pitch - 2) / 2.5)
     const red = new Set(dotsAt(p, 0).filter(d => visible(d) && d.color === theme.dotActive).map(d => `${cell(d.x)},${cell(d.y)}`))
-    const seen = new Set<string>(), sizes: number[] = []
+    const seen = new Set<string>(), pieces: number[][][] = []
     for (const start of red) {
       if (seen.has(start)) continue
-      let n = 0
-      const stack = [start]
+      const piece: number[][] = [], stack = [start]
       while (stack.length) {
         const k = stack.pop()!
         if (seen.has(k) || !red.has(k)) continue
-        seen.add(k); n++
+        seen.add(k)
         const [c, r] = k.split(',').map(Number)
+        piece.push([c, r])
         for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) stack.push(`${c + i},${r + j}`)
       }
-      sizes.push(n)
+      pieces.push(piece)
     }
-    assert('cards: cinema-sundown has no red piece smaller than 4 dots', red.size > 100 && Math.min(...sizes) >= 4, `red pieces of ${sizes.join(', ')} dots`)
+    const small = pieces.filter(q => q.length < 4), rows = (q: number[][]) => [...new Set(q.map(d => d[1]))].sort().join('/')
+    const flat = small.filter(q => q.length === 2 && q[0][1] === q[1][1]), tall = small.filter(q => q.length === 2 && q[0][0] === q[1][0])
+    const ok = small.length === 4 && flat.length === 2 && tall.length === 2 && rows(flat[0]) === rows(flat[1]) && rows(tall[0]) === rows(tall[1]) && +rows(flat[0]) < +rows(tall[0]).split('/')[0]
+    assert('cards: cinema-sundown has no lone red specks; the small red pieces are his two eyes and the two gaps by his hands', red.size > 100 && ok,
+      `red pieces of ${pieces.map(q => q.length).join(', ')} dots`)
   }
   // sim-sand: the falling stream is grains (red only on the leading grain of each run), not a red bar
   {
