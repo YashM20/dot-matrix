@@ -227,6 +227,11 @@ frameCacheChecks(assert)
   const { mosaicChecks } = await import('./verify/mosaic')
   mosaicChecks(assert)
 }
+// FACES (#255) refine fixes: one dot size per feature stroke, CURIOUS's open mouth, SLEEPY's Z's on the grid (scripts/verify/faces.ts)
+{
+  const { facesChecks } = await import('./verify/faces')
+  facesChecks(assert)
+}
 // RIDE (#258) refine fixes: one-number speed, the tenths' baseline, henry's still header, text on uniform lattices, one apps lattice (scripts/verify/ride.ts)
 {
   const { rideChecks } = await import('./verify/ride')

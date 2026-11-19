@@ -1,8 +1,9 @@
 /**
  * FACES, the drawing: one face as a lit halftone on fixed dot sites, the afterlight face's technique (a lattice of
  * sites, dot size = light). The head is an SDF inflated into a dome and lit by one light; eyes, lids, brows, mouth and
- * cheeks are shapes in head space that set each site's value and tone in the same field. Every edge is soft over about
- * one lattice step, so a pupil that moves less than a step still moves: the dots on its rim shrink and grow.
+ * cheeks are shapes in head space that set each site's value and tone in the same field. Skin edges are soft over about
+ * one lattice step, so the dark rims and holes shrink and grow as they move. Bright features are on or off per site,
+ * so a stroke is one dot size end to end and a pupil moves a whole step at a time.
  * Two inks: a grey head (`skin: 'grey'`) wears bright features (white eyes ringed in dark, white strokes for brows,
  * lips and shut eyes, dark pupils and mouths); a white head (`'white'`, a vinyl toy) wears dark ones (dot eyes, holes).
  * Tones: grey skin `idle` / `mid`, white skin `value` / `idle` / `mid` (dithered where they meet), features `value`,
@@ -109,6 +110,8 @@ export function sitesFor(look: Look, margin = 11): Pt[] {
 const keyOf = (x: number, y: number) => Math.round(x * 20) * 4096 + Math.round(y * 20)
 /** Coverage of `d < 0` with a soft edge (1 inside). */
 const inside = (d: number) => 1 - smoothstep(-SOFT, SOFT, d)
+/** A bright feature's coverage snapped to on or off, so a stroke is one dot size and one tone end to end (#255). */
+const solid = (c: number) => (c >= .5 ? 1 : 0)
 /** Skin tone by value; each site's band edge is jittered by its own hash, so neighbouring bands dither into each other. */
 function skinTone(skin: Look['skin'], v: number, x: number, y: number): Tone {
   const h = hash01(Math.round(x * 10), Math.round(y * 10), 5)
@@ -129,7 +132,7 @@ let arcIn = 0, arcBase = 0, arcH = 0, arcS = 0
 function arc(ax: number, my: number, half: number, depth: number, open: number, smile: number): number {
   const s = ax / half, bow = Math.max(0, 1 - s * s), base = smile * depth * bow, h = open * half * .9 * Math.sqrt(bow)
   const up = base - h * .25, lo = base + h
-  arcIn = h > .6 ? Math.max(up - my, my - lo, (Math.abs(s) - .9) * half) : Infinity
+  arcIn = h > .6 ? Math.max(up - my, my - lo, Math.abs(ax) - half + STROKE) : Infinity
   arcBase = base; arcH = h; arcS = s
   return Math.max(up - STROKE - my, my - lo - STROKE, (Math.abs(s) - 1) * half)
 }
@@ -186,7 +189,7 @@ export function faceLayers(look: Look, pose: Pose, sites: Pt[]): Layer[] {
       if (dOpen > reach + SOFT) { if (dE < 0) skin *= .9; continue }
       if (!bright) { value = skin * (1 - inside(dOpen - LINE)); tone = skinTone(look.skin, value, x, y); return }
       const hole = inside(Math.hypot(lx - v.px, ly - v.py) - v.pr) * inside(dOpen + .8)
-      const w = inside(dOpen - LINE) * (1 - hole) * ink, beyond = smoothstep(reach - SOFT, reach + SOFT, dOpen) * skin
+      const w = solid(inside(dOpen - LINE) * (1 - hole)) * ink, beyond = smoothstep(reach - SOFT, reach + SOFT, dOpen) * skin
       value = Math.max(w, beyond); tone = w >= beyond ? 'value' : skinTone(look.skin, beyond, x, y)
       return
     }
@@ -197,8 +200,9 @@ export function faceLayers(look: Look, pose: Pose, sites: Pt[]): Layer[] {
         const s = i ? 1 : -1, v = eyes[i], bx = lx - (s * E.dx * 1.04 + fx)
         if (Math.abs(bx) > B.half + 3) continue
         const u = bx / B.half, by = v.cy - v.ry - B.gap - pose.brow[i] + pose.slant[i] * u * s - B.arch * (1 - u * u)
-        const c = inside(Math.max(Math.abs(ly - by) - B.w / 2, Math.abs(bx) - B.half))
-        if (bright) lit = Math.max(lit, c); else skin *= 1 - c
+        // bright brows are a one-row pixel line along the arch: the site nearest the curve in each column
+        if (bright) { if (Math.abs(ly - by) < PITCH / 2 && Math.abs(bx) < B.half) lit = 1; continue }
+        skin *= 1 - inside(Math.max(Math.abs(ly - by) - B.w / 2, Math.abs(bx) - B.half))
       }
     }
     // mouth: lips along a smile curve that open downward; dark inside, with a tongue when wide open
@@ -208,7 +212,7 @@ export function faceLayers(look: Look, pose: Pose, sites: Pt[]): Layer[] {
       const lips = inside(arc(cat ? mx + (mx < 0 ? half : -half) : mx, my, half, look.mouth.depth * (cat ? .8 : 1), cat ? 0 : pose.open, pose.smile))
       const hollow = inside(arcIn)
       if (hollow > .5 && pose.open > .35 && my > arcBase + arcH * .45 && Math.abs(arcS) < .7) { value = .5 * ink; tone = 'idle'; return }
-      if (bright) { lit = Math.max(lit, lips * (1 - hollow)); skin *= 1 - hollow } else skin *= 1 - lips
+      if (bright) { lit = Math.max(lit, solid(lips * (1 - hollow))); skin *= 1 - hollow } else skin *= 1 - lips
     }
     skin = clamp(skin)
     const sv = skin * (1 - lit), lv = lit * ink

@@ -1,0 +1,2 @@
+visitor: CALM, CURIOUS and SLEEPY each rest with their own look now: a soft smile, a small open mouth, and heavy drooping lids. Their eyes, brows and mouths are drawn in even dots.
+engineering: faces-kit snaps bright features to one dot size and draws brows as a one-row line, CURIOUS and SLEEPY get distinct rest poses and an open mouth that keeps its sides, SLEEPY's Z's sit on whole cells, and pnpm verify pins all three (#255).
