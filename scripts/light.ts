@@ -342,7 +342,7 @@ export async function lightChecks(assert: Assert): Promise<void> {
     const eager = boardById('physics')!
     const declared = lazy.items.filter(p => p.defaults?.gx === LIGHT_FIXTURE.gx && p.defaults?.gy === LIGHT_FIXTURE.gy).length
     assert('light: physics board lists lightSource in both the manifest load() and the eager registry',
-      !!lazy.sources?.includes(mod.lightSource) && !!eager.sources?.includes(mod.lightSource) && declared === lazy.items.length && lazy.items.length === 4,
+      !!lazy.sources?.includes(mod.lightSource) && !!eager.sources?.includes(mod.lightSource) && declared === lazy.items.length && lazy.items.length === 5,
       `manifest ${!!lazy.sources?.includes(mod.lightSource)}, registry ${!!eager.sources?.includes(mod.lightSource)}, ${declared}/${lazy.items.length} cards declare gx 0, gy 1`)
   }
 }

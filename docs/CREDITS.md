@@ -361,6 +361,12 @@ By Solari di Udine.
 - Platform (`platform`), board `/departures/`: the flap boards this mimics
 - Split-Flap (`kt-flap`), board `/kinetic/`: the flap boards this mimics
 
+### [Stable fluids (1999)](https://doi.org/10.1145/311535.311548)
+
+By Jos Stam.
+
+- Physics Ink (`phys-ink`), board `/physics/`: the fluid solver
+
 ### [Star Wars (1977)](https://en.wikipedia.org/wiki/Tatooine)
 
 By George Lucas.

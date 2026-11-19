@@ -1073,6 +1073,7 @@ var catalog = [
   ["type-flight", "y2bw9z86", "type"],
   ["type-anything", "j48nv622", "type"],
   ["phys-splash", "mkjr11yg", "physics"],
+  ["phys-ink", "3p1ge0nq", "physics"],
   ["phys-flag", "461qgtrt", "physics"],
   ["phys-jelly", "p9vdea8r", "physics"],
   ["phys-pit", "p09567t5", "physics"],

@@ -27,7 +27,7 @@ export const boardBlurbs: Record<BoardId, string> = {
   surfaces: 'One field on three surfaces: browser, glyph matrix and flip-disc.',
   components: 'The building blocks: toggles, sliders, knobs, tabs and a keypad. All of them work.',
   type: 'A variable dot typeface: weight and width knobs, morphs, a marquee. Type your own.',
-  physics: 'Dots you can touch: splash a word, grab the flag, poke the jelly, throw a dot.',
+  physics: 'Dots you can touch: splash a word, stir ink, grab the flag, poke the jelly, throw a dot.',
   scope: 'The instrument seen as signal: oscilloscope, spectrum and your microphone.',
   heal: 'Scratch the dots with your cursor and watch them grow back.',
   algorithms: 'Four niche algorithms drawing in dots: Voronoi stippling, a strange attractor, wave function collapse and frost growth.',

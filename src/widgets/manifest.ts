@@ -107,7 +107,7 @@ export const removedCards: Readonly<Record<string, readonly [uid: string, board:
   'mat-leather': ['9q3kgrk7', 'workshop'], 'mat-sand': ['ey87ejrb', 'workshop'], 'mat-mercury': ['qn7td5fx', 'workshop'], 'mat-thread': ['rh733bmf', 'workshop'],
   'mat-mud': ['r9kvhax6', 'workshop'], 'mat-lichtenberg': ['rxtyh8y2', 'workshop'], 'mat-erosion': ['2xeq5xxe', 'workshop'],
   // the #221 picks
-  'ir-plasma': ['c67z8djy', 'ir'], 'gpu-moire': ['hxrn7e57', 'gpu'], 'phys-ink': ['3p1ge0nq', 'physics'], 'heal-persist': ['aq49ah2w', 'heal'],
+  'ir-plasma': ['c67z8djy', 'ir'], 'gpu-moire': ['hxrn7e57', 'gpu'], 'heal-persist': ['aq49ah2w', 'heal'],
   'light-matte': ['a1tbjq54', 'light'], 'light-glass': ['n444xcy1', 'light'], 'sq-blob': ['ns450j4j', 'squares'], 'sq-sort': ['sfsr5e3y', 'squares'],
   'sq-beads': ['c5pv0ygb', 'squares'], 'sq-morph': ['4kgr5vej', 'squares'], 'fr-lyapunov': ['4fqq6940', 'fractals'],
 }
