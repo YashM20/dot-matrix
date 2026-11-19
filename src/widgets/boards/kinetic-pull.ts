@@ -11,7 +11,7 @@ import type { Control } from '../../engine/context'
 import { loopT, wordOf, wordPixels } from '../../engine/kinetic/word'
 import { MAGNET, SHATTER, magnetFrame, shatterFrame } from '../../engine/kinetic/drift'
 import type { WidgetContext, WidgetPreset } from '../types'
-import { SCREEN, WORD, centred, footer, letters, loopTime, paint, tile, wordStage, type Stage } from './kinetic-kit'
+import { REST, SCREEN, WORD, centred, footer, letters, loopTime, paint, tile, wordStage, type Stage } from './kinetic-kit'
 
 // ── 06 MAGNET ───────────────────────────────────────────────────────────────
 const PAD: Control = { key: 'mag', keyY: 'magY', kind: 'xy', gesture: 'surface', box: [0, SCREEN.top, 144, SCREEN.bottom - SCREEN.top + 1], label: 'Magnet' }
@@ -28,7 +28,7 @@ function heldAt(ctx: WidgetContext, st: Stage): [number, number] | undefined {
 export const ktMagnet: WidgetPreset = {
   id: 'kt-magnet', name: 'Magnet', label: 'MAGNET', numbered: true, ...tile, defaults: WORD, controls: [PAD],
   layers: ctx => {
-    const word = wordOf(ctx.data), t = loopTime(ctx), st = wordStage(word, centred), held = heldAt(ctx, st)
+    const word = wordOf(ctx.data), t = loopTime(ctx, REST.magnet), st = wordStage(word, centred), held = heldAt(ctx, st)
     const f = magnetFrame(word, t, held), px = wordPixels(word)
     let pulled = 0
     f.cells.forEach((c, j) => { if (c.x !== px[j].x || c.y !== px[j].y) pulled++ })
@@ -40,7 +40,7 @@ export const ktMagnet: WidgetPreset = {
 export const ktShatter: WidgetPreset = {
   id: 'kt-shatter', name: 'Shatter', label: 'SHATTER', numbered: true, ...tile, defaults: WORD,
   layers: ctx => {
-    const word = wordOf(ctx.data), t = loopTime(ctx), lt = loopT(t, SHATTER.period), n = letters(word)
+    const word = wordOf(ctx.data), t = loopTime(ctx, REST.shatter), lt = loopT(t, SHATTER.period), n = letters(word)
     let home = 0, rank = 0
     for (let i = 0; i < word.length; i++) {
       if (word[i] === ' ') continue
