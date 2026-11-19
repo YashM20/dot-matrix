@@ -29,7 +29,7 @@ const profile = (r: number, y: number) => sminQuad(sdCircle(r, y - .62, .5), sdT
 const solid = opRevolution(profile, 0)
 const vase = (x: number, y: number, z: number) => Math.max(onion(solid(x, y, z), WALL), y - MOUTH)
 export const scLathe: WidgetPreset = {
-  id: 'sc-lathe', name: 'Scenes Lathe', label: 'LATHE', ...tile, credit: CREDIT_SDF,
+  id: 'sc-lathe', name: 'Lathe', label: 'LATHE', ...tile, credit: CREDIT_SDF,
   layers: ctx => {
     const az = ctx.t * (Math.PI * 2 / 14) - 2.8
     const plate = scenePlate(K, (rows): Scene => ({
@@ -40,18 +40,20 @@ export const scLathe: WidgetPreset = {
     }))
     return [
       plate.layer,
-      ...footer(`SUN ${pad(deg(az), 3)}`, `ONION .0${WALL * 100}`),
+      ...footer(`SUN ${pad(deg(az), 3)}`, `ONION ${WALL.toFixed(2).slice(1)}`),
     ]
   },
 }
 
 // ── 02 TWIST ── a hexagram extruded 2 units tall (opExtrusion works in xy, so the column is drawn in x, z, y),
 // rounded, then twisted round y by a rate that swings between ±2 rad a unit. The twist is a bound, so the march
-// steps at .55. A red torus rides up and down the column, tilted a little, and throws its soft shadow on it.
+// steps at .55. A red torus rides up and down the column, tilted a little, and throws its soft shadow on it. The
+// eye sits above the column's top, so the star cap shows and the ring reads as a ring round the column, and the sun
+// stands higher and nearer the eye than a side light, so most faces are lit and the column reads as one solid (#254).
 const star = (a: number, b: number) => sdHexagram(a, b, .19)
 const prism = opRound(opExtrusion(star, .95), .035)
 export const scTwist: WidgetPreset = {
-  id: 'sc-twist', name: 'Scenes Twist', label: 'TWIST', ...tile, credit: CREDIT_SDF,
+  id: 'sc-twist', name: 'Twist', label: 'TWIST', ...tile, credit: CREDIT_SDF,
   layers: ctx => {
     const k = 2 * dsin(ctx.t * .4 + .3), ry = 1.05 + .62 * dsin(ctx.t * .7 + 1), tilt = .22 * dsin(ctx.t * .5)
     const column = opTwist((x, y, z) => prism(x, z, y - 1.05), k)
@@ -60,7 +62,7 @@ export const scTwist: WidgetPreset = {
     const sd = (x: number, y: number, z: number) => Math.min(column(x, y, z), ring(x, y, z))
     const plate = scenePlate(K, (rows): Scene => ({
       ...room, sd, box: [-.8, 0, -.8, .8, 2.1, .8], stepScale: .55, steps: 140,
-      cam: camera([2, 1.7, -3], [0, 1, 0], 2.45, rows), sun: sunAt(-2.2, .7),
+      cam: camera([2, 3, -3], [0, .95, 0], 2.45, rows), sun: sunAt(-1.7, .95),
       material: (x, y, z, plane) => (plane >= 0 ? FLOOR : ring(x, y, z) < column(x, y, z) ? ACCENT : STONE),
       shadow: { w: .06, maxt: 6 },
     }))
