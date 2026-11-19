@@ -1,7 +1,8 @@
 /**
  * Board: Kinetic (#129). One word in big dot lettering, seven ways of moving it, one effect per card. The word is
- * board-shared (set it on the FLAP card, or with `?word=` in the link) and every card loops seamlessly from the
- * settled word back to the settled word, so t = 0 and reduced motion show the word as it is spelled.
+ * board-shared (set it on the FLAP card, or with `?word=` in the link) and every effect loops seamlessly from the
+ * settled word back to the settled word. Each card starts, and holds under reduced motion, on its rest pose
+ * (`REST`): a still from its own loop that shows its move, so seven cards at rest don't show one plain word.
  *
  *   01 FLAP      twelve split-flap modules, also the editor (./kinetic-flap.ts)
  *   02 MELT      the columns drip into a pool and set back into letters; the hot letter is red
@@ -18,20 +19,25 @@ import { MELT, WAVE, meltFloor, meltFrame, waveFrame, waveOffset } from '../../e
 import { SCRAMBLE, TYPE, scrambleFrame, scrambleLock, typed, typewriterFrame } from '../../engine/kinetic/glyphs'
 import type { WidgetPreset } from '../types'
 import { numberBoard } from '../numbered'
-import { SCREEN, WORD, WORD_KEYS, centred, footer, letters, loopTime, paint, tile, wordStage } from './kinetic-kit'
+import { REST, SCREEN, WORD, WORD_KEYS, centred, footer, letters, loopTime, paint, tile, wordStage } from './kinetic-kit'
 import { ktFlap } from './kinetic-flap'
 import { ktMagnet, ktShatter } from './kinetic-pull'
 
 
 // ── 02 MELT ─────────────────────────────────────────────────────────────────
+/** Melt's drop count: the word's pixels away from their place (the frame's full-value cells, in word order). */
+export function meltDrops(word: string, t: number): number {
+  const px = wordPixels(word)
+  return meltFrame(word, t).cells.filter(c => c.v === 1).filter((c, j) => c.x !== px[j].x || c.y !== px[j].y).length
+}
 export const ktMelt: WidgetPreset = {
   id: 'kt-melt', name: 'Melt', label: 'MELT', numbered: true, ...tile, defaults: WORD,
   layers: ctx => {
-    const word = wordOf(ctx.data), t = loopTime(ctx), lt = loopT(t, MELT.period)
+    const word = wordOf(ctx.data), t = loopTime(ctx, REST.melt), lt = loopT(t, MELT.period)
     // the word and its pool (7 + drop rows) centred together
     const st = wordStage(word, k => Math.round(SCREEN.middle - ((meltFloor() + 1) * k) / 2))
     const state = lt < MELT.hold ? 'SOLID' : lt < MELT.pool - .3 ? 'MELTING' : lt < MELT.pool ? 'POOLED' : lt < MELT.pool + MELT.sweep + MELT.rise ? 'SETTING' : 'SOLID'
-    return [...paint(st, meltFrame(word, t)), ...footer(lt / MELT.period, state, `${wordPixels(word).length} DROPS`)]
+    return [...paint(st, meltFrame(word, t)), ...footer(lt / MELT.period, state, `${meltDrops(word, t)} DROPS`)]
   },
 }
 
@@ -39,7 +45,7 @@ export const ktMelt: WidgetPreset = {
 export const ktScramble: WidgetPreset = {
   id: 'kt-scramble', name: 'Scramble', label: 'SCRAMBLE', numbered: true, ...tile, defaults: WORD,
   layers: ctx => {
-    const word = wordOf(ctx.data), t = loopTime(ctx), lt = loopT(t, SCRAMBLE.period)
+    const word = wordOf(ctx.data), t = loopTime(ctx, REST.scramble), lt = loopT(t, SCRAMBLE.period)
     let busy = 0
     for (let i = 0; i < word.length; i++) if (word[i] !== ' ' && lt >= SCRAMBLE.start + i * SCRAMBLE.spread && lt < scrambleLock(i)) busy++
     const n = letters(word)
@@ -51,7 +57,7 @@ export const ktScramble: WidgetPreset = {
 export const ktWave: WidgetPreset = {
   id: 'kt-wave', name: 'Wave', label: 'WAVE', numbered: true, ...tile, defaults: WORD,
   layers: ctx => {
-    const word = wordOf(ctx.data), t = loopTime(ctx), lt = loopT(t, WAVE.period)
+    const word = wordOf(ctx.data), t = loopTime(ctx, REST.wave), lt = loopT(t, WAVE.period)
     let amp = 0
     for (let x = 0; x < wordWidth(word); x++) amp = Math.max(amp, Math.abs(waveOffset(x, lt)))
     return [...paint(wordStage(word, centred), waveFrame(word, t)), ...footer(lt / WAVE.period, amp ? 'WAVE' : 'STILL', `AMP ${amp} ROWS`)]

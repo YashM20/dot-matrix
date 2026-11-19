@@ -5,8 +5,9 @@
  * - each effect: its loop wraps (t and t ± one period give the same frame), it moves in between, and its first
  *   and last frames spell the word exactly (every pixel of the word once, at full value, nothing else);
  * - the cards: every dot on the screen sits on the card's one lattice, red only on the screen, the settled frame
- *   has no red but the caret, reduced motion holds the word, each card loops, a flap edit flips and lands,
- *   control boxes inside the grid, the determinism lint, and the frame time (warn-only).
+ *   has no red but the caret, each posed card rests on its own pose (not the plain word) and reduced motion holds
+ *   it, each card loops, a flap edit flips and lands, control boxes inside the grid, the determinism lint, and
+ *   the frame time (warn-only).
  * Called from verify.ts (`kineticChecks(assert)`); also runnable alone: `npx tsx scripts/kinetic.ts`.
  */
 import { DEFAULT_WORD, DRUM, WORD_MAX, parseWord, slotText, toSlots, wordData, wordOf, wordParam, wordPixels, wordWidth, type Frame } from '../src/engine/kinetic/word'
@@ -16,8 +17,8 @@ import { bitmapFont } from '../src/engine/fields/bitmapFont'
 import { sampleLayersInto } from '../src/engine/sampler/gridSampler'
 import { dot480 } from '../src/engine/theme/tokens'
 import { withChrome, type WidgetPreset } from '../src/widgets'
-import { kineticBoard } from '../src/widgets/boards/kinetic'
-import { latticeFor } from '../src/widgets/boards/kinetic-kit'
+import { kineticBoard, meltDrops } from '../src/widgets/boards/kinetic'
+import { REST, latticeFor } from '../src/widgets/boards/kinetic-kit'
 import { sampleCard, type CtxExtra } from './lib/cards'
 import { detLint } from './lib/detLint'
 import { fmtLoaded, medianLoaded } from './lib/load'
@@ -79,26 +80,34 @@ export function kineticChecks(assert: Assert): void {
   // ── the cards ──────────────────────────────────────────────────────────────────────────────────────
   {
     const pitch = 2.25, onScreen = (y: number) => y / pitch >= 12 && y / pitch < 127
-    const offGrid: string[] = [], strayRed: string[] = [], settledRed: string[] = [], reduced: string[] = [], loops: string[] = [], boxes: string[] = []
+    const offGrid: string[] = [], strayRed: string[] = [], settledRed: string[] = [], reduced: string[] = [], loops: string[] = [], boxes: string[] = [], unposed: string[] = []
+    // each card's rest pose (kinetic-kit REST); the loop's own start, the settled word, is one period minus it
+    const rest: Record<string, number> = { 'kt-melt': REST.melt, 'kt-scramble': REST.scramble, 'kt-wave': REST.wave, 'kt-magnet': REST.magnet, 'kt-shatter': REST.shatter }
     for (const p of kineticBoard) {
       const k = p.id === 'kt-flap' ? 2 : latticeFor(wordWidth(DEFAULT_WORD))
-      for (const t of [0, 1.25, 2.5, 3.75]) {
+      const settledAt = rest[p.id] ? PERIOD[p.id] - rest[p.id] : 0
+      for (const t of [0, 1.25, 2.5, 3.75, settledAt]) {
         const dots = sampleCard(p, t), screen = dots.filter(d => onScreen(d.y))
         // one lattice: every screen dot's centre is a whole number of lattice steps from the first one's
         const x0 = screen[0]?.x ?? 0, y0 = screen[0]?.y ?? 0, step = k * pitch
         const frac = (v: number) => Math.abs(v / step - Math.round(v / step))
         if (screen.some(d => frac(d.x - x0) > 1e-3 || frac(d.y - y0) > 1e-3)) offGrid.push(`${p.id}@${t}`)
         if (dots.some(d => d.color === dot480.dotActive && !onScreen(d.y))) strayRed.push(`${p.id}@${t}`)
-        if (t === 0 && (dots.some(d => d.color === dot480.dotActive) !== (p.id === 'kt-type'))) settledRed.push(p.id)
+        if (t === settledAt && (dots.some(d => d.color === dot480.dotActive) !== (p.id === 'kt-type'))) settledRed.push(p.id)
       }
       const at = (t: number, extra: CtxExtra = {}) => JSON.stringify(sampleCard(p, t, p.style, undefined, extra))
       if (at(2.5, { reducedMotion: true }) !== at(0)) reduced.push(p.id)
+      if (rest[p.id] && at(0) === at(settledAt)) unposed.push(p.id)
       if (at(1.25) !== at(1.25 + PERIOD[p.id]) || at(3.75) !== at(3.75 + PERIOD[p.id])) loops.push(p.id)
       for (const c of p.controls ?? []) { const [x, y, w, h] = c.box; if (x < 0 || y < 0 || w <= 0 || h <= 0 || x + w > p.grid.cols || y + h > p.grid.rows) boxes.push(`${p.id}:${c.key}`) }
     }
     assert('kinetic: on the grid (every dot on a card\'s screen sits on that card\'s one lattice, at t 0, 1.25, 2.5, 3.75)', offGrid.length === 0, offGrid.join(', '))
     assert('kinetic: one red (only on the screen; the settled word has none but the typewriter caret)', strayRed.length === 0 && settledRed.length === 0, [...strayRed, ...settledRed].join(', '))
-    assert('kinetic: reduced motion holds the word, and every card loops on its period', reduced.length === 0 && loops.length === 0, [...reduced.map(s => `reduced ${s}`), ...loops.map(s => `loop ${s}`)].join(', '))
+    assert('kinetic: reduced motion holds the rest frame, and every card loops on its period', reduced.length === 0 && loops.length === 0, [...reduced.map(s => `reduced ${s}`), ...loops.map(s => `loop ${s}`)].join(', '))
+    assert('kinetic: melt, scramble, wave, magnet and shatter rest on their own pose, not on the plain word', unposed.length === 0, unposed.join(', '))
+    // #252: the melt footer counted the word's pixels and never changed
+    const pool = MELT.pool - .1, all = wordPixels(DEFAULT_WORD).length
+    assert('kinetic: melt counts its drops (none on the settled word, every pixel in the pool)', meltDrops(DEFAULT_WORD, 0) === 0 && meltDrops(DEFAULT_WORD, pool) === all && meltDrops(DEFAULT_WORD, REST.melt) > 0, `${meltDrops(DEFAULT_WORD, 0)} / ${meltDrops(DEFAULT_WORD, REST.melt)} / ${meltDrops(DEFAULT_WORD, pool)} of ${all}`)
     assert('kinetic: control boxes are [col, row, width, height] inside the card grid', boxes.length === 0, boxes.join(', '))
 
     // a flap edit: on an interaction frame module 5 goes K → L, flips (a leaf in red) and lands on L

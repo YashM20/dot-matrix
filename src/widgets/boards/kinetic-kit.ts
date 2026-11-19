@@ -46,8 +46,17 @@ export function keepWord(data: Record<string, number>): void {
     replaceUrl(url)
   } catch { /* no history API (a sandboxed frame): the word still works, it just isn't in the link */ }
 }
-/** The loop time a card draws: 0 (the settled word) under reduced motion. */
-export const loopTime = (ctx: WidgetContext) => (ctx.reducedMotion ? 0 : ctx.t)
+/**
+ * The loop time a card draws. `rest` is the card's rest pose: the point in its loop that shows its own move (the
+ * wave mid-swell, the magnet on a letter), where the card starts and where reduced motion holds it.
+ */
+export const loopTime = (ctx: WidgetContext, rest = 0) => (ctx.reducedMotion ? 0 : ctx.t) + rest
+/**
+ * Each card's rest pose, seconds into its loop (the flap and the typewriter rest on the word): melt's hot letter
+ * starting to drip, scramble with five of seven letters locked, a gentle wave, the magnet pulling the last letter,
+ * and shatter with four letters home and the fifth in flight.
+ */
+export const REST = { melt: 1.25, scramble: 2.5, wave: 1.75, magnet: 3.5, shatter: 4.5 }
 
 // ── the stage ───────────────────────────────────────────────────────────────
 /** The card rows of the screen (between the label and the footer). */
