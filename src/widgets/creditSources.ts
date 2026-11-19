@@ -17,6 +17,7 @@ export const DLA: WidgetCredit = {
   by: ['Thomas A. Witten', 'Leonard M. Sander'], title: 'Diffusion-limited aggregation, a kinetic critical phenomenon (1981)',
   source: 'https://doi.org/10.1103/PhysRevLett.47.1400', note: 'the growth model',
 }
+export const STABLE_FLUIDS: WidgetCredit = { by: ['Jos Stam'], title: 'Stable fluids (1999)', source: 'https://doi.org/10.1145/311535.311548', note: 'the fluid solver' }
 export const PBD: WidgetCredit = {
   by: ['Matthias Müller', 'Bruno Heidelberger', 'Marcus Hennix', 'John Ratcliff'], title: 'Position based dynamics (2007)',
   source: 'https://doi.org/10.1016/j.jvcir.2007.01.005', note: 'the solver',

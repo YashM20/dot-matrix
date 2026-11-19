@@ -154,6 +154,7 @@ export const cardNames: Readonly<Record<string, readonly [name: string, tags: st
   "type-flight": ["Flight", "type animated"],
   "type-anything": ["Type Anything", "type input animated"],
   "phys-splash": ["Physics Splash", "physics fluid control"],
+  "phys-ink": ["Physics Ink", "physics fluid control"],
   "phys-flag": ["Physics Flag", "physics cloth control"],
   "phys-jelly": ["Physics Jelly", "physics jelly control"],
   "phys-pit": ["Physics Pit", "physics particles control"],

@@ -283,6 +283,7 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'type-anything': ['Type your own words onto the dot matrix.', 'type input animated'],
   // physics: dots you can touch
   'phys-splash': ['Splash a word into fluid with your pointer.', 'physics fluid control'],
+  'phys-ink': ['Stir ink in water.', 'physics fluid control'],
   'phys-flag': ['A cloth flag in the wind. Grab it.', 'physics cloth control'],
   'phys-jelly': ['A jelly that wobbles when you poke it.', 'physics jelly control'],
   'phys-pit': ['A pit of dots to throw around.', 'physics particles control'],
