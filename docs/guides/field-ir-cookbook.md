@@ -32,7 +32,7 @@ Bright rings start at the center and move outward. Near the edge their dots step
 
 ## Recipe 2: Shifting plasma
 
-<!-- VISUAL: kind=card · what=ir-plasma · notice=flowing organic contour bands shifting smoothly across five tone levels -->
+<!-- VISUAL: kind=card · what=gpu-plasma · notice=flowing organic contour bands shifting smoothly across five tone levels -->
 
 Four overlapping sine waves added together and folded into contour bands.
 

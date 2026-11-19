@@ -14,7 +14,7 @@ export const ESSAY_SLUG = 'dot-matrix-essay'
 export const POSTS: readonly PostInfo[] = [
   { slug: ESSAY_SLUG, title: 'Ditherpunk for UI', dek: 'How the Dot/480 engine turns fields into dots, with every figure running live in the page.', thumb: 'level-03', kind: 'essay', date: '2026-10-24' },
   { slug: 'build-your-own-dot-engine', title: 'Build your own dot engine', dek: 'Write a field, a sampler and a canvas renderer, then build a dot clock with them.', reader: 'Front-end developers', thumb: 'home-clock', kind: 'md', date: '2026-11-01' },
-  { slug: 'a-tiny-language-for-dots', title: 'A tiny language for dots', dek: 'Parse a safe formula language and share programs as links.', reader: 'Tool makers and creative coders', thumb: 'ir-plasma', kind: 'md', date: '2026-11-01' },
+  { slug: 'a-tiny-language-for-dots', title: 'A tiny language for dots', dek: 'Parse a safe formula language and share programs as links.', reader: 'Tool makers and creative coders', thumb: 'ir-ripple', kind: 'md', date: '2026-11-01' },
   { slug: 'living-matter', title: 'Living matter', dek: 'Make ripples, swimming koi and lit materials that run for hours.', reader: 'Generative artists', thumb: 'pond-koi', kind: 'md', date: '2026-11-01' },
 ]
 /** The index page's own meta (title, description; its images are `public/og/blog/blog-*`). */

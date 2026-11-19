@@ -109,7 +109,7 @@ try {
 
   if (args.includes("--ir-only")) throw new Error("--ir-only: stopped after IR parity")
   // 2. pixel parity
-  const presets: [string, number, number?][] = [['ir-plasma', 1.3], ['ir-dial', 0], ['level-03', 0], ['ui-knob', 0], ['afterlight', 0], ['gpu-plasma', 1.3, 1], ['gpu-starfield', 1.3, 1], ['gpu-moire', 1.3, 1]]
+  const presets: [string, number, number?][] = [['ir-ripple', 1.3], ['ir-dial', 0], ['level-03', 0], ['ui-knob', 0], ['afterlight', 0], ['gpu-plasma', 1.3, 1], ['gpu-starfield', 1.3, 1]]
   const px: unknown[] = []
   for (const [id, t, density] of presets) {
     const r = await run(`P5.presetParity(${JSON.stringify(id)}, ${t}, 2, ${density ?? 'undefined'})`)
@@ -121,7 +121,7 @@ try {
     check(`pixels ${tag}: canvas vs WebGL2 @2×${swift ? " (report only)" : ""}`, r.ok && (swift || r.mean <= TOL.pixelMean && r.over16 <= TOL.pixelOver16 && r.psnr >= TOL.psnr), `mean ${r.mean}/255, ${r.over16}% px off by >16, PSNR ${r.psnr} dB, max ${r.max}, ink ${r.ink}, ${r.dots} dots${r.passes.length ? `, passes ${r.passes}` : ''}`)
   }
   report.pixels = px
-  for (const id of ['gpu-plasma', 'gpu-starfield', 'gpu-moire']) {
+  for (const id of ['gpu-plasma', 'gpu-starfield']) {
     const r = await run(`P5.gpuShot(${JSON.stringify(id)}, 2.5, 3)`)
     png(`${id}-gpu.png`, r.png)
     check(`${id} at authored density`, r.ok, `${r.dots} GPU dots → ${OUT}/${id}-gpu.png`)

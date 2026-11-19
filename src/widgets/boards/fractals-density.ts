@@ -1,12 +1,11 @@
 /**
- * Fractals board · the density cards: popcorn, a Flames-style IFS, a symmetric icon and a Lyapunov field. Each
+ * Fractals board · the density cards: popcorn, a Flames-style IFS and a symmetric icon. Each
  * picture is baked once (a fixed number of seeded steps, so it is the same everywhere) and cached; a frame only
  * moves the one live element on top, so a frame costs a lookup, never a re-bake.
  */
-import { chaosGame, chaosWalker, densityTone, fitWindow, iconDensity, iconRadius, iconStep, lyapunov, lyapunovSequence, popcornDensity, popcornPath, type Affine, type IconParams, type PopcornParams, type Variation } from '../../engine/fractal'
-import { dcos, dsin, TAU } from '../../engine/noise/dmath'
+import { chaosGame, chaosWalker, densityTone, fitWindow, iconDensity, iconRadius, iconStep, popcornDensity, popcornPath, type Affine, type IconParams, type PopcornParams, type Variation } from '../../engine/fractal'
 import { layer, type WidgetPreset } from '../types'
-import { T, cite, credit, densityBands, footer, gridLayer, phase, probe, signed, thousands, tile, toCell, toPlane, type Band, type Pt } from './fractals-kit'
+import { T, cite, credit, densityBands, footer, gridLayer, probe, thousands, tile, toCell, type Pt } from './fractals-kit'
 
 /** Every density picture fills the same window: the full card width, rows 12 to 123. */
 const W = 144, H = 112, R0 = 12
@@ -127,44 +126,6 @@ export const frIcon: WidgetPreset = {
       layer(T.knockout(T.dots([at(i - 1), at(i - 2)].filter(inWin), 1.3), icProbe.sites ?? [], 3), 'value'),
       icProbe,
       ...footer(`${ICON.n}-FOLD`, `${IC_STEPS / 1000}K STEPS`),
-    ]
-  },
-}
-
-// ── 06 LYAPUNOV ─ order and chaos, one probe ──────────────────────────────────────────────────────────
-// Thesis: "Two growth rates taking turns are either calm or chaotic, and the border is a fractal." The logistic
-// map driven by the sequence AAABB over (a, b) ∈ [2.8, 4]²; where the orbit settles (λ < 0) the dots grow with
-// how fast it settles, where it is chaotic (λ > 0) the plane stays dark. The red probe drifts across and the
-// footer reads its λ.
-const SEQ = 'AAABB', SEQ_V = lyapunovSequence(SEQ), LY_WIN = [2.8, 4, 4, 2.8] as const, LY_W = 144
-const LY_C0 = 0, LY_OPTS = { warmup: 30, n: 80 }
-let lyVals: Float32Array | undefined
-const lyBake = () => {
-  if (lyVals) return lyVals
-  const v = new Float32Array(LY_W * H), at = toPlane(LY_WIN, LY_W, H)
-  for (let j = 0; j < H; j++) for (let i = 0; i < LY_W; i++) { const [a, b] = at(i, j); v[j * LY_W + i] = -lyapunov(a, b, SEQ_V, LY_OPTS) }
-  // the chaotic sea is dotted with one-cell periodic windows; a cell with fewer than two ordered neighbours drops
-  // out, so the sea reads dark and the ordered shapes keep their edges
-  const out = new Float32Array(v.length), ordered = (i: number, j: number) => i >= 0 && j >= 0 && i < LY_W && j < H && v[j * LY_W + i] > 0
-  for (let j = 0; j < H; j++) for (let i = 0; i < LY_W; i++) {
-    const n = +ordered(i - 1, j) + +ordered(i + 1, j) + +ordered(i, j - 1) + +ordered(i, j + 1)
-    out[j * LY_W + i] = n >= 2 ? v[j * LY_W + i] : 0
-  }
-  return (lyVals = out)
-}
-/** −λ in bands: most of the ordered region settles slowly (−λ < .3), so the bands sit low and the superstable ridges go white. */
-const LY_BANDS: Band[] = [{ at: .012, tone: 'faint', v: .25 }, { at: .07, tone: 'mid', v: .5 }, { at: .2, tone: 'idle', v: .75 }, { at: .58, tone: 'value', v: 1 }]
-const lyCell = toCell(LY_WIN, LY_W, H, LY_C0, R0)
-const probeAB = (t: number): [number, number] => { const p = TAU * phase(t, 48); return [3.35 + .5 * dsin(p), 3.35 + .45 * dcos(2 * p + .6)] }
-export const frLyapunov: WidgetPreset = {
-  id: 'fr-lyapunov', name: 'Lyapunov', label: 'LYAPUNOV', ...tile,
-  credit: credit('lyapunovfractals', 'Lyapunov fractals', ['Mario Markus']),
-  layers: ctx => {
-    const [a, b] = probeAB(ctx.t), l = lyapunov(a, b, SEQ_V, LY_OPTS)
-    return [
-      cite('MARKUS'),
-      ...probe(gridLayer(lyBake(), LY_W, H, LY_C0, R0, LY_BANDS), lyCell(a, b)),
-      ...footer(`L ${Number.isFinite(l) ? signed(l, 2) : '-INF'}`, SEQ),
     ]
   },
 }

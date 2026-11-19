@@ -122,7 +122,7 @@ try {
   const held = await ajs(`const d = ${hub}.lightSource.snapshot().data, w = ${worlds}; return { gx: d.gx, gy: d.gy, src: d.lightSrc, live: w.filter(x => x.mode !== 'pristine').length }`) as { gx: number; gy: number; src: number; live: number }
   check('held phone (β 50°, γ 2°): lightSrc 1, exactly gx 0, gy 1, every world pristine', held.src === 1 && held.gx === 0 && held.gy === 1 && held.live === 0, JSON.stringify(held))
   await orient(50, 40)
-  const went = await waitFor(`(async () => { const d = ${hub}.lightSource.snapshot().data; return d.gx !== 0 && (${worlds})[4].mode === 'live' })()`, 5000)
+  const went = await waitFor(`(async () => { const d = ${hub}.lightSource.snapshot().data; return d.gx !== 0 && (${worlds})[3].mode === 'live' })()`, 5000)
   const tiltedG = await ajs(`return ${hub}.lightSource.snapshot().data.gx`)
   check('γ = 40° → the PIT card\'s world goes live (snapshot gx ≠ 0)', went, `gx ${tiltedG}`)
   await sleep(600)
@@ -134,9 +134,9 @@ try {
 
   // ── 4. scroll first with tilt live (and tilted) ─────────────────────────────────────────────────────
   await orient(50, 30); await sleep(300)
-  await js(`document.querySelector('[data-card-id="phys-ink"]').scrollIntoView({ block: 'center' })`)
+  await js(`document.querySelector('[data-card-id="phys-flag"]').scrollIntoView({ block: 'center' })`)
   await sleep(500)
-  const card = await center('[data-card-id="phys-ink"] canvas, [data-card-id="phys-ink"] svg')
+  const card = await center('[data-card-id="phys-flag"] canvas, [data-card-id="phys-flag"] svg')
   const y0 = await js('scrollY') as number
   if (card) {
     const [x, y] = card

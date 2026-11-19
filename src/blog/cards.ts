@@ -15,6 +15,7 @@ const BOARDS: Record<string, () => Promise<Loaded>> = {
   audio: () => import('../widgets/boards/audio').then(m => ({ items: m.audioBoard })),
   departures: () => import('../widgets/boards/departures').then(m => ({ items: m.departuresBoard })),
   ir: () => import('../widgets/boards/ir').then(m => ({ items: m.irBoard })),
+  gpu: () => import('../widgets/boards/gpu').then(m => ({ items: m.gpuBoard })),
   pond: () => import('../widgets/boards/pond/index').then(m => ({ items: m.pondBoard, sources: m.pondSources })),
   light: () => import('../widgets/boards/light').then(m => ({ items: m.lightBoard })),
   squares: () => import('../widgets/boards/squares').then(m => ({ items: m.squaresBoard })),
@@ -23,8 +24,8 @@ const BOARDS: Record<string, () => Promise<Loaded>> = {
 /** Card id → its board (the rows of src/widgets/catalog.ts the posts use). */
 const CARD_BOARD: Record<string, keyof typeof BOARDS> = {
   'home-clock': 'henry', timer: 'henry', weather: 'henry', 'device-overview': 'deerflow12', 'audio-levels': 'audio', 'level-03': 'audio', departures: 'departures',
-  'ir-ripple': 'ir', 'ir-plasma': 'ir', 'ir-dial': 'ir',
-  'pond-koi': 'pond', 'pond-jelly': 'pond', 'pond-marble': 'pond', 'light-matte': 'light', 'sq-stack': 'squares', 'mat-frost': 'workshop',
+  'ir-ripple': 'ir', 'ir-dial': 'ir', 'gpu-plasma': 'gpu',
+  'pond-koi': 'pond', 'pond-jelly': 'pond', 'pond-marble': 'pond', 'light-torch': 'light', 'sq-stack': 'squares', 'mat-frost': 'workshop',
 }
 
 export interface PostCard { preset: WidgetPreset; sources?: readonly Source[] }

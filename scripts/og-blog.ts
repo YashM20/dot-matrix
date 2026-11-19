@@ -23,7 +23,6 @@ import { squircleExponent } from '../src/engine/renderer/shapePath'
 import { sampleLayers } from '../src/engine/sampler/gridSampler'
 import type { DotStyle, Field, GridConfig, Layer } from '../src/engine/types'
 import { blobs, sphere } from '../src/essay/figures/fields'
-import { PLASMA_SRC } from '../src/widgets/boards/ir'
 import { BLOG, POSTS } from '../src/blog/posts'
 import { Raster } from './lib/raster'
 import { theme, visible } from './lib/stats'
@@ -58,6 +57,12 @@ function rippleField(c: Ctx, drops: [x: number, y: number, amp: number][], steps
   return (u, v) => Math.min(1, Math.abs(s[r.H + Math.round(v * (h - 1)) * w + Math.round(u * (w - 1))]) * 2.4)
 }
 
+/** The plasma program of the retired `ir-plasma` card (#221), kept so the post's image stays the same. */
+const PLASMA_SRC = `// four interfering sines, folded into contour bands
+let x = u * 7; let y = v * 6;
+let s = sin(x + t) + sin(y * 1.3 - t * .7)
+      + sin((x + y) * .7 + t * .5) + sin(length(x - 3.5, y - 3) * 1.8 - t);
+.5 + .5 * sin(s * 1.6)`
 const plasma = irProgram(PLASMA_SRC)
 /** Where the reader holds the third metaball. */
 const HELD = [.45, .47] as const, held = blobs(...HELD)

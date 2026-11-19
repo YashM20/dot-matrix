@@ -134,42 +134,6 @@ export const healXray: WidgetPreset = {
   },
 }
 
-// ── 03 Persist: a ghost hand scratches a different stroke every 4 s; the lizard never stops healing.
-// Loop 16 s. The ghost's fingertip is a small ring of `mid` dots while it drags.
-interface Stroke { at: number; from: [number, number]; to: [number, number] }
-const STROKES: Stroke[] = [
-  { at: 3.2, from: [6, 6], to: [26, 16] },
-  { at: 7.2, from: [27, 22], to: [8, 25] },
-  { at: 11.2, from: [16, 0], to: [16, 15] },
-]
-const STROKE_S = .6, GHOST_R = 2.4
-const ghostAt = (phaseS: number): [number, number] | null => {
-  for (const s of STROKES) {
-    const k = (phaseS - s.at) / STROKE_S
-    if (k >= 0 && k <= 1) return [s.from[0] + (s.to[0] - s.from[0]) * k, s.from[1] + (s.to[1] - s.from[1]) * k]
-  }
-  return null
-}
-const persistRun = ncaRun({
-  model, w: W, h: H, dt: DT, seed: 9, lead: 2.5, period: 16, every: 24,
-  script: (g, n) => {
-    const p = ghostAt(n * DT)
-    if (p) ncaDamage(g, p[0], p[1], GHOST_R)
-  },
-})
-export const healPersist: WidgetPreset = {
-  id: 'heal-persist', name: 'Heal Persist', label: 'HEAL  PERSIST', ...tile, credit,
-  controls: scratchPad('Scratch the lizard with the pointer or the arrow keys'), defaults: { sx: .5, sy: .5 },
-  layers: ctx => {
-    scratch(persistRun, ctx)
-    const g = ncaRunAt(persistRun, ctx.t), s = ncaPhase(persistRun, ctx.t) * 16 + 2.5
-    const ghost = persistRun.live ? null : ghostAt(s), ring: [number, number][] = []
-    if (ghost) for (let a = 0; a < 12; a++) ring.push([OX + ghost[0] * K + Math.cos(a / 12 * Math.PI * 2) * GHOST_R * K, OY + ghost[1] * K + Math.sin(a / 12 * Math.PI * 2) * GHOST_R * K])
-    const wounds = STROKES.filter(w => w.at <= s).length
-    return [...body(g), layer(T.dots(ring, 1.4), 'mid'), ...footer(persistRun, ctx.t, `CUTS ${wounds}`, `HEAL ${pad(healPct(g), 3)}%`)]
-  },
-}
-
 /** The board's runs (benches and checks reset or inspect them). */
-export const healRuns: NcaRun[] = [heroRun, xrayRun, persistRun]
-export const healBoard = [healMirror, healXray, healPersist]
+export const healRuns: NcaRun[] = [heroRun, xrayRun]
+export const healBoard = [healMirror, healXray]

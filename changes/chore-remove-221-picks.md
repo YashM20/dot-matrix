@@ -1,0 +1,2 @@
+visitor: Eleven cards that repeated a neighbour are gone from PROGRAMS, PHYSICS, HEAL, LIGHT, SQUARES, FRACTALS and 500K DOTS, and their old links open the board they lived on.
+engineering: removes ir-plasma, phys-ink, heal-persist, light-glass, light-matte, sq-morph, sq-sort, sq-blob, sq-beads, fr-lyapunov and gpu-moire through the removedCards table and vercel.json 301s, and makes PHYSICS a dense board of four (#221, #PR).
