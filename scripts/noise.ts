@@ -21,7 +21,7 @@ import { compileBytecode, compileJS, deserialize, emitGLSL, IRError, parse, refe
 import '../src/engine/noise/ir' // the IR noise pack (F0.4)
 import { NOISE_GLSL } from '../src/engine/noise/glsl'
 import { DET_PATHS, detLint } from './lib/detLint'
-import { medianLoaded, type Loaded } from './lib/load'
+import { medianLoaded, type Loaded, type LoadRef } from './lib/load'
 import { hash01, hash32 } from '../src/engine/math'
 import { curl2, datan2, dexp, dpow, dsin, fbm2, ihash, noise2, noise3, noise3Grad, octaveSeed, ridge2, rngFor, tsin, turb2, valueNoise2, voronoi2, voronoiBorder2, type Metric, type VoronoiOut } from '../src/engine/noise'
 
@@ -143,11 +143,13 @@ const fnv1a = (str: string) => { let h = 0x811c9dc5; for (let i = 0; i < str.len
  * Voronoi (#28): per metric, the best of 3 medians of 15 warm runs of a 144² voronoi2, each run after its own load
  * sample (lib/load.ts). The rounds go l2, l1, linf, l2, … so each metric's three medians are spread over about a
  * second. The gate, × scale: l2 ≤ 3.0 ms, l1 and linf ≤ 3.5 ms (`VORONOI_BUDGET`).
- * The scale is the load sample's ratio before its floor (`Loaded.speed`) over a usual runner's, `RUNNER_SPEED`: 1 on
- * a usual runner, below 1 on a faster one, above on a slower or busy one. The shared load factor never drops below 1,
- * so on a runner about 1.5× faster (l2 at 1.24 ms, not 1.85) the budget stayed at 3.0 ms, and a real 2× slowdown
- * (2.56 ms) still passed: the 2× check failed 0/3 on two main runs in a row. Scaled, the budget follows the runner
- * both ways, and every metric keeps its headroom (about 60% of the budget plain, 120% slowed) on every runner.
+ * The scale is how long a frozen copy of the l2 search takes on this box right now (`VORONOI_REF`, sampled before
+ * each run like the load factor), over its time on a usual runner: 1 there, below 1 on a faster runner, above on a
+ * slower or busy one. The shared load factor never drops below 1, and its float loop doesn't track this code across
+ * CPUs (a runner 1.4× faster on Voronoi runs it only 1.2× faster), so on a fast runner (l2 at 1.24 ms, not 1.85) the
+ * budget stayed near 3.0 ms and a real 2× slowdown (2.56 ms) passed: the 2× check failed 0/3 on two main runs in a
+ * row (#435). Scaled by the same kind of work, every metric keeps its headroom on every runner: plain about 60% of
+ * its budget, slowed about 120%.
  * Why the best of 3: a short burst from a neighbour that slows the runs by 30% can miss the load samples. One such burst pushed one median
  * to 3.62 ms (the others 2.4 to 2.9) and failed the gate once. A burst that short spoils one round; a real slowdown
  * moves every round. `slow` (scripts/gates.ts) runs each grid twice, a true 2× slowdown, and every metric must fail.
@@ -155,8 +157,28 @@ const fnv1a = (str: string) => { let h = 0x811c9dc5; for (let i = 0; i < str.len
  * by about 20%, like the others.
  */
 export const VORONOI_BUDGET = { l2: 3, l1: 3.5, linf: 3.5 } as const
-/** `Loaded.speed` on a usual GitHub runner, where the budgets were read (l2 1.85 ms at 0.68). */
-const RUNNER_SPEED = .68
+/**
+ * The gate's reference workload: the l2 search of `voronoi2` as it stood when the budgets were read (3 × 3 cells, a
+ * murmur finalizer for the feature points), on a 72² grid. A copy, so it never speeds up or slows down with the
+ * engine: a slower `voronoi2` reads slower against it on any CPU. `ms`: its time on a usual runner.
+ */
+function voronoiRef(): number {
+  let s = 0
+  for (let r = 0; r < 72; r++) for (let c = 0; c < 72; c++) {
+    const x = c * 8 / 72, y = r * 8 / 72, cx = Math.floor(x), cy = Math.floor(y)
+    let f1 = 9, f2 = 9
+    for (let j = -1; j <= 1; j++) for (let i = -1; i <= 1; i++) {
+      let h = Math.imul((cx + i) | 0, 0x27d4eb2d) ^ Math.imul((cy + j) | 0, 0x165667b1)
+      h ^= h >>> 16; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13; h = Math.imul(h, 0xc2b2ae35); h ^= h >>> 16
+      const dx = cx + i + (h & 0xffff) / 65536 - x, dy = cy + j + (h >>> 16) / 65536 - y, d = dx * dx + dy * dy
+      if (d < f1) { f2 = f1; f1 = d } else if (d < f2) f2 = d
+    }
+    s += Math.sqrt(f1) + Math.sqrt(f2)
+  }
+  return s
+}
+let refSink = 0
+const VORONOI_REF: LoadRef = { time: () => { const a = performance.now(); refSink += voronoiRef(); return performance.now() - a }, ms: .4 }
 export interface VoronoiMetric { metric: Metric; ms: number; load: number; budget: number }
 export function voronoiBudget(slow = false): { ok: boolean; detail: string; metrics: VoronoiMetric[] } {
   const G = 144, out = { f1: 0, f2: 0, id: 0, x: 0, y: 0 }, reps = slow ? 2 : 1, names = ['l2', 'l1', 'linf'] as const
@@ -166,13 +188,14 @@ export function voronoiBudget(slow = false): { ok: boolean; detail: string; metr
     return f
   })
   const rounds: Loaded[][] = runs.map(() => [])
-  for (let round = 0; round < 3; round++) runs.forEach((f, i) => rounds[i].push(medianLoaded(f, 15)))
-  const scale = (t: Loaded) => t.speed / RUNNER_SPEED, norm = (t: Loaded) => t.ms / scale(t)
+  for (let k = 0; k < 20; k++) VORONOI_REF.time()
+  for (let round = 0; round < 3; round++) runs.forEach((f, i) => rounds[i].push(medianLoaded(f, 15, VORONOI_REF)))
+  const scale = (t: Loaded) => t.speed, norm = (t: Loaded) => t.ms / scale(t)
   const best = rounds.map(rs => rs.reduce((a, b) => norm(b) < norm(a) ? b : a))
   const metrics = best.map((t, i) => ({ metric: names[i], ms: t.ms, load: scale(t), budget: VORONOI_BUDGET[names[i]] }))
   return {
     ok: metrics.every(m => m.ms <= m.budget * m.load),
-    detail: best.map((t, i) => `${names[i]} ${t.ms.toFixed(2)} ms @ speed ${t.speed.toFixed(2)}, scale ${scale(t).toFixed(2)} → ${norm(t).toFixed(2)} / ${metrics[i].budget} (rounds ${rounds[i].map(r => norm(r).toFixed(2)).join(', ')})`).join(' · '),
+    detail: best.map((t, i) => `${names[i]} ${t.ms.toFixed(2)} ms @ scale ${scale(t).toFixed(2)} (ref ${(t.speed * VORONOI_REF.ms).toFixed(3)} ms) → ${norm(t).toFixed(2)} / ${metrics[i].budget} (rounds ${rounds[i].map(r => norm(r).toFixed(2)).join(', ')})`).join(' · '),
     metrics,
   }
 }
