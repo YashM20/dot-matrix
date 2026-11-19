@@ -30,7 +30,7 @@ import { motifAt, truchetInk, truchetTiles } from '../src/engine/algo/truchet'
 import { dotKey, legacyKey } from './lib/goldenKey'
 import { detLint } from './lib/detLint'
 import { boards, widgetById, withChrome, type WidgetPreset } from '../src/widgets'
-import { morphStyle, squareStyle, squaresBoard, squaresSources as Q } from '../src/widgets/boards/squares'
+import { squareStyle, squaresBoard, squaresSources as Q } from '../src/widgets/boards/squares'
 import { hatFloor } from '../src/widgets/boards/squaresHat'
 import { packSources as QP } from '../src/widgets/boards/squaresPack'
 import { describe } from '../src/engine/describe'
@@ -92,7 +92,7 @@ class Recorder implements OutlineSink {
 }
 
 /** Cards with no join layer at all (spaced squares, rotated sites, motifs). */
-const UNJOINED = new Set(['sq-gameboy', 'sq-schotter', 'sq-stitch', 'sq-beads'])
+const UNJOINED = new Set(['sq-gameboy', 'sq-schotter', 'sq-stitch'])
 export function squaresChecks(assert: Assert): void {
   installSquares()
   const load = loadFactor()
@@ -256,7 +256,12 @@ export function squaresChecks(assert: Assert): void {
     lists.forEach((d, i) => { if (renderSVG(d, 100, 100).replace(/d[0-9a-z]+-/g, '') !== svgs[i]) diff++ })
     installSquares()
     assert('squares: byte-identical SVG for every existing preset (hooks installed vs not)', diff === 0, `${presets.length} presets, ${diff} differ`)
-    const svg = renderSVG(sampleCard(widgetById('sq-blob')!, 0), 324, 324)
+    // a joined terrace at .5 inside a spaced .25 halo (the shape of the retired blob card)
+    const terrace: Layer[] = [
+      { field: (u, v) => (Math.hypot(u - .5, v - .5) < .25 ? .5 : 0), lattice: 3, join: { at: .5 }, tone: 'idle' },
+      { field: (u, v) => { const d = Math.hypot(u - .5, v - .5); return d >= .25 && d < .45 ? .25 : 0 }, lattice: 3, tone: 'idle' },
+    ]
+    const svg = renderSVG(sampleLayers(terrace, { cols: 24, rows: 24, pitch: 2.25 }, squareStyle, dot480), 108, 108)
     assert('squares: a group holding joined cells fades with group `opacity` (no double blend in the bleed); plain groups keep `fill-opacity`',
       / opacity="0\.5"/.test(svg) && / fill-opacity="0\.25"/.test(svg) && !/fill-opacity="0\.5"/.test(svg))
   }
@@ -419,6 +424,8 @@ export function squaresChecks(assert: Assert): void {
     assert('squares: equal ink (a shapeOf dot keeps the style dot\'s ink: A(n)·r² within 0.1% over the 9 roundness steps; 15 = untouched)', steps.every(x => Math.abs(x / ref - 1) < .001) && formInk(1.5, 15, 'square', undefined) === 1.5, steps.map(x => (x / ref).toFixed(4)).join(' '))
 
     // Q3.7 morph: ink holds across k (no join), the ends equal the dot card and the joined card
+    // (round dots .8 of the half pitch; squares come out .71, equal ink, under the .1 gutter)
+    const morphStyle: DotStyle = { shape: 'circle', sizeMin: .25, sizeMax: .9, gap: .1, quantizeSteps: 5, opacityMode: 'fromValue' }
     const lcd: Layer = { field: (u, v) => ((Math.round(u * 23) * 7 + Math.round(v * 23) * 3) % 5 === 0 ? 1 : .25), lattice: 2, toneOf: x => (x > .5 ? 'idle' : 'faint') }
     const g48 = { cols: 48, rows: 48, pitch: 2.25 }, rows = latticeGrid(g48, 2).rows
     const inkAtK = (k: number) => { let s = 0; for (const d of sampleLayers(squareMorph([lcd], k, { width: .3, rows }), g48, morphStyle, dot480)) s += formArea(d.r, shapeExponent(d.shape, d.roundness), 0) * d.opacity * lumaOf(d.color); return s }
@@ -528,16 +535,9 @@ export function squaresChecks(assert: Assert): void {
     let pure: boolean
     try { pure = squaresBoard.every(p => { const x = sampleCard(p, 7.3).map(key).join(), _ = sampleCard(p, 2.1), y = sampleCard(p, 7.3).map(key).join(); return x === y && !!_ }) } finally { globalThis.Date = RealNow }
     assert('squares: pure in t (a frame is a function of t: the same t samples the same dots after other frames)', pure)
-    // the blob's accent: at most one joined red component per frame over t ∈ 0:20:0.5
-    let worstComp = 0, withNeck = 0
-    for (let i = 0; i <= 40; i++) {
-      const d = sampleCard(widgetById('sq-blob')!, i * .5).filter(x => x.color === dot480.dotActive && x.r > 2), comps = components(d, 3 * 2.25)
-      worstComp = Math.max(worstComp, comps); if (comps) withNeck++
-    }
-    assert('squares: blob accent (≤ 1 joined red component per frame over t ∈ 0:20:0.5)', worstComp <= 1 && withNeck > 0, `max ${worstComp}, neck in ${withNeck}/41 frames`)
-    // accents: one red element per card frame (the falling piece, the newest split's 4 quads, the neck, the colon)
+    // accents: one red element per card frame (the falling piece, the newest split's 4 quads, the colon)
     // (teletext: the red is the header's two seconds digits: every red dot sits in that 2-character box)
-    const PITCH: Record<string, number> = { 'sq-stack': 6, 'sq-quads': 2, 'sq-blob': 3, 'sq-gameboy': 2, 'sq-teletext': 1, 'sq-lines': 1, 'sq-schotter': 5, 'sq-blocks': 3, 'sq-sort': 2, 'sq-truchet': 2, 'sq-stitch': 3, 'sq-beads': 6, 'sq-morph': 2, 'sq-hat': 1, 'sq-ammann': 1, 'sq-arctic': 2, 'sq-sandpile': 2, 'sq-ascii': 1 }
+    const PITCH: Record<string, number> = { 'sq-stack': 6, 'sq-quads': 2, 'sq-gameboy': 2, 'sq-teletext': 1, 'sq-lines': 1, 'sq-schotter': 5, 'sq-blocks': 3, 'sq-truchet': 2, 'sq-stitch': 3, 'sq-hat': 1, 'sq-ammann': 1, 'sq-arctic': 2, 'sq-sandpile': 2, 'sq-ascii': 1 }
     // the truchet's live tile is one tile whose motif may cut its ink into up to 6 pieces (arcs, stubs, inverted corners)
     // the hat floor's red is the set of mirrored hats (the tiling's one exception, about 1 hat in 7.85): one piece each
     // the arctic red is the edge of the frozen corners (one ring, which can break where the edge touches the rim);
@@ -557,8 +557,8 @@ export function squaresChecks(assert: Assert): void {
     const seams = [['sq-quads', jump(t => Q.quadsAt(t, splits).k, splits)], ['sq-truchet', jump(t => QP.truchetAt(t, nTiles).placed, nTiles)]] as const
     assert('squares: loop seams (quads, truchet: no step moves a tenth of the splits or tiles over a loop)', seams.every(([, f]) => f < .1), seams.map(([id, f]) => `${id} ${(f * 100).toFixed(1)}%`).join(', '))
     // #234: the LCD's time and date are pixels, so its layer names them for describe()
-    const lcdSays = ['sq-gameboy', 'sq-morph'].map(id => [id, describe(widgetById(id)!, { t: 1 }).text.join(' | ')] as const)
-    assert('squares: LCD text (sq-gameboy and sq-morph describe the time and date)', lcdSays.every(([, s]) => /\d\d:\d\d [A-Z]{3} \d\d [A-Z]{3}/.test(s)), lcdSays.map(([id, s]) => `${id}: ${s}`).join('; '))
+    const lcdSays = ['sq-gameboy'].map(id => [id, describe(widgetById(id)!, { t: 1 }).text.join(' | ')] as const)
+    assert('squares: LCD text (sq-gameboy describes the time and date)', lcdSays.every(([, s]) => /\d\d:\d\d [A-Z]{3} \d\d [A-Z]{3}/.test(s)), lcdSays.map(([id, s]) => `${id}: ${s}`).join('; '))
     // #234: the teletext banner's stepped glyphs: every lit font pixel has a lit edge neighbour (contiguous sextants join)
     const loose = Object.entries(Q.TT_BANNER).flatMap(([ch, rows]) => rows.flatMap((row, y) => [...row].map((on, x) => (on === '1' && ![[x - 1, y], [x + 1, y], [x, y - 1], [x, y + 1]].some(([u, v]) => rows[v]?.[u] === '1') ? `${ch}(${x},${y})` : '')))).filter(Boolean)
     assert('squares: teletext banner glyphs (no lit pixel joins its letter only by a corner)', loose.length === 0, loose.join(' ') || 'Q, R stepped')

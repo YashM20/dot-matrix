@@ -35,14 +35,8 @@ By Hugo Elias.
 
 By Inigo Quilez.
 
-- Scenes Lathe (`sc-lathe`), board `/scenes/`: technique
-- Scenes Twist (`sc-twist`), board `/scenes/`: technique
-
-### [A generalization of algebraic surface drawing (1982)](https://doi.org/10.1145/357306.357310)
-
-By James F. Blinn.
-
-- Blob (`sq-blob`), board `/squares/`: the blobby model behind metaballs
+- Lathe (`sc-lathe`), board `/scenes/`: technique
+- Twist (`sc-twist`), board `/scenes/`: technique
 
 ### [A local cellular model for snow crystal growth](https://webbox.lafayette.edu/~reiterc/mvp/sfn/sfn_pp.pdf)
 
@@ -80,12 +74,6 @@ By argonautcode.
 
 - Pond Koi (`pond-koi`), board `/pond/`: the follow-the-leader spine
 
-### [ASDFPixelSort (2010)](https://github.com/kimasendorf/ASDFPixelSort)
-
-By Kim Asendorf.
-
-- Sort (`sq-sort`), board `/squares/`: the pixel sorting idea; none of its code
-
 ### [Astronomical Algorithms](https://en.wikipedia.org/wiki/Astronomical_Algorithms)
 
 By Jean Meeus.
@@ -97,7 +85,7 @@ By Jean Meeus.
 
 By Inigo Quilez.
 
-- Scenes Posts (`sc-posts`), board `/scenes/`: technique
+- Posts (`sc-posts`), board `/scenes/`: technique
 
 ### [Boids (1987)](https://www.red3d.com/cwr/boids/)
 
@@ -148,11 +136,9 @@ By Thomas A. Witten, Leonard M. Sander.
 
 By lionleaf.
 
-- Moire (`gpu-moire`), board `/gpu/`: demos in 140 characters
 - Plasma (`gpu-plasma`), board `/gpu/`: demos in 140 characters
 - Starfield (`gpu-starfield`), board `/gpu/`: demos in 140 characters
 - IR Dial (`ir-dial`), board `/ir/`: demos in 140 characters
-- IR Plasma (`ir-plasma`), board `/ir/`: demos in 140 characters
 - IR Ripple (`ir-ripple`), board `/ir/`: demos in 140 characters
 
 ### [ESP-Mosaico concept screens](https://x.com/henry19840301/status/2090273665669874050)
@@ -215,7 +201,6 @@ By Nothing.
 By Alexander Mordvintsev, Ettore Randazzo, Eyvind Niklasson, Michael Levin.
 
 - Heal Mirror (`heal-mirror`), board `/heal/`: technique
-- Heal Persist (`heal-persist`), board `/heal/`: technique
 - Heal X-Ray (`heal-xray`), board `/heal/`: technique
 
 ### [Halftone](https://en.wikipedia.org/wiki/Halftone)
@@ -247,12 +232,6 @@ By Michele Ballerini, Andrea Cavagna, Irene Giardina.
 By Yoshiki Kuramoto.
 
 - Pond Jelly (`pond-jelly`), board `/pond/`: how the pulses drift into step
-
-### [Lyapunov fractals](https://iquilezles.org/articles/lyapunovfractals/)
-
-By Inigo Quilez, Mario Markus.
-
-- Lyapunov (`fr-lyapunov`), board `/fractals/`: technique
 
 ### [Mathematical Games: the game of Life (Scientific American, 1970)](https://www.scientificamerican.com/article/mathematical-games-1970-10)
 
@@ -366,7 +345,7 @@ By Inigo Quilez.
 
 By Inigo Quilez.
 
-- Scenes Chain (`sc-chain`), board `/scenes/`: technique
+- Chain (`sc-chain`), board `/scenes/`: technique
 
 ### [Space Invaders (1978)](https://en.wikipedia.org/wiki/Space_Invaders)
 
@@ -446,11 +425,9 @@ By Robert Ulichney.
 
 By Martin Kleppe.
 
-- Moire (`gpu-moire`), board `/gpu/`: one small program drives the whole card; this program is our own
 - Plasma (`gpu-plasma`), board `/gpu/`: one small program drives the whole card; this program is our own
 - Starfield (`gpu-starfield`), board `/gpu/`: one small program drives the whole card; this program is our own
 - IR Dial (`ir-dial`), board `/ir/`: one small program drives the whole card; this program is our own
-- IR Plasma (`ir-plasma`), board `/ir/`: one small program drives the whole card; this program is our own
 - IR Ripple (`ir-ripple`), board `/ir/`: one small program drives the whole card; this program is our own
 
 ### [Vera Molnár](https://en.wikipedia.org/wiki/Vera_Moln%C3%A1r)

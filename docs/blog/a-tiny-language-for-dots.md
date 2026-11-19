@@ -10,7 +10,7 @@ This guide explains how to design a domain-specific expression language for dot 
 
 ## Why a custom language beats evaluation
 
-<!-- VISUAL: kind=card · what=ir-plasma · notice=interference contours calculated per dot from three added sine terms -->
+<!-- VISUAL: kind=card · what=gpu-plasma · notice=interference contours calculated per dot from four added sine terms -->
 
 Allowing users to type arbitrary JavaScript into an input field creates security and stability risks. If an application passes untrusted strings to `eval()` or `new Function()`, malicious users can inject script payloads or access browser storage APIs.
 

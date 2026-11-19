@@ -60,18 +60,6 @@
     "hash": "e7a02b3c",
     "dots": 7575
    }
-  },
-  "fr-lyapunov": {
-   "t=0": {
-    "style": "squircle:2.30",
-    "hash": "c1750815",
-    "dots": 8478
-   },
-   "t=1.3": {
-    "style": "squircle:2.30",
-    "hash": "e401fa92",
-    "dots": 8488
-   }
   }
  }
 }

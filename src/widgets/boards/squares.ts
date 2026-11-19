@@ -5,7 +5,6 @@
  *
  *   STACK   a deterministic falling-blocks game (7-bag, El-Ashi's AI weights): each settled piece fuses into one tetromino
  *   QUADS   Fogleman's Quads: split the worst quad 400 times, until 1,201 squares find a face
- *   BLOB    metaballs on a lattice: terraces fuse level by level, and the red neck is where two balls meet
  *   LCD     a four-shade 72 × 64 LCD in spaced squares: a clock, a walker and a parallax strip
  *   TELETEXT a 24 × 16 page: sextant block graphics, contiguous (joined) and separated (spaced), on joined panels
  *   LINES    a 36-line screen on rect cells, each line one stroke whose weight is the tone, over a solid-bar spectrum
@@ -24,12 +23,10 @@ import { EMPTY, GARBAGE, tetris, ROTATIONS, type TetrisHistory } from '../../eng
 import { tsin } from '../../engine/noise/trig'
 import { glyph } from '../../engine/fields/bitmapFont'
 import { clamp, hash01 } from '../../engine/math'
-import type { DotStyle, Layer, Tone } from '../../engine/types'
+import type { Layer, Tone } from '../../engine/types'
 import { TILE, layer, stack, type WidgetPreset } from '../types'
 import { portrait } from './mirror'
 import { FOOT, T, cells, cite, footer, mod, pad, squareStyle, thousands, tile, type Pt } from './squaresKit'
-import { latticeGrid } from '../../engine/sampler/gridSampler'
-import { frontOf, squareMorph } from '../../engine/squares/morph'
 import { squaresPack } from './squaresPack'
 import { sqHat } from './squaresHat'
 import { sqAmmann } from './squaresAmmann'
@@ -185,86 +182,6 @@ export const sqQuads: WidgetPreset = {
   },
 }
 
-// ── 03 BLOB ─ metaballs that fuse only with their equals ──────────────────────────────────────────────
-// Thesis: "Metaballs on a grid: cells fuse only with their equals." Four balls on Lissajous paths over a 3×
-// lattice; f = Σ rᵢ² / dᵢ², value = f / 2 on five levels. Cells from level .5 up join, level by level, so the blob
-// is a stack of terraces with grout between them; the .25 halo stays spaced squares. The red is the neck: the
-// cells where the two closest balls each give more than .35 of the threshold, so it forms as they meet.
-const BK = 3, B_ORIGIN: Pt = [0, 9], BW = 48, BH = 40, B_LOOP = 24
-const BALLS = [
-  { r: 6.2, ax: 14, ay: 9, wx: 1, wy: 2, px: 0, py: .6 },
-  { r: 5.4, ax: 15, ay: 11, wx: 2, wy: 1, px: 2.1, py: 0 },
-  { r: 4.8, ax: 12, ay: 12, wx: 3, wy: 2, px: 4.2, py: 1.3 },
-  { r: 5.8, ax: 16, ay: 8, wx: 1, wy: 3, px: 1.1, py: 3.4 },
-]
-const B_OFF = 3.4
-function ballsAt(t: number): Pt[] {
-  const w = (2 * Math.PI) / B_LOOP
-  return BALLS.map(b => [BW / 2 - .5 + b.ax * tsin(b.wx * w * t + b.px), BH / 2 - .5 + b.ay * tsin(b.wy * w * t + b.py + Math.PI / 2)])
-}
-/**
- * The field and its neck at ball positions `at`. The neck belongs to the pair of balls that is nearest (distance
- * over the sum of radii) without overlapping: the cells between their centres that are lit (value ≥ .5) where each
- * ball gives more than .35 of the threshold and neither reaches it alone. Only the largest 4-connected piece of
- * that corridor is kept, so the red is one shape.
- */
-function blobFrame(at: Pt[]): { val: Float32Array; neck: Uint8Array; necks: number; gap: number } {
-  const n = BW * BH, val = new Float32Array(n), cand = new Uint8Array(n), neck = new Uint8Array(n)
-  let pi = -1, pj = -1, gap = Infinity
-  for (let i = 0; i < 4; i++) for (let j = i + 1; j < 4; j++) {
-    const d = Math.hypot(at[i][0] - at[j][0], at[i][1] - at[j][1]) / (BALLS[i].r + BALLS[j].r)
-    if (d > 1 && d < gap) { gap = d; pi = i; pj = j }
-  }
-  for (let r = 0; r < BH; r++) for (let c = 0; c < BW; c++) {
-    let f = 0, a = 0, b = 0
-    for (let i = 0; i < 4; i++) {
-      const dx = c - at[i][0], dy = r - at[i][1], g = (BALLS[i].r * BALLS[i].r) / (dx * dx + dy * dy + .25)
-      f += g
-      if (i === pi) a = g; else if (i === pj) b = g
-    }
-    const v = clamp(f / 2), j = r * BW + c
-    val[j] = v
-    if (pi < 0 || v < .5 || !(a > .35 && b > .35 && a < 1 && b < 1)) continue
-    // between the two centres: projected inside the segment, off its axis by less than the smaller radius
-    const ax = at[pj][0] - at[pi][0], ay = at[pj][1] - at[pi][1], L2 = ax * ax + ay * ay, px = c - at[pi][0], py = r - at[pi][1]
-    const s = (px * ax + py * ay) / L2, off = Math.abs(px * ay - py * ax) / Math.sqrt(L2)
-    if (s > 0 && s < 1 && off < Math.min(BALLS[pi].r, BALLS[pj].r)) cand[j] = 1
-  }
-  // keep the largest 4-connected piece (scan order, so ties keep the first)
-  const seen = new Uint8Array(n), stack: number[] = []
-  let bestCells: number[] = []
-  for (let s0 = 0; s0 < n; s0++) {
-    if (!cand[s0] || seen[s0]) continue
-    const comp: number[] = []
-    seen[s0] = 1; stack.push(s0)
-    while (stack.length) {
-      const j = stack.pop()!, c = j % BW, r = (j - c) / BW
-      comp.push(j)
-      for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-        const cc = c + dc, rr = r + dr, k = rr * BW + cc
-        if (cc >= 0 && cc < BW && rr >= 0 && rr < BH && cand[k] && !seen[k]) { seen[k] = 1; stack.push(k) }
-      }
-    }
-    if (comp.length > bestCells.length) bestCells = comp
-  }
-  for (const j of bestCells) neck[j] = 1
-  return { val, neck, necks: bestCells.length, gap }
-}
-export const sqBlob: WidgetPreset = {
-  id: 'sq-blob', name: 'Blob', label: 'BLOB', ...tile,
-  credit: { by: ['James F. Blinn'], title: 'A generalization of algebraic surface drawing (1982)', source: 'https://doi.org/10.1145/357306.357310', note: 'the blobby model behind metaballs' },
-  layers: ctx => {
-    const t = ctx.t + B_OFF, at = ballsAt(t)
-    const { val, neck, necks, gap } = blobFrame(at)
-    return [
-      cite('BLINN 1982'),
-      cells(BK, B_ORIGIN, BW, BH, (c, r) => (neck[r * BW + c] ? 0 : val[r * BW + c]), { toneOf: (c, r) => (val[r * BW + c] >= .875 ? 'idle' : 'mid'), join: { at: .5, inner: .35 } }),
-      cells(BK, B_ORIGIN, BW, BH, (c, r) => neck[r * BW + c], { tone: 'active', join: { accent: true, inner: .35 } }),
-      ...footer(mod(t, B_LOOP) / B_LOOP, `D/R ${gap < 9 ? gap.toFixed(2) : '-.--'}`, `NECK ${pad(necks, 3)}`),
-    ]
-  },
-}
-
 // ── 04 LCD ─ four shades ──────────────────────────────────────────────────────────────────────────────
 // Thesis: "Four shades, 160 × 144 in spirit." A 72 × 64 four-shade LCD on a 2× lattice: every pixel is a square
 // at one size (the gutter is the LCD grid), and the shade is the tone: off pixels small and faint (the LCD grid), lit pixels faint, mid, idle, value.
@@ -285,7 +202,7 @@ const WALKER = [[
 const SHADE: Tone[] = ['faint', 'faint', 'mid', 'idle', 'value']
 /** LCD rows: the date (7 px) from row 27, then the sky with one empty row between (clouds are 2 px tall). */
 const [LCD_DATE, LCD_SKY] = stack(27, [7, 2])
-/** The LCD's shade per pixel (0 unlit … 4 value) at t, the colon's phase and its pixels (shared with sq-morph). */
+/** The LCD's shade per pixel (0 unlit … 4 value) at t, the colon's phase and its pixels. */
 function lcdFrame(t: number): { px: Uint8Array; colon: boolean; dots: Set<number>; text: string } {
   const px = new Uint8Array(LW * LH), set = (x: number, y: number, s: number) => { if (x >= 0 && y >= 0 && x < LW && y < LH) px[y * LW + x] = s }
   // sky: two clouds drifting left (mid)
@@ -319,12 +236,6 @@ function lcdFrame(t: number): { px: Uint8Array; colon: boolean; dots: Set<number
   const dots = new Set([[34, 9], [35, 9], [34, 10], [35, 10], [34, 17], [35, 17], [34, 18], [35, 18]].map(([x, y]) => y * LW + x))
   return { px, colon, dots, text: `${hh}:${mm} ${date}` }
 }
-/** The LCD with its colon lit when on (the morph draws it in the panel's own shade). */
-function lcdWithColon(t: number): { px: Uint8Array; text: string } {
-  const { px, colon, dots, text } = lcdFrame(t)
-  if (colon) for (const i of dots) px[i] = 4
-  return { px, text }
-}
 export const sqGameboy: WidgetPreset = {
   id: 'sq-gameboy', name: 'LCD', label: 'LCD', ...tile, clock: true,
   credit: { by: ['Nintendo R&D1'], title: 'Game Boy (DMG-01, 1989)', source: 'https://en.wikipedia.org/wiki/Game_Boy', note: 'the four-shade LCD this mimics' },
@@ -338,37 +249,6 @@ export const sqGameboy: WidgetPreset = {
       lcd,
       ...(colon ? [cells(LK, L_ORIGIN, LW, LH, (c, r) => (dots.has(r * LW + c) ? 1 : 0), { tone: 'active' })] : []),
     ]
-  },
-}
-
-// ── 13 MORPH ─ dots become squares ────────────────────────────────────────────────────────────────────
-// Thesis: "Same ink, new shape: dots turn square, then fuse." The LCD face on a round-dot style: a front sweeps down
-// the panel and turns each pixel from a dot into a square of the same ink (`shapeOf`, equal-ink half sides), then the
-// passed rows fuse (`join` from level .5: the digits, hills and walker become solid shapes) and the front sweeps back.
-// The red is the front: the LCD row it is crossing.
-/** Round-dot style of the morph: circles .8 of the half pitch; squares come out .71 (equal ink), under the .1 gutter. */
-export const morphStyle: DotStyle = { shape: 'circle', sizeMin: .25, sizeMax: .9, gap: .1, quantizeSteps: 5, opacityMode: 'fromValue' }
-const M_LOOP = 14, M_OFF = 4.2, M_WIDTH = .3
-/** Morph position k ∈ [0, 1] at t: a triangle wave with a short hold at each end. */
-export const morphK = (t: number) => { const p = mod(t + M_OFF, M_LOOP) / M_LOOP, tri = p < .5 ? 2 * p : 2 - 2 * p; return clamp(tri * 1.2 - .1) }
-const M_ROWS = latticeGrid(TILE, LK, L_ORIGIN).rows
-export const sqMorph: WidgetPreset = {
-  id: 'sq-morph', name: 'Morph', label: 'MORPH', ...tile, style: morphStyle, clock: true,
-  layers: ctx => {
-    const { px, text } = lcdWithColon(ctx.t), k = morphK(ctx.t), opts = { width: M_WIDTH, join: { at: .5, outer: 0 }, rows: M_ROWS }
-    // the front row: where the wavefront crosses w = .5 (the LCD row whose dots are halfway to squares)
-    const w = frontOf(k, opts)
-    let front = -1, best = 1
-    for (let r = 0; r < LH; r++) { const x = w(.5, r / (M_ROWS - 1)); if (x > 0 && x < 1 && Math.abs(x - .5) < best) { best = Math.abs(x - .5); front = r } }
-    const lcd = cells(LK, L_ORIGIN, LW, LH, (c, r) => (r === front ? 0 : px[r * LW + c] ? 1 : .25), { toneOf: (c, r) => SHADE[px[r * LW + c]] })
-    const red = cells(LK, L_ORIGIN, LW, LH, (c, r) => (r === front ? (px[r * LW + c] ? 1 : .25) : 0), { tone: 'active' })
-    // only the front row can light: bound the red layer's window to it
-    red.field.bounds = front < 0 ? [0, 0, -1, -1] : [0, front, LW - 1, front]
-    // the red row is always mid-turn (never joined): only its shape follows the front
-    // the morph wraps the LCD's field, so its words go on the first wrapped layer
-    const panel = squareMorph([lcd], k, opts)
-    panel[0].field.text = text
-    return [cite(`SHAPE ${pad(k * 100, 3)}%`), ...panel, ...squareMorph([red], k, { width: M_WIDTH })]
   },
 }
 
@@ -500,6 +380,6 @@ export const sqLines: WidgetPreset = {
   },
 }
 
-export const squaresBoard = [sqStack, sqQuads, sqBlob, sqGameboy, sqTeletext, sqLines, ...squaresPack, sqMorph, sqHat, sqAmmann, sqArctic, sqSandpile, sqAscii]
+export const squaresBoard = [sqStack, sqQuads, sqGameboy, sqTeletext, sqLines, ...squaresPack, sqHat, sqAmmann, sqArctic, sqSandpile, sqAscii]
 /** The board's sims and sizes, for the checks (`scripts/squares.ts`). */
-export const squaresSources = { game, quadTree, quadsAt, ballsAt, blobFrame, lineLevels, TT_BANNER, B_OFF, B_LOOP, LINES: { w: LN_W, lines: LN_LINES }, TETRIS: { w: TW, h: TH, k: TK, origin: T_ORIGIN }, BLOB: { k: BK, origin: B_ORIGIN, w: BW, h: BH }, QUADS: { size: Q_SIZE, k: QK, origin: Q_ORIGIN, splits: Q_SPLITS } }
+export const squaresSources = { game, quadTree, quadsAt, lineLevels, TT_BANNER, LINES: { w: LN_W, lines: LN_LINES }, TETRIS: { w: TW, h: TH, k: TK, origin: T_ORIGIN }, QUADS: { size: Q_SIZE, k: QK, origin: Q_ORIGIN, splits: Q_SPLITS } }

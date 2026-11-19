@@ -68,16 +68,4 @@ export const gpuStarfield: WidgetPreset = {
   layers: ctx => gpuCard(STARS_SRC, 4, 'value', ctx),
 }
 
-// ── MOIRE ── a turning grating over rings: the beat pattern needs ~20 dots per line pair to exist.
-export const MOIRE_SRC = `// a turning grating over drifting rings: the beat only exists at fine pitch
-let x = u - .5; let y = (v - .5) * .83;
-let a = t * .05;
-let g1 = .5 + .5 * sin((x * cos(a) + y * sin(a)) * 220);
-let g2 = .5 + .5 * sin(length(x - .1 * sin(t * .3), y) * 230);
-g1 * g2`
-export const gpuMoire: WidgetPreset = {
-  id: 'gpu-moire', name: 'Moire', label: 'MOIRE', ...tile,
-  layers: ctx => gpuCard(MOIRE_SRC, 5, 'auto', ctx),
-}
-
-export const gpuBoard = [gpuPlasma, gpuStarfield, gpuMoire]
+export const gpuBoard = [gpuPlasma, gpuStarfield]
