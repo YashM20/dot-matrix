@@ -163,15 +163,15 @@ for (let run = 1; run <= REPEAT; run++) for (const board of BOARDS) for (const v
   check(`viewport-frames: ${board} @${v.id}: no scroll position keeps more rows live than the model's ${r.model.rows}`, most <= r.model.rows, `most ${most}`)
 }
 
-// the summary: per board, viewport and mode, the worst row (by p95) of each run, then the median over runs
-const lines = ['| board | viewport | mode | live cards (most) | frame mean (ms) | frame p95 (ms) | main busy (ms/frame) | worst row | fps (min) |', '| --- | --- | --- | --- | --- | --- | --- | --- | --- |']
+// the summary: per board, viewport and mode, each run's worst row (frame p95 and busy: the highest; page Hz and a card's
+// fps: the lowest, any row), then the median over runs
+const lines = ['| board | viewport | mode | live cards (most) | frame p95, worst row (ms) | main busy, worst row (ms/frame) | page Hz (lowest) | card fps (lowest) |', '| --- | --- | --- | --- | --- | --- | --- | --- |']
 for (const board of BOARDS) for (const v of VPS) for (const mode of MODES) {
   const rs = reads.filter(r => r.board === board && r.viewport === v.id && r.mode === mode)
   if (!rs.length) continue
-  const worst = rs.map(r => r.rows.reduce((w, x) => (x.p95 > w.p95 ? x : w)))
-  const med = (f: (x: RowRead) => number) => q(worst.map(f), .5).toFixed(2)
-  const fps = worst.map(x => x.fpsMin).filter((x): x is number => x !== null)
-  lines.push(`| ${board} | ${v.id} | ${mode} | ${Math.max(...rs.flatMap(r => r.rows.map(x => x.inBand.length)))} | ${med(x => x.mean)} | ${med(x => x.p95)} | ${med(x => x.busy)} | ${worst.map(x => x.row).join(', ')} | ${fps.length ? q(fps, .5).toFixed(1) : '-'} |`)
+  const per = (f: (x: RowRead) => number, pick: (...xs: number[]) => number) => q(rs.map(r => pick(...r.rows.map(f))), .5)
+  const fps = rs.map(r => r.rows.map(x => x.fpsMin).filter((x): x is number => x !== null)).filter(xs => xs.length).map(xs => Math.min(...xs))
+  lines.push(`| ${board} | ${v.id} | ${mode} | ${Math.max(...rs.flatMap(r => r.rows.map(x => x.inBand.length)))} | ${per(x => x.p95, Math.max).toFixed(2)} | ${per(x => x.busy, Math.max).toFixed(2)} | ${per(x => x.hz, Math.min).toFixed(1)} | ${fps.length ? q(fps, .5).toFixed(1) : '-'} |`)
 }
 console.log(`\n${lines.join('\n')}`)
 mkdirSync('.snapshots/viewport-frames', { recursive: true })
