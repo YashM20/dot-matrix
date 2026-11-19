@@ -7,7 +7,8 @@
  * left empty leaves no trace at all.
  */
 import { editLayer, frameById, layerOf, pitchOf, removeLayer } from './doc'
-import { editableText, textGeo, textOf, withText } from './direct'
+import { foldText, undrawnNote } from '../../data/text'
+import { editableText, textGeo, textOf, typedText, withText } from './direct'
 import { isPhone } from './phone'
 import { validSel } from './select'
 import { useEditor } from './store'
@@ -41,11 +42,21 @@ export function startTyping(frame: string, layer: string, o: { begun?: boolean; 
   keepInView(frame, layer)
   return true
 }
-/** The input changed: the layer takes the new text (upper case, ≤ 64). */
-export function typeText(value: string) {
+/**
+ * The input changed: the layer takes the new text folded to the dot font (`typedText`: upper case, É → E, ß → SS,
+ * ≤ 64), and the editor note names what the font can't draw. Outside an IME composition the input takes the folded
+ * text too, so its caret indexes the layer's glyphs.
+ */
+export function typeText(value: string, composing = false) {
   const ses = session
   if (!ses) return
-  st().live(d => editLayer(d, ses, l => withText(l, value)))
+  const text = typedText(value), note = undrawnNote(foldText(value).dropped)
+  if (input && !composing && input.value !== text) {
+    const at = typedText(value.slice(0, input.selectionStart ?? value.length)).length
+    input.value = text; input.setSelectionRange(at, at)
+  }
+  if (note) st().setNote(note)
+  st().live(d => editLayer(d, ses, l => withText(l, text)))
 }
 export function placeCaret(i: number) { if (input) { input.focus({ preventScroll: true }); input.setSelectionRange(i, i); onCaret?.() } }
 /** Finish typing: one undo step (none if nothing changed). An emptied layer is removed. */

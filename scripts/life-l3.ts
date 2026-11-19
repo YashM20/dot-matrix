@@ -36,14 +36,16 @@ const fnvStr = (s: string) => { let h = 0x811c9dc5; for (let i = 0; i < s.length
  * (#225), and when big dots began to ease toward a circle (each dot's roundness is in the hash), and for pond-koi when
  * its DOTS/TYPE switch took the time-of-day caption's place at rest (#269, so a phone can see it) and its chosen
  * word went to `value` (the other stays `mid`), and again when the switch took the shared label row spec (#360: the
- * names 6 cells apart, so DOTS moved one cell left); nothing else in the frames changed.
+ * names 6 cells apart, so DOTS moved one cell left), and for #246 (every lattice dot centred on its glyph box; koi:
+ * the bank fades out, red only on the lattice dots; fireflies: grass on its blades; murmur: one dot per bird);
+ * nothing else in the frames changed.
  */
 const L2_FRAMES: Record<string, string[]> = {
-  'pond-koi': ['26d308b7', '6651d28b', 'abeac167', '6d1b7ee2', 'f0438ae1'],
+  'pond-koi': ['b43f0133', '686f03f4', 'c3819d21', 'aecafcd7', '24c98d15'],
   'pond-jelly': ['ab366d7c', '60c52111', 'cc4380bf', '894c0c34', '7ed619a0'],
   'pond-slime': ['0f69b10d', 'ae470b32', '7d5d4160', 'a334b32e', 'bfedb193'],
-  'pond-fireflies': ['c9e73652', 'e9e9cd82', '18ad1d40', 'ce3fd4f2', '85c3abda'],
-  'pond-murmur': ['15097b7a', 'cb9e8ddf', '9b23f00a', '2fa47a31', '21910c0b'],
+  'pond-fireflies': ['6acefdbd', '3af67e32', '62a25406', '0f6e9a33', '430b11ae'],
+  'pond-murmur': ['c50e1000', '6d7820c3', 'a7cb9975', '72b33083', 'b0541e27'],
   'pond-terrarium': ['bc5dc345', '269ae61d', '94b74998', '971500b3', '18794e77'],
 }
 /** `rippleStep`'s output, pinned: FNV of a 600-step run on the pond mask with a splat every 50 steps (the L1.2 code). */

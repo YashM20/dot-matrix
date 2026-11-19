@@ -2,8 +2,8 @@
  * The murmuration (docs/living-matter/L-pond.md §L2 `pond-murmur`): 400 starlings as boids (steer.ts `flock`),
  * alignment and cohesion over each bird's 7 nearest (topological, Ballerini et al. 2008), separation within 3
  * cells, a soft elliptical sky, a falcon they flee, and the agitation wave of Procaccini et al.: a startled bird's
- * alarm passes to its 7 nearest at .88 per step, so a dark band runs through the flock. Drawn as a sheet of line
- * glyphs along each tile's mean velocity; the falcon (the one accent) is a lattice dot with two wing strokes.
+ * alarm passes to its 7 nearest at .88 per step, so a dark band runs through the flock. Drawn one dot per bird,
+ * brighter where the flock is dense; the falcon (the one accent) is a lattice dot with two wing strokes.
  */
 import { createWorld, type StepInput, type World } from '../physics/world'
 import { createHash, type SpatialHash } from '../physics/particles'
@@ -11,7 +11,7 @@ import { dcos, dsin, rngFor, TAU } from '../noise'
 import { contain, flock, hashPoints, integrate, kNearest, turnCap, wander, type Agent } from './steer'
 import { phaseSteps } from './pond'
 import { pressDiscrete, pressInit, pressStep, PRESS_HOLD, PRESS_TAP, pressAt, seamBlend } from './loop'
-import { clearTiles, EDGE3, edgeOfTangent, glyphOf, putBig, putGlyph, T_ACTIVE, T_IDLE, T_MID, T_VALUE, type TileGrid, type TileRaster } from './glyphTiles'
+import { clearTiles, EDGE3, edgeOfTangent, putBig, putGlyph, T_ACTIVE, T_IDLE, T_MID, T_VALUE, type TileGrid, type TileRaster } from './glyphTiles'
 
 export const MURMUR_DT = 1 / 30
 export const BIRDS = 400
@@ -122,28 +122,28 @@ export function createMurmur(spec: MurmurSpec): Murmur {
 export interface FalconView { x: number; y: number; vx: number; vy: number; mode: number }
 export const falconView = (m: Murmur, s: Float32Array): FalconView => { const G = m.layout.G; return { x: s[G + F_X], y: s[G + F_Y], vx: s[G + F_VX], vy: s[G + F_VY], mode: s[G + F_MODE] } }
 
-const cnt = new Uint16Array(36 * 33), sx = new Float32Array(36 * 33), sy = new Float32Array(36 * 33), amax = new Float32Array(36 * 33)
-const X_GLYPH = glyphOf(EDGE3, 'x')
+const cnt = new Uint16Array(36 * 33)
 /**
- * Draw: per tile, the birds' mean velocity as a line glyph (a sheet of dashes that turns with the flock), tone by
- * count (1 mid, 2 idle, ≥ 3 value); agitation > .5 draws 'x' a tone down (the dark band). Then the falcon.
+ * Draw: each bird one card dot, its tone by its tile's crowd (1 mid, 2 idle, ≥ 3 value), a tone down while alarmed
+ * (the dark band). Then the falcon.
  */
 export function drawMurmur(m: Murmur, s: Float32Array, r: TileRaster): void {
-  const { cols, rows, pitch, ox, oy } = m.spec.tiles, { X, Y, VX, VY, A } = m.layout, T = cols * rows
+  const { cols, rows, pitch, ox, oy } = m.spec.tiles, { X, Y, A } = m.layout, T = cols * rows
   clearTiles(r)
-  cnt.fill(0, 0, T); sx.fill(0, 0, T); sy.fill(0, 0, T); amax.fill(0, 0, T)
+  cnt.fill(0, 0, T)
   for (let i = 0; i < BIRDS; i++) {
     const tx = Math.floor((s[X + i] - ox) / pitch), ty = Math.floor((s[Y + i] - oy) / pitch)
     if (tx < 0 || ty < 0 || tx >= cols || ty >= rows) continue
-    const k = ty * cols + tx
-    cnt[k]++; sx[k] += s[VX + i]; sy[k] += s[VY + i]; if (s[A + i] > amax[k]) amax[k] = s[A + i]
+    cnt[ty * cols + tx]++
   }
-  for (let k = 0; k < T; k++) {
-    const c = cnt[k]
-    if (!c) continue
-    const tone = c === 1 ? T_MID : c === 2 ? T_IDLE : T_VALUE
-    if (amax[k] > .5) putGlyph(r, k % cols, (k / cols) | 0, X_GLYPH, tone === T_VALUE ? T_IDLE : T_MID, .8)
-    else putGlyph(r, k % cols, (k / cols) | 0, edgeOfTangent(EDGE3, sx[k], sy[k]), tone, c >= 3 ? 1 : .8)
+  // every bird is one dot on its own card cell, the tone by its tile's crowd (1 mid, 2 idle, ≥ 3 value) and a tone
+  // down while it is alarmed (the dark band); a line glyph per tile lined the tiles up into hatching (#246)
+  for (let i = 0; i < BIRDS; i++) {
+    const tx = Math.floor((s[X + i] - ox) / pitch), ty = Math.floor((s[Y + i] - oy) / pitch)
+    if (tx < 0 || ty < 0 || tx >= cols || ty >= rows) continue
+    const c = cnt[ty * cols + tx], j = Math.floor(s[Y + i]) * r.cardW + Math.floor(s[X + i])
+    const tone = c >= 3 ? T_VALUE : c === 2 ? T_IDLE : T_MID, shown = s[A + i] > .5 ? (tone === T_VALUE ? T_IDLE : T_MID) : tone
+    if (r.tone[j] < shown) { r.tone[j] = shown; r.value[j] = shown === T_VALUE ? 1 : .8 }
   }
   // the falcon: a lattice dot with two swept-back wing strokes
   const G = m.layout.G, fx = s[G + F_X], fy = s[G + F_Y]

@@ -4,12 +4,13 @@
  */
 import { useRef } from 'react'
 import { squircleExponent } from '../../engine/renderer/shapePath'
+import { undrawnNote } from '../../data/text'
 import { SHARE_GRIDS } from '../../lib/share'
 import { CARD, widgetById } from '../../widgets'
 import type { WidgetPreset } from '../../widgets/types'
 import { More } from '../More'
 import { looksLikeSpec, presetAsSpecCard, specV1 } from '../studio/adapter'
-import { BLENDS, cardFromJSON, LATTICES, TONES, type LayerTone, type StudioCard, type StudioLayer } from '../studio/doc'
+import { BLENDS, cardFromJSON, LATTICES, TONES, validateCard, type LayerTone, type StudioCard, type StudioLayer } from '../studio/doc'
 import { arrangeSel, copyEverywhere, deleteSel, duplicateSel, groupSel, lockSel, paste, ungroupSel } from './actions'
 import { attempt } from './attempt'
 import { docFromJSON, duplicateFrame, duplicateLayer, editFrame, frameById, groupOf, moveLayer, newIRLayer, removeFrame, removeLayer, renameGroup, seedDoc, THEMES, topDown, type EditorFrame, type ThemeName } from './doc'
@@ -67,14 +68,18 @@ function ManyPanel({ f }: { f: EditorFrame }) {
   </>
 }
 
-/** Open a picked file: an editor document replaces the canvas, a card spec or card JSON becomes a frame. */
+/**
+ * Open a picked file: an editor document replaces the canvas, a card spec or card JSON becomes a frame. Text layers
+ * fold to the dot font (`validateCard`), and the note names any characters the font can't draw.
+ */
 async function openFile(fl: File) {
   const { setNote, fit } = getEditor()
-  const text = await fl.text(), x = JSON.parse(text) as { kind?: string }
-  if (x.kind === 'dot480.editor') { getEditor().openDoc(docFromJSON(text)); setNote(`opened ${fl.name}`); requestAnimationFrame(() => fit()) } // held from the autosave until it draws
+  const text = await fl.text(), x = JSON.parse(text) as { kind?: string }, gone = new Set<string>()
+  const undrawn = () => (gone.size ? `; ${undrawnNote([...gone])}` : '')
+  if (x.kind === 'dot480.editor') { getEditor().openDoc(docFromJSON(text, gone)); setNote(`opened ${fl.name}${undrawn()}`); requestAnimationFrame(() => fit()) } // held from the autosave until it draws
   else {
-    const card = looksLikeSpec(x) ? specV1.fromSpec(x as never) : cardFromJSON(text)
-    getEditor().insertCard(card, { source: 'file' }); setNote(`added ${fl.name} as a frame`)
+    const card = looksLikeSpec(x) ? validateCard(specV1.fromSpec(x as never), gone) : cardFromJSON(text, gone)
+    getEditor().insertCard(card, { source: 'file' }); setNote(`added ${fl.name} as a frame${undrawn()}`)
   }
 }
 

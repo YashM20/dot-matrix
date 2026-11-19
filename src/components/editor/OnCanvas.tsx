@@ -97,7 +97,7 @@ export function InText({ f, l, cam }: { f?: EditorFrame; l?: StudioLayer; cam: C
   return <>
     <input ref={ref} className={`ed-intext${g ? ' on' : ''}`} style={box} aria-label="Text on the canvas: type, Enter to finish, Esc to cancel" aria-hidden={!g} tabIndex={g ? 0 : -1}
       autoCapitalize="characters" autoComplete="off" autoCorrect="off" spellCheck={false} maxLength={64} enterKeyHint="done"
-      onChange={e => { typeText(e.currentTarget.value); sync() }} onSelect={sync} onKeyUp={sync}
+      onChange={e => { typeText(e.currentTarget.value, (e.nativeEvent as InputEvent).isComposing); sync() }} onSelect={sync} onKeyUp={sync}
       onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); commitTyping() } else if (e.key === 'Escape') { e.preventDefault(); cancelTyping() } }}
       onBlur={() => commitTyping()} />
     {g && (a === b

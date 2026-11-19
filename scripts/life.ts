@@ -32,6 +32,7 @@ import { lifeX1Checks } from './life-x1'
 import { lifeHealChecks } from './life-heal'
 import { lifePlanktonChecks, planktonSnapshot } from './life-plankton'
 import { lifeTuringChecks, turingSnapshot } from './life-turing'
+import { pondDotChecks } from './life-pond-dots'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[s.length >> 1] }
@@ -529,6 +530,8 @@ export async function lifeChecks(assert: Assert): Promise<void> {
   await lifePlanktonChecks(assert, pond)
   // ── X-advanced #15: the Turing skin, reaction-diffusion on a growing body (scripts/life-turing.ts) ──
   await lifeTuringChecks(assert, pond)
+  // ── #246: the board's dot-level fixes (scripts/life-pond-dots.ts) ──
+  await pondDotChecks(assert, pond)
 
   // ── determinism across engines (Bun / JSC), when available ──
   {

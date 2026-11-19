@@ -1,6 +1,6 @@
 /**
  * 05 MURMUR (docs/living-matter/L-pond.md §L2 `pond-murmur`): 400 starlings, each watching its seven nearest
- * (topological boids, Ballerini et al. 2008), fold and turn as one sheet of line glyphs. A falcon (the accent) hunts
+ * (topological boids, Ballerini et al. 2008), fold and turn as one flock, a dot per bird. A falcon (the accent) hunts
  * on a Lissajous path; birds near it flee and the alarm runs through the flock as a dark band (Procaccini et al.).
  * On a desktop the cursor is the falcon and a click is a swoop; on touch a tap swoops, a held drag steers it.
  */
@@ -26,3 +26,5 @@ export const pondMurmur: WidgetPreset = {
     return [caption('400 BIRDS'), ...surfaceFocus(ctx, 'murmur'), ...tileLayers(raster)]
   },
 }
+/** Read-outs for the checks (scripts/life-pond-dots.ts): the raster the card drew last. */
+export const murmurProbe = { raster }

@@ -29,7 +29,7 @@ let kl: readonly [number, number, number] = KOI_LIGHT
 /**
  * Draw the scene state at t into `r` (water, foam, shadows, koi, pellets, pads), day/night from `hour` (sky.ts:
  * night 21–05, ramps at dusk and dawn; by day nothing changes). Values sit on quantize steps (.6, .8, 1); the only
- * accent is the red marking of a koi (`active`, never activeDim). A raster on another tile grid than the scene's
+ * accent is the red marking of a koi (`active`, never activeDim), on the lattice dots only in style B. A raster on another tile grid than the scene's
  * (L3.4's TYPE grid, `KOI_TYPE_TILES`) is drawn in 5×7 font glyphs by `drawKoiType`.
  */
 export function drawKoiPond(p: KoiPond, s: Float32Array, t: number, hour: number, r: TileRaster, opts: KoiDrawOpts = {}): void {
@@ -157,7 +157,8 @@ function drawKoi(p: KoiPond, s: Float32Array, k: number, T: KoiTiles, t: number,
     const flick = flickerOn(tx, ty, t, .03, .25, k * .37) ? 1 : 0
     if (cover < INTERIOR) {
       for (let i = 0; i < 16; i++) sub16[i] = T.sub[q * 16 + i]
-      putGlyph(r, tx, ty, matchTile(SHAPE3, sub16), bright, stepDown(.8, dz))
+      // in style B the red is the lattice dots' alone: an edge glyph of a red patch is the body's white (#246)
+      putGlyph(r, tx, ty, matchTile(SHAPE3, sub16), red && lattice ? (deep ? T_IDLE : T_VALUE) - dark : bright, stepDown(.8, dz))
       continue
     }
     if (fin) { putGlyph(r, tx, ty, rampGlyph(RAMP3, .5), (deep ? T_IDLE : T_VALUE) - dark, stepDown(.8, dz)); continue }

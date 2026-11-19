@@ -255,11 +255,11 @@ export function flickerOn(tx: number, ty: number, t: number, share: number, rate
 const toneName = (i: number): Tone | undefined => (i >= 0 ? LIFE_TONES[i] : undefined)
 /**
  * The raster as layers: one multi-tone `toneOf` layer bounded to the tile box (`split` → one layer per tone), plus,
- * when any big dot is set, one multi-tone layer with `lattice: pitch, origin: [ox, oy]` (the sampler hides card dots
- * under a lit lattice dot). `tones` limits the output to those tones (X-ray, checks).
+ * when any big dot is set, one multi-tone layer with `lattice: pitch` centred on the glyph boxes (origin
+ * [ox − .5, oy − .5]; the sampler hides card dots under a lit lattice dot). `tones` limits the output to those tones (X-ray, checks).
  * The layers read the raster live: draw, take the layers, sample, then draw the next frame.
  */
-export function tileLayers(r: TileRaster, opts: { split?: boolean; tones?: readonly Tone[] } = {}): Layer[] {
+export function tileLayers(r: TileRaster, opts: { split?: boolean; tones?: readonly Tone[]; bigOnTile?: boolean } = {}): Layer[] {
   const { cardW, cardH } = r, { pitch, ox, oy } = r.grid, py = r.grid.pitchY ?? pitch
   const c0 = Math.max(0, ox), r0 = Math.max(0, oy), c1 = Math.min(cardW - 1, ox + r.grid.cols * pitch - 1), r1 = Math.min(cardH - 1, oy + r.grid.rows * py - 1)
   const allow = opts.tones ? new Set(opts.tones) : undefined
@@ -286,8 +286,12 @@ export function tileLayers(r: TileRaster, opts: { split?: boolean; tones?: reado
   }
   const out: Layer[] = opts.split ? LIFE_TONES.map((_, k) => make(k)) : [make()]
   if (r.bigCount > 0 && r.grid.pitchY === undefined) {
+    // a big dot sits centred on the glyph box it stands for (cells 0 to g − 1 of its tile, g = pitch − 1), not on
+    // the whole tile with its gutter: half a cell up and left, so it keeps the same air to the glyphs on every side
+    // (#246; `bigOnTile` keeps the old place for the terrarium, which waits on #221)
+    const sh = opts.bigOnTile ? 0 : .5, bx = ox - sh, by = oy - sh
     // the lattice the sampler builds for (pitch, origin): floor((card − origin) / pitch) cells each way
-    const sc = Math.max(1, Math.floor((cardW - ox) / pitch)), sr = Math.max(1, Math.floor((cardH - oy) / pitch))
+    const sc = Math.max(1, Math.floor((cardW - bx) / pitch)), sr = Math.max(1, Math.floor((cardH - by) / pitch))
     const tileOf = (u: number, v: number) => {
       const c = Math.round(u * (sc - 1)), rr = Math.round(v * (sr - 1))
       return c < 0 || rr < 0 || c >= r.grid.cols || rr >= r.grid.rows ? -1 : rr * r.grid.cols + c
@@ -301,7 +305,7 @@ export function tileLayers(r: TileRaster, opts: { split?: boolean; tones?: reado
         return r.bigValue[i]
       }
       field.bounds = [0, 0, Math.min(sc, r.grid.cols) - 1, Math.min(sr, r.grid.rows) - 1]
-      const base = { field, lattice: pitch, origin: [ox, oy] as [number, number] }
+      const base = { field, lattice: pitch, origin: [bx, by] as [number, number] }
       return only !== undefined ? { ...base, tone: LIFE_TONES[only] } : { ...base, toneOf: (_v, u, v) => { const i = tileOf(u, v); return i < 0 ? undefined : toneName(r.bigTone[i]) } }
     }
     if (opts.split) out.push(...LIFE_TONES.map((_, k) => big(k))); else out.push(big())

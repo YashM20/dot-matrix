@@ -8,6 +8,7 @@
  */
 import { scaleOf, textSize } from '../../engine/layout'
 import { glyphMetrics } from '../../engine/fields/bitmapFont'
+import { foldText } from '../../data/text'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import type { LayerSpec } from '../../spec/types'
 import { LATTICES, paintCells, SITE_SIZES, TONES, type LayerTone, type PaintLayer, type SitesLayer, type SpecLayer, type StudioLayer, type TextLayer } from '../studio/doc'
@@ -84,9 +85,11 @@ export const layerBox = (f: EditorFrame, l: StudioLayer): FBox | undefined => (h
 export const editableText = (l?: StudioLayer): l is TextLayer | (SpecLayer & { spec: Extract<LayerSpec, { kind: 'text' }> & { text: string } }) =>
   l?.kind === 'text' || (l?.kind === 'spec' && l.spec.kind === 'text' && typeof l.spec.text === 'string')
 export const textOf = (l: StudioLayer): string => (l.kind === 'text' ? l.params.text : l.kind === 'spec' && l.spec.kind === 'text' ? l.spec.text ?? '' : '')
-/** The layer with its text replaced (upper case: the 5×7 font's letters), at most 64 characters. */
+/** Typed text as a layer holds it: folded to the 5×7 font (`foldText`: upper case, É → E, ß → SS), at most 64 characters. */
+export const typedText = (text: string): string => foldText(text).text.slice(0, 64)
+/** The layer with its text replaced by `typedText(text)`. */
 export function withText(l: StudioLayer, text: string): StudioLayer {
-  const s = text.toUpperCase().slice(0, 64)
+  const s = typedText(text)
   if (l.kind === 'text') return { ...l, params: { ...l.params, text: s } }
   if (l.kind === 'spec' && l.spec.kind === 'text' && typeof l.spec.text === 'string') return { ...l, spec: { ...l.spec, text: s } }
   return l

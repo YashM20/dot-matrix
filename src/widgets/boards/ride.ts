@@ -1,11 +1,13 @@
 /**
  * Board 6 — Ride / Henry / System / Apps (public/images/HQLHmo4asAA8Blx.jpg).
  * TILE cards (144×144): 5×7 labels on the card pitch, body text on a 1.4–2 lattice, heroes in the
- * smooth display weight; rings, rules and markers are evenly spaced dot sites. The reference font
- * runs taller than 5×7, so body text uses `scale: [1, 9/7]` (rows 1 and 5 doubled — stems, not bars).
+ * hero faces; rings, rules and markers are evenly spaced dot sites. The reference font runs taller than
+ * 5×7, so body text is 5×9 (`tall`, rows 1 and 5 doubled) and the posters use condensed caps (`poster`),
+ * both on one lattice so rows and columns share a pitch (ride-type.ts).
  */
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { TAU, TILE, bounded, dim, layer, layoutFor, tileStyle, type LatticeField, type WidgetPreset } from '../types'
+import { poster, tall } from './ride-type'
 
 const T = layoutFor(TILE)
 /** The same dots, with `text` (what `describe()` reads) set to what the glyphs mean. */
@@ -13,7 +15,6 @@ const saying = (f: LatticeField, text: string): LatticeField => {
   const g = f.field
   return { ...f, field: Object.assign((u: number, v: number) => g(u, v), g, { text }) }
 }
-const TALL: [number, number] = [1, 9 / 7]
 type Pt = [number, number]
 
 /**
@@ -37,11 +38,13 @@ const spriteOn = (rows: string[], k: number, col: number, row: number): LatticeF
 const ringSites = (cx: number, cy: number, r: number, n: number, keep: (i: number) => boolean): Pt[] =>
   Array.from({ length: n }, (_, i) => i).filter(keep).map(i => [cx + r * Math.sin((i / n) * TAU), cy - r * Math.cos((i / n) * TAU)])
 /** Light-grey text: value-tone dots at 3/4 size and opacity. */
-const soft = (l: LatticeField, v = .75): LatticeField => ({ ...l, field: dim(l.field, v) })
+const soft = (l: LatticeField, v = .75): LatticeField => ({ ...l, field: Object.assign(dim(l.field, v), { text: l.field.text }) })
 const range = (x0: number, step: number, n: number) => Array.from({ length: n }, (_, i) => x0 + i * step)
 
 // ── Ride: speed ring open at the bottom, effort arc in red ──────────────────
 const RIDE_RING = { cx: 72, cy: 73.5, r: 65.4, n: 54 }
+/** The tenths' top row: their last dot row (13.5 dots down on a 2 lattice) on the 32's (13.5 dots down on 2.7, from 47.5). */
+export const SPEED_TENTHS_ROW = 47.5 + 13.5 * 2.7 - 13.5 * 2
 export const ride: WidgetPreset = {
   id: 'ride', name: 'Ride', group: 'polar', chrome: 'dots', grid: TILE, style: tileStyle,
   defaults: { effort: 0.3 },
@@ -52,10 +55,11 @@ export const ride: WidgetPreset = {
     return [
       layer(T.dots(ringSites(cx, cy, r, n, track), 3.9), 'idle'),
       layer(T.dots(ringSites(cx, cy, r, n, i => i >= 8 && i < 8 + red && track(i)), 4.3), 'active'),
-      layer(T.big('32', 24, 47.5, { lattice: 2.7, smooth: true })),
-      layer(T.big('.', 87, 60, { lattice: 2, smooth: true })), layer(T.big('4', 98, 60, { lattice: 2, smooth: true })),
+      // the speed is two lattices (the tenths smaller, on the 32's baseline) but reads as one number
+      layer(saying(T.big('32', 24, 47.5, { lattice: 2.7, smooth: true }), '32.4')),
+      layer(saying(T.big('.4', 86, SPEED_TENTHS_ROW, { lattice: 2, smooth: true }), '')),
       layer(soft(T.big('KM/H', 72, 98, { lattice: 1.5, align: 'center' }))),
-      layer(T.big('247', 42, 126, { lattice: 1.05, smooth: true })), layer(T.big('W', 87, 126, { lattice: 1.05, smooth: true })),
+      layer(saying(T.big('247', 42, 126, { lattice: 1.05, smooth: true }), '247 W')), layer(saying(T.big('W', 87, 126, { lattice: 1.05, smooth: true }), '')),
     ]
   },
 }
@@ -92,8 +96,8 @@ const BEAR = [
   '..fFFFFFFFFFFFFFFFFFFf..',
   '...ffffffffffffffffff...',
 ]
-const BUNNY = [
-  '.##...##.',
+// the ears are two rows, so the bunny sits centred in the hold with air above and below it (#258)
+export const BUNNY = [
   '.##...##.',
   '.##...##.',
   '#########',
@@ -105,7 +109,7 @@ const BUNNY = [
   '.#######.',
   '.##...##.',
 ]
-const BEAR_K = 3, BUNNY_K = 2, BEAR_AT: Pt = [36, 30], BUNNY_AT: Pt = [63, 79]
+export const BEAR_K = 3, BUNNY_K = 2, BEAR_AT: Pt = [36, 30], BUNNY_AT: Pt = [63, 80]
 /** Fur luma by lighting: lit top-left rim, plain fur, shaded right rim and chin. */
 const furLuma = (i: number, j: number): string => {
   const at = (x: number, y: number) => (BEAR[y]?.[x] ?? '.') === 'F' || BEAR[y]?.[x] === 'E'
@@ -119,14 +123,14 @@ const furLuma = (i: number, j: number): string => {
 const bearFur = BEAR.map((row, j) => [...row].map((_, i) => furLuma(i, j)).join(''))
 const bearWhite = BEAR.map(row => row.replace(/[^W]/g, '.').replace(/W/g, '#'))
 export const henryBear: WidgetPreset = {
-  id: 'henry-bear', name: 'Henry', group: 'icon', live: true, chrome: 'dots', grid: TILE, style: tileStyle,
+  id: 'henry-bear', name: 'Henry', group: 'icon', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => [
     layer(T.dots(ringSites(72, 69.5, 65, 93, () => true).filter(([, y]) => y < 128), 2.4), 'idle'),
     layer(T.dots(ringSites(72, 69.5, 54, 78, () => true), 2.2), 'mid'),
     layer(spriteOn(bearFur, BEAR_K, ...BEAR_AT), 'idle'),
     layer(spriteOn(bearWhite, BEAR_K, ...BEAR_AT)),
     layer(spriteOn(BUNNY, BUNNY_K, ...BUNNY_AT)),
-    layer(T.big("I'M LISTENING", 72, 131, { lattice: 1.4, scale: TALL, align: 'center' })),
+    layer(tall("I'M LISTENING", 1.4, 72, 131, 'center')),
   ],
 }
 
@@ -138,14 +142,14 @@ export const designReview: WidgetPreset = {
     const now = RULE_X[10]
     const rule = (y: number): Pt[] => RULE_X.filter(x => x !== now).map(x => [x, y])
     return [
-      // drawn with a letter O (the font's 0 is slashed, the reference's isn't), read as the number 20
-      layer(saying(T.big('THU 2O', 8, 10, { lattice: 1.8, smooth: true, scale: [1, 1.25] }), 'THU 20')),
+      // condensed caps on one lattice, as wide as the rules; the 0 is the condensed face's (open, like the reference's)
+      layer(poster('THU 20', 2.3, 7.5, 10)),
       layer(T.dots([...rule(66.6), ...rule(118.3)], 3.3), 'idle'),
       // the now-line stops a clear step above and below the text row, so it never runs into the N
       layer(T.dots([...range(58.8, 3.88, 6), ...range(103.04, 3.74, 7)].map(y => [now, y]), 3), 'active'),
       // the end bullets share one size, the trailing three evenly spaced
       layer(T.dots([[6.8, 91.9], [124.3, 92], [129.3, 92], [134.3, 92]], 3.4)),
-      layer(T.big('DESIGN REVIEW', 12, 85, { lattice: 1.4, scale: TALL })),
+      layer(tall('DESIGN REVIEW', 1.4, 12, 85)),
     ]
   },
 }
@@ -153,15 +157,12 @@ export const designReview: WidgetPreset = {
 // ── Memo 07: two-line poster, dotted progress rule ending in a red dot ──────
 export const memo: WidgetPreset = {
   id: 'memo', name: 'Memo 07', group: 'text', chrome: 'dots', grid: TILE, style: tileStyle,
-  layers: () => {
-    const poster = { lattice: 1.5, smooth: true, scale: [1, 1.4] as [number, number] }
-    return [
-      layer(T.big('SHIP', 6, 35, poster)),
-      layer(T.big('THE', 6, 74.5, poster)), layer(T.big('IDEA', 72, 74.5, poster)),
-      layer(T.dotLine(4.7, 123.2, 130, 123.2, { spacing: 4.8, size: 3.3 }), 'idle'),
-      layer(T.dots([[137.9, 123.2]], 7.6), 'active'),
-    ]
-  },
+  layers: () => [
+    // condensed caps on one lattice; THE IDEA ends over the red dot
+    layer(poster('SHIP', 1.8, 6, 40)), layer(poster('THE IDEA', 1.8, 6, 75)),
+    layer(T.dotLine(4.7, 123.2, 130, 123.2, { spacing: 4.8, size: 3.3 }), 'idle'),
+    layer(T.dots([[137.9, 123.2]], 7.6), 'active'),
+  ],
 }
 
 /** Bear face outline (wiki hub, Henry app icon): round ears, dot eyes, boxed muzzle. */
@@ -207,16 +208,13 @@ export const wiki: WidgetPreset = {
 // ── System: settings list, the selected row marked red with a dotted leader ─
 export const systemMenu: WidgetPreset = {
   id: 'system-menu', name: 'System', group: 'text', chrome: 'dots', grid: TILE, style: tileStyle,
-  layers: () => {
-    const item = { lattice: 1.65, scale: TALL }
-    return [
-      layer(T.big('DISPLAY', 17, 23, item), 'idle'),
-      layer(T.dots([[4.2, 60.7]], 8.5), 'active'), layer(T.big('SOUND', 17, 54, item)),
-      layer(T.dotLine(102.3, 62, 133.2, 62, { spacing: 5.15, size: 3.8 })),
-      layer(T.big('NETWORK', 17, 86, item), 'idle'),
-      layer(T.big('ABOUT', 17, 118, item), 'idle'),
-    ]
-  },
+  layers: () => [
+    layer(tall('DISPLAY', 1.65, 17, 23), 'idle'),
+    layer(T.dots([[4.2, 60.7]], 8.5), 'active'), layer(tall('SOUND', 1.65, 17, 54)),
+    layer(T.dotLine(102.3, 62, 133.2, 62, { spacing: 5.15, size: 3.8 })),
+    layer(tall('NETWORK', 1.65, 17, 86), 'idle'),
+    layer(tall('ABOUT', 1.65, 17, 118), 'idle'),
+  ],
 }
 
 // ── Last Password: dotted dial, red marker at 12, masked password ───────────
@@ -235,10 +233,12 @@ export const lastPassword: WidgetPreset = {
 export const notifications: WidgetPreset = {
   id: 'notifications', name: 'Notifications', group: 'chart', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => {
-    const big = { lattice: 2.15, smooth: true, scale: [1, 1.2] as [number, number] }
     const grid = [80.6, 102.4, 124.2].flatMap(y => [36.5, 50.5, 64.4, 77.7, 90.9].map((x): Pt => [x, y]))
     return [
-      layer(T.big('3', 14, 24, big)), layer(T.big('NEW', 54, 24, big)),
+      // the 3 is the twin hero numeral (#292, kept by the owner); NEW is condensed caps on one lattice, its last
+      // dot row on the 3's (13.5 rows down at 2.15 × 1.2 from row 24) and where it sat in "3 NEW" (#258)
+      layer(T.big('3', 14, 24, { lattice: 2.15, smooth: true, scale: [1, 1.2] })),
+      layer(poster('NEW', 2.5, 57.5, 24 + 13.5 * (2.15 * 1.2 - 2.5))),
       layer(T.dots(grid.slice(1), 5.9), 'idle'),
       layer(T.dots(grid.slice(0, 1), 7.9), 'active'),
     ]
@@ -324,16 +324,19 @@ const strokeOn = (paths: Pt[][], k: number, col: number, row: number, w = .75) =
 }, [Math.floor(Math.max(...paths.flat().map(p => p[0])) + w) + 1, Math.floor(Math.max(...paths.flat().map(p => p[1])) + w) + 1])
 const PULSE: Pt[][] = [[[0, 5], [3.5, 5], [5.5, .5], [7.5, 9.5], [9.5, .5], [11.5, 5], [15, 5]]]
 const MOUNTAIN: Pt[][] = [[[.5, 9.5], [3.5, 3.5], [5.8, 6.3], [9.5, .5], [15, 9.5]], [[.5, 9.5], [15, 9.5]]]
+/** All nine icons sit on one lattice: APP_K cells, anchored at APP_ORIGIN, each icon a whole number of dots from it. */
+export const APP_K = 1.85, APP_ORIGIN: Pt = [16, 13]
+const appAt = (i: number, j: number): Pt => [APP_ORIGIN[0] + i * APP_K, APP_ORIGIN[1] + j * APP_K]
 export const apps: WidgetPreset = {
   id: 'apps', name: 'Apps', group: 'icon', chrome: 'dots', grid: TILE, style: tileStyle,
   layers: () => {
     // each icon only spans its own box of lattice dots (12×12 for the round ones), so the sampler skips the rest
-    const shape = (f: (i: number, j: number) => boolean, col: number, row: number, size: [number, number] = [12, 12]) => cellField(1.85, col, row, (x, y) => (f(Math.round((x - col + .5) / 1.85 - .5), Math.round((y - row + .5) / 1.85 - .5)) ? 1 : 0), size)
-    const grey = (rows: string[], col: number, row: number) => shape((i, j) => rows[j]?.[i] === '#', col, row, [Math.max(...rows.map(r => r.length)), rows.length])
+    const shape = (f: (i: number, j: number) => boolean, [col, row]: Pt, size: [number, number] = [12, 12]) => cellField(APP_K, col, row, (x, y) => (f(Math.round((x - col + .5) / APP_K - .5), Math.round((y - row + .5) / APP_K - .5)) ? 1 : 0), size)
+    const grey = (rows: string[], at: Pt) => shape((i, j) => rows[j]?.[i] === '#', at, [Math.max(...rows.map(r => r.length)), rows.length])
     return [
-      layer(grey(MONITOR, 16, 13), 'idle'), layer(grey(BARS, 60, 13), 'idle'), layer(shape(gear, 103, 13), 'idle'),
-      layer(shape(compass, 16, 48), 'idle'), layer(spriteOn(FACE, 1.8, 56, 45)), layer(strokeOn(PULSE, 1.95, 100, 51), 'idle'),
-      layer(grey(CALENDAR, 14, 85), 'idle'), layer(strokeOn(MOUNTAIN, 1.9, 56, 86), 'idle'), layer(grey(DOCUMENT, 104, 85), 'idle'),
+      layer(grey(MONITOR, appAt(0, 0)), 'idle'), layer(grey(BARS, appAt(24, 0)), 'idle'), layer(shape(gear, appAt(47, 0)), 'idle'),
+      layer(shape(compass, appAt(0, 19)), 'idle'), layer(spriteOn(FACE, APP_K, ...appAt(22, 17))), layer(strokeOn(PULSE, APP_K, ...appAt(45, 20)), 'idle'),
+      layer(grey(CALENDAR, appAt(-1, 39)), 'idle'), layer(strokeOn(MOUNTAIN, APP_K, ...appAt(22, 40)), 'idle'), layer(grey(DOCUMENT, appAt(47, 39)), 'idle'),
       layer(T.dots([[71, 116.5]], 7.5), 'active'),
       layer(T.big('HENRY', 72, 125, { lattice: 2, align: 'center' })),
     ]

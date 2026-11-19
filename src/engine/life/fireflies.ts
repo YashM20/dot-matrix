@@ -13,7 +13,7 @@ import { nightness, nightTile } from './sky'
 import { lsystem, turtleSites } from './grow'
 import { phaseSteps } from './pond'
 import { pressDiscrete, pressInit, pressStep, PRESS_HOLD, PRESS_SLOTS, PRESS_TAP, pressAt, seamBlend } from './loop'
-import { clearTiles, EDGE3, edgeOfTangent, flickerOn, glyphOf, putBig, putGlyph, T_ACTIVE, T_FAINT, T_MID, T_VALUE, type TileGrid, type TileRaster } from './glyphTiles'
+import { clearTiles, EDGE3, flickerOn, glyphOf, putBig, putGlyph, T_ACTIVE, T_FAINT, T_MID, T_VALUE, type TileGrid, type TileRaster } from './glyphTiles'
 
 export const FLY_DT = 1 / 30
 export const FLIES = 160
@@ -23,8 +23,8 @@ export interface FirefliesSpec { seed: number; tiles: TileGrid; lead: number; pe
 export interface FlyLayout { X: number; Y: number; K: number; PH: number; AGE: number; G: number; size: number }
 export interface Fireflies {
   world: World; spec: FirefliesSpec; layout: FlyLayout; pulse: PulseSpec
-  /** Baked grass: per tile, an EDGE3 glyph index (−1 = none). */
-  grass: Int16Array
+  /** Baked grass: the card cells (y · 144 + x) its blades cross, ascending. */
+  grass: Int32Array
 }
 /** Flash timing (s): the peak (a lattice dot), then a small red dot. */
 export const FLASH_PEAK = .07, FLASH_TAIL = .2
@@ -108,28 +108,27 @@ export function createFireflies(spec: FirefliesSpec): Fireflies {
 
 /**
  * The grass silhouette, baked once: an L-system (X → F[+X]F[−X]+X | F[−X]F[+X]−X, F → FF; 4 generations, 22°)
- * grown as tufts along the bottom, its turtle sites binned per tile (bottom 26 card rows) into a line glyph along
- * the mean stroke direction.
+ * grown as tufts along the bottom (bottom 26 card rows). Its turtle path is drawn onto the card cells it crosses,
+ * on the glyph cells only (the tile gutters stay dark), the way the marble draws its ink. The old bake, one line
+ * glyph per tile, snapped each fork to - | \ /, so the tufts read as letters (#246). Returns the cells, ascending.
  */
-function bakeGrass(spec: FirefliesSpec, seed: number): Int16Array {
-  const { cols, rows, pitch, ox, oy } = spec.tiles, tx = new Float32Array(cols * rows), ty = new Float32Array(cols * rows), cnt = new Uint16Array(cols * rows)
+function bakeGrass(spec: FirefliesSpec, seed: number): Int32Array {
+  const { pitch, ox, oy } = spec.tiles, py = spec.tiles.pitchY ?? pitch, out = new Uint8Array(144 * 144)
   const top = 144 - 26
   for (let k = 0; k < 10; k++) {
     const str = lsystem({ axiom: 'X', rules: { X: [['F[+X]F[-X]+X', .5], ['F[-X]F[+X]-X', .5]], F: 'FF' }, generations: 4, seed: seed + k })
     const lean = (ihash(seed, k, 21) / 4294967296 - .5) * .5
     const t = turtleSites(str, { x: 4 + 15 * k + 6 * (ihash(seed, k, 22) / 4294967296), y: 144, heading: -TAU / 4 + lean, angle: 22 * TAU / 360, step: .62, spacing: .5 })
     for (let q = 0; q < t.count; q++) {
-      const x = t.x[q], y = t.y[q]
+      const x = Math.floor(t.x[q]), y = Math.floor(t.y[q])
       if (y < top || y >= 143 || x < 0 || x >= 144) continue
-      const cx = Math.floor((x - ox) / pitch), cy = Math.floor((y - oy) / pitch)
-      if (cx < 0 || cy < 0 || cx >= cols || cy >= rows) continue
-      const i = cy * cols + cx, sg = t.hy[q] > 0 ? -1 : 1
-      tx[i] += t.hx[q] * sg; ty[i] += t.hy[q] * sg; cnt[i]++
+      if (((x - ox) % pitch + pitch) % pitch === pitch - 1 || ((y - oy) % py + py) % py === py - 1) continue
+      out[y * 144 + x] = 1
     }
   }
-  const out = new Int16Array(cols * rows).fill(-1)
-  for (let i = 0; i < out.length; i++) if (cnt[i] >= 2) out[i] = edgeOfTangent(EDGE3, tx[i], ty[i]).index
-  return out
+  const cells: number[] = []
+  for (let i = 0; i < out.length; i++) if (out[i]) cells.push(i)
+  return Int32Array.from(cells)
 }
 
 /** The lantern while a press is held (card cells; `lit` during its flash), else undefined. */
@@ -159,7 +158,8 @@ export function drawFireflies(f: Fireflies, s: Float32Array, t: number, hour: nu
   clearTiles(r)
   const nl = nightness(hour)
   if (nl > 0) for (let ty = 0; ty < 18; ty++) for (let tx = 0; tx < cols; tx++) if (flickerOn(tx, ty, t, .025, .02, .3) && nightTile(tx, ty, nl)) putGlyph(r, tx, ty, DOT, T_FAINT, .6)
-  for (let i = 0; i < cols * rows; i++) if (f.grass[i] >= 0) putGlyph(r, i % cols, (i / cols) | 0, EDGE3.glyphs[f.grass[i]], T_MID, .6)
+  // the grass on its own card cells (the raster is the card's 144 × 144)
+  for (let k = 0; k < f.grass.length; k++) { const i = f.grass[k]; r.tone[i] = T_MID; r.value[i] = .6 }
   for (let pass = 0; pass < 3; pass++) for (let i = 0; i < FLIES; i++) {
     const a = s[AGE + i], kind = a < FLASH_PEAK ? 2 : a < FLASH_TAIL ? 1 : 0
     if (kind !== pass) continue
