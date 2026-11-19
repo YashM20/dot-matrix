@@ -62,7 +62,7 @@ const calm: Character = {
     eye: { dx: 17, y: -2, rx: 9, ry: 7, pupil: 3.8 }, brow: { gap: 6, half: 8, w: 3.6, arch: 1.5 },
     mouth: { y: 23, half: 11, depth: 4.5 }, cheek: { dx: 27, y: 12, r: 7.5 }, nose: { y: 10, r: 4.5 }, parallax: [5, 3.5], gloss: .12,
   },
-  rest: { lid: .38, curve: 0, brow: [0, 0], slant: [1, 1], smile: .7, open: 0, mouthW: 1, mouthX: 0 },
+  rest: { lid: .3, curve: 0, brow: [0, 0], slant: [1, 1], smile: .7, open: 0, mouthW: 1, mouthX: 0 },
   asleep: .85, turn: .5, tiltBy: .03, breath: [4.6, .6],
   gazes: makeGazes(11, 2.8, [.45, .3], [0, .05]), blinks: makeBlinks(21, 4.2, .3),
   dur: 1.4, word: () => 'WINK',
