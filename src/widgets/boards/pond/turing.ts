@@ -5,6 +5,9 @@
  * then it swims off and the next one comes in. The skin sits on a 2-cell lattice, the fins are fine rays at the card
  * pitch. The spot that is splitting right now is the accent. Tap the body to scratch a patch clean; the spots around
  * it split into the gap.
+ * The owner kept the cluster spots on this card (#246): each spot stays a block of skin-lattice dots, and the splitting
+ * one stays red. One round dot site per spot was tried and rejected. A cell of air between the spots and the eye was
+ * tried too, and dropped: it ate into the spot beside the eye.
  */
 import { GRAY_SCOTT } from '../../creditSources'
 import { ADULT_PX, bodyHalf, bodyMid, createTuring, growth, lifeOf, onBody, SKIN_NX, SKIN_NY, toBody, turingPose, turingUnits, type Pose, type Turing } from '../../../engine/life/turing'

@@ -25,3 +25,5 @@ export const pondFireflies: WidgetPreset = {
     return [caption(`SYNC ${Math.round(100 * flySync(fireflies, s))}%`), ...surfaceFocus(ctx, 'flies'), ...tileLayers(raster)]
   },
 }
+/** Read-outs for the checks (scripts/life-pond-dots.ts): the raster the card drew last. */
+export const firefliesProbe = { raster }

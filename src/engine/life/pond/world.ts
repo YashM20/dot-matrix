@@ -27,6 +27,8 @@ import { createHealBlend } from './heal'
 const wakeAmp = (speed: number) => -.04 * Math.min(1.5, (speed - 10) / 40)
 /** Seconds the heal back to the loop takes (#90: the koi swim back to their scripted places in it, see heal.ts). */
 const HEAL = 6
+/** The bank's stones fade out over this many cells past the shore (#246), so the card's edge is quiet. */
+const BANK_FADE = 14
 
 export function createKoiPond(spec: KoiPondSpec): KoiPond {
   const { tiles, seed } = spec, K = spec.koi.length, lay = pondLayout(K, tiles), dt = POND_DT
@@ -41,14 +43,16 @@ export function createKoiPond(spec: KoiPondSpec): KoiPond {
   const feeds = (spec.feeds ?? []).map(([sec, x, y, count]) => ({ at: Math.round(sec / dt), x, y, count }))
   const kisses = (spec.kisses ?? []).map(([sec, koi]) => ({ at: Math.round(sec / dt), koi }))
   const dives = spec.koi.map((_, i) => { const every = Math.round((8 + 12 * (ihash(seed, i, 31) / 4294967296)) / dt); return { every, off: Math.floor((ihash(seed, i, 32) / 4294967296) * every) } })
-  // the bank, baked once: voronoi stones with grout, density from fBm
+  // the bank, baked once: voronoi stones with grout, density from fBm, fading away from the water
   const bank = new Int16Array(tiles.cols * tiles.rows).fill(-1)
   for (let ty = 0; ty < tiles.rows; ty++) for (let tx = 0; tx < tiles.cols; tx++) {
     const i = ty * tiles.cols + tx
     if (water[i]) continue
     const x = tileX(tx), y = tileY(ty), vo = voronoi2(x / 7, y / 7, seed, 'l2')
     if (vo.f2 - vo.f1 < .08) continue
-    bank[i] = rampGlyph(RAMP3, .2 + .3 * (fbm2(x / 9, y / 9, 3, seed) * .5 + .5) + .3 * (1 - Math.min(1, vo.f1 * 1.4))).index
+    // the stones fade out toward the card's edge (#246): full at the shore, gone 16 cells out (the corners)
+    const fade = Math.max(0, Math.min(1, 1 - (spec.sdf(x, y) - 2) / BANK_FADE))
+    bank[i] = rampGlyph(RAMP3, fade * (.2 + .3 * (fbm2(x / 9, y / 9, 3, seed) * .5 + .5) + .3 * (1 - Math.min(1, vo.f1 * 1.4)))).index
   }
 
   // the shore, baked once: water tiles next to the bank draw a line along it (the pond's rim)
