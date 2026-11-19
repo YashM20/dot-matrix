@@ -6,7 +6,7 @@
  * gloss), never one grey ramp. Red only on the ON AIR sign (emissive = live). Every card stays a dark inset on a light page (`inset: 'dark'`).
  */
 import { blur, createRaster, outline, rasterize, sample, type Raster } from '../../engine/raster'
-import { bloom, emissive, fabric, heightRaster, hourOf, illuminate, lambert, metal, normalRaster, phong, sdfBox, sdfCircle, sdfRing, sdfSubtract, sdfUnion, stackHeights, sunAt, torch, type Light, type Vec3 } from '../../engine/light'
+import { bloom, emissive, fabric, STUDIO, heightRaster, hourOf, illuminate, lambert, metal, normalRaster, phong, sdfBox, sdfCircle, sdfRing, sdfSubtract, sdfUnion, stackHeights, sunAt, torch, type Light, type Vec3 } from '../../engine/light'
 import type { Control } from '../../engine/context'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { smoothstep } from '../../engine/math'
@@ -229,18 +229,21 @@ function lacquer(light: Light): Layer[] {
   halo.bounds = spec.bounds
   return [...banded(lit, GLOSS_BODY), layer(LAT.at(rimOnly), 'mid'), layer(LAT.at(cut(halo)), 'idle'), ...(dot ? [layer(dot, 'value')] : [])]
 }
-/** Fabric's shadow side keeps its weave: a higher floor of light, the Bayer dither to one size step. */
-const FABRIC_AMBIENT = .34
+/**
+ * Fabric's shadow side keeps its weave: a floor of light, the Bayer dither to one size step. The lit side climbs
+ * the whole step range (in `idle`, never `value`), so the ball shows a lit side and a shadow side, as cloth does.
+ */
+const FABRIC_AMBIENT = .22, FABRIC_TOP = 4
 /** Velvet sheen: cloth brightens where it turns away from the eye: a rim of `mid` round the shadow side, so the dark half keeps its edge. */
 function velvet(light: Light): Layer[] {
   const L = dirOf(light)
   const sheen = ballCells((nx, ny, nz) => (nz < .34 && nx * L[0] + ny * L[1] < .1 ? .5 : 0))
-  const cloth = fabric(BALL_N, light, { ...AT, ambient: FABRIC_AMBIENT }).cloth
+  const cloth = fabric(BALL_N, light, { ...AT, ambient: FABRIC_AMBIENT, top: FABRIC_TOP }).cloth
   const under: Field = (u, v) => (sheen(u, v) ? 0 : cloth(u, v))
   under.bounds = cloth.bounds
   return [...banded(under, [[.1, .3, 'faint'], [.3, .6, 'mid'], [.6, 2, 'idle']]), layer(LAT.at(sheen), 'mid')]
 }
-export const lightGloss = materialCard('light-gloss', 'Gloss', '+2 STEPS', ctx => lacquer(boardLight(ctx)))
+export const lightGloss = materialCard('light-gloss', 'Gloss', 'LACQUER', ctx => lacquer(boardLight(ctx)))
 /** The halo stops at lattice row 61 (card row 122.5): a clear moat above the caption at row 126. */
 const aboveCaption = (l: Layer): Layer => {
   const f = l.field, g: Field = (u, v) => (Math.round(v * (LG.rows - 1)) > 61 ? 0 : f(u, v))
@@ -248,7 +251,9 @@ const aboveCaption = (l: Layer): Layer => {
   return { ...l, field: g }
 }
 export const lightEmissive = materialCard('light-emissive', 'Emissive', 'BLOOM', () => emissive(BALL_LIGHT, { ...AT, radius: 4.5, lift: .7, coreTone: 'value', haloBands: [[.1, .45, 'faint'], [.45, 2, 'mid']] }).layers.map(aboveCaption), false)
-export const lightMetal = materialCard('light-metal', 'Metal', 'ENVIRONMENT', ctx => metal(BALL_N, boardLight(ctx), AT).layers)
+/** The studio with a flatter horizon: a near-level line reads as the room's horizon, where a steep bend read as a frowning mouth. */
+const METAL_STUDIO = { ...STUDIO, bend: .12 }
+export const lightMetal = materialCard('light-metal', 'Metal', 'ENVIRONMENT', ctx => metal(BALL_N, boardLight(ctx), { ...AT, studio: METAL_STUDIO }).layers)
 export const lightFabric = materialCard('light-fabric', 'Fabric', 'BAYER 4', ctx => velvet(boardLight(ctx)))
 
 export const lightBoard = [lightTorch, lightOrb, lightOnAir, lightGloss, lightEmissive, lightMetal, lightFabric]
