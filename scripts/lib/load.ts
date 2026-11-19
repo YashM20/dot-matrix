@@ -27,6 +27,8 @@ export interface Loaded<T = unknown> {
   ms: number
   /** The load factor sampled alongside it (≥ 1). */
   load: number
+  /** The same ratio before the floor: below 1 on a box faster than the budget machine. */
+  speed: number
   /** The last sample's return value. */
   value: T
 }
@@ -38,14 +40,16 @@ export function medianLoaded<T>(f: (i: number) => T, n: number): Loaded<T> {
     lf.push(timeSpin())
     const a = performance.now(); value = f(i); ms.push(performance.now() - a)
   }
-  return { ms: median(ms), load: Math.max(1, median(lf) / SPIN_MS), value }
+  const speed = median(lf) / SPIN_MS
+  return { ms: median(ms), load: Math.max(1, speed), speed, value }
 }
 /** One timing of `f` (a cold frame, a bake), with the load sampled 3× right before and 3× right after it. */
 export function onceLoaded<T>(f: () => T): Loaded<T> {
   const lf = [timeSpin(), timeSpin(), timeSpin()]
   const a = performance.now(), value = f(), ms = performance.now() - a
   lf.push(timeSpin(), timeSpin(), timeSpin())
-  return { ms, load: Math.max(1, median(lf) / SPIN_MS), value }
+  const speed = median(lf) / SPIN_MS
+  return { ms, load: Math.max(1, speed), speed, value }
 }
 /** `12.34 ms @ load 2.10` for a check's detail. */
 export const fmtLoaded = (r: Pick<Loaded, 'ms' | 'load'>, dp = 2) => `${r.ms.toFixed(dp)} ms @ ${r.load.toFixed(2)}`

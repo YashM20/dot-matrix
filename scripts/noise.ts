@@ -166,7 +166,7 @@ export function voronoiBudget(slow = false): { ok: boolean; detail: string; metr
   const metrics = best.map((t, i) => ({ metric: names[i], ms: t.ms, load: t.load, budget: VORONOI_BUDGET[names[i]] }))
   return {
     ok: metrics.every(m => m.ms <= m.budget * m.load),
-    detail: best.map((t, i) => `${names[i]} ${fmtLoaded(t)} → ${norm(t).toFixed(2)} / ${metrics[i].budget} (rounds ${rounds[i].map(r => norm(r).toFixed(2)).join(', ')})`).join(' · '),
+    detail: best.map((t, i) => `${names[i]} ${fmtLoaded(t)} (speed ${t.speed.toFixed(2)}) → ${norm(t).toFixed(2)} / ${metrics[i].budget} (rounds ${rounds[i].map(r => norm(r).toFixed(2)).join(', ')})`).join(' · '),
     metrics,
   }
 }
