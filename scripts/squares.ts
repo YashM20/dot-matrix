@@ -403,6 +403,15 @@ export function squaresChecks(assert: Assert): void {
       }
     }
     assert('squares: form outline = reference (5 exponents × 2 rotations × 4 motifs, a recording sink vs insideForm: ≤ 1% of pixels differ)', worst <= .01, `worst ${(worst * 100).toFixed(2)}% ${worstAt}`)
+    // each sub-path closes once (#416): a close right after a rect or another close is an empty contour to Chrome,
+    // and doubled the fill time of sq-ammann's turned squares
+    const twice: string[] = []
+    for (const n of [Infinity, 32, 9.5, 4, 2]) for (const rot45 of [false, true]) for (const motif of [0, BEAD, STUD, STITCH]) {
+      const rec = new FormRec()
+      formOutline(rec, 0, 0, 7, n, rot45, motif)
+      if (rec.cmds.some((c, i) => c[0] === 'Z' && i > 0 && (rec.cmds[i - 1][0] === 'Z' || rec.cmds[i - 1][0] === 'R'))) twice.push(`n ${n} rot ${rot45} motif ${motif}`)
+    }
+    assert('squares: form outline closes each sub-path once (no close after a rect or a close)', !twice.length, twice.join(', '))
     assert('squares: motif ink (bead, stud and stitch ink = the analytic area within 1%, rotated or not)', inkErr <= .01, `max err ${(inkErr * 100).toFixed(2)}% ${inkAt}`)
     // equal ink: a shapeOf dot holds the frame style's ink (drawn area × r² constant across the 9 steps)
     const ref = Math.PI
