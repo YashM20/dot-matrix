@@ -35,8 +35,8 @@ By Hugo Elias.
 
 By Inigo Quilez.
 
-- Scenes Lathe (`sc-lathe`), board `/scenes/`: technique
-- Scenes Twist (`sc-twist`), board `/scenes/`: technique
+- Lathe (`sc-lathe`), board `/scenes/`: technique
+- Twist (`sc-twist`), board `/scenes/`: technique
 
 ### [A local cellular model for snow crystal growth](https://webbox.lafayette.edu/~reiterc/mvp/sfn/sfn_pp.pdf)
 
@@ -85,7 +85,7 @@ By Jean Meeus.
 
 By Inigo Quilez.
 
-- Scenes Posts (`sc-posts`), board `/scenes/`: technique
+- Posts (`sc-posts`), board `/scenes/`: technique
 
 ### [Boids (1987)](https://www.red3d.com/cwr/boids/)
 
@@ -345,7 +345,7 @@ By Inigo Quilez.
 
 By Inigo Quilez.
 
-- Scenes Chain (`sc-chain`), board `/scenes/`: technique
+- Chain (`sc-chain`), board `/scenes/`: technique
 
 ### [Space Invaders (1978)](https://en.wikipedia.org/wiki/Space_Invaders)
 

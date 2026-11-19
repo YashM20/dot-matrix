@@ -17,18 +17,20 @@ const K = 2
 // floor, walked through down the middle lane at a steady pace; the walk loops after one row, so it never ends. The
 // sun sits just over the horizon at the end of the lane: its disc is the red, the fog thickens with distance and
 // warms toward it, a thin height fog lies on the floor, and every post throws a long soft shadow back toward the eye.
+// The eye stands at 1.7, a little under the post tops, and looks a touch down, so the sun sits on the horizon, the
+// far post tops show and the sky above is quiet (#254). A shadow ray looks 10 ahead: further back the fog has eaten the penumbra.
 const ROW = 1.6, PACE = .35
 const post = (x: number, y: number, z: number) => sdVerticalCapsule(x, y, z, 2, .13)
 const posts = opLimitedRepetition(post, ROW, 4, 0, 40)
 const POSTS_SUN = normalize([0, .07, 1]) as V3
 export const scPosts: WidgetPreset = {
-  id: 'sc-posts', name: 'Scenes Posts', label: 'POSTS', ...tile, credit: CREDIT_FOG,
+  id: 'sc-posts', name: 'Posts', label: 'POSTS', ...tile, credit: CREDIT_FOG,
   layers: ctx => {
     const walked = ctx.t * PACE, z = phase(walked, ROW) * ROW
     const plate = scenePlate(K, (r): Scene => ({
       sd: posts, box: [-6.6, 0, -2, 6.6, 2.15, 66], planes: [GROUND], tmax: 60, steps: 120,
-      cam: camera([.8, .95, z], [.8, 1.25, z + 10], 1.9, r), sun: POSTS_SUN, sunDisc: dcos(.065),
-      material: (_x, _y, _z, plane) => (plane >= 0 ? FLOOR : STONE), albedo, shadow: { w: .05, maxt: 16 }, occ: .25,
+      cam: camera([.8, 1.7, z], [.8, 1.4, z + 10], 1.9, r), sun: POSTS_SUN, sunDisc: dcos(.065),
+      material: (_x, _y, _z, plane) => (plane >= 0 ? FLOOR : STONE), albedo, shadow: { w: .05, maxt: 10 }, occ: .25,
       fog: { b: .085, base: [.002, .0025, .003], sun: [.15, .12, .085], height: [.03, 1.4] }, gain: [2.4, 2, 1.5], exposure: 1.6,
     }))
     return [
@@ -39,15 +41,18 @@ export const scPosts: WidgetPreset = {
   },
 }
 
-// ── 04 CHAIN ── a link is a torus elongated along y (opElongate), every other one turned a quarter round y so they
-// interlock. Four hang from a bracket with a red bob at the end; the whole chain swings like a pendulum and turns
-// slowly on itself. The sun comes from front left, so the shadow falls on the wall behind, sharp where the chain is
-// near the wall and soft further out (Aaltonen's soft shadow).
+// ── 04 CHAIN ── a link is a torus elongated along y (opElongate), every other one turned 60 degrees round y so
+// they interlock and still show their hole (a quarter turn left them edge-on, a one-dot stalk, #254). Four hang from
+// a bracket with a red bob at the end; the whole chain swings like a pendulum and turns slowly on itself. The sun
+// comes from front left, so the shadow falls on the wall behind, sharp where the chain is near the wall and soft
+// further out (Aaltonen's soft shadow). The box spans the swing's reach (about ±.9), and 80 steps reach every surface it holds.
 const R = .21, TUBE = .062, LE = .13, PITCH = 2 * (LE + R - TUBE) + .006, LINKS = 4, PIVOT = 3, WALL_Z = .95
 const link = opElongate((x, y, z) => sdTorus(x, z, y, R, TUBE), 0, LE, 0)
+// turned against the spin: at t = 0 and 1.3 s every link sits within 45 degrees of facing the eye
+const TURN = -Math.PI / 3, TURN_C = dcos(TURN), TURN_S = dsin(TURN)
 const CHAIN_SUN = normalize([-.72, .5, -.48]) as V3
 export const scChain: WidgetPreset = {
-  id: 'sc-chain', name: 'Scenes Chain', label: 'CHAIN', ...tile, credit: CREDIT_SHADOW,
+  id: 'sc-chain', name: 'Chain', label: 'CHAIN', ...tile, credit: CREDIT_SHADOW,
   layers: ctx => {
     const swing = .32 * dsin(ctx.t * 1.15), spin = ctx.t * .25
     const cs = dcos(swing), ss = dsin(swing), cy = dcos(spin), sy = dsin(spin)
@@ -66,7 +71,7 @@ export const scChain: WidgetPreset = {
       let d = 1e9
       for (let n = Math.max(0, i - 1); n <= Math.min(LINKS - 1, i + 1); n++) {
         const ly = q[1] + (n + .5) * PITCH
-        d = Math.min(d, n % 2 ? link(q[2], ly, -q[0]) : link(q[0], ly, q[2]))
+        d = Math.min(d, n % 2 ? link(TURN_C * q[0] + TURN_S * q[2], ly, TURN_C * q[2] - TURN_S * q[0]) : link(q[0], ly, q[2]))
       }
       return d
     }
@@ -77,8 +82,8 @@ export const scChain: WidgetPreset = {
     // one turn into chain space per read, for the chain and the bob alike
     const sd = (x: number, y: number, z: number) => { local(x, y, z, q); return Math.min(chainQ(), bobQ(), bracket(x, y, z)) }
     const plate = scenePlate(K, (r): Scene => ({
-      sd, box: [-1.4, 0, -.6, 1.4, PIVOT + .2, WALL_Z], planes: [GROUND, [0, 0, -1, WALL_Z]],
-      cam: camera([0, 1.6, -4.3], [.15, 1.55, 0], 2.15, r), sun: CHAIN_SUN, tmax: 14, steps: 110,
+      sd, box: [-1, 0, -.6, 1, PIVOT + .2, WALL_Z], planes: [GROUND, [0, 0, -1, WALL_Z]],
+      cam: camera([0, 1.6, -4.3], [.15, 1.55, 0], 2.15, r), sun: CHAIN_SUN, tmax: 14, steps: 80,
       material: (x, y, z, plane) => (plane >= 0 ? FLOOR : bob(x, y, z) < chain(x, y, z) ? ACCENT : STONE),
       albedo, shadow: { w: .05, maxt: 8 }, occ: .2,
       fog: { b: .05, base: [.002, .0025, .003], sun: [.12, .1, .08] }, gain: [1.8, 2.2, 1.8], exposure: 1.6,
