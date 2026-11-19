@@ -100,13 +100,13 @@
   "pond-turing": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "5022aee9",
-    "dots": 514
+    "hash": "632b33d7",
+    "dots": 561
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "39029b60",
-    "dots": 514
+    "hash": "6ab9f139",
+    "dots": 563
    }
   }
  }
