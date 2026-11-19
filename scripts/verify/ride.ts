@@ -3,7 +3,7 @@
  * Run alone: `pnpm exec tsx scripts/verify/ride.ts`.
  */
 import { describe } from '../../src/engine/describe'
-import { heroRows } from '../../src/engine/fields/heroFaces'
+import { heroCovers, heroRows } from '../../src/engine/fields/heroFaces'
 import { sampleLayers } from '../../src/engine/sampler/gridSampler'
 import type { DotInstance, Layer } from '../../src/engine/types'
 import { APP_K, APP_ORIGIN, apps, designReview, henryBear, memo, notifications, ride, rideBoard } from '../../src/widgets/boards/ride'
@@ -44,10 +44,19 @@ export function rideChecks(assert: Assert) {
     const red = dotsOf(notifications, at(notifications)).filter(d => d.color === theme.dotActive)
     assert('ride: notifications shows exactly one red dot', red.length === 1, `${red.length} red dots`)
   }
-  // every word on the board is drawn on one lattice: rows and columns share a pitch (no `[1, 1.25]`-style glyph scale)
+  // every word on the board is drawn on one lattice: rows and columns share a pitch (no `[1, 1.25]`-style glyph scale).
+  // Hero numerals are the exception: hand-made face bitmaps (#292), kept as the owner approved them (notifications' 3)
   {
-    const bad = rideBoard.flatMap(p => at(p).filter(l => textOf(l) && (l.sites || !l.lattice)).map(l => `${p.id} "${textOf(l)}"`))
+    const hero = (s: string) => heroCovers('twin', s)
+    const bad = rideBoard.flatMap(p => at(p).filter(l => textOf(l) && !hero(textOf(l)) && (l.sites || !l.lattice)).map(l => `${p.id} "${textOf(l)}"`))
     assert('ride: all text sits on a uniform lattice (no stretched glyph sites)', !bad.length, bad.join(', '))
+  }
+  // notifications: the 3 stays main's twin hero numeral (every dot of the face's 3), NEW is the condensed capitals
+  {
+    const ls = at(notifications), three = ls.find(l => textOf(l) === '3'), word = ls.find(l => textOf(l) === 'NEW')
+    const dots = heroRows('twin', '3').join('').split('#').length - 1
+    const ok = !!three && three.sites?.length === dots && !!word && word.lattice === 2.5 && !word.sites
+    assert('ride: notifications keeps the twin-face 3 and draws NEW in condensed capitals on one lattice', ok, `3: ${three?.sites?.length ?? 0} of ${dots} face dots; NEW lattice ${word?.lattice}`)
   }
   // design-review: THU 20 reads and draws a digit zero (the condensed face's open 0), never the letter O
   {

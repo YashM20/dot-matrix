@@ -235,8 +235,10 @@ export const notifications: WidgetPreset = {
   layers: () => {
     const grid = [80.6, 102.4, 124.2].flatMap(y => [36.5, 50.5, 64.4, 77.7, 90.9].map((x): Pt => [x, y]))
     return [
-      // condensed caps on one lattice, as wide and tall as the stretched 3 and NEW they replace
-      layer(poster('3 NEW', 2.5, 15, 24)),
+      // the 3 is the twin hero numeral (#292, kept by the owner); NEW is condensed caps on one lattice, its last
+      // dot row on the 3's (13.5 rows down at 2.15 × 1.2 from row 24) and where it sat in "3 NEW" (#258)
+      layer(T.big('3', 14, 24, { lattice: 2.15, smooth: true, scale: [1, 1.2] })),
+      layer(poster('NEW', 2.5, 57.5, 24 + 13.5 * (2.15 * 1.2 - 2.5))),
       layer(T.dots(grid.slice(1), 5.9), 'idle'),
       layer(T.dots(grid.slice(0, 1), 7.9), 'active'),
     ]
