@@ -81,7 +81,7 @@ export const typeMorphCard: WidgetPreset = {
     const lit = Math.round(k * (rail.length - 1))
     return [
       MOR.layer(typeMorph(a, b, k, { ...MOR_OPTS, sweep: .45 })),
-      layer(T.text(`${a} > ${b}`, 72, 104, { align: 'center' }), 'idle'),
+      layer(T.text(`${a} → ${b}`, 72, 104, { align: 'center' }), 'idle'),
       layer(T.dots(rail.slice(0, lit + 1), 1.6), 'value'),
       layer(T.dots(rail.slice(lit + 1), 1.2), 'mid'),
       layer(T.text(`SDF ${k.toFixed(2)}`, 72, 128, { align: 'center' }), 'mid'),
@@ -146,7 +146,7 @@ export const typeFlightCard: WidgetPreset = {
     return [
       ...(word ? [FLY.layer(typeField(word, { ...FLY_OPTS, grid: FLY.grid }))] : migrationLayers(m, p)),
       layer(T.text(`${m.count} DOTS`, 72, 118, { align: 'center' }), p > 0 && p < 1 ? 'value' : 'idle'),
-      layer(T.text(`${a} > ${b}`, 72, 128, { align: 'center' }), 'mid'),
+      layer(T.text(`${a} → ${b}`, 72, 128, { align: 'center' }), 'mid'),
     ]
   },
 }

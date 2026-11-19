@@ -108,6 +108,14 @@ export function describe(preset: Describable, ctx: Partial<FrameContext> = {}): 
   return { id: preset.id, name: preset.name, state, data, controls, text, summary: parts.join(' '), label: spokenLabel(preset, text) }
 }
 
+/**
+ * Symbols the dot font draws, as the words a reader should say (#413); an empty word drops the symbol (a status dot).
+ * Cards draw icons as dots; this covers a card that keeps one in its text.
+ */
+const SAID: Record<string, string> = { '→': 'to', '▶': 'play', '■': 'stop', '✓': 'done', '●': '', '○': '' }
+const SYMBOL = new RegExp(`[${Object.keys(SAID).join('')}]`, 'g')
+const spoken = (s: string) => s.replace(SYMBOL, ch => ` ${SAID[ch]} `).replace(/\s+/g, ' ').trim()
+
 /** Longest accessible name the site reads out; a card that prints a lot (a news list) stops at a whole string. */
 const LABEL_MAX = 240
 /** Name, then the drawn strings, minus the label row that only repeats the name and the card number drawn on its own (MOSAIC's red number). */
@@ -115,8 +123,9 @@ function spokenLabel(preset: Describable, text: string[]): string {
   const name = `${preset.name}${preset.liveData ? ' (live)' : ''}`, num = /^(\d{2})\s/.exec(preset.label ?? '')?.[1] ?? ''
   const own = new Set([preset.name, preset.label ?? '', num].map(s => s.replace(/\s+/g, ' ').trim().toUpperCase()))
   let out = name, first = true
-  for (const s of text) {
-    if (own.has(s.replace(/\s+/g, ' ').trim().toUpperCase())) continue
+  for (const raw of text) {
+    const s = spoken(raw)
+    if (!s || own.has(s.toUpperCase())) continue
     const next = `${out}${first ? ': ' : ', '}${s}`
     if (next.length > LABEL_MAX) break
     out = next; first = false

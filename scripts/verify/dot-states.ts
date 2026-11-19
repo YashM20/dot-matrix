@@ -5,7 +5,8 @@
  *  - the ring marches between two frames and holds still under reduced motion;
  *  - hover draws the kit's halo (`value` sites of the outline size), except where the card's own surface reacts
  *    instead (the XY pad and the mic ring, where a halo has no room, and every pond card's touch surface);
- *  - a pond card's touch surface marches its focus along the line under the label, clear of the scene (#393).
+ *  - a pond card's touch surface marches its focus along the line under the label, clear of the scene (#393);
+ *  - every CHARTS card's label switch and readout march their focus line, and hold it still under reduced motion (#408).
  * On its own: `pnpm exec tsx scripts/verify/dot-states.ts`.
  */
 import type { FrameContext } from '../../src/engine/context'
@@ -52,6 +53,15 @@ export async function dotStateChecks(assert: Assert) {
   assert('dot states: every control on these boards draws the kit focus ring (idle, 1.3) on focus', n >= 38 && !noRing.length, `${n} controls, none: ${noRing.join(' ')}`)
   assert('dot states: the focus ring marches, and holds still under reduced motion', !still.length && !frozen.length, `still: ${still.join(' ')} / moving under reduced motion: ${frozen.join(' ')}`)
   assert('dot states: hover draws the kit halo (value, outline size), except the cards whose own surface reacts', !noHalo.length, noHalo.join(' '))
+  const { chartsBoard } = await import('../../src/widgets/boards/charts')
+  const chartIds: string[] = [], chartStill: string[] = [], chartMoving: string[] = []
+  for (const p of chartsBoard as WidgetPreset[]) for (const c of p.controls ?? []) {
+    const id = `${p.id}/${c.key}`, at = (t: number, rm: boolean) => ring(frame(p, t, { focus: c.key, reducedMotion: rm }))
+    chartIds.push(id)
+    if (at(.35, false) === ring(frame(p, .35)) || at(.35, false) === at(.55, false)) chartStill.push(id)
+    if (at(.35, true) !== at(.55, true)) chartMoving.push(id)
+  }
+  assert('dot states: CHARTS focus lines march, and hold still under reduced motion (#408)', chartIds.length >= 2 && !chartStill.length && !chartMoving.length, `${chartIds.length} controls, no march: ${chartStill.join(' ')} / moving under reduced motion: ${chartMoving.join(' ')}`)
   assert('dot states: every pond touch surface marches its focus along the line under the label (#393)', surfaces === 9 && !offRow.length, `${surfaces} surfaces, off the row: ${offRow.join(' ')}`)
 }
 

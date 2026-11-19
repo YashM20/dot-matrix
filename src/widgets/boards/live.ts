@@ -18,7 +18,7 @@ import { contribSource, GH_WEEKS, nowPlayingSource, weatherSource, WX_HOURS } fr
 import { fit, textOf } from '../../data/text'
 import { TAU, TILE, layer, layoutFor, tileStyle, type WidgetPreset } from '../types'
 import { capSize } from '../sites'
-import { scrubber, type ScrubSpec } from '../dot-controls'
+import { scrubber, transportGlyph, type ScrubSpec } from '../dot-controls'
 import { dotText } from './henry'
 
 const T = layoutFor(TILE)
@@ -197,7 +197,9 @@ export const liveNowPlaying: WidgetPreset = {
     const eq = playing ? eqLevels(t, seed) : Array.from({ length: EQ_BANDS }, () => .04)
     return [
       ...cover(seed),
-      layer(T.text(playing ? '▶ PLAYING' : '■ PAUSED', 62, 15), playing ? 'value' : 'idle'),
+      // the state glyph in dots where the font's ▶ and ■ sat (rows 15 to 21), so the name reads "PLAYING" (#413)
+      layer(playing ? transportGlyph('play', 66.2, 18, 4, 2) : transportGlyph('stop', 64, 18, 3, 2), playing ? 'value' : 'idle'),
+      layer(T.text(playing ? 'PLAYING' : 'PAUSED', 74, 15), playing ? 'value' : 'idle'),
       layer(T.dotBars(eq, 64, 63, { gap: 8.3, pitch: 2.8, height: 36, size: 1.7 }), playing ? 'idle' : 'faint'),
       layer(T.big(fit(title, 17), 1.5, 75, { lattice: 1.4 })),
       layer(T.big(fit(textOf(data.npArtist), 20), 1.5, 89, { lattice: 1.15 }), 'idle'),
