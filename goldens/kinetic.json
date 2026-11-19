@@ -4,49 +4,49 @@
   "kt-flap": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "3756f99e",
-    "dots": 715
+    "hash": "3c10fcfa",
+    "dots": 668
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "df37dd48",
-    "dots": 715
+    "hash": "d47b6820",
+    "dots": 668
    }
   },
   "kt-melt": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "6d315f52",
-    "dots": 2111
+    "hash": "24596b39",
+    "dots": 2138
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "a5a51e7b",
+    "hash": "cebb06e9",
     "dots": 2144
    }
   },
   "kt-scramble": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "9017c90b",
-    "dots": 2159
+    "hash": "24c4bff2",
+    "dots": 2204
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "eb0dce68",
-    "dots": 2206
+    "hash": "15850e7f",
+    "dots": 2159
    }
   },
   "kt-wave": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "c5bfb319",
-    "dots": 2083
+    "hash": "9f87dd75",
+    "dots": 2082
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "a43895e7",
-    "dots": 2082
+    "hash": "cc33b4b5",
+    "dots": 2087
    }
   },
   "kt-type": {
@@ -64,25 +64,25 @@
   "kt-magnet": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "7f163ede",
-    "dots": 2100
+    "hash": "bdc6832c",
+    "dots": 2106
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "3f48da0e",
+    "hash": "f8e35b0e",
     "dots": 2100
    }
   },
   "kt-shatter": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "10a9eb9b",
-    "dots": 2101
+    "hash": "816f7dea",
+    "dots": 2126
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "4042c8af",
-    "dots": 2104
+    "hash": "ac0ff9a5",
+    "dots": 2101
    }
   }
  }
