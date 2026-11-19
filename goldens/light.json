@@ -40,13 +40,13 @@
   "light-gloss": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "64854b98",
-    "dots": 1358
+    "hash": "c86d665e",
+    "dots": 1371
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "64854b98",
-    "dots": 1358
+    "hash": "c86d665e",
+    "dots": 1371
    }
   },
   "light-emissive": {
@@ -64,25 +64,25 @@
   "light-metal": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "d545a3aa",
-    "dots": 1542
+    "hash": "11ceae17",
+    "dots": 1540
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "d545a3aa",
-    "dots": 1542
+    "hash": "11ceae17",
+    "dots": 1540
    }
   },
   "light-fabric": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "3e3e2326",
-    "dots": 1744
+    "hash": "a078a669",
+    "dots": 1727
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "3e3e2326",
-    "dots": 1744
+    "hash": "a078a669",
+    "dots": 1727
    }
   }
  }
