@@ -229,7 +229,7 @@ export const evCharge: WidgetPreset = {
       layer(T.hrule(97, 76, 7), 'value'), layer(T.dots([[106.5, 76]], 3.4), 'active'),
       layer(dotPath([[107.5, 79], [108.5, 90], [110, 96], [114, 99], [143, 99]], 1.05, 1.05), 'active'),
       layer(T.hrule(0, 109, 144), 'faint'),
-      ...([['142 KW', 'SPEED', 1], ['00:28', 'TIME LEFT', 56], ['312 KM', 'RANGE', 104.5]] as const).flatMap(([v, k, x]) => [
+      ...([['142 KW', 'POWER', 1], ['00:28', 'TIME LEFT', 56], ['312 KM', 'RANGE', 104.5]] as const).flatMap(([v, k, x]) => [
         layer(T.big(v, x, 119, { lattice: 1.1 })), layer(cap(k, x, 131), 'idle'),
       ]),
       layer(T.vrule(47, 118, 19), 'faint'), layer(T.vrule(99, 118, 19), 'faint'),
@@ -257,7 +257,8 @@ export const codexUsage: WidgetPreset = {
       layer(T.big('1,158', 0, 89, { lattice: 1.4 })),
       layer(cap('CONSUMED TODAY', 0, 106), 'idle'),
       layer(T.hrule(0, 129, 64), 'faint'),
-      layer(cap('DAILY USAGE', 0, 137), 'idle'),
+      // the chart's caption, lifted off the card's bottom edge
+      layer(cap('DAILY USAGE', 0, 133), 'idle'),
       // chart: axis on the right with its scale, hour ticks below
       ...bars(TOTAL).map(b => layer(b, 'mid')), ...bars(USED).map(b => layer(b, 'active')),
       layer(T.vrule(134, 41, 80), 'faint'),
@@ -342,6 +343,9 @@ const SHIP_R = [
 // seeds 24/25 picked after the hash01 switch: evenly spread, no star pairs clumping beside the invaders
 const STARS: Pt[] = Array.from({ length: 34 }, (_, i) => [Math.round(hash01(i, 24) * 143), 14 + Math.round(hash01(i, 25) * 129)] as Pt)
   .filter(([x, y]) => !(x > 52 && x < 84 && y > 108) && !(x > 90 && y < 40) && !(x < 30 && y < 28))
+/** Invader sprite origins (before the sway); no background star may sit in or touching one. */
+const INVADERS: Pt[] = [[20, 43], [43, 55], [104, 64], [76, 47]]
+const clearOfInvaders = ([x, y]: Pt) => !INVADERS.some(([ix, iy]) => x > ix - 4 && x < ix + 18 && y > iy - 3 && y < iy + 12)
 const SPARKS: Pt[] = [[82, 41], [76, 47], [91, 47], [75, 57], [92, 57], [79, 62], [88, 62], [83.5, 65]]
 export const miniGame: WidgetPreset = {
   id: 'mini-game', name: 'Mini Game', label: 'MINI GAME', numbered: true, group: 'scatter', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
@@ -352,11 +356,11 @@ export const miniGame: WidgetPreset = {
     const ship = T.lattice(1.3, 57, 115)
     return [
       num(miniGame), ...menuGlyph,
-      layer(T.dots(STARS.filter((_, i) => i % 3), 1), 'mid'), layer(T.dots(STARS.filter((_, i) => !(i % 3)), 1.3), 'idle'),
+      // split by index first, so dropping a star never changes another star's size or tone
+      layer(T.dots(STARS.filter((_, i) => i % 3).filter(clearOfInvaders), 1), 'mid'), layer(T.dots(STARS.filter((_, i) => !(i % 3)).filter(clearOfInvaders), 1.3), 'idle'),
       ...([[HEART, 0, 'active'], [HEART, 10.5, 'active'], [HEART_OUTLINE, 21, 'idle']] as const).map(([art, x, tone]) => { const L = T.lattice(1.15, x, 18); return layer(L.at(L.sprite([...art], 0, 0)), tone) }),
       layer(T.text('SCORE', 94, 20), 'idle'), layer(T.big('01260', 94, 30, { lattice: 1.25 })),
-      layer(invader(20, 43)), layer(invader(43, 55)), layer(invader(104, 64)),
-      layer(invader(76, 47), 'active'), layer(T.dots(SPARKS.map(([x, y]) => [x + sway, y] as Pt), 1.1), 'active'),
+      ...INVADERS.map(([x, y], i) => layer(invader(x, y), i === 3 ? 'active' : 'value')), layer(T.dots(SPARKS.map(([x, y]) => [x + sway, y] as Pt), 1.1), 'active'),
       layer(T.dotLine(68, 81 - shot, 68, 89 - shot, { spacing: 1.2, size: 1.6 }), 'active'),
       layer(T.dotLine(68, 103 - shot, 68, 110 - shot, { spacing: 1.2, size: 1.6 }), 'active'),
       layer(ship.at(ship.sprite(SHIP_W, 0, 0))), layer(ship.at(ship.sprite(SHIP_R, 0, 0)), 'active'),
@@ -432,8 +436,9 @@ const inNotebook = (x: number, y: number) => inPoly(NOTEBOOK, x, y, NOTEBOOK_BOX
 const inPen = (x: number, y: number) => near(x, y, PEN[0], PEN[1], .8)
 const bright = (x: number, y: number) => inPen(x, y) || inLaptop(x, y) || inLeaf(x, y)
 const caster = (x: number, y: number) => inMug(x, y) || inHandle(x, y) || inLaptop(x, y) || inNotebook(x, y) || inPot(x, y)
-/** Detections: a box snapped to each object's extent, the tag sitting on its top-left corner (the plant's to its left). */
-const DETECT: [string, Box, Pt][] = [['MUG', [12, 36, 48, 71], [12, 25]], ['PLANT', [106, 27, 136, 70], [77, 27]], ['LAPTOP', [53, 62, 135, 101], [53, 51]], ['NOTEBOOK', [9, 86, 69, 118], [9, 75]]]
+/** Detections: a box snapped to each object's extent, the tag just above its top-left corner (the plant's to its left). */
+// each tag keeps an empty cell before its box's bracket, so the tag edge and the bracket never read as one doubled line
+const DETECT: [string, Box, Pt][] = [['MUG', [12, 36, 48, 71], [12, 24]], ['PLANT', [106, 27, 136, 70], [76, 27]], ['LAPTOP', [53, 62, 135, 101], [53, 50]], ['NOTEBOOK', [9, 86, 69, 118], [9, 74]]]
 const TAG_BOX = DETECT.map(([s, , [x, y]]) => [x, y, x + tagW(s) - 1, y + TAG_H - 1])
 const desk = (x: number, y: number) => {
   for (const [a, b, c, d] of TAG_BOX) if (x >= a && x <= c && y >= b && y <= d) return 0

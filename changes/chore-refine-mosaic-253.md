@@ -1,0 +1,2 @@
+visitor: On MOSAIC, the EV charge rate reads POWER, the vision camera tags sit clear of their boxes, and no star hides inside an invader.
+engineering: mosaic.ts labels the ev-charge kW figure POWER, lifts the codex-usage DAILY USAGE caption off the bottom edge, keeps mini-game stars clear of the invaders and leaves an empty cell between each vision-camera tag and its bracket; scripts/verify/mosaic.ts pins all four (#253, #433).

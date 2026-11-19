@@ -222,6 +222,11 @@ frameCacheChecks(assert)
   const { levelsChecks } = await import('./verify/levels')
   levelsChecks(assert)
 }
+// MOSAIC refine fixes (#253): POWER label, codex caption, stars clear of invaders, tag gaps (scripts/verify/mosaic.ts)
+{
+  const { mosaicChecks } = await import('./verify/mosaic')
+  mosaicChecks(assert)
+}
 // RIDE (#258) refine fixes: one-number speed, the tenths' baseline, henry's still header, text on uniform lattices, one apps lattice (scripts/verify/ride.ts)
 {
   const { rideChecks } = await import('./verify/ride')

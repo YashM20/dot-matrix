@@ -11,14 +11,14 @@
   "ev-charge": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "57ea2cee",
-    "dots": 6042
+    "hash": "b4a76e68",
+    "dots": 6043
    }
   },
   "codex-usage": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "c338393f",
+    "hash": "a014d17a",
     "dots": 2030
    }
   },
@@ -39,13 +39,13 @@
   "mini-game": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "beb1ec2d",
-    "dots": 803
+    "hash": "e6bc14e2",
+    "dots": 801
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "b439058d",
-    "dots": 803
+    "hash": "ea57cd9e",
+    "dots": 801
    }
   },
   "ai-assistant": {
@@ -58,8 +58,8 @@
   "vision-camera": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "66c3c06d",
-    "dots": 13051
+    "hash": "f9a14759",
+    "dots": 13044
    }
   },
   "deerflow-agent": {
