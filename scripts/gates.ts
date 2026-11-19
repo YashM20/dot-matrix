@@ -1,6 +1,6 @@
 /**
  * The timing gates of #28, run back to back to read their pass rate (Node, no browser):
- *  - voronoi: voronoi2 144², l2 ≤ 3.0 ms and l1 / linf ≤ 3.5 ms × load, best of 3 medians (scripts/noise.ts `voronoiBudget`).
+ *  - voronoi: voronoi2 144², l2 ≤ 3.0 ms and l1 / linf ≤ 3.5 ms × the runner scale, best of 3 medians (scripts/noise.ts `voronoiBudget`).
  * Each gate runs plain `--runs` times (every run must pass) and slowed 2× three times. A slowed run counts as caught
  * only when every metric reads at least `MARGIN` over its own budget, so a green gate catches a real 2× slowdown of
  * any one metric on the same runner, with room to spare.
@@ -33,6 +33,6 @@ for (let i = 0; i < slowRuns; i++) {
   if (all) caught++
   console.log(`  voronoi 2× slower, run ${i + 1}: ${all ? 'every metric caught' : 'NOT every metric caught'} (${over.map(o => `${o.metric} ${((o.x - 1) * 100).toFixed(0)}% over`).join(', ')}; ${r.detail})`)
 }
-console.log(`${pass === runs ? '✓' : '✗'} gates: voronoi2 144² l2 ≤ 3.0 ms, l1 / linf ≤ 3.5 ms × load: ${pass}/${runs} passed`)
+console.log(`${pass === runs ? '✓' : '✗'} gates: voronoi2 144² l2 ≤ 3.0 ms, l1 / linf ≤ 3.5 ms × scale: ${pass}/${runs} passed`)
 console.log(`${caught === slowRuns ? '✓' : '✗'} gates: voronoi2 2× slower reads ≥ ${Math.round((MARGIN - 1) * 100)}% over budget on every metric: ${caught}/${slowRuns} caught`)
 process.exit(pass === runs && caught === slowRuns ? 0 : 1)

@@ -27,25 +27,34 @@ export interface Loaded<T = unknown> {
   ms: number
   /** The load factor sampled alongside it (≥ 1). */
   load: number
+  /** The same ratio before the floor: below 1 on a box faster than the reference's machine. */
+  speed: number
   /** The last sample's return value. */
   value: T
 }
-/** Median of `n` timings of `f(i)` with one load sample before each, so the factor sees what the samples saw. */
-export function medianLoaded<T>(f: (i: number) => T, n: number): Loaded<T> {
+/** A reference workload for `medianLoaded`: one timed run in ms, and its time on the machine the budget was read on. */
+export interface LoadRef { time: () => number; ms: number }
+/**
+ * Median of `n` timings of `f(i)` with one load sample before each, so the factor sees what the samples saw. The
+ * sample is `spin` unless `ref` names another workload (a gate whose code a plain float loop doesn't track across CPUs).
+ */
+export function medianLoaded<T>(f: (i: number) => T, n: number, ref: LoadRef = { time: timeSpin, ms: SPIN_MS }): Loaded<T> {
   const ms: number[] = [], lf: number[] = []
   let value!: T
   for (let i = 0; i < n; i++) {
-    lf.push(timeSpin())
+    lf.push(ref.time())
     const a = performance.now(); value = f(i); ms.push(performance.now() - a)
   }
-  return { ms: median(ms), load: Math.max(1, median(lf) / SPIN_MS), value }
+  const speed = median(lf) / ref.ms
+  return { ms: median(ms), load: Math.max(1, speed), speed, value }
 }
 /** One timing of `f` (a cold frame, a bake), with the load sampled 3× right before and 3× right after it. */
 export function onceLoaded<T>(f: () => T): Loaded<T> {
   const lf = [timeSpin(), timeSpin(), timeSpin()]
   const a = performance.now(), value = f(), ms = performance.now() - a
   lf.push(timeSpin(), timeSpin(), timeSpin())
-  return { ms, load: Math.max(1, median(lf) / SPIN_MS), value }
+  const speed = median(lf) / SPIN_MS
+  return { ms, load: Math.max(1, speed), speed, value }
 }
 /** `12.34 ms @ load 2.10` for a check's detail. */
 export const fmtLoaded = (r: Pick<Loaded, 'ms' | 'load'>, dp = 2) => `${r.ms.toFixed(dp)} ms @ ${r.load.toFixed(2)}`
