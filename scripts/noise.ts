@@ -160,7 +160,8 @@ export const VORONOI_BUDGET = { l2: 3, l1: 3.5, linf: 3.5 } as const
 /**
  * The gate's reference workload: the l2 search of `voronoi2` as it stood when the budgets were read (3 × 3 cells, a
  * murmur finalizer for the feature points), on a 72² grid. A copy, so it never speeds up or slows down with the
- * engine: a slower `voronoi2` reads slower against it on any CPU. `ms`: its time on a usual runner.
+ * engine: a slower `voronoi2` reads slower against it on any CPU. `ms`: its time on a usual runner (l2 1.83 ms there;
+ * the copy runs about 7.8× faster than the 144² l2 grid on every runner read so far).
  */
 function voronoiRef(): number {
   let s = 0
@@ -178,7 +179,7 @@ function voronoiRef(): number {
   return s
 }
 let refSink = 0
-const VORONOI_REF: LoadRef = { time: () => { const a = performance.now(); refSink += voronoiRef(); return performance.now() - a }, ms: .4 }
+const VORONOI_REF: LoadRef = { time: () => { const a = performance.now(); refSink += voronoiRef(); return performance.now() - a }, ms: .235 }
 export interface VoronoiMetric { metric: Metric; ms: number; load: number; budget: number }
 export function voronoiBudget(slow = false): { ok: boolean; detail: string; metrics: VoronoiMetric[] } {
   const G = 144, out = { f1: 0, f2: 0, id: 0, x: 0, y: 0 }, reps = slow ? 2 : 1, names = ['l2', 'l1', 'linf'] as const
