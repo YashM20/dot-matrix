@@ -52,7 +52,7 @@ Dot/480 achieves bit-exact reproducibility through three systems:
 
 ## Materials: height, normals and raking light
 
-<!-- VISUAL: kind=card · what=light-matte · notice=a moving light casts diffuse highlights across surface bumps -->
+<!-- VISUAL: kind=card · what=light-torch · notice=a moving light rakes across a raised button and its glyph -->
 
 Dot/480 can turn any two-dimensional field into a tactile material such as stone, wood, leather or woven fabric. This system is implemented in `src/engine/matter/relief.ts` and `src/engine/light/shade.ts`.
 

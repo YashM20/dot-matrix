@@ -24,18 +24,6 @@
     "hash": "75ba537f",
     "dots": 1552
    }
-  },
-  "heal-persist": {
-   "t=0": {
-    "style": "squircle:2.30",
-    "hash": "0030c486",
-    "dots": 613
-   },
-   "t=1.3": {
-    "style": "squircle:2.30",
-    "hash": "5fa4b70c",
-    "dots": 627
-   }
   }
  }
 }

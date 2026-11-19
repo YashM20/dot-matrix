@@ -6,7 +6,7 @@
  * gloss), never one grey ramp. Red only on the ON AIR sign (emissive = live). Every card stays a dark inset on a light page (`inset: 'dark'`).
  */
 import { blur, createRaster, outline, rasterize, sample, type Raster } from '../../engine/raster'
-import { bloom, emissive, fabric, glass, heightRaster, hourOf, illuminate, lambert, matte, metal, normalRaster, phong, sdfBox, sdfCircle, sdfRing, sdfSubtract, sdfUnion, stackHeights, sunAt, torch, type Light, type Vec3 } from '../../engine/light'
+import { bloom, emissive, fabric, heightRaster, hourOf, illuminate, lambert, metal, normalRaster, phong, sdfBox, sdfCircle, sdfRing, sdfSubtract, sdfUnion, stackHeights, sunAt, torch, type Light, type Vec3 } from '../../engine/light'
 import type { Control } from '../../engine/context'
 import { latticeGrid } from '../../engine/sampler/gridSampler'
 import { smoothstep } from '../../engine/math'
@@ -186,9 +186,6 @@ function materialCard(id: string, name: string, note: string, body: (ctx: Widget
     layers: ctx => [...body(ctx), caption(note)],
   }
 }
-/** What the glass ball stands in front of: vertical rules on the lattice, a band across the card. */
-const RULES: Field = (u, v) => { const c = Math.round(u * (LG.cols - 1)), r = Math.round(v * (LG.rows - 1)); return r >= 12 && r <= 61 && c >= 4 && c <= 67 && c % 4 === 0 ? .5 : 0 }
-RULES.bounds = [4, 12, 67, 61]
 /** The lit bulb: full dots, one size step down on the outer ring (the limb of a glowing ball). */
 const BALL_LIGHT = rasterize((u, v) => { const d = BALL_SDF(u, v); return d > 0 ? 0 : d > -5 ? .75 : 1 }, LG)
 /** The board light as a unit direction seen from the ball (a torch: from the ball's centre). */
@@ -243,9 +240,7 @@ function velvet(light: Light): Layer[] {
   under.bounds = cloth.bounds
   return [...banded(under, [[.1, .3, 'faint'], [.3, .6, 'mid'], [.6, 2, 'idle']]), layer(LAT.at(sheen), 'mid')]
 }
-export const lightMatte = materialCard('light-matte', 'Matte', 'LAMBERT', ctx => matte(BALL_N, boardLight(ctx), AT))
 export const lightGloss = materialCard('light-gloss', 'Gloss', '+2 STEPS', ctx => lacquer(boardLight(ctx)))
-export const lightGlass = materialCard('light-glass', 'Glass', 'REFRACT', ctx => glass(BALL_N, boardLight(ctx), RULES, AT).layers)
 /** The halo stops at lattice row 61 (card row 122.5): a clear moat above the caption at row 126. */
 const aboveCaption = (l: Layer): Layer => {
   const f = l.field, g: Field = (u, v) => (Math.round(v * (LG.rows - 1)) > 61 ? 0 : f(u, v))
@@ -256,4 +251,4 @@ export const lightEmissive = materialCard('light-emissive', 'Emissive', 'BLOOM',
 export const lightMetal = materialCard('light-metal', 'Metal', 'ENVIRONMENT', ctx => metal(BALL_N, boardLight(ctx), AT).layers)
 export const lightFabric = materialCard('light-fabric', 'Fabric', 'BAYER 4', ctx => velvet(boardLight(ctx)))
 
-export const lightBoard = [lightTorch, lightOrb, lightOnAir, lightMatte, lightGloss, lightGlass, lightEmissive, lightMetal, lightFabric]
+export const lightBoard = [lightTorch, lightOrb, lightOnAir, lightGloss, lightEmissive, lightMetal, lightFabric]

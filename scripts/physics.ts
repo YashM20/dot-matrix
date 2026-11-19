@@ -33,7 +33,7 @@ const resetAll = () => { for (const w of physicsWorlds) worldReset(w) }
 
 export function physicsChecks(assert: Assert): void {
   resetAll()
-  const [splash, ink, flag, jelly, pit] = physicsBoard
+  const [splash, flag, jelly, pit] = physicsBoard
 
   // ── determinism: pristine frames are a pure function of t, in any order and after a cold replay ──
   const ts = [0, 1.3, 7.7, 3600.2]
@@ -51,11 +51,11 @@ export function physicsChecks(assert: Assert): void {
   // splash and pit are exactly periodic (their state at start + len is the state at start)
   const seams = physicsWorlds.map((w, i) => {
     const [start, len] = simLoop(w.sim), s0 = simAtStep(w.sim, start).slice(), s1 = simAtStep(w.sim, start + 1).slice()
-    const exact = i === 0 || i === 4, end = simAtStep(w.sim, exact ? start + len : start + len - 1).slice()
-    const n = i === 0 ? particlesSize(physicsProbe.sp) : i === 4 ? particlesSize(physicsProbe.pit) : s0.length
+    const exact = i === 0 || i === 3, end = simAtStep(w.sim, exact ? start + len : start + len - 1).slice()
+    const n = i === 0 ? particlesSize(physicsProbe.sp) : i === 3 ? particlesSize(physicsProbe.pit) : s0.length
     return exact ? maxAbs(end, s0, n) : maxAbs(end, s0, n) / (maxAbs(s1, s0, n) || 1)
   })
-  assert('physics: loops wrap without a jump (seam ≤ 4 ordinary steps; splash / pit exact)', seams.every((g, i) => g <= (i === 0 || i === 4 ? 1e-4 : 4)), seams.map(g => g.toFixed(3)).join(' '))
+  assert('physics: loops wrap without a jump (seam ≤ 4 ordinary steps; splash / pit exact)', seams.every((g, i) => g <= (i === 0 || i === 3 ? 1e-4 : 4)), seams.map(g => g.toFixed(3)).join(' '))
 
   // ── solver invariants ──
   const fl = createFluid({ w: 32, h: 32 }), fs = new Float32Array(fluidSize(fl))
@@ -136,14 +136,7 @@ export function physicsChecks(assert: Assert): void {
   assert('physics pit: grab a dot, it follows the hand; let go, it is thrown', held.grab === 3 && Math.hypot(held.x - (b0.x + 60), held.y - (b0.y - 60)) < 8 && thrown.grab === -1 && Math.hypot(thrown.vx, thrown.vy) > 120,
     `held at ${held.x.toFixed(0)},${held.y.toFixed(0)} (hand ${(b0.x + 60).toFixed(0)},${(b0.y - 60).toFixed(0)}), thrown at ${Math.hypot(thrown.vx, thrown.vy).toFixed(0)} cells/s`)
 
-  // ink: a pressed stir adds ink and moves it; flag: grab and pull a corner; jelly: poke, then it heals back
-  resetAll()
-  const pristineInk = fluidInk(physicsProbe.fluid, worldAt(worldOf(ink), 50.5))
-  resetAll()
-  run(ink, 50, .5, k => [ptr(30 + k * 160, 90 + 20 * Math.sin(k * 12), true)])
-  const stirred = fluidInk(physicsProbe.fluid, worldOf(ink).live)
-  assert('physics ink: a pressed stroke stirs and adds ink', worldOf(ink).mode === 'live' && stirred > pristineInk + .5, `ink ${pristineInk.toFixed(1)} → ${stirred.toFixed(1)}`)
-
+  // flag: grab and pull a corner; jelly: poke, then it heals back
   resetAll()
   const { cloth } = physicsProbe, w3 = worldOf(flag)
   frame(flag, 60)

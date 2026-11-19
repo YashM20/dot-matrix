@@ -1,29 +1,22 @@
 /**
- * Squares board, Q3 (docs/living-matter/Q-squares.md §4.4): the square field pack, rotation and nested motifs.
+ * Squares board, Q3 (docs/living-matter/Q-squares.md §4.4): the square field pack, rotation and the stitch motif.
  *
  *   SCHOTTER  Nees 1968: 264 squares, order at the top, rubble below; rotation snapped to the square's two states
  *   BLOCKS    Voronoi under L∞ and L1: regions that are joined blocks, a Mondrian that drifts
- *   SORT      a pixel-sorted portrait, line by line, with block-glitch bursts every 4 s
  *   TRUCHET   Carlson's multi-scale Truchet: tiles at three scales, the colour inverting per level
  *   STITCH    a cross-stitch sampler (`motif: 'stitch'`): an alphabet inside a WFC border, sewn stitch by stitch
- *   BEADS     one sprite as Perler beads and as LEGO studs (`motif: 'bead' | 'stud'`), the split sweeping across
  *
- * The morph card (dots → squares → joined) sits with the LCD it morphs, in squares.ts. Same chrome and rules as the
- * rest of the board: t = 0 is a finished picture, one red per card and it is the live thing.
+ * Same chrome and rules as the rest of the board: t = 0 is a finished picture, one red per card and it is the live thing.
  */
 import { blockVoronoi, type BlockMetric } from '../../engine/algo/linfVoronoi'
 import { molnar, schotter } from '../../engine/algo/schotter'
-import { pixelSortData, type SortRun } from '../../engine/algo/pixelSort'
-import { blockGlitch } from '../../engine/algo/glitch'
 import { truchetInk, truchetTileAt, truchetTiles, type TruchetTile } from '../../engine/algo/truchet'
 import { wfc, type WfcTile } from '../../engine/algo/wfc'
 import { glyph } from '../../engine/fields/bitmapFont'
 import { tsin } from '../../engine/noise/trig'
-import { clamp, hash01 } from '../../engine/math'
-import { latticeGrid } from '../../engine/sampler/gridSampler'
+import { hash01 } from '../../engine/math'
 import type { Layer, Tone } from '../../engine/types'
-import { TILE, layer, type WidgetPreset } from '../types'
-import { portrait } from './mirror'
+import { layer, type WidgetPreset } from '../types'
 import { FOOT, T, cells, cite, footer, mod, pad, tile, type Pt } from './squaresKit'
 
 /** A layer of explicit sites (card cells) at one value, size and tone, optionally turned (radians). */
@@ -119,47 +112,6 @@ export const sqBlocks: WidgetPreset = {
       cells(V_K, V_ORIGIN, V_W, V_H, (c, r) => (id(c, r) === n - 1 ? 1 : 0), { tone: 'active', group: id, join: { accent: true } }),
       layer(T.text(`REGIONS ${pad(n, 2)}`, 0, FOOT), 'idle'),
       layer(T.text(metric === 'linf' ? 'CHEBYSHEV' : 'MANHATTAN', 143, FOOT, { align: 'right' }), 'mid'),
-    ]
-  },
-}
-
-// ── 09 SORT ─ pixel sorting ───────────────────────────────────────────────────────────────────────────
-// Thesis: "Sort the middle tones, keep the edges: a face melts into streaks." The mirror portrait on a 2× lattice,
-// pixel-sorted row by row (runs of values in [.3, .85], dark → bright, stable). The sort sweeps down the face; equal
-// neighbours join, so a sorted run reads as one streak. Every 4 s a block-glitch burst shifts a few blocks by whole
-// cells for half a second. The red is the run being sorted.
-const P_K = 2, P_ORIGIN: Pt = [8, 10], P_W = 64, P_H = 58, P_LOOP = 20, P_OFF = 13
-const P_SUB = latticeGrid(TILE, P_K, P_ORIGIN)
-interface SortState { raw: Float32Array; sorted: Float32Array; runs: SortRun[][] }
-let sortState: SortState | undefined
-/** The portrait once raw and once fully sorted (rows are independent, so a sweep at row k is a row-wise mix), with each row's runs. */
-function sortFrame(): SortState {
-  if (sortState) return sortState
-  const raw = new Float32Array(P_W * P_H)
-  for (let r = 0; r < P_H; r++) for (let c = 0; c < P_W; c++) raw[r * P_W + c] = clamp(portrait(P_ORIGIN[0] + c * P_K + .5, P_ORIGIN[1] + r * P_K + .5))
-  const sorted = Float32Array.from(raw), all = pixelSortData(sorted, P_W, P_H, { lo: .3, hi: .85 }), runs: SortRun[][] = Array.from({ length: P_H }, () => [])
-  for (const run of all) if (run.length > 1) runs[run.line].push(run)
-  return (sortState = { raw, sorted, runs })
-}
-const sortTone = (v: number): Tone => (v > .62 ? 'idle' : v > .4 ? 'mid' : 'faint')
-export const sqSort: WidgetPreset = {
-  id: 'sq-sort', name: 'Sort', label: 'SORT', ...tile,
-  credit: { by: ['Kim Asendorf'], title: 'ASDFPixelSort (2010)', source: 'https://github.com/kimasendorf/ASDFPixelSort', note: 'the pixel sorting idea; none of its code' },
-  layers: ctx => {
-    const s = sortFrame(), t = ctx.t, p = mod(t + P_OFF, P_LOOP) / P_LOOP, line = Math.min(P_H - 1, Math.floor(p * 1.15 * P_H))
-    // the run being sorted: the longest run of the current line (a line without one points at the next that has one)
-    let live: SortRun | undefined
-    for (let r = line; r < P_H && !live; r++) for (const run of s.runs[r]) if (!live || run.length > live.length) live = run
-    const at = (c: number, r: number) => (r <= line ? s.sorted : s.raw)[r * P_W + c]
-    const inLive = (c: number, r: number) => !!live && r === live.line && c >= live.start && c < live.start + live.length
-    const burst = mod(t, 4) < .5 ? Math.floor(t / 4) : -1
-    const grey = cells(P_K, P_ORIGIN, P_W, P_H, (c, r) => (inLive(c, r) ? 0 : at(c, r)), { join: { at: .5 } })
-    return [
-      cite('ASENDORF 2010'),
-      { ...grey, field: blockGlitch(grey.field, { seed: 5, step: burst, blocks: 6, maxShift: 9, cols: P_SUB.cols, rows: P_SUB.rows }), toneOf: (v: number) => sortTone(v) },
-      cells(P_K, P_ORIGIN, P_W, P_H, (c, r) => (inLive(c, r) ? Math.max(.5, at(c, r)) : 0), { tone: 'active', join: { accent: true } }),
-      layer(T.text(`ROW ${pad(Math.min(line + 1, P_H), 2)}/${P_H}`, 0, FOOT), 'idle'),
-      layer(T.text(burst >= 0 ? 'GLITCH' : `RUN ${pad(live?.length ?? 0, 2)}`, 143, FOOT, { align: 'right' }), 'mid'),
     ]
   },
 }
@@ -263,58 +215,6 @@ export const sqStitch: WidgetPreset = {
   },
 }
 
-// ── 12 BEADS ─ Perler and LEGO ────────────────────────────────────────────────────────────────────────
-// Thesis: "One sprite, two toys: a bead has a hole, a stud has a ring." A 24 × 22 sprite on 6-cell squares: left of
-// the split each pixel is an ironed Perler bead (a rounded square with a round hole, `motif: 'bead'`), right of it a
-// LEGO plate with its stud (`motif: 'stud'`); the split sweeps across and back. Both motifs are cuts in the cell's own
-// colour; the shape is still the exponent. The red is the bird's eye.
-const B_K = 6, B_ORIGIN: Pt = [0, 12], B_W = 24, B_H = 22, B_LOOP = 16
-/** The sprite ('.' empty, '1' belly, '2' body, '3' outline, '4' ground, 'e' the eye). */
-const SPRITE = [
-  '........................',
-  '........................',
-  '.........3333...........',
-  '.......33222233.........',
-  '......3222222223........',
-  '.....322e2222222........',
-  '.....3222222222211......',
-  '....33222222222111......',
-  '....3222222222223.......',
-  '...332222222222223......',
-  '..3332222211112222333...',
-  '.33322222111111222333...',
-  '3333222221111111222333..',
-  '33332222211111112222333.',
-  '.3332222221111112222233.',
-  '..33322222211112222233..',
-  '...333222222222222333...',
-  '....3333222222223333....',
-  '......33333333333.......',
-  '.........4..4...........',
-  '........44.44...........',
-  '4444444444444444444444..',
-]
-/** A band low for a sprite this large (Q-squares §2.5): the belly idle, the body mid, the outline and ground faint. */
-const B_TONE: Record<string, Tone> = { 1: 'idle', 2: 'mid', 3: 'faint', 4: 'faint', e: 'active' }
-const pix = (c: number, r: number) => SPRITE[r]?.[c] ?? '.'
-export const sqBeads: WidgetPreset = {
-  id: 'sq-beads', name: 'Beads', label: 'BEADS', ...tile,
-  layers: ctx => {
-    const p = mod(ctx.t, B_LOOP) / B_LOOP, tri = p < .5 ? 2 * p : 2 - 2 * p, split = Math.round(4 + tri * (B_W - 8))
-    const lit = (c: number, r: number) => pix(c, r) !== '.' && pix(c, r) !== 'e'
-    const side = (bead: boolean): Layer => ({
-      ...cells(B_K, B_ORIGIN, B_W, B_H, (c, r) => ((c < split) === bead ? (lit(c, r) ? 1 : .25) : 0), { toneOf: (c, r) => (lit(c, r) ? B_TONE[pix(c, r)] : 'faint') }),
-      motif: bead ? 'bead' : 'stud', ...(bead ? { shapeOf: () => .55 } : {}),
-    })
-    const eye = SPRITE.findIndex(l => l.includes('e')), ex = SPRITE[eye].indexOf('e')
-    return [
-      cite('PERLER  LEGO'),
-      side(true), side(false),
-      { ...cells(B_K, B_ORIGIN, B_W, B_H, (c, r) => (c === ex && r === eye ? 1 : 0), { tone: 'active' }), motif: ex < split ? 'bead' : 'stud', ...(ex < split ? { shapeOf: () => .55 } : {}) },
-    ]
-  },
-}
-
-export const squaresPack: WidgetPreset[] = [sqSchotter, sqBlocks, sqSort, sqTruchet, sqStitch, sqBeads]
+export const squaresPack: WidgetPreset[] = [sqSchotter, sqBlocks, sqTruchet, sqStitch]
 /** Sims and sizes for the checks (`scripts/squares.ts`). */
-export const packSources = { schotterK, sortFrame, tiles, truchetAt, stitchChart, blocksFrame, BLOCKS: { w: V_W, h: V_H }, TRUCHET: { k: R_K, origin: R_ORIGIN, w: R_W, h: R_H }, STITCH: { k: X_K, origin: X_ORIGIN, w: X_W, h: X_H }, hash01 }
+export const packSources = { schotterK, tiles, truchetAt, stitchChart, blocksFrame, BLOCKS: { w: V_W, h: V_H }, TRUCHET: { k: R_K, origin: R_ORIGIN, w: R_W, h: R_H }, STITCH: { k: X_K, origin: X_ORIGIN, w: X_W, h: X_H }, hash01 }

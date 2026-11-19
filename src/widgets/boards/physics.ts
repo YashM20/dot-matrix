@@ -3,20 +3,19 @@
  * a pure function of t (seeded, fixed dt, looped) until a pointer moves on it, then a live simulation that
  * takes the pointer, the keyboard (Enter on the card = a kick) and tilt (`data.gx` / `data.gy`, in g, from the
  * light hub `src/site/light.ts`: exactly (0, 1) while the phone is held normally, so the worlds stay pristine).
- * Fluid / cloth / jelly heal back onto the loop after 3 s idle.
+ * Cloth / jelly heal back onto the loop after 3 s idle.
  * - 01 SPLASH: the departures word; a swipe knocks its dots loose as particles, they settle, then migrate
  *   (Hilbert-ranked, `src/engine/migrate`) back into the word, or into the next word after a full splash.
  *   The board's one red: dots in flight right now (live), cooling to grey as they slow.
- * - 02 INK: stable fluids; ink drops sink and bloom into vortex mushrooms, the pointer stirs (press = ink).
- * - 03 FLAG: a PBD banner hung from six rings, waving in a gusting wind, folds shaded by their normals; grab it.
- * - 04 JELLY: a shape-matched soft body with eyes; poke it, grab and stretch it.
- * - 05 PIT: dot sprites with a spatial hash; grab one and throw it. Pours in, plays, drains out each loop.
+ * - 02 FLAG: a PBD banner hung from six rings, waving in a gusting wind, folds shaded by their normals; grab it.
+ * - 03 JELLY: a shape-matched soft body with eyes; poke it, grab and stretch it.
+ * - 04 PIT: dot sprites with a spatial hash; grab one and throw it. Pours in, plays, drains out each loop.
  * Interactive cards must keep their state where the input is: they refuse the sampling worker (one
  * console warning per card), so the app samples them on the main thread.
  */
-import { PBD, STABLE_FLUIDS } from '../creditSources'
+import { PBD } from '../creditSources'
 import {
-  clothInit, clothNearest, clothNormals, clothSize, clothStep, createCloth, createFluid, createParticles, createSoft, createWorld, fluidSize, fluidSplat, fluidStep,
+  clothInit, clothNearest, clothNormals, clothSize, clothStep, createCloth, createParticles, createSoft, createWorld,
   framePointers, nearestParticle, P_DYNAMIC, P_OFF, P_STATIC, particlesSize, particlesStep, setParticle, softFrame, softInit, softNearest, softSize, softStep,
   worldAt, worldStep, type FrameInput, type StepInput, type World,
 } from '../../engine/physics'
@@ -196,50 +195,7 @@ export const physicsSplash: WidgetPreset = {
   },
 }
 
-// ── 02 INK ──────────────────────────────────────────────────────────────────
-// A 48×38 tank on a 3-cell lattice. Each drop lands with downward speed and sinks (ink is heavier than
-// water), so it rolls up into a vortex mushroom. Dots are density: size steps, faint → mid → value.
-const FW = 48, FH = 38, FL = 3, FY = 30
-const fluid = createFluid({ w: FW, h: FH, iterations: 8, vorticity: 7, dissipation: .08, damping: .22, sink: 20 })
-const I_DT = 1 / 24, I_PERIOD = 10, I_LEN = Math.round(I_PERIOD / I_DT), FALL = .45
-const DROPS = [{ at: .4, x: .32 }, { at: 2.9, x: .66 }, { at: 5.4, x: .45 }, { at: 7.9, x: .74 }]
-const toTank: Map2 = (x, y) => [(x + .5) / FL - .5, (y - FY + .5) / FL - .5]
-function inkStep(s: Float32Array, n: number, inp: StepInput) {
-  const cyc = n % I_LEN
-  for (const d of DROPS) if (cyc === Math.round(d.at / I_DT)) fluidSplat(fluid, s, d.x * FW, 1.5, 2, 0, 30, 2.6, 2.6)
-  if (inp.kick) fluidSplat(fluid, s, FW / 2, 1.5, 2.6, 0, 45, 2.6, 2.6)
-  for (const p of inp.pointers) {
-    if (p.y < -1.5 || p.y > FH || p.x < -1 || p.x > FW) continue
-    fluidSplat(fluid, s, p.x, p.y, 2.2, clamp(p.vx, -60, 60) * .6, clamp(p.vy, -60, 60) * .6, p.down ? .3 : 0)
-  }
-  fluidStep(fluid, s, I_DT, inp.gx, inp.gy)
-}
-const inkWorld = createWorld({ size: fluidSize(fluid), dt: I_DT, lead: 3, period: I_PERIOD, seam: 1.2, every: 12, maxSteps: 720, maxLiveSteps: 4, init: () => {}, step: inkStep })
-const inkTone = (v: number): Tone => (v >= .86 ? 'value' : v >= .68 ? 'idle' : v >= .48 ? 'mid' : 'faint')
-export const physicsInk: WidgetPreset = {
-  id: 'phys-ink', name: 'Physics Ink', label: 'INK', numbered: true, ...tile, controls: touch('ink', 'Stir the ink'), defaults: { ...TILT },
-  credit: STABLE_FLUIDS,
-  layers: ctx => {
-    mainThread()
-    const s = worldAt(inkWorld, ctx.t, frameOf(ctx, 'ink', toTank)), tau = ((worldStep(inkWorld, ctx.t) % I_LEN) * I_DT), D = fluid.D
-    const field: Field = (u, v) => {
-      const d = s[D + Math.round(v * (FH - 1)) * FW + Math.round(u * (FW - 1))]
-      return d < .035 ? 0 : Math.min(1, .2 + Math.sqrt(d) * .85)
-    }
-    const drops: Site[] = []
-    for (const d of DROPS) {
-      const k = (tau - d.at + FALL) / FALL
-      if (k >= 0 && k < 1) drops.push({ x: (d.x * FW + .5) * FL - .5, y: 12 + (FY - 16) * k * k, size: 3, tone: 'value' })
-    }
-    return [
-      { ...T.lattice(FL, 0, FY).at(field), toneOf: inkTone },
-      layer(T.dotLine(1, FY - 3, 142, FY - 3, { spacing: 3, size: .9 }), 'faint'),
-      ...siteLayers(drops),
-    ]
-  },
-}
-
-// ── 03 FLAG ─────────────────────────────────────────────────────────────────
+// ── 02 FLAG ─────────────────────────────────────────────────────────────────
 // A 21×15 banner hung from six rings on a rail; the wind gusts toward the viewer with a travelling wave, so
 // the sheet billows and folds. Perspective scales dots with depth; tone is the fold's light (|n·L|).
 const FC = 21, FR = 15, FSP = 5.4, FX0 = 72 - ((FC - 1) * FSP) / 2, FY0 = 26
@@ -304,7 +260,7 @@ export const physicsFlag: WidgetPreset = {
   },
 }
 
-// ── 04 JELLY ────────────────────────────────────────────────────────────────
+// ── 03 JELLY ────────────────────────────────────────────────────────────────
 // A 40-particle ring with shape matching (rotation + some squash) and an area constraint. It hops, gets
 // poked from the side and pressed from above; a hand pokes it, a press grabs and stretches it.
 const FLOOR = 128
@@ -408,7 +364,7 @@ export const physicsJelly: WidgetPreset = {
   },
 }
 
-// ── 05 PIT ──────────────────────────────────────────────────────────────────
+// ── 04 PIT ──────────────────────────────────────────────────────────────────
 // 45 dot sprites in four sizes. They pour in from above, the autopilot throws two and shakes the pit, then
 // the floor opens and they drain; in a live pit the drained ones pour back in. Grab one, throw it.
 const BALLS: [number, Tone][] = [[9, 'value'], ...Array.from({ length: 6 }, (): [number, Tone] => [6.2, 'idle']),
@@ -466,10 +422,10 @@ export const physicsPit: WidgetPreset = {
 }
 
 /** The board's worlds (tests reset them; see scripts/physics.ts). */
-export const physicsWorlds: World[] = [splashWorld, inkWorld, flagWorld, jellyWorld, pitWorld]
-export const physicsBoard: WidgetPreset[] = numberBoard([physicsSplash, physicsInk, physicsFlag, physicsJelly, physicsPit])
+export const physicsWorlds: World[] = [splashWorld, flagWorld, jellyWorld, pitWorld]
+export const physicsBoard: WidgetPreset[] = numberBoard([physicsSplash, physicsFlag, physicsJelly, physicsPit])
 
-/** Read-outs for tests (scripts/physics.ts): splash dot modes, a pit ball, the grabs, total ink. */
+/** Read-outs for tests (scripts/physics.ts): splash dot modes, a pit ball, the grabs. */
 export const physicsProbe = {
   splash(s: Float32Array) {
     let home = 0, free = 0, flying = 0
@@ -479,5 +435,5 @@ export const physicsProbe = {
   ball: (s: Float32Array, i: number) => ({ x: s[pit.X + i], y: s[pit.Y + i], vx: (s[pit.X + i] - s[pit.PX + i]) / P_DT, vy: (s[pit.Y + i] - s[pit.PY + i]) / P_DT, grab: s[P_GRAB] }),
   flagGrab: (s: Float32Array) => s[C_GRAB],
   jellyGrab: (s: Float32Array) => s[J_GRAB],
-  fluid, cloth, soft, pit, sp,
+  cloth, soft, pit, sp,
 }

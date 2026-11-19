@@ -38,23 +38,6 @@ export const irRipple: WidgetPreset = {
   ],
 }
 
-// ── PLASMA ── four interfering sines, banded by the quantize ladder.
-export const PLASMA_SRC = `// four interfering sines, folded into contour bands
-let x = u * 7; let y = v * 6;
-let s = sin(x + t) + sin(y * 1.3 - t * .7)
-      + sin((x + y) * .7 + t * .5) + sin(length(x - 3.5, y - 3) * 1.8 - t);
-.5 + .5 * sin(s * 1.6)`
-const plasma = program(PLASMA_SRC)
-const PLASMA_GRID = T.lattice(2, 0, 12)
-export const irPlasma: WidgetPreset = {
-  id: 'ir-plasma', name: 'IR Plasma', label: 'IR  PLASMA', ...tile, animated: true,
-  credit: TINY_PROGRAMS,
-  layers: ctx => [
-    layer(PLASMA_GRID.at(PLASMA_GRID.place(plasma(env(ctx)), 0, 0, 72, 59)), 'auto'),
-    footer(PLASMA_SRC, plasma),
-  ],
-}
-
 // ── DIAL ── `data.value` drives an arc: the IR decides which ring sites are lit.
 const DIAL_SRC = `// arc from 12 o'clock, clockwise to data.value
 let a = fract(atan(u - .5, .5 - v) / TAU);
@@ -80,4 +63,4 @@ export const irDial: WidgetPreset = {
   },
 }
 
-export const irBoard = [irRipple, irPlasma, irDial]
+export const irBoard = [irRipple, irDial]

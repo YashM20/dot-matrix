@@ -13,18 +13,6 @@
     "dots": 1069
    }
   },
-  "ir-plasma": {
-   "t=0": {
-    "style": "squircle:2.30",
-    "hash": "cbcf12bb",
-    "dots": 3227
-   },
-   "t=1.3": {
-    "style": "squircle:2.30",
-    "hash": "d8bbcd8f",
-    "dots": 3653
-   }
-  },
   "ir-dial": {
    "t=0": {
     "style": "squircle:2.30",

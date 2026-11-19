@@ -59,7 +59,7 @@ export const boardManifest = [
   { id: 'surfaces', title: 'SURFACES: ONE FIELD, THREE SURFACES', columns: 3, density: 'standard', load: () => import('./boards/surfaces').then(m => ({ items: m.surfacesBoard, sources: m.surfacesSources })) },
   { id: 'components', title: 'PRIMITIVE COMPONENTS', columns: 5, density: 'standard', load: () => import('./boards/components').then(m => ({ items: m.componentsBoard })) },
   { id: 'type', title: 'TYPE: VARIABLE DOT TYPE', columns: 3, density: 'standard', load: () => import('./boards/type').then(m => ({ items: m.typeBoard })) },
-  { id: 'physics', title: 'PHYSICS: DOTS YOU CAN TOUCH', columns: 3, density: 'standard', load: () => import('./boards/physics').then(m => ({ items: m.physicsBoard, sources: m.physicsSources })) },
+  { id: 'physics', title: 'PHYSICS: DOTS YOU CAN TOUCH', columns: 4, density: 'dense', load: () => import('./boards/physics').then(m => ({ items: m.physicsBoard, sources: m.physicsSources })) },
   { id: 'scope', title: 'SCOPE: THE INSTRUMENT, SEEN', columns: 3, density: 'hero', load: () => import('./boards/scope').then(m => ({ items: m.scopeBoard, shared: m.scopeShared })) },
   { id: 'heal', title: 'HEAL: THE MIRROR THAT HEALS', columns: 3, density: 'hero', load: () => import('./boards/heal').then(m => ({ items: m.healBoard })) },
   { id: 'algorithms', title: 'ALGORITHMS: STIPPLE, ATTRACT, COLLAPSE, AGGREGATE', columns: 2, density: 'hero', load: () => import('./boards/algorithms').then(m => ({ items: m.algorithmsBoard })) },
@@ -93,7 +93,7 @@ export const boardMeta = (id: string): BoardMeta | undefined => boardManifest.fi
 export const cardAliases: Readonly<Record<string, string>> = { 'sq-tetris': 'sq-stack' }
 export const resolveCardId = (id: string): string => cardAliases[id] ?? (id.startsWith('glyph-') ? `lock-${id.slice(6)}` : id)
 /**
- * Retired cards (#364, #378): slug → [uid, board]. Their old `/widget/<slug|uid>/`, `/<uid>` and `?card=` links open the
+ * Retired cards (#364, #378, #221): slug → [uid, board]. Their old `/widget/<slug|uid>/`, `/<uid>` and `?card=` links open the
  * board they lived on (`viewFromUrl`; vercel.json redirects the same paths). The uids stay in `ids.json`, never reused.
  */
 export const removedCards: Readonly<Record<string, readonly [uid: string, board: string]>> = {
@@ -106,6 +106,10 @@ export const removedCards: Readonly<Record<string, readonly [uid: string, board:
   'mat-knit': ['k8par51e', 'workshop'], 'mat-denim': ['5ccpsd8c', 'workshop'], 'mat-paper': ['ev8dqt4a', 'workshop'], 'mat-wood': ['zv5k2rra', 'workshop'],
   'mat-leather': ['9q3kgrk7', 'workshop'], 'mat-sand': ['ey87ejrb', 'workshop'], 'mat-mercury': ['qn7td5fx', 'workshop'], 'mat-thread': ['rh733bmf', 'workshop'],
   'mat-mud': ['r9kvhax6', 'workshop'], 'mat-lichtenberg': ['rxtyh8y2', 'workshop'], 'mat-erosion': ['2xeq5xxe', 'workshop'],
+  // the #221 picks
+  'ir-plasma': ['c67z8djy', 'ir'], 'gpu-moire': ['hxrn7e57', 'gpu'], 'phys-ink': ['3p1ge0nq', 'physics'], 'heal-persist': ['aq49ah2w', 'heal'],
+  'light-matte': ['a1tbjq54', 'light'], 'light-glass': ['n444xcy1', 'light'], 'sq-blob': ['ns450j4j', 'squares'], 'sq-sort': ['sfsr5e3y', 'squares'],
+  'sq-beads': ['c5pv0ygb', 'squares'], 'sq-morph': ['4kgr5vej', 'squares'], 'fr-lyapunov': ['4fqq6940', 'fractals'],
 }
 /** The board a retired card's slug or uid lived on, else undefined. */
 export const removedCardBoard = (key: string): string | undefined => {

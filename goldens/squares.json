@@ -25,18 +25,6 @@
     "dots": 4626
    }
   },
-  "sq-blob": {
-   "t=0": {
-    "style": "square:2.00",
-    "hash": "a7c83ffc",
-    "dots": 2094
-   },
-   "t=1.3": {
-    "style": "square:2.00",
-    "hash": "12778a43",
-    "dots": 2083
-   }
-  },
   "sq-gameboy": {
    "t=0": {
     "style": "square:2.00",
@@ -97,18 +85,6 @@
     "dots": 2481
    }
   },
-  "sq-sort": {
-   "t=0": {
-    "style": "square:2.00",
-    "hash": "dc3c3353",
-    "dots": 2646
-   },
-   "t=1.3": {
-    "style": "square:2.00",
-    "hash": "bb3ca017",
-    "dots": 2543
-   }
-  },
   "sq-truchet": {
    "t=0": {
     "style": "square:2.00",
@@ -131,30 +107,6 @@
     "style": "square:2.00",
     "hash": "e031c6ea",
     "dots": 1119
-   }
-  },
-  "sq-beads": {
-   "t=0": {
-    "style": "square:2.00",
-    "hash": "f2a170a8",
-    "dots": 778
-   },
-   "t=1.3": {
-    "style": "square:2.00",
-    "hash": "1d1d0284",
-    "dots": 778
-   }
-  },
-  "sq-morph": {
-   "t=0": {
-    "style": "circle:2.00",
-    "hash": "e3fd1703",
-    "dots": 4830
-   },
-   "t=1.3": {
-    "style": "circle:2.00",
-    "hash": "58121b67",
-    "dots": 4832
    }
   },
   "sq-hat": {
