@@ -58,21 +58,56 @@ const BUTTON = (() => {
   const raised = heightRaster(glyph, { shape: 'round', width: 2.3, height: 3 }, LG)
   return normalRaster(stackHeights(plate, raised))
 })()
-function torchLight(ctx: WidgetContext): { light: Light; at: [number, number] } {
-  const p = ctx.pointers?.find(q => q.inside && !q.up)
-  let x: number, y: number
-  if (p) { x = toLat(p.x); y = toLat(p.y) }
-  else if (ctx.focus === 'lx') { x = ctx.data.lx * (LG.cols - 1); y = (1 - ctx.data.ly) * (LG.rows - 1) }
-  else { const a = ctx.t * .45 - 2.2; x = BTN.cx + 22 * Math.sin(a); y = BTN.cy - 22 * Math.cos(a) }
-  return { light: torch(x, y, 22, 160), at: [x, y] }
+/** The idle torch: a slow circle round the button. */
+const orbitAt = (t: number): [number, number] => { const a = t * .45 - 2.2; return [BTN.cx + 22 * Math.sin(a), BTN.cy - 22 * Math.cos(a)] }
+/** Seconds the light takes to glide from one source (pointer, keyboard, orbit) to the next. */
+const HANDOFF = .5
+/**
+ * The light's last place and its handoff in flight. A frame more than a few ticks after the last one starts from the
+ * orbit (a still, a golden, or the idle orbit sampled off this thread), so a static render is always the plain orbit.
+ */
+const glide = { src: 'orbit', from: [0, 0] as [number, number], at: -Infinity, x: 0, y: 0, t: -Infinity }
+function torchLight(ctx: WidgetContext): Light {
+  const p = ctx.pointers?.find(q => q.inside && !q.up), t = ctx.t, g = glide
+  const [src, x, y]: [string, number, number] = p ? ['pointer', toLat(p.x), toLat(p.y)]
+    : ctx.focus === 'lx' ? ['key', ctx.data.lx * (LG.cols - 1), (1 - ctx.data.ly) * (LG.rows - 1)]
+    : ['orbit', ...orbitAt(t)]
+  if (!(t >= g.t && t - g.t < .25)) { g.src = 'orbit'; g.at = -Infinity; [g.x, g.y] = orbitAt(t) }
+  if (src !== g.src) { g.src = src; g.from = [g.x, g.y]; g.at = t }
+  // ease-out: the light leaves at once toward the new source and settles on it (under reduced motion it jumps)
+  const k = ctx.reducedMotion ? 1 : Math.min(1, (t - g.at) / HANDOFF), e = 1 - (1 - k) ** 3
+  g.x = g.from[0] + (x - g.from[0]) * e; g.y = g.from[1] + (y - g.from[1]) * e; g.t = t
+  return torch(g.x, g.y, 22, 160)
 }
 const TORCH_BANDS: [number, number, Tone][] = [[.08, .4, 'faint'], [.4, .8, 'mid'], [.8, 2, 'idle']]
+/**
+ * A cell alone in its band (no 8-neighbour in the same band or above) drops to its brightest neighbour's value, so a
+ * glyph slope that catches the torch on one cell never reads as a stray dot. The faint band is left as it is.
+ */
+function settle(r: Raster, bands: [number, number, Tone][]): Raster {
+  const { cols, rows } = r.grid, d = r.data, band = new Int8Array(d.length)
+  for (let i = 0; i < d.length; i++) band[i] = bands.findIndex(([lo, hi]) => d[i] >= lo && d[i] < hi)
+  for (let y = 1; y < rows - 1; y++) for (let x = 1; x < cols - 1; x++) {
+    const i = y * cols + x
+    if (band[i] < 1) continue
+    let alone = true, top = 0
+    for (let dy = -1; dy <= 1; dy++) for (let dx = -1; dx <= 1; dx++) {
+      const j = i + dy * cols + dx
+      if (j === i) continue
+      if (band[j] >= band[i]) alone = false
+      top = Math.max(top, d[j])
+    }
+    if (alone) d[i] = top
+  }
+  return r
+}
 export const lightTorch: WidgetPreset = {
   id: 'light-torch', name: 'Torch', group: 'composite', inset: 'dark', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
   defaults: { lx: .3, ly: .7 },
   controls: [{ key: 'lx', keyY: 'ly', kind: 'xy', box: [16, 18, 112, 112], label: 'Torch position' }],
   layers: ctx => {
-    const { light } = torchLight(ctx), { diffuse, specular } = illuminate(BUTTON, light, { ambient: .04, shininess: 24 })
+    const into = createRaster(BUTTON.grid, BUTTON.space), { specular } = illuminate(BUTTON, torchLight(ctx), { ambient: .04, shininess: 24, into })
+    const diffuse = sample(settle(into, TORCH_BANDS))
     // the flat face sits in the mid band; only slopes turned to the torch climb to idle, the far ones fall to faint
     return [layer(LAT.at(RIM), 'mid'), ...gloss(diffuse, specular, .35, TORCH_BANDS)]
   },
@@ -109,7 +144,8 @@ function contactShadow(L: readonly [number, number, number]): Field {
 const shadows = new Map<number, Field>()
 const blurred = (r: Raster) => { const b = blur(r, 2.5); for (let i = 0; i < b.data.length; i++) b.data[i] = Math.min(1, b.data[i] * 1.5); return b }
 export const lightOrb: WidgetPreset = {
-  id: 'light-orb', name: 'Orb', group: 'composite', inset: 'dark', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
+  // the light is the sun of the wall-clock hour: re-sampled on the minute tick, no frame loop
+  id: 'light-orb', name: 'Orb', group: 'composite', inset: 'dark', chrome: 'dots', clock: true, grid: TILE, style: tileStyle,
   layers: () => {
     const L = boardSun(), diffuse = lambert(SPHERE, L, { ambient: .16 }), specular = phong(SPHERE, L, [0, 0, 1], 60)
     const shadow = contactShadow(L), floor: Field = (u, v) => floorDots(u, v) * (1 - shadow(u, v)) * (1 - BODY_MASK(u, v))
@@ -126,13 +162,25 @@ const SIGN_LAT = T.lattice(SIGN.k, 0, 0), SG = latticeGrid(TILE, SIGN.k)
 const SIGN_W = T.size(SIGN.text, { smooth: true })[0], SIGN_X = Math.round((SG.cols - SIGN_W) / 2), SIGN_Y = Math.round(SIGN.y / SIGN.k)
 // the bloom's mask is the plain glyph at 2×2 per pixel; the letters themselves are that glyph on a lattice twice as coarse
 const letters = SIGN_LAT.text(SIGN.text, SIGN_X, SIGN_Y, { scale: 2 }), LETTERS = T.big(SIGN.text, SIGN_X * SIGN.k, SIGN_Y * SIGN.k, { lattice: SIGN.k * 2 })
-const GLOW_R = bloom(rasterize(letters, SG), 4.5, { strength: 1, gap: 1 })
-// a lamp's halo falls off slower than a gaussian: lift the tail so the outer dots still read
-for (let i = 0; i < GLOW_R.data.length; i++) GLOW_R.data[i] = GLOW_R.data[i] ** .7
+const SIGN_R = rasterize(letters, SG), GLOW_R = bloom(SIGN_R, 4.5, { strength: 1, gap: 1 })
+/** Closed counters (the insides of O, A and R): cells off the letters that a flood from the grid's edge never reaches. */
+const counters = (r: Raster): Uint8Array => {
+  const { cols, rows } = r.grid, out = new Uint8Array(cols * rows).fill(1), stack: number[] = []
+  const push = (x: number, y: number) => { const i = y * cols + x; if (x >= 0 && y >= 0 && x < cols && y < rows && out[i] && r.data[i] < .5) { out[i] = 0; stack.push(i) } }
+  for (let x = 0; x < cols; x++) { push(x, 0); push(x, rows - 1) }
+  for (let y = 0; y < rows; y++) { push(0, y); push(cols - 1, y) }
+  while (stack.length) { const i = stack.pop()!, x = i % cols, y = (i - x) / cols; push(x + 1, y); push(x - 1, y); push(x, y + 1); push(x, y - 1) }
+  for (let i = 0; i < out.length; i++) if (r.data[i] >= .5) out[i] = 0
+  return out
+}
+// a lamp's halo falls off slower than a gaussian: lift the tail so the outer dots still read. The counters stay dark,
+// so the letters read as letters and the glow sits round them.
+const HOLES = counters(SIGN_R)
+for (let i = 0; i < GLOW_R.data.length; i++) GLOW_R.data[i] = HOLES[i] ? 0 : GLOW_R.data[i] ** .7
 const GLOW = sample(GLOW_R)
-/** The sign's frame: a dotted rounded rectangle on the card pitch, in mid. */
+/** The sign's frame: a dotted rounded rectangle on the card pitch, in mid, a few cells clear of the bloom. */
 const frame = (() => {
-  const x0 = 10, y0 = 34, w = 124, h = 62, r = 10, spacing = 3.3, pts: [number, number][] = []
+  const x0 = 6, y0 = 34, w = 132, h = 62, r = 10, spacing = 3.3, pts: [number, number][] = []
   const straightW = w - 2 * r, straightH = h - 2 * r, per = 2 * (straightW + straightH) + 2 * Math.PI * r, n = Math.round(per / spacing), step = per / n
   for (let i = 0; i < n; i++) {
     let d = i * step
@@ -179,9 +227,13 @@ function boardLight(ctx: WidgetContext): Light {
 const caption = (s: string) => layer(T.big(s, 72, 126, { lattice: 1, align: 'center' }), 'mid')
 /** The torch: a control over the ball, so the pointer reaches the card (the host only tracks pointers on cards with controls). */
 const TORCH: Control = { key: 'lx', keyY: 'ly', kind: 'xy', box: [16, 16, 112, 104], label: 'Torch position' }
+/**
+ * A lit material card follows the board sun (the wall clock, so `clock`) and the torch while it is in use (input keeps
+ * the card live). None reads `t`, so none runs a frame loop. The emissive ball lights itself and is a plain still.
+ */
 function materialCard(id: string, name: string, note: string, body: (ctx: WidgetContext) => Layer[], lit = true): WidgetPreset {
   return {
-    id, name, group: 'composite', inset: 'dark', chrome: 'dots', animated: true, grid: TILE, style: tileStyle,
+    id, name, group: 'composite', inset: 'dark', chrome: 'dots', ...(lit ? { clock: true } : {}), grid: TILE, style: tileStyle,
     ...(lit ? { defaults: { lx: .3, ly: .7 }, controls: [TORCH] } : {}),
     layers: ctx => [...body(ctx), caption(note)],
   }
@@ -200,6 +252,8 @@ function ballCells(fn: (nx: number, ny: number, nz: number) => number): Field {
   for (let r = b[1]; r <= b[3]; r++) for (let c = b[0]; c <= b[2]; c++) { const i = r * cols + c; if (n.mask[i] >= .5) out.data[i] = fn(n.x[i], n.y[i], n.z[i]) }
   return sample(out)
 }
+/** The lacquer ball's limb: the outer ring (nz below `LIMB`), held at one faint size where the body fades out on the dark side. */
+const LIMB = .3, LIMB_VALUE = .5
 const GLOSS_BODY: [number, number, Tone][] = [[.06, .26, 'faint'], [.26, .5, 'mid'], [.5, 2, 'idle']]
 /**
  * Black lacquer: a dark Lambert body (void on the shadow side, never past idle), the window's
@@ -217,17 +271,21 @@ function lacquer(light: Light): Layer[] {
     const d = Math.max(0, nx * L[0] + ny * L[1] + nz * L[2])
     if (Math.max(0, nx * Hx + ny * Hy + nz * Hz) ** 60 > .1) return 0 // the highlight replaces the body under it
     const rim = nz < .3 && nx * hx + ny * hy < -.25 ? .4 : 0 // floor bounce on the far rim
-    return Math.max(rim, .95 * d ** 1.25)
+    const lit = .95 * d ** 1.25
+    // the limb keeps one faint size where the body fades out, so the outline stays whole on the dark side (-1 marks it)
+    return !rim && nz < LIMB && lit < .26 ? -1 : Math.max(rim, lit)
   })
   const rimOnly: Field = (u, v) => { const x = body(u, v); return x === .4 ? .5 : 0 }
   rimOnly.bounds = body.bounds
-  const lit: Field = (u, v) => { const x = body(u, v); return x === .4 ? 0 : x }
+  const limb: Field = (u, v) => (body(u, v) === -1 ? LIMB_VALUE : 0)
+  limb.bounds = body.bounds
+  const lit: Field = (u, v) => { const x = body(u, v); return x === .4 || x < 0 ? 0 : x }
   lit.bounds = body.bounds
   // the spot's hard core is one white dot; the rest of the spot steps down to an idle ring round it
   const { dot, cut } = T.peak(K, [0, 0], spec, { from: .5 })
   const halo: Field = (u, v) => (spec(u, v) > 0 ? .7 : 0)
   halo.bounds = spec.bounds
-  return [...banded(lit, GLOSS_BODY), layer(LAT.at(rimOnly), 'mid'), layer(LAT.at(cut(halo)), 'idle'), ...(dot ? [layer(dot, 'value')] : [])]
+  return [...banded(lit, GLOSS_BODY), layer(LAT.at(limb), 'faint'), layer(LAT.at(rimOnly), 'mid'), layer(LAT.at(cut(halo)), 'idle'), ...(dot ? [layer(dot, 'value')] : [])]
 }
 /**
  * Fabric's shadow side keeps its weave: a floor of light, the Bayer dither to one size step. The lit side climbs
