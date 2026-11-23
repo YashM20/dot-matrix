@@ -29,6 +29,7 @@ import { TILE, layer, layoutFor, tileStyle, type WidgetContext, type WidgetPrese
 import { numberBoard } from '../numbered'
 import { lightSource } from '../../site/light'
 import { minGap } from '../sites'
+import { caption } from '../captions'
 
 const T = layoutFor(TILE)
 const tile = { group: 'composite', chrome: 'dots', grid: TILE, style: tileStyle, animated: true } as const
@@ -67,6 +68,9 @@ function siteLayers(sites: Site[], step = .2): Layer[] {
   }
   return [...groups.values()].map(g => ({ field: () => g.value, sites: g.pts, size: +g.size.toFixed(3), tone: g.tone }))
 }
+/** Footer hint (#235): one verb bottom right in `mid` (the components board's footer stat) until a hand is on the card. */
+const HINT_ROW = 136, BODY_BOTTOM = 132
+const hint = (w: World, s: Float32Array, word: string): Layer[] => (s === w.live ? [] : [caption(word, TILE.cols - 1, HINT_ROW)])
 /** Floats [0, n) blend; the discrete tail (grab indices) is left alone. */
 const blendHead = (n: number) => (a: Float32Array, b: Float32Array, k: number) => { for (let i = 0; i < n; i++) a[i] += (b[i] - a[i]) * k }
 
@@ -83,7 +87,7 @@ function homesOf(word: string): Pt[] {
 }
 const HOMES = WORDS.map(homesOf), CAP = Math.max(...HOMES.map(h => h.length)) + 1, PTR = CAP - 1
 const splashR = new Float32Array(CAP).fill(SL * .46); splashR[PTR] = 4.5
-const sp = createParticles({ n: CAP, radius: splashR, bounds: [1, 12, 143, 142], restitution: .35, bounce: .25, friction: .8, g: 260, iterations: 2, maxSpeed: 320 })
+const sp = createParticles({ n: CAP, radius: splashR, bounds: [1, 12, 143, BODY_BOTTOM], restitution: .35, bounce: .25, friction: .8, g: 260, iterations: 2, maxSpeed: 320 })
 const S_HOME = particlesSize(sp), S_MODE = S_HOME + CAP, S_MX = S_MODE + CAP, S_MY = S_MX + CAP, S_G = S_MY + CAP
 const G_WORD = S_G, G_KICK = S_G + 1, G_MIG = S_G + 2, G_TARGET = S_G + 3, G_FULL = S_G + 4
 const HOME = 0, FREE = 1, FLYING = 2
@@ -192,7 +196,10 @@ export const physicsSplash: WidgetPreset = {
     const word = s[G_MIG] >= 0 && s[G_FULL] ? s[G_TARGET] : s[G_WORD]
     // no two particles closer than the gap (the word's home dots are kept first)
     const pts = sites.map((q): Pt => [q.x, q.y]), kept = new Set(minGap(pts, SL))
-    return [layer(T.text(SPLASH_CAPTION[word], 72, 34, { align: 'center' }), 'idle'), ...siteLayers(sites.filter((_, i) => kept.has(pts[i])))]
+    return [
+      layer(T.text(SPLASH_CAPTION[word], 72, 34, { align: 'center' }), 'mid'),
+      ...siteLayers(sites.filter((_, i) => kept.has(pts[i]))), ...hint(splashWorld, s, 'SPLASH'),
+    ]
   },
 }
 
@@ -279,6 +286,8 @@ const flagWorld = createWorld({
 })
 const LIGHT = (() => { const v = [-.75, -.35, .55], l = Math.hypot(...v); return v.map(x => x / l) })()
 const FOCAL = 170
+// the rings hang under a rail on a pole; rail and pole sit behind the cloth, none of their dots within CLEAR of the cloth's
+const RAIL_Y = FY0 - 3, POLE_X = FX0 - 8, RAIL_X1 = FX0 + (FC - 1) * FSP + 8, CLEAR = 2.6, RAIL = { spacing: 2.4, size: 1 }
 export const physicsFlag: WidgetPreset = {
   id: 'phys-flag', name: 'Physics Flag', label: 'FLAG', numbered: true, ...tile, controls: touch('flag', 'Grab the flag'), defaults: { ...TILT },
   credit: PBD,
@@ -286,20 +295,23 @@ export const physicsFlag: WidgetPreset = {
     mainThread()
     const s = worldAt(flagWorld, ctx.t, frameOf(ctx, 'flag'))
     clothNormals(cloth, s)
-    const sites: Site[] = [], rings: Pt[] = []
+    const sites: Site[] = [], rings: Pt[] = [], behind: Pt[] = []
     for (let p = 0; p < cloth.n; p++) {
       // perspective can swing a corner past the card edge: keep the dot on the card
       const k = clamp(FOCAL / (FOCAL - s[cloth.Z + p]), .7, 1.5), x = clamp(72 + (s[cloth.X + p] - 72) * k, 1, 143), y = clamp(20 + (s[cloth.Y + p] - 20) * k, 1, 143)
+      behind.push([x, y])
       if (!cloth.invMass[p]) { rings.push([x, y]); continue }
       const shade = Math.abs(cloth.nx[p] * LIGHT[0] + cloth.ny[p] * LIGHT[1] + cloth.nz[p] * LIGHT[2])
-      const tone: Tone = PRINT[p] ? (shade > .3 ? 'value' : 'idle') : shade > .55 ? 'mid' : 'faint'
-      sites.push({ x, y, size: (PRINT[p] ? 2.6 : 2.1) * k * (.6 + .5 * shade), tone })
+      // the print reads by size as well as tone: its dots stay near full size on every fold, the cloth's above them
+      if (PRINT[p]) sites.push({ x, y, size: 3 * k * (.9 + .2 * shade), tone: shade > .15 ? 'value' : 'idle' })
+      else sites.push({ x, y, size: 2.1 * k * (.6 + .5 * shade), tone: shade > .55 ? 'mid' : 'faint' })
     }
     return [
-      // the rail stops short of each ring, so no rail dot touches a ring
-      layer(T.knockout(T.dotLine(FX0 - 8, FY0, FX0 + (FC - 1) * FSP + 8, FY0, { spacing: 2.4, size: 1 }), rings, 2.2), 'faint'),
+      layer(T.knockout(T.dotLine(POLE_X, RAIL_Y, RAIL_X1, RAIL_Y, RAIL), behind, CLEAR), 'faint'),
+      layer(T.knockout(T.dotLine(POLE_X, RAIL_Y + RAIL.spacing, POLE_X, 142, RAIL), behind, CLEAR), 'faint'),
       ...siteLayers(sites),
       layer(T.dots(rings, 2.6), 'idle'),
+      ...hint(flagWorld, s, 'GRAB'),
     ]
   },
 }
@@ -404,6 +416,7 @@ export const physicsJelly: WidgetPreset = {
       { field: jellyField, lattice: JL, origin: [0, JOY], toneOf: jellyToneOf },
       layer(T.dots(floor, .9), 'faint'), layer(T.dots(contact, 1.3), 'mid'),
       ...(shine.n ? [layer(T.dots([[shine.x / shine.n, shine.y / shine.n]], 4.2), 'value')] : []),
+      ...hint(jellyWorld, s, 'POKE'),
     ]
   },
 }
@@ -415,7 +428,7 @@ const BALLS: [number, Tone][] = [[9, 'value'], ...Array.from({ length: 6 }, (): 
   ...Array.from({ length: 14 }, (): [number, Tone] => [4.4, 'mid']), ...Array.from({ length: 30 }, (): [number, Tone] => [3.2, 'faint'])]
 const NB = BALLS.length, PIT_PTR = NB
 const pitR = new Float32Array(NB + 1); BALLS.forEach(([r], i) => { pitR[i] = r }); pitR[PIT_PTR] = 5
-const PIT_FLOOR = 141
+const PIT_FLOOR = BODY_BOTTOM
 const pit = createParticles({ n: NB + 1, radius: pitR, bounds: [2, -400, 142, PIT_FLOOR], restitution: .4, bounce: .3, friction: .85, g: 240, iterations: 3 })
 const P_GRAB = particlesSize(pit), P_DT = 1 / 60, P_PERIOD = 16, P_LEN = Math.round(P_PERIOD / P_DT)
 const queue = (i: number): Pt => [10 + hash01(i, 1) * 124, -8 - i * 5.5]
@@ -461,7 +474,10 @@ export const physicsPit: WidgetPreset = {
       if (y < 10 - r || y > 144 + r) continue
       sites.push({ x, y, size: discSize(r), tone: BALLS[i][1] })
     }
-    return [...siteLayers(sites, .1), ...(grab >= 0 ? [layer(T.dotRing(s[pit.X + grab], s[pit.Y + grab], pitR[grab] + 3, { spacing: 2.6, size: 1 }), 'faint')] : [])]
+    return [
+      ...siteLayers(sites, .1), ...(grab >= 0 ? [layer(T.dotRing(s[pit.X + grab], s[pit.Y + grab], pitR[grab] + 3, { spacing: 2.6, size: 1 }), 'faint')] : []),
+      ...hint(pitWorld, s, 'THROW'),
+    ]
   },
 }
 

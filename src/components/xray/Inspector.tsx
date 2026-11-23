@@ -87,7 +87,7 @@ function Summary({ probe, layers, d }: { probe: CardProbe; layers: Layer[]; d: C
     <p>{probe.preset.name} is {plural(layers.length, 'layer')} of {term('field', 'fields')} ({names.slice(0, 4).join(', ')}{names.length > 4 ? ', …' : ''}), sampled into <b>{plural(probe.stats.dots, 'dot')}</b> on a {probe.grid.cols}×{probe.grid.rows} grid.</p>
     {(coarse > 0 || sited > 0) && <p>{coarse > 0 && <>{plural(coarse, 'layer')} {coarse === 1 ? 'sits' : 'sit'} on a coarser {term('lattice')} for bigger dots. </>}{sited > 0 && <>{plural(sited, 'layer')} {sited === 1 ? 'places' : 'place'} dots at exact {term('site', 'sites')}.</>}</p>}
     <p>Each dot's size is the field's value{steps ? <>, snapped to {steps} steps ({term('quantize')})</> : ' (not quantized)'}; its colour is its {term('tone')}.{ir && <> Part of it is written in {term('IR')}, so REMIX opens its own program.</>}</p>
-    {d.controls.length ? <ul>{d.controls.map(c => <li key={c.key}><b>{c.label}</b> ({c.kind}) sets <code>{c.key}</code>, now {c.valueText}</li>)}</ul>
+    {d.controls.length ? <ul>{d.controls.map(c => <li key={c.key}><b>{c.label}</b> ({c.kind}) sets <code>{c.key}</code>{c.valueText && <>, now {c.valueText}</>}</li>)}</ul>
       : <p>No controls: {probe.animated ? 'it moves on its own clock' : 'it is a still picture'}.</p>}
     <p className="xr-note">{noHover() ? 'Tap' : 'Hover'} any dot to see its value, size step, tone and layer.</p>
     <p className="xr-words">{GLOSSARY_TERMS.map(k => <span key={k}>{term(k)}</span>)}</p>
