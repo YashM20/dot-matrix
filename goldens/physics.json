@@ -4,13 +4,13 @@
   "phys-splash": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "70b7fc17",
-    "dots": 424
+    "hash": "555cfc02",
+    "dots": 515
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "e8bd9c35",
-    "dots": 447
+    "hash": "ca9e3290",
+    "dots": 538
    }
   },
   "phys-ink": {
@@ -28,37 +28,37 @@
   "phys-flag": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "b9edc390",
-    "dots": 450
+    "hash": "45d201d1",
+    "dots": 575
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "7b1fe9e7",
-    "dots": 450
+    "hash": "a68c32d1",
+    "dots": 569
    }
   },
   "phys-jelly": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "3b5b1b8a",
-    "dots": 433
+    "hash": "c6e86017",
+    "dots": 496
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "0c7ea0b3",
-    "dots": 431
+    "hash": "f67b2e52",
+    "dots": 494
    }
   },
   "phys-pit": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "ac57b86a",
-    "dots": 124
+    "hash": "fbfbf3e4",
+    "dots": 204
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "1ffa12b5",
-    "dots": 124
+    "hash": "65da0b84",
+    "dots": 204
    }
   }
  }
