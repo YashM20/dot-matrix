@@ -1,0 +1,2 @@
+visitor: The PHYSICS cards say what to do in one word at the bottom (SPLASH, GRAB, POKE, THROW) until you touch them, and the FLAG's 480 now reads at card size, hung from a rail on a pole.
+engineering: physics cards get a footer hint that hides on the live state, splash and pit floors sit above it, the flag's print reads by size and hangs from a raised rail on a pole, the splash caption is one tone up, and describe() gives an idle button no value text (#235).

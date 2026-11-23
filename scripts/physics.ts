@@ -18,6 +18,7 @@ import type { DotInstance } from '../src/engine/types'
 import { withChrome, type WidgetPreset } from '../src/widgets'
 import { physicsBoard, physicsProbe, physicsWorlds } from '../src/widgets/boards/physics'
 import { fnv1a, legacyKey } from './lib/goldenKey'
+import { describe } from '../src/engine/describe'
 
 type Assert = (name: string, cond: boolean, detail?: string) => void
 /** Frame fingerprint: the golden key's per-dot `legacyKey`, sorted, FNV-1a 32 (compared only between frames here). */
@@ -117,6 +118,9 @@ export function physicsChecks(assert: Assert): void {
     for (let i = 0; i <= secs * fps; i++) { t = t0 + i / fps; frame(p, t, at(i / fps)) }
     return t
   }
+  // the footer hint (#235) shows on the card's own loop and hides once a hand is on it; a button that is up says no value
+  const words = (p: WidgetPreset, t: number, pointers?: Pointer[]) => p.layers({ t, data: { ...p.defaults }, pointers }).map(l => l.field.text)
+  const hintBefore = words(splash, 19.2).includes('SPLASH'), said = describe(splash).summary
   // splash: a fast swipe across the word knocks dots loose; untouched for 3.5 s, they are all home again
   let t = run(splash, 19.3, .4, k => [ptr(-5 + k * 400, 64, false)])
   const hit = physicsProbe.splash(worldOf(splash).live)
@@ -124,6 +128,9 @@ export function physicsChecks(assert: Assert): void {
   const back = physicsProbe.splash(worldOf(splash).live)
   assert('physics splash: a swipe knocks the word\'s dots loose, they settle and migrate back into text', hit.free > 40 && back.free === 0 && back.flying === 0 && back.home > 100,
     `knocked ${hit.free} (home ${hit.home}), after 3.5 s home ${back.home}, word ${back.word}`)
+  const hintAfter = words(splash, t + 1 / 60).includes('SPLASH')
+  assert('physics: the footer hint shows on the loop and hides once touched; describe() says no value for a button that is up (#235)',
+    hintBefore && !hintAfter && said.includes('Splash the word (button)') && !said.includes('released'), `hint ${hintBefore} → ${hintAfter}; ${said}`)
 
   // pit: press on a ball, drag up-right fast, let go: it was held, then flies
   resetAll()

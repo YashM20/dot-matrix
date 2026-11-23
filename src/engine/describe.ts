@@ -29,7 +29,7 @@ export interface ControlDescription {
   kind: Control['kind']
   label: string
   value: number
-  /** `value` in words: the option name, on/off, a percentage of the range, … */
+  /** `value` in words: the option name, on/off, a percentage of the range, …; empty for a button that is up */
   valueText: string
   min: number; max: number
 }
@@ -54,7 +54,7 @@ const num = (x: number) => (Number.isInteger(x) ? String(x) : String(+x.toFixed(
 
 /**
  * A control's value in words: the card's own `valueText` when it has one, else a percentage of the range, the option
- * name, on / off. `key` reads one axis of an xy pad (`aria-valuetext` per axis); without it an xy pad reads "x, y".
+ * name, on / off, "pressed" for a held button (empty when it is up). `key` reads one axis of an xy pad (`aria-valuetext` per axis); without it an xy pad reads "x, y".
  */
 export function controlValueText(c: Control, data: Record<string, number>, key?: string): string {
   const min = c.min ?? 0, max = c.max ?? (c.kind === 'segmented' ? Math.max(0, (c.options ?? 1) - 1) : 1), k = key ?? c.key
@@ -72,7 +72,8 @@ export function controlValueText(c: Control, data: Record<string, number>, key?:
   switch (c.kind) {
     case 'segmented': { const i = Math.round(v); return c.optionLabels?.[i] ?? String(i + 1) }
     case 'toggle': return v >= .5 ? 'on' : 'off'
-    case 'button': return v >= .5 ? 'pressed' : 'released'
+    // a button has no lasting value: its idle state is not worth saying ("Splash the word = released" read oddly, #235)
+    case 'button': return v >= .5 ? 'pressed' : ''
     case 'xy': if (key === undefined) return `${num(v)}, ${num(Number.isFinite(data[c.keyY ?? '']) ? data[c.keyY!] : 0)}`
       return max > min ? `${Math.round(((v - min) / (max - min)) * 100)}%` : num(v)
     case 'stepper': case 'crank': return num(v)
@@ -102,7 +103,7 @@ export function describe(preset: Describable, ctx: Partial<FrameContext> = {}): 
   const state = ctx.state ?? (pick ? pick.valueText : preset.animated ? 'animated' : 'static')
   const parts = [`${preset.name} (${preset.id}${preset.group ? `, ${preset.group}` : ''}${preset.liveData ? ', live' : ''}): ${state}.`]
   if (text.length) parts.push(`Shows ${text.map(s => `"${s}"`).join(', ')}.`)
-  if (controls.length) parts.push(`Controls: ${controls.map(c => `${c.label} = ${c.valueText} (${c.kind})`).join('; ')}.`)
+  if (controls.length) parts.push(`Controls: ${controls.map(c => `${c.label}${c.valueText ? ` = ${c.valueText}` : ''} (${c.kind})`).join('; ')}.`)
   const ui = (['hover', 'pressed', 'focus'] as const).filter(k => ctx[k]).map(k => `${k} ${ctx[k]}`)
   if (ui.length) parts.push(`Input: ${ui.join(', ')}.`)
   return { id: preset.id, name: preset.name, state, data, controls, text, summary: parts.join(' '), label: spokenLabel(preset, text) }
