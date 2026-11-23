@@ -1,7 +1,7 @@
 {
  "version": 1,
  "id": "ir-ripple",
- "name": "IR Ripple",
+ "name": "Ripple",
  "group": "composite",
  "grid": {
   "cols": 144,
@@ -19,7 +19,7 @@
  "layers": [
   {
    "kind": "ir",
-   "src": "// rings leave the centre and fade at the rim\nlet x = (u - .5) * 1.08; let y = v - .5;\nlet d = length(x, y);\nlet w = .5 + .5 * sin(d * 30 - t * 5);\nd < .026 ? 0 : w * smoothstep(.6, .04, d)",
+   "src": "// rings leave the centre and fade at the rim\nlet x = (u - .5) * 1.2; let y = v - .5;\nlet d = length(x, y);\nlet w = .5 + .5 * sin(d * 30 - t * 5);\nd < .026 ? 0 : w * max(smoothstep(.6, .04, d), .45 * smoothstep(.58, .48, d))",
    "tone": "auto",
    "lattice": 3,
    "origin": [
@@ -47,7 +47,7 @@
   {
    "kind": "text",
    "tone": "idle",
-   "text": "189 B  38 NODES",
+   "text": "224 B  45 NODES",
    "at": [
     0,
     134
@@ -55,5 +55,5 @@
   }
  ],
  "chrome": "dots",
- "label": "IR  RIPPLE"
+ "label": "RIPPLE"
 }
