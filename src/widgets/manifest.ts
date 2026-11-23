@@ -27,7 +27,8 @@ export interface BoardContents {
  * How a board's cards fill the screen (docs/LAYOUT-THEME-PLAN.md §3, DESIGN.md › Board grid): the site grid is
  * `repeat(auto-fill, minmax(--card-min, 1fr))` with `--card-min` per density, capped by the visitor's CARD SIZE
  * (`src/site/cards.ts`: 3 a row by default, a dense board 4). `hero`: few cards that want size
- * (showpieces, cameras, lock screens); `standard`: the default; `dense`: many small tiles (dashboards).
+ * (showpieces, cameras, lock screens); `pair`: two showpieces, two wide cards a row at every CARD SIZE;
+ * `standard`: the default; `dense`: many small tiles (dashboards).
  * A board without one is `standard`.
  */
 export type BoardDensity = 'hero' | 'pair' | 'standard' | 'dense'

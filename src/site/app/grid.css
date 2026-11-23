@@ -28,10 +28,22 @@
   --card-min: var(--card-min-hero)
 }
 
-/* pair: two wide cards a row at every CARD SIZE (boards of 2 or 4), one column below two hero cards' width */
+/* pair: two wide cards a row at every CARD SIZE (boards of two showpieces), one column below two hero cards'
+   width. Once a column outgrows --card-max, each card sits at its column's inner edge, so the two stay one gap
+   apart in the middle of the row instead of drifting to the frame's edges */
 .board-grid[data-density="pair"] {
   --card-min: var(--card-min-hero);
   --cols: 2
+}
+
+@container board-grid (696px <= width) {
+  :root:not([data-grid="ruled"]) .board-grid[data-density="pair"] > .dot-slot:nth-child(odd) {
+    justify-self: end
+  }
+
+  :root:not([data-grid="ruled"]) .board-grid[data-density="pair"] > .dot-slot:nth-child(even) {
+    justify-self: start
+  }
 }
 
 .board-grid[data-density="dense"] {
@@ -70,7 +82,7 @@
    stays on the columns. The column count per width mirrors auto-fill: n columns fit when the grid is at least
    n·--card-min + (n−1)·--spacing-cardGap wide (tokens.css: 340 / 240 / 200, gap 16), up to the CARD SIZE cap:
    LARGE (no data-cards, or "l") 3 (dense 4), MEDIUM ("m") 4 (dense 5), COMPACT ("s") none. A hero board fits only
-   3 in the frame, so no cap reaches it. Two columns never orphan. ALL's grid (`.browse-grid`, every card, standard)
+   3 in the frame, so no cap reaches it. Two columns never orphan (a pair board keeps an even count). ALL's grid (`.browse-grid`, every card, standard)
    is a board-grid container too and takes the standard rules. */
 @container board-grid (1052px <= width) {
   :root:not([data-grid="ruled"]) .board-grid[data-density="hero"] > :nth-child(3n+1):last-child {
