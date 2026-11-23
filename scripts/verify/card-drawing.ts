@@ -2,7 +2,7 @@
  * Card drawing fixes (#359) for `pnpm verify`: each pins one fix so it can't come back.
  * The unit after a `fine` hero number, the dash-drive lap knob in clear air, the glyph transport as hex-packed
  * triangles, own-drawn REC dots at the chrome live dot's size, and the speed and power dials' end labels clear of
- * the needle (#263).
+ * the needle (#263), and the henry camera thirds and flip icon (#247).
  */
 import { LIVE_DOT, TILE, layoutFor, type LatticeField, type WidgetPreset } from '../../src/widgets/types'
 import { progressCard } from '../../src/widgets/boards/motion-progress'
@@ -70,5 +70,16 @@ export function cardDrawingChecks(assert: Assert) {
   {
     const rec = (camera.layers({ t: 0, data: {} }) as LatticeField[]).find(l => l.tone === 'active')
     assert('cards: henry camera REC dot is the live dot size', rec?.size === LIVE_DOT, `${rec?.size}`)
+  }
+  // henry camera (#247): each rule-of-thirds crossing is one dot both dotted rules share, and no two flip-icon dots touch
+  {
+    const ls = camera.layers({ t: 0, data: {} }) as LatticeField[]
+    const rules = (gen: 'hrule' | 'vrule') => ls.filter(l => l.tone === 'mid' && l.field.from?.gen === gen).map(l => l.field.from!.args as number[])
+    const on = (at: number, from: number, len: number, step: number) => at >= from && at < from + len && (at - from) % step === 0
+    const miss = rules('vrule').flatMap(([vx, vy, vh, vs]) => rules('hrule').filter(([hx, hy, hw, hs]) => !on(vx, hx, hw, hs) || !on(hy, vy, vh, vs)).map(([, hy]) => `${vx},${hy}`))
+    assert('cards: henry camera thirds cross on a shared dot', rules('vrule').length === 2 && rules('hrule').length === 2 && !miss.length, miss.join(' '))
+    const flip = ls.flatMap(l => l.size === .85 ? l.sites ?? [] : []).filter(([x, y]) => x < 40 && y > 110)
+    const min = Math.min(...flip.flatMap((p, i) => flip.slice(i + 1).map(q => Math.hypot(p[0] - q[0], p[1] - q[1]))))
+    assert('cards: henry camera flip icon dots sit a stroke pitch apart', flip.length > 40 && min > .99, `${flip.length} dots, closest ${min.toFixed(2)}`)
   }
 }

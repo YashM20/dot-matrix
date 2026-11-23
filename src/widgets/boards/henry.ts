@@ -289,9 +289,10 @@ export const messages: WidgetPreset = {
 const FR = { x0: 10, x1: 133, y0: 19, y1: 100 }
 const corner = (x: number, y: number, dx: number, dy: number) => [T.hrule(dx > 0 ? x : x - 6, y, 7), T.vrule(x, dy > 0 ? y : y - 7, 8)]
 const flipIcon = (cx: number, cy: number) => icon(
-  // camera body with the viewfinder bump, a turn arrow through it
+  // camera body with the viewfinder bump, a turn arrow through it: the arc clears the body's bottom line and the
+  // head's arms step at the stroke pitch, so no two dots touch (#247)
   linePts(cx - 6, cy - 5, [[0, 3], [3, 3], [4.5, 1], [7.5, 1], [9, 3], [12, 3], [12, 10], [0, 10], [0, 3]]),
-  arcPts(cx, cy + 1.5, 2.6, TAU * .15, TAU * .7), linePts(cx, cy - 1.1, [[-1.2, -1.2], [0, 0], [-1.2, 1.2]]),
+  arcPts(cx, cy + 1.3, 2.6, TAU * .15, TAU * .7), linePts(cx + .6, cy - 1.3, [[-1.5, -1.5], [0, 0], [-1.5, 1.5]]),
 )
 const slidersIcon = (cx: number, cy: number) => icon(
   linePts(cx - 6, cy - 3, [[0, 0], [2, 0]]), linePts(cx + 1, cy - 3, [[0, 0], [6, 0]]), arcPts(cx - 1.5, cy - 3, 2),
@@ -301,12 +302,15 @@ export const camera: WidgetPreset = {
   id: 'camera', name: 'Camera', label: 'CAMERA', numbered: true, group: 'composite', ...tile,
   layers: () => {
     const { x0, x1, y0, y1 } = FR, w = x1 - x0, h = y1 - y0, cx = Math.round((x0 + x1) / 2), cy = Math.round((y0 + y1) / 2)
+    // rule-of-thirds guides mirrored about the crosshair on even cells; the step-2 rules start on even cells too
+    // (y0 + 1, x0), so each crossing is one shared dot (#247)
+    const tx = 2 * Math.round(w / 12), ty = 2 * Math.round(h / 12)
     return [
       // recording indicator in place of the live dot, at the live dot's size
       layer(T.dots([[116, 3.5]], LIVE_DOT), 'active'), layer(T.big('REC', 143, 0, { lattice: 1.15, align: 'right' }), 'active'),
       ...[...corner(x0, y0, 1, 1), ...corner(x1, y0, -1, 1), ...corner(x0, y1, 1, -1), ...corner(x1, y1, -1, -1)].map(f => layer(f)),
-      ...[1, 2].map(k => layer(T.vrule(Math.round(x0 + (w * k) / 3), y0, h + 1, 2), 'mid')),
-      ...[1, 2].map(k => layer(T.hrule(x0, Math.round(y0 + (h * k) / 3), w + 1, 2), 'mid')),
+      ...[cx - tx, cx + tx].map(x => layer(T.vrule(x, y0 + 1, h - 1, 2), 'mid')),
+      ...[cy - ty, cy + ty].map(y => layer(T.hrule(x0, y, w + 1, 2), 'mid')),
       layer(T.hrule(cx - 5, cy, 11)), layer(T.vrule(cx, cy - 5, 11)),
       layer(T.dotRing(20, 123, 10.5, { spacing: 2, size: 1 }), 'idle'), layer(flipIcon(20, 123)),
       layer(T.dotRing(cx, 123, 15, { spacing: 2.1, size: 1.1 })), layer(T.dots([[cx, 123]], 11), 'active'),
