@@ -105,6 +105,9 @@ const loadMigrate = () => (migrateLoading ??= import('../engine/migrate/migrate'
 const SPRING_HALFLIFE = .12
 /** A frame that lands this soon (ms) after input is a direct response: it cuts, never dissolves. */
 const INPUT_CUT_MS = 250
+/** A card stays on this thread this long (ms) after its input ends, so it can ease out of the input state (the light
+ *  board's torch glides back to its orbit). The worker never sees the pointer, so it could only jump. */
+const SETTLE_MS = 600
 
 const usePrefersReducedMotion = () => useSyncExternalStore(onMotionChange, () => motionReduced(), () => false)
 
@@ -454,7 +457,8 @@ export function DotCanvas({ field, layers, data, grid, style, theme = dot480, an
     // while a transient runs, while a control is engaged (input answers without a worker round trip), for the
     // first frame and when no worker is available — into a reused DotBuffer unless a transient needs DotInstance[]
     const remote = webgl ? null : remoteSampler(layers, (buf, _t, bitmap) => { if (!transientRef.current && !engagedNow()) drawBuffer(canvas, buf, frameData, bitmap); else bitmap?.close() })
-    const engagedNow = () => { const ix = input.ixRef.current; return !!(ix && (ix.hover || ix.pressed || ix.focus || ix.pointers?.length)) }
+    let engagedAt = -Infinity
+    const engagedNow = () => { const ix = input.ixRef.current, now = performance.now(); if (ix && (ix.hover || ix.pressed || ix.focus || ix.pointers?.length)) engagedAt = now; return now - engagedAt < SETTLE_MS }
     const local = acquireDotBuffer(cols * rows)
     const frameAt = (t: number, frame: number, sync: boolean) => {
       const d = springKey && springsRef.current ? { ...frameData, ...springsRef.current.at(t) } : frameData

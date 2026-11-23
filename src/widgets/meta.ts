@@ -209,12 +209,12 @@ export const cardBlurbs: Readonly<Record<string, readonly [blurb: string, tags: 
   'cinema-encore': ['Musical: one more song under the spotlight.', 'film musical animated photo'],
   // light: the raster light stack
   'light-torch': ['Drag a torch across a relief and watch the dots light up.', 'light torch control'],
-  'light-orb': ['A gloss ball lit by the sun of the current hour, with its shadow under it.', 'light orb animated'],
+  'light-orb': ['A gloss ball lit by the sun of the current hour, with its shadow under it.', 'light orb clock'],
   'light-on-air': ['An ON AIR studio sign, glowing.', 'light sign animated'],
-  'light-gloss': ['A glossy surface with a sharp highlight.', 'light material animated'],
-  'light-emissive': ['A surface that gives off its own light, with bloom.', 'light material animated'],
-  'light-metal': ['Metal reflecting its surroundings.', 'light material animated'],
-  'light-fabric': ['Fabric shaded with an ordered dither.', 'light material animated'],
+  'light-gloss': ['A glossy surface with a sharp highlight.', 'light material clock'],
+  'light-emissive': ['A surface that gives off its own light, with bloom.', 'light material'],
+  'light-metal': ['Metal reflecting its surroundings.', 'light material clock'],
+  'light-fabric': ['Fabric shaded with an ordered dither.', 'light material clock'],
   // levels: HIVE
   'lv-title': ['HIVE’s title screen: push start.', 'game title animated'],
   'lv-corridor': ['HIVE level 01: a corridor of enemies.', 'game level animated'],
