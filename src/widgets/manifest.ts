@@ -27,10 +27,11 @@ export interface BoardContents {
  * How a board's cards fill the screen (docs/LAYOUT-THEME-PLAN.md §3, DESIGN.md › Board grid): the site grid is
  * `repeat(auto-fill, minmax(--card-min, 1fr))` with `--card-min` per density, capped by the visitor's CARD SIZE
  * (`src/site/cards.ts`: 3 a row by default, a dense board 4). `hero`: few cards that want size
- * (showpieces, cameras, lock screens); `standard`: the default; `dense`: many small tiles (dashboards).
+ * (showpieces, cameras, lock screens); `pair`: two showpieces, two wide cards a row at every CARD SIZE;
+ * `standard`: the default; `dense`: many small tiles (dashboards).
  * A board without one is `standard`.
  */
-export type BoardDensity = 'hero' | 'standard' | 'dense'
+export type BoardDensity = 'hero' | 'pair' | 'standard' | 'dense'
 /** `columns` is the reference sheet's column count (snapshots, the entry stagger); the site grid uses `density`. */
 export interface BoardMeta { id: string; title: string; columns: number; density?: BoardDensity }
 export interface BoardDef extends BoardMeta, BoardContents {}
@@ -46,7 +47,7 @@ export const boardManifest = [
   { id: 'audio', title: 'AUDIO / MIDI / INTERPRETER', columns: 3, density: 'dense', load: () => import('./boards/audio').then(m => ({ items: m.audioBoard })) },
   { id: 'departures', title: 'DEPARTURES: LIVE TRANSIT BOARD', columns: 3, density: 'dense', load: () => import('./boards/departures').then(m => ({ items: m.departuresBoard })) },
   { id: 'instrument', title: 'INSTRUMENT DEVICE', columns: 3, density: 'standard', load: () => import('./boards/instrument').then(m => ({ items: m.instrumentBoard, shared: m.instrumentShared })) },
-  { id: 'ir', title: 'FIELD IR: DOT PROGRAMS', columns: 3, density: 'hero', load: () => import('./boards/ir').then(m => ({ items: m.irBoard })) },
+  { id: 'ir', title: 'FIELD IR: DOT PROGRAMS', columns: 2, density: 'pair', load: () => import('./boards/ir').then(m => ({ items: m.irBoard })) },
   { id: 'cinema', title: 'CINEMA: THE AFTERLIGHT CYCLE', columns: 3, density: 'standard', load: () => import('./boards/cinema').then(m => ({ items: m.cinemaBoard })) },
   { id: 'light', title: 'LIGHT: RASTER LIGHT STACK', columns: 3, density: 'standard', load: () => import('./boards/light').then(m => ({ items: m.lightBoard })) },
   { id: 'levels', title: 'LEVELS: HIVE, NINE WORLDS', columns: 3, density: 'standard', load: () => import('./boards/levels').then(m => ({ items: m.levelsBoard })) },
@@ -55,13 +56,13 @@ export const boardManifest = [
   { id: 'lock', title: 'LOCK: LOCK SCREEN EXPERIENCES', columns: 2, density: 'hero', load: () => import('./boards/glyph').then(m => ({ items: m.lockBoard })) },
   { id: 'live', title: 'LIVE: WEATHER, NOW PLAYING, CONTRIBUTIONS', columns: 3, density: 'hero', load: () => import('./boards/live').then(m => ({ items: m.liveBoard, sources: m.liveSources })) },
   { id: 'mirror', title: 'MIRROR: LIVE HALFTONE', columns: 3, density: 'hero', load: () => import('./boards/mirror').then(m => ({ items: m.mirrorBoard })) },
-  { id: 'gpu', title: 'GPU: HALF A MILLION DOTS', columns: 2, density: 'hero', load: () => import('./boards/gpu').then(m => ({ items: m.gpuBoard })) },
+  { id: 'gpu', title: 'GPU: HALF A MILLION DOTS', columns: 2, density: 'pair', load: () => import('./boards/gpu').then(m => ({ items: m.gpuBoard })) },
   { id: 'surfaces', title: 'SURFACES: ONE FIELD, THREE SURFACES', columns: 3, density: 'standard', load: () => import('./boards/surfaces').then(m => ({ items: m.surfacesBoard, sources: m.surfacesSources })) },
   { id: 'components', title: 'PRIMITIVE COMPONENTS', columns: 5, density: 'standard', load: () => import('./boards/components').then(m => ({ items: m.componentsBoard })) },
   { id: 'type', title: 'TYPE: VARIABLE DOT TYPE', columns: 3, density: 'standard', load: () => import('./boards/type').then(m => ({ items: m.typeBoard })) },
   { id: 'physics', title: 'PHYSICS: DOTS YOU CAN TOUCH', columns: 4, density: 'dense', load: () => import('./boards/physics').then(m => ({ items: m.physicsBoard, sources: m.physicsSources })) },
   { id: 'scope', title: 'SCOPE: THE INSTRUMENT, SEEN', columns: 3, density: 'hero', load: () => import('./boards/scope').then(m => ({ items: m.scopeBoard, shared: m.scopeShared })) },
-  { id: 'heal', title: 'HEAL: THE MIRROR THAT HEALS', columns: 3, density: 'hero', load: () => import('./boards/heal').then(m => ({ items: m.healBoard })) },
+  { id: 'heal', title: 'HEAL: THE MIRROR THAT HEALS', columns: 2, density: 'pair', load: () => import('./boards/heal').then(m => ({ items: m.healBoard })) },
   { id: 'algorithms', title: 'ALGORITHMS: STIPPLE, ATTRACT, COLLAPSE, AGGREGATE', columns: 2, density: 'hero', load: () => import('./boards/algorithms').then(m => ({ items: m.algorithmsBoard })) },
   { id: 'pond', title: 'POND: LIVING SCENES IN GLYPH TILES', columns: 3, density: 'standard', load: () => import('./boards/pond/index').then(m => ({ items: m.pondBoard, sources: m.pondSources })) },
   { id: 'workshop', title: 'WORKSHOP: FROST, ICE, KINTSUGI, PAPER FOLD', columns: 4, density: 'dense', load: () => import('./boards/workshop').then(m => ({ items: m.workshopBoard, sources: m.workshopSources })) },

@@ -241,29 +241,30 @@ One scale in `src/tokens.css`. A layer one step over its neighbour is `calc(var(
 - **Figure legends.** One mono meta line under a figure: `FIG 03 · <subject> · <grid> · <pitch>` (`.fig-cap`, and the essay's `figcaption[data-fig]`).
 
 ### Board grid (T3, docs/LAYOUT-THEME-PLAN.md §3)
-Boards declare intent, not columns. `BoardMeta.density` (`src/widgets/manifest.ts`) is `hero`, `standard` or `dense`; a board without one, new boards included, is `standard`. The grid (`.board-grid[data-density]`, `src/site/app/grid.css`) is `repeat(auto-fill, minmax(--card-min, 1fr))`, so the column count follows the frame's width, held between the visitor's CARD SIZE bounds: at most `--board-cols-max` columns (one more on a dense board) and at least `--board-cols-min`. The track's minimum is `clamp(width of the cap's columns, --card-min, width of the floor's columns)`. `columns` in the manifest is the reference sheet's count: snapshots and the entry stagger use it, the site grid does not.
+Boards declare intent, not columns. `BoardMeta.density` (`src/widgets/manifest.ts`) is `hero`, `pair`, `standard` or `dense`; a board without one, new boards included, is `standard`. The grid (`.board-grid[data-density]`, `src/site/app/grid.css`) is `repeat(auto-fill, minmax(--card-min, 1fr))`, so the column count follows the frame's width, held between the visitor's CARD SIZE bounds: at most `--board-cols-max` columns (one more on a dense board, and never more than 2 on a pair board) and at least `--board-cols-min`. The track's minimum is `clamp(width of the cap's columns, --card-min, width of the floor's columns)`. `columns` in the manifest is the reference sheet's count: snapshots and the entry stagger use it, the site grid does not.
 
 | Density | `--card-min` | For | Boards |
 |---|---|---|---|
-| `hero` | 340 px | a few cards that want size: showpieces, cameras, lock screens | lock, gpu, algorithms, ir, sim, live, mirror, scope, heal, squares |
+| `hero` | 340 px | a few cards that want size: showpieces, cameras, lock screens | lock, algorithms, sim, live, mirror, scope, squares |
+| `pair` | 340 px | boards of two showpieces (keep the count even): two wide cards a row at every CARD SIZE, drawn together at the middle of the row, one column below 2 × 340 px | ir, gpu, heal |
 | `standard` | 240 px | the default | every other board (home, components, surfaces, ...) |
-| `dense` | 200 px | dashboards of many small tiles; boards of 4 or 8 (full rows of 4 at LARGE) | deerflow12, departures, audio, workshop, physics |
+| `dense` | 200 px | dashboards and boards of small tiles, 4 a row at LARGE; a short last row centres (physics has 5, so its fifth card sits in the middle) | deerflow12 (12), audio (8), departures (6), physics (5), workshop (4) |
 
 **CARD SIZE** (owner feedback on round 3: T3's 5 a row at 1440 lost the cards' impact and detail; 3 a row is the default again, and the visitor can choose). Three sizes, set as `html[data-cards]` (`src/site/cards.ts`): only CSS custom properties change, so nothing re-renders. The pick is kept in localStorage `dot480:cards`, and the theme boot script sets the attribute before first paint, so a reload does not reflow. The control is a segmented radio group (LARGE / MEDIUM / COMPACT) under the theme in the THEME popover, under TOOLS › DISPLAY on a phone, and in ⌘K as "Card size: large / medium / compact". A missing attribute reads as LARGE.
 
-| CARD SIZE | `data-cards` | Columns at 1440 / 1280 / 1024 / 768 / 390: standard · dense · hero | Card at 1440 (standard) |
+| CARD SIZE | `data-cards` | Columns at 1440 / 1280 / 1024 / 768 / 390: standard · dense · hero · pair | Card at 1440 (standard) |
 |---|---|---|---|
-| LARGE (default) | `l` | 3/3/3/2/1 · 4/4/4/3/1 · 3/3/2/2/1 | ~440 px |
-| MEDIUM | `m` | 4/4/3/2/1 · 5/5/4/3/1 · 3/3/2/2/1 | ~330 px |
-| COMPACT (T3's grid) | `s` | 5/4/3/2/2 · 6/5/4/3/2 · 3/3/2/2/2 | ~260 px |
+| LARGE (default) | `l` | 3/3/3/2/1 · 4/4/4/3/1 · 3/3/2/2/1 · 2/2/2/2/1 | ~440 px |
+| MEDIUM | `m` | 4/4/3/2/1 · 5/5/4/3/1 · 3/3/2/2/1 · 2/2/2/2/1 | ~330 px |
+| COMPACT (T3's grid) | `s` | 5/4/3/2/2 · 6/5/4/3/2 · 3/3/2/2/2 · 2/2/2/2/2 | ~260 px |
 
-A hero board fits 3 columns at most in the frame, so on a desktop the cap never reaches it; only COMPACT's 2 on a phone changes it.
+A hero board fits 3 columns at most in the frame, so on a desktop the cap never reaches it; only COMPACT's 2 on a phone changes it. A pair board stops at 2. When a column is wider than `--card-max`, its two cards sit at the inner edges of their columns, one gap apart, so the pair reads as one block in the middle of the row.
 
 - **Square, capped.** Cards are square at every width (phones too) and at most `--card-max`; on a wide, short screen the card stops and centres in its column.
 - **Card internals** follow the card, not the viewport: each board card is a size container (`card`). Under 240 px the hint verb goes and the label sits tighter.
 - **Orphans.** A last row less than half full is centred under the row above; a fuller one stays on the columns. It is never stretched. The column count per width comes from container queries on the grid (`board-grid`) that mirror auto-fill: n columns when the grid is at least n·`--card-min` + (n−1)·`{spacing.cardGap}` wide, up to the CARD SIZE cap (the queries are keyed by `html[data-cards]` too). Change the tokens and these queries together.
 - **Grid style** (owner decision 10). The default is separated cards: a `{spacing.cardGap}` gutter, a radius-12 card, a hairline. The alternative, `html[data-grid="ruled"]`, is edge-to-edge cells with dotted rules: each cell draws its rules and the quarter of a 5×5 dot cross at each corner (in `--mute`, ≥ 3:1). Cells overlap by the 1 px rule, so a cross is whole only where four cells meet, a T on an outer edge and an L at a corner, and nothing is drawn where there is no cell. Ruled orphans stay on the columns.
-- **Checks.** `scripts/site/layout.ts` (6 widths) gates one full row above the fold at 1440 (≥ 3 whole cards on standard boards, ≥ 4 on dense, ≥ 2 on hero) and the LARGE columns per width of home, components, deerflow12 and lock. It also runs each CARD SIZE at 1440, 1280 and 390, and checks that no board gains a column as the width shrinks, that orphans sit right, and that cards are square. `--grid ruled` runs it on the alternative. `scripts/site/theme-boot.ts` checks that a stored size is on `<html>` when `<body>` starts and that the grid's first layout already has its columns; `scripts/site/theme-picker.ts` checks the control (radio semantics, keyboard, persistence, the phone sheet, ⌘K).
+- **Checks.** `scripts/site/layout.ts` (6 widths) gates one full row above the fold at 1440 (≥ 3 whole cards on standard boards, ≥ 4 on dense, ≥ 2 on hero and pair) and the LARGE columns per width of home, components, deerflow12, lock and heal (pair). It also runs each CARD SIZE at 1440, 1280 and 390, and checks that no board gains a column as the width shrinks, that orphans sit right, and that cards are square. `--grid ruled` runs it on the alternative. `scripts/site/theme-boot.ts` checks that a stored size is on `<html>` when `<body>` starts and that the grid's first layout already has its columns; `scripts/site/theme-picker.ts` checks the control (radio semantics, keyboard, persistence, the phone sheet, ⌘K).
 
 ### Grid & Container
 - **Default board size:** 3×3 card grid at 1:1 aspect per card (matches every reference board). A 3×4 variant is supported for taller compositions (DeerFlow Mosaic hero board).
@@ -763,7 +764,7 @@ The HTML chrome has one component per job; a new control reuses one of these ins
 
 | Name | Grid Behavior | Key Changes |
 |---|---|---|
-| desktop-wide / desktop | columns per board density and CARD SIZE (› Board grid), `{grid.pitch}` = 4px | The frame caps the grid at 1360 px of content: at the default CARD SIZE (LARGE) a standard or hero board shows 3 columns, a dense board 4 (MEDIUM 4 / 5, COMPACT 5 / 6) |
+| desktop-wide / desktop | columns per board density and CARD SIZE (› Board grid), `{grid.pitch}` = 4px | The frame caps the grid at 1360 px of content: at the default CARD SIZE (LARGE) a standard or hero board shows 3 columns, a dense board 4 (MEDIUM 4 / 5, COMPACT 5 / 6), a pair board 2 |
 | tablet | one or two columns fewer, by the same rule | The grid drops a column whenever a card would get narrower than its density's `--card-min`. There is no fixed breakpoint |
 | mobile | 1-column board (2 at COMPACT), square cards | Full stack; `{typography.displayDot}` steps down one tier to `{typography.headingDot}` to preserve legibility at narrow width |
 | led-panel (physical) | Fixed native resolution | `{grid.pitch}` locked to the panel's real dot pitch; `{grid.quantizeSteps}` reduced to match the panel's actual bit-depth per LED |

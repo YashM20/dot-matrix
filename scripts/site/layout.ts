@@ -1,19 +1,21 @@
 /**
  * Layout probe (docs/LAYOUT-THEME-PLAN.md §6, phases T2 and T3; docs/POLISH-PLAN.md §2 P0) in headless Chrome over CDP
  * (scripts/lib/cdp.ts), at 1920 / 1440 / 1280 / 1024 / 768 / 390 / 320 px (390 and 320: phone emulation, touch).
- * Pages: the home board, a standard board (components), a hero board (lock), a dense board (deerflow12), ABOUT, MAKE,
+ * Pages: the home board, a standard board (components), a hero board (lock), a dense board (deerflow12), a pair board
+ * (heal), ABOUT, MAKE,
  * a widget page, the essay, privacy and terms. Checks, each with an id (`<check>:<page>@<width>`):
  *  - `edge`: one left edge (±1 px): the top bar, intro, picker, board title, grid, footer (and ABOUT's bands, the
  *    widget page's top row and card, the editor's first tool) all start on the frame's content edge;
  *  - `overflow`: no horizontal overflow (scrollWidth ≤ viewport); `overflow-sb`: the same in a second Chrome that
  *    shows real scrollbars (1920 to 768), where a `100vw` width overflows by the scrollbar's width;
  *  - `fold`: cards above the fold: at least one whole card on the home board at every width (T2); at 1440, ≥ 3 on
- *    standard boards, ≥ 4 on dense ones, ≥ 2 on hero ones (one full row at LARGE; density from the grid's data-density);
+ *    standard boards, ≥ 4 on dense ones, ≥ 2 on hero and pair ones (one full row at LARGE; density from the grid's
+ *    data-density);
  *  - `square`, `tall`: every card square (±1 px) and ≤ 62svh tall;
  *  - `cols`, `cols-grow`: columns at the default CARD SIZE (LARGE): home and components 3 / 3 / 3 / 3 / 2 / 1 / 1
- *    from 1920 to 320, deerflow12 (dense) 4 / 4 / 4 / 4 / 3 / 1 / 1, lock (hero) 3 / 3 / 3 / 2 / 2 / 1 / 1, and no
- *    board gains a column as the width shrinks;
- *  - `size-*`: CARD SIZE: html[data-cards] l / m / s on components, deerflow12 and lock at 1440, 1280 and 390 gives
+ *    from 1920 to 320, deerflow12 (dense) 4 / 4 / 4 / 4 / 3 / 1 / 1, lock (hero) 3 / 3 / 3 / 2 / 2 / 1 / 1, heal (pair)
+ *    2 / 2 / 2 / 2 / 2 / 1 / 1, and no board gains a column as the width shrinks;
+ *  - `size-*`: CARD SIZE: html[data-cards] l / m / s on components, deerflow12, lock and heal at 1440, 1280 and 390 gives
  *    the columns of `SIZE_COLS` (MEDIUM 4, COMPACT 5 at 1440 on a standard board; COMPACT 2 on a phone), with the
  *    cards square, unstretched and the last row placed right;
  *  - `stretch`, `orphan` (T3): the last row's cards are as wide as the first row's (never stretched); with separated
@@ -67,30 +69,33 @@ const ALL_WIDTHS: [number, number, boolean][] = [[1920, 1080, false], [1440, 900
 const WIDTHS = ALL_WIDTHS.filter(([w]) => !onlyWidths || onlyWidths.includes(w))
 /**
  * Columns per width at the default CARD SIZE, LARGE (no data-cards): a standard board 3 → 2 → 1, a dense one
- * 4 → 3 → 1, a hero one 3 → 2 → 1 (its card-min, not the cap). The home board is standard.
+ * 4 → 3 → 1, a hero one 3 → 2 → 1 (its card-min, not the cap), a pair one 2 → 1. The home board is standard.
  */
 const COLS: Record<string, Record<number, number>> = {
   home: { 1920: 3, 1440: 3, 1280: 3, 1024: 3, 768: 2, 390: 1, 320: 1 },
   components: { 1920: 3, 1440: 3, 1280: 3, 1024: 3, 768: 2, 390: 1, 320: 1 },
   deerflow12: { 1920: 4, 1440: 4, 1280: 4, 1024: 4, 768: 3, 390: 1, 320: 1 },
   lock: { 1920: 3, 1440: 3, 1280: 3, 1024: 2, 768: 2, 390: 1, 320: 1 },
+  heal: { 1920: 2, 1440: 2, 1280: 2, 1024: 2, 768: 2, 390: 1, 320: 1 },
 }
 /**
  * CARD SIZE (html[data-cards]): columns per size, width and board. MEDIUM caps at 4 (dense 5), COMPACT is T3's
- * uncapped auto-fill (5 → 4 → 3 → 2) with 2 on a phone. Hero boards fit 3 at most, so only the phone changes.
+ * uncapped auto-fill (5 → 4 → 3 → 2) with 2 on a phone. Hero boards fit 3 at most and pair boards stop at 2, so only
+ * the phone changes.
  */
 const SIZE_COLS: Record<'l' | 'm' | 's', Record<number, Record<string, number>>> = {
-  l: { 1440: { components: 3, deerflow12: 4, lock: 3 }, 1280: { components: 3, deerflow12: 4 }, 390: { components: 1, deerflow12: 1, lock: 1 } },
-  m: { 1440: { components: 4, deerflow12: 5, lock: 3 }, 1280: { components: 4, deerflow12: 5 }, 390: { components: 1, deerflow12: 1, lock: 1 } },
-  s: { 1440: { components: 5, deerflow12: 6, lock: 3 }, 1280: { components: 4, deerflow12: 5 }, 390: { components: 2, deerflow12: 2, lock: 2 } },
+  l: { 1440: { components: 3, deerflow12: 4, lock: 3, heal: 2 }, 1280: { components: 3, deerflow12: 4 }, 390: { components: 1, deerflow12: 1, lock: 1, heal: 1 } },
+  m: { 1440: { components: 4, deerflow12: 5, lock: 3, heal: 2 }, 1280: { components: 4, deerflow12: 5 }, 390: { components: 1, deerflow12: 1, lock: 1, heal: 1 } },
+  s: { 1440: { components: 5, deerflow12: 6, lock: 3, heal: 2 }, 1280: { components: 4, deerflow12: 5 }, 390: { components: 2, deerflow12: 2, lock: 2, heal: 2 } },
 }
 /** Whole cards above the fold at 1440, per density: LARGE gives each card ~440 px, so one full row (T3 wanted 6 at 240 px). */
-const FOLD_1440: Record<string, number> = { hero: 2, standard: 3, dense: 4 }
+const FOLD_1440: Record<string, number> = { hero: 2, pair: 2, standard: 3, dense: 4 }
 const ALL_PAGES = [
   { name: 'home', path: '', kind: 'board', hero: true },
   { name: 'components', path: 'components/', kind: 'board' },
   { name: 'lock', path: 'lock/', kind: 'board' },
   { name: 'deerflow12', path: 'deerflow12/', kind: 'board' },
+  { name: 'heal', path: 'heal/', kind: 'board' },
   { name: 'about', path: 'about/', kind: 'about' },
   { name: 'make', path: '?make=tune', kind: 'make' },
   { name: 'widget', path: 'widget/timer/', kind: 'widget' },

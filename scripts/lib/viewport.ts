@@ -6,7 +6,7 @@
  * `rootMargin: 64px`), and the master clock stops while the tab is hidden. So at any scroll position the live cards are
  * the rows the live band (the viewport plus 64 px above and below) touches. The board grid (src/site/app/grid.css, at
  * the default CARD SIZE, LARGE) fits as many columns as hold `--card-min` for the board's density, up to 3 (4 on a dense
- * board), and every card is square, capped at `--card-max = min(62svh, 520px)`. Each slot is the card plus its row
+ * board, 2 on a pair board), and every card is square, capped at `--card-max = min(62svh, 520px)`. Each slot is the card plus its row
  * (src/components/CardRow.tsx), `rowExtra` px taller than the card, read from the site by the probe.
  *
  * The busiest scroll position is the one whose band touches the most rows: `rows` consecutive rows, in board order. A
@@ -36,9 +36,9 @@ export const VIEWPORTS: readonly Viewport[] = [
 /** DotCanvas's IntersectionObserver root margin (src/components/DotCanvas.tsx `useOnScreen`). */
 export const LIVE_MARGIN = 64
 const GAP = 16
-const CARD_MIN: Record<BoardDensity, number> = { hero: 340, standard: 240, dense: 200 }
-/** LARGE: at most 3 columns, one more on a dense board (src/tokens.css `--board-cols-max`). */
-const COLS_MAX: Record<BoardDensity, number> = { hero: 3, standard: 3, dense: 4 }
+const CARD_MIN: Record<BoardDensity, number> = { hero: 340, pair: 340, standard: 240, dense: 200 }
+/** LARGE: at most 3 columns, one more on a dense board (src/tokens.css `--board-cols-max`), 2 on a pair board. */
+const COLS_MAX: Record<BoardDensity, number> = { hero: 3, pair: 2, standard: 3, dense: 4 }
 
 export interface BoardGrid { cols: number; card: number; slot: number; pitch: number; rows: number }
 
