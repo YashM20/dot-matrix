@@ -34,6 +34,8 @@ const at = (lf: LatticeField, v: number): LatticeField => (v === 1 ? lf : { ...l
 // a second falls from it and slides down the flanks of a 60-grain heap, which drains with the
 // digits. Falls advance in whole lattice steps (dot-native), gravity on every grain.
 // `ctx.since` (seconds into the minute) overrides the wall clock for films; `data.tilt` leans the stream.
+// Live, the phase is the wall clock's seconds, so the digits drain on the real minute. Under reduced motion the
+// card is one still at t (0): the phase follows t from SETTLED, so the time reads whole over a part-filled heap.
 const DIG = { px: 4.3, py: 4.8, size: 4.7 }, DX = 7.5, DY = 30
 const COLS = [0, 7, 14, 18, 25]
 const glyphSites = (s: string, k: number): Pt[] => dotText(s[k], DX + COLS[k] * DIG.px, DY, DIG).sites ?? []
@@ -42,14 +44,15 @@ const heapSlots: Pt[] = HEAP.rows.flatMap((n, j) => {
   const xs = Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * HEAP.px)
   return xs.map((dx): [number, Pt] => [j + Math.abs(dx) / HEAP.px + dx * 1e-3, [72 + dx, HEAP.y - j * HEAP.py]])
 }).sort((a, b) => a[0] - b[0]).map(e => e[1]) // cone order: every grain lands on the two below it
-const NECK = DY + 6 * DIG.py, TRICKLE = { from: 2.4, every: .95 }
+const NECK = DY + 6 * DIG.py, TRICKLE = { from: 2.4, every: .95 }, SETTLED = 30
 /** Distance fallen after τ s under gravity g, in whole `step`s; null before release. */
 const fallen = (tau: number, g: number, step: number) => (tau < 0 ? null : Math.floor((.5 * g * tau * tau) / step) * step)
 export const glyphHourglass: WidgetPreset = {
   id: 'lock-hourglass', name: 'Hourglass', label: 'HOURGLASS', numbered: true, group: 'text', ...tile, clock: true,
   defaults: { tilt: 0 },
-  layers: ({ since, data }) => {
-    const now = new Date(), sec = since ?? now.getSeconds() + now.getMilliseconds() / 1000
+  layers: ({ t, since, data, reducedMotion }) => {
+    const now = new Date(), wall = now.getSeconds() + now.getMilliseconds() / 1000
+    const sec = since ?? (reducedMotion ? (((SETTLED + t) % 60) + 60) % 60 : wall)
     const next = hhmm(now), prev = hhmm(new Date(+now - 60_000)), lean = Math.max(-1, Math.min(1, data.tilt ?? 0))
     const settled: Pt[] = [], falling: Pt[] = [], draining: Pt[] = []
     for (let k = 0; k < 5; k++) {
@@ -222,44 +225,42 @@ export const glyphLongpress: WidgetPreset = {
 // ── 03 NOTIFY ───────────────────────────────────────────────────────────────
 // A metaball inbox: Σ r²/d² over two bodies, thresholded on a 3.6-cell lattice into core, skin and
 // halo. Every PERIOD s a bud pinches off the top-right of the body, and once it is free it turns
-// into the badge — red sites (the board's one red: a *live* count) with the count in white 5×7
-// numerals on the same lattice. Then it is drawn back in, read, and merges grey.
-const PERIOD = 7, PITCH = 3.6, BIG: Pt = [58.8, 77.4], OFF: Pt = [46, -40]
+// into the badge: red sites (the board's one red: a *live* count) with the count in white 5×7
+// numerals on the same lattice. The badge keeps the body's sizes: core sites at the core size (the
+// ink the same size, only the tone changes) and a skin at the skin size. Then it is drawn back in, read, and
+// merges grey. Every loop tells the same story: COUNT new.
+const PERIOD = 7, PITCH = 3.6, COUNT = 2, CORE = 2.9, SKIN = 2.2, BIG: Pt = [58.8, 77.4], OFF: Pt = [46, -40]
 const lattice: Pt[] = []
 for (let y = 16.2; y < 122; y += PITCH) for (let x = 5.4; x < 140; x += PITCH) lattice.push([x, y])
-/** The count in 5×7 numerals on the badge's own lattice (hand-set: 3×5 read as a smudge at 1×). */
-const MINI: Record<string, string[]> = {
-  '2': ['.###.', '#...#', '....#', '...#.', '..#..', '.#...', '#####'], '3': ['####.', '....#', '....#', '.###.', '....#', '....#', '####.'],
-  '4': ['...#.', '..##.', '.#.#.', '#..#.', '#####', '...#.', '...#.'], '5': ['#####', '#....', '####.', '....#', '....#', '#...#', '.###.'],
-  '6': ['..##.', '.#...', '#....', '####.', '#...#', '#...#', '.###.'], '7': ['#####', '....#', '...#.', '..#..', '.#...', '.#...', '.#...'],
-  '8': ['.###.', '#...#', '#...#', '.###.', '#...#', '#...#', '.###.'], '9': ['.###.', '#...#', '#...#', '.####', '....#', '...#.', '.##..'],
-}
+/** COUNT as a 5×7 numeral on the badge's own lattice (hand-set: 3×5 read as a smudge at 1×). */
+const MINI = ['.###.', '#...#', '....#', '...#.', '..#..', '.#...', '#####']
 const away = (t: number) => { const tau = t % PERIOD; return tau < 1 ? 0 : tau < 2.6 ? ease.emphasized((tau - 1) / 1.6) : tau < 4.6 ? 1 : tau < 6.2 ? 1 - ease.emphasized((tau - 4.6) / 1.6) : 0 }
 const snap = (x: number) => Math.round(x / PITCH) * PITCH
 export const glyphNotify: WidgetPreset = {
   id: 'lock-notify', name: 'Notify', label: 'NOTIFY', numbered: true, group: 'composite', ...tile,
   layers: ({ t }) => {
-    const tt = t + 2.4, s = away(tt), wob = Math.sin(t * 2.1) * .6 * (1 - s), n = 2 + (Math.floor(tt / PERIOD) % 8) // stills land on the badge
+    const tt = t + 2.4, s = away(tt), wob = Math.sin(t * 2.1) * .6 * (1 - s) // stills land on the badge
     const drop: Pt = [BIG[0] + 8 + s * (OFF[0] - 8), BIG[1] - 8 + s * (OFF[1] + 8)], rBig = 24 - 4 * s + wob, rDrop = 8 + 14 * s
-    const badge = s > .8, core: Pt[] = [], skin: Pt[] = [], halo: Pt[] = [], red: Pt[] = [], ink: Pt[] = []
+    const badge = s > .8, core: Pt[] = [], skin: Pt[] = [], halo: Pt[] = [], red: Pt[] = [], redSkin: Pt[] = [], ink: Pt[] = []
     // the count's 5×7 cells, on lattice sites around the bud's nearest site
-    const gx = snap(drop[0] - 1.8 - 5.4) + 5.4, gy = snap(drop[1] - 1.8 - 16.2) + 16.2, glyph = MINI[String(n)] // the free bud bulges away from the body
+    const gx = snap(drop[0] - 1.8 - 5.4) + 5.4, gy = snap(drop[1] - 1.8 - 16.2) + 16.2 // the free bud bulges away from the body
     const isInk = (x: number, y: number) => {
       const c = Math.round((x - gx) / PITCH) + 2, r = Math.round((y - gy) / PITCH) + 3
-      return glyph[r]?.[c] === '#'
+      return MINI[r]?.[c] === '#'
     }
     for (const [x, y] of lattice) {
       const fb = rBig ** 2 / ((x - BIG[0]) ** 2 + (y - BIG[1]) ** 2 + .01), fd = rDrop ** 2 / ((x - drop[0]) ** 2 + (y - drop[1]) ** 2 + .01), f = fb + fd
-      if (badge && fd > fb && f >= 1) (isInk(x, y) ? ink : red).push([x, y])
+      if (badge && fd > fb && f >= 1) (isInk(x, y) ? ink : f >= 1.6 ? red : redSkin).push([x, y])
       else if (f >= 1.6) core.push([x, y]); else if (f >= 1) skin.push([x, y]); else if (f >= .62) halo.push([x, y])
     }
     return [
       layer(T.dots(halo, 1.2), 'faint'),
-      layer(T.dots(skin, 2.2), 'mid'),
-      layer(T.dots(core, 2.9)),
-      layer(T.dots(red, 2.2), 'active'),
-      layer(T.dots(ink, 3.5)),
-      layer(T.big(badge ? `${n} NEW` : 'ALL CLEAR', 6, 132, { lattice: 1.1 }), badge ? 'value' : 'idle'),
+      layer(T.dots(skin, SKIN), 'mid'),
+      layer(T.dots(core, CORE)),
+      layer(T.dots(redSkin, SKIN), 'active'),
+      layer(T.dots(red, CORE), 'active'),
+      layer(T.dots(ink, CORE)),
+      layer(T.big(badge ? `${COUNT} NEW` : 'ALL CLEAR', 6, 132, { lattice: 1.1 }), badge ? 'value' : 'idle'),
     ]
   },
 }
@@ -273,7 +274,8 @@ const N = 60, K = 2.1, R = 63, OX = 72, OY = 78
 const rd = grayScott({ w: N, h: N, feed: .037, kill: .06, du: .05, dv: .025, seed: 7, blobs: 14, sub: 12, every: 12, radius: [1, 2] })
 /** Sim seconds: LEAD of head start, then LOOP on repeat at RATE sim-s per board second (150 s per regrowth). */
 const LEAD = 1, LOOP = 11, RATE = .06
-const BANDS = [{ at: .3, size: 1.9, tone: 'value' }, { at: .24, size: 1.6, tone: 'idle' }, { at: .17, size: 1.2, tone: 'mid' }, { at: .1, size: .8, tone: 'faint' }] as const
+/** The top band is 1.6 on the 2.1 lattice, so the brightest strokes keep a gap between dots. */
+const BANDS = [{ at: .3, size: 1.6, tone: 'value' }, { at: .24, size: 1.3, tone: 'idle' }, { at: .17, size: 1.2, tone: 'mid' }, { at: .1, size: .8, tone: 'faint' }] as const
 export const glyphIdle: WidgetPreset = {
   id: 'lock-idle', name: 'Idle', label: 'IDLE', numbered: true, group: 'scatter', ...tile,
   credit: GRAY_SCOTT,
