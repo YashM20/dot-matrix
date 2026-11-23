@@ -27,6 +27,20 @@ export function cardChecks(assert: Assert) {
   }
   // #237: the transport opens in Play, so its red record light means the visitor pressed record
   assert('cards: inst-transport opens in Play (mode 1)', widgetById('inst-transport')?.defaults?.mode === 1)
+  // #227: ir-ripple's rings are round (x scaled by the window's 1.2 aspect, was 1.08: 7-16% wider than tall), and the
+  // outer ring's crests stay `mid` or brighter out near the rim (a `faint` outer ring vanishes on paper)
+  {
+    const p = widgetById('ir-ripple')!, pitch = p.grid.pitch ?? theme.gridPx, odd: string[] = []
+    for (const t of [0, 1.3, 3.7]) {
+      const strong = dotsAt(p, t).filter(d => visible(d) && d.color !== theme.dotFaint && d.color !== theme.dotActive)
+        .map(d => [d.x / pitch - 72, d.y / pitch - 72]).filter(d => Math.abs(d[1]) < 60)
+      const inner = strong.filter(([x, y]) => Math.hypot(x, y) < 50), span = (i: number) => Math.max(...inner.map(d => Math.abs(d[i])))
+      const far = Math.max(...strong.map(([x, y]) => Math.hypot(x, y)))
+      if (span(0) / span(1) > 1.04) odd.push(`t = ${t}: rings ${(span(0) / span(1)).toFixed(2)} wider than tall`)
+      if (t < 2 && far < 55) odd.push(`t = ${t}: outer mid ring ends at r = ${far.toFixed(1)}`)
+    }
+    assert('cards: ir-ripple rings are round and the outer ring stays mid (#227)', !odd.length, odd.join('; '))
+  }
   // cinema: the red mark keeps the title's moat, no grey dot within one lattice dot (2.5 cells; the next ring is 5 away)
   {
     const near: string[] = []

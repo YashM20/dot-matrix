@@ -4,20 +4,20 @@
   "ir-ripple": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "4d960f30",
-    "dots": 1097
+    "hash": "4156df73",
+    "dots": 1290
    },
    "t=1.3": {
     "style": "squircle:2.30",
-    "hash": "b5ca3614",
-    "dots": 1069
+    "hash": "22f8a34f",
+    "dots": 1274
    }
   },
   "ir-dial": {
    "t=0": {
     "style": "squircle:2.30",
-    "hash": "76ad27d2",
-    "dots": 532
+    "hash": "171eeb16",
+    "dots": 503
    }
   }
  }

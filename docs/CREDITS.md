@@ -138,8 +138,8 @@ By lionleaf.
 
 - Plasma (`gpu-plasma`), board `/gpu/`: demos in 140 characters
 - Starfield (`gpu-starfield`), board `/gpu/`: demos in 140 characters
-- IR Dial (`ir-dial`), board `/ir/`: demos in 140 characters
-- IR Ripple (`ir-ripple`), board `/ir/`: demos in 140 characters
+- Dial (`ir-dial`), board `/ir/`: demos in 140 characters
+- Ripple (`ir-ripple`), board `/ir/`: demos in 140 characters
 
 ### [ESP-Mosaico concept screens](https://x.com/henry19840301/status/2090273665669874050)
 
@@ -427,8 +427,8 @@ By Martin Kleppe.
 
 - Plasma (`gpu-plasma`), board `/gpu/`: one small program drives the whole card; this program is our own
 - Starfield (`gpu-starfield`), board `/gpu/`: one small program drives the whole card; this program is our own
-- IR Dial (`ir-dial`), board `/ir/`: one small program drives the whole card; this program is our own
-- IR Ripple (`ir-ripple`), board `/ir/`: one small program drives the whole card; this program is our own
+- Dial (`ir-dial`), board `/ir/`: one small program drives the whole card; this program is our own
+- Ripple (`ir-ripple`), board `/ir/`: one small program drives the whole card; this program is our own
 
 ### [Vera Molnár](https://en.wikipedia.org/wiki/Vera_Moln%C3%A1r)
 
