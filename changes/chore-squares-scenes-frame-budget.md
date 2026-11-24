@@ -1,2 +1,0 @@
-visitor: The AMMANN card on SQUARES draws its turned squares in half the time, so the cards around it keep their frame rate.
-engineering: Square form dots close their outline once (Chrome drew an empty contour per turned square), the bench reads the board frame per viewport and times a whole loop after a warm-up, and the viewport-frames and card-time probes measure SQUARES and SCENES in Chrome (#416, #340, #431).

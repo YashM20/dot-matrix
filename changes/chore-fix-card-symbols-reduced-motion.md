@@ -1,2 +1,0 @@
-visitor: Screen readers now read card names as words instead of symbol names, and the CHARTS focus line stays still when you ask for reduced motion.
-engineering: live-now-playing, ai-assistant and the TYPE arrows draw their symbols as dots or the font's arrow, describe() words the font's symbols and scripts/verify/card-labels.ts pins every card name, and the CHARTS focus lines use the shared frozen clock (#413, #408).

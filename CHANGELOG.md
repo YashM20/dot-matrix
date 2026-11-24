@@ -3,6 +3,47 @@
 All notable engineering changes to Dot/480 are recorded here, newest first.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/). Dot/480 is a personal website (https://matrix.reactopia.me, deployed from `main`), not a published package: there are no tagged or npm releases. From 0.14 on, an entry is one checkpoint (a GitHub milestone, see `docs/CHECKPOINTS.md`) and names its PRs; older entries are grouped by date, commit and PR. The visitor-facing notes live in the LOG tab (`src/changelog.ts`).
 
+## 0.19 · 2026-11-16 to 2026-11-24 · CP7, board refinement (PRs #418 to #447)
+Milestone `CP7 · 0.19 · Board refinement`, published 2026-11-24. It has no new boards or features. It makes the owner's remaining card cuts (#221) and brings twenty boards up to the bar of `level-03`, the afterlight face, MOSAIC and COMPONENTS. The queue is #401, and #225 tracked the board issues. The plan named twelve boards. Four more joined once the #221 picks unblocked them (#236, #252, #254, #255), and four came in from Backlog (#227, #235, #247, #260). Each board lane changed only its own `goldens/<board>.json`, and on purpose.
+### For visitors
+- **Fewer cards** (#437, #441): ten cards that repeated a neighbour are gone: `ir-plasma`, `heal-persist`, `light-glass`, `light-matte`, `sq-morph`, `sq-sort`, `sq-blob`, `sq-beads`, `fr-lyapunov` and `gpu-moire`. Their old links open the board they lived on. `phys-ink` went in #437 and came back in #441.
+- **Two cards a row** (#442): PROGRAMS, 500K DOTS and HEAL show their two cards side by side and large, with no empty third column.
+- **Dot font** (#432): the font draws `"`, `;`, `[`, `]`, `|` and `@`. Text typed in MAKE folds to the font, so accents and ß draw, and a short note names any character it lacks.
+- **Card names as words** (#430): screen readers read card names as words instead of symbol names, and icon symbols on cards are drawn as dots.
+- **CHARTS** (#430): the label switch focus line stays still under reduced motion (#408).
+- **SQUARES** (#431): the AMMANN card draws its turned squares in half the time.
+- **HEAL** (#418): the X-ray card shows its four hidden channels clearly in both themes and says 4 OF 10 SHOWN, and the mirror card marks live with the rail knob.
+- **MIRROR** (#419): the SHADOW card draws a clean edge and a tighter spotlight, and the conduct ring stays clear of its text.
+- **MICRO MOTION** (#420): the pull hint clears the chat list, and the send placeholder and read ticks are easier to see.
+- **DEPARTURES** (#421): later trains and on-time lines are brighter, the station clock says its time to screen readers, and the line map keeps its stop names off the card edge.
+- **LEVELS** (#422): the high scores open with the leader's row, the last row is easy to read, and the board says where level 03 went.
+- **SCOPE** (#423): units on the readouts, held peaks that fall between beats, and a CHECK SETTINGS line when the mic is blocked.
+- **FRACTALS** (#425): titles drop the board name, captions credit the people each fractal comes from, and the Julia footer writes its c as `C -0.22 +0.64 I`.
+- **CINEMA** (#424, #428): SUNDOWN keeps its striped, broken sun without stray red dots, and the gunslinger has his eyes and hands back.
+- **500K DOTS** (#426): the fine GPU dots show under reduced motion too, footers count the dots each card draws, and starfield stars fade out before the window edge.
+- **RIDE** (#427): tall type on an even dot grid, the speed read as one number, and no red live dot on the still Henry card.
+- **POND** (#429): the starlings fly as one dot per bird, the meadow grass grows along its blades, and the koi pond's outer bank fades into the card. Turing keeps its cluster spots.
+- **MOSAIC** (#433): the EV charge rate reads POWER, the camera tags sit clear of their boxes, and no star hides inside an invader.
+- **KINETIC TYPE** (#436): each card rests on a still from its own move, so the melt drips and the magnet pulls before anything plays.
+- **FACES** (#438): CALM, CURIOUS and SLEEPY rest with their own look, drawn in even dots.
+- **SCENES** (#439): the twist column reads as one solid with its ring around it, the posts walk is calmer, and the chain shows all four links.
+- **LIGHT** (#440, #446): the metal and fabric balls read as spheres, the gloss caption says LACQUER, the ON AIR letters read inside their glow, the torch glides between your pointer and its orbit, and the gloss ball keeps its outline on the dark side.
+- **PROGRAMS** (#443): the cards read RIPPLE and DIAL, the ripple rings are round, and the outer ring stays visible on paper.
+- **MICRO UI** (#444): the camera's thirds lines meet on a shared dot, and the flip arrow reads as separate dots.
+- **LOCK** (#445): the notify badge shows 2 NEW in even dots, the idle coral keeps a gap between its brightest dots, and the hourglass shows a whole time under reduced motion.
+- **PHYSICS** (#447): each card says what to do in one word (SPLASH, GRAB, POKE, THROW) until you touch it, and the flag's 480 reads at card size, hung from a rail on a pole.
+### For contributors
+- **Removed cards** (#437, #441): the ten cuts go through `removedCards` and 301s in `vercel.json`. Restoring `phys-ink` dropped its row and its redirects. PHYSICS is a dense board.
+- **Pair density** (#442): a board density with two wide cards a row at every CARD SIZE and one column on a phone, used by `ir`, `gpu` and `heal`. The layout probe gates `heal`, and the `DESIGN.md` density table matches.
+- **Glyph and label checks** (#430, #432): `scripts/verify/glyphs.ts` fails any card text the 5x7 font lacks, MAKE text and imports go through `foldText`, and `scripts/verify/card-labels.ts` pins every card name. `describe()` words the font's symbols, and the CHARTS focus lines use the shared frozen clock.
+- **Frame cost** (#416, #340, #431): square form dots close their outline once (Chrome drew an empty contour per turned square). The bench reads the board frame per viewport and times a whole loop after a warm-up, and the `viewport-frames` and `card-time` probes measure SQUARES and SCENES in Chrome.
+- **Timing gates** (#224, #435): the Voronoi gate scales its budget by a frozen copy of the l2 search timed on the same runner, so its 2x slowdown check also catches on fast runners.
+- **DotCanvas** (#446): it settles on the main thread for 600 ms after input. `light-orb` and the material cards use `clock` instead of `animated`.
+- **Rest poses** (#436): kinetic cards start and hold under reduced motion on a per-card pose (`REST` in `kinetic-kit`).
+- **Per-board checks:** one check per fix, so nothing comes back: `scripts/verify/cards.ts` (DEPARTURES, #421), `scripts/verify/levels.ts` (#422), `scripts/verify/scope.ts` plus a blocked step in the audio probe (#423), `scripts/fractal.ts` (#425), `scripts/verify/gpu.ts` (#426), `scripts/verify/ride.ts` (#427), `scripts/life-pond-dots.ts` (#429), `scripts/verify/mosaic.ts` (#433), and `pnpm verify` pins for CINEMA (#424, #428), FACES (#438) and MICRO UI (#444).
+- **Board details:** HEAL windows each X-ray panel at the 90th percentile of |h| (#418). `mirror-shadow` keeps its 2-cell lattice as an owner exception (#419). RIDE sets poster caps and 5x9 body text on uniform lattices in `ride-type.ts` (#427). Big pond tile dots centre on the glyph box (#429). FACES snaps bright features to one dot size and draws brows as a one-row line (#438). SCENES card names drop the board prefix and LATHE's footer uses `toFixed` (#439). `ir-ripple` scales x by the window aspect (#443). `lock-notify` holds COUNT 2 on the body's 2.9 and 2.2 sizes (#445). PHYSICS `describe()` gives an idle button no value text (#447).
+- **Docs** (this PR): CP7 marked published in `docs/CHECKPOINTS.md`, and the run state in `docs/PROGRESS.md` moves on to CP8 (#402).
+
 ## 0.18 · 2026-11-06 to 2026-11-16 · CP6, stabilise (PRs #216 to #415)
 Milestone `CP6 · 0.18 · Stabilise`, published 2026-11-16. It has no new features. It fixes bugs and flaky gates, makes the site more accessible, runs the design system audit (#361), cuts the cards the card audit (#221) put below the bar, and refines the first boards (#225). Wave 1 is PRs #265 to #268, wave 2 is tracked on #269, wave 3 is #286 to #295, wave 4 started on Nov 15 (#323 onward), and the closing queue is #403 (it replaced #349). Goldens change only where a PR changes cards on purpose: the wave 2 helpers (#275, #276, #277, #279, #285), the wave 3 card fixes, the hero faces (#292), the board refines (#324, #331, #332, #334, #337, #368, #370, #372, #377, #380, #381, #384, #386, #389, #407), the shared switch and scrubber look (#394), card numbers (#385) and the removals (#369, #387). The remaining #221 cuts and twelve board refines move to CP7 (#401).
 ### For visitors

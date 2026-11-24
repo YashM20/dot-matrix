@@ -1,2 +1,0 @@
-visitor: The RIDE cards set their tall type on an even dot grid, the speed reads as one number to screen readers, and the still Henry card drops its red live dot.
-engineering: RIDE board refinement (#258): poster caps and 5x9 body text on uniform lattices (ride-type.ts), the speed and watts read as one string with the tenths on the hero baseline, henry-bear is not live and its bunny has air round it, apps icons share one lattice; checks in scripts/verify/ride.ts.
