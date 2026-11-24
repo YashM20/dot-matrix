@@ -15,6 +15,24 @@ export interface Upcoming { phase: string; title: string; text: string; status: 
 
 export const releases: Release[] = [
   {
+    version: '0.19', date: '2026-11-24', title: 'Twenty boards, card by card',
+    summary: 'Twenty boards had their cards fixed one at a time, ten cards that repeated a neighbour are gone, and the dot font draws a few more characters.',
+    changes: [
+      { kind: 'new', text: 'The dot font now draws quote marks, semicolons, square brackets, the vertical bar and the at sign.' },
+      { kind: 'improved', text: 'PROGRAMS, 500K DOTS and HEAL show their two cards side by side and large.' },
+      { kind: 'improved', text: 'Each KINETIC TYPE card rests on a still from its own move, and CALM, CURIOUS and SLEEPY on FACES each rest with their own look.' },
+      { kind: 'improved', text: 'On POND the starlings fly as one dot per bird, the grass grows along its blades, and the koi pond’s bank fades into the card.' },
+      { kind: 'improved', text: 'On LIGHT the metal and fabric balls read as spheres, the ON AIR letters read inside their glow, and the torch glides between your pointer and its orbit.' },
+      { kind: 'improved', text: 'PHYSICS cards say what to do in one word until you touch them, and the INK card is back.' },
+      { kind: 'improved', text: 'The SUNDOWN poster on CINEMA keeps its striped sun without stray red dots, and the gunslinger has his eyes and hands back.' },
+      { kind: 'improved', text: 'DEPARTURES, LEVELS, SCOPE, RIDE and MOSAIC are easier to read: brighter rows, units on the readouts, and labels clear of their boxes.' },
+      { kind: 'improved', text: 'Smaller fixes on SCENES, HEAL, MIRROR, MICRO MOTION, MICRO UI, LOCK, FRACTALS, PROGRAMS and 500K DOTS.' },
+      { kind: 'improved', text: 'The AMMANN card on SQUARES draws in half the time, so the cards around it keep their frame rate.' },
+      { kind: 'improved', text: 'Ten cards that repeated a neighbour are gone from PROGRAMS, HEAL, LIGHT, SQUARES, FRACTALS and 500K DOTS. Old links open the board the card lived on.' },
+      { kind: 'fixed', text: 'Screen readers read card names as words instead of symbol names, and the CHARTS focus line stays still with reduced motion.' },
+    ],
+  },
+  {
     version: '0.18', date: '2026-11-16', title: 'Fewer cards, each one checked',
     summary: 'Every card had a dot-level review, the weakest cards and boards are gone, big numbers have their own faces, and controls look and behave the same on every board.',
     changes: [
@@ -231,7 +249,6 @@ export const releases: Release[] = [
 ]
 
 export const upcoming: Upcoming[] = [
-  { phase: 'CP7', title: 'Every board up to the bar', status: 'next', text: 'Twelve boards get the same care as the best cards, and the cards that can’t get there are removed. Their links keep working.' },
-  { phase: 'CP8', title: 'Games, a live world and guides', status: 'planned', text: 'Three small games, a board of live world data, a wallpaper maker, and the guides published on the blog.' },
+  { phase: 'CP8', title: 'Games, a live world and guides', status: 'next', text: 'Three small games, a board of live world data, a wallpaper maker, and the guides published on the blog.' },
   { phase: 'C1', title: 'A million dots', status: 'planned', text: 'Fields evaluated on the GPU with WebGPU: a full-screen field that follows the cursor, and a zoom from one card into a million dots.' },
 ]

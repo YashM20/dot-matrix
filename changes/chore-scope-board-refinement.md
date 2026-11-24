@@ -1,2 +1,0 @@
-visitor: The SCOPE cards show their units, the spectrum's held peaks fall between beats, and a blocked mic tells you to check your settings.
-engineering: SCOPE board fixes from the #240 triage: a solid trigger arrow, PK in % and a 20 MS span, a 40 HZ axis with 1K on its band, accented demo beats so held peaks fall, and a CHECK SETTINGS line on the blocked mic, with `scripts/verify/scope.ts` and a blocked step in the audio probe (#240, #423).

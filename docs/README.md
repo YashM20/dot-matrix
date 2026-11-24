@@ -1,6 +1,6 @@
 # Docs index
 
-Which doc to read for what, and how current each one is (checked 2026-11-16, at the CP6 release: 0.18). Files stay where they are, because code comments cite them by path.
+Which doc to read for what, and how current each one is (checked 2026-11-24, at the CP7 release: 0.19). Files stay where they are, because code comments cite them by path.
 
 **Start here:** `AGENTS.md` (invariants that must not break) → `DESIGN.md` (tokens, components, interaction) → `docs/PROGRESS.md` (what's done and what's next).
 
@@ -10,9 +10,9 @@ Which doc to read for what, and how current each one is (checked 2026-11-16, at 
 | [`../AGENTS.md`](../AGENTS.md) | Non-negotiables: Field → Sampler → Renderer, one accent per board, quantized dots, a framework-free engine with no new deps |
 | [`../DESIGN.md`](../DESIGN.md) | Design tokens, typography, components, interaction grammar, responsive rules, display skins, devices |
 | [`../README.md`](../README.md) | What the site is, repo layout, scripts, deep links, writing a card |
-| [`../CHANGELOG.md`](../CHANGELOG.md) | Engineering history: one entry per checkpoint from 0.14 on, with its PRs. The visitor-facing notes are `src/changelog.ts` (the LOG tab in ABOUT), which skips 0.17 and is current at 0.18. |
+| [`../CHANGELOG.md`](../CHANGELOG.md) | Engineering history: one entry per checkpoint from 0.14 on, with its PRs. The visitor-facing notes are `src/changelog.ts` (the LOG tab in ABOUT), which skips 0.17 and is current at 0.19. |
 | [`PROGRESS.md`](PROGRESS.md) | **Source of truth** for what is done, in progress, skipped and next, plus the "Resume here" notes for the next session |
-| [`CHECKPOINTS.md`](CHECKPOINTS.md) | **How work moves**: one checkpoint (GitHub milestone `CPn`) at a time. Build, gate, publish to main, then a breather (clean up, docs, issues) before the next. CP6 (0.18) is published; CP7 (#401) is next and CP8 (#402) is planned |
+| [`CHECKPOINTS.md`](CHECKPOINTS.md) | **How work moves**: one checkpoint (GitHub milestone `CPn`) at a time. Build, gate, publish to main, then a breather (clean up, docs, issues) before the next. CP7 (0.19) is published; CP8 (#402) is next |
 | [`WEB-PLAN.md`](WEB-PLAN.md) | The active product plan: a personal website, with tracks C1–C10. C1 and C9 not started; MAKE, the Lab and X-ray are behind flags (off by default) |
 | [`UX-PLAN.md`](UX-PLAN.md) | The active UX plan: low floor, high ceiling. Phases U0–U6 plus the build log (§9). U0–U4 and the U5 DISPLAY slice are built and merged (PR #6); the rest of U5, and U6, are planned. Since #319 the visible top level is EXPLORE (with ALL on `/`, which took in BROWSE) and ABOUT; MAKE and the Lab are behind flags. |
 | [`SHARE-PLAN.md`](SHARE-PLAN.md) | S0–S1 and the S2 copy helpers built (2026-10-26) and merged (PR #7); the rest of S2, and S3–S5, planned: metadata, a slug and a short permanent id per widget, a page at `/widget/<slug or id>/`, copy as PNG / SVG / HTML, share and embed, iOS-style pill action bars, the shadcn registry. Phases S0–S5 and the open decisions. |

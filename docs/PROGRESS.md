@@ -4,26 +4,24 @@
 > Update this file in the same commit as the work. Active plans: `docs/WEB-PLAN.md` (what the site does) and `docs/UX-PLAN.md` (how visitors find it); every doc and its status: `docs/README.md`. Original phase plan: `docs/MASTER-PLAN.md` (v2). Research: `docs/MOTION-INTERACTION-DEPTH.md`, `docs/ADVANCED-PLAN.md`. Taste: `docs/STYLE-BIBLE.md`.
 > Legend: `[x]` done and verified · `[~]` partly done (see note) · `[ ]` not started · `[-]` skipped or deferred on purpose (reason given)
 
-## Live run state: resume here (updated 2026-11-16)
+## Live run state: resume here (updated 2026-11-24)
 > The coordinator keeps this block short and current. Read it first after any interruption or compaction.
 >
 > **Process: [`docs/CHECKPOINTS.md`](CHECKPOINTS.md).** One checkpoint at a time: scope, build, gate, publish, breather, then the owner picks the next one. Four to six lanes, one agent per line of the checkpoint's tracking issue. Agents run quick checks only; CI runs builds, goldens and probes. GitHub (milestones, labels, the tracking issue, issue comments) is the source of truth.
 
-**Now: CP6 · 0.18 · Stabilise is published (2026-11-16), and the breather is on.** Nothing new starts until the owner confirms CP7. 0.18 is in `CHANGELOG.md` and the LOG tab. SQUARES (12.7 ms) and SCENES (8.9 ms) are still over the 8 ms board budget on the buffer path; that is #416, in CP7.
+**Now: CP7 · 0.19 · Board refinement is published (2026-11-24, PR #448), and the breather is on.** Nothing new starts until the owner confirms CP8. 0.19 is in `CHANGELOG.md` and the LOG tab. It made the owner's #221 cuts and refined twenty boards: the twelve planned, plus KINETIC TYPE, SCENES, FACES, LIGHT, PROGRAMS, PHYSICS, MICRO UI and LOCK.
 
 **What's next:**
-- **CP7 · 0.19 · Board refinement** (queue #401). The owner's remaining #221 cuts first, then twelve boards, smallest first: HEAL, MIRROR, MICRO MOTION, DEPARTURES, LEVELS, SCOPE, FRACTALS, CINEMA, 500K DOTS, MOSAIC, RIDE and POND. Then the dot symbols (#413) and the dot font check (#412). Each board issue has a "Triage against `main` (Nov 16)" comment with what's left. One board per lane, so lanes never share a goldens file.
-- **CP8 · 0.20 · Play, live data and guides** (queue #402), after CP7.
+- **CP8 · 0.20 · Play, live data and guides** (queue #402), once the owner confirms it. The blog bar, wayfinding and Back fixes (#38, #40, #34, #39, #41, #44) first, then three original games (#131), the hill-driving game (#311), the world board (#130), the wallpaper maker (#133) and the guides on the blog (#77).
 - **Backlog**, by priority. Plan and exit criteria: `docs/CHECKPOINTS.md`.
 
-**Closed milestones:** CP1 to CP5. "Tixy gallery" and "Next phases" were reopened on Nov 16 as parked theme milestones (`docs/CHECKPOINTS.md`). CP1 to CP6 shipped as 0.13 to 0.18 (`CHANGELOG.md`); CP6 closes with its milestone after the breather.
+**Closed milestones:** CP1 to CP6. "Tixy gallery" and "Next phases" were reopened on Nov 16 as parked theme milestones (`docs/CHECKPOINTS.md`). CP1 to CP7 shipped as 0.13 to 0.19 (`CHANGELOG.md`); CP7 closes with its milestone after the breather.
 
 **Defaults on main:** MAKE, LAB and X-ray are off; likes (#169, #176) and opt-in PostHog analytics (#171) are on. The like button stays hidden while the likes API answers 404, and analytics needs `VITE_POSTHOG_PROJECT_TOKEN`. Trusted Types stays Report-Only, because the BotID challenge script writes a plain string to `srcdoc`. CI runs four parallel jobs behind the required `check + build` gate; PR pushes also run the affected browser probes (`docs/HARNESS.md`).
 
 **Decisions:** recorded on the issue they affect. The open product questions on #12 were decided on Nov 16, except the device and hardware export, which is a feature removal and stays with the owner.
 
 **Waiting on the owner:**
-- #221: which remaining cards to remove or merge (CP7 starts with this).
 - #12: keep, slim or remove the device and hardware export.
 - #52: the permission request to the tixy maintainer (it blocks the ports).
 - #379: the repo setting that deletes merged branches.
@@ -65,7 +63,7 @@ How the CP3 cards and the #36 additions were built. The release summary is `CHAN
 
 
 ## Status board (updated 2026-11-09)
-- **Checkpoints:** CP1 (0.13) to CP5 (0.17) are shipped and their milestones closed; CP6 (0.18, stabilise) is closing; CP7 (0.19, board refinement) and CP8 (0.20, play, live data and guides) are planned. What each shipped: `CHANGELOG.md`. What is next: the live run state above and `docs/CHECKPOINTS.md`.
+- **Checkpoints:** CP1 (0.13) to CP6 (0.18) are shipped and their milestones closed; CP7 (0.19, board refinement) is published and closes after its breather; CP8 (0.20, play, live data and guides) is next. What each shipped: `CHANGELOG.md`. What is next: the live run state above and `docs/CHECKPOINTS.md`.
 - Everything below is the round-1 and round-2 log, kept as written. Its "not merged" and "queued" notes predate PR #10 (round 2) and PR #78 (round 3), which merged that work.
 - [x] **E3 editor: editing on canvas** (on an agent worktree branch, based on `feat/round2` 0741d3b; `docs/EDITOR-PLAN.md` §4.2, §8.3). Not merged.
   - Sites handles: a ring's radius and sweep (the sweep snaps to the ring's own sites, so an arc ends on a dot of its track), a disc's radius, a line's ends; whole cells.

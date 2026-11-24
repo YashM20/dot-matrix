@@ -1,2 +1,0 @@
-visitor: On SCENES, the twist column reads as one solid with its ring around it, the posts walk is calmer with the sun on the horizon, and the chain shows all four links.
-engineering: scenes-objects.ts raises the TWIST eye over the column and moves its sun toward the eye, scenes-rooms.ts raises the POSTS eye and trims its shadow reach, turns alternate CHAIN links 60 degrees and tightens the chain box and steps; card names drop the board prefix and LATHE's footer uses toFixed (#254).

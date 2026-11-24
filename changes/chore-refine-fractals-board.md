@@ -1,2 +1,0 @@
-visitor: The FRACTALS cards drop the board name from their titles, credit the people each fractal comes from, and the Julia card writes its c as "C -0.22 +0.64 I".
-engineering: Fractals board refinement (#248): captions name a person from each card's credit, names lose the "Fractals" prefix (ids unchanged), fr-flame credits Scott Draves, the Julia footer keeps the I off the digits and never shows -0.00; checks in scripts/fractal.ts.
